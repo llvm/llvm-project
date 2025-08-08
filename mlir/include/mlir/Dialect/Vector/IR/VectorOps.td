@@ -1731,7 +1731,7 @@ def Vector_LoadOp : Vector_Op<"load", [
                    CArg<"bool", "false">:$nontemporal,
                    CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
       return build($_builder, $_state, resultType, base, indices, nontemporal,
-                   alignment != llvm::MaybeAlign() ? $_builder.getI64IntegerAttr(alignment.valueOrOne().value()) :
+                   alignment.has_value() ? $_builder.getI64IntegerAttr((*alignment).value()) :
                                     nullptr);
     }]>,
     OpBuilder<(ins "TypeRange":$resultTypes,
@@ -1740,7 +1740,7 @@ def Vector_LoadOp : Vector_Op<"load", [
                    CArg<"bool", "false">:$nontemporal,
                    CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
       return build($_builder, $_state, resultTypes, base, indices, nontemporal,
-                   alignment != llvm::MaybeAlign() ? $_builder.getI64IntegerAttr(alignment.valueOrOne().value()) :
+                   alignment.has_value() ? $_builder.getI64IntegerAttr((*alignment).value()) :
                                     nullptr);
     }]>
   ];
@@ -1849,7 +1849,7 @@ def Vector_StoreOp : Vector_Op<"store", [
                    CArg<"bool", "false">:$nontemporal,
                    CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
       return build($_builder, $_state, valueToStore, base, indices, nontemporal,
-                   alignment != llvm::MaybeAlign() ? $_builder.getI64IntegerAttr(alignment.valueOrOne().value()) :
+                   alignment.has_value() ? $_builder.getI64IntegerAttr((*alignment).value()) :
                                     nullptr);
     }]>
   ];
@@ -1949,7 +1949,7 @@ def Vector_MaskedLoadOp :
                    "Value":$passthrough,
                    CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
       return build($_builder, $_state, resultType, base, indices, mask, passthrough,
-                   alignment != llvm::MaybeAlign() ? $_builder.getI64IntegerAttr(alignment.valueOrOne().value()) :
+                   alignment.has_value() ? $_builder.getI64IntegerAttr((*alignment).value()) :
                                     nullptr);
     }]>,
     OpBuilder<(ins "TypeRange":$resultTypes,
@@ -1959,7 +1959,7 @@ def Vector_MaskedLoadOp :
                    "Value":$passthrough,
                    CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
       return build($_builder, $_state, resultTypes, base, indices, mask, passthrough,
-                   alignment != llvm::MaybeAlign() ? $_builder.getI64IntegerAttr(alignment.valueOrOne().value()) :
+                   alignment.has_value() ? $_builder.getI64IntegerAttr((*alignment).value()) :
                                     nullptr);
     }]>
   ];
@@ -2039,7 +2039,7 @@ def Vector_MaskedStoreOp :
                    "Value":$valueToStore,
                    CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
       return build($_builder, $_state, base, indices, mask, valueToStore,
-                   alignment != llvm::MaybeAlign() ? $_builder.getI64IntegerAttr(alignment.valueOrOne().value()) :
+                   alignment.has_value() ? $_builder.getI64IntegerAttr((*alignment).value()) :
                                     nullptr);
     }]>
   ];
