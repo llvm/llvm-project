@@ -323,7 +323,7 @@ void ProcedureRef::DetermineCopyInOut() {
     }
     if (actual->keyword()) {
       seenKeyword = true;
-    auto actualName{actual->keyword()->ToString()};
+      auto actualName{actual->keyword()->ToString()};
       if (processedKeywords.find(actualName) != processedKeywords.end()) {
         // Actual arguments with duplicate keywords. Semantic analysis will
         // deal with the error.
