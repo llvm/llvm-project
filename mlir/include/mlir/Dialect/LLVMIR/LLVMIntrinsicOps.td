@@ -1080,7 +1080,24 @@ def LLVM_masked_compressstore
     : LLVM_IntrOp<"masked.compressstore", [], [0], [], 0> {
   let arguments = (ins LLVM_AnyVector:$vector,
                        LLVM_AnyPointer:$base,
-                       LLVM_VectorOf<I1>:$mask);
+                       LLVM_VectorOf<I1>:$mask,
+                       DefaultValuedAttr<I32Attr, "1">:$align);
+
+  let builders = [LLVM_VoidResultTypeOpBuilder, LLVM_ZeroResultOpBuilder];
+
+  let assemblyFormat = "`(` $vector `,` $base `,` $mask `)` attr-dict `:` functional-type(operands, results)";
+
+  string llvmBuilder = [{
+    builder.CreateMaskedCompressStore(
+      $vector, $base, $align != 1 ? llvm::Align($align) : llvm::MaybeAlign(), $mask);
+  }];
+  string mlirBuilder = [{
+    auto *intrinInst = dyn_cast<llvm::IntrinsicInst>(inst);
+    llvm::MaybeAlign alignment = intrinInst->getParamAlign(1);
+    IntegerAttr attr = $_builder.getI32IntegerAttr(alignment.has_value() ? alignment->value() : 1);
+    $_op = LLVM::masked_compressstore::create($_builder, $_location,
+      $vector, $base, $mask, attr);
+  }];
 }
 
 //
