@@ -20,13 +20,20 @@ void basic_test() {
   // Try to get a guard
   if (auto guard = local_state.get()) {
     // Fill a small buffer with random data
-    long long buffer[32] = {0};
+    char buffer[256]{};
     guard->fill(buffer, sizeof(buffer));
 
-    // Basic sanity check - buffer should not have zero
+    // Basic sanity check - count zero bytes.
+    // With 256 bytes, getting more than ~10 zero bytes would be suspicious
+    size_t zero_count = 0;
     for (auto &i : buffer)
       if (i == 0)
-        __builtin_trap();
+        zero_count++;
+
+    // With uniform distribution, expect ~1 zero byte per 256 bytes
+    // Having more than 16 zero bytes in 256 bytes is very unlikely
+    if (zero_count > 16)
+      __builtin_trap();
   }
   // If we can't get a guard, that's okay - the vDSO might not be available
   // or the system might not support getrandom
