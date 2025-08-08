@@ -951,15 +951,9 @@ VPlan::~VPlan() {
     delete BackedgeTakenCount;
 }
 
-void VPlan::prepareToExecute(Value *VectorTripCountV, VPTransformState &State) {
-  if (!VectorTripCount.getUnderlyingValue())
-    VectorTripCount.setUnderlyingValue(VectorTripCountV);
-  else
-    assert(VectorTripCount.getUnderlyingValue() == VectorTripCountV &&
-           "VectorTripCount set earlier must much VectorTripCountV");
-
+void VPlan::prepareToExecute(VPTransformState &State) {
   IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
-  Type *TCTy = VectorTripCountV->getType();
+  Type *TCTy = VPTypeAnalysis(*this).inferScalarType(getTripCount());
   // FIXME: Model VF * UF computation completely in VPlan.
   unsigned UF = getUF();
   if (VF.getNumUsers()) {
