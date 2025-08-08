@@ -27,11 +27,18 @@ class TestFrameVarDILArithmetic(TestBase):
         self.expect_var_path("1u", value="1", type="unsigned int")
         self.expect_var_path("0b1l", value="1", type="long")
         self.expect_var_path("01ul", value="1", type="unsigned long")
+        self.expect_var_path("01lu", value="1", type="unsigned long")
         self.expect_var_path("0o1ll", value="1", type="long long")
         self.expect_var_path("0x1ULL", value="1", type="unsigned long long")
+        self.expect_var_path("0x1llu", value="1", type="unsigned long long")
+        self.expect(
+            "frame var '1ullu'",
+            error=True,
+            substrs=["Failed to parse token as numeric-constant"],
+        )
         self.expect_var_path("0xFFFFFFFFFFFFFFFF", value="18446744073709551615")
         self.expect(
-            "frame var '0xFFFFFFFFFFFFFFFFF'",
+            "frame var '0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF'",
             error=True,
             substrs=[
                 "integer literal is too large to be represented in any integer type"
