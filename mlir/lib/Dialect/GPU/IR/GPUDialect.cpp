@@ -2515,6 +2515,43 @@ gpu::YieldOp WarpExecuteOnLane0Op::getTerminator() {
 }
 
 //===----------------------------------------------------------------------===//
+// GPU_BroadcastLaneOp
+//===----------------------------------------------------------------------===//
+
+void gpu::BroadcastLaneOp::inferResultRanges(
+    ArrayRef<ConstantIntRanges> argRanges, SetIntRangeFn setResultRange) {
+  setResultRange(getResult(), argRanges.front());
+}
+
+Speculation::Speculatability gpu::BroadcastLaneOp::getSpeculatability() {
+  switch (getBroadcastType()) {
+  case BroadcastType::first_lane:
+    // Cannot speculate first_lane broadcast, because speculating it across
+    // control flow can change the active lanes.
+    return Speculation::NotSpeculatable;
+  case BroadcastType::any_lane:
+    LLVM_FALLTHROUGH;
+  case BroadcastType::lane:
+    return Speculation::Speculatable;
+  }
+}
+
+LogicalResult gpu::BroadcastLaneOp::verify() {
+  switch (getBroadcastType()) {
+  case BroadcastType::first_lane:
+    LLVM_FALLTHROUGH;
+  case BroadcastType::any_lane:
+    if (getLane())
+      return emitOpError() << "lane can only be specified for lane broadcast";
+    return success();
+  case BroadcastType::lane:
+    if (!getLane())
+      return emitOpError() << "lane must be specified for lane broadcast";
+    return success();
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // GPU KernelMetadataAttr
 //===----------------------------------------------------------------------===//
 

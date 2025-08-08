@@ -1517,7 +1517,7 @@ def GPU_GPUModuleOp : GPU_Op<"module", [
     /// Sets the targets of the module.
     void setTargets(ArrayRef<TargetAttrInterface> targets);
   }];
-  
+
   let hasVerifier = 1;
 }
 
@@ -3213,6 +3213,48 @@ def GPU_WarpExecuteOnLane0Op : GPU_Op<"warp_execute_on_lane_0",
     /// Get the terminator of the warp region.
     gpu::YieldOp getTerminator();
   }];
+}
+
+def GPU_BroadcastType : I32EnumAttr<"BroadcastType",
+    "a lane to broadcast from",
+    [
+      I32EnumAttrCase<"first_lane", 0>,
+      I32EnumAttrCase<"any_lane", 1>,
+      I32EnumAttrCase<"lane", 2>
+    ]>{
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::gpu";
+}
+def GPU_BroadcastTypeAttr : EnumAttr<GPU_Dialect, GPU_BroadcastType, "broadcast">;
+
+def GPU_BroadcastLaneOp : GPU_Op<"broadcast_lane",
+    [NoMemoryEffect, AllTypesMatch<["result", "src"]>,
+    DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
+    DeclareOpInterfaceMethods<ConditionallySpeculatable, ["getSpeculatability"]>] #
+    ElementwiseMappable.traits>,
+  Arguments<(ins AnyType:$src,
+                 Optional<I32>:$lane,
+                 GPU_BroadcastTypeAttr:$broadcast_type)> {
+  let summary = "Broadcasts a value from the specific lane across subgroup";
+  let description = [{
+      Broadcasts the value from the one lane to the all lanes in subgroup.
+
+      The possible broadcats types are:
+
+      * `first_lane` - first active lane in subgroup.
+      * `lane` - from the specified lane, lane index must be withing subgroup.
+      * `any_lane` - if `src` value is uniform across all the subgroup
+      lanes return it unchanged, otherwise result is poison. This variant
+      essentially an uniformity hint for the compiler, conveying that
+      specific value is uniform across all subgroup lanes. Dropping `any_lane`
+      broadcast will not change the code semantics.
+      ```
+  }];
+  let results = (outs AnyType:$result);
+  let assemblyFormat = [{
+    $src `,` $broadcast_type ($lane^)?  attr-dict `:` type($result)
+  }];
+  let hasVerifier = 1;
 }
 
 #endif // GPU_OPS
