@@ -388,6 +388,9 @@ struct GenericKernelTy {
                            KernelLaunchParamsTy LaunchParams,
                            AsyncInfoWrapperTy &AsyncInfoWrapper) const = 0;
 
+  virtual Expected<uint64_t> maxGroupSize(GenericDeviceTy &GenericDevice,
+                                          uint64_t DynamicMemSize) const = 0;
+
   /// Get the kernel name.
   const char *getName() const { return Name.c_str(); }
 
