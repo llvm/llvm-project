@@ -66,6 +66,36 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  arc4random
+  SRCS
+    arc4random.cpp
+  HDRS
+    arc4random.h
+  DEPENDS
+    .${LIBC_TARGET_OS}.vdso_rng
+)
+
+add_entrypoint_object(
+  arc4random_buf
+  SRCS
+    arc4random_buf.cpp
+  HDRS
+    arc4random_buf.h
+  DEPENDS
+    .${LIBC_TARGET_OS}.vdso_rng
+)
+
+add_entrypoint_object(
+  arc4random_uniform
+  SRCS
+    arc4random_uniform.cpp
+  HDRS
+    arc4random_uniform.h
+  DEPENDS
+    .${LIBC_TARGET_OS}.vdso_rng
+)
+
+add_entrypoint_object(
   strfromf
   SRCS
     strfromf.cpp
