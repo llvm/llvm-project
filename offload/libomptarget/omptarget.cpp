@@ -782,10 +782,10 @@ int processAttachEntries(DeviceTy &Device, AttachInfoTy &AttachInfo,
       return IsNewlyAllocated;
     };
 
-    // Only process ATTACH if base/begin was newly allocated OR ALWAYS flag is
-    // set
-    if (!IsAttachAlways && !WasNewlyAllocated(HstPtr, "pointer") &&
-        !WasNewlyAllocated(HstPteeBegin, "pointee")) {
+    // Only process ATTACH if either the pointee or the pointer was newly
+    // allocated, or the ALWAYS flag is set.
+    if (!IsAttachAlways && !WasNewlyAllocated(HstPteeBegin, "pointee") &&
+        !WasNewlyAllocated(HstPtr, "pointer")) {
       DP("Skipping ATTACH entry %zu: neither pointer nor pointee was newly "
          "allocated and no ALWAYS flag\n",
          EntryIdx);
@@ -821,18 +821,21 @@ int processAttachEntries(DeviceTy &Device, AttachInfoTy &AttachInfo,
       return TPR;
     };
 
-    // Get device version of the pointer (e.g., &p)
+    // Get device version of the pointee (e.g., &p[10]) first, as we can
+    // release its TPR after extracting the pointer value.
+    void *TgtPteeBegin;
+    if (auto PteeTPROpt = LookupTargetPointer(HstPteeBegin, 0, "pointee"))
+      TgtPteeBegin = PteeTPROpt->TargetPointer;
+    else
+      continue;
+
+    // Get device version of the pointer (e.g., &p) next. We need to keep its
+    // TPR for use in shadow-pointer handling during pointer-attachment.
     auto PtrTPROpt = LookupTargetPointer(HstPtr, PtrSize, "pointer");
     if (!PtrTPROpt)
       continue;
     TargetPointerResultTy &PtrTPR = *PtrTPROpt;
     void **TgtPtrBase = reinterpret_cast<void **>(PtrTPR.TargetPointer);
-
-    // Get device version of the pointee (e.g., &p[10])
-    auto PteeTPROpt = LookupTargetPointer(HstPteeBegin, 0, "pointee");
-    if (!PteeTPROpt)
-      continue;
-    void *TgtPteeBegin = PteeTPROpt->TargetPointer;
 
     // Insert a data-fence before the first pointer-attachment.
     if (IsFirstPointerAttachment) {
