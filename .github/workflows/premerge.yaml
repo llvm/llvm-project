@@ -70,6 +70,12 @@ jobs:
           export SCCACHE_IDLE_TIMEOUT=0
           sccache --start-server
 
+          export projects_to_build=polly
+          export project_check_targets=check-polly
+          export runtimes_to_build=""
+          export runtimes_check_targets=""
+          export runtimes_check_targets_needs_reconfig=""
+
           ./.ci/monolithic-linux.sh "${projects_to_build}" "${project_check_targets}" "${runtimes_to_build}" "${runtimes_check_targets}" "${runtimes_check_targets_needs_reconfig}" "${enable_cir}"
       - name: Upload Artifacts
         if: '!cancelled()'
@@ -105,6 +111,9 @@ jobs:
 
           echo "Building projects: ${projects_to_build}"
           echo "Running project checks targets: ${project_check_targets}"
+
+          export projects_to_build=polly
+          export project_check_targets=check-polly
 
           echo "windows-projects=${projects_to_build}" >> $GITHUB_OUTPUT
           echo "windows-check-targets=${project_check_targets}" >> $GITHUB_OUTPUT
