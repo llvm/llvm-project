@@ -388,8 +388,8 @@ SliceAttr::getOffsets(OpBuilder &builder, Location loc, Value linearId,
   SmallVector<int64_t> sgShape;
   if (auto maybeSgShape = getSgDataAsInt())
     sgShape = maybeSgShape.value();
-  else if (auto ratio = computeShapeRatio(shape, sgLayout))
-    sgShape = ratio.value();
+  else if (auto derivedShape = computeShapeRatio(shape, sgLayout))
+    sgShape = derivedShape.value();
   else
     return failure();
 
