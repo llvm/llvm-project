@@ -27,10 +27,16 @@ def _parse_ninja_log(ninja_log: list[str]) -> list[tuple[str, str]]:
             # We hit the end of the log without finding a build failure, go to
             # the next log.
             return failures
+        # We are trying to parse cases like the following:
+        #
+        # [4/5] test/4.stamp
+        # FAILED: touch test/4.stamp
+        # touch test/4.stamp
+        #
         # index will point to the line that starts with Failed:. The progress
-        # indicator is the line before this and contains a pretty printed version
-        # of the target being built. We use this and remove the progress information
-        # to get a succinct name for the target.
+        # indicator is the line before this ([4/5] test/4.stamp) and contains a pretty
+        # printed version of the target being built (test/4.stamp). We use this line
+        # and remove the progress information to get a succinct name for the target.
         failing_action = ninja_log[index - 1].split("] ")[1]
         failure_log = []
         while (
