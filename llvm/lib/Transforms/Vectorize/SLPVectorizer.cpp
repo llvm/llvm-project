@@ -23844,6 +23844,8 @@ private:
         case RecurKind::FMinimum:
           // res = vv
           break;
+        case RecurKind::Sub:
+        case RecurKind::AddChainWithSubs:
         case RecurKind::Mul:
         case RecurKind::FMul:
         case RecurKind::FMulAdd:
@@ -23983,6 +23985,8 @@ private:
     case RecurKind::FMinimum:
       // res = vv
       return VectorizedValue;
+    case RecurKind::Sub:
+    case RecurKind::AddChainWithSubs:
     case RecurKind::Mul:
     case RecurKind::FMul:
     case RecurKind::FMulAdd:
@@ -24087,6 +24091,8 @@ private:
       auto *Scale = ConstantVector::get(Vals);
       return Builder.CreateFMul(VectorizedValue, Scale);
     }
+    case RecurKind::Sub:
+    case RecurKind::AddChainWithSubs:
     case RecurKind::Mul:
     case RecurKind::FMul:
     case RecurKind::FMulAdd:
