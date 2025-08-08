@@ -14286,10 +14286,11 @@ bool SemaOpenMP::checkTransformableLoopNest(
   return Result;
 }
 
-/// Counts the total number of OpenMP canonical nested loops, including the outermost loop (the
-/// original loop). PRECONDITION of this visitor is that it must be invoked from
-/// the original loop to be analyzed. The traversal stops for Decl's and
-/// Expr's given that they may contain inner loops that must not be counted.
+/// Counts the total number of OpenMP canonical nested loops, including the
+/// outermost loop (the original loop). PRECONDITION of this visitor is that it
+/// must be invoked from the original loop to be analyzed. The traversal stops
+/// for Decl's and Expr's given that they may contain inner loops that must not
+/// be counted.
 ///
 /// Example AST structure for the code:
 ///
@@ -16282,7 +16283,7 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
           OMPLoopCategory::TransformSingleLoop) {
         const auto &TransformPreInit =
             SeqAnalysis.Loops[TransformIndex++].TransformsPreInits;
-        if (!TransformPreInit.empty()) 
+        if (!TransformPreInit.empty())
           llvm::append_range(PreInits, TransformPreInit);
       }
 
