@@ -123,6 +123,10 @@ Options for all Libraries
   Compiler to use for testing. Defaults to the compiler that was also used for
   building. Will default to flang if build is in-tree.
 
+**OPENMP_INCLUDE_TESTS** = ``${LLVM_INCLUDE_TESTS}``
+  Enable generation and build of test suite. Defaults to ``LLVM_INCLUDE_TESTS``
+  if built as part of LLVM, otherwise defaults to ``ON``.
+
 **OPENMP_LLVM_TOOLS_DIR** = ``/path/to/built/llvm/tools``
   Additional path to search for LLVM tools needed by tests.
 
