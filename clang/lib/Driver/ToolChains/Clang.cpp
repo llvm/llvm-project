@@ -7613,6 +7613,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
           Twine("-funique-source-file-identifier=") + Input.getBaseInput()));
   }
 
+  if (!IsCudaDevice)
+    Args.AddLastArg(CmdArgs,
+                    options::OPT_experimental_pointer_field_protection_EQ);
+
   // Setup statistics file output.
   SmallString<128> StatsFile = getStatsFileName(Args, Output, Input, D);
   if (!StatsFile.empty()) {
