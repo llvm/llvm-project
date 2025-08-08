@@ -61,6 +61,7 @@ cl::opt<bool> useOldAliasTags(
     cl::desc("Use a single TBAA tree for all functions and do not use "
              "the FIR alias tags pass"),
     cl::init(false), cl::Hidden);
+EnableOption(AffineOpt, "affine-opt", "affine optimization");
 
 /// CodeGen Passes
 DisableOption(CodeGenRewrite, "codegen-rewrite", "rewrite FIR for codegen");
