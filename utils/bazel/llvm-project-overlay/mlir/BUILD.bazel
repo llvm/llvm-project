@@ -3541,13 +3541,12 @@ cc_library(
         ":InferTypeOpInterface",
         ":Support",
         ":WasmSSAIncGen",
+        ":WasmSSAInterfacesIncGen",
         ":WasmSSAOpsIncGen",
         ":WasmSSATypesIncGen",
-        ":WasmSSAInterfacesIncGen",
         "//llvm:Support",
     ],
 )
-
 
 ##---------------------------------------------------------------------------##
 # XeGPU dialect.
@@ -10683,6 +10682,7 @@ cc_library(
         ":AsmParser",
         ":BufferizationDialect",
         ":BufferizationTransforms",
+        ":CommonFolders",
         ":DialectUtils",
         ":FuncDialect",
         ":FunctionInterfaces",
@@ -10706,6 +10706,7 @@ cc_library(
         ":TransformDialectInterfaces",
         ":TransformDialectUtils",
         ":TransformUtils",
+        ":UBDialect",
         ":VectorDialect",
         ":VectorTransforms",
         "//llvm:Support",
@@ -10818,6 +10819,7 @@ cc_library(
         ":TensorUtils",
         ":TilingInterface",
         ":TransformUtils",
+        ":UBDialect",
         ":ValueBoundsOpInterface",
         ":VectorDialect",
         ":VectorToSCF",
