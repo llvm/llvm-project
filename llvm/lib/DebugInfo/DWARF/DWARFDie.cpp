@@ -15,11 +15,12 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFTypePrinter.h"
 #include "llvm/DebugInfo/DWARF/DWARFTypeUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Format.h"
@@ -99,7 +100,7 @@ static void dumpLocationExpr(raw_ostream &OS, const DWARFFormValue &FormValue,
   DataExtractor Data(StringRef((const char *)Expr.data(), Expr.size()),
                      Ctx.isLittleEndian(), 0);
   DWARFExpression DE(Data, U->getAddressByteSize(), U->getFormParams().Format);
-  DWARFExpressionPrinter::print(&DE, OS, DumpOpts, U);
+  printDwarfExpression(&DE, OS, DumpOpts, U);
 }
 
 static DWARFDie resolveReferencedType(DWARFDie D, DWARFFormValue F) {

@@ -238,9 +238,9 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::FoldingSet<ElaboratedType> ElaboratedTypes{
       GeneralTypesLog2InitSize};
   mutable llvm::FoldingSet<DependentNameType> DependentNameTypes;
-  mutable llvm::ContextualFoldingSet<DependentTemplateSpecializationType,
-                                     ASTContext&>
-    DependentTemplateSpecializationTypes;
+  mutable llvm::DenseMap<llvm::FoldingSetNodeID,
+                         DependentTemplateSpecializationType *>
+      DependentTemplateSpecializationTypes;
   mutable llvm::FoldingSet<PackExpansionType> PackExpansionTypes;
   mutable llvm::FoldingSet<ObjCObjectTypeImpl> ObjCObjectTypes;
   mutable llvm::FoldingSet<ObjCObjectPointerType> ObjCObjectPointerTypes;
@@ -276,6 +276,11 @@ class ASTContext : public RefCountedBase<ASTContext> {
 
   mutable llvm::ContextualFoldingSet<ArrayParameterType, ASTContext &>
       ArrayParameterTypes;
+
+  /// Store the unique Type corresponding to each Kind.
+  mutable std::array<Type *,
+                     llvm::to_underlying(PredefinedSugarType::Kind::Last) + 1>
+      PredefinedSugarTypes{};
 
   /// The set of nested name specifiers.
   ///
@@ -488,8 +493,8 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// if possible.
   ///
   /// Not serialized intentionally.
-  llvm::StringMap<const Module *> PrimaryModuleNameMap;
-  llvm::DenseMap<const Module *, const Module *> SameModuleLookupSet;
+  mutable llvm::StringMap<const Module *> PrimaryModuleNameMap;
+  mutable llvm::DenseMap<const Module *, const Module *> SameModuleLookupSet;
 
   static constexpr unsigned ConstantArrayTypesLog2InitSize = 8;
   static constexpr unsigned GeneralTypesLog2InitSize = 9;
@@ -629,9 +634,47 @@ public:
   void setRelocationInfoForCXXRecord(const CXXRecordDecl *,
                                      CXXRecordDeclRelocationInfo);
 
+  /// Examines a given type, and returns whether the type itself
+  /// is address discriminated, or any transitively embedded types
+  /// contain data that is address discriminated. This includes
+  /// implicitly authenticated values like vtable pointers, as well as
+  /// explicitly qualified fields.
+  bool containsAddressDiscriminatedPointerAuth(QualType T) {
+    if (!isPointerAuthenticationAvailable())
+      return false;
+    return findPointerAuthContent(T) != PointerAuthContent::None;
+  }
+
+  /// Examines a given type, and returns whether the type itself
+  /// or any data it transitively contains has a pointer authentication
+  /// schema that is not safely relocatable. e.g. any data or fields
+  /// with address discrimination other than any otherwise similar
+  /// vtable pointers.
+  bool containsNonRelocatablePointerAuth(QualType T) {
+    if (!isPointerAuthenticationAvailable())
+      return false;
+    return findPointerAuthContent(T) ==
+           PointerAuthContent::AddressDiscriminatedData;
+  }
+
 private:
   llvm::DenseMap<const CXXRecordDecl *, CXXRecordDeclRelocationInfo>
       RelocatableClasses;
+
+  // FIXME: store in RecordDeclBitfields in future?
+  enum class PointerAuthContent : uint8_t {
+    None,
+    AddressDiscriminatedVTable,
+    AddressDiscriminatedData
+  };
+
+  // A simple helper function to short circuit pointer auth checks.
+  bool isPointerAuthenticationAvailable() const {
+    return LangOpts.PointerAuthCalls || LangOpts.PointerAuthIntrinsics;
+  }
+  PointerAuthContent findPointerAuthContent(QualType T);
+  llvm::DenseMap<const RecordDecl *, PointerAuthContent>
+      RecordContainsAddressDiscriminatedPointerAuth;
 
   ImportDecl *FirstLocalImport = nullptr;
   ImportDecl *LastLocalImport = nullptr;
@@ -776,7 +819,7 @@ public:
 
   llvm::StringRef backupStr(llvm::StringRef S) const {
     char *Buf = new (*this) char[S.size()];
-    std::copy(S.begin(), S.end(), Buf);
+    llvm::copy(S, Buf);
     return llvm::StringRef(Buf, S.size());
   }
 
@@ -1151,9 +1194,11 @@ public:
   ///
   /// FIXME: The signature may be confusing since `clang::Module` means to
   /// a module fragment or a module unit but not a C++20 module.
-  bool isInSameModule(const Module *M1, const Module *M2);
+  bool isInSameModule(const Module *M1, const Module *M2) const;
 
   TranslationUnitDecl *getTranslationUnitDecl() const {
+    assert(TUDecl->getMostRecentDecl() == TUDecl &&
+           "The active TU is not current one!");
     return TUDecl->getMostRecentDecl();
   }
   void addTranslationUnitDecl() {
@@ -1245,6 +1290,9 @@ public:
   // Implicitly-declared type 'struct _GUID'.
   mutable TagDecl *MSGuidTagDecl = nullptr;
 
+  // Implicitly-declared type 'struct type_info'.
+  mutable TagDecl *MSTypeInfoTagDecl = nullptr;
+
   /// Keep track of CUDA/HIP device-side variables ODR-used by host code.
   /// This does not include extern shared variables used by device host
   /// functions as addresses of shared variables are per warp, therefore
@@ -1288,6 +1336,12 @@ public:
   /// with this AST context, if any.
   ExternalASTSource *getExternalSource() const {
     return ExternalSource.get();
+  }
+
+  /// Retrieve a pointer to the external AST source associated
+  /// with this AST context, if any. Returns as an IntrusiveRefCntPtr.
+  IntrusiveRefCntPtr<ExternalASTSource> getExternalSourcePtr() const {
+    return ExternalSource;
   }
 
   /// Attach an AST mutation listener to the AST context.
@@ -1529,6 +1583,8 @@ public:
   /// and bit count.
   QualType getDependentBitIntType(bool Unsigned, Expr *BitsExpr) const;
 
+  QualType getPredefinedSugarType(PredefinedSugarType::Kind KD) const;
+
   /// Gets the struct used to keep track of the extended descriptor for
   /// pointer to blocks.
   QualType getBlockDescriptorExtendedType() const;
@@ -1706,7 +1762,7 @@ private:
   QualType
   getAutoTypeInternal(QualType DeducedType, AutoTypeKeyword Keyword,
                       bool IsDependent, bool IsPack = false,
-                      ConceptDecl *TypeConstraintConcept = nullptr,
+                      TemplateDecl *TypeConstraintConcept = nullptr,
                       ArrayRef<TemplateArgument> TypeConstraintArgs = {},
                       bool IsCanon = false) const;
 
@@ -1771,7 +1827,7 @@ public:
         NumPositiveBits = std::max({NumPositiveBits, ActiveBits, 1u});
       } else {
         NumNegativeBits =
-            std::max(NumNegativeBits, (unsigned)InitVal.getSignificantBits());
+            std::max(NumNegativeBits, InitVal.getSignificantBits());
       }
 
       MembersRepresentableByInt &= isRepresentableIntegerValue(InitVal, IntTy);
@@ -1926,10 +1982,11 @@ public:
                                  UnaryTransformType::UTTKind UKind) const;
 
   /// C++11 deduced auto type.
-  QualType getAutoType(QualType DeducedType, AutoTypeKeyword Keyword,
-                       bool IsDependent, bool IsPack = false,
-                       ConceptDecl *TypeConstraintConcept = nullptr,
-                       ArrayRef<TemplateArgument> TypeConstraintArgs ={}) const;
+  QualType
+  getAutoType(QualType DeducedType, AutoTypeKeyword Keyword, bool IsDependent,
+              bool IsPack = false,
+              TemplateDecl *TypeConstraintConcept = nullptr,
+              ArrayRef<TemplateArgument> TypeConstraintArgs = {}) const;
 
   /// C++11 deduction pattern for 'auto' type.
   QualType getAutoDeductType() const;
@@ -1961,11 +2018,13 @@ public:
   /// <stddef.h>.
   ///
   /// The sizeof operator requires this (C99 6.5.3.4p4).
-  CanQualType getSizeType() const;
+  QualType getSizeType() const;
+
+  CanQualType getCanonicalSizeType() const;
 
   /// Return the unique signed counterpart of
   /// the integer type corresponding to size_t.
-  CanQualType getSignedSizeType() const;
+  QualType getSignedSizeType() const;
 
   /// Return the unique type for "intmax_t" (C99 7.18.1.5), defined in
   /// <stdint.h>.
@@ -2262,6 +2321,8 @@ public:
     return getTypeDeclType(getObjCSelDecl());
   }
 
+  PointerAuthQualifier getObjCMemberSelTypePtrAuth();
+
   /// Retrieve the typedef declaration corresponding to the predefined
   /// Objective-C 'Class' type.
   TypedefDecl *getObjCClassDecl() const;
@@ -2328,6 +2389,14 @@ public:
   QualType getMSGuidType() const {
     assert(MSGuidTagDecl && "asked for GUID type but MS extensions disabled");
     return getTagDeclType(MSGuidTagDecl);
+  }
+
+  /// Retrieve the implicitly-predeclared 'struct type_info' declaration.
+  TagDecl *getMSTypeInfoTagDecl() const {
+    // Lazily create this type on demand - it's only needed for MS builds.
+    if (!MSTypeInfoTagDecl)
+      MSTypeInfoTagDecl = buildImplicitRecord("type_info", TagTypeKind::Class);
+    return MSTypeInfoTagDecl;
   }
 
   /// Return whether a declaration to a builtin is allowed to be
@@ -2485,15 +2554,6 @@ public:
   /// \note This ignores whether they are target-specific (AltiVec or Neon)
   /// types.
   bool areCompatibleVectorTypes(QualType FirstVec, QualType SecondVec);
-
-  /// Return true if the given types are an SVE builtin and a VectorType that
-  /// is a fixed-length representation of the SVE builtin for a specific
-  /// vector-length.
-  bool areCompatibleSveTypes(QualType FirstType, QualType SecondType);
-
-  /// Return true if the given vector types are lax-compatible SVE vector types,
-  /// false otherwise.
-  bool areLaxCompatibleSveTypes(QualType FirstType, QualType SecondType);
 
   /// Return true if the given types are an RISC-V vector builtin type and a
   /// VectorType that is a fixed-length representation of the RISC-V vector
@@ -2885,10 +2945,14 @@ public:
   NestedNameSpecifier *
   getCanonicalNestedNameSpecifier(NestedNameSpecifier *NNS) const;
 
-  /// Retrieves the default calling convention for the current target.
+  /// Retrieves the default calling convention for the current context.
+  ///
+  /// The context's default calling convention may differ from the current
+  /// target's default calling convention if the -fdefault-calling-conv option
+  /// is used; to get the target's default calling convention, e.g. for built-in
+  /// functions, call getTargetInfo().getDefaultCallingConv() instead.
   CallingConv getDefaultCallingConvention(bool IsVariadic,
-                                          bool IsCXXMethod,
-                                          bool IsBuiltin = false) const;
+                                          bool IsCXXMethod) const;
 
   /// Retrieves the "canonical" template name that refers to a
   /// given template.
@@ -3668,6 +3732,7 @@ public:
   /// authentication policy for the specified record.
   const CXXRecordDecl *
   baseForVTableAuthentication(const CXXRecordDecl *ThisClass);
+
   bool useAbbreviatedThunkName(GlobalDecl VirtualMethodDecl,
                                StringRef MangledName);
 

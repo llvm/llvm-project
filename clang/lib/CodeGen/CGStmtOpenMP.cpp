@@ -713,7 +713,7 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S,
     VLASizeMap[VLASizePair.second.first] = VLASizePair.second.second;
   PGO->assignRegionCounters(GlobalDecl(CD), F);
   CapturedStmtInfo->EmitBody(*this, CD->getBody());
-  (void)LocalScope.ForceCleanup();
+  LocalScope.ForceCleanup();
   FinishFunction(CD->getBodyRBrace());
   if (!NeedWrapperFunction)
     return F;

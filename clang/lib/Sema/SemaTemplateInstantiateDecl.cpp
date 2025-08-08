@@ -527,6 +527,7 @@ static void instantiateOMPDeclareVariantAttr(
 
   SmallVector<Expr *, 8> NothingExprs;
   SmallVector<Expr *, 8> NeedDevicePtrExprs;
+  SmallVector<Expr *, 8> NeedDeviceAddrExprs;
   SmallVector<OMPInteropInfo, 4> AppendArgs;
 
   for (Expr *E : Attr.adjustArgsNothing()) {
@@ -541,14 +542,20 @@ static void instantiateOMPDeclareVariantAttr(
       continue;
     NeedDevicePtrExprs.push_back(ER.get());
   }
+  for (Expr *E : Attr.adjustArgsNeedDeviceAddr()) {
+    ExprResult ER = Subst(E);
+    if (ER.isInvalid())
+      continue;
+    NeedDeviceAddrExprs.push_back(ER.get());
+  }
   for (OMPInteropInfo &II : Attr.appendArgs()) {
     // When prefer_type is implemented for append_args handle them here too.
     AppendArgs.emplace_back(II.IsTarget, II.IsTargetSync);
   }
 
   S.OpenMP().ActOnOpenMPDeclareVariantDirective(
-      FD, E, TI, NothingExprs, NeedDevicePtrExprs, AppendArgs, SourceLocation(),
-      SourceLocation(), Attr.getRange());
+      FD, E, TI, NothingExprs, NeedDevicePtrExprs, NeedDeviceAddrExprs,
+      AppendArgs, SourceLocation(), SourceLocation(), Attr.getRange());
 }
 
 static void instantiateDependentAMDGPUFlatWorkGroupSizeAttr(
@@ -2015,8 +2022,17 @@ Decl *TemplateDeclInstantiator::VisitEnumDecl(EnumDecl *D) {
                                                 DeclarationName());
       if (!NewTI || SemaRef.CheckEnumUnderlyingType(NewTI))
         Enum->setIntegerType(SemaRef.Context.IntTy);
-      else
-        Enum->setIntegerTypeSourceInfo(NewTI);
+      else {
+        // If the underlying type is atomic, we need to adjust the type before
+        // continuing. See C23 6.7.3.3p5 and Sema::ActOnTag(). FIXME: same as
+        // within ActOnTag(), it would be nice to have an easy way to get a
+        // derived TypeSourceInfo which strips qualifiers including the weird
+        // ones like _Atomic where it forms a different type.
+        if (NewTI->getType()->isAtomicType())
+          Enum->setIntegerType(NewTI->getType().getAtomicUnqualifiedType());
+        else
+          Enum->setIntegerTypeSourceInfo(NewTI);
+      }
 
       // C++23 [conv.prom]p4
       // if integral promotion can be applied to its underlying type, a prvalue
@@ -3022,7 +3038,7 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
   LocalInstantiationScope Scope(SemaRef, MergeWithParentScope);
 
   Sema::LambdaScopeForCallOperatorInstantiationRAII LambdaScope(
-      SemaRef, const_cast<CXXMethodDecl *>(D), TemplateArgs, Scope);
+      SemaRef, D, TemplateArgs, Scope);
 
   // Instantiate enclosing template arguments for friends.
   SmallVector<TemplateParameterList *, 4> TempParamLists;
@@ -3768,14 +3784,14 @@ TemplateDeclInstantiator::VisitTemplateTemplateParmDecl(
     Param = TemplateTemplateParmDecl::Create(
         SemaRef.Context, Owner, D->getLocation(),
         D->getDepth() - TemplateArgs.getNumSubstitutedLevels(),
-        D->getPosition(), D->getIdentifier(), D->wasDeclaredWithTypename(),
-        InstParams, ExpandedParams);
+        D->getPosition(), D->getIdentifier(), D->templateParameterKind(),
+        D->wasDeclaredWithTypename(), InstParams, ExpandedParams);
   else
     Param = TemplateTemplateParmDecl::Create(
         SemaRef.Context, Owner, D->getLocation(),
         D->getDepth() - TemplateArgs.getNumSubstitutedLevels(),
         D->getPosition(), D->isParameterPack(), D->getIdentifier(),
-        D->wasDeclaredWithTypename(), InstParams);
+        D->templateParameterKind(), D->wasDeclaredWithTypename(), InstParams);
   if (D->hasDefaultArgument() && !D->defaultArgumentWasInherited()) {
     NestedNameSpecifierLoc QualifierLoc =
         D->getDefaultArgument().getTemplateQualifierLoc();
@@ -5837,6 +5853,8 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     // context seems wrong. Investigate more.
     ActOnFinishFunctionBody(Function, Body.get(), /*IsInstantiation=*/true);
 
+    checkReferenceToTULocalFromOtherTU(Function, PointOfInstantiation);
+
     PerformDependentDiagnostics(PatternDecl, TemplateArgs);
 
     if (auto *Listener = getASTMutationListener())
@@ -6096,7 +6114,8 @@ void Sema::InstantiateVariableInitializer(
   ContextRAII SwitchContext(*this, Var->getDeclContext());
 
   EnterExpressionEvaluationContext Evaluated(
-      *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated, Var);
+      *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated, Var,
+      ExpressionEvaluationContextRecord::EK_VariableInit);
   currentEvaluationContext().InLifetimeExtendingContext =
       parentEvaluationContext().InLifetimeExtendingContext;
   currentEvaluationContext().RebuildDefaultArgOrDefaultInit =

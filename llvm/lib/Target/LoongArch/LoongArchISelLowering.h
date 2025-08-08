@@ -60,6 +60,10 @@ enum NodeType : unsigned {
 
   FTINT,
 
+  // Build and split F64 pair
+  BUILD_PAIR_F64,
+  SPLIT_PAIR_F64,
+
   // Bit counting operations
   CLZ_W,
   CTZ_W,
@@ -314,13 +318,19 @@ public:
   bool isFPImmVLDILegal(const APFloat &Imm, EVT VT) const;
   LegalizeTypeAction getPreferredVectorAction(MVT VT) const override;
 
+  bool SimplifyDemandedBitsForTargetNode(SDValue Op, const APInt &DemandedBits,
+                                         const APInt &DemandedElts,
+                                         KnownBits &Known,
+                                         TargetLoweringOpt &TLO,
+                                         unsigned Depth) const override;
+
 private:
   /// Target-specific function used to lower LoongArch calling conventions.
   typedef bool LoongArchCCAssignFn(const DataLayout &DL, LoongArchABI::ABI ABI,
                                    unsigned ValNo, MVT ValVT,
                                    CCValAssign::LocInfo LocInfo,
                                    ISD::ArgFlagsTy ArgFlags, CCState &State,
-                                   bool IsFixed, bool IsRet, Type *OrigTy);
+                                   bool IsRet, Type *OrigTy);
 
   void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
                         const SmallVectorImpl<ISD::InputArg> &Ins, bool IsRet,
@@ -366,6 +376,7 @@ private:
   SDValue lowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBITREVERSE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSCALAR_TO_VECTOR(SDValue Op, SelectionDAG &DAG) const;

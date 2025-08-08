@@ -152,7 +152,7 @@ void LanaiInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     OS << formatHex(Op.getImm());
   else {
     assert(Op.isExpr() && "Expected an expression");
-    Op.getExpr()->print(OS, &MAI);
+    MAI.printExpr(OS, *Op.getExpr());
   }
 }
 
@@ -165,7 +165,7 @@ void LanaiInstPrinter::printMemImmOperand(const MCInst *MI, unsigned OpNo,
     // Symbolic operand will be lowered to immediate value by linker
     assert(Op.isExpr() && "Expected an expression");
     OS << '[';
-    Op.getExpr()->print(OS, &MAI);
+    MAI.printExpr(OS, *Op.getExpr());
     OS << ']';
   }
 }
@@ -178,7 +178,7 @@ void LanaiInstPrinter::printHi16ImmOperand(const MCInst *MI, unsigned OpNo,
   } else {
     // Symbolic operand will be lowered to immediate value by linker
     assert(Op.isExpr() && "Expected an expression");
-    Op.getExpr()->print(OS, &MAI);
+    MAI.printExpr(OS, *Op.getExpr());
   }
 }
 
@@ -190,7 +190,7 @@ void LanaiInstPrinter::printHi16AndImmOperand(const MCInst *MI, unsigned OpNo,
   } else {
     // Symbolic operand will be lowered to immediate value by linker
     assert(Op.isExpr() && "Expected an expression");
-    Op.getExpr()->print(OS, &MAI);
+    MAI.printExpr(OS, *Op.getExpr());
   }
 }
 
@@ -202,7 +202,7 @@ void LanaiInstPrinter::printLo16AndImmOperand(const MCInst *MI, unsigned OpNo,
   } else {
     // Symbolic operand will be lowered to immediate value by linker
     assert(Op.isExpr() && "Expected an expression");
-    Op.getExpr()->print(OS, &MAI);
+    MAI.printExpr(OS, *Op.getExpr());
   }
 }
 
@@ -227,7 +227,7 @@ static void printMemoryImmediateOffset(const MCAsmInfo &MAI,
     assert(isInt<SizeInBits>(OffsetOp.getImm()) && "Constant value truncated");
     OS << OffsetOp.getImm();
   } else
-    OffsetOp.getExpr()->print(OS, &MAI);
+    MAI.printExpr(OS, *OffsetOp.getExpr());
 }
 
 void LanaiInstPrinter::printMemRiOperand(const MCInst *MI, int OpNo,

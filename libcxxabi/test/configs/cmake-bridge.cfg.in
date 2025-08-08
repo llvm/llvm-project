@@ -32,7 +32,7 @@ config.substitutions.append(('%{llvm}', '@LLVM_MAIN_SRC_DIR@'))
 config.substitutions.append(('%{install-prefix}', '@LIBCXXABI_TESTING_INSTALL_PREFIX@'))
 config.substitutions.append(('%{include}', '@LIBCXXABI_TESTING_INSTALL_PREFIX@/include'))
 config.substitutions.append(('%{cxx-include}', '@LIBCXXABI_TESTING_INSTALL_PREFIX@/@LIBCXXABI_INSTALL_INCLUDE_DIR@'))
-config.substitutions.append(('%{cxx-target-include}', '@LIBCXXABI_TESTING_INSTALL_PREFIX@/include/%{triple}/c++/v1'))
+config.substitutions.append(('%{cxx-target-include}', '@LIBCXXABI_TESTING_INSTALL_PREFIX@/@LIBCXXABI_INSTALL_INCLUDE_TARGET_DIR@'))
 config.substitutions.append(('%{lib}', '@LIBCXXABI_TESTING_INSTALL_PREFIX@/@LIBCXXABI_INSTALL_LIBRARY_DIR@'))
 config.substitutions.append(('%{benchmark_flags}', ''))
 

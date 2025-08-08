@@ -30,11 +30,11 @@ template <>
 struct DenseMapInfo<clang::tidy::RenamerClangTidyCheck::NamingCheckId> {
   using NamingCheckId = clang::tidy::RenamerClangTidyCheck::NamingCheckId;
 
-  static inline NamingCheckId getEmptyKey() {
+  static NamingCheckId getEmptyKey() {
     return {DenseMapInfo<clang::SourceLocation>::getEmptyKey(), "EMPTY"};
   }
 
-  static inline NamingCheckId getTombstoneKey() {
+  static NamingCheckId getTombstoneKey() {
     return {DenseMapInfo<clang::SourceLocation>::getTombstoneKey(),
             "TOMBSTONE"};
   }
@@ -282,7 +282,8 @@ public:
 
   bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc Loc) {
     if (const NestedNameSpecifier *Spec = Loc.getNestedNameSpecifier()) {
-      if (const NamespaceDecl *Decl = Spec->getAsNamespace())
+      if (const auto *Decl =
+              dyn_cast_if_present<NamespaceDecl>(Spec->getAsNamespace()))
         Check->addUsage(Decl, Loc.getLocalSourceRange(), SM);
     }
 
@@ -431,6 +432,10 @@ RenamerClangTidyCheck::addUsage(
   if (FixLocation.isInvalid())
     return {NamingCheckFailures.end(), false};
 
+  // Skip if in system system header
+  if (SourceMgr.isInSystemHeader(FixLocation))
+    return {NamingCheckFailures.end(), false};
+
   auto EmplaceResult = NamingCheckFailures.try_emplace(FailureId);
   NamingCheckFailure &Failure = EmplaceResult.first->second;
 
@@ -454,6 +459,9 @@ RenamerClangTidyCheck::addUsage(
 void RenamerClangTidyCheck::addUsage(const NamedDecl *Decl,
                                      SourceRange UsageRange,
                                      const SourceManager &SourceMgr) {
+  if (SourceMgr.isInSystemHeader(Decl->getLocation()))
+    return;
+
   if (hasNoName(Decl))
     return;
 

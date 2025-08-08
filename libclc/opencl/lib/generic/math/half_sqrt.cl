@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_half_sqrt.h>
-#include <clc/opencl/clc.h>
+#include <clc/opencl/math/half_sqrt.h>
 
 #define __FLOAT_ONLY
 #define FUNCTION half_sqrt

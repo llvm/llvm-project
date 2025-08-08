@@ -10,6 +10,7 @@
 #define FORTRAN_EVALUATE_TOOLS_H_
 
 #include "traverse.h"
+#include "flang/Common/enum-set.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/template.h"
 #include "flang/Common/unwrap.h"
@@ -490,26 +491,30 @@ template <typename A> std::optional<CoarrayRef> ExtractCoarrayRef(const A &x) {
   }
 }
 
-struct ExtractSubstringHelper {
-  template <typename T> static std::optional<Substring> visit(T &&) {
+template <typename TARGET> struct ExtractFromExprDesignatorHelper {
+  template <typename T> static std::optional<TARGET> visit(T &&) {
     return std::nullopt;
   }
 
-  static std::optional<Substring> visit(const Substring &e) { return e; }
+  static std::optional<TARGET> visit(const TARGET &t) { return t; }
 
   template <typename T>
-  static std::optional<Substring> visit(const Designator<T> &e) {
+  static std::optional<TARGET> visit(const Designator<T> &e) {
     return common::visit([](auto &&s) { return visit(s); }, e.u);
   }
 
-  template <typename T>
-  static std::optional<Substring> visit(const Expr<T> &e) {
+  template <typename T> static std::optional<TARGET> visit(const Expr<T> &e) {
     return common::visit([](auto &&s) { return visit(s); }, e.u);
   }
 };
 
 template <typename A> std::optional<Substring> ExtractSubstring(const A &x) {
-  return ExtractSubstringHelper::visit(x);
+  return ExtractFromExprDesignatorHelper<Substring>::visit(x);
+}
+
+template <typename A>
+std::optional<ComplexPart> ExtractComplexPart(const A &x) {
+  return ExtractFromExprDesignatorHelper<ComplexPart>::visit(x);
 }
 
 // If an expression is simply a whole symbol data designator,
@@ -1282,17 +1287,6 @@ bool CheckForCoindexedObject(parser::ContextualMessages &,
     const std::optional<ActualArgument> &, const std::string &procName,
     const std::string &argName);
 
-inline bool CanCUDASymbolHaveSaveAttr(const Symbol &sym) {
-  if (const auto *details =
-          sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
-    if (details->cudaDataAttr() &&
-        *details->cudaDataAttr() != common::CUDADataAttr::Unified) {
-      return false;
-    }
-  }
-  return true;
-}
-
 inline bool IsCUDADeviceSymbol(const Symbol &sym) {
   if (const auto *details =
           sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
@@ -1366,24 +1360,164 @@ inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
 
 /// Check if the expression is a mix of host and device variables that require
 /// implicit data transfer.
-inline bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr) {
-  unsigned hostSymbols{0};
-  unsigned deviceSymbols{0};
-  for (const Symbol &sym : CollectCudaSymbols(expr)) {
-    if (IsCUDADeviceSymbol(sym)) {
-      ++deviceSymbols;
-    } else {
-      if (sym.owner().IsDerivedType()) {
-        if (IsCUDADeviceSymbol(sym.owner().GetSymbol()->GetUltimate())) {
-          ++deviceSymbols;
-        }
-      }
-      ++hostSymbols;
-    }
+bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr);
+
+// Checks whether the symbol on the LHS is present in the RHS expression.
+bool CheckForSymbolMatch(const Expr<SomeType> *lhs, const Expr<SomeType> *rhs);
+
+namespace operation {
+
+enum class Operator {
+  Unknown,
+  Add,
+  And,
+  Associated,
+  Call,
+  Constant,
+  Convert,
+  Div,
+  Eq,
+  Eqv,
+  False,
+  Ge,
+  Gt,
+  Identity,
+  Intrinsic,
+  Le,
+  Lt,
+  Max,
+  Min,
+  Mul,
+  Ne,
+  Neqv,
+  Not,
+  Or,
+  Pow,
+  Resize, // Convert within the same TypeCategory
+  Sub,
+  True,
+};
+
+using OperatorSet = common::EnumSet<Operator, 32>;
+
+std::string ToString(Operator op);
+
+template <int Kind> Operator OperationCode(const LogicalOperation<Kind> &op) {
+  switch (op.logicalOperator) {
+  case common::LogicalOperator::And:
+    return Operator::And;
+  case common::LogicalOperator::Or:
+    return Operator::Or;
+  case common::LogicalOperator::Eqv:
+    return Operator::Eqv;
+  case common::LogicalOperator::Neqv:
+    return Operator::Neqv;
+  case common::LogicalOperator::Not:
+    return Operator::Not;
   }
-  bool hasConstant{HasConstant(expr)};
-  return (hasConstant || (hostSymbols > 0)) && deviceSymbols > 0;
+  return Operator::Unknown;
 }
+
+Operator OperationCode(const Relational<SomeType> &op);
+
+template <typename T> Operator OperationCode(const Relational<T> &op) {
+  switch (op.opr) {
+  case common::RelationalOperator::LT:
+    return Operator::Lt;
+  case common::RelationalOperator::LE:
+    return Operator::Le;
+  case common::RelationalOperator::EQ:
+    return Operator::Eq;
+  case common::RelationalOperator::NE:
+    return Operator::Ne;
+  case common::RelationalOperator::GE:
+    return Operator::Ge;
+  case common::RelationalOperator::GT:
+    return Operator::Gt;
+  }
+  return Operator::Unknown;
+}
+
+template <typename T> Operator OperationCode(const Add<T> &op) {
+  return Operator::Add;
+}
+
+template <typename T> Operator OperationCode(const Subtract<T> &op) {
+  return Operator::Sub;
+}
+
+template <typename T> Operator OperationCode(const Multiply<T> &op) {
+  return Operator::Mul;
+}
+
+template <typename T> Operator OperationCode(const Divide<T> &op) {
+  return Operator::Div;
+}
+
+template <typename T> Operator OperationCode(const Power<T> &op) {
+  return Operator::Pow;
+}
+
+template <typename T> Operator OperationCode(const RealToIntPower<T> &op) {
+  return Operator::Pow;
+}
+
+template <typename T, common::TypeCategory C>
+Operator OperationCode(const Convert<T, C> &op) {
+  if constexpr (C == T::category) {
+    return Operator::Resize;
+  } else {
+    return Operator::Convert;
+  }
+}
+
+template <typename T> Operator OperationCode(const Extremum<T> &op) {
+  if (op.ordering == Ordering::Greater) {
+    return Operator::Max;
+  } else {
+    return Operator::Min;
+  }
+}
+
+template <typename T> Operator OperationCode(const Constant<T> &x) {
+  return Operator::Constant;
+}
+
+template <typename T> Operator OperationCode(const Designator<T> &x) {
+  return Operator::Identity;
+}
+
+template <typename T> Operator OperationCode(const T &) {
+  return Operator::Unknown;
+}
+
+Operator OperationCode(const ProcedureDesignator &proc);
+
+} // namespace operation
+
+// Return information about the top-level operation (ignoring parentheses):
+// the operation code and the list of arguments.
+std::pair<operation::Operator, std::vector<Expr<SomeType>>>
+GetTopLevelOperation(const Expr<SomeType> &expr);
+
+// Return information about the top-level operation (ignoring parentheses, and
+// resizing converts)
+std::pair<operation::Operator, std::vector<Expr<SomeType>>>
+GetTopLevelOperationIgnoreResizing(const Expr<SomeType> &expr);
+
+// Check if expr is same as x, or a sequence of Convert operations on x.
+bool IsSameOrConvertOf(const Expr<SomeType> &expr, const Expr<SomeType> &x);
+
+// Check if the Variable appears as a subexpression of the expression.
+bool IsVarSubexpressionOf(
+    const Expr<SomeType> &var, const Expr<SomeType> &super);
+
+// Strip away any top-level Convert operations (if any exist) and return
+// the input value. A ComplexConstructor(x, 0) is also considered as a
+// convert operation.
+// If the input is not Operation, Designator, FunctionRef or Constant,
+// it returns std::nullopt.
+std::optional<Expr<SomeType>> GetConvertInput(const Expr<SomeType> &x);
 
 } // namespace Fortran::evaluate
 
@@ -1423,6 +1557,7 @@ bool IsExtensibleType(const DerivedTypeSpec *);
 bool IsSequenceOrBindCType(const DerivedTypeSpec *);
 bool IsBuiltinDerivedType(const DerivedTypeSpec *derived, const char *name);
 bool IsBuiltinCPtr(const Symbol &);
+bool IsFromBuiltinModule(const Symbol &);
 bool IsEventType(const DerivedTypeSpec *);
 bool IsLockType(const DerivedTypeSpec *);
 bool IsNotifyType(const DerivedTypeSpec *);

@@ -12,12 +12,12 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=bdver1 | FileCheck %s --check-prefixes=BMI
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=bdver2 | FileCheck %s --check-prefixes=BMI
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=bdver3 | FileCheck %s --check-prefixes=BMI
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=bdver4 | FileCheck %s --check-prefixes=BMI2
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver1 | FileCheck %s --check-prefixes=BMI2
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver2 | FileCheck %s --check-prefixes=BMI2
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver3 | FileCheck %s --check-prefixes=BMI2
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver4 | FileCheck %s --check-prefixes=BMI2
-; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver5 | FileCheck %s --check-prefixes=BMI2
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=bdver4 | FileCheck %s --check-prefixes=BMI2-SLOW
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver1 | FileCheck %s --check-prefixes=BMI2-SLOW
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver2 | FileCheck %s --check-prefixes=BMI2-SLOW
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver3 | FileCheck %s --check-prefixes=BMI2-FAST
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver4 | FileCheck %s --check-prefixes=BMI2-FAST
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver5 | FileCheck %s --check-prefixes=BMI2-FAST
 
 ; Verify that for the X86_64 processors that are known to have poor latency
 ; double precision shift instructions we do not generate 'shld' or 'shrd'
@@ -53,15 +53,23 @@ define i64 @lshift(i64 %a, i64 %b, i32 %c) nounwind readnone {
 ; BMI-NEXT:    orq %rdi, %rax
 ; BMI-NEXT:    retq
 ;
-; BMI2-LABEL: lshift:
-; BMI2:       # %bb.0: # %entry
-; BMI2-NEXT:    # kill: def $edx killed $edx def $rdx
-; BMI2-NEXT:    shlxq %rdx, %rdi, %rcx
-; BMI2-NEXT:    notb %dl
-; BMI2-NEXT:    shrq %rsi
-; BMI2-NEXT:    shrxq %rdx, %rsi, %rax
-; BMI2-NEXT:    orq %rcx, %rax
-; BMI2-NEXT:    retq
+; BMI2-SLOW-LABEL: lshift:
+; BMI2-SLOW:       # %bb.0: # %entry
+; BMI2-SLOW-NEXT:    # kill: def $edx killed $edx def $rdx
+; BMI2-SLOW-NEXT:    shlxq %rdx, %rdi, %rcx
+; BMI2-SLOW-NEXT:    notb %dl
+; BMI2-SLOW-NEXT:    shrq %rsi
+; BMI2-SLOW-NEXT:    shrxq %rdx, %rsi, %rax
+; BMI2-SLOW-NEXT:    orq %rcx, %rax
+; BMI2-SLOW-NEXT:    retq
+;
+; BMI2-FAST-LABEL: lshift:
+; BMI2-FAST:       # %bb.0: # %entry
+; BMI2-FAST-NEXT:    movl %edx, %ecx
+; BMI2-FAST-NEXT:    movq %rdi, %rax
+; BMI2-FAST-NEXT:    # kill: def $cl killed $cl killed $ecx
+; BMI2-FAST-NEXT:    shldq %cl, %rsi, %rax
+; BMI2-FAST-NEXT:    retq
 entry:
   %sh_prom = zext i32 %c to i64
   %shl = shl i64 %a, %sh_prom
@@ -100,15 +108,23 @@ define i64 @rshift(i64 %a, i64 %b, i32 %c) nounwind readnone {
 ; BMI-NEXT:    orq %rdi, %rax
 ; BMI-NEXT:    retq
 ;
-; BMI2-LABEL: rshift:
-; BMI2:       # %bb.0: # %entry
-; BMI2-NEXT:    # kill: def $edx killed $edx def $rdx
-; BMI2-NEXT:    shrxq %rdx, %rdi, %rcx
-; BMI2-NEXT:    notb %dl
-; BMI2-NEXT:    addq %rsi, %rsi
-; BMI2-NEXT:    shlxq %rdx, %rsi, %rax
-; BMI2-NEXT:    orq %rcx, %rax
-; BMI2-NEXT:    retq
+; BMI2-SLOW-LABEL: rshift:
+; BMI2-SLOW:       # %bb.0: # %entry
+; BMI2-SLOW-NEXT:    # kill: def $edx killed $edx def $rdx
+; BMI2-SLOW-NEXT:    shrxq %rdx, %rdi, %rcx
+; BMI2-SLOW-NEXT:    notb %dl
+; BMI2-SLOW-NEXT:    addq %rsi, %rsi
+; BMI2-SLOW-NEXT:    shlxq %rdx, %rsi, %rax
+; BMI2-SLOW-NEXT:    orq %rcx, %rax
+; BMI2-SLOW-NEXT:    retq
+;
+; BMI2-FAST-LABEL: rshift:
+; BMI2-FAST:       # %bb.0: # %entry
+; BMI2-FAST-NEXT:    movl %edx, %ecx
+; BMI2-FAST-NEXT:    movq %rdi, %rax
+; BMI2-FAST-NEXT:    # kill: def $cl killed $cl killed $ecx
+; BMI2-FAST-NEXT:    shrdq %cl, %rsi, %rax
+; BMI2-FAST-NEXT:    retq
 entry:
   %sh_prom = zext i32 %c to i64
   %shr = lshr i64 %a, %sh_prom

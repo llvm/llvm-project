@@ -1,0 +1,16 @@
+loadable_module("CGTestPlugin") {
+  # Put plugin next to the unit test executable.
+  output_dir = "$target_out_dir/.."
+
+  sources = [
+    "Plugin.cpp",
+    "CodeGenTestPass.cpp",
+  ]
+
+  if (host_os != "mac" && host_os != "win") {
+    # The GN build currently doesn't globally pass -fPIC, but that's
+    # needed for building .so files on ELF.  Just pass it manually
+    # for loadable_modules for now.
+    cflags = [ "-fPIC" ]
+  }
+}

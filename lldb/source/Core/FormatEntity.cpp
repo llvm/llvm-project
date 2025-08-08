@@ -128,6 +128,7 @@ constexpr Definition g_function_child_entries[] = {
     Definition("prefix", EntryType::FunctionPrefix),
     Definition("scope", EntryType::FunctionScope),
     Definition("basename", EntryType::FunctionBasename),
+    Definition("name-qualifiers", EntryType::FunctionNameQualifiers),
     Definition("template-arguments", EntryType::FunctionTemplateArguments),
     Definition("formatted-arguments", EntryType::FunctionFormattedArguments),
     Definition("return-left", EntryType::FunctionReturnLeft),
@@ -390,6 +391,7 @@ const char *FormatEntity::Entry::TypeToCString(Type t) {
     ENUM_TO_CSTR(FunctionPrefix);
     ENUM_TO_CSTR(FunctionScope);
     ENUM_TO_CSTR(FunctionBasename);
+    ENUM_TO_CSTR(FunctionNameQualifiers);
     ENUM_TO_CSTR(FunctionTemplateArguments);
     ENUM_TO_CSTR(FunctionFormattedArguments);
     ENUM_TO_CSTR(FunctionReturnLeft);
@@ -470,9 +472,7 @@ static bool DumpAddressAndContent(Stream &s, const SymbolContext *sc,
                                   bool print_file_addr_or_load_addr) {
   Target *target = Target::GetTargetFromContexts(exe_ctx, sc);
 
-  addr_t vaddr = LLDB_INVALID_ADDRESS;
-  if (target && target->HasLoadedSections())
-    vaddr = addr.GetLoadAddress(target);
+  addr_t vaddr = addr.GetLoadAddress(target);
   if (vaddr == LLDB_INVALID_ADDRESS)
     vaddr = addr.GetFileAddress();
   if (vaddr == LLDB_INVALID_ADDRESS)
@@ -1282,7 +1282,9 @@ static bool FormatFunctionNameForLanguage(Stream &s,
     return false;
 
   FormatEntity::Entry format = language_plugin->GetFunctionNameFormat();
-  if (!format)
+
+  // Bail on invalid or empty format.
+  if (!format || format == FormatEntity::Entry(Entry::Type::Root))
     return false;
 
   StreamString name_stream;
@@ -1842,6 +1844,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
   case Entry::Type::FunctionPrefix:
   case Entry::Type::FunctionScope:
   case Entry::Type::FunctionBasename:
+  case Entry::Type::FunctionNameQualifiers:
   case Entry::Type::FunctionTemplateArguments:
   case Entry::Type::FunctionFormattedArguments:
   case Entry::Type::FunctionReturnRight:

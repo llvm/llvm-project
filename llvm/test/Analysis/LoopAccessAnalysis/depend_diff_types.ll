@@ -129,16 +129,8 @@ define void @neg_dist_dep_type_size_equivalence(ptr nocapture %vec, i64 %n) {
 ; CHECK-LABEL: 'neg_dist_dep_type_size_equivalence'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:  Backward loop carried data dependence that prevents store-to-load forwarding.
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            %ld.f64 = load double, ptr %gep.iv, align 8 ->
-; CHECK-NEXT:            store i32 %ld.i64.i32, ptr %gep.iv.n.i64, align 8
-; CHECK-EMPTY:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            %ld.i64 = load i64, ptr %gep.iv, align 8 ->
-; CHECK-NEXT:            store i32 %ld.i64.i32, ptr %gep.iv.n.i64, align 8
-; CHECK-EMPTY:
 ; CHECK-NEXT:        BackwardVectorizableButPreventsForwarding:
 ; CHECK-NEXT:            %ld.f64 = load double, ptr %gep.iv, align 8 ->
 ; CHECK-NEXT:            store double %val, ptr %gep.iv.101.i64, align 8
