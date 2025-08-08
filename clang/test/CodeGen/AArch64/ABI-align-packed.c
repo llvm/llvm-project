@@ -72,9 +72,9 @@ __attribute__((noinline)) void named_arg_non_packed_struct(double d0, double d1,
 // CHECK-SAME: (double [[D0:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[D3:%.*]], double [[D4:%.*]], double [[D5:%.*]], double [[D6:%.*]], double [[D7:%.*]], double [[D8:%.*]], ...) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VL:%.*]] = alloca [[STRUCT___VA_LIST:%.*]], align 8
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6:[0-9]+]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[VL]]) #[[ATTR6:[0-9]+]]
 // CHECK-NEXT:    call void @llvm.va_start.p0(ptr nonnull [[VL]])
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 void variadic_non_packed_struct(double d0, double d1, double d2, double d3,
                                  double d4, double d5, double d6, double d7,
@@ -89,7 +89,7 @@ void variadic_non_packed_struct(double d0, double d1, double d2, double d3,
 // CHECK-SAME: () local_unnamed_addr #[[ATTR4:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[S_NON_PACKED_STRUCT:%.*]] = alloca [[STRUCT_NON_PACKED_STRUCT:%.*]], align 16
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr nonnull [[S_NON_PACKED_STRUCT]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[S_NON_PACKED_STRUCT]]) #[[ATTR6]]
 // CHECK-NEXT:    call void (i32, ...) @init(i32 noundef 1, ptr noundef nonnull [[S_NON_PACKED_STRUCT]]) #[[ATTR6]]
 // CHECK-NEXT:    [[DOTFCA_0_LOAD:%.*]] = load <8 x i16>, ptr [[S_NON_PACKED_STRUCT]], align 16
 // CHECK-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue [1 x <8 x i16>] poison, <8 x i16> [[DOTFCA_0_LOAD]], 0
@@ -97,7 +97,7 @@ void variadic_non_packed_struct(double d0, double d1, double d2, double d3,
 // CHECK-NEXT:    [[DOTFCA_0_LOAD3:%.*]] = load <8 x i16>, ptr [[S_NON_PACKED_STRUCT]], align 16
 // CHECK-NEXT:    [[DOTFCA_0_INSERT4:%.*]] = insertvalue [1 x <8 x i16>] poison, <8 x i16> [[DOTFCA_0_LOAD3]], 0
 // CHECK-NEXT:    call void (double, double, double, double, double, double, double, double, double, ...) @variadic_non_packed_struct(double poison, double poison, double poison, double poison, double poison, double poison, double poison, double poison, double poison, [1 x <8 x i16>] alignstack(16) [[DOTFCA_0_INSERT4]])
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr nonnull [[S_NON_PACKED_STRUCT]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[S_NON_PACKED_STRUCT]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 void test_non_packed_struct() {
     struct non_packed_struct s_non_packed_struct;
@@ -127,9 +127,9 @@ __attribute__((noinline)) void named_arg_packed_struct(double d0, double d1, dou
 // CHECK-SAME: (double [[D0:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[D3:%.*]], double [[D4:%.*]], double [[D5:%.*]], double [[D6:%.*]], double [[D7:%.*]], double [[D8:%.*]], ...) local_unnamed_addr #[[ATTR1]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VL:%.*]] = alloca [[STRUCT___VA_LIST:%.*]], align 8
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    call void @llvm.va_start.p0(ptr nonnull [[VL]])
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 void variadic_packed_struct(double d0, double d1, double d2, double d3,
                                  double d4, double d5, double d6, double d7,
@@ -144,7 +144,7 @@ void variadic_packed_struct(double d0, double d1, double d2, double d3,
 // CHECK-SAME: () local_unnamed_addr #[[ATTR4]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[S_PACKED_STRUCT:%.*]] = alloca [[STRUCT_PACKED_STRUCT:%.*]], align 16
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr nonnull [[S_PACKED_STRUCT]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[S_PACKED_STRUCT]]) #[[ATTR6]]
 // CHECK-NEXT:    call void (i32, ...) @init(i32 noundef 1, ptr noundef nonnull [[S_PACKED_STRUCT]]) #[[ATTR6]]
 // CHECK-NEXT:    [[DOTFCA_0_LOAD:%.*]] = load <8 x i16>, ptr [[S_PACKED_STRUCT]], align 16
 // CHECK-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue [1 x <8 x i16>] poison, <8 x i16> [[DOTFCA_0_LOAD]], 0
@@ -152,7 +152,7 @@ void variadic_packed_struct(double d0, double d1, double d2, double d3,
 // CHECK-NEXT:    [[DOTFCA_0_LOAD3:%.*]] = load <8 x i16>, ptr [[S_PACKED_STRUCT]], align 16
 // CHECK-NEXT:    [[DOTFCA_0_INSERT4:%.*]] = insertvalue [1 x <8 x i16>] poison, <8 x i16> [[DOTFCA_0_LOAD3]], 0
 // CHECK-NEXT:    call void (double, double, double, double, double, double, double, double, double, ...) @variadic_packed_struct(double poison, double poison, double poison, double poison, double poison, double poison, double poison, double poison, double poison, [1 x <8 x i16>] alignstack(8) [[DOTFCA_0_INSERT4]])
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr nonnull [[S_PACKED_STRUCT]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[S_PACKED_STRUCT]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 void test_packed_struct() {
     struct packed_struct s_packed_struct;
@@ -182,9 +182,9 @@ __attribute__((noinline)) void named_arg_packed_member(double d0, double d1, dou
 // CHECK-SAME: (double [[D0:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[D3:%.*]], double [[D4:%.*]], double [[D5:%.*]], double [[D6:%.*]], double [[D7:%.*]], double [[D8:%.*]], ...) local_unnamed_addr #[[ATTR1]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VL:%.*]] = alloca [[STRUCT___VA_LIST:%.*]], align 8
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    call void @llvm.va_start.p0(ptr nonnull [[VL]])
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 void variadic_packed_member(double d0, double d1, double d2, double d3,
                                  double d4, double d5, double d6, double d7,
@@ -199,7 +199,7 @@ void variadic_packed_member(double d0, double d1, double d2, double d3,
 // CHECK-SAME: () local_unnamed_addr #[[ATTR4]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[S_PACKED_MEMBER:%.*]] = alloca [[STRUCT_PACKED_MEMBER:%.*]], align 16
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr nonnull [[S_PACKED_MEMBER]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[S_PACKED_MEMBER]]) #[[ATTR6]]
 // CHECK-NEXT:    call void (i32, ...) @init(i32 noundef 1, ptr noundef nonnull [[S_PACKED_MEMBER]]) #[[ATTR6]]
 // CHECK-NEXT:    [[DOTFCA_0_LOAD:%.*]] = load <8 x i16>, ptr [[S_PACKED_MEMBER]], align 16
 // CHECK-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue [1 x <8 x i16>] poison, <8 x i16> [[DOTFCA_0_LOAD]], 0
@@ -207,7 +207,7 @@ void variadic_packed_member(double d0, double d1, double d2, double d3,
 // CHECK-NEXT:    [[DOTFCA_0_LOAD3:%.*]] = load <8 x i16>, ptr [[S_PACKED_MEMBER]], align 16
 // CHECK-NEXT:    [[DOTFCA_0_INSERT4:%.*]] = insertvalue [1 x <8 x i16>] poison, <8 x i16> [[DOTFCA_0_LOAD3]], 0
 // CHECK-NEXT:    call void (double, double, double, double, double, double, double, double, double, ...) @variadic_packed_member(double poison, double poison, double poison, double poison, double poison, double poison, double poison, double poison, double poison, [1 x <8 x i16>] alignstack(8) [[DOTFCA_0_INSERT4]])
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr nonnull [[S_PACKED_MEMBER]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[S_PACKED_MEMBER]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 void test_packed_member() {
     struct packed_member s_packed_member;
@@ -237,9 +237,9 @@ __attribute__((noinline)) void named_arg_aligned_struct_8(double d0, double d1, 
 // CHECK-SAME: (double [[D0:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[D3:%.*]], double [[D4:%.*]], double [[D5:%.*]], double [[D6:%.*]], double [[D7:%.*]], double [[D8:%.*]], ...) local_unnamed_addr #[[ATTR1]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VL:%.*]] = alloca [[STRUCT___VA_LIST:%.*]], align 8
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    call void @llvm.va_start.p0(ptr nonnull [[VL]])
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 void variadic_aligned_struct_8(double d0, double d1, double d2, double d3,
                                  double d4, double d5, double d6, double d7,
@@ -254,7 +254,7 @@ void variadic_aligned_struct_8(double d0, double d1, double d2, double d3,
 // CHECK-SAME: () local_unnamed_addr #[[ATTR4]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[S_ALIGNED_STRUCT_8:%.*]] = alloca [[STRUCT_ALIGNED_STRUCT_8:%.*]], align 16
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr nonnull [[S_ALIGNED_STRUCT_8]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[S_ALIGNED_STRUCT_8]]) #[[ATTR6]]
 // CHECK-NEXT:    call void (i32, ...) @init(i32 noundef 1, ptr noundef nonnull [[S_ALIGNED_STRUCT_8]]) #[[ATTR6]]
 // CHECK-NEXT:    [[DOTFCA_0_LOAD:%.*]] = load <8 x i16>, ptr [[S_ALIGNED_STRUCT_8]], align 16
 // CHECK-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue [1 x <8 x i16>] poison, <8 x i16> [[DOTFCA_0_LOAD]], 0
@@ -262,7 +262,7 @@ void variadic_aligned_struct_8(double d0, double d1, double d2, double d3,
 // CHECK-NEXT:    [[DOTFCA_0_LOAD3:%.*]] = load <8 x i16>, ptr [[S_ALIGNED_STRUCT_8]], align 16
 // CHECK-NEXT:    [[DOTFCA_0_INSERT4:%.*]] = insertvalue [1 x <8 x i16>] poison, <8 x i16> [[DOTFCA_0_LOAD3]], 0
 // CHECK-NEXT:    call void (double, double, double, double, double, double, double, double, double, ...) @variadic_aligned_struct_8(double poison, double poison, double poison, double poison, double poison, double poison, double poison, double poison, double poison, [1 x <8 x i16>] alignstack(16) [[DOTFCA_0_INSERT4]])
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr nonnull [[S_ALIGNED_STRUCT_8]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[S_ALIGNED_STRUCT_8]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 void test_aligned_struct_8() {
     struct aligned_struct_8 s_aligned_struct_8;
@@ -292,9 +292,9 @@ __attribute__((noinline)) void named_arg_aligned_member_8(double d0, double d1, 
 // CHECK-SAME: (double [[D0:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[D3:%.*]], double [[D4:%.*]], double [[D5:%.*]], double [[D6:%.*]], double [[D7:%.*]], double [[D8:%.*]], ...) local_unnamed_addr #[[ATTR1]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VL:%.*]] = alloca [[STRUCT___VA_LIST:%.*]], align 8
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    call void @llvm.va_start.p0(ptr nonnull [[VL]])
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 void variadic_aligned_member_8(double d0, double d1, double d2, double d3,
                                  double d4, double d5, double d6, double d7,
@@ -309,7 +309,7 @@ void variadic_aligned_member_8(double d0, double d1, double d2, double d3,
 // CHECK-SAME: () local_unnamed_addr #[[ATTR4]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[S_ALIGNED_MEMBER_8:%.*]] = alloca [[STRUCT_ALIGNED_MEMBER_8:%.*]], align 16
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr nonnull [[S_ALIGNED_MEMBER_8]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[S_ALIGNED_MEMBER_8]]) #[[ATTR6]]
 // CHECK-NEXT:    call void (i32, ...) @init(i32 noundef 1, ptr noundef nonnull [[S_ALIGNED_MEMBER_8]]) #[[ATTR6]]
 // CHECK-NEXT:    [[DOTFCA_0_LOAD:%.*]] = load <8 x i16>, ptr [[S_ALIGNED_MEMBER_8]], align 16
 // CHECK-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue [1 x <8 x i16>] poison, <8 x i16> [[DOTFCA_0_LOAD]], 0
@@ -317,7 +317,7 @@ void variadic_aligned_member_8(double d0, double d1, double d2, double d3,
 // CHECK-NEXT:    [[DOTFCA_0_LOAD3:%.*]] = load <8 x i16>, ptr [[S_ALIGNED_MEMBER_8]], align 16
 // CHECK-NEXT:    [[DOTFCA_0_INSERT4:%.*]] = insertvalue [1 x <8 x i16>] poison, <8 x i16> [[DOTFCA_0_LOAD3]], 0
 // CHECK-NEXT:    call void (double, double, double, double, double, double, double, double, double, ...) @variadic_aligned_member_8(double poison, double poison, double poison, double poison, double poison, double poison, double poison, double poison, double poison, [1 x <8 x i16>] alignstack(16) [[DOTFCA_0_INSERT4]])
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr nonnull [[S_ALIGNED_MEMBER_8]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[S_ALIGNED_MEMBER_8]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 void test_aligned_member_8() {
     struct aligned_member_8 s_aligned_member_8;
@@ -347,9 +347,9 @@ __attribute__((noinline)) void named_arg_pragma_packed_struct_8(double d0, doubl
 // CHECK-SAME: (double [[D0:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[D3:%.*]], double [[D4:%.*]], double [[D5:%.*]], double [[D6:%.*]], double [[D7:%.*]], double [[D8:%.*]], ...) local_unnamed_addr #[[ATTR1]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VL:%.*]] = alloca [[STRUCT___VA_LIST:%.*]], align 8
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    call void @llvm.va_start.p0(ptr nonnull [[VL]])
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 void variadic_pragma_packed_struct_8(double d0, double d1, double d2, double d3,
                                  double d4, double d5, double d6, double d7,
@@ -364,7 +364,7 @@ void variadic_pragma_packed_struct_8(double d0, double d1, double d2, double d3,
 // CHECK-SAME: () local_unnamed_addr #[[ATTR4]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[S_PRAGMA_PACKED_STRUCT_8:%.*]] = alloca [[STRUCT_PRAGMA_PACKED_STRUCT_8:%.*]], align 16
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr nonnull [[S_PRAGMA_PACKED_STRUCT_8]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[S_PRAGMA_PACKED_STRUCT_8]]) #[[ATTR6]]
 // CHECK-NEXT:    call void (i32, ...) @init(i32 noundef 1, ptr noundef nonnull [[S_PRAGMA_PACKED_STRUCT_8]]) #[[ATTR6]]
 // CHECK-NEXT:    [[DOTFCA_0_LOAD:%.*]] = load <8 x i16>, ptr [[S_PRAGMA_PACKED_STRUCT_8]], align 16
 // CHECK-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue [1 x <8 x i16>] poison, <8 x i16> [[DOTFCA_0_LOAD]], 0
@@ -372,7 +372,7 @@ void variadic_pragma_packed_struct_8(double d0, double d1, double d2, double d3,
 // CHECK-NEXT:    [[DOTFCA_0_LOAD3:%.*]] = load <8 x i16>, ptr [[S_PRAGMA_PACKED_STRUCT_8]], align 16
 // CHECK-NEXT:    [[DOTFCA_0_INSERT4:%.*]] = insertvalue [1 x <8 x i16>] poison, <8 x i16> [[DOTFCA_0_LOAD3]], 0
 // CHECK-NEXT:    call void (double, double, double, double, double, double, double, double, double, ...) @variadic_pragma_packed_struct_8(double poison, double poison, double poison, double poison, double poison, double poison, double poison, double poison, double poison, [1 x <8 x i16>] alignstack(8) [[DOTFCA_0_INSERT4]])
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr nonnull [[S_PRAGMA_PACKED_STRUCT_8]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[S_PRAGMA_PACKED_STRUCT_8]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 void test_pragma_packed_struct_8() {
     struct pragma_packed_struct_8 s_pragma_packed_struct_8;
@@ -402,9 +402,9 @@ __attribute__((noinline)) void named_arg_pragma_packed_struct_4(double d0, doubl
 // CHECK-SAME: (double [[D0:%.*]], double [[D1:%.*]], double [[D2:%.*]], double [[D3:%.*]], double [[D4:%.*]], double [[D5:%.*]], double [[D6:%.*]], double [[D7:%.*]], double [[D8:%.*]], ...) local_unnamed_addr #[[ATTR1]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[VL:%.*]] = alloca [[STRUCT___VA_LIST:%.*]], align 8
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    call void @llvm.va_start.p0(ptr nonnull [[VL]])
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr nonnull [[VL]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[VL]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 void variadic_pragma_packed_struct_4(double d0, double d1, double d2, double d3,
                                  double d4, double d5, double d6, double d7,
@@ -419,7 +419,7 @@ void variadic_pragma_packed_struct_4(double d0, double d1, double d2, double d3,
 // CHECK-SAME: () local_unnamed_addr #[[ATTR4]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[S_PRAGMA_PACKED_STRUCT_4:%.*]] = alloca [[STRUCT_PRAGMA_PACKED_STRUCT_4:%.*]], align 16
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr nonnull [[S_PRAGMA_PACKED_STRUCT_4]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[S_PRAGMA_PACKED_STRUCT_4]]) #[[ATTR6]]
 // CHECK-NEXT:    call void (i32, ...) @init(i32 noundef 1, ptr noundef nonnull [[S_PRAGMA_PACKED_STRUCT_4]]) #[[ATTR6]]
 // CHECK-NEXT:    [[DOTFCA_0_LOAD:%.*]] = load <8 x i16>, ptr [[S_PRAGMA_PACKED_STRUCT_4]], align 16
 // CHECK-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue [1 x <8 x i16>] poison, <8 x i16> [[DOTFCA_0_LOAD]], 0
@@ -427,7 +427,7 @@ void variadic_pragma_packed_struct_4(double d0, double d1, double d2, double d3,
 // CHECK-NEXT:    [[DOTFCA_0_LOAD3:%.*]] = load <8 x i16>, ptr [[S_PRAGMA_PACKED_STRUCT_4]], align 16
 // CHECK-NEXT:    [[DOTFCA_0_INSERT4:%.*]] = insertvalue [1 x <8 x i16>] poison, <8 x i16> [[DOTFCA_0_LOAD3]], 0
 // CHECK-NEXT:    call void (double, double, double, double, double, double, double, double, double, ...) @variadic_pragma_packed_struct_4(double poison, double poison, double poison, double poison, double poison, double poison, double poison, double poison, double poison, [1 x <8 x i16>] alignstack(8) [[DOTFCA_0_INSERT4]])
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr nonnull [[S_PRAGMA_PACKED_STRUCT_4]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[S_PRAGMA_PACKED_STRUCT_4]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 void test_pragma_packed_struct_4() {
     struct pragma_packed_struct_4 s_pragma_packed_struct_4;

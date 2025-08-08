@@ -121,10 +121,10 @@ define i64 @_Z3foov() #0 !dbg !4 {
 entry:
   %sum = alloca i64, align 8
   %i = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 8, ptr %sum) #4, !dbg !19
+  call void @llvm.lifetime.start.p0(ptr %sum) #4, !dbg !19
   call void @llvm.dbg.declare(metadata ptr %sum, metadata !9, metadata !20), !dbg !21
   store i64 0, ptr %sum, align 8, !dbg !21, !tbaa !22
-  call void @llvm.lifetime.start.p0(i64 4, ptr %i) #4, !dbg !26
+  call void @llvm.lifetime.start.p0(ptr %i) #4, !dbg !26
   call void @llvm.dbg.declare(metadata ptr %i, metadata !10, metadata !20), !dbg !27
   store i32 0, ptr %i, align 4, !dbg !27, !tbaa !28
   br label %for.cond, !dbg !26
@@ -135,7 +135,7 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %cmp, label %for.body, label %for.cond.cleanup, !dbg !35
 
 for.cond.cleanup:                                 ; preds = %for.cond
-  call void @llvm.lifetime.end.p0(i64 4, ptr %i) #4, !dbg !36
+  call void @llvm.lifetime.end.p0(ptr %i) #4, !dbg !36
   br label %for.end
 
 for.body:                                         ; preds = %for.cond
@@ -173,12 +173,12 @@ for.inc:                                          ; preds = %if.end
 
 for.end:                                          ; preds = %for.cond.cleanup
   %7 = load i64, ptr %sum, align 8, !dbg !53, !tbaa !22
-  call void @llvm.lifetime.end.p0(i64 8, ptr %sum) #4, !dbg !54
+  call void @llvm.lifetime.end.p0(ptr %sum) #4, !dbg !54
   ret i64 %7, !dbg !55
 }
 
 ; Function Attrs: nounwind argmemonly
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #2
@@ -189,7 +189,7 @@ define i32 @rand() #3 !dbg !59 {
 }
 
 ; Function Attrs: nounwind argmemonly
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture) #1
 
 ; Function Attrs: nounwind uwtable
 define i32 @main() #0 !dbg !13 {

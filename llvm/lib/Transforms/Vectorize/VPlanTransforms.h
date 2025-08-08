@@ -177,10 +177,9 @@ struct VPlanTransforms {
   /// VPCanonicalIVPHIRecipe with a VPEVLBasedIVPHIRecipe.
   /// VPCanonicalIVPHIRecipe is only used to control the loop after
   /// this transformation.
-  /// \returns true if the transformation succeeds, or false if it doesn't.
-  static bool
-  tryAddExplicitVectorLength(VPlan &Plan,
-                             const std::optional<unsigned> &MaxEVLSafeElements);
+  static void
+  addExplicitVectorLength(VPlan &Plan,
+                          const std::optional<unsigned> &MaxEVLSafeElements);
 
   // For each Interleave Group in \p InterleaveGroups replace the Recipes
   // widening its memory instructions with a single VPInterleaveRecipe at its
@@ -252,9 +251,21 @@ struct VPlanTransforms {
 
   // Materialize vector trip counts for constants early if it can simply be
   // computed as (Original TC / VF * UF) * VF * UF.
-  static void materializeVectorTripCount(VPlan &Plan, ElementCount BestVF,
-                                         unsigned BestUF,
-                                         PredicatedScalarEvolution &PSE);
+  static void
+  materializeConstantVectorTripCount(VPlan &Plan, ElementCount BestVF,
+                                     unsigned BestUF,
+                                     PredicatedScalarEvolution &PSE);
+
+  /// Materialize vector trip count computations to a set of VPInstructions.
+  static void materializeVectorTripCount(VPlan &Plan,
+                                         VPBasicBlock *VectorPHVPBB,
+                                         bool TailByMasking,
+                                         bool RequiresScalarEpilogue);
+
+  /// Materialize the backedge-taken count to be computed explicitly using
+  /// VPInstructions.
+  static void materializeBackedgeTakenCount(VPlan &Plan,
+                                            VPBasicBlock *VectorPH);
 
   /// Try to convert a plan with interleave groups with VF elements to a plan
   /// with the interleave groups replaced by wide loads and stores processing VF

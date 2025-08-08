@@ -50,7 +50,8 @@ class SPIRVAsmPrinter : public AsmPrinter {
 public:
   explicit SPIRVAsmPrinter(TargetMachine &TM,
                            std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer), ID), ST(nullptr), TII(nullptr) {}
+      : AsmPrinter(TM, std::move(Streamer), ID), ModuleSectionsEmitted(false),
+        ST(nullptr), TII(nullptr), MAI(nullptr) {}
   static char ID;
   bool ModuleSectionsEmitted;
   const SPIRVSubtarget *ST;
@@ -649,7 +650,9 @@ void SPIRVAsmPrinter::outputAnnotations(const Module &M) {
           cast<GlobalVariable>(CS->getOperand(1)->stripPointerCasts());
 
       StringRef AnnotationString;
-      getConstantStringInfo(GV, AnnotationString);
+      [[maybe_unused]] bool Success =
+          getConstantStringInfo(GV, AnnotationString);
+      assert(Success && "Failed to get annotation string");
       MCInst Inst;
       Inst.setOpcode(SPIRV::OpDecorate);
       Inst.addOperand(MCOperand::createReg(Reg));

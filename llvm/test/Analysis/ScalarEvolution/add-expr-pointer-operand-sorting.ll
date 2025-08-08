@@ -50,7 +50,7 @@ define i32 @d(i32 %base) {
 ;
 entry:
   %e = alloca [1 x [1 x i8]], align 1
-  call void @llvm.lifetime.start.p0(i64 1, ptr %e) #2
+  call void @llvm.lifetime.start.p0(ptr %e) #2
   br label %for.cond
 
 for.cond:                                         ; preds = %for.cond, %entry
@@ -69,4 +69,4 @@ for.cond:                                         ; preds = %for.cond, %entry
   br label %for.cond
 }
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)

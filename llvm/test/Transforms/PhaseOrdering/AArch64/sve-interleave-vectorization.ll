@@ -24,8 +24,6 @@ define void @interleave_deinterleave(ptr noalias %dst, ptr %a, ptr %b) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -47,7 +45,7 @@ define void @interleave_deinterleave(ptr noalias %dst, ptr %a, ptr %b) {
 ; CHECK-NEXT:    [[TMP23:%.*]] = shl <vscale x 4 x i32> [[TMP11]], [[TMP18]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = ashr <vscale x 4 x i32> [[TMP12]], [[TMP19]]
 ; CHECK-NEXT:    call void @llvm.aarch64.sve.st4.nxv4i32(<vscale x 4 x i32> [[TMP20]], <vscale x 4 x i32> [[TMP22]], <vscale x 4 x i32> [[TMP23]], <vscale x 4 x i32> [[TMP24]], <vscale x 4 x i1> splat (i1 true), ptr [[TMP21]])
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:

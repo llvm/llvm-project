@@ -31,10 +31,6 @@ namespace SystemZ {
 
 class SystemZCCState : public CCState {
 private:
-  /// Records whether the value was a fixed argument.
-  /// See ISD::OutputArg::IsFixed.
-  SmallVector<bool, 4> ArgIsFixed;
-
   /// Records whether the value was widened from a short vector type.
   SmallVector<bool, 4> ArgIsShortVector;
 
@@ -50,10 +46,6 @@ public:
 
   void AnalyzeFormalArguments(const SmallVectorImpl<ISD::InputArg> &Ins,
                               CCAssignFn Fn) {
-    // Formal arguments are always fixed.
-    ArgIsFixed.clear();
-    for (unsigned i = 0; i < Ins.size(); ++i)
-      ArgIsFixed.push_back(true);
     // Record whether the call operand was a short vector.
     ArgIsShortVector.clear();
     for (unsigned i = 0; i < Ins.size(); ++i)
@@ -64,10 +56,6 @@ public:
 
   void AnalyzeCallOperands(const SmallVectorImpl<ISD::OutputArg> &Outs,
                            CCAssignFn Fn) {
-    // Record whether the call operand was a fixed argument.
-    ArgIsFixed.clear();
-    for (unsigned i = 0; i < Outs.size(); ++i)
-      ArgIsFixed.push_back(Outs[i].IsFixed);
     // Record whether the call operand was a short vector.
     ArgIsShortVector.clear();
     for (unsigned i = 0; i < Outs.size(); ++i)
@@ -77,12 +65,11 @@ public:
   }
 
   // This version of AnalyzeCallOperands in the base class is not usable
-  // since we must provide a means of accessing ISD::OutputArg::IsFixed.
+  // since we must provide a means of accessing ISD::OutputArg::IsShortVector.
   void AnalyzeCallOperands(const SmallVectorImpl<MVT> &Outs,
                            SmallVectorImpl<ISD::ArgFlagsTy> &Flags,
                            CCAssignFn Fn) = delete;
 
-  bool IsFixed(unsigned ValNo) { return ArgIsFixed[ValNo]; }
   bool IsShortVector(unsigned ValNo) { return ArgIsShortVector[ValNo]; }
 };
 

@@ -445,6 +445,86 @@ body:             |
 
 ...
 
+
+---
+name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_mac_vgprcd_e64_two_chained_uses_cannot_rewrite_final_use
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  stackPtrOffsetReg: '$sgpr32'
+  occupancy:       10
+  sgprForEXECCopy: '$sgpr100_sgpr101'
+body:             |
+  ; CHECK-LABEL: name: inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_mac_vgprcd_e64_two_chained_uses_cannot_rewrite_final_use
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $agpr0
+  ; CHECK-NEXT:   renamable $sgpr0 = S_MOV_B32 0
+  ; CHECK-NEXT:   renamable $vgpr8 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT:   renamable $sgpr1 = COPY renamable $sgpr0
+  ; CHECK-NEXT:   renamable $vgpr0_vgpr1 = COPY killed renamable $sgpr0_sgpr1
+  ; CHECK-NEXT:   renamable $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
+  ; CHECK-NEXT:   dead renamable $vgpr9 = COPY renamable $vgpr8
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $vcc, $vgpr0_vgpr1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $vgpr2_vgpr3 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+  ; CHECK-NEXT:   renamable $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 $vgpr0_vgpr1, $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   renamable $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 $vgpr0_vgpr1, $vgpr0_vgpr1, killed $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+  ; CHECK-NEXT:   S_BRANCH %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   liveins: $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17:0x00000000FFFFFFFF
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = COPY killed renamable $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+  ; CHECK-NEXT:   renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY killed renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+  ; CHECK-NEXT:   INLINEASM &"; use $0 ", 1 /* sideeffect attdialect */, 27983881 /* reguse:VReg_512_Align2 */, killed renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+  ; CHECK-NEXT:   S_ENDPGM 0
+  bb.0:
+    S_NOP 0, implicit-def $agpr0
+    renamable $sgpr0 = S_MOV_B32 0
+    undef %0.sub8:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    renamable $sgpr1 = COPY renamable $sgpr0
+    %1:vreg_64_align2 = COPY killed renamable $sgpr0_sgpr1
+    renamable $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
+    %0.sub9:vreg_512_align2 = COPY %0.sub8
+
+  bb.1:
+    liveins: $vcc
+
+    undef %0.sub0_sub1:vreg_512_align2 = GLOBAL_LOAD_DWORDX2 undef %3:vreg_64_align2, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+    %0:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %1, %1, %0, 0, 0, 0, implicit $mode, implicit $exec
+    %0:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %1, %1, %0, 0, 0, 0, implicit $mode, implicit $exec
+    S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+    S_BRANCH %bb.2
+
+  bb.2:
+    ; No VGPRs available for %0
+    S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+    S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
+    S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
+    S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
+    S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    INLINEASM &"; use $0 ", 1 /* sideeffect attdialect */, 27983881 /* reguse:VReg_512_Align2 */, %0:vreg_512_align2
+    S_ENDPGM 0
+
+...
+
 # There is a rewrite candidate, but it is used by another MFMA which
 # does not have a tied result.
 ---
@@ -619,189 +699,6 @@ body:             |
     S_ENDPGM 0
 
 ...
-
-# There isn't an assignable AGPR around the first MFMA.
----
-name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_vgprcd_e64_chain_no_agprs_first
-tracksRegLiveness: true
-machineFunctionInfo:
-  isEntryFunction: true
-  stackPtrOffsetReg: '$sgpr32'
-  occupancy:       10
-  sgprForEXECCopy: '$sgpr100_sgpr101'
-body:             |
-  ; CHECK-LABEL: name: inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_vgprcd_e64_chain_no_agprs_first
-  ; CHECK: bb.0:
-  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_NOP 0, implicit-def $agpr0
-  ; CHECK-NEXT:   renamable $sgpr0 = S_MOV_B32 0
-  ; CHECK-NEXT:   renamable $vgpr8 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   renamable $sgpr1 = COPY renamable $sgpr0
-  ; CHECK-NEXT:   renamable $vgpr18_vgpr19 = COPY killed renamable $sgpr0_sgpr1
-  ; CHECK-NEXT:   renamable $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
-  ; CHECK-NEXT:   dead renamable $vgpr9 = COPY renamable $vgpr8
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK-NEXT:   liveins: $vcc, $vgpr18_vgpr19
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $vgpr16_vgpr17 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (load (s64), addrspace 1)
-  ; CHECK-NEXT:   S_NOP 0, implicit-def renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, implicit-def renamable $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, implicit-def renamable $agpr32_agpr33_agpr34_agpr35_agpr36_agpr37_agpr38_agpr39_agpr40_agpr41_agpr42_agpr43_agpr44_agpr45_agpr46_agpr47, implicit-def renamable $agpr48_agpr49_agpr50_agpr51_agpr52_agpr53_agpr54_agpr55_agpr56_agpr57_agpr58_agpr59_agpr60_agpr61_agpr62_agpr63
-  ; CHECK-NEXT:   early-clobber renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X8F16_vgprcd_e64 $vgpr18_vgpr19, $vgpr18_vgpr19, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   S_NOP 0, implicit killed renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, implicit killed renamable $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, implicit killed renamable $agpr32_agpr33_agpr34_agpr35_agpr36_agpr37_agpr38_agpr39_agpr40_agpr41_agpr42_agpr43_agpr44_agpr45_agpr46_agpr47, implicit killed renamable $agpr48_agpr49_agpr50_agpr51_agpr52_agpr53_agpr54_agpr55_agpr56_agpr57_agpr58_agpr59_agpr60_agpr61_agpr62_agpr63
-  ; CHECK-NEXT:   early-clobber renamable $vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33_vgpr34_vgpr35 = V_MFMA_F32_32X32X8F16_vgprcd_e64 $vgpr18_vgpr19, $vgpr18_vgpr19, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
-  ; CHECK-NEXT:   S_BRANCH %bb.2
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   liveins: $vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33_vgpr34_vgpr35:0x00000000FFFFFFFF
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
-  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-  ; CHECK-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = COPY killed renamable $vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33_vgpr34_vgpr35
-  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
-  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
-  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
-  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
-  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
-  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
-  ; CHECK-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_agpr9_agpr10_agpr11, undef $sgpr0_sgpr1, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_agpr13_agpr14_agpr15, undef $sgpr0_sgpr1, 48, 0, implicit $exec :: (store (s128), addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_agpr1_agpr2_agpr3, undef $sgpr0_sgpr1, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_agpr5_agpr6_agpr7, killed undef $sgpr0_sgpr1, 16, 0, implicit $exec :: (store (s128), addrspace 1)
-  ; CHECK-NEXT:   S_ENDPGM 0
-  bb.0:
-    S_NOP 0, implicit-def $agpr0
-    renamable $sgpr0 = S_MOV_B32 0
-    undef %0.sub8:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
-    renamable $sgpr1 = COPY renamable $sgpr0
-    %1:vreg_64_align2 = COPY killed renamable $sgpr0_sgpr1
-    renamable $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
-    %0.sub9:vreg_512_align2 = COPY %0.sub8
-
-  bb.1:
-    liveins: $vcc
-
-    undef %0.sub0_sub1:vreg_512_align2 = GLOBAL_LOAD_DWORDX2 undef %2:vreg_64_align2, 0, 0, implicit $exec :: (load (s64), addrspace 1)
-    S_NOP 0, implicit-def %6:areg_512_align2, implicit-def %7:areg_512_align2, implicit-def %8:areg_512_align2, implicit-def %9:areg_512_align2
-    %3:vreg_512_align2 = V_MFMA_F32_32X32X8F16_vgprcd_e64 %1, %1, %0, 0, 0, 0, implicit $mode, implicit $exec
-    S_NOP 0, implicit %6, implicit %7, implicit %8, implicit %9
-    %4:vreg_512_align2 = V_MFMA_F32_32X32X8F16_vgprcd_e64 %1, %1, %3, 0, 0, 0, implicit $mode, implicit $exec
-    S_CBRANCH_VCCNZ %bb.1, implicit $vcc
-    S_BRANCH %bb.2
-
-  bb.2:
-    ; No VGPRs available for %0 or %4
-    S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
-    S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-    S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
-    S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
-    S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
-    S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
-    S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
-    S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
-    %5:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    GLOBAL_STORE_DWORDX4_SADDR %5, %4.sub8_sub9_sub10_sub11, undef $sgpr0_sgpr1, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
-    GLOBAL_STORE_DWORDX4_SADDR %5, %4.sub12_sub13_sub14_sub15, undef $sgpr0_sgpr1, 48, 0, implicit $exec :: (store (s128), addrspace 1)
-    GLOBAL_STORE_DWORDX4_SADDR %5, %4.sub0_sub1_sub2_sub3, undef $sgpr0_sgpr1, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
-    GLOBAL_STORE_DWORDX4_SADDR %5, %4.sub4_sub5_sub6_sub7, killed undef $sgpr0_sgpr1, 16, 0, implicit $exec :: (store (s128), addrspace 1)
-    S_ENDPGM 0
-
-...
-
-# There isn't an assignable AGPR around the second MFMA.
----
-name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_vgprcd_e64_chain_no_agprs_second
-tracksRegLiveness: true
-machineFunctionInfo:
-  isEntryFunction: true
-  stackPtrOffsetReg: '$sgpr32'
-  occupancy:       10
-  sgprForEXECCopy: '$sgpr100_sgpr101'
-body:             |
-  ; CHECK-LABEL: name: inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_vgprcd_e64_chain_no_agprs_second
-  ; CHECK: bb.0:
-  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_NOP 0, implicit-def $agpr0
-  ; CHECK-NEXT:   renamable $sgpr0 = S_MOV_B32 0
-  ; CHECK-NEXT:   renamable $vgpr8 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   renamable $sgpr1 = COPY renamable $sgpr0
-  ; CHECK-NEXT:   renamable $vgpr18_vgpr19 = COPY killed renamable $sgpr0_sgpr1
-  ; CHECK-NEXT:   renamable $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
-  ; CHECK-NEXT:   dead renamable $vgpr9 = COPY renamable $vgpr8
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK-NEXT:   liveins: $vcc, $vgpr18_vgpr19
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $vgpr16_vgpr17 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (load (s64), addrspace 1)
-  ; CHECK-NEXT:   early-clobber renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X8F16_vgprcd_e64 $vgpr18_vgpr19, $vgpr18_vgpr19, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   S_NOP 0, implicit-def renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, implicit-def renamable $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, implicit-def renamable $agpr32_agpr33_agpr34_agpr35_agpr36_agpr37_agpr38_agpr39_agpr40_agpr41_agpr42_agpr43_agpr44_agpr45_agpr46_agpr47, implicit-def renamable $agpr48_agpr49_agpr50_agpr51_agpr52_agpr53_agpr54_agpr55_agpr56_agpr57_agpr58_agpr59_agpr60_agpr61_agpr62_agpr63
-  ; CHECK-NEXT:   early-clobber renamable $vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33_vgpr34_vgpr35 = V_MFMA_F32_32X32X8F16_vgprcd_e64 $vgpr18_vgpr19, $vgpr18_vgpr19, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   S_NOP 0, implicit killed renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, implicit killed renamable $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, implicit killed renamable $agpr32_agpr33_agpr34_agpr35_agpr36_agpr37_agpr38_agpr39_agpr40_agpr41_agpr42_agpr43_agpr44_agpr45_agpr46_agpr47, implicit killed renamable $agpr48_agpr49_agpr50_agpr51_agpr52_agpr53_agpr54_agpr55_agpr56_agpr57_agpr58_agpr59_agpr60_agpr61_agpr62_agpr63
-  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
-  ; CHECK-NEXT:   S_BRANCH %bb.2
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   liveins: $vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33_vgpr34_vgpr35:0x00000000FFFFFFFF
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
-  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-  ; CHECK-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = COPY killed renamable $vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33_vgpr34_vgpr35
-  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
-  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
-  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
-  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
-  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
-  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
-  ; CHECK-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_agpr9_agpr10_agpr11, undef $sgpr0_sgpr1, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_agpr13_agpr14_agpr15, undef $sgpr0_sgpr1, 48, 0, implicit $exec :: (store (s128), addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_agpr1_agpr2_agpr3, undef $sgpr0_sgpr1, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_agpr5_agpr6_agpr7, killed undef $sgpr0_sgpr1, 16, 0, implicit $exec :: (store (s128), addrspace 1)
-  ; CHECK-NEXT:   S_ENDPGM 0
-  bb.0:
-    S_NOP 0, implicit-def $agpr0
-    renamable $sgpr0 = S_MOV_B32 0
-    undef %0.sub8:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
-    renamable $sgpr1 = COPY renamable $sgpr0
-    %1:vreg_64_align2 = COPY killed renamable $sgpr0_sgpr1
-    renamable $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
-    %0.sub9:vreg_512_align2 = COPY %0.sub8
-
-  bb.1:
-    liveins: $vcc
-
-    undef %0.sub0_sub1:vreg_512_align2 = GLOBAL_LOAD_DWORDX2 undef %2:vreg_64_align2, 0, 0, implicit $exec :: (load (s64), addrspace 1)
-    %3:vreg_512_align2 = V_MFMA_F32_32X32X8F16_vgprcd_e64 %1, %1, %0, 0, 0, 0, implicit $mode, implicit $exec
-    S_NOP 0, implicit-def %6:areg_512_align2, implicit-def %7:areg_512_align2, implicit-def %8:areg_512_align2, implicit-def %9:areg_512_align2
-    %4:vreg_512_align2 = V_MFMA_F32_32X32X8F16_vgprcd_e64 %1, %1, %3, 0, 0, 0, implicit $mode, implicit $exec
-    S_NOP 0, implicit %6, implicit %7, implicit %8, implicit %9
-    S_CBRANCH_VCCNZ %bb.1, implicit $vcc
-    S_BRANCH %bb.2
-
-  bb.2:
-    ; No VGPRs available for %0 or %4
-    S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
-    S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-    S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
-    S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
-    S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
-    S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
-    S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
-    S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
-    %5:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    GLOBAL_STORE_DWORDX4_SADDR %5, %4.sub8_sub9_sub10_sub11, undef $sgpr0_sgpr1, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
-    GLOBAL_STORE_DWORDX4_SADDR %5, %4.sub12_sub13_sub14_sub15, undef $sgpr0_sgpr1, 48, 0, implicit $exec :: (store (s128), addrspace 1)
-    GLOBAL_STORE_DWORDX4_SADDR %5, %4.sub0_sub1_sub2_sub3, undef $sgpr0_sgpr1, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
-    GLOBAL_STORE_DWORDX4_SADDR %5, %4.sub4_sub5_sub6_sub7, killed undef $sgpr0_sgpr1, 16, 0, implicit $exec :: (store (s128), addrspace 1)
-    S_ENDPGM 0
-
-...
-
 # Chain of 2 untied cases, but the use isn't in src2.
 ---
 name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_vgprcd_e64_chain_non_src2
@@ -972,6 +869,402 @@ body:             |
 ...
 
 ---
+name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_mac_vgprcd_e64_local_split
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  stackPtrOffsetReg: '$sgpr32'
+  occupancy:       10
+  sgprForEXECCopy: '$sgpr100_sgpr101'
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_mac_vgprcd_e64_local_split
+    ; CHECK: S_NOP 0, implicit-def $agpr0
+    ; CHECK-NEXT: renamable $sgpr0 = S_MOV_B32 0
+    ; CHECK-NEXT: renamable $vgpr8 = V_MOV_B32_e32 0, implicit $exec
+    ; CHECK-NEXT: renamable $sgpr1 = COPY renamable $sgpr0
+    ; CHECK-NEXT: renamable $vgpr0_vgpr1 = COPY killed renamable $sgpr0_sgpr1
+    ; CHECK-NEXT: renamable $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
+    ; CHECK-NEXT: dead renamable $vgpr9 = COPY renamable $vgpr8
+    ; CHECK-NEXT: renamable $agpr0_agpr1 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+    ; CHECK-NEXT: renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X8F16_mac_e64 killed $vgpr0_vgpr1, $vgpr0_vgpr1, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    ; CHECK-NEXT: renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    ; CHECK-NEXT: renamable $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17 = COPY killed renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; CHECK-NEXT: GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $vgpr10_vgpr11_vgpr12_vgpr13, undef $sgpr0_sgpr1, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+    ; CHECK-NEXT: GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $vgpr14_vgpr15_vgpr16_vgpr17, undef $sgpr0_sgpr1, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+    ; CHECK-NEXT: GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $vgpr2_vgpr3_vgpr4_vgpr5, undef $sgpr0_sgpr1, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+    ; CHECK-NEXT: GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $vgpr6_vgpr7_vgpr8_vgpr9, killed undef $sgpr0_sgpr1, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+    ; CHECK-NEXT: S_ENDPGM 0
+    S_NOP 0, implicit-def $agpr0
+    renamable $sgpr0 = S_MOV_B32 0
+    undef %0.sub8:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    renamable $sgpr1 = COPY renamable $sgpr0
+    %1:vreg_64_align2 = COPY killed renamable $sgpr0_sgpr1
+    renamable $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
+    %0.sub9:vreg_512_align2 = COPY %0.sub8
+    undef %0.sub0_sub1:vreg_512_align2 = GLOBAL_LOAD_DWORDX2 undef %3:vreg_64_align2, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+    %0:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %1, %1, %0, 0, 0, 0, implicit $mode, implicit $exec
+    ; No VGPRs available for %0
+    S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+    S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
+    S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
+    S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
+    S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    %2:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    GLOBAL_STORE_DWORDX4_SADDR %2, %0.sub8_sub9_sub10_sub11, undef $sgpr0_sgpr1, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+    GLOBAL_STORE_DWORDX4_SADDR %2, %0.sub12_sub13_sub14_sub15, undef $sgpr0_sgpr1, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+    GLOBAL_STORE_DWORDX4_SADDR %2, %0.sub0_sub1_sub2_sub3, undef $sgpr0_sgpr1, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+    GLOBAL_STORE_DWORDX4_SADDR %2, %0.sub4_sub5_sub6_sub7, killed undef $sgpr0_sgpr1, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+    S_ENDPGM 0
+
+...
+
+# Performs a split and inflate around the single instruction
+---
+name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_mac_vgprcd_e64_instruction_split
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  stackPtrOffsetReg: '$sgpr32'
+  occupancy:       10
+  sgprForEXECCopy: '$sgpr100_sgpr101'
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_mac_vgprcd_e64_instruction_split
+    ; CHECK: S_NOP 0, implicit-def $agpr0
+    ; CHECK-NEXT: renamable $sgpr0 = S_MOV_B32 0
+    ; CHECK-NEXT: renamable $vgpr8 = V_MOV_B32_e32 0, implicit $exec
+    ; CHECK-NEXT: renamable $sgpr1 = COPY renamable $sgpr0
+    ; CHECK-NEXT: renamable $vgpr0_vgpr1 = COPY killed renamable $sgpr0_sgpr1
+    ; CHECK-NEXT: SI_SPILL_AV64_SAVE killed $vgpr0_vgpr1, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, align 4, addrspace 5)
+    ; CHECK-NEXT: renamable $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
+    ; CHECK-NEXT: dead renamable $vgpr9 = COPY renamable $vgpr8
+    ; CHECK-NEXT: renamable $agpr0_agpr1 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    ; CHECK-NEXT: renamable $vgpr2_vgpr3 = SI_SPILL_AV64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
+    ; CHECK-NEXT: renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X8F16_mac_e64 killed $vgpr2_vgpr3, $vgpr2_vgpr3, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    ; CHECK-NEXT: renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    ; CHECK-NEXT: renamable $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17 = COPY killed renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; CHECK-NEXT: GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $vgpr10_vgpr11_vgpr12_vgpr13, undef $sgpr0_sgpr1, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+    ; CHECK-NEXT: GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $vgpr14_vgpr15_vgpr16_vgpr17, undef $sgpr0_sgpr1, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+    ; CHECK-NEXT: GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $vgpr2_vgpr3_vgpr4_vgpr5, undef $sgpr0_sgpr1, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+    ; CHECK-NEXT: GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $vgpr6_vgpr7_vgpr8_vgpr9, killed undef $sgpr0_sgpr1, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+    ; CHECK-NEXT: S_ENDPGM 0
+    S_NOP 0, implicit-def $agpr0
+    renamable $sgpr0 = S_MOV_B32 0
+    undef %0.sub8:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    renamable $sgpr1 = COPY renamable $sgpr0
+    %1:vreg_64_align2 = COPY killed renamable $sgpr0_sgpr1
+    renamable $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
+    %0.sub9:vreg_512_align2 = COPY %0.sub8
+    undef %0.sub0_sub1:vreg_512_align2 = GLOBAL_LOAD_DWORDX2 undef %3:vreg_64_align2, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+    S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+    S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
+    S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
+    S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
+    S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    %0:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %1, %1, %0, 0, 0, 0, implicit $mode, implicit $exec
+    ; No VGPRs available for %0
+    S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+    S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
+    S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
+    S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
+    S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    %2:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    GLOBAL_STORE_DWORDX4_SADDR %2, %0.sub8_sub9_sub10_sub11, undef $sgpr0_sgpr1, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+    GLOBAL_STORE_DWORDX4_SADDR %2, %0.sub12_sub13_sub14_sub15, undef $sgpr0_sgpr1, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+    GLOBAL_STORE_DWORDX4_SADDR %2, %0.sub0_sub1_sub2_sub3, undef $sgpr0_sgpr1, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+    GLOBAL_STORE_DWORDX4_SADDR %2, %0.sub4_sub5_sub6_sub7, killed undef $sgpr0_sgpr1, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+    S_ENDPGM 0
+
+...
+
+# Performs a split and inflate around the single instruction, non-tied case
+---
+name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_vgprcd_e64_instruction_split
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  stackPtrOffsetReg: '$sgpr32'
+  occupancy:       10
+  sgprForEXECCopy: '$sgpr100_sgpr101'
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_vgprcd_e64_instruction_split
+    ; CHECK: S_NOP 0, implicit-def $agpr0
+    ; CHECK-NEXT: renamable $sgpr0 = S_MOV_B32 0
+    ; CHECK-NEXT: renamable $vgpr8 = V_MOV_B32_e32 0, implicit $exec
+    ; CHECK-NEXT: renamable $sgpr1 = COPY renamable $sgpr0
+    ; CHECK-NEXT: renamable $vgpr0_vgpr1 = COPY killed renamable $sgpr0_sgpr1
+    ; CHECK-NEXT: SI_SPILL_AV64_SAVE killed $vgpr0_vgpr1, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, align 4, addrspace 5)
+    ; CHECK-NEXT: renamable $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
+    ; CHECK-NEXT: dead renamable $vgpr9 = COPY renamable $vgpr8
+    ; CHECK-NEXT: renamable $agpr0_agpr1 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    ; CHECK-NEXT: renamable $vgpr0_vgpr1 = SI_SPILL_AV64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
+    ; CHECK-NEXT: renamable $vgpr18_vgpr19 = COPY killed renamable $agpr0_agpr1
+    ; CHECK-NEXT: early-clobber renamable $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17 = V_MFMA_F32_32X32X8F16_vgprcd_e64 killed $vgpr0_vgpr1, $vgpr0_vgpr1, $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33, 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = COPY killed renamable $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    ; CHECK-NEXT: renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    ; CHECK-NEXT: renamable $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17 = COPY killed renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; CHECK-NEXT: GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $vgpr10_vgpr11_vgpr12_vgpr13, undef $sgpr0_sgpr1, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+    ; CHECK-NEXT: GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $vgpr14_vgpr15_vgpr16_vgpr17, undef $sgpr0_sgpr1, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+    ; CHECK-NEXT: GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $vgpr2_vgpr3_vgpr4_vgpr5, undef $sgpr0_sgpr1, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+    ; CHECK-NEXT: GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $vgpr6_vgpr7_vgpr8_vgpr9, killed undef $sgpr0_sgpr1, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+    ; CHECK-NEXT: S_ENDPGM 0
+    S_NOP 0, implicit-def $agpr0
+    renamable $sgpr0 = S_MOV_B32 0
+    undef %0.sub8:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    renamable $sgpr1 = COPY renamable $sgpr0
+    %1:vreg_64_align2 = COPY killed renamable $sgpr0_sgpr1
+    renamable $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
+    %0.sub9:vreg_512_align2 = COPY %0.sub8
+    undef %0.sub0_sub1:vreg_512_align2 = GLOBAL_LOAD_DWORDX2 undef %3:vreg_64_align2, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+    S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+    S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
+    S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
+    S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
+    S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    %4:vreg_512_align2 = V_MFMA_F32_32X32X8F16_vgprcd_e64 %1, %1, %0, 0, 0, 0, implicit $mode, implicit $exec
+    ; No VGPRs available for %0
+    S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+    S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
+    S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
+    S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
+    S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    %5:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    GLOBAL_STORE_DWORDX4_SADDR %5, %4.sub8_sub9_sub10_sub11, undef $sgpr0_sgpr1, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+    GLOBAL_STORE_DWORDX4_SADDR %5, %4.sub12_sub13_sub14_sub15, undef $sgpr0_sgpr1, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+    GLOBAL_STORE_DWORDX4_SADDR %5, %4.sub0_sub1_sub2_sub3, undef $sgpr0_sgpr1, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+    GLOBAL_STORE_DWORDX4_SADDR %5, %4.sub4_sub5_sub6_sub7, killed undef $sgpr0_sgpr1, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+    S_ENDPGM 0
+
+...
+
+# This case does not fully use %0 after the MFMA. As a result,
+# SplitKits insert a copy bundle for the subset of used lanes instead
+# of a simple copy.
+---
+name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_mac_vgprcd_e64_instruction_split_partial_uses_only
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  stackPtrOffsetReg: '$sgpr32'
+  occupancy:       10
+  sgprForEXECCopy: '$sgpr100_sgpr101'
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_mac_vgprcd_e64_instruction_split_partial_uses_only
+    ; CHECK: S_NOP 0, implicit-def $agpr0
+    ; CHECK-NEXT: renamable $sgpr0 = S_MOV_B32 0
+    ; CHECK-NEXT: renamable $vgpr8 = V_MOV_B32_e32 0, implicit $exec
+    ; CHECK-NEXT: renamable $sgpr1 = COPY renamable $sgpr0
+    ; CHECK-NEXT: renamable $vgpr0_vgpr1 = COPY killed renamable $sgpr0_sgpr1
+    ; CHECK-NEXT: SI_SPILL_AV64_SAVE killed $vgpr0_vgpr1, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, align 4, addrspace 5)
+    ; CHECK-NEXT: renamable $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
+    ; CHECK-NEXT: dead renamable $vgpr9 = COPY renamable $vgpr8
+    ; CHECK-NEXT: renamable $agpr0_agpr1 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    ; CHECK-NEXT: renamable $vgpr0_vgpr1 = COPY killed renamable $agpr0_agpr1
+    ; CHECK-NEXT: renamable $vgpr2_vgpr3 = SI_SPILL_AV64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
+    ; CHECK-NEXT: renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 killed $vgpr2_vgpr3, $vgpr2_vgpr3, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: renamable $agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = COPY killed renamable $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; CHECK-NEXT: renamable $agpr0_agpr1_agpr2_agpr3 = COPY renamable $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    ; CHECK-NEXT: renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    ; CHECK-NEXT: renamable $vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17 = COPY killed renamable $agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; CHECK-NEXT: renamable $vgpr2_vgpr3_vgpr4_vgpr5 = COPY renamable $agpr0_agpr1_agpr2_agpr3
+    ; CHECK-NEXT: GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $vgpr10_vgpr11_vgpr12_vgpr13, undef $sgpr0_sgpr1, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+    ; CHECK-NEXT: GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $vgpr14_vgpr15_vgpr16_vgpr17, undef $sgpr0_sgpr1, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+    ; CHECK-NEXT: GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $vgpr2_vgpr3_vgpr4_vgpr5, undef $sgpr0_sgpr1, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+    ; CHECK-NEXT: S_ENDPGM 0
+    S_NOP 0, implicit-def $agpr0
+    renamable $sgpr0 = S_MOV_B32 0
+    undef %0.sub8:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    renamable $sgpr1 = COPY renamable $sgpr0
+    %1:vreg_64_align2 = COPY killed renamable $sgpr0_sgpr1
+    renamable $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
+    %0.sub9:vreg_512_align2 = COPY %0.sub8
+    undef %0.sub0_sub1:vreg_512_align2 = GLOBAL_LOAD_DWORDX2 undef %3:vreg_64_align2, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+    S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+    S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
+    S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
+    S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
+    S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    %0:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %1, %1, %0, 0, 0, 0, implicit $mode, implicit $exec
+    ; No VGPRs available for %0
+    S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+    S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
+    S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
+    S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
+    S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    %2:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    GLOBAL_STORE_DWORDX4_SADDR %2, %0.sub8_sub9_sub10_sub11, undef $sgpr0_sgpr1, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+    GLOBAL_STORE_DWORDX4_SADDR %2, %0.sub12_sub13_sub14_sub15, undef $sgpr0_sgpr1, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+    GLOBAL_STORE_DWORDX4_SADDR %2, %0.sub0_sub1_sub2_sub3, undef $sgpr0_sgpr1, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+    S_ENDPGM 0
+
+...
+
+# Untied version of previous. This case does not fully use %4 after
+# the MFMA. As a result, SplitKits insert a copy bundle for the subset
+# of used lanes instead of a simple copy,
+---
+name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_vgprcd_e64_instruction_split_partial_uses_only
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  stackPtrOffsetReg: '$sgpr32'
+  occupancy:       10
+  sgprForEXECCopy: '$sgpr100_sgpr101'
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_vgprcd_e64_instruction_split_partial_uses_only
+    ; CHECK: S_NOP 0, implicit-def $agpr0
+    ; CHECK-NEXT: renamable $sgpr0 = S_MOV_B32 0
+    ; CHECK-NEXT: renamable $vgpr8 = V_MOV_B32_e32 0, implicit $exec
+    ; CHECK-NEXT: renamable $sgpr1 = COPY renamable $sgpr0
+    ; CHECK-NEXT: renamable $vgpr0_vgpr1 = COPY killed renamable $sgpr0_sgpr1
+    ; CHECK-NEXT: SI_SPILL_AV64_SAVE killed $vgpr0_vgpr1, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, align 4, addrspace 5)
+    ; CHECK-NEXT: renamable $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
+    ; CHECK-NEXT: dead renamable $vgpr9 = COPY renamable $vgpr8
+    ; CHECK-NEXT: renamable $agpr0_agpr1 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    ; CHECK-NEXT: renamable $vgpr0_vgpr1 = SI_SPILL_AV64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
+    ; CHECK-NEXT: renamable $vgpr18_vgpr19 = COPY killed renamable $agpr0_agpr1
+    ; CHECK-NEXT: early-clobber renamable $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17 = V_MFMA_F32_32X32X8F16_vgprcd_e64 killed $vgpr0_vgpr1, $vgpr0_vgpr1, $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33, 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: renamable $agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = COPY killed renamable $vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17
+    ; CHECK-NEXT: renamable $agpr0_agpr1_agpr2_agpr3 = COPY renamable $vgpr2_vgpr3_vgpr4_vgpr5
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
+    ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    ; CHECK-NEXT: renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    ; CHECK-NEXT: renamable $vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17 = COPY killed renamable $agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; CHECK-NEXT: renamable $vgpr2_vgpr3_vgpr4_vgpr5 = COPY renamable $agpr0_agpr1_agpr2_agpr3
+    ; CHECK-NEXT: GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $vgpr10_vgpr11_vgpr12_vgpr13, undef $sgpr0_sgpr1, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+    ; CHECK-NEXT: GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $vgpr14_vgpr15_vgpr16_vgpr17, undef $sgpr0_sgpr1, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+    ; CHECK-NEXT: GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $vgpr2_vgpr3_vgpr4_vgpr5, undef $sgpr0_sgpr1, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+    ; CHECK-NEXT: S_ENDPGM 0
+    S_NOP 0, implicit-def $agpr0
+    renamable $sgpr0 = S_MOV_B32 0
+    undef %0.sub8:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    renamable $sgpr1 = COPY renamable $sgpr0
+    %1:vreg_64_align2 = COPY killed renamable $sgpr0_sgpr1
+    renamable $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
+    %0.sub9:vreg_512_align2 = COPY %0.sub8
+    undef %0.sub0_sub1:vreg_512_align2 = GLOBAL_LOAD_DWORDX2 undef %3:vreg_64_align2, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+    S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+    S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
+    S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
+    S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
+    S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    %4:vreg_512_align2 = V_MFMA_F32_32X32X8F16_vgprcd_e64 %1, %1, %0, 0, 0, 0, implicit $mode, implicit $exec
+    ; No VGPRs available for %4
+    S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+    S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
+    S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
+    S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
+    S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    %5:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    GLOBAL_STORE_DWORDX4_SADDR %5, %4.sub8_sub9_sub10_sub11, undef $sgpr0_sgpr1, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+    GLOBAL_STORE_DWORDX4_SADDR %5, %4.sub12_sub13_sub14_sub15, undef $sgpr0_sgpr1, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+    GLOBAL_STORE_DWORDX4_SADDR %5, %4.sub0_sub1_sub2_sub3, undef $sgpr0_sgpr1, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+    S_ENDPGM 0
+
+...
+
+---
 name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_mac_vgprcd_e64_same_subreg
 tracksRegLiveness: true
 machineFunctionInfo:
@@ -1039,6 +1332,623 @@ body:             |
     %0.sub8_sub9_sub10_sub11:vreg_1024_align2 = GLOBAL_LOAD_DWORDX4 undef %3:vreg_64_align2, 0, 0, implicit $exec :: (load (s128), addrspace 1)
     %0.sub12_sub13_sub14_sub15:vreg_1024_align2 = GLOBAL_LOAD_DWORDX4 undef %3:vreg_64_align2, 0, 0, implicit $exec :: (load (s128), addrspace 1)
     %0.sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7_sub8_sub9_sub10_sub11_sub12_sub13_sub14_sub15:vreg_1024_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %1, %1, %0.sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7_sub8_sub9_sub10_sub11_sub12_sub13_sub14_sub15, 0, 0, 0, implicit $mode, implicit $exec
+    S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+    S_BRANCH %bb.2
+
+  bb.2:
+    ; No VGPRs available for %0
+    S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+    S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
+    S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
+    S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
+    S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    %2:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    GLOBAL_STORE_DWORDX4_SADDR %2, %0.sub8_sub9_sub10_sub11, undef $sgpr0_sgpr1, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+    GLOBAL_STORE_DWORDX4_SADDR %2, %0.sub12_sub13_sub14_sub15, undef $sgpr0_sgpr1, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+    GLOBAL_STORE_DWORDX4_SADDR %2, %0.sub0_sub1_sub2_sub3, undef $sgpr0_sgpr1, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+    GLOBAL_STORE_DWORDX4_SADDR %2, %0.sub4_sub5_sub6_sub7, killed undef $sgpr0_sgpr1, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+    S_ENDPGM 0
+
+...
+
+---
+name:            chained_mfma_dst_user_is_vgpr
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  stackPtrOffsetReg: '$sgpr32'
+  occupancy:       10
+  sgprForEXECCopy: '$sgpr100_sgpr101'
+body:             |
+  ; CHECK-LABEL: name: chained_mfma_dst_user_is_vgpr
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $agpr0
+  ; CHECK-NEXT:   renamable $sgpr0 = S_MOV_B32 0
+  ; CHECK-NEXT:   renamable $vgpr8 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT:   renamable $sgpr1 = COPY renamable $sgpr0
+  ; CHECK-NEXT:   renamable $vgpr16_vgpr17 = COPY killed renamable $sgpr0_sgpr1
+  ; CHECK-NEXT:   renamable $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
+  ; CHECK-NEXT:   dead renamable $vgpr9 = COPY renamable $vgpr8
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $vcc, $vgpr16_vgpr17
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $vgpr0_vgpr1 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+  ; CHECK-NEXT:   early-clobber renamable $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33 = V_MFMA_F32_32X32X8F16_vgprcd_e64 $vgpr16_vgpr17, $vgpr16_vgpr17, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   early-clobber renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X8F16_vgprcd_e64 $vgpr16_vgpr17, $vgpr16_vgpr17, $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 27983881 /* reguse:VReg_512_Align2 */, killed renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+  ; CHECK-NEXT:   S_BRANCH %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   liveins: $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33:0x00000000FFFFFFFF
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+  ; CHECK-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = COPY killed renamable $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+  ; CHECK-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_agpr9_agpr10_agpr11, undef $sgpr0_sgpr1, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_agpr13_agpr14_agpr15, undef $sgpr0_sgpr1, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_agpr1_agpr2_agpr3, undef $sgpr0_sgpr1, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_agpr5_agpr6_agpr7, killed undef $sgpr0_sgpr1, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   S_ENDPGM 0
+  bb.0:
+    successors: %bb.1(0x80000000)
+
+    S_NOP 0, implicit-def $agpr0
+    renamable $sgpr0 = S_MOV_B32 0
+    undef %0.sub8:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    renamable $sgpr1 = COPY renamable $sgpr0
+    %1:vreg_64_align2 = COPY killed renamable $sgpr0_sgpr1
+    renamable $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
+    %0.sub9:vreg_512_align2 = COPY %0.sub8
+
+  bb.1:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $vcc
+
+    undef %2.sub0_sub1:vreg_512_align2 = GLOBAL_LOAD_DWORDX2 undef %3:vreg_64_align2, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+    early-clobber %0:vreg_512_align2 = V_MFMA_F32_32X32X8F16_vgprcd_e64 %1, %1, %2, 0, 0, 0, implicit $mode, implicit $exec
+    early-clobber %4:vreg_512_align2 = V_MFMA_F32_32X32X8F16_vgprcd_e64 %1, %1, %0, 0, 0, 0, implicit $mode, implicit $exec
+    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 27983881 /* reguse:VReg_512_Align2 */, %4
+    S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+    S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
+    S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
+    S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
+    S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    %6:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    GLOBAL_STORE_DWORDX4_SADDR %6, %0.sub8_sub9_sub10_sub11, undef $sgpr0_sgpr1, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+    GLOBAL_STORE_DWORDX4_SADDR %6, %0.sub12_sub13_sub14_sub15, undef $sgpr0_sgpr1, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+    GLOBAL_STORE_DWORDX4_SADDR %6, %0.sub0_sub1_sub2_sub3, undef $sgpr0_sgpr1, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+    GLOBAL_STORE_DWORDX4_SADDR %6, %0.sub4_sub5_sub6_sub7, killed undef $sgpr0_sgpr1, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+    S_ENDPGM 0
+
+...
+
+# TODO: In this trivial case, the single copy required is cheaper than
+# the tuple copy.
+---
+name:            chained_mfma_dst_user_is_vgpr_small_subreg
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  stackPtrOffsetReg: '$sgpr32'
+  occupancy:       10
+  sgprForEXECCopy: '$sgpr100_sgpr101'
+body:             |
+  ; CHECK-LABEL: name: chained_mfma_dst_user_is_vgpr_small_subreg
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $agpr0
+  ; CHECK-NEXT:   renamable $sgpr0 = S_MOV_B32 0
+  ; CHECK-NEXT:   renamable $vgpr8 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT:   renamable $sgpr1 = COPY renamable $sgpr0
+  ; CHECK-NEXT:   renamable $vgpr16_vgpr17 = COPY killed renamable $sgpr0_sgpr1
+  ; CHECK-NEXT:   renamable $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
+  ; CHECK-NEXT:   dead renamable $vgpr9 = COPY renamable $vgpr8
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $vcc, $vgpr16_vgpr17
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $vgpr0_vgpr1 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+  ; CHECK-NEXT:   early-clobber renamable $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33 = V_MFMA_F32_32X32X8F16_vgprcd_e64 $vgpr16_vgpr17, $vgpr16_vgpr17, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   early-clobber renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X8F16_vgprcd_e64 $vgpr16_vgpr17, $vgpr16_vgpr17, $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   dead renamable $vgpr0 = nofpexcept V_CVT_F16_F32_e32 killed $vgpr0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+  ; CHECK-NEXT:   S_BRANCH %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   liveins: $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33:0x00000000FFFFFFFF
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+  ; CHECK-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = COPY killed renamable $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+  ; CHECK-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_agpr9_agpr10_agpr11, undef $sgpr0_sgpr1, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_agpr13_agpr14_agpr15, undef $sgpr0_sgpr1, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_agpr1_agpr2_agpr3, undef $sgpr0_sgpr1, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_agpr5_agpr6_agpr7, killed undef $sgpr0_sgpr1, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   S_ENDPGM 0
+  bb.0:
+    successors: %bb.1(0x80000000)
+
+    S_NOP 0, implicit-def $agpr0
+    renamable $sgpr0 = S_MOV_B32 0
+    undef %0.sub8:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    renamable $sgpr1 = COPY renamable $sgpr0
+    %1:vreg_64_align2 = COPY killed renamable $sgpr0_sgpr1
+    renamable $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
+    %0.sub9:vreg_512_align2 = COPY %0.sub8
+
+  bb.1:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $vcc
+
+    undef %2.sub0_sub1:vreg_512_align2 = GLOBAL_LOAD_DWORDX2 undef %3:vreg_64_align2, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+    early-clobber %0:vreg_512_align2 = V_MFMA_F32_32X32X8F16_vgprcd_e64 %1, %1, %2, 0, 0, 0, implicit $mode, implicit $exec
+    early-clobber %4:vreg_512_align2 = V_MFMA_F32_32X32X8F16_vgprcd_e64 %1, %1, %0, 0, 0, 0, implicit $mode, implicit $exec
+    %5:vgpr_32 = nofpexcept V_CVT_F16_F32_e32 %4.sub0, implicit $mode, implicit $exec
+    S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+    S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
+    S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
+    S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
+    S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    %6:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    GLOBAL_STORE_DWORDX4_SADDR %6, %0.sub8_sub9_sub10_sub11, undef $sgpr0_sgpr1, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+    GLOBAL_STORE_DWORDX4_SADDR %6, %0.sub12_sub13_sub14_sub15, undef $sgpr0_sgpr1, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+    GLOBAL_STORE_DWORDX4_SADDR %6, %0.sub0_sub1_sub2_sub3, undef $sgpr0_sgpr1, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+    GLOBAL_STORE_DWORDX4_SADDR %6, %0.sub4_sub5_sub6_sub7, killed undef $sgpr0_sgpr1, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+    S_ENDPGM 0
+
+...
+
+# Transitive user of the register is an MFMA with non-register src2
+---
+name:            chained_mfma_dst_user_has_imm_src2
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  stackPtrOffsetReg: '$sgpr32'
+  occupancy:       10
+  sgprForEXECCopy: '$sgpr100_sgpr101'
+body:             |
+  ; CHECK-LABEL: name: chained_mfma_dst_user_has_imm_src2
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $agpr0
+  ; CHECK-NEXT:   renamable $sgpr0 = S_MOV_B32 0
+  ; CHECK-NEXT:   renamable $vgpr8 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT:   renamable $sgpr1 = COPY renamable $sgpr0
+  ; CHECK-NEXT:   renamable $vgpr18_vgpr19 = COPY killed renamable $sgpr0_sgpr1
+  ; CHECK-NEXT:   renamable $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
+  ; CHECK-NEXT:   dead renamable $vgpr9 = COPY renamable $vgpr8
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $vcc, $vgpr18_vgpr19
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $vgpr16_vgpr17 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+  ; CHECK-NEXT:   early-clobber renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X8F16_vgprcd_e64 $vgpr18_vgpr19, $vgpr18_vgpr19, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   early-clobber renamable $vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33_vgpr34_vgpr35 = V_MFMA_F32_32X32X8F16_vgprcd_e64 $vgpr18_vgpr19, $vgpr18_vgpr19, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   renamable $vgpr20_vgpr21_vgpr22_vgpr23 = V_MFMA_F32_4X4X4F16_vgprcd_e64 $vgpr20_vgpr21, $vgpr18_vgpr19, 0, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+  ; CHECK-NEXT:   S_BRANCH %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   liveins: $vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33_vgpr34_vgpr35:0x00000000FFFFFFFF
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+  ; CHECK-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = COPY killed renamable $vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33_vgpr34_vgpr35
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+  ; CHECK-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_agpr9_agpr10_agpr11, undef $sgpr0_sgpr1, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_agpr13_agpr14_agpr15, undef $sgpr0_sgpr1, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_agpr1_agpr2_agpr3, undef $sgpr0_sgpr1, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_agpr5_agpr6_agpr7, killed undef $sgpr0_sgpr1, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   S_ENDPGM 0
+  bb.0:
+    successors: %bb.1(0x80000000)
+
+    S_NOP 0, implicit-def $agpr0
+    renamable $sgpr0 = S_MOV_B32 0
+    undef %0.sub8:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    renamable $sgpr1 = COPY renamable $sgpr0
+    %1:vreg_64_align2 = COPY killed renamable $sgpr0_sgpr1
+    renamable $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
+    %0.sub9:vreg_512_align2 = COPY %0.sub8
+
+  bb.1:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $vcc
+
+    undef %2.sub0_sub1:vreg_512_align2 = GLOBAL_LOAD_DWORDX2 undef %3:vreg_64_align2, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+    early-clobber %0:vreg_512_align2 = V_MFMA_F32_32X32X8F16_vgprcd_e64 %1, %1, %2, 0, 0, 0, implicit $mode, implicit $exec
+    early-clobber %4:vreg_512_align2 = V_MFMA_F32_32X32X8F16_vgprcd_e64 %1, %1, %0, 0, 0, 0, implicit $mode, implicit $exec
+    %4.sub0_sub1_sub2_sub3:vreg_512_align2 = V_MFMA_F32_4X4X4F16_vgprcd_e64 %4.sub0_sub1, %1, 0, 0, 0, 0, implicit $mode, implicit $exec
+
+    S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+    S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
+    S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
+    S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
+    S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    %6:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    GLOBAL_STORE_DWORDX4_SADDR %6, %4.sub8_sub9_sub10_sub11, undef $sgpr0_sgpr1, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+    GLOBAL_STORE_DWORDX4_SADDR %6, %4.sub12_sub13_sub14_sub15, undef $sgpr0_sgpr1, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+    GLOBAL_STORE_DWORDX4_SADDR %6, %4.sub0_sub1_sub2_sub3, undef $sgpr0_sgpr1, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+    GLOBAL_STORE_DWORDX4_SADDR %6, %4.sub4_sub5_sub6_sub7, killed undef $sgpr0_sgpr1, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+    S_ENDPGM 0
+
+...
+
+---
+name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_mac_vgprcd_e64_has_untied_user
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  stackPtrOffsetReg: '$sgpr32'
+  occupancy:       10
+  sgprForEXECCopy: '$sgpr100_sgpr101'
+body:             |
+  ; CHECK-LABEL: name: inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_mac_vgprcd_e64_has_untied_user
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $agpr0
+  ; CHECK-NEXT:   renamable $sgpr0 = S_MOV_B32 0
+  ; CHECK-NEXT:   renamable $vgpr8 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT:   renamable $sgpr1 = COPY renamable $sgpr0
+  ; CHECK-NEXT:   renamable $vgpr16_vgpr17 = COPY killed renamable $sgpr0_sgpr1
+  ; CHECK-NEXT:   renamable $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
+  ; CHECK-NEXT:   dead renamable $vgpr9 = COPY renamable $vgpr8
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $vcc, $vgpr16_vgpr17
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $vgpr0_vgpr1 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+  ; CHECK-NEXT:   renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 $vgpr16_vgpr17, $vgpr16_vgpr17, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   early-clobber renamable $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33 = V_MFMA_F32_32X32X8F16_vgprcd_e64 $vgpr16_vgpr17, $vgpr16_vgpr17, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+  ; CHECK-NEXT:   S_BRANCH %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   liveins: $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33:0x00000000FFFFFFFF
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+  ; CHECK-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = COPY killed renamable $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+  ; CHECK-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_agpr9_agpr10_agpr11, undef $sgpr0_sgpr1, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_agpr13_agpr14_agpr15, undef $sgpr0_sgpr1, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_agpr1_agpr2_agpr3, undef $sgpr0_sgpr1, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_agpr5_agpr6_agpr7, killed undef $sgpr0_sgpr1, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   S_ENDPGM 0
+  bb.0:
+    S_NOP 0, implicit-def $agpr0
+    renamable $sgpr0 = S_MOV_B32 0
+    undef %0.sub8:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    renamable $sgpr1 = COPY renamable $sgpr0
+    %1:vreg_64_align2 = COPY killed renamable $sgpr0_sgpr1
+    renamable $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
+    %0.sub9:vreg_512_align2 = COPY %0.sub8
+
+  bb.1:
+    liveins: $vcc
+
+    undef %0.sub0_sub1:vreg_512_align2 = GLOBAL_LOAD_DWORDX2 undef %3:vreg_64_align2, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+    %0:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %1, %1, %0, 0, 0, 0, implicit $mode, implicit $exec
+    %4:vreg_512_align2 = V_MFMA_F32_32X32X8F16_vgprcd_e64 %1, %1, %0, 0, 0, 0, implicit $mode, implicit $exec
+    S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+    S_BRANCH %bb.2
+
+  bb.2:
+    ; No VGPRs available for %0
+    S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+    S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
+    S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
+    S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
+    S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    %5:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    GLOBAL_STORE_DWORDX4_SADDR %5, %4.sub8_sub9_sub10_sub11, undef $sgpr0_sgpr1, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+    GLOBAL_STORE_DWORDX4_SADDR %5, %4.sub12_sub13_sub14_sub15, undef $sgpr0_sgpr1, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+    GLOBAL_STORE_DWORDX4_SADDR %5, %4.sub0_sub1_sub2_sub3, undef $sgpr0_sgpr1, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+    GLOBAL_STORE_DWORDX4_SADDR %5, %4.sub4_sub5_sub6_sub7, killed undef $sgpr0_sgpr1, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+    S_ENDPGM 0
+
+...
+
+---
+name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_mac_vgprcd_e64_has_untied_user_with_vgpr_use
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  stackPtrOffsetReg: '$sgpr32'
+  occupancy:       10
+  sgprForEXECCopy: '$sgpr100_sgpr101'
+body:             |
+  ; CHECK-LABEL: name: inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_mac_vgprcd_e64_has_untied_user_with_vgpr_use
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $agpr0
+  ; CHECK-NEXT:   renamable $sgpr0 = S_MOV_B32 0
+  ; CHECK-NEXT:   renamable $vgpr8 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT:   renamable $sgpr1 = COPY renamable $sgpr0
+  ; CHECK-NEXT:   renamable $vgpr16_vgpr17 = COPY killed renamable $sgpr0_sgpr1
+  ; CHECK-NEXT:   renamable $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
+  ; CHECK-NEXT:   dead renamable $vgpr9 = COPY renamable $vgpr8
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $vcc, $vgpr16_vgpr17
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $vgpr0_vgpr1 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+  ; CHECK-NEXT:   renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 $vgpr16_vgpr17, $vgpr16_vgpr17, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   early-clobber renamable $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33 = V_MFMA_F32_32X32X8F16_vgprcd_e64 $vgpr16_vgpr17, $vgpr16_vgpr17, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 27983881 /* reguse:VReg_512_Align2 */, renamable $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33
+  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+  ; CHECK-NEXT:   S_BRANCH %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   liveins: $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33:0x00000000FFFFFFFF
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+  ; CHECK-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = COPY killed renamable $vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+  ; CHECK-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_agpr9_agpr10_agpr11, undef $sgpr0_sgpr1, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_agpr13_agpr14_agpr15, undef $sgpr0_sgpr1, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_agpr1_agpr2_agpr3, undef $sgpr0_sgpr1, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_agpr5_agpr6_agpr7, killed undef $sgpr0_sgpr1, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   S_ENDPGM 0
+  bb.0:
+    S_NOP 0, implicit-def $agpr0
+    renamable $sgpr0 = S_MOV_B32 0
+    undef %0.sub8:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    renamable $sgpr1 = COPY renamable $sgpr0
+    %1:vreg_64_align2 = COPY killed renamable $sgpr0_sgpr1
+    renamable $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
+    %0.sub9:vreg_512_align2 = COPY %0.sub8
+
+  bb.1:
+    liveins: $vcc
+
+    undef %0.sub0_sub1:vreg_512_align2 = GLOBAL_LOAD_DWORDX2 undef %3:vreg_64_align2, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+    %0:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %1, %1, %0, 0, 0, 0, implicit $mode, implicit $exec
+    %4:vreg_512_align2 = V_MFMA_F32_32X32X8F16_vgprcd_e64 %1, %1, %0, 0, 0, 0, implicit $mode, implicit $exec
+    INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 27983881 /* reguse:VReg_512_Align2 */, %4
+    S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+    S_BRANCH %bb.2
+
+  bb.2:
+    ; No VGPRs available for %0
+    S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+    S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
+    S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
+    S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
+    S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    %5:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    GLOBAL_STORE_DWORDX4_SADDR %5, %4.sub8_sub9_sub10_sub11, undef $sgpr0_sgpr1, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+    GLOBAL_STORE_DWORDX4_SADDR %5, %4.sub12_sub13_sub14_sub15, undef $sgpr0_sgpr1, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+    GLOBAL_STORE_DWORDX4_SADDR %5, %4.sub0_sub1_sub2_sub3, undef $sgpr0_sgpr1, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+    GLOBAL_STORE_DWORDX4_SADDR %5, %4.sub4_sub5_sub6_sub7, killed undef $sgpr0_sgpr1, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+    S_ENDPGM 0
+
+...
+
+---
+name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_vgprcd_e64_has_tied_user
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  stackPtrOffsetReg: '$sgpr32'
+  occupancy:       10
+  sgprForEXECCopy: '$sgpr100_sgpr101'
+body:             |
+  ; CHECK-LABEL: name: inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_vgprcd_e64_has_tied_user
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $agpr0
+  ; CHECK-NEXT:   renamable $sgpr0 = S_MOV_B32 0
+  ; CHECK-NEXT:   renamable $vgpr8 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT:   renamable $sgpr1 = COPY renamable $sgpr0
+  ; CHECK-NEXT:   renamable $vgpr2_vgpr3 = COPY killed renamable $sgpr0_sgpr1
+  ; CHECK-NEXT:   renamable $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
+  ; CHECK-NEXT:   dead renamable $vgpr9 = COPY renamable $vgpr8
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $vcc, $vgpr2_vgpr3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $vgpr0_vgpr1 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+  ; CHECK-NEXT:   early-clobber renamable $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19 = V_MFMA_F32_32X32X8F16_vgprcd_e64 $vgpr2_vgpr3, $vgpr2_vgpr3, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   renamable $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 $vgpr2_vgpr3, $vgpr2_vgpr3, killed $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+  ; CHECK-NEXT:   S_BRANCH %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   liveins: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19:0x00000000FFFFFFFF
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = COPY killed renamable $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+  ; CHECK-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_agpr9_agpr10_agpr11, undef $sgpr0_sgpr1, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_agpr13_agpr14_agpr15, undef $sgpr0_sgpr1, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_agpr1_agpr2_agpr3, undef $sgpr0_sgpr1, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_agpr5_agpr6_agpr7, killed undef $sgpr0_sgpr1, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   S_ENDPGM 0
+  bb.0:
+    S_NOP 0, implicit-def $agpr0
+    renamable $sgpr0 = S_MOV_B32 0
+    undef %0.sub8:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    renamable $sgpr1 = COPY renamable $sgpr0
+    %1:vreg_64_align2 = COPY killed renamable $sgpr0_sgpr1
+    renamable $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
+    %0.sub9:vreg_512_align2 = COPY %0.sub8
+
+  bb.1:
+    liveins: $vcc
+
+    undef %0.sub0_sub1:vreg_512_align2 = GLOBAL_LOAD_DWORDX2 undef %3:vreg_64_align2, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+    %4:vreg_512_align2 = V_MFMA_F32_32X32X8F16_vgprcd_e64 %1, %1, %0, 0, 0, 0, implicit $mode, implicit $exec
+    %4:vreg_512_align2 = V_MFMA_F32_32X32X8F16_mac_vgprcd_e64 %1, %1, %4, 0, 0, 0, implicit $mode, implicit $exec
+    S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+    S_BRANCH %bb.2
+
+  bb.2:
+    ; No VGPRs available for %0
+    S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+    S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
+    S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
+    S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
+    S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    %5:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    GLOBAL_STORE_DWORDX4_SADDR %5, %4.sub8_sub9_sub10_sub11, undef $sgpr0_sgpr1, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+    GLOBAL_STORE_DWORDX4_SADDR %5, %4.sub12_sub13_sub14_sub15, undef $sgpr0_sgpr1, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+    GLOBAL_STORE_DWORDX4_SADDR %5, %4.sub0_sub1_sub2_sub3, undef $sgpr0_sgpr1, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+    GLOBAL_STORE_DWORDX4_SADDR %5, %4.sub4_sub5_sub6_sub7, killed undef $sgpr0_sgpr1, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+    S_ENDPGM 0
+
+...
+
+# Non-mac variant, src2 is an immediate.
+---
+name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_vgprcd_e64_imm_src2
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  stackPtrOffsetReg: '$sgpr32'
+  occupancy:       10
+  sgprForEXECCopy: '$sgpr100_sgpr101'
+body:             |
+  ; CHECK-LABEL: name: inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_vgprcd_e64_imm_src2
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $agpr0
+  ; CHECK-NEXT:   renamable $sgpr0 = S_MOV_B32 0
+  ; CHECK-NEXT:   renamable $vgpr8 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT:   renamable $sgpr1 = COPY renamable $sgpr0
+  ; CHECK-NEXT:   renamable $vgpr0_vgpr1 = COPY killed renamable $sgpr0_sgpr1
+  ; CHECK-NEXT:   renamable $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
+  ; CHECK-NEXT:   dead renamable $vgpr9 = COPY renamable $vgpr8
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $vcc, $vgpr0_vgpr1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   early-clobber renamable $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17 = V_MFMA_F32_32X32X8F16_vgprcd_e64 $vgpr0_vgpr1, $vgpr0_vgpr1, 0, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
+  ; CHECK-NEXT:   S_BRANCH %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   liveins: $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17:0x00000000FFFFFFFF
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = COPY killed renamable $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
+  ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+  ; CHECK-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_agpr9_agpr10_agpr11, undef $sgpr0_sgpr1, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_agpr13_agpr14_agpr15, undef $sgpr0_sgpr1, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_agpr1_agpr2_agpr3, undef $sgpr0_sgpr1, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_agpr5_agpr6_agpr7, killed undef $sgpr0_sgpr1, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   S_ENDPGM 0
+  bb.0:
+    S_NOP 0, implicit-def $agpr0
+    renamable $sgpr0 = S_MOV_B32 0
+    undef %0.sub8:vreg_512_align2 = V_MOV_B32_e32 0, implicit $exec
+    renamable $sgpr1 = COPY renamable $sgpr0
+    %1:vreg_64_align2 = COPY killed renamable $sgpr0_sgpr1
+    renamable $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
+    %0.sub9:vreg_512_align2 = COPY %0.sub8
+
+  bb.1:
+    liveins: $vcc
+
+    %0:vreg_512_align2 = V_MFMA_F32_32X32X8F16_vgprcd_e64 %1, %1, 0, 0, 0, 0, implicit $mode, implicit $exec
     S_CBRANCH_VCCNZ %bb.1, implicit $vcc
     S_BRANCH %bb.2
 
