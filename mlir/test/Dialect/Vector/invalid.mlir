@@ -1952,10 +1952,17 @@ func.func @vector_load(%src : memref<?xi8>) {
 
 // -----
 
-func.func @invalid_load_alignment(%memref: memref<4xi32>) {
-  %c0 = arith.constant 0 : index
+func.func @invalid_load_alignment(%memref: memref<4xi32>, %c0: index) {
   // expected-error @below {{'vector.load' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
   %val = vector.load %memref[%c0] { alignment = -1 } : memref<4xi32>, vector<4xi32>
+  return
+}
+
+// -----
+
+func.func @invalid_load_alignment(%memref: memref<4xi32>, %c0: index) {
+  // expected-error @below {{'vector.load' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
+  %val = vector.load %memref[%c0] { alignment = 3 } : memref<4xi32>, vector<4xi32>
   return
 }
 
@@ -1974,8 +1981,15 @@ func.func @vector_store(%dest : memref<?xi8>, %vec : vector<16x16xi8>) {
 
 // -----
 
-func.func @invalid_store_alignment(%memref: memref<4xi32>, %val: vector<4xi32>) {
-  %c0 = arith.constant 0 : index
+func.func @invalid_store_alignment(%memref: memref<4xi32>, %val: vector<4xi32>, %c0: index) {
+  // expected-error @below {{'vector.store' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
+  vector.store %val, %memref[%c0] { alignment = -1 } : memref<4xi32>, vector<4xi32>
+  return
+}
+
+// -----
+
+func.func @invalid_store_alignment(%memref: memref<4xi32>, %val: vector<4xi32>, %c0: index) {
   // expected-error @below {{'vector.store' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
   vector.store %val, %memref[%c0] { alignment = 3 } : memref<4xi32>, vector<4xi32>
   return
