@@ -534,6 +534,10 @@ private:
   Align Alignment;
   /// The section index in the assemblers section list.
   unsigned Ordinal = 0;
+  // If not -1u, the first linker-relaxable fragment's order within the
+  // subsection. When present, the offset between two locations crossing this
+  // fragment may not be fully resolved.
+  unsigned FirstLinkerRelaxable = -1u;
 
   /// Whether this section has had instructions emitted into it.
   bool HasInstructions : 1;
@@ -542,10 +546,6 @@ private:
 
   bool IsText : 1;
   bool IsBss : 1;
-
-  /// Whether the section contains linker-relaxable fragments. If true, the
-  /// offset between two locations may not be fully resolved.
-  bool LinkerRelaxable : 1;
 
   MCFragment DummyFragment;
 
@@ -601,8 +601,9 @@ public:
   bool isRegistered() const { return IsRegistered; }
   void setIsRegistered(bool Value) { IsRegistered = Value; }
 
-  bool isLinkerRelaxable() const { return LinkerRelaxable; }
-  void setLinkerRelaxable() { LinkerRelaxable = true; }
+  unsigned firstLinkerRelaxable() const { return FirstLinkerRelaxable; }
+  bool isLinkerRelaxable() const { return FirstLinkerRelaxable != -1u; }
+  void setFirstLinkerRelaxable(unsigned Order) { FirstLinkerRelaxable = Order; }
 
   MCFragment &getDummyFragment() { return DummyFragment; }
 
