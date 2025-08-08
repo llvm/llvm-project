@@ -140,6 +140,15 @@ public:
   /// Adds `Constraint` to the flow condition identified by `Token`.
   void addFlowConditionConstraint(Atom Token, const Formula &Constraint);
 
+  /// Adds `Deps` to the dependencies of the flow condition identified by
+  /// `Token`. Intended for use in deserializing contexts. The formula alone
+  /// doesn't have enough information to indicate its deps.
+  void addFlowConditionDeps(Atom Token, const llvm::DenseSet<Atom> &Deps) {
+    // Avoid creating an entry for `Token` with an empty set.
+    if (!Deps.empty())
+      FlowConditionDeps[Token].insert(Deps.begin(), Deps.end());
+  }
+
   /// Creates a new flow condition with the same constraints as the flow
   /// condition identified by `Token` and returns its token.
   Atom forkFlowCondition(Atom Token);
@@ -176,6 +185,29 @@ public:
   const Options &getOptions() { return Opts; }
 
   Arena &arena() { return *A; }
+
+  const Formula *getInvariant() const { return Invariant; }
+
+  /// Returns null if no constraints are associated with `Token`.
+  const Formula *getFlowConditionConstraints(Atom Token) const {
+    auto ConstraintsIt = FlowConditionConstraints.find(Token);
+    if (ConstraintsIt == FlowConditionConstraints.end())
+      return nullptr;
+    return ConstraintsIt->second;
+  }
+
+  /// Returns null if no deps are found.
+  const llvm::DenseSet<Atom> *getFlowConditionDeps(Atom Token) const {
+    auto DepsIt = FlowConditionDeps.find(Token);
+    if (DepsIt == FlowConditionDeps.end())
+      return nullptr;
+    return &DepsIt->second;
+  }
+
+  /// Computes the transitive closure of reachable atoms from `Tokens`, through
+  /// the dependency graph.
+  llvm::DenseSet<Atom>
+  getTransitiveClosure(const llvm::DenseSet<Atom> &Tokens) const;
 
   /// Returns the outcome of satisfiability checking on `Constraints`.
   ///
