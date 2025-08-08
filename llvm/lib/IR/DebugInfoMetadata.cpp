@@ -57,15 +57,9 @@ DebugVariable::DebugVariable(const DbgVariableRecord *DVR)
 DILocation::DILocation(LLVMContext &C, StorageType Storage, unsigned Line,
                        unsigned Column, uint64_t AtomGroup, uint8_t AtomRank,
                        ArrayRef<Metadata *> MDs, bool ImplicitCode)
-    : MDNode(C, DILocationKind, Storage, MDs)
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
-      ,
-      AtomGroup(AtomGroup), AtomRank(AtomRank)
-#endif
-{
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
+    : MDNode(C, DILocationKind, Storage, MDs), AtomGroup(AtomGroup),
+      AtomRank(AtomRank) {
   assert(AtomRank <= 7 && "AtomRank number should fit in 3 bits");
-#endif
   if (AtomGroup)
     C.updateDILocationAtomGroupWaterline(AtomGroup + 1);
 
