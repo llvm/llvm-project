@@ -71,18 +71,11 @@ entry:
 }
 
 define void @test_commutable_vaddl_s8(<8 x i8> %a, <8 x i8> %b, ptr %c) {
-; CHECK-SD-LABEL: test_commutable_vaddl_s8:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    saddl v0.8h, v0.8b, v1.8b
-; CHECK-SD-NEXT:    stp q0, q0, [x0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_commutable_vaddl_s8:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    saddl v2.8h, v0.8b, v1.8b
-; CHECK-GI-NEXT:    saddl v0.8h, v1.8b, v0.8b
-; CHECK-GI-NEXT:    stp q2, q0, [x0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_commutable_vaddl_s8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    saddl v0.8h, v0.8b, v1.8b
+; CHECK-NEXT:    stp q0, q0, [x0]
+; CHECK-NEXT:    ret
 entry:
   %vmovl.i.i = sext <8 x i8> %a to <8 x i16>
   %vmovl.i2.i = sext <8 x i8> %b to <8 x i16>
@@ -131,18 +124,11 @@ entry:
 }
 
 define void @test_commutable_vaddl_u8(<8 x i8> %a, <8 x i8> %b, ptr %c) {
-; CHECK-SD-LABEL: test_commutable_vaddl_u8:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    uaddl v0.8h, v0.8b, v1.8b
-; CHECK-SD-NEXT:    stp q0, q0, [x0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_commutable_vaddl_u8:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    uaddl v2.8h, v0.8b, v1.8b
-; CHECK-GI-NEXT:    uaddl v0.8h, v1.8b, v0.8b
-; CHECK-GI-NEXT:    stp q2, q0, [x0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_commutable_vaddl_u8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uaddl v0.8h, v0.8b, v1.8b
+; CHECK-NEXT:    stp q0, q0, [x0]
+; CHECK-NEXT:    ret
 entry:
   %vmovl.i.i = zext <8 x i8> %a to <8 x i16>
   %vmovl.i2.i = zext <8 x i8> %b to <8 x i16>

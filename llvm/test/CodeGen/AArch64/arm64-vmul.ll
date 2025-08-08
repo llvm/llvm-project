@@ -82,9 +82,8 @@ define <2 x i64> @smull2d(ptr %A, ptr %B) nounwind {
 define void @commutable_smull(<2 x i32> %A, <2 x i32> %B, ptr %C) {
 ; CHECK-LABEL: commutable_smull:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    smull v2.2d, v0.2s, v1.2s
-; CHECK-NEXT:    smull v0.2d, v1.2s, v0.2s
-; CHECK-NEXT:    stp q2, q0, [x0]
+; CHECK-NEXT:    smull v0.2d, v0.2s, v1.2s
+; CHECK-NEXT:    stp q0, q0, [x0]
 ; CHECK-NEXT:    ret
   %1 = call <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32> %A, <2 x i32> %B)
   %2 = call <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32> %B, <2 x i32> %A)
@@ -140,9 +139,8 @@ define <2 x i64> @umull2d(ptr %A, ptr %B) nounwind {
 define void @commutable_umull(<2 x i32> %A, <2 x i32> %B, ptr %C) {
 ; CHECK-LABEL: commutable_umull:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umull v2.2d, v0.2s, v1.2s
-; CHECK-NEXT:    umull v0.2d, v1.2s, v0.2s
-; CHECK-NEXT:    stp q2, q0, [x0]
+; CHECK-NEXT:    umull v0.2d, v0.2s, v1.2s
+; CHECK-NEXT:    stp q0, q0, [x0]
 ; CHECK-NEXT:    ret
   %1 = call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> %A, <2 x i32> %B)
   %2 = call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> %B, <2 x i32> %A)
@@ -246,9 +244,8 @@ define <8 x i16> @pmull8h(ptr %A, ptr %B) nounwind {
 define void @commutable_pmull8h(<8 x i8> %A, <8 x i8> %B, ptr %C) {
 ; CHECK-LABEL: commutable_pmull8h:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    pmull v2.8h, v0.8b, v1.8b
-; CHECK-NEXT:    pmull v0.8h, v1.8b, v0.8b
-; CHECK-NEXT:    stp q2, q0, [x0]
+; CHECK-NEXT:    pmull v0.8h, v0.8b, v1.8b
+; CHECK-NEXT:    stp q0, q0, [x0]
 ; CHECK-NEXT:    ret
   %1 = call <8 x i16> @llvm.aarch64.neon.pmull.v8i16(<8 x i8> %A, <8 x i8> %B)
   %2 = call <8 x i16> @llvm.aarch64.neon.pmull.v8i16(<8 x i8> %B, <8 x i8> %A)
@@ -3273,9 +3270,8 @@ define <16 x i8> @test_commutable_pmull_64(i64 %l, i64 %r) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov d0, x1
 ; CHECK-NEXT:    fmov d1, x0
-; CHECK-NEXT:    pmull v2.1q, v1.1d, v0.1d
-; CHECK-NEXT:    pmull v0.1q, v0.1d, v1.1d
-; CHECK-NEXT:    add v0.16b, v2.16b, v0.16b
+; CHECK-NEXT:    pmull v0.1q, v1.1d, v0.1d
+; CHECK-NEXT:    add v0.16b, v0.16b, v0.16b
 ; CHECK-NEXT:    ret
   %1 = call <16 x i8> @llvm.aarch64.neon.pmull64(i64 %l, i64 %r)
   %2 = call <16 x i8> @llvm.aarch64.neon.pmull64(i64 %r, i64 %l)
