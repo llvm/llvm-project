@@ -39,6 +39,14 @@ def hasSinCos : RuntimeLibcallPredicate<"hasSinCos(TT)">;
 // FIXME: Way to combine predicates
 def hasSinCos_f32_f64 : RuntimeLibcallPredicate<"hasSinCos_f32_f64(TT)">;
 
+def ExceptionModelIsNotNone : RuntimeLibcallPredicate<
+  [{ExceptionModel != ExceptionHandling::None}]
+>;
+
+def ExceptionModelIsSjLj : RuntimeLibcallPredicate<
+  [{ExceptionModel == ExceptionHandling::SjLj}]
+>;
+
 //--------------------------------------------------------------------
 // Declare all kinds of used libcalls
 //--------------------------------------------------------------------
@@ -696,10 +704,6 @@ foreach MemSize = [ 1, 2, 4, 8, 16 ] in {
     !cast<RuntimeLibcall>("MEMSET_ELEMENT_UNORDERED_ATOMIC_"#MemSize)>;
 }
 
-// Exception handling
-def _Unwind_Resume : RuntimeLibcallImpl<UNWIND_RESUME>;
-def __cxa_end_cleanup : RuntimeLibcallImpl<CXA_END_CLEANUP>;
-
 // Atomic '__sync_*' libcalls.
 foreach lc = LibCalls__sync in {
   def __#!tolower(!cast<string>(lc)) : RuntimeLibcallImpl<lc>;
@@ -1003,9 +1007,20 @@ defm sincos : LibmLongDoubleLibCall;
 
 def bzero : RuntimeLibcallImpl<BZERO>;
 def __bzero : RuntimeLibcallImpl<BZERO>;
-def _Unwind_SjLj_Resume : RuntimeLibcallImpl<UNWIND_RESUME>;
-def _Unwind_SjLj_Register : RuntimeLibcallImpl<UNWIND_REGISTER>;
-def _Unwind_SjLj_Unregister : RuntimeLibcallImpl<UNWIND_UNREGISTER>;
+
+// Exception handling
+defset list<RuntimeLibcallImpl> DefaultExceptionHandlingLibcalls = {
+  def _Unwind_Resume : RuntimeLibcallImpl<UNWIND_RESUME>;
+  def __cxa_end_cleanup : RuntimeLibcallImpl<CXA_END_CLEANUP>;
+}
+
+defset list<RuntimeLibcallImpl> SjLjExceptionHandlingLibcalls = {
+  def _Unwind_SjLj_Resume : RuntimeLibcallImpl<UNWIND_RESUME>;
+  def _Unwind_SjLj_Register : RuntimeLibcallImpl<UNWIND_REGISTER>;
+  def _Unwind_SjLj_Unregister : RuntimeLibcallImpl<UNWIND_UNREGISTER>;
+}
+
+// Only used on wasm?
 def _Unwind_CallPersonality : RuntimeLibcallImpl<UNWIND_CALL_PERSONALITY>;
 
 // Used on OpenBSD
@@ -1081,6 +1096,13 @@ defset list<RuntimeLibcallImpl> LibmF128FiniteLibcalls = {
 // Common Libcall Sets
 //===----------------------------------------------------------------------===//
 
+defvar ExceptionModelCalls = (add
+  LibcallImpls<(add DefaultExceptionHandlingLibcalls),
+               ExceptionModelIsNotNone>,
+  LibcallImpls<(add SjLjExceptionHandlingLibcalls),
+               ExceptionModelIsSjLj>
+);
+
 // FIXME: Should move to explicit opt-in to different sets of libcalls
 // instead of trying to remove from a default set. We have
 // unreasonable defaults like reporting f80 calls on most targets when
@@ -1101,19 +1123,25 @@ defvar DefaultRuntimeLibcallImpls_f128 =
     !filter(entry, AllDefaultRuntimeLibcallImpls,
             !match(!cast<string>(entry.Provides), "_F128"));
 
-defvar DefaultRuntimeLibcallImpls =
+// FIXME: Ideally we would just use dags everywhere, but for the
+// arm64ec case we need iterable lists so we can add the # prefix
+defvar DefaultRuntimeLibcallImplsList =
 !listremove(
   !listremove(
     !listremove(AllDefaultRuntimeLibcallImpls, Int128RTLibcalls),
                 DefaultRuntimeLibcallImpls_f80),
                 DefaultRuntimeLibcallImpls_ppcf128);
 
+defvar DefaultRuntimeLibcallImpls = (add DefaultRuntimeLibcallImplsList, ExceptionModelCalls);
+
 /// Default set of libcall impls for 32-bit architectures.
-defvar DefaultLibcallImpls32 = DefaultRuntimeLibcallImpls;
+defvar DefaultLibcallImpls32List = DefaultRuntimeLibcallImplsList;
+defvar DefaultLibcallImpls32 = (add DefaultRuntimeLibcallImpls);
 
 /// Default set of libcall impls for 64-bit architectures.
-defvar DefaultLibcallImpls64 = !listconcat(DefaultRuntimeLibcallImpls,
-                                           Int128RTLibcalls);
+defvar DefaultLibcallImpls64List = !listconcat(DefaultRuntimeLibcallImplsList,
+                                               Int128RTLibcalls);
+defvar DefaultLibcallImpls64 = (add DefaultLibcallImpls32List);
 
 defvar DarwinSinCosStret = LibcallImpls<(add __sincosf_stret, __sincos_stret),
                                         darwinHasSinCosStret>;
@@ -1149,8 +1177,12 @@ defvar WindowsExclusions = !listconcat(WindowsMathRemovals, MostPowI);
 
 // Targets which support windows should start with these as a base and
 // add in calls for other OSes
-defvar Win32DefaultLibcallImpls = !listremove(DefaultLibcallImpls32, WindowsExclusions);
-defvar Win64DefaultLibcallImpls = !listremove(DefaultLibcallImpls64, WindowsExclusions);
+defvar Win32DefaultLibcallImpls = (sub DefaultLibcallImpls32, WindowsExclusions);
+defvar Win64DefaultLibcallImpls = (sub DefaultLibcallImpls64, WindowsExclusions);
+
+// We need a list (not-dag) to use foreach to define all the prefixed
+// versions, and there isn't an easy way to flatten a dag into a list.
+defvar Win64DefaultLibcallImplsList = !listremove(DefaultLibcallImpls64List, WindowsExclusions);
 
 defvar LibmHasFrexpF32 = LibcallImpls<(add frexpf), isNotOSWindowsOrIsCygwinMinGW>;
 defvar LibmHasLdexpF32 = LibcallImpls<(add ldexpf), isNotOSWindowsOrIsCygwinMinGW>;
@@ -1245,12 +1277,13 @@ def AArch64SystemLibrary : SystemRuntimeLibrary<
        LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
        DefaultLibmExp10,
        DefaultStackProtector,
-       SecurityCheckCookieIfWinMSVC)
+       SecurityCheckCookieIfWinMSVC,
+       ExceptionModelCalls)
 >;
 
 // Prepend a # to every name
 defset list<RuntimeLibcallImpl> WinArm64ECDefaultRuntimeLibcallImpls = {
-  foreach libcall = Win64DefaultLibcallImpls in {
+  foreach libcall = Win64DefaultLibcallImplsList in {
     def arm64ec_#libcall : DuplicateLibcallImplWithPrefix<libcall, "#">;
   }
 
@@ -1261,12 +1294,32 @@ defset list<RuntimeLibcallImpl> WinArm64ECDefaultRuntimeLibcallImpls = {
 
 def arm64ec___stack_chk_fail : DuplicateLibcallImplWithPrefix<__stack_chk_fail, "#">;
 
+defset list<RuntimeLibcallImpl> WinArm64ECDefaultExceptionHandlingLibcalls = {
+  foreach libcall = DefaultExceptionHandlingLibcalls in {
+    def arm64ec_#libcall : DuplicateLibcallImplWithPrefix<libcall, "#">;
+  }
+}
+
+defset list<RuntimeLibcallImpl> WinArm64ECSjLjExceptionHandlingLibcalls = {
+  foreach libcall = SjLjExceptionHandlingLibcalls in {
+    def arm64ec_#libcall : DuplicateLibcallImplWithPrefix<libcall, "#">;
+  }
+}
+
+defvar ExceptionModelCallsArm64EC = (add
+  LibcallImpls<(add WinArm64ECDefaultExceptionHandlingLibcalls),
+               ExceptionModelIsNotNone>,
+  LibcallImpls<(add WinArm64ECSjLjExceptionHandlingLibcalls),
+               ExceptionModelIsSjLj>
+);
+
 def WindowsARM64ECSystemLibrary
     : SystemRuntimeLibrary<isWindowsArm64EC,
                            (add WinArm64ECDefaultRuntimeLibcallImpls,
                                 arm64ec___stack_chk_fail,
                                 LibcallImpls<(add __security_check_cookie_arm64ec),
-                                              isWindowsMSVCEnvironment>)>;
+                                              isWindowsMSVCEnvironment>,
+                                ExceptionModelCallsArm64EC)>;
 
 //===----------------------------------------------------------------------===//
 // AMDGPU Runtime Libcalls
@@ -2179,7 +2232,8 @@ defvar X86CommonLibcalls =
        // FIXME: MSVCRT doesn't have powi. The f128 case is added as a
        // hack for one test relying on it.
        __powitf2_f128,
-       DefaultStackProtector
+       DefaultStackProtector,
+       ExceptionModelCalls
 );
 
 defvar Windows32DivRemMulCalls =
@@ -2324,6 +2378,7 @@ def WasmSystemLibrary
       (add DefaultRuntimeLibcallImpls, Int128RTLibcalls,
            CompilerRTOnlyInt64Libcalls, CompilerRTOnlyInt128Libcalls,
            exp10f, exp10,
+           _Unwind_CallPersonality,
            emscripten_return_address,
            __stack_chk_fail)>;
 

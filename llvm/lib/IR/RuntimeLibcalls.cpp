@@ -69,10 +69,7 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
                                        ExceptionHandling ExceptionModel,
                                        FloatABI::ABIType FloatABI,
                                        EABI EABIVersion, StringRef ABIName) {
-  setTargetRuntimeLibcallSets(TT, FloatABI);
-
-  if (ExceptionModel == ExceptionHandling::SjLj)
-    setLibcallImpl(RTLIB::UNWIND_RESUME, RTLIB::_Unwind_SjLj_Resume);
+  setTargetRuntimeLibcallSets(TT, ExceptionModel, FloatABI);
 
   if (TT.isARM() || TT.isThumb()) {
     setARMLibcallNames(*this, TT, FloatABI, EABIVersion);
