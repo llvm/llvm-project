@@ -272,15 +272,12 @@ define i64 @load_i64_align2(ptr %p) {
 ; RV64IZBKB-LABEL: load_i64_align2:
 ; RV64IZBKB:       # %bb.0:
 ; RV64IZBKB-NEXT:    lhu a1, 2(a0)
-; RV64IZBKB-NEXT:    lhu a2, 0(a0)
-; RV64IZBKB-NEXT:    lhu a3, 4(a0)
-; RV64IZBKB-NEXT:    lhu a0, 6(a0)
-; RV64IZBKB-NEXT:    slli a1, a1, 16
-; RV64IZBKB-NEXT:    or a1, a1, a2
-; RV64IZBKB-NEXT:    slli a3, a3, 32
-; RV64IZBKB-NEXT:    slli a0, a0, 48
-; RV64IZBKB-NEXT:    or a0, a0, a3
-; RV64IZBKB-NEXT:    or a0, a0, a1
+; RV64IZBKB-NEXT:    lhu a2, 4(a0)
+; RV64IZBKB-NEXT:    lhu a3, 6(a0)
+; RV64IZBKB-NEXT:    lhu a0, 0(a0)
+; RV64IZBKB-NEXT:    packw a2, a2, a3
+; RV64IZBKB-NEXT:    packw a0, a0, a1
+; RV64IZBKB-NEXT:    pack a0, a0, a2
 ; RV64IZBKB-NEXT:    ret
 ;
 ; RV32I-FAST-LABEL: load_i64_align2:
