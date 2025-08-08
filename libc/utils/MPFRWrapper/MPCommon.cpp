@@ -125,8 +125,17 @@ MPFRNumber MPFRNumber::atanh() const {
 
 MPFRNumber MPFRNumber::atanpi() const {
   MPFRNumber result(*this);
-  mpfr_atanpi(result.value, value, mpfr_rounding);
+#if 0 && (MPFR_VERSION >= MPFR_VERSION_NUM(4, 2, 0))
+   mpfr_asinpi(result.value, value, mpfr_rounding);
+   return result;
+#else
+  MPFRNumber value_atan(0.0, 1280);
+  mpfr_atan(value_atan.value, value, MPFR_RNDN);
+  MPFRNumber value_pi(0.0, 1280);
+  mpfr_const_pi(value_pi.value, MPFR_RNDN);
+  mpfr_div(result.value, value_atan.value, value_pi.value, mpfr_rounding);
   return result;
+#endif
 }
 
 MPFRNumber MPFRNumber::cbrt() const {
