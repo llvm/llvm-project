@@ -142,13 +142,48 @@ void NORETURN reportMisalignedPointer(AllocatorAction Action, const void *Ptr) {
                 stringifyAction(Action), Ptr);
 }
 
+static const char *stringifyAllocOrigin(Chunk::Origin AllocOrigin) {
+  switch (AllocOrigin) {
+  case Chunk::Origin::Malloc:
+    return "malloc";
+  case Chunk::Origin::New:
+    return "operator new";
+  case Chunk::Origin::NewArray:
+    return "operator new []";
+  case Chunk::Origin::Memalign:
+    return "aligned_alloc";
+  }
+  return "<invalid origin>";
+}
+
+static const char *stringifyDeallocOrigin(Chunk::Origin DeallocOrigin,
+                                          bool HasDeleteSize) {
+  switch (DeallocOrigin) {
+  case Chunk::Origin::Malloc:
+    if (HasDeleteSize)
+      return "free_sized";
+    return "free";
+  case Chunk::Origin::New:
+    return "operator delete";
+  case Chunk::Origin::NewArray:
+    return "operator delete []";
+  case Chunk::Origin::Memalign:
+    return "free_aligned_sized";
+  }
+  return "<invalid origin>";
+}
+
 // The deallocation function used is at odds with the one used to allocate the
 // chunk (eg: new[]/delete or malloc/delete, and so on).
 void NORETURN reportDeallocTypeMismatch(AllocatorAction Action, const void *Ptr,
-                                        u8 TypeA, u8 TypeB) {
+                                        u8 TypeA, u8 TypeB,
+                                        bool HasDeleteSize) {
   ScopedErrorReport Report;
-  Report.append("allocation type mismatch when %s address %p (%d vs %d)\n",
-                stringifyAction(Action), Ptr, TypeA, TypeB);
+  Report.append(
+      "allocation type mismatch when %s address %p (%s vs %s)\n",
+      stringifyAction(Action), Ptr,
+      stringifyAllocOrigin(static_cast<Chunk::Origin>(TypeA)),
+      stringifyDeallocOrigin(static_cast<Chunk::Origin>(TypeB), HasDeleteSize));
 }
 
 // The size specified to the delete operator does not match the one that was
@@ -159,6 +194,28 @@ void NORETURN reportDeleteSizeMismatch(const void *Ptr, uptr Size,
   Report.append(
       "invalid sized delete when deallocating address %p (%zu vs %zu)\n", Ptr,
       Size, ExpectedSize);
+}
+
+void NORETURN reportDeleteAlignmentMismatch(const void *Ptr, uptr Alignment) {
+  ScopedErrorReport Report;
+  Report.append(
+      "invalid aligned delete when deallocating address %p (%zu vs %zu)\n", Ptr,
+      getLeastSignificantSetBitIndex(reinterpret_cast<uptr>(Ptr)), Alignment);
+}
+
+void NORETURN reportFreeSizeMismatch(const void *Ptr, uptr Size,
+                                     uptr ExpectedSize) {
+  ScopedErrorReport Report;
+  Report.append(
+      "invalid sized free when deallocating address %p (%zu vs %zu)\n", Ptr,
+      Size, ExpectedSize);
+}
+
+void NORETURN reportFreeAlignmentMismatch(const void *Ptr, uptr Alignment) {
+  ScopedErrorReport Report;
+  Report.append(
+      "invalid aligned free when deallocating address %p (%zu vs %zu)\n", Ptr,
+      getLeastSignificantSetBitIndex(reinterpret_cast<uptr>(Ptr)), Alignment);
 }
 
 void NORETURN reportAlignmentNotPowerOfTwo(uptr Alignment) {

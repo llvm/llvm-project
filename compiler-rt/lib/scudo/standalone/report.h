@@ -44,9 +44,13 @@ enum class AllocatorAction : u8 {
 void NORETURN reportInvalidChunkState(AllocatorAction Action, const void *Ptr);
 void NORETURN reportMisalignedPointer(AllocatorAction Action, const void *Ptr);
 void NORETURN reportDeallocTypeMismatch(AllocatorAction Action, const void *Ptr,
-                                        u8 TypeA, u8 TypeB);
+                                        u8 TypeA, u8 TypeB, bool HasDeleteSize);
 void NORETURN reportDeleteSizeMismatch(const void *Ptr, uptr Size,
                                        uptr ExpectedSize);
+void NORETURN reportDeleteAlignmentMismatch(const void *Ptr, uptr Alignment);
+void NORETURN reportFreeSizeMismatch(const void *Ptr, uptr Size,
+                                     uptr ExpectedSize);
+void NORETURN reportFreeAlignmentMismatch(const void *Ptr, uptr Alignment);
 
 // C wrappers errors.
 void NORETURN reportAlignmentNotPowerOfTwo(uptr Alignment);
