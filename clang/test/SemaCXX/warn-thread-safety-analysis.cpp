@@ -6875,6 +6875,34 @@ class PointerGuard {
 };
 } // namespace Derived_Smart_Pointer
 
+// Test for capabilities that are heap-allocated and stored in static variables.
+namespace FunctionStaticVariable {
+struct Data {
+  Mutex mu;
+  int x GUARDED_BY(mu);
+};
+
+void testStaticVariable() {
+}
+
+void testHeapAllocation() {
+  static Data *d = new Data;
+  d->mu.Lock();
+  d->x = 5;
+  d->mu.Unlock();
+}
+
+void testHeapAllocationBug() {
+  static auto *d = new Data;
+  d->x = 10; // expected-warning{{writing variable 'x' requires holding mutex 'd->mu' exclusively}}
+}
+
+void testHeapAllocationScopedLock() {
+  static Mutex *mu = new Mutex;
+  MutexLock lock(mu);
+}
+} // namespace HeapAllocatedCapability
+
 namespace Reentrancy {
 
 class LOCKABLE REENTRANT_CAPABILITY ReentrantMutex {
@@ -7485,5 +7513,14 @@ void testRecursiveAssign() {
   f->mu.Lock();
   f->data = 42;
   f->mu.Unlock();
+}
+
+// A strange pattern that no sane person should write...
+void testStrangePattern(Mutex *&out, int &x) {
+  Mutex *mu = new Mutex;
+  __atomic_store_n(&out, mu, __ATOMIC_RELEASE);
+  mu->Lock();
+  x = 42;  // ... perhaps guarded by mu
+  mu->Unlock();
 }
 }  // namespace CapabilityAliases

@@ -439,6 +439,7 @@ private:
                                          CallingContext *Ctx);
   til::SExpr *translateCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE,
                                            CallingContext *Ctx);
+  til::SExpr *translateCXXNewExpr(const CXXNewExpr *NE, CallingContext *Ctx);
   til::SExpr *translateUnaryOperator(const UnaryOperator *UO,
                                      CallingContext *Ctx);
   til::SExpr *translateBinOp(til::TIL_BinaryOpcode Op,

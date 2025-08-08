@@ -1012,7 +1012,7 @@ public:
   Alloc(SExpr *D, AllocKind K) : SExpr(COP_Alloc), Dtype(D) { Flags = K; }
   Alloc(const Alloc &A, SExpr *Dt) : SExpr(A), Dtype(Dt) { Flags = A.kind(); }
 
-  static bool classof(const SExpr *E) { return E->opcode() == COP_Call; }
+  static bool classof(const SExpr *E) { return E->opcode() == COP_Alloc; }
 
   AllocKind kind() const { return static_cast<AllocKind>(Flags); }
 

@@ -256,7 +256,7 @@ til::SExpr *SExprBuilder::translateVariable(const VarDecl *VD,
       [&] { VarsBeingTranslated.erase(VD->getCanonicalDecl()); });
 
   QualType Ty = VD->getType();
-  if (Ty->isPointerType()) {
+  if (!VD->isStaticLocal() && Ty->isPointerType()) {
     // Substitute local variable aliases with a canonical definition.
     if (VD->hasInit() && !isVariableReassigned(VD)) {
       // Fast and CFG-independent mode: Substitute local pointer variables with
@@ -301,6 +301,8 @@ til::SExpr *SExprBuilder::translate(const Stmt *S, CallingContext *Ctx) {
     return translateCXXMemberCallExpr(cast<CXXMemberCallExpr>(S), Ctx);
   case Stmt::CXXOperatorCallExprClass:
     return translateCXXOperatorCallExpr(cast<CXXOperatorCallExpr>(S), Ctx);
+  case Stmt::CXXNewExprClass:
+    return translateCXXNewExpr(cast<CXXNewExpr>(S), Ctx);
   case Stmt::UnaryOperatorClass:
     return translateUnaryOperator(cast<UnaryOperator>(S), Ctx);
   case Stmt::BinaryOperatorClass:
@@ -521,6 +523,13 @@ til::SExpr *SExprBuilder::translateCXXOperatorCallExpr(
     }
   }
   return translateCallExpr(cast<CallExpr>(OCE), Ctx);
+}
+
+til::SExpr *SExprBuilder::translateCXXNewExpr(const CXXNewExpr *NE,
+                                              CallingContext *Ctx) {
+  if (til::SExpr *Dtype = translate(NE->getConstructExpr(), Ctx))
+    return new (Arena) til::Alloc(Dtype, til::Alloc::AK_Heap);
+  return new (Arena) til::Undefined(NE);
 }
 
 til::SExpr *SExprBuilder::translateUnaryOperator(const UnaryOperator *UO,
