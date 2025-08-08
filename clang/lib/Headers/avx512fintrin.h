@@ -314,7 +314,7 @@ _mm512_set1_epi16(short __w)
     __w, __w, __w, __w, __w, __w, __w, __w };
 }
 
-static __inline __m512i __DEFAULT_FN_ATTRS512
+static __inline __m512i __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_set1_epi32(int __s)
 {
   return __extension__ (__m512i)(__v16si){
@@ -330,7 +330,7 @@ _mm512_maskz_set1_epi32(__mmask16 __M, int __A)
                                              (__v16si)_mm512_setzero_si512());
 }
 
-static __inline __m512i __DEFAULT_FN_ATTRS512
+static __inline __m512i __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_set1_epi64(long long __d)
 {
   return __extension__(__m512i)(__v8di){ __d, __d, __d, __d, __d, __d, __d, __d };
