@@ -5879,8 +5879,12 @@ AMDGPULegalizerInfo::splitBufferOffsets(MachineIRBuilder &B,
   const LLT S32 = LLT::scalar(32);
   MachineRegisterInfo &MRI = *B.getMRI();
 
-  std::tie(BaseReg, ImmOffset) =
-      AMDGPU::getBaseWithConstantOffset(MRI, OrigOffset);
+  // On GFX1250+, voffset and immoffset are zero-extended from 32 bits before
+  // being added, so we can only safely match a 32-bit addition with no unsigned
+  // overflow.
+  bool CheckNUW = AMDGPU::isGFX1250(ST);
+  std::tie(BaseReg, ImmOffset) = AMDGPU::getBaseWithConstantOffset(
+      MRI, OrigOffset, /*KnownBits=*/nullptr, CheckNUW);
 
   // If BaseReg is a pointer, convert it to int.
   if (MRI.getType(BaseReg).isPointer())

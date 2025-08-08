@@ -14742,6 +14742,106 @@ static SDValue tryLowerToSLI(SDNode *N, SelectionDAG &DAG) {
   return ResultSLI;
 }
 
+static SDValue tryCombineToBSL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+                               const AArch64TargetLowering &TLI) {
+  EVT VT = N->getValueType(0);
+  SelectionDAG &DAG = DCI.DAG;
+  SDLoc DL(N);
+  const auto &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
+
+  if (!VT.isVector())
+    return SDValue();
+
+  if (VT.isScalableVector() && !Subtarget.hasSVE2())
+    return SDValue();
+
+  if (VT.isFixedLengthVector() &&
+      (!Subtarget.isNeonAvailable() || TLI.useSVEForFixedLengthVectorVT(VT)))
+    return SDValue();
+
+  SDValue N0 = N->getOperand(0);
+  if (N0.getOpcode() != ISD::AND)
+    return SDValue();
+
+  SDValue N1 = N->getOperand(1);
+  if (N1.getOpcode() != ISD::AND)
+    return SDValue();
+
+  // InstCombine does (not (neg a)) => (add a -1).
+  // Try: (or (and (neg a) b) (and (add a -1) c)) => (bsl (neg a) b c)
+  // Loop over all combinations of AND operands.
+  for (int i = 1; i >= 0; --i) {
+    for (int j = 1; j >= 0; --j) {
+      SDValue O0 = N0->getOperand(i);
+      SDValue O1 = N1->getOperand(j);
+      SDValue Sub, Add, SubSibling, AddSibling;
+
+      // Find a SUB and an ADD operand, one from each AND.
+      if (O0.getOpcode() == ISD::SUB && O1.getOpcode() == ISD::ADD) {
+        Sub = O0;
+        Add = O1;
+        SubSibling = N0->getOperand(1 - i);
+        AddSibling = N1->getOperand(1 - j);
+      } else if (O0.getOpcode() == ISD::ADD && O1.getOpcode() == ISD::SUB) {
+        Add = O0;
+        Sub = O1;
+        AddSibling = N0->getOperand(1 - i);
+        SubSibling = N1->getOperand(1 - j);
+      } else
+        continue;
+
+      if (!ISD::isConstantSplatVectorAllZeros(Sub.getOperand(0).getNode()))
+        continue;
+
+      // Constant ones is always righthand operand of the Add.
+      if (!ISD::isConstantSplatVectorAllOnes(Add.getOperand(1).getNode()))
+        continue;
+
+      if (Sub.getOperand(1) != Add.getOperand(0))
+        continue;
+
+      return DAG.getNode(AArch64ISD::BSP, DL, VT, Sub, SubSibling, AddSibling);
+    }
+  }
+
+  // (or (and a b) (and (not a) c)) => (bsl a b c)
+  // We only have to look for constant vectors here since the general, variable
+  // case can be handled in TableGen.
+  unsigned Bits = VT.getScalarSizeInBits();
+  uint64_t BitMask = Bits == 64 ? -1ULL : ((1ULL << Bits) - 1);
+  for (int i = 1; i >= 0; --i)
+    for (int j = 1; j >= 0; --j) {
+      APInt Val1, Val2;
+
+      if (ISD::isConstantSplatVector(N0->getOperand(i).getNode(), Val1) &&
+          ISD::isConstantSplatVector(N1->getOperand(j).getNode(), Val2) &&
+          (BitMask & ~Val1.getZExtValue()) == Val2.getZExtValue()) {
+        return DAG.getNode(AArch64ISD::BSP, DL, VT, N0->getOperand(i),
+                           N0->getOperand(1 - i), N1->getOperand(1 - j));
+      }
+      BuildVectorSDNode *BVN0 = dyn_cast<BuildVectorSDNode>(N0->getOperand(i));
+      BuildVectorSDNode *BVN1 = dyn_cast<BuildVectorSDNode>(N1->getOperand(j));
+      if (!BVN0 || !BVN1)
+        continue;
+
+      bool FoundMatch = true;
+      for (unsigned k = 0; k < VT.getVectorNumElements(); ++k) {
+        ConstantSDNode *CN0 = dyn_cast<ConstantSDNode>(BVN0->getOperand(k));
+        ConstantSDNode *CN1 = dyn_cast<ConstantSDNode>(BVN1->getOperand(k));
+        if (!CN0 || !CN1 ||
+            CN0->getZExtValue() != (BitMask & ~CN1->getZExtValue())) {
+          FoundMatch = false;
+          break;
+        }
+      }
+      if (FoundMatch)
+        return DAG.getNode(AArch64ISD::BSP, DL, VT, N0->getOperand(i),
+                           N0->getOperand(1 - i), N1->getOperand(1 - j));
+    }
+
+  return SDValue();
+}
+
 SDValue AArch64TargetLowering::LowerVectorOR(SDValue Op,
                                              SelectionDAG &DAG) const {
   if (useSVEForFixedLengthVectorVT(Op.getValueType(),
@@ -19417,106 +19517,6 @@ static SDValue performFpToIntCombine(SDNode *N, SelectionDAG &DAG,
     FixConv = DAG.getNode(ISD::TRUNCATE, DL, N->getValueType(0), FixConv);
 
   return FixConv;
-}
-
-static SDValue tryCombineToBSL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
-                               const AArch64TargetLowering &TLI) {
-  EVT VT = N->getValueType(0);
-  SelectionDAG &DAG = DCI.DAG;
-  SDLoc DL(N);
-  const auto &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
-
-  if (!VT.isVector())
-    return SDValue();
-
-  if (VT.isScalableVector() && !Subtarget.hasSVE2())
-    return SDValue();
-
-  if (VT.isFixedLengthVector() &&
-      (!Subtarget.isNeonAvailable() || TLI.useSVEForFixedLengthVectorVT(VT)))
-    return SDValue();
-
-  SDValue N0 = N->getOperand(0);
-  if (N0.getOpcode() != ISD::AND)
-    return SDValue();
-
-  SDValue N1 = N->getOperand(1);
-  if (N1.getOpcode() != ISD::AND)
-    return SDValue();
-
-  // InstCombine does (not (neg a)) => (add a -1).
-  // Try: (or (and (neg a) b) (and (add a -1) c)) => (bsl (neg a) b c)
-  // Loop over all combinations of AND operands.
-  for (int i = 1; i >= 0; --i) {
-    for (int j = 1; j >= 0; --j) {
-      SDValue O0 = N0->getOperand(i);
-      SDValue O1 = N1->getOperand(j);
-      SDValue Sub, Add, SubSibling, AddSibling;
-
-      // Find a SUB and an ADD operand, one from each AND.
-      if (O0.getOpcode() == ISD::SUB && O1.getOpcode() == ISD::ADD) {
-        Sub = O0;
-        Add = O1;
-        SubSibling = N0->getOperand(1 - i);
-        AddSibling = N1->getOperand(1 - j);
-      } else if (O0.getOpcode() == ISD::ADD && O1.getOpcode() == ISD::SUB) {
-        Add = O0;
-        Sub = O1;
-        AddSibling = N0->getOperand(1 - i);
-        SubSibling = N1->getOperand(1 - j);
-      } else
-        continue;
-
-      if (!ISD::isConstantSplatVectorAllZeros(Sub.getOperand(0).getNode()))
-        continue;
-
-      // Constant ones is always righthand operand of the Add.
-      if (!ISD::isConstantSplatVectorAllOnes(Add.getOperand(1).getNode()))
-        continue;
-
-      if (Sub.getOperand(1) != Add.getOperand(0))
-        continue;
-
-      return DAG.getNode(AArch64ISD::BSP, DL, VT, Sub, SubSibling, AddSibling);
-    }
-  }
-
-  // (or (and a b) (and (not a) c)) => (bsl a b c)
-  // We only have to look for constant vectors here since the general, variable
-  // case can be handled in TableGen.
-  unsigned Bits = VT.getScalarSizeInBits();
-  uint64_t BitMask = Bits == 64 ? -1ULL : ((1ULL << Bits) - 1);
-  for (int i = 1; i >= 0; --i)
-    for (int j = 1; j >= 0; --j) {
-      APInt Val1, Val2;
-
-      if (ISD::isConstantSplatVector(N0->getOperand(i).getNode(), Val1) &&
-          ISD::isConstantSplatVector(N1->getOperand(j).getNode(), Val2) &&
-          (BitMask & ~Val1.getZExtValue()) == Val2.getZExtValue()) {
-        return DAG.getNode(AArch64ISD::BSP, DL, VT, N0->getOperand(i),
-                           N0->getOperand(1 - i), N1->getOperand(1 - j));
-      }
-      BuildVectorSDNode *BVN0 = dyn_cast<BuildVectorSDNode>(N0->getOperand(i));
-      BuildVectorSDNode *BVN1 = dyn_cast<BuildVectorSDNode>(N1->getOperand(j));
-      if (!BVN0 || !BVN1)
-        continue;
-
-      bool FoundMatch = true;
-      for (unsigned k = 0; k < VT.getVectorNumElements(); ++k) {
-        ConstantSDNode *CN0 = dyn_cast<ConstantSDNode>(BVN0->getOperand(k));
-        ConstantSDNode *CN1 = dyn_cast<ConstantSDNode>(BVN1->getOperand(k));
-        if (!CN0 || !CN1 ||
-            CN0->getZExtValue() != (BitMask & ~CN1->getZExtValue())) {
-          FoundMatch = false;
-          break;
-        }
-      }
-      if (FoundMatch)
-        return DAG.getNode(AArch64ISD::BSP, DL, VT, N0->getOperand(i),
-                           N0->getOperand(1 - i), N1->getOperand(1 - j));
-    }
-
-  return SDValue();
 }
 
 // Given a tree of and/or(csel(0, 1, cc0), csel(0, 1, cc1)), we may be able to

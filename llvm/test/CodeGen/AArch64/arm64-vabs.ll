@@ -44,6 +44,36 @@ define <2 x i64> @sabdl2d(ptr %A, ptr %B) nounwind {
   ret <2 x i64> %tmp4
 }
 
+define void @commutable_sabdl(ptr %A, ptr %B, ptr %C) nounwind {
+; CHECK-SD-LABEL: commutable_sabdl:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr d0, [x0]
+; CHECK-SD-NEXT:    ldr d1, [x1]
+; CHECK-SD-NEXT:    sabdl.8h v0, v1, v0
+; CHECK-SD-NEXT:    str q0, [x2]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: commutable_sabdl:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr d0, [x0]
+; CHECK-GI-NEXT:    ldr d1, [x1]
+; CHECK-GI-NEXT:    sabdl.8h v2, v0, v1
+; CHECK-GI-NEXT:    sabdl.8h v0, v1, v0
+; CHECK-GI-NEXT:    str q2, [x2]
+; CHECK-GI-NEXT:    str q0, [x2]
+; CHECK-GI-NEXT:    ret
+  %tmp1 = load <8 x i8>, ptr %A
+  %tmp2 = load <8 x i8>, ptr %B
+  %tmp3 = call <8 x i8> @llvm.aarch64.neon.sabd.v8i8(<8 x i8> %tmp1, <8 x i8> %tmp2)
+  %tmp4 = zext <8 x i8> %tmp3 to <8 x i16>
+  store <8 x i16> %tmp4, ptr %C
+  %tmp5 = call <8 x i8> @llvm.aarch64.neon.sabd.v8i8(<8 x i8> %tmp2, <8 x i8> %tmp1)
+  %tmp6 = zext <8 x i8> %tmp5 to <8 x i16>
+  %tmp7 = getelementptr i8, ptr %C, i64 16
+  store <8 x i16> %tmp6, ptr %C
+  ret void
+}
+
 define <8 x i16> @sabdl2_8h(ptr %A, ptr %B) nounwind {
 ; CHECK-SD-LABEL: sabdl2_8h:
 ; CHECK-SD:       // %bb.0:
@@ -153,6 +183,36 @@ define <2 x i64> @uabdl2d(ptr %A, ptr %B) nounwind {
   %tmp3 = call <2 x i32> @llvm.aarch64.neon.uabd.v2i32(<2 x i32> %tmp1, <2 x i32> %tmp2)
   %tmp4 = zext <2 x i32> %tmp3 to <2 x i64>
   ret <2 x i64> %tmp4
+}
+
+define void @commutable_uabdl(ptr %A, ptr %B, ptr %C) nounwind {
+; CHECK-SD-LABEL: commutable_uabdl:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ldr d0, [x0]
+; CHECK-SD-NEXT:    ldr d1, [x1]
+; CHECK-SD-NEXT:    uabdl.8h v0, v1, v0
+; CHECK-SD-NEXT:    str q0, [x2]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: commutable_uabdl:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldr d0, [x0]
+; CHECK-GI-NEXT:    ldr d1, [x1]
+; CHECK-GI-NEXT:    uabdl.8h v2, v0, v1
+; CHECK-GI-NEXT:    uabdl.8h v0, v1, v0
+; CHECK-GI-NEXT:    str q2, [x2]
+; CHECK-GI-NEXT:    str q0, [x2]
+; CHECK-GI-NEXT:    ret
+  %tmp1 = load <8 x i8>, ptr %A
+  %tmp2 = load <8 x i8>, ptr %B
+  %tmp3 = call <8 x i8> @llvm.aarch64.neon.uabd.v8i8(<8 x i8> %tmp1, <8 x i8> %tmp2)
+  %tmp4 = zext <8 x i8> %tmp3 to <8 x i16>
+  store <8 x i16> %tmp4, ptr %C
+  %tmp5 = call <8 x i8> @llvm.aarch64.neon.uabd.v8i8(<8 x i8> %tmp2, <8 x i8> %tmp1)
+  %tmp6 = zext <8 x i8> %tmp5 to <8 x i16>
+  %tmp7 = getelementptr i8, ptr %C, i64 16
+  store <8 x i16> %tmp6, ptr %C
+  ret void
 }
 
 define <8 x i16> @uabdl2_8h(ptr %A, ptr %B) nounwind {
