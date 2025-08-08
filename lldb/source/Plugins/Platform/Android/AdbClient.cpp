@@ -8,8 +8,8 @@
 
 #include "AdbClient.h"
 
+#include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/FileSystem.h"
-#include "lldb/Host/posix/ConnectionFileDescriptorPosix.h"
 #include "lldb/Utility/Connection.h"
 #include "lldb/Utility/DataEncoder.h"
 #include "lldb/Utility/DataExtractor.h"
@@ -35,19 +35,19 @@ using namespace lldb_private::platform_android;
 using namespace std::chrono;
 using namespace llvm;
 
-const static char *kSocketNamespaceAbstract = "localabstract";
-const static char *kSocketNamespaceFileSystem = "localfilesystem";
+static const char *kSocketNamespaceAbstract = "localabstract";
+static const char *kSocketNamespaceFileSystem = "localfilesystem";
 const seconds kReadTimeout(20);
-const static char *kOKAY = "OKAY";
-const static char *kFAIL = "FAIL";
-const static char *kDATA = "DATA";
-const static char *kDONE = "DONE";
-const static char *kSEND = "SEND";
-const static char *kRECV = "RECV";
-const static char *kSTAT = "STAT";
-const static size_t kSyncPacketLen = 8;
-const static size_t kMaxPushData = 2 * 1024;
-const static uint32_t kDefaultMode = 0100770;
+static const char *kOKAY = "OKAY";
+static const char *kFAIL = "FAIL";
+static const char *kDATA = "DATA";
+static const char *kDONE = "DONE";
+static const char *kSEND = "SEND";
+static const char *kRECV = "RECV";
+static const char *kSTAT = "STAT";
+static const size_t kSyncPacketLen = 8;
+static const size_t kMaxPushData = 2 * 1024;
+static const uint32_t kDefaultMode = 0100770;
 
 static Status ReadAllBytes(Connection &conn, void *buffer, size_t size) {
   Status error;
@@ -129,7 +129,7 @@ static Status ReadResponseStatus(Connection &conn) {
   return error;
 }
 
-static Status SendAdbMessage(Connection &conn, const std::string &packet) {
+static Status SendAdbMessage(Connection &conn, llvm::StringRef packet) {
   Status error;
 
   char length_buffer[5];
@@ -142,7 +142,7 @@ static Status SendAdbMessage(Connection &conn, const std::string &packet) {
   if (error.Fail())
     return error;
 
-  conn.Write(packet.c_str(), packet.size(), status, &error);
+  conn.Write(packet.str().c_str(), packet.size(), status, &error);
   return error;
 }
 
@@ -168,13 +168,12 @@ static Status EnterSyncMode(Connection &conn) {
   return ReadResponseStatus(conn);
 }
 
-static Status SelectTargetDevice(Connection &conn,
-                                 const std::string &device_id) {
+static Status SelectTargetDevice(Connection &conn, llvm::StringRef device_id) {
   Log *log = GetLog(LLDBLog::Platform);
-  LLDB_LOGF(log, "Selecting device: %s", device_id.c_str());
+  LLDB_LOGF(log, "Selecting device: %s", device_id.str().c_str());
 
   std::ostringstream msg;
-  msg << "host:transport:" << device_id;
+  msg << "host:transport:" << device_id.str();
 
   auto error = SendAdbMessage(conn, msg.str());
   if (error.Fail())
@@ -185,11 +184,10 @@ static Status SelectTargetDevice(Connection &conn,
 
 Expected<std::string> AdbClient::ResolveDeviceID(StringRef device_id) {
   StringRef preferred_serial;
-  if (!device_id.empty()) {
+  if (!device_id.empty())
     preferred_serial = device_id;
-  } else if (const char *env_serial = std::getenv("ANDROID_SERIAL")) {
+  else if (const char *env_serial = std::getenv("ANDROID_SERIAL"))
     preferred_serial = env_serial;
-  }
 
   if (preferred_serial.empty()) {
     DeviceIDList connected_devices;
@@ -250,12 +248,12 @@ Expected<std::string> AdbClient::ResolveDeviceID(StringRef device_id) {
   return resolved_device_id;
 }
 
-AdbClient::AdbClient(const std::string &device_id) : m_device_id(device_id) {
+AdbClient::AdbClient(llvm::StringRef device_id) : m_device_id(device_id) {
   Log *log = GetLog(LLDBLog::Platform);
   LLDB_LOGF(log,
             "AdbClient::AdbClient(device_id='%s') - Creating AdbClient with "
             "device ID",
-            device_id.c_str());
+            device_id.str().c_str());
   m_conn = std::make_unique<ConnectionFileDescriptor>();
   Connect();
 }
@@ -276,7 +274,7 @@ AdbClient::~AdbClient() {
             m_device_id.c_str());
 }
 
-const std::string &AdbClient::GetDeviceID() const { return m_device_id; }
+llvm::StringRef AdbClient::GetDeviceID() const { return m_device_id; }
 
 Status AdbClient::Connect() {
   if (m_conn->IsConnected())
@@ -328,9 +326,9 @@ Status AdbClient::DeletePortForwarding(const uint16_t local_port) {
   return ReadResponseStatus(*m_conn);
 }
 
-Status AdbClient::SendDeviceMessage(const std::string &packet) {
+Status AdbClient::SendDeviceMessage(llvm::StringRef packet) {
   std::ostringstream msg;
-  msg << "host-serial:" << m_device_id << ":" << packet;
+  msg << "host-serial:" << m_device_id << ":" << packet.str();
   return SendAdbMessage(*m_conn, msg.str());
 }
 
@@ -430,8 +428,8 @@ Status AdbClient::ShellToFile(const char *command, milliseconds timeout,
   return Status();
 }
 
-Status AdbSyncService::internalPullFile(const FileSpec &remote_file,
-                                        const FileSpec &local_file) {
+Status AdbSyncService::PullFileImpl(const FileSpec &remote_file,
+                                    const FileSpec &local_file) {
   const auto local_file_path = local_file.GetPath();
   llvm::FileRemover local_file_remover(local_file_path);
 
@@ -465,8 +463,8 @@ Status AdbSyncService::internalPullFile(const FileSpec &remote_file,
   return error;
 }
 
-Status AdbSyncService::internalPushFile(const FileSpec &local_file,
-                                        const FileSpec &remote_file) {
+Status AdbSyncService::PushFileImpl(const FileSpec &local_file,
+                                    const FileSpec &remote_file) {
   const auto local_file_path(local_file.GetPath());
   std::ifstream src(local_file_path.c_str(), std::ios::in | std::ios::binary);
   if (!src.is_open())
@@ -523,8 +521,8 @@ Status AdbSyncService::internalPushFile(const FileSpec &local_file,
   return error;
 }
 
-Status AdbSyncService::internalStat(const FileSpec &remote_file, uint32_t &mode,
-                                    uint32_t &size, uint32_t &mtime) {
+Status AdbSyncService::StatImpl(const FileSpec &remote_file, uint32_t &mode,
+                                uint32_t &size, uint32_t &mtime) {
   const std::string remote_file_path(remote_file.GetPath(false));
   auto error = SendSyncRequest(kSTAT, remote_file_path.length(),
                                remote_file_path.c_str());
@@ -561,22 +559,22 @@ Status AdbSyncService::internalStat(const FileSpec &remote_file, uint32_t &mode,
 
 Status AdbSyncService::PullFile(const FileSpec &remote_file,
                                 const FileSpec &local_file) {
-  return executeCommand([this, &remote_file, &local_file]() {
-    return internalPullFile(remote_file, local_file);
+  return ExecuteCommand([this, &remote_file, &local_file]() {
+    return PullFileImpl(remote_file, local_file);
   });
 }
 
 Status AdbSyncService::PushFile(const FileSpec &local_file,
                                 const FileSpec &remote_file) {
-  return executeCommand([this, &local_file, &remote_file]() {
-    return internalPushFile(local_file, remote_file);
+  return ExecuteCommand([this, &local_file, &remote_file]() {
+    return PushFileImpl(local_file, remote_file);
   });
 }
 
 Status AdbSyncService::Stat(const FileSpec &remote_file, uint32_t &mode,
                             uint32_t &size, uint32_t &mtime) {
-  return executeCommand([this, &remote_file, &mode, &size, &mtime]() {
-    return internalStat(remote_file, mode, size, mtime);
+  return ExecuteCommand([this, &remote_file, &mode, &size, &mtime]() {
+    return StatImpl(remote_file, mode, size, mtime);
   });
 }
 
@@ -594,7 +592,7 @@ AdbSyncService::AdbSyncService(const std::string device_id)
             m_device_id.c_str());
 }
 
-Status AdbSyncService::executeCommand(const std::function<Status()> &cmd) {
+Status AdbSyncService::ExecuteCommand(const std::function<Status()> &cmd) {
   Status error = cmd();
   return error;
 }

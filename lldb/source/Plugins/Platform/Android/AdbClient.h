@@ -43,11 +43,11 @@ public:
   static llvm::Expected<std::string> ResolveDeviceID(llvm::StringRef device_id);
 
   AdbClient();
-  explicit AdbClient(const std::string &device_id);
+  explicit AdbClient(llvm::StringRef device_id);
 
   virtual ~AdbClient();
 
-  const std::string &GetDeviceID() const;
+  llvm::StringRef GetDeviceID() const;
 
   Status SetPortForwarding(const uint16_t local_port,
                            const uint16_t remote_port);
@@ -68,7 +68,7 @@ public:
   Status Connect();
 
 private:
-  Status SendDeviceMessage(const std::string &packet);
+  Status SendDeviceMessage(llvm::StringRef packet);
 
   Status ReadMessageStream(std::vector<char> &message,
                            std::chrono::milliseconds timeout);
@@ -94,20 +94,18 @@ public:
                       uint32_t &size, uint32_t &mtime);
   virtual bool IsConnected() const;
 
-  const std::string &GetDeviceId() const { return m_device_id; }
+  llvm::StringRef GetDeviceId() const { return m_device_id; }
 
 private:
   Status SendSyncRequest(const char *request_id, const uint32_t data_len,
                          const void *data);
   Status ReadSyncHeader(std::string &response_id, uint32_t &data_len);
   Status PullFileChunk(std::vector<char> &buffer, bool &eof);
-  Status internalPullFile(const FileSpec &remote_file,
-                          const FileSpec &local_file);
-  Status internalPushFile(const FileSpec &local_file,
-                          const FileSpec &remote_file);
-  Status internalStat(const FileSpec &remote_file, uint32_t &mode,
-                      uint32_t &size, uint32_t &mtime);
-  Status executeCommand(const std::function<Status()> &cmd);
+  Status PullFileImpl(const FileSpec &remote_file, const FileSpec &local_file);
+  Status PushFileImpl(const FileSpec &local_file, const FileSpec &remote_file);
+  Status StatImpl(const FileSpec &remote_file, uint32_t &mode, uint32_t &size,
+                  uint32_t &mtime);
+  Status ExecuteCommand(const std::function<Status()> &cmd);
 
   std::unique_ptr<Connection> m_conn;
   std::string m_device_id;

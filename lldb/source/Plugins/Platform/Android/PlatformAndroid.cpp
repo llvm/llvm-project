@@ -24,7 +24,6 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::platform_android;
 using namespace std::chrono;
-using namespace llvm;
 
 LLDB_PLUGIN_DEFINE(PlatformAndroid)
 
