@@ -21,7 +21,9 @@
 #include "mlir/Target/SPIRV/Serialization.h"
 #include "mlir/Tools/mlir-translate/Translation.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
 
@@ -94,6 +96,17 @@ serializeModule(spirv::ModuleOp module, raw_ostream &output,
   output.write(reinterpret_cast<char *>(binary.data()), sizeInBytes);
 
   if (options.saveModuleForValidation) {
+    size_t dirSeparator =
+        options.validationFilePrefix.find(llvm::sys::path::get_separator());
+    // If file prefix includes directory check if that directory exists.
+    if (dirSeparator != std::string::npos) {
+      llvm::StringRef parentDir =
+          llvm::sys::path::parent_path(options.validationFilePrefix);
+      if (!llvm::sys::fs::is_directory(parentDir)) {
+        llvm::errs() << "validation prefix directory does not exist\n";
+        return failure();
+      }
+    }
     std::string errorMessage;
     std::string filename =
         options.validationFilePrefix + std::to_string(validationFileCounter++);
