@@ -88,12 +88,12 @@ entry:
   %alloca = alloca <4 x float>
 
   %ptr0 = getelementptr inbounds <4 x float>, ptr %alloca, i32 0, i32 0
-  %float_vec = insertelement <2 x float> undef, float 1.0, i32 0
+  %float_vec = insertelement <2 x float> poison, float 1.0, i32 0
   %float_vec2 = insertelement <2 x float> %float_vec, float 2.0, i32 1
   store <2 x float> %float_vec2, ptr %ptr0
 
   %ptr1 = getelementptr inbounds <4 x float>, ptr %alloca, i32 0, i32 2
-  %int_vec = insertelement <2 x i32> undef, i32 3, i32 0
+  %int_vec = insertelement <2 x i32> poison, i32 3, i32 0
   %int_vec2 = insertelement <2 x i32> %int_vec, i32 4, i32 1
   store <2 x i32> %int_vec2, ptr %ptr1
 
@@ -106,12 +106,12 @@ entry:
   %alloca = alloca <4 x float>
 
   %ptr0 = getelementptr inbounds <4 x float>, ptr %alloca, i32 0, i32 0
-  %float_vec = insertelement <2 x float> undef, float 1.0, i32 0
+  %float_vec = insertelement <2 x float> poison, float 1.0, i32 0
   %float_vec2 = insertelement <2 x float> %float_vec, float 2.0, i32 1
   store <2 x float> %float_vec2, ptr %ptr0
 
   %ptr1 = getelementptr inbounds <4 x float>, ptr %alloca, i32 0, i32 2
-  %float_vec3 = insertelement <2 x float> undef, float 3.0, i32 0
+  %float_vec3 = insertelement <2 x float> poison, float 3.0, i32 0
   %float_vec4 = insertelement <2 x float> %float_vec3, float 4.0, i32 1
   store <2 x float> %float_vec4, ptr %ptr1
 

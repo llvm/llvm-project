@@ -2988,8 +2988,8 @@ public:
     if (!TheLoad)
       return std::nullopt;
 
-    // If we do not have any stores, we cannot do the tree structured merge
-    if (StoreInfos.empty())
+    // If we do not have multiple stores, we cannot do the tree structured merge
+    if (StoreInfos.size() < 2)
       return std::nullopt;
 
     // The load and store element types should be the same
