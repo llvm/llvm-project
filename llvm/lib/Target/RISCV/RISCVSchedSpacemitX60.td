@@ -668,7 +668,7 @@ foreach mx = SchedMxListFW in {
 
     // Slightly increased latency for SEW == 32
     defvar VFWMullOcc = !if(!eq(sew, 32),
-      !add(ConstValueUntilLMULThenDouble<"M2", 2, mx>.c, 1), // 1/3/5/9
+      GetLMULValue<[1, 1, 1, 3, 5, 9, 18], mx>.c,
       ConstOneUntilMF2ThenDouble<mx>.c
     );
     defvar VFWMulVLat = ConstValueUntilLMULThenDoubleBase<"M8", 5, 8, mx>.c;
