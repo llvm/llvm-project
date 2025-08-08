@@ -158,6 +158,9 @@ struct DeviceTy {
   /// Indicate that there are pending images for this device or not.
   void setHasPendingImages(bool V) { HasPendingImages = V; }
 
+  /// Get the maximum shared memory per team for any kernel.
+  uint64_t getMaxSharedTeamMemory();
+
 private:
   /// Deinitialize the device (and plugin).
   void deinit();

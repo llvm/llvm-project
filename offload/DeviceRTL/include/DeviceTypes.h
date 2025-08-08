@@ -163,4 +163,8 @@ typedef enum omp_allocator_handle_t {
 
 ///}
 
+enum omp_access_t {
+  omp_access_cgroup = 0,
+};
+
 #endif

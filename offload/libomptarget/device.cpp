@@ -281,3 +281,9 @@ bool DeviceTy::useAutoZeroCopy() {
     return false;
   return RTL->use_auto_zero_copy(RTLDeviceID);
 }
+
+uint64_t DeviceTy::getMaxSharedTeamMemory() {
+  using DeviceQueryKind = llvm::omp::target::plugin::DeviceQueryKind;
+  return RTL->query_device_info(
+      RTLDeviceID, DeviceQueryKind::DEVICE_QUERY_MAX_SHARED_TEAM_MEM);
+}
