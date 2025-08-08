@@ -5376,9 +5376,9 @@ LoopVectorizationCostModel::getGatherScatterCost(Instruction *I,
                                                  ElementCount VF) {
   Type *ValTy = getLoadStoreType(I);
   auto *VectorTy = cast<VectorType>(toVectorTy(ValTy, VF));
-  Type *PtrTy = toVectorTy(getLoadStorePointerOperand(I)->getType(), VF);
   const Align Alignment = getLoadStoreAlignment(I);
   const Value *Ptr = getLoadStorePointerOperand(I);
+  Type *PtrTy = toVectorTy(Ptr->getType(), VF);
 
   return TTI.getAddressComputationCost(PtrTy) +
          TTI.getGatherScatterOpCost(I->getOpcode(), VectorTy, Ptr,
