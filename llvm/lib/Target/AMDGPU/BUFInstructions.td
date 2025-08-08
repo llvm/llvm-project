@@ -882,7 +882,7 @@ multiclass MUBUF_Pseudo_Stores<string opName, ValueType store_vt = i32> {
 #endif /* LLPC_BUILD_NPI */
   defm _TFE_VBUFFER : MUBUF_Pseudo_Stores_Helper<opName, store_vt, 1, 1>;
 #ifdef LLPC_BUILD_NPI
-  defm _TFE_VBUFFER_indexed : MUBUF_Pseudo_Stores_Helper<opName, store_vt, 0, 1, RsrcReg128Op>;
+  defm _TFE_VBUFFER_indexed : MUBUF_Pseudo_Stores_Helper<opName, store_vt, 1, 1, RsrcReg128Op>;
 #endif /* LLPC_BUILD_NPI */
 }
 
@@ -3271,6 +3271,7 @@ class Mnem_gfx13 <string mnemonic, string real_name> :
 multiclass MUBUF_Real_AllAddr_gfx13<bits<8> op, string real_name = get_BUF_ps<NAME>.Mnemonic> {
   foreach mode = ["_BOTHEN", "_IDXEN", "_OFFEN", "_OFFSET"] in {
     defm _VBUFFER_indexed # mode : VBUFFER_MUBUF_Real_gfx13<op, real_name>;
+    defm _TFE_VBUFFER_indexed # mode : VBUFFER_MUBUF_Real_gfx13<op, real_name>;
   }
   defvar ps = get_BUF_ps<NAME>;
   if !ne(ps.Mnemonic, real_name) then
