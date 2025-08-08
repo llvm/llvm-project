@@ -29,11 +29,11 @@
 // RUN: diff %t.tgt1 %t.res.tgt1
 // RUN: diff %t.tgt2 %t.res.tgt2
 //
-// CHECK: Compressed bundle format version: 2
+// CHECK: Compressed bundle format version: 3
 // CHECK: Total file size (including headers): [[SIZE:[0-9]*]] bytes
 // CHECK: Compression method used: zstd
 // CHECK: Compression level: 3
-// CHECK: Compressed bundle format version: 2
+// CHECK: Compressed bundle format version: 3
 // CHECK: Total file size (from header): [[SIZE]] bytes
 // CHECK: Decompression method: zstd
 // CHECK: Hashes match: Yes
