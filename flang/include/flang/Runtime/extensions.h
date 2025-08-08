@@ -90,5 +90,9 @@ void RTNAME(Perror)(const char *str);
 // MCLOCK -- returns accumulated time in ticks
 int FORTRAN_PROCEDURE_NAME(mclock)();
 
+// GNU extension subroutine SECNDS(refTime)
+float FORTRAN_PROCEDURE_NAME(secnds)(float *refTime);
+float RTNAME(Secnds)(float *refTime, const char *sourceFile, int line);
+
 } // extern "C"
 #endif // FORTRAN_RUNTIME_EXTENSIONS_H_

@@ -1247,8 +1247,7 @@ private:
            "Map index doesn't point back to a slice with this user.");
   }
 
-  // Disable SRoA for any intrinsics except for lifetime invariants and
-  // invariant group.
+  // Disable SRoA for any intrinsics except for lifetime invariants.
   // FIXME: What about debug intrinsics? This matches old behavior, but
   // doesn't make sense.
   void visitIntrinsicInst(IntrinsicInst &II) {
@@ -1261,16 +1260,7 @@ private:
       return PI.setAborted(&II);
 
     if (II.isLifetimeStartOrEnd()) {
-      ConstantInt *Length = cast<ConstantInt>(II.getArgOperand(0));
-      uint64_t Size = std::min(AllocSize - Offset.getLimitedValue(),
-                               Length->getLimitedValue());
-      insertUse(II, Offset, Size, true);
-      return;
-    }
-
-    if (II.isLaunderOrStripInvariantGroup()) {
       insertUse(II, Offset, AllocSize, true);
-      enqueueUsers(II);
       return;
     }
 
@@ -3607,8 +3597,7 @@ private:
   }
 
   bool visitIntrinsicInst(IntrinsicInst &II) {
-    assert((II.isLifetimeStartOrEnd() || II.isLaunderOrStripInvariantGroup() ||
-            II.isDroppable()) &&
+    assert((II.isLifetimeStartOrEnd() || II.isDroppable()) &&
            "Unexpected intrinsic!");
     LLVM_DEBUG(dbgs() << "    original: " << II << "\n");
 
@@ -3622,33 +3611,14 @@ private:
       return true;
     }
 
-    if (II.isLaunderOrStripInvariantGroup())
-      return true;
-
-    assert(II.getArgOperand(1) == OldPtr);
-    // Lifetime intrinsics are only promotable if they cover the whole alloca.
-    // Therefore, we drop lifetime intrinsics which don't cover the whole
-    // alloca.
-    // (In theory, intrinsics which partially cover an alloca could be
-    // promoted, but PromoteMemToReg doesn't handle that case.)
-    // FIXME: Check whether the alloca is promotable before dropping the
-    // lifetime intrinsics?
-    if (NewBeginOffset != NewAllocaBeginOffset ||
-        NewEndOffset != NewAllocaEndOffset)
-      return true;
-
-    ConstantInt *Size =
-        ConstantInt::get(cast<IntegerType>(II.getArgOperand(0)->getType()),
-                         NewEndOffset - NewBeginOffset);
-    // Lifetime intrinsics always expect an i8* so directly get such a pointer
-    // for the new alloca slice.
+    assert(II.getArgOperand(0) == OldPtr);
     Type *PointerTy = IRB.getPtrTy(OldPtr->getType()->getPointerAddressSpace());
     Value *Ptr = getNewAllocaSlicePtr(IRB, PointerTy);
     Value *New;
     if (II.getIntrinsicID() == Intrinsic::lifetime_start)
-      New = IRB.CreateLifetimeStart(Ptr, Size);
+      New = IRB.CreateLifetimeStart(Ptr);
     else
-      New = IRB.CreateLifetimeEnd(Ptr, Size);
+      New = IRB.CreateLifetimeEnd(Ptr);
 
     (void)New;
     LLVM_DEBUG(dbgs() << "          to: " << *New << "\n");

@@ -554,7 +554,17 @@ static bool isUnpackedVectorVT(EVT VecVT) {
          VecVT.getSizeInBits().getKnownMinValue() < AArch64::SVEBitsPerBlock;
 }
 
-static InstructionCost getHistogramCost(const IntrinsicCostAttributes &ICA) {
+static InstructionCost getHistogramCost(const AArch64Subtarget *ST,
+                                        const IntrinsicCostAttributes &ICA) {
+  // We need to know at least the number of elements in the vector of buckets
+  // and the size of each element to update.
+  if (ICA.getArgTypes().size() < 2)
+    return InstructionCost::getInvalid();
+
+  // Only interested in costing for the hardware instruction from SVE2.
+  if (!ST->hasSVE2())
+    return InstructionCost::getInvalid();
+
   Type *BucketPtrsTy = ICA.getArgTypes()[0]; // Type of vector of pointers
   Type *EltTy = ICA.getArgTypes()[1];        // Type of bucket elements
   unsigned TotalHistCnts = 1;
@@ -579,9 +589,11 @@ static InstructionCost getHistogramCost(const IntrinsicCostAttributes &ICA) {
 
     unsigned NaturalVectorWidth = AArch64::SVEBitsPerBlock / LegalEltSize;
     TotalHistCnts = EC / NaturalVectorWidth;
+
+    return InstructionCost(BaseHistCntCost * TotalHistCnts);
   }
 
-  return InstructionCost(BaseHistCntCost * TotalHistCnts);
+  return InstructionCost::getInvalid();
 }
 
 InstructionCost
@@ -597,10 +609,13 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return InstructionCost::getInvalid();
 
   switch (ICA.getID()) {
-  case Intrinsic::experimental_vector_histogram_add:
-    if (!ST->hasSVE2())
-      return InstructionCost::getInvalid();
-    return getHistogramCost(ICA);
+  case Intrinsic::experimental_vector_histogram_add: {
+    InstructionCost HistCost = getHistogramCost(ST, ICA);
+    // If the cost isn't valid, we may still be able to scalarize
+    if (HistCost.isValid())
+      return HistCost;
+    break;
+  }
   case Intrinsic::umin:
   case Intrinsic::umax:
   case Intrinsic::smin:
@@ -6284,10 +6299,17 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
     }
   }
 
-  auto ShouldSinkCondition = [](Value *Cond) -> bool {
+  auto ShouldSinkCondition = [](Value *Cond,
+                                SmallVectorImpl<Use *> &Ops) -> bool {
+    if (!isa<IntrinsicInst>(Cond))
+      return false;
     auto *II = dyn_cast<IntrinsicInst>(Cond);
-    return II && II->getIntrinsicID() == Intrinsic::vector_reduce_or &&
-           isa<ScalableVectorType>(II->getOperand(0)->getType());
+    if (II->getIntrinsicID() != Intrinsic::vector_reduce_or ||
+        !isa<ScalableVectorType>(II->getOperand(0)->getType()))
+      return false;
+    if (isa<CmpInst>(II->getOperand(0)))
+      Ops.push_back(&II->getOperandUse(0));
+    return true;
   };
 
   switch (I->getOpcode()) {
@@ -6303,7 +6325,7 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
     }
     break;
   case Instruction::Select: {
-    if (!ShouldSinkCondition(I->getOperand(0)))
+    if (!ShouldSinkCondition(I->getOperand(0), Ops))
       return false;
 
     Ops.push_back(&I->getOperandUse(0));
@@ -6313,7 +6335,7 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
     if (cast<BranchInst>(I)->isUnconditional())
       return false;
 
-    if (!ShouldSinkCondition(cast<BranchInst>(I)->getCondition()))
+    if (!ShouldSinkCondition(cast<BranchInst>(I)->getCondition(), Ops))
       return false;
 
     Ops.push_back(&I->getOperandUse(0));

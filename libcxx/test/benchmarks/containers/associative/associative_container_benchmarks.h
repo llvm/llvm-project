@@ -151,7 +151,7 @@ void associative_container_benchmarks(std::string container) {
   /////////////////////////
   // Assignment
   /////////////////////////
-  bench("operator=(const&)", [=](auto& st) {
+  bench("operator=(const&) (into cleared Container)", [=](auto& st) {
     const std::size_t size = st.range(0);
     std::vector<Value> in  = make_value_types(generate_unique_keys(size));
     Container src(in.begin(), in.end());
@@ -169,6 +169,42 @@ void associative_container_benchmarks(std::string container) {
         c[i].clear();
       }
       st.ResumeTiming();
+    }
+  });
+
+  bench("operator=(const&) (into partially populated Container)", [=](auto& st) {
+    const std::size_t size = st.range(0);
+    std::vector<Value> in  = make_value_types(generate_unique_keys(size));
+    Container src(in.begin(), in.end());
+    Container c[BatchSize];
+
+    while (st.KeepRunningBatch(BatchSize)) {
+      for (std::size_t i = 0; i != BatchSize; ++i) {
+        c[i] = src;
+        benchmark::DoNotOptimize(c[i]);
+        benchmark::ClobberMemory();
+      }
+
+      st.PauseTiming();
+      for (std::size_t i = 0; i != BatchSize; ++i) {
+        c[i].clear();
+      }
+      st.ResumeTiming();
+    }
+  });
+
+  bench("operator=(const&) (into populated Container)", [=](auto& st) {
+    const std::size_t size = st.range(0);
+    std::vector<Value> in  = make_value_types(generate_unique_keys(size));
+    Container src(in.begin(), in.end());
+    Container c[BatchSize];
+
+    while (st.KeepRunningBatch(BatchSize)) {
+      for (std::size_t i = 0; i != BatchSize; ++i) {
+        c[i] = src;
+        benchmark::DoNotOptimize(c[i]);
+        benchmark::ClobberMemory();
+      }
     }
   });
 

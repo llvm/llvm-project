@@ -40,13 +40,13 @@ define void @atomicrmw(ptr %a, i32 %i) {
 define void @opaque_mangle() {
 ; CHECK-LABEL: @opaque_mangle(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i64, align 8
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[A]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A]])
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca i64
-  call void @llvm.lifetime.start.p0(i64 8, ptr %a)
-  call void @llvm.lifetime.end.p0(i64 8, ptr %a)
+  call void @llvm.lifetime.start.p0(ptr %a)
+  call void @llvm.lifetime.end.p0(ptr %a)
   ret void
 }
 
@@ -65,10 +65,8 @@ define void @intrinsic_calls(ptr %a) {
   ret void
 }
 
-; CHECK: @llvm.lifetime.start.p0
-; CHECK: @llvm.lifetime.end.p0
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 declare <2 x i32> @llvm.masked.load.v2i32.p0(ptr, i32, <2 x i1>, <2 x i32>)
 declare void @llvm.masked.store.v2i32.p0(<2 x i32>, ptr, i32, <2 x i1>)

@@ -5193,7 +5193,7 @@ private:
   void ParseHLSLAnnotations(ParsedAttributes &Attrs,
                             SourceLocation *EndLoc = nullptr,
                             bool CouldBeBitField = false);
-  Decl *ParseHLSLBuffer(SourceLocation &DeclEnd);
+  Decl *ParseHLSLBuffer(SourceLocation &DeclEnd, ParsedAttributes &Attrs);
 
   ///@}
 

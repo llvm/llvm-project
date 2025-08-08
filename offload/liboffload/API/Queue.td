@@ -24,7 +24,9 @@ def : Function {
 def : Function {
     let name = "olDestroyQueue";
     let desc = "Destroy the queue and free all underlying resources.";
-    let details = [];
+    let details = [
+      "Any work previously enqueued to the queue is still performed and any events generated for this queue remain valid."
+    ];
     let params = [
         Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>
     ];
@@ -63,7 +65,8 @@ def : Enum {
   let desc = "Supported queue info.";
   let is_typed = 1;
   let etors = [
-    TaggedEtor<"DEVICE", "ol_device_handle_t", "The handle of the device associated with the queue.">
+    TaggedEtor<"DEVICE", "ol_device_handle_t", "The handle of the device associated with the queue.">,
+    TaggedEtor<"EMPTY", "bool", "True if the queue is known to be empty. May be unconditionally false if the device does not support status queries.">,
   ];
 }
 
