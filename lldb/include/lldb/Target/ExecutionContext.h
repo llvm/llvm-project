@@ -562,14 +562,14 @@ protected:
 /// A wrapper class representing an execution context with non-null Target
 /// and Process pointers, a locked API mutex and a locked ProcessRunLock.
 /// The locks are private by design: to unlock them, destroy the
-/// CompleteExecutionContext.
-struct CompleteExecutionContext : ExecutionContext {
-  CompleteExecutionContext(lldb::TargetSP &target_sp,
-                           lldb::ProcessSP &process_sp,
-                           lldb::ThreadSP &thread_sp,
-                           lldb::StackFrameSP &frame_sp,
-                           std::unique_lock<std::recursive_mutex> api_lock,
-                           ProcessRunLock::ProcessRunLocker stop_locker)
+/// StoppedExecutionContext.
+struct StoppedExecutionContext : ExecutionContext {
+  StoppedExecutionContext(lldb::TargetSP &target_sp,
+                          lldb::ProcessSP &process_sp,
+                          lldb::ThreadSP &thread_sp,
+                          lldb::StackFrameSP &frame_sp,
+                          std::unique_lock<std::recursive_mutex> api_lock,
+                          ProcessRunLock::ProcessRunLocker stop_locker)
       : m_api_lock(std::move(api_lock)), m_stop_locker(std::move(stop_locker)) {
     assert(target_sp);
     assert(process_sp);
@@ -583,11 +583,11 @@ struct CompleteExecutionContext : ExecutionContext {
 
   /// Transfers ownership of the locks from `other` to `this`, making `other`
   /// unusable.
-  CompleteExecutionContext(CompleteExecutionContext &&other)
-      : CompleteExecutionContext(other.m_target_sp, other.m_process_sp,
-                                 other.m_thread_sp, other.m_frame_sp,
-                                 std::move(other.m_api_lock),
-                                 std::move(other.m_stop_locker)) {
+  StoppedExecutionContext(StoppedExecutionContext &&other)
+      : StoppedExecutionContext(other.m_target_sp, other.m_process_sp,
+                                other.m_thread_sp, other.m_frame_sp,
+                                std::move(other.m_api_lock),
+                                std::move(other.m_stop_locker)) {
     other.Clear();
   }
 
@@ -601,10 +601,10 @@ private:
   ProcessRunLock::ProcessRunLocker m_stop_locker;
 };
 
-llvm::Expected<CompleteExecutionContext>
-GetCompleteExecutionContext(const ExecutionContextRef *exe_ctx_ref_ptr);
-llvm::Expected<CompleteExecutionContext>
-GetCompleteExecutionContext(const lldb::ExecutionContextRefSP &exe_ctx_ref_ptr);
+llvm::Expected<StoppedExecutionContext>
+GetStoppedExecutionContext(const ExecutionContextRef *exe_ctx_ref_ptr);
+llvm::Expected<StoppedExecutionContext>
+GetStoppedExecutionContext(const lldb::ExecutionContextRefSP &exe_ctx_ref_ptr);
 
 } // namespace lldb_private
 

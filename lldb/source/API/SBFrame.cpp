@@ -97,8 +97,8 @@ bool SBFrame::IsValid() const {
 }
 SBFrame::operator bool() const {
   LLDB_INSTRUMENT_VA(this);
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return false;
@@ -112,8 +112,8 @@ SBSymbolContext SBFrame::GetSymbolContext(uint32_t resolve_scope) const {
 
   SBSymbolContext sb_sym_ctx;
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return sb_sym_ctx;
@@ -129,8 +129,8 @@ SBSymbolContext SBFrame::GetSymbolContext(uint32_t resolve_scope) const {
 SBModule SBFrame::GetModule() const {
   LLDB_INSTRUMENT_VA(this);
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return SBModule();
@@ -150,8 +150,8 @@ SBModule SBFrame::GetModule() const {
 SBCompileUnit SBFrame::GetCompileUnit() const {
   LLDB_INSTRUMENT_VA(this);
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return SBCompileUnit();
@@ -166,8 +166,8 @@ SBCompileUnit SBFrame::GetCompileUnit() const {
 SBFunction SBFrame::GetFunction() const {
   LLDB_INSTRUMENT_VA(this);
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return SBFunction();
@@ -181,8 +181,8 @@ SBFunction SBFrame::GetFunction() const {
 SBSymbol SBFrame::GetSymbol() const {
   LLDB_INSTRUMENT_VA(this);
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return SBSymbol();
@@ -196,8 +196,8 @@ SBSymbol SBFrame::GetSymbol() const {
 SBBlock SBFrame::GetBlock() const {
   LLDB_INSTRUMENT_VA(this);
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return SBBlock();
@@ -211,8 +211,8 @@ SBBlock SBFrame::GetBlock() const {
 SBBlock SBFrame::GetFrameBlock() const {
   LLDB_INSTRUMENT_VA(this);
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return SBBlock();
@@ -226,8 +226,8 @@ SBBlock SBFrame::GetFrameBlock() const {
 SBLineEntry SBFrame::GetLineEntry() const {
   LLDB_INSTRUMENT_VA(this);
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return SBLineEntry();
@@ -244,8 +244,8 @@ uint32_t SBFrame::GetFrameID() const {
 
   constexpr uint32_t error_frame_idx = UINT32_MAX;
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return error_frame_idx;
@@ -259,8 +259,8 @@ uint32_t SBFrame::GetFrameID() const {
 lldb::addr_t SBFrame::GetCFA() const {
   LLDB_INSTRUMENT_VA(this);
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return LLDB_INVALID_ADDRESS;
@@ -275,8 +275,8 @@ addr_t SBFrame::GetPC() const {
   LLDB_INSTRUMENT_VA(this);
 
   addr_t addr = LLDB_INVALID_ADDRESS;
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return addr;
@@ -294,8 +294,8 @@ bool SBFrame::SetPC(addr_t new_pc) {
   LLDB_INSTRUMENT_VA(this, new_pc);
 
   constexpr bool error_ret_val = false;
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return error_ret_val;
@@ -311,8 +311,8 @@ bool SBFrame::SetPC(addr_t new_pc) {
 addr_t SBFrame::GetSP() const {
   LLDB_INSTRUMENT_VA(this);
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return LLDB_INVALID_ADDRESS;
@@ -328,8 +328,8 @@ addr_t SBFrame::GetSP() const {
 addr_t SBFrame::GetFP() const {
   LLDB_INSTRUMENT_VA(this);
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return LLDB_INVALID_ADDRESS;
@@ -345,8 +345,8 @@ addr_t SBFrame::GetFP() const {
 SBAddress SBFrame::GetPCAddress() const {
   LLDB_INSTRUMENT_VA(this);
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return SBAddress();
@@ -367,8 +367,8 @@ lldb::SBValue SBFrame::GetValueForVariablePath(const char *var_path) {
   LLDB_INSTRUMENT_VA(this, var_path);
 
   SBValue sb_value;
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return sb_value;
@@ -391,8 +391,8 @@ lldb::SBValue SBFrame::GetValueForVariablePath(const char *var_path,
     return sb_value;
   }
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return sb_value;
@@ -414,8 +414,8 @@ lldb::SBValue SBFrame::GetValueForVariablePath(const char *var_path,
 SBValue SBFrame::FindVariable(const char *name) {
   LLDB_INSTRUMENT_VA(this, name);
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return SBValue();
@@ -440,8 +440,8 @@ SBValue SBFrame::FindVariable(const char *name,
     return sb_value;
   }
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return sb_value;
@@ -458,8 +458,8 @@ SBValue SBFrame::FindValue(const char *name, ValueType value_type) {
   LLDB_INSTRUMENT_VA(this, name, value_type);
 
   SBValue value;
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return value;
@@ -484,8 +484,8 @@ SBValue SBFrame::FindValue(const char *name, ValueType value_type,
   }
 
   ValueObjectSP value_sp;
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
 
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
@@ -611,8 +611,8 @@ bool SBFrame::operator!=(const SBFrame &rhs) const {
 SBThread SBFrame::GetThread() const {
   LLDB_INSTRUMENT_VA(this);
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return SBThread();
@@ -627,8 +627,8 @@ SBThread SBFrame::GetThread() const {
 const char *SBFrame::Disassemble() const {
   LLDB_INSTRUMENT_VA(this);
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return nullptr;
@@ -645,8 +645,8 @@ SBValueList SBFrame::GetVariables(bool arguments, bool locals, bool statics,
   LLDB_INSTRUMENT_VA(this, arguments, locals, statics, in_scope_only);
 
   SBValueList value_list;
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return value_list;
@@ -678,8 +678,8 @@ lldb::SBValueList SBFrame::GetVariables(bool arguments, bool locals,
   LLDB_INSTRUMENT_VA(this, arguments, locals, statics, in_scope_only,
                      use_dynamic);
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return SBValueList();
@@ -702,8 +702,8 @@ SBValueList SBFrame::GetVariables(const lldb::SBVariablesOptions &options) {
   LLDB_INSTRUMENT_VA(this, options);
 
   SBValueList value_list;
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return SBValueList();
@@ -809,8 +809,8 @@ SBValueList SBFrame::GetRegisters() {
   LLDB_INSTRUMENT_VA(this);
 
   SBValueList value_list;
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return SBValueList();
@@ -839,8 +839,8 @@ SBValue SBFrame::FindRegister(const char *name) {
 
   SBValue result;
   ValueObjectSP value_sp;
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return SBValue();
@@ -868,8 +868,8 @@ SBError SBFrame::GetDescriptionWithFormat(const SBFormat &format,
                                           SBStream &output) {
   Stream &strm = output.ref();
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx)
     return Status::FromError(exe_ctx.takeError());
 
@@ -895,8 +895,8 @@ bool SBFrame::GetDescription(SBStream &description) {
 
   Stream &strm = description.ref();
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     strm.PutCString("Error: process is not stopped.");
@@ -912,8 +912,8 @@ bool SBFrame::GetDescription(SBStream &description) {
 SBValue SBFrame::EvaluateExpression(const char *expr) {
   LLDB_INSTRUMENT_VA(this, expr);
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return CreateProcessIsRunningExprEvalError();
@@ -945,8 +945,8 @@ SBFrame::EvaluateExpression(const char *expr,
   options.SetFetchDynamicValue(fetch_dynamic_value);
   options.SetUnwindOnError(true);
   options.SetIgnoreBreakpoints(true);
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return CreateProcessIsRunningExprEvalError();
@@ -967,8 +967,8 @@ SBValue SBFrame::EvaluateExpression(const char *expr,
   LLDB_INSTRUMENT_VA(this, expr, fetch_dynamic_value, unwind_on_error);
 
   SBExpressionOptions options;
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return CreateProcessIsRunningExprEvalError();
@@ -1010,8 +1010,8 @@ lldb::SBValue SBFrame::EvaluateExpression(const char *expr,
 
   ValueObjectSP expr_value_sp;
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     expr_result = CreateProcessIsRunningExprEvalError();
@@ -1060,8 +1060,8 @@ SBStructuredData SBFrame::GetLanguageSpecificData() const {
   LLDB_INSTRUMENT_VA(this);
 
   SBStructuredData sb_data;
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return sb_data;
@@ -1084,8 +1084,8 @@ bool SBFrame::IsInlined() {
 bool SBFrame::IsInlined() const {
   LLDB_INSTRUMENT_VA(this);
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return false;
@@ -1105,8 +1105,8 @@ bool SBFrame::IsArtificial() {
 bool SBFrame::IsArtificial() const {
   LLDB_INSTRUMENT_VA(this);
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return false;
@@ -1121,8 +1121,8 @@ bool SBFrame::IsArtificial() const {
 bool SBFrame::IsHidden() const {
   LLDB_INSTRUMENT_VA(this);
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return false;
@@ -1143,8 +1143,8 @@ const char *SBFrame::GetFunctionName() {
 lldb::LanguageType SBFrame::GuessLanguage() const {
   LLDB_INSTRUMENT_VA(this);
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return eLanguageTypeUnknown;
@@ -1158,8 +1158,8 @@ lldb::LanguageType SBFrame::GuessLanguage() const {
 const char *SBFrame::GetFunctionName() const {
   LLDB_INSTRUMENT_VA(this);
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return nullptr;
@@ -1173,8 +1173,8 @@ const char *SBFrame::GetFunctionName() const {
 const char *SBFrame::GetDisplayFunctionName() {
   LLDB_INSTRUMENT_VA(this);
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return nullptr;

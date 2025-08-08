@@ -90,8 +90,8 @@ lldb::SBQueue SBThread::GetQueue() const {
 
   SBQueue sb_queue;
   QueueSP queue_sp;
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return SBQueue();
@@ -116,8 +116,8 @@ SBThread::operator bool() const {
   if (!m_opaque_sp)
     return false;
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return false;
@@ -136,8 +136,8 @@ StopReason SBThread::GetStopReason() {
   LLDB_INSTRUMENT_VA(this);
 
   StopReason reason = eStopReasonInvalid;
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return reason;
@@ -152,8 +152,8 @@ StopReason SBThread::GetStopReason() {
 size_t SBThread::GetStopReasonDataCount() {
   LLDB_INSTRUMENT_VA(this);
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (exe_ctx) {
     if (exe_ctx->HasThreadScope()) {
       StopInfoSP stop_info_sp = exe_ctx->GetThreadPtr()->GetStopInfo();
@@ -214,8 +214,8 @@ size_t SBThread::GetStopReasonDataCount() {
 uint64_t SBThread::GetStopReasonDataAtIndex(uint32_t idx) {
   LLDB_INSTRUMENT_VA(this, idx);
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (exe_ctx) {
     if (exe_ctx->HasThreadScope()) {
       Thread *thread = exe_ctx->GetThreadPtr();
@@ -290,8 +290,8 @@ bool SBThread::GetStopReasonExtendedInfoAsJSON(lldb::SBStream &stream) {
 
   Stream &strm = stream.ref();
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return false;
@@ -316,8 +316,8 @@ SBThread::GetStopReasonExtendedBacktraces(InstrumentationRuntimeType type) {
 
   SBThreadCollection threads;
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return SBThreadCollection();
@@ -344,8 +344,8 @@ size_t SBThread::GetStopDescription(char *dst, size_t dst_len) {
   if (dst)
     *dst = 0;
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return 0;
@@ -370,8 +370,8 @@ SBValue SBThread::GetStopReturnValue() {
   LLDB_INSTRUMENT_VA(this);
 
   ValueObjectSP return_valobj_sp;
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return SBValue();
@@ -412,8 +412,8 @@ uint32_t SBThread::GetIndexID() const {
 const char *SBThread::GetName() const {
   LLDB_INSTRUMENT_VA(this);
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return nullptr;
@@ -428,8 +428,8 @@ const char *SBThread::GetName() const {
 const char *SBThread::GetQueueName() const {
   LLDB_INSTRUMENT_VA(this);
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return nullptr;
@@ -445,8 +445,8 @@ lldb::queue_id_t SBThread::GetQueueID() const {
   LLDB_INSTRUMENT_VA(this);
 
   queue_id_t id = LLDB_INVALID_QUEUE_ID;
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return id;
@@ -463,8 +463,8 @@ bool SBThread::GetInfoItemByPathAsString(const char *path, SBStream &strm) {
   LLDB_INSTRUMENT_VA(this, path, strm);
 
   bool success = false;
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (exe_ctx) {
     if (exe_ctx->HasThreadScope()) {
       Thread *thread = exe_ctx->GetThreadPtr();
@@ -507,7 +507,7 @@ bool SBThread::GetInfoItemByPathAsString(const char *path, SBStream &strm) {
   return success;
 }
 
-static Status ResumeNewPlan(CompleteExecutionContext exe_ctx,
+static Status ResumeNewPlan(StoppedExecutionContext exe_ctx,
                             ThreadPlan *new_plan) {
   Thread *thread = exe_ctx.GetThreadPtr();
   if (!thread)
@@ -542,8 +542,8 @@ void SBThread::StepOver(lldb::RunMode stop_other_threads) {
 void SBThread::StepOver(lldb::RunMode stop_other_threads, SBError &error) {
   LLDB_INSTRUMENT_VA(this, stop_other_threads, error);
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     error = Status::FromError(exe_ctx.takeError());
     return;
@@ -593,8 +593,8 @@ void SBThread::StepInto(const char *target_name, uint32_t end_line,
                         SBError &error, lldb::RunMode stop_other_threads) {
   LLDB_INSTRUMENT_VA(this, target_name, end_line, error, stop_other_threads);
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     error = Status::FromError(exe_ctx.takeError());
     return;
@@ -654,8 +654,8 @@ void SBThread::StepOut() {
 void SBThread::StepOut(SBError &error) {
   LLDB_INSTRUMENT_VA(this, error);
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     error = Status::FromError(exe_ctx.takeError());
     return;
@@ -693,8 +693,8 @@ void SBThread::StepOutOfFrame(SBFrame &sb_frame) {
 void SBThread::StepOutOfFrame(SBFrame &sb_frame, SBError &error) {
   LLDB_INSTRUMENT_VA(this, sb_frame, error);
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     error = Status::FromError(exe_ctx.takeError());
     return;
@@ -741,8 +741,8 @@ void SBThread::StepInstruction(bool step_over) {
 void SBThread::StepInstruction(bool step_over, SBError &error) {
   LLDB_INSTRUMENT_VA(this, step_over, error);
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     error = Status::FromError(exe_ctx.takeError());
     return;
@@ -774,8 +774,8 @@ void SBThread::RunToAddress(lldb::addr_t addr) {
 void SBThread::RunToAddress(lldb::addr_t addr, SBError &error) {
   LLDB_INSTRUMENT_VA(this, addr, error);
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     error = Status::FromError(exe_ctx.takeError());
     return;
@@ -810,8 +810,8 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
   SBError sb_error;
   char path[PATH_MAX];
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx)
     return Status::FromError(exe_ctx.takeError());
 
@@ -946,8 +946,8 @@ SBError SBThread::StepUsingScriptedThreadPlan(const char *script_class_name,
 
   SBError error;
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx)
     return Status::FromError(exe_ctx.takeError());
 
@@ -984,8 +984,8 @@ SBError SBThread::JumpToLine(lldb::SBFileSpec &file_spec, uint32_t line) {
 
   SBError sb_error;
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx)
     return Status::FromError(exe_ctx.takeError());
 
@@ -1006,8 +1006,8 @@ SBError SBThread::ReturnFromFrame(SBFrame &frame, SBValue &return_value) {
 
   SBError sb_error;
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx)
     return Status::FromError(exe_ctx.takeError());
 
@@ -1025,8 +1025,8 @@ SBError SBThread::UnwindInnermostExpression() {
 
   SBError sb_error;
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx)
     return Status::FromError(exe_ctx.takeError());
 
@@ -1050,8 +1050,8 @@ bool SBThread::Suspend() {
 bool SBThread::Suspend(SBError &error) {
   LLDB_INSTRUMENT_VA(this, error);
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     error = Status::FromError(exe_ctx.takeError());
     return false;
@@ -1076,8 +1076,8 @@ bool SBThread::Resume() {
 bool SBThread::Resume(SBError &error) {
   LLDB_INSTRUMENT_VA(this, error);
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     error = Status::FromErrorString("process is running");
@@ -1097,8 +1097,8 @@ bool SBThread::Resume(SBError &error) {
 bool SBThread::IsSuspended() {
   LLDB_INSTRUMENT_VA(this);
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return false;
@@ -1112,8 +1112,8 @@ bool SBThread::IsSuspended() {
 bool SBThread::IsStopped() {
   LLDB_INSTRUMENT_VA(this);
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return false;
@@ -1128,8 +1128,8 @@ SBProcess SBThread::GetProcess() {
   LLDB_INSTRUMENT_VA(this);
 
   SBProcess sb_process;
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return SBProcess();
@@ -1147,8 +1147,8 @@ SBProcess SBThread::GetProcess() {
 uint32_t SBThread::GetNumFrames() {
   LLDB_INSTRUMENT_VA(this);
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return 0;
@@ -1164,8 +1164,8 @@ SBFrame SBThread::GetFrameAtIndex(uint32_t idx) {
   LLDB_INSTRUMENT_VA(this, idx);
 
   SBFrame sb_frame;
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return SBFrame();
@@ -1183,8 +1183,8 @@ lldb::SBFrame SBThread::GetSelectedFrame() {
   LLDB_INSTRUMENT_VA(this);
 
   SBFrame sb_frame;
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return SBFrame();
@@ -1204,8 +1204,8 @@ lldb::SBFrame SBThread::SetSelectedFrame(uint32_t idx) {
 
   SBFrame sb_frame;
   StackFrameSP frame_sp;
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return SBFrame();
@@ -1260,8 +1260,8 @@ bool SBThread::GetStatus(SBStream &status) const {
 
   Stream &strm = status.ref();
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return false;
@@ -1287,8 +1287,8 @@ bool SBThread::GetDescription(SBStream &description, bool stop_format) const {
 
   Stream &strm = description.ref();
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return false;
@@ -1313,8 +1313,8 @@ SBError SBThread::GetDescriptionWithFormat(const SBFormat &format,
     return error;
   }
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
     llvm::consumeError(exe_ctx.takeError());
     return error;
@@ -1337,8 +1337,8 @@ SBError SBThread::GetDescriptionWithFormat(const SBFormat &format,
 SBThread SBThread::GetExtendedBacktraceThread(const char *type) {
   LLDB_INSTRUMENT_VA(this, type);
 
-  llvm::Expected<CompleteExecutionContext> exe_ctx =
-      GetCompleteExecutionContext(m_opaque_sp);
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
   SBThread sb_origin_thread;
   if (exe_ctx) {
     if (exe_ctx->HasThreadScope()) {

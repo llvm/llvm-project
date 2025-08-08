@@ -127,14 +127,14 @@ ExecutionContext::ExecutionContext(const ExecutionContextRef *exe_ctx_ref_ptr,
   }
 }
 
-llvm::Expected<CompleteExecutionContext>
-lldb_private::GetCompleteExecutionContext(
+llvm::Expected<StoppedExecutionContext>
+lldb_private::GetStoppedExecutionContext(
     const lldb::ExecutionContextRefSP &exe_ctx_ref_ptr) {
-  return GetCompleteExecutionContext(exe_ctx_ref_ptr.get());
+  return GetStoppedExecutionContext(exe_ctx_ref_ptr.get());
 }
 
-llvm::Expected<CompleteExecutionContext>
-lldb_private::GetCompleteExecutionContext(
+llvm::Expected<StoppedExecutionContext>
+lldb_private::GetStoppedExecutionContext(
     const ExecutionContextRef *exe_ctx_ref_ptr) {
   if (!exe_ctx_ref_ptr)
     return llvm::createStringError(
@@ -163,12 +163,12 @@ lldb_private::GetCompleteExecutionContext(
 
   auto thread_sp = exe_ctx_ref_ptr->GetThreadSP();
   auto frame_sp = exe_ctx_ref_ptr->GetFrameSP();
-  return CompleteExecutionContext(target_sp, process_sp, thread_sp, frame_sp,
-                                  std::move(api_lock), std::move(stop_locker));
+  return StoppedExecutionContext(target_sp, process_sp, thread_sp, frame_sp,
+                                 std::move(api_lock), std::move(stop_locker));
 }
 
 std::unique_lock<std::recursive_mutex>
-CompleteExecutionContext::ClearAndGetAPILock() {
+StoppedExecutionContext::ClearAndGetAPILock() {
   Clear();
   m_stop_locker = ProcessRunLock::ProcessRunLocker();
   return std::move(m_api_lock);
