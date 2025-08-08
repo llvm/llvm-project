@@ -247,13 +247,12 @@ static Symbol parseExtendedSymbol(Parser &p, AsmParserState *asmState,
 
   if constexpr (std::is_same_v<Symbol, Attribute>) {
     auto &cache = p.getState().symbols.attributesCache;
-
     auto cacheIt = cache.find(symbolData);
-    if (cacheIt != cache.end()) {
+    // Skip cached attribute if it has type.
+    if (cacheIt != cache.end() && !p.getToken().is(Token::colon))
       return cacheIt->second;
-    }
-    cache[symbolData] = createSymbol(dialectName, symbolData, loc);
-    return cache[symbolData];
+    
+    return cache[symbolData] = createSymbol(dialectName, symbolData, loc);
   }
   return createSymbol(dialectName, symbolData, loc);
 }
