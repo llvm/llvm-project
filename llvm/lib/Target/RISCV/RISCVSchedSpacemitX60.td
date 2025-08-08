@@ -687,18 +687,26 @@ foreach mx = SchedMxList in {
 foreach mx = SchedMxList in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
 
-  // Pattern for vslide1down.vx, vslidedown.vi/vx: 4/5/9/17
-  // Pattern for vslide1up.vx: 4/4/8/16
-  // We use 4/4/8/16 for simplicity
-  defvar VSlideLatAndOcc = GetDoublingValueFromLMUL<"M2", 4, mx>.c;
-  let Latency = VSlideLatAndOcc, ReleaseAtCycles =[VSlideLatAndOcc] in {
-    defm "" : LMULWriteResMX<"WriteVSlideI", [SMX60_VIEU], mx, IsWorstCase>;
-
-    defm "" : LMULWriteResMX<"WriteVISlide1X", [SMX60_VIEU], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVFSlide1F", [SMX60_VFP], mx, IsWorstCase>;
-
+  // Latency for slide up: 4/4/8/16, ReleaseAtCycles is 2/4/8/16
+  defvar VSlideUpLat = ConstValueUntilLMULThenDouble<"M2", 4, mx>.c;
+  defvar VSlideUpOcc = ConstOneUntilMF2ThenDouble<mx>.c;
+  let Latency = VSlideUpLat, ReleaseAtCycles =[VSlideUpOcc] in {
     defm "" : LMULWriteResMX<"WriteVSlideUpX", [SMX60_VIEU], mx, IsWorstCase>;
+  }
+
+  // Latency for slide down: 4/5/9/17, ReleaseAtCycles is 3/5/9/17
+  defvar VSlideDownLat = GetLMULValue<[4, 4, 4, 4, 5, 9, 17], mx>.c;
+  defvar VSlideDownOcc = GetLMULValue<[1, 1, 1, 3, 5, 9, 17], mx>.c;
+  let Latency = VSlideDownLat, ReleaseAtCycles =[VSlideDownOcc] in {
     defm "" : LMULWriteResMX<"WriteVSlideDownX", [SMX60_VIEU], mx, IsWorstCase>;
+  }
+  // The following group slide up and down together, so we use the worst-case
+  // (slide down) for all.
+  let Latency = VSlideDownLat, ReleaseAtCycles =[VSlideDownOcc] in {
+    defm "" : LMULWriteResMX<"WriteVSlideI", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVISlide1X", [SMX60_VIEU], mx, IsWorstCase>;
+
+    defm "" : LMULWriteResMX<"WriteVFSlide1F", [SMX60_VFP], mx, IsWorstCase>;
   }
 }
 
@@ -720,8 +728,8 @@ let Latency = 4, ReleaseAtCycles = [4] in {
 foreach mx = SchedMxList in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
 
-  defvar VRGatherLat = GetDoublingValueFromLMUL<"M2", 4, mx>.c;
-  let Latency = VRGatherLat, ReleaseAtCycles = [GetOneMF2AndDouble<mx>.c] in {
+  defvar VRGatherLat = ConstValueUntilLMULThenDouble<"M2", 4, mx>.c;
+  let Latency = VRGatherLat, ReleaseAtCycles = [ConstOneUntilMF2ThenDouble<mx>.c] in {
     defm "" : LMULWriteResMX<"WriteVRGatherVX", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVRGatherVI", [SMX60_VIEU], mx, IsWorstCase>;
   }
@@ -736,11 +744,11 @@ foreach mx = SchedMxList in {
     }
     // For sew == 8, latency is half of the other cases, except for the fractional LMULs (const 4 cycles)
     defvar VRGatherEI16Lat = !if(!eq(sew, 8),
-      GetLMULValue<[4, 4, 4, 8, 32, 128], mx>.c,
-      VRGatherVVLat);
+      GetLMULValue<[4, 4, 4, 8, 32, 128, 256], mx>.c,
+      GetLMULValue<[4, 4, 4, 4, 16,  64, 256], mx>.c);
     defvar VRGatherEI16Occ = !if(!eq(sew, 8),
-      GetLMULValue<[1, 1, 2, 8, 32, 128], mx>.c,
-      GetLMULValue<[4, 4, 4, 4, 16, 64, 256], mx>.c);
+      GetLMULValue<[1, 1, 2, 8, 32, 128, 256], mx>.c,
+      GetLMULValue<[1, 1, 1, 4, 16,  64, 256], mx>.c);
     let Latency = VRGatherEI16Lat, ReleaseAtCycles = [VRGatherEI16Occ] in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherEI16VV", [SMX60_VIEU], mx, sew, IsWorstCaseSEW>;
     }
