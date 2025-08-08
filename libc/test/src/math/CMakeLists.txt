@@ -2974,6 +2974,7 @@ add_fp_unittest(
 
 add_fp_unittest(
   bf16add_test
+  NEED_MPFR
   SUITE
     libc-math-unittests
   SRCS
@@ -2987,6 +2988,7 @@ add_fp_unittest(
 
 add_fp_unittest(
   bf16addf_test
+  NEED_MPFR
   SUITE
     libc-math-unittests
   SRCS
@@ -3000,6 +3002,7 @@ add_fp_unittest(
 
 add_fp_unittest(
   bf16addl_test
+  NEED_MPFR
   SUITE
     libc-math-unittests
   SRCS
@@ -3013,6 +3016,7 @@ add_fp_unittest(
 
 add_fp_unittest(
   bf16addf128_test
+  NEED_MPFR
   SUITE
     libc-math-unittests
   SRCS
@@ -3026,6 +3030,7 @@ add_fp_unittest(
 
 add_fp_unittest(
   bf16sub_test
+  NEED_MPFR
   SUITE
     libc-math-unittests
   SRCS
@@ -3039,6 +3044,7 @@ add_fp_unittest(
 
 add_fp_unittest(
   bf16subf_test
+  NEED_MPFR
   SUITE
     libc-math-unittests
   SRCS
@@ -3052,6 +3058,7 @@ add_fp_unittest(
 
 add_fp_unittest(
   bf16subl_test
+  NEED_MPFR
   SUITE
     libc-math-unittests
   SRCS
@@ -3065,6 +3072,7 @@ add_fp_unittest(
 
 add_fp_unittest(
   bf16subf128_test
+  NEED_MPFR
   SUITE
     libc-math-unittests
   SRCS
