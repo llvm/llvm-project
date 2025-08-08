@@ -61,4 +61,4 @@ Options
     The function to use in the `function` mode for the empty subscript operator
     case in C++23 and beyond only. If no fixes should be made for empty
     subscript operators, pass an empty string. In that case, only the warnings
-    will be printed. The default is the value of `FixFunction`.
+    will be printed. The default is the value of :option:`FixFunction`.
