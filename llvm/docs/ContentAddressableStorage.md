@@ -6,7 +6,7 @@ Content Addressable Storage, or `CAS`, is a storage system that assigns
 unique addresses to the data stored. It is very useful for data deduplicaton
 and creating unique identifiers.
 
-Unlike other kinds of storage systems like file systems, CAS is immutable. It
+Unlike other kinds of storage systems, like file systems, CAS is immutable. It
 is more reliable to model a computation by representing the inputs and outputs
 of the computation using objects stored in CAS.
 

@@ -20,7 +20,6 @@ class raw_ostream;
 namespace cas {
 
 class ObjectStore;
-
 class ObjectHandle;
 class ObjectRef;
 
@@ -41,8 +40,9 @@ public:
     return InternalRef;
   }
 
+  /// Helper functions for DenseMapInfo.
   unsigned getDenseMapHash() const {
-    return (unsigned)llvm::hash_value(InternalRef);
+    return static_cast<unsigned>(llvm::hash_value(InternalRef));
   }
   bool isDenseMapEmpty() const { return InternalRef == getDenseMapEmptyRef(); }
   bool isDenseMapTombstone() const {
