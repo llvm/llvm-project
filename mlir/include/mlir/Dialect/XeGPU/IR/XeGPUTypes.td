@@ -201,4 +201,27 @@ def XeGPU_Nbarrier: XeGPUTypeDef<"Nbarrier", "nbarrier", [], "mlir::Type"> {
   }];
 }
 
+def XeGPU_MatrixDesc: XeGPUTypeDef<"MatrixDesc", "matrix_desc", [ShapedTypeInterface], "mlir::Type"> {
+  let summary = "MatrixDesc describing the data in SLM";
+  let description = [{
+    MatrixDesc describes the data stored in SLM. Unleass specified via
+    the the optional layout attribute, the data is stored in a continuous
+    SLM region in row-major order by default.
+  }];
+  let parameters = (ins ArrayRefParameter<"int64_t">: $shape,
+                        "mlir::Type": $elementType,
+                        OptionalParameter<"mlir::Attribute">: $layout);
+
+  let extraClassDeclaration = [{
+    // using mlir::ShapedType::Trait<MatrixDescType>::getElementTypeBitWidth;
+    // using mlir::ShapedType::Trait<MatrixDescType>::getElementTypeBitWidth;
+    // using mlir::ShapedType::Trait<MatrixDescType>::getRank;
+    // using mlir::ShapedType::Trait<MatrixDescType>::getNumElements;
+    // using mlir::ShapedType::Trait<MatrixDescType>::isDynamicDim;
+    // using mlir::ShapedType::Trait<MatrixDescType>::hasStaticShape;
+  }];
+
+  let hasCustomAssemblyFormat = true;
+}
+
 #endif // MLIR_DIALECT_XEGPU_IR_XEGPUTYPES_TD
