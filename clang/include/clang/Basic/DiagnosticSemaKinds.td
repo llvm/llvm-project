@@ -11700,6 +11700,8 @@ def err_omp_negative_expression_in_clause : Error<
   "argument to '%0' clause must be a %select{non-negative|strictly positive}1 integer value">;
 def err_omp_large_expression_in_clause : Error<
   "argument to '%0' clause requires a value that can be represented by a 64-bit">;
+def err_omp_unroll_factor_width_mismatch : Error<
+  "unroll factor has width %0 but the iteration variable %1 is only %2 bits wide">;
 def err_omp_not_integral : Error<
   "expression must have integral or unscoped enumeration "
   "type, not %0">;
