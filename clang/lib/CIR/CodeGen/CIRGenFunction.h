@@ -1125,6 +1125,9 @@ public:
 
   mlir::Value emitOpOnBoolExpr(mlir::Location loc, const clang::Expr *cond);
 
+  mlir::LogicalResult emitLabel(const clang::LabelDecl *d);
+  mlir::LogicalResult emitLabelStmt(const clang::LabelStmt &s);
+
   mlir::LogicalResult emitIfStmt(const clang::IfStmt &s);
 
   /// Emit code to compute the specified expression,
