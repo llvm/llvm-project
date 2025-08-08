@@ -52,8 +52,6 @@ typedef std::pair<const RuntimeCheckingPtrGroup *,
 template <typename T, unsigned N> class SmallSetVector;
 template <typename T, unsigned N> class SmallPriorityWorklist;
 
-const char *const LLVMLoopEstimatedTripCount = "llvm.loop.estimated_trip_count";
-
 LLVM_ABI BasicBlock *InsertPreheaderForLoop(Loop *L, DominatorTree *DT,
                                             LoopInfo *LI,
                                             MemorySSAUpdater *MSSAU,
