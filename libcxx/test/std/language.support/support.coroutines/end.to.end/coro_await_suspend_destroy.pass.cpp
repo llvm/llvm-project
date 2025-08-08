@@ -40,6 +40,14 @@
 #include <optional>
 #include <string>
 
+#define DEBUG_LOG 0 // Logs break no-localization CI, set to 1 if needed
+
+#ifndef TEST_HAS_NO_EXCEPTIONS
+#  define THROW(_ex) throw _ex;
+#else
+#  define THROW(_ex)
+#endif
+
 struct my_err : std::exception {};
 
 enum test_toggles {
@@ -110,7 +118,7 @@ struct optional_wrapper {
   operator std::optional<T>() {
     if (driver_.toggles(test_toggles::throw_in_convert_optional_wrapper)) {
       driver_.log(test_event::throw_convert_optional_wrapper);
-      throw my_err();
+      THROW(my_err());
     }
     driver_.log(test_event::convert_optional_wrapper);
     return std::move(storage_);
@@ -143,7 +151,7 @@ struct std::coroutine_traits<std::optional<T>, test_driver&, Args...> {
       driver_.log(test_event::return_value, value);
       if (driver_.toggles(test_toggles::throw_in_return_value)) {
         driver_.log(test_event::throw_return_value);
-        throw my_err();
+        THROW(my_err());
       }
       *storagePtr_ = std::move(value);
     }
@@ -169,7 +177,7 @@ struct base_optional_awaitable {
   T await_resume() {
     if (driver_.toggles(test_toggles::throw_in_await_resume)) {
       driver_.log(test_event::throw_await_resume, id_);
-      throw my_err();
+      THROW(my_err());
     }
     driver_.log(test_event::await_resume, id_);
     return std::move(opt_).value();
@@ -184,7 +192,7 @@ struct base_optional_awaitable {
     assert(promise.storagePtr_);
     if (driver_.toggles(test_toggles::throw_in_await_suspend_destroy)) {
       driver_.log(test_event::throw_await_suspend_destroy, id_);
-      throw my_err();
+      THROW(my_err());
     }
     driver_.log(test_event::await_suspend_destroy, id_);
   }
@@ -218,20 +226,29 @@ void check_coro_with_driver_for(auto coro_fn) {
     auto old_driver = driver;
     std::optional<T> old_res;
     bool old_threw = false;
+#ifndef TEST_HAS_NO_EXCEPTIONS
     try {
+#endif
       old_res = coro_fn.template operator()<old_optional_awaitable<T>, T>(old_driver);
+#ifndef TEST_HAS_NO_EXCEPTIONS
     } catch (const my_err&) {
       old_threw = true;
     }
+#endif
     auto new_driver = driver;
     std::optional<T> new_res;
     bool new_threw = false;
+#ifndef TEST_HAS_NO_EXCEPTIONS
     try {
+#endif
       new_res = coro_fn.template operator()<new_optional_awaitable<T>, T>(new_driver);
+#ifndef TEST_HAS_NO_EXCEPTIONS
     } catch (const my_err&) {
       new_threw = true;
     }
+#endif
 
+#if DEBUG_LOG
     // Print toggle values for debugging
     std::string toggle_info = "Toggles: ";
     for (int i = 0; i <= test_toggles::largest; ++i) {
@@ -241,6 +258,7 @@ void check_coro_with_driver_for(auto coro_fn) {
     }
     toggle_info += "\n";
     std::cerr << toggle_info.c_str() << std::endl;
+#endif
 
     assert(old_threw == new_threw);
     assert(old_res == new_res);
@@ -282,7 +300,9 @@ std::optional<T> coro_shortcircuits_to_empty(test_driver& driver) {
 }
 
 void test_coro_shortcircuits_to_empty() {
+#if DEBUG_LOG
   std::cerr << "test_coro_shortcircuits_to_empty" << std::endl;
+#endif
   check_coro_with_driver([]<typename Awaitable, typename T>(test_driver& driver) {
     return coro_shortcircuits_to_empty<Awaitable, T>(driver);
   });
@@ -295,7 +315,9 @@ std::optional<T> coro_simple_await(test_driver& driver) {
 }
 
 void test_coro_simple_await() {
+#if DEBUG_LOG
   std::cerr << "test_coro_simple_await" << std::endl;
+#endif
   check_coro_with_driver([]<typename Awaitable, typename T>(test_driver& driver) {
     return coro_simple_await<Awaitable, T>(driver);
   });
@@ -306,18 +328,24 @@ void test_coro_simple_await() {
 
 template <typename Awaitable, typename T>
 std::optional<T> coro_catching_shortcircuits_to_empty(test_driver& driver) {
+#ifndef TEST_HAS_NO_EXCEPTIONS
   try {
+#endif
     T n = co_await Awaitable{driver, 1, std::optional<T>{11}};
     co_await Awaitable{driver, 2, std::optional<T>{}}; // return early!
     co_return n + co_await Awaitable{driver, 3, std::optional<T>{22}};
+#ifndef TEST_HAS_NO_EXCEPTIONS
   } catch (...) {
     driver.log(test_event::coro_catch);
     throw;
   }
+#endif
 }
 
 void test_coro_catching_shortcircuits_to_empty() {
+#if DEBUG_LOG
   std::cerr << "test_coro_catching_shortcircuits_to_empty" << std::endl;
+#endif
   check_coro_with_driver([]<typename Awaitable, typename T>(test_driver& driver) {
     return coro_catching_shortcircuits_to_empty<Awaitable, T>(driver);
   });
@@ -325,18 +353,24 @@ void test_coro_catching_shortcircuits_to_empty() {
 
 template <typename Awaitable, typename T>
 std::optional<T> coro_catching_simple_await(test_driver& driver) {
+#ifndef TEST_HAS_NO_EXCEPTIONS
   try {
+#endif
     co_return co_await Awaitable{driver, 1, std::optional<T>{11}} +
         co_await Awaitable{
             driver, 2, driver.toggles(dynamic_short_circuit) ? std::optional<T>{} : std::optional<T>{22}};
+#ifndef TEST_HAS_NO_EXCEPTIONS
   } catch (...) {
     driver.log(test_event::coro_catch);
     throw;
   }
+#endif
 }
 
 void test_coro_catching_simple_await() {
+#if DEBUG_LOG
   std::cerr << "test_coro_catching_simple_await" << std::endl;
+#endif
   check_coro_with_driver([]<typename Awaitable, typename T>(test_driver& driver) {
     return coro_catching_simple_await<Awaitable, T>(driver);
   });
@@ -354,7 +388,9 @@ std::optional<T> noneliding_coro_shortcircuits_to_empty(test_driver& driver) {
 }
 
 void test_noneliding_coro_shortcircuits_to_empty() {
+#if DEBUG_LOG
   std::cerr << "test_noneliding_coro_shortcircuits_to_empty" << std::endl;
+#endif
   check_coro_with_driver([]<typename Awaitable, typename T>(test_driver& driver) {
     return noneliding_coro_shortcircuits_to_empty<Awaitable, T>(driver);
   });
@@ -368,7 +404,9 @@ std::optional<T> noneliding_coro_simple_await(test_driver& driver) {
 }
 
 void test_noneliding_coro_simple_await() {
+#if DEBUG_LOG
   std::cerr << "test_noneliding_coro_simple_await" << std::endl;
+#endif
   check_coro_with_driver([]<typename Awaitable, typename T>(test_driver& driver) {
     return noneliding_coro_simple_await<Awaitable, T>(driver);
   });
@@ -391,7 +429,9 @@ std::optional<T> outer_coro(test_driver& driver) {
 }
 
 void test_nested_coroutines() {
+#if DEBUG_LOG
   std::cerr << "test_nested_coroutines" << std::endl;
+#endif
   check_coro_with_driver([]<typename Awaitable, typename T>(test_driver& driver) {
     return outer_coro<Awaitable, T>(driver);
   });
