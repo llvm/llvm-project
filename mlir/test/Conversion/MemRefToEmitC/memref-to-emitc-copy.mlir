@@ -8,7 +8,6 @@ func.func @copying(%arg0 : memref<9x4x5x7xf32>, %arg1 : memref<9x4x5x7xf32>) {
 
 // CHECK: module {
 // NOCPP:  emitc.include <"string.h">
-
 // CPP:  emitc.include <"cstring">
 
 // CHECK-LABEL:  copying
