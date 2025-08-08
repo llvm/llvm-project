@@ -3497,6 +3497,19 @@ void Sema::DeclareGlobalAllocationFunction(DeclarationName Name,
   }
 
   auto CreateAllocationFunctionDecl = [&](Attr *ExtraAttr) {
+    // The MSVC STL has explicit cdecl on its (host-side) allocation function
+    // specializations for the allocation, so in order to prevent a CC clash
+    // we use the host's CC, if available, or CC_C as a fallback, for the
+    // host-side implicit decls, knowing these do not get emitted when compiling
+    // for device.
+    if (getLangOpts().CUDAIsDevice && ExtraAttr &&
+        isa<CUDAHostAttr>(ExtraAttr) &&
+        Context.getTargetInfo().getTriple().isSPIRV()) {
+      if (auto *ATI = Context.getAuxTargetInfo())
+        EPI.ExtInfo = EPI.ExtInfo.withCallingConv(ATI->getDefaultCallingConv());
+      else
+        EPI.ExtInfo = EPI.ExtInfo.withCallingConv(CallingConv::CC_C);
+    }
     QualType FnType = Context.getFunctionType(Return, Params, EPI);
     FunctionDecl *Alloc = FunctionDecl::Create(
         Context, GlobalCtx, SourceLocation(), SourceLocation(), Name, FnType,
