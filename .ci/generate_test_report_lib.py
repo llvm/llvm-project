@@ -219,6 +219,14 @@ def generate_report(
                 ]
             )
         else:
+            report.extend(
+                [
+                    "",
+                    "All tests passed but another part of the build **failed**. Click on "
+                    "a failure below to see the details.",
+                    "",
+                ]
+            )
             report.extend(_format_ninja_failures(ninja_failures))
 
     if failures or return_code != 0:

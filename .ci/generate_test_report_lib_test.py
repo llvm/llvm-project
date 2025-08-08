@@ -325,6 +325,9 @@ class TestReports(unittest.TestCase):
                     # Foo
 
                     * 1 test passed
+
+                    All tests passed but another part of the build **failed**. Click on a failure below to see the details.
+
                     <details>
                     <summary>test/4.stamp</summary>
 
