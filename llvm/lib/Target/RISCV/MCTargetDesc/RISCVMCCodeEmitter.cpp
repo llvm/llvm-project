@@ -675,8 +675,8 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
       FixupKind = RISCV::fixup_riscv_12_i;
     } else if (MIFrm == RISCVII::InstFormatQC_EB) {
       FixupKind = RISCV::fixup_riscv_qc_e_branch;
-      // This might be assembler relaxed to `qc.e.b<cc>; jal` but we cannot relax
-      // the `jal` again in the assembler.
+      // This might be assembler relaxed to `qc.e.b<cc>; jal` but we cannot
+      // relax the `jal` again in the assembler.
     } else if (MIFrm == RISCVII::InstFormatQC_EAI) {
       FixupKind = RISCV::fixup_riscv_qc_e_32;
       RelaxCandidate = true;
