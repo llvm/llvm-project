@@ -676,7 +676,7 @@ foreach mx = SchedMxList in {
   let Latency = 4, ReleaseAtCycles = [1] in  {
     defm "" : LMULWriteResMX<"WriteVMALUV", [SMX60_VIEU], mx, IsWorstCase>;
   }
-  let Latency = 4, ReleaseAtCycles = [GetDoublingValueFromLMUL<"M2", 1, mx>.c] in  {
+  let Latency = 4, ReleaseAtCycles = [ConstValueUntilLMULThenDouble<"M2", 1, mx>.c] in  {
     defm "" : LMULWriteResMX<"WriteVMSFSV", [SMX60_VIEU], mx, IsWorstCase>;
   }
 
@@ -685,7 +685,9 @@ foreach mx = SchedMxList in {
     defm "" : LMULWriteResMX<"WriteVMFFSV", [SMX60_VIEU], mx, IsWorstCase>;
   }
 
-  let Latency = Get4816Latency<mx>.c, ReleaseAtCycles = [GetOneMF2AndDouble<mx>.c] in {
+  defvar VIotaLat = ConstValueUntilLMULThenDouble<"M2", 4, mx>.c;
+  defvar VIotaOcc = ConstOneUntilMF2ThenDouble<mx>.c;
+  let Latency = VIotaLat, ReleaseAtCycles = [VIotaOcc] in {
     defm "" : LMULWriteResMX<"WriteVIotaV", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIdxV", [SMX60_VIEU], mx, IsWorstCase>;
   }
