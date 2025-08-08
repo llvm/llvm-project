@@ -4,34 +4,26 @@
 //CHECK: #map1 = affine_map<()[s0] -> (s0 mod 4)>
 gpu.module @test_1_1_assignment {
   // CHECK-LABEL: create_nd_tdesc
-  // CHECK-SAME: %[[ARG_0:.*]]: memref<256x128xf32>
+  // CHECK-SAME: [[ARG_0:%.*]]: memref<256x128xf32>
   gpu.func @create_nd_tdesc(%src: memref<256x128xf32>) {
-  // CHECK: %[[SGID:.*]] = gpu.subgroup_id
-  // CHECK: %[[C8:.*]] = arith.constant 8 : index
-  // CHECK: %[[C32:.*]] = arith.constant 32 : index
-  // CHECK: %[[C4:.*]] = arith.constant 4 : index
-  // CHECK: %[[C32_0:.*]] = arith.constant 32 : index
-  // CHECK: %[[C4_1:.*]] = arith.constant 4 : index
-  // CHECK: %[[DIV:.*]] = affine.apply #map()[%[[SGID]]]
-  // CHECK: %[[REM:.*]] = affine.apply #map1()[%[[SGID]]]
-  // CHECK: %[[MUL1:.*]] = index.mul %[[DIV]], %[[C32]]
-  // CHECK: %[[MUL2:.*]] = index.mul %[[REM]], %[[C32_0]]
-  // CHECK: %[[C0:.*]] = arith.constant 0 : index
-  // CHECK: %[[C256:.*]] = arith.constant 256 : index
-  // CHECK: %[[MOD:.*]] = index.remu %[[MUL1]], %[[C256]]
-  // CHECK: %[[C0_2:.*]] = arith.constant 0 : index
-  // CHECK: %[[ADD1:.*]] = index.add %[[MOD]], %[[C0_2]]
-  // CHECK: %[[C0_3:.*]] = arith.constant 0 : index
-  // CHECK: %[[C128:.*]] = arith.constant 128 : index
-  // CHECK: %[[MOD1:.*]] = index.remu %[[MUL2]], %[[C128]]
-  // CHECK: %[[C0_4:.*]] = arith.constant 0 : index
-  // CHECK: %[[ADD2:.*]] = index.add %[[MOD1]], %[[C0_4]]
-  // CHECK: %[[TDESC:.*]] = xegpu.create_nd_tdesc %[[ARG_0]][%[[ADD1]], %[[ADD2]]] : memref<256x128xf32>
-  // CHECK-SAME: -> !xegpu.tensor_desc<32x32xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
-  // CHECK: gpu.return
-  %tdesc = xegpu.create_nd_tdesc %src[0, 0] : memref<256x128xf32>
-    -> !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32], lane_layout = [1, 16], lane_data = [1, 1]>>
-  gpu.return
+    //CHECK: [[SGID:%.+]] = gpu.subgroup_id : index
+    //CHECK: [[SGIDY:%.+]] = affine.apply #map()[[[SGID]]]
+    //CHECK: [[SGIDX:%.+]] = affine.apply #map1()[[[SGID]]]
+    //CHECK: [[C32:%.+]] = arith.constant 32 : index
+    //CHECK: [[LY:%.+]] = index.mul [[SGIDY]], [[C32]]
+    //CHECK: [[LX:%.+]] = index.mul [[SGIDX]], [[C32]]
+    //CHECK: [[C0:%.+]] = arith.constant 0 : index
+    //CHECK: [[C0_1:%.+]] = arith.constant 0 : index
+    //CHECK: [[UY:%.+]] = arith.addi [[LY]], [[C0]] : index
+    //CHECK: [[UX:%.+]] = arith.addi [[LX]], [[C0_1]] : index
+    //CHECK: [[C256:%.+]] = arith.constant 256 : index
+    //CHECK: [[Y:%.+]] = index.remu [[UY]], [[C256]]
+    //CHECK: [[C128:%.+]] = arith.constant 128 : index
+    //CHECK: [[X:%.+]] = index.remu [[UX]], [[C128]]
+    //CHECK: [[TDESC:%.+]] = xegpu.create_nd_tdesc [[ARG_0]][[[Y]], [[X]]] : memref<256x128xf32> -> !xegpu.tensor_desc<32x32xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+    %tdesc = xegpu.create_nd_tdesc %src[0, 0] : memref<256x128xf32>
+      -> !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32], lane_layout = [1, 16], lane_data = [1, 1]>>
+    gpu.return
   }
 
   // CHECK-LABEL: load_nd_tdesc
@@ -347,7 +339,7 @@ gpu.func @dpas_no_sg_data(%a: memref<128x128xf16>, %b: memref<128x128xf16>) {
   // CHECK-LABEL: @subgroup_id_range_nested_if
   gpu.func @subgroup_id_range_nested_if(%src: memref<256x128xf32>, %src1: memref<128x64xf32>) {
     %sg_id = gpu.subgroup_id : index
-    %c1 = arith.constant 1 : i1 
+    %c1 = arith.constant 1 : i1
     %c3 = arith.constant 3 : index
     %c32 = arith.constant 32 : index
     %tdesc = xegpu.create_nd_tdesc %src[0, 0] : memref<256x128xf32>
