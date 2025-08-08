@@ -461,3 +461,17 @@ func.func @sched_barrier() {
   amdgpu.sched_barrier allow = <valu|all_vmem>
   func.return
 }
+
+// CHECK-LABEL: func @assume_subgroup_uniform
+//  CHECK-SAME:   (%[[ARG:.*]]: index)
+func.func @assume_subgroup_uniform(%arg0 : index) -> (index, index) {
+//       CHECK:   %[[SRC:.*]] = builtin.unrealized_conversion_cast %[[ARG]] : index to i64
+//       CHECK:   %[[V1:.*]] = rocdl.readfirstlane %[[SRC]] : i64
+//       CHECK:   %[[RES1:.*]] = builtin.unrealized_conversion_cast %[[V1]] : i64 to index
+//       CHECK:   %[[V2:.*]] = rocdl.readfirstlane %[[SRC]] : i64
+//       CHECK:   %[[RES2:.*]] = builtin.unrealized_conversion_cast %[[V2]] : i64 to index
+//       CHECK:   return %[[RES1]], %[[RES2]] : index, index
+  %0 = amdgpu.assume_subgroup_uniform %arg0 : index
+  %1 = amdgpu.assume_subgroup_uniform all_lanes %arg0 : index
+  func.return %0, %1 : index, index
+}

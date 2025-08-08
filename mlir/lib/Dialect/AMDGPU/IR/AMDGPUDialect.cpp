@@ -511,6 +511,22 @@ LogicalResult DPPOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// AssumeSubgroupUniformOp
+//===----------------------------------------------------------------------===//
+
+void AssumeSubgroupUniformOp::inferResultRanges(
+    ArrayRef<ConstantIntRanges> argRanges, SetIntRangeFn setResultRange) {
+  setResultRange(getResult(), argRanges.front());
+}
+
+Speculation::Speculatability AssumeSubgroupUniformOp::getSpeculatability() {
+  if (getAllLanes())
+    return Speculation::Speculatable;
+
+  return Speculation::NotSpeculatable;
+}
+
+//===----------------------------------------------------------------------===//
 // GatherToLDSOp
 //===----------------------------------------------------------------------===//
 

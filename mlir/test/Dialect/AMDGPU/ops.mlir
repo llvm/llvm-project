@@ -517,6 +517,16 @@ func.func @wmma(%arg0 : vector<16xf16>, %arg1 : vector<8xf16>) -> vector<8xf16> 
   func.return %0 : vector<8xf16>
 }
 
+// CHECK-LABEL: func @assume_subgroup_uniform
+//  CHECK-SAME: (%[[ARG:.*]]: f32)
+func.func @assume_subgroup_uniform(%arg0 : f32) -> (f32, f32) {
+  // CHECK: amdgpu.assume_subgroup_uniform %[[ARG]] : f32
+  %0 = amdgpu.assume_subgroup_uniform %arg0 : f32
+  // CHECK: amdgpu.assume_subgroup_uniform all_lanes %[[ARG]] : f32
+  %1 = amdgpu.assume_subgroup_uniform all_lanes %arg0 : f32
+  func.return %0, %1 : f32, f32
+}
+
 // CHECK-LABEL: func @swizzle_bitmode
 func.func @swizzle_bitmode(%arg0 : f32) -> f32 {
   // CHECK: amdgpu.swizzle_bitmode

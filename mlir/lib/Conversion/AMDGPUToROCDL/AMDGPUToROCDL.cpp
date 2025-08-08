@@ -1876,6 +1876,19 @@ struct AMDGPUSwizzleBitModeLowering
   }
 };
 
+struct AMDGPUAssumeSubgroupUniformLowering
+    : public ConvertOpToLLVMPattern<AssumeSubgroupUniformOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(AssumeSubgroupUniformOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Value src = adaptor.getSrc();
+    rewriter.replaceOpWithNewOp<ROCDL::ReadfirstlaneOp>(op, src.getType(), src);
+    return success();
+  }
+};
+
 struct ConvertAMDGPUToROCDLPass
     : public impl::ConvertAMDGPUToROCDLPassBase<ConvertAMDGPUToROCDLPass> {
   using Base::Base;
@@ -1945,5 +1958,7 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
            PackedScaledTruncOpLowering, PackedTrunc2xFp8OpLowering,
            PackedStochRoundFp8OpLowering, GatherToLDSOpLowering,
            TransposeLoadOpLowering>(converter, chipset);
-  patterns.add<AMDGPUSwizzleBitModeLowering>(converter);
+  patterns
+      .add<AMDGPUSwizzleBitModeLowering, AMDGPUAssumeSubgroupUniformLowering>(
+          converter);
 }

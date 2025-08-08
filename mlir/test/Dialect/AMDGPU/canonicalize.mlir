@@ -159,3 +159,13 @@ func.func @fold_gather_to_lds_of_cast_dest(%global: memref<128x72xf32, 1>, %lds:
     : f32, memref<128x72xf32, 1>, memref<?x?xf32, 3>
   func.return
 }
+
+// -----
+
+// CHECK-LABEL: func @assume_subgroup_uniform_unused
+func.func @assume_subgroup_uniform_unused(%arg0 : f32) {
+// CHECK-NOT: amdgpu.assume_subgroup_uniform
+  %0 = amdgpu.assume_subgroup_uniform %arg0 : f32
+  %1 = amdgpu.assume_subgroup_uniform all_lanes %arg0 : f32
+  func.return
+}

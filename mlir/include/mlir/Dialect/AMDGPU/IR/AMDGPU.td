@@ -9,12 +9,13 @@
 #ifndef AMDGPU
 #define AMDGPU
 
+include "mlir/IR/EnumAttr.td"
+include "mlir/IR/OpBase.td"
+include "mlir/IR/Properties.td"
+include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
-include "mlir/IR/EnumAttr.td"
-include "mlir/IR/Properties.td"
-include "mlir/IR/OpBase.td"
 
 def AMDGPU_Dialect : Dialect {
   let name = "amdgpu";
@@ -633,6 +634,37 @@ def AMDGPU_DPPOp : AMDGPU_Op<"dpp",
     $old $src $kind (`(` $permArgument^ `)`)? attr-dict `:` type($result)
   }];
   let hasVerifier = 1;
+}
+
+def AMDGPU_AssumeSubgroupUniformOp : AMDGPU_Op<"assume_subgroup_uniform",
+    [NoMemoryEffect, AllTypesMatch<["result", "src"]>,
+    DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
+    DeclareOpInterfaceMethods<ConditionallySpeculatable, ["getSpeculatability"]>] #
+    ElementwiseMappable.traits>,
+  Arguments<(ins AnyType:$src,
+                 DefaultValuedAttr<UnitAttr, "false">:$all_lanes)> {
+  let summary = "Assumes value is unform across the lanes in subgroup";
+  let description = [{
+      This op is a compiler hint to help backend put values into scalar registers.
+
+      If `src` value is uniform across all the active subgroup lanes it is
+      returned unchanged, otherwise result is poison.
+
+      If `all_lanes` is set, the value is assumed to be uniform across all the
+      subgroup lanes, this can allow to speculate it out of control flow, which
+      may change the current active lanes, i.e:
+      ```
+      // %value must be uniform at this point
+      %value = ...
+      scf.if lane_id < 13 {
+        %uniform = amdgpu.assume_subgroup_uniform all_lanes %value
+      }
+      ```
+  }];
+  let results = (outs AnyType:$result);
+  let assemblyFormat = [{
+    (`all_lanes` $all_lanes^)? $src attr-dict `:` type($result)
+  }];
 }
 
 def AMDGPU_SwizzleBitModeOp : AMDGPU_Op<"swizzle_bitmode",
