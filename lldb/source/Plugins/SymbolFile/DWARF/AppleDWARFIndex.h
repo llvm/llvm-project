@@ -57,10 +57,12 @@ public:
   void GetCompleteObjCClass(
       ConstString class_name, bool must_be_implementation,
       llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
-  void GetTypes(ConstString name,
-                llvm::function_ref<bool(DWARFDIE die)> callback) override;
-  void GetTypes(const DWARFDeclContext &context,
-                llvm::function_ref<bool(DWARFDIE die)> callback) override;
+  void
+  GetTypes(ConstString name,
+           llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
+  void
+  GetTypes(const DWARFDeclContext &context,
+           llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
   void GetNamespaces(
       ConstString name,
       llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
@@ -92,9 +94,10 @@ private:
   /// each match. If `search_for_tag` is provided, ignore entries whose tag is
   /// not `search_for_tag`. If `search_for_qualhash` is provided, ignore entries
   /// whose qualified name hash does not match `search_for_qualhash`.
-  /// If `callback` returns false for an entry, the search is interrupted.
+  /// If `callback` returns `IterationAction::Stop` for an entry, the search is
+  /// interrupted.
   void SearchFor(const llvm::AppleAcceleratorTable &table, llvm::StringRef name,
-                 llvm::function_ref<bool(DWARFDIE die)> callback,
+                 llvm::function_ref<IterationAction(DWARFDIE die)> callback,
                  std::optional<dw_tag_t> search_for_tag = std::nullopt,
                  std::optional<uint32_t> search_for_qualhash = std::nullopt);
 };

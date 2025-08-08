@@ -40,6 +40,7 @@ template <class Emitter> class LoopScope;
 template <class Emitter> class LabelScope;
 template <class Emitter> class SwitchScope;
 template <class Emitter> class StmtExprScope;
+template <class Emitter> class LocOverrideScope;
 
 template <class Emitter> class Compiler;
 struct InitLink {
@@ -333,6 +334,7 @@ private:
   friend class LabelScope<Emitter>;
   friend class SwitchScope<Emitter>;
   friend class StmtExprScope<Emitter>;
+  friend class LocOverrideScope<Emitter>;
 
   /// Emits a zero initializer.
   bool visitZeroInitializer(PrimType T, QualType QT, const Expr *E);

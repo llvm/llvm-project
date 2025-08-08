@@ -5035,6 +5035,9 @@ static const ValueDecl *HandleMemberPointerAccess(EvalInfo &Info,
     // This is a member of some derived class. Truncate LV appropriately.
     // The end of the derived-to-base path for the base object must match the
     // derived-to-base path for the member pointer.
+    // C++23 [expr.mptr.oper]p4:
+    //   If the result of E1 is an object [...] whose most derived object does
+    //   not contain the member to which E2 refers, the behavior is undefined.
     if (LV.Designator.MostDerivedPathLength + MemPtr.Path.size() >
         LV.Designator.Entries.size()) {
       Info.FFDiag(RHS);
@@ -5050,6 +5053,24 @@ static const ValueDecl *HandleMemberPointerAccess(EvalInfo &Info,
         Info.FFDiag(RHS);
         return nullptr;
       }
+    }
+    // MemPtr.Path only contains the base classes of the class directly
+    // containing the member E2. It is still necessary to check that the class
+    // directly containing the member E2 lies on the derived-to-base path of E1
+    // to avoid incorrectly permitting member pointer access into a sibling
+    // class of the class containing the member E2. If this class would
+    // correspond to the most-derived class of E1, it either isn't contained in
+    // LV.Designator.Entries or the corresponding entry refers to an array
+    // element instead. Therefore get the most derived class directly in this
+    // case. Otherwise the previous entry should correpond to this class.
+    const CXXRecordDecl *LastLVDecl =
+        (PathLengthToMember > LV.Designator.MostDerivedPathLength)
+            ? getAsBaseClass(LV.Designator.Entries[PathLengthToMember - 1])
+            : LV.Designator.MostDerivedType->getAsCXXRecordDecl();
+    const CXXRecordDecl *LastMPDecl = MemPtr.getContainingRecord();
+    if (LastLVDecl->getCanonicalDecl() != LastMPDecl->getCanonicalDecl()) {
+      Info.FFDiag(RHS);
+      return nullptr;
     }
 
     // Truncate the lvalue to the appropriate derived class.
@@ -9839,11 +9860,15 @@ bool PointerExprEvaluator::VisitCastExpr(const CastExpr *E) {
     if (Value.isInt()) {
       unsigned Size = Info.Ctx.getTypeSize(E->getType());
       uint64_t N = Value.getInt().extOrTrunc(Size).getZExtValue();
-      Result.Base = (Expr*)nullptr;
-      Result.InvalidBase = false;
-      Result.Offset = CharUnits::fromQuantity(N);
-      Result.Designator.setInvalid();
-      Result.IsNullPtr = false;
+      if (N == Info.Ctx.getTargetNullPointerValue(E->getType())) {
+        Result.setNull(Info.Ctx, E->getType());
+      } else {
+        Result.Base = (Expr *)nullptr;
+        Result.InvalidBase = false;
+        Result.Offset = CharUnits::fromQuantity(N);
+        Result.Designator.setInvalid();
+        Result.IsNullPtr = false;
+      }
       return true;
     } else {
       // In rare instances, the value isn't an lvalue.
@@ -11603,7 +11628,13 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
   case Builtin::BI__builtin_elementwise_add_sat:
-  case Builtin::BI__builtin_elementwise_sub_sat: {
+  case Builtin::BI__builtin_elementwise_sub_sat:
+  case clang::X86::BI__builtin_ia32_pmulhuw128:
+  case clang::X86::BI__builtin_ia32_pmulhuw256:
+  case clang::X86::BI__builtin_ia32_pmulhuw512:
+  case clang::X86::BI__builtin_ia32_pmulhw128:
+  case clang::X86::BI__builtin_ia32_pmulhw256:
+  case clang::X86::BI__builtin_ia32_pmulhw512: {
     APValue SourceLHS, SourceRHS;
     if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
         !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
@@ -11627,6 +11658,18 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         ResultElements.push_back(APValue(
             APSInt(LHS.isSigned() ? LHS.ssub_sat(RHS) : LHS.usub_sat(RHS),
                    DestEltTy->isUnsignedIntegerOrEnumerationType())));
+        break;
+      case clang::X86::BI__builtin_ia32_pmulhuw128:
+      case clang::X86::BI__builtin_ia32_pmulhuw256:
+      case clang::X86::BI__builtin_ia32_pmulhuw512:
+        ResultElements.push_back(APValue(APSInt(llvm::APIntOps::mulhu(LHS, RHS),
+                                                /*isUnsigned=*/true)));
+        break;
+      case clang::X86::BI__builtin_ia32_pmulhw128:
+      case clang::X86::BI__builtin_ia32_pmulhw256:
+      case clang::X86::BI__builtin_ia32_pmulhw512:
+        ResultElements.push_back(APValue(APSInt(llvm::APIntOps::mulhs(LHS, RHS),
+                                                /*isUnsigned=*/false)));
         break;
       }
     }

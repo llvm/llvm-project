@@ -28,8 +28,6 @@ CIRGenFunction::CIRGenFunction(CIRGenModule &cgm, CIRGenBuilderTy &builder,
                                bool suppressNewContext)
     : CIRGenTypeCache(cgm), cgm{cgm}, builder(builder) {
   ehStack.setCGF(this);
-  currentCleanupStackDepth = 0;
-  assert(ehStack.getStackDepth() == 0);
 }
 
 CIRGenFunction::~CIRGenFunction() {}
@@ -383,6 +381,7 @@ void CIRGenFunction::LexicalScope::emitImplicitReturn() {
         !mayDropFunctionReturn(fd->getASTContext(), fd->getReturnType());
 
     if (shouldEmitUnreachable) {
+      assert(!cir::MissingFeatures::sanitizers());
       if (cgf.cgm.getCodeGenOpts().OptimizationLevel == 0)
         builder.create<cir::TrapOp>(localScope->endLoc);
       else
@@ -407,6 +406,8 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   const Decl *d = gd.getDecl();
   const auto *fd = dyn_cast_or_null<FunctionDecl>(d);
   curFuncDecl = d->getNonClosureContext();
+
+  prologueCleanupDepth = ehStack.stable_begin();
 
   mlir::Block *entryBB = &fn.getBlocks().front();
   builder.setInsertionPointToStart(entryBB);
@@ -474,11 +475,11 @@ void CIRGenFunction::finishFunction(SourceLocation endLoc) {
   // important to do this before we enter the return block or return
   // edges will be *really* confused.
   // TODO(cir): Use prologueCleanupDepth here.
-  bool hasCleanups = ehStack.getStackDepth() != currentCleanupStackDepth;
+  bool hasCleanups = ehStack.stable_begin() != prologueCleanupDepth;
   if (hasCleanups) {
     assert(!cir::MissingFeatures::generateDebugInfo());
     // FIXME(cir): should we clearInsertionPoint? breaks many testcases
-    popCleanupBlocks(currentCleanupStackDepth);
+    popCleanupBlocks(prologueCleanupDepth);
   }
 }
 
@@ -784,9 +785,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     }
     if (!ty->isAnyComplexType())
       return emitCompoundAssignmentLValue(cast<CompoundAssignOperator>(e));
-    cgm.errorNYI(e->getSourceRange(),
-                 "CompoundAssignOperator with ComplexType");
-    return LValue();
+
+    return emitComplexCompoundAssignmentLValue(cast<CompoundAssignOperator>(e));
   }
   case Expr::CallExprClass:
   case Expr::CXXMemberCallExprClass:

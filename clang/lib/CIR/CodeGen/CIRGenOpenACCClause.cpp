@@ -358,8 +358,8 @@ class OpenACCClauseCIREmitter final
 
   template <typename RecipeTy>
   RecipeTy getOrCreateRecipe(ASTContext &astCtx, const Expr *varRef,
-                             DeclContext *dc, QualType baseType,
-                             mlir::Value mainOp) {
+                             const VarDecl *varRecipe, DeclContext *dc,
+                             QualType baseType, mlir::Value mainOp) {
     mlir::ModuleOp mod =
         builder.getBlock()->getParent()->getParentOfType<mlir::ModuleOp>();
 
@@ -398,12 +398,6 @@ class OpenACCClauseCIREmitter final
     auto recipe =
         RecipeTy::create(modBuilder, loc, recipeName, mainOp.getType());
 
-    // Magic-up a var-decl so we can use normal init/destruction operations for
-    // a variable declaration.
-    VarDecl &tempDecl = *VarDecl::Create(
-        astCtx, dc, varRef->getBeginLoc(), varRef->getBeginLoc(),
-        &astCtx.Idents.get("openacc.private.init"), baseType,
-        astCtx.getTrivialTypeSourceInfo(baseType), SC_Auto);
     CIRGenFunction::AutoVarEmission tempDeclEmission{
         CIRGenFunction::AutoVarEmission::invalid()};
 
@@ -422,9 +416,11 @@ class OpenACCClauseCIREmitter final
                          "OpenACC non-private recipe init");
       }
 
-      tempDeclEmission =
-          cgf.emitAutoVarAlloca(tempDecl, builder.saveInsertionPoint());
-      cgf.emitAutoVarInit(tempDeclEmission);
+      if (varRecipe) {
+        tempDeclEmission =
+            cgf.emitAutoVarAlloca(*varRecipe, builder.saveInsertionPoint());
+        cgf.emitAutoVarInit(tempDeclEmission);
+      }
 
       mlir::acc::YieldOp::create(builder, locEnd);
     }
@@ -439,7 +435,7 @@ class OpenACCClauseCIREmitter final
     }
 
     // Destroy section (doesn't currently exist).
-    if (tempDecl.needsDestruction(cgf.getContext())) {
+    if (varRecipe && varRecipe->needsDestruction(cgf.getContext())) {
       llvm::SmallVector<mlir::Type> argsTys{mainOp.getType()};
       llvm::SmallVector<mlir::Location> argsLocs{loc};
       mlir::Block *block = builder.createBlock(&recipe.getDestroyRegion(),
@@ -450,7 +446,7 @@ class OpenACCClauseCIREmitter final
       mlir::Type elementTy =
           mlir::cast<cir::PointerType>(mainOp.getType()).getPointee();
       Address addr{block->getArgument(0), elementTy,
-                   cgf.getContext().getDeclAlign(&tempDecl)};
+                   cgf.getContext().getDeclAlign(varRecipe)};
       cgf.emitDestroy(addr, baseType,
                       cgf.getDestroyer(QualType::DK_cxx_destructor));
 
@@ -1080,9 +1076,10 @@ public:
   void VisitPrivateClause(const OpenACCPrivateClause &clause) {
     if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
                                mlir::acc::LoopOp>) {
-      for (const Expr *var : clause.getVarList()) {
+      for (const auto [varExpr, varRecipe] :
+           llvm::zip_equal(clause.getVarList(), clause.getInitRecipes())) {
         CIRGenFunction::OpenACCDataOperandInfo opInfo =
-            cgf.getOpenACCDataOperandInfo(var);
+            cgf.getOpenACCDataOperandInfo(varExpr);
         auto privateOp = mlir::acc::PrivateOp::create(
             builder, opInfo.beginLoc, opInfo.varValue, /*structured=*/true,
             /*implicit=*/false, opInfo.name, opInfo.bounds);
@@ -1091,8 +1088,9 @@ public:
         {
           mlir::OpBuilder::InsertionGuard guardCase(builder);
           auto recipe = getOrCreateRecipe<mlir::acc::PrivateRecipeOp>(
-              cgf.getContext(), var, Decl::castToDeclContext(cgf.curFuncDecl),
-              opInfo.baseType, privateOp.getResult());
+              cgf.getContext(), varExpr, varRecipe,
+              Decl::castToDeclContext(cgf.curFuncDecl), opInfo.baseType,
+              privateOp.getResult());
           // TODO: OpenACC: The dialect is going to change in the near future to
           // have these be on a different operation, so when that changes, we
           // probably need to change these here.

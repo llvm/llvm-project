@@ -92,25 +92,6 @@ namespace {
 struct InitializePythonRAII {
 public:
   InitializePythonRAII() {
-    PyConfig config;
-    PyConfig_InitPythonConfig(&config);
-
-#if LLDB_EMBED_PYTHON_HOME
-    static std::string g_python_home = []() -> std::string {
-      if (llvm::sys::path::is_absolute(LLDB_PYTHON_HOME))
-        return LLDB_PYTHON_HOME;
-
-      FileSpec spec = HostInfo::GetShlibDir();
-      if (!spec)
-        return {};
-      spec.AppendPathComponent(LLDB_PYTHON_HOME);
-      return spec.GetPath();
-    }();
-    if (!g_python_home.empty()) {
-      PyConfig_SetBytesString(&config, &config.home, g_python_home.c_str());
-    }
-#endif
-
     // The table of built-in modules can only be extended before Python is
     // initialized.
     if (!Py_IsInitialized()) {
@@ -134,16 +115,38 @@ public:
       PyImport_AppendInittab("_lldb", LLDBSwigPyInit);
     }
 
+#if LLDB_EMBED_PYTHON_HOME
+    PyConfig config;
+    PyConfig_InitPythonConfig(&config);
+
+    static std::string g_python_home = []() -> std::string {
+      if (llvm::sys::path::is_absolute(LLDB_PYTHON_HOME))
+        return LLDB_PYTHON_HOME;
+
+      FileSpec spec = HostInfo::GetShlibDir();
+      if (!spec)
+        return {};
+      spec.AppendPathComponent(LLDB_PYTHON_HOME);
+      return spec.GetPath();
+    }();
+    if (!g_python_home.empty()) {
+      PyConfig_SetBytesString(&config, &config.home, g_python_home.c_str());
+    }
+
     config.install_signal_handlers = 0;
     Py_InitializeFromConfig(&config);
     PyConfig_Clear(&config);
+#else
+    Py_InitializeEx(/*install_sigs=*/0);
+#endif
 
     // The only case we should go further and acquire the GIL: it is unlocked.
-    if (PyGILState_Check())
+    PyGILState_STATE gil_state = PyGILState_Ensure();
+    if (gil_state != PyGILState_UNLOCKED)
       return;
 
     m_was_already_initialized = true;
-    m_gil_state = PyGILState_Ensure();
+    m_gil_state = gil_state;
     LLDB_LOGV(GetLog(LLDBLog::Script),
               "Ensured PyGILState. Previous state = {0}",
               m_gil_state == PyGILState_UNLOCKED ? "unlocked" : "locked");
