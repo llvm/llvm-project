@@ -3359,6 +3359,38 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     }
   }
 
+  // Canonicalize the unsigned-add overflow/non-overflow boolean patterns:
+  //   (icmp eq A, 0) | (icmp ult B, sub 0, A)  --> icmp ule B, ~A
+  //   (icmp ne A, 0) & (icmp uge B, sub 0, A)  --> icmp ugt B, ~A
+  // Accept commuted order of the two icmps within the or/and, and
+  // commuted operand order within the ULT/UGE compare.
+  {
+    Value *A, *B;
+    // Try (LHS,RHS) order
+    if (PredL == (IsAnd ? ICmpInst::ICMP_NE : ICmpInst::ICMP_EQ) &&
+        match(LHS0, m_Value(A)) && match(LHS1, m_Zero()) &&
+        ((PredR == (IsAnd ? ICmpInst::ICMP_UGE : ICmpInst::ICMP_ULT) &&
+          ((match(RHS0, m_Value(B)) && match(RHS1, m_Neg(m_Specific(A)))) ||
+           (match(RHS1, m_Value(B)) && match(RHS0, m_Neg(m_Specific(A))))))) &&
+        (!IsLogical || isGuaranteedNotToBePoison(B))) {
+      Value *NotA = Builder.CreateNot(A);
+      return Builder.CreateICmp(IsAnd ? ICmpInst::ICMP_UGT : ICmpInst::ICMP_ULE,
+                                B, NotA);
+    }
+
+    // Try (RHS,LHS) order
+    if (PredR == (IsAnd ? ICmpInst::ICMP_NE : ICmpInst::ICMP_EQ) &&
+        match(RHS0, m_Value(A)) && match(RHS1, m_Zero()) &&
+        ((PredL == (IsAnd ? ICmpInst::ICMP_UGE : ICmpInst::ICMP_ULT) &&
+          ((match(LHS0, m_Value(B)) && match(LHS1, m_Neg(m_Specific(A)))) ||
+           (match(LHS1, m_Value(B)) && match(LHS0, m_Neg(m_Specific(A))))))) &&
+        (!IsLogical || isGuaranteedNotToBePoison(B))) {
+      Value *NotA = Builder.CreateNot(A);
+      return Builder.CreateICmp(IsAnd ? ICmpInst::ICMP_UGT : ICmpInst::ICMP_ULE,
+                                B, NotA);
+    }
+  }
+
   if (Value *V =
           foldAndOrOfICmpEqConstantAndICmp(LHS, RHS, IsAnd, IsLogical, Builder))
     return V;
