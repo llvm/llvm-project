@@ -585,10 +585,6 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
   // The actual emission of `R_RISCV_RELAX` will be handled in
   // `RISCVAsmBackend`.
   bool RelaxCandidate = false;
-  auto AsmRelaxToLinkerRelaxable = [&]() -> void {
-    if (!STI.hasFeature(RISCV::FeatureExactAssembly))
-      RelaxCandidate = true;
-  };
   auto AsmRelaxToLinkerRelaxableWithFeature = [&](unsigned Feature) -> void {
     if (!STI.hasFeature(RISCV::FeatureExactAssembly) && STI.hasFeature(Feature))
       RelaxCandidate = true;
@@ -679,7 +675,8 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
       FixupKind = RISCV::fixup_riscv_12_i;
     } else if (MIFrm == RISCVII::InstFormatQC_EB) {
       FixupKind = RISCV::fixup_riscv_qc_e_branch;
-      AsmRelaxToLinkerRelaxable();
+      // This might be assembler relaxed to `qc.e.b<cc>; jal` but we cannot relax
+      // the `jal` again in the assembler.
     } else if (MIFrm == RISCVII::InstFormatQC_EAI) {
       FixupKind = RISCV::fixup_riscv_qc_e_32;
       RelaxCandidate = true;
