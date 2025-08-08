@@ -65,8 +65,8 @@ void RewriteInsertsPass::runOnOperation() {
       operands.push_back(insertionOp.getObject());
 
     OpBuilder builder(lastCompositeInsertOp);
-    auto compositeConstructOp = builder.create<spirv::CompositeConstructOp>(
-        location, compositeType, operands);
+    auto compositeConstructOp = spirv::CompositeConstructOp::create(
+        builder, location, compositeType, operands);
 
     lastCompositeInsertOp.replaceAllUsesWith(
         compositeConstructOp->getResult(0));

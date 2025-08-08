@@ -240,8 +240,10 @@ Linux              x86\ :sup:`1`         GCC, Clang
 Linux              amd64                 GCC, Clang
 Linux              ARM                   GCC, Clang
 Linux              AArch64               GCC, Clang
+Linux              LoongArch             GCC, Clang
 Linux              Mips                  GCC, Clang
 Linux              PowerPC               GCC, Clang
+Linux              RISC-V                GCC, Clang
 Linux              SystemZ               GCC, Clang
 Solaris            V9 (Ultrasparc)       GCC
 DragonFlyBSD       amd64                 GCC, Clang
@@ -917,11 +919,11 @@ the `Command Guide <CommandGuide/index.html>`_.
 
 ``llvm-as``
 
-  The assembler transforms the human readable LLVM assembly to LLVM bitcode.
+  The assembler transforms the human-readable LLVM assembly to LLVM bitcode.
 
 ``llvm-dis``
 
-  The disassembler transforms the LLVM bitcode to human readable LLVM assembly.
+  The disassembler transforms the LLVM bitcode to human-readable LLVM assembly.
 
 ``llvm-link``
 

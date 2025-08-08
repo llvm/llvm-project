@@ -234,7 +234,7 @@ static SmallVector<Metadata *> parseAnnotation(Value *I,
       return SmallVector<Metadata *>{};
     MDs.push_back(MDNode::get(Ctx, MDsItem));
   }
-  return Pos == static_cast<int>(Anno.length()) ? MDs
+  return Pos == static_cast<int>(Anno.length()) ? std::move(MDs)
                                                 : SmallVector<Metadata *>{};
 }
 
@@ -410,6 +410,7 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
               II, Intrinsic::SPVIntrinsics::spv_lifetime_start, {1});
         } else {
           II->eraseFromParent();
+          Changed = true;
         }
         break;
       case Intrinsic::lifetime_end:
@@ -418,6 +419,7 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
               II, Intrinsic::SPVIntrinsics::spv_lifetime_end, {1});
         } else {
           II->eraseFromParent();
+          Changed = true;
         }
         break;
       case Intrinsic::ptr_annotation:

@@ -103,6 +103,10 @@ public:
     return reinterpret_cast<const std::byte *>(this) + sizeof(Block);
   }
 
+  template <typename T> T deref() const {
+    return *reinterpret_cast<const T *>(data());
+  }
+
   /// Invokes the constructor.
   void invokeCtor() {
     assert(!IsInitialized);
