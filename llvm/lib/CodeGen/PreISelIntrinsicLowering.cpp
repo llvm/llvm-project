@@ -594,8 +594,8 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
           return false;
         const TargetLowering *TL = TM->getSubtargetImpl(F)->getTargetLowering();
         unsigned Op = TL->IntrinsicIDToISD(F.getIntrinsicID());
-        if (Op == ISD::DELETED_NODE ||
-            !TL->isOperationExpand(Op, EVT::getEVT(Ty)))
+        assert(Op != ISD::DELETED_NODE && "unsupported intrinsic");
+        if (!TL->isOperationExpand(Op, EVT::getEVT(Ty)))
           return false;
         return lowerUnaryVectorIntrinsicAsLoop(M, CI);
       });
