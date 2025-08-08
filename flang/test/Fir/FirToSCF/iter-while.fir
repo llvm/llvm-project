@@ -13,11 +13,11 @@
 // CHECK:             scf.condition(%[[VAL_12]]) %[[VAL_7]], %[[VAL_8]], %[[VAL_9]], %[[VAL_10]] : index, i1, i16, i32
 // CHECK:           } do {
 // CHECK:           ^bb0(%[[VAL_13:.*]]: index, %[[VAL_14:.*]]: i1, %[[VAL_15:.*]]: i16, %[[VAL_16:.*]]: i32):
-// CHECK:             %[[VAL_17:.*]] = arith.constant true
-// CHECK:             %[[VAL_18:.*]] = arith.constant 22 : i16
-// CHECK:             %[[VAL_19:.*]] = arith.constant 33 : i32
-// CHECK:             %[[VAL_20:.*]] = arith.addi %[[VAL_13]], %[[VAL_2]] : index
-// CHECK:             scf.yield %[[VAL_20]], %[[VAL_17]], %[[VAL_18]], %[[VAL_19]] : index, i1, i16, i32
+// CHECK:             %[[VAL_17:.*]] = arith.addi %[[VAL_13]], %[[VAL_2]] : index
+// CHECK:             %[[VAL_18:.*]] = arith.constant true
+// CHECK:             %[[VAL_19:.*]] = arith.constant 22 : i16
+// CHECK:             %[[VAL_20:.*]] = arith.constant 33 : i32
+// CHECK:             scf.yield %[[VAL_17]], %[[VAL_18]], %[[VAL_19]], %[[VAL_20]] : index, i1, i16, i32
 // CHECK:           }
 // CHECK:           return %[[VAL_21:.*]]#0, %[[VAL_21]]#1, %[[VAL_21]]#2, %[[VAL_21]]#3 : index, i1, i16, i32
 // CHECK:         }
@@ -48,10 +48,10 @@ func.func @test_simple_iterate_while_1() -> (index, i1, i16, i32) {
 // CHECK:             scf.condition(%[[VAL_6]]) %[[VAL_2]], %[[VAL_3]], %[[VAL_4]] : index, i1, i32
 // CHECK:           } do {
 // CHECK:           ^bb0(%[[VAL_7:.*]]: index, %[[VAL_8:.*]]: i1, %[[VAL_9:.*]]: i32):
-// CHECK:             %[[VAL_10:.*]] = arith.constant 123 : i32
-// CHECK:             %[[VAL_11:.*]] = arith.constant true
-// CHECK:             %[[VAL_12:.*]] = arith.addi %[[VAL_7]], %[[VAL_0]] : index
-// CHECK:             scf.yield %[[VAL_12]], %[[VAL_11]], %[[VAL_10]] : index, i1, i32
+// CHECK:             %[[VAL_10:.*]] = arith.addi %[[VAL_7]], %[[VAL_0]] : index
+// CHECK:             %[[VAL_11:.*]] = arith.constant 123 : i32
+// CHECK:             %[[VAL_12:.*]] = arith.constant true
+// CHECK:             scf.yield %[[VAL_10]], %[[VAL_12]], %[[VAL_11]] : index, i1, i32
 // CHECK:           }
 // CHECK:           return %[[VAL_13:.*]]#0, %[[VAL_13]]#1, %[[VAL_13]]#2 : index, i1, i32
 // CHECK:         }
