@@ -688,6 +688,7 @@ cc_test(
         "//clang:ast",
         "//clang:basic",
         "//clang:codegen",
+        "//clang:config",
         "//clang:frontend",
         "//clang:interpreter",
         "//clang:lex",
