@@ -268,9 +268,9 @@ func.func @dim_of_pad_op(%arg0 : tensor<2x?x?xf32>, %arg1 : index, %arg2 : index
 //  CHECK-DAG:   %[[C2:.+]] = arith.constant 2 : index
 //  CHECK-DAG:   %[[C12:.+]] = arith.constant 12 : index
 //      CHECK:   %[[IN_DIM1:.+]] = tensor.dim %[[ARG0]], %[[C1]]
-//      CHECK:   %[[OUT_DIM1:.+]] = affine.apply #[[MAP0]]()[%[[ARG1]], %[[IN_DIM1]]]
+//      CHECK:   %[[OUT_DIM1:.+]] = affine.apply #[[MAP0]]()[%[[IN_DIM1]], %[[ARG1]]]
 //      CHECK:   %[[IN_DIM2:.+]] = tensor.dim %[[ARG0]], %[[C2]]
-//      CHECK:   %[[OUT_DIM2:.+]] = affine.apply #[[MAP1]]()[%[[ARG2]], %[[IN_DIM2]]]
+//      CHECK:   %[[OUT_DIM2:.+]] = affine.apply #[[MAP1]]()[%[[IN_DIM2]], %[[ARG2]]]
 //      CHECK:   return %[[C12]], %[[OUT_DIM1]], %[[OUT_DIM2]]
 
 // -----

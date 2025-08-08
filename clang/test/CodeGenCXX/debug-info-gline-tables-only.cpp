@@ -14,9 +14,11 @@ class E : public C {
   // CHECK-NOT: DW_TAG_reference type
   void x(const D& d);
 };
+// CHECK-NOT: DW_TAG_structure_type
 struct F {
   enum X { };
   void func(X);
+  // CHECK-NOT: DW_TAG_member
   virtual ~F();
 };
 F::~F() {

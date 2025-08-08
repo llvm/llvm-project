@@ -57,7 +57,7 @@ void f(X *noreturn) {
 
 template<typename...Ts> void f(Ts ...x) {
   [[test::foo(bar, baz)...]]; // expected-error {{attribute 'foo' cannot be used as an attribute pack}} \
-  // expected-warning {{unknown attribute 'foo' ignored}}
+  // expected-warning {{unknown attribute 'test::foo' ignored}}
 
   [[used(x)...]]; // expected-error {{attribute 'used' cannot be used as an attribute pack}} \
   // expected-warning {{unknown attribute 'used' ignored}}

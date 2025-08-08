@@ -172,8 +172,6 @@ GetItaniumDemangledStr(const char *M) {
 
     TrackingOutputBuffer OB(demangled_cstr, demangled_size);
     demangled_cstr = ipd.finishDemangle(&OB);
-    OB.NameInfo.SuffixRange.first = OB.NameInfo.QualifiersRange.second;
-    OB.NameInfo.SuffixRange.second = std::string_view(OB).size();
     info = std::move(OB.NameInfo);
 
     assert(demangled_cstr &&

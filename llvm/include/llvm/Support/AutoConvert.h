@@ -16,8 +16,9 @@
 
 #ifdef __MVS__
 #include <_Ccsid.h>
+#endif
 #ifdef __cplusplus
-#include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/Error.h"
 #include <system_error>
 #endif /* __cplusplus */
 
@@ -28,9 +29,11 @@
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
+
 int enablezOSAutoConversion(int FD);
 int disablezOSAutoConversion(int FD);
 int restorezOSStdHandleAutoConversion(int FD);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
@@ -38,19 +41,7 @@ int restorezOSStdHandleAutoConversion(int FD);
 #ifdef __cplusplus
 namespace llvm {
 
-/** \brief Disable the z/OS enhanced ASCII auto-conversion for the file
- * descriptor.
- */
-std::error_code disablezOSAutoConversion(int FD);
-
-/** \brief Query the z/OS enhanced ASCII auto-conversion status of a file
- * descriptor and force the conversion if the file is not tagged with a
- * codepage.
- */
-std::error_code enablezOSAutoConversion(int FD);
-
-/** Restore the z/OS enhanced ASCII auto-conversion for the std handle. */
-std::error_code restorezOSStdHandleAutoConversion(int FD);
+#ifdef __MVS__
 
 /** \brief Set the tag information for a file descriptor. */
 std::error_code setzOSFileTag(int FD, int CCSID, bool Text);
@@ -63,9 +54,47 @@ ErrorOr<__ccsid_t> getzOSFileTag(const char *FileName, const int FD = -1);
  */
 ErrorOr<bool> needzOSConversion(const char *FileName, const int FD = -1);
 
+#endif /* __MVS__*/
+
+inline std::error_code disableAutoConversion(int FD) {
+#ifdef __MVS__
+  if (::disablezOSAutoConversion(FD) == -1)
+    return errnoAsErrorCode();
+#endif
+  return std::error_code();
+}
+
+inline std::error_code enableAutoConversion(int FD) {
+#ifdef __MVS__
+  if (::enablezOSAutoConversion(FD) == -1)
+    return errnoAsErrorCode();
+#endif
+  return std::error_code();
+}
+
+inline std::error_code restoreStdHandleAutoConversion(int FD) {
+#ifdef __MVS__
+  if (::restorezOSStdHandleAutoConversion(FD) == -1)
+    return errnoAsErrorCode();
+#endif
+  return std::error_code();
+}
+
+inline std::error_code setFileTag(int FD, int CCSID, bool Text) {
+#ifdef __MVS__
+  return setzOSFileTag(FD, CCSID, Text);
+#endif
+  return std::error_code();
+}
+
+inline ErrorOr<bool> needConversion(const char *FileName, const int FD = -1) {
+#ifdef __MVS__
+  return needzOSConversion(FileName, FD);
+#endif
+  return false;
+}
+
 } /* namespace llvm */
 #endif /* __cplusplus */
-
-#endif /* __MVS__ */
 
 #endif /* LLVM_SUPPORT_AUTOCONVERT_H */

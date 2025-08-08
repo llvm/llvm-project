@@ -61,7 +61,8 @@ using SVals = llvm::StringMap<SVal>;
 /// can test whatever we gathered.
 class SValCollector : public Checker<check::Bind, check::EndAnalysis> {
 public:
-  void checkBind(SVal Loc, SVal Val, const Stmt *S, CheckerContext &C) const {
+  void checkBind(SVal Loc, SVal Val, const Stmt *S, bool AtDeclInit,
+                 CheckerContext &C) const {
     // Skip instantly if we finished testing.
     // Also, we care only for binds happening in variable initializations.
     if (Tested || !isa<DeclStmt>(S))
@@ -139,10 +140,10 @@ class SValTest : public testing::TestWithParam<TestClangConfig> {};
                                                                                \
   void add##NAME##SValCollector(AnalysisASTConsumer &AnalysisConsumer,         \
                                 AnalyzerOptions &AnOpts) {                     \
-    AnOpts.CheckersAndPackages = {{"test.##NAME##SValCollector", true}};       \
+    AnOpts.CheckersAndPackages = {{"test." #NAME "SValColl", true}};           \
     AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {  \
-      Registry.addChecker<NAME##SValCollector>("test.##NAME##SValCollector",   \
-                                               "Description", "");             \
+      Registry.addChecker<NAME##SValCollector>("test." #NAME "SValColl",       \
+                                               "MockDescription");             \
     });                                                                        \
   }                                                                            \
                                                                                \

@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/MipsMCNaCl.h"
 #include "Mips.h"
 #include "MipsInstrInfo.h"
 #include "MipsSubtarget.h"
@@ -727,18 +726,6 @@ bool MipsDelaySlotFiller::searchRange(MachineBasicBlock &MBB, IterTy Begin,
       continue;
 
     const MipsSubtarget &STI = MBB.getParent()->getSubtarget<MipsSubtarget>();
-    if (STI.isTargetNaCl()) {
-      // In NaCl, instructions that must be masked are forbidden in delay slots.
-      // We only check for loads, stores and SP changes.  Calls, returns and
-      // branches are not checked because non-NaCl targets never put them in
-      // delay slots.
-      unsigned AddrIdx;
-      if ((isBasePlusOffsetMemoryAccess(CurrI->getOpcode(), &AddrIdx) &&
-           baseRegNeedsLoadStoreMask(CurrI->getOperand(AddrIdx).getReg())) ||
-          CurrI->modifiesRegister(Mips::SP, STI.getRegisterInfo()))
-        continue;
-    }
-
     bool InMicroMipsMode = STI.inMicroMipsMode();
     const MipsInstrInfo *TII = STI.getInstrInfo();
     unsigned Opcode = (*Slot).getOpcode();

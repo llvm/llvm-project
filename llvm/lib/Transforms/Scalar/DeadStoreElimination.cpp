@@ -1017,10 +1017,10 @@ struct DSEState {
       }
     }
 
-    // Treat byval or inalloca arguments the same as Allocas, stores to them are
-    // dead at the end of the function.
+    // Treat byval, inalloca or dead on return arguments the same as Allocas,
+    // stores to them are dead at the end of the function.
     for (Argument &AI : F.args())
-      if (AI.hasPassPointeeByValueCopyAttr())
+      if (AI.hasPassPointeeByValueCopyAttr() || AI.hasDeadOnReturnAttr())
         InvisibleToCallerAfterRet.insert({&AI, true});
 
     // Collect whether there is any irreducible control flow in the function.
@@ -1360,13 +1360,10 @@ struct DSEState {
   /// indicating whether \p I is a free-like call.
   std::optional<std::pair<MemoryLocation, bool>>
   getLocForTerminator(Instruction *I) const {
-    uint64_t Len;
-    Value *Ptr;
-    if (match(I, m_Intrinsic<Intrinsic::lifetime_end>(m_ConstantInt(Len),
-                                                      m_Value(Ptr))))
-      return {std::make_pair(MemoryLocation(Ptr, Len), false)};
-
     if (auto *CB = dyn_cast<CallBase>(I)) {
+      if (CB->getIntrinsicID() == Intrinsic::lifetime_end)
+        return {
+            std::make_pair(MemoryLocation::getForArgument(CB, 0, &TLI), false)};
       if (Value *FreedOp = getFreedOperand(CB, &TLI))
         return {std::make_pair(MemoryLocation::getAfter(FreedOp), true)};
     }
@@ -2079,6 +2076,7 @@ struct DSEState {
       AllocFnKind AllocKind =
           Attrs.getFnAttr(Attribute::AllocKind).getAllocKind() |
           AllocFnKind::Zeroed;
+      AllocKind &= ~AllocFnKind::Uninitialized;
       Attrs =
           Attrs.addFnAttribute(Ctx, Attribute::getWithAllocKind(Ctx, AllocKind))
               .removeFnAttribute(Ctx, "alloc-variant-zeroed");
@@ -2345,7 +2343,8 @@ bool isFuncLocalAndNotCaptured(Value *Arg, const CallBase *CB,
                                EarliestEscapeAnalysis &EA) {
   const Value *UnderlyingObj = getUnderlyingObject(Arg);
   return isIdentifiedFunctionLocal(UnderlyingObj) &&
-         EA.isNotCapturedBefore(UnderlyingObj, CB, /*OrAt*/ true);
+         capturesNothing(
+             EA.getCapturesBefore(UnderlyingObj, CB, /*OrAt*/ true));
 }
 
 SmallVector<MemoryLocation, 1>

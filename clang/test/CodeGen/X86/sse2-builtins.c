@@ -96,6 +96,7 @@ __m128i test_mm_and_si128(__m128i A, __m128i B) {
   // CHECK: and <2 x i64>
   return _mm_and_si128(A, B);
 }
+TEST_CONSTEXPR(match_v4si(_mm_and_si128((__m128i)(__v4si){0, -1, 0, -1}, (__m128i)(__v4si){0, 0, -1, -1}), 0, 0, 0, -1));
 
 __m128d test_mm_andnot_pd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_andnot_pd
@@ -111,6 +112,7 @@ __m128i test_mm_andnot_si128(__m128i A, __m128i B) {
   // CHECK: and <2 x i64>
   return _mm_andnot_si128(A, B);
 }
+TEST_CONSTEXPR(match_v4si(_mm_andnot_si128((__m128i)(__v4si){0, -1, 0, -1}, (__m128i)(__v4si){0, 0, -1, -1}), 0, 0, -1, 0));
 
 __m128i test_mm_avg_epu8(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_avg_epu8
@@ -938,18 +940,21 @@ __m128i test_mm_mulhi_epi16(__m128i A, __m128i B) {
   // CHECK: call <8 x i16> @llvm.x86.sse2.pmulh.w(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   return _mm_mulhi_epi16(A, B);
 }
+TEST_CONSTEXPR(match_v8hi(_mm_mulhi_epi16((__m128i)(__v8hi){+1, -2, +3, -4, +5, -6, +7, -8}, (__m128i)(__v8hi){-16, -14, +12, +10, -8, +6, -4, +2}), -1, 0, 0, -1, -1, -1, -1, -1));
 
 __m128i test_mm_mulhi_epu16(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_mulhi_epu16
   // CHECK: call <8 x i16> @llvm.x86.sse2.pmulhu.w(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   return _mm_mulhi_epu16(A, B);
 }
+TEST_CONSTEXPR(match_v8hi(_mm_mulhi_epu16((__m128i)(__v8hi){+1, -2, +3, -4, +5, -6, +7, -8}, (__m128i)(__v8hi){-16, -14, +12, +10, -8, +6, -4, +2}), 0, -16, 0, 9, 4, 5, 6, 1));
 
 __m128i test_mm_mullo_epi16(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_mullo_epi16
   // CHECK: mul <8 x i16> %{{.*}}, %{{.*}}
   return _mm_mullo_epi16(A, B);
 }
+TEST_CONSTEXPR(match_v8hi(_mm_mullo_epi16((__m128i)(__v8hi){+1, -2, +3, -4, +5, -6, +7, -8}, (__m128i)(__v8hi){-16, -14, +12, +10, -8, +6, -4, +2}), -16, 28, 36, -40, -40, -36, -28, -16));
 
 __m128d test_mm_or_pd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_or_pd
@@ -963,6 +968,7 @@ __m128i test_mm_or_si128(__m128i A, __m128i B) {
   // CHECK: or <2 x i64> %{{.*}}, %{{.*}}
   return _mm_or_si128(A, B);
 }
+TEST_CONSTEXPR(match_v4si(_mm_or_si128((__m128i)(__v4si){0, -1, 0, -1}, (__m128i)(__v4si){0, 0, -1, -1}), 0, -1, -1, -1));
 
 __m128i test_mm_packs_epi16(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_packs_epi16
@@ -1831,3 +1837,4 @@ __m128i test_mm_xor_si128(__m128i A, __m128i B) {
   // CHECK: xor <2 x i64> %{{.*}}, %{{.*}}
   return _mm_xor_si128(A, B);
 }
+TEST_CONSTEXPR(match_v4si(_mm_xor_si128((__m128i)(__v4si){0, -1, 0, -1}, (__m128i)(__v4si){0, 0, -1, -1}), 0, -1, -1, 0));

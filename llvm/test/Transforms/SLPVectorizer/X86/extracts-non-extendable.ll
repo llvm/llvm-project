@@ -7,26 +7,16 @@ define void @test(i64 %v) {
 ; CHECK-NEXT:  [[BB:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> <i64 0, i64 poison>, i64 [[V]], i32 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i64> zeroinitializer, [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 0, [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 0, 0
-; CHECK-NEXT:    [[TMP5:%.*]] = and i1 [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 0, 0
-; CHECK-NEXT:    [[TMP7:%.*]] = and i1 [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 0, 0
-; CHECK-NEXT:    [[TMP9:%.*]] = and i1 [[TMP7]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = and i1 [[TMP9]], false
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 0, [[TMP2]]
-; CHECK-NEXT:    [[TMP12:%.*]] = and i1 [[TMP10]], [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 0, 0
-; CHECK-NEXT:    [[TMP14:%.*]] = and i1 [[TMP12]], [[TMP13]]
-; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 0, 0
-; CHECK-NEXT:    [[TMP16:%.*]] = and i1 [[TMP14]], [[TMP15]]
-; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 0, 0
-; CHECK-NEXT:    [[TMP18:%.*]] = and i1 [[TMP16]], [[TMP17]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 1, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i64> [[TMP2]], <8 x i64> <i64 poison, i64 0, i64 0, i64 0, i64 poison, i64 0, i64 0, i64 0>, <8 x i32> <i32 0, i32 9, i32 10, i32 11, i32 4, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <8 x i64> zeroinitializer, [[TMP3]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp ult i64 0, 0
+; CHECK-NEXT:    [[TMP6:%.*]] = freeze <8 x i1> [[TMP4]]
+; CHECK-NEXT:    [[TMP18:%.*]] = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> [[TMP6]])
 ; CHECK-NEXT:    [[TMP20:%.*]] = select i1 [[TMP19]], i1 [[TMP18]], i1 false
-; CHECK-NEXT:    br i1 [[TMP20]], label %[[BB_I107_PREHEADER:.*]], label %[[BB_I27_I_PREHEADER:.*]]
+; CHECK-NEXT:    [[TMP8:%.*]] = freeze i1 [[TMP20]]
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = select i1 [[TMP8]], i1 false, i1 false
+; CHECK-NEXT:    br i1 [[OP_RDX1]], label %[[BB_I107_PREHEADER:.*]], label %[[BB_I27_I_PREHEADER:.*]]
 ; CHECK:       [[BB_I107_PREHEADER]]:
 ; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <2 x i64> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[DOTSROA_1278_10_EXTRACT_SHIFT83_I1622_1:%.*]] = xor i64 0, [[TMP21]]
