@@ -4414,7 +4414,7 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
   }
 
   if (Opcode == Instruction::FCmp) {
-    if (auto Cost = getFP16BF16PromoteCost(
+    if (auto PromotedCost = getFP16BF16PromoteCost(
             ValTy, CostKind, Op1Info, Op2Info, /*IncludeTrunc=*/false,
             [&](Type *PromotedTy) {
               InstructionCost Cost =
@@ -4428,7 +4428,7 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
                     TTI::CastContextHint::None, CostKind);
               return Cost;
             }))
-      return *Cost;
+      return *PromotedCost;
 
     auto LT = getTypeLegalizationCost(ValTy);
     // Model unknown fp compares as a libcall.
