@@ -1032,6 +1032,13 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
                                   I32Ty, {Arg0Ty, I32Ty, I1Ty});
     return Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
   }
+  case VPInstruction::Not: {
+    Type *RetTy = Ctx.Types.inferScalarType(getOperand(0));
+    if (!vputils::onlyFirstLaneUsed(this))
+      RetTy = toVectorTy(RetTy, VF);
+    return Ctx.TTI.getArithmeticInstrCost(Instruction::Xor, RetTy,
+                                          Ctx.CostKind);
+  }
   case VPInstruction::ExtractPenultimateElement:
     if (VF == ElementCount::getScalable(1))
       return InstructionCost::getInvalid();
