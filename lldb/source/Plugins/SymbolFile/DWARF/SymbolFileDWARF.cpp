@@ -2619,7 +2619,7 @@ SymbolFileDWARF::FindFunctionDefinition(const FunctionCallLabel &label,
   }
 
   return llvm::createStringError(llvm::formatv(
-      "failed to find structor variant DIE for label: {0}", label));
+      "failed to find DIE for structor variant: {0}", label.discriminator));
 }
 
 llvm::Expected<SymbolContext>
@@ -2637,7 +2637,7 @@ SymbolFileDWARF::ResolveFunctionCallLabel(const FunctionCallLabel &label) {
     auto die_or_err = FindFunctionDefinition(label, die);
     if (!die_or_err)
       return llvm::joinErrors(
-          llvm::createStringError("failed to find definition DIE"),
+          llvm::createStringError("failed to find definition DIE:"),
           die_or_err.takeError());
 
     die = std::move(*die_or_err);
