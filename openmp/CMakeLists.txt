@@ -13,11 +13,11 @@ list(INSERT CMAKE_MODULE_PATH 0
 if (OPENMP_STANDALONE_BUILD OR "${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
   set(OPENMP_STANDALONE_BUILD TRUE)
   project(openmp C CXX ASM)
+  option(OPENMP_INCLUDE_TESTS "Generate and build openmp tests." ON)
 else()
   set(OPENMP_STANDALONE_BUILD FALSE)
+  option(OPENMP_INCLUDE_TESTS "Generate and build openmp tests." ${LLVM_INCLUDE_TESTS})
 endif()
-
-option(OPENMP_INCLUDE_TESTS "Generate and build openmp tests." ${LLVM_INCLUDE_TESTS})
 
 # Must go below project(..)
 include(GNUInstallDirs)
