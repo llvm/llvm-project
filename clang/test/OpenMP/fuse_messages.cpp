@@ -121,7 +121,7 @@ void func() {
         for(int i = 0; i < 10; ++i);
         for(int j = 0; j < 100; ++j);
         for(int k = 0; k < 50; ++k);
-        // This fusion results in  2 loops
+        // This fusion results in 2 loops
         #pragma omp fuse looprange(1,2)
         {
             for(int i = 0; i < 10; ++i);

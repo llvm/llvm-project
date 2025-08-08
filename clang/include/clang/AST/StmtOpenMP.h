@@ -5883,7 +5883,7 @@ class OMPInterchangeDirective final : public OMPLoopTransformationDirective {
                                        EndLoc, NumLoops) {
     // Interchange produces a single top-level canonical loop
     // nest, with the exact same amount of total loops
-    setNumGeneratedLoops(3 * NumLoops);
+    setNumGeneratedLoops(NumLoops);
     setNumGeneratedLoopNests(1);
   }
 
@@ -5945,7 +5945,6 @@ public:
 ///   ...
 /// }
 /// \endcode
-
 class OMPFuseDirective final : public OMPLoopTransformationDirective {
   friend class ASTStmtReader;
   friend class OMPExecutableDirective;
