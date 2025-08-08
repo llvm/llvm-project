@@ -319,8 +319,8 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
                          "initDeviceInfoImpl not supported");
   }
 
-  Error enqueueHostCallbackImpl(void (*Callback)(void *), void *UserData,
-                                AsyncInfoWrapperTy &AsyncInfo) override {
+  Error enqueueHostCallImpl(void (*Callback)(void *), void *UserData,
+                            AsyncInfoWrapperTy &AsyncInfo) override {
     Callback(UserData);
     return Plugin::success();
   };

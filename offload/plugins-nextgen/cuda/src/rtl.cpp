@@ -875,8 +875,8 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::success();
   }
 
-  Error enqueueHostCallbackImpl(void (*Callback)(void *), void *UserData,
-                                AsyncInfoWrapperTy &AsyncInfo) override {
+  Error enqueueHostCallImpl(void (*Callback)(void *), void *UserData,
+                            AsyncInfoWrapperTy &AsyncInfo) override {
     if (auto Err = setContext())
       return Err;
 
