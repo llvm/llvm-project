@@ -876,7 +876,10 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
   // Likewise if this is the standard C++ import keyword.
   if (((LastTokenWasAt && II.isModulesImport()) ||
        Identifier.is(tok::kw_import)) &&
-      !InMacroArgs && !DisableMacroExpansion &&
+      // FIXME: Can we just ignore DisableMacroExpansion here?
+      // https://github.com/llvm/llvm-project/pull/137665 disable
+      // macro expansion when current input file is preprocessed.
+      !InMacroArgs && /*!DisableMacroExpansion &&*/
       CurLexerCallback != CLK_CachingLexer) {
     ModuleImportLoc = Identifier.getLocation();
     IsAtImport = true;
