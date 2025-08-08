@@ -1102,6 +1102,21 @@ public:
   }
 };
 
+/// EscapeTrackedCallback - A SymbolVisitor that marks allocated symbols as escaped.
+///
+/// This visitor is used to suppress false positive leak reports when smart pointers
+/// are nested in temporary objects passed by value to functions. When the analyzer
+/// can't see the destructor calls for temporary objects, it may incorrectly report
+/// leaks for memory that will be properly freed by the smart pointer destructors.
+///
+/// The visitor traverses reachable symbols from a given set of memory regions
+/// (typically smart pointer field regions) and marks any allocated symbols as
+/// escaped. Escaped symbols are not reported as leaks by checkDeadSymbols.
+///
+/// Usage:
+///   auto Scan = State->scanReachableSymbols<EscapeTrackedCallback>(RootRegions);
+///   ProgramStateRef NewState = Scan.getState();
+///   if (NewState != State) C.addTransition(NewState);
 class EscapeTrackedCallback final : public SymbolVisitor {
   ProgramStateRef State;
 
@@ -3104,10 +3119,12 @@ static bool isInStdNamespace(const DeclContext *DC) {
   return false;
 }
 
-static bool isUniquePtrType(QualType QT) {
+// Allowlist of owning smart pointers we want to recognize.
+// Start with unique_ptr and shared_ptr. (intentionally exclude weak_ptr)
+static bool isSmartOwningPtrType(QualType QT) {
   QT = canonicalStrip(QT);
   
-  // First try TemplateSpecializationType (for std::unique_ptr)
+  // First try TemplateSpecializationType (for std smart pointers)
   const auto *TST = QT->getAs<TemplateSpecializationType>();
   if (TST) {
     const TemplateDecl *TD = TST->getTemplateName().getAsTemplateDecl();
@@ -3116,38 +3133,42 @@ static bool isUniquePtrType(QualType QT) {
     const auto *ND = dyn_cast_or_null<NamedDecl>(TD->getTemplatedDecl());
     if (!ND) return false;
     
-    if (ND->getName() != "unique_ptr") return false;
-    
     // Check if it's in std namespace
     const DeclContext *DC = ND->getDeclContext();
-    if (isInStdNamespace(DC)) return true;
+    if (!isInStdNamespace(DC)) return false;
+    
+    StringRef Name = ND->getName();
+    return Name == "unique_ptr" || Name == "shared_ptr";
   }
   
-  // Also try RecordType (for custom unique_ptr)
+  // Also try RecordType (for custom smart pointer implementations)
   const auto *RT = QT->getAs<RecordType>();
   if (RT) {
     const auto *RD = RT->getDecl();
-    if (RD && RD->getName() == "unique_ptr") {
-      // Accept any custom unique_ptr implementation
-      return true;
+    if (RD) {
+      StringRef Name = RD->getName();
+      if (Name == "unique_ptr" || Name == "shared_ptr") {
+        // Accept any custom unique_ptr or shared_ptr implementation
+        return true;
+      }
     }
   }
   
   return false;
 }
 
-static void collectDirectUniquePtrFieldRegions(const MemRegion *Base,
-                                               QualType RecQT,
-                                               ProgramStateRef State,
-                                               SmallVectorImpl<const MemRegion*> &Out) {
+static void collectDirectSmartOwningPtrFieldRegions(const MemRegion *Base,
+                                                    QualType RecQT,
+                                                    CheckerContext &C,
+                                                    SmallVectorImpl<const MemRegion*> &Out) {
   if (!Base) return;
   const auto *CRD = RecQT->getAsCXXRecordDecl();
   if (!CRD) return;
 
   for (const FieldDecl *FD : CRD->fields()) {
-    if (!isUniquePtrType(FD->getType()))
+    if (!isSmartOwningPtrType(FD->getType()))
       continue;
-    SVal L = State->getLValue(FD, loc::MemRegionVal(Base));
+    SVal L = C.getState()->getLValue(FD, loc::MemRegionVal(Base));
     if (const MemRegion *FR = L.getAsRegion())
       Out.push_back(FR);
   }
@@ -3160,7 +3181,7 @@ void MallocChecker::checkPostCall(const CallEvent &Call,
     (*PostFN)(this, C.getState(), Call, C);
   }
 
-  SmallVector<const MemRegion*, 8> UniquePtrFieldRoots;
+  SmallVector<const MemRegion*, 8> SmartPtrFieldRoots;
 
 
 
@@ -3187,17 +3208,17 @@ void MallocChecker::checkPostCall(const CallEvent &Call,
         isa<CXXBindTemporaryExpr>(AE); // handle CXXBindTemporaryExpr
     if (!LooksLikeTemp) continue;
 
-    // Require at least one direct unique_ptr field by type.
+    // Require at least one direct smart owning pointer field by type.
     const auto *CRD = T->getAsCXXRecordDecl();
     if (!CRD) continue;
-    bool HasUPtrField = false;
+    bool HasSmartPtrField = false;
     for (const FieldDecl *FD : CRD->fields()) {
-      if (isUniquePtrType(FD->getType())) { 
-        HasUPtrField = true; 
+      if (isSmartOwningPtrType(FD->getType())) { 
+        HasSmartPtrField = true; 
         break; 
       }
     }
-    if (!HasUPtrField) continue;
+    if (!HasSmartPtrField) continue;
 
     // Find a region for the argument.
     SVal VCall = Call.getArgSVal(I);
@@ -3222,21 +3243,21 @@ void MallocChecker::checkPostCall(const CallEvent &Call,
       continue; 
     }
 
-    // Push direct unique_ptr field regions only (precise root set).
-    collectDirectUniquePtrFieldRegions(Base, T, C.getState(), UniquePtrFieldRoots);
+    // Push direct smart owning pointer field regions only (precise root set).
+    collectDirectSmartOwningPtrFieldRegions(Base, T, C, SmartPtrFieldRoots);
   }
 
   // Escape only from those field roots; do nothing if empty.
-  if (!UniquePtrFieldRoots.empty()) {
+  if (!SmartPtrFieldRoots.empty()) {
     ProgramStateRef State = C.getState();
-    auto Scan = State->scanReachableSymbols<EscapeTrackedCallback>(UniquePtrFieldRoots);
+    auto Scan = State->scanReachableSymbols<EscapeTrackedCallback>(SmartPtrFieldRoots);
     ProgramStateRef NewState = Scan.getState();
     if (NewState != State) {
       C.addTransition(NewState);
       } else {
-      // Fallback: if we have by-value record arguments but no unique_ptr fields detected,
-      // check if any of the arguments are by-value records with unique_ptr fields
-      bool hasByValueRecordWithUniquePtr = false;
+      // Fallback: if we have by-value record arguments but no smart pointer fields detected,
+      // check if any of the arguments are by-value records with smart pointer fields
+      bool hasByValueRecordWithSmartPtr = false;
       for (unsigned I = 0, E = Call.getNumArgs(); I != E; ++I) {
         const Expr *AE = Call.getArgExpr(I);
         if (!AE) continue;
@@ -3255,20 +3276,20 @@ void MallocChecker::checkPostCall(const CallEvent &Call,
             isa<CXXBindTemporaryExpr>(AE);
         if (!LooksLikeTemp) continue;
         
-        // Check if this record type has unique_ptr fields
+        // Check if this record type has smart pointer fields
         const auto *CRD = T->getAsCXXRecordDecl();
         if (CRD) {
           for (const FieldDecl *FD : CRD->fields()) {
-            if (isUniquePtrType(FD->getType())) {
-              hasByValueRecordWithUniquePtr = true;
+            if (isSmartOwningPtrType(FD->getType())) {
+              hasByValueRecordWithSmartPtr = true;
               break;
             }
           }
         }
-        if (hasByValueRecordWithUniquePtr) break;
+        if (hasByValueRecordWithSmartPtr) break;
       }
       
-      if (hasByValueRecordWithUniquePtr) {
+      if (hasByValueRecordWithSmartPtr) {
         ProgramStateRef State = C.getState();
         RegionStateTy RS = State->get<RegionState>();
         ProgramStateRef NewState = State;
@@ -3346,17 +3367,7 @@ void MallocChecker::checkPreCall(const CallEvent &Call,
     if (!FD)
       return;
 
-    // If we won't inline this call, conservatively treat by-value record
-    // arguments as escaping any tracked pointers they contain.
-    const bool WillNotInline = !FD || !FD->hasBody();
-    if (WillNotInline) {
-      // TODO: Implement proper escape logic for by-value record arguments
-      // The issue is that when a record type is passed by value to a non-inlined
-      // function, the analyzer doesn't see the destructor calls for the temporary
-      // object, leading to false positive leaks. We need to mark contained
-      // pointers as escaped in such cases.
-      // For now, just skip this to avoid crashes
-    }
+
 
     // FIXME: I suspect we should remove `MallocChecker.isEnabled() &&` because
     // it's fishy that the enabled/disabled state of one frontend may influence
