@@ -606,6 +606,7 @@ such instructions has the following format:
 
 Below, you will find the mappings between SPIR-V instruction and their corresponding
 LLVM IR representations.
+
 +--------------------+---------------------------------------------------------+
 | SPIR-V instruction | LLVM IR                                                 |
 +====================+=========================================================+

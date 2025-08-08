@@ -2100,12 +2100,11 @@ static unsigned getFastMathFlags(const MachineInstr &I,
 
     // Error out if AllowTransform is enabled without AllowReassoc and
     // AllowContract.
-    assert(
-        !(Flags & SPIRV::FPFastMathMode::AllowTransform) ||
-        ((Flags & SPIRV::FPFastMathMode::AllowReassoc &&
-          Flags & SPIRV::FPFastMathMode::AllowContract)) &&
-            "SPIRV::FPFastMathMode::AllowTransform requires AllowReassoc and "
-            "AllowContract flags to be enabled as well.");
+    assert((!(Flags & SPIRV::FPFastMathMode::AllowTransform) ||
+            ((Flags & SPIRV::FPFastMathMode::AllowReassoc &&
+              Flags & SPIRV::FPFastMathMode::AllowContract))) &&
+           "SPIRV::FPFastMathMode::AllowTransform requires AllowReassoc and "
+           "AllowContract flags to be enabled as well.");
   }
 
   return Flags;
@@ -2168,6 +2167,7 @@ static void handleMIFlagDecoration(
                           : I.getOperand(2).getReg();
     SPIRVType *ResType = GR->getSPIRVTypeForVReg(ResReg, I.getMF());
     const Type *Ty = GR->getTypeForSPIRVType(ResType);
+    Ty = Ty->isVectorTy() ? cast<VectorType>(Ty)->getElementType() : Ty;
 
     // Match instruction type with the FPFastMathDefaultInfoVec.
     bool Emit = false;
@@ -2295,59 +2295,60 @@ static void collectFPFastMathDefaults(const Module &M,
   // execution modes, as they are now deprecated and must be replaced
   // with FPFastMathDefaultInfo.
   auto Node = M.getNamedMetadata("spirv.ExecutionMode");
-  if (Node) {
-    for (unsigned i = 0; i < Node->getNumOperands(); i++) {
-      MDNode *MDN = cast<MDNode>(Node->getOperand(i));
-      assert(MDN->getNumOperands() >= 2 && "Expected at least 2 operands");
-      const Function *F = cast<Function>(
-          cast<ConstantAsMetadata>(MDN->getOperand(0))->getValue());
-      const auto EM =
+  if (!Node)
+    return;
+
+  for (unsigned i = 0; i < Node->getNumOperands(); i++) {
+    MDNode *MDN = cast<MDNode>(Node->getOperand(i));
+    assert(MDN->getNumOperands() >= 2 && "Expected at least 2 operands");
+    const Function *F = cast<Function>(
+        cast<ConstantAsMetadata>(MDN->getOperand(0))->getValue());
+    const auto EM =
+        cast<ConstantInt>(
+            cast<ConstantAsMetadata>(MDN->getOperand(1))->getValue())
+            ->getZExtValue();
+    if (EM == SPIRV::ExecutionMode::FPFastMathDefault) {
+      assert(MDN->getNumOperands() == 4 &&
+             "Expected 4 operands for FPFastMathDefault");
+
+      const Type *T = cast<ValueAsMetadata>(MDN->getOperand(2))->getType();
+      unsigned Flags =
           cast<ConstantInt>(
-              cast<ConstantAsMetadata>(MDN->getOperand(1))->getValue())
+              cast<ConstantAsMetadata>(MDN->getOperand(3))->getValue())
               ->getZExtValue();
-      if (EM == SPIRV::ExecutionMode::FPFastMathDefault) {
-        assert(MDN->getNumOperands() == 4 &&
-               "Expected 4 operands for FPFastMathDefault");
+      SmallVector<SPIRV::FPFastMathDefaultInfo, 3> &FPFastMathDefaultInfoVec =
+          getOrCreateFPFastMathDefaultInfoVec(M, MAI, F);
+      SPIRV::FPFastMathDefaultInfo &Info =
+          getFPFastMathDefaultInfo(FPFastMathDefaultInfoVec, T);
+      Info.FastMathFlags = Flags;
+      Info.FPFastMathDefault = true;
+    } else if (EM == SPIRV::ExecutionMode::ContractionOff) {
+      assert(MDN->getNumOperands() == 2 &&
+             "Expected no operands for ContractionOff");
 
-        const Type *T = cast<ValueAsMetadata>(MDN->getOperand(2))->getType();
-        unsigned Flags =
-            cast<ConstantInt>(
-                cast<ConstantAsMetadata>(MDN->getOperand(3))->getValue())
-                ->getZExtValue();
-        SmallVector<SPIRV::FPFastMathDefaultInfo, 3> &FPFastMathDefaultInfoVec =
-            getOrCreateFPFastMathDefaultInfoVec(M, MAI, F);
-        SPIRV::FPFastMathDefaultInfo &Info =
-            getFPFastMathDefaultInfo(FPFastMathDefaultInfoVec, T);
-        Info.FastMathFlags = Flags;
-        Info.FPFastMathDefault = true;
-      } else if (EM == SPIRV::ExecutionMode::ContractionOff) {
-        assert(MDN->getNumOperands() == 2 &&
-               "Expected no operands for ContractionOff");
-
-        // We need to save this info for every possible FP type, i.e. {half,
-        // float, double, fp128}.
-        SmallVector<SPIRV::FPFastMathDefaultInfo, 3> &FPFastMathDefaultInfoVec =
-            getOrCreateFPFastMathDefaultInfoVec(M, MAI, F);
-        for (SPIRV::FPFastMathDefaultInfo &Info : FPFastMathDefaultInfoVec) {
-          Info.ContractionOff = true;
-        }
-      } else if (EM == SPIRV::ExecutionMode::SignedZeroInfNanPreserve) {
-        assert(MDN->getNumOperands() == 3 &&
-               "Expected 1 operand for SignedZeroInfNanPreserve");
-        unsigned TargetWidth =
-            cast<ConstantInt>(
-                cast<ConstantAsMetadata>(MDN->getOperand(2))->getValue())
-                ->getZExtValue();
-        // We need to save this info only for the FP type with TargetWidth.
-        SmallVector<SPIRV::FPFastMathDefaultInfo, 3> &FPFastMathDefaultInfoVec =
-            getOrCreateFPFastMathDefaultInfoVec(M, MAI, F);
-        int Index = computeFPFastMathDefaultInfoVecIndex(TargetWidth);
-        assert(Index >= 0 && Index < 3 &&
-               "Expected FPFastMathDefaultInfo for half, float, or double");
-        assert(FPFastMathDefaultInfoVec.size() == 3 &&
-               "Expected FPFastMathDefaultInfoVec to have exactly 3 elements");
-        FPFastMathDefaultInfoVec[Index].SignedZeroInfNanPreserve = true;
+      // We need to save this info for every possible FP type, i.e. {half,
+      // float, double, fp128}.
+      SmallVector<SPIRV::FPFastMathDefaultInfo, 3> &FPFastMathDefaultInfoVec =
+          getOrCreateFPFastMathDefaultInfoVec(M, MAI, F);
+      for (SPIRV::FPFastMathDefaultInfo &Info : FPFastMathDefaultInfoVec) {
+        Info.ContractionOff = true;
       }
+    } else if (EM == SPIRV::ExecutionMode::SignedZeroInfNanPreserve) {
+      assert(MDN->getNumOperands() == 3 &&
+             "Expected 1 operand for SignedZeroInfNanPreserve");
+      unsigned TargetWidth =
+          cast<ConstantInt>(
+              cast<ConstantAsMetadata>(MDN->getOperand(2))->getValue())
+              ->getZExtValue();
+      // We need to save this info only for the FP type with TargetWidth.
+      SmallVector<SPIRV::FPFastMathDefaultInfo, 3> &FPFastMathDefaultInfoVec =
+          getOrCreateFPFastMathDefaultInfoVec(M, MAI, F);
+      int Index = computeFPFastMathDefaultInfoVecIndex(TargetWidth);
+      assert(Index >= 0 && Index < 3 &&
+             "Expected FPFastMathDefaultInfo for half, float, or double");
+      assert(FPFastMathDefaultInfoVec.size() == 3 &&
+             "Expected FPFastMathDefaultInfoVec to have exactly 3 elements");
+      FPFastMathDefaultInfoVec[Index].SignedZeroInfNanPreserve = true;
     }
   }
 }

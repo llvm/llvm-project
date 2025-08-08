@@ -1,7 +1,7 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_float_controls2 %s -o - | FileCheck %s
 ; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_float_controls2 %s -o - -filetype=obj | spirv-val %}
 
-; CHECK-DAG: Capability FloatControls2 
+; CHECK-DAG: Capability FloatControls2
 ; CHECK: Extension "SPV_KHR_float_controls2"
 
 define dso_local dllexport spir_kernel void @k_float_controls_half(half %h) {
@@ -49,21 +49,21 @@ entry:
 !7 = !{i32 32, i32 36}
 !8 = !{i32 0, i32 0}
 
-; CHECK-DAG: OpExecutionMode %[[#KERNEL_HALF]] FPFastMathDefault %[[#HALF_TYPE:]] 1 
+; CHECK-DAG: OpExecutionMode %[[#KERNEL_HALF]] FPFastMathDefault %[[#HALF_TYPE:]] 1
 !17 = !{ptr @k_float_controls_half, i32 6028, half poison, i32 1}
 
-; CHECK-DAG: OpExecutionMode %[[#KERNEL_BFLOAT]] FPFastMathDefault %[[#BFLOAT_TYPE:]] 2 
+; CHECK-DAG: OpExecutionMode %[[#KERNEL_BFLOAT]] FPFastMathDefault %[[#BFLOAT_TYPE:]] 2
 !18 = !{ptr @k_float_controls_bfloat, i32 6028, bfloat poison, i32 2}
 
-; CHECK-DAG: OpExecutionMode %[[#KERNEL_FLOAT]] FPFastMathDefault %[[#FLOAT_TYPE:]] 4 
+; CHECK-DAG: OpExecutionMode %[[#KERNEL_FLOAT]] FPFastMathDefault %[[#FLOAT_TYPE:]] 4
 !19 = !{ptr @k_float_controls_float, i32 6028, float poison, i32 4}
 
-; CHECK-DAG: OpExecutionMode %[[#KERNEL_DOUBLE]] FPFastMathDefault %[[#DOUBLE_TYPE:]] 7 
+; CHECK-DAG: OpExecutionMode %[[#KERNEL_DOUBLE]] FPFastMathDefault %[[#DOUBLE_TYPE:]] 7
 !20 = !{ptr @k_float_controls_double, i32 6028, double poison, i32 7}
 
-; CHECK-DAG: OpExecutionMode %[[#KERNEL_ALL]] FPFastMathDefault %[[#HALF_TYPE]] 131072 
-; CHECK-DAG: OpExecutionMode %[[#KERNEL_ALL]] FPFastMathDefault %[[#FLOAT_TYPE]] 262144 
-; CHECK-DAG: OpExecutionMode %[[#KERNEL_ALL]] FPFastMathDefault %[[#DOUBLE_TYPE]] 458752 
+; CHECK-DAG: OpExecutionMode %[[#KERNEL_ALL]] FPFastMathDefault %[[#HALF_TYPE]] 131072
+; CHECK-DAG: OpExecutionMode %[[#KERNEL_ALL]] FPFastMathDefault %[[#FLOAT_TYPE]] 262144
+; CHECK-DAG: OpExecutionMode %[[#KERNEL_ALL]] FPFastMathDefault %[[#DOUBLE_TYPE]] 458752
 !22 = !{ptr @k_float_controls_all, i32 6028, half poison, i32 131072}
 !23 = !{ptr @k_float_controls_all, i32 6028, bfloat poison, i32 131072}
 !24 = !{ptr @k_float_controls_all, i32 6028, float poison, i32 262144}

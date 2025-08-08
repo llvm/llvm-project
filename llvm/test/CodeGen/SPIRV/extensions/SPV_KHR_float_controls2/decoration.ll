@@ -27,6 +27,29 @@
 ; CHECK: OpName %[[#modRes:]] "modRes"
 ; CHECK: OpName %[[#maxRes:]] "maxRes"
 ; CHECK: OpName %[[#maxCommonRes:]] "maxCommonRes"
+; CHECK: OpName %[[#addResV:]] "addResV"
+; CHECK: OpName %[[#subResV:]] "subResV"
+; CHECK: OpName %[[#mulResV:]] "mulResV"
+; CHECK: OpName %[[#divResV:]] "divResV"
+; CHECK: OpName %[[#remResV:]] "remResV"
+; CHECK: OpName %[[#negResV:]] "negResV"
+; CHECK: OpName %[[#oeqResV:]] "oeqResV"
+; CHECK: OpName %[[#oneResV:]] "oneResV"
+; CHECK: OpName %[[#oltResV:]] "oltResV"
+; CHECK: OpName %[[#ogtResV:]] "ogtResV"
+; CHECK: OpName %[[#oleResV:]] "oleResV"
+; CHECK: OpName %[[#ogeResV:]] "ogeResV"
+; CHECK: OpName %[[#ordResV:]] "ordResV"
+; CHECK: OpName %[[#ueqResV:]] "ueqResV"
+; CHECK: OpName %[[#uneResV:]] "uneResV"
+; CHECK: OpName %[[#ultResV:]] "ultResV"
+; CHECK: OpName %[[#ugtResV:]] "ugtResV"
+; CHECK: OpName %[[#uleResV:]] "uleResV"
+; CHECK: OpName %[[#ugeResV:]] "ugeResV"
+; CHECK: OpName %[[#unoResV:]] "unoResV"
+; CHECK: OpName %[[#modResV:]] "modResV"
+; CHECK: OpName %[[#maxResV:]] "maxResV"
+; CHECK: OpName %[[#maxCommonResV:]] "maxCommonResV"
 ; CHECK: OpDecorate %[[#subRes]] FPFastMathMode NotNaN
 ; CHECK: OpDecorate %[[#mulRes]] FPFastMathMode NotInf
 ; CHECK: OpDecorate %[[#divRes]] FPFastMathMode NSZ
@@ -40,7 +63,21 @@
 ; CHECK: OpDecorate %[[#ordRes]] FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
 ; CHECK: OpDecorate %[[#ueqRes]] FPFastMathMode NotNaN|NotInf
 ; CHECK: OpDecorate %[[#maxRes]] FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
-; CHECK: OpDecorate %[[#maxCommonRes:]] FPFastMathMode NotNaN|NotInf
+; CHECK: OpDecorate %[[#maxCommonRes]] FPFastMathMode NotNaN|NotInf
+; CHECK: OpDecorate %[[#subResV]] FPFastMathMode NotNaN
+; CHECK: OpDecorate %[[#mulResV]] FPFastMathMode NotInf
+; CHECK: OpDecorate %[[#divResV]] FPFastMathMode NSZ
+; CHECK: OpDecorate %[[#remResV]] FPFastMathMode AllowRecip
+; CHECK: OpDecorate %[[#negResV]] FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
+; CHECK: OpDecorate %[[#oeqResV]] FPFastMathMode NotNaN|NotInf
+; CHECK: OpDecorate %[[#oltResV]] FPFastMathMode NotNaN
+; CHECK: OpDecorate %[[#ogtResV]] FPFastMathMode NotInf
+; CHECK: OpDecorate %[[#oleResV]] FPFastMathMode NSZ
+; CHECK: OpDecorate %[[#ogeResV]] FPFastMathMode AllowRecip
+; CHECK: OpDecorate %[[#ordResV]] FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
+; CHECK: OpDecorate %[[#ueqResV]] FPFastMathMode NotNaN|NotInf
+; CHECK: OpDecorate %[[#maxResV]] FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
+; CHECK: OpDecorate %[[#maxCommonResV]] FPFastMathMode NotNaN|NotInf
 
 ; Function Attrs: convergent mustprogress nofree nounwind willreturn memory(none)
 declare spir_func float @_Z4fmodff(float, float)
@@ -73,6 +110,33 @@ entry:
   %modRes = call spir_func float @_Z4fmodff(float %1, float %2)
   %maxRes = tail call fast spir_func noundef nofpclass(nan inf) float @_Z16__spirv_ocl_fmaxff(float noundef nofpclass(nan inf) %1, float noundef nofpclass(nan inf) %2)
    %maxCommonRes = tail call spir_func noundef float @_Z23__spirv_ocl_fmax_commonff(float noundef nofpclass(nan inf) %1, float noundef nofpclass(nan inf) %2)
+  ret void
+}
+
+define weak_odr dso_local spir_kernel void @fooV(<2 x float> %v1, <2 x float> %v2) {
+  %addResV = fadd <2 x float> %v1,  %v2
+  %subResV = fsub nnan <2 x float> %v1,  %v2
+  %mulResV = fmul ninf <2 x float> %v1,  %v2
+  %divResV = fdiv nsz <2 x float> %v1,  %v2
+  %remResV = frem arcp <2 x float> %v1,  %v2
+  %negResV = fneg fast <2 x float> %v1
+  %oeqResV = fcmp nnan ninf oeq <2 x float> %v1,  %v2
+  %oneResV = fcmp one <2 x float> %v1,  %v2, !spirv.Decorations !3
+  %oltResV = fcmp nnan olt <2 x float> %v1,  %v2, !spirv.Decorations !3
+  %ogtResV = fcmp ninf ogt <2 x float> %v1,  %v2, !spirv.Decorations !3
+  %oleResV = fcmp nsz ole <2 x float> %v1,  %v2, !spirv.Decorations !3
+  %ogeResV = fcmp arcp oge <2 x float> %v1,  %v2, !spirv.Decorations !3
+  %ordResV = fcmp fast ord <2 x float> %v1,  %v2, !spirv.Decorations !3
+  %ueqResV = fcmp nnan ninf ueq <2 x float> %v1,  %v2, !spirv.Decorations !3
+  %uneResV = fcmp une <2 x float> %v1,  %v2, !spirv.Decorations !3
+  %ultResV = fcmp ult <2 x float> %v1,  %v2, !spirv.Decorations !3
+  %ugtResV = fcmp ugt <2 x float> %v1,  %v2, !spirv.Decorations !3
+  %uleResV = fcmp ule <2 x float> %v1,  %v2, !spirv.Decorations !3
+  %ugeResV = fcmp uge <2 x float> %v1,  %v2, !spirv.Decorations !3
+  %unoResV = fcmp uno <2 x float> %v1,  %v2, !spirv.Decorations !3
+  %modResV = call spir_func <2 x float> @_Z4fmodff(<2 x float> %v1, <2 x float> %v2)
+  %maxResV = tail call fast spir_func noundef nofpclass(nan inf) <2 x float> @_Z16__spirv_ocl_fmaxff(<2 x float> noundef nofpclass(nan inf) %v1, <2 x float> noundef nofpclass(nan inf) %v2)
+   %maxCommonResV = tail call spir_func noundef <2 x float> @_Z23__spirv_ocl_fmax_commonff(<2 x float> noundef nofpclass(nan inf) %v1, <2 x float> noundef nofpclass(nan inf) %v2)
   ret void
 }
 

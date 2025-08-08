@@ -713,10 +713,7 @@ void SPIRVAsmPrinter::outputFPFastMathDefaultInfo() {
         if (FPFastMathDefaultInfo.FPFastMathDefault)
           report_fatal_error("Conflicting FPFastMathFlags: "
                              "SignedZeroInfNanPreserve but at least one of "
-                             "NotNaN/NotInf/NSZ is disabled.");
-
-        Flags |= SPIRV::FPFastMathMode::NotNaN | SPIRV::FPFastMathMode::NotInf |
-                 SPIRV::FPFastMathMode::NSZ;
+                             "NotNaN/NotInf/NSZ is enabled.");
       }
 
       // Don't emit if none of the execution modes was used.

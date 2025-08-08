@@ -182,9 +182,6 @@ void buildOpMemberDecorate(Register Reg, MachineInstr &I,
 
 void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
                              const MDNode *GVarMD, const SPIRVSubtarget &ST) {
-  bool NoContractionFound = false;
-  bool FPFastMathModeFound = false;
-  unsigned FPFastMathFlags = SPIRV::FPFastMathMode::None;
   for (unsigned I = 0, E = GVarMD->getNumOperands(); I != E; ++I) {
     auto *OpMD = dyn_cast<MDNode>(GVarMD->getOperand(I));
     if (!OpMD)
@@ -1023,9 +1020,7 @@ size_t computeFPFastMathDefaultInfoVecIndex(size_t BitWidth) {
   default:
     report_fatal_error("Expected BitWidth to be 16, 32, 64", false);
   }
-  assert(false && "Unreachable code");
-  // This return is just to avoid compiler warnings.
-  return 0;
+  llvm_unreachable("Unreachable code in computeFPFastMathDefaultInfoVecIndex");
 }
 
 MachineBasicBlock::iterator
@@ -1052,3 +1047,4 @@ getFirstValidInstructionInsertPoint(MachineBasicBlock &BB) {
 }
 
 } // namespace llvm
+
