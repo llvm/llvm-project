@@ -916,9 +916,9 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
       // to that block.
       if (CurLoop->hasLoopInvariantOperands(&I, HasCoroSuspendInst) &&
           canSinkOrHoistInst(I, AA, DT, CurLoop, MSSAU, true, Flags, ORE) &&
-          isSafeToExecuteUnconditionally(
-              I, DT, TLI, CurLoop, SafetyInfo, ORE,
-              Preheader->getTerminator(), AC, AllowSpeculation)) {
+          isSafeToExecuteUnconditionally(I, DT, TLI, CurLoop, SafetyInfo, ORE,
+                                         Preheader->getTerminator(), AC,
+                                         AllowSpeculation)) {
         hoist(I, DT, CurLoop, CFH.getOrCreateHoistedBlock(BB), SafetyInfo,
               MSSAU, SE, ORE);
         HoistedInstructions.push_back(&I);
