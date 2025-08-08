@@ -2,9 +2,11 @@
 // Without -Wl,--emit-relocs BOLT refuses to create CFG information for the below functions.
 
 // RUN: %clang %cflags -march=armv8.3-a -Wl,--no-relax -Wl,--emit-relocs %s -o %t.exe
-// RUN: llvm-bolt-binary-analysis --scanners=pauth %t.exe 2>&1 | FileCheck --check-prefixes=CHECK,CFG %s
+// RUN: llvm-bolt-binary-analysis --scanners=pauth                         %t.exe 2>&1 | FileCheck --check-prefixes=CHECK,CFG %s
+// RUN: llvm-bolt-binary-analysis --scanners=pauth --auth-traps-on-failure %t.exe 2>&1 | FileCheck --check-prefixes=CHECK,CFG %s
 // RUN: %clang %cflags -march=armv8.3-a -Wl,--no-relax %s -o %t.exe
-// RUN: llvm-bolt-binary-analysis --scanners=pauth %t.exe 2>&1 | FileCheck --check-prefixes=CHECK,NOCFG %s
+// RUN: llvm-bolt-binary-analysis --scanners=pauth                         %t.exe 2>&1 | FileCheck --check-prefixes=CHECK,NOCFG %s
+// RUN: llvm-bolt-binary-analysis --scanners=pauth --auth-traps-on-failure %t.exe 2>&1 | FileCheck --check-prefixes=CHECK,NOCFG %s
 
 // FIXME: Labels could be further validated. Specifically, it could be checked
 //        that the jump table itself is located in a read-only data section.

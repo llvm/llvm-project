@@ -14,6 +14,7 @@
 #include "bolt/Passes/PAuthGadgetScanner.h"
 #include "bolt/Core/ParallelUtilities.h"
 #include "bolt/Passes/DataflowAnalysis.h"
+#include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/MC/MCInst.h"
@@ -25,6 +26,11 @@
 namespace llvm {
 namespace bolt {
 namespace PAuthGadgetScanner {
+
+static cl::opt<bool> AuthTrapsOnFailure(
+    "auth-traps-on-failure",
+    cl::desc("Assume authentication instructions always trap on failure"),
+    cl::cat(opts::BinaryAnalysisCategory));
 
 [[maybe_unused]] static void traceInst(const BinaryContext &BC, StringRef Label,
                                        const MCInst &MI) {
@@ -364,6 +370,34 @@ protected:
     return Clobbered;
   }
 
+  std::optional<MCPhysReg> getRegMadeTrustedByChecking(const MCInst &Inst,
+                                                       SrcState Cur) const {
+    // This functions cannot return multiple registers. This is never the case
+    // on AArch64.
+    std::optional<MCPhysReg> RegCheckedByInst =
+        BC.MIB->getAuthCheckedReg(Inst, /*MayOverwrite=*/false);
+    if (RegCheckedByInst && Cur.SafeToDerefRegs[*RegCheckedByInst])
+      return *RegCheckedByInst;
+
+    auto It = CheckerSequenceInfo.find(&Inst);
+    if (It == CheckerSequenceInfo.end())
+      return std::nullopt;
+
+    MCPhysReg RegCheckedBySequence = It->second.first;
+    const MCInst *FirstCheckerInst = It->second.second;
+
+    // FirstCheckerInst should belong to the same basic block (see the
+    // assertion in DataflowSrcSafetyAnalysis::run()), meaning it was
+    // deterministically processed a few steps before this instruction.
+    const SrcState &StateBeforeChecker = getStateBefore(*FirstCheckerInst);
+
+    // The sequence checks the register, but it should be authenticated before.
+    if (!StateBeforeChecker.SafeToDerefRegs[RegCheckedBySequence])
+      return std::nullopt;
+
+    return RegCheckedBySequence;
+  }
+
   // Returns all registers that can be treated as if they are written by an
   // authentication instruction.
   SmallVector<MCPhysReg> getRegsMadeSafeToDeref(const MCInst &Point,
@@ -386,18 +420,38 @@ protected:
         Regs.push_back(DstAndSrc->first);
     }
 
+    // Make sure explicit checker sequence keeps register safe-to-dereference
+    // when the register would be clobbered according to the regular rules:
+    //
+    //    ; LR is safe to dereference here
+    //    mov   x16, x30  ; start of the sequence, LR is s-t-d right before
+    //    xpaclri         ; clobbers LR, LR is not safe anymore
+    //    cmp   x30, x16
+    //    b.eq  1f        ; end of the sequence: LR is marked as trusted
+    //    brk   0x1234
+    //  1:
+    //    ; at this point LR would be marked as trusted,
+    //    ; but not safe-to-dereference
+    //
+    // or even just
+    //
+    //    ; X1 is safe to dereference here
+    //    ldr x0, [x1, #8]!
+    //    ; X1 is trusted here, but it was clobbered due to address write-back
+    if (auto CheckedReg = getRegMadeTrustedByChecking(Point, Cur))
+      Regs.push_back(*CheckedReg);
+
     return Regs;
   }
 
   // Returns all registers made trusted by this instruction.
   SmallVector<MCPhysReg> getRegsMadeTrusted(const MCInst &Point,
                                             const SrcState &Cur) const {
+    assert(!AuthTrapsOnFailure && "Use getRegsMadeSafeToDeref instead");
     SmallVector<MCPhysReg> Regs;
 
     // An authenticated pointer can be checked, or
-    std::optional<MCPhysReg> CheckedReg =
-        BC.MIB->getAuthCheckedReg(Point, /*MayOverwrite=*/false);
-    if (CheckedReg && Cur.SafeToDerefRegs[*CheckedReg])
+    if (auto CheckedReg = getRegMadeTrustedByChecking(Point, Cur))
       Regs.push_back(*CheckedReg);
 
     // ... a pointer can be authenticated by an instruction that always checks
@@ -407,19 +461,6 @@ protected:
         BC.MIB->getWrittenAuthenticatedReg(Point, IsChecked);
     if (AutReg && IsChecked)
       Regs.push_back(*AutReg);
-
-    if (CheckerSequenceInfo.contains(&Point)) {
-      MCPhysReg CheckedReg;
-      const MCInst *FirstCheckerInst;
-      std::tie(CheckedReg, FirstCheckerInst) = CheckerSequenceInfo.at(&Point);
-
-      // FirstCheckerInst should belong to the same basic block (see the
-      // assertion in DataflowSrcSafetyAnalysis::run()), meaning it was
-      // deterministically processed a few steps before this instruction.
-      const SrcState &StateBeforeChecker = getStateBefore(*FirstCheckerInst);
-      if (StateBeforeChecker.SafeToDerefRegs[CheckedReg])
-        Regs.push_back(CheckedReg);
-    }
 
     // ... a safe address can be materialized, or
     if (auto NewAddrReg = BC.MIB->getMaterializedAddressRegForPtrAuth(Point))
@@ -463,28 +504,11 @@ protected:
     BitVector Clobbered = getClobberedRegs(Point);
     SmallVector<MCPhysReg> NewSafeToDerefRegs =
         getRegsMadeSafeToDeref(Point, Cur);
-    SmallVector<MCPhysReg> NewTrustedRegs = getRegsMadeTrusted(Point, Cur);
-
-    // Ideally, being trusted is a strictly stronger property than being
-    // safe-to-dereference. To simplify the computation of Next state, enforce
-    // this for NewSafeToDerefRegs and NewTrustedRegs. Additionally, this
-    // fixes the properly for "cumulative" register states in tricky cases
-    // like the following:
-    //
-    //    ; LR is safe to dereference here
-    //    mov   x16, x30  ; start of the sequence, LR is s-t-d right before
-    //    xpaclri         ; clobbers LR, LR is not safe anymore
-    //    cmp   x30, x16
-    //    b.eq  1f        ; end of the sequence: LR is marked as trusted
-    //    brk   0x1234
-    //  1:
-    //    ; at this point LR would be marked as trusted,
-    //    ; but not safe-to-dereference
-    //
-    for (auto TrustedReg : NewTrustedRegs) {
-      if (!is_contained(NewSafeToDerefRegs, TrustedReg))
-        NewSafeToDerefRegs.push_back(TrustedReg);
-    }
+    // If authentication instructions trap on failure, safe-to-dereference
+    // registers are always trusted.
+    SmallVector<MCPhysReg> NewTrustedRegs =
+        AuthTrapsOnFailure ? NewSafeToDerefRegs
+                           : getRegsMadeTrusted(Point, Cur);
 
     // Then, compute the state after this instruction is executed.
     SrcState Next = Cur;
@@ -520,6 +544,11 @@ protected:
       P.print(dbgs(), Next);
       dbgs() << ")\n";
     });
+
+    // Being trusted is a strictly stronger property than being
+    // safe-to-dereference.
+    assert(!Next.TrustedRegs.test(Next.SafeToDerefRegs) &&
+           "SafeToDerefRegs should contain all TrustedRegs");
 
     return Next;
   }
@@ -1136,6 +1165,11 @@ public:
   }
 
   void run() override {
+    // As long as DstSafetyAnalysis is only computed to detect authentication
+    // oracles, it is a waste of time to compute it when authentication
+    // instructions are known to always trap on failure.
+    assert(!AuthTrapsOnFailure &&
+           "DstSafetyAnalysis is useless with faulting auth");
     for (BinaryBasicBlock &BB : Func) {
       if (auto CheckerInfo = BC.MIB->getAuthCheckedReg(BB)) {
         LLVM_DEBUG({
@@ -1586,6 +1620,8 @@ void FunctionAnalysisContext::augmentUnsafeUseReports(
 void FunctionAnalysisContext::findUnsafeDefs(
     SmallVector<PartialReport<MCPhysReg>> &Reports) {
   if (PacRetGadgetsOnly)
+    return;
+  if (AuthTrapsOnFailure)
     return;
 
   auto Analysis = DstSafetyAnalysis::create(BF, AllocatorId, {});
