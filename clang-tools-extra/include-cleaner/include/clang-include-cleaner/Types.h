@@ -136,7 +136,7 @@ struct Header {
   }
   StringRef verbatim() const { return std::get<Verbatim>(Storage); }
 
-  /// For phiscal files, either absolute path or path relative to the execution
+  /// For physical files, either absolute path or path relative to the execution
   /// root. Otherwise just the spelling without surrounding quotes/brackets.
   llvm::StringRef resolvedPath() const;
 

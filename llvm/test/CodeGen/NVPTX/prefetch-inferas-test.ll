@@ -1,6 +1,6 @@
 ; RUN: opt < %s -S -passes=infer-address-spaces | FileCheck %s --check-prefix=INFER
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_90 -mattr=+ptx80 | FileCheck %s --check-prefix=PTX
-; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_90 -mattr=+ptx80 | %ptxas-verify %}
+; RUN: %if ptxas-12.3 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_90 -mattr=+ptx80 | %ptxas-verify -arch=sm_90 %}
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64"
 target triple = "nvptx64-unknown-unknown"
@@ -76,3 +76,5 @@ entry:
 declare void @llvm.nvvm.prefetch.tensormap.p0(ptr)
 declare void @llvm.nvvm.prefetch.tensormap.p4(ptr addrspace(4))
 declare void @llvm.nvvm.prefetch.tensormap.p101(ptr addrspace(101))
+
+
