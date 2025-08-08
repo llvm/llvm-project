@@ -12,15 +12,24 @@
 # RUN: llvm-profdata merge --temporal-profile-trace-reservoir-size=2 %t-2.profdata %s %s --text | FileCheck %s --check-prefixes=CHECK,SEEN4,SAMPLE2
 # RUN: llvm-profdata merge --temporal-profile-trace-reservoir-size=2 %t-2.profdata %t-2.profdata --text | FileCheck %s --check-prefixes=CHECK,SEEN4,SAMPLE2
 
+# Test that we can increase the reservoir size, even if inputs are sampled
+# RUN: llvm-profdata merge --temporal-profile-trace-reservoir-size=2 %s %s %s %s -o %t-4.profdata
+# RUN: llvm-profdata merge --temporal-profile-trace-reservoir-size=4 %t-4.profdata %t-4.profdata --text | FileCheck %s --check-prefixes=CHECK,SEEN8,SAMPLE4
+
+# Test that decreasing the reservoir size truncates traces
+# RUN: llvm-profdata merge --temporal-profile-trace-reservoir-size=1 %t-4.profdata --text | FileCheck %s --check-prefixes=CHECK,SEEN4,SAMPLE1
+
 # CHECK: :temporal_prof_traces
 # CHECK: # Num Temporal Profile Traces:
 # SAMPLE1: 1
 # SAMPLE2: 2
+# SAMPLE4: 4
 # CHECK: # Temporal Profile Trace Stream Size:
 # SEEN1: 1
 # SEEN2: 2
 # SEEN3: 3
 # SEEN4: 4
+# SEEN8: 8
 # CHECK: a,b,c,
 
 # Header
