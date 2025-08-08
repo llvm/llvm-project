@@ -203,7 +203,7 @@ struct Recipe_match {
   template <typename... OpTy> Recipe_match(OpTy... Ops) : Ops(Ops...) {
     static_assert(std::tuple_size<Ops_t>::value == sizeof...(Ops) &&
                   "number of operands in constructor doesn't match Ops_t");
-    static_assert(!(Commutative && std::tuple_size<Ops_t>::value != 2) &&
+    static_assert((!Commutative || std::tuple_size<Ops_t>::value == 2) &&
                   "only binary ops can be commutative");
   }
 
@@ -267,14 +267,14 @@ private:
 
 template <unsigned Opcode, typename... OpTys>
 using AllRecipe_match =
-    Recipe_match<std::tuple<OpTys...>, Opcode, false, VPWidenRecipe,
-                 VPReplicateRecipe, VPWidenCastRecipe, VPInstruction,
-                 VPWidenSelectRecipe>;
+    Recipe_match<std::tuple<OpTys...>, Opcode, /*Commutative*/ false,
+                 VPWidenRecipe, VPReplicateRecipe, VPWidenCastRecipe,
+                 VPInstruction, VPWidenSelectRecipe>;
 
 template <unsigned Opcode, typename... OpTys>
 using AllRecipe_commutative_match =
-    Recipe_match<std::tuple<OpTys...>, Opcode, true, VPWidenRecipe,
-                 VPReplicateRecipe, VPInstruction>;
+    Recipe_match<std::tuple<OpTys...>, Opcode, /*Commutative*/ true,
+                 VPWidenRecipe, VPReplicateRecipe, VPInstruction>;
 
 template <unsigned Opcode, typename... OpTys>
 using VPInstruction_match = Recipe_match<std::tuple<OpTys...>, Opcode,
@@ -391,9 +391,9 @@ m_c_BinaryOr(const Op0_t &Op0, const Op1_t &Op1) {
 
 template <typename Op0_t, typename Op1_t>
 using GEPLikeRecipe_match =
-    Recipe_match<std::tuple<Op0_t, Op1_t>, Instruction::GetElementPtr, false,
-                 VPWidenRecipe, VPReplicateRecipe, VPWidenGEPRecipe,
-                 VPInstruction>;
+    Recipe_match<std::tuple<Op0_t, Op1_t>, Instruction::GetElementPtr,
+                 /*Commutative*/ false, VPWidenRecipe, VPReplicateRecipe,
+                 VPWidenGEPRecipe, VPInstruction>;
 
 template <typename Op0_t, typename Op1_t>
 inline GEPLikeRecipe_match<Op0_t, Op1_t> m_GetElementPtr(const Op0_t &Op0,
