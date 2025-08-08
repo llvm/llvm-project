@@ -219,6 +219,7 @@ private:
   void sortECChunks();
   void appendECImportTables();
   void removeUnusedSections();
+  void layoutSections();
   void assignAddresses();
   bool isInRange(uint16_t relType, uint64_t s, uint64_t p, int margin,
                  MachineTypes machine);
@@ -783,6 +784,7 @@ void Writer::run() {
     appendECImportTables();
     createDynamicRelocs();
     removeUnusedSections();
+    layoutSections();
     finalizeAddresses();
     removeEmptySections();
     assignOutputSectionIndices();
@@ -1411,6 +1413,34 @@ void Writer::removeUnusedSections() {
     return s->chunks.empty();
   };
   llvm::erase_if(ctx.outputSections, isUnused);
+}
+
+void Writer::layoutSections() {
+  llvm::TimeTraceScope timeScope("Layout sections");
+  if (ctx.config.sectionLayout.empty())
+    return;
+
+  std::unordered_map<const OutputSection *, size_t> originalOrder;
+  for (size_t i = 0; i < ctx.outputSections.size(); ++i)
+    originalOrder[ctx.outputSections[i]] = i;
+
+  std::stable_sort(
+      ctx.outputSections.begin(), ctx.outputSections.end(),
+      [this, &originalOrder](const OutputSection *a, const OutputSection *b) {
+        auto itA = ctx.config.sectionLayout.find(a->name.str());
+        auto itB = ctx.config.sectionLayout.find(b->name.str());
+
+        if (itA != ctx.config.sectionLayout.end() &&
+            itB != ctx.config.sectionLayout.end())
+          return itA->second < itB->second;
+
+        if (itA == ctx.config.sectionLayout.end() &&
+            itB == ctx.config.sectionLayout.end())
+          return originalOrder[a] < originalOrder[b];
+
+        // Not found in layout file; respect the original order
+        return originalOrder[a] < originalOrder[b];
+      });
 }
 
 // The Windows loader doesn't seem to like empty sections,

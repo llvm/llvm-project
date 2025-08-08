@@ -102,6 +102,7 @@ def pdbstream : Joined<["/", "-", "/?", "-?"], "pdbstream:">,
     MetaVarName<"<name>=<file>">,
     HelpText<"Embed the contents of <file> in the PDB as named stream <name>">;
 def section : P<"section", "Specify section attributes">;
+def sectionlayout : P<"sectionlayout", "Specifies the layout strategy for output sections">;
 def stack   : P<"stack", "Size of the stack">;
 def stub    : P<"stub", "Specify DOS stub file">;
 def subsystem : P<"subsystem", "Specify subsystem">;
