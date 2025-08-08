@@ -497,6 +497,13 @@ TEST_F(SourceMgrTest, FixitForTab) {
             Output);
 }
 
+/// Replace back-slashes by front-slashes.
+static std::string getPosixPath(const Twine &S) {
+  SmallString<128> Result;
+  llvm::sys::path::native(S, Result, llvm::sys::path::Style::posix);
+  return std::string(Result.str());
+}
+
 TEST_F(SourceMgrTest, AddIncludedFile) {
   auto FS = makeIntrusiveRefCnt<vfs::InMemoryFileSystem>();
 
@@ -524,12 +531,16 @@ TEST_F(SourceMgrTest, AddIncludedFile) {
   ASSERT_TRUE(Include1.isValid());
   std::string Included;
   ASSERT_EQ(2u, SM.AddIncludeFile(Filename.str(), Include1, Included));
-  ASSERT_EQ(Filename, Included);
+  // When on Windows, we end up with a mixed-slash path.  Convert to
+  // Posix path for the sake of the comparison.
+  ASSERT_EQ(Filename, getPosixPath(Included));
 
   SMLoc Include2 = SM.FindLocForLineAndColumn(2u, 2, 1);
   ASSERT_TRUE(Include2.isValid());
   ASSERT_EQ(3u, SM.AddIncludeFile(IncludesFilename.str(), Include2, Included));
-  ASSERT_EQ(IncludesPath, Included);
+  // When on Windows, we end up with a mixed-slash path.  Convert to
+  // Posix path for the sake of the comparison.
+  ASSERT_EQ(IncludesPath, getPosixPath(Included));
 
   SMLoc Deepest = SM.FindLocForLineAndColumn(3u, 3, 1);
   ASSERT_TRUE(Deepest.isValid());

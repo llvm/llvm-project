@@ -513,7 +513,7 @@ struct MapState {
       {"/missing/nested", "/missing/nested"},
       {"/relative/nested", "/relative/nested"},
   };
-  MapState() : PM(FS) {
+  MapState() : PM(FS, sys::path::Style::posix) {
     PM.add(MappedPrefix{"relative", "/new1"});
     PM.add(MappedPrefix{"/absolute", "/new2"});
   }

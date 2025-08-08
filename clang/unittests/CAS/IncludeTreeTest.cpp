@@ -17,6 +17,7 @@ using namespace tooling;
 using namespace dependencies;
 
 TEST(IncludeTree, IncludeTreeScan) {
+  StringRef PathSep = llvm::sys::path::get_separator();
   std::shared_ptr<ObjectStore> DB = llvm::cas::createInMemoryCAS();
   auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   FS->setCurrentWorkingDirectory("/root");
@@ -109,7 +110,7 @@ TEST(IncludeTree, IncludeTreeScan) {
     EXPECT_EQ(A1->getFileCharacteristic(), SrcMgr::C_User);
     IncludeTree::FileInfo FI;
     ASSERT_THAT_ERROR(A1File->getFileInfo().moveInto(FI), llvm::Succeeded());
-    EXPECT_EQ(FI.Filename, "./a1.h");
+    EXPECT_EQ(FI.Filename, "." + PathSep.str() + "a1.h");
     EXPECT_EQ(FI.Contents, A1Contents);
     EXPECT_FALSE(A1->getCheckResult(0));
     EXPECT_TRUE(A1->getCheckResult(1));
@@ -123,7 +124,7 @@ TEST(IncludeTree, IncludeTreeScan) {
       EXPECT_EQ(B1->getFileCharacteristic(), SrcMgr::C_User);
       IncludeTree::FileInfo FI;
       ASSERT_THAT_ERROR(B1->getBaseFileInfo().moveInto(FI), llvm::Succeeded());
-      EXPECT_EQ(FI.Filename, "./b1.h");
+      EXPECT_EQ(FI.Filename, "." + PathSep.str() + "b1.h");
       EXPECT_EQ(FI.Contents, "");
 
       ASSERT_EQ(B1->getNumIncludes(), uint32_t(0));
@@ -138,7 +139,7 @@ TEST(IncludeTree, IncludeTreeScan) {
     EXPECT_EQ(Sys->getFileCharacteristic(), SrcMgr::C_System);
     IncludeTree::FileInfo FI;
     ASSERT_THAT_ERROR(Sys->getBaseFileInfo().moveInto(FI), llvm::Succeeded());
-    EXPECT_EQ(FI.Filename, "sys/sys.h");
+    EXPECT_EQ(FI.Filename, "sys" + PathSep.str() + "sys.h");
     EXPECT_EQ(FI.Contents, "");
 
     ASSERT_EQ(Sys->getNumIncludes(), uint32_t(0));
@@ -298,6 +299,7 @@ TEST(IncludeTree, IncludeTreeFileListDuplicates) {
 }
 
 TEST(IncludeTree, IncludeTreeFileSystemOverlay) {
+  StringRef PathSep = llvm::sys::path::get_separator();
   std::shared_ptr<ObjectStore> DB = llvm::cas::createInMemoryCAS();
   SmallVector<IncludeTree::FileList::FileEntry> Files;
   for (unsigned I = 0; I < 10; ++I) {
@@ -328,11 +330,12 @@ TEST(IncludeTree, IncludeTreeFileSystemOverlay) {
 
   std::error_code EC;
   int NumFile = 0;
-  for (auto I = OverlayFS.dir_begin("/dir", EC);
+  for (auto I = OverlayFS.dir_begin(PathSep.str() + "dir", EC);
        !EC && I != llvm::vfs::directory_iterator(); I.increment(EC)) {
     ASSERT_FALSE(EC);
     ++NumFile;
-    std::string Path = "/dir/file" + std::to_string(NumFile);
+    std::string Path = PathSep.str() + "dir" + PathSep.str() + "file" +
+        std::to_string(NumFile);
     ASSERT_EQ(I->path(), Path);
   }
   ASSERT_EQ(NumFile, 2);

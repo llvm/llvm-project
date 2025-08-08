@@ -43,14 +43,16 @@ public:
   struct DirectoryListingInfo;
 
   struct LookupPathState {
+    sys::path::Style PathStyle;
     DirectoryEntry *Entry;
     StringRef Remaining;
     StringRef Name;
     StringRef AfterName;
 
-    LookupPathState(DirectoryEntry &Entry, StringRef Remaining)
-        : Entry(&Entry), Remaining(Remaining) {
-      size_t Slash = Remaining.find('/');
+    LookupPathState(sys::path::Style PathStyle, DirectoryEntry &Entry,
+        StringRef Remaining)
+        : PathStyle(PathStyle), Entry(&Entry), Remaining(Remaining) {
+      size_t Slash = Remaining.find(get_separator(PathStyle)[0]);
       Name = Remaining.substr(0, Slash);
       AfterName = Slash == StringRef::npos ? "" : Remaining.drop_front(Slash);
     }
@@ -63,11 +65,11 @@ public:
       // Optional, this should crash if advancing to far, and users of
       // LookupPathState should be updated.
       if (AfterName.empty())
-        *this = LookupPathState(NewEntry, AfterName);
-      else if (AfterName == "/")
-        *this = LookupPathState(NewEntry, ".");
+        *this = LookupPathState(PathStyle, NewEntry, AfterName);
+      else if (AfterName == get_separator(PathStyle))
+        *this = LookupPathState(PathStyle, NewEntry, ".");
       else
-        *this = LookupPathState(NewEntry, AfterName.drop_front());
+        *this = LookupPathState(PathStyle, NewEntry, AfterName.drop_front());
     }
     void skip() { advance(*Entry); }
   };
@@ -186,10 +188,14 @@ public:
   std::error_code setCurrentWorkingDirectory(const Twine &Path);
 
   static StringRef canonicalizeWorkingDirectory(const Twine &Path,
+                                                sys::path::Style PathStyle,
                                                 StringRef WorkingDirectory,
                                                 SmallVectorImpl<char> &Storage);
 
-  DirectoryEntry &getRoot() { return *Root; }
+  DirectoryEntry &getRoot(StringRef root_path,
+                          std::optional<ObjectRef> RootRef = std::nullopt);
+  StringRef getRootPathFor(StringRef Path) const;
+  sys::path::Style getPathStyle() const { return PathStyle; }
 
   using LookupSymlinkPathType =
       unique_function<Expected<DirectoryEntry *>(StringRef)>;
@@ -201,7 +207,8 @@ public:
   FileSystemCache(FileSystemCache &&) = delete;
   FileSystemCache(const FileSystemCache &) = delete;
 
-  explicit FileSystemCache(std::optional<ObjectRef> Root = std::nullopt);
+  FileSystemCache(sys::path::Style PathStyle = sys::path::Style::native)
+      : PathStyle(PathStyle) {}
 
 private:
   ThreadSafeAllocator<SpecificBumpPtrAllocator<File>> FileAlloc;
@@ -210,7 +217,8 @@ private:
   ThreadSafeAllocator<SpecificBumpPtrAllocator<DirectoryEntry>> EntryAlloc;
   ThreadSafeAllocator<SpecificBumpPtrAllocator<char>> TreePathAlloc;
 
-  DirectoryEntry *Root = nullptr;
+  // Support multiple roots for Windows
+  DenseMap<StringRef, DirectoryEntry *> Roots;
   struct {
     DirectoryEntry *Entry = nullptr;
 
@@ -218,6 +226,7 @@ private:
     /// as \c Entry->getTreePath().
     std::string Path;
   } WorkingDirectory;
+  sys::path::Style PathStyle;
 };
 
 class FileSystemCache::DirectoryEntry : public vfs::CachedDirectoryEntry {
@@ -446,21 +455,22 @@ public:
   std::error_code increment() override;
 
   static std::shared_ptr<VFSDirIterImpl>
-  create(LookupSymlinkPathType LookupSymlinkPath, StringRef ParentPath,
-         ArrayRef<const DirectoryEntry *> Entries);
+  create(FileSystemCache *Cache, LookupSymlinkPathType LookupSymlinkPath,
+         StringRef ParentPath, ArrayRef<const DirectoryEntry *> Entries);
 
   void operator delete(void *Ptr) { ::free(Ptr); }
 
 private:
   void setEntry();
 
-  VFSDirIterImpl(LookupSymlinkPathType LookupSymlinkPath, StringRef ParentPath,
-                 ArrayRef<const DirectoryEntry *> Entries)
-      : LookupSymlinkPath(std::move(LookupSymlinkPath)), ParentPath(ParentPath),
-        Entries(Entries), I(this->Entries.begin()) {
+  VFSDirIterImpl(FileSystemCache *Cache, LookupSymlinkPathType LookupSymlinkPath,
+                 StringRef ParentPath, ArrayRef<const DirectoryEntry *> Entries)
+      : Cache(Cache), LookupSymlinkPath(std::move(LookupSymlinkPath)),
+        ParentPath(ParentPath), Entries(Entries), I(this->Entries.begin()) {
     setEntry();
   }
 
+  FileSystemCache *Cache;
   LookupSymlinkPathType LookupSymlinkPath;
   StringRef ParentPath;
   ArrayRef<const DirectoryEntry *> Entries;

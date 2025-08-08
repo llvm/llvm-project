@@ -346,7 +346,7 @@ public:
                                        StringRef Parent2) override {
     init();
     SmallString<128> Path;
-    sys::path::append(Path, D->path(), Parent1, Parent2, getFilePathToCreate());
+    sys::path::append(Path, D->path(), Parent1, Parent2, "file.data");
     return Path.str().str();
   }
 
@@ -561,9 +561,18 @@ Error OnDiskOutputBackendProvider::checkKept(StringRef FilePath,
 
   sys::fs::UniqueID UID =
       shouldUseTemporaries(*Info) ? *Info->TempUID : *Info->UID;
+#ifndef _WIN32
   if (!Info->F->hasUniqueID(UID))
     return createStringError(inconvertibleErrorCode(),
                              "File not created by keep or changed UID");
+#else
+  // On Windows, the UID changes in a rename that happens in keep()
+  // because it's based on hash of file paths. Instead check that the
+  // file contents are the same.
+  if (!Info->F->equalsCurrentContent(Data))
+    return createStringError(inconvertibleErrorCode(),
+                             "File not created by keep");
+#endif
 
   if (std::optional<OnDiskFile> Temp = Info->F->findTemp())
     return createStringError(inconvertibleErrorCode(),
@@ -796,8 +805,21 @@ TEST(OnDiskBackendTest, OnlyIfDifferent) {
   EXPECT_FALSE(O2.isOpen());
   EXPECT_FALSE(sys::fs::status(FilePath, Status2, /*follow=*/false));
 
+#ifndef _WIN32
   // Make sure the output path file is not modified with same content.
   EXPECT_EQ(Status1.getUniqueID(), Status2.getUniqueID());
+#else
+  // On Windows, UniqueIDs are currently hash of file paths and don't
+  // change on overwrites or depend on the file content. Check that
+  // the file content is what is expected instead.
+  auto EqualsCurrentContent = [](StringRef FilePath, StringRef Data) -> bool {
+    auto BufOrErr = MemoryBuffer::getFile(FilePath);
+    if (!BufOrErr)
+      return false;
+    return (*BufOrErr)->getBuffer() == Data;
+  };
+  EXPECT_TRUE(EqualsCurrentContent(FilePath, Data));
+#endif
 
   // Write third with different content.
   EXPECT_THAT_ERROR(Backend->createFile(FilePath, Config).moveInto(O3),
@@ -807,8 +829,15 @@ TEST(OnDiskBackendTest, OnlyIfDifferent) {
   EXPECT_FALSE(O3.isOpen());
   EXPECT_FALSE(sys::fs::status(FilePath, Status3, /*follow=*/false));
 
+#ifndef _WIN32
   // This should overwrite the file and create a different UniqueID.
   EXPECT_NE(Status1.getUniqueID(), Status3.getUniqueID());
+#else
+  // On Windows, UniqueIDs are currently hash of file paths and don't
+  // change on overwrites or depend on the file content. Check that
+  // the file content is what is expected instead.
+  EXPECT_TRUE(EqualsCurrentContent(FilePath, (Data + "\n").str()));
+#endif
 }
 
 TEST(OnDiskBackendTest, Append) {

@@ -61,6 +61,10 @@ TEST(CachingOnDiskFileSystemTest, BasicRealFSIteration) {
   EXPECT_EQ(vfs::directory_iterator(), I);
 }
 
+#ifndef _WIN32
+  // Disabled on Windows. As the create_link uses a hard link and a
+  // hard link cannot be a directory on Windows, this TempLink will
+  // fail.
 TEST(CachingOnDiskFileSystemTest, MultipleWorkingDirs) {
   // Our root contains a/aa, b/bb, c, where c is a link to a/.
   // Run tests both in root/b/ and root/c/ (to test "normal" and symlink dirs).
@@ -134,7 +138,11 @@ TEST(CachingOnDiskFileSystemTest, MultipleWorkingDirs) {
   ASSERT_FALSE(EC);
   ASSERT_EQ(CIt, vfs::directory_iterator());
 }
+#endif
 
+#ifndef _WIN32
+// Disabled on Windows. As the create_link uses a hard link on
+// Windows, TempLink will fail if the target doesn't exist.
 TEST(CachingOnDiskFileSystemTest, BrokenSymlinkRealFSIteration) {
   TempDir TestDirectory("virtual-file-system-test", /*Unique*/ true);
   IntrusiveRefCntPtr<vfs::FileSystem> FS =
@@ -164,6 +172,7 @@ TEST(CachingOnDiskFileSystemTest, BrokenSymlinkRealFSIteration) {
           testing::Pair("c", std::make_error_code(
                                  std::errc::no_such_file_or_directory))));
 }
+#endif
 
 TEST(CachingOnDiskFileSystemTest, BasicRealFSRecursiveIteration) {
   TempDir TestDirectory("virtual-file-system-test", /*Unique*/ true);
@@ -288,6 +297,9 @@ TEST(CachingOnDiskFileSystemTest, BasicRealFSRecursiveIterationNoPush) {
   }
 }
 
+#ifndef _WIN32
+// Disabled on Windows. As the create_link uses a hard link on
+// Windows, TempLink will fail if the target doesn't exist.
 TEST(CachingOnDiskFileSystemTest, BrokenSymlinkRealFSRecursiveIteration) {
   TempDir TestDirectory("virtual-file-system-test", /*Unique*/ true);
   IntrusiveRefCntPtr<vfs::FileSystem> FS =
@@ -326,7 +338,12 @@ TEST(CachingOnDiskFileSystemTest, BrokenSymlinkRealFSRecursiveIteration) {
                                             _d.path().str(), _dd.path().str(),
                                             _ddd.path().str()));
 }
+#endif
 
+#ifndef _WIN32
+// Disabled on Windows. As the create_link uses a hard link on
+// Windows, the full path is required for the link target and TempLink
+// will fail if the target doesn't exist.
 TEST(CachingOnDiskFileSystemTest, Exists) {
   TempDir TestDirectory("virtual-file-system-test", /*Unique*/ true);
   IntrusiveRefCntPtr<cas::CachingOnDiskFileSystem> FS =
@@ -342,6 +359,7 @@ TEST(CachingOnDiskFileSystemTest, Exists) {
   EXPECT_TRUE(FS->exists(Link.path()));
   EXPECT_FALSE(FS->exists(BrokenLink.path()));
 }
+#endif
 
 TEST(CachingOnDiskFileSystemTest, TrackNewAccesses) {
   TempDir TestDirectory("virtual-file-system-test", /*Unique*/ true);
@@ -350,7 +368,8 @@ TEST(CachingOnDiskFileSystemTest, TrackNewAccesses) {
   ASSERT_FALSE(FS->setCurrentWorkingDirectory(TestDirectory.path()));
 
   TreePathPrefixMapper Remapper(FS);
-  Remapper.add(MappedPrefix{TestDirectory.path(), "/"});
+  Remapper.add(MappedPrefix{TestDirectory.path(),
+                            sys::path::root_path(TestDirectory.path())});
 
   TempFile Extra(TestDirectory.path("Extra"), "", "content");
   SmallVector<TempFile> Temps;
@@ -397,7 +416,8 @@ TEST(CachingOnDiskFileSystemTest, TrackNewAccessesStack) {
   ASSERT_FALSE(FS->setCurrentWorkingDirectory(TestDirectory.path()));
 
   TreePathPrefixMapper Remapper(FS);
-  Remapper.add(MappedPrefix{TestDirectory.path(), "/"});
+  Remapper.add(MappedPrefix{TestDirectory.path(),
+                            sys::path::root_path(TestDirectory.path())});
 
   TempFile Extra(TestDirectory.path("Extra"), "", "content");
   SmallVector<TempFile> Temps;
@@ -467,7 +487,8 @@ TEST(CachingOnDiskFileSystemTest, TrackNewAccessesExists) {
   ASSERT_FALSE(FS->setCurrentWorkingDirectory(TestDirectory.path()));
 
   TreePathPrefixMapper Remapper(FS);
-  Remapper.add(MappedPrefix{TestDirectory.path(), "/"});
+  Remapper.add(MappedPrefix{TestDirectory.path(),
+                            sys::path::root_path(TestDirectory.path())});
 
   SmallVector<TempFile> Temps;
   for (size_t I = 0, E = 4; I != E; ++I)
@@ -604,7 +625,8 @@ TEST(CachingOnDiskFileSystemTest, ExcludeFromTacking) {
   ASSERT_FALSE(FS->setCurrentWorkingDirectory(TestDirectory.path()));
 
   TreePathPrefixMapper Remapper(FS);
-  Remapper.add(MappedPrefix{TestDirectory.path(), "/"});
+  Remapper.add(MappedPrefix{TestDirectory.path(),
+                            sys::path::root_path(TestDirectory.path())});
 
   TempDir D1(TestDirectory.path("d1"));
   TempDir D2(TestDirectory.path("d2"));
@@ -711,6 +733,8 @@ TEST(CachingOnDiskFileSystemTest, ExcludeFromTacking) {
   }
 }
 
+#ifndef _WIN32
+// As the create_link uses a hard link on Windows, the paths don't match.
 TEST(CachingOnDiskFileSystemTest, getRealPath) {
   TempDir D("caching-on-disk-file-system-test", /*Unique=*/true);
   IntrusiveRefCntPtr<cas::CachingOnDiskFileSystem> FS =
@@ -725,6 +749,7 @@ TEST(CachingOnDiskFileSystemTest, getRealPath) {
   EXPECT_FALSE(FS->getRealPath(Link.path(), LinkPath));
   EXPECT_EQ(FilePath, LinkPath);
 }
+#endif
 
 TEST(CachingOnDiskFileSystemTest, caseSensitivityFile) {
   TempDir D("caching-on-disk-file-system-test", /*Unique=*/true);
@@ -768,6 +793,9 @@ TEST(CachingOnDiskFileSystemTest, caseSensitivityFile) {
   }
 }
 
+#ifndef _WIN32
+// On windows, create_link uses a hard link and cannot handle a link
+// to a directory.
 TEST(CachingOnDiskFileSystemTest, caseSensitivityDir) {
   TempDir D("caching-on-disk-file-system-test", /*Unique=*/true);
   IntrusiveRefCntPtr<cas::CachingOnDiskFileSystem> FS =
@@ -834,5 +862,6 @@ TEST(CachingOnDiskFileSystemTest, caseSensitivityDir) {
     EXPECT_EQ(StatF1.getUniqueID(), StatF2.getUniqueID());
   }
 }
+#endif
 
 } // namespace

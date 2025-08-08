@@ -1190,6 +1190,12 @@ static DWORD nativeAccess(FileAccess Access, OpenFlags Flags) {
     Result |= DELETE;
   if (Flags & OF_UpdateAtime)
     Result |= FILE_WRITE_ATTRIBUTES;
+  // If a combination of FA_Write and OF_Append are used, the supposed
+  // intent is to enable atomic appends, which requires using
+  // FILE_APPEND_DATA without GENERIC_WRITE. Otherwise, atomicity
+  // isn't enabled.
+  if (Access == FA_Write && Flags == OF_Append)
+    Result = FILE_APPEND_DATA;
   return Result;
 }
 

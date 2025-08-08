@@ -24,7 +24,13 @@ using llvm::unittest::TempLink;
 TEST(DependencyScanningCASFilesystem, FilenameSpelling) {
   TempDir TestDir("DependencyScanningCASFilesystemTest", /*Unique=*/true);
   TempFile TestFile(TestDir.path("File.h"), "", "#define FOO\n");
+#ifndef _WIN32
   TempLink TestLink("File.h", TestDir.path("SymFile.h"));
+#else
+  // As the create_link uses a hard link on Windows, the full path is
+  // required for the link target.
+  TempLink TestLink(TestDir.path("File.h"), TestDir.path("SymFile.h"));
+#endif
 
   std::unique_ptr<ObjectStore> CAS = llvm::cas::createInMemoryCAS();
   std::unique_ptr<ActionCache> Cache = llvm::cas::createInMemoryActionCache();

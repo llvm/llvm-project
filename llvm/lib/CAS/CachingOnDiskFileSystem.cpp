@@ -252,11 +252,17 @@ private:
 };
 
 void CachingOnDiskFileSystemImpl::initializeWorkingDirectory() {
-  Cache = makeIntrusiveRefCnt<FileSystemCache>();
+  Cache = makeIntrusiveRefCnt<FileSystemCache>(sys::path::Style::native);
 
   // Start with root, and then initialize the current working directory to
   // match process state, ignoring errors if there's a problem.
-  WorkingDirectory.Entry = &Cache->getRoot();
+#ifndef _WIN32
+  static std::string RootPath = get_separator(sys::path::Style::native).str();
+#else
+  static std::string RootPath = const_cast<const char *>(getenv("SYSTEMDRIVE")) +
+      get_separator(sys::path::Style::native).str();
+#endif
+  WorkingDirectory.Entry = &Cache->getRoot(RootPath);
   WorkingDirectory.Path = WorkingDirectory.Entry->getTreePath().str();
 
   SmallString<128> CWD;
@@ -288,28 +294,28 @@ CachingOnDiskFileSystemImpl::setCurrentWorkingDirectory(const Twine &Path) {
 StringRef CachingOnDiskFileSystemImpl::canonicalizeWorkingDirectory(
     const Twine &Path, StringRef WorkingDirectory,
     SmallVectorImpl<char> &Storage) {
-  // Not portable.
-  assert(WorkingDirectory.starts_with("/"));
+  const char separator = get_separator(sys::path::Style::native)[0];
   Path.toVector(Storage);
   if (Storage.empty())
     return WorkingDirectory;
 
-  if (Storage[0] != '/') {
+  if (!is_absolute(Path, sys::path::Style::native) && Storage.size() != 0) {
+    assert(is_absolute(WorkingDirectory, sys::path::Style::native));
     SmallString<128> Prefix = StringRef(WorkingDirectory);
-    Prefix.push_back('/');
+    Prefix.push_back(separator);
     Storage.insert(Storage.begin(), Prefix.begin(), Prefix.end());
   }
 
   // Remove ".." components based on working directory string, not based on
   // real path. This matches shell behaviour.
   sys::path::remove_dots(Storage, /*remove_dot_dot=*/true,
-                         sys::path::Style::posix);
+                         sys::path::Style::native);
 
   // Remove double slashes.
   int W = 0;
   bool WasSlash = false;
   for (int R = 0, E = Storage.size(); R != E; ++R) {
-    bool IsSlash = Storage[R] == '/';
+    bool IsSlash = Storage[R] == separator;
     if (IsSlash && WasSlash)
       continue;
     WasSlash = IsSlash;
@@ -318,7 +324,9 @@ StringRef CachingOnDiskFileSystemImpl::canonicalizeWorkingDirectory(
   Storage.resize(W);
 
   // Remove final slash.
-  if (Storage.size() > 1 && Storage.back() == '/')
+  if (llvm::sys::path::root_path(StringRef(Storage.begin(), Storage.size()))
+          != StringRef(Storage.begin(), Storage.size()) &&
+      Storage.back() == separator)
     Storage.pop_back();
 
   return StringRef(Storage.begin(), Storage.size());
@@ -571,13 +579,12 @@ CachingOnDiskFileSystemImpl::preloadRealPath(DirectoryEntry &From,
   }
 
   SmallString<256> RealPath;
-  auto FD = sys::fs::openNativeFileForRead(ExpectedRealPath, sys::fs::OF_None,
-                                           &RealPath);
-  if (!FD)
-    return FD.takeError();
-  auto CloseOnExit = make_scope_exit([&FD]() { sys::fs::closeFile(*FD); });
+  if (std::error_code EC = sys::fs::real_path(ExpectedRealPath, RealPath,
+      /* expand_tilde */false))
+    return errorCodeToError(EC);
 
-  FileSystemCache::LookupPathState State(Cache->getRoot(), RealPath);
+  FileSystemCache::LookupPathState State(Cache->getPathStyle(),
+      Cache->getRoot(Cache->getRootPathFor(RealPath)), RealPath);
 
   // Advance through the cached directories. Note: no need to pass through
   // TrackNonRealPathEntries because we're navigating a real path.
@@ -585,7 +592,7 @@ CachingOnDiskFileSystemImpl::preloadRealPath(DirectoryEntry &From,
       StringRef(ExpectedRealPath).drop_back(Remaining.size());
   if (RealPath.starts_with(ExpectedPrefix))
     State = FileSystemCache::LookupPathState(
-        From, RealPath.substr(ExpectedPrefix.size()));
+        Cache->getPathStyle(), From, RealPath.substr(ExpectedPrefix.size()));
   else
     State = Cache->lookupRealPathPrefixFromCached(
         State, /*TrackNonRealPathEntries=*/nullptr);
@@ -610,12 +617,24 @@ CachingOnDiskFileSystemImpl::preloadRealPath(DirectoryEntry &From,
   assert(!State.Name.empty());
 
   // Skip all errors from here out. This is just priming the cache.
-  sys::fs::file_status Status;
-  if (/*std::error_code EC =*/sys::fs::status(*FD, Status))
-    return nullptr;
 
-  if (Status.type() == sys::fs::file_type::directory_file)
+  // Check if it's a directory or not before opening because
+  // openNativeFileForRead will fail on directories on Windows.
+  sys::fs::file_status Status;
+  if (/*std::error_code EC =*/sys::fs::status(ExpectedRealPath, Status))
+    return nullptr;
+  const bool IsDir = sys::fs::is_directory(Status);
+
+  if (IsDir)
     return makeDirectory(*State.Entry, RealPath);
+
+  auto FD = sys::fs::openNativeFileForRead(ExpectedRealPath, sys::fs::OF_None,
+                                           /*RealPath=*/nullptr);
+  if (!FD) {
+    llvm::consumeError(FD.takeError());
+    return nullptr;
+  }
+  auto CloseOnExit = make_scope_exit([&FD]() { sys::fs::closeFile(*FD); });
 
   auto F = makeFile(*State.Entry, RealPath, *FD, Status);
   if (F)
@@ -749,10 +768,8 @@ Expected<ObjectProxy> CachingOnDiskFileSystemImpl::createTreeFromAllAccesses() {
   std::unique_ptr<CachingOnDiskFileSystem::TreeBuilder> Builder =
       createTreeBuilder();
 
-  // FIXME: Not portable; only works for posix, not windows.
-  //
   // FIXME: don't know if we want this push to be recursive...
-  if (Error E = Builder->push("/"))
+  if (Error E = Builder->push(get_separator(sys::path::Style::native)))
     return std::move(E);
   return Builder->create();
 }
@@ -868,7 +885,8 @@ public:
   // Push \p Entry to \a Builder if it's a file, to \a Worklist otherwise.
   void pushEntry(const DirectoryEntry &Entry);
 
-  explicit TreeBuilder(CachingOnDiskFileSystemImpl &FS) : FS(FS) {}
+  explicit TreeBuilder(CachingOnDiskFileSystemImpl &FS)
+      : Builder(HierarchicalTreeBuilder()), FS(FS) {}
   HierarchicalTreeBuilder Builder;
   CachingOnDiskFileSystemImpl &FS;
 
