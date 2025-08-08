@@ -587,6 +587,11 @@ def remark_found_cxx20_module_usage : Remark<
 def remark_performing_driver_managed_module_build : Remark<
   "performing driver managed module build">,
   InGroup<ModulesDriver>;
+def err_failed_dependency_scan : Error <
+  "failed to perform dependency scan">;
+def remark_module_dependency_graph : Remark<
+  "printing module dependency graph">,
+  InGroup<ModulesDriver>;
 
 def warn_drv_delayed_template_parsing_after_cxx20 : Warning<
   "-fdelayed-template-parsing is deprecated after C++20">,

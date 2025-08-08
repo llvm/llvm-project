@@ -58,6 +58,7 @@
 #include "clang/Config/config.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Compilation.h"
+#include "clang/Driver/DependencyScanner.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Job.h"
 #include "clang/Driver/Options.h"
@@ -87,6 +88,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -4674,7 +4676,20 @@ void Driver::BuildDriverManagedModuleBuildActions(
     Compilation &C, llvm::opt::DerivedArgList &Args, const InputList &Inputs,
     ActionList &Actions) const {
   Diags.Report(diag::remark_performing_driver_managed_module_build);
-  return;
+
+  auto ScanResults =
+      dependencies::scanModuleDependencies(getClangProgramPath(), Diags, Args);
+  if (!ScanResults) {
+    llvm::consumeError(ScanResults.takeError());
+    Diags.Report(diag::err_failed_dependency_scan);
+    return;
+  }
+
+  const auto ModuleDepGraph = dependencies::buildModuleDepGraph(
+      std::move(*ScanResults), Inputs, getClangProgramPath());
+  Diags.Report(diag::remark_module_dependency_graph);
+  if (!Diags.isLastDiagnosticIgnored())
+    llvm::WriteGraph(llvm::errs(), &ModuleDepGraph);
 }
 
 /// Returns the canonical name for the offloading architecture when using a HIP
