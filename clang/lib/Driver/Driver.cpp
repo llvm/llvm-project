@@ -4375,7 +4375,7 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
       }
       UsesCXXModules = *ErrOrScanResult;
     }
-    if (UsesCXXModules)
+    if (UsesCXXModules || Args.hasArg(options::OPT_fmodules))
       BuildDriverManagedModuleBuildActions(C, Args, Inputs, Actions);
     return;
   }
