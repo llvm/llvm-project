@@ -17,6 +17,7 @@ namespace llvm::cas {
 class ActionCache;
 namespace builtin {
 
+/// Common base class for builtin CAS implementations using the same CASContext.
 class BuiltinCAS : public ObjectStore {
 public:
   BuiltinCAS() : ObjectStore(BuiltinCASContext::getDefaultContext()) {}

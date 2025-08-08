@@ -33,6 +33,7 @@ using InMemoryIndexT =
 /// their hash.
 using InMemoryIndexValueT = InMemoryIndexT::value_type;
 
+/// Builtin InMemory CAS that stores CAS object in the memory.
 class InMemoryObject {
 public:
   enum class Kind {

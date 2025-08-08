@@ -2,11 +2,11 @@
 
 ## Introduction to CAS
 
-Content Addressable Storage, or `CAS`, is a storage system where it assigns
+Content Addressable Storage, or `CAS`, is a storage system that assigns
 unique addresses to the data stored. It is very useful for data deduplicaton
 and creating unique identifiers.
 
-Unlike other kinds of storage system like a file system, CAS is immutable. It
+Unlike other kinds of storage systems like file systems, CAS is immutable. It
 is more reliable to model a computation by representing the inputs and outputs
 of the computation using objects stored in CAS.
 
@@ -24,7 +24,7 @@ struct CASObject {
 }
 ```
 
-With this abstraction, it is possible to compose CASObjects into a DAG that is
+With this abstraction, it is possible to compose `CASObject`s into a DAG that is
 capable of representing complicated data structures, while still allowing data
 deduplication. Note you can compare two DAGs by just comparing the CASObject
 hash of two root nodes.
