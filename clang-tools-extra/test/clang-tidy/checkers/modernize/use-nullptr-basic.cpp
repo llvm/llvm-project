@@ -1,4 +1,7 @@
-// RUN: %check_clang_tidy %s modernize-use-nullptr %t -- -- -Wno-non-literal-null-conversion
+// RUN: %check_clang_tidy %s modernize-use-nullptr %t -- -- \
+// RUN:   -target x86_64-linux-gnu -Wno-non-literal-null-conversion -fno-delayed-template-parsing
+// RUN: %check_clang_tidy %s -check-suffixes=,WINDOWS modernize-use-nullptr %t -- -- \
+// RUN:   -target x86_64-windows-msvc -Wno-non-literal-null-conversion -fno-delayed-template-parsing
 
 const unsigned int g_null = 0;
 #define NULL 0
@@ -59,8 +62,6 @@ int *Foo::m_p2 = NULL;
 // CHECK-FIXES: int *Foo::m_p2 = nullptr;
 
 // FIXME: all these DISABLED-* cases should trigger the warning.
-// Some of them do work, but only on Linux, not on Windows.
-#if 0
 template <typename T>
 struct Bar {
   Bar(T *p) : m_p(p) {
@@ -69,12 +70,12 @@ struct Bar {
     // DISABLED-CHECK-FIXES: m_p = static_cast<T*>(nullptr);
 
     m_p = static_cast<T*>(reinterpret_cast<int*>((void*)NULL));
-    // DISABLED-CHECK-MESSAGES: :[[@LINE-1]]:27: warning: use nullptr
-    // DISABLED-CHECK-FIXES: m_p = static_cast<T*>(nullptr);
+    // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: use nullptr
+    // CHECK-FIXES: m_p = static_cast<T*>(nullptr);
 
     T *p2 = static_cast<T*>(reinterpret_cast<int*>((void*)NULL));
-    // DISABLED-CHECK-MESSAGES: :[[@LINE-1]]:29: warning: use nullptr
-    // DISABLED-CHECK-FIXES: T *p2 = static_cast<T*>(nullptr);
+    // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: use nullptr
+    // CHECK-FIXES: T *p2 = static_cast<T*>(nullptr);
 
     m_p = NULL;
     // DISABLED-CHECK-MESSAGES: :[[@LINE-1]]:11: warning: use nullptr
@@ -88,7 +89,6 @@ struct Bar {
 
   T *m_p;
 };
-#endif
 
 struct Baz {
   Baz() : i(0) {}
@@ -199,14 +199,12 @@ void *test_parentheses_explicit_cast_sequence1() {
   // CHECK-FIXES: return(static_cast<void*>(nullptr));
 }
 
-// FIXME: this case triggers the warning on Windows but not on Linux.
-#if 0
+// FIXME: make the warning trigger on Linux too.
 void *test_parentheses_explicit_cast_sequence2() {
   return(static_cast<void*>(reinterpret_cast<int*>((float*)int(0.f))));
-  // DISABLED-CHECK-MESSAGES: :[[@LINE-1]]:29: warning: use nullptr
-  // DISABLED-CHECK-FIXES: return(static_cast<void*>(nullptr));
+  // CHECK-MESSAGES-WINDOWS: :[[@LINE-1]]:29: warning: use nullptr
+  // CHECK-FIXES-WINDOWS: return(static_cast<void*>(nullptr));
 }
-#endif
 
 // Test explicit cast expressions resulting in nullptr.
 struct Bam {
