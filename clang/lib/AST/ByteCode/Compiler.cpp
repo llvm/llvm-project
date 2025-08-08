@@ -2063,12 +2063,9 @@ bool Compiler<Emitter>::visitCallArgs(ArrayRef<const Expr *> Args,
                                       const FunctionDecl *FuncDecl,
                                       bool Activate) {
   assert(VarScope->getKind() == ScopeKind::Call);
-  bool HasNonNullAttr = false;
   llvm::BitVector NonNullArgs;
-  if (FuncDecl && FuncDecl->hasAttr<NonNullAttr>()) {
-    HasNonNullAttr = true;
+  if (FuncDecl && FuncDecl->hasAttr<NonNullAttr>())
     NonNullArgs = collectNonNullArgs(FuncDecl, Args);
-  }
 
   unsigned ArgIndex = 0;
   for (const Expr *Arg : Args) {
@@ -2094,7 +2091,7 @@ bool Compiler<Emitter>::visitCallArgs(ArrayRef<const Expr *> Args,
         return false;
     }
 
-    if (HasNonNullAttr && NonNullArgs[ArgIndex]) {
+    if (!NonNullArgs.empty() && NonNullArgs[ArgIndex]) {
       PrimType ArgT = classify(Arg).value_or(PT_Ptr);
       if (ArgT == PT_Ptr) {
         if (!this->emitCheckNonNullArg(ArgT, Arg))
@@ -5997,6 +5994,23 @@ bool Compiler<Emitter>::checkLiteralType(const Expr *E) {
   return this->emitCheckLiteralType(E->getType().getTypePtr(), E);
 }
 
+static bool initNeedsOverridenLoc(const CXXCtorInitializer *Init) {
+  const Expr *InitExpr = Init->getInit();
+
+  if (!Init->isWritten() && !Init->isInClassMemberInitializer() &&
+      !isa<CXXConstructExpr>(InitExpr))
+    return true;
+
+  if (const auto *CE = dyn_cast<CXXConstructExpr>(InitExpr)) {
+    const CXXConstructorDecl *Ctor = CE->getConstructor();
+    if (Ctor->isDefaulted() && Ctor->isCopyOrMoveConstructor() &&
+        Ctor->isTrivial())
+      return true;
+  }
+
+  return false;
+}
+
 template <class Emitter>
 bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
   assert(!ReturnType);
@@ -6071,10 +6085,7 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
       const Record::Field *F = R->getField(Member);
 
       LocOverrideScope<Emitter> LOS(this, SourceInfo{},
-                                    !Init->isWritten() &&
-                                        !Init->isInClassMemberInitializer() &&
-                                        (!isa<CXXConstructExpr>(InitExpr) ||
-                                         Member->isAnonymousStructOrUnion()));
+                                    initNeedsOverridenLoc(Init));
       if (!emitFieldInitializer(F, F->Offset, InitExpr, IsUnion))
         return false;
     } else if (const Type *Base = Init->getBaseClass()) {
@@ -6104,10 +6115,7 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
         return false;
     } else if (const IndirectFieldDecl *IFD = Init->getIndirectMember()) {
       LocOverrideScope<Emitter> LOS(this, SourceInfo{},
-                                    !Init->isWritten() &&
-                                        !Init->isInClassMemberInitializer() &&
-                                        !isa<CXXConstructExpr>(InitExpr));
-
+                                    initNeedsOverridenLoc(Init));
       assert(IFD->getChainingSize() >= 2);
 
       unsigned NestedFieldOffset = 0;

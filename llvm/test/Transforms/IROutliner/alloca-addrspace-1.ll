@@ -20,14 +20,14 @@ declare i32 @llvm.foo(i32, i32)
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I3_LOC:%.*]] = alloca i32, align 4, addrspace(5)
 ; CHECK-NEXT:    [[I1_LOC:%.*]] = alloca i32, align 4, addrspace(5)
-; CHECK-NEXT:    call void @llvm.lifetime.start.p5(i64 -1, ptr addrspace(5) [[I1_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[I1_LOC]])
 ; CHECK-NEXT:    call void @outlined_ir_func_0(i32 0, i32 1, ptr addrspace(5) [[I1_LOC]])
 ; CHECK-NEXT:    [[I1_RELOAD:%.*]] = load i32, ptr addrspace(5) [[I1_LOC]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p5(i64 -1, ptr addrspace(5) [[I1_LOC]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p5(i64 -1, ptr addrspace(5) [[I3_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[I1_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[I3_LOC]])
 ; CHECK-NEXT:    call void @outlined_ir_func_0(i32 [[I1_RELOAD]], i32 0, ptr addrspace(5) [[I3_LOC]])
 ; CHECK-NEXT:    [[I3_RELOAD:%.*]] = load i32, ptr addrspace(5) [[I3_LOC]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p5(i64 -1, ptr addrspace(5) [[I3_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[I3_LOC]])
 ; CHECK-NEXT:    [[I4:%.*]] = tail call i32 @llvm.foo(i32 [[I3_RELOAD]], i32 0)
 ; CHECK-NEXT:    ret i32 0
 ;

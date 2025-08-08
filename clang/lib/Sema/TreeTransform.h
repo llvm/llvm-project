@@ -11902,7 +11902,10 @@ void OpenACCClauseTransform<Derived>::VisitPrivateClause(
         InitRecipes.push_back(InitRecipe);
       else
         InitRecipes.push_back(
-            Self.getSema().OpenACC().CreateInitRecipe(VarRef.get()));
+            Self.getSema()
+                .OpenACC()
+                .CreateInitRecipe(OpenACCClauseKind::Private, VarRef.get())
+                .first);
     }
   }
   ParsedClause.setVarListDetails(InstantiatedVarList,
@@ -11941,12 +11944,31 @@ void OpenACCClauseTransform<Derived>::VisitDeviceClause(
 template <typename Derived>
 void OpenACCClauseTransform<Derived>::VisitFirstPrivateClause(
     const OpenACCFirstPrivateClause &C) {
-  ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
+  llvm::SmallVector<Expr *> InstantiatedVarList;
+  llvm::SmallVector<OpenACCFirstPrivateRecipe> InitRecipes;
+
+  for (const auto [RefExpr, InitRecipe] :
+       llvm::zip(C.getVarList(), C.getInitRecipes())) {
+    ExprResult VarRef = VisitVar(RefExpr);
+
+    if (VarRef.isUsable()) {
+      InstantiatedVarList.push_back(VarRef.get());
+
+      // We only have to create a new one if it is dependent, and Sema won't
+      // make one of these unless the type is non-dependent.
+      if (InitRecipe.RecipeDecl)
+        InitRecipes.push_back(InitRecipe);
+      else
+        InitRecipes.push_back(Self.getSema().OpenACC().CreateInitRecipe(
+            OpenACCClauseKind::FirstPrivate, VarRef.get()));
+    }
+  }
+  ParsedClause.setVarListDetails(InstantiatedVarList,
                                  OpenACCModifierKind::Invalid);
 
   NewClause = OpenACCFirstPrivateClause::Create(
       Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
-      ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
+      ParsedClause.getLParenLoc(), ParsedClause.getVarList(), InitRecipes,
       ParsedClause.getEndLoc());
 }
 
