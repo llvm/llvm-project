@@ -9148,7 +9148,7 @@ static bool matchTwoInputRecurrence(const PHINode *PN, InstTy *&Inst,
 
   for (unsigned I = 0; I != 2; ++I) {
     if (auto *Operation = dyn_cast<InstTy>(PN->getIncomingValue(I));
-        Operation && Operation->getNumOperands() == 2) {
+        Operation && Operation->getNumOperands() >= 2) {
       Value *LHS = Operation->getOperand(0);
       Value *RHS = Operation->getOperand(1);
       if (LHS != PN && RHS != PN)
