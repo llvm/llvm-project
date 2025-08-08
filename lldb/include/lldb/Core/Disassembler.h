@@ -159,7 +159,8 @@ public:
                     const SymbolContext *sym_ctx,
                     const SymbolContext *prev_sym_ctx,
                     const FormatEntity::Entry *disassembly_addr_format,
-                    size_t max_address_text_size);
+                    size_t max_address_text_size,
+                    bool enable_rich_annotations = false);
 
   virtual bool DoesBranch() = 0;
 
@@ -443,10 +444,10 @@ public:
                           const ExecutionContext &exe_ctx, const Address &start,
                           Limit limit, bool mixed_source_and_assembly,
                           uint32_t num_mixed_context_lines, uint32_t options,
-                          Stream &strm);
+                          Stream &strm, bool enable_rich_annotations = false);
 
   static bool Disassemble(Debugger &debugger, const ArchSpec &arch,
-                          StackFrame &frame, Stream &strm);
+                          StackFrame &frame, Stream &strm, bool enable_rich_annotations = false);
 
   // Constructors and Destructors
   Disassembler(const ArchSpec &arch, const char *flavor);
@@ -456,7 +457,7 @@ public:
                          const ExecutionContext &exe_ctx,
                          bool mixed_source_and_assembly,
                          uint32_t num_mixed_context_lines, uint32_t options,
-                         Stream &strm);
+                         Stream &strm, bool enable_rich_annotations = false);
 
   size_t ParseInstructions(Target &target, Address address, Limit limit,
                            Stream *error_strm_ptr,

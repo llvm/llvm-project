@@ -175,7 +175,8 @@ bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
                                const Address &address, Limit limit,
                                bool mixed_source_and_assembly,
                                uint32_t num_mixed_context_lines,
-                               uint32_t options, Stream &strm) {
+                               uint32_t options, Stream &strm,
+                               bool enable_rich_annotations) {
   if (!exe_ctx.GetTargetPtr())
     return false;
 
@@ -191,8 +192,9 @@ bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
     return false;
 
   disasm_sp->PrintInstructions(debugger, arch, exe_ctx,
-                               mixed_source_and_assembly,
-                               num_mixed_context_lines, options, strm);
+                             mixed_source_and_assembly,
+                             num_mixed_context_lines, options, strm,
+                             /*enable_rich_annotations=*/enable_rich_annotations);
   return true;
 }
 
@@ -287,7 +289,8 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
                                      const ExecutionContext &exe_ctx,
                                      bool mixed_source_and_assembly,
                                      uint32_t num_mixed_context_lines,
-                                     uint32_t options, Stream &strm) {
+                                     uint32_t options, Stream &strm,
+                                     bool enable_rich_annotations) {
   // We got some things disassembled...
   size_t num_instructions_found = GetInstructionList().GetSize();
 
@@ -545,7 +548,8 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
           (options & eOptionShowControlFlowKind) != 0;
       inst->Dump(&strm, max_opcode_byte_size, true, show_bytes,
                  show_control_flow_kind, &exe_ctx, &sc, &prev_sc, nullptr,
-                 address_text_size);
+                 address_text_size,
+                 enable_rich_annotations);
       strm.EOL();
     } else {
       break;
@@ -554,7 +558,8 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
 }
 
 bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
-                               StackFrame &frame, Stream &strm) {
+                               StackFrame &frame, Stream &strm,
+                               bool enable_rich_annotations) {
   constexpr const char *plugin_name = nullptr;
   constexpr const char *flavor = nullptr;
   constexpr const char *cpu = nullptr;
@@ -641,7 +646,8 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
                        const SymbolContext *sym_ctx,
                        const SymbolContext *prev_sym_ctx,
                        const FormatEntity::Entry *disassembly_addr_format,
-                       size_t max_address_text_size) {
+                       size_t max_address_text_size,
+                       bool enable_rich_annotations) {
   size_t opcode_column_width = 7;
   const size_t operand_column_width = 25;
 
@@ -801,7 +807,7 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
     frame->ChangePC(original_pc);
   };
 
-  if (exe_ctx && exe_ctx->GetFramePtr()) {
+  if (enable_rich_annotations && exe_ctx && exe_ctx->GetFramePtr()) {
     annotate_variables();
   }
 
