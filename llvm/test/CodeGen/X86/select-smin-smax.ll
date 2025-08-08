@@ -2,10 +2,61 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -mattr=-bmi < %s | FileCheck %s --check-prefixes=CHECK,CHECK-NOBMI
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -mattr=+bmi < %s | FileCheck %s --check-prefixes=CHECK,CHECK-BMI
 
+declare i8 @llvm.smax.i8(i8, i8)
+declare i8 @llvm.smin.i8(i8, i8)
+declare i16 @llvm.smax.i16(i16, i16)
+declare i16 @llvm.smin.i16(i16, i16)
 declare i32 @llvm.smax.i32(i32, i32)
 declare i32 @llvm.smin.i32(i32, i32)
 declare i64 @llvm.smax.i64(i64, i64)
 declare i64 @llvm.smin.i64(i64, i64)
+
+define i8 @test_i8_smax(i8 %a) nounwind {
+; CHECK-LABEL: test_i8_smax:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %dil, %dil
+; CHECK-NEXT:    cmovgl %edi, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    retq
+  %r = call i8 @llvm.smax.i8(i8 %a, i8 0)
+  ret i8 %r
+}
+
+define i8 @test_i8_smin(i8 %a) nounwind {
+; CHECK-LABEL: test_i8_smin:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    sarb $7, %al
+; CHECK-NEXT:    andb %dil, %al
+; CHECK-NEXT:    retq
+  %r = call i8 @llvm.smin.i8(i8 %a, i8 0)
+  ret i8 %r
+}
+
+define i16 @test_i16_smax(i16 %a) nounwind {
+; CHECK-LABEL: test_i16_smax:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testw %di, %di
+; CHECK-NEXT:    cmovgl %edi, %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    retq
+  %r = call i16 @llvm.smax.i16(i16 %a, i16 0)
+  ret i16 %r
+}
+
+define i16 @test_i16_smin(i16 %a) nounwind {
+; CHECK-LABEL: test_i16_smin:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movswl %di, %eax
+; CHECK-NEXT:    sarl $15, %eax
+; CHECK-NEXT:    andl %edi, %eax
+; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
+; CHECK-NEXT:    retq
+  %r = call i16 @llvm.smin.i16(i16 %a, i16 0)
+  ret i16 %r
+}
 
 define i32 @test_i32_smax(i32 %a) nounwind {
 ; CHECK-NOBMI-LABEL: test_i32_smax:
