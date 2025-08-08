@@ -518,7 +518,6 @@ bool Sema::checkLiteralOperatorId(const CXXScopeSpec &SS,
   case NestedNameSpecifier::Global:
   case NestedNameSpecifier::Super:
   case NestedNameSpecifier::Namespace:
-  case NestedNameSpecifier::NamespaceAlias:
     return false;
   }
 
@@ -2021,7 +2020,7 @@ Sema::ActOnCXXNew(SourceLocation StartLoc, bool UseGlobal,
       return ExprError(Diag(Chunk.Loc, diag::err_array_new_needs_size)
         << D.getSourceRange());
 
-    ArraySize = static_cast<Expr*>(Chunk.Arr.NumElts);
+    ArraySize = Chunk.Arr.NumElts;
     D.DropFirstTypeObject();
   }
 
@@ -2032,7 +2031,7 @@ Sema::ActOnCXXNew(SourceLocation StartLoc, bool UseGlobal,
         break;
 
       DeclaratorChunk::ArrayTypeInfo &Array = D.getTypeObject(I).Arr;
-      if (Expr *NumElts = (Expr *)Array.NumElts) {
+      if (Expr *NumElts = Array.NumElts) {
         if (!NumElts->isTypeDependent() && !NumElts->isValueDependent()) {
           // FIXME: GCC permits constant folding here. We should either do so consistently
           // or not do so at all, rather than changing behavior in C++14 onwards.
@@ -2752,10 +2751,20 @@ static bool resolveAllocationOverloadInterior(
     if (Diagnose) {
       // If this is an allocation of the form 'new (p) X' for some object
       // pointer p (or an expression that will decay to such a pointer),
-      // diagnose the missing inclusion of <new>.
+      // diagnose the reason for the error.
       if (!R.isClassLookup() && Args.size() == 2 &&
           (Args[1]->getType()->isObjectPointerType() ||
            Args[1]->getType()->isArrayType())) {
+        const QualType Arg1Type = Args[1]->getType();
+        QualType UnderlyingType = S.Context.getBaseElementType(Arg1Type);
+        if (UnderlyingType->isPointerType())
+          UnderlyingType = UnderlyingType->getPointeeType();
+        if (UnderlyingType.isConstQualified()) {
+          S.Diag(Args[1]->getExprLoc(),
+                 diag::err_placement_new_into_const_qualified_storage)
+              << Arg1Type << Args[1]->getSourceRange();
+          return true;
+        }
         S.Diag(R.getNameLoc(), diag::err_need_header_before_placement_new)
             << R.getLookupName() << Range;
         // Listing the candidates is unlikely to be useful; skip it.
@@ -3452,11 +3461,11 @@ void Sema::DeclareGlobalAllocationFunction(DeclarationName Name,
     // non-templated allocation function we are trying to declare here.
     if (FunctionDecl *Func = dyn_cast<FunctionDecl>(*Alloc)) {
       if (Func->getNumParams() == Params.size()) {
-        llvm::SmallVector<QualType, 3> FuncParams;
-        for (auto *P : Func->parameters())
-          FuncParams.push_back(
-              Context.getCanonicalType(P->getType().getUnqualifiedType()));
-        if (llvm::ArrayRef(FuncParams) == Params) {
+        if (std::equal(Func->param_begin(), Func->param_end(), Params.begin(),
+                       Params.end(), [&](ParmVarDecl *D, QualType RT) {
+                         return Context.hasSameUnqualifiedType(D->getType(),
+                                                               RT);
+                       })) {
           // Make the function visible to name lookup, even if we found it in
           // an unimported module. It either is an implicitly-declared global
           // allocation function, or is suppressing that function.
@@ -3467,8 +3476,8 @@ void Sema::DeclareGlobalAllocationFunction(DeclarationName Name,
     }
   }
 
-  FunctionProtoType::ExtProtoInfo EPI(Context.getDefaultCallingConvention(
-      /*IsVariadic=*/false, /*IsCXXMethod=*/false, /*IsBuiltin=*/true));
+  FunctionProtoType::ExtProtoInfo EPI(
+      Context.getTargetInfo().getDefaultCallingConv());
 
   QualType BadAllocType;
   bool HasBadAllocExceptionSpec = Name.isAnyOperatorNew();
@@ -4086,8 +4095,7 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
       if (!PointeeRD->hasIrrelevantDestructor()) {
         if (CXXDestructorDecl *Dtor = LookupDestructor(PointeeRD)) {
           if (Dtor->isCalledByDelete(OperatorDelete)) {
-            MarkFunctionReferenced(StartLoc,
-                                   const_cast<CXXDestructorDecl *>(Dtor));
+            MarkFunctionReferenced(StartLoc, Dtor);
             if (DiagnoseUseOfDecl(Dtor, StartLoc))
               return ExprError();
           }

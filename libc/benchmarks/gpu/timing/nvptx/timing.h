@@ -9,14 +9,14 @@
 #ifndef LLVM_LIBC_UTILS_GPU_TIMING_NVPTX
 #define LLVM_LIBC_UTILS_GPU_TIMING_NVPTX
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/array.h"
+#include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/GPU/utils.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
-
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -46,7 +46,7 @@ template <typename F, typename T>
   T arg = storage;
 
   // Get the current timestamp from the clock.
-  gpu::memory_fence();
+  cpp::atomic_thread_fence(cpp::MemoryOrder::ACQ_REL);
   uint64_t start = gpu::processor_clock();
 
   // This forces the compiler to load the input argument and run the clock cycle
@@ -63,7 +63,7 @@ template <typename F, typename T>
   // Obtain the current timestamp after running the calculation and force
   // ordering.
   uint64_t stop = gpu::processor_clock();
-  gpu::memory_fence();
+  cpp::atomic_thread_fence(cpp::MemoryOrder::ACQ_REL);
   asm("" ::"r"(stop));
   volatile T output = result;
 
@@ -78,7 +78,7 @@ static LIBC_INLINE uint64_t latency(F f, T1 t1, T2 t2) {
   T1 arg = storage;
   T2 arg2 = storage2;
 
-  gpu::memory_fence();
+  cpp::atomic_thread_fence(cpp::MemoryOrder::ACQ_REL);
   uint64_t start = gpu::processor_clock();
 
   asm("" ::"llr"(start));
@@ -88,7 +88,7 @@ static LIBC_INLINE uint64_t latency(F f, T1 t1, T2 t2) {
   asm("or.b32 %[v_reg], %[v_reg], 0;" ::[v_reg] "r"(result));
 
   uint64_t stop = gpu::processor_clock();
-  gpu::memory_fence();
+  cpp::atomic_thread_fence(cpp::MemoryOrder::ACQ_REL);
   asm("" ::"r"(stop));
   volatile auto output = result;
 
@@ -101,7 +101,7 @@ template <typename F, typename T, size_t N>
 throughput(F f, const cpp::array<T, N> &inputs) {
   asm("" ::"r"(&inputs));
 
-  gpu::memory_fence();
+  cpp::atomic_thread_fence(cpp::MemoryOrder::ACQ_REL);
   uint64_t start = gpu::processor_clock();
 
   asm("" ::"llr"(start));
@@ -114,7 +114,7 @@ throughput(F f, const cpp::array<T, N> &inputs) {
   }
 
   uint64_t stop = gpu::processor_clock();
-  gpu::memory_fence();
+  cpp::atomic_thread_fence(cpp::MemoryOrder::ACQ_REL);
   asm("" ::"r"(stop));
   volatile auto output = result;
 
@@ -128,7 +128,7 @@ template <typename F, typename T, size_t N>
     F f, const cpp::array<T, N> &inputs1, const cpp::array<T, N> &inputs2) {
   asm("" ::"r"(&inputs1), "r"(&inputs2));
 
-  gpu::memory_fence();
+  cpp::atomic_thread_fence(cpp::MemoryOrder::ACQ_REL);
   uint64_t start = gpu::processor_clock();
 
   asm("" ::"llr"(start));
@@ -140,7 +140,7 @@ template <typename F, typename T, size_t N>
   }
 
   uint64_t stop = gpu::processor_clock();
-  gpu::memory_fence();
+  cpp::atomic_thread_fence(cpp::MemoryOrder::ACQ_REL);
   asm("" ::"r"(stop));
   volatile auto output = result;
 

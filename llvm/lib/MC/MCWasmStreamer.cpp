@@ -11,8 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCWasmStreamer.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -38,7 +36,7 @@ using namespace llvm;
 MCWasmStreamer::~MCWasmStreamer() = default; // anchor.
 
 void MCWasmStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {
-  auto *Symbol = cast<MCSymbolWasm>(S);
+  auto *Symbol = static_cast<MCSymbolWasm *>(S);
   MCObjectStreamer::emitLabel(Symbol, Loc);
 
   const MCSectionWasm &Section =
@@ -47,9 +45,9 @@ void MCWasmStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {
     Symbol->setTLS();
 }
 
-void MCWasmStreamer::emitLabelAtPos(MCSymbol *S, SMLoc Loc, MCDataFragment &F,
+void MCWasmStreamer::emitLabelAtPos(MCSymbol *S, SMLoc Loc, MCFragment &F,
                                     uint64_t Offset) {
-  auto *Symbol = cast<MCSymbolWasm>(S);
+  auto *Symbol = static_cast<MCSymbolWasm *>(S);
   MCObjectStreamer::emitLabelAtPos(Symbol, Loc, F, Offset);
 
   const MCSectionWasm &Section =
@@ -60,7 +58,7 @@ void MCWasmStreamer::emitLabelAtPos(MCSymbol *S, SMLoc Loc, MCDataFragment &F,
 
 void MCWasmStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   MCAssembler &Asm = getAssembler();
-  auto *SectionWasm = cast<MCSectionWasm>(Section);
+  auto *SectionWasm = static_cast<const MCSectionWasm *>(Section);
   const MCSymbol *Grp = SectionWasm->getGroup();
   if (Grp)
     Asm.registerSymbol(*Grp);
@@ -71,8 +69,7 @@ void MCWasmStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
 
 bool MCWasmStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
   assert(Attribute != MCSA_IndirectSymbol && "indirect symbols not supported");
-
-  auto *Symbol = cast<MCSymbolWasm>(S);
+  auto *Symbol = static_cast<MCSymbolWasm *>(S);
 
   // Adding a symbol attribute always introduces the symbol; note that an
   // important side effect of calling registerSymbol here is to register the
@@ -137,7 +134,7 @@ void MCWasmStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
 }
 
 void MCWasmStreamer::emitELFSize(MCSymbol *Symbol, const MCExpr *Value) {
-  cast<MCSymbolWasm>(Symbol)->setSize(Value);
+  static_cast<MCSymbolWasm *>(Symbol)->setSize(Value);
 }
 
 void MCWasmStreamer::emitLocalCommonSymbol(MCSymbol *S, uint64_t Size,

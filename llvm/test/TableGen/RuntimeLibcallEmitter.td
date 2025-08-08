@@ -95,8 +95,8 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK-NEXT:  __lshrdi3 = 4, // __lshrdi3
 // CHECK-NEXT:  bzero = 5, // bzero
 // CHECK-NEXT:  calloc = 6, // calloc
-// CHECK-NEXT:  sqrtl_f80 = 7, // sqrtl
-// CHECK-NEXT:  sqrtl_f128 = 8, // sqrtl
+// CHECK-NEXT:  sqrtl_f128 = 7, // sqrtl
+// CHECK-NEXT:  sqrtl_f80 = 8, // sqrtl
 // CHECK-NEXT:  NumLibcallImpls = 9
 // CHECK-NEXT: };
 // CHECK-NEXT: } // End namespace RTLIB
@@ -104,31 +104,40 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK-NEXT: #endif
 
 // CHECK: #ifdef GET_INIT_RUNTIME_LIBCALL_NAMES
-// CHECK-NEXT: const RTLIB::LibcallImpl llvm::RTLIB::RuntimeLibcallsInfo::DefaultLibcallImpls[RTLIB::UNKNOWN_LIBCALL + 1] = {
-// CHECK-NEXT:   RTLIB::Unsupported, // RTLIB::BZERO
-// CHECK-NEXT:   RTLIB::Unsupported, // RTLIB::CALLOC
-// CHECK-NEXT:   RTLIB::Unsupported, // RTLIB::MEMCPY
-// CHECK-NEXT:   RTLIB::Unsupported, // RTLIB::MEMSET
-// CHECK-NEXT:   RTLIB::__ashlsi3, // RTLIB::SHL_I32
-// CHECK-NEXT:   RTLIB::sqrtl_f80, // RTLIB::SQRT_F80
-// CHECK-NEXT:   RTLIB::sqrtl_f128, // RTLIB::SQRT_F128
-// CHECK-NEXT:   RTLIB::__lshrdi3, // RTLIB::SRL_I64
-// CHECK-NEXT:   RTLIB::Unsupported
-// CHECK-NEXT: };
 // CHECK-EMPTY:
-// CHECK-NEXT: const char *const llvm::RTLIB::RuntimeLibcallsInfo::LibCallImplNames[RTLIB::NumLibcallImpls] = {
-// CHECK-NEXT: nullptr, // RTLIB::Unsupported
-// CHECK-NEXT: "___memcpy", // RTLIB::___memcpy
-// CHECK-NEXT: "___memset", // RTLIB::___memset
-// CHECK-NEXT: "__ashlsi3", // RTLIB::__ashlsi3
-// CHECK-NEXT: "__lshrdi3", // RTLIB::__lshrdi3
-// CHECK-NEXT: "bzero", // RTLIB::bzero
-// CHECK-NEXT: "calloc", // RTLIB::calloc
-// CHECK-NEXT: "sqrtl", // RTLIB::sqrtl_f80
-// CHECK-NEXT: "sqrtl", // RTLIB::sqrtl_f128
+// CHECK-NEXT: #ifdef __GNUC__
+// CHECK-NEXT: #pragma GCC diagnostic push
+// CHECK-NEXT: #pragma GCC diagnostic ignored "-Woverlength-strings"
+// CHECK-NEXT: #endif
+// CHECK-NEXT:  constexpr char RTLIB::RuntimeLibcallsInfo::RuntimeLibcallImplNameTableStorage[] =
+// CHECK-NEXT:   "\0"
+// CHECK-NEXT:   "___memcpy\0"
+// CHECK-NEXT:   "___memset\0"
+// CHECK-NEXT:   "__ashlsi3\0"
+// CHECK-NEXT:   "__lshrdi3\0"
+// CHECK-NEXT:   "bzero\0"
+// CHECK-NEXT:   "calloc\0"
+// CHECK-NEXT:   "sqrtl\0"
+// CHECK-NEXT:   ;
+// CHECK-NEXT: #ifdef __GNUC__
+// CHECK-NEXT: #pragma GCC diagnostic pop
+// CHECK-NEXT: #endif
+// CHECK-EMPTY:
+// CHECK-NEXT: const llvm::StringTable
+// CHECK-NEXT: RTLIB::RuntimeLibcallsInfo::RuntimeLibcallImplNameTable = RuntimeLibcallImplNameTableStorage;
+// CHECK-EMPTY:
+// CHECK-NEXT: const uint16_t RTLIB::RuntimeLibcallsInfo::RuntimeLibcallNameOffsetTable[] = {
+// CHECK-NEXT:   0, //
+// CHECK-NEXT:   1, // ___memcpy
+// CHECK-NEXT:   11, // ___memset
+// CHECK-NEXT:   21, // __ashlsi3
+// CHECK-NEXT:   31, // __lshrdi3
+// CHECK-NEXT:   41, // bzero
+// CHECK-NEXT:   47, // calloc
+// CHECK-NEXT:   54, // sqrtl
+// CHECK-NEXT:   54, // sqrtl
 // CHECK-NEXT: };
-
-// CHECK: const RTLIB::Libcall llvm::RTLIB::RuntimeLibcallsInfo::ImplToLibcall[RTLIB::NumLibcallImpls] = {
+// CHECK-NEXT: const RTLIB::Libcall llvm::RTLIB::RuntimeLibcallsInfo::ImplToLibcall[RTLIB::NumLibcallImpls] = {
 // CHECK-NEXT: RTLIB::UNKNOWN_LIBCALL, // RTLIB::Unsupported
 // CHECK-NEXT: RTLIB::MEMCPY, // RTLIB::___memcpy
 // CHECK-NEXT: RTLIB::MEMSET, // RTLIB::___memset
@@ -136,8 +145,8 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK-NEXT: RTLIB::SRL_I64, // RTLIB::__lshrdi3
 // CHECK-NEXT: RTLIB::BZERO, // RTLIB::bzero
 // CHECK-NEXT: RTLIB::CALLOC, // RTLIB::calloc
-// CHECK-NEXT: RTLIB::SQRT_F80, // RTLIB::sqrtl_f80
 // CHECK-NEXT: RTLIB::SQRT_F128, // RTLIB::sqrtl_f128
+// CHECK-NEXT: RTLIB::SQRT_F80, // RTLIB::sqrtl_f80
 // CHECK-NEXT: };
 
 
@@ -236,7 +245,7 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK-EMPTY:
 // CHECK-NEXT:   return;
 // CHECK-NEXT: }
-// CHECK-NEXT:  initDefaultLibCallImpls();
+// CHECK-NEXT:  LLVM_DEBUG(dbgs() << "no system runtime library applied to target \'" << TT.str() << "\'\n");
 // CHECK-NEXT: }
 // CHECK-EMPTY:
 // CHECK: #endif

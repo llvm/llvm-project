@@ -610,6 +610,10 @@ public:
                                  TemplateArgumentLoc &Output,
                                  bool Uneval = false);
 
+  TemplateArgument
+  TransformNamedTemplateTemplateArgument(CXXScopeSpec &SS, TemplateName Name,
+                                         SourceLocation NameLoc);
+
   /// Transform the given set of template arguments.
   ///
   /// By default, this operation transforms all of the template arguments
@@ -4621,19 +4625,9 @@ NestedNameSpecifierLoc TreeTransform<Derived>::TransformNestedNameSpecifierLoc(
     }
 
     case NestedNameSpecifier::Namespace: {
-      NamespaceDecl *NS =
-          cast_or_null<NamespaceDecl>(getDerived().TransformDecl(
-              Q.getLocalBeginLoc(), QNNS->getAsNamespace()));
+      auto *NS = cast<NamespaceBaseDecl>(getDerived().TransformDecl(
+          Q.getLocalBeginLoc(), QNNS->getAsNamespace()));
       SS.Extend(SemaRef.Context, NS, Q.getLocalBeginLoc(), Q.getLocalEndLoc());
-      break;
-    }
-
-    case NestedNameSpecifier::NamespaceAlias: {
-      NamespaceAliasDecl *Alias =
-          cast_or_null<NamespaceAliasDecl>(getDerived().TransformDecl(
-              Q.getLocalBeginLoc(), QNNS->getAsNamespaceAlias()));
-      SS.Extend(SemaRef.Context, Alias, Q.getLocalBeginLoc(),
-                Q.getLocalEndLoc());
       break;
     }
 
@@ -4853,6 +4847,15 @@ TreeTransform<Derived>::TransformTemplateName(CXXScopeSpec &SS,
   llvm_unreachable("overloaded function decl survived to here");
 }
 
+template <typename Derived>
+TemplateArgument TreeTransform<Derived>::TransformNamedTemplateTemplateArgument(
+    CXXScopeSpec &SS, TemplateName Name, SourceLocation NameLoc) {
+  TemplateName TN = getDerived().TransformTemplateName(SS, Name, NameLoc);
+  if (TN.isNull())
+    return TemplateArgument();
+  return TemplateArgument(TN);
+}
+
 template<typename Derived>
 void TreeTransform<Derived>::InventTemplateArgumentLoc(
                                          const TemplateArgument &Arg,
@@ -4937,13 +4940,13 @@ bool TreeTransform<Derived>::TransformTemplateArgument(
 
     CXXScopeSpec SS;
     SS.Adopt(QualifierLoc);
-    TemplateName Template = getDerived().TransformTemplateName(
-        SS, Arg.getAsTemplate(), Input.getTemplateNameLoc());
-    if (Template.isNull())
-      return true;
 
-    Output = TemplateArgumentLoc(SemaRef.Context, TemplateArgument(Template),
-                                 QualifierLoc, Input.getTemplateNameLoc());
+    TemplateArgument Out = getDerived().TransformNamedTemplateTemplateArgument(
+        SS, Arg.getAsTemplate(), Input.getTemplateNameLoc());
+    if (Out.isNull())
+      return true;
+    Output = TemplateArgumentLoc(SemaRef.Context, Out, QualifierLoc,
+                                 Input.getTemplateNameLoc());
     return false;
   }
 
@@ -5039,10 +5042,8 @@ template<typename InputIterator>
 bool TreeTransform<Derived>::TransformTemplateArguments(
     InputIterator First, InputIterator Last, TemplateArgumentListInfo &Outputs,
     bool Uneval) {
-  for (; First != Last; ++First) {
+  for (TemplateArgumentLoc In : llvm::make_range(First, Last)) {
     TemplateArgumentLoc Out;
-    TemplateArgumentLoc In = *First;
-
     if (In.getArgument().getKind() == TemplateArgument::Pack) {
       // Unpack argument packs, which we translate them into separate
       // arguments.
@@ -5052,11 +5053,10 @@ bool TreeTransform<Derived>::TransformTemplateArguments(
       typedef TemplateArgumentLocInventIterator<Derived,
                                                 TemplateArgument::pack_iterator>
         PackLocIterator;
-      if (TransformTemplateArguments(PackLocIterator(*this,
-                                                 In.getArgument().pack_begin()),
-                                     PackLocIterator(*this,
-                                                   In.getArgument().pack_end()),
-                                     Outputs, Uneval))
+      if (TransformTemplateArguments(
+              PackLocIterator(*this, In.getArgument().pack_begin()),
+              PackLocIterator(*this, In.getArgument().pack_end()), Outputs,
+              Uneval))
         return true;
 
       continue;
@@ -7253,6 +7253,12 @@ QualType TreeTransform<Derived>::TransformDependentBitIntType(
     NewTL.setNameLoc(TL.getNameLoc());
   }
   return Result;
+}
+
+template <typename Derived>
+QualType TreeTransform<Derived>::TransformPredefinedSugarType(
+    TypeLocBuilder &TLB, PredefinedSugarTypeLoc TL) {
+  llvm_unreachable("This type does not need to be transformed.");
 }
 
   /// Simple iterator that traverses the template arguments in a
@@ -11734,20 +11740,26 @@ class OpenACCClauseTransform final
   SemaOpenACC::OpenACCParsedClause &ParsedClause;
   OpenACCClause *NewClause = nullptr;
 
+  ExprResult VisitVar(Expr *VarRef) {
+    ExprResult Res = Self.TransformExpr(VarRef);
+
+    if (!Res.isUsable())
+      return Res;
+
+    Res = Self.getSema().OpenACC().ActOnVar(ParsedClause.getDirectiveKind(),
+                                            ParsedClause.getClauseKind(),
+                                            Res.get());
+
+    return Res;
+  }
+
   llvm::SmallVector<Expr *> VisitVarList(ArrayRef<Expr *> VarList) {
     llvm::SmallVector<Expr *> InstantiatedVarList;
     for (Expr *CurVar : VarList) {
-      ExprResult Res = Self.TransformExpr(CurVar);
+      ExprResult VarRef = VisitVar(CurVar);
 
-      if (!Res.isUsable())
-        continue;
-
-      Res = Self.getSema().OpenACC().ActOnVar(ParsedClause.getDirectiveKind(),
-                                              ParsedClause.getClauseKind(),
-                                              Res.get());
-
-      if (Res.isUsable())
-        InstantiatedVarList.push_back(Res.get());
+      if (VarRef.isUsable())
+        InstantiatedVarList.push_back(VarRef.get());
     }
 
     return InstantiatedVarList;
@@ -11874,12 +11886,34 @@ void OpenACCClauseTransform<Derived>::VisitNumGangsClause(
 template <typename Derived>
 void OpenACCClauseTransform<Derived>::VisitPrivateClause(
     const OpenACCPrivateClause &C) {
-  ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
+  llvm::SmallVector<Expr *> InstantiatedVarList;
+  llvm::SmallVector<VarDecl *> InitRecipes;
+
+  for (const auto [RefExpr, InitRecipe] :
+       llvm::zip(C.getVarList(), C.getInitRecipes())) {
+    ExprResult VarRef = VisitVar(RefExpr);
+
+    if (VarRef.isUsable()) {
+      InstantiatedVarList.push_back(VarRef.get());
+
+      // We only have to create a new one if it is dependent, and Sema won't
+      // make one of these unless the type is non-dependent.
+      if (InitRecipe)
+        InitRecipes.push_back(InitRecipe);
+      else
+        InitRecipes.push_back(
+            Self.getSema()
+                .OpenACC()
+                .CreateInitRecipe(OpenACCClauseKind::Private, VarRef.get())
+                .first);
+    }
+  }
+  ParsedClause.setVarListDetails(InstantiatedVarList,
                                  OpenACCModifierKind::Invalid);
 
   NewClause = OpenACCPrivateClause::Create(
       Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
-      ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
+      ParsedClause.getLParenLoc(), ParsedClause.getVarList(), InitRecipes,
       ParsedClause.getEndLoc());
 }
 
@@ -11910,12 +11944,31 @@ void OpenACCClauseTransform<Derived>::VisitDeviceClause(
 template <typename Derived>
 void OpenACCClauseTransform<Derived>::VisitFirstPrivateClause(
     const OpenACCFirstPrivateClause &C) {
-  ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
+  llvm::SmallVector<Expr *> InstantiatedVarList;
+  llvm::SmallVector<OpenACCFirstPrivateRecipe> InitRecipes;
+
+  for (const auto [RefExpr, InitRecipe] :
+       llvm::zip(C.getVarList(), C.getInitRecipes())) {
+    ExprResult VarRef = VisitVar(RefExpr);
+
+    if (VarRef.isUsable()) {
+      InstantiatedVarList.push_back(VarRef.get());
+
+      // We only have to create a new one if it is dependent, and Sema won't
+      // make one of these unless the type is non-dependent.
+      if (InitRecipe.RecipeDecl)
+        InitRecipes.push_back(InitRecipe);
+      else
+        InitRecipes.push_back(Self.getSema().OpenACC().CreateInitRecipe(
+            OpenACCClauseKind::FirstPrivate, VarRef.get()));
+    }
+  }
+  ParsedClause.setVarListDetails(InstantiatedVarList,
                                  OpenACCModifierKind::Invalid);
 
   NewClause = OpenACCFirstPrivateClause::Create(
       Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
-      ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
+      ParsedClause.getLParenLoc(), ParsedClause.getVarList(), InitRecipes,
       ParsedClause.getEndLoc());
 }
 
@@ -14034,9 +14087,14 @@ TreeTransform<Derived>::TransformCXXOperatorCallExpr(CXXOperatorCallExpr *E) {
     if (Object.isInvalid())
       return ExprError();
 
-    // FIXME: Poor location information
-    SourceLocation FakeLParenLoc = SemaRef.getLocForEndOfToken(
-        static_cast<Expr *>(Object.get())->getEndLoc());
+    // FIXME: Poor location information. Also, if the location for the end of
+    // the token is within a macro expansion, getLocForEndOfToken() will return
+    // an invalid source location. If that happens and we have an otherwise
+    // valid end location, use the valid one instead of the invalid one.
+    SourceLocation EndLoc = static_cast<Expr *>(Object.get())->getEndLoc();
+    SourceLocation FakeLParenLoc = SemaRef.getLocForEndOfToken(EndLoc);
+    if (FakeLParenLoc.isInvalid() && EndLoc.isValid())
+      FakeLParenLoc = EndLoc;
 
     // Transform the call arguments.
     SmallVector<Expr*, 8> Args;

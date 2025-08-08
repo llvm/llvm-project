@@ -1629,20 +1629,20 @@ QualType CallExpr::getCallReturnType(const ASTContext &Ctx) const {
   return FnType->getReturnType();
 }
 
-std::pair<const NamedDecl *, const Attr *>
-CallExpr::getUnusedResultAttr(const ASTContext &Ctx) const {
+std::pair<const NamedDecl *, const WarnUnusedResultAttr *>
+Expr::getUnusedResultAttrImpl(const Decl *Callee, QualType ReturnType) {
   // If the callee is marked nodiscard, return that attribute
-  if (const Decl *D = getCalleeDecl())
-    if (const auto *A = D->getAttr<WarnUnusedResultAttr>())
+  if (Callee != nullptr)
+    if (const auto *A = Callee->getAttr<WarnUnusedResultAttr>())
       return {nullptr, A};
 
   // If the return type is a struct, union, or enum that is marked nodiscard,
   // then return the return type attribute.
-  if (const TagDecl *TD = getCallReturnType(Ctx)->getAsTagDecl())
+  if (const TagDecl *TD = ReturnType->getAsTagDecl())
     if (const auto *A = TD->getAttr<WarnUnusedResultAttr>())
       return {TD, A};
 
-  for (const auto *TD = getCallReturnType(Ctx)->getAs<TypedefType>(); TD;
+  for (const auto *TD = ReturnType->getAs<TypedefType>(); TD;
        TD = TD->desugar()->getAs<TypedefType>())
     if (const auto *A = TD->getDecl()->getAttr<WarnUnusedResultAttr>())
       return {TD->getDecl(), A};
@@ -2844,12 +2844,11 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
       return true;
     }
 
-    if (const ObjCMethodDecl *MD = ME->getMethodDecl())
-      if (MD->hasAttr<WarnUnusedResultAttr>()) {
-        WarnE = this;
-        Loc = getExprLoc();
-        return true;
-      }
+    if (ME->hasUnusedResultAttr(Ctx)) {
+      WarnE = this;
+      Loc = getExprLoc();
+      return true;
+    }
 
     return false;
   }
@@ -3393,6 +3392,10 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
     //     an anonymous union, in declaration order.
     const InitListExpr *ILE = cast<InitListExpr>(this);
     assert(ILE->isSemanticForm() && "InitListExpr must be in semantic form");
+
+    if (ILE->isTransparent())
+      return ILE->getInit(0)->isConstantInitializer(Ctx, false, Culprit);
+
     if (ILE->getType()->isArrayType()) {
       unsigned numInits = ILE->getNumInits();
       for (unsigned i = 0; i < numInits; i++) {
@@ -4230,8 +4233,15 @@ bool Expr::isSameComparisonOperand(const Expr* E1, const Expr* E2) {
       // template parameters.
       const auto *DRE1 = cast<DeclRefExpr>(E1);
       const auto *DRE2 = cast<DeclRefExpr>(E2);
-      return DRE1->isPRValue() && DRE2->isPRValue() &&
-             DRE1->getDecl() == DRE2->getDecl();
+
+      if (DRE1->getDecl() != DRE2->getDecl())
+        return false;
+
+      if ((DRE1->isPRValue() && DRE2->isPRValue()) ||
+          (DRE1->isLValue() && DRE2->isLValue()))
+        return true;
+
+      return false;
     }
     case ImplicitCastExprClass: {
       // Peel off implicit casts.
@@ -4241,7 +4251,8 @@ bool Expr::isSameComparisonOperand(const Expr* E1, const Expr* E2) {
         if (!ICE1 || !ICE2)
           return false;
         if (ICE1->getCastKind() != ICE2->getCastKind())
-          return false;
+          return isSameComparisonOperand(ICE1->IgnoreParenImpCasts(),
+                                         ICE2->IgnoreParenImpCasts());
         E1 = ICE1->getSubExpr()->IgnoreParens();
         E2 = ICE2->getSubExpr()->IgnoreParens();
         // The final cast must be one of these types.

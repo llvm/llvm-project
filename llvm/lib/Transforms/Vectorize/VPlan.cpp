@@ -951,20 +951,9 @@ VPlan::~VPlan() {
     delete BackedgeTakenCount;
 }
 
-void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
-                             VPTransformState &State) {
-  Type *TCTy = TripCountV->getType();
-  // Check if the backedge taken count is needed, and if so build it.
-  if (BackedgeTakenCount && BackedgeTakenCount->getNumUsers()) {
-    IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
-    auto *TCMO = Builder.CreateSub(TripCountV, ConstantInt::get(TCTy, 1),
-                                   "trip.count.minus.1");
-    BackedgeTakenCount->setUnderlyingValue(TCMO);
-  }
-
-  VectorTripCount.setUnderlyingValue(VectorTripCountV);
-
+void VPlan::prepareToExecute(VPTransformState &State) {
   IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
+  Type *TCTy = VPTypeAnalysis(*this).inferScalarType(getTripCount());
   // FIXME: Model VF * UF computation completely in VPlan.
   unsigned UF = getUF();
   if (VF.getNumUsers()) {
@@ -1043,21 +1032,6 @@ void VPlan::execute(VPTransformState *State) {
     if (isa<VPWidenPHIRecipe>(&R))
       continue;
 
-    if (auto *WidenPhi = dyn_cast<VPWidenPointerInductionRecipe>(&R)) {
-      assert(!WidenPhi->onlyScalarsGenerated(State->VF.isScalable()) &&
-             "recipe generating only scalars should have been replaced");
-      auto *GEP = cast<GetElementPtrInst>(State->get(WidenPhi));
-      PHINode *Phi = cast<PHINode>(GEP->getPointerOperand());
-
-      Phi->setIncomingBlock(1, VectorLatchBB);
-
-      // Move the last step to the end of the latch block. This ensures
-      // consistent placement of all induction updates.
-      Instruction *Inc = cast<Instruction>(Phi->getIncomingValue(1));
-      Inc->moveBefore(std::prev(VectorLatchBB->getTerminator()->getIterator()));
-      continue;
-    }
-
     auto *PhiR = cast<VPSingleDefRecipe>(&R);
     // VPInstructions currently model scalar Phis only.
     bool NeedsScalar = isa<VPInstruction>(PhiR) ||
@@ -1074,12 +1048,17 @@ void VPlan::execute(VPTransformState *State) {
 
 InstructionCost VPlan::cost(ElementCount VF, VPCostContext &Ctx) {
   // For now only return the cost of the vector loop region, ignoring any other
-  // blocks, like the preheader or middle blocks.
+  // blocks, like the preheader or middle blocks, expect for checking them for
+  // recipes with invalid costs.
   InstructionCost Cost = getVectorLoopRegion()->cost(VF, Ctx);
 
-  // If any instructions in the middle block are invalid return invalid.
-  // TODO: Remove once no VPlans with VF == vscale x 1 and first-order recurrences are created.
-  if (!getMiddleBlock()->cost(VF, Ctx).isValid())
+  // If the cost of the loop region is invalid or any recipe in the skeleton
+  // outside loop regions are invalid return an invalid cost.
+  if (!Cost.isValid() || any_of(VPBlockUtils::blocksOnly<VPBasicBlock>(
+                                    vp_depth_first_shallow(getEntry())),
+                                [&VF, &Ctx](VPBasicBlock *VPBB) {
+                                  return !VPBB->cost(VF, Ctx).isValid();
+                                }))
     return InstructionCost::getInvalid();
 
   return Cost;

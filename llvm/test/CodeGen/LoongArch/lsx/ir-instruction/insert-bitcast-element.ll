@@ -4,8 +4,6 @@
 define <4 x float> @insert_bitcast_v4f32(<4 x float> %a, i32 %b) nounwind {
 ; CHECK-LABEL: insert_bitcast_v4f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movgr2fr.w $fa1, $a0
-; CHECK-NEXT:    movfr2gr.s $a0, $fa1
 ; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 1
 ; CHECK-NEXT:    ret
 entry:
@@ -17,8 +15,6 @@ entry:
 define <2 x double> @insert_bitcast_v2f64(<2 x double> %a, i64 %b) nounwind {
 ; CHECK-LABEL: insert_bitcast_v2f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movgr2fr.d $fa1, $a0
-; CHECK-NEXT:    movfr2gr.d $a0, $fa1
 ; CHECK-NEXT:    vinsgr2vr.d $vr0, $a0, 1
 ; CHECK-NEXT:    ret
 entry:

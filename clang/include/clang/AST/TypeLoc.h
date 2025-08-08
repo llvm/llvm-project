@@ -2284,7 +2284,7 @@ public:
     return nullptr;
   }
 
-  ConceptDecl *getNamedConcept() const {
+  TemplateDecl *getNamedConcept() const {
     if (const auto *CR = getConceptReference())
       return CR->getNamedConcept();
     return nullptr;
@@ -2781,6 +2781,16 @@ public:
   SourceRange getSourceRange() const LLVM_READONLY {
     return SourceRange(Loc, Loc);
   }
+};
+
+struct PredefinedSugarTypeLocInfo {}; // Nothing.
+
+class PredefinedSugarTypeLoc final
+    : public ConcreteTypeLoc<UnqualTypeLoc, PredefinedSugarTypeLoc,
+                             PredefinedSugarType, PredefinedSugarTypeLocInfo> {
+public:
+  void initializeLocal(ASTContext &Context, SourceLocation loc) {}
+  SourceRange getLocalSourceRange() const { return {}; }
 };
 
 } // namespace clang

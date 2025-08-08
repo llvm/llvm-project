@@ -582,7 +582,7 @@ class TemplateDiff {
   /// IsBold - Keeps track of the bold formatting for the output string.
   bool IsBold;
 
-  /// DiffTree - A tree representation the differences between two types.
+  /// DiffTree - A tree representation of the differences between two types.
   class DiffTree {
   public:
     /// DiffKind - The difference in a DiffNode.  Fields of
@@ -802,7 +802,7 @@ class TemplateDiff {
       CurrentNode = FlatTree[CurrentNode].ParentNode;
     }
 
-    /// AddNode - Adds a child node to the current node, then sets that node
+    /// AddNode - Adds a child node to the current node, then sets that
     /// node as the current node.
     void AddNode() {
       assert(FlatTree[CurrentNode].Kind == Template &&
@@ -937,12 +937,12 @@ class TemplateDiff {
       return FlatTree[ReadNode].ToArgInfo.IsDefault;
     }
 
-    /// NodeIsSame - Returns true the arguments are the same.
+    /// NodeIsSame - Returns true if the arguments are the same.
     bool NodeIsSame() {
       return FlatTree[ReadNode].Same;
     }
 
-    /// HasChildrend - Returns true if the node has children.
+    /// HasChildren - Returns true if the node has children.
     bool HasChildren() {
       return FlatTree[ReadNode].ChildNode != 0;
     }
@@ -982,7 +982,7 @@ class TemplateDiff {
 
   /// TSTiterator - a pair of iterators that walks the
   /// TemplateSpecializationType and the desugared TemplateSpecializationType.
-  /// The deseguared TemplateArgument should provide the canonical argument
+  /// The desugared TemplateArgument should provide the canonical argument
   /// for comparisons.
   class TSTiterator {
     typedef const TemplateArgument& reference;
@@ -993,7 +993,7 @@ class TemplateDiff {
     /// parameter packs in order with the rest of the TemplateArguments.
     struct InternalIterator {
       /// TST - the template specialization whose arguments this iterator
-      /// traverse over.
+      /// traverses over.
       const TemplateSpecializationType *TST;
 
       /// Index - the index of the template argument in TST.

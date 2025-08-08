@@ -44,8 +44,8 @@ unsigned VEELFObjectWriter::getRelocType(const MCFixup &Fixup,
   case VE::S_TLS_GD_LO32:
   case VE::S_TPOFF_HI32:
   case VE::S_TPOFF_LO32:
-    if (auto *SA = Target.getAddSym())
-      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
+    if (auto *SA = const_cast<MCSymbol *>(Target.getAddSym()))
+      static_cast<MCSymbolELF *>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;
@@ -56,7 +56,7 @@ unsigned VEELFObjectWriter::getRelocType(const MCFixup &Fixup,
   }
 
   if (IsPCRel) {
-    switch (Fixup.getTargetKind()) {
+    switch (Fixup.getKind()) {
     default:
       reportError(Fixup.getLoc(), "Unsupported pc-relative fixup kind");
       return ELF::R_VE_NONE;
@@ -84,7 +84,7 @@ unsigned VEELFObjectWriter::getRelocType(const MCFixup &Fixup,
     }
   }
 
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   default:
     reportError(Fixup.getLoc(), "Unknown ELF relocation type");
     return ELF::R_VE_NONE;

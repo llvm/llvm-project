@@ -206,7 +206,7 @@ define void @sw_ri(i32* %a, i32 %b, i32 %c) {
   ret void
 }
 
-define i8 @lrb_anyext(ptr %a, i64 %b) {
+define i8 @lrb_anyext(ptr %a, i32 %b) {
 ; RV32I-LABEL: lrb_anyext:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    add a0, a0, a1
@@ -223,175 +223,106 @@ define i8 @lrb_anyext(ptr %a, i64 %b) {
 ; RV32IZBAXQCISLS:       # %bb.0:
 ; RV32IZBAXQCISLS-NEXT:    qc.lrbu a0, a0, a1, 0
 ; RV32IZBAXQCISLS-NEXT:    ret
-  %1 = getelementptr i8, ptr %a, i64 %b
+  %1 = getelementptr i8, ptr %a, i32 %b
   %2 = load i8, ptr %1, align 1
   ret i8 %2
 }
 
-define i64 @lrb(ptr %a, i64 %b) {
+define i32 @lrb(ptr %a, i32 %b) {
 ; RV32I-LABEL: lrb:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    add a0, a0, a1
-; RV32I-NEXT:    lb a1, 0(a0)
-; RV32I-NEXT:    srai a2, a1, 31
-; RV32I-NEXT:    add a0, a1, a1
-; RV32I-NEXT:    sltu a1, a0, a1
-; RV32I-NEXT:    add a2, a2, a2
-; RV32I-NEXT:    add a1, a2, a1
+; RV32I-NEXT:    lb a0, 0(a0)
+; RV32I-NEXT:    add a0, a0, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV32IZBA-LABEL: lrb:
 ; RV32IZBA:       # %bb.0:
 ; RV32IZBA-NEXT:    add a0, a0, a1
-; RV32IZBA-NEXT:    lb a1, 0(a0)
-; RV32IZBA-NEXT:    srai a2, a1, 31
-; RV32IZBA-NEXT:    add a0, a1, a1
-; RV32IZBA-NEXT:    sltu a1, a0, a1
-; RV32IZBA-NEXT:    add a2, a2, a2
-; RV32IZBA-NEXT:    add a1, a2, a1
+; RV32IZBA-NEXT:    lb a0, 0(a0)
+; RV32IZBA-NEXT:    add a0, a0, a0
 ; RV32IZBA-NEXT:    ret
 ;
 ; RV32IZBAXQCISLS-LABEL: lrb:
 ; RV32IZBAXQCISLS:       # %bb.0:
-; RV32IZBAXQCISLS-NEXT:    qc.lrb a1, a0, a1, 0
-; RV32IZBAXQCISLS-NEXT:    srai a2, a1, 31
-; RV32IZBAXQCISLS-NEXT:    add a0, a1, a1
-; RV32IZBAXQCISLS-NEXT:    sltu a1, a0, a1
-; RV32IZBAXQCISLS-NEXT:    add a2, a2, a2
-; RV32IZBAXQCISLS-NEXT:    add a1, a2, a1
+; RV32IZBAXQCISLS-NEXT:    qc.lrb a0, a0, a1, 0
+; RV32IZBAXQCISLS-NEXT:    add a0, a0, a0
 ; RV32IZBAXQCISLS-NEXT:    ret
-  %1 = getelementptr i8, ptr %a, i64 %b
+  %1 = getelementptr i8, ptr %a, i32 %b
   %2 = load i8, ptr %1, align 1
-  %3 = sext i8 %2 to i64
-  %4 = add i64 %3, %3
-  ret i64 %4
+  %3 = sext i8 %2 to i32
+  %4 = add i32 %3, %3
+  ret i32 %4
 }
 
-define i8 @lurb_anyext(ptr %a, i32 %b) {
-; RV32I-LABEL: lurb_anyext:
+define i32 @lrbu(ptr %a, i32 %b) {
+; RV32I-LABEL: lrbu:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    lbu a0, 0(a0)
+; RV32I-NEXT:    add a0, a0, a0
 ; RV32I-NEXT:    ret
 ;
-; RV32IZBA-LABEL: lurb_anyext:
+; RV32IZBA-LABEL: lrbu:
 ; RV32IZBA:       # %bb.0:
 ; RV32IZBA-NEXT:    add a0, a0, a1
 ; RV32IZBA-NEXT:    lbu a0, 0(a0)
+; RV32IZBA-NEXT:    add a0, a0, a0
 ; RV32IZBA-NEXT:    ret
 ;
-; RV32IZBAXQCISLS-LABEL: lurb_anyext:
+; RV32IZBAXQCISLS-LABEL: lrbu:
 ; RV32IZBAXQCISLS:       # %bb.0:
 ; RV32IZBAXQCISLS-NEXT:    qc.lrbu a0, a0, a1, 0
+; RV32IZBAXQCISLS-NEXT:    add a0, a0, a0
 ; RV32IZBAXQCISLS-NEXT:    ret
-  %1 = zext i32 %b to i64
-  %2 = getelementptr i8, ptr %a, i64 %1
-  %3 = load i8, ptr %2, align 1
-  ret i8 %3
+  %1 = getelementptr i8, ptr %a, i32 %b
+  %2 = load i8, ptr %1, align 1
+  %3 = zext i8 %2 to i32
+  %4 = add i32 %3, %3
+  ret i32 %4
 }
 
-define i64 @lurb(ptr %a, i32 %b) {
-; RV32I-LABEL: lurb:
+define i64 @lrd(ptr %a, i32 %b) {
+; RV32I-LABEL: lrd:
 ; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a1, a1, 3
 ; RV32I-NEXT:    add a0, a0, a1
-; RV32I-NEXT:    lb a1, 0(a0)
-; RV32I-NEXT:    srai a2, a1, 31
+; RV32I-NEXT:    lw a1, 0(a0)
+; RV32I-NEXT:    lw a2, 4(a0)
 ; RV32I-NEXT:    add a0, a1, a1
 ; RV32I-NEXT:    sltu a1, a0, a1
 ; RV32I-NEXT:    add a2, a2, a2
 ; RV32I-NEXT:    add a1, a2, a1
 ; RV32I-NEXT:    ret
 ;
-; RV32IZBA-LABEL: lurb:
+; RV32IZBA-LABEL: lrd:
 ; RV32IZBA:       # %bb.0:
-; RV32IZBA-NEXT:    add a0, a0, a1
-; RV32IZBA-NEXT:    lb a1, 0(a0)
-; RV32IZBA-NEXT:    srai a2, a1, 31
+; RV32IZBA-NEXT:    sh3add a0, a1, a0
+; RV32IZBA-NEXT:    lw a1, 0(a0)
+; RV32IZBA-NEXT:    lw a2, 4(a0)
 ; RV32IZBA-NEXT:    add a0, a1, a1
 ; RV32IZBA-NEXT:    sltu a1, a0, a1
 ; RV32IZBA-NEXT:    add a2, a2, a2
 ; RV32IZBA-NEXT:    add a1, a2, a1
 ; RV32IZBA-NEXT:    ret
 ;
-; RV32IZBAXQCISLS-LABEL: lurb:
+; RV32IZBAXQCISLS-LABEL: lrd:
 ; RV32IZBAXQCISLS:       # %bb.0:
-; RV32IZBAXQCISLS-NEXT:    qc.lrb a1, a0, a1, 0
-; RV32IZBAXQCISLS-NEXT:    srai a2, a1, 31
+; RV32IZBAXQCISLS-NEXT:    sh3add a0, a1, a0
+; RV32IZBAXQCISLS-NEXT:    lw a1, 0(a0)
+; RV32IZBAXQCISLS-NEXT:    lw a2, 4(a0)
 ; RV32IZBAXQCISLS-NEXT:    add a0, a1, a1
 ; RV32IZBAXQCISLS-NEXT:    sltu a1, a0, a1
 ; RV32IZBAXQCISLS-NEXT:    add a2, a2, a2
 ; RV32IZBAXQCISLS-NEXT:    add a1, a2, a1
 ; RV32IZBAXQCISLS-NEXT:    ret
-  %1 = zext i32 %b to i64
-  %2 = getelementptr i8, ptr %a, i64 %1
-  %3 = load i8, ptr %2, align 1
-  %4 = sext i8 %3 to i64
-  %5 = add i64 %4, %4
-  ret i64 %5
+  %1 = getelementptr i64, ptr %a, i32 %b
+  %2 = load i64, ptr %1, align 8
+  %3 = add i64 %2, %2
+  ret i64 %3
 }
 
-define i64 @lrbu(ptr %a, i64 %b) {
-; RV32I-LABEL: lrbu:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    add a0, a0, a1
-; RV32I-NEXT:    lbu a1, 0(a0)
-; RV32I-NEXT:    add a0, a1, a1
-; RV32I-NEXT:    sltu a1, a0, a1
-; RV32I-NEXT:    ret
-;
-; RV32IZBA-LABEL: lrbu:
-; RV32IZBA:       # %bb.0:
-; RV32IZBA-NEXT:    add a0, a0, a1
-; RV32IZBA-NEXT:    lbu a1, 0(a0)
-; RV32IZBA-NEXT:    add a0, a1, a1
-; RV32IZBA-NEXT:    sltu a1, a0, a1
-; RV32IZBA-NEXT:    ret
-;
-; RV32IZBAXQCISLS-LABEL: lrbu:
-; RV32IZBAXQCISLS:       # %bb.0:
-; RV32IZBAXQCISLS-NEXT:    qc.lrbu a1, a0, a1, 0
-; RV32IZBAXQCISLS-NEXT:    add a0, a1, a1
-; RV32IZBAXQCISLS-NEXT:    sltu a1, a0, a1
-; RV32IZBAXQCISLS-NEXT:    ret
-  %1 = getelementptr i8, ptr %a, i64 %b
-  %2 = load i8, ptr %1, align 1
-  %3 = zext i8 %2 to i64
-  %4 = add i64 %3, %3
-  ret i64 %4
-}
-
-define i64 @lurbu(ptr %a, i32 %b) {
-; RV32I-LABEL: lurbu:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    add a0, a0, a1
-; RV32I-NEXT:    lbu a1, 0(a0)
-; RV32I-NEXT:    add a0, a1, a1
-; RV32I-NEXT:    sltu a1, a0, a1
-; RV32I-NEXT:    ret
-;
-; RV32IZBA-LABEL: lurbu:
-; RV32IZBA:       # %bb.0:
-; RV32IZBA-NEXT:    add a0, a0, a1
-; RV32IZBA-NEXT:    lbu a1, 0(a0)
-; RV32IZBA-NEXT:    add a0, a1, a1
-; RV32IZBA-NEXT:    sltu a1, a0, a1
-; RV32IZBA-NEXT:    ret
-;
-; RV32IZBAXQCISLS-LABEL: lurbu:
-; RV32IZBAXQCISLS:       # %bb.0:
-; RV32IZBAXQCISLS-NEXT:    qc.lrbu a1, a0, a1, 0
-; RV32IZBAXQCISLS-NEXT:    add a0, a1, a1
-; RV32IZBAXQCISLS-NEXT:    sltu a1, a0, a1
-; RV32IZBAXQCISLS-NEXT:    ret
-  %1 = zext i32 %b to i64
-  %2 = getelementptr i8, ptr %a, i64 %1
-  %3 = load i8, ptr %2, align 1
-  %4 = zext i8 %3 to i64
-  %5 = add i64 %4, %4
-  ret i64 %5
-}
-
-define i64 @lrd_2(ptr %a, i64 %b) {
+define i64 @lrd_2(ptr %a, i32 %b) {
 ; RV32I-LABEL: lrd_2:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slli a1, a1, 3
@@ -417,76 +348,142 @@ define i64 @lrd_2(ptr %a, i64 %b) {
 ;
 ; RV32IZBAXQCISLS-LABEL: lrd_2:
 ; RV32IZBAXQCISLS:       # %bb.0:
-; RV32IZBAXQCISLS-NEXT:    addi a2, a0, 96
-; RV32IZBAXQCISLS-NEXT:    qc.lrw a2, a2, a1, 3
-; RV32IZBAXQCISLS-NEXT:    addi a0, a0, 100
-; RV32IZBAXQCISLS-NEXT:    qc.lrw a1, a0, a1, 3
-; RV32IZBAXQCISLS-NEXT:    add a0, a2, a2
-; RV32IZBAXQCISLS-NEXT:    sltu a2, a0, a2
-; RV32IZBAXQCISLS-NEXT:    add a1, a1, a1
-; RV32IZBAXQCISLS-NEXT:    add a1, a1, a2
+; RV32IZBAXQCISLS-NEXT:    sh3add a0, a1, a0
+; RV32IZBAXQCISLS-NEXT:    lw a1, 96(a0)
+; RV32IZBAXQCISLS-NEXT:    lw a2, 100(a0)
+; RV32IZBAXQCISLS-NEXT:    add a0, a1, a1
+; RV32IZBAXQCISLS-NEXT:    sltu a1, a0, a1
+; RV32IZBAXQCISLS-NEXT:    add a2, a2, a2
+; RV32IZBAXQCISLS-NEXT:    add a1, a2, a1
 ; RV32IZBAXQCISLS-NEXT:    ret
-  %1 = add i64 %b, 12
-  %2 = getelementptr i64, ptr %a, i64 %1
+  %1 = add i32 %b, 12
+  %2 = getelementptr i64, ptr %a, i32 %1
   %3 = load i64, ptr %2, align 8
   %4 = add i64 %3, %3
   ret i64 %4
 }
 
-define void @srb(ptr %a, i64 %b, i8 %c) {
+define void @srb(ptr %a, i32 %b, i8 %c) {
 ; RV32I-LABEL: srb:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    add a3, a3, a3
-; RV32I-NEXT:    add a0, a0, a1
-; RV32I-NEXT:    sb a3, 0(a0)
-; RV32I-NEXT:    ret
-;
-; RV32IZBA-LABEL: srb:
-; RV32IZBA:       # %bb.0:
-; RV32IZBA-NEXT:    add a3, a3, a3
-; RV32IZBA-NEXT:    add a0, a0, a1
-; RV32IZBA-NEXT:    sb a3, 0(a0)
-; RV32IZBA-NEXT:    ret
-;
-; RV32IZBAXQCISLS-LABEL: srb:
-; RV32IZBAXQCISLS:       # %bb.0:
-; RV32IZBAXQCISLS-NEXT:    add a3, a3, a3
-; RV32IZBAXQCISLS-NEXT:    qc.srb a3, a0, a1, 0
-; RV32IZBAXQCISLS-NEXT:    ret
-  %1 = add i8 %c, %c
-  %2 = getelementptr i8, ptr %a, i64 %b
-  store i8 %1, ptr %2, align 1
-  ret void
-}
-
-define void @surb(ptr %a, i32 %b, i8 %c) {
-; RV32I-LABEL: surb:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    add a2, a2, a2
 ; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    sb a2, 0(a0)
 ; RV32I-NEXT:    ret
 ;
-; RV32IZBA-LABEL: surb:
+; RV32IZBA-LABEL: srb:
 ; RV32IZBA:       # %bb.0:
 ; RV32IZBA-NEXT:    add a2, a2, a2
 ; RV32IZBA-NEXT:    add a0, a0, a1
 ; RV32IZBA-NEXT:    sb a2, 0(a0)
 ; RV32IZBA-NEXT:    ret
 ;
-; RV32IZBAXQCISLS-LABEL: surb:
+; RV32IZBAXQCISLS-LABEL: srb:
 ; RV32IZBAXQCISLS:       # %bb.0:
 ; RV32IZBAXQCISLS-NEXT:    add a2, a2, a2
 ; RV32IZBAXQCISLS-NEXT:    qc.srb a2, a0, a1, 0
 ; RV32IZBAXQCISLS-NEXT:    ret
-  %1 = zext i32 %b to i64
-  %2 = add i8 %c, %c
-  %3 = getelementptr i8, ptr %a, i64 %1
-  store i8 %2, ptr %3, align 1
+  %1 = add i8 %c, %c
+  %2 = getelementptr i8, ptr %a, i32 %b
+  store i8 %1, ptr %2, align 1
   ret void
 }
 
-define i64 @lrd_large_shift(ptr %a, i64 %b) {
+define void @srh(ptr %a, i32 %b, i16 %c) {
+; RV32I-LABEL: srh:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    add a2, a2, a2
+; RV32I-NEXT:    slli a1, a1, 1
+; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    sh a2, 0(a0)
+; RV32I-NEXT:    ret
+;
+; RV32IZBA-LABEL: srh:
+; RV32IZBA:       # %bb.0:
+; RV32IZBA-NEXT:    add a2, a2, a2
+; RV32IZBA-NEXT:    sh1add a0, a1, a0
+; RV32IZBA-NEXT:    sh a2, 0(a0)
+; RV32IZBA-NEXT:    ret
+;
+; RV32IZBAXQCISLS-LABEL: srh:
+; RV32IZBAXQCISLS:       # %bb.0:
+; RV32IZBAXQCISLS-NEXT:    add a2, a2, a2
+; RV32IZBAXQCISLS-NEXT:    qc.srh a2, a0, a1, 1
+; RV32IZBAXQCISLS-NEXT:    ret
+  %1 = add i16 %c, %c
+  %2 = getelementptr i16, ptr %a, i32 %b
+  store i16 %1, ptr %2, align 2
+  ret void
+}
+
+define void @srw(ptr %a, i32 %b, i32 %c) {
+; RV32I-LABEL: srw:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    add a2, a2, a2
+; RV32I-NEXT:    slli a1, a1, 2
+; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    sw a2, 0(a0)
+; RV32I-NEXT:    ret
+;
+; RV32IZBA-LABEL: srw:
+; RV32IZBA:       # %bb.0:
+; RV32IZBA-NEXT:    add a2, a2, a2
+; RV32IZBA-NEXT:    sh2add a0, a1, a0
+; RV32IZBA-NEXT:    sw a2, 0(a0)
+; RV32IZBA-NEXT:    ret
+;
+; RV32IZBAXQCISLS-LABEL: srw:
+; RV32IZBAXQCISLS:       # %bb.0:
+; RV32IZBAXQCISLS-NEXT:    add a2, a2, a2
+; RV32IZBAXQCISLS-NEXT:    qc.srw a2, a0, a1, 2
+; RV32IZBAXQCISLS-NEXT:    ret
+  %1 = add i32 %c, %c
+  %2 = getelementptr i32, ptr %a, i32 %b
+  store i32 %1, ptr %2, align 4
+  ret void
+}
+
+define void @srd(ptr %a, i32 %b, i64 %c) {
+; RV32I-LABEL: srd:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    add a4, a2, a2
+; RV32I-NEXT:    add a3, a3, a3
+; RV32I-NEXT:    slli a1, a1, 3
+; RV32I-NEXT:    sltu a2, a4, a2
+; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    add a2, a3, a2
+; RV32I-NEXT:    sw a4, 0(a0)
+; RV32I-NEXT:    sw a2, 4(a0)
+; RV32I-NEXT:    ret
+;
+; RV32IZBA-LABEL: srd:
+; RV32IZBA:       # %bb.0:
+; RV32IZBA-NEXT:    add a4, a2, a2
+; RV32IZBA-NEXT:    add a3, a3, a3
+; RV32IZBA-NEXT:    sh3add a0, a1, a0
+; RV32IZBA-NEXT:    sltu a1, a4, a2
+; RV32IZBA-NEXT:    add a1, a3, a1
+; RV32IZBA-NEXT:    sw a4, 0(a0)
+; RV32IZBA-NEXT:    sw a1, 4(a0)
+; RV32IZBA-NEXT:    ret
+;
+; RV32IZBAXQCISLS-LABEL: srd:
+; RV32IZBAXQCISLS:       # %bb.0:
+; RV32IZBAXQCISLS-NEXT:    add a4, a2, a2
+; RV32IZBAXQCISLS-NEXT:    add a3, a3, a3
+; RV32IZBAXQCISLS-NEXT:    sh3add a0, a1, a0
+; RV32IZBAXQCISLS-NEXT:    sltu a1, a4, a2
+; RV32IZBAXQCISLS-NEXT:    add a1, a3, a1
+; RV32IZBAXQCISLS-NEXT:    sw a4, 0(a0)
+; RV32IZBAXQCISLS-NEXT:    sw a1, 4(a0)
+; RV32IZBAXQCISLS-NEXT:    ret
+  %1 = add i64 %c, %c
+  %2 = getelementptr i64, ptr %a, i32 %b
+  store i64 %1, ptr %2, align 8
+  ret void
+}
+
+define i64 @lrd_large_shift(ptr %a, i32 %b) {
 ; RV32I-LABEL: lrd_large_shift:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slli a1, a1, 5
@@ -505,14 +502,14 @@ define i64 @lrd_large_shift(ptr %a, i64 %b) {
 ;
 ; RV32IZBAXQCISLS-LABEL: lrd_large_shift:
 ; RV32IZBAXQCISLS:       # %bb.0:
-; RV32IZBAXQCISLS-NEXT:    addi a2, a0, 384
-; RV32IZBAXQCISLS-NEXT:    addi a3, a0, 388
-; RV32IZBAXQCISLS-NEXT:    qc.lrw a0, a2, a1, 5
-; RV32IZBAXQCISLS-NEXT:    qc.lrw a1, a3, a1, 5
+; RV32IZBAXQCISLS-NEXT:    slli a1, a1, 5
+; RV32IZBAXQCISLS-NEXT:    add a1, a1, a0
+; RV32IZBAXQCISLS-NEXT:    lw a0, 384(a1)
+; RV32IZBAXQCISLS-NEXT:    lw a1, 388(a1)
 ; RV32IZBAXQCISLS-NEXT:    ret
-  %1 = add i64 %b, 12
-  %2 = shl i64 %1, 2
-  %3 = getelementptr i64, ptr %a, i64 %2
+  %1 = add i32 %b, 12
+  %2 = shl i32 %1, 2
+  %3 = getelementptr i64, ptr %a, i32 %2
   %4 = load i64, ptr %3, align 8
   ret i64 %4
 }

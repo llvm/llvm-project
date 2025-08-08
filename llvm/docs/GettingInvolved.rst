@@ -354,11 +354,6 @@ The :doc:`CodeOfConduct` applies to all office hours.
     - Every first Friday of the month, 14:00 UK time, for 60 minutes.
     - `Google meet <https://meet.google.com/jps-twgq-ivz>`__
     - English, Portuguese
-  * - Rotating hosts
-    - Getting Started, beginner questions, new contributors.
-    - Every Tuesday at 2 PM ET (11 AM PT), for 30 minutes.
-    - `Google meet <https://meet.google.com/nga-uhpf-bbb>`__
-    - English
 
 For event owners, our Discord bot also supports sending automated announcements
 of upcoming office hours. Please see the :ref:`discord-bot-event-pings` section

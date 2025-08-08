@@ -53,6 +53,54 @@ functions:
       - type: wchar_t *__restrict
       - type: const char *__restrict
       - type: size_t
+  - name: mbsnrtowcs
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: wchar_t *__restrict
+      - type: const char **__restrict
+      - type: size_t
+      - type: size_t
+      - type: mbstate_t *__restrict
+  - name: mbsrtowcs
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: wchar_t *__restrict
+      - type: const char **__restrict
+      - type: size_t
+      - type: mbstate_t *__restrict
+  - name: mbstowcs
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: wchar_t *__restrict
+      - type: const char *__restrict
+      - type: size_t
+  - name: mbsinit
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: mbstate_t *
+  - name: mblen
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: size_t
+  - name: mbrlen
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: const char *__restrict
+      - type: size_t
+      - type: mbstate_t *__restrict
   - name: wmemset
     standards:
       - stdc
@@ -189,6 +237,25 @@ functions:
       - type: wchar_t *__restrict
       - type: const wchar_t *__restrict
       - type: size_t
+  - name: wcsnrtombs
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: char *__restrict
+      - type: const wchar_t **__restrict
+      - type: size_t
+      - type: size_t
+      - type: mbstate_t
+  - name: wcsrtombs
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: char *__restrict
+      - type: const wchar_t **__restrict
+      - type: size_t
+      - type: mbstate_t
   - name: wcrtomb
     standards:
       - stdc
@@ -211,6 +278,12 @@ functions:
     arguments:
       - type: wchar_t *__restrict
       - type: const wchar_t *__restrict
+  - name: wcsdup
+    standards:
+      - stdc
+    return_type: wchar_t *
+    arguments:
+      - type: const wchar_t *
   - name: wcslcpy
     standards:
       - stdc
@@ -242,3 +315,43 @@ functions:
       - type: wchar_t *__restrict
       - type: const wchar_t *__restrict
       - type: size_t
+  - name: wcstol
+    standards:
+      - stdc
+    return_type: long
+    arguments:
+      - type: const wchar_t *__restrict
+      - type: wchar_t **__restrict
+      - type: int
+  - name: wcstoll
+    standards:
+      - stdc
+    return_type: long long
+    arguments:
+      - type: const wchar_t *__restrict
+      - type: wchar_t **__restrict
+      - type: int
+  - name: wcstombs
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: char *__restrict
+      - type: const wchar_t *__restrict
+      - type: size_t
+  - name: wcstoul
+    standards:
+      - stdc
+    return_type: unsigned long
+    arguments:
+      - type: const wchar_t *__restrict
+      - type: wchar_t **__restrict
+      - type: int
+  - name: wcstoull
+    standards:
+      - stdc
+    return_type: unsigned long long
+    arguments:
+      - type: const wchar_t *__restrict
+      - type: wchar_t **__restrict
+      - type: int

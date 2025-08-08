@@ -379,6 +379,8 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
     Features["atomic-fadd-rtn-insts"] = true;
     Features["atomic-flat-pk-add-16-insts"] = true;
     Features["atomic-global-pk-add-bf16-inst"] = true;
+    Features["bf16-trans-insts"] = true;
+    Features["bf16-cvt-insts"] = true;
     Features["bf8-cvt-scale-insts"] = true;
     Features["bitop3-insts"] = true;
     Features["ci-insts"] = true;
@@ -401,9 +403,10 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
     Features["f32-to-f16bf16-cvt-sr-insts"] = true;
     Features["fp4-cvt-scale-insts"] = true;
     Features["fp6bf6-cvt-scale-insts"] = true;
-    Features["fp8-insts"] = true;
+    Features["fp8e5m3-insts"] = true;
     Features["fp8-conversion-insts"] = true;
     Features["fp8-cvt-scale-insts"] = true;
+    Features["fp8-insts"] = true;
     Features["gfx8-insts"] = true;
     Features["gfx9-insts"] = true;
     Features["gfx90a-insts"] = true;
@@ -413,17 +416,23 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
     Features["gfx10-3-insts"] = true;
     Features["gfx11-insts"] = true;
     Features["gfx12-insts"] = true;
+    Features["gfx1250-insts"] = true;
     Features["gws"] = true;
     Features["image-insts"] = true;
-    Features["s-memrealtime"] = true;
-    Features["s-memtime-inst"] = true;
     Features["mai-insts"] = true;
     Features["permlane16-swap"] = true;
     Features["permlane32-swap"] = true;
     Features["prng-inst"] = true;
+    Features["setprio-inc-wg-inst"] = true;
+    Features["s-memrealtime"] = true;
+    Features["s-memtime-inst"] = true;
+    Features["tanh-insts"] = true;
+    Features["tensor-cvt-lut-insts"] = true;
+    Features["transpose-load-f4f6-insts"] = true;
+    Features["vmem-pref-insts"] = true;
+    Features["vmem-to-lds-load-insts"] = true;
     Features["wavefrontsize32"] = true;
     Features["wavefrontsize64"] = true;
-    Features["vmem-to-lds-load-insts"] = true;
   } else if (T.isAMDGCN()) {
     AMDGPU::GPUKind Kind = parseArchAMDGCN(GPU);
     switch (Kind) {
@@ -443,18 +452,25 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["gfx1250-insts"] = true;
       Features["bitop3-insts"] = true;
       Features["prng-inst"] = true;
+      Features["tanh-insts"] = true;
+      Features["tensor-cvt-lut-insts"] = true;
       Features["transpose-load-f4f6-insts"] = true;
+      Features["bf16-trans-insts"] = true;
+      Features["bf16-cvt-insts"] = true;
       Features["fp8-conversion-insts"] = true;
       Features["fp8e5m3-insts"] = true;
       Features["permlane16-swap"] = true;
       Features["ashr-pk-insts"] = true;
       Features["atomic-buffer-pk-add-bf16-inst"] = true;
+      Features["vmem-pref-insts"] = true;
       Features["atomic-fadd-rtn-insts"] = true;
       Features["atomic-buffer-global-pk-add-f16-insts"] = true;
       Features["atomic-flat-pk-add-16-insts"] = true;
       Features["atomic-global-pk-add-bf16-inst"] = true;
       Features["atomic-ds-pk-add-16-insts"] = true;
       Features["setprio-inc-wg-inst"] = true;
+      Features["atomic-fmin-fmax-global-f32"] = true;
+      Features["atomic-fmin-fmax-global-f64"] = true;
       break;
     case GK_GFX1201:
     case GK_GFX1200:
@@ -483,6 +499,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["atomic-fadd-rtn-insts"] = true;
       Features["image-insts"] = true;
       Features["fp8-conversion-insts"] = true;
+      Features["atomic-fmin-fmax-global-f32"] = true;
       break;
     case GK_GFX1153:
     case GK_GFX1152:
@@ -511,6 +528,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["atomic-fadd-rtn-insts"] = true;
       Features["image-insts"] = true;
       Features["gws"] = true;
+      Features["atomic-fmin-fmax-global-f32"] = true;
       break;
     case GK_GFX1036:
     case GK_GFX1035:
@@ -539,6 +557,8 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["s-memtime-inst"] = true;
       Features["gws"] = true;
       Features["vmem-to-lds-load-insts"] = true;
+      Features["atomic-fmin-fmax-global-f32"] = true;
+      Features["atomic-fmin-fmax-global-f64"] = true;
       break;
     case GK_GFX1012:
     case GK_GFX1011:
@@ -564,6 +584,8 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["s-memtime-inst"] = true;
       Features["gws"] = true;
       Features["vmem-to-lds-load-insts"] = true;
+      Features["atomic-fmin-fmax-global-f32"] = true;
+      Features["atomic-fmin-fmax-global-f64"] = true;
       break;
     case GK_GFX950:
       Features["bitop3-insts"] = true;
@@ -615,11 +637,13 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["s-memtime-inst"] = true;
       Features["gws"] = true;
       Features["vmem-to-lds-load-insts"] = true;
+      Features["atomic-fmin-fmax-global-f64"] = true;
       break;
     case GK_GFX90A:
       Features["gfx90a-insts"] = true;
       Features["atomic-buffer-global-pk-add-f16-insts"] = true;
       Features["atomic-fadd-rtn-insts"] = true;
+      Features["atomic-fmin-fmax-global-f64"] = true;
       [[fallthrough]];
     case GK_GFX908:
       Features["dot3-insts"] = true;
@@ -653,7 +677,11 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["16-bit-insts"] = true;
       Features["dpp"] = true;
       Features["s-memrealtime"] = true;
-      [[fallthrough]];
+      Features["ci-insts"] = true;
+      Features["image-insts"] = true;
+      Features["s-memtime-inst"] = true;
+      Features["gws"] = true;
+      break;
     case GK_GFX705:
     case GK_GFX704:
     case GK_GFX703:
@@ -668,6 +696,8 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["image-insts"] = true;
       Features["s-memtime-inst"] = true;
       Features["gws"] = true;
+      Features["atomic-fmin-fmax-global-f32"] = true;
+      Features["atomic-fmin-fmax-global-f64"] = true;
       break;
     case GK_NONE:
       break;

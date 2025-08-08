@@ -189,7 +189,7 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
 
   if (TM.isAAPCS_ABI())
     stackAlignment = Align(8);
-  if (isTargetNaCl() || TM.isAAPCS16_ABI())
+  if (TM.isAAPCS16_ABI())
     stackAlignment = Align(16);
 
   // FIXME: Completely disable sibcall for Thumb1 since ThumbRegisterInfo::
@@ -407,10 +407,9 @@ bool ARMSubtarget::useFastISel() const {
   if (!hasV6Ops())
     return false;
 
-  // Thumb2 support on iOS; ARM support on iOS, Linux and NaCl.
-  return TM.Options.EnableFastISel &&
-         ((isTargetMachO() && !isThumb1Only()) ||
-          (isTargetLinux() && !isThumb()) || (isTargetNaCl() && !isThumb()));
+  // Thumb2 support on iOS; ARM support on iOS and Linux.
+  return TM.Options.EnableFastISel && ((isTargetMachO() && !isThumb1Only()) ||
+                                       (isTargetLinux() && !isThumb()));
 }
 
 unsigned ARMSubtarget::getGPRAllocationOrder(const MachineFunction &MF) const {
