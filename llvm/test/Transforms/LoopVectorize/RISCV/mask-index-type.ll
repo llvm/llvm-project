@@ -13,12 +13,6 @@ define void @test(ptr noalias nocapture %a, ptr noalias nocapture %b, i32 %v) {
 ; VLENUNK-NEXT:  entry:
 ; VLENUNK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; VLENUNK:       vector.ph:
-; VLENUNK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; VLENUNK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
-; VLENUNK-NEXT:    [[TMP12:%.*]] = sub i64 [[TMP3]], 1
-; VLENUNK-NEXT:    [[N_RND_UP:%.*]] = add i64 1024, [[TMP12]]
-; VLENUNK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP3]]
-; VLENUNK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; VLENUNK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; VLENUNK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; VLENUNK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[V:%.*]], i64 0

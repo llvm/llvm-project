@@ -53,12 +53,6 @@ define void @skip_free_iv_truncate(i16 %x, ptr %A) #0 {
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT19]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP45:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP46:%.*]] = mul nuw i64 [[TMP45]], 8
-; CHECK-NEXT:    [[TMP22:%.*]] = sub i64 [[TMP46]], 1
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP5]], [[TMP22]]
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP46]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP51:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP52:%.*]] = mul nuw i64 [[TMP51]], 8
 ; CHECK-NEXT:    [[TMP53:%.*]] = call <vscale x 8 x i64> @llvm.stepvector.nxv8i64()

@@ -9062,6 +9062,36 @@ __m512i test_mm512_set1_epi16(short d)
   return _mm512_set1_epi16(d);
 }
 
+__m512i test_mm512_set1_epi32(int d)
+{
+  // CHECK-LABEL: test_mm512_set1_epi32
+  // CHECK: insertelement <16 x i32> {{.*}}, i32 0
+  // CHECK: insertelement <16 x i32> {{.*}}, i32 1
+  // CHECK: insertelement <16 x i32> {{.*}}, i32 2
+  // CHECK: insertelement <16 x i32> {{.*}}, i32 3
+  // CHECK: insertelement <16 x i32> {{.*}}, i32 4
+  // CHECK: insertelement <16 x i32> {{.*}}, i32 5
+  // CHECK: insertelement <16 x i32> {{.*}}, i32 6
+  // CHECK: insertelement <16 x i32> {{.*}}, i32 15
+  return _mm512_set1_epi32(d);
+}
+TEST_CONSTEXPR(match_v16si(_mm512_set1_epi32(99), 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99));
+
+__m512i test_mm512_set1_epi64(long long d)
+{
+  // CHECK-LABEL: test_mm512_set1_epi64
+  // CHECK: insertelement <8 x i64> {{.*}}, i32 0
+  // CHECK: insertelement <8 x i64> {{.*}}, i32 1
+  // CHECK: insertelement <8 x i64> {{.*}}, i32 2
+  // CHECK: insertelement <8 x i64> {{.*}}, i32 3
+  // CHECK: insertelement <8 x i64> {{.*}}, i32 4
+  // CHECK: insertelement <8 x i64> {{.*}}, i32 5
+  // CHECK: insertelement <8 x i64> {{.*}}, i32 6
+  // CHECK: insertelement <8 x i64> {{.*}}, i32 7
+  return _mm512_set1_epi64(d);
+}
+TEST_CONSTEXPR(match_v8di(_mm512_set1_epi64(-42), -42, -42, -42, -42, -42, -42, -42, -42));
+
 __m512i test_mm512_set4_epi32 (int __A, int __B, int __C, int __D)
 {
   // CHECK-LABEL: test_mm512_set4_epi32 

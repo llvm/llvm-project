@@ -31,3 +31,10 @@ class ExprDefinitionInDylibTestCase(TestBase):
         )
 
         self.expect_expr("f.method()", result_value="-72", result_type="int")
+        self.expect_expr("Foo()", result_type="Foo")
+
+        # FIXME: mangled name lookup for ABI-tagged ctors fails because
+        # the debug-info AST doesn't have ABI-tag information.
+        self.expect(
+            "expr Bar()", error=True, substrs=["error: Couldn't look up symbols"]
+        )

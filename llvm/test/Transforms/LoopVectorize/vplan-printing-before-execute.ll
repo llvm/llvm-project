@@ -62,18 +62,18 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ;
 ; CHECK: Executing best plan with VF=8, UF=2
 ; CHECK-NEXT: VPlan 'Final VPlan for VF={8},UF={2}' {
-; CHECK-NEXT: Live-in ir<[[VTC:%.+]]> = vector-trip-count
-; CHECK-NEXT: ir<%and> = original trip-count
+; CHECK-NEXT: Live-in ir<16> = VF * UF
+; CHECK-NEXT: Live-in ir<%and> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
 ; CHECK-NEXT:   IR %and = and i64 %N, 15
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, ir-bb<vector.ph>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<vector.ph>:
-; CHECK-NEXT:  IR   %n.mod.vf = urem i64 %and, 16
-; CHECK-NEXT:  IR   %n.vec = sub i64 %and, %n.mod.vf
-; CHECK-NEXT:  vp<[[END1:%.+]]> = DERIVED-IV ir<%and> + ir<[[VTC]]> * ir<-1>
-; CHECK-NEXT:  vp<[[END2:%.+]]> = DERIVED-IV ir<%A> + ir<[[VTC]]> * ir<1>
+; CHECK-NEXT:  EMIT vp<%n.mod.vf> = urem ir<%and>, ir<16>
+; CHECK-NEXT:  EMIT vp<[[VTC:%.+]]> = sub ir<%and>, vp<%n.mod.vf>
+; CHECK-NEXT:  vp<[[END1:%.+]]> = DERIVED-IV ir<%and> + vp<[[VTC]]> * ir<-1>
+; CHECK-NEXT:  vp<[[END2:%.+]]> = DERIVED-IV ir<%A> + vp<[[VTC]]> * ir<1>
 ; CHECK-NEXT: Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.body:
@@ -88,7 +88,7 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<[[C:%.+]]> = icmp eq ir<%and>, ir<[[VTC]]>
+; CHECK-NEXT:   EMIT vp<[[C:%.+]]> = icmp eq ir<%and>, vp<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[C]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, ir-bb<scalar.ph>
 ; CHECK-EMPTY:

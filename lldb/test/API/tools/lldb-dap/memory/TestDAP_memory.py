@@ -127,7 +127,7 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_exit()
 
     # Flakey on 32-bit Arm Linux.
-    @skipif(oslist=["linux"], archs=["arm$"])
+    @skipIf(oslist=["linux"], archs=["arm$"])
     def test_writeMemory(self):
         """
         Tests the 'writeMemory' request
