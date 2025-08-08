@@ -1589,12 +1589,11 @@ Error GenericDeviceTy::initAsyncInfo(__tgt_async_info **AsyncInfoPtr) {
   return Err;
 }
 
-Error GenericDeviceTy::enqueueHostCallback(void (*Callback)(void *),
-                                           void *UserData,
-                                           __tgt_async_info *AsyncInfo) {
+Error GenericDeviceTy::enqueueHostCall(void (*Callback)(void *), void *UserData,
+                                       __tgt_async_info *AsyncInfo) {
   AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
 
-  auto Err = enqueueHostCallbackImpl(Callback, UserData, AsyncInfoWrapper);
+  auto Err = enqueueHostCallImpl(Callback, UserData, AsyncInfoWrapper);
   AsyncInfoWrapper.finalize(Err);
   return Err;
 }

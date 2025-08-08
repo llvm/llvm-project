@@ -2592,8 +2592,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return Plugin::success();
   }
 
-  Error enqueueHostCallbackImpl(void (*Callback)(void *), void *UserData,
-                                AsyncInfoWrapperTy &AsyncInfo) override {
+  Error enqueueHostCallImpl(void (*Callback)(void *), void *UserData,
+                            AsyncInfoWrapperTy &AsyncInfo) override {
     AMDGPUStreamTy *Stream = nullptr;
     if (auto Err = getStream(AsyncInfo, Stream))
       return Err;
