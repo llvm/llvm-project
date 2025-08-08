@@ -1993,6 +1993,134 @@ Value *InstCombinerImpl::foldSelectWithConstOpToBinOp(ICmpInst *Cmp,
   return BinOp;
 }
 
+/// Folds:
+///   %a_sub = call @llvm.usub.sat(x, IntConst1)
+///   %b_sub = call @llvm.usub.sat(y, IntConst2)
+///   %or = or %a_sub, %b_sub
+///   %cmp = icmp eq %or, 0
+///   %sel = select %cmp, 0, MostSignificantBit
+/// into:
+///   %a_sub' = usub.sat(x, IntConst1 - MostSignificantBit)
+///   %b_sub' = usub.sat(y, IntConst2 - MostSignificantBit)
+///   %or = or %a_sub', %b_sub'
+///   %and = and %or, MostSignificantBit
+/// Likewise, for vector arguments as well.
+static Instruction *foldICmpUSubSatWithAndForMostSignificantBitCmp(
+    SelectInst &SI, ICmpInst *ICI, InstCombiner::BuilderTy &Builder) {
+  auto *CI = dyn_cast<ICmpInst>(SI.getCondition());
+  if (!CI) {
+    return nullptr;
+  }
+
+  Value *CmpLHS = CI->getOperand(0);
+  Value *CmpRHS = CI->getOperand(1);
+  if (!match(CmpRHS, m_Zero())) {
+    return nullptr;
+  }
+  auto Pred = CI->getPredicate();
+  auto *TrueVal = SI.getTrueValue();
+  auto *FalseVal = SI.getFalseValue();
+
+  if (Pred != ICmpInst::ICMP_EQ)
+    return nullptr;
+
+  // Match: icmp eq (or (usub.sat A, IntConst1), (usub.sat B, IntConst2)), 0
+  Value *A, *B;
+  ConstantInt *IntConst1, *IntConst2, *PossibleMSBInt;
+
+  if (match(CmpLHS, m_Or(m_Intrinsic<Intrinsic::usub_sat>(
+                             m_Value(A), m_ConstantInt(IntConst1)),
+                         m_Intrinsic<Intrinsic::usub_sat>(
+                             m_Value(B), m_ConstantInt(IntConst2)))) &&
+      match(TrueVal, m_Zero()) &&
+      match(FalseVal, m_ConstantInt(PossibleMSBInt))) {
+    auto *Ty = A->getType();
+    unsigned BW = Ty->getIntegerBitWidth();
+    APInt MostSignificantBit = APInt::getOneBitSet(BW, BW - 1);
+
+    if (PossibleMSBInt->getValue() != MostSignificantBit)
+      return nullptr;
+    // Ensure IntConst1 and IntConst2 are >= MostSignificantBit
+    if (IntConst1->getValue().ult(MostSignificantBit) ||
+        IntConst2->getValue().ult(MostSignificantBit))
+      return nullptr;
+
+    // Rewrite:
+    Value *NewA = Builder.CreateBinaryIntrinsic(
+        Intrinsic::usub_sat, A,
+        ConstantInt::get(Ty, IntConst1->getValue() - MostSignificantBit + 1));
+    Value *NewB = Builder.CreateBinaryIntrinsic(
+        Intrinsic::usub_sat, B,
+        ConstantInt::get(Ty, IntConst2->getValue() - MostSignificantBit + 1));
+    Value *Or = Builder.CreateOr(NewA, NewB);
+    Value *And =
+        Builder.CreateAnd(Or, ConstantInt::get(Ty, MostSignificantBit));
+    return cast<Instruction>(And);
+  }
+  Constant *Const1, *Const2, *PossibleMSB;
+  if (match(CmpLHS, m_Or(m_Intrinsic<Intrinsic::usub_sat>(m_Value(A),
+                                                          m_Constant(Const1)),
+                         m_Intrinsic<Intrinsic::usub_sat>(
+                             m_Value(B), m_Constant(Const2)))) &&
+      match(TrueVal, m_Zero()) && match(FalseVal, m_Constant(PossibleMSB))) {
+    auto *VecTy1 = dyn_cast<FixedVectorType>(Const1->getType());
+    auto *VecTy2 = dyn_cast<FixedVectorType>(Const2->getType());
+    auto *VecTyMSB = dyn_cast<FixedVectorType>(PossibleMSB->getType());
+    if (!VecTy1 || !VecTy2 || !VecTyMSB) {
+      return nullptr;
+    }
+
+    unsigned NumElements = VecTy1->getNumElements();
+
+    if (NumElements != VecTy2->getNumElements() ||
+        NumElements != VecTyMSB->getNumElements() || NumElements == 0) {
+      return nullptr;
+    }
+    auto *SplatMSB =
+        dyn_cast<ConstantInt>(PossibleMSB->getAggregateElement(0u));
+    unsigned BW = SplatMSB->getValue().getBitWidth();
+    APInt MostSignificantBit = APInt::getOneBitSet(BW, BW - 1);
+    if (!SplatMSB || SplatMSB->getValue() != MostSignificantBit) {
+      return nullptr;
+    }
+    for (unsigned int i = 1; i < NumElements; ++i) {
+      auto *Element =
+          dyn_cast<ConstantInt>(PossibleMSB->getAggregateElement(i));
+      if (!Element || Element->getValue() != SplatMSB->getValue()) {
+        return nullptr;
+      }
+    }
+    SmallVector<Constant *, 16> Arg1, Arg2;
+    for (unsigned int i = 0; i < NumElements; ++i) {
+      auto *E1 = dyn_cast<ConstantInt>(Const1->getAggregateElement(i));
+      auto *E2 = dyn_cast<ConstantInt>(Const2->getAggregateElement(i));
+      if (!E1 || !E2) {
+        return nullptr;
+      }
+      if (E1->getValue().ult(SplatMSB->getValue()) ||
+          E2->getValue().ult(SplatMSB->getValue())) {
+        return nullptr;
+      }
+      Arg1.emplace_back(
+          ConstantInt::get(A->getType()->getScalarType(),
+                           E1->getValue() - MostSignificantBit + 1));
+      Arg2.emplace_back(
+          ConstantInt::get(B->getType()->getScalarType(),
+                           E2->getValue() - MostSignificantBit + 1));
+    }
+    Constant *ConstVec1 = ConstantVector::get(Arg1);
+    Constant *ConstVec2 = ConstantVector::get(Arg2);
+    Value *NewA =
+        Builder.CreateBinaryIntrinsic(Intrinsic::usub_sat, A, ConstVec1);
+    Value *NewB =
+        Builder.CreateBinaryIntrinsic(Intrinsic::usub_sat, B, ConstVec2);
+    Value *Or = Builder.CreateOr(NewA, NewB);
+    Value *And = Builder.CreateAnd(Or, PossibleMSB);
+    return cast<Instruction>(And);
+  }
+  return nullptr;
+}
+
 /// Visit a SelectInst that has an ICmpInst as its first operand.
 Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
                                                       ICmpInst *ICI) {
@@ -2009,6 +2137,9 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
   if (Instruction *NewSel =
           tryToReuseConstantFromSelectInComparison(SI, *ICI, *this))
     return NewSel;
+  if (Instruction *Folded =
+          foldICmpUSubSatWithAndForMostSignificantBitCmp(SI, ICI, Builder))
+    return replaceInstUsesWith(SI, Folded);
 
   // NOTE: if we wanted to, this is where to detect integer MIN/MAX
   bool Changed = false;
