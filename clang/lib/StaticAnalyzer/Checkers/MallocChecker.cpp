@@ -3156,13 +3156,7 @@ void MallocChecker::checkPreCall(const CallEvent &Call,
   for (unsigned I = 0, E = Call.getNumArgs(); I != E; ++I) {
     SVal ArgSVal = Call.getArgSVal(I);
     if (isa<Loc>(ArgSVal)) {
-      const MemRegion *MR = ArgSVal.getAsRegion();
-      if (!MR)
-        continue;
-      const MemRegion *BaseRegion = MR->getBaseRegion();
-      SymbolRef Sym = nullptr;
-      if (const auto *SR = dyn_cast<SymbolicRegion>(BaseRegion))
-        Sym = SR->getSymbol();
+      SymbolRef Sym = ArgSVal.getAsSymbol(/*IncludeBaseRegions=*/true);
       if (!Sym) 
         continue;
       if (checkUseAfterFree(Sym, C, Call.getArgExpr(I)))
