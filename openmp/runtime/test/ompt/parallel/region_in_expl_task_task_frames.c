@@ -38,7 +38,7 @@ int main()
 
 
   // CHECK: {{^}}0: NULL_POINTER=[[NULL:.*$]]
-  // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_initial_task_begin: parallel_id=[[INITIAL_PARALLEL_ID:[0-9]+]], task_id=[[INITIAL_TASK_ID:[0-9]+]], actual_parallelism=1, index=1, flags=1
+  // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_initial_task_begin: parallel_id=[[INITIAL_PARALLEL_ID:[0-f]+]], task_id=[[INITIAL_TASK_ID:[0-f]+]], actual_parallelism=1, index=1, flags=1
 
   // region 0
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_parallel_begin

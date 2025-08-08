@@ -39,21 +39,21 @@ int main() {
 // CHECK: {{^}}0: NULL_POINTER=[[NULL:.*$]]
 
 // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_parallel_begin:
-// CHECK-SAME: parent_task_id=[[PARENT_TASK_ID:[0-9]+]],
+// CHECK-SAME: parent_task_id=[[PARENT_TASK_ID:[0-f]+]],
 // CHECK-SAME: parent_task_frame.exit=[[NULL]],
 // CHECK-SAME: parent_task_frame.reenter={{(0x)?[0-f]+}},
-// CHECK-SAME: parallel_id=[[PARALLEL_ID:[0-9]+]],
+// CHECK-SAME: parallel_id=[[PARALLEL_ID:[0-f]+]],
 // CHECK-SAME: requested_team_size=3,
 
 // CHECK: {{^}}[[MASTER_ID]]: ompt_event_implicit_task_begin:
 // CHECK-SAME: parallel_id=[[PARALLEL_ID]],
-// CHECK-SAME: task_id=[[IMPLICIT_TASK_ID:[0-9]+]]
+// CHECK-SAME: task_id=[[IMPLICIT_TASK_ID:[0-f]+]]
 
 // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_create:
 // CHECK-SAME: parent_task_id=[[IMPLICIT_TASK_ID]],
 // CHECK-SAME: parent_task_frame.exit={{(0x)?[0-f]+}},
 // CHECK-SAME: parent_task_frame.reenter={{(0x)?[0-f]+}},
-// CHECK-SAME: new_task_id=[[TASK_ID:[0-9]+]],
+// CHECK-SAME: new_task_id=[[TASK_ID:[0-f]+]],
 
 // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_task_schedule:
 // CHECK-SAME: first_task_id=[[IMPLICIT_TASK_ID]],
@@ -62,7 +62,7 @@ int main() {
 
 // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_task_schedule:
 // CHECK-SAME: first_task_id=[[TASK_ID]],
-// CHECK-SAME: second_task_id=18446744073709551615,
+// CHECK-SAME: second_task_id=ffffffffffffffff,
 // CHECK-SAME: prior_task_status=ompt_task_early_fulfill=5
 
 // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_task_schedule:

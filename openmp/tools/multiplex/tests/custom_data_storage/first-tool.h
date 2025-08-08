@@ -216,7 +216,7 @@ static int on_cds_ompt_callback_control_tool(uint64_t command,
   while (ompt_get_task_info(task_level, NULL, (ompt_data_t **)&task_data, NULL,
                             NULL, NULL)) {
     task_data = get_own_ompt_data(task_data);
-    printf("%" PRIu64 ": _first_tool: task level %d: task_id=%" PRIu64 "\n",
+    printf("%" PRIu64 ": _first_tool: task level %d: task_id=%" PRIx64 "\n",
            ompt_get_thread_data()->value, task_level, task_data->value);
     task_level++;
   }
@@ -227,7 +227,7 @@ static int on_cds_ompt_callback_control_tool(uint64_t command,
   while (ompt_get_parallel_info(parallel_level, (ompt_data_t **)&parallel_data,
                                 NULL)) {
     parallel_data = get_own_ompt_data(parallel_data);
-    printf("%" PRIu64 ": _first_tool: parallel level %d: parallel_id=%" PRIu64
+    printf("%" PRIu64 ": _first_tool: parallel level %d: parallel_id=%" PRIx64
            "\n",
            ompt_get_thread_data()->value, parallel_level, parallel_data->value);
     parallel_level++;

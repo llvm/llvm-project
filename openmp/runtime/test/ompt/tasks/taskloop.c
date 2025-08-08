@@ -26,8 +26,8 @@ int main() {
   // CHECK: 0: NULL_POINTER=[[NULL:.*$]]
 
   // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_parallel_begin:
-  // CHECK-SAME: parent_task_id={{[0-9]+}}
-  // CHECK-SAME: parallel_id=[[PARALLEL_ID:[0-9]+]]
+  // CHECK-SAME: parent_task_id={{[0-f]+}}
+  // CHECK-SAME: parallel_id=[[PARALLEL_ID:[0-f]+]]
   // CHECK-SAME: requested_team_size=2
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_implicit_task_begin:
   // CHECK-SAME: parallel_id=[[PARALLEL_ID]]
@@ -64,16 +64,16 @@ int main() {
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_parallel_end:
   // CHECK-SAME: parallel_id=[[PARALLEL_ID]]
 
-  // TASKS: ompt_event_initial_task_begin:{{.*}} task_id={{[0-9]+}}
+  // TASKS: ompt_event_initial_task_begin:{{.*}} task_id={{[0-f]+}}
   // TASKS: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_taskloop_begin:
   // TASKS: ompt_event_task_create:{{.*}} new_task_id=[[TASK_ID1:[0-9]+]]
   // TASKS-SAME: task_type=ompt_task_explicit
   // TASKS-DAG: ompt_event_task_create:{{.*}} new_task_id=[[TASK_ID2:[0-9]+]]
   // Schedule events:
-  // TASKS-DAG: {{^.*}}first_task_id={{[0-9]+}}, second_task_id=[[TASK_ID1]]
-  // TASKS-DAG: {{^.*}}first_task_id=[[TASK_ID1]], second_task_id={{[0-9]+}}
-  // TASKS-DAG: {{^.*}}first_task_id={{[0-9]+}}, second_task_id=[[TASK_ID2]]
-  // TASKS-DAG: {{^.*}}first_task_id=[[TASK_ID2]], second_task_id={{[0-9]+}}
+  // TASKS-DAG: {{^.*}}first_task_id={{[0-f]+}}, second_task_id=[[TASK_ID1]]
+  // TASKS-DAG: {{^.*}}first_task_id=[[TASK_ID1]], second_task_id={{[0-f]+}}
+  // TASKS-DAG: {{^.*}}first_task_id={{[0-f]+}}, second_task_id=[[TASK_ID2]]
+  // TASKS-DAG: {{^.*}}first_task_id=[[TASK_ID2]], second_task_id={{[0-f]+}}
   // TASKS-NOT: ompt_event_task_schedule
 
   return 0;

@@ -22,8 +22,8 @@ int main() {
   // CHECK: 0: NULL_POINTER=[[NULL:.*$]]
 
   // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_parallel_begin:
-  // CHECK-SAME: parent_task_id={{[0-9]+}}
-  // CHECK-SAME: parallel_id=[[PARALLEL_ID:[0-9]+]]
+  // CHECK-SAME: parent_task_id={{[0-f]+}}
+  // CHECK-SAME: parallel_id=[[PARALLEL_ID:[0-f]+]]
   // CHECK-SAME: requested_team_size=2
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_implicit_task_begin:
   // CHECK-SAME: parallel_id=[[PARALLEL_ID]]

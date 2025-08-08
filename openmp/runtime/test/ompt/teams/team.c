@@ -36,7 +36,7 @@ int main() {
 // CHECK: {{^}}[[MASTER]]: ompt_event_implicit_task_begin:
 // CHECK-SAME: {{.*}} parallel_id=[[PAR_0]], task_id=[[IMPL_TASK_0:[0-9]+]]
 // CHECK: {{^}}[[MASTER]]: ompt_event_implicit_task_end:
-// CHECK-SAME: {{.*}} parallel_id={{[0-9]+}}, task_id=[[IMPL_TASK_0]]
+// CHECK-SAME: {{.*}} parallel_id={{[0-f]+}}, task_id=[[IMPL_TASK_0]]
 // CHECK: {{^}}[[MASTER]]: ompt_event_parallel_end:
 // CHECK-SAME: {{.*}} parallel_id=[[PAR_0]], task_id=[[INIT_TASK_0]]
 
