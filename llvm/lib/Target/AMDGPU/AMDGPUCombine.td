@@ -151,6 +151,17 @@ def zext_of_shift_amount_combines : GICombineGroup<[
   canonicalize_zext_lshr, canonicalize_zext_ashr, canonicalize_zext_shl
 ]>;
 
+// Early select of uniform BFX into S_BFE instructions.
+// These instructions encode the offset/width in a way that requires using
+// bitwise operations. Selecting these instructions early allow the combiner
+// to potentially fold these.
+class lower_uniform_bfx<Instruction bfx> : GICombineRule<
+  (defs root:$bfx),
+  (combine (bfx $dst, $src, $o, $w):$bfx, [{ return lowerUniformBFX(*${bfx}); }])>;
+
+def lower_uniform_sbfx : lower_uniform_bfx<G_SBFX>;
+def lower_uniform_ubfx : lower_uniform_bfx<G_UBFX>;
+
 let Predicates = [Has16BitInsts, NotHasMed3_16] in {
 // For gfx8, expand f16-fmed3-as-f32 into a min/max f16 sequence. This
 // saves one instruction compared to the promotion.
@@ -198,5 +209,6 @@ def AMDGPURegBankCombiner : GICombiner<
    zext_trunc_fold, int_minmax_to_med3, ptr_add_immed_chain,
    fp_minmax_to_clamp, fp_minmax_to_med3, fmed3_intrinsic_to_clamp,
    identity_combines, redundant_and, constant_fold_cast_op,
-   cast_of_cast_combines, sext_trunc, zext_of_shift_amount_combines]> {
+   cast_of_cast_combines, sext_trunc, zext_of_shift_amount_combines,
+   lower_uniform_sbfx, lower_uniform_ubfx]> {
 }
