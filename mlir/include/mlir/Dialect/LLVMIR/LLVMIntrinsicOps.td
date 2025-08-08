@@ -1070,13 +1070,17 @@ def LLVM_masked_scatter : LLVM_ZeroResultIntrOp<"masked.scatter"> {
 
 /// Create a call to Masked Expand Load intrinsic.
 def LLVM_masked_expandload : LLVM_IntrOp<"masked.expandload", [0], [], [], 1> {
-  let arguments = (ins LLVM_AnyPointer, LLVM_VectorOf<I1>, LLVM_AnyVector);
+  let arguments = (ins LLVM_AnyPointer:$base,
+                       LLVM_VectorOf<I1>:$mask,
+                       LLVM_AnyVector:$passthru);
 }
 
 /// Create a call to Masked Compress Store intrinsic.
 def LLVM_masked_compressstore
     : LLVM_IntrOp<"masked.compressstore", [], [0], [], 0> {
-  let arguments = (ins LLVM_AnyVector, LLVM_AnyPointer, LLVM_VectorOf<I1>);
+  let arguments = (ins LLVM_AnyVector:$vector,
+                       LLVM_AnyPointer:$base,
+                       LLVM_VectorOf<I1>:$mask);
 }
 
 //
