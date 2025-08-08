@@ -244,12 +244,13 @@ void LinkerDriver::parseSectionLayout(StringRef path) {
 
     StringRef sectionName = line.split(' ').first;
     std::string sectionNameStr = sectionName.str();
-    
+
     if (seenSections.count(sectionNameStr)) {
-      Warn(ctx) << "duplicate section '" << sectionNameStr << "' in section layout file, ignoring";
+      Warn(ctx) << "duplicate section '" << sectionNameStr
+                << "' in section layout file, ignoring";
       continue;
     }
-    
+
     seenSections.insert(sectionNameStr);
     ctx.config.sectionLayout[sectionNameStr] = index++;
   }
