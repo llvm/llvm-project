@@ -18,6 +18,7 @@
 #include "src/__support/mpmc_stack.h"
 #include "src/__support/threads/callonce.h"
 #include "src/__support/threads/linux/raw_mutex.h"
+// TODO: this is public entrypoint, we should remove it later on.
 #include "src/sys/auxv/getauxval.h"
 
 namespace LIBC_NAMESPACE_DECL {

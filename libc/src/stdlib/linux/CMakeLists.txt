@@ -26,6 +26,6 @@ add_header_library(
     libc.src.__support.mpmc_stack
     libc.src.__support.threads.callonce
     libc.src.__support.threads.linux.raw_mutex
-    libc.src.sys.auxv.getauxval
+    libc.src.sys.auxv.getauxval # TODO: remove public entrypoint dependency
     libc.include.sys_syscall
 )
