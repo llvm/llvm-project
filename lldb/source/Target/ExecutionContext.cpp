@@ -156,7 +156,7 @@ lldb_private::GetStoppedExecutionContext(
   ProcessRunLock::ProcessRunLocker stop_locker;
   if (!stop_locker.TryLock(&process_sp->GetRunLock()))
     return llvm::createStringError(
-        "Attempted to create an ExecutionContext with a running process");
+        "attempted to create an ExecutionContext with a running process");
 
   auto thread_sp = exe_ctx_ref_ptr->GetThreadSP();
   auto frame_sp = exe_ctx_ref_ptr->GetFrameSP();
