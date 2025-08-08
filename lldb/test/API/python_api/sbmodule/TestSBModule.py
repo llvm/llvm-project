@@ -35,8 +35,6 @@ class SBModuleAPICase(TestBase):
         # check archive member names
         module_specs = lldb.SBModuleSpecList.GetModuleSpecifications(libfoo_path)
         self.assertGreater(module_specs.GetSize(), 0, "Archive should have at least one module spec")
-        target = self.dbg.CreateTarget(None)
-        self.assertTrue(target.IsValid(), "Target is valid")
         found = set()
         expected = {"a.o", "b.o"}
         for i in range(module_specs.GetSize()):
@@ -45,7 +43,7 @@ class SBModuleAPICase(TestBase):
             self.assertIsInstance(obj_name, str)
             self.assertIn(obj_name, expected, f"Unexpected object name: {obj_name}")
             #create a module from the arhive using the sepc
-            module = target.AddModule(spec)
+            module = lldb.SBModule(spec)
             self.assertTrue(module.IsValid(), "Module is valid")
             self.assertTrue(module.IsValid(), f"Module for {obj_name} is valid")
             self.assertEqual(module.GetObjectName(), obj_name, f"Object name for {obj_name} matches")
