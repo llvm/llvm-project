@@ -2607,6 +2607,29 @@ static void DiagnoseNonAggregateReason(Sema &SemaRef, SourceLocation Loc,
           << diag::TraitNotSatisfiedReason::InheritedCtr;
   }
 
+  bool HasInherited = false;
+  for (const Decl *Sub : D->decls()) {
+    if (auto *UD = dyn_cast<UsingDecl>(Sub)) {
+      for (auto I = UD->shadow_begin(), E = UD->shadow_end(); I != E; ++I) {
+        if (isa<ConstructorUsingShadowDecl>(*I)) {
+          HasInherited = true;
+          break;
+        }
+      }
+      if (HasInherited)
+        break;
+    }
+    if (isa<ConstructorUsingShadowDecl>(Sub)) {
+      HasInherited = true;
+      break;
+    }
+  }
+
+  if (HasInherited) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::InheritedCtr;
+  }
+
   for (const FieldDecl *Field : D->fields()) {
     switch (Field->getAccess()) {
     case AS_private:
