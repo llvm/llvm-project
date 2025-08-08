@@ -2345,6 +2345,43 @@ static std::optional<APInt> getConstantPart(const SCEV *Expr) {
   return std::nullopt;
 }
 
+bool DependenceInfo::accumulateCoefficientsGCD(const SCEV *Expr,
+                                               const Loop *CurLoop,
+                                               const SCEV *&CurLoopCoeff,
+                                               APInt &RunningGCD) const {
+  // If RunningGCD is already 1, exit early.
+  // TODO: It might be better to continue the recursion to find CurLoopCoeff.
+  if (RunningGCD == 1)
+    return true;
+
+  const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(Expr);
+  if (!AddRec) {
+    assert(isLoopInvariant(Expr, CurLoop) &&
+           "Expected loop invariant expression");
+    return true;
+  }
+
+  assert(AddRec->isAffine() && "Unexpected Expr");
+  const SCEV *Start = AddRec->getStart();
+  const SCEV *Step = AddRec->getStepRecurrence(*SE);
+  if (AddRec->getLoop() == CurLoop) {
+    CurLoopCoeff = Step;
+  } else {
+    std::optional<APInt> ConstCoeff = getConstantPart(Step);
+
+    // If the coefficient is the product of a constant and other stuff, we can
+    // use the constant in the GCD computation.
+    if (!ConstCoeff)
+      return false;
+
+    // TODO: What happens if ConstCoeff is the "most negative" signed number
+    // (e.g. -128 for 8 bit wide APInt)?
+    RunningGCD = APIntOps::GreatestCommonDivisor(RunningGCD, ConstCoeff->abs());
+  }
+
+  return accumulateCoefficientsGCD(Start, CurLoop, CurLoopCoeff, RunningGCD);
+}
+
 //===----------------------------------------------------------------------===//
 // gcdMIVtest -
 // Tests an MIV subscript pair for dependence.
@@ -2464,40 +2501,11 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
     RunningGCD = ExtraGCD;
     const SCEV *SrcCoeff = AddRec->getStepRecurrence(*SE);
     const SCEV *DstCoeff = SE->getMinusSCEV(SrcCoeff, SrcCoeff);
-    const SCEV *Inner = Src;
-    while (RunningGCD != 1 && isa<SCEVAddRecExpr>(Inner)) {
-      AddRec = cast<SCEVAddRecExpr>(Inner);
-      const SCEV *Coeff = AddRec->getStepRecurrence(*SE);
-      if (CurLoop == AddRec->getLoop())
-        ; // SrcCoeff == Coeff
-      else {
-        // If the coefficient is the product of a constant and other stuff,
-        // we can use the constant in the GCD computation.
-        std::optional<APInt> ConstCoeff = getConstantPart(Coeff);
-        if (!ConstCoeff)
-          return false;
-        RunningGCD =
-            APIntOps::GreatestCommonDivisor(RunningGCD, ConstCoeff->abs());
-      }
-      Inner = AddRec->getStart();
-    }
-    Inner = Dst;
-    while (RunningGCD != 1 && isa<SCEVAddRecExpr>(Inner)) {
-      AddRec = cast<SCEVAddRecExpr>(Inner);
-      const SCEV *Coeff = AddRec->getStepRecurrence(*SE);
-      if (CurLoop == AddRec->getLoop())
-        DstCoeff = Coeff;
-      else {
-        // If the coefficient is the product of a constant and other stuff,
-        // we can use the constant in the GCD computation.
-        std::optional<APInt> ConstCoeff = getConstantPart(Coeff);
-        if (!ConstCoeff)
-          return false;
-        RunningGCD =
-            APIntOps::GreatestCommonDivisor(RunningGCD, ConstCoeff->abs());
-      }
-      Inner = AddRec->getStart();
-    }
+
+    if (!accumulateCoefficientsGCD(Src, CurLoop, SrcCoeff, RunningGCD) ||
+        !accumulateCoefficientsGCD(Dst, CurLoop, DstCoeff, RunningGCD))
+      return false;
+
     Delta = SE->getMinusSCEV(SrcCoeff, DstCoeff);
     // If the coefficient is the product of a constant and other stuff,
     // we can use the constant in the GCD computation.
