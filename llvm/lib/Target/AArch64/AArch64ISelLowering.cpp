@@ -9055,9 +9055,6 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (MF.getTarget().Options.EmitCallGraphSection && CB && CB->isIndirectCall())
     CSInfo = MachineFunction::CallSiteInfo(*CB);
 
-  // Determine whether we need any streaming mode changes.
-  SMECallAttrs CallAttrs = getSMECallAttrs(MF.getFunction(), *this, CLI);
-
   // Check callee args/returns for SVE registers and set calling convention
   // accordingly.
   if (CallConv == CallingConv::C || CallConv == CallingConv::Fast) {
@@ -9071,6 +9068,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       CallConv = CallingConv::AArch64_SVE_VectorCall;
   }
 
+  // Determine whether we need any streaming mode changes.
+  SMECallAttrs CallAttrs = getSMECallAttrs(MF.getFunction(), *this, CLI);
   bool UseNewSMEABILowering = Subtarget->useNewSMEABILowering();
   bool IsAgnosticZAFunction = CallAttrs.caller().hasAgnosticZAInterface();
   auto ZAMarkerNode = [&]() -> std::optional<unsigned> {
@@ -9089,7 +9088,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
     // A sibling call is one where we're under the usual C ABI and not planning
     // to change that but can still do a tail call:
-    if (!ZAMarkerNode.has_value() && !TailCallOpt && IsTailCall &&
+    if (!ZAMarkerNode && !TailCallOpt && IsTailCall &&
         CallConv != CallingConv::Tail && CallConv != CallingConv::SwiftTail)
       IsSibCall = true;
 
@@ -9238,8 +9237,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     Chain = DAG.getCALLSEQ_START(Chain, IsTailCall ? 0 : NumBytes, 0, DL);
     if (ZAMarkerNode) {
       // Note: We need the CALLSEQ_START to glue the ZAMarkerNode to, simply
-      // using a chain can result in incorrect scheduling. The markers referer
-      // to the position just before the CALLSEQ_START (though occur after as
+      // using a chain can result in incorrect scheduling. The markers refer to
+      // the position just before the CALLSEQ_START (though occur after as
       // CALLSEQ_START lacks in-glue).
       Chain = DAG.getNode(*ZAMarkerNode, DL, DAG.getVTList(MVT::Other),
                           {Chain, Chain.getValue(1)});

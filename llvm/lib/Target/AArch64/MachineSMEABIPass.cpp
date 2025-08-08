@@ -31,14 +31,27 @@ using namespace llvm;
 namespace {
 
 enum ZAState {
+  // Any/unknown state (not valid)
   ANY = 0,
+
+  // ZA is in use and active (i.e. within the accumulator)
   ACTIVE,
+
+  // A ZA save has been set up or committed (i.e. ZA is dormant or off)
   LOCAL_SAVED,
+
+  // ZA is off or a lazy save has been set up by the caller
   CALLER_DORMANT,
+
+  // ZA is off
   OFF,
+
+  // The number of ZA states (not a valid state)
   NUM_ZA_STATE
 };
 
+/// A bitmask enum to record live physical registers that the "emit*" routines
+/// may need to preserve. Note: This only tracks registers we may clobber.
 enum LiveRegs : uint8_t {
   None = 0,
   NZCV = 1 << 0,
@@ -46,6 +59,13 @@ enum LiveRegs : uint8_t {
   W0_HI = 1 << 2,
   X0 = W0 | W0_HI,
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ W0_HI)
+};
+
+/// Holds the virtual registers live physical registers have been saved to.
+struct PhysRegSave {
+  LiveRegs PhysLiveRegs;
+  Register StatusFlags = AArch64::NoRegister;
+  Register X0Save = AArch64::NoRegister;
 };
 
 static bool isLegalEdgeBundleZAState(ZAState State) {
@@ -126,9 +146,17 @@ struct MachineSMEABI : public MachineFunctionPass {
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
-  void collectNeededZAStates(MachineFunction &MF, SMEAttrs);
-  void pickBundleZAStates(MachineFunction &MF);
-  void insertStateChanges(MachineFunction &MF);
+  /// Collects the needed ZA state (and live registers) before each instruction
+  /// within the machine function.
+  void collectNeededZAStates(SMEAttrs);
+
+  /// Assigns each edge bundle a ZA state based on the needed states of blocks
+  /// that have incoming or outgoing edges in that bundle.
+  void assignBundleZAStates();
+
+  /// Inserts code to handle changes between ZA states within the function.
+  /// E.g., ACTIVE -> LOCAL_SAVED will insert code required to save ZA.
+  void insertStateChanges();
 
   // Emission routines for private and shared ZA functions (using lazy saves).
   void emitNewZAPrologue(MachineBasicBlock &MBB,
@@ -146,15 +174,26 @@ struct MachineSMEABI : public MachineFunctionPass {
   void emitStateChange(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                        ZAState From, ZAState To, LiveRegs PhysLiveRegs);
 
-  TPIDR2State getTPIDR2Block(MachineFunction &MF);
+  /// Save live physical registers to virtual registers.
+  PhysRegSave createPhysRegSave(LiveRegs PhysLiveRegs, MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator MBBI, DebugLoc DL);
+  /// Restore physical registers from a save of their previous values.
+  void restorePhyRegSave(PhysRegSave const &RegSave, MachineBasicBlock &MBB,
+                         MachineBasicBlock::iterator MBBI, DebugLoc DL);
+
+  /// Get or create a TPIDR2 block in this function.
+  TPIDR2State getTPIDR2Block();
 
 private:
+  /// Contains the needed ZA state (and live registers) at an instruction.
   struct InstInfo {
     ZAState NeededState{ZAState::ANY};
     MachineBasicBlock::iterator InsertPt;
     LiveRegs PhysLiveRegs = LiveRegs::None;
   };
 
+  /// Contains the needed ZA state for each instruction in a block.
+  /// Instructions that do not require a ZA state are not recorded.
   struct BlockInfo {
     ZAState FixedEntryState{ZAState::ANY};
     SmallVector<InstInfo> Insts;
@@ -168,19 +207,22 @@ private:
     std::optional<TPIDR2State> TPIDR2Block;
   } State;
 
+  MachineFunction *MF = nullptr;
   EdgeBundles *Bundles = nullptr;
+  const AArch64Subtarget *Subtarget = nullptr;
+  const AArch64RegisterInfo *TRI = nullptr;
+  const TargetInstrInfo *TII = nullptr;
+  MachineRegisterInfo *MRI = nullptr;
 };
 
-void MachineSMEABI::collectNeededZAStates(MachineFunction &MF,
-                                          SMEAttrs SMEFnAttrs) {
-  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+void MachineSMEABI::collectNeededZAStates(SMEAttrs SMEFnAttrs) {
   assert((SMEFnAttrs.hasZT0State() || SMEFnAttrs.hasZAState()) &&
          "Expected function to have ZA/ZT0 state!");
 
-  State.Blocks.resize(MF.getNumBlockIDs());
-  for (MachineBasicBlock &MBB : MF) {
+  State.Blocks.resize(MF->getNumBlockIDs());
+  for (MachineBasicBlock &MBB : *MF) {
     BlockInfo &Block = State.Blocks[MBB.getNumber()];
-    if (&MBB == &MF.front()) {
+    if (&MBB == &MF->front()) {
       // Entry block:
       Block.FixedEntryState = SMEFnAttrs.hasPrivateZAInterface()
                                   ? ZAState::CALLER_DORMANT
@@ -190,7 +232,7 @@ void MachineSMEABI::collectNeededZAStates(MachineFunction &MF,
       Block.FixedEntryState = ZAState::LOCAL_SAVED;
     }
 
-    LiveRegUnits LiveUnits(TRI);
+    LiveRegUnits LiveUnits(*TRI);
     LiveUnits.addLiveOuts(MBB);
 
     auto GetPhysLiveRegs = [&] {
@@ -198,7 +240,7 @@ void MachineSMEABI::collectNeededZAStates(MachineFunction &MF,
       if (!LiveUnits.available(AArch64::NZCV))
         PhysLiveRegs |= LiveRegs::NZCV;
       // We have to track W0 and X0 separately as otherwise things can get
-      // confused we attempt to preserve X0 but only W0 was defined.
+      // confused if we attempt to preserve X0 but only W0 was defined.
       if (!LiveUnits.available(AArch64::W0))
         PhysLiveRegs |= LiveRegs::W0;
       if (!LiveUnits.available(AArch64::W0_HI))
@@ -213,7 +255,7 @@ void MachineSMEABI::collectNeededZAStates(MachineFunction &MF,
       LiveUnits.stepBackward(MI);
       LiveRegs PhysLiveRegs = GetPhysLiveRegs();
       auto [NeededState, InsertPt] = getInstNeededZAState(
-          TRI, MI, /*ZALiveAtReturn=*/SMEFnAttrs.hasSharedZAInterface());
+          *TRI, MI, /*ZALiveAtReturn=*/SMEFnAttrs.hasSharedZAInterface());
       assert((InsertPt == MBBI ||
               InsertPt->getOpcode() == AArch64::ADJCALLSTACKDOWN) &&
              "Unexpected state change insertion point!");
@@ -229,12 +271,12 @@ void MachineSMEABI::collectNeededZAStates(MachineFunction &MF,
   }
 }
 
-void MachineSMEABI::pickBundleZAStates(MachineFunction &MF) {
+void MachineSMEABI::assignBundleZAStates() {
   State.BundleStates.resize(Bundles->getNumBundles());
   for (unsigned I = 0, E = Bundles->getNumBundles(); I != E; ++I) {
-    LLVM_DEBUG(dbgs() << "Picking ZA state for edge bundle: " << I << '\n');
+    LLVM_DEBUG(dbgs() << "Assigning ZA state for edge bundle: " << I << '\n');
 
-    // Attempt to pick a ZA state for this bundle that minimizes state
+    // Attempt to assign a ZA state for this bundle that minimizes state
     // transitions. Edges within loops are given a higher weight as we assume
     // they will be executed more than once.
     // TODO: We should propagate desired incoming/outgoing states through blocks
@@ -286,8 +328,8 @@ void MachineSMEABI::pickBundleZAStates(MachineFunction &MF) {
   }
 }
 
-void MachineSMEABI::insertStateChanges(MachineFunction &MF) {
-  for (MachineBasicBlock &MBB : MF) {
+void MachineSMEABI::insertStateChanges() {
+  for (MachineBasicBlock &MBB : *MF) {
     BlockInfo &Block = State.Blocks[MBB.getNumber()];
     ZAState InState =
         State.BundleStates[Bundles->getBundle(MBB.getNumber(), /*Out=*/false)];
@@ -314,10 +356,10 @@ void MachineSMEABI::insertStateChanges(MachineFunction &MF) {
   }
 }
 
-TPIDR2State MachineSMEABI::getTPIDR2Block(MachineFunction &MF) {
+TPIDR2State MachineSMEABI::getTPIDR2Block() {
   if (State.TPIDR2Block)
     return *State.TPIDR2Block;
-  MachineFrameInfo &MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF->getFrameInfo();
   State.TPIDR2Block = TPIDR2State{MFI.CreateStackObject(16, Align(16), false)};
   return *State.TPIDR2Block;
 }
@@ -331,148 +373,128 @@ static DebugLoc getDebugLoc(MachineBasicBlock &MBB,
 
 void MachineSMEABI::emitSetupLazySave(MachineBasicBlock &MBB,
                                       MachineBasicBlock::iterator MBBI) {
-  MachineFunction &MF = *MBB.getParent();
-  auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
-  const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
-  MachineRegisterInfo &MRI = MF.getRegInfo();
   DebugLoc DL = getDebugLoc(MBB, MBBI);
 
   // Get pointer to TPIDR2 block.
-  Register TPIDR2 = MRI.createVirtualRegister(&AArch64::GPR64spRegClass);
-  Register TPIDR2Ptr = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
-  BuildMI(MBB, MBBI, DL, TII.get(AArch64::ADDXri), TPIDR2)
-      .addFrameIndex(getTPIDR2Block(MF).FrameIndex)
+  Register TPIDR2 = MRI->createVirtualRegister(&AArch64::GPR64spRegClass);
+  Register TPIDR2Ptr = MRI->createVirtualRegister(&AArch64::GPR64RegClass);
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADDXri), TPIDR2)
+      .addFrameIndex(getTPIDR2Block().FrameIndex)
       .addImm(0)
       .addImm(0);
-  BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::COPY), TPIDR2Ptr).addReg(TPIDR2);
+  BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::COPY), TPIDR2Ptr)
+      .addReg(TPIDR2);
   // Set TPIDR2_EL0 to point to TPIDR2 block.
-  BuildMI(MBB, MBBI, DL, TII.get(AArch64::MSR))
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::MSR))
       .addImm(AArch64SysReg::TPIDR2_EL0)
       .addReg(TPIDR2Ptr);
 }
 
-// Helper class for saving physical registers around calls.
-struct ScopedPhysRegSave {
-  ScopedPhysRegSave(MachineRegisterInfo &MRI, const TargetInstrInfo &TII,
-                    DebugLoc DL, MachineBasicBlock &MBB,
-                    MachineBasicBlock::iterator MBBI, LiveRegs PhysLiveRegs)
-      : TII(TII), DL(DL), MBB(MBB), MBBI(MBBI), PhysLiveRegs(PhysLiveRegs) {
-    if (PhysLiveRegs & LiveRegs::NZCV) {
-      StatusFlags = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
-      BuildMI(MBB, MBBI, DL, TII.get(AArch64::MRS))
-          .addReg(StatusFlags, RegState::Define)
-          .addImm(AArch64SysReg::NZCV)
-          .addReg(AArch64::NZCV, RegState::Implicit);
-    }
-    // Note: Preserving X0 is "free" as this is before register allocation, so
-    // the register allocator is still able to optimize these copies.
-    if (PhysLiveRegs & LiveRegs::W0) {
-      X0Save = MRI.createVirtualRegister(PhysLiveRegs & LiveRegs::W0_HI
-                                             ? &AArch64::GPR64RegClass
-                                             : &AArch64::GPR32RegClass);
-      BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::COPY), X0Save)
-          .addReg(PhysLiveRegs & LiveRegs::W0_HI ? AArch64::X0 : AArch64::W0);
-    }
+PhysRegSave MachineSMEABI::createPhysRegSave(LiveRegs PhysLiveRegs,
+                                             MachineBasicBlock &MBB,
+                                             MachineBasicBlock::iterator MBBI,
+                                             DebugLoc DL) {
+  PhysRegSave RegSave{PhysLiveRegs};
+  if (PhysLiveRegs & LiveRegs::NZCV) {
+    RegSave.StatusFlags = MRI->createVirtualRegister(&AArch64::GPR64RegClass);
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::MRS))
+        .addReg(RegSave.StatusFlags, RegState::Define)
+        .addImm(AArch64SysReg::NZCV)
+        .addReg(AArch64::NZCV, RegState::Implicit);
   }
-
-  ~ScopedPhysRegSave() {
-    if (StatusFlags != AArch64::NoRegister)
-      BuildMI(MBB, MBBI, DL, TII.get(AArch64::MSR))
-          .addImm(AArch64SysReg::NZCV)
-          .addReg(StatusFlags)
-          .addReg(AArch64::NZCV, RegState::ImplicitDefine);
-
-    if (X0Save != AArch64::NoRegister)
-      BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::COPY),
-              PhysLiveRegs & LiveRegs::W0_HI ? AArch64::X0 : AArch64::W0)
-          .addReg(X0Save);
+  // Note: Preserving X0 is "free" as this is before register allocation, so
+  // the register allocator is still able to optimize these copies.
+  if (PhysLiveRegs & LiveRegs::W0) {
+    RegSave.X0Save = MRI->createVirtualRegister(PhysLiveRegs & LiveRegs::W0_HI
+                                                    ? &AArch64::GPR64RegClass
+                                                    : &AArch64::GPR32RegClass);
+    BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::COPY), RegSave.X0Save)
+        .addReg(PhysLiveRegs & LiveRegs::W0_HI ? AArch64::X0 : AArch64::W0);
   }
+  return RegSave;
+}
 
-  const TargetInstrInfo &TII;
-  DebugLoc DL;
-  MachineBasicBlock &MBB;
-  MachineBasicBlock::iterator MBBI;
-  LiveRegs PhysLiveRegs;
-  Register StatusFlags = AArch64::NoRegister;
-  Register X0Save = AArch64::NoRegister;
-};
+void MachineSMEABI::restorePhyRegSave(PhysRegSave const &RegSave,
+                                      MachineBasicBlock &MBB,
+                                      MachineBasicBlock::iterator MBBI,
+                                      DebugLoc DL) {
+  if (RegSave.StatusFlags != AArch64::NoRegister)
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::MSR))
+        .addImm(AArch64SysReg::NZCV)
+        .addReg(RegSave.StatusFlags)
+        .addReg(AArch64::NZCV, RegState::ImplicitDefine);
+
+  if (RegSave.X0Save != AArch64::NoRegister)
+    BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::COPY),
+            RegSave.PhysLiveRegs & LiveRegs::W0_HI ? AArch64::X0 : AArch64::W0)
+        .addReg(RegSave.X0Save);
+}
 
 void MachineSMEABI::emitRestoreLazySave(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator MBBI,
                                         LiveRegs PhysLiveRegs) {
-  MachineFunction &MF = *MBB.getParent();
-  auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
-  const AArch64RegisterInfo &TRI = *Subtarget.getRegisterInfo();
-  const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-
   DebugLoc DL = getDebugLoc(MBB, MBBI);
-  Register TPIDR2EL0 = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
+  Register TPIDR2EL0 = MRI->createVirtualRegister(&AArch64::GPR64RegClass);
   Register TPIDR2 = AArch64::X0;
 
   // TODO: Emit these within the restore MBB to prevent unnecessary saves.
-  ScopedPhysRegSave ScopedPhysRegSave(MRI, TII, DL, MBB, MBBI, PhysLiveRegs);
+  PhysRegSave RegSave = createPhysRegSave(PhysLiveRegs, MBB, MBBI, DL);
 
   // Enable ZA.
-  BuildMI(MBB, MBBI, DL, TII.get(AArch64::MSRpstatesvcrImm1))
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::MSRpstatesvcrImm1))
       .addImm(AArch64SVCR::SVCRZA)
       .addImm(1);
   // Get current TPIDR2_EL0.
-  BuildMI(MBB, MBBI, DL, TII.get(AArch64::MRS))
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::MRS))
       .addReg(TPIDR2EL0, RegState::Define)
       .addImm(AArch64SysReg::TPIDR2_EL0);
   // Get pointer to TPIDR2 block.
-  BuildMI(MBB, MBBI, DL, TII.get(AArch64::ADDXri), TPIDR2)
-      .addFrameIndex(getTPIDR2Block(MF).FrameIndex)
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADDXri), TPIDR2)
+      .addFrameIndex(getTPIDR2Block().FrameIndex)
       .addImm(0)
       .addImm(0);
   // (Conditionally) restore ZA state.
-  BuildMI(MBB, MBBI, DL, TII.get(AArch64::RestoreZAPseudo))
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::RestoreZAPseudo))
       .addReg(TPIDR2EL0)
       .addReg(TPIDR2)
       .addExternalSymbol("__arm_tpidr2_restore")
-      .addRegMask(TRI.SMEABISupportRoutinesCallPreservedMaskFromX0());
+      .addRegMask(TRI->SMEABISupportRoutinesCallPreservedMaskFromX0());
   // Zero TPIDR2_EL0.
-  BuildMI(MBB, MBBI, DL, TII.get(AArch64::MSR))
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::MSR))
       .addImm(AArch64SysReg::TPIDR2_EL0)
       .addReg(AArch64::XZR);
+
+  restorePhyRegSave(RegSave, MBB, MBBI, DL);
 }
 
 void MachineSMEABI::emitZAOff(MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator MBBI,
                               bool ClearTPIDR2) {
-  MachineFunction &MF = *MBB.getParent();
-  auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
-  const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
   DebugLoc DL = getDebugLoc(MBB, MBBI);
 
   // Clear TPIDR2.
   if (ClearTPIDR2)
-    BuildMI(MBB, MBBI, DL, TII.get(AArch64::MSR))
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::MSR))
         .addImm(AArch64SysReg::TPIDR2_EL0)
         .addReg(AArch64::XZR);
 
   // Disable ZA.
-  BuildMI(MBB, MBBI, DL, TII.get(AArch64::MSRpstatesvcrImm1))
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::MSRpstatesvcrImm1))
       .addImm(AArch64SVCR::SVCRZA)
       .addImm(0);
 }
 
 void MachineSMEABI::emitAllocateLazySaveBuffer(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
-  MachineFunction &MF = *MBB.getParent();
-  MachineFrameInfo &MFI = MF.getFrameInfo();
-  auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
-  const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
-  MachineRegisterInfo &MRI = MF.getRegInfo();
+  MachineFrameInfo &MFI = MF->getFrameInfo();
 
   DebugLoc DL = getDebugLoc(MBB, MBBI);
-  Register SP = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
-  Register SVL = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
-  Register Buffer = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
+  Register SP = MRI->createVirtualRegister(&AArch64::GPR64RegClass);
+  Register SVL = MRI->createVirtualRegister(&AArch64::GPR64RegClass);
+  Register Buffer = MRI->createVirtualRegister(&AArch64::GPR64RegClass);
 
   // Calculate SVL.
-  BuildMI(MBB, MBBI, DL, TII.get(AArch64::RDSVLI_XI), SVL).addImm(1);
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::RDSVLI_XI), SVL).addImm(1);
 
   // 1. Allocate the lazy save buffer.
   {
@@ -480,16 +502,17 @@ void MachineSMEABI::emitAllocateLazySaveBuffer(
     // on Windows. Some refactoring to share the functionality in
     // LowerWindowsDYNAMIC_STACKALLOC will be required once the Windows ABI
     // supports SME
-    assert(!Subtarget.isTargetWindows() &&
+    assert(!Subtarget->isTargetWindows() &&
            "Lazy ZA save is not yet supported on Windows");
     // Get original stack pointer.
-    BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::COPY), SP).addReg(AArch64::SP);
+    BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::COPY), SP)
+        .addReg(AArch64::SP);
     // Allocate a lazy-save buffer object of the size given, normally SVL * SVL
-    BuildMI(MBB, MBBI, DL, TII.get(AArch64::MSUBXrrr), Buffer)
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::MSUBXrrr), Buffer)
         .addReg(SVL)
         .addReg(SVL)
         .addReg(SP);
-    BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::COPY), AArch64::SP)
+    BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::COPY), AArch64::SP)
         .addReg(Buffer);
     // We have just allocated a variable sized object, tell this to PEI.
     MFI.CreateVariableSizedObject(Align(16), nullptr);
@@ -498,11 +521,10 @@ void MachineSMEABI::emitAllocateLazySaveBuffer(
   // 2. Setup the TPIDR2 block.
   {
     Register TPIDInitSaveSlicesReg = SVL;
-    if (!Subtarget.isLittleEndian()) {
-      Register TmpReg =
-          MF.getRegInfo().createVirtualRegister(&AArch64::GPR64RegClass);
+    if (!Subtarget->isLittleEndian()) {
+      Register TmpReg = MRI->createVirtualRegister(&AArch64::GPR64RegClass);
       // For big-endian targets move "num_za_save_slices" to the top two bytes.
-      BuildMI(MBB, MBBI, DL, TII.get(AArch64::UBFMXri), TmpReg)
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::UBFMXri), TmpReg)
           .addReg(TPIDInitSaveSlicesReg)
           .addImm(16)
           .addImm(15);
@@ -510,10 +532,10 @@ void MachineSMEABI::emitAllocateLazySaveBuffer(
     }
     // Store buffer pointer and num_za_save_slices.
     // Bytes 10-15 are implicitly zeroed.
-    BuildMI(MBB, MBBI, DL, TII.get(AArch64::STPXi))
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::STPXi))
         .addReg(Buffer)
         .addReg(TPIDInitSaveSlicesReg)
-        .addFrameIndex(getTPIDR2Block(MF).FrameIndex)
+        .addFrameIndex(getTPIDR2Block().FrameIndex)
         .addImm(0);
   }
 }
@@ -531,34 +553,29 @@ static void emitZeroZA(const TargetInstrInfo &TII, DebugLoc DL,
 
 void MachineSMEABI::emitNewZAPrologue(MachineBasicBlock &MBB,
                                       MachineBasicBlock::iterator MBBI) {
-  MachineFunction &MF = *MBB.getParent();
-  auto &Subtarget = MF.getSubtarget<AArch64Subtarget>();
-  const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-  const AArch64RegisterInfo &TRI = *Subtarget.getRegisterInfo();
   DebugLoc DL = getDebugLoc(MBB, MBBI);
 
   // Get current TPIDR2_EL0.
-  Register TPIDR2EL0 = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
-  BuildMI(MBB, MBBI, DL, TII.get(AArch64::MRS))
+  Register TPIDR2EL0 = MRI->createVirtualRegister(&AArch64::GPR64RegClass);
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::MRS))
       .addReg(TPIDR2EL0, RegState::Define)
       .addImm(AArch64SysReg::TPIDR2_EL0);
   // If TPIDR2_EL0 is non-zero, commit the lazy save.
-  BuildMI(MBB, MBBI, DL, TII.get(AArch64::CommitZAPseudo))
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::CommitZAPseudo))
       .addReg(TPIDR2EL0)
       .addExternalSymbol("__arm_tpidr2_save")
-      .addRegMask(TRI.SMEABISupportRoutinesCallPreservedMaskFromX0());
+      .addRegMask(TRI->SMEABISupportRoutinesCallPreservedMaskFromX0());
   // Clear TPIDR2_EL0.
-  BuildMI(MBB, MBBI, DL, TII.get(AArch64::MSR))
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::MSR))
       .addImm(AArch64SysReg::TPIDR2_EL0)
       .addReg(AArch64::XZR);
   // Enable ZA (as ZA could have previously been in the OFF state).
-  BuildMI(MBB, MBBI, DL, TII.get(AArch64::MSRpstatesvcrImm1))
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::MSRpstatesvcrImm1))
       .addImm(AArch64SVCR::SVCRZA)
       .addImm(1);
   // Zero ZA. Note: ZA state may new be needed for new ZT0 functions.
-  if (MF.getInfo<AArch64FunctionInfo>()->getSMEFnAttrs().hasZAState())
-    emitZeroZA(TII, DL, MBB, MBBI, /*Mask=*/0b11111111);
+  if (MF->getInfo<AArch64FunctionInfo>()->getSMEFnAttrs().hasZAState())
+    emitZeroZA(*TII, DL, MBB, MBBI, /*Mask=*/0b11111111);
 }
 
 void MachineSMEABI::emitStateChange(MachineBasicBlock &MBB,
@@ -582,10 +599,10 @@ void MachineSMEABI::emitStateChange(MachineBasicBlock &MBB,
            "CALLER_DORMANT state only valid in entry block");
     emitNewZAPrologue(MBB, MBB.getFirstNonPHI());
     if (To == ZAState::ACTIVE)
-      return; // Nothing more to to (ZA is active after the prologue).
+      return; // Nothing more to do (ZA is active after the prologue).
 
     // Note: "emitNewZAPrologue" zeros ZA, so we may need to setup a lazy save
-    // if "To" os "ZAState::LOCAL_SAVED". If may be possible to improve this
+    // if "To" is "ZAState::LOCAL_SAVED". If may be possible to improve this
     // case by changing the placement of the zero instruction.
     From = ZAState::ACTIVE;
   }
@@ -624,14 +641,19 @@ bool MachineSMEABI::runOnMachineFunction(MachineFunction &MF) {
 
   // Reset pass state.
   State = PassState{};
+  this->MF = &MF;
   Bundles = &getAnalysis<EdgeBundlesWrapperLegacy>().getEdgeBundles();
+  Subtarget = &MF.getSubtarget<AArch64Subtarget>();
+  TII = Subtarget->getInstrInfo();
+  TRI = Subtarget->getRegisterInfo();
+  MRI = &MF.getRegInfo();
 
-  collectNeededZAStates(MF, SMEFnAttrs);
-  pickBundleZAStates(MF);
-  insertStateChanges(MF);
+  collectNeededZAStates(SMEFnAttrs);
+  assignBundleZAStates();
+  insertStateChanges();
 
   // Allocate save buffer (if needed).
-  if (State.TPIDR2Block.has_value()) {
+  if (State.TPIDR2Block) {
     MachineBasicBlock &EntryBlock = MF.front();
     emitAllocateLazySaveBuffer(EntryBlock, EntryBlock.getFirstNonPHI());
   }

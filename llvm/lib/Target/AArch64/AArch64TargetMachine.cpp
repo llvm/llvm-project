@@ -824,7 +824,7 @@ bool AArch64PassConfig::addILPOpts() {
 }
 
 void AArch64PassConfig::addPreRegAlloc() {
-  if (EnableNewSMEABILowering && TM->getOptLevel() == CodeGenOptLevel::None)
+  if (TM->getOptLevel() == CodeGenOptLevel::None && EnableNewSMEABILowering)
     addPass(createMachineSMEABIPass());
 
   // Change dead register definitions to refer to the zero register.

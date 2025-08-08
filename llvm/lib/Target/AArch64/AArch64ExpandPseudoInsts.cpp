@@ -1029,11 +1029,9 @@ AArch64ExpandPseudo::expandCommitOrRestoreZA(MachineBasicBlock &MBB,
   // Replace the pseudo with a call (BL).
   MachineInstrBuilder MIB =
       BuildMI(*SMBB, SMBB->end(), DL, TII->get(AArch64::BL));
-  unsigned FirstBLOperand = 1;
-  if (IsRestoreZA) {
+  if (IsRestoreZA)
     MIB.addReg(MI.getOperand(1).getReg(), RegState::Implicit);
-    FirstBLOperand = 2;
-  }
+  unsigned FirstBLOperand = IsRestoreZA ? 2 : 1;
   for (unsigned I = FirstBLOperand; I < MI.getNumOperands(); ++I)
     MIB.add(MI.getOperand(I));
   BuildMI(SMBB, DL, TII->get(AArch64::B)).addMBB(EndBB);
