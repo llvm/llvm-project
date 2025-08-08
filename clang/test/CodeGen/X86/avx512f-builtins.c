@@ -439,6 +439,22 @@ __m512d test_mm512_set1_pd(double d)
   // CHECK: insertelement <8 x double> {{.*}}, i32 7
   return _mm512_set1_pd(d);
 }
+TEST_CONSTEXPR(match_m512d(_mm512_set1_pd(-100.0), -100.0, -100.0, -100.0, -100.0, -100.0, -100.0, -100.0, -100.0));
+
+__m512 test_mm512_set1_ps(float d)
+{
+  // CHECK-LABEL: test_mm512_set1_ps
+  // CHECK: insertelement <16 x float> {{.*}}, i32 0
+  // CHECK: insertelement <16 x float> {{.*}}, i32 1
+  // CHECK: insertelement <16 x float> {{.*}}, i32 2
+  // CHECK: insertelement <16 x float> {{.*}}, i32 3
+  // CHECK: insertelement <16 x float> {{.*}}, i32 4
+  // CHECK: insertelement <16 x float> {{.*}}, i32 5
+  // CHECK: insertelement <16 x float> {{.*}}, i32 6
+  // CHECK: insertelement <16 x float> {{.*}}, i32 15
+  return _mm512_set1_ps(d);
+}
+TEST_CONSTEXPR(match_m512(_mm512_set1_ps(-55.0f), -55.0f, -55.0f, -55.0f, -55.0f, -55.0f, -55.0f, -55.0f, -55.0f, -55.0f, -55.0f, -55.0f, -55.0f, -55.0f, -55.0f, -55.0f, -55.0f));
 
 __mmask16 test_mm512_knot(__mmask16 a)
 {
@@ -9046,6 +9062,7 @@ __m512i test_mm512_set1_epi8(char d)
   // CHECK: insertelement <64 x i8> {{.*}}, i32 63
   return _mm512_set1_epi8(d);
 }
+TEST_CONSTEXPR(match_v64qi(_mm512_set1_epi8(127), 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127, 127));
 
 __m512i test_mm512_set1_epi16(short d)
 {
@@ -9061,6 +9078,7 @@ __m512i test_mm512_set1_epi16(short d)
   // CHECK: insertelement <32 x i16> {{.*}}, i32 31
   return _mm512_set1_epi16(d);
 }
+TEST_CONSTEXPR(match_v32hi(_mm512_set1_epi16(-511), -511, -511, -511, -511, -511, -511, -511, -511, -511, -511, -511, -511, -511, -511, -511, -511, -511, -511, -511, -511, -511, -511, -511, -511, -511, -511, -511, -511, -511, -511, -511, -511));
 
 __m512i test_mm512_set1_epi32(int d)
 {
