@@ -7,13 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeCompletionStrings.h"
+#include "Config.h"
+#include "SymbolDocumentation.h"
 #include "clang-c/Index.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Comment.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/RawCommentList.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/raw_ostream.h"
 #include <limits>
 #include <utility>
 
@@ -100,16 +105,51 @@ std::string getDeclComment(const ASTContext &Ctx, const NamedDecl &Decl) {
     // the comments for namespaces.
     return "";
   }
-  const RawComment *RC = getCompletionComment(Ctx, &Decl);
-  if (!RC)
-    return "";
-  // Sanity check that the comment does not come from the PCH. We choose to not
-  // write them into PCH, because they are racy and slow to load.
-  assert(!Ctx.getSourceManager().isLoadedSourceLocation(RC->getBeginLoc()));
-  std::string Doc =
-      RC->getFormattedText(Ctx.getSourceManager(), Ctx.getDiagnostics());
-  if (!looksLikeDocComment(Doc))
-    return "";
+
+  const RawComment *RC = nullptr;
+  const Config &Cfg = Config::current();
+
+  std::string Doc;
+
+  if (Cfg.Documentation.CommentFormat == Config::CommentFormatPolicy::Doxygen &&
+      isa<ParmVarDecl>(Decl)) {
+    // Parameters are documented in their declaration context (function or
+    // template function).
+    const NamedDecl *ND = dyn_cast<NamedDecl>(Decl.getDeclContext());
+    if (!ND)
+      return "";
+
+    RC = getCompletionComment(Ctx, ND);
+    if (!RC)
+      return "";
+
+    // Sanity check that the comment does not come from the PCH. We choose to
+    // not write them into PCH, because they are racy and slow to load.
+    assert(!Ctx.getSourceManager().isLoadedSourceLocation(RC->getBeginLoc()));
+
+    comments::FullComment *FC = RC->parse(Ctx, /*PP=*/nullptr, ND);
+    if (!FC)
+      return "";
+
+    SymbolDocCommentVisitor V(FC, Ctx.getLangOpts().CommentOpts);
+    std::string RawDoc;
+    llvm::raw_string_ostream OS(RawDoc);
+
+    V.parameterDocToString(dyn_cast<ParmVarDecl>(&Decl)->getName(), OS);
+
+    Doc = StringRef(RawDoc).trim().str();
+  } else {
+    RC = getCompletionComment(Ctx, &Decl);
+    if (!RC)
+      return "";
+    // Sanity check that the comment does not come from the PCH. We choose to
+    // not write them into PCH, because they are racy and slow to load.
+    assert(!Ctx.getSourceManager().isLoadedSourceLocation(RC->getBeginLoc()));
+    Doc = RC->getFormattedText(Ctx.getSourceManager(), Ctx.getDiagnostics());
+    if (!looksLikeDocComment(Doc))
+      return "";
+  }
+
   // Clang requires source to be UTF-8, but doesn't enforce this in comments.
   if (!llvm::json::isUTF8(Doc))
     Doc = llvm::json::fixUTF8(Doc);
