@@ -54,6 +54,8 @@ class CIR_UnitAttr<string name, string attrMnemonic, list<Trait> traits = []>
 // SourceLanguageAttr
 //===----------------------------------------------------------------------===//
 
+// TODO: Add cases for other languages that Clang supports.
+
 def CIR_SourceLanguage : CIR_I32EnumAttr<"SourceLanguage", "source language", [
   I32EnumAttrCase<"C", 1, "c">,
   I32EnumAttrCase<"CXX", 2, "cxx">
@@ -62,8 +64,6 @@ def CIR_SourceLanguage : CIR_I32EnumAttr<"SourceLanguage", "source language", [
   // so that it can define extra class methods.
   let genSpecializedAttr = 0;
 }
-
-// TODO: Add cases for other languages that Clang supports.
 
 def CIR_SourceLanguageAttr : CIR_EnumAttr<CIR_SourceLanguage, "lang"> {
 
