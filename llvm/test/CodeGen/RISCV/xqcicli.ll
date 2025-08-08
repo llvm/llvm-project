@@ -307,7 +307,8 @@ define i32 @select_cc_example_sgei(i32 %a, i32 %b, i32 %x, i32 %y) {
 ;
 ; RV32IXQCICLI-LABEL: select_cc_example_sgei:
 ; RV32IXQCICLI:       # %bb.0: # %entry
-; RV32IXQCICLI-NEXT:    qc.ligei a0, a1, 12, 11
+; RV32IXQCICLI-NEXT:    li a2, 11
+; RV32IXQCICLI-NEXT:    qc.lilt a0, a2, a1, 11
 ; RV32IXQCICLI-NEXT:    ret
 entry:
   %cmp = icmp sge i32 %b, 12
@@ -347,7 +348,8 @@ define i32 @select_cc_example_ugei(i32 %a, i32 %b, i32 %x, i32 %y) {
 ;
 ; RV32IXQCICLI-LABEL: select_cc_example_ugei:
 ; RV32IXQCICLI:       # %bb.0: # %entry
-; RV32IXQCICLI-NEXT:    qc.ligeui a0, a1, 12, 11
+; RV32IXQCICLI-NEXT:    li a2, 11
+; RV32IXQCICLI-NEXT:    qc.liltu a0, a2, a1, 11
 ; RV32IXQCICLI-NEXT:    ret
 entry:
   %cmp = icmp uge i32 %b, 12
@@ -407,7 +409,8 @@ define i32 @select_cc_example_slti_c1(i32 %a, i32 %b, i32 %x, i32 %y) {
 ;
 ; RV32IXQCICLI-LABEL: select_cc_example_slti_c1:
 ; RV32IXQCICLI:       # %bb.0: # %entry
-; RV32IXQCICLI-NEXT:    qc.ligei a0, a1, 13, 11
+; RV32IXQCICLI-NEXT:    li a2, 12
+; RV32IXQCICLI-NEXT:    qc.lilt a0, a2, a1, 11
 ; RV32IXQCICLI-NEXT:    ret
 entry:
   %cmp = icmp slt i32 12, %b
@@ -447,7 +450,8 @@ define i32 @select_cc_example_ulti_c1(i32 %a, i32 %b, i32 %x, i32 %y) {
 ;
 ; RV32IXQCICLI-LABEL: select_cc_example_ulti_c1:
 ; RV32IXQCICLI:       # %bb.0: # %entry
-; RV32IXQCICLI-NEXT:    qc.ligeui a0, a1, 13, 11
+; RV32IXQCICLI-NEXT:    li a2, 12
+; RV32IXQCICLI-NEXT:    qc.liltu a0, a2, a1, 11
 ; RV32IXQCICLI-NEXT:    ret
 entry:
   %cmp = icmp ult i32 12, %b
@@ -527,7 +531,8 @@ define i32 @select_cc_example_slti_c2(i32 %a, i32 %b, i32 %x, i32 %y) {
 ;
 ; RV32IXQCICLI-LABEL: select_cc_example_slti_c2:
 ; RV32IXQCICLI:       # %bb.0: # %entry
-; RV32IXQCICLI-NEXT:    qc.lilti a0, a1, 13, 11
+; RV32IXQCICLI-NEXT:    li a2, 12
+; RV32IXQCICLI-NEXT:    qc.lige a0, a2, a1, 11
 ; RV32IXQCICLI-NEXT:    ret
 entry:
   %cmp = icmp slt i32 12, %b
@@ -567,7 +572,8 @@ define i32 @select_cc_example_ulti_c2(i32 %a, i32 %b, i32 %x, i32 %y) {
 ;
 ; RV32IXQCICLI-LABEL: select_cc_example_ulti_c2:
 ; RV32IXQCICLI:       # %bb.0: # %entry
-; RV32IXQCICLI-NEXT:    qc.liltui a0, a1, 13, 11
+; RV32IXQCICLI-NEXT:    li a2, 12
+; RV32IXQCICLI-NEXT:    qc.ligeu a0, a2, a1, 11
 ; RV32IXQCICLI-NEXT:    ret
 entry:
   %cmp = icmp ult i32 12, %b
@@ -667,7 +673,8 @@ define i32 @select_cc_example_sgei_c3(i32 %a, i32 %b, i32 %x, i32 %y) {
 ;
 ; RV32IXQCICLI-LABEL: select_cc_example_sgei_c3:
 ; RV32IXQCICLI:       # %bb.0: # %entry
-; RV32IXQCICLI-NEXT:    qc.lilti a0, a1, 12, 11
+; RV32IXQCICLI-NEXT:    li a2, 11
+; RV32IXQCICLI-NEXT:    qc.lige a0, a2, a1, 11
 ; RV32IXQCICLI-NEXT:    ret
 entry:
   %cmp = icmp sge i32 %b, 12
@@ -707,7 +714,8 @@ define i32 @select_cc_example_ugei_c3(i32 %a, i32 %b, i32 %x, i32 %y) {
 ;
 ; RV32IXQCICLI-LABEL: select_cc_example_ugei_c3:
 ; RV32IXQCICLI:       # %bb.0: # %entry
-; RV32IXQCICLI-NEXT:    qc.liltui a0, a1, 12, 11
+; RV32IXQCICLI-NEXT:    li a2, 11
+; RV32IXQCICLI-NEXT:    qc.ligeu a0, a2, a1, 11
 ; RV32IXQCICLI-NEXT:    ret
 entry:
   %cmp = icmp uge i32 %b, 12
