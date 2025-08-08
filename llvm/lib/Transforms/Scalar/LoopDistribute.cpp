@@ -504,6 +504,12 @@ public:
       Value *Ptr = RtPtrCheck->Pointers[I].PointerValue;
       auto Instructions =
           LAI.getInstructionsForAccess(Ptr, RtPtrCheck->Pointers[I].IsWritePtr);
+      const MemoryDepChecker &DC = LAI.getDepChecker();
+      bool IsWritePtr = !RtPtrCheck->Pointers[I].IsWritePtr;
+      if (!DC.getOrderForAccess(Ptr, IsWritePtr).empty()) {
+        auto AltInstructions = LAI.getInstructionsForAccess(Ptr, IsWritePtr);
+        Instructions.append(AltInstructions.begin(), AltInstructions.end());
+      }
 
       int &Partition = PtrToPartitions[I];
       // First set it to uninitialized.
