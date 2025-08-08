@@ -19,6 +19,111 @@ def junit_from_xml(xml):
 
 
 class TestReports(unittest.TestCase):
+    def test_find_failure_ninja_logs(self):
+        failures = generate_test_report_lib.find_failure_in_ninja_logs(
+            [
+                [
+                    "[1/5] test/1.stamp",
+                    "[2/5] test/2.stamp",
+                    "[3/5] test/3.stamp",
+                    "[4/5] test/4.stamp",
+                    "FAILED: touch test/4.stamp",
+                    "Wow! This system is really broken!",
+                    "[5/5] test/5.stamp",
+                ],
+            ]
+        )
+        self.assertEqual(len(failures), 1)
+        self.assertEqual(
+            failures[0],
+            (
+                "test/4.stamp",
+                dedent(
+                    """\
+                    FAILED: touch test/4.stamp
+                    Wow! This system is really broken!"""
+                ),
+            ),
+        )
+
+    def test_no_failure_ninja_log(self):
+        failures = generate_test_report_lib.find_failure_in_ninja_logs(
+            [
+                [
+                    "[1/3] test/1.stamp",
+                    "[2/3] test/2.stamp",
+                    "[3/3] test/3.stamp",
+                ]
+            ]
+        )
+        self.assertEqual(failures, [])
+
+    def test_ninja_log_end(self):
+        failures = generate_test_report_lib.find_failure_in_ninja_logs(
+            [
+                [
+                    "[1/3] test/1.stamp",
+                    "[2/3] test/2.stamp",
+                    "[3/3] test/3.stamp",
+                    "FAILED: touch test/3.stamp",
+                    "Wow! This system is really broken!",
+                    "ninja: build stopped: subcommand failed.",
+                ]
+            ]
+        )
+        self.assertEqual(len(failures), 1)
+        self.assertEqual(
+            failures[0],
+            (
+                "test/3.stamp",
+                dedent(
+                    """\
+                    FAILED: touch test/3.stamp
+                    Wow! This system is really broken!"""
+                ),
+            ),
+        )
+
+    def test_ninja_log_multiple_failures(self):
+        failures = generate_test_report_lib.find_failure_in_ninja_logs(
+            [
+                [
+                    "[1/5] test/1.stamp",
+                    "[2/5] test/2.stamp",
+                    "FAILED: touch test/2.stamp",
+                    "Wow! This system is really broken!",
+                    "[3/5] test/3.stamp",
+                    "[4/5] test/4.stamp",
+                    "FAILED: touch test/4.stamp",
+                    "Wow! This system is maybe broken!",
+                    "[5/5] test/5.stamp",
+                ]
+            ]
+        )
+        self.assertEqual(len(failures), 2)
+        self.assertEqual(
+            failures[0],
+            (
+                "test/2.stamp",
+                dedent(
+                    """\
+                    FAILED: touch test/2.stamp
+                    Wow! This system is really broken!"""
+                ),
+            ),
+        )
+        self.assertEqual(
+            failures[1],
+            (
+                "test/4.stamp",
+                dedent(
+                    """\
+                    FAILED: touch test/4.stamp
+                    Wow! This system is maybe broken!"""
+                ),
+            ),
+        )
+
     def test_title_only(self):
         self.assertEqual(
             generate_test_report_lib.generate_report("Foo", 0, []),
