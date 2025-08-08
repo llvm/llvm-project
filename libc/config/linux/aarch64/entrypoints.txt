@@ -970,6 +970,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.fileno
     libc.src.stdio.flockfile
     libc.src.stdio.fopen
+    libc.src.stdio.fopen_s
     libc.src.stdio.fopencookie
     libc.src.stdio.fputc
     libc.src.stdio.fputs
@@ -1000,11 +1001,14 @@ if(LLVM_LIBC_FULL_BUILD)
     # stdlib.h entrypoints
     libc.src.stdlib._Exit
     libc.src.stdlib.abort
+    libc.src.stdlib.abort_handler_s
     libc.src.stdlib.at_quick_exit
     libc.src.stdlib.atexit
     libc.src.stdlib.exit
     libc.src.stdlib.getenv
+    libc.src.stdlib.ignore_handler_s
     libc.src.stdlib.quick_exit
+    libc.src.stdlib.set_constraint_handler_s
 
     # signal.h entrypoints
     libc.src.signal.kill
