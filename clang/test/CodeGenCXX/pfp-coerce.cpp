@@ -186,7 +186,7 @@ void pass_trivial_abi_pointer(TrivialAbiPointer p, TrivialAbiPointer *pp) {
   // X86_64: store ptr %p.coerce, ptr %1, align 8
   // X86_64: store ptr %pp, ptr %pp.addr, align 8
   // X86_64: %2 = load ptr, ptr %pp.addr, align 8
-  // X86_64: %call = call noundef nonnull align 8 dereferenceable(8) ptr @_ZN17TrivialAbiPointeraSERKS_(ptr noundef nonnull align 8 dereferenceable(8) %2, ptr noundef nonnull align 8 dereferenceable(8) %p)
+  // X86_64: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %2, ptr align 8 %p, i64 8, i1 false)
   // X86_64: call void @_ZN17TrivialAbiPointerD1Ev(ptr noundef nonnull align 8 dereferenceable(8) %p)
   *pp = p;
 }
@@ -210,7 +210,7 @@ TrivialAbiPointer return_trivial_abi_pointer(TrivialAbiPointer *pp) {
   // X86_64: %pp.addr = alloca ptr, align 8
   // X86_64: store ptr %pp, ptr %pp.addr, align 8
   // X86_64: %0 = load ptr, ptr %pp.addr, align 8
-  // X86_64: call void @_ZN17TrivialAbiPointerC1ERKS_(ptr noundef nonnull align 8 dereferenceable(8) %retval, ptr noundef nonnull align 8 dereferenceable(8) %0)
+  // X86_64: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %retval, ptr align 8 %0, i64 8, i1 false)
   // X86_64: %1 = getelementptr inbounds i8, ptr %retval, i64 0
   // X86_64: %2 = call ptr @llvm.protected.field.ptr(ptr %1, i64 33, i1 false) [ "deactivation-symbol"(ptr @__pfp_ds__ZTS17TrivialAbiPointer.ptr) ]
   // X86_64: %3 = load ptr, ptr %2, align 8
