@@ -102,6 +102,35 @@ class DAPMessageLogger:
             )
 
 
+# Debuggers communicate optional feature support.
+class DAPDebuggerCapabilities:
+    def __init__(self):
+        self.supportsConfigurationDoneRequest: bool = False
+        self.supportsFunctionBreakpoints: bool = False
+        self.supportsConditionalBreakpoints: bool = False
+        self.supportsHitConditionalBreakpoints: bool = False
+        self.supportsEvaluateForHovers: bool = False
+        self.supportsSetVariable: bool = False
+        self.supportsStepInTargetsRequest: bool = False
+        self.supportsModulesRequest: bool = False
+        self.supportsValueFormattingOptions: bool = False
+        self.supportsLogPoints: bool = False
+        self.supportsSetExpression: bool = False
+        self.supportsDataBreakpoints: bool = False
+        self.supportsReadMemoryRequest: bool = False
+        self.supportsWriteMemoryRequest: bool = False
+        self.supportsDisassembleRequest: bool = False
+        self.supportsCancelRequest: bool = False
+        self.supportsSteppingGranularity: bool = False
+        self.supportsInstructionBreakpoints: bool = False
+
+    def update(self, logger: Logger, feature_dict: dict):
+        for k, v in feature_dict.items():
+            if hasattr(self, k):
+                setattr(self, k, v)
+            else:
+                logger.warning(f"DAP: Unknown support flag: {k}")
+
 # As DAP does not give us a trivially query-able process, we are responsible for maintaining our own state information,
 # including what breakpoints are currently set, and whether the debugger is running or stopped.
 # This class holds all state that is set based on events sent by the debug adapter; most responses are forwarded through
@@ -143,6 +172,9 @@ class DAPDebuggerState:
         self.responses: list[dict | None] = [None]
         # Map of DAP breakpoint IDs to resolved instruction addresses.
         self.bp_addr_map: dict[int, str] = {}
+
+        # DAP features supported by the debugger.
+        self.capabilities = DAPDebuggerCapabilities()
 
     def set_response(self, req_id: int, response: dict):
         if len(self.responses) > req_id:
@@ -320,6 +352,9 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
                         and debugger_state.thread is None
                     ):
                         debugger_state.thread = event_details["threadId"]
+                case "capabilities":
+                    # Unchanged capabilites may not be included.
+                    debugger_state.capabilities.update(logger, event_details)
                 # There are many events we do not care about, just skip processing them.
                 case _:
                     pass
@@ -343,6 +378,12 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
                 debugger_state.frame_map = [
                     stackframe["id"] for stackframe in message["body"]["stackFrames"]
                 ]
+            # The debugger communicates which optional DAP features are
+            # supported in its initalize response.
+            if message["command"] == "initialize" and message["success"] == True:
+                body = message.get("body")
+                if body:
+                    debugger_state.capabilities.update(logger, body)
 
     def _colorize_dap_message(message: dict) -> dict:
         colorized_message = copy.deepcopy(message)
