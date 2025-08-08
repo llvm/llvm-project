@@ -221,6 +221,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fabsbf16_test
+  SUITE
+  libc-math-smoke-tests
+  SRCS
+    fabsbf16_test.cpp
+  HDRS
+    FAbsTest.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.math.fabsbf16
+)
+
+add_fp_unittest(
   fadd_test
   SUITE
     libc-math-smoke-tests
@@ -329,6 +342,19 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.truncf128
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  truncbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    truncbf16_test.cpp
+  HDRS
+    TruncTest.h
+  DEPENDS
+    libc.src.math.truncbf16
+    libc.src.__support.FPUtil.bfloat16
 )
 
 add_fp_unittest(
@@ -531,6 +557,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  ceilbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    ceilbf16_test.cpp
+  HDRS
+    CeilTest.h
+  DEPENDS
+    libc.src.math.ceilbf16
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
   dfmal_test
   SUITE
     libc-math-smoke-tests
@@ -651,6 +690,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  floorbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    floorbf16_test.cpp
+  HDRS
+    FloorTest.h
+  DEPENDS
+    libc.src.math.floorbf16
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
   round_test
   SUITE
     libc-math-smoke-tests
@@ -715,6 +767,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  roundbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    roundbf16_test.cpp
+  HDRS
+    RoundTest.h
+  DEPENDS
+    libc.src.math.roundbf16
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
   roundeven_test
   SUITE
     libc-math-smoke-tests
@@ -776,6 +841,19 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.roundevenf128
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  roundevenbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    roundevenbf16_test.cpp
+  HDRS
+    RoundEvenTest.h
+  DEPENDS
+    libc.src.math.roundevenbf16
+    libc.src.__support.FPUtil.bfloat16
 )
 
 add_fp_unittest(
@@ -3169,7 +3247,6 @@ add_fp_unittest(
     libc.hdr.signal_macros
     libc.src.math.nanf
     libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.macros.sanitizer
   # FIXME: The nan tests currently have death tests, which aren't supported for
   # hermetic tests.
   UNIT_TEST_ONLY
@@ -3185,7 +3262,6 @@ add_fp_unittest(
     libc.hdr.signal_macros
     libc.src.math.nan
     libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.macros.sanitizer
   # FIXME: The nan tests currently have death tests, which aren't supported for
   # hermetic tests.
   UNIT_TEST_ONLY
@@ -3201,7 +3277,6 @@ add_fp_unittest(
     libc.hdr.signal_macros
     libc.src.math.nanl
     libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.macros.sanitizer
   # FIXME: The nan tests currently have death tests, which aren't supported for
   # hermetic tests.
   UNIT_TEST_ONLY
@@ -3217,7 +3292,6 @@ add_fp_unittest(
     libc.hdr.signal_macros
     libc.src.math.nanf16
     libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.macros.sanitizer
   # FIXME: The nan tests currently have death tests, which aren't supported for
   # hermetic tests.
   UNIT_TEST_ONLY
@@ -3233,7 +3307,6 @@ add_fp_unittest(
     libc.hdr.signal_macros
     libc.src.math.nanf128
     libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.macros.sanitizer
   # FIXME: The nan tests currently have death tests, which aren't supported for
   # hermetic tests.
   UNIT_TEST_ONLY
@@ -5296,6 +5369,69 @@ add_fp_unittest(
     DivTest.h
   DEPENDS
     libc.src.math.ddivf128
+)
+
+add_fp_unittest(
+  bfloat16_add_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    bfloat16_add_test.cpp
+  HDRS
+    AddTest.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.macros.properties.os
+    libc.src.__support.macros.properties.types
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+)
+
+add_fp_unittest(
+  bfloat16_div_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    bfloat16_div_test.cpp
+  HDRS
+    DivTest.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+)
+
+add_fp_unittest(
+  bfloat16_mul_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    bfloat16_mul_test.cpp
+  HDRS
+    MulTest.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.bfloat16
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+)
+
+add_fp_unittest(
+  bfloat16_sub_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    bfloat16_sub_test.cpp
+  HDRS
+    SubTest.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.macros.properties.os
+    libc.src.__support.macros.properties.types
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
 )
 
 add_fp_unittest(

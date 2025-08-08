@@ -614,6 +614,13 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
       Use &U = *AI->use_begin();
       Instruction *User = cast<Instruction>(U.getUser());
 
+      // Drop lifetime markers now that this is no longer an alloca.
+      // SafeStack has already performed its own stack coloring.
+      if (User->isLifetimeStartOrEnd()) {
+        User->eraseFromParent();
+        continue;
+      }
+
       Instruction *InsertBefore;
       if (auto *PHI = dyn_cast<PHINode>(User))
         InsertBefore = PHI->getIncomingBlock(U)->getTerminator();

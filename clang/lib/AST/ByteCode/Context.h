@@ -17,9 +17,9 @@
 #define LLVM_CLANG_AST_INTERP_CONTEXT_H
 
 #include "InterpStack.h"
+#include "clang/AST/ASTContext.h"
 
 namespace clang {
-class ASTContext;
 class LangOptions;
 class FunctionDecl;
 class VarDecl;
@@ -82,10 +82,10 @@ public:
   uint32_t getBitWidth(QualType T) const { return Ctx.getIntWidth(T); }
 
   /// Classifies a type.
-  std::optional<PrimType> classify(QualType T) const;
+  OptPrimType classify(QualType T) const;
 
   /// Classifies an expression.
-  std::optional<PrimType> classify(const Expr *E) const {
+  OptPrimType classify(const Expr *E) const {
     assert(E);
     if (E->isGLValue())
       return PT_Ptr;

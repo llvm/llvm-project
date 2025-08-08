@@ -2724,6 +2724,7 @@ public:
   bool isHLSLAttributedResourceType() const;
   bool isHLSLInlineSpirvType() const;
   bool isHLSLResourceRecord() const;
+  bool isHLSLResourceRecordArray() const;
   bool isHLSLIntangibleType()
       const; // Any HLSL intangible type (builtin, array, class)
 
@@ -6762,10 +6763,10 @@ public:
 class AutoType : public DeducedType {
   friend class ASTContext; // ASTContext creates these
 
-  ConceptDecl *TypeConstraintConcept;
+  TemplateDecl *TypeConstraintConcept;
 
   AutoType(QualType DeducedAsType, AutoTypeKeyword Keyword,
-           TypeDependence ExtraDependence, QualType Canon, ConceptDecl *CD,
+           TypeDependence ExtraDependence, QualType Canon, TemplateDecl *CD,
            ArrayRef<TemplateArgument> TypeConstraintArgs);
 
 public:
@@ -6774,7 +6775,7 @@ public:
             AutoTypeBits.NumArgs};
   }
 
-  ConceptDecl *getTypeConstraintConcept() const {
+  TemplateDecl *getTypeConstraintConcept() const {
     return TypeConstraintConcept;
   }
 
@@ -6797,7 +6798,7 @@ public:
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context);
   static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
                       QualType Deduced, AutoTypeKeyword Keyword,
-                      bool IsDependent, ConceptDecl *CD,
+                      bool IsDependent, TemplateDecl *CD,
                       ArrayRef<TemplateArgument> Arguments);
 
   static bool classof(const Type *T) {
@@ -7276,8 +7277,7 @@ public:
 /// Represents a template specialization type whose template cannot be
 /// resolved, e.g.
 ///   A<T>::template B<T>
-class DependentTemplateSpecializationType : public TypeWithKeyword,
-                                            public llvm::FoldingSetNode {
+class DependentTemplateSpecializationType : public TypeWithKeyword {
   friend class ASTContext; // ASTContext creates these
 
   DependentTemplateStorage Name;

@@ -13,7 +13,7 @@ define <vscale x 4 x i32> @invoke_callee_may_throw_sve(<vscale x 4 x i32> %v) uw
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-18
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 144 * VG
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0a, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x90, 0x01, 0x1e, 0x22 // sp + 16 + 144 * VG
 ; CHECK-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Folded Spill
 ; CHECK-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Folded Spill
@@ -42,27 +42,27 @@ define <vscale x 4 x i32> @invoke_callee_may_throw_sve(<vscale x 4 x i32> %v) uw
 ; CHECK-NEXT:    str z10, [sp, #15, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z9, [sp, #16, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z8, [sp, #17, mul vl] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 16 - 8 * VG
-; CHECK-NEXT:    .cfi_escape 0x10, 0x49, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d9 @ cfa - 16 - 16 * VG
-; CHECK-NEXT:    .cfi_escape 0x10, 0x4a, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x68, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d10 @ cfa - 16 - 24 * VG
-; CHECK-NEXT:    .cfi_escape 0x10, 0x4b, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x60, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d11 @ cfa - 16 - 32 * VG
-; CHECK-NEXT:    .cfi_escape 0x10, 0x4c, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x58, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d12 @ cfa - 16 - 40 * VG
-; CHECK-NEXT:    .cfi_escape 0x10, 0x4d, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x50, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d13 @ cfa - 16 - 48 * VG
-; CHECK-NEXT:    .cfi_escape 0x10, 0x4e, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x48, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d14 @ cfa - 16 - 56 * VG
-; CHECK-NEXT:    .cfi_escape 0x10, 0x4f, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x40, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d15 @ cfa - 16 - 64 * VG
+; CHECK-NEXT:    .cfi_escape 0x10, 0x48, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x40, 0x1c // $d8 @ cfa - 8 * VG - 16
+; CHECK-NEXT:    .cfi_escape 0x10, 0x49, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x70, 0x1e, 0x22, 0x40, 0x1c // $d9 @ cfa - 16 * VG - 16
+; CHECK-NEXT:    .cfi_escape 0x10, 0x4a, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x68, 0x1e, 0x22, 0x40, 0x1c // $d10 @ cfa - 24 * VG - 16
+; CHECK-NEXT:    .cfi_escape 0x10, 0x4b, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x60, 0x1e, 0x22, 0x40, 0x1c // $d11 @ cfa - 32 * VG - 16
+; CHECK-NEXT:    .cfi_escape 0x10, 0x4c, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x58, 0x1e, 0x22, 0x40, 0x1c // $d12 @ cfa - 40 * VG - 16
+; CHECK-NEXT:    .cfi_escape 0x10, 0x4d, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x50, 0x1e, 0x22, 0x40, 0x1c // $d13 @ cfa - 48 * VG - 16
+; CHECK-NEXT:    .cfi_escape 0x10, 0x4e, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x48, 0x1e, 0x22, 0x40, 0x1c // $d14 @ cfa - 56 * VG - 16
+; CHECK-NEXT:    .cfi_escape 0x10, 0x4f, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x40, 0x1e, 0x22, 0x40, 0x1c // $d15 @ cfa - 64 * VG - 16
 ; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0xa0, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 160 * VG
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0a, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0xa0, 0x01, 0x1e, 0x22 // sp + 16 + 160 * VG
 ; CHECK-NEXT:    .cfi_remember_state
 ; CHECK-NEXT:    str z0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:  .Ltmp0:
+; CHECK-NEXT:  .Ltmp0: // EH_LABEL
 ; CHECK-NEXT:    bl may_throw_sve
-; CHECK-NEXT:  .Ltmp1:
+; CHECK-NEXT:  .Ltmp1: // EH_LABEL
 ; CHECK-NEXT:    str z0, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    b .LBB0_1
 ; CHECK-NEXT:  .LBB0_1: // %.Lcontinue
 ; CHECK-NEXT:    ldr z0, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    addvl sp, sp, #2
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 144 * VG
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0a, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x90, 0x01, 0x1e, 0x22 // sp + 16 + 144 * VG
 ; CHECK-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z21, [sp, #4, mul vl] // 16-byte Folded Reload
@@ -108,10 +108,10 @@ define <vscale x 4 x i32> @invoke_callee_may_throw_sve(<vscale x 4 x i32> %v) uw
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_2: // %.Lunwind
 ; CHECK-NEXT:    .cfi_restore_state
-; CHECK-NEXT:  .Ltmp2:
+; CHECK-NEXT:  .Ltmp2: // EH_LABEL
 ; CHECK-NEXT:    ldr z0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    addvl sp, sp, #2
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 144 * VG
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0a, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x90, 0x01, 0x1e, 0x22 // sp + 16 + 144 * VG
 ; CHECK-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z21, [sp, #4, mul vl] // 16-byte Folded Reload
@@ -165,7 +165,7 @@ define <vscale x 4 x i32> @invoke_callee_may_throw_sve(<vscale x 4 x i32> %v) uw
 ; GISEL-NEXT:    .cfi_offset w30, -8
 ; GISEL-NEXT:    .cfi_offset w29, -16
 ; GISEL-NEXT:    addvl sp, sp, #-18
-; GISEL-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 144 * VG
+; GISEL-NEXT:    .cfi_escape 0x0f, 0x0a, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x90, 0x01, 0x1e, 0x22 // sp + 16 + 144 * VG
 ; GISEL-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Folded Spill
 ; GISEL-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Folded Spill
 ; GISEL-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Folded Spill
@@ -194,27 +194,27 @@ define <vscale x 4 x i32> @invoke_callee_may_throw_sve(<vscale x 4 x i32> %v) uw
 ; GISEL-NEXT:    str z10, [sp, #15, mul vl] // 16-byte Folded Spill
 ; GISEL-NEXT:    str z9, [sp, #16, mul vl] // 16-byte Folded Spill
 ; GISEL-NEXT:    str z8, [sp, #17, mul vl] // 16-byte Folded Spill
-; GISEL-NEXT:    .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 16 - 8 * VG
-; GISEL-NEXT:    .cfi_escape 0x10, 0x49, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d9 @ cfa - 16 - 16 * VG
-; GISEL-NEXT:    .cfi_escape 0x10, 0x4a, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x68, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d10 @ cfa - 16 - 24 * VG
-; GISEL-NEXT:    .cfi_escape 0x10, 0x4b, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x60, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d11 @ cfa - 16 - 32 * VG
-; GISEL-NEXT:    .cfi_escape 0x10, 0x4c, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x58, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d12 @ cfa - 16 - 40 * VG
-; GISEL-NEXT:    .cfi_escape 0x10, 0x4d, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x50, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d13 @ cfa - 16 - 48 * VG
-; GISEL-NEXT:    .cfi_escape 0x10, 0x4e, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x48, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d14 @ cfa - 16 - 56 * VG
-; GISEL-NEXT:    .cfi_escape 0x10, 0x4f, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x40, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d15 @ cfa - 16 - 64 * VG
+; GISEL-NEXT:    .cfi_escape 0x10, 0x48, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x40, 0x1c // $d8 @ cfa - 8 * VG - 16
+; GISEL-NEXT:    .cfi_escape 0x10, 0x49, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x70, 0x1e, 0x22, 0x40, 0x1c // $d9 @ cfa - 16 * VG - 16
+; GISEL-NEXT:    .cfi_escape 0x10, 0x4a, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x68, 0x1e, 0x22, 0x40, 0x1c // $d10 @ cfa - 24 * VG - 16
+; GISEL-NEXT:    .cfi_escape 0x10, 0x4b, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x60, 0x1e, 0x22, 0x40, 0x1c // $d11 @ cfa - 32 * VG - 16
+; GISEL-NEXT:    .cfi_escape 0x10, 0x4c, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x58, 0x1e, 0x22, 0x40, 0x1c // $d12 @ cfa - 40 * VG - 16
+; GISEL-NEXT:    .cfi_escape 0x10, 0x4d, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x50, 0x1e, 0x22, 0x40, 0x1c // $d13 @ cfa - 48 * VG - 16
+; GISEL-NEXT:    .cfi_escape 0x10, 0x4e, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x48, 0x1e, 0x22, 0x40, 0x1c // $d14 @ cfa - 56 * VG - 16
+; GISEL-NEXT:    .cfi_escape 0x10, 0x4f, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x40, 0x1e, 0x22, 0x40, 0x1c // $d15 @ cfa - 64 * VG - 16
 ; GISEL-NEXT:    addvl sp, sp, #-2
-; GISEL-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0xa0, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 160 * VG
+; GISEL-NEXT:    .cfi_escape 0x0f, 0x0a, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0xa0, 0x01, 0x1e, 0x22 // sp + 16 + 160 * VG
 ; GISEL-NEXT:    .cfi_remember_state
 ; GISEL-NEXT:    str z0, [sp] // 16-byte Folded Spill
-; GISEL-NEXT:  .Ltmp0:
+; GISEL-NEXT:  .Ltmp0: // EH_LABEL
 ; GISEL-NEXT:    bl may_throw_sve
-; GISEL-NEXT:  .Ltmp1:
+; GISEL-NEXT:  .Ltmp1: // EH_LABEL
 ; GISEL-NEXT:    str z0, [sp, #1, mul vl] // 16-byte Folded Spill
 ; GISEL-NEXT:    b .LBB0_1
 ; GISEL-NEXT:  .LBB0_1: // %.Lcontinue
 ; GISEL-NEXT:    ldr z0, [sp, #1, mul vl] // 16-byte Folded Reload
 ; GISEL-NEXT:    addvl sp, sp, #2
-; GISEL-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 144 * VG
+; GISEL-NEXT:    .cfi_escape 0x0f, 0x0a, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x90, 0x01, 0x1e, 0x22 // sp + 16 + 144 * VG
 ; GISEL-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
 ; GISEL-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
 ; GISEL-NEXT:    ldr z21, [sp, #4, mul vl] // 16-byte Folded Reload
@@ -260,10 +260,10 @@ define <vscale x 4 x i32> @invoke_callee_may_throw_sve(<vscale x 4 x i32> %v) uw
 ; GISEL-NEXT:    ret
 ; GISEL-NEXT:  .LBB0_2: // %.Lunwind
 ; GISEL-NEXT:    .cfi_restore_state
-; GISEL-NEXT:  .Ltmp2:
+; GISEL-NEXT:  .Ltmp2: // EH_LABEL
 ; GISEL-NEXT:    ldr z0, [sp] // 16-byte Folded Reload
 ; GISEL-NEXT:    addvl sp, sp, #2
-; GISEL-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 144 * VG
+; GISEL-NEXT:    .cfi_escape 0x0f, 0x0a, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x90, 0x01, 0x1e, 0x22 // sp + 16 + 144 * VG
 ; GISEL-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
 ; GISEL-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
 ; GISEL-NEXT:    ldr z21, [sp, #4, mul vl] // 16-byte Folded Reload
@@ -355,9 +355,9 @@ define aarch64_vector_pcs <4 x i32> @invoke_callee_may_throw_neon(<4 x i32> %v) 
 ; CHECK-NEXT:    .cfi_offset b23, -272
 ; CHECK-NEXT:    .cfi_remember_state
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:  .Ltmp3:
+; CHECK-NEXT:  .Ltmp3: // EH_LABEL
 ; CHECK-NEXT:    bl may_throw_neon
-; CHECK-NEXT:  .Ltmp4:
+; CHECK-NEXT:  .Ltmp4: // EH_LABEL
 ; CHECK-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    b .LBB1_1
 ; CHECK-NEXT:  .LBB1_1: // %.Lcontinue
@@ -394,7 +394,7 @@ define aarch64_vector_pcs <4 x i32> @invoke_callee_may_throw_neon(<4 x i32> %v) 
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB1_2: // %.Lunwind
 ; CHECK-NEXT:    .cfi_restore_state
-; CHECK-NEXT:  .Ltmp5:
+; CHECK-NEXT:  .Ltmp5: // EH_LABEL
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x29, x30, [sp, #288] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp q9, q8, [sp, #256] // 32-byte Folded Reload
@@ -462,10 +462,10 @@ define aarch64_vector_pcs <4 x i32> @invoke_callee_may_throw_neon(<4 x i32> %v) 
 ; GISEL-NEXT:    .cfi_offset b23, -272
 ; GISEL-NEXT:    .cfi_remember_state
 ; GISEL-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; GISEL-NEXT:  .Ltmp3:
+; GISEL-NEXT:  .Ltmp3: // EH_LABEL
 ; GISEL-NEXT:    bl may_throw_neon
 ; GISEL-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
-; GISEL-NEXT:  .Ltmp4:
+; GISEL-NEXT:  .Ltmp4: // EH_LABEL
 ; GISEL-NEXT:    b .LBB1_1
 ; GISEL-NEXT:  .LBB1_1: // %.Lcontinue
 ; GISEL-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
@@ -501,7 +501,7 @@ define aarch64_vector_pcs <4 x i32> @invoke_callee_may_throw_neon(<4 x i32> %v) 
 ; GISEL-NEXT:    ret
 ; GISEL-NEXT:  .LBB1_2: // %.Lunwind
 ; GISEL-NEXT:    .cfi_restore_state
-; GISEL-NEXT:  .Ltmp5:
+; GISEL-NEXT:  .Ltmp5: // EH_LABEL
 ; GISEL-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; GISEL-NEXT:    ldp x29, x30, [sp, #288] // 16-byte Folded Reload
 ; GISEL-NEXT:    ldp q9, q8, [sp, #256] // 32-byte Folded Reload

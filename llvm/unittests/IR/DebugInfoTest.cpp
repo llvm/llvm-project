@@ -185,10 +185,8 @@ TEST(MetadataTest, DeleteInstUsedByDbgRecord) {
   Instruction &I = *M->getFunction("f")->getEntryBlock().getFirstNonPHIIt();
 
   // Find the dbg.value using %b.
-  SmallVector<DbgValueInst *, 1> DVIs;
   SmallVector<DbgVariableRecord *, 1> DVRs;
-  findDbgValues(DVIs, &I, &DVRs);
-  assert(DVIs.empty());
+  findDbgValues(&I, DVRs);
 
   // Delete %b. The dbg.value should now point to undef.
   I.eraseFromParent();
@@ -230,7 +228,6 @@ TEST(MetadataTest, GlobalConstantMetadataUsedByDbgRecord) {
   Value *V = M->getNamedValue("x");
 
   // Find the dbg.value
-  auto DVIs = findDbgDeclares(V);
   auto DVRs = findDVRDeclares(V);
   auto DVRVs = findDVRValues(V);
 
@@ -312,10 +309,8 @@ TEST(MetadataTest, DeleteInstUsedByDbgVariableRecord) {
   Instruction &I = *M->getFunction("f")->getEntryBlock().getFirstNonPHIIt();
 
   // Find the DbgVariableRecords using %b.
-  SmallVector<DbgValueInst *, 2> DVIs;
   SmallVector<DbgVariableRecord *, 2> DVRs;
-  findDbgValues(DVIs, &I, &DVRs);
-  assert(DVIs.empty());
+  findDbgValues(&I, DVRs);
   ASSERT_EQ(DVRs.size(), 2u);
 
   // Delete %b. The DbgVariableRecord should now point to undef.
@@ -359,11 +354,9 @@ TEST(MetadataTest, OrderingOfDbgVariableRecords) {
 
   Instruction &I = *M->getFunction("f")->getEntryBlock().getFirstNonPHIIt();
 
-  SmallVector<DbgValueInst *, 2> DVIs;
   SmallVector<DbgVariableRecord *, 2> DVRs;
 
-  findDbgValues(DVIs, &I, &DVRs);
-  ASSERT_EQ(DVIs.size(), 0u);
+  findDbgValues(&I, DVRs);
   ASSERT_EQ(DVRs.size(), 2u);
 
   // The correct order of dbg.values is given by their use-list, which becomes

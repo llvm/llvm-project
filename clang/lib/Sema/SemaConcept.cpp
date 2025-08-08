@@ -588,6 +588,9 @@ static bool CheckConstraintSatisfaction(
     return true;
 
   for (const AssociatedConstraint &AC : AssociatedConstraints) {
+    if (AC.isNull())
+      return true;
+
     Sema::ArgPackSubstIndexRAII _(S, AC.ArgPackSubstIndex);
     ExprResult Res = calculateConstraintSatisfaction(
         S, Template, TemplateIDRange.getBegin(), TemplateArgsLists,
@@ -1102,10 +1105,6 @@ static bool CheckFunctionConstraintsWithoutInstantiation(
   }
 
   Sema::ContextRAII SavedContext(SemaRef, FD);
-  std::optional<Sema::CXXThisScopeRAII> ThisScope;
-  if (auto *Method = dyn_cast<CXXMethodDecl>(FD))
-    ThisScope.emplace(SemaRef, /*Record=*/Method->getParent(),
-                      /*ThisQuals=*/Method->getMethodQualifiers());
   return SemaRef.CheckConstraintSatisfaction(
       Template, TemplateAC, MLTAL, PointOfInstantiation, Satisfaction);
 }

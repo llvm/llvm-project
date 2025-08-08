@@ -137,6 +137,7 @@
 
 def llvm_global_ptr_ty  : LLVMQualPointerType<1>;         // (global)ptr
 def llvm_shared_ptr_ty  : LLVMQualPointerType<3>;         // (shared)ptr
+def llvm_constant_ptr_ty: LLVMQualPointerType<4>;         // (const)ptr
 def llvm_local_ptr_ty   : LLVMQualPointerType<5>;         // (local)ptr
 def llvm_tmem_ptr_ty    : LLVMQualPointerType<6>;         // (tensor memory)ptr
 def llvm_shared_cluster_ptr_ty : LLVMQualPointerType<7>;  // (shared_cluster)ptr
@@ -331,6 +332,11 @@ class WMMA_REGS<string Geom, string Frag, string PtxEltType> {
     !eq(gf,"m8n16:x2") : !listsplat(llvm_i32_ty, 2),
     !eq(gf,"m8n16:x4") : !listsplat(llvm_i32_ty, 4),
 
+    // stmatrix b8 -> s32 @ m16n8
+    !eq(gf,"m16n8:x1") : !listsplat(llvm_i32_ty, 1),
+    !eq(gf,"m16n8:x2") : !listsplat(llvm_i32_ty, 2),
+    !eq(gf,"m16n8:x4") : !listsplat(llvm_i32_ty, 4),
+
   );
 }
 
@@ -403,6 +409,17 @@ class LDMATRIX_NAME<WMMA_REGS Frag, int Trans> {
                   !subst("llvm.", "int_", intr));
 }
 
+class STMATRIX_NAME<WMMA_REGS Frag, int Trans> {
+  string intr = "llvm.nvvm.stmatrix.sync.aligned"
+                # "." # Frag.geom
+                # "." # Frag.frag
+                # !if(Trans, ".trans", "")
+                # "." # Frag.ptx_elt_type
+                ;
+  string record = !subst(".", "_",
+                  !subst("llvm.", "int_", intr));
+}
+
 // Generates list of 4-tuples of WMMA_REGS representing a valid MMA op.
 //   Geom: list of supported geometries.
 //   TypeN: PTX type of the corresponding fragment's element.
@@ -434,6 +451,16 @@ class MMA_LDST_OPS<list<string> Geom, list<string> Frags, list<string> Types> {
 }
 
 class LDMATRIX_OPS<list<string> Geom, list<string> Frags, list<string> Types> {
+  list<WMMA_REGS> ret =
+     !foldl([]<WMMA_REGS>, Geom, t1, geom, !listconcat(t1,
+     !foldl([]<WMMA_REGS>, Frags, t2, frag, !listconcat(t2,
+     !foldl([]<WMMA_REGS>, Types, t3, type, !listconcat(t3,
+            [WMMA_REGS<geom, frag, type>]))))));
+   // Debugging aid for readable representation of the list above.
+   list<string> ops = !foreach(x, ret, x.gft);
+}
+
+class STMATRIX_OPS<list<string> Geom, list<string> Frags, list<string> Types> {
   list<WMMA_REGS> ret =
      !foldl([]<WMMA_REGS>, Geom, t1, geom, !listconcat(t1,
      !foldl([]<WMMA_REGS>, Frags, t2, frag, !listconcat(t2,
@@ -537,9 +564,18 @@ class NVVM_MMA_OPS {
   list<WMMA_REGS> ldmatrix_geom_m8n16_ops = LDMATRIX_OPS<
     ["m8n16"], ["x1", "x2", "x4"], ["b8x16.b6x16_p32", "b8x16.b4x16_p64"]>.ret;
 
+  list<WMMA_REGS> stmatrix_b16_ops = STMATRIX_OPS<
+    ["m8n8"], ["x1", "x2", "x4"], ["b16"]>.ret;
+
+  list<WMMA_REGS> stmatrix_b8_ops = STMATRIX_OPS<
+    ["m16n8"], ["x1", "x2", "x4"], ["b8"]>.ret;
+
   list<WMMA_REGS> all_ldmatrix_ops = !listconcat(ldmatrix_b16_ops,
                                                  ldmatrix_geom_m16n16_ops,
                                                  ldmatrix_geom_m8n16_ops);
+
+  list<WMMA_REGS> all_stmatrix_ops = !listconcat(stmatrix_b16_ops,
+                                                 stmatrix_b8_ops);
 }
 
 def NVVM_MMA_OPS : NVVM_MMA_OPS;
@@ -676,6 +712,19 @@ class NVVM_LDMATRIX_SUPPORTED<WMMA_REGS frag, bit trans> {
     !and(!eq(g, "m8n16"), !eq(t, "b8"), !eq(trans, 0)): true,
     !and(!eq(g, "m8n16"), !eq(t, "b8x16.b6x16_p32"), !eq(trans, 0)): true,
     !and(!eq(g, "m8n16"), !eq(t, "b8x16.b4x16_p64"), !eq(trans, 0)): true,
+    true: false
+  );
+}
+
+// Returns true if the fragment is valid for stmatrix ops is supported;
+// false otherwise.
+class NVVM_STMATRIX_SUPPORTED<WMMA_REGS frag, bit trans> {
+  string g = frag.geom;
+  string t = frag.ptx_elt_type;
+
+  bit ret = !cond(
+    !and(!eq(g, "m8n8"), !eq(t, "b16")): true,
+    !and(!eq(g, "m16n8"), !eq(t, "b8"), !eq(trans, 1)): true,
     true: false
   );
 }
@@ -1969,6 +2018,23 @@ foreach transposed = [0, 1] in {
   }
 }
 
+// STMATRIX
+class NVVM_STMATRIX<WMMA_REGS Frag, int Transposed>
+  : Intrinsic<[],
+          !listconcat([llvm_anyptr_ty], Frag.regs),
+          [IntrWriteMem, IntrArgMemOnly, IntrNoCallback,
+           WriteOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>],
+          STMATRIX_NAME<Frag, Transposed>.intr>;
+
+foreach transposed = [0, 1] in {
+  foreach frag = NVVM_MMA_OPS.all_stmatrix_ops in {
+    if NVVM_STMATRIX_SUPPORTED<frag, transposed>.ret then {
+      def STMATRIX_NAME<frag, transposed>.record
+        : NVVM_STMATRIX<frag, transposed>;
+    }
+  }
+}
+
 // MAPA
 let IntrProperties = [IntrNoMem, IntrSpeculatable, NoCapture<ArgIndex<0>>] in {
   def int_nvvm_mapa
@@ -2147,15 +2213,17 @@ def int_nvvm_cp_async_bulk_tensor_prefetch_tile_gather4_2d
 // Intrinsics for Prefetch and Prefetchu
 let IntrProperties = [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>] in {
   foreach level = ["L1", "L2"] in {
-    def int_nvvm_prefetch_ # level : Intrinsic<[], [llvm_ptr_ty]>;
-    def int_nvvm_prefetch_global_ # level : Intrinsic<[], [llvm_global_ptr_ty]>;
-    def int_nvvm_prefetch_local_ # level : Intrinsic<[], [llvm_local_ptr_ty]>;
+    def int_nvvm_prefetch_ # level : DefaultAttrsIntrinsic<[], [llvm_ptr_ty]>;
+    def int_nvvm_prefetch_global_ # level : DefaultAttrsIntrinsic<[], [llvm_global_ptr_ty]>;
+    def int_nvvm_prefetch_local_ # level : DefaultAttrsIntrinsic<[], [llvm_local_ptr_ty]>;
   }
 
+  def int_nvvm_prefetch_tensormap : DefaultAttrsIntrinsic<[], [llvm_anyptr_ty]>;
+  
   foreach eviction_priority = ["evict_normal", "evict_last"] in
-    def int_nvvm_prefetch_global_L2_ # eviction_priority : Intrinsic<[], [llvm_global_ptr_ty]>;
+    def int_nvvm_prefetch_global_L2_ # eviction_priority : DefaultAttrsIntrinsic<[], [llvm_global_ptr_ty]>;
 
-  def int_nvvm_prefetchu_L1 : Intrinsic<[], [llvm_ptr_ty]>;
+  def int_nvvm_prefetchu_L1 : DefaultAttrsIntrinsic<[], [llvm_ptr_ty]>;
 }
 
 // applypriority

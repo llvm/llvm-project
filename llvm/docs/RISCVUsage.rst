@@ -136,7 +136,7 @@ on support follow.
      ``Smepmp``        Supported
      ``Smmpm``         Supported
      ``Smnpm``         Supported
-     ``Smrnmi``        Assembly Support
+     ``Smrnmi``        Supported
      ``Smstateen``     Assembly Support
      ``Ssaia``         Supported
      ``Ssccfg``        Supported

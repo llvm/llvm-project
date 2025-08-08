@@ -35,7 +35,7 @@ MCFragment::MCFragment(FragmentType Kind, bool HasInstructions)
 }
 
 const MCSymbol *MCFragment::getAtom() const {
-  return cast<MCSectionMachO>(Parent)->getAtom(LayoutOrder);
+  return static_cast<const MCSectionMachO *>(Parent)->getAtom(LayoutOrder);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

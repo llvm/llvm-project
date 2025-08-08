@@ -1960,7 +1960,6 @@ void JumpThreadingPass::updateSSA(BasicBlock *BB, BasicBlock *NewBB,
   // PHI insertion, of which we are prepared to do, clean these up now.
   SSAUpdater SSAUpdate;
   SmallVector<Use *, 16> UsesToRename;
-  SmallVector<DbgValueInst *, 4> DbgValues;
   SmallVector<DbgVariableRecord *, 4> DbgVariableRecords;
 
   for (Instruction &I : *BB) {
@@ -1978,8 +1977,7 @@ void JumpThreadingPass::updateSSA(BasicBlock *BB, BasicBlock *NewBB,
     }
 
     // Find debug values outside of the block
-    findDbgValues(DbgValues, &I, &DbgVariableRecords);
-    assert(DbgValues.empty());
+    findDbgValues(&I, DbgVariableRecords);
     llvm::erase_if(DbgVariableRecords, [&](const DbgVariableRecord *DbgVarRec) {
       return DbgVarRec->getParent() == BB;
     });
@@ -2000,7 +1998,6 @@ void JumpThreadingPass::updateSSA(BasicBlock *BB, BasicBlock *NewBB,
       SSAUpdate.RewriteUse(*UsesToRename.pop_back_val());
     if (!DbgVariableRecords.empty()) {
       SSAUpdate.UpdateDebugValues(&I, DbgVariableRecords);
-      DbgValues.clear();
       DbgVariableRecords.clear();
     }
 

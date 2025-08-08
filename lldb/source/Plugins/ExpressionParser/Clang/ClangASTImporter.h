@@ -225,7 +225,7 @@ public:
     ContextMetadataMap::iterator context_md_iter = m_metadata_map.find(dst_ctx);
 
     if (context_md_iter == m_metadata_map.end()) {
-      context_md = ASTContextMetadataSP(new ASTContextMetadata(dst_ctx));
+      context_md = std::make_shared<ASTContextMetadata>(dst_ctx);
       m_metadata_map[dst_ctx] = context_md;
     } else {
       context_md = context_md_iter->second;
@@ -438,7 +438,7 @@ public:
 
     if (context_md_iter == m_metadata_map.end()) {
       ASTContextMetadataSP context_md =
-          ASTContextMetadataSP(new ASTContextMetadata(dst_ctx));
+          std::make_shared<ASTContextMetadata>(dst_ctx);
       m_metadata_map[dst_ctx] = context_md;
       return context_md;
     }
@@ -462,7 +462,7 @@ public:
 
     if (delegate_iter == delegates.end()) {
       ImporterDelegateSP delegate =
-          ImporterDelegateSP(new ASTImporterDelegate(*this, dst_ctx, src_ctx));
+          std::make_shared<ASTImporterDelegate>(*this, dst_ctx, src_ctx);
       delegates[src_ctx] = delegate;
       return delegate;
     }

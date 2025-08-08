@@ -158,7 +158,7 @@ getEffectsBefore(Operation *op,
 
   // If there is a non-structured control flow, bail.
   Region *region = op->getBlock()->getParent();
-  if (region && !llvm::hasSingleElement(region->getBlocks())) {
+  if (region && !region->hasOneBlock()) {
     addAllValuelessEffects(effects);
     return false;
   }
@@ -250,7 +250,7 @@ getEffectsAfter(Operation *op,
 
   // If there is a non-structured control flow, bail.
   Region *region = op->getBlock()->getParent();
-  if (region && !llvm::hasSingleElement(region->getBlocks())) {
+  if (region && !region->hasOneBlock()) {
     addAllValuelessEffects(effects);
     return false;
   }

@@ -566,6 +566,8 @@ private:
   void visitUIToFPInst(UIToFPInst &I);
   void visitSIToFPInst(SIToFPInst &I);
   void visitIntToPtrInst(IntToPtrInst &I);
+  void checkPtrToAddr(Type *SrcTy, Type *DestTy, const Value &V);
+  void visitPtrToAddrInst(PtrToAddrInst &I);
   void visitPtrToIntInst(PtrToIntInst &I);
   void visitBitCastInst(BitCastInst &I);
   void visitAddrSpaceCastInst(AddrSpaceCastInst &I);
@@ -834,6 +836,7 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
           &GV);
     Check(GV.getInitializer()->getType()->isSized(),
           "Global variable initializer must be sized", &GV);
+    visitConstantExprsRecursively(GV.getInitializer());
     // If the global has common linkage, it must have a zero initializer and
     // cannot be constant.
     if (GV.hasCommonLinkage()) {
@@ -2610,6 +2613,8 @@ void Verifier::visitConstantExpr(const ConstantExpr *CE) {
     Check(CastInst::castIsValid(Instruction::BitCast, CE->getOperand(0),
                                 CE->getType()),
           "Invalid bitcast", CE);
+  else if (CE->getOpcode() == Instruction::PtrToAddr)
+    checkPtrToAddr(CE->getOperand(0)->getType(), CE->getType(), *CE);
 }
 
 void Verifier::visitConstantPtrAuth(const ConstantPtrAuth *CPA) {
@@ -2974,6 +2979,16 @@ void Verifier::visitFunction(const Function &F) {
   case CallingConv::Intel_OCL_BI:
   case CallingConv::PTX_Kernel:
   case CallingConv::PTX_Device:
+    Check(!F.isVarArg(),
+          "Calling convention does not support varargs or "
+          "perfect forwarding!",
+          &F);
+    break;
+  case CallingConv::AMDGPU_Gfx_WholeWave:
+    Check(!F.arg_empty() && F.arg_begin()->getType()->isIntegerTy(1),
+          "Calling convention requires first argument to be i1", &F);
+    Check(!F.arg_begin()->hasInRegAttr(),
+          "Calling convention requires first argument to not be inreg", &F);
     Check(!F.isVarArg(),
           "Calling convention does not support varargs or "
           "perfect forwarding!",
@@ -3522,6 +3537,28 @@ void Verifier::visitFPToSIInst(FPToSIInst &I) {
   visitInstruction(I);
 }
 
+void Verifier::checkPtrToAddr(Type *SrcTy, Type *DestTy, const Value &V) {
+  Check(SrcTy->isPtrOrPtrVectorTy(), "PtrToAddr source must be pointer", V);
+  Check(DestTy->isIntOrIntVectorTy(), "PtrToAddr result must be integral", V);
+  Check(SrcTy->isVectorTy() == DestTy->isVectorTy(), "PtrToAddr type mismatch",
+        V);
+
+  if (SrcTy->isVectorTy()) {
+    auto *VSrc = cast<VectorType>(SrcTy);
+    auto *VDest = cast<VectorType>(DestTy);
+    Check(VSrc->getElementCount() == VDest->getElementCount(),
+          "PtrToAddr vector length mismatch", V);
+  }
+
+  Type *AddrTy = DL.getAddressType(SrcTy);
+  Check(AddrTy == DestTy, "PtrToAddr result must be address width", V);
+}
+
+void Verifier::visitPtrToAddrInst(PtrToAddrInst &I) {
+  checkPtrToAddr(I.getOperand(0)->getType(), I.getType(), I);
+  visitInstruction(I);
+}
+
 void Verifier::visitPtrToIntInst(PtrToIntInst &I) {
   // Get the source and destination types
   Type *SrcTy = I.getOperand(0)->getType();
@@ -3537,7 +3574,7 @@ void Verifier::visitPtrToIntInst(PtrToIntInst &I) {
     auto *VSrc = cast<VectorType>(SrcTy);
     auto *VDest = cast<VectorType>(DestTy);
     Check(VSrc->getElementCount() == VDest->getElementCount(),
-          "PtrToInt Vector width mismatch", &I);
+          "PtrToInt Vector length mismatch", &I);
   }
 
   visitInstruction(I);
@@ -3557,7 +3594,7 @@ void Verifier::visitIntToPtrInst(IntToPtrInst &I) {
     auto *VSrc = cast<VectorType>(SrcTy);
     auto *VDest = cast<VectorType>(DestTy);
     Check(VSrc->getElementCount() == VDest->getElementCount(),
-          "IntToPtr Vector width mismatch", &I);
+          "IntToPtr Vector length mismatch", &I);
   }
   visitInstruction(I);
 }
@@ -6658,6 +6695,54 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "invalid vector type for format", &Call, Src1, Call.getArgOperand(5));
     break;
   }
+  case Intrinsic::amdgcn_wmma_f32_16x16x128_f8f6f4: {
+    Value *Src0 = Call.getArgOperand(1);
+    Value *Src1 = Call.getArgOperand(3);
+
+    unsigned FmtA = cast<ConstantInt>(Call.getArgOperand(0))->getZExtValue();
+    unsigned FmtB = cast<ConstantInt>(Call.getArgOperand(2))->getZExtValue();
+    Check(FmtA <= 4, "invalid value for matrix format", Call,
+          Call.getArgOperand(0));
+    Check(FmtB <= 4, "invalid value for matrix format", Call,
+          Call.getArgOperand(2));
+
+    // AMDGPU::MatrixFMT values
+    auto getFormatNumRegs = [](unsigned FormatVal) {
+      switch (FormatVal) {
+      case 0:
+      case 1:
+        return 16u;
+      case 2:
+      case 3:
+        return 12u;
+      case 4:
+        return 8u;
+      default:
+        llvm_unreachable("invalid format value");
+      }
+    };
+
+    auto isValidSrcASrcBVector = [](FixedVectorType *Ty) {
+      if (!Ty || !Ty->getElementType()->isIntegerTy(32))
+        return false;
+      unsigned NumElts = Ty->getNumElements();
+      return NumElts == 16 || NumElts == 12 || NumElts == 8;
+    };
+
+    auto *Src0Ty = dyn_cast<FixedVectorType>(Src0->getType());
+    auto *Src1Ty = dyn_cast<FixedVectorType>(Src1->getType());
+    Check(isValidSrcASrcBVector(Src0Ty),
+          "operand 1 must be 8, 12 or 16 element i32 vector", &Call, Src0);
+    Check(isValidSrcASrcBVector(Src1Ty),
+          "operand 3 must be 8, 12 or 16 element i32 vector", &Call, Src1);
+
+    // Permit excess registers for the format.
+    Check(Src0Ty->getNumElements() >= getFormatNumRegs(FmtA),
+          "invalid vector type for format", &Call, Src0, Call.getArgOperand(0));
+    Check(Src1Ty->getNumElements() >= getFormatNumRegs(FmtB),
+          "invalid vector type for format", &Call, Src1, Call.getArgOperand(2));
+    break;
+  }
   case Intrinsic::nvvm_setmaxnreg_inc_sync_aligned_u32:
   case Intrinsic::nvvm_setmaxnreg_dec_sync_aligned_u32: {
     Value *V = Call.getArgOperand(0);
@@ -6708,6 +6793,14 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "llvm.threadlocal.address first argument must be a GlobalValue");
     Check(cast<GlobalValue>(Arg0).isThreadLocal(),
           "llvm.threadlocal.address operand isThreadLocal() must be true");
+    break;
+  }
+  case Intrinsic::lifetime_start:
+  case Intrinsic::lifetime_end: {
+    Value *Ptr = Call.getArgOperand(0);
+    Check(isa<AllocaInst>(Ptr) || isa<PoisonValue>(Ptr),
+          "llvm.lifetime.start/end can only be used on alloca or poison",
+          &Call);
     break;
   }
   };

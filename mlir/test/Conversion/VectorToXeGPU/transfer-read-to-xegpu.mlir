@@ -51,7 +51,7 @@ func.func @load_zero_pad_out_of_bounds(%source: memref<32x64xf32>,
 // CHECK-SAME:  %[[SRC:.+]]: memref<32x64xf32>,
 // CHECK-SAME:  %[[OFFSET:.+]]: index
 // CHECK:       %[[DESC:.+]] = xegpu.create_nd_tdesc %[[SRC]][%[[OFFSET]], %[[OFFSET]]]
-// CHECK-SAME:    memref<32x64xf32> -> !xegpu.tensor_desc<8x16xf32,
+// CHECK-SAME:    memref<32x64xf32> -> !xegpu.tensor_desc<8x16xf32>
 // CHECK:       %[[VEC:.+]] = xegpu.load_nd %[[DESC]]{{.*}}-> vector<8x16xf32>
 // CHECK:       return %[[VEC]]
 

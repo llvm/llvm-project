@@ -36,7 +36,6 @@ void uses() {
 
 #pragma acc serial
   {
-  // expected-error@+1{{OpenACC 'reduction' variable must be of scalar type, sub-array, or a composite of scalar types; type is 'int[5]'}}
 #pragma acc loop reduction(+:Array)
     for(int i = 0; i < 5; ++i){}
   }
@@ -172,7 +171,6 @@ void templ_uses() {
 
 #pragma acc serial
   {
-  // expected-error@+1{{OpenACC 'reduction' variable must be of scalar type, sub-array, or a composite of scalar types; type is 'int[5]'}}
 #pragma acc loop reduction(+:Array)
     for(int i = 0; i < 5; ++i){}
   }
