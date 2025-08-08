@@ -1,24 +1,27 @@
-# RUN: llvm-profdata merge --temporal-profile-trace-reservoir-size=2 %s -o %t.profdata
-# RUN: llvm-profdata show --temporal-profile-traces %t.profdata | FileCheck %s --check-prefixes=SAMPLE1,SEEN1
-# RUN: llvm-profdata merge --temporal-profile-trace-reservoir-size=2 %s %t.profdata -o %t.profdata
-# RUN: llvm-profdata show --temporal-profile-traces %t.profdata | FileCheck %s --check-prefixes=SAMPLE2,SEEN2
-# RUN: llvm-profdata merge --temporal-profile-trace-reservoir-size=2 %s %t.profdata -o %t.profdata
-# RUN: llvm-profdata show --temporal-profile-traces %t.profdata | FileCheck %s --check-prefixes=SAMPLE2,SEEN3
-# RUN: llvm-profdata merge --temporal-profile-trace-reservoir-size=2 %s %t.profdata -o %t.profdata
-# RUN: llvm-profdata show --temporal-profile-traces %t.profdata | FileCheck %s --check-prefixes=SAMPLE2,SEEN4
+# RUN: llvm-profdata merge --temporal-profile-trace-reservoir-size=2 %s --text | FileCheck %s --check-prefixes=CHECK,SEEN1,SAMPLE1
 
-# SEEN1: Temporal Profile Traces (samples=1 seen=1):
-# SEEN2: Temporal Profile Traces (samples=2 seen=2):
-# SEEN3: Temporal Profile Traces (samples=2 seen=3):
-# SEEN4: Temporal Profile Traces (samples=2 seen=4):
-# SAMPLE1: Temporal Profile Trace 0 (weight=1 count=3):
-# SAMPLE1:   a
-# SAMPLE1:   b
-# SAMPLE1:   c
-# SAMPLE2: Temporal Profile Trace 1 (weight=1 count=3):
-# SAMPLE2:   a
-# SAMPLE2:   b
-# SAMPLE2:   c
+# Merge %s twice so it has two traces
+# RUN: llvm-profdata merge --temporal-profile-trace-reservoir-size=2 %s %s --text | FileCheck %s --check-prefixes=CHECK,SEEN2,SAMPLE2
+# RUN: llvm-profdata merge --temporal-profile-trace-reservoir-size=2 %s %s -o %t-2.profdata
+
+# RUN: llvm-profdata merge --temporal-profile-trace-reservoir-size=2 %s %s %s --text | FileCheck %s --check-prefixes=CHECK,SEEN3,SAMPLE2
+# RUN: llvm-profdata merge --temporal-profile-trace-reservoir-size=2 %t-2.profdata %s --text | FileCheck %s --check-prefixes=CHECK,SEEN3,SAMPLE2
+# RUN: llvm-profdata merge --temporal-profile-trace-reservoir-size=2 %s %t-2.profdata --text | FileCheck %s --check-prefixes=CHECK,SEEN3,SAMPLE2
+
+# RUN: llvm-profdata merge --temporal-profile-trace-reservoir-size=2 %s %s %s %s --text | FileCheck %s --check-prefixes=CHECK,SEEN4,SAMPLE2
+# RUN: llvm-profdata merge --temporal-profile-trace-reservoir-size=2 %t-2.profdata %s %s --text | FileCheck %s --check-prefixes=CHECK,SEEN4,SAMPLE2
+# RUN: llvm-profdata merge --temporal-profile-trace-reservoir-size=2 %t-2.profdata %t-2.profdata --text | FileCheck %s --check-prefixes=CHECK,SEEN4,SAMPLE2
+
+# CHECK: :temporal_prof_traces
+# CHECK: # Num Temporal Profile Traces:
+# SAMPLE1: 1
+# SAMPLE2: 2
+# CHECK: # Temporal Profile Trace Stream Size:
+# SEEN1: 1
+# SEEN2: 2
+# SEEN3: 3
+# SEEN4: 4
+# CHECK: a,b,c,
 
 # Header
 :ir

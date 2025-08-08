@@ -1365,6 +1365,21 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
     assert(!cir::MissingFeatures::generateDebugInfo());
     assert(!cir::MissingFeatures::cxxRecordStaticMembers());
     break;
+
+  case Decl::FileScopeAsm:
+    // File-scope asm is ignored during device-side CUDA compilation.
+    if (langOpts.CUDA && langOpts.CUDAIsDevice)
+      break;
+    // File-scope asm is ignored during device-side OpenMP compilation.
+    if (langOpts.OpenMPIsTargetDevice)
+      break;
+    // File-scope asm is ignored during device-side SYCL compilation.
+    if (langOpts.SYCLIsDevice)
+      break;
+    auto *file_asm = cast<FileScopeAsmDecl>(decl);
+    std::string line = file_asm->getAsmString();
+    globalScopeAsm.push_back(builder.getStringAttr(line));
+    break;
   }
 }
 
@@ -1977,6 +1992,9 @@ CIRGenModule::getGlobalVisibilityAttrFromDecl(const Decl *decl) {
 void CIRGenModule::release() {
   emitDeferred();
   applyReplacements();
+
+  theModule->setAttr(cir::CIRDialect::getModuleLevelAsmAttrName(),
+                     builder.getArrayAttr(globalScopeAsm));
 
   // There's a lot of code that is not implemented yet.
   assert(!cir::MissingFeatures::cgmRelease());
