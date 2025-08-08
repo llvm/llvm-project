@@ -100,7 +100,7 @@ SBFrame::operator bool() const {
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return false;
   }
 
@@ -115,7 +115,7 @@ SBSymbolContext SBFrame::GetSymbolContext(uint32_t resolve_scope) const {
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return sb_sym_ctx;
   }
 
@@ -132,7 +132,7 @@ SBModule SBFrame::GetModule() const {
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return SBModule();
   }
 
@@ -153,7 +153,7 @@ SBCompileUnit SBFrame::GetCompileUnit() const {
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return SBCompileUnit();
   }
 
@@ -169,7 +169,7 @@ SBFunction SBFrame::GetFunction() const {
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return SBFunction();
   }
 
@@ -184,7 +184,7 @@ SBSymbol SBFrame::GetSymbol() const {
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return SBSymbol();
   }
 
@@ -199,7 +199,7 @@ SBBlock SBFrame::GetBlock() const {
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return SBBlock();
   }
 
@@ -214,7 +214,7 @@ SBBlock SBFrame::GetFrameBlock() const {
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return SBBlock();
   }
 
@@ -229,7 +229,7 @@ SBLineEntry SBFrame::GetLineEntry() const {
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return SBLineEntry();
   }
 
@@ -247,7 +247,7 @@ uint32_t SBFrame::GetFrameID() const {
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return error_frame_idx;
   }
 
@@ -262,7 +262,7 @@ lldb::addr_t SBFrame::GetCFA() const {
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return LLDB_INVALID_ADDRESS;
   }
 
@@ -278,7 +278,7 @@ addr_t SBFrame::GetPC() const {
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return addr;
   }
 
@@ -297,7 +297,7 @@ bool SBFrame::SetPC(addr_t new_pc) {
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return error_ret_val;
   }
 
@@ -314,7 +314,7 @@ addr_t SBFrame::GetSP() const {
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return LLDB_INVALID_ADDRESS;
   }
 
@@ -331,7 +331,7 @@ addr_t SBFrame::GetFP() const {
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return LLDB_INVALID_ADDRESS;
   }
 
@@ -348,7 +348,7 @@ SBAddress SBFrame::GetPCAddress() const {
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return SBAddress();
   }
 
@@ -370,7 +370,7 @@ lldb::SBValue SBFrame::GetValueForVariablePath(const char *var_path) {
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return sb_value;
   }
 
@@ -394,7 +394,7 @@ lldb::SBValue SBFrame::GetValueForVariablePath(const char *var_path,
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return sb_value;
   }
 
@@ -417,7 +417,7 @@ SBValue SBFrame::FindVariable(const char *name) {
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return SBValue();
   }
 
@@ -443,7 +443,7 @@ SBValue SBFrame::FindVariable(const char *name,
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return sb_value;
   }
 
@@ -461,7 +461,7 @@ SBValue SBFrame::FindValue(const char *name, ValueType value_type) {
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return value;
   }
 
@@ -488,7 +488,7 @@ SBValue SBFrame::FindValue(const char *name, ValueType value_type,
       GetStoppedExecutionContext(m_opaque_sp);
 
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return value_sp;
   } else {
     Target *target = exe_ctx->GetTargetPtr();
@@ -614,7 +614,7 @@ SBThread SBFrame::GetThread() const {
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return SBThread();
   }
 
@@ -630,7 +630,7 @@ const char *SBFrame::Disassemble() const {
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return nullptr;
   }
 
@@ -648,7 +648,7 @@ SBValueList SBFrame::GetVariables(bool arguments, bool locals, bool statics,
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return value_list;
   }
 
@@ -681,7 +681,7 @@ lldb::SBValueList SBFrame::GetVariables(bool arguments, bool locals,
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return SBValueList();
   }
 
@@ -705,7 +705,7 @@ SBValueList SBFrame::GetVariables(const lldb::SBVariablesOptions &options) {
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return SBValueList();
   } else {
     const bool statics = options.GetIncludeStatics();
@@ -812,7 +812,7 @@ SBValueList SBFrame::GetRegisters() {
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return SBValueList();
   } else {
     Target *target = exe_ctx->GetTargetPtr();
@@ -842,7 +842,7 @@ SBValue SBFrame::FindRegister(const char *name) {
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return SBValue();
   } else {
     Target *target = exe_ctx->GetTargetPtr();
@@ -898,7 +898,7 @@ bool SBFrame::GetDescription(SBStream &description) {
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     strm.PutCString("Error: process is not stopped.");
     return true;
   }
@@ -915,7 +915,7 @@ SBValue SBFrame::EvaluateExpression(const char *expr) {
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return CreateProcessIsRunningExprEvalError();
   }
 
@@ -948,7 +948,7 @@ SBFrame::EvaluateExpression(const char *expr,
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return CreateProcessIsRunningExprEvalError();
   }
 
@@ -970,7 +970,7 @@ SBValue SBFrame::EvaluateExpression(const char *expr,
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return CreateProcessIsRunningExprEvalError();
   }
 
@@ -1013,7 +1013,7 @@ lldb::SBValue SBFrame::EvaluateExpression(const char *expr,
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     expr_result = CreateProcessIsRunningExprEvalError();
   } else {
     Target *target = exe_ctx->GetTargetPtr();
@@ -1063,7 +1063,7 @@ SBStructuredData SBFrame::GetLanguageSpecificData() const {
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return sb_data;
   }
   StackFrame *frame = exe_ctx->GetFramePtr();
@@ -1087,7 +1087,7 @@ bool SBFrame::IsInlined() const {
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return false;
   }
 
@@ -1108,7 +1108,7 @@ bool SBFrame::IsArtificial() const {
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return false;
   }
 
@@ -1124,7 +1124,7 @@ bool SBFrame::IsHidden() const {
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return false;
   }
 
@@ -1146,7 +1146,7 @@ lldb::LanguageType SBFrame::GuessLanguage() const {
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return eLanguageTypeUnknown;
   }
 
@@ -1161,7 +1161,7 @@ const char *SBFrame::GetFunctionName() const {
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return nullptr;
   }
 
@@ -1176,7 +1176,7 @@ const char *SBFrame::GetDisplayFunctionName() {
   llvm::Expected<StoppedExecutionContext> exe_ctx =
       GetStoppedExecutionContext(m_opaque_sp);
   if (!exe_ctx) {
-    llvm::consumeError(exe_ctx.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return nullptr;
   }
 
