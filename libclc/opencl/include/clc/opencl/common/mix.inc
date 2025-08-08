@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-_CLC_CNFN _CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE mix(__CLC_GENTYPE a,
-                                                    __CLC_GENTYPE b,
-                                                    __CLC_GENTYPE c);
+_CLC_CONST _CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE mix(__CLC_GENTYPE a,
+                                                     __CLC_GENTYPE b,
+                                                     __CLC_GENTYPE c);
 
 #ifndef __CLC_SCALAR
-_CLC_CNFN _CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE mix(__CLC_GENTYPE a,
-                                                    __CLC_GENTYPE b,
-                                                    __CLC_SCALAR_GENTYPE c);
+_CLC_CONST _CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE mix(__CLC_GENTYPE a,
+                                                     __CLC_GENTYPE b,
+                                                     __CLC_SCALAR_GENTYPE c);
 #endif

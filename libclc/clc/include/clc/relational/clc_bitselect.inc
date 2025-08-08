@@ -6,5 +6,5 @@
 //
 //===----------------------------------------------------------------------===//
 
-_CLC_CNFN _CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE
+_CLC_CONST _CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE
 __clc_bitselect(__CLC_GENTYPE x, __CLC_GENTYPE y, __CLC_GENTYPE z);

@@ -11,6 +11,6 @@
 
 #include <clc/opencl/opencl-base.h>
 
-_CLC_CNFN _CLC_OVERLOAD _CLC_DECL uint get_work_dim(void);
+_CLC_CONST _CLC_OVERLOAD _CLC_DECL uint get_work_dim(void);
 
 #endif // __CLC_OPENCL_WORKITEM_GET_WORK_DIM_H__

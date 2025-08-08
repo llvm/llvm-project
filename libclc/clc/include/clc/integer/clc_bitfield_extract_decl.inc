@@ -6,5 +6,5 @@
 //
 //===----------------------------------------------------------------------===//
 
-_CLC_CNFN _CLC_OVERLOAD _CLC_DECL __RETTYPE FUNCTION(__CLC_GENTYPE base,
-                                                     uint offset, uint count);
+_CLC_CONST _CLC_OVERLOAD _CLC_DECL __RETTYPE FUNCTION(__CLC_GENTYPE base,
+                                                      uint offset, uint count);

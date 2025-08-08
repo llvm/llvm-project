@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-_CLC_CNFN _CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE step(__CLC_GENTYPE edge,
-                                                     __CLC_GENTYPE x);
+_CLC_CONST _CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE step(__CLC_GENTYPE edge,
+                                                      __CLC_GENTYPE x);
 
 #ifndef __CLC_SCALAR
-_CLC_CNFN _CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE step(__CLC_SCALAR_GENTYPE edge,
-                                                     __CLC_GENTYPE x);
+_CLC_CONST _CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE step(__CLC_SCALAR_GENTYPE edge,
+                                                      __CLC_GENTYPE x);
 #endif

@@ -12,7 +12,7 @@
 #define __RETTYPE __CLC_BIT_INTN
 #endif
 
-_CLC_CNFN _CLC_OVERLOAD _CLC_DECL __RETTYPE FUNCTION(__CLC_GENTYPE a,
-                                                     __CLC_GENTYPE b);
+_CLC_CONST _CLC_OVERLOAD _CLC_DECL __RETTYPE FUNCTION(__CLC_GENTYPE a,
+                                                      __CLC_GENTYPE b);
 
 #undef __RETTYPE
