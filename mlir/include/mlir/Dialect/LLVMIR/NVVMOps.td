@@ -2995,20 +2995,20 @@ def NVVM_WgmmaMmaAsyncOp : NVVM_Op<"wgmma.mma_async",
 // NVVM Griddepcontrol Ops
 //===----------------------------------------------------------------------===//
 
-def FDLWait : I32EnumAttrCase<"wait", 0>;
-def FDLLaunchDependent : I32EnumAttrCase<"launch_dependents", 1>;
+def GridDepActionWait : I32EnumAttrCase<"wait", 0>;
+def GridDepActionLaunchDependent : I32EnumAttrCase<"launch_dependents", 1>;
 
-def FDLKind : I32EnumAttr<"FDLKind", "Fast dependenct launch kind",
-  [FDLWait, FDLLaunchDependent]> {
+def GridDepActionKind : I32EnumAttr<"GridDepKind", "Action kind for grid dependency control",
+  [GridDepActionWait, GridDepActionLaunchDependent]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::NVVM";
 }
 
-def FDLKindAttr : EnumAttr<NVVM_Dialect, FDLKind, "fdl_kind">;
+def GridDepActionAttr : EnumAttr<NVVM_Dialect, GridDepActionKind, "grid_dep_action">;
 
 def NVVM_GriddepcontrolOp : NVVM_Op<"griddepcontrol", []> {
   let description = [{
-    If the $kind attribute is set to `wait`, the instruction, it causes the 
+    If the $kind attribute is set to `wait`, it causes the 
     executing thread to wait until all prerequisite grids in flight 
     have completed and all the memory operations from the prerequisite grids 
     are performed and made visible to the current grid.
@@ -3021,11 +3021,11 @@ def NVVM_GriddepcontrolOp : NVVM_Op<"griddepcontrol", []> {
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-griddepcontrol)
   }];
 
-  let arguments = (ins FDLKindAttr:$kind);
+  let arguments = (ins GridDepActionAttr:$kind);
 
   let assemblyFormat = "$kind attr-dict";
 
-   string llvmBuilder = [{
+  string llvmBuilder = [{
     llvm::Intrinsic::ID id;
       switch ($kind) {
         case NVVM::FDLKind::wait:
