@@ -7,7 +7,7 @@
 ; CHECK-NEXT: Target Library Information
 ; CHECK-NEXT: DXIL Resource Type Analysis
 ; CHECK-NEXT: Target Transform Information
-
+; CHECK-NEXT: Assumption Cache Tracker
 ; CHECK-OBJ-NEXT: Machine Module Information
 ; CHECK-OBJ-NEXT: Machine Branch Probability Analysis
 ; CHECK-OBJ-NEXT: Create Garbage Collector Module Metadata
@@ -26,6 +26,13 @@
 ; CHECK-NEXT:   FunctionPass Manager
 ; CHECK-NEXT:     Dominator Tree Construction
 ; CHECK-NEXT:     DXIL Forward Handle Accesses
+; CHECK-NEXT:     Dominator Tree Construction
+; CHECK-NEXT:     Basic Alias Analysis (stateless AA impl)
+; CHECK-NEXT:     Function Alias Analysis Results
+; CHECK-NEXT:     Post-Dominator Tree Construction
+; CHECK-NEXT:     Memory SSA
+; CHECK-NEXT:     Natural Loop Information
+; CHECK-NEXT:     Dead Store Elimination
 ; CHECK-NEXT:     DXIL Legalizer
 ; CHECK-NEXT:   DXIL Resource Binding Analysis
 ; CHECK-NEXT:   DXIL Resource Implicit Binding
