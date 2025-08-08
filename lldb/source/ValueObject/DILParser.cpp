@@ -403,11 +403,13 @@ ASTNodeUP DILParser::ParseIntegerLiteral() {
 
   auto radix = llvm::getAutoSenseRadix(spelling_ref);
   bool is_unsigned = false, is_long = false, is_longlong = false;
+  if (spelling_ref.consume_back_insensitive("u"))
+    is_unsigned = true;
   if (spelling_ref.consume_back_insensitive("ll"))
     is_longlong = true;
   if (spelling_ref.consume_back_insensitive("l"))
     is_long = true;
-  if (spelling_ref.consume_back_insensitive("u"))
+  if (!is_unsigned && spelling_ref.consume_back_insensitive("u"))
     is_unsigned = true;
 
   llvm::APInt raw_value;
