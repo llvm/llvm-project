@@ -997,89 +997,24 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   const Function &F = MF.getFunction();
 
   // Ensure there are enough SGPRs and VGPRs for wave dispatch, where wave
-  // dispatch registers are function args.
-  unsigned WaveDispatchNumSGPR = 0, WaveDispatchNumVGPR = 0;
+  // dispatch registers as function args.
+  unsigned WaveDispatchNumSGPR = MFI->getNumWaveDispatchSGPRs(),
+           WaveDispatchNumVGPR = MFI->getNumWaveDispatchVGPRs();
 
-  if (isShader(F.getCallingConv())) {
-    bool IsPixelShader =
-        F.getCallingConv() == CallingConv::AMDGPU_PS && !STM.isAmdHsaOS();
-
-    // Calculate the number of VGPR registers based on the SPI input registers
-    uint32_t InputEna = 0;
-    uint32_t InputAddr = 0;
-    unsigned LastEna = 0;
-
-    if (IsPixelShader) {
-      // Note for IsPixelShader:
-      // By this stage, all enabled inputs are tagged in InputAddr as well.
-      // We will use InputAddr to determine whether the input counts against the
-      // vgpr total and only use the InputEnable to determine the last input
-      // that is relevant - if extra arguments are used, then we have to honour
-      // the InputAddr for any intermediate non-enabled inputs.
-      InputEna = MFI->getPSInputEnable();
-      InputAddr = MFI->getPSInputAddr();
-
-      // We only need to consider input args up to the last used arg.
-      assert((InputEna || InputAddr) &&
-             "PSInputAddr and PSInputEnable should "
-             "never both be 0 for AMDGPU_PS shaders");
-      // There are some rare circumstances where InputAddr is non-zero and
-      // InputEna can be set to 0. In this case we default to setting LastEna
-      // to 1.
-      LastEna = InputEna ? llvm::Log2_32(InputEna) + 1 : 1;
-    }
-
-    // FIXME: We should be using the number of registers determined during
-    // calling convention lowering to legalize the types.
-    const DataLayout &DL = F.getDataLayout();
-    unsigned PSArgCount = 0;
-    unsigned IntermediateVGPR = 0;
-    for (auto &Arg : F.args()) {
-      unsigned NumRegs = (DL.getTypeSizeInBits(Arg.getType()) + 31) / 32;
-      if (Arg.hasAttribute(Attribute::InReg)) {
-        WaveDispatchNumSGPR += NumRegs;
-      } else {
-        // If this is a PS shader and we're processing the PS Input args (first
-        // 16 VGPR), use the InputEna and InputAddr bits to define how many
-        // VGPRs are actually used.
-        // Any extra VGPR arguments are handled as normal arguments (and
-        // contribute to the VGPR count whether they're used or not).
-        if (IsPixelShader && PSArgCount < 16) {
-          if ((1 << PSArgCount) & InputAddr) {
-            if (PSArgCount < LastEna)
-              WaveDispatchNumVGPR += NumRegs;
-            else
-              IntermediateVGPR += NumRegs;
-          }
-          PSArgCount++;
-        } else {
-          // If there are extra arguments we have to include the allocation for
-          // the non-used (but enabled with InputAddr) input arguments
-          if (IntermediateVGPR) {
-            WaveDispatchNumVGPR += IntermediateVGPR;
-            IntermediateVGPR = 0;
-          }
-          WaveDispatchNumVGPR += NumRegs;
-        }
-      }
-    }
+  if (WaveDispatchNumSGPR) {
     ProgInfo.NumSGPR = AMDGPUMCExpr::createMax(
-        {ProgInfo.NumSGPR, CreateExpr(WaveDispatchNumSGPR)}, Ctx);
+        {ProgInfo.NumSGPR,
+         MCBinaryExpr::createAdd(CreateExpr(WaveDispatchNumSGPR), ExtraSGPRs,
+                                 Ctx)},
+        Ctx);
+  }
 
+  if (WaveDispatchNumVGPR) {
     ProgInfo.NumArchVGPR = AMDGPUMCExpr::createMax(
         {ProgInfo.NumVGPR, CreateExpr(WaveDispatchNumVGPR)}, Ctx);
 
     ProgInfo.NumVGPR = AMDGPUMCExpr::createTotalNumVGPR(
         ProgInfo.NumAccVGPR, ProgInfo.NumArchVGPR, Ctx);
-  } else if (isKernel(F.getCallingConv()) &&
-             MFI->getNumKernargPreloadedSGPRs()) {
-    // Consider cases where the total number of UserSGPRs with trailing
-    // allocated preload SGPRs, is greater than the number of explicitly
-    // referenced SGPRs.
-    const MCExpr *UserPlusExtraSGPRs = MCBinaryExpr::createAdd(
-        CreateExpr(MFI->getNumUserSGPRs()), ExtraSGPRs, Ctx);
-    ProgInfo.NumSGPR =
-        AMDGPUMCExpr::createMax({ProgInfo.NumSGPR, UserPlusExtraSGPRs}, Ctx);
   }
 
   // Adjust number of registers used to meet default/requested minimum/maximum
