@@ -58,13 +58,21 @@ private:
     }
 
     void Post(const parser::Name &name) {
-      auto *current = !constructs.empty() ? constructs.back() : nullptr;
+      const void *current = !constructs.empty() ? constructs.back() : nullptr;
       symDefMap.try_emplace(name.symbol, current);
     }
 
-    llvm::SmallVector<const parser::OpenMPConstruct *> constructs;
-    llvm::DenseMap<semantics::Symbol *, const parser::OpenMPConstruct *>
-        symDefMap;
+    bool Pre(const parser::DeclarationConstruct &decl) {
+      constructs.push_back(&decl);
+      return true;
+    }
+
+    void Post(const parser::DeclarationConstruct &decl) {
+      constructs.pop_back();
+    }
+
+    llvm::SmallVector<const void *> constructs;
+    llvm::DenseMap<semantics::Symbol *, const void *> symDefMap;
 
     /// Given a \p symbol and an \p eval, returns true if eval is the OMP
     /// construct that defines symbol.
