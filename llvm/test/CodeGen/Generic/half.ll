@@ -57,7 +57,7 @@
 ; work better anyway.
 ; Regression test for https://github.com/llvm/llvm-project/issues/97981.
 
-define half @from_bits(i16 %bits) #0 {
+define half @from_bits(i16 %bits) nounwind {
 ; ALL-LABEL: from_bits:
 ; CHECK-NOT: __extend
 ; CHECK-NOT: __trunc
@@ -67,7 +67,7 @@ define half @from_bits(i16 %bits) #0 {
     ret half %f
 }
 
-define i16 @to_bits(half %f) #0 {
+define i16 @to_bits(half %f) nounwind {
 ; ALL-LABEL: to_bits:
 ; CHECK-NOT: __extend
 ; CHECK-NOT: __trunc
@@ -80,10 +80,8 @@ define i16 @to_bits(half %f) #0 {
 ; Some platforms have had problems freezing. Regression test for
 ; https://github.com/llvm/llvm-project/issues/117337 and similar issues.
 
-define half @check_freeze(half %f) #0 {
+define half @check_freeze(half %f) nounwind {
 ; ALL-LABEL: check_freeze:
   %t0 = freeze half %f
   ret half %t0
 }
-
-attributes #0 = { nounwind }
