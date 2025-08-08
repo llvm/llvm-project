@@ -397,7 +397,7 @@ define void @tail_predicate_without_optsize(ptr %p, i8 %a, i8 %b, i8 %c, i32 %n)
 ; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; DEFAULT-NEXT:    br label %[[FOR_BODY:.*]]
 ; DEFAULT:       [[FOR_BODY]]:
-; DEFAULT-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; DEFAULT-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; DEFAULT-NEXT:    [[TMP72:%.*]] = trunc nuw nsw i64 [[INDVARS_IV]] to i8
 ; DEFAULT-NEXT:    [[MUL:%.*]] = mul i8 [[A]], [[TMP72]]
 ; DEFAULT-NEXT:    [[SHR:%.*]] = lshr i8 [[TMP72]], 1
@@ -546,7 +546,7 @@ define void @sve_tail_predicate_without_minsize(ptr %p, i8 %a, i8 %b, i8 %c, i32
 ; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; DEFAULT-NEXT:    br label %[[FOR_BODY:.*]]
 ; DEFAULT:       [[FOR_BODY]]:
-; DEFAULT-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; DEFAULT-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; DEFAULT-NEXT:    [[TMP26:%.*]] = trunc nuw nsw i64 [[IV]] to i8
 ; DEFAULT-NEXT:    [[MUL:%.*]] = mul i8 [[A]], [[TMP26]]
 ; DEFAULT-NEXT:    [[SHR:%.*]] = lshr i8 [[TMP26]], 1
@@ -621,7 +621,7 @@ define void @sve_tail_predicate_without_minsize(ptr %p, i8 %a, i8 %b, i8 %c, i32
 ; OPTSIZE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; OPTSIZE-NEXT:    br label %[[FOR_BODY:.*]]
 ; OPTSIZE:       [[FOR_BODY]]:
-; OPTSIZE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; OPTSIZE-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; OPTSIZE-NEXT:    [[TMP26:%.*]] = trunc nuw nsw i64 [[IV]] to i8
 ; OPTSIZE-NEXT:    [[MUL:%.*]] = mul i8 [[A]], [[TMP26]]
 ; OPTSIZE-NEXT:    [[SHR:%.*]] = lshr i8 [[TMP26]], 1
@@ -696,7 +696,7 @@ define void @sve_tail_predicate_without_minsize(ptr %p, i8 %a, i8 %b, i8 %c, i32
 ; MINSIZE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; MINSIZE-NEXT:    br label %[[FOR_BODY:.*]]
 ; MINSIZE:       [[FOR_BODY]]:
-; MINSIZE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; MINSIZE-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; MINSIZE-NEXT:    [[TMP26:%.*]] = trunc nuw nsw i64 [[IV]] to i8
 ; MINSIZE-NEXT:    [[MUL:%.*]] = mul i8 [[A]], [[TMP26]]
 ; MINSIZE-NEXT:    [[SHR:%.*]] = lshr i8 [[TMP26]], 1

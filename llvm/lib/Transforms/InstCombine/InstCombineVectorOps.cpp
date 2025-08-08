@@ -462,6 +462,13 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
         return ScalarPHI;
   }
 
+  // If SrcVec is a subvector starting at index 0, extract from the
+  // wider source vector
+  Value *V;
+  if (match(SrcVec,
+            m_Intrinsic<Intrinsic::vector_extract>(m_Value(V), m_Zero())))
+    return ExtractElementInst::Create(V, Index);
+
   // TODO come up with a n-ary matcher that subsumes both unary and
   // binary matchers.
   UnaryOperator *UO;

@@ -53,7 +53,7 @@ protected:
     assert(!DriverInstance && "Running twice is not allowed");
 
     DiagnosticOptions DiagOpts;
-    DiagnosticsEngine Diags(new DiagnosticIDs, DiagOpts,
+    DiagnosticsEngine Diags(DiagnosticIDs::create(), DiagOpts,
                             new TextDiagnosticPrinter(llvm::errs(), DiagOpts));
     DriverInstance.emplace(ClangBinary, "x86_64-unknown-linux-gnu", Diags,
                            "clang LLVM compiler", prepareFS(ExtraFiles));
@@ -78,8 +78,7 @@ protected:
 private:
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem>
   prepareFS(llvm::ArrayRef<std::string> ExtraFiles) {
-    llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS =
-        new llvm::vfs::InMemoryFileSystem;
+    auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
     FS->addFile(ClangBinary, time_t(), llvm::MemoryBuffer::getMemBuffer(""));
     FS->addFile(InputFile, time_t(), llvm::MemoryBuffer::getMemBuffer(""));
     for (llvm::StringRef F : ExtraFiles)

@@ -30,12 +30,11 @@ def int_deref_ptr_ret : Intrinsic<[llvm_ptr_ty], [], [Dereferenceable<RetIndex, 
 
 // CHECK: getAttributes(LLVMContext &C, ID id,
 // CHECK-NEXT: FunctionType *FT) {
-// CHECK: case 1:
-// CHECK-NEXT: return AttributeList::get(C, {
-// CHECK-NEXT:   {AttributeList::FunctionIndex, getIntrinsicFnAttributeSet(C, FnAttrID)}
-// CHECK-NEXT: });
+// CHECK:      case 1:
+// CHECK-NEXT:   HasFnAttr = true;
+// CHECK-NEXT:   break;
 // CHECK-NEXT: case 0:
-// CHECK-NEXT: return AttributeList::get(C, {
-// CHECK-NEXT:   {0, getIntrinsicArgAttributeSet(C, 0, FT->getContainedType(0))},
-// CHECK-NEXT:   {AttributeList::FunctionIndex, getIntrinsicFnAttributeSet(C, FnAttrID)}
-// CHECK-NEXT: });
+// CHECK-NEXT:   AS[0] = {0, getIntrinsicArgAttributeSet(C, 0, FT->getContainedType(0))};
+// CHECK-NEXT:   HasFnAttr = true;
+// CHECK-NEXT:   NumAttrs = 1
+// CHECK-NEXT:   break;

@@ -381,10 +381,11 @@ void NarrowingConversionsCheck::diagNarrowTypeOrConstant(
     const Expr &Rhs) {
   APValue Constant = getConstantExprValue(Context, Rhs);
   if (Constant.isInt())
-    return diagNarrowIntegerConstant(SourceLoc, Lhs, Rhs, Constant.getInt());
-  if (Constant.isFloat())
-    return diagNarrowConstant(SourceLoc, Lhs, Rhs);
-  return diagNarrowType(SourceLoc, Lhs, Rhs);
+    diagNarrowIntegerConstant(SourceLoc, Lhs, Rhs, Constant.getInt());
+  else if (Constant.isFloat())
+    diagNarrowConstant(SourceLoc, Lhs, Rhs);
+  else
+    diagNarrowType(SourceLoc, Lhs, Rhs);
 }
 
 void NarrowingConversionsCheck::handleIntegralCast(const ASTContext &Context,
@@ -460,10 +461,10 @@ void NarrowingConversionsCheck::handleFloatingToIntegral(
   llvm::APFloat FloatConstant(0.0);
   if (getFloatingConstantExprValue(Context, Rhs, FloatConstant)) {
     if (!isFloatExactlyRepresentable(Context, FloatConstant, Lhs.getType()))
-      return diagNarrowConstant(SourceLoc, Lhs, Rhs);
+      diagNarrowConstant(SourceLoc, Lhs, Rhs);
 
-    if (PedanticMode)
-      return diagConstantCast(SourceLoc, Lhs, Rhs);
+    else if (PedanticMode)
+      diagConstantCast(SourceLoc, Lhs, Rhs);
 
     return;
   }
@@ -478,7 +479,7 @@ void NarrowingConversionsCheck::handleFloatingToIntegral(
 void NarrowingConversionsCheck::handleFloatingToBoolean(
     const ASTContext &Context, SourceLocation SourceLoc, const Expr &Lhs,
     const Expr &Rhs) {
-  return diagNarrowTypeOrConstant(Context, SourceLoc, Lhs, Rhs);
+  diagNarrowTypeOrConstant(Context, SourceLoc, Lhs, Rhs);
 }
 
 void NarrowingConversionsCheck::handleBooleanToSignedIntegral(
@@ -532,19 +533,20 @@ void NarrowingConversionsCheck::handleBinaryOperator(const ASTContext &Context,
   if (LhsType == RhsType)
     return;
   if (RhsType->getKind() == BuiltinType::Bool && LhsType->isSignedInteger())
-    return handleBooleanToSignedIntegral(Context, SourceLoc, Lhs, Rhs);
-  if (RhsType->isInteger() && LhsType->getKind() == BuiltinType::Bool)
-    return handleIntegralToBoolean(Context, SourceLoc, Lhs, Rhs);
-  if (RhsType->isInteger() && LhsType->isFloatingPoint())
-    return handleIntegralToFloating(Context, SourceLoc, Lhs, Rhs);
-  if (RhsType->isInteger() && LhsType->isInteger())
-    return handleIntegralCast(Context, SourceLoc, Lhs, Rhs);
-  if (RhsType->isFloatingPoint() && LhsType->getKind() == BuiltinType::Bool)
-    return handleFloatingToBoolean(Context, SourceLoc, Lhs, Rhs);
-  if (RhsType->isFloatingPoint() && LhsType->isInteger())
-    return handleFloatingToIntegral(Context, SourceLoc, Lhs, Rhs);
-  if (RhsType->isFloatingPoint() && LhsType->isFloatingPoint())
-    return handleFloatingCast(Context, SourceLoc, Lhs, Rhs);
+    handleBooleanToSignedIntegral(Context, SourceLoc, Lhs, Rhs);
+  else if (RhsType->isInteger() && LhsType->getKind() == BuiltinType::Bool)
+    handleIntegralToBoolean(Context, SourceLoc, Lhs, Rhs);
+  else if (RhsType->isInteger() && LhsType->isFloatingPoint())
+    handleIntegralToFloating(Context, SourceLoc, Lhs, Rhs);
+  else if (RhsType->isInteger() && LhsType->isInteger())
+    handleIntegralCast(Context, SourceLoc, Lhs, Rhs);
+  else if (RhsType->isFloatingPoint() &&
+           LhsType->getKind() == BuiltinType::Bool)
+    handleFloatingToBoolean(Context, SourceLoc, Lhs, Rhs);
+  else if (RhsType->isFloatingPoint() && LhsType->isInteger())
+    handleFloatingToIntegral(Context, SourceLoc, Lhs, Rhs);
+  else if (RhsType->isFloatingPoint() && LhsType->isFloatingPoint())
+    handleFloatingCast(Context, SourceLoc, Lhs, Rhs);
 }
 
 bool NarrowingConversionsCheck::handleConditionalOperator(
@@ -577,21 +579,28 @@ void NarrowingConversionsCheck::handleImplicitCast(
   SourceLocation SourceLoc = Lhs.getExprLoc();
   switch (Cast.getCastKind()) {
   case CK_BooleanToSignedIntegral:
-    return handleBooleanToSignedIntegral(Context, SourceLoc, Lhs, Rhs);
+    handleBooleanToSignedIntegral(Context, SourceLoc, Lhs, Rhs);
+    return;
   case CK_IntegralToBoolean:
-    return handleIntegralToBoolean(Context, SourceLoc, Lhs, Rhs);
+    handleIntegralToBoolean(Context, SourceLoc, Lhs, Rhs);
+    return;
   case CK_IntegralToFloating:
-    return handleIntegralToFloating(Context, SourceLoc, Lhs, Rhs);
+    handleIntegralToFloating(Context, SourceLoc, Lhs, Rhs);
+    return;
   case CK_IntegralCast:
-    return handleIntegralCast(Context, SourceLoc, Lhs, Rhs);
+    handleIntegralCast(Context, SourceLoc, Lhs, Rhs);
+    return;
   case CK_FloatingToBoolean:
-    return handleFloatingToBoolean(Context, SourceLoc, Lhs, Rhs);
+    handleFloatingToBoolean(Context, SourceLoc, Lhs, Rhs);
+    return;
   case CK_FloatingToIntegral:
-    return handleFloatingToIntegral(Context, SourceLoc, Lhs, Rhs);
+    handleFloatingToIntegral(Context, SourceLoc, Lhs, Rhs);
+    return;
   case CK_FloatingCast:
-    return handleFloatingCast(Context, SourceLoc, Lhs, Rhs);
+    handleFloatingCast(Context, SourceLoc, Lhs, Rhs);
+    return;
   default:
-    break;
+    return;
   }
 }
 
@@ -610,9 +619,10 @@ void NarrowingConversionsCheck::handleBinaryOperator(const ASTContext &Context,
 
 void NarrowingConversionsCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *Op = Result.Nodes.getNodeAs<BinaryOperator>("binary_op"))
-    return handleBinaryOperator(*Result.Context, *Op);
-  if (const auto *Cast = Result.Nodes.getNodeAs<ImplicitCastExpr>("cast"))
-    return handleImplicitCast(*Result.Context, *Cast);
-  llvm_unreachable("must be binary operator or cast expression");
+    handleBinaryOperator(*Result.Context, *Op);
+  else if (const auto *Cast = Result.Nodes.getNodeAs<ImplicitCastExpr>("cast"))
+    handleImplicitCast(*Result.Context, *Cast);
+  else
+    llvm_unreachable("must be binary operator or cast expression");
 }
 } // namespace clang::tidy::bugprone

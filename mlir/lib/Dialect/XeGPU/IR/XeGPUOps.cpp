@@ -110,6 +110,34 @@ isValidGatherScatterParams(Type maskTy, VectorType valueTy,
   return success();
 }
 
+static LogicalResult
+isValidGatherScatterBufferParams(Type maskTy, VectorType valueTy,
+                                 int64_t chunkSize,
+                                 function_ref<InFlightDiagnostic()> emitError) {
+
+  if (!valueTy)
+    return emitError() << "Expecting a vector type result.";
+
+  auto maskShape = getShapeOf(maskTy);
+  auto valueShape = getShapeOf(valueTy);
+
+  // a valid shape for SIMT case
+  if (valueTy.getRank() == 1) {
+    if (valueTy.getNumElements() != chunkSize)
+      return emitError() << "value elements must match chunk size " << chunkSize
+                         << " for SIMT code.";
+    return success();
+  }
+
+  llvm::SmallVector<int64_t> expectedMaskShape(valueShape);
+  if (chunkSize > 1)
+    expectedMaskShape.pop_back();
+  if (expectedMaskShape != maskShape)
+    return emitError() << "Mask should match value except the chunk size dim.";
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // XeGPU_CreateNdDescOp
 //===----------------------------------------------------------------------===//
@@ -644,8 +672,13 @@ LogicalResult CreateDescOp::verify() {
 //===----------------------------------------------------------------------===//
 LogicalResult PrefetchOp::verify() {
   auto tdescTy = getTensorDescType();
-  if (!tdescTy.isScattered())
+
+  if (tdescTy && !tdescTy.isScattered())
     return emitOpError("Expects a scattered TensorDesc.\n");
+
+  if (!tdescTy && getRankOf(getSource()) > 1)
+    return emitOpError(
+        "Expecting the source is a 1D memref or pointer (uint64_t).");
 
   if (!isReadHintOrNone(getL1HintAttr()))
     return emitOpError("invalid l1_hint: ") << getL1HintAttr();
@@ -659,6 +692,13 @@ LogicalResult PrefetchOp::verify() {
   return success();
 }
 
+void PrefetchOp::build(OpBuilder &builder, OperationState &state, Value source,
+                       xegpu::CachePolicyAttr l1_hint,
+                       xegpu::CachePolicyAttr l2_hint,
+                       xegpu::CachePolicyAttr l3_hint) {
+  build(builder, state, source, Value(), l1_hint, l2_hint, l3_hint);
+}
+
 //===----------------------------------------------------------------------===//
 // XeGPU_LoadGatherOp
 //===----------------------------------------------------------------------===//
@@ -666,6 +706,13 @@ LogicalResult LoadGatherOp::verify() {
   auto tdescTy = getTensorDescType();
   auto maskTy = getMaskType();
   auto valueTy = getValueType();
+
+  if (tdescTy && !tdescTy.isScattered())
+    return emitOpError("Expects a scattered TensorDesc.");
+
+  if (!tdescTy && getRankOf(getSource()) > 1)
+    return emitOpError(
+        "Expecting the source is a 1D memref or pointer (uint64_t).");
 
   if (!isReadHintOrNone(getL1HintAttr()))
     return emitOpError("invalid l1_hint: ") << getL1HintAttr();
@@ -676,8 +723,27 @@ LogicalResult LoadGatherOp::verify() {
   if (!isReadHintOrNone(getL3HintAttr()))
     return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
-  return isValidGatherScatterParams(maskTy, valueTy, tdescTy,
-                                    [&]() { return emitOpError(); });
+  if (tdescTy)
+    return isValidGatherScatterParams(maskTy, valueTy, tdescTy,
+                                      [&]() { return emitOpError(); });
+  auto srcTy = getSourceType();
+  uint64_t chunkSize = static_cast<int64_t>(getChunkSize().value_or(1));
+  auto memTy = dyn_cast<MemRefType>(srcTy);
+
+  if (memTy && (valueTy.getElementType() != memTy.getElementType()))
+    return emitError() << "Value should have the same element type as MemRef.";
+
+  return isValidGatherScatterBufferParams(maskTy, valueTy, chunkSize,
+                                          [&]() { return emitOpError(); });
+}
+
+void LoadGatherOp::build(OpBuilder &builder, OperationState &state,
+                         Type valueType, Value source, Value mask,
+                         xegpu::CachePolicyAttr l1_hint,
+                         xegpu::CachePolicyAttr l2_hint,
+                         xegpu::CachePolicyAttr l3_hint) {
+  build(builder, state, valueType, source, Value(), mask, IntegerAttr(),
+        l1_hint, l2_hint, l3_hint);
 }
 
 //===----------------------------------------------------------------------===//
@@ -688,6 +754,13 @@ LogicalResult StoreScatterOp::verify() {
   auto maskTy = getMaskType();
   auto valueTy = getValueType();
 
+  if (tdescTy && !tdescTy.isScattered())
+    return emitOpError("Expects a scattered TensorDesc.\n");
+
+  if (!tdescTy && getRankOf(getDest()) > 1)
+    return emitOpError(
+        "Expecting the dest is a 1D memref or pointer (uint64_t).");
+
   if (!isWriteHintOrNone(getL1HintAttr()))
     return emitOpError("invalid l1_hint: ") << getL1HintAttr();
 
@@ -697,8 +770,28 @@ LogicalResult StoreScatterOp::verify() {
   if (!isWriteHintOrNone(getL3HintAttr()))
     return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
-  return isValidGatherScatterParams(maskTy, valueTy, tdescTy,
-                                    [&]() { return emitOpError(); });
+  if (tdescTy)
+    return isValidGatherScatterParams(maskTy, valueTy, tdescTy,
+                                      [&]() { return emitOpError(); });
+
+  auto destTy = getDestType();
+  uint64_t chunkSize = static_cast<int64_t>(getChunkSize().value_or(1));
+  auto memTy = dyn_cast<MemRefType>(destTy);
+
+  if (memTy && (valueTy.getElementType() != memTy.getElementType()))
+    return emitError() << "Value should have the same element type as MemRef.";
+
+  return isValidGatherScatterBufferParams(maskTy, valueTy, chunkSize,
+                                          [&]() { return emitOpError(); });
+}
+
+void StoreScatterOp::build(OpBuilder &builder, OperationState &state,
+                           Value value, Value dest, Value mask,
+                           xegpu::CachePolicyAttr l1_hint,
+                           xegpu::CachePolicyAttr l2_hint,
+                           xegpu::CachePolicyAttr l3_hint) {
+  build(builder, state, value, dest, Value(), mask, IntegerAttr(), l1_hint,
+        l2_hint, l3_hint);
 }
 
 //===----------------------------------------------------------------------===//

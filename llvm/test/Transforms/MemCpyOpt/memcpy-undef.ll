@@ -39,20 +39,6 @@ define void @test2(ptr sret(i8) noalias nocapture %out) nounwind noinline ssp uw
 }
 
 ; Check that the memcpy is not removed.
-define void @test3(ptr sret(i8) noalias nocapture %out) nounwind noinline ssp uwtable {
-; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[IN:%.*]] = alloca i64, align 8
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[IN]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[OUT:%.*]], ptr [[IN]], i64 8, i1 false)
-; CHECK-NEXT:    ret void
-;
-  %in = alloca i64
-  call void @llvm.lifetime.start.p0(i64 4, ptr %in)
-  call void @llvm.memcpy.p0.p0.i64(ptr %out, ptr %in, i64 8, i1 false)
-  ret void
-}
-
-; Check that the memcpy is not removed.
 define void @test_lifetime_may_alias(ptr %src, ptr %dst) {
 ; CHECK-LABEL: @test_lifetime_may_alias(
 ; CHECK-NEXT:    [[LIFETIME:%.*]] = alloca i64, align 8
@@ -93,38 +79,6 @@ define void @test_lifetime_partial_alias_2(ptr noalias %dst) {
   call void @llvm.lifetime.start.p0(i64 16, ptr %a)
   %gep = getelementptr i8, ptr %a, i64 8
   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %gep, i64 16, i1 false)
-  ret void
-}
-
-; lifetime.start on part of alloca, copy in range.
-define void @test_lifetime_partial_alias_3(ptr noalias %dst) {
-; CHECK-LABEL: @test_lifetime_partial_alias_3(
-; CHECK-NEXT:    [[A:%.*]] = alloca [16 x i8], align 1
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 12, ptr [[A]])
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 8
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST:%.*]], ptr [[GEP]], i64 4, i1 false)
-; CHECK-NEXT:    ret void
-;
-  %a = alloca [16 x i8]
-  call void @llvm.lifetime.start.p0(i64 12, ptr %a)
-  %gep = getelementptr i8, ptr %a, i64 8
-  call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %gep, i64 4, i1 false)
-  ret void
-}
-
-; lifetime.start on part of alloca, copy out of range.
-define void @test_lifetime_partial_alias_4(ptr noalias %dst) {
-; CHECK-LABEL: @test_lifetime_partial_alias_4(
-; CHECK-NEXT:    [[A:%.*]] = alloca [16 x i8], align 1
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 12, ptr [[A]])
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 8
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST:%.*]], ptr [[GEP]], i64 8, i1 false)
-; CHECK-NEXT:    ret void
-;
-  %a = alloca [16 x i8]
-  call void @llvm.lifetime.start.p0(i64 12, ptr %a)
-  %gep = getelementptr i8, ptr %a, i64 8
-  call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %gep, i64 8, i1 false)
   ret void
 }
 

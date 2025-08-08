@@ -54,10 +54,37 @@ program openacc_atomic_validity
   i = c(i)
   !$acc end atomic
 
+  !TODO: Should error because c(i) references i which is the atomic update variable.
   !$acc atomic capture
   c(i) = i
   i = i + 1
   !$acc end atomic
+
+  !ERROR: The variables assigned in this atomic capture construct must be distinct
+  !$acc atomic capture
+  c(1) = c(2)
+  c(1) = c(3)
+  !$acc end atomic
+  
+  !ERROR: The assignments in this atomic capture construct do not update a variable and capture either its initial or final value
+  !$acc atomic capture
+  c(1) = c(2)
+  c(2) = c(2)
+  !$acc end atomic
+
+  !ERROR: The assignments in this atomic capture construct do not update a variable and capture either its initial or final value
+  !$acc atomic capture
+  c(1) = c(2)
+  c(2) = c(1)
+  !$acc end atomic
+
+  !ERROR: The assignments in this atomic capture construct do not update a variable and capture either its initial or final value
+  !$acc atomic capture
+  c(1) = c(2)
+  c(3) = c(2)
+  !$acc end atomic
+
+
 
   !$acc atomic capture if(l .EQV. .false.)
   c(i) = i
@@ -79,3 +106,45 @@ program openacc_atomic_validity
   !$acc end parallel
 
 end program openacc_atomic_validity
+
+subroutine capture_with_convert_f64_to_i32()
+  integer :: x
+  real(8) :: v, w
+  x = 1
+  v = 0
+  w = 2
+
+  !$acc atomic capture
+  x = x * 2.5_8
+  v = x
+  !$acc end atomic
+
+  !$acc atomic capture
+  !TODO: The rhs side of this update statement cannot reference v.
+  x = x * v
+  v = x
+  !$acc end atomic
+
+  !$acc atomic capture
+  !TODO: The rhs side of this update statement cannot reference v.
+  x = v * x
+  v = x
+  !$acc end atomic
+
+  !$acc atomic capture
+  !ERROR: The RHS of this atomic update statement must reference the updated variable: x
+  x = v * v
+  v = x
+  !$acc end atomic
+
+  !$acc atomic capture
+  x = v
+  !ERROR: The updated variable, v, cannot appear more than once in the atomic update operation
+  v = v * v
+  !$acc end atomic
+
+  !$acc atomic capture
+  v = x
+  x = w * w
+  !$acc end atomic
+end subroutine capture_with_convert_f64_to_i32

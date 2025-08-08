@@ -1012,7 +1012,7 @@ DIDerivedType *DIDerivedType::getImpl(
 std::optional<DIDerivedType::PtrAuthData>
 DIDerivedType::getPtrAuthData() const {
   return getTag() == dwarf::DW_TAG_LLVM_ptrauth_type
-             ? std::optional<PtrAuthData>(PtrAuthData(SubclassData32))
+             ? std::make_optional<PtrAuthData>(SubclassData32)
              : std::nullopt;
 }
 
