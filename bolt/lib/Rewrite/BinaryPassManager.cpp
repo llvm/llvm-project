@@ -52,6 +52,7 @@ namespace opts {
 extern cl::opt<bool> PrintAll;
 extern cl::opt<bool> PrintDynoStats;
 extern cl::opt<bool> DumpDotAll;
+extern bool shouldDumpDot(const bolt::BinaryFunction &Function);
 extern cl::opt<std::string> AsmDump;
 extern cl::opt<bolt::PLTCall::OptType> PLT;
 extern cl::opt<bolt::IdenticalCodeFolding::ICFLevel, false,
@@ -340,7 +341,7 @@ Error BinaryFunctionPassManager::runPasses() {
 
       Function.print(BC.outs(), Message);
 
-      if (opts::DumpDotAll)
+      if (opts::shouldDumpDot(Function))
         Function.dumpGraphForPass(PassIdName);
     }
   }
