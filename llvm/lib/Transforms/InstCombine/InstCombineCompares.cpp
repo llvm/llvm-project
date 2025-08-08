@@ -1320,6 +1320,67 @@ Instruction *InstCombinerImpl::foldICmpWithZero(ICmpInst &Cmp) {
   return nullptr;
 }
 
+// Fold icmp eq (num + (val - 1)) & -val, num
+//      to
+//      icmp eq 0, (and num, val - 1)
+// For value being power of two
+Instruction *InstCombinerImpl::foldNextMultiply(ICmpInst &Cmp) {
+  Value *Op0 = Cmp.getOperand(0), *Op1 = Cmp.getOperand(1);
+  Value *Neg, *Add, *Num, *Mask, *Value;
+  CmpInst::Predicate Pred = Cmp.getPredicate();
+  const APInt *NegConst, *MaskConst, *NumCost;
+
+  if (Pred != ICmpInst::ICMP_EQ)
+    return nullptr;
+
+  // Match num + neg
+  if (!match(Op0, m_And(m_Value(Add), m_Value(Neg))))
+    return nullptr;
+
+  // Match num & mask
+  if (!match(Add, m_Add(m_Value(Num), m_Value(Mask))))
+    return nullptr;
+
+  // Check the constant case
+  if (match(Neg, m_APInt(NegConst)) && match(Mask, m_APInt(MaskConst))) {
+    // Mask + 1 should be a power-of-two
+    if (!(*MaskConst + 1).isPowerOf2())
+      return nullptr;
+
+    // Neg = -(Mask + 1)
+    if (*NegConst != -(*MaskConst + 1))
+      return nullptr;
+  } else {
+    // Match neg = sub 0, val
+    if (!match(Neg, m_Sub(m_Zero(), m_Value(Value))))
+      return nullptr;
+
+    // mask = %val - 1, which can be represented as sub %val, 1 or add %val, -1
+    if (!match(Mask, m_Add(m_Value(Value), m_AllOnes())) &&
+        !match(Mask, m_Sub(m_Value(Value), m_One())))
+      return nullptr;
+
+    // Value should be a known power-of-two.
+    if (!isKnownToBeAPowerOfTwo(Value, false, &Cmp))
+      return nullptr;
+  }
+
+  // Guard against weird special-case where Op1 gets optimized to constant. Leave it constant
+  // fonder.
+  if (match(Op1, m_APInt(NumCost)))
+    return nullptr;
+
+  if (!match(Op1, m_Value(Num)))
+    return nullptr;
+
+  // Create new icmp eq (num & (val - 1)), 0
+  auto NewAnd = Builder.CreateAnd(Num, Mask);
+  auto Zero = llvm::Constant::getNullValue(Num->getType());
+  auto ICmp = Builder.CreateICmp(CmpInst::ICMP_EQ, NewAnd, Zero);
+
+  return replaceInstUsesWith(Cmp, ICmp);
+}
+
 /// Fold icmp Pred X, C.
 /// TODO: This code structure does not make sense. The saturating add fold
 /// should be moved to some other helper and extended as noted below (it is also
@@ -7642,6 +7703,9 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     return Res;
 
   if (Instruction *Res = foldICmpUsingKnownBits(I))
+    return Res;
+
+  if (Instruction *Res = foldNextMultiply(I))
     return Res;
 
   // Test if the ICmpInst instruction is used exclusively by a select as
