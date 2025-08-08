@@ -86,7 +86,7 @@ Sections:
       0xe2, 0xde, 0x02, 0x04,  # Preamble (magic, version, flags)
       # Header:
       0x03, 0x42, 0x40, 0x00,  # ABI, Fixed FP offset, Fixed RA Offset, AUX header length
-      0x02, 0x00, 0x00, 0x00,  # Number of FDEs
+      0x03, 0x00, 0x00, 0x00,  # Number of FDEs
       0x01, 0x00, 0x00, 0x00,  # Number of FREs
       0x00, 0x10, 0x00, 0x00,  # FRE length
       0x00, 0x00, 0x00, 0x00,  # FDE offset
@@ -105,6 +105,13 @@ Sections:
       0x08, 0x00, 0x00, 0x00,  # Start FRE Offset
       0x03, 0x00, 0x00, 0x00,  # Number of FREs
       0x11, 0xde, 0xad, 0x00,  # Info, RepSize, Padding2
+
+      # FDE[2]:
+      0x00, 0x00, 0xbe, 0x00,  # Start Address
+      0xbe, 0x01, 0x00, 0x00,  # Size
+      0x08, 0x00, 0x00, 0x00,  # Start FRE Offset
+      0x01, 0x00, 0x00, 0x00,  # Number of FREs
+      0x03, 0xde, 0xad, 0x00,  # Info, RepSize, Padding2
 
       # FRE[0,0]: Zero offsets
       0x00, 0x00,              # Start Address, Info
@@ -129,6 +136,7 @@ Sections:
 ## - all offset sizes
 ## - various offset counts
 ## - hitting EOF after printing some number of FREs
+## - invalid FRE type
 # CASE1-LABEL:SFrame section '.sframe' {
 #       CASE1:    ABI: AMD64EndianLittle (0x3)
 #       CASE1:    CFA fixed RA offset: 64
@@ -179,7 +187,12 @@ Sections:
 #  CASE1-NEXT:          FP Offset: 32
 #  CASE1-NEXT:          Extra Offsets: [48, 64]
 #  CASE1-NEXT:        }
-#  CASE1-NEXT:{{.*}}: warning: '[[FILE]]': unexpected end of data at offset 0x5a while reading [0x5a, 0x5d)
+#  CASE1-NEXT:{{.*}}: warning: '[[FILE]]': unexpected end of data at offset 0x6e while reading [0x6e, 0x71)
+#       CASE1:    FuncDescEntry [2] {
+#       CASE1:      Info {
+#  CASE1-NEXT:        FRE Type: 0x3
+#       CASE1:      FREs [
+#  CASE1-NEXT:{{.*}}: warning: '[[FILE]]': unsupported FRE type 3 at offset 0x60
 
 --- !ELF
 FileHeader:
@@ -204,7 +217,7 @@ Sections:
       0x00, 0xde, 0x00, 0x00,  # Start Address
       0x00, 0x00, 0x01, 0xbe,  # Size
       0x00, 0x00, 0x00, 0x00,  # Start FRE Offset
-      0x00, 0x00, 0x00, 0x05,  # Number of FREs
+      0x00, 0x00, 0x00, 0x06,  # Number of FREs
       0x02, 0xde, 0xad, 0x00,  # Info, RepSize, Padding2
 
       # FRE[0]: Zero offsets
@@ -227,6 +240,10 @@ Sections:
       0x00, 0x00, 0x00, 0x04,  # Start Address
       0x08,                    # Info
       0x10, 0x20, 0x30, 0x40,  # Offset[0-3]
+
+      # FRE[4]: Invalid offset size
+      0x00, 0x00, 0x00, 0x05,  # Start Address
+      0x60,                    # Info
     ]
 ## Testing:
 ## - big-endian support
@@ -234,6 +251,7 @@ Sections:
 ## - four-byte address sizes
 ## - return address signing
 ## - various offset counts
+## - invalid offset size
 # CASE2-LABEL:SFrame section '.sframe' {
 #       CASE2:    ABI: AArch64EndianBig (0x1)
 #       CASE2:    FuncDescEntry [0] {
@@ -282,3 +300,4 @@ Sections:
 #  CASE2-NEXT:          FP Offset: 48
 #  CASE2-NEXT:          Extra Offsets: [64]
 #  CASE2-NEXT:        }
+#  CASE2-NEXT:{{.*}}: warning: '[[FILE]]': unsupported FRE offset size 3 at offset 0x58
