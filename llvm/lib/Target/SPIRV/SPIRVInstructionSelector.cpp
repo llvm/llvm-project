@@ -2579,19 +2579,17 @@ Register SPIRVInstructionSelector::buildOnesVal(bool AllOnes,
 bool SPIRVInstructionSelector::selectSelect(Register ResVReg,
                                             const SPIRVType *ResType,
                                             MachineInstr &I) const {
-  bool IsFloatTy =
-      GR.isScalarOrVectorOfType(I.getOperand(2).getReg(), SPIRV::OpTypeFloat) ||
-      GR.isScalarOrVectorOfType(I.getOperand(3).getReg(), SPIRV::OpTypeFloat);
+  Register SelectFirstArg = I.getOperand(2).getReg();
+  Register SelectSecondArg = I.getOperand(3).getReg();
+  assert(ResType == GR.getSPIRVTypeForVReg(SelectFirstArg) &&
+         ResType == GR.getSPIRVTypeForVReg(SelectSecondArg));
 
+  bool IsFloatTy =
+      GR.isScalarOrVectorOfType(SelectFirstArg, SPIRV::OpTypeFloat);
   bool IsPtrTy =
-      GR.isScalarOrVectorOfType(I.getOperand(2).getReg(),
-                                SPIRV::OpTypePointer) ||
-      GR.isScalarOrVectorOfType(I.getOperand(3).getReg(), SPIRV::OpTypePointer);
-  bool IsVectorTy =
-      GR.getSPIRVTypeForVReg(I.getOperand(2).getReg())->getOpcode() ==
-          SPIRV::OpTypeVector ||
-      GR.getSPIRVTypeForVReg(I.getOperand(3).getReg())->getOpcode() ==
-          SPIRV::OpTypeVector;
+      GR.isScalarOrVectorOfType(SelectFirstArg, SPIRV::OpTypePointer);
+  bool IsVectorTy = GR.getSPIRVTypeForVReg(SelectFirstArg)->getOpcode() ==
+                    SPIRV::OpTypeVector;
 
   bool IsScalarBool =
       GR.isScalarOfType(I.getOperand(1).getReg(), SPIRV::OpTypeBool);
@@ -2617,8 +2615,8 @@ bool SPIRVInstructionSelector::selectSelect(Register ResVReg,
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(ResType))
       .addUse(I.getOperand(1).getReg())
-      .addUse(I.getOperand(2).getReg())
-      .addUse(I.getOperand(3).getReg())
+      .addUse(SelectFirstArg)
+      .addUse(SelectSecondArg)
       .constrainAllUses(TII, TRI, RBI);
 }
 
