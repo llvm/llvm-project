@@ -23,9 +23,7 @@ _CLC_OVERLOAD _CLC_DEF int __clc_isinf(double x) { return __nv_isinfd(x); }
 #ifdef cl_khr_fp16
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
-_CLC_OVERLOAD _CLC_DEF int __clc_isinf(half x) {
-  return __clc_isinf((float)x);
-}
+_CLC_OVERLOAD _CLC_DEF int __clc_isinf(half x) { return __clc_isinf((float)x); }
 
 #endif
 
