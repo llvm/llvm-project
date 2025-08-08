@@ -8,20 +8,50 @@
 define void @test_fcmpueq_legalize_br_cc_with_invert(float %a) {
 ; CHECK-LABEL: test_fcmpueq_legalize_br_cc_with_invert:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lis 4, .LCPI0_0@ha
-; CHECK-NEXT:    lwz 4, .LCPI0_0@l(4)
+; CHECK-NEXT:    mflr 0
+; CHECK-NEXT:    stwu 1, -32(1)
+; CHECK-NEXT:    stw 0, 36(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset lr, 4
+; CHECK-NEXT:    .cfi_offset r28, -16
+; CHECK-NEXT:    .cfi_offset r29, -12
+; CHECK-NEXT:    .cfi_offset r30, -8
+; CHECK-NEXT:    stw 30, 24(1) # 4-byte Folded Spill
+; CHECK-NEXT:    mr 30, 3
+; CHECK-NEXT:    lis 3, .LCPI0_0@ha
+; CHECK-NEXT:    stw 29, 20(1) # 4-byte Folded Spill
+; CHECK-NEXT:    lwz 29, .LCPI0_0@l(3)
+; CHECK-NEXT:    stw 28, 16(1) # 4-byte Folded Spill
+; CHECK-NEXT:    b .LBB0_2
 ; CHECK-NEXT:  .LBB0_1: # %l1
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    efscmplt 7, 3, 4
-; CHECK-NEXT:    efscmpgt 0, 3, 4
-; CHECK-NEXT:    mfcr 5 # cr7
-; CHECK-NEXT:    mcrf 7, 0
-; CHECK-NEXT:    mfcr 6 # cr7
-; CHECK-NEXT:    rlwinm 5, 5, 30, 31, 31
-; CHECK-NEXT:    rlwinm 6, 6, 30, 31, 31
-; CHECK-NEXT:    or. 5, 6, 5
-; CHECK-NEXT:    beq 0, .LBB0_1
-; CHECK-NEXT:  # %bb.2: # %l2
+; CHECK-NEXT:    mr 3, 30
+; CHECK-NEXT:    mr 4, 29
+; CHECK-NEXT:    bl __ltsf2
+; CHECK-NEXT:    srwi 3, 3, 31
+; CHECK-NEXT:    or 3, 28, 3
+; CHECK-NEXT:    xori 3, 3, 1
+; CHECK-NEXT:    cmplwi 3, 0
+; CHECK-NEXT:    beq 0, .LBB0_4
+; CHECK-NEXT:  .LBB0_2: # %l1
+; CHECK-NEXT:    #
+; CHECK-NEXT:    mr 3, 30
+; CHECK-NEXT:    mr 4, 29
+; CHECK-NEXT:    bl __gtsf2
+; CHECK-NEXT:    cmpwi 3, 0
+; CHECK-NEXT:    li 28, 1
+; CHECK-NEXT:    bgt 0, .LBB0_1
+; CHECK-NEXT:  # %bb.3: # %l1
+; CHECK-NEXT:    #
+; CHECK-NEXT:    li 28, 0
+; CHECK-NEXT:    b .LBB0_1
+; CHECK-NEXT:  .LBB0_4: # %l2
+; CHECK-NEXT:    lwz 30, 24(1) # 4-byte Folded Reload
+; CHECK-NEXT:    lwz 29, 20(1) # 4-byte Folded Reload
+; CHECK-NEXT:    lwz 28, 16(1) # 4-byte Folded Reload
+; CHECK-NEXT:    lwz 0, 36(1)
+; CHECK-NEXT:    addi 1, 1, 32
+; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
 entry:
   br label %l1

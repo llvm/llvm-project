@@ -552,8 +552,22 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::UINT_TO_FP, MVT::i32, Legal);
 
     // SPE supports signaling compare of f32/f64.
-    setOperationAction(ISD::STRICT_FSETCCS, MVT::f32, Legal);
-    setOperationAction(ISD::STRICT_FSETCCS, MVT::f64, Legal);
+    // But it doesn't comply IEEE-754 rules for comparing
+    // special values like NaNs, Infs.
+    if (!getTargetMachine().Options.NoNaNsFPMath) {
+      setOperationAction(ISD::SETCC, MVT::f32, Custom);
+      setOperationAction(ISD::SETCC, MVT::f64, Custom);
+      setOperationAction(ISD::STRICT_FSETCCS, MVT::f32, Custom);
+      setOperationAction(ISD::STRICT_FSETCCS, MVT::f64, Custom);
+      setOperationAction(ISD::STRICT_FSETCC, MVT::f32, Custom);
+      setOperationAction(ISD::STRICT_FSETCC, MVT::f64, Custom);
+
+      setOperationAction(ISD::BR_CC, MVT::f32, Expand);
+      setOperationAction(ISD::BR_CC, MVT::f64, Expand);
+    } else {
+      setOperationAction(ISD::STRICT_FSETCCS, MVT::f32, Legal);
+      setOperationAction(ISD::STRICT_FSETCCS, MVT::f64, Legal);
+    }
   } else {
     // PowerPC turns FP_TO_SINT into FCTIWZ and some load/stores.
     setOperationAction(ISD::STRICT_FP_TO_SINT, MVT::i32, Custom);
@@ -3587,8 +3601,8 @@ SDValue PPCTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   EVT LHSVT = LHS.getValueType();
   SDLoc dl(Op);
 
-  // Soften the setcc with libcall if it is fp128.
-  if (LHSVT == MVT::f128) {
+  // Soften the setcc with libcall if it is fp128 or it is SPE and fp32/fp64.
+  if (LHSVT == MVT::f128 || (Subtarget.hasSPE() && (LHSVT == MVT::f32 || LHSVT == MVT::f64))) {
     assert(!Subtarget.hasP9Vector() &&
            "SETCC for f128 is already legal under Power9!");
     softenSetCCOperands(DAG, LHSVT, LHS, RHS, CC, dl, LHS, RHS, Chain,
