@@ -288,15 +288,6 @@ static std::string MakeLLDBFuncAsmLabel(const DWARFDIE &die) {
   if (!cu)
     return {};
 
-  // FIXME: When resolving function call labels, we check that
-  // that the definition's DW_AT_specification points to the
-  // declaration that we encoded into the label here. But if the
-  // declaration came from a type-unit (and the definition from
-  // .debug_info), that check won't work. So for now, don't use
-  // function call labels for declaration DIEs from type-units.
-  if (cu->IsTypeUnit())
-    return {};
-
   SymbolFileDWARF *dwarf = die.GetDWARF();
   if (!dwarf)
     return {};
