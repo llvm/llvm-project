@@ -1356,6 +1356,14 @@ TEST(APFloatTest, fromDecimalString) {
   EXPECT_EQ(2.71828, convertToDoubleFromString("2.71828"));
 }
 
+TEST(APFloatTest, fromDecimalStringLongSignificand) {
+  APFloat f(0.0);
+  auto statusOrError = f.convertFromString("0." + std::string(17000, '9'),
+                                           APFloat::rmNearestTiesToEven);
+  EXPECT_FALSE(!statusOrError);
+  EXPECT_EQ(1.0, f.convertToDouble());
+}
+
 TEST(APFloatTest, fromStringSpecials) {
   const fltSemantics &Sem = APFloat::IEEEdouble();
   const unsigned Precision = 53;
