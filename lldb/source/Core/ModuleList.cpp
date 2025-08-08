@@ -766,7 +766,8 @@ public:
     std::lock_guard<std::recursive_mutex> guard(GetMutex());
     // Try map first for performance - if found, skip expensive full list
     // search.
-    if (FindModulesInMap(module_spec, matching_module_list))
+    FindModulesInMap(module_spec, matching_module_list);
+    if (!matching_module_list.IsEmpty())
       return;
     m_list.FindModules(module_spec, matching_module_list);
     // Assert that modules were found in the list but not the map, it's
@@ -868,20 +869,16 @@ private:
     return ModuleSP();
   }
 
-  bool FindModulesInMap(const ModuleSpec &module_spec,
+  void FindModulesInMap(const ModuleSpec &module_spec,
                         ModuleList &matching_module_list) const {
     auto it = m_name_to_modules.find(module_spec.GetFileSpec().GetFilename());
     if (it == m_name_to_modules.end())
-      return false;
+      return;
     const llvm::SmallVectorImpl<ModuleSP> &vector = it->second;
-    bool found = false;
     for (const ModuleSP &module_sp : vector) {
-      if (module_sp->MatchesModuleSpec(module_spec)) {
+      if (module_sp->MatchesModuleSpec(module_spec))
         matching_module_list.Append(module_sp);
-        found = true;
-      }
     }
-    return found;
   }
 
   void AddToMap(const ModuleSP &module_sp) {
@@ -900,8 +897,6 @@ private:
     llvm::SmallVectorImpl<ModuleSP> &vec = m_name_to_modules[name];
     for (auto *it = vec.begin(); it != vec.end(); ++it) {
       if (it->get() == module_ptr) {
-        // use_count == 2 means only held by map and list (orphaned).
-        constexpr long kUseCountOrphaned = 2;
         if (!if_orphaned || it->use_count() == kUseCountOrphaned) {
           vec.erase(it);
           break;
@@ -939,17 +934,17 @@ private:
 
   /// Remove orphans from the vector and return the removed modules.
   ModuleList RemoveOrphansFromVector(llvm::SmallVectorImpl<ModuleSP> &vec) {
+    // remove_if moves the elements that match the condition to the end of the
+    // container, and returns an iterator to the first element that was moved.
+    auto *to_remove_start = llvm::remove_if(vec, [](const ModuleSP &module) {
+      return module.use_count() == kUseCountOrphaned;
+    });
+
     ModuleList to_remove;
-    for (int i = vec.size() - 1; i >= 0; --i) {
-      ModuleSP module = vec[i];
-      constexpr long kUseCountOrphaned = 2;
-      constexpr long kUseCountLocalVariable = 1;
-      // use_count == 3: map + list + local variable = orphaned.
-      if (module.use_count() == kUseCountOrphaned + kUseCountLocalVariable) {
-        to_remove.Append(module);
-        vec.erase(vec.begin() + i);
-      }
-    }
+    for (ModuleSP *it = to_remove_start; it != vec.end(); ++it)
+      to_remove.Append(*it);
+
+    vec.erase(to_remove_start, vec.end());
     return to_remove;
   }
 
@@ -961,19 +956,20 @@ private:
     // Modules might hold shared pointers to other modules, so removing one
     // module might orphan other modules. Keep removing modules until
     // there are no further modules that can be removed.
-    bool made_progress = true;
     int remove_count = 0;
-    while (made_progress) {
-      made_progress = false;
+    int previous_remove_count;
+    do {
+      previous_remove_count = remove_count;
       for (auto &[name, vec] : m_name_to_modules) {
         if (vec.empty())
           continue;
         ModuleList to_remove = RemoveOrphansFromVector(vec);
         remove_count += to_remove.GetSize();
-        made_progress = !to_remove.IsEmpty();
         m_list.Remove(to_remove);
       }
-    }
+     // Break when fixed-point is reached. 
+    } while (previous_remove_count != remove_count); 
+
     return remove_count;
   }
 
@@ -982,6 +978,9 @@ private:
   /// A hash map from a module's filename to all the modules that share that
   /// filename, for fast module lookups by name.
   llvm::DenseMap<ConstString, llvm::SmallVector<ModuleSP, 1>> m_name_to_modules;
+  
+  /// The use count of a module held only by m_list and m_name_to_modules.
+  static constexpr long kUseCountOrphaned = 2;
 };
 
 struct SharedModuleListInfo {
