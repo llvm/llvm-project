@@ -56,6 +56,8 @@ Makes programs 10x faster by doing Special New Thing.
 Changes to the LLVM IR
 ----------------------
 
+* Floating-point operand bundles have been added.
+
 Changes to LLVM infrastructure
 ------------------------------
 

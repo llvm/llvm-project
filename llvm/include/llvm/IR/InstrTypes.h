@@ -25,6 +25,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/FMF.h"
+#include "llvm/IR/FPEnv.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/LLVMContext.h"
@@ -1095,6 +1096,18 @@ public:
 using OperandBundleDef = OperandBundleDefT<Value *>;
 using ConstOperandBundleDef = OperandBundleDefT<const Value *>;
 
+/// Add a bundle with tag "fp.round" and the specified rounding to the given
+/// bundle set.
+void addRoundingBundle(LLVMContext &Ctx,
+                       SmallVectorImpl<OperandBundleDef> &Bundles,
+                       RoundingMode Rounding);
+
+/// Add a bundle with tag "fp.except" and the specified exception behavior to
+/// the given bundle set.
+void addExceptionBundle(LLVMContext &Ctx,
+                        SmallVectorImpl<OperandBundleDef> &Bundles,
+                        fp::ExceptionBehavior Except);
+
 //===----------------------------------------------------------------------===//
 //                               CallBase Class
 //===----------------------------------------------------------------------===//
@@ -1153,6 +1166,9 @@ protected:
   /// Get the number of extra operands for instructions that don't have a fixed
   /// number of extra operands.
   LLVM_ABI unsigned getNumSubclassExtraOperandsDynamic() const;
+
+  /// Get memory effects specific to floating-point operations.
+  MemoryEffects getFloatingPointMemoryEffects() const;
 
 public:
   using Instruction::getContext;
@@ -2163,6 +2179,12 @@ public:
     }
     return false;
   }
+
+  /// Return the effective rounding mode for this call.
+  RoundingMode getRoundingMode() const;
+
+  /// Return the effective exception behavior for this call.
+  fp::ExceptionBehavior getExceptionBehavior() const;
 
   /// Used to keep track of an operand bundle.  See the main comment on
   /// OperandBundleUser above.
