@@ -47,12 +47,12 @@ static ObjectRef createBlobUnchecked(ObjectStore &CAS, StringRef Content) {
 }
 
 static Expected<ObjectProxy> createEmptyTree(ObjectStore &CAS) {
-  HierarchicalTreeBuilder Builder;
+  HierarchicalTreeBuilder Builder(sys::path::Style::posix);
   return Builder.create(CAS);
 }
 
 static Expected<ObjectProxy> createFlatTree(ObjectStore &CAS) {
-  HierarchicalTreeBuilder Builder;
+  HierarchicalTreeBuilder Builder(sys::path::Style::posix);
   Builder.push(createBlobUnchecked(CAS, "1"), TreeEntry::Regular, "file1");
   Builder.push(createBlobUnchecked(CAS, "1"), TreeEntry::Regular, "1");
   Builder.push(createBlobUnchecked(CAS, "2"), TreeEntry::Regular, "2");
@@ -64,7 +64,7 @@ static Expected<ObjectProxy> createNestedTree(ObjectStore &CAS) {
   ObjectRef Data2 = createBlobUnchecked(CAS, "blob2");
   ObjectRef Data3 = createBlobUnchecked(CAS, "blob3");
 
-  HierarchicalTreeBuilder Builder;
+  HierarchicalTreeBuilder Builder(sys::path::Style::posix);
   Builder.push(Data2, TreeEntry::Regular, "/d2");
   Builder.push(Data1, TreeEntry::Regular, "/t1/d1");
   Builder.push(Data3, TreeEntry::Regular, "/t3/d3");
@@ -77,7 +77,7 @@ static Expected<ObjectProxy> createNestedTree(ObjectStore &CAS) {
 static Expected<ObjectProxy> createSymlinksTree(ObjectStore &CAS) {
   auto make = [&](StringRef Bytes) { return createBlobUnchecked(CAS, Bytes); };
 
-  HierarchicalTreeBuilder Builder;
+  HierarchicalTreeBuilder Builder(sys::path::Style::posix);
   Builder.push(make("broken"), TreeEntry::Symlink, "/s0");
   Builder.push(make("b1"), TreeEntry::Symlink, "/s1");
   Builder.push(make("blob1"), TreeEntry::Regular, "/b1");
@@ -97,7 +97,7 @@ static Expected<ObjectProxy> createSymlinksTree(ObjectStore &CAS) {
 static Expected<ObjectProxy> createSymlinkLoopsTree(ObjectStore &CAS) {
   auto make = [&](StringRef Bytes) { return createBlobUnchecked(CAS, Bytes); };
 
-  HierarchicalTreeBuilder Builder;
+  HierarchicalTreeBuilder Builder(sys::path::Style::posix);
   Builder.push(make("s0"), TreeEntry::Symlink, "/s0");
   Builder.push(make("s1"), TreeEntry::Symlink, "/s2");
   Builder.push(make("s2"), TreeEntry::Symlink, "/s1");
@@ -111,7 +111,7 @@ static Expected<std::unique_ptr<vfs::FileSystem>>
 createFS(ObjectStore &CAS, Expected<ObjectProxy> Tree) {
   if (!Tree)
     return Tree.takeError();
-  return createCASFileSystem(CAS, Tree->getID());
+  return createCASFileSystem(CAS, Tree->getID(), sys::path::Style::posix);
 }
 
 template <class IteratorType>

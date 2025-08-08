@@ -1,3 +1,5 @@
+// REQUIRES: ondisk_cas
+
 // Test that modifications to a common header (imported from both a PCH and a TU)
 // cause rebuilds of dependent modules imported from the TU on incremental build.
 

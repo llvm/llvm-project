@@ -70,9 +70,10 @@ public:
 
   Error initialize(ObjectRef Root);
 
-  CASFileSystem(std::shared_ptr<ObjectStore> DB)
-      : DB(*DB), OwnedDB(std::move(DB)) {}
-  CASFileSystem(ObjectStore &DB) : DB(DB) {}
+  CASFileSystem(std::shared_ptr<ObjectStore> DB, sys::path::Style PathStyle)
+      : DB(*DB), OwnedDB(std::move(DB)), PathStyle(PathStyle) {}
+  CASFileSystem(ObjectStore &DB, sys::path::Style PathStyle)
+      : DB(DB), PathStyle(PathStyle) {}
 
   IntrusiveRefCntPtr<ThreadSafeFileSystem> createThreadSafeProxyFS() final {
     return makeIntrusiveRefCnt<CASFileSystem>(*this);
@@ -87,6 +88,7 @@ private:
 
   IntrusiveRefCntPtr<FileSystemCache> Cache;
   WorkingDirectoryType WorkingDirectory;
+  sys::path::Style PathStyle;
 };
 } // namespace
 
@@ -128,10 +130,11 @@ private:
 };
 
 Error CASFileSystem::initialize(ObjectRef Root) {
-  Cache = makeIntrusiveRefCnt<FileSystemCache>(Root);
+  Cache = makeIntrusiveRefCnt<FileSystemCache>(PathStyle);
 
   // Initial working directory is the root.
-  WorkingDirectory.Entry = &Cache->getRoot();
+  StringRef path_separator = get_separator(PathStyle);
+  WorkingDirectory.Entry = &Cache->getRoot(path_separator, Root);
   WorkingDirectory.Path = WorkingDirectory.Entry->getTreePath().str();
 
   // Load the root to confirm it's really a tree.
@@ -141,7 +144,7 @@ Error CASFileSystem::initialize(ObjectRef Root) {
 std::error_code CASFileSystem::setCurrentWorkingDirectory(const Twine &Path) {
   SmallString<128> Storage;
   StringRef CanonicalPath = FileSystemCache::canonicalizeWorkingDirectory(
-      Path, WorkingDirectory.Path, Storage);
+      Path, PathStyle, WorkingDirectory.Path, Storage);
 
   // Read and cache all the symlinks in the path by looking it up. Return any
   // error encountered.
@@ -164,7 +167,7 @@ Error CASFileSystem::loadDirectory(DirectoryEntry &Parent) {
   auto makeCachedEntry =
       [&](const NamedTreeEntry &NewEntry) -> DirectoryEntry & {
     Path.resize(ParentPathSize);
-    sys::path::append(Path, sys::path::Style::posix, NewEntry.getName());
+    sys::path::append(Path, PathStyle, NewEntry.getName());
     switch (NewEntry.getKind()) {
     case TreeEntry::Regular:
     case TreeEntry::Executable:
@@ -355,12 +358,17 @@ initializeCASFileSystem(std::unique_ptr<CASFileSystem> FS,
 }
 
 Expected<std::unique_ptr<vfs::FileSystem>>
-cas::createCASFileSystem(std::shared_ptr<ObjectStore> DB, const CASID &RootID) {
-  return initializeCASFileSystem(std::make_unique<CASFileSystem>(std::move(DB)),
-                                 RootID);
+cas::createCASFileSystem(std::shared_ptr<ObjectStore> DB,
+                         const CASID &RootID,
+                         sys::path::Style PathStyle) {
+  return initializeCASFileSystem(
+      std::make_unique<CASFileSystem>(std::move(DB), PathStyle),
+      RootID);
 }
 
 Expected<std::unique_ptr<vfs::FileSystem>>
-cas::createCASFileSystem(ObjectStore &DB, const CASID &RootID) {
-  return initializeCASFileSystem(std::make_unique<CASFileSystem>(DB), RootID);
+cas::createCASFileSystem(ObjectStore &DB, const CASID &RootID,
+                         sys::path::Style PathStyle) {
+  return initializeCASFileSystem(
+      std::make_unique<CASFileSystem>(DB, PathStyle), RootID);
 }

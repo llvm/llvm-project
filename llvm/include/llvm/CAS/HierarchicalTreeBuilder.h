@@ -16,6 +16,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h" // FIXME: Split out sys::fs::file_status.
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include <cstddef>
 
 namespace llvm {
@@ -43,6 +44,8 @@ class HierarchicalTreeBuilder {
     std::string Path;
   };
 
+  sys::path::Style PathStyle;
+
   /// Preallocate space for small trees, common when creating cache keys.
   SmallVector<HierarchicalEntry, 8> Entries;
   SmallVector<HierarchicalEntry, 0> TreeContents;
@@ -51,6 +54,9 @@ class HierarchicalTreeBuilder {
                 const Twine &Path);
 
 public:
+  HierarchicalTreeBuilder(sys::path::Style PathStyle = sys::path::Style::native)
+      : PathStyle(PathStyle) {}
+
   /// Add a hierarchical entry at \p Path, which is expected to be from the
   /// top-level (otherwise, the caller should prepend a working directory).
   ///

@@ -1,3 +1,5 @@
+// REQUIRES: !system-windows
+
 // RUN: %clang -fdepscan-prefix-map-toolchain=/^tc -resource-dir '' -### %s 2>&1 | FileCheck %s -check-prefix=NONE
 // RUN: %clang -fdepscan-prefix-map-toolchain=/^tc -resource-dir relative -### %s 2>&1 | FileCheck %s -check-prefix=NONE
 // RUN: %clang -fdepscan-prefix-map-toolchain=/^tc -resource-dir /lib/clang/10 -### %s 2>&1 | FileCheck %s -check-prefix=NONE
