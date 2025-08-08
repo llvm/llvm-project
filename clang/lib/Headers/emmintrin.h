@@ -2415,7 +2415,7 @@ _mm_mulhi_epi16(__m128i __a, __m128i __b) {
 ///    of each of the eight 32-bit products.
 static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm_mulhi_epu16(__m128i __a, __m128i __b) {
-  return (__m128i)__builtin_ia32_pmulhuw128((__v8hi)__a, (__v8hi)__b);
+  return (__m128i)__builtin_ia32_pmulhuw128((__v8hu)__a, (__v8hu)__b);
 }
 
 /// Multiplies the corresponding elements of two signed [8 x i16]
