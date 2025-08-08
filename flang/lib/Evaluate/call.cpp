@@ -323,18 +323,18 @@ void ProcedureRef::DetermineCopyInOut() {
     }
     if (actual->keyword()) {
       seenKeyword = true;
-      auto actualName = actual->keyword()->ToString();
+    auto actualName{actual->keyword()->ToString()};
       if (processedKeywords.find(actualName) != processedKeywords.end()) {
         // Actual arguments with duplicate keywords. Semantic analysis will
         // deal with the error.
         return;
       } else {
         processedKeywords.insert(actualName);
-        if (auto it = std::find_if(procInfo->dummyArguments.begin(),
+        if (auto it{std::find_if(procInfo->dummyArguments.begin(),
                 procInfo->dummyArguments.end(),
                 [&](const characteristics::DummyArgument &dummy) {
                   return dummy.name == actualName;
-                });
+                })};
             it != procInfo->dummyArguments.end()) {
           DetermineCopyInOutArgument(*procInfo, *actual, *it, sc);
         }
