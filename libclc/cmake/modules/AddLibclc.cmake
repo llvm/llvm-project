@@ -425,7 +425,7 @@ function(add_libclc_builtin_set)
   # targets dependent on libclc.
   add_dependencies( ${ARG_PARENT_TARGET} prepare-${ARG_TRIPLE} )
 
-  if( NOT CMAKE_CFG_INTDIR STREQUAL  "." )
+  if( NOT CMAKE_CFG_INTDIR STREQUAL "." )
     string( REPLACE ${CMAKE_CFG_INTDIR} "\$\{CMAKE_INSTALL_CONFIG_NAME\}"
             libclc_builtins_lib_install ${libclc_builtins_lib} )
   else()
