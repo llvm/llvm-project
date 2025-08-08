@@ -893,10 +893,14 @@ if(LIBC_TYPES_HAS_FLOAT128)
   )
 endif()
 
-
 list(APPEND TARGET_LIBM_ENTRYPOINTS
   # bfloat16 entrypoints
+  libc.src.math.ceilbf16
   libc.src.math.fabsbf16
+  libc.src.math.floorbf16
+  libc.src.math.roundbf16
+  libc.src.math.roundevenbf16
+  libc.src.math.truncbf16
 )
 
 if(LIBC_COMPILER_HAS_FIXED_POINT)
