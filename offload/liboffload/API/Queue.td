@@ -65,7 +65,8 @@ def : Enum {
   let desc = "Supported queue info.";
   let is_typed = 1;
   let etors = [
-    TaggedEtor<"DEVICE", "ol_device_handle_t", "The handle of the device associated with the queue.">
+    TaggedEtor<"DEVICE", "ol_device_handle_t", "The handle of the device associated with the queue.">,
+    TaggedEtor<"EMPTY", "bool", "True if the queue is known to be empty. May be unconditionally false if the device does not support status queries.">,
   ];
 }
 
