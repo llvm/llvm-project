@@ -975,17 +975,16 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     // `optimizeForVFandUF` which will optimize BranchOnCount out.
     auto TC = dyn_cast_if_present<ConstantInt>(
         getParent()->getPlan()->getTripCount()->getUnderlyingValue());
-    if (TC && VF.isFixed() && TC->getSExtValue() == VF.getFixedValue())
+    if (TC && VF.isFixed() && TC->getZExtValue() == VF.getFixedValue())
       return 0;
 
-    // BranchOnCount will generate icmp_eq + br instructions and the
-    // cost of branch will be calculated in VPRegionBlock.
+    // BranchOnCount will generate icmp_eq + br instructions and the cost of
+    // branch will be calculated in VPRegionBlock.
     return Ctx.TTI.getCmpSelInstrCost(Instruction::ICmp, ValTy, nullptr,
                                       CmpInst::ICMP_EQ, Ctx.CostKind);
   }
   case VPInstruction::BranchOnCond: {
-    // BranchOnCond is free since the branch cost is already
-    // calculated by VPBB.
+    // BranchOnCond is free since the branch cost is already calculated by VPBB.
     if (vputils::onlyFirstLaneUsed(getOperand(0)))
       return 0;
 
