@@ -9,15 +9,14 @@ define void @pr87378_vpinstruction_or_drop_poison_generating_flags(ptr %arg, i64
 ; CHECK-LABEL: define void @pr87378_vpinstruction_or_drop_poison_generating_flags(
 ; CHECK-SAME: ptr [[ARG:%.*]], i64 [[A:%.*]], i64 [[B:%.*]], i64 [[C:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 8
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1001, [[TMP1]]
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 8
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1001, [[TMP3]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 1001, [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP12:%.*]] = sub i64 [[TMP3]], 1
+; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 1001, [[TMP12]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP3]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 8
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i64> poison, i64 [[A]], i64 0
@@ -29,39 +28,49 @@ define void @pr87378_vpinstruction_or_drop_poison_generating_flags(ptr %arg, i64
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 8 x i64> @llvm.stepvector.nxv8i64()
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul <vscale x 8 x i64> [[TMP6]], splat (i64 1)
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 8 x i64> zeroinitializer, [[TMP7]]
-; CHECK-NEXT:    [[TMP8:%.*]] = mul i64 1, [[TMP5]]
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x i64> poison, i64 [[TMP8]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 8 x i64> [[DOTSPLATINSERT]], <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 8 x i64> [ [[INDUCTION]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ 1001, [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP25:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 8, i1 true)
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <vscale x 8 x i32> poison, i32 [[TMP25]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT8:%.*]] = shufflevector <vscale x 8 x i32> [[BROADCAST_SPLATINSERT7]], <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP25]] to i64
+; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 1, [[TMP8]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <vscale x 8 x i64> poison, i64 [[TMP9]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 8 x i64> [[BROADCAST_SPLATINSERT5]], <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = call <vscale x 8 x i32> @llvm.stepvector.nxv8i32()
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp ult <vscale x 8 x i32> [[TMP10]], [[BROADCAST_SPLAT8]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp ule <vscale x 8 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP28:%.*]] = select <vscale x 8 x i1> [[TMP11]], <vscale x 8 x i1> [[TMP13]], <vscale x 8 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp ule <vscale x 8 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
-; CHECK-NEXT:    [[TMP15:%.*]] = select <vscale x 8 x i1> [[TMP13]], <vscale x 8 x i1> [[TMP14]], <vscale x 8 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP15:%.*]] = select <vscale x 8 x i1> [[TMP28]], <vscale x 8 x i1> [[TMP14]], <vscale x 8 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP16:%.*]] = xor <vscale x 8 x i1> [[TMP13]], splat (i1 true)
-; CHECK-NEXT:    [[TMP17:%.*]] = or <vscale x 8 x i1> [[TMP15]], [[TMP16]]
+; CHECK-NEXT:    [[TMP29:%.*]] = select <vscale x 8 x i1> [[TMP11]], <vscale x 8 x i1> [[TMP16]], <vscale x 8 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP17:%.*]] = or <vscale x 8 x i1> [[TMP15]], [[TMP29]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp ule <vscale x 8 x i64> [[VEC_IND]], [[BROADCAST_SPLAT4]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = select <vscale x 8 x i1> [[TMP17]], <vscale x 8 x i1> [[TMP18]], <vscale x 8 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP20:%.*]] = xor <vscale x 8 x i1> [[TMP14]], splat (i1 true)
-; CHECK-NEXT:    [[TMP21:%.*]] = select <vscale x 8 x i1> [[TMP13]], <vscale x 8 x i1> [[TMP20]], <vscale x 8 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP21:%.*]] = select <vscale x 8 x i1> [[TMP28]], <vscale x 8 x i1> [[TMP20]], <vscale x 8 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP22:%.*]] = or <vscale x 8 x i1> [[TMP19]], [[TMP21]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <vscale x 8 x i1> [[TMP21]], i32 0
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP23]], i64 poison, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i16, ptr [[ARG]], i64 [[PREDPHI]]
-; CHECK-NEXT:    call void @llvm.masked.store.nxv8i16.p0(<vscale x 8 x i16> zeroinitializer, ptr [[TMP24]], i32 2, <vscale x 8 x i1> [[TMP22]])
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
+; CHECK-NEXT:    call void @llvm.vp.store.nxv8i16.p0(<vscale x 8 x i16> zeroinitializer, ptr align 2 [[TMP24]], <vscale x 8 x i1> [[TMP22]], i32 [[TMP25]])
+; CHECK-NEXT:    [[TMP26:%.*]] = zext i32 [[TMP25]] to i64
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP26]], [[INDEX]]
+; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP26]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 8 x i64> [[VEC_IND]], [[DOTSPLAT]]
-; CHECK-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP26]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[TMP27:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1001
+; CHECK-NEXT:    br i1 [[TMP27]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1001, [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i64 [[IV]], [[A]]
 ; CHECK-NEXT:    br i1 [[C_1]], label [[THEN_1:%.*]], label [[ELSE_1:%.*]]
 ; CHECK:       then.1:
@@ -80,7 +89,7 @@ define void @pr87378_vpinstruction_or_drop_poison_generating_flags(ptr %arg, i64
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i64 [[IV]], 1000
-; CHECK-NEXT:    br i1 [[ICMP]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[ICMP]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -118,8 +127,9 @@ exit:
   ret void
 }
 ;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
+; CHECK: [[META2]] = !{!"llvm.loop.isvectorized.tailfoldingstyle", !"evl"}
+; CHECK: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]], [[META1]]}
 ;.
