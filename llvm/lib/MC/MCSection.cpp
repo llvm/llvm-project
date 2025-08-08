@@ -39,8 +39,8 @@ LLVM_DUMP_METHOD void MCSection::dump(
   raw_ostream &OS = errs();
 
   OS << "MCSection Name:" << getName();
-  if (LinkerRelaxable)
-    OS << " LinkerRelaxable";
+  if (isLinkerRelaxable())
+    OS << " FirstLinkerRelaxable:" << firstLinkerRelaxable();
   for (auto &F : *this) {
     OS << '\n';
     F.dump();

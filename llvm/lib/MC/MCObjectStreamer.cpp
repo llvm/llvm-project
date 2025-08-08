@@ -466,12 +466,14 @@ void MCObjectStreamer::emitInstToFragment(const MCInst &Inst,
   F->setVarContents(Data);
   F->setInst(Inst);
 
+  bool MarkedLinkerRelaxable = false;
   for (auto &Fixup : Fixups) {
-    if (!Fixup.isLinkerRelaxable())
+    if (!Fixup.isLinkerRelaxable() || MarkedLinkerRelaxable)
       continue;
+    MarkedLinkerRelaxable = true;
     auto *Sec = F->getParent();
     if (!Sec->isLinkerRelaxable())
-      Sec->setLinkerRelaxable();
+      Sec->setFirstLinkerRelaxable(F->getLayoutOrder());
     F->setLinkerRelaxable();
   }
   F->setVarFixups(Fixups);
