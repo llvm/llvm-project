@@ -12,6 +12,65 @@ UNRELATED_FAILURES_STR = (
     "https://github.com/llvm/llvm-project/issues and add the "
     "`infrastructure` label."
 )
+# The maximum number of lines to pull from a ninja failure.
+NINJA_LOG_SIZE_THRESHOLD = 500
+
+
+def _parse_ninja_log(ninja_log: list[str]) -> list[tuple[str, str]]:
+    """Parses an individual ninja log."""
+    failures = []
+    index = 0
+    while index < len(ninja_log):
+        while index < len(ninja_log) and not ninja_log[index].startswith("FAILED:"):
+            index += 1
+        if index == len(ninja_log):
+            # We hit the end of the log without finding a build failure, go to
+            # the next log.
+            return failures
+        # We are trying to parse cases like the following:
+        #
+        # [4/5] test/4.stamp
+        # FAILED: touch test/4.stamp
+        # touch test/4.stamp
+        #
+        # index will point to the line that starts with Failed:. The progress
+        # indicator is the line before this ([4/5] test/4.stamp) and contains a pretty
+        # printed version of the target being built (test/4.stamp). We use this line
+        # and remove the progress information to get a succinct name for the target.
+        failing_action = ninja_log[index - 1].split("] ")[1]
+        failure_log = []
+        while (
+            index < len(ninja_log)
+            and not ninja_log[index].startswith("[")
+            and not ninja_log[index].startswith("ninja: build stopped:")
+            and len(failure_log) < NINJA_LOG_SIZE_THRESHOLD
+        ):
+            failure_log.append(ninja_log[index])
+            index += 1
+        failures.append((failing_action, "\n".join(failure_log)))
+    return failures
+
+
+def find_failure_in_ninja_logs(ninja_logs: list[list[str]]) -> list[tuple[str, str]]:
+    """Extracts failure messages from ninja output.
+
+    This function takes stdout/stderr from ninja in the form of a list of files
+    represented as a list of lines. This function then returns tuples containing
+    the name of the target and the error message.
+
+    Args:
+      ninja_logs: A list of files in the form of a list of lines representing the log
+        files captured from ninja.
+
+    Returns:
+      A list of tuples. The first string is the name of the target that failed. The
+      second string is the error message.
+    """
+    failures = []
+    for ninja_log in ninja_logs:
+        log_failures = _parse_ninja_log(ninja_log)
+        failures.extend(log_failures)
+    return failures
 
 
 # Set size_limit to limit the byte size of the report. The default is 1MB as this
