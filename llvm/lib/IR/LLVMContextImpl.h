@@ -329,15 +329,13 @@ template <> struct MDNodeKeyImpl<DILocation> {
       : Scope(L->getRawScope()), InlinedAt(L->getRawInlinedAt()),
         AtomGroup(L->getAtomGroup()), AtomRank(L->getAtomRank()),
         Line(L->getLine()), Column(L->getColumn()),
-        ImplicitCode(L->isImplicitCode()) {
-  }
+        ImplicitCode(L->isImplicitCode()) {}
 
   bool isKeyOf(const DILocation *RHS) const {
     return Line == RHS->getLine() && Column == RHS->getColumn() &&
            Scope == RHS->getRawScope() && InlinedAt == RHS->getRawInlinedAt() &&
-           ImplicitCode == RHS->isImplicitCode()
-           && AtomGroup == RHS->getAtomGroup() &&
-           AtomRank == RHS->getAtomRank();
+           ImplicitCode == RHS->isImplicitCode() &&
+           AtomGroup == RHS->getAtomGroup() && AtomRank == RHS->getAtomRank();
   }
 
   unsigned getHashValue() const {
