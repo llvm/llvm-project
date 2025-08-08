@@ -691,12 +691,11 @@ public:
       OptimizationRemarkEmitter *ORE, EpilogueLoopVectorizationInfo &EPI,
       LoopVectorizationCostModel *CM, BlockFrequencyInfo *BFI,
       ProfileSummaryInfo *PSI, GeneratedRTChecks &Checks, VPlan &Plan,
-      bool ForMainLoop)
-      : InnerLoopVectorizer(OrigLoop, PSE, LI, DT, TLI, TTI, AC, ORE,
-                            ForMainLoop ? EPI.MainLoopVF : EPI.EpilogueVF,
-                            ForMainLoop ? EPI.MainLoopVF : EPI.EpilogueVF,
-                            ForMainLoop ? EPI.MainLoopUF : EPI.EpilogueUF, CM,
-                            BFI, PSI, Checks, Plan),
+      ElementCount VecWidth, ElementCount MinProfitableTripCount,
+      unsigned UnrollFactor)
+      : InnerLoopVectorizer(OrigLoop, PSE, LI, DT, TLI, TTI, AC, ORE, VecWidth,
+                            MinProfitableTripCount, UnrollFactor, CM, BFI, PSI,
+                            Checks, Plan),
         EPI(EPI) {}
 
   // Override this function to handle the more complex control flow around the
@@ -731,9 +730,9 @@ public:
       OptimizationRemarkEmitter *ORE, EpilogueLoopVectorizationInfo &EPI,
       LoopVectorizationCostModel *CM, BlockFrequencyInfo *BFI,
       ProfileSummaryInfo *PSI, GeneratedRTChecks &Check, VPlan &Plan)
-      : InnerLoopAndEpilogueVectorizer(OrigLoop, PSE, LI, DT, TLI, TTI, AC, ORE,
-                                       EPI, CM, BFI, PSI, Check, Plan,
-                                       /*ForMainLoop=*/true) {}
+      : InnerLoopAndEpilogueVectorizer(
+            OrigLoop, PSE, LI, DT, TLI, TTI, AC, ORE, EPI, CM, BFI, PSI, Check,
+            Plan, EPI.MainLoopVF, EPI.MainLoopVF, EPI.MainLoopUF) {}
   /// Implements the interface for creating a vectorized skeleton using the
   /// *main loop* strategy (ie the first pass of vplan execution).
   BasicBlock *createEpilogueVectorizedLoopSkeleton() final;
@@ -759,9 +758,9 @@ public:
       OptimizationRemarkEmitter *ORE, EpilogueLoopVectorizationInfo &EPI,
       LoopVectorizationCostModel *CM, BlockFrequencyInfo *BFI,
       ProfileSummaryInfo *PSI, GeneratedRTChecks &Checks, VPlan &Plan)
-      : InnerLoopAndEpilogueVectorizer(OrigLoop, PSE, LI, DT, TLI, TTI, AC, ORE,
-                                       EPI, CM, BFI, PSI, Checks, Plan,
-                                       /*ForMainLoop=*/false) {
+      : InnerLoopAndEpilogueVectorizer(
+            OrigLoop, PSE, LI, DT, TLI, TTI, AC, ORE, EPI, CM, BFI, PSI, Checks,
+            Plan, EPI.EpilogueVF, EPI.EpilogueVF, EPI.EpilogueUF) {
     TripCount = EPI.TripCount;
   }
   /// Implements the interface for creating a vectorized skeleton using the
@@ -7562,8 +7561,9 @@ EpilogueVectorizerMainLoop::emitIterationCountCheck(BasicBlock *Bypass,
   assert(Bypass && "Expected valid bypass basic block.");
   Value *Count = getTripCount();
   MinProfitableTripCount = ElementCount::getFixed(0);
-  Value *CheckMinIters = createIterationCountCheck(
-      ForEpilogue ? EPI.EpilogueVF : VF, ForEpilogue ? EPI.EpilogueUF : UF);
+  Value *CheckMinIters =
+      createIterationCountCheck(ForEpilogue ? EPI.EpilogueVF : EPI.MainLoopVF,
+                                ForEpilogue ? EPI.EpilogueUF : EPI.MainLoopUF);
 
   BasicBlock *const TCCheckBlock = LoopVectorPreHeader;
   if (!ForEpilogue)
