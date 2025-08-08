@@ -32,8 +32,10 @@
 #include <cstdlib>
 #include <cstring>
 
+RT_OFFLOAD_VAR_GROUP_BEGIN
 /// Value used for asyncObject when no specific stream is specified.
 static constexpr std::int64_t *kNoAsyncObject = nullptr;
+RT_OFFLOAD_VAR_GROUP_END
 
 namespace Fortran::runtime {
 
