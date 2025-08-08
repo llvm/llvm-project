@@ -1363,7 +1363,7 @@ struct DSEState {
     if (auto *CB = dyn_cast<CallBase>(I)) {
       if (CB->getIntrinsicID() == Intrinsic::lifetime_end)
         return {
-            std::make_pair(MemoryLocation::getForArgument(CB, 1, &TLI), false)};
+            std::make_pair(MemoryLocation::getForArgument(CB, 0, &TLI), false)};
       if (Value *FreedOp = getFreedOperand(CB, &TLI))
         return {std::make_pair(MemoryLocation::getAfter(FreedOp), true)};
     }

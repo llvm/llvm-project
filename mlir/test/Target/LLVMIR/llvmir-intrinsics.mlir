@@ -1104,9 +1104,9 @@ llvm.func @lifetime() {
   %c = llvm.mlir.constant(16 : i64) : i64
   %a = llvm.alloca %c x i8 : (i64) -> !llvm.ptr
   // CHECK: call void @llvm.lifetime.start
-  llvm.intr.lifetime.start 16, %a : !llvm.ptr
+  llvm.intr.lifetime.start %a : !llvm.ptr
   // CHECK: call void @llvm.lifetime.end
-  llvm.intr.lifetime.end 16, %a : !llvm.ptr
+  llvm.intr.lifetime.end %a : !llvm.ptr
   llvm.return
 }
 
@@ -1418,8 +1418,8 @@ llvm.func @experimental_constrained_fpext(%s: f32, %v: vector<4xf32>) {
 // CHECK-DAG: declare <2 x i32> @llvm.vector.extract.v2i32.v8i32(<8 x i32>, i64 immarg)
 // CHECK-DAG: declare { <2 x double>, <2 x double> } @llvm.vector.deinterleave2.v4f64(<4 x double>)
 // CHECK-DAG: declare { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32>)
-// CHECK-DAG: declare void @llvm.lifetime.start.p0(i64 immarg, ptr captures(none))
-// CHECK-DAG: declare void @llvm.lifetime.end.p0(i64 immarg, ptr captures(none))
+// CHECK-DAG: declare void @llvm.lifetime.start.p0(ptr captures(none))
+// CHECK-DAG: declare void @llvm.lifetime.end.p0(ptr captures(none))
 // CHECK-DAG: declare ptr @llvm.invariant.start.p0(i64 immarg, ptr captures(none))
 // CHECK-DAG: declare void @llvm.invariant.end.p0(ptr, i64 immarg, ptr captures(none))
 

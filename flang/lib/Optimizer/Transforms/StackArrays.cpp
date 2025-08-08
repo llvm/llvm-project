@@ -813,10 +813,10 @@ void AllocMemConversion::insertLifetimeMarkers(
     mlir::OpBuilder::InsertionGuard insertGuard(rewriter);
     rewriter.setInsertionPoint(oldAlloc);
     mlir::Value ptr = fir::factory::genLifetimeStart(
-        rewriter, newAlloc.getLoc(), newAlloc, *size, &*dl);
+        rewriter, newAlloc.getLoc(), newAlloc, &*dl);
     visitFreeMemOp(oldAlloc, [&](mlir::Operation *op) {
       rewriter.setInsertionPoint(op);
-      fir::factory::genLifetimeEnd(rewriter, op->getLoc(), ptr, *size);
+      fir::factory::genLifetimeEnd(rewriter, op->getLoc(), ptr);
     });
     newAlloc->setAttr(attrName, rewriter.getUnitAttr());
   }
