@@ -1,7 +1,5 @@
 @LIT_SITE_CFG_IN_HEADER@
 
-import lit.util
-
 config.llvm_src_root = "@LLVM_SOURCE_DIR@"
 config.llvm_obj_root = "@LLVM_BINARY_DIR@"
 config.llvm_tools_dir = lit_config.substitute("@LLVM_TOOLS_DIR@")
@@ -9,7 +7,6 @@ config.llvm_libs_dir = lit_config.substitute("@LLVM_LIBS_DIR@")
 config.llvm_include_dir = lit_config.substitute("@LLVM_INCLUDE_DIR@")
 config.llvm_shlib_dir = lit_config.substitute("@SHLIBDIR@")
 config.llvm_build_mode = lit_config.substitute("@LLVM_BUILD_MODE@")
-config.llvm_enable_dia_sdk = lit.util.pythonize_bool("@LLVM_ENABLE_DIA_SDK@")
 config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
 config.lldb_obj_root = lit_config.substitute("@LLDB_BINARY_DIR@")
 config.lldb_src_root = "@LLDB_SOURCE_DIR@"

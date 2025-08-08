@@ -349,8 +349,6 @@ if platform.system() == "Windows":
     for v in ["SystemDrive"]:
         if v in os.environ:
             config.environment[v] = os.environ[v]
-    if config.llvm_enable_dia_sdk:
-        config.environment["LLVM_ENABLE_DIA_SDK"] = "1"
 
 # Some steps required to initialize the tests dynamically link with python.dll
 # and need to know the location of the Python libraries. This ensures that we

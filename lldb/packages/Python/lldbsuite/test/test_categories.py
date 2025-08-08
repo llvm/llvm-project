@@ -4,7 +4,6 @@ Provides definitions for various lldb test categories
 
 # System modules
 import sys
-import os
 
 # Third-party modules
 
@@ -17,8 +16,7 @@ debug_info_categories = {
     "dwarf": True,
     "dwo": True,
     "dsym": True,
-    "native-pdb": False,
-    "dia-pdb": False,
+    "pdb": False,
     "gmodules": False,
 }
 
@@ -27,7 +25,6 @@ all_categories = {
     "cmdline": "Tests related to the LLDB command-line interface",
     "dataformatters": "Tests related to the type command and the data formatters subsystem",
     "debugserver": "Debugserver tests",
-    "dia-pdb": "Tests that can be run with PDB debug information using the DIA PDB plugin",
     "dsym": "Tests that can be run with DSYM debug information",
     "dwarf": "Tests that can be run with DWARF debug information",
     "dwo": "Tests that can be run with DWO debug information",
@@ -43,7 +40,7 @@ all_categories = {
     "lldb-dap": "Tests for the Debug Adapter Protocol with lldb-dap",
     "llgs": "Tests for the gdb-server functionality of lldb-server",
     "msvcstl": "Test for MSVC STL data formatters",
-    "native-pdb": "Tests that can be run with PDB debug information using the native PDB plugin",
+    "pdb": "Tests that can be run with PDB debug information",
     "pexpect": "Tests requiring the pexpect library to be available",
     "objc": "Tests related to the Objective-C programming language support",
     "pyapi": "Tests related to the Python API",
@@ -75,10 +72,8 @@ def is_supported_on_platform(category, platform, compiler_path):
         if platform not in ["darwin", "macosx", "ios", "watchos", "tvos", "bridgeos"]:
             return False
         return gmodules.is_compiler_clang_with_gmodules(compiler_path)
-    elif category == "native-pdb":
+    elif category == "pdb":
         return platform == "windows"
-    elif category == "dia-pdb":
-        return os.environ.get("LLVM_ENABLE_DIA_SDK", None) == "1"
     return True
 
 

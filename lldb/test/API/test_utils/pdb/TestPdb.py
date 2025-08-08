@@ -12,9 +12,7 @@ class TestBuildMethod(TestBase):
     def test(self):
         self.build()
         self.assertTrue(self.dbg.CreateTarget(self.getBuildArtifact()))
-        if self.getDebugInfo() == "native-pdb":
+        if self.getDebugInfo() == "pdb":
             self.expect(
-                "target modules dump symfile", substrs=["SymbolFile native-pdb"]
+                "target modules dump symfile", patterns=["SymbolFile (native-)?pdb"]
             )
-        if self.getDebugInfo() == "dia-pdb":
-            self.expect("target modules dump symfile", substrs=["SymbolFile pdb"])
