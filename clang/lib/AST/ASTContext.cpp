@@ -15183,6 +15183,10 @@ bool ASTContext::useAbbreviatedThunkName(GlobalDecl VirtualMethodDecl,
 }
 
 bool ASTContext::arePFPFieldsTriviallyRelocatable(const RecordDecl *RD) const {
+  bool IsPAuthSupported =
+      getTargetInfo().getTriple().getArch() == llvm::Triple::aarch64;
+  if (!IsPAuthSupported)
+    return true;
   if (getLangOpts().getPointerFieldProtection() ==
       LangOptions::PointerFieldProtectionKind::Tagged)
     return !isa<CXXRecordDecl>(RD) ||
@@ -15200,7 +15204,7 @@ bool ASTContext::isPFPStruct(const RecordDecl *rec) const {
 
 void ASTContext::findPFPFields(QualType Ty, CharUnits Offset,
                                std::vector<PFPField> &Fields,
-                               bool IncludeVBases) const {
+                               bool IncludeVBases, bool IsWithinUnion) const {
   if (auto *AT = getAsConstantArrayType(Ty)) {
     if (auto *ElemDecl = AT->getElementType()->getAsCXXRecordDecl()) {
       const ASTRecordLayout &ElemRL = getASTRecordLayout(ElemDecl);
@@ -15213,26 +15217,27 @@ void ASTContext::findPFPFields(QualType Ty, CharUnits Offset,
   auto *Decl = Ty->getAsCXXRecordDecl();
   if (!Decl)
     return;
+  IsWithinUnion |= Decl->isUnion();
   const ASTRecordLayout &RL = getASTRecordLayout(Decl);
   for (FieldDecl *field : Decl->fields()) {
     CharUnits fieldOffset =
         Offset + toCharUnitsFromBits(RL.getFieldOffset(field->getFieldIndex()));
     if (isPFPField(field))
-      Fields.push_back({fieldOffset, field});
-    findPFPFields(field->getType(), fieldOffset, Fields, true);
+      Fields.push_back({fieldOffset, field, IsWithinUnion});
+    findPFPFields(field->getType(), fieldOffset, Fields, true, IsWithinUnion);
   }
   for (auto &Base : Decl->bases()) {
     if (Base.isVirtual())
       continue;
     CharUnits BaseOffset =
         Offset + RL.getBaseClassOffset(Base.getType()->getAsCXXRecordDecl());
-    findPFPFields(Base.getType(), BaseOffset, Fields, false);
+    findPFPFields(Base.getType(), BaseOffset, Fields, false, IsWithinUnion);
   }
   if (IncludeVBases) {
     for (auto &Base : Decl->vbases()) {
       CharUnits BaseOffset =
           Offset + RL.getVBaseClassOffset(Base.getType()->getAsCXXRecordDecl());
-      findPFPFields(Base.getType(), BaseOffset, Fields, false);
+      findPFPFields(Base.getType(), BaseOffset, Fields, false, IsWithinUnion);
     }
   }
 }

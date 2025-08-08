@@ -5112,6 +5112,7 @@ static Address emitRawAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
     return emitAddrOfZeroSizeField(CGF, base, field, IsInBounds);
 
   const RecordDecl *rec = field->getParent();
+
   unsigned idx =
     CGF.CGM.getTypes().getCGRecordLayout(rec).getLLVMFieldNo(field);
 
