@@ -1721,7 +1721,7 @@ void SymbolFileNativePDB::CacheFunctionNames() {
       m_func_full_names.Append(ConstString(pub.Name), it->second);
   }
 
-  // Sort them before value searching is working properly
+  // Sort them before value searching is working properly.
   m_func_full_names.Sort();
   m_func_full_names.SizeToFit();
   m_func_method_names.Sort();
