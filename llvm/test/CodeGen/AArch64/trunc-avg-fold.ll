@@ -4,26 +4,31 @@
 define <8 x i8> @test_avgceil_u(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test_avgceil_u:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.8h, #255, lsl #8
+; CHECK-NEXT:    bic v1.8h, #255, lsl #8
+; CHECK-NEXT:    uhadd v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    xtn v0.8b, v0.8h
-; CHECK-NEXT:    xtn v1.8b, v1.8h
-; CHECK-NEXT:    uhadd v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %mask = insertelement <8 x i16> poison, i16 255, i32 0
   %mask.splat = shufflevector <8 x i16> %mask, <8 x i16> poison, <8 x i32> zeroinitializer
   %ta16 = and <8 x i16> %a, %mask.splat
   %tb16 = and <8 x i16> %b, %mask.splat
-  %ta8 = trunc <8 x i16> %ta16 to <8 x i8>
-  %tb8 = trunc <8 x i16> %tb16 to <8 x i8>
-  %res = call <8 x i8> @llvm.aarch64.neon.uhadd.v8i8(<8 x i8> %ta8, <8 x i8> %tb8)
+  %avg16 = call <8 x i16> @llvm.aarch64.neon.uhadd.v8i16(<8 x i16> %ta16, <8 x i16> %tb16)
+  %res = trunc <8 x i16> %avg16 to <8 x i8>
   ret <8 x i8> %res
 }
 
 define <8 x i8> @test_avgceil_s(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test_avgceil_s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sqxtn v0.8b, v0.8h
-; CHECK-NEXT:    sqxtn v1.8b, v1.8h
-; CHECK-NEXT:    shadd v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    movi v2.8h, #127
+; CHECK-NEXT:    mvni v3.8h, #127
+; CHECK-NEXT:    smin v0.8h, v0.8h, v2.8h
+; CHECK-NEXT:    smin v1.8h, v1.8h, v2.8h
+; CHECK-NEXT:    smax v0.8h, v0.8h, v3.8h
+; CHECK-NEXT:    smax v1.8h, v1.8h, v3.8h
+; CHECK-NEXT:    shadd v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-NEXT:    ret
   %min = insertelement <8 x i16> poison, i16 -128, i32 0
   %min.splat = shufflevector <8 x i16> %min, <8 x i16> poison, <8 x i32> zeroinitializer
@@ -33,35 +38,39 @@ define <8 x i8> @test_avgceil_s(<8 x i16> %a, <8 x i16> %b) {
   %ta16.clamped = call <8 x i16> @llvm.smax.v8i16(<8 x i16> %ta16, <8 x i16> %min.splat)
   %tb16 = call <8 x i16> @llvm.smin.v8i16(<8 x i16> %b, <8 x i16> %max.splat)
   %tb16.clamped = call <8 x i16> @llvm.smax.v8i16(<8 x i16> %tb16, <8 x i16> %min.splat)
-  %ta8 = trunc <8 x i16> %ta16.clamped to <8 x i8>
-  %tb8 = trunc <8 x i16> %tb16.clamped to <8 x i8>
-  %res = call <8 x i8> @llvm.aarch64.neon.shadd.v8i8(<8 x i8> %ta8, <8 x i8> %tb8)
+  %avg16 = call <8 x i16> @llvm.aarch64.neon.shadd.v8i16(<8 x i16> %ta16.clamped, <8 x i16> %tb16.clamped)
+  %res = trunc <8 x i16> %avg16 to <8 x i8>
   ret <8 x i8> %res
 }
 
 define <8 x i8> @test_avgfloor_u(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test_avgfloor_u:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.8h, #255, lsl #8
+; CHECK-NEXT:    bic v1.8h, #255, lsl #8
+; CHECK-NEXT:    uhadd v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    xtn v0.8b, v0.8h
-; CHECK-NEXT:    xtn v1.8b, v1.8h
-; CHECK-NEXT:    uhadd v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %mask = insertelement <8 x i16> poison, i16 255, i32 0
   %mask.splat = shufflevector <8 x i16> %mask, <8 x i16> poison, <8 x i32> zeroinitializer
   %ta16 = and <8 x i16> %a, %mask.splat
   %tb16 = and <8 x i16> %b, %mask.splat
-  %ta8 = trunc <8 x i16> %ta16 to <8 x i8>
-  %tb8 = trunc <8 x i16> %tb16 to <8 x i8>
-  %res = call <8 x i8> @llvm.aarch64.neon.uhadd.v8i8(<8 x i8> %ta8, <8 x i8> %tb8)
+  %avg16 = call <8 x i16> @llvm.aarch64.neon.uhadd.v8i16(<8 x i16> %ta16, <8 x i16> %tb16)
+  %res = trunc <8 x i16> %avg16 to <8 x i8>
   ret <8 x i8> %res
 }
 
 define <8 x i8> @test_avgfloor_s(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: test_avgfloor_s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sqxtn v0.8b, v0.8h
-; CHECK-NEXT:    sqxtn v1.8b, v1.8h
-; CHECK-NEXT:    shadd v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    movi v2.8h, #127
+; CHECK-NEXT:    mvni v3.8h, #127
+; CHECK-NEXT:    smin v0.8h, v0.8h, v2.8h
+; CHECK-NEXT:    smin v1.8h, v1.8h, v2.8h
+; CHECK-NEXT:    smax v0.8h, v0.8h, v3.8h
+; CHECK-NEXT:    smax v1.8h, v1.8h, v3.8h
+; CHECK-NEXT:    shadd v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-NEXT:    ret
   %min = insertelement <8 x i16> poison, i16 -128, i32 0
   %min.splat = shufflevector <8 x i16> %min, <8 x i16> poison, <8 x i32> zeroinitializer
@@ -71,9 +80,8 @@ define <8 x i8> @test_avgfloor_s(<8 x i16> %a, <8 x i16> %b) {
   %ta16.clamped = call <8 x i16> @llvm.smax.v8i16(<8 x i16> %ta16, <8 x i16> %min.splat)
   %tb16 = call <8 x i16> @llvm.smin.v8i16(<8 x i16> %b, <8 x i16> %max.splat)
   %tb16.clamped = call <8 x i16> @llvm.smax.v8i16(<8 x i16> %tb16, <8 x i16> %min.splat)
-  %ta8 = trunc <8 x i16> %ta16.clamped to <8 x i8>
-  %tb8 = trunc <8 x i16> %tb16.clamped to <8 x i8>
-  %res = call <8 x i8> @llvm.aarch64.neon.shadd.v8i8(<8 x i8> %ta8, <8 x i8> %tb8)
+  %avg16 = call <8 x i16> @llvm.aarch64.neon.shadd.v8i16(<8 x i16> %ta16.clamped, <8 x i16> %tb16.clamped)
+  %res = trunc <8 x i16> %avg16 to <8 x i8>
   ret <8 x i8> %res
 }
 
