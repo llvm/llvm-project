@@ -1715,7 +1715,7 @@ void SymbolFileNativePDB::CacheFunctionNames() {
     if (!Mangled::IsMangledName(pub.Name))
       continue;
 
-    // Check if this symbol is for one of our functions
+    // Check if this symbol is for one of our functions.
     auto it = addr_ids.find({pub.Segment, pub.Offset});
     if (it != addr_ids.end())
       m_func_full_names.Append(ConstString(pub.Name), it->second);
