@@ -8,8 +8,7 @@
 
 #include "AddTest.h"
 
-#include "src/math/bf16add.h"
-
 #include "src/__support/FPUtil/bfloat16.h"
+#include "src/math/bf16add.h"
 
 LIST_ADD_TESTS(bfloat16, double, LIBC_NAMESPACE::bf16add)

@@ -8,8 +8,7 @@
 
 #include "SubTest.h"
 
-#include "src/math/bf16sub.h"
-
 #include "src/__support/FPUtil/bfloat16.h"
+#include "src/math/bf16sub.h"
 
 LIST_SUB_TESTS(bfloat16, double, LIBC_NAMESPACE::bf16sub)

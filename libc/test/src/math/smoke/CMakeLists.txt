@@ -5341,9 +5341,9 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.src.math.bf16add
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.macros.properties.os
-    libc.src.math.bf16add
 )
 
 add_fp_unittest(
@@ -5357,9 +5357,9 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.src.math.bf16addf
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.macros.properties.os
-    libc.src.math.bf16addf
 )
 
 add_fp_unittest(
@@ -5373,9 +5373,9 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.src.math.bf16addl
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.macros.properties.os
-    libc.src.math.bf16addl
 )
 
 add_fp_unittest(
@@ -5389,9 +5389,9 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.src.math.bf16addf128
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.macros.properties.os
-    libc.src.math.bf16addf128
 )
 
 add_fp_unittest(
@@ -5405,9 +5405,9 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.src.math.bf16sub
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.macros.properties.os
-    libc.src.math.bf16sub
 )
 
 add_fp_unittest(
@@ -5421,9 +5421,9 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.src.math.bf16subf
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.macros.properties.os
-    libc.src.math.bf16subf
 )
 
 add_fp_unittest(
@@ -5437,9 +5437,9 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.src.math.bf16subl
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.macros.properties.os
-    libc.src.math.bf16subl
 )
 
 add_fp_unittest(
@@ -5453,7 +5453,7 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.src.math.bf16subf128
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.macros.properties.os
-    libc.src.math.bf16subf128
 )
