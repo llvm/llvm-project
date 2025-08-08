@@ -197,9 +197,8 @@ std::optional<bool> CSKYAsmBackend::evaluateFixup(const MCFragment &F,
 }
 
 void CSKYAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
-                                const MCValue &Target,
-                                MutableArrayRef<char> Data, uint64_t Value,
-                                bool IsResolved) {
+                                const MCValue &Target, uint8_t *Data,
+                                uint64_t Value, bool IsResolved) {
   if (IsResolved && shouldForceRelocation(Fixup, Target))
     IsResolved = false;
   maybeAddReloc(F, Fixup, Target, Value, IsResolved);
@@ -217,10 +216,10 @@ void CSKYAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   // Shift the value into position.
   Value <<= Info.TargetOffset;
 
-  unsigned Offset = Fixup.getOffset();
   unsigned NumBytes = alignTo(Info.TargetSize + Info.TargetOffset, 8) / 8;
 
-  assert(Offset + NumBytes <= F.getSize() && "Invalid fixup offset!");
+  assert(Fixup.getOffset() + NumBytes <= F.getSize() &&
+         "Invalid fixup offset!");
 
   // For each byte of the fragment that the fixup touches, mask in the
   // bits from the fixup value.
@@ -228,14 +227,14 @@ void CSKYAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   bool IsInstFixup = (Kind >= FirstTargetFixupKind);
 
   if (IsLittleEndian && IsInstFixup && (NumBytes == 4)) {
-    Data[Offset + 0] |= uint8_t((Value >> 16) & 0xff);
-    Data[Offset + 1] |= uint8_t((Value >> 24) & 0xff);
-    Data[Offset + 2] |= uint8_t(Value & 0xff);
-    Data[Offset + 3] |= uint8_t((Value >> 8) & 0xff);
+    Data[0] |= uint8_t((Value >> 16) & 0xff);
+    Data[1] |= uint8_t((Value >> 24) & 0xff);
+    Data[2] |= uint8_t(Value & 0xff);
+    Data[3] |= uint8_t((Value >> 8) & 0xff);
   } else {
     for (unsigned I = 0; I != NumBytes; I++) {
       unsigned Idx = IsLittleEndian ? I : (NumBytes - 1 - I);
-      Data[Offset + Idx] |= uint8_t((Value >> (I * 8)) & 0xff);
+      Data[Idx] |= uint8_t((Value >> (I * 8)) & 0xff);
     }
   }
 }

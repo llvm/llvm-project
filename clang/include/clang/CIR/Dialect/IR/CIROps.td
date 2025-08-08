@@ -291,6 +291,9 @@ def CIR_ConstantOp : CIR_Op<"const", [
         return ptrAttr.isNullValue();
       return false;
     }
+
+    template <typename T>
+    T getValueAttr() { return mlir::dyn_cast<T>(getValue()); }
   }];
 
   let hasFolder = 1;
@@ -1685,6 +1688,49 @@ def CIR_GetGlobalOp : CIR_Op<"get_global", [
 
   let assemblyFormat = [{
     $name `:` qualified(type($addr)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// VTableAddrPointOp
+//===----------------------------------------------------------------------===//
+
+def CIR_VTableAddrPointOp : CIR_Op<"vtable.address_point", [
+  Pure, DeclareOpInterfaceMethods<SymbolUserOpInterface>
+]> {
+  let summary = "Get the vtable (global variable) address point";
+  let description = [{
+    The `vtable.address_point` operation retrieves the "effective" address
+    (address point) of a C++ virtual table. An object internal `__vptr`
+    gets initializated on top of the value returned by this operation.
+
+    `address_point.index` (vtable index) provides the appropriate vtable within
+    the vtable group (as specified by Itanium ABI), and `address_point.offset`
+    (address point index) the actual address point within that vtable.
+
+    The return type is always `!cir.vptr`.
+
+    Example:
+    ```mlir
+    cir.global linkonce_odr @_ZTV1B = ...
+    ...
+    %3 = cir.vtable.address_point(@_ZTV1B,
+              address_point = <index = 0, offset = 2>) : !cir.vptr
+    ```
+  }];
+
+  let arguments = (ins
+    FlatSymbolRefAttr:$name,
+    CIR_AddressPointAttr:$address_point
+  );
+
+  let results = (outs Res<CIR_VPtrType, "", []>:$addr);
+
+  let assemblyFormat = [{
+    `(`
+      $name `,` `address_point` `=` $address_point
+    `)`
+    `:` qualified(type($addr)) attr-dict
   }];
 }
 

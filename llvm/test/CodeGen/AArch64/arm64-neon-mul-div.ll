@@ -1608,6 +1608,19 @@ define <16 x i8> @poly_mulv16i8(<16 x i8> %lhs, <16 x i8> %rhs) {
    ret <16 x i8> %prod
 }
 
+define <16 x i8> @commutable_poly_mul(<16 x i8> %lhs, <16 x i8> %rhs) {
+; CHECK-LABEL: commutable_poly_mul:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    pmul v2.16b, v0.16b, v1.16b
+; CHECK-NEXT:    pmul v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    add v0.16b, v2.16b, v0.16b
+; CHECK-NEXT:    ret
+  %1 = call <16 x i8> @llvm.aarch64.neon.pmul.v16i8(<16 x i8> %lhs, <16 x i8> %rhs)
+  %2 = call <16 x i8> @llvm.aarch64.neon.pmul.v16i8(<16 x i8> %rhs, <16 x i8> %lhs)
+  %3 = add <16 x i8> %1, %2
+  ret <16 x i8> %3
+}
+
 declare <4 x i16> @llvm.aarch64.neon.sqdmulh.v4i16(<4 x i16>, <4 x i16>)
 declare <8 x i16> @llvm.aarch64.neon.sqdmulh.v8i16(<8 x i16>, <8 x i16>)
 declare <2 x i32> @llvm.aarch64.neon.sqdmulh.v2i32(<2 x i32>, <2 x i32>)
