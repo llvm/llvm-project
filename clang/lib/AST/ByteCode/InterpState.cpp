@@ -94,7 +94,7 @@ void InterpState::deallocate(Block *B) {
     auto *D = new (Memory) DeadBlock(DeadBlocks, B);
     // Since the block doesn't hold any actual data anymore, we can just
     // memcpy() everything over.
-    std::memcpy(D->rawData(), B->rawData(), B->getSize());
+    std::memcpy(D->rawData(), B->rawData(), Size);
     D->B.IsInitialized = false;
   }
 }
