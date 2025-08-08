@@ -59,11 +59,12 @@ public:
 
 static void legalizeLifetimeIntrinsics(Module &M) {
   LLVMContext &Ctx = M.getContext();
+  Type *I64Ty = IntegerType::get(Ctx, 64);
+  Type *PtrTy = PointerType::get(Ctx, 0);
   Intrinsic::ID LifetimeIIDs[2] = {Intrinsic::lifetime_start,
                                    Intrinsic::lifetime_end};
   for (Intrinsic::ID &IID : LifetimeIIDs) {
-    Function *F =
-        M.getFunction(Intrinsic::getName(IID, {PointerType::get(Ctx, 0)}, &M));
+    Function *F = M.getFunction(Intrinsic::getName(IID, {PtrTy}, &M));
     if (!F)
       continue;
 
@@ -73,8 +74,7 @@ static void legalizeLifetimeIntrinsics(Module &M) {
     AttributeList Attr;
     Attr = Attr.addFnAttribute(Ctx, Attribute::NoUnwind);
     FunctionCallee LifetimeCallee = M.getOrInsertFunction(
-        Intrinsic::getBaseName(IID), Attr, Type::getVoidTy(Ctx),
-        IntegerType::get(Ctx, 64), PointerType::get(Ctx, 0));
+        Intrinsic::getBaseName(IID), Attr, Type::getVoidTy(Ctx), I64Ty, PtrTy);
 
     // Replace all calls to lifetime intrinsics with calls to the
     // LLVM 3.7-compliant version of the lifetime intrinsic
@@ -86,9 +86,9 @@ static void legalizeLifetimeIntrinsics(Module &M) {
       // LLVM 3.7 lifetime intrinics require an i8* operand, so we insert
       // a bitcast to ensure that is the case
       Value *PtrOperand = CI->getArgOperand(0);
-      PointerType *PtrTy = cast<PointerType>(PtrOperand->getType());
+      PointerType *PtrOpPtrTy = cast<PointerType>(PtrOperand->getType());
       Value *NoOpBitCast = CastInst::Create(Instruction::BitCast, PtrOperand,
-                                            PtrTy, "", CI->getIterator());
+                                            PtrOpPtrTy, "", CI->getIterator());
 
       // LLVM 3.7 lifetime intrinsics have an explicit size operand, whose value
       // we can obtain from the pointer operand which must be an AllocaInst (as
@@ -101,12 +101,11 @@ static void legalizeLifetimeIntrinsics(Module &M) {
           AI->getAllocationSize(CI->getDataLayout());
       assert(AllocSize.has_value() &&
              "Expected the allocation size of AllocaInst to be known");
-      CallInst *NewCI =
-          CallInst::Create(LifetimeCallee,
-                           {ConstantInt::get(IntegerType::get(Ctx, 64),
-                                             AllocSize.value().getFixedValue()),
-                            NoOpBitCast},
-                           "", CI->getIterator());
+      CallInst *NewCI = CallInst::Create(
+          LifetimeCallee,
+          {ConstantInt::get(I64Ty, AllocSize.value().getFixedValue()),
+           NoOpBitCast},
+          "", CI->getIterator());
       for (Attribute ParamAttr : CI->getParamAttributes(0))
         NewCI->addParamAttr(1, ParamAttr);
 
