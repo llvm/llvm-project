@@ -73,6 +73,25 @@ def find_failure_in_ninja_logs(ninja_logs: list[list[str]]) -> list[tuple[str, s
     return failures
 
 
+def _format_ninja_failures(ninja_failures: list[tuple[str, str]]) -> list[str]:
+    """Formats ninja failures into summary views for the report."""
+    output = []
+    for build_failure in ninja_failures:
+        failed_action, failure_message = build_failure
+        output.extend(
+            [
+                "<details>",
+                f"<summary>{failed_action}</summary>",
+                "",
+                "```",
+                failure_message,
+                "```",
+                "</details>",
+            ]
+        )
+    return output
+
+
 # Set size_limit to limit the byte size of the report. The default is 1MB as this
 # is the most that can be put into an annotation. If the generated report exceeds
 # this limit and failures are listed, it will be generated again without failures
@@ -83,6 +102,7 @@ def generate_report(
     title,
     return_code,
     junit_objects,
+    ninja_logs: list[list[str]],
     size_limit=1024 * 1024,
     list_failures=True,
 ):
@@ -120,15 +140,34 @@ def generate_report(
                 ]
             )
         else:
-            report.extend(
-                [
-                    "The build failed before running any tests.",
-                    "",
-                    SEE_BUILD_FILE_STR,
-                    "",
-                    UNRELATED_FAILURES_STR,
-                ]
-            )
+            ninja_failures = find_failure_in_ninja_logs(ninja_logs)
+            if not ninja_failures:
+                report.extend(
+                    [
+                        "The build failed before running any tests. Detailed "
+                        "information about the build failure could not be "
+                        "automatically obtained.",
+                        "",
+                        SEE_BUILD_FILE_STR,
+                        "",
+                        UNRELATED_FAILURES_STR,
+                    ]
+                )
+            else:
+                report.extend(
+                    [
+                        "The build failed before running any tests. Click on a "
+                        "failure below to see the details.",
+                        "",
+                    ]
+                )
+                report.extend(_format_ninja_failures(ninja_failures))
+                report.extend(
+                    [
+                        "",
+                        UNRELATED_FAILURES_STR,
+                    ]
+                )
         return "\n".join(report)
 
     tests_passed = tests_run - tests_skipped - tests_failed
@@ -173,14 +212,28 @@ def generate_report(
     elif return_code != 0:
         # No tests failed but the build was in a failed state. Bring this to the user's
         # attention.
-        report.extend(
-            [
-                "",
-                "All tests passed but another part of the build **failed**.",
-                "",
-                SEE_BUILD_FILE_STR,
-            ]
-        )
+        ninja_failures = find_failure_in_ninja_logs(ninja_logs)
+        if not ninja_failures:
+            report.extend(
+                [
+                    "",
+                    "All tests passed but another part of the build **failed**. "
+                    "Information about the build failure could not be automatically "
+                    "obtained.",
+                    "",
+                    SEE_BUILD_FILE_STR,
+                ]
+            )
+        else:
+            report.extend(
+                [
+                    "",
+                    "All tests passed but another part of the build **failed**. Click on "
+                    "a failure below to see the details.",
+                    "",
+                ]
+            )
+            report.extend(_format_ninja_failures(ninja_failures))
 
     if failures or return_code != 0:
         report.extend(["", UNRELATED_FAILURES_STR])
@@ -200,7 +253,5 @@ def generate_report(
 
 def generate_report_from_files(title, return_code, junit_files):
     return generate_report(
-        title,
-        return_code,
-        [JUnitXml.fromfile(p) for p in junit_files],
+        title, return_code, [JUnitXml.fromfile(p) for p in junit_files], []
     )

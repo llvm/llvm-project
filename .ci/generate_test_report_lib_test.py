@@ -126,7 +126,7 @@ class TestReports(unittest.TestCase):
 
     def test_title_only(self):
         self.assertEqual(
-            generate_test_report_lib.generate_report("Foo", 0, []),
+            generate_test_report_lib.generate_report("Foo", 0, [], []),
             dedent(
                 """\
                 # Foo
@@ -137,15 +137,54 @@ class TestReports(unittest.TestCase):
 
     def test_title_only_failure(self):
         self.assertEqual(
-            generate_test_report_lib.generate_report("Foo", 1, []),
+            generate_test_report_lib.generate_report("Foo", 1, [], []),
             dedent(
                 """\
             # Foo
 
-            The build failed before running any tests.
+            The build failed before running any tests. Detailed information about the build failure could not be automatically obtained.
 
             Download the build's log file to see the details.
 
+            If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
+            ),
+        )
+
+    def test_title_only_failure_ninja_log(self):
+        self.assertEqual(
+            generate_test_report_lib.generate_report(
+                "Foo",
+                1,
+                [],
+                [
+                    [
+                        "[1/5] test/1.stamp",
+                        "[2/5] test/2.stamp",
+                        "[3/5] test/3.stamp",
+                        "[4/5] test/4.stamp",
+                        "FAILED: test/4.stamp",
+                        "touch test/4.stamp",
+                        "Wow! Risk!",
+                        "[5/5] test/5.stamp",
+                    ]
+                ],
+            ),
+            dedent(
+                """\
+            # Foo
+
+            The build failed before running any tests. Click on a failure below to see the details.
+
+            <details>
+            <summary>test/4.stamp</summary>
+
+            ```
+            FAILED: test/4.stamp
+            touch test/4.stamp
+            Wow! Risk!
+            ```
+            </details>
+            
             If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
             ),
         )
@@ -167,12 +206,13 @@ class TestReports(unittest.TestCase):
                         )
                     )
                 ],
+                [],
             ),
             dedent(
                 """\
                 # Foo
 
-                The build failed before running any tests.
+                The build failed before running any tests. Detailed information about the build failure could not be automatically obtained.
 
                 Download the build's log file to see the details.
 
@@ -198,6 +238,7 @@ class TestReports(unittest.TestCase):
                         )
                     )
                 ],
+                [],
             ),
             (
                 dedent(
@@ -227,6 +268,7 @@ class TestReports(unittest.TestCase):
                         )
                     )
                 ],
+                [],
             ),
             (
                 dedent(
@@ -235,11 +277,160 @@ class TestReports(unittest.TestCase):
 
               * 1 test passed
 
-              All tests passed but another part of the build **failed**.
+              All tests passed but another part of the build **failed**. Information about the build failure could not be automatically obtained.
 
               Download the build's log file to see the details.
               
               If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
+                )
+            ),
+        )
+
+    def test_no_failures_build_failed_ninja_log(self):
+        self.assertEqual(
+            generate_test_report_lib.generate_report(
+                "Foo",
+                1,
+                [
+                    junit_from_xml(
+                        dedent(
+                            """\
+          <?xml version="1.0" encoding="UTF-8"?>
+          <testsuites time="0.00">
+          <testsuite name="Passed" tests="1" failures="0" skipped="0" time="0.00">
+          <testcase classname="Bar/test_1" name="test_1" time="0.00"/>
+          </testsuite>
+          </testsuites>"""
+                        )
+                    )
+                ],
+                [
+                    [
+                        "[1/5] test/1.stamp",
+                        "[2/5] test/2.stamp",
+                        "[3/5] test/3.stamp",
+                        "[4/5] test/4.stamp",
+                        "FAILED: test/4.stamp",
+                        "touch test/4.stamp",
+                        "Wow! Close To You!",
+                        "[5/5] test/5.stamp",
+                    ]
+                ],
+            ),
+            (
+                dedent(
+                    """\
+                    # Foo
+
+                    * 1 test passed
+
+                    All tests passed but another part of the build **failed**. Click on a failure below to see the details.
+
+                    <details>
+                    <summary>test/4.stamp</summary>
+
+                    ```
+                    FAILED: test/4.stamp
+                    touch test/4.stamp
+                    Wow! Close To You!
+                    ```
+                    </details>
+
+                    If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
+                )
+            ),
+        )
+
+    def test_no_failures_multiple_build_failed_ninja_log(self):
+        test = generate_test_report_lib.generate_report(
+            "Foo",
+            1,
+            [
+                junit_from_xml(
+                    dedent(
+                        """\
+          <?xml version="1.0" encoding="UTF-8"?>
+          <testsuites time="0.00">
+          <testsuite name="Passed" tests="1" failures="0" skipped="0" time="0.00">
+          <testcase classname="Bar/test_1" name="test_1" time="0.00"/>
+          </testsuite>
+          </testsuites>"""
+                    )
+                )
+            ],
+            [
+                [
+                    "[1/5] test/1.stamp",
+                    "[2/5] test/2.stamp",
+                    "FAILED: touch test/2.stamp",
+                    "Wow! Be Kind!",
+                    "[3/5] test/3.stamp",
+                    "[4/5] test/4.stamp",
+                    "FAILED: touch test/4.stamp",
+                    "Wow! I Dare You!",
+                    "[5/5] test/5.stamp",
+                ]
+            ],
+        )
+        print(test)
+        self.assertEqual(
+            generate_test_report_lib.generate_report(
+                "Foo",
+                1,
+                [
+                    junit_from_xml(
+                        dedent(
+                            """\
+          <?xml version="1.0" encoding="UTF-8"?>
+          <testsuites time="0.00">
+          <testsuite name="Passed" tests="1" failures="0" skipped="0" time="0.00">
+          <testcase classname="Bar/test_1" name="test_1" time="0.00"/>
+          </testsuite>
+          </testsuites>"""
+                        )
+                    )
+                ],
+                [
+                    [
+                        "[1/5] test/1.stamp",
+                        "[2/5] test/2.stamp",
+                        "FAILED: touch test/2.stamp",
+                        "Wow! Be Kind!",
+                        "[3/5] test/3.stamp",
+                        "[4/5] test/4.stamp",
+                        "FAILED: touch test/4.stamp",
+                        "Wow! I Dare You!",
+                        "[5/5] test/5.stamp",
+                    ]
+                ],
+            ),
+            (
+                dedent(
+                    """\
+                    # Foo
+
+                    * 1 test passed
+
+                    All tests passed but another part of the build **failed**. Click on a failure below to see the details.
+
+                    <details>
+                    <summary>test/2.stamp</summary>
+
+                    ```
+                    FAILED: touch test/2.stamp
+                    Wow! Be Kind!
+                    ```
+                    </details>
+                    <details>
+                    <summary>test/4.stamp</summary>
+
+                    ```
+                    FAILED: touch test/4.stamp
+                    Wow! I Dare You!
+                    ```
+                    </details>
+
+                    If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
                 )
             ),
         )
@@ -271,6 +462,7 @@ class TestReports(unittest.TestCase):
                         )
                     )
                 ],
+                [],
             ),
             (
                 dedent(
@@ -366,6 +558,7 @@ class TestReports(unittest.TestCase):
                         )
                     )
                 ],
+                [],
             ),
             self.MULTI_SUITE_OUTPUT,
         )
@@ -407,6 +600,7 @@ class TestReports(unittest.TestCase):
                         )
                     ),
                 ],
+                [],
             ),
             self.MULTI_SUITE_OUTPUT,
         )
@@ -431,6 +625,7 @@ class TestReports(unittest.TestCase):
                         )
                     )
                 ],
+                [],
                 list_failures=False,
             ),
             (
@@ -467,6 +662,7 @@ class TestReports(unittest.TestCase):
                         )
                     )
                 ],
+                [],
                 list_failures=False,
             ),
             (
@@ -506,6 +702,7 @@ class TestReports(unittest.TestCase):
                         )
                     )
                 ],
+                [],
                 size_limit=512,
             ),
             (
