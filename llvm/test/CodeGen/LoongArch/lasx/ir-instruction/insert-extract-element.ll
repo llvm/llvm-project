@@ -39,6 +39,18 @@ entry:
   ret <8 x i32> %c
 }
 
+
+define <8 x i32> @insert_extract0_v8i32(<8 x i32> %a) nounwind {
+; CHECK-LABEL: insert_extract0_v8i32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvinsve0.w $xr0, $xr0, 1
+; CHECK-NEXT:    ret
+entry:
+  %b = extractelement <8 x i32> %a, i32 0
+  %c = insertelement <8 x i32> %a, i32 %b, i32 1
+  ret <8 x i32> %c
+}
+
 define <8 x float> @insert_extract_v8f32(<8 x float> %a) nounwind {
 ; CHECK-LABEL: insert_extract_v8f32:
 ; CHECK:       # %bb.0: # %entry
@@ -59,6 +71,17 @@ define <4 x i64> @insert_extract_v4i64(<4 x i64> %a) nounwind {
 ; CHECK-NEXT:    ret
 entry:
   %b = extractelement <4 x i64> %a, i32 3
+  %c = insertelement <4 x i64> %a, i64 %b, i32 1
+  ret <4 x i64> %c
+}
+
+define <4 x i64> @insert_extract0_v4i64(<4 x i64> %a) nounwind {
+; CHECK-LABEL: insert_extract0_v4i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvinsve0.d $xr0, $xr0, 1
+; CHECK-NEXT:    ret
+entry:
+  %b = extractelement <4 x i64> %a, i32 0
   %c = insertelement <4 x i64> %a, i64 %b, i32 1
   ret <4 x i64> %c
 }
