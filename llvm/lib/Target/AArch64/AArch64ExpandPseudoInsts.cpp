@@ -528,6 +528,10 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
       UseRev = true;
     }
     break;
+  case AArch64::DestructiveRegRegImmUnpred:
+    // EXT_ZZZI Zd, Zs1, Zs2, Imm ==> EXT_ZZI Zds1, Zs2, Imm
+    std::tie(DOPIdx, SrcIdx, Src2Idx) = std::make_tuple(1, 2, 3);
+    break;
   default:
     llvm_unreachable("Unsupported Destructive Operand type");
   }
@@ -538,6 +542,7 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
   bool DOPRegIsUnique = false;
   switch (DType) {
   case AArch64::DestructiveBinary:
+  case AArch64::DestructiveRegRegImmUnpred:
     DOPRegIsUnique = DstReg != MI.getOperand(SrcIdx).getReg();
     break;
   case AArch64::DestructiveBinaryComm:
@@ -639,10 +644,20 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
           .addImm(0);
     }
   } else if (DstReg != MI.getOperand(DOPIdx).getReg()) {
-    assert(DOPRegIsUnique && "The destructive operand should be unique");
-    PRFX = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(MovPrfx))
-               .addReg(DstReg, RegState::Define)
-               .addReg(MI.getOperand(DOPIdx).getReg(), DOPRegState);
+    if (DOPRegIsUnique) {
+      PRFX = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(MovPrfx))
+                 .addReg(DstReg, RegState::Define)
+                 .addReg(MI.getOperand(DOPIdx).getReg(), DOPRegState);
+    } else {
+      // MOVPRFX requires unique operands: Just build a COPY (Using ORR directly
+      // as we are past PostRAPseudo expansion).
+      assert(DType == AArch64::DestructiveRegRegImmUnpred &&
+             "Unexpected destructive operation type");
+      PRFX = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ORR_ZZZ))
+                 .addReg(DstReg, RegState::Define)
+                 .addReg(MI.getOperand(DOPIdx).getReg(), DOPRegState)
+                 .addReg(MI.getOperand(DOPIdx).getReg(), DOPRegState);
+    }
     DOPIdx = 0;
     DOPRegState = 0;
   }
@@ -671,6 +686,11 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
   case AArch64::DestructiveTernaryCommWithRev:
     DOP.add(MI.getOperand(PredIdx))
         .addReg(MI.getOperand(DOPIdx).getReg(), DOPRegState)
+        .add(MI.getOperand(SrcIdx))
+        .add(MI.getOperand(Src2Idx));
+    break;
+  case AArch64::DestructiveRegRegImmUnpred:
+    DOP.addReg(MI.getOperand(DOPIdx).getReg(), DOPRegState)
         .add(MI.getOperand(SrcIdx))
         .add(MI.getOperand(Src2Idx));
     break;
