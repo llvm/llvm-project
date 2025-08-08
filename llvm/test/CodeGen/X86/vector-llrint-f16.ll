@@ -7,7 +7,7 @@
 ; RUN: sed 's/XRINT/lrint/g' %s | llc -mtriple=x86_64-unknown -mattr=avx512fp16,avx512vl | FileCheck %s --check-prefix=FP16
 ; RUN: sed 's/XRINT/llrint/g' %s | llc -mtriple=x86_64-unknown -mattr=avx512fp16,avx512vl | FileCheck %s --check-prefix=FP16
 
-define <1 x i64> @llrint_v1i64_v1f16(<1 x half> %x) {
+define <1 x i64> @llrint_v1i64_v1f16(<1 x half> %x) nounwind {
 ; AVX-LABEL: llrint_v1i64_v1f16:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcvtph2ps %xmm0, %xmm0
@@ -25,7 +25,7 @@ define <1 x i64> @llrint_v1i64_v1f16(<1 x half> %x) {
   ret <1 x i64> %a
 }
 
-define <2 x i64> @llrint_v2i64_v2f16(<2 x half> %x) {
+define <2 x i64> @llrint_v2i64_v2f16(<2 x half> %x) nounwind {
 ; AVX-LABEL: llrint_v2i64_v2f16:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcvtph2ps %xmm0, %xmm1
@@ -52,7 +52,7 @@ define <2 x i64> @llrint_v2i64_v2f16(<2 x half> %x) {
   ret <2 x i64> %a
 }
 
-define <4 x i64> @llrint_v4i64_v4f16(<4 x half> %x) {
+define <4 x i64> @llrint_v4i64_v4f16(<4 x half> %x) nounwind {
 ; AVX-LABEL: llrint_v4i64_v4f16:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpsrlq $48, %xmm0, %xmm1
@@ -95,7 +95,7 @@ define <4 x i64> @llrint_v4i64_v4f16(<4 x half> %x) {
   ret <4 x i64> %a
 }
 
-define <8 x i64> @llrint_v8i64_v8f16(<8 x half> %x) {
+define <8 x i64> @llrint_v8i64_v8f16(<8 x half> %x) nounwind {
 ; AVX-LABEL: llrint_v8i64_v8f16:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpsrlq $48, %xmm0, %xmm1
@@ -170,7 +170,7 @@ define <8 x i64> @llrint_v8i64_v8f16(<8 x half> %x) {
   ret <8 x i64> %a
 }
 
-define <16 x i64> @llrint_v16i64_v16f16(<16 x half> %x) {
+define <16 x i64> @llrint_v16i64_v16f16(<16 x half> %x) nounwind {
 ; AVX-LABEL: llrint_v16i64_v16f16:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovdqa %ymm0, %ymm2
@@ -310,7 +310,7 @@ define <16 x i64> @llrint_v16i64_v16f16(<16 x half> %x) {
   ret <16 x i64> %a
 }
 
-define <32 x i64> @llrint_v32i64_v32f16(<32 x half> %x) {
+define <32 x i64> @llrint_v32i64_v32f16(<32 x half> %x) nounwind {
 ; AVX-LABEL: llrint_v32i64_v32f16:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movq %rdi, %rax

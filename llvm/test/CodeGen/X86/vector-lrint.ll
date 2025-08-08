@@ -12,25 +12,20 @@
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=x86_64-unknown -mattr=avx512f | FileCheck %s --check-prefixes=X64-AVX-i64,AVX512-i64
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=x86_64-unknown -mattr=avx512dq,avx512vl | FileCheck %s --check-prefixes=X64-AVX-i64,AVX512DQ-i64
 
-define <1 x iXLen> @lrint_v1f32(<1 x float> %x) {
+define <1 x iXLen> @lrint_v1f32(<1 x float> %x) nounwind {
 ; X86-I32-LABEL: lrint_v1f32:
 ; X86-I32:       # %bb.0:
 ; X86-I32-NEXT:    pushl %eax
-; X86-I32-NEXT:    .cfi_def_cfa_offset 8
 ; X86-I32-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-I32-NEXT:    fistpl (%esp)
 ; X86-I32-NEXT:    movl (%esp), %eax
 ; X86-I32-NEXT:    popl %ecx
-; X86-I32-NEXT:    .cfi_def_cfa_offset 4
 ; X86-I32-NEXT:    retl
 ;
 ; X86-I64-LABEL: lrint_v1f32:
 ; X86-I64:       # %bb.0:
 ; X86-I64-NEXT:    pushl %ebp
-; X86-I64-NEXT:    .cfi_def_cfa_offset 8
-; X86-I64-NEXT:    .cfi_offset %ebp, -8
 ; X86-I64-NEXT:    movl %esp, %ebp
-; X86-I64-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-I64-NEXT:    andl $-8, %esp
 ; X86-I64-NEXT:    subl $8, %esp
 ; X86-I64-NEXT:    flds 8(%ebp)
@@ -39,7 +34,6 @@ define <1 x iXLen> @lrint_v1f32(<1 x float> %x) {
 ; X86-I64-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-I64-NEXT:    movl %ebp, %esp
 ; X86-I64-NEXT:    popl %ebp
-; X86-I64-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-I64-NEXT:    retl
 ;
 ; X86-SSE2-LABEL: lrint_v1f32:
@@ -66,11 +60,10 @@ define <1 x iXLen> @lrint_v1f32(<1 x float> %x) {
 }
 declare <1 x iXLen> @llvm.lrint.v1iXLen.v1f32(<1 x float>)
 
-define <2 x iXLen> @lrint_v2f32(<2 x float> %x) {
+define <2 x iXLen> @lrint_v2f32(<2 x float> %x) nounwind {
 ; X86-I32-LABEL: lrint_v2f32:
 ; X86-I32:       # %bb.0:
 ; X86-I32-NEXT:    subl $8, %esp
-; X86-I32-NEXT:    .cfi_def_cfa_offset 12
 ; X86-I32-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-I32-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-I32-NEXT:    fistpl (%esp)
@@ -78,22 +71,16 @@ define <2 x iXLen> @lrint_v2f32(<2 x float> %x) {
 ; X86-I32-NEXT:    movl (%esp), %eax
 ; X86-I32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-I32-NEXT:    addl $8, %esp
-; X86-I32-NEXT:    .cfi_def_cfa_offset 4
 ; X86-I32-NEXT:    retl
 ;
 ; X86-I64-LABEL: lrint_v2f32:
 ; X86-I64:       # %bb.0:
 ; X86-I64-NEXT:    pushl %ebp
-; X86-I64-NEXT:    .cfi_def_cfa_offset 8
-; X86-I64-NEXT:    .cfi_offset %ebp, -8
 ; X86-I64-NEXT:    movl %esp, %ebp
-; X86-I64-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-I64-NEXT:    pushl %edi
 ; X86-I64-NEXT:    pushl %esi
 ; X86-I64-NEXT:    andl $-8, %esp
 ; X86-I64-NEXT:    subl $16, %esp
-; X86-I64-NEXT:    .cfi_offset %esi, -16
-; X86-I64-NEXT:    .cfi_offset %edi, -12
 ; X86-I64-NEXT:    movl 8(%ebp), %eax
 ; X86-I64-NEXT:    flds 16(%ebp)
 ; X86-I64-NEXT:    flds 12(%ebp)
@@ -111,7 +98,6 @@ define <2 x iXLen> @lrint_v2f32(<2 x float> %x) {
 ; X86-I64-NEXT:    popl %esi
 ; X86-I64-NEXT:    popl %edi
 ; X86-I64-NEXT:    popl %ebp
-; X86-I64-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-I64-NEXT:    retl $4
 ;
 ; X86-SSE2-LABEL: lrint_v2f32:
@@ -158,17 +144,12 @@ define <2 x iXLen> @lrint_v2f32(<2 x float> %x) {
 }
 declare <2 x iXLen> @llvm.lrint.v2iXLen.v2f32(<2 x float>)
 
-define <4 x iXLen> @lrint_v4f32(<4 x float> %x) {
+define <4 x iXLen> @lrint_v4f32(<4 x float> %x) nounwind {
 ; X86-I32-LABEL: lrint_v4f32:
 ; X86-I32:       # %bb.0:
 ; X86-I32-NEXT:    pushl %edi
-; X86-I32-NEXT:    .cfi_def_cfa_offset 8
 ; X86-I32-NEXT:    pushl %esi
-; X86-I32-NEXT:    .cfi_def_cfa_offset 12
 ; X86-I32-NEXT:    subl $16, %esp
-; X86-I32-NEXT:    .cfi_def_cfa_offset 28
-; X86-I32-NEXT:    .cfi_offset %esi, -12
-; X86-I32-NEXT:    .cfi_offset %edi, -8
 ; X86-I32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-I32-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-I32-NEXT:    flds {{[0-9]+}}(%esp)
@@ -187,28 +168,19 @@ define <4 x iXLen> @lrint_v4f32(<4 x float> %x) {
 ; X86-I32-NEXT:    movl %edx, 4(%eax)
 ; X86-I32-NEXT:    movl %ecx, (%eax)
 ; X86-I32-NEXT:    addl $16, %esp
-; X86-I32-NEXT:    .cfi_def_cfa_offset 12
 ; X86-I32-NEXT:    popl %esi
-; X86-I32-NEXT:    .cfi_def_cfa_offset 8
 ; X86-I32-NEXT:    popl %edi
-; X86-I32-NEXT:    .cfi_def_cfa_offset 4
 ; X86-I32-NEXT:    retl $4
 ;
 ; X86-I64-LABEL: lrint_v4f32:
 ; X86-I64:       # %bb.0:
 ; X86-I64-NEXT:    pushl %ebp
-; X86-I64-NEXT:    .cfi_def_cfa_offset 8
-; X86-I64-NEXT:    .cfi_offset %ebp, -8
 ; X86-I64-NEXT:    movl %esp, %ebp
-; X86-I64-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-I64-NEXT:    pushl %ebx
 ; X86-I64-NEXT:    pushl %edi
 ; X86-I64-NEXT:    pushl %esi
 ; X86-I64-NEXT:    andl $-8, %esp
 ; X86-I64-NEXT:    subl $56, %esp
-; X86-I64-NEXT:    .cfi_offset %esi, -20
-; X86-I64-NEXT:    .cfi_offset %edi, -16
-; X86-I64-NEXT:    .cfi_offset %ebx, -12
 ; X86-I64-NEXT:    movl 8(%ebp), %eax
 ; X86-I64-NEXT:    flds 24(%ebp)
 ; X86-I64-NEXT:    flds 20(%ebp)
@@ -245,7 +217,6 @@ define <4 x iXLen> @lrint_v4f32(<4 x float> %x) {
 ; X86-I64-NEXT:    popl %edi
 ; X86-I64-NEXT:    popl %ebx
 ; X86-I64-NEXT:    popl %ebp
-; X86-I64-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-I64-NEXT:    retl $4
 ;
 ; X86-SSE2-LABEL: lrint_v4f32:
@@ -308,23 +279,14 @@ define <4 x iXLen> @lrint_v4f32(<4 x float> %x) {
 }
 declare <4 x iXLen> @llvm.lrint.v4iXLen.v4f32(<4 x float>)
 
-define <8 x iXLen> @lrint_v8f32(<8 x float> %x) {
+define <8 x iXLen> @lrint_v8f32(<8 x float> %x) nounwind {
 ; X86-I32-LABEL: lrint_v8f32:
 ; X86-I32:       # %bb.0:
 ; X86-I32-NEXT:    pushl %ebp
-; X86-I32-NEXT:    .cfi_def_cfa_offset 8
 ; X86-I32-NEXT:    pushl %ebx
-; X86-I32-NEXT:    .cfi_def_cfa_offset 12
 ; X86-I32-NEXT:    pushl %edi
-; X86-I32-NEXT:    .cfi_def_cfa_offset 16
 ; X86-I32-NEXT:    pushl %esi
-; X86-I32-NEXT:    .cfi_def_cfa_offset 20
 ; X86-I32-NEXT:    subl $40, %esp
-; X86-I32-NEXT:    .cfi_def_cfa_offset 60
-; X86-I32-NEXT:    .cfi_offset %esi, -20
-; X86-I32-NEXT:    .cfi_offset %edi, -16
-; X86-I32-NEXT:    .cfi_offset %ebx, -12
-; X86-I32-NEXT:    .cfi_offset %ebp, -8
 ; X86-I32-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-I32-NEXT:    fistpl {{[0-9]+}}(%esp)
 ; X86-I32-NEXT:    flds {{[0-9]+}}(%esp)
@@ -363,32 +325,21 @@ define <8 x iXLen> @lrint_v8f32(<8 x float> %x) {
 ; X86-I32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; X86-I32-NEXT:    movl %ecx, (%eax)
 ; X86-I32-NEXT:    addl $40, %esp
-; X86-I32-NEXT:    .cfi_def_cfa_offset 20
 ; X86-I32-NEXT:    popl %esi
-; X86-I32-NEXT:    .cfi_def_cfa_offset 16
 ; X86-I32-NEXT:    popl %edi
-; X86-I32-NEXT:    .cfi_def_cfa_offset 12
 ; X86-I32-NEXT:    popl %ebx
-; X86-I32-NEXT:    .cfi_def_cfa_offset 8
 ; X86-I32-NEXT:    popl %ebp
-; X86-I32-NEXT:    .cfi_def_cfa_offset 4
 ; X86-I32-NEXT:    retl $4
 ;
 ; X86-I64-LABEL: lrint_v8f32:
 ; X86-I64:       # %bb.0:
 ; X86-I64-NEXT:    pushl %ebp
-; X86-I64-NEXT:    .cfi_def_cfa_offset 8
-; X86-I64-NEXT:    .cfi_offset %ebp, -8
 ; X86-I64-NEXT:    movl %esp, %ebp
-; X86-I64-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-I64-NEXT:    pushl %ebx
 ; X86-I64-NEXT:    pushl %edi
 ; X86-I64-NEXT:    pushl %esi
 ; X86-I64-NEXT:    andl $-8, %esp
 ; X86-I64-NEXT:    subl $120, %esp
-; X86-I64-NEXT:    .cfi_offset %esi, -20
-; X86-I64-NEXT:    .cfi_offset %edi, -16
-; X86-I64-NEXT:    .cfi_offset %ebx, -12
 ; X86-I64-NEXT:    flds 12(%ebp)
 ; X86-I64-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X86-I64-NEXT:    flds 16(%ebp)
@@ -465,7 +416,6 @@ define <8 x iXLen> @lrint_v8f32(<8 x float> %x) {
 ; X86-I64-NEXT:    popl %edi
 ; X86-I64-NEXT:    popl %ebx
 ; X86-I64-NEXT:    popl %ebp
-; X86-I64-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-I64-NEXT:    retl $4
 ;
 ; X86-SSE2-LABEL: lrint_v8f32:
@@ -561,31 +511,26 @@ define <8 x iXLen> @lrint_v8f32(<8 x float> %x) {
 }
 declare <8 x iXLen> @llvm.lrint.v8iXLen.v8f32(<8 x float>)
 
-define <16 x iXLen> @lrint_v16iXLen_v16f32(<16 x float> %x) {
+define <16 x iXLen> @lrint_v16iXLen_v16f32(<16 x float> %x) nounwind {
   %a = call <16 x iXLen> @llvm.lrint.v16iXLen.v16f32(<16 x float> %x)
   ret <16 x iXLen> %a
 }
 declare <16 x iXLen> @llvm.lrint.v16iXLen.v16f32(<16 x float>)
 
-define <1 x iXLen> @lrint_v1f64(<1 x double> %x) {
+define <1 x iXLen> @lrint_v1f64(<1 x double> %x) nounwind {
 ; X86-I32-LABEL: lrint_v1f64:
 ; X86-I32:       # %bb.0:
 ; X86-I32-NEXT:    pushl %eax
-; X86-I32-NEXT:    .cfi_def_cfa_offset 8
 ; X86-I32-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X86-I32-NEXT:    fistpl (%esp)
 ; X86-I32-NEXT:    movl (%esp), %eax
 ; X86-I32-NEXT:    popl %ecx
-; X86-I32-NEXT:    .cfi_def_cfa_offset 4
 ; X86-I32-NEXT:    retl
 ;
 ; X86-I64-LABEL: lrint_v1f64:
 ; X86-I64:       # %bb.0:
 ; X86-I64-NEXT:    pushl %ebp
-; X86-I64-NEXT:    .cfi_def_cfa_offset 8
-; X86-I64-NEXT:    .cfi_offset %ebp, -8
 ; X86-I64-NEXT:    movl %esp, %ebp
-; X86-I64-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-I64-NEXT:    andl $-8, %esp
 ; X86-I64-NEXT:    subl $8, %esp
 ; X86-I64-NEXT:    fldl 8(%ebp)
@@ -594,7 +539,6 @@ define <1 x iXLen> @lrint_v1f64(<1 x double> %x) {
 ; X86-I64-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-I64-NEXT:    movl %ebp, %esp
 ; X86-I64-NEXT:    popl %ebp
-; X86-I64-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-I64-NEXT:    retl
 ;
 ; X86-SSE2-LABEL: lrint_v1f64:
@@ -621,11 +565,10 @@ define <1 x iXLen> @lrint_v1f64(<1 x double> %x) {
 }
 declare <1 x iXLen> @llvm.lrint.v1iXLen.v1f64(<1 x double>)
 
-define <2 x iXLen> @lrint_v2f64(<2 x double> %x) {
+define <2 x iXLen> @lrint_v2f64(<2 x double> %x) nounwind {
 ; X86-I32-LABEL: lrint_v2f64:
 ; X86-I32:       # %bb.0:
 ; X86-I32-NEXT:    subl $8, %esp
-; X86-I32-NEXT:    .cfi_def_cfa_offset 12
 ; X86-I32-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X86-I32-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X86-I32-NEXT:    fistpl (%esp)
@@ -633,22 +576,16 @@ define <2 x iXLen> @lrint_v2f64(<2 x double> %x) {
 ; X86-I32-NEXT:    movl (%esp), %eax
 ; X86-I32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-I32-NEXT:    addl $8, %esp
-; X86-I32-NEXT:    .cfi_def_cfa_offset 4
 ; X86-I32-NEXT:    retl
 ;
 ; X86-I64-LABEL: lrint_v2f64:
 ; X86-I64:       # %bb.0:
 ; X86-I64-NEXT:    pushl %ebp
-; X86-I64-NEXT:    .cfi_def_cfa_offset 8
-; X86-I64-NEXT:    .cfi_offset %ebp, -8
 ; X86-I64-NEXT:    movl %esp, %ebp
-; X86-I64-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-I64-NEXT:    pushl %edi
 ; X86-I64-NEXT:    pushl %esi
 ; X86-I64-NEXT:    andl $-8, %esp
 ; X86-I64-NEXT:    subl $16, %esp
-; X86-I64-NEXT:    .cfi_offset %esi, -16
-; X86-I64-NEXT:    .cfi_offset %edi, -12
 ; X86-I64-NEXT:    movl 8(%ebp), %eax
 ; X86-I64-NEXT:    fldl 20(%ebp)
 ; X86-I64-NEXT:    fldl 12(%ebp)
@@ -666,7 +603,6 @@ define <2 x iXLen> @lrint_v2f64(<2 x double> %x) {
 ; X86-I64-NEXT:    popl %esi
 ; X86-I64-NEXT:    popl %edi
 ; X86-I64-NEXT:    popl %ebp
-; X86-I64-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-I64-NEXT:    retl $4
 ;
 ; X86-SSE2-LABEL: lrint_v2f64:
@@ -713,17 +649,12 @@ define <2 x iXLen> @lrint_v2f64(<2 x double> %x) {
 }
 declare <2 x iXLen> @llvm.lrint.v2iXLen.v2f64(<2 x double>)
 
-define <4 x iXLen> @lrint_v4f64(<4 x double> %x) {
+define <4 x iXLen> @lrint_v4f64(<4 x double> %x) nounwind {
 ; X86-I32-LABEL: lrint_v4f64:
 ; X86-I32:       # %bb.0:
 ; X86-I32-NEXT:    pushl %edi
-; X86-I32-NEXT:    .cfi_def_cfa_offset 8
 ; X86-I32-NEXT:    pushl %esi
-; X86-I32-NEXT:    .cfi_def_cfa_offset 12
 ; X86-I32-NEXT:    subl $16, %esp
-; X86-I32-NEXT:    .cfi_def_cfa_offset 28
-; X86-I32-NEXT:    .cfi_offset %esi, -12
-; X86-I32-NEXT:    .cfi_offset %edi, -8
 ; X86-I32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-I32-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X86-I32-NEXT:    fldl {{[0-9]+}}(%esp)
@@ -742,28 +673,19 @@ define <4 x iXLen> @lrint_v4f64(<4 x double> %x) {
 ; X86-I32-NEXT:    movl %edx, 4(%eax)
 ; X86-I32-NEXT:    movl %ecx, (%eax)
 ; X86-I32-NEXT:    addl $16, %esp
-; X86-I32-NEXT:    .cfi_def_cfa_offset 12
 ; X86-I32-NEXT:    popl %esi
-; X86-I32-NEXT:    .cfi_def_cfa_offset 8
 ; X86-I32-NEXT:    popl %edi
-; X86-I32-NEXT:    .cfi_def_cfa_offset 4
 ; X86-I32-NEXT:    retl $4
 ;
 ; X86-I64-LABEL: lrint_v4f64:
 ; X86-I64:       # %bb.0:
 ; X86-I64-NEXT:    pushl %ebp
-; X86-I64-NEXT:    .cfi_def_cfa_offset 8
-; X86-I64-NEXT:    .cfi_offset %ebp, -8
 ; X86-I64-NEXT:    movl %esp, %ebp
-; X86-I64-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-I64-NEXT:    pushl %ebx
 ; X86-I64-NEXT:    pushl %edi
 ; X86-I64-NEXT:    pushl %esi
 ; X86-I64-NEXT:    andl $-8, %esp
 ; X86-I64-NEXT:    subl $56, %esp
-; X86-I64-NEXT:    .cfi_offset %esi, -20
-; X86-I64-NEXT:    .cfi_offset %edi, -16
-; X86-I64-NEXT:    .cfi_offset %ebx, -12
 ; X86-I64-NEXT:    movl 8(%ebp), %eax
 ; X86-I64-NEXT:    fldl 36(%ebp)
 ; X86-I64-NEXT:    fldl 28(%ebp)
@@ -800,7 +722,6 @@ define <4 x iXLen> @lrint_v4f64(<4 x double> %x) {
 ; X86-I64-NEXT:    popl %edi
 ; X86-I64-NEXT:    popl %ebx
 ; X86-I64-NEXT:    popl %ebp
-; X86-I64-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-I64-NEXT:    retl $4
 ;
 ; X86-SSE2-LABEL: lrint_v4f64:
@@ -867,23 +788,14 @@ define <4 x iXLen> @lrint_v4f64(<4 x double> %x) {
 }
 declare <4 x iXLen> @llvm.lrint.v4iXLen.v4f64(<4 x double>)
 
-define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
+define <8 x iXLen> @lrint_v8f64(<8 x double> %x) nounwind {
 ; X86-I32-LABEL: lrint_v8f64:
 ; X86-I32:       # %bb.0:
 ; X86-I32-NEXT:    pushl %ebp
-; X86-I32-NEXT:    .cfi_def_cfa_offset 8
 ; X86-I32-NEXT:    pushl %ebx
-; X86-I32-NEXT:    .cfi_def_cfa_offset 12
 ; X86-I32-NEXT:    pushl %edi
-; X86-I32-NEXT:    .cfi_def_cfa_offset 16
 ; X86-I32-NEXT:    pushl %esi
-; X86-I32-NEXT:    .cfi_def_cfa_offset 20
 ; X86-I32-NEXT:    subl $40, %esp
-; X86-I32-NEXT:    .cfi_def_cfa_offset 60
-; X86-I32-NEXT:    .cfi_offset %esi, -20
-; X86-I32-NEXT:    .cfi_offset %edi, -16
-; X86-I32-NEXT:    .cfi_offset %ebx, -12
-; X86-I32-NEXT:    .cfi_offset %ebp, -8
 ; X86-I32-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X86-I32-NEXT:    fistpl {{[0-9]+}}(%esp)
 ; X86-I32-NEXT:    fldl {{[0-9]+}}(%esp)
@@ -922,32 +834,21 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
 ; X86-I32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; X86-I32-NEXT:    movl %ecx, (%eax)
 ; X86-I32-NEXT:    addl $40, %esp
-; X86-I32-NEXT:    .cfi_def_cfa_offset 20
 ; X86-I32-NEXT:    popl %esi
-; X86-I32-NEXT:    .cfi_def_cfa_offset 16
 ; X86-I32-NEXT:    popl %edi
-; X86-I32-NEXT:    .cfi_def_cfa_offset 12
 ; X86-I32-NEXT:    popl %ebx
-; X86-I32-NEXT:    .cfi_def_cfa_offset 8
 ; X86-I32-NEXT:    popl %ebp
-; X86-I32-NEXT:    .cfi_def_cfa_offset 4
 ; X86-I32-NEXT:    retl $4
 ;
 ; X86-I64-LABEL: lrint_v8f64:
 ; X86-I64:       # %bb.0:
 ; X86-I64-NEXT:    pushl %ebp
-; X86-I64-NEXT:    .cfi_def_cfa_offset 8
-; X86-I64-NEXT:    .cfi_offset %ebp, -8
 ; X86-I64-NEXT:    movl %esp, %ebp
-; X86-I64-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-I64-NEXT:    pushl %ebx
 ; X86-I64-NEXT:    pushl %edi
 ; X86-I64-NEXT:    pushl %esi
 ; X86-I64-NEXT:    andl $-8, %esp
 ; X86-I64-NEXT:    subl $120, %esp
-; X86-I64-NEXT:    .cfi_offset %esi, -20
-; X86-I64-NEXT:    .cfi_offset %edi, -16
-; X86-I64-NEXT:    .cfi_offset %ebx, -12
 ; X86-I64-NEXT:    fldl 12(%ebp)
 ; X86-I64-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X86-I64-NEXT:    fldl 20(%ebp)
@@ -1024,16 +925,12 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
 ; X86-I64-NEXT:    popl %edi
 ; X86-I64-NEXT:    popl %ebx
 ; X86-I64-NEXT:    popl %ebp
-; X86-I64-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-I64-NEXT:    retl $4
 ;
 ; X86-SSE2-LABEL: lrint_v8f64:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE2-NEXT:    .cfi_offset %ebp, -8
 ; X86-SSE2-NEXT:    movl %esp, %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-SSE2-NEXT:    andl $-16, %esp
 ; X86-SSE2-NEXT:    subl $16, %esp
 ; X86-SSE2-NEXT:    cvtpd2dq %xmm1, %xmm1
@@ -1044,7 +941,6 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
 ; X86-SSE2-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX1-LABEL: lrint_v8f64:
@@ -1141,14 +1037,11 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
 }
 declare <8 x iXLen> @llvm.lrint.v8iXLen.v8f64(<8 x double>)
 
-define <1 x iXLen> @lrint_v1fp128(<1 x fp128> %x) {
+define <1 x iXLen> @lrint_v1fp128(<1 x fp128> %x) nounwind {
 ; X86-I32-LABEL: lrint_v1fp128:
 ; X86-I32:       # %bb.0:
 ; X86-I32-NEXT:    pushl %ebp
-; X86-I32-NEXT:    .cfi_def_cfa_offset 8
-; X86-I32-NEXT:    .cfi_offset %ebp, -8
 ; X86-I32-NEXT:    movl %esp, %ebp
-; X86-I32-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-I32-NEXT:    andl $-16, %esp
 ; X86-I32-NEXT:    subl $16, %esp
 ; X86-I32-NEXT:    pushl 20(%ebp)
@@ -1159,16 +1052,12 @@ define <1 x iXLen> @lrint_v1fp128(<1 x fp128> %x) {
 ; X86-I32-NEXT:    addl $16, %esp
 ; X86-I32-NEXT:    movl %ebp, %esp
 ; X86-I32-NEXT:    popl %ebp
-; X86-I32-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-I32-NEXT:    retl
 ;
 ; X86-I64-LABEL: lrint_v1fp128:
 ; X86-I64:       # %bb.0:
 ; X86-I64-NEXT:    pushl %ebp
-; X86-I64-NEXT:    .cfi_def_cfa_offset 8
-; X86-I64-NEXT:    .cfi_offset %ebp, -8
 ; X86-I64-NEXT:    movl %esp, %ebp
-; X86-I64-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-I64-NEXT:    andl $-16, %esp
 ; X86-I64-NEXT:    subl $16, %esp
 ; X86-I64-NEXT:    pushl 20(%ebp)
@@ -1179,16 +1068,12 @@ define <1 x iXLen> @lrint_v1fp128(<1 x fp128> %x) {
 ; X86-I64-NEXT:    addl $16, %esp
 ; X86-I64-NEXT:    movl %ebp, %esp
 ; X86-I64-NEXT:    popl %ebp
-; X86-I64-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-I64-NEXT:    retl
 ;
 ; X86-SSE2-LABEL: lrint_v1fp128:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE2-NEXT:    .cfi_offset %ebp, -8
 ; X86-SSE2-NEXT:    movl %esp, %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-SSE2-NEXT:    andl $-16, %esp
 ; X86-SSE2-NEXT:    subl $16, %esp
 ; X86-SSE2-NEXT:    pushl 20(%ebp)
@@ -1199,16 +1084,12 @@ define <1 x iXLen> @lrint_v1fp128(<1 x fp128> %x) {
 ; X86-SSE2-NEXT:    addl $16, %esp
 ; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: lrint_v1fp128:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    pushl %ebp
-; X86-AVX-NEXT:    .cfi_def_cfa_offset 8
-; X86-AVX-NEXT:    .cfi_offset %ebp, -8
 ; X86-AVX-NEXT:    movl %esp, %ebp
-; X86-AVX-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-AVX-NEXT:    andl $-16, %esp
 ; X86-AVX-NEXT:    subl $32, %esp
 ; X86-AVX-NEXT:    vmovups 8(%ebp), %xmm0
@@ -1216,47 +1097,36 @@ define <1 x iXLen> @lrint_v1fp128(<1 x fp128> %x) {
 ; X86-AVX-NEXT:    calll lrintl
 ; X86-AVX-NEXT:    movl %ebp, %esp
 ; X86-AVX-NEXT:    popl %ebp
-; X86-AVX-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-AVX-i32-LABEL: lrint_v1fp128:
 ; X64-AVX-i32:       # %bb.0:
 ; X64-AVX-i32-NEXT:    pushq %rax
-; X64-AVX-i32-NEXT:    .cfi_def_cfa_offset 16
 ; X64-AVX-i32-NEXT:    callq lrintl@PLT
 ; X64-AVX-i32-NEXT:    popq %rcx
-; X64-AVX-i32-NEXT:    .cfi_def_cfa_offset 8
 ; X64-AVX-i32-NEXT:    retq
 ;
 ; X64-AVX-i64-LABEL: lrint_v1fp128:
 ; X64-AVX-i64:       # %bb.0:
 ; X64-AVX-i64-NEXT:    pushq %rax
-; X64-AVX-i64-NEXT:    .cfi_def_cfa_offset 16
 ; X64-AVX-i64-NEXT:    callq lrintl@PLT
 ; X64-AVX-i64-NEXT:    popq %rcx
-; X64-AVX-i64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-AVX-i64-NEXT:    retq
   %a = call <1 x iXLen> @llvm.lrint.v1iXLen.v1fp128(<1 x fp128> %x)
   ret <1 x iXLen> %a
 }
 declare <1 x iXLen> @llvm.lrint.v1iXLen.v1fp128(<1 x fp128>)
 
-define <2 x iXLen> @lrint_v2fp128(<2 x fp128> %x) {
+define <2 x iXLen> @lrint_v2fp128(<2 x fp128> %x) nounwind {
 ; X86-I32-LABEL: lrint_v2fp128:
 ; X86-I32:       # %bb.0:
 ; X86-I32-NEXT:    pushl %ebp
-; X86-I32-NEXT:    .cfi_def_cfa_offset 8
-; X86-I32-NEXT:    .cfi_offset %ebp, -8
 ; X86-I32-NEXT:    movl %esp, %ebp
-; X86-I32-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-I32-NEXT:    pushl %ebx
 ; X86-I32-NEXT:    pushl %edi
 ; X86-I32-NEXT:    pushl %esi
 ; X86-I32-NEXT:    andl $-16, %esp
 ; X86-I32-NEXT:    subl $16, %esp
-; X86-I32-NEXT:    .cfi_offset %esi, -20
-; X86-I32-NEXT:    .cfi_offset %edi, -16
-; X86-I32-NEXT:    .cfi_offset %ebx, -12
 ; X86-I32-NEXT:    movl 32(%ebp), %edi
 ; X86-I32-NEXT:    movl 36(%ebp), %ebx
 ; X86-I32-NEXT:    pushl 20(%ebp)
@@ -1279,24 +1149,17 @@ define <2 x iXLen> @lrint_v2fp128(<2 x fp128> %x) {
 ; X86-I32-NEXT:    popl %edi
 ; X86-I32-NEXT:    popl %ebx
 ; X86-I32-NEXT:    popl %ebp
-; X86-I32-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-I32-NEXT:    retl
 ;
 ; X86-I64-LABEL: lrint_v2fp128:
 ; X86-I64:       # %bb.0:
 ; X86-I64-NEXT:    pushl %ebp
-; X86-I64-NEXT:    .cfi_def_cfa_offset 8
-; X86-I64-NEXT:    .cfi_offset %ebp, -8
 ; X86-I64-NEXT:    movl %esp, %ebp
-; X86-I64-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-I64-NEXT:    pushl %ebx
 ; X86-I64-NEXT:    pushl %edi
 ; X86-I64-NEXT:    pushl %esi
 ; X86-I64-NEXT:    andl $-16, %esp
 ; X86-I64-NEXT:    subl $16, %esp
-; X86-I64-NEXT:    .cfi_offset %esi, -20
-; X86-I64-NEXT:    .cfi_offset %edi, -16
-; X86-I64-NEXT:    .cfi_offset %ebx, -12
 ; X86-I64-NEXT:    movl 8(%ebp), %esi
 ; X86-I64-NEXT:    pushl 24(%ebp)
 ; X86-I64-NEXT:    pushl 20(%ebp)
@@ -1322,24 +1185,17 @@ define <2 x iXLen> @lrint_v2fp128(<2 x fp128> %x) {
 ; X86-I64-NEXT:    popl %edi
 ; X86-I64-NEXT:    popl %ebx
 ; X86-I64-NEXT:    popl %ebp
-; X86-I64-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-I64-NEXT:    retl $4
 ;
 ; X86-SSE2-LABEL: lrint_v2fp128:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE2-NEXT:    .cfi_offset %ebp, -8
 ; X86-SSE2-NEXT:    movl %esp, %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-SSE2-NEXT:    pushl %ebx
 ; X86-SSE2-NEXT:    pushl %edi
 ; X86-SSE2-NEXT:    pushl %esi
 ; X86-SSE2-NEXT:    andl $-16, %esp
 ; X86-SSE2-NEXT:    subl $32, %esp
-; X86-SSE2-NEXT:    .cfi_offset %esi, -20
-; X86-SSE2-NEXT:    .cfi_offset %edi, -16
-; X86-SSE2-NEXT:    .cfi_offset %ebx, -12
 ; X86-SSE2-NEXT:    movl 12(%ebp), %edi
 ; X86-SSE2-NEXT:    movl 16(%ebp), %ebx
 ; X86-SSE2-NEXT:    movl 20(%ebp), %esi
@@ -1365,16 +1221,12 @@ define <2 x iXLen> @lrint_v2fp128(<2 x fp128> %x) {
 ; X86-SSE2-NEXT:    popl %edi
 ; X86-SSE2-NEXT:    popl %ebx
 ; X86-SSE2-NEXT:    popl %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: lrint_v2fp128:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    pushl %ebp
-; X86-AVX-NEXT:    .cfi_def_cfa_offset 8
-; X86-AVX-NEXT:    .cfi_offset %ebp, -8
 ; X86-AVX-NEXT:    movl %esp, %ebp
-; X86-AVX-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-AVX-NEXT:    andl $-16, %esp
 ; X86-AVX-NEXT:    subl $48, %esp
 ; X86-AVX-NEXT:    vmovups 8(%ebp), %xmm0
@@ -1389,16 +1241,12 @@ define <2 x iXLen> @lrint_v2fp128(<2 x fp128> %x) {
 ; X86-AVX-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
 ; X86-AVX-NEXT:    movl %ebp, %esp
 ; X86-AVX-NEXT:    popl %ebp
-; X86-AVX-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-AVX-i32-LABEL: lrint_v2fp128:
 ; X64-AVX-i32:       # %bb.0:
 ; X64-AVX-i32-NEXT:    pushq %rbx
-; X64-AVX-i32-NEXT:    .cfi_def_cfa_offset 16
 ; X64-AVX-i32-NEXT:    subq $16, %rsp
-; X64-AVX-i32-NEXT:    .cfi_def_cfa_offset 32
-; X64-AVX-i32-NEXT:    .cfi_offset %rbx, -16
 ; X64-AVX-i32-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; X64-AVX-i32-NEXT:    vmovaps %xmm1, %xmm0
 ; X64-AVX-i32-NEXT:    callq lrintl@PLT
@@ -1408,15 +1256,12 @@ define <2 x iXLen> @lrint_v2fp128(<2 x fp128> %x) {
 ; X64-AVX-i32-NEXT:    vmovd %eax, %xmm0
 ; X64-AVX-i32-NEXT:    vpinsrd $1, %ebx, %xmm0, %xmm0
 ; X64-AVX-i32-NEXT:    addq $16, %rsp
-; X64-AVX-i32-NEXT:    .cfi_def_cfa_offset 16
 ; X64-AVX-i32-NEXT:    popq %rbx
-; X64-AVX-i32-NEXT:    .cfi_def_cfa_offset 8
 ; X64-AVX-i32-NEXT:    retq
 ;
 ; X64-AVX-i64-LABEL: lrint_v2fp128:
 ; X64-AVX-i64:       # %bb.0:
 ; X64-AVX-i64-NEXT:    subq $40, %rsp
-; X64-AVX-i64-NEXT:    .cfi_def_cfa_offset 48
 ; X64-AVX-i64-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; X64-AVX-i64-NEXT:    vmovaps %xmm1, %xmm0
 ; X64-AVX-i64-NEXT:    callq lrintl@PLT
@@ -1428,29 +1273,22 @@ define <2 x iXLen> @lrint_v2fp128(<2 x fp128> %x) {
 ; X64-AVX-i64-NEXT:    vpunpcklqdq (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
 ; X64-AVX-i64-NEXT:    # xmm0 = xmm0[0],mem[0]
 ; X64-AVX-i64-NEXT:    addq $40, %rsp
-; X64-AVX-i64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-AVX-i64-NEXT:    retq
   %a = call <2 x iXLen> @llvm.lrint.v2iXLen.v2fp128(<2 x fp128> %x)
   ret <2 x iXLen> %a
 }
 declare <2 x iXLen> @llvm.lrint.v2iXLen.v2fp128(<2 x fp128>)
 
-define <4 x iXLen> @lrint_v4fp128(<4 x fp128> %x) {
+define <4 x iXLen> @lrint_v4fp128(<4 x fp128> %x) nounwind {
 ; X86-I32-LABEL: lrint_v4fp128:
 ; X86-I32:       # %bb.0:
 ; X86-I32-NEXT:    pushl %ebp
-; X86-I32-NEXT:    .cfi_def_cfa_offset 8
-; X86-I32-NEXT:    .cfi_offset %ebp, -8
 ; X86-I32-NEXT:    movl %esp, %ebp
-; X86-I32-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-I32-NEXT:    pushl %ebx
 ; X86-I32-NEXT:    pushl %edi
 ; X86-I32-NEXT:    pushl %esi
 ; X86-I32-NEXT:    andl $-16, %esp
 ; X86-I32-NEXT:    subl $16, %esp
-; X86-I32-NEXT:    .cfi_offset %esi, -20
-; X86-I32-NEXT:    .cfi_offset %edi, -16
-; X86-I32-NEXT:    .cfi_offset %ebx, -12
 ; X86-I32-NEXT:    movl 8(%ebp), %esi
 ; X86-I32-NEXT:    movl 36(%ebp), %ebx
 ; X86-I32-NEXT:    movl 40(%ebp), %edi
@@ -1492,24 +1330,17 @@ define <4 x iXLen> @lrint_v4fp128(<4 x fp128> %x) {
 ; X86-I32-NEXT:    popl %edi
 ; X86-I32-NEXT:    popl %ebx
 ; X86-I32-NEXT:    popl %ebp
-; X86-I32-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-I32-NEXT:    retl $4
 ;
 ; X86-I64-LABEL: lrint_v4fp128:
 ; X86-I64:       # %bb.0:
 ; X86-I64-NEXT:    pushl %ebp
-; X86-I64-NEXT:    .cfi_def_cfa_offset 8
-; X86-I64-NEXT:    .cfi_offset %ebp, -8
 ; X86-I64-NEXT:    movl %esp, %ebp
-; X86-I64-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-I64-NEXT:    pushl %ebx
 ; X86-I64-NEXT:    pushl %edi
 ; X86-I64-NEXT:    pushl %esi
 ; X86-I64-NEXT:    andl $-16, %esp
 ; X86-I64-NEXT:    subl $32, %esp
-; X86-I64-NEXT:    .cfi_offset %esi, -20
-; X86-I64-NEXT:    .cfi_offset %edi, -16
-; X86-I64-NEXT:    .cfi_offset %ebx, -12
 ; X86-I64-NEXT:    movl 8(%ebp), %esi
 ; X86-I64-NEXT:    movl 36(%ebp), %edi
 ; X86-I64-NEXT:    movl 40(%ebp), %ebx
@@ -1561,24 +1392,17 @@ define <4 x iXLen> @lrint_v4fp128(<4 x fp128> %x) {
 ; X86-I64-NEXT:    popl %edi
 ; X86-I64-NEXT:    popl %ebx
 ; X86-I64-NEXT:    popl %ebp
-; X86-I64-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-I64-NEXT:    retl $4
 ;
 ; X86-SSE2-LABEL: lrint_v4fp128:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE2-NEXT:    .cfi_offset %ebp, -8
 ; X86-SSE2-NEXT:    movl %esp, %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-SSE2-NEXT:    pushl %ebx
 ; X86-SSE2-NEXT:    pushl %edi
 ; X86-SSE2-NEXT:    pushl %esi
 ; X86-SSE2-NEXT:    andl $-16, %esp
 ; X86-SSE2-NEXT:    subl $48, %esp
-; X86-SSE2-NEXT:    .cfi_offset %esi, -20
-; X86-SSE2-NEXT:    .cfi_offset %edi, -16
-; X86-SSE2-NEXT:    .cfi_offset %ebx, -12
 ; X86-SSE2-NEXT:    movl 48(%ebp), %edi
 ; X86-SSE2-NEXT:    movl 52(%ebp), %ebx
 ; X86-SSE2-NEXT:    pushl 36(%ebp)
@@ -1623,22 +1447,16 @@ define <4 x iXLen> @lrint_v4fp128(<4 x fp128> %x) {
 ; X86-SSE2-NEXT:    popl %edi
 ; X86-SSE2-NEXT:    popl %ebx
 ; X86-SSE2-NEXT:    popl %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: lrint_v4fp128:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    pushl %ebp
-; X86-AVX-NEXT:    .cfi_def_cfa_offset 8
-; X86-AVX-NEXT:    .cfi_offset %ebp, -8
 ; X86-AVX-NEXT:    movl %esp, %ebp
-; X86-AVX-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-AVX-NEXT:    pushl %edi
 ; X86-AVX-NEXT:    pushl %esi
 ; X86-AVX-NEXT:    andl $-16, %esp
 ; X86-AVX-NEXT:    subl $32, %esp
-; X86-AVX-NEXT:    .cfi_offset %esi, -16
-; X86-AVX-NEXT:    .cfi_offset %edi, -12
 ; X86-AVX-NEXT:    vmovups 40(%ebp), %xmm0
 ; X86-AVX-NEXT:    vmovups %xmm0, (%esp)
 ; X86-AVX-NEXT:    calll lrintl
@@ -1663,16 +1481,12 @@ define <4 x iXLen> @lrint_v4fp128(<4 x fp128> %x) {
 ; X86-AVX-NEXT:    popl %esi
 ; X86-AVX-NEXT:    popl %edi
 ; X86-AVX-NEXT:    popl %ebp
-; X86-AVX-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-AVX-i32-LABEL: lrint_v4fp128:
 ; X64-AVX-i32:       # %bb.0:
 ; X64-AVX-i32-NEXT:    pushq %rbx
-; X64-AVX-i32-NEXT:    .cfi_def_cfa_offset 16
 ; X64-AVX-i32-NEXT:    subq $48, %rsp
-; X64-AVX-i32-NEXT:    .cfi_def_cfa_offset 64
-; X64-AVX-i32-NEXT:    .cfi_offset %rbx, -16
 ; X64-AVX-i32-NEXT:    vmovaps %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; X64-AVX-i32-NEXT:    vmovaps %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; X64-AVX-i32-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
@@ -1694,15 +1508,12 @@ define <4 x iXLen> @lrint_v4fp128(<4 x fp128> %x) {
 ; X64-AVX-i32-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; X64-AVX-i32-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
 ; X64-AVX-i32-NEXT:    addq $48, %rsp
-; X64-AVX-i32-NEXT:    .cfi_def_cfa_offset 16
 ; X64-AVX-i32-NEXT:    popq %rbx
-; X64-AVX-i32-NEXT:    .cfi_def_cfa_offset 8
 ; X64-AVX-i32-NEXT:    retq
 ;
 ; X64-AVX1-i64-LABEL: lrint_v4fp128:
 ; X64-AVX1-i64:       # %bb.0:
 ; X64-AVX1-i64-NEXT:    subq $72, %rsp
-; X64-AVX1-i64-NEXT:    .cfi_def_cfa_offset 80
 ; X64-AVX1-i64-NEXT:    vmovaps %xmm2, (%rsp) # 16-byte Spill
 ; X64-AVX1-i64-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; X64-AVX1-i64-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -1727,13 +1538,11 @@ define <4 x iXLen> @lrint_v4fp128(<4 x fp128> %x) {
 ; X64-AVX1-i64-NEXT:    # xmm0 = xmm0[0],mem[0]
 ; X64-AVX1-i64-NEXT:    vinsertf128 $1, (%rsp), %ymm0, %ymm0 # 16-byte Folded Reload
 ; X64-AVX1-i64-NEXT:    addq $72, %rsp
-; X64-AVX1-i64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-AVX1-i64-NEXT:    retq
 ;
 ; AVX512-i64-LABEL: lrint_v4fp128:
 ; AVX512-i64:       # %bb.0:
 ; AVX512-i64-NEXT:    subq $72, %rsp
-; AVX512-i64-NEXT:    .cfi_def_cfa_offset 80
 ; AVX512-i64-NEXT:    vmovaps %xmm2, (%rsp) # 16-byte Spill
 ; AVX512-i64-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX512-i64-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -1758,13 +1567,11 @@ define <4 x iXLen> @lrint_v4fp128(<4 x fp128> %x) {
 ; AVX512-i64-NEXT:    # xmm0 = xmm0[0],mem[0]
 ; AVX512-i64-NEXT:    vinserti128 $1, (%rsp), %ymm0, %ymm0 # 16-byte Folded Reload
 ; AVX512-i64-NEXT:    addq $72, %rsp
-; AVX512-i64-NEXT:    .cfi_def_cfa_offset 8
 ; AVX512-i64-NEXT:    retq
 ;
 ; AVX512DQ-i64-LABEL: lrint_v4fp128:
 ; AVX512DQ-i64:       # %bb.0:
 ; AVX512DQ-i64-NEXT:    subq $72, %rsp
-; AVX512DQ-i64-NEXT:    .cfi_def_cfa_offset 80
 ; AVX512DQ-i64-NEXT:    vmovaps %xmm2, (%rsp) # 16-byte Spill
 ; AVX512DQ-i64-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX512DQ-i64-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -1789,29 +1596,22 @@ define <4 x iXLen> @lrint_v4fp128(<4 x fp128> %x) {
 ; AVX512DQ-i64-NEXT:    # xmm0 = xmm0[0],mem[0]
 ; AVX512DQ-i64-NEXT:    vinserti128 $1, (%rsp), %ymm0, %ymm0 # 16-byte Folded Reload
 ; AVX512DQ-i64-NEXT:    addq $72, %rsp
-; AVX512DQ-i64-NEXT:    .cfi_def_cfa_offset 8
 ; AVX512DQ-i64-NEXT:    retq
   %a = call <4 x iXLen> @llvm.lrint.v4iXLen.v4fp128(<4 x fp128> %x)
   ret <4 x iXLen> %a
 }
 declare <4 x iXLen> @llvm.lrint.v4iXLen.v4fp128(<4 x fp128>)
 
-define <8 x iXLen> @lrint_v8fp128(<8 x fp128> %x) {
+define <8 x iXLen> @lrint_v8fp128(<8 x fp128> %x) nounwind {
 ; X86-I32-LABEL: lrint_v8fp128:
 ; X86-I32:       # %bb.0:
 ; X86-I32-NEXT:    pushl %ebp
-; X86-I32-NEXT:    .cfi_def_cfa_offset 8
-; X86-I32-NEXT:    .cfi_offset %ebp, -8
 ; X86-I32-NEXT:    movl %esp, %ebp
-; X86-I32-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-I32-NEXT:    pushl %ebx
 ; X86-I32-NEXT:    pushl %edi
 ; X86-I32-NEXT:    pushl %esi
 ; X86-I32-NEXT:    andl $-16, %esp
 ; X86-I32-NEXT:    subl $32, %esp
-; X86-I32-NEXT:    .cfi_offset %esi, -20
-; X86-I32-NEXT:    .cfi_offset %edi, -16
-; X86-I32-NEXT:    .cfi_offset %ebx, -12
 ; X86-I32-NEXT:    movl 8(%ebp), %esi
 ; X86-I32-NEXT:    movl 36(%ebp), %ebx
 ; X86-I32-NEXT:    movl 40(%ebp), %edi
@@ -1889,24 +1689,17 @@ define <8 x iXLen> @lrint_v8fp128(<8 x fp128> %x) {
 ; X86-I32-NEXT:    popl %edi
 ; X86-I32-NEXT:    popl %ebx
 ; X86-I32-NEXT:    popl %ebp
-; X86-I32-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-I32-NEXT:    retl $4
 ;
 ; X86-I64-LABEL: lrint_v8fp128:
 ; X86-I64:       # %bb.0:
 ; X86-I64-NEXT:    pushl %ebp
-; X86-I64-NEXT:    .cfi_def_cfa_offset 8
-; X86-I64-NEXT:    .cfi_offset %ebp, -8
 ; X86-I64-NEXT:    movl %esp, %ebp
-; X86-I64-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-I64-NEXT:    pushl %ebx
 ; X86-I64-NEXT:    pushl %edi
 ; X86-I64-NEXT:    pushl %esi
 ; X86-I64-NEXT:    andl $-16, %esp
 ; X86-I64-NEXT:    subl $64, %esp
-; X86-I64-NEXT:    .cfi_offset %esi, -20
-; X86-I64-NEXT:    .cfi_offset %edi, -16
-; X86-I64-NEXT:    .cfi_offset %ebx, -12
 ; X86-I64-NEXT:    movl 8(%ebp), %esi
 ; X86-I64-NEXT:    movl 36(%ebp), %edi
 ; X86-I64-NEXT:    movl 40(%ebp), %ebx
@@ -2006,24 +1799,17 @@ define <8 x iXLen> @lrint_v8fp128(<8 x fp128> %x) {
 ; X86-I64-NEXT:    popl %edi
 ; X86-I64-NEXT:    popl %ebx
 ; X86-I64-NEXT:    popl %ebp
-; X86-I64-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-I64-NEXT:    retl $4
 ;
 ; X86-SSE2-LABEL: lrint_v8fp128:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    pushl %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa_offset 8
-; X86-SSE2-NEXT:    .cfi_offset %ebp, -8
 ; X86-SSE2-NEXT:    movl %esp, %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-SSE2-NEXT:    pushl %ebx
 ; X86-SSE2-NEXT:    pushl %edi
 ; X86-SSE2-NEXT:    pushl %esi
 ; X86-SSE2-NEXT:    andl $-16, %esp
 ; X86-SSE2-NEXT:    subl $64, %esp
-; X86-SSE2-NEXT:    .cfi_offset %esi, -20
-; X86-SSE2-NEXT:    .cfi_offset %edi, -16
-; X86-SSE2-NEXT:    .cfi_offset %ebx, -12
 ; X86-SSE2-NEXT:    movl 108(%ebp), %esi
 ; X86-SSE2-NEXT:    movl 112(%ebp), %edi
 ; X86-SSE2-NEXT:    movl 116(%ebp), %ebx
@@ -2109,24 +1895,17 @@ define <8 x iXLen> @lrint_v8fp128(<8 x fp128> %x) {
 ; X86-SSE2-NEXT:    popl %edi
 ; X86-SSE2-NEXT:    popl %ebx
 ; X86-SSE2-NEXT:    popl %ebp
-; X86-SSE2-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX1-LABEL: lrint_v8fp128:
 ; X86-AVX1:       # %bb.0:
 ; X86-AVX1-NEXT:    pushl %ebp
-; X86-AVX1-NEXT:    .cfi_def_cfa_offset 8
-; X86-AVX1-NEXT:    .cfi_offset %ebp, -8
 ; X86-AVX1-NEXT:    movl %esp, %ebp
-; X86-AVX1-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-AVX1-NEXT:    pushl %ebx
 ; X86-AVX1-NEXT:    pushl %edi
 ; X86-AVX1-NEXT:    pushl %esi
 ; X86-AVX1-NEXT:    andl $-16, %esp
 ; X86-AVX1-NEXT:    subl $80, %esp
-; X86-AVX1-NEXT:    .cfi_offset %esi, -20
-; X86-AVX1-NEXT:    .cfi_offset %edi, -16
-; X86-AVX1-NEXT:    .cfi_offset %ebx, -12
 ; X86-AVX1-NEXT:    vmovups 40(%ebp), %xmm0
 ; X86-AVX1-NEXT:    vmovups %xmm0, (%esp)
 ; X86-AVX1-NEXT:    calll lrintl
@@ -2175,16 +1954,12 @@ define <8 x iXLen> @lrint_v8fp128(<8 x fp128> %x) {
 ; X86-AVX1-NEXT:    popl %edi
 ; X86-AVX1-NEXT:    popl %ebx
 ; X86-AVX1-NEXT:    popl %ebp
-; X86-AVX1-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-AVX1-NEXT:    retl
 ;
 ; X64-AVX1-i32-LABEL: lrint_v8fp128:
 ; X64-AVX1-i32:       # %bb.0:
 ; X64-AVX1-i32-NEXT:    pushq %rbx
-; X64-AVX1-i32-NEXT:    .cfi_def_cfa_offset 16
 ; X64-AVX1-i32-NEXT:    subq $112, %rsp
-; X64-AVX1-i32-NEXT:    .cfi_def_cfa_offset 128
-; X64-AVX1-i32-NEXT:    .cfi_offset %rbx, -16
 ; X64-AVX1-i32-NEXT:    vmovaps %xmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; X64-AVX1-i32-NEXT:    vmovaps %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; X64-AVX1-i32-NEXT:    vmovaps %xmm4, (%rsp) # 16-byte Spill
@@ -2229,15 +2004,12 @@ define <8 x iXLen> @lrint_v8fp128(<8 x fp128> %x) {
 ; X64-AVX1-i32-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
 ; X64-AVX1-i32-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
 ; X64-AVX1-i32-NEXT:    addq $112, %rsp
-; X64-AVX1-i32-NEXT:    .cfi_def_cfa_offset 16
 ; X64-AVX1-i32-NEXT:    popq %rbx
-; X64-AVX1-i32-NEXT:    .cfi_def_cfa_offset 8
 ; X64-AVX1-i32-NEXT:    retq
 ;
 ; X64-AVX1-i64-LABEL: lrint_v8fp128:
 ; X64-AVX1-i64:       # %bb.0:
 ; X64-AVX1-i64-NEXT:    subq $152, %rsp
-; X64-AVX1-i64-NEXT:    .cfi_def_cfa_offset 160
 ; X64-AVX1-i64-NEXT:    vmovaps %xmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; X64-AVX1-i64-NEXT:    vmovaps %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; X64-AVX1-i64-NEXT:    vmovaps %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -2289,13 +2061,11 @@ define <8 x iXLen> @lrint_v8fp128(<8 x fp128> %x) {
 ; X64-AVX1-i64-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm1 # 16-byte Folded Reload
 ; X64-AVX1-i64-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; X64-AVX1-i64-NEXT:    addq $152, %rsp
-; X64-AVX1-i64-NEXT:    .cfi_def_cfa_offset 8
 ; X64-AVX1-i64-NEXT:    retq
 ;
 ; AVX512-i64-LABEL: lrint_v8fp128:
 ; AVX512-i64:       # %bb.0:
 ; AVX512-i64-NEXT:    subq $152, %rsp
-; AVX512-i64-NEXT:    .cfi_def_cfa_offset 160
 ; AVX512-i64-NEXT:    vmovaps %xmm6, (%rsp) # 16-byte Spill
 ; AVX512-i64-NEXT:    vmovaps %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX512-i64-NEXT:    vmovaps %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -2347,13 +2117,11 @@ define <8 x iXLen> @lrint_v8fp128(<8 x fp128> %x) {
 ; AVX512-i64-NEXT:    vinserti128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
 ; AVX512-i64-NEXT:    vinserti64x4 $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 32-byte Folded Reload
 ; AVX512-i64-NEXT:    addq $152, %rsp
-; AVX512-i64-NEXT:    .cfi_def_cfa_offset 8
 ; AVX512-i64-NEXT:    retq
 ;
 ; AVX512DQ-i64-LABEL: lrint_v8fp128:
 ; AVX512DQ-i64:       # %bb.0:
 ; AVX512DQ-i64-NEXT:    subq $152, %rsp
-; AVX512DQ-i64-NEXT:    .cfi_def_cfa_offset 160
 ; AVX512DQ-i64-NEXT:    vmovaps %xmm6, (%rsp) # 16-byte Spill
 ; AVX512DQ-i64-NEXT:    vmovaps %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX512DQ-i64-NEXT:    vmovaps %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -2405,7 +2173,6 @@ define <8 x iXLen> @lrint_v8fp128(<8 x fp128> %x) {
 ; AVX512DQ-i64-NEXT:    vinserti128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
 ; AVX512DQ-i64-NEXT:    vinserti64x4 $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 32-byte Folded Reload
 ; AVX512DQ-i64-NEXT:    addq $152, %rsp
-; AVX512DQ-i64-NEXT:    .cfi_def_cfa_offset 8
 ; AVX512DQ-i64-NEXT:    retq
   %a = call <8 x iXLen> @llvm.lrint.v8iXLen.v8fp128(<8 x fp128> %x)
   ret <8 x iXLen> %a

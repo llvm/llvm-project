@@ -45,7 +45,7 @@
 ; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v16f64
 ; CHECK-i64-GI-NEXT:  warning: Instruction selection used fallback path for lrint_v32f64
 
-define <1 x iXLen> @lrint_v1f16(<1 x half> %x) {
+define <1 x iXLen> @lrint_v1f16(<1 x half> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v1f16:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    fcvt s0, h0
@@ -66,7 +66,7 @@ define <1 x iXLen> @lrint_v1f16(<1 x half> %x) {
 }
 declare <1 x iXLen> @llvm.lrint.v1iXLen.v1f16(<1 x half>)
 
-define <2 x iXLen> @lrint_v2f16(<2 x half> %x) {
+define <2 x iXLen> @lrint_v2f16(<2 x half> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v2f16:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    // kill: def $d0 killed $d0 def $q0
@@ -100,7 +100,7 @@ define <2 x iXLen> @lrint_v2f16(<2 x half> %x) {
 }
 declare <2 x iXLen> @llvm.lrint.v2iXLen.v2f16(<2 x half>)
 
-define <4 x iXLen> @lrint_v4f16(<4 x half> %x) {
+define <4 x iXLen> @lrint_v4f16(<4 x half> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v4f16:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    // kill: def $d0 killed $d0 def $q0
@@ -153,7 +153,7 @@ define <4 x iXLen> @lrint_v4f16(<4 x half> %x) {
 }
 declare <4 x iXLen> @llvm.lrint.v4iXLen.v4f16(<4 x half>)
 
-define <8 x iXLen> @lrint_v8f16(<8 x half> %x) {
+define <8 x iXLen> @lrint_v8f16(<8 x half> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v8f16:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
@@ -244,7 +244,7 @@ define <8 x iXLen> @lrint_v8f16(<8 x half> %x) {
 }
 declare <8 x iXLen> @llvm.lrint.v8iXLen.v8f16(<8 x half>)
 
-define <16 x iXLen> @lrint_v16f16(<16 x half> %x) {
+define <16 x iXLen> @lrint_v16f16(<16 x half> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v16f16:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
@@ -413,7 +413,7 @@ define <16 x iXLen> @lrint_v16f16(<16 x half> %x) {
 }
 declare <16 x iXLen> @llvm.lrint.v16iXLen.v16f16(<16 x half>)
 
-define <32 x iXLen> @lrint_v32f16(<32 x half> %x) {
+define <32 x iXLen> @lrint_v32f16(<32 x half> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v32f16:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    ext v5.16b, v0.16b, v0.16b, #8
@@ -748,7 +748,7 @@ define <32 x iXLen> @lrint_v32f16(<32 x half> %x) {
 }
 declare <32 x iXLen> @llvm.lrint.v32iXLen.v32f16(<32 x half>)
 
-define <1 x iXLen> @lrint_v1f32(<1 x float> %x) {
+define <1 x iXLen> @lrint_v1f32(<1 x float> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v1f32:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    frintx v0.2s, v0.2s
@@ -774,7 +774,7 @@ define <1 x iXLen> @lrint_v1f32(<1 x float> %x) {
 }
 declare <1 x iXLen> @llvm.lrint.v1iXLen.v1f32(<1 x float>)
 
-define <2 x iXLen> @lrint_v2f32(<2 x float> %x) {
+define <2 x iXLen> @lrint_v2f32(<2 x float> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v2f32:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    frintx v0.2s, v0.2s
@@ -792,7 +792,7 @@ define <2 x iXLen> @lrint_v2f32(<2 x float> %x) {
 }
 declare <2 x iXLen> @llvm.lrint.v2iXLen.v2f32(<2 x float>)
 
-define <4 x iXLen> @lrint_v4f32(<4 x float> %x) {
+define <4 x iXLen> @lrint_v4f32(<4 x float> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v4f32:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    frintx v0.4s, v0.4s
@@ -814,7 +814,7 @@ define <4 x iXLen> @lrint_v4f32(<4 x float> %x) {
 }
 declare <4 x iXLen> @llvm.lrint.v4iXLen.v4f32(<4 x float>)
 
-define <8 x iXLen> @lrint_v8f32(<8 x float> %x) {
+define <8 x iXLen> @lrint_v8f32(<8 x float> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v8f32:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    frintx v0.4s, v0.4s
@@ -845,7 +845,7 @@ define <8 x iXLen> @lrint_v8f32(<8 x float> %x) {
 }
 declare <8 x iXLen> @llvm.lrint.v8iXLen.v8f32(<8 x float>)
 
-define <16 x iXLen> @lrint_v16f32(<16 x float> %x) {
+define <16 x iXLen> @lrint_v16f32(<16 x float> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v16f32:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    frintx v0.4s, v0.4s
@@ -894,7 +894,7 @@ define <16 x iXLen> @lrint_v16f32(<16 x float> %x) {
 }
 declare <16 x iXLen> @llvm.lrint.v16iXLen.v16f32(<16 x float>)
 
-define <32 x iXLen> @lrint_v32f32(<32 x float> %x) {
+define <32 x iXLen> @lrint_v32f32(<32 x float> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v32f32:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    frintx v0.4s, v0.4s
@@ -987,7 +987,7 @@ define <32 x iXLen> @lrint_v32f32(<32 x float> %x) {
 }
 declare <32 x iXLen> @llvm.lrint.v32iXLen.v32f32(<32 x float>)
 
-define <1 x iXLen> @lrint_v1f64(<1 x double> %x) {
+define <1 x iXLen> @lrint_v1f64(<1 x double> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v1f64:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    frintx d0, d0
@@ -1006,7 +1006,7 @@ define <1 x iXLen> @lrint_v1f64(<1 x double> %x) {
 }
 declare <1 x iXLen> @llvm.lrint.v1iXLen.v1f64(<1 x double>)
 
-define <2 x iXLen> @lrint_v2f64(<2 x double> %x) {
+define <2 x iXLen> @lrint_v2f64(<2 x double> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v2f64:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    frintx v0.2d, v0.2d
@@ -1028,7 +1028,7 @@ define <2 x iXLen> @lrint_v2f64(<2 x double> %x) {
 }
 declare <2 x iXLen> @llvm.lrint.v2iXLen.v2f64(<2 x double>)
 
-define <4 x iXLen> @lrint_v4f64(<4 x double> %x) {
+define <4 x iXLen> @lrint_v4f64(<4 x double> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v4f64:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    frintx v0.2d, v0.2d
@@ -1057,7 +1057,7 @@ define <4 x iXLen> @lrint_v4f64(<4 x double> %x) {
 }
 declare <4 x iXLen> @llvm.lrint.v4iXLen.v4f64(<4 x double>)
 
-define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
+define <8 x iXLen> @lrint_v8f64(<8 x double> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v8f64:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    frintx v2.2d, v2.2d
@@ -1102,7 +1102,7 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
 }
 declare <8 x iXLen> @llvm.lrint.v8iXLen.v8f64(<8 x double>)
 
-define <16 x iXLen> @lrint_v16f64(<16 x double> %x) {
+define <16 x iXLen> @lrint_v16f64(<16 x double> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v16f64:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    frintx v0.2d, v0.2d
@@ -1179,7 +1179,7 @@ define <16 x iXLen> @lrint_v16f64(<16 x double> %x) {
 }
 declare <16 x iXLen> @llvm.lrint.v16iXLen.v16f64(<16 x double>)
 
-define <32 x iXLen> @lrint_v32f64(<32 x double> %x) {
+define <32 x iXLen> @lrint_v32f64(<32 x double> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v32f64:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    frintx v17.2d, v0.2d
@@ -1336,12 +1336,10 @@ define <32 x iXLen> @lrint_v32f64(<32 x double> %x) {
 }
 declare <32 x iXLen> @llvm.lrint.v32iXLen.v32f64(<32 x double>)
 
-define <1 x iXLen> @lrint_v1fp128(<1 x fp128> %x) {
+define <1 x iXLen> @lrint_v1fp128(<1 x fp128> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v1fp128:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-i32-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-i32-NEXT:    .cfi_offset w30, -16
 ; CHECK-i32-NEXT:    bl lrintl
 ; CHECK-i32-NEXT:    fmov s0, w0
 ; CHECK-i32-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -1350,8 +1348,6 @@ define <1 x iXLen> @lrint_v1fp128(<1 x fp128> %x) {
 ; CHECK-i64-LABEL: lrint_v1fp128:
 ; CHECK-i64:       // %bb.0:
 ; CHECK-i64-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-i64-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-i64-NEXT:    .cfi_offset w30, -16
 ; CHECK-i64-NEXT:    bl lrintl
 ; CHECK-i64-NEXT:    fmov d0, x0
 ; CHECK-i64-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -1361,13 +1357,11 @@ define <1 x iXLen> @lrint_v1fp128(<1 x fp128> %x) {
 }
 declare <1 x iXLen> @llvm.lrint.v1iXLen.v1fp128(<1 x fp128>)
 
-define <2 x iXLen> @lrint_v2fp128(<2 x fp128> %x) {
+define <2 x iXLen> @lrint_v2fp128(<2 x fp128> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v2fp128:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    sub sp, sp, #48
 ; CHECK-i32-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
-; CHECK-i32-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-i32-NEXT:    .cfi_offset w30, -16
 ; CHECK-i32-NEXT:    str q1, [sp, #16] // 16-byte Folded Spill
 ; CHECK-i32-NEXT:    bl lrintl
 ; CHECK-i32-NEXT:    fmov s0, w0
@@ -1384,11 +1378,9 @@ define <2 x iXLen> @lrint_v2fp128(<2 x fp128> %x) {
 ; CHECK-i64-LABEL: lrint_v2fp128:
 ; CHECK-i64:       // %bb.0:
 ; CHECK-i64-NEXT:    sub sp, sp, #48
-; CHECK-i64-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
-; CHECK-i64-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-i64-NEXT:    .cfi_offset w30, -16
 ; CHECK-i64-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-i64-NEXT:    mov v0.16b, v1.16b
+; CHECK-i64-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
 ; CHECK-i64-NEXT:    bl lrintl
 ; CHECK-i64-NEXT:    fmov d0, x0
 ; CHECK-i64-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
@@ -1405,13 +1397,11 @@ define <2 x iXLen> @lrint_v2fp128(<2 x fp128> %x) {
 }
 declare <2 x iXLen> @llvm.lrint.v2iXLen.v2fp128(<2 x fp128>)
 
-define <4 x iXLen> @lrint_v4fp128(<4 x fp128> %x) {
+define <4 x iXLen> @lrint_v4fp128(<4 x fp128> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v4fp128:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    sub sp, sp, #80
 ; CHECK-i32-NEXT:    str x30, [sp, #64] // 8-byte Folded Spill
-; CHECK-i32-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-i32-NEXT:    .cfi_offset w30, -16
 ; CHECK-i32-NEXT:    stp q2, q3, [sp, #16] // 32-byte Folded Spill
 ; CHECK-i32-NEXT:    str q1, [sp] // 16-byte Folded Spill
 ; CHECK-i32-NEXT:    bl lrintl
@@ -1438,11 +1428,9 @@ define <4 x iXLen> @lrint_v4fp128(<4 x fp128> %x) {
 ; CHECK-i64-LABEL: lrint_v4fp128:
 ; CHECK-i64:       // %bb.0:
 ; CHECK-i64-NEXT:    sub sp, sp, #80
-; CHECK-i64-NEXT:    str x30, [sp, #64] // 8-byte Folded Spill
-; CHECK-i64-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-i64-NEXT:    .cfi_offset w30, -16
 ; CHECK-i64-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-i64-NEXT:    mov v0.16b, v1.16b
+; CHECK-i64-NEXT:    str x30, [sp, #64] // 8-byte Folded Spill
 ; CHECK-i64-NEXT:    stp q3, q2, [sp, #32] // 32-byte Folded Spill
 ; CHECK-i64-NEXT:    bl lrintl
 ; CHECK-i64-NEXT:    fmov d0, x0
@@ -1470,17 +1458,15 @@ define <4 x iXLen> @lrint_v4fp128(<4 x fp128> %x) {
 }
 declare <4 x iXLen> @llvm.lrint.v4iXLen.v4fp128(<4 x fp128>)
 
-define <8 x iXLen> @lrint_v8fp128(<8 x fp128> %x) {
+define <8 x iXLen> @lrint_v8fp128(<8 x fp128> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v8fp128:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    sub sp, sp, #144
 ; CHECK-i32-NEXT:    str x30, [sp, #128] // 8-byte Folded Spill
-; CHECK-i32-NEXT:    .cfi_def_cfa_offset 144
-; CHECK-i32-NEXT:    .cfi_offset w30, -16
+; CHECK-i32-NEXT:    str q4, [sp, #96] // 16-byte Folded Spill
 ; CHECK-i32-NEXT:    stp q1, q2, [sp] // 32-byte Folded Spill
 ; CHECK-i32-NEXT:    stp q3, q5, [sp, #32] // 32-byte Folded Spill
 ; CHECK-i32-NEXT:    stp q6, q7, [sp, #64] // 32-byte Folded Spill
-; CHECK-i32-NEXT:    str q4, [sp, #96] // 16-byte Folded Spill
 ; CHECK-i32-NEXT:    bl lrintl
 ; CHECK-i32-NEXT:    fmov s0, w0
 ; CHECK-i32-NEXT:    str q0, [sp, #112] // 16-byte Folded Spill
@@ -1524,11 +1510,9 @@ define <8 x iXLen> @lrint_v8fp128(<8 x fp128> %x) {
 ; CHECK-i64-LABEL: lrint_v8fp128:
 ; CHECK-i64:       // %bb.0:
 ; CHECK-i64-NEXT:    sub sp, sp, #144
-; CHECK-i64-NEXT:    str x30, [sp, #128] // 8-byte Folded Spill
-; CHECK-i64-NEXT:    .cfi_def_cfa_offset 144
-; CHECK-i64-NEXT:    .cfi_offset w30, -16
 ; CHECK-i64-NEXT:    str q0, [sp] // 16-byte Folded Spill
 ; CHECK-i64-NEXT:    mov v0.16b, v1.16b
+; CHECK-i64-NEXT:    str x30, [sp, #128] // 8-byte Folded Spill
 ; CHECK-i64-NEXT:    stp q3, q2, [sp, #16] // 32-byte Folded Spill
 ; CHECK-i64-NEXT:    stp q5, q4, [sp, #48] // 32-byte Folded Spill
 ; CHECK-i64-NEXT:    stp q7, q6, [sp, #96] // 32-byte Folded Spill
@@ -1580,22 +1564,19 @@ define <8 x iXLen> @lrint_v8fp128(<8 x fp128> %x) {
 }
 declare <8 x iXLen> @llvm.lrint.v8iXLen.v8fp128(<8 x fp128>)
 
-define <16 x iXLen> @lrint_v16fp128(<16 x fp128> %x) {
+define <16 x iXLen> @lrint_v16fp128(<16 x fp128> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v16fp128:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    sub sp, sp, #272
-; CHECK-i32-NEXT:    stp x29, x30, [sp, #256] // 16-byte Folded Spill
-; CHECK-i32-NEXT:    .cfi_def_cfa_offset 272
-; CHECK-i32-NEXT:    .cfi_offset w30, -8
-; CHECK-i32-NEXT:    .cfi_offset w29, -16
 ; CHECK-i32-NEXT:    stp q1, q2, [sp] // 32-byte Folded Spill
 ; CHECK-i32-NEXT:    ldr q1, [sp, #384]
-; CHECK-i32-NEXT:    stp q3, q5, [sp, #32] // 32-byte Folded Spill
+; CHECK-i32-NEXT:    stp x29, x30, [sp, #256] // 16-byte Folded Spill
 ; CHECK-i32-NEXT:    str q1, [sp, #176] // 16-byte Folded Spill
 ; CHECK-i32-NEXT:    ldr q1, [sp, #368]
-; CHECK-i32-NEXT:    stp q7, q4, [sp, #208] // 32-byte Folded Spill
+; CHECK-i32-NEXT:    stp q3, q5, [sp, #32] // 32-byte Folded Spill
 ; CHECK-i32-NEXT:    str q1, [sp, #160] // 16-byte Folded Spill
 ; CHECK-i32-NEXT:    ldr q1, [sp, #352]
+; CHECK-i32-NEXT:    stp q7, q4, [sp, #208] // 32-byte Folded Spill
 ; CHECK-i32-NEXT:    str q1, [sp, #144] // 16-byte Folded Spill
 ; CHECK-i32-NEXT:    ldr q1, [sp, #336]
 ; CHECK-i32-NEXT:    str q1, [sp, #192] // 16-byte Folded Spill
@@ -1689,19 +1670,16 @@ define <16 x iXLen> @lrint_v16fp128(<16 x fp128> %x) {
 ; CHECK-i64-LABEL: lrint_v16fp128:
 ; CHECK-i64:       // %bb.0:
 ; CHECK-i64-NEXT:    sub sp, sp, #272
-; CHECK-i64-NEXT:    stp x29, x30, [sp, #256] // 16-byte Folded Spill
-; CHECK-i64-NEXT:    .cfi_def_cfa_offset 272
-; CHECK-i64-NEXT:    .cfi_offset w30, -8
-; CHECK-i64-NEXT:    .cfi_offset w29, -16
 ; CHECK-i64-NEXT:    str q2, [sp, #160] // 16-byte Folded Spill
 ; CHECK-i64-NEXT:    ldr q2, [sp, #368]
 ; CHECK-i64-NEXT:    stp q0, q3, [sp] // 32-byte Folded Spill
 ; CHECK-i64-NEXT:    mov v0.16b, v1.16b
 ; CHECK-i64-NEXT:    str q2, [sp, #240] // 16-byte Folded Spill
 ; CHECK-i64-NEXT:    ldr q2, [sp, #384]
-; CHECK-i64-NEXT:    stp q5, q7, [sp, #32] // 32-byte Folded Spill
+; CHECK-i64-NEXT:    stp x29, x30, [sp, #256] // 16-byte Folded Spill
 ; CHECK-i64-NEXT:    str q2, [sp, #224] // 16-byte Folded Spill
 ; CHECK-i64-NEXT:    ldr q2, [sp, #336]
+; CHECK-i64-NEXT:    stp q5, q7, [sp, #32] // 32-byte Folded Spill
 ; CHECK-i64-NEXT:    str q2, [sp, #192] // 16-byte Folded Spill
 ; CHECK-i64-NEXT:    ldr q2, [sp, #352]
 ; CHECK-i64-NEXT:    str q2, [sp, #176] // 16-byte Folded Spill
@@ -1803,14 +1781,11 @@ define <16 x iXLen> @lrint_v16fp128(<16 x fp128> %x) {
 }
 declare <16 x iXLen> @llvm.lrint.v16iXLen.v16fp128(<16 x fp128>)
 
-define <32 x iXLen> @lrint_v32fp128(<32 x fp128> %x) {
+define <32 x iXLen> @lrint_v32fp128(<32 x fp128> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v32fp128:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
 ; CHECK-i32-NEXT:    sub sp, sp, #512
-; CHECK-i32-NEXT:    .cfi_def_cfa_offset 528
-; CHECK-i32-NEXT:    .cfi_offset w30, -8
-; CHECK-i32-NEXT:    .cfi_offset w29, -16
 ; CHECK-i32-NEXT:    str q1, [sp] // 16-byte Folded Spill
 ; CHECK-i32-NEXT:    ldr q1, [sp, #896]
 ; CHECK-i32-NEXT:    stp q2, q3, [sp, #16] // 32-byte Folded Spill
@@ -2026,10 +2001,6 @@ define <32 x iXLen> @lrint_v32fp128(<32 x fp128> %x) {
 ; CHECK-i64-NEXT:    str x29, [sp, #-32]! // 8-byte Folded Spill
 ; CHECK-i64-NEXT:    stp x30, x19, [sp, #16] // 16-byte Folded Spill
 ; CHECK-i64-NEXT:    sub sp, sp, #512
-; CHECK-i64-NEXT:    .cfi_def_cfa_offset 544
-; CHECK-i64-NEXT:    .cfi_offset w19, -8
-; CHECK-i64-NEXT:    .cfi_offset w30, -16
-; CHECK-i64-NEXT:    .cfi_offset w29, -32
 ; CHECK-i64-NEXT:    str q0, [sp, #464] // 16-byte Folded Spill
 ; CHECK-i64-NEXT:    ldr q0, [sp, #896]
 ; CHECK-i64-NEXT:    mov x19, x8
