@@ -3657,6 +3657,7 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV,
     break; // Error
   }
 
+  case Instruction::PtrToAddr:
   case Instruction::PtrToInt: {
     const DataLayout &DL = getDataLayout();
 
