@@ -503,9 +503,6 @@ cir::SourceLanguage CIRGenModule::getCIRSourceLanguage() const {
   using CIRLang = cir::SourceLanguage;
   auto opts = getLangOpts();
 
-  if (opts.OpenCL && !opts.OpenCLCPlusPlus)
-    llvm_unreachable("NYI");
-
   if (opts.CPlusPlus || opts.CPlusPlus11 || opts.CPlusPlus14 ||
       opts.CPlusPlus17 || opts.CPlusPlus20 || opts.CPlusPlus23 ||
       opts.CPlusPlus26)
@@ -516,7 +513,8 @@ cir::SourceLanguage CIRGenModule::getCIRSourceLanguage() const {
     return CIRLang::C;
 
   // TODO(cir): support remaining source languages.
-  llvm_unreachable("CIR does not yet support the given source language");
+  assert(!cir::MissingFeatures::sourceLanguageCases());
+  errorNYI("CIR does not yet support the given source language");
 }
 
 static void setLinkageForGV(cir::GlobalOp &gv, const NamedDecl *nd) {

@@ -63,6 +63,8 @@ def CIR_SourceLanguage : CIR_I32EnumAttr<"SourceLanguage", "source language", [
   let genSpecializedAttr = 0;
 }
 
+// TODO: Add cases for other languages that Clang supports.
+
 def CIR_SourceLanguageAttr : CIR_EnumAttr<CIR_SourceLanguage, "lang"> {
 
   let summary = "Module source language";
