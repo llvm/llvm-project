@@ -2528,8 +2528,10 @@ static bool OptimizeNonTrivialIFuncs(
     Module &M, function_ref<TargetTransformInfo &(Function &)> GetTTI) {
   bool Changed = false;
 
-  // Cache containing the mask constructed from a function's target features.
+  // Cache containing the feature mask constructed from a function's metadata.
   DenseMap<Function *, APInt> FeatureMask;
+  // Cache containing the priority mask constructed from a function's metadata.
+  DenseMap<Function *, APInt> PriorityMask;
 
   for (GlobalIFunc &IF : M.ifuncs()) {
     if (IF.isInterposable())
@@ -2559,16 +2561,19 @@ static bool OptimizeNonTrivialIFuncs(
     LLVM_DEBUG(dbgs() << "Statically resolving calls to function "
                       << Resolver->getName() << "\n");
 
-    // Cache the feature mask for each callee.
+    // Cache the masks for each callee.
     for (Function *Callee : Callees) {
-      auto [It, Inserted] = FeatureMask.try_emplace(Callee);
-      if (Inserted)
-        It->second = TTI.getFeatureMask(*Callee);
+      auto [FeatIt, FeatInserted] = FeatureMask.try_emplace(Callee);
+      if (FeatInserted)
+        FeatIt->second = TTI.getFeatureMask(*Callee);
+      auto [PriorIt, PriorInserted] = PriorityMask.try_emplace(Callee);
+      if (PriorInserted)
+        PriorIt->second = TTI.getPriorityMask(*Callee);
     }
 
     // Sort the callee versions in decreasing priority order.
     sort(Callees, [&](auto *LHS, auto *RHS) {
-      return FeatureMask[LHS].ugt(FeatureMask[RHS]);
+      return PriorityMask[LHS].ugt(PriorityMask[RHS]);
     });
 
     // Find the callsites and cache the feature mask for each caller.
@@ -2581,6 +2586,9 @@ static bool OptimizeNonTrivialIFuncs(
           auto [FeatIt, FeatInserted] = FeatureMask.try_emplace(Caller);
           if (FeatInserted)
             FeatIt->second = TTI.getFeatureMask(*Caller);
+          auto [PriorIt, PriorInserted] = PriorityMask.try_emplace(Caller);
+          if (PriorInserted)
+            PriorIt->second = TTI.getPriorityMask(*Caller);
           auto [CallIt, CallInserted] = CallSites.try_emplace(Caller);
           if (CallInserted)
             Callers.push_back(Caller);
@@ -2591,7 +2599,7 @@ static bool OptimizeNonTrivialIFuncs(
 
     // Sort the caller versions in decreasing priority order.
     sort(Callers, [&](auto *LHS, auto *RHS) {
-      return FeatureMask[LHS].ugt(FeatureMask[RHS]);
+      return PriorityMask[LHS].ugt(PriorityMask[RHS]);
     });
 
     auto implies = [](APInt A, APInt B) { return B.isSubsetOf(A); };

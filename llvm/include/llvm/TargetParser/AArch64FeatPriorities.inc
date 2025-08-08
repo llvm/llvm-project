@@ -59,7 +59,13 @@ enum FeatPriorities {
   PRIOR_SME_I64,
   PRIOR_SME2,
   PRIOR_MOPS,
-  PRIOR_CSSC
+  PRIOR_CSSC,
+  PRIOR_MAX,
+  PRIOR_P0 = 123,
+  PRIOR_P1,
+  PRIOR_P2,
+  PRIOR_P3,
+  PRIOR_P4
 };
 
 #endif
