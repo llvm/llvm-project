@@ -92,16 +92,9 @@ static raw_ostream &operator<<(raw_ostream &OS,
   return OS;
 }
 
-static const EnumEntry<dxil::ResourceClass> ResourceClassNames[] = {
-    {"CBV", dxil::ResourceClass::CBuffer},
-    {"SRV", dxil::ResourceClass::SRV},
-    {"UAV", dxil::ResourceClass::UAV},
-    {"Sampler", dxil::ResourceClass::Sampler},
-};
-
 static raw_ostream &operator<<(raw_ostream &OS, const ClauseType &Type) {
   OS << enumToStringRef(dxil::ResourceClass(llvm::to_underlying(Type)),
-                        ArrayRef(ResourceClassNames));
+                        dxbc::getResourceClasses());
 
   return OS;
 }
