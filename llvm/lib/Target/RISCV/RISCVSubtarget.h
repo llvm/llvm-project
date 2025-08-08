@@ -94,7 +94,7 @@ public:
 
   enum class ZicfilpLabelSchemeKind {
     Disabled,
-    Unknown,
+    EnabledUnknown,
     Unlabeled,
     FuncSig,
   };

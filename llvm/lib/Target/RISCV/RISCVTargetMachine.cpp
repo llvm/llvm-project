@@ -270,16 +270,19 @@ RISCVTargetMachine::getSubtargetImpl(const Function &F) const {
           StringSwitch<ZicfilpLabelSchemeKind>(CFBranchLabelScheme)
               .Case("unlabeled", ZicfilpLabelSchemeKind::Unlabeled)
               .Case("func-sig", ZicfilpLabelSchemeKind::FuncSig)
-              .Default(ZicfilpLabelSchemeKind::Unknown);
-      assert(ZicfilpLabelScheme != ZicfilpLabelSchemeKind::Unknown);
+              .Default(ZicfilpLabelSchemeKind::EnabledUnknown);
+      assert(ZicfilpLabelScheme != ZicfilpLabelSchemeKind::EnabledUnknown);
     }
   }
 
   SmallString<512> Key;
-  raw_svector_ostream(Key) << "RVVMin" << RVVBitsMin << "RVVMax" << RVVBitsMax
-                           << "ZicfilpLabelSchemeKind"
-                           << to_underlying(ZicfilpLabelScheme) << CPU
-                           << TuneCPU << FS;
+  {
+    raw_svector_ostream OS(Key);
+    OS << "RVVMin" << RVVBitsMin << "RVVMax" << RVVBitsMax;
+    if (ZicfilpLabelScheme != ZicfilpLabelSchemeKind::Disabled)
+      OS << "ZicfilpLabelSchemeKind" << to_underlying(ZicfilpLabelScheme);
+    OS << CPU << TuneCPU << FS;
+  }
   auto &I = SubtargetMap[Key];
   if (!I) {
     // This needs to be done before we create a new subtarget since any
