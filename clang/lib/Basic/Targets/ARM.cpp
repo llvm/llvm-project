@@ -133,19 +133,24 @@ void ARMTargetInfo::setArchInfo(llvm::ARM::ArchKind Kind) {
 }
 
 void ARMTargetInfo::setAtomic() {
-  // when triple does not specify a sub arch,
-  // then we are not using inline atomics
-  bool ShouldUseInlineAtomic =
-      (ArchISA == llvm::ARM::ISAKind::ARM && ArchVersion >= 6) ||
-      (ArchISA == llvm::ARM::ISAKind::THUMB && ArchVersion >= 7);
-  // Cortex M does not support 8 byte atomics, while general Thumb2 does.
   if (ArchProfile == llvm::ARM::ProfileKind::M) {
+    // M-class only ever supports 32-bit atomics. Cortex-M0 doesn't have
+    // any atomics.
     MaxAtomicPromoteWidth = 32;
-    if (ShouldUseInlineAtomic)
+    if (ArchVersion >= 7)
       MaxAtomicInlineWidth = 32;
   } else {
+    // A-class targets have up to 64-bit atomics.
+    //
+    // On Linux, 64-bit atomics are always available through kernel helpers
+    // (which are lock-free). Otherwise, atomics are available on v6 or later.
+    //
+    // (Thumb doesn't matter; for Thumbv6, we just use a library call which
+    // switches out of Thumb mode.)
+    //
+    // This should match setMaxAtomicSizeInBitsSupported() in the backend.
     MaxAtomicPromoteWidth = 64;
-    if (ShouldUseInlineAtomic)
+    if (getTriple().getOS() == llvm::Triple::Linux || ArchVersion >= 6)
       MaxAtomicInlineWidth = 64;
   }
 }
@@ -618,21 +623,21 @@ bool ARMTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       LDREX = 0;
     else if (ArchKind == llvm::ARM::ArchKind::ARMV6K ||
              ArchKind == llvm::ARM::ArchKind::ARMV6KZ)
-      LDREX = LDREX_D | LDREX_W | LDREX_H | LDREX_B;
+      LDREX = ARM_LDREX_D | ARM_LDREX_W | ARM_LDREX_H | ARM_LDREX_B;
     else
-      LDREX = LDREX_W;
+      LDREX = ARM_LDREX_W;
     break;
   case 7:
   case 8:
     if (ArchProfile == llvm::ARM::ProfileKind::M)
-      LDREX = LDREX_W | LDREX_H | LDREX_B;
+      LDREX = ARM_LDREX_W | ARM_LDREX_H | ARM_LDREX_B;
     else
-      LDREX = LDREX_D | LDREX_W | LDREX_H | LDREX_B;
+      LDREX = ARM_LDREX_D | ARM_LDREX_W | ARM_LDREX_H | ARM_LDREX_B;
     break;
   case 9:
     assert(ArchProfile != llvm::ARM::ProfileKind::M &&
            "No Armv9-M architectures defined");
-    LDREX = LDREX_D | LDREX_W | LDREX_H | LDREX_B;
+    LDREX = ARM_LDREX_D | ARM_LDREX_W | ARM_LDREX_H | ARM_LDREX_B;
   }
 
   if (!(FPU & NeonFPU) && FPMath == FP_Neon) {

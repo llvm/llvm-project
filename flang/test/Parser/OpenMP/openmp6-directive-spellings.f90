@@ -170,14 +170,14 @@ end
 !UNPARSE: SUBROUTINE f06
 !UNPARSE:  IMPLICIT NONE
 !UNPARSE:  INTEGER i
-!UNPARSE: !$OMP TARGET DATA  MAP(TOFROM: i)
+!UNPARSE: !$OMP TARGET_DATA MAP(TOFROM: i)
 !UNPARSE:   i=0_4
-!UNPARSE: !$OMP END TARGET DATA
+!UNPARSE: !$OMP END TARGET_DATA
 !UNPARSE: END SUBROUTINE
 
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPBlockConstruct
-!PARSE-TREE: | OmpBeginBlockDirective
-!PARSE-TREE: | | OmpBlockDirective -> llvm::omp::Directive = target data
+!PARSE-TREE: | OmpBeginDirective
+!PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = target data
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Map -> OmpMapClause
 !PARSE-TREE: | | | Modifier -> OmpMapType -> Value = Tofrom
 !PARSE-TREE: | | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'i'
@@ -188,8 +188,8 @@ end
 !PARSE-TREE: | | | | Designator -> DataRef -> Name = 'i'
 !PARSE-TREE: | | | Expr = '0_4'
 !PARSE-TREE: | | | | LiteralConstant -> IntLiteralConstant = '0'
-!PARSE-TREE: | OmpEndBlockDirective
-!PARSE-TREE: | | OmpBlockDirective -> llvm::omp::Directive = target data
+!PARSE-TREE: | OmpEndDirective
+!PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = target data
 !PARSE-TREE: | | OmpClauseList ->
 
 subroutine f07
