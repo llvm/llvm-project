@@ -98,3 +98,26 @@ TEST(IsContiguous, Basic) {
   EXPECT_TRUE(RTNAME(IsContiguousUpTo)(section, 1));
   EXPECT_FALSE(RTNAME(IsContiguousUpTo)(section, 2));
 }
+
+TEST(DescriptorGetBaseAddress, Basic) {
+  auto array{MakeArray<TypeCategory::Integer, 4>(
+      std::vector<int>{2, 3}, std::vector<std::int32_t>{0, 1, 2, 3, 4, 5})};
+  void *baseAddr = RTNAME(DescriptorGetBaseAddress)(*array);
+  EXPECT_NE(baseAddr, nullptr);
+  EXPECT_EQ(baseAddr, array->raw().base_addr);
+}
+
+TEST(DescriptorGetDataSizeInBytes, Basic) {
+  // Test with a 2x3 integer*4 array
+  auto int4Array{MakeArray<TypeCategory::Integer, 4>({2, 3})};
+  EXPECT_EQ(RTNAME(DescriptorGetDataSizeInBytes)(*int4Array),
+      6 * sizeof(std::int32_t));
+  // Test with a 1D, 5-element real*8 array
+  auto real8Array{MakeArray<TypeCategory::Real, 8>({5})};
+  EXPECT_EQ(
+      RTNAME(DescriptorGetDataSizeInBytes)(*real8Array), 5 * sizeof(double));
+  // Test with a scalar logical*1
+  auto logical1Scalar{MakeArray<TypeCategory::Logical, 1>({})};
+  EXPECT_EQ(
+      RTNAME(DescriptorGetDataSizeInBytes)(*logical1Scalar), 1 * sizeof(bool));
+}

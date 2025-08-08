@@ -49,6 +49,14 @@ void RTDECL(CopyAndUpdateDescriptor)(Descriptor &to, const Descriptor &from,
     const typeInfo::DerivedType *newDynamicType,
     ISO::CFI_attribute_t newAttribute, enum LowerBoundModifier newLowerBounds);
 
+// Retrieve the base_addr from Descriptor
+void *RTDECL(DescriptorGetBaseAddress)(const Descriptor &desc,
+    const char *sourceFile = nullptr, int sourceLine = 0);
+
+// Retrieve the totalSizeInBytes of data from Descriptor
+std::size_t RTDECL(DescriptorGetDataSizeInBytes)(const Descriptor &desc,
+    const char *sourceFile = nullptr, int sourceLine = 0);
+
 } // extern "C"
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_SUPPORT_H_
