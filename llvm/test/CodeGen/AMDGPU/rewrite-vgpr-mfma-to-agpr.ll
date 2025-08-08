@@ -479,6 +479,75 @@ entry:
   ret void
 }
 
+define void @test_rewrite_mfma_subreg_insert0(float %arg0, float %arg1, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_mfma_subreg_insert0:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 v[2:5], v[2:3], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mfma_f32_4x4x1_16b_f32 v[0:3], v0, v1, v[2:5]
+; CHECK-NEXT:    s_nop 3
+; CHECK-NEXT:    v_accvgpr_write_b32 a0, v0
+; CHECK-NEXT:    v_accvgpr_write_b32 a1, v1
+; CHECK-NEXT:    v_accvgpr_write_b32 a2, v2
+; CHECK-NEXT:    v_accvgpr_write_b32 a3, v3
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:7]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <4 x float>, ptr addrspace(1) %ptr
+  %mai = call <4 x float> @llvm.amdgcn.mfma.f32.4x4x1f32(float %arg0, float %arg1, <4 x float> %src2, i32 0, i32 0, i32 0)
+  %insert.sub0 = shufflevector <4 x float> %mai, <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+  call void asm sideeffect "; use $0", "a"(<8 x float> %insert.sub0)
+  ret void
+}
+
+; odd offset
+define void @test_rewrite_mfma_subreg_insert1(float %arg0, float %arg1, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_mfma_subreg_insert1:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 v[2:5], v[2:3], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mfma_f32_4x4x1_16b_f32 v[0:3], v0, v1, v[2:5]
+; CHECK-NEXT:    s_nop 3
+; CHECK-NEXT:    v_pk_mov_b32 v[0:1], v[0:1], v[2:3] op_sel:[1,0]
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    v_accvgpr_write_b32 a0, v0
+; CHECK-NEXT:    v_accvgpr_write_b32 a1, v1
+; CHECK-NEXT:    v_accvgpr_write_b32 a2, v3
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:7]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load <4 x float>, ptr addrspace(1) %ptr
+  %mai = call <4 x float> @llvm.amdgcn.mfma.f32.4x4x1f32(float %arg0, float %arg1, <4 x float> %src2, i32 0, i32 0, i32 0)
+  %insert.sub0 = shufflevector <4 x float> %mai, <4 x float> poison, <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 poison, i32 poison, i32 poison, i32 poison>
+  call void asm sideeffect "; use $0", "a"(<8 x float> %insert.sub0)
+  ret void
+}
+
+define void @test_rewrite_mfma_subreg_insert2(double %arg0, double %arg1, ptr addrspace(1) %ptr) #0 {
+; CHECK-LABEL: test_rewrite_mfma_subreg_insert2:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx2 v[4:5], v[4:5], off
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    v_mfma_f64_4x4x4_4b_f64 v[0:1], v[0:1], v[2:3], v[4:5]
+; CHECK-NEXT:    s_nop 5
+; CHECK-NEXT:    v_accvgpr_write_b32 a0, v0
+; CHECK-NEXT:    v_accvgpr_write_b32 a1, v1
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:3]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %src2 = load double, ptr addrspace(1) %ptr
+  %mai = call double @llvm.amdgcn.mfma.f64.4x4x4f64(double %arg0, double %arg1, double %src2, i32 0, i32 0, i32 0)
+  %insert.sub0 = insertelement <2 x double> poison, double %mai, i32 0
+  call void asm sideeffect "; use $0", "a"(<2 x double> %insert.sub0)
+  ret void
+}
+
 declare <4 x float> @llvm.amdgcn.mfma.f32.16x16x16f16(<4 x half>, <4 x half>, <4 x float>, i32 immarg, i32 immarg, i32 immarg) #2
 declare <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float, float, <32 x float>, i32 immarg, i32 immarg, i32 immarg) #2
 declare noundef range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.x() #3
