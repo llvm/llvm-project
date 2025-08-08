@@ -894,9 +894,8 @@ PdbAstBuilder::CreateFunctionDecl(PdbCompilandSymId func_id,
       }
     }
 
-    ConstString mangled_name;
-    if (auto mangled_name_opt = pdb->FindMangledFunctionName(func_id))
-      mangled_name = ConstString(*mangled_name_opt);
+    ConstString mangled_name(
+        pdb->FindMangledFunctionName(func_id).value_or(llvm::StringRef()));
 
     if (!tag_record.FieldList.isSimple()) {
       CVType field_list_cvt = index.tpi().getType(tag_record.FieldList);
