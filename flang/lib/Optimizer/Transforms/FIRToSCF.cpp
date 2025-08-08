@@ -10,6 +10,7 @@
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include <mlir/Support/LLVM.h>
 
 namespace fir {
 #define GEN_PASS_DEF_FIRTOSCFPASS
@@ -114,59 +115,53 @@ struct IterWhileConversion : public OpRewritePattern<fir::IterWhileOp> {
       loopTypes.push_back(val.getType());
 
     auto scfWhileOp = scf::WhileOp::create(rewriter, loc, loopTypes, initVals);
-    rewriter.createBlock(&scfWhileOp.getBefore(), scfWhileOp.getBefore().end(),
-                         loopTypes,
-                         SmallVector<Location>(loopTypes.size(), loc));
 
-    rewriter.createBlock(&scfWhileOp.getAfter(), scfWhileOp.getAfter().end(),
-                         loopTypes,
-                         SmallVector<Location>(loopTypes.size(), loc));
+    auto &beforeBlock = *rewriter.createBlock(
+        &scfWhileOp.getBefore(), scfWhileOp.getBefore().end(), loopTypes,
+        SmallVector<Location>(loopTypes.size(), loc));
 
-    {
-      rewriter.setInsertionPointToStart(&scfWhileOp.getBefore().front());
-      auto args = scfWhileOp.getBefore().getArguments();
-      auto iv = args[0];
-      auto ok = args[1];
+    auto &afterBlock = *rewriter.createBlock(
+        &scfWhileOp.getAfter(), scfWhileOp.getAfter().end(), loopTypes,
+        SmallVector<Location>(loopTypes.size(), loc));
 
-      Value inductionCmp = mlir::arith::CmpIOp::create(
-          rewriter, loc, mlir::arith::CmpIPredicate::sle, iv, upperBound);
-      Value cmp = mlir::arith::AndIOp::create(rewriter, loc, inductionCmp, ok);
+    auto beforeArgs = scfWhileOp.getBefore().getArguments();
+    auto beforeIv = beforeArgs[0];
+    auto beforeOk = beforeArgs[1];
 
-      mlir::scf::ConditionOp::create(rewriter, loc, cmp, args);
-    }
+    rewriter.setInsertionPointToStart(&beforeBlock);
 
-    {
-      rewriter.setInsertionPointToStart(&scfWhileOp.getAfter().front());
-      auto args = scfWhileOp.getAfter().getArguments();
-      auto iv = args[0];
+    Value inductionCmp = mlir::arith::CmpIOp::create(
+        rewriter, loc, mlir::arith::CmpIPredicate::sle, beforeIv, upperBound);
+    Value cond =
+        mlir::arith::AndIOp::create(rewriter, loc, inductionCmp, beforeOk);
 
-      mlir::IRMapping mapping;
-      for (auto [oldArg, newVal] :
-           llvm::zip(iterWhileOp.getBody()->getArguments(), args))
-        mapping.map(oldArg, newVal);
+    mlir::scf::ConditionOp::create(rewriter, loc, cond, beforeArgs);
 
-      for (auto &op : iterWhileOp.getBody()->without_terminator())
-        rewriter.clone(op, mapping);
+    auto afterArgs = scfWhileOp.getAfter().getArguments();
 
-      auto resultOp =
-          cast<fir::ResultOp>(iterWhileOp.getBody()->getTerminator());
-      auto results = resultOp.getResults();
+    SmallVector<Value> argReplacements;
+    for (auto [oldArg, newVal] :
+         llvm::zip(iterWhileOp.getBody()->getArguments(), afterArgs))
+      argReplacements.push_back(newVal);
 
-      SmallVector<Value> yieldedVals;
+    auto resultOp = cast<fir::ResultOp>(iterWhileOp.getBody()->getTerminator());
+    SmallVector<Value> results(resultOp->getOperands().begin(),
+                               resultOp->getOperands().end());
 
-      Value nextIv = mlir::arith::AddIOp::create(rewriter, loc, iv, step);
-      yieldedVals.push_back(nextIv);
+    rewriter.inlineBlockBefore(iterWhileOp.getBody(), &afterBlock,
+                               afterBlock.begin(), argReplacements);
 
-      for (auto val : results.drop_front()) {
-        if (mapping.contains(val)) {
-          yieldedVals.push_back(mapping.lookup(val));
-        } else {
-          yieldedVals.push_back(val);
-        }
-      }
+    Value afterIv = afterArgs[0];
 
-      mlir::scf::YieldOp::create(rewriter, loc, yieldedVals);
-    }
+    rewriter.setInsertionPointToStart(&afterBlock);
+
+    results[0] = mlir::arith::AddIOp::create(rewriter, loc, afterIv, step);
+
+    Operation *movedTerminator = afterBlock.getTerminator();
+    rewriter.setInsertionPoint(movedTerminator);
+
+    mlir::scf::YieldOp::create(rewriter, loc, results);
+    rewriter.eraseOp(movedTerminator);
 
     rewriter.replaceOp(iterWhileOp, scfWhileOp);
     return success();
