@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=unix.Malloc -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc -verify %s
 
 #include "Inputs/system-header-simulator-for-malloc.h"
 
@@ -37,7 +37,7 @@ void test_nested_alloc() {
 }
 
 void test_nested_field() {
-    struct Obj *o = malloc(sizeof(struct Obj));
+    struct Obj *o = (struct Obj *)malloc(sizeof(struct Obj));
     int *f = &o->field;
     free(o);
     use(f); // expected-warning{{Use of memory after it is freed}}
