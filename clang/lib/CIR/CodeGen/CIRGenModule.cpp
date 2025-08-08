@@ -656,8 +656,6 @@ mlir::Value CIRGenModule::getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty,
 
 void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
                                            bool isTentative) {
-  const QualType astTy = vd->getType();
-
   if (getLangOpts().OpenCL || getLangOpts().OpenMPIsTargetDevice) {
     errorNYI(vd->getSourceRange(), "emit OpenCL/OpenMP global variable");
     return;
@@ -701,7 +699,7 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
     // never attempt to emit a tentative definition if a real one
     // exists. A use may still exists, however, so we still may need
     // to do a RAUW.
-    assert(!astTy->isIncompleteType() && "Unexpected incomplete type");
+    assert(!vd->getType()->isIncompleteType() && "Unexpected incomplete type");
     init = builder.getZeroInitAttr(convertType(vd->getType()));
   } else {
     emitter.emplace(*this);
@@ -1298,6 +1296,7 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
              decl->getDeclKindName());
     break;
 
+  case Decl::CXXConversion:
   case Decl::CXXMethod:
   case Decl::Function: {
     auto *fd = cast<FunctionDecl>(decl);
@@ -1307,8 +1306,14 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
     break;
   }
 
-  case Decl::Var: {
+  case Decl::Var:
+  case Decl::Decomposition:
+  case Decl::VarTemplateSpecialization: {
     auto *vd = cast<VarDecl>(decl);
+    if (isa<DecompositionDecl>(decl)) {
+      errorNYI(decl->getSourceRange(), "global variable decompositions");
+      break;
+    }
     emitGlobal(vd);
     break;
   }
@@ -1330,8 +1335,16 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
     break;
 
   // No code generation needed.
-  case Decl::UsingShadow:
+  case Decl::ClassTemplate:
+  case Decl::Concept:
+  case Decl::CXXDeductionGuide:
   case Decl::Empty:
+  case Decl::FunctionTemplate:
+  case Decl::StaticAssert:
+  case Decl::TypeAliasTemplate:
+  case Decl::UsingShadow:
+  case Decl::VarTemplate:
+  case Decl::VarTemplatePartialSpecialization:
     break;
 
   case Decl::CXXConstructor:
@@ -1351,6 +1364,21 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
   case Decl::CXXRecord:
     assert(!cir::MissingFeatures::generateDebugInfo());
     assert(!cir::MissingFeatures::cxxRecordStaticMembers());
+    break;
+
+  case Decl::FileScopeAsm:
+    // File-scope asm is ignored during device-side CUDA compilation.
+    if (langOpts.CUDA && langOpts.CUDAIsDevice)
+      break;
+    // File-scope asm is ignored during device-side OpenMP compilation.
+    if (langOpts.OpenMPIsTargetDevice)
+      break;
+    // File-scope asm is ignored during device-side SYCL compilation.
+    if (langOpts.SYCLIsDevice)
+      break;
+    auto *file_asm = cast<FileScopeAsmDecl>(decl);
+    std::string line = file_asm->getAsmString();
+    globalScopeAsm.push_back(builder.getStringAttr(line));
     break;
   }
 }
@@ -1964,6 +1992,9 @@ CIRGenModule::getGlobalVisibilityAttrFromDecl(const Decl *decl) {
 void CIRGenModule::release() {
   emitDeferred();
   applyReplacements();
+
+  theModule->setAttr(cir::CIRDialect::getModuleLevelAsmAttrName(),
+                     builder.getArrayAttr(globalScopeAsm));
 
   // There's a lot of code that is not implemented yet.
   assert(!cir::MissingFeatures::cgmRelease());

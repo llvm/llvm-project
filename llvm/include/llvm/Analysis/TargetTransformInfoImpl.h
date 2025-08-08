@@ -878,9 +878,6 @@ public:
     switch (ICA.getID()) {
     default:
       break;
-    case Intrinsic::experimental_vector_histogram_add:
-      // For now, we want explicit support from the target for histograms.
-      return InstructionCost::getInvalid();
     case Intrinsic::allow_runtime_check:
     case Intrinsic::allow_ubsan_check:
     case Intrinsic::annotation:
@@ -1144,6 +1141,8 @@ public:
   virtual void collectKernelLaunchBounds(
       const Function &F,
       SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {}
+
+  virtual bool allowVectorElementIndexingUsingGEP() const { return true; }
 
 protected:
   // Obtain the minimum required size to hold the value (without the sign)

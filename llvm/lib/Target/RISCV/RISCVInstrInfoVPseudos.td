@@ -1510,21 +1510,6 @@ class VPseudoTiedBinaryCarryIn<VReg RetClass,
   let VLMul = MInfo.value;
 }
 
-class VPseudoTernaryNoMask<VReg RetClass,
-                           RegisterClass Op1Class,
-                           DAGOperand Op2Class,
-                           string Constraint> :
-      RISCVVPseudo<(outs RetClass:$rd),
-                   (ins RetClass:$rs3, Op1Class:$rs1, Op2Class:$rs2,
-                        AVL:$vl, sew:$sew)> {
-  let mayLoad = 0;
-  let mayStore = 0;
-  let hasSideEffects = 0;
-  let Constraints = !interleave([Constraint, "$rd = $rs3"], ",");
-  let HasVLOp = 1;
-  let HasSEWOp = 1;
-}
-
 class VPseudoTernaryNoMaskWithPolicy<VReg RetClass,
                                      RegisterClass Op1Class,
                                      DAGOperand Op2Class,

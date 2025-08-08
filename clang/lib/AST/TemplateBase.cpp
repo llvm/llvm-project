@@ -339,6 +339,17 @@ bool TemplateArgument::isPackExpansion() const {
   llvm_unreachable("Invalid TemplateArgument Kind!");
 }
 
+bool TemplateArgument::isConceptOrConceptTemplateParameter() const {
+  if (getKind() == TemplateArgument::Template) {
+    if (isa<ConceptDecl>(getAsTemplate().getAsTemplateDecl()))
+      return true;
+    else if (auto *TTP = dyn_cast_if_present<TemplateTemplateParmDecl>(
+                 getAsTemplate().getAsTemplateDecl()))
+      return TTP->templateParameterKind() == TNK_Concept_template;
+  }
+  return false;
+}
+
 bool TemplateArgument::containsUnexpandedParameterPack() const {
   return getDependence() & TemplateArgumentDependence::UnexpandedPack;
 }

@@ -1,4 +1,4 @@
-; RUN: llvm-ir2vec --mode=triplets %s | FileCheck %s -check-prefix=TRIPLETS
+; RUN: llvm-ir2vec triplets %s | FileCheck %s -check-prefix=TRIPLETS
 
 define i32 @simple_add(i32 %a, i32 %b) {
 entry:

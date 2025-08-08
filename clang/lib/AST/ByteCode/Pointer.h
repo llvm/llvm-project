@@ -39,6 +39,10 @@ struct BlockPointer {
   Block *Pointee;
   /// Start of the current subfield.
   unsigned Base;
+  /// Previous link in the pointer chain.
+  Pointer *Prev;
+  /// Next link in the pointer chain.
+  Pointer *Next;
 };
 
 struct IntPointer {
@@ -832,15 +836,10 @@ private:
   /// Offset into the storage.
   uint64_t Offset = 0;
 
-  /// Previous link in the pointer chain.
-  Pointer *Prev = nullptr;
-  /// Next link in the pointer chain.
-  Pointer *Next = nullptr;
-
   Storage StorageKind = Storage::Int;
   union {
-    BlockPointer BS;
     IntPointer Int;
+    BlockPointer BS;
     FunctionPointer Fn;
     TypeidPointer Typeid;
   } PointeeStorage;
