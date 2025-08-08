@@ -274,6 +274,22 @@ LIBC_INLINE void LocalState::Guard::fill(void *buf, size_t size) const {
   }
 }
 
+//===----------------------------------------------------------------------===//
+// Fallback Fill
+//===----------------------------------------------------------------------===//
+LIBC_INLINE void fallback_rng_fill(void *buf, size_t size) {
+  size_t remaining = size;
+  char *cursor = reinterpret_cast<char *>(buf);
+  while (remaining > 0) {
+    int res =
+        LIBC_NAMESPACE::syscall_impl<int>(SYS_getrandom, cursor, remaining, 0);
+    if (res < 0)
+      continue;
+    remaining -= static_cast<size_t>(res);
+    cursor += res;
+  }
+}
+
 } // namespace vdso_rng
 } // namespace LIBC_NAMESPACE_DECL
 

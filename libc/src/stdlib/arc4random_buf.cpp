@@ -7,12 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdlib/arc4random_buf.h"
-#include "src/stdlib/linux/vsdo_rng.h"
+#include "src/__support/CPP/optional.h"
+#include "src/__support/OSUtil/syscall.h"
+#include "src/stdlib/linux/vdso_rng.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 void arc4random_buf(void *buf, size_t len) {
-  vdso_rng::LocalState::Guard guard = vdso_rng::get();
+  using namespace vdso_rng;
+  cpp::optional<LocalState::Guard> guard = local_state.get();
+  if (!guard) {
+    return fallback_rng_fill(buf, len);
+  }
+  guard->fill(buf, len);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
