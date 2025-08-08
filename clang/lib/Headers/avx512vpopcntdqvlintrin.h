@@ -99,5 +99,7 @@ _mm256_maskz_popcnt_epi32(__mmask8 __U, __m256i __A) {
 
 #undef __DEFAULT_FN_ATTRS128
 #undef __DEFAULT_FN_ATTRS256
+#undef __DEFAULT_FN_ATTRS128_CONSTEXPR
+#undef __DEFAULT_FN_ATTRS256_CONSTEXPR
 
 #endif
