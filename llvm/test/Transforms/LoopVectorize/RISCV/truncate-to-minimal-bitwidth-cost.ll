@@ -10,12 +10,6 @@ define void @test_pr98413_zext_removed(ptr %src, ptr noalias %dst, i64 %x) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 8
-; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP3]], 1
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 97, [[TMP9]]
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP3]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 8
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i64> poison, i64 [[X]], i64 0
@@ -83,12 +77,6 @@ define void @test_pr98413_sext_removed(ptr %src, ptr noalias %dst, i64 %x) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 8
-; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP3]], 1
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 97, [[TMP9]]
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP3]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 8
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i64> poison, i64 [[X]], i64 0
@@ -157,12 +145,6 @@ define void @truncate_to_i1_used_by_branch(i8 %x, ptr %dst) #0 {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i32 [[TMP2]], 4
-; CHECK-NEXT:    [[TMP12:%.*]] = sub i32 [[TMP3]], 1
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 9, [[TMP12]]
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], [[TMP3]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i32 [[TMP10]], 4
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x ptr> poison, ptr [[DST]], i64 0
@@ -265,12 +247,6 @@ define void @icmp_only_first_op_truncated(ptr noalias %dst, i32 %x, i64 %N, i64 
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[V]], 1
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 2
-; CHECK-NEXT:    [[TMP13:%.*]] = sub i64 [[TMP4]], 1
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP0]], [[TMP13]]
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP4]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 2
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[N]], i64 0

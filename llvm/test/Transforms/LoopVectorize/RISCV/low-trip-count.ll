@@ -123,12 +123,6 @@ define void @trip8_i8(ptr noalias nocapture noundef %dst, ptr noalias nocapture 
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], 1
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 8, [[TMP2]]
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 4
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -185,12 +179,6 @@ define void @trip16_i8(ptr noalias nocapture noundef %dst, ptr noalias nocapture
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP0]], 8
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP9]], 1
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 16, [[TMP2]]
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP9]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP3]], 8
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -248,12 +236,6 @@ define void @trip32_i8(ptr noalias nocapture noundef %dst, ptr noalias nocapture
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP0]], 16
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP9]], 1
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 32, [[TMP2]]
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP9]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP3]], 16
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -310,12 +292,6 @@ define void @trip24_i8(ptr noalias nocapture noundef %dst, ptr noalias nocapture
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 16
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], 1
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 24, [[TMP2]]
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 16
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]

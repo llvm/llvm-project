@@ -22,8 +22,6 @@ define i64 @same_exit_block_pre_inc_use1() #1 {
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 16
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 64, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 64, [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 16
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 3, [[N_VEC]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -34,7 +32,7 @@ define i64 @same_exit_block_pre_inc_use1() #1 {
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 16 x i8>, ptr [[TMP13]], align 1
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp ne <vscale x 16 x i8> [[WIDE_LOAD]], [[WIDE_LOAD2]]
-; CHECK-NEXT:    [[INDEX_NEXT3]] = add nuw i64 [[INDEX1]], [[TMP5]]
+; CHECK-NEXT:    [[INDEX_NEXT3]] = add nuw i64 [[INDEX1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = call i1 @llvm.vector.reduce.or.nxv16i1(<vscale x 16 x i1> [[TMP16]])
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT3]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = or i1 [[TMP17]], [[TMP18]]
@@ -264,8 +262,6 @@ define i64 @loop_contains_safe_div() #1 {
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP10]], 4
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 64, [[TMP3]]
 ; CHECK-NEXT:    [[INDEX1:%.*]] = sub i64 64, [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX1]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -275,7 +271,7 @@ define i64 @loop_contains_safe_div() #1 {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP1]], align 1
 ; CHECK-NEXT:    [[TMP13:%.*]] = udiv <vscale x 4 x i32> [[WIDE_LOAD]], splat (i32 20000)
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp ne <vscale x 4 x i32> [[TMP13]], splat (i32 1)
-; CHECK-NEXT:    [[INDEX_NEXT2]] = add nuw i64 [[INDEX2]], [[TMP5]]
+; CHECK-NEXT:    [[INDEX_NEXT2]] = add nuw i64 [[INDEX2]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP15]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT2]], [[INDEX1]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP6]], [[TMP7]]
