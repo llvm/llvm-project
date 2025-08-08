@@ -189,7 +189,6 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
     }
 
     SmallVector<OpFoldResult> getMixedSizes() {
-      Builder b(getContext());
       SmallVector<int64_t> statics;
 
       /// Get the static sizes/shape, the value passed to const_shape
@@ -199,11 +198,10 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
       if (auto attr = getConstShapeAttr())
         statics = llvm::to_vector(attr.asArrayRef());
 
-      return getMixedValues(statics, getShape(), b);
+      return getMixedValues(statics, getShape(), getContext());
     }
 
     SmallVector<OpFoldResult> getMixedStrides() {
-      Builder b(getContext());
       SmallVector<int64_t> statics;
 
       /// Get the static strides, the value passed to const_strides
@@ -213,7 +211,7 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
       if (auto attr = getConstStridesAttr())
         statics = llvm::to_vector(attr.asArrayRef());
 
-      return getMixedValues(statics, getStrides(), b);
+      return getMixedValues(statics, getStrides(), getContext());
     }
 
     /// Return the number of leading operands before the `offsets`,
