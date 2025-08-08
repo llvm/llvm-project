@@ -765,11 +765,11 @@ implicit none
   end interface
 
   interface __brev
-    attributes(device) integer function __brev(i) bind(c)
+    attributes(device) integer function __brev(i) bind(c, name='__nv_brev')
       !dir$ ignore_tkr (d) i
       integer, value :: i
     end function
-    attributes(device) integer(8) function __brevll(i) bind(c)
+    attributes(device) integer(8) function __brevll(i) bind(c, name ='__nv_brevll')
       !dir$ ignore_tkr (d) i
       integer(8), value :: i
     end function
