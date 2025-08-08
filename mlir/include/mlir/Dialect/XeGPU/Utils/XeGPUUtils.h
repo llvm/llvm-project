@@ -123,6 +123,8 @@ Value createVectorWithShapeFromValues(OpBuilder &builder, Location loc,
 void doSCFStructuralTypeConversionWithTensorType(Operation *op,
                                                  TypeConverter converter);
 
+std::optional<std::string> getXeGPUChipStr(Operation *op);
+
 } // namespace xegpu
 
 } // namespace mlir
