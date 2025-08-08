@@ -208,11 +208,20 @@ MachineIRBuilder::buildPtrAdd(const DstOp &Res, const SrcOp &Op0,
   return buildInstr(TargetOpcode::G_PTR_ADD, {Res}, {Op0, Op1}, Flags);
 }
 
+MachineInstrBuilder MachineIRBuilder::buildObjectPtrOffset(const DstOp &Res,
+                                                           const SrcOp &Op0,
+                                                           const SrcOp &Op1) {
+  return buildPtrAdd(Res, Op0, Op1,
+                     MachineInstr::MIFlag::NoUWrap |
+                         MachineInstr::MIFlag::InBounds);
+}
+
 std::optional<MachineInstrBuilder>
 MachineIRBuilder::materializePtrAdd(Register &Res, Register Op0,
-                                    const LLT ValueTy, uint64_t Value) {
+                                    const LLT ValueTy, uint64_t Value,
+                                    std::optional<unsigned> Flags) {
   assert(Res == 0 && "Res is a result argument");
-  assert(ValueTy.isScalar()  && "invalid offset type");
+  assert(ValueTy.isScalar() && "invalid offset type");
 
   if (Value == 0) {
     Res = Op0;
@@ -221,7 +230,14 @@ MachineIRBuilder::materializePtrAdd(Register &Res, Register Op0,
 
   Res = getMRI()->createGenericVirtualRegister(getMRI()->getType(Op0));
   auto Cst = buildConstant(ValueTy, Value);
-  return buildPtrAdd(Res, Op0, Cst.getReg(0));
+  return buildPtrAdd(Res, Op0, Cst.getReg(0), Flags);
+}
+
+std::optional<MachineInstrBuilder> MachineIRBuilder::materializeObjectPtrOffset(
+    Register &Res, Register Op0, const LLT ValueTy, uint64_t Value) {
+  return materializePtrAdd(Res, Op0, ValueTy, Value,
+                           MachineInstr::MIFlag::NoUWrap |
+                               MachineInstr::MIFlag::InBounds);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildMaskLowPtrBits(const DstOp &Res,

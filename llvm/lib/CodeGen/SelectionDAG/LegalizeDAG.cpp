@@ -3853,7 +3853,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     break;
   case ISD::FP_TO_FP16:
     LLVM_DEBUG(dbgs() << "Legalizing FP_TO_FP16\n");
-    if (!TLI.useSoftFloat() && TM.Options.UnsafeFPMath) {
+    if (Node->getFlags().hasApproximateFuncs() && !TLI.useSoftFloat()) {
       SDValue Op = Node->getOperand(0);
       MVT SVT = Op.getSimpleValueType();
       if ((SVT == MVT::f64 || SVT == MVT::f80) &&

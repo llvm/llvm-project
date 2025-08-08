@@ -1105,16 +1105,16 @@ define i64 @captures_ptrtoaddr_stored(ptr %p) {
   ret i64 0
 }
 
-;; TODO: Shouldn't this be captures(ret: address)?
+;; Note: ptrtoaddr is a location-independent capture, so we don't get captures(ret: address) here.
 define i64 @captures_ptrtoaddr_ret(ptr %p) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; FNATTRS-LABEL: define i64 @captures_ptrtoaddr_ret_only
+; FNATTRS-LABEL: define i64 @captures_ptrtoaddr_ret
 ; FNATTRS-SAME: (ptr captures(address) [[P:%.*]]) #[[ATTR0]] {
 ; FNATTRS-NEXT:    [[INT:%.*]] = ptrtoaddr ptr [[P]] to i64
 ; FNATTRS-NEXT:    ret i64 [[INT]]
 ;
 ; ATTRIBUTOR: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; ATTRIBUTOR-LABEL: define i64 @captures_ptrtoaddr_ret_only
+; ATTRIBUTOR-LABEL: define i64 @captures_ptrtoaddr_ret
 ; ATTRIBUTOR-SAME: (ptr nofree readnone [[P:%.*]]) #[[ATTR0]] {
 ; ATTRIBUTOR-NEXT:    [[INT:%.*]] = ptrtoaddr ptr [[P]] to i64
 ; ATTRIBUTOR-NEXT:    ret i64 [[INT]]
@@ -1123,7 +1123,7 @@ define i64 @captures_ptrtoaddr_ret(ptr %p) {
   ret i64 %int
 }
 
-;; TODO: Shouldn't this be captures(none)?
+;; Note: ptrtoaddr is a location-independent capture, so we don't get captures(none) here.
 define i64 @captures_ptrtoaddr_ignored(ptr %p) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; FNATTRS-LABEL: define noundef i64 @captures_ptrtoaddr_ignored

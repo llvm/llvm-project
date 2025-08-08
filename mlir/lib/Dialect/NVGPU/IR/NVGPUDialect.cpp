@@ -345,6 +345,19 @@ LogicalResult LdMatrixOp::verify() {
 // NVGPU_TmaAsyncLoadOp
 //===----------------------------------------------------------------------===//
 
+unsigned getSwizzleBytes(TensorMapSwizzleKind kind) {
+  switch (kind) {
+  case TensorMapSwizzleKind::SWIZZLE_32B:
+    return 32;
+  case TensorMapSwizzleKind::SWIZZLE_64B:
+    return 64;
+  case TensorMapSwizzleKind::SWIZZLE_128B:
+    return 128;
+  default:
+    return 0;
+  }
+}
+
 std::optional<InFlightDiagnostic> verifyTmaDescriptorWithMemref(
     Operation *op, nvgpu::TensorMapDescriptorType descType,
     std::optional<MemRefType> memrefType = std::nullopt) {
@@ -373,10 +386,11 @@ std::optional<InFlightDiagnostic> verifyTmaDescriptorWithMemref(
       descType.getSwizzle() != TensorMapSwizzleKind::SWIZZLE_NONE) {
     unsigned lastDimensionByte =
         descMemref.getElementTypeBitWidth() * descMemref.getShape().back() / 8;
-    if (lastDimensionByte != kMaxTMALastdimByte)
+    unsigned expectByte = getSwizzleBytes(descType.getSwizzle());
+    if (lastDimensionByte != expectByte)
       return op->emitError() << "the tensormap descriptor must have last "
                                 "dimension of "
-                             << kMaxTMALastdimByte << " bytes but it is "
+                             << expectByte << " bytes but it is "
                              << lastDimensionByte << " bytes";
   }
 

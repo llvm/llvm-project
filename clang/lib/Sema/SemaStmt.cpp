@@ -2284,7 +2284,11 @@ StmtResult Sema::ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc,
           // we can diagnose if we don't see any variable declarations. This
           // covers a case like declaring a typedef, function, or structure
           // type rather than a variable.
-          NonVarSeen = DI;
+          //
+          // Note, _Static_assert is acceptable because it does not declare an
+          // identifier at all, so "for object having" does not apply.
+          if (!isa<StaticAssertDecl>(DI))
+            NonVarSeen = DI;
         }
       }
       // Diagnose if we saw a non-variable declaration but no variable

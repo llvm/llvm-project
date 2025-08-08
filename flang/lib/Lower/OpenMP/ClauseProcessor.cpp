@@ -1121,7 +1121,7 @@ bool ClauseProcessor::processInReduction(
                 std::get<typename omp::clause::ReductionOperatorList>(clause.t),
                 inReductionVars, inReduceVarByRef, inReductionDeclSymbols,
                 inReductionSyms))
-          inReductionSyms.clear();
+          TODO(currentLocation, "Lowering unrecognised reduction type");
 
         // Copy local lists into the output.
         llvm::copy(inReductionVars, std::back_inserter(result.inReductionVars));
@@ -1467,7 +1467,7 @@ bool ClauseProcessor::processReduction(
                 std::get<typename omp::clause::ReductionOperatorList>(clause.t),
                 reductionVars, reduceVarByRef, reductionDeclSymbols,
                 reductionSyms))
-          reductionSyms.clear();
+          TODO(currentLocation, "Lowering unrecognised reduction type");
         // Copy local lists into the output.
         llvm::copy(reductionVars, std::back_inserter(result.reductionVars));
         llvm::copy(reduceVarByRef, std::back_inserter(result.reductionByref));
@@ -1494,7 +1494,7 @@ bool ClauseProcessor::processTaskReduction(
                 std::get<typename omp::clause::ReductionOperatorList>(clause.t),
                 taskReductionVars, taskReduceVarByRef, taskReductionDeclSymbols,
                 taskReductionSyms))
-          taskReductionSyms.clear();
+          TODO(currentLocation, "Lowering unrecognised reduction type");
         // Copy local lists into the output.
         llvm::copy(taskReductionVars,
                    std::back_inserter(result.taskReductionVars));
@@ -1519,10 +1519,14 @@ bool ClauseProcessor::processTo(
 bool ClauseProcessor::processEnter(
     llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const {
   return findRepeatableClause<omp::clause::Enter>(
-      [&](const omp::clause::Enter &clause, const parser::CharBlock &) {
+      [&](const omp::clause::Enter &clause, const parser::CharBlock &source) {
+        mlir::Location currentLocation = converter.genLocation(source);
+        if (std::get<std::optional<omp::clause::Enter::Modifier>>(clause.t))
+          TODO(currentLocation, "Declare target enter AUTOMAP modifier");
         // Case: declare target enter(func, var1, var2)...
-        gatherFuncAndVarSyms(
-            clause.v, mlir::omp::DeclareTargetCaptureClause::enter, result);
+        gatherFuncAndVarSyms(std::get<ObjectList>(clause.t),
+                             mlir::omp::DeclareTargetCaptureClause::enter,
+                             result);
       });
 }
 

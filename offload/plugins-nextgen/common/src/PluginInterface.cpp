@@ -815,8 +815,11 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
 
   // Enable the memory manager if required.
   auto [ThresholdMM, EnableMM] = MemoryManagerTy::getSizeThresholdFromEnv();
-  if (EnableMM)
+  if (EnableMM) {
+    if (ThresholdMM == 0)
+      ThresholdMM = getMemoryManagerSizeThreshold();
     MemoryManager = new MemoryManagerTy(*this, ThresholdMM);
+  }
 
   return Plugin::success();
 }
@@ -1623,6 +1626,21 @@ Error GenericDeviceTy::waitEvent(void *EventPtr, __tgt_async_info *AsyncInfo) {
   return Err;
 }
 
+Expected<bool> GenericDeviceTy::hasPendingWork(__tgt_async_info *AsyncInfo) {
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+  auto Res = hasPendingWorkImpl(AsyncInfoWrapper);
+  if (auto Err = Res.takeError()) {
+    AsyncInfoWrapper.finalize(Err);
+    return Err;
+  }
+
+  auto Err = Plugin::success();
+  AsyncInfoWrapper.finalize(Err);
+  if (Err)
+    return Err;
+  return Res;
+}
+
 Error GenericDeviceTy::syncEvent(void *EventPtr) {
   return syncEventImpl(EventPtr);
 }
@@ -2229,5 +2247,73 @@ int32_t GenericPluginTy::get_function(__tgt_device_binary Binary,
 
   // Note that this is not the kernel's device address.
   *KernelPtr = &Kernel;
+  return OFFLOAD_SUCCESS;
+}
+
+/// Create OpenMP interop with the given interop context
+omp_interop_val_t *
+GenericPluginTy::create_interop(int32_t ID, int32_t InteropContext,
+                                interop_spec_t *InteropSpec) {
+  assert(InteropSpec && "Interop spec is null");
+  auto &Device = getDevice(ID);
+  auto InteropOrErr = Device.createInterop(InteropContext, *InteropSpec);
+  if (!InteropOrErr) {
+    REPORT("Failure to create interop object for device " DPxMOD ": %s\n",
+           DPxPTR(InteropSpec), toString(InteropOrErr.takeError()).c_str());
+    return nullptr;
+  }
+  return *InteropOrErr;
+}
+
+/// Release OpenMP interop object
+int32_t GenericPluginTy::release_interop(int32_t ID,
+                                         omp_interop_val_t *Interop) {
+  assert(Interop && "Interop is null");
+  assert(Interop->device_id == ID && "Interop does not match device id");
+  auto &Device = getDevice(ID);
+  auto Err = Device.releaseInterop(Interop);
+  if (Err) {
+    REPORT("Failure to release interop object " DPxMOD ": %s\n",
+           DPxPTR(Interop), toString(std::move(Err)).c_str());
+    return OFFLOAD_FAIL;
+  }
+  return OFFLOAD_SUCCESS;
+}
+
+/// Flush the queue associated with the interop object if necessary
+int32_t GenericPluginTy::flush_queue(omp_interop_val_t *Interop) {
+  assert(Interop && "Interop is null");
+  auto Err = flushQueueImpl(Interop);
+  if (Err) {
+    REPORT("Failure to flush interop object " DPxMOD " queue: %s\n",
+           DPxPTR(Interop), toString(std::move(Err)).c_str());
+    return OFFLOAD_FAIL;
+  }
+  return OFFLOAD_SUCCESS;
+}
+
+/// Perform a host synchronization with the queue associated with the interop
+/// object and wait for it to complete.
+int32_t GenericPluginTy::sync_barrier(omp_interop_val_t *Interop) {
+  assert(Interop && "Interop is null");
+  auto Err = syncBarrierImpl(Interop);
+  if (Err) {
+    REPORT("Failure to synchronize interop object " DPxMOD ": %s\n",
+           DPxPTR(Interop), toString(std::move(Err)).c_str());
+    return OFFLOAD_FAIL;
+  }
+  return OFFLOAD_SUCCESS;
+}
+
+/// Queue an asynchronous barrier in the queue associated with the interop
+/// object and return immediately.
+int32_t GenericPluginTy::async_barrier(omp_interop_val_t *Interop) {
+  assert(Interop && "Interop is null");
+  auto Err = asyncBarrierImpl(Interop);
+  if (Err) {
+    REPORT("Failure to queue barrier in interop object " DPxMOD ": %s\n",
+           DPxPTR(Interop), toString(std::move(Err)).c_str());
+    return OFFLOAD_FAIL;
+  }
   return OFFLOAD_SUCCESS;
 }

@@ -461,6 +461,66 @@ m_c_BinaryOr(const Op0_t &Op0, const Op1_t &Op1) {
   return m_BinaryOr<Op0_t, Op1_t, /*Commutative*/ true>(Op0, Op1);
 }
 
+/// ICmp_match is a variant of BinaryRecipe_match that also binds the comparison
+/// predicate.
+template <typename Op0_t, typename Op1_t> struct ICmp_match {
+  CmpPredicate *Predicate = nullptr;
+  Op0_t Op0;
+  Op1_t Op1;
+
+  ICmp_match(CmpPredicate &Pred, const Op0_t &Op0, const Op1_t &Op1)
+      : Predicate(&Pred), Op0(Op0), Op1(Op1) {}
+  ICmp_match(const Op0_t &Op0, const Op1_t &Op1) : Op0(Op0), Op1(Op1) {}
+
+  bool match(const VPValue *V) const {
+    auto *DefR = V->getDefiningRecipe();
+    return DefR && match(DefR);
+  }
+
+  bool match(const VPRecipeBase *V) const {
+    if (m_Binary<Instruction::ICmp>(Op0, Op1).match(V)) {
+      if (Predicate)
+        *Predicate = cast<VPRecipeWithIRFlags>(V)->getPredicate();
+      return true;
+    }
+    return false;
+  }
+};
+
+/// SpecificICmp_match is a variant of ICmp_match that matches the comparison
+/// predicate, instead of binding it.
+template <typename Op0_t, typename Op1_t> struct SpecificICmp_match {
+  const CmpPredicate Predicate;
+  Op0_t Op0;
+  Op1_t Op1;
+
+  SpecificICmp_match(CmpPredicate Pred, const Op0_t &LHS, const Op1_t &RHS)
+      : Predicate(Pred), Op0(LHS), Op1(RHS) {}
+
+  bool match(const VPValue *V) const {
+    CmpPredicate CurrentPred;
+    return ICmp_match<Op0_t, Op1_t>(CurrentPred, Op0, Op1).match(V) &&
+           CmpPredicate::getMatching(CurrentPred, Predicate);
+  }
+};
+
+template <typename Op0_t, typename Op1_t>
+inline ICmp_match<Op0_t, Op1_t> m_ICmp(const Op0_t &Op0, const Op1_t &Op1) {
+  return ICmp_match<Op0_t, Op1_t>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline ICmp_match<Op0_t, Op1_t> m_ICmp(CmpPredicate &Pred, const Op0_t &Op0,
+                                       const Op1_t &Op1) {
+  return ICmp_match<Op0_t, Op1_t>(Pred, Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline SpecificICmp_match<Op0_t, Op1_t>
+m_SpecificICmp(CmpPredicate MatchPred, const Op0_t &Op0, const Op1_t &Op1) {
+  return SpecificICmp_match<Op0_t, Op1_t>(MatchPred, Op0, Op1);
+}
+
 template <typename Op0_t, typename Op1_t>
 using GEPLikeRecipe_match =
     BinaryRecipe_match<Op0_t, Op1_t, Instruction::GetElementPtr, false,

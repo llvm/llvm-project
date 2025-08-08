@@ -1134,15 +1134,26 @@ void AMDGPUDAGToDAGISel::SelectMAD_64_32(SDNode *N) {
   SDLoc SL(N);
   bool Signed = N->getOpcode() == AMDGPUISD::MAD_I64_I32;
   unsigned Opc;
+  bool UseNoCarry = Subtarget->hasMadU64U32NoCarry() && !N->hasAnyUseOfValue(1);
   if (Subtarget->hasMADIntraFwdBug())
     Opc = Signed ? AMDGPU::V_MAD_I64_I32_gfx11_e64
                  : AMDGPU::V_MAD_U64_U32_gfx11_e64;
+  else if (UseNoCarry)
+    Opc = Signed ? AMDGPU::V_MAD_NC_I64_I32_e64 : AMDGPU::V_MAD_NC_U64_U32_e64;
   else
     Opc = Signed ? AMDGPU::V_MAD_I64_I32_e64 : AMDGPU::V_MAD_U64_U32_e64;
 
   SDValue Clamp = CurDAG->getTargetConstant(0, SL, MVT::i1);
   SDValue Ops[] = { N->getOperand(0), N->getOperand(1), N->getOperand(2),
                     Clamp };
+
+  if (UseNoCarry) {
+    MachineSDNode *Mad = CurDAG->getMachineNode(Opc, SL, MVT::i64, Ops);
+    ReplaceUses(SDValue(N, 0), SDValue(Mad, 0));
+    CurDAG->RemoveDeadNode(N);
+    return;
+  }
+
   CurDAG->SelectNodeTo(N, Opc, N->getVTList(), Ops);
 }
 
@@ -2046,6 +2057,24 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddrGLC(SDNode *N, SDValue Addr,
 
   unsigned CPolVal = (ScaleOffset ? AMDGPU::CPol::SCAL : 0) | AMDGPU::CPol::GLC;
   CPol = CurDAG->getTargetConstant(CPolVal, SDLoc(), MVT::i32);
+  return true;
+}
+
+bool AMDGPUDAGToDAGISel::SelectGlobalSAddrNoIOffset(SDNode *N, SDValue Addr,
+                                                    SDValue &SAddr,
+                                                    SDValue &VOffset,
+                                                    SDValue &CPol) const {
+  bool ScaleOffset;
+  SDValue DummyOffset;
+  if (!SelectGlobalSAddr(N, Addr, SAddr, VOffset, DummyOffset, ScaleOffset,
+                         false))
+    return false;
+
+  // We are assuming CPol is always the last operand of the intrinsic.
+  auto PassedCPol =
+      N->getConstantOperandVal(N->getNumOperands() - 1) & ~AMDGPU::CPol::SCAL;
+  CPol = CurDAG->getTargetConstant(
+      (ScaleOffset ? AMDGPU::CPol::SCAL : 0) | PassedCPol, SDLoc(), MVT::i32);
   return true;
 }
 
@@ -3418,63 +3447,6 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMods(SDValue In, SDValue &Src,
 bool AMDGPUDAGToDAGISel::SelectVOP3PModsDOT(SDValue In, SDValue &Src,
                                             SDValue &SrcMods) const {
   return SelectVOP3PMods(In, Src, SrcMods, true);
-}
-
-// Select neg_lo from the i1 immediate operand.
-bool AMDGPUDAGToDAGISel::SelectVOP3PModsNeg(SDValue In, SDValue &Src) const {
-  const ConstantSDNode *C = cast<ConstantSDNode>(In);
-  // Literal i1 value set in intrinsic, represents SrcMods for the next operand.
-  // 1 promotes packed values to signed, 0 treats them as unsigned.
-  assert(C->getAPIntValue().getBitWidth() == 1 && "expected i1 value");
-
-  unsigned Mods = SISrcMods::OP_SEL_1;
-  unsigned SrcSign = C->getZExtValue();
-  if (SrcSign == 1)
-    Mods ^= SISrcMods::NEG;
-
-  Src = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
-  return true;
-}
-
-// Select both neg_lo and neg_hi from the i1 immediate operand. This is
-// specifically for F16/BF16 operands in WMMA instructions, where neg_lo applies
-// to matrix's even k elements, and neg_hi applies to matrix's odd k elements.
-bool AMDGPUDAGToDAGISel::SelectVOP3PModsNegs(SDValue In, SDValue &Src) const {
-  const ConstantSDNode *C = cast<ConstantSDNode>(In);
-  // Literal i1 value set in intrinsic, represents SrcMods for the next operand.
-  // 1 promotes packed values to signed, 0 treats them as unsigned.
-  assert(C->getAPIntValue().getBitWidth() == 1 && "expected i1 value");
-
-  unsigned Mods = SISrcMods::OP_SEL_1;
-  unsigned SrcSign = C->getZExtValue();
-  if (SrcSign == 1)
-    Mods ^= (SISrcMods::NEG | SISrcMods::NEG_HI);
-
-  Src = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
-  return true;
-}
-
-// Select neg, abs, or both neg and abs from the i16 immediate operans.
-bool AMDGPUDAGToDAGISel::SelectVOP3PModsNegAbs(SDValue In, SDValue &Src) const {
-  const ConstantSDNode *C = cast<ConstantSDNode>(In);
-  unsigned Mods = SISrcMods::OP_SEL_1;
-  unsigned SrcMod = C->getZExtValue();
-  switch (SrcMod) {
-  default: // Any other value will be silently ignored (considered as 0).
-    break;
-  case 1:
-    Mods ^= SISrcMods::NEG;
-    break;
-  case 2:
-    Mods ^= SISrcMods::ABS;
-    break;
-  case 3:
-    Mods ^= (SISrcMods::NEG | SISrcMods::ABS);
-    break;
-  }
-
-  Src = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
-  return true;
 }
 
 bool AMDGPUDAGToDAGISel::SelectWMMAOpSelVOP3PMods(SDValue In,

@@ -220,8 +220,9 @@ public:
 
   CompileUnit *GetCompUnitForDWARFCompUnit(DWARFCompileUnit &dwarf_cu);
 
-  virtual void GetObjCMethods(ConstString class_name,
-                              llvm::function_ref<bool(DWARFDIE die)> callback);
+  virtual void
+  GetObjCMethods(ConstString class_name,
+                 llvm::function_ref<IterationAction(DWARFDIE die)> callback);
 
   DebugMacrosSP ParseDebugMacros(lldb::offset_t *offset);
 
@@ -329,6 +330,8 @@ public:
 
   virtual bool ParseVendorDWARFOpcode(uint8_t op, const DataExtractor &opcodes,
                                       lldb::offset_t &offset,
+                                      RegisterContext *reg_ctx,
+                                      lldb::RegisterKind reg_kind,
                                       std::vector<Value> &stack) const {
     return false;
   }
@@ -433,6 +436,9 @@ protected:
 
   DIEArray MergeBlockAbstractParameters(const DWARFDIE &block_die,
                                         DIEArray &&variable_dies);
+
+  llvm::Expected<SymbolContext>
+  ResolveFunctionCallLabel(const FunctionCallLabel &label) override;
 
   // Given a die_offset, figure out the symbol context representing that die.
   bool ResolveFunction(const DWARFDIE &die, bool include_inlines,
@@ -556,6 +562,7 @@ protected:
   /// an index that identifies the .DWO or .o file.
   std::optional<uint64_t> m_file_index;
 };
+
 } // namespace dwarf
 } // namespace lldb_private::plugin
 

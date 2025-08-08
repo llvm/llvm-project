@@ -138,6 +138,7 @@ LogicalResult spirv::Deserializer::processHeader() {
       MIN_VERSION_CASE(3);
       MIN_VERSION_CASE(4);
       MIN_VERSION_CASE(5);
+      MIN_VERSION_CASE(6);
 #undef MIN_VERSION_CASE
     default:
       return emitError(unknownLoc, "unsupported SPIR-V minor version: ")
@@ -343,14 +344,12 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
   case spirv::Decoration::RestrictPointer:
   case spirv::Decoration::NoContraction:
   case spirv::Decoration::Constant:
+  case spirv::Decoration::Invariant:
+  case spirv::Decoration::Patch:
     if (words.size() != 2) {
       return emitError(unknownLoc, "OpDecoration with ")
              << decorationName << "needs a single target <id>";
     }
-    // Block decoration does not affect spirv.struct type, but is still stored
-    // for verification.
-    // TODO: Update StructType to contain this information since
-    // it is needed for many validation rules.
     decorations[words[0]].set(symbol, opBuilder.getUnitAttr());
     break;
   case spirv::Decoration::Location:
@@ -993,7 +992,8 @@ spirv::Deserializer::processOpTypePointer(ArrayRef<uint32_t> operands) {
 
       if (failed(structType.trySetBody(
               deferredStructIt->memberTypes, deferredStructIt->offsetInfo,
-              deferredStructIt->memberDecorationsInfo)))
+              deferredStructIt->memberDecorationsInfo,
+              deferredStructIt->structDecorationsInfo)))
         return failure();
 
       deferredStructIt = deferredStructTypesInfos.erase(deferredStructIt);
@@ -1203,24 +1203,37 @@ spirv::Deserializer::processStructType(ArrayRef<uint32_t> operands) {
     }
   }
 
+  SmallVector<spirv::StructType::StructDecorationInfo, 0> structDecorationsInfo;
+  if (decorations.count(operands[0])) {
+    NamedAttrList &allDecorations = decorations[operands[0]];
+    for (NamedAttribute &decorationAttr : allDecorations) {
+      std::optional<spirv::Decoration> decoration = spirv::symbolizeDecoration(
+          llvm::convertToCamelFromSnakeCase(decorationAttr.getName(), true));
+      assert(decoration.has_value());
+      structDecorationsInfo.emplace_back(decoration.value(),
+                                         decorationAttr.getValue());
+    }
+  }
+
   uint32_t structID = operands[0];
   std::string structIdentifier = nameMap.lookup(structID).str();
 
   if (structIdentifier.empty()) {
     assert(unresolvedMemberTypes.empty() &&
            "didn't expect unresolved member types");
-    typeMap[structID] =
-        spirv::StructType::get(memberTypes, offsetInfo, memberDecorationsInfo);
+    typeMap[structID] = spirv::StructType::get(
+        memberTypes, offsetInfo, memberDecorationsInfo, structDecorationsInfo);
   } else {
     auto structTy = spirv::StructType::getIdentified(context, structIdentifier);
     typeMap[structID] = structTy;
 
     if (!unresolvedMemberTypes.empty())
-      deferredStructTypesInfos.push_back({structTy, unresolvedMemberTypes,
-                                          memberTypes, offsetInfo,
-                                          memberDecorationsInfo});
+      deferredStructTypesInfos.push_back(
+          {structTy, unresolvedMemberTypes, memberTypes, offsetInfo,
+           memberDecorationsInfo, structDecorationsInfo});
     else if (failed(structTy.trySetBody(memberTypes, offsetInfo,
-                                        memberDecorationsInfo)))
+                                        memberDecorationsInfo,
+                                        structDecorationsInfo)))
       return failure();
   }
 
@@ -1769,7 +1782,7 @@ LogicalResult
 spirv::Deserializer::processConstantNull(ArrayRef<uint32_t> operands) {
   if (operands.size() != 2) {
     return emitError(unknownLoc,
-                     "OpConstantNull must have type <id> and result <id>");
+                     "OpConstantNull must only have type <id> and result <id>");
   }
 
   Type resultType = getType(operands[0]);
@@ -1779,8 +1792,15 @@ spirv::Deserializer::processConstantNull(ArrayRef<uint32_t> operands) {
   }
 
   auto resultID = operands[1];
+  Attribute attr;
   if (resultType.isIntOrFloat() || isa<VectorType>(resultType)) {
-    auto attr = opBuilder.getZeroAttr(resultType);
+    attr = opBuilder.getZeroAttr(resultType);
+  } else if (auto tensorType = dyn_cast<TensorArmType>(resultType)) {
+    if (auto element = opBuilder.getZeroAttr(tensorType.getElementType()))
+      attr = DenseElementsAttr::get(tensorType, element);
+  }
+
+  if (attr) {
     // For normal constants, we just record the attribute (and its type) for
     // later materialization at use sites.
     constantMap.try_emplace(resultID, attr, resultType);

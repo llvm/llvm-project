@@ -1207,6 +1207,8 @@ namespace llvm {
                                   bool IsVarArg) const;
     bool supportsTailCallFor(const CallBase *CB) const;
 
+    bool hasMultipleConditionRegisters(EVT VT) const override;
+
   private:
     struct ReuseLoadInfo {
       SDValue Ptr;
