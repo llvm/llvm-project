@@ -19,8 +19,9 @@ void llvm::offloading::writePropertiesToJSON(
   json::OStream J(Out);
   J.object([&] {
     for (const auto &[CategoryName, PropSet] : PSRegistry) {
+      auto PropSetCapture = PropSet;
       J.attributeObject(CategoryName, [&] {
-        for (const auto &[PropName, PropVal] : PropSet) {
+        for (const auto &[PropName, PropVal] : PropSetCapture) {
           switch (PropVal.index()) {
           case 0:
             J.attribute(PropName, std::get<uint32_t>(PropVal));
@@ -94,6 +95,7 @@ llvm::offloading::readPropertiesFromJSON(MemoryBufferRef Buf) {
       auto [It, Inserted] =
           PropSet.try_emplace(PropName.str(), std::move(*Prop));
       assert(Inserted && "Property already exists in PropertySet");
+      (void)Inserted;
     }
   }
   return Res;
