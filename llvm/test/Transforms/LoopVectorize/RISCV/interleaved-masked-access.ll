@@ -18,37 +18,35 @@ define void @masked_strided_factor2(ptr noalias nocapture readonly %p, ptr noali
 ; SCALAR_EPILOGUE-NEXT:    [[TMP2:%.*]] = shl nuw i32 [[TMP1]], 4
 ; SCALAR_EPILOGUE-NEXT:    [[N_MOD_VF:%.*]] = urem i32 1024, [[TMP2]]
 ; SCALAR_EPILOGUE-NEXT:    [[N_VEC:%.*]] = sub nuw nsw i32 1024, [[N_MOD_VF]]
-; SCALAR_EPILOGUE-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vscale.i32()
-; SCALAR_EPILOGUE-NEXT:    [[TMP4:%.*]] = shl nuw i32 [[TMP3]], 4
 ; SCALAR_EPILOGUE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[CONV]], i64 0
 ; SCALAR_EPILOGUE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
-; SCALAR_EPILOGUE-NEXT:    [[TMP5:%.*]] = call <vscale x 16 x i32> @llvm.stepvector.nxv16i32()
-; SCALAR_EPILOGUE-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[TMP4]], i64 0
+; SCALAR_EPILOGUE-NEXT:    [[TMP3:%.*]] = call <vscale x 16 x i32> @llvm.stepvector.nxv16i32()
+; SCALAR_EPILOGUE-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[TMP2]], i64 0
 ; SCALAR_EPILOGUE-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT1]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
 ; SCALAR_EPILOGUE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; SCALAR_EPILOGUE:       vector.body:
 ; SCALAR_EPILOGUE-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; SCALAR_EPILOGUE-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 16 x i32> [ [[TMP5]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; SCALAR_EPILOGUE-NEXT:    [[TMP6:%.*]] = icmp ugt <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; SCALAR_EPILOGUE-NEXT:    [[TMP7:%.*]] = shl i32 [[INDEX]], 1
-; SCALAR_EPILOGUE-NEXT:    [[TMP8:%.*]] = sext i32 [[TMP7]] to i64
-; SCALAR_EPILOGUE-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP8]]
-; SCALAR_EPILOGUE-NEXT:    [[INTERLEAVED_MASK:%.*]] = call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> [[TMP6]], <vscale x 16 x i1> [[TMP6]])
-; SCALAR_EPILOGUE-NEXT:    [[WIDE_MASKED_VEC:%.*]] = call <vscale x 32 x i8> @llvm.masked.load.nxv32i8.p0(ptr [[TMP9]], i32 1, <vscale x 32 x i1> [[INTERLEAVED_MASK]], <vscale x 32 x i8> poison)
+; SCALAR_EPILOGUE-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 16 x i32> [ [[TMP3]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; SCALAR_EPILOGUE-NEXT:    [[TMP4:%.*]] = icmp ugt <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; SCALAR_EPILOGUE-NEXT:    [[TMP5:%.*]] = shl i32 [[INDEX]], 1
+; SCALAR_EPILOGUE-NEXT:    [[TMP6:%.*]] = sext i32 [[TMP5]] to i64
+; SCALAR_EPILOGUE-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP6]]
+; SCALAR_EPILOGUE-NEXT:    [[INTERLEAVED_MASK:%.*]] = call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> [[TMP4]], <vscale x 16 x i1> [[TMP4]])
+; SCALAR_EPILOGUE-NEXT:    [[WIDE_MASKED_VEC:%.*]] = call <vscale x 32 x i8> @llvm.masked.load.nxv32i8.p0(ptr [[TMP7]], i32 1, <vscale x 32 x i1> [[INTERLEAVED_MASK]], <vscale x 32 x i8> poison)
 ; SCALAR_EPILOGUE-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.vector.deinterleave2.nxv32i8(<vscale x 32 x i8> [[WIDE_MASKED_VEC]])
-; SCALAR_EPILOGUE-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 0
-; SCALAR_EPILOGUE-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 1
-; SCALAR_EPILOGUE-NEXT:    [[TMP12:%.*]] = call <vscale x 16 x i8> @llvm.smax.nxv16i8(<vscale x 16 x i8> [[TMP10]], <vscale x 16 x i8> [[TMP11]])
-; SCALAR_EPILOGUE-NEXT:    [[TMP13:%.*]] = sext i32 [[TMP7]] to i64
-; SCALAR_EPILOGUE-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[Q]], i64 [[TMP13]]
-; SCALAR_EPILOGUE-NEXT:    [[TMP15:%.*]] = sub <vscale x 16 x i8> zeroinitializer, [[TMP12]]
-; SCALAR_EPILOGUE-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 32 x i8> @llvm.vector.interleave2.nxv32i8(<vscale x 16 x i8> [[TMP12]], <vscale x 16 x i8> [[TMP15]])
-; SCALAR_EPILOGUE-NEXT:    [[INTERLEAVED_MASK3:%.*]] = call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> [[TMP6]], <vscale x 16 x i1> [[TMP6]])
-; SCALAR_EPILOGUE-NEXT:    call void @llvm.masked.store.nxv32i8.p0(<vscale x 32 x i8> [[INTERLEAVED_VEC]], ptr [[TMP14]], i32 1, <vscale x 32 x i1> [[INTERLEAVED_MASK3]])
-; SCALAR_EPILOGUE-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP4]]
+; SCALAR_EPILOGUE-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 0
+; SCALAR_EPILOGUE-NEXT:    [[TMP9:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 1
+; SCALAR_EPILOGUE-NEXT:    [[TMP10:%.*]] = call <vscale x 16 x i8> @llvm.smax.nxv16i8(<vscale x 16 x i8> [[TMP8]], <vscale x 16 x i8> [[TMP9]])
+; SCALAR_EPILOGUE-NEXT:    [[TMP11:%.*]] = sext i32 [[TMP5]] to i64
+; SCALAR_EPILOGUE-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[Q]], i64 [[TMP11]]
+; SCALAR_EPILOGUE-NEXT:    [[TMP13:%.*]] = sub <vscale x 16 x i8> zeroinitializer, [[TMP10]]
+; SCALAR_EPILOGUE-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 32 x i8> @llvm.vector.interleave2.nxv32i8(<vscale x 16 x i8> [[TMP10]], <vscale x 16 x i8> [[TMP13]])
+; SCALAR_EPILOGUE-NEXT:    [[INTERLEAVED_MASK3:%.*]] = call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> [[TMP4]], <vscale x 16 x i1> [[TMP4]])
+; SCALAR_EPILOGUE-NEXT:    call void @llvm.masked.store.nxv32i8.p0(<vscale x 32 x i8> [[INTERLEAVED_VEC]], ptr [[TMP12]], i32 1, <vscale x 32 x i1> [[INTERLEAVED_MASK3]])
+; SCALAR_EPILOGUE-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP2]]
 ; SCALAR_EPILOGUE-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT2]]
-; SCALAR_EPILOGUE-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; SCALAR_EPILOGUE-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; SCALAR_EPILOGUE-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; SCALAR_EPILOGUE-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; SCALAR_EPILOGUE:       middle.block:
 ; SCALAR_EPILOGUE-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
 ; SCALAR_EPILOGUE-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
@@ -65,39 +63,37 @@ define void @masked_strided_factor2(ptr noalias nocapture readonly %p, ptr noali
 ; PREDICATED_DATA-NEXT:    [[N_RND_UP:%.*]] = add i32 [[TMP1]], 1023
 ; PREDICATED_DATA-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], [[TMP1]]
 ; PREDICATED_DATA-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
-; PREDICATED_DATA-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
-; PREDICATED_DATA-NEXT:    [[TMP3:%.*]] = shl nuw i32 [[TMP2]], 4
 ; PREDICATED_DATA-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[CONV]], i64 0
 ; PREDICATED_DATA-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
-; PREDICATED_DATA-NEXT:    [[TMP4:%.*]] = call <vscale x 16 x i32> @llvm.stepvector.nxv16i32()
-; PREDICATED_DATA-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[TMP3]], i64 0
+; PREDICATED_DATA-NEXT:    [[TMP2:%.*]] = call <vscale x 16 x i32> @llvm.stepvector.nxv16i32()
+; PREDICATED_DATA-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[TMP1]], i64 0
 ; PREDICATED_DATA-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT1]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
 ; PREDICATED_DATA-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; PREDICATED_DATA:       vector.body:
 ; PREDICATED_DATA-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; PREDICATED_DATA-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 16 x i32> [ [[TMP4]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; PREDICATED_DATA-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 16 x i32> [ [[TMP2]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; PREDICATED_DATA-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i32 [[INDEX]], i32 1024)
-; PREDICATED_DATA-NEXT:    [[TMP5:%.*]] = icmp ugt <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; PREDICATED_DATA-NEXT:    [[TMP6:%.*]] = select <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i1> [[TMP5]], <vscale x 16 x i1> zeroinitializer
-; PREDICATED_DATA-NEXT:    [[TMP7:%.*]] = shl i32 [[INDEX]], 1
-; PREDICATED_DATA-NEXT:    [[TMP8:%.*]] = sext i32 [[TMP7]] to i64
-; PREDICATED_DATA-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP8]]
-; PREDICATED_DATA-NEXT:    [[INTERLEAVED_MASK:%.*]] = call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> [[TMP6]], <vscale x 16 x i1> [[TMP6]])
-; PREDICATED_DATA-NEXT:    [[WIDE_MASKED_VEC:%.*]] = call <vscale x 32 x i8> @llvm.masked.load.nxv32i8.p0(ptr [[TMP9]], i32 1, <vscale x 32 x i1> [[INTERLEAVED_MASK]], <vscale x 32 x i8> poison)
+; PREDICATED_DATA-NEXT:    [[TMP3:%.*]] = icmp ugt <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; PREDICATED_DATA-NEXT:    [[TMP4:%.*]] = select <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i1> [[TMP3]], <vscale x 16 x i1> zeroinitializer
+; PREDICATED_DATA-NEXT:    [[TMP5:%.*]] = shl i32 [[INDEX]], 1
+; PREDICATED_DATA-NEXT:    [[TMP6:%.*]] = sext i32 [[TMP5]] to i64
+; PREDICATED_DATA-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP6]]
+; PREDICATED_DATA-NEXT:    [[INTERLEAVED_MASK:%.*]] = call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> [[TMP4]], <vscale x 16 x i1> [[TMP4]])
+; PREDICATED_DATA-NEXT:    [[WIDE_MASKED_VEC:%.*]] = call <vscale x 32 x i8> @llvm.masked.load.nxv32i8.p0(ptr [[TMP7]], i32 1, <vscale x 32 x i1> [[INTERLEAVED_MASK]], <vscale x 32 x i8> poison)
 ; PREDICATED_DATA-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.vector.deinterleave2.nxv32i8(<vscale x 32 x i8> [[WIDE_MASKED_VEC]])
-; PREDICATED_DATA-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 0
-; PREDICATED_DATA-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 1
-; PREDICATED_DATA-NEXT:    [[TMP12:%.*]] = call <vscale x 16 x i8> @llvm.smax.nxv16i8(<vscale x 16 x i8> [[TMP10]], <vscale x 16 x i8> [[TMP11]])
-; PREDICATED_DATA-NEXT:    [[TMP13:%.*]] = sext i32 [[TMP7]] to i64
-; PREDICATED_DATA-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[Q]], i64 [[TMP13]]
-; PREDICATED_DATA-NEXT:    [[TMP15:%.*]] = sub <vscale x 16 x i8> zeroinitializer, [[TMP12]]
-; PREDICATED_DATA-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 32 x i8> @llvm.vector.interleave2.nxv32i8(<vscale x 16 x i8> [[TMP12]], <vscale x 16 x i8> [[TMP15]])
-; PREDICATED_DATA-NEXT:    [[INTERLEAVED_MASK3:%.*]] = call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> [[TMP6]], <vscale x 16 x i1> [[TMP6]])
-; PREDICATED_DATA-NEXT:    call void @llvm.masked.store.nxv32i8.p0(<vscale x 32 x i8> [[INTERLEAVED_VEC]], ptr [[TMP14]], i32 1, <vscale x 32 x i1> [[INTERLEAVED_MASK3]])
-; PREDICATED_DATA-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP3]]
+; PREDICATED_DATA-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 0
+; PREDICATED_DATA-NEXT:    [[TMP9:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 1
+; PREDICATED_DATA-NEXT:    [[TMP10:%.*]] = call <vscale x 16 x i8> @llvm.smax.nxv16i8(<vscale x 16 x i8> [[TMP8]], <vscale x 16 x i8> [[TMP9]])
+; PREDICATED_DATA-NEXT:    [[TMP11:%.*]] = sext i32 [[TMP5]] to i64
+; PREDICATED_DATA-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[Q]], i64 [[TMP11]]
+; PREDICATED_DATA-NEXT:    [[TMP13:%.*]] = sub <vscale x 16 x i8> zeroinitializer, [[TMP10]]
+; PREDICATED_DATA-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 32 x i8> @llvm.vector.interleave2.nxv32i8(<vscale x 16 x i8> [[TMP10]], <vscale x 16 x i8> [[TMP13]])
+; PREDICATED_DATA-NEXT:    [[INTERLEAVED_MASK3:%.*]] = call <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1> [[TMP4]], <vscale x 16 x i1> [[TMP4]])
+; PREDICATED_DATA-NEXT:    call void @llvm.masked.store.nxv32i8.p0(<vscale x 32 x i8> [[INTERLEAVED_VEC]], ptr [[TMP12]], i32 1, <vscale x 32 x i1> [[INTERLEAVED_MASK3]])
+; PREDICATED_DATA-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP1]]
 ; PREDICATED_DATA-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT2]]
-; PREDICATED_DATA-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; PREDICATED_DATA-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; PREDICATED_DATA-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; PREDICATED_DATA-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; PREDICATED_DATA:       middle.block:
 ; PREDICATED_DATA-NEXT:    br label [[FOR_END:%.*]]
 ; PREDICATED_DATA:       scalar.ph:
@@ -197,41 +193,39 @@ define void @masked_strided_factor4(ptr noalias nocapture readonly %p, ptr noali
 ; SCALAR_EPILOGUE-NEXT:    [[TMP2:%.*]] = shl nuw i32 [[TMP1]], 4
 ; SCALAR_EPILOGUE-NEXT:    [[N_MOD_VF:%.*]] = urem i32 1024, [[TMP2]]
 ; SCALAR_EPILOGUE-NEXT:    [[N_VEC:%.*]] = sub nuw nsw i32 1024, [[N_MOD_VF]]
-; SCALAR_EPILOGUE-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vscale.i32()
-; SCALAR_EPILOGUE-NEXT:    [[TMP4:%.*]] = shl nuw i32 [[TMP3]], 4
 ; SCALAR_EPILOGUE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[CONV]], i64 0
 ; SCALAR_EPILOGUE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
-; SCALAR_EPILOGUE-NEXT:    [[TMP5:%.*]] = call <vscale x 16 x i32> @llvm.stepvector.nxv16i32()
-; SCALAR_EPILOGUE-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[TMP4]], i64 0
+; SCALAR_EPILOGUE-NEXT:    [[TMP3:%.*]] = call <vscale x 16 x i32> @llvm.stepvector.nxv16i32()
+; SCALAR_EPILOGUE-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[TMP2]], i64 0
 ; SCALAR_EPILOGUE-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT1]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
 ; SCALAR_EPILOGUE-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; SCALAR_EPILOGUE:       vector.body:
 ; SCALAR_EPILOGUE-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; SCALAR_EPILOGUE-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 16 x i32> [ [[TMP5]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; SCALAR_EPILOGUE-NEXT:    [[TMP6:%.*]] = icmp ugt <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; SCALAR_EPILOGUE-NEXT:    [[TMP7:%.*]] = shl i32 [[INDEX]], 2
-; SCALAR_EPILOGUE-NEXT:    [[TMP8:%.*]] = sext i32 [[TMP7]] to i64
-; SCALAR_EPILOGUE-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP8]]
-; SCALAR_EPILOGUE-NEXT:    [[INTERLEAVED_MASK:%.*]] = call <vscale x 64 x i1> @llvm.vector.interleave4.nxv64i1(<vscale x 16 x i1> [[TMP6]], <vscale x 16 x i1> [[TMP6]], <vscale x 16 x i1> [[TMP6]], <vscale x 16 x i1> [[TMP6]])
-; SCALAR_EPILOGUE-NEXT:    [[WIDE_MASKED_VEC:%.*]] = call <vscale x 64 x i8> @llvm.masked.load.nxv64i8.p0(ptr [[TMP9]], i32 1, <vscale x 64 x i1> [[INTERLEAVED_MASK]], <vscale x 64 x i8> poison)
+; SCALAR_EPILOGUE-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 16 x i32> [ [[TMP3]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; SCALAR_EPILOGUE-NEXT:    [[TMP4:%.*]] = icmp ugt <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; SCALAR_EPILOGUE-NEXT:    [[TMP5:%.*]] = shl i32 [[INDEX]], 2
+; SCALAR_EPILOGUE-NEXT:    [[TMP6:%.*]] = sext i32 [[TMP5]] to i64
+; SCALAR_EPILOGUE-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP6]]
+; SCALAR_EPILOGUE-NEXT:    [[INTERLEAVED_MASK:%.*]] = call <vscale x 64 x i1> @llvm.vector.interleave4.nxv64i1(<vscale x 16 x i1> [[TMP4]], <vscale x 16 x i1> [[TMP4]], <vscale x 16 x i1> [[TMP4]], <vscale x 16 x i1> [[TMP4]])
+; SCALAR_EPILOGUE-NEXT:    [[WIDE_MASKED_VEC:%.*]] = call <vscale x 64 x i8> @llvm.masked.load.nxv64i8.p0(ptr [[TMP7]], i32 1, <vscale x 64 x i1> [[INTERLEAVED_MASK]], <vscale x 64 x i8> poison)
 ; SCALAR_EPILOGUE-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.vector.deinterleave4.nxv64i8(<vscale x 64 x i8> [[WIDE_MASKED_VEC]])
-; SCALAR_EPILOGUE-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 0
-; SCALAR_EPILOGUE-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 1
-; SCALAR_EPILOGUE-NEXT:    [[TMP12:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 2
-; SCALAR_EPILOGUE-NEXT:    [[TMP13:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 3
+; SCALAR_EPILOGUE-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 0
+; SCALAR_EPILOGUE-NEXT:    [[TMP9:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 1
+; SCALAR_EPILOGUE-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 2
+; SCALAR_EPILOGUE-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 3
+; SCALAR_EPILOGUE-NEXT:    [[TMP12:%.*]] = call <vscale x 16 x i8> @llvm.smax.nxv16i8(<vscale x 16 x i8> [[TMP8]], <vscale x 16 x i8> [[TMP9]])
+; SCALAR_EPILOGUE-NEXT:    [[TMP13:%.*]] = sub <vscale x 16 x i8> zeroinitializer, [[TMP12]]
 ; SCALAR_EPILOGUE-NEXT:    [[TMP14:%.*]] = call <vscale x 16 x i8> @llvm.smax.nxv16i8(<vscale x 16 x i8> [[TMP10]], <vscale x 16 x i8> [[TMP11]])
 ; SCALAR_EPILOGUE-NEXT:    [[TMP15:%.*]] = sub <vscale x 16 x i8> zeroinitializer, [[TMP14]]
-; SCALAR_EPILOGUE-NEXT:    [[TMP16:%.*]] = call <vscale x 16 x i8> @llvm.smax.nxv16i8(<vscale x 16 x i8> [[TMP12]], <vscale x 16 x i8> [[TMP13]])
-; SCALAR_EPILOGUE-NEXT:    [[TMP17:%.*]] = sub <vscale x 16 x i8> zeroinitializer, [[TMP16]]
-; SCALAR_EPILOGUE-NEXT:    [[TMP18:%.*]] = sext i32 [[TMP7]] to i64
-; SCALAR_EPILOGUE-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[Q]], i64 [[TMP18]]
-; SCALAR_EPILOGUE-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 64 x i8> @llvm.vector.interleave4.nxv64i8(<vscale x 16 x i8> [[TMP14]], <vscale x 16 x i8> [[TMP15]], <vscale x 16 x i8> [[TMP16]], <vscale x 16 x i8> [[TMP17]])
-; SCALAR_EPILOGUE-NEXT:    [[INTERLEAVED_MASK3:%.*]] = call <vscale x 64 x i1> @llvm.vector.interleave4.nxv64i1(<vscale x 16 x i1> [[TMP6]], <vscale x 16 x i1> [[TMP6]], <vscale x 16 x i1> [[TMP6]], <vscale x 16 x i1> [[TMP6]])
-; SCALAR_EPILOGUE-NEXT:    call void @llvm.masked.store.nxv64i8.p0(<vscale x 64 x i8> [[INTERLEAVED_VEC]], ptr [[TMP19]], i32 1, <vscale x 64 x i1> [[INTERLEAVED_MASK3]])
-; SCALAR_EPILOGUE-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP4]]
+; SCALAR_EPILOGUE-NEXT:    [[TMP16:%.*]] = sext i32 [[TMP5]] to i64
+; SCALAR_EPILOGUE-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[Q]], i64 [[TMP16]]
+; SCALAR_EPILOGUE-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 64 x i8> @llvm.vector.interleave4.nxv64i8(<vscale x 16 x i8> [[TMP12]], <vscale x 16 x i8> [[TMP13]], <vscale x 16 x i8> [[TMP14]], <vscale x 16 x i8> [[TMP15]])
+; SCALAR_EPILOGUE-NEXT:    [[INTERLEAVED_MASK3:%.*]] = call <vscale x 64 x i1> @llvm.vector.interleave4.nxv64i1(<vscale x 16 x i1> [[TMP4]], <vscale x 16 x i1> [[TMP4]], <vscale x 16 x i1> [[TMP4]], <vscale x 16 x i1> [[TMP4]])
+; SCALAR_EPILOGUE-NEXT:    call void @llvm.masked.store.nxv64i8.p0(<vscale x 64 x i8> [[INTERLEAVED_VEC]], ptr [[TMP17]], i32 1, <vscale x 64 x i1> [[INTERLEAVED_MASK3]])
+; SCALAR_EPILOGUE-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP2]]
 ; SCALAR_EPILOGUE-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT2]]
-; SCALAR_EPILOGUE-NEXT:    [[TMP20:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; SCALAR_EPILOGUE-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; SCALAR_EPILOGUE-NEXT:    [[TMP18:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; SCALAR_EPILOGUE-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; SCALAR_EPILOGUE:       middle.block:
 ; SCALAR_EPILOGUE-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
 ; SCALAR_EPILOGUE-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
@@ -248,43 +242,41 @@ define void @masked_strided_factor4(ptr noalias nocapture readonly %p, ptr noali
 ; PREDICATED_DATA-NEXT:    [[N_RND_UP:%.*]] = add i32 [[TMP1]], 1023
 ; PREDICATED_DATA-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], [[TMP1]]
 ; PREDICATED_DATA-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
-; PREDICATED_DATA-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
-; PREDICATED_DATA-NEXT:    [[TMP3:%.*]] = shl nuw i32 [[TMP2]], 4
 ; PREDICATED_DATA-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[CONV]], i64 0
 ; PREDICATED_DATA-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
-; PREDICATED_DATA-NEXT:    [[TMP4:%.*]] = call <vscale x 16 x i32> @llvm.stepvector.nxv16i32()
-; PREDICATED_DATA-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[TMP3]], i64 0
+; PREDICATED_DATA-NEXT:    [[TMP2:%.*]] = call <vscale x 16 x i32> @llvm.stepvector.nxv16i32()
+; PREDICATED_DATA-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[TMP1]], i64 0
 ; PREDICATED_DATA-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT1]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
 ; PREDICATED_DATA-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; PREDICATED_DATA:       vector.body:
 ; PREDICATED_DATA-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; PREDICATED_DATA-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 16 x i32> [ [[TMP4]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; PREDICATED_DATA-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 16 x i32> [ [[TMP2]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; PREDICATED_DATA-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i32 [[INDEX]], i32 1024)
-; PREDICATED_DATA-NEXT:    [[TMP5:%.*]] = icmp ugt <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; PREDICATED_DATA-NEXT:    [[TMP6:%.*]] = select <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i1> [[TMP5]], <vscale x 16 x i1> zeroinitializer
-; PREDICATED_DATA-NEXT:    [[TMP7:%.*]] = shl i32 [[INDEX]], 2
-; PREDICATED_DATA-NEXT:    [[TMP8:%.*]] = sext i32 [[TMP7]] to i64
-; PREDICATED_DATA-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP8]]
-; PREDICATED_DATA-NEXT:    [[INTERLEAVED_MASK:%.*]] = call <vscale x 64 x i1> @llvm.vector.interleave4.nxv64i1(<vscale x 16 x i1> [[TMP6]], <vscale x 16 x i1> [[TMP6]], <vscale x 16 x i1> [[TMP6]], <vscale x 16 x i1> [[TMP6]])
-; PREDICATED_DATA-NEXT:    [[WIDE_MASKED_VEC:%.*]] = call <vscale x 64 x i8> @llvm.masked.load.nxv64i8.p0(ptr [[TMP9]], i32 1, <vscale x 64 x i1> [[INTERLEAVED_MASK]], <vscale x 64 x i8> poison)
+; PREDICATED_DATA-NEXT:    [[TMP3:%.*]] = icmp ugt <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; PREDICATED_DATA-NEXT:    [[TMP4:%.*]] = select <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i1> [[TMP3]], <vscale x 16 x i1> zeroinitializer
+; PREDICATED_DATA-NEXT:    [[TMP5:%.*]] = shl i32 [[INDEX]], 2
+; PREDICATED_DATA-NEXT:    [[TMP6:%.*]] = sext i32 [[TMP5]] to i64
+; PREDICATED_DATA-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP6]]
+; PREDICATED_DATA-NEXT:    [[INTERLEAVED_MASK:%.*]] = call <vscale x 64 x i1> @llvm.vector.interleave4.nxv64i1(<vscale x 16 x i1> [[TMP4]], <vscale x 16 x i1> [[TMP4]], <vscale x 16 x i1> [[TMP4]], <vscale x 16 x i1> [[TMP4]])
+; PREDICATED_DATA-NEXT:    [[WIDE_MASKED_VEC:%.*]] = call <vscale x 64 x i8> @llvm.masked.load.nxv64i8.p0(ptr [[TMP7]], i32 1, <vscale x 64 x i1> [[INTERLEAVED_MASK]], <vscale x 64 x i8> poison)
 ; PREDICATED_DATA-NEXT:    [[STRIDED_VEC:%.*]] = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.vector.deinterleave4.nxv64i8(<vscale x 64 x i8> [[WIDE_MASKED_VEC]])
-; PREDICATED_DATA-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 0
-; PREDICATED_DATA-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 1
-; PREDICATED_DATA-NEXT:    [[TMP12:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 2
-; PREDICATED_DATA-NEXT:    [[TMP13:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 3
+; PREDICATED_DATA-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 0
+; PREDICATED_DATA-NEXT:    [[TMP9:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 1
+; PREDICATED_DATA-NEXT:    [[TMP10:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 2
+; PREDICATED_DATA-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[STRIDED_VEC]], 3
+; PREDICATED_DATA-NEXT:    [[TMP12:%.*]] = call <vscale x 16 x i8> @llvm.smax.nxv16i8(<vscale x 16 x i8> [[TMP8]], <vscale x 16 x i8> [[TMP9]])
+; PREDICATED_DATA-NEXT:    [[TMP13:%.*]] = sub <vscale x 16 x i8> zeroinitializer, [[TMP12]]
 ; PREDICATED_DATA-NEXT:    [[TMP14:%.*]] = call <vscale x 16 x i8> @llvm.smax.nxv16i8(<vscale x 16 x i8> [[TMP10]], <vscale x 16 x i8> [[TMP11]])
 ; PREDICATED_DATA-NEXT:    [[TMP15:%.*]] = sub <vscale x 16 x i8> zeroinitializer, [[TMP14]]
-; PREDICATED_DATA-NEXT:    [[TMP16:%.*]] = call <vscale x 16 x i8> @llvm.smax.nxv16i8(<vscale x 16 x i8> [[TMP12]], <vscale x 16 x i8> [[TMP13]])
-; PREDICATED_DATA-NEXT:    [[TMP17:%.*]] = sub <vscale x 16 x i8> zeroinitializer, [[TMP16]]
-; PREDICATED_DATA-NEXT:    [[TMP18:%.*]] = sext i32 [[TMP7]] to i64
-; PREDICATED_DATA-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[Q]], i64 [[TMP18]]
-; PREDICATED_DATA-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 64 x i8> @llvm.vector.interleave4.nxv64i8(<vscale x 16 x i8> [[TMP14]], <vscale x 16 x i8> [[TMP15]], <vscale x 16 x i8> [[TMP16]], <vscale x 16 x i8> [[TMP17]])
-; PREDICATED_DATA-NEXT:    [[INTERLEAVED_MASK3:%.*]] = call <vscale x 64 x i1> @llvm.vector.interleave4.nxv64i1(<vscale x 16 x i1> [[TMP6]], <vscale x 16 x i1> [[TMP6]], <vscale x 16 x i1> [[TMP6]], <vscale x 16 x i1> [[TMP6]])
-; PREDICATED_DATA-NEXT:    call void @llvm.masked.store.nxv64i8.p0(<vscale x 64 x i8> [[INTERLEAVED_VEC]], ptr [[TMP19]], i32 1, <vscale x 64 x i1> [[INTERLEAVED_MASK3]])
-; PREDICATED_DATA-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP3]]
+; PREDICATED_DATA-NEXT:    [[TMP16:%.*]] = sext i32 [[TMP5]] to i64
+; PREDICATED_DATA-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[Q]], i64 [[TMP16]]
+; PREDICATED_DATA-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 64 x i8> @llvm.vector.interleave4.nxv64i8(<vscale x 16 x i8> [[TMP12]], <vscale x 16 x i8> [[TMP13]], <vscale x 16 x i8> [[TMP14]], <vscale x 16 x i8> [[TMP15]])
+; PREDICATED_DATA-NEXT:    [[INTERLEAVED_MASK3:%.*]] = call <vscale x 64 x i1> @llvm.vector.interleave4.nxv64i1(<vscale x 16 x i1> [[TMP4]], <vscale x 16 x i1> [[TMP4]], <vscale x 16 x i1> [[TMP4]], <vscale x 16 x i1> [[TMP4]])
+; PREDICATED_DATA-NEXT:    call void @llvm.masked.store.nxv64i8.p0(<vscale x 64 x i8> [[INTERLEAVED_VEC]], ptr [[TMP17]], i32 1, <vscale x 64 x i1> [[INTERLEAVED_MASK3]])
+; PREDICATED_DATA-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP1]]
 ; PREDICATED_DATA-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT2]]
-; PREDICATED_DATA-NEXT:    [[TMP20:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; PREDICATED_DATA-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; PREDICATED_DATA-NEXT:    [[TMP18:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; PREDICATED_DATA-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; PREDICATED_DATA:       middle.block:
 ; PREDICATED_DATA-NEXT:    br label [[FOR_END:%.*]]
 ; PREDICATED_DATA:       scalar.ph:
