@@ -967,8 +967,8 @@ private:
         remove_count += to_remove.GetSize();
         m_list.Remove(to_remove);
       }
-     // Break when fixed-point is reached. 
-    } while (previous_remove_count != remove_count); 
+      // Break when fixed-point is reached.
+    } while (previous_remove_count != remove_count);
 
     return remove_count;
   }
@@ -978,7 +978,7 @@ private:
   /// A hash map from a module's filename to all the modules that share that
   /// filename, for fast module lookups by name.
   llvm::DenseMap<ConstString, llvm::SmallVector<ModuleSP, 1>> m_name_to_modules;
-  
+
   /// The use count of a module held only by m_list and m_name_to_modules.
   static constexpr long kUseCountOrphaned = 2;
 };
