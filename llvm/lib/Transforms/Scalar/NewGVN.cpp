@@ -82,6 +82,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
@@ -505,13 +506,14 @@ class NewGVN {
   MemorySSAWalker *MSSAWalker = nullptr;
   AssumptionCache *AC = nullptr;
   const DataLayout &DL;
-  std::unique_ptr<PredicateInfo> PredInfo;
 
   // These are the only two things the create* functions should have
   // side-effects on due to allocating memory.
   mutable BumpPtrAllocator ExpressionAllocator;
   mutable ArrayRecycler<Value *> ArgRecycler;
   mutable TarjanSCC SCCFinder;
+
+  std::unique_ptr<PredicateInfo> PredInfo;
   const SimplifyQuery SQ;
 
   // Number of function arguments, used by ranking
@@ -649,7 +651,7 @@ class NewGVN {
   BitVector TouchedInstructions;
 
   DenseMap<const BasicBlock *, std::pair<unsigned, unsigned>> BlockInstRange;
-  mutable DenseMap<const IntrinsicInst *, const Value *> IntrinsicInstPred;
+  mutable DenseMap<const IntrinsicInst *, const Value *> PredicateSwapChoice;
 
 #ifndef NDEBUG
   // Debugging for how many times each block and instruction got processed.
@@ -673,7 +675,9 @@ public:
          TargetLibraryInfo *TLI, AliasAnalysis *AA, MemorySSA *MSSA,
          const DataLayout &DL)
       : F(F), DT(DT), TLI(TLI), AA(AA), MSSA(MSSA), AC(AC), DL(DL),
-        PredInfo(std::make_unique<PredicateInfo>(F, *DT, *AC)),
+        // Reuse ExpressionAllocator for PredicateInfo as well.
+        PredInfo(
+            std::make_unique<PredicateInfo>(F, *DT, *AC, ExpressionAllocator)),
         SQ(DL, TLI, DT, AC, /*CtxI=*/nullptr, /*UseInstrInfo=*/false,
            /*CanUseUndef=*/false) {}
 
@@ -836,7 +840,7 @@ private:
   // Ranking
   unsigned int getRank(const Value *) const;
   bool shouldSwapOperands(const Value *, const Value *) const;
-  bool shouldSwapOperandsForIntrinsic(const Value *, const Value *,
+  bool shouldSwapOperandsForPredicate(const Value *, const Value *,
                                       const IntrinsicInst *I) const;
 
   // Reachability handling.
@@ -1531,7 +1535,7 @@ NewGVN::performSymbolicLoadCoercion(Type *LoadType, Value *LoadPtr,
 
   if (auto *II = dyn_cast<IntrinsicInst>(DepInst)) {
     if (II->getIntrinsicID() == Intrinsic::lifetime_start) {
-      auto *LifetimePtr = II->getOperand(1);
+      auto *LifetimePtr = II->getOperand(0);
       if (LoadPtr == lookupOperandLeader(LifetimePtr) ||
           AA->isMustAlias(LoadPtr, LifetimePtr))
         return createConstantExpression(UndefValue::get(LoadType));
@@ -1620,7 +1624,7 @@ NewGVN::performSymbolicPredicateInfoEvaluation(IntrinsicInst *I) const {
   Value *AdditionallyUsedValue = CmpOp0;
 
   // Sort the ops.
-  if (shouldSwapOperandsForIntrinsic(FirstOp, SecondOp, I)) {
+  if (shouldSwapOperandsForPredicate(FirstOp, SecondOp, I)) {
     std::swap(FirstOp, SecondOp);
     Predicate = CmpInst::getSwappedPredicate(Predicate);
     AdditionallyUsedValue = CmpOp1;
@@ -3020,7 +3024,7 @@ void NewGVN::cleanupTables() {
   PredicateToUsers.clear();
   MemoryToUsers.clear();
   RevisitOnReachabilityChange.clear();
-  IntrinsicInstPred.clear();
+  PredicateSwapChoice.clear();
 }
 
 // Assign local DFS number mapping to instructions, and leave space for Value
@@ -3041,6 +3045,7 @@ std::pair<unsigned, unsigned> NewGVN::assignDFSNumbers(BasicBlock *B,
     if (isInstructionTriviallyDead(&I, TLI)) {
       InstrDFS[&I] = 0;
       LLVM_DEBUG(dbgs() << "Skipping trivially dead instruction " << I << "\n");
+      salvageDebugInfo(I);
       markInstructionForDeletion(&I);
       continue;
     }
@@ -4073,6 +4078,12 @@ bool NewGVN::eliminateInstructions(Function &F) {
                 if (!match(DefI, m_Intrinsic<Intrinsic::ssa_copy>()))
                   patchReplacementInstruction(DefI, DominatingLeader);
 
+                SmallVector<DbgVariableRecord *> DVRUsers;
+                findDbgUsers(DefI, DVRUsers);
+
+                for (auto *DVR : DVRUsers)
+                  DVR->replaceVariableLocationOp(DefI, DominatingLeader);
+
                 markInstructionForDeletion(DefI);
               }
             }
@@ -4239,20 +4250,18 @@ bool NewGVN::shouldSwapOperands(const Value *A, const Value *B) const {
   return std::make_pair(getRank(A), A) > std::make_pair(getRank(B), B);
 }
 
-bool NewGVN::shouldSwapOperandsForIntrinsic(const Value *A, const Value *B,
+bool NewGVN::shouldSwapOperandsForPredicate(const Value *A, const Value *B,
                                             const IntrinsicInst *I) const {
-  auto LookupResult = IntrinsicInstPred.find(I);
   if (shouldSwapOperands(A, B)) {
-    if (LookupResult == IntrinsicInstPred.end())
-      IntrinsicInstPred.insert({I, B});
-    else
-      LookupResult->second = B;
+    PredicateSwapChoice[I] = B;
     return true;
   }
 
-  if (LookupResult != IntrinsicInstPred.end()) {
+  auto LookupResult = PredicateSwapChoice.find(I);
+  if (LookupResult != PredicateSwapChoice.end()) {
     auto *SeenPredicate = LookupResult->second;
     if (SeenPredicate) {
+      // We previously decided to swap B to the left. Keep that choice.
       if (SeenPredicate == B)
         return true;
       else

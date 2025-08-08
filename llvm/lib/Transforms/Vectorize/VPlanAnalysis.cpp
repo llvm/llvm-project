@@ -16,7 +16,6 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/Support/GenericDomTreeConstruction.h"
 
 using namespace llvm;
 
@@ -85,17 +84,17 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     return ResTy;
   }
   case Instruction::ICmp:
+  case Instruction::FCmp:
   case VPInstruction::ActiveLaneMask:
     assert(inferScalarType(R->getOperand(0)) ==
                inferScalarType(R->getOperand(1)) &&
            "different types inferred for different operands");
     return IntegerType::get(Ctx, 1);
   case VPInstruction::ComputeAnyOfResult:
-  case VPInstruction::ComputeFindLastIVResult:
+    return inferScalarType(R->getOperand(1));
+  case VPInstruction::ComputeFindIVResult:
   case VPInstruction::ComputeReductionResult: {
-    auto *PhiR = cast<VPReductionPHIRecipe>(R->getOperand(0));
-    auto *OrigPhi = cast<PHINode>(PhiR->getUnderlyingValue());
-    return OrigPhi->getType();
+    return inferScalarType(R->getOperand(0));
   }
   case VPInstruction::ExplicitVectorLength:
     return Type::getIntNTy(Ctx, 32);
@@ -108,7 +107,11 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::AnyOf:
+  case VPInstruction::BuildStructVector:
+  case VPInstruction::BuildVector:
     return SetResultTyFromOp();
+  case VPInstruction::ExtractLane:
+    return inferScalarType(R->getOperand(1));
   case VPInstruction::FirstActiveLane:
     return Type::getIntNTy(Ctx, 64);
   case VPInstruction::ExtractLastElement:
@@ -125,6 +128,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     return IntegerType::get(Ctx, 1);
   case VPInstruction::Broadcast:
   case VPInstruction::PtrAdd:
+  case VPInstruction::WidePtrAdd:
     // Return the type based on first operand.
     return inferScalarType(R->getOperand(0));
   case VPInstruction::BranchOnCond:
@@ -296,13 +300,14 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
             // TODO: Use info from interleave group.
             return V->getUnderlyingValue()->getType();
           })
-          .Case<VPExtendedReductionRecipe, VPMulAccumulateReductionRecipe>(
-              [](const auto *R) { return R->getResultType(); })
           .Case<VPExpandSCEVRecipe>([](const VPExpandSCEVRecipe *R) {
             return R->getSCEV()->getType();
           })
           .Case<VPReductionRecipe>([this](const auto *R) {
             return inferScalarType(R->getChainOp());
+          })
+          .Case<VPExpressionRecipe>([this](const auto *R) {
+            return inferScalarType(R->getOperandOfResultType());
           });
 
   assert(ResultTy && "could not infer type for the given VPValue");
@@ -403,9 +408,12 @@ static unsigned getVFScaleFactor(VPRecipeBase *R) {
   return 1;
 }
 
-bool VPRegisterUsage::exceedsMaxNumRegs(const TargetTransformInfo &TTI) const {
-  return any_of(MaxLocalUsers, [&TTI](auto &LU) {
-    return LU.second > TTI.getNumberOfRegisters(LU.first);
+bool VPRegisterUsage::exceedsMaxNumRegs(const TargetTransformInfo &TTI,
+                                        unsigned OverrideMaxNumRegs) const {
+  return any_of(MaxLocalUsers, [&TTI, &OverrideMaxNumRegs](auto &LU) {
+    return LU.second > (OverrideMaxNumRegs > 0
+                            ? OverrideMaxNumRegs
+                            : TTI.getNumberOfRegisters(LU.first));
   });
 }
 

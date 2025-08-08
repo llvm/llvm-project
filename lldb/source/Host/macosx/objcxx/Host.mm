@@ -595,7 +595,9 @@ static bool GetMacOSXProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
       const llvm::Triple::ArchType triple_arch = triple.getArch();
       const bool check_for_ios_simulator =
           (triple_arch == llvm::Triple::x86 ||
-           triple_arch == llvm::Triple::x86_64);
+           triple_arch == llvm::Triple::x86_64 ||
+           triple_arch == llvm::Triple::aarch64);
+
       const char *cstr = data.GetCStr(&offset);
       if (cstr) {
         process_info.GetExecutableFile().SetFile(cstr, FileSpec::Style::native);
@@ -621,21 +623,20 @@ static bool GetMacOSXProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
           }
 
           Environment &proc_env = process_info.GetEnvironment();
-          while ((cstr = data.GetCStr(&offset))) {
-            if (cstr[0] == '\0')
-              break;
-
-            if (check_for_ios_simulator) {
-              if (strncmp(cstr, "SIMULATOR_UDID=", strlen("SIMULATOR_UDID=")) ==
-                  0)
-                process_info.GetArchitecture().GetTriple().setOS(
-                    llvm::Triple::IOS);
-              else
-                process_info.GetArchitecture().GetTriple().setOS(
-                    llvm::Triple::MacOSX);
-            }
-
-            proc_env.insert(cstr);
+          bool is_simulator = false;
+          llvm::StringRef env_var;
+          while (!(env_var = data.GetCStr(&offset)).empty()) {
+            if (check_for_ios_simulator &&
+                env_var.starts_with("SIMULATOR_UDID="))
+              is_simulator = true;
+            proc_env.insert(env_var);
+          }
+          llvm::Triple &triple = process_info.GetArchitecture().GetTriple();
+          if (is_simulator) {
+            triple.setOS(llvm::Triple::IOS);
+            triple.setEnvironment(llvm::Triple::Simulator);
+          } else {
+            triple.setOS(llvm::Triple::MacOSX);
           }
           return true;
         }
@@ -741,8 +742,8 @@ uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
         !match_info.ProcessIDsMatch(process_info))
       continue;
 
-    // Get CPU type first so we can know to look for iOS simulator is we have
-    // x86 or x86_64
+    // Get CPU type first so we can know to look for iOS simulator if we have
+    // a compatible type.
     if (GetMacOSXProcessCPUType(process_info)) {
       if (GetMacOSXProcessArgs(&match_info, process_info)) {
         if (match_info.Matches(process_info))

@@ -1,8 +1,11 @@
 // RUN: %clang_cc1 -fopenacc -emit-cir -fclangir %s -o - | FileCheck %s
 
 void acc_data(int cond) {
-  // CHECK: cir.func @acc_data(%[[ARG:.*]]: !s32i{{.*}}) {
+  // CHECK: cir.func{{.*}} @acc_data(%[[ARG:.*]]: !s32i{{.*}}) {
   // CHECK-NEXT: %[[COND:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["cond", init]
+
+  int *ptr;
+  // CHECK-NEXT: %[[PTR:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["ptr"]
   // CHECK-NEXT: cir.store %[[ARG]], %[[COND]] : !s32i, !cir.ptr<!s32i>
 
 #pragma acc data default(none)
@@ -220,6 +223,51 @@ void acc_data(int cond) {
   // CHECK-NEXT: acc.data wait({%[[CONV_CAST]] : si32, %[[ONE_CAST]] : si32}) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: attributes {defaultAttr = #acc<defaultvalue none>}
+
+#pragma acc data deviceptr(ptr)
+  {}
+  // CHECK-NEXT: %[[DEV_PTR:.*]] = acc.deviceptr varPtr(%[[PTR]] : !cir.ptr<!cir.ptr<!s32i>>) -> !cir.ptr<!cir.ptr<!s32i>> {name = "ptr"}
+  // CHECK-NEXT: acc.data dataOperands(%[[DEV_PTR]] : !cir.ptr<!cir.ptr<!s32i>>) {
+  // CHECK-NEXT: acc.terminator
+  // CHECK-NEXT: } loc
+#pragma acc data deviceptr(ptr) device_type(radeon) async
+  {}
+  // CHECK-NEXT: %[[DEV_PTR:.*]] = acc.deviceptr varPtr(%[[PTR]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<radeon>]) -> !cir.ptr<!cir.ptr<!s32i>> {name = "ptr"}
+  // CHECK-NEXT: acc.data async([#acc.device_type<radeon>]) dataOperands(%[[DEV_PTR]] : !cir.ptr<!cir.ptr<!s32i>>) {
+  // CHECK-NEXT: acc.terminator
+  // CHECK-NEXT: } loc
+
+#pragma acc data present(cond)
+  {}
+  // CHECK-NEXT: %[[PRESENT:.*]] = acc.present varPtr(%[[COND]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "cond"}
+  // CHECK-NEXT: acc.data dataOperands(%[[PRESENT]] : !cir.ptr<!s32i>) {
+  // CHECK-NEXT: acc.terminator
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.delete accPtr(%[[PRESENT]] : !cir.ptr<!s32i>) {dataClause = #acc<data_clause acc_present>, name = "cond"}
+
+#pragma acc data present(cond) device_type(radeon) async
+  {}
+  // CHECK-NEXT: %[[PRESENT:.*]] = acc.present varPtr(%[[COND]] : !cir.ptr<!s32i>) async([#acc.device_type<radeon>]) -> !cir.ptr<!s32i> {name = "cond"}
+  // CHECK-NEXT: acc.data async([#acc.device_type<radeon>]) dataOperands(%[[PRESENT]] : !cir.ptr<!s32i>) {
+  // CHECK-NEXT: acc.terminator
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.delete accPtr(%[[PRESENT]] : !cir.ptr<!s32i>) async([#acc.device_type<radeon>]) {dataClause = #acc<data_clause acc_present>, name = "cond"}
+
+#pragma acc data attach(ptr)
+  {}
+  // CHECK-NEXT: %[[ATTACH:.*]] = acc.attach varPtr(%[[PTR]] : !cir.ptr<!cir.ptr<!s32i>>) -> !cir.ptr<!cir.ptr<!s32i>> {name = "ptr"}
+  // CHECK-NEXT: acc.data dataOperands(%[[ATTACH]] : !cir.ptr<!cir.ptr<!s32i>>) {
+  // CHECK-NEXT: acc.terminator
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.detach accPtr(%[[ATTACH]] : !cir.ptr<!cir.ptr<!s32i>>) {dataClause = #acc<data_clause acc_attach>, name = "ptr"}
+
+#pragma acc data attach(ptr) device_type(radeon) async
+  {}
+  // CHECK-NEXT: %[[ATTACH:.*]] = acc.attach varPtr(%[[PTR]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<radeon>]) -> !cir.ptr<!cir.ptr<!s32i>> {name = "ptr"}
+  // CHECK-NEXT: acc.data async([#acc.device_type<radeon>]) dataOperands(%[[ATTACH]] : !cir.ptr<!cir.ptr<!s32i>>) {
+  // CHECK-NEXT: acc.terminator
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.detach accPtr(%[[ATTACH]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<radeon>]) {dataClause = #acc<data_clause acc_attach>, name = "ptr"}
 
   // CHECK-NEXT: cir.return
 }

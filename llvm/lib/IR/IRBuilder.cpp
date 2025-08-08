@@ -15,7 +15,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
@@ -52,7 +51,7 @@ GlobalVariable *IRBuilderBase::CreateGlobalString(StringRef Str,
       *M, StrConstant->getType(), true, GlobalValue::PrivateLinkage,
       StrConstant, Name, nullptr, GlobalVariable::NotThreadLocal, AddressSpace);
   GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-  GV->setAlignment(Align(1));
+  GV->setAlignment(M->getDataLayout().getPrefTypeAlign(getInt8Ty()));
   return GV;
 }
 
@@ -61,19 +60,12 @@ Type *IRBuilderBase::getCurrentFunctionReturnType() const {
   return BB->getParent()->getReturnType();
 }
 
-DebugLoc IRBuilderBase::getCurrentDebugLocation() const {
-  for (auto &KV : MetadataToCopy)
-    if (KV.first == LLVMContext::MD_dbg)
-      return {cast<DILocation>(KV.second)};
-
-  return {};
-}
+DebugLoc IRBuilderBase::getCurrentDebugLocation() const { return StoredDL; }
 void IRBuilderBase::SetInstDebugLocation(Instruction *I) const {
-  for (const auto &KV : MetadataToCopy)
-    if (KV.first == LLVMContext::MD_dbg) {
-      I->setDebugLoc(DebugLoc(KV.second));
-      return;
-    }
+  // We prefer to set our current debug location if any has been set, but if
+  // our debug location is empty and I has a valid location, we shouldn't
+  // overwrite it.
+  I->setDebugLoc(StoredDL.orElse(I->getDebugLoc()));
 }
 
 Value *IRBuilderBase::CreateAggregateCast(Value *V, Type *DestTy) {
@@ -125,7 +117,7 @@ static Value *CreateVScaleMultiple(IRBuilderBase &B, Type *Ty, uint64_t Scale) {
   if (Scale == 1)
     return VScale;
 
-  return B.CreateMul(VScale, ConstantInt::get(Ty, Scale));
+  return B.CreateNUWMul(VScale, ConstantInt::get(Ty, Scale));
 }
 
 Value *IRBuilderBase::CreateElementCount(Type *Ty, ElementCount EC) {
@@ -419,28 +411,16 @@ CallInst *IRBuilderBase::CreateFPMinimumReduce(Value *Src) {
   return getReductionIntrinsic(Intrinsic::vector_reduce_fminimum, Src);
 }
 
-CallInst *IRBuilderBase::CreateLifetimeStart(Value *Ptr, ConstantInt *Size) {
+CallInst *IRBuilderBase::CreateLifetimeStart(Value *Ptr) {
   assert(isa<PointerType>(Ptr->getType()) &&
          "lifetime.start only applies to pointers.");
-  if (!Size)
-    Size = getInt64(-1);
-  else
-    assert(Size->getType() == getInt64Ty() &&
-           "lifetime.start requires the size to be an i64");
-  Value *Ops[] = { Size, Ptr };
-  return CreateIntrinsic(Intrinsic::lifetime_start, {Ptr->getType()}, Ops);
+  return CreateIntrinsic(Intrinsic::lifetime_start, {Ptr->getType()}, {Ptr});
 }
 
-CallInst *IRBuilderBase::CreateLifetimeEnd(Value *Ptr, ConstantInt *Size) {
+CallInst *IRBuilderBase::CreateLifetimeEnd(Value *Ptr) {
   assert(isa<PointerType>(Ptr->getType()) &&
          "lifetime.end only applies to pointers.");
-  if (!Size)
-    Size = getInt64(-1);
-  else
-    assert(Size->getType() == getInt64Ty() &&
-           "lifetime.end requires the size to be an i64");
-  Value *Ops[] = { Size, Ptr };
-  return CreateIntrinsic(Intrinsic::lifetime_end, {Ptr->getType()}, Ops);
+  return CreateIntrinsic(Intrinsic::lifetime_end, {Ptr->getType()}, {Ptr});
 }
 
 CallInst *IRBuilderBase::CreateInvariantStart(Value *Ptr, ConstantInt *Size) {
@@ -1152,9 +1132,32 @@ Value *IRBuilderBase::CreateVectorSplat(ElementCount EC, Value *V,
   return CreateShuffleVector(V, Zeros, Name + ".splat");
 }
 
-Value *IRBuilderBase::CreatePreserveArrayAccessIndex(
-    Type *ElTy, Value *Base, unsigned Dimension, unsigned LastIndex,
-    MDNode *DbgInfo) {
+Value *IRBuilderBase::CreateVectorInterleave(ArrayRef<Value *> Ops,
+                                             const Twine &Name) {
+  assert(Ops.size() >= 2 && Ops.size() <= 8 &&
+         "Unexpected number of operands to interleave");
+
+  // Make sure all operands are the same type.
+  assert(isa<VectorType>(Ops[0]->getType()) && "Unexpected type");
+
+#ifndef NDEBUG
+  for (unsigned I = 1; I < Ops.size(); I++) {
+    assert(Ops[I]->getType() == Ops[0]->getType() &&
+           "Vector interleave expects matching operand types!");
+  }
+#endif
+
+  unsigned IID = Intrinsic::getInterleaveIntrinsicID(Ops.size());
+  auto *SubvecTy = cast<VectorType>(Ops[0]->getType());
+  Type *DestTy = VectorType::get(SubvecTy->getElementType(),
+                                 SubvecTy->getElementCount() * Ops.size());
+  return CreateIntrinsic(IID, {DestTy}, Ops, {}, Name);
+}
+
+Value *IRBuilderBase::CreatePreserveArrayAccessIndex(Type *ElTy, Value *Base,
+                                                     unsigned Dimension,
+                                                     unsigned LastIndex,
+                                                     MDNode *DbgInfo) {
   auto *BaseType = Base->getType();
   assert(isa<PointerType>(BaseType) &&
          "Invalid Base ptr type for preserve.array.access.index.");

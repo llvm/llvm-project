@@ -33,7 +33,7 @@ typedef std::pair<std::vector<unsigned char>, std::vector<const char *>>
 static bool PrintInsts(const MCDisassembler &DisAsm, const ByteArrayTy &Bytes,
                        SourceMgr &SM, raw_ostream &Out, MCStreamer &Streamer,
                        bool InAtomicBlock, const MCSubtargetInfo &STI) {
-  ArrayRef<uint8_t> Data(Bytes.first.data(), Bytes.first.size());
+  ArrayRef<uint8_t> Data(Bytes.first);
 
   // Disassemble it to strings.
   uint64_t Size;

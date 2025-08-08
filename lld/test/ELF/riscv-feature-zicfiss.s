@@ -13,13 +13,17 @@
 # RUN: llvm-mc --filetype=obj --triple=riscv64 f3.s   -o f3.o
 # RUN: llvm-mc --filetype=obj --triple=riscv64 f3-s.s -o f3-s.o
 
-## ZICFISS should be enabled when it's enabled in all inputs
+## ZICFISS should be enabled when it's enabled in all inputs or when it's forced on.
 # RUN: ld.lld rv32-f1-s.o rv32-f2-s.o rv32-f3-s.o -o out.rv32 --fatal-warnings
 # RUN: llvm-readelf -n out.rv32 | FileCheck --check-prefix=ZICFISS %s
 # RUN: ld.lld f1-s.o f2-s.o f3-s.o -o out --fatal-warnings
 # RUN: llvm-readelf -n out | FileCheck --check-prefix=ZICFISS %s
 # RUN: ld.lld f1-s.o f3-s.o --shared -o out.so --fatal-warnings
 # RUN: llvm-readelf -n out.so | FileCheck --check-prefix=ZICFISS %s
+# RUN: ld.lld f1-s.o f2.o f3-s.o -o out.force -z zicfiss=always --fatal-warnings
+# RUN: llvm-readelf -n out.force | FileCheck --check-prefix=ZICFISS %s
+# RUN: ld.lld f2-s.o f3.o --shared -o out.force.so -z zicfiss=never -z zicfiss=always --fatal-warnings
+# RUN: llvm-readelf -n out.force.so | FileCheck --check-prefix=ZICFISS %s
 # ZICFISS: Properties: RISC-V feature: ZICFISS
 
 ## ZICFISS should not be enabled if it's not enabled in at least one input
@@ -28,17 +32,25 @@
 # RUN: ld.lld f2-s.o f3.o --shared -o out.no.so --fatal-warnings
 # RUN: llvm-readelf -n out.no.so | count 0
 
+## ZICFISS should be disabled with zicfiss=never, even if ZICFISS is present in
+## all inputs.
+# RUN: ld.lld f1-s.o f2-s.o f3-s.o -z zicfiss=always -z zicfiss=never -o out.never --fatal-warnings
+# RUN: llvm-readelf -n out.never | count 0
+
 ## zicfiss-report should report any input files that don't have the zicfiss
 ## property
 # RUN: ld.lld f1-s.o f2.o f3-s.o -z zicfiss-report=warning 2>&1 | FileCheck --check-prefix=REPORT-WARN %s
+# RUN: ld.lld f1-s.o f2.o f3-s.o -z zicfiss-report=warning -z zicfiss=always 2>&1 | FileCheck --check-prefix=REPORT-WARN %s
+# RUN: ld.lld f1-s.o f2.o f3-s.o -z zicfiss-report=warning -z zicfiss=never 2>&1 | FileCheck --check-prefix=REPORT-WARN %s
 # RUN: not ld.lld f2-s.o f3.o --shared -z zicfiss-report=error 2>&1 | FileCheck --check-prefix=REPORT-ERROR %s
-# RUN: ld.lld f1-s.o f2-s.o f3-s.o -z zicfiss-report=warning 2>&1 | count 0
-# RUN: ld.lld f1-s.o f2-s.o f3-s.o -z zicfiss-report=error 2>&1 | count 0
+# RUN: ld.lld f1-s.o f2-s.o f3-s.o -z zicfiss-report=warning -z zicfiss=always 2>&1 | count 0
+# RUN: ld.lld f1-s.o f2-s.o f3-s.o -z zicfiss-report=error -z zicfiss=always 2>&1 | count 0
 # REPORT-WARN: warning: f2.o: -z zicfiss-report: file does not have GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS property
 # REPORT-ERROR: error: f3.o: -z zicfiss-report: file does not have GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS property
 
 ## An invalid -z zicfiss-report option should give an error
-# RUN: not ld.lld f2-s.o f3-s.o -z zicfiss-report=x 2>&1 | FileCheck --check-prefix=INVALID %s
+# RUN: not ld.lld f2-s.o f3-s.o -z zicfiss=x -z zicfiss-report=x 2>&1 | FileCheck --check-prefix=INVALID %s
+# INVALID: error: unknown -z zicfiss= value: x
 # INVALID: error: unknown -z zicfiss-report= value: x
 
 #--- rv32-f1-s.s

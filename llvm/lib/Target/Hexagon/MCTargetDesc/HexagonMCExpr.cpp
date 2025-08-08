@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "HexagonMCExpr.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCValue.h"
@@ -58,7 +59,7 @@ HexagonMCExpr::HexagonMCExpr(MCExpr const *Expr)
       SignMismatch(false) {}
 
 void HexagonMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
-  Expr->print(OS, MAI);
+  MAI->printExpr(OS, *Expr);
 }
 
 void HexagonMCExpr::setSignMismatch(bool Val) {

@@ -271,10 +271,6 @@ void IndexingContext::indexNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS,
     handleReference(NNS.getNestedNameSpecifier()->getAsNamespace(),
                     Loc, Parent, DC, SymbolRoleSet());
     break;
-  case NestedNameSpecifier::NamespaceAlias:
-    handleReference(NNS.getNestedNameSpecifier()->getAsNamespaceAlias(),
-                    Loc, Parent, DC, SymbolRoleSet());
-    break;
 
   case NestedNameSpecifier::TypeSpec:
     indexTypeLoc(NNS.getTypeLoc(), Parent, DC);

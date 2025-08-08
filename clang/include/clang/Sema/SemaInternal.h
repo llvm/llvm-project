@@ -15,6 +15,7 @@
 #define LLVM_CLANG_SEMA_SEMAINTERNAL_H
 
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaDiagnostic.h"
@@ -313,20 +314,6 @@ private:
   bool EnteringContext;
   bool SearchNamespaces;
 };
-
-inline Sema::TypoExprState::TypoExprState() {}
-
-inline Sema::TypoExprState::TypoExprState(TypoExprState &&other) noexcept {
-  *this = std::move(other);
-}
-
-inline Sema::TypoExprState &Sema::TypoExprState::
-operator=(Sema::TypoExprState &&other) noexcept {
-  Consumer = std::move(other.Consumer);
-  DiagHandler = std::move(other.DiagHandler);
-  RecoveryHandler = std::move(other.RecoveryHandler);
-  return *this;
-}
 
 } // end namespace clang
 

@@ -59,32 +59,32 @@ LogicalResult ExpandDivF16::matchAndRewrite(LLVM::FDivOp op,
   Type i32Type = rewriter.getI32Type();
 
   // Extend lhs and rhs to fp32.
-  Value lhs = rewriter.create<LLVM::FPExtOp>(loc, f32Type, op.getLhs());
-  Value rhs = rewriter.create<LLVM::FPExtOp>(loc, f32Type, op.getRhs());
+  Value lhs = LLVM::FPExtOp::create(rewriter, loc, f32Type, op.getLhs());
+  Value rhs = LLVM::FPExtOp::create(rewriter, loc, f32Type, op.getRhs());
 
   // float rcp = rcp.approx.ftz.f32(rhs), approx = lhs * rcp.
-  Value rcp = rewriter.create<NVVM::RcpApproxFtzF32Op>(loc, f32Type, rhs);
-  Value approx = rewriter.create<LLVM::FMulOp>(loc, lhs, rcp);
+  Value rcp = NVVM::RcpApproxFtzF32Op::create(rewriter, loc, f32Type, rhs);
+  Value approx = LLVM::FMulOp::create(rewriter, loc, lhs, rcp);
 
   // Refine the approximation with one Newton iteration:
   // float refined = approx + (lhs - approx * rhs) * rcp;
-  Value err = rewriter.create<LLVM::FMAOp>(
-      loc, approx, rewriter.create<LLVM::FNegOp>(loc, rhs), lhs);
-  Value refined = rewriter.create<LLVM::FMAOp>(loc, err, rcp, approx);
+  Value err = LLVM::FMAOp::create(
+      rewriter, loc, approx, LLVM::FNegOp::create(rewriter, loc, rhs), lhs);
+  Value refined = LLVM::FMAOp::create(rewriter, loc, err, rcp, approx);
 
   // Use refined value if approx is normal (exponent neither all 0 or all 1).
-  Value mask = rewriter.create<LLVM::ConstantOp>(
-      loc, i32Type, rewriter.getUI32IntegerAttr(0x7f800000));
-  Value cast = rewriter.create<LLVM::BitcastOp>(loc, i32Type, approx);
-  Value exp = rewriter.create<LLVM::AndOp>(loc, i32Type, cast, mask);
-  Value zero = rewriter.create<LLVM::ConstantOp>(
-      loc, i32Type, rewriter.getUI32IntegerAttr(0));
-  Value pred = rewriter.create<LLVM::OrOp>(
-      loc,
-      rewriter.create<LLVM::ICmpOp>(loc, LLVM::ICmpPredicate::eq, exp, zero),
-      rewriter.create<LLVM::ICmpOp>(loc, LLVM::ICmpPredicate::eq, exp, mask));
+  Value mask = LLVM::ConstantOp::create(
+      rewriter, loc, i32Type, rewriter.getUI32IntegerAttr(0x7f800000));
+  Value cast = LLVM::BitcastOp::create(rewriter, loc, i32Type, approx);
+  Value exp = LLVM::AndOp::create(rewriter, loc, i32Type, cast, mask);
+  Value zero = LLVM::ConstantOp::create(rewriter, loc, i32Type,
+                                        rewriter.getUI32IntegerAttr(0));
+  Value pred = LLVM::OrOp::create(
+      rewriter, loc,
+      LLVM::ICmpOp::create(rewriter, loc, LLVM::ICmpPredicate::eq, exp, zero),
+      LLVM::ICmpOp::create(rewriter, loc, LLVM::ICmpPredicate::eq, exp, mask));
   Value result =
-      rewriter.create<LLVM::SelectOp>(loc, f32Type, pred, approx, refined);
+      LLVM::SelectOp::create(rewriter, loc, f32Type, pred, approx, refined);
 
   // Replace with trucation back to fp16.
   rewriter.replaceOpWithNewOp<LLVM::FPTruncOp>(op, op.getType(), result);

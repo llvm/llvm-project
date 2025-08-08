@@ -46,7 +46,7 @@ struct SlicyBits {
 };
 
 // Case 1: Extraneous braces get ignored in literal instantiation.
-// CHECK-LABEL: define void @_Z5case1v(
+// CHECK-LABEL: define hidden void @_Z5case1v(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_TWOFLOATS:%.*]]) align 1 [[AGG_RESULT:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[AGG_RESULT]], ptr align 1 @__const._Z5case1v.TF1, i32 8, i1 false)
@@ -58,7 +58,7 @@ TwoFloats case1() {
 }
 
 // Case 2: Valid C/C++ initializer is handled appropriately.
-// CHECK-LABEL: define void @_Z5case2v(
+// CHECK-LABEL: define hidden void @_Z5case2v(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_TWOFLOATS:%.*]]) align 1 [[AGG_RESULT:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[AGG_RESULT]], ptr align 1 @__const._Z5case2v.TF2, i32 8, i1 false)
@@ -70,7 +70,7 @@ TwoFloats case2() {
 }
 
 // Case 3: Simple initialization with conversion of an argument.
-// CHECK-LABEL: define void @_Z5case3i(
+// CHECK-LABEL: define hidden void @_Z5case3i(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_TWOFLOATS:%.*]]) align 1 [[AGG_RESULT:%.*]], i32 noundef [[VAL:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VAL_ADDR:%.*]] = alloca i32, align 4
@@ -90,7 +90,7 @@ TwoFloats case3(int Val) {
 
 // Case 4: Initialization from a scalarized vector into a structure with element
 // conversions.
-// CHECK-LABEL: define void @_Z5case4Dv2_i(
+// CHECK-LABEL: define hidden void @_Z5case4Dv2_i(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_TWOFLOATS:%.*]]) align 1 [[AGG_RESULT:%.*]], <2 x i32> noundef [[TWOVALS:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TWOVALS_ADDR:%.*]] = alloca <2 x i32>, align 8
@@ -113,7 +113,7 @@ TwoFloats case4(int2 TwoVals) {
 }
 
 // Case 5: Initialization from a scalarized vector of matching type.
-// CHECK-LABEL: define void @_Z5case5Dv2_i(
+// CHECK-LABEL: define hidden void @_Z5case5Dv2_i(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_TWOINTS:%.*]]) align 1 [[AGG_RESULT:%.*]], <2 x i32> noundef [[TWOVALS:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TWOVALS_ADDR:%.*]] = alloca <2 x i32>, align 8
@@ -135,7 +135,7 @@ TwoInts case5(int2 TwoVals) {
 
 // Case 6: Initialization from a scalarized structure of different type with
 // different element types.
-// CHECK-LABEL: define void @_Z5case69TwoFloats(
+// CHECK-LABEL: define hidden void @_Z5case69TwoFloats(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_TWOINTS:%.*]]) align 1 [[AGG_RESULT:%.*]], ptr noundef byval([[STRUCT_TWOFLOATS:%.*]]) align 1 [[TF4:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[Z:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[AGG_RESULT]], i32 0, i32 0
@@ -157,7 +157,7 @@ TwoInts case6(TwoFloats TF4) {
 
 // Case 7: Initialization of a complex structure, with bogus braces and element
 // conversions from a collection of scalar values, and structures.
-// CHECK-LABEL: define void @_Z5case77TwoIntsS_i9TwoFloatsS0_S0_S0_(
+// CHECK-LABEL: define hidden void @_Z5case77TwoIntsS_i9TwoFloatsS0_S0_S0_(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_DOGGO:%.*]]) align 1 [[AGG_RESULT:%.*]], ptr noundef byval([[STRUCT_TWOINTS:%.*]]) align 1 [[TI1:%.*]], ptr noundef byval([[STRUCT_TWOINTS]]) align 1 [[TI2:%.*]], i32 noundef [[VAL:%.*]], ptr noundef byval([[STRUCT_TWOFLOATS:%.*]]) align 1 [[TF1:%.*]], ptr noundef byval([[STRUCT_TWOFLOATS]]) align 1 [[TF2:%.*]], ptr noundef byval([[STRUCT_TWOFLOATS]]) align 1 [[TF3:%.*]], ptr noundef byval([[STRUCT_TWOFLOATS]]) align 1 [[TF4:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[VAL_ADDR:%.*]] = alloca i32, align 4
@@ -221,7 +221,7 @@ Doggo case7(TwoInts TI1, TwoInts TI2, int Val, TwoFloats TF1, TwoFloats TF2,
 
 // Case 8: Initialization of a structure from a different structure with
 // significantly different element types and grouping.
-// CHECK-LABEL: define void @_Z5case85Doggo(
+// CHECK-LABEL: define hidden void @_Z5case85Doggo(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_ANIMALBITS:%.*]]) align 1 [[AGG_RESULT:%.*]], ptr noundef byval([[STRUCT_DOGGO:%.*]]) align 1 [[D1:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[LEGS:%.*]] = getelementptr inbounds nuw [[STRUCT_ANIMALBITS]], ptr [[AGG_RESULT]], i32 0, i32 0
@@ -307,7 +307,7 @@ AnimalBits case8(Doggo D1) {
 // Case 9: Everything everywhere all at once... Initializing mismatched
 // structures from different layouts, different component groupings, with no
 // top-level bracing separation.
-// CHECK-LABEL: define void @_Z5case95Doggo10AnimalBits(
+// CHECK-LABEL: define hidden void @_Z5case95Doggo10AnimalBits(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_ZOO:%.*]]) align 1 [[AGG_RESULT:%.*]], ptr noundef byval([[STRUCT_DOGGO:%.*]]) align 1 [[D1:%.*]], ptr noundef byval([[STRUCT_ANIMALBITS:%.*]]) align 1 [[A1:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[DOGS:%.*]] = getelementptr inbounds nuw [[STRUCT_ZOO]], ptr [[AGG_RESULT]], i32 0, i32 0
@@ -723,7 +723,7 @@ Zoo case9(Doggo D1, AnimalBits A1) {
 }
 
 // Case 10: Initialize an object with a base class from two objects.
-// CHECK-LABEL: define void @_Z6case109TwoFloatsS_(
+// CHECK-LABEL: define hidden void @_Z6case109TwoFloatsS_(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_FOURFLOATS:%.*]]) align 1 [[AGG_RESULT:%.*]], ptr noundef byval([[STRUCT_TWOFLOATS:%.*]]) align 1 [[TF1:%.*]], ptr noundef byval([[STRUCT_TWOFLOATS]]) align 1 [[TF2:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOFLOATS]], ptr [[AGG_RESULT]], i32 0, i32 0
@@ -750,7 +750,7 @@ FourFloats case10(TwoFloats TF1, TwoFloats TF2) {
 }
 
 // Case 11: Initialize an object with a base class from a vector splat.
-// CHECK-LABEL: define void @_Z6case11f(
+// CHECK-LABEL: define hidden void @_Z6case11f(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_FOURFLOATS:%.*]]) align 1 [[AGG_RESULT:%.*]], float noundef nofpclass(nan inf) [[F:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
@@ -799,7 +799,7 @@ FourFloats case11(float F) {
 }
 
 // Case 12: Initialize bitfield from two integers.
-// CHECK-LABEL: define void @_Z6case12ii(
+// CHECK-LABEL: define hidden void @_Z6case12ii(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_SLICYBITS:%.*]]) align 1 [[AGG_RESULT:%.*]], i32 noundef [[I:%.*]], i32 noundef [[J:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
@@ -821,7 +821,7 @@ SlicyBits case12(int I, int J) {
 }
 
 // Case 13: Initialize bitfield from a struct of two ints.
-// CHECK-LABEL: define void @_Z6case137TwoInts(
+// CHECK-LABEL: define hidden void @_Z6case137TwoInts(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_SLICYBITS:%.*]]) align 1 [[AGG_RESULT:%.*]], ptr noundef byval([[STRUCT_TWOINTS:%.*]]) align 1 [[TI:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[Z:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[TI]], i32 0, i32 0
@@ -841,7 +841,7 @@ SlicyBits case13(TwoInts TI) {
 }
 
 // Case 14: Initialize struct of ints from struct with bitfields.
-// CHECK-LABEL: define void @_Z6case149SlicyBits(
+// CHECK-LABEL: define hidden void @_Z6case149SlicyBits(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_TWOINTS:%.*]]) align 1 [[AGG_RESULT:%.*]], ptr noundef byval([[STRUCT_SLICYBITS:%.*]]) align 1 [[SB:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[Z:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[AGG_RESULT]], i32 0, i32 0
@@ -861,7 +861,7 @@ TwoInts case14(SlicyBits SB) {
 }
 
 // Case 15: Initialize struct of floats from struct with bitfields.
-// CHECK-LABEL: define void @_Z6case159SlicyBits(
+// CHECK-LABEL: define hidden void @_Z6case159SlicyBits(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_TWOFLOATS:%.*]]) align 1 [[AGG_RESULT:%.*]], ptr noundef byval([[STRUCT_SLICYBITS:%.*]]) align 1 [[SB:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOFLOATS]], ptr [[AGG_RESULT]], i32 0, i32 0
@@ -884,7 +884,7 @@ TwoFloats case15(SlicyBits SB) {
 
 // Case 16: Side-effecting initialization list arguments. The important thing
 // here is that case16 only has _one_ call to makeTwo.
-// CHECK-LABEL: define void @_Z7makeTwoRf(
+// CHECK-LABEL: define hidden void @_Z7makeTwoRf(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_TWOFLOATS:%.*]]) align 1 [[AGG_RESULT:%.*]], ptr noalias noundef nonnull align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca ptr, align 4
@@ -910,7 +910,7 @@ TwoFloats makeTwo(inout float X) {
     return TF;
 }
 
-// CHECK-LABEL: define void @_Z6case16v(
+// CHECK-LABEL: define hidden void @_Z6case16v(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_FOURFLOATS:%.*]]) align 1 [[AGG_RESULT:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[X:%.*]] = alloca float, align 4
@@ -948,7 +948,7 @@ int case17Helper(int x) {
 }
 
 // InitList with OpaqueValueExpr
-// CHECK-LABEL: define void {{.*}}case17
+// CHECK-LABEL: define hidden void {{.*}}case17
 // CHECK: [[X:%.*]] = alloca <2 x i32>, align 8
 // CHECK-NEXT: [[C:%.*]] = call noundef i32 {{.*}}case17Helper{{.*}}(i32 noundef 0)
 // CHECK-NEXT: [[C1:%.*]] = call noundef i32 {{.*}}case17Helper{{.*}}(i32 noundef 1)
