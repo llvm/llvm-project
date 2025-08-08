@@ -6,11 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
+#include "flang/Optimizer/Dialect/FIRDialect.h"
+#include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 
 using namespace mlir;
@@ -24,6 +28,11 @@ struct TestFIROpenACCInterfaces
   StringRef getArgument() const final { return "test-fir-openacc-interfaces"; }
   StringRef getDescription() const final {
     return "Test FIR implementation of the OpenACC interfaces.";
+  }
+  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
+    registry.insert<fir::FIROpsDialect, hlfir::hlfirDialect,
+        mlir::arith::ArithDialect, mlir::acc::OpenACCDialect,
+        mlir::DLTIDialect>();
   }
   void runOnOperation() override {
     mlir::ModuleOp mod = getOperation();
@@ -49,8 +58,18 @@ struct TestFIROpenACCInterfaces
         llvm::errs() << "Visiting: " << *op << "\n";
         llvm::errs() << "\tVar: " << var << "\n";
 
-        if (auto ptrTy = dyn_cast_if_present<acc::PointerLikeType>(typeOfVar)) {
+        if (mlir::isa<acc::PointerLikeType>(typeOfVar) &&
+            mlir::isa<acc::MappableType>(typeOfVar)) {
+          llvm::errs() << "\tPointer-like and Mappable: " << typeOfVar << "\n";
+        } else if (mlir::isa<acc::PointerLikeType>(typeOfVar)) {
           llvm::errs() << "\tPointer-like: " << typeOfVar << "\n";
+        } else {
+          assert(
+              mlir::isa<acc::MappableType>(typeOfVar) && "expected mappable");
+          llvm::errs() << "\tMappable: " << typeOfVar << "\n";
+        }
+
+        if (auto ptrTy = dyn_cast_if_present<acc::PointerLikeType>(typeOfVar)) {
           // If the pointee is not mappable, print details about it. Otherwise,
           // we defer to the mappable printing below to print those details.
           if (!mappableTy) {
@@ -63,8 +82,6 @@ struct TestFIROpenACCInterfaces
         }
 
         if (mappableTy) {
-          llvm::errs() << "\tMappable: " << mappableTy << "\n";
-
           acc::VariableTypeCategory typeCategory =
               mappableTy.getTypeCategory(var);
           llvm::errs() << "\t\tType category: " << typeCategory << "\n";

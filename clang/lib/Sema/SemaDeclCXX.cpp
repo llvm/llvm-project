@@ -2865,8 +2865,7 @@ BaseResult Sema::ActOnBaseSpecifier(Decl *classdecl, SourceRange SpecifierRange,
     if (AL.isInvalid() || AL.getKind() == ParsedAttr::IgnoredAttribute)
       continue;
     if (AL.getKind() == ParsedAttr::UnknownAttribute)
-      Diag(AL.getLoc(), diag::warn_unknown_attribute_ignored)
-          << AL << AL.getRange();
+      DiagnoseUnknownAttribute(AL);
     else
       Diag(AL.getLoc(), diag::err_base_specifier_attribute)
           << AL << AL.isRegularKeywordAttribute() << AL.getRange();
@@ -3432,7 +3431,7 @@ static bool IsUnusedPrivateField(const FieldDecl *FD) {
 NamedDecl *
 Sema::ActOnCXXMemberDeclarator(Scope *S, AccessSpecifier AS, Declarator &D,
                                MultiTemplateParamsArg TemplateParameterLists,
-                               Expr *BW, const VirtSpecifiers &VS,
+                               Expr *BitWidth, const VirtSpecifiers &VS,
                                InClassInitStyle InitStyle) {
   const DeclSpec &DS = D.getDeclSpec();
   DeclarationNameInfo NameInfo = GetNameForDeclarator(D);
@@ -3442,8 +3441,6 @@ Sema::ActOnCXXMemberDeclarator(Scope *S, AccessSpecifier AS, Declarator &D,
   // For anonymous bitfields, the location should point to the type.
   if (Loc.isInvalid())
     Loc = D.getBeginLoc();
-
-  Expr *BitWidth = static_cast<Expr*>(BW);
 
   assert(isa<CXXRecordDecl>(CurContext));
   assert(!DS.isFriendSpecified());
@@ -4154,10 +4151,6 @@ ExprResult Sema::ActOnRequiresClause(ExprResult ConstraintExpr) {
   if (ConstraintExpr.isInvalid())
     return ExprError();
 
-  ConstraintExpr = CorrectDelayedTyposInExpr(ConstraintExpr);
-  if (ConstraintExpr.isInvalid())
-    return ExprError();
-
   if (DiagnoseUnexpandedParameterPack(ConstraintExpr.get(),
                                       UPPC_RequiresClause))
     return ExprError();
@@ -4207,23 +4200,20 @@ void Sema::ActOnFinishCXXInClassMemberInitializer(Decl *D,
     return;
   }
 
-  ExprResult Init = CorrectDelayedTyposInExpr(InitExpr, /*InitDecl=*/nullptr,
-                                              /*RecoverUncorrectedTypos=*/true);
-  assert(Init.isUsable() && "Init should at least have a RecoveryExpr");
-  if (!FD->getType()->isDependentType() && !Init.get()->isTypeDependent()) {
-    Init = ConvertMemberDefaultInitExpression(FD, Init.get(), InitLoc);
+  if (!FD->getType()->isDependentType() && !InitExpr.get()->isTypeDependent()) {
+    InitExpr = ConvertMemberDefaultInitExpression(FD, InitExpr.get(), InitLoc);
     // C++11 [class.base.init]p7:
     //   The initialization of each base and member constitutes a
     //   full-expression.
-    if (!Init.isInvalid())
-      Init = ActOnFinishFullExpr(Init.get(), /*DiscarededValue=*/false);
-    if (Init.isInvalid()) {
+    if (!InitExpr.isInvalid())
+      InitExpr = ActOnFinishFullExpr(InitExpr.get(), /*DiscarededValue=*/false);
+    if (InitExpr.isInvalid()) {
       FD->setInvalidDecl();
       return;
     }
   }
 
-  FD->setInClassInitializer(Init.get());
+  FD->setInClassInitializer(InitExpr.get());
 }
 
 /// Find the direct and/or virtual base specifiers that
@@ -4393,13 +4383,7 @@ Sema::BuildMemInitializer(Decl *ConstructorD,
                           SourceLocation IdLoc,
                           Expr *Init,
                           SourceLocation EllipsisLoc) {
-  ExprResult Res = CorrectDelayedTyposInExpr(Init, /*InitDecl=*/nullptr,
-                                             /*RecoverUncorrectedTypos=*/true);
-  if (!Res.isUsable())
-    return true;
-  Init = Res.get();
-
-  if (!ConstructorD)
+  if (!ConstructorD || !Init)
     return true;
 
   AdjustDeclIfTemplate(ConstructorD);
@@ -7172,7 +7156,10 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
     // "effectively constexpr" for better compatibility.
     // See https://github.com/llvm/llvm-project/issues/102293 for more info.
     if (isa<CXXDestructorDecl>(M)) {
-      auto Check = [](QualType T, auto &&Check) -> bool {
+      llvm::SmallDenseSet<QualType> Visited;
+      auto Check = [&Visited](QualType T, auto &&Check) -> bool {
+        if (!Visited.insert(T->getCanonicalTypeUnqualified()).second)
+          return false;
         const CXXRecordDecl *RD =
             T->getBaseElementTypeUnsafe()->getAsCXXRecordDecl();
         if (!RD || !RD->isCompleteDefinition())
@@ -7181,16 +7168,11 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
         if (!RD->hasConstexprDestructor())
           return false;
 
-        QualType CanUnqualT = T.getCanonicalType().getUnqualifiedType();
         for (const CXXBaseSpecifier &B : RD->bases())
-          if (B.getType().getCanonicalType().getUnqualifiedType() !=
-                  CanUnqualT &&
-              !Check(B.getType(), Check))
+          if (!Check(B.getType(), Check))
             return false;
         for (const FieldDecl *FD : RD->fields())
-          if (FD->getType().getCanonicalType().getUnqualifiedType() !=
-                  CanUnqualT &&
-              !Check(FD->getType(), Check))
+          if (!Check(FD->getType(), Check))
             return false;
         return true;
       };
@@ -11948,7 +11930,7 @@ Decl *Sema::ActOnStartNamespaceDef(Scope *NamespcScope,
 
 /// getNamespaceDecl - Returns the namespace a decl represents. If the decl
 /// is a namespace alias, returns the namespace it points to.
-static inline NamespaceDecl *getNamespaceDecl(NamedDecl *D) {
+static inline NamespaceDecl *getNamespaceDecl(NamespaceBaseDecl *D) {
   if (NamespaceAliasDecl *AD = dyn_cast_or_null<NamespaceAliasDecl>(D))
     return AD->getNamespace();
   return dyn_cast_or_null<NamespaceDecl>(D);
@@ -13326,7 +13308,7 @@ NamedDecl *Sema::BuildUsingEnumDeclaration(Scope *S, AccessSpecifier AS,
     LookupResult Previous(*this, UsingEnumName, LookupUsingDeclName,
                           RedeclarationKind::ForVisibleRedeclaration);
 
-    LookupName(Previous, S);
+    LookupQualifiedName(Previous, CurContext);
 
     for (NamedDecl *D : Previous)
       if (UsingEnumDecl *UED = dyn_cast<UsingEnumDecl>(D))
@@ -13635,82 +13617,40 @@ bool Sema::CheckUsingDeclQualifier(SourceLocation UsingLoc, bool HasTypename,
       RequireCompleteDeclContext(const_cast<CXXScopeSpec&>(SS), NamedContext))
     return true;
 
-  if (getLangOpts().CPlusPlus11) {
-    // C++11 [namespace.udecl]p3:
-    //   In a using-declaration used as a member-declaration, the
-    //   nested-name-specifier shall name a base class of the class
-    //   being defined.
+  // C++26 [namespace.udecl]p3:
+  //   In a using-declaration used as a member-declaration, each
+  //   using-declarator shall either name an enumerator or have a
+  //   nested-name-specifier naming a base class of the current class
+  //   ([expr.prim.this]). ...
+  // "have a nested-name-specifier naming a base class of the current class"
+  // was introduced by CWG400.
 
-    if (cast<CXXRecordDecl>(CurContext)->isProvablyNotDerivedFrom(
-                                 cast<CXXRecordDecl>(NamedContext))) {
+  if (cast<CXXRecordDecl>(CurContext)
+          ->isProvablyNotDerivedFrom(cast<CXXRecordDecl>(NamedContext))) {
 
-      if (Cxx20Enumerator) {
-        Diag(NameLoc, diag::warn_cxx17_compat_using_decl_non_member_enumerator)
-            << SS.getRange();
-        return false;
-      }
+    if (Cxx20Enumerator) {
+      Diag(NameLoc, diag::warn_cxx17_compat_using_decl_non_member_enumerator)
+          << SS.getRange();
+      return false;
+    }
 
-      if (CurContext == NamedContext) {
-        Diag(SS.getBeginLoc(),
-             diag::err_using_decl_nested_name_specifier_is_current_class)
-            << SS.getRange();
-        return !getLangOpts().CPlusPlus20;
-      }
-
-      if (!cast<CXXRecordDecl>(NamedContext)->isInvalidDecl()) {
-        Diag(SS.getBeginLoc(),
-             diag::err_using_decl_nested_name_specifier_is_not_base_class)
-            << SS.getScopeRep() << cast<CXXRecordDecl>(CurContext)
-            << SS.getRange();
-      }
+    if (CurContext == NamedContext) {
+      Diag(SS.getBeginLoc(),
+           diag::err_using_decl_nested_name_specifier_is_current_class)
+          << SS.getRange();
       return true;
     }
 
-    return false;
+    if (!cast<CXXRecordDecl>(NamedContext)->isInvalidDecl()) {
+      Diag(SS.getBeginLoc(),
+           diag::err_using_decl_nested_name_specifier_is_not_base_class)
+          << SS.getScopeRep() << cast<CXXRecordDecl>(CurContext)
+          << SS.getRange();
+    }
+    return true;
   }
 
-  // C++03 [namespace.udecl]p4:
-  //   A using-declaration used as a member-declaration shall refer
-  //   to a member of a base class of the class being defined [etc.].
-
-  // Salient point: SS doesn't have to name a base class as long as
-  // lookup only finds members from base classes.  Therefore we can
-  // diagnose here only if we can prove that can't happen,
-  // i.e. if the class hierarchies provably don't intersect.
-
-  // TODO: it would be nice if "definitely valid" results were cached
-  // in the UsingDecl and UsingShadowDecl so that these checks didn't
-  // need to be repeated.
-
-  llvm::SmallPtrSet<const CXXRecordDecl *, 4> Bases;
-  auto Collect = [&Bases](const CXXRecordDecl *Base) {
-    Bases.insert(Base);
-    return true;
-  };
-
-  // Collect all bases. Return false if we find a dependent base.
-  if (!cast<CXXRecordDecl>(CurContext)->forallBases(Collect))
-    return false;
-
-  // Returns true if the base is dependent or is one of the accumulated base
-  // classes.
-  auto IsNotBase = [&Bases](const CXXRecordDecl *Base) {
-    return !Bases.count(Base);
-  };
-
-  // Return false if the class has a dependent base or if it or one
-  // of its bases is present in the base set of the current context.
-  if (Bases.count(cast<CXXRecordDecl>(NamedContext)) ||
-      !cast<CXXRecordDecl>(NamedContext)->forallBases(IsNotBase))
-    return false;
-
-  Diag(SS.getRange().getBegin(),
-       diag::err_using_decl_nested_name_specifier_is_not_base_class)
-    << SS.getScopeRep()
-    << cast<CXXRecordDecl>(CurContext)
-    << SS.getRange();
-
-  return true;
+  return false;
 }
 
 Decl *Sema::ActOnAliasDeclaration(Scope *S, AccessSpecifier AS,
@@ -13889,7 +13829,7 @@ Decl *Sema::ActOnNamespaceAliasDef(Scope *S, SourceLocation NamespaceLoc,
     }
   }
   assert(!R.isAmbiguous() && !R.empty());
-  NamedDecl *ND = R.getRepresentativeDecl();
+  auto *ND = cast<NamespaceBaseDecl>(R.getRepresentativeDecl());
 
   // Check if we have a previous declaration with the same name.
   LookupResult PrevR(*this, Alias, AliasLoc, LookupOrdinaryName,
@@ -16443,9 +16383,8 @@ bool Sema::CompleteConstructorCall(CXXConstructorDecl *Constructor,
 
   DiagnoseSentinelCalls(Constructor, Loc, AllArgs);
 
-  CheckConstructorCall(Constructor, DeclInitType,
-                       llvm::ArrayRef(AllArgs.data(), AllArgs.size()), Proto,
-                       Loc);
+  CheckConstructorCall(Constructor, DeclInitType, llvm::ArrayRef(AllArgs),
+                       Proto, Loc);
 
   return Invalid;
 }
@@ -16602,12 +16541,8 @@ static inline bool CheckOperatorNewDeleteTypes(
   if (IsPotentiallyTypeAware) {
     // We don't emit this diagnosis for template instantiations as we will
     // have already emitted it for the original template declaration.
-    if (!FnDecl->isTemplateInstantiation()) {
-      unsigned DiagID = SemaRef.getLangOpts().CPlusPlus26
-                            ? diag::warn_cxx26_type_aware_allocators
-                            : diag::ext_cxx26_type_aware_allocators;
-      SemaRef.Diag(FnDecl->getLocation(), DiagID);
-    }
+    if (!FnDecl->isTemplateInstantiation())
+      SemaRef.Diag(FnDecl->getLocation(), diag::warn_ext_type_aware_allocators);
 
     if (OperatorKind == AllocationOperatorKind::New) {
       SizeParameterIndex = 1;
@@ -18747,7 +18682,7 @@ bool Sema::CheckOverridingFunctionAttributes(CXXMethodDecl *New,
         case FunctionEffectDiff::OverrideResult::NoAction:
           break;
         case FunctionEffectDiff::OverrideResult::Warn:
-          Diag(New->getLocation(), diag::warn_mismatched_func_effect_override)
+          Diag(New->getLocation(), diag::warn_conflicting_func_effect_override)
               << Diff.effectName();
           Diag(Old->getLocation(), diag::note_overridden_virtual_function)
               << Old->getReturnTypeSourceRange();
@@ -18760,6 +18695,14 @@ bool Sema::CheckOverridingFunctionAttributes(CXXMethodDecl *New,
           QualType ModQT = Context.getFunctionType(NewFT->getReturnType(),
                                                    NewFT->getParamTypes(), EPI);
           New->setType(ModQT);
+          if (Errs.empty()) {
+            // A warning here is somewhat pedantic. Skip this if there was
+            // already a merge conflict, which is more serious.
+            Diag(New->getLocation(), diag::warn_mismatched_func_effect_override)
+                << Diff.effectName();
+            Diag(Old->getLocation(), diag::note_overridden_virtual_function)
+                << Old->getReturnTypeSourceRange();
+          }
           break;
         }
         }
@@ -18953,7 +18896,8 @@ void Sema::ActOnCXXEnterDeclInitializer(Scope *S, Decl *D) {
     EnterDeclaratorContext(S, D->getDeclContext());
 
   PushExpressionEvaluationContext(
-      ExpressionEvaluationContext::PotentiallyEvaluated, D);
+      ExpressionEvaluationContext::PotentiallyEvaluated, D,
+      ExpressionEvaluationContextRecord::EK_VariableInit);
 }
 
 void Sema::ActOnCXXExitDeclInitializer(Scope *S, Decl *D) {
@@ -18962,29 +18906,6 @@ void Sema::ActOnCXXExitDeclInitializer(Scope *S, Decl *D) {
   if (S && D->isOutOfLine())
     ExitDeclaratorContext(S);
 
-  if (getLangOpts().CPlusPlus23) {
-    // An expression or conversion is 'manifestly constant-evaluated' if it is:
-    // [...]
-    // - the initializer of a variable that is usable in constant expressions or
-    //   has constant initialization.
-    if (auto *VD = dyn_cast<VarDecl>(D);
-        VD && (VD->isUsableInConstantExpressions(Context) ||
-               VD->hasConstantInitialization())) {
-      // An expression or conversion is in an 'immediate function context' if it
-      // is potentially evaluated and either:
-      // [...]
-      // - it is a subexpression of a manifestly constant-evaluated expression
-      //   or conversion.
-      ExprEvalContexts.back().InImmediateFunctionContext = true;
-    }
-  }
-
-  // Unless the initializer is in an immediate function context (as determined
-  // above), this will evaluate all contained immediate function calls as
-  // constant expressions. If the initializer IS an immediate function context,
-  // the initializer has been determined to be a constant expression, and all
-  // such evaluations will be elided (i.e., as if we "knew the whole time" that
-  // it was a constant expression).
   PopExpressionEvaluationContext();
 }
 

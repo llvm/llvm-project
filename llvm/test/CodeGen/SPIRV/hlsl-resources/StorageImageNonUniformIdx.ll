@@ -1,6 +1,8 @@
 ; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv1.5-vulkan-library %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.5-vulkan-library %s -o - -filetype=obj | spirv-val %}
 
+@.str.b0 = private unnamed_addr constant [3 x i8] c"B0\00", align 1
+
 ; CHECK-DAG: OpCapability Shader
 ; CHECK-DAG: OpCapability ShaderNonUniformEXT
 ; CHECK-DAG: OpCapability StorageImageArrayNonUniformIndexing
@@ -33,7 +35,7 @@ define void @main() #0 {
 ; CHECK: [[ld0]] = OpLoad [[BufferType]] [[ac0]]
   %buffer0 = call target("spirv.Image", i32, 0, 2, 0, 0, 2, 24)
       @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_0_2_0_0_2_24(
-          i32 3, i32 4, i32 3, i32 0, i1 true)
+          i32 3, i32 4, i32 3, i32 0, i1 true, ptr nonnull @.str.b0)
   %ptr0 = tail call noundef nonnull align 4 dereferenceable(4) ptr @llvm.spv.resource.getpointer.p0.tspirv.Image_f32_5_2_0_0_2_0t(target("spirv.Image", i32, 0, 2, 0, 0, 2, 24) %buffer0, i32 0)
   store i32 0, ptr %ptr0, align 4
 
@@ -41,7 +43,7 @@ define void @main() #0 {
 ; CHECK: [[ld1]] = OpLoad [[BufferType]] [[ac1]]
   %buffer1 = call target("spirv.Image", i32, 0, 2, 0, 0, 2, 24)
       @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_0_2_0_0_2_24(
-          i32 3, i32 4, i32 3, i32 1, i1 true)
+          i32 3, i32 4, i32 3, i32 1, i1 true, ptr nonnull @.str.b0)
   %ptr1 = tail call noundef nonnull align 4 dereferenceable(4) ptr @llvm.spv.resource.getpointer.p0.tspirv.Image_f32_5_2_0_0_2_0t(target("spirv.Image", i32, 0, 2, 0, 0, 2, 24) %buffer1, i32 0)
   store i32 0, ptr %ptr1, align 4
   ret void

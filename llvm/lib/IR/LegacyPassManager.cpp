@@ -28,7 +28,6 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 
 using namespace llvm;
 
@@ -120,7 +119,7 @@ void PMDataManager::emitInstrCountChangedRemark(
   // If no function was passed in, then we're either a module pass or an
   // CGSCC pass.
   if (!CouldOnlyImpactOneFunction)
-    std::for_each(M.begin(), M.end(), UpdateFunctionChanges);
+    llvm::for_each(M, UpdateFunctionChanges);
   else
     UpdateFunctionChanges(*F);
 
@@ -197,9 +196,7 @@ void PMDataManager::emitInstrCountChangedRemark(
   // Are we looking at more than one function? If so, emit remarks for all of
   // the functions in the module. Otherwise, only emit one remark.
   if (!CouldOnlyImpactOneFunction)
-    std::for_each(FunctionToInstrCount.keys().begin(),
-                  FunctionToInstrCount.keys().end(),
-                  EmitFunctionSizeChangedRemark);
+    llvm::for_each(FunctionToInstrCount.keys(), EmitFunctionSizeChangedRemark);
   else
     EmitFunctionSizeChangedRemark(F->getName().str());
 }

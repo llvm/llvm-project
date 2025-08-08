@@ -824,7 +824,7 @@ public:
   /// functions, MismatchedFuncSum returns the maximum. If \c FuncName is not
   /// found, try to lookup \c DeprecatedFuncName to handle profiles built by
   /// older compilers.
-  Expected<InstrProfRecord>
+  Expected<NamedInstrProfRecord>
   getInstrProfRecord(StringRef FuncName, uint64_t FuncHash,
                      StringRef DeprecatedFuncName = "",
                      uint64_t *MismatchedFuncSum = nullptr);

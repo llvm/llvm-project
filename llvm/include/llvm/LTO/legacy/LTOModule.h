@@ -143,6 +143,14 @@ public:
     return StringRef();
   }
 
+  uint32_t getAsmUndefSymbolCount() { return _asm_undefines.size(); }
+
+  StringRef getAsmUndefSymbolName(uint32_t index) {
+    if (index < _asm_undefines.size())
+      return _asm_undefines[index];
+    return StringRef();
+  }
+
   const GlobalValue *getSymbolGV(uint32_t index) {
     if (index < _symbols.size())
       return _symbols[index].symbol;

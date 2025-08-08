@@ -350,8 +350,8 @@
 // MIPS:typedef int8_t int_fast8_t;
 // MIPS:typedef uint8_t uint_fast8_t;
 //
-// MIPS:typedef long int intptr_t;
-// MIPS:typedef long unsigned int uintptr_t;
+// MIPS:typedef int intptr_t;
+// MIPS:typedef unsigned int uintptr_t;
 //
 // MIPS:typedef long long int intmax_t;
 // MIPS:typedef long long unsigned int uintmax_t;
@@ -396,9 +396,9 @@
 // MIPS:INT_FAST64_MAX_ 9223372036854775807LL
 // MIPS:UINT_FAST64_MAX_ 18446744073709551615ULL
 //
-// MIPS:INTPTR_MIN_ (-2147483647L -1)
-// MIPS:INTPTR_MAX_ 2147483647L
-// MIPS:UINTPTR_MAX_ 4294967295UL
+// MIPS:INTPTR_MIN_ (-2147483647 -1)
+// MIPS:INTPTR_MAX_ 2147483647
+// MIPS:UINTPTR_MAX_ 4294967295U
 // MIPS:PTRDIFF_MIN_ (-2147483647 -1)
 // MIPS:PTRDIFF_MAX_ 2147483647
 // MIPS:SIZE_MAX_ 4294967295U

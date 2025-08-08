@@ -9,11 +9,11 @@
 #ifndef __CLC_MATH_CLC_POWN_H__
 #define __CLC_MATH_CLC_POWN_H__
 
-#define __CLC_BODY <clc/math/binary_decl_with_int_second_arg.inc>
-#define __CLC_FUNCTION __clc_pown
+#define __CLC_BODY <clc/shared/binary_decl_with_int_second_arg.inc>
+#define FUNCTION __clc_pown
 
 #include <clc/math/gentype.inc>
 
-#undef __CLC_FUNCTION
+#undef FUNCTION
 
 #endif // __CLC_MATH_CLC_POWN_H__

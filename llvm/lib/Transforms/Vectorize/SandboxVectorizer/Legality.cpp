@@ -81,6 +81,7 @@ LegalityAnalysis::notVectorizableBasedOnOpcodesAndTypes(
   case Instruction::Opcode::FPToUI:
   case Instruction::Opcode::FPToSI:
   case Instruction::Opcode::FPExt:
+  case Instruction::Opcode::PtrToAddr:
   case Instruction::Opcode::PtrToInt:
   case Instruction::Opcode::IntToPtr:
   case Instruction::Opcode::SIToFP:
