@@ -41,12 +41,12 @@ GITHUB_JOB_TO_TRACK = {
     "github_llvm_premerge_checks": {
         "Build and Test Linux": "premerge_linux",
         "Build and Test Windows": "premerge_windows",
-    }
+    },
     "github_libc++_premerge_checks": {
         "libc++ Stage1 Testing": "premerge_libcxx_stage1",
         "libc++ Stage2 Testing": "premerge_libcxx_stage2",
         "libc++ Stage3 Testing": "premerge_libcxx_stage3",
-    }
+    },
 }
 
 # The number of workflows to pull when sampling Github workflows.
