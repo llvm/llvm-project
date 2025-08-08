@@ -9,6 +9,10 @@
 #ifndef LLVM_LIBC_TYPES_RSIZE_T_H
 #define LLVM_LIBC_TYPES_RSIZE_T_H
 
+#ifdef LIBC_HAS_ANNEX_K
+
 typedef __SIZE_TYPE__ rsize_t;
+
+#endif // LIBC_HAS_ANNEX_K
 
 #endif // LLVM_LIBC_TYPES_RSIZE_T_H

@@ -9,6 +9,10 @@
 #ifndef LLVM_LIBC_HDR_TYPES_CONSTRAINT_HANDLER_T_H
 #define LLVM_LIBC_HDR_TYPES_CONSTRAINT_HANDLER_T_H
 
+#define LIBC_HAS_ANNEX_K
+
 #include "include/llvm-libc-types/constraint_handler_t.h"
+
+#undef LIBC_HAS_ANNEX_K
 
 #endif // LLVM_LIBC_HDR_TYPES_CONSTRAINT_HANDLER_T_H

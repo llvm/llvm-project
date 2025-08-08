@@ -9,6 +9,10 @@
 #ifndef LLVM_LIBC_HDR_TYPES_ERRNO_T_H
 #define LLVM_LIBC_HDR_TYPES_ERRNO_T_H
 
+#define LIBC_HAS_ANNEX_K
+
 #include "include/llvm-libc-types/errno_t.h"
+
+#undef LIBC_HAS_ANNEX_K
 
 #endif // LLVM_LIBC_HDR_TYPES_ERRNO_T_H

@@ -11,7 +11,11 @@
 
 #include "errno_t.h"
 
+#ifdef LIBC_HAS_ANNEX_K
+
 typedef void (*constraint_handler_t)(const char *__restrict msg,
                                      void *__restrict ptr, errno_t error);
+
+#endif // LIBC_HAS_ANNEX_K
 
 #endif // LLVM_LIBC_INCLUDE_LLVM_LIBC_TYPES_CONSTRAINT_HANDLER_T_H
