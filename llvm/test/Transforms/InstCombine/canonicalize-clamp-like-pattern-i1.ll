@@ -19,10 +19,9 @@
 ; clamp-like max case, can be optimized with max
 define i32 @clamp_max_sgt(i32 %x) {
 ; CHECK-LABEL: @clamp_max_sgt(
-; CHECK-NEXT:    [[OR_COND:%.*]] = icmp ult i32 [[X:%.*]], 256
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[X]], 0
-; CHECK-NEXT:    [[COND:%.*]] = sext i1 [[CMP2]] to i32
-; CHECK-NEXT:    [[COND3:%.*]] = select i1 [[OR_COND]], i32 [[X]], i32 [[COND]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[X:%.*]], 255
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.smax.i32(i32 [[X]], i32 0)
+; CHECK-NEXT:    [[COND3:%.*]] = select i1 [[TMP1]], i32 -1, i32 [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[COND3]]
 ;
   %or.cond = icmp ult i32 %x, 256
@@ -35,10 +34,9 @@ define i32 @clamp_max_sgt(i32 %x) {
 ; clamp-like max case with vector, can be optimized with max
 define <2 x i32> @clamp_max_sgt_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @clamp_max_sgt_vec(
-; CHECK-NEXT:    [[OR_COND:%.*]] = icmp ult <2 x i32> [[X:%.*]], <i32 100, i32 256>
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt <2 x i32> [[X]], <i32 98, i32 254>
-; CHECK-NEXT:    [[COND:%.*]] = sext <2 x i1> [[CMP2]] to <2 x i32>
-; CHECK-NEXT:    [[COND3:%.*]] = select <2 x i1> [[OR_COND]], <2 x i32> [[X]], <2 x i32> [[COND]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <2 x i32> [[X:%.*]], <i32 99, i32 255>
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.smax.v2i32(<2 x i32> [[X]], <2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[COND3:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> splat (i32 -1), <2 x i32> [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i32> [[COND3]]
 ;
   %or.cond = icmp ult <2 x i32> %x, <i32 100, i32 256>
@@ -67,10 +65,9 @@ define <2 x i32> @clamp_max_vec(<2 x i32> %x) {
 ; clamp-like max case, can be optimized with max
 define i32 @clamp_max_sgt_neg1(i32 %x) {
 ; CHECK-LABEL: @clamp_max_sgt_neg1(
-; CHECK-NEXT:    [[OR_COND:%.*]] = icmp ult i32 [[X:%.*]], 256
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[X]], -1
-; CHECK-NEXT:    [[COND:%.*]] = sext i1 [[CMP2]] to i32
-; CHECK-NEXT:    [[COND3:%.*]] = select i1 [[OR_COND]], i32 [[X]], i32 [[COND]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[X:%.*]], 255
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.smax.i32(i32 [[X]], i32 0)
+; CHECK-NEXT:    [[COND3:%.*]] = select i1 [[TMP1]], i32 -1, i32 [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[COND3]]
 ;
   %or.cond = icmp ult i32 %x, 256
@@ -83,10 +80,9 @@ define i32 @clamp_max_sgt_neg1(i32 %x) {
 ; clamp-like max case, can be optimized with max
 define i32 @clamp_max_sge(i32 %x) {
 ; CHECK-LABEL: @clamp_max_sge(
-; CHECK-NEXT:    [[OR_COND:%.*]] = icmp ult i32 [[X:%.*]], 256
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[X]], -1
-; CHECK-NEXT:    [[COND:%.*]] = sext i1 [[CMP2]] to i32
-; CHECK-NEXT:    [[COND3:%.*]] = select i1 [[OR_COND]], i32 [[X]], i32 [[COND]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[X:%.*]], 255
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.smax.i32(i32 [[X]], i32 0)
+; CHECK-NEXT:    [[COND3:%.*]] = select i1 [[TMP1]], i32 -1, i32 [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[COND3]]
 ;
   %or.cond = icmp ult i32 %x, 256

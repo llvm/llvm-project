@@ -1521,10 +1521,17 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
              m_CombineAnd(m_AnyIntegralConstant(), m_Constant(C0))))
     return nullptr;
 
-  if (!isa<SelectInst>(Sel1)) {
-    Pred0 = ICmpInst::getInversePredicate(Pred0);
-    std::swap(X, Sel1);
-  }
+  auto SwapSelectOperands = [](ICmpInst::Predicate &Pred, Value *&Op0,
+                               Value *&Op1) -> void {
+    std::swap(Op0, Op1);
+    Pred = ICmpInst::getInversePredicate(Pred);
+  };
+
+  if (!isa<SelectInst>(Sel1))
+    SwapSelectOperands(Pred0, Sel1, X);
+
+  if (!isa<SelectInst>(Sel1) && !isa<SExtInst>(Sel1))
+    SwapSelectOperands(Pred0, Sel1, X);
 
   // Canonicalize Cmp0 into ult or uge.
   // FIXME: we shouldn't care about lanes that are 'undef' in the end?
@@ -1575,15 +1582,28 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
                         m_CombineAnd(m_AnyIntegralConstant(), m_Constant(C1)))))
     return nullptr;
 
+  // Will create Replacement[Low/High] later for SExtICmp case
   Value *Cmp1;
   CmpPredicate Pred1;
   Constant *C2;
   Value *ReplacementLow, *ReplacementHigh;
-  if (!match(Sel1, m_Select(m_Value(Cmp1), m_Value(ReplacementLow),
-                            m_Value(ReplacementHigh))) ||
+  bool FoldSExtICmp;
+  auto MatchSExtICmp = [](Value *PossibleSextIcmp, Value *&Cmp1) -> bool {
+    Value *ICmpOp0, *ICmpOp1;
+    return match(PossibleSextIcmp, m_SExt(m_Value(Cmp1))) &&
+           match(Cmp1, m_ICmp(m_Value(ICmpOp0), m_Value(ICmpOp1)));
+  };
+  if (!((FoldSExtICmp = MatchSExtICmp(Sel1, Cmp1)) ||
+        match(Sel1, m_Select(m_Value(Cmp1), m_Value(ReplacementLow),
+                             m_Value(ReplacementHigh)))) ||
       !match(Cmp1,
              m_ICmp(Pred1, m_Specific(X),
                     m_CombineAnd(m_AnyIntegralConstant(), m_Constant(C2)))))
+    return nullptr;
+
+  // When folding sext-icmp, only efficient if C1 = 0 so we can make use of the
+  // `smax` instruction
+  if (FoldSExtICmp && !C1->isZeroValue())
     return nullptr;
 
   if (!Cmp1->hasOneUse() && (Cmp00 == X || !Cmp00->hasOneUse()))
@@ -1593,8 +1613,13 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
 
   // Canonicalize Cmp1 into the form we expect.
   // FIXME: we shouldn't care about lanes that are 'undef' in the end?
+  bool SwapReplacement = false;
   switch (Pred1) {
   case ICmpInst::Predicate::ICMP_SLT:
+    // The sext(icmp) case only is advantageous for SGT/SGTE since that enables
+    // max conversion
+    if (FoldSExtICmp)
+      return nullptr;
     break;
   case ICmpInst::Predicate::ICMP_SLE:
     // We'd have to increment C2 by one, and for that it must not have signed
@@ -1615,7 +1640,7 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
     // Also non-canonical, but here we don't need to change C2,
     // so we don't have any restrictions on C2, so we can just handle it.
     Pred1 = ICmpInst::Predicate::ICMP_SLT;
-    std::swap(ReplacementLow, ReplacementHigh);
+    SwapReplacement = true;
     break;
   default:
     return nullptr; // Unknown predicate.
@@ -1643,6 +1668,14 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
       ICmpInst::Predicate::ICMP_SLE, C2, ThresholdHighExcl, IC.getDataLayout());
   if (!Precond2 || !match(Precond2, m_One()))
     return nullptr;
+
+  if (FoldSExtICmp) {
+    ReplacementLow = Constant::getAllOnesValue(Sel1->getType());
+    ReplacementHigh = Constant::getNullValue(Sel1->getType());
+  }
+
+  if (SwapReplacement)
+    std::swap(ReplacementLow, ReplacementHigh);
 
   // If we are matching from a truncated input, we need to sext the
   // ReplacementLow and ReplacementHigh values. Only do the transform if they
