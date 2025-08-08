@@ -46,9 +46,9 @@ public:
 
   // based on RegisterContextDarwin_arm64.h
   // Pack this so there are no extra bytes, but align its start address to at
-  // least 4 bytes to prevent alignment errors on Arm 32-bit.
+  // least 8 bytes to prevent alignment errors.
   LLVM_PACKED_START
-  struct alignas(4) GPR {
+  struct alignas(8) GPR {
     uint64_t x[29]; // x0-x28
     uint64_t fp;    // x29
     uint64_t lr;    // x30
