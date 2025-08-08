@@ -133,8 +133,7 @@ DeadBlock::DeadBlock(DeadBlock *&Root, Block *Blk)
 }
 
 void DeadBlock::free() {
-  if (B.IsInitialized)
-    B.invokeDtor();
+  assert(!B.isInitialized());
 
   if (Prev)
     Prev->Next = Next;
