@@ -895,13 +895,13 @@ endif()
 
 list(APPEND TARGET_LIBM_ENTRYPOINTS
   # bfloat16 entrypoints
-  libc.src.math.ceilbf16
   libc.src.math.bf16add
   libc.src.math.bf16addf
   libc.src.math.bf16addl
   libc.src.math.bf16sub
   libc.src.math.bf16subf
   libc.src.math.bf16subl
+  libc.src.math.ceilbf16
   libc.src.math.fabsbf16
   libc.src.math.floorbf16
   libc.src.math.roundbf16
