@@ -2536,8 +2536,9 @@ GetItaniumCtorDtorVariant(llvm::StringRef discriminator) {
   return ClangToItaniumDtorKind(static_cast<clang::CXXDtorType>(structor_kind));
 }
 
-DWARFDIE SymbolFileDWARF::FindFunctionDefinition(const FunctionCallLabel &label,
-                                                 const DWARFDIE &declaration) {
+llvm::Expected<DWARFDIE>
+SymbolFileDWARF::FindFunctionDefinition(const FunctionCallLabel &label,
+                                        const DWARFDIE &declaration) {
   DWARFDIE definition;
   llvm::DenseMap<int, DWARFDIE> structor_variant_to_die;
 
@@ -2571,6 +2572,8 @@ DWARFDIE SymbolFileDWARF::FindFunctionDefinition(const FunctionCallLabel &label,
     if (!mangled)
       return IterationAction::Continue;
 
+    // FIXME: we should make DWARF encode the structor variant instead of
+    // needing to re-demangle.
     llvm::ItaniumPartialDemangler D;
     if (D.partialDemangle(mangled))
       return IterationAction::Continue;
@@ -2595,7 +2598,9 @@ DWARFDIE SymbolFileDWARF::FindFunctionDefinition(const FunctionCallLabel &label,
 
   auto label_variant = GetItaniumCtorDtorVariant(label.discriminator);
   if (!label_variant)
-    return {};
+    return llvm::createStringError(
+        llvm::formatv("failed to retrieve structor variant from label: {0}",
+                      label.discriminator));
 
   auto it = structor_variant_to_die.find(*label_variant);
 
@@ -2605,13 +2610,16 @@ DWARFDIE SymbolFileDWARF::FindFunctionDefinition(const FunctionCallLabel &label,
 
   // We need a C1 constructor. If debug-info only contains a DIE for C2,
   // assume C1 was aliased to C2.
+  //
+  // FIXME: can DWARF encode this information for us?
   if (!label.lookup_name.starts_with("~") && label_variant == 1) {
     if (auto it = structor_variant_to_die.find(2);
         it != structor_variant_to_die.end())
       return it->getSecond();
   }
 
-  return {};
+  return llvm::createStringError(llvm::formatv(
+      "failed to find structor variant DIE for label: {0}", label));
 }
 
 llvm::Expected<SymbolContext>
@@ -2626,9 +2634,13 @@ SymbolFileDWARF::ResolveFunctionCallLabel(const FunctionCallLabel &label) {
   // Label was created using a declaration DIE. Need to fetch the definition
   // to resolve the function call.
   if (die.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_declaration, 0)) {
-    die = FindFunctionDefinition(label, die);
-    if (!die.IsValid())
-      return llvm::createStringError("failed to find definition DIE");
+    auto die_or_err = FindFunctionDefinition(label, die);
+    if (!die_or_err)
+      return llvm::joinErrors(
+          llvm::createStringError("failed to find definition DIE"),
+          die_or_err.takeError());
+
+    die = std::move(*die_or_err);
   }
 
   SymbolContextList sc_list;
