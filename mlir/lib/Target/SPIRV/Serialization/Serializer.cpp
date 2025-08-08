@@ -958,7 +958,7 @@ Serializer::prepareDenseElementsConstant(Location loc, Type constType,
   auto elementType = cast<spirv::CompositeType>(constType).getElementType(0);
   if (auto tensorArmType = dyn_cast<spirv::TensorArmType>(constType)) {
     ArrayRef<int64_t> innerShape = tensorArmType.getShape().drop_front();
-    if (innerShape.size() > 0)
+    if (!innerShape.empty())
       elementType = spirv::TensorArmType::get(innerShape, elementType);
   }
 
