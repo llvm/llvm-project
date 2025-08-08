@@ -108,8 +108,6 @@ Sections:
 #  CASE1-NEXT:      }
 #  CASE1-NEXT:      Repetitive block size: 0xDE
 #  CASE1-NEXT:      Padding2: 0xAD
-#  CASE1-NEXT:      FREs [
-#  CASE1-NEXT:      ]
 #  CASE1-NEXT:    }
 #  CASE1-NEXT:  ]
 #  CASE1-NEXT:}
@@ -171,8 +169,6 @@ Sections:
 #  CASE1-NEXT:      }
 #  CASE1-NEXT:      Repetitive block size (unused): 0xDE
 #  CASE1-NEXT:      Padding2: 0xAD
-#  CASE1-NEXT:      FREs [
-#  CASE1-NEXT:      ]
 #  CASE1-NEXT:    }
 #  CASE1-NEXT:  ]
 #  CASE1-NEXT:}
@@ -200,7 +196,7 @@ Sections:
       0x00, 0xde, 0xad, 0x00,  # Start Address
       0x00, 0x00, 0x01, 0xbe,  # Size
       0x00, 0x00, 0x00, 0x10,  # Start FRE Offset
-      0x00, 0x00, 0x00, 0x00,  # Number of FREs
+      0x00, 0x00, 0x00, 0x10,  # Number of FREs
       0x02, 0xde, 0xad, 0x00,  # Info, RepSize, Padding2
     ]
 # CASE2-LABEL:SFrame section '.sframe' {
@@ -227,7 +223,7 @@ Sections:
 #  CASE2-NEXT:      PC: 0xDEAD1C
 #  CASE2-NEXT:      Size: 0x1BE
 #  CASE2-NEXT:      Start FRE Offset: 0x10
-#  CASE2-NEXT:      Num FREs: 0
+#  CASE2-NEXT:      Num FREs: 16
 #  CASE2-NEXT:      Info {
 #  CASE2-NEXT:        FRE Type: Addr4 (0x2)
 #  CASE2-NEXT:        FDE Type: PCInc (0x0)
@@ -236,8 +232,6 @@ Sections:
 #  CASE2-NEXT:      }
 #  CASE2-NEXT:      Repetitive block size (unused): 0xDE
 #  CASE2-NEXT:      Padding2: 0xAD00
-#  CASE2-NEXT:      FREs [
-#  CASE2-NEXT:      ]
 #  CASE2-NEXT:    }
 #  CASE2-NEXT:  ]
 #  CASE2-NEXT:}
