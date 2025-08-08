@@ -553,8 +553,16 @@ void DataSharingProcessor::collectSymbols(
       return sym->test(semantics::Symbol::Flag::OmpImplicit);
     }
 
-    if (collectPreDetermined)
-      return sym->test(semantics::Symbol::Flag::OmpPreDetermined);
+    if (collectPreDetermined) {
+      // Collect pre-determined symbols only if they are defined by the current
+      // OpenMP evaluation. If `sym` is not defined by the current OpenMP
+      // evaluation then it is defined by a block nested within the OpenMP
+      // construct. This, in turn, means that the private allocation for the
+      // symbol will be emitted as part of the nested block and there is no need
+      // to prvatize it within the OpenMP construct.
+      return visitor.isSymbolDefineBy(sym, eval) &&
+             sym->test(semantics::Symbol::Flag::OmpPreDetermined);
+    }
 
     return !sym->test(semantics::Symbol::Flag::OmpImplicit) &&
            !sym->test(semantics::Symbol::Flag::OmpPreDetermined);
