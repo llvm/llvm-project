@@ -3990,6 +3990,27 @@ InstructionCost AArch64TTIImpl::getScalarizationOverhead(
   return DemandedElts.popcount() * (Insert + Extract) * VecInstCost;
 }
 
+std::optional<InstructionCost> AArch64TTIImpl::getFP16BF16PromoteCost(
+    Type *Ty, TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
+    TTI::OperandValueInfo Op2Info, bool IncludeTrunc,
+    std::function<InstructionCost(Type *)> InstCost) const {
+  if (!Ty->getScalarType()->isHalfTy() && !Ty->getScalarType()->isBFloatTy())
+    return std::nullopt;
+  if (Ty->getScalarType()->isHalfTy() && ST->hasFullFP16())
+    return std::nullopt;
+
+  Type *PromotedTy = Ty->getWithNewType(Type::getFloatTy(Ty->getContext()));
+  InstructionCost Cost = getCastInstrCost(Instruction::FPExt, PromotedTy, Ty,
+                                          TTI::CastContextHint::None, CostKind);
+  if (!Op1Info.isConstant() && !Op2Info.isConstant())
+    Cost *= 2;
+  Cost += InstCost(PromotedTy);
+  if (IncludeTrunc)
+    Cost += getCastInstrCost(Instruction::FPTrunc, Ty, PromotedTy,
+                             TTI::CastContextHint::None, CostKind);
+  return Cost;
+}
+
 InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
@@ -4011,6 +4032,18 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
+
+  // Increase the cost for half and bfloat types if not architecturally
+  // supported.
+  if (ISD == ISD::FADD || ISD == ISD::FSUB || ISD == ISD::FMUL ||
+      ISD == ISD::FDIV || ISD == ISD::FREM)
+    if (auto PromotedCost = getFP16BF16PromoteCost(
+            Ty, CostKind, Op1Info, Op2Info, /*IncludeTrunc=*/true,
+            [&](Type *PromotedTy) {
+              return getArithmeticInstrCost(Opcode, PromotedTy, CostKind,
+                                            Op1Info, Op2Info);
+            }))
+      return *PromotedCost;
 
   switch (ISD) {
   default:
@@ -4280,11 +4313,6 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     [[fallthrough]];
   case ISD::FADD:
   case ISD::FSUB:
-    // Increase the cost for half and bfloat types if not architecturally
-    // supported.
-    if ((Ty->getScalarType()->isHalfTy() && !ST->hasFullFP16()) ||
-        (Ty->getScalarType()->isBFloatTy() && !ST->hasBF16()))
-      return 2 * LT.first;
     if (!Ty->getScalarType()->isFP128Ty())
       return LT.first;
     [[fallthrough]];
@@ -4386,25 +4414,21 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
   }
 
   if (Opcode == Instruction::FCmp) {
-    // Without dedicated instructions we promote f16 + bf16 compares to f32.
-    if ((!ST->hasFullFP16() && ValTy->getScalarType()->isHalfTy()) ||
-        ValTy->getScalarType()->isBFloatTy()) {
-      Type *PromotedTy =
-          ValTy->getWithNewType(Type::getFloatTy(ValTy->getContext()));
-      InstructionCost Cost =
-          getCastInstrCost(Instruction::FPExt, PromotedTy, ValTy,
-                           TTI::CastContextHint::None, CostKind);
-      if (!Op1Info.isConstant() && !Op2Info.isConstant())
-        Cost *= 2;
-      Cost += getCmpSelInstrCost(Opcode, PromotedTy, CondTy, VecPred, CostKind,
-                                 Op1Info, Op2Info);
-      if (ValTy->isVectorTy())
-        Cost += getCastInstrCost(
-            Instruction::Trunc, VectorType::getInteger(cast<VectorType>(ValTy)),
-            VectorType::getInteger(cast<VectorType>(PromotedTy)),
-            TTI::CastContextHint::None, CostKind);
-      return Cost;
-    }
+    if (auto Cost = getFP16BF16PromoteCost(
+            ValTy, CostKind, Op1Info, Op2Info, /*IncludeTrunc=*/false,
+            [&](Type *PromotedTy) {
+              InstructionCost Cost =
+                  getCmpSelInstrCost(Opcode, PromotedTy, CondTy, VecPred,
+                                     CostKind, Op1Info, Op2Info);
+              if (isa<VectorType>(PromotedTy))
+                Cost += getCastInstrCost(
+                    Instruction::Trunc,
+                    VectorType::getInteger(cast<VectorType>(ValTy)),
+                    VectorType::getInteger(cast<VectorType>(PromotedTy)),
+                    TTI::CastContextHint::None, CostKind);
+              return Cost;
+            }))
+      return *Cost;
 
     auto LT = getTypeLegalizationCost(ValTy);
     // Model unknown fp compares as a libcall.
