@@ -11,6 +11,8 @@
 // UNSUPPORTED: x86_64-unknown-linux-gnu-LTO
 // UNSUPPORTED: s390x-ibm-linux-gnu
 // UNSUPPORTED: s390x-ibm-linux-gnu-LTO
+// XFAIL: nvptx64-nvidia-cuda
+// XFAIL: nvptx64-nvidia-cuda-LTO
 
 #include <omp.h>
 

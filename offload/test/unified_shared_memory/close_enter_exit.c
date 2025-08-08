@@ -6,8 +6,8 @@
 // UNSUPPORTED: clang-6, clang-7, clang-8, clang-9
 
 // Fails on nvptx with error: an illegal memory access was encountered
-// XFAIL: nvptx64-nvidia-cuda
-// XFAIL: nvptx64-nvidia-cuda-LTO
+// UNSUPPORTED: nvptx64-nvidia-cuda
+// UNSUPPORTED: nvptx64-nvidia-cuda-LTO
 
 #include <omp.h>
 #include <stdio.h>
