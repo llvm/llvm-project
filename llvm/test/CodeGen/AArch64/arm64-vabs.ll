@@ -57,9 +57,8 @@ define void @commutable_sabdl(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr d0, [x0]
 ; CHECK-GI-NEXT:    ldr d1, [x1]
-; CHECK-GI-NEXT:    sabdl.8h v2, v0, v1
-; CHECK-GI-NEXT:    sabdl.8h v0, v1, v0
-; CHECK-GI-NEXT:    str q2, [x2]
+; CHECK-GI-NEXT:    sabdl.8h v0, v0, v1
+; CHECK-GI-NEXT:    str q0, [x2]
 ; CHECK-GI-NEXT:    str q0, [x2]
 ; CHECK-GI-NEXT:    ret
   %tmp1 = load <8 x i8>, ptr %A
@@ -198,9 +197,8 @@ define void @commutable_uabdl(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr d0, [x0]
 ; CHECK-GI-NEXT:    ldr d1, [x1]
-; CHECK-GI-NEXT:    uabdl.8h v2, v0, v1
-; CHECK-GI-NEXT:    uabdl.8h v0, v1, v0
-; CHECK-GI-NEXT:    str q2, [x2]
+; CHECK-GI-NEXT:    uabdl.8h v0, v0, v1
+; CHECK-GI-NEXT:    str q0, [x2]
 ; CHECK-GI-NEXT:    str q0, [x2]
 ; CHECK-GI-NEXT:    ret
   %tmp1 = load <8 x i8>, ptr %A
