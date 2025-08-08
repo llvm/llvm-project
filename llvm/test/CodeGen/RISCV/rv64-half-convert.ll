@@ -253,8 +253,8 @@ define i128 @fptosi_sat_f16_to_i128(half %a) nounwind {
 ; RV64IZHINX-NEXT:    srli a1, a2, 1
 ; RV64IZHINX-NEXT:  .LBB4_4:
 ; RV64IZHINX-NEXT:    feq.s a2, s0, s0
-; RV64IZHINX-NEXT:    neg a3, a3
 ; RV64IZHINX-NEXT:    neg a4, s1
+; RV64IZHINX-NEXT:    neg a3, a3
 ; RV64IZHINX-NEXT:    neg a2, a2
 ; RV64IZHINX-NEXT:    and a0, a4, a0
 ; RV64IZHINX-NEXT:    and a1, a2, a1
@@ -334,18 +334,19 @@ define i128 @fptoui_sat_f16_to_i128(half %a) nounwind {
 ; RV64IZHINX-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; RV64IZHINX-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; RV64IZHINX-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; RV64IZHINX-NEXT:    fcvt.s.h a0, a0
-; RV64IZHINX-NEXT:    lui a1, 522240
-; RV64IZHINX-NEXT:    addi a1, a1, -1
-; RV64IZHINX-NEXT:    fle.s a2, zero, a0
-; RV64IZHINX-NEXT:    flt.s a1, a1, a0
-; RV64IZHINX-NEXT:    neg s0, a1
-; RV64IZHINX-NEXT:    neg s1, a2
+; RV64IZHINX-NEXT:    fcvt.s.h s0, a0
+; RV64IZHINX-NEXT:    fle.s a0, zero, s0
+; RV64IZHINX-NEXT:    neg s1, a0
+; RV64IZHINX-NEXT:    mv a0, s0
 ; RV64IZHINX-NEXT:    call __fixunssfti
 ; RV64IZHINX-NEXT:    and a0, s1, a0
+; RV64IZHINX-NEXT:    lui a2, 522240
 ; RV64IZHINX-NEXT:    and a1, s1, a1
-; RV64IZHINX-NEXT:    or a0, s0, a0
-; RV64IZHINX-NEXT:    or a1, s0, a1
+; RV64IZHINX-NEXT:    addi a2, a2, -1
+; RV64IZHINX-NEXT:    flt.s a2, a2, s0
+; RV64IZHINX-NEXT:    neg a2, a2
+; RV64IZHINX-NEXT:    or a0, a2, a0
+; RV64IZHINX-NEXT:    or a1, a2, a1
 ; RV64IZHINX-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64IZHINX-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64IZHINX-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload

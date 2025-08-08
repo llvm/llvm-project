@@ -1635,27 +1635,21 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   config->osoPrefix = args.getLastArgValue(OPT_oso_prefix);
   if (!config->osoPrefix.empty()) {
-    // Expand special characters, such as ".", "..", or  "~", if present.
-    // Note: LD64 only expands "." and not other special characters.
-    // That seems silly to imitate so we will not try to follow it, but rather
-    // just use real_path() to do it.
-
     // The max path length is 4096, in theory. However that seems quite long
     // and seems unlikely that any one would want to strip everything from the
     // path. Hence we've picked a reasonably large number here.
     SmallString<1024> expanded;
-    if (!fs::real_path(config->osoPrefix, expanded,
-                       /*expand_tilde=*/true)) {
-      // Note: LD64 expands "." to be `<current_dir>/`
-      // (ie., it has a slash suffix) whereas real_path() doesn't.
-      // So we have to append '/' to be consistent.
-      StringRef sep = sys::path::get_separator();
-      // real_path removes trailing slashes as part of the normalization, but
-      // these are meaningful for our text based stripping
-      if (config->osoPrefix == "." || config->osoPrefix.ends_with(sep))
-        expanded += sep;
-      config->osoPrefix = saver().save(expanded.str());
+    // Expand "." into the current working directory.
+    if (config->osoPrefix == "." && !fs::current_path(expanded)) {
+      // Note: LD64 expands "." to be `<current_dir>/
+      // (ie., it has a slash suffix) whereas current_path() doesn't.
+      // So we have to append '/' to be consistent because this is
+      // meaningful for our text based stripping.
+      expanded += sys::path::get_separator();
+    } else {
+      expanded = config->osoPrefix;
     }
+    config->osoPrefix = saver().save(expanded.str());
   }
 
   bool pie = args.hasFlag(OPT_pie, OPT_no_pie, true);

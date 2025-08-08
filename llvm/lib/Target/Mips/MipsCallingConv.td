@@ -29,12 +29,6 @@ class CCIfOrigArgWasFloat<CCAction A>
 class CCIfOrigArgWasF128<CCAction A>
     : CCIf<"static_cast<MipsCCState *>(&State)->WasOriginalArgF128(ValNo)", A>;
 
-/// Match if this specific argument is a vararg.
-/// This is slightly different fro CCIfIsVarArg which matches if any argument is
-/// a vararg.
-class CCIfArgIsVarArg<CCAction A>
-    : CCIf<"!static_cast<MipsCCState *>(&State)->IsCallOperandFixed(ValNo)", A>;
-
 /// Match if the return was a floating point vector.
 class CCIfOrigArgWasNotVectorFloat<CCAction A>
     : CCIf<"!static_cast<MipsCCState *>(&State)"
@@ -344,7 +338,7 @@ def CC_Mips_VarArg : CallingConv<[
 ]>;
 
 def CC_Mips : CallingConv<[
-  CCIfVarArg<CCIfArgIsVarArg<CCDelegateTo<CC_Mips_VarArg>>>,
+  CCIfVarArg<CCIfArgVarArg<CCDelegateTo<CC_Mips_VarArg>>>,
   CCDelegateTo<CC_Mips_FixedArg>
 ]>;
 

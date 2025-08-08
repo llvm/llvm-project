@@ -74,10 +74,11 @@ define bfloat @v_mad_mixlo_bf16_bf16lo_bf16lo_f32_clamp_post_cvt(bfloat %src0, b
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_fma_mixlo_bf16 v0, v0, v1, v2 op_sel_hi:[1,1,0]
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v0 clamp
+; GFX1250-NEXT:    v_fma_mixlo_bf16 v0, v0, v1, v2 op_sel_hi:[1,1,0] clamp
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+
+
+
   %src0.ext = fpext bfloat %src0 to float
   %src1.ext = fpext bfloat %src1 to float
   %result = tail call float @llvm.fmuladd.f32(float %src0.ext, float %src1.ext, float %src2)
@@ -191,10 +192,11 @@ define <2 x bfloat> @v_mad_mix_v2f32_clamp_postcvt(<2 x bfloat> %src0, <2 x bflo
 ; GFX1250-NEXT:    v_lshlrev_b32_e32 v0, 16, v2
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_pk_fma_f32 v[0:1], v[4:5], v[6:7], v[0:1]
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v1
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v0 clamp
+; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v1 clamp
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+
+
+
   %src0.ext = fpext <2 x bfloat> %src0 to <2 x float>
   %src1.ext = fpext <2 x bfloat> %src1 to <2 x float>
   %src2.ext = fpext <2 x bfloat> %src2 to <2 x float>
@@ -247,12 +249,12 @@ define <4 x bfloat> @v_mad_mix_v4f32_clamp_postcvt(<4 x bfloat> %src0, <4 x bflo
 ; GFX1250-NEXT:    v_pk_fma_f32 v[0:1], v[6:7], v[0:1], v[2:3]
 ; GFX1250-NEXT:    v_pk_fma_f32 v[2:3], v[8:9], v[10:11], v[12:13]
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v1
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v1, v2, v3
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, v0 clamp
-; GFX1250-NEXT:    v_pk_max_num_bf16 v1, v1, v1 clamp
+; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v1 clamp
+; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v1, v2, v3 clamp
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+
+
+
   %src0.ext = fpext <4 x bfloat> %src0 to <4 x float>
   %src1.ext = fpext <4 x bfloat> %src1 to <4 x float>
   %src2.ext = fpext <4 x bfloat> %src2 to <4 x float>

@@ -38,6 +38,8 @@ namespace llvm {
   LLVM_ABI bool getAsSignedInteger(StringRef Str, unsigned Radix,
                                    long long &Result);
 
+  LLVM_ABI unsigned getAutoSenseRadix(StringRef &Str);
+
   LLVM_ABI bool consumeUnsignedInteger(StringRef &Str, unsigned Radix,
                                        unsigned long long &Result);
   LLVM_ABI bool consumeSignedInteger(StringRef &Str, unsigned Radix,

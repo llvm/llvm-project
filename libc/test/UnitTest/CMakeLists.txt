@@ -125,6 +125,7 @@ add_unittest_framework_library(
     RoundingModeUtils.h
   DEPENDS
     LibcTest
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.string_utils
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fp_bits

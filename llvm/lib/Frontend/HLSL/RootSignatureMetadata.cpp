@@ -51,13 +51,6 @@ static std::optional<StringRef> extractMdStringValue(MDNode *Node,
   return NodeText->getString();
 }
 
-static const EnumEntry<dxil::ResourceClass> ResourceClassNames[] = {
-    {"CBV", dxil::ResourceClass::CBuffer},
-    {"SRV", dxil::ResourceClass::SRV},
-    {"UAV", dxil::ResourceClass::UAV},
-    {"Sampler", dxil::ResourceClass::Sampler},
-};
-
 namespace {
 
 // We use the OverloadVisit with std::visit to ensure the compiler catches if a
@@ -128,7 +121,7 @@ MDNode *MetadataBuilder::BuildRootDescriptor(const RootDescriptor &Descriptor) {
   IRBuilder<> Builder(Ctx);
   StringRef ResName =
       enumToStringRef(dxil::ResourceClass(to_underlying(Descriptor.Type)),
-                      ArrayRef(ResourceClassNames));
+                      dxbc::getResourceClasses());
   assert(!ResName.empty() && "Provided an invalid Resource Class");
   SmallString<7> Name({"Root", ResName});
   Metadata *Operands[] = {
@@ -170,7 +163,7 @@ MDNode *MetadataBuilder::BuildDescriptorTableClause(
   IRBuilder<> Builder(Ctx);
   StringRef ResName =
       enumToStringRef(dxil::ResourceClass(to_underlying(Clause.Type)),
-                      ArrayRef(ResourceClassNames));
+                      dxbc::getResourceClasses());
   assert(!ResName.empty() && "Provided an invalid Resource Class");
   Metadata *Operands[] = {
       MDString::get(Ctx, ResName),

@@ -1,0 +1,32 @@
+name: MLIR SPIR-V Tests
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'mlir/include/mlir/Dialect/SPIRV/**'
+      - 'mlir/lib/Dialect/SPIRV/**'
+      - 'mlir/include/mlir/Target/SPIRV/**'
+      - 'mlir/lib/Target/SPIRV/**'
+      - 'mlir/test/Target/SPIRV/**'
+      - '.github/workflows/mlir-spirv-tests.yml'
+
+concurrency:
+  # Skip intermediate builds: always.
+  # Cancel intermediate builds: only if it is a pull request build.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
+jobs:
+  check_spirv:
+    if: github.repository_owner == 'llvm'
+    name: Test MLIR SPIR-V
+    uses: ./.github/workflows/llvm-project-tests.yml
+    with:
+      build_target: check-mlir
+      projects: mlir
+      extra_cmake_args: '-DLLVM_TARGETS_TO_BUILD="host" -DLLVM_INCLUDE_SPIRV_TOOLS_TESTS=ON'
+      os_list: '["ubuntu-24.04"]'

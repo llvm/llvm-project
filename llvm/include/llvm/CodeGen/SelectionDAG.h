@@ -1260,6 +1260,9 @@ public:
   /// stack arguments from being clobbered.
   LLVM_ABI SDValue getStackArgumentTokenFactor(SDValue Chain);
 
+  std::pair<SDValue, SDValue> getMemcmp(SDValue Chain, const SDLoc &dl,
+                                        SDValue Dst, SDValue Src, SDValue Size,
+                                        const CallInst *CI);
   /* \p CI if not null is the memset call being lowered.
    * \p OverrideTailCall is an optional parameter that can be used to override
    * the tail call optimization decision. */

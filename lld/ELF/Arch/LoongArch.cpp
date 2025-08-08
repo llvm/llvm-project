@@ -1396,9 +1396,6 @@ void LoongArch::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
 // change in section sizes can have cascading effect and require another
 // relaxation pass.
 bool LoongArch::relaxOnce(int pass) const {
-  if (ctx.arg.relocatable)
-    return false;
-
   if (pass == 0)
     initSymbolAnchors(ctx);
 

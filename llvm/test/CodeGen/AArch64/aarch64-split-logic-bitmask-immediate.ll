@@ -370,3 +370,175 @@ entry:
   %r = select i1 %c, i64 %a, i64 %ands
   ret i64 %r
 }
+
+; Test EOR.
+define i32 @test1_eor(i32 %a) {
+; CHECK-LABEL: test1_eor:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    eor w8, w0, #0x400
+; CHECK-NEXT:    eor w0, w8, #0x200000
+; CHECK-NEXT:    ret
+entry:
+  %eor = xor i32 %a, 2098176
+  ret i32 %eor
+}
+
+; This constant should not be split because it can be handled by one mov.
+define i32 @test2_eor(i32 %a) {
+; CHECK-LABEL: test2_eor:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #135 // =0x87
+; CHECK-NEXT:    eor w0, w0, w8
+; CHECK-NEXT:    ret
+entry:
+  %eor = xor i32 %a, 135
+  ret i32 %eor
+}
+
+; This constant should not be split because the split immediate is not valid
+; bitmask immediate.
+define i32 @test3_eor(i32 %a) {
+; CHECK-LABEL: test3_eor:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #1024 // =0x400
+; CHECK-NEXT:    movk w8, #33, lsl #16
+; CHECK-NEXT:    eor w0, w0, w8
+; CHECK-NEXT:    ret
+entry:
+  %eor = xor i32 %a, 2163712
+  ret i32 %eor
+}
+
+define i64 @test4_eor(i64 %a) {
+; CHECK-LABEL: test4_eor:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    eor x8, x0, #0x400
+; CHECK-NEXT:    eor x0, x8, #0x200000
+; CHECK-NEXT:    ret
+entry:
+  %eor = xor i64 %a, 2098176
+  ret i64 %eor
+}
+
+define i64 @test5_eor(i64 %a) {
+; CHECK-LABEL: test5_eor:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    eor x8, x0, #0x4000
+; CHECK-NEXT:    eor x0, x8, #0x200000000
+; CHECK-NEXT:    ret
+entry:
+  %eor = xor i64 %a, 8589950976
+  ret i64 %eor
+}
+
+; This constant should not be split because it can be handled by one mov.
+define i64 @test6_eor(i64 %a) {
+; CHECK-LABEL: test6_eor:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #135 // =0x87
+; CHECK-NEXT:    eor x0, x0, x8
+; CHECK-NEXT:    ret
+entry:
+  %eor = xor i64 %a, 135
+  ret i64 %eor
+}
+
+; This constant should not be split because the split immediate is not valid
+; bitmask immediate.
+define i64 @test7_eor(i64 %a) {
+; CHECK-LABEL: test7_eor:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #1024 // =0x400
+; CHECK-NEXT:    movk w8, #33, lsl #16
+; CHECK-NEXT:    eor x0, x0, x8
+; CHECK-NEXT:    ret
+entry:
+  %eor = xor i64 %a, 2163712
+  ret i64 %eor
+}
+
+; Test ORR.
+define i32 @test1_orr(i32 %a) {
+; CHECK-LABEL: test1_orr:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    orr w8, w0, #0x400
+; CHECK-NEXT:    orr w0, w8, #0x200000
+; CHECK-NEXT:    ret
+entry:
+  %orr = or i32 %a, 2098176
+  ret i32 %orr
+}
+
+; This constant should not be split because it can be handled by one mov.
+define i32 @test2_orr(i32 %a) {
+; CHECK-LABEL: test2_orr:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #135 // =0x87
+; CHECK-NEXT:    orr w0, w0, w8
+; CHECK-NEXT:    ret
+entry:
+  %orr = or i32 %a, 135
+  ret i32 %orr
+}
+
+; This constant should not be split because the split immediate is not valid
+; bitmask immediate.
+define i32 @test3_orr(i32 %a) {
+; CHECK-LABEL: test3_orr:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #1024 // =0x400
+; CHECK-NEXT:    movk w8, #33, lsl #16
+; CHECK-NEXT:    orr w0, w0, w8
+; CHECK-NEXT:    ret
+entry:
+  %orr = or i32 %a, 2163712
+  ret i32 %orr
+}
+
+define i64 @test4_orr(i64 %a) {
+; CHECK-LABEL: test4_orr:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    orr x8, x0, #0x400
+; CHECK-NEXT:    orr x0, x8, #0x200000
+; CHECK-NEXT:    ret
+entry:
+  %orr = or i64 %a, 2098176
+  ret i64 %orr
+}
+
+define i64 @test5_orr(i64 %a) {
+; CHECK-LABEL: test5_orr:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    orr x8, x0, #0x4000
+; CHECK-NEXT:    orr x0, x8, #0x200000000
+; CHECK-NEXT:    ret
+entry:
+  %orr = or i64 %a, 8589950976
+  ret i64 %orr
+}
+
+; This constant should not be split because it can be handled by one mov.
+define i64 @test6_orr(i64 %a) {
+; CHECK-LABEL: test6_orr:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #135 // =0x87
+; CHECK-NEXT:    orr x0, x0, x8
+; CHECK-NEXT:    ret
+entry:
+  %orr = or i64 %a, 135
+  ret i64 %orr
+}
+
+; This constant should not be split because the split immediate is not valid
+; bitmask immediate.
+define i64 @test7_orr(i64 %a) {
+; CHECK-LABEL: test7_orr:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #1024 // =0x400
+; CHECK-NEXT:    movk w8, #33, lsl #16
+; CHECK-NEXT:    orr x0, x0, x8
+; CHECK-NEXT:    ret
+entry:
+  %orr = or i64 %a, 2163712
+  ret i64 %orr
+}

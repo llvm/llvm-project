@@ -669,7 +669,7 @@ SDValue AVRTargetLowering::getAVRCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
       default: {
         // Turn lhs < rhs with lhs constant into rhs >= lhs+1, this allows
         // us to  fold the constant into the cmp instruction.
-        RHS = DAG.getConstant(C->getSExtValue() + 1, DL, VT);
+        RHS = DAG.getSignedConstant(C->getSExtValue() + 1, DL, VT);
         CC = ISD::SETGE;
         break;
       }
@@ -713,7 +713,10 @@ SDValue AVRTargetLowering::getAVRCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
     // Turn lhs < rhs with lhs constant into rhs >= lhs+1, this allows us to
     // fold the constant into the cmp instruction.
     if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(RHS)) {
-      RHS = DAG.getConstant(C->getSExtValue() + 1, DL, VT);
+      // Doing a "icmp ugt i16 65535, %0" comparison should have been converted
+      // already to something else. Assert to make sure this assumption holds.
+      assert((!C->isAllOnes()) && "integer overflow in comparison transform");
+      RHS = DAG.getConstant(C->getZExtValue() + 1, DL, VT);
       CC = ISD::SETUGE;
       break;
     }

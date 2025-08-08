@@ -31,6 +31,7 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   clc/lib/amdgcn/SOURCES;
   clc/lib/amdgpu/SOURCES;
   clc/lib/clspv/SOURCES;
+  clc/lib/ptx-nvidiacl/SOURCES;
   clc/lib/r600/SOURCES;
   clc/lib/spirv/SOURCES;
 )

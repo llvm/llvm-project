@@ -804,8 +804,8 @@ def GPU_LaunchOp : GPU_Op<"launch", [
                Optional<Index>:$clusterSizeY,
                Optional<Index>:$clusterSizeZ,
                Optional<I32>:$dynamicSharedMemorySize,
-               OptionalAttr<SymbolRefAttr>:$kernelFunc,
-               OptionalAttr<SymbolRefAttr>:$kernelModule)>,
+               OptionalAttr<FlatSymbolRefAttr>:$module,
+               OptionalAttr<FlatSymbolRefAttr>:$function)>,
     Results<(outs Optional<GPU_AsyncToken>:$asyncToken)> {
   let summary = "GPU kernel launch operation";
 
@@ -839,7 +839,7 @@ def GPU_LaunchOp : GPU_Op<"launch", [
     -   a variadic number of Workgroup memory attributions.
     -   a variadic number of Private memory attributions.
 
-    The `kernelFunc` and `kernelModule` attributes are optional and specifies
+    The `function` and `module` attributes are optional and specifies
     the kernel name and a module in which the kernel should be outlined.
 
     Syntax:
@@ -850,6 +850,8 @@ def GPU_LaunchOp : GPU_Op<"launch", [
                              `blocks` `(` ssa-id-list `)` `in` ssa-reassignment
                              `threads` `(` ssa-id-list `)` `in` ssa-reassignment
                              (dynamic_shared_memory_size ssa-use)?
+                             (`module(` symbol-ref-id `)`)?
+                             (`function(` symbol-ref-id `)`)?
                              memory-attribution
                              region attr-dict?
     ssa-reassignment ::= `(` ssa-id `=` ssa-use (`,` ssa-id `=` ssa-use)* `)`
@@ -907,6 +909,14 @@ def GPU_LaunchOp : GPU_Op<"launch", [
       // sizes are immediately usable inside body region.
       "some_op"(%cx, %bx, %tx) : (index, index, index) -> ()
     }
+
+    // Launch with module and function attributes.
+    gpu.launch blocks(%bx, %by, %bz) in (%sz_bx = %0, %sz_by = %1, %sz_bz = %2)
+               threads(%tx, %ty, %tz) in (%sz_tx = %3, %sz_ty = %4, %sz_tz = %5)
+               module(@kernel_module) function(@kernel_func) {
+      "some_op"(%bx, %tx) : (index, index) -> ()
+      %42 = load %val1[%bx] : memref<?xf32, 1>
+    }
     ```
 
     Rationale: using operation/block arguments gives analyses a clear way of
@@ -931,7 +941,9 @@ def GPU_LaunchOp : GPU_Op<"launch", [
       CArg<"TypeRange", "{}">:$privateAttributions,
       CArg<"Value", "nullptr">:$clusterSizeX,
       CArg<"Value", "nullptr">:$clusterSizeY,
-      CArg<"Value", "nullptr">:$clusterSizeZ)>
+      CArg<"Value", "nullptr">:$clusterSizeZ,
+      CArg<"FlatSymbolRefAttr", "nullptr">:$module,
+      CArg<"FlatSymbolRefAttr", "nullptr">:$function)>,
   ];
 
   let extraClassDeclaration = [{

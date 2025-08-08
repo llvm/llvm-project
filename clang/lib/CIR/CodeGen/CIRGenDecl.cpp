@@ -667,6 +667,12 @@ struct DestroyObject final : EHScopeStack::Cleanup {
   void emit(CIRGenFunction &cgf) override {
     cgf.emitDestroy(addr, type, destroyer);
   }
+
+  // This is a placeholder until EHCleanupScope is implemented.
+  size_t getSize() const override {
+    assert(!cir::MissingFeatures::ehCleanupScope());
+    return sizeof(DestroyObject);
+  }
 };
 } // namespace
 

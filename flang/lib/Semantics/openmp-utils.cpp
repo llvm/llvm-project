@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "openmp-utils.h"
+#include "flang/Semantics/openmp-utils.h"
 
 #include "flang/Common/indirection.h"
 #include "flang/Common/reference.h"

@@ -251,19 +251,33 @@ else()
   add_win_flangrt_runtime(STATIC dynamic     MultiThreadedDLL      INSTALL_WITH_TOOLCHAIN)
   add_win_flangrt_runtime(STATIC dynamic_dbg MultiThreadedDebugDLL INSTALL_WITH_TOOLCHAIN)
 
-  # Unittests link against LLVMSupport which is using CMake's default runtime
-  # library selection, which is either MultiThreadedDLL or MultiThreadedDebugDLL
-  # depending on the configuration. They have to match or linking will fail.
+  # Unittests link against LLVMSupport. If CMAKE_MSVC_RUNTIME_LIBRARY is set,
+  # that will have been used for LLVMSupport so it must also be used here.
+  # Otherwise this will use CMake's default runtime library selection, which
+  # is either MultiThreadedDLL or MultiThreadedDebugDLL depending on the configuration.
+  # They have to match or linking will fail.
   if (GENERATOR_IS_MULTI_CONFIG)
     # We cannot select an ALIAS library because it may be different
     # per configuration. Fallback to CMake's default.
     add_win_flangrt_runtime(STATIC unittest "" EXCLUDE_FROM_ALL)
   else ()
-    string(TOLOWER ${CMAKE_BUILD_TYPE} build_type)
-    if (build_type STREQUAL "debug")
-      add_library(flang_rt.runtime.unittest ALIAS flang_rt.runtime.dynamic_dbg)
-    else ()
-      add_library(flang_rt.runtime.unittest ALIAS flang_rt.runtime.dynamic)
-    endif ()
+    # Check if CMAKE_MSVC_RUNTIME_LIBRARY was set.
+    if (CMAKE_MSVC_RUNTIME_LIBRARY STREQUAL "MultiThreaded")
+        add_library(flang_rt.runtime.unittest ALIAS flang_rt.runtime.static)
+    elseif (CMAKE_MSVC_RUNTIME_LIBRARY STREQUAL "MultiThreadedDLL")
+        add_library(flang_rt.runtime.unittest ALIAS flang_rt.runtime.dynamic)
+    elseif (CMAKE_MSVC_RUNTIME_LIBRARY STREQUAL "MultiThreadedDebug")
+        add_library(flang_rt.runtime.unittest ALIAS flang_rt.runtime.static_dbg)
+    elseif (CMAKE_MSVC_RUNTIME_LIBRARY STREQUAL "MultiThreadedDebugDLL")
+        add_library(flang_rt.runtime.unittest ALIAS flang_rt.runtime.dynamic_dbg)
+    else()
+      # Default based on the build type.
+      string(TOLOWER ${CMAKE_BUILD_TYPE} build_type)
+      if (build_type STREQUAL "debug")
+          add_library(flang_rt.runtime.unittest ALIAS flang_rt.runtime.dynamic_dbg)
+      else ()
+          add_library(flang_rt.runtime.unittest ALIAS flang_rt.runtime.dynamic)
+      endif ()
+    endif()
   endif ()
 endif()

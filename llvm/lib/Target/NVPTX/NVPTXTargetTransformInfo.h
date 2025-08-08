@@ -87,6 +87,13 @@ public:
   }
   unsigned getMinVectorRegisterBitWidth() const override { return 32; }
 
+  bool shouldExpandReduction(const IntrinsicInst *II) const override {
+    // Turn off ExpandReductions pass for NVPTX, which doesn't have advanced
+    // swizzling operations. Our backend/Selection DAG can expand these
+    // reductions with less movs.
+    return false;
+  }
+
   // We don't want to prevent inlining because of target-cpu and -features
   // attributes that were added to newer versions of LLVM/Clang: There are
   // no incompatible functions in PTX, ptxas will throw errors in such cases.

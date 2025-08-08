@@ -39,7 +39,7 @@ define noundef i32 @_Z11memcmp_testPKvS0_m(ptr noundef readonly captures(none) %
 ; CHECK-AIX-64-P9-NEXT:    mflr r0
 ; CHECK-AIX-64-P9-NEXT:    stdu r1, -112(r1)
 ; CHECK-AIX-64-P9-NEXT:    std r0, 128(r1)
-; CHECK-AIX-64-P9-NEXT:    bl .memcmp[PR]
+; CHECK-AIX-64-P9-NEXT:    bl .___memcmp64[PR]
 ; CHECK-AIX-64-P9-NEXT:    nop
 ; CHECK-AIX-64-P9-NEXT:    addi r1, r1, 112
 ; CHECK-AIX-64-P9-NEXT:    ld r0, 16(r1)

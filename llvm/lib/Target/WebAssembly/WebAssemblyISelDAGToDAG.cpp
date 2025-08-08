@@ -136,6 +136,15 @@ static APInt encodeFunctionSignature(SelectionDAG *DAG, SDLoc &DL,
     if (VT == MVT::f64) {
       return wasm::ValType::F64;
     }
+    if (VT == MVT::externref) {
+      return wasm::ValType::EXTERNREF;
+    }
+    if (VT == MVT::funcref) {
+      return wasm::ValType::FUNCREF;
+    }
+    if (VT == MVT::exnref) {
+      return wasm::ValType::EXNREF;
+    }
     LLVM_DEBUG(errs() << "Unhandled type for llvm.wasm.ref.test.func: " << VT
                       << "\n");
     llvm_unreachable("Unhandled type for llvm.wasm.ref.test.func");

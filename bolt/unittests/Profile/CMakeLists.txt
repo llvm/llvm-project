@@ -16,7 +16,6 @@ target_link_libraries(ProfileTests
   LLVMBOLTCore
   LLVMBOLTProfile
   LLVMTargetParser
-  LLVMTestingSupport
   )
 
 foreach (tgt ${BOLT_TARGETS_TO_BUILD})

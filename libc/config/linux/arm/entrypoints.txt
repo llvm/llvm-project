@@ -460,7 +460,12 @@ set(TARGET_LIBM_ENTRYPOINTS
 
 list(APPEND TARGET_LIBM_ENTRYPOINTS
   # bfloat16 entrypoints
+  libc.src.math.ceilbf16
   libc.src.math.fabsbf16
+  libc.src.math.floorbf16
+  libc.src.math.roundbf16
+  libc.src.math.roundevenbf16
+  libc.src.math.truncbf16
 )
 
 set(TARGET_LLVMLIBC_ENTRYPOINTS

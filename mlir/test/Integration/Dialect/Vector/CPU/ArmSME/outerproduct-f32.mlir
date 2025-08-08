@@ -46,7 +46,7 @@ func.func @test_outerproduct_with_accumulator_4x4xf32() {
   %c0 = arith.constant 0 : index
   %f10 = arith.constant 10.0 : f32
 
-  %acc = vector.splat %f10 : vector<[4]x[4]xf32>
+  %acc = vector.broadcast %f10 : f32 to vector<[4]x[4]xf32>
   %vector_i32 = llvm.intr.stepvector : vector<[4]xi32>
   %vector = arith.sitofp %vector_i32 : vector<[4]xi32> to vector<[4]xf32>
   %tile = vector.outerproduct %vector, %vector, %acc : vector<[4]xf32>, vector<[4]xf32>
@@ -103,7 +103,7 @@ func.func @test_masked_outerproduct_with_accumulator_4x4xf32() {
   %ones = arith.constant dense<1> : vector<[4]xi32>
   %f10 = arith.constant 10.0 : f32
 
-  %acc = vector.splat %f10 : vector<[4]x[4]xf32>
+  %acc = vector.broadcast %f10 : f32 to vector<[4]x[4]xf32>
   %step_vector = llvm.intr.stepvector : vector<[4]xi32>
   %vector_i32 = arith.addi %step_vector, %ones : vector<[4]xi32>
   %vector = arith.sitofp %vector_i32 : vector<[4]xi32> to vector<[4]xf32>

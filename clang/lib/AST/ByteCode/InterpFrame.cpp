@@ -231,6 +231,10 @@ Pointer InterpFrame::getLocalPointer(unsigned Offset) const {
   return Pointer(localBlock(Offset));
 }
 
+Block *InterpFrame::getLocalBlock(unsigned Offset) const {
+  return localBlock(Offset);
+}
+
 Pointer InterpFrame::getParamPointer(unsigned Off) {
   // Return the block if it was created previously.
   if (auto Pt = Params.find(Off); Pt != Params.end())

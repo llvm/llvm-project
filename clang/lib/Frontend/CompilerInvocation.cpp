@@ -3936,47 +3936,18 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
     GenerateArg(Consumer, OPT_fsanitize_ignorelist_EQ, F);
 
   switch (Opts.getClangABICompat()) {
-  case LangOptions::ClangABI::Ver3_8:
-    GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "3.8");
+#define ABI_VER_MAJOR_MINOR(Major, Minor)                                      \
+  case LangOptions::ClangABI::Ver##Major##_##Minor:                            \
+    GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, #Major "." #Minor);        \
     break;
-  case LangOptions::ClangABI::Ver4:
-    GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "4.0");
+#define ABI_VER_MAJOR(Major)                                                   \
+  case LangOptions::ClangABI::Ver##Major:                                      \
+    GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, #Major ".0");              \
     break;
-  case LangOptions::ClangABI::Ver6:
-    GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "6.0");
+#define ABI_VER_LATEST(Latest)                                                 \
+  case LangOptions::ClangABI::Latest:                                          \
     break;
-  case LangOptions::ClangABI::Ver7:
-    GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "7.0");
-    break;
-  case LangOptions::ClangABI::Ver9:
-    GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "9.0");
-    break;
-  case LangOptions::ClangABI::Ver11:
-    GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "11.0");
-    break;
-  case LangOptions::ClangABI::Ver12:
-    GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "12.0");
-    break;
-  case LangOptions::ClangABI::Ver14:
-    GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "14.0");
-    break;
-  case LangOptions::ClangABI::Ver15:
-    GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "15.0");
-    break;
-  case LangOptions::ClangABI::Ver17:
-    GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "17.0");
-    break;
-  case LangOptions::ClangABI::Ver18:
-    GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "18.0");
-    break;
-  case LangOptions::ClangABI::Ver19:
-    GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "19.0");
-    break;
-  case LangOptions::ClangABI::Ver20:
-    GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "20.0");
-    break;
-  case LangOptions::ClangABI::Latest:
-    break;
+#include "clang/Basic/ABIVersions.def"
   }
 
   if (Opts.getSignReturnAddressScope() ==
@@ -4482,32 +4453,18 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
                    !VerParts.second.getAsInteger(10, Minor)
              : VerParts.first.size() == Ver.size() || VerParts.second == "0")) {
       // Got a valid version number.
-      if (Major == 3 && Minor <= 8)
-        Opts.setClangABICompat(LangOptions::ClangABI::Ver3_8);
-      else if (Major <= 4)
-        Opts.setClangABICompat(LangOptions::ClangABI::Ver4);
-      else if (Major <= 6)
-        Opts.setClangABICompat(LangOptions::ClangABI::Ver6);
-      else if (Major <= 7)
-        Opts.setClangABICompat(LangOptions::ClangABI::Ver7);
-      else if (Major <= 9)
-        Opts.setClangABICompat(LangOptions::ClangABI::Ver9);
-      else if (Major <= 11)
-        Opts.setClangABICompat(LangOptions::ClangABI::Ver11);
-      else if (Major <= 12)
-        Opts.setClangABICompat(LangOptions::ClangABI::Ver12);
-      else if (Major <= 14)
-        Opts.setClangABICompat(LangOptions::ClangABI::Ver14);
-      else if (Major <= 15)
-        Opts.setClangABICompat(LangOptions::ClangABI::Ver15);
-      else if (Major <= 17)
-        Opts.setClangABICompat(LangOptions::ClangABI::Ver17);
-      else if (Major <= 18)
-        Opts.setClangABICompat(LangOptions::ClangABI::Ver18);
-      else if (Major <= 19)
-        Opts.setClangABICompat(LangOptions::ClangABI::Ver19);
-      else if (Major <= 20)
-        Opts.setClangABICompat(LangOptions::ClangABI::Ver20);
+#define ABI_VER_MAJOR_MINOR(Major_, Minor_)                                    \
+  if (std::tie(Major, Minor) <= std::tuple(Major_, Minor_))                    \
+    Opts.setClangABICompat(LangOptions::ClangABI::Ver##Major_##_##Minor_);     \
+  else
+#define ABI_VER_MAJOR(Major_)                                                  \
+  if (Major <= Major_)                                                         \
+    Opts.setClangABICompat(LangOptions::ClangABI::Ver##Major_);                \
+  else
+#define ABI_VER_LATEST(Latest)                                                 \
+  { /* Equivalent to latest version - do nothing */                            \
+  }
+#include "clang/Basic/ABIVersions.def"
     } else if (Ver != "latest") {
       Diags.Report(diag::err_drv_invalid_value)
           << A->getAsString(Args) << A->getValue();
