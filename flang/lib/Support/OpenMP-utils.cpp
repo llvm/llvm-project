@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Support/OpenMP-utils.h"
+#include "flang/Optimizer/Builder/DirectivesCommon.h"
+#include "flang/Optimizer/Builder/HLFIRTools.h"
 
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/OpDefinition.h"
 
 namespace Fortran::common::openmp {
@@ -46,5 +49,31 @@ mlir::Block *genEntryBlock(mlir::OpBuilder &builder, const EntryBlockArgs &args,
   extractTypeLoc(args.useDevicePtr.vars);
 
   return builder.createBlock(&region, {}, types, locs);
+}
+
+bool needsBoundsOps(mlir::Value var) {
+  assert(mlir::isa<mlir::omp::PointerLikeType>(var.getType()) &&
+      "only pointer like types expected");
+  mlir::Type t = fir::unwrapRefType(var.getType());
+  if (mlir::Type inner = fir::dyn_cast_ptrOrBoxEleTy(t))
+    return fir::hasDynamicSize(inner);
+  return fir::hasDynamicSize(t);
+}
+
+void genBoundsOps(fir::FirOpBuilder &builder, mlir::Value var,
+    llvm::SmallVectorImpl<mlir::Value> &boundsOps) {
+  mlir::Location loc = var.getLoc();
+  fir::factory::AddrAndBoundsInfo info =
+      fir::factory::getDataOperandBaseAddr(builder, var,
+          /*isOptional=*/false, loc);
+  fir::ExtendedValue exv =
+      hlfir::translateToExtendedValue(loc, builder, hlfir::Entity{info.addr},
+          /*contiguousHint=*/true)
+          .first;
+  llvm::SmallVector<mlir::Value> tmp =
+      fir::factory::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
+          mlir::omp::MapBoundsType>(
+          builder, info, exv, /*dataExvIsAssumedSize=*/false, loc);
+  llvm::append_range(boundsOps, tmp);
 }
 } // namespace Fortran::common::openmp
