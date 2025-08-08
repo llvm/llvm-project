@@ -13,8 +13,8 @@
 
 #ifdef LIBC_HAS_ANNEX_K
 
-typedef void (*constraint_handler_t)(const char *__restrict msg,
-                                     void *__restrict ptr, errno_t error);
+typedef void (*constraint_handler_t)(const char *__restrict, void *__restrict,
+                                     errno_t);
 
 #endif // LIBC_HAS_ANNEX_K
 
