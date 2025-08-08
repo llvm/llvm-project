@@ -896,7 +896,7 @@ namespace PR94454 {
   auto eq = 0_ci == 0;
 }
 
-namespace PR152387 {
+namespace GH152387 {
 
 class foo : public std::string{
   void doit() {
