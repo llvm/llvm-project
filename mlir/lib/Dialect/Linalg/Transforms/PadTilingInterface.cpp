@@ -11,6 +11,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -230,13 +231,18 @@ static Value padOperand(RewriterBase &rewriter, TilingInterface opToPad,
   Value paddingValue;
   if (auto complexTy =
           dyn_cast<ComplexType>(getElementTypeOrSelf(v.getType()))) {
-    auto complexAttr = cast<ArrayAttr>(paddingValueAttr);
-    paddingValue = complex::ConstantOp::create(rewriter, opToPad.getLoc(),
-                                               complexTy, complexAttr);
-  } else {
-    paddingValue = arith::ConstantOp::create(rewriter, opToPad.getLoc(),
-                                             cast<TypedAttr>(paddingValueAttr));
+    if (auto complexAttr = dyn_cast<ArrayAttr>(paddingValueAttr)) {
+      paddingValue = complex::ConstantOp::create(rewriter, opToPad.getLoc(),
+                                                 complexTy, complexAttr);
+    }
+  } else if (isa<ub::PoisonAttr>(paddingValueAttr)) {
+    paddingValue = ub::PoisonOp::create(rewriter, opToPad.getLoc(),
+                                        getElementTypeOrSelf(v.getType()));
+  } else if (auto typedAttr = dyn_cast<TypedAttr>(paddingValueAttr)) {
+    paddingValue =
+        arith::ConstantOp::create(rewriter, opToPad.getLoc(), typedAttr);
   }
+  assert(paddingValue && "failed to create value from padding attribute");
 
   // Pad the operand to the bounding box defined by `paddedShape`.
   SmallVector<int64_t> tensorShape;

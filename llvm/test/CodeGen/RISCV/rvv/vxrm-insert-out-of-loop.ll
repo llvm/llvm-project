@@ -366,8 +366,8 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV64X60-NEXT:    # => This Inner Loop Header: Depth=2
 ; RV64X60-NEXT:    vl2r.v v8, (s2)
 ; RV64X60-NEXT:    vl2r.v v10, (s3)
-; RV64X60-NEXT:    sub s1, s1, t3
 ; RV64X60-NEXT:    vaaddu.vv v8, v8, v10
+; RV64X60-NEXT:    sub s1, s1, t3
 ; RV64X60-NEXT:    vs2r.v v8, (s4)
 ; RV64X60-NEXT:    add s4, s4, t3
 ; RV64X60-NEXT:    add s3, s3, t3

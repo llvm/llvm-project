@@ -57,6 +57,9 @@ typedef char __v16qi __attribute__((__vector_size__(16)));
 
 #define __trunc64(x)                                                           \
   (__m64) __builtin_shufflevector((__v2di)(x), __extension__(__v2di){}, 0)
+#define __zext128(x)                                                           \
+  (__m128i) __builtin_shufflevector((__v2si)(x), __extension__(__v2si){}, 0,   \
+                                    1, 2, 3)
 #define __anyext128(x)                                                         \
   (__m128i) __builtin_shufflevector((__v2si)(x), __extension__(__v2si){}, 0,   \
                                     1, -1, -1)
@@ -723,11 +726,11 @@ _mm_madd_pi16(__m64 __m1, __m64 __m2)
 ///    A 64-bit integer vector of [4 x i16].
 /// \returns A 64-bit integer vector of [4 x i16] containing the upper 16 bits
 ///    of the products of both parameters.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_mulhi_pi16(__m64 __m1, __m64 __m2)
 {
-    return __trunc64(__builtin_ia32_pmulhw128((__v8hi)__anyext128(__m1),
-                                              (__v8hi)__anyext128(__m2)));
+    return __trunc64(__builtin_ia32_pmulhw128((__v8hi)__zext128(__m1),
+                                              (__v8hi)__zext128(__m2)));
 }
 
 /// Multiplies each 16-bit signed integer element of the first 64-bit
