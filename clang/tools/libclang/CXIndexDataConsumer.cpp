@@ -415,9 +415,9 @@ const char *ScratchAlloc::copyCStr(StringRef Str) {
   return buf;
 }
 
-void CXIndexDataConsumer::setASTContext(ASTContext &ctx) {
-  Ctx = &ctx;
-  cxtu::getASTUnit(CXTU)->setASTContext(&ctx);
+void CXIndexDataConsumer::setASTContext(IntrusiveRefCntPtr<ASTContext> ctx) {
+  Ctx = ctx.get();
+  cxtu::getASTUnit(CXTU)->setASTContext(std::move(ctx));
 }
 
 void CXIndexDataConsumer::setPreprocessor(std::shared_ptr<Preprocessor> PP) {

@@ -753,6 +753,17 @@ func.func @load_non_temporal(%arg0 : memref<32xf32, affine_map<(d0) -> (d0)>>) {
 
 // -----
 
+// CHECK-LABEL: func @load_with_alignment(
+// CHECK-INTERFACE-LABEL: func @load_with_alignment(
+func.func @load_with_alignment(%arg0 : memref<32xf32>, %arg1 : index) {
+  // CHECK: llvm.load %{{.*}} {alignment = 32 : i64} : !llvm.ptr -> f32
+  // CHECK-INTERFACE: llvm.load
+  %1 = memref.load %arg0[%arg1] {alignment = 32} : memref<32xf32>
+  func.return
+}
+
+// -----
+
 // CHECK-LABEL: func @store_non_temporal(
 // CHECK-INTERFACE-LABEL: func @store_non_temporal(
 func.func @store_non_temporal(%input : memref<32xf32, affine_map<(d0) -> (d0)>>, %output : memref<32xf32, affine_map<(d0) -> (d0)>>) {
@@ -761,6 +772,17 @@ func.func @store_non_temporal(%input : memref<32xf32, affine_map<(d0) -> (d0)>>,
   // CHECK: llvm.store %{{.*}}, %{{.*}}  {nontemporal} : f32, !llvm.ptr
   // CHECK-INTERFACE: llvm.store
   memref.store %2, %output[%1] {nontemporal = true} : memref<32xf32, affine_map<(d0) -> (d0)>>
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @store_with_alignment(
+// CHECK-INTERFACE-LABEL: func @store_with_alignment(
+func.func @store_with_alignment(%arg0 : memref<32xf32>, %arg1 : f32, %arg2 : index) {
+  // CHECK: llvm.store %{{.*}}, %{{.*}} {alignment = 32 : i64} : f32, !llvm.ptr
+  // CHECK-INTERFACE: llvm.store
+  memref.store %arg1, %arg0[%arg2] {alignment = 32} : memref<32xf32>
   func.return
 }
 

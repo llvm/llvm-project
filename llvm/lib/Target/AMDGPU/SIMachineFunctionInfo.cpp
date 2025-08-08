@@ -81,11 +81,15 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
     PSInputAddr = AMDGPU::getInitialPSInputAddr(F);
   }
 
-  MayNeedAGPRs = ST.hasMAIInsts() && !MFMAVGPRForm;
-  if (!MFMAVGPRForm && ST.hasGFX90AInsts() &&
-      ST.getMaxNumVGPRs(F) <= AMDGPU::VGPR_32RegClass.getNumRegs() &&
-      !mayUseAGPRs(F))
-    MayNeedAGPRs = false; // We will select all MAI with VGPR operands.
+  MayNeedAGPRs = ST.hasMAIInsts();
+  if (ST.hasGFX90AInsts()) {
+    // FIXME: MayNeedAGPRs is a misnomer for how this is used. MFMA selection
+    // should be separated from availability of AGPRs
+    if (MFMAVGPRForm ||
+        (ST.getMaxNumVGPRs(F) <= AMDGPU::VGPR_32RegClass.getNumRegs() &&
+         !mayUseAGPRs(F)))
+      MayNeedAGPRs = false; // We will select all MAI with VGPR operands.
+  }
 
   if (AMDGPU::isChainCC(CC)) {
     // Chain functions don't receive an SP from their caller, but are free to
@@ -724,6 +728,8 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       MemoryBound(MFI.isMemoryBound()), WaveLimiter(MFI.needsWaveLimiter()),
       HasSpilledSGPRs(MFI.hasSpilledSGPRs()),
       HasSpilledVGPRs(MFI.hasSpilledVGPRs()),
+      NumWaveDispatchSGPRs(MFI.getNumWaveDispatchSGPRs()),
+      NumWaveDispatchVGPRs(MFI.getNumWaveDispatchVGPRs()),
       HighBitsOf32BitAddress(MFI.get32BitAddressHighBits()),
       Occupancy(MFI.getOccupancy()),
       ScratchRSrcReg(regToString(MFI.getScratchRSrcReg(), TRI)),
@@ -780,6 +786,8 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   WaveLimiter = YamlMFI.WaveLimiter;
   HasSpilledSGPRs = YamlMFI.HasSpilledSGPRs;
   HasSpilledVGPRs = YamlMFI.HasSpilledVGPRs;
+  NumWaveDispatchSGPRs = YamlMFI.NumWaveDispatchSGPRs;
+  NumWaveDispatchVGPRs = YamlMFI.NumWaveDispatchVGPRs;
   BytesInStackArgArea = YamlMFI.BytesInStackArgArea;
   ReturnsVoid = YamlMFI.ReturnsVoid;
   IsWholeWaveFunction = YamlMFI.IsWholeWaveFunction;

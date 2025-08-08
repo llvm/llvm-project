@@ -106,7 +106,69 @@ void llvm::get_thread_name(SmallVectorImpl<char> &Name) {
   Name.clear();
 }
 
+namespace llvm::sys::windows {
+HMODULE loadSystemModuleSecure(LPCWSTR lpModuleName) {
+  // Ensure we load indeed a module from system32 path.
+  // As per GetModuleHandle documentation:
+  // "If lpModuleName does not include a path and there is more than one loaded
+  // module with the same base name and extension, you cannot predict which
+  // module handle will be returned.". This mitigates
+  // https://learn.microsoft.com/en-us/security-updates/securityadvisories/2010/2269637
+  SmallVector<wchar_t, MAX_PATH> Buf;
+  size_t Size = MAX_PATH;
+  do {
+    Buf.resize_for_overwrite(Size);
+    SetLastError(NO_ERROR);
+    Size = ::GetSystemDirectoryW(Buf.data(), Buf.size());
+    if (Size == 0)
+      return NULL;
+
+    // Try again with larger buffer.
+  } while (Size > Buf.size());
+
+  Buf.truncate(Size);
+  Buf.push_back(L'\\');
+  Buf.append(lpModuleName, lpModuleName + std::wcslen(lpModuleName));
+  Buf.push_back(0);
+
+  return ::GetModuleHandleW(Buf.data());
+}
+} // namespace llvm::sys::windows
+
 SetThreadPriorityResult llvm::set_thread_priority(ThreadPriority Priority) {
+#ifdef THREAD_POWER_THROTTLING_CURRENT_VERSION
+  HMODULE kernelM = llvm::sys::windows::loadSystemModuleSecure(L"kernel32.dll");
+  if (kernelM) {
+    // SetThreadInformation is only available on Windows 8 and later. Since we
+    // still support compilation on Windows 7, we load the function dynamically.
+    typedef BOOL(WINAPI * SetThreadInformation_t)(
+        HANDLE hThread, THREAD_INFORMATION_CLASS ThreadInformationClass,
+        _In_reads_bytes_(ThreadInformationSize) PVOID ThreadInformation,
+        ULONG ThreadInformationSize);
+    static const auto pfnSetThreadInformation =
+        (SetThreadInformation_t)::GetProcAddress(kernelM,
+                                                 "SetThreadInformation");
+    if (pfnSetThreadInformation) {
+      auto setThreadInformation = [](ULONG ControlMaskAndStateMask) {
+        THREAD_POWER_THROTTLING_STATE state{};
+        state.Version = THREAD_POWER_THROTTLING_CURRENT_VERSION;
+        state.ControlMask = ControlMaskAndStateMask;
+        state.StateMask = ControlMaskAndStateMask;
+        return pfnSetThreadInformation(
+            ::GetCurrentThread(), ThreadPowerThrottling, &state, sizeof(state));
+      };
+
+      // Use EcoQoS for ThreadPriority::Background available (running on most
+      // efficent cores at the most efficient cpu frequency):
+      // https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setthreadinformation
+      // https://learn.microsoft.com/en-us/windows/win32/procthread/quality-of-service
+      setThreadInformation(Priority == ThreadPriority::Background
+                               ? THREAD_POWER_THROTTLING_EXECUTION_SPEED
+                               : 0);
+    }
+  }
+#endif
+
   // https://docs.microsoft.com/en-us/windows/desktop/api/processthreadsapi/nf-processthreadsapi-setthreadpriority
   // Begin background processing mode. The system lowers the resource scheduling
   // priorities of the thread so that it can perform background work without

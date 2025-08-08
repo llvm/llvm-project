@@ -1,4 +1,4 @@
-// RUN: mlir-opt --wrap-emitc-func-in-class='named-attribute=emitc.name_hint' %s | FileCheck %s
+// RUN: mlir-opt --wrap-emitc-func-in-class %s | FileCheck %s
 
 module attributes { } {
   emitc.func @model(%arg0: !emitc.array<1xf32> {emitc.name_hint = "another_feature"}, 

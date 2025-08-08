@@ -750,17 +750,16 @@ Value BufferDeallocation::materializeMemrefWithGuaranteedOwnership(
 
   // Insert a runtime check and only clone if we still don't have ownership at
   // runtime.
-  Value maybeClone = builder
-                         .create<scf::IfOp>(
-                             memref.getLoc(), condition,
-                             [&](OpBuilder &builder, Location loc) {
-                               scf::YieldOp::create(builder, loc, newMemref);
-                             },
-                             [&](OpBuilder &builder, Location loc) {
-                               Value clone = bufferization::CloneOp::create(
-                                   builder, loc, newMemref);
-                               scf::YieldOp::create(builder, loc, clone);
-                             })
+  Value maybeClone = scf::IfOp::create(
+                         builder, memref.getLoc(), condition,
+                         [&](OpBuilder &builder, Location loc) {
+                           scf::YieldOp::create(builder, loc, newMemref);
+                         },
+                         [&](OpBuilder &builder, Location loc) {
+                           Value clone = bufferization::CloneOp::create(
+                               builder, loc, newMemref);
+                           scf::YieldOp::create(builder, loc, clone);
+                         })
                          .getResult(0);
   Value trueVal = buildBoolValue(builder, memref.getLoc(), true);
   state.updateOwnership(maybeClone, trueVal);

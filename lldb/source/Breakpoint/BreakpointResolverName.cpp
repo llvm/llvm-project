@@ -195,10 +195,10 @@ StructuredData::ObjectSP BreakpointResolverName::SerializeToStructuredData() {
     StructuredData::ArraySP names_sp(new StructuredData::Array());
     StructuredData::ArraySP name_masks_sp(new StructuredData::Array());
     for (auto lookup : m_lookups) {
-      names_sp->AddItem(StructuredData::StringSP(
-          new StructuredData::String(lookup.GetName().GetStringRef())));
-      name_masks_sp->AddItem(StructuredData::UnsignedIntegerSP(
-          new StructuredData::UnsignedInteger(lookup.GetNameTypeMask())));
+      names_sp->AddItem(std::make_shared<StructuredData::String>(
+          lookup.GetName().GetStringRef()));
+      name_masks_sp->AddItem(std::make_shared<StructuredData::UnsignedInteger>(
+          lookup.GetNameTypeMask()));
     }
     options_dict_sp->AddItem(GetKey(OptionNames::SymbolNameArray), names_sp);
     options_dict_sp->AddItem(GetKey(OptionNames::NameMaskArray), name_masks_sp);

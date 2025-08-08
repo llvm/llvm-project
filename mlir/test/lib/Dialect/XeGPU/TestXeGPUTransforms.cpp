@@ -20,8 +20,6 @@ using namespace mlir::xegpu;
 namespace {
 
 #define DEBUG_TYPE "test-xegpu-unroll"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
-#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
 struct TestXeGPUUnrollingPatterns
     : public PassWrapper<TestXeGPUUnrollingPatterns,

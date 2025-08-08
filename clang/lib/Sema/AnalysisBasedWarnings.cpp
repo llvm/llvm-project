@@ -503,8 +503,12 @@ static bool areAllValuesNoReturn(const VarDecl *VD, const CFGBlock &VarBlk,
 
   TransferFunctions TF(VD);
   BackwardDataflowWorklist Worklist(*AC.getCFG(), AC);
+  llvm::DenseSet<const CFGBlock *> Visited;
   Worklist.enqueueBlock(&VarBlk);
   while (const CFGBlock *B = Worklist.dequeue()) {
+    if (Visited.contains(B))
+      continue;
+    Visited.insert(B);
     // First check the current block.
     for (CFGBlock::const_reverse_iterator ri = B->rbegin(), re = B->rend();
          ri != re; ++ri) {
@@ -577,7 +581,7 @@ static ControlFlowKind CheckFallThrough(AnalysisDeclContext &AC) {
     // mark them as live.
     for (const auto *B : *cfg) {
       if (!live[B->getBlockID()]) {
-        if (B->pred_begin() == B->pred_end()) {
+        if (B->preds().empty()) {
           const Stmt *Term = B->getTerminatorStmt();
           if (isa_and_nonnull<CXXTryStmt>(Term))
             // When not adding EH edges from calls, catch clauses
