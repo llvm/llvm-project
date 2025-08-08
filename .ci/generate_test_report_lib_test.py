@@ -29,8 +29,7 @@ class TestReports(unittest.TestCase):
                     "[2/5] test/2.stamp",
                     "[3/5] test/3.stamp",
                     "[4/5] test/4.stamp",
-                    "FAILED: test/4.stamp",
-                    "touch test/4.stamp",
+                    "FAILED: touch test/4.stamp",
                     "Wow! This system is really broken!",
                     "[5/5] test/5.stamp",
                 ],
@@ -43,8 +42,7 @@ class TestReports(unittest.TestCase):
                 "test/4.stamp",
                 dedent(
                     """\
-                    FAILED: test/4.stamp
-                    touch test/4.stamp
+                    FAILED: touch test/4.stamp
                     Wow! This system is really broken!"""
                 ),
             ),
@@ -177,7 +175,7 @@ class TestReports(unittest.TestCase):
                 """\
             # Foo
 
-            The build failed before running any tests. Click on the failure below to see the details.
+            The build failed before running any tests. Click on a failure below to see the details.
 
             <details>
             <summary>test/4.stamp</summary>
@@ -281,7 +279,7 @@ class TestReports(unittest.TestCase):
 
               * 1 test passed
 
-              All tests passed but another part of the build **failed**. Detailed information about the build failure could not be automatically obtained.
+              All tests passed but another part of the build **failed**. Information about the build failure could not be automatically obtained.
 
               Download the build's log file to see the details.
               

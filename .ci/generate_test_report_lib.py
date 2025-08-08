@@ -27,14 +27,16 @@ def _parse_ninja_log(ninja_log: list[str]) -> list[tuple[str, str]]:
             # We hit the end of the log without finding a build failure, go to
             # the next log.
             return failures
+        # index will point to the line that starts with Failed:. The progress
+        # indicator is the line before this and contains a pretty printed version
+        # of the target being built. We use this and remove the progress information
+        # to get a succinct name for the target.
         failing_action = ninja_log[index - 1].split("] ")[1]
         failure_log = []
         while (
             index < len(ninja_log)
             and not ninja_log[index].startswith("[")
-            and not ninja_log[index].startswith(
-                "ninja: build stopped: subcommand failed"
-            )
+            and not ninja_log[index].startswith("ninja: build stopped:")
             and len(failure_log) < NINJA_LOG_SIZE_THRESHOLD
         ):
             failure_log.append(ninja_log[index])
@@ -46,7 +48,7 @@ def _parse_ninja_log(ninja_log: list[str]) -> list[tuple[str, str]]:
 def find_failure_in_ninja_logs(ninja_logs: list[list[str]]) -> list[tuple[str, str]]:
     """Extracts failure messages from ninja output.
 
-    This patch takes stdout/stderr from ninja in the form of a list of files
+    This function takes stdout/stderr from ninja in the form of a list of files
     represented as a list of lines. This function then returns tuples containing
     the name of the target and the error message.
 
@@ -63,6 +65,25 @@ def find_failure_in_ninja_logs(ninja_logs: list[list[str]]) -> list[tuple[str, s
         log_failures = _parse_ninja_log(ninja_log)
         failures.extend(log_failures)
     return failures
+
+
+def _format_ninja_failures(ninja_failures: list[tuple[str, str]]) -> list[str]:
+    """Formats ninja failures into summary views for the report."""
+    output = []
+    for build_failure in ninja_failures:
+        failed_action, failure_message = build_failure
+        output.extend(
+            [
+                "<details>",
+                f"<summary>{failed_action}</summary>",
+                "",
+                "```",
+                failure_message,
+                "```",
+                "</details>",
+            ]
+        )
+    return output
 
 
 # Set size_limit to limit the byte size of the report. The default is 1MB as this
@@ -129,24 +150,12 @@ def generate_report(
             else:
                 report.extend(
                     [
-                        "The build failed before running any tests. Click on the "
+                        "The build failed before running any tests. Click on a "
                         "failure below to see the details.",
                         "",
                     ]
                 )
-                for build_failure in ninja_failures:
-                    failed_action, failure_message = build_failure
-                    report.extend(
-                        [
-                            "<details>",
-                            f"<summary>{failed_action}</summary>",
-                            "",
-                            "```",
-                            failure_message,
-                            "```",
-                            "</details>",
-                        ]
-                    )
+                report.extend(_format_ninja_failures(ninja_failures))
                 report.extend(
                     [
                         "",
@@ -203,26 +212,14 @@ def generate_report(
                 [
                     "",
                     "All tests passed but another part of the build **failed**. "
-                    "Detailed information about the build failure could not be "
-                    "automatically obtained.",
+                    "Information about the build failure could not be automatically "
+                    "obtained.",
                     "",
                     SEE_BUILD_FILE_STR,
                 ]
             )
         else:
-            for build_failure in ninja_failures:
-                failed_action, failure_message = build_failure
-                report.extend(
-                    [
-                        "<details>",
-                        f"<summary>{failed_action}</summary>",
-                        "",
-                        "```",
-                        failure_message,
-                        "```",
-                        "</details>",
-                    ]
-                )
+            report.extend(_format_ninja_failures(ninja_failures))
 
     if failures or return_code != 0:
         report.extend(["", UNRELATED_FAILURES_STR])
