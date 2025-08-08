@@ -47,7 +47,7 @@ struct MipsOutgoingValueAssigner : public CallLowering::OutgoingValueAssigner {
     if (IsReturn)
       State.PreAnalyzeReturnValue(EVT::getEVT(Info.Ty));
     else
-      State.PreAnalyzeCallOperand(Info.Ty, Info.IsFixed, Func);
+      State.PreAnalyzeCallOperand(Info.Ty, Func);
 
     return CallLowering::OutgoingValueAssigner::assignArg(
         ValNo, OrigVT, ValVT, LocVT, LocInfo, Info, Flags, State);

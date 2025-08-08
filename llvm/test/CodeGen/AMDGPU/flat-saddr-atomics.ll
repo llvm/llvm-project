@@ -284,6 +284,7 @@ define amdgpu_ps <2 x float> @flat_xchg_saddr_i64_rtn(ptr inreg %sbase, i32 %vof
 ; GFX1250-SDAG-NEXT:    v_subrev_nc_u32_e32 v0, s1, v4
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-NEXT:    v_cndmask_b32_e32 v4, -1, v0, vcc_lo
+; GFX1250-SDAG-NEXT:    s_clause 0x1
 ; GFX1250-SDAG-NEXT:    scratch_load_b64 v[0:1], v4, off
 ; GFX1250-SDAG-NEXT:    scratch_store_b64 v4, v[2:3], off scope:SCOPE_SE
 ; GFX1250-SDAG-NEXT:    s_wait_xcnt 0x0
@@ -329,6 +330,7 @@ define amdgpu_ps <2 x float> @flat_xchg_saddr_i64_rtn(ptr inreg %sbase, i32 %vof
 ; GFX1250-GISEL-NEXT:    v_subrev_nc_u32_e32 v0, s1, v6
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_cndmask_b32_e32 v2, -1, v0, vcc_lo
+; GFX1250-GISEL-NEXT:    s_clause 0x1
 ; GFX1250-GISEL-NEXT:    scratch_load_b64 v[0:1], v2, off
 ; GFX1250-GISEL-NEXT:    scratch_store_b64 v2, v[4:5], off scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_wait_xcnt 0x0
@@ -382,6 +384,7 @@ define amdgpu_ps <2 x float> @flat_xchg_saddr_i64_rtn_neg128(ptr inreg %sbase, i
 ; GFX1250-SDAG-NEXT:    v_subrev_nc_u32_e32 v0, s1, v4
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-NEXT:    v_cndmask_b32_e32 v4, -1, v0, vcc_lo
+; GFX1250-SDAG-NEXT:    s_clause 0x1
 ; GFX1250-SDAG-NEXT:    scratch_load_b64 v[0:1], v4, off
 ; GFX1250-SDAG-NEXT:    scratch_store_b64 v4, v[2:3], off scope:SCOPE_SE
 ; GFX1250-SDAG-NEXT:    s_wait_xcnt 0x0
@@ -430,6 +433,7 @@ define amdgpu_ps <2 x float> @flat_xchg_saddr_i64_rtn_neg128(ptr inreg %sbase, i
 ; GFX1250-GISEL-NEXT:    v_subrev_nc_u32_e32 v0, s1, v6
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_cndmask_b32_e32 v2, -1, v0, vcc_lo
+; GFX1250-GISEL-NEXT:    s_clause 0x1
 ; GFX1250-GISEL-NEXT:    scratch_load_b64 v[0:1], v2, off
 ; GFX1250-GISEL-NEXT:    scratch_store_b64 v2, v[4:5], off scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_wait_xcnt 0x0

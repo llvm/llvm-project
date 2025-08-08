@@ -2,7 +2,7 @@
 ; RUN: opt < %s -mtriple=x86_64-unknown -passes=slp-vectorizer -S | FileCheck %s --check-prefixes=CHECK,SSE2
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=corei7 -passes=slp-vectorizer -S | FileCheck %s --check-prefixes=CHECK,SSE4
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=corei7-avx -passes=slp-vectorizer -S | FileCheck %s --check-prefixes=CHECK,AVX
-; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=core-avx2 -passes=slp-vectorizer -S | FileCheck %s --check-prefixes=CHECK,AVX
+; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=core-avx2 -passes=slp-vectorizer -S | FileCheck %s --check-prefixes=CHECK,AVX2
 
 ;
 ; dot4(ptr x, ptr y) - ((xptr y[0])+(xptr y[1])+(xptr y[2])+(xptr y[3]))
@@ -95,12 +95,47 @@ define float @dot4f32(ptr dereferenceable(16) %ptrx, ptr dereferenceable(16) %pt
 }
 
 define double @dot4f64_fast(ptr dereferenceable(32) %ptrx, ptr dereferenceable(32) %ptry) {
-; CHECK-LABEL: @dot4f64_fast(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x double>, ptr [[PTRX:%.*]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x double>, ptr [[PTRY:%.*]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul <4 x double> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP3]])
-; CHECK-NEXT:    ret double [[TMP4]]
+; SSE2-LABEL: @dot4f64_fast(
+; SSE2-NEXT:    [[TMP1:%.*]] = load <4 x double>, ptr [[PTRX:%.*]], align 4
+; SSE2-NEXT:    [[TMP2:%.*]] = load <4 x double>, ptr [[PTRY:%.*]], align 4
+; SSE2-NEXT:    [[TMP3:%.*]] = fmul <4 x double> [[TMP1]], [[TMP2]]
+; SSE2-NEXT:    [[TMP4:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP3]])
+; SSE2-NEXT:    ret double [[TMP4]]
+;
+; SSE4-LABEL: @dot4f64_fast(
+; SSE4-NEXT:    [[TMP1:%.*]] = load <4 x double>, ptr [[PTRX:%.*]], align 4
+; SSE4-NEXT:    [[TMP2:%.*]] = load <4 x double>, ptr [[PTRY:%.*]], align 4
+; SSE4-NEXT:    [[TMP3:%.*]] = fmul <4 x double> [[TMP1]], [[TMP2]]
+; SSE4-NEXT:    [[TMP4:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP3]])
+; SSE4-NEXT:    ret double [[TMP4]]
+;
+; AVX-LABEL: @dot4f64_fast(
+; AVX-NEXT:    [[TMP1:%.*]] = load <4 x double>, ptr [[PTRX:%.*]], align 4
+; AVX-NEXT:    [[TMP2:%.*]] = load <4 x double>, ptr [[PTRY:%.*]], align 4
+; AVX-NEXT:    [[TMP3:%.*]] = fmul <4 x double> [[TMP1]], [[TMP2]]
+; AVX-NEXT:    [[TMP4:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP3]])
+; AVX-NEXT:    ret double [[TMP4]]
+;
+; AVX2-LABEL: @dot4f64_fast(
+; AVX2-NEXT:    [[PTRX1:%.*]] = getelementptr inbounds double, ptr [[PTRX:%.*]], i64 1
+; AVX2-NEXT:    [[PTRY1:%.*]] = getelementptr inbounds double, ptr [[PTRY:%.*]], i64 1
+; AVX2-NEXT:    [[PTRX2:%.*]] = getelementptr inbounds double, ptr [[PTRX]], i64 2
+; AVX2-NEXT:    [[PTRY2:%.*]] = getelementptr inbounds double, ptr [[PTRY]], i64 2
+; AVX2-NEXT:    [[X0:%.*]] = load double, ptr [[PTRX]], align 4
+; AVX2-NEXT:    [[Y0:%.*]] = load double, ptr [[PTRY]], align 4
+; AVX2-NEXT:    [[X1:%.*]] = load double, ptr [[PTRX1]], align 4
+; AVX2-NEXT:    [[Y1:%.*]] = load double, ptr [[PTRY1]], align 4
+; AVX2-NEXT:    [[MUL0:%.*]] = fmul double [[X0]], [[Y0]]
+; AVX2-NEXT:    [[MUL1:%.*]] = fmul double [[X1]], [[Y1]]
+; AVX2-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[PTRX2]], align 4
+; AVX2-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[PTRY2]], align 4
+; AVX2-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[TMP1]], [[TMP2]]
+; AVX2-NEXT:    [[DOT01:%.*]] = fadd fast double [[MUL0]], [[MUL1]]
+; AVX2-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i32 0
+; AVX2-NEXT:    [[DOT012:%.*]] = fadd fast double [[DOT01]], [[TMP4]]
+; AVX2-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP3]], i32 1
+; AVX2-NEXT:    [[DOT0123:%.*]] = fadd fast double [[DOT012]], [[TMP5]]
+; AVX2-NEXT:    ret double [[DOT0123]]
 ;
   %ptrx1 = getelementptr inbounds double, ptr %ptrx, i64 1
   %ptry1 = getelementptr inbounds double, ptr %ptry, i64 1
@@ -127,12 +162,47 @@ define double @dot4f64_fast(ptr dereferenceable(32) %ptrx, ptr dereferenceable(3
 }
 
 define float @dot4f32_fast(ptr dereferenceable(16) %ptrx, ptr dereferenceable(16) %ptry) {
-; CHECK-LABEL: @dot4f32_fast(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[PTRX:%.*]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[PTRY:%.*]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul <4 x float> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP3]])
-; CHECK-NEXT:    ret float [[TMP4]]
+; SSE2-LABEL: @dot4f32_fast(
+; SSE2-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[PTRX:%.*]], align 4
+; SSE2-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[PTRY:%.*]], align 4
+; SSE2-NEXT:    [[TMP3:%.*]] = fmul <4 x float> [[TMP1]], [[TMP2]]
+; SSE2-NEXT:    [[TMP4:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP3]])
+; SSE2-NEXT:    ret float [[TMP4]]
+;
+; SSE4-LABEL: @dot4f32_fast(
+; SSE4-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[PTRX:%.*]], align 4
+; SSE4-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[PTRY:%.*]], align 4
+; SSE4-NEXT:    [[TMP3:%.*]] = fmul <4 x float> [[TMP1]], [[TMP2]]
+; SSE4-NEXT:    [[TMP4:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP3]])
+; SSE4-NEXT:    ret float [[TMP4]]
+;
+; AVX-LABEL: @dot4f32_fast(
+; AVX-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[PTRX:%.*]], align 4
+; AVX-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[PTRY:%.*]], align 4
+; AVX-NEXT:    [[TMP3:%.*]] = fmul <4 x float> [[TMP1]], [[TMP2]]
+; AVX-NEXT:    [[TMP4:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP3]])
+; AVX-NEXT:    ret float [[TMP4]]
+;
+; AVX2-LABEL: @dot4f32_fast(
+; AVX2-NEXT:    [[PTRX1:%.*]] = getelementptr inbounds float, ptr [[PTRX:%.*]], i64 1
+; AVX2-NEXT:    [[PTRY1:%.*]] = getelementptr inbounds float, ptr [[PTRY:%.*]], i64 1
+; AVX2-NEXT:    [[PTRX2:%.*]] = getelementptr inbounds float, ptr [[PTRX]], i64 2
+; AVX2-NEXT:    [[PTRY2:%.*]] = getelementptr inbounds float, ptr [[PTRY]], i64 2
+; AVX2-NEXT:    [[X0:%.*]] = load float, ptr [[PTRX]], align 4
+; AVX2-NEXT:    [[Y0:%.*]] = load float, ptr [[PTRY]], align 4
+; AVX2-NEXT:    [[X1:%.*]] = load float, ptr [[PTRX1]], align 4
+; AVX2-NEXT:    [[Y1:%.*]] = load float, ptr [[PTRY1]], align 4
+; AVX2-NEXT:    [[MUL0:%.*]] = fmul float [[X0]], [[Y0]]
+; AVX2-NEXT:    [[MUL1:%.*]] = fmul float [[X1]], [[Y1]]
+; AVX2-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[PTRX2]], align 4
+; AVX2-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[PTRY2]], align 4
+; AVX2-NEXT:    [[TMP3:%.*]] = fmul <2 x float> [[TMP1]], [[TMP2]]
+; AVX2-NEXT:    [[DOT01:%.*]] = fadd fast float [[MUL0]], [[MUL1]]
+; AVX2-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP3]], i32 0
+; AVX2-NEXT:    [[DOT012:%.*]] = fadd fast float [[DOT01]], [[TMP4]]
+; AVX2-NEXT:    [[TMP5:%.*]] = extractelement <2 x float> [[TMP3]], i32 1
+; AVX2-NEXT:    [[DOT0123:%.*]] = fadd fast float [[DOT012]], [[TMP5]]
+; AVX2-NEXT:    ret float [[DOT0123]]
 ;
   %ptrx1 = getelementptr inbounds float, ptr %ptrx, i64 1
   %ptry1 = getelementptr inbounds float, ptr %ptry, i64 1
@@ -372,6 +442,18 @@ define double @dot2f64_fast(ptr dereferenceable(16) %ptrx, ptr dereferenceable(1
 ; AVX-NEXT:    [[DOT01:%.*]] = fadd fast double [[TMP4]], [[TMP5]]
 ; AVX-NEXT:    ret double [[DOT01]]
 ;
+; AVX2-LABEL: @dot2f64_fast(
+; AVX2-NEXT:    [[PTRX1:%.*]] = getelementptr inbounds double, ptr [[PTRX:%.*]], i64 1
+; AVX2-NEXT:    [[PTRY1:%.*]] = getelementptr inbounds double, ptr [[PTRY:%.*]], i64 1
+; AVX2-NEXT:    [[X0:%.*]] = load double, ptr [[PTRX]], align 4
+; AVX2-NEXT:    [[Y0:%.*]] = load double, ptr [[PTRY]], align 4
+; AVX2-NEXT:    [[X1:%.*]] = load double, ptr [[PTRX1]], align 4
+; AVX2-NEXT:    [[Y1:%.*]] = load double, ptr [[PTRY1]], align 4
+; AVX2-NEXT:    [[MUL0:%.*]] = fmul double [[X0]], [[Y0]]
+; AVX2-NEXT:    [[MUL1:%.*]] = fmul double [[X1]], [[Y1]]
+; AVX2-NEXT:    [[DOT01:%.*]] = fadd fast double [[MUL0]], [[MUL1]]
+; AVX2-NEXT:    ret double [[DOT01]]
+;
   %ptrx1 = getelementptr inbounds double, ptr %ptrx, i64 1
   %ptry1 = getelementptr inbounds double, ptr %ptry, i64 1
   %x0 = load double, ptr %ptrx, align 4
@@ -409,6 +491,18 @@ define float @dot2f32_fast(ptr dereferenceable(16) %ptrx, ptr dereferenceable(16
 ; AVX-NEXT:    [[TMP5:%.*]] = extractelement <2 x float> [[TMP3]], i32 1
 ; AVX-NEXT:    [[DOT01:%.*]] = fadd fast float [[TMP4]], [[TMP5]]
 ; AVX-NEXT:    ret float [[DOT01]]
+;
+; AVX2-LABEL: @dot2f32_fast(
+; AVX2-NEXT:    [[PTRX1:%.*]] = getelementptr inbounds float, ptr [[PTRX:%.*]], i64 1
+; AVX2-NEXT:    [[PTRY1:%.*]] = getelementptr inbounds float, ptr [[PTRY:%.*]], i64 1
+; AVX2-NEXT:    [[X0:%.*]] = load float, ptr [[PTRX]], align 4
+; AVX2-NEXT:    [[Y0:%.*]] = load float, ptr [[PTRY]], align 4
+; AVX2-NEXT:    [[X1:%.*]] = load float, ptr [[PTRX1]], align 4
+; AVX2-NEXT:    [[Y1:%.*]] = load float, ptr [[PTRY1]], align 4
+; AVX2-NEXT:    [[MUL0:%.*]] = fmul float [[X0]], [[Y0]]
+; AVX2-NEXT:    [[MUL1:%.*]] = fmul float [[X1]], [[Y1]]
+; AVX2-NEXT:    [[DOT01:%.*]] = fadd fast float [[MUL0]], [[MUL1]]
+; AVX2-NEXT:    ret float [[DOT01]]
 ;
   %ptrx1 = getelementptr inbounds float, ptr %ptrx, i64 1
   %ptry1 = getelementptr inbounds float, ptr %ptry, i64 1

@@ -90,6 +90,8 @@ private:
   /// for FunctionDecls's.
   CIRGenFunction *curCGF = nullptr;
 
+  llvm::SmallVector<mlir::Attribute> globalScopeAsm;
+
 public:
   mlir::ModuleOp getModule() const { return theModule; }
   CIRGenBuilderTy &getBuilder() { return builder; }

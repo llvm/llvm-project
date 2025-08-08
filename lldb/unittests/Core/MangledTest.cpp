@@ -889,10 +889,10 @@ TEST_P(DemanglingInfoCorrectnessTestFixutre, Correctness) {
   EXPECT_THAT_EXPECTED(qualifiers, llvm::Succeeded());
   reconstructed_name += *qualifiers;
 
-  // TODO: should retrieve suffix using the plugin too.
-  auto suffix = tracked_name.slice(OB->NameInfo.QualifiersRange.second,
-                                   llvm::StringRef::npos);
-  reconstructed_name += suffix;
+  auto suffix =
+      CPlusPlusLanguage::GetDemangledFunctionSuffix(tracked_name, OB->NameInfo);
+  EXPECT_THAT_EXPECTED(suffix, llvm::Succeeded());
+  reconstructed_name += *suffix;
 
   EXPECT_EQ(reconstructed_name, demangled);
 }

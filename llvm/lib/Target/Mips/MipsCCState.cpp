@@ -128,12 +128,10 @@ void MipsCCState::PreAnalyzeReturnValue(EVT ArgVT) {
   OriginalRetWasFloatVector.push_back(originalEVTTypeIsVectorFloat(ArgVT));
 }
 
-void MipsCCState::PreAnalyzeCallOperand(const Type *ArgTy, bool IsFixed,
-                                        const char *Func) {
+void MipsCCState::PreAnalyzeCallOperand(const Type *ArgTy, const char *Func) {
   OriginalArgWasF128.push_back(originalTypeIsF128(ArgTy, Func));
   OriginalArgWasFloat.push_back(ArgTy->isFloatingPointTy());
   OriginalArgWasFloatVector.push_back(ArgTy->isVectorTy());
-  CallOperandIsFixed.push_back(IsFixed);
 }
 
 /// Identify lowered values that originated from f128, float and sret to vXfXX
@@ -148,7 +146,6 @@ void MipsCCState::PreAnalyzeCallOperands(
     OriginalArgWasF128.push_back(originalTypeIsF128(FuncArg.Ty, Func));
     OriginalArgWasFloat.push_back(FuncArg.Ty->isFloatingPointTy());
     OriginalArgWasFloatVector.push_back(FuncArg.Ty->isVectorTy());
-    CallOperandIsFixed.push_back(Outs[i].IsFixed);
   }
 }
 
