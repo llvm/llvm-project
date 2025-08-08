@@ -10,6 +10,7 @@
 #include "TestOps.h"
 #include "TestTypes.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/CommonFolders.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/FuncConversions.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -198,6 +199,66 @@ struct HoistEligibleOps : public OpRewritePattern<test::OneRegionOp> {
     if (!toBeHoisted->hasAttr("eligible"))
       return failure();
     rewriter.moveOpBefore(toBeHoisted, op);
+    return success();
+  }
+};
+
+struct FoldSignOpF32ToSI32 : public OpRewritePattern<test::SignOp> {
+  using OpRewritePattern<test::SignOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(test::SignOp op,
+                                PatternRewriter &rewriter) const override {
+    if (op->getNumOperands() != 1 || op->getNumResults() != 1)
+      return failure();
+
+    TypedAttr operandAttr;
+    matchPattern(op->getOperand(0), m_Constant(&operandAttr));
+    if (!operandAttr)
+      return failure();
+
+    TypedAttr res = cast_or_null<TypedAttr>(
+        constFoldUnaryOp<FloatAttr, FloatAttr::ValueType, void, IntegerAttr>(
+            operandAttr, op.getType(), [](APFloat operand) -> APSInt {
+              static const APFloat zero(0.0f);
+              int operandSign = 0;
+              if (operand != zero)
+                operandSign = (operand < zero) ? -1 : +1;
+              return APSInt(APInt(32, operandSign), false);
+            }));
+    if (!res)
+      return failure();
+
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, res);
+    return success();
+  }
+};
+
+struct FoldLessThanOpF32ToI1 : public OpRewritePattern<test::LessThanOp> {
+  using OpRewritePattern<test::LessThanOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(test::LessThanOp op,
+                                PatternRewriter &rewriter) const override {
+    if (op->getNumOperands() != 2 || op->getNumResults() != 1)
+      return failure();
+
+    TypedAttr lhsAttr;
+    TypedAttr rhsAttr;
+    matchPattern(op->getOperand(0), m_Constant(&lhsAttr));
+    matchPattern(op->getOperand(1), m_Constant(&rhsAttr));
+
+    if (!lhsAttr || !rhsAttr)
+      return failure();
+
+    Attribute operandAttrs[2] = {lhsAttr, rhsAttr};
+    TypedAttr res = cast_or_null<TypedAttr>(
+        constFoldBinaryOp<FloatAttr, FloatAttr::ValueType, void, IntegerAttr>(
+            operandAttrs, op.getType(), [](APFloat lhs, APFloat rhs) -> APInt {
+              return APInt(1, lhs < rhs);
+            }));
+    if (!res)
+      return failure();
+
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, res);
     return success();
   }
 };
@@ -2226,6 +2287,24 @@ struct TestSelectiveReplacementPatternDriver
     (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
+
+struct TestFoldTypeConvertingOp
+    : public PassWrapper<TestFoldTypeConvertingOp, OperationPass<>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestFoldTypeConvertingOp)
+
+  StringRef getArgument() const final { return "test-fold-type-converting-op"; }
+  StringRef getDescription() const final {
+    return "Test helper functions for folding ops whose input and output types "
+           "differ, e.g. float comparisons of the form `(f32, f32) -> i1`.";
+  }
+  void runOnOperation() override {
+    MLIRContext *context = &getContext();
+    mlir::RewritePatternSet patterns(context);
+    patterns.add<FoldSignOpF32ToSI32, FoldLessThanOpF32ToI1>(context);
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
+      signalPassFailure();
+  }
+};
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -2256,6 +2335,8 @@ void registerPatternsTestPass() {
 
   PassRegistration<TestMergeBlocksPatternDriver>();
   PassRegistration<TestSelectiveReplacementPatternDriver>();
+
+  PassRegistration<TestFoldTypeConvertingOp>();
 }
 } // namespace test
 } // namespace mlir

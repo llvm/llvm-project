@@ -411,28 +411,16 @@ CallInst *IRBuilderBase::CreateFPMinimumReduce(Value *Src) {
   return getReductionIntrinsic(Intrinsic::vector_reduce_fminimum, Src);
 }
 
-CallInst *IRBuilderBase::CreateLifetimeStart(Value *Ptr, ConstantInt *Size) {
+CallInst *IRBuilderBase::CreateLifetimeStart(Value *Ptr) {
   assert(isa<PointerType>(Ptr->getType()) &&
          "lifetime.start only applies to pointers.");
-  if (!Size)
-    Size = getInt64(-1);
-  else
-    assert(Size->getType() == getInt64Ty() &&
-           "lifetime.start requires the size to be an i64");
-  Value *Ops[] = { Size, Ptr };
-  return CreateIntrinsic(Intrinsic::lifetime_start, {Ptr->getType()}, Ops);
+  return CreateIntrinsic(Intrinsic::lifetime_start, {Ptr->getType()}, {Ptr});
 }
 
-CallInst *IRBuilderBase::CreateLifetimeEnd(Value *Ptr, ConstantInt *Size) {
+CallInst *IRBuilderBase::CreateLifetimeEnd(Value *Ptr) {
   assert(isa<PointerType>(Ptr->getType()) &&
          "lifetime.end only applies to pointers.");
-  if (!Size)
-    Size = getInt64(-1);
-  else
-    assert(Size->getType() == getInt64Ty() &&
-           "lifetime.end requires the size to be an i64");
-  Value *Ops[] = { Size, Ptr };
-  return CreateIntrinsic(Intrinsic::lifetime_end, {Ptr->getType()}, Ops);
+  return CreateIntrinsic(Intrinsic::lifetime_end, {Ptr->getType()}, {Ptr});
 }
 
 CallInst *IRBuilderBase::CreateInvariantStart(Value *Ptr, ConstantInt *Size) {

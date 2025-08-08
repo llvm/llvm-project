@@ -13,14 +13,14 @@
 // CHECK-LIFETIME-NEXT:  entry:
 // CHECK-LIFETIME-NEXT:    [[X:%.*]] = alloca i32, align 4
 // CHECK-LIFETIME-NEXT:    [[P:%.*]] = alloca ptr, align 8
-// CHECK-LIFETIME-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[X]]) #[[ATTR2:[0-9]+]], !dbg [[DBG9:![0-9]+]]
+// CHECK-LIFETIME-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[X]]) #[[ATTR2:[0-9]+]], !dbg [[DBG9:![0-9]+]]
 // CHECK-LIFETIME-NEXT:    store i32 3, ptr [[X]], align 4, !dbg [[DBG10:![0-9]+]], !tbaa [[TBAA11:![0-9]+]]
-// CHECK-LIFETIME-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr nonnull [[P]]), !dbg [[DBG15:![0-9]+]]
+// CHECK-LIFETIME-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[P]]), !dbg [[DBG15:![0-9]+]]
 // CHECK-LIFETIME-NEXT:    store volatile ptr [[X]], ptr [[P]], align 8, !dbg [[DBG16:![0-9]+]], !tbaa [[TBAA17:![0-9]+]]
 // CHECK-LIFETIME-NEXT:    [[P_0_P_0_P_0_P_0_:%.*]] = load volatile ptr, ptr [[P]], align 8, !dbg [[DBG19:![0-9]+]], !tbaa [[TBAA17]]
 // CHECK-LIFETIME-NEXT:    [[TMP0:%.*]] = load i32, ptr [[P_0_P_0_P_0_P_0_]], align 4, !dbg [[DBG20:![0-9]+]], !tbaa [[TBAA11]]
-// CHECK-LIFETIME-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr nonnull [[P]]), !dbg [[DBG21:![0-9]+]]
-// CHECK-LIFETIME-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[X]]) #[[ATTR2]], !dbg [[DBG21]]
+// CHECK-LIFETIME-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[P]]), !dbg [[DBG21:![0-9]+]]
+// CHECK-LIFETIME-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[X]]) #[[ATTR2]], !dbg [[DBG21]]
 // CHECK-LIFETIME-NEXT:    ret i32 [[TMP0]], !dbg [[DBG22:![0-9]+]]
 //
 // CHECK-OPTNONE-LABEL: @test(
@@ -37,13 +37,13 @@
 // CHECK-MSAN-NEXT:  entry:
 // CHECK-MSAN-NEXT:    [[X:%.*]] = alloca i32, align 4
 // CHECK-MSAN-NEXT:    [[P:%.*]] = alloca ptr, align 8
-// CHECK-MSAN-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[X]]) #[[ATTR2:[0-9]+]], !dbg [[DBG9:![0-9]+]]
+// CHECK-MSAN-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[X]]) #[[ATTR2:[0-9]+]], !dbg [[DBG9:![0-9]+]]
 // CHECK-MSAN-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[X]] to i64, !dbg [[DBG9]]
 // CHECK-MSAN-NEXT:    [[TMP1:%.*]] = xor i64 [[TMP0]], 87960930222080, !dbg [[DBG9]]
 // CHECK-MSAN-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[TMP1]] to ptr, !dbg [[DBG9]]
 // CHECK-MSAN-NEXT:    store i32 0, ptr [[TMP2]], align 4, !dbg [[DBG10:![0-9]+]]
 // CHECK-MSAN-NEXT:    store i32 3, ptr [[X]], align 4, !dbg [[DBG10]], !tbaa [[TBAA11:![0-9]+]]
-// CHECK-MSAN-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr nonnull [[P]]), !dbg [[DBG15:![0-9]+]]
+// CHECK-MSAN-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[P]]), !dbg [[DBG15:![0-9]+]]
 // CHECK-MSAN-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[P]] to i64, !dbg [[DBG15]]
 // CHECK-MSAN-NEXT:    [[TMP4:%.*]] = xor i64 [[TMP3]], 87960930222080, !dbg [[DBG15]]
 // CHECK-MSAN-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr, !dbg [[DBG15]]
@@ -62,8 +62,8 @@
 // CHECK-MSAN-NEXT:    [[TMP10:%.*]] = xor i64 [[TMP9]], 87960930222080, !dbg [[DBG20]]
 // CHECK-MSAN-NEXT:    [[TMP11:%.*]] = inttoptr i64 [[TMP10]] to ptr, !dbg [[DBG20]]
 // CHECK-MSAN-NEXT:    [[_MSLD1:%.*]] = load i32, ptr [[TMP11]], align 4, !dbg [[DBG20]]
-// CHECK-MSAN-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr nonnull [[P]]), !dbg [[DBG22:![0-9]+]]
-// CHECK-MSAN-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[X]]) #[[ATTR2]], !dbg [[DBG22]]
+// CHECK-MSAN-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[P]]), !dbg [[DBG22:![0-9]+]]
+// CHECK-MSAN-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[X]]) #[[ATTR2]], !dbg [[DBG22]]
 // CHECK-MSAN-NEXT:    [[_MSCMP2_NOT:%.*]] = icmp eq i32 [[_MSLD1]], 0, !dbg [[DBG23:![0-9]+]]
 // CHECK-MSAN-NEXT:    br i1 [[_MSCMP2_NOT]], label [[TMP13:%.*]], label [[TMP12:%.*]], !dbg [[DBG23]], !prof [[PROF21]]
 // CHECK-MSAN:       12:
@@ -77,13 +77,13 @@
 // CHECK-KMSAN-NEXT:    [[TMP0:%.*]] = call ptr @__msan_get_context_state() #[[ATTR2:[0-9]+]]
 // CHECK-KMSAN-NEXT:    [[X:%.*]] = alloca i32, align 4
 // CHECK-KMSAN-NEXT:    [[P:%.*]] = alloca ptr, align 8
-// CHECK-KMSAN-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[X]]) #[[ATTR2]], !dbg [[DBG9:![0-9]+]]
+// CHECK-KMSAN-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[X]]) #[[ATTR2]], !dbg [[DBG9:![0-9]+]]
 // CHECK-KMSAN-NEXT:    call void @__msan_poison_alloca(ptr nonnull [[X]], i64 4, ptr nonnull @[[GLOB0:[0-9]+]]) #[[ATTR2]], !dbg [[DBG9]]
 // CHECK-KMSAN-NEXT:    [[TMP1:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_store_4(ptr nonnull [[X]]) #[[ATTR2]], !dbg [[DBG10:![0-9]+]]
 // CHECK-KMSAN-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, ptr } [[TMP1]], 0, !dbg [[DBG10]]
 // CHECK-KMSAN-NEXT:    store i32 0, ptr [[TMP2]], align 4, !dbg [[DBG10]]
 // CHECK-KMSAN-NEXT:    store i32 3, ptr [[X]], align 4, !dbg [[DBG10]], !tbaa [[TBAA11:![0-9]+]]
-// CHECK-KMSAN-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr nonnull [[P]]), !dbg [[DBG15:![0-9]+]]
+// CHECK-KMSAN-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[P]]), !dbg [[DBG15:![0-9]+]]
 // CHECK-KMSAN-NEXT:    call void @__msan_poison_alloca(ptr nonnull [[P]], i64 8, ptr nonnull @[[GLOB1:[0-9]+]]) #[[ATTR2]], !dbg [[DBG15]]
 // CHECK-KMSAN-NEXT:    [[TMP3:%.*]] = call { ptr, ptr } @__msan_metadata_ptr_for_store_8(ptr nonnull [[P]]) #[[ATTR2]], !dbg [[DBG16:![0-9]+]]
 // CHECK-KMSAN-NEXT:    [[TMP4:%.*]] = extractvalue { ptr, ptr } [[TMP3]], 0, !dbg [[DBG16]]
@@ -109,8 +109,8 @@
 // CHECK-KMSAN-NEXT:    [[TMP14:%.*]] = extractvalue { ptr, ptr } [[TMP12]], 1, !dbg [[DBG20]]
 // CHECK-KMSAN-NEXT:    [[_MSLD1:%.*]] = load i32, ptr [[TMP13]], align 4, !dbg [[DBG20]]
 // CHECK-KMSAN-NEXT:    [[TMP15:%.*]] = load i32, ptr [[TMP14]], align 4, !dbg [[DBG20]]
-// CHECK-KMSAN-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr nonnull [[P]]), !dbg [[DBG22:![0-9]+]]
-// CHECK-KMSAN-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[X]]) #[[ATTR2]], !dbg [[DBG22]]
+// CHECK-KMSAN-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[P]]), !dbg [[DBG22:![0-9]+]]
+// CHECK-KMSAN-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[X]]) #[[ATTR2]], !dbg [[DBG22]]
 // CHECK-KMSAN-NEXT:    store i32 [[_MSLD1]], ptr [[RETVAL_SHADOW]], align 8, !dbg [[DBG23:![0-9]+]]
 // CHECK-KMSAN-NEXT:    store i32 [[TMP15]], ptr [[RETVAL_ORIGIN]], align 4, !dbg [[DBG23]]
 // CHECK-KMSAN-NEXT:    ret i32 [[TMP11]], !dbg [[DBG23]]
