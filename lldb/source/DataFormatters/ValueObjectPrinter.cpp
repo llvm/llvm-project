@@ -9,6 +9,7 @@
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
 
 #include "lldb/DataFormatters/DataVisualization.h"
+#include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Target.h"
@@ -148,6 +149,11 @@ llvm::Expected<std::string> ValueObjectPrinter::GetDescriptionForDisplay() {
   ValueObject &valobj = GetMostSpecializedValue();
   llvm::Expected<std::string> maybe_str = valobj.GetObjectDescription();
   if (maybe_str)
+    return maybe_str;
+
+  if (maybe_str.errorIsA<lldb_private::ExpressionError>())
+    // Propagate expression errors to expose diagnostics to the user.
+    // Without this early exit, the summary/value may be shown without errors.
     return maybe_str;
 
   const char *str = nullptr;
