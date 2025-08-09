@@ -110,10 +110,9 @@ class FakeStack {
   }
 
   // Get frame by class_id and pos.
-  //
-  // ASanStackFrameLayout::ComputeASanStackFrameLayout() will align variables
-  // correctly if GetFrame(..., class_id, ...) returns addresses aligned to
-  // BytesInSizeClass(class_id).
+  // Return values are guaranteed to be aligned to BytesInSizeClass(class_id),
+  // which is useful in combination with
+  // ASanStackFrameLayout::ComputeASanStackFrameLayout().
   //
   // Note that alignment to 1<<kMaxStackFrameSizeLog (aka
   // BytesInSizeClass(max_class_id)) implies alignment to BytesInSizeClass()
