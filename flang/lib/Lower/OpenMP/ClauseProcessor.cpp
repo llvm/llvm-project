@@ -1179,12 +1179,13 @@ bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result) const {
 }
 
 bool ClauseProcessor::processLink(
-    llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const {
+    llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &result) const {
   return findRepeatableClause<omp::clause::Link>(
       [&](const omp::clause::Link &clause, const parser::CharBlock &) {
         // Case: declare target link(var1, var2)...
         gatherFuncAndVarSyms(
-            clause.v, mlir::omp::DeclareTargetCaptureClause::link, result);
+            clause.v, mlir::omp::DeclareTargetCaptureClause::link, result,
+            /*automap=*/false);
       });
 }
 
@@ -1507,26 +1508,28 @@ bool ClauseProcessor::processTaskReduction(
 }
 
 bool ClauseProcessor::processTo(
-    llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const {
+    llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &result) const {
   return findRepeatableClause<omp::clause::To>(
       [&](const omp::clause::To &clause, const parser::CharBlock &) {
         // Case: declare target to(func, var1, var2)...
         gatherFuncAndVarSyms(std::get<ObjectList>(clause.t),
-                             mlir::omp::DeclareTargetCaptureClause::to, result);
+                             mlir::omp::DeclareTargetCaptureClause::to, result,
+                             /*automap=*/false);
       });
 }
 
 bool ClauseProcessor::processEnter(
-    llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const {
+    llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &result) const {
   return findRepeatableClause<omp::clause::Enter>(
       [&](const omp::clause::Enter &clause, const parser::CharBlock &source) {
         mlir::Location currentLocation = converter.genLocation(source);
-        if (std::get<std::optional<omp::clause::Enter::Modifier>>(clause.t))
-          TODO(currentLocation, "Declare target enter AUTOMAP modifier");
+        bool automap =
+            std::get<std::optional<omp::clause::Enter::Modifier>>(clause.t)
+                .has_value();
         // Case: declare target enter(func, var1, var2)...
         gatherFuncAndVarSyms(std::get<ObjectList>(clause.t),
                              mlir::omp::DeclareTargetCaptureClause::enter,
-                             result);
+                             result, automap);
       });
 }
 
