@@ -358,8 +358,12 @@ IntrusiveRefCntPtr<DiagnosticsEngine> CompilerInstance::createDiagnostics(
     Diags->setClient(Client, ShouldOwnClient);
   } else if (Opts.getFormat() == DiagnosticOptions::SARIF) {
     Diags->setClient(new SARIFDiagnosticPrinter(llvm::errs(), Opts));
-  } else
+  } else {
     Diags->setClient(new TextDiagnosticPrinter(llvm::errs(), Opts));
+
+    // Currently, only the 'fancy' format supports nesting.
+    Diags->setEnableNesting(Opts.getFormat() == TextDiagnosticFormat::Fancy);
+  }
 
   // Chain in -verify checker, if requested.
   if (Opts.VerifyDiagnostics)

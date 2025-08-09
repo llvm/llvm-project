@@ -42,6 +42,16 @@ struct UnsignedOrNone {
     return LHS.Rep != RHS.Rep;
   }
 
+  // NOTE: These value_or overloads are included to make this pr compile;
+  // the actual patch introducing them will be #143516.
+  constexpr unsigned value_or(unsigned val) const {
+    return operator bool() ? **this : val;
+  }
+
+  constexpr UnsignedOrNone value_or(UnsignedOrNone val) const {
+    return operator bool() ? *this : val;
+  }
+
 private:
   constexpr UnsignedOrNone(std::nullopt_t, unsigned Rep) : Rep(Rep) {};
 

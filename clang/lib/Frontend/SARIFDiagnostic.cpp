@@ -39,7 +39,7 @@ SARIFDiagnostic::SARIFDiagnostic(raw_ostream &OS, const LangOptions &LangOpts,
 void SARIFDiagnostic::emitDiagnosticMessage(
     FullSourceLoc Loc, PresumedLoc PLoc, DiagnosticsEngine::Level Level,
     StringRef Message, ArrayRef<clang::CharSourceRange> Ranges,
-    DiagOrStoredDiag D) {
+    unsigned NestingLevel, DiagOrStoredDiag D) {
 
   const auto *Diag = D.dyn_cast<const Diagnostic *>();
 
