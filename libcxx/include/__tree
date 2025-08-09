@@ -870,26 +870,9 @@ public:
     return __value_comp_;
   }
 
-private:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const __node_allocator& __node_alloc() const _NOEXCEPT {
-    return __node_alloc_;
-  }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __end_node_pointer& __begin_node() _NOEXCEPT {
-    return __begin_node_;
-  }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const __end_node_pointer& __begin_node() const _NOEXCEPT {
-    return __begin_node_;
-  }
-
 public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __node_pointer __root() const _NOEXCEPT {
-    // double t = __end_node()->__left_;
-    //     using __ptr_traits   = pointer_traits<__node_pointer>;
-    //     using __element_type = typename __ptr_traits::element_type;
-    // typename __element_type_type x{};
-    //     double t = x;
     return std::__static_fancy_pointer_cast<__node_pointer>(__end_node()->__left_);
-    // return static_cast<__node_pointer>(__end_node()->__left_);
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __node_base_pointer* __root_ptr() const _NOEXCEPT {
