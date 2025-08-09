@@ -2341,17 +2341,20 @@ public:
     Value *DynCGGroupMem = nullptr;
     /// True if the kernel has 'no wait' clause.
     bool HasNoWait = false;
+    /// True if the dynamic shared memory may fallback.
+    bool MayFallbackDynCGroupMem = false;
 
     // Constructors for TargetKernelArgs.
     TargetKernelArgs() {}
     TargetKernelArgs(unsigned NumTargetItems, TargetDataRTArgs RTArgs,
                      Value *NumIterations, ArrayRef<Value *> NumTeams,
                      ArrayRef<Value *> NumThreads, Value *DynCGGroupMem,
-                     bool HasNoWait)
+                     bool HasNoWait, bool MayFallbackDynCGroupMem)
         : NumTargetItems(NumTargetItems), RTArgs(RTArgs),
           NumIterations(NumIterations), NumTeams(NumTeams),
           NumThreads(NumThreads), DynCGGroupMem(DynCGGroupMem),
-          HasNoWait(HasNoWait) {}
+          HasNoWait(HasNoWait),
+          MayFallbackDynCGroupMem(MayFallbackDynCGroupMem) {}
   };
 
   /// Create the kernel args vector used by emitTargetKernel. This function

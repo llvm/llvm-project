@@ -506,7 +506,13 @@ void OpenMPIRBuilder::getKernelArgsVector(TargetKernelArgs &KernelArgs,
   auto Int32Ty = Type::getInt32Ty(Builder.getContext());
   constexpr const size_t MaxDim = 3;
   Value *ZeroArray = Constant::getNullValue(ArrayType::get(Int32Ty, MaxDim));
-  Value *Flags = Builder.getInt64(KernelArgs.HasNoWait);
+
+  Value *HasNoWaitFlag = Builder.getInt64(KernelArgs.HasNoWait);
+  Value *MayFallbackDynCGroupMemFlag =
+      Builder.getInt64(KernelArgs.MayFallbackDynCGroupMem);
+  MayFallbackDynCGroupMemFlag =
+      Builder.CreateShl(MayFallbackDynCGroupMemFlag, 2);
+  Value *Flags = Builder.CreateOr(HasNoWaitFlag, MayFallbackDynCGroupMemFlag);
 
   assert(!KernelArgs.NumTeams.empty() && !KernelArgs.NumThreads.empty());
 
@@ -7891,7 +7897,7 @@ static void emitTargetCall(
 
     KArgs = OpenMPIRBuilder::TargetKernelArgs(NumTargetItems, RTArgs, TripCount,
                                               NumTeamsC, NumThreadsC,
-                                              DynCGGroupMem, HasNoWait);
+                                              DynCGGroupMem, HasNoWait, false);
 
     // Assume no error was returned because TaskBodyCB and
     // EmitTargetCallFallbackCB don't produce any.
