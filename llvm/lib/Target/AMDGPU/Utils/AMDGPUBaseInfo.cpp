@@ -21,6 +21,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -1664,6 +1665,19 @@ getIntegerVecAttribute(const Function &F, StringRef Name, unsigned Size) {
     return std::nullopt;
   }
   return Vals;
+}
+
+bool hasValueInRangeLikeMetadata(const MDNode &MD, int64_t Val) {
+  assert((MD.getNumOperands() % 2 == 0) && "invalid number of operands!");
+  for (unsigned I = 0, E = MD.getNumOperands() / 2; I != E; ++I) {
+    auto *Low = mdconst::extract<ConstantInt>(MD.getOperand(2 * I + 0));
+    auto *High = mdconst::extract<ConstantInt>(MD.getOperand(2 * I + 1));
+    assert(Low->getValue().ult(High->getValue()) && "invalid range metadata!");
+    if (Low->getValue().ule(Val) && High->getValue().ugt(Val))
+      return true;
+  }
+
+  return false;
 }
 
 unsigned getVmcntBitMask(const IsaVersion &Version) {
