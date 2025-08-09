@@ -1,7 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-use-nullptr %t -- -- \
-// RUN:   -target x86_64-linux-gnu -Wno-non-literal-null-conversion -fno-delayed-template-parsing
-// RUN: %check_clang_tidy %s -check-suffixes=,WINDOWS modernize-use-nullptr %t -- -- \
-// RUN:   -target x86_64-windows-msvc -Wno-non-literal-null-conversion -fno-delayed-template-parsing
+// RUN: %check_clang_tidy %s modernize-use-nullptr %t -- -- -fno-delayed-template-parsing
 
 const unsigned int g_null = 0;
 #define NULL 0
@@ -60,35 +57,6 @@ struct Foo {
 int *Foo::m_p2 = NULL;
 // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: use nullptr
 // CHECK-FIXES: int *Foo::m_p2 = nullptr;
-
-// FIXME: all these DISABLED-* cases should trigger the warning.
-template <typename T>
-struct Bar {
-  Bar(T *p) : m_p(p) {
-    m_p = static_cast<T*>(NULL);
-    // DISABLED-CHECK-MESSAGES: :[[@LINE-1]]:27: warning: use nullptr
-    // DISABLED-CHECK-FIXES: m_p = static_cast<T*>(nullptr);
-
-    m_p = static_cast<T*>(reinterpret_cast<int*>((void*)NULL));
-    // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: use nullptr
-    // CHECK-FIXES: m_p = static_cast<T*>(nullptr);
-
-    T *p2 = static_cast<T*>(reinterpret_cast<int*>((void*)NULL));
-    // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: use nullptr
-    // CHECK-FIXES: T *p2 = static_cast<T*>(nullptr);
-
-    m_p = NULL;
-    // DISABLED-CHECK-MESSAGES: :[[@LINE-1]]:11: warning: use nullptr
-    // DISABLED-CHECK-FIXES: m_p = nullptr;
-
-    int i = static_cast<int>(0.f);
-    T *i2 = static_cast<int>(0.f);
-    // DISABLED-CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use nullptr
-    // DISABLED-CHECK-FIXES: T *i2 = nullptr;
-  }
-
-  T *m_p;
-};
 
 struct Baz {
   Baz() : i(0) {}
@@ -199,11 +167,10 @@ void *test_parentheses_explicit_cast_sequence1() {
   // CHECK-FIXES: return(static_cast<void*>(nullptr));
 }
 
-// FIXME: make the warning trigger on Linux too.
 void *test_parentheses_explicit_cast_sequence2() {
-  return(static_cast<void*>(reinterpret_cast<int*>((float*)int(0.f))));
-  // CHECK-MESSAGES-WINDOWS: :[[@LINE-1]]:29: warning: use nullptr
-  // CHECK-FIXES-WINDOWS: return(static_cast<void*>(nullptr));
+  return(static_cast<void*>(reinterpret_cast<int*>((float*)(0))));
+  // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: use nullptr
+  // CHECK-FIXES: return(static_cast<void*>(nullptr));
 }
 
 // Test explicit cast expressions resulting in nullptr.
@@ -299,7 +266,21 @@ void test_nested_implicit_cast_expr() {
 template<typename T>
 class A {
  public:
-  A(T *p = NULL) {}
+  A(T *p = NULL) {
+    Ptr = static_cast<T*>(NULL);
+
+    Ptr = static_cast<T*>(reinterpret_cast<int*>((void*)NULL));
+    // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: use nullptr
+    // CHECK-FIXES: Ptr = static_cast<T*>(nullptr);
+    // FIXME: a better fix-it is: Ptr = nullptr;
+
+    T *p2 = static_cast<T*>(reinterpret_cast<int*>((void*)NULL));
+    // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: use nullptr
+    // CHECK-FIXES: T *p2 = static_cast<T*>(nullptr);
+    // FIXME: a better fix-it is: T *p2 = nullptr;
+
+    Ptr = NULL;
+  }
 
   void f() {
     Ptr = NULL;
