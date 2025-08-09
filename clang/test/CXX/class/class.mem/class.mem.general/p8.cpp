@@ -45,7 +45,7 @@ namespace N1 {
     void g0() noexcept(y); // expected-error {{use of undeclared identifier 'y'}}
 
     void f1() noexcept(A::x);
-    void g1() noexcept(A::y); // expected-error {{no member named 'y' in 'A<T>'}}
+    void g1() noexcept(A::y); // expected-error {{no member named 'y' in 'N1::A<T>'}}
 
     template<typename U>
     void f2() noexcept(x);
@@ -55,13 +55,13 @@ namespace N1 {
     template<typename U>
     void f3() noexcept(A::x);
     template<typename U>
-    void g3() noexcept(A::y); // expected-error {{no member named 'y' in 'A<T>'}}
+    void g3() noexcept(A::y); // expected-error {{no member named 'y' in 'N1::A<T>'}}
 
     friend void f4() noexcept(x);
     friend void g4() noexcept(y); // expected-error {{use of undeclared identifier 'y'}}
 
     friend void f5() noexcept(A::x);
-    friend void g5() noexcept(A::y); // expected-error {{no member named 'y' in 'A<T>'}}
+    friend void g5() noexcept(A::y); // expected-error {{no member named 'y' in 'N1::A<T>'}}
 
     template<typename U>
     friend void f6() noexcept(x);
@@ -71,7 +71,7 @@ namespace N1 {
     template<typename U>
     friend void f7() noexcept(A::x);
     template<typename U>
-    friend void g7() noexcept(A::y); // expected-error {{no member named 'y' in 'A<T>'}}
+    friend void g7() noexcept(A::y); // expected-error {{no member named 'y' in 'N1::A<T>'}}
 
     static constexpr bool x = true;
   };

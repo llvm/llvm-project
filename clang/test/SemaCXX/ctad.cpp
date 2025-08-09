@@ -186,7 +186,7 @@ namespace GH136624 {
     template<class Y> using Alias = A<Y>;
   }
 
-  // FIXME: This diagnostic prints incorrect qualification for `A<int>`.
+  // FIXME: This diagnostic is missing 'foo::Alias', as written.
   foo::Alias t = 0;
-  // expected-error@-1 {{no viable conversion from 'int' to 'foo::A<int>' (aka 'A<int>')}}
+  // expected-error@-1 {{no viable conversion from 'int' to 'GH136624::A<int>' (aka 'A<int>')}}
 } // namespace GH136624

@@ -377,12 +377,14 @@ QualType Descriptor::getType() const {
   if (const auto *D = asValueDecl())
     return D->getType();
   if (const auto *T = dyn_cast_if_present<TypeDecl>(asDecl()))
-    return QualType(T->getTypeForDecl(), 0);
+    return T->getASTContext().getTypeDeclType(T);
 
   // The Source sometimes has a different type than the once
   // we really save. Try to consult the Record first.
-  if (isRecord())
-    return QualType(ElemRecord->getDecl()->getTypeForDecl(), 0);
+  if (isRecord()) {
+    const RecordDecl *RD = ElemRecord->getDecl();
+    return RD->getASTContext().getCanonicalTagType(RD);
+  }
   if (const auto *E = asExpr())
     return E->getType();
   llvm_unreachable("Invalid descriptor type");

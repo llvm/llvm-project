@@ -36,11 +36,6 @@ QualType clang::desugarForDiagnostic(ASTContext &Context, QualType QT,
   while (true) {
     const Type *Ty = QC.strip(QT);
 
-    // Don't aka just because we saw an elaborated type...
-    if (const ElaboratedType *ET = dyn_cast<ElaboratedType>(Ty)) {
-      QT = ET->desugar();
-      continue;
-    }
     // ... or a using type ...
     if (const UsingType *UT = dyn_cast<UsingType>(Ty)) {
       QT = UT->desugar();
@@ -130,7 +125,8 @@ QualType clang::desugarForDiagnostic(ASTContext &Context, QualType QT,
         if (DesugarArgument) {
           ShouldAKA = true;
           QT = Context.getTemplateSpecializationType(
-              TST->getTemplateName(), Args, /*CanonicalArgs=*/{}, QT);
+              TST->getKeyword(), TST->getTemplateName(), Args,
+              /*CanonicalArgs=*/{}, QT);
         }
         break;
       }
@@ -200,7 +196,8 @@ break; \
     // Don't desugar through the primary typedef of an anonymous type.
     if (const TagType *UTT = Underlying->getAs<TagType>())
       if (const TypedefType *QTT = dyn_cast<TypedefType>(QT))
-        if (UTT->getDecl()->getTypedefNameForAnonDecl() == QTT->getDecl())
+        if (UTT->getOriginalDecl()->getTypedefNameForAnonDecl() ==
+            QTT->getDecl())
           break;
 
     // Record that we actually looked through an opaque type here.
@@ -461,13 +458,12 @@ void clang::FormatASTNodeDiagnosticArgument(
       ND->getNameForDiagnostic(OS, Context.getPrintingPolicy(), Qualified);
       break;
     }
-    case DiagnosticsEngine::ak_nestednamespec: {
-      NestedNameSpecifier *NNS = reinterpret_cast<NestedNameSpecifier*>(Val);
-      NNS->print(OS, Context.getPrintingPolicy(),
+    case DiagnosticsEngine::ak_nestednamespec:
+      NestedNameSpecifier::getFromVoidPointer(reinterpret_cast<void *>(Val))
+          .print(OS, Context.getPrintingPolicy(),
                  /*ResolveTemplateArguments=*/false,
                  /*PrintFinalScopeResOp=*/false);
       break;
-    }
     case DiagnosticsEngine::ak_declcontext: {
       DeclContext *DC = reinterpret_cast<DeclContext *> (Val);
       assert(DC && "Should never have a null declaration context");
@@ -484,9 +480,8 @@ void clang::FormatASTNodeDiagnosticArgument(
       } else if (isLambdaCallOperator(DC)) {
         OS << "lambda expression";
       } else if (TypeDecl *Type = dyn_cast<TypeDecl>(DC)) {
-        OS << ConvertTypeToDiagnosticString(Context,
-                                            Context.getTypeDeclType(Type),
-                                            PrevArgs, QualTypeVals);
+        OS << ConvertTypeToDiagnosticString(
+            Context, Context.getTypeDeclType(Type), PrevArgs, QualTypeVals);
       } else {
         assert(isa<NamedDecl>(DC) && "Expected a NamedDecl");
         NamedDecl *ND = cast<NamedDecl>(DC);
@@ -1158,12 +1153,13 @@ class TemplateDiff {
       return nullptr;
 
     const ClassTemplateSpecializationDecl *CTSD =
-        dyn_cast<ClassTemplateSpecializationDecl>(RT->getDecl());
+        dyn_cast<ClassTemplateSpecializationDecl>(RT->getOriginalDecl());
 
     if (!CTSD)
       return nullptr;
 
     Ty = Context.getTemplateSpecializationType(
+        ElaboratedTypeKeyword::None,
         TemplateName(CTSD->getSpecializedTemplate()),
         CTSD->getTemplateArgs().asArray(), /*CanonicalArgs=*/{},
         Ty.getLocalUnqualifiedType().getCanonicalType());
@@ -1743,25 +1739,10 @@ class TemplateDiff {
 
     std::string FromTypeStr = FromType.isNull() ? "(no argument)"
                                                 : FromType.getAsString(Policy);
-    std::string ToTypeStr = ToType.isNull() ? "(no argument)"
-                                            : ToType.getAsString(Policy);
-    // Print without ElaboratedType sugar if it is better.
+    std::string ToTypeStr =
+        ToType.isNull() ? "(no argument)" : ToType.getAsString(Policy);
     // TODO: merge this with other aka printing above.
     if (FromTypeStr == ToTypeStr) {
-      const auto *FromElTy = dyn_cast<ElaboratedType>(FromType),
-                 *ToElTy = dyn_cast<ElaboratedType>(ToType);
-      if (FromElTy || ToElTy) {
-        std::string FromNamedTypeStr =
-            FromElTy ? FromElTy->getNamedType().getAsString(Policy)
-                     : FromTypeStr;
-        std::string ToNamedTypeStr =
-            ToElTy ? ToElTy->getNamedType().getAsString(Policy) : ToTypeStr;
-        if (FromNamedTypeStr != ToNamedTypeStr) {
-          FromTypeStr = FromNamedTypeStr;
-          ToTypeStr = ToNamedTypeStr;
-          goto PrintTypes;
-        }
-      }
       // Switch to canonical typename if it is better.
       std::string FromCanTypeStr =
           FromType.getCanonicalType().getAsString(Policy);
@@ -1772,8 +1753,8 @@ class TemplateDiff {
       }
     }
 
-  PrintTypes:
-    if (PrintTree) OS << '[';
+    if (PrintTree)
+      OS << '[';
     OS << (FromDefault ? "(default) " : "");
     Bold();
     OS << FromTypeStr;

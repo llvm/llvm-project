@@ -89,8 +89,8 @@ void InheritanceHierarchyWriter::WriteNode(QualType Type, bool FromVirtual) {
   Out << " \"];\n";
 
   // Display the base classes.
-  const auto *Decl =
-      static_cast<const CXXRecordDecl *>(Type->castAs<RecordType>()->getDecl());
+  const auto *Decl = static_cast<const CXXRecordDecl *>(
+      Type->castAs<RecordType>()->getOriginalDecl());
   for (const auto &Base : Decl->bases()) {
     QualType CanonBaseType = Context.getCanonicalType(Base.getType());
 
@@ -133,7 +133,7 @@ InheritanceHierarchyWriter::WriteNodeReference(QualType Type,
 /// viewInheritance - Display the inheritance hierarchy of this C++
 /// class using GraphViz.
 void CXXRecordDecl::viewInheritance(ASTContext& Context) const {
-  QualType Self = Context.getTypeDeclType(this);
+  QualType Self = Context.getCanonicalTagType(this);
 
   int FD;
   SmallString<128> Filename;
