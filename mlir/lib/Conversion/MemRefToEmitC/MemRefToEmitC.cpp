@@ -16,10 +16,12 @@
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeRange.h"
 #include "mlir/IR/Value.h"
+#include "mlir/IR/ValueRange.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include <cstdint>
 
@@ -288,6 +290,70 @@ struct ConvertStore final : public OpConversionPattern<memref::StoreOp> {
     return success();
   }
 };
+
+struct ConvertExtractStridedMetadata final
+    : public OpConversionPattern<memref::ExtractStridedMetadataOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(memref::ExtractStridedMetadataOp extractStridedMetadataOp,
+                  OpAdaptor operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = extractStridedMetadataOp.getLoc();
+    Value source = extractStridedMetadataOp.getSource();
+
+    MemRefType memrefType = cast<MemRefType>(source.getType());
+    if (!isMemRefTypeLegalForEmitC(memrefType))
+      return rewriter.notifyMatchFailure(
+          loc, "incompatible memref type for EmitC conversion");
+
+    emitc::ConstantOp zeroIndex = rewriter.create<emitc::ConstantOp>(
+        loc, rewriter.getIndexType(), rewriter.getIndexAttr(0));
+    TypedValue<emitc::ArrayType> srcArrayValue =
+        cast<TypedValue<emitc::ArrayType>>(operands.getSource());
+    auto createPointerFromEmitcArray = [loc, &rewriter, &zeroIndex,
+                                        srcArrayValue]() -> emitc::ApplyOp {
+      int64_t rank = srcArrayValue.getType().getRank();
+      llvm::SmallVector<mlir::Value> indices;
+      for (int i = 0; i < rank; ++i) {
+        indices.push_back(zeroIndex);
+      }
+
+      emitc::SubscriptOp subPtr = rewriter.create<emitc::SubscriptOp>(
+          loc, srcArrayValue, mlir::ValueRange(indices));
+      emitc::ApplyOp ptr = rewriter.create<emitc::ApplyOp>(
+          loc,
+          emitc::PointerType::get(srcArrayValue.getType().getElementType()),
+          rewriter.getStringAttr("&"), subPtr);
+
+      return ptr;
+    };
+
+    emitc::ApplyOp srcPtr = createPointerFromEmitcArray();
+    auto [strides, offset] = memrefType.getStridesAndOffset();
+    Value offsetValue = rewriter.create<emitc::ConstantOp>(
+        loc, rewriter.getIndexType(), rewriter.getIndexAttr(offset));
+
+    SmallVector<Value> results;
+    results.push_back(srcPtr);
+    results.push_back(offsetValue);
+
+    for (unsigned i = 0, e = memrefType.getRank(); i < e; ++i) {
+      Value sizeValue = rewriter.create<emitc::ConstantOp>(
+          loc, rewriter.getIndexType(),
+          rewriter.getIndexAttr(memrefType.getDimSize(i)));
+      results.push_back(sizeValue);
+
+      Value strideValue = rewriter.create<emitc::ConstantOp>(
+          loc, rewriter.getIndexType(), rewriter.getIndexAttr(strides[i]));
+      results.push_back(strideValue);
+    }
+
+    rewriter.replaceOp(extractStridedMetadataOp, results);
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::populateMemRefToEmitCTypeConversion(TypeConverter &typeConverter) {
@@ -320,6 +386,7 @@ void mlir::populateMemRefToEmitCTypeConversion(TypeConverter &typeConverter) {
 
 void mlir::populateMemRefToEmitCConversionPatterns(
     RewritePatternSet &patterns, const TypeConverter &converter) {
-  patterns.add<ConvertAlloca, ConvertAlloc, ConvertGlobal, ConvertGetGlobal,
-               ConvertLoad, ConvertStore>(converter, patterns.getContext());
+  patterns.add<ConvertAlloca, ConvertAlloc, ConvertExtractStridedMetadata,
+               ConvertGlobal, ConvertGetGlobal, ConvertLoad, ConvertStore>(
+      converter, patterns.getContext());
 }
