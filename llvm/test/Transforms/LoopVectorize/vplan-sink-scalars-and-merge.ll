@@ -908,6 +908,27 @@ define void @update_multiple_users(ptr noalias %src, ptr noalias %dst, i1 %c) {
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
+; CHECK-NEXT: Successor(s): pred.load
+; CHECK-EMPTY:
+; CHECK-NEXT: <xVFxUF> pred.load: {
+; CHECK-NEXT:   pred.load.entry:
+; CHECK-NEXT:     BRANCH-ON-MASK ir<%c>
+; CHECK-NEXT:   Successor(s): pred.load.if, pred.load.continue
+; CHECK-EMPTY:
+; CHECK-NEXT:   pred.load.if:
+; CHECK-NEXT:     REPLICATE ir<%l1> = load ir<%src>
+; CHECK-NEXT:   Successor(s): pred.load.continue
+; CHECK-EMPTY:
+; CHECK-NEXT:   pred.load.continue:
+; CHECK-NEXT:     PHI-PREDICATED-INSTRUCTION vp<[[PRED:%.*]]> = ir<%l1>
+; CHECK-NEXT:   No successors
+; CHECK-NEXT: }
+; CHECK-NEXT: Successor(s): loop.then.0
+; CHECK-EMPTY:
+; CHECK-NEXT: loop.then.0:
+; CHECK-NEXT:   CLONE ir<%l2> = trunc vp<[[PRED]]>
+; CHECK-NEXT:   CLONE ir<%cmp> = icmp eq vp<[[PRED]]>, ir<0>
+; CHECK-NEXT:   CLONE ir<%sel> = select ir<%cmp>, ir<5>, ir<%l2>
 ; CHECK-NEXT: Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.store: {
@@ -916,10 +937,6 @@ define void @update_multiple_users(ptr noalias %src, ptr noalias %dst, i1 %c) {
 ; CHECK-NEXT:   Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.if:
-; CHECK-NEXT:     REPLICATE ir<%l1> = load ir<%src>
-; CHECK-NEXT:     REPLICATE ir<%l2> = trunc ir<%l1>
-; CHECK-NEXT:     REPLICATE ir<%cmp> = icmp eq ir<%l1>, ir<0>
-; CHECK-NEXT:     REPLICATE ir<%sel> = select ir<%cmp>, ir<5>, ir<%l2>
 ; CHECK-NEXT:     REPLICATE store ir<%sel>, ir<%dst>
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 ; CHECK-EMPTY:
