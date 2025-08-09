@@ -1177,8 +1177,8 @@ struct TestNonRootReplacement : public RewritePattern {
     auto illegalOp = ILLegalOpF::create(rewriter, op->getLoc(), resultType);
     auto legalOp = LegalOpB::create(rewriter, op->getLoc(), resultType);
 
-    rewriter.replaceOp(illegalOp, legalOp);
     rewriter.replaceOp(op, illegalOp);
+    rewriter.replaceOp(illegalOp, legalOp);
     return success();
   }
 };
@@ -1362,6 +1362,7 @@ public:
     // Helper function that replaces the given op with a new op of the given
     // name and doubles each result (1 -> 2 replacement of each result).
     auto replaceWithDoubleResults = [&](Operation *op, StringRef name) {
+      rewriter.setInsertionPointAfter(op);
       SmallVector<Type> types;
       for (Type t : op->getResultTypes()) {
         types.push_back(t);
@@ -1560,6 +1561,7 @@ struct TestLegalizePatternDriver
     if (mode == ConversionMode::Partial) {
       DenseSet<Operation *> unlegalizedOps;
       ConversionConfig config;
+      config.allowPatternRollback = allowPatternRollback;
       DumpNotifications dumpNotifications;
       config.listener = &dumpNotifications;
       config.unlegalizedOps = &unlegalizedOps;
@@ -1581,6 +1583,7 @@ struct TestLegalizePatternDriver
       });
 
       ConversionConfig config;
+      config.allowPatternRollback = allowPatternRollback;
       DumpNotifications dumpNotifications;
       config.listener = &dumpNotifications;
       if (failed(applyFullConversion(getOperation(), target,
@@ -1596,6 +1599,7 @@ struct TestLegalizePatternDriver
     // Analyze the convertible operations.
     DenseSet<Operation *> legalizedOps;
     ConversionConfig config;
+    config.allowPatternRollback = allowPatternRollback;
     config.legalizableOps = &legalizedOps;
     if (failed(applyAnalysisConversion(getOperation(), target,
                                        std::move(patterns), config)))
@@ -1616,6 +1620,10 @@ struct TestLegalizePatternDriver
           clEnumValN(ConversionMode::Full, "full", "Perform a full conversion"),
           clEnumValN(ConversionMode::Partial, "partial",
                      "Perform a partial conversion"))};
+
+  Option<bool> allowPatternRollback{*this, "allow-pattern-rollback",
+                                    llvm::cl::desc("Allow pattern rollback"),
+                                    llvm::cl::init(true)};
 };
 } // namespace
 
