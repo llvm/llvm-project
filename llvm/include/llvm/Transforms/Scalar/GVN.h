@@ -36,6 +36,7 @@ class AAResults;
 class AssumeInst;
 class AssumptionCache;
 class BasicBlock;
+class BatchAAResults;
 class BranchInst;
 class CallInst;
 class ExtractValueInst;
@@ -253,6 +254,7 @@ private:
   OptimizationRemarkEmitter *ORE = nullptr;
   ImplicitControlFlowTracking *ICF = nullptr;
   LoopInfo *LI = nullptr;
+  AAResults *AA = nullptr;
   MemorySSAUpdater *MSSAU = nullptr;
 
   ValueTable VN;
@@ -347,20 +349,59 @@ private:
   // List of critical edges to be split between iterations.
   SmallVector<std::pair<Instruction *, unsigned>, 4> ToSplit;
 
+  enum class DepKind {
+    Other = 0, // Unknown value.
+    Def,       // Exactly overlapping locations.
+    Clobber,   // Reaching value superset of needed bits.
+  };
+
+  struct ReachingMemVal {
+    DepKind Kind;
+    BasicBlock *Block;
+    const Value *Addr;
+    Instruction *Inst;
+    int32_t Offset;
+
+    static ReachingMemVal getUnknown(BasicBlock *BB, const Value *Addr,
+                                     Instruction *Inst = nullptr) {
+      return {DepKind::Other, BB, Addr, Inst, -1};
+    }
+
+    static ReachingMemVal getDef(const Value *Addr, Instruction *Inst) {
+      return {DepKind::Def, Inst->getParent(), Addr, Inst, -1};
+    }
+
+    static ReachingMemVal getClobber(const Value *Addr, Instruction *Inst,
+                                     int32_t Offset = -1) {
+      return {DepKind::Clobber, Inst->getParent(), Addr, Inst, Offset};
+    }
+  };
+
+  std::optional<ReachingMemVal> findReachingValueForLoadInBlock(
+      const MemoryLocation &Loc, bool IsInvariantload, BasicBlock *BB,
+      Instruction *DomLower, Instruction *DomUpper, MemoryAccess *ClobberMA,
+      MemorySSA &MSSA, BatchAAResults &AA);
+
+  bool findReachingValuesForLoad(LoadInst *Inst, MemorySSA &MSSA, AAResults &AA,
+                                 SmallVectorImpl<ReachingMemVal> &Values);
+
   // Helper functions of redundant load elimination.
   bool processLoad(LoadInst *L);
   bool processNonLocalLoad(LoadInst *L);
+  bool processNonLocalLoad(LoadInst *L, SmallVectorImpl<ReachingMemVal> &Deps);
   bool processAssumeIntrinsic(AssumeInst *II);
 
   /// Given a local dependency (Def or Clobber) determine if a value is
   /// available for the load.
   std::optional<gvn::AvailableValue>
-  AnalyzeLoadAvailability(LoadInst *Load, MemDepResult DepInfo, Value *Address);
+  AnalyzeLoadAvailability(LoadInst *Load, const ReachingMemVal &Dep,
+                          Value *Address);
 
   /// Given a list of non-local dependencies, determine if a value is
   /// available for the load in each specified block.  If it is, add it to
   /// ValuesPerBlock.  If not, add it to UnavailableBlocks.
-  void AnalyzeLoadAvailability(LoadInst *Load, LoadDepVect &Deps,
+  void AnalyzeLoadAvailability(LoadInst *Load,
+                               SmallVectorImpl<ReachingMemVal> &Deps,
                                AvailValInBlkVect &ValuesPerBlock,
                                UnavailBlkVect &UnavailableBlocks);
 
