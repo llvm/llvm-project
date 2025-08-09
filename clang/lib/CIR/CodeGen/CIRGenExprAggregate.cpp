@@ -376,7 +376,10 @@ void AggExprEmitter::visitCXXParenListOrInitListExpr(
   // the disadvantage is that the generated code is more difficult for
   // the optimizer, especially with bitfields.
   unsigned numInitElements = args.size();
-  RecordDecl *record = e->getType()->castAs<RecordType>()->getDecl();
+  RecordDecl *record = e->getType()
+                           ->castAs<RecordType>()
+                           ->getOriginalDecl()
+                           ->getDefinitionOrSelf();
 
   // We'll need to enter cleanup scopes in case any of the element
   // initializers throws an exception.
