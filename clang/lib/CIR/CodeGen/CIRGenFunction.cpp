@@ -356,7 +356,8 @@ static bool mayDropFunctionReturn(const ASTContext &astContext,
   // destructor or a non-trivially copyable type.
   if (const RecordType *recordType =
           returnType.getCanonicalType()->getAs<RecordType>()) {
-    if (const auto *classDecl = dyn_cast<CXXRecordDecl>(recordType->getDecl()))
+    if (const auto *classDecl =
+            dyn_cast<CXXRecordDecl>(recordType->getOriginalDecl()))
       return classDecl->hasTrivialDestructor();
   }
   return returnType.isTriviallyCopyableType(astContext);
@@ -827,7 +828,9 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
   // Ignore empty classes in C++.
   if (getLangOpts().CPlusPlus) {
     if (const RecordType *rt = ty->getAs<RecordType>()) {
-      if (cast<CXXRecordDecl>(rt->getDecl())->isEmpty())
+      if (cast<CXXRecordDecl>(rt->getOriginalDecl())
+              ->getDefinitionOrSelf()
+              ->isEmpty())
         return;
     }
   }
@@ -977,10 +980,6 @@ void CIRGenFunction::emitVariablyModifiedType(QualType type) {
     case Type::ObjCObjectPointer:
     case Type::BitInt:
       llvm_unreachable("type class is never variably-modified!");
-
-    case Type::Elaborated:
-      type = cast<clang::ElaboratedType>(ty)->getNamedType();
-      break;
 
     case Type::Adjusted:
       type = cast<clang::AdjustedType>(ty)->getAdjustedType();
