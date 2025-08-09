@@ -1,9 +1,0 @@
-add_header_library(
-  fopen
-  HDRS
-    fopen.h
-  DEPENDS
-    libc.hdr.types.FILE
-    libc.src.__support.File.file
-    libc.src.__support.libc_errno
-)

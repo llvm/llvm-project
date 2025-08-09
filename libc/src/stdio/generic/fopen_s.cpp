@@ -9,7 +9,7 @@
 #include "src/stdio/fopen_s.h"
 #include "src/__support/annex_k/helper_macros.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/stdio/fopen.h"
+#include "src/stdio/fopen.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -24,13 +24,13 @@ LLVM_LIBC_FUNCTION(errno_t, fopen_s,
   FILE *ret = nullptr;
 
   if (mode[0] == 'u') {
-    ret = stdio_internal::fopen(filename, mode + 1);
+    ret = fopen(filename, mode + 1);
     if (!ret) {
       *streamptr = nullptr;
       return -1;
     }
   } else {
-    ret = stdio_internal::fopen(filename, mode);
+    ret = fopen(filename, mode);
     if (!ret) {
       *streamptr = nullptr;
       return -1;

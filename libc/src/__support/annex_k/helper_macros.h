@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_ANNEX_K_HELPER_MACROS_H
 
 #include "libc_constraint_handler.h"
+#include "src/__support/libc_errno.h"
 
 #define _CONSTRAINT_VIOLATION(msg, error_code, ret_code)                       \
   {                                                                            \

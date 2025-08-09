@@ -2,6 +2,9 @@ add_header_library(
   helper_macros
   HDRS
     helper_macros.h
+  DEPENDS
+    .libc_constraint_handler
+    libc.src.__support.libc_errno
 )
 
 add_header_library(
@@ -10,5 +13,7 @@ add_header_library(
     libc_constraint_handler.h
   DEPENDS
     .abort_handler_s
-    libc.hdr.types.errno_t
+    libc.hdr.types.constraint_handler_t
+    libc.src.__support.common
+    libc.src.stdlib.abort_handler_s
 )
