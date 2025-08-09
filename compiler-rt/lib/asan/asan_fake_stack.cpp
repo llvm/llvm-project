@@ -65,8 +65,10 @@ FakeStack *FakeStack::Create(uptr stack_size_log) {
   // We didn't use MmapAlignedOrDieOnFatalError, because it requires that the
   // *size* is a power of 2, which is an overly strong condition.
   FakeStack *res = reinterpret_cast<FakeStack *>(
-      RoundUpTo((uptr)true_res + kFlagsOffset + SizeRequiredForFlags(stack_size_log), 1 << kMaxStackFrameSizeLog)
-      - kFlagsOffset - SizeRequiredForFlags(stack_size_log));
+      RoundUpTo(
+          (uptr)true_res + kFlagsOffset + SizeRequiredForFlags(stack_size_log),
+          1 << kMaxStackFrameSizeLog) -
+      kFlagsOffset - SizeRequiredForFlags(stack_size_log));
   res->true_start = true_res;
   res->stack_size_log_ = stack_size_log;
   u8 *p = reinterpret_cast<u8 *>(res);
