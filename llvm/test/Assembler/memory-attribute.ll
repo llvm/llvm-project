@@ -78,3 +78,28 @@ declare void @fn_argmem_read_inaccessiblemem_write()
 ; CHECK: @fn_argmem_read_inaccessiblemem_write_reordered()
 declare void @fn_argmem_read_inaccessiblemem_write_reordered()
     memory(inaccessiblemem: write, argmem: read)
+
+; CHECK: Function Attrs: memory(aarch64_za: write)
+; CHECK: @fn_inaccessiblemem_write_aarch64_za()
+declare void @fn_inaccessiblemem_write_aarch64_za()
+    memory(aarch64_za: write)
+
+; CHECK: Function Attrs: memory(aarch64_za: read)
+; CHECK: @fn_inaccessiblemem_read_aarch64_za()
+declare void @fn_inaccessiblemem_read_aarch64_za()
+    memory(aarch64_za: read)
+
+; CHECK: Function Attrs: memory(aarch64_fpmr: write)
+; CHECK: @fn_inaccessiblemem_write_aarch64_fpmr()
+declare void @fn_inaccessiblemem_write_aarch64_fpmr()
+    memory(aarch64_fpmr: write)
+
+; CHECK: Function Attrs: memory(aarch64_fpmr: read)
+; CHECK: @fn_inaccessiblemem_read_aarch64_fpmr()
+declare void @fn_inaccessiblemem_read_aarch64_fpmr()
+    memory(aarch64_fpmr: read)
+
+; CHECK: Function Attrs: memory(aarch64_fpmr: read, aarch64_za: write)
+; CHECK: @fn_inaccessiblemem_read_aarch64_fpmr_write_aarch64_za()
+declare void @fn_inaccessiblemem_read_aarch64_fpmr_write_aarch64_za()
+    memory(aarch64_fpmr: read, aarch64_za: write)

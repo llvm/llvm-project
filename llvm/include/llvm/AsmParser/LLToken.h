@@ -203,6 +203,8 @@ enum Kind {
   kw_readwrite,
   kw_argmem,
   kw_inaccessiblemem,
+  kw_aarch64_fpmr,
+  kw_aarch64_za,
   kw_errnomem,
 
   // Legacy attributes:
