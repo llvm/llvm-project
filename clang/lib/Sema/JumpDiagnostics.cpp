@@ -332,8 +332,6 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
   unsigned &ParentScope = ((isa<Expr>(S) && !isa<StmtExpr>(S))
                             ? origParentScope : independentParentScope);
 
-  unsigned StmtsToSkip = 0u;
-
   // If we found a label, remember that it is in ParentScope scope.
   switch (S->getStmtClass()) {
   case Stmt::AddrLabelExprClass:
@@ -679,10 +677,6 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
   for (Stmt *SubStmt : S->children()) {
     if (!SubStmt)
         continue;
-    if (StmtsToSkip) {
-      --StmtsToSkip;
-      continue;
-    }
 
     // Cases, labels, attributes, and defaults aren't "scope parents".  It's also
     // important to handle these iteratively instead of recursively in
