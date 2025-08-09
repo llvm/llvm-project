@@ -2256,7 +2256,7 @@ class BitPermutationSelector {
   }
 
   // Instruction selection for the 32-bit case.
-  SDNode *Select32(SDNode *N, bool LateMask, unsigned *InstCnt) {
+  SDValue Select32(SDNode *N, bool LateMask, unsigned *InstCnt) {
     SDLoc dl(N);
     SDValue Res;
 
@@ -2337,7 +2337,7 @@ class BitPermutationSelector {
                         ANDIVal, ANDISVal), 0);
     }
 
-    return Res.getNode();
+    return Res;
   }
 
   unsigned SelectRotMask64Count(unsigned RLAmt, bool Repl32,
@@ -2642,7 +2642,7 @@ class BitPermutationSelector {
   }
 
   // Instruction selection for the 64-bit case.
-  SDNode *Select64(SDNode *N, bool LateMask, unsigned *InstCnt) {
+  SDValue Select64(SDNode *N, bool LateMask, unsigned *InstCnt) {
     SDLoc dl(N);
     SDValue Res;
 
@@ -2782,14 +2782,14 @@ class BitPermutationSelector {
       }
     }
 
-    return Res.getNode();
+    return Res;
   }
 
-  SDNode *Select(SDNode *N, bool LateMask, unsigned *InstCnt = nullptr) {
+  SDValue Select(SDNode *N, bool LateMask, unsigned *InstCnt = nullptr) {
     // Fill in BitGroups.
     collectBitGroups(LateMask);
     if (BitGroups.empty())
-      return nullptr;
+      return SDValue();
 
     // For 64-bit values, figure out when we can use 32-bit instructions.
     if (Bits.size() == 64)
@@ -2805,7 +2805,7 @@ class BitPermutationSelector {
       return Select64(N, LateMask, InstCnt);
     }
 
-    return nullptr;
+    return SDValue();
   }
 
   void eraseMatchingBitGroups(function_ref<bool(const BitGroup &)> F) {
@@ -2831,12 +2831,12 @@ public:
   // Here we try to match complex bit permutations into a set of
   // rotate-and-shift/shift/and/or instructions, using a set of heuristics
   // known to produce optimal code for common cases (like i32 byte swapping).
-  SDNode *Select(SDNode *N) {
+  SDValue Select(SDNode *N) {
     Memoizer.clear();
     auto Result =
         getValueBits(SDValue(N, 0), N->getValueType(0).getSizeInBits());
     if (!Result.first)
-      return nullptr;
+      return SDValue();
     Bits = std::move(*Result.second);
 
     LLVM_DEBUG(dbgs() << "Considering bit-permutation-based instruction"
@@ -2859,21 +2859,21 @@ public:
 
     unsigned InstCnt = 0, InstCntLateMask = 0;
     LLVM_DEBUG(dbgs() << "\tEarly masking:\n");
-    SDNode *RN = Select(N, false, &InstCnt);
+    SDValue RV = Select(N, false, &InstCnt);
     LLVM_DEBUG(dbgs() << "\t\tisel would use " << InstCnt << " instructions\n");
 
     LLVM_DEBUG(dbgs() << "\tLate masking:\n");
-    SDNode *RNLM = Select(N, true, &InstCntLateMask);
+    SDValue RVLM = Select(N, true, &InstCntLateMask);
     LLVM_DEBUG(dbgs() << "\t\tisel would use " << InstCntLateMask
                       << " instructions\n");
 
     if (InstCnt <= InstCntLateMask) {
       LLVM_DEBUG(dbgs() << "\tUsing early-masking for isel\n");
-      return RN;
+      return RV;
     }
 
     LLVM_DEBUG(dbgs() << "\tUsing late-masking for isel\n");
-    return RNLM;
+    return RVLM;
   }
 };
 
@@ -4104,8 +4104,9 @@ bool PPCDAGToDAGISel::tryBitPermutation(SDNode *N) {
   case ISD::AND:
   case ISD::OR: {
     BitPermutationSelector BPS(CurDAG);
-    if (SDNode *New = BPS.Select(N)) {
-      ReplaceNode(N, New);
+    if (SDValue New = BPS.Select(N)) {
+      CurDAG->ReplaceAllUsesWith(N, &New);
+      CurDAG->RemoveDeadNode(N);
       return true;
     }
     return false;
