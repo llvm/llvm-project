@@ -2860,14 +2860,18 @@ static SDValue lowerFREM(SDValue Op, SelectionDAG &DAG,
   EVT Ty = Op.getValueType();
   SDNodeFlags Flags = Op->getFlags();
 
-  SDValue Div = DAG.getNode(ISD::FDIV, DL, Ty, X, Y, Flags);
-  SDValue Trunc = DAG.getNode(ISD::FTRUNC, DL, Ty, Div, Flags);
+  // fdiv can still generate inf and nan when nnan and ninf are set.
+  SDNodeFlags NewFlags = Flags;
+  NewFlags.setNoNaNs(false);
+  NewFlags.setNoInfs(false);
+  SDValue Div = DAG.getNode(ISD::FDIV, DL, Ty, X, Y, NewFlags);
+  SDValue Trunc = DAG.getNode(ISD::FTRUNC, DL, Ty, Div, NewFlags);
   SDValue Mul = DAG.getNode(ISD::FMUL, DL, Ty, Trunc, Y,
-                            Flags | SDNodeFlags::AllowContract);
+                            NewFlags | SDNodeFlags::AllowContract);
   SDValue Sub = DAG.getNode(ISD::FSUB, DL, Ty, X, Mul,
-                            Flags | SDNodeFlags::AllowContract);
+                            NewFlags | SDNodeFlags::AllowContract);
 
-  if (AllowUnsafeFPMath || Flags.hasNoInfs())
+  if (AllowUnsafeFPMath || (Flags.hasNoInfs() && Flags.hasApproximateFuncs()))
     return Sub;
 
   // If Y is infinite, return X

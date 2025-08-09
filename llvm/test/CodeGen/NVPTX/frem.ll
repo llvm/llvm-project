@@ -147,14 +147,14 @@ define half @frem_f16_ninf(half %a, half %b) {
 ; NORMAL-NEXT:    ld.param.b16 %rs2, [frem_f16_ninf_param_1];
 ; NORMAL-NEXT:    cvt.f32.f16 %r1, %rs2;
 ; NORMAL-NEXT:    cvt.f32.f16 %r2, %rs1;
-; NORMAL-NEXT:    div.rn.f32 %r3, %r2, %r1;
+; NORMAL-NEXT:    div.approx.f32 %r3, %r2, %r1;
 ; NORMAL-NEXT:    cvt.rzi.f32.f32 %r4, %r3;
 ; NORMAL-NEXT:    neg.f32 %r5, %r4;
 ; NORMAL-NEXT:    fma.rn.f32 %r6, %r5, %r1, %r2;
 ; NORMAL-NEXT:    cvt.rn.f16.f32 %rs3, %r6;
 ; NORMAL-NEXT:    st.param.b16 [func_retval0], %rs3;
 ; NORMAL-NEXT:    ret;
-  %r = frem ninf half %a, %b
+  %r = frem ninf afn half %a, %b
   ret half %r
 }
 
@@ -180,13 +180,13 @@ define float @frem_f32_ninf(float %a, float %b) {
 ; NORMAL-NEXT:  // %bb.0:
 ; NORMAL-NEXT:    ld.param.b32 %r1, [frem_f32_ninf_param_0];
 ; NORMAL-NEXT:    ld.param.b32 %r2, [frem_f32_ninf_param_1];
-; NORMAL-NEXT:    div.rn.f32 %r3, %r1, %r2;
+; NORMAL-NEXT:    div.approx.f32 %r3, %r1, %r2;
 ; NORMAL-NEXT:    cvt.rzi.f32.f32 %r4, %r3;
 ; NORMAL-NEXT:    neg.f32 %r5, %r4;
 ; NORMAL-NEXT:    fma.rn.f32 %r6, %r5, %r2, %r1;
 ; NORMAL-NEXT:    st.param.b32 [func_retval0], %r6;
 ; NORMAL-NEXT:    ret;
-  %r = frem ninf float %a, %b
+  %r = frem ninf afn float %a, %b
   ret float %r
 }
 
@@ -218,7 +218,7 @@ define double @frem_f64_ninf(double %a, double %b) {
 ; NORMAL-NEXT:    fma.rn.f64 %rd6, %rd5, %rd2, %rd1;
 ; NORMAL-NEXT:    st.param.b64 [func_retval0], %rd6;
 ; NORMAL-NEXT:    ret;
-  %r = frem ninf double %a, %b
+  %r = frem ninf afn double %a, %b
   ret double %r
 }
 
