@@ -199,8 +199,14 @@ private:
   /// Return a pointer to object file at specified path, for a specified
   /// architecture (e.g. if path refers to a Mach-O universal binary, only one
   /// object file from it will be returned).
-  Expected<ObjectFile *> getOrCreateObject(const std::string &Path,
-                                           const std::string &ArchName);
+  Expected<ObjectFile *> getOrCreateObject(const std::string &InputPath,
+                                           const std::string &DefaultArchName);
+
+  /// Return a pointer to object file at specified path, for a specified
+  /// architecture that is present inside an archive file
+  Expected<ObjectFile *> getOrCreateObjectFromArchive(StringRef ArchivePath,
+                                                      StringRef MemberName,
+                                                      StringRef ArchName);
 
   /// Update the LRU cache order when a binary is accessed.
   void recordAccess(CachedBinary &Bin);
@@ -225,6 +231,21 @@ private:
   /// to Mach-O universal binary.
   std::map<std::pair<std::string, std::string>, std::unique_ptr<ObjectFile>>
       ObjectForUBPathAndArch;
+
+  struct ArchiveCacheKey {
+    std::string ArchivePath; // Storage for StringRef
+    std::string MemberName;  // Storage for StringRef
+    std::string ArchName;    // Storage for StringRef
+
+    // Required for map comparison
+    bool operator<(const ArchiveCacheKey &Other) const {
+      return std::tie(ArchivePath, MemberName, ArchName) <
+             std::tie(Other.ArchivePath, Other.MemberName, Other.ArchName);
+    }
+  };
+
+  std::map<ArchiveCacheKey, std::unique_ptr<ObjectFile>>
+      ObjectForArchivePathAndArch;
 
   Options Opts;
 
