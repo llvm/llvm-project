@@ -8,7 +8,7 @@
 // RUN: %clang_cc1 -triple riscv64 -fsyntax-only -verify=silence %s
 // RUN: %clang_cc1 -triple powerpc-unknown-linux-gnu -fsyntax-only -verify=silence %s
 // RUN: %clang_cc1 -triple powerpc64-unknown-linux-gnu -fsyntax-only -verify=silence %s
-// RUN: %clang_cc1 -triple ppc64le -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple ppc64le -fsyntax-only -verify=silence %s
 // RUN: %clang_cc1 -triple powerpc64-ibm-aix-xcoff -fsyntax-only -verify=AIX %s
 // RUN: %clang_cc1 -triple powerpc-ibm-aix-xcoff -fsyntax-only -verify=AIX %s
 
