@@ -156,6 +156,10 @@ protected:
     return {CurArray, CurArray + NumNonEmpty};
   }
 
+  iterator_range<const void **> buckets() {
+    return make_range(CurArray, EndPointer());
+  }
+
   /// insert_imp - This returns true if the pointer was new to the set, false if
   /// it was already in the set.  This is hidden from the client so that the
   /// derived class can check that the right type of pointer is passed in.
@@ -441,13 +445,12 @@ public:
       return Removed;
     }
 
-    for (const void **APtr = CurArray, **E = EndPointer(); APtr != E; ++APtr) {
-      const void *Value = *APtr;
-      if (Value == getTombstoneMarker() || Value == getEmptyMarker())
+    for (const void *&Bucket : buckets()) {
+      if (Bucket == getTombstoneMarker() || Bucket == getEmptyMarker())
         continue;
-      PtrType Ptr = PtrTraits::getFromVoidPointer(const_cast<void *>(Value));
+      PtrType Ptr = PtrTraits::getFromVoidPointer(const_cast<void *>(Bucket));
       if (P(Ptr)) {
-        *APtr = getTombstoneMarker();
+        Bucket = getTombstoneMarker();
         ++NumTombstones;
         incrementEpoch();
         Removed = true;
