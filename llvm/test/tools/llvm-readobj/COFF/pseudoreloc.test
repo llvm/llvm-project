@@ -1,17 +1,19 @@
-DEFINE: %{local} = 0x3000
-DEFINE: %{addr1l} = E8
-DEFINE: %{addr3l} = D8
+DEFINE: %{local1a_386} = 0x3000
+DEFINE: %{sym1_386} = 0x20B0
+DEFINE: %{sym3_386} = 0x20BC
+DEFINE: %{local1a_x64} = 0x3000
+DEFINE: %{sym1_x64} = 0x20E8
+DEFINE: %{sym3_x64} = 0x20D8
+
 RUN: yaml2obj  -o %t.exe-x86_64 %p/Inputs/pseudoreloc.x86_64.yaml
 RUN: llvm-readobj %t.exe-x86_64 --coff-pseudoreloc 2>&1 | \
 RUN:   FileCheck %s --check-prefixes=CHECK,CHECK-X64 --match-full-lines --implicit-check-not=warning \
-RUN:     -D#WORD=8 -D#SYM1=0x20%{addr1l} -D#SYM3=0x20%{addr3l} -D#LOCAL1A=%{local} -DPREFIX=
+RUN:     -D#WORD=8 -D#SYM1=%{sym1_x64} -D#SYM3=%{sym3_x64} -D#LOCAL1A=%{local1a_x64} -DPREFIX=
 
-REDEFINE: %{addr1l} = B0
-REDEFINE: %{addr3l} = BC
 RUN: yaml2obj   -o %t.exe-i386  %p/Inputs/pseudoreloc.i386.yaml
 RUN: llvm-readobj  %t.exe-i386  --coff-pseudoreloc 2>&1 | \
 RUN:   FileCheck %s --check-prefixes=CHECK,CHECK-386 --match-full-lines --implicit-check-not=warning \
-RUN:     -D#WORD=4 -D#SYM1=0x20%{addr1l} -D#SYM3=0x20%{addr3l} -D#LOCAL1A=%{local} -DPREFIX=_
+RUN:     -D#WORD=4 -D#SYM1=%{sym1_386} -D#SYM3=%{sym3_386} -D#LOCAL1A=%{local1a_386} -DPREFIX=_
 
 CHECK-X64:      Format: COFF-x86-64
 CHECK-X64-NEXT: Arch: x86_64
@@ -57,34 +59,37 @@ CHECK-NEXT:  }
 CHECK-NEXT: ]
 
 ; Test that llvm-readobj silently ignores missing imported symbol names.
-RUN: sed -E -e '/Name: *\.rdata/,/Name:/{/SectionData:/{s/%{addr1l}200000/30000000/;s/%{addr3l}200000/00FFFF00/}}' %p/Inputs/pseudoreloc.i386.yaml | \
-RUN:   yaml2obj -o %t.corrupted-iat.exe-i386
-RUN: llvm-readobj  %t.corrupted-iat.exe-i386 --coff-pseudoreloc 2>&1 | \
-RUN:   FileCheck %s --check-prefix=INVALIDSYMBOL --match-full-lines -D#LOCAL1A=%{local} --implicit-check-not=warning
+RUN: yaml2obj  -o %t.corrupted-iat.exe-i386 %p/Inputs/pseudoreloc.i386.yaml -DSYMBOL0=30000000 -DSYMBOL1=00FFFF00
+RUN: llvm-readobj %t.corrupted-iat.exe-i386 --coff-pseudoreloc 2>&1 | \
+RUN:   FileCheck %s --check-prefix=INVALIDSYMBOL --match-full-lines -D#LOCAL1A=%{local1a_386} --implicit-check-not=warning
 
 INVALIDSYMBOL:      Symbol: 0x30
 INVALIDSYMBOL-NEXT: Target: 0x[[#%X,LOCAL1A]]
 INVALIDSYMBOL:      Symbol: 0xFFFF00
-INVALIDSYMBOL-NEXT: Target: 0x[[#%X,LOCAL1A+8]]
+INVALIDSYMBOL-NEXT: Target: 0x[[#%X,LOCAL1A+4]]
 
-; Assume the position of the relocation list for further tests.
-RUN: yaml2obj %p/Inputs/pseudoreloc.i386.yaml | llvm-readobj --syms - | \
-RUN:   FileCheck %s --check-prefix=RELOCPOS --match-full-lines
+; Assume the position of the section and the relocation list for further tests.
+RUN: FileCheck --input-file=%p/Inputs/pseudoreloc.i386.yaml %s --check-prefix=RELOCPOS --match-full-lines
 
-RELOCPOS: Name: ___RUNTIME_PSEUDO_RELOC_LIST_END__
-RELOCPOS-NEXT: Value: 80
-RELOCPOS: Name: ___RUNTIME_PSEUDO_RELOC_LIST__
-RELOCPOS-NEXT: Value: 8
+RELOCPOS:       - Name:            .rdata
+RELOCPOS-NEXT:    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+RELOCPOS-NEXT:    VirtualAddress:  8192
+RELOCPOS:       - Name:            .data
+RELOCPOS-NEXT:    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+RELOCPOS-NEXT:    VirtualAddress:  12288
+RELOCPOS:       - Name: ___RUNTIME_PSEUDO_RELOC_LIST_END__
+RELOCPOS-NEXT:    Value: {{\[\[END=80\]\]}}
+RELOCPOS:       - Name: ___RUNTIME_PSEUDO_RELOC_LIST__
+RELOCPOS-NEXT:    Value: {{\[\[BEGIN=8\]\]}}
 
 ; Test that llvm-readobj shows an empty list if the relocation list has no contents.
-RUN: sed -E -e '/__RUNTIME_PSEUDO_RELOC_LIST_END__/,/Name:/{/Value:/s/[0-9]+/20/}' %p/Inputs/pseudoreloc.i386.yaml | \
-RUN:   yaml2obj -o %t.empty-list.exe-i386
-RUN: llvm-readobj  %t.empty-list.exe-i386 --coff-pseudoreloc 2>&1 | \
+RUN: yaml2obj  -o %t.empty-list.exe-i386 %p/Inputs/pseudoreloc.i386.yaml -DEND=20
+RUN: llvm-readobj %t.empty-list.exe-i386 --coff-pseudoreloc 2>&1 | \
 RUN:   FileCheck %s --check-prefix=EMPTY --implicit-check-not=warning
 
-RUN: sed -E -e '/__RUNTIME_PSEUDO_RELOC_LIST_END__/,/Name:/{/Value:/s/[0-9]+/8/}' %p/Inputs/pseudoreloc.i386.yaml | \
-RUN:   yaml2obj -o %t.noheader.exe-i386
-RUN: llvm-readobj  %t.noheader.exe-i386 --coff-pseudoreloc 2>&1 | \
+; Test that llvm-readobj shows an empty list if the relocation list has no header.
+RUN: yaml2obj  -o %t.no-header.exe-i386 %p/Inputs/pseudoreloc.i386.yaml -DEND=8
+RUN: llvm-readobj %t.no-header.exe-i386 --coff-pseudoreloc 2>&1 | \
 RUN:   FileCheck %s --check-prefix=EMPTY --implicit-check-not=warning
 
 ; Test that llvm-readobj shows an empty list if the image is stripped.
@@ -102,28 +107,22 @@ RUN: llvm-readobj --coff-pseudoreloc %p/Inputs/trivial.obj.coff-i386 2>&1 | \
 RUN:   FileCheck %s --check-prefix=EMPTY --implicit-check-not=warning
 
 ; Test that llvm-readobj warns if the header of the relocation list is broken.
-RUN: sed -E -e '/__RUNTIME_PSEUDO_RELOC_LIST__/,/Name:/{/Value:/s/[0-9]+/20/}' %p/Inputs/pseudoreloc.i386.yaml | \
-RUN:   yaml2obj -o %t.corrupted-header.exe-i386
-RUN: llvm-readobj  %t.corrupted-header.exe-i386 --coff-pseudoreloc 2>&1 | \
+RUN: yaml2obj  -o %t.broken-header.exe-i386 %p/Inputs/pseudoreloc.i386.yaml -DBEGIN=20 -DEND=48
+RUN: llvm-readobj %t.broken-header.exe-i386 --coff-pseudoreloc 2>&1 | \
 RUN:   FileCheck %s --check-prefixes=EMPTY,WARN-INVALIDHEADER
 
 ; Test that llvm-readobj warns if end < start.
-RUN: sed -E -e '/__RUNTIME_PSEUDO_RELOC_LIST_END__/,/Name:/{/Value:/s/[0-9]+/8/}' \
-RUN:        -e '/__RUNTIME_PSEUDO_RELOC_LIST__/,/Name:/{/Value:/s/[0-9]+/20/}' %p/Inputs/pseudoreloc.i386.yaml | \
-RUN:   yaml2obj -o %t.negative-size.exe-i386
-RUN: llvm-readobj  %t.negative-size.exe-i386 --coff-pseudoreloc 2>&1 | \
+RUN: yaml2obj  -o %t.negative-size.exe-i386 %p/Inputs/pseudoreloc.i386.yaml -DBEGIN=20 -DEND=8
+RUN: llvm-readobj %t.negative-size.exe-i386 --coff-pseudoreloc 2>&1 | \
 RUN:   FileCheck %s --check-prefixes=EMPTY,WARN-LOWEREND
 
 ; Test that llvm-readobj warns if the marker symbol points out of the section space.
-RUN: sed -E -e '/__RUNTIME_PSEUDO_RELOC_LIST_END__/,/Name:/{/Value:/s/[0-9]+/9999/}' \
-RUN:        -e '/__RUNTIME_PSEUDO_RELOC_LIST__/,/Name:/{/Value:/s/[0-9]+/8888/}' %p/Inputs/pseudoreloc.i386.yaml | \
-RUN:   yaml2obj -o %t.outofrange-both.exe-i386
-RUN: llvm-readobj  %t.outofrange-both.exe-i386 --coff-pseudoreloc 2>&1 | \
+RUN: yaml2obj  -o %t.outofrange-both.exe-i386 %p/Inputs/pseudoreloc.i386.yaml -DBEGIN=8888 -DEND=9999
+RUN: llvm-readobj %t.outofrange-both.exe-i386 --coff-pseudoreloc 2>&1 | \
 RUN:   FileCheck %s --check-prefixes=EMPTY,WARN-OUTOFRANGE
 
-RUN: sed -E -e '/__RUNTIME_PSEUDO_RELOC_LIST_END__/,/Name:/{/Value:/s/[0-9]+/9999/}' %p/Inputs/pseudoreloc.i386.yaml | \
-RUN:   yaml2obj -o %t.outofrange-end.exe-i386
-RUN: llvm-readobj  %t.outofrange-end.exe-i386 --coff-pseudoreloc 2>&1 | \
+RUN: yaml2obj  -o %t.outofrange-end.exe-i386 %p/Inputs/pseudoreloc.i386.yaml -DEND=9999
+RUN: llvm-readobj %t.outofrange-end.exe-i386 --coff-pseudoreloc 2>&1 | \
 RUN:   FileCheck %s --check-prefixes=EMPTY,WARN-OUTOFRANGE
 
 EMPTY:      Format: COFF-i386
@@ -144,23 +143,45 @@ $ split-file pseudoreloc.test /tmp/pseudoreloc && bash /tmp/pseudoreloc/generate
 cd "$(dirname $0)"
 set -e
 
-llc -mtriple i386-mingw32 -filetype obj export1.ll -o export1.i386.o
-ld.lld -m i386pe --dll export1.i386.o -o export1.i386.dll -entry=
-llc -mtriple i386-mingw32 -filetype obj export2.ll -o export2.i386.o
-ld.lld -m i386pe --dll export2.i386.o -o export2.i386.dll -entry=
-llc -mtriple i386-mingw32 -filetype obj import.ll -o import.i386.o
-ld.lld -m i386pe -S import.i386.o export1.i386.dll export2.i386.dll -o pseudoreloc.i386.exe -entry=start \
-  --disable-dynamicbase --disable-reloc-section
-obj2yaml pseudoreloc.i386.exe -o pseudoreloc.i386.yaml
+generate() {
+  LANG=C
+  local arch=$1
+  local emul=$2
 
-llc -mtriple x86_64-mingw32 -filetype obj export1.ll -o export1.x86_64.o
-ld.lld -m i386pep --dll export1.x86_64.o -o export1.x86_64.dll -entry=
-llc -mtriple x86_64-mingw32 -filetype obj export2.ll -o export2.x86_64.o
-ld.lld -m i386pep --dll export2.x86_64.o -o export2.x86_64.dll -entry=
-llc -mtriple x86_64-mingw32 -filetype obj import.ll -o import.x86_64.o
-ld.lld -m i386pep -S import.x86_64.o export1.x86_64.dll export2.x86_64.dll -o pseudoreloc.x86_64.exe -entry=start \
-  --disable-dynamicbase --disable-reloc-section
-obj2yaml pseudoreloc.x86_64.exe -o pseudoreloc.x86_64.yaml
+  llc -mtriple $arch-mingw32 -filetype obj export1.ll -o export1.$arch.o
+  ld.lld -m $emul --dll export1.$arch.o -o export1.$arch.dll -entry=
+  llc -mtriple $arch-mingw32 -filetype obj export2.ll -o export2.$arch.o
+  ld.lld -m $emul --dll export2.$arch.o -o export2.$arch.dll -entry=
+  llc -mtriple $arch-mingw32 -filetype obj import.ll -o import.$arch.o
+  ld.lld -m $emul -S import.$arch.o export1.$arch.dll export2.$arch.dll -o pseudoreloc.$arch.exe -entry=start \
+    --disable-dynamicbase --disable-reloc-section
+
+  obj2yaml pseudoreloc.$arch.exe -o pseudoreloc.$arch.yaml.orig
+
+  llvm-readobj --coff-imports --syms --section-headers pseudoreloc.$arch.exe > dump.$arch.txt
+  local begin=$(sed -n -e '/__RUNTIME_PSEUDO_RELOC_LIST__/,/Value:/{/Value:/{s/ *Value: *//p;q}}' dump.$arch.txt)
+
+  # Make
+  #  - the referenced symbol in 1st and 2nd relocation entry parametarizable
+  #  - the marker symbols' value parameterizable
+  sed -E -f - pseudoreloc.$arch.yaml.orig <<EOT > pseudoreloc.$arch.yaml
+/- Name: *\\.rdata/,/SectionData:/{
+  s/( *SectionData: *[0-9A-F]{$(($begin * 2 + 24))})(.{8})(.{16})(.{8})/\\1[[SYMBOL0=\\2]]\\3[[SYMBOL1=\\4]]/
+}
+/__RUNTIME_PSEUDO_RELOC_LIST_END__/,/Value:/{
+  /Value:/s/([0-9]+)/[[END=\1]]/
+}
+/__RUNTIME_PSEUDO_RELOC_LIST__/,/Value:/{
+  /Value:/s/([0-9]+)/[[BEGIN=\1]]/
+}
+EOT
+
+  # Ensure the binaries generated from parameterized yaml and original one are exact same.
+  diff <(yaml2obj pseudoreloc.$arch.yaml.orig -o -) <(yaml2obj pseudoreloc.$arch.yaml -o -)
+}
+
+generate i386 i386pe
+generate x86_64 i386pep
 
 #--- export1.ll
 @sym1 = dso_local dllexport global [4 x i8] c"\11\22\33\44"
