@@ -3652,11 +3652,22 @@ static void warnAboutRedundantParens(Sema &S, Declarator &D, QualType T) {
     // here: even (e.g.) "int ::x" is visually ambiguous even though it's
     // formally unambiguous.
     if (StartsWithDeclaratorId && D.getCXXScopeSpec().isValid()) {
-      for (NestedNameSpecifier *NNS = D.getCXXScopeSpec().getScopeRep(); NNS;
-           NNS = NNS->getPrefix()) {
-        if (NNS->getKind() == NestedNameSpecifier::Global)
+      NestedNameSpecifier NNS = D.getCXXScopeSpec().getScopeRep();
+      for (;;) {
+        switch (NNS.getKind()) {
+        case NestedNameSpecifier::Kind::Global:
           return;
+        case NestedNameSpecifier::Kind::Type:
+          NNS = NNS.getAsType()->getPrefix();
+          continue;
+        case NestedNameSpecifier::Kind::Namespace:
+          NNS = NNS.getAsNamespaceAndPrefix().Prefix;
+          continue;
+        default:
+          goto out;
+        }
       }
+    out:;
     }
 
     S.Diag(Paren.Loc, diag::warn_redundant_parens_around_declarator)
@@ -5319,7 +5330,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                   state.getDeclarator()
                           .getCXXScopeSpec()
                           .getScopeRep()
-                          ->getKind() == NestedNameSpecifier::TypeSpec) ||
+                          .getKind() == NestedNameSpecifier::Kind::Type) ||
                  state.getDeclarator().getContext() ==
                      DeclaratorContext::Member ||
                  state.getDeclarator().getContext() ==

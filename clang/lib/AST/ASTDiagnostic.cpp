@@ -458,13 +458,12 @@ void clang::FormatASTNodeDiagnosticArgument(
       ND->getNameForDiagnostic(OS, Context.getPrintingPolicy(), Qualified);
       break;
     }
-    case DiagnosticsEngine::ak_nestednamespec: {
-      NestedNameSpecifier *NNS = reinterpret_cast<NestedNameSpecifier*>(Val);
-      NNS->print(OS, Context.getPrintingPolicy(),
+    case DiagnosticsEngine::ak_nestednamespec:
+      NestedNameSpecifier::getFromVoidPointer(reinterpret_cast<void *>(Val))
+          .print(OS, Context.getPrintingPolicy(),
                  /*ResolveTemplateArguments=*/false,
                  /*PrintFinalScopeResOp=*/false);
       break;
-    }
     case DiagnosticsEngine::ak_declcontext: {
       DeclContext *DC = reinterpret_cast<DeclContext *> (Val);
       assert(DC && "Should never have a null declaration context");

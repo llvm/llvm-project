@@ -708,11 +708,8 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
     Proto += D->getQualifiedNameAsString();
   } else {
     llvm::raw_string_ostream OS(Proto);
-    if (!Policy.SuppressScope) {
-      if (const NestedNameSpecifier *NS = D->getQualifier()) {
-        NS->print(OS, Policy);
-      }
-    }
+    if (!Policy.SuppressScope)
+      D->getQualifier().print(OS, Policy);
     D->getNameInfo().printName(OS, Policy);
   }
 

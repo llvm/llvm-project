@@ -394,12 +394,14 @@ public:
   }
   void VisitMemberPointerType(const MemberPointerType *T) {
     // FIXME: Provide a NestedNameSpecifier visitor.
-    NestedNameSpecifier *Qualifier = T->getQualifier();
-    if (NestedNameSpecifier::SpecifierKind K = Qualifier->getKind();
-        K == NestedNameSpecifier::TypeSpec)
-      Visit(Qualifier->getAsType());
+    NestedNameSpecifier Qualifier = T->getQualifier();
+    if (NestedNameSpecifier::Kind K = Qualifier.getKind();
+        K == NestedNameSpecifier::Kind::Type)
+      Visit(Qualifier.getAsType());
     if (T->isSugared())
-      Visit(T->getMostRecentCXXRecordDecl()->getTypeForDecl());
+      Visit(cast<MemberPointerType>(T->getCanonicalTypeUnqualified())
+                ->getQualifier()
+                .getAsType());
     Visit(T->getPointeeType());
   }
   void VisitArrayType(const ArrayType *T) { Visit(T->getElementType()); }

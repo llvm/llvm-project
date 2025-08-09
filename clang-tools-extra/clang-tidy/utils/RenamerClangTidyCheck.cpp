@@ -281,9 +281,10 @@ public:
   }
 
   bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc Loc) {
-    if (const NestedNameSpecifier *Spec = Loc.getNestedNameSpecifier()) {
+    if (NestedNameSpecifier Spec = Loc.getNestedNameSpecifier();
+        Spec.getKind() == NestedNameSpecifier::Kind::Namespace) {
       if (const auto *Decl =
-              dyn_cast_if_present<NamespaceDecl>(Spec->getAsNamespace()))
+              dyn_cast<NamespaceDecl>(Spec.getAsNamespaceAndPrefix().Namespace))
         Check->addUsage(Decl, Loc.getLocalSourceRange(), SM);
     }
 

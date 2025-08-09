@@ -898,9 +898,9 @@ void JSONNodeDumper::VisitNamespaceAliasDecl(const NamespaceAliasDecl *NAD) {
 
 void JSONNodeDumper::VisitUsingDecl(const UsingDecl *UD) {
   std::string Name;
-  if (const NestedNameSpecifier *NNS = UD->getQualifier()) {
+  if (NestedNameSpecifier Qualifier = UD->getQualifier()) {
     llvm::raw_string_ostream SOS(Name);
-    NNS->print(SOS, UD->getASTContext().getPrintingPolicy());
+    Qualifier.print(SOS, UD->getASTContext().getPrintingPolicy());
   }
   Name += UD->getNameAsString();
   JOS.attribute("name", Name);

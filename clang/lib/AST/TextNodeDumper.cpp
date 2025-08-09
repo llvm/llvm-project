@@ -1037,35 +1037,34 @@ void clang::TextNodeDumper::dumpTemplateSpecializationKind(
   }
 }
 
-void clang::TextNodeDumper::dumpNestedNameSpecifier(const NestedNameSpecifier *NNS) {
+void clang::TextNodeDumper::dumpNestedNameSpecifier(NestedNameSpecifier NNS) {
   if (!NNS)
     return;
 
   AddChild([=] {
     OS << "NestedNameSpecifier";
 
-    switch (NNS->getKind()) {
-    case NestedNameSpecifier::Identifier:
-      OS << " Identifier";
-      OS << " '" << NNS->getAsIdentifier()->getName() << "'";
-      break;
-    case NestedNameSpecifier::Namespace:
+    switch (NNS.getKind()) {
+    case NestedNameSpecifier::Kind::Namespace: {
+      auto [Namespace, Prefix] = NNS.getAsNamespaceAndPrefix();
       OS << " "; // "Namespace" is printed as the decl kind.
-      dumpBareDeclRef(NNS->getAsNamespace());
-      break;
-    case NestedNameSpecifier::TypeSpec:
-      OS << " TypeSpec";
-      dumpType(QualType(NNS->getAsType(), 0));
-      break;
-    case NestedNameSpecifier::Global:
-      OS << " Global";
-      break;
-    case NestedNameSpecifier::Super:
-      OS << " Super";
+      dumpBareDeclRef(Namespace);
+      dumpNestedNameSpecifier(Prefix);
       break;
     }
-
-    dumpNestedNameSpecifier(NNS->getPrefix());
+    case NestedNameSpecifier::Kind::Type:
+      OS << " TypeSpec";
+      dumpType(QualType(NNS.getAsType(), 0));
+      break;
+    case NestedNameSpecifier::Kind::Global:
+      OS << " Global";
+      break;
+    case NestedNameSpecifier::Kind::MicrosoftSuper:
+      OS << " Super";
+      break;
+    case NestedNameSpecifier::Kind::Null:
+      llvm_unreachable("unexpected null nested name specifier");
+    }
   });
 }
 
@@ -2804,8 +2803,7 @@ void TextNodeDumper::VisitTemplateTemplateParmDecl(
 
 void TextNodeDumper::VisitUsingDecl(const UsingDecl *D) {
   OS << ' ';
-  if (D->getQualifier())
-    D->getQualifier()->print(OS, D->getASTContext().getPrintingPolicy());
+  D->getQualifier().print(OS, D->getASTContext().getPrintingPolicy());
   OS << D->getDeclName();
   dumpNestedNameSpecifier(D->getQualifier());
 }

@@ -2702,12 +2702,10 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
 
 bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
                                CXXScopeSpec &SS) {
-  auto *NNS = SS.getScopeRep();
-  if (NNS && NNS->getKind() == NestedNameSpecifier::Super)
-    return LookupInSuper(R, NNS->getAsRecordDecl());
-  else
-
-    return LookupQualifiedName(R, LookupCtx);
+  NestedNameSpecifier Qualifier = SS.getScopeRep();
+  if (Qualifier.getKind() == NestedNameSpecifier::Kind::MicrosoftSuper)
+    return LookupInSuper(R, Qualifier.getAsMicrosoftSuper());
+  return LookupQualifiedName(R, LookupCtx);
 }
 
 bool Sema::LookupParsedName(LookupResult &R, Scope *S, CXXScopeSpec *SS,
@@ -2744,9 +2742,9 @@ bool Sema::LookupParsedName(LookupResult &R, Scope *S, CXXScopeSpec *SS,
       // FIXME: '__super' lookup semantics could be implemented by a
       // LookupResult::isSuperLookup flag which skips the initial search of
       // the lookup context in LookupQualified.
-      if (NestedNameSpecifier *NNS = SS->getScopeRep();
-          NNS->getKind() == NestedNameSpecifier::Super)
-        return LookupInSuper(R, NNS->getAsRecordDecl());
+      if (NestedNameSpecifier Qualifier = SS->getScopeRep();
+          Qualifier.getKind() == NestedNameSpecifier::Kind::MicrosoftSuper)
+        return LookupInSuper(R, Qualifier.getAsMicrosoftSuper());
     }
     IsDependent = !DC && isDependentScopeSpecifier(*SS);
   } else {
@@ -4553,40 +4551,101 @@ static void checkCorrectionVisibility(Sema &SemaRef, TypoCorrection &TC) {
 // the given NestedNameSpecifier (i.e. given a NestedNameSpecifier "foo::bar::",
 // fill the vector with the IdentifierInfo pointers for "foo" and "bar").
 static void getNestedNameSpecifierIdentifiers(
-    NestedNameSpecifier *NNS,
-    SmallVectorImpl<const IdentifierInfo*> &Identifiers) {
-  if (NestedNameSpecifier *Prefix = NNS->getPrefix())
-    getNestedNameSpecifierIdentifiers(Prefix, Identifiers);
-  else
+    NestedNameSpecifier NNS,
+    SmallVectorImpl<const IdentifierInfo *> &Identifiers) {
+  switch (NNS.getKind()) {
+  case NestedNameSpecifier::Kind::Null:
     Identifiers.clear();
+    return;
 
-  const IdentifierInfo *II = nullptr;
-
-  switch (NNS->getKind()) {
-  case NestedNameSpecifier::Identifier:
-    II = NNS->getAsIdentifier();
-    break;
-
-  case NestedNameSpecifier::Namespace: {
-    const NamespaceBaseDecl *Namespace = NNS->getAsNamespace();
+  case NestedNameSpecifier::Kind::Namespace: {
+    auto [Namespace, Prefix] = NNS.getAsNamespaceAndPrefix();
+    getNestedNameSpecifierIdentifiers(Prefix, Identifiers);
     if (const auto *NS = dyn_cast<NamespaceDecl>(Namespace);
         NS && NS->isAnonymousNamespace())
       return;
-    II = Namespace->getIdentifier();
-    break;
-  }
-
-  case NestedNameSpecifier::TypeSpec:
-    II = QualType(NNS->getAsType(), 0).getBaseTypeIdentifier();
-    break;
-
-  case NestedNameSpecifier::Global:
-  case NestedNameSpecifier::Super:
+    Identifiers.push_back(Namespace->getIdentifier());
     return;
   }
 
-  if (II)
-    Identifiers.push_back(II);
+  case NestedNameSpecifier::Kind::Type: {
+    for (const Type *T = NNS.getAsType(); /**/; /**/) {
+      switch (T->getTypeClass()) {
+      case Type::DependentName: {
+        auto *DT = cast<DependentNameType>(T);
+        getNestedNameSpecifierIdentifiers(DT->getQualifier(), Identifiers);
+        Identifiers.push_back(DT->getIdentifier());
+        return;
+      }
+      case Type::TemplateSpecialization: {
+        TemplateName Name =
+            cast<TemplateSpecializationType>(T)->getTemplateName();
+        if (const QualifiedTemplateName *QTN =
+                Name.getAsAdjustedQualifiedTemplateName()) {
+          getNestedNameSpecifierIdentifiers(QTN->getQualifier(), Identifiers);
+          Name = QTN->getUnderlyingTemplate();
+        }
+        if (const auto *TD = Name.getAsTemplateDecl(/*IgnoreDeduced=*/true))
+          Identifiers.push_back(TD->getIdentifier());
+        return;
+      }
+      case Type::DependentTemplateSpecialization: {
+        const DependentTemplateStorage &S =
+            cast<DependentTemplateSpecializationType>(T)
+                ->getDependentTemplateName();
+        getNestedNameSpecifierIdentifiers(S.getQualifier(), Identifiers);
+        // FIXME: Should this dig into the Name as well?
+        // Identifiers.push_back(S.getName().getIdentifier());
+        return;
+      }
+      case Type::SubstTemplateTypeParm:
+        T = cast<SubstTemplateTypeParmType>(T)
+                ->getReplacementType()
+                .getTypePtr();
+        continue;
+      case Type::TemplateTypeParm:
+        Identifiers.push_back(cast<TemplateTypeParmType>(T)->getIdentifier());
+        return;
+      case Type::Decltype:
+        return;
+      case Type::Enum:
+      case Type::Record:
+      case Type::InjectedClassName: {
+        auto *TT = cast<TagType>(T);
+        getNestedNameSpecifierIdentifiers(TT->getQualifier(), Identifiers);
+        Identifiers.push_back(TT->getOriginalDecl()->getIdentifier());
+        return;
+      }
+      case Type::Typedef: {
+        auto *TT = cast<TypedefType>(T);
+        getNestedNameSpecifierIdentifiers(TT->getQualifier(), Identifiers);
+        Identifiers.push_back(TT->getDecl()->getIdentifier());
+        return;
+      }
+      case Type::Using: {
+        auto *TT = cast<UsingType>(T);
+        getNestedNameSpecifierIdentifiers(TT->getQualifier(), Identifiers);
+        Identifiers.push_back(TT->getDecl()->getIdentifier());
+        return;
+      }
+      case Type::UnresolvedUsing: {
+        auto *TT = cast<UnresolvedUsingType>(T);
+        getNestedNameSpecifierIdentifiers(TT->getQualifier(), Identifiers);
+        Identifiers.push_back(TT->getDecl()->getIdentifier());
+        return;
+      }
+      default:
+        Identifiers.push_back(QualType(T, 0).getBaseTypeIdentifier());
+        return;
+      }
+    }
+    break;
+  }
+
+  case NestedNameSpecifier::Kind::Global:
+  case NestedNameSpecifier::Kind::MicrosoftSuper:
+    return;
+  }
 }
 
 void TypoCorrectionConsumer::FoundDecl(NamedDecl *ND, NamedDecl *Hiding,
@@ -4619,11 +4678,11 @@ void TypoCorrectionConsumer::FoundName(StringRef Name) {
 void TypoCorrectionConsumer::addKeywordResult(StringRef Keyword) {
   // Compute the edit distance between the typo and this keyword,
   // and add the keyword to the list of results.
-  addName(Keyword, nullptr, nullptr, true);
+  addName(Keyword, /*ND=*/nullptr, /*NNS=*/std::nullopt, /*isKeyword=*/true);
 }
 
 void TypoCorrectionConsumer::addName(StringRef Name, NamedDecl *ND,
-                                     NestedNameSpecifier *NNS, bool isKeyword) {
+                                     NestedNameSpecifier NNS, bool isKeyword) {
   // Use a simple length-based heuristic to determine the minimum possible
   // edit distance. If the minimum isn't good enough, bail out early.
   StringRef TypoStr = Typo->getName();
@@ -4715,10 +4774,10 @@ void TypoCorrectionConsumer::addNamespaces(
     Namespaces.addNameSpecifier(KNPair.first);
 
   bool SSIsTemplate = false;
-  if (NestedNameSpecifier *NNS =
-          (SS && SS->isValid()) ? SS->getScopeRep() : nullptr) {
-    if (const Type *T = NNS->getAsType())
-      SSIsTemplate = T->getTypeClass() == Type::TemplateSpecialization;
+  if (NestedNameSpecifier NNS = (SS ? SS->getScopeRep() : std::nullopt)) {
+    if (NNS.getKind() == NestedNameSpecifier::Kind::Type)
+      SSIsTemplate =
+          NNS.getAsType()->getTypeClass() == Type::TemplateSpecialization;
   }
   // Do not transform this into an iterator-based loop. The loop body can
   // trigger the creation of further types (through lazy deserialization) and
@@ -4820,17 +4879,15 @@ void TypoCorrectionConsumer::performQualifiedLookups() {
   for (const TypoCorrection &QR : QualifiedResults) {
     for (const auto &NSI : Namespaces) {
       DeclContext *Ctx = NSI.DeclCtx;
-      const Type *NSType = NSI.NameSpecifier->getAsType();
+      CXXRecordDecl *NamingClass = NSI.NameSpecifier.getAsRecordDecl();
 
       // If the current NestedNameSpecifier refers to a class and the
       // current correction candidate is the name of that class, then skip
       // it as it is unlikely a qualified version of the class' constructor
       // is an appropriate correction.
-      if (CXXRecordDecl *NSDecl = NSType ? NSType->getAsCXXRecordDecl() :
-                                           nullptr) {
-        if (NSDecl->getIdentifier() == QR.getCorrectionAsIdentifierInfo())
-          continue;
-      }
+      if (NamingClass &&
+          NamingClass->getIdentifier() == QR.getCorrectionAsIdentifierInfo())
+        continue;
 
       TypoCorrection TC(QR);
       TC.ClearCorrectionDecls();
@@ -4895,10 +4952,10 @@ void TypoCorrectionConsumer::performQualifiedLookups() {
 TypoCorrectionConsumer::NamespaceSpecifierSet::NamespaceSpecifierSet(
     ASTContext &Context, DeclContext *CurContext, CXXScopeSpec *CurScopeSpec)
     : Context(Context), CurContextChain(buildContextChain(CurContext)) {
-  if (NestedNameSpecifier *NNS =
-          CurScopeSpec ? CurScopeSpec->getScopeRep() : nullptr) {
+  if (NestedNameSpecifier NNS =
+          CurScopeSpec ? CurScopeSpec->getScopeRep() : std::nullopt) {
     llvm::raw_string_ostream SpecifierOStream(CurNameSpecifier);
-    NNS->print(SpecifierOStream, Context.getPrintingPolicy());
+    NNS.print(SpecifierOStream, Context.getPrintingPolicy());
 
     getNestedNameSpecifierIdentifiers(NNS, CurNameSpecifierIdentifiers);
   }
@@ -4912,7 +4969,7 @@ TypoCorrectionConsumer::NamespaceSpecifierSet::NamespaceSpecifierSet(
 
   // Add the global context as a NestedNameSpecifier
   SpecifierInfo SI = {cast<DeclContext>(Context.getTranslationUnitDecl()),
-                      NestedNameSpecifier::GlobalSpecifier(Context), 1};
+                      NestedNameSpecifier::getGlobal(), 1};
   DistanceMap[1].push_back(SI);
 }
 
@@ -4932,14 +4989,16 @@ auto TypoCorrectionConsumer::NamespaceSpecifierSet::buildContextChain(
 
 unsigned
 TypoCorrectionConsumer::NamespaceSpecifierSet::buildNestedNameSpecifier(
-    DeclContextList &DeclChain, NestedNameSpecifier *&NNS) {
+    DeclContextList &DeclChain, NestedNameSpecifier &NNS) {
   unsigned NumSpecifiers = 0;
   for (DeclContext *C : llvm::reverse(DeclChain)) {
     if (auto *ND = dyn_cast_or_null<NamespaceDecl>(C)) {
-      NNS = NestedNameSpecifier::Create(Context, NNS, ND);
+      NNS = NestedNameSpecifier(Context, ND, NNS);
       ++NumSpecifiers;
     } else if (auto *RD = dyn_cast_or_null<RecordDecl>(C)) {
-      NNS = NestedNameSpecifier::Create(Context, NNS, RD->getTypeForDecl());
+      QualType T = Context.getTagType(ElaboratedTypeKeyword::None, NNS, RD,
+                                      /*OwnsTag=*/false);
+      NNS = NestedNameSpecifier(T.getTypePtr());
       ++NumSpecifiers;
     }
   }
@@ -4948,7 +5007,7 @@ TypoCorrectionConsumer::NamespaceSpecifierSet::buildNestedNameSpecifier(
 
 void TypoCorrectionConsumer::NamespaceSpecifierSet::addNameSpecifier(
     DeclContext *Ctx) {
-  NestedNameSpecifier *NNS = nullptr;
+  NestedNameSpecifier NNS = std::nullopt;
   unsigned NumSpecifiers = 0;
   DeclContextList NamespaceDeclChain(buildContextChain(Ctx));
   DeclContextList FullNamespaceDeclChain(NamespaceDeclChain);
@@ -4966,7 +5025,7 @@ void TypoCorrectionConsumer::NamespaceSpecifierSet::addNameSpecifier(
   // Add an explicit leading '::' specifier if needed.
   if (NamespaceDeclChain.empty()) {
     // Rebuild the NestedNameSpecifier as a globally-qualified specifier.
-    NNS = NestedNameSpecifier::GlobalSpecifier(Context);
+    NNS = NestedNameSpecifier::getGlobal();
     NumSpecifiers =
         buildNestedNameSpecifier(FullNamespaceDeclChain, NNS);
   } else if (NamedDecl *ND =
@@ -4978,12 +5037,12 @@ void TypoCorrectionConsumer::NamespaceSpecifierSet::addNameSpecifier(
       llvm::raw_string_ostream SpecifierOStream(NewNameSpecifier);
       SmallVector<const IdentifierInfo *, 4> NewNameSpecifierIdentifiers;
       getNestedNameSpecifierIdentifiers(NNS, NewNameSpecifierIdentifiers);
-      NNS->print(SpecifierOStream, Context.getPrintingPolicy());
+      NNS.print(SpecifierOStream, Context.getPrintingPolicy());
       SameNameSpecifier = NewNameSpecifier == CurNameSpecifier;
     }
     if (SameNameSpecifier || llvm::is_contained(CurContextIdentifiers, Name)) {
       // Rebuild the NestedNameSpecifier as a globally-qualified specifier.
-      NNS = NestedNameSpecifier::GlobalSpecifier(Context);
+      NNS = NestedNameSpecifier::getGlobal();
       NumSpecifiers =
           buildNestedNameSpecifier(FullNamespaceDeclChain, NNS);
     }

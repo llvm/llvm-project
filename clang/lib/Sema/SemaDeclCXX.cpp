@@ -12456,9 +12456,7 @@ Decl *Sema::ActOnUsingDirective(Scope *S, SourceLocation UsingLoc,
   S = S->getDeclParent();
 
   UsingDirectiveDecl *UDir = nullptr;
-  NestedNameSpecifier *Qualifier = nullptr;
-  if (SS.isSet())
-    Qualifier = SS.getScopeRep();
+  NestedNameSpecifier Qualifier = SS.getScopeRep();
 
   // Lookup namespace name.
   LookupResult R(*this, NamespcName, IdentLoc, LookupNamespaceName);
@@ -12470,14 +12468,16 @@ Decl *Sema::ActOnUsingDirective(Scope *S, SourceLocation UsingLoc,
     R.clear();
     // Allow "using namespace std;" or "using namespace ::std;" even if
     // "std" hasn't been defined yet, for GCC compatibility.
-    if ((!Qualifier || Qualifier->getKind() == NestedNameSpecifier::Global) &&
+    if ((!Qualifier ||
+         Qualifier.getKind() == NestedNameSpecifier::Kind::Global) &&
         NamespcName->isStr("std")) {
       Diag(IdentLoc, diag::ext_using_undefined_std);
       R.addDecl(getOrCreateStdNamespace());
       R.resolveKind();
     }
     // Otherwise, attempt typo correction.
-    else TryNamespaceTypoCorrection(*this, R, S, SS, IdentLoc, NamespcName);
+    else
+      TryNamespaceTypoCorrection(*this, R, S, SS, IdentLoc, NamespcName);
   }
 
   if (!R.empty()) {
@@ -12955,7 +12955,7 @@ namespace {
 class UsingValidatorCCC final : public CorrectionCandidateCallback {
 public:
   UsingValidatorCCC(bool HasTypenameKeyword, bool IsInstantiation,
-                    NestedNameSpecifier *NNS, CXXRecordDecl *RequireMemberOf)
+                    NestedNameSpecifier NNS, CXXRecordDecl *RequireMemberOf)
       : HasTypenameKeyword(HasTypenameKeyword),
         IsInstantiation(IsInstantiation), OldNNS(NNS),
         RequireMemberOf(RequireMemberOf) {}
@@ -12982,24 +12982,23 @@ public:
         ASTContext &Ctx = ND->getASTContext();
         if (!Ctx.getLangOpts().CPlusPlus11)
           return false;
-        QualType FoundType = Ctx.getRecordType(FoundRecord);
+        CanQualType FoundType = Ctx.getCanonicalTagType(FoundRecord);
 
         // Check that the injected-class-name is named as a member of its own
         // type; we don't want to suggest 'using Derived::Base;', since that
         // means something else.
-        NestedNameSpecifier *Specifier =
-            Candidate.WillReplaceSpecifier()
-                ? Candidate.getCorrectionSpecifier()
-                : OldNNS;
-        if (!Specifier->getAsType() ||
-            !Ctx.hasSameType(QualType(Specifier->getAsType(), 0), FoundType))
+        NestedNameSpecifier Specifier = Candidate.WillReplaceSpecifier()
+                                            ? Candidate.getCorrectionSpecifier()
+                                            : OldNNS;
+        if (Specifier.getKind() != NestedNameSpecifier::Kind::Type ||
+            !Ctx.hasSameType(QualType(Specifier.getAsType(), 0), FoundType))
           return false;
 
         // Check that this inheriting constructor declaration actually names a
         // direct base class of the current class.
         bool AnyDependentBases = false;
         if (!findDirectBaseWithType(RequireMemberOf,
-                                    Ctx.getRecordType(FoundRecord),
+                                    Ctx.getCanonicalTagType(FoundRecord),
                                     AnyDependentBases) &&
             !AnyDependentBases)
           return false;
@@ -13029,7 +13028,7 @@ public:
 private:
   bool HasTypenameKeyword;
   bool IsInstantiation;
-  NestedNameSpecifier *OldNNS;
+  NestedNameSpecifier OldNNS;
   CXXRecordDecl *RequireMemberOf;
 };
 } // end anonymous namespace
@@ -13411,7 +13410,7 @@ bool Sema::CheckUsingDeclRedeclaration(SourceLocation UsingLoc,
                                        const CXXScopeSpec &SS,
                                        SourceLocation NameLoc,
                                        const LookupResult &Prev) {
-  NestedNameSpecifier *Qual = SS.getScopeRep();
+  NestedNameSpecifier Qual = SS.getScopeRep();
 
   // C++03 [namespace.udecl]p8:
   // C++0x [namespace.udecl]p10:
@@ -13443,13 +13442,12 @@ bool Sema::CheckUsingDeclRedeclaration(SourceLocation UsingLoc,
     return false;
   }
 
-  const NestedNameSpecifier *CNNS =
-      Context.getCanonicalNestedNameSpecifier(Qual);
+  NestedNameSpecifier CNNS = Qual.getCanonical();
   for (LookupResult::iterator I = Prev.begin(), E = Prev.end(); I != E; ++I) {
     NamedDecl *D = *I;
 
     bool DTypename;
-    NestedNameSpecifier *DQual;
+    NestedNameSpecifier DQual = std::nullopt;
     if (UsingDecl *UD = dyn_cast<UsingDecl>(D)) {
       DTypename = UD->hasTypename();
       DQual = UD->getQualifier();
@@ -13470,7 +13468,7 @@ bool Sema::CheckUsingDeclRedeclaration(SourceLocation UsingLoc,
     // using decls differ if they name different scopes (but note that
     // template instantiation can cause this check to trigger when it
     // didn't before instantiation).
-    if (CNNS != Context.getCanonicalNestedNameSpecifier(DQual))
+    if (CNNS != DQual.getCanonical())
       continue;
 
     Diag(NameLoc, diag::err_using_decl_redeclaration) << SS.getRange();
@@ -14903,10 +14901,9 @@ buildSingleCopyAssignRecursively(Sema &S, SourceLocation Loc, QualType T,
     // reference to operator=; this is required to suppress the virtual
     // call mechanism.
     CXXScopeSpec SS;
+    // FIXME: Don't canonicalize this.
     const Type *CanonicalT = S.Context.getCanonicalType(T.getTypePtr());
-    SS.MakeTrivial(S.Context,
-                   NestedNameSpecifier::Create(S.Context, nullptr, CanonicalT),
-                   Loc);
+    SS.MakeTrivial(S.Context, NestedNameSpecifier(CanonicalT), Loc);
 
     // Create the reference to operator=.
     ExprResult OpEqualRef

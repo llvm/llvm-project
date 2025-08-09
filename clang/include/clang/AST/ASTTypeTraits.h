@@ -336,9 +336,9 @@ public:
             NodeKind)) {
       auto NNSLA = getUnchecked<NestedNameSpecifierLoc>();
       auto NNSLB = Other.getUnchecked<NestedNameSpecifierLoc>();
-      return std::make_pair(NNSLA.getNestedNameSpecifier(),
+      return std::make_pair(NNSLA.getNestedNameSpecifier().getAsVoidPointer(),
                             NNSLA.getOpaqueData()) <
-             std::make_pair(NNSLB.getNestedNameSpecifier(),
+             std::make_pair(NNSLB.getNestedNameSpecifier().getAsVoidPointer(),
                             NNSLB.getOpaqueData());
     }
 
@@ -393,8 +393,9 @@ public:
       if (ASTNodeKind::getFromNodeKind<NestedNameSpecifierLoc>().isSame(
               Val.NodeKind)) {
         auto NNSL = Val.getUnchecked<NestedNameSpecifierLoc>();
-        return llvm::hash_combine(NNSL.getNestedNameSpecifier(),
-                                  NNSL.getOpaqueData());
+        return llvm::hash_combine(
+            NNSL.getNestedNameSpecifier().getAsVoidPointer(),
+            NNSL.getOpaqueData());
       }
 
       assert(Val.getMemoizationData());
@@ -539,8 +540,8 @@ struct DynTypedNode::BaseConverter<
     : public DynCastPtrConverter<T, Attr> {};
 
 template <>
-struct DynTypedNode::BaseConverter<
-    NestedNameSpecifier, void> : public PtrConverter<NestedNameSpecifier> {};
+struct DynTypedNode::BaseConverter<NestedNameSpecifier, void>
+    : public ValueConverter<NestedNameSpecifier> {};
 
 template <>
 struct DynTypedNode::BaseConverter<

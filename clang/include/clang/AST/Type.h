@@ -18,7 +18,7 @@
 #define LLVM_CLANG_AST_TYPE_H
 
 #include "clang/AST/DependenceFlags.h"
-#include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/NestedNameSpecifierBase.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/AttrKinds.h"
@@ -2957,6 +2957,11 @@ public:
   /// qualifiers from the outermost type.
   const ArrayType *castAsArrayTypeUnsafe() const;
 
+  /// If this type represents a qualified-id, this returns its nested name
+  /// specifier. For example, for the qualified-id "foo::bar::baz", this returns
+  /// "foo::bar". Returns null if this type represents an unqualified-id.
+  NestedNameSpecifier getPrefix() const;
+
   /// Determine whether this type had the specified attribute applied to it
   /// (looking through top-level type sugar).
   bool hasAttr(attr::Kind AK) const;
@@ -3634,12 +3639,12 @@ class MemberPointerType : public Type, public llvm::FoldingSetNode {
 
   /// The class of which the pointee is a member. Must ultimately be a
   /// CXXRecordType, but could be a typedef or a template parameter too.
-  NestedNameSpecifier *Qualifier;
+  NestedNameSpecifier Qualifier;
 
-  MemberPointerType(QualType Pointee, NestedNameSpecifier *Qualifier,
+  MemberPointerType(QualType Pointee, NestedNameSpecifier Qualifier,
                     QualType CanonicalPtr)
       : Type(MemberPointer, CanonicalPtr,
-             (toTypeDependence(Qualifier->getDependence()) &
+             (toTypeDependence(Qualifier.getDependence()) &
               ~TypeDependence::VariablyModified) |
                  Pointee->getDependence()),
         PointeeType(Pointee), Qualifier(Qualifier) {}
@@ -3659,7 +3664,7 @@ public:
     return !PointeeType->isFunctionProtoType();
   }
 
-  NestedNameSpecifier *getQualifier() const { return Qualifier; }
+  NestedNameSpecifier getQualifier() const { return Qualifier; }
   /// Note: this can trigger extra deserialization when external AST sources are
   /// used. Prefer `getCXXRecordDecl()` unless you really need the most recent
   /// decl.
@@ -3678,7 +3683,7 @@ public:
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, QualType Pointee,
-                      const NestedNameSpecifier *Qualifier,
+                      const NestedNameSpecifier Qualifier,
                       const CXXRecordDecl *Cls);
 
   static bool classof(const Type *T) {
@@ -7276,24 +7281,24 @@ class DependentNameType : public TypeWithKeyword, public llvm::FoldingSetNode {
   friend class ASTContext; // ASTContext creates these
 
   /// The nested name specifier containing the qualifier.
-  NestedNameSpecifier *NNS;
+  NestedNameSpecifier NNS;
 
   /// The type that this typename specifier refers to.
   const IdentifierInfo *Name;
 
-  DependentNameType(ElaboratedTypeKeyword Keyword, NestedNameSpecifier *NNS,
+  DependentNameType(ElaboratedTypeKeyword Keyword, NestedNameSpecifier NNS,
                     const IdentifierInfo *Name, QualType CanonType)
       : TypeWithKeyword(Keyword, DependentName, CanonType,
                         TypeDependence::DependentInstantiation |
-                            toTypeDependence(NNS->getDependence())),
+                            (NNS ? toTypeDependence(NNS.getDependence())
+                                 : TypeDependence::Dependent)),
         NNS(NNS), Name(Name) {
-    assert(NNS);
     assert(Name);
   }
 
 public:
   /// Retrieve the qualification on this type.
-  NestedNameSpecifier *getQualifier() const { return NNS; }
+  NestedNameSpecifier getQualifier() const { return NNS; }
 
   /// Retrieve the identifier that terminates this type name.
   /// For example, "type" in "typename T::type".
@@ -7309,9 +7314,9 @@ public:
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, ElaboratedTypeKeyword Keyword,
-                      NestedNameSpecifier *NNS, const IdentifierInfo *Name) {
+                      NestedNameSpecifier NNS, const IdentifierInfo *Name) {
     ID.AddInteger(llvm::to_underlying(Keyword));
-    ID.AddPointer(NNS);
+    NNS.Profile(ID);
     ID.AddPointer(Name);
   }
 
