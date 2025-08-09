@@ -94,6 +94,19 @@ static DebugLoc getDebugLoc(MachineBasicBlock::instr_iterator FirstMI,
   return DebugLoc();
 }
 
+static bool containReg(SmallSetVector<Register, 32> LocalDefsV,
+                       SmallSetVector<MCRegUnit, 32> LocalDefsP, Register Reg,
+                       const TargetRegisterInfo *TRI) {
+  if (Reg.isPhysical()) {
+    for (MCRegUnit Unit : TRI->regunits(MCRegister::from(Reg.id())))
+      if (!LocalDefsP.contains(Unit))
+        return false;
+
+    return true;
+  }
+  return LocalDefsV.contains(Reg);
+}
+
 /// finalizeBundle - Finalize a machine instruction bundle which includes
 /// a sequence of instructions starting from FirstMI to LastMI (exclusive).
 /// This routine adds a BUNDLE instruction to represent the bundle, it adds
@@ -115,6 +128,7 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
   Bundle.prepend(MIB);
 
   SmallSetVector<Register, 32> LocalDefs;
+  SmallSetVector<MCRegUnit, 32> LocalDefsP;
   SmallSet<Register, 8> DeadDefSet;
   SmallSet<Register, 16> KilledDefSet;
   SmallSetVector<Register, 8> ExternUses;
@@ -130,7 +144,7 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
       if (!Reg)
         continue;
 
-      if (LocalDefs.contains(Reg)) {
+      if (containReg(LocalDefs, LocalDefsP, Reg, TRI)) {
         MO.setIsInternalRead();
         if (MO.isKill()) {
           // Internal def is now killed.
@@ -165,8 +179,10 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
         }
       }
 
-      if (!MO.isDead() && Reg.isPhysical())
-        LocalDefs.insert_range(TRI->subregs(Reg));
+      if (!MO.isDead() && Reg.isPhysical()) {
+        for (MCRegUnit Unit : TRI->regunits(MCRegister::from(Reg.id())))
+          LocalDefsP.insert(Unit);
+      }
     }
 
     // Set FrameSetup/FrameDestroy for the bundle. If any of the instructions
