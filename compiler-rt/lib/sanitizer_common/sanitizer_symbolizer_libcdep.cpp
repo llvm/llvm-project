@@ -32,9 +32,8 @@ Symbolizer *Symbolizer::GetOrInit() {
 // overridden method, __asan_default_options().
 void Symbolizer::ClearTools() {
   SpinMutexLock l(&init_mu_);
-  if (!common_flags()->symbolize) {
+  if (symbolizer_)
     symbolizer_->tools_.clear();
-  }
 }
 
 // See sanitizer_symbolizer_markup.cpp.
