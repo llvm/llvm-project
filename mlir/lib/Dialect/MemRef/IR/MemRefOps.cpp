@@ -2977,14 +2977,6 @@ LogicalResult SubViewOp::verify() {
     return produceSubViewErrorMsg(SliceVerificationResult::LayoutMismatch,
                                   *this, expectedType);
 
-  // Verify that offsets, sizes, strides do not run out-of-bounds with respect
-  // to the base memref.
-  SliceBoundsVerificationResult boundsResult =
-      verifyInBoundsSlice(baseType.getShape(), staticOffsets, staticSizes,
-                          staticStrides, /*generateErrorMessage=*/true);
-  if (!boundsResult.isValid)
-    return getOperation()->emitError(boundsResult.errorMessage);
-
   return success();
 }
 
@@ -3253,10 +3245,10 @@ struct SubViewCanonicalizer {
 
 void SubViewOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results
-      .add<OpWithOffsetSizesAndStridesConstantArgumentFolder<
-               SubViewOp, SubViewReturnTypeCanonicalizer, SubViewCanonicalizer>,
-           SubViewOpMemRefCastFolder, TrivialSubViewOpFolder>(context);
+  results.add<OpWithOffsetSizesAndStridesConstantArgumentFolder<
+                  SubViewOp, SubViewReturnTypeCanonicalizer,
+                  SubViewCanonicalizer, /*CheckInBounds=*/false>,
+              SubViewOpMemRefCastFolder, TrivialSubViewOpFolder>(context);
 }
 
 OpFoldResult SubViewOp::fold(FoldAdaptor adaptor) {
