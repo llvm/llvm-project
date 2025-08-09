@@ -32,6 +32,7 @@
 #include "math/atanhf16.h"
 #include "math/cbrt.h"
 #include "math/cbrtf.h"
+#include "math/cos.h"
 #include "math/erff.h"
 #include "math/exp.h"
 #include "math/exp10.h"

@@ -292,23 +292,6 @@ add_header_library(
 )
 
 add_header_library(
-  range_reduction_double
-  HDRS
-    range_reduction_double_common.h
-    range_reduction_double_fma.h
-    range_reduction_double_nofma.h
-  DEPENDS
-    libc.src.__support.FPUtil.double_double
-    libc.src.__support.FPUtil.dyadic_float
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.fma
-    libc.src.__support.FPUtil.multiply_add
-    libc.src.__support.FPUtil.nearest_integer
-    libc.src.__support.common
-    libc.src.__support.integer_literals
-)
-
-add_header_library(
   sincosf_utils
   HDRS
     sincosf_utils.h
@@ -329,18 +312,6 @@ add_header_library(
     libc.src.__support.common
 )
 
-add_header_library(
-  sincos_eval
-  HDRS
-    sincos_eval.h
-  DEPENDS
-    libc.src.__support.FPUtil.double_double
-    libc.src.__support.FPUtil.dyadic_float
-    libc.src.__support.FPUtil.multiply_add
-    libc.src.__support.FPUtil.polyeval
-    libc.src.__support.integer_literals
-)
-
 add_entrypoint_object(
   cos
   SRCS
@@ -348,16 +319,7 @@ add_entrypoint_object(
   HDRS
     ../cos.h
   DEPENDS
-    .range_reduction_double
-    .sincos_eval
-    libc.hdr.errno_macros
-    libc.src.errno.errno
-    libc.src.__support.FPUtil.double_double
-    libc.src.__support.FPUtil.dyadic_float
-    libc.src.__support.FPUtil.except_value_utils
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.macros.optimization
+    libc.src.__support.math.cos
 )
 
 add_entrypoint_object(
@@ -436,8 +398,8 @@ add_entrypoint_object(
   HDRS
     ../sin.h
   DEPENDS
-    .range_reduction_double
-    .sincos_eval
+    libc.src.__support.math.range_reduction_double
+    libc.src.__support.math.sincos_eval
     libc.hdr.errno_macros
     libc.src.errno.errno
     libc.src.__support.FPUtil.double_double
@@ -496,8 +458,8 @@ add_entrypoint_object(
   HDRS
     ../sincos.h
   DEPENDS
-    .range_reduction_double
-    .sincos_eval
+    libc.src.__support.math.range_reduction_double
+    libc.src.__support.math.sincos_eval
     libc.hdr.errno_macros
     libc.src.errno.errno
     libc.src.__support.FPUtil.double_double
@@ -569,7 +531,7 @@ add_entrypoint_object(
   HDRS
     ../tan.h
   DEPENDS
-    .range_reduction_double
+    libc.src.__support.math.range_reduction_double
     libc.hdr.errno_macros
     libc.src.errno.errno
     libc.src.__support.FPUtil.double_double

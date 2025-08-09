@@ -19,13 +19,13 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
-#include "src/math/generic/range_reduction_double_common.h"
-#include "src/math/generic/sincos_eval.h"
+#include "src/__support/math/range_reduction_double_common.h"
+#include "src/__support/math/sincos_eval.h"
 
 #ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
-#include "range_reduction_double_fma.h"
+#include "src/__support/math/range_reduction_double_fma.h"
 #else
-#include "range_reduction_double_nofma.h"
+#include "src/__support/math/range_reduction_double_nofma.h"
 #endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
 namespace LIBC_NAMESPACE_DECL {
@@ -34,6 +34,7 @@ using DoubleDouble = fputil::DoubleDouble;
 using Float128 = typename fputil::DyadicFloat<128>;
 
 LLVM_LIBC_FUNCTION(void, sincos, (double x, double *sin_x, double *cos_x)) {
+  using namespace math::range_reduction_double_internal;
   using FPBits = typename fputil::FPBits<double>;
   FPBits xbits(x);
 
@@ -106,7 +107,8 @@ LLVM_LIBC_FUNCTION(void, sincos, (double x, double *sin_x, double *cos_x)) {
 
   DoubleDouble sin_y, cos_y;
 
-  [[maybe_unused]] double err = generic::sincos_eval(y, sin_y, cos_y);
+  [[maybe_unused]] double err =
+      math::sincos_eval_internal::sincos_eval(y, sin_y, cos_y);
 
   // Look up sin(k * pi/128) and cos(k * pi/128)
 #ifdef LIBC_MATH_HAS_SMALL_TABLES
@@ -179,7 +181,7 @@ LLVM_LIBC_FUNCTION(void, sincos, (double x, double *sin_x, double *cos_x)) {
   else
     u_f128 = range_reduction_large.accurate();
 
-  generic::sincos_eval(u_f128, sin_u, cos_u);
+  math::sincos_eval_internal::sincos_eval(u_f128, sin_u, cos_u);
 
   auto get_sin_k = [](unsigned kk) -> Float128 {
     unsigned idx = (kk & 64) ? 64 - (kk & 63) : (kk & 63);
