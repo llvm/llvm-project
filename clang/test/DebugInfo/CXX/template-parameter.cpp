@@ -4,15 +4,14 @@
 // RUN: %clang_cc1 -emit-llvm %std_cxx11-14 -dwarf-version=5 -triple x86_64 %s -O0 -disable-llvm-passes -debug-info-kind=standalone -o - | FileCheck %s --check-prefixes=CHECK,PRE17
 // RUN: %clang_cc1 -emit-llvm %std_cxx17- -dwarf-version=5 -triple x86_64 %s -O0 -disable-llvm-passes -debug-info-kind=standalone -o - | FileCheck %s --check-prefixes=CHECK,CXX17
 // RUN: %clang_cc1 -emit-llvm %std_cxx17- -dwarf-version=4 -triple x86_64 %s -O0 -disable-llvm-passes -debug-info-kind=standalone -o - | FileCheck %s --check-prefixes=CHECK,CXX17
-// RUN: %clang_cc1 -emit-llvm %std_cxx20- -dwarf-version=5 -DCXX20=1 -triple x86_64 %s -O0 -disable-llvm-passes -debug-info-kind=standalone -o - | FileCheck %s --check-prefix=CHECK-CXX20
+// RUN: %clang_cc1 -emit-llvm %std_cxx20- -dwarf-version=5 -triple x86_64 %s -O0 -disable-llvm-passes -debug-info-kind=standalone -o - | FileCheck %s --check-prefixes=CHECK-CXX20
 
 // CHECK: DILocalVariable(name: "f1", {{.*}}, type: ![[TEMPLATE_TYPE:[0-9]+]]
 // CHECK: [[TEMPLATE_TYPE]] = {{.*}}!DICompositeType({{.*}}, templateParams: ![[F1_TYPE:[0-9]+]]
 // CHECK: [[F1_TYPE]] = !{![[FIRST:[0-9]+]], ![[SECOND:[0-9]+]], ![[THIRD:[0-9]+]], ![[FORTH:[0-9]+]], ![[FIFTH:[0-9]+]]}
 // CHECK: [[FIRST]] = !DITemplateTypeParameter(name: "T", type: !{{[0-9]*}})
 // CHECK: [[SECOND]] = !DITemplateValueParameter(name: "i", type: !{{[0-9]*}}, value: i32 6)
-// PRE17: [[THIRD]] = !DITemplateValueParameter(name: "b", type: !{{[0-9]*}}, value: i8 0)
-// CXX17: [[THIRD]] = !DITemplateValueParameter(name: "b", type: !{{[0-9]*}}, value: i1 false)
+// CHECK: [[THIRD]] = !DITemplateValueParameter(name: "b", type: !{{[0-9]*}}, value: i1 false)
 // CHECK: [[FIFTH]] = !DITemplateTypeParameter(name: "d", type: !{{[0-9]*}})
 
 // CHECK: DILocalVariable(name: "f2", {{.*}}, type: ![[TEMPLATE_TYPE:[0-9]+]]
@@ -51,7 +50,7 @@ template <template <typename T> class CT = bar>
 class baz {
 };
 
-#ifdef CXX20
+#if __cplusplus >= 202002L
 struct non_empty { int mem; int mem2; } ne;
 
 template<float f = -1.5f, double d = 5.2, int * p = &ne.mem2>
@@ -72,7 +71,7 @@ nttp<> n1;
 // CHECK-CXX20-SAME:                                       defaulted: true
 // CHECK-CXX20-SAME:                                       value: ptr getelementptr (i8, ptr @ne, i64 4)
 
-#endif // CXX20
+#endif // C++20
 
 int main() {
   foo<int, 6, false, 3, double> f1;

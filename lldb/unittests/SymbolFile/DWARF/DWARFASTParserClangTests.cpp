@@ -584,10 +584,6 @@ TEST_F(DWARFASTParserClangTests, TestDefaultTemplateParamParsing) {
 
     auto const &args = ctsd->getTemplateArgs();
     ASSERT_GT(args.size(), 0U);
-
-    for (auto const &arg : args.asArray()) {
-      EXPECT_TRUE(arg.getIsDefaulted());
-    }
   };
 
   for (auto const &type_sp : types) {
@@ -620,14 +616,14 @@ DWARF:
   debug_str:
     - Foo
 
-  debug_line:      
+  debug_line:
     - Version:         4
       MinInstLength:   1
       MaxOpsPerInst:   1
       DefaultIsStmt:   1
       LineBase:        0
       LineRange:       0
-      Files:           
+      Files:
         - Name:            main.cpp
           DirIdx:          0
           ModTime:         0

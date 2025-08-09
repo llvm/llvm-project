@@ -239,8 +239,7 @@ std::optional<Decl *> CxxModuleHandler::tryInstantiateStdTemplate(Decl *d) {
         LLDB_LOG_ERROR(log, type.takeError(), "Couldn't import type: {0}");
         return std::nullopt;
       }
-      imported_args.push_back(
-          TemplateArgument(*type, /*isNullPtr*/ false, arg.getIsDefaulted()));
+      imported_args.push_back(TemplateArgument(*type, /*isNullPtr=*/false));
       break;
     }
     case TemplateArgument::Integral: {
@@ -251,8 +250,8 @@ std::optional<Decl *> CxxModuleHandler::tryInstantiateStdTemplate(Decl *d) {
         LLDB_LOG_ERROR(log, type.takeError(), "Couldn't import type: {0}");
         return std::nullopt;
       }
-      imported_args.push_back(TemplateArgument(d->getASTContext(), integral,
-                                               *type, arg.getIsDefaulted()));
+      imported_args.push_back(
+          TemplateArgument(d->getASTContext(), integral, *type));
       break;
     }
     default:
