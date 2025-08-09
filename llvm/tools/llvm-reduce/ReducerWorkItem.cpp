@@ -92,11 +92,23 @@ static void cloneFrameInfo(
   DstMFI.setCVBytesOfCalleeSavedRegisters(
       SrcMFI.getCVBytesOfCalleeSavedRegisters());
 
-  if (MachineBasicBlock *SavePt = SrcMFI.getSavePoint())
-    DstMFI.setSavePoint(Src2DstMBB.find(SavePt)->second);
-  if (MachineBasicBlock *RestorePt = SrcMFI.getRestorePoint())
-    DstMFI.setRestorePoint(Src2DstMBB.find(RestorePt)->second);
+  assert(SrcMFI.getSavePoints().size() < 2 &&
+         "MFI can't contain multiple save points!");
+  if (!SrcMFI.getSavePoints().empty()) {
+    MachineBasicBlock *SavePt = SrcMFI.getSavePoints().front();
+    std::vector<MachineBasicBlock *> SavePts;
+    SavePts.push_back(Src2DstMBB.find(SavePt)->second);
+    DstMFI.setSavePoints(SavePts);
+  }
 
+  assert(SrcMFI.getRestorePoints().size() < 2 &&
+         "MFI can't contain multiple restore points!");
+  if (!SrcMFI.getRestorePoints().empty()) {
+    MachineBasicBlock *RestorePt = SrcMFI.getRestorePoints().front();
+    std::vector<MachineBasicBlock *> RestorePts;
+    RestorePts.push_back(Src2DstMBB.find(RestorePt)->second);
+    DstMFI.setRestorePoints(RestorePts);
+  }
 
   auto CopyObjectProperties = [](MachineFrameInfo &DstMFI,
                                  const MachineFrameInfo &SrcMFI, int FI) {
