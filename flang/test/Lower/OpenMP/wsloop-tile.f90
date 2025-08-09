@@ -2,7 +2,7 @@
 
 ! RUN: bbc -fopenmp -fopenmp-version=51 -emit-hlfir %s -o - | FileCheck %s
 
-!CHECK-LABEL:   func.func @_QQmain() attributes {fir.bindc_name = "wsloop_tile"} {
+!CHECK-LABEL: func.func @_QQmain() attributes {fir.bindc_name = "WSLOOP_TILE"} {
 program wsloop_tile
   integer :: i, j, k
   integer :: a, b, c
