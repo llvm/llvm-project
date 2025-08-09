@@ -3307,8 +3307,8 @@ define i1 @val_is_aligend_sub(i32 %num, i32 %val) {
 ; CHECK-NEXT:    [[POW:%.*]] = icmp eq i32 [[TMP1]], 1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[POW]])
 ; CHECK-NEXT:    [[NEG:%.*]] = add i32 [[NUM]], -1
-; CHECK-NEXT:    [[_2_SROA_0_0:%.*]] = and i32 [[NUM_BIASED:%.*]], [[NEG]]
-; CHECK-NEXT:    [[_0:%.*]] = icmp eq i32 [[_2_SROA_0_0]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[NUM1:%.*]], [[NEG]]
+; CHECK-NEXT:    [[_0:%.*]] = icmp eq i32 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[_0]]
 ;
   %1 = tail call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 %val)
@@ -3330,8 +3330,8 @@ define i1 @val_is_aligend_add(i32 %num, i32 %val) {
 ; CHECK-NEXT:    [[POW:%.*]] = icmp eq i32 [[TMP1]], 1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[POW]])
 ; CHECK-NEXT:    [[NEG:%.*]] = add i32 [[NUM]], -1
-; CHECK-NEXT:    [[_2_SROA_0_0:%.*]] = and i32 [[NUM_BIASED:%.*]], [[NEG]]
-; CHECK-NEXT:    [[_0:%.*]] = icmp eq i32 [[_2_SROA_0_0]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[NUM1:%.*]], [[NEG]]
+; CHECK-NEXT:    [[_0:%.*]] = icmp eq i32 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[_0]]
 ;
   %1 = tail call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 %val)
@@ -3343,6 +3343,52 @@ define i1 @val_is_aligend_add(i32 %num, i32 %val) {
 
   %num.biased = add i32 %num, %mask
   %_2.sroa.0.0 = and i32 %num.biased, %neg
+  %_0 = icmp eq i32 %_2.sroa.0.0, %num
+  ret i1 %_0
+}
+
+define i1 @val_is_aligend_add_commute_add(i32 %num, i32 %val) {
+; CHECK-LABEL: @val_is_aligend_add_commute_add(
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 [[VAL:%.*]])
+; CHECK-NEXT:    [[POW:%.*]] = icmp eq i32 [[TMP1]], 1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[POW]])
+; CHECK-NEXT:    [[MASK:%.*]] = add i32 [[VAL]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[NUM:%.*]], [[MASK]]
+; CHECK-NEXT:    [[_0:%.*]] = icmp eq i32 [[TMP2]], 0
+; CHECK-NEXT:    ret i1 [[_0]]
+;
+  %1 = tail call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 %val)
+  %pow = icmp eq i32 %1, 1
+  call void @llvm.assume(i1 %pow)
+
+  %mask = add i32 %val, -1
+  %neg = sub nsw i32 0, %val
+
+  %num.biased = add i32 %mask, %num
+  %_2.sroa.0.0 = and i32 %num.biased, %neg
+  %_0 = icmp eq i32 %_2.sroa.0.0, %num
+  ret i1 %_0
+}
+
+define i1 @val_is_aligend_add_commute_and(i32 %num, i32 %val) {
+; CHECK-LABEL: @val_is_aligend_add_commute_and(
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 [[VAL:%.*]])
+; CHECK-NEXT:    [[POW:%.*]] = icmp eq i32 [[TMP1]], 1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[POW]])
+; CHECK-NEXT:    [[MASK:%.*]] = add i32 [[VAL]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[NUM:%.*]], [[MASK]]
+; CHECK-NEXT:    [[_0:%.*]] = icmp eq i32 [[TMP2]], 0
+; CHECK-NEXT:    ret i1 [[_0]]
+;
+  %1 = tail call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 %val)
+  %pow = icmp eq i32 %1, 1
+  call void @llvm.assume(i1 %pow)
+
+  %mask = add i32 %val, -1
+  %neg = sub nsw i32 0, %val
+
+  %num.biased = add i32 %mask, %num
+  %_2.sroa.0.0 = and i32 %neg, %num.biased
   %_0 = icmp eq i32 %_2.sroa.0.0, %num
   ret i1 %_0
 }

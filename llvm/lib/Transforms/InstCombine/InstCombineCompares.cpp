@@ -1330,16 +1330,21 @@ Instruction *InstCombinerImpl::foldNextMultiply(ICmpInst &Cmp) {
   CmpInst::Predicate Pred = Cmp.getPredicate();
   const APInt *NegConst, *MaskConst, *NumCost;
 
-  if (Pred != ICmpInst::ICMP_EQ)
+  if (!ICmpInst::isEquality(Pred))
     return nullptr;
 
   // Match num + neg
-  if (!match(Op0, m_And(m_Value(Add), m_Value(Neg))))
+  if (!match(Op0, m_c_And(m_Value(Add), m_Value(Neg))))
     return nullptr;
 
-  // Match num & mask
-  if (!match(Add, m_Add(m_Value(Num), m_Value(Mask))))
-    return nullptr;
+  // Match num & mask and handle commutative care
+  if (!match(Add, m_c_Add(m_Value(Num), m_Value(Mask)))) {
+    if (match(Neg, m_c_Add(m_Value(Num), m_Value(Mask)))) {
+      std::swap(Add, Neg);
+    } else {
+      return nullptr;
+    }
+  }
 
   // Check the constant case
   if (match(Neg, m_APInt(NegConst)) && match(Mask, m_APInt(MaskConst))) {
@@ -1355,10 +1360,14 @@ Instruction *InstCombinerImpl::foldNextMultiply(ICmpInst &Cmp) {
     if (!match(Neg, m_Sub(m_Zero(), m_Value(Value))))
       return nullptr;
 
-    // mask = %val - 1, which can be represented as sub %val, 1 or add %val, -1
-    if (!match(Mask, m_Add(m_Value(Value), m_AllOnes())) &&
-        !match(Mask, m_Sub(m_Value(Value), m_One())))
-      return nullptr;
+    // mask = add %val, -1. No commutative here, since it's canonical representation for sub %val, -1
+    if (!match(Mask, m_Add(m_Value(Value), m_AllOnes()))) {
+      if (match(Num, m_Add(m_Value(Value), m_AllOnes()))) {
+        std::swap(Mask, Num);
+      } else {
+        return nullptr;
+      }
+    }
 
     // Value should be a known power-of-two.
     if (!isKnownToBeAPowerOfTwo(Value, false, &Cmp))
@@ -1376,9 +1385,8 @@ Instruction *InstCombinerImpl::foldNextMultiply(ICmpInst &Cmp) {
   // Create new icmp eq (num & (val - 1)), 0
   auto NewAnd = Builder.CreateAnd(Num, Mask);
   auto Zero = llvm::Constant::getNullValue(Num->getType());
-  auto ICmp = Builder.CreateICmp(CmpInst::ICMP_EQ, NewAnd, Zero);
 
-  return replaceInstUsesWith(Cmp, ICmp);
+  return new ICmpInst(Pred, NewAnd, Zero);
 }
 
 /// Fold icmp Pred X, C.
