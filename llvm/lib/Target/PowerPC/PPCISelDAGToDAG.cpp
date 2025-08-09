@@ -4570,6 +4570,16 @@ bool PPCDAGToDAGISel::trySETCC(SDNode *N) {
     if (Subtarget->hasSPE())
       return false;
 
+    // To optimize zero-vector comparisons and avoid the extra step of negation,
+    // we should be checking for greater than unsigned halfwords and the only
+    // scenario where it will be True is for all values other than 0.
+    // The optimized code will be using vcmpgtuh instruction.
+    if (CC == ISD::SETNE) {
+      if (ISD::isBuildVectorAllZeros(RHS.getNode()))
+        CC = ISD::SETUGT;
+      else if (ISD::isBuildVectorAllZeros(LHS.getNode()))
+        CC = ISD::SETULT;
+    }
     EVT VecVT = LHS.getValueType();
     bool Swap, Negate;
     unsigned int VCmpInst =

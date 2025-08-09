@@ -19,8 +19,7 @@ define i32 @test_Greater_than(ptr %colauths) {
 ; POWERPC_64LE-NEXT:    li 4, 0
 ; POWERPC_64LE-NEXT:    li 3, 4
 ; POWERPC_64LE-NEXT:    xxswapd 34, 0
-; POWERPC_64LE-NEXT:    vcmpequh 2, 2, 3
-; POWERPC_64LE-NEXT:    xxlnor 34, 34, 34
+; POWERPC_64LE-NEXT:    vcmpgtuh 2, 2, 3
 ; POWERPC_64LE-NEXT:    vmrglh 3, 2, 2
 ; POWERPC_64LE-NEXT:    vextuwrx 4, 4, 2
 ; POWERPC_64LE-NEXT:    vextuwrx 3, 3, 3
@@ -42,8 +41,7 @@ define i32 @test_Greater_than(ptr %colauths) {
 ; POWERPC_64-NEXT:    xxlxor 35, 35, 35
 ; POWERPC_64-NEXT:    li 4, 12
 ; POWERPC_64-NEXT:    li 3, 8
-; POWERPC_64-NEXT:    vcmpequh 2, 2, 3
-; POWERPC_64-NEXT:    xxlnor 34, 34, 34
+; POWERPC_64-NEXT:    vcmpgtuh 2, 2, 3
 ; POWERPC_64-NEXT:    vmrghh 2, 2, 2
 ; POWERPC_64-NEXT:    vextuwlx 4, 4, 2
 ; POWERPC_64-NEXT:    vextuwlx 3, 3, 2
@@ -66,8 +64,7 @@ define i32 @test_Greater_than(ptr %colauths) {
 ; POWERPC_32-NEXT:    xxlxor 35, 35, 35
 ; POWERPC_32-NEXT:    lxvwsx 0, 3, 4
 ; POWERPC_32-NEXT:    xxmrghw 34, 1, 0
-; POWERPC_32-NEXT:    vcmpequh 2, 2, 3
-; POWERPC_32-NEXT:    xxlnor 34, 34, 34
+; POWERPC_32-NEXT:    vcmpgtuh 2, 2, 3
 ; POWERPC_32-NEXT:    vmrghh 2, 2, 2
 ; POWERPC_32-NEXT:    stxv 34, -32(1)
 ; POWERPC_32-NEXT:    lwz 3, -20(1)
