@@ -2358,7 +2358,7 @@ void RewriteObjC::SynthMsgSendSuperFunctionDecl() {
   RecordDecl *RD = RecordDecl::Create(*Context, TagTypeKind::Struct, TUDecl,
                                       SourceLocation(), SourceLocation(),
                                       &Context->Idents.get("objc_super"));
-  QualType argT = Context->getPointerType(Context->getTagDeclType(RD));
+  QualType argT = Context->getPointerType(Context->getCanonicalTagType(RD));
   assert(!argT.isNull() && "Can't build 'struct objc_super *' type");
   ArgTys.push_back(argT);
   argT = Context->getObjCSelType();
@@ -2401,7 +2401,7 @@ void RewriteObjC::SynthMsgSendSuperStretFunctionDecl() {
   RecordDecl *RD = RecordDecl::Create(*Context, TagTypeKind::Struct, TUDecl,
                                       SourceLocation(), SourceLocation(),
                                       &Context->Idents.get("objc_super"));
-  QualType argT = Context->getPointerType(Context->getTagDeclType(RD));
+  QualType argT = Context->getPointerType(Context->getCanonicalTagType(RD));
   assert(!argT.isNull() && "Can't build 'struct objc_super *' type");
   ArgTys.push_back(argT);
   argT = Context->getObjCSelType();
@@ -2552,7 +2552,7 @@ QualType RewriteObjC::getSuperStructType() {
 
     SuperStructDecl->completeDefinition();
   }
-  return Context->getTagDeclType(SuperStructDecl);
+  return Context->getCanonicalTagType(SuperStructDecl);
 }
 
 QualType RewriteObjC::getConstantStringStructType() {
@@ -2585,7 +2585,7 @@ QualType RewriteObjC::getConstantStringStructType() {
 
     ConstantStringDecl->completeDefinition();
   }
-  return Context->getTagDeclType(ConstantStringDecl);
+  return Context->getCanonicalTagType(ConstantStringDecl);
 }
 
 CallExpr *RewriteObjC::SynthMsgSendStretCallExpr(FunctionDecl *MsgSendStretFlavor,
@@ -3750,7 +3750,7 @@ Stmt *RewriteObjC::SynthesizeBlockCall(CallExpr *Exp, const Expr *BlockExp) {
   RecordDecl *RD = RecordDecl::Create(*Context, TagTypeKind::Struct, TUDecl,
                                       SourceLocation(), SourceLocation(),
                                       &Context->Idents.get("__block_impl"));
-  QualType PtrBlock = Context->getPointerType(Context->getTagDeclType(RD));
+  QualType PtrBlock = Context->getPointerType(Context->getCanonicalTagType(RD));
 
   // Generate a funky cast.
   SmallVector<QualType, 8> ArgTypes;
@@ -4468,7 +4468,8 @@ Stmt *RewriteObjC::SynthBlockInitExpr(BlockExpr *Exp,
           RecordDecl::Create(*Context, TagTypeKind::Struct, TUDecl,
                              SourceLocation(), SourceLocation(), II);
       assert(RD && "SynthBlockInitExpr(): Can't find RecordDecl");
-      QualType castT = Context->getPointerType(Context->getTagDeclType(RD));
+      QualType castT =
+          Context->getPointerType(Context->getCanonicalTagType(RD));
 
       FD = SynthBlockInitFunctionDecl((*I)->getName());
       Exp = new (Context) DeclRefExpr(*Context, FD, false, FD->getType(),
@@ -4834,7 +4835,10 @@ void RewriteObjC::HandleDeclInMainFile(Decl *D) {
           }
         }
       } else if (VD->getType()->isRecordType()) {
-        RecordDecl *RD = VD->getType()->castAs<RecordType>()->getDecl();
+        RecordDecl *RD = VD->getType()
+                             ->castAs<RecordType>()
+                             ->getOriginalDecl()
+                             ->getDefinitionOrSelf();
         if (RD->isCompleteDefinition())
           RewriteRecordBody(RD);
       }
@@ -5804,7 +5808,8 @@ Stmt *RewriteObjCFragileABI::RewriteObjCIvarRefExpr(ObjCIvarRefExpr *IV) {
           RecordDecl::Create(*Context, TagTypeKind::Struct, TUDecl,
                              SourceLocation(), SourceLocation(), II);
       assert(RD && "RewriteObjCIvarRefExpr(): Can't find RecordDecl");
-      QualType castT = Context->getPointerType(Context->getTagDeclType(RD));
+      QualType castT =
+          Context->getPointerType(Context->getCanonicalTagType(RD));
       CastExpr *castExpr = NoTypeInfoCStyleCastExpr(Context, castT,
                                                     CK_BitCast,
                                                     IV->getBase());
@@ -5845,7 +5850,8 @@ Stmt *RewriteObjCFragileABI::RewriteObjCIvarRefExpr(ObjCIvarRefExpr *IV) {
           RecordDecl::Create(*Context, TagTypeKind::Struct, TUDecl,
                              SourceLocation(), SourceLocation(), II);
       assert(RD && "RewriteObjCIvarRefExpr(): Can't find RecordDecl");
-      QualType castT = Context->getPointerType(Context->getTagDeclType(RD));
+      QualType castT =
+          Context->getPointerType(Context->getCanonicalTagType(RD));
       CastExpr *castExpr = NoTypeInfoCStyleCastExpr(Context, castT,
                                                     CK_BitCast,
                                                     IV->getBase());
