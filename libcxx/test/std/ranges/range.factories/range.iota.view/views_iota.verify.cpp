@@ -19,11 +19,11 @@ void test() {
   {
     [[maybe_unused]] auto i1 = std::views::iota(0); // OK
     [[maybe_unused]] auto i2 = std::views::iota(std::views::iota(0));
-    // expected-error-re@*:* {{constraints not satisfied for class template 'iota_view'{{.*}}}}
+    // expected-error@*:* {{no matching function for call to object of type 'const __iota::__fn'}}
   }
   {
     [[maybe_unused]] auto i1 = std::views::iota(SomeInt(0)); // OK
     [[maybe_unused]] auto i2 = std::views::iota(std::views::iota(SomeInt(0)));
-    //expected-error-re@*:* {{constraints not satisfied for class template 'iota_view'{{.*}}}}
+    //expected-error@*:* {{no matching function for call to object of type 'const __iota::__fn'}}
   }
 }
