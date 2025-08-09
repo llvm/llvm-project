@@ -7,7 +7,7 @@ class TestRichDisassembler(TestBase):
     def test_d_original_example_O1(self):
         """
         Tests disassembler output for d_original_example.c built with -O1,
-        using the CLI with --rich to enable annotations.
+        using the CLI with --rich for enabled annotations.
         """
         self.build(
             dictionary={"C_SOURCES": "d_original_example.c", "CFLAGS_EXTRAS": "-g -O1"}
