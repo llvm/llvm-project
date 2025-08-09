@@ -1394,6 +1394,45 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
     return nullptr;
   };
 
+  // Special case for reconstructing across a select:
+  // (Cond ? V1 : (X & Mask)) |
+  // zext (Cond ? V2 : trunc X)
+  // -> (Cond ? (V1 | zext V2) : X)
+  auto foldReconstruction = [&](Value *V1, Value *Masked,
+                                Value *ZExtSel) -> Value * {
+    if (Opcode != Instruction::Or)
+      return nullptr;
+
+    Value *X;
+    const APInt *C;
+    if (!match(Masked, m_OneUse(m_And(m_Value(X), m_APInt(C)))))
+      return nullptr;
+
+    const APInt *V2;
+    Value *Trunc;
+    if (!match(ZExtSel,
+               m_ZExt(m_OneUse(m_Select(m_Specific(Cond), m_APInt(V2),
+                                        m_Value(Trunc))))))
+      return nullptr;
+
+    if (*C != APInt::getBitsSetFrom(X->getType()->getScalarSizeInBits(),
+                                    Trunc->getType()->getScalarSizeInBits())) {
+      return nullptr;
+    }
+
+    if (!match(Trunc, m_Trunc(m_Specific(X))))
+      return nullptr;
+
+    unsigned V1Width = V1->getType()->getScalarSizeInBits();
+    APInt ZextV2 = V2->zext(V1Width);
+    Value *True = simplifyBinOp(
+        Opcode, V1, ConstantInt::get(V1->getType(), ZextV2), FMF, Q);
+    if (!True)
+      return nullptr;
+
+    return Builder.CreateSelect(Cond, True, X, I.getName());
+  };
+
   if (LHSIsSelect && RHSIsSelect && A == D) {
     // (A ? B : C) op (A ? E : F) -> A ? (B op E) : (C op F)
     Cond = A;
@@ -1413,12 +1452,16 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
     False = simplifyBinOp(Opcode, C, RHS, FMF, Q);
     if (Value *NewSel = foldAddNegate(B, C, RHS))
       return NewSel;
+    if (Value *NewSel = foldReconstruction(B, C, RHS))
+      return NewSel;
   } else if (RHSIsSelect && RHS->hasOneUse()) {
     // X op (D ? E : F) -> D ? (X op E) : (X op F)
     Cond = D;
     True = simplifyBinOp(Opcode, LHS, E, FMF, Q);
     False = simplifyBinOp(Opcode, LHS, F, FMF, Q);
     if (Value *NewSel = foldAddNegate(E, F, LHS))
+      return NewSel;
+    if (Value *NewSel = foldReconstruction(E, F, LHS))
       return NewSel;
   }
 
