@@ -8,6 +8,11 @@ set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   find_package(MLIR REQUIRED CONFIG)
 
+  # Explictily set LLVM_LIT_ARGS so that the in-tree test for this example
+  # will get the expected output regardless of the value of LLVM_LIT_ARGS
+  # in the main LLVM build.
+  set(LLVM_LIT_ARGS "")
+
   message(STATUS "Using MLIRConfig.cmake in: ${MLIR_DIR}")
   message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
