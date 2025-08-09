@@ -138,7 +138,7 @@ class Symbolizer final {
   static void LateInitialize();
   static void ClearTools();
 
-// Returns a list of symbolized frames for a given address (containing
+  // Returns a list of symbolized frames for a given address (containing
   // all inlined functions, if necessary).
   SymbolizedStack *SymbolizePC(uptr address);
   bool SymbolizeData(uptr address, DataInfo *info);
