@@ -6042,22 +6042,24 @@ static MachineBasicBlock *
 emitPseudoXVINSGR2VR(MachineInstr &MI, MachineBasicBlock *BB,
                      const LoongArchSubtarget &Subtarget) {
   unsigned InsOp;
+  unsigned BroadcastOp;
   unsigned HalfSize;
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Unexpected opcode");
   case LoongArch::PseudoXVINSGR2VR_B:
     HalfSize = 16;
-    InsOp = LoongArch::VINSGR2VR_B;
+    BroadcastOp = LoongArch::XVREPLGR2VR_B;
+    InsOp = LoongArch::XVEXTRINS_B;
     break;
   case LoongArch::PseudoXVINSGR2VR_H:
     HalfSize = 8;
-    InsOp = LoongArch::VINSGR2VR_H;
+    BroadcastOp = LoongArch::XVREPLGR2VR_H;
+    InsOp = LoongArch::XVEXTRINS_H;
     break;
   }
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   const TargetRegisterClass *RC = &LoongArch::LASX256RegClass;
-  const TargetRegisterClass *SubRC = &LoongArch::LSX128RegClass;
   DebugLoc DL = MI.getDebugLoc();
   MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
   // XDst = vector_insert XSrc, Elt, Idx
@@ -6066,37 +6068,19 @@ emitPseudoXVINSGR2VR(MachineInstr &MI, MachineBasicBlock *BB,
   Register Elt = MI.getOperand(2).getReg();
   unsigned Idx = MI.getOperand(3).getImm();
 
-  Register ScratchReg1 = XSrc;
-  if (Idx >= HalfSize) {
-    ScratchReg1 = MRI.createVirtualRegister(RC);
-    BuildMI(*BB, MI, DL, TII->get(LoongArch::XVPERMI_D), ScratchReg1)
-        .addReg(XSrc)
-        .addImm(14);
-  }
+  Register ScratchReg1 = MRI.createVirtualRegister(RC);
+  Register ScratchReg2 = MRI.createVirtualRegister(RC);
+  BuildMI(*BB, MI, DL, TII->get(BroadcastOp), ScratchReg1).addReg(Elt);
 
-  Register ScratchSubReg1 = MRI.createVirtualRegister(SubRC);
-  Register ScratchSubReg2 = MRI.createVirtualRegister(SubRC);
-  BuildMI(*BB, MI, DL, TII->get(LoongArch::COPY), ScratchSubReg1)
-      .addReg(ScratchReg1, 0, LoongArch::sub_128);
-  BuildMI(*BB, MI, DL, TII->get(InsOp), ScratchSubReg2)
-      .addReg(ScratchSubReg1)
-      .addReg(Elt)
-      .addImm(Idx >= HalfSize ? Idx - HalfSize : Idx);
+  BuildMI(*BB, MI, DL, TII->get(LoongArch::XVPERMI_Q), ScratchReg2)
+      .addReg(ScratchReg1)
+      .addReg(XSrc)
+      .addImm(Idx >= HalfSize ? 48 : 18);
 
-  Register ScratchReg2 = XDst;
-  if (Idx >= HalfSize)
-    ScratchReg2 = MRI.createVirtualRegister(RC);
-
-  BuildMI(*BB, MI, DL, TII->get(LoongArch::SUBREG_TO_REG), ScratchReg2)
-      .addImm(0)
-      .addReg(ScratchSubReg2)
-      .addImm(LoongArch::sub_128);
-
-  if (Idx >= HalfSize)
-    BuildMI(*BB, MI, DL, TII->get(LoongArch::XVPERMI_Q), XDst)
-        .addReg(XSrc)
-        .addReg(ScratchReg2)
-        .addImm(2);
+  BuildMI(*BB, MI, DL, TII->get(InsOp), XDst)
+      .addReg(XSrc)
+      .addReg(ScratchReg2)
+      .addImm((Idx >= HalfSize ? Idx - HalfSize : Idx) * 17);
 
   MI.eraseFromParent();
   return BB;
