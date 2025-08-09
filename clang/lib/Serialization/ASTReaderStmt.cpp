@@ -116,6 +116,7 @@ namespace clang {
                                    TemplateArgumentLoc *ArgsLocArray,
                                    unsigned NumTemplateArgs);
 
+    void VisitLoopControlStmt(LoopControlStmt *S);
     void VisitStmt(Stmt *S);
 #define STMT(Type, Base) \
     void Visit##Type(Type *);
@@ -320,14 +321,21 @@ void ASTStmtReader::VisitIndirectGotoStmt(IndirectGotoStmt *S) {
   S->setTarget(Record.readSubExpr());
 }
 
-void ASTStmtReader::VisitContinueStmt(ContinueStmt *S) {
+void ASTStmtReader::VisitLoopControlStmt(LoopControlStmt *S) {
   VisitStmt(S);
-  S->setContinueLoc(readSourceLocation());
+  S->setKwLoc(readSourceLocation());
+  if (Record.readBool()) {
+    S->setLabeledStmt(Record.readSubStmt());
+    S->setLabelLoc(readSourceLocation());
+  }
+}
+
+void ASTStmtReader::VisitContinueStmt(ContinueStmt *S) {
+  VisitLoopControlStmt(S);
 }
 
 void ASTStmtReader::VisitBreakStmt(BreakStmt *S) {
-  VisitStmt(S);
-  S->setBreakLoc(readSourceLocation());
+  VisitLoopControlStmt(S);
 }
 
 void ASTStmtReader::VisitReturnStmt(ReturnStmt *S) {

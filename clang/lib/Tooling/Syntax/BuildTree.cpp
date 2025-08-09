@@ -1483,7 +1483,7 @@ public:
   }
 
   bool WalkUpFromContinueStmt(ContinueStmt *S) {
-    Builder.markChildToken(S->getContinueLoc(),
+    Builder.markChildToken(S->getKwLoc(),
                            syntax::NodeRole::IntroducerKeyword);
     Builder.foldNode(Builder.getStmtRange(S),
                      new (allocator()) syntax::ContinueStatement, S);
@@ -1491,7 +1491,7 @@ public:
   }
 
   bool WalkUpFromBreakStmt(BreakStmt *S) {
-    Builder.markChildToken(S->getBreakLoc(),
+    Builder.markChildToken(S->getKwLoc(),
                            syntax::NodeRole::IntroducerKeyword);
     Builder.foldNode(Builder.getStmtRange(S),
                      new (allocator()) syntax::BreakStatement, S);

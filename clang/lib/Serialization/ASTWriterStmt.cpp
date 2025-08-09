@@ -109,6 +109,7 @@ namespace clang {
     void AddTemplateKWAndArgsInfo(const ASTTemplateKWAndArgsInfo &ArgInfo,
                                   const TemplateArgumentLoc *Args);
 
+    void VisitLoopControlStmt(LoopControlStmt *S);
     void VisitStmt(Stmt *S);
 #define STMT(Type, Base) \
     void Visit##Type(Type *);
@@ -310,15 +311,23 @@ void ASTStmtWriter::VisitIndirectGotoStmt(IndirectGotoStmt *S) {
   Code = serialization::STMT_INDIRECT_GOTO;
 }
 
-void ASTStmtWriter::VisitContinueStmt(ContinueStmt *S) {
+void ASTStmtWriter::VisitLoopControlStmt(LoopControlStmt *S) {
   VisitStmt(S);
-  Record.AddSourceLocation(S->getContinueLoc());
+  Record.AddSourceLocation(S->getKwLoc());
+  Record.push_back(S->isLabeled());
+  if (S->isLabeled()) {
+    Record.AddStmt(S->getLabeledStmt());
+    Record.AddSourceLocation(S->getLabelLoc());
+  }
+}
+
+void ASTStmtWriter::VisitContinueStmt(ContinueStmt *S) {
+  VisitLoopControlStmt(S);
   Code = serialization::STMT_CONTINUE;
 }
 
 void ASTStmtWriter::VisitBreakStmt(BreakStmt *S) {
-  VisitStmt(S);
-  Record.AddSourceLocation(S->getBreakLoc());
+  VisitLoopControlStmt(S);
   Code = serialization::STMT_BREAK;
 }
 

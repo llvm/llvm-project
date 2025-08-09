@@ -2290,12 +2290,24 @@ StmtResult Parser::ParseGotoStatement() {
 
 StmtResult Parser::ParseContinueStatement() {
   SourceLocation ContinueLoc = ConsumeToken();  // eat the 'continue'.
-  return Actions.ActOnContinueStmt(ContinueLoc, getCurScope());
+  if (!Tok.is(tok::identifier))
+    return Actions.ActOnContinueStmt(ContinueLoc, getCurScope());
+
+  StmtResult Res = Actions.ActOnLabelledContinueStmt(
+      ContinueLoc, Tok.getIdentifierInfo(), Tok.getLocation());
+  ConsumeToken();
+  return Res;
 }
 
 StmtResult Parser::ParseBreakStatement() {
   SourceLocation BreakLoc = ConsumeToken();  // eat the 'break'.
-  return Actions.ActOnBreakStmt(BreakLoc, getCurScope());
+  if (!Tok.is(tok::identifier))
+    return Actions.ActOnBreakStmt(BreakLoc, getCurScope());
+
+  StmtResult Res = Actions.ActOnLabelledBreakStmt(
+      BreakLoc, Tok.getIdentifierInfo(), Tok.getLocation());
+  ConsumeToken();
+  return Res;
 }
 
 StmtResult Parser::ParseReturnStatement() {
