@@ -851,6 +851,52 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
     }
     break;
   }
+  case DW_AT_LLVM_stmt_sequence: {
+    // Make sure the offset in the DW_AT_LLVM_stmt_sequence attribute is valid
+    // and points to a valid sequence start in the line table.
+    auto SectionOffset = AttrValue.Value.getAsSectionOffset();
+    if (!SectionOffset) {
+      ReportError("Invalid DW_AT_LLVM_stmt_sequence encoding",
+                  "DIE has invalid DW_AT_LLVM_stmt_sequence encoding:");
+      break;
+    }
+    if (*SectionOffset >= U->getLineSection().Data.size()) {
+      ReportError(
+          "DW_AT_LLVM_stmt_sequence offset out of bounds",
+          "DW_AT_LLVM_stmt_sequence offset is beyond .debug_line bounds: " +
+              llvm::formatv("{0:x8}", *SectionOffset));
+      break;
+    }
+
+    // Check if the offset points to a valid sequence start
+    const auto *LineTable = DCtx.getLineTableForUnit(U);
+    if (!LineTable) {
+      ReportError("DW_AT_LLVM_stmt_sequence without line table",
+                  "DIE has DW_AT_LLVM_stmt_sequence but compile unit has no "
+                  "line table");
+      break;
+    }
+    bool ValidSequenceOffset = false;
+    // Check if the offset matches any of the sequence start offsets using
+    // binary search
+    auto it = std::lower_bound(LineTable->Sequences.begin(),
+                               LineTable->Sequences.end(), *SectionOffset,
+                               [](const auto &Sequence, const uint64_t Offset) {
+                                 return Sequence.StmtSeqOffset < Offset;
+                               });
+    if (it != LineTable->Sequences.end() &&
+        it->StmtSeqOffset == *SectionOffset) {
+      ValidSequenceOffset = true;
+    }
+
+    if (!ValidSequenceOffset)
+      ReportError(
+          "Invalid DW_AT_LLVM_stmt_sequence offset",
+          "DW_AT_LLVM_stmt_sequence offset " +
+              llvm::formatv("{0:x8}", *SectionOffset) +
+              " does not point to a valid sequence start in the line table");
+    break;
+  }
   default:
     break;
   }
