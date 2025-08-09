@@ -667,8 +667,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_VectorSplat: {
-    assert(!classify(CE->getType()));
-    assert(classify(SubExpr->getType()));
+    assert(!canClassify(CE->getType()));
+    assert(canClassify(SubExpr->getType()));
     assert(CE->getType()->isVectorType());
 
     if (!Initializing) {
@@ -2070,7 +2070,7 @@ bool Compiler<Emitter>::visitCallArgs(ArrayRef<const Expr *> Args,
 
   unsigned ArgIndex = 0;
   for (const Expr *Arg : Args) {
-    if (OptPrimType T = classify(Arg)) {
+    if (canClassify(Arg)) {
       if (!this->visit(Arg))
         return false;
     } else {
@@ -3155,7 +3155,7 @@ bool Compiler<Emitter>::VisitCXXNoexceptExpr(const CXXNoexceptExpr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
   QualType T = E->getType();
-  assert(!classify(T));
+  assert(!canClassify(T));
 
   if (T->isRecordType()) {
     const CXXConstructorDecl *Ctor = E->getConstructor();
@@ -4150,7 +4150,7 @@ template <class Emitter> bool Compiler<Emitter>::visit(const Expr *E) {
 
   // Create local variable to hold the return value.
   if (!E->isGLValue() && !E->getType()->isAnyComplexType() &&
-      !classify(E->getType())) {
+      !canClassify(E->getType())) {
     std::optional<unsigned> LocalIndex = allocateLocal(E);
     if (!LocalIndex)
       return false;
@@ -4170,7 +4170,7 @@ template <class Emitter> bool Compiler<Emitter>::visit(const Expr *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::visitInitializer(const Expr *E) {
-  assert(!classify(E->getType()));
+  assert(!canClassify(E->getType()));
 
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/false,
                              /*NewInitializing=*/true);
@@ -4377,7 +4377,7 @@ bool Compiler<Emitter>::visitZeroArrayInitializer(QualType T, const Expr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::visitAssignment(const Expr *LHS, const Expr *RHS,
                                         const Expr *E) {
-  if (!classify(E->getType()))
+  if (!canClassify(E->getType()))
     return false;
 
   if (!this->visit(RHS))
