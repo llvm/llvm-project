@@ -880,7 +880,8 @@ bool llvm::isReadOnlyLoopWithSafeOrSpeculativeLoads(
       if (auto *LI = dyn_cast<LoadInst>(&I)) {
         if (!isDereferenceableAndAlignedInLoop(LI, L, *SE, *DT, AC, Predicates))
           SpeculativeLoads->push_back(LI);
-      } else if (I.mayReadFromMemory() || I.mayWriteToMemory() || I.mayThrow()) {
+      } else if (I.mayReadFromMemory() || I.mayWriteToMemory() ||
+                 I.mayThrow()) {
         return false;
       }
     }

@@ -1791,10 +1791,10 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   }
   // Support single Speculative load for now.
   if (NonDerefLoads.size() > 1) {
-      reportVectorizationFailure("Loop contains more than one unbound access",
-                                 "TooManySpeculativeLoadInEarlyExitLoop",
-                                 ORE, TheLoop);
-      return false;
+    reportVectorizationFailure("Loop contains more than one unbound access",
+                               "TooManySpeculativeLoadInEarlyExitLoop", ORE,
+                               TheLoop);
+    return false;
   }
 
   [[maybe_unused]] const SCEV *SymbolicMaxBTC =
