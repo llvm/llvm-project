@@ -52,7 +52,6 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
-
 #include "clang/AST/ParentMap.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -1116,6 +1115,15 @@ class EscapeTrackedCallback final : public SymbolVisitor {
 
   explicit EscapeTrackedCallback(ProgramStateRef S) : State(std::move(S)) {}
 
+  bool VisitSymbol(SymbolRef Sym) override {
+    if (const RefState *RS = State->get<RegionState>(Sym)) {
+      if (RS->isAllocated() || RS->isAllocatedOfSizeZero()) {
+        State = State->set<RegionState>(Sym, RefState::getEscaped(RS));
+      }
+    }
+    return true;
+  }
+
 public:
   /// Escape tracked regions reachable from the given roots.
   static ProgramStateRef
@@ -1125,19 +1133,10 @@ public:
     for (const MemRegion *R : Roots) {
       State->scanReachableSymbols(loc::MemRegionVal(R), Visitor);
     }
-    return Visitor.getState();
+    return Visitor.State;
   }
 
-  ProgramStateRef getState() const { return State; }
-
-  bool VisitSymbol(SymbolRef Sym) override {
-    if (const RefState *RS = State->get<RegionState>(Sym)) {
-      if (RS->isAllocated() || RS->isAllocatedOfSizeZero()) {
-        State = State->set<RegionState>(Sym, RefState::getEscaped(RS));
-      }
-    }
-    return true;
-  }
+  friend class SymbolVisitor;
 };
 } // end anonymous namespace
 
@@ -3111,17 +3110,13 @@ void MallocChecker::checkDeadSymbols(SymbolReaper &SymReaper,
   C.addTransition(state->set<RegionState>(RS), N);
 }
 
-// Use isWithinStdNamespace from CheckerHelpers.h instead of custom
-// implementation
-
 // Allowlist of owning smart pointers we want to recognize.
 // Start with unique_ptr and shared_ptr. (intentionally exclude weak_ptr)
 static bool isSmartOwningPtrType(QualType QT) {
   QT = QT->getCanonicalTypeUnqualified();
 
   // First try TemplateSpecializationType (for std smart pointers)
-  const auto *TST = QT->getAs<TemplateSpecializationType>();
-  if (TST) {
+  if (const auto *TST = QT->getAs<TemplateSpecializationType>()) {
     const TemplateDecl *TD = TST->getTemplateName().getAsTemplateDecl();
     if (!TD)
       return false;
@@ -3139,8 +3134,7 @@ static bool isSmartOwningPtrType(QualType QT) {
   }
 
   // Also try RecordType (for custom smart pointer implementations)
-  const auto *RD = QT->getAsCXXRecordDecl();
-  if (RD) {
+  if (const auto *RD = QT->getAsCXXRecordDecl()) {
     StringRef Name = RD->getName();
     if (Name == "unique_ptr" || Name == "shared_ptr") {
       // Accept any custom unique_ptr or shared_ptr implementation
