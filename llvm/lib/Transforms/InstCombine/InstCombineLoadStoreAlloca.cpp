@@ -718,6 +718,14 @@ static Instruction *combineLoadToOperationType(InstCombinerImpl &IC,
   return nullptr;
 }
 
+// Check if the aggregate load has a invariant.load metadata
+// If aggregate load has invariant.load metadata, add it to the
+// unpacked loads as well.
+static void copyInvariantLoadMetadata(LoadInst &LI, LoadInst *NewLoad) {
+  if (MDNode *MD = LI.getMetadata(LLVMContext::MD_invariant_load))
+    NewLoad->setMetadata(LLVMContext::MD_invariant_load, MD);
+}
+
 static Instruction *unpackLoadToAggregate(InstCombinerImpl &IC, LoadInst &LI) {
   // FIXME: We could probably with some care handle both volatile and atomic
   // stores here but it isn't clear that this is important.
@@ -737,6 +745,7 @@ static Instruction *unpackLoadToAggregate(InstCombinerImpl &IC, LoadInst &LI) {
       LoadInst *NewLoad = IC.combineLoadToNewType(LI, ST->getTypeAtIndex(0U),
                                                   ".unpack");
       NewLoad->setAAMetadata(LI.getAAMetadata());
+      copyInvariantLoadMetadata(LI, NewLoad);
       return IC.replaceInstUsesWith(LI, IC.Builder.CreateInsertValue(
         PoisonValue::get(T), NewLoad, 0, Name));
     }
@@ -762,8 +771,13 @@ static Instruction *unpackLoadToAggregate(InstCombinerImpl &IC, LoadInst &LI) {
           ST->getElementType(i), Ptr,
           commonAlignment(Align, SL->getElementOffset(i).getKnownMinValue()),
           Name + ".unpack");
+      // Adjust AA metadata to new offset and size.
+      AAMDNodes adjustedAANodes = LI.getAAMetadata().adjustForAccess(
+          SL->getElementOffset(i),
+          SL->getElementOffset(i).getKnownMinValue());
       // Propagate AA metadata. It'll still be valid on the narrowed load.
-      L->setAAMetadata(LI.getAAMetadata());
+      L->setAAMetadata(adjustedAANodes);
+      copyInvariantLoadMetadata(LI, L);
       V = IC.Builder.CreateInsertValue(V, L, i);
     }
 
