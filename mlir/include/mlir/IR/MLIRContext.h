@@ -12,6 +12,7 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Remarks/RemarkFormat.h"
 #include <functional>
 #include <memory>
 #include <vector>
@@ -32,6 +33,7 @@ class InFlightDiagnostic;
 class Location;
 class MLIRContextImpl;
 class RegisteredOperationName;
+class RemarkEngine;
 class StorageUniquer;
 class IRUnit;
 
@@ -212,6 +214,9 @@ public:
   /// Returns the diagnostic engine for this context.
   DiagnosticEngine &getDiagEngine();
 
+  /// Returns the remark engine for this context.
+  RemarkEngine *getRemarkEngine();
+
   /// Returns the storage uniquer used for creating affine constructs.
   StorageUniquer &getAffineUniquer();
 
@@ -244,6 +249,15 @@ public:
   /// context registry correlates to loaded dialects and their entities
   /// (attributes, operations, types, etc.).
   llvm::hash_code getRegistryHash();
+
+  /// Setup optimization remarks for the context.
+  void setupOptimizationRemarks(
+      StringRef outputPath, llvm::remarks::Format outputFormat,
+      bool printAsEmitRemarks,
+      const std::optional<std::string> &categoryPassedName = std::nullopt,
+      const std::optional<std::string> &categoryMissedName = std::nullopt,
+      const std::optional<std::string> &categoryAnalysisName = std::nullopt,
+      const std::optional<std::string> &categoryFailedName = std::nullopt);
 
   //===--------------------------------------------------------------------===//
   // Action API
@@ -281,6 +295,9 @@ public:
   }
 
 private:
+  /// Set the remark engine for this context.
+  void setRemarkEngine(std::unique_ptr<RemarkEngine> engine);
+
   /// Return true if the given dialect is currently loading.
   bool isDialectLoading(StringRef dialectNamespace);
 

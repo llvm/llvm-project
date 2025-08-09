@@ -25,12 +25,14 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OperationSupport.h"
+#include "mlir/IR/Remarks.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/RWMutex.h"
@@ -132,6 +134,11 @@ public:
   // Diagnostics
   //===--------------------------------------------------------------------===//
   DiagnosticEngine diagEngine;
+
+  //===--------------------------------------------------------------------===//
+  // Remark
+  //===--------------------------------------------------------------------===//
+  std::unique_ptr<RemarkEngine> remarkEngine;
 
   //===--------------------------------------------------------------------===//
   // Options
@@ -386,6 +393,37 @@ bool MLIRContext::hasActionHandler() { return (bool)getImpl().actionHandler; }
 
 /// Returns the diagnostic engine for this context.
 DiagnosticEngine &MLIRContext::getDiagEngine() { return getImpl().diagEngine; }
+
+//===----------------------------------------------------------------------===//
+// Remark Handlers
+//===----------------------------------------------------------------------===//
+
+/// Returns the remark engine for this context.
+void MLIRContext::setRemarkEngine(std::unique_ptr<RemarkEngine> engine) {
+  getImpl().remarkEngine = std::move(engine);
+}
+
+RemarkEngine *MLIRContext::getRemarkEngine() {
+  return getImpl().remarkEngine.get();
+}
+
+void MLIRContext::setupOptimizationRemarks(
+    StringRef outputPath, llvm::remarks::Format outputFormat,
+    bool printAsEmitRemarks,
+    const std::optional<std::string> &categoryPassedName,
+    const std::optional<std::string> &categoryMissedName,
+    const std::optional<std::string> &categoryAnalysisName,
+    const std::optional<std::string> &categoryFailedName) {
+  auto engine = std::make_unique<RemarkEngine>(
+      printAsEmitRemarks, categoryPassedName, categoryMissedName,
+      categoryAnalysisName, categoryFailedName);
+  std::string errMsg;
+  if (failed(engine->initialize(outputPath, outputFormat, &errMsg))) {
+    llvm::report_fatal_error(
+        llvm::Twine("Failed to initialize remark engine. Error: ") + errMsg);
+  }
+  setRemarkEngine(std::move(engine));
+}
 
 //===----------------------------------------------------------------------===//
 // Dialect and Operation Registration
