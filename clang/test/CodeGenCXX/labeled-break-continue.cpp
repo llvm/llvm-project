@@ -167,3 +167,55 @@ void f2() {
     NonTrivialDestructor n4;
   }
 }
+
+template <bool Continue>
+void f3() {
+  l1: while (g(1)) {
+    for (;g(2);) {
+      if constexpr (Continue) continue l1;
+      else break l1;
+    }
+  }
+}
+
+// CHECK-LABEL: define {{.*}} void @_Z2f3ILb1EEvv()
+// CHECK: entry:
+// CHECK:   br label %l1
+// CHECK: l1:
+// CHECK:   br label %while.cond
+// CHECK: while.cond:
+// CHECK:   %call = call {{.*}} i1 @_Z1gi(i32 {{.*}} 1)
+// CHECK:   br i1 %call, label %while.body, label %while.end
+// CHECK: while.body:
+// CHECK:   br label %for.cond
+// CHECK: for.cond:
+// CHECK:   %call1 = call {{.*}} i1 @_Z1gi(i32 {{.*}} 2)
+// CHECK:   br i1 %call1, label %for.body, label %for.end
+// CHECK: for.body:
+// CHECK:   br label %while.cond
+// CHECK: for.end:
+// CHECK:   br label %while.cond
+// CHECK: while.end:
+// CHECK:   ret void
+template void f3<true>();
+
+// CHECK-LABEL: define {{.*}} void @_Z2f3ILb0EEvv()
+// CHECK: entry:
+// CHECK:   br label %l1
+// CHECK: l1:
+// CHECK:   br label %while.cond
+// CHECK: while.cond:
+// CHECK:   %call = call {{.*}} i1 @_Z1gi(i32 {{.*}} 1)
+// CHECK:   br i1 %call, label %while.body, label %while.end
+// CHECK: while.body:
+// CHECK:   br label %for.cond
+// CHECK: for.cond:
+// CHECK:   %call1 = call {{.*}} i1 @_Z1gi(i32 {{.*}} 2)
+// CHECK:   br i1 %call1, label %for.body, label %for.end
+// CHECK: for.body:
+// CHECK:   br label %while.end
+// CHECK: for.end:
+// CHECK:   br label %while.cond
+// CHECK: while.end:
+// CHECK:   ret void
+template void f3<false>();

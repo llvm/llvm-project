@@ -153,3 +153,17 @@ constexpr bool f11() {
   return destroyed;
 }
 static_assert(f11());
+
+template <typename T>
+constexpr T f12() {
+  T x{};
+  a: for (T i = 0; i < 10; i++) {
+    b: for (T j = 0; j < 10; j++) {
+      x += j;
+      if (i == 2 && j == 2) break a;
+    }
+  }
+  return x;
+}
+static_assert(f12<int>() == 93);
+static_assert(f12<unsigned>() == 93u);

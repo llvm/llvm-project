@@ -3291,6 +3291,7 @@ StmtResult Sema::ActOnContinueStmt(SourceLocation ContinueLoc, Scope *CurScope,
     return new (Context) ContinueStmt(ContinueLoc, LabelLoc, Target);
   }
 
+  assert(CurScope && "unlabeled continue requires a scope");
   Scope *S = CurScope->getContinueParent();
   if (!S) {
     // C99 6.8.6.2p1: A break shall appear only in or as a loop body.
@@ -3324,6 +3325,7 @@ StmtResult Sema::ActOnBreakStmt(SourceLocation BreakLoc, Scope *CurScope,
     return new (Context) BreakStmt(BreakLoc, LabelLoc, Target);
   }
 
+  assert(CurScope && "unlabeled break requires a scope");
   Scope *S = CurScope->getBreakParent();
   if (!S) {
     // C99 6.8.6.3p1: A break shall appear only in or as a switch/loop body.
