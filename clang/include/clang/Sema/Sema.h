@@ -3225,7 +3225,7 @@ public:
   /// current instantiation (C++0x [temp.dep.type]p1).
   ///
   /// \param NNS a dependent nested name specifier.
-  CXXRecordDecl *getCurrentInstantiationOf(NestedNameSpecifier *NNS);
+  CXXRecordDecl *getCurrentInstantiationOf(NestedNameSpecifier NNS);
 
   /// The parser has parsed a global nested-name-specifier '::'.
   ///
@@ -3262,7 +3262,7 @@ public:
   /// (e.g., Base::), perform name lookup for that identifier as a
   /// nested-name-specifier within the given scope, and return the result of
   /// that name lookup.
-  NamedDecl *FindFirstQualifierInScope(Scope *S, NestedNameSpecifier *NNS);
+  NamedDecl *FindFirstQualifierInScope(Scope *S, NestedNameSpecifier NNS);
 
   /// Keeps information about an identifier in a nested-name-spec.
   ///
@@ -7618,7 +7618,7 @@ public:
   /// "real" base class is checked as appropriate when checking the access of
   /// the member name.
   ExprResult PerformObjectMemberConversion(Expr *From,
-                                           NestedNameSpecifier *Qualifier,
+                                           NestedNameSpecifier Qualifier,
                                            NamedDecl *FoundDecl,
                                            NamedDecl *Member);
 
@@ -10210,7 +10210,7 @@ public:
   ExprResult InitializeExplicitObjectArgument(Sema &S, Expr *Obj,
                                               FunctionDecl *Fun);
   ExprResult PerformImplicitObjectArgumentInitialization(
-      Expr *From, NestedNameSpecifier *Qualifier, NamedDecl *FoundDecl,
+      Expr *From, NestedNameSpecifier Qualifier, NamedDecl *FoundDecl,
       CXXMethodDecl *Method);
 
   /// PerformContextuallyConvertToBool - Perform a contextual conversion
@@ -13765,8 +13765,9 @@ public:
   SubstDeclarationNameInfo(const DeclarationNameInfo &NameInfo,
                            const MultiLevelTemplateArgumentList &TemplateArgs);
   TemplateName
-  SubstTemplateName(NestedNameSpecifierLoc QualifierLoc, TemplateName Name,
-                    SourceLocation Loc,
+  SubstTemplateName(SourceLocation TemplateKWLoc,
+                    NestedNameSpecifierLoc &QualifierLoc, TemplateName Name,
+                    SourceLocation NameLoc,
                     const MultiLevelTemplateArgumentList &TemplateArgs);
 
   bool SubstTypeConstraint(TemplateTypeParmDecl *Inst, const TypeConstraint *TC,

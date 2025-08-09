@@ -1783,7 +1783,7 @@ public:
 
 private:
   static DynTypedNode extract(const NestedNameSpecifierLoc &Loc) {
-    return DynTypedNode::create(*Loc.getNestedNameSpecifier());
+    return DynTypedNode::create(Loc.getNestedNameSpecifier());
   }
 };
 

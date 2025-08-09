@@ -59,19 +59,6 @@ void CXXScopeSpec::Make(ASTContext &Context, TypeLoc TL,
          "NestedNameSpecifierLoc range computation incorrect");
 }
 
-void CXXScopeSpec::Extend(ASTContext &Context, IdentifierInfo *Identifier,
-                          SourceLocation IdentifierLoc,
-                          SourceLocation ColonColonLoc) {
-  Builder.Extend(Context, Identifier, IdentifierLoc, ColonColonLoc);
-
-  if (Range.getBegin().isInvalid())
-    Range.setBegin(IdentifierLoc);
-  Range.setEnd(ColonColonLoc);
-
-  assert(Range == Builder.getSourceRange() &&
-         "NestedNameSpecifierLoc range computation incorrect");
-}
-
 void CXXScopeSpec::Extend(ASTContext &Context, NamespaceBaseDecl *Namespace,
                           SourceLocation NamespaceLoc,
                           SourceLocation ColonColonLoc) {
@@ -95,10 +82,10 @@ void CXXScopeSpec::MakeGlobal(ASTContext &Context,
          "NestedNameSpecifierLoc range computation incorrect");
 }
 
-void CXXScopeSpec::MakeSuper(ASTContext &Context, CXXRecordDecl *RD,
-                             SourceLocation SuperLoc,
-                             SourceLocation ColonColonLoc) {
-  Builder.MakeSuper(Context, RD, SuperLoc, ColonColonLoc);
+void CXXScopeSpec::MakeMicrosoftSuper(ASTContext &Context, CXXRecordDecl *RD,
+                                      SourceLocation SuperLoc,
+                                      SourceLocation ColonColonLoc) {
+  Builder.MakeMicrosoftSuper(Context, RD, SuperLoc, ColonColonLoc);
 
   Range.setBegin(SuperLoc);
   Range.setEnd(ColonColonLoc);
@@ -108,7 +95,7 @@ void CXXScopeSpec::MakeSuper(ASTContext &Context, CXXRecordDecl *RD,
 }
 
 void CXXScopeSpec::MakeTrivial(ASTContext &Context,
-                               NestedNameSpecifier *Qualifier, SourceRange R) {
+                               NestedNameSpecifier Qualifier, SourceRange R) {
   Builder.MakeTrivial(Context, Qualifier, R);
   Range = R;
 }

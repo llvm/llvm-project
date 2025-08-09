@@ -123,7 +123,7 @@ public:
       return;
 
     // TODO: Recurse into the fields to see if they have excess padding.
-    visitRecord(RT->getDecl(), Elts);
+    visitRecord(RT->getOriginalDecl()->getDefinitionOrSelf(), Elts);
   }
 
   bool shouldSkipDecl(const RecordDecl *RD) const {

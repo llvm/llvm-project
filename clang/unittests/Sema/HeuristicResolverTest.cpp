@@ -648,15 +648,16 @@ TEST(HeuristicResolver, NestedNameSpecifier) {
   // expected by expectResolution() (returning a vector of decls).
   ResolveFnT<NestedNameSpecifier> ResolveFn =
       [](const HeuristicResolver *H,
-         const NestedNameSpecifier *NNS) -> std::vector<const NamedDecl *> {
+         NestedNameSpecifier NNS) -> std::vector<const NamedDecl *> {
     return {H->resolveNestedNameSpecifierToType(NNS)->getAsCXXRecordDecl()};
   };
-  expectResolution(Code, ResolveFn,
-                   nestedNameSpecifier(hasPrefix(specifiesType(hasDeclaration(
-                                           classTemplateDecl(hasName("A"))))))
-                       .bind("input"),
-                   classTemplateDecl(has(cxxRecordDecl(
-                       has(cxxRecordDecl(hasName("B")).bind("output"))))));
+  expectResolution<NestedNameSpecifier>(
+      Code, ResolveFn,
+      nestedNameSpecifier(hasPrefix(specifiesType(
+                              hasDeclaration(classTemplateDecl(hasName("A"))))))
+          .bind("input"),
+      classTemplateDecl(
+          has(cxxRecordDecl(has(cxxRecordDecl(hasName("B")).bind("output"))))));
 }
 
 TEST(HeuristicResolver, TemplateSpecializationType) {

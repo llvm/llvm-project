@@ -57,11 +57,11 @@ using namespace sema;
 ParsedType Sema::getInheritingConstructorName(CXXScopeSpec &SS,
                                               SourceLocation NameLoc,
                                               const IdentifierInfo &Name) {
-  NestedNameSpecifier *NNS = SS.getScopeRep();
-  if ([[maybe_unused]] const IdentifierInfo *II = NNS->getAsIdentifier())
-    assert(II == &Name && "not a constructor name");
+  NestedNameSpecifier NNS = SS.getScopeRep();
+  QualType Type(NNS.getAsType(), 0);
+  if ([[maybe_unused]] const auto *DNT = dyn_cast<DependentNameType>(Type))
+    assert(DNT->getIdentifier() == &Name && "not a constructor name");
 
-  QualType Type(NNS->translateToType(Context), 0);
   // This reference to the type is located entirely at the location of the
   // final identifier in the qualified-id.
   return CreateParsedType(Type,
@@ -310,15 +310,23 @@ ParsedType Sema::getDestructorName(const IdentifierInfo &II,
   // If both lookups succeed and find a dependent result, which result should
   // we retain? (Same question for p->~type-name().)
 
-  if (NestedNameSpecifier *Prefix =
-      SS.isSet() ? SS.getScopeRep()->getPrefix() : nullptr) {
+  auto Prefix = [&]() -> NestedNameSpecifierLoc {
+    NestedNameSpecifierLoc NNS = SS.getWithLocInContext(Context);
+    if (!NNS)
+      return NestedNameSpecifierLoc();
+    if (auto TL = NNS.getAsTypeLoc())
+      return TL.getPrefix();
+    return NNS.getAsNamespaceAndPrefix().Prefix;
+  }();
+
+  if (Prefix) {
     // This is
     //
     //   nested-name-specifier type-name :: ~ type-name
     //
     // Look for the second type-name in the nested-name-specifier.
     CXXScopeSpec PrefixSS;
-    PrefixSS.Adopt(NestedNameSpecifierLoc(Prefix, SS.location_data()));
+    PrefixSS.Adopt(Prefix);
     if (ParsedType T = LookupInNestedNameSpec(PrefixSS))
       return T;
   } else {
@@ -502,12 +510,8 @@ bool Sema::checkLiteralOperatorId(const CXXScopeSpec &SS,
           << II << static_cast<int>(Status) << Hint;
   }
 
-  if (!SS.isValid())
-    return false;
-
-  switch (SS.getScopeRep()->getKind()) {
-  case NestedNameSpecifier::Identifier:
-  case NestedNameSpecifier::TypeSpec:
+  switch (SS.getScopeRep().getKind()) {
+  case NestedNameSpecifier::Kind::Type:
     // Per C++11 [over.literal]p2, literal operators can only be declared at
     // namespace scope. Therefore, this unqualified-id cannot name anything.
     // Reject it early, because we have no AST representation for this in the
@@ -516,9 +520,10 @@ bool Sema::checkLiteralOperatorId(const CXXScopeSpec &SS,
         << SS.getScopeRep();
     return true;
 
-  case NestedNameSpecifier::Global:
-  case NestedNameSpecifier::Super:
-  case NestedNameSpecifier::Namespace:
+  case NestedNameSpecifier::Kind::Null:
+  case NestedNameSpecifier::Kind::Global:
+  case NestedNameSpecifier::Kind::MicrosoftSuper:
+  case NestedNameSpecifier::Kind::Namespace:
     return false;
   }
 
@@ -566,7 +571,8 @@ ExprResult Sema::BuildCXXTypeId(QualType TypeInfoType,
 
     QualType T = E->getType();
     if (const RecordType *RecordT = T->getAs<RecordType>()) {
-      CXXRecordDecl *RecordD = cast<CXXRecordDecl>(RecordT->getDecl());
+      CXXRecordDecl *RecordD = cast<CXXRecordDecl>(RecordT->getOriginalDecl())
+                                   ->getDefinitionOrSelf();
       // C++ [expr.typeid]p3:
       //   [...] If the type of the expression is a class type, the class
       //   shall be completely-defined.
@@ -1978,7 +1984,7 @@ static bool doesUsualArrayDeleteWantSize(Sema &S, SourceLocation loc,
   DeclarationName deleteName =
     S.Context.DeclarationNames.getCXXOperatorName(OO_Array_Delete);
   LookupResult ops(S, deleteName, loc, Sema::LookupOrdinaryName);
-  S.LookupQualifiedName(ops, record->getDecl());
+  S.LookupQualifiedName(ops, record->getOriginalDecl()->getDefinitionOrSelf());
 
   // We're just doing this for information.
   ops.suppressDiagnostics();
@@ -3049,8 +3055,9 @@ bool Sema::FindAllocationFunctions(
   LookupResult FoundDelete(*this, DeleteName, StartLoc, LookupOrdinaryName);
   if (AllocElemType->isRecordType() &&
       DeleteScope != AllocationFunctionScope::Global) {
-    auto *RD =
-        cast<CXXRecordDecl>(AllocElemType->castAs<RecordType>()->getDecl());
+    auto *RD = cast<CXXRecordDecl>(
+                   AllocElemType->castAs<RecordType>()->getOriginalDecl())
+                   ->getDefinitionOrSelf();
     LookupQualifiedName(FoundDelete, RD);
   }
   if (FoundDelete.isAmbiguous())
@@ -4064,7 +4071,8 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
                                    : diag::warn_delete_incomplete,
                                Ex.get())) {
         if (const RecordType *RT = PointeeElem->getAs<RecordType>())
-          PointeeRD = cast<CXXRecordDecl>(RT->getDecl());
+          PointeeRD =
+              cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf();
       }
     }
 
@@ -4832,7 +4840,10 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     if (FromType->isVectorType() || ToType->isVectorType())
       StepTy = adjustVectorType(Context, FromType, ToType, &ElTy);
     if (ElTy->isBooleanType()) {
-      assert(FromType->castAs<EnumType>()->getDecl()->isFixed() &&
+      assert(FromType->castAs<EnumType>()
+                 ->getOriginalDecl()
+                 ->getDefinitionOrSelf()
+                 ->isFixed() &&
              SCS.Second == ICK_Integral_Promotion &&
              "only enums with fixed underlying type can promote to bool");
       From = ImpCastExprToType(From, StepTy, CK_IntegralToBoolean, VK_PRValue,
@@ -6652,7 +6663,8 @@ ExprResult Sema::MaybeBindToTemporary(Expr *E) {
 
   // That should be enough to guarantee that this type is complete, if we're
   // not processing a decltype expression.
-  CXXRecordDecl *RD = cast<CXXRecordDecl>(RT->getDecl());
+  CXXRecordDecl *RD =
+      cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf();
   if (RD->isInvalidDecl() || RD->isDependentContext())
     return E;
 
@@ -7515,7 +7527,7 @@ ExprResult Sema::IgnoredValueConversions(Expr *E) {
 
   // GCC seems to also exclude expressions of incomplete enum type.
   if (const EnumType *T = E->getType()->getAs<EnumType>()) {
-    if (!T->getDecl()->isComplete()) {
+    if (!T->getOriginalDecl()->getDefinitionOrSelf()->isComplete()) {
       // FIXME: stupid workaround for a codegen bug!
       E = ImpCastExprToType(E, Context.VoidTy, CK_ToVoid).get();
       return E;

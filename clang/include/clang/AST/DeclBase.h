@@ -622,6 +622,12 @@ public:
 
   void setReferenced(bool R = true) { Referenced = R; }
 
+  /// When doing manipulations which might change the computed linkage,
+  /// such as changing the DeclContext after the declaration has already been
+  /// used, invalidating the cache will make sure its linkage will be
+  /// recomputed.
+  void invalidateCachedLinkage() { setCachedLinkage(Linkage::Invalid); }
+
   /// Whether this declaration is a top-level declaration (function,
   /// global variable, etc.) that is lexically inside an objc container
   /// definition.

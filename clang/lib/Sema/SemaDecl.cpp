@@ -307,9 +307,10 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
           if (AllowImplicitTypename == ImplicitTypenameContext::No)
             return nullptr;
           SourceLocation QualifiedLoc = SS->getRange().getBegin();
-          auto DB =
-              DiagCompat(QualifiedLoc, diag_compat::implicit_typename)
-              << NestedNameSpecifier::Create(Context, SS->getScopeRep(), &II);
+          // FIXME: Defer the diagnostic after we build the type and use it.
+          auto DB = DiagCompat(QualifiedLoc, diag_compat::implicit_typename)
+                    << Context.getDependentNameType(ElaboratedTypeKeyword::None,
+                                                    SS->getScopeRep(), &II);
           if (!getLangOpts().CPlusPlus20)
             DB << FixItHint::CreateInsertion(QualifiedLoc, "typename ");
         }
@@ -389,7 +390,7 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
       bool MemberOfUnknownSpecialization;
       UnqualifiedId TemplateName;
       TemplateName.setIdentifier(NewII, NameLoc);
-      NestedNameSpecifier *NNS = Correction.getCorrectionSpecifier();
+      NestedNameSpecifier NNS = Correction.getCorrectionSpecifier();
       CXXScopeSpec NewSS, *NewSSPtr = SS;
       if (SS && NNS) {
         NewSS.MakeTrivial(Context, NNS, SourceRange(NameLoc));
@@ -568,8 +569,9 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
   } else if (AllowDeducedTemplate) {
     if (auto *TD = getAsTypeTemplateDecl(IIDecl)) {
       assert(!FoundUsingShadow || FoundUsingShadow->getTargetDecl() == TD);
+      // FIXME: Support UsingType here.
       TemplateName Template = Context.getQualifiedTemplateName(
-          SS ? SS->getScopeRep() : nullptr, /*TemplateKeyword=*/false,
+          SS ? SS->getScopeRep() : std::nullopt, /*TemplateKeyword=*/false,
           FoundUsingShadow ? TemplateName(FoundUsingShadow) : TemplateName(TD));
       QualType T = Context.getDeducedTemplateSpecializationType(
           ElaboratedTypeKeyword::None, Template, QualType(), false);
@@ -582,31 +584,23 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
     }
   }
 
-  if (T.isNull()) {
-    // If it's not plausibly a type, suppress diagnostics.
-    Result.suppressDiagnostics();
-    return nullptr;
-  }
-
-  if (FoundUsingShadow)
-    T = Context.getUsingType(FoundUsingShadow, T);
-
-  return buildNamedType(*this, SS, T, NameLoc, WantNontrivialTypeSourceInfo);
+  // As it's not plausibly a type, suppress diagnostics.
+  Result.suppressDiagnostics();
+  return nullptr;
 }
 
 // Builds a fake NNS for the given decl context.
-static NestedNameSpecifier *
+static NestedNameSpecifier
 synthesizeCurrentNestedNameSpecifier(ASTContext &Context, DeclContext *DC) {
   for (;; DC = DC->getLookupParent()) {
     DC = DC->getPrimaryContext();
     auto *ND = dyn_cast<NamespaceDecl>(DC);
     if (ND && !ND->isInline() && !ND->isAnonymousNamespace())
-      return NestedNameSpecifier::Create(Context, nullptr, ND);
+      return NestedNameSpecifier(Context, ND, std::nullopt);
     if (auto *RD = dyn_cast<CXXRecordDecl>(DC))
-      return NestedNameSpecifier::Create(Context, nullptr,
-                                         RD->getTypeForDecl());
+      return NestedNameSpecifier(Context.getCanonicalTagType(RD)->getTypePtr());
     if (isa<TranslationUnitDecl>(DC))
-      return NestedNameSpecifier::GlobalSpecifier(Context);
+      return NestedNameSpecifier::getGlobal();
   }
   llvm_unreachable("something isn't in TU scope?");
 }
@@ -631,7 +625,7 @@ ParsedType Sema::ActOnMSVCUnknownTypeName(const IdentifierInfo &II,
                                           bool IsTemplateTypeArg) {
   assert(getLangOpts().MSVCCompat && "shouldn't be called in non-MSVC mode");
 
-  NestedNameSpecifier *NNS = nullptr;
+  NestedNameSpecifier NNS = std::nullopt;
   if (IsTemplateTypeArg && getCurScope()->isTemplateParamScope()) {
     // If we weren't able to parse a default template argument, delay lookup
     // until instantiation time by making a non-dependent DependentTypeName. We
@@ -646,7 +640,7 @@ ParsedType Sema::ActOnMSVCUnknownTypeName(const IdentifierInfo &II,
                  findRecordWithDependentBasesOfEnclosingMethod(CurContext)) {
     // Build a DependentNameType that will perform lookup into RD at
     // instantiation time.
-    NNS = NestedNameSpecifier::Create(Context, nullptr, RD->getTypeForDecl());
+    NNS = NestedNameSpecifier(Context.getCanonicalTagType(RD)->getTypePtr());
 
     // Diagnose that this identifier was undeclared, and retry the lookup during
     // template instantiation.
@@ -699,19 +693,22 @@ DeclSpec::TST Sema::isTagName(IdentifierInfo &II, Scope *S) {
 }
 
 bool Sema::isMicrosoftMissingTypename(const CXXScopeSpec *SS, Scope *S) {
-  if (CurContext->isRecord()) {
-    if (SS->getScopeRep()->getKind() == NestedNameSpecifier::Super)
-      return true;
+  if (!CurContext->isRecord())
+    return CurContext->isFunctionOrMethod() || S->isFunctionPrototypeScope();
 
-    const Type *Ty = SS->getScopeRep()->getAsType();
-
-    CXXRecordDecl *RD = cast<CXXRecordDecl>(CurContext);
-    for (const auto &Base : RD->bases())
-      if (Ty && Context.hasSameUnqualifiedType(QualType(Ty, 1), Base.getType()))
+  switch (SS->getScopeRep().getKind()) {
+  case NestedNameSpecifier::Kind::MicrosoftSuper:
+    return true;
+  case NestedNameSpecifier::Kind::Type: {
+    QualType T(SS->getScopeRep().getAsType(), 0);
+    for (const auto &Base : cast<CXXRecordDecl>(CurContext)->bases())
+      if (Context.hasSameUnqualifiedType(T, Base.getType()))
         return true;
+    [[fallthrough]];
+  }
+  default:
     return S->isFunctionPrototypeScope();
   }
-  return CurContext->isFunctionOrMethod() || S->isFunctionPrototypeScope();
 }
 
 void Sema::DiagnoseUnknownTypeName(IdentifierInfo *&II,
@@ -815,12 +812,13 @@ void Sema::DiagnoseUnknownTypeName(IdentifierInfo *&II,
     if (getLangOpts().MSVCCompat && isMicrosoftMissingTypename(SS, S))
       DiagID = diag::ext_typename_missing;
 
+    SuggestedType =
+        ActOnTypenameType(S, SourceLocation(), *SS, *II, IILoc).get();
+
     Diag(SS->getRange().getBegin(), DiagID)
-        << NestedNameSpecifier::Create(Context, SS->getScopeRep(), II)
+        << GetTypeFromParser(SuggestedType)
         << SourceRange(SS->getRange().getBegin(), IILoc)
         << FixItHint::CreateInsertion(SS->getRange().getBegin(), "typename ");
-    SuggestedType = ActOnTypenameType(S, SourceLocation(),
-                                      *SS, *II, IILoc).get();
   } else {
     assert(SS && SS->isInvalid() &&
            "Invalid scope specifier has already been diagnosed");
@@ -5280,9 +5278,9 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
         Record = dyn_cast<RecordDecl>(Tag);
       else if (const RecordType *RT =
                    DS.getRepAsType().get()->getAsStructureType())
-        Record = RT->getDecl();
+        Record = RT->getOriginalDecl()->getDefinitionOrSelf();
       else if (const RecordType *UT = DS.getRepAsType().get()->getAsUnionType())
-        Record = UT->getDecl();
+        Record = UT->getOriginalDecl()->getDefinitionOrSelf();
 
       if (Record && getLangOpts().MicrosoftExt) {
         Diag(DS.getBeginLoc(), diag::ext_ms_anonymous_record)
@@ -9794,7 +9792,8 @@ static void checkIsValidOpenCLKernelParameter(
 
   // At this point we already handled everything except of a RecordType.
   assert(PT->isRecordType() && "Unexpected type.");
-  const RecordDecl *PD = PT->castAs<RecordType>()->getDecl();
+  const RecordDecl *PD =
+      PT->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf();
   VisitStack.push_back(PD);
   assert(VisitStack.back() && "First decl null?");
 
@@ -9822,7 +9821,9 @@ static void checkIsValidOpenCLKernelParameter(
              "Unexpected type.");
       const Type *FieldRecTy = FieldTy->getPointeeOrArrayElementType();
 
-      RD = FieldRecTy->castAs<RecordType>()->getDecl();
+      RD = FieldRecTy->castAs<RecordType>()
+               ->getOriginalDecl()
+               ->getDefinitionOrSelf();
     } else {
       RD = cast<RecordDecl>(Next);
     }
@@ -13340,7 +13341,8 @@ struct DiagNonTrivalCUnionDefaultInitializeVisitor
   }
 
   void visitStruct(QualType QT, const FieldDecl *FD, bool InNonTrivialUnion) {
-    const RecordDecl *RD = QT->castAs<RecordType>()->getDecl();
+    const RecordDecl *RD =
+        QT->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf();
     if (RD->isUnion()) {
       if (OrigLoc.isValid()) {
         bool IsUnion = false;
@@ -13406,7 +13408,8 @@ struct DiagNonTrivalCUnionDestructedTypeVisitor
   }
 
   void visitStruct(QualType QT, const FieldDecl *FD, bool InNonTrivialUnion) {
-    const RecordDecl *RD = QT->castAs<RecordType>()->getDecl();
+    const RecordDecl *RD =
+        QT->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf();
     if (RD->isUnion()) {
       if (OrigLoc.isValid()) {
         bool IsUnion = false;
@@ -13471,7 +13474,8 @@ struct DiagNonTrivalCUnionCopyVisitor
   }
 
   void visitStruct(QualType QT, const FieldDecl *FD, bool InNonTrivialUnion) {
-    const RecordDecl *RD = QT->castAs<RecordType>()->getDecl();
+    const RecordDecl *RD =
+        QT->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf();
     if (RD->isUnion()) {
       if (OrigLoc.isValid()) {
         bool IsUnion = false;
@@ -14444,7 +14448,9 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
     if (getLangOpts().CPlusPlus && Var->hasLocalStorage()) {
       if (const RecordType *Record
             = Context.getBaseElementType(Type)->getAs<RecordType>()) {
-        CXXRecordDecl *CXXRecord = cast<CXXRecordDecl>(Record->getDecl());
+        CXXRecordDecl *CXXRecord =
+            cast<CXXRecordDecl>(Record->getOriginalDecl())
+                ->getDefinitionOrSelf();
         // Mark the function (if we're in one) for further checking even if the
         // looser rules of C++11 do not require such checks, so that we can
         // diagnose incompatibilities with C++98.
@@ -19070,7 +19076,7 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
   if (!InvalidDecl && getLangOpts().CPlusPlus) {
     if (Record->isUnion()) {
       if (const RecordType *RT = EltTy->getAs<RecordType>()) {
-        CXXRecordDecl* RDecl = cast<CXXRecordDecl>(RT->getDecl());
+        CXXRecordDecl *RDecl = cast<CXXRecordDecl>(RT->getOriginalDecl());
         if (RDecl->getDefinition()) {
           // C++ [class.union]p1: An object of a class with a non-trivial
           // constructor, a non-trivial copy constructor, a non-trivial
@@ -19136,7 +19142,8 @@ bool Sema::CheckNontrivialField(FieldDecl *FD) {
 
   QualType EltTy = Context.getBaseElementType(FD->getType());
   if (const RecordType *RT = EltTy->getAs<RecordType>()) {
-    CXXRecordDecl *RDecl = cast<CXXRecordDecl>(RT->getDecl());
+    CXXRecordDecl *RDecl =
+        cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf();
     if (RDecl->getDefinition()) {
       // We check for copy constructors before constructors
       // because otherwise we'll never get complaints about
@@ -19459,7 +19466,7 @@ bool Sema::EntirelyFunctionPointers(const RecordDecl *Record) {
     }
     // If a member is a struct entirely of function pointers, that counts too.
     if (const RecordType *RT = FieldType->getAs<RecordType>()) {
-      const RecordDecl *Record = RT->getDecl();
+      const RecordDecl *Record = RT->getOriginalDecl()->getDefinitionOrSelf();
       if (Record->isStruct() && EntirelyFunctionPointers(Record))
         return true;
     }
@@ -19617,7 +19624,9 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
       EnclosingDecl->setInvalidDecl();
       continue;
     } else if (const RecordType *FDTTy = FDTy->getAs<RecordType>()) {
-      if (Record && FDTTy->getDecl()->hasFlexibleArrayMember()) {
+      if (Record && FDTTy->getOriginalDecl()
+                        ->getDefinitionOrSelf()
+                        ->hasFlexibleArrayMember()) {
         // A type which contains a flexible array member is considered to be a
         // flexible array member.
         Record->setHasFlexibleArrayMember(true);
@@ -19643,9 +19652,10 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
         // Ivars can not have abstract class types
         FD->setInvalidDecl();
       }
-      if (Record && FDTTy->getDecl()->hasObjectMember())
+      const RecordDecl *RD = FDTTy->getOriginalDecl()->getDefinitionOrSelf();
+      if (Record && RD->hasObjectMember())
         Record->setHasObjectMember(true);
-      if (Record && FDTTy->getDecl()->hasVolatileMember())
+      if (Record && RD->hasVolatileMember())
         Record->setHasVolatileMember(true);
     } else if (FDTy->isObjCObjectType()) {
       /// A field cannot be an Objective-c object
@@ -19676,8 +19686,10 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
         Record->setHasObjectMember(true);
       else if (Context.getAsArrayType(FD->getType())) {
         QualType BaseType = Context.getBaseElementType(FD->getType());
-        if (BaseType->isRecordType() &&
-            BaseType->castAs<RecordType>()->getDecl()->hasObjectMember())
+        if (BaseType->isRecordType() && BaseType->castAs<RecordType>()
+                                            ->getOriginalDecl()
+                                            ->getDefinitionOrSelf()
+                                            ->hasObjectMember())
           Record->setHasObjectMember(true);
         else if (BaseType->isObjCObjectPointerType() ||
                  BaseType.isObjCGCStrong())
@@ -19710,7 +19722,9 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
       }
 
       if (const auto *RT = FT->getAs<RecordType>()) {
-        if (RT->getDecl()->getArgPassingRestrictions() ==
+        if (RT->getOriginalDecl()
+                ->getDefinitionOrSelf()
+                ->getArgPassingRestrictions() ==
             RecordArgPassingKind::CanNeverPassInRegs)
           Record->setArgPassingRestrictions(
               RecordArgPassingKind::CanNeverPassInRegs);
