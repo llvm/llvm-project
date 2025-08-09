@@ -188,6 +188,8 @@ Bug Fixes to C++ Support
   (``[[assume(expr)]]``) creates temporary objects.
 - Fix the dynamic_cast to final class optimization to correctly handle
   casts that are guaranteed to fail (#GH137518).
+- Support the dynamic_cast to final class optimization with pointer
+  authentication enabled.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
