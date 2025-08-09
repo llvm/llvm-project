@@ -39,12 +39,6 @@ def AArch64_save_zt : SDNode<"AArch64ISD::SAVE_ZT", SDTypeProfile<0, 2,
 def AArch64CoalescerBarrier
     : SDNode<"AArch64ISD::COALESCER_BARRIER", SDTypeProfile<1, 1, []>, [SDNPOptInGlue, SDNPOutGlue]>;
 
-def AArch64VGSave : SDNode<"AArch64ISD::VG_SAVE", SDTypeProfile<0, 0, []>,
-                           [SDNPHasChain, SDNPSideEffect, SDNPOptInGlue, SDNPOutGlue]>;
-
-def AArch64VGRestore : SDNode<"AArch64ISD::VG_RESTORE", SDTypeProfile<0, 0, []>,
-                              [SDNPHasChain, SDNPSideEffect, SDNPOptInGlue, SDNPOutGlue]>;
-
 def AArch64AllocateZABuffer : SDNode<"AArch64ISD::ALLOCATE_ZA_BUFFER", SDTypeProfile<1, 1,
                               [SDTCisInt<0>, SDTCisInt<1>]>,
                               [SDNPHasChain, SDNPSideEffect]>;
@@ -324,16 +318,6 @@ def : Pat<(AArch64_smstart (i32 svcr_op:$pstate)),
           (MSRpstatesvcrImm1 svcr_op:$pstate, 0b1)>;
 def : Pat<(AArch64_smstop (i32 svcr_op:$pstate)),
           (MSRpstatesvcrImm1 svcr_op:$pstate, 0b0)>;
-
-
-// Pseudo to insert cfi_offset/cfi_restore instructions. Used to save or restore
-// the streaming value of VG around streaming-mode changes in locally-streaming
-// functions.
-def VGSavePseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
-def : Pat<(AArch64VGSave), (VGSavePseudo)>;
-
-def VGRestorePseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
-def : Pat<(AArch64VGRestore), (VGRestorePseudo)>;
 
 //===----------------------------------------------------------------------===//
 // SME2 Instructions
