@@ -701,7 +701,7 @@ public:
     return traverseNode(&PL, [&] { return Base::TraverseObjCProtocolLoc(PL); });
   }
   // Uninteresting parts of the AST that don't have locations within them.
-  bool TraverseNestedNameSpecifier(NestedNameSpecifier *) { return true; }
+  bool TraverseNestedNameSpecifier(NestedNameSpecifier) { return true; }
   bool TraverseType(QualType) { return true; }
 
   // The DeclStmt for the loop variable claims to cover the whole range

@@ -279,7 +279,7 @@ public:
   void AddQualifierInfo(const QualifierInfo &Info);
 
   /// Emit a nested name specifier.
-  void AddNestedNameSpecifier(NestedNameSpecifier *NNS) {
+  void AddNestedNameSpecifier(NestedNameSpecifier NNS) {
     writeNestedNameSpecifier(NNS);
   }
 

@@ -176,7 +176,7 @@ template <bool Const> struct Impl : RecursiveASTVisitor<Impl<Const>> {
     return Visitor.TraverseLambdaCapture(LE, C, Init);
   }
 
-  bool TraverseNestedNameSpecifier(NestedNameSpecifier *NNS) {
+  bool TraverseNestedNameSpecifier(NestedNameSpecifier NNS) {
     return Visitor.TraverseNestedNameSpecifier(NNS);
   }
 
@@ -301,7 +301,6 @@ FORWARD_TO_BASE(TraverseAttr, Attr, *)
 FORWARD_TO_BASE(TraverseConstructorInitializer, CXXCtorInitializer, *)
 FORWARD_TO_BASE(TraverseDecl, Decl, *)
 FORWARD_TO_BASE(TraverseStmt, Stmt, *)
-FORWARD_TO_BASE(TraverseNestedNameSpecifier, NestedNameSpecifier, *)
 FORWARD_TO_BASE(TraverseTemplateInstantiations, ClassTemplateDecl, *)
 FORWARD_TO_BASE(TraverseTemplateInstantiations, VarTemplateDecl, *)
 FORWARD_TO_BASE(TraverseTemplateInstantiations, FunctionTemplateDecl, *)
@@ -318,8 +317,22 @@ FORWARD_TO_BASE_EXACT(TraverseTemplateArgument, const TemplateArgument &)
 FORWARD_TO_BASE_EXACT(TraverseTemplateArguments, ArrayRef<TemplateArgument>)
 FORWARD_TO_BASE_EXACT(TraverseTemplateArgumentLoc, const TemplateArgumentLoc &)
 FORWARD_TO_BASE_EXACT(TraverseTemplateName, TemplateName)
-FORWARD_TO_BASE_EXACT(TraverseType, QualType)
-FORWARD_TO_BASE_EXACT(TraverseTypeLoc, TypeLoc)
+FORWARD_TO_BASE_EXACT(TraverseNestedNameSpecifier, NestedNameSpecifier)
+
+template <bool Const>
+bool DynamicRecursiveASTVisitorBase<Const>::TraverseType(
+    QualType T, bool TraverseQualifier) {
+  return Impl<Const>(*this).RecursiveASTVisitor<Impl<Const>>::TraverseType(
+      T, TraverseQualifier);
+}
+
+template <bool Const>
+bool DynamicRecursiveASTVisitorBase<Const>::TraverseTypeLoc(
+    TypeLoc TL, bool TraverseQualifier) {
+  return Impl<Const>(*this).RecursiveASTVisitor<Impl<Const>>::TraverseTypeLoc(
+      TL, TraverseQualifier);
+}
+
 FORWARD_TO_BASE_EXACT(TraverseTypeConstraint, const TypeConstraint *)
 FORWARD_TO_BASE_EXACT(TraverseObjCProtocolLoc, ObjCProtocolLoc)
 FORWARD_TO_BASE_EXACT(TraverseNestedNameSpecifierLoc, NestedNameSpecifierLoc)

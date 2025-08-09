@@ -217,7 +217,8 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
     if (BaseType->isDependentType())
       continue;
     auto *BaseClassDecl =
-        cast<CXXRecordDecl>(BaseType->castAs<RecordType>()->getDecl());
+        cast<CXXRecordDecl>(BaseType->castAs<RecordType>()->getOriginalDecl())
+            ->getDefinitionOrSelf();
 
     // C++2a [class]p7:
     //   A standard-layout class is a class that:
@@ -1207,7 +1208,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
     bool IsZeroSize = Field->isZeroSize(Context);
 
     if (const auto *RecordTy = T->getAs<RecordType>()) {
-      auto *FieldRec = cast<CXXRecordDecl>(RecordTy->getDecl());
+      auto *FieldRec = cast<CXXRecordDecl>(RecordTy->getOriginalDecl());
       if (FieldRec->getDefinition()) {
         addedClassSubobject(FieldRec);
 
@@ -1914,7 +1915,8 @@ static void CollectVisibleConversions(
       = CXXRecordDecl::MergeAccess(Access, I.getAccessSpecifier());
     bool BaseInVirtual = InVirtual || I.isVirtual();
 
-    auto *Base = cast<CXXRecordDecl>(RT->getDecl());
+    auto *Base =
+        cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf();
     CollectVisibleConversions(Context, Base, BaseInVirtual, BaseAccess,
                               *HiddenTypes, Output, VOutput, HiddenVBaseCs);
   }
@@ -1952,9 +1954,11 @@ static void CollectVisibleConversions(ASTContext &Context,
     const auto *RT = I.getType()->getAs<RecordType>();
     if (!RT) continue;
 
-    CollectVisibleConversions(Context, cast<CXXRecordDecl>(RT->getDecl()),
-                              I.isVirtual(), I.getAccessSpecifier(),
-                              HiddenTypes, Output, VBaseCs, HiddenVBaseCs);
+    CollectVisibleConversions(
+        Context,
+        cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf(),
+        I.isVirtual(), I.getAccessSpecifier(), HiddenTypes, Output, VBaseCs,
+        HiddenVBaseCs);
   }
 
   // Add any unhidden conversions provided by virtual bases.
@@ -2307,8 +2311,8 @@ bool CXXRecordDecl::mayBeAbstract() const {
     return false;
 
   for (const auto &B : bases()) {
-    const auto *BaseDecl =
-        cast<CXXRecordDecl>(B.getType()->castAs<RecordType>()->getDecl());
+    const auto *BaseDecl = cast<CXXRecordDecl>(
+        B.getType()->castAs<RecordType>()->getOriginalDecl());
     if (BaseDecl->isAbstract())
       return true;
   }
@@ -2471,7 +2475,8 @@ CXXMethodDecl::getCorrespondingMethodInClass(const CXXRecordDecl *RD,
     const RecordType *RT = I.getType()->getAs<RecordType>();
     if (!RT)
       continue;
-    const auto *Base = cast<CXXRecordDecl>(RT->getDecl());
+    const auto *Base =
+        cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf();
     if (CXXMethodDecl *D = this->getCorrespondingMethodInClass(Base))
       AddFinalOverrider(D);
   }

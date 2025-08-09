@@ -131,16 +131,14 @@ public:
   }
 
   bool qualifierIsNamespaceOrNone(DeclRefExpr *DRE) {
-    const auto *Qual = DRE->getQualifier();
-    if (!Qual)
+    NestedNameSpecifier Qual = DRE->getQualifier();
+    switch (Qual.getKind()) {
+    case NestedNameSpecifier::Kind::Null:
+    case NestedNameSpecifier::Kind::Namespace:
+    case NestedNameSpecifier::Kind::Global:
       return true;
-    switch (Qual->getKind()) {
-    case NestedNameSpecifier::Namespace:
-    case NestedNameSpecifier::Global:
-      return true;
-    case NestedNameSpecifier::TypeSpec:
-    case NestedNameSpecifier::Super:
-    case NestedNameSpecifier::Identifier:
+    case NestedNameSpecifier::Kind::Type:
+    case NestedNameSpecifier::Kind::MicrosoftSuper:
       return false;
     }
     llvm_unreachable("Unknown value for NestedNameSpecifierKind");
@@ -337,17 +335,17 @@ public:
   }
 
   bool VisitUsingTypeLoc(UsingTypeLoc TL) {
-    reportType(TL.getNameLoc(), TL.getFoundDecl());
+    reportType(TL.getNameLoc(), TL.getDecl());
     return true;
   }
 
   bool VisitTagTypeLoc(TagTypeLoc TTL) {
-    reportType(TTL.getNameLoc(), TTL.getDecl());
+    reportType(TTL.getNameLoc(), TTL.getOriginalDecl());
     return true;
   }
 
   bool VisitTypedefTypeLoc(TypedefTypeLoc TTL) {
-    reportType(TTL.getNameLoc(), TTL.getTypedefNameDecl());
+    reportType(TTL.getNameLoc(), TTL.getDecl());
     return true;
   }
 
