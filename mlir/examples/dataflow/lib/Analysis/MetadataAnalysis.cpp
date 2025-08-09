@@ -34,7 +34,7 @@ MetadataLatticeValue::join(const MetadataLatticeValue &lhs,
   // directly insert the metadata of rhs into the metadata of lhs.If lhs and rhs
   // have overlapping attributes, keep the attribute value in lhs unchanged.
   MetadataLatticeValue result;
-  for (auto &&lhsIt : lhs.metadata) {
+  for (const llvm::StringMapEntry<mlir::Attribute> &lhsIt : lhs.metadata) {
     result.metadata.insert(
         std::pair<StringRef, Attribute>(lhsIt.getKey(), lhsIt.getValue()));
   }
@@ -99,7 +99,7 @@ LogicalResult MetadataAnalysis::visitOperation(
     isChanged |= result->join(latticeValue);
 
     // All lattice of operands of op are joined to the lattice of result.
-    for (MetadataLatticeValueLattice *operand : operands)
+    for (const MetadataLatticeValueLattice *operand : operands)
       isChanged |= result->join(*operand);
 
     propagateIfChanged(result, isChanged);
