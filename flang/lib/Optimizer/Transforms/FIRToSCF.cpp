@@ -10,6 +10,7 @@
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include <mlir/Support/LLVM.h>
 
 namespace fir {
 #define GEN_PASS_DEF_FIRTOSCFPASS
@@ -88,6 +89,85 @@ struct DoLoopConversion : public OpRewritePattern<fir::DoLoopOp> {
   }
 };
 
+struct IterWhileConversion : public OpRewritePattern<fir::IterWhileOp> {
+  using OpRewritePattern<fir::IterWhileOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(fir::IterWhileOp iterWhileOp,
+                                PatternRewriter &rewriter) const override {
+
+    Location loc = iterWhileOp.getLoc();
+    Value lowerBound = iterWhileOp.getLowerBound();
+    Value upperBound = iterWhileOp.getUpperBound();
+    Value step = iterWhileOp.getStep();
+
+    Value okInit = iterWhileOp.getIterateIn();
+    ValueRange iterArgs = iterWhileOp.getInitArgs();
+
+    SmallVector<Value> initVals;
+    initVals.push_back(lowerBound);
+    initVals.push_back(okInit);
+    initVals.append(iterArgs.begin(), iterArgs.end());
+
+    SmallVector<Type> loopTypes;
+    loopTypes.push_back(lowerBound.getType());
+    loopTypes.push_back(okInit.getType());
+    for (auto val : iterArgs)
+      loopTypes.push_back(val.getType());
+
+    auto scfWhileOp = scf::WhileOp::create(rewriter, loc, loopTypes, initVals);
+
+    auto &beforeBlock = *rewriter.createBlock(
+        &scfWhileOp.getBefore(), scfWhileOp.getBefore().end(), loopTypes,
+        SmallVector<Location>(loopTypes.size(), loc));
+
+    auto &afterBlock = *rewriter.createBlock(
+        &scfWhileOp.getAfter(), scfWhileOp.getAfter().end(), loopTypes,
+        SmallVector<Location>(loopTypes.size(), loc));
+
+    auto beforeArgs = scfWhileOp.getBefore().getArguments();
+    auto beforeIv = beforeArgs[0];
+    auto beforeOk = beforeArgs[1];
+
+    rewriter.setInsertionPointToStart(&beforeBlock);
+
+    Value inductionCmp = mlir::arith::CmpIOp::create(
+        rewriter, loc, mlir::arith::CmpIPredicate::sle, beforeIv, upperBound);
+    Value cond =
+        mlir::arith::AndIOp::create(rewriter, loc, inductionCmp, beforeOk);
+
+    mlir::scf::ConditionOp::create(rewriter, loc, cond, beforeArgs);
+
+    auto afterArgs = scfWhileOp.getAfter().getArguments();
+
+    SmallVector<Value> argReplacements;
+    for (auto [oldArg, newVal] :
+         llvm::zip(iterWhileOp.getBody()->getArguments(), afterArgs))
+      argReplacements.push_back(newVal);
+
+    auto resultOp = cast<fir::ResultOp>(iterWhileOp.getBody()->getTerminator());
+    SmallVector<Value> results(resultOp->getOperands().begin(),
+                               resultOp->getOperands().end());
+
+    rewriter.inlineBlockBefore(iterWhileOp.getBody(), &afterBlock,
+                               afterBlock.begin(), argReplacements);
+
+    Value afterIv = afterArgs[0];
+
+    rewriter.setInsertionPointToStart(&afterBlock);
+
+    results[0] = mlir::arith::AddIOp::create(rewriter, loc, afterIv, step);
+
+    Operation *movedTerminator = afterBlock.getTerminator();
+    rewriter.setInsertionPoint(movedTerminator);
+
+    mlir::scf::YieldOp::create(rewriter, loc, results);
+    rewriter.eraseOp(movedTerminator);
+
+    rewriter.replaceOp(iterWhileOp, scfWhileOp);
+    return success();
+  }
+};
+
 void copyBlockAndTransformResult(PatternRewriter &rewriter, Block &srcBlock,
                                  Block &dstBlock) {
   Operation *srcTerminator = srcBlock.getTerminator();
@@ -130,9 +210,10 @@ struct IfConversion : public OpRewritePattern<fir::IfOp> {
 
 void FIRToSCFPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
-  patterns.add<DoLoopConversion, IfConversion>(patterns.getContext());
+  patterns.add<DoLoopConversion, IterWhileConversion, IfConversion>(
+      patterns.getContext());
   ConversionTarget target(getContext());
-  target.addIllegalOp<fir::DoLoopOp, fir::IfOp>();
+  target.addIllegalOp<fir::DoLoopOp, fir::IterWhileOp, fir::IfOp>();
   target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))
