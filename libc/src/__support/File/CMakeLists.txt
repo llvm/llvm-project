@@ -22,6 +22,20 @@ add_object_library(
     libc.src.__support.error_or
 )
 
+add_header_library(
+  cookie_file
+  HDRS
+    cookie_file.h
+  DEPENDS
+    .file
+    libc.hdr.errno_macros
+    libc.hdr.stdio_macros
+    libc.hdr.types.FILE
+    libc.hdr.types.cookie_io_functions_t
+    libc.src.__support.CPP.new
+    libc.src.__support.File.file
+)
+
 add_object_library(
   dir
   SRCS
@@ -41,10 +55,17 @@ endif()
 
 add_subdirectory(${LIBC_TARGET_OS})
 
-set(target_file libc.src.__support.File.${LIBC_TARGET_OS}.file)
-set(target_stdout libc.src.__support.File.${LIBC_TARGET_OS}.stdout)
-set(target_stderr libc.src.__support.File.${LIBC_TARGET_OS}.stderr)
-set(target_stdin libc.src.__support.File.${LIBC_TARGET_OS}.stdin)
+if(LIBC_TARGET_OS_IS_BAREMETAL)
+  set(target_file libc.src.__support.File.cookie_file)
+  set(target_stdout libc.src.__support.File.${LIBC_TARGET_OS}.stderr)
+  set(target_stderr libc.src.__support.File.${LIBC_TARGET_OS}.stderr)
+  set(target_stdin libc.src.__support.File.${LIBC_TARGET_OS}.stderr)
+else()
+  set(target_file libc.src.__support.File.${LIBC_TARGET_OS}.file)
+  set(target_stdout libc.src.__support.File.${LIBC_TARGET_OS}.stdout)
+  set(target_stderr libc.src.__support.File.${LIBC_TARGET_OS}.stderr)
+  set(target_stdin libc.src.__support.File.${LIBC_TARGET_OS}.stdin)
+endif()
 
 set(file_targets "${target_file};${target_stdout};${target_stdin};${target_stderr}")
 set(file_aliases "platform_file;platform_stdout;platform_stdin;platform_stderr")
