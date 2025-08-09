@@ -22,6 +22,32 @@ using namespace llvm;
 using namespace lldb;
 using namespace lldb_private;
 
+void TransportEOFError::log(llvm::raw_ostream &OS) const {
+  OS << "transport EOF";
+}
+
+std::error_code TransportEOFError::convertToErrorCode() const {
+  return std::make_error_code(std::errc::io_error);
+}
+
+TransportUnhandledContentsError::TransportUnhandledContentsError(
+    std::string unhandled_contents)
+    : m_unhandled_contents(unhandled_contents) {}
+
+void TransportUnhandledContentsError::log(llvm::raw_ostream &OS) const {
+  OS << "transport EOF with unhandled contents " << m_unhandled_contents;
+}
+std::error_code TransportUnhandledContentsError::convertToErrorCode() const {
+  return std::make_error_code(std::errc::bad_message);
+}
+
+void TransportInvalidError::log(llvm::raw_ostream &OS) const {
+  OS << "transport IO object invalid";
+}
+std::error_code TransportInvalidError::convertToErrorCode() const {
+  return std::make_error_code(std::errc::not_connected);
+}
+
 JSONTransport::JSONTransport(IOObjectSP input, IOObjectSP output)
     : m_input(std::move(input)), m_output(std::move(output)) {}
 

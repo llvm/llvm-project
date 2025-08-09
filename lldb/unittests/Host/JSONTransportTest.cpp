@@ -63,7 +63,7 @@ protected:
     std::promise<Expected<P>> promised_message;
     std::future<Expected<P>> future_message = promised_message.get_future();
     RunUntil<P>(
-        [&](Expected<P> message) mutable -> bool {
+        [&promised_message](Expected<P> message) mutable -> bool {
           promised_message.set_value(std::move(message));
           return /*keep_going*/ false;
         },
@@ -77,13 +77,13 @@ protected:
   void RunUntil(std::function<bool(Expected<P>)> callback,
                 std::chrono::milliseconds timeout = std::chrono::seconds(1)) {
     auto handle = transport->RegisterReadObject<P>(
-        loop, [&](MainLoopBase &loop, Expected<P> message) mutable {
+        loop, [&callback](MainLoopBase &loop, Expected<P> message) mutable {
           bool keep_going = callback(std::move(message));
           if (!keep_going)
             loop.RequestTermination();
         });
     loop.AddCallback(
-        [&](MainLoopBase &loop) mutable {
+        [&callback](MainLoopBase &loop) mutable {
           loop.RequestTermination();
           callback(createStringError("timeout"));
         },

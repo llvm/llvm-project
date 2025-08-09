@@ -36,7 +36,7 @@ protected:
           loop.RequestTermination();
         });
     loop.AddCallback(
-        [&](lldb_private::MainLoopBase &loop) {
+        [](lldb_private::MainLoopBase &loop) {
           loop.RequestTermination();
           FAIL() << "timeout waiting for read callback";
         },
