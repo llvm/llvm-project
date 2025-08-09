@@ -10,8 +10,7 @@ end function
 ! CHECK-LABEL: @_QPtest_real4
 ! CHECK-PRECISE: %[[acos:.*]] = fir.call @acosf({{%[A-Za-z0-9._]+}}) fastmath<contract> : (f32) -> f32
 ! CHECK-FAST: %[[acos:.*]] = math.acos %{{.*}} : f32
-! CHECK: %[[dpi:.*]] = arith.constant 0.31830988618379069 : f64
-! CHECK: %[[inv_pi:.*]] = fir.convert %[[dpi]] : (f64) -> f32
+! CHECK: %[[inv_pi:.*]] = arith.constant 0.318309873 : f32
 ! CHECK: %{{.*}} = arith.mulf %[[acos]], %[[inv_pi]] fastmath<contract> : f32
 
 function test_real8(x)
