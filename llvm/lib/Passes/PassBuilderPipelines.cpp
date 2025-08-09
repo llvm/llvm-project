@@ -1240,7 +1240,8 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     MPM.addPass(AssignGUIDPass());
     if (IsCtxProfUse) {
       MPM.addPass(PGOCtxProfFlatteningPass(/*IsPreThinlink=*/true));
-      MPM.addPass(PGOEstimateTripCountsPass());
+      MPM.addPass(
+          createModuleToFunctionPassAdaptor(PGOEstimateTripCountsPass()));
       return MPM;
     }
     // Block further inlining in the instrumented ctxprof case. This avoids
@@ -1273,7 +1274,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
                  PGOOpt->Action == PGOOptions::SampleUse)) {
     MPM.addPass(PGOForceFunctionAttrsPass(PGOOpt->ColdOptType));
   }
-  MPM.addPass(PGOEstimateTripCountsPass());
+  MPM.addPass(createModuleToFunctionPassAdaptor(PGOEstimateTripCountsPass()));
 
   MPM.addPass(AlwaysInlinerPass(/*InsertLifetimeIntrinsics=*/true));
 

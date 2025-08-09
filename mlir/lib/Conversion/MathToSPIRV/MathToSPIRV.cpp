@@ -488,7 +488,12 @@ namespace mlir {
 void populateMathToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                                  RewritePatternSet &patterns) {
   // Core patterns
-  patterns.add<CopySignPattern>(typeConverter, patterns.getContext());
+  patterns
+      .add<CopySignPattern,
+           CheckedElementwiseOpPattern<math::IsInfOp, spirv::IsInfOp>,
+           CheckedElementwiseOpPattern<math::IsNaNOp, spirv::IsNanOp>,
+           CheckedElementwiseOpPattern<math::IsFiniteOp, spirv::IsFiniteOp>>(
+          typeConverter, patterns.getContext());
 
   // GLSL patterns
   patterns

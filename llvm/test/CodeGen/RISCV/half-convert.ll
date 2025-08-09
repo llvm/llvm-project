@@ -2262,12 +2262,12 @@ define i64 @fcvt_l_h_sat(half %a) nounwind {
 ; RV32IZHINX-NEXT:    addi a2, a3, -1
 ; RV32IZHINX-NEXT:  .LBB10_4: # %start
 ; RV32IZHINX-NEXT:    feq.s a3, s0, s0
-; RV32IZHINX-NEXT:    neg a4, a1
-; RV32IZHINX-NEXT:    neg a1, s1
+; RV32IZHINX-NEXT:    neg a4, s1
+; RV32IZHINX-NEXT:    neg a5, a1
 ; RV32IZHINX-NEXT:    neg a3, a3
-; RV32IZHINX-NEXT:    and a0, a1, a0
+; RV32IZHINX-NEXT:    and a0, a4, a0
 ; RV32IZHINX-NEXT:    and a1, a3, a2
-; RV32IZHINX-NEXT:    or a0, a4, a0
+; RV32IZHINX-NEXT:    or a0, a5, a0
 ; RV32IZHINX-NEXT:    and a0, a3, a0
 ; RV32IZHINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IZHINX-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
@@ -2309,12 +2309,12 @@ define i64 @fcvt_l_h_sat(half %a) nounwind {
 ; RV32IZDINXZHINX-NEXT:    addi a2, a3, -1
 ; RV32IZDINXZHINX-NEXT:  .LBB10_4: # %start
 ; RV32IZDINXZHINX-NEXT:    feq.s a3, s0, s0
-; RV32IZDINXZHINX-NEXT:    neg a4, a1
-; RV32IZDINXZHINX-NEXT:    neg a1, s1
+; RV32IZDINXZHINX-NEXT:    neg a4, s1
+; RV32IZDINXZHINX-NEXT:    neg a5, a1
 ; RV32IZDINXZHINX-NEXT:    neg a3, a3
-; RV32IZDINXZHINX-NEXT:    and a0, a1, a0
+; RV32IZDINXZHINX-NEXT:    and a0, a4, a0
 ; RV32IZDINXZHINX-NEXT:    and a1, a3, a2
-; RV32IZDINXZHINX-NEXT:    or a0, a4, a0
+; RV32IZDINXZHINX-NEXT:    or a0, a5, a0
 ; RV32IZDINXZHINX-NEXT:    and a0, a3, a0
 ; RV32IZDINXZHINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IZDINXZHINX-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
@@ -2653,12 +2653,12 @@ define i64 @fcvt_l_h_sat(half %a) nounwind {
 ; CHECK32-IZHINXMIN-NEXT:    addi a2, a3, -1
 ; CHECK32-IZHINXMIN-NEXT:  .LBB10_4: # %start
 ; CHECK32-IZHINXMIN-NEXT:    feq.s a3, s0, s0
-; CHECK32-IZHINXMIN-NEXT:    neg a4, a1
-; CHECK32-IZHINXMIN-NEXT:    neg a1, s1
+; CHECK32-IZHINXMIN-NEXT:    neg a4, s1
+; CHECK32-IZHINXMIN-NEXT:    neg a5, a1
 ; CHECK32-IZHINXMIN-NEXT:    neg a3, a3
-; CHECK32-IZHINXMIN-NEXT:    and a0, a1, a0
+; CHECK32-IZHINXMIN-NEXT:    and a0, a4, a0
 ; CHECK32-IZHINXMIN-NEXT:    and a1, a3, a2
-; CHECK32-IZHINXMIN-NEXT:    or a0, a4, a0
+; CHECK32-IZHINXMIN-NEXT:    or a0, a5, a0
 ; CHECK32-IZHINXMIN-NEXT:    and a0, a3, a0
 ; CHECK32-IZHINXMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK32-IZHINXMIN-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
@@ -2701,12 +2701,12 @@ define i64 @fcvt_l_h_sat(half %a) nounwind {
 ; CHECK32-IZDINXZHINXMIN-NEXT:    addi a2, a3, -1
 ; CHECK32-IZDINXZHINXMIN-NEXT:  .LBB10_4: # %start
 ; CHECK32-IZDINXZHINXMIN-NEXT:    feq.s a3, s0, s0
-; CHECK32-IZDINXZHINXMIN-NEXT:    neg a4, a1
-; CHECK32-IZDINXZHINXMIN-NEXT:    neg a1, s1
+; CHECK32-IZDINXZHINXMIN-NEXT:    neg a4, s1
+; CHECK32-IZDINXZHINXMIN-NEXT:    neg a5, a1
 ; CHECK32-IZDINXZHINXMIN-NEXT:    neg a3, a3
-; CHECK32-IZDINXZHINXMIN-NEXT:    and a0, a1, a0
+; CHECK32-IZDINXZHINXMIN-NEXT:    and a0, a4, a0
 ; CHECK32-IZDINXZHINXMIN-NEXT:    and a1, a3, a2
-; CHECK32-IZDINXZHINXMIN-NEXT:    or a0, a4, a0
+; CHECK32-IZDINXZHINXMIN-NEXT:    or a0, a5, a0
 ; CHECK32-IZDINXZHINXMIN-NEXT:    and a0, a3, a0
 ; CHECK32-IZDINXZHINXMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK32-IZDINXZHINXMIN-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
@@ -2972,18 +2972,19 @@ define i64 @fcvt_lu_h_sat(half %a) nounwind {
 ; RV32IZHINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IZHINX-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32IZHINX-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
-; RV32IZHINX-NEXT:    fcvt.s.h a0, a0
-; RV32IZHINX-NEXT:    lui a1, 391168
-; RV32IZHINX-NEXT:    addi a1, a1, -1
-; RV32IZHINX-NEXT:    fle.s a2, zero, a0
-; RV32IZHINX-NEXT:    flt.s a1, a1, a0
-; RV32IZHINX-NEXT:    neg s0, a1
-; RV32IZHINX-NEXT:    neg s1, a2
+; RV32IZHINX-NEXT:    fcvt.s.h s0, a0
+; RV32IZHINX-NEXT:    fle.s a0, zero, s0
+; RV32IZHINX-NEXT:    neg s1, a0
+; RV32IZHINX-NEXT:    mv a0, s0
 ; RV32IZHINX-NEXT:    call __fixunssfdi
 ; RV32IZHINX-NEXT:    and a0, s1, a0
+; RV32IZHINX-NEXT:    lui a2, 391168
 ; RV32IZHINX-NEXT:    and a1, s1, a1
-; RV32IZHINX-NEXT:    or a0, s0, a0
-; RV32IZHINX-NEXT:    or a1, s0, a1
+; RV32IZHINX-NEXT:    addi a2, a2, -1
+; RV32IZHINX-NEXT:    flt.s a2, a2, s0
+; RV32IZHINX-NEXT:    neg a2, a2
+; RV32IZHINX-NEXT:    or a0, a2, a0
+; RV32IZHINX-NEXT:    or a1, a2, a1
 ; RV32IZHINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IZHINX-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32IZHINX-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
@@ -3005,18 +3006,19 @@ define i64 @fcvt_lu_h_sat(half %a) nounwind {
 ; RV32IZDINXZHINX-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32IZDINXZHINX-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32IZDINXZHINX-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
-; RV32IZDINXZHINX-NEXT:    fcvt.s.h a0, a0
-; RV32IZDINXZHINX-NEXT:    lui a1, 391168
-; RV32IZDINXZHINX-NEXT:    addi a1, a1, -1
-; RV32IZDINXZHINX-NEXT:    fle.s a2, zero, a0
-; RV32IZDINXZHINX-NEXT:    flt.s a1, a1, a0
-; RV32IZDINXZHINX-NEXT:    neg s0, a1
-; RV32IZDINXZHINX-NEXT:    neg s1, a2
+; RV32IZDINXZHINX-NEXT:    fcvt.s.h s0, a0
+; RV32IZDINXZHINX-NEXT:    fle.s a0, zero, s0
+; RV32IZDINXZHINX-NEXT:    neg s1, a0
+; RV32IZDINXZHINX-NEXT:    mv a0, s0
 ; RV32IZDINXZHINX-NEXT:    call __fixunssfdi
 ; RV32IZDINXZHINX-NEXT:    and a0, s1, a0
+; RV32IZDINXZHINX-NEXT:    lui a2, 391168
 ; RV32IZDINXZHINX-NEXT:    and a1, s1, a1
-; RV32IZDINXZHINX-NEXT:    or a0, s0, a0
-; RV32IZDINXZHINX-NEXT:    or a1, s0, a1
+; RV32IZDINXZHINX-NEXT:    addi a2, a2, -1
+; RV32IZDINXZHINX-NEXT:    flt.s a2, a2, s0
+; RV32IZDINXZHINX-NEXT:    neg a2, a2
+; RV32IZDINXZHINX-NEXT:    or a0, a2, a0
+; RV32IZDINXZHINX-NEXT:    or a1, a2, a1
 ; RV32IZDINXZHINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IZDINXZHINX-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32IZDINXZHINX-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
@@ -3217,18 +3219,19 @@ define i64 @fcvt_lu_h_sat(half %a) nounwind {
 ; CHECK32-IZHINXMIN-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; CHECK32-IZHINXMIN-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; CHECK32-IZHINXMIN-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
-; CHECK32-IZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECK32-IZHINXMIN-NEXT:    lui a1, 391168
-; CHECK32-IZHINXMIN-NEXT:    addi a1, a1, -1
-; CHECK32-IZHINXMIN-NEXT:    fle.s a2, zero, a0
-; CHECK32-IZHINXMIN-NEXT:    flt.s a1, a1, a0
-; CHECK32-IZHINXMIN-NEXT:    neg s0, a1
-; CHECK32-IZHINXMIN-NEXT:    neg s1, a2
+; CHECK32-IZHINXMIN-NEXT:    fcvt.s.h s0, a0
+; CHECK32-IZHINXMIN-NEXT:    fle.s a0, zero, s0
+; CHECK32-IZHINXMIN-NEXT:    neg s1, a0
+; CHECK32-IZHINXMIN-NEXT:    mv a0, s0
 ; CHECK32-IZHINXMIN-NEXT:    call __fixunssfdi
 ; CHECK32-IZHINXMIN-NEXT:    and a0, s1, a0
+; CHECK32-IZHINXMIN-NEXT:    lui a2, 391168
 ; CHECK32-IZHINXMIN-NEXT:    and a1, s1, a1
-; CHECK32-IZHINXMIN-NEXT:    or a0, s0, a0
-; CHECK32-IZHINXMIN-NEXT:    or a1, s0, a1
+; CHECK32-IZHINXMIN-NEXT:    addi a2, a2, -1
+; CHECK32-IZHINXMIN-NEXT:    flt.s a2, a2, s0
+; CHECK32-IZHINXMIN-NEXT:    neg a2, a2
+; CHECK32-IZHINXMIN-NEXT:    or a0, a2, a0
+; CHECK32-IZHINXMIN-NEXT:    or a1, a2, a1
 ; CHECK32-IZHINXMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK32-IZHINXMIN-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; CHECK32-IZHINXMIN-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
@@ -3251,18 +3254,19 @@ define i64 @fcvt_lu_h_sat(half %a) nounwind {
 ; CHECK32-IZDINXZHINXMIN-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; CHECK32-IZDINXZHINXMIN-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; CHECK32-IZDINXZHINXMIN-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
-; CHECK32-IZDINXZHINXMIN-NEXT:    fcvt.s.h a0, a0
-; CHECK32-IZDINXZHINXMIN-NEXT:    lui a1, 391168
-; CHECK32-IZDINXZHINXMIN-NEXT:    addi a1, a1, -1
-; CHECK32-IZDINXZHINXMIN-NEXT:    fle.s a2, zero, a0
-; CHECK32-IZDINXZHINXMIN-NEXT:    flt.s a1, a1, a0
-; CHECK32-IZDINXZHINXMIN-NEXT:    neg s0, a1
-; CHECK32-IZDINXZHINXMIN-NEXT:    neg s1, a2
+; CHECK32-IZDINXZHINXMIN-NEXT:    fcvt.s.h s0, a0
+; CHECK32-IZDINXZHINXMIN-NEXT:    fle.s a0, zero, s0
+; CHECK32-IZDINXZHINXMIN-NEXT:    neg s1, a0
+; CHECK32-IZDINXZHINXMIN-NEXT:    mv a0, s0
 ; CHECK32-IZDINXZHINXMIN-NEXT:    call __fixunssfdi
 ; CHECK32-IZDINXZHINXMIN-NEXT:    and a0, s1, a0
+; CHECK32-IZDINXZHINXMIN-NEXT:    lui a2, 391168
 ; CHECK32-IZDINXZHINXMIN-NEXT:    and a1, s1, a1
-; CHECK32-IZDINXZHINXMIN-NEXT:    or a0, s0, a0
-; CHECK32-IZDINXZHINXMIN-NEXT:    or a1, s0, a1
+; CHECK32-IZDINXZHINXMIN-NEXT:    addi a2, a2, -1
+; CHECK32-IZDINXZHINXMIN-NEXT:    flt.s a2, a2, s0
+; CHECK32-IZDINXZHINXMIN-NEXT:    neg a2, a2
+; CHECK32-IZDINXZHINXMIN-NEXT:    or a0, a2, a0
+; CHECK32-IZDINXZHINXMIN-NEXT:    or a1, a2, a1
 ; CHECK32-IZDINXZHINXMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; CHECK32-IZDINXZHINXMIN-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; CHECK32-IZDINXZHINXMIN-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload

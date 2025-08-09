@@ -75,6 +75,27 @@ module {
   // CHECK-NEXT:    cir.return %[[R]] : !u32i
   // CHECK-NEXT:  }
 
+  cir.func @fold_ffs() -> !s32i {
+    // 40 is 0b0010_1000
+    %0 = cir.const #cir.int<40> : !s32i
+    %1 = cir.ffs %0 : !s32i
+    cir.return %1 : !s32i
+  }
+  // CHECK-LABEL: @fold_ffs
+  // CHECK-NEXT:    %[[R:.+]] = cir.const #cir.int<4> : !s32i
+  // CHECK-NEXT:    cir.return %[[R]] : !s32i
+  // CHECK-NEXT:  }
+
+  cir.func @fold_ffs_zero() -> !s32i {
+    %0 = cir.const #cir.int<0> : !s32i
+    %1 = cir.ffs %0 : !s32i
+    cir.return %1 : !s32i
+  }
+  // CHECK-LABEL: @fold_ffs_zero
+  // CHECK-NEXT:    %[[R:.+]] = cir.const #cir.int<0> : !s32i
+  // CHECK-NEXT:    cir.return %[[R]] : !s32i
+  // CHECK-NEXT:  }
+
   cir.func @fold_parity() -> !u32i {
     // 0xdeadbeef is 0b1101_1110_1010_1101_1011_1110_1110_1111
     // 0xdeadbeef contains 24 ones

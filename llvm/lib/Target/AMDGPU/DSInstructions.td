@@ -1397,6 +1397,9 @@ defm DS_BVH_STACK_RTN_B32             : DS_Real_gfx12<0x0e0,
 defm DS_BVH_STACK_PUSH8_POP1_RTN_B32  : DS_Real_gfx12<0x0e1>;
 defm DS_BVH_STACK_PUSH8_POP2_RTN_B64  : DS_Real_gfx12<0x0e2>;
 
+defm DS_ADD_F64     : DS_Real_gfx12<0x054>;
+defm DS_ADD_RTN_F64 : DS_Real_gfx12<0x074>;
+
 let AssemblerPredicate = HasLdsBarrierArriveAtomic in {
 defm DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 : DS_Real_gfx12<0x056>;
 defm DS_ATOMIC_BARRIER_ARRIVE_RTN_B64   : DS_Real_gfx12<0x075>;
