@@ -1052,3 +1052,14 @@ class SettingsCommandTestCase(TestBase):
         # NULL execution context (not one with an empty Target...) and in the
         # special handling for load-script-from-symbol-file this wasn't checked.
         self.runCmd("settings set -g target.load-script-from-symbol-file true")
+
+    def test_modified(self):
+        self.runCmd("settings set notify-void true")
+        self.runCmd("settings set target.process.optimization-warnings false")
+        self.expect(
+            "settings modified",
+            substrs=[
+                "notify-void = true",
+                "target.process.optimization-warnings = false",
+            ],
+        )
