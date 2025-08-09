@@ -117,12 +117,16 @@ ValueObjectSP GenericOptionalFrontend::GetChildAtIndex(uint32_t _idx) {
     ValueObjectSP candidate = val_sp->GetChildMemberWithName("_M_value");
     if (candidate)
       val_sp = candidate;
-  } else if (m_stdlib == StdLib::MsvcStl)
-    // Same issue as with LibCxx
-    val_sp = m_backend.GetChildMemberWithName("_Has_value")
-                 ->GetParent()
-                 ->GetChildAtIndex(0)
-                 ->GetChildMemberWithName("_Value");
+  } else if (m_stdlib == StdLib::MsvcStl) {
+    // PDB flattens anonymous unions to the parent
+    val_sp = m_backend.GetChildMemberWithName("_Value");
+    // With DWARF and NativePDB, same issue as with LibCxx
+    if (!val_sp)
+      val_sp = m_backend.GetChildMemberWithName("_Has_value")
+                   ->GetParent()
+                   ->GetChildAtIndex(0)
+                   ->GetChildMemberWithName("_Value");
+  }
 
   if (!val_sp)
     return ValueObjectSP();
