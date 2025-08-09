@@ -93,6 +93,25 @@ public:
     return classify(E->getType());
   }
 
+  bool canClassify(QualType T) {
+    if (const auto *BT = dyn_cast<BuiltinType>(T)) {
+      if (BT->isInteger() || BT->isFloatingPoint())
+        return true;
+      if (BT->getKind() == BuiltinType::Bool)
+        return true;
+    }
+
+    if (T->isArrayType() || T->isRecordType() || T->isAnyComplexType() ||
+        T->isVectorType())
+      return false;
+    return classify(T) != std::nullopt;
+  }
+  bool canClassify(const Expr *E) {
+    if (E->isGLValue())
+      return true;
+    return canClassify(E->getType());
+  }
+
   const CXXMethodDecl *
   getOverridingFunction(const CXXRecordDecl *DynamicDecl,
                         const CXXRecordDecl *StaticDecl,

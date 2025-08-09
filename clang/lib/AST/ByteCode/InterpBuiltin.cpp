@@ -1785,6 +1785,13 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
     return false;
 
   QualType DestElemType = getElemType(DestPtr);
+  if (DestElemType->isIncompleteType()) {
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_ltor_incomplete_type)
+        << DestElemType;
+    return false;
+  }
+
   size_t RemainingDestElems;
   if (DestPtr.getFieldDesc()->isArray()) {
     RemainingDestElems = DestPtr.isUnknownSizeArray()

@@ -256,6 +256,8 @@ protected:
 
   OptPrimType classify(const Expr *E) const { return Ctx.classify(E); }
   OptPrimType classify(QualType Ty) const { return Ctx.classify(Ty); }
+  bool canClassify(const Expr *E) const { return Ctx.canClassify(E); }
+  bool canClassify(QualType T) const { return Ctx.canClassify(T); }
 
   /// Classifies a known primitive type.
   PrimType classifyPrim(QualType Ty) const {

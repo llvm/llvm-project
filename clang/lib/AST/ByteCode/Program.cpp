@@ -180,17 +180,15 @@ unsigned Program::getOrCreateDummy(const DeclTy &D) {
     Desc = allocateDescriptor(D);
 
   assert(Desc);
-  Desc->makeDummy();
-
-  assert(Desc->isDummy());
 
   // Allocate a block for storage.
   unsigned I = Globals.size();
 
   auto *G = new (Allocator, Desc->getAllocSize())
       Global(Ctx.getEvalID(), getCurrentDecl(), Desc, /*IsStatic=*/true,
-             /*IsExtern=*/false, IsWeak);
+             /*IsExtern=*/false, IsWeak, /*IsDummy=*/true);
   G->block()->invokeCtor();
+  assert(G->block()->isDummy());
 
   Globals.push_back(G);
   DummyVariables[D.getOpaqueValue()] = I;
