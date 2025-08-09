@@ -7,8 +7,7 @@
 ; RUN: %if aarch64-registered-target     %{ llc %s -o - -mtriple=aarch64-apple-darwin            | FileCheck %s --check-prefixes=ALL,CHECK %}
 ; RUN: %if aarch64-registered-target     %{ llc %s -o - -mtriple=aarch64-pc-windows-msvc         | FileCheck %s --check-prefixes=ALL,CHECK %}
 ; RUN: %if aarch64-registered-target     %{ llc %s -o - -mtriple=aarch64-unknown-linux-gnu       | FileCheck %s --check-prefixes=ALL,CHECK %}
-; FIXME(#94434) unsupported on arm64ec
-; RUN: %if aarch64-registered-target     %{ ! llc %s -o - -mtriple=arm64ec-pc-windows-msvc -filetype=null %}
+; RUN: %if aarch64-registered-target     %{ llc %s -o - -mtriple=arm64ec-pc-windows-msvc         | FileCheck %s --check-prefixes=EC,CHECK  %}
 ; RUN: %if amdgpu-registered-target      %{ llc %s -o - -mtriple=amdgcn-amd-amdhsa               | FileCheck %s --check-prefixes=ALL,CHECK %}
 ; RUN: %if arc-registered-target         %{ llc %s -o - -mtriple=arc-elf                         | FileCheck %s --check-prefixes=ALL,CHECK %}
 ; RUN: %if arm-registered-target         %{ llc %s -o - -mtriple=arm-unknown-linux-gnueabi       | FileCheck %s --check-prefixes=ALL,CHECK %}
@@ -47,6 +46,9 @@
 ; RUN: %if xcore-registered-target       %{ llc %s -o - -mtriple=xcore-unknown-unknown           | FileCheck %s --check-prefixes=ALL,CHECK %}
 ; RUN: %if xtensa-registered-target      %{ llc %s -o - -mtriple=xtensa-none-elf                 | FileCheck %s --check-prefixes=ALL,CHECK %}
 
+; Note that arm64ec labels don't have a `:` so use `EC`, other tests do need the
+; `:` so directives with the function names don't get treated as labels.
+
 ; Codegen tests don't work the same for graphics targets. Add a dummy directive
 ; for filecheck, just make sure we don't crash.
 ; NOCRASH: {{.*}}
@@ -59,6 +61,7 @@
 
 define half @from_bits(i16 %bits) nounwind {
 ; ALL-LABEL: from_bits:
+; EC-LABEL:  from_bits
 ; CHECK-NOT: __extend
 ; CHECK-NOT: __trunc
 ; CHECK-NOT: __gnu
@@ -69,6 +72,7 @@ define half @from_bits(i16 %bits) nounwind {
 
 define i16 @to_bits(half %f) nounwind {
 ; ALL-LABEL: to_bits:
+; EC-LABEL:  to_bits
 ; CHECK-NOT: __extend
 ; CHECK-NOT: __trunc
 ; CHECK-NOT: __gnu
@@ -82,6 +86,7 @@ define i16 @to_bits(half %f) nounwind {
 
 define half @check_freeze(half %f) nounwind {
 ; ALL-LABEL: check_freeze:
+; EC-LABEL:  check_freeze
   %t0 = freeze half %f
   ret half %t0
 }

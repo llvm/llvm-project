@@ -316,6 +316,11 @@ ThunkArgInfo AArch64Arm64ECCallLowering::canonicalizeThunkType(
                         ThunkArgTranslation::PointerIndirection};
   };
 
+  if (T->isHalfTy()) {
+    Out << "h";
+    return direct(T);
+  }
+
   if (T->isFloatTy()) {
     Out << "f";
     return direct(T);
@@ -327,8 +332,8 @@ ThunkArgInfo AArch64Arm64ECCallLowering::canonicalizeThunkType(
   }
 
   if (T->isFloatingPointTy()) {
-    report_fatal_error(
-        "Only 32 and 64 bit floating points are supported for ARM64EC thunks");
+    report_fatal_error("Only 16, 32, and 64 bit floating points are supported "
+                       "for ARM64EC thunks");
   }
 
   auto &DL = M->getDataLayout();
@@ -342,8 +347,15 @@ ThunkArgInfo AArch64Arm64ECCallLowering::canonicalizeThunkType(
     uint64_t ElementCnt = T->getArrayNumElements();
     uint64_t ElementSizePerBytes = DL.getTypeSizeInBits(ElementTy) / 8;
     uint64_t TotalSizeBytes = ElementCnt * ElementSizePerBytes;
-    if (ElementTy->isFloatTy() || ElementTy->isDoubleTy()) {
-      Out << (ElementTy->isFloatTy() ? "F" : "D") << TotalSizeBytes;
+    if (ElementTy->isHalfTy() || ElementTy->isFloatTy() ||
+        ElementTy->isDoubleTy()) {
+      if (ElementTy->isHalfTy())
+        Out << "H";
+      else if (ElementTy->isFloatTy())
+        Out << "F";
+      else if (ElementTy->isDoubleTy())
+        Out << "D";
+      Out << TotalSizeBytes;
       if (Alignment.value() >= 16 && !Ret)
         Out << "a" << Alignment.value();
       if (TotalSizeBytes <= 8) {
@@ -355,8 +367,9 @@ ThunkArgInfo AArch64Arm64ECCallLowering::canonicalizeThunkType(
         return pointerIndirection(T);
       }
     } else if (T->isFloatingPointTy()) {
-      report_fatal_error("Only 32 and 64 bit floating points are supported for "
-                         "ARM64EC thunks");
+      report_fatal_error(
+          "Only 16, 32, and 64 bit floating points are supported "
+          "for ARM64EC thunks");
     }
   }
 
