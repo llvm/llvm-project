@@ -3005,6 +3005,9 @@ static void GenerateFrontendArgs(const FrontendOptions &Opts,
                 Lang + HeaderUnit + Header + ModuleMap + Preprocessed);
   }
 
+  if (!Opts.EmitSummaryDir.empty() || !Opts.ReadSummaryDir.empty())
+    GenerateArg(Consumer, OPT_summary_format_EQ, Opts.SummaryFormat);
+
   // OPT_INPUT has a unique class, generate it directly.
   for (const auto &Input : Opts.Inputs)
     Consumer(Input.getFile());
@@ -3282,6 +3285,15 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
 
     Opts.Inputs.emplace_back(std::move(Inputs[i]), IK, IsSystem);
   }
+
+  Opts.SummaryFormat = "json";
+  if (const Arg *A = Args.getLastArg(OPT_summary_format_EQ)) {
+    StringRef Format = A->getValue();
+
+    // FIXME: don't hardcode these values
+    if (Format == "yaml" || Format == "binary")
+      Opts.SummaryFormat = Format;
+  };
 
   Opts.DashX = DashX;
 
