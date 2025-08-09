@@ -32,27 +32,24 @@ struct FakeFrame {
 // is not popped but remains there for quite some time until gets used again.
 // So, we poison the objects on the fake stack when function returns.
 // It helps us find use-after-return bugs.
-//
 // The FakeStack objects is allocated by a single mmap call and has no other
 // pointers. The size of the fake stack depends on the actual thread stack size
 // and thus can not be a constant.
 // stack_size is a power of two greater or equal to the thread's stack size;
 // we store it as its logarithm (stack_size_log).
+// FakeStack is padded such that GetFrame() is aligned to BytesInSizeClass().
 // FakeStack has kNumberOfSizeClasses (11) size classes, each size class
 // is a power of two, starting from 64 bytes. Each size class occupies
 // stack_size bytes and thus can allocate
 // NumberOfFrames=(stack_size/BytesInSizeClass) fake frames (also a power of 2).
-//
 // For each size class we have NumberOfFrames allocation flags,
 // each flag indicates whether the given frame is currently allocated.
-//
-// All flags for size classes 0 .. 10 are stored in a single contiguous region,
-// padded to 2**kMaxStackFrameSizeLog (to prevent frames from becoming
-// unaligned; see also GetFrame()), followed by another contiguous region which
-// contains the actual memory for size classes.
-//
-// The addresses are computed by GetFlags and GetFrame without
+// All flags for size classes 0 .. 10 are stored in a single contiguous region
+// followed by another contiguous region which contains the actual memory for
+// size classes. The addresses are computed by GetFlags and GetFrame without
 // any memory accesses solely based on 'this' and stack_size_log.
+// Allocate() flips the appropriate allocation flag atomically, thus achieving
+// async-signal safety.
 // Allocate() flips the appropriate allocation flag atomically, thus achieving
 // async-signal safety.
 // This allocator does not have quarantine per se, but it tries to allocate the
