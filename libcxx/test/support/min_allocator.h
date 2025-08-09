@@ -163,7 +163,8 @@ struct cpp03_overload_allocator : bare_allocator<T> {
 template <class T>
 bool cpp03_overload_allocator<T>::construct_called = false;
 
-template <class T, class = std::integral_constant<std::size_t, 0> >
+// template <class T, class = std::integral_constant<std::size_t, 0> >
+template <class T, class = void >
 class min_pointer;
 template <class T, class ID>
 class min_pointer<const T, ID>;
@@ -194,7 +195,11 @@ public:
 
 template <class ID>
 class min_pointer<void, ID> {
+#ifdef TEST_IS_CONSTANT_EVALUATED
+  ID* ptr_;
+#else
   void* ptr_;
+#endif
 
 public:
   min_pointer() TEST_NOEXCEPT = default;
