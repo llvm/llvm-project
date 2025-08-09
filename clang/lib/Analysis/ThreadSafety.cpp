@@ -1338,8 +1338,7 @@ void ThreadSafetyAnalyzer::addLock(FactSet &FSet,
   }
 
   // Check before/after constraints
-  if (Handler.issueBetaWarnings() &&
-      !Entry->asserted() && !Entry->declared()) {
+  if (!Entry->asserted() && !Entry->declared()) {
     GlobalBeforeSet->checkBeforeAfter(Entry->valueDecl(), FSet, *this,
                                       Entry->loc(), Entry->getKind());
   }
