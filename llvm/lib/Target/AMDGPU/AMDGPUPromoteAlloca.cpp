@@ -1500,7 +1500,7 @@ size_t AMDGPUPromoteAllocaImpl::getSGPRPressureEstimate(AllocaInst &I) {
 
     for (auto RIt = BB->rbegin(); RIt != BB->rend(); RIt++) {
       if (&*RIt == &I)
-        return (MaxLive + CurrentlyLive.size()) / 2;
+        return MaxLive;
 
       MaxLive = std::max(MaxLive, CurrentlyLive.size());
 
@@ -1532,7 +1532,7 @@ size_t AMDGPUPromoteAllocaImpl::getVGPRPressureEstimate(AllocaInst &I) {
 
     for (auto RIt = BB->rbegin(); RIt != BB->rend(); RIt++) {
       if (&*RIt == &I)
-        return (MaxLive + CurrentlyLive.size() / 2);
+        return MaxLive;
 
       MaxLive = std::max(MaxLive, CurrentlyLive.size());
 
@@ -1555,10 +1555,10 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(AllocaInst &I,
   const unsigned SGPRPressureLimit = AMDGPU::SGPR_32RegClass.getNumRegs();
   const unsigned VGPRPressureLimit = AMDGPU::VGPR_32RegClass.getNumRegs();
 
-  if (getSGPRPressureEstimate(I) < SGPRPressureLimit &&
-      getVGPRPressureEstimate(I) < VGPRPressureLimit) {
+  if (getSGPRPressureEstimate(I) > SGPRPressureLimit ||
+      getVGPRPressureEstimate(I) > VGPRPressureLimit) {
     LLVM_DEBUG(dbgs() << "Declining to promote " << I
-                      << " to LDS since pressure is relatively low.\n");
+                      << " to LDS since pressure is relatively high.\n");
     return false;
   }
 
