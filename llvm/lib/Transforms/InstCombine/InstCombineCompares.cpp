@@ -6381,6 +6381,36 @@ Instruction *InstCombinerImpl::foldICmpWithZextOrSext(ICmpInst &ICmp) {
   return new ICmpInst(CmpInst::ICMP_SLT, X, Constant::getNullValue(SrcTy));
 }
 
+Instruction *InstCombinerImpl::foldICmpWithSextAndAdd(ICmpInst &ICmp) {
+  Value *X;
+  ConstantInt *Y, *Z;
+  // Match the pattern: icmp ult (add (sext X), Y), Z
+  // where X is a value, Y and Z are integer constants
+  // icmp ult (add(sext(X), Y)), Z  -> icmp ult (add(X, Y)), Z
+  if (match(&ICmp, m_SpecificICmp(CmpInst::ICMP_ULT,
+                            m_Add(m_SExt(m_Value(X)), m_ConstantInt(Y)),
+                            m_ConstantInt(Z)))) {
+    Type *XType = X->getType();
+    if (!XType->isIntegerTy())
+      return nullptr;
+
+    unsigned XBitWidth = XType->getIntegerBitWidth();
+    auto YValue = Y->getSExtValue();
+    auto ZValue = Z->getSExtValue();
+
+    auto MinValue = -(1LL << (XBitWidth - 1));
+    auto MaxValue = (1LL << (XBitWidth - 1)) - 1;
+
+    // // Check if Y and Z fit within X's type without wrapping
+    if (YValue < MinValue || YValue > MaxValue || ZValue < MinValue || ZValue > MaxValue)
+      return nullptr; // Cannot optimize if Y or Z would wrap in X's type
+
+    Value *NewAdd = Builder.CreateAdd(X, ConstantInt::get(XType, YValue));
+    return new ICmpInst(CmpInst::ICMP_ULT, NewAdd, ConstantInt::get(XType, ZValue));
+  }
+  return nullptr;
+}
+
 /// Handle icmp (cast x), (cast or constant).
 Instruction *InstCombinerImpl::foldICmpWithCastOp(ICmpInst &ICmp) {
   // If any operand of ICmp is a inttoptr roundtrip cast then remove it as
@@ -7725,6 +7755,10 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
       replaceOperand(I, 1, Pair->second);
       return &I;
     }
+  }
+
+  if (Instruction *Res = foldICmpWithSextAndAdd(I)) {
+    return Res;
   }
 
   // In case of a comparison with two select instructions having the same
