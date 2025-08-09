@@ -282,6 +282,15 @@ namespace {
 }
 
 // The simplified `await_suspend_destroy` path avoids suspend intrinsics.
+//
+// If a coro has only `await_suspend_destroy` and trivial (`suspend_never`)
+// awaiters, then subsequent passes are able to allocate its frame on-stack.
+//
+// As of 2025, there is still an optimization gap between a realistic
+// short-circuiting coro, and the equivalent plain function.  For a
+// guesstimate, expect 4-5ns per call on x86.  One idea for improvement is to
+// also elide trivial suspends like `std::suspend_never`, in order to hit the
+// `HasCoroSuspend` path in `CoroEarly.cpp`.
 static void emitAwaitSuspendDestroy(CodeGenFunction &CGF, CGCoroData &Coro,
                                     llvm::Function *SuspendWrapper,
                                     llvm::Value *Awaiter, llvm::Value *Frame,
@@ -296,6 +305,89 @@ static void emitAwaitSuspendDestroy(CodeGenFunction &CGF, CGCoroData &Coro,
     CGF.EmitNounwindRuntimeCall(SuspendWrapper, DirectCallArgs);
   }
 
+  CGF.EmitBranchThroughCleanup(Coro.CleanupJD);
+}
+
+static void emitStandardAwaitSuspend(
+    CodeGenFunction &CGF, CGCoroData &Coro, CoroutineSuspendExpr const &S,
+    llvm::Function *SuspendWrapper, llvm::Value *Awaiter, llvm::Value *Frame,
+    bool AwaitSuspendCanThrow, SmallString<32> Prefix, BasicBlock *ReadyBlock,
+    AwaitKind Kind, CoroutineSuspendExpr::SuspendReturnType SuspendReturnType) {
+  auto &Builder = CGF.Builder;
+
+  CGF.CurCoro.InSuspendBlock = true;
+
+  SmallVector<llvm::Value *, 3> SuspendIntrinsicCallArgs;
+  SuspendIntrinsicCallArgs.push_back(Awaiter);
+  SuspendIntrinsicCallArgs.push_back(Frame);
+  SuspendIntrinsicCallArgs.push_back(SuspendWrapper);
+  BasicBlock *CleanupBlock = CGF.createBasicBlock(Prefix + Twine(".cleanup"));
+
+  llvm::Function *CoroSave = CGF.CGM.getIntrinsic(llvm::Intrinsic::coro_save);
+  auto *NullPtr = llvm::ConstantPointerNull::get(CGF.CGM.Int8PtrTy);
+  auto *SaveCall = Builder.CreateCall(CoroSave, {NullPtr});
+
+  llvm::Intrinsic::ID AwaitSuspendIID;
+  switch (SuspendReturnType) {
+  case CoroutineSuspendExpr::SuspendReturnType::SuspendVoid:
+    AwaitSuspendIID = llvm::Intrinsic::coro_await_suspend_void;
+    break;
+  case CoroutineSuspendExpr::SuspendReturnType::SuspendBool:
+    AwaitSuspendIID = llvm::Intrinsic::coro_await_suspend_bool;
+    break;
+  case CoroutineSuspendExpr::SuspendReturnType::SuspendHandle:
+    AwaitSuspendIID = llvm::Intrinsic::coro_await_suspend_handle;
+    break;
+  }
+
+  llvm::Function *AwaitSuspendIntrinsic = CGF.CGM.getIntrinsic(AwaitSuspendIID);
+
+  llvm::CallBase *SuspendRet = nullptr;
+  // FIXME: add call attributes?
+  if (AwaitSuspendCanThrow)
+    SuspendRet =
+        CGF.EmitCallOrInvoke(AwaitSuspendIntrinsic, SuspendIntrinsicCallArgs);
+  else
+    SuspendRet = CGF.EmitNounwindRuntimeCall(AwaitSuspendIntrinsic,
+                                             SuspendIntrinsicCallArgs);
+
+  assert(SuspendRet);
+  CGF.CurCoro.InSuspendBlock = false;
+
+  switch (SuspendReturnType) {
+  case CoroutineSuspendExpr::SuspendReturnType::SuspendVoid:
+    assert(SuspendRet->getType()->isVoidTy());
+    break;
+  case CoroutineSuspendExpr::SuspendReturnType::SuspendBool: {
+    assert(SuspendRet->getType()->isIntegerTy());
+
+    // Veto suspension if requested by bool returning await_suspend.
+    BasicBlock *RealSuspendBlock =
+        CGF.createBasicBlock(Prefix + Twine(".suspend.bool"));
+    CGF.Builder.CreateCondBr(SuspendRet, RealSuspendBlock, ReadyBlock);
+    CGF.EmitBlock(RealSuspendBlock);
+    break;
+  }
+  case CoroutineSuspendExpr::SuspendReturnType::SuspendHandle: {
+    assert(SuspendRet->getType()->isVoidTy());
+    break;
+  }
+  }
+
+  // Emit the suspend point.
+  const bool IsFinalSuspend = (Kind == AwaitKind::Final);
+  llvm::Function *CoroSuspend =
+      CGF.CGM.getIntrinsic(llvm::Intrinsic::coro_suspend);
+  auto *SuspendResult = Builder.CreateCall(
+      CoroSuspend, {SaveCall, Builder.getInt1(IsFinalSuspend)});
+
+  // Create a switch capturing three possible continuations.
+  auto *Switch = Builder.CreateSwitch(SuspendResult, Coro.SuspendBB, 2);
+  Switch->addCase(Builder.getInt8(0), ReadyBlock);
+  Switch->addCase(Builder.getInt8(1), CleanupBlock);
+
+  // Emit cleanup for this suspend point.
+  CGF.EmitBlock(CleanupBlock);
   CGF.EmitBranchThroughCleanup(Coro.CleanupJD);
 }
 
@@ -320,8 +412,6 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
   // Otherwise, emit suspend logic.
   CGF.EmitBlock(SuspendBlock);
 
-  auto &Builder = CGF.Builder;
-
   auto SuspendWrapper = CodeGenFunction(CGF.CGM).generateAwaitSuspendWrapper(
       CGF.CurFn->getName(), Prefix, S);
 
@@ -343,82 +433,9 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
     emitAwaitSuspendDestroy(CGF, Coro, SuspendWrapper, Awaiter, Frame,
                             AwaitSuspendCanThrow);
   } else { // Normal suspend path -- can actually suspend, uses intrinsics
-    CGF.CurCoro.InSuspendBlock = true;
-
-    SmallVector<llvm::Value *, 3> SuspendIntrinsicCallArgs;
-    SuspendIntrinsicCallArgs.push_back(Awaiter);
-    SuspendIntrinsicCallArgs.push_back(Frame);
-    SuspendIntrinsicCallArgs.push_back(SuspendWrapper);
-    BasicBlock *CleanupBlock = CGF.createBasicBlock(Prefix + Twine(".cleanup"));
-
-    llvm::Function *CoroSave = CGF.CGM.getIntrinsic(llvm::Intrinsic::coro_save);
-    auto *NullPtr = llvm::ConstantPointerNull::get(CGF.CGM.Int8PtrTy);
-    auto *SaveCall = Builder.CreateCall(CoroSave, {NullPtr});
-
-    llvm::Intrinsic::ID AwaitSuspendIID;
-
-    switch (SuspendReturnType) {
-    case CoroutineSuspendExpr::SuspendReturnType::SuspendVoid:
-      AwaitSuspendIID = llvm::Intrinsic::coro_await_suspend_void;
-      break;
-    case CoroutineSuspendExpr::SuspendReturnType::SuspendBool:
-      AwaitSuspendIID = llvm::Intrinsic::coro_await_suspend_bool;
-      break;
-    case CoroutineSuspendExpr::SuspendReturnType::SuspendHandle:
-      AwaitSuspendIID = llvm::Intrinsic::coro_await_suspend_handle;
-      break;
-    }
-
-    llvm::Function *AwaitSuspendIntrinsic =
-        CGF.CGM.getIntrinsic(AwaitSuspendIID);
-
-    llvm::CallBase *SuspendRet = nullptr;
-    // FIXME: add call attributes?
-    if (AwaitSuspendCanThrow)
-      SuspendRet =
-          CGF.EmitCallOrInvoke(AwaitSuspendIntrinsic, SuspendIntrinsicCallArgs);
-    else
-      SuspendRet = CGF.EmitNounwindRuntimeCall(AwaitSuspendIntrinsic,
-                                               SuspendIntrinsicCallArgs);
-
-    assert(SuspendRet);
-    CGF.CurCoro.InSuspendBlock = false;
-
-    switch (SuspendReturnType) {
-    case CoroutineSuspendExpr::SuspendReturnType::SuspendVoid:
-      assert(SuspendRet->getType()->isVoidTy());
-      break;
-    case CoroutineSuspendExpr::SuspendReturnType::SuspendBool: {
-      assert(SuspendRet->getType()->isIntegerTy());
-
-      // Veto suspension if requested by bool returning await_suspend.
-      BasicBlock *RealSuspendBlock =
-          CGF.createBasicBlock(Prefix + Twine(".suspend.bool"));
-      CGF.Builder.CreateCondBr(SuspendRet, RealSuspendBlock, ReadyBlock);
-      CGF.EmitBlock(RealSuspendBlock);
-      break;
-    }
-    case CoroutineSuspendExpr::SuspendReturnType::SuspendHandle: {
-      assert(SuspendRet->getType()->isVoidTy());
-      break;
-    }
-    }
-
-    // Emit the suspend point.
-    const bool IsFinalSuspend = (Kind == AwaitKind::Final);
-    llvm::Function *CoroSuspend =
-        CGF.CGM.getIntrinsic(llvm::Intrinsic::coro_suspend);
-    auto *SuspendResult = Builder.CreateCall(
-        CoroSuspend, {SaveCall, Builder.getInt1(IsFinalSuspend)});
-
-    // Create a switch capturing three possible continuations.
-    auto *Switch = Builder.CreateSwitch(SuspendResult, Coro.SuspendBB, 2);
-    Switch->addCase(Builder.getInt8(0), ReadyBlock);
-    Switch->addCase(Builder.getInt8(1), CleanupBlock);
-
-    // Emit cleanup for this suspend point.
-    CGF.EmitBlock(CleanupBlock);
-    CGF.EmitBranchThroughCleanup(Coro.CleanupJD);
+    emitStandardAwaitSuspend(CGF, Coro, S, SuspendWrapper, Awaiter, Frame,
+                             AwaitSuspendCanThrow, Prefix, ReadyBlock, Kind,
+                             SuspendReturnType);
   }
 
   // Emit await_resume expression.
@@ -429,6 +446,7 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
   CXXTryStmt *TryStmt = nullptr;
   if (Coro.ExceptionHandler && Kind == AwaitKind::Init &&
       StmtCanThrow(S.getResumeExpr())) {
+    auto &Builder = CGF.Builder;
     Coro.ResumeEHVar =
         CGF.CreateTempAlloca(Builder.getInt1Ty(), Prefix + Twine("resume.eh"));
     Builder.CreateFlagStore(true, Coro.ResumeEHVar);
