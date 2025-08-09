@@ -84,6 +84,7 @@ private:
                              unsigned &ParentScope);
   void BuildScopeInformation(CompoundLiteralExpr *CLE, unsigned &ParentScope);
   void BuildScopeInformation(Stmt *S, unsigned &origParentScope);
+  void BuildScopeInformationForLoopOrSwitch(Stmt *S, Stmt *Body, unsigned& ParentScope);
 
   void VerifyJumps();
   void VerifyIndirectJumps();
@@ -296,6 +297,28 @@ void JumpScopeChecker::BuildScopeInformation(CompoundLiteralExpr *CLE,
   ParentScope = Scopes.size() - 1;
 }
 
+/// Build scope information for an iteration or 'switch' statement.
+///
+/// This pushes a new scope for the body of the loop so we can check if any
+/// labeled break/continue statements that target this loop are actually
+/// inside it.
+///
+/// The loop condition etc. are *not* included in it though; this forbids doing
+/// horrible things such as 'x: while (({ continue x; })) {}'.
+void JumpScopeChecker::BuildScopeInformationForLoopOrSwitch(
+    Stmt *S, Stmt *Body, unsigned &ParentScope) {
+  for (Stmt *Child : S->children()) {
+    if (!Child || Child == Body)
+      continue;
+    BuildScopeInformation(Child, ParentScope);
+  }
+
+  unsigned NewParentScope = Scopes.size();
+  Scopes.push_back(GotoScope(ParentScope, 0, 0, S->getBeginLoc()));
+  LabelAndGotoScopes[S] = NewParentScope;
+  BuildScopeInformation(Body, NewParentScope);
+}
+
 /// BuildScopeInformation - The statements from CI to CE are known to form a
 /// coherent VLA scope with a specified parent node.  Walk through the
 /// statements, adding any labels or gotos to LabelAndGotoScopes and recursively
@@ -339,18 +362,11 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
     IndirectJumps.push_back(S);
     break;
 
-  case Stmt::SwitchStmtClass:
-    // Evaluate the C++17 init stmt and condition variable
-    // before entering the scope of the switch statement.
-    if (Stmt *Init = cast<SwitchStmt>(S)->getInit()) {
-      BuildScopeInformation(Init, ParentScope);
-      ++StmtsToSkip;
-    }
-    if (VarDecl *Var = cast<SwitchStmt>(S)->getConditionVariable()) {
-      BuildScopeInformation(Var, ParentScope);
-      ++StmtsToSkip;
-    }
-    goto RecordJumpScope;
+  case Stmt::SwitchStmtClass: {
+    BuildScopeInformationForLoopOrSwitch(S, cast<SwitchStmt>(S)->getBody(), ParentScope);
+    Jumps.push_back(S);
+    return;
+  }
 
   case Stmt::GCCAsmStmtClass:
     if (!cast<GCCAsmStmt>(S)->isAsmGoto())
@@ -364,6 +380,29 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
     LabelAndGotoScopes[S] = ParentScope;
     Jumps.push_back(S);
     break;
+
+  case Stmt::BreakStmtClass:
+  case Stmt::ContinueStmtClass:
+    if (cast<LoopControlStmt>(S)->isLabeled()) goto RecordJumpScope;
+    break;
+
+  case Stmt::WhileStmtClass: {
+    BuildScopeInformationForLoopOrSwitch(S, cast<WhileStmt>(S)->getBody(),
+                                         ParentScope);
+    return;
+  }
+
+  case Stmt::DoStmtClass: {
+    BuildScopeInformationForLoopOrSwitch(S, cast<DoStmt>(S)->getBody(),
+                                         ParentScope);
+    return;
+  }
+
+  case Stmt::ForStmtClass: {
+    BuildScopeInformationForLoopOrSwitch(S, cast<ForStmt>(S)->getBody(),
+                                         ParentScope);
+    return;
+  }
 
   case Stmt::IfStmtClass: {
     IfStmt *IS = cast<IfStmt>(S);
@@ -721,6 +760,34 @@ void JumpScopeChecker::VerifyJumps() {
       continue;
     }
 
+    // Any labeled break/continue statements must also be handled here.
+    if (auto *L = dyn_cast<LoopControlStmt>(Jump)) {
+      assert(L->isLabeled() && "expected labeled break/continue");
+      bool IsContinue = isa<ContinueStmt>(L);
+
+      // The jump target didn't exist yet when we parsed the break/continue, so
+      // verify it now. Note that if the target is null, then Sema will have
+      // already complained about an undeclared label.
+      Stmt *Target = L->getLabelTarget();
+      if (!Target)
+        continue;
+
+      if (!isa<SwitchStmt, WhileStmt, ForStmt, DoStmt, CXXForRangeStmt,
+               ObjCForCollectionStmt>(Target)) {
+        S.Diag(L->getLabelLoc(), diag::err_break_continue_label_not_found)
+          << !IsContinue;
+        continue;
+      }
+
+      if (IsContinue && isa<SwitchStmt>(Target)) {
+        S.Diag(L->getLabelLoc(), diag::err_continue_switch);
+        continue;
+      }
+
+      CheckJump(L, Target, L->getKwLoc(), 0, 0, 0);
+      continue;
+    }
+
     SwitchStmt *SS = cast<SwitchStmt>(Jump);
     for (SwitchCase *SC = SS->getSwitchCaseList(); SC;
          SC = SC->getNextSwitchCase()) {
@@ -973,7 +1040,7 @@ void JumpScopeChecker::CheckJump(Stmt *From, Stmt *To, SourceLocation DiagLoc,
   if (FromScope == ToScope) return;
 
   // Warn on gotos out of __finally blocks.
-  if (isa<GotoStmt>(From) || isa<IndirectGotoStmt>(From)) {
+  if (isa<GotoStmt, IndirectGotoStmt, LoopControlStmt>(From)) {
     // If FromScope > ToScope, FromScope is more nested and the jump goes to a
     // less nested scope.  Check if it crosses a __finally along the way.
     for (unsigned I = FromScope; I > ToScope; I = Scopes[I].ParentScope) {
@@ -998,6 +1065,13 @@ void JumpScopeChecker::CheckJump(Stmt *From, Stmt *To, SourceLocation DiagLoc,
 
   // It's okay to jump out from a nested scope.
   if (CommonScope == ToScope) return;
+
+  // Error if we're trying to break/continue out of a non-enclosing statement.
+  if (auto L = dyn_cast<LoopControlStmt>(From)) {
+    S.Diag(L->getLabelLoc(), diag::err_break_continue_label_not_found)
+          << isa<BreakStmt>(L);
+    return;
+  }
 
   // Pull out (and reverse) any scopes we might need to diagnose skipping.
   SmallVector<unsigned, 10> ToScopesCompat;

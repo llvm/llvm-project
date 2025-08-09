@@ -7415,12 +7415,12 @@ static ExpectedStmt ImportLoopControlStmt(ASTNodeImporter &NodeImporter,
   auto ToLabelLoc = S->isLabeled()
                         ? NodeImporter.importChecked(Err, S->getLabelLoc())
                         : SourceLocation();
-  auto ToStmt = S->isLabeled()
-                    ? NodeImporter.importChecked(Err, S->getLabeledStmt())
+  auto ToDecl = S->isLabeled()
+                    ? NodeImporter.importChecked(Err, S->getLabelDecl())
                     : nullptr;
   if (Err)
     return std::move(Err);
-  return new (Importer.getToContext()) StmtClass(ToLoc, ToLabelLoc, ToStmt);
+  return new (Importer.getToContext()) StmtClass(ToLoc, ToLabelLoc, ToDecl);
 }
 
 ExpectedStmt ASTNodeImporter::VisitContinueStmt(ContinueStmt *S) {

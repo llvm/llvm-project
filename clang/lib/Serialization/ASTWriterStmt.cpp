@@ -109,7 +109,6 @@ namespace clang {
     void AddTemplateKWAndArgsInfo(const ASTTemplateKWAndArgsInfo &ArgInfo,
                                   const TemplateArgumentLoc *Args);
 
-    void VisitLoopControlStmt(LoopControlStmt *S);
     void VisitStmt(Stmt *S);
 #define STMT(Type, Base) \
     void Visit##Type(Type *);
@@ -316,7 +315,7 @@ void ASTStmtWriter::VisitLoopControlStmt(LoopControlStmt *S) {
   Record.AddSourceLocation(S->getKwLoc());
   Record.push_back(S->isLabeled());
   if (S->isLabeled()) {
-    Record.AddStmt(S->getLabeledStmt());
+    Record.AddDeclRef(S->getLabelDecl());
     Record.AddSourceLocation(S->getLabelLoc());
   }
 }

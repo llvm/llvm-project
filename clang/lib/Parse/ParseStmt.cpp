@@ -2290,24 +2290,26 @@ StmtResult Parser::ParseGotoStatement() {
 
 StmtResult Parser::ParseContinueStatement() {
   SourceLocation ContinueLoc = ConsumeToken();  // eat the 'continue'.
-  if (!Tok.is(tok::identifier))
-    return Actions.ActOnContinueStmt(ContinueLoc, getCurScope());
-
-  StmtResult Res = Actions.ActOnLabelledContinueStmt(
-      ContinueLoc, Tok.getIdentifierInfo(), Tok.getLocation());
-  ConsumeToken();
-  return Res;
+  SourceLocation LabelLoc;
+  LabelDecl *Target = nullptr;
+  if (Tok.is(tok::identifier)) {
+    Target =
+        Actions.LookupOrCreateLabel(Tok.getIdentifierInfo(), Tok.getLocation());
+    LabelLoc = ConsumeToken();
+  }
+  return Actions.ActOnContinueStmt(ContinueLoc, getCurScope(), Target, LabelLoc);
 }
 
 StmtResult Parser::ParseBreakStatement() {
   SourceLocation BreakLoc = ConsumeToken();  // eat the 'break'.
-  if (!Tok.is(tok::identifier))
-    return Actions.ActOnBreakStmt(BreakLoc, getCurScope());
-
-  StmtResult Res = Actions.ActOnLabelledBreakStmt(
-      BreakLoc, Tok.getIdentifierInfo(), Tok.getLocation());
-  ConsumeToken();
-  return Res;
+  SourceLocation LabelLoc;
+  LabelDecl *Target = nullptr;
+  if (Tok.is(tok::identifier)) {
+    Target =
+        Actions.LookupOrCreateLabel(Tok.getIdentifierInfo(), Tok.getLocation());
+    LabelLoc = ConsumeToken();
+  }
+  return Actions.ActOnBreakStmt(BreakLoc, getCurScope(), Target, LabelLoc);
 }
 
 StmtResult Parser::ParseReturnStatement() {

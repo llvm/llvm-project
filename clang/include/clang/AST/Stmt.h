@@ -3047,9 +3047,9 @@ public:
 
 /// Base class for BreakStmt and ContinueStmt.
 class LoopControlStmt : public Stmt {
-  /// If this is a labeled break, the loop or switch statement that we need
-  /// to continue/break.
-  Stmt* LabeledStmt = nullptr;
+  /// If this is a labeled break/continue, the label whose statement we're
+  /// targeting.
+  LabelDecl* TargetLabel = nullptr;
 
   /// Location of the label, if any.
   SourceLocation Label;
@@ -3070,13 +3070,17 @@ public:
     return isLabeled() ? getLabelLoc() : getKwLoc();
   }
 
-  bool isLabeled() const { return Label != SourceLocation(); }
+  bool isLabeled() const { return TargetLabel; }
 
   SourceLocation getLabelLoc() const { return Label; }
   void setLabelLoc(SourceLocation L) { Label = L; }
 
-  Stmt* getLabeledStmt() const { return LabeledStmt; }
-  void setLabeledStmt(Stmt* S) { LabeledStmt = S; }
+  LabelDecl* getLabelDecl() const { return TargetLabel; }
+  void setLabelDecl(LabelDecl* S) { TargetLabel = S; }
+
+  /// If this is a labeled break/continue, get the loop or switch statement
+  /// that this targets.
+  Stmt *getLabelTarget() const;
 
   // Iterators
   child_range children() {
@@ -3097,10 +3101,10 @@ public:
 class ContinueStmt : public LoopControlStmt {
 public:
   ContinueStmt(SourceLocation CL) : LoopControlStmt(ContinueStmtClass, CL) {}
-  ContinueStmt(SourceLocation CL, SourceLocation LabelLoc, Stmt *Loop)
+  ContinueStmt(SourceLocation CL, SourceLocation LabelLoc, LabelDecl *Target)
     : LoopControlStmt(ContinueStmtClass, CL) {
     setLabelLoc(LabelLoc);
-    setLabeledStmt(Loop);
+    setLabelDecl(Target);
   }
 
   /// Build an empty continue statement.
@@ -3116,10 +3120,10 @@ public:
 class BreakStmt : public LoopControlStmt {
 public:
   BreakStmt(SourceLocation BL) : LoopControlStmt(BreakStmtClass, BL) {}
-  BreakStmt(SourceLocation CL, SourceLocation LabelLoc, Stmt *LoopOrSwitch)
+  BreakStmt(SourceLocation CL, SourceLocation LabelLoc, LabelDecl *Target)
     : LoopControlStmt(BreakStmtClass, CL) {
     setLabelLoc(LabelLoc);
-    setLabeledStmt(LoopOrSwitch);
+    setLabelDecl(Target);
   }
 
   /// Build an empty break statement.

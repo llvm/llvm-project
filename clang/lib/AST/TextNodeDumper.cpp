@@ -1413,6 +1413,26 @@ static void dumpBasePath(raw_ostream &OS, const CastExpr *Node) {
   OS << ')';
 }
 
+void TextNodeDumper::VisitLoopControlStmt(const LoopControlStmt *Node) {
+  if (!Node->isLabeled())
+    return;
+
+  OS << " '" << Node->getLabelDecl()->getIdentifier()->getName() << "' (";
+
+  auto *Target = Node->getLabelTarget();
+  if (!Target) {
+    ColorScope Color(OS, ShowColors, NullColor);
+    OS << "<<<NULL>>>";
+  } else {
+    {
+      ColorScope Color(OS, ShowColors, StmtColor);
+      OS << Target->getStmtClassName();
+    }
+    dumpPointer(Target);
+  }
+  OS << ")";
+}
+
 void TextNodeDumper::VisitIfStmt(const IfStmt *Node) {
   if (Node->hasInitStorage())
     OS << " has_init";
