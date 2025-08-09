@@ -118,12 +118,12 @@ class FakeStack {
   // BytesInSizeClass(max_class_id)) implies alignment to BytesInSizeClass()
   // for any class_id, since the class sizes are increasing powers of 2.
   //
-  // 1) ('this' + kFlagsOffset + SizeRequiredForFlags())) is aligned to
+  // 1) (this + kFlagsOffset + SizeRequiredForFlags())) is aligned to
   //    1<<kMaxStackFrameSizeLog (see FakeStack::Create)
   // 2) We know that stack_size_log >= kMaxStackFrameSizeLog (otherwise you
   //    couldn't store a single frame of that size in the entire stack)
-  //    hence (1 << stack_size_log) is aligned to 1<<kMaxStackFrameSizeLog
-  //    and   ((1 << stack_size_log) * class_id) is aligned to
+  //    hence (1<<stack_size_log) is aligned to 1<<kMaxStackFrameSizeLog
+  //    and   ((1<<stack_size_log) * class_id) is aligned to
   //          1<<kMaxStackFrameSizeLog
   // 3) BytesInSizeClass(class_id) * pos is aligned to
   //    BytesInSizeClass(class_id)
