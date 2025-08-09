@@ -139,6 +139,8 @@ isSafeToConvert(const RecordDecl *rd, CIRGenTypes &cgt,
   if (!alreadyChecked.insert(rd).second)
     return true;
 
+  assert(rd->isCompleteDefinition() &&
+         "Expect RecordDecl to be CompleteDefinition");
   const Type *key = cgt.getASTContext().getCanonicalTagType(rd).getTypePtr();
 
   // If this type is already laid out, converting it is a noop.
@@ -243,8 +245,10 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
     for (const auto &base : cxxRecordDecl->bases()) {
       if (base.isVirtual())
         continue;
-      convertRecordDeclType(
-          base.getType()->castAs<RecordType>()->getOriginalDecl());
+      convertRecordDeclType(base.getType()
+                                ->castAs<RecordType>()
+                                ->getOriginalDecl()
+                                ->getDefinitionOrSelf());
     }
   }
 
@@ -277,7 +281,8 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 
   // Process record types before the type cache lookup.
   if (const auto *recordType = dyn_cast<RecordType>(type))
-    return convertRecordDeclType(recordType->getOriginalDecl());
+    return convertRecordDeclType(
+        recordType->getOriginalDecl()->getDefinitionOrSelf());
 
   // Has the type already been processed?
   TypeCacheTy::iterator tci = typeCache.find(ty);

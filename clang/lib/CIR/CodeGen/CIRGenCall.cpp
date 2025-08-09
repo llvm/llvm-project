@@ -42,17 +42,17 @@ CIRGenFunctionInfo::create(CanQualType resultType,
   return fi;
 }
 
-cir::FuncType CIRGenTypes::getFunctionType(const CIRGenFunctionInfo &fi) {
-  mlir::Type resultType = convertType(fi.getReturnType());
+cir::FuncType CIRGenTypes::getFunctionType(const CIRGenFunctionInfo &info) {
+  mlir::Type resultType = convertType(info.getReturnType());
   SmallVector<mlir::Type, 8> argTypes;
-  argTypes.reserve(fi.getNumRequiredArgs());
+  argTypes.reserve(info.getNumRequiredArgs());
 
-  for (const CanQualType &argType : fi.requiredArguments())
+  for (const CanQualType &argType : info.requiredArguments())
     argTypes.push_back(convertType(argType));
 
   return cir::FuncType::get(argTypes,
                             (resultType ? resultType : builder.getVoidTy()),
-                            fi.isVariadic());
+                            info.isVariadic());
 }
 
 CIRGenCallee CIRGenCallee::prepareConcreteCallee(CIRGenFunction &cgf) const {
@@ -269,6 +269,7 @@ void CIRGenFunction::emitDelegateCallArg(CallArgList &args,
   if (type->isRecordType() &&
       type->castAs<RecordType>()
           ->getOriginalDecl()
+          ->getDefinitionOrSelf()
           ->isParamDestroyedInCallee() &&
       param->needsDestruction(getContext())) {
     cgm.errorNYI(param->getSourceRange(),
@@ -671,6 +672,7 @@ void CIRGenFunction::emitCallArg(CallArgList &args, const clang::Expr *e,
   // we make it to the call.
   if (argType->isRecordType() && argType->castAs<RecordType>()
                                      ->getOriginalDecl()
+                                     ->getDefinitionOrSelf()
                                      ->isParamDestroyedInCallee()) {
     assert(!cir::MissingFeatures::msabi());
     cgm.errorNYI(e->getSourceRange(), "emitCallArg: msabi is NYI");

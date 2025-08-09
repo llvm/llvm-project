@@ -120,8 +120,10 @@ static void emitMemberInitializer(CIRGenFunction &cgf,
 
 static bool isInitializerOfDynamicClass(const CXXCtorInitializer *baseInit) {
   const Type *baseType = baseInit->getBaseClass();
-  const auto *baseClassDecl =
-      cast<CXXRecordDecl>(baseType->castAs<RecordType>()->getOriginalDecl());
+  const auto *baseClassDecl = cast<CXXRecordDecl>(baseType->castAs<RecordType>()
+                                                      ->getOriginalDecl()
+                                                      ->getDefinitionOrSelf()
+                                                      ->getDefinitionOrSelf());
   return baseClassDecl->isDynamicClass();
 }
 
@@ -160,8 +162,8 @@ void CIRGenFunction::emitBaseInitializer(mlir::Location loc,
   Address thisPtr = loadCXXThisAddress();
 
   const Type *baseType = baseInit->getBaseClass();
-  const auto *baseClassDecl =
-      cast<CXXRecordDecl>(baseType->castAs<RecordType>()->getOriginalDecl());
+  const auto *baseClassDecl = cast<CXXRecordDecl>(
+      baseType->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf());
 
   bool isBaseVirtual = baseInit->isBaseVirtual();
 
@@ -484,7 +486,8 @@ void CIRGenFunction::emitImplicitAssignmentOperatorBody(FunctionArgList &args) {
 void CIRGenFunction::destroyCXXObject(CIRGenFunction &cgf, Address addr,
                                       QualType type) {
   const RecordType *rtype = type->castAs<RecordType>();
-  const CXXRecordDecl *record = cast<CXXRecordDecl>(rtype->getOriginalDecl());
+  const CXXRecordDecl *record =
+      cast<CXXRecordDecl>(rtype->getOriginalDecl()->getDefinitionOrSelf());
   const CXXDestructorDecl *dtor = record->getDestructor();
   // TODO(cir): Unlike traditional codegen, CIRGen should actually emit trivial
   // dtors which shall be removed on later CIR passes. However, only remove this

@@ -356,8 +356,8 @@ static bool mayDropFunctionReturn(const ASTContext &astContext,
   // destructor or a non-trivially copyable type.
   if (const RecordType *recordType =
           returnType.getCanonicalType()->getAs<RecordType>()) {
-    if (const auto *classDecl =
-            dyn_cast<CXXRecordDecl>(recordType->getOriginalDecl()))
+    if (const auto *classDecl = dyn_cast<CXXRecordDecl>(
+            recordType->getOriginalDecl()->getDefinitionOrSelf()))
       return classDecl->hasTrivialDestructor();
   }
   return returnType.isTriviallyCopyableType(astContext);
@@ -828,7 +828,8 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
   // Ignore empty classes in C++.
   if (getLangOpts().CPlusPlus) {
     if (const RecordType *rt = ty->getAs<RecordType>()) {
-      if (cast<CXXRecordDecl>(rt->getOriginalDecl())->isEmpty())
+      if (cast<CXXRecordDecl>(rt->getOriginalDecl()->getDefinitionOrSelf())
+              ->isEmpty())
         return;
     }
   }

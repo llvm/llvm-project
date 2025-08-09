@@ -590,8 +590,9 @@ mlir::Attribute ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &d) {
         // assignments and whatnots). Since this is for globals shouldn't
         // be a problem for the near future.
         if (cd->isTrivial() && cd->isDefaultConstructor()) {
-          const auto *cxxrd =
-              cast<CXXRecordDecl>(ty->getAs<RecordType>()->getOriginalDecl());
+          const auto *cxxrd = cast<CXXRecordDecl>(ty->getAs<RecordType>()
+                                                      ->getOriginalDecl()
+                                                      ->getDefinitionOrSelf());
           if (cxxrd->getNumBases() != 0) {
             // There may not be anything additional to do here, but this will
             // force us to pause and test this path when it is supported.

@@ -1013,8 +1013,8 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
   case CK_DerivedToBase: {
     const auto *derivedClassTy =
         e->getSubExpr()->getType()->castAs<clang::RecordType>();
-    auto *derivedClassDecl =
-        cast<CXXRecordDecl>(derivedClassTy->getOriginalDecl());
+    auto *derivedClassDecl = cast<CXXRecordDecl>(
+        derivedClassTy->getOriginalDecl()->getDefinitionOrSelf());
 
     LValue lv = emitLValue(e->getSubExpr());
     Address thisAddr = lv.getAddress();
@@ -1168,7 +1168,8 @@ static void pushTemporaryCleanup(CIRGenFunction &cgf,
                                         ->getBaseElementTypeUnsafe()
                                         ->getAs<clang::RecordType>()) {
     // Get the destructor for the reference temporary.
-    auto *classDecl = cast<CXXRecordDecl>(rt->getOriginalDecl());
+    auto *classDecl =
+        cast<CXXRecordDecl>(rt->getOriginalDecl()->getDefinitionOrSelf());
     if (!classDecl->hasTrivialDestructor())
       referenceTemporaryDtor = classDecl->getDestructor();
   }
