@@ -5390,7 +5390,6 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
                                    const Stmt *S,
                                    const SwitchCase *SC = nullptr);
 
-
 /// Helper to implement labeled break/continue. Returns 'true' if the evaluation
 /// result should be propagated up. Otherwise, it sets the evaluation result
 /// to either Continue to continue the current loop, or Succeeded to break it.
@@ -5420,7 +5419,7 @@ static bool ShouldPropagateBreakContinue(EvalInfo &Info,
   }
 
   // We're not. Propagate the result up.
-  for (BlockScopeRAII* S : Scopes) {
+  for (BlockScopeRAII *S : Scopes) {
     if (!S->destroy()) {
       ESR = ESR_Failed;
       break;
@@ -5981,7 +5980,7 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
   case Stmt::BreakStmtClass: {
     auto *B = cast<LoopControlStmt>(S);
     Info.BreakContinueStack.push_back(B->isLabeled() ? B->getLabelTarget()
-                                                   : nullptr);
+                                                     : nullptr);
     return isa<ContinueStmt>(S) ? ESR_Continue : ESR_Break;
   }
 

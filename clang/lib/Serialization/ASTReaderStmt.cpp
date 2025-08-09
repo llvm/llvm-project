@@ -333,9 +333,7 @@ void ASTStmtReader::VisitContinueStmt(ContinueStmt *S) {
   VisitLoopControlStmt(S);
 }
 
-void ASTStmtReader::VisitBreakStmt(BreakStmt *S) {
-  VisitLoopControlStmt(S);
-}
+void ASTStmtReader::VisitBreakStmt(BreakStmt *S) { VisitLoopControlStmt(S); }
 
 void ASTStmtReader::VisitReturnStmt(ReturnStmt *S) {
   VisitStmt(S);

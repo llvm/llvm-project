@@ -362,7 +362,8 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
     break;
 
   case Stmt::SwitchStmtClass: {
-    BuildScopeInformationForLoopOrSwitch(S, cast<SwitchStmt>(S)->getBody(), ParentScope);
+    BuildScopeInformationForLoopOrSwitch(S, cast<SwitchStmt>(S)->getBody(),
+                                         ParentScope);
     Jumps.push_back(S);
     return;
   }
@@ -382,7 +383,8 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
 
   case Stmt::BreakStmtClass:
   case Stmt::ContinueStmtClass:
-    if (cast<LoopControlStmt>(S)->isLabeled()) goto RecordJumpScope;
+    if (cast<LoopControlStmt>(S)->isLabeled())
+      goto RecordJumpScope;
     break;
 
   case Stmt::WhileStmtClass: {
@@ -683,7 +685,7 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
 
   for (Stmt *SubStmt : S->children()) {
     if (!SubStmt)
-        continue;
+      continue;
 
     // Cases, labels, attributes, and defaults aren't "scope parents".  It's also
     // important to handle these iteratively instead of recursively in
@@ -776,7 +778,7 @@ void JumpScopeChecker::VerifyJumps() {
       if (!isa<SwitchStmt, WhileStmt, ForStmt, DoStmt, CXXForRangeStmt,
                ObjCForCollectionStmt>(Target)) {
         S.Diag(L->getLabelLoc(), diag::err_break_continue_label_not_found)
-          << !IsContinue;
+            << !IsContinue;
         continue;
       }
 
@@ -1031,7 +1033,8 @@ void JumpScopeChecker::CheckJump(Stmt *From, Stmt *To, SourceLocation DiagLoc,
                                  unsigned JumpDiagCompat) {
   auto DiagnoseInvalidBreakInOpenACCComputeConstruct = [&](unsigned Scope) {
     auto GetParent = [&](unsigned S) -> unsigned {
-      if (S >= Scopes.size()) return S;
+      if (S >= Scopes.size())
+        return S;
       return Scopes[S].ParentScope;
     };
 
@@ -1106,7 +1109,7 @@ void JumpScopeChecker::CheckJump(Stmt *From, Stmt *To, SourceLocation DiagLoc,
   // Error if we're trying to break/continue out of a non-enclosing statement.
   if (auto L = dyn_cast<LoopControlStmt>(From)) {
     S.Diag(L->getLabelLoc(), diag::err_break_continue_label_not_found)
-          << isa<BreakStmt>(L);
+        << isa<BreakStmt>(L);
     return;
   }
 

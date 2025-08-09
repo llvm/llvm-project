@@ -1732,13 +1732,14 @@ void CodeGenFunction::EmitDeclStmt(const DeclStmt &S) {
     EmitDecl(*I, /*EvaluateConditionDecl=*/true);
 }
 
-auto CodeGenFunction::GetDestForLoopControlStmt(const LoopControlStmt& S) -> const BreakContinue* {
+auto CodeGenFunction::GetDestForLoopControlStmt(const LoopControlStmt &S)
+    -> const BreakContinue * {
   if (!S.isLabeled())
     return &BreakContinueStack.back();
 
   Stmt *LoopOrSwitch = S.getLabelTarget();
   assert(LoopOrSwitch && "break/continue target not set?");
-  for (const BreakContinue& BC : llvm::reverse(BreakContinueStack))
+  for (const BreakContinue &BC : llvm::reverse(BreakContinueStack))
     if (BC.LoopOrSwitch == LoopOrSwitch)
       return &BC;
 

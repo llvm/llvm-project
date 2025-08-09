@@ -3049,7 +3049,7 @@ public:
 class LoopControlStmt : public Stmt {
   /// If this is a labeled break/continue, the label whose statement we're
   /// targeting.
-  LabelDecl* TargetLabel = nullptr;
+  LabelDecl *TargetLabel = nullptr;
 
   /// Location of the label, if any.
   SourceLocation Label;
@@ -3059,7 +3059,7 @@ protected:
     setKwLoc(Loc);
   }
 
-  LoopControlStmt(StmtClass Class, EmptyShell ES): Stmt(Class, ES) {}
+  LoopControlStmt(StmtClass Class, EmptyShell ES) : Stmt(Class, ES) {}
 
 public:
   SourceLocation getKwLoc() const { return LoopControlStmtBits.KwLoc; }
@@ -3075,8 +3075,8 @@ public:
   SourceLocation getLabelLoc() const { return Label; }
   void setLabelLoc(SourceLocation L) { Label = L; }
 
-  LabelDecl* getLabelDecl() const { return TargetLabel; }
-  void setLabelDecl(LabelDecl* S) { TargetLabel = S; }
+  LabelDecl *getLabelDecl() const { return TargetLabel; }
+  void setLabelDecl(LabelDecl *S) { TargetLabel = S; }
 
   /// If this is a labeled break/continue, get the loop or switch statement
   /// that this targets.
@@ -3102,7 +3102,7 @@ class ContinueStmt : public LoopControlStmt {
 public:
   ContinueStmt(SourceLocation CL) : LoopControlStmt(ContinueStmtClass, CL) {}
   ContinueStmt(SourceLocation CL, SourceLocation LabelLoc, LabelDecl *Target)
-    : LoopControlStmt(ContinueStmtClass, CL) {
+      : LoopControlStmt(ContinueStmtClass, CL) {
     setLabelLoc(LabelLoc);
     setLabelDecl(Target);
   }
@@ -3121,7 +3121,7 @@ class BreakStmt : public LoopControlStmt {
 public:
   BreakStmt(SourceLocation BL) : LoopControlStmt(BreakStmtClass, BL) {}
   BreakStmt(SourceLocation CL, SourceLocation LabelLoc, LabelDecl *Target)
-    : LoopControlStmt(BreakStmtClass, CL) {
+      : LoopControlStmt(BreakStmtClass, CL) {
     setLabelLoc(LabelLoc);
     setLabelDecl(Target);
   }

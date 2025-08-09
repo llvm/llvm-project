@@ -3283,8 +3283,7 @@ static void CheckJumpOutOfSEHFinally(Sema &S, SourceLocation Loc,
 }
 
 StmtResult Sema::ActOnContinueStmt(SourceLocation ContinueLoc, Scope *CurScope,
-                                   LabelDecl *Target,
-                                   SourceLocation LabelLoc) {
+                                   LabelDecl *Target, SourceLocation LabelLoc) {
   // We can only check this after we're done parsing label that this targets.
   if (Target) {
     getCurFunction()->setHasLabeledBreakOrContinue();

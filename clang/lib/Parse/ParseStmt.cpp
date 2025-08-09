@@ -2289,7 +2289,7 @@ StmtResult Parser::ParseGotoStatement() {
 }
 
 StmtResult Parser::ParseBreakOrContinueStatement(bool IsContinue) {
-  SourceLocation KwLoc = ConsumeToken();  // Eat the keyword.
+  SourceLocation KwLoc = ConsumeToken(); // Eat the keyword.
   SourceLocation LabelLoc;
   LabelDecl *Target = nullptr;
   if (Tok.is(tok::identifier)) {
@@ -2305,7 +2305,6 @@ StmtResult Parser::ParseBreakOrContinueStatement(bool IsContinue) {
     return Actions.ActOnContinueStmt(KwLoc, getCurScope(), Target, LabelLoc);
   return Actions.ActOnBreakStmt(KwLoc, getCurScope(), Target, LabelLoc);
 }
-
 
 StmtResult Parser::ParseContinueStatement() {
   return ParseBreakOrContinueStatement(/*IsContinue=*/true);

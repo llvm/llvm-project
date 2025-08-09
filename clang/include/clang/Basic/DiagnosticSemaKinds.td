@@ -10796,9 +10796,11 @@ def err_continue_not_in_loop : Error<
   "'continue' statement not in loop statement">;
 def err_break_not_in_loop_or_switch : Error<
   "'break' statement not in loop or switch statement">;
-def err_break_continue_label_not_found: Error<
-    "'%select{continue|break}0' label does not name an enclosing %select{loop|loop or 'switch'}0">;
-def err_continue_switch: Error<"label of 'continue' refers to a switch statement">;
+def err_break_continue_label_not_found
+    : Error<"'%select{continue|break}0' label does not name an enclosing "
+            "%select{loop|loop or 'switch'}0">;
+def err_continue_switch
+    : Error<"label of 'continue' refers to a switch statement">;
 def warn_loop_ctrl_binds_to_inner : Warning<
   "'%0' is bound to current loop, GCC binds it to the enclosing loop">,
   InGroup<GccCompat>;

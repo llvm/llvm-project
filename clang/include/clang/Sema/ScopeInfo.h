@@ -440,9 +440,7 @@ public:
     HasBranchIntoScope = true;
   }
 
-  void setHasLabeledBreakOrContinue() {
-    HasLabeledBreakOrContinue = true;
-  }
+  void setHasLabeledBreakOrContinue() { HasLabeledBreakOrContinue = true; }
 
   void setHasBranchProtectedScope() {
     HasBranchProtectedScope = true;
