@@ -154,6 +154,10 @@ Status CommandObjectDisassemble::CommandOptions::SetOptionValue(
     }
   } break;
 
+  case 'R': // --rich
+    enable_rich_annotations = true;
+    break;
+
   case '\x01':
     force = true;
     break;
@@ -180,6 +184,7 @@ void CommandObjectDisassemble::CommandOptions::OptionParsingStarting(
   end_addr = LLDB_INVALID_ADDRESS;
   symbol_containing_addr = LLDB_INVALID_ADDRESS;
   raw = false;
+  enable_rich_annotations = false;
   plugin_name.clear();
 
   Target *target =
@@ -550,7 +555,8 @@ void CommandObjectDisassemble::DoExecute(Args &command,
             cpu_string, features_string, m_exe_ctx, cur_range.GetBaseAddress(),
             limit, m_options.show_mixed,
             m_options.show_mixed ? m_options.num_lines_context : 0, options,
-            result.GetOutputStream())) {
+            result.GetOutputStream(),
+            /*enable_rich_annotations=*/m_options.enable_rich_annotations)) {
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
       if (m_options.symbol_containing_addr != LLDB_INVALID_ADDRESS) {
