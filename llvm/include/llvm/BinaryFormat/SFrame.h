@@ -169,6 +169,7 @@ LLVM_ABI ArrayRef<EnumEntry<FREType>> getFRETypes();
 LLVM_ABI ArrayRef<EnumEntry<FDEType>> getFDETypes();
 LLVM_ABI ArrayRef<EnumEntry<AArch64PAuthKey>> getAArch64PAuthKeys();
 LLVM_ABI ArrayRef<EnumEntry<FREOffset>> getFREOffsets();
+LLVM_ABI ArrayRef<EnumEntry<BaseReg>> getBaseRegisters();
 
 } // namespace sframe
 } // namespace llvm
