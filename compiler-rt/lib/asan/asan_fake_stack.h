@@ -75,7 +75,8 @@ class FakeStack {
   static uptr SizeRequiredForFlags(uptr stack_size_log) {
     // Padding is needed to protect alignment in GetFrame().
     uptr size = ((uptr)1) << (stack_size_log + 1 - kMinStackFrameSizeLog);
-    return RoundUpTo(size + 1, 1 << kMaxStackFrameSizeLog) - kFlagsOffset;
+    return RoundUpTo(size + kFlagsOffset, 1 << kMaxStackFrameSizeLog) -
+           kFlagsOffset;
   }
 
   // Each size class occupies stack_size bytes.
