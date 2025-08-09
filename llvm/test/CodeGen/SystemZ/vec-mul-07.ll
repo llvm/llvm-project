@@ -191,12 +191,12 @@ define <2 x i64> @f9_not(<4 x i32> %val1, <4 x i32> %val2) {
 ; CHECK-NEXT:    vuplhf %v0, %v24
 ; CHECK-NEXT:    vuplhf %v1, %v26
 ; CHECK-NEXT:    vlgvg %r0, %v1, 1
-; CHECK-NEXT:    vlgvg %r1, %v0, 1
-; CHECK-NEXT:    msgr %r1, %r0
-; CHECK-NEXT:    vlgvg %r0, %v1, 0
-; CHECK-NEXT:    vlgvg %r2, %v0, 0
+; CHECK-NEXT:    vlgvg %r1, %v1, 0
+; CHECK-NEXT:    vlgvg %r2, %v0, 1
+; CHECK-NEXT:    vlgvg %r3, %v0, 0
 ; CHECK-NEXT:    msgr %r2, %r0
-; CHECK-NEXT:    vlvgp %v24, %r2, %r1
+; CHECK-NEXT:    msgr %r3, %r1
+; CHECK-NEXT:    vlvgp %v24, %r3, %r2
 ; CHECK-NEXT:    br %r14
   %shuf1 = shufflevector <4 x i32> %val1, <4 x i32> poison, <2 x i32> <i32 0, i32 1>
   %zext1 = zext <2 x i32> %shuf1 to <2 x i64>
@@ -242,12 +242,12 @@ define <2 x i64> @f11_not(<4 x i32> %val1, <4 x i32> %val2) {
 ; CHECK-NEXT:    vuphf %v0, %v24
 ; CHECK-NEXT:    vuphf %v1, %v26
 ; CHECK-NEXT:    vlgvg %r0, %v1, 1
-; CHECK-NEXT:    vlgvg %r1, %v0, 1
-; CHECK-NEXT:    msgr %r1, %r0
-; CHECK-NEXT:    vlgvg %r0, %v1, 0
-; CHECK-NEXT:    vlgvg %r2, %v0, 0
+; CHECK-NEXT:    vlgvg %r1, %v1, 0
+; CHECK-NEXT:    vlgvg %r2, %v0, 1
+; CHECK-NEXT:    vlgvg %r3, %v0, 0
 ; CHECK-NEXT:    msgr %r2, %r0
-; CHECK-NEXT:    vlvgp %v24, %r2, %r1
+; CHECK-NEXT:    msgr %r3, %r1
+; CHECK-NEXT:    vlvgp %v24, %r3, %r2
 ; CHECK-NEXT:    br %r14
   %shuf1 = shufflevector <4 x i32> %val1, <4 x i32> poison, <2 x i32> <i32 0, i32 1>
   %sext1 = sext <2 x i32> %shuf1 to <2 x i64>

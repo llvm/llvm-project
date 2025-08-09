@@ -1,0 +1,160 @@
+# RUN: llc -o - %s -mtriple=s390x-linux-gnu -mcpu=z16 \
+# RUN:   -verify-machineinstrs -run-pass=machine-scheduler 2>&1 \
+# RUN:   -debug-only=machine-scheduler | FileCheck %s
+# REQUIRES: asserts
+
+# Don't move things around in this tiny region with just 7 instructions. It has
+# a good input order in the sense that %0 and %1 do not overlap and both have
+# COPYs involving $r2d.
+# CHECK:      ********** MI Scheduling **********
+# CHECK-NEXT: fun0:%bb.0 
+# CHECK: Region is tiny.
+# CHECK:      *** Final schedule for %bb.0 ***
+# CHECK-NEXT: SU(0):   %0:addr64bit = COPY $r2d
+# CHECK-NEXT: SU(1):   STG %0:addr64bit, $noreg, 0, $noreg :: (store (s64) into
+# CHECK-NEXT: SU(2):   %1:gr64bit = LA %0:addr64bit, 24, $noreg
+# CHECK-NEXT: SU(3):   $r1d = LGHI 0
+# CHECK-NEXT: SU(4):   $r2d = COPY %1:gr64bit
+# CHECK-NEXT: SU(5):   $r3d = LGHI 0
+# CHECK-NEXT: SU(6):   $r4l = LHIMux 0
+---
+name:            fun0
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $r2d
+    %0:addr64bit = COPY $r2d
+    STG %0, $noreg, 0, $noreg :: (store (s64) into `ptr null`)
+    %1:gr64bit = LA %0, 24, $noreg
+    $r1d = LGHI 0
+    $r2d = COPY %1
+    $r3d = LGHI 0
+    $r4l = LHIMux 0
+    CallBR killed $r1d, csr_systemz_elf, implicit $r2d, implicit killed $r3d, implicit killed $r4l
+...
+
+# This function has two tiny regions, which are generally not reordered much.
+# The region in bb.1 however contains a WFADB with a long latency so it should
+# be scheduled normally and moved up.
+# CHECK:      ********** MI Scheduling **********
+# CHECK-NEXT: fun1:%bb.0 
+# CHECK: Region is tiny.
+# CHECK:      *** Final schedule for %bb.0 ***
+# CHECK-NEXT: SU(0):   %0:fp64bit = COPY $f0d
+# CHECK-NEXT: SU(1):   %1:gr32bit = COPY $r2l
+# CHECK-NEXT: SU(2):   %2:vr128bit = VGBM 0
+# CHECK-NEXT: SU(3):   %3:fp64bit = LZDR
+# CHECK-NEXT: SU(4):   %4:vr64bit = COPY %3:fp64bit
+# CHECK-NEXT: SU(5):   %5:vr128bit = VGBM 0
+
+# CHECK:      ********** MI Scheduling **********
+# CHECK-NEXT: fun1:%bb.1
+# CHECK: Region is not tiny.
+# CHECK:      *** Final schedule for %bb.1 ***
+# CHECK-NEXT: SU(1):   %7:vr128bit = COPY %5:vr128bit
+# CHECK-NEXT: SU(0):   dead %6:vr64bit = COPY %4:vr64bit
+# CHECK-NEXT: SU(2):   %7:vr128bit = VLEIG %7:vr128bit(tied-def 0), 0, 0
+# CHECK-NEXT: SU(5):   %4:vr64bit = nofpexcept WFADB %0:fp64bit, %3:fp64bit, implicit $fpc
+# CHECK-NEXT: SU(3):   %8:vr128bit = nofpexcept VFCHDB %7:vr128bit, %2:vr128bit, implicit $fpc
+# CHECK-NEXT: SU(4):   %5:vr128bit = VSEL %2:vr128bit, %5:vr128bit, %8:vr128bit
+# CHECK-NEXT: SU(6):   TMLMux %1:gr32bit, 1, implicit-def $cc
+---
+name:            fun1
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $r2l, $f0d
+
+    %5:fp64bit = COPY $f0d
+    %4:gr32bit = COPY $r2l
+    %8:vr128bit = VGBM 0
+    %7:fp64bit = LZDR
+    %19:vr64bit = COPY %7
+    %20:vr128bit = VGBM 0
+
+  bb.1:
+    successors: %bb.1(0x7c000000), %bb.2(0x04000000)
+
+    %0:vr64bit = COPY %19
+    %10:vr128bit = COPY %20
+    %10:vr128bit = VLEIG %10, 0, 0
+    %12:vr128bit = nofpexcept VFCHDB %10, %8, implicit $fpc
+    %20:vr128bit = VSEL %8, %20, %12
+    %19:vr64bit = nofpexcept WFADB %5, %7, implicit $fpc
+    TMLMux %4, 1, implicit-def $cc
+    BRC 15, 7, %bb.1, implicit killed $cc
+    J %bb.2
+
+  bb.2:
+    Return
+...
+
+# The tiny region in bb.0 has an AGF with latency 6 which would make this
+# region be handled as a big region with latency scheduling, but it however
+# has a compare-0. No reordering is done and the NG stays close to the CGHI.
+# CHECK:      ********** MI Scheduling **********
+# CHECK-NEXT: fun2:%bb.0
+# CHECK: Region is tiny.
+# CHECK:      *** Final schedule for %bb.0 ***
+# CHECK-NEXT: SU(0):   %0:gr64bit = COPY $r3d
+# CHECK-NEXT: SU(1):   %1:gr64bit = COPY $r2d
+# CHECK-NEXT: SU(2):   %1:gr64bit = AGF %1:gr64bit(tied-def 0), {{.*}}
+# CHECK-NEXT: SU(3):   MVGHI $noreg, 0, 0 :: (store (s64) into `ptr null`)
+# CHECK-NEXT: SU(4):   %2:gr64bit = LGFR %1.subreg_l32:gr64bit
+# CHECK-NEXT: SU(5):   dead %3:gr64bit = NGRK %2:gr64bit, %0:gr64bit, {{.*}}
+# CHECK-NEXT: SU(6):   %4:gr64bit = COPY undef %5:gr64bit
+# CHECK-NEXT: SU(7):   %4:gr64bit = NG %4:gr64bit(tied-def 0), {{.*}}
+# CHECK-NEXT: SU(8):   CGHI %4:gr64bit, 0, implicit-def $cc
+---
+name:            fun2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.2(0x30000000), %bb.1(0x50000000)
+    liveins: $r2d, $r3d
+
+    %1:gr64bit = COPY $r3d
+    %2:gr64bit = COPY $r2d
+    %2:gr64bit = AGF %2, $noreg, 0, $noreg, implicit-def dead $cc
+    MVGHI $noreg, 0, 0 :: (store (s64) into `ptr null`)
+    %4:gr64bit = LGFR %2.subreg_l32
+    %5:gr64bit = NGRK %4, %1, implicit-def dead $cc
+    %6:gr64bit = COPY undef %7:gr64bit
+    %6:gr64bit = NG %6, $noreg, 0, $noreg, implicit-def dead $cc
+    CGHI %6, 0, implicit-def $cc
+    BRC 14, 8, %bb.2, implicit killed $cc
+    J %bb.1
+
+  bb.1:
+
+  bb.2:
+    $r2d = LGHI 0
+    Return implicit $r2d
+...
+
+# A blocking long-latency (FP divide) is moved up also in a tiny region.
+# CHECK:      ********** MI Scheduling **********
+# CHECK-NEXT: fun3:%bb.0
+# CHECK: Region is tiny.
+# CHECK:      *** Final schedule for %bb.0 ***
+# CHECK-NEXT: SU(0):   dead %0:gr64bit = COPY $r3d
+# CHECK-NEXT: SU(1):   %1:gr64bit = COPY $r2d
+# CHECK-NEXT: SU(4):   %2:fp64bit = COPY undef %3:fp64bit
+# CHECK-NEXT: SU(5):   dead %2:fp64bit = DDB %2:fp64bit(tied-def 0), {{.*}}
+# CHECK-NEXT: SU(2):   %1:gr64bit = AGRK %1:gr64bit, %1:gr64bit, {{.*}}
+# CHECK-NEXT: SU(3):   dead %1:gr64bit = AGRK %1:gr64bit, %1:gr64bit, {{.*}}
+---
+name:            fun3
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $r2d, $r3d
+
+    %0:gr64bit = COPY $r3d
+    %1:gr64bit = COPY $r2d
+    %1:gr64bit = AGRK %1, %1, implicit-def dead $cc
+    %1:gr64bit = AGRK %1, %1, implicit-def dead $cc
+    %2:fp64bit = COPY undef %3:fp64bit
+    %2:fp64bit = DDB %2, $noreg, 0, $noreg, implicit $fpc
+    Return
+...
