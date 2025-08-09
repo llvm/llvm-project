@@ -67,7 +67,7 @@ void *__libc_stack_end = 0;
 #endif
 
 #if SANITIZER_LINUX && (defined(__aarch64__) || defined(__loongarch_lp64)) && \
-    !SANITIZER_GO
+    !SANITIZER_GO && !SANITIZER_ANDROID
 # define INIT_LONGJMP_XOR_KEY 1
 #else
 # define INIT_LONGJMP_XOR_KEY 0
@@ -415,7 +415,7 @@ void InitializePlatform() {
   // is not compiled with -pie.
 #if !SANITIZER_GO
   {
-#    if SANITIZER_LINUX && (defined(__aarch64__) || defined(__loongarch_lp64))
+#    if INIT_LONGJMP_XOR_KEY
     // Initialize the xor key used in {sig}{set,long}jump.
     InitializeLongjmpXorKey();
 #    endif
@@ -484,9 +484,55 @@ int ExtractRecvmsgFDs(void *msgp, int *fds, int nfd) {
   return res;
 }
 
+#if SANITIZER_NETBSD
+# ifdef __x86_64__
+#  define LONG_JMP_SP_ENV_SLOT 6
+# else
+#  error unsupported
+# endif
+#elif defined(__powerpc__)
+# define LONG_JMP_SP_ENV_SLOT 0
+#elif SANITIZER_FREEBSD
+# ifdef __aarch64__
+#  define LONG_JMP_SP_ENV_SLOT 1
+# else
+#  define LONG_JMP_SP_ENV_SLOT 2
+# endif
+#elif SANITIZER_LINUX && !SANITIZER_ANDROID
+# ifdef __aarch64__
+#  define LONG_JMP_SP_ENV_SLOT 13
+# elif defined(__loongarch__)
+#  define LONG_JMP_SP_ENV_SLOT 1
+# elif defined(__mips64)
+#  define LONG_JMP_SP_ENV_SLOT 1
+# elif SANITIZER_RISCV64
+#  define LONG_JMP_SP_ENV_SLOT 13
+# elif defined(__s390x__)
+#  define LONG_JMP_SP_ENV_SLOT 9
+# else
+#  define LONG_JMP_SP_ENV_SLOT 6
+# endif
+#elif SANITIZER_ANDROID
+// https://android.googlesource.com/platform/bionic/+/refs/heads/android16-release/libc/arch-arm64/bionic/setjmp.S
+// https://android.googlesource.com/platform/bionic/+/refs/heads/android16-release/libc/arch-x86_64/bionic/setjmp.S
+// https://android.googlesource.com/platform/bionic/+/refs/heads/android16-release/libc/arch-riscv64/bionic/setjmp.S
+# if defined(__aarch64__) || SANITIZER_RISCV64
+#  define LONG_JMP_SP_ENV_SLOT 3
+#  define LONG_JMP_COOKIE_ENV_SLOT 0
+# elif defined(__x86_64__)
+#  define LONG_JMP_SP_ENV_SLOT 6
+#  define LONG_JMP_COOKIE_ENV_SLOT 8
+# else
+#  error unsupported
+# endif
+#endif
+
 // Reverse operation of libc stack pointer mangling
-static uptr UnmangleLongJmpSp(uptr mangled_sp) {
-#if defined(__x86_64__)
+uptr ExtractLongJmpSp(uptr *env) {
+  uptr mangled_sp = env[LONG_JMP_SP_ENV_SLOT];
+# if SANITIZER_ANDROID
+  return mangled_sp ^ (env[LONG_JMP_COOKIE_ENV_SLOT] & ~1ULL);
+# elif defined(__x86_64__)
 # if SANITIZER_LINUX
   // Reverse of:
   //   xor  %fs:0x30, %rsi
@@ -526,41 +572,6 @@ static uptr UnmangleLongJmpSp(uptr mangled_sp) {
 #    else
 #      error "Unknown platform"
 #    endif
-}
-
-#if SANITIZER_NETBSD
-# ifdef __x86_64__
-#  define LONG_JMP_SP_ENV_SLOT 6
-# else
-#  error unsupported
-# endif
-#elif defined(__powerpc__)
-# define LONG_JMP_SP_ENV_SLOT 0
-#elif SANITIZER_FREEBSD
-# ifdef __aarch64__
-#  define LONG_JMP_SP_ENV_SLOT 1
-# else
-#  define LONG_JMP_SP_ENV_SLOT 2
-# endif
-#elif SANITIZER_LINUX
-# ifdef __aarch64__
-#  define LONG_JMP_SP_ENV_SLOT 13
-# elif defined(__loongarch__)
-#  define LONG_JMP_SP_ENV_SLOT 1
-# elif defined(__mips64)
-#  define LONG_JMP_SP_ENV_SLOT 1
-#      elif SANITIZER_RISCV64
-#        define LONG_JMP_SP_ENV_SLOT 13
-#      elif defined(__s390x__)
-#        define LONG_JMP_SP_ENV_SLOT 9
-#      else
-#        define LONG_JMP_SP_ENV_SLOT 6
-#      endif
-#endif
-
-uptr ExtractLongJmpSp(uptr *env) {
-  uptr mangled_sp = env[LONG_JMP_SP_ENV_SLOT];
-  return UnmangleLongJmpSp(mangled_sp);
 }
 
 #if INIT_LONGJMP_XOR_KEY

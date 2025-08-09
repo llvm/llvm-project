@@ -1287,6 +1287,22 @@ INTERCEPTOR(int, puts, char *s) {
 #if SANITIZER_INTERCEPT_PRCTL
 INTERCEPTOR(int, prctl, int option, unsigned long arg2, unsigned long arg3,
             unsigned long arg4, unsigned long arg5) {
+#  if SANITIZER_ANDROID
+  // This is a workaround to avoid the crash by leveraging compiler
+  // optimizations, which convert the code into a tail call so that
+  // no PAC-related instructions are generated.
+  // The root cause of the crash is that PR_PAC_RESET_KEYS generates
+  // a new PAC key. As a result, paciasp and autiasp use different
+  // keys, leading to the crash.
+  // However, this workaround does not prevent the crash in debug
+  // builds, since compiler optimizations are disabled and the
+  // function is not converted into a tail call.
+  static const int PR_PAC_RESET_KEYS = 54;
+  if (option == PR_PAC_RESET_KEYS) {
+    return REAL(prctl)(option, arg2, arg3, arg4, arg5);
+  }
+#  endif
+
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, prctl, option, arg2, arg3, arg4, arg5);
   static const int PR_SET_NAME = 15;
