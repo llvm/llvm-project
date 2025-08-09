@@ -26,11 +26,11 @@ define i64 @foo(ptr %arg) {
 ; CHECK-LABEL: define i64 @foo(
 ; CHECK-SAME: ptr [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[ARG1:%.*]] = alloca [[STRUCT:%.*]], align 8
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr [[ARG1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[ARG1]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[ARG1]], ptr align 8 [[ARG]], i64 16, i1 false)
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT]], ptr [[ARG1]], i64 0, i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr [[ARG1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[ARG1]])
 ; CHECK-NEXT:    ret i64 0
 ;
   %1 = call i64 @bar(ptr byval(%struct) align 8 %arg)

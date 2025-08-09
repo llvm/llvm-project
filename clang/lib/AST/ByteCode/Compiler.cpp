@@ -553,9 +553,10 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     // Possibly diagnose casts to enum types if the target type does not
     // have a fixed size.
     if (Ctx.getLangOpts().CPlusPlus && CE->getType()->isEnumeralType()) {
-      if (const auto *ET = CE->getType().getCanonicalType()->castAs<EnumType>();
-          !ET->getDecl()->isFixed()) {
-        if (!this->emitCheckEnumValue(*FromT, ET->getDecl(), CE))
+      const auto *ET = CE->getType().getCanonicalType()->castAs<EnumType>();
+      const auto *ED = ET->getOriginalDecl()->getDefinitionOrSelf();
+      if (!ED->isFixed()) {
+        if (!this->emitCheckEnumValue(*FromT, ED, CE))
           return false;
       }
     }
@@ -666,8 +667,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_VectorSplat: {
-    assert(!classify(CE->getType()));
-    assert(classify(SubExpr->getType()));
+    assert(!canClassify(CE->getType()));
+    assert(canClassify(SubExpr->getType()));
     assert(CE->getType()->isVectorType());
 
     if (!Initializing) {
@@ -2063,16 +2064,13 @@ bool Compiler<Emitter>::visitCallArgs(ArrayRef<const Expr *> Args,
                                       const FunctionDecl *FuncDecl,
                                       bool Activate) {
   assert(VarScope->getKind() == ScopeKind::Call);
-  bool HasNonNullAttr = false;
   llvm::BitVector NonNullArgs;
-  if (FuncDecl && FuncDecl->hasAttr<NonNullAttr>()) {
-    HasNonNullAttr = true;
+  if (FuncDecl && FuncDecl->hasAttr<NonNullAttr>())
     NonNullArgs = collectNonNullArgs(FuncDecl, Args);
-  }
 
   unsigned ArgIndex = 0;
   for (const Expr *Arg : Args) {
-    if (OptPrimType T = classify(Arg)) {
+    if (canClassify(Arg)) {
       if (!this->visit(Arg))
         return false;
     } else {
@@ -2094,7 +2092,7 @@ bool Compiler<Emitter>::visitCallArgs(ArrayRef<const Expr *> Args,
         return false;
     }
 
-    if (HasNonNullAttr && NonNullArgs[ArgIndex]) {
+    if (!NonNullArgs.empty() && NonNullArgs[ArgIndex]) {
       PrimType ArgT = classify(Arg).value_or(PT_Ptr);
       if (ArgT == PT_Ptr) {
         if (!this->emitCheckNonNullArg(ArgT, Arg))
@@ -3157,7 +3155,7 @@ bool Compiler<Emitter>::VisitCXXNoexceptExpr(const CXXNoexceptExpr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
   QualType T = E->getType();
-  assert(!classify(T));
+  assert(!canClassify(T));
 
   if (T->isRecordType()) {
     const CXXConstructorDecl *Ctor = E->getConstructor();
@@ -4152,7 +4150,7 @@ template <class Emitter> bool Compiler<Emitter>::visit(const Expr *E) {
 
   // Create local variable to hold the return value.
   if (!E->isGLValue() && !E->getType()->isAnyComplexType() &&
-      !classify(E->getType())) {
+      !canClassify(E->getType())) {
     std::optional<unsigned> LocalIndex = allocateLocal(E);
     if (!LocalIndex)
       return false;
@@ -4172,7 +4170,7 @@ template <class Emitter> bool Compiler<Emitter>::visit(const Expr *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::visitInitializer(const Expr *E) {
-  assert(!classify(E->getType()));
+  assert(!canClassify(E->getType()));
 
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/false,
                              /*NewInitializing=*/true);
@@ -4379,7 +4377,7 @@ bool Compiler<Emitter>::visitZeroArrayInitializer(QualType T, const Expr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::visitAssignment(const Expr *LHS, const Expr *RHS,
                                         const Expr *E) {
-  if (!classify(E->getType()))
+  if (!canClassify(E->getType()))
     return false;
 
   if (!this->visit(RHS))
@@ -4592,7 +4590,7 @@ const RecordType *Compiler<Emitter>::getRecordTy(QualType Ty) {
 
 template <class Emitter> Record *Compiler<Emitter>::getRecord(QualType Ty) {
   if (const auto *RecordTy = getRecordTy(Ty))
-    return getRecord(RecordTy->getDecl());
+    return getRecord(RecordTy->getOriginalDecl()->getDefinitionOrSelf());
   return nullptr;
 }
 
@@ -5997,6 +5995,23 @@ bool Compiler<Emitter>::checkLiteralType(const Expr *E) {
   return this->emitCheckLiteralType(E->getType().getTypePtr(), E);
 }
 
+static bool initNeedsOverridenLoc(const CXXCtorInitializer *Init) {
+  const Expr *InitExpr = Init->getInit();
+
+  if (!Init->isWritten() && !Init->isInClassMemberInitializer() &&
+      !isa<CXXConstructExpr>(InitExpr))
+    return true;
+
+  if (const auto *CE = dyn_cast<CXXConstructExpr>(InitExpr)) {
+    const CXXConstructorDecl *Ctor = CE->getConstructor();
+    if (Ctor->isDefaulted() && Ctor->isCopyOrMoveConstructor() &&
+        Ctor->isTrivial())
+      return true;
+  }
+
+  return false;
+}
+
 template <class Emitter>
 bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
   assert(!ReturnType);
@@ -6071,10 +6086,7 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
       const Record::Field *F = R->getField(Member);
 
       LocOverrideScope<Emitter> LOS(this, SourceInfo{},
-                                    !Init->isWritten() &&
-                                        !Init->isInClassMemberInitializer() &&
-                                        (!isa<CXXConstructExpr>(InitExpr) ||
-                                         Member->isAnonymousStructOrUnion()));
+                                    initNeedsOverridenLoc(Init));
       if (!emitFieldInitializer(F, F->Offset, InitExpr, IsUnion))
         return false;
     } else if (const Type *Base = Init->getBaseClass()) {
@@ -6104,10 +6116,7 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
         return false;
     } else if (const IndirectFieldDecl *IFD = Init->getIndirectMember()) {
       LocOverrideScope<Emitter> LOS(this, SourceInfo{},
-                                    !Init->isWritten() &&
-                                        !Init->isInClassMemberInitializer() &&
-                                        !isa<CXXConstructExpr>(InitExpr));
-
+                                    initNeedsOverridenLoc(Init));
       assert(IFD->getChainingSize() >= 2);
 
       unsigned NestedFieldOffset = 0;
@@ -7130,10 +7139,6 @@ bool Compiler<Emitter>::emitDestruction(const Descriptor *Desc,
   assert(Desc);
   assert(!Desc->isPrimitive());
   assert(!Desc->isPrimitiveArray());
-
-  // Can happen if the decl is invalid.
-  if (Desc->isDummy())
-    return true;
 
   // Arrays.
   if (Desc->isArray()) {

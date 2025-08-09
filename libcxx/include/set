@@ -522,7 +522,6 @@ erase_if(multiset<Key, Compare, Allocator>& c, Predicate pred);  // C++20
 #  include <__config>
 #  include <__functional/is_transparent.h>
 #  include <__functional/operations.h>
-#  include <__fwd/set.h>
 #  include <__iterator/erase_if_container.h>
 #  include <__iterator/iterator_traits.h>
 #  include <__iterator/ranges_iterator_traits.h>
@@ -570,7 +569,10 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Key, class _Compare, class _Allocator>
+template <class _Key, class _Compare = less<_Key>, class _Allocator = allocator<_Key> >
+class multiset;
+
+template <class _Key, class _Compare = less<_Key>, class _Allocator = allocator<_Key> >
 class set {
 public:
   // types:

@@ -73,14 +73,26 @@ foreach(tool ${SUPPORTED_TOOLS})
     get_test_cc_for_arch(${arch} SANITIZER_COMMON_TEST_TARGET_CC SANITIZER_COMMON_TEST_TARGET_CFLAGS)
     set(CONFIG_NAME ${tool}-${arch}-${OS_NAME})
 
+    # ARM on Linux might use the slow unwinder as default and the unwind table is
+    # required to get a complete stacktrace.
+    if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" AND NOT ANDROID)
+      list(APPEND SANITIZER_COMMON_TEST_TARGET_CFLAGS -funwind-tables)
+      if(CMAKE_SYSROOT)
+        list(APPEND SANITIZER_COMMON_TEST_TARGET_CFLAGS "--sysroot=${CMAKE_SYSROOT}")
+      endif()
+      string(REPLACE ";" " " SANITIZER_COMMON_TEST_TARGET_CFLAGS
+                             "${SANITIZER_COMMON_TEST_TARGET_CFLAGS}")
+    endif()
+
     configure_lit_site_cfg(
       ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
       ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg.py)
     # FIXME(dliew): LSan i386 on Darwin is completely broken right now.
     # so don't run the tests by default.
+    # Tests fail on arm64, see https://github.com/llvm/llvm-project/issues/131678
     if (NOT (CMAKE_SYSTEM_NAME MATCHES "Darwin" AND
              ${tool} STREQUAL "lsan" AND
-             ${arch} STREQUAL "i386"))
+             (${arch} STREQUAL "i386" OR ${arch} MATCHES "arm64")))
       list(APPEND SANITIZER_COMMON_TESTSUITES
            ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME})
     endif()
