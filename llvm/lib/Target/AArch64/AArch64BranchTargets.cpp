@@ -57,7 +57,6 @@ void AArch64BranchTargets::getAnalysisUsage(AnalysisUsage &AU) const {
 FunctionPass *llvm::createAArch64BranchTargetsPass() {
   return new AArch64BranchTargets();
 }
-
 bool AArch64BranchTargets::runOnMachineFunction(MachineFunction &MF) {
   if (!MF.getInfo<AArch64FunctionInfo>()->branchTargetEnforcement())
     return false;
@@ -100,7 +99,7 @@ bool AArch64BranchTargets::runOnMachineFunction(MachineFunction &MF) {
     // If the block itself is address-taken, it could be indirectly branched
     // to, but not called.
     if (MBB.isMachineBlockAddressTaken() || MBB.isIRBlockAddressTaken() ||
-        JumpTableTargets.count(&MBB))
+        JumpTableTargets.count(&MBB) || MBB.isEHPad())
       CouldJump = true;
 
     if (CouldCall || CouldJump) {
@@ -147,7 +146,15 @@ void AArch64BranchTargets::addBTI(MachineBasicBlock &MBB, bool CouldCall,
     BuildMI(MBB, MBB.begin(), MBB.findDebugLoc(MBB.begin()),
             TII->get(AArch64::SEH_Nop));
   }
-  BuildMI(MBB, MBB.begin(), MBB.findDebugLoc(MBB.begin()),
+
+  MBBI = MBB.begin();
+  if (MBB.isEHPad()) {
+    while (MBBI != MBB.end() &&
+           MBBI->getOpcode() == TargetOpcode::EH_LABEL)
+      ++MBBI;
+  }
+
+  BuildMI(MBB, MBBI, MBB.findDebugLoc(MBBI),
           TII->get(AArch64::HINT))
       .addImm(HintNum);
 }
