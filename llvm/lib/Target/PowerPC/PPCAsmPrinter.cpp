@@ -61,6 +61,7 @@
 #include "llvm/MC/MCSymbolXCOFF.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
@@ -252,6 +253,22 @@ private:
   // This is used for AIX's extra-label-at-definition aliasing strategy.
   DenseMap<const GlobalObject *, SmallVector<const GlobalAlias *, 1>>
       GOAliasMap;
+
+  // The __profd_* symbol for the profiling instrumentation data and the
+  // corresponding __profc_* counters it references.
+  struct ProfilingSubSection {
+    MCSectionXCOFF *ProfD;
+    MCSectionXCOFF *ProfC;
+  };
+
+  // Collect the 'sub-sections' of the profile-generate symbols
+  // so we can:
+  // 1) rename to the common CSECT name after emission.
+  // 2) emit the refs from the profc_ symbol to the related CSECTs.
+  SmallVector<ProfilingSubSection> ProfGenSubSections;
+
+  void emitSharedSectionPGORefs(Module &M);
+  void emitSplitSectionPGORefs();
 
   uint16_t getNumberOfVRSaved();
   void emitTracebackTable();
@@ -2792,6 +2809,28 @@ void PPCAIXAsmPrinter::emitGlobalVariableHelper(const GlobalVariable *GV) {
   auto *Csect = static_cast<MCSectionXCOFF *>(
       getObjFileLowering().SectionForGlobal(GV, GVKind, TM));
 
+  // When compiling with function sections enabled, we need some special
+  // codegen to rename the CSECTs. For each profiling data symbol find its
+  // associated profiling counters.
+  if (TM.getFunctionSections() &&
+      Csect->getName().starts_with("__llvm_prf_data.")) {
+    MDNode *MD = GV->getMetadata(LLVMContext::MD_pgo_associated);
+
+    assert(MD &&
+           "profiling data symbol must have an associated counter symbol");
+
+    const ValueAsMetadata *VAM = cast<ValueAsMetadata>(MD->getOperand(0).get());
+    const GlobalVariable *ProfCGV = cast<GlobalVariable>(VAM->getValue());
+
+    // Map the global variable to its CSECT.
+    SectionKind ProfCKind = getObjFileLowering().getKindForGlobal(GV, TM);
+
+    MCSectionXCOFF *ProfCCsect = static_cast<MCSectionXCOFF *>(
+        getObjFileLowering().SectionForGlobal(ProfCGV, ProfCKind, TM));
+
+    ProfGenSubSections.push_back({Csect, ProfCCsect});
+  }
+
   // Switch to the containing csect.
   OutStreamer->switchSection(Csect);
 
@@ -2893,7 +2932,7 @@ void PPCAIXAsmPrinter::emitFunctionEntryLabel() {
         getObjFileLowering().getFunctionEntryPointSymbol(Alias, TM));
 }
 
-void PPCAIXAsmPrinter::emitPGORefs(Module &M) {
+void PPCAIXAsmPrinter::emitSharedSectionPGORefs(Module &M) {
   if (!OutContext.hasXCOFFSection(
           "__llvm_prf_cnts",
           XCOFF::CsectProperties(XCOFF::XMC_RW, XCOFF::XTY_SD)))
@@ -2940,6 +2979,65 @@ void PPCAIXAsmPrinter::emitPGORefs(Module &M) {
       OutStreamer->emitXCOFFRefDirective(S);
     }
   }
+}
+
+void PPCAIXAsmPrinter::emitSplitSectionPGORefs() {
+  MCSymbol *NamesSym = nullptr;
+  MCSymbol *VNDSSym = nullptr;
+
+  auto profSectionName = [](InstrProfSectKind IPSK) -> std::string {
+    return getInstrProfSectionName(IPSK, Triple::XCOFF,
+                                   /* AddSegmentInfo */ false);
+  };
+
+  if (OutContext.hasXCOFFSection(
+          profSectionName(IPSK_name),
+          XCOFF::CsectProperties(XCOFF::XMC_RO, XCOFF::XTY_SD))) {
+    std::string SymName = profSectionName(IPSK_name);
+    SymName += "[RO]";
+    NamesSym = OutContext.getOrCreateSymbol(SymName);
+  }
+
+  if (OutContext.hasXCOFFSection(
+          profSectionName(IPSK_vnodes),
+          XCOFF::CsectProperties(XCOFF::XMC_RW, XCOFF::XTY_SD))) {
+    std::string SymName = profSectionName(IPSK_vnodes);
+    SymName += "[RW]";
+    VNDSSym = OutContext.getOrCreateSymbol(SymName);
+  }
+
+  for (auto SubSections : ProfGenSubSections) {
+    MCSectionXCOFF *ProfDCsect = SubSections.ProfD;
+    MCSectionXCOFF *ProfCCsect = SubSections.ProfC;
+
+    OutStreamer->switchSection(ProfCCsect);
+
+    if (NamesSym)
+      OutStreamer->emitXCOFFRefDirective(NamesSym);
+
+    if (VNDSSym)
+      OutStreamer->emitXCOFFRefDirective(VNDSSym);
+
+    OutStreamer->emitXCOFFRefDirective(ProfDCsect->getQualNameSymbol());
+
+    // Rename the subsection for the counters
+    OutStreamer->emitXCOFFRenameDirective(ProfCCsect->getQualNameSymbol(),
+                                          profSectionName(IPSK_cnts));
+    OutStreamer->addBlankLine();
+
+    // Rename the subsection for the data.
+    OutStreamer->switchSection(ProfDCsect);
+    OutStreamer->emitXCOFFRenameDirective(ProfDCsect->getQualNameSymbol(),
+                                          profSectionName(IPSK_data));
+    OutStreamer->addBlankLine();
+  }
+}
+
+void PPCAIXAsmPrinter::emitPGORefs(Module &M) {
+  if (!TM.getFunctionSections())
+    emitSharedSectionPGORefs(M);
+  else
+    emitSplitSectionPGORefs();
 }
 
 void PPCAIXAsmPrinter::emitGCOVRefs() {
