@@ -8,7 +8,7 @@ define void @test_pr55100(i32 %N) {
 ; CHECK-NEXT:    br label [[LOOP_1_HEADER:%.*]]
 ; CHECK:       loop.1.header:
 ; CHECK-NEXT:    [[IV_1:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_1_NEXT:%.*]], [[LOOP_1_LATCH:%.*]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw nsw i32 [[IV_1]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[IV_1]], -1
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP2]], i32 18)
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i32 [[UMIN]], 1
@@ -44,7 +44,7 @@ define void @test_pr55100(i32 %N) {
 ; CHECK-NEXT:    [[ADD_2:%.*]] = add i32 [[ADD_1]], [[IV_2_EXT]]
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp ult i32 [[ADD_2]], 1
 ; CHECK-NEXT:    [[IV_2_NEXT]] = add i16 [[IV_2]], 1
-; CHECK-NEXT:    br i1 [[C_4]], label [[EXIT_LOOPEXIT:%.*]], label [[LOOP_2_HEADER]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[C_4]], label [[EXIT_LOOPEXIT:%.*]], label [[LOOP_2_HEADER]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       loop.1.latch:
 ; CHECK-NEXT:    [[IV_1_NEXT]] = add i32 [[IV_1]], 1
 ; CHECK-NEXT:    br label [[LOOP_1_HEADER]]

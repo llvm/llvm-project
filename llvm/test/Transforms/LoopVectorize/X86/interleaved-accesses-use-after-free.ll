@@ -23,7 +23,7 @@ target triple = "x86_64-redhat-linux-gnu"
 %struct.bar.5 = type { i8 }
 %struct.baz = type { i64, %struct.pluto }
 
-; LOOP-ACCESS: Too many dependences, stopped recording
+; TODO: Too many dependences, stopped recording
 
 ; If no dependences are recorded because there are too many, LoopAccessAnalysis
 ; just conservatively returns true for any pair of instructions compared (even
