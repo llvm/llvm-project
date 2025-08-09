@@ -340,8 +340,11 @@ void RISCVMCCodeEmitter::expandLongCondBr(const MCInst &MI,
   // Drop any fixup added so we can add the correct one.
   Fixups.resize(FixupStartIndex);
 
-  if (SrcSymbol.isExpr())
+  if (SrcSymbol.isExpr()) {
     addFixup(Fixups, Offset, SrcSymbol.getExpr(), RISCV::fixup_riscv_jal);
+    if (STI.hasFeature(RISCV::FeatureRelax))
+      Fixups.back().setLinkerRelaxable();
+  }
 }
 
 // Expand PseudoLongQC_(E_)Bxxx to an inverted conditional branch and an
@@ -388,8 +391,11 @@ void RISCVMCCodeEmitter::expandQCLongCondBrImm(const MCInst &MI,
   support::endian::write(CB, JBinary, llvm::endianness::little);
   // Drop any fixup added so we can add the correct one.
   Fixups.resize(FixupStartIndex);
-  if (SrcSymbol.isExpr())
+  if (SrcSymbol.isExpr()) {
     addFixup(Fixups, Offset, SrcSymbol.getExpr(), RISCV::fixup_riscv_jal);
+    if (STI.hasFeature(RISCV::FeatureRelax))
+      Fixups.back().setLinkerRelaxable();
+  }
 }
 
 void RISCVMCCodeEmitter::encodeInstruction(const MCInst &MI,
@@ -628,9 +634,6 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
         llvm_unreachable("VK_TPREL_LO used with unexpected instruction format");
       RelaxCandidate = true;
       break;
-    case ELF::R_RISCV_TPREL_HI20:
-      RelaxCandidate = true;
-      break;
     case ELF::R_RISCV_CALL_PLT:
       FixupKind = RISCV::fixup_riscv_call_plt;
       RelaxCandidate = true;
@@ -639,11 +642,17 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
       FixupKind = RISCV::fixup_riscv_qc_abs20_u;
       RelaxCandidate = true;
       break;
+    case ELF::R_RISCV_GOT_HI20:
+    case ELF::R_RISCV_TPREL_HI20:
+    case ELF::R_RISCV_TLSDESC_HI20:
+      RelaxCandidate = true;
+      break;
     }
   } else if (Kind == MCExpr::SymbolRef || Kind == MCExpr::Binary) {
     // FIXME: Sub kind binary exprs have chance of underflow.
     if (MIFrm == RISCVII::InstFormatJ) {
       FixupKind = RISCV::fixup_riscv_jal;
+      RelaxCandidate = true;
     } else if (MIFrm == RISCVII::InstFormatB) {
       FixupKind = RISCV::fixup_riscv_branch;
     } else if (MIFrm == RISCVII::InstFormatCJ) {
