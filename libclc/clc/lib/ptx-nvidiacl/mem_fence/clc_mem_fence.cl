@@ -8,8 +8,8 @@
 
 #include <clc/mem_fence/clc_mem_fence.h>
 
-_CLC_OVERLOAD _CLC_DEF void __clc_mem_fence(int memory_scope,
-                                            int memory_order) {
+_CLC_OVERLOAD _CLC_DEF void __clc_mem_fence(int memory_scope, int memory_order,
+                                            MemorySemantic memory_semantic) {
   if (memory_scope & (__MEMORY_SCOPE_DEVICE | __MEMORY_SCOPE_WRKGRP))
     __nvvm_membar_cta();
 }
