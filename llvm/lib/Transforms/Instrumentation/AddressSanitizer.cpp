@@ -3530,9 +3530,13 @@ void FunctionStackPoisoner::processStaticAllocas() {
   auto DescriptionString = ComputeASanStackFrameDescription(SVD);
   LLVM_DEBUG(dbgs() << DescriptionString << " --- " << L.FrameSize << "\n");
   uint64_t LocalStackSize = L.FrameSize;
+  // In rare cases, a frame may have small objects with significant alignment
+  // needs. Placing the frame into a small fake stack frame would not meet
+  // the alignment needs.
+  uint64_t AlignedLocalStackSize = std::max(L.FrameSize, L.FrameAlignment);
   bool DoStackMalloc =
       ASan.UseAfterReturn != AsanDetectStackUseAfterReturnMode::Never &&
-      !ASan.CompileKernel && LocalStackSize <= kMaxStackMallocSize;
+      !ASan.CompileKernel && AlignedLocalStackSize <= kMaxStackMallocSize;
   bool DoDynamicAlloca = ClDynamicAllocaStack;
   // Don't do dynamic alloca or stack malloc if:
   // 1) There is inline asm: too often it makes assumptions on which registers
@@ -3568,11 +3572,11 @@ void FunctionStackPoisoner::processStaticAllocas() {
       Instruction *Term =
           SplitBlockAndInsertIfThen(UseAfterReturnIsEnabled, InsBefore, false);
       IRBuilder<> IRBIf(Term);
-      StackMallocIdx = StackMallocSizeClass(LocalStackSize);
+      StackMallocIdx = StackMallocSizeClass(AlignedLocalStackSize);
       assert(StackMallocIdx <= kMaxAsanStackMallocSizeClass);
-      Value *FakeStackValue =
-          RTCI.createRuntimeCall(IRBIf, AsanStackMallocFunc[StackMallocIdx],
-                                 ConstantInt::get(IntptrTy, LocalStackSize));
+      Value *FakeStackValue = RTCI.createRuntimeCall(
+          IRBIf, AsanStackMallocFunc[StackMallocIdx],
+          ConstantInt::get(IntptrTy, AlignedLocalStackSize));
       IRB.SetInsertPoint(InsBefore);
       FakeStack = createPHI(IRB, UseAfterReturnIsEnabled, FakeStackValue, Term,
                             ConstantInt::get(IntptrTy, 0));
@@ -3581,10 +3585,10 @@ void FunctionStackPoisoner::processStaticAllocas() {
       // void *FakeStack = __asan_stack_malloc_N(LocalStackSize);
       // void *LocalStackBase = (FakeStack) ? FakeStack :
       //                        alloca(LocalStackSize);
-      StackMallocIdx = StackMallocSizeClass(LocalStackSize);
-      FakeStack =
-          RTCI.createRuntimeCall(IRB, AsanStackMallocFunc[StackMallocIdx],
-                                 ConstantInt::get(IntptrTy, LocalStackSize));
+      StackMallocIdx = StackMallocSizeClass(AlignedLocalStackSize);
+      FakeStack = RTCI.createRuntimeCall(
+          IRB, AsanStackMallocFunc[StackMallocIdx],
+          ConstantInt::get(IntptrTy, AlignedLocalStackSize));
     }
     Value *NoFakeStack =
         IRB.CreateICmpEQ(FakeStack, Constant::getNullValue(IntptrTy));
