@@ -1789,7 +1789,7 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
     SpeculativeLoads.insert(LI);
     LLVM_DEBUG(dbgs() << "LV: Found speculative load: " << *LI << "\n");
   }
-  // Support single Speculative load for now.
+  // Support single speculative load for now.
   if (NonDerefLoads.size() > 1) {
     reportVectorizationFailure("Loop contains more than one unbound access",
                                "TooManySpeculativeLoadInEarlyExitLoop", ORE,
