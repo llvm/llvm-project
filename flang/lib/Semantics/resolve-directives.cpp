@@ -2107,12 +2107,18 @@ void OmpAttributeVisitor::CollectAssociatedLoopLevelsFromInnerLoopContruct(
     const parser::OpenMPLoopConstruct &x,
     llvm::SmallVector<std::int64_t> &levels,
     llvm::SmallVector<const parser::OmpClause *> &clauses) {
-  const auto &innerOptional =
-      std::get<std::optional<common::Indirection<parser::OpenMPLoopConstruct>>>(
-          x.t);
-  if (innerOptional.has_value()) {
+
+  const auto &nestedOptional =
+      std::get<std::optional<parser::NestedConstruct>>(x.t);
+  assert(nestedOptional.has_value() &&
+      "Expected a DoConstruct or OpenMPLoopConstruct");
+  const auto *innerConstruct =
+      std::get_if<common::Indirection<parser::OpenMPLoopConstruct>>(
+          &(nestedOptional.value()));
+
+  if (innerConstruct) {
     CollectAssociatedLoopLevelsFromLoopConstruct(
-        innerOptional.value().value(), levels, clauses);
+        innerConstruct->value(), levels, clauses);
   }
 }
 
@@ -2177,17 +2183,19 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
   bool hasCollapseClause{
       clause ? (clause->Id() == llvm::omp::OMPC_collapse) : false};
   const parser::OpenMPLoopConstruct *innerMostLoop = &x;
-
+  const parser::NestedConstruct *innerMostNest = nullptr;
   while (auto &optLoopCons{
-      std::get<std::optional<parser::NestedConstruct>>(x.t)}) {
-    if (const auto &innerLoop{
-            std::get_if < parser::OpenMPLoopConstruct >>> (innerMostLoop->t)}) {
-      innerMostLoop = &innerLoop.value().value();
+      std::get<std::optional<parser::NestedConstruct>>(innerMostLoop->t)}) {
+    innerMostNest = &(optLoopCons.value());
+    if (const auto *innerLoop{
+            std::get_if<common::Indirection<parser::OpenMPLoopConstruct>>(
+                innerMostNest)}) {
+      innerMostLoop = &(innerLoop->value());
     }
   }
 
-  if (optLoopCons.has_value()) {
-    if (const auto &outer{std::get_if<parser::DoConstruct>(innerMostLoop->t)}) {
+  if (innerMostNest) {
+    if (const auto &outer{std::get_if<parser::DoConstruct>(innerMostNest)}) {
       for (const parser::DoConstruct *loop{&*outer}; loop && level > 0;
           --level) {
         if (loop->IsDoConcurrent()) {
@@ -2223,7 +2231,7 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
       CheckAssocLoopLevel(level, GetAssociatedClause());
     } else if (const auto &loop{std::get_if<
                    common::Indirection<parser::OpenMPLoopConstruct>>(
-                   &*optLoopCons)}) {
+                   innerMostNest)}) {
       auto &beginDirective =
           std::get<parser::OmpBeginLoopDirective>(loop->value().t);
       auto &beginLoopDirective =

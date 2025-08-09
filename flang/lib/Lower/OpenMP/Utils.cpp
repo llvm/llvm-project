@@ -614,11 +614,15 @@ void collectTileSizesFromOpenMPConstruct(
     return;
 
   if (auto *ompLoop{std::get_if<parser::OpenMPLoopConstruct>(&ompCons->u)}) {
-    const auto &innerOptional = std::get<
-        std::optional<common::Indirection<parser::OpenMPLoopConstruct>>>(
-        ompLoop->t);
-    if (innerOptional.has_value()) {
-      const auto &innerLoopDirective = innerOptional.value().value();
+    const auto &nestedOptional =
+        std::get<std::optional<parser::NestedConstruct>>(ompLoop->t);
+    assert(nestedOptional.has_value() &&
+           "Expected a DoConstruct or OpenMPLoopConstruct");
+    const auto *innerConstruct =
+        std::get_if<common::Indirection<parser::OpenMPLoopConstruct>>(
+            &(nestedOptional.value()));
+    if (innerConstruct) {
+      const auto &innerLoopDirective = innerConstruct->value();
       const auto &innerBegin =
           std::get<parser::OmpBeginLoopDirective>(innerLoopDirective.t);
       const auto &innerDirective =
@@ -667,11 +671,15 @@ bool collectLoopRelatedInfo(
   std::int64_t sizesLengthValue = 0l;
   if (auto *ompCons{eval.getIf<parser::OpenMPConstruct>()}) {
     if (auto *ompLoop{std::get_if<parser::OpenMPLoopConstruct>(&ompCons->u)}) {
-      const auto &innerOptional = std::get<
-          std::optional<common::Indirection<parser::OpenMPLoopConstruct>>>(
-          ompLoop->t);
-      if (innerOptional.has_value()) {
-        const auto &innerLoopDirective = innerOptional.value().value();
+      const auto &nestedOptional =
+          std::get<std::optional<parser::NestedConstruct>>(ompLoop->t);
+      assert(nestedOptional.has_value() &&
+             "Expected a DoConstruct or OpenMPLoopConstruct");
+      const auto *innerConstruct =
+          std::get_if<common::Indirection<parser::OpenMPLoopConstruct>>(
+              &(nestedOptional.value()));
+      if (innerConstruct) {
+        const auto &innerLoopDirective = innerConstruct->value();
         const auto &innerBegin =
             std::get<parser::OmpBeginLoopDirective>(innerLoopDirective.t);
         const auto &innerDirective =

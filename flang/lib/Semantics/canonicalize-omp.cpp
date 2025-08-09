@@ -157,13 +157,15 @@ private:
             std::get<parser::OmpBeginLoopDirective>(innerOmpLoop->t)};
         auto &innerDir{std::get<parser::OmpLoopDirective>(innerBeginDir.t)};
         if (innerDir.v == llvm::omp::Directive::OMPD_tile) {
-          auto &innerLoop = std::get<
-              std::optional<common::Indirection<parser::OpenMPLoopConstruct>>>(
-              loops.back()->t);
+          auto &innerLoopVariant =
+              std::get<std::optional<parser::NestedConstruct>>(loops.back()->t);
+          auto &innerLoop =
+              std::get<common::Indirection<parser::OpenMPLoopConstruct>>(
+                  innerLoopVariant.value());
           innerLoop = std::move(*innerOmpLoop);
           // Retrieveing the address so that DoConstruct or inner loop can be
           // set later.
-          loops.push_back(&(innerLoop.value().value()));
+          loops.push_back(&(innerLoop.value()));
           nextIt = block.erase(nextIt);
         }
       }

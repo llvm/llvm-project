@@ -424,14 +424,19 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
 
               // FIXME(JAN): For now we check if there is an inner
               // OpenMPLoopConstruct, and extract the size clause from there
-              const auto &innerOptional = std::get<std::optional<
-                  common::Indirection<parser::OpenMPLoopConstruct>>>(
-                  ompConstruct.t);
-              if (innerOptional.has_value()) {
-                const auto &innerLoopDirective = innerOptional.value().value();
+              const auto &nestedOptional =
+                  std::get<std::optional<parser::NestedConstruct>>(
+                      ompConstruct.t);
+              assert(nestedOptional.has_value() &&
+                     "Expected a DoConstruct or OpenMPLoopConstruct");
+              const auto *innerConstruct =
+                  std::get_if<common::Indirection<parser::OpenMPLoopConstruct>>(
+                      &(nestedOptional.value()));
+              if (innerConstruct) {
+                const auto &innerLoopConstruct = innerConstruct->value();
                 const auto &innerBegin =
                     std::get<parser::OmpBeginLoopDirective>(
-                        innerLoopDirective.t);
+                        innerLoopConstruct.t);
                 const auto &innerDirective =
                     std::get<parser::OmpLoopDirective>(innerBegin.t);
                 if (innerDirective.v == llvm::omp::Directive::OMPD_tile) {
@@ -2188,41 +2193,6 @@ static void genUnrollOp(Fortran::lower::AbstractConverter &converter,
   // Apply unrolling to it
   auto cli = canonLoop.getCli();
   mlir::omp::UnrollHeuristicOp::create(firOpBuilder, loc, cli);
-
-static mlir::omp::LoopOp genTiledLoopOp(lower::AbstractConverter &converter,
-                                        lower::SymMap &symTable,
-                                        semantics::SemanticsContext &semaCtx,
-                                        lower::pft::Evaluation &eval,
-                                        mlir::Location loc,
-                                        const ConstructQueue &queue,
-                                        ConstructQueue::const_iterator item) {
-  mlir::omp::LoopOperands loopClauseOps;
-  llvm::SmallVector<const semantics::Symbol *> loopReductionSyms;
-  genLoopClauses(converter, semaCtx, item->clauses, loc, loopClauseOps,
-                 loopReductionSyms);
-
-  DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
-                           /*shouldCollectPreDeterminedSymbols=*/true,
-                           /*useDelayedPrivatization=*/true, symTable);
-  dsp.processStep1(&loopClauseOps);
-
-  mlir::omp::LoopNestOperands loopNestClauseOps;
-  llvm::SmallVector<const semantics::Symbol *> iv;
-  genLoopNestClauses(converter, semaCtx, eval, item->clauses, loc,
-                     loopNestClauseOps, iv);
-
-  EntryBlockArgs loopArgs;
-  loopArgs.priv.syms = dsp.getDelayedPrivSymbols();
-  loopArgs.priv.vars = loopClauseOps.privateVars;
-  loopArgs.reduction.syms = loopReductionSyms;
-  loopArgs.reduction.vars = loopClauseOps.reductionVars;
-
-  auto loopOp =
-      genWrapperOp<mlir::omp::LoopOp>(converter, loc, loopClauseOps, loopArgs);
-  genLoopNestOp(converter, symTable, semaCtx, eval, loc, queue, item,
-                loopNestClauseOps, iv, {{loopOp, loopArgs}},
-                llvm::omp::Directive::OMPD_loop, dsp);
-  return loopOp;
 }
 
 static mlir::omp::MaskedOp
