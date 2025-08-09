@@ -6765,6 +6765,68 @@ LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 // code for that information.
 class MappableExprsHandler {
 public:
+  // Custom comparator for attach-ptr expessions that compares them by
+  // complexity (i.e. their component-depth) first, then semantically.
+  struct AttachPtrExprComparator {
+    const MappableExprsHandler *Handler;
+
+    AttachPtrExprComparator(const MappableExprsHandler *H) : Handler(H) {}
+
+    bool operator()(const Expr *LHS, const Expr *RHS) const {
+      if (LHS == RHS)
+        return false;
+
+      // First, compare by complexity (depth)
+      auto ItLHS = Handler->AttachPtrComponentDepthMap.find(LHS);
+      auto ItRHS = Handler->AttachPtrComponentDepthMap.find(RHS);
+
+      std::optional<size_t> DepthLHS =
+          (ItLHS != Handler->AttachPtrComponentDepthMap.end()) ? ItLHS->second
+                                                               : std::nullopt;
+      std::optional<size_t> DepthRHS =
+          (ItRHS != Handler->AttachPtrComponentDepthMap.end()) ? ItRHS->second
+                                                               : std::nullopt;
+
+      // std::nullopt (no attach pointer) has lowest complexity
+      if (!DepthLHS.has_value() && !DepthRHS.has_value()) {
+        // Both have same complexity, now check semantic equality
+        if (areSemanticallyEqual(LHS, RHS))
+          return false;   // They are semantically equal
+        return LHS < RHS; // Use pointer comparison for consistent ordering
+      }
+      if (!DepthLHS.has_value())
+        return true; // LHS has lower complexity
+      if (!DepthRHS.has_value())
+        return false; // RHS has lower complexity
+
+      // Both have values, compare by depth (lower depth = lower complexity)
+      if (DepthLHS.value() != DepthRHS.value())
+        return DepthLHS.value() < DepthRHS.value();
+
+      // Same complexity, now check semantic equality
+      if (areSemanticallyEqual(LHS, RHS))
+        return false; // They are semantically equal
+
+      // Same complexity but semantically different exprs. Use pointer
+      // comparison as a fallback to break the tie.
+      return LHS < RHS;
+    }
+
+  private:
+    bool areSemanticallyEqual(const Expr *LHS, const Expr *RHS) const {
+      // For DeclRefExpr, compare by the referenced declaration directly
+      if (const auto *LHSDeclRef = dyn_cast<DeclRefExpr>(LHS)) {
+        if (const auto *RHSDeclRef = dyn_cast<DeclRefExpr>(RHS)) {
+          if (LHSDeclRef->getDecl() == RHSDeclRef->getDecl())
+            return true; // They reference the same declaration
+        }
+      }
+
+      // Use Expr::isSameComparisonOperand for other semantic comparisons
+      return Expr::isSameComparisonOperand(LHS, RHS);
+    }
+  };
+
   /// Get the offset of the OMP_MAP_MEMBER_OF field.
   static unsigned getFlagMemberOffset() {
     unsigned Offset = 0;
@@ -6952,13 +7014,6 @@ private:
   mutable llvm::DenseMap<
       OMPClauseMappableExprCommon::MappableExprComponentListRef, const Expr *>
       AttachPtrExprMap;
-
-  /// Map from attach pointer expressions to their component lists.
-  /// nullptr key represents component lists with no attach pointer expression.
-  mutable llvm::DenseMap<
-      const Expr *,
-      SmallVector<OMPClauseMappableExprCommon::MappableExprComponentListRef, 4>>
-      AttachPtrToComponentListsMap;
 
   /// Map from attach pointer expressions to their component depth.
   /// nullptr key has std::nullopt depth. This can be used to order attach-ptr
@@ -7617,6 +7672,7 @@ private:
       }
     }
 
+    bool SeemFirstNonBinOpExprAfterAttachPtr = false;
     for (; I != CE; ++I) {
       // If we have a valid attach-ptr, we skip processing all components until
       // after the attach-ptr.
@@ -7625,11 +7681,18 @@ private:
         continue;
       }
 
-      bool IsFirstComponentAfterAttach =
-          HasAttachPtr &&
-          std::prev(I)->getAssociatedExpression() == AttachPtrExpr;
-      if (IsFirstComponentAfterAttach)
+      // After finding the attach pointer, skip binary-ops, to skip past
+      // expressions like (p + 10), for a map like map(*(p + 10)), where p is
+      // the attach-ptr.
+      if (HasAttachPtr && !SeemFirstNonBinOpExprAfterAttachPtr) {
+        const auto *BO = dyn_cast<BinaryOperator>(I->getAssociatedExpression());
+        if (BO)
+          continue;
+
+        // Found the first non-binary-operator component after attach
+        SeemFirstNonBinOpExprAfterAttachPtr = true;
         BP = AttachPteeBaseAddr;
+      }
 
       // If the current component is member of a struct (parent struct) mark it.
       if (!EncounteredME) {
@@ -8900,7 +8963,6 @@ public:
         if (!Components.empty()) {
           auto [AttachPtrExpr, Depth] = findAttachPtrExpr(Components);
           AttachPtrExprMap[Components] = AttachPtrExpr;
-          AttachPtrToComponentListsMap[AttachPtrExpr].push_back(Components);
           AttachPtrComponentDepthMap[AttachPtrExpr] = Depth;
         }
       }
@@ -9351,12 +9413,10 @@ public:
     bool NoDefaultMappingDoneForVD = CurCaptureVarInfo.BasePointers.empty();
     bool FirstGroupProcessed = false;
 
-    // Get AttachPtrExprs sorted by complexity
-    SmallVector<const Expr *, 8> SortedAttachPtrs =
-        getAttachPtrExprsSortedByComplexity();
-
-    // Process each group in order
-    for (const Expr *AttachPtr : SortedAttachPtrs) {
+    // Process each group in order of their attach-pointers increasing
+    // complexity.
+    for (const auto &Entry : AttachPtrGroups) {
+      const Expr *AttachPtr = Entry.first;
       const MapDataArrayTy &GroupLists = AttachPtrGroups[AttachPtr];
       if (GroupLists.empty())
         continue;
