@@ -95,6 +95,7 @@ const char *MDProfLabels::FunctionEntryCount = "function_entry_count";
 const char *MDProfLabels::SyntheticFunctionEntryCount =
     "synthetic_function_entry_count";
 const char *MDProfLabels::UnknownBranchWeightsMarker = "unknown";
+const char *LLVMLoopEstimatedTripCount = "llvm.loop.estimated_trip_count";
 
 bool hasProfMD(const Instruction &I) {
   return I.hasMetadata(LLVMContext::MD_prof);
