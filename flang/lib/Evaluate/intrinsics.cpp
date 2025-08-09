@@ -1892,7 +1892,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   // arguments in a procedure reference.
   std::size_t dummyArgPatterns{0};
   for (; dummyArgPatterns < maxArguments && dummy[dummyArgPatterns].keyword;
-      ++dummyArgPatterns) {
+       ++dummyArgPatterns) {
   }
   // MAX and MIN (and others that map to them) allow their last argument to
   // be repeated indefinitely.  The actualForDummy vector is sized
@@ -2696,7 +2696,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   // Rearrange the actual arguments into dummy argument order.
   ActualArguments rearranged(dummies);
   for (std::size_t j{0}; j < dummies; ++j) {
-    if (ActualArgument * arg{actualForDummy[j]}) {
+    if (ActualArgument *arg{actualForDummy[j]}) {
       rearranged[j] = std::move(*arg);
     }
   }
@@ -3127,7 +3127,7 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
           }
         } else if (!IsInteroperableIntrinsicType(
                        *type, &context.languageFeatures())
-                       .value_or(true)) {
+                        .value_or(true)) {
           if (type->category() == TypeCategory::Character &&
               type->kind() == 1) {
             if (context.languageFeatures().ShouldWarn(
@@ -3633,7 +3633,7 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
   parser::Messages specificBuffer;
   auto specificRange{specificFuncs_.equal_range(call.name)};
   for (auto specIter{specificRange.first}; specIter != specificRange.second;
-      ++specIter) {
+       ++specIter) {
     // We only need to check the cases with distinct generic names.
     if (const char *genericName{specIter->second->generic}) {
       if (auto specificCall{
@@ -3655,13 +3655,13 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
   if (context.languageFeatures().IsEnabled(common::LanguageFeature::
               UseGenericIntrinsicWhenSpecificDoesntMatch)) {
     for (auto specIter{specificRange.first}; specIter != specificRange.second;
-        ++specIter) {
+         ++specIter) {
       // We only need to check the cases with distinct generic names.
       if (const char *genericName{specIter->second->generic}) {
         if (specIter->second->useGenericAndForceResultType) {
           auto genericRange{genericFuncs_.equal_range(genericName)};
           for (auto genIter{genericRange.first}; genIter != genericRange.second;
-              ++genIter) {
+               ++genIter) {
             if (auto specificCall{
                     matchOrBufferMessages(*genIter->second, specificBuffer)}) {
               // Force the call result type to the specific intrinsic result
