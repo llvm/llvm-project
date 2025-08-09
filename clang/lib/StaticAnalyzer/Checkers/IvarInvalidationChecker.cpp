@@ -53,13 +53,13 @@ struct ChecksFilter {
 };
 
 class IvarInvalidationCheckerImpl {
-  typedef llvm::SmallSetVector<const ObjCMethodDecl*, 2> MethodSet;
-  typedef llvm::DenseMap<const ObjCMethodDecl*,
-                         const ObjCIvarDecl*> MethToIvarMapTy;
-  typedef llvm::DenseMap<const ObjCPropertyDecl*,
-                         const ObjCIvarDecl*> PropToIvarMapTy;
-  typedef llvm::DenseMap<const ObjCIvarDecl*,
-                         const ObjCPropertyDecl*> IvarToPropMapTy;
+  using MethodSet = llvm::SmallSetVector<const ObjCMethodDecl *, 2>;
+  using MethToIvarMapTy =
+      llvm::DenseMap<const ObjCMethodDecl *, const ObjCIvarDecl *>;
+  using PropToIvarMapTy =
+      llvm::DenseMap<const ObjCPropertyDecl *, const ObjCIvarDecl *>;
+  using IvarToPropMapTy =
+      llvm::DenseMap<const ObjCIvarDecl *, const ObjCPropertyDecl *>;
 
   struct InvalidationInfo {
     /// Has the ivar been invalidated?
@@ -90,7 +90,7 @@ class IvarInvalidationCheckerImpl {
     }
   };
 
-  typedef llvm::DenseMap<const ObjCIvarDecl*, InvalidationInfo> IvarSet;
+  using IvarSet = llvm::DenseMap<const ObjCIvarDecl *, InvalidationInfo>;
 
   /// Statement visitor, which walks the method body and flags the ivars
   /// referenced in it (either directly or via property).

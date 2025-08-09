@@ -26,7 +26,7 @@ using namespace clang;
 using namespace ento;
 
 namespace {
-typedef SmallVector<SymbolRef, 2> SymbolVector;
+using SymbolVector = SmallVector<SymbolRef, 2>;
 
 struct StreamState {
 private:
