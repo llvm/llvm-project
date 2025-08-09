@@ -3280,7 +3280,7 @@ static void __kmp_stg_print_places(kmp_str_buf_t *buffer, char const *name,
           const char *ct_name = __kmp_hw_get_core_type_keyword(ct);
           __kmp_str_buf_print(buffer, ":%s", name, ct_name);
         } else if (eff >= 0 && eff < KMP_HW_MAX_NUM_CORE_EFFS) {
-          __kmp_str_buf_print(buffer, ":eff%d", name, eff);
+          __kmp_str_buf_print(buffer, ":eff%d", eff);
         }
       }
 
