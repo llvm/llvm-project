@@ -2015,7 +2015,7 @@ void COFFDumper::printCOFFPseudoReloc() {
                                      ? "___RUNTIME_PSEUDO_RELOC_LIST_END__"
                                      : "__RUNTIME_PSEUDO_RELOC_LIST_END__";
 
-  auto Count = Obj->getNumberOfSymbols();
+  uint32_t Count = Obj->getNumberOfSymbols();
   if (Count == 0) {
     W.startLine() << "the symbol table has been stripped\n";
     return;
@@ -2028,8 +2028,8 @@ void COFFDumper::printCOFFPseudoReloc() {
   };
   std::map<uint32_t, SymbolEntry> RVASymbolMap;
   COFFSymbolRef RelocBegin, RelocEnd;
-  for (auto i = 0u; i < Count; ++i) {
-    auto Sym = Obj->getSymbol(i);
+  for (uint32_t i = 0; i < Count; ++i) {
+    Expected<COFFSymbolRef> Sym = Obj->getSymbol(i);
     if (!Sym) {
       consumeError(Sym.takeError());
       continue;
@@ -2038,7 +2038,7 @@ void COFFDumper::printCOFFPseudoReloc() {
 
     if (Sym->getSectionNumber() <= 0)
       continue;
-    auto Name = Obj->getSymbolName(*Sym);
+    Expected<StringRef> Name = Obj->getSymbolName(*Sym);
     if (!Name) {
       consumeError(Name.takeError());
       continue;
@@ -2049,7 +2049,8 @@ void COFFDumper::printCOFFPseudoReloc() {
     else if (*Name == RelocEndName)
       RelocEnd = *Sym;
 
-    auto Sec = Obj->getSection(Sym->getSectionNumber());
+    Expected<const coff_section *> Sec =
+        Obj->getSection(Sym->getSectionNumber());
     if (!Sec) {
       consumeError(Sec.takeError());
       continue;
@@ -2070,7 +2071,8 @@ void COFFDumper::printCOFFPseudoReloc() {
     return;
   }
 
-  auto Section = Obj->getSection(RelocBegin.getSectionNumber());
+  Expected<const coff_section *> Section =
+      Obj->getSection(RelocBegin.getSectionNumber());
   if (auto E = Section.takeError()) {
     reportWarning(std::move(E), Obj->getFileName());
     return;
@@ -2152,13 +2154,12 @@ void COFFDumper::printCOFFPseudoReloc() {
         return nullptr;
 
       --Ite;
-      const auto &D = Ite->EntryRef;
       uint32_t RVA = Ite->StartRVA;
       if (Ite->EndRVA != 0 && Ite->EndRVA <= RVA)
         return nullptr;
       // Search with linear iteration to care if padding or garbage exist
       // between ImportDirectoryEntry
-      for (auto S : D.imported_symbols()) {
+      for (auto S : Ite->EntryRef.imported_symbols()) {
         if (RVA == EntryRVA) {
           StringRef &NameDst = ImportedSymbols[RVA];
           if (auto E = S.getSymbolName(NameDst)) {
@@ -2186,7 +2187,7 @@ void COFFDumper::printCOFFPseudoReloc() {
     DictScope Entry(W, "Entry");
 
     W.printHex("Symbol", Reloc.Symbol);
-    if (const auto *Sym = ImportedSymbols.find(Reloc.Symbol))
+    if (const StringRef *Sym = ImportedSymbols.find(Reloc.Symbol))
       W.printString("SymbolName", *Sym);
 
     W.printHex("Target", Reloc.Target);
@@ -2200,11 +2201,12 @@ void COFFDumper::printCOFFPseudoReloc() {
       W.printSymbolOffset("TargetSymbol", Ite->second.SymbolName, Offset);
     else if (++Ite == RVASymbolMap.end())
       W.printSymbolOffset("TargetSymbol", "(base)", Reloc.Target);
-    else if (auto Name = Obj->getSectionName(Ite->second.Section)) {
-      W.printSymbolOffset("TargetSymbol", *Name,
+    else if (Expected<StringRef> NameOrErr =
+                 Obj->getSectionName(Ite->second.Section)) {
+      W.printSymbolOffset("TargetSymbol", *NameOrErr,
                           Reloc.Target - Ite->second.Section->VirtualAddress);
     } else {
-      consumeError(Name.takeError());
+      consumeError(NameOrErr.takeError());
       W.printSymbolOffset("TargetSymbol", "(base)", Reloc.Target);
     }
 
