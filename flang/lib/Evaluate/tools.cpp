@@ -1203,6 +1203,11 @@ bool HasVectorSubscript(const Expr<SomeType> &expr) {
   return HasVectorSubscriptHelper{}(expr);
 }
 
+bool HasVectorSubscript(const ActualArgument &actual) {
+  auto expr = actual.UnwrapExpr();
+  return expr && HasVectorSubscript(*expr);
+}
+
 // HasConstant()
 struct HasConstantHelper : public AnyTraverse<HasConstantHelper, bool,
                                /*TraverseAssocEntityDetails=*/false> {
