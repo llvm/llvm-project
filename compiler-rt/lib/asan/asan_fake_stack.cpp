@@ -56,23 +56,26 @@ FakeStack *FakeStack::Create(uptr stack_size_log) {
     stack_size_log = kMaxStackSizeLog;
   uptr size = RequiredSize(stack_size_log);
   uptr padded_size = size + (1 << kMaxStackFrameSizeLog);
-  // Alignment here is needed to protect the alignment invariant in GetFrame()
-  // MmapAlignedOrDieOnFatalError requires that the *size* is a power of 2,
-  // which is an overly strong condition.
   void *true_res = reinterpret_cast<void *>(
       flags()->uar_noreserve ? MmapNoReserveOrDie(padded_size, "FakeStack")
                              : MmapOrDie(padded_size, "FakeStack"));
+  // GetFrame() requires the property that
+  // (res + kFlagsOffset + SizeRequiredForFlags(stack_size_log)) is aligned to
+  // (1 << kMaxStackFrameSizeLog)
+  // We didn't use MmapAlignedOrDieOnFatalError, because it requires that the
+  // *size* is a power of 2, which is an overly strong condition.
   FakeStack *res = reinterpret_cast<FakeStack *>(
-      RoundUpTo((uptr)true_res, 1 << kMaxStackFrameSizeLog));
+      RoundUpTo((uptr)true_res + kFlagsOffset + SizeRequiredForFlags(stack_size_log), 1 << kMaxStackFrameSizeLog)
+      - kFlagsOffset - SizeRequiredForFlags(stack_size_log));
   res->true_start = true_res;
   res->stack_size_log_ = stack_size_log;
   u8 *p = reinterpret_cast<u8 *>(res);
   VReport(1,
           "T%d: FakeStack created: %p -- %p stack_size_log: %zd; "
-          "mmapped %zdK, noreserve=%d \n",
+          "mmapped %zdK, noreserve=%d, true_start: %p\n",
           GetCurrentTidOrInvalid(), (void *)p,
           (void *)(p + FakeStack::RequiredSize(stack_size_log)), stack_size_log,
-          size >> 10, flags()->uar_noreserve);
+          size >> 10, flags()->uar_noreserve, res->true_start);
   return res;
 }
 

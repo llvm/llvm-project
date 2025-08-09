@@ -73,10 +73,7 @@ class FakeStack {
 
   // stack_size_log is at least 15 (stack_size >= 32K).
   static uptr SizeRequiredForFlags(uptr stack_size_log) {
-    // Padding is needed to protect alignment in GetFrame().
-    uptr size = ((uptr)1) << (stack_size_log + 1 - kMinStackFrameSizeLog);
-    return RoundUpTo(size + kFlagsOffset, 1 << kMaxStackFrameSizeLog) -
-           kFlagsOffset;
+    return ((uptr)1) << (stack_size_log + 1 - kMinStackFrameSizeLog);
   }
 
   // Each size class occupies stack_size bytes.
@@ -120,29 +117,23 @@ class FakeStack {
   // Get frame by class_id and pos.
   //
   // ASanStackFrameLayout::ComputeASanStackFrameLayout() will align variables
-  // correctly if GetFrame() returns addresses aligned to
+  // correctly if GetFrame(..., class_id, ...) returns addresses aligned to
   // BytesInSizeClass(class_id).
   //
   // Note that alignment to 1<<kMaxStackFrameSizeLog (aka
   // BytesInSizeClass(max_class_id)) implies alignment to BytesInSizeClass()
-  // for any class_id, since the class sizes are increasing powers of 2. [*]
+  // for any class_id, since the class sizes are increasing powers of 2.
   //
-  // 1) 'this' is aligned to 1<<kMaxStackFrameSizeLog (see FakeStack::Create)
-  // 2) (kFlagsOffset + SizeRequiredForFlags()) is aligned to
-  //    1<<kMaxStackFrameSizeLog (see SizeRequiredForFlags())
-  // 3) We know that stack_size_log >= kMaxStackFrameSizeLog (otherwise you
+  // 1) ('this' + kFlagsOffset + SizeRequiredForFlags())) is aligned to
+  //    1<<kMaxStackFrameSizeLog (see FakeStack::Create)
+  // 2) We know that stack_size_log >= kMaxStackFrameSizeLog (otherwise you
   //    couldn't store a single frame of that size in the entire stack)
   //    hence (1 << stack_size_log) is aligned to 1<<kMaxStackFrameSizeLog
   //    and   ((1 << stack_size_log) * class_id) is aligned to
   //          1<<kMaxStackFrameSizeLog
-  // 4) BytesInSizeClass(class_id) * pos is aligned to
+  // 3) BytesInSizeClass(class_id) * pos is aligned to
   //    BytesInSizeClass(class_id)
   // The sum of these is aligned to BytesInSizeClass(class_id).
-  //
-  // This is nearly-optimal: we must ensure that GetFrame() is aligned to
-  // BytesInSizeClass(max_class_id)) when called with max_class_id, and
-  // alignment implies a cost of up to (1<<kMaxStackFrameSizeLog) bytes. Our
-  // alignment in steps 1) and 2) incurs nearly double this cost.
   u8 *GetFrame(uptr stack_size_log, uptr class_id, uptr pos) {
     return reinterpret_cast<u8 *>(this) + kFlagsOffset +
            SizeRequiredForFlags(stack_size_log) +
