@@ -425,6 +425,7 @@ namespace D50526 {
   void h() { g<void, h>(); }
 #if !_M_X64
   // expected-error@-2 {{no matching function for call to}}
-  // expected-note@-4 {{invalid explicitly-specified argument}}
+  // expected-note@-4 {{invalid explicitly-specified argument}} \
+  // expected-note@-4 {{non-type template argument of type 'void ()' cannot be converted to a value of type 'void (*)() __attribute__((stdcall))'}}
 #endif
 }

@@ -40,7 +40,8 @@ namespace ConstDestruction {
   };
 
   template<D d>
-  void f() {} // expected-note 2{{invalid explicitly-specified argument}}
+  void f() {} // expected-note 2{{invalid explicitly-specified argument}} \
+  // expected-note 2{{non-type template argument is not a constant expression}}
 
   void g() {
     f<D{0, true}>();

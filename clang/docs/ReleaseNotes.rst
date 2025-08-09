@@ -146,6 +146,9 @@ Improvements to Clang's diagnostics
 - Fixed fix-it hint for fold expressions. Clang now correctly places the suggested right 
   parenthesis when diagnosing malformed fold expressions. (#GH151787)
 
+- Fixed a duplicate diagnostic when performing typo correction on function template
+  calls with explicit template arguments. Fixes #GH139226.
+
 Improvements to Clang's time-trace
 ----------------------------------
 

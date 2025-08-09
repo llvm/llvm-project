@@ -985,7 +985,9 @@ namespace cwg354 { // cwg354: 3.1 c++11
   int b1 = both<(int*)0>();
   // cxx98-error@-1 {{no matching function for call to 'both'}}
   //   cxx98-note@#cwg354-both-int-ptr {{candidate template ignored: invalid explicitly-specified argument for 1st template parameter}}
+  //   cxx98-note@#cwg354-both-int-ptr {{non-type template argument does not refer to any declaration}}
   //   cxx98-note@#cwg354-both-int {{candidate template ignored: invalid explicitly-specified argument for 1st template parameter}}
+  //   cxx98-note@#cwg354-both-int {{non-type template argument of type 'int *' must have an integral or enumeration type}}
 
   template<int S::*> struct ptr_mem {}; // #cwg354-ptr_mem
   ptr_mem<0> m0; // #cwg354-m0
