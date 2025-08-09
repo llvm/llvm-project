@@ -45,6 +45,46 @@ end:
   ret void
 }
 
+declare i32 @getv()
+
+; indirect.goto.dest2 should get hoisted, and that should not result
+; in a loss of profiling info
+define i32 @test19(i1 %cond, i1 %cond2, ptr %address, i32 %v1) nounwind {
+; CHECK-LABEL: define i32 @test19
+; CHECK-SAME: (i1 [[COND:%.*]], i1 [[COND2:%.*]], ptr [[ADDRESS:%.*]], i32 [[V1:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INDIRECT_GOTO_DEST:%.*]] = select i1 [[COND]], ptr blockaddress(@test19, [[EXIT:%.*]]), ptr [[ADDRESS]], !prof [[PROF9:![0-9]+]]
+; CHECK-NEXT:    [[INDIRECT_GOTO_DEST2:%.*]] = select i1 [[COND2]], ptr blockaddress(@test19, [[EXIT]]), ptr [[ADDRESS]], !prof [[PROF10:![0-9]+]]
+; CHECK-NEXT:    br label [[L0:%.*]]
+; CHECK:       L0:
+; CHECK-NEXT:    [[V2:%.*]] = call i32 @getv()
+; CHECK-NEXT:    [[SINKABLE:%.*]] = mul i32 [[V1]], [[V2]]
+; CHECK-NEXT:    [[SINKABLE2:%.*]] = add i32 [[V1]], [[V2]]
+; CHECK-NEXT:    indirectbr ptr [[INDIRECT_GOTO_DEST]], [label [[L1:%.*]], label %exit]
+; CHECK:       L1:
+; CHECK-NEXT:    indirectbr ptr [[INDIRECT_GOTO_DEST2]], [label [[L0]], label %exit]
+; CHECK:       exit:
+; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[SINKABLE]], [[L0]] ], [ [[SINKABLE2]], [[L1]] ]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+entry:
+  br label %L0
+L0:
+  %indirect.goto.dest = select i1 %cond, ptr blockaddress(@test19, %exit), ptr %address, !prof !10
+  %v2 = call i32 @getv()
+  %sinkable = mul i32 %v1, %v2
+  %sinkable2 = add i32 %v1, %v2
+  indirectbr ptr %indirect.goto.dest, [label %L1, label %exit]
+
+L1:
+  %indirect.goto.dest2 = select i1 %cond2, ptr blockaddress(@test19, %exit), ptr %address, !prof !11
+  indirectbr ptr %indirect.goto.dest2, [label %L0, label %exit]
+
+exit:
+  %r = phi i32 [%sinkable, %L0], [%sinkable2, %L1]
+  ret i32 %r
+}
+
 !llvm.module.flags = !{!2, !3}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1)
@@ -57,6 +97,10 @@ end:
 !7 = !DILocation(line: 3, column: 22, scope: !4)
 !8 = !{!"branch_weights", i32 5, i32 7}
 !9 = !{!"branch_weights", i32 13, i32 11}
+!10 = !{!"branch_weights", i32 101, i32 189}
+!11 = !{!"branch_weights", i32 67, i32 1}
+;.
+; CHECK: attributes #[[ATTR0]] = { nounwind }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i32 7, !"Dwarf Version", i32 5}
 ; CHECK: [[META1:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}

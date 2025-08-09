@@ -57,6 +57,8 @@
 
 using namespace llvm;
 
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+
 MetadataAsValue::MetadataAsValue(Type *Ty, Metadata *MD)
     : Value(Ty, MetadataAsValueVal), MD(MD) {
   track();
@@ -1678,6 +1680,8 @@ void Instruction::dropUnknownNonDebugMetadata(ArrayRef<unsigned> KnownIDs) {
 
   // A DIAssignID attachment is debug metadata, don't drop it.
   KnownSet.insert(LLVMContext::MD_DIAssignID);
+  if (!ProfcheckDisableMetadataFixes)
+    KnownSet.insert(LLVMContext::MD_prof);
 
   Value::eraseMetadataIf([&KnownSet](unsigned MDKind, MDNode *Node) {
     return !KnownSet.count(MDKind);
