@@ -2039,11 +2039,11 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
   return LaneMaskPhi;
 }
 
-/// Collect all VPValues representing a header mask through the (ICMP_ULE,
-/// WideCanonicalIV, backedge-taken-count) pattern.
+/// Collect the header mask with the pattern:
+///   (ICMP_ULE, WideCanonicalIV, backedge-taken-count)
 /// TODO: Introduce explicit recipe for header-mask instead of searching
 /// for the header-mask pattern manually.
-static SmallVector<VPValue *> collectAllHeaderMasks(VPlan &Plan) {
+static VPSingleDefRecipe *findHeaderMask(VPlan &Plan) {
   SmallVector<VPValue *> WideCanonicalIVs;
   auto *FoundWidenCanonicalIVUser =
       find_if(Plan.getCanonicalIV()->users(),
@@ -2069,7 +2069,7 @@ static SmallVector<VPValue *> collectAllHeaderMasks(VPlan &Plan) {
 
   // Walk users of wide canonical IVs and collect to all compares of the form
   // (ICMP_ULE, WideCanonicalIV, backedge-taken-count).
-  SmallVector<VPValue *> HeaderMasks;
+  SmallVector<VPSingleDefRecipe *> HeaderMasks;
   for (auto *Wide : WideCanonicalIVs) {
     for (VPUser *U : SmallVector<VPUser *>(Wide->users())) {
       auto *HeaderMask = dyn_cast<VPInstruction>(U);
@@ -2081,7 +2081,10 @@ static SmallVector<VPValue *> collectAllHeaderMasks(VPlan &Plan) {
       HeaderMasks.push_back(HeaderMask);
     }
   }
-  return HeaderMasks;
+  assert(HeaderMasks.size() <= 1 && "Multiple header masks found?");
+  if (HeaderMasks.empty())
+    return nullptr;
+  return HeaderMasks[0];
 }
 
 void VPlanTransforms::addActiveLaneMask(
@@ -2097,6 +2100,7 @@ void VPlanTransforms::addActiveLaneMask(
               [](VPUser *U) { return isa<VPWidenCanonicalIVRecipe>(U); });
   assert(FoundWidenCanonicalIVUser &&
          "Must have widened canonical IV when tail folding!");
+  VPSingleDefRecipe *HeaderMask = findHeaderMask(Plan);
   auto *WideCanonicalIV =
       cast<VPWidenCanonicalIVRecipe>(*FoundWidenCanonicalIVUser);
   VPSingleDefRecipe *LaneMask;
@@ -2113,8 +2117,8 @@ void VPlanTransforms::addActiveLaneMask(
   // Walk users of WideCanonicalIV and replace all compares of the form
   // (ICMP_ULE, WideCanonicalIV, backedge-taken-count) with an
   // active-lane-mask.
-  for (VPValue *HeaderMask : collectAllHeaderMasks(Plan))
-    HeaderMask->replaceAllUsesWith(LaneMask);
+  HeaderMask->replaceAllUsesWith(LaneMask);
+  HeaderMask->eraseFromParent();
 }
 
 /// Try to optimize a \p CurRecipe masked by \p HeaderMask to a corresponding
@@ -2242,8 +2246,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
     }
   }
 
-  // Try to optimize header mask recipes away to their EVL variants.
-  for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
+  // Try to optimize recipes which use the header mask to their EVL variants.
+  if (VPValue *HeaderMask = findHeaderMask(Plan)) {
     // TODO: Split optimizeMaskToEVL out and move into
     // VPlanTransforms::optimize. transformRecipestoEVLRecipes should be run in
     // tryToBuildVPlanWithVPRecipes beforehand.
@@ -2269,7 +2273,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
       ToErase.push_back(CurRecipe);
     }
 
-    // Replace header masks with a mask equivalent to predicating by EVL:
+    // Replace the header mask with a mask equivalent to predicating by EVL:
     //
     // icmp ule widen-canonical-iv backedge-taken-count
     // ->
