@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -pedantic -std=c++11 -verify -triple x86_64-apple-darwin %s
-// RUN: %clang_cc1 -fsyntax-only -pedantic -std=c++17 -verify -triple x86_64-apple-darwin %s
+// RUN: %clang_cc1 -fsyntax-only -pedantic -std=c++11 -verify=expected,cxx11-17 -triple x86_64-apple-darwin %s
+// RUN: %clang_cc1 -fsyntax-only -pedantic -std=c++17 -verify=expected,cxx11-17 -triple x86_64-apple-darwin %s
 // RUN: %clang_cc1 -fsyntax-only -pedantic -std=c++20 -verify -triple x86_64-apple-darwin %s
 
 enum class E1 {
@@ -329,10 +329,8 @@ namespace PR18044 {
   int E::*p; // expected-error {{does not point into a class}}
   using E::f; // expected-error {{no member named 'f'}}
 
-  #if __cplusplus < 202002L
-  using E::a; // expected-warning {{using declaration naming a scoped enumerator is a C++20 extension}}
+  using E::a; // cxx11-17-warning {{using declaration naming a scoped enumerator is a C++20 extension}}
   E b = a;
-  #endif
 }
 
 namespace test11 {
