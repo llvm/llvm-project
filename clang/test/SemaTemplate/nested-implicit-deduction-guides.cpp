@@ -84,11 +84,11 @@ nested_init_list<int>::concept_fail nil_invalid{1, ""};
 // expected-note@#INIT_LIST_INNER_INVALID {{candidate template ignored: constraints not satisfied [with F = const char *]}}
 // expected-note@#INIT_LIST_INNER_INVALID_HEADER {{because 'const char *' does not satisfy 'False'}}
 // expected-note@#False {{because 'false' evaluated to false}}
-// expected-note@#INIT_LIST_INNER_INVALID {{implicit deduction guide declared as 'template <False F> concept_fail(int, F) -> concept_fail<F>'}}
+// expected-note@#INIT_LIST_INNER_INVALID {{implicit deduction guide declared as 'template <False F> concept_fail(int, F) -> nested_init_list<int>::concept_fail<F>'}}
 // expected-note@#INIT_LIST_INNER_INVALID {{candidate function template not viable: requires 1 argument, but 2 were provided}}
-// expected-note@#INIT_LIST_INNER_INVALID {{implicit deduction guide declared as 'template <False F> concept_fail(concept_fail<F>) -> concept_fail<F>'}}
+// expected-note@#INIT_LIST_INNER_INVALID {{implicit deduction guide declared as 'template <False F> concept_fail(nested_init_list<int>::concept_fail<F>) -> nested_init_list<int>::concept_fail<F>'}}
 // expected-note@#INIT_LIST_INNER_INVALID {{candidate function template not viable: requires 0 arguments, but 2 were provided}}
-// expected-note@#INIT_LIST_INNER_INVALID {{implicit deduction guide declared as 'template <False F> concept_fail() -> concept_fail<F>'}}
+// expected-note@#INIT_LIST_INNER_INVALID {{implicit deduction guide declared as 'template <False F> concept_fail() -> nested_init_list<int>::concept_fail<F>'}}
 
 namespace GH88142 {
 

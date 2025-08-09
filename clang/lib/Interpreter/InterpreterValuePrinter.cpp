@@ -66,10 +66,10 @@ static std::string QualTypeToString(ASTContext &Ctx, QualType QT) {
   const QualType NonRefTy = QT.getNonReferenceType();
 
   if (const auto *TTy = llvm::dyn_cast<TagType>(NonRefTy))
-    return DeclTypeToString(NonRefTy, TTy->getDecl());
+    return DeclTypeToString(NonRefTy, TTy->getOriginalDecl());
 
   if (const auto *TRy = dyn_cast<RecordType>(NonRefTy))
-    return DeclTypeToString(NonRefTy, TRy->getDecl());
+    return DeclTypeToString(NonRefTy, TRy->getOriginalDecl());
 
   const QualType Canon = NonRefTy.getCanonicalType();
 
@@ -105,7 +105,7 @@ static std::string EnumToString(const Value &V) {
   const EnumType *EnumTy = DesugaredTy.getNonReferenceType()->getAs<EnumType>();
   assert(EnumTy && "Fail to cast to enum type");
 
-  EnumDecl *ED = EnumTy->getDecl();
+  EnumDecl *ED = EnumTy->getOriginalDecl()->getDefinitionOrSelf();
   uint64_t Data = V.convertTo<uint64_t>();
   bool IsFirst = true;
   llvm::APSInt AP = Ctx.MakeIntValue(Data, DesugaredTy);
@@ -666,7 +666,7 @@ __clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal, void *OpaqueType,
     VRef.setPtr(va_arg(args, void *));
   } else {
     if (const auto *ET = QT->getAs<EnumType>())
-      QT = ET->getDecl()->getIntegerType();
+      QT = ET->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
     switch (QT->castAs<BuiltinType>()->getKind()) {
     default:
       llvm_unreachable("unknown type kind!");
