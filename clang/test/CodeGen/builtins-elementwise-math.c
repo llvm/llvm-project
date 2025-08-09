@@ -418,7 +418,7 @@ void test_builtin_elementwise_max(float f1, float f2, double d1, double d2,
   // CHECK-NEXT: call i32 @llvm.smax.i32(i32 [[IAS1]], i32 [[B]])
   int_as_one = __builtin_elementwise_max(int_as_one, b);
 
-  // CHECK: call i32 @llvm.smax.i32(i32 1, i32 97)
+  // CHECK: store i64 97, ptr [[I1:%.+]], align 8
   i1 = __builtin_elementwise_max(1, 'a');
 }
 
@@ -508,6 +508,9 @@ void test_builtin_elementwise_min(float f1, float f2, double d1, double d2,
   // CHECK-NEXT: [[B:%.+]] = load i32, ptr @b, align 4
   // CHECK-NEXT: call i32 @llvm.smin.i32(i32 [[IAS1]], i32 [[B]])
   int_as_one = __builtin_elementwise_min(int_as_one, b);
+
+  // CHECK: store i64 2, ptr [[I1:%.+]], align 8
+  i1 = __builtin_elementwise_min(2, 'b');
 }
 
 void test_builtin_elementwise_bitreverse(si8 vi1, si8 vi2,
