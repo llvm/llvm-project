@@ -107,6 +107,8 @@ static cl::opt<bool>
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   RegisterTargetMachine<RISCVTargetMachine> X(getTheRISCV32Target());
   RegisterTargetMachine<RISCVTargetMachine> Y(getTheRISCV64Target());
+  RegisterTargetMachine<RISCVTargetMachine> A(getTheRISCV32beTarget());
+  RegisterTargetMachine<RISCVTargetMachine> B(getTheRISCV64beTarget());
   auto *PR = PassRegistry::getPassRegistry();
   initializeGlobalISel(*PR);
   initializeRISCVO0PreLegalizerCombinerPass(*PR);
@@ -140,21 +142,33 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVAsmPrinterPass(*PR);
 }
 
-static StringRef computeDataLayout(const Triple &TT,
-                                   const TargetOptions &Options) {
-  StringRef ABIName = Options.MCOptions.getABIName();
+static std::string computeDataLayout(const Triple &TT,
+                                     const TargetOptions &Opts) {
+  std::string Endianness = TT.isLittleEndian() ? "e" : "E";
+
+  std::string PointerAndIntegerLayout;
+  std::string NativeIntegerWidths;
+
   if (TT.isArch64Bit()) {
-    if (ABIName == "lp64e")
-      return "e-m:e-p:64:64-i64:64-i128:128-n32:64-S64";
-
-    return "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128";
+    PointerAndIntegerLayout = "p:64:64-i64:64-i128:128";
+    NativeIntegerWidths = "n32:64";
+  } else {
+    assert(TT.isArch32Bit() && "only RV32 and RV64 are currently supported");
+    PointerAndIntegerLayout = "p:32:32-i64:64";
+    NativeIntegerWidths = "n32";
   }
-  assert(TT.isArch32Bit() && "only RV32 and RV64 are currently supported");
 
-  if (ABIName == "ilp32e")
-    return "e-m:e-p:32:32-i64:64-n32-S32";
+  StringRef ABI = Opts.MCOptions.getABIName();
+  std::string StackAlignment;
 
-  return "e-m:e-p:32:32-i64:64-n32-S128";
+  if (TT.isArch64Bit()) {
+    StackAlignment = (ABI == "lp64e") ? "S64" : "S128";
+  } else {
+    StackAlignment = (ABI == "ilp32e") ? "S32" : "S128";
+  }
+
+  return Endianness + "-m:e-" + PointerAndIntegerLayout + "-" +
+         NativeIntegerWidths + "-" + StackAlignment;
 }
 
 static Reloc::Model getEffectiveRelocModel(const Triple &TT,
