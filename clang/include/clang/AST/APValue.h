@@ -143,7 +143,7 @@ public:
     AddrLabelDiff
   };
 
-  class LValueBase {
+  class alignas(8) LValueBase {
     typedef llvm::PointerUnion<const ValueDecl *, const Expr *, TypeInfoLValue,
                                DynamicAllocLValue>
         PtrTy;
