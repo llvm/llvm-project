@@ -334,6 +334,7 @@ public:
   void VisitStringLiteral(const StringLiteral *SL);
   void VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *BLE);
 
+  void VisitLoopControlStmt(const LoopControlStmt *LS);
   void VisitIfStmt(const IfStmt *IS);
   void VisitSwitchStmt(const SwitchStmt *SS);
   void VisitCaseStmt(const CaseStmt *CS);
