@@ -1228,6 +1228,8 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
     return Instruction::ICmp;
   case RecurKind::FMax:
   case RecurKind::FMin:
+  case RecurKind::FMaxNum:
+  case RecurKind::FMinNum:
   case RecurKind::FMaximum:
   case RecurKind::FMinimum:
   case RecurKind::FMaximumNum:

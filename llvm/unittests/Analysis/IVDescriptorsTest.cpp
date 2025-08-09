@@ -259,3 +259,12 @@ for.end:
         EXPECT_EQ(Kind, RecurKind::FMax);
       });
 }
+
+TEST(IVDescriptorsTest, GetOpcodeForFMinMaxNum) {
+  using RK = RecurKind;
+  // Ensure the "num" variants map to the same opcode as the plain ones.
+  EXPECT_EQ(RecurrenceDescriptor::getOpcode(RK::FMinNum),
+    RecurrenceDescriptor::getOpcode(RK::FMin));
+  EXPECT_EQ(RecurrenceDescriptor::getOpcode(RK::FMinNum),
+    RecurrenceDescriptor::getOpcode(RK::FMin));
+}
