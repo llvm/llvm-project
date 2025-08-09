@@ -4126,7 +4126,11 @@ static bool isTemplateArgumentTemplateParameter(const TemplateArgument &Arg,
       return false;
     const NonTypeTemplateParmDecl *NTTP =
         dyn_cast<NonTypeTemplateParmDecl>(DRE->getDecl());
-    return NTTP && NTTP->getDepth() == Depth && NTTP->getIndex() == Index;
+    if (!NTTP || NTTP->getDepth() != Depth || NTTP->getIndex() != Index)
+      return false;
+    QualType ParamType = cast<NonTypeTemplateParmDecl>(Param)->getType();
+    QualType NTTPType = NTTP->getType();
+    return ParamType.getCanonicalType() == NTTPType.getCanonicalType();
   }
 
   case TemplateArgument::Template:
