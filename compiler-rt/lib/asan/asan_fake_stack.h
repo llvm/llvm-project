@@ -181,7 +181,6 @@ class FakeStack {
 
   uptr hint_position_[kNumberOfSizeClasses];
   uptr stack_size_log_;
-  // a bit is set if something was allocated from the corresponding size class.
   bool needs_gc_;
   // We allocated more memory than needed to ensure the FakeStack (and, by
   // extension, each of the fake stack frames) is aligned. We keep track of the
