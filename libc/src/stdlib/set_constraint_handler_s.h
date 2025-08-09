@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_STDLIB_STRTOULL_H
-#define LLVM_LIBC_SRC_STDLIB_STRTOULL_H
+#ifndef LLVM_LIBC_SRC_STDLIB_SET_CONSTRAINT_HANDLER_S_H
+#define LLVM_LIBC_SRC_STDLIB_SET_CONSTRAINT_HANDLER_S_H
 
 #include "hdr/types/constraint_handler_t.h"
 #include "src/__support/macros/config.h"
@@ -18,4 +18,4 @@ constraint_handler_t set_constraint_handler_s(constraint_handler_t handler);
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_STDLIB_STRTOULL_H
+#endif // LLVM_LIBC_SRC_STDLIB_SET_CONSTRAINT_HANDLER_S_H
