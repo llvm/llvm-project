@@ -2058,7 +2058,7 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
     EmitAutoVarCleanups(variable);
 
   // Perform the loop body, setting up break and continue labels.
-  BreakContinueStack.push_back(BreakContinue(LoopEnd, AfterBody));
+  BreakContinueStack.push_back(BreakContinue(S, LoopEnd, AfterBody));
   {
     RunCleanupsScope Scope(*this);
     EmitStmt(S.getBody());

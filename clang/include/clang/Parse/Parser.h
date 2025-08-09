@@ -7458,6 +7458,7 @@ public:
   /// \verbatim
   ///       jump-statement:
   ///         'continue' ';'
+  /// [C2y]   'continue' identifier ';'
   /// \endverbatim
   ///
   /// Note: this lets the caller parse the end ';'.
@@ -7468,6 +7469,7 @@ public:
   /// \verbatim
   ///       jump-statement:
   ///         'break' ';'
+  /// [C2y]   'break' identifier ';'
   /// \endverbatim
   ///
   /// Note: this lets the caller parse the end ';'.
@@ -7483,6 +7485,8 @@ public:
   ///         'co_return' braced-init-list ';'
   /// \endverbatim
   StmtResult ParseReturnStatement();
+
+  StmtResult ParseBreakOrContinueStatement(bool IsContinue);
 
   StmtResult ParsePragmaLoopHint(StmtVector &Stmts, ParsedStmtContext StmtCtx,
                                  SourceLocation *TrailingElseLoc,

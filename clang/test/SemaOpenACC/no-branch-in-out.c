@@ -687,3 +687,26 @@ void DuffsDeviceLoop() {
   }
   }
 }
+
+void LabeledBreakContinue() {
+  a: for (int i =0; i < 5; ++i) {
+#pragma acc parallel
+    {
+      continue a; // expected-error{{invalid branch out of OpenACC Compute/Combined Construct}}
+      break a; // expected-error{{invalid branch out of OpenACC Compute/Combined Construct}}
+    }
+  }
+
+#pragma acc parallel
+  b: c: for (int i =0; i < 5; ++i) {
+    switch(i) {
+    case 0: break; // leaves switch, not 'for'.
+    }
+
+    break b; // expected-error{{invalid branch out of OpenACC Compute/Combined Construct}}
+    break c; // expected-error{{invalid branch out of OpenACC Compute/Combined Construct}}
+    while (1) break b; // expected-error{{invalid branch out of OpenACC Compute/Combined Construct}}
+    while (1) break c; // expected-error{{invalid branch out of OpenACC Compute/Combined Construct}}
+    d: while (1) break d;
+  }
+}
