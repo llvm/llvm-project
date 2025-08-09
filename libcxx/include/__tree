@@ -574,9 +574,8 @@ public:
     __parent_ = std::__static_fancy_pointer_cast<__end_node_pointer>(__p);
   }
 
-  // template <typename... Args> constexpr __tree_node_base(Args && ... args) =default;
-  _LIBCPP_HIDE_FROM_ABI __tree_node_base()             = default;
-  _LIBCPP_HIDE_FROM_ABI ~__tree_node_base()            = default;
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree_node_base()             = default;
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 ~__tree_node_base()            = default;
   __tree_node_base(__tree_node_base const&)            = delete;
   __tree_node_base& operator=(__tree_node_base const&) = delete;
 };
@@ -593,8 +592,6 @@ public:
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree_node(_Args&&... __args)
       : __value_(std::forward<_Args>(__args)...) {}
-  // TODO: libcxx26
-  // _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree_node(__node_value_type &&  args): __value_{args} { }
   ~__tree_node()                             = delete;
   __tree_node(__tree_node const&)            = delete;
   __tree_node& operator=(__tree_node const&) = delete;
@@ -859,6 +856,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __node_allocator& __node_alloc() _NOEXCEPT {
     return __node_alloc_;
   }
+private:
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const __node_allocator& __node_alloc() const _NOEXCEPT { return __node_alloc_; }
 
 public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 allocator_type __alloc() const _NOEXCEPT {
