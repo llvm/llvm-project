@@ -23,7 +23,8 @@ using lldb_private::roundtripJSON;
 
 TEST(DAPTypesTest, SourceLLDBData) {
   SourceLLDBData source_data;
-  source_data.persistenceData = PersistenceData{"module_path123", "symbol_name456"};
+  source_data.persistenceData =
+      PersistenceData{"module_path123", "symbol_name456"};
 
   llvm::Expected<SourceLLDBData> deserialized_data = roundtripJSON(source_data);
   ASSERT_THAT_EXPECTED(deserialized_data, llvm::Succeeded());
@@ -32,4 +33,30 @@ TEST(DAPTypesTest, SourceLLDBData) {
             deserialized_data->persistenceData->module_path);
   EXPECT_EQ(source_data.persistenceData->symbol_name,
             deserialized_data->persistenceData->symbol_name);
+}
+
+TEST(DAPTypesTest, DAPSymbol) {
+  DAPSymbol symbol;
+  symbol.userId = 42;
+  symbol.isDebug = true;
+  symbol.isExternal = false;
+  symbol.isSynthetic = true;
+  symbol.type = "Trampoline";
+  symbol.fileAddress = 0x12345678;
+  symbol.loadAddress = 0x87654321;
+  symbol.size = 64;
+  symbol.name = "testSymbol";
+
+  llvm::Expected<DAPSymbol> deserialized_symbol = roundtripJSON(symbol);
+  ASSERT_THAT_EXPECTED(deserialized_symbol, llvm::Succeeded());
+
+  EXPECT_EQ(symbol.userId, deserialized_symbol->userId);
+  EXPECT_EQ(symbol.isDebug, deserialized_symbol->isDebug);
+  EXPECT_EQ(symbol.isExternal, deserialized_symbol->isExternal);
+  EXPECT_EQ(symbol.isSynthetic, deserialized_symbol->isSynthetic);
+  EXPECT_EQ(symbol.type, deserialized_symbol->type);
+  EXPECT_EQ(symbol.fileAddress, deserialized_symbol->fileAddress);
+  EXPECT_EQ(symbol.loadAddress, deserialized_symbol->loadAddress);
+  EXPECT_EQ(symbol.size, deserialized_symbol->size);
+  EXPECT_EQ(symbol.name, deserialized_symbol->name);
 }

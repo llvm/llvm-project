@@ -36,22 +36,19 @@ llvm::json::Value toJSON(const SourceLLDBData &SLD) {
 bool fromJSON(const llvm::json::Value &Params, DAPSymbol &DS,
               llvm::json::Path P) {
   json::ObjectMapper O(Params, P);
-  return O && O.map("userId", DS.userId) &&
-         O.map("isDebug", DS.isDebug) &&
-         O.map("isSynthesized", DS.isSynthesized) &&
-         O.map("isExternal", DS.isExternal) &&
-         O.map("type", DS.type) &&
+  return O && O.map("userId", DS.userId) && O.map("isDebug", DS.isDebug) &&
+         O.map("isSynthetic", DS.isSynthetic) &&
+         O.map("isExternal", DS.isExternal) && O.map("type", DS.type) &&
          O.map("fileAddress", DS.fileAddress) &&
          O.mapOptional("loadAddress", DS.loadAddress) &&
-         O.map("size", DS.size) &&
-         O.map("name", DS.name);
+         O.map("size", DS.size) && O.map("name", DS.name);
 }
 
 llvm::json::Value toJSON(const DAPSymbol &DS) {
   json::Object result{
       {"userId", DS.userId},
       {"isDebug", DS.isDebug},
-      {"isSynthesized", DS.isSynthesized},
+      {"isSynthetic", DS.isSynthetic},
       {"isExternal", DS.isExternal},
       {"type", DS.type},
       {"fileAddress", DS.fileAddress},

@@ -85,6 +85,8 @@ public:
 
   SymbolType GetType();
 
+  uint32_t GetID();
+
   bool operator==(const lldb::SBSymbol &rhs) const;
 
   bool operator!=(const lldb::SBSymbol &rhs) const;
@@ -98,6 +100,9 @@ public:
   // Returns true if the symbol was synthetically generated from something
   // other than the actual symbol table itself in the object file.
   bool IsSynthetic();
+
+  /// Returns true if the symbol is a debug symbol.
+  bool IsDebug();
 
 protected:
   lldb_private::Symbol *get();

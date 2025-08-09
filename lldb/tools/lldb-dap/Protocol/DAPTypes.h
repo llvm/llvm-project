@@ -55,8 +55,9 @@ struct DAPSymbol {
   /// True if this symbol is debug information in a symbol.
   bool isDebug;
 
-  /// True if this symbol is not actually in the symbol table, but synthesized from other info in the object file.
-  bool isSynthesized;
+  /// True if this symbol is not actually in the symbol table, but synthesized
+  /// from other info in the object file.
+  bool isSynthetic;
 
   /// True if this symbol is globally visible.
   bool isExternal;
