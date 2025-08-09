@@ -640,6 +640,9 @@ void IRMemoryMap::WritePointerToMemory(lldb::addr_t process_address,
                                        lldb::addr_t address, Status &error) {
   error.Clear();
 
+  if (auto process_sp = GetProcessWP().lock())
+    address = process_sp->FixAnyAddress(address);
+
   Scalar scalar(address);
 
   WriteScalarToMemory(process_address, scalar, GetAddressByteSize(), error);
