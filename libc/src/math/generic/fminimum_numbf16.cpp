@@ -1,4 +1,4 @@
-//===-- Implementation of fminimum_numbf16 function ------------------------===//
+//===-- Implementation of fminimum_numbf16 function -----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.

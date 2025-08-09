@@ -8,7 +8,7 @@
 
 #include "FMinimumNumTest.h"
 
-#include "src/math/fminimum_numbf16.h"
 #include "src/__support/FPUtil/bfloat16.h"
+#include "src/math/fminimum_numbf16.h"
 
 LIST_FMINIMUM_NUM_TESTS(bfloat16, LIBC_NAMESPACE::fminimum_numbf16)

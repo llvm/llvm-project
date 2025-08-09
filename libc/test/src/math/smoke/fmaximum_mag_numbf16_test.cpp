@@ -8,7 +8,7 @@
 
 #include "FMaximumMagNumTest.h"
 
-#include "src/math/fmaximum_mag_numbf16.h"
 #include "src/__support/FPUtil/bfloat16.h"
+#include "src/math/fmaximum_mag_numbf16.h"
 
 LIST_FMAXIMUM_MAG_NUM_TESTS(bfloat16, LIBC_NAMESPACE::fmaximum_mag_numbf16)
