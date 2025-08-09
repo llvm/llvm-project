@@ -23,6 +23,7 @@
 #include "clang/Sema/Overload.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaHLSL.h"
+#include "llvm/ADT/STLExtras.h"
 
 using namespace clang;
 
@@ -2607,23 +2608,15 @@ static void DiagnoseNonAggregateReason(Sema &SemaRef, SourceLocation Loc,
           << diag::TraitNotSatisfiedReason::InheritedCtr;
   }
 
-  bool HasInherited = false;
-  for (const Decl *Sub : D->decls()) {
+  bool HasInherited = llvm::any_of(D->decls(), [](auto const *Sub) {
+    bool Result = false;
     if (auto *UD = dyn_cast<UsingDecl>(Sub)) {
-      for (auto I = UD->shadow_begin(), E = UD->shadow_end(); I != E; ++I) {
-        if (isa<ConstructorUsingShadowDecl>(*I)) {
-          HasInherited = true;
-          break;
-        }
-      }
-      if (HasInherited)
-        break;
+      Result = llvm::any_of(UD->shadows(), [](auto const &I) {
+        return isa<ConstructorUsingShadowDecl>(I);
+      });
     }
-    if (isa<ConstructorUsingShadowDecl>(Sub)) {
-      HasInherited = true;
-      break;
-    }
-  }
+    return isa<ConstructorUsingShadowDecl>(Sub) || Result;
+  });
 
   if (HasInherited) {
     SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
