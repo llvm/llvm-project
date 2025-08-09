@@ -1084,7 +1084,7 @@ InstructionCost ARMTTIImpl::getCmpSelInstrCost(
                                               CostKind, Op1Info, Op2Info, I);
 }
 
-InstructionCost ARMTTIImpl::getAddressComputationCost(Type *Ty,
+InstructionCost ARMTTIImpl::getAddressComputationCost(Type *PtrTy,
                                                       ScalarEvolution *SE,
                                                       const SCEV *Ptr) const {
   // Address computations in vectorized code with non-consecutive addresses will
@@ -1095,7 +1095,7 @@ InstructionCost ARMTTIImpl::getAddressComputationCost(Type *Ty,
   int MaxMergeDistance = 64;
 
   if (ST->hasNEON()) {
-    if (Ty->isVectorTy() && SE &&
+    if (PtrTy->isVectorTy() && SE &&
         !BaseT::isConstantStridedAccessLessThan(SE, Ptr, MaxMergeDistance + 1))
       return NumVectorInstToHideOverhead;
 
@@ -1103,7 +1103,7 @@ InstructionCost ARMTTIImpl::getAddressComputationCost(Type *Ty,
     // addressing mode.
     return 1;
   }
-  return BaseT::getAddressComputationCost(Ty, SE, Ptr);
+  return BaseT::getAddressComputationCost(PtrTy, SE, Ptr);
 }
 
 bool ARMTTIImpl::isProfitableLSRChainElement(Instruction *I) const {
