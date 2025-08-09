@@ -148,11 +148,11 @@ protected:
     return isSmall() ? CurArray + NumNonEmpty : CurArray + CurArraySize;
   }
 
-  iterator_range<const void **> smallBuckets() {
+  iterator_range<const void **> small_buckets() {
     return make_range(CurArray, CurArray + NumNonEmpty);
   }
 
-  iterator_range<const void *const *> smallBuckets() const {
+  iterator_range<const void *const *> small_buckets() const {
     return {CurArray, CurArray + NumNonEmpty};
   }
 
@@ -162,7 +162,7 @@ protected:
   std::pair<const void *const *, bool> insert_imp(const void *Ptr) {
     if (isSmall()) {
       // Check to see if it is already in the set.
-      for (const void *&Bucket : smallBuckets()) {
+      for (const void *&Bucket : small_buckets()) {
         if (Bucket == Ptr)
           return std::make_pair(&Bucket, false);
       }
@@ -184,7 +184,7 @@ protected:
   /// in.
   bool erase_imp(const void * Ptr) {
     if (isSmall()) {
-      for (const void *&Bucket : smallBuckets()) {
+      for (const void *&Bucket : small_buckets()) {
         if (Bucket == Ptr) {
           Bucket = CurArray[--NumNonEmpty];
           incrementEpoch();
@@ -212,7 +212,7 @@ protected:
   const void *const * find_imp(const void * Ptr) const {
     if (isSmall()) {
       // Linear search for the item.
-      for (const void *const &Bucket : smallBuckets())
+      for (const void *const &Bucket : small_buckets())
         if (Bucket == Ptr)
           return &Bucket;
       return EndPointer();
@@ -227,7 +227,7 @@ protected:
   bool contains_imp(const void *Ptr) const {
     if (isSmall()) {
       // Linear search for the item.
-      for (const void *const &Bucket : smallBuckets())
+      for (const void *const &Bucket : small_buckets())
         if (Bucket == Ptr)
           return true;
       return false;
