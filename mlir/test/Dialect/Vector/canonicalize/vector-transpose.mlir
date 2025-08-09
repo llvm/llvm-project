@@ -91,12 +91,27 @@ func.func @broadcast_transpose_final_group(%arg0 : vector<4x7x1x1xi8>) -> vector
 
 // -----
 
-// CHECK-LABEL: negative_broadcast_transpose_square
-//  CHECK-SAME:  %[[ARG:.*]]:
-//       CHECK:  %[[BCT:.*]] = vector.broadcast %[[ARG]]
-//       CHECK:  %[[TRP:.*]] = vector.transpose %[[BCT]], [1, 0]
-//       CHECK:  return %[[TRP]] : vector<4x4xi8>
-func.func @negative_broadcast_transpose_square(%arg0 : vector<4x1xi8>) -> vector<4x4xi8> {
+// CHECK-LABEL:   func.func @broadcast_transpose_shapecast(
+// CHECK-SAME:      %[[ARG0:.*]]: vector<2xf32>) -> vector<2x32xf32> {
+// CHECK:           %[[VAL_0:.*]] = vector.shape_cast %[[ARG0]] : vector<2xf32> to vector<2x1xf32>
+// CHECK:           %[[VAL_1:.*]] = vector.broadcast %[[VAL_0]] : vector<2x1xf32> to vector<2x32xf32>
+// CHECK:           return %[[VAL_1]] : vector<2x32xf32>
+// CHECK:         }
+func.func @broadcast_transpose_shapecast(%arg0 : vector<2xf32>) -> vector<2x32xf32> {
+  %b = vector.broadcast %arg0 : vector<2xf32> to vector<32x2xf32>
+  %t = vector.transpose %b, [1, 0] : vector<32x2xf32> to vector<2x32xf32>
+  return %t : vector<2x32xf32>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @broadcast_transpose_shapecast_square(
+// CHECK-SAME:      %[[ARG0:.*]]: vector<4x1xi8>) -> vector<4x4xi8> {
+// CHECK:           %[[VAL_0:.*]] = vector.shape_cast %[[ARG0]] : vector<4x1xi8> to vector<1x4xi8>
+// CHECK:           %[[VAL_1:.*]] = vector.broadcast %[[VAL_0]] : vector<1x4xi8> to vector<4x4xi8>
+// CHECK:           return %[[VAL_1]] : vector<4x4xi8>
+// CHECK:         }
+func.func @broadcast_transpose_shapecast_square(%arg0 : vector<4x1xi8>) -> vector<4x4xi8> {
   %0 = vector.broadcast %arg0 : vector<4x1xi8> to vector<4x4xi8>
   %1 = vector.transpose %0, [1, 0] : vector<4x4xi8> to vector<4x4xi8>
   return %1 : vector<4x4xi8>
@@ -104,12 +119,13 @@ func.func @negative_broadcast_transpose_square(%arg0 : vector<4x1xi8>) -> vector
 
 // -----
 
-// CHECK-LABEL: negative_broadcast_transpose_hypercube
-//  CHECK-SAME:  %[[ARG:.*]]:
-//       CHECK:  %[[BCT:.*]] = vector.broadcast %[[ARG]]
-//       CHECK:  %[[TRP:.*]] = vector.transpose %[[BCT]], [1, 0, 3, 2]
-//       CHECK:  return %[[TRP]] : vector<4x4x4x4xi8>
-func.func @negative_broadcast_transpose_hypercube(%arg0 : vector<1x1x4xi8>) -> vector<4x4x4x4xi8> {
+// CHECK-LABEL:   func.func @broadcast_transpose_shapecast_hypercube(
+// CHECK-SAME:      %[[ARG0:.*]]: vector<1x1x4xi8>) -> vector<4x4x4x4xi8> {
+// CHECK:           %[[VAL_0:.*]] = vector.shape_cast %[[ARG0]] : vector<1x1x4xi8> to vector<1x1x4x1xi8>
+// CHECK:           %[[VAL_1:.*]] = vector.broadcast %[[VAL_0]] : vector<1x1x4x1xi8> to vector<4x4x4x4xi8>
+// CHECK:           return %[[VAL_1]] : vector<4x4x4x4xi8>
+// CHECK:         }
+func.func @broadcast_transpose_shapecast_hypercube(%arg0 : vector<1x1x4xi8>) -> vector<4x4x4x4xi8> {
   %0 = vector.broadcast %arg0 : vector<1x1x4xi8> to vector<4x4x4x4xi8>
   %1 = vector.transpose %0, [1, 0, 3, 2] : vector<4x4x4x4xi8> to vector<4x4x4x4xi8>
   return %1 : vector<4x4x4x4xi8>
@@ -117,12 +133,13 @@ func.func @negative_broadcast_transpose_hypercube(%arg0 : vector<1x1x4xi8>) -> v
 
 // -----
 
-// CHECK-LABEL: negative_broadcast_transpose_102
-//  CHECK-SAME:  %[[ARG:.*]]:
-//       CHECK:  %[[BCT:.*]] = vector.broadcast %[[ARG]]
-//       CHECK:  %[[TRP:.*]] = vector.transpose %[[BCT]], [1, 0, 2]
-//       CHECK:  return %[[TRP]] : vector<3x3x3xi8>
-func.func @negative_broadcast_transpose_102(%arg0 : vector<3x1x3xi8>) -> vector<3x3x3xi8> {
+// CHECK-LABEL:   func.func @broadcast_transpose_shapecast_102(
+// CHECK-SAME:      %[[ARG0:.*]]: vector<3x1x3xi8>) -> vector<3x3x3xi8> {
+// CHECK:           %[[VAL_0:.*]] = vector.shape_cast %[[ARG0]] : vector<3x1x3xi8> to vector<1x3x3xi8>
+// CHECK:           %[[VAL_1:.*]] = vector.broadcast %[[VAL_0]] : vector<1x3x3xi8> to vector<3x3x3xi8>
+// CHECK:           return %[[VAL_1]] : vector<3x3x3xi8>
+// CHECK:         }
+func.func @broadcast_transpose_shapecast_102(%arg0 : vector<3x1x3xi8>) -> vector<3x3x3xi8> {
   %0 = vector.broadcast %arg0 : vector<3x1x3xi8> to vector<3x3x3xi8>
   %1 = vector.transpose %0, [1, 0, 2] : vector<3x3x3xi8> to vector<3x3x3xi8>
   return %1 : vector<3x3x3xi8>
@@ -130,15 +147,58 @@ func.func @negative_broadcast_transpose_102(%arg0 : vector<3x1x3xi8>) -> vector<
 
 // -----
 
-// CHECK-LABEL: negative_broadcast_transpose_021
-//  CHECK-SAME:  %[[ARG:.*]]:
-//       CHECK:  %[[BCT:.*]] = vector.broadcast %[[ARG]]
-//       CHECK:  %[[TRP:.*]] = vector.transpose %[[BCT]], [0, 2, 1]
-//       CHECK:  return %[[TRP]] : vector<3x3x3xi8>
-func.func @negative_broadcast_transpose_021(%arg0 : vector<3x1x3xi8>) -> vector<3x3x3xi8> {
+// CHECK-LABEL:   func.func @broadcast_transpose_shapecast_021(
+// CHECK-SAME:      %[[ARG0:.*]]: vector<3x1x3xi8>) -> vector<3x3x3xi8> {
+// CHECK:           %[[VAL_0:.*]] = vector.shape_cast %[[ARG0]] : vector<3x1x3xi8> to vector<3x3x1xi8>
+// CHECK:           %[[VAL_1:.*]] = vector.broadcast %[[VAL_0]] : vector<3x3x1xi8> to vector<3x3x3xi8>
+// CHECK:           return %[[VAL_1]] : vector<3x3x3xi8>
+// CHECK:         }
+func.func @broadcast_transpose_shapecast_021(%arg0 : vector<3x1x3xi8>) -> vector<3x3x3xi8> {
   %0 = vector.broadcast %arg0 : vector<3x1x3xi8> to vector<3x3x3xi8>
   %1 = vector.transpose %0, [0, 2, 1] : vector<3x3x3xi8> to vector<3x3x3xi8>
   return %1 : vector<3x3x3xi8>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @broadcast_transpose_shapecast_210(
+// CHECK-SAME:      %[[ARG0:.*]]: vector<1x2xf32>) -> vector<2x1x32xf32> {
+// CHECK:           %[[VAL_0:.*]] = vector.shape_cast %[[ARG0]] : vector<1x2xf32> to vector<2x1x1xf32>
+// CHECK:           %[[VAL_1:.*]] = vector.broadcast %[[VAL_0]] : vector<2x1x1xf32> to vector<2x1x32xf32>
+// CHECK:           return %[[VAL_1]] : vector<2x1x32xf32>
+// CHECK:         }
+func.func @broadcast_transpose_shapecast_210(%arg0 : vector<1x2xf32>) -> vector<2x1x32xf32> {
+  %b = vector.broadcast %arg0 : vector<1x2xf32> to vector<32x1x2xf32>
+  %t = vector.transpose %b, [2, 1, 0] : vector<32x1x2xf32> to vector<2x1x32xf32>
+  return %t : vector<2x1x32xf32>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @broadcast_transpose_shapecast_tail_unit_dim(
+// CHECK-SAME:      %[[ARG0:.*]]: vector<2x1xf32>) -> vector<2x32x1xf32> {
+// CHECK:           %[[VAL_0:.*]] = vector.shape_cast %[[ARG0]] : vector<2x1xf32> to vector<2x1x1xf32>
+// CHECK:           %[[VAL_1:.*]] = vector.broadcast %[[VAL_0]] : vector<2x1x1xf32> to vector<2x32x1xf32>
+// CHECK:           return %[[VAL_1]] : vector<2x32x1xf32>
+// CHECK:         }
+func.func @broadcast_transpose_shapecast_tail_unit_dim(%arg0 : vector<2x1xf32>) -> vector<2x32x1xf32> {
+  %b = vector.broadcast %arg0 : vector<2x1xf32> to vector<32x2x1xf32>
+  %t = vector.transpose %b, [1, 0, 2] : vector<32x2x1xf32> to vector<2x32x1xf32>
+  return %t : vector<2x32x1xf32>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @negative_broadcast_transpose_shapecast_not_order_preserving(
+// CHECK-SAME:      %[[ARG0:.*]]: vector<14x7xf32>) -> vector<7x14x8x16xf32> {
+// CHECK:           %[[VAL_0:.*]] = vector.broadcast %[[ARG0]] : vector<14x7xf32> to vector<8x16x14x7xf32>
+// CHECK:           %[[VAL_1:.*]] = vector.transpose %[[VAL_0]], [3, 2, 0, 1] : vector<8x16x14x7xf32> to vector<7x14x8x16xf32>
+// CHECK:           return %[[VAL_1]] : vector<7x14x8x16xf32>
+// CHECK:         }
+func.func @negative_broadcast_transpose_shapecast_not_order_preserving(%arg0 : vector<14x7xf32>) -> vector<7x14x8x16xf32> {
+  %b = vector.broadcast %arg0 : vector<14x7xf32> to vector<8x16x14x7xf32>
+  %t = vector.transpose %b, [3, 2, 0, 1] : vector<8x16x14x7xf32> to vector<7x14x8x16xf32>
+  return %t : vector<7x14x8x16xf32>
 }
 
 // -----
