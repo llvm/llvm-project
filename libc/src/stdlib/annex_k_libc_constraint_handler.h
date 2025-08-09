@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_ANNEX_K_LIBC_CONSTRAINT_HANDLER_H
-#define LLVM_LIBC_SRC___SUPPORT_ANNEX_K_LIBC_CONSTRAINT_HANDLER_H
+#ifndef LLVM_LIBC_SRC_STDLIB_ANNEX_K_LIBC_CONSTRAINT_HANDLER_H
+#define LLVM_LIBC_SRC_STDLIB_ANNEX_K_LIBC_CONSTRAINT_HANDLER_H
 
 #include "hdr/types/constraint_handler_t.h"
 #include "src/__support/common.h"
@@ -20,4 +20,4 @@ LIBC_INLINE static constraint_handler_t libc_constraint_handler =
 
 }
 
-#endif // LLVM_LIBC_SRC___SUPPORT_ANNEX_K_LIBC_CONSTRAINT_HANDLER_H
+#endif // LLVM_LIBC_SRC_STDLIB_ANNEX_K_LIBC_CONSTRAINT_HANDLER_H

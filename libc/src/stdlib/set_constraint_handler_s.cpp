@@ -8,7 +8,7 @@
 
 #include "set_constraint_handler_s.h"
 #include "abort_handler_s.h"
-#include "src/__support/annex_k/libc_constraint_handler.h"
+#include "annex_k_libc_constraint_handler.h"
 #include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE_DECL {

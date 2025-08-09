@@ -176,7 +176,7 @@ add_generic_entrypoint_object(
   DEPENDS
     libc.src.stdio.fopen
     libc.src.__support.macros.config
-    libc.src.__support.annex_k.helper_macros
+    libc.src.stdlib.annex_k_helper_macros
 )
 
 add_generic_entrypoint_object(

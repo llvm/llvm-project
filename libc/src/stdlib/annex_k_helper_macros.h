@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_ANNEX_K_HELPER_MACROS_H
-#define LLVM_LIBC_SRC___SUPPORT_ANNEX_K_HELPER_MACROS_H
+#ifndef LLVM_LIBC_SRC_STDLIB_ANNEX_K_HELPER_MACROS_H
+#define LLVM_LIBC_SRC_STDLIB_ANNEX_K_HELPER_MACROS_H
 
-#include "libc_constraint_handler.h"
+#include "annex_k_libc_constraint_handler.h"
 #include "src/__support/libc_errno.h"
 
 #define _CONSTRAINT_VIOLATION(msg, error_code, ret_code)                       \
@@ -41,4 +41,4 @@
     }                                                                          \
   }
 
-#endif // LLVM_LIBC_SRC___SUPPORT_ANNEX_K_HELPER_MACROS_H
+#endif // LLVM_LIBC_SRC_STDLIB_ANNEX_K_HELPER_MACROS_H

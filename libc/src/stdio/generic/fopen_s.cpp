@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/fopen_s.h"
-#include "src/__support/annex_k/helper_macros.h"
 #include "src/__support/macros/config.h"
 #include "src/stdio/fopen.h"
+#include "src/stdlib/annex_k_helper_macros.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
