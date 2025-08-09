@@ -3530,9 +3530,10 @@ void FunctionStackPoisoner::processStaticAllocas() {
   auto DescriptionString = ComputeASanStackFrameDescription(SVD);
   LLVM_DEBUG(dbgs() << DescriptionString << " --- " << L.FrameSize << "\n");
   uint64_t LocalStackSize = L.FrameSize;
-  // In rare cases, a frame may have small objects with significant alignment
-  // needs. Placing the frame into a small fake stack frame would not meet
-  // the alignment needs.
+  // Fake stack frames only guarantee alignment of the frame size.
+  // In rare cases, where a frame has small objects with significant alignment
+  // needs, we need to place it in a frame that is at least as large as the
+  // required frame alignment.
   uint64_t AlignedLocalStackSize = std::max(L.FrameSize, L.FrameAlignment);
   bool DoStackMalloc =
       ASan.UseAfterReturn != AsanDetectStackUseAfterReturnMode::Never &&
