@@ -200,6 +200,8 @@ struct MissingFeatures {
   static bool deferredCXXGlobalInit() { return false; }
   static bool ehCleanupFlags() { return false; }
   static bool ehCleanupScope() { return false; }
+  static bool ehCleanupScopeRequiresEHCleanup() { return false; }
+  static bool ehCleanupBranchFixups() { return false; }
   static bool ehstackBranches() { return false; }
   static bool emitCheckedInBoundsGEP() { return false; }
   static bool emitCondLikelihoodViaExpectIntrinsic() { return false; }
