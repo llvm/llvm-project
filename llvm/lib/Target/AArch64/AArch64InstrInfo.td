@@ -6068,6 +6068,7 @@ defm MLA      : SIMDThreeSameVectorBHSTied<0, 0b10010, "mla", null_frag>;
 defm MLS      : SIMDThreeSameVectorBHSTied<1, 0b10010, "mls", null_frag>;
 
 defm MUL      : SIMDThreeSameVectorBHS<0, 0b10011, "mul", mul>;
+let isCommutable = 1 in
 defm PMUL     : SIMDThreeSameVectorB<1, 0b10011, "pmul", int_aarch64_neon_pmul>;
 defm SABA     : SIMDThreeSameVectorBHSTied<0, 0b01111, "saba",
       TriOpFrag<(add node:$LHS, (abds node:$MHS, node:$RHS))> >;
@@ -6819,6 +6820,7 @@ defm ADDHN  : SIMDNarrowThreeVectorBHS<0,0b0100,"addhn", int_aarch64_neon_addhn>
 defm SUBHN  : SIMDNarrowThreeVectorBHS<0,0b0110,"subhn", int_aarch64_neon_subhn>;
 defm RADDHN : SIMDNarrowThreeVectorBHS<1,0b0100,"raddhn",int_aarch64_neon_raddhn>;
 defm RSUBHN : SIMDNarrowThreeVectorBHS<1,0b0110,"rsubhn",int_aarch64_neon_rsubhn>;
+let isCommutable = 1 in
 defm PMULL  : SIMDDifferentThreeVectorBD<0,0b1110,"pmull", AArch64pmull>;
 defm SABAL  : SIMDLongThreeVectorTiedBHSabal<0,0b0101,"sabal", abds>;
 defm SABDL   : SIMDLongThreeVectorBHSabdl<0, 0b0111, "sabdl", abds>;
@@ -6835,6 +6837,7 @@ defm SQDMLAL : SIMDLongThreeVectorSQDMLXTiedHS<0, 0b1001, "sqdmlal", saddsat>;
 defm SQDMLSL : SIMDLongThreeVectorSQDMLXTiedHS<0, 0b1011, "sqdmlsl", ssubsat>;
 defm SQDMULL : SIMDLongThreeVectorHS<0, 0b1101, "sqdmull",
                                      int_aarch64_neon_sqdmull>;
+let isCommutable = 0 in
 defm SSUBL   : SIMDLongThreeVectorBHS<0, 0b0010, "ssubl",
                  BinOpFrag<(sub (sext node:$LHS), (sext node:$RHS))>>;
 defm SSUBW   : SIMDWideThreeVectorBHS<0, 0b0011, "ssubw",
@@ -6849,6 +6852,7 @@ defm UMLAL   : SIMDLongThreeVectorTiedBHS<1, 0b1000, "umlal",
 defm UMLSL   : SIMDLongThreeVectorTiedBHS<1, 0b1010, "umlsl",
     TriOpFrag<(sub node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
 defm UMULL   : SIMDLongThreeVectorBHS<1, 0b1100, "umull", AArch64umull>;
+let isCommutable = 0 in
 defm USUBL   : SIMDLongThreeVectorBHS<1, 0b0010, "usubl",
                  BinOpFrag<(sub (zanyext node:$LHS), (zanyext node:$RHS))>>;
 defm USUBW   : SIMDWideThreeVectorBHS<   1, 0b0011, "usubw",
