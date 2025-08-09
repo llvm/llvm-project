@@ -1466,15 +1466,19 @@ bool allowIndex(CodeCompletionContext &CC) {
   auto Scope = CC.getCXXScopeSpecifier();
   if (!Scope)
     return true;
+  NestedNameSpecifier *NameSpec = (*Scope)->getScopeRep();
+  if (!NameSpec)
+    return true;
   // We only query the index when qualifier is a namespace.
   // If it's a class, we rely solely on sema completions.
-  switch ((*Scope)->getScopeRep().getKind()) {
-  case NestedNameSpecifier::Kind::Null:
-  case NestedNameSpecifier::Kind::Global:
-  case NestedNameSpecifier::Kind::Namespace:
+  switch (NameSpec->getKind()) {
+  case NestedNameSpecifier::Global:
+  case NestedNameSpecifier::Namespace:
     return true;
-  case NestedNameSpecifier::Kind::MicrosoftSuper:
-  case NestedNameSpecifier::Kind::Type:
+  case NestedNameSpecifier::Super:
+  case NestedNameSpecifier::TypeSpec:
+  // Unresolved inside a template.
+  case NestedNameSpecifier::Identifier:
     return false;
   }
   llvm_unreachable("invalid NestedNameSpecifier kind");

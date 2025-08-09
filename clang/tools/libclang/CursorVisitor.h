@@ -255,12 +255,12 @@ public:
 
   // Name visitor
   bool VisitDeclarationNameInfo(DeclarationNameInfo Name);
+  bool VisitNestedNameSpecifier(NestedNameSpecifier *NNS, SourceRange Range);
   bool VisitNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS);
 
   // Template visitors
   bool VisitTemplateParameters(const TemplateParameterList *Params);
-  bool VisitTemplateName(TemplateName Name, SourceLocation NameLoc,
-                         NestedNameSpecifierLoc NNS);
+  bool VisitTemplateName(TemplateName Name, SourceLocation Loc);
   bool VisitTemplateArgumentLoc(const TemplateArgumentLoc &TAL);
 
   // Type visitors

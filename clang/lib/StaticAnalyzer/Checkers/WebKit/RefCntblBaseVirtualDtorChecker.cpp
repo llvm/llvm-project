@@ -113,6 +113,10 @@ public:
         auto CastType = Cast->getType();
         if (auto *PtrType = dyn_cast<PointerType>(CastType)) {
           auto PointeeType = PtrType->getPointeeType();
+          while (auto *ET = dyn_cast<ElaboratedType>(PointeeType)) {
+            if (ET->isSugared())
+              PointeeType = ET->desugar();
+          }
           if (auto *ParmType = dyn_cast<TemplateTypeParmType>(PointeeType)) {
             if (ArgList) {
               auto ParmIndex = ParmType->getIndex();
@@ -121,13 +125,13 @@ public:
                 return true;
             }
           } else if (auto *RD = dyn_cast<RecordType>(PointeeType)) {
-            if (declaresSameEntity(RD->getOriginalDecl(), ClassDecl))
+            if (RD->getDecl() == ClassDecl)
               return true;
           } else if (auto *ST =
                          dyn_cast<SubstTemplateTypeParmType>(PointeeType)) {
             auto Type = ST->getReplacementType();
             if (auto *RD = dyn_cast<RecordType>(Type)) {
-              if (declaresSameEntity(RD->getOriginalDecl(), ClassDecl))
+              if (RD->getDecl() == ClassDecl)
                 return true;
             }
           }

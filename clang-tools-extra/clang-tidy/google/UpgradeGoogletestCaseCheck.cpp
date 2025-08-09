@@ -257,13 +257,8 @@ getAliasNameRange(const MatchFinder::MatchResult &Result) {
     return CharSourceRange::getTokenRange(
         Using->getNameInfo().getSourceRange());
   }
-  TypeLoc TL = *Result.Nodes.getNodeAs<TypeLoc>("typeloc");
-  if (auto QTL = TL.getAs<QualifiedTypeLoc>())
-    TL = QTL.getUnqualifiedLoc();
-
-  if (auto TTL = TL.getAs<TypedefTypeLoc>())
-    return CharSourceRange::getTokenRange(TTL.getNameLoc());
-  return CharSourceRange::getTokenRange(TL.castAs<UsingTypeLoc>().getNameLoc());
+  return CharSourceRange::getTokenRange(
+      Result.Nodes.getNodeAs<TypeLoc>("typeloc")->getSourceRange());
 }
 
 void UpgradeGoogletestCaseCheck::check(const MatchFinder::MatchResult &Result) {

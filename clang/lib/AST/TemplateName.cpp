@@ -289,28 +289,8 @@ QualifiedTemplateName *TemplateName::getAsQualifiedTemplateName() const {
   return dyn_cast_if_present<QualifiedTemplateName *>(Storage);
 }
 
-QualifiedTemplateName *
-TemplateName::getAsAdjustedQualifiedTemplateName() const {
-  for (std::optional<TemplateName> Cur = *this; Cur;
-       Cur = Cur->desugar(/*IgnoreDeduced=*/true))
-    if (QualifiedTemplateName *N = Cur->getAsQualifiedTemplateName())
-      return N;
-  return nullptr;
-}
-
 DependentTemplateName *TemplateName::getAsDependentTemplateName() const {
   return Storage.dyn_cast<DependentTemplateName *>();
-}
-
-NestedNameSpecifier TemplateName::getQualifier() const {
-  for (std::optional<TemplateName> Cur = *this; Cur;
-       Cur = Cur->desugar(/*IgnoreDeduced=*/true)) {
-    if (DependentTemplateName *N = Cur->getAsDependentTemplateName())
-      return N->getQualifier();
-    if (QualifiedTemplateName *N = Cur->getAsQualifiedTemplateName())
-      return N->getQualifier();
-  }
-  return std::nullopt;
 }
 
 UsingShadowDecl *TemplateName::getAsUsingShadowDecl() const {
@@ -323,21 +303,24 @@ UsingShadowDecl *TemplateName::getAsUsingShadowDecl() const {
 }
 
 DependentTemplateStorage::DependentTemplateStorage(
-    NestedNameSpecifier Qualifier, IdentifierOrOverloadedOperator Name,
+    NestedNameSpecifier *Qualifier, IdentifierOrOverloadedOperator Name,
     bool HasTemplateKeyword)
     : Qualifier(Qualifier, HasTemplateKeyword), Name(Name) {
-  assert((!Qualifier || Qualifier.isDependent()) &&
+  assert((!Qualifier || Qualifier->isDependent()) &&
          "Qualifier must be dependent");
 }
 
 TemplateNameDependence DependentTemplateStorage::getDependence() const {
-  return toTemplateNameDependence(getQualifier().getDependence()) |
-         TemplateNameDependence::DependentInstantiation;
+  auto D = TemplateNameDependence::DependentInstantiation;
+  if (NestedNameSpecifier *Qualifier = getQualifier())
+    D |= toTemplateNameDependence(Qualifier->getDependence());
+  return D;
 }
 
 void DependentTemplateStorage::print(raw_ostream &OS,
                                      const PrintingPolicy &Policy) const {
-  getQualifier().print(OS, Policy);
+  if (NestedNameSpecifier *NNS = getQualifier())
+    NNS->print(OS, Policy);
 
   if (hasTemplateKeyword())
     OS << "template ";
@@ -380,13 +363,16 @@ TemplateNameDependence TemplateName::getDependence() const {
   case NameKind::QualifiedTemplate: {
     QualifiedTemplateName *S = getAsQualifiedTemplateName();
     TemplateNameDependence D = S->getUnderlyingTemplate().getDependence();
-    D |= toTemplateNameDependence(S->getQualifier().getDependence());
+    if (NestedNameSpecifier *NNS = S->getQualifier())
+      D |= toTemplateNameDependence(NNS->getDependence());
     return D;
   }
   case NameKind::DependentTemplate: {
     DependentTemplateName *S = getAsDependentTemplateName();
-    return toTemplateNameDependence(S->getQualifier().getDependence()) |
-           TemplateNameDependence::DependentInstantiation;
+    auto D = TemplateNameDependence::DependentInstantiation;
+    if (NestedNameSpecifier *Qualifier = S->getQualifier())
+      D |= toTemplateNameDependence(Qualifier->getDependence());
+    return D;
   }
   case NameKind::SubstTemplateTemplateParm: {
     auto *S = getAsSubstTemplateTemplateParm();
@@ -448,20 +434,18 @@ void TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
       Template = cast<TemplateDecl>(Template->getCanonicalDecl());
     if (handleAnonymousTTP(Template, OS))
       return;
-    if (Qual == Qualified::None || Policy.SuppressScope) {
+    if (Qual == Qualified::None)
       OS << *Template;
-    } else {
-      PrintingPolicy NestedNamePolicy = Policy;
-      NestedNamePolicy.SuppressUnwrittenScope = true;
-      Template->printQualifiedName(OS, NestedNamePolicy);
-    }
+    else
+      Template->printQualifiedName(OS, Policy);
   } else if (QualifiedTemplateName *QTN = getAsQualifiedTemplateName()) {
     if (Policy.PrintAsCanonical) {
       QTN->getUnderlyingTemplate().print(OS, Policy, Qual);
       return;
     }
-    if (Qual != Qualified::None)
-      QTN->getQualifier().print(OS, Policy);
+    if (NestedNameSpecifier *NNS = QTN->getQualifier();
+        Qual != Qualified::None && NNS)
+      NNS->print(OS, Policy);
     if (QTN->hasTemplateKeyword())
       OS << "template ";
 

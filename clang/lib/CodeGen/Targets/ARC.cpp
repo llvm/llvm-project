@@ -106,14 +106,13 @@ ABIArgInfo ARCABIInfo::classifyArgumentType(QualType Ty,
 
   // Treat an enum type as its underlying type.
   if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-    Ty = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+    Ty = EnumTy->getDecl()->getIntegerType();
 
   auto SizeInRegs = llvm::alignTo(getContext().getTypeSize(Ty), 32) / 32;
 
   if (isAggregateTypeForABI(Ty)) {
     // Structures with flexible arrays are always indirect.
-    if (RT &&
-        RT->getOriginalDecl()->getDefinitionOrSelf()->hasFlexibleArrayMember())
+    if (RT && RT->getDecl()->hasFlexibleArrayMember())
       return getIndirectByValue(Ty);
 
     // Ignore empty structs/unions.

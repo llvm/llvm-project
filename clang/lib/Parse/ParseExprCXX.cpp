@@ -195,10 +195,9 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     if (DS.getTypeSpecType() == DeclSpec::TST_error)
       return false;
 
-    QualType Pattern = Sema::GetTypeFromParser(DS.getRepAsType());
-    QualType Type =
-        Actions.ActOnPackIndexingType(Pattern, DS.getPackIndexingExpr(),
-                                      DS.getBeginLoc(), DS.getEllipsisLoc());
+    QualType Type = Actions.ActOnPackIndexingType(
+        DS.getRepAsType().get(), DS.getPackIndexingExpr(), DS.getBeginLoc(),
+        DS.getEllipsisLoc());
 
     if (Type.isNull())
       return false;
@@ -2356,10 +2355,8 @@ bool Parser::ParseUnqualifiedIdTemplateId(
 
   // Constructor and destructor names.
   TypeResult Type = Actions.ActOnTemplateIdType(
-      getCurScope(), ElaboratedTypeKeyword::None,
-      /*ElaboratedKeywordLoc=*/SourceLocation(), SS, TemplateKWLoc, Template,
-      Name, NameLoc, LAngleLoc, TemplateArgsPtr, RAngleLoc,
-      /*IsCtorOrDtorName=*/true);
+      getCurScope(), SS, TemplateKWLoc, Template, Name, NameLoc, LAngleLoc,
+      TemplateArgsPtr, RAngleLoc, /*IsCtorOrDtorName=*/true);
   if (Type.isInvalid())
     return true;
 

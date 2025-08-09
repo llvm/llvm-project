@@ -172,7 +172,6 @@ static void test_codegen_fns(MyASTConsumer *my) {
   bool mytest_struct_ok = false;
 
   CodeGen::CodeGenModule &CGM = my->Builder->CGM();
-  const ASTContext &Ctx = my->toplevel_decls.front()->getASTContext();
 
   for (auto decl : my->toplevel_decls ) {
     if (FunctionDecl *fd = dyn_cast<FunctionDecl>(decl)) {
@@ -190,7 +189,9 @@ static void test_codegen_fns(MyASTConsumer *my) {
       if (rd->getName() == "mytest_struct") {
         RecordDecl *def = rd->getDefinition();
         ASSERT_TRUE(def != NULL);
-        CanQualType qType = Ctx.getCanonicalTagType(rd);
+        const clang::Type *clangTy = rd->getCanonicalDecl()->getTypeForDecl();
+        ASSERT_TRUE(clangTy != NULL);
+        QualType qType = clangTy->getCanonicalTypeInternal();
 
         // Check convertTypeForMemory
         llvm::Type *llvmTy = CodeGen::convertTypeForMemory(CGM, qType);

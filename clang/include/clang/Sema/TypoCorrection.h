@@ -57,15 +57,15 @@ public:
   static const unsigned CallbackDistanceWeight = 150U;
 
   TypoCorrection(const DeclarationName &Name, NamedDecl *NameDecl,
-                 NestedNameSpecifier NNS = std::nullopt,
-                 unsigned CharDistance = 0, unsigned QualifierDistance = 0)
+                 NestedNameSpecifier *NNS = nullptr, unsigned CharDistance = 0,
+                 unsigned QualifierDistance = 0)
       : CorrectionName(Name), CorrectionNameSpec(NNS),
         CharDistance(CharDistance), QualifierDistance(QualifierDistance) {
     if (NameDecl)
       CorrectionDecls.push_back(NameDecl);
   }
 
-  TypoCorrection(NamedDecl *Name, NestedNameSpecifier NNS = std::nullopt,
+  TypoCorrection(NamedDecl *Name, NestedNameSpecifier *NNS = nullptr,
                  unsigned CharDistance = 0)
       : CorrectionName(Name->getDeclName()), CorrectionNameSpec(NNS),
         CharDistance(CharDistance) {
@@ -73,7 +73,7 @@ public:
       CorrectionDecls.push_back(Name);
   }
 
-  TypoCorrection(DeclarationName Name, NestedNameSpecifier NNS = std::nullopt,
+  TypoCorrection(DeclarationName Name, NestedNameSpecifier *NNS = nullptr,
                  unsigned CharDistance = 0)
       : CorrectionName(Name), CorrectionNameSpec(NNS),
         CharDistance(CharDistance) {}
@@ -88,13 +88,13 @@ public:
   }
 
   /// Gets the NestedNameSpecifier needed to use the typo correction
-  NestedNameSpecifier getCorrectionSpecifier() const {
+  NestedNameSpecifier *getCorrectionSpecifier() const {
     return CorrectionNameSpec;
   }
 
-  void setCorrectionSpecifier(NestedNameSpecifier NNS) {
+  void setCorrectionSpecifier(NestedNameSpecifier *NNS) {
     CorrectionNameSpec = NNS;
-    ForceSpecifierReplacement = !!NNS;
+    ForceSpecifierReplacement = (NNS != nullptr);
   }
 
   void WillReplaceSpecifier(bool ForceReplacement) {
@@ -264,7 +264,7 @@ private:
 
   // Results.
   DeclarationName CorrectionName;
-  NestedNameSpecifier CorrectionNameSpec = std::nullopt;
+  NestedNameSpecifier *CorrectionNameSpec = nullptr;
   SmallVector<NamedDecl *, 1> CorrectionDecls;
   unsigned CharDistance = 0;
   unsigned QualifierDistance = 0;
@@ -282,9 +282,8 @@ class CorrectionCandidateCallback {
 public:
   static const unsigned InvalidDistance = TypoCorrection::InvalidDistance;
 
-  explicit CorrectionCandidateCallback(
-      const IdentifierInfo *Typo = nullptr,
-      NestedNameSpecifier TypoNNS = std::nullopt)
+  explicit CorrectionCandidateCallback(const IdentifierInfo *Typo = nullptr,
+                                       NestedNameSpecifier *TypoNNS = nullptr)
       : Typo(Typo), TypoNNS(TypoNNS) {}
 
   virtual ~CorrectionCandidateCallback() = default;
@@ -321,7 +320,7 @@ public:
   virtual std::unique_ptr<CorrectionCandidateCallback> clone() = 0;
 
   void setTypoName(const IdentifierInfo *II) { Typo = II; }
-  void setTypoNNS(NestedNameSpecifier NNS) { TypoNNS = NNS; }
+  void setTypoNNS(NestedNameSpecifier *NNS) { TypoNNS = NNS; }
 
   // Flags for context-dependent keywords. WantFunctionLikeCasts is only
   // used/meaningful when WantCXXNamedCasts is false.
@@ -347,13 +346,13 @@ protected:
   }
 
   const IdentifierInfo *Typo;
-  NestedNameSpecifier TypoNNS;
+  NestedNameSpecifier *TypoNNS;
 };
 
 class DefaultFilterCCC final : public CorrectionCandidateCallback {
 public:
   explicit DefaultFilterCCC(const IdentifierInfo *Typo = nullptr,
-                            NestedNameSpecifier TypoNNS = std::nullopt)
+                            NestedNameSpecifier *TypoNNS = nullptr)
       : CorrectionCandidateCallback(Typo, TypoNNS) {}
 
   std::unique_ptr<CorrectionCandidateCallback> clone() override {
@@ -367,7 +366,7 @@ template <class C>
 class DeclFilterCCC final : public CorrectionCandidateCallback {
 public:
   explicit DeclFilterCCC(const IdentifierInfo *Typo = nullptr,
-                         NestedNameSpecifier TypoNNS = std::nullopt)
+                         NestedNameSpecifier *TypoNNS = nullptr)
       : CorrectionCandidateCallback(Typo, TypoNNS) {}
 
   bool ValidateCandidate(const TypoCorrection &candidate) override {

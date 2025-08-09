@@ -124,8 +124,7 @@ bool isTriviallyDefaultConstructible(QualType Type, const ASTContext &Context) {
     return true;
 
   if (const auto *RT = CanonicalType->getAs<RecordType>()) {
-    return recordIsTriviallyDefaultConstructible(
-        *RT->getOriginalDecl()->getDefinitionOrSelf(), Context);
+    return recordIsTriviallyDefaultConstructible(*RT->getDecl(), Context);
   }
 
   // No other types can match.

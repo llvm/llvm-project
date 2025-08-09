@@ -454,7 +454,10 @@ void StmtPrinter::VisitMSDependentExistsStmt(MSDependentExistsStmt *Node) {
   else
     OS << "__if_not_exists (";
 
-  Node->getQualifierLoc().getNestedNameSpecifier().print(OS, Policy);
+  if (NestedNameSpecifier *Qualifier
+        = Node->getQualifierLoc().getNestedNameSpecifier())
+    Qualifier->print(OS, Policy);
+
   OS << Node->getNameInfo() << ") ";
 
   PrintRawCompoundStmt(Node->getSubStmt());
@@ -1306,7 +1309,8 @@ void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
     TPOD->printAsExpr(OS, Policy);
     return;
   }
-  Node->getQualifier().print(OS, Policy);
+  if (NestedNameSpecifier *Qualifier = Node->getQualifier())
+    Qualifier->print(OS, Policy);
   if (Node->hasTemplateKeyword())
     OS << "template ";
 
@@ -1355,7 +1359,8 @@ void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
 
 void StmtPrinter::VisitDependentScopeDeclRefExpr(
                                            DependentScopeDeclRefExpr *Node) {
-  Node->getQualifier().print(OS, Policy);
+  if (NestedNameSpecifier *Qualifier = Node->getQualifier())
+    Qualifier->print(OS, Policy);
   if (Node->hasTemplateKeyword())
     OS << "template ";
   OS << Node->getNameInfo();
@@ -1364,7 +1369,8 @@ void StmtPrinter::VisitDependentScopeDeclRefExpr(
 }
 
 void StmtPrinter::VisitUnresolvedLookupExpr(UnresolvedLookupExpr *Node) {
-  Node->getQualifier().print(OS, Policy);
+  if (Node->getQualifier())
+    Node->getQualifier()->print(OS, Policy);
   if (Node->hasTemplateKeyword())
     OS << "template ";
   OS << Node->getNameInfo();
@@ -1772,7 +1778,8 @@ void StmtPrinter::VisitMemberExpr(MemberExpr *Node) {
     if (FD->isAnonymousStructOrUnion())
       return;
 
-  Node->getQualifier().print(OS, Policy);
+  if (NestedNameSpecifier *Qualifier = Node->getQualifier())
+    Qualifier->print(OS, Policy);
   if (Node->hasTemplateKeyword())
     OS << "template ";
   OS << Node->getMemberNameInfo();
@@ -2170,7 +2177,9 @@ void StmtPrinter::VisitMSPropertyRefExpr(MSPropertyRefExpr *Node) {
     OS << "->";
   else
     OS << ".";
-  Node->getQualifierLoc().getNestedNameSpecifier().print(OS, Policy);
+  if (NestedNameSpecifier *Qualifier =
+      Node->getQualifierLoc().getNestedNameSpecifier())
+    Qualifier->print(OS, Policy);
   OS << Node->getPropertyDecl()->getDeclName();
 }
 
@@ -2500,7 +2509,8 @@ void StmtPrinter::VisitCXXPseudoDestructorExpr(CXXPseudoDestructorExpr *E) {
     OS << "->";
   else
     OS << '.';
-  E->getQualifier().print(OS, Policy);
+  if (E->getQualifier())
+    E->getQualifier()->print(OS, Policy);
   OS << "~";
 
   if (const IdentifierInfo *II = E->getDestroyedTypeIdentifier())
@@ -2562,7 +2572,8 @@ void StmtPrinter::VisitCXXDependentScopeMemberExpr(
     PrintExpr(Node->getBase());
     OS << (Node->isArrow() ? "->" : ".");
   }
-  Node->getQualifier().print(OS, Policy);
+  if (NestedNameSpecifier *Qualifier = Node->getQualifier())
+    Qualifier->print(OS, Policy);
   if (Node->hasTemplateKeyword())
     OS << "template ";
   OS << Node->getMemberNameInfo();
@@ -2575,7 +2586,8 @@ void StmtPrinter::VisitUnresolvedMemberExpr(UnresolvedMemberExpr *Node) {
     PrintExpr(Node->getBase());
     OS << (Node->isArrow() ? "->" : ".");
   }
-  Node->getQualifier().print(OS, Policy);
+  if (NestedNameSpecifier *Qualifier = Node->getQualifier())
+    Qualifier->print(OS, Policy);
   if (Node->hasTemplateKeyword())
     OS << "template ";
   OS << Node->getMemberNameInfo();
@@ -2666,7 +2678,8 @@ void StmtPrinter::VisitCXXParenListInitExpr(CXXParenListInitExpr *Node) {
 
 void StmtPrinter::VisitConceptSpecializationExpr(ConceptSpecializationExpr *E) {
   NestedNameSpecifierLoc NNS = E->getNestedNameSpecifierLoc();
-  NNS.getNestedNameSpecifier().print(OS, Policy);
+  if (NNS)
+    NNS.getNestedNameSpecifier()->print(OS, Policy);
   if (E->getTemplateKWLoc().isValid())
     OS << "template ";
   OS << E->getFoundDecl()->getName();

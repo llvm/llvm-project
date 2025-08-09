@@ -438,12 +438,10 @@ private:
         DeclNode, DeclNode, [&] { return VisitorBase::TraverseDecl(DeclNode); },
         &Map.PointerParents);
   }
-  bool TraverseTypeLoc(TypeLoc TypeLocNode, bool TraverseQualifier = true) {
+  bool TraverseTypeLoc(TypeLoc TypeLocNode) {
     return TraverseNode(
         TypeLocNode, DynTypedNode::create(TypeLocNode),
-        [&] {
-          return VisitorBase::TraverseTypeLoc(TypeLocNode, TraverseQualifier);
-        },
+        [&] { return VisitorBase::TraverseTypeLoc(TypeLocNode); },
         &Map.OtherParents);
   }
   bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNSLocNode) {

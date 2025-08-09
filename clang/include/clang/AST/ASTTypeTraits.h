@@ -307,7 +307,7 @@ public:
 
   /// For nodes which represent textual entities in the source code,
   /// return their SourceRange.  For all other nodes, return SourceRange().
-  SourceRange getSourceRange(bool IncludeQualifier = false) const;
+  SourceRange getSourceRange() const;
 
   /// @{
   /// Imposes an order on \c DynTypedNode.
@@ -336,9 +336,9 @@ public:
             NodeKind)) {
       auto NNSLA = getUnchecked<NestedNameSpecifierLoc>();
       auto NNSLB = Other.getUnchecked<NestedNameSpecifierLoc>();
-      return std::make_pair(NNSLA.getNestedNameSpecifier().getAsVoidPointer(),
+      return std::make_pair(NNSLA.getNestedNameSpecifier(),
                             NNSLA.getOpaqueData()) <
-             std::make_pair(NNSLB.getNestedNameSpecifier().getAsVoidPointer(),
+             std::make_pair(NNSLB.getNestedNameSpecifier(),
                             NNSLB.getOpaqueData());
     }
 
@@ -393,9 +393,8 @@ public:
       if (ASTNodeKind::getFromNodeKind<NestedNameSpecifierLoc>().isSame(
               Val.NodeKind)) {
         auto NNSL = Val.getUnchecked<NestedNameSpecifierLoc>();
-        return llvm::hash_combine(
-            NNSL.getNestedNameSpecifier().getAsVoidPointer(),
-            NNSL.getOpaqueData());
+        return llvm::hash_combine(NNSL.getNestedNameSpecifier(),
+                                  NNSL.getOpaqueData());
       }
 
       assert(Val.getMemoizationData());
@@ -540,8 +539,8 @@ struct DynTypedNode::BaseConverter<
     : public DynCastPtrConverter<T, Attr> {};
 
 template <>
-struct DynTypedNode::BaseConverter<NestedNameSpecifier, void>
-    : public ValueConverter<NestedNameSpecifier> {};
+struct DynTypedNode::BaseConverter<
+    NestedNameSpecifier, void> : public PtrConverter<NestedNameSpecifier> {};
 
 template <>
 struct DynTypedNode::BaseConverter<

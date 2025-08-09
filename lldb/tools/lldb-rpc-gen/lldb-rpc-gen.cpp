@@ -121,10 +121,11 @@ private:
   ///   - Certain inconvenient classes
   ///   - Records without definitions (forward declarations)
   bool ShouldSkipRecord(CXXRecordDecl *Decl) {
+    const Type *DeclType = Decl->getTypeForDecl();
+    QualType CanonicalType = DeclType->getCanonicalTypeInternal();
     return !Manager.isInMainFile(Decl->getBeginLoc()) ||
            !Decl->hasDefinition() || Decl->getDefinition() != Decl ||
-           lldb_rpc_gen::TypeIsDisallowedClass(
-               Context.getCanonicalTagType(Decl));
+           lldb_rpc_gen::TypeIsDisallowedClass(CanonicalType);
   }
 
   /// Check the support level for a type

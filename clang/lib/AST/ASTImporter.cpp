@@ -949,10 +949,8 @@ ASTNodeImporter::import(const TemplateArgumentLoc &TALoc) {
     else
       return TSIOrErr.takeError();
   } else {
-    auto ToTemplateKWLocOrErr = import(FromInfo.getTemplateKwLoc());
-    if (!ToTemplateKWLocOrErr)
-      return ToTemplateKWLocOrErr.takeError();
-    auto ToTemplateQualifierLocOrErr = import(TALoc.getTemplateQualifierLoc());
+    auto ToTemplateQualifierLocOrErr =
+        import(FromInfo.getTemplateQualifierLoc());
     if (!ToTemplateQualifierLocOrErr)
       return ToTemplateQualifierLocOrErr.takeError();
     auto ToTemplateNameLocOrErr = import(FromInfo.getTemplateNameLoc());
@@ -963,9 +961,8 @@ ASTNodeImporter::import(const TemplateArgumentLoc &TALoc) {
     if (!ToTemplateEllipsisLocOrErr)
       return ToTemplateEllipsisLocOrErr.takeError();
     ToInfo = TemplateArgumentLocInfo(
-        Importer.getToContext(), *ToTemplateKWLocOrErr,
-        *ToTemplateQualifierLocOrErr, *ToTemplateNameLocOrErr,
-        *ToTemplateEllipsisLocOrErr);
+        Importer.getToContext(), *ToTemplateQualifierLocOrErr,
+        *ToTemplateNameLocOrErr, *ToTemplateEllipsisLocOrErr);
   }
 
   return TemplateArgumentLoc(Arg, ToInfo);
@@ -1600,15 +1597,13 @@ ASTNodeImporter::VisitFunctionProtoType(const FunctionProtoType *T) {
 ExpectedType ASTNodeImporter::VisitUnresolvedUsingType(
     const UnresolvedUsingType *T) {
   Error Err = Error::success();
-  auto ToQualifier = importChecked(Err, T->getQualifier());
-  auto *ToD = importChecked(Err, T->getDecl());
+  auto ToD = importChecked(Err, T->getDecl());
+  auto ToPrevD = importChecked(Err, T->getDecl()->getPreviousDecl());
   if (Err)
     return std::move(Err);
 
-  if (T->isCanonicalUnqualified())
-    return Importer.getToContext().getCanonicalUnresolvedUsingType(ToD);
-  return Importer.getToContext().getUnresolvedUsingType(T->getKeyword(),
-                                                        ToQualifier, ToD);
+  return Importer.getToContext().getTypeDeclType(
+      ToD, cast_or_null<TypeDecl>(ToPrevD));
 }
 
 ExpectedType ASTNodeImporter::VisitParenType(const ParenType *T) {
@@ -1636,17 +1631,15 @@ ExpectedType ASTNodeImporter::VisitTypedefType(const TypedefType *T) {
   if (!ToDeclOrErr)
     return ToDeclOrErr.takeError();
 
-  auto ToQualifierOrErr = import(T->getQualifier());
-  if (!ToQualifierOrErr)
-    return ToQualifierOrErr.takeError();
+  TypedefNameDecl *ToDecl = *ToDeclOrErr;
+  if (ToDecl->getTypeForDecl())
+    return QualType(ToDecl->getTypeForDecl(), 0);
 
-  ExpectedType ToUnderlyingTypeOrErr =
-      T->typeMatchesDecl() ? QualType() : import(T->desugar());
+  ExpectedType ToUnderlyingTypeOrErr = import(T->desugar());
   if (!ToUnderlyingTypeOrErr)
     return ToUnderlyingTypeOrErr.takeError();
 
-  return Importer.getToContext().getTypedefType(
-      T->getKeyword(), *ToQualifierOrErr, *ToDeclOrErr, *ToUnderlyingTypeOrErr);
+  return Importer.getToContext().getTypedefType(ToDecl, *ToUnderlyingTypeOrErr);
 }
 
 ExpectedType ASTNodeImporter::VisitTypeOfExprType(const TypeOfExprType *T) {
@@ -1665,14 +1658,14 @@ ExpectedType ASTNodeImporter::VisitTypeOfType(const TypeOfType *T) {
 }
 
 ExpectedType ASTNodeImporter::VisitUsingType(const UsingType *T) {
-  Error Err = Error::success();
-  auto ToQualifier = importChecked(Err, T->getQualifier());
-  auto *ToD = importChecked(Err, T->getDecl());
-  QualType ToT = importChecked(Err, T->desugar());
-  if (Err)
-    return std::move(Err);
-  return Importer.getToContext().getUsingType(T->getKeyword(), ToQualifier, ToD,
-                                              ToT);
+  Expected<UsingShadowDecl *> FoundOrErr = import(T->getFoundDecl());
+  if (!FoundOrErr)
+    return FoundOrErr.takeError();
+  Expected<QualType> UnderlyingOrErr = import(T->getUnderlyingType());
+  if (!UnderlyingOrErr)
+    return UnderlyingOrErr.takeError();
+
+  return Importer.getToContext().getUsingType(*FoundOrErr, *UnderlyingOrErr);
 }
 
 ExpectedType ASTNodeImporter::VisitDecltypeType(const DecltypeType *T) {
@@ -1735,37 +1728,36 @@ ExpectedType ASTNodeImporter::VisitDeducedTemplateSpecializationType(
     return ToDeducedTypeOrErr.takeError();
 
   return Importer.getToContext().getDeducedTemplateSpecializationType(
-      T->getKeyword(), *ToTemplateNameOrErr, *ToDeducedTypeOrErr,
-      T->isDependentType());
+      *ToTemplateNameOrErr, *ToDeducedTypeOrErr, T->isDependentType());
 }
 
-ExpectedType ASTNodeImporter::VisitTagType(const TagType *T) {
-  Expected<TagDecl *> ToDeclOrErr = import(T->getOriginalDecl());
+ExpectedType ASTNodeImporter::VisitInjectedClassNameType(
+    const InjectedClassNameType *T) {
+  Expected<CXXRecordDecl *> ToDeclOrErr = import(T->getDecl());
   if (!ToDeclOrErr)
     return ToDeclOrErr.takeError();
 
-  if (T->isCanonicalUnqualified())
-    return Importer.getToContext().getCanonicalTagType(*ToDeclOrErr);
-
-  auto ToQualifierOrErr = import(T->getQualifier());
-  if (!ToQualifierOrErr)
-    return ToQualifierOrErr.takeError();
-
-  return Importer.getToContext().getTagType(T->getKeyword(), *ToQualifierOrErr,
-                                            *ToDeclOrErr, T->isTagOwned());
-}
-
-ExpectedType ASTNodeImporter::VisitEnumType(const EnumType *T) {
-  return VisitTagType(T);
+  // The InjectedClassNameType is created in VisitRecordDecl when the
+  // T->getDecl() is imported. Here we can return the existing type.
+  const Type *Ty = (*ToDeclOrErr)->getTypeForDecl();
+  assert(isa_and_nonnull<InjectedClassNameType>(Ty));
+  return QualType(Ty, 0);
 }
 
 ExpectedType ASTNodeImporter::VisitRecordType(const RecordType *T) {
-  return VisitTagType(T);
+  Expected<RecordDecl *> ToDeclOrErr = import(T->getDecl());
+  if (!ToDeclOrErr)
+    return ToDeclOrErr.takeError();
+
+  return Importer.getToContext().getTagDeclType(*ToDeclOrErr);
 }
 
-ExpectedType
-ASTNodeImporter::VisitInjectedClassNameType(const InjectedClassNameType *T) {
-  return VisitTagType(T);
+ExpectedType ASTNodeImporter::VisitEnumType(const EnumType *T) {
+  Expected<EnumDecl *> ToDeclOrErr = import(T->getDecl());
+  if (!ToDeclOrErr)
+    return ToDeclOrErr.takeError();
+
+  return Importer.getToContext().getTagDeclType(*ToDeclOrErr);
 }
 
 ExpectedType ASTNodeImporter::VisitAttributedType(const AttributedType *T) {
@@ -1858,8 +1850,27 @@ ExpectedType ASTNodeImporter::VisitTemplateSpecializationType(
   if (!ToUnderlyingOrErr)
     return ToUnderlyingOrErr.takeError();
   return Importer.getToContext().getTemplateSpecializationType(
-      T->getKeyword(), *ToTemplateOrErr, ToTemplateArgs, {},
-      *ToUnderlyingOrErr);
+      *ToTemplateOrErr, ToTemplateArgs, {}, *ToUnderlyingOrErr);
+}
+
+ExpectedType ASTNodeImporter::VisitElaboratedType(const ElaboratedType *T) {
+  // Note: the qualifier in an ElaboratedType is optional.
+  auto ToQualifierOrErr = import(T->getQualifier());
+  if (!ToQualifierOrErr)
+    return ToQualifierOrErr.takeError();
+
+  ExpectedType ToNamedTypeOrErr = import(T->getNamedType());
+  if (!ToNamedTypeOrErr)
+    return ToNamedTypeOrErr.takeError();
+
+  Expected<TagDecl *> ToOwnedTagDeclOrErr = import(T->getOwnedTagDecl());
+  if (!ToOwnedTagDeclOrErr)
+    return ToOwnedTagDeclOrErr.takeError();
+
+  return Importer.getToContext().getElaboratedType(T->getKeyword(),
+                                                   *ToQualifierOrErr,
+                                                   *ToNamedTypeOrErr,
+                                                   *ToOwnedTagDeclOrErr);
 }
 
 ExpectedType
@@ -2157,7 +2168,7 @@ Error ASTNodeImporter::ImportDeclParts(
       const Type *LeafT =
           getLeafPointeeType(P->getType().getCanonicalType().getTypePtr());
       auto *RT = dyn_cast<RecordType>(LeafT);
-      if (RT && RT->getOriginalDecl() == D) {
+      if (RT && RT->getDecl() == D) {
         Importer.FromDiag(D->getLocation(), diag::err_unsupported_ast_node)
             << D->getDeclKindName();
         return make_error<ASTImportError>(ASTImportError::UnsupportedConstruct);
@@ -2410,8 +2421,8 @@ Error ASTNodeImporter::ImportFieldDeclDefinition(const FieldDecl *From,
     const RecordType *RecordTo = ToType->getAs<RecordType>();
 
     if (RecordFrom && RecordTo) {
-      FromRecordDecl = RecordFrom->getOriginalDecl();
-      ToRecordDecl = RecordTo->getOriginalDecl();
+      FromRecordDecl = RecordFrom->getDecl();
+      ToRecordDecl = RecordTo->getDecl();
     }
   }
 
@@ -2632,7 +2643,7 @@ Error ASTNodeImporter::ImportDefinition(
     return Err;
 
   ExpectedType ToTypeOrErr =
-      import(QualType(Importer.getFromContext().getCanonicalTagType(From)));
+      import(Importer.getFromContext().getTypeDeclType(From));
   if (!ToTypeOrErr)
     return ToTypeOrErr.takeError();
 
@@ -3207,7 +3218,7 @@ ExpectedDecl ASTNodeImporter::VisitEnumDecl(EnumDecl *D) {
 
       if (auto *Typedef = dyn_cast<TypedefNameDecl>(FoundDecl)) {
         if (const auto *Tag = Typedef->getUnderlyingType()->getAs<TagType>())
-          FoundDecl = Tag->getOriginalDecl();
+          FoundDecl = Tag->getDecl();
       }
 
       if (auto *FoundEnum = dyn_cast<EnumDecl>(FoundDecl)) {
@@ -3338,7 +3349,7 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
       Decl *Found = FoundDecl;
       if (auto *Typedef = dyn_cast<TypedefNameDecl>(Found)) {
         if (const auto *Tag = Typedef->getUnderlyingType()->getAs<TagType>())
-          Found = Tag->getOriginalDecl();
+          Found = Tag->getDecl();
       }
 
       if (auto *FoundRecord = dyn_cast<RecordDecl>(Found)) {
@@ -3417,6 +3428,17 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
         return CDeclOrErr.takeError();
       Numbering.ContextDecl = *CDeclOrErr;
       D2CXX->setLambdaNumbering(Numbering);
+   } else if (DCXX->isInjectedClassName()) {
+      // We have to be careful to do a similar dance to the one in
+      // Sema::ActOnStartCXXMemberDeclarations
+      const bool DelayTypeCreation = true;
+      if (GetImportedOrCreateDecl(
+              D2CXX, D, Importer.getToContext(), D->getTagKind(), DC,
+              *BeginLocOrErr, Loc, Name.getAsIdentifierInfo(),
+              cast_or_null<CXXRecordDecl>(PrevDecl), DelayTypeCreation))
+        return D2CXX;
+      Importer.getToContext().getTypeDeclType(
+          D2CXX, dyn_cast<CXXRecordDecl>(DC));
     } else {
       if (GetImportedOrCreateDecl(D2CXX, D, Importer.getToContext(),
                                   D->getTagKind(), DC, *BeginLocOrErr, Loc,
@@ -3436,6 +3458,51 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
       if (Error Err = importInto(ToDescribed, FromDescribed))
         return std::move(Err);
       D2CXX->setDescribedClassTemplate(ToDescribed);
+      if (!DCXX->isInjectedClassName() && !IsFriendTemplate) {
+        // In a record describing a template the type should be an
+        // InjectedClassNameType (see Sema::CheckClassTemplate). Update the
+        // previously set type to the correct value here (ToDescribed is not
+        // available at record create).
+        CXXRecordDecl *Injected = nullptr;
+        for (NamedDecl *Found : D2CXX->noload_lookup(Name)) {
+          auto *Record = dyn_cast<CXXRecordDecl>(Found);
+          if (Record && Record->isInjectedClassName()) {
+            Injected = Record;
+            break;
+          }
+        }
+        // Create an injected type for the whole redecl chain.
+        // The chain may contain an already existing injected type at the start,
+        // if yes this should be reused. We must ensure that only one type
+        // object exists for the injected type (including the injected record
+        // declaration), ASTContext does not check it.
+        SmallVector<Decl *, 2> Redecls =
+            getCanonicalForwardRedeclChain(D2CXX);
+        const Type *FrontTy =
+            cast<CXXRecordDecl>(Redecls.front())->getTypeForDecl();
+        QualType InjSpec;
+        if (auto *InjTy = FrontTy->getAs<InjectedClassNameType>())
+          InjSpec = InjTy->getInjectedSpecializationType();
+        else
+          InjSpec = ToDescribed->getInjectedClassNameSpecialization();
+        for (auto *R : Redecls) {
+          auto *RI = cast<CXXRecordDecl>(R);
+          if (R != Redecls.front() ||
+              !isa<InjectedClassNameType>(RI->getTypeForDecl()))
+            RI->setTypeForDecl(nullptr);
+          // This function tries to get the injected type from getTypeForDecl,
+          // then from the previous declaration if possible. If not, it creates
+          // a new type.
+          Importer.getToContext().getInjectedClassNameType(RI, InjSpec);
+        }
+        // Set the new type for the injected decl too.
+        if (Injected) {
+          Injected->setTypeForDecl(nullptr);
+          // This function will copy the injected type from D2CXX into Injected.
+          // The injected decl does not have a previous decl to copy from.
+          Importer.getToContext().getTypeDeclType(Injected, D2CXX);
+        }
+      }
     } else if (MemberSpecializationInfo *MemberInfo =
                    DCXX->getMemberSpecializationInfo()) {
         TemplateSpecializationKind SK =
@@ -3759,12 +3826,11 @@ public:
   }
 
   std::optional<bool> VisitTagType(const TagType *T) {
-    if (auto *Spec =
-            dyn_cast<ClassTemplateSpecializationDecl>(T->getOriginalDecl()))
+    if (auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(T->getDecl()))
       for (const auto &Arg : Spec->getTemplateArgs().asArray())
         if (checkTemplateArgument(Arg))
           return true;
-    return isAncestorDeclContextOf(ParentDC, T->getOriginalDecl());
+    return isAncestorDeclContextOf(ParentDC, T->getDecl());
   }
 
   std::optional<bool> VisitPointerType(const PointerType *T) {
@@ -3776,11 +3842,17 @@ public:
   }
 
   std::optional<bool> VisitTypedefType(const TypedefType *T) {
-    return isAncestorDeclContextOf(ParentDC, T->getDecl());
+    const TypedefNameDecl *TD = T->getDecl();
+    assert(TD);
+    return isAncestorDeclContextOf(ParentDC, TD);
   }
 
   std::optional<bool> VisitUsingType(const UsingType *T) {
-    return isAncestorDeclContextOf(ParentDC, T->getDecl());
+    if (T->getFoundDecl() &&
+        isAncestorDeclContextOf(ParentDC, T->getFoundDecl()))
+      return true;
+
+    return {};
   }
 
   std::optional<bool>
@@ -6449,10 +6521,16 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
   // Create the specialization.
   ClassTemplateSpecializationDecl *D2 = nullptr;
   if (PartialSpec) {
+    QualType CanonInjType;
+    if (Error Err = importInto(
+        CanonInjType, PartialSpec->getInjectedSpecializationType()))
+      return std::move(Err);
+    CanonInjType = CanonInjType.getCanonicalType();
+
     if (GetImportedOrCreateDecl<ClassTemplatePartialSpecializationDecl>(
             D2, D, Importer.getToContext(), D->getTagKind(), DC, *BeginLocOrErr,
             *IdLocOrErr, ToTPList, ClassTemplate, ArrayRef(TemplateArgs),
-            /*CanonInjectedTST=*/CanQualType(),
+            CanonInjType,
             cast_or_null<ClassTemplatePartialSpecializationDecl>(PrevDecl)))
       return D2;
 
@@ -9972,34 +10050,46 @@ Expected<Stmt *> ASTImporter::Import(Stmt *FromS) {
   return ToSOrErr;
 }
 
-Expected<NestedNameSpecifier> ASTImporter::Import(NestedNameSpecifier FromNNS) {
-  switch (FromNNS.getKind()) {
-  case NestedNameSpecifier::Kind::Null:
-  case NestedNameSpecifier::Kind::Global:
-    return FromNNS;
-  case NestedNameSpecifier::Kind::Namespace: {
-    auto [Namespace, Prefix] = FromNNS.getAsNamespaceAndPrefix();
-    auto NSOrErr = Import(Namespace);
-    if (!NSOrErr)
+Expected<NestedNameSpecifier *>
+ASTImporter::Import(NestedNameSpecifier *FromNNS) {
+  if (!FromNNS)
+    return nullptr;
+
+  NestedNameSpecifier *Prefix = nullptr;
+  if (Error Err = importInto(Prefix, FromNNS->getPrefix()))
+    return std::move(Err);
+
+  switch (FromNNS->getKind()) {
+  case NestedNameSpecifier::Identifier:
+    assert(FromNNS->getAsIdentifier() && "NNS should contain identifier.");
+    return NestedNameSpecifier::Create(ToContext, Prefix,
+                                       Import(FromNNS->getAsIdentifier()));
+
+  case NestedNameSpecifier::Namespace:
+    if (ExpectedDecl NSOrErr = Import(FromNNS->getAsNamespace())) {
+      return NestedNameSpecifier::Create(ToContext, Prefix,
+                                         cast<NamespaceBaseDecl>(*NSOrErr));
+    } else
       return NSOrErr.takeError();
-    auto PrefixOrErr = Import(Prefix);
-    if (!PrefixOrErr)
-      return PrefixOrErr.takeError();
-    return NestedNameSpecifier(ToContext, cast<NamespaceBaseDecl>(*NSOrErr),
-                               *PrefixOrErr);
-  }
-  case NestedNameSpecifier::Kind::MicrosoftSuper:
-    if (ExpectedDecl RDOrErr = Import(FromNNS.getAsMicrosoftSuper()))
-      return NestedNameSpecifier(cast<CXXRecordDecl>(*RDOrErr));
+
+  case NestedNameSpecifier::Global:
+    return NestedNameSpecifier::GlobalSpecifier(ToContext);
+
+  case NestedNameSpecifier::Super:
+    if (ExpectedDecl RDOrErr = Import(FromNNS->getAsRecordDecl()))
+      return NestedNameSpecifier::SuperSpecifier(ToContext,
+                                                 cast<CXXRecordDecl>(*RDOrErr));
     else
       return RDOrErr.takeError();
-  case NestedNameSpecifier::Kind::Type:
-    if (ExpectedTypePtr TyOrErr = Import(FromNNS.getAsType())) {
-      return NestedNameSpecifier(*TyOrErr);
+
+  case NestedNameSpecifier::TypeSpec:
+    if (ExpectedTypePtr TyOrErr = Import(FromNNS->getAsType())) {
+      return NestedNameSpecifier::Create(ToContext, Prefix, *TyOrErr);
     } else {
       return TyOrErr.takeError();
     }
   }
+
   llvm_unreachable("Invalid nested name specifier kind");
 }
 
@@ -10013,62 +10103,64 @@ ASTImporter::Import(NestedNameSpecifierLoc FromNNS) {
   // serialization in reverse order.
   while (NNS) {
     NestedNames.push_back(NNS);
-    NNS = NNS.getAsNamespaceAndPrefix().Prefix;
+    NNS = NNS.getPrefix();
   }
 
   NestedNameSpecifierLocBuilder Builder;
 
   while (!NestedNames.empty()) {
     NNS = NestedNames.pop_back_val();
-    NestedNameSpecifier Spec = std::nullopt;
+    NestedNameSpecifier *Spec = nullptr;
     if (Error Err = importInto(Spec, NNS.getNestedNameSpecifier()))
       return std::move(Err);
 
-    NestedNameSpecifier::Kind Kind = Spec.getKind();
+    NestedNameSpecifier::SpecifierKind Kind = Spec->getKind();
 
     SourceLocation ToLocalBeginLoc, ToLocalEndLoc;
-    if (Kind != NestedNameSpecifier::Kind::MicrosoftSuper) {
+    if (Kind != NestedNameSpecifier::Super) {
       if (Error Err = importInto(ToLocalBeginLoc, NNS.getLocalBeginLoc()))
         return std::move(Err);
 
-      if (Kind != NestedNameSpecifier::Kind::Global)
+      if (Kind != NestedNameSpecifier::Global)
         if (Error Err = importInto(ToLocalEndLoc, NNS.getLocalEndLoc()))
           return std::move(Err);
     }
 
     switch (Kind) {
-    case NestedNameSpecifier::Kind::Namespace:
-      Builder.Extend(getToContext(), Spec.getAsNamespaceAndPrefix().Namespace,
-                     ToLocalBeginLoc, ToLocalEndLoc);
+    case NestedNameSpecifier::Identifier:
+      Builder.Extend(getToContext(), Spec->getAsIdentifier(), ToLocalBeginLoc,
+                     ToLocalEndLoc);
       break;
 
-    case NestedNameSpecifier::Kind::Type: {
+    case NestedNameSpecifier::Namespace:
+      Builder.Extend(getToContext(), Spec->getAsNamespace(), ToLocalBeginLoc,
+                     ToLocalEndLoc);
+      break;
+
+    case NestedNameSpecifier::TypeSpec: {
       SourceLocation ToTLoc;
-      if (Error Err = importInto(ToTLoc, NNS.castAsTypeLoc().getBeginLoc()))
+      if (Error Err = importInto(ToTLoc, NNS.getTypeLoc().getBeginLoc()))
         return std::move(Err);
       TypeSourceInfo *TSI = getToContext().getTrivialTypeSourceInfo(
-          QualType(Spec.getAsType(), 0), ToTLoc);
-      Builder.Make(getToContext(), TSI->getTypeLoc(), ToLocalEndLoc);
+          QualType(Spec->getAsType(), 0), ToTLoc);
+      Builder.Extend(getToContext(), TSI->getTypeLoc(), ToLocalEndLoc);
       break;
     }
 
-    case NestedNameSpecifier::Kind::Global:
+    case NestedNameSpecifier::Global:
       Builder.MakeGlobal(getToContext(), ToLocalBeginLoc);
       break;
 
-    case NestedNameSpecifier::Kind::MicrosoftSuper: {
+    case NestedNameSpecifier::Super: {
       auto ToSourceRangeOrErr = Import(NNS.getSourceRange());
       if (!ToSourceRangeOrErr)
         return ToSourceRangeOrErr.takeError();
 
-      Builder.MakeMicrosoftSuper(getToContext(), Spec.getAsMicrosoftSuper(),
-                                 ToSourceRangeOrErr->getBegin(),
-                                 ToSourceRangeOrErr->getEnd());
-      break;
+      Builder.MakeSuper(getToContext(), Spec->getAsRecordDecl(),
+                        ToSourceRangeOrErr->getBegin(),
+                        ToSourceRangeOrErr->getEnd());
     }
-    case NestedNameSpecifier::Kind::Null:
-      llvm_unreachable("unexpected null nested name specifier");
-    }
+  }
   }
 
   return Builder.getWithLocInContext(getToContext());
@@ -10648,7 +10740,7 @@ ASTNodeImporter::ImportAPValue(const APValue &FromValue) {
           if (Err)
             return std::move(Err);
           if (auto *RD = dyn_cast<CXXRecordDecl>(FromDecl))
-            FromElemTy = Importer.FromContext.getCanonicalTagType(RD);
+            FromElemTy = Importer.FromContext.getRecordType(RD);
           else
             FromElemTy = cast<ValueDecl>(FromDecl)->getType();
           ToPath[LoopIdx] = APValue::LValuePathEntry(APValue::BaseOrMemberType(

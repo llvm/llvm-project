@@ -107,83 +107,45 @@ private:
 };
 
 SourceLocation StartLocationForType(TypeLoc TL) {
-  if (auto QTL = TL.getAs<QualifiedTypeLoc>())
-    TL = QTL.getUnqualifiedLoc();
-
   // For elaborated types (e.g. `struct a::A`) we want the portion after the
-  // `struct`, including the namespace qualifier, `a::`.
-  switch (TL.getTypeLocClass()) {
-  case TypeLoc::Record:
-  case TypeLoc::InjectedClassName:
-  case TypeLoc::Enum: {
-    auto TTL = TL.castAs<TagTypeLoc>();
-    if (NestedNameSpecifierLoc QualifierLoc = TTL.getQualifierLoc())
-      return QualifierLoc.getBeginLoc();
-    return TTL.getNameLoc();
+  // `struct` but including the namespace qualifier, `a::`.
+  if (auto ElaboratedTypeLoc = TL.getAs<clang::ElaboratedTypeLoc>()) {
+    NestedNameSpecifierLoc NestedNameSpecifier =
+        ElaboratedTypeLoc.getQualifierLoc();
+    if (NestedNameSpecifier.getNestedNameSpecifier())
+      return NestedNameSpecifier.getBeginLoc();
+    TL = TL.getNextTypeLoc();
   }
-  case TypeLoc::Typedef: {
-    auto TTL = TL.castAs<TypedefTypeLoc>();
-    if (NestedNameSpecifierLoc QualifierLoc = TTL.getQualifierLoc())
-      return QualifierLoc.getBeginLoc();
-    return TTL.getNameLoc();
-  }
-  case TypeLoc::UnresolvedUsing: {
-    auto TTL = TL.castAs<UnresolvedUsingTypeLoc>();
-    if (NestedNameSpecifierLoc QualifierLoc = TTL.getQualifierLoc())
-      return QualifierLoc.getBeginLoc();
-    return TTL.getNameLoc();
-  }
-  case TypeLoc::Using: {
-    auto TTL = TL.castAs<UsingTypeLoc>();
-    if (NestedNameSpecifierLoc QualifierLoc = TTL.getQualifierLoc())
-      return QualifierLoc.getBeginLoc();
-    return TTL.getNameLoc();
-  }
-  case TypeLoc::TemplateSpecialization: {
-    auto TTL = TL.castAs<TemplateSpecializationTypeLoc>();
-    if (NestedNameSpecifierLoc QualifierLoc = TTL.getQualifierLoc())
-      return QualifierLoc.getBeginLoc();
-    return TTL.getTemplateNameLoc();
-  }
-  case TypeLoc::DeducedTemplateSpecialization: {
-    auto DTL = TL.castAs<clang::DeducedTemplateSpecializationTypeLoc>();
-    if (NestedNameSpecifierLoc QualifierLoc = DTL.getQualifierLoc())
-      return QualifierLoc.getBeginLoc();
-    return DTL.getTemplateNameLoc();
-  }
-  case TypeLoc::DependentName: {
-    auto TTL = TL.castAs<DependentNameTypeLoc>();
-    if (NestedNameSpecifierLoc QualifierLoc = TTL.getQualifierLoc())
-      return QualifierLoc.getBeginLoc();
-    return TTL.getNameLoc();
-  }
-  case TypeLoc::DependentTemplateSpecialization: {
-    auto TTL = TL.castAs<DependentTemplateSpecializationTypeLoc>();
-    if (NestedNameSpecifierLoc QualifierLoc = TTL.getQualifierLoc())
-      return QualifierLoc.getBeginLoc();
-    return TTL.getTemplateNameLoc();
-  }
-  default:
-    llvm_unreachable("unhandled TypeLoc class");
-  }
+  return TL.getBeginLoc();
 }
 
 SourceLocation EndLocationForType(TypeLoc TL) {
-  if (auto QTL = TL.getAs<QualifiedTypeLoc>())
-    TL = QTL.getUnqualifiedLoc();
+  // Dig past any namespace or keyword qualifications.
+  while (TL.getTypeLocClass() == TypeLoc::Elaborated ||
+         TL.getTypeLocClass() == TypeLoc::Qualified)
+    TL = TL.getNextTypeLoc();
 
   // The location for template specializations (e.g. Foo<int>) includes the
   // templated types in its location range.  We want to restrict this to just
   // before the `<` character.
-  if (auto TTL = TL.getAs<TemplateSpecializationTypeLoc>())
-    return TTL.getLAngleLoc().getLocWithOffset(-1);
+  if (TL.getTypeLocClass() == TypeLoc::TemplateSpecialization) {
+    return TL.castAs<TemplateSpecializationTypeLoc>()
+        .getLAngleLoc()
+        .getLocWithOffset(-1);
+  }
   return TL.getEndLoc();
 }
 
-NestedNameSpecifier GetNestedNameForType(TypeLoc TL) {
-  if (auto QTL = TL.getAs<QualifiedTypeLoc>())
-    TL = QTL.getUnqualifiedLoc();
-  return TL.getPrefix().getNestedNameSpecifier();
+NestedNameSpecifier *GetNestedNameForType(TypeLoc TL) {
+  // Dig past any keyword qualifications.
+  while (TL.getTypeLocClass() == TypeLoc::Qualified)
+    TL = TL.getNextTypeLoc();
+
+  // For elaborated types (e.g. `struct a::A`) we want the portion after the
+  // `struct` but including the namespace qualifier, `a::`.
+  if (auto ElaboratedTypeLoc = TL.getAs<clang::ElaboratedTypeLoc>())
+    return ElaboratedTypeLoc.getQualifierLoc().getNestedNameSpecifier();
+  return nullptr;
 }
 
 // Find all locations identified by the given USRs for rename.
@@ -206,14 +168,14 @@ public:
     const NamedDecl *FromDecl;
     // The declaration in which the nested name is contained (can be nullptr).
     const Decl *Context;
-    // The nested name being replaced.
-    NestedNameSpecifier Specifier;
+    // The nested name being replaced (can be nullptr).
+    const NestedNameSpecifier *Specifier;
     // Determine whether the prefix qualifiers of the NewName should be ignored.
     // Normally, we set it to true for the symbol declaration and definition to
     // avoid adding prefix qualifiers.
     // For example, if it is true and NewName is "a::b::foo", then the symbol
     // occurrence which the RenameInfo points to will be renamed to "foo".
-    bool IgnorePrefixQualifiers;
+    bool IgnorePrefixQualifers;
   };
 
   bool VisitNamedDecl(const NamedDecl *Decl) {
@@ -241,8 +203,8 @@ public:
                            EndLoc,
                            /*FromDecl=*/nullptr,
                            /*Context=*/nullptr,
-                           /*Specifier=*/std::nullopt,
-                           /*IgnorePrefixQualifiers=*/true};
+                           /*Specifier=*/nullptr,
+                           /*IgnorePrefixQualifers=*/true};
         RenameInfos.push_back(Info);
       }
     }
@@ -255,10 +217,10 @@ public:
     auto EndLoc = Expr->getMemberLoc();
     if (isInUSRSet(Decl)) {
       RenameInfos.push_back({StartLoc, EndLoc,
-                             /*FromDecl=*/nullptr,
-                             /*Context=*/nullptr,
-                             /*Specifier=*/std::nullopt,
-                             /*IgnorePrefixQualifiers=*/true});
+                            /*FromDecl=*/nullptr,
+                            /*Context=*/nullptr,
+                            /*Specifier=*/nullptr,
+                            /*IgnorePrefixQualifiers=*/true});
     }
     return true;
   }
@@ -273,7 +235,7 @@ public:
             RenameInfos.push_back({StartLoc, EndLoc,
                                    /*FromDecl=*/nullptr,
                                    /*Context=*/nullptr,
-                                   /*Specifier=*/std::nullopt,
+                                   /*Specifier=*/nullptr,
                                    /*IgnorePrefixQualifiers=*/true});
           }
         }
@@ -295,7 +257,7 @@ public:
           RenameInfos.push_back({Loc, Loc,
                                  /*FromDecl=*/nullptr,
                                  /*Context=*/nullptr,
-                                 /*Specifier=*/std::nullopt,
+                                 /*Specifier=*/nullptr,
                                  /*IgnorePrefixQualifiers=*/true});
         }
       }
@@ -326,7 +288,7 @@ public:
         RenameInfos.push_back({EndLoc, EndLoc,
                                /*FromDecl=*/nullptr,
                                /*Context=*/nullptr,
-                               /*Specifier=*/std::nullopt,
+                               /*Specifier=*/nullptr,
                                /*IgnorePrefixQualifiers=*/true});
         return true;
       }
@@ -370,7 +332,7 @@ public:
                          Decl,
                          getClosestAncestorDecl(*Expr),
                          Expr->getQualifier(),
-                         /*IgnorePrefixQualifiers=*/false};
+                         /*IgnorePrefixQualifers=*/false};
       RenameInfos.push_back(Info);
     }
 
@@ -388,18 +350,18 @@ public:
   }
 
   bool VisitNestedNameSpecifierLocations(NestedNameSpecifierLoc NestedLoc) {
-    TypeLoc TL = NestedLoc.getAsTypeLoc();
-    if (!TL)
+    if (!NestedLoc.getNestedNameSpecifier()->getAsType())
       return true;
 
-    if (const auto *TargetDecl = getSupportedDeclFromTypeLoc(TL)) {
+    if (const auto *TargetDecl =
+            getSupportedDeclFromTypeLoc(NestedLoc.getTypeLoc())) {
       if (isInUSRSet(TargetDecl)) {
         RenameInfo Info = {NestedLoc.getBeginLoc(),
-                           EndLocationForType(TL),
+                           EndLocationForType(NestedLoc.getTypeLoc()),
                            TargetDecl,
                            getClosestAncestorDecl(NestedLoc),
-                           /*Specifier=*/std::nullopt,
-                           /*IgnorePrefixQualifiers=*/false};
+                           NestedLoc.getNestedNameSpecifier()->getPrefix(),
+                           /*IgnorePrefixQualifers=*/false};
         RenameInfos.push_back(Info);
       }
     }
@@ -449,7 +411,7 @@ public:
                              TargetDecl,
                              getClosestAncestorDecl(Loc),
                              GetNestedNameForType(Loc),
-                             /*IgnorePrefixQualifiers=*/false};
+                             /*IgnorePrefixQualifers=*/false};
           RenameInfos.push_back(Info);
         }
         return true;
@@ -459,17 +421,33 @@ public:
     // Handle specific template class specialiation cases.
     if (const auto *TemplateSpecType =
             dyn_cast<TemplateSpecializationType>(Loc.getType())) {
+      TypeLoc TargetLoc = Loc;
+      if (!ParentTypeLoc.isNull()) {
+        if (llvm::isa<ElaboratedType>(ParentTypeLoc.getType()))
+          TargetLoc = ParentTypeLoc;
+      }
+
       if (isInUSRSet(TemplateSpecType->getTemplateName().getAsTemplateDecl())) {
-        auto StartLoc = StartLocationForType(Loc);
-        auto EndLoc = EndLocationForType(Loc);
+        TypeLoc TargetLoc = Loc;
+        // FIXME: Find a better way to handle this case.
+        // For the qualified template class specification type like
+        // "ns::Foo<int>" in "ns::Foo<int>& f();", we want the parent typeLoc
+        // (ElaboratedType) of the TemplateSpecializationType in order to
+        // catch the prefix qualifiers "ns::".
+        if (!ParentTypeLoc.isNull() &&
+            llvm::isa<ElaboratedType>(ParentTypeLoc.getType()))
+          TargetLoc = ParentTypeLoc;
+
+        auto StartLoc = StartLocationForType(TargetLoc);
+        auto EndLoc = EndLocationForType(TargetLoc);
         if (IsValidEditLoc(Context.getSourceManager(), StartLoc)) {
           RenameInfo Info = {
               StartLoc,
               EndLoc,
               TemplateSpecType->getTemplateName().getAsTemplateDecl(),
-              getClosestAncestorDecl(DynTypedNode::create(Loc)),
-              GetNestedNameForType(Loc),
-              /*IgnorePrefixQualifiers=*/false};
+              getClosestAncestorDecl(DynTypedNode::create(TargetLoc)),
+              GetNestedNameForType(TargetLoc),
+              /*IgnorePrefixQualifers=*/false};
           RenameInfos.push_back(Info);
         }
       }
@@ -491,7 +469,12 @@ private:
   const NamedDecl *getSupportedDeclFromTypeLoc(TypeLoc Loc) {
     if (const auto* TT = Loc.getType()->getAs<clang::TypedefType>())
       return TT->getDecl();
-    return Loc.getType()->getAsTagDecl();
+    if (const auto *RD = Loc.getType()->getAsCXXRecordDecl())
+      return RD;
+    if (const auto *ED =
+            llvm::dyn_cast_or_null<EnumDecl>(Loc.getType()->getAsTagDecl()))
+      return ED;
+    return nullptr;
   }
 
   // Get the closest ancester which is a declaration of a given AST node.
@@ -566,7 +549,7 @@ createRenameAtomicChanges(llvm::ArrayRef<std::string> USRs,
 
   for (const auto &RenameInfo : Finder.getRenameInfos()) {
     std::string ReplacedName = NewName.str();
-    if (RenameInfo.IgnorePrefixQualifiers) {
+    if (RenameInfo.IgnorePrefixQualifers) {
       // Get the name without prefix qualifiers from NewName.
       size_t LastColonPos = NewName.find_last_of(':');
       if (LastColonPos != std::string::npos)

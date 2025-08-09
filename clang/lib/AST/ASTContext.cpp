@@ -654,7 +654,7 @@ comments::FullComment *ASTContext::getCommentForDecl(
       // does not have one of its own.
       QualType QT = TD->getUnderlyingType();
       if (const auto *TT = QT->getAs<TagType>())
-        if (const Decl *TD = TT->getOriginalDecl())
+        if (const Decl *TD = TT->getDecl())
           if (comments::FullComment *FC = getCommentForDecl(TD, PP))
             return cloneFullComment(FC, D);
     }
@@ -1938,12 +1938,10 @@ TypeInfoChars ASTContext::getTypeInfoDataSizeInChars(QualType T) const {
   // of a base-class subobject.  We decide whether that's possible
   // during class layout, so here we can just trust the layout results.
   if (getLangOpts().CPlusPlus) {
-    if (const auto *RT = T->getAs<RecordType>()) {
-      const auto *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
-      if (!RD->isInvalidDecl()) {
-        const ASTRecordLayout &layout = getASTRecordLayout(RD);
-        Info.Width = layout.getDataSize();
-      }
+    if (const auto *RT = T->getAs<RecordType>();
+        RT && !RT->getDecl()->isInvalidDecl()) {
+      const ASTRecordLayout &layout = getASTRecordLayout(RT->getDecl());
+      Info.Width = layout.getDataSize();
     }
   }
 
@@ -2010,9 +2008,8 @@ bool ASTContext::isPromotableIntegerType(QualType T) const {
   // Enumerated types are promotable to their compatible integer types
   // (C99 6.3.1.1) a.k.a. its underlying type (C++ [conv.prom]p2).
   if (const auto *ET = T->getAs<EnumType>()) {
-    const EnumDecl *ED = ET->getOriginalDecl()->getDefinitionOrSelf();
-    if (T->isDependentType() || ED->getPromotionType().isNull() ||
-        ED->isScoped())
+    if (T->isDependentType() || ET->getDecl()->getPromotionType().isNull() ||
+        ET->getDecl()->isScoped())
       return false;
 
     return true;
@@ -2048,8 +2045,8 @@ unsigned ASTContext::getTypeAlignIfKnown(QualType T,
       return Align;
 
   // Otherwise, see if the declaration of the type had an attribute.
-  if (const auto *TD = T->getAsTagDecl())
-    return TD->getMaxAlignment();
+  if (const auto *TT = T->getAs<TagType>())
+    return TT->getDecl()->getMaxAlignment();
 
   return 0;
 }
@@ -2480,16 +2477,15 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
   case Type::Record:
   case Type::Enum: {
     const auto *TT = cast<TagType>(T);
-    const TagDecl *TD = TT->getOriginalDecl()->getDefinitionOrSelf();
 
-    if (TD->isInvalidDecl()) {
+    if (TT->getDecl()->isInvalidDecl()) {
       Width = 8;
       Align = 8;
       break;
     }
 
-    if (isa<EnumType>(TT)) {
-      const EnumDecl *ED = cast<EnumDecl>(TD);
+    if (const auto *ET = dyn_cast<EnumType>(TT)) {
+      const EnumDecl *ED = ET->getDecl();
       TypeInfo Info =
           getTypeInfo(ED->getIntegerType()->getUnqualifiedDesugaredType());
       if (unsigned AttrAlign = ED->getMaxAlignment()) {
@@ -2499,7 +2495,8 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
       return Info;
     }
 
-    const auto *RD = cast<RecordDecl>(TD);
+    const auto *RT = cast<RecordType>(TT);
+    const RecordDecl *RD = RT->getDecl();
     const ASTRecordLayout &Layout = getASTRecordLayout(RD);
     Width = toBits(Layout.getSize());
     Align = toBits(Layout.getAlignment());
@@ -2550,6 +2547,9 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     Width = Info.Width;
     break;
   }
+
+  case Type::Elaborated:
+    return getTypeInfo(cast<ElaboratedType>(T)->getNamedType().getTypePtr());
 
   case Type::Attributed:
     return getTypeInfo(
@@ -2624,7 +2624,8 @@ unsigned ASTContext::getTypeUnadjustedAlign(const Type *T) const {
 
   unsigned UnadjustedAlign;
   if (const auto *RT = T->getAs<RecordType>()) {
-    const ASTRecordLayout &Layout = getASTRecordLayout(RT->getOriginalDecl());
+    const RecordDecl *RD = RT->getDecl();
+    const ASTRecordLayout &Layout = getASTRecordLayout(RD);
     UnadjustedAlign = toBits(Layout.getUnadjustedAlignment());
   } else if (const auto *ObjCI = T->getAs<ObjCInterfaceType>()) {
     const ASTRecordLayout &Layout = getASTObjCInterfaceLayout(ObjCI->getDecl());
@@ -2700,7 +2701,7 @@ unsigned ASTContext::getPreferredTypeAlign(const Type *T) const {
     return ABIAlign;
 
   if (const auto *RT = T->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+    const RecordDecl *RD = RT->getDecl();
 
     // When used as part of a typedef, or together with a 'packed' attribute,
     // the 'aligned' attribute can be used to decrease alignment. Note that the
@@ -2723,10 +2724,7 @@ unsigned ASTContext::getPreferredTypeAlign(const Type *T) const {
   if (const auto *CT = T->getAs<ComplexType>())
     T = CT->getElementType().getTypePtr();
   if (const auto *ET = T->getAs<EnumType>())
-    T = ET->getOriginalDecl()
-            ->getDefinitionOrSelf()
-            ->getIntegerType()
-            .getTypePtr();
+    T = ET->getDecl()->getIntegerType().getTypePtr();
   if (T->isSpecificBuiltinType(BuiltinType::Double) ||
       T->isSpecificBuiltinType(BuiltinType::LongLong) ||
       T->isSpecificBuiltinType(BuiltinType::ULongLong) ||
@@ -2858,8 +2856,7 @@ static bool unionHasUniqueObjectRepresentations(const ASTContext &Context,
                                                 const RecordDecl *RD,
                                                 bool CheckIfTriviallyCopyable) {
   assert(RD->isUnion() && "Must be union type");
-  CharUnits UnionSize =
-      Context.getTypeSizeInChars(Context.getCanonicalTagType(RD));
+  CharUnits UnionSize = Context.getTypeSizeInChars(RD->getTypeForDecl());
 
   for (const auto *Field : RD->fields()) {
     if (!Context.hasUniqueObjectRepresentations(Field->getType(),
@@ -3053,8 +3050,7 @@ bool ASTContext::hasUniqueObjectRepresentations(
     return !ABI->getMemberPointerInfo(MPT).HasPadding;
 
   if (Ty->isRecordType()) {
-    const RecordDecl *Record =
-        Ty->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf();
+    const RecordDecl *Record = Ty->castAs<RecordType>()->getDecl();
 
     if (Record->isInvalidDecl())
       return false;
@@ -3427,10 +3423,7 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
     //   type, or an unsigned integer type.
     //
     // So we have to treat enum types as integers.
-    QualType UnderlyingType = cast<EnumType>(T)
-                                  ->getOriginalDecl()
-                                  ->getDefinitionOrSelf()
-                                  ->getIntegerType();
+    QualType UnderlyingType = cast<EnumType>(T)->getDecl()->getIntegerType();
     return encodeTypeForFunctionPointerAuth(
         Ctx, OS, UnderlyingType.isNull() ? Ctx.IntTy : UnderlyingType);
   }
@@ -3468,7 +3461,7 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
     OS << "M";
     const auto *MPT = T->castAs<MemberPointerType>();
     encodeTypeForFunctionPointerAuth(
-        Ctx, OS, QualType(MPT->getQualifier().getAsType(), 0));
+        Ctx, OS, QualType(MPT->getQualifier()->getAsType(), 0));
     encodeTypeForFunctionPointerAuth(Ctx, OS, MPT->getPointeeType());
     return;
   }
@@ -3574,8 +3567,7 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
     llvm_unreachable("should never get here");
   }
   case Type::Record: {
-    const RecordDecl *RD =
-        T->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf();
+    const RecordDecl *RD = T->castAs<RecordType>()->getDecl();
     const IdentifierInfo *II = RD->getIdentifier();
 
     // In C++, an immediate typedef of an anonymous struct or union
@@ -3751,6 +3743,12 @@ ASTContext::adjustType(QualType Orig,
     const auto *BTFT = dyn_cast<BTFTagAttributedType>(Orig);
     return getBTFTagAttributedType(BTFT->getAttr(),
                                    adjustType(BTFT->getWrappedType(), Adjust));
+  }
+
+  case Type::Elaborated: {
+    const auto *ET = cast<ElaboratedType>(Orig);
+    return getElaboratedType(ET->getKeyword(), ET->getQualifier(),
+                             adjustType(ET->getNamedType(), Adjust));
   }
 
   case Type::Paren:
@@ -4170,13 +4168,14 @@ QualType ASTContext::getRValueReferenceType(QualType T) const {
 }
 
 QualType ASTContext::getMemberPointerType(QualType T,
-                                          NestedNameSpecifier Qualifier,
+                                          NestedNameSpecifier *Qualifier,
                                           const CXXRecordDecl *Cls) const {
   if (!Qualifier) {
     assert(Cls && "At least one of Qualifier or Cls must be provided");
-    Qualifier = NestedNameSpecifier(getCanonicalTagType(Cls).getTypePtr());
+    Qualifier = NestedNameSpecifier::Create(*this, /*Prefix=*/nullptr,
+                                            getTypeDeclType(Cls).getTypePtr());
   } else if (!Cls) {
-    Cls = Qualifier.getAsRecordDecl();
+    Cls = Qualifier->getAsRecordDecl();
   }
   // Unique pointers, to guarantee there is only one pointer of a particular
   // structure.
@@ -4188,11 +4187,12 @@ QualType ASTContext::getMemberPointerType(QualType T,
       MemberPointerTypes.FindNodeOrInsertPos(ID, InsertPos))
     return QualType(PT, 0);
 
-  NestedNameSpecifier CanonicalQualifier = [&] {
+  NestedNameSpecifier *CanonicalQualifier = [&] {
     if (!Cls)
-      return Qualifier.getCanonical();
-    NestedNameSpecifier R(getCanonicalTagType(Cls).getTypePtr());
-    assert(R.isCanonical());
+      return getCanonicalNestedNameSpecifier(Qualifier);
+    NestedNameSpecifier *R = NestedNameSpecifier::Create(
+        *this, /*Prefix=*/nullptr, Cls->getCanonicalDecl()->getTypeForDecl());
+    assert(R == getCanonicalNestedNameSpecifier(R));
     return R;
   }();
   // If the pointee or class type isn't canonical, this won't be a canonical
@@ -5250,6 +5250,7 @@ ASTContext::getPredefinedSugarType(PredefinedSugarType::Kind KD) const {
     }
     llvm_unreachable("unexpected kind");
   };
+
   auto *New = new (*this, alignof(PredefinedSugarType))
       PredefinedSugarType(KD, &Idents.get(PredefinedSugarType::getName(KD)),
                           getCanonicalType(*this, static_cast<Kind>(KD)));
@@ -5258,297 +5259,153 @@ ASTContext::getPredefinedSugarType(PredefinedSugarType::Kind KD) const {
   return QualType(New, 0);
 }
 
-QualType ASTContext::getTypeDeclType(ElaboratedTypeKeyword Keyword,
-                                     NestedNameSpecifier Qualifier,
-                                     const TypeDecl *Decl) const {
-  if (auto *Tag = dyn_cast<TagDecl>(Decl))
-    return getTagType(Keyword, Qualifier, Tag,
-                      /*OwnsTag=*/false);
-  if (auto *Typedef = dyn_cast<TypedefNameDecl>(Decl))
-    return getTypedefType(Keyword, Qualifier, Typedef);
-  if (auto *UD = dyn_cast<UnresolvedUsingTypenameDecl>(Decl))
-    return getUnresolvedUsingType(Keyword, Qualifier, UD);
+#ifndef NDEBUG
+static bool NeedsInjectedClassNameType(const RecordDecl *D) {
+  if (!isa<CXXRecordDecl>(D)) return false;
+  const auto *RD = cast<CXXRecordDecl>(D);
+  if (isa<ClassTemplatePartialSpecializationDecl>(RD))
+    return true;
+  if (RD->getDescribedClassTemplate() &&
+      !isa<ClassTemplateSpecializationDecl>(RD))
+    return true;
+  return false;
+}
+#endif
 
-  assert(Keyword == ElaboratedTypeKeyword::None);
-  assert(!Qualifier);
+/// getInjectedClassNameType - Return the unique reference to the
+/// injected class name type for the specified templated declaration.
+QualType ASTContext::getInjectedClassNameType(CXXRecordDecl *Decl,
+                                              QualType TST) const {
+  assert(NeedsInjectedClassNameType(Decl));
+  if (Decl->TypeForDecl) {
+    assert(isa<InjectedClassNameType>(Decl->TypeForDecl));
+  } else if (CXXRecordDecl *PrevDecl = Decl->getPreviousDecl()) {
+    assert(PrevDecl->TypeForDecl && "previous declaration has no type");
+    Decl->TypeForDecl = PrevDecl->TypeForDecl;
+    assert(isa<InjectedClassNameType>(Decl->TypeForDecl));
+  } else {
+    Type *newType = new (*this, alignof(InjectedClassNameType))
+        InjectedClassNameType(Decl, TST);
+    Decl->TypeForDecl = newType;
+    Types.push_back(newType);
+  }
   return QualType(Decl->TypeForDecl, 0);
 }
 
-CanQualType ASTContext::getCanonicalTypeDeclType(const TypeDecl *TD) const {
-  if (auto *Tag = dyn_cast<TagDecl>(TD))
-    return getCanonicalTagType(Tag);
-  if (auto *TN = dyn_cast<TypedefNameDecl>(TD))
-    return getCanonicalType(TN->getUnderlyingType());
-  if (const auto *UD = dyn_cast<UnresolvedUsingTypenameDecl>(TD))
-    return getCanonicalUnresolvedUsingType(UD);
-  assert(TD->TypeForDecl);
-  return TD->TypeForDecl->getCanonicalTypeUnqualified();
-}
+/// getTypeDeclType - Return the unique reference to the type for the
+/// specified type declaration.
+QualType ASTContext::getTypeDeclTypeSlow(const TypeDecl *Decl) const {
+  assert(Decl && "Passed null for Decl param");
+  assert(!Decl->TypeForDecl && "TypeForDecl present in slow case");
 
-QualType ASTContext::getTypeDeclType(const TypeDecl *Decl) const {
-  if (const auto *TD = dyn_cast<TagDecl>(Decl))
-    return getCanonicalTagType(TD);
-  if (const auto *TD = dyn_cast<TypedefNameDecl>(Decl);
-      isa_and_nonnull<TypedefDecl, TypeAliasDecl>(TD))
-    return getTypedefType(ElaboratedTypeKeyword::None,
-                          /*Qualifier=*/std::nullopt, TD);
-  if (const auto *Using = dyn_cast<UnresolvedUsingTypenameDecl>(Decl))
-    return getCanonicalUnresolvedUsingType(Using);
+  if (const auto *Typedef = dyn_cast<TypedefNameDecl>(Decl))
+    return getTypedefType(Typedef);
 
-  assert(Decl->TypeForDecl);
+  assert(!isa<TemplateTypeParmDecl>(Decl) &&
+         "Template type parameter types are always available.");
+
+  if (const auto *Record = dyn_cast<RecordDecl>(Decl)) {
+    assert(Record->isFirstDecl() && "struct/union has previous declaration");
+    assert(!NeedsInjectedClassNameType(Record));
+    return getRecordType(Record);
+  } else if (const auto *Enum = dyn_cast<EnumDecl>(Decl)) {
+    assert(Enum->isFirstDecl() && "enum has previous declaration");
+    return getEnumType(Enum);
+  } else if (const auto *Using = dyn_cast<UnresolvedUsingTypenameDecl>(Decl)) {
+    return getUnresolvedUsingType(Using);
+  } else
+    llvm_unreachable("TypeDecl without a type?");
+
   return QualType(Decl->TypeForDecl, 0);
 }
 
 /// getTypedefType - Return the unique reference to the type for the
 /// specified typedef name decl.
-QualType
-ASTContext::getTypedefType(ElaboratedTypeKeyword Keyword,
-                           NestedNameSpecifier Qualifier,
-                           const TypedefNameDecl *Decl, QualType UnderlyingType,
-                           std::optional<bool> TypeMatchesDeclOrNone) const {
-  if (!TypeMatchesDeclOrNone) {
-    QualType DeclUnderlyingType = Decl->getUnderlyingType();
-    assert(!DeclUnderlyingType.isNull());
-    if (UnderlyingType.isNull())
-      UnderlyingType = DeclUnderlyingType;
-    else
-      assert(hasSameType(UnderlyingType, DeclUnderlyingType));
-    TypeMatchesDeclOrNone = UnderlyingType == DeclUnderlyingType;
-  } else {
-    // FIXME: This is a workaround for a serialization cycle: assume the decl
-    // underlying type is not available; don't touch it.
-    assert(!UnderlyingType.isNull());
-  }
-
-  if (Keyword == ElaboratedTypeKeyword::None && !Qualifier &&
-      *TypeMatchesDeclOrNone) {
-    if (Decl->TypeForDecl)
-      return QualType(Decl->TypeForDecl, 0);
-
-    auto *NewType = new (*this, alignof(TypedefType))
-        TypedefType(Type::Typedef, Keyword, Qualifier, Decl, UnderlyingType,
-                    !*TypeMatchesDeclOrNone);
-
-    Types.push_back(NewType);
+QualType ASTContext::getTypedefType(const TypedefNameDecl *Decl,
+                                    QualType Underlying) const {
+  if (!Decl->TypeForDecl) {
+    if (Underlying.isNull())
+      Underlying = Decl->getUnderlyingType();
+    auto *NewType = new (*this, alignof(TypedefType)) TypedefType(
+        Type::Typedef, Decl, Underlying, /*HasTypeDifferentFromDecl=*/false);
     Decl->TypeForDecl = NewType;
+    Types.push_back(NewType);
     return QualType(NewType, 0);
   }
+  if (Underlying.isNull() || Decl->getUnderlyingType() == Underlying)
+    return QualType(Decl->TypeForDecl, 0);
+  assert(hasSameType(Decl->getUnderlyingType(), Underlying));
 
   llvm::FoldingSetNodeID ID;
-  TypedefType::Profile(ID, Keyword, Qualifier, Decl, UnderlyingType);
+  TypedefType::Profile(ID, Decl, Underlying);
 
   void *InsertPos = nullptr;
-  if (FoldingSetPlaceholder<TypedefType> *Placeholder =
-          TypedefTypes.FindNodeOrInsertPos(ID, InsertPos))
-    return QualType(Placeholder->getType(), 0);
+  if (TypedefType *T = TypedefTypes.FindNodeOrInsertPos(ID, InsertPos)) {
+    assert(!T->typeMatchesDecl() &&
+           "non-divergent case should be handled with TypeDecl");
+    return QualType(T, 0);
+  }
 
-  void *Mem =
-      Allocate(TypedefType::totalSizeToAlloc<FoldingSetPlaceholder<TypedefType>,
-                                             NestedNameSpecifier, QualType>(
-                   1, !!Qualifier, !*TypeMatchesDeclOrNone),
-               alignof(TypedefType));
-  auto *NewType =
-      new (Mem) TypedefType(Type::Typedef, Keyword, Qualifier, Decl,
-                            UnderlyingType, !*TypeMatchesDeclOrNone);
-  auto *Placeholder = new (NewType->getFoldingSetPlaceholder())
-      FoldingSetPlaceholder<TypedefType>();
-  TypedefTypes.InsertNode(Placeholder, InsertPos);
+  void *Mem = Allocate(TypedefType::totalSizeToAlloc<QualType>(true),
+                       alignof(TypedefType));
+  auto *NewType = new (Mem) TypedefType(Type::Typedef, Decl, Underlying,
+                                        /*HasTypeDifferentFromDecl=*/true);
+  TypedefTypes.InsertNode(NewType, InsertPos);
   Types.push_back(NewType);
   return QualType(NewType, 0);
 }
 
-QualType ASTContext::getUsingType(ElaboratedTypeKeyword Keyword,
-                                  NestedNameSpecifier Qualifier,
-                                  const UsingShadowDecl *D,
-                                  QualType UnderlyingType) const {
-  // FIXME: This is expensive to compute every time!
-  if (UnderlyingType.isNull()) {
-    const auto *UD = cast<UsingDecl>(D->getIntroducer());
-    UnderlyingType =
-        getTypeDeclType(UD->hasTypename() ? ElaboratedTypeKeyword::Typename
-                                          : ElaboratedTypeKeyword::None,
-                        UD->getQualifier(), cast<TypeDecl>(D->getTargetDecl()));
-  }
-
+QualType ASTContext::getUsingType(const UsingShadowDecl *Found,
+                                  QualType Underlying) const {
   llvm::FoldingSetNodeID ID;
-  UsingType::Profile(ID, Keyword, Qualifier, D, UnderlyingType);
+  UsingType::Profile(ID, Found, Underlying);
 
   void *InsertPos = nullptr;
-  if (const UsingType *T = UsingTypes.FindNodeOrInsertPos(ID, InsertPos))
+  if (UsingType *T = UsingTypes.FindNodeOrInsertPos(ID, InsertPos))
     return QualType(T, 0);
 
-  assert(!UnderlyingType.hasLocalQualifiers());
+  const Type *TypeForDecl =
+      cast<TypeDecl>(Found->getTargetDecl())->getTypeForDecl();
 
-  assert(
-      hasSameType(getCanonicalTypeDeclType(cast<TypeDecl>(D->getTargetDecl())),
-                  UnderlyingType));
+  assert(!Underlying.hasLocalQualifiers());
+  QualType Canon = Underlying->getCanonicalTypeInternal();
+  assert(TypeForDecl->getCanonicalTypeInternal() == Canon);
 
+  if (Underlying.getTypePtr() == TypeForDecl)
+    Underlying = QualType();
   void *Mem =
-      Allocate(UsingType::totalSizeToAlloc<NestedNameSpecifier>(!!Qualifier),
+      Allocate(UsingType::totalSizeToAlloc<QualType>(!Underlying.isNull()),
                alignof(UsingType));
-  UsingType *T = new (Mem) UsingType(Keyword, Qualifier, D, UnderlyingType);
-  Types.push_back(T);
-  UsingTypes.InsertNode(T, InsertPos);
-  return QualType(T, 0);
+  UsingType *NewType = new (Mem) UsingType(Found, Underlying, Canon);
+  Types.push_back(NewType);
+  UsingTypes.InsertNode(NewType, InsertPos);
+  return QualType(NewType, 0);
 }
 
-TagType *ASTContext::getTagTypeInternal(ElaboratedTypeKeyword Keyword,
-                                        NestedNameSpecifier Qualifier,
-                                        const TagDecl *TD, bool OwnsTag,
-                                        bool IsInjected,
-                                        const Type *CanonicalType,
-                                        bool WithFoldingSetNode) const {
-  auto [TC, Size] = [&] {
-    switch (TD->getDeclKind()) {
-    case Decl::Enum:
-      static_assert(alignof(EnumType) == alignof(TagType));
-      return std::make_tuple(Type::Enum, sizeof(EnumType));
-    case Decl::ClassTemplatePartialSpecialization:
-    case Decl::ClassTemplateSpecialization:
-    case Decl::CXXRecord:
-      static_assert(alignof(RecordType) == alignof(TagType));
-      static_assert(alignof(InjectedClassNameType) == alignof(TagType));
-      if (cast<CXXRecordDecl>(TD)->hasInjectedClassType())
-        return std::make_tuple(Type::InjectedClassName,
-                               sizeof(InjectedClassNameType));
-      [[fallthrough]];
-    case Decl::Record:
-      return std::make_tuple(Type::Record, sizeof(RecordType));
-    default:
-      llvm_unreachable("unexpected decl kind");
-    }
-  }();
+QualType ASTContext::getRecordType(const RecordDecl *Decl) const {
+  if (Decl->TypeForDecl) return QualType(Decl->TypeForDecl, 0);
 
-  if (Qualifier) {
-    static_assert(alignof(NestedNameSpecifier) <= alignof(TagType));
-    Size = llvm::alignTo(Size, alignof(NestedNameSpecifier)) +
-           sizeof(NestedNameSpecifier);
-  }
-  void *Mem;
-  if (WithFoldingSetNode) {
-    // FIXME: It would be more profitable to tail allocate the folding set node
-    // from the type, instead of the other way around, due to the greater
-    // alignment requirements of the type. But this makes it harder to deal with
-    // the different type node sizes. This would require either uniquing from
-    // different folding sets, or having the folding setaccept a
-    // contextual parameter which is not fixed at construction.
-    Mem = Allocate(
-        sizeof(TagTypeFoldingSetPlaceholder) +
-            TagTypeFoldingSetPlaceholder::getOffset() + Size,
-        std::max(alignof(TagTypeFoldingSetPlaceholder), alignof(TagType)));
-    auto *T = new (Mem) TagTypeFoldingSetPlaceholder();
-    Mem = T->getTagType();
-  } else {
-    Mem = Allocate(Size, alignof(TagType));
-  }
+  if (const RecordDecl *PrevDecl = Decl->getPreviousDecl())
+    if (PrevDecl->TypeForDecl)
+      return QualType(Decl->TypeForDecl = PrevDecl->TypeForDecl, 0);
 
-  auto *T = [&, TC = TC]() -> TagType * {
-    switch (TC) {
-    case Type::Enum: {
-      assert(isa<EnumDecl>(TD));
-      auto *T = new (Mem) EnumType(TC, Keyword, Qualifier, TD, OwnsTag,
-                                   IsInjected, CanonicalType);
-      assert(reinterpret_cast<void *>(T) ==
-                 reinterpret_cast<void *>(static_cast<TagType *>(T)) &&
-             "TagType must be the first base of EnumType");
-      return T;
-    }
-    case Type::Record: {
-      assert(isa<RecordDecl>(TD));
-      auto *T = new (Mem) RecordType(TC, Keyword, Qualifier, TD, OwnsTag,
-                                     IsInjected, CanonicalType);
-      assert(reinterpret_cast<void *>(T) ==
-                 reinterpret_cast<void *>(static_cast<TagType *>(T)) &&
-             "TagType must be the first base of RecordType");
-      return T;
-    }
-    case Type::InjectedClassName: {
-      auto *T = new (Mem) InjectedClassNameType(Keyword, Qualifier, TD,
-                                                IsInjected, CanonicalType);
-      assert(reinterpret_cast<void *>(T) ==
-                 reinterpret_cast<void *>(static_cast<TagType *>(T)) &&
-             "TagType must be the first base of InjectedClassNameType");
-      return T;
-    }
-    default:
-      llvm_unreachable("unexpected type class");
-    }
-  }();
-  assert(T->getKeyword() == Keyword);
-  assert(T->getQualifier() == Qualifier);
-  assert(T->getOriginalDecl() == TD);
-  assert(T->isInjected() == IsInjected);
-  assert(T->isTagOwned() == OwnsTag);
-  assert((T->isCanonicalUnqualified()
-              ? QualType()
-              : T->getCanonicalTypeInternal()) == QualType(CanonicalType, 0));
-  Types.push_back(T);
-  return T;
+  auto *newType = new (*this, alignof(RecordType)) RecordType(Decl);
+  Decl->TypeForDecl = newType;
+  Types.push_back(newType);
+  return QualType(newType, 0);
 }
 
-static bool getNonInjectedClassName(const TagDecl *&TD) {
-  if (const auto *RD = dyn_cast<CXXRecordDecl>(TD);
-      RD && RD->isInjectedClassName()) {
-    TD = cast<TagDecl>(RD->getDeclContext());
-    return true;
-  }
-  return false;
-}
+QualType ASTContext::getEnumType(const EnumDecl *Decl) const {
+  if (Decl->TypeForDecl) return QualType(Decl->TypeForDecl, 0);
 
-CanQualType ASTContext::getCanonicalTagType(const TagDecl *TD) const {
-  ::getNonInjectedClassName(TD);
-  TD = TD->getCanonicalDecl();
-  if (TD->TypeForDecl)
-    return TD->TypeForDecl->getCanonicalTypeUnqualified();
+  if (const EnumDecl *PrevDecl = Decl->getPreviousDecl())
+    if (PrevDecl->TypeForDecl)
+      return QualType(Decl->TypeForDecl = PrevDecl->TypeForDecl, 0);
 
-  const Type *CanonicalType = getTagTypeInternal(
-      ElaboratedTypeKeyword::None,
-      /*Qualifier=*/std::nullopt, TD,
-      /*OwnsTag=*/false, /*IsInjected=*/false, /*CanonicalType=*/nullptr,
-      /*WithFoldingSetNode=*/false);
-  TD->TypeForDecl = CanonicalType;
-  return CanQualType::CreateUnsafe(QualType(CanonicalType, 0));
-}
-
-QualType ASTContext::getTagType(ElaboratedTypeKeyword Keyword,
-                                NestedNameSpecifier Qualifier,
-                                const TagDecl *TD, bool OwnsTag) const {
-  ElaboratedTypeKeyword PreferredKeyword =
-      getLangOpts().CPlusPlus
-          ? ElaboratedTypeKeyword::None
-          : KeywordHelpers::getKeywordForTagTypeKind(TD->getTagKind());
-
-  if (Keyword == PreferredKeyword && !Qualifier && !OwnsTag) {
-    if (const Type *T = TD->TypeForDecl; T && !T->isCanonicalUnqualified())
-      return QualType(T, 0);
-
-    bool IsInjected = ::getNonInjectedClassName(TD);
-    const Type *CanonicalType = getCanonicalTagType(TD).getTypePtr();
-    const Type *T =
-        getTagTypeInternal(Keyword,
-                           /*Qualifier=*/std::nullopt, TD,
-                           /*OwnsTag=*/false, IsInjected, CanonicalType,
-                           /*WithFoldingSetNode=*/false);
-    TD->TypeForDecl = T;
-    return QualType(T, 0);
-  }
-
-  bool IsInjected = ::getNonInjectedClassName(TD);
-
-  llvm::FoldingSetNodeID ID;
-  TagTypeFoldingSetPlaceholder::Profile(ID, Keyword, Qualifier, TD, OwnsTag,
-                                        IsInjected);
-
-  void *InsertPos = nullptr;
-  if (TagTypeFoldingSetPlaceholder *T =
-          TagTypes.FindNodeOrInsertPos(ID, InsertPos))
-    return QualType(T->getTagType(), 0);
-
-  const Type *CanonicalType = getCanonicalTagType(TD).getTypePtr();
-  TagType *T = getTagTypeInternal(Keyword, Qualifier, TD, OwnsTag, IsInjected,
-                                  CanonicalType, /*WithFoldingSetNode=*/true);
-  TagTypes.InsertNode(TagTypeFoldingSetPlaceholder::fromTagType(T), InsertPos);
-  return QualType(T, 0);
+  auto *newType = new (*this, alignof(EnumType)) EnumType(Decl);
+  Decl->TypeForDecl = newType;
+  Types.push_back(newType);
+  return QualType(newType, 0);
 }
 
 bool ASTContext::computeBestEnumTypes(bool IsPacked, unsigned NumNegativeBits,
@@ -5643,69 +5500,21 @@ bool ASTContext::isRepresentableIntegerValue(llvm::APSInt &Value, QualType T) {
   return Value.getSignificantBits() <= BitWidth;
 }
 
-UnresolvedUsingType *ASTContext::getUnresolvedUsingTypeInternal(
-    ElaboratedTypeKeyword Keyword, NestedNameSpecifier Qualifier,
-    const UnresolvedUsingTypenameDecl *D, void *InsertPos,
-    const Type *CanonicalType) const {
-  void *Mem = Allocate(
-      UnresolvedUsingType::totalSizeToAlloc<
-          FoldingSetPlaceholder<UnresolvedUsingType>, NestedNameSpecifier>(
-          !!InsertPos, !!Qualifier),
-      alignof(UnresolvedUsingType));
-  auto *T = new (Mem) UnresolvedUsingType(Keyword, Qualifier, D, CanonicalType);
-  if (InsertPos) {
-    auto *Placeholder = new (T->getFoldingSetPlaceholder())
-        FoldingSetPlaceholder<TypedefType>();
-    TypedefTypes.InsertNode(Placeholder, InsertPos);
-  }
-  Types.push_back(T);
-  return T;
-}
+QualType ASTContext::getUnresolvedUsingType(
+    const UnresolvedUsingTypenameDecl *Decl) const {
+  if (Decl->TypeForDecl)
+    return QualType(Decl->TypeForDecl, 0);
 
-CanQualType ASTContext::getCanonicalUnresolvedUsingType(
-    const UnresolvedUsingTypenameDecl *D) const {
-  D = D->getCanonicalDecl();
-  if (D->TypeForDecl)
-    return D->TypeForDecl->getCanonicalTypeUnqualified();
+  if (const UnresolvedUsingTypenameDecl *CanonicalDecl =
+          Decl->getCanonicalDecl())
+    if (CanonicalDecl->TypeForDecl)
+      return QualType(Decl->TypeForDecl = CanonicalDecl->TypeForDecl, 0);
 
-  const Type *CanonicalType = getUnresolvedUsingTypeInternal(
-      ElaboratedTypeKeyword::None,
-      /*Qualifier=*/std::nullopt, D,
-      /*InsertPos=*/nullptr, /*CanonicalType=*/nullptr);
-  D->TypeForDecl = CanonicalType;
-  return CanQualType::CreateUnsafe(QualType(CanonicalType, 0));
-}
-
-QualType
-ASTContext::getUnresolvedUsingType(ElaboratedTypeKeyword Keyword,
-                                   NestedNameSpecifier Qualifier,
-                                   const UnresolvedUsingTypenameDecl *D) const {
-  if (Keyword == ElaboratedTypeKeyword::None && !Qualifier) {
-    if (const Type *T = D->TypeForDecl; T && !T->isCanonicalUnqualified())
-      return QualType(T, 0);
-
-    const Type *CanonicalType = getCanonicalUnresolvedUsingType(D).getTypePtr();
-    const Type *T =
-        getUnresolvedUsingTypeInternal(ElaboratedTypeKeyword::None,
-                                       /*Qualifier=*/std::nullopt, D,
-                                       /*InsertPos=*/nullptr, CanonicalType);
-    D->TypeForDecl = T;
-    return QualType(T, 0);
-  }
-
-  llvm::FoldingSetNodeID ID;
-  UnresolvedUsingType::Profile(ID, Keyword, Qualifier, D);
-
-  void *InsertPos = nullptr;
-  if (FoldingSetPlaceholder<UnresolvedUsingType> *Placeholder =
-          UnresolvedUsingTypes.FindNodeOrInsertPos(ID, InsertPos))
-    return QualType(Placeholder->getType(), 0);
-  assert(InsertPos);
-
-  const Type *CanonicalType = getCanonicalUnresolvedUsingType(D).getTypePtr();
-  const Type *T = getUnresolvedUsingTypeInternal(Keyword, Qualifier, D,
-                                                 InsertPos, CanonicalType);
-  return QualType(T, 0);
+  Type *newType =
+      new (*this, alignof(UnresolvedUsingType)) UnresolvedUsingType(Decl);
+  Decl->TypeForDecl = newType;
+  Types.push_back(newType);
+  return QualType(newType, 0);
 }
 
 QualType ASTContext::getAttributedType(attr::Kind attrKind,
@@ -5925,32 +5734,34 @@ QualType ASTContext::getTemplateTypeParmType(unsigned Depth, unsigned Index,
 }
 
 TypeSourceInfo *ASTContext::getTemplateSpecializationTypeInfo(
-    ElaboratedTypeKeyword Keyword, SourceLocation ElaboratedKeywordLoc,
-    NestedNameSpecifierLoc QualifierLoc, SourceLocation TemplateKeywordLoc,
     TemplateName Name, SourceLocation NameLoc,
     const TemplateArgumentListInfo &SpecifiedArgs,
     ArrayRef<TemplateArgument> CanonicalArgs, QualType Underlying) const {
-  QualType TST = getTemplateSpecializationType(
-      Keyword, Name, SpecifiedArgs.arguments(), CanonicalArgs, Underlying);
+  QualType TST = getTemplateSpecializationType(Name, SpecifiedArgs.arguments(),
+                                               CanonicalArgs, Underlying);
 
   TypeSourceInfo *DI = CreateTypeSourceInfo(TST);
-  DI->getTypeLoc().castAs<TemplateSpecializationTypeLoc>().set(
-      ElaboratedKeywordLoc, QualifierLoc, TemplateKeywordLoc, NameLoc,
-      SpecifiedArgs);
+  TemplateSpecializationTypeLoc TL =
+      DI->getTypeLoc().castAs<TemplateSpecializationTypeLoc>();
+  TL.setTemplateKeywordLoc(SourceLocation());
+  TL.setTemplateNameLoc(NameLoc);
+  TL.setLAngleLoc(SpecifiedArgs.getLAngleLoc());
+  TL.setRAngleLoc(SpecifiedArgs.getRAngleLoc());
+  for (unsigned i = 0, e = TL.getNumArgs(); i != e; ++i)
+    TL.setArgLocInfo(i, SpecifiedArgs[i].getLocInfo());
   return DI;
 }
 
 QualType ASTContext::getTemplateSpecializationType(
-    ElaboratedTypeKeyword Keyword, TemplateName Template,
-    ArrayRef<TemplateArgumentLoc> SpecifiedArgs,
+    TemplateName Template, ArrayRef<TemplateArgumentLoc> SpecifiedArgs,
     ArrayRef<TemplateArgument> CanonicalArgs, QualType Underlying) const {
   SmallVector<TemplateArgument, 4> SpecifiedArgVec;
   SpecifiedArgVec.reserve(SpecifiedArgs.size());
   for (const TemplateArgumentLoc &Arg : SpecifiedArgs)
     SpecifiedArgVec.push_back(Arg.getArgument());
 
-  return getTemplateSpecializationType(Keyword, Template, SpecifiedArgVec,
-                                       CanonicalArgs, Underlying);
+  return getTemplateSpecializationType(Template, SpecifiedArgVec, CanonicalArgs,
+                                       Underlying);
 }
 
 [[maybe_unused]] static bool
@@ -5981,8 +5792,7 @@ QualType ASTContext::getCanonicalTemplateSpecializationType(
                            sizeof(TemplateArgument) * Args.size(),
                        alignof(TemplateSpecializationType));
   auto *Spec = new (Mem)
-      TemplateSpecializationType(ElaboratedTypeKeyword::None, Template,
-                                 /*IsAlias=*/false, Args, QualType());
+      TemplateSpecializationType(Template, /*IsAlias=*/false, Args, QualType());
   assert(Spec->isDependentType() &&
          "canonical template specialization must be dependent");
   Types.push_back(Spec);
@@ -5991,8 +5801,7 @@ QualType ASTContext::getCanonicalTemplateSpecializationType(
 }
 
 QualType ASTContext::getTemplateSpecializationType(
-    ElaboratedTypeKeyword Keyword, TemplateName Template,
-    ArrayRef<TemplateArgument> SpecifiedArgs,
+    TemplateName Template, ArrayRef<TemplateArgument> SpecifiedArgs,
     ArrayRef<TemplateArgument> CanonicalArgs, QualType Underlying) const {
   assert(!Template.getUnderlying().getAsDependentTemplateName() &&
          "No dependent template names here!");
@@ -6002,8 +5811,7 @@ QualType ASTContext::getTemplateSpecializationType(
   if (Underlying.isNull()) {
     TemplateName CanonTemplate =
         getCanonicalTemplateName(Template, /*IgnoreDeduced=*/true);
-    bool NonCanonical =
-        Template != CanonTemplate || Keyword != ElaboratedTypeKeyword::None;
+    bool NonCanonical = Template != CanonTemplate;
     SmallVector<TemplateArgument, 4> CanonArgsVec;
     if (CanonicalArgs.empty()) {
       CanonArgsVec = SmallVector<TemplateArgument, 4>(SpecifiedArgs);
@@ -6034,10 +5842,40 @@ QualType ASTContext::getTemplateSpecializationType(
                            sizeof(TemplateArgument) * SpecifiedArgs.size() +
                            (IsTypeAlias ? sizeof(QualType) : 0),
                        alignof(TemplateSpecializationType));
-  auto *Spec = new (Mem) TemplateSpecializationType(
-      Keyword, Template, IsTypeAlias, SpecifiedArgs, Underlying);
+  auto *Spec = new (Mem) TemplateSpecializationType(Template, IsTypeAlias,
+                                                    SpecifiedArgs, Underlying);
   Types.push_back(Spec);
   return QualType(Spec, 0);
+}
+
+QualType ASTContext::getElaboratedType(ElaboratedTypeKeyword Keyword,
+                                       NestedNameSpecifier *NNS,
+                                       QualType NamedType,
+                                       TagDecl *OwnedTagDecl) const {
+  llvm::FoldingSetNodeID ID;
+  ElaboratedType::Profile(ID, Keyword, NNS, NamedType, OwnedTagDecl);
+
+  void *InsertPos = nullptr;
+  ElaboratedType *T = ElaboratedTypes.FindNodeOrInsertPos(ID, InsertPos);
+  if (T)
+    return QualType(T, 0);
+
+  QualType Canon = NamedType;
+  if (!Canon.isCanonical()) {
+    Canon = getCanonicalType(NamedType);
+    ElaboratedType *CheckT = ElaboratedTypes.FindNodeOrInsertPos(ID, InsertPos);
+    assert(!CheckT && "Elaborated canonical type broken");
+    (void)CheckT;
+  }
+
+  void *Mem =
+      Allocate(ElaboratedType::totalSizeToAlloc<TagDecl *>(!!OwnedTagDecl),
+               alignof(ElaboratedType));
+  T = new (Mem) ElaboratedType(Keyword, NNS, NamedType, Canon, OwnedTagDecl);
+
+  Types.push_back(T);
+  ElaboratedTypes.InsertNode(T, InsertPos);
+  return QualType(T, 0);
 }
 
 QualType
@@ -6102,7 +5940,7 @@ getCanonicalElaboratedTypeKeyword(ElaboratedTypeKeyword Keyword) {
 }
 
 QualType ASTContext::getDependentNameType(ElaboratedTypeKeyword Keyword,
-                                          NestedNameSpecifier NNS,
+                                          NestedNameSpecifier *NNS,
                                           const IdentifierInfo *Name) const {
   llvm::FoldingSetNodeID ID;
   DependentNameType::Profile(ID, Keyword, NNS, Name);
@@ -6114,7 +5952,7 @@ QualType ASTContext::getDependentNameType(ElaboratedTypeKeyword Keyword,
 
   ElaboratedTypeKeyword CanonKeyword =
       getCanonicalElaboratedTypeKeyword(Keyword);
-  NestedNameSpecifier CanonNNS = NNS.getCanonical();
+  NestedNameSpecifier *CanonNNS = getCanonicalNestedNameSpecifier(NNS);
 
   QualType Canon;
   if (CanonKeyword != Keyword || CanonNNS != NNS) {
@@ -6152,13 +5990,13 @@ QualType ASTContext::getDependentTemplateSpecializationType(
       T_iter != DependentTemplateSpecializationTypes.end())
     return QualType(T_iter->getSecond(), 0);
 
-  NestedNameSpecifier NNS = Name.getQualifier();
+  NestedNameSpecifier *NNS = Name.getQualifier();
 
   QualType Canon;
   if (!IsCanonical) {
     ElaboratedTypeKeyword CanonKeyword =
         getCanonicalElaboratedTypeKeyword(Keyword);
-    NestedNameSpecifier CanonNNS = NNS.getCanonical();
+    NestedNameSpecifier *CanonNNS = getCanonicalNestedNameSpecifier(NNS);
     bool AnyNonCanonArgs = false;
     auto CanonArgs =
         ::getCanonicalTemplateArguments(*this, Args, AnyNonCanonArgs);
@@ -6173,7 +6011,7 @@ QualType ASTContext::getDependentTemplateSpecializationType(
   } else {
     assert(Keyword == getCanonicalElaboratedTypeKeyword(Keyword));
     assert(Name.hasTemplateKeyword());
-    assert(NNS.isCanonical());
+    assert(NNS == getCanonicalNestedNameSpecifier(NNS));
 #ifndef NDEBUG
     for (const auto &Arg : Args)
       assert(Arg.structurallyEquals(getCanonicalTemplateArgument(Arg)));
@@ -6229,8 +6067,7 @@ TemplateArgument ASTContext::getInjectedTemplateArg(NamedDecl *Param) const {
   } else {
     auto *TTP = cast<TemplateTemplateParmDecl>(Param);
     TemplateName Name = getQualifiedTemplateName(
-        /*Qualifier=*/std::nullopt, /*TemplateKeyword=*/false,
-        TemplateName(TTP));
+        nullptr, /*TemplateKeyword=*/false, TemplateName(TTP));
     if (TTP->isParameterPack())
       Arg = TemplateArgument(Name, /*NumExpansions=*/std::nullopt);
     else
@@ -6502,11 +6339,11 @@ void ASTContext::adjustObjCTypeParamBoundType(const ObjCTypeParamDecl *Orig,
                                               ObjCTypeParamDecl *New) const {
   New->setTypeSourceInfo(getTrivialTypeSourceInfo(Orig->getUnderlyingType()));
   // Update TypeForDecl after updating TypeSourceInfo.
-  auto *NewTypeParamTy = cast<ObjCTypeParamType>(New->TypeForDecl);
+  auto NewTypeParamTy = cast<ObjCTypeParamType>(New->getTypeForDecl());
   SmallVector<ObjCProtocolDecl *, 8> protocols;
   protocols.append(NewTypeParamTy->qual_begin(), NewTypeParamTy->qual_end());
   QualType UpdatedTy = getObjCTypeParamType(New, protocols);
-  New->TypeForDecl = UpdatedTy.getTypePtr();
+  New->setTypeForDecl(UpdatedTy.getTypePtr());
 }
 
 /// ObjCObjectAdoptsQTypeProtocols - Checks that protocols in IC's
@@ -6905,20 +6742,20 @@ QualType ASTContext::getUnconstrainedType(QualType T) const {
 }
 
 QualType ASTContext::getDeducedTemplateSpecializationTypeInternal(
-    ElaboratedTypeKeyword Keyword, TemplateName Template, QualType DeducedType,
-    bool IsDependent, QualType Canon) const {
+    TemplateName Template, QualType DeducedType, bool IsDependent,
+    QualType Canon) const {
   // Look in the folding set for an existing type.
   void *InsertPos = nullptr;
   llvm::FoldingSetNodeID ID;
-  DeducedTemplateSpecializationType::Profile(ID, Keyword, Template, DeducedType,
+  DeducedTemplateSpecializationType::Profile(ID, Template, DeducedType,
                                              IsDependent);
   if (DeducedTemplateSpecializationType *DTST =
           DeducedTemplateSpecializationTypes.FindNodeOrInsertPos(ID, InsertPos))
     return QualType(DTST, 0);
 
   auto *DTST = new (*this, alignof(DeducedTemplateSpecializationType))
-      DeducedTemplateSpecializationType(Keyword, Template, DeducedType,
-                                        IsDependent, Canon);
+      DeducedTemplateSpecializationType(Template, DeducedType, IsDependent,
+                                        Canon);
 
 #ifndef NDEBUG
   llvm::FoldingSetNodeID TempID;
@@ -6934,20 +6771,14 @@ QualType ASTContext::getDeducedTemplateSpecializationTypeInternal(
 /// which has been deduced to the given type, or to the canonical undeduced
 /// such type, or the canonical deduced-but-dependent such type.
 QualType ASTContext::getDeducedTemplateSpecializationType(
-    ElaboratedTypeKeyword Keyword, TemplateName Template, QualType DeducedType,
-    bool IsDependent) const {
-  // FIXME: This could save an extra hash table lookup if it handled all the
-  // parameters already being canonical.
-  // FIXME: Can this be formed from a DependentTemplateName, such that the
-  // keyword should be part of the canonical type?
-  QualType Canon =
-      DeducedType.isNull()
-          ? getDeducedTemplateSpecializationTypeInternal(
-                ElaboratedTypeKeyword::None, getCanonicalTemplateName(Template),
-                QualType(), IsDependent, QualType())
-          : DeducedType.getCanonicalType();
-  return getDeducedTemplateSpecializationTypeInternal(
-      Keyword, Template, DeducedType, IsDependent, Canon);
+    TemplateName Template, QualType DeducedType, bool IsDependent) const {
+  QualType Canon = DeducedType.isNull()
+                       ? getDeducedTemplateSpecializationTypeInternal(
+                             getCanonicalTemplateName(Template), QualType(),
+                             IsDependent, QualType())
+                       : DeducedType.getCanonicalType();
+  return getDeducedTemplateSpecializationTypeInternal(Template, DeducedType,
+                                                      IsDependent, Canon);
 }
 
 /// getAtomicType - Return the uniqued reference to the atomic type for
@@ -6995,6 +6826,15 @@ QualType ASTContext::getAutoRRefDeductType() const {
     AutoRRefDeductTy = getRValueReferenceType(getAutoDeductType());
   assert(!AutoRRefDeductTy.isNull() && "can't build 'auto &&' pattern");
   return AutoRRefDeductTy;
+}
+
+/// getTagDeclType - Return the unique reference to the type for the
+/// specified TagDecl (struct/union/class/enum) decl.
+QualType ASTContext::getTagDeclType(const TagDecl *Decl) const {
+  assert(Decl);
+  // FIXME: What is the design on getTagDeclType when it requires casting
+  // away const?  mutable?
+  return getTypeDeclType(const_cast<TagDecl*>(Decl));
 }
 
 /// getSizeType - Return the unique type for "size_t" (C99 7.17), the result
@@ -7218,8 +7058,8 @@ bool ASTContext::UnwrapSimilarTypes(QualType &T1, QualType &T2,
         *RD2 = T2MPType->getMostRecentCXXRecordDecl();
         RD1 != RD2 && RD1->getCanonicalDecl() != RD2->getCanonicalDecl())
       return false;
-    if (T1MPType->getQualifier().getCanonical() !=
-        T2MPType->getQualifier().getCanonical())
+    if (getCanonicalNestedNameSpecifier(T1MPType->getQualifier()) !=
+        getCanonicalNestedNameSpecifier(T2MPType->getQualifier()))
       return false;
     T1 = T1MPType->getPointeeType();
     T2 = T2MPType->getPointeeType();
@@ -7376,8 +7216,9 @@ TemplateName ASTContext::getCanonicalTemplateName(TemplateName Name,
   case TemplateName::DependentTemplate: {
     DependentTemplateName *DTN = Name.getAsDependentTemplateName();
     assert(DTN && "Non-dependent template names must refer to template decls.");
-    NestedNameSpecifier Qualifier = DTN->getQualifier();
-    NestedNameSpecifier CanonQualifier = Qualifier.getCanonical();
+    NestedNameSpecifier *Qualifier = DTN->getQualifier();
+    NestedNameSpecifier *CanonQualifier =
+        getCanonicalNestedNameSpecifier(Qualifier);
     if (Qualifier != CanonQualifier || !DTN->hasTemplateKeyword())
       return getDependentTemplateName({CanonQualifier, DTN->getName(),
                                        /*HasTemplateKeyword=*/true});
@@ -7594,40 +7435,38 @@ bool ASTContext::isSameDefaultTemplateArgument(const NamedDecl *X,
   return hasSameTemplateName(TAX.getAsTemplate(), TAY.getAsTemplate());
 }
 
-static bool isSameQualifier(const NestedNameSpecifier X,
-                            const NestedNameSpecifier Y) {
-  if (X == Y)
-    return true;
-  if (!X || !Y)
-    return false;
-
-  auto Kind = X.getKind();
-  if (Kind != Y.getKind())
+static bool isSameQualifier(const NestedNameSpecifier *X,
+                            const NestedNameSpecifier *Y) {
+  if (X->getKind() != Y->getKind())
     return false;
 
   // FIXME: For namespaces and types, we're permitted to check that the entity
   // is named via the same tokens. We should probably do so.
-  switch (Kind) {
-  case NestedNameSpecifier::Kind::Namespace: {
-    auto [NamespaceX, PrefixX] = X.getAsNamespaceAndPrefix();
-    auto [NamespaceY, PrefixY] = Y.getAsNamespaceAndPrefix();
-    if (!declaresSameEntity(NamespaceX->getNamespace(),
-                            NamespaceY->getNamespace()))
+  switch (X->getKind()) {
+  case NestedNameSpecifier::Identifier:
+    if (X->getAsIdentifier() != Y->getAsIdentifier())
       return false;
-    return isSameQualifier(PrefixX, PrefixY);
-  }
-  case NestedNameSpecifier::Kind::Type: {
-    const auto *TX = X.getAsType(), *TY = Y.getAsType();
-    if (TX->getCanonicalTypeInternal() != TY->getCanonicalTypeInternal())
+    break;
+  case NestedNameSpecifier::Namespace:
+    if (!declaresSameEntity(X->getAsNamespace(), Y->getAsNamespace()))
       return false;
-    return isSameQualifier(TX->getPrefix(), TY->getPrefix());
-  }
-  case NestedNameSpecifier::Kind::Null:
-  case NestedNameSpecifier::Kind::Global:
-  case NestedNameSpecifier::Kind::MicrosoftSuper:
+    break;
+  case NestedNameSpecifier::TypeSpec:
+    if (X->getAsType()->getCanonicalTypeInternal() !=
+        Y->getAsType()->getCanonicalTypeInternal())
+      return false;
+    break;
+  case NestedNameSpecifier::Global:
+  case NestedNameSpecifier::Super:
     return true;
   }
-  llvm_unreachable("unhandled qualifier kind");
+
+  // Recurse into earlier portion of NNS, if any.
+  auto *PX = X->getPrefix();
+  auto *PY = Y->getPrefix();
+  if (PX && PY)
+    return isSameQualifier(PX, PY);
+  return !PX && !PY;
 }
 
 static bool hasSameCudaAttrs(const FunctionDecl *A, const FunctionDecl *B) {
@@ -8020,6 +7859,63 @@ bool ASTContext::isSameTemplateArgument(const TemplateArgument &Arg1,
   llvm_unreachable("Unhandled template argument kind");
 }
 
+NestedNameSpecifier *
+ASTContext::getCanonicalNestedNameSpecifier(NestedNameSpecifier *NNS) const {
+  if (!NNS)
+    return nullptr;
+
+  switch (NNS->getKind()) {
+  case NestedNameSpecifier::Identifier:
+    // Canonicalize the prefix but keep the identifier the same.
+    return NestedNameSpecifier::Create(*this,
+                         getCanonicalNestedNameSpecifier(NNS->getPrefix()),
+                                       NNS->getAsIdentifier());
+
+  case NestedNameSpecifier::Namespace:
+    // A namespace is canonical; build a nested-name-specifier with
+    // this namespace and no prefix.
+    return NestedNameSpecifier::Create(
+        *this, nullptr, NNS->getAsNamespace()->getNamespace()->getFirstDecl());
+
+  // The difference between TypeSpec and TypeSpecWithTemplate is that the
+  // latter will have the 'template' keyword when printed.
+  case NestedNameSpecifier::TypeSpec: {
+    const Type *T = getCanonicalType(NNS->getAsType());
+
+    // If we have some kind of dependent-named type (e.g., "typename T::type"),
+    // break it apart into its prefix and identifier, then reconsititute those
+    // as the canonical nested-name-specifier. This is required to canonicalize
+    // a dependent nested-name-specifier involving typedefs of dependent-name
+    // types, e.g.,
+    //   typedef typename T::type T1;
+    //   typedef typename T1::type T2;
+    if (const auto *DNT = T->getAs<DependentNameType>())
+      return NestedNameSpecifier::Create(*this, DNT->getQualifier(),
+                                         DNT->getIdentifier());
+    if (const auto *DTST = T->getAs<DependentTemplateSpecializationType>()) {
+      const DependentTemplateStorage &DTN = DTST->getDependentTemplateName();
+      QualType NewT = getDependentTemplateSpecializationType(
+          ElaboratedTypeKeyword::None,
+          {/*NNS=*/nullptr, DTN.getName(), /*HasTemplateKeyword=*/true},
+          DTST->template_arguments(), /*IsCanonical=*/true);
+      assert(NewT.isCanonical());
+      NestedNameSpecifier *Prefix = DTN.getQualifier();
+      if (!Prefix)
+        Prefix = getCanonicalNestedNameSpecifier(NNS->getPrefix());
+      return NestedNameSpecifier::Create(*this, Prefix, NewT.getTypePtr());
+    }
+    return NestedNameSpecifier::Create(*this, nullptr, T);
+  }
+
+  case NestedNameSpecifier::Global:
+  case NestedNameSpecifier::Super:
+    // The global specifier and __super specifer are canonical and unique.
+    return NNS;
+  }
+
+  llvm_unreachable("Invalid NestedNameSpecifier::Kind!");
+}
+
 const ArrayType *ASTContext::getAsArrayType(QualType T) const {
   // Handle the non-qualified case efficiently.
   if (!T.hasLocalQualifiers()) {
@@ -8338,7 +8234,7 @@ QualType ASTContext::getPromotedIntegerType(QualType Promotable) const {
   assert(!Promotable.isNull());
   assert(isPromotableIntegerType(Promotable));
   if (const auto *ET = Promotable->getAs<EnumType>())
-    return ET->getOriginalDecl()->getDefinitionOrSelf()->getPromotionType();
+    return ET->getDecl()->getPromotionType();
 
   if (const auto *BT = Promotable->getAs<BuiltinType>()) {
     // C++ [conv.prom]: A prvalue of type char16_t, char32_t, or wchar_t
@@ -8397,9 +8293,8 @@ Qualifiers::ObjCLifetime ASTContext::getInnerObjCOwnership(QualType T) const {
 static const Type *getIntegerTypeForEnum(const EnumType *ET) {
   // Incomplete enum types are not treated as integer types.
   // FIXME: In C++, enum types are never integer types.
-  const EnumDecl *ED = ET->getOriginalDecl()->getDefinitionOrSelf();
-  if (ED->isComplete() && !ED->isScoped())
-    return ED->getIntegerType().getTypePtr();
+  if (ET->getDecl()->isComplete() && !ET->getDecl()->isScoped())
+    return ET->getDecl()->getIntegerType().getTypePtr();
   return nullptr;
 }
 
@@ -8528,7 +8423,7 @@ TypedefDecl *ASTContext::getCFConstantStringDecl() const {
   CFConstantStringTagDecl->completeDefinition();
   // This type is designed to be compatible with NSConstantString, but cannot
   // use the same name, since NSConstantString is an interface.
-  CanQualType tagType = getCanonicalTagType(CFConstantStringTagDecl);
+  auto tagType = getTagDeclType(CFConstantStringTagDecl);
   CFConstantStringTypeDecl =
       buildImplicitTypedef(tagType, "__NSConstantString");
 
@@ -8543,15 +8438,14 @@ RecordDecl *ASTContext::getCFConstantStringTagDecl() const {
 
 // getCFConstantStringType - Return the type used for constant CFStrings.
 QualType ASTContext::getCFConstantStringType() const {
-  return getTypedefType(ElaboratedTypeKeyword::None, /*Qualifier=*/std::nullopt,
-                        getCFConstantStringDecl());
+  return getTypedefType(getCFConstantStringDecl());
 }
 
 QualType ASTContext::getObjCSuperType() const {
   if (ObjCSuperType.isNull()) {
     RecordDecl *ObjCSuperTypeDecl = buildImplicitRecord("objc_super");
     getTranslationUnitDecl()->addDecl(ObjCSuperTypeDecl);
-    ObjCSuperType = getCanonicalTagType(ObjCSuperTypeDecl);
+    ObjCSuperType = getTagDeclType(ObjCSuperTypeDecl);
   }
   return ObjCSuperType;
 }
@@ -8560,12 +8454,12 @@ void ASTContext::setCFConstantStringType(QualType T) {
   const auto *TD = T->castAs<TypedefType>();
   CFConstantStringTypeDecl = cast<TypedefDecl>(TD->getDecl());
   const auto *TagType = TD->castAs<RecordType>();
-  CFConstantStringTagDecl = TagType->getOriginalDecl()->getDefinitionOrSelf();
+  CFConstantStringTagDecl = TagType->getDecl();
 }
 
 QualType ASTContext::getBlockDescriptorType() const {
   if (BlockDescriptorType)
-    return getCanonicalTagType(BlockDescriptorType);
+    return getTagDeclType(BlockDescriptorType);
 
   RecordDecl *RD;
   // FIXME: Needs the FlagAppleBlock bit.
@@ -8595,12 +8489,12 @@ QualType ASTContext::getBlockDescriptorType() const {
 
   BlockDescriptorType = RD;
 
-  return getCanonicalTagType(BlockDescriptorType);
+  return getTagDeclType(BlockDescriptorType);
 }
 
 QualType ASTContext::getBlockDescriptorExtendedType() const {
   if (BlockDescriptorExtendedType)
-    return getCanonicalTagType(BlockDescriptorExtendedType);
+    return getTagDeclType(BlockDescriptorExtendedType);
 
   RecordDecl *RD;
   // FIXME: Needs the FlagAppleBlock bit.
@@ -8634,7 +8528,7 @@ QualType ASTContext::getBlockDescriptorExtendedType() const {
   RD->completeDefinition();
 
   BlockDescriptorExtendedType = RD;
-  return getCanonicalTagType(BlockDescriptorExtendedType);
+  return getTagDeclType(BlockDescriptorExtendedType);
 }
 
 OpenCLTypeKind ASTContext::getOpenCLTypeKind(const Type *T) const {
@@ -9272,7 +9166,7 @@ static char getObjCEncodingForPrimitiveType(const ASTContext *C,
 }
 
 static char ObjCEncodingForEnumType(const ASTContext *C, const EnumType *ET) {
-  EnumDecl *Enum = ET->getOriginalDecl()->getDefinitionOrSelf();
+  EnumDecl *Enum = ET->getDecl();
 
   // The encoding of an non-fixed enum type is always 'i', regardless of size.
   if (!Enum->isFixed())
@@ -9441,14 +9335,13 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string &S,
         return;
       }
     } else if (const auto *RTy = PointeeTy->getAs<RecordType>()) {
-      const IdentifierInfo *II = RTy->getOriginalDecl()->getIdentifier();
       // GCC binary compat: Need to convert "struct objc_class *" to "#".
-      if (II == &Idents.get("objc_class")) {
+      if (RTy->getDecl()->getIdentifier() == &Idents.get("objc_class")) {
         S += '#';
         return;
       }
       // GCC binary compat: Need to convert "struct objc_object *" to "@".
-      if (II == &Idents.get("objc_object")) {
+      if (RTy->getDecl()->getIdentifier() == &Idents.get("objc_object")) {
         S += '@';
         return;
       }
@@ -9513,7 +9406,7 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string &S,
     return;
 
   case Type::Record: {
-    RecordDecl *RDecl = cast<RecordType>(CT)->getOriginalDecl();
+    RecordDecl *RDecl = cast<RecordType>(CT)->getDecl();
     S += RDecl->isUnion() ? '(' : '{';
     // Anonymous structures print as '?'
     if (const IdentifierInfo *II = RDecl->getIdentifier()) {
@@ -10012,7 +9905,7 @@ CreateAArch64ABIBuiltinVaListDecl(const ASTContext *Context) {
   }
   VaListTagDecl->completeDefinition();
   Context->VaListTagDecl = VaListTagDecl;
-  CanQualType VaListTagType = Context->getCanonicalTagType(VaListTagDecl);
+  QualType VaListTagType = Context->getRecordType(VaListTagDecl);
 
   // } __builtin_va_list;
   return Context->buildImplicitTypedef(VaListTagType, "__builtin_va_list");
@@ -10064,15 +9957,14 @@ static TypedefDecl *CreatePowerABIBuiltinVaListDecl(const ASTContext *Context) {
   }
   VaListTagDecl->completeDefinition();
   Context->VaListTagDecl = VaListTagDecl;
-  CanQualType VaListTagType = Context->getCanonicalTagType(VaListTagDecl);
+  QualType VaListTagType = Context->getRecordType(VaListTagDecl);
 
   // } __va_list_tag;
   TypedefDecl *VaListTagTypedefDecl =
       Context->buildImplicitTypedef(VaListTagType, "__va_list_tag");
 
   QualType VaListTagTypedefType =
-      Context->getTypedefType(ElaboratedTypeKeyword::None,
-                              /*Qualifier=*/std::nullopt, VaListTagTypedefDecl);
+    Context->getTypedefType(VaListTagTypedefDecl);
 
   // typedef __va_list_tag __builtin_va_list[1];
   llvm::APInt Size(Context->getTypeSize(Context->getSizeType()), 1);
@@ -10124,7 +10016,7 @@ CreateX86_64ABIBuiltinVaListDecl(const ASTContext *Context) {
   }
   VaListTagDecl->completeDefinition();
   Context->VaListTagDecl = VaListTagDecl;
-  CanQualType VaListTagType = Context->getCanonicalTagType(VaListTagDecl);
+  QualType VaListTagType = Context->getRecordType(VaListTagDecl);
 
   // };
 
@@ -10172,7 +10064,7 @@ CreateAAPCSABIBuiltinVaListDecl(const ASTContext *Context) {
   Context->VaListTagDecl = VaListDecl;
 
   // typedef struct __va_list __builtin_va_list;
-  CanQualType T = Context->getCanonicalTagType(VaListDecl);
+  QualType T = Context->getRecordType(VaListDecl);
   return Context->buildImplicitTypedef(T, "__builtin_va_list");
 }
 
@@ -10219,7 +10111,7 @@ CreateSystemZBuiltinVaListDecl(const ASTContext *Context) {
   }
   VaListTagDecl->completeDefinition();
   Context->VaListTagDecl = VaListTagDecl;
-  CanQualType VaListTagType = Context->getCanonicalTagType(VaListTagDecl);
+  QualType VaListTagType = Context->getRecordType(VaListTagDecl);
 
   // };
 
@@ -10266,15 +10158,13 @@ static TypedefDecl *CreateHexagonBuiltinVaListDecl(const ASTContext *Context) {
   }
   VaListTagDecl->completeDefinition();
   Context->VaListTagDecl = VaListTagDecl;
-  CanQualType VaListTagType = Context->getCanonicalTagType(VaListTagDecl);
+  QualType VaListTagType = Context->getRecordType(VaListTagDecl);
 
   // } __va_list_tag;
   TypedefDecl *VaListTagTypedefDecl =
       Context->buildImplicitTypedef(VaListTagType, "__va_list_tag");
 
-  QualType VaListTagTypedefType =
-      Context->getTypedefType(ElaboratedTypeKeyword::None,
-                              /*Qualifier=*/std::nullopt, VaListTagTypedefDecl);
+  QualType VaListTagTypedefType = Context->getTypedefType(VaListTagTypedefDecl);
 
   // typedef __va_list_tag __builtin_va_list[1];
   llvm::APInt Size(Context->getTypeSize(Context->getSizeType()), 1);
@@ -10312,7 +10202,7 @@ CreateXtensaABIBuiltinVaListDecl(const ASTContext *Context) {
   }
   VaListTagDecl->completeDefinition();
   Context->VaListTagDecl = VaListTagDecl;
-  CanQualType VaListTagType = Context->getCanonicalTagType(VaListTagDecl);
+  QualType VaListTagType = Context->getRecordType(VaListTagDecl);
 
   // } __va_list_tag;
   TypedefDecl *VaListTagTypedefDecl =
@@ -10426,7 +10316,7 @@ TemplateName ASTContext::getAssumedTemplateName(DeclarationName Name) const {
 
 /// Retrieve the template name that represents a qualified
 /// template name such as \c std::vector.
-TemplateName ASTContext::getQualifiedTemplateName(NestedNameSpecifier Qualifier,
+TemplateName ASTContext::getQualifiedTemplateName(NestedNameSpecifier *NNS,
                                                   bool TemplateKeyword,
                                                   TemplateName Template) const {
   assert(Template.getKind() == TemplateName::Template ||
@@ -10434,14 +10324,14 @@ TemplateName ASTContext::getQualifiedTemplateName(NestedNameSpecifier Qualifier,
 
   // FIXME: Canonicalization?
   llvm::FoldingSetNodeID ID;
-  QualifiedTemplateName::Profile(ID, Qualifier, TemplateKeyword, Template);
+  QualifiedTemplateName::Profile(ID, NNS, TemplateKeyword, Template);
 
   void *InsertPos = nullptr;
   QualifiedTemplateName *QTN =
-      QualifiedTemplateNames.FindNodeOrInsertPos(ID, InsertPos);
+    QualifiedTemplateNames.FindNodeOrInsertPos(ID, InsertPos);
   if (!QTN) {
     QTN = new (*this, alignof(QualifiedTemplateName))
-        QualifiedTemplateName(Qualifier, TemplateKeyword, Template);
+        QualifiedTemplateName(NNS, TemplateKeyword, Template);
     QualifiedTemplateNames.InsertNode(QTN, InsertPos);
   }
 
@@ -11411,7 +11301,7 @@ QualType ASTContext::mergeTransparentUnionType(QualType T, QualType SubType,
                                                bool OfBlockPointer,
                                                bool Unqualified) {
   if (const RecordType *UT = T->getAsUnionType()) {
-    RecordDecl *UD = UT->getOriginalDecl()->getMostRecentDecl();
+    RecordDecl *UD = UT->getDecl();
     if (UD->hasAttr<TransparentUnionAttr>()) {
       for (const auto *I : UD->fields()) {
         QualType ET = I->getType().getUnqualifiedType();
@@ -11643,8 +11533,7 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
       // Look at the converted type of enum types, since that is the type used
       // to pass enum values.
       if (const auto *Enum = paramTy->getAs<EnumType>()) {
-        paramTy =
-            Enum->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+        paramTy = Enum->getDecl()->getIntegerType();
         if (paramTy.isNull())
           return {};
       }
@@ -11676,8 +11565,7 @@ static QualType mergeEnumWithInteger(ASTContext &Context, const EnumType *ET,
   // a signed integer type, or an unsigned integer type.
   // Compatibility is based on the underlying type, not the promotion
   // type.
-  QualType underlyingType =
-      ET->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+  QualType underlyingType = ET->getDecl()->getIntegerType();
   if (underlyingType.isNull())
     return {};
   if (Context.hasSameType(underlyingType, other))
@@ -12236,7 +12124,7 @@ QualType ASTContext::mergeObjCGCQualifiers(QualType LHS, QualType RHS) {
 
 unsigned ASTContext::getIntWidth(QualType T) const {
   if (const auto *ET = T->getAs<EnumType>())
-    T = ET->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+    T = ET->getDecl()->getIntegerType();
   if (T->isBooleanType())
     return 1;
   if (const auto *EIT = T->getAs<BitIntType>())
@@ -12262,7 +12150,7 @@ QualType ASTContext::getCorrespondingUnsignedType(QualType T) const {
   // For enums, get the underlying integer type of the enum, and let the general
   // integer type signchanging code handle it.
   if (const auto *ETy = T->getAs<EnumType>())
-    T = ETy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+    T = ETy->getDecl()->getIntegerType();
 
   switch (T->castAs<BuiltinType>()->getKind()) {
   case BuiltinType::Char_U:
@@ -12336,7 +12224,7 @@ QualType ASTContext::getCorrespondingSignedType(QualType T) const {
   // For enums, get the underlying integer type of the enum, and let the general
   // integer type signchanging code handle it.
   if (const auto *ETy = T->getAs<EnumType>())
-    T = ETy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+    T = ETy->getDecl()->getIntegerType();
 
   switch (T->castAs<BuiltinType>()->getKind()) {
   case BuiltinType::Char_S:
@@ -13694,7 +13582,7 @@ static T *getCommonDeclChecked(T *X, T *Y) {
                                const_cast<Decl *>(cast<Decl>(Y))));
 }
 
-static TemplateName getCommonTemplateName(const ASTContext &Ctx, TemplateName X,
+static TemplateName getCommonTemplateName(ASTContext &Ctx, TemplateName X,
                                           TemplateName Y,
                                           bool IgnoreDeduced = false) {
   if (X.getAsVoidPointer() == Y.getAsVoidPointer())
@@ -13709,7 +13597,7 @@ static TemplateName getCommonTemplateName(const ASTContext &Ctx, TemplateName X,
   return CX;
 }
 
-static TemplateName getCommonTemplateNameChecked(const ASTContext &Ctx,
+static TemplateName getCommonTemplateNameChecked(ASTContext &Ctx,
                                                  TemplateName X, TemplateName Y,
                                                  bool IgnoreDeduced) {
   TemplateName R = getCommonTemplateName(Ctx, X, Y, IgnoreDeduced);
@@ -13717,7 +13605,7 @@ static TemplateName getCommonTemplateNameChecked(const ASTContext &Ctx,
   return R;
 }
 
-static auto getCommonTypes(const ASTContext &Ctx, ArrayRef<QualType> Xs,
+static auto getCommonTypes(ASTContext &Ctx, ArrayRef<QualType> Xs,
                            ArrayRef<QualType> Ys, bool Unqualified = false) {
   assert(Xs.size() == Ys.size());
   SmallVector<QualType, 8> Rs(Xs.size());
@@ -13732,7 +13620,7 @@ static SourceLocation getCommonAttrLoc(const T *X, const T *Y) {
                                                       : SourceLocation();
 }
 
-static TemplateArgument getCommonTemplateArgument(const ASTContext &Ctx,
+static TemplateArgument getCommonTemplateArgument(ASTContext &Ctx,
                                                   const TemplateArgument &X,
                                                   const TemplateArgument &Y) {
   if (X.getKind() != Y.getKind())
@@ -13778,7 +13666,7 @@ static TemplateArgument getCommonTemplateArgument(const ASTContext &Ctx,
   }
 }
 
-static bool getCommonTemplateArguments(const ASTContext &Ctx,
+static bool getCommonTemplateArguments(ASTContext &Ctx,
                                        SmallVectorImpl<TemplateArgument> &R,
                                        ArrayRef<TemplateArgument> Xs,
                                        ArrayRef<TemplateArgument> Ys) {
@@ -13793,7 +13681,7 @@ static bool getCommonTemplateArguments(const ASTContext &Ctx,
   return false;
 }
 
-static auto getCommonTemplateArguments(const ASTContext &Ctx,
+static auto getCommonTemplateArguments(ASTContext &Ctx,
                                        ArrayRef<TemplateArgument> Xs,
                                        ArrayRef<TemplateArgument> Ys) {
   SmallVector<TemplateArgument, 8> R;
@@ -13804,101 +13692,163 @@ static auto getCommonTemplateArguments(const ASTContext &Ctx,
 }
 
 template <class T>
-static ElaboratedTypeKeyword getCommonTypeKeyword(const T *X, const T *Y,
-                                                  bool IsSame) {
-  ElaboratedTypeKeyword KX = X->getKeyword(), KY = Y->getKeyword();
-  if (KX == KY)
-    return KX;
-  KX = getCanonicalElaboratedTypeKeyword(KX);
-  assert(!IsSame || KX == getCanonicalElaboratedTypeKeyword(KY));
-  return KX;
+static ElaboratedTypeKeyword getCommonTypeKeyword(const T *X, const T *Y) {
+  return X->getKeyword() == Y->getKeyword() ? X->getKeyword()
+                                            : ElaboratedTypeKeyword::None;
 }
 
 /// Returns a NestedNameSpecifier which has only the common sugar
 /// present in both NNS1 and NNS2.
-static NestedNameSpecifier getCommonNNS(const ASTContext &Ctx,
-                                        NestedNameSpecifier NNS1,
-                                        NestedNameSpecifier NNS2, bool IsSame) {
+static NestedNameSpecifier *getCommonNNS(ASTContext &Ctx,
+                                         NestedNameSpecifier *NNS1,
+                                         NestedNameSpecifier *NNS2,
+                                         bool IsSame) {
   // If they are identical, all sugar is common.
   if (NNS1 == NNS2)
     return NNS1;
 
-  // IsSame implies both Qualifiers are equivalent.
-  NestedNameSpecifier Canon = NNS1.getCanonical();
-  if (Canon != NNS2.getCanonical()) {
+  // IsSame implies both NNSes are equivalent.
+  NestedNameSpecifier *Canon = Ctx.getCanonicalNestedNameSpecifier(NNS1);
+  if (Canon != Ctx.getCanonicalNestedNameSpecifier(NNS2)) {
     assert(!IsSame && "Should be the same NestedNameSpecifier");
     // If they are not the same, there is nothing to unify.
-    return std::nullopt;
+    // FIXME: It would be useful here if we could represent a canonically
+    // empty NNS, which is not identical to an empty-as-written NNS.
+    return nullptr;
   }
 
-  NestedNameSpecifier R = std::nullopt;
-  NestedNameSpecifier::Kind Kind = NNS1.getKind();
-  assert(Kind == NNS2.getKind());
-  switch (Kind) {
-  case NestedNameSpecifier::Kind::Namespace: {
-    auto [Namespace1, Prefix1] = NNS1.getAsNamespaceAndPrefix();
-    auto [Namespace2, Prefix2] = NNS2.getAsNamespaceAndPrefix();
+  NestedNameSpecifier *R = nullptr;
+  NestedNameSpecifier::SpecifierKind K1 = NNS1->getKind(), K2 = NNS2->getKind();
+  switch (K1) {
+  case NestedNameSpecifier::SpecifierKind::Identifier: {
+    assert(K2 == NestedNameSpecifier::SpecifierKind::Identifier);
+    IdentifierInfo *II = NNS1->getAsIdentifier();
+    assert(II == NNS2->getAsIdentifier());
+    // For an identifier, the prefixes are significant, so they must be the
+    // same.
+    NestedNameSpecifier *P = ::getCommonNNS(Ctx, NNS1->getPrefix(),
+                                            NNS2->getPrefix(), /*IsSame=*/true);
+    R = NestedNameSpecifier::Create(Ctx, P, II);
+    break;
+  }
+  case NestedNameSpecifier::SpecifierKind::Namespace: {
+    assert(K2 == NestedNameSpecifier::SpecifierKind::Namespace);
+    // The prefixes for namespaces are not significant, its declaration
+    // identifies it uniquely.
+    NestedNameSpecifier *P =
+        ::getCommonNNS(Ctx, NNS1->getPrefix(), NNS2->getPrefix(),
+                       /*IsSame=*/false);
+    NamespaceBaseDecl *Namespace1 = NNS1->getAsNamespace(),
+                      *Namespace2 = NNS2->getAsNamespace();
     auto Kind = Namespace1->getKind();
     if (Kind != Namespace2->getKind() ||
         (Kind == Decl::NamespaceAlias &&
          !declaresSameEntity(Namespace1, Namespace2))) {
-      R = NestedNameSpecifier(
-          Ctx,
+      R = NestedNameSpecifier::Create(
+          Ctx, P,
           ::getCommonDeclChecked(Namespace1->getNamespace(),
-                                 Namespace2->getNamespace()),
-          /*Prefix=*/std::nullopt);
+                                 Namespace2->getNamespace()));
       break;
     }
-    // The prefixes for namespaces are not significant, its declaration
-    // identifies it uniquely.
-    NestedNameSpecifier Prefix = ::getCommonNNS(Ctx, Prefix1, Prefix2,
-                                                /*IsSame=*/false);
-    R = NestedNameSpecifier(Ctx, ::getCommonDeclChecked(Namespace1, Namespace2),
-                            Prefix);
+    R = NestedNameSpecifier::Create(
+        Ctx, P, ::getCommonDeclChecked(Namespace1, Namespace2));
     break;
   }
-  case NestedNameSpecifier::Kind::Type: {
-    const Type *T1 = NNS1.getAsType(), *T2 = NNS2.getAsType();
+  case NestedNameSpecifier::SpecifierKind::TypeSpec: {
+    // FIXME: See comment below, on Super case.
+    if (K2 == NestedNameSpecifier::SpecifierKind::Super)
+      return Ctx.getCanonicalNestedNameSpecifier(NNS1);
+
+    assert(K2 == NestedNameSpecifier::SpecifierKind::TypeSpec);
+
+    const Type *T1 = NNS1->getAsType(), *T2 = NNS2->getAsType();
+    if (T1 == T2) {
+      // If the types are indentical, then only the prefixes differ.
+      // A well-formed NNS never has these types, as they have
+      // special normalized forms.
+      assert((!isa<DependentNameType, ElaboratedType>(T1)));
+      // Only for a DependentTemplateSpecializationType the prefix
+      // is actually significant. A DependentName, which would be another
+      // plausible case, cannot occur here, as explained above.
+      bool IsSame = isa<DependentTemplateSpecializationType>(T1);
+      NestedNameSpecifier *P =
+          ::getCommonNNS(Ctx, NNS1->getPrefix(), NNS2->getPrefix(), IsSame);
+      R = NestedNameSpecifier::Create(Ctx, P, T1);
+      break;
+    }
+    // TODO: Try to salvage the original prefix.
+    // If getCommonSugaredType removed any top level sugar, the original prefix
+    // is not applicable anymore.
     const Type *T = Ctx.getCommonSugaredType(QualType(T1, 0), QualType(T2, 0),
                                              /*Unqualified=*/true)
                         .getTypePtr();
-    R = NestedNameSpecifier(T);
+
+    // A NestedNameSpecifier has special normalization rules for certain types.
+    switch (T->getTypeClass()) {
+    case Type::Elaborated: {
+      // An ElaboratedType is stripped off, it's Qualifier becomes the prefix.
+      auto *ET = cast<ElaboratedType>(T);
+      R = NestedNameSpecifier::Create(Ctx, ET->getQualifier(),
+                                      ET->getNamedType().getTypePtr());
+      break;
+    }
+    case Type::DependentName: {
+      // A DependentName is turned into an Identifier NNS.
+      auto *DN = cast<DependentNameType>(T);
+      R = NestedNameSpecifier::Create(Ctx, DN->getQualifier(),
+                                      DN->getIdentifier());
+      break;
+    }
+    case Type::DependentTemplateSpecialization: {
+      // A DependentTemplateSpecializationType loses it's Qualifier, which
+      // is turned into the prefix.
+      auto *DTST = cast<DependentTemplateSpecializationType>(T);
+      const DependentTemplateStorage &DTN = DTST->getDependentTemplateName();
+      DependentTemplateStorage NewDTN(/*Qualifier=*/nullptr, DTN.getName(),
+                                      DTN.hasTemplateKeyword());
+      T = Ctx.getDependentTemplateSpecializationType(DTST->getKeyword(), NewDTN,
+                                                     DTST->template_arguments())
+              .getTypePtr();
+      R = NestedNameSpecifier::Create(Ctx, DTN.getQualifier(), T);
+      break;
+    }
+    default:
+      R = NestedNameSpecifier::Create(Ctx, /*Prefix=*/nullptr, T);
+      break;
+    }
     break;
   }
-  case NestedNameSpecifier::Kind::MicrosoftSuper: {
+  case NestedNameSpecifier::SpecifierKind::Super:
     // FIXME: Can __super even be used with data members?
     // If it's only usable in functions, we will never see it here,
     // unless we save the qualifiers used in function types.
     // In that case, it might be possible NNS2 is a type,
     // in which case we should degrade the result to
     // a CXXRecordType.
-    R = NestedNameSpecifier(getCommonDeclChecked(NNS1.getAsMicrosoftSuper(),
-                                                 NNS2.getAsMicrosoftSuper()));
-    break;
+    return Ctx.getCanonicalNestedNameSpecifier(NNS1);
+  case NestedNameSpecifier::SpecifierKind::Global:
+    // The global NNS is a singleton.
+    assert(K2 == NestedNameSpecifier::SpecifierKind::Global &&
+           "Global NNS cannot be equivalent to any other kind");
+    llvm_unreachable("Global NestedNameSpecifiers did not compare equal");
   }
-  case NestedNameSpecifier::Kind::Null:
-  case NestedNameSpecifier::Kind::Global:
-    // These are singletons.
-    llvm_unreachable("singletons did not compare equal");
-  }
-  assert(R.getCanonical() == Canon);
+  assert(Ctx.getCanonicalNestedNameSpecifier(R) == Canon);
   return R;
 }
 
 template <class T>
-static NestedNameSpecifier getCommonQualifier(const ASTContext &Ctx, const T *X,
-                                              const T *Y, bool IsSame) {
+static NestedNameSpecifier *getCommonQualifier(ASTContext &Ctx, const T *X,
+                                               const T *Y, bool IsSame) {
   return ::getCommonNNS(Ctx, X->getQualifier(), Y->getQualifier(), IsSame);
 }
 
 template <class T>
-static QualType getCommonElementType(const ASTContext &Ctx, const T *X,
-                                     const T *Y) {
+static QualType getCommonElementType(ASTContext &Ctx, const T *X, const T *Y) {
   return Ctx.getCommonSugaredType(X->getElementType(), Y->getElementType());
 }
 
 template <class T>
-static QualType getCommonArrayElementType(const ASTContext &Ctx, const T *X,
+static QualType getCommonArrayElementType(ASTContext &Ctx, const T *X,
                                           Qualifiers &QX, const T *Y,
                                           Qualifiers &QY) {
   QualType EX = X->getElementType(), EY = Y->getElementType();
@@ -13915,13 +13865,11 @@ static QualType getCommonArrayElementType(const ASTContext &Ctx, const T *X,
 }
 
 template <class T>
-static QualType getCommonPointeeType(const ASTContext &Ctx, const T *X,
-                                     const T *Y) {
+static QualType getCommonPointeeType(ASTContext &Ctx, const T *X, const T *Y) {
   return Ctx.getCommonSugaredType(X->getPointeeType(), Y->getPointeeType());
 }
 
-template <class T>
-static auto *getCommonSizeExpr(const ASTContext &Ctx, T *X, T *Y) {
+template <class T> static auto *getCommonSizeExpr(ASTContext &Ctx, T *X, T *Y) {
   assert(Ctx.hasSameExpr(X->getSizeExpr(), Y->getSizeExpr()));
   return X->getSizeExpr();
 }
@@ -13941,9 +13889,8 @@ static auto getCommonIndexTypeCVRQualifiers(const ArrayType *X,
 // each type (in a canonical sense) only once, in the order they appear
 // from X to Y. If they occur in both X and Y, the result will contain
 // the common sugared type between them.
-static void mergeTypeLists(const ASTContext &Ctx,
-                           SmallVectorImpl<QualType> &Out, ArrayRef<QualType> X,
-                           ArrayRef<QualType> Y) {
+static void mergeTypeLists(ASTContext &Ctx, SmallVectorImpl<QualType> &Out,
+                           ArrayRef<QualType> X, ArrayRef<QualType> Y) {
   llvm::DenseMap<QualType, unsigned> Found;
   for (auto Ts : {X, Y}) {
     for (QualType T : Ts) {
@@ -13962,7 +13909,7 @@ FunctionProtoType::ExceptionSpecInfo
 ASTContext::mergeExceptionSpecs(FunctionProtoType::ExceptionSpecInfo ESI1,
                                 FunctionProtoType::ExceptionSpecInfo ESI2,
                                 SmallVectorImpl<QualType> &ExceptionTypeStorage,
-                                bool AcceptDependent) const {
+                                bool AcceptDependent) {
   ExceptionSpecificationType EST1 = ESI1.Type, EST2 = ESI2.Type;
 
   // If either of them can throw anything, that is the result.
@@ -14026,7 +13973,7 @@ ASTContext::mergeExceptionSpecs(FunctionProtoType::ExceptionSpecInfo ESI1,
   llvm_unreachable("invalid ExceptionSpecificationType");
 }
 
-static QualType getCommonNonSugarTypeNode(const ASTContext &Ctx, const Type *X,
+static QualType getCommonNonSugarTypeNode(ASTContext &Ctx, const Type *X,
                                           Qualifiers &QX, const Type *Y,
                                           Qualifiers &QY) {
   Type::TypeClass TC = X->getTypeClass();
@@ -14044,8 +13991,10 @@ static QualType getCommonNonSugarTypeNode(const ASTContext &Ctx, const Type *X,
     SUGAR_FREE_TYPE(Builtin)
     SUGAR_FREE_TYPE(DeducedTemplateSpecialization)
     SUGAR_FREE_TYPE(DependentBitInt)
+    SUGAR_FREE_TYPE(Enum)
     SUGAR_FREE_TYPE(BitInt)
     SUGAR_FREE_TYPE(ObjCInterface)
+    SUGAR_FREE_TYPE(Record)
     SUGAR_FREE_TYPE(SubstTemplateTypeParmPack)
     SUGAR_FREE_TYPE(UnresolvedUsing)
     SUGAR_FREE_TYPE(HLSLAttributedResource)
@@ -14263,15 +14212,13 @@ static QualType getCommonNonSugarTypeNode(const ASTContext &Ctx, const Type *X,
         getCommonElementType(Ctx, VX, VY), getCommonSizeExpr(Ctx, VX, VY),
         getCommonAttrLoc(VX, VY), VX->getVectorKind());
   }
-  case Type::Enum:
-  case Type::Record:
   case Type::InjectedClassName: {
-    const auto *TX = cast<TagType>(X), *TY = cast<TagType>(Y);
-    return Ctx.getTagType(
-        ::getCommonTypeKeyword(TX, TY, /*IsSame=*/false),
-        ::getCommonQualifier(Ctx, TX, TY, /*IsSame=*/false),
-        ::getCommonDeclChecked(TX->getOriginalDecl(), TY->getOriginalDecl()),
-        /*OwnedTag=*/false);
+    const auto *IX = cast<InjectedClassNameType>(X),
+               *IY = cast<InjectedClassNameType>(Y);
+    return Ctx.getInjectedClassNameType(
+        getCommonDeclChecked(IX->getDecl(), IY->getDecl()),
+        Ctx.getCommonSugaredType(IX->getInjectedSpecializationType(),
+                                 IY->getInjectedSpecializationType()));
   }
   case Type::TemplateSpecialization: {
     const auto *TX = cast<TemplateSpecializationType>(X),
@@ -14279,7 +14226,6 @@ static QualType getCommonNonSugarTypeNode(const ASTContext &Ctx, const Type *X,
     auto As = getCommonTemplateArguments(Ctx, TX->template_arguments(),
                                          TY->template_arguments());
     return Ctx.getTemplateSpecializationType(
-        getCommonTypeKeyword(TX, TY, /*IsSame=*/false),
         ::getCommonTemplateNameChecked(Ctx, TX->getTemplateName(),
                                        TY->getTemplateName(),
                                        /*IgnoreDeduced=*/true),
@@ -14307,7 +14253,7 @@ static QualType getCommonNonSugarTypeNode(const ASTContext &Ctx, const Type *X,
                *NY = cast<DependentNameType>(Y);
     assert(NX->getIdentifier() == NY->getIdentifier());
     return Ctx.getDependentNameType(
-        getCommonTypeKeyword(NX, NY, /*IsSame=*/true),
+        getCommonTypeKeyword(NX, NY),
         getCommonQualifier(Ctx, NX, NY, /*IsSame=*/true), NX->getIdentifier());
   }
   case Type::DependentTemplateSpecialization: {
@@ -14323,7 +14269,7 @@ static QualType getCommonNonSugarTypeNode(const ASTContext &Ctx, const Type *X,
                      /*IsSame=*/true),
         SX.getName(), SX.hasTemplateKeyword() || SY.hasTemplateKeyword());
     return Ctx.getDependentTemplateSpecializationType(
-        getCommonTypeKeyword(TX, TY, /*IsSame=*/true), Name, As);
+        getCommonTypeKeyword(TX, TY), Name, As);
   }
   case Type::UnaryTransform: {
     const auto *TX = cast<UnaryTransformType>(X),
@@ -14364,7 +14310,7 @@ static QualType getCommonNonSugarTypeNode(const ASTContext &Ctx, const Type *X,
   llvm_unreachable("Unknown Type Class");
 }
 
-static QualType getCommonSugarTypeNode(const ASTContext &Ctx, const Type *X,
+static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
                                        const Type *Y,
                                        SplitQualType Underlying) {
   Type::TypeClass TC = X->getTypeClass();
@@ -14476,6 +14422,15 @@ static QualType getCommonSugarTypeNode(const ASTContext &Ctx, const Type *X,
   case Type::DeducedTemplateSpecialization:
     // FIXME: Try to merge these.
     return QualType();
+
+  case Type::Elaborated: {
+    const auto *EX = cast<ElaboratedType>(X), *EY = cast<ElaboratedType>(Y);
+    return Ctx.getElaboratedType(
+        ::getCommonTypeKeyword(EX, EY),
+        ::getCommonQualifier(Ctx, EX, EY, /*IsSame=*/false),
+        Ctx.getQualifiedType(Underlying),
+        ::getCommonDecl(EX->getOwnedTagDecl(), EY->getOwnedTagDecl()));
+  }
   case Type::MacroQualified: {
     const auto *MX = cast<MacroQualifiedType>(X),
                *MY = cast<MacroQualifiedType>(Y);
@@ -14519,19 +14474,16 @@ static QualType getCommonSugarTypeNode(const ASTContext &Ctx, const Type *X,
     if (getCommonTemplateArguments(Ctx, As, TX->template_arguments(),
                                    TY->template_arguments()))
       return QualType();
-    return Ctx.getTemplateSpecializationType(
-        getCommonTypeKeyword(TX, TY, /*IsSame=*/false), CTN, As,
-        /*CanonicalArgs=*/{}, Ctx.getQualifiedType(Underlying));
+    return Ctx.getTemplateSpecializationType(CTN, As,
+                                             /*CanonicalArgs=*/{},
+                                             Ctx.getQualifiedType(Underlying));
   }
   case Type::Typedef: {
     const auto *TX = cast<TypedefType>(X), *TY = cast<TypedefType>(Y);
     const TypedefNameDecl *CD = ::getCommonDecl(TX->getDecl(), TY->getDecl());
     if (!CD)
       return QualType();
-    return Ctx.getTypedefType(
-        ::getCommonTypeKeyword(TX, TY, /*IsSame=*/false),
-        ::getCommonQualifier(Ctx, TX, TY, /*IsSame=*/false), CD,
-        Ctx.getQualifiedType(Underlying));
+    return Ctx.getTypedefType(CD, Ctx.getQualifiedType(Underlying));
   }
   case Type::TypeOf: {
     // The common sugar between two typeof expressions, where one is
@@ -14562,12 +14514,11 @@ static QualType getCommonSugarTypeNode(const ASTContext &Ctx, const Type *X,
   }
   case Type::Using: {
     const auto *UX = cast<UsingType>(X), *UY = cast<UsingType>(Y);
-    const UsingShadowDecl *CD = ::getCommonDecl(UX->getDecl(), UY->getDecl());
+    const UsingShadowDecl *CD =
+        ::getCommonDecl(UX->getFoundDecl(), UY->getFoundDecl());
     if (!CD)
       return QualType();
-    return Ctx.getUsingType(::getCommonTypeKeyword(UX, UY, /*IsSame=*/false),
-                            ::getCommonQualifier(Ctx, UX, UY, /*IsSame=*/false),
-                            CD, Ctx.getQualifiedType(Underlying));
+    return Ctx.getUsingType(CD, Ctx.getQualifiedType(Underlying));
   }
   case Type::MemberPointer: {
     const auto *PX = cast<MemberPointerType>(X),
@@ -14626,7 +14577,7 @@ static auto unwrapSugar(SplitQualType &T, Qualifiers &QTotal) {
 }
 
 QualType ASTContext::getCommonSugaredType(QualType X, QualType Y,
-                                          bool Unqualified) const {
+                                          bool Unqualified) {
   assert(Unqualified ? hasSameUnqualifiedType(X, Y) : hasSameType(X, Y));
   if (X == Y)
     return X;

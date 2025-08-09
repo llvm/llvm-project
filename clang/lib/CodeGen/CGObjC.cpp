@@ -1000,9 +1000,7 @@ PropertyImplStrategy::PropertyImplStrategy(CodeGenModule &CGM,
   // Compute whether the ivar has strong members.
   if (CGM.getLangOpts().getGC())
     if (const RecordType *recordType = ivarType->getAs<RecordType>())
-      HasStrong = recordType->getOriginalDecl()
-                      ->getDefinitionOrSelf()
-                      ->hasObjectMember();
+      HasStrong = recordType->getDecl()->hasObjectMember();
 
   // We can never access structs with object members with a native
   // access, because we need to use write barriers.  This is what

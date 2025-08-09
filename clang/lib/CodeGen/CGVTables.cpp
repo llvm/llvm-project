@@ -971,7 +971,7 @@ llvm::GlobalVariable *CodeGenVTables::GenerateConstructionVTable(
   VTable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
   llvm::Constant *RTTI = CGM.GetAddrOfRTTIDescriptor(
-      CGM.getContext().getCanonicalTagType(Base.getBase()));
+      CGM.getContext().getTagDeclType(Base.getBase()));
 
   // Create and set the initializer.
   ConstantInitBuilder builder(CGM);
@@ -1382,8 +1382,8 @@ void CodeGenModule::EmitVTableTypeMetadata(const CXXRecordDecl *RD,
                        AP.second.AddressPointIndex,
                    {}};
     llvm::raw_string_ostream Stream(N.TypeName);
-    CanQualType T = getContext().getCanonicalTagType(N.Base);
-    getCXXABI().getMangleContext().mangleCanonicalTypeName(T, Stream);
+    getCXXABI().getMangleContext().mangleCanonicalTypeName(
+        QualType(N.Base->getTypeForDecl(), 0), Stream);
     AddressPoints.push_back(std::move(N));
   }
 
@@ -1404,7 +1404,7 @@ void CodeGenModule::EmitVTableTypeMetadata(const CXXRecordDecl *RD,
         continue;
       llvm::Metadata *MD = CreateMetadataIdentifierForVirtualMemPtrType(
           Context.getMemberPointerType(Comps[I].getFunctionDecl()->getType(),
-                                       /*Qualifier=*/std::nullopt, AP.Base));
+                                       /*Qualifier=*/nullptr, AP.Base));
       VTable->addTypeMetadata((ComponentWidth * I).getQuantity(), MD);
     }
   }

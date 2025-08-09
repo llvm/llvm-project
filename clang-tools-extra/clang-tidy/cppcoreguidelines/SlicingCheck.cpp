@@ -92,7 +92,7 @@ void SlicingCheck::diagnoseSlicedOverriddenMethods(
   for (const auto &Base : DerivedDecl.bases()) {
     if (const auto *BaseRecordType = Base.getType()->getAs<RecordType>()) {
       if (const auto *BaseRecord = cast_or_null<CXXRecordDecl>(
-              BaseRecordType->getOriginalDecl()->getDefinition()))
+              BaseRecordType->getDecl()->getDefinition()))
         diagnoseSlicedOverriddenMethods(Call, *BaseRecord, BaseDecl);
     }
   }

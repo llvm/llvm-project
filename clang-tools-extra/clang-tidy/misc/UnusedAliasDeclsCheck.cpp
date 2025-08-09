@@ -35,12 +35,12 @@ void UnusedAliasDeclsCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   if (const auto *NestedName =
-          Result.Nodes.getNodeAs<NestedNameSpecifier>("nns");
-      NestedName &&
-      NestedName->getKind() == NestedNameSpecifier::Kind::Namespace)
-    if (const auto *AliasDecl = dyn_cast<NamespaceAliasDecl>(
-            NestedName->getAsNamespaceAndPrefix().Namespace))
+          Result.Nodes.getNodeAs<NestedNameSpecifier>("nns")) {
+    if (const auto *AliasDecl = dyn_cast_if_present<NamespaceAliasDecl>(
+            NestedName->getAsNamespace())) {
       FoundDecls[AliasDecl] = CharSourceRange();
+    }
+  }
 }
 
 void UnusedAliasDeclsCheck::onEndOfTranslationUnit() {

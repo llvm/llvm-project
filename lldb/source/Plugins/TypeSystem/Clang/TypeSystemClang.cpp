@@ -27,7 +27,6 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Mangle.h"
-#include "clang/AST/QualTypeNames.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/VTableBuilder.h"
@@ -162,7 +161,8 @@ void addOverridesForMethod(clang::CXXMethodDecl *decl) {
   auto find_overridden_methods =
       [&decls, decl](const clang::CXXBaseSpecifier *specifier,
                      clang::CXXBasePath &path) {
-        if (auto *base_record = specifier->getType()->getAsCXXRecordDecl()) {
+        if (auto *base_record = llvm::dyn_cast<clang::CXXRecordDecl>(
+                specifier->getType()->castAs<clang::RecordType>()->getDecl())) {
 
           clang::DeclarationName name = decl->getDeclName();
 
@@ -1179,7 +1179,7 @@ CompilerType TypeSystemClang::GetTypeForDecl(clang::NamedDecl *decl) {
 }
 
 CompilerType TypeSystemClang::GetTypeForDecl(TagDecl *decl) {
-  return GetType(getASTContext().getCanonicalTagType(decl));
+  return GetType(getASTContext().getTagDeclType(decl));
 }
 
 CompilerType TypeSystemClang::GetTypeForDecl(ObjCInterfaceDecl *decl) {
@@ -1306,7 +1306,7 @@ CompilerType TypeSystemClang::CreateRecordType(
   if (decl_ctx)
     decl_ctx->addDecl(decl);
 
-  return GetType(ast.getCanonicalTagType(decl));
+  return GetType(ast.getTagDeclType(decl));
 }
 
 namespace {
@@ -1674,6 +1674,7 @@ TypeSystemClang::CreateClassTemplateSpecializationDecl(
   class_template_specialization_decl->setInstantiationOf(class_template_decl);
   class_template_specialization_decl->setTemplateArgs(
       TemplateArgumentList::CreateCopy(ast, args));
+  ast.getTypeDeclType(class_template_specialization_decl, nullptr);
   class_template_specialization_decl->setDeclName(
       class_template_decl->getDeclName());
 
@@ -1695,7 +1696,7 @@ CompilerType TypeSystemClang::CreateClassTemplateSpecializationType(
     ClassTemplateSpecializationDecl *class_template_specialization_decl) {
   if (class_template_specialization_decl) {
     ASTContext &ast = getASTContext();
-    return GetType(ast.getCanonicalTagType(class_template_specialization_decl));
+    return GetType(ast.getTagDeclType(class_template_specialization_decl));
   }
   return CompilerType();
 }
@@ -1791,7 +1792,9 @@ bool TypeSystemClang::RecordHasFields(const RecordDecl *record_decl) {
     for (base_class = cxx_record_decl->bases_begin(),
         base_class_end = cxx_record_decl->bases_end();
          base_class != base_class_end; ++base_class) {
-      if (RecordHasFields(base_class->getType()->getAsCXXRecordDecl()))
+      const CXXRecordDecl *base_class_decl = cast<CXXRecordDecl>(
+          base_class->getType()->getAs<RecordType>()->getDecl());
+      if (RecordHasFields(base_class_decl))
         return true;
     }
   }
@@ -2287,9 +2290,9 @@ CompilerType TypeSystemClang::CreateStructForIdentifier(
         &type_fields,
     bool packed) {
   CompilerType type;
-  if (!type_name.empty() && (type = GetTypeForIdentifier<clang::CXXRecordDecl>(
-                                 getASTContext(), type_name))
-                                .IsValid()) {
+  if (!type_name.empty() &&
+      (type = GetTypeForIdentifier<clang::CXXRecordDecl>(type_name))
+          .IsValid()) {
     lldbassert(0 && "Trying to create a type for an existing name");
     return type;
   }
@@ -2313,9 +2316,7 @@ CompilerType TypeSystemClang::GetOrCreateStructForIdentifier(
         &type_fields,
     bool packed) {
   CompilerType type;
-  if ((type = GetTypeForIdentifier<clang::CXXRecordDecl>(getASTContext(),
-                                                         type_name))
-          .IsValid())
+  if ((type = GetTypeForIdentifier<clang::CXXRecordDecl>(type_name)).IsValid())
     return type;
 
   return CreateStructForIdentifier(type_name, type_fields, packed);
@@ -2354,7 +2355,7 @@ CompilerType TypeSystemClang::CreateEnumerationType(
 
   enum_decl->setAccess(AS_public); // TODO respect what's in the debug info
 
-  return GetType(ast.getCanonicalTagType(enum_decl));
+  return GetType(ast.getTagDeclType(enum_decl));
 }
 
 CompilerType TypeSystemClang::GetIntTypeFromBitSize(size_t bit_size,
@@ -2470,7 +2471,7 @@ bool TypeSystemClang::GetCompleteDecl(clang::ASTContext *ast,
 
     ast_source->CompleteType(tag_decl);
 
-    return !ast->getCanonicalTagType(tag_decl)->isIncompleteType();
+    return !tag_decl->getTypeForDecl()->isIncompleteType();
   } else if (clang::ObjCInterfaceDecl *objc_interface_decl =
                  llvm::dyn_cast<clang::ObjCInterfaceDecl>(decl)) {
     if (objc_interface_decl->getDefinition())
@@ -2574,6 +2575,7 @@ RemoveWrappingTypes(QualType type, ArrayRef<clang::Type::TypeClass> mask = {}) {
       break;
     case clang::Type::Auto:
     case clang::Type::Decltype:
+    case clang::Type::Elaborated:
     case clang::Type::Paren:
     case clang::Type::SubstTemplateTypeParm:
     case clang::Type::TemplateSpecialization:
@@ -2605,11 +2607,10 @@ TypeSystemClang::GetDeclContextForType(clang::QualType type) {
     return GetDeclContextForType(
         llvm::cast<clang::ObjCObjectPointerType>(qual_type.getTypePtr())
             ->getPointeeType());
-  case clang::Type::Enum:
   case clang::Type::Record:
-    return llvm::cast<clang::TagType>(qual_type)
-        ->getOriginalDecl()
-        ->getDefinitionOrSelf();
+    return llvm::cast<clang::RecordType>(qual_type)->getDecl();
+  case clang::Type::Enum:
+    return llvm::cast<clang::EnumType>(qual_type)->getDecl();
   default:
     break;
   }
@@ -2789,7 +2790,7 @@ static bool GetCompleteQualType(clang::ASTContext *ast,
     if (ast->getTargetInfo().getCXXABI().isMicrosoft()) {
       auto *MPT = qual_type.getTypePtr()->castAs<clang::MemberPointerType>();
       if (auto *RD = MPT->getMostRecentCXXRecordDecl())
-        GetCompleteRecordType(ast, ast->getCanonicalTagType(RD),
+        GetCompleteRecordType(ast, QualType(RD->getTypeForDecl(), 0),
                               allow_completion);
 
       return !qual_type.getTypePtr()->isIncompleteType();
@@ -2858,8 +2859,7 @@ bool TypeSystemClang::IsAnonymousType(lldb::opaque_compiler_type_t type) {
     if (const clang::RecordType *record_type =
             llvm::dyn_cast_or_null<clang::RecordType>(
                 qual_type.getTypePtrOrNull())) {
-      if (const clang::RecordDecl *record_decl =
-              record_type->getOriginalDecl()) {
+      if (const clang::RecordDecl *record_decl = record_type->getDecl()) {
         return record_decl->isAnonymousStructOrUnion();
       }
     }
@@ -3099,8 +3099,8 @@ TypeSystemClang::IsHomogeneousAggregate(lldb::opaque_compiler_type_t type,
       const clang::RecordType *record_type =
           llvm::cast<clang::RecordType>(qual_type.getTypePtr());
       if (record_type) {
-        if (const clang::RecordDecl *record_decl =
-                record_type->getOriginalDecl()->getDefinition()) {
+        const clang::RecordDecl *record_decl = record_type->getDecl();
+        if (record_decl) {
           // We are looking for a structure that contains only floating point
           // types
           clang::RecordDecl::field_iterator field_pos,
@@ -3280,10 +3280,7 @@ bool TypeSystemClang::IsEnumerationType(lldb::opaque_compiler_type_t type,
         GetCanonicalQualType(type)->getCanonicalTypeInternal());
 
     if (enum_type) {
-      IsIntegerType(enum_type->getOriginalDecl()
-                        ->getDefinitionOrSelf()
-                        ->getIntegerType()
-                        .getAsOpaquePtr(),
+      IsIntegerType(enum_type->getDecl()->getIntegerType().getAsOpaquePtr(),
                     is_signed);
       return true;
     }
@@ -3508,7 +3505,8 @@ bool TypeSystemClang::IsDefined(lldb::opaque_compiler_type_t type) {
   const clang::TagType *tag_type =
       llvm::dyn_cast<clang::TagType>(qual_type.getTypePtr());
   if (tag_type) {
-    if (clang::TagDecl *tag_decl = tag_type->getOriginalDecl()->getDefinition())
+    clang::TagDecl *tag_decl = tag_type->getDecl();
+    if (tag_decl)
       return tag_decl->isCompleteDefinition();
     return false;
   } else {
@@ -3567,14 +3565,21 @@ bool TypeSystemClang::IsPolymorphicClass(lldb::opaque_compiler_type_t type) {
     switch (type_class) {
     case clang::Type::Record:
       if (GetCompleteType(type)) {
-        if (const auto *cxx_record_decl = qual_type->getAsCXXRecordDecl()) {
-          // We can't just call is isPolymorphic() here because that just
-          // means the current class has virtual functions, it doesn't check
-          // if any inherited classes have virtual functions. The doc string
-          // in SBType::IsPolymorphicClass() says it is looking for both
-          // if the class has virtual methods or if any bases do, so this
-          // should be more correct.
-          return cxx_record_decl->isDynamicClass();
+        const clang::RecordType *record_type =
+            llvm::cast<clang::RecordType>(qual_type.getTypePtr());
+        const clang::RecordDecl *record_decl = record_type->getDecl();
+        if (record_decl) {
+          const clang::CXXRecordDecl *cxx_record_decl =
+              llvm::dyn_cast<clang::CXXRecordDecl>(record_decl);
+          if (cxx_record_decl) {
+            // We can't just call is isPolymorphic() here because that just
+            // means the current class has virtual functions, it doesn't check
+            // if any inherited classes have virtual functions. The doc string
+            // in SBType::IsPolymorphicClass() says it is looking for both
+            // if the class has virtual methods or if any bases do, so this
+            // should be more correct.
+            return cxx_record_decl->isDynamicClass();
+          }
         }
       }
       break;
@@ -3761,7 +3766,7 @@ bool TypeSystemClang::IsBeingDefined(lldb::opaque_compiler_type_t type) {
   clang::QualType qual_type(GetCanonicalQualType(type));
   const clang::TagType *tag_type = llvm::dyn_cast<clang::TagType>(qual_type);
   if (tag_type)
-    return tag_type->getOriginalDecl()->isEntityBeingDefined();
+    return tag_type->isBeingDefined();
   return false;
 }
 
@@ -3969,8 +3974,7 @@ TypeSystemClang::GetTypeInfo(lldb::opaque_compiler_type_t type,
     if (pointee_or_element_clang_type)
       pointee_or_element_clang_type->SetCompilerType(
           weak_from_this(), llvm::cast<clang::EnumType>(qual_type)
-                                ->getOriginalDecl()
-                                ->getDefinitionOrSelf()
+                                ->getDecl()
                                 ->getIntegerType()
                                 .getAsOpaquePtr());
     return eTypeIsEnumeration | eTypeHasValue;
@@ -4150,6 +4154,7 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
   case clang::Type::Auto:
   case clang::Type::CountAttributed:
   case clang::Type::Decltype:
+  case clang::Type::Elaborated:
   case clang::Type::Paren:
   case clang::Type::TypeOf:
   case clang::Type::TypeOfExpr:
@@ -4209,7 +4214,7 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
   case clang::Type::Record: {
     const clang::RecordType *record_type =
         llvm::cast<clang::RecordType>(qual_type.getTypePtr());
-    const clang::RecordDecl *record_decl = record_type->getOriginalDecl();
+    const clang::RecordDecl *record_decl = record_type->getDecl();
     if (record_decl->isUnion())
       return lldb::eTypeClassUnion;
     else if (record_decl->isStruct())
@@ -4407,10 +4412,17 @@ TypeSystemClang::GetNumMemberFunctions(lldb::opaque_compiler_type_t type) {
     clang::QualType qual_type = RemoveWrappingTypes(GetCanonicalQualType(type));
     switch (qual_type->getTypeClass()) {
     case clang::Type::Record:
-      if (GetCompleteQualType(&getASTContext(), qual_type))
-        if (const auto *cxx_record_decl = qual_type->getAsCXXRecordDecl())
+      if (GetCompleteQualType(&getASTContext(), qual_type)) {
+        const clang::RecordType *record_type =
+            llvm::cast<clang::RecordType>(qual_type.getTypePtr());
+        const clang::RecordDecl *record_decl = record_type->getDecl();
+        assert(record_decl);
+        const clang::CXXRecordDecl *cxx_record_decl =
+            llvm::dyn_cast<clang::CXXRecordDecl>(record_decl);
+        if (cxx_record_decl)
           num_functions = std::distance(cxx_record_decl->method_begin(),
                                         cxx_record_decl->method_end());
+      }
       break;
 
     case clang::Type::ObjCObjectPointer: {
@@ -4465,7 +4477,13 @@ TypeSystemClang::GetMemberFunctionAtIndex(lldb::opaque_compiler_type_t type,
     switch (qual_type->getTypeClass()) {
     case clang::Type::Record:
       if (GetCompleteQualType(&getASTContext(), qual_type)) {
-        if (const auto *cxx_record_decl = qual_type->getAsCXXRecordDecl()) {
+        const clang::RecordType *record_type =
+            llvm::cast<clang::RecordType>(qual_type.getTypePtr());
+        const clang::RecordDecl *record_decl = record_type->getDecl();
+        assert(record_decl);
+        const clang::CXXRecordDecl *cxx_record_decl =
+            llvm::dyn_cast<clang::CXXRecordDecl>(record_decl);
+        if (cxx_record_decl) {
           auto method_iter = cxx_record_decl->method_begin();
           auto method_end = cxx_record_decl->method_end();
           if (idx <
@@ -4685,9 +4703,9 @@ CompilerType TypeSystemClang::CreateTypedef(
     clang::TagDecl *tdecl = nullptr;
     if (!qual_type.isNull()) {
       if (const clang::RecordType *rt = qual_type->getAs<clang::RecordType>())
-        tdecl = rt->getOriginalDecl();
+        tdecl = rt->getDecl();
       if (const clang::EnumType *et = qual_type->getAs<clang::EnumType>())
-        tdecl = et->getOriginalDecl();
+        tdecl = et->getDecl();
     }
 
     // Check whether this declaration is an anonymous struct, union, or enum,
@@ -4699,10 +4717,7 @@ CompilerType TypeSystemClang::CreateTypedef(
     decl->setAccess(clang::AS_public); // TODO respect proper access specifier
 
     // Get a uniqued clang::QualType for the typedef decl type
-    NestedNameSpecifier Qualifier =
-        clang::TypeName::getFullyQualifiedDeclaredContext(clang_ast, decl);
-    return GetType(
-        clang_ast.getTypedefType(ElaboratedTypeKeyword::None, Qualifier, decl));
+    return GetType(clang_ast.getTypedefType(decl));
   }
   return CompilerType();
 }
@@ -4854,6 +4869,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
   case clang::Type::Auto:
   case clang::Type::CountAttributed:
   case clang::Type::Decltype:
+  case clang::Type::Elaborated:
   case clang::Type::Paren:
   case clang::Type::Typedef:
   case clang::Type::TypeOf:
@@ -5155,6 +5171,7 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
   case clang::Type::Auto:
   case clang::Type::CountAttributed:
   case clang::Type::Decltype:
+  case clang::Type::Elaborated:
   case clang::Type::Paren:
   case clang::Type::Typedef:
   case clang::Type::TypeOf:
@@ -5363,8 +5380,8 @@ TypeSystemClang::GetNumChildren(lldb::opaque_compiler_type_t type,
     if (GetCompleteQualType(&getASTContext(), qual_type)) {
       const clang::RecordType *record_type =
           llvm::cast<clang::RecordType>(qual_type.getTypePtr());
-      const clang::RecordDecl *record_decl =
-          record_type->getOriginalDecl()->getDefinitionOrSelf();
+      const clang::RecordDecl *record_decl = record_type->getDecl();
+      assert(record_decl);
       const clang::CXXRecordDecl *cxx_record_decl =
           llvm::dyn_cast<clang::CXXRecordDecl>(record_decl);
 
@@ -5560,8 +5577,7 @@ void TypeSystemClang::ForEachEnumerator(
   const clang::EnumType *enum_type =
       llvm::dyn_cast<clang::EnumType>(GetCanonicalQualType(type));
   if (enum_type) {
-    const clang::EnumDecl *enum_decl =
-        enum_type->getOriginalDecl()->getDefinitionOrSelf();
+    const clang::EnumDecl *enum_decl = enum_type->getDecl();
     if (enum_decl) {
       CompilerType integer_type = GetType(enum_decl->getIntegerType());
 
@@ -5592,8 +5608,7 @@ uint32_t TypeSystemClang::GetNumFields(lldb::opaque_compiler_type_t type) {
       const clang::RecordType *record_type =
           llvm::dyn_cast<clang::RecordType>(qual_type.getTypePtr());
       if (record_type) {
-        clang::RecordDecl *record_decl =
-            record_type->getOriginalDecl()->getDefinition();
+        clang::RecordDecl *record_decl = record_type->getDecl();
         if (record_decl) {
           count = std::distance(record_decl->field_begin(),
                                 record_decl->field_end());
@@ -5707,8 +5722,7 @@ CompilerType TypeSystemClang::GetFieldAtIndex(lldb::opaque_compiler_type_t type,
     if (GetCompleteType(type)) {
       const clang::RecordType *record_type =
           llvm::cast<clang::RecordType>(qual_type.getTypePtr());
-      const clang::RecordDecl *record_decl =
-          record_type->getOriginalDecl()->getDefinitionOrSelf();
+      const clang::RecordDecl *record_decl = record_type->getDecl();
       uint32_t field_idx = 0;
       clang::RecordDecl::field_iterator field, field_end;
       for (field = record_decl->field_begin(),
@@ -5894,7 +5908,7 @@ CompilerType TypeSystemClang::GetDirectBaseClassAtIndex(
                   llvm::cast<clang::CXXRecordDecl>(
                       base_class->getType()
                           ->castAs<clang::RecordType>()
-                          ->getOriginalDecl());
+                          ->getDecl());
               if (base_class->isVirtual())
                 *bit_offset_ptr =
                     record_layout.getVBaseClassOffset(base_class_decl)
@@ -5989,7 +6003,7 @@ CompilerType TypeSystemClang::GetVirtualBaseClassAtIndex(
                   llvm::cast<clang::CXXRecordDecl>(
                       base_class->getType()
                           ->castAs<clang::RecordType>()
-                          ->getOriginalDecl());
+                          ->getDecl());
               *bit_offset_ptr =
                   record_layout.getVBaseClassOffset(base_class_decl)
                       .getQuantity() *
@@ -6019,8 +6033,7 @@ TypeSystemClang::GetStaticFieldWithName(lldb::opaque_compiler_type_t type,
 
     const clang::RecordType *record_type =
         llvm::cast<clang::RecordType>(qual_type.getTypePtr());
-    const clang::RecordDecl *record_decl =
-        record_type->getOriginalDecl()->getDefinitionOrSelf();
+    const clang::RecordDecl *record_decl = record_type->getDecl();
 
     clang::DeclarationName decl_name(&getASTContext().Idents.get(name));
     for (NamedDecl *decl : record_decl->lookup(decl_name)) {
@@ -6250,8 +6263,8 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
     if (idx_is_valid && GetCompleteType(type)) {
       const clang::RecordType *record_type =
           llvm::cast<clang::RecordType>(parent_qual_type.getTypePtr());
-      const clang::RecordDecl *record_decl =
-          record_type->getOriginalDecl()->getDefinitionOrSelf();
+      const clang::RecordDecl *record_decl = record_type->getDecl();
+      assert(record_decl);
       const clang::ASTRecordLayout &record_layout =
           getASTContext().getASTRecordLayout(record_decl);
       uint32_t child_idx = 0;
@@ -6270,10 +6283,7 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
           // Skip empty base classes
           if (omit_empty_base_classes) {
             base_class_decl = llvm::cast<clang::CXXRecordDecl>(
-                                  base_class->getType()
-                                      ->getAs<clang::RecordType>()
-                                      ->getOriginalDecl())
-                                  ->getDefinitionOrSelf();
+                base_class->getType()->getAs<clang::RecordType>()->getDecl());
             if (!TypeSystemClang::RecordHasFields(base_class_decl))
               continue;
           }
@@ -6281,10 +6291,7 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
           if (idx == child_idx) {
             if (base_class_decl == nullptr)
               base_class_decl = llvm::cast<clang::CXXRecordDecl>(
-                                    base_class->getType()
-                                        ->getAs<clang::RecordType>()
-                                        ->getOriginalDecl())
-                                    ->getDefinitionOrSelf();
+                  base_class->getType()->getAs<clang::RecordType>()->getDecl());
 
             if (base_class->isVirtual()) {
               bool handled = false;
@@ -6745,8 +6752,7 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
       if (GetCompleteType(type)) {
         const clang::RecordType *record_type =
             llvm::cast<clang::RecordType>(qual_type.getTypePtr());
-        const clang::RecordDecl *record_decl =
-            record_type->getOriginalDecl()->getDefinitionOrSelf();
+        const clang::RecordDecl *record_decl = record_type->getDecl();
 
         assert(record_decl);
         uint32_t child_idx = 0;
@@ -6811,10 +6817,10 @@ size_t TypeSystemClang::GetIndexOfChildMemberWithName(
                   return 0;
                 } else {
                   child_indexes.push_back(child_idx);
-                  parent_record_decl = elem.Base->getType()
-                                           ->castAs<clang::RecordType>()
-                                           ->getOriginalDecl()
-                                           ->getDefinitionOrSelf();
+                  parent_record_decl = llvm::cast<clang::RecordDecl>(
+                      elem.Base->getType()
+                          ->castAs<clang::RecordType>()
+                          ->getDecl());
                 }
               }
               for (clang::DeclContext::lookup_iterator I = path->Decls, E;
@@ -6948,8 +6954,7 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
       if (GetCompleteType(type)) {
         const clang::RecordType *record_type =
             llvm::cast<clang::RecordType>(qual_type.getTypePtr());
-        const clang::RecordDecl *record_decl =
-            record_type->getOriginalDecl()->getDefinitionOrSelf();
+        const clang::RecordDecl *record_decl = record_type->getDecl();
 
         assert(record_decl);
         uint32_t child_idx = 0;
@@ -6968,8 +6973,7 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
                 llvm::cast<clang::CXXRecordDecl>(
                     base_class->getType()
                         ->castAs<clang::RecordType>()
-                        ->getOriginalDecl())
-                    ->getDefinitionOrSelf();
+                        ->getDecl());
             if (omit_empty_base_classes &&
                 !TypeSystemClang::RecordHasFields(base_class_decl))
               continue;
@@ -7088,17 +7092,14 @@ TypeSystemClang::GetDirectNestedTypeWithName(lldb::opaque_compiler_type_t type,
       return CompilerType();
     const clang::RecordType *record_type =
         llvm::cast<clang::RecordType>(qual_type.getTypePtr());
-    const clang::RecordDecl *record_decl =
-        record_type->getOriginalDecl()->getDefinitionOrSelf();
+    const clang::RecordDecl *record_decl = record_type->getDecl();
 
     clang::DeclarationName decl_name(&getASTContext().Idents.get(name));
     for (NamedDecl *decl : record_decl->lookup(decl_name)) {
       if (auto *tag_decl = dyn_cast<clang::TagDecl>(decl))
-        return GetType(getASTContext().getCanonicalTagType(tag_decl));
+        return GetType(getASTContext().getTagDeclType(tag_decl));
       if (auto *typedef_decl = dyn_cast<clang::TypedefNameDecl>(decl))
-        return GetType(getASTContext().getTypedefType(
-            ElaboratedTypeKeyword::None, /*Qualifier=*/std::nullopt,
-            typedef_decl));
+        return GetType(getASTContext().getTypedefType(typedef_decl));
     }
     break;
   }
@@ -7115,7 +7116,7 @@ bool TypeSystemClang::IsTemplateType(lldb::opaque_compiler_type_t type) {
   const clang::Type *clang_type = ClangUtil::GetQualType(ct).getTypePtr();
   if (auto *cxx_record_decl = dyn_cast<clang::TagType>(clang_type))
     return isa<clang::ClassTemplateSpecializationDecl>(
-        cxx_record_decl->getOriginalDecl());
+        cxx_record_decl->getDecl());
   return false;
 }
 
@@ -7318,7 +7319,7 @@ clang::EnumDecl *TypeSystemClang::GetAsEnumDecl(const CompilerType &type) {
   const clang::EnumType *enutype =
       llvm::dyn_cast<clang::EnumType>(ClangUtil::GetCanonicalQualType(type));
   if (enutype)
-    return enutype->getOriginalDecl()->getDefinitionOrSelf();
+    return enutype->getDecl();
   return nullptr;
 }
 
@@ -7326,7 +7327,7 @@ clang::RecordDecl *TypeSystemClang::GetAsRecordDecl(const CompilerType &type) {
   const clang::RecordType *record_type =
       llvm::dyn_cast<clang::RecordType>(ClangUtil::GetCanonicalQualType(type));
   if (record_type)
-    return record_type->getOriginalDecl()->getDefinitionOrSelf();
+    return record_type->getDecl();
   return nullptr;
 }
 
@@ -7408,7 +7409,7 @@ clang::FieldDecl *TypeSystemClang::AddFieldToRecordType(
       if (const clang::TagType *TagT =
               field->getType()->getAs<clang::TagType>()) {
         if (clang::RecordDecl *Rec =
-                llvm::dyn_cast<clang::RecordDecl>(TagT->getOriginalDecl()))
+                llvm::dyn_cast<clang::RecordDecl>(TagT->getDecl()))
           if (!Rec->getDeclName()) {
             Rec->setAnonymousStructOrUnion(true);
             field->setImplicit();
@@ -7493,8 +7494,7 @@ void TypeSystemClang::BuildIndirectFields(const CompilerType &type) {
       if (!field_record_type)
         continue;
 
-      clang::RecordDecl *field_record_decl =
-          field_record_type->getOriginalDecl()->getDefinition();
+      clang::RecordDecl *field_record_decl = field_record_type->getDecl();
 
       if (!field_record_decl)
         continue;
@@ -7636,8 +7636,7 @@ void TypeSystemClang::SetIntegerInitializerForVariable(
   // If the variable is an enum type, take the underlying integer type as
   // the type of the integer literal.
   if (const EnumType *enum_type = qt->getAs<EnumType>()) {
-    const EnumDecl *enum_decl =
-        enum_type->getOriginalDecl()->getDefinitionOrSelf();
+    const EnumDecl *enum_decl = enum_type->getDecl();
     qt = enum_decl->getIntegerType();
   }
   // Bools are handled separately because the clang AST printer handles bools
@@ -8297,7 +8296,7 @@ bool TypeSystemClang::SetHasExternalStorage(lldb::opaque_compiler_type_t type,
 
   case clang::Type::Enum: {
     clang::EnumDecl *enum_decl =
-        llvm::cast<clang::EnumType>(qual_type)->getOriginalDecl();
+        llvm::cast<clang::EnumType>(qual_type)->getDecl();
     if (enum_decl) {
       enum_decl->setHasExternalLexicalStorage(has_extern);
       enum_decl->setHasExternalVisibleStorage(has_extern);
@@ -8335,7 +8334,7 @@ bool TypeSystemClang::StartTagDeclarationDefinition(const CompilerType &type) {
   if (!qual_type.isNull()) {
     const clang::TagType *tag_type = qual_type->getAs<clang::TagType>();
     if (tag_type) {
-      clang::TagDecl *tag_decl = tag_type->getOriginalDecl();
+      clang::TagDecl *tag_decl = tag_type->getDecl();
       if (tag_decl) {
         tag_decl->startDefinition();
         return true;
@@ -8370,8 +8369,7 @@ bool TypeSystemClang::CompleteTagDeclarationDefinition(
   // the definition.
   const clang::TagType *tag_type = qual_type->getAs<clang::TagType>();
   if (tag_type) {
-    clang::TagDecl *tag_decl =
-        tag_type->getOriginalDecl()->getDefinitionOrSelf();
+    clang::TagDecl *tag_decl = tag_type->getDecl();
 
     if (auto *cxx_record_decl = llvm::dyn_cast<CXXRecordDecl>(tag_decl)) {
       // If we have a move constructor declared but no copy constructor we
@@ -8406,8 +8404,7 @@ bool TypeSystemClang::CompleteTagDeclarationDefinition(
 
   if (!enutype)
     return false;
-  clang::EnumDecl *enum_decl =
-      enutype->getOriginalDecl()->getDefinitionOrSelf();
+  clang::EnumDecl *enum_decl = enutype->getDecl();
 
   if (enum_decl->isCompleteDefinition())
     return true;
@@ -8465,19 +8462,17 @@ clang::EnumConstantDecl *TypeSystemClang::AddEnumerationValueToEnumerationType(
   clang::EnumConstantDecl *enumerator_decl =
       clang::EnumConstantDecl::CreateDeserialized(getASTContext(),
                                                   GlobalDeclID());
-  clang::EnumDecl *enum_decl =
-      enutype->getOriginalDecl()->getDefinitionOrSelf();
-  enumerator_decl->setDeclContext(enum_decl);
+  enumerator_decl->setDeclContext(enutype->getDecl());
   if (name && name[0])
     enumerator_decl->setDeclName(&getASTContext().Idents.get(name));
   enumerator_decl->setType(clang::QualType(enutype, 0));
   enumerator_decl->setInitVal(getASTContext(), value);
-  SetMemberOwningModule(enumerator_decl, enum_decl);
+  SetMemberOwningModule(enumerator_decl, enutype->getDecl());
 
   if (!enumerator_decl)
     return nullptr;
 
-  enum_decl->addDecl(enumerator_decl);
+  enutype->getDecl()->addDecl(enumerator_decl);
 
   VerifyDecl(enumerator_decl);
   return enumerator_decl;
@@ -8501,8 +8496,7 @@ CompilerType TypeSystemClang::GetEnumerationIntegerType(CompilerType type) {
   if (!enum_type)
     return CompilerType();
 
-  return GetType(
-      enum_type->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType());
+  return GetType(enum_type->getDecl()->getIntegerType());
 }
 
 CompilerType
@@ -8515,7 +8509,7 @@ TypeSystemClang::CreateMemberPointerType(const CompilerType &type,
       return CompilerType();
     return ast->GetType(ast->getASTContext().getMemberPointerType(
         ClangUtil::GetQualType(pointee_type),
-        /*Qualifier=*/std::nullopt,
+        /*Qualifier=*/nullptr,
         ClangUtil::GetQualType(type)->getAsCXXRecordDecl()));
   }
   return CompilerType();
@@ -8593,8 +8587,8 @@ static bool DumpEnumValue(const clang::QualType &qual_type, Stream &s,
                           uint32_t bitfield_bit_size) {
   const clang::EnumType *enutype =
       llvm::cast<clang::EnumType>(qual_type.getTypePtr());
-  const clang::EnumDecl *enum_decl =
-      enutype->getOriginalDecl()->getDefinitionOrSelf();
+  const clang::EnumDecl *enum_decl = enutype->getDecl();
+  assert(enum_decl);
   lldb::offset_t offset = byte_offset;
   bool qual_type_is_signed = qual_type->isSignedIntegerOrEnumerationType();
   const uint64_t enum_svalue =
@@ -8700,7 +8694,15 @@ bool TypeSystemClang::DumpTypeValue(
   } else {
     clang::QualType qual_type(GetQualType(type));
 
-    switch (qual_type->getTypeClass()) {
+    const clang::Type::TypeClass type_class = qual_type->getTypeClass();
+
+    if (type_class == clang::Type::Elaborated) {
+      qual_type = llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType();
+      return DumpTypeValue(qual_type.getAsOpaquePtr(), s, format, data, byte_offset, byte_size,
+                           bitfield_bit_size, bitfield_bit_offset, exe_scope);
+    }
+
+    switch (type_class) {
     case clang::Type::Typedef: {
       clang::QualType typedef_qual_type =
           llvm::cast<clang::TypedefType>(qual_type)
@@ -8870,7 +8872,7 @@ void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
       GetCompleteType(type);
 
       auto *record_type = llvm::cast<clang::RecordType>(qual_type.getTypePtr());
-      const clang::RecordDecl *record_decl = record_type->getOriginalDecl();
+      const clang::RecordDecl *record_decl = record_type->getDecl();
       if (level == eDescriptionLevelVerbose)
         record_decl->dump(llvm_ostrm);
       else {
@@ -8882,7 +8884,7 @@ void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
     default: {
       if (auto *tag_type =
               llvm::dyn_cast<clang::TagType>(qual_type.getTypePtr())) {
-        if (clang::TagDecl *tag_decl = tag_type->getOriginalDecl()) {
+        if (clang::TagDecl *tag_decl = tag_type->getDecl()) {
           if (level == eDescriptionLevelVerbose)
             tag_decl->dump(llvm_ostrm);
           else
@@ -8922,7 +8924,7 @@ void TypeSystemClang::DumpTypeName(const CompilerType &type) {
 
     case clang::Type::Enum: {
       clang::EnumDecl *enum_decl =
-          llvm::cast<clang::EnumType>(qual_type)->getOriginalDecl();
+          llvm::cast<clang::EnumType>(qual_type)->getDecl();
       if (enum_decl) {
         printf("enum %s", enum_decl->getName().str().c_str());
       }
@@ -8957,6 +8959,13 @@ void TypeSystemClang::DumpTypeName(const CompilerType &type) {
                                        llvm::cast<clang::AutoType>(qual_type)
                                            ->getDeducedType()
                                            .getAsOpaquePtr()));
+
+    case clang::Type::Elaborated:
+      printf("elaborated ");
+      return DumpTypeName(CompilerType(
+          type.GetTypeSystem(), llvm::cast<clang::ElaboratedType>(qual_type)
+                                    ->getNamedType()
+                                    .getAsOpaquePtr()));
 
     case clang::Type::Paren:
       printf("paren ");
@@ -9787,8 +9796,8 @@ bool TypeSystemClang::IsForcefullyCompleted(lldb::opaque_compiler_type_t type) {
     const clang::RecordType *record_type =
         llvm::dyn_cast<clang::RecordType>(qual_type.getTypePtr());
     if (record_type) {
-      const clang::RecordDecl *record_decl =
-          record_type->getOriginalDecl()->getDefinitionOrSelf();
+      const clang::RecordDecl *record_decl = record_type->getDecl();
+      assert(record_decl);
       if (std::optional<ClangASTMetadata> metadata = GetMetadata(record_decl))
         return metadata->IsForcefullyCompleted();
     }

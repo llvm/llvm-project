@@ -7962,6 +7962,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "desugaredQualType": "NS::X",
 // CHECK-NEXT:         "qualType": "X"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "prvalue",
@@ -7987,6 +7988,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
+// CHECK-NEXT:           "desugaredQualType": "const NS::X",
 // CHECK-NEXT:           "qualType": "const X"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "lvalue",
@@ -8140,6 +8142,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
+// CHECK-NEXT:           "desugaredQualType": "const NS::X",
 // CHECK-NEXT:           "qualType": "const X"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "lvalue",
@@ -8392,6 +8395,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "desugaredQualType": "NS::X",
 // CHECK-NEXT:         "qualType": "X"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "prvalue",
@@ -8417,6 +8421,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
+// CHECK-NEXT:           "desugaredQualType": "const NS::X",
 // CHECK-NEXT:           "qualType": "const X"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "lvalue",
@@ -8715,6 +8720,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "desugaredQualType": "NS::X",
 // CHECK-NEXT:         "qualType": "X"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "prvalue",
@@ -8740,6 +8746,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
+// CHECK-NEXT:           "desugaredQualType": "const NS::X",
 // CHECK-NEXT:           "qualType": "const X"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "lvalue",
@@ -8893,6 +8900,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
+// CHECK-NEXT:           "desugaredQualType": "const NS::X",
 // CHECK-NEXT:           "qualType": "const X"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "lvalue",
@@ -9024,6 +9032,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:        "isUsed": true,
 // CHECK-NEXT:        "name": "x",
 // CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "desugaredQualType": "NS::X",
 // CHECK-NEXT:         "qualType": "X"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "init": "call",
@@ -9044,6 +9053,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
+// CHECK-NEXT:           "desugaredQualType": "NS::X",
 // CHECK-NEXT:           "qualType": "X"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "prvalue",
@@ -9145,6 +9155,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "desugaredQualType": "NS::X",
 // CHECK-NEXT:         "qualType": "X"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "prvalue",
@@ -9170,6 +9181,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
+// CHECK-NEXT:           "desugaredQualType": "const NS::X",
 // CHECK-NEXT:           "qualType": "const X"
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "valueCategory": "lvalue",
@@ -9191,6 +9203,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
+// CHECK-NEXT:             "desugaredQualType": "NS::X",
 // CHECK-NEXT:             "qualType": "X"
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "valueCategory": "lvalue",
@@ -9199,6 +9212,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:             "kind": "VarDecl",
 // CHECK-NEXT:             "name": "x",
 // CHECK-NEXT:             "type": {
+// CHECK-NEXT:              "desugaredQualType": "NS::X",
 // CHECK-NEXT:              "qualType": "X"
 // CHECK-NEXT:             }
 // CHECK-NEXT:            }

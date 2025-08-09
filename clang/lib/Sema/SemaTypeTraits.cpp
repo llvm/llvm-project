@@ -32,7 +32,8 @@ static CXXMethodDecl *LookupSpecialMemberFromXValue(Sema &SemaRef,
   RD = RD->getDefinition();
   SourceLocation LookupLoc = RD->getLocation();
 
-  CanQualType CanTy = SemaRef.getASTContext().getCanonicalTagType(RD);
+  CanQualType CanTy = SemaRef.getASTContext().getCanonicalType(
+      SemaRef.getASTContext().getTagDeclType(RD));
   DeclarationName Name;
   Expr *Arg = nullptr;
   unsigned NumArgs;
@@ -561,8 +562,7 @@ static bool HasNoThrowOperator(const RecordType *RT, OverloadedOperatorKind Op,
                                bool (CXXRecordDecl::*HasTrivial)() const,
                                bool (CXXRecordDecl::*HasNonTrivial)() const,
                                bool (CXXMethodDecl::*IsDesiredOp)() const) {
-  CXXRecordDecl *RD =
-      cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf();
+  CXXRecordDecl *RD = cast<CXXRecordDecl>(RT->getDecl());
   if ((RD->*HasTrivial)() && !(RD->*HasNonTrivial)())
     return true;
 
@@ -599,7 +599,6 @@ static bool HasNonDeletedDefaultedEqualityComparison(Sema &S,
   if (Decl->isLambda())
     return Decl->isCapturelessLambda();
 
-  CanQualType T = S.Context.getCanonicalTagType(Decl);
   {
     EnterExpressionEvaluationContext UnevaluatedContext(
         S, Sema::ExpressionEvaluationContext::Unevaluated);
@@ -607,7 +606,10 @@ static bool HasNonDeletedDefaultedEqualityComparison(Sema &S,
     Sema::ContextRAII TUContext(S, S.Context.getTranslationUnitDecl());
 
     // const ClassT& obj;
-    OpaqueValueExpr Operand(KeyLoc, T.withConst(), ExprValueKind::VK_LValue);
+    OpaqueValueExpr Operand(
+        KeyLoc,
+        Decl->getTypeForDecl()->getCanonicalTypeUnqualified().withConst(),
+        ExprValueKind::VK_LValue);
     UnresolvedSet<16> Functions;
     // obj == obj;
     S.LookupBinOp(S.TUScope, {}, BinaryOperatorKind::BO_EQ, Functions);
@@ -626,7 +628,8 @@ static bool HasNonDeletedDefaultedEqualityComparison(Sema &S,
       return false;
     if (!ParamT->isReferenceType() && !Decl->isTriviallyCopyable())
       return false;
-    if (!S.Context.hasSameUnqualifiedType(ParamT.getNonReferenceType(), T))
+    if (ParamT.getNonReferenceType()->getUnqualifiedDesugaredType() !=
+        Decl->getTypeForDecl())
       return false;
   }
 
@@ -1610,9 +1613,9 @@ bool Sema::BuiltinIsBaseOf(SourceLocation RhsTLoc, QualType LhsT,
 
   // Unions are never base classes, and never have base classes.
   // It doesn't matter if they are complete or not. See PR#41843
-  if (lhsRecord && lhsRecord->getOriginalDecl()->isUnion())
+  if (lhsRecord && lhsRecord->getDecl()->isUnion())
     return false;
-  if (rhsRecord && rhsRecord->getOriginalDecl()->isUnion())
+  if (rhsRecord && rhsRecord->getDecl()->isUnion())
     return false;
 
   if (lhsRecord == rhsRecord)
@@ -1626,8 +1629,8 @@ bool Sema::BuiltinIsBaseOf(SourceLocation RhsTLoc, QualType LhsT,
                           diag::err_incomplete_type_used_in_type_trait_expr))
     return false;
 
-  return cast<CXXRecordDecl>(rhsRecord->getOriginalDecl())
-      ->isDerivedFrom(cast<CXXRecordDecl>(lhsRecord->getOriginalDecl()));
+  return cast<CXXRecordDecl>(rhsRecord->getDecl())
+      ->isDerivedFrom(cast<CXXRecordDecl>(lhsRecord->getDecl()));
 }
 
 static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT,
@@ -1667,9 +1670,8 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT,
                                  diag::err_incomplete_type))
       return false;
 
-    return cast<CXXRecordDecl>(DerivedRecord->getOriginalDecl())
-        ->isVirtuallyDerivedFrom(
-            cast<CXXRecordDecl>(BaseRecord->getOriginalDecl()));
+    return cast<CXXRecordDecl>(DerivedRecord->getDecl())
+        ->isVirtuallyDerivedFrom(cast<CXXRecordDecl>(BaseRecord->getDecl()));
   }
   case BTT_IsSame:
     return Self.Context.hasSameType(LhsT, RhsT);
@@ -2016,10 +2018,11 @@ static ExtractedTypeTraitInfo ExtractTypeTraitFromExpression(const Expr *E) {
   // std::is_xxx<>::value
   if (const auto *VD = dyn_cast<VarDecl>(Ref->getDecl());
       Ref->hasQualifier() && VD && VD->getIdentifier()->isStr("value")) {
-    NestedNameSpecifier Qualifier = Ref->getQualifier();
-    if (Qualifier.getKind() != NestedNameSpecifier::Kind::Type)
+    const Type *T = Ref->getQualifier()->getAsType();
+    if (!T)
       return std::nullopt;
-    const auto *Ts = Qualifier.getAsType()->getAs<TemplateSpecializationType>();
+    const TemplateSpecializationType *Ts =
+        T->getAs<TemplateSpecializationType>();
     if (!Ts)
       return std::nullopt;
     const TemplateDecl *D = Ts->getTemplateName().getAsTemplateDecl();

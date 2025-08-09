@@ -2453,8 +2453,7 @@ NonLoc RegionStoreManager::createLazyBinding(RegionBindingsConstRef B,
 
 SVal RegionStoreManager::getBindingForStruct(RegionBindingsConstRef B,
                                              const TypedValueRegion *R) {
-  const RecordDecl *RD =
-      R->getValueType()->castAs<RecordType>()->getOriginalDecl();
+  const RecordDecl *RD = R->getValueType()->castAs<RecordType>()->getDecl();
   if (!RD->getDefinition())
     return UnknownVal();
 
@@ -2845,7 +2844,7 @@ RegionStoreManager::bindStruct(LimitedRegionBindingsConstRef B,
   assert(T->isStructureOrClassType());
 
   const RecordType* RT = T->castAs<RecordType>();
-  const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+  const RecordDecl *RD = RT->getDecl();
 
   if (!RD->isCompleteDefinition())
     return B;

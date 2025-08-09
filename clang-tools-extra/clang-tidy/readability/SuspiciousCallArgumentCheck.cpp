@@ -414,9 +414,9 @@ static bool areTypesCompatible(QualType ArgType, QualType ParamType,
   // Arithmetic types are interconvertible, except scoped enums.
   if (ParamType->isArithmeticType() && ArgType->isArithmeticType()) {
     if ((ParamType->isEnumeralType() &&
-         ParamType->castAs<EnumType>()->getOriginalDecl()->isScoped()) ||
+         ParamType->castAs<EnumType>()->getDecl()->isScoped()) ||
         (ArgType->isEnumeralType() &&
-         ArgType->castAs<EnumType>()->getOriginalDecl()->isScoped()))
+         ArgType->castAs<EnumType>()->getDecl()->isScoped()))
       return false;
 
     return true;

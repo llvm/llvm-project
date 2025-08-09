@@ -51,20 +51,30 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestElaboratedType1",
 // CHECK-NEXT:  "type": {
+// CHECK-NEXT:   "desugaredQualType": "T",
 // CHECK-NEXT:   "qualType": "struct T"
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
-// CHECK-NEXT:    "kind": "RecordType",
+// CHECK-NEXT:    "kind": "ElaboratedType",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "struct T"
 // CHECK-NEXT:    },
-// CHECK-NEXT:    "decl": {
-// CHECK-NEXT:     "id": "0x{{.*}}",
-// CHECK-NEXT:     "kind": "CXXRecordDecl",
-// CHECK-NEXT:     "name": "T"
-// CHECK-NEXT:    }
+// CHECK-NEXT:    "inner": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "id": "0x{{.*}}",
+// CHECK-NEXT:      "kind": "RecordType",
+// CHECK-NEXT:      "type": {
+// CHECK-NEXT:       "qualType": "T"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "decl": {
+// CHECK-NEXT:       "id": "0x{{.*}}",
+// CHECK-NEXT:       "kind": "CXXRecordDecl",
+// CHECK-NEXT:       "name": "T"
+// CHECK-NEXT:      }
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
@@ -98,16 +108,25 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:  "inner": [
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
-// CHECK-NEXT:    "kind": "RecordType",
+// CHECK-NEXT:    "kind": "ElaboratedType",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "NS::S"
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "qualifier": "NS::",
-// CHECK-NEXT:    "decl": {
-// CHECK-NEXT:     "id": "0x{{.*}}",
-// CHECK-NEXT:     "kind": "CXXRecordDecl",
-// CHECK-NEXT:     "name": "S"
-// CHECK-NEXT:    }
+// CHECK-NEXT:    "inner": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "id": "0x{{.*}}",
+// CHECK-NEXT:      "kind": "RecordType",
+// CHECK-NEXT:      "type": {
+// CHECK-NEXT:       "qualType": "NS::S"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "decl": {
+// CHECK-NEXT:       "id": "0x{{.*}}",
+// CHECK-NEXT:       "kind": "CXXRecordDecl",
+// CHECK-NEXT:       "name": "S"
+// CHECK-NEXT:      }
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
@@ -519,39 +538,7 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
 // CHECK-NEXT:     {
-// CHECK-NEXT:      "id": "0x{{.*}}",
-// CHECK-NEXT:      "kind": "TypedefDecl",
-// CHECK-NEXT:      "loc": {
-// CHECK-NEXT:       "offset": 506,
-// CHECK-NEXT:       "line": 23,
-// CHECK-NEXT:       "col": 13,
-// CHECK-NEXT:       "tokLen": 23
-// CHECK-NEXT:      },
-// CHECK-NEXT:      "range": {
-// CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": 494,
-// CHECK-NEXT:        "col": 1,
-// CHECK-NEXT:        "tokLen": 7
-// CHECK-NEXT:       },
-// CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 506,
-// CHECK-NEXT:        "col": 13,
-// CHECK-NEXT:        "tokLen": 23
-// CHECK-NEXT:       }
-// CHECK-NEXT:      },
-// CHECK-NEXT:      "name": "TestUsingShadowDeclType",
-// CHECK-NEXT:      "type": {
-// CHECK-NEXT:       "qualType": "int"
-// CHECK-NEXT:      },
-// CHECK-NEXT:      "inner": [
-// CHECK-NEXT:       {
-// CHECK-NEXT:        "id": "0x{{.*}}",
-// CHECK-NEXT:        "kind": "BuiltinType",
-// CHECK-NEXT:        "type": {
-// CHECK-NEXT:         "qualType": "int"
-// CHECK-NEXT:        }
-// CHECK-NEXT:       }
-// CHECK-NEXT:      ]
+// CHECK-NEXT:      "id": "0x0"
 // CHECK-NEXT:     }
 // CHECK-NEXT:    ]
 // CHECK-NEXT:   }

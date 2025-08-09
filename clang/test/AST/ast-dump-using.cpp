@@ -9,17 +9,19 @@ using a::S;
 // CHECK:      UsingDecl {{.*}} a::S
 // CHECK-NEXT: | `-NestedNameSpecifier Namespace {{.*}} 'a'
 // CHECK-NEXT: UsingShadowDecl {{.*}} implicit CXXRecord {{.*}} 'S'
-// CHECK-NEXT: `-CXXRecordDecl {{.*}} referenced struct S
+// CHECK-NEXT: `-RecordType {{.*}} 'a::S'
 typedef S f; // to dump the introduced type
 // CHECK:      TypedefDecl
-// CHECK-NEXT: `-UsingType [[TYPE_ADDR:.*]] 'S' sugar 'a::S'
-// CHECK-NEXT:   |-UsingShadow [[SHADOW_ADDR:.*]] 'S'
-// CHECK-NEXT:   `-RecordType {{.*}} 'a::S'
+// CHECK-NEXT: `-ElaboratedType {{.*}} 'S' sugar
+// CHECK-NEXT:   `-UsingType [[TYPE_ADDR:.*]] 'a::S' sugar
+// CHECK-NEXT:     |-UsingShadow [[SHADOW_ADDR:.*]] 'S'
+// CHECK-NEXT:     `-RecordType {{.*}} 'a::S'
 typedef S e; // check the same UsingType is reused.
 // CHECK:      TypedefDecl
-// CHECK-NEXT: `-UsingType [[TYPE_ADDR]] 'S' sugar 'a::S'
-// CHECK-NEXT:   |-UsingShadow [[SHADOW_ADDR]] 'S'
-// CHECK-NEXT:   `-RecordType {{.*}} 'a::S'
+// CHECK-NEXT: `-ElaboratedType {{.*}} 'S' sugar
+// CHECK-NEXT:   `-UsingType [[TYPE_ADDR]] 'a::S' sugar
+// CHECK-NEXT:     |-UsingShadow [[SHADOW_ADDR]] 'S'
+// CHECK-NEXT:     `-RecordType {{.*}} 'a::S'
 using a::x;
 
 void foo() {

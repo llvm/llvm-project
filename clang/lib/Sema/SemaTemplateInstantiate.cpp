@@ -353,50 +353,45 @@ Response HandleFunctionTemplateDecl(Sema &SemaRef,
             SemaRef.Context),
         /*Final=*/false);
 
-    NestedNameSpecifier NNS = FTD->getTemplatedDecl()->getQualifier();
+    NestedNameSpecifier *NNS = FTD->getTemplatedDecl()->getQualifier();
 
-    for (const Type *Ty = NNS.getKind() == NestedNameSpecifier::Kind::Type
-                              ? NNS.getAsType()
-                              : nullptr,
-                    *NextTy = nullptr;
-         Ty && Ty->isInstantiationDependentType();
-         Ty = std::exchange(NextTy, nullptr)) {
-      if (NestedNameSpecifier P = Ty->getPrefix();
-          P.getKind() == NestedNameSpecifier::Kind::Type)
-        NextTy = P.getAsType();
-      const auto *TSTy = dyn_cast<TemplateSpecializationType>(Ty);
-      if (!TSTy)
-        continue;
-
-      ArrayRef<TemplateArgument> Arguments = TSTy->template_arguments();
-      // Prefer template arguments from the injected-class-type if possible.
-      // For example,
-      // ```cpp
-      // template <class... Pack> struct S {
-      //   template <class T> void foo();
-      // };
-      // template <class... Pack> template <class T>
-      //           ^^^^^^^^^^^^^ InjectedTemplateArgs
-      //           They're of kind TemplateArgument::Pack, not of
-      //           TemplateArgument::Type.
-      // void S<Pack...>::foo() {}
-      //        ^^^^^^^
-      //        TSTy->template_arguments() (which are of PackExpansionType)
-      // ```
-      // This meets the contract in
-      // TreeTransform::TryExpandParameterPacks that the template arguments
-      // for unexpanded parameters should be of a Pack kind.
-      if (TSTy->isCurrentInstantiation()) {
-        auto *RD = TSTy->getCanonicalTypeInternal()->getAsCXXRecordDecl();
-        if (ClassTemplateDecl *CTD = RD->getDescribedClassTemplate())
-          Arguments = CTD->getInjectedTemplateArgs(SemaRef.Context);
-        else if (auto *Specialization =
-                     dyn_cast<ClassTemplateSpecializationDecl>(RD))
-          Arguments = Specialization->getTemplateInstantiationArgs().asArray();
+    while (const Type *Ty = NNS ? NNS->getAsType() : nullptr) {
+      if (NNS->isInstantiationDependent()) {
+        if (const auto *TSTy = Ty->getAs<TemplateSpecializationType>()) {
+          ArrayRef<TemplateArgument> Arguments = TSTy->template_arguments();
+          // Prefer template arguments from the injected-class-type if possible.
+          // For example,
+          // ```cpp
+          // template <class... Pack> struct S {
+          //   template <class T> void foo();
+          // };
+          // template <class... Pack> template <class T>
+          //           ^^^^^^^^^^^^^ InjectedTemplateArgs
+          //           They're of kind TemplateArgument::Pack, not of
+          //           TemplateArgument::Type.
+          // void S<Pack...>::foo() {}
+          //        ^^^^^^^
+          //        TSTy->template_arguments() (which are of PackExpansionType)
+          // ```
+          // This meets the contract in
+          // TreeTransform::TryExpandParameterPacks that the template arguments
+          // for unexpanded parameters should be of a Pack kind.
+          if (TSTy->isCurrentInstantiation()) {
+            auto *RD = TSTy->getCanonicalTypeInternal()->getAsCXXRecordDecl();
+            if (ClassTemplateDecl *CTD = RD->getDescribedClassTemplate())
+              Arguments = CTD->getInjectedTemplateArgs(SemaRef.Context);
+            else if (auto *Specialization =
+                         dyn_cast<ClassTemplateSpecializationDecl>(RD))
+              Arguments =
+                  Specialization->getTemplateInstantiationArgs().asArray();
+          }
+          Result.addOuterTemplateArguments(
+              TSTy->getTemplateName().getAsTemplateDecl(), Arguments,
+              /*Final=*/false);
+        }
       }
-      Result.addOuterTemplateArguments(
-          TSTy->getTemplateName().getAsTemplateDecl(), Arguments,
-          /*Final=*/false);
+
+      NNS = NNS->getPrefix();
     }
   }
 
@@ -1170,7 +1165,7 @@ void Sema::PrintInstantiationStack(InstantiationContextDiagFuncRef DiagFunc) {
         DiagFunc(Active->PointOfInstantiation,
                  PDiag(diag::note_member_synthesized_at)
                      << MD->isExplicitlyDefaulted() << DFK.asSpecialMember()
-                     << Context.getCanonicalTagType(MD->getParent()));
+                     << Context.getTagDeclType(MD->getParent()));
       } else if (DFK.isComparison()) {
         QualType RecordType = FD->getParamDecl(0)
                                   ->getType()
@@ -1600,9 +1595,15 @@ namespace {
     VarDecl *RebuildObjCExceptionDecl(VarDecl *ExceptionDecl,
                                       TypeSourceInfo *TSInfo, QualType T);
 
+    /// Check for tag mismatches when instantiating an
+    /// elaborated type.
+    QualType RebuildElaboratedType(SourceLocation KeywordLoc,
+                                   ElaboratedTypeKeyword Keyword,
+                                   NestedNameSpecifierLoc QualifierLoc,
+                                   QualType T);
+
     TemplateName
-    TransformTemplateName(NestedNameSpecifierLoc &QualifierLoc,
-                          SourceLocation TemplateKWLoc, TemplateName Name,
+    TransformTemplateName(CXXScopeSpec &SS, TemplateName Name,
                           SourceLocation NameLoc,
                           QualType ObjectType = QualType(),
                           NamedDecl *FirstQualifierInScope = nullptr,
@@ -1648,20 +1649,22 @@ namespace {
       return inherited::TransformFunctionProtoType(TLB, TL);
     }
 
-    QualType TransformTagType(TypeLocBuilder &TLB, TagTypeLoc TL) {
-      auto Type = inherited::TransformTagType(TLB, TL);
-      if (!Type.isNull())
-        return Type;
+    QualType TransformInjectedClassNameType(TypeLocBuilder &TLB,
+                                            InjectedClassNameTypeLoc TL) {
+      auto Type = inherited::TransformInjectedClassNameType(TLB, TL);
       // Special case for transforming a deduction guide, we return a
       // transformed TemplateSpecializationType.
-      // FIXME: Why is this hack necessary?
-      if (const auto *ICNT = dyn_cast<InjectedClassNameType>(TL.getTypePtr());
-          ICNT && SemaRef.CodeSynthesisContexts.back().Kind ==
-                      Sema::CodeSynthesisContext::BuildingDeductionGuides) {
-        Type = inherited::TransformType(
-            ICNT->getOriginalDecl()->getCanonicalTemplateSpecializationType(
-                SemaRef.Context));
-        TLB.pushTrivial(SemaRef.Context, Type, TL.getNameLoc());
+      if (Type.isNull() &&
+          SemaRef.CodeSynthesisContexts.back().Kind ==
+              Sema::CodeSynthesisContext::BuildingDeductionGuides) {
+        // Return a TemplateSpecializationType for transforming a deduction
+        // guide.
+        if (auto *ICT = TL.getType()->getAs<InjectedClassNameType>()) {
+          auto Type =
+              inherited::TransformType(ICT->getInjectedSpecializationType());
+          TLB.pushTrivial(SemaRef.Context, Type, TL.getNameLoc());
+          return Type;
+        }
       }
       return Type;
     }
@@ -2046,7 +2049,7 @@ TemplateInstantiator::TransformFirstQualifierInScope(NamedDecl *D,
         return cast_or_null<NamedDecl>(TransformDecl(Loc, D));
 
       if (const TagType *Tag = T->getAs<TagType>())
-        return Tag->getOriginalDecl();
+        return Tag->getDecl();
 
       // The resulting type is not a tag; complain.
       getSema().Diag(Loc, diag::err_nested_name_spec_non_tag) << T;
@@ -2079,10 +2082,41 @@ VarDecl *TemplateInstantiator::RebuildObjCExceptionDecl(VarDecl *ExceptionDecl,
   return Var;
 }
 
+QualType
+TemplateInstantiator::RebuildElaboratedType(SourceLocation KeywordLoc,
+                                            ElaboratedTypeKeyword Keyword,
+                                            NestedNameSpecifierLoc QualifierLoc,
+                                            QualType T) {
+  if (const TagType *TT = T->getAs<TagType>()) {
+    TagDecl* TD = TT->getDecl();
+
+    SourceLocation TagLocation = KeywordLoc;
+
+    IdentifierInfo *Id = TD->getIdentifier();
+
+    // TODO: should we even warn on struct/class mismatches for this?  Seems
+    // like it's likely to produce a lot of spurious errors.
+    if (Id && Keyword != ElaboratedTypeKeyword::None &&
+        Keyword != ElaboratedTypeKeyword::Typename) {
+      TagTypeKind Kind = TypeWithKeyword::getTagTypeKindForKeyword(Keyword);
+      if (!SemaRef.isAcceptableTagRedeclaration(TD, Kind, /*isDefinition*/false,
+                                                TagLocation, Id)) {
+        SemaRef.Diag(TagLocation, diag::err_use_with_wrong_tag)
+          << Id
+          << FixItHint::CreateReplacement(SourceRange(TagLocation),
+                                          TD->getKindName());
+        SemaRef.Diag(TD->getLocation(), diag::note_previous_use);
+      }
+    }
+  }
+
+  return inherited::RebuildElaboratedType(KeywordLoc, Keyword, QualifierLoc, T);
+}
+
 TemplateName TemplateInstantiator::TransformTemplateName(
-    NestedNameSpecifierLoc &QualifierLoc, SourceLocation TemplateKWLoc,
-    TemplateName Name, SourceLocation NameLoc, QualType ObjectType,
-    NamedDecl *FirstQualifierInScope, bool AllowInjectedClassName) {
+    CXXScopeSpec &SS, TemplateName Name, SourceLocation NameLoc,
+    QualType ObjectType, NamedDecl *FirstQualifierInScope,
+    bool AllowInjectedClassName) {
   if (TemplateTemplateParmDecl *TTP
        = dyn_cast_or_null<TemplateTemplateParmDecl>(Name.getAsTemplateDecl())) {
     if (TTP->getDepth() < TemplateArgs.getNumLevels()) {
@@ -2129,12 +2163,6 @@ TemplateName TemplateInstantiator::TransformTemplateName(
       TemplateName Template = Arg.getAsTemplate();
       assert(!Template.isNull() && "Null template template argument");
 
-      if (NestedNameSpecifier Qualifier = Template.getQualifier()) {
-        NestedNameSpecifierLocBuilder Builder;
-        Builder.MakeTrivial(SemaRef.Context, Qualifier, NameLoc);
-        QualifierLoc = Builder.getWithLocInContext(SemaRef.Context);
-      }
-
       return getSema().Context.getSubstTemplateTemplateParm(
           Template, AssociatedDecl, TTP->getIndex(), PackIndex, Final);
     }
@@ -2153,9 +2181,9 @@ TemplateName TemplateInstantiator::TransformTemplateName(
         getPackIndex(Pack), SubstPack->getFinal());
   }
 
-  return inherited::TransformTemplateName(
-      QualifierLoc, TemplateKWLoc, Name, NameLoc, ObjectType,
-      FirstQualifierInScope, AllowInjectedClassName);
+  return inherited::TransformTemplateName(SS, Name, NameLoc, ObjectType,
+                                          FirstQualifierInScope,
+                                          AllowInjectedClassName);
 }
 
 ExprResult
@@ -3130,6 +3158,10 @@ namespace {
 
     // Only these types can contain 'auto' types, and subsequently be replaced
     // by references to invented parameters.
+
+    TemplateTypeParmDecl *VisitElaboratedType(const ElaboratedType *T) {
+      return Visit(T->getNamedType());
+    }
 
     TemplateTypeParmDecl *VisitPointerType(const PointerType *T) {
       return Visit(T->getPointeeType());
@@ -4525,14 +4557,14 @@ Sema::SubstDeclarationNameInfo(const DeclarationNameInfo &NameInfo,
 }
 
 TemplateName
-Sema::SubstTemplateName(SourceLocation TemplateKWLoc,
-                        NestedNameSpecifierLoc &QualifierLoc, TemplateName Name,
-                        SourceLocation NameLoc,
+Sema::SubstTemplateName(NestedNameSpecifierLoc QualifierLoc,
+                        TemplateName Name, SourceLocation Loc,
                         const MultiLevelTemplateArgumentList &TemplateArgs) {
-  TemplateInstantiator Instantiator(*this, TemplateArgs, NameLoc,
+  TemplateInstantiator Instantiator(*this, TemplateArgs, Loc,
                                     DeclarationName());
-  return Instantiator.TransformTemplateName(QualifierLoc, TemplateKWLoc, Name,
-                                            NameLoc);
+  CXXScopeSpec SS;
+  SS.Adopt(QualifierLoc);
+  return Instantiator.TransformTemplateName(SS, Name, Loc);
 }
 
 static const Decl *getCanonicalParmVarDecl(const Decl *D) {

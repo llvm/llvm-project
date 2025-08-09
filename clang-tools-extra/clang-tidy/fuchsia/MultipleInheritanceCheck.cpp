@@ -74,7 +74,7 @@ bool MultipleInheritanceCheck::isInterface(const CXXRecordDecl *Node) {
     const auto *Ty = I.getType()->getAs<RecordType>();
     if (!Ty)
       continue;
-    const RecordDecl *D = Ty->getOriginalDecl()->getDefinition();
+    const RecordDecl *D = Ty->getDecl()->getDefinition();
     if (!D)
       continue;
     const auto *Base = cast<CXXRecordDecl>(D);
@@ -106,8 +106,7 @@ void MultipleInheritanceCheck::check(const MatchFinder::MatchResult &Result) {
       const auto *Ty = I.getType()->getAs<RecordType>();
       if (!Ty)
         continue;
-      const auto *Base =
-          cast<CXXRecordDecl>(Ty->getOriginalDecl()->getDefinition());
+      const auto *Base = cast<CXXRecordDecl>(Ty->getDecl()->getDefinition());
       if (!isInterface(Base))
         NumConcrete++;
     }
@@ -118,8 +117,7 @@ void MultipleInheritanceCheck::check(const MatchFinder::MatchResult &Result) {
       const auto *Ty = V.getType()->getAs<RecordType>();
       if (!Ty)
         continue;
-      const auto *Base =
-          cast<CXXRecordDecl>(Ty->getOriginalDecl()->getDefinition());
+      const auto *Base = cast<CXXRecordDecl>(Ty->getDecl()->getDefinition());
       if (!isInterface(Base))
         NumConcrete++;
     }

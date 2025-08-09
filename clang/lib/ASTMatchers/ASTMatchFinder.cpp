@@ -122,15 +122,15 @@ public:
     else if (const Stmt *S = DynNode.get<Stmt>())
       traverse(*S);
     else if (const NestedNameSpecifier *NNS =
-                 DynNode.get<NestedNameSpecifier>())
+             DynNode.get<NestedNameSpecifier>())
       traverse(*NNS);
     else if (const NestedNameSpecifierLoc *NNSLoc =
              DynNode.get<NestedNameSpecifierLoc>())
       traverse(*NNSLoc);
     else if (const QualType *Q = DynNode.get<QualType>())
-      traverse(*Q, /*TraverseQualifier=*/true);
+      traverse(*Q);
     else if (const TypeLoc *T = DynNode.get<TypeLoc>())
-      traverse(*T, /*TraverseQualifier=*/true);
+      traverse(*T);
     else if (const auto *C = DynNode.get<CXXCtorInitializer>())
       traverse(*C);
     else if (const TemplateArgumentLoc *TALoc =
@@ -194,7 +194,7 @@ public:
   }
   // We assume that the QualType and the contained type are on the same
   // hierarchy level. Thus, we try to match either of them.
-  bool TraverseType(QualType TypeNode, bool TraverseQualifier = true) {
+  bool TraverseType(QualType TypeNode) {
     if (TypeNode.isNull())
       return true;
     ScopedIncrement ScopedDepth(&CurrentDepth);
@@ -202,11 +202,11 @@ public:
     if (!match(*TypeNode))
       return false;
     // The QualType is matched inside traverse.
-    return traverse(TypeNode, TraverseQualifier);
+    return traverse(TypeNode);
   }
   // We assume that the TypeLoc, contained QualType and contained Type all are
   // on the same hierarchy level. Thus, we try to match all of them.
-  bool TraverseTypeLoc(TypeLoc TypeLocNode, bool TraverseQualifier = true) {
+  bool TraverseTypeLoc(TypeLoc TypeLocNode) {
     if (TypeLocNode.isNull())
       return true;
     ScopedIncrement ScopedDepth(&CurrentDepth);
@@ -217,17 +217,17 @@ public:
     if (!match(TypeLocNode.getType()))
       return false;
     // The TypeLoc is matched inside traverse.
-    return traverse(TypeLocNode, TraverseQualifier);
+    return traverse(TypeLocNode);
   }
-  bool TraverseNestedNameSpecifier(NestedNameSpecifier NNS) {
+  bool TraverseNestedNameSpecifier(NestedNameSpecifier *NNS) {
     ScopedIncrement ScopedDepth(&CurrentDepth);
-    return !NNS || traverse(NNS);
+    return (NNS == nullptr) || traverse(*NNS);
   }
   bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS) {
     if (!NNS)
       return true;
     ScopedIncrement ScopedDepth(&CurrentDepth);
-    if (!match(NNS.getNestedNameSpecifier()))
+    if (!match(*NNS.getNestedNameSpecifier()))
       return false;
     return traverse(NNS);
   }
@@ -340,14 +340,15 @@ private:
   bool baseTraverse(const Stmt &StmtNode) {
     return VisitorBase::TraverseStmt(const_cast<Stmt*>(&StmtNode));
   }
-  bool baseTraverse(QualType TypeNode, bool TraverseQualifier) {
-    return VisitorBase::TraverseType(TypeNode, TraverseQualifier);
+  bool baseTraverse(QualType TypeNode) {
+    return VisitorBase::TraverseType(TypeNode);
   }
-  bool baseTraverse(TypeLoc TypeLocNode, bool TraverseQualifier) {
-    return VisitorBase::TraverseTypeLoc(TypeLocNode, TraverseQualifier);
+  bool baseTraverse(TypeLoc TypeLocNode) {
+    return VisitorBase::TraverseTypeLoc(TypeLocNode);
   }
-  bool baseTraverse(NestedNameSpecifier NNS) {
-    return VisitorBase::TraverseNestedNameSpecifier(NNS);
+  bool baseTraverse(const NestedNameSpecifier &NNS) {
+    return VisitorBase::TraverseNestedNameSpecifier(
+        const_cast<NestedNameSpecifier*>(&NNS));
   }
   bool baseTraverse(NestedNameSpecifierLoc NNS) {
     return VisitorBase::TraverseNestedNameSpecifierLoc(NNS);
@@ -395,13 +396,13 @@ private:
 
   // Traverses the subtree rooted at 'Node'; returns true if the
   // traversal should continue after this function returns.
-  template <typename T, class... Args>
-  bool traverse(const T &Node, Args &&...args) {
+  template <typename T>
+  bool traverse(const T &Node) {
     static_assert(IsBaseType<T>::value,
                   "traverse can only be instantiated with base type");
     if (!match(Node))
       return false;
-    return baseTraverse(Node, std::forward<Args>(args)...);
+    return baseTraverse(Node);
   }
 
   const DynTypedMatcher *const Matcher;
@@ -500,9 +501,9 @@ public:
 
   bool TraverseDecl(Decl *DeclNode);
   bool TraverseStmt(Stmt *StmtNode, DataRecursionQueue *Queue = nullptr);
-  bool TraverseType(QualType TypeNode, bool TraverseQualifier = true);
-  bool TraverseTypeLoc(TypeLoc TypeNode, bool TraverseQualifier = true);
-  bool TraverseNestedNameSpecifier(NestedNameSpecifier NNS);
+  bool TraverseType(QualType TypeNode);
+  bool TraverseTypeLoc(TypeLoc TypeNode);
+  bool TraverseNestedNameSpecifier(NestedNameSpecifier *NNS);
   bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS);
   bool TraverseConstructorInitializer(CXXCtorInitializer *CtorInit);
   bool TraverseTemplateArgumentLoc(TemplateArgumentLoc TAL);
@@ -576,13 +577,13 @@ public:
 
         const auto *T = Proto.getTypePtr();
         for (const auto &E : T->exceptions())
-          TraverseType(E, /*TraverseQualifier=*/true);
+          TraverseType(E);
 
         if (Expr *NE = T->getNoexceptExpr())
           TraverseStmt(NE, Queue);
 
         if (LE->hasExplicitResultType())
-          TraverseTypeLoc(Proto.getReturnLoc(), /*TraverseQualifier=*/true);
+          TraverseTypeLoc(Proto.getReturnLoc());
         TraverseStmt(
             const_cast<Expr *>(LE->getTrailingRequiresClause().ConstraintExpr));
       }
@@ -1288,42 +1289,33 @@ private:
     if (Aliases == TypeAliases.end())
       return false;
 
-    auto matches = [&](const TypedefNameDecl *Alias) {
+    if (const auto *ElaboratedTypeNode =
+            llvm::dyn_cast<ElaboratedType>(TypeNode)) {
+      if (ElaboratedTypeNode->isSugared() && Aliases->second.size() > 1) {
+        const auto &DesugaredTypeName =
+            ElaboratedTypeNode->desugar().getAsString();
+
+        for (const TypedefNameDecl *Alias : Aliases->second) {
+          if (Alias->getName() != DesugaredTypeName) {
+            continue;
+          }
+
+          BoundNodesTreeBuilder Result(*Builder);
+          if (Matcher.matches(*Alias, this, &Result)) {
+            *Builder = std::move(Result);
+            return true;
+          }
+        }
+      }
+    }
+
+    for (const TypedefNameDecl *Alias : Aliases->second) {
       BoundNodesTreeBuilder Result(*Builder);
       if (Matcher.matches(*Alias, this, &Result)) {
         *Builder = std::move(Result);
         return true;
       }
-      return false;
-    };
-
-    if (const auto *T = TypeNode->getAs<TypedefType>()) {
-      const auto *TD = T->getDecl()->getCanonicalDecl();
-
-      // Prioritize exact matches.
-      SmallVector<const TypedefNameDecl *, 8> NonExactMatches;
-      for (const TypedefNameDecl *Alias : Aliases->second) {
-        if (!declaresSameEntity(TD, Alias)) {
-          NonExactMatches.push_back(Alias);
-          continue;
-        }
-        if (matches(Alias))
-          return true;
-      }
-
-      for (const TypedefNameDecl *Alias : NonExactMatches) {
-        BoundNodesTreeBuilder Result(*Builder);
-        if (Matcher.matches(*Alias, this, &Result)) {
-          *Builder = std::move(Result);
-          return true;
-        }
-      }
-      return false;
     }
-
-    for (const TypedefNameDecl *Alias : Aliases->second)
-      if (matches(Alias))
-        return true;
     return false;
   }
 
@@ -1514,14 +1506,12 @@ bool MatchASTVisitor::TraverseStmt(Stmt *StmtNode, DataRecursionQueue *Queue) {
   return RecursiveASTVisitor<MatchASTVisitor>::TraverseStmt(StmtNode, Queue);
 }
 
-bool MatchASTVisitor::TraverseType(QualType TypeNode, bool TraverseQualifier) {
+bool MatchASTVisitor::TraverseType(QualType TypeNode) {
   match(TypeNode);
-  return RecursiveASTVisitor<MatchASTVisitor>::TraverseType(TypeNode,
-                                                            TraverseQualifier);
+  return RecursiveASTVisitor<MatchASTVisitor>::TraverseType(TypeNode);
 }
 
-bool MatchASTVisitor::TraverseTypeLoc(TypeLoc TypeLocNode,
-                                      bool TraverseQualifier) {
+bool MatchASTVisitor::TraverseTypeLoc(TypeLoc TypeLocNode) {
   // The RecursiveASTVisitor only visits types if they're not within TypeLocs.
   // We still want to find those types via matchers, so we match them here. Note
   // that the TypeLocs are structurally a shadow-hierarchy to the expressed
@@ -1529,12 +1519,11 @@ bool MatchASTVisitor::TraverseTypeLoc(TypeLoc TypeLocNode,
   // each TypeLoc.
   match(TypeLocNode);
   match(TypeLocNode.getType());
-  return RecursiveASTVisitor<MatchASTVisitor>::TraverseTypeLoc(
-      TypeLocNode, TraverseQualifier);
+  return RecursiveASTVisitor<MatchASTVisitor>::TraverseTypeLoc(TypeLocNode);
 }
 
-bool MatchASTVisitor::TraverseNestedNameSpecifier(NestedNameSpecifier NNS) {
-  match(NNS);
+bool MatchASTVisitor::TraverseNestedNameSpecifier(NestedNameSpecifier *NNS) {
+  match(*NNS);
   return RecursiveASTVisitor<MatchASTVisitor>::TraverseNestedNameSpecifier(NNS);
 }
 
@@ -1548,7 +1537,7 @@ bool MatchASTVisitor::TraverseNestedNameSpecifierLoc(
   // We only match the nested name specifier here (as opposed to traversing it)
   // because the traversal is already done in the parallel "Loc"-hierarchy.
   if (NNS.hasQualifier())
-    match(NNS.getNestedNameSpecifier());
+    match(*NNS.getNestedNameSpecifier());
   return
       RecursiveASTVisitor<MatchASTVisitor>::TraverseNestedNameSpecifierLoc(NNS);
 }

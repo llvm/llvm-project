@@ -104,9 +104,9 @@ TEST(SelectionTest, CommonAncestor) {
       {
           R"cpp(
             template <typename T>
-            int x = T::[[^U]]::ccc();
+            int x = [[T::^U::]]ccc();
           )cpp",
-          "DependentNameTypeLoc",
+          "NestedNameSpecifierLoc",
       },
       {
           R"cpp(

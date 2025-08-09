@@ -4543,7 +4543,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
 
 LValue CodeGenFunction::InitCapturedStruct(const CapturedStmt &S) {
   const RecordDecl *RD = S.getCapturedRecordDecl();
-  CanQualType RecordTy = getContext().getCanonicalTagType(RD);
+  QualType RecordTy = getContext().getRecordType(RD);
 
   // Initialize the captured struct.
   LValue SlotLV =
@@ -4623,7 +4623,7 @@ CodeGenFunction::GenerateCapturedStmtFunction(const CapturedStmt &S) {
 
   // Initialize variable-length arrays.
   LValue Base = MakeNaturalAlignRawAddrLValue(
-      CapturedStmtInfo->getContextValue(), Ctx.getCanonicalTagType(RD));
+      CapturedStmtInfo->getContextValue(), Ctx.getTagDeclType(RD));
   for (auto *FD : RD->fields()) {
     if (FD->hasCapturedVLAType()) {
       auto *ExprArg =

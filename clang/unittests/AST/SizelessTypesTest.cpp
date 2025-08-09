@@ -24,7 +24,7 @@ struct SizelessTypeTester : public ::testing::Test {
   ASTContext &Ctx = AST->getASTContext();
   TranslationUnitDecl &TU = *Ctx.getTranslationUnitDecl();
   TypeDecl *Foo = cast<TypeDecl>(TU.lookup(&Ctx.Idents.get("foo")).front());
-  const Type *FooTy = Ctx.getTypeDeclType(Foo).getTypePtr();
+  const Type *FooTy = Foo->getTypeForDecl();
 };
 
 TEST_F(SizelessTypeTester, TestSizelessBuiltin) {

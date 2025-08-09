@@ -238,7 +238,7 @@ SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit) const {
 
   // Treat an enum type as its underlying type.
   if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-    Ty = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+    Ty = EnumTy->getDecl()->getIntegerType();
 
   // Integer types smaller than a register are extended.
   if (Size < 64 && Ty->isIntegerType())

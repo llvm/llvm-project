@@ -347,7 +347,7 @@ TEST(IndexTest, Constructors) {
                 WrittenAt(Position(4, 8)))));
 }
 
-TEST(IndexTest, InjectedNameClass) {
+TEST(IndexTest, InjecatedNameClass) {
   std::string Code = R"cpp(
     template <typename T>
     class Foo {

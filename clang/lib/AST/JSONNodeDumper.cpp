@@ -395,8 +395,8 @@ llvm::json::Array JSONNodeDumper::createCastPath(const CastExpr *C) {
 
   for (auto I = C->path_begin(), E = C->path_end(); I != E; ++I) {
     const CXXBaseSpecifier *Base = *I;
-    const auto *RD = cast<CXXRecordDecl>(
-        Base->getType()->castAs<RecordType>()->getOriginalDecl());
+    const auto *RD =
+        cast<CXXRecordDecl>(Base->getType()->castAs<RecordType>()->getDecl());
 
     llvm::json::Object Val{{"name", RD->getName()}};
     if (Base->isVirtual())
@@ -606,8 +606,9 @@ void JSONNodeDumper::VisitTypedefType(const TypedefType *TT) {
 }
 
 void JSONNodeDumper::VisitUsingType(const UsingType *TT) {
-  JOS.attribute("decl", createBareDeclRef(TT->getDecl()));
-  JOS.attribute("type", createQualType(TT->desugar()));
+  JOS.attribute("decl", createBareDeclRef(TT->getFoundDecl()));
+  if (!TT->typeMatchesDecl())
+    JOS.attribute("type", createQualType(TT->desugar()));
 }
 
 void JSONNodeDumper::VisitFunctionType(const FunctionType *T) {
@@ -758,15 +759,7 @@ void JSONNodeDumper::VisitUnaryTransformType(const UnaryTransformType *UTT) {
 }
 
 void JSONNodeDumper::VisitTagType(const TagType *TT) {
-  if (NestedNameSpecifier Qualifier = TT->getQualifier()) {
-    std::string Str;
-    llvm::raw_string_ostream OS(Str);
-    Qualifier.print(OS, PrintPolicy, /*ResolveTemplateArguments=*/true);
-    JOS.attribute("qualifier", Str);
-  }
-  JOS.attribute("decl", createBareDeclRef(TT->getOriginalDecl()));
-  if (TT->isTagOwned())
-    JOS.attribute("isTagOwned", true);
+  JOS.attribute("decl", createBareDeclRef(TT->getDecl()));
 }
 
 void JSONNodeDumper::VisitTemplateTypeParmType(
@@ -816,7 +809,7 @@ void JSONNodeDumper::VisitTemplateSpecializationType(
 
 void JSONNodeDumper::VisitInjectedClassNameType(
     const InjectedClassNameType *ICNT) {
-  JOS.attribute("decl", createBareDeclRef(ICNT->getOriginalDecl()));
+  JOS.attribute("decl", createBareDeclRef(ICNT->getDecl()));
 }
 
 void JSONNodeDumper::VisitObjCInterfaceType(const ObjCInterfaceType *OIT) {
@@ -826,6 +819,17 @@ void JSONNodeDumper::VisitObjCInterfaceType(const ObjCInterfaceType *OIT) {
 void JSONNodeDumper::VisitPackExpansionType(const PackExpansionType *PET) {
   if (UnsignedOrNone N = PET->getNumExpansions())
     JOS.attribute("numExpansions", *N);
+}
+
+void JSONNodeDumper::VisitElaboratedType(const ElaboratedType *ET) {
+  if (const NestedNameSpecifier *NNS = ET->getQualifier()) {
+    std::string Str;
+    llvm::raw_string_ostream OS(Str);
+    NNS->print(OS, PrintPolicy, /*ResolveTemplateArgs*/ true);
+    JOS.attribute("qualifier", Str);
+  }
+  if (const TagDecl *TD = ET->getOwnedTagDecl())
+    JOS.attribute("ownedTagDecl", createBareDeclRef(TD));
 }
 
 void JSONNodeDumper::VisitMacroQualifiedType(const MacroQualifiedType *MQT) {
@@ -898,9 +902,9 @@ void JSONNodeDumper::VisitNamespaceAliasDecl(const NamespaceAliasDecl *NAD) {
 
 void JSONNodeDumper::VisitUsingDecl(const UsingDecl *UD) {
   std::string Name;
-  if (NestedNameSpecifier Qualifier = UD->getQualifier()) {
+  if (const NestedNameSpecifier *NNS = UD->getQualifier()) {
     llvm::raw_string_ostream SOS(Name);
-    Qualifier.print(SOS, UD->getASTContext().getPrintingPolicy());
+    NNS->print(SOS, UD->getASTContext().getPrintingPolicy());
   }
   Name += UD->getNameAsString();
   JOS.attribute("name", Name);

@@ -121,9 +121,7 @@ TEST(QualityTests, SymbolRelevanceSignalExtraction) {
 
   SymbolRelevanceSignals Relevance;
   Relevance.merge(CodeCompletionResult(&findDecl(AST, "deprecated"),
-                                       /*Priority=*/42,
-                                       /*Qualifier=*/std::nullopt,
-                                       /*QualifierIsInformative=*/false,
+                                       /*Priority=*/42, nullptr, false,
                                        /*Accessible=*/false));
   EXPECT_EQ(Relevance.NameMatch, SymbolRelevanceSignals().NameMatch);
   EXPECT_TRUE(Relevance.Forbidden);
@@ -489,15 +487,13 @@ TEST(QualityTests, ItemWithFixItsRankedDown) {
   auto AST = Header.build();
 
   SymbolRelevanceSignals RelevanceWithFixIt;
-  RelevanceWithFixIt.merge(CodeCompletionResult(
-      &findDecl(AST, "x"), /*Priority=*/0, /*Qualifier=*/std::nullopt,
-      /*QualifierIsInformative=*/false, /*Accessible=*/true, {FixItHint{}}));
+  RelevanceWithFixIt.merge(CodeCompletionResult(&findDecl(AST, "x"), 0, nullptr,
+                                                false, true, {FixItHint{}}));
   EXPECT_TRUE(RelevanceWithFixIt.NeedsFixIts);
 
   SymbolRelevanceSignals RelevanceWithoutFixIt;
-  RelevanceWithoutFixIt.merge(CodeCompletionResult(
-      &findDecl(AST, "x"), /*Priority=*/0, /*Qualifier=*/std::nullopt,
-      /*QualifierIsInformative=*/false, /*Accessible=*/true, {}));
+  RelevanceWithoutFixIt.merge(
+      CodeCompletionResult(&findDecl(AST, "x"), 0, nullptr, false, true, {}));
   EXPECT_FALSE(RelevanceWithoutFixIt.NeedsFixIts);
 
   EXPECT_LT(RelevanceWithFixIt.evaluateHeuristics(),

@@ -47,6 +47,9 @@ static bool InNamespace(const Decl *D, StringRef NS) {
 }
 
 static bool IsStdString(QualType T) {
+  if (const ElaboratedType *QT = T->getAs<ElaboratedType>())
+    T = QT->getNamedType();
+
   const TypedefType *TT = T->getAs<TypedefType>();
   if (!TT)
     return false;
@@ -198,7 +201,7 @@ static bool IsPartOfAST(const CXXRecordDecl *R) {
   for (const auto &BS : R->bases()) {
     QualType T = BS.getType();
     if (const RecordType *baseT = T->getAs<RecordType>()) {
-      CXXRecordDecl *baseD = cast<CXXRecordDecl>(baseT->getOriginalDecl());
+      CXXRecordDecl *baseD = cast<CXXRecordDecl>(baseT->getDecl());
       if (IsPartOfAST(baseD))
         return true;
     }
@@ -244,7 +247,7 @@ void ASTFieldVisitor::Visit(FieldDecl *D) {
     ReportError(T);
 
   if (const RecordType *RT = T->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getOriginalDecl()->getDefinition();
+    const RecordDecl *RD = RT->getDecl()->getDefinition();
     for (auto *I : RD->fields())
       Visit(I);
   }

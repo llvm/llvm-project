@@ -29,7 +29,8 @@ static std::optional<const char *> getReplacementType(StringRef Type) {
 
 void DeprecatedIosBaseAliasesCheck::registerMatchers(MatchFinder *Finder) {
   auto IoStateDecl = typedefDecl(hasAnyName(DeprecatedTypes)).bind("TypeDecl");
-  auto IoStateType = typedefType(hasDeclaration(IoStateDecl));
+  auto IoStateType =
+      qualType(hasDeclaration(IoStateDecl), unless(elaboratedType()));
 
   Finder->addMatcher(typeLoc(loc(IoStateType)).bind("TypeLoc"), this);
 }
@@ -42,14 +43,12 @@ void DeprecatedIosBaseAliasesCheck::check(
   StringRef TypeName = Typedef->getName();
   auto Replacement = getReplacementType(TypeName);
 
-  TypeLoc TL = *Result.Nodes.getNodeAs<TypeLoc>("TypeLoc");
-  if (auto QTL = TL.getAs<QualifiedTypeLoc>())
-    TL = QTL.getUnqualifiedLoc();
+  const auto *TL = Result.Nodes.getNodeAs<TypeLoc>("TypeLoc");
+  SourceLocation IoStateLoc = TL->getBeginLoc();
 
-  SourceLocation IoStateLoc = TL.castAs<TypedefTypeLoc>().getNameLoc();
   // Do not generate fixits for matches depending on template arguments and
   // macro expansions.
-  bool Fix = Replacement && !TL.getType()->isDependentType();
+  bool Fix = Replacement && !TL->getType()->isDependentType();
   if (IoStateLoc.isMacroID()) {
     IoStateLoc = SM.getSpellingLoc(IoStateLoc);
     Fix = false;

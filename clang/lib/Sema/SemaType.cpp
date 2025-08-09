@@ -1211,11 +1211,14 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
            DS.getTypeSpecSign() == TypeSpecifierSign::Unspecified &&
            "No qualifiers on tag names!");
 
-    ElaboratedTypeKeyword Keyword =
-        KeywordHelpers::getKeywordForTypeSpec(DS.getTypeSpecType());
     // TypeQuals handled by caller.
-    Result = Context.getTagType(Keyword, DS.getTypeSpecScope().getScopeRep(), D,
-                                DS.isTypeSpecOwned());
+    Result = Context.getTypeDeclType(D);
+
+    // In both C and C++, make an ElaboratedType.
+    ElaboratedTypeKeyword Keyword
+      = ElaboratedType::getKeywordForTypeSpec(DS.getTypeSpecType());
+    Result = S.getElaboratedType(Keyword, DS.getTypeSpecScope(), Result,
+                                 DS.isTypeSpecOwned() ? D : nullptr);
     break;
   }
   case DeclSpec::TST_typename: {
@@ -1238,7 +1241,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     assert(!Result.isNull() && "Didn't get a type for typeof?");
     if (!Result->isDependentType())
       if (const TagType *TT = Result->getAs<TagType>())
-        S.DiagnoseUseOfDecl(TT->getOriginalDecl(), DS.getTypeSpecTypeLoc());
+        S.DiagnoseUseOfDecl(TT->getDecl(), DS.getTypeSpecTypeLoc());
     // TypeQuals handled by caller.
     Result = Context.getTypeOfType(
         Result, DS.getTypeSpecType() == DeclSpec::TST_typeof_unqualType
@@ -2082,7 +2085,7 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
     // an inheritance model, even if it's inside an unused typedef.
     if (Context.getTargetInfo().getCXXABI().isMicrosoft())
       if (const MemberPointerType *MPTy = T->getAs<MemberPointerType>())
-        if (!MPTy->getQualifier().isDependent())
+        if (!MPTy->getQualifier()->isDependent())
           (void)isCompleteType(Loc, T);
 
   } else {
@@ -2117,9 +2120,7 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
   if (const RecordType *EltTy = T->getAs<RecordType>()) {
     // If the element type is a struct or union that contains a variadic
     // array, accept it as a GNU extension: C99 6.7.2.1p2.
-    if (EltTy->getOriginalDecl()
-            ->getDefinitionOrSelf()
-            ->hasFlexibleArrayMember())
+    if (EltTy->getDecl()->hasFlexibleArrayMember())
       Diag(Loc, diag::ext_flexible_array_in_array) << T;
   } else if (T->isObjCObjectType()) {
     Diag(Loc, diag::err_objc_array_of_interfaces) << T;
@@ -3459,7 +3460,7 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
 
     if (DiagID != 0) {
       SemaRef.Diag(OwnedTagDecl->getLocation(), DiagID)
-          << SemaRef.Context.getCanonicalTagType(OwnedTagDecl);
+          << SemaRef.Context.getTypeDeclType(OwnedTagDecl);
       D.setInvalidType(true);
     }
   }
@@ -3652,22 +3653,11 @@ static void warnAboutRedundantParens(Sema &S, Declarator &D, QualType T) {
     // here: even (e.g.) "int ::x" is visually ambiguous even though it's
     // formally unambiguous.
     if (StartsWithDeclaratorId && D.getCXXScopeSpec().isValid()) {
-      NestedNameSpecifier NNS = D.getCXXScopeSpec().getScopeRep();
-      for (;;) {
-        switch (NNS.getKind()) {
-        case NestedNameSpecifier::Kind::Global:
+      for (NestedNameSpecifier *NNS = D.getCXXScopeSpec().getScopeRep(); NNS;
+           NNS = NNS->getPrefix()) {
+        if (NNS->getKind() == NestedNameSpecifier::Global)
           return;
-        case NestedNameSpecifier::Kind::Type:
-          NNS = NNS.getAsType()->getPrefix();
-          continue;
-        case NestedNameSpecifier::Kind::Namespace:
-          NNS = NNS.getAsNamespaceAndPrefix().Prefix;
-          continue;
-        default:
-          goto out;
-        }
       }
-    out:;
     }
 
     S.Diag(Paren.Loc, diag::warn_redundant_parens_around_declarator)
@@ -3975,8 +3965,7 @@ classifyPointerDeclarator(Sema &S, QualType type, Declarator &declarator,
       return PointerDeclaratorKind::NonPointer;
 
     if (auto recordType = type->getAs<RecordType>()) {
-      RecordDecl *recordDecl =
-          recordType->getOriginalDecl()->getDefinitionOrSelf();
+      RecordDecl *recordDecl = recordType->getDecl();
 
       // If this is CFErrorRef*, report it as such.
       if (numNormalPointers == 2 && numTypeSpecifierPointers < 2 &&
@@ -5112,7 +5101,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         //   Types shall not be defined in return or parameter types.
         TagDecl *Tag = cast<TagDecl>(D.getDeclSpec().getRepAsDecl());
         S.Diag(Tag->getLocation(), diag::err_type_defined_in_result_type)
-            << Context.getCanonicalTagType(Tag);
+          << Context.getTypeDeclType(Tag);
       }
 
       // Exception specs are not allowed in typedefs. Complain, but add it
@@ -5330,7 +5319,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                   state.getDeclarator()
                           .getCXXScopeSpec()
                           .getScopeRep()
-                          .getKind() == NestedNameSpecifier::Kind::Type) ||
+                          ->getKind() == NestedNameSpecifier::TypeSpec) ||
                  state.getDeclarator().getContext() ==
                      DeclaratorContext::Member ||
                  state.getDeclarator().getContext() ==
@@ -5909,49 +5898,7 @@ namespace {
     //   int __attr * __attr * __attr *p;
     void VisitPointerTypeLoc(PointerTypeLoc TL) { Visit(TL.getNextTypeLoc()); }
     void VisitTypedefTypeLoc(TypedefTypeLoc TL) {
-      if (DS.getTypeSpecType() == TST_typename) {
-        TypeSourceInfo *TInfo = nullptr;
-        Sema::GetTypeFromParser(DS.getRepAsType(), &TInfo);
-        if (TInfo) {
-          TL.copy(TInfo->getTypeLoc().castAs<TypedefTypeLoc>());
-          return;
-        }
-      }
-      TL.set(TL.getTypePtr()->getKeyword() != ElaboratedTypeKeyword::None
-                 ? DS.getTypeSpecTypeLoc()
-                 : SourceLocation(),
-             DS.getTypeSpecScope().getWithLocInContext(Context),
-             DS.getTypeSpecTypeNameLoc());
-    }
-    void VisitUnresolvedUsingTypeLoc(UnresolvedUsingTypeLoc TL) {
-      if (DS.getTypeSpecType() == TST_typename) {
-        TypeSourceInfo *TInfo = nullptr;
-        Sema::GetTypeFromParser(DS.getRepAsType(), &TInfo);
-        if (TInfo) {
-          TL.copy(TInfo->getTypeLoc().castAs<UnresolvedUsingTypeLoc>());
-          return;
-        }
-      }
-      TL.set(TL.getTypePtr()->getKeyword() != ElaboratedTypeKeyword::None
-                 ? DS.getTypeSpecTypeLoc()
-                 : SourceLocation(),
-             DS.getTypeSpecScope().getWithLocInContext(Context),
-             DS.getTypeSpecTypeNameLoc());
-    }
-    void VisitUsingTypeLoc(UsingTypeLoc TL) {
-      if (DS.getTypeSpecType() == TST_typename) {
-        TypeSourceInfo *TInfo = nullptr;
-        Sema::GetTypeFromParser(DS.getRepAsType(), &TInfo);
-        if (TInfo) {
-          TL.copy(TInfo->getTypeLoc().castAs<UsingTypeLoc>());
-          return;
-        }
-      }
-      TL.set(TL.getTypePtr()->getKeyword() != ElaboratedTypeKeyword::None
-                 ? DS.getTypeSpecTypeLoc()
-                 : SourceLocation(),
-             DS.getTypeSpecScope().getWithLocInContext(Context),
-             DS.getTypeSpecTypeNameLoc());
+      TL.setNameLoc(DS.getTypeSpecTypeLoc());
     }
     void VisitObjCInterfaceTypeLoc(ObjCInterfaceTypeLoc TL) {
       TL.setNameLoc(DS.getTypeSpecTypeLoc());
@@ -5982,9 +5929,16 @@ namespace {
       }
 
       TypeLoc OldTL = TInfo->getTypeLoc();
-      TL.copy(OldTL.castAs<TemplateSpecializationTypeLoc>());
-      assert(TL.getRAngleLoc() ==
-             OldTL.castAs<TemplateSpecializationTypeLoc>().getRAngleLoc());
+      if (TInfo->getType()->getAs<ElaboratedType>()) {
+        ElaboratedTypeLoc ElabTL = OldTL.castAs<ElaboratedTypeLoc>();
+        TemplateSpecializationTypeLoc NamedTL = ElabTL.getNamedTypeLoc()
+            .castAs<TemplateSpecializationTypeLoc>();
+        TL.copy(NamedTL);
+      } else {
+        TL.copy(OldTL.castAs<TemplateSpecializationTypeLoc>());
+        assert(TL.getRAngleLoc() == OldTL.castAs<TemplateSpecializationTypeLoc>().getRAngleLoc());
+      }
+
     }
     void VisitTypeOfExprTypeLoc(TypeOfExprTypeLoc TL) {
       assert(DS.getTypeSpecType() == DeclSpec::TST_typeofExpr ||
@@ -6032,6 +5986,24 @@ namespace {
         if (TL.getWrittenWidthSpec() != TypeSpecifierWidth::Unspecified)
           TL.expandBuiltinRange(DS.getTypeSpecWidthRange());
       }
+    }
+    void VisitElaboratedTypeLoc(ElaboratedTypeLoc TL) {
+      if (DS.getTypeSpecType() == TST_typename) {
+        TypeSourceInfo *TInfo = nullptr;
+        Sema::GetTypeFromParser(DS.getRepAsType(), &TInfo);
+        if (TInfo)
+          if (auto ETL = TInfo->getTypeLoc().getAs<ElaboratedTypeLoc>()) {
+            TL.copy(ETL);
+            return;
+          }
+      }
+      const ElaboratedType *T = TL.getTypePtr();
+      TL.setElaboratedKeywordLoc(T->getKeyword() != ElaboratedTypeKeyword::None
+                                     ? DS.getTypeSpecTypeLoc()
+                                     : SourceLocation());
+      const CXXScopeSpec& SS = DS.getTypeSpecScope();
+      TL.setQualifierLoc(SS.getWithLocInContext(Context));
+      Visit(TL.getNextTypeLoc().getUnqualifiedLoc());
     }
     void VisitDependentNameTypeLoc(DependentNameTypeLoc TL) {
       assert(DS.getTypeSpecType() == TST_typename);
@@ -6091,29 +6063,7 @@ namespace {
           ASTTemplateArgumentListInfo::Create(Context, TemplateArgsInfo));
       TL.setConceptReference(CR);
     }
-    void VisitDeducedTemplateSpecializationTypeLoc(
-        DeducedTemplateSpecializationTypeLoc TL) {
-      assert(DS.getTypeSpecType() == TST_typename);
-      TypeSourceInfo *TInfo = nullptr;
-      Sema::GetTypeFromParser(DS.getRepAsType(), &TInfo);
-      assert(TInfo);
-      TL.copy(
-          TInfo->getTypeLoc().castAs<DeducedTemplateSpecializationTypeLoc>());
-    }
     void VisitTagTypeLoc(TagTypeLoc TL) {
-      if (DS.getTypeSpecType() == TST_typename) {
-        TypeSourceInfo *TInfo = nullptr;
-        Sema::GetTypeFromParser(DS.getRepAsType(), &TInfo);
-        if (TInfo) {
-          TL.copy(TInfo->getTypeLoc().castAs<TagTypeLoc>());
-          return;
-        }
-      }
-      TL.setElaboratedKeywordLoc(TL.getTypePtr()->getKeyword() !=
-                                         ElaboratedTypeKeyword::None
-                                     ? DS.getTypeSpecTypeLoc()
-                                     : SourceLocation());
-      TL.setQualifierLoc(DS.getTypeSpecScope().getWithLocInContext(Context));
       TL.setNameLoc(DS.getTypeSpecTypeNameLoc());
     }
     void VisitAtomicTypeLoc(AtomicTypeLoc TL) {
@@ -7078,6 +7028,9 @@ static bool handleMSPointerTypeQualifierAttr(TypeProcessingState &State,
   for (;;) {
     if (const TypedefType *TT = dyn_cast<TypedefType>(Desugared)) {
       Desugared = TT->desugar();
+      continue;
+    } else if (const ElaboratedType *ET = dyn_cast<ElaboratedType>(Desugared)) {
+      Desugared = ET->desugar();
       continue;
     }
     const AttributedType *AT = dyn_cast<AttributedType>(Desugared);
@@ -9217,9 +9170,11 @@ bool Sema::RequireCompleteType(SourceLocation Loc, QualType T,
                                TypeDiagnoser &Diagnoser) {
   if (RequireCompleteTypeImpl(Loc, T, Kind, &Diagnoser))
     return true;
-  if (auto *TD = T->getAsTagDecl(); TD && !TD->isCompleteDefinitionRequired()) {
-    TD->setCompleteDefinitionRequired();
-    Consumer.HandleTagDeclRequiredDefinition(TD);
+  if (const TagType *Tag = T->getAs<TagType>()) {
+    if (!Tag->getDecl()->isCompleteDefinitionRequired()) {
+      Tag->getDecl()->setCompleteDefinitionRequired();
+      Consumer.HandleTagDeclRequiredDefinition(Tag->getDecl());
+    }
   }
   return false;
 }
@@ -9357,7 +9312,7 @@ bool Sema::hasReachableDefinition(NamedDecl *D, NamedDecl **Suggested,
 
 /// Locks in the inheritance model for the given class and all of its bases.
 static void assignInheritanceModel(Sema &S, CXXRecordDecl *RD) {
-  RD = RD->getMostRecentDecl();
+  RD = RD->getMostRecentNonInjectedDecl();
   if (!RD->hasAttr<MSInheritanceAttr>()) {
     MSInheritanceModel IM;
     bool BestCase = false;
@@ -9397,10 +9352,10 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
   //  assert(!T->isDependentType() &&
   //         "Can't ask whether a dependent type is complete");
 
-  if (const auto *MPTy = dyn_cast<MemberPointerType>(T.getCanonicalType())) {
+  if (const MemberPointerType *MPTy = T->getAs<MemberPointerType>()) {
     if (CXXRecordDecl *RD = MPTy->getMostRecentCXXRecordDecl();
         RD && !RD->isDependentType()) {
-      CanQualType T = Context.getCanonicalTagType(RD);
+      QualType T = Context.getTypeDeclType(RD);
       if (getLangOpts().CompleteMemberPointers && !RD->isBeingDefined() &&
           RequireCompleteType(Loc, T, Kind, diag::err_memptr_incomplete))
         return true;
@@ -9537,10 +9492,10 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
   // If the type was a forward declaration of a class/struct/union
   // type, produce a note.
   if (Tag && !Tag->isInvalidDecl() && !Tag->getLocation().isInvalid())
-    Diag(Tag->getLocation(), Tag->isBeingDefined()
-                                 ? diag::note_type_being_defined
-                                 : diag::note_forward_declaration)
-        << Context.getCanonicalTagType(Tag);
+    Diag(Tag->getLocation(),
+         Tag->isBeingDefined() ? diag::note_type_being_defined
+                               : diag::note_forward_declaration)
+      << Context.getTagDeclType(Tag);
 
   // If the Objective-C class was a forward declaration, produce a note.
   if (IFace && !IFace->isInvalidDecl() && !IFace->getLocation().isInvalid())
@@ -9595,8 +9550,7 @@ bool Sema::RequireLiteralType(SourceLocation Loc, QualType T,
   if (!RT)
     return true;
 
-  const CXXRecordDecl *RD =
-      cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf();
+  const CXXRecordDecl *RD = cast<CXXRecordDecl>(RT->getDecl());
 
   // A partially-defined class type can't be a literal type, because a literal
   // class type must have a trivial destructor (which can't be checked until
@@ -9674,6 +9628,15 @@ bool Sema::RequireLiteralType(SourceLocation Loc, QualType T, unsigned DiagID) {
   return RequireLiteralType(Loc, T, Diagnoser);
 }
 
+QualType Sema::getElaboratedType(ElaboratedTypeKeyword Keyword,
+                                 const CXXScopeSpec &SS, QualType T,
+                                 TagDecl *OwnedTagDecl) {
+  if (T.isNull())
+    return T;
+  return Context.getElaboratedType(
+      Keyword, SS.isValid() ? SS.getScopeRep() : nullptr, T, OwnedTagDecl);
+}
+
 QualType Sema::BuildTypeofExprType(Expr *E, TypeOfKind Kind) {
   assert(!E->hasPlaceholderType() && "unexpected placeholder");
 
@@ -9684,7 +9647,7 @@ QualType Sema::BuildTypeofExprType(Expr *E, TypeOfKind Kind) {
   if (!E->isTypeDependent()) {
     QualType T = E->getType();
     if (const TagType *TT = T->getAs<TagType>())
-      DiagnoseUseOfDecl(TT->getOriginalDecl(), E->getExprLoc());
+      DiagnoseUseOfDecl(TT->getDecl(), E->getExprLoc());
   }
   return Context.getTypeOfExprType(E, Kind);
 }
@@ -9850,7 +9813,8 @@ QualType Sema::BuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
 static QualType GetEnumUnderlyingType(Sema &S, QualType BaseType,
                                       SourceLocation Loc) {
   assert(BaseType->isEnumeralType());
-  EnumDecl *ED = BaseType->castAs<EnumType>()->getOriginalDecl();
+  EnumDecl *ED = BaseType->castAs<EnumType>()->getDecl();
+  assert(ED && "EnumType has no EnumDecl");
 
   S.DiagnoseUseOfDecl(ED, Loc);
 

@@ -1172,8 +1172,8 @@ TEST_P(ASTMatchersTest, IsDerivedFrom_ElaboratedType) {
     return;
   }
 
-  DeclarationMatcher IsDerivenFromBase = cxxRecordDecl(
-      isDerivedFrom(decl().bind("typedef")), unless(isImplicit()));
+  DeclarationMatcher IsDerivenFromBase =
+      cxxRecordDecl(isDerivedFrom(decl().bind("typedef")));
 
   EXPECT_TRUE(matchAndVerifyResultTrue(
       "struct AnInterface {};"
@@ -2302,9 +2302,10 @@ TEST(ASTMatchersTest, NamesMember_CXXDependentScopeMemberExpr) {
     EXPECT_TRUE(matches(
         Code,
         cxxDependentScopeMemberExpr(
-            hasObjectExpression(declRefExpr(hasType(templateSpecializationType(
-                hasDeclaration(classTemplateDecl(has(cxxRecordDecl(
-                    has(cxxMethodDecl(hasName("mem")).bind("templMem")))))))))),
+            hasObjectExpression(declRefExpr(hasType(elaboratedType(namesType(
+                templateSpecializationType(hasDeclaration(classTemplateDecl(
+                    has(cxxRecordDecl(has(cxxMethodDecl(hasName("mem"))
+                                              .bind("templMem")))))))))))),
             memberHasSameNameAsBoundNode("templMem"))));
 
     EXPECT_TRUE(
@@ -2322,9 +2323,10 @@ TEST(ASTMatchersTest, NamesMember_CXXDependentScopeMemberExpr) {
     EXPECT_TRUE(matches(
         Code,
         cxxDependentScopeMemberExpr(
-            hasObjectExpression(declRefExpr(hasType(templateSpecializationType(
-                hasDeclaration(classTemplateDecl(has(cxxRecordDecl(
-                    has(fieldDecl(hasName("mem")).bind("templMem")))))))))),
+            hasObjectExpression(declRefExpr(
+                hasType(elaboratedType(namesType(templateSpecializationType(
+                    hasDeclaration(classTemplateDecl(has(cxxRecordDecl(has(
+                        fieldDecl(hasName("mem")).bind("templMem")))))))))))),
             memberHasSameNameAsBoundNode("templMem"))));
   }
 
@@ -2339,9 +2341,10 @@ TEST(ASTMatchersTest, NamesMember_CXXDependentScopeMemberExpr) {
     EXPECT_TRUE(matches(
         Code,
         cxxDependentScopeMemberExpr(
-            hasObjectExpression(declRefExpr(hasType(templateSpecializationType(
-                hasDeclaration(classTemplateDecl(has(cxxRecordDecl(
-                    has(varDecl(hasName("mem")).bind("templMem")))))))))),
+            hasObjectExpression(declRefExpr(
+                hasType(elaboratedType(namesType(templateSpecializationType(
+                    hasDeclaration(classTemplateDecl(has(cxxRecordDecl(
+                        has(varDecl(hasName("mem")).bind("templMem")))))))))))),
             memberHasSameNameAsBoundNode("templMem"))));
   }
   {

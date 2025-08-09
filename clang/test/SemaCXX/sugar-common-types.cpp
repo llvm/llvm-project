@@ -44,8 +44,7 @@ template <class T> struct S1 {
 };
 
 N t10 = 0 ? S1<X1>() : S1<Y1>(); // expected-error {{from 'S1<B1>' (aka 'S1<int>')}}
-// FIXME: needs to compute common sugar for qualified template names
-N t11 = 0 ? S1<X1>::S2<X2>() : S1<Y1>::S2<Y2>(); // expected-error {{from 'S1<int>::S2<B2>' (aka 'S1<int>::S2<void>')}}
+N t11 = 0 ? S1<X1>::S2<X2>() : S1<Y1>::S2<Y2>(); // expected-error {{from 'S1<B1>::S2<B2>' (aka 'S2<void>')}}
 
 template <class T> using Al = S1<T>;
 
@@ -201,5 +200,5 @@ namespace member_pointers {
 
   // FIXME: adjusted MemberPointer does not preserve qualifier
   N t3 = 0 ? &W1::a : &W2::b;
-  // expected-error@-1 {{rvalue of type 'B1 member_pointers::W<void>::*'}}
+  // expected-error@-1 {{rvalue of type 'B1 W<void>::*'}}
 } // namespace member_pointers

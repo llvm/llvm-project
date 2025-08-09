@@ -150,7 +150,7 @@ bool LoongArchABIInfo::detectFARsEligibleStructHelper(
     // Non-zero-length arrays of empty records make the struct ineligible to be
     // passed via FARs in C++.
     if (const auto *RTy = EltTy->getAs<RecordType>()) {
-      if (ArraySize != 0 && isa<CXXRecordDecl>(RTy->getOriginalDecl()) &&
+      if (ArraySize != 0 && isa<CXXRecordDecl>(RTy->getDecl()) &&
           isEmptyRecord(getContext(), EltTy, true, true))
         return false;
     }
@@ -169,7 +169,7 @@ bool LoongArchABIInfo::detectFARsEligibleStructHelper(
     // copy constructor are not eligible for the FP calling convention.
     if (getRecordArgABI(Ty, CGT.getCXXABI()))
       return false;
-    const RecordDecl *RD = RTy->getOriginalDecl()->getDefinitionOrSelf();
+    const RecordDecl *RD = RTy->getDecl();
     if (isEmptyRecord(getContext(), Ty, true, true) &&
         (!RD->isUnion() || !isa<CXXRecordDecl>(RD)))
       return true;
@@ -181,9 +181,7 @@ bool LoongArchABIInfo::detectFARsEligibleStructHelper(
     if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
       for (const CXXBaseSpecifier &B : CXXRD->bases()) {
         const auto *BDecl =
-            cast<CXXRecordDecl>(
-                B.getType()->castAs<RecordType>()->getOriginalDecl())
-                ->getDefinitionOrSelf();
+            cast<CXXRecordDecl>(B.getType()->castAs<RecordType>()->getDecl());
         if (!detectFARsEligibleStructHelper(
                 B.getType(), CurOff + Layout.getBaseClassOffset(BDecl),
                 Field1Ty, Field1Off, Field2Ty, Field2Off))
@@ -371,7 +369,7 @@ ABIArgInfo LoongArchABIInfo::classifyArgumentType(QualType Ty, bool IsFixed,
   if (!isAggregateTypeForABI(Ty) && !Ty->isVectorType()) {
     // Treat an enum type as its underlying type.
     if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-      Ty = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+      Ty = EnumTy->getDecl()->getIntegerType();
 
     // All integral types are promoted to GRLen width.
     if (Size < GRLen && Ty->isIntegralOrEnumerationType())

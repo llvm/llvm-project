@@ -172,14 +172,13 @@ HoverInfo::PrintedType printType(QualType QT, ASTContext &ASTCtx,
     QT = QT->castAs<DecltypeType>()->getUnderlyingType();
   HoverInfo::PrintedType Result;
   llvm::raw_string_ostream OS(Result.Type);
-  // Special case: if the outer type is a canonical tag type, then include the
-  // tag for extra clarity. This isn't very idiomatic, so don't attempt it for
-  // complex cases, including pointers/references, template specializations,
-  // etc.
+  // Special case: if the outer type is a tag type without qualifiers, then
+  // include the tag for extra clarity.
+  // This isn't very idiomatic, so don't attempt it for complex cases, including
+  // pointers/references, template specializations, etc.
   if (!QT.isNull() && !QT.hasQualifiers() && PP.SuppressTagKeyword) {
-    if (auto *TT = llvm::dyn_cast<TagType>(QT.getTypePtr());
-        TT && TT->isCanonicalUnqualified())
-      OS << TT->getOriginalDecl()->getKindName() << " ";
+    if (auto *TT = llvm::dyn_cast<TagType>(QT.getTypePtr()))
+      OS << TT->getDecl()->getKindName() << " ";
   }
   QT.print(OS, PP);
 
@@ -455,7 +454,7 @@ std::optional<std::string> printExprValue(const Expr *E,
     // Compare to int64_t to avoid bit-width match requirements.
     int64_t Val = Constant.Val.getInt().getExtValue();
     for (const EnumConstantDecl *ECD :
-         T->castAs<EnumType>()->getOriginalDecl()->enumerators())
+         T->castAs<EnumType>()->getDecl()->enumerators())
       if (ECD->getInitVal() == Val)
         return llvm::formatv("{0} ({1})", ECD->getNameAsString(),
                              printHex(Constant.Val.getInt()))
@@ -973,11 +972,10 @@ void addLayoutInfo(const NamedDecl &ND, HoverInfo &HI) {
 
   const auto &Ctx = ND.getASTContext();
   if (auto *RD = llvm::dyn_cast<RecordDecl>(&ND)) {
-    CanQualType RT = Ctx.getCanonicalTagType(RD);
-    if (auto Size = Ctx.getTypeSizeInCharsIfKnown(RT))
+    if (auto Size = Ctx.getTypeSizeInCharsIfKnown(RD->getTypeForDecl()))
       HI.Size = Size->getQuantity() * 8;
     if (!RD->isDependentType() && RD->isCompleteDefinition())
-      HI.Align = Ctx.getTypeAlign(RT);
+      HI.Align = Ctx.getTypeAlign(RD->getTypeForDecl());
     return;
   }
 

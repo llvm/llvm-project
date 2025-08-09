@@ -2754,7 +2754,7 @@ bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
       const RecordType *RT = CurrentType->getAs<RecordType>();
       if (!RT)
         return false;
-      const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+      const RecordDecl *RD = RT->getDecl();
       if (RD->isInvalidDecl())
         return false;
       const ASTRecordLayout &RL = S.getASTContext().getASTRecordLayout(RD);
@@ -2787,7 +2787,7 @@ bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
       const RecordType *RT = CurrentType->getAs<RecordType>();
       if (!RT)
         return false;
-      const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+      const RecordDecl *RD = RT->getDecl();
       if (RD->isInvalidDecl())
         return false;
       const ASTRecordLayout &RL = S.getASTContext().getASTRecordLayout(RD);
@@ -2799,8 +2799,7 @@ bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
         return false;
 
       // Add the offset to the base.
-      Result += RL.getBaseClassOffset(cast<CXXRecordDecl>(
-          BaseRT->getOriginalDecl()->getDefinitionOrSelf()));
+      Result += RL.getBaseClassOffset(cast<CXXRecordDecl>(BaseRT->getDecl()));
       break;
     }
     case OffsetOfNode::Identifier:

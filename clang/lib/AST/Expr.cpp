@@ -75,7 +75,8 @@ const CXXRecordDecl *Expr::getBestDynamicClassType() const {
     return nullptr;
 
   const RecordType *Ty = DerivedType->castAs<RecordType>();
-  return cast<CXXRecordDecl>(Ty->getOriginalDecl())->getDefinitionOrSelf();
+  Decl *D = Ty->getDecl();
+  return cast<CXXRecordDecl>(D);
 }
 
 const Expr *Expr::skipRValueSubobjectAdjustments(
@@ -91,9 +92,7 @@ const Expr *Expr::skipRValueSubobjectAdjustments(
           E->getType()->isRecordType()) {
         E = CE->getSubExpr();
         const auto *Derived =
-            cast<CXXRecordDecl>(
-                E->getType()->castAs<RecordType>()->getOriginalDecl())
-                ->getDefinitionOrSelf();
+            cast<CXXRecordDecl>(E->getType()->castAs<RecordType>()->getDecl());
         Adjustments.push_back(SubobjectAdjustment(CE, Derived));
         continue;
       }
@@ -269,7 +268,7 @@ QualType Expr::getEnumCoercedType(const ASTContext &Ctx) const {
   if (const auto *ECD = getEnumConstantDecl()) {
     const auto *ED = cast<EnumDecl>(ECD->getDeclContext());
     if (ED->isCompleteDefinition())
-      return Ctx.getCanonicalTagType(ED);
+      return Ctx.getTypeDeclType(ED);
   }
   return getType();
 }
@@ -2032,8 +2031,7 @@ CXXBaseSpecifier **CastExpr::path_buffer() {
 
 const FieldDecl *CastExpr::getTargetFieldForToUnionCast(QualType unionType,
                                                         QualType opType) {
-  auto RD =
-      unionType->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf();
+  auto RD = unionType->castAs<RecordType>()->getDecl();
   return getTargetFieldForToUnionCast(RD, opType);
 }
 
@@ -3223,7 +3221,7 @@ static const Expr *skipTemporaryBindingsNoOpCastsAndParens(const Expr *E) {
 /// isTemporaryObject - Determines if this expression produces a
 /// temporary of the given class type.
 bool Expr::isTemporaryObject(ASTContext &C, const CXXRecordDecl *TempTy) const {
-  if (!C.hasSameUnqualifiedType(getType(), C.getCanonicalTagType(TempTy)))
+  if (!C.hasSameUnqualifiedType(getType(), C.getTypeDeclType(TempTy)))
     return false;
 
   const Expr *E = skipTemporaryBindingsNoOpCastsAndParens(this);
@@ -3409,10 +3407,7 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
 
     if (ILE->getType()->isRecordType()) {
       unsigned ElementNo = 0;
-      RecordDecl *RD = ILE->getType()
-                           ->castAs<RecordType>()
-                           ->getOriginalDecl()
-                           ->getDefinitionOrSelf();
+      RecordDecl *RD = ILE->getType()->castAs<RecordType>()->getDecl();
 
       // In C++17, bases were added to the list of members used by aggregate
       // initialization.
@@ -4055,10 +4050,8 @@ Expr::isNullPointerConstant(ASTContext &Ctx,
     return NPCK_CXX11_nullptr;
 
   if (const RecordType *UT = getType()->getAsUnionType())
-    if (!Ctx.getLangOpts().CPlusPlus11 && UT &&
-        UT->getOriginalDecl()
-            ->getMostRecentDecl()
-            ->hasAttr<TransparentUnionAttr>())
+    if (!Ctx.getLangOpts().CPlusPlus11 &&
+        UT && UT->getDecl()->hasAttr<TransparentUnionAttr>())
       if (const CompoundLiteralExpr *CLE = dyn_cast<CompoundLiteralExpr>(this)){
         const Expr *InitExpr = CLE->getInitializer();
         if (const InitListExpr *ILE = dyn_cast<InitListExpr>(InitExpr))

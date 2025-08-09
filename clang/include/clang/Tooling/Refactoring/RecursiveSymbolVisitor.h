@@ -108,21 +108,19 @@ public:
   bool VisitTypedefTypeLoc(TypedefTypeLoc TL) {
     const SourceLocation TypeEndLoc =
         Lexer::getLocForEndOfToken(TL.getBeginLoc(), 0, SM, LangOpts);
-    return visit(TL.getDecl(), TL.getBeginLoc(), TypeEndLoc);
+    return visit(TL.getTypedefNameDecl(), TL.getBeginLoc(), TypeEndLoc);
   }
 
-  bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc QualifierLoc) {
+  bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS) {
     // The base visitor will visit NNSL prefixes, so we should only look at
     // the current NNS.
-    if (NestedNameSpecifier Qualifier = QualifierLoc.getNestedNameSpecifier();
-        Qualifier.getKind() == NestedNameSpecifier::Kind::Namespace) {
-      const auto *ND = dyn_cast<NamespaceDecl>(
-          Qualifier.getAsNamespaceAndPrefix().Namespace);
-      if (!visit(ND, QualifierLoc.getLocalBeginLoc(),
-                 QualifierLoc.getLocalEndLoc()))
+    if (NNS) {
+      const auto *ND = dyn_cast_if_present<NamespaceDecl>(
+          NNS.getNestedNameSpecifier()->getAsNamespace());
+      if (!visit(ND, NNS.getLocalBeginLoc(), NNS.getLocalEndLoc()))
         return false;
     }
-    return BaseType::TraverseNestedNameSpecifierLoc(QualifierLoc);
+    return BaseType::TraverseNestedNameSpecifierLoc(NNS);
   }
 
   bool VisitDesignatedInitExpr(const DesignatedInitExpr *E) {

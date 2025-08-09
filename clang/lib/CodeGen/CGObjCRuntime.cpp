@@ -440,9 +440,7 @@ void CGObjCRuntime::destroyCalleeDestroyedArguments(CodeGenFunction &CGF,
     } else {
       QualType QT = param->getType();
       auto *RT = QT->getAs<RecordType>();
-      if (RT && RT->getOriginalDecl()
-                    ->getDefinitionOrSelf()
-                    ->isParamDestroyedInCallee()) {
+      if (RT && RT->getDecl()->isParamDestroyedInCallee()) {
         RValue RV = I->getRValue(CGF);
         QualType::DestructionKind DtorKind = QT.isDestructedType();
         switch (DtorKind) {

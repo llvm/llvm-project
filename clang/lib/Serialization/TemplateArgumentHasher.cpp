@@ -320,7 +320,7 @@ public:
 
   void VisitMemberPointerType(const MemberPointerType *T) {
     AddQualType(T->getPointeeType());
-    AddType(T->getQualifier().getAsType());
+    AddType(T->getQualifier()->getAsType());
     if (auto *RD = T->getMostRecentCXXRecordDecl())
       AddDecl(RD->getCanonicalDecl());
   }
@@ -358,7 +358,7 @@ public:
     AddQualType(T->getReplacementType());
   }
 
-  void VisitTagType(const TagType *T) { AddDecl(T->getOriginalDecl()); }
+  void VisitTagType(const TagType *T) { AddDecl(T->getDecl()); }
 
   void VisitRecordType(const RecordType *T) { VisitTagType(T); }
   void VisitEnumType(const EnumType *T) { VisitTagType(T); }
@@ -378,6 +378,10 @@ public:
   }
 
   void VisitTypedefType(const TypedefType *T) { AddDecl(T->getDecl()); }
+
+  void VisitElaboratedType(const ElaboratedType *T) {
+    AddQualType(T->getNamedType());
+  }
 
   void VisitUnaryTransformType(const UnaryTransformType *T) {
     AddQualType(T->getUnderlyingType());

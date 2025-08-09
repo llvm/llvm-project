@@ -1888,10 +1888,9 @@ public:
     for (const FieldDecl *FD : RD->fields()) {
       QualType FT = FD->getType();
       if (const auto *RT = FT->getAs<RecordType>())
-        if (const auto *ClassDecl =
-                dyn_cast<CXXRecordDecl>(RT->getOriginalDecl()))
-          if (const auto *Def = ClassDecl->getDefinition())
-            if (CXXDestructorDecl *MemberDtor = Def->getDestructor())
+        if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl()))
+          if (ClassDecl->hasDefinition())
+            if (CXXDestructorDecl *MemberDtor = ClassDecl->getDestructor())
               asImpl().visitUsedDecl(MemberDtor->getLocation(), MemberDtor);
     }
 
@@ -1899,10 +1898,9 @@ public:
     for (const auto &Base : RD->bases()) {
       QualType BaseType = Base.getType();
       if (const auto *RT = BaseType->getAs<RecordType>())
-        if (const auto *BaseDecl =
-                dyn_cast<CXXRecordDecl>(RT->getOriginalDecl()))
-          if (const auto *Def = BaseDecl->getDefinition())
-            if (CXXDestructorDecl *BaseDtor = Def->getDestructor())
+        if (const auto *BaseDecl = dyn_cast<CXXRecordDecl>(RT->getDecl()))
+          if (BaseDecl->hasDefinition())
+            if (CXXDestructorDecl *BaseDtor = BaseDecl->getDestructor())
               asImpl().visitUsedDecl(BaseDtor->getLocation(), BaseDtor);
     }
   }
@@ -1915,10 +1913,9 @@ public:
             VD->needsDestruction(S.Context)) {
           QualType VT = VD->getType();
           if (const auto *RT = VT->getAs<RecordType>())
-            if (const auto *ClassDecl =
-                    dyn_cast<CXXRecordDecl>(RT->getOriginalDecl()))
-              if (const auto *Def = ClassDecl->getDefinition())
-                if (CXXDestructorDecl *Dtor = Def->getDestructor())
+            if (const auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl()))
+              if (ClassDecl->hasDefinition())
+                if (CXXDestructorDecl *Dtor = ClassDecl->getDestructor())
                   asImpl().visitUsedDecl(Dtor->getLocation(), Dtor);
         }
 

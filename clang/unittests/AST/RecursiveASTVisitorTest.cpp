@@ -95,10 +95,9 @@ public:
     return Ret;
   }
 
-  bool TraverseTypedefTypeLoc(TypedefTypeLoc TL, bool TraverseQualifier) {
+  bool TraverseTypedefTypeLoc(TypedefTypeLoc TL) {
     Events.push_back(VisitEvent::StartTraverseTypedefType);
-    bool Ret =
-        RecursiveASTVisitor::TraverseTypedefTypeLoc(TL, TraverseQualifier);
+    bool Ret = RecursiveASTVisitor::TraverseTypedefTypeLoc(TL);
     Events.push_back(VisitEvent::EndTraverseTypedefType);
 
     return Ret;

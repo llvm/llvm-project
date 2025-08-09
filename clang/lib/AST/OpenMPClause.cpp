@@ -2350,16 +2350,17 @@ void OMPClausePrinter::VisitOMPReductionClause(OMPReductionClause *Node) {
     if (Node->getModifierLoc().isValid())
       OS << getOpenMPSimpleClauseTypeName(OMPC_reduction, Node->getModifier())
          << ", ";
-    NestedNameSpecifier Qualifier =
+    NestedNameSpecifier *QualifierLoc =
         Node->getQualifierLoc().getNestedNameSpecifier();
     OverloadedOperatorKind OOK =
         Node->getNameInfo().getName().getCXXOverloadedOperator();
-    if (!Qualifier && OOK != OO_None) {
+    if (QualifierLoc == nullptr && OOK != OO_None) {
       // Print reduction identifier in C format
       OS << getOperatorSpelling(OOK);
     } else {
       // Use C++ format
-      Qualifier.print(OS, Policy);
+      if (QualifierLoc != nullptr)
+        QualifierLoc->print(OS, Policy);
       OS << Node->getNameInfo();
     }
     OS << ":";
@@ -2372,16 +2373,17 @@ void OMPClausePrinter::VisitOMPTaskReductionClause(
     OMPTaskReductionClause *Node) {
   if (!Node->varlist_empty()) {
     OS << "task_reduction(";
-    NestedNameSpecifier Qualifier =
+    NestedNameSpecifier *QualifierLoc =
         Node->getQualifierLoc().getNestedNameSpecifier();
     OverloadedOperatorKind OOK =
         Node->getNameInfo().getName().getCXXOverloadedOperator();
-    if (!Qualifier && OOK != OO_None) {
+    if (QualifierLoc == nullptr && OOK != OO_None) {
       // Print reduction identifier in C format
       OS << getOperatorSpelling(OOK);
     } else {
       // Use C++ format
-      Qualifier.print(OS, Policy);
+      if (QualifierLoc != nullptr)
+        QualifierLoc->print(OS, Policy);
       OS << Node->getNameInfo();
     }
     OS << ":";
@@ -2393,16 +2395,17 @@ void OMPClausePrinter::VisitOMPTaskReductionClause(
 void OMPClausePrinter::VisitOMPInReductionClause(OMPInReductionClause *Node) {
   if (!Node->varlist_empty()) {
     OS << "in_reduction(";
-    NestedNameSpecifier Qualifier =
+    NestedNameSpecifier *QualifierLoc =
         Node->getQualifierLoc().getNestedNameSpecifier();
     OverloadedOperatorKind OOK =
         Node->getNameInfo().getName().getCXXOverloadedOperator();
-    if (!Qualifier && OOK != OO_None) {
+    if (QualifierLoc == nullptr && OOK != OO_None) {
       // Print reduction identifier in C format
       OS << getOperatorSpelling(OOK);
     } else {
       // Use C++ format
-      Qualifier.print(OS, Policy);
+      if (QualifierLoc != nullptr)
+        QualifierLoc->print(OS, Policy);
       OS << Node->getNameInfo();
     }
     OS << ":";
@@ -2505,9 +2508,10 @@ template <typename T>
 static void PrintMapper(raw_ostream &OS, T *Node,
                         const PrintingPolicy &Policy) {
   OS << '(';
-  NestedNameSpecifier MapperNNS =
+  NestedNameSpecifier *MapperNNS =
       Node->getMapperQualifierLoc().getNestedNameSpecifier();
-  MapperNNS.print(OS, Policy);
+  if (MapperNNS)
+    MapperNNS->print(OS, Policy);
   OS << Node->getMapperIdInfo() << ')';
 }
 

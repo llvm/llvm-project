@@ -2044,7 +2044,7 @@ bool GetTypeidPtr(InterpState &S, CodePtr OpPC, const Type *TypeInfoType) {
     return false;
 
   // Pick the most-derived type.
-  CanQualType T = P.getDeclPtr().getType()->getCanonicalTypeUnqualified();
+  const Type *T = P.getDeclPtr().getType().getTypePtr();
   // ... unless we're currently constructing this object.
   // FIXME: We have a similar check to this in more places.
   if (S.Current->getFunction()) {
@@ -2052,14 +2052,14 @@ bool GetTypeidPtr(InterpState &S, CodePtr OpPC, const Type *TypeInfoType) {
       if (const Function *Func = Frame->getFunction();
           Func && (Func->isConstructor() || Func->isDestructor()) &&
           P.block() == Frame->getThis().block()) {
-        T = S.getContext().getASTContext().getCanonicalTagType(
-            Func->getParentDecl());
+        T = Func->getParentDecl()->getTypeForDecl();
         break;
       }
     }
   }
 
-  S.Stk.push<Pointer>(T->getTypePtr(), TypeInfoType);
+  S.Stk.push<Pointer>(T->getCanonicalTypeUnqualified().getTypePtr(),
+                      TypeInfoType);
   return true;
 }
 

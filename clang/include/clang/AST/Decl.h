@@ -20,7 +20,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/ExternalASTSource.h"
-#include "clang/AST/NestedNameSpecifierBase.h"
+#include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/Redeclarable.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/AddressSpaces.h"
@@ -833,9 +833,9 @@ public:
 
   /// Retrieve the nested-name-specifier that qualifies the name of this
   /// declaration, if it was present in the source.
-  NestedNameSpecifier getQualifier() const {
+  NestedNameSpecifier *getQualifier() const {
     return hasExtInfo() ? getExtInfo()->QualifierLoc.getNestedNameSpecifier()
-                        : std::nullopt;
+                        : nullptr;
   }
 
   /// Retrieve the nested-name-specifier (with source-location
@@ -3528,14 +3528,8 @@ public:
   // check out ASTContext::getTypeDeclType or one of
   // ASTContext::getTypedefType, ASTContext::getRecordType, etc. if you
   // already know the specific kind of node this is.
-  const Type *getTypeForDecl() const {
-    assert(!isa<TagDecl>(this));
-    return TypeForDecl;
-  }
-  void setTypeForDecl(const Type *TD) {
-    assert(!isa<TagDecl>(this));
-    TypeForDecl = TD;
-  }
+  const Type *getTypeForDecl() const { return TypeForDecl; }
+  void setTypeForDecl(const Type *TD) { TypeForDecl = TD; }
 
   SourceLocation getBeginLoc() const LLVM_READONLY { return LocStart; }
   void setLocStart(SourceLocation L) { LocStart = L; }
@@ -3640,10 +3634,6 @@ public:
       return MaybeModedTInfo.getInt() & 0x2;
     return isTransparentTagSlow();
   }
-
-  // These types are created lazily, use the ASTContext methods to obtain them.
-  const Type *getTypeForDecl() const = delete;
-  void setTypeForDecl(const Type *TD) = delete;
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
@@ -3764,6 +3754,14 @@ protected:
   /// True if this decl is currently being defined.
   void setBeingDefined(bool V = true) { TagDeclBits.IsBeingDefined = V; }
 
+  /// Indicates whether it is possible for declarations of this kind
+  /// to have an out-of-date definition.
+  ///
+  /// This option is only enabled when modules are enabled.
+  void setMayHaveOutOfDateDef(bool V = true) {
+    TagDeclBits.MayHaveOutOfDateDef = V;
+  }
+
 public:
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
@@ -3844,6 +3842,12 @@ public:
     TagDeclBits.IsFreeStanding = isFreeStanding;
   }
 
+  /// Indicates whether it is possible for declarations of this kind
+  /// to have an out-of-date definition.
+  ///
+  /// This option is only enabled when modules are enabled.
+  bool mayHaveOutOfDateDef() const { return TagDeclBits.MayHaveOutOfDateDef; }
+
   /// Whether this declaration declares a type that is
   /// dependent, i.e., a type that somehow depends on template
   /// parameters.
@@ -3883,19 +3887,6 @@ public:
   ///  This method returns NULL if there is no TagDecl that defines
   ///  the struct/union/class/enum.
   TagDecl *getDefinition() const;
-
-  TagDecl *getDefinitionOrSelf() const {
-    if (TagDecl *Def = getDefinition())
-      return Def;
-    return const_cast<TagDecl *>(this);
-  }
-
-  /// Determines whether this entity is in the process of being defined.
-  bool isEntityBeingDefined() const {
-    if (const TagDecl *Def = getDefinition())
-      return Def->isBeingDefined();
-    return false;
-  }
 
   StringRef getKindName() const {
     return TypeWithKeyword::getTagTypeKindName(getTagKind());
@@ -3943,9 +3934,9 @@ public:
 
   /// Retrieve the nested-name-specifier that qualifies the name of this
   /// declaration, if it was present in the source.
-  NestedNameSpecifier getQualifier() const {
+  NestedNameSpecifier *getQualifier() const {
     return hasExtInfo() ? getExtInfo()->QualifierLoc.getNestedNameSpecifier()
-                        : std::nullopt;
+                        : nullptr;
   }
 
   /// Retrieve the nested-name-specifier (with source-location
@@ -3966,10 +3957,6 @@ public:
     assert(i < getNumTemplateParameterLists());
     return getExtInfo()->TemplParamLists[i];
   }
-
-  // These types are created lazily, use the ASTContext methods to obtain them.
-  const Type *getTypeForDecl() const = delete;
-  void setTypeForDecl(const Type *TD) = delete;
 
   using TypeDecl::printName;
   void printName(raw_ostream &OS, const PrintingPolicy &Policy) const override;
@@ -4098,10 +4085,6 @@ public:
 
   EnumDecl *getDefinition() const {
     return cast_or_null<EnumDecl>(TagDecl::getDefinition());
-  }
-
-  EnumDecl *getDefinitionOrSelf() const {
-    return cast_or_null<EnumDecl>(TagDecl::getDefinitionOrSelf());
   }
 
   static EnumDecl *Create(ASTContext &C, DeclContext *DC,
@@ -4484,10 +4467,6 @@ public:
   ///  no RecordDecl that defines the struct/union/tag.
   RecordDecl *getDefinition() const {
     return cast_or_null<RecordDecl>(TagDecl::getDefinition());
-  }
-
-  RecordDecl *getDefinitionOrSelf() const {
-    return cast_or_null<RecordDecl>(TagDecl::getDefinitionOrSelf());
   }
 
   /// Returns whether this record is a union, or contains (at any nesting level)
@@ -5320,8 +5299,6 @@ void Redeclarable<decl_type>::setPreviousDecl(decl_type *PrevDecl) {
 /// We use this function to break a cycle between the inline definitions in
 /// Type.h and Decl.h.
 inline bool IsEnumDeclComplete(EnumDecl *ED) {
-  if (const auto *Def = ED->getDefinition())
-    return Def->isComplete();
   return ED->isComplete();
 }
 

@@ -18,20 +18,17 @@ public:
   bool VisitRecordTypeLoc(RecordTypeLoc RTL) override {
     if (!RTL)
       return true;
-    Match(RTL.getOriginalDecl()->getName(), RTL.getNameLoc());
+    Match(RTL.getDecl()->getName(), RTL.getNameLoc());
     return true;
   }
 
-  bool
-  TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc QualifierLoc) override {
-    NestedNameSpecifier Qualifier = QualifierLoc.getNestedNameSpecifier();
-    if (Qualifier.getKind() == NestedNameSpecifier::Kind::Namespace) {
-      if (const auto *ND = dyn_cast<NamespaceDecl>(
-              Qualifier.getAsNamespaceAndPrefix().Namespace))
-        Match(ND->getName(), QualifierLoc.getLocalBeginLoc());
-    }
-    return ExpectedLocationVisitor::TraverseNestedNameSpecifierLoc(
-        QualifierLoc);
+  bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS) override {
+    if (!NNS)
+      return true;
+    if (const auto *ND = dyn_cast_if_present<NamespaceDecl>(
+            NNS.getNestedNameSpecifier()->getAsNamespace()))
+      Match(ND->getName(), NNS.getLocalBeginLoc());
+    return ExpectedLocationVisitor::TraverseNestedNameSpecifierLoc(NNS);
   }
 };
 

@@ -281,10 +281,9 @@ public:
   }
 
   bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc Loc) {
-    if (NestedNameSpecifier Spec = Loc.getNestedNameSpecifier();
-        Spec.getKind() == NestedNameSpecifier::Kind::Namespace) {
+    if (const NestedNameSpecifier *Spec = Loc.getNestedNameSpecifier()) {
       if (const auto *Decl =
-              dyn_cast<NamespaceDecl>(Spec.getAsNamespaceAndPrefix().Namespace))
+              dyn_cast_if_present<NamespaceDecl>(Spec->getAsNamespace()))
         Check->addUsage(Decl, Loc.getLocalSourceRange(), SM);
     }
 
@@ -324,34 +323,48 @@ public:
   }
 
   bool VisitTypedefTypeLoc(const TypedefTypeLoc &Loc) {
-    Check->addUsage(Loc.getDecl(), Loc.getNameLoc(), SM);
+    Check->addUsage(Loc.getTypedefNameDecl(), Loc.getSourceRange(), SM);
     return true;
   }
 
   bool VisitTagTypeLoc(const TagTypeLoc &Loc) {
-    Check->addUsage(Loc.getOriginalDecl(), Loc.getNameLoc(), SM);
+    Check->addUsage(Loc.getDecl(), Loc.getSourceRange(), SM);
+    return true;
+  }
+
+  bool VisitInjectedClassNameTypeLoc(const InjectedClassNameTypeLoc &Loc) {
+    Check->addUsage(Loc.getDecl(), Loc.getSourceRange(), SM);
     return true;
   }
 
   bool VisitUnresolvedUsingTypeLoc(const UnresolvedUsingTypeLoc &Loc) {
-    Check->addUsage(Loc.getDecl(), Loc.getNameLoc(), SM);
+    Check->addUsage(Loc.getDecl(), Loc.getSourceRange(), SM);
     return true;
   }
 
   bool VisitTemplateTypeParmTypeLoc(const TemplateTypeParmTypeLoc &Loc) {
-    Check->addUsage(Loc.getDecl(), Loc.getNameLoc(), SM);
+    Check->addUsage(Loc.getDecl(), Loc.getSourceRange(), SM);
     return true;
   }
 
   bool
   VisitTemplateSpecializationTypeLoc(const TemplateSpecializationTypeLoc &Loc) {
     const TemplateDecl *Decl =
-        Loc.getTypePtr()->getTemplateName().getAsTemplateDecl(
-            /*IgnoreDeduced=*/true);
+        Loc.getTypePtr()->getTemplateName().getAsTemplateDecl();
 
-    if (const auto *ClassDecl = dyn_cast<TemplateDecl>(Decl))
+    SourceRange Range(Loc.getTemplateNameLoc(), Loc.getTemplateNameLoc());
+    if (const auto *ClassDecl = dyn_cast<TemplateDecl>(Decl)) {
       if (const NamedDecl *TemplDecl = ClassDecl->getTemplatedDecl())
-        Check->addUsage(TemplDecl, Loc.getTemplateNameLoc(), SM);
+        Check->addUsage(TemplDecl, Range, SM);
+    }
+
+    return true;
+  }
+
+  bool VisitDependentTemplateSpecializationTypeLoc(
+      const DependentTemplateSpecializationTypeLoc &Loc) {
+    if (const TagDecl *Decl = Loc.getTypePtr()->getAsTagDecl())
+      Check->addUsage(Decl, Loc.getSourceRange(), SM);
 
     return true;
   }

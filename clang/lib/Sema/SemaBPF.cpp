@@ -58,10 +58,10 @@ static bool isValidPreserveTypeInfoArg(Expr *Arg) {
   // Record type or Enum type.
   const Type *Ty = ArgType->getUnqualifiedDesugaredType();
   if (const auto *RT = Ty->getAs<RecordType>()) {
-    if (!RT->getOriginalDecl()->getDeclName().isEmpty())
+    if (!RT->getDecl()->getDeclName().isEmpty())
       return true;
   } else if (const auto *ET = Ty->getAs<EnumType>()) {
-    if (!ET->getOriginalDecl()->getDeclName().isEmpty())
+    if (!ET->getDecl()->getDeclName().isEmpty())
       return true;
   }
 
@@ -105,7 +105,7 @@ static bool isValidPreserveEnumValueArg(Expr *Arg) {
     return false;
 
   // The enum value must be supported.
-  return llvm::is_contained(ET->getOriginalDecl()->enumerators(), Enumerator);
+  return llvm::is_contained(ET->getDecl()->enumerators(), Enumerator);
 }
 
 bool SemaBPF::CheckBPFBuiltinFunctionCall(unsigned BuiltinID,

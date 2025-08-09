@@ -115,12 +115,8 @@ template <bool Const> struct Impl : RecursiveASTVisitor<Impl<Const>> {
   bool TraverseAST(ASTContext &AST) { return Visitor.TraverseAST(AST); }
   bool TraverseAttr(Attr *At) { return Visitor.TraverseAttr(At); }
   bool TraverseDecl(Decl *D) { return Visitor.TraverseDecl(D); }
-  bool TraverseType(QualType T, bool TraverseQualifier = true) {
-    return Visitor.TraverseType(T, TraverseQualifier);
-  }
-  bool TraverseTypeLoc(TypeLoc TL, bool TraverseQualifier = true) {
-    return Visitor.TraverseTypeLoc(TL, TraverseQualifier);
-  }
+  bool TraverseType(QualType T) { return Visitor.TraverseType(T); }
+  bool TraverseTypeLoc(TypeLoc TL) { return Visitor.TraverseTypeLoc(TL); }
   bool TraverseStmt(Stmt *S) { return Visitor.TraverseStmt(S); }
 
   bool TraverseConstructorInitializer(CXXCtorInitializer *Init) {
@@ -176,7 +172,7 @@ template <bool Const> struct Impl : RecursiveASTVisitor<Impl<Const>> {
     return Visitor.TraverseLambdaCapture(LE, C, Init);
   }
 
-  bool TraverseNestedNameSpecifier(NestedNameSpecifier NNS) {
+  bool TraverseNestedNameSpecifier(NestedNameSpecifier *NNS) {
     return Visitor.TraverseNestedNameSpecifier(NNS);
   }
 
@@ -245,8 +241,8 @@ template <bool Const> struct Impl : RecursiveASTVisitor<Impl<Const>> {
   // Types.
 #define ABSTRACT_TYPE(CLASS, BASE)
 #define TYPE(CLASS, BASE)                                                      \
-  bool Traverse##CLASS##Type(CLASS##Type *T, bool TraverseQualifier) {         \
-    return Visitor.Traverse##CLASS##Type(T, TraverseQualifier);                \
+  bool Traverse##CLASS##Type(CLASS##Type *T) {                                 \
+    return Visitor.Traverse##CLASS##Type(T);                                   \
   }
 #include "clang/AST/TypeNodes.inc"
 
@@ -259,8 +255,8 @@ template <bool Const> struct Impl : RecursiveASTVisitor<Impl<Const>> {
   // TypeLocs.
 #define ABSTRACT_TYPELOC(CLASS, BASE)
 #define TYPELOC(CLASS, BASE)                                                   \
-  bool Traverse##CLASS##TypeLoc(CLASS##TypeLoc TL, bool TraverseQualifier) {   \
-    return Visitor.Traverse##CLASS##TypeLoc(TL, TraverseQualifier);            \
+  bool Traverse##CLASS##TypeLoc(CLASS##TypeLoc TL) {                           \
+    return Visitor.Traverse##CLASS##TypeLoc(TL);                               \
   }
 #include "clang/AST/TypeLocNodes.def"
 
@@ -301,6 +297,7 @@ FORWARD_TO_BASE(TraverseAttr, Attr, *)
 FORWARD_TO_BASE(TraverseConstructorInitializer, CXXCtorInitializer, *)
 FORWARD_TO_BASE(TraverseDecl, Decl, *)
 FORWARD_TO_BASE(TraverseStmt, Stmt, *)
+FORWARD_TO_BASE(TraverseNestedNameSpecifier, NestedNameSpecifier, *)
 FORWARD_TO_BASE(TraverseTemplateInstantiations, ClassTemplateDecl, *)
 FORWARD_TO_BASE(TraverseTemplateInstantiations, VarTemplateDecl, *)
 FORWARD_TO_BASE(TraverseTemplateInstantiations, FunctionTemplateDecl, *)
@@ -317,22 +314,8 @@ FORWARD_TO_BASE_EXACT(TraverseTemplateArgument, const TemplateArgument &)
 FORWARD_TO_BASE_EXACT(TraverseTemplateArguments, ArrayRef<TemplateArgument>)
 FORWARD_TO_BASE_EXACT(TraverseTemplateArgumentLoc, const TemplateArgumentLoc &)
 FORWARD_TO_BASE_EXACT(TraverseTemplateName, TemplateName)
-FORWARD_TO_BASE_EXACT(TraverseNestedNameSpecifier, NestedNameSpecifier)
-
-template <bool Const>
-bool DynamicRecursiveASTVisitorBase<Const>::TraverseType(
-    QualType T, bool TraverseQualifier) {
-  return Impl<Const>(*this).RecursiveASTVisitor<Impl<Const>>::TraverseType(
-      T, TraverseQualifier);
-}
-
-template <bool Const>
-bool DynamicRecursiveASTVisitorBase<Const>::TraverseTypeLoc(
-    TypeLoc TL, bool TraverseQualifier) {
-  return Impl<Const>(*this).RecursiveASTVisitor<Impl<Const>>::TraverseTypeLoc(
-      TL, TraverseQualifier);
-}
-
+FORWARD_TO_BASE_EXACT(TraverseType, QualType)
+FORWARD_TO_BASE_EXACT(TraverseTypeLoc, TypeLoc)
 FORWARD_TO_BASE_EXACT(TraverseTypeConstraint, const TypeConstraint *)
 FORWARD_TO_BASE_EXACT(TraverseObjCProtocolLoc, ObjCProtocolLoc)
 FORWARD_TO_BASE_EXACT(TraverseNestedNameSpecifierLoc, NestedNameSpecifierLoc)
@@ -371,25 +354,13 @@ bool DynamicRecursiveASTVisitorBase<Const>::dataTraverseNode(
 // Declare Traverse*() and friends for all concrete Type classes.
 #define ABSTRACT_TYPE(CLASS, BASE)
 #define TYPE(CLASS, BASE)                                                      \
-  template <bool Const>                                                        \
-  bool DynamicRecursiveASTVisitorBase<Const>::Traverse##CLASS##Type(           \
-      MaybeConst<CLASS##Type> *T, bool TraverseQualifier) {                    \
-    return Impl<Const>(*this)                                                  \
-        .RecursiveASTVisitor<Impl<Const>>::Traverse##CLASS##Type(              \
-            const_cast<CLASS##Type *>(T), TraverseQualifier);                  \
-  }                                                                            \
+  FORWARD_TO_BASE(Traverse##CLASS##Type, CLASS##Type, *)                       \
   FORWARD_TO_BASE(WalkUpFrom##CLASS##Type, CLASS##Type, *)
 #include "clang/AST/TypeNodes.inc"
 
 #define ABSTRACT_TYPELOC(CLASS, BASE)
 #define TYPELOC(CLASS, BASE)                                                   \
-  template <bool Const>                                                        \
-  bool DynamicRecursiveASTVisitorBase<Const>::Traverse##CLASS##TypeLoc(        \
-      CLASS##TypeLoc TL, bool TraverseQualifier) {                             \
-    return Impl<Const>(*this)                                                  \
-        .RecursiveASTVisitor<Impl<Const>>::Traverse##CLASS##TypeLoc(           \
-            TL, TraverseQualifier);                                            \
-  }
+  FORWARD_TO_BASE_EXACT(Traverse##CLASS##TypeLoc, CLASS##TypeLoc)
 #include "clang/AST/TypeLocNodes.def"
 
 #define TYPELOC(CLASS, BASE)                                                   \

@@ -886,7 +886,7 @@ void CGOpenMPRuntimeGPU::emitKernelDeinit(CodeGenFunction &CGF,
       "_openmp_teams_reduction_type_$_", RecordDecl::TagKind::Union);
   StaticRD->startDefinition();
   for (const RecordDecl *TeamReductionRec : TeamsReductions) {
-    CanQualType RecTy = C.getCanonicalTagType(TeamReductionRec);
+    QualType RecTy = C.getRecordType(TeamReductionRec);
     auto *Field = FieldDecl::Create(
         C, StaticRD, SourceLocation(), SourceLocation(), nullptr, RecTy,
         C.getTrivialTypeSourceInfo(RecTy, SourceLocation()),
@@ -896,7 +896,7 @@ void CGOpenMPRuntimeGPU::emitKernelDeinit(CodeGenFunction &CGF,
     StaticRD->addDecl(Field);
   }
   StaticRD->completeDefinition();
-  CanQualType StaticTy = C.getCanonicalTagType(StaticRD);
+  QualType StaticTy = C.getRecordType(StaticRD);
   llvm::Type *LLVMReductionsBufferTy =
       CGM.getTypes().ConvertTypeForMem(StaticTy);
   const auto &DL = CGM.getModule().getDataLayout();

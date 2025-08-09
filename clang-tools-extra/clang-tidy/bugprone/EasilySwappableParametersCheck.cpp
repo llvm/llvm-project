@@ -577,7 +577,7 @@ approximateImplicitConversion(const TheCheck &Check, QualType LType,
                               ImplicitConversionModellingMode ImplicitMode);
 
 static inline bool isUselessSugar(const Type *T) {
-  return isa<AttributedType, DecayedType, ParenType>(T);
+  return isa<AttributedType, DecayedType, ElaboratedType, ParenType>(T);
 }
 
 namespace {
@@ -1040,9 +1040,7 @@ approximateStandardConversionSequence(const TheCheck &Check, QualType From,
   const auto *ToRecord = To->getAsCXXRecordDecl();
   if (isDerivedToBase(FromRecord, ToRecord)) {
     LLVM_DEBUG(llvm::dbgs() << "--- approximateStdConv. Derived To Base.\n");
-    WorkType = QualType{
-        ToRecord->getASTContext().getCanonicalTagType(ToRecord)->getTypePtr(),
-        FastQualifiersToApply};
+    WorkType = QualType{ToRecord->getTypeForDecl(), FastQualifiersToApply};
   }
 
   if (Ctx.getLangOpts().CPlusPlus17 && FromPtr && ToPtr) {
@@ -1074,9 +1072,9 @@ approximateStandardConversionSequence(const TheCheck &Check, QualType From,
     WorkType = To;
   }
 
-  if (Ctx.hasSameType(WorkType, To)) {
+  if (WorkType == To) {
     LLVM_DEBUG(llvm::dbgs() << "<<< approximateStdConv. Reached 'To' type.\n");
-    return {Ctx.getCommonSugaredType(WorkType, To)};
+    return {WorkType};
   }
 
   LLVM_DEBUG(llvm::dbgs() << "<<< approximateStdConv. Did not reach 'To'.\n");
@@ -1221,7 +1219,7 @@ tryConversionOperators(const TheCheck &Check, const CXXRecordDecl *RD,
 
   if (std::optional<UserDefinedConversionSelector::PreparedConversion>
           SelectedConversion = ConversionSet()) {
-    CanQualType RecordType = RD->getASTContext().getCanonicalTagType(RD);
+    QualType RecordType{RD->getTypeForDecl(), 0};
 
     ConversionSequence Result{RecordType, ToType};
     // The conversion from the operator call's return type to ToType was
@@ -1272,7 +1270,7 @@ tryConvertingConstructors(const TheCheck &Check, QualType FromType,
 
   if (std::optional<UserDefinedConversionSelector::PreparedConversion>
           SelectedConversion = ConversionSet()) {
-    CanQualType RecordType = RD->getASTContext().getCanonicalTagType(RD);
+    QualType RecordType{RD->getTypeForDecl(), 0};
 
     ConversionSequence Result{FromType, RecordType};
     Result.AfterFirstStandard = SelectedConversion->Seq.AfterFirstStandard;

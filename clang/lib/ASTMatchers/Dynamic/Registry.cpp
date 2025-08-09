@@ -235,6 +235,8 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(designatorCountIs);
   REGISTER_MATCHER(doStmt);
   REGISTER_MATCHER(eachOf);
+  REGISTER_MATCHER(elaboratedType);
+  REGISTER_MATCHER(elaboratedTypeLoc);
   REGISTER_MATCHER(usingType);
   REGISTER_MATCHER(enumConstantDecl);
   REGISTER_MATCHER(enumDecl);
@@ -339,6 +341,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(hasMemberName);
   REGISTER_MATCHER(hasMethod);
   REGISTER_MATCHER(hasName);
+  REGISTER_MATCHER(hasNamedTypeLoc);
   REGISTER_MATCHER(hasNullSelector);
   REGISTER_MATCHER(hasObjectExpression);
   REGISTER_MATCHER(hasOperands);
@@ -500,6 +503,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(memberHasSameNameAsBoundNode);
   REGISTER_MATCHER(memberPointerType);
   REGISTER_MATCHER(namedDecl);
+  REGISTER_MATCHER(namesType);
   REGISTER_MATCHER(namespaceAliasDecl);
   REGISTER_MATCHER(namespaceDecl);
   REGISTER_MATCHER(nestedNameSpecifier);
@@ -589,7 +593,6 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(typeLoc);
   REGISTER_MATCHER(typedefDecl);
   REGISTER_MATCHER(typedefNameDecl);
-  REGISTER_MATCHER(usingShadowDecl);
   REGISTER_MATCHER(typedefType);
   REGISTER_MATCHER(unaryExprOrTypeTraitExpr);
   REGISTER_MATCHER(unaryOperator);

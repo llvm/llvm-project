@@ -362,7 +362,7 @@ struct NewFunction {
   SourceLocation DefinitionPoint;
   std::optional<SourceLocation> ForwardDeclarationPoint;
   const CXXRecordDecl *EnclosingClass = nullptr;
-  NestedNameSpecifier DefinitionQualifier = std::nullopt;
+  const NestedNameSpecifier *DefinitionQualifier = nullptr;
   const DeclContext *SemanticDC = nullptr;
   const DeclContext *SyntacticDC = nullptr;
   const DeclContext *ForwardDeclarationSyntacticDC = nullptr;
@@ -455,12 +455,13 @@ std::string NewFunction::renderQualifiers() const {
 }
 
 std::string NewFunction::renderDeclarationName(FunctionDeclKind K) const {
-  if (!DefinitionQualifier || K != OutOfLineDefinition)
+  if (DefinitionQualifier == nullptr || K != OutOfLineDefinition) {
     return Name;
+  }
 
   std::string QualifierName;
   llvm::raw_string_ostream Oss(QualifierName);
-  DefinitionQualifier.print(Oss, *LangOpts);
+  DefinitionQualifier->print(Oss, *LangOpts);
   return llvm::formatv("{0}{1}", QualifierName, Name);
 }
 

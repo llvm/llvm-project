@@ -179,7 +179,8 @@ static const clang::HLSLAttributedResourceType *
 createBufferHandleType(const HLSLBufferDecl *BufDecl) {
   ASTContext &AST = BufDecl->getASTContext();
   QualType QT = AST.getHLSLAttributedResourceType(
-      AST.HLSLResourceTy, AST.getCanonicalTagType(BufDecl->getLayoutStruct()),
+      AST.HLSLResourceTy,
+      QualType(BufDecl->getLayoutStruct()->getTypeForDecl(), 0),
       HLSLAttributedResourceType::Attributes(ResourceClass::CBuffer));
   return cast<HLSLAttributedResourceType>(QT.getTypePtr());
 }

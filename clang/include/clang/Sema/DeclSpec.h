@@ -91,11 +91,12 @@ public:
   }
 
   /// Retrieve the representation of the nested-name-specifier.
-  NestedNameSpecifier getScopeRep() const {
+  NestedNameSpecifier *getScopeRep() const {
     return Builder.getRepresentation();
   }
 
-  /// Make a nested-name-specifier of the form 'type::'.
+  /// Extend the current nested-name-specifier by another
+  /// nested-name-specifier component of the form 'type::'.
   ///
   /// \param Context The AST context in which this nested-name-specifier
   /// resides.
@@ -105,7 +106,21 @@ public:
   /// \param TL The TypeLoc that describes the type preceding the '::'.
   ///
   /// \param ColonColonLoc The location of the trailing '::'.
-  void Make(ASTContext &Context, TypeLoc TL, SourceLocation ColonColonLoc);
+  void Extend(ASTContext &Context, TypeLoc TL, SourceLocation ColonColonLoc);
+
+  /// Extend the current nested-name-specifier by another
+  /// nested-name-specifier component of the form 'identifier::'.
+  ///
+  /// \param Context The AST context in which this nested-name-specifier
+  /// resides.
+  ///
+  /// \param Identifier The identifier.
+  ///
+  /// \param IdentifierLoc The location of the identifier.
+  ///
+  /// \param ColonColonLoc The location of the trailing '::'.
+  void Extend(ASTContext &Context, IdentifierInfo *Identifier,
+              SourceLocation IdentifierLoc, SourceLocation ColonColonLoc);
 
   /// Extend the current nested-name-specifier by another
   /// nested-name-specifier component of the form 'namespace::'.
@@ -139,9 +154,8 @@ public:
   /// name.
   ///
   /// \param ColonColonLoc The location of the trailing '::'.
-  void MakeMicrosoftSuper(ASTContext &Context, CXXRecordDecl *RD,
-                          SourceLocation SuperLoc,
-                          SourceLocation ColonColonLoc);
+  void MakeSuper(ASTContext &Context, CXXRecordDecl *RD,
+                 SourceLocation SuperLoc, SourceLocation ColonColonLoc);
 
   /// Make a new nested-name-specifier from incomplete source-location
   /// information.
@@ -149,7 +163,7 @@ public:
   /// FIXME: This routine should be used very, very rarely, in cases where we
   /// need to synthesize a nested-name-specifier. Most code should instead use
   /// \c Adopt() with a proper \c NestedNameSpecifierLoc.
-  void MakeTrivial(ASTContext &Context, NestedNameSpecifier Qualifier,
+  void MakeTrivial(ASTContext &Context, NestedNameSpecifier *Qualifier,
                    SourceRange R);
 
   /// Adopt an existing nested-name-specifier (with source-range
@@ -175,14 +189,14 @@ public:
   SourceLocation getLastQualifierNameLoc() const;
 
   /// No scope specifier.
-  bool isEmpty() const { return Range.isInvalid() && !getScopeRep(); }
+  bool isEmpty() const { return Range.isInvalid() && getScopeRep() == nullptr; }
   /// A scope specifier is present, but may be valid or invalid.
   bool isNotEmpty() const { return !isEmpty(); }
 
   /// An error occurred during parsing of the scope specifier.
-  bool isInvalid() const { return Range.isValid() && !getScopeRep(); }
+  bool isInvalid() const { return Range.isValid() && getScopeRep() == nullptr; }
   /// A scope specifier is present, and it refers to a real scope.
-  bool isValid() const { return bool(getScopeRep()); }
+  bool isValid() const { return getScopeRep() != nullptr; }
 
   /// Indicate that this nested-name-specifier is invalid.
   void SetInvalid(SourceRange R) {
@@ -195,7 +209,7 @@ public:
 
   /// Deprecated.  Some call sites intend isNotEmpty() while others intend
   /// isValid().
-  bool isSet() const { return bool(getScopeRep()); }
+  bool isSet() const { return getScopeRep() != nullptr; }
 
   void clear() {
     Range = SourceRange();

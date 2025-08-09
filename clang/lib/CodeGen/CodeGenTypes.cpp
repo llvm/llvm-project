@@ -229,13 +229,12 @@ bool CodeGenTypes::isFuncTypeConvertible(const FunctionType *FT) {
 /// UpdateCompletedType - When we find the full definition for a TagDecl,
 /// replace the 'opaque' type we previously made for it if applicable.
 void CodeGenTypes::UpdateCompletedType(const TagDecl *TD) {
-  CanQualType T = CGM.getContext().getCanonicalTagType(TD);
   // If this is an enum being completed, then we flush all non-struct types from
   // the cache.  This allows function types and other things that may be derived
   // from the enum to be recomputed.
   if (const EnumDecl *ED = dyn_cast<EnumDecl>(TD)) {
     // Only flush the cache if we've actually already converted this type.
-    if (TypeCache.count(T->getTypePtr())) {
+    if (TypeCache.count(ED->getTypeForDecl())) {
       // Okay, we formed some types based on this.  We speculated that the enum
       // would be lowered to i32, so we only need to flush the cache if this
       // didn't happen.
@@ -256,7 +255,7 @@ void CodeGenTypes::UpdateCompletedType(const TagDecl *TD) {
 
   // Only complete it if we converted it already.  If we haven't converted it
   // yet, we'll just do it lazily.
-  if (RecordDeclTypes.count(T.getTypePtr()))
+  if (RecordDeclTypes.count(Context.getTagDeclType(RD).getTypePtr()))
     ConvertRecordDeclType(RD);
 
   // If necessary, provide the full definition of a type only used with a
@@ -266,7 +265,7 @@ void CodeGenTypes::UpdateCompletedType(const TagDecl *TD) {
 }
 
 void CodeGenTypes::RefreshTypeCacheForClass(const CXXRecordDecl *RD) {
-  CanQualType T = Context.getCanonicalTagType(RD);
+  QualType T = Context.getRecordType(RD);
   T = Context.getCanonicalType(T);
 
   const Type *Ty = T.getTypePtr();
@@ -312,11 +311,11 @@ llvm::Type *CodeGenTypes::ConvertFunctionTypeInternal(QualType QFT) {
     // Force conversion of all the relevant record types, to make sure
     // we re-convert the FunctionType when appropriate.
     if (const RecordType *RT = FT->getReturnType()->getAs<RecordType>())
-      ConvertRecordDeclType(RT->getOriginalDecl()->getDefinitionOrSelf());
+      ConvertRecordDeclType(RT->getDecl());
     if (const FunctionProtoType *FPT = dyn_cast<FunctionProtoType>(FT))
       for (unsigned i = 0, e = FPT->getNumParams(); i != e; i++)
         if (const RecordType *RT = FPT->getParamType(i)->getAs<RecordType>())
-          ConvertRecordDeclType(RT->getOriginalDecl()->getDefinitionOrSelf());
+          ConvertRecordDeclType(RT->getDecl());
 
     SkippedLayout = true;
 
@@ -374,7 +373,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
 
   // RecordTypes are cached and processed specially.
   if (const RecordType *RT = dyn_cast<RecordType>(Ty))
-    return ConvertRecordDeclType(RT->getOriginalDecl()->getDefinitionOrSelf());
+    return ConvertRecordDeclType(RT->getDecl());
 
   llvm::Type *CachedType = nullptr;
   auto TCI = TypeCache.find(Ty);
@@ -703,8 +702,7 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
     break;
 
   case Type::Enum: {
-    const EnumDecl *ED =
-        cast<EnumType>(Ty)->getOriginalDecl()->getDefinitionOrSelf();
+    const EnumDecl *ED = cast<EnumType>(Ty)->getDecl();
     if (ED->isCompleteDefinition() || ED->isFixed())
       return ConvertType(ED->getIntegerType());
     // Return a placeholder 'i32' type.  This can be changed later when the
@@ -730,10 +728,8 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   case Type::MemberPointer: {
     auto *MPTy = cast<MemberPointerType>(Ty);
     if (!getCXXABI().isMemberPointerConvertible(MPTy)) {
-      CanQualType T = CGM.getContext().getCanonicalTagType(
-          MPTy->getMostRecentCXXRecordDecl());
-      auto Insertion =
-          RecordsWithOpaqueMemberPointers.try_emplace(T.getTypePtr());
+      auto *C = MPTy->getMostRecentCXXRecordDecl()->getTypeForDecl();
+      auto Insertion = RecordsWithOpaqueMemberPointers.try_emplace(C);
       if (Insertion.second)
         Insertion.first->second = llvm::StructType::create(getLLVMContext());
       ResultType = Insertion.first->second;
@@ -796,7 +792,7 @@ bool CodeGenModule::isPaddedAtomicType(const AtomicType *type) {
 llvm::StructType *CodeGenTypes::ConvertRecordDeclType(const RecordDecl *RD) {
   // TagDecl's are not necessarily unique, instead use the (clang)
   // type connected to the decl.
-  const Type *Key = Context.getCanonicalTagType(RD).getTypePtr();
+  const Type *Key = Context.getTagDeclType(RD).getTypePtr();
 
   llvm::StructType *&Entry = RecordDeclTypes[Key];
 
@@ -817,10 +813,7 @@ llvm::StructType *CodeGenTypes::ConvertRecordDeclType(const RecordDecl *RD) {
   if (const CXXRecordDecl *CRD = dyn_cast<CXXRecordDecl>(RD)) {
     for (const auto &I : CRD->bases()) {
       if (I.isVirtual()) continue;
-      ConvertRecordDeclType(I.getType()
-                                ->castAs<RecordType>()
-                                ->getOriginalDecl()
-                                ->getDefinitionOrSelf());
+      ConvertRecordDeclType(I.getType()->castAs<RecordType>()->getDecl());
     }
   }
 
@@ -840,7 +833,7 @@ llvm::StructType *CodeGenTypes::ConvertRecordDeclType(const RecordDecl *RD) {
 /// getCGRecordLayout - Return record layout info for the given record decl.
 const CGRecordLayout &
 CodeGenTypes::getCGRecordLayout(const RecordDecl *RD) {
-  const Type *Key = Context.getCanonicalTagType(RD).getTypePtr();
+  const Type *Key = Context.getTagDeclType(RD).getTypePtr();
 
   auto I = CGRecordLayouts.find(Key);
   if (I != CGRecordLayouts.end())
@@ -879,7 +872,7 @@ bool CodeGenTypes::isZeroInitializable(QualType T) {
   // Records are non-zero-initializable if they contain any
   // non-zero-initializable subobjects.
   if (const RecordType *RT = T->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+    const RecordDecl *RD = RT->getDecl();
     return isZeroInitializable(RD);
   }
 

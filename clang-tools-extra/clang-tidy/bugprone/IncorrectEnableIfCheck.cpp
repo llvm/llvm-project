@@ -32,10 +32,13 @@ AST_MATCHER_P(TemplateTypeParmDecl, hasUnnamedDefaultArgument,
 void IncorrectEnableIfCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       templateTypeParmDecl(
-          hasUnnamedDefaultArgument(templateSpecializationTypeLoc(
-                                        loc(qualType(hasDeclaration(namedDecl(
-                                            hasName("::std::enable_if"))))))
-                                        .bind("enable_if_specialization")))
+          hasUnnamedDefaultArgument(
+              elaboratedTypeLoc(
+                  hasNamedTypeLoc(templateSpecializationTypeLoc(
+                                      loc(qualType(hasDeclaration(namedDecl(
+                                          hasName("::std::enable_if"))))))
+                                      .bind("enable_if_specialization")))
+                  .bind("elaborated")))
           .bind("enable_if"),
       this);
 }
@@ -43,11 +46,13 @@ void IncorrectEnableIfCheck::registerMatchers(MatchFinder *Finder) {
 void IncorrectEnableIfCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *EnableIf =
       Result.Nodes.getNodeAs<TemplateTypeParmDecl>("enable_if");
+  const auto *ElaboratedLoc =
+      Result.Nodes.getNodeAs<ElaboratedTypeLoc>("elaborated");
   const auto *EnableIfSpecializationLoc =
       Result.Nodes.getNodeAs<TemplateSpecializationTypeLoc>(
           "enable_if_specialization");
 
-  if (!EnableIf || !EnableIfSpecializationLoc)
+  if (!EnableIf || !ElaboratedLoc || !EnableIfSpecializationLoc)
     return;
 
   const SourceManager &SM = *Result.SourceManager;
@@ -57,10 +62,8 @@ void IncorrectEnableIfCheck::check(const MatchFinder::MatchResult &Result) {
   auto Diag = diag(EnableIf->getBeginLoc(),
                    "incorrect std::enable_if usage detected; use "
                    "'typename std::enable_if<...>::type'");
-  // FIXME: This should handle the enable_if specialization already having an
-  // elaborated keyword.
   if (!getLangOpts().CPlusPlus20) {
-    Diag << FixItHint::CreateInsertion(EnableIfSpecializationLoc->getBeginLoc(),
+    Diag << FixItHint::CreateInsertion(ElaboratedLoc->getBeginLoc(),
                                        "typename ");
   }
   Diag << FixItHint::CreateInsertion(RAngleLoc.getLocWithOffset(1), "::type");

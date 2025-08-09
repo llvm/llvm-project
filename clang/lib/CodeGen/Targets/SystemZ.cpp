@@ -146,7 +146,7 @@ public:
 bool SystemZABIInfo::isPromotableIntegerTypeForABI(QualType Ty) const {
   // Treat an enum type as its underlying type.
   if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-    Ty = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+    Ty = EnumTy->getDecl()->getIntegerType();
 
   // Promotable integer types are required to be promoted by the ABI.
   if (ABIInfo::isPromotableIntegerTypeForABI(Ty))
@@ -211,7 +211,7 @@ QualType SystemZABIInfo::GetSingleElementType(QualType Ty) const {
   const RecordType *RT = Ty->getAs<RecordType>();
 
   if (RT && RT->isStructureOrClassType()) {
-    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+    const RecordDecl *RD = RT->getDecl();
     QualType Found;
 
     // If this is a C++ record, check the bases first.
@@ -455,7 +455,7 @@ ABIArgInfo SystemZABIInfo::classifyArgumentType(QualType Ty) const {
   if (const RecordType *RT = Ty->getAs<RecordType>()) {
     // Structures with flexible arrays have variable length, so really
     // fail the size test above.
-    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+    const RecordDecl *RD = RT->getDecl();
     if (RD->hasFlexibleArrayMember())
       return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
                                      /*ByVal=*/false);
@@ -526,7 +526,7 @@ bool SystemZTargetCodeGenInfo::isVectorTypeBased(const Type *Ty,
       return true;
 
   if (const auto *RecordTy = Ty->getAs<RecordType>()) {
-    const RecordDecl *RD = RecordTy->getOriginalDecl()->getDefinitionOrSelf();
+    const RecordDecl *RD = RecordTy->getDecl();
     if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD))
       if (CXXRD->hasDefinition())
         for (const auto &I : CXXRD->bases())

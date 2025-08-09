@@ -43,8 +43,7 @@ static bool isDerivedClassBefriended(const CXXRecordDecl *CRTP,
       return false;
     }
 
-    return declaresSameEntity(FriendType->getType()->getAsCXXRecordDecl(),
-                              Derived);
+    return FriendType->getType()->getAsCXXRecordDecl() == Derived;
   });
 }
 
@@ -56,8 +55,7 @@ getDerivedParameter(const ClassTemplateSpecializationDecl *CRTP,
       CRTP->getTemplateArgs().asArray(), [&](const TemplateArgument &Arg) {
         ++Idx;
         return Arg.getKind() == TemplateArgument::Type &&
-               declaresSameEntity(Arg.getAsType()->getAsCXXRecordDecl(),
-                                  Derived);
+               Arg.getAsType()->getAsCXXRecordDecl() == Derived;
       });
 
   return AnyOf ? CRTP->getSpecializedTemplate()

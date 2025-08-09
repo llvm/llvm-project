@@ -39,31 +39,24 @@ static void replaceMoveWithForward(const UnresolvedLookupExpr *Callee,
     // std::move(). This will hopefully prevent erroneous replacements if the
     // code does unusual things (e.g. create an alias for std::move() in
     // another namespace).
-    NestedNameSpecifier NNS = Callee->getQualifier();
-    switch (NNS.getKind()) {
-    case NestedNameSpecifier::Kind::Null:
+    NestedNameSpecifier *NNS = Callee->getQualifier();
+    if (!NNS) {
       // Called as "move" (i.e. presumably the code had a "using std::move;").
       // We still conservatively put a "std::" in front of the forward because
       // we don't know whether the code also had a "using std::forward;".
       Diag << FixItHint::CreateReplacement(CallRange, "std::" + ForwardName);
-      break;
-    case NestedNameSpecifier::Kind::Namespace: {
-      auto [Namespace, Prefix] = NNS.getAsNamespaceAndPrefix();
+    } else if (const NamespaceBaseDecl *Namespace = NNS->getAsNamespace()) {
       if (Namespace->getName() == "std") {
-        if (!Prefix) {
+        if (!NNS->getPrefix()) {
           // Called as "std::move".
           Diag << FixItHint::CreateReplacement(CallRange,
                                                "std::" + ForwardName);
-        } else if (Prefix.getKind() == NestedNameSpecifier::Kind::Global) {
+        } else if (NNS->getPrefix()->getKind() == NestedNameSpecifier::Global) {
           // Called as "::std::move".
           Diag << FixItHint::CreateReplacement(CallRange,
                                                "::std::" + ForwardName);
         }
       }
-      break;
-    }
-    default:
-      return;
     }
   }
 }

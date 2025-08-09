@@ -643,9 +643,6 @@ public:
   /// from the explicitly-specified bound.
   SourceLocation getColonLoc() const { return ColonLoc; }
 
-  using TypeDecl::getTypeForDecl;
-  using TypeDecl::setTypeForDecl;
-
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == ObjCTypeParam; }

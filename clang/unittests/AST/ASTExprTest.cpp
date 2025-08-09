@@ -89,14 +89,14 @@ TEST(ASTExpr, InitListIsConstantInitialized) {
 
   SourceLocation Loc{};
   InitListExpr *BaseInit = new (Ctx) InitListExpr(Ctx, Loc, {}, Loc);
-  BaseInit->setType(Ctx.getCanonicalTagType(Empty));
+  BaseInit->setType(Ctx.getRecordType(Empty));
   Expr *Exprs[3] = {
       BaseInit,
       createIntLiteral(Ctx, 13),
       createIntLiteral(Ctx, 42),
   };
   InitListExpr *FooInit = new (Ctx) InitListExpr(Ctx, Loc, Exprs, Loc);
-  FooInit->setType(Ctx.getCanonicalTagType(Foo));
+  FooInit->setType(Ctx.getRecordType(Foo));
   EXPECT_TRUE(FooInit->isConstantInitializer(Ctx, false));
 
   // Replace the last initializer with something non-constant and make sure

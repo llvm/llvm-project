@@ -83,9 +83,8 @@ bool CodeGenModule::TryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D) {
     if (I.isVirtual()) continue;
 
     // Skip base classes with trivial destructors.
-    const auto *Base = cast<CXXRecordDecl>(
-                           I.getType()->castAs<RecordType>()->getOriginalDecl())
-                           ->getDefinitionOrSelf();
+    const auto *Base =
+        cast<CXXRecordDecl>(I.getType()->castAs<RecordType>()->getDecl());
     if (Base->hasTrivialDestructor()) continue;
 
     // If we've already found a base class with a non-trivial
@@ -278,18 +277,18 @@ static CGCallee BuildAppleKextVirtualCall(CodeGenFunction &CGF,
 /// BuildAppleKextVirtualCall - This routine is to support gcc's kext ABI making
 /// indirect call to virtual functions. It makes the call through indexing
 /// into the vtable.
-CGCallee CodeGenFunction::BuildAppleKextVirtualCall(const CXXMethodDecl *MD,
-                                                    NestedNameSpecifier Qual,
-                                                    llvm::Type *Ty) {
-  assert(Qual.getKind() == NestedNameSpecifier::Kind::Type &&
+CGCallee
+CodeGenFunction::BuildAppleKextVirtualCall(const CXXMethodDecl *MD,
+                                           NestedNameSpecifier *Qual,
+                                           llvm::Type *Ty) {
+  assert((Qual->getKind() == NestedNameSpecifier::TypeSpec) &&
          "BuildAppleKextVirtualCall - bad Qual kind");
 
-  const Type *QTy = Qual.getAsType();
+  const Type *QTy = Qual->getAsType();
   QualType T = QualType(QTy, 0);
   const RecordType *RT = T->getAs<RecordType>();
   assert(RT && "BuildAppleKextVirtualCall - Qual type must be record");
-  const auto *RD =
-      cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf();
+  const auto *RD = cast<CXXRecordDecl>(RT->getDecl());
 
   if (const auto *DD = dyn_cast<CXXDestructorDecl>(MD))
     return BuildAppleKextVirtualDestructorCall(DD, Dtor_Complete, RD);

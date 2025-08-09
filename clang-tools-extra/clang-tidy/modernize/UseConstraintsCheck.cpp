@@ -60,11 +60,9 @@ matchEnableIfSpecializationImplTypename(TypeLoc TheType) {
          Keyword != ElaboratedTypeKeyword::None)) {
       return std::nullopt;
     }
-    TheType = Dep.getQualifierLoc().getAsTypeLoc();
+    TheType = Dep.getQualifierLoc().getTypeLoc();
     if (TheType.isNull())
       return std::nullopt;
-  } else {
-    return std::nullopt;
   }
 
   if (const auto SpecializationLoc =
@@ -91,6 +89,9 @@ matchEnableIfSpecializationImplTypename(TypeLoc TheType) {
 
 static std::optional<TemplateSpecializationTypeLoc>
 matchEnableIfSpecializationImplTrait(TypeLoc TheType) {
+  if (const auto Elaborated = TheType.getAs<ElaboratedTypeLoc>())
+    TheType = Elaborated.getNamedTypeLoc();
+
   if (const auto SpecializationLoc =
           TheType.getAs<TemplateSpecializationTypeLoc>()) {
 

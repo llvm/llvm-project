@@ -1128,14 +1128,12 @@ bool Parser::AnnotateTemplateIdToken(TemplateTy Template, TemplateNameKind TNK,
 
   // Build the annotation token.
   if (TNK == TNK_Type_template && AllowTypeAnnotation) {
-    TypeResult Type =
-        ArgsInvalid
-            ? TypeError()
-            : Actions.ActOnTemplateIdType(
-                  getCurScope(), ElaboratedTypeKeyword::None,
-                  /*ElaboratedKeywordLoc=*/SourceLocation(), SS, TemplateKWLoc,
-                  Template, TemplateName.Identifier, TemplateNameLoc, LAngleLoc,
-                  TemplateArgsPtr, RAngleLoc);
+    TypeResult Type = ArgsInvalid
+                          ? TypeError()
+                          : Actions.ActOnTemplateIdType(
+                                getCurScope(), SS, TemplateKWLoc, Template,
+                                TemplateName.Identifier, TemplateNameLoc,
+                                LAngleLoc, TemplateArgsPtr, RAngleLoc);
 
     Tok.setKind(tok::annot_typename);
     setTypeAnnotation(Tok, Type);
@@ -1196,11 +1194,10 @@ void Parser::AnnotateTemplateIdTokenAsType(
       TemplateId->isInvalid()
           ? TypeError()
           : Actions.ActOnTemplateIdType(
-                getCurScope(), ElaboratedTypeKeyword::None,
-                /*ElaboratedKeywordLoc=*/SourceLocation(), SS,
-                TemplateId->TemplateKWLoc, TemplateId->Template,
-                TemplateId->Name, TemplateId->TemplateNameLoc,
-                TemplateId->LAngleLoc, TemplateArgsPtr, TemplateId->RAngleLoc,
+                getCurScope(), SS, TemplateId->TemplateKWLoc,
+                TemplateId->Template, TemplateId->Name,
+                TemplateId->TemplateNameLoc, TemplateId->LAngleLoc,
+                TemplateArgsPtr, TemplateId->RAngleLoc,
                 /*IsCtorOrDtorName=*/false, IsClassName, AllowImplicitTypename);
   // Create the new "type" annotation token.
   Tok.setKind(tok::annot_typename);
@@ -1266,8 +1263,7 @@ ParsedTemplateArgument Parser::ParseTemplateTemplateArgument() {
           Actions.ActOnTemplateName(getCurScope(), SS, TemplateKWLoc, Name,
                                     /*ObjectType=*/nullptr,
                                     /*EnteringContext=*/false, Template))
-        Result = ParsedTemplateArgument(TemplateKWLoc, SS, Template,
-                                        Name.StartLocation);
+        Result = ParsedTemplateArgument(SS, Template, Name.StartLocation);
     }
   } else if (Tok.is(tok::identifier) || Tok.is(tok::annot_template_id) ||
              Tok.is(tok::annot_non_type)) {
@@ -1304,8 +1300,7 @@ ParsedTemplateArgument Parser::ParseTemplateTemplateArgument() {
           TNK == TNK_Var_template || TNK == TNK_Concept_template) {
         // We have an id-expression that refers to a class template or
         // (C++0x) alias template.
-        Result = ParsedTemplateArgument(/*TemplateKwLoc=*/SourceLocation(), SS,
-                                        Template, Name.StartLocation);
+        Result = ParsedTemplateArgument(SS, Template, Name.StartLocation);
       }
     }
   }

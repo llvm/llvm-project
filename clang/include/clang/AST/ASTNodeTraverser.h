@@ -394,14 +394,12 @@ public:
   }
   void VisitMemberPointerType(const MemberPointerType *T) {
     // FIXME: Provide a NestedNameSpecifier visitor.
-    NestedNameSpecifier Qualifier = T->getQualifier();
-    if (NestedNameSpecifier::Kind K = Qualifier.getKind();
-        K == NestedNameSpecifier::Kind::Type)
-      Visit(Qualifier.getAsType());
+    NestedNameSpecifier *Qualifier = T->getQualifier();
+    if (NestedNameSpecifier::SpecifierKind K = Qualifier->getKind();
+        K == NestedNameSpecifier::TypeSpec)
+      Visit(Qualifier->getAsType());
     if (T->isSugared())
-      Visit(cast<MemberPointerType>(T->getCanonicalTypeUnqualified())
-                ->getQualifier()
-                .getAsType());
+      Visit(T->getMostRecentCXXRecordDecl()->getTypeForDecl());
     Visit(T->getPointeeType());
   }
   void VisitArrayType(const ArrayType *T) { Visit(T->getElementType()); }
@@ -512,7 +510,7 @@ public:
   }
   void VisitMemberPointerTypeLoc(MemberPointerTypeLoc TL) {
     // FIXME: Provide NestedNamespecifierLoc visitor.
-    Visit(TL.getQualifierLoc().castAsTypeLoc());
+    Visit(TL.getQualifierLoc().getTypeLoc());
   }
   void VisitVariableArrayTypeLoc(VariableArrayTypeLoc TL) {
     Visit(TL.getSizeExpr());
@@ -774,16 +772,17 @@ public:
   }
 
   void VisitUsingShadowDecl(const UsingShadowDecl *D) {
-    Visit(D->getTargetDecl());
+    if (auto *TD = dyn_cast<TypeDecl>(D->getUnderlyingDecl()))
+      Visit(TD->getTypeForDecl());
   }
 
   void VisitFriendDecl(const FriendDecl *D) {
     if (D->getFriendType()) {
       // Traverse any CXXRecordDecl owned by this type, since
       // it will not be in the parent context:
-      if (auto *TT = D->getFriendType()->getType()->getAs<TagType>())
-        if (TT->isTagOwned())
-          Visit(TT->getOriginalDecl());
+      if (auto *ET = D->getFriendType()->getType()->getAs<ElaboratedType>())
+        if (auto *TD = ET->getOwnedTagDecl())
+          Visit(TD);
     } else {
       Visit(D->getFriendDecl());
     }

@@ -365,7 +365,7 @@ OptPrimType Context::classify(QualType T) const {
   }
 
   if (const auto *ET = T->getAs<EnumType>()) {
-    const auto *D = ET->getOriginalDecl()->getDefinitionOrSelf();
+    const auto *D = ET->getDecl();
     if (!D->isComplete())
       return std::nullopt;
     return classify(D->getIntegerType());

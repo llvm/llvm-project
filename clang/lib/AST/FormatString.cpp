@@ -417,11 +417,10 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
         // If the enum is incomplete we know nothing about the underlying type.
         // Assume that it's 'int'. Do not use the underlying type for a scoped
         // enumeration.
-        const EnumDecl *ED = ETy->getOriginalDecl()->getDefinitionOrSelf();
-        if (!ED->isComplete())
+        if (!ETy->getDecl()->isComplete())
           return NoMatch;
         if (ETy->isUnscopedEnumerationType())
-          argTy = ED->getIntegerType();
+          argTy = ETy->getDecl()->getIntegerType();
       }
 
       if (const auto *BT = argTy->getAs<BuiltinType>()) {
@@ -467,11 +466,10 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
         // If the enum is incomplete we know nothing about the underlying type.
         // Assume that it's 'int'. Do not use the underlying type for a scoped
         // enumeration as that needs an exact match.
-        const EnumDecl *ED = ETy->getOriginalDecl()->getDefinitionOrSelf();
-        if (!ED->isComplete())
+        if (!ETy->getDecl()->isComplete())
           argTy = C.IntTy;
         else if (ETy->isUnscopedEnumerationType())
-          argTy = ED->getIntegerType();
+          argTy = ETy->getDecl()->getIntegerType();
       }
 
       if (argTy->isSaturatedFixedPointType())

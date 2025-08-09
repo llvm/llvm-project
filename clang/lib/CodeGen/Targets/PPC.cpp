@@ -154,7 +154,7 @@ public:
 bool AIXABIInfo::isPromotableTypeForABI(QualType Ty) const {
   // Treat an enum type as its underlying type.
   if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-    Ty = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+    Ty = EnumTy->getDecl()->getIntegerType();
 
   // Promotable integer types are required to be promoted by the ABI.
   if (getContext().isPromotableIntegerType(Ty))
@@ -295,9 +295,7 @@ void AIXTargetCodeGenInfo::setTargetAttributes(
     unsigned Alignment = Context.toBits(Context.getDeclAlign(D)) / 8;
     const auto *Ty = VarD->getType().getTypePtr();
     const RecordDecl *RDecl =
-        Ty->isRecordType()
-            ? Ty->getAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf()
-            : nullptr;
+        Ty->isRecordType() ? Ty->getAs<RecordType>()->getDecl() : nullptr;
 
     bool EmitDiagnostic = UserSpecifiedTOC && GV->hasExternalLinkage();
     auto reportUnsupportedWarning = [&](bool ShouldEmitWarning, StringRef Msg) {
@@ -709,7 +707,7 @@ bool
 PPC64_SVR4_ABIInfo::isPromotableTypeForABI(QualType Ty) const {
   // Treat an enum type as its underlying type.
   if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-    Ty = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+    Ty = EnumTy->getDecl()->getIntegerType();
 
   // Promotable integer types are required to be promoted by the ABI.
   if (isPromotableIntegerTypeForABI(Ty))

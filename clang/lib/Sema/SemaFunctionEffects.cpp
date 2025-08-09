@@ -1352,15 +1352,11 @@ private:
       return true;
     }
 
-    bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc Node,
-                                   bool TraverseQualifier) override {
+    bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc Node) override {
       return true;
     }
 
-    bool TraverseDecltypeTypeLoc(DecltypeTypeLoc Node,
-                                 bool TraverseQualifier) override {
-      return true;
-    }
+    bool TraverseDecltypeTypeLoc(DecltypeTypeLoc Node) override { return true; }
 
     bool TraverseCXXNoexceptExpr(CXXNoexceptExpr *Node) override {
       return true;

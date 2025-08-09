@@ -67,7 +67,11 @@ static QualType getNonTemplateAlias(QualType QT) {
       if (!TT->getDecl()->getDescribedTemplate() &&
           !TT->getDecl()->getDeclContext()->isDependentContext())
         return QT;
-      QT = TT->desugar();
+      QT = TT->getDecl()->getUnderlyingType();
+    }
+    // cast to elaborated type
+    else if (const ElaboratedType *ET = dyn_cast<ElaboratedType>(QT)) {
+      QT = ET->getNamedType();
     } else {
       break;
     }

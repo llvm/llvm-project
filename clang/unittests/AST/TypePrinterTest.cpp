@@ -60,7 +60,7 @@ TEST(TypePrinter, TemplateId) {
       [](PrintingPolicy &Policy) { Policy.FullyQualifiedName = false; }));
 
   ASSERT_TRUE(PrintedTypeMatches(
-      Code, {}, Matcher, "const N::Type<T> &",
+      Code, {}, Matcher, "const Type<T> &",
       [](PrintingPolicy &Policy) { Policy.FullyQualifiedName = true; }));
 }
 
@@ -97,7 +97,7 @@ TEST(TypePrinter, ParamsUglified) {
                                  "const f<Tp &> *", Clean));
 }
 
-TEST(TypePrinter, TemplateSpecializationFullyQualified) {
+TEST(TypePrinter, SuppressElaboration) {
   llvm::StringLiteral Code = R"cpp(
     namespace shared {
     namespace a {
@@ -115,10 +115,13 @@ TEST(TypePrinter, TemplateSpecializationFullyQualified) {
                                  hasType(qualType().bind("id")));
   ASSERT_TRUE(PrintedTypeMatches(
       Code, {}, Matcher, "a::S<b::Foo>",
-      [](PrintingPolicy &Policy) { Policy.FullyQualifiedName = false; }));
-  ASSERT_TRUE(PrintedTypeMatches(
-      Code, {}, Matcher, "shared::a::S<shared::b::Foo>",
       [](PrintingPolicy &Policy) { Policy.FullyQualifiedName = true; }));
+  ASSERT_TRUE(PrintedTypeMatches(Code, {}, Matcher,
+                                 "shared::a::S<shared::b::Foo>",
+                                 [](PrintingPolicy &Policy) {
+                                   Policy.SuppressElaboration = true;
+                                   Policy.FullyQualifiedName = true;
+                                 }));
 }
 
 TEST(TypePrinter, TemplateIdWithNTTP) {

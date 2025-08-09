@@ -375,7 +375,7 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
   if (!passAsAggregateType(Ty)) {
     // Treat an enum type as its underlying type.
     if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-      Ty = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+      Ty = EnumTy->getDecl()->getIntegerType();
 
     if (const auto *EIT = Ty->getAs<BitIntType>())
       if (EIT->getNumBits() > 128)
@@ -496,7 +496,7 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
       const RecordType *RT = Ty->getAs<RecordType>();
       if (!RT)
         return false;
-      const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+      const RecordDecl *RD = RT->getDecl();
       if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
         for (const auto &I : CXXRD->bases())
           if (!Self(Self, I.getType()))
@@ -548,8 +548,7 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(QualType RetTy,
   if (!passAsAggregateType(RetTy)) {
     // Treat an enum type as its underlying type.
     if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
-      RetTy =
-          EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+      RetTy = EnumTy->getDecl()->getIntegerType();
 
     if (const auto *EIT = RetTy->getAs<BitIntType>())
       if (EIT->getNumBits() > 128)
@@ -745,7 +744,7 @@ bool AArch64ABIInfo::passAsPureScalableType(
       return false;
 
     // Pure scalable types are never unions and never contain unions.
-    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+    const RecordDecl *RD = RT->getDecl();
     if (RD->isUnion())
       return false;
 

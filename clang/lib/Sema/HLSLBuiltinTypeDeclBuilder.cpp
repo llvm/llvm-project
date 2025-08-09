@@ -313,6 +313,9 @@ TemplateParameterListBuilder::finalizeTemplateArgs(ConceptDecl *CD) {
   Builder.Record->getDeclContext()->addDecl(Builder.Template);
   Params.clear();
 
+  QualType T = Builder.Template->getInjectedClassNameSpecialization();
+  T = AST.getInjectedClassNameType(Builder.Record, T);
+
   return Builder;
 }
 
@@ -348,7 +351,7 @@ BuiltinTypeMethodBuilder::BuiltinTypeMethodBuilder(BuiltinTypeDeclBuilder &DB,
   ASTContext &AST = DB.SemaRef.getASTContext();
   if (IsCtor) {
     Name = AST.DeclarationNames.getCXXConstructorName(
-        AST.getCanonicalTagType(DB.Record));
+        DB.Record->getTypeForDecl()->getCanonicalTypeUnqualified());
   } else {
     const IdentifierInfo &II =
         AST.Idents.get(NameStr, tok::TokenKind::identifier);
@@ -550,9 +553,9 @@ BuiltinTypeDeclBuilder::BuiltinTypeDeclBuilder(Sema &SemaRef,
     return;
   }
 
-  Record =
-      CXXRecordDecl::Create(AST, TagDecl::TagKind::Class, HLSLNamespace,
-                            SourceLocation(), SourceLocation(), &II, PrevDecl);
+  Record = CXXRecordDecl::Create(AST, TagDecl::TagKind::Class, HLSLNamespace,
+                                 SourceLocation(), SourceLocation(), &II,
+                                 PrevDecl, true);
   Record->setImplicit(true);
   Record->setLexicalDeclContext(HLSLNamespace);
   Record->setHasExternalLexicalStorage();
@@ -565,6 +568,18 @@ BuiltinTypeDeclBuilder::BuiltinTypeDeclBuilder(Sema &SemaRef,
 BuiltinTypeDeclBuilder::~BuiltinTypeDeclBuilder() {
   if (HLSLNamespace && !Template && Record->getDeclContext() == HLSLNamespace)
     HLSLNamespace->addDecl(Record);
+}
+
+CXXRecordDecl *BuiltinTypeDeclBuilder::finalizeForwardDeclaration() {
+  // Force the QualType to be generated for the record declaration. In most
+  // cases this will happen naturally when something uses the type the
+  // QualType gets lazily created. Unfortunately, with our injected types if a
+  // type isn't used in a translation unit the QualType may not get
+  // automatically generated before a PCH is generated. To resolve this we
+  // just force that the QualType is generated after we create a forward
+  // declaration.
+  (void)Record->getASTContext().getRecordType(Record);
+  return Record;
 }
 
 BuiltinTypeDeclBuilder &

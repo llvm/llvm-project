@@ -120,14 +120,14 @@ TEST(TemplateName, UsingTemplate) {
     // are rather part of the ElaboratedType)!
     absl::vector<int> v(123);
   )cpp");
-  auto Matcher = templateSpecializationTypeLoc().bind("id");
+  auto Matcher = elaboratedTypeLoc(
+      hasNamedTypeLoc(loc(templateSpecializationType().bind("id"))));
   auto MatchResults = match(Matcher, AST->getASTContext());
   const auto *TST =
-      MatchResults.front().getNodeAs<TemplateSpecializationTypeLoc>("id");
+      MatchResults.front().getNodeAs<TemplateSpecializationType>("id");
   ASSERT_TRUE(TST);
-  TemplateName TN = TST->getTypePtr()->getTemplateName();
-  EXPECT_EQ(TN.getKind(), TemplateName::QualifiedTemplate);
-  EXPECT_TRUE(TN.getAsUsingShadowDecl() != nullptr);
+  EXPECT_EQ(TST->getTemplateName().getKind(), TemplateName::QualifiedTemplate);
+  EXPECT_TRUE(TST->getTemplateName().getAsUsingShadowDecl() != nullptr);
 
   AST = tooling::buildASTFromCodeWithArgs(R"cpp(
     namespace std {
@@ -139,7 +139,8 @@ TEST(TemplateName, UsingTemplate) {
     absl::vector DTST(123);
     )cpp",
                                           {"-std=c++17"});
-  Matcher = loc(deducedTemplateSpecializationType().bind("id"));
+  Matcher = elaboratedTypeLoc(
+      hasNamedTypeLoc(loc(deducedTemplateSpecializationType().bind("id"))));
   MatchResults = match(Matcher, AST->getASTContext());
   const auto *DTST =
       MatchResults.front().getNodeAs<DeducedTemplateSpecializationType>("id");

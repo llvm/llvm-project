@@ -533,8 +533,7 @@ void ClangTidyDiagnosticConsumer::forwardDiagnostic(const Diagnostic &Info) {
       Builder << reinterpret_cast<const NamedDecl *>(Info.getRawArg(Index));
       break;
     case clang::DiagnosticsEngine::ak_nestednamespec:
-      Builder << NestedNameSpecifier::getFromVoidPointer(
-          reinterpret_cast<void *>(Info.getRawArg(Index)));
+      Builder << reinterpret_cast<NestedNameSpecifier *>(Info.getRawArg(Index));
       break;
     case clang::DiagnosticsEngine::ak_declcontext:
       Builder << reinterpret_cast<DeclContext *>(Info.getRawArg(Index));

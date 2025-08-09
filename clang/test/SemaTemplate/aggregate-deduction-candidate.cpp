@@ -15,7 +15,7 @@ namespace Basic {
   // CHECK-LABEL: Dumping Basic::<deduction guide for A>:
   // CHECK: FunctionTemplateDecl {{.*}} implicit <deduction guide for A>
   // CHECK: |-TemplateTypeParmDecl {{.*}} referenced class depth 0 index 0 T
-  // CHECK: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for A> 'auto (T, T) -> Basic::A<T>'
+  // CHECK: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for A> 'auto (T, T) -> A<T>'
   // CHECK: | |-ParmVarDecl {{.*}} 'T'
   // CHECK: | `-ParmVarDecl {{.*}} 'T'
   // CHECK: `-CXXDeductionGuideDecl {{.*}} implicit used <deduction guide for A> 'auto (double, double) -> Basic::A<double>'
@@ -23,8 +23,8 @@ namespace Basic {
   // CHECK:   | `-BuiltinType {{.*}} 'double'
   // CHECK:   |-ParmVarDecl {{.*}} 'double'
   // CHECK:   `-ParmVarDecl {{.*}} 'double'
-  // CHECK: FunctionProtoType {{.*}} 'auto (T, T) -> Basic::A<T>' dependent trailing_return cdecl
-  // CHECK: |-InjectedClassNameType {{.*}} 'Basic::A<T>' dependent
+  // CHECK: FunctionProtoType {{.*}} 'auto (T, T) -> A<T>' dependent trailing_return cdecl
+  // CHECK: |-InjectedClassNameType {{.*}} 'A<T>' dependent
   // CHECK: | `-CXXRecord {{.*}} 'A'
   // CHECK: |-TemplateTypeParmType {{.*}} 'T' dependent depth 0 index 0
   // CHECK: | `-TemplateTypeParm {{.*}} 'T'
@@ -66,7 +66,7 @@ namespace Basic {
   // CHECK-LABEL: Dumping Basic::<deduction guide for C>:
   // CHECK: FunctionTemplateDecl {{.*}} implicit <deduction guide for C>
   // CHECK: |-TemplateTypeParmDecl {{.*}} referenced typename depth 0 index 0 T
-  // CHECK: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for C> 'auto (S<T>, T) -> Basic::C<T>'
+  // CHECK: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for C> 'auto (S<T>, T) -> C<T>'
   // CHECK: | |-ParmVarDecl {{.*}} 'S<T>'
   // CHECK: | `-ParmVarDecl {{.*}} 'T'
   // CHECK: `-CXXDeductionGuideDecl {{.*}} implicit used <deduction guide for C> 'auto (S<int>, int) -> Basic::C<int>'
@@ -74,24 +74,25 @@ namespace Basic {
   // CHECK:   | `-BuiltinType {{.*}} 'int'
   // CHECK:   |-ParmVarDecl {{.*}} 'S<int>':'Basic::S<int>'
   // CHECK:   `-ParmVarDecl {{.*}} 'int'
-  // CHECK: FunctionProtoType {{.*}} 'auto (S<T>, T) -> Basic::C<T>' dependent trailing_return cdecl
-  // CHECK: |-InjectedClassNameType {{.*}} 'Basic::C<T>' dependent
+  // CHECK: FunctionProtoType {{.*}} 'auto (S<T>, T) -> C<T>' dependent trailing_return cdecl
+  // CHECK: |-InjectedClassNameType {{.*}} 'C<T>' dependent
   // CHECK: | `-CXXRecord {{.*}} 'C'
-  // CHECK: |-TemplateSpecializationType {{.*}} 'S<T>' dependent
-  // CHECK: | `-TemplateArgument type 'T'
-  // CHECK: |   `-TemplateTypeParmType {{.*}} 'T' dependent depth 0 index 0
-  // CHECK: |     `-TemplateTypeParm {{.*}} 'T'
+  // CHECK: |-ElaboratedType {{.*}} 'S<T>' sugar dependent
+  // CHECK: | `-TemplateSpecializationType {{.*}} 'S<T>' dependent
+  // CHECK: |   `-TemplateArgument type 'T'
+  // CHECK: |     `-TemplateTypeParmType {{.*}} 'T' dependent depth 0 index 0
+  // CHECK: |       `-TemplateTypeParm {{.*}} 'T'
   // CHECK: `-TemplateTypeParmType {{.*}} 'T' dependent depth 0 index 0
   // CHECK:   `-TemplateTypeParm {{.*}} 'T'
 
   // CHECK-LABEL: Dumping Basic::<deduction guide for D>:
   // CHECK: FunctionTemplateDecl {{.*}} implicit <deduction guide for D>
   // CHECK: |-TemplateTypeParmDecl {{.*}} referenced typename depth 0 index 0 T
-  // CHECK: `-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for D> 'auto (int, int) -> Basic::D<T>'
+  // CHECK: `-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for D> 'auto (int, int) -> D<T>'
   // CHECK:   |-ParmVarDecl {{.*}} 'int'
   // CHECK:   `-ParmVarDecl {{.*}} 'int'
-  // CHECK: FunctionProtoType {{.*}} 'auto (int, int) -> Basic::D<T>' dependent trailing_return cdecl
-  // CHECK: |-InjectedClassNameType {{.*}} 'Basic::D<T>' dependent
+  // CHECK: FunctionProtoType {{.*}} 'auto (int, int) -> D<T>' dependent trailing_return cdecl
+  // CHECK: |-InjectedClassNameType {{.*}} 'D<T>' dependent
   // CHECK: | `-CXXRecord {{.*}} 'D'
   // CHECK: |-SubstTemplateTypeParmType {{.*}} 'int' sugar typename depth 0 index 0 T
   // CHECK: | |-ClassTemplateSpecialization {{.*}} 'S'
@@ -112,7 +113,7 @@ namespace Basic {
   // CHECK-LABEL: Dumping Basic::<deduction guide for E>:
   // CHECK: FunctionTemplateDecl {{.*}} implicit <deduction guide for E>
   // CHECK: |-TemplateTypeParmDecl {{.*}} referenced typename depth 0 index 0 T
-  // CHECK: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for E> 'auto (T, decltype(t)) -> Basic::E<T>'
+  // CHECK: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for E> 'auto (T, decltype(t)) -> E<T>'
   // CHECK: | |-ParmVarDecl {{.*}} 'T'
   // CHECK: | `-ParmVarDecl {{.*}} 'decltype(t)'
   // CHECK: `-CXXDeductionGuideDecl {{.*}} implicit used <deduction guide for E> 'auto (int, decltype(t)) -> Basic::E<int>'
@@ -120,8 +121,8 @@ namespace Basic {
   // CHECK:   | `-BuiltinType {{.*}} 'int'
   // CHECK:   |-ParmVarDecl {{.*}} 'int'
   // CHECK:   `-ParmVarDecl {{.*}} 'decltype(t)':'int'
-  // CHECK: FunctionProtoType {{.*}} 'auto (T, decltype(t)) -> Basic::E<T>' dependent trailing_return cdecl
-  // CHECK: |-InjectedClassNameType {{.*}} 'Basic::E<T>' dependent
+  // CHECK: FunctionProtoType {{.*}} 'auto (T, decltype(t)) -> E<T>' dependent trailing_return cdecl
+  // CHECK: |-InjectedClassNameType {{.*}} 'E<T>' dependent
   // CHECK: | `-CXXRecord {{.*}} 'E'
   // CHECK: |-TemplateTypeParmType {{.*}} 'T' dependent depth 0 index 0
   // CHECK: | `-TemplateTypeParm {{.*}} 'T'
@@ -144,7 +145,7 @@ namespace Basic {
   // CHECK-LABEL: Dumping Basic::<deduction guide for F>:
   // CHECK: FunctionTemplateDecl {{.*}} implicit <deduction guide for F>
   // CHECK: |-TemplateTypeParmDecl {{.*}} referenced typename depth 0 index 0 T
-  // CHECK: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for F> 'auto (typename I<T>::type, T) -> Basic::F<T>'
+  // CHECK: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for F> 'auto (typename I<T>::type, T) -> F<T>'
   // CHECK: | |-ParmVarDecl {{.*}} 'typename I<T>::type'
   // CHECK: | `-ParmVarDecl {{.*}} 'T'
   // CHECK: `-CXXDeductionGuideDecl {{.*}} implicit used <deduction guide for F> 'auto (typename I<int>::type, int) -> Basic::F<int>'
@@ -152,8 +153,8 @@ namespace Basic {
   // CHECK:   | `-BuiltinType {{.*}} 'int'
   // CHECK:   |-ParmVarDecl {{.*}} 'typename I<int>::type':'int'
   // CHECK:   `-ParmVarDecl {{.*}} 'int'
-  // CHECK: FunctionProtoType {{.*}} 'auto (typename I<T>::type, T) -> Basic::F<T>' dependent trailing_return cdecl
-  // CHECK: |-InjectedClassNameType {{.*}} 'Basic::F<T>' dependent
+  // CHECK: FunctionProtoType {{.*}} 'auto (typename I<T>::type, T) -> F<T>' dependent trailing_return cdecl
+  // CHECK: |-InjectedClassNameType {{.*}} 'F<T>' dependent
   // CHECK: | `-CXXRecord {{.*}} 'F'
   // CHECK: |-DependentNameType {{.*}} 'typename I<T>::type' dependent
   // CHECK: `-TemplateTypeParmType {{.*}} 'T' dependent depth 0 index 0
@@ -180,15 +181,15 @@ namespace Array {
   // CHECK: FunctionTemplateDecl {{.*}} implicit <deduction guide for A>
   // CHECK: |-TemplateTypeParmDecl {{.*}} referenced typename depth 0 index 0 T
   // CHECK: |-NonTypeTemplateParmDecl {{.*}} 'size_t':'unsigned {{.*}}' depth 0 index 1 N
-  // CHECK: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for A> 'auto (T (&&)[N]) -> Array::A<T, N>'
+  // CHECK: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for A> 'auto (T (&&)[N]) -> A<T, N>'
   // CHECK: | `-ParmVarDecl {{.*}} 'T (&&)[N]'
   // CHECK: `-CXXDeductionGuideDecl {{.*}} implicit used <deduction guide for A> 'auto (int (&&)[3]) -> Array::A<int, 3>'
   // CHECK:   |-TemplateArgument type 'int'
   // CHECK:   | `-BuiltinType {{.*}} 'int'
   // CHECK:   |-TemplateArgument integral '3UL'
   // CHECK:   `-ParmVarDecl {{.*}} 'int (&&)[3]'
-  // CHECK: FunctionProtoType {{.*}} 'auto (T (&&)[N]) -> Array::A<T, N>' dependent trailing_return cdecl
-  // CHECK: |-InjectedClassNameType {{.*}} 'Array::A<T, N>' dependent
+  // CHECK: FunctionProtoType {{.*}} 'auto (T (&&)[N]) -> A<T, N>' dependent trailing_return cdecl
+  // CHECK: |-InjectedClassNameType {{.*}} 'A<T, N>' dependent
   // CHECK: | `-CXXRecord {{.*}} 'A'
   // CHECK: `-RValueReferenceType {{.*}} 'T (&&)[N]' dependent
   // CHECK:   `-DependentSizedArrayType {{.*}} 'T[N]' dependent
@@ -200,15 +201,15 @@ namespace Array {
   // CHECK: FunctionTemplateDecl {{.*}} implicit <deduction guide for A>
   // CHECK: |-TemplateTypeParmDecl {{.*}} referenced typename depth 0 index 0 T
   // CHECK: |-NonTypeTemplateParmDecl {{.*}} 'size_t':'unsigned {{.*}}' depth 0 index 1 N
-  // CHECK: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for A> 'auto (const T (&)[N]) -> Array::A<T, N>'
+  // CHECK: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for A> 'auto (const T (&)[N]) -> A<T, N>'
   // CHECK: | `-ParmVarDecl {{.*}} 'const T (&)[N]'
   // CHECK: `-CXXDeductionGuideDecl {{.*}} implicit used <deduction guide for A> 'auto (const char (&)[5]) -> Array::A<char, 5>'
   // CHECK:   |-TemplateArgument type 'char'
   // CHECK:   | `-BuiltinType {{.*}} 'char'
   // CHECK:   |-TemplateArgument integral '5UL'
   // CHECK:   `-ParmVarDecl {{.*}} 'const char (&)[5]'
-  // CHECK: FunctionProtoType {{.*}} 'auto (const T (&)[N]) -> Array::A<T, N>' dependent trailing_return cdecl
-  // CHECK: |-InjectedClassNameType {{.*}} 'Array::A<T, N>' dependent
+  // CHECK: FunctionProtoType {{.*}} 'auto (const T (&)[N]) -> A<T, N>' dependent trailing_return cdecl
+  // CHECK: |-InjectedClassNameType {{.*}} 'A<T, N>' dependent
   // CHECK: | `-CXXRecord {{.*}} 'A'
   // CHECK: `-LValueReferenceType {{.*}} 'const T (&)[N]' dependent
   // CHECK:   `-QualType {{.*}} 'const T[N]' const
@@ -231,7 +232,7 @@ namespace BraceElision {
   // CHECK-LABEL: Dumping BraceElision::<deduction guide for A>:
   // CHECK: FunctionTemplateDecl {{.*}} implicit <deduction guide for A>
   // CHECK: |-TemplateTypeParmDecl {{.*}} referenced typename depth 0 index 0 T
-  // CHECK: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for A> 'auto (T, T) -> BraceElision::A<T>'
+  // CHECK: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for A> 'auto (T, T) -> A<T>'
   // CHECK: | |-ParmVarDecl {{.*}} 'T'
   // CHECK: | `-ParmVarDecl {{.*}} 'T'
   // CHECK: `-CXXDeductionGuideDecl {{.*}} implicit used <deduction guide for A> 'auto (int, int) -> BraceElision::A<int>'
@@ -239,8 +240,8 @@ namespace BraceElision {
   // CHECK:   | `-BuiltinType {{.*}} 'int'
   // CHECK:   |-ParmVarDecl {{.*}} 'int'
   // CHECK:   `-ParmVarDecl {{.*}} 'int'
-  // CHECK: FunctionProtoType {{.*}} 'auto (T, T) -> BraceElision::A<T>' dependent trailing_return cdecl
-  // CHECK: |-InjectedClassNameType {{.*}} 'BraceElision::A<T>' dependent
+  // CHECK: FunctionProtoType {{.*}} 'auto (T, T) -> A<T>' dependent trailing_return cdecl
+  // CHECK: |-InjectedClassNameType {{.*}} 'A<T>' dependent
   // CHECK: | `-CXXRecord {{.*}} 'A'
   // CHECK: |-TemplateTypeParmType {{.*}} 'T' dependent depth 0 index 0
   // CHECK: | `-TemplateTypeParm {{.*}} 'T'
@@ -265,7 +266,7 @@ namespace TrailingPack {
   // CHECK-LABEL: Dumping TrailingPack::<deduction guide for A>:
   // CHECK: FunctionTemplateDecl {{.*}} implicit <deduction guide for A>
   // CHECK: |-TemplateTypeParmDecl {{.*}} referenced typename depth 0 index 0 ... T
-  // CHECK: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for A> 'auto (T...) -> TrailingPack::A<T...>'
+  // CHECK: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for A> 'auto (T...) -> A<T...>'
   // CHECK: | `-ParmVarDecl {{.*}} 'T...' pack
   // CHECK: `-CXXDeductionGuideDecl {{.*}} implicit used <deduction guide for A>
   // CHECK-SAME: 'auto (TrailingPack::(lambda at {{.*}}), TrailingPack::(lambda at {{.*}})) ->
@@ -273,14 +274,14 @@ namespace TrailingPack {
   // CHECK: |-TemplateArgument pack
   // CHECK: | |-TemplateArgument type 'TrailingPack::(lambda at {{.*}})'
   // CHECK: | | `-RecordType {{.*}} 'TrailingPack::(lambda at {{.*}})'
-  // CHECK: | |   `-CXXRecord {{.*}} <line:261:5>
+  // CHECK: | |   `-CXXRecord {{.*}} <line:262:5>
   // CHECK: | `-TemplateArgument type 'TrailingPack::(lambda at {{.*}})'
   // CHECK: |   `-RecordType {{.*}} 'TrailingPack::(lambda at {{.*}})'
-  // CHECK: |     `-CXXRecord {{.*}} <line:262:5>
+  // CHECK: |     `-CXXRecord {{.*}} <line:263:5>
   // CHECK: |-ParmVarDecl {{.*}} 'TrailingPack::(lambda at {{.*}})'
   // CHECK: `-ParmVarDecl {{.*}} 'TrailingPack::(lambda at {{.*}})'
-  // CHECK: FunctionProtoType {{.*}} 'auto (T...) -> TrailingPack::A<T...>' dependent trailing_return cdecl
-  // CHECK: |-InjectedClassNameType {{.*}} 'TrailingPack::A<T...>' dependent
+  // CHECK: FunctionProtoType {{.*}} 'auto (T...) -> A<T...>' dependent trailing_return cdecl
+  // CHECK: |-InjectedClassNameType {{.*}} 'A<T...>' dependent
   // CHECK: | `-CXXRecord {{.*}} 'A'
   // CHECK: `-PackExpansionType {{.*}} 'T...' dependent
   // CHECK:   `-TemplateTypeParmType {{.*}} 'T' dependent contains_unexpanded_pack depth 0 index 0 pack
@@ -326,7 +327,7 @@ namespace DeduceArity {
   // CHECK-LABEL: Dumping DeduceArity::<deduction guide for F>:
   // CHECK: FunctionTemplateDecl {{.*}} implicit <deduction guide for F>
   // CHECK: |-TemplateTypeParmDecl {{.*}} referenced typename depth 0 index 0 ... T
-  // CHECK: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for F> 'auto (Types<T...>, T...) -> DeduceArity::F<T...>'
+  // CHECK: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for F> 'auto (Types<T...>, T...) -> F<T...>'
   // CHECK: | |-ParmVarDecl {{.*}} 'Types<T...>'
   // CHECK: | `-ParmVarDecl {{.*}} 'T...' pack
   // CHECK: |-CXXDeductionGuideDecl {{.*}} implicit used <deduction guide for F>
@@ -353,14 +354,15 @@ namespace DeduceArity {
   // CHECK:   |     `-CXXRecord {{.*}} 'X'
   // CHECK:   |-ParmVarDecl {{.*}} 'Types<DeduceArity::X>':'DeduceArity::Types<DeduceArity::X>'
   // CHECK:   `-ParmVarDecl {{.*}} 'DeduceArity::X'
-  // CHECK: FunctionProtoType {{.*}} 'auto (Types<T...>, T...) -> DeduceArity::F<T...>' dependent trailing_return cdecl
-  // CHECK: |-InjectedClassNameType {{.*}} 'DeduceArity::F<T...>' dependent
+  // CHECK: FunctionProtoType {{.*}} 'auto (Types<T...>, T...) -> F<T...>' dependent trailing_return cdecl
+  // CHECK: |-InjectedClassNameType {{.*}} 'F<T...>' dependent
   // CHECK: | `-CXXRecord {{.*}} 'F'
-  // CHECK: |-TemplateSpecializationType {{.*}} 'Types<T...>' dependent
-  // CHECK: | `-TemplateArgument type 'T...'
-  // CHECK: |   `-PackExpansionType {{.*}} 'T...' dependent
-  // CHECK: |     `-TemplateTypeParmType {{.*}} 'T' dependent contains_unexpanded_pack depth 0 index 0 pack
-  // CHECK: |       `-TemplateTypeParm {{.*}} 'T'
+  // CHECK: |-ElaboratedType {{.*}} 'Types<T...>' sugar dependent
+  // CHECK: | `-TemplateSpecializationType {{.*}} 'Types<T...>' dependent
+  // CHECK: |   `-TemplateArgument type 'T...'
+  // CHECK: |     `-PackExpansionType {{.*}} 'T...' dependent
+  // CHECK: |       `-TemplateTypeParmType {{.*}} 'T' dependent contains_unexpanded_pack depth 0 index 0 pack
+  // CHECK: |         `-TemplateTypeParm {{.*}} 'T'
   // CHECK: `-PackExpansionType {{.*}} 'T...' dependent
   // CHECK:   `-TemplateTypeParmType {{.*}} 'T' dependent contains_unexpanded_pack depth 0 index 0 pack
   // CHECK:     `-TemplateTypeParm {{.*}} 'T'

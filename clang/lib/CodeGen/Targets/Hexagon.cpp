@@ -98,7 +98,7 @@ ABIArgInfo HexagonABIInfo::classifyArgumentType(QualType Ty,
   if (!isAggregateTypeForABI(Ty)) {
     // Treat an enum type as its underlying type.
     if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-      Ty = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+      Ty = EnumTy->getDecl()->getIntegerType();
 
     uint64_t Size = getContext().getTypeSize(Ty);
     if (Size <= 64)
@@ -161,8 +161,7 @@ ABIArgInfo HexagonABIInfo::classifyReturnType(QualType RetTy) const {
   if (!isAggregateTypeForABI(RetTy)) {
     // Treat an enum type as its underlying type.
     if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
-      RetTy =
-          EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
+      RetTy = EnumTy->getDecl()->getIntegerType();
 
     if (Size > 64 && RetTy->isBitIntType())
       return getNaturalAlignIndirect(
