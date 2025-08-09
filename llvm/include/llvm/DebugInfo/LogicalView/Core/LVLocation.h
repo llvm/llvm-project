@@ -159,6 +159,7 @@ public:
 
   void print(raw_ostream &OS, bool Full = true) const override;
   void printExtra(raw_ostream &OS, bool Full = true) const override;
+  virtual void printLocations(raw_ostream &OS) const {}
 };
 
 class LLVM_ABI LVLocationSymbol final : public LVLocation {
@@ -179,6 +180,7 @@ public:
 
   void printRawExtra(raw_ostream &OS, bool Full = true) const override;
   void printExtra(raw_ostream &OS, bool Full = true) const override;
+  void printLocations(raw_ostream &OS) const override;
 };
 
 } // end namespace logicalview
