@@ -67,12 +67,12 @@ TEST(StdlibTest, All) {
                           stdlib::Header::named("<iosfwd>")));
   EXPECT_THAT(stdlib::Symbol::named("std::", "size_t")->headers(),
               ElementsAre(stdlib::Header::named("<cstddef>"),
+                          stdlib::Header::named("<cstdio>"),
                           stdlib::Header::named("<cstdlib>"),
                           stdlib::Header::named("<cstring>"),
-                          stdlib::Header::named("<cwchar>"),
-                          stdlib::Header::named("<cuchar>"),
                           stdlib::Header::named("<ctime>"),
-                          stdlib::Header::named("<cstdio>")));
+                          stdlib::Header::named("<cuchar>"),
+                          stdlib::Header::named("<cwchar>")));
   EXPECT_EQ(stdlib::Symbol::named("std::", "size_t")->header(),
             stdlib::Header::named("<cstddef>"));
 
