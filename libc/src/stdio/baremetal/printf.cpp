@@ -7,26 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/printf.h"
-#include "src/__support/OSUtil/io.h"
+
 #include "src/__support/arg_list.h"
 #include "src/__support/macros/config.h"
-#include "src/stdio/printf_core/core_structs.h"
+#include "src/stdio/baremetal/write_hooks.h"
 #include "src/stdio/printf_core/printf_main.h"
-#include "src/stdio/printf_core/writer.h"
 
 #include <stdarg.h>
 #include <stddef.h>
 
 namespace LIBC_NAMESPACE_DECL {
-
-namespace {
-
-LIBC_INLINE int stdout_write_hook(cpp::string_view new_str, void *) {
-  write_to_stdout(new_str);
-  return printf_core::WRITE_OK;
-}
-
-} // namespace
 
 LLVM_LIBC_FUNCTION(int, printf, (const char *__restrict format, ...)) {
   va_list vlist;
@@ -39,7 +29,7 @@ LLVM_LIBC_FUNCTION(int, printf, (const char *__restrict format, ...)) {
   char buffer[BUFF_SIZE];
 
   printf_core::WriteBuffer<printf_core::WriteMode::FLUSH_TO_STREAM> wb(
-      buffer, BUFF_SIZE, &stdout_write_hook, nullptr);
+      buffer, BUFF_SIZE, &write_utils::stdout_write_hook, nullptr);
   printf_core::Writer<printf_core::WriteMode::FLUSH_TO_STREAM> writer(wb);
 
   int retval = printf_core::printf_main(&writer, format, args);
