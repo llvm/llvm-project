@@ -3548,6 +3548,7 @@ public:
                       QualType T, ExprValueKind VK, Expr *init, bool fileScope)
       : Expr(CompoundLiteralExprClass, T, VK, OK_Ordinary),
         LParenLoc(lparenloc), TInfoAndScope(tinfo, fileScope), Init(init) {
+    assert(Init && "Init is a nullptr");
     setDependence(computeDependence(this));
   }
 
@@ -3577,19 +3578,11 @@ public:
   APValue &getStaticValue() const;
 
   SourceLocation getBeginLoc() const LLVM_READONLY {
-    // FIXME: Init should never be null.
-    if (!Init)
-      return SourceLocation();
     if (LParenLoc.isInvalid())
       return Init->getBeginLoc();
     return LParenLoc;
   }
-  SourceLocation getEndLoc() const LLVM_READONLY {
-    // FIXME: Init should never be null.
-    if (!Init)
-      return SourceLocation();
-    return Init->getEndLoc();
-  }
+  SourceLocation getEndLoc() const LLVM_READONLY { return Init->getEndLoc(); }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CompoundLiteralExprClass;

@@ -72,6 +72,7 @@ static_library("lib") {
     "LLDBUtils.cpp",
     "OutputRedirector.cpp",
     "ProgressEvent.cpp",
+    "Protocol/DAPTypes.cpp",
     "Protocol/ProtocolBase.cpp",
     "Protocol/ProtocolEvents.cpp",
     "Protocol/ProtocolRequests.cpp",

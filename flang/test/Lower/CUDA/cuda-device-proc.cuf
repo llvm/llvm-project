@@ -11,6 +11,7 @@ attributes(global) subroutine devsub()
   integer(8) :: al
   integer(8) :: time
   integer :: smalltime
+  integer(4) :: res
 
   call syncthreads()
   call syncwarp(1)
@@ -49,6 +50,9 @@ attributes(global) subroutine devsub()
   smalltime = clock()
   time = clock64()
   time = globalTimer()
+
+  res = __popc(ai)
+  res = __popc(al)
 end
 
 ! CHECK-LABEL: func.func @_QPdevsub() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
@@ -88,6 +92,9 @@ end
 ! CHECK: %{{.*}} = nvvm.read.ptx.sreg.clock : i32
 ! CHECK: %{{.*}} = nvvm.read.ptx.sreg.clock64 : i64
 ! CHECK: %{{.*}} = nvvm.read.ptx.sreg.globaltimer : i64
+
+! CHECK: %{{.*}} = fir.call @__nv_popc(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_popcll(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> i32
 
 subroutine host1()
   integer, device :: a(32)
