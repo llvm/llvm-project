@@ -31,6 +31,9 @@ identifier = ? C99 Identifier ? ;
 
 integer_literal = ? Integer constant: hexademical, decimal, octal, binary ? ;
 
+numeric_literal = ? Integer constant: hexademical, decimal, octal, binary ?
+                | ? Floating constant ? ;
+
 register = "$" ? Register name ? ;
 
 nested_name_specifier = type_name "::"

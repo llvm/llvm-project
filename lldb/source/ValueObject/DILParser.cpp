@@ -179,10 +179,13 @@ ASTNodeUP DILParser::ParsePostfixExpression() {
 // Parse a primary_expression.
 //
 //  primary_expression:
+//    numeric_literal
 //    id_expression
 //    "(" expression ")"
 //
 ASTNodeUP DILParser::ParsePrimaryExpression() {
+  if (CurToken().IsOneOf({Token::integer_constant, Token::floating_constant}))
+    return ParseNumericLiteral();
   if (CurToken().IsOneOf(
           {Token::coloncolon, Token::identifier, Token::l_paren})) {
     // Save the source location for the diagnostics message.
@@ -346,6 +349,7 @@ void DILParser::BailOut(const std::string &error, uint32_t loc,
   m_dil_lexer.ResetTokenIdx(m_dil_lexer.NumLexedTokens() - 1);
 }
 
+// FIXME: Remove this once subscript operator uses ScalarLiteralNode.
 // Parse a integer_literal.
 //
 //  integer_literal:
@@ -368,6 +372,76 @@ std::optional<int64_t> DILParser::ParseIntegerConstant() {
   }
 
   return std::nullopt;
+}
+
+// Parse a numeric_literal.
+//
+//  numeric_literal:
+//    ? Token::integer_constant ?
+//    ? Token::floating_constant ?
+//
+ASTNodeUP DILParser::ParseNumericLiteral() {
+  ASTNodeUP numeric_constant;
+  if (CurToken().Is(Token::integer_constant))
+    numeric_constant = ParseIntegerLiteral();
+  else
+    numeric_constant = ParseFloatingPointLiteral();
+  if (numeric_constant->GetKind() == NodeKind::eErrorNode) {
+    BailOut(llvm::formatv("Failed to parse token as numeric-constant: {0}",
+                          CurToken()),
+            CurToken().GetLocation(), CurToken().GetSpelling().length());
+    return std::make_unique<ErrorNode>();
+  }
+  m_dil_lexer.Advance();
+  return numeric_constant;
+}
+
+ASTNodeUP DILParser::ParseIntegerLiteral() {
+  Token token = CurToken();
+  auto spelling = token.GetSpelling();
+  llvm::StringRef spelling_ref = spelling;
+
+  auto radix = llvm::getAutoSenseRadix(spelling_ref);
+  bool is_unsigned = false, is_long = false, is_longlong = false;
+  if (spelling_ref.consume_back_insensitive("u"))
+    is_unsigned = true;
+  if (spelling_ref.consume_back_insensitive("ll"))
+    is_longlong = true;
+  if (spelling_ref.consume_back_insensitive("l"))
+    is_long = true;
+  if (!is_unsigned && spelling_ref.consume_back_insensitive("u"))
+    is_unsigned = true;
+
+  llvm::APInt raw_value;
+  if (!spelling_ref.getAsInteger(radix, raw_value)) {
+    Scalar scalar_value(raw_value);
+    return std::make_unique<ScalarLiteralNode>(token.GetLocation(),
+                                               scalar_value, radix, is_unsigned,
+                                               is_long, is_longlong);
+  }
+  return std::make_unique<ErrorNode>();
+}
+
+ASTNodeUP DILParser::ParseFloatingPointLiteral() {
+  Token token = CurToken();
+  auto spelling = token.GetSpelling();
+  llvm::StringRef spelling_ref = spelling;
+
+  bool is_float = false;
+  llvm::APFloat raw_float(llvm::APFloat::IEEEdouble());
+  if (spelling_ref.consume_back_insensitive("f")) {
+    is_float = true;
+    raw_float = llvm::APFloat(llvm::APFloat::IEEEsingle());
+  }
+
+  auto StatusOrErr = raw_float.convertFromString(
+      spelling_ref, llvm::APFloat::rmNearestTiesToEven);
+  if (!errorToBool(StatusOrErr.takeError())) {
+    Scalar scalar_value(raw_float);
+    return std::make_unique<ScalarLiteralNode>(token.GetLocation(),
+                                               scalar_value, is_float);
+  }
+  return std::make_unique<ErrorNode>();
 }
 
 void DILParser::Expect(Token::Kind kind) {

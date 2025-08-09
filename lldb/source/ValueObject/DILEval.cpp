@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/ValueObject/DILEval.h"
+#include "lldb/Core/Module.h"
 #include "lldb/Symbol/CompileUnit.h"
+#include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/ValueObject/DILAST.h"
@@ -400,6 +402,122 @@ Interpreter::Visit(const BitFieldExtractionNode *node) {
                                                 node->GetLocation());
   }
   return child_valobj_sp;
+}
+
+static lldb::TypeSystemSP GetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx) {
+  SymbolContext symbol_context =
+      ctx->GetSymbolContext(lldb::eSymbolContextCompUnit);
+  lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
+
+  symbol_context = ctx->GetSymbolContext(lldb::eSymbolContextModule);
+  llvm::Expected<lldb::TypeSystemSP> type_system =
+      symbol_context.module_sp->GetTypeSystemForLanguage(language);
+
+  if (type_system)
+    return *type_system;
+
+  return lldb::TypeSystemSP();
+}
+
+static CompilerType GetBasicType(lldb::TypeSystemSP type_system,
+                                 lldb::BasicType basic_type) {
+  if (type_system)
+    if (auto compiler_type = type_system.get()->GetBasicTypeFromAST(basic_type))
+      return compiler_type;
+
+  CompilerType empty_type;
+  return empty_type;
+}
+
+llvm::Expected<CompilerType>
+Interpreter::PickLiteralType(lldb::TypeSystemSP type_system,
+                             std::shared_ptr<ExecutionContextScope> ctx,
+                             const ScalarLiteralNode *literal) {
+  Scalar scalar = literal->GetValue();
+  if (scalar.GetType() == Scalar::e_float) {
+    if (literal->IsFloat())
+      return GetBasicType(type_system, lldb::eBasicTypeFloat);
+    return GetBasicType(type_system, lldb::eBasicTypeDouble);
+  }
+  if (scalar.GetType() == Scalar::e_int) {
+    // Binary, Octal, Hexadecimal and literals with a U suffix are allowed to be
+    // an unsigned integer.
+    bool unsigned_is_allowed =
+        literal->IsUnsigned() || literal->GetRadix() != 10;
+
+    // Try int/unsigned int.
+    uint64_t int_byte_size = 0;
+    if (auto temp = GetBasicType(type_system, lldb::eBasicTypeInt)
+                        .GetByteSize(ctx.get()))
+      int_byte_size = *temp;
+    unsigned int_size = int_byte_size * CHAR_BIT;
+    llvm::APInt apint = scalar.GetAPSInt();
+    if (!literal->IsLong() && !literal->IsLongLong() &&
+        apint.isIntN(int_size)) {
+      if (!literal->IsUnsigned() && apint.isIntN(int_size - 1))
+        return GetBasicType(type_system, lldb::eBasicTypeInt);
+      if (unsigned_is_allowed)
+        return GetBasicType(type_system, lldb::eBasicTypeUnsignedInt);
+    }
+    // Try long/unsigned long.
+    uint64_t long_byte_size = 0;
+    if (auto temp = GetBasicType(type_system, lldb::eBasicTypeLong)
+                        .GetByteSize(ctx.get()))
+      long_byte_size = *temp;
+    unsigned long_size = long_byte_size * CHAR_BIT;
+    if (!literal->IsLongLong() && apint.isIntN(long_size)) {
+      if (!literal->IsUnsigned() && apint.isIntN(long_size - 1))
+        return GetBasicType(type_system, lldb::eBasicTypeLong);
+      if (unsigned_is_allowed)
+        return GetBasicType(type_system, lldb::eBasicTypeUnsignedLong);
+    }
+    // Try long long/unsigned long long.
+    uint64_t long_long_byte_size = 0;
+    if (auto temp = GetBasicType(type_system, lldb::eBasicTypeLongLong)
+                        .GetByteSize(ctx.get()))
+      long_long_byte_size = *temp;
+    unsigned long_long_size = long_long_byte_size * CHAR_BIT;
+    if (apint.isIntN(long_long_size)) {
+      if (!literal->IsUnsigned() && apint.isIntN(long_long_size - 1))
+        return GetBasicType(type_system, lldb::eBasicTypeLongLong);
+      // If we still couldn't decide a type, we probably have something that
+      // does not fit in a signed long long, but has no U suffix. Also known as:
+      //
+      //  warning: integer literal is too large to be represented in a signed
+      //  integer type, interpreting as unsigned [-Wimplicitly-unsigned-literal]
+      //
+      return GetBasicType(type_system, lldb::eBasicTypeUnsignedLongLong);
+    }
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr,
+        "integer literal is too large to be represented in any integer type",
+        literal->GetLocation());
+  }
+  return llvm::make_error<DILDiagnosticError>(
+      m_expr, "unable to create a const literal", literal->GetLocation());
+}
+
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::Visit(const ScalarLiteralNode *node) {
+  auto type_system = GetTypeSystemFromCU(m_exe_ctx_scope);
+  if (!type_system)
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, "unable to create a const literal", node->GetLocation());
+
+  auto type = PickLiteralType(type_system, m_exe_ctx_scope, node);
+  if (type) {
+    Scalar scalar = node->GetValue();
+    // APInt from StringRef::getAsInteger comes with just enough bitwidth to
+    // hold the value. This adjusts APInt bitwidth to match the compiler type.
+    if (scalar.GetType() == scalar.e_int) {
+      auto type_bitsize = type->GetBitSize(m_exe_ctx_scope.get());
+      if (type_bitsize)
+        scalar.TruncOrExtendTo(*type_bitsize, false);
+    }
+    return ValueObject::CreateValueObjectFromScalar(m_target, scalar, *type,
+                                                    "result");
+  } else
+    return type.takeError();
 }
 
 } // namespace lldb_private::dil

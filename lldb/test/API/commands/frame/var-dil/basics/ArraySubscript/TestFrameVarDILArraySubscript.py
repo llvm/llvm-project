@@ -66,7 +66,7 @@ class TestFrameVarDILArraySubscript(TestBase):
         self.expect(
             "frame var 'int_arr[1.0]'",
             error=True,
-            substrs=["expected 'r_square', got: <'.'"],
+            substrs=["failed to parse integer constant: <'1.0' (floating_constant)>"],
         )
 
         # Base should be a "pointer to T" and index should be of an integral type.
@@ -88,7 +88,7 @@ class TestFrameVarDILArraySubscript(TestBase):
         self.expect(
             "frame var '1[2]'",
             error=True,
-            substrs=["Unexpected token"],
+            substrs=["subscripted value is not an array or pointer"],
         )
 
         # Base should not be a pointer to void
