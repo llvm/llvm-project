@@ -325,7 +325,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
       const auto *RT = Spec.getType()->getAs<RecordType>();
       if (!RT)
         return nullptr;
-      const RecordDecl *BD = RT->getDecl();
+      const RecordDecl *BD = RT->getOriginalDecl()->getDefinitionOrSelf();
       const Record *BR = getOrCreateRecord(BD);
 
       const Descriptor *Desc = GetBaseDesc(BD, BR);
@@ -342,7 +342,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
       if (!RT)
         return nullptr;
 
-      const RecordDecl *BD = RT->getDecl();
+      const RecordDecl *BD = RT->getOriginalDecl()->getDefinitionOrSelf();
       const Record *BR = getOrCreateRecord(BD);
 
       const Descriptor *Desc = GetBaseDesc(BD, BR);
@@ -399,7 +399,8 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
 
   // Classes and structures.
   if (const auto *RT = Ty->getAs<RecordType>()) {
-    if (const auto *Record = getOrCreateRecord(RT->getDecl()))
+    if (const auto *Record =
+            getOrCreateRecord(RT->getOriginalDecl()->getDefinitionOrSelf()))
       return allocateDescriptor(D, Record, MDSize, IsConst, IsTemporary,
                                 IsMutable, IsVolatile);
     return allocateDescriptor(D, MDSize);

@@ -68,7 +68,7 @@ bool ABIInfo::isHomogeneousAggregate(QualType Ty, const Type *&Base,
       return false;
     Members *= NElements;
   } else if (const RecordType *RT = Ty->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getDecl();
+    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
     if (RD->hasFlexibleArrayMember())
       return false;
 
