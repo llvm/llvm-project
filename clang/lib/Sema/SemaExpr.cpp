@@ -10750,9 +10750,53 @@ static void DiagnoseBadDivideOrRemainderValues(Sema& S, ExprResult &LHS,
                             << IsDiv << RHS.get()->getSourceRange());
 }
 
+static void diagnoseScopedEnums(Sema &S, const SourceLocation Loc,
+                                const ExprResult &LHS, const ExprResult &RHS,
+                                BinaryOperatorKind Opc) {
+  const Expr *LHSExpr = LHS.get();
+  const Expr *RHSExpr = RHS.get();
+  if (!LHSExpr || !RHSExpr)
+    return;
+  const QualType LHSType = LHSExpr->getType();
+  const QualType RHSType = RHSExpr->getType();
+  const bool LHSIsScoped = LHSType->isScopedEnumeralType();
+  const bool RHSIsScoped = RHSType->isScopedEnumeralType();
+  if (!LHSIsScoped && !RHSIsScoped)
+    return;
+  if (!LHSIsScoped && !LHSType->isIntegralOrUnscopedEnumerationType())
+    return;
+  if (!RHSIsScoped && !RHSType->isIntegralOrUnscopedEnumerationType())
+    return;
+  if (BinaryOperator::isAssignmentOp(Opc) && LHSIsScoped)
+    return;
+  bool isCxx23 = S.getLangOpts().CPlusPlus23;
+  unsigned diagID =
+      isCxx23 ? diag::note_no_implicit_conversion_for_scoped_enum_cxx23
+              : diag::note_no_implicit_conversion_for_scoped_enum;
+  auto diagnosticHelper = [&S, isCxx23, diagID](const Expr *expr, const QualType type) {
+    SourceLocation beginLoc = expr->getBeginLoc();
+    QualType intType =
+        type->castAs<EnumType>()->getDecl()->getIntegerType();
+    std::string insertionString =
+        isCxx23 ? "std::to_underlying("
+                : "static_cast<" + intType.getAsString() + ">(";
+    S.Diag(beginLoc, diagID)
+        << FixItHint::CreateInsertion(beginLoc, insertionString)
+        << FixItHint::CreateInsertion(expr->getEndLoc(), ")");
+  };
+  if (LHSIsScoped) {
+    diagnosticHelper(LHSExpr, LHSType);
+  }
+  if (RHSIsScoped) {
+    diagnosticHelper(RHSExpr, RHSType);
+  }
+}
+
 QualType Sema::CheckMultiplyDivideOperands(ExprResult &LHS, ExprResult &RHS,
-                                           SourceLocation Loc,
-                                           bool IsCompAssign, bool IsDiv) {
+                                           SourceLocation Loc, BinaryOperatorKind Opc) {
+  bool IsCompAssign = Opc == BO_MulAssign || Opc == BO_DivAssign;
+  bool IsDiv = Opc == BO_Div || Opc == BO_DivAssign;
+
   checkArithmeticNull(*this, LHS, RHS, Loc, /*IsCompare=*/false);
 
   QualType LHSTy = LHS.get()->getType();
@@ -10780,9 +10824,11 @@ QualType Sema::CheckMultiplyDivideOperands(ExprResult &LHS, ExprResult &RHS,
   if (LHS.isInvalid() || RHS.isInvalid())
     return QualType();
 
-
-  if (compType.isNull() || !compType->isArithmeticType())
-    return InvalidOperands(Loc, LHS, RHS);
+  if (compType.isNull() || !compType->isArithmeticType()) {
+    InvalidOperands(Loc, LHS, RHS);
+    diagnoseScopedEnums(*this, Loc, LHS, RHS, Opc);
+    return QualType();
+  }
   if (IsDiv) {
     DetectPrecisionLossInComplexDivision(*this, RHS.get()->getType(), Loc);
     DiagnoseBadDivideOrRemainderValues(*this, LHS, RHS, Loc, IsDiv);
@@ -10845,8 +10891,12 @@ QualType Sema::CheckRemainderOperands(
 
   if (compType.isNull() ||
       (!compType->isIntegerType() &&
-       !(getLangOpts().HLSL && compType->isFloatingType())))
-    return InvalidOperands(Loc, LHS, RHS);
+       !(getLangOpts().HLSL && compType->isFloatingType()))) {
+    InvalidOperands(Loc, LHS, RHS);
+    diagnoseScopedEnums(*this, Loc, LHS, RHS,
+                        IsCompAssign ? BO_RemAssign : BO_Rem);
+    return QualType();
+  }
   DiagnoseBadDivideOrRemainderValues(*this, LHS, RHS, Loc, false /* IsDiv */);
   return compType;
 }
@@ -11202,7 +11252,9 @@ QualType Sema::CheckAdditionOperands(ExprResult &LHS, ExprResult &RHS,
     } else if (PExp->getType()->isObjCObjectPointerType()) {
       isObjCPointer = true;
     } else {
-      return InvalidOperands(Loc, LHS, RHS);
+      InvalidOperands(Loc, LHS, RHS);
+      diagnoseScopedEnums(*this, Loc, LHS, RHS, Opc);
+      return QualType();
     }
   }
   assert(PExp->getType()->isAnyPointerType());
@@ -11259,7 +11311,8 @@ QualType Sema::CheckAdditionOperands(ExprResult &LHS, ExprResult &RHS,
 // C99 6.5.6
 QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
                                         SourceLocation Loc,
-                                        QualType* CompLHSTy) {
+                                        BinaryOperatorKind Opc,
+                                        QualType *CompLHSTy) {
   checkArithmeticNull(*this, LHS, RHS, Loc, /*IsCompare=*/false);
 
   if (LHS.get()->getType()->isVectorType() ||
@@ -11404,7 +11457,9 @@ QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
     }
   }
 
-  return InvalidOperands(Loc, LHS, RHS);
+  InvalidOperands(Loc, LHS, RHS);
+  diagnoseScopedEnums(*this, Loc, LHS, RHS, Opc);
+  return QualType();
 }
 
 static bool isScopedEnumerationType(QualType T) {
@@ -11752,8 +11807,11 @@ QualType Sema::CheckShiftOperands(ExprResult &LHS, ExprResult &RHS,
   // Embedded-C 4.1.6.2.2: The LHS may also be fixed-point.
   if ((!LHSType->isFixedPointOrIntegerType() &&
        !LHSType->hasIntegerRepresentation()) ||
-      !RHSType->hasIntegerRepresentation())
-    return InvalidOperands(Loc, LHS, RHS);
+      !RHSType->hasIntegerRepresentation()) {
+    InvalidOperands(Loc, LHS, RHS);
+    diagnoseScopedEnums(*this, Loc, LHS, RHS, Opc);
+    return QualType();
+  }
 
   // C++0x: Don't allow scoped enums. FIXME: Use something better than
   // hasIntegerRepresentation() above instead of this.
@@ -12321,8 +12379,11 @@ static QualType checkArithmeticOrEnumeralThreeWayCompare(Sema &S,
       S.UsualArithmeticConversions(LHS, RHS, Loc, ArithConvKind::Comparison);
   if (LHS.isInvalid() || RHS.isInvalid())
     return QualType();
-  if (Type.isNull())
-    return S.InvalidOperands(Loc, LHS, RHS);
+  if (Type.isNull()) {
+    S.InvalidOperands(Loc, LHS, RHS);
+    diagnoseScopedEnums(S, Loc, LHS, RHS, BO_Cmp);
+    return QualType();
+  }
 
   std::optional<ComparisonCategoryType> CCT =
       getComparisonCategoryForBuiltinCmp(Type);
@@ -12354,8 +12415,11 @@ static QualType checkArithmeticOrEnumeralCompare(Sema &S, ExprResult &LHS,
       S.UsualArithmeticConversions(LHS, RHS, Loc, ArithConvKind::Comparison);
   if (LHS.isInvalid() || RHS.isInvalid())
     return QualType();
-  if (Type.isNull())
-    return S.InvalidOperands(Loc, LHS, RHS);
+  if (Type.isNull()) {
+    S.InvalidOperands(Loc, LHS, RHS);
+    diagnoseScopedEnums(S, Loc, LHS, RHS, Opc);
+    return QualType();
+  }
   assert(Type->isArithmeticType() || Type->isEnumeralType());
 
   if (Type->isAnyComplexType() && BinaryOperator::isRelationalOp(Opc))
@@ -13365,7 +13429,9 @@ inline QualType Sema::CheckBitwiseOperands(ExprResult &LHS, ExprResult &RHS,
 
   if (!compType.isNull() && compType->isIntegralOrUnscopedEnumerationType())
     return compType;
-  return InvalidOperands(Loc, LHS, RHS);
+  InvalidOperands(Loc, LHS, RHS);
+  diagnoseScopedEnums(*this, Loc, LHS, RHS, Opc);
+  return QualType();
 }
 
 // C99 6.5.[13,14]
@@ -13467,13 +13533,19 @@ inline QualType Sema::CheckLogicalOperands(ExprResult &LHS, ExprResult &RHS,
   // C++ [expr.log.or]p1
   // The operands are both contextually converted to type bool.
   ExprResult LHSRes = PerformContextuallyConvertToBool(LHS.get());
-  if (LHSRes.isInvalid())
-    return InvalidOperands(Loc, LHS, RHS);
+  if (LHSRes.isInvalid()) {
+    InvalidOperands(Loc, LHS, RHS);
+    diagnoseScopedEnums(*this, Loc, LHS, RHS, Opc);
+    return QualType();
+  }
   LHS = LHSRes;
 
   ExprResult RHSRes = PerformContextuallyConvertToBool(RHS.get());
-  if (RHSRes.isInvalid())
-    return InvalidOperands(Loc, LHS, RHS);
+  if (RHSRes.isInvalid()) {
+    InvalidOperands(Loc, LHS, RHS);
+    diagnoseScopedEnums(*this, Loc, LHS, RHS, Opc);
+    return QualType();
+  }
   RHS = RHSRes;
 
   // C++ [expr.log.and]p2
@@ -15069,8 +15141,7 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
   case BO_Mul:
   case BO_Div:
     ConvertHalfVec = true;
-    ResultTy = CheckMultiplyDivideOperands(LHS, RHS, OpLoc, false,
-                                           Opc == BO_Div);
+    ResultTy = CheckMultiplyDivideOperands(LHS, RHS, OpLoc, Opc);
     break;
   case BO_Rem:
     ResultTy = CheckRemainderOperands(LHS, RHS, OpLoc);
@@ -15081,7 +15152,7 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
     break;
   case BO_Sub:
     ConvertHalfVec = true;
-    ResultTy = CheckSubtractionOperands(LHS, RHS, OpLoc);
+    ResultTy = CheckSubtractionOperands(LHS, RHS, OpLoc, Opc);
     break;
   case BO_Shl:
   case BO_Shr:
@@ -15125,8 +15196,7 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
   case BO_MulAssign:
   case BO_DivAssign:
     ConvertHalfVec = true;
-    CompResultTy = CheckMultiplyDivideOperands(LHS, RHS, OpLoc, true,
-                                               Opc == BO_DivAssign);
+    CompResultTy = CheckMultiplyDivideOperands(LHS, RHS, OpLoc, Opc);
     CompLHSTy = CompResultTy;
     if (!CompResultTy.isNull() && !LHS.isInvalid() && !RHS.isInvalid())
       ResultTy =
@@ -15148,7 +15218,7 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
     break;
   case BO_SubAssign:
     ConvertHalfVec = true;
-    CompResultTy = CheckSubtractionOperands(LHS, RHS, OpLoc, &CompLHSTy);
+    CompResultTy = CheckSubtractionOperands(LHS, RHS, OpLoc, Opc, &CompLHSTy);
     if (!CompResultTy.isNull() && !LHS.isInvalid() && !RHS.isInvalid())
       ResultTy =
           CheckAssignmentOperands(LHS.get(), RHS, OpLoc, CompResultTy, Opc);
