@@ -888,9 +888,8 @@ KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
   Res.Zero |= (~BottomKnown).getLoBits(ResultBitsKnown);
   Res.One = BottomKnown.getLoBits(ResultBitsKnown);
 
-  // Self multiplying
   if (NoUndefSelfMultiply) {
-    // If X has TZ trailing zeroes, then bit (2 * TZ + 1) must be zero.
+    // If X has at least TZ trailing zeroes, then bit (2 * TZ + 1) must be zero.
     unsigned TwoTZP1 = 2 * TrailZero0 + 1;
     if (TwoTZP1 < BitWidth)
       Res.Zero.setBit(TwoTZP1);
