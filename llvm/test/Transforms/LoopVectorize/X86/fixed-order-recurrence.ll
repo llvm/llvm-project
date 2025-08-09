@@ -507,8 +507,8 @@ define void @test_first_order_recurrence_tried_to_scalarized(ptr %dst, i1 %c, i3
 ; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ 4, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[FOR:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[IV]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[FOR:%.*]] = phi i32 [ 4, [[SCALAR_PH]] ], [ [[IV]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 10, [[FOR]]
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds nuw i32, ptr [[DST]], i32 [[IV]]

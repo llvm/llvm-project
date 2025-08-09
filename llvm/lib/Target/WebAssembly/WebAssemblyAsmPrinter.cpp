@@ -183,10 +183,10 @@ MCSymbolWasm *WebAssemblyAsmPrinter::getMCSymbolForFunction(
           WebAssembly::signatureToString(Sig);
       report_fatal_error(Twine(Msg));
     }
-    WasmSym = cast<MCSymbolWasm>(
+    WasmSym = static_cast<MCSymbolWasm *>(
         GetExternalSymbolSymbol(getEmscriptenInvokeSymbolName(Sig)));
   } else {
-    WasmSym = cast<MCSymbolWasm>(getSymbol(F));
+    WasmSym = static_cast<MCSymbolWasm *>(getSymbol(F));
   }
   return WasmSym;
 }
@@ -198,9 +198,7 @@ void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   }
 
   assert(!GV->isThreadLocal());
-
-  MCSymbolWasm *Sym = cast<MCSymbolWasm>(getSymbol(GV));
-
+  auto *Sym = static_cast<MCSymbolWasm *>(getSymbol(GV));
   if (!Sym->getType()) {
     SmallVector<MVT, 1> VTs;
     Type *GlobalVT = GV->getValueType();
@@ -230,8 +228,7 @@ void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 }
 
 MCSymbol *WebAssemblyAsmPrinter::getOrCreateWasmSymbol(StringRef Name) {
-  auto *WasmSym = cast<MCSymbolWasm>(GetExternalSymbolSymbol(Name));
-
+  auto *WasmSym = static_cast<MCSymbolWasm *>(GetExternalSymbolSymbol(Name));
   // May be called multiple times, so early out.
   if (WasmSym->getType())
     return WasmSym;
@@ -324,7 +321,7 @@ void WebAssemblyAsmPrinter::emitDecls(const Module &M) {
   // not be found here.
   MachineModuleInfoWasm &MMIW = MMI->getObjFileInfo<MachineModuleInfoWasm>();
   for (StringRef Name : MMIW.MachineSymbolsUsed) {
-    auto *WasmSym = cast<MCSymbolWasm>(getOrCreateWasmSymbol(Name));
+    auto *WasmSym = static_cast<MCSymbolWasm *>(getOrCreateWasmSymbol(Name));
     if (WasmSym->isFunction()) {
       // TODO(wvo): is there any case where this overlaps with the call to
       // emitFunctionType in the loop below?
@@ -336,7 +333,7 @@ void WebAssemblyAsmPrinter::emitDecls(const Module &M) {
     // Emit .globaltype, .tagtype, or .tabletype declarations for extern
     // declarations, i.e. those that have only been declared (but not defined)
     // in the current module
-    auto Sym = cast_or_null<MCSymbolWasm>(It.getValue().Symbol);
+    auto Sym = static_cast<MCSymbolWasm *>(It.getValue().Symbol);
     if (Sym && !Sym->isDefined())
       emitSymbolType(Sym);
   }
@@ -393,7 +390,7 @@ void WebAssemblyAsmPrinter::emitDecls(const Module &M) {
     }
 
     if (F.hasFnAttribute("wasm-export-name")) {
-      auto *Sym = cast<MCSymbolWasm>(getSymbol(&F));
+      auto *Sym = static_cast<MCSymbolWasm *>(getSymbol(&F));
       StringRef Name = F.getFnAttribute("wasm-export-name").getValueAsString();
       Sym->setExportName(OutContext.allocateString(Name));
       getTargetStreamer()->emitExportName(Sym, Name);
@@ -629,7 +626,7 @@ void WebAssemblyAsmPrinter::EmitFunctionAttributes(Module &M) {
     auto *GV = cast<GlobalVariable>(CS->getOperand(1)->stripPointerCasts());
     StringRef AnnotationString;
     getConstantStringInfo(GV, AnnotationString);
-    auto *Sym = cast<MCSymbolWasm>(getSymbol(F));
+    auto *Sym = static_cast<MCSymbolWasm *>(getSymbol(F));
     CustomSections[AnnotationString].push_back(Sym);
   }
 
@@ -666,7 +663,7 @@ void WebAssemblyAsmPrinter::emitFunctionBodyStart() {
   computeSignatureVTs(F.getFunctionType(), &F, F, TM, ParamVTs, ResultVTs);
 
   auto Signature = signatureFromMVTs(OutContext, ResultVTs, ParamVTs);
-  auto *WasmSym = cast<MCSymbolWasm>(CurrentFnSym);
+  auto *WasmSym = static_cast<MCSymbolWasm *>(CurrentFnSym);
   WasmSym->setSignature(Signature);
   WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
 

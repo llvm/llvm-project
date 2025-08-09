@@ -1670,21 +1670,12 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
     const SCEV *EC =
         PSE.getSE()->getPredicatedExitCount(TheLoop, BB, &Predicates);
     if (isa<SCEVCouldNotCompute>(EC)) {
-      SmallVector<BasicBlock *, 2> Succs(successors(BB));
-      if (Succs.size() != 2) {
+      if (size(successors(BB)) != 2) {
         reportVectorizationFailure(
             "Early exiting block does not have exactly two successors",
             "Incorrect number of successors from early exiting block",
             "EarlyExitTooManySuccessors", ORE, TheLoop);
         return false;
-      }
-
-      BasicBlock *ExitBlock;
-      if (!TheLoop->contains(Succs[0]))
-        ExitBlock = Succs[0];
-      else {
-        assert(!TheLoop->contains(Succs[1]));
-        ExitBlock = Succs[1];
       }
 
       if (SingleUncountableExitingBlock) {

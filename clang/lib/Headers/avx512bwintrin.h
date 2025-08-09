@@ -25,6 +25,14 @@ typedef unsigned long long __mmask64;
   __attribute__((__always_inline__, __nodebug__,                               \
                  __target__("avx512bw,no-evex512")))
 
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+#define __DEFAULT_FN_ATTRS512_CONSTEXPR __DEFAULT_FN_ATTRS512 constexpr
+#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS constexpr
+#else
+#define __DEFAULT_FN_ATTRS512_CONSTEXPR __DEFAULT_FN_ATTRS512
+#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS
+#endif
+
 static __inline __mmask32 __DEFAULT_FN_ATTRS
 _knot_mask32(__mmask32 __M)
 {
@@ -438,7 +446,7 @@ _mm512_maskz_sub_epi16(__mmask32 __U, __m512i __A, __m512i __B) {
                                              (__v32hi)_mm512_setzero_si512());
 }
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS512
+static __inline__ __m512i __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_mullo_epi16 (__m512i __A, __m512i __B) {
   return (__m512i) ((__v32hu) __A * (__v32hu) __B);
 }
@@ -1082,7 +1090,7 @@ _mm512_maskz_mulhrs_epi16(__mmask32 __U, __m512i __A, __m512i __B)
                                          (__v32hi)_mm512_setzero_si512());
 }
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS512
+static __inline__ __m512i __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_mulhi_epi16(__m512i __A, __m512i __B)
 {
   return (__m512i)__builtin_ia32_pmulhw512((__v32hi) __A, (__v32hi) __B);
@@ -1105,10 +1113,10 @@ _mm512_maskz_mulhi_epi16(__mmask32 __U, __m512i __A, __m512i __B)
                                           (__v32hi)_mm512_setzero_si512());
 }
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS512
+static __inline__ __m512i __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_mulhi_epu16(__m512i __A, __m512i __B)
 {
-  return (__m512i)__builtin_ia32_pmulhuw512((__v32hi) __A, (__v32hi) __B);
+  return (__m512i)__builtin_ia32_pmulhuw512((__v32hu) __A, (__v32hu) __B);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS512
@@ -2010,5 +2018,7 @@ _mm512_sad_epu8 (__m512i __A, __m512i __B)
 
 #undef __DEFAULT_FN_ATTRS512
 #undef __DEFAULT_FN_ATTRS
+#undef __DEFAULT_FN_ATTRS512_CONSTEXPR
+#undef __DEFAULT_FN_ATTRS_CONSTEXPR
 
 #endif

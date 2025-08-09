@@ -40,6 +40,7 @@ template <class Emitter> class LoopScope;
 template <class Emitter> class LabelScope;
 template <class Emitter> class SwitchScope;
 template <class Emitter> class StmtExprScope;
+template <class Emitter> class LocOverrideScope;
 
 template <class Emitter> class Compiler;
 struct InitLink {
@@ -255,6 +256,8 @@ protected:
 
   OptPrimType classify(const Expr *E) const { return Ctx.classify(E); }
   OptPrimType classify(QualType Ty) const { return Ctx.classify(Ty); }
+  bool canClassify(const Expr *E) const { return Ctx.canClassify(E); }
+  bool canClassify(QualType T) const { return Ctx.canClassify(T); }
 
   /// Classifies a known primitive type.
   PrimType classifyPrim(QualType Ty) const {
@@ -333,6 +336,7 @@ private:
   friend class LabelScope<Emitter>;
   friend class SwitchScope<Emitter>;
   friend class StmtExprScope<Emitter>;
+  friend class LocOverrideScope<Emitter>;
 
   /// Emits a zero initializer.
   bool visitZeroInitializer(PrimType T, QualType QT, const Expr *E);
