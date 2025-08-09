@@ -1734,7 +1734,6 @@ StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc) {
                  Scope::DeclScope  | Scope::ControlScope;
   else
     ScopeFlags = Scope::BreakScope | Scope::ContinueScope;
-  ParseScope WhileScope(this, ScopeFlags);
 
   // Parse the condition.
   Sema::ConditionResult Cond;
@@ -1743,6 +1742,8 @@ StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc) {
   if (ParseParenExprOrCondition(nullptr, Cond, WhileLoc,
                                 Sema::ConditionKind::Boolean, LParen, RParen))
     return StmtError();
+
+  ParseScope WhileScope(this, ScopeFlags);
 
   // OpenACC Restricts a while-loop inside of certain construct/clause
   // combinations, so diagnose that here in OpenACC mode.
