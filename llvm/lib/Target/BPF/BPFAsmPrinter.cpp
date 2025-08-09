@@ -11,51 +11,34 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "BPFAsmPrinter.h"
 #include "BPF.h"
 #include "BPFInstrInfo.h"
 #include "BPFMCInstLower.h"
 #include "BTFDebug.h"
 #include "MCTargetDesc/BPFInstPrinter.h"
 #include "TargetInfo/BPFTargetInfo.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetLoweringObjectFile.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
-
-namespace {
-class BPFAsmPrinter : public AsmPrinter {
-public:
-  explicit BPFAsmPrinter(TargetMachine &TM,
-                         std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer), ID), BTF(nullptr) {}
-
-  StringRef getPassName() const override { return "BPF Assembly Printer"; }
-  bool doInitialization(Module &M) override;
-  void printOperand(const MachineInstr *MI, int OpNum, raw_ostream &O);
-  bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                       const char *ExtraCode, raw_ostream &O) override;
-  bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNum,
-                             const char *ExtraCode, raw_ostream &O) override;
-
-  void emitInstruction(const MachineInstr *MI) override;
-
-  static char ID;
-
-private:
-  BTFDebug *BTF;
-};
-} // namespace
 
 bool BPFAsmPrinter::doInitialization(Module &M) {
   AsmPrinter::doInitialization(M);
@@ -148,6 +131,50 @@ void BPFAsmPrinter::emitInstruction(const MachineInstr *MI) {
     MCInstLowering.Lower(MI, TmpInst);
   }
   EmitToStreamer(*OutStreamer, TmpInst);
+}
+
+MCSymbol *BPFAsmPrinter::getJTPublicSymbol(unsigned JTI) {
+  SmallString<60> Name;
+  raw_svector_ostream(Name)
+      << "BPF.JT." << MF->getFunctionNumber() << '.' << JTI;
+  MCSymbol *S = OutContext.getOrCreateSymbol(Name);
+  if (auto *ES = dyn_cast<MCSymbolELF>(S)) {
+    ES->setBinding(ELF::STB_GLOBAL);
+    ES->setType(ELF::STT_OBJECT);
+  }
+  return S;
+}
+
+void BPFAsmPrinter::emitJumpTableInfo() {
+  const MachineJumpTableInfo *MJTI = MF->getJumpTableInfo();
+  if (!MJTI)
+    return;
+
+  const std::vector<MachineJumpTableEntry> &JT = MJTI->getJumpTables();
+  if (JT.empty())
+    return;
+
+  const TargetLoweringObjectFile &TLOF = getObjFileLowering();
+  const Function &F = MF->getFunction();
+  MCSection *JTS = TLOF.getSectionForJumpTable(F, TM);
+  assert(MJTI->getEntryKind() == MachineJumpTableInfo::EK_BlockAddress);
+  unsigned EntrySize = MJTI->getEntrySize(getDataLayout());
+  OutStreamer->switchSection(JTS);
+  for (unsigned JTI = 0; JTI < JT.size(); JTI++) {
+    ArrayRef<MachineBasicBlock *> JTBBs = JT[JTI].MBBs;
+    if (JTBBs.empty())
+      continue;
+
+    MCSymbol *JTStart = getJTPublicSymbol(JTI);
+    OutStreamer->emitLabel(JTStart);
+    for (const MachineBasicBlock *MBB : JTBBs) {
+      const MCExpr *LHS = MCSymbolRefExpr::create(MBB->getSymbol(), OutContext);
+      OutStreamer->emitValue(LHS, EntrySize);
+    }
+    const MCExpr *JTSize =
+        MCConstantExpr::create(JTBBs.size() * EntrySize, OutContext);
+    OutStreamer->emitELFSize(JTStart, JTSize);
+  }
 }
 
 char BPFAsmPrinter::ID = 0;
