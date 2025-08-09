@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 def SDT_LoongArchXVPERM : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisSameAs<0, 1>,
-                                        SDTCisVec<2>, SDTCisInt<2>]>;
+                                               SDTCisVec<2>, SDTCisInt<2>]>;
 
 // Target nodes.
 def loongarch_xvpermi: SDNode<"LoongArchISD::XVPERMI", SDT_LoongArchV1RUimm>;

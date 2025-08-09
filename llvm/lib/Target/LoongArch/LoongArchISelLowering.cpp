@@ -412,6 +412,11 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine(ISD::BITCAST);
   }
 
+  // Set DAG combine for 'LASX' feature.
+
+  if (Subtarget.hasExtLASX())
+    setTargetDAGCombine(ISD::EXTRACT_VECTOR_ELT);
+
   // Compute derived properties from the register classes.
   computeRegisterProperties(Subtarget.getRegisterInfo());
 
@@ -2612,26 +2617,87 @@ LoongArchTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
   SDValue Vec = Op->getOperand(0);
   EVT VecTy = Vec->getValueType(0);
   SDValue Idx = Op->getOperand(1);
-  unsigned NumElts = VecTy.getVectorNumElements();
   SDLoc DL(Op);
+  MVT GRLenVT = Subtarget.getGRLenVT();
 
   assert(VecTy.is256BitVector() && "Unexpected EXTRACT_VECTOR_ELT vector type");
 
-  if (isa<ConstantSDNode>(Idx) && Idx->getAsZExtVal() < NumElts)
+  if (isa<ConstantSDNode>(Idx))
     return Op;
 
-  // TODO: Deal with other legal 256-bits vector types?
-  if (!isa<ConstantSDNode>(Idx) &&
-      (VecTy == MVT::v8i32 || VecTy == MVT::v8f32)) {
+  switch (VecTy.getSimpleVT().SimpleTy) {
+  default:
+    llvm_unreachable("Unexpected type");
+  case MVT::v32i8:
+  case MVT::v16i16: {
+    // Consider the source vector as v8i32 type.
+    SDValue NewVec = DAG.getBitcast(MVT::v8i32, Vec);
+
+    // Compute the adjusted index and use it to broadcast the vector.
+    // The original desired i8/i16 element is now replicated in each
+    // i32 lane of the splatted vector.
+    SDValue NewIdx = DAG.getNode(
+        LoongArchISD::BSTRPICK, DL, GRLenVT, Idx,
+        DAG.getConstant(31, DL, GRLenVT),
+        DAG.getConstant(((VecTy == MVT::v32i8) ? 2 : 1), DL, GRLenVT));
+    SDValue SplatIdx = DAG.getSplatBuildVector(MVT::v8i32, DL, NewIdx);
+    SDValue SplatValue =
+        DAG.getNode(LoongArchISD::XVPERM, DL, MVT::v8i32, NewVec, SplatIdx);
+    SDValue SplatVec = DAG.getBitcast(VecTy, SplatValue);
+
+    // Compute the local index of the original i8/i16 element within the
+    // i32 element and then use it to broadcast the vector. Each elements
+    // of the vector will be the desired element.
+    SDValue LocalIdx = DAG.getNode(
+        ISD::AND, DL, GRLenVT, Idx,
+        DAG.getConstant(((VecTy == MVT::v32i8) ? 3 : 1), DL, GRLenVT));
+    SDValue ExtractVec =
+        DAG.getNode(LoongArchISD::VREPLVE, DL, VecTy, SplatVec, LocalIdx);
+
+    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, ExtractVec,
+                       DAG.getConstant(0, DL, GRLenVT));
+  }
+  case MVT::v8i32:
+  case MVT::v8f32: {
     SDValue SplatIdx = DAG.getSplatBuildVector(MVT::v8i32, DL, Idx);
     SDValue SplatValue =
         DAG.getNode(LoongArchISD::XVPERM, DL, VecTy, Vec, SplatIdx);
 
     return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, SplatValue,
-                       DAG.getConstant(0, DL, Subtarget.getGRLenVT()));
+                       DAG.getConstant(0, DL, GRLenVT));
   }
+  case MVT::v4i64:
+  case MVT::v4f64: {
+    // Consider the source vector as v8i32 type.
+    SDValue NewVec = DAG.getBitcast(MVT::v8i32, Vec);
 
-  return SDValue();
+    // Split the original element index into low and high parts:
+    // Lo = Idx * 2, Hi = Idx * 2 + 1.
+    SDValue SplatIdx = DAG.getSplatBuildVector(MVT::v8i32, DL, Idx);
+    SDValue SplatIdxLo = DAG.getNode(LoongArchISD::VSLLI, DL, MVT::v8i32,
+                                     SplatIdx, DAG.getConstant(1, DL, GRLenVT));
+    SDValue SplatIdxHi =
+        DAG.getNode(ISD::ADD, DL, MVT::v8i32, SplatIdxLo,
+                    DAG.getSplatBuildVector(MVT::v8i32, DL,
+                                            DAG.getConstant(1, DL, GRLenVT)));
+
+    // Use the broadcasted index to broadcast the low and high parts of the
+    // vector separately.
+    SDValue SplatVecLo =
+        DAG.getNode(LoongArchISD::XVPERM, DL, MVT::v8i32, NewVec, SplatIdxLo);
+    SDValue SplatVecHi =
+        DAG.getNode(LoongArchISD::XVPERM, DL, MVT::v8i32, NewVec, SplatIdxHi);
+
+    // Combine the low and high i32 parts to reconstruct the original i64/f64
+    // element.
+    SDValue SplatValue = DAG.getNode(LoongArchISD::VILVL, DL, MVT::v8i32,
+                                     SplatVecHi, SplatVecLo);
+    SDValue ExtractVec = DAG.getBitcast(VecTy, SplatValue);
+
+    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, ExtractVec,
+                       DAG.getConstant(0, DL, GRLenVT));
+  }
+  }
 }
 
 SDValue
@@ -5846,6 +5912,42 @@ performSPLIT_PAIR_F64Combine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue
+performEXTRACT_VECTOR_ELTCombine(SDNode *N, SelectionDAG &DAG,
+                                 TargetLowering::DAGCombinerInfo &DCI,
+                                 const LoongArchSubtarget &Subtarget) {
+  if (!DCI.isBeforeLegalize())
+    return SDValue();
+
+  MVT EltVT = N->getSimpleValueType(0);
+  SDValue Vec = N->getOperand(0);
+  EVT VecTy = Vec->getValueType(0);
+  SDValue Idx = N->getOperand(1);
+  unsigned IdxOp = Idx.getOpcode();
+  SDLoc DL(N);
+
+  if (!VecTy.is256BitVector() || isa<ConstantSDNode>(Idx))
+    return SDValue();
+
+  // Combine:
+  //   t2 = truncate t1
+  //   t3 = {zero/sign/any}_extend t2
+  //   t4 = extract_vector_elt t0, t3
+  // to:
+  //   t4 = extract_vector_elt t0, t1
+  if (IdxOp == ISD::ZERO_EXTEND || IdxOp == ISD::SIGN_EXTEND ||
+      IdxOp == ISD::ANY_EXTEND) {
+    SDValue IdxOrig = Idx.getOperand(0);
+    if (!(IdxOrig.getOpcode() == ISD::TRUNCATE))
+      return SDValue();
+
+    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Vec,
+                       IdxOrig.getOperand(0));
+  }
+
+  return SDValue();
+}
+
 SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
                                                    DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -5875,6 +5977,8 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
     return performVMSKLTZCombine(N, DAG, DCI, Subtarget);
   case LoongArchISD::SPLIT_PAIR_F64:
     return performSPLIT_PAIR_F64Combine(N, DAG, DCI, Subtarget);
+  case ISD::EXTRACT_VECTOR_ELT:
+    return performEXTRACT_VECTOR_ELTCombine(N, DAG, DCI, Subtarget);
   }
   return SDValue();
 }
