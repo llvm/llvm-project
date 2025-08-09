@@ -16925,7 +16925,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
 
     if (RC) {
       if (NumRegs > 1) {
-        if (Idx >= RC->getNumRegs() || Idx + NumRegs - 1 > RC->getNumRegs())
+        if (Idx >= RC->getNumRegs() || Idx + NumRegs - 1 >= RC->getNumRegs())
           return std::pair(0U, nullptr);
 
         uint32_t Width = NumRegs * 32;

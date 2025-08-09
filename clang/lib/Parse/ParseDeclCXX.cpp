@@ -591,7 +591,7 @@ bool Parser::ParseUsingDeclarator(DeclaratorContext Context,
        NextToken().isRegularKeywordAttribute() ||
        NextToken().is(tok::kw___attribute)) &&
       D.SS.isNotEmpty() && LastII == Tok.getIdentifierInfo() &&
-      D.SS.getScopeRep()->getKind() != NestedNameSpecifier::Namespace) {
+      D.SS.getScopeRep().getKind() != NestedNameSpecifier::Kind::Namespace) {
     SourceLocation IdLoc = ConsumeToken();
     ParsedType Type =
         Actions.getInheritingConstructorName(D.SS, IdLoc, *LastII);

@@ -173,7 +173,7 @@ std::vector<Fix> IncludeFixer::fix(DiagnosticsEngine::Level DiagLevel,
           // `enum x : int;' is not formally an incomplete type.
           // We may need a full definition anyway.
           if (auto * ET = llvm::dyn_cast<EnumType>(T))
-            if (!ET->getDecl()->getDefinition())
+            if (!ET->getOriginalDecl()->getDefinition())
               return fixIncompleteType(*T);
         }
       }
@@ -400,35 +400,35 @@ std::optional<CheapUnresolvedName> extractUnresolvedNameCheaply(
   CheapUnresolvedName Result;
   Result.Name = Unresolved.getAsString();
   if (SS && SS->isNotEmpty()) { // "::" or "ns::"
-    if (auto *Nested = SS->getScopeRep()) {
-      if (Nested->getKind() == NestedNameSpecifier::Global) {
-        Result.ResolvedScope = "";
-      } else if (const NamespaceBaseDecl *NSB = Nested->getAsNamespace()) {
-        if (const auto *NS = dyn_cast<NamespaceDecl>(NSB)) {
-          std::string SpecifiedNS = printNamespaceScope(*NS);
-          std::optional<std::string> Spelling = getSpelledSpecifier(*SS, SM);
+    NestedNameSpecifier Nested = SS->getScopeRep();
+    if (Nested.getKind() == NestedNameSpecifier::Kind::Global) {
+      Result.ResolvedScope = "";
+    } else if (Nested.getKind() == NestedNameSpecifier::Kind::Namespace) {
+      const NamespaceBaseDecl *NSB = Nested.getAsNamespaceAndPrefix().Namespace;
+      if (const auto *NS = dyn_cast<NamespaceDecl>(NSB)) {
+        std::string SpecifiedNS = printNamespaceScope(*NS);
+        std::optional<std::string> Spelling = getSpelledSpecifier(*SS, SM);
 
-          // Check the specifier spelled in the source.
-          // If the resolved scope doesn't end with the spelled scope, the
-          // resolved scope may come from a sema typo correction. For example,
-          // sema assumes that "clangd::" is a typo of "clang::" and uses
-          // "clang::" as the specified scope in:
-          //     namespace clang { clangd::X; }
-          // In this case, we use the "typo" specifier as extra scope instead
-          // of using the scope assumed by sema.
-          if (!Spelling || llvm::StringRef(SpecifiedNS).ends_with(*Spelling)) {
-            Result.ResolvedScope = std::move(SpecifiedNS);
-          } else {
-            Result.UnresolvedScope = std::move(*Spelling);
-          }
+        // Check the specifier spelled in the source.
+        // If the resolved scope doesn't end with the spelled scope, the
+        // resolved scope may come from a sema typo correction. For example,
+        // sema assumes that "clangd::" is a typo of "clang::" and uses
+        // "clang::" as the specified scope in:
+        //     namespace clang { clangd::X; }
+        // In this case, we use the "typo" specifier as extra scope instead
+        // of using the scope assumed by sema.
+        if (!Spelling || llvm::StringRef(SpecifiedNS).ends_with(*Spelling)) {
+          Result.ResolvedScope = std::move(SpecifiedNS);
         } else {
-          Result.ResolvedScope = printNamespaceScope(*cast<NamespaceAliasDecl>(NSB)->getNamespace());
+          Result.UnresolvedScope = std::move(*Spelling);
         }
       } else {
-        // We don't fix symbols in scopes that are not top-level e.g. class
-        // members, as we don't collect includes for them.
-        return std::nullopt;
+        Result.ResolvedScope = printNamespaceScope(*cast<NamespaceAliasDecl>(NSB)->getNamespace());
       }
+    } else {
+      // We don't fix symbols in scopes that are not top-level e.g. class
+      // members, as we don't collect includes for them.
+      return std::nullopt;
     }
   }
 

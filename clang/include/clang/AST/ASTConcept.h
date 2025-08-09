@@ -15,7 +15,7 @@
 #define LLVM_CLANG_AST_ASTCONCEPT_H
 
 #include "clang/AST/DeclarationName.h"
-#include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/NestedNameSpecifierBase.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/UnsignedOrNone.h"
@@ -177,12 +177,7 @@ public:
 
   SourceLocation getLocation() const { return getConceptNameLoc(); }
 
-  SourceLocation getBeginLoc() const LLVM_READONLY {
-    // Note that if the qualifier is null the template KW must also be null.
-    if (auto QualifierLoc = getNestedNameSpecifierLoc())
-      return QualifierLoc.getBeginLoc();
-    return getConceptNameInfo().getBeginLoc();
-  }
+  SourceLocation getBeginLoc() const LLVM_READONLY;
 
   SourceLocation getEndLoc() const LLVM_READONLY {
     return getTemplateArgsAsWritten() &&

@@ -1420,79 +1420,25 @@ bool CursorVisitor::VisitDeclarationNameInfo(DeclarationNameInfo Name) {
   llvm_unreachable("Invalid DeclarationName::Kind!");
 }
 
-bool CursorVisitor::VisitNestedNameSpecifier(NestedNameSpecifier *NNS,
-                                             SourceRange Range) {
-  // FIXME: This whole routine is a hack to work around the lack of proper
-  // source information in nested-name-specifiers (PR5791). Since we do have
-  // a beginning source location, we can visit the first component of the
-  // nested-name-specifier, if it's a single-token component.
-  if (!NNS)
-    return false;
-
-  // Get the first component in the nested-name-specifier.
-  while (NestedNameSpecifier *Prefix = NNS->getPrefix())
-    NNS = Prefix;
-
-  switch (NNS->getKind()) {
-  case NestedNameSpecifier::Namespace:
-    return Visit(
-        MakeCursorNamespaceRef(NNS->getAsNamespace(), Range.getBegin(), TU));
-
-  case NestedNameSpecifier::TypeSpec: {
-    // If the type has a form where we know that the beginning of the source
-    // range matches up with a reference cursor. Visit the appropriate reference
-    // cursor.
-    const Type *T = NNS->getAsType();
-    if (const TypedefType *Typedef = dyn_cast<TypedefType>(T))
-      return Visit(MakeCursorTypeRef(Typedef->getDecl(), Range.getBegin(), TU));
-    if (const TagType *Tag = dyn_cast<TagType>(T))
-      return Visit(MakeCursorTypeRef(Tag->getDecl(), Range.getBegin(), TU));
-    if (const TemplateSpecializationType *TST =
-            dyn_cast<TemplateSpecializationType>(T))
-      return VisitTemplateName(TST->getTemplateName(), Range.getBegin());
-    break;
-  }
-
-  case NestedNameSpecifier::Global:
-  case NestedNameSpecifier::Identifier:
-  case NestedNameSpecifier::Super:
-    break;
-  }
-
-  return false;
-}
-
 bool CursorVisitor::VisitNestedNameSpecifierLoc(
     NestedNameSpecifierLoc Qualifier) {
-  SmallVector<NestedNameSpecifierLoc, 4> Qualifiers;
-  for (; Qualifier; Qualifier = Qualifier.getPrefix())
-    Qualifiers.push_back(Qualifier);
-
-  while (!Qualifiers.empty()) {
-    NestedNameSpecifierLoc Q = Qualifiers.pop_back_val();
-    NestedNameSpecifier *NNS = Q.getNestedNameSpecifier();
-    switch (NNS->getKind()) {
-    case NestedNameSpecifier::Namespace:
-      if (Visit(MakeCursorNamespaceRef(NNS->getAsNamespace(),
-                                       Q.getLocalBeginLoc(), TU)))
-        return true;
-
-      break;
-
-    case NestedNameSpecifier::TypeSpec:
-      if (Visit(Q.getTypeLoc()))
-        return true;
-
-      break;
-
-    case NestedNameSpecifier::Global:
-    case NestedNameSpecifier::Identifier:
-    case NestedNameSpecifier::Super:
-      break;
-    }
+  NestedNameSpecifier NNS = Qualifier.getNestedNameSpecifier();
+  switch (NNS.getKind()) {
+  case NestedNameSpecifier::Kind::Namespace: {
+    auto [Namespace, Prefix] = Qualifier.castAsNamespaceAndPrefix();
+    if (VisitNestedNameSpecifierLoc(Prefix))
+      return true;
+    return Visit(
+        MakeCursorNamespaceRef(Namespace, Qualifier.getLocalBeginLoc(), TU));
   }
-
-  return false;
+  case NestedNameSpecifier::Kind::Type:
+    return Visit(Qualifier.castAsTypeLoc());
+  case NestedNameSpecifier::Kind::Null:
+  case NestedNameSpecifier::Kind::Global:
+  case NestedNameSpecifier::Kind::MicrosoftSuper:
+    return false;
+  }
+  llvm_unreachable("unexpected nested name specifier kind");
 }
 
 bool CursorVisitor::VisitTemplateParameters(
@@ -1515,16 +1461,23 @@ bool CursorVisitor::VisitTemplateParameters(
   return false;
 }
 
-bool CursorVisitor::VisitTemplateName(TemplateName Name, SourceLocation Loc) {
+bool CursorVisitor::VisitTemplateName(TemplateName Name, SourceLocation NameLoc,
+                                      NestedNameSpecifierLoc NNS) {
   switch (Name.getKind()) {
+  case TemplateName::QualifiedTemplate: {
+    const QualifiedTemplateName *QTN = Name.getAsQualifiedTemplateName();
+    assert(QTN->getQualifier() == NNS.getNestedNameSpecifier());
+    if (VisitNestedNameSpecifierLoc(NNS))
+      return true;
+    return VisitTemplateName(QTN->getUnderlyingTemplate(), NameLoc, /*NNS=*/{});
+  }
   case TemplateName::Template:
   case TemplateName::UsingTemplate:
-  case TemplateName::QualifiedTemplate: // FIXME: Visit nested-name-specifier.
-    return Visit(MakeCursorTemplateRef(Name.getAsTemplateDecl(), Loc, TU));
+    return Visit(MakeCursorTemplateRef(Name.getAsTemplateDecl(), NameLoc, TU));
 
   case TemplateName::OverloadedTemplate:
     // Visit the overloaded template set.
-    if (Visit(MakeCursorOverloadedDeclRef(Name, Loc, TU)))
+    if (Visit(MakeCursorOverloadedDeclRef(Name, NameLoc, TU)))
       return true;
 
     return false;
@@ -1533,17 +1486,19 @@ bool CursorVisitor::VisitTemplateName(TemplateName Name, SourceLocation Loc) {
     // FIXME: Visit DeclarationName?
     return false;
 
-  case TemplateName::DependentTemplate:
-    // FIXME: Visit nested-name-specifier.
-    return false;
+  case TemplateName::DependentTemplate: {
+    assert(Name.getAsDependentTemplateName()->getQualifier() ==
+           NNS.getNestedNameSpecifier());
+    return VisitNestedNameSpecifierLoc(NNS);
+  }
 
   case TemplateName::SubstTemplateTemplateParm:
     return Visit(MakeCursorTemplateRef(
-        Name.getAsSubstTemplateTemplateParm()->getParameter(), Loc, TU));
+        Name.getAsSubstTemplateTemplateParm()->getParameter(), NameLoc, TU));
 
   case TemplateName::SubstTemplateTemplateParmPack:
     return Visit(MakeCursorTemplateRef(
-        Name.getAsSubstTemplateTemplateParmPack()->getParameterPack(), Loc,
+        Name.getAsSubstTemplateTemplateParmPack()->getParameterPack(), NameLoc,
         TU));
 
   case TemplateName::DeducedTemplate:
@@ -1587,11 +1542,9 @@ bool CursorVisitor::VisitTemplateArgumentLoc(const TemplateArgumentLoc &TAL) {
 
   case TemplateArgument::Template:
   case TemplateArgument::TemplateExpansion:
-    if (VisitNestedNameSpecifierLoc(TAL.getTemplateQualifierLoc()))
-      return true;
-
     return VisitTemplateName(TAL.getArgument().getAsTemplateOrTemplatePattern(),
-                             TAL.getTemplateNameLoc());
+                             TAL.getTemplateNameLoc(),
+                             TAL.getTemplateQualifierLoc());
   }
 
   llvm_unreachable("Invalid TemplateArgument::Kind!");
@@ -1669,7 +1622,10 @@ bool CursorVisitor::VisitBuiltinTypeLoc(BuiltinTypeLoc TL) {
 }
 
 bool CursorVisitor::VisitTypedefTypeLoc(TypedefTypeLoc TL) {
-  return Visit(MakeCursorTypeRef(TL.getTypedefNameDecl(), TL.getNameLoc(), TU));
+  if (VisitNestedNameSpecifierLoc(TL.getQualifierLoc()))
+    return true;
+
+  return Visit(MakeCursorTypeRef(TL.getDecl(), TL.getNameLoc(), TU));
 }
 
 bool CursorVisitor::VisitPredefinedSugarTypeLoc(PredefinedSugarTypeLoc TL) {
@@ -1677,14 +1633,20 @@ bool CursorVisitor::VisitPredefinedSugarTypeLoc(PredefinedSugarTypeLoc TL) {
 }
 
 bool CursorVisitor::VisitUnresolvedUsingTypeLoc(UnresolvedUsingTypeLoc TL) {
+  if (VisitNestedNameSpecifierLoc(TL.getQualifierLoc()))
+    return true;
+
   return Visit(MakeCursorTypeRef(TL.getDecl(), TL.getNameLoc(), TU));
 }
 
 bool CursorVisitor::VisitTagTypeLoc(TagTypeLoc TL) {
-  if (TL.isDefinition())
-    return Visit(MakeCXCursor(TL.getDecl(), TU, RegionOfInterest));
+  if (VisitNestedNameSpecifierLoc(TL.getQualifierLoc()))
+    return true;
 
-  return Visit(MakeCursorTypeRef(TL.getDecl(), TL.getNameLoc(), TU));
+  if (TL.isDefinition())
+    return Visit(MakeCXCursor(TL.getOriginalDecl(), TU, RegionOfInterest));
+
+  return Visit(MakeCursorTypeRef(TL.getOriginalDecl(), TL.getNameLoc(), TU));
 }
 
 bool CursorVisitor::VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc TL) {
@@ -1763,7 +1725,10 @@ bool CursorVisitor::VisitRValueReferenceTypeLoc(RValueReferenceTypeLoc TL) {
 }
 
 bool CursorVisitor::VisitUsingTypeLoc(UsingTypeLoc TL) {
-  auto *underlyingDecl = TL.getUnderlyingType()->getAsTagDecl();
+  if (VisitNestedNameSpecifierLoc(TL.getQualifierLoc()))
+    return true;
+
+  auto *underlyingDecl = TL.getTypePtr()->desugar()->getAsTagDecl();
   if (underlyingDecl) {
     return Visit(MakeCursorTypeRef(underlyingDecl, TL.getNameLoc(), TU));
   }
@@ -1826,7 +1791,7 @@ bool CursorVisitor::VisitAdjustedTypeLoc(AdjustedTypeLoc TL) {
 bool CursorVisitor::VisitDeducedTemplateSpecializationTypeLoc(
     DeducedTemplateSpecializationTypeLoc TL) {
   if (VisitTemplateName(TL.getTypePtr()->getTemplateName(),
-                        TL.getTemplateNameLoc()))
+                        TL.getTemplateNameLoc(), TL.getQualifierLoc()))
     return true;
 
   return false;
@@ -1836,7 +1801,7 @@ bool CursorVisitor::VisitTemplateSpecializationTypeLoc(
     TemplateSpecializationTypeLoc TL) {
   // Visit the template name.
   if (VisitTemplateName(TL.getTypePtr()->getTemplateName(),
-                        TL.getTemplateNameLoc()))
+                        TL.getTemplateNameLoc(), TL.getQualifierLoc()))
     return true;
 
   // Visit the template arguments.
@@ -1871,8 +1836,7 @@ bool CursorVisitor::VisitDependentNameTypeLoc(DependentNameTypeLoc TL) {
 
 bool CursorVisitor::VisitDependentTemplateSpecializationTypeLoc(
     DependentTemplateSpecializationTypeLoc TL) {
-  // Visit the nested-name-specifier, if there is one.
-  if (TL.getQualifierLoc() && VisitNestedNameSpecifierLoc(TL.getQualifierLoc()))
+  if (VisitNestedNameSpecifierLoc(TL.getQualifierLoc()))
     return true;
 
   // Visit the template arguments.
@@ -1881,13 +1845,6 @@ bool CursorVisitor::VisitDependentTemplateSpecializationTypeLoc(
       return true;
 
   return false;
-}
-
-bool CursorVisitor::VisitElaboratedTypeLoc(ElaboratedTypeLoc TL) {
-  if (VisitNestedNameSpecifierLoc(TL.getQualifierLoc()))
-    return true;
-
-  return Visit(TL.getNamedTypeLoc());
 }
 
 bool CursorVisitor::VisitPackExpansionTypeLoc(PackExpansionTypeLoc TL) {
@@ -1908,7 +1865,7 @@ bool CursorVisitor::VisitPackIndexingTypeLoc(PackIndexingTypeLoc TL) {
 }
 
 bool CursorVisitor::VisitInjectedClassNameTypeLoc(InjectedClassNameTypeLoc TL) {
-  return Visit(MakeCursorTypeRef(TL.getDecl(), TL.getNameLoc(), TU));
+  return Visit(MakeCursorTypeRef(TL.getOriginalDecl(), TL.getNameLoc(), TU));
 }
 
 bool CursorVisitor::VisitAtomicTypeLoc(AtomicTypeLoc TL) {
@@ -2065,7 +2022,7 @@ class NestedNameSpecifierLocVisit : public VisitorJob {
 public:
   NestedNameSpecifierLocVisit(NestedNameSpecifierLoc Qualifier, CXCursor parent)
       : VisitorJob(parent, VisitorJob::NestedNameSpecifierLocVisitKind,
-                   Qualifier.getNestedNameSpecifier(),
+                   Qualifier.getNestedNameSpecifier().getAsVoidPointer(),
                    Qualifier.getOpaqueData()) {}
 
   static bool classof(const VisitorJob *VJ) {
@@ -2074,8 +2031,7 @@ public:
 
   NestedNameSpecifierLoc get() const {
     return NestedNameSpecifierLoc(
-        const_cast<NestedNameSpecifier *>(
-            static_cast<const NestedNameSpecifier *>(data[0])),
+        NestedNameSpecifier::getFromVoidPointer(data[0]),
         const_cast<void *>(data[1]));
   }
 };
@@ -5363,9 +5319,13 @@ CXString clang_getCursorSpelling(CXCursor C) {
     case CXCursor_TypeRef: {
       const TypeDecl *Type = getCursorTypeRef(C).first;
       assert(Type && "Missing type decl");
+      const ASTContext &Ctx = getCursorContext(C);
+      QualType T = Ctx.getTypeDeclType(Type);
 
-      return cxstring::createDup(
-          getCursorContext(C).getTypeDeclType(Type).getAsString());
+      PrintingPolicy Policy = Ctx.getPrintingPolicy();
+      Policy.FullyQualifiedName = true;
+      Policy.SuppressTagKeyword = false;
+      return cxstring::createDup(T.getAsString(Policy));
     }
     case CXCursor_TemplateRef: {
       const TemplateDecl *Template = getCursorTemplateRef(C).first;

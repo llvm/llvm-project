@@ -2915,7 +2915,7 @@ createKmpTaskTRecordDecl(CodeGenModule &CGM, OpenMPDirectiveKind Kind,
   addFieldToRecordDecl(C, UD, KmpInt32Ty);
   addFieldToRecordDecl(C, UD, KmpRoutineEntryPointerQTy);
   UD->completeDefinition();
-  QualType KmpCmplrdataTy = C.getRecordType(UD);
+  CanQualType KmpCmplrdataTy = C.getCanonicalTagType(UD);
   RecordDecl *RD = C.buildImplicitRecord("kmp_task_t");
   RD->startDefinition();
   addFieldToRecordDecl(C, RD, C.VoidPtrTy);
@@ -2950,7 +2950,7 @@ createKmpTaskTWithPrivatesRecordDecl(CodeGenModule &CGM, QualType KmpTaskTQTy,
   RD->startDefinition();
   addFieldToRecordDecl(C, RD, KmpTaskTQTy);
   if (const RecordDecl *PrivateRD = createPrivatesRecordDecl(CGM, Privates))
-    addFieldToRecordDecl(C, RD, C.getRecordType(PrivateRD));
+    addFieldToRecordDecl(C, RD, C.getCanonicalTagType(PrivateRD));
   RD->completeDefinition();
   return RD;
 }
@@ -3582,7 +3582,7 @@ static void getKmpAffinityType(ASTContext &C, QualType &KmpTaskAffinityInfoTy) {
     addFieldToRecordDecl(C, KmpAffinityInfoRD, C.getSizeType());
     addFieldToRecordDecl(C, KmpAffinityInfoRD, FlagsTy);
     KmpAffinityInfoRD->completeDefinition();
-    KmpTaskAffinityInfoTy = C.getRecordType(KmpAffinityInfoRD);
+    KmpTaskAffinityInfoTy = C.getCanonicalTagType(KmpAffinityInfoRD);
   }
 }
 
@@ -3640,7 +3640,7 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
   // Build type kmp_task_t (if not built yet).
   if (isOpenMPTaskLoopDirective(D.getDirectiveKind())) {
     if (SavedKmpTaskloopTQTy.isNull()) {
-      SavedKmpTaskloopTQTy = C.getRecordType(createKmpTaskTRecordDecl(
+      SavedKmpTaskloopTQTy = C.getCanonicalTagType(createKmpTaskTRecordDecl(
           CGM, D.getDirectiveKind(), KmpInt32Ty, KmpRoutineEntryPtrQTy));
     }
     KmpTaskTQTy = SavedKmpTaskloopTQTy;
@@ -3650,7 +3650,7 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
             isOpenMPTargetDataManagementDirective(D.getDirectiveKind())) &&
            "Expected taskloop, task or target directive");
     if (SavedKmpTaskTQTy.isNull()) {
-      SavedKmpTaskTQTy = C.getRecordType(createKmpTaskTRecordDecl(
+      SavedKmpTaskTQTy = C.getCanonicalTagType(createKmpTaskTRecordDecl(
           CGM, D.getDirectiveKind(), KmpInt32Ty, KmpRoutineEntryPtrQTy));
     }
     KmpTaskTQTy = SavedKmpTaskTQTy;
@@ -3659,7 +3659,8 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
   // Build particular struct kmp_task_t for the given task.
   const RecordDecl *KmpTaskTWithPrivatesQTyRD =
       createKmpTaskTWithPrivatesRecordDecl(CGM, KmpTaskTQTy, Privates);
-  QualType KmpTaskTWithPrivatesQTy = C.getRecordType(KmpTaskTWithPrivatesQTyRD);
+  CanQualType KmpTaskTWithPrivatesQTy =
+      C.getCanonicalTagType(KmpTaskTWithPrivatesQTyRD);
   QualType KmpTaskTWithPrivatesPtrQTy =
       C.getPointerType(KmpTaskTWithPrivatesQTy);
   llvm::Type *KmpTaskTWithPrivatesPtrTy = CGF.Builder.getPtrTy(0);
@@ -3914,7 +3915,10 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
   // Fill the data in the resulting kmp_task_t record.
   // Copy shareds if there are any.
   Address KmpTaskSharedsPtr = Address::invalid();
-  if (!SharedsTy->getAsStructureType()->getDecl()->field_empty()) {
+  if (!SharedsTy->getAsStructureType()
+           ->getOriginalDecl()
+           ->getDefinitionOrSelf()
+           ->field_empty()) {
     KmpTaskSharedsPtr = Address(
         CGF.EmitLoadOfScalar(
             CGF.EmitLValueForField(
@@ -3944,8 +3948,11 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
   enum { Priority = 0, Destructors = 1 };
   // Provide pointer to function with destructors for privates.
   auto FI = std::next(KmpTaskTQTyRD->field_begin(), Data1);
-  const RecordDecl *KmpCmplrdataUD =
-      (*FI)->getType()->getAsUnionType()->getDecl();
+  const RecordDecl *KmpCmplrdataUD = (*FI)
+                                         ->getType()
+                                         ->getAsUnionType()
+                                         ->getOriginalDecl()
+                                         ->getDefinitionOrSelf();
   if (NeedsCleanup) {
     llvm::Value *DestructorFn = emitDestructorsFunction(
         CGM, Loc, KmpInt32Ty, KmpTaskTWithPrivatesPtrQTy,
@@ -4015,7 +4022,7 @@ static void getDependTypes(ASTContext &C, QualType &KmpDependInfoTy,
     addFieldToRecordDecl(C, KmpDependInfoRD, C.getSizeType());
     addFieldToRecordDecl(C, KmpDependInfoRD, FlagsTy);
     KmpDependInfoRD->completeDefinition();
-    KmpDependInfoTy = C.getRecordType(KmpDependInfoRD);
+    KmpDependInfoTy = C.getCanonicalTagType(KmpDependInfoRD);
   }
 }
 
@@ -5714,7 +5721,7 @@ llvm::Value *CGOpenMPRuntime::emitTaskReductionInit(
   const FieldDecl *FlagsFD = addFieldToRecordDecl(
       C, RD, C.getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/false));
   RD->completeDefinition();
-  QualType RDType = C.getRecordType(RD);
+  CanQualType RDType = C.getCanonicalTagType(RD);
   unsigned Size = Data.ReductionVars.size();
   llvm::APInt ArraySize(/*numBits=*/64, Size);
   QualType ArrayRDType =
@@ -10703,7 +10710,7 @@ static unsigned evaluateCDTSize(const FunctionDecl *FD,
     unsigned Offset = 0;
     if (const auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
       if (ParamAttrs[Offset].Kind == Vector)
-        CDT = C.getPointerType(C.getRecordType(MD->getParent()));
+        CDT = C.getPointerType(C.getCanonicalTagType(MD->getParent()));
       ++Offset;
     }
     if (CDT.isNull()) {
@@ -11285,7 +11292,7 @@ void CGOpenMPRuntime::emitDoacrossInit(CodeGenFunction &CGF,
     addFieldToRecordDecl(C, RD, Int64Ty);
     addFieldToRecordDecl(C, RD, Int64Ty);
     RD->completeDefinition();
-    KmpDimTy = C.getRecordType(RD);
+    KmpDimTy = C.getCanonicalTagType(RD);
   } else {
     RD = cast<RecordDecl>(KmpDimTy->getAsTagDecl());
   }
@@ -11781,7 +11788,7 @@ Address CGOpenMPRuntime::emitLastprivateConditionalInit(CodeGenFunction &CGF,
     VDField = addFieldToRecordDecl(C, RD, VD->getType().getNonReferenceType());
     FiredField = addFieldToRecordDecl(C, RD, C.CharTy);
     RD->completeDefinition();
-    NewType = C.getRecordType(RD);
+    NewType = C.getCanonicalTagType(RD);
     Address Addr = CGF.CreateMemTemp(NewType, C.getDeclAlign(VD), VD->getName());
     BaseLVal = CGF.MakeAddrLValue(Addr, NewType, AlignmentSource::Decl);
     I->getSecond().try_emplace(VD, NewType, VDField, FiredField, BaseLVal);

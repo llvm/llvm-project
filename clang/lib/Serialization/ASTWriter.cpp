@@ -345,6 +345,7 @@ public:
 
   void VisitArrayTypeLoc(ArrayTypeLoc TyLoc);
   void VisitFunctionTypeLoc(FunctionTypeLoc TyLoc);
+  void VisitTagTypeLoc(TagTypeLoc TL);
 };
 
 } // namespace
@@ -490,14 +491,20 @@ void TypeLocWriter::VisitFunctionNoProtoTypeLoc(FunctionNoProtoTypeLoc TL) {
 }
 
 void TypeLocWriter::VisitUnresolvedUsingTypeLoc(UnresolvedUsingTypeLoc TL) {
+  addSourceLocation(TL.getElaboratedKeywordLoc());
+  Record.AddNestedNameSpecifierLoc(TL.getQualifierLoc());
   addSourceLocation(TL.getNameLoc());
 }
 
 void TypeLocWriter::VisitUsingTypeLoc(UsingTypeLoc TL) {
+  addSourceLocation(TL.getElaboratedKeywordLoc());
+  Record.AddNestedNameSpecifierLoc(TL.getQualifierLoc());
   addSourceLocation(TL.getNameLoc());
 }
 
 void TypeLocWriter::VisitTypedefTypeLoc(TypedefTypeLoc TL) {
+  addSourceLocation(TL.getElaboratedKeywordLoc());
+  Record.AddNestedNameSpecifierLoc(TL.getQualifierLoc());
   addSourceLocation(TL.getNameLoc());
 }
 
@@ -564,16 +571,26 @@ void TypeLocWriter::VisitAutoTypeLoc(AutoTypeLoc TL) {
 
 void TypeLocWriter::VisitDeducedTemplateSpecializationTypeLoc(
     DeducedTemplateSpecializationTypeLoc TL) {
+  addSourceLocation(TL.getElaboratedKeywordLoc());
+  Record.AddNestedNameSpecifierLoc(TL.getQualifierLoc());
   addSourceLocation(TL.getTemplateNameLoc());
 }
 
-void TypeLocWriter::VisitRecordTypeLoc(RecordTypeLoc TL) {
+void TypeLocWriter::VisitTagTypeLoc(TagTypeLoc TL) {
+  addSourceLocation(TL.getElaboratedKeywordLoc());
+  Record.AddNestedNameSpecifierLoc(TL.getQualifierLoc());
   addSourceLocation(TL.getNameLoc());
 }
 
-void TypeLocWriter::VisitEnumTypeLoc(EnumTypeLoc TL) {
-  addSourceLocation(TL.getNameLoc());
+void TypeLocWriter::VisitRecordTypeLoc(RecordTypeLoc TL) {
+  VisitTagTypeLoc(TL);
 }
+
+void TypeLocWriter::VisitInjectedClassNameTypeLoc(InjectedClassNameTypeLoc TL) {
+  VisitTagTypeLoc(TL);
+}
+
+void TypeLocWriter::VisitEnumTypeLoc(EnumTypeLoc TL) { VisitTagTypeLoc(TL); }
 
 void TypeLocWriter::VisitAttributedTypeLoc(AttributedTypeLoc TL) {
   Record.AddAttr(TL.getAttr());
@@ -612,13 +629,14 @@ void TypeLocWriter::VisitSubstTemplateTypeParmPackTypeLoc(
 
 void TypeLocWriter::VisitTemplateSpecializationTypeLoc(
                                            TemplateSpecializationTypeLoc TL) {
+  addSourceLocation(TL.getElaboratedKeywordLoc());
+  Record.AddNestedNameSpecifierLoc(TL.getQualifierLoc());
   addSourceLocation(TL.getTemplateKeywordLoc());
   addSourceLocation(TL.getTemplateNameLoc());
   addSourceLocation(TL.getLAngleLoc());
   addSourceLocation(TL.getRAngleLoc());
   for (unsigned i = 0, e = TL.getNumArgs(); i != e; ++i)
-    Record.AddTemplateArgumentLocInfo(TL.getArgLoc(i).getArgument().getKind(),
-                                      TL.getArgLoc(i).getLocInfo());
+    Record.AddTemplateArgumentLocInfo(TL.getArgLoc(i));
 }
 
 void TypeLocWriter::VisitParenTypeLoc(ParenTypeLoc TL) {
@@ -628,15 +646,6 @@ void TypeLocWriter::VisitParenTypeLoc(ParenTypeLoc TL) {
 
 void TypeLocWriter::VisitMacroQualifiedTypeLoc(MacroQualifiedTypeLoc TL) {
   addSourceLocation(TL.getExpansionLoc());
-}
-
-void TypeLocWriter::VisitElaboratedTypeLoc(ElaboratedTypeLoc TL) {
-  addSourceLocation(TL.getElaboratedKeywordLoc());
-  Record.AddNestedNameSpecifierLoc(TL.getQualifierLoc());
-}
-
-void TypeLocWriter::VisitInjectedClassNameTypeLoc(InjectedClassNameTypeLoc TL) {
-  addSourceLocation(TL.getNameLoc());
 }
 
 void TypeLocWriter::VisitDependentNameTypeLoc(DependentNameTypeLoc TL) {
@@ -654,8 +663,7 @@ void TypeLocWriter::VisitDependentTemplateSpecializationTypeLoc(
   addSourceLocation(TL.getLAngleLoc());
   addSourceLocation(TL.getRAngleLoc());
   for (unsigned I = 0, E = TL.getNumArgs(); I != E; ++I)
-    Record.AddTemplateArgumentLocInfo(TL.getArgLoc(I).getArgument().getKind(),
-                                      TL.getArgLoc(I).getLocInfo());
+    Record.AddTemplateArgumentLocInfo(TL.getArgLoc(I));
 }
 
 void TypeLocWriter::VisitPackExpansionTypeLoc(PackExpansionTypeLoc TL) {
@@ -1038,7 +1046,6 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(TYPE_OBJC_INTERFACE);
   RECORD(TYPE_OBJC_OBJECT_POINTER);
   RECORD(TYPE_DECLTYPE);
-  RECORD(TYPE_ELABORATED);
   RECORD(TYPE_SUBST_TEMPLATE_TYPE_PARM);
   RECORD(TYPE_UNRESOLVED_USING);
   RECORD(TYPE_INJECTED_CLASS_NAME);
@@ -6769,22 +6776,22 @@ void ASTRecordWriter::AddCXXTemporary(const CXXTemporary *Temp) {
 }
 
 void ASTRecordWriter::AddTemplateArgumentLocInfo(
-    TemplateArgument::ArgKind Kind, const TemplateArgumentLocInfo &Arg) {
-  switch (Kind) {
+    const TemplateArgumentLoc &Arg) {
+  const TemplateArgumentLocInfo &Info = Arg.getLocInfo();
+  switch (auto K = Arg.getArgument().getKind()) {
   case TemplateArgument::Expression:
-    AddStmt(Arg.getAsExpr());
+    AddStmt(Info.getAsExpr());
     break;
   case TemplateArgument::Type:
-    AddTypeSourceInfo(Arg.getAsTypeSourceInfo());
+    AddTypeSourceInfo(Info.getAsTypeSourceInfo());
     break;
   case TemplateArgument::Template:
-    AddNestedNameSpecifierLoc(Arg.getTemplateQualifierLoc());
-    AddSourceLocation(Arg.getTemplateNameLoc());
-    break;
   case TemplateArgument::TemplateExpansion:
+    AddSourceLocation(Arg.getTemplateKWLoc());
     AddNestedNameSpecifierLoc(Arg.getTemplateQualifierLoc());
     AddSourceLocation(Arg.getTemplateNameLoc());
-    AddSourceLocation(Arg.getTemplateEllipsisLoc());
+    if (K == TemplateArgument::TemplateExpansion)
+      AddSourceLocation(Arg.getTemplateEllipsisLoc());
     break;
   case TemplateArgument::Null:
   case TemplateArgument::Integral:
@@ -6807,7 +6814,7 @@ void ASTRecordWriter::AddTemplateArgumentLoc(const TemplateArgumentLoc &Arg) {
     if (InfoHasSameExpr)
       return; // Avoid storing the same expr twice.
   }
-  AddTemplateArgumentLocInfo(Arg.getArgument().getKind(), Arg.getLocInfo());
+  AddTemplateArgumentLocInfo(Arg);
 }
 
 void ASTRecordWriter::AddTypeSourceInfo(TypeSourceInfo *TInfo) {
@@ -7065,49 +7072,50 @@ void ASTRecordWriter::AddQualifierInfo(const QualifierInfo &Info) {
     AddTemplateParameterList(Info.TemplParamLists[i]);
 }
 
-void ASTRecordWriter::AddNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS) {
+void ASTRecordWriter::AddNestedNameSpecifierLoc(
+    NestedNameSpecifierLoc QualifierLoc) {
   // Nested name specifiers usually aren't too long. I think that 8 would
   // typically accommodate the vast majority.
   SmallVector<NestedNameSpecifierLoc , 8> NestedNames;
 
   // Push each of the nested-name-specifiers's onto a stack for
   // serialization in reverse order.
-  while (NNS) {
-    NestedNames.push_back(NNS);
-    NNS = NNS.getPrefix();
+  while (QualifierLoc) {
+    NestedNames.push_back(QualifierLoc);
+    QualifierLoc = QualifierLoc.getAsNamespaceAndPrefix().Prefix;
   }
 
   Record->push_back(NestedNames.size());
   while(!NestedNames.empty()) {
-    NNS = NestedNames.pop_back_val();
-    NestedNameSpecifier::SpecifierKind Kind
-      = NNS.getNestedNameSpecifier()->getKind();
-    Record->push_back(Kind);
+    QualifierLoc = NestedNames.pop_back_val();
+    NestedNameSpecifier Qualifier = QualifierLoc.getNestedNameSpecifier();
+    NestedNameSpecifier::Kind Kind = Qualifier.getKind();
+    Record->push_back(llvm::to_underlying(Kind));
     switch (Kind) {
-    case NestedNameSpecifier::Identifier:
-      AddIdentifierRef(NNS.getNestedNameSpecifier()->getAsIdentifier());
-      AddSourceRange(NNS.getLocalSourceRange());
+    case NestedNameSpecifier::Kind::Namespace:
+      AddDeclRef(Qualifier.getAsNamespaceAndPrefix().Namespace);
+      AddSourceRange(QualifierLoc.getLocalSourceRange());
       break;
 
-    case NestedNameSpecifier::Namespace:
-      AddDeclRef(NNS.getNestedNameSpecifier()->getAsNamespace());
-      AddSourceRange(NNS.getLocalSourceRange());
+    case NestedNameSpecifier::Kind::Type: {
+      TypeLoc TL = QualifierLoc.castAsTypeLoc();
+      AddTypeRef(TL.getType());
+      AddTypeLoc(TL);
+      AddSourceLocation(QualifierLoc.getLocalSourceRange().getEnd());
+      break;
+    }
+
+    case NestedNameSpecifier::Kind::Global:
+      AddSourceLocation(QualifierLoc.getLocalSourceRange().getEnd());
       break;
 
-    case NestedNameSpecifier::TypeSpec:
-      AddTypeRef(NNS.getTypeLoc().getType());
-      AddTypeLoc(NNS.getTypeLoc());
-      AddSourceLocation(NNS.getLocalSourceRange().getEnd());
+    case NestedNameSpecifier::Kind::MicrosoftSuper:
+      AddDeclRef(Qualifier.getAsMicrosoftSuper());
+      AddSourceRange(QualifierLoc.getLocalSourceRange());
       break;
 
-    case NestedNameSpecifier::Global:
-      AddSourceLocation(NNS.getLocalSourceRange().getEnd());
-      break;
-
-    case NestedNameSpecifier::Super:
-      AddDeclRef(NNS.getNestedNameSpecifier()->getAsRecordDecl());
-      AddSourceRange(NNS.getLocalSourceRange());
-      break;
+    case NestedNameSpecifier::Kind::Null:
+      llvm_unreachable("unexpected null nested name specifier");
     }
   }
 }

@@ -1770,10 +1770,7 @@ inline bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off,
   const Record *TargetRecord = Ptr.atFieldSub(Off).getRecord();
   assert(TargetRecord);
 
-  if (TargetRecord->getDecl()
-          ->getTypeForDecl()
-          ->getAsCXXRecordDecl()
-          ->getCanonicalDecl() !=
+  if (TargetRecord->getDecl()->getCanonicalDecl() !=
       TargetType->getAsCXXRecordDecl()->getCanonicalDecl()) {
     QualType MostDerivedType = Ptr.getDeclDesc()->getType();
     S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_downcast)

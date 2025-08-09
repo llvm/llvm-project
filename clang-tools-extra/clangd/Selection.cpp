@@ -62,7 +62,8 @@ void recordMetrics(const SelectionTree &S, const LangOptions &Lang) {
 }
 
 // Return the range covering a node and all its children.
-SourceRange getSourceRange(const DynTypedNode &N) {
+SourceRange getSourceRange(const DynTypedNode &N,
+                           bool IncludeQualifier = false) {
   // MemberExprs to implicitly access anonymous fields should not claim any
   // tokens for themselves. Given:
   //   struct A { struct { int b; }; };
@@ -80,7 +81,7 @@ SourceRange getSourceRange(const DynTypedNode &N) {
                  ? getSourceRange(DynTypedNode::create(*ME->getBase()))
                  : SourceRange();
   }
-  return N.getSourceRange();
+  return N.getSourceRange(IncludeQualifier);
 }
 
 // An IntervalSet maintains a set of disjoint subranges of an array.
@@ -643,8 +644,9 @@ public:
     }
     return traverseNode(X, [&] { return Base::TraverseDecl(X); });
   }
-  bool TraverseTypeLoc(TypeLoc X) {
-    return traverseNode(&X, [&] { return Base::TraverseTypeLoc(X); });
+  bool TraverseTypeLoc(TypeLoc X, bool TraverseQualifier = true) {
+    return traverseNode(
+        &X, [&] { return Base::TraverseTypeLoc(X, TraverseQualifier); });
   }
   bool TraverseTemplateArgumentLoc(const TemplateArgumentLoc &X) {
     return traverseNode(&X,
@@ -690,7 +692,8 @@ public:
   // This means we'd never see 'int' in 'const int'! Work around that here.
   // (The reason for the behavior is to avoid traversing the nested Type twice,
   // but we ignore TraverseType anyway).
-  bool TraverseQualifiedTypeLoc(QualifiedTypeLoc QX) {
+  bool TraverseQualifiedTypeLoc(QualifiedTypeLoc QX,
+                                bool TraverseQualifier = true) {
     return traverseNode<TypeLoc>(
         &QX, [&] { return TraverseTypeLoc(QX.getUnqualifiedLoc()); });
   }
@@ -698,7 +701,7 @@ public:
     return traverseNode(&PL, [&] { return Base::TraverseObjCProtocolLoc(PL); });
   }
   // Uninteresting parts of the AST that don't have locations within them.
-  bool TraverseNestedNameSpecifier(NestedNameSpecifier *) { return true; }
+  bool TraverseNestedNameSpecifier(NestedNameSpecifier) { return true; }
   bool TraverseType(QualType) { return true; }
 
   // The DeclStmt for the loop variable claims to cover the whole range
@@ -798,7 +801,7 @@ private:
   // An optimization for a common case: nodes outside macro expansions that
   // don't intersect the selection may be recursively skipped.
   bool canSafelySkipNode(const DynTypedNode &N) {
-    SourceRange S = getSourceRange(N);
+    SourceRange S = getSourceRange(N, /*IncludeQualifier=*/true);
     if (auto *TL = N.get<TypeLoc>()) {
       // FIXME: TypeLoc::getBeginLoc()/getEndLoc() are pretty fragile
       // heuristics. We should consider only pruning critical TypeLoc nodes, to

@@ -102,7 +102,7 @@ Sema::ShouldDiagnoseAvailabilityOfDecl(const NamedDecl *D, std::string *Message,
       break;
     for (const Type *T = TD->getUnderlyingType().getTypePtr(); /**/; /**/) {
       if (auto *TT = dyn_cast<TagType>(T)) {
-        D = TT->getDecl();
+        D = TT->getOriginalDecl()->getDefinitionOrSelf();
       } else if (isa<SubstTemplateTypeParmType>(T)) {
         // A Subst* node represents a use through a template.
         // Any uses of the underlying declaration happened through it's template
@@ -1017,7 +1017,7 @@ bool DiagnoseUnguardedAvailability::VisitTypeLoc(TypeLoc Ty) {
     return true;
 
   if (const auto *TT = dyn_cast<TagType>(TyPtr)) {
-    TagDecl *TD = TT->getDecl();
+    TagDecl *TD = TT->getOriginalDecl()->getDefinitionOrSelf();
     DiagnoseDeclAvailability(TD, Range);
 
   } else if (const auto *TD = dyn_cast<TypedefType>(TyPtr)) {

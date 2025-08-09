@@ -43,12 +43,7 @@ public:
         TLI(ST->getTargetLowering()) {}
 
   bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
-                     const TargetTransformInfo::LSRCost &C2) const override {
-    if (C2.Insns == ~0u)
-      return true;
-    return 2 * C1.Insns + C1.AddRecCost + C1.SetupCost + C1.NumRegs <
-           2 * C2.Insns + C2.AddRecCost + C2.SetupCost + C2.NumRegs;
-  }
+                     const TargetTransformInfo::LSRCost &C2) const override;
 };
 
 } // end namespace llvm

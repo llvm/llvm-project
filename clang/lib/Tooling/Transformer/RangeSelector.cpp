@@ -222,14 +222,10 @@ RangeSelector transformer::name(std::string ID) {
       return CharSourceRange::getTokenRange(L, L);
     }
     if (const auto *T = Node.get<TypeLoc>()) {
-      TypeLoc Loc = *T;
-      auto ET = Loc.getAs<ElaboratedTypeLoc>();
-      if (!ET.isNull())
-        Loc = ET.getNamedTypeLoc();
-      if (auto SpecLoc = Loc.getAs<TemplateSpecializationTypeLoc>();
+      if (auto SpecLoc = T->getAs<TemplateSpecializationTypeLoc>();
           !SpecLoc.isNull())
         return CharSourceRange::getTokenRange(SpecLoc.getTemplateNameLoc());
-      return CharSourceRange::getTokenRange(Loc.getSourceRange());
+      return CharSourceRange::getTokenRange(T->getSourceRange());
     }
     return typeError(ID, Node.getNodeKind(),
                      "DeclRefExpr, NamedDecl, CXXCtorInitializer, TypeLoc");

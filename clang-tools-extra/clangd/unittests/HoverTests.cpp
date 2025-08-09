@@ -2894,7 +2894,7 @@ TEST(Hover, All) {
           )cpp",
           [](HoverInfo &HI) {
             HI.Name = "this";
-            HI.Definition = "const Foo<T> *";
+            HI.Definition = "const ns::Foo<T> *";
           }},
       {
           R"cpp(// this expr for specialization class
@@ -2910,7 +2910,7 @@ TEST(Hover, All) {
           )cpp",
           [](HoverInfo &HI) {
             HI.Name = "this";
-            HI.Definition = "Foo<int> *";
+            HI.Definition = "ns::Foo<int> *";
           }},
       {
           R"cpp(// this expr for partial specialization struct
@@ -2926,7 +2926,7 @@ TEST(Hover, All) {
           )cpp",
           [](HoverInfo &HI) {
             HI.Name = "this";
-            HI.Definition = "const Foo<int, F> *";
+            HI.Definition = "const ns::Foo<int, F> *";
           }},
       {
           R"cpp(
@@ -3046,8 +3046,8 @@ TEST(Hover, All) {
          HI.Kind = index::SymbolKind::Function;
          HI.NamespaceScope = "";
          HI.Definition = "MyRect foobar()";
-         HI.Type = {"MyRect ()", "MyRect ()"};
-         HI.ReturnType = {"MyRect", "MyRect"};
+         HI.Type = {"MyRect ()", "struct MyRect ()"};
+         HI.ReturnType = {"MyRect", "struct MyRect"};
          HI.Parameters.emplace();
        }},
       {R"cpp(

@@ -894,7 +894,7 @@ bool Sema::LookupInlineAsmField(StringRef Base, StringRef Member,
         QT = PT->getPointeeType();
       RT = QT->getAs<RecordType>();
     } else if (TypeDecl *TD = dyn_cast<TypeDecl>(FoundDecl))
-      RT = TD->getTypeForDecl()->getAs<RecordType>();
+      RT = Context.getTypeDeclType(TD)->getAs<RecordType>();
     else if (FieldDecl *TD = dyn_cast<FieldDecl>(FoundDecl))
       RT = TD->getType()->getAs<RecordType>();
     if (!RT)
@@ -907,7 +907,8 @@ bool Sema::LookupInlineAsmField(StringRef Base, StringRef Member,
     LookupResult FieldResult(*this, &Context.Idents.get(NextMember),
                              SourceLocation(), LookupMemberName);
 
-    if (!LookupQualifiedName(FieldResult, RT->getDecl()))
+    RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+    if (!LookupQualifiedName(FieldResult, RD))
       return true;
 
     if (!FieldResult.isSingleResult())
@@ -919,7 +920,7 @@ bool Sema::LookupInlineAsmField(StringRef Base, StringRef Member,
     if (!FD)
       return true;
 
-    const ASTRecordLayout &RL = Context.getASTRecordLayout(RT->getDecl());
+    const ASTRecordLayout &RL = Context.getASTRecordLayout(RD);
     unsigned i = FD->getFieldIndex();
     CharUnits Result = Context.toCharUnitsFromBits(RL.getFieldOffset(i));
     Offset += (unsigned)Result.getQuantity();
@@ -951,7 +952,8 @@ Sema::LookupInlineAsmVarDeclField(Expr *E, StringRef Member,
   LookupResult FieldResult(*this, &Context.Idents.get(Member), AsmLoc,
                            LookupMemberName);
 
-  if (!LookupQualifiedName(FieldResult, RT->getDecl()))
+  if (!LookupQualifiedName(FieldResult,
+                           RT->getOriginalDecl()->getDefinitionOrSelf()))
     return ExprResult();
 
   // Only normal and indirect field results will work.

@@ -37,15 +37,13 @@ void UseTransparentFunctorsCheck::registerMatchers(MatchFinder *Finder) {
 
   // Non-transparent functor mentioned as a template parameter. FIXIT.
   Finder->addMatcher(
-      loc(qualType(
-              unless(elaboratedType()),
-              hasDeclaration(classTemplateSpecializationDecl(
-                  unless(hasAnyTemplateArgument(templateArgument(refersToType(
-                      qualType(pointsTo(qualType(isAnyCharacter()))))))),
-                  hasAnyTemplateArgument(
-                      templateArgument(refersToType(qualType(hasDeclaration(
-                                           TransparentFunctors))))
-                          .bind("Functor"))))))
+      loc(qualType(hasDeclaration(classTemplateSpecializationDecl(
+              unless(hasAnyTemplateArgument(templateArgument(refersToType(
+                  qualType(pointsTo(qualType(isAnyCharacter()))))))),
+              hasAnyTemplateArgument(
+                  templateArgument(refersToType(qualType(
+                                       hasDeclaration(TransparentFunctors))))
+                      .bind("Functor"))))))
           .bind("FunctorParentLoc"),
       this);
 

@@ -162,7 +162,8 @@ SimplifiedTypeClass getSimplifiedTypeClass(CanQualType T);
 
 /// Determine the type that this declaration will have if it is used
 /// as a type or in an expression.
-QualType getDeclUsageType(ASTContext &C, const NamedDecl *ND);
+QualType getDeclUsageType(ASTContext &C, NestedNameSpecifier Qualifier,
+                          const NamedDecl *ND);
 
 /// Determine the priority to be given to a macro code completion result
 /// with the given name.
@@ -867,7 +868,7 @@ public:
   /// If the result should have a nested-name-specifier, this is it.
   /// When \c QualifierIsInformative, the nested-name-specifier is
   /// informative rather than required.
-  NestedNameSpecifier *Qualifier = nullptr;
+  NestedNameSpecifier Qualifier = std::nullopt;
 
   /// If this Decl was unshadowed by using declaration, this can store a
   /// pointer to the UsingShadowDecl which was used in the unshadowing process.
@@ -882,7 +883,7 @@ public:
 
   /// Build a result that refers to a declaration.
   CodeCompletionResult(const NamedDecl *Declaration, unsigned Priority,
-                       NestedNameSpecifier *Qualifier = nullptr,
+                       NestedNameSpecifier Qualifier = std::nullopt,
                        bool QualifierIsInformative = false,
                        bool Accessible = true,
                        std::vector<FixItHint> FixIts = std::vector<FixItHint>())

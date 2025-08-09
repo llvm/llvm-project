@@ -402,7 +402,7 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK-tokens: Identifier: "getKind" [33:17 - 33:24] CXXMethod=getKind:33:17 (static)
 // CHECK-tokens: Punctuation: "(" [33:24 - 33:25] CXXMethod=getKind:33:17 (static)
 // CHECK-tokens: Keyword: "const" [33:25 - 33:30] ParmDecl=Name:33:48 (Definition)
-// CHECK-tokens: Identifier: "IdentifierInfo" [33:31 - 33:45] TypeRef=class clang::IdentifierInfo:66:7
+// CHECK-tokens: Identifier: "IdentifierInfo" [33:31 - 33:45] TypeRef=class clang::IdentifierInfo:11:9
 // CHECK-tokens: Punctuation: "*" [33:46 - 33:47] ParmDecl=Name:33:48 (Definition)
 // CHECK-tokens: Identifier: "Name" [33:48 - 33:52] ParmDecl=Name:33:48 (Definition)
 // CHECK-tokens: Punctuation: ")" [33:52 - 33:53] CXXMethod=getKind:33:17 (static)
@@ -823,18 +823,18 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK-tokens: Punctuation: ";" [85:18 - 85:19] ClassTemplate=StringSwitch:83:47 (Definition)
 // CHECK-tokens: Keyword: "public" [86:1 - 86:7] CXXAccessSpecifier=:86:1 (Definition)
 // CHECK-tokens: Punctuation: ":" [86:7 - 86:8] CXXAccessSpecifier=:86:1 (Definition)
-// CHECK-tokens: Keyword: "explicit" [87:3 - 87:11] CXXConstructor=StringSwitch<T, R>:87:12 (Definition)
-// CHECK-tokens: Identifier: "StringSwitch" [87:12 - 87:24] CXXConstructor=StringSwitch<T, R>:87:12 (Definition) (explicit)
-// CHECK-tokens: Punctuation: "(" [87:24 - 87:25] CXXConstructor=StringSwitch<T, R>:87:12 (Definition)
+// CHECK-tokens: Keyword: "explicit" [87:3 - 87:11] CXXConstructor=llvm::StringSwitch<T, R>:87:12 (Definition)
+// CHECK-tokens: Identifier: "StringSwitch" [87:12 - 87:24] CXXConstructor=llvm::StringSwitch<T, R>:87:12 (Definition) (explicit)
+// CHECK-tokens: Punctuation: "(" [87:24 - 87:25] CXXConstructor=llvm::StringSwitch<T, R>:87:12 (Definition)
 // CHECK-tokens: Identifier: "StringRef" [87:25 - 87:34] TypeRef=class llvm::StringRef:38:7
 // CHECK-tokens: Identifier: "Str" [87:35 - 87:38] ParmDecl=Str:87:35 (Definition)
-// CHECK-tokens: Punctuation: ")" [87:38 - 87:39] CXXConstructor=StringSwitch<T, R>:87:12 (Definition)
-// CHECK-tokens: Punctuation: ":" [87:40 - 87:41] CXXConstructor=StringSwitch<T, R>:87:12 (Definition)
+// CHECK-tokens: Punctuation: ")" [87:38 - 87:39] CXXConstructor=llvm::StringSwitch<T, R>:87:12 (Definition)
+// CHECK-tokens: Punctuation: ":" [87:40 - 87:41] CXXConstructor=llvm::StringSwitch<T, R>:87:12 (Definition)
 // CHECK-tokens: Identifier: "Str" [87:42 - 87:45] MemberRef=Str:84:13
 // CHECK-tokens: Punctuation: "(" [87:45 - 87:46] CallExpr=StringRef:38:7
 // CHECK-tokens: Identifier: "Str" [87:46 - 87:49] DeclRefExpr=Str:87:35
 // CHECK-tokens: Punctuation: ")" [87:49 - 87:50] CallExpr=StringRef:38:7
-// CHECK-tokens: Punctuation: "," [87:50 - 87:51] CXXConstructor=StringSwitch<T, R>:87:12 (Definition)
+// CHECK-tokens: Punctuation: "," [87:50 - 87:51] CXXConstructor=llvm::StringSwitch<T, R>:87:12 (Definition)
 // CHECK-tokens: Identifier: "Result" [87:52 - 87:58] MemberRef=Result:85:12
 // CHECK-tokens: Punctuation: "(" [87:58 - 87:59] UnexposedExpr=
 // CHECK-tokens: Literal: "0" [87:59 - 87:60] IntegerLiteral=
@@ -846,7 +846,7 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK-tokens: Keyword: "unsigned" [88:14 - 88:22] NonTypeTemplateParameter=N:88:23 (Definition)
 // CHECK-tokens: Identifier: "N" [88:23 - 88:24] NonTypeTemplateParameter=N:88:23 (Definition)
 // CHECK-tokens: Punctuation: ">" [88:25 - 88:26] FunctionTemplate=Case:88:42 (Definition)
-// CHECK-tokens: Identifier: "StringSwitch" [88:27 - 88:39] TypeRef=StringSwitch<T, R>:83:47
+// CHECK-tokens: Identifier: "StringSwitch" [88:27 - 88:39] TypeRef=llvm::StringSwitch<T, R>:83:47
 // CHECK-tokens: Punctuation: "&" [88:40 - 88:41] FunctionTemplate=Case:88:42 (Definition)
 // CHECK-tokens: Identifier: "Case" [88:42 - 88:46] FunctionTemplate=Case:88:42 (Definition)
 // CHECK-tokens: Punctuation: "(" [88:46 - 88:47] FunctionTemplate=Case:88:42 (Definition)
@@ -1619,7 +1619,7 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK: 33:17: CXXMethod=getKind:33:17 (static) Extent=[33:5 - 33:53]
 // CHECK: 33:12: TypeRef=enum clang::AttributeList::Kind:13:10 Extent=[33:12 - 33:16]
 // CHECK: 33:48: ParmDecl=Name:33:48 (Definition) Extent=[33:25 - 33:52]
-// CHECK: 33:31: TypeRef=class clang::IdentifierInfo:66:7 Extent=[33:31 - 33:45]
+// CHECK: 33:31: TypeRef=class clang::IdentifierInfo:11:9 Extent=[33:31 - 33:45]
 // CHECK: 36:8: FunctionDecl=magic_length:36:8 Extent=[36:1 - 36:35]
 // CHECK: 36:1: TypeRef=size_t:2:25 Extent=[36:1 - 36:7]
 // CHECK: 36:33: ParmDecl=s:36:33 (Definition) Extent=[36:21 - 36:34]
@@ -1839,7 +1839,7 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK: 84:3: TypeRef=class llvm::StringRef:38:7 Extent=[84:3 - 84:12]
 // CHECK: 85:12: FieldDecl=Result:85:12 (Definition) Extent=[85:3 - 85:18]
 // CHECK: 86:1: CXXAccessSpecifier=:86:1 (Definition) Extent=[86:1 - 86:8]
-// CHECK: 87:12: CXXConstructor=StringSwitch<T, R>:87:12 (Definition) (explicit) Extent=[87:3 - 87:64]
+// CHECK: 87:12: CXXConstructor=llvm::StringSwitch<T, R>:87:12 (Definition) (explicit) Extent=[87:3 - 87:64]
 // CHECK: 87:35: ParmDecl=Str:87:35 (Definition) Extent=[87:25 - 87:38]
 // CHECK: 87:25: TypeRef=class llvm::StringRef:38:7 Extent=[87:25 - 87:34]
 // CHECK: 87:42: MemberRef=Str:84:13 Extent=[87:42 - 87:45]

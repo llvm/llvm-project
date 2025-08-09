@@ -461,8 +461,9 @@ bool FormatStringConverter::emitIntegerArgument(
     // the signedness based on the format string, so we need to do the
     // same.
     if (const auto *ET = ArgType->getAs<EnumType>()) {
-      if (const std::optional<std::string> MaybeCastType =
-              castTypeForArgument(ArgKind, ET->getDecl()->getIntegerType()))
+      if (const std::optional<std::string> MaybeCastType = castTypeForArgument(
+              ArgKind,
+              ET->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType()))
         ArgFixes.emplace_back(
             ArgIndex, (Twine("static_cast<") + *MaybeCastType + ">(").str());
       else

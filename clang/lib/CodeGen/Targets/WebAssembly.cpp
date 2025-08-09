@@ -118,7 +118,8 @@ ABIArgInfo WebAssemblyABIInfo::classifyArgumentType(QualType Ty) const {
       const RecordType *RT = Ty->getAs<RecordType>();
       assert(RT);
       bool HasBitField = false;
-      for (auto *Field : RT->getDecl()->fields()) {
+      for (auto *Field :
+           RT->getOriginalDecl()->getDefinitionOrSelf()->fields()) {
         if (Field->isBitField()) {
           HasBitField = true;
           break;

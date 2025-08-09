@@ -216,8 +216,7 @@ void FindAllSymbols::registerMatchers(MatchFinder *MatchFinder) {
   // Uses of most types: just look at what the typeLoc refers to.
   MatchFinder->addMatcher(
       typeLoc(isExpansionInMainFile(),
-              loc(qualType(allOf(unless(elaboratedType()),
-                                 hasDeclaration(Types.bind("use")))))),
+              loc(qualType(hasDeclaration(Types.bind("use"))))),
       this);
   // Uses of typedefs: these are often transparent to hasDeclaration, so we need
   // to handle them explicitly.

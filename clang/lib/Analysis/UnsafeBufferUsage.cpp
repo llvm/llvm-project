@@ -182,18 +182,22 @@ public:
     return DynamicRecursiveASTVisitor::TraverseUnaryExprOrTypeTraitExpr(Node);
   }
 
-  bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc Node) override {
+  bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc Node,
+                                 bool TraverseQualifier) override {
     // Unevaluated context.
     if (ignoreUnevaluatedContext)
       return true;
-    return DynamicRecursiveASTVisitor::TraverseTypeOfExprTypeLoc(Node);
+    return DynamicRecursiveASTVisitor::TraverseTypeOfExprTypeLoc(
+        Node, TraverseQualifier);
   }
 
-  bool TraverseDecltypeTypeLoc(DecltypeTypeLoc Node) override {
+  bool TraverseDecltypeTypeLoc(DecltypeTypeLoc Node,
+                               bool TraverseQualifier) override {
     // Unevaluated context.
     if (ignoreUnevaluatedContext)
       return true;
-    return DynamicRecursiveASTVisitor::TraverseDecltypeTypeLoc(Node);
+    return DynamicRecursiveASTVisitor::TraverseDecltypeTypeLoc(
+        Node, TraverseQualifier);
   }
 
   bool TraverseCXXNoexceptExpr(CXXNoexceptExpr *Node) override {

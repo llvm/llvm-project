@@ -40,7 +40,7 @@ void test(double d) {
   // expected-warning@-3 2{{'typename' outside of a template is a C++11 extension}}
 #endif
   int five = f(5);
-  
+
   using namespace N;
   for (typename A::type i = 0; i < 10; ++i)
 #if __cplusplus <= 199711L
@@ -102,7 +102,7 @@ D<long> struct_D;  // expected-note {{in instantiation of template class 'D<long
 
 template<typename T> struct E {
   typedef typename T::foo foo;
-  typedef typename foo::bar bar;  // expected-error {{type 'E<F>::foo' (aka 'double') cannot be used prior to '::' because it has no members}}
+  typedef typename foo::bar bar;  // expected-error {{type 'foo' (aka 'double') cannot be used prior to '::' because it has no members}}
 };
 
 struct F {
@@ -245,7 +245,7 @@ void j() {
 
 namespace pointer_vs_multiply {
 int x;
-// expected-error@+1 {{missing 'typename' prior to dependent type name 'B::type_or_int'}}
+// expected-error@+1 {{missing 'typename' prior to dependent type name 'pointer_vs_multiply::B::type_or_int'}}
 template <typename T> void g() { T::type_or_int * x; }
 // expected-error@+1 {{typename specifier refers to non-type member 'type_or_int' in 'pointer_vs_multiply::A'}}
 template <typename T> void h() { typename T::type_or_int * x; }

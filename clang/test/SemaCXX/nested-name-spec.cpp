@@ -15,7 +15,9 @@ namespace A {
     static int Ag1();
     static int Ag2();
   };
-  int ax; // expected-note {{'ax' declared here}}
+  int ax;
+  // expected-note@-1 {{'ax' declared here}}
+  // expected-note@-2 {{'::A::ax' declared here}}
   void Af();
 }
 
@@ -100,7 +102,7 @@ void f3() {
   N::x = 0; // expected-error {{'N' is not a class, namespace, or enumeration}}
   { int A;           A::ax = 0; }
   { typedef int A;   A::ax = 0; } // expected-error{{'A' (aka 'int') is not a class, namespace, or enumeration}}
-  { typedef A::C A;  A::ax = 0; } // expected-error {{no member named 'ax'}}
+  { typedef A::C A;  A::ax = 0; } // expected-error {{no member named 'ax' in 'A::C'; did you mean '::A::ax'?}}
   { typedef A::C A;  A::cx = 0; }
 }
 
@@ -474,7 +476,7 @@ namespace A {
 class B {
   typedef C D; // expected-error{{unknown type name 'C'}}
   A::D::F;
-  // expected-error@-1{{'PR30619::A::B::D' (aka 'int') is not a class, namespace, or enumeration}}
+  // expected-error@-1{{'A::D' (aka 'int') is not a class, namespace, or enumeration}}
 };
 }
 }

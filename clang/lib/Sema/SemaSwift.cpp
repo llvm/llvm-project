@@ -130,7 +130,7 @@ static bool isErrorParameter(Sema &S, QualType QT) {
   // Check for CFError**.
   if (const auto *PT = Pointee->getAs<PointerType>())
     if (const auto *RT = PT->getPointeeType()->getAs<RecordType>())
-      if (S.ObjC().isCFError(RT->getDecl()))
+      if (S.ObjC().isCFError(RT->getOriginalDecl()->getDefinitionOrSelf()))
         return true;
 
   return false;
@@ -272,7 +272,8 @@ static void checkSwiftAsyncErrorBlock(Sema &S, Decl *D,
       // Check for CFError *.
       if (const auto *PtrTy = Param->getAs<PointerType>()) {
         if (const auto *RT = PtrTy->getPointeeType()->getAs<RecordType>()) {
-          if (S.ObjC().isCFError(RT->getDecl())) {
+          if (S.ObjC().isCFError(
+                  RT->getOriginalDecl()->getDefinitionOrSelf())) {
             AnyErrorParams = true;
             break;
           }

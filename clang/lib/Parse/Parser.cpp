@@ -1774,9 +1774,9 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC,
     /// An Objective-C object type followed by '<' is a specialization of
     /// a parameterized class type or a protocol-qualified type.
     ParsedType Ty = Classification.getType();
+    QualType T = Actions.GetTypeFromParser(Ty);
     if (getLangOpts().ObjC && NextToken().is(tok::less) &&
-        (Ty.get()->isObjCObjectType() ||
-         Ty.get()->isObjCObjectPointerType())) {
+        (T->isObjCObjectType() || T->isObjCObjectPointerType())) {
       // Consume the name.
       SourceLocation IdentifierLoc = ConsumeToken();
       SourceLocation NewEndLoc;
@@ -2032,11 +2032,12 @@ bool Parser::TryAnnotateTypeOrScopeTokenAfterScopeSpec(
       if (SS.isNotEmpty()) // it was a C++ qualified type name.
         BeginLoc = SS.getBeginLoc();
 
+      QualType T = Actions.GetTypeFromParser(Ty);
+
       /// An Objective-C object type followed by '<' is a specialization of
       /// a parameterized class type or a protocol-qualified type.
       if (getLangOpts().ObjC && NextToken().is(tok::less) &&
-          (Ty.get()->isObjCObjectType() ||
-           Ty.get()->isObjCObjectPointerType())) {
+          (T->isObjCObjectType() || T->isObjCObjectPointerType())) {
         // Consume the name.
         SourceLocation IdentifierLoc = ConsumeToken();
         SourceLocation NewEndLoc;

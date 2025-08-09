@@ -1295,14 +1295,7 @@ TEST(TypeHints, NoQualifiers) {
       }
     }
   )cpp",
-                  ExpectedHint{": S1", "x"},
-                  // FIXME: We want to suppress scope specifiers
-                  //        here because we are into the whole
-                  //        brevity thing, but the ElaboratedType
-                  //        printer does not honor the SuppressScope
-                  //        flag by design, so we need to extend the
-                  //        PrintingPolicy to support this use case.
-                  ExpectedHint{": S2::Inner<int>", "y"});
+                  ExpectedHint{": S1", "x"}, ExpectedHint{": Inner<int>", "y"});
 }
 
 TEST(TypeHints, Lambda) {

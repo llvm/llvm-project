@@ -96,12 +96,12 @@ struct Test {
 void test() {
 
     [i = 0](this Test) { }();
-    // expected-error@-1 {{invalid explicit object parameter type 'ThisInLambdaWithCaptures::Test' in lambda with capture; the type must be the same as, or derived from, the lambda}}
+    // expected-error@-1 {{invalid explicit object parameter type 'Test' in lambda with capture; the type must be the same as, or derived from, the lambda}}
 
     struct Derived;
     auto ok = [i = 0](this const Derived&) {};
     auto ko = [i = 0](this const Test&) {};
-    // expected-error@-1 {{invalid explicit object parameter type 'ThisInLambdaWithCaptures::Test' in lambda with capture; the type must be the same as, or derived from, the lambda}}
+    // expected-error@-1 {{invalid explicit object parameter type 'Test' in lambda with capture; the type must be the same as, or derived from, the lambda}}
 
     struct Derived : decltype(ok){};
     Derived dok{ok};

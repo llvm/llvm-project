@@ -161,7 +161,7 @@ llvm::Type* MipsABIInfo::HandleAggregates(QualType Ty, uint64_t TySize) const {
     return llvm::StructType::get(getVMContext(), ArgList);
   }
 
-  const RecordDecl *RD = RT->getDecl();
+  const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
   const ASTRecordLayout &Layout = getContext().getASTRecordLayout(RD);
   assert(!(TySize % 8) && "Size of structure must be multiple of 8.");
 
@@ -242,7 +242,7 @@ MipsABIInfo::classifyArgumentType(QualType Ty, uint64_t &Offset) const {
 
   // Treat an enum type as its underlying type.
   if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-    Ty = EnumTy->getDecl()->getIntegerType();
+    Ty = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
 
   // Make sure we pass indirectly things that are too large.
   if (const auto *EIT = Ty->getAs<BitIntType>())
@@ -265,7 +265,7 @@ MipsABIInfo::returnAggregateInRegs(QualType RetTy, uint64_t Size) const {
   SmallVector<llvm::Type*, 8> RTList;
 
   if (RT && RT->isStructureOrClassType()) {
-    const RecordDecl *RD = RT->getDecl();
+    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
     const ASTRecordLayout &Layout = getContext().getASTRecordLayout(RD);
     unsigned FieldCnt = Layout.getFieldCount();
 
@@ -333,7 +333,7 @@ ABIArgInfo MipsABIInfo::classifyReturnType(QualType RetTy) const {
 
   // Treat an enum type as its underlying type.
   if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
-    RetTy = EnumTy->getDecl()->getIntegerType();
+    RetTy = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
 
   // Make sure we pass indirectly things that are too large.
   if (const auto *EIT = RetTy->getAs<BitIntType>())

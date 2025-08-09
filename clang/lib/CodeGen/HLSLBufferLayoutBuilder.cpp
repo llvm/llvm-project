@@ -101,7 +101,8 @@ llvm::TargetExtType *HLSLBufferLayoutBuilder::createLayoutType(
     const RecordType *RT = RecordTypes.back();
     RecordTypes.pop_back();
 
-    for (const auto *FD : RT->getDecl()->fields()) {
+    for (const auto *FD :
+         RT->getOriginalDecl()->getDefinitionOrSelf()->fields()) {
       assert((!PackOffsets || Index < PackOffsets->size()) &&
              "number of elements in layout struct does not match number of "
              "packoffset annotations");

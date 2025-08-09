@@ -51,7 +51,7 @@ const Record::Base *Record::getBase(const RecordDecl *FD) const {
 
 const Record::Base *Record::getBase(QualType T) const {
   if (auto *RT = T->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getDecl();
+    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
     return BaseMap.lookup(RD);
   }
   return nullptr;

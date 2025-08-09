@@ -190,7 +190,7 @@ struct InitializerInsertion {
 // Convenience utility to get a RecordDecl from a QualType.
 const RecordDecl *getCanonicalRecordDecl(const QualType &Type) {
   if (const auto *RT = Type.getCanonicalType()->getAs<RecordType>())
-    return RT->getDecl();
+    return RT->getOriginalDecl();
   return nullptr;
 }
 
