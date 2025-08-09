@@ -48,8 +48,8 @@ struct FakeFrame {
 //
 // All flags for size classes 0 .. 10 are stored in a single contiguous region,
 // padded to 2**kMaxStackFrameSizeLog (to prevent frames from becoming
-// unaligned), followed by another contiguous region which contains the actual
-// memory for size classes.
+// unaligned; see also GetFrame()), followed by another contiguous region which
+// contains the actual memory for size classes.
 //
 // The addresses are computed by GetFlags and GetFrame without
 // any memory accesses solely based on 'this' and stack_size_log.
@@ -118,6 +118,27 @@ class FakeStack {
   }
 
   // Get frame by class_id and pos.
+  //
+  // ASanStackFrameLayout::ComputeASanStackFrameLayout() will align variables
+  // correctly if GetFrame() returns addresses aligned to
+  // BytesInSizeClass(class_id).
+  //
+  // In steps 1-3, we prove an even stronger property: GetFrame() returns
+  // addresses aligned to 1<<kMaxStackFrameSizeLog (aka
+  // BytesInSizeClass(max_class_id)), which implies alignment to
+  // BytesInSizeClass for any class_id, since they are increasing powers of 2.
+  //
+  // 1) 'this' is aligned to 1<<kMaxStackFrameSizeLog (see FakeStack::Create)
+  // 2) (kFlagsOffset + SizeRequiredForFlags()) is aligned to
+  //    1<<kMaxStackFrameSizeLog (see SizeRequiredForFlags())
+  // 3) We know that stack_size_log >= kMaxStackFrameSizeLog (otherwise you
+  //    couldn't store a single frame in the entire stack)
+  //    hence (1 << stack_size_log) is aligned to 1<<kMaxStackFrameSizeLog
+  //    and   ((1 << stack_size_log) * class_id) is aligned to
+  //          1<<kMaxStackFrameSizeLog
+  // 4) BytesInSizeClass(class_id) * pos is aligned to
+  //    BytesInSizeClass(class_id);
+  // The sum of these is aligned to BytesInSizeClass(max_class_id).
   u8 *GetFrame(uptr stack_size_log, uptr class_id, uptr pos) {
     return reinterpret_cast<u8 *>(this) + kFlagsOffset +
            SizeRequiredForFlags(stack_size_log) +
