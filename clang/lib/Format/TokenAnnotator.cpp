@@ -5935,10 +5935,11 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
 
     // Don't attempt to interpret struct return types as structs.
     if (Right.isNot(TT_FunctionLBrace)) {
-      return (Line.startsWith(tok::kw_class) &&
-              Style.BraceWrapping.AfterClass) ||
-             (Line.startsWith(tok::kw_struct) &&
-              Style.BraceWrapping.AfterStruct);
+      return ((Line.startsWith(tok::kw_class) &&
+               Style.BraceWrapping.AfterClass) ||
+              (Line.startsWith(tok::kw_struct) &&
+               Style.BraceWrapping.AfterStruct)) &&
+             Style.BraceWrapping.WrapEmptyRecord == FormatStyle::BWER_Default;
     }
   }
 
