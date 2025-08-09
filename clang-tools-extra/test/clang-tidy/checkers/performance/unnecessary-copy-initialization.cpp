@@ -938,3 +938,59 @@ template<typename T> bool OperatorWithNoDirectCallee(T t) {
   ExpensiveToCopyType a2 = a1;
   return a1 == t;
 }
+
+bool CopiedFromParmVarField(const Struct &crs, const Struct cs, Struct &rs, Struct s) {
+  const auto m1 = crs.Member;
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'm1' of the subobject 'crs.Member' of type 'const ExpensiveToCopyType' is never modified; consider avoiding the copy
+  // CHECK-FIXES: const auto& m1 = crs.Member;
+  const auto m2 = cs.Member;
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'm2' of the subobject 'cs.Member' of type 'const ExpensiveToCopyType' is never modified; consider avoiding the copy
+  // CHECK-FIXES: const auto& m2 = cs.Member;
+  const auto m3 = rs.Member;
+  const auto m4 = s.Member;
+  return m1 == m2 || m3 == m4;
+}
+
+const Struct GlobalS;
+bool CopiedFromVarField() {
+  const Struct crs;
+  Struct s;
+  const auto m1 = crs.Member;
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'm1' of the subobject 'crs.Member' of type 'const ExpensiveToCopyType' is never modified; consider avoiding the copy
+  // CHECK-FIXES: const auto& m1 = crs.Member;
+  const auto m2 = s.Member;
+  const auto m3 = GlobalS.Member;
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'm3' of the subobject 'GlobalS.Member' of type 'const ExpensiveToCopyType' is never modified; consider avoiding the copy
+  // CHECK-FIXES: const auto& m3 = GlobalS.Member;
+  return m1 == m2 || m2 == m3;
+}
+
+struct NestedStruct {
+  Struct s;
+};
+
+bool CopiedFromParmVarNestedField(const NestedStruct &ncrs, const NestedStruct ncs, NestedStruct &nrs, NestedStruct ns) {
+  const auto m1 = ncrs.s.Member;
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'm1' of the subobject 'ncrs.s.Member' of type 'const ExpensiveToCopyType' is never modified; consider avoiding the copy
+  // CHECK-FIXES: const auto& m1 = ncrs.s.Member;
+  const auto m2 = ncs.s.Member;
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'm2' of the subobject 'ncs.s.Member' of type 'const ExpensiveToCopyType' is never modified; consider avoiding the copy
+  // CHECK-FIXES: const auto& m2 = ncs.s.Member;
+  const auto m3 = nrs.s.Member;
+  const auto m4 = ns.s.Member;
+  return m1 == m2 || m3 == m4;
+}
+
+const NestedStruct GlobalNS;
+bool CopiedFromVarNestedField() {
+  const NestedStruct ncrs;
+  NestedStruct ns;
+  const auto m1 = ncrs.s.Member;
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'm1' of the subobject 'ncrs.s.Member' of type 'const ExpensiveToCopyType' is never modified; consider avoiding the copy
+  // CHECK-FIXES: const auto& m1 = ncrs.s.Member;
+  const auto m2 = ns.s.Member;
+  const auto m3 = GlobalNS.s.Member;
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'm3' of the subobject 'GlobalNS.s.Member' of type 'const ExpensiveToCopyType' is never modified; consider avoiding the copy
+  // CHECK-FIXES: const auto& m3 = GlobalNS.s.Member;
+  return m1 == m2 || m2 == m3;
+}
