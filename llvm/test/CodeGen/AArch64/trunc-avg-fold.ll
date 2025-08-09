@@ -9,10 +9,8 @@ define <8 x i8> @test_avgceil_u(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-NEXT:    uhadd v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-NEXT:    ret
-  %mask = insertelement <8 x i16> poison, i16 255, i32 0
-  %mask.splat = shufflevector <8 x i16> %mask, <8 x i16> poison, <8 x i32> zeroinitializer
-  %ta16 = and <8 x i16> %a, %mask.splat
-  %tb16 = and <8 x i16> %b, %mask.splat
+  %ta16 = and <8 x i16> %a, splat (i16 255)
+  %tb16 = and <8 x i16> %b, splat (i16 255)
   %avg16 = call <8 x i16> @llvm.aarch64.neon.uhadd.v8i16(<8 x i16> %ta16, <8 x i16> %tb16)
   %res = trunc <8 x i16> %avg16 to <8 x i8>
   ret <8 x i8> %res
@@ -30,14 +28,10 @@ define <8 x i8> @test_avgceil_s(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-NEXT:    shadd v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-NEXT:    ret
-  %min = insertelement <8 x i16> poison, i16 -128, i32 0
-  %min.splat = shufflevector <8 x i16> %min, <8 x i16> poison, <8 x i32> zeroinitializer
-  %max = insertelement <8 x i16> poison, i16 127, i32 0
-  %max.splat = shufflevector <8 x i16> %max, <8 x i16> poison, <8 x i32> zeroinitializer
-  %ta16 = call <8 x i16> @llvm.smin.v8i16(<8 x i16> %a, <8 x i16> %max.splat)
-  %ta16.clamped = call <8 x i16> @llvm.smax.v8i16(<8 x i16> %ta16, <8 x i16> %min.splat)
-  %tb16 = call <8 x i16> @llvm.smin.v8i16(<8 x i16> %b, <8 x i16> %max.splat)
-  %tb16.clamped = call <8 x i16> @llvm.smax.v8i16(<8 x i16> %tb16, <8 x i16> %min.splat)
+  %ta16 = call <8 x i16> @llvm.smin.v8i16(<8 x i16> %a, <8 x i16> splat (i16 127))
+  %ta16.clamped = call <8 x i16> @llvm.smax.v8i16(<8 x i16> %ta16, <8 x i16> splat (i16 -128))
+  %tb16 = call <8 x i16> @llvm.smin.v8i16(<8 x i16> %b, <8 x i16> splat (i16 127))
+  %tb16.clamped = call <8 x i16> @llvm.smax.v8i16(<8 x i16> %tb16, <8 x i16> splat (i16 -128))
   %avg16 = call <8 x i16> @llvm.aarch64.neon.shadd.v8i16(<8 x i16> %ta16.clamped, <8 x i16> %tb16.clamped)
   %res = trunc <8 x i16> %avg16 to <8 x i8>
   ret <8 x i8> %res
@@ -51,10 +45,8 @@ define <8 x i8> @test_avgfloor_u(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-NEXT:    uhadd v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-NEXT:    ret
-  %mask = insertelement <8 x i16> poison, i16 255, i32 0
-  %mask.splat = shufflevector <8 x i16> %mask, <8 x i16> poison, <8 x i32> zeroinitializer
-  %ta16 = and <8 x i16> %a, %mask.splat
-  %tb16 = and <8 x i16> %b, %mask.splat
+  %ta16 = and <8 x i16> %a, splat (i16 255)
+  %tb16 = and <8 x i16> %b, splat (i16 255)
   %avg16 = call <8 x i16> @llvm.aarch64.neon.uhadd.v8i16(<8 x i16> %ta16, <8 x i16> %tb16)
   %res = trunc <8 x i16> %avg16 to <8 x i8>
   ret <8 x i8> %res
@@ -72,14 +64,10 @@ define <8 x i8> @test_avgfloor_s(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-NEXT:    shadd v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-NEXT:    ret
-  %min = insertelement <8 x i16> poison, i16 -128, i32 0
-  %min.splat = shufflevector <8 x i16> %min, <8 x i16> poison, <8 x i32> zeroinitializer
-  %max = insertelement <8 x i16> poison, i16 127, i32 0
-  %max.splat = shufflevector <8 x i16> %max, <8 x i16> poison, <8 x i32> zeroinitializer
-  %ta16 = call <8 x i16> @llvm.smin.v8i16(<8 x i16> %a, <8 x i16> %max.splat)
-  %ta16.clamped = call <8 x i16> @llvm.smax.v8i16(<8 x i16> %ta16, <8 x i16> %min.splat)
-  %tb16 = call <8 x i16> @llvm.smin.v8i16(<8 x i16> %b, <8 x i16> %max.splat)
-  %tb16.clamped = call <8 x i16> @llvm.smax.v8i16(<8 x i16> %tb16, <8 x i16> %min.splat)
+  %ta16 = call <8 x i16> @llvm.smin.v8i16(<8 x i16> %a, <8 x i16> splat (i16 127))
+  %ta16.clamped = call <8 x i16> @llvm.smax.v8i16(<8 x i16> %ta16, <8 x i16> splat (i16 -128))
+  %tb16 = call <8 x i16> @llvm.smin.v8i16(<8 x i16> %b, <8 x i16> splat (i16 127))
+  %tb16.clamped = call <8 x i16> @llvm.smax.v8i16(<8 x i16> %tb16, <8 x i16> splat (i16 -128))
   %avg16 = call <8 x i16> @llvm.aarch64.neon.shadd.v8i16(<8 x i16> %ta16.clamped, <8 x i16> %tb16.clamped)
   %res = trunc <8 x i16> %avg16 to <8 x i8>
   ret <8 x i8> %res
