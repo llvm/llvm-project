@@ -174,6 +174,66 @@ static bool StmtCanThrow(const Stmt *S) {
   return false;
 }
 
+// Check if this suspend should be calling `await_suspend_destroy`
+static bool useCoroAwaitSuspendDestroy(const CoroutineSuspendExpr &S) {
+  // This can only be an `await_suspend_destroy` suspend expression if it
+  // returns void -- `buildCoawaitCalls` in `SemaCoroutine.cpp` asserts this.
+  // Moreover, when `await_suspend` returns a handle, the outermost method call
+  // is `.address()` -- making it harder to get the actual class or method.
+  if (S.getSuspendReturnType() !=
+      CoroutineSuspendExpr::SuspendReturnType::SuspendVoid) {
+    return false;
+  }
+
+  // `CGCoroutine.cpp` & `SemaCoroutine.cpp` must agree on whether this suspend
+  // expression uses `[[clang::coro_await_suspend_destroy]]`.
+  //
+  // Any mismatch is a serious bug -- we would either double-free, or fail to
+  // destroy the promise type. For this reason, we make our decision based on
+  // the method name, and fatal outside of the happy path -- including on
+  // failure to find a method name.
+  //
+  // As a debug-only check we also try to detect the `AwaiterClass`. This is
+  // secondary, because  detection of the awaiter type can be silently broken by
+  // small `buildCoawaitCalls` AST changes.
+  StringRef SuspendMethodName;           // Primary
+  CXXRecordDecl *AwaiterClass = nullptr; // Debug-only, best-effort
+  if (auto *SuspendCall =
+          dyn_cast<CallExpr>(S.getSuspendExpr()->IgnoreImplicit())) {
+    if (auto *SuspendMember = dyn_cast<MemberExpr>(SuspendCall->getCallee())) {
+      if (auto *BaseExpr = SuspendMember->getBase()) {
+        // `IgnoreImplicitAsWritten` is critical since `await_suspend...` can be
+        // invoked on the base of the actual awaiter, and the base need not have
+        // the attribute. In such cases, the AST will show the true awaiter
+        // being upcast to the base.
+        AwaiterClass = BaseExpr->IgnoreImplicitAsWritten()
+                           ->getType()
+                           ->getAsCXXRecordDecl();
+      }
+      if (auto *SuspendMethod =
+              dyn_cast<CXXMethodDecl>(SuspendMember->getMemberDecl())) {
+        SuspendMethodName = SuspendMethod->getName();
+      }
+    }
+  }
+  if (SuspendMethodName == "await_suspend_destroy") {
+    assert(!AwaiterClass ||
+           AwaiterClass->hasAttr<CoroAwaitSuspendDestroyAttr>());
+    return true;
+  } else if (SuspendMethodName == "await_suspend") {
+    assert(!AwaiterClass ||
+           !AwaiterClass->hasAttr<CoroAwaitSuspendDestroyAttr>());
+    return false;
+  } else {
+    llvm::report_fatal_error(
+        "Wrong method in [[clang::coro_await_suspend_destroy]] check: "
+        "expected 'await_suspend' or 'await_suspend_destroy', but got '" +
+        SuspendMethodName + "'");
+  }
+
+  return false;
+}
+
 // Emit suspend expression which roughly looks like:
 //
 //   auto && x = CommonExpr();
@@ -220,51 +280,54 @@ namespace {
     RValue RV;
   };
 }
-static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Coro,
-                                    CoroutineSuspendExpr const &S,
-                                    AwaitKind Kind, AggValueSlot aggSlot,
-                                    bool ignoreResult, bool forLValue) {
-  auto *E = S.getCommonExpr();
 
-  auto CommonBinder =
-      CodeGenFunction::OpaqueValueMappingData::bind(CGF, S.getOpaqueValue(), E);
-  auto UnbindCommonOnExit =
-      llvm::make_scope_exit([&] { CommonBinder.unbind(CGF); });
+// The simplified `await_suspend_destroy` path avoids suspend intrinsics.
+//
+// If a coro has only `await_suspend_destroy` and trivial (`suspend_never`)
+// awaiters, then subsequent passes are able to allocate its frame on-stack.
+//
+// As of 2025, there is still an optimization gap between a realistic
+// short-circuiting coro, and the equivalent plain function.  For a
+// guesstimate, expect 4-5ns per call on x86.  One idea for improvement is to
+// also elide trivial suspends like `std::suspend_never`, in order to hit the
+// `HasCoroSuspend` path in `CoroEarly.cpp`.
+static void emitAwaitSuspendDestroy(CodeGenFunction &CGF, CGCoroData &Coro,
+                                    llvm::Function *SuspendWrapper,
+                                    llvm::Value *Awaiter, llvm::Value *Frame,
+                                    bool AwaitSuspendCanThrow) {
+  SmallVector<llvm::Value *, 2> DirectCallArgs;
+  DirectCallArgs.push_back(Awaiter);
+  DirectCallArgs.push_back(Frame);
 
-  auto Prefix = buildSuspendPrefixStr(Coro, Kind);
-  BasicBlock *ReadyBlock = CGF.createBasicBlock(Prefix + Twine(".ready"));
-  BasicBlock *SuspendBlock = CGF.createBasicBlock(Prefix + Twine(".suspend"));
+  if (AwaitSuspendCanThrow) {
+    CGF.EmitCallOrInvoke(SuspendWrapper, DirectCallArgs);
+  } else {
+    CGF.EmitNounwindRuntimeCall(SuspendWrapper, DirectCallArgs);
+  }
+
+  CGF.EmitBranchThroughCleanup(Coro.CleanupJD);
+}
+
+static void emitStandardAwaitSuspend(
+    CodeGenFunction &CGF, CGCoroData &Coro, CoroutineSuspendExpr const &S,
+    llvm::Function *SuspendWrapper, llvm::Value *Awaiter, llvm::Value *Frame,
+    bool AwaitSuspendCanThrow, SmallString<32> Prefix, BasicBlock *ReadyBlock,
+    AwaitKind Kind, CoroutineSuspendExpr::SuspendReturnType SuspendReturnType) {
+  auto &Builder = CGF.Builder;
+
+  CGF.CurCoro.InSuspendBlock = true;
+
+  SmallVector<llvm::Value *, 3> SuspendIntrinsicCallArgs;
+  SuspendIntrinsicCallArgs.push_back(Awaiter);
+  SuspendIntrinsicCallArgs.push_back(Frame);
+  SuspendIntrinsicCallArgs.push_back(SuspendWrapper);
   BasicBlock *CleanupBlock = CGF.createBasicBlock(Prefix + Twine(".cleanup"));
 
-  // If expression is ready, no need to suspend.
-  CGF.EmitBranchOnBoolExpr(S.getReadyExpr(), ReadyBlock, SuspendBlock, 0);
-
-  // Otherwise, emit suspend logic.
-  CGF.EmitBlock(SuspendBlock);
-
-  auto &Builder = CGF.Builder;
   llvm::Function *CoroSave = CGF.CGM.getIntrinsic(llvm::Intrinsic::coro_save);
   auto *NullPtr = llvm::ConstantPointerNull::get(CGF.CGM.Int8PtrTy);
   auto *SaveCall = Builder.CreateCall(CoroSave, {NullPtr});
 
-  auto SuspendWrapper = CodeGenFunction(CGF.CGM).generateAwaitSuspendWrapper(
-      CGF.CurFn->getName(), Prefix, S);
-
-  CGF.CurCoro.InSuspendBlock = true;
-
-  assert(CGF.CurCoro.Data && CGF.CurCoro.Data->CoroBegin &&
-         "expected to be called in coroutine context");
-
-  SmallVector<llvm::Value *, 3> SuspendIntrinsicCallArgs;
-  SuspendIntrinsicCallArgs.push_back(
-      CGF.getOrCreateOpaqueLValueMapping(S.getOpaqueValue()).getPointer(CGF));
-
-  SuspendIntrinsicCallArgs.push_back(CGF.CurCoro.Data->CoroBegin);
-  SuspendIntrinsicCallArgs.push_back(SuspendWrapper);
-
-  const auto SuspendReturnType = S.getSuspendReturnType();
   llvm::Intrinsic::ID AwaitSuspendIID;
-
   switch (SuspendReturnType) {
   case CoroutineSuspendExpr::SuspendReturnType::SuspendVoid:
     AwaitSuspendIID = llvm::Intrinsic::coro_await_suspend_void;
@@ -278,12 +341,6 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
   }
 
   llvm::Function *AwaitSuspendIntrinsic = CGF.CGM.getIntrinsic(AwaitSuspendIID);
-
-  // SuspendHandle might throw since it also resumes the returned handle.
-  const bool AwaitSuspendCanThrow =
-      SuspendReturnType ==
-          CoroutineSuspendExpr::SuspendReturnType::SuspendHandle ||
-      StmtCanThrow(S.getSuspendExpr());
 
   llvm::CallBase *SuspendRet = nullptr;
   // FIXME: add call attributes?
@@ -332,6 +389,54 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
   // Emit cleanup for this suspend point.
   CGF.EmitBlock(CleanupBlock);
   CGF.EmitBranchThroughCleanup(Coro.CleanupJD);
+}
+
+static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Coro,
+                                    CoroutineSuspendExpr const &S,
+                                    AwaitKind Kind, AggValueSlot aggSlot,
+                                    bool ignoreResult, bool forLValue) {
+  auto *E = S.getCommonExpr();
+
+  auto CommonBinder =
+      CodeGenFunction::OpaqueValueMappingData::bind(CGF, S.getOpaqueValue(), E);
+  auto UnbindCommonOnExit =
+      llvm::make_scope_exit([&] { CommonBinder.unbind(CGF); });
+
+  auto Prefix = buildSuspendPrefixStr(Coro, Kind);
+  BasicBlock *ReadyBlock = CGF.createBasicBlock(Prefix + Twine(".ready"));
+  BasicBlock *SuspendBlock = CGF.createBasicBlock(Prefix + Twine(".suspend"));
+
+  // If expression is ready, no need to suspend.
+  CGF.EmitBranchOnBoolExpr(S.getReadyExpr(), ReadyBlock, SuspendBlock, 0);
+
+  // Otherwise, emit suspend logic.
+  CGF.EmitBlock(SuspendBlock);
+
+  auto SuspendWrapper = CodeGenFunction(CGF.CGM).generateAwaitSuspendWrapper(
+      CGF.CurFn->getName(), Prefix, S);
+
+  assert(CGF.CurCoro.Data && CGF.CurCoro.Data->CoroBegin &&
+         "expected to be called in coroutine context");
+
+  // SuspendHandle might throw since it also resumes the returned handle.
+  const auto SuspendReturnType = S.getSuspendReturnType();
+  const bool AwaitSuspendCanThrow =
+      SuspendReturnType ==
+          CoroutineSuspendExpr::SuspendReturnType::SuspendHandle ||
+      StmtCanThrow(S.getSuspendExpr());
+
+  llvm::Value *Awaiter =
+      CGF.getOrCreateOpaqueLValueMapping(S.getOpaqueValue()).getPointer(CGF);
+  llvm::Value *Frame = CGF.CurCoro.Data->CoroBegin;
+
+  if (useCoroAwaitSuspendDestroy(S)) { // Call `await_suspend_destroy` & cleanup
+    emitAwaitSuspendDestroy(CGF, Coro, SuspendWrapper, Awaiter, Frame,
+                            AwaitSuspendCanThrow);
+  } else { // Normal suspend path -- can actually suspend, uses intrinsics
+    emitStandardAwaitSuspend(CGF, Coro, S, SuspendWrapper, Awaiter, Frame,
+                             AwaitSuspendCanThrow, Prefix, ReadyBlock, Kind,
+                             SuspendReturnType);
+  }
 
   // Emit await_resume expression.
   CGF.EmitBlock(ReadyBlock);
@@ -341,6 +446,7 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
   CXXTryStmt *TryStmt = nullptr;
   if (Coro.ExceptionHandler && Kind == AwaitKind::Init &&
       StmtCanThrow(S.getResumeExpr())) {
+    auto &Builder = CGF.Builder;
     Coro.ResumeEHVar =
         CGF.CreateTempAlloca(Builder.getInt1Ty(), Prefix + Twine("resume.eh"));
     Builder.CreateFlagStore(true, Coro.ResumeEHVar);

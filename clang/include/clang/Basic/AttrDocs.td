@@ -9270,6 +9270,110 @@ Example:
 }];
 }
 
+def CoroAwaitSuspendDestroyDoc : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+
+The ``[[clang::coro_await_suspend_destroy]]`` attribute may be applied to a C++
+coroutine awaiter type.  When this attribute is present, the awaiter must
+implement ``void await_suspend_destroy(Promise&)``.  If ``await_ready()``
+returns ``false`` at a suspension point, ``await_suspend_destroy`` will be
+called directly.  The coroutine being suspended will then be immediately
+destroyed.
+
+The new behavior is equivalent to this standard code:
+
+.. code-block:: c++
+
+  void await_suspend_destroy(YourPromise&) { ... }
+  void await_suspend(auto handle) {
+    await_suspend_destroy(handle.promise());
+    handle.destroy();
+  }
+
+This enables `await_suspend_destroy()` usage in portable awaiters — just add a
+stub ``await_suspend()`` as above.  Without ``coro_await_suspend_destroy``
+support, the awaiter will behave nearly identically, with the only difference
+being heap allocation instead of stack allocation for the coroutine frame.
+
+This attribute helps optimize short-circuiting coroutines.
+
+A short-circuiting coroutine is one where every ``co_await`` or ``co_yield``
+either immediately produces a value, or exits the coroutine.  In other words,
+they use coroutine syntax to concisely branch out of a synchronous function. 
+Here are close analogs in other languages:
+
+- Rust has ``Result<T>`` and a ``?`` operator to unpack it, while
+  ``folly::result<T>`` is a C++ short-circuiting coroutine, with ``co_await``
+  acting just like ``?``.
+
+- Haskell has ``Maybe`` & ``Error`` monads.  A short-circuiting ``co_await``
+  loosely corresponds to the monadic ``>>=``, whereas a short-circuiting
+  ``std::optional`` coro would be an exact analog of ``Maybe``.
+
+The C++ implementation relies on short-circuiting awaiters.  These either
+resume synchronously, or immediately destroy the awaiting coroutine and return
+control to the parent:
+
+.. code-block:: c++
+
+  T val;
+  if (awaiter.await_ready()) {
+    val = awaiter.await_resume();
+  } else {
+    awaiter.await_suspend();
+    return /* value representing the "execution short-circuited" outcome */;
+  }
+
+Then, a short-ciruiting coroutine is one where all the suspend points are
+either (i) trivial (like ``std::suspend_never``), or (ii) short-circuiting.
+
+Although the coroutine machinery makes them harder to optimize, logically,
+short-circuiting coroutines are like syntax sugar for regular functions where:
+
+- `co_await` allows expressions to return early.
+
+- `unhandled_exception()` lets the coroutine promise type wrap the function
+  body in an implicit try-catch.  This mandatory exception boundary behavior
+  can be desirable in robust, return-value-oriented programs that benefit from
+  short-circuiting coroutines.  If not, the promise can always re-throw.
+
+This attribute improves short-circuiting coroutines in a few ways:
+
+- **Avoid heap allocations for coro frames**: Allocating short-circuiting
+  coros on the stack makes code more predictable under memory pressure.
+  Without this attribute, LLVM cannot elide heap allocation even when all
+  awaiters are short-circuiting.
+
+- **Performance**: Significantly faster execution and smaller code size.
+
+- **Build time**: Faster compilation due to less IR being generated.
+
+Marking your ``await_suspend_destroy`` method as ``noexcept`` can sometimes
+further improve optimization.
+
+Here is a toy example of a portable short-circuiting awaiter:
+
+.. code-block:: c++
+
+  template <typename T>
+  struct [[clang::coro_await_suspend_destroy]] optional_awaiter {
+    std::optional<T> opt_;
+    bool await_ready() const noexcept { return opt_.has_value(); }
+    T await_resume() { return std::move(opt_).value(); }
+    void await_suspend_destroy(auto& promise) {
+      // Assume the return object of the outer coro defaults to "empty".
+    }
+    // Fallback for when `coro_await_suspend_destroy` is unavailable.
+    void await_suspend(auto handle) {
+      await_suspend_destroy(handle.promise());
+      handle.destroy();
+    }
+  };
+
+}];
+}
+
 def CountedByDocs : Documentation {
   let Category = DocCatField;
   let Content = [{
