@@ -186,6 +186,9 @@ protected:
   /// IsLittle - The target is Little Endian
   bool IsLittle;
 
+  /// DM - Denormal mode
+  DenormalMode DM;
+
   /// TargetTriple - What processor and OS we're targeting.
   Triple TargetTriple;
 
@@ -206,7 +209,7 @@ public:
   ///
   ARMSubtarget(const Triple &TT, const std::string &CPU, const std::string &FS,
                const ARMBaseTargetMachine &TM, bool IsLittle,
-               bool MinSize = false);
+               bool MinSize = false, DenormalMode DM = DenormalMode::getIEEE());
 
   /// getMaxInlineSizeThreshold - Returns the maximum memset / memcpy size
   /// that still makes it profitable to inline the call.

@@ -13,7 +13,7 @@
 ; RUN: llc -mtriple=arm-eabi -mcpu=cortex-a8 -regalloc=basic %s -o - \
 ; RUN:  | FileCheck %s -check-prefix=A8
 
-; RUN: llc -mtriple=arm-eabi -mcpu=cortex-a8 --enable-unsafe-fp-math %s -o - \
+; RUN: llc -mtriple=arm-eabi -mcpu=cortex-a8 --enable-unsafe-fp-math  %s -o - \
 ; RUN:  | FileCheck %s -check-prefix=A8U
 
 ; RUN: llc -mtriple=arm-darwin -mcpu=cortex-a8 %s -o - \
