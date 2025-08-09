@@ -101,8 +101,6 @@ std::optional<AttrInfo> findAttributeInfo(const DWARFDie DIE,
   return findAttributeInfo(DIE, AbbrevDecl, *Index);
 }
 
-const DebugLineTableRowRef DebugLineTableRowRef::NULL_ROW{0, 0};
-
 LLVM_ATTRIBUTE_UNUSED
 static void printLE64(const std::string &S) {
   for (uint32_t I = 0, Size = S.size(); I < Size; ++I) {
