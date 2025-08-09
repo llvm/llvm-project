@@ -17,11 +17,13 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeRange.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include <cstdint>
+#include <numeric>
 
 using namespace mlir;
 
@@ -97,6 +99,49 @@ Type convertMemRefType(MemRefType opTy, const TypeConverter *typeConverter) {
   return resultTy;
 }
 
+static Value calculateMemrefTotalSizeBytes(Location loc, MemRefType memrefType,
+                                           OpBuilder &builder) {
+  assert(isMemRefTypeLegalForEmitC(memrefType) &&
+         "incompatible memref type for EmitC conversion");
+  emitc::CallOpaqueOp elementSize = builder.create<emitc::CallOpaqueOp>(
+      loc, emitc::SizeTType::get(builder.getContext()),
+      builder.getStringAttr("sizeof"), ValueRange{},
+      ArrayAttr::get(builder.getContext(),
+                     {TypeAttr::get(memrefType.getElementType())}));
+
+  IndexType indexType = builder.getIndexType();
+  int64_t numElements = std::accumulate(memrefType.getShape().begin(),
+                                        memrefType.getShape().end(), int64_t{1},
+                                        std::multiplies<int64_t>());
+  emitc::ConstantOp numElementsValue = builder.create<emitc::ConstantOp>(
+      loc, indexType, builder.getIndexAttr(numElements));
+
+  Type sizeTType = emitc::SizeTType::get(builder.getContext());
+  emitc::MulOp totalSizeBytes = builder.create<emitc::MulOp>(
+      loc, sizeTType, elementSize.getResult(0), numElementsValue);
+
+  return totalSizeBytes.getResult();
+}
+
+static emitc::ApplyOp
+createPointerFromEmitcArray(Location loc, OpBuilder &builder,
+                            TypedValue<emitc::ArrayType> arrayValue) {
+
+  emitc::ConstantOp zeroIndex = builder.create<emitc::ConstantOp>(
+      loc, builder.getIndexType(), builder.getIndexAttr(0));
+
+  int64_t rank = arrayValue.getType().getRank();
+  llvm::SmallVector<mlir::Value> indices(rank, zeroIndex);
+
+  emitc::SubscriptOp subPtr =
+      builder.create<emitc::SubscriptOp>(loc, arrayValue, ValueRange(indices));
+  emitc::ApplyOp ptr = builder.create<emitc::ApplyOp>(
+      loc, emitc::PointerType::get(arrayValue.getType().getElementType()),
+      builder.getStringAttr("&"), subPtr);
+
+  return ptr;
+}
+
 struct ConvertAlloc final : public OpConversionPattern<memref::AllocOp> {
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
@@ -155,6 +200,47 @@ struct ConvertAlloc final : public OpConversionPattern<memref::AllocOp> {
         loc, targetPointerType, allocCall.getResult(0));
 
     rewriter.replaceOp(allocOp, castOp);
+    return success();
+  }
+};
+
+struct ConvertCopy final : public OpConversionPattern<memref::CopyOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(memref::CopyOp copyOp, OpAdaptor operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = copyOp.getLoc();
+    MemRefType srcMemrefType = cast<MemRefType>(copyOp.getSource().getType());
+    MemRefType targetMemrefType =
+        cast<MemRefType>(copyOp.getTarget().getType());
+
+    if (!isMemRefTypeLegalForEmitC(srcMemrefType))
+      return rewriter.notifyMatchFailure(
+          loc, "incompatible source memref type for EmitC conversion");
+
+    if (!isMemRefTypeLegalForEmitC(targetMemrefType))
+      return rewriter.notifyMatchFailure(
+          loc, "incompatible target memref type for EmitC conversion");
+
+    auto srcArrayValue =
+        cast<TypedValue<emitc::ArrayType>>(operands.getSource());
+    emitc::ApplyOp srcPtr =
+        createPointerFromEmitcArray(loc, rewriter, srcArrayValue);
+
+    auto targetArrayValue =
+        cast<TypedValue<emitc::ArrayType>>(operands.getTarget());
+    emitc::ApplyOp targetPtr =
+        createPointerFromEmitcArray(loc, rewriter, targetArrayValue);
+
+    emitc::CallOpaqueOp memCpyCall = rewriter.create<emitc::CallOpaqueOp>(
+        loc, TypeRange{}, "memcpy",
+        ValueRange{
+            targetPtr.getResult(), srcPtr.getResult(),
+            calculateMemrefTotalSizeBytes(loc, srcMemrefType, rewriter)});
+
+    rewriter.replaceOp(copyOp, memCpyCall.getResults());
+
     return success();
   }
 };
@@ -320,6 +406,7 @@ void mlir::populateMemRefToEmitCTypeConversion(TypeConverter &typeConverter) {
 
 void mlir::populateMemRefToEmitCConversionPatterns(
     RewritePatternSet &patterns, const TypeConverter &converter) {
-  patterns.add<ConvertAlloca, ConvertAlloc, ConvertGlobal, ConvertGetGlobal,
-               ConvertLoad, ConvertStore>(converter, patterns.getContext());
+  patterns.add<ConvertAlloca, ConvertAlloc, ConvertCopy, ConvertGlobal,
+               ConvertGetGlobal, ConvertLoad, ConvertStore>(
+      converter, patterns.getContext());
 }
