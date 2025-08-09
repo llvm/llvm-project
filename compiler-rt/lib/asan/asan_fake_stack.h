@@ -42,11 +42,16 @@ struct FakeFrame {
 // is a power of two, starting from 64 bytes. Each size class occupies
 // stack_size bytes and thus can allocate
 // NumberOfFrames=(stack_size/BytesInSizeClass) fake frames (also a power of 2).
+//
 // For each size class we have NumberOfFrames allocation flags,
 // each flag indicates whether the given frame is currently allocated.
-// All flags for size classes 0 .. 10 are stored in a single contiguous region
-// followed by another contiguous region which contains the actual memory for
-// size classes. The addresses are computed by GetFlags and GetFrame without
+//
+// All flags for size classes 0 .. 10 are stored in a single contiguous region,
+// padded to 2**kMaxStackFrameSizeLog (to prevent frames from becoming
+// unaligned), followed by another contiguous region which contains the actual
+// memory for size classes.
+//
+// The addresses are computed by GetFlags and GetFrame without
 // any memory accesses solely based on 'this' and stack_size_log.
 // Allocate() flips the appropriate allocation flag atomically, thus achieving
 // async-signal safety.
@@ -68,7 +73,9 @@ class FakeStack {
 
   // stack_size_log is at least 15 (stack_size >= 32K).
   static uptr SizeRequiredForFlags(uptr stack_size_log) {
-    return ((uptr)1) << (stack_size_log + 1 - kMinStackFrameSizeLog);
+    // Padding is needed to protect alignment in GetFrame().
+    uptr size = ((uptr)1) << (stack_size_log + 1 - kMinStackFrameSizeLog);
+    return RoundUpTo(size + 1, 1 << kMaxStackFrameSizeLog) - kFlagsOffset;
   }
 
   // Each size class occupies stack_size bytes.
@@ -156,7 +163,7 @@ class FakeStack {
 
  private:
   FakeStack() { }
-  static const uptr kFlagsOffset = 4096;  // This is were the flags begin.
+  static const uptr kFlagsOffset = 4096;  // This is where the flags begin.
   // Must match the number of uses of DEFINE_STACK_MALLOC_FREE_WITH_CLASS_ID
   COMPILER_CHECK(kNumberOfSizeClasses == 11);
   static const uptr kMaxStackMallocSize = ((uptr)1) << kMaxStackFrameSizeLog;
@@ -165,6 +172,10 @@ class FakeStack {
   uptr stack_size_log_;
   // a bit is set if something was allocated from the corresponding size class.
   bool needs_gc_;
+  // We allocated more memory than needed to ensure the FakeStack (and, by
+  // extension, each of the fake stack frames) is aligned. We keep track of the
+  // true start so that we can unmap it.
+  void *true_start;
 };
 
 FakeStack *GetTLSFakeStack();

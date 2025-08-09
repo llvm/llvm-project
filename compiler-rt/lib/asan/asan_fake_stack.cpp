@@ -55,9 +55,16 @@ FakeStack *FakeStack::Create(uptr stack_size_log) {
   if (stack_size_log > kMaxStackSizeLog)
     stack_size_log = kMaxStackSizeLog;
   uptr size = RequiredSize(stack_size_log);
+  uptr padded_size = size + (1 << kMaxStackFrameSizeLog);
+  // Alignment here is needed to protect the alignment invariant in GetFrame()
+  // MmapAlignedOrDieOnFatalError requires that the *size* is a power of 2,
+  // which is an overly strong condition.
+  void *true_res = reinterpret_cast<void *>(
+      flags()->uar_noreserve ? MmapNoReserveOrDie(padded_size, "FakeStack")
+                             : MmapOrDie(padded_size, "FakeStack"));
   FakeStack *res = reinterpret_cast<FakeStack *>(
-      flags()->uar_noreserve ? MmapNoReserveOrDie(size, "FakeStack")
-                             : MmapOrDie(size, "FakeStack"));
+      RoundUpTo((uptr)true_res, 1 << kMaxStackFrameSizeLog));
+  res->true_start = true_res;
   res->stack_size_log_ = stack_size_log;
   u8 *p = reinterpret_cast<u8 *>(res);
   VReport(1,
@@ -79,8 +86,11 @@ void FakeStack::Destroy(int tid) {
     Report("T%d: FakeStack destroyed: %s\n", tid, str.data());
   }
   uptr size = RequiredSize(stack_size_log_);
-  FlushUnneededASanShadowMemory(reinterpret_cast<uptr>(this), size);
-  UnmapOrDie(this, size);
+  uptr padded_size = size + (1 << kMaxStackFrameSizeLog);
+  void *true_start = this->true_start;
+  FlushUnneededASanShadowMemory(reinterpret_cast<uptr>(true_start),
+                                padded_size);
+  UnmapOrDie(true_start, padded_size);
 }
 
 void FakeStack::PoisonAll(u8 magic) {

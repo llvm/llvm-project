@@ -25,9 +25,9 @@
 namespace __asan {
 
 TEST(FakeStack, FlagsSize) {
-  EXPECT_EQ(FakeStack::SizeRequiredForFlags(10), 1U << 5);
-  EXPECT_EQ(FakeStack::SizeRequiredForFlags(11), 1U << 6);
-  EXPECT_EQ(FakeStack::SizeRequiredForFlags(20), 1U << 15);
+  EXPECT_EQ(FakeStack::SizeRequiredForFlags(10), (1U << 16) - 4096);
+  EXPECT_EQ(FakeStack::SizeRequiredForFlags(11), (1U << 16) - 4096);
+  EXPECT_EQ(FakeStack::SizeRequiredForFlags(20), (1U << 16) - 4096);
 }
 
 TEST(FakeStack, RequiredSize) {
@@ -35,11 +35,11 @@ TEST(FakeStack, RequiredSize) {
   //  uptr alloc_size = FakeStack::RequiredSize(i);
   //  printf("%zdK ==> %zd\n", 1 << (i - 10), alloc_size);
   // }
-  EXPECT_EQ(FakeStack::RequiredSize(15), 365568U);
-  EXPECT_EQ(FakeStack::RequiredSize(16), 727040U);
-  EXPECT_EQ(FakeStack::RequiredSize(17), 1449984U);
-  EXPECT_EQ(FakeStack::RequiredSize(18), 2895872U);
-  EXPECT_EQ(FakeStack::RequiredSize(19), 5787648U);
+  EXPECT_EQ(FakeStack::RequiredSize(15), 425984U);
+  EXPECT_EQ(FakeStack::RequiredSize(16), 786432U);
+  EXPECT_EQ(FakeStack::RequiredSize(17), 1507328U);
+  EXPECT_EQ(FakeStack::RequiredSize(18), 2949120U);
+  EXPECT_EQ(FakeStack::RequiredSize(19), 5832704U);
 }
 
 TEST(FakeStack, FlagsOffset) {
