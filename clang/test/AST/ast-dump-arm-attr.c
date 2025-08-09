@@ -18,7 +18,7 @@
 
 __attribute__((interrupt)) void Test(void);
 // CHECK: FunctionDecl{{.*}}Test
-// CHECK-NEXT: ARMInterruptAttr
+// CHECK-NEXT: attrDetails: ARMInterruptAttr
 
 typedef int (*CmseTest)(int a) __attribute__((cmse_nonsecure_call));
 // CHECK-CMSE: TypedefDecl{{.*}}CmseTest{{.*}}__attribute__((cmse_nonsecure_call))

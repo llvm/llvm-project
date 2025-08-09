@@ -25,17 +25,17 @@
 // instantiated specialization.
 
 // EMPTY: ClassTemplateDecl {{.*}} implicit [[RESOURCE]]
-// EMPTY-NEXT: TemplateTypeParmDecl {{.*}} typename depth 0 index 0 element_type
-// EMPTY-NEXT: ConceptSpecializationExpr {{.*}} 'bool' Concept {{.*}} '__is_typed_resource_element_compatible'
-// EMPTY-NEXT: ImplicitConceptSpecializationDecl
-// EMPTY-NEXT: TemplateArgument type 'type-parameter-0-0'
-// EMPTY-NEXT: TemplateTypeParmType {{.*}}  'type-parameter-0-0' dependent depth 0 index 0
-// EMPTY-NEXT: TemplateTypeParm {{.*}}  depth 0 index 0
-// EMPTY-NEXT: TemplateArgument type 'element_type':'type-parameter-0-0'
-// EMPTY-NEXT: TemplateTypeParmType {{.*}}  'element_type' dependent depth 0 index 0
-// EMPTY-NEXT: TemplateTypeParm {{.*}}  'element_type'
-// EMPTY-NEXT: CXXRecordDecl {{.*}} implicit <undeserialized declarations> class [[RESOURCE]]
-// EMPTY-NEXT: FinalAttr {{.*}} Implicit final
+// EMPTY: TemplateTypeParmDecl {{.*}} typename depth 0 index 0 element_type
+// EMPTY: ConceptSpecializationExpr {{.*}} 'bool' Concept {{.*}} '__is_typed_resource_element_compatible'
+// EMPTY: ImplicitConceptSpecializationDecl
+// EMPTY: TemplateArgument type 'type-parameter-0-0'
+// EMPTY: TemplateTypeParmType {{.*}}  'type-parameter-0-0' dependent depth 0 index 0
+// EMPTY: TemplateTypeParm {{.*}}  depth 0 index 0
+// EMPTY: TemplateArgument type 'element_type':'type-parameter-0-0'
+// EMPTY: TemplateTypeParmType {{.*}}  'element_type' dependent depth 0 index 0
+// EMPTY: TemplateTypeParm {{.*}}  'element_type'
+// EMPTY: CXXRecordDecl {{.*}} implicit <undeserialized declarations> class [[RESOURCE]]
+// EMPTY: FinalAttr {{.*}} Implicit final
 
 // There should be no more occurrences of the resource type
 // EMPTY-NOT: {{[^[:alnum:]]}}[[RESOURCE]]
@@ -47,19 +47,19 @@ RESOURCE<float> Buffer;
 #endif
 
 // CHECK: ClassTemplateDecl {{.*}} implicit [[RESOURCE]]
-// CHECK-NEXT: TemplateTypeParmDecl {{.*}} typename depth 0 index 0 element_type
-// CHECK-NEXT: ConceptSpecializationExpr {{.*}} 'bool' Concept {{.*}}  '__is_typed_resource_element_compatible'
-// CHECK-NEXT: ImplicitConceptSpecializationDecl
-// CHECK-NEXT: TemplateArgument type 'type-parameter-0-0'
-// CHECK-NEXT: TemplateTypeParmType {{.*}}  'type-parameter-0-0' dependent depth 0 index 0
-// CHECK-NEXT: TemplateTypeParm {{.*}}  depth 0 index 0
-// CHECK-NEXT: TemplateArgument type 'element_type':'type-parameter-0-0'
-// CHECK-NEXT: TemplateTypeParmType {{.*}}  'element_type' dependent depth 0 index 0
-// CHECK-NEXT: TemplateTypeParm {{.*}}  'element_type'
-// CHECK-NEXT: CXXRecordDecl {{.*}} implicit class [[RESOURCE]] definition
+// CHECK: TemplateTypeParmDecl {{.*}} typename depth 0 index 0 element_type
+// CHECK: ConceptSpecializationExpr {{.*}} 'bool' Concept {{.*}}  '__is_typed_resource_element_compatible'
+// CHECK: ImplicitConceptSpecializationDecl
+// CHECK: TemplateArgument type 'type-parameter-0-0'
+// CHECK: TemplateTypeParmType {{.*}}  'type-parameter-0-0' dependent depth 0 index 0
+// CHECK: TemplateTypeParm {{.*}}  depth 0 index 0
+// CHECK: TemplateArgument type 'element_type':'type-parameter-0-0'
+// CHECK: TemplateTypeParmType {{.*}}  'element_type' dependent depth 0 index 0
+// CHECK: TemplateTypeParm {{.*}}  'element_type'
+// CHECK: CXXRecordDecl {{.*}} implicit class [[RESOURCE]] definition
 
 // CHECK: FinalAttr {{.*}} Implicit final
-// CHECK-NEXT: FieldDecl {{.*}} implicit __handle '__hlsl_resource_t
+// CHECK: FieldDecl {{.*}} implicit __handle '__hlsl_resource_t
 // CHECK-UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-SRV-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
@@ -67,125 +67,125 @@ RESOURCE<float> Buffer;
 // Default constructor
 
 // CHECK: CXXConstructorDecl {{.*}} [[RESOURCE]]<element_type> 'void ()' inline
-// CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: BinaryOperator {{.*}} '='
-// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} '[[RESOURCE]]<element_type>' lvalue implicit this
-// CHECK-NEXT: CallExpr {{.*}} '__hlsl_resource_t
-// CHECK-NEXT: ImplicitCastExpr {{.*}} <BuiltinFnToFnPtr>
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_uninitializedhandle'
-// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} '[[RESOURCE]]<element_type>' lvalue implicit this
-// CHECK-NEXT: AlwaysInlineAttr
+// CHECK: CompoundStmt
+// CHECK: BinaryOperator {{.*}} '='
+// CHECK: MemberExpr {{.*}} lvalue .__handle
+// CHECK: CXXThisExpr {{.*}} '[[RESOURCE]]<element_type>' lvalue implicit this
+// CHECK: CallExpr {{.*}} '__hlsl_resource_t
+// CHECK: ImplicitCastExpr {{.*}} <BuiltinFnToFnPtr>
+// CHECK: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_uninitializedhandle'
+// CHECK: MemberExpr {{.*}} lvalue .__handle
+// CHECK: CXXThisExpr {{.*}} '[[RESOURCE]]<element_type>' lvalue implicit this
+// CHECK: AlwaysInlineAttr
 
 // Constructor from binding
 
 // CHECK: CXXConstructorDecl {{.*}} [[RESOURCE]]<element_type> 'void (unsigned int, unsigned int, int, unsigned int, const char *)' inline
-// CHECK-NEXT: ParmVarDecl {{.*}} registerNo 'unsigned int'
-// CHECK-NEXT: ParmVarDecl {{.*}} spaceNo 'unsigned int'
-// CHECK-NEXT: ParmVarDecl {{.*}} range 'int'
-// CHECK-NEXT: ParmVarDecl {{.*}} index 'unsigned int'
-// CHECK-NEXT: ParmVarDecl {{.*}} name 'const char *'
-// CHECK-NEXT: CompoundStmt {{.*}}
-// CHECK-NEXT: BinaryOperator {{.*}} '='
-// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} '[[RESOURCE]]<element_type>' lvalue implicit this
-// CHECK-NEXT: CallExpr {{.*}} '__hlsl_resource_t
-// CHECK-NEXT: ImplicitCastExpr {{.*}} <BuiltinFnToFnPtr>
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_handlefrombinding'
-// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} '[[RESOURCE]]<element_type>' lvalue implicit this
-// CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'registerNo' 'unsigned int'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'spaceNo' 'unsigned int'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'int' ParmVar {{.*}} 'range' 'int'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'index' 'unsigned int'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'const char *' ParmVar {{.*}} 'name' 'const char *'
-// CHECK-NEXT: AlwaysInlineAttr
+// CHECK: ParmVarDecl {{.*}} registerNo 'unsigned int'
+// CHECK: ParmVarDecl {{.*}} spaceNo 'unsigned int'
+// CHECK: ParmVarDecl {{.*}} range 'int'
+// CHECK: ParmVarDecl {{.*}} index 'unsigned int'
+// CHECK: ParmVarDecl {{.*}} name 'const char *'
+// CHECK: CompoundStmt {{.*}}
+// CHECK: BinaryOperator {{.*}} '='
+// CHECK: MemberExpr {{.*}} lvalue .__handle
+// CHECK: CXXThisExpr {{.*}} '[[RESOURCE]]<element_type>' lvalue implicit this
+// CHECK: CallExpr {{.*}} '__hlsl_resource_t
+// CHECK: ImplicitCastExpr {{.*}} <BuiltinFnToFnPtr>
+// CHECK: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_handlefrombinding'
+// CHECK: MemberExpr {{.*}} lvalue .__handle
+// CHECK: CXXThisExpr {{.*}} '[[RESOURCE]]<element_type>' lvalue implicit this
+// CHECK: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'registerNo' 'unsigned int'
+// CHECK: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'spaceNo' 'unsigned int'
+// CHECK: DeclRefExpr {{.*}} 'int' ParmVar {{.*}} 'range' 'int'
+// CHECK: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'index' 'unsigned int'
+// CHECK: DeclRefExpr {{.*}} 'const char *' ParmVar {{.*}} 'name' 'const char *'
+// CHECK: AlwaysInlineAttr
 
 // Constructor from implicit binding
 
 // CHECK: CXXConstructorDecl {{.*}} [[RESOURCE]]<element_type> 'void (unsigned int, int, unsigned int, unsigned int, const char *)' inline
-// CHECK-NEXT: ParmVarDecl {{.*}} spaceNo 'unsigned int'
-// CHECK-NEXT: ParmVarDecl {{.*}} range 'int'
-// CHECK-NEXT: ParmVarDecl {{.*}} index 'unsigned int'
-// CHECK-NEXT: ParmVarDecl {{.*}} orderId 'unsigned int'
-// CHECK-NEXT: ParmVarDecl {{.*}} name 'const char *'
-// CHECK-NEXT: CompoundStmt {{.*}}
-// CHECK-NEXT: BinaryOperator {{.*}} '='
-// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} '[[RESOURCE]]<element_type>' lvalue implicit this
-// CHECK-NEXT: CallExpr {{.*}} '__hlsl_resource_t
-// CHECK-NEXT: ImplicitCastExpr {{.*}} <BuiltinFnToFnPtr>
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_handlefromimplicitbinding'
-// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
-// CHECK-NEXT: CXXThisExpr {{.*}} '[[RESOURCE]]<element_type>' lvalue implicit this
-// CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'spaceNo' 'unsigned int'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'int' ParmVar {{.*}} 'range' 'int'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'index' 'unsigned int'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'orderId' 'unsigned int'
-// CHECK-NEXT: DeclRefExpr {{.*}} 'const char *' ParmVar {{.*}} 'name' 'const char *'
-// CHECK-NEXT: AlwaysInlineAttr
+// CHECK: ParmVarDecl {{.*}} spaceNo 'unsigned int'
+// CHECK: ParmVarDecl {{.*}} range 'int'
+// CHECK: ParmVarDecl {{.*}} index 'unsigned int'
+// CHECK: ParmVarDecl {{.*}} orderId 'unsigned int'
+// CHECK: ParmVarDecl {{.*}} name 'const char *'
+// CHECK: CompoundStmt {{.*}}
+// CHECK: BinaryOperator {{.*}} '='
+// CHECK: MemberExpr {{.*}} lvalue .__handle
+// CHECK: CXXThisExpr {{.*}} '[[RESOURCE]]<element_type>' lvalue implicit this
+// CHECK: CallExpr {{.*}} '__hlsl_resource_t
+// CHECK: ImplicitCastExpr {{.*}} <BuiltinFnToFnPtr>
+// CHECK: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_handlefromimplicitbinding'
+// CHECK: MemberExpr {{.*}} lvalue .__handle
+// CHECK: CXXThisExpr {{.*}} '[[RESOURCE]]<element_type>' lvalue implicit this
+// CHECK: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'spaceNo' 'unsigned int'
+// CHECK: DeclRefExpr {{.*}} 'int' ParmVar {{.*}} 'range' 'int'
+// CHECK: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'index' 'unsigned int'
+// CHECK: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'orderId' 'unsigned int'
+// CHECK: DeclRefExpr {{.*}} 'const char *' ParmVar {{.*}} 'name' 'const char *'
+// CHECK: AlwaysInlineAttr
 
 // Subscript operators
 
 // CHECK: CXXMethodDecl {{.*}} operator[] 'const hlsl_device element_type &(unsigned int) const'
-// CHECK-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
-// CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' prefix '*' cannot overflow
-// CHECK-NEXT: CallExpr {{.*}} 'hlsl_device element_type *'
-// CHECK-NEXT: ImplicitCastExpr {{.*}} <BuiltinFnToFnPtr>
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}}  '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// CHECK: ParmVarDecl {{.*}} Index 'unsigned int'
+// CHECK: CompoundStmt
+// CHECK: ReturnStmt
+// CHECK: UnaryOperator {{.*}} 'hlsl_device element_type' prefix '*' cannot overflow
+// CHECK: CallExpr {{.*}} 'hlsl_device element_type *'
+// CHECK: ImplicitCastExpr {{.*}} <BuiltinFnToFnPtr>
+// CHECK: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}}  '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
+// CHECK: MemberExpr {{.*}} '__hlsl_resource_t
 // CHECK-UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-SRV-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
 // CHECK-SAME: ' lvalue .__handle {{.*}}
-// CHECK-NEXT: CXXThisExpr {{.*}} 'const [[RESOURCE]]<element_type>' lvalue implicit this
-// CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}}  'Index' 'unsigned int'
-// CHECK-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
+// CHECK: CXXThisExpr {{.*}} 'const [[RESOURCE]]<element_type>' lvalue implicit this
+// CHECK: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}}  'Index' 'unsigned int'
+// CHECK: AlwaysInlineAttr {{.*}} Implicit always_inline
 
-// CHECK-UAV-NEXT: CXXMethodDecl {{.*}} operator[] 'hlsl_device element_type &(unsigned int)'
-// CHECK-UAV-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
-// CHECK-UAV-NEXT: CompoundStmt
-// CHECK-UAV-NEXT: ReturnStmt
-// CHECK-UAV-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' prefix '*' cannot overflow
-// CHECK-UAV-NEXT: CallExpr {{.*}} 'hlsl_device element_type *'
-// CHECK-UAV-NEXT: ImplicitCastExpr {{.*}} <BuiltinFnToFnPtr>
-// CHECK-UAV-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}}  '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
-// CHECK-UAV-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// CHECK-UAV: CXXMethodDecl {{.*}} operator[] 'hlsl_device element_type &(unsigned int)'
+// CHECK-UAV: ParmVarDecl {{.*}} Index 'unsigned int'
+// CHECK-UAV: CompoundStmt
+// CHECK-UAV: ReturnStmt
+// CHECK-UAV: UnaryOperator {{.*}} 'hlsl_device element_type' prefix '*' cannot overflow
+// CHECK-UAV: CallExpr {{.*}} 'hlsl_device element_type *'
+// CHECK-UAV: ImplicitCastExpr {{.*}} <BuiltinFnToFnPtr>
+// CHECK-UAV: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}}  '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
+// CHECK-UAV: MemberExpr {{.*}} '__hlsl_resource_t
 // CHECK-UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-UAV-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
 // CHECK-UAV-SAME: ' lvalue .__handle {{.*}}
-// CHECK-UAV-NEXT: CXXThisExpr {{.*}} '[[RESOURCE]]<element_type>' lvalue implicit this
-// CHECK-UAV-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}}  'Index' 'unsigned int'
-// CHECK-UAV-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
+// CHECK-UAV: CXXThisExpr {{.*}} '[[RESOURCE]]<element_type>' lvalue implicit this
+// CHECK-UAV: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}}  'Index' 'unsigned int'
+// CHECK-UAV: AlwaysInlineAttr {{.*}} Implicit always_inline
 
 // Load method
 
-// CHECK-NEXT: CXXMethodDecl {{.*}} Load 'element_type (unsigned int)'
-// CHECK-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
-// CHECK-NEXT: CompoundStmt
-// CHECK-NEXT: ReturnStmt
-// CHECK-NEXT: UnaryOperator {{.*}} 'hlsl_device element_type' prefix '*' cannot overflow
-// CHECK-NEXT: CallExpr {{.*}} 'hlsl_device element_type *'
-// CHECK-NEXT: ImplicitCastExpr {{.*}} <BuiltinFnToFnPtr>
-// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}}  '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
-// CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
+// CHECK: CXXMethodDecl {{.*}} Load 'element_type (unsigned int)'
+// CHECK: ParmVarDecl {{.*}} Index 'unsigned int'
+// CHECK: CompoundStmt
+// CHECK: ReturnStmt
+// CHECK: UnaryOperator {{.*}} 'hlsl_device element_type' prefix '*' cannot overflow
+// CHECK: CallExpr {{.*}} 'hlsl_device element_type *'
+// CHECK: ImplicitCastExpr {{.*}} <BuiltinFnToFnPtr>
+// CHECK: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}}  '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
+// CHECK: MemberExpr {{.*}} '__hlsl_resource_t
 // CHECK-UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-SRV-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
 // CHECK-SAME: ' lvalue .__handle {{.*}}
-// CHECK-NEXT: CXXThisExpr {{.*}} '[[RESOURCE]]<element_type>' lvalue implicit this
-// CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}}  'Index' 'unsigned int'
-// CHECK-NEXT: AlwaysInlineAttr {{.*}} Implicit always_inline
+// CHECK: CXXThisExpr {{.*}} '[[RESOURCE]]<element_type>' lvalue implicit this
+// CHECK: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}}  'Index' 'unsigned int'
+// CHECK: AlwaysInlineAttr {{.*}} Implicit always_inline
 
 // CHECK: ClassTemplateSpecializationDecl {{.*}} class [[RESOURCE]] definition
 
 // CHECK: TemplateArgument type 'float'
-// CHECK-NEXT: BuiltinType {{.*}}  'float'
-// CHECK-NEXT: FinalAttr {{.*}} Implicit final
-// CHECK-NEXT: FieldDecl {{.*}} implicit referenced __handle '__hlsl_resource_t
+// CHECK: BuiltinType {{.*}}  'float'
+// CHECK: FinalAttr {{.*}} Implicit final
+// CHECK: FieldDecl {{.*}} implicit referenced __handle '__hlsl_resource_t
 // CHECK-UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-SRV-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(float)]]

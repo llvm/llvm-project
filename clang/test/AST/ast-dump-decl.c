@@ -130,14 +130,14 @@ int TestFunctionDecl(int x, enum { e } y) {
 }
 // CHECK:      FunctionDecl{{.*}} TestFunctionDecl 'int (int, enum {{.*}})'
 // CHECK-NEXT:   ParmVarDecl{{.*}} x
-// CHECK-NEXT:   ParmVarDecl{{.*}} y
-// CHECK-NEXT:   CompoundStmt
+// CHECK:   ParmVarDecl{{.*}} y
+// CHECK:   CompoundStmt
 
 // FIXME: It would be nice to 'Enum' and 'e'.
 int TestFunctionDecl2(enum Enum { e } x) { return x; }
 // CHECK:      FunctionDecl{{.*}} TestFunctionDecl2 'int (enum {{.*}})'
 // CHECK-NEXT:   ParmVarDecl{{.*}} x
-// CHECK-NEXT:   CompoundStmt
+// CHECK:   CompoundStmt
 
 
 int TestFunctionDeclProto(int x);

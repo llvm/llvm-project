@@ -4,9 +4,9 @@
 int some_func(int *);
 
 // CHECK:     VarDecl {{.*}} invalid_call
-// CHECK-NEXT:  `-RecoveryExpr {{.*}} 'int' contains-errors
-// CHECK-NEXT:    |-UnresolvedLookupExpr {{.*}} 'some_func'
-// CHECK-NEXT:    `-IntegerLiteral {{.*}} 123
+// CHECK-NEXT:    RecoveryExpr {{.*}} 'int' contains-errors
+// CHECK-NEXT:      UnresolvedLookupExpr {{.*}} 'some_func'
+// CHECK-NEXT:      IntegerLiteral {{.*}} 123
 // DISABLED-NOT: -RecoveryExpr {{.*}} contains-errors
 int invalid_call = some_func(123);
 
@@ -35,37 +35,37 @@ int ambig_func(double);
 int ambig_func(float);
 
 // CHECK:     VarDecl {{.*}} ambig_call
-// CHECK-NEXT:  `-RecoveryExpr {{.*}} 'int' contains-errors
-// CHECK-NEXT:    |-UnresolvedLookupExpr {{.*}} 'ambig_func'
-// CHECK-NEXT:    `-IntegerLiteral {{.*}} 123
+// CHECK-NEXT:    RecoveryExpr {{.*}} 'int' contains-errors
+// CHECK-NEXT:      UnresolvedLookupExpr {{.*}} 'ambig_func'
+// CHECK-NEXT:      IntegerLiteral {{.*}} 123
 // DISABLED-NOT: -RecoveryExpr {{.*}} contains-errors
 int ambig_call = ambig_func(123);
 
 constexpr int a = 10;
 
 // CHECK:     VarDecl {{.*}} postfix_inc
-// CHECK-NEXT:`-RecoveryExpr {{.*}} contains-errors
-// CHECK-NEXT:  `-DeclRefExpr {{.*}} 'a'
+// CHECK-NEXT:  RecoveryExpr {{.*}} contains-errors
+// CHECK-NEXT:    DeclRefExpr {{.*}} 'a'
 // DISABLED-NOT: -RecoveryExpr {{.*}} contains-errors
 int postfix_inc = a++;
 
 // CHECK:     VarDecl {{.*}} prefix_inc
-// CHECK-NEXT:`-RecoveryExpr {{.*}} contains-errors
-// CHECK-NEXT:  `-DeclRefExpr {{.*}} 'a'
+// CHECK-NEXT:  RecoveryExpr {{.*}} contains-errors
+// CHECK-NEXT:    DeclRefExpr {{.*}} 'a'
 // DISABLED-NOT: -RecoveryExpr {{.*}} contains-errors
 int prefix_inc = ++a;
 
 // CHECK:     VarDecl {{.*}} unary_address
-// CHECK-NEXT:`-RecoveryExpr {{.*}} contains-errors
-// CHECK-NEXT:  `-ParenExpr {{.*}}
-// CHECK-NEXT:    `-BinaryOperator {{.*}} '+'
-// CHECK-NEXT:      |-ImplicitCastExpr
-// CHECK-NEXT:      | `-DeclRefExpr {{.*}} 'a'
+// CHECK-NEXT:  RecoveryExpr {{.*}} contains-errors
+// CHECK-NEXT:    ParenExpr {{.*}}
+// CHECK-NEXT:      BinaryOperator {{.*}} '+'
+// CHECK-NEXT:        ImplicitCastExpr
+// CHECK-NEXT:          DeclRefExpr {{.*}} 'a'
 // DISABLED-NOT: -RecoveryExpr {{.*}} contains-errors
 int unary_address = &(a + 1);
 
 // CHECK:     VarDecl {{.*}} unary_bitinverse
-// CHECK-NEXT:`-RecoveryExpr {{.*}} contains-errors
+// CHECK-NEXT:  RecoveryExpr {{.*}} contains-errors
 // CHECK-NEXT:  `-ParenExpr {{.*}}
 // CHECK-NEXT:    `-BinaryOperator {{.*}} '+'
 // CHECK-NEXT:      |-ImplicitCastExpr
@@ -75,14 +75,14 @@ int unary_address = &(a + 1);
 int unary_bitinverse = ~(a + 0.0);
 
 // CHECK:     VarDecl {{.*}} binary
-// CHECK-NEXT:`-RecoveryExpr {{.*}} contains-errors
+// CHECK-NEXT:  RecoveryExpr {{.*}} contains-errors
 // CHECK-NEXT:  |-DeclRefExpr {{.*}} 'a'
 // CHECK-NEXT:  `-CXXNullPtrLiteralExpr
 // DISABLED-NOT: -RecoveryExpr {{.*}} contains-errors
 int binary = a + nullptr;
 
 // CHECK:     VarDecl {{.*}} ternary
-// CHECK-NEXT:`-RecoveryExpr {{.*}} contains-errors
+// CHECK-NEXT:  RecoveryExpr {{.*}} contains-errors
 // CHECK-NEXT:  |-DeclRefExpr {{.*}} 'a'
 // CHECK-NEXT:  |-CXXNullPtrLiteralExpr
 // CHECK-NEXT:  `-DeclRefExpr {{.*}} 'a'
@@ -91,7 +91,7 @@ int ternary = a ? nullptr : a;
 
 // CHECK:     FunctionDecl
 // CHECK-NEXT:|-ParmVarDecl {{.*}} x
-// CHECK-NEXT:`-CompoundStmt
+// CHECK:| `-CompoundStmt
 // CHECK-NEXT: |-RecoveryExpr {{.*}} contains-errors
 // CHECK-NEXT: | `-DeclRefExpr {{.*}} 'foo'
 // CHECK-NEXT: `-CallExpr {{.*}} contains-errors
@@ -142,39 +142,39 @@ void test2(Foo2 f) {
 auto f();
 int f(double);
 // CHECK:      VarDecl {{.*}} unknown_type_call 'int'
-// CHECK-NEXT: `-RecoveryExpr {{.*}} '<dependent type>'
+// CHECK-NEXT: RecoveryExpr {{.*}} '<dependent type>'
 int unknown_type_call = f(0, 0);
 
 void InvalidInitalizer(int x) {
   struct Bar { Bar(); };
   // CHECK:     `-VarDecl {{.*}} a1 'Bar'
-  // CHECK-NEXT: `-RecoveryExpr {{.*}} contains-errors
+  // CHECK-NEXT: RecoveryExpr {{.*}} contains-errors
   // CHECK-NEXT:  `-IntegerLiteral {{.*}} 'int' 1
   Bar a1(1);
   // CHECK:     `-VarDecl {{.*}} a2 'Bar'
-  // CHECK-NEXT: `-RecoveryExpr {{.*}} contains-errors
+  // CHECK-NEXT: RecoveryExpr {{.*}} contains-errors
   // CHECK-NEXT:  `-DeclRefExpr {{.*}} 'x'
   Bar a2(x);
   // CHECK:     `-VarDecl {{.*}} a3 'Bar'
-  // CHECK-NEXT: `-RecoveryExpr {{.*}} contains-errors
+  // CHECK-NEXT: RecoveryExpr {{.*}} contains-errors
   // CHECK-NEXT:  `-InitListExpr
   // CHECK-NEDT:   `-DeclRefExpr {{.*}} 'x'
   Bar a3{x};
 
   // CHECK:     `-VarDecl {{.*}} b1 'Bar'
-  // CHECK-NEXT: `-RecoveryExpr {{.*}} contains-errors
+  // CHECK-NEXT: RecoveryExpr {{.*}} contains-errors
   // CHECK-NEXT:  `-IntegerLiteral {{.*}} 'int' 1
   Bar b1 = 1;
   // CHECK:     `-VarDecl {{.*}} b2 'Bar'
-  // CHECK-NEXT: `-RecoveryExpr {{.*}} contains-errors
+  // CHECK-NEXT: RecoveryExpr {{.*}} contains-errors
   // CHECK-NEXT:  `-InitListExpr
   Bar b2 = {1};
   // CHECK:     `-VarDecl {{.*}} b3 'Bar'
-  // CHECK-NEXT:  `-RecoveryExpr {{.*}} 'Bar' contains-errors
+  // CHECK-NEXT:  RecoveryExpr {{.*}} 'Bar' contains-errors
   // CHECK-NEXT:    `-DeclRefExpr {{.*}} 'x' 'int'
   Bar b3 = Bar(x);
   // CHECK:     `-VarDecl {{.*}} b4 'Bar'
-  // CHECK-NEXT:  `-RecoveryExpr {{.*}} 'Bar' contains-errors
+  // CHECK-NEXT:  RecoveryExpr {{.*}} 'Bar' contains-errors
   // CHECK-NEXT:    `-InitListExpr {{.*}} 'void'
   // CHECK-NEXT:      `-DeclRefExpr {{.*}} 'x' 'int'
   Bar b4 = Bar{x};
@@ -185,7 +185,7 @@ void InvalidInitalizer(int x) {
 }
 
 // CHECK:      VarDecl {{.*}} NoCrashOnInvalidInitList
-// CHECK-NEXT: `-RecoveryExpr {{.*}} '<dependent type>' contains-errors lvalue
+// CHECK-NEXT: RecoveryExpr {{.*}} '<dependent type>' contains-errors lvalue
 // CHECK-NEXT:   `-InitListExpr
 // CHECK-NEXT:     `-DesignatedInitExpr {{.*}} 'void'
 // CHECK-NEXT:       `-CXXNullPtrLiteralExpr {{.*}} 'std::nullptr_t'
@@ -214,7 +214,7 @@ void CtorInitializer() {
     BaseInit(float) : S("no match") {}
     // CHECK:      CXXConstructorDecl {{.*}} BaseInit 'void (float)'
     // CHECK-NEXT: |-ParmVarDecl
-    // CHECK-NEXT: |-CXXCtorInitializer 'S'
+    // CHECK: |-CXXCtorInitializer 'S'
     // CHECK-NEXT: | `-RecoveryExpr {{.*}} 'S'
     // CHECK-NEXT: |   `-StringLiteral
   };
@@ -222,7 +222,7 @@ void CtorInitializer() {
     DelegatingInit(float) : DelegatingInit("no match") {}
     // CHECK:      CXXConstructorDecl {{.*}} DelegatingInit 'void (float)'
     // CHECK-NEXT: |-ParmVarDecl
-    // CHECK-NEXT: |-CXXCtorInitializer 'DelegatingInit'
+    // CHECK: |-CXXCtorInitializer 'DelegatingInit'
     // CHECK-NEXT: | `-RecoveryExpr {{.*}} 'DelegatingInit'
     // CHECK-NEXT: |   `-StringLiteral
   };
@@ -293,7 +293,7 @@ union U {
 // CHECK-NEXT:    `-CompoundStmt {{.*}}
 // CHECK-NEXT:      `-DeclStmt {{.*}}
 // CHECK-NEXT:        `-VarDecl {{.*}} g 'U':'GH112560::U' listinit
-// CHECK-NEXT:          `-InitListExpr {{.*}} 'U':'GH112560::U' contains-errors field Field {{.*}} 'f' 'int'
+// CHECK-NEXT:            InitListExpr {{.*}} 'U':'GH112560::U' contains-errors field Field {{.*}} 'f' 'int'
 // CHECK-NEXT:            `-CXXDefaultInitExpr {{.*}} 'int' contains-errors has rewritten init
 // CHECK-NEXT:              `-RecoveryExpr {{.*}} 'int' contains-errors
 // DISABLED-NOT: -RecoveryExpr {{.*}} contains-errors

@@ -73,19 +73,19 @@ int main() {
 // CHECK-NEXT: |   |-CompoundStmt [[ADDR_7:0x[a-z0-9]*]] <col:15, line:12:1>
 // CHECK-NEXT: |   | `-ReturnStmt [[ADDR_8:0x[a-z0-9]*]] <line:11:3, col:10>
 // CHECK-NEXT: |   |   `-IntegerLiteral [[ADDR_9:0x[a-z0-9]*]] <col:10> 'int' 1
-// CHECK-NEXT: |   `-OMPDeclareVariantAttr [[ADDR_10:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(llvm)}
+// CHECK-NEXT: |   `-attrDetails: OMPDeclareVariantAttr [[ADDR_10:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(llvm)}
 // CHECK-NEXT: |     `-DeclRefExpr [[ADDR_11:0x[a-z0-9]*]] <line:34:1> 'int ({{.*}})' Function [[ADDR_12:0x[a-z0-9]*]] 'bar[implementation={vendor(llvm)}]' 'int ({{.*}})'
 // CHECK-NEXT: |-NamespaceDecl [[ADDR_13:0x[a-z0-9]*]] <line:15:1, line:19:1> line:15:11 C
 // CHECK-NEXT: | `-FunctionDecl [[ADDR_14:0x[a-z0-9]*]] <line:16:1, line:18:1> line:16:5 used baz 'int ({{.*}})'
 // CHECK-NEXT: |   |-CompoundStmt [[ADDR_15:0x[a-z0-9]*]] <col:15, line:18:1>
 // CHECK-NEXT: |   | `-ReturnStmt [[ADDR_16:0x[a-z0-9]*]] <line:17:3, col:10>
 // CHECK-NEXT: |   |   `-IntegerLiteral [[ADDR_17:0x[a-z0-9]*]] <col:10> 'int' 2
-// CHECK-NEXT: |   `-OMPDeclareVariantAttr [[ADDR_18:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(llvm)}
+// CHECK-NEXT: |   `-attrDetails: OMPDeclareVariantAttr [[ADDR_18:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(llvm)}
 // CHECK-NEXT: |     `-DeclRefExpr [[ADDR_19:0x[a-z0-9]*]] <line:42:1> 'int ({{.*}})' Function [[ADDR_20:0x[a-z0-9]*]] 'baz[implementation={vendor(llvm)}]' 'int ({{.*}})'
 // CHECK-NEXT: |-FunctionDecl [[ADDR_21:0x[a-z0-9]*]] <line:24:1, col:13> col:5 implicit foo 'int ({{.*}})'
-// CHECK-NEXT: | |-OMPDeclareVariantAttr [[ADDR_22:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(llvm)}
+// CHECK-NEXT: | |-attrDetails: OMPDeclareVariantAttr [[ADDR_22:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(llvm)}
 // CHECK-NEXT: | | `-DeclRefExpr [[ADDR_23:0x[a-z0-9]*]] <col:1> 'int ({{.*}})' Function [[ADDR_24:0x[a-z0-9]*]] 'foo[implementation={vendor(llvm)}]' 'int ({{.*}})'
-// CHECK-NEXT: | `-OMPDeclareVariantAttr [[ADDR_25:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(llvm)}
+// CHECK-NEXT: | `-attrDetails: OMPDeclareVariantAttr [[ADDR_25:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={vendor(llvm)}
 // CHECK-NEXT: |   `-DeclRefExpr [[ADDR_26:0x[a-z0-9]*]] <line:30:1> 'int ({{.*}})' Function [[ADDR_27:0x[a-z0-9]*]] 'foo[implementation={vendor(llvm)}]' 'int ({{.*}})'
 // CHECK-NEXT: |-FunctionDecl [[ADDR_24]] <line:24:1, line:26:1> line:24:1 foo[implementation={vendor(llvm)}] 'int ({{.*}})'
 // CHECK-NEXT: | `-CompoundStmt [[ADDR_28:0x[a-z0-9]*]] <col:15, line:26:1>

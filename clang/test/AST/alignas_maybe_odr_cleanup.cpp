@@ -15,7 +15,7 @@ struct FOO {
   }
 };
 
-// CHECK:      |   `-AlignedAttr {{.*}} <col:14> alignas
+// CHECK:      |   `-attrDetails: AlignedAttr {{.*}} <col:14> alignas
 // CHECK-NEXT:      |     `-ConstantExpr {{.*}} <col:22> 'int'
 // CHECK-NEXT:      |       |-value: Int 16
 // CHECK-NEXT:      |       `-ImplicitCastExpr {{.*}} <col:22> 'int' <LValueToRValue>

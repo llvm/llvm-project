@@ -52,7 +52,7 @@ struct TestFriends {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXMethodDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 124,
+// CHECK-NEXT:   "offset": 127,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 4,
 // CHECK-NEXT:   "col": 8,
@@ -60,12 +60,12 @@ struct TestFriends {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 119,
+// CHECK-NEXT:    "offset": 122,
 // CHECK-NEXT:    "col": 3,
 // CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 130,
+// CHECK-NEXT:    "offset": 133,
 // CHECK-NEXT:    "col": 14,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
@@ -81,7 +81,7 @@ struct TestFriends {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXMethodDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 140,
+// CHECK-NEXT:   "offset": 144,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 5,
 // CHECK-NEXT:   "col": 8,
@@ -89,12 +89,12 @@ struct TestFriends {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 135,
+// CHECK-NEXT:    "offset": 139,
 // CHECK-NEXT:    "col": 3,
 // CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 148,
+// CHECK-NEXT:    "offset": 152,
 // CHECK-NEXT:    "col": 16,
 // CHECK-NEXT:    "tokLen": 5
 // CHECK-NEXT:   }
@@ -110,7 +110,7 @@ struct TestFriends {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXMethodDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 162,
+// CHECK-NEXT:   "offset": 167,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 6,
 // CHECK-NEXT:   "col": 8,
@@ -118,12 +118,12 @@ struct TestFriends {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 157,
+// CHECK-NEXT:    "offset": 162,
 // CHECK-NEXT:    "col": 3,
 // CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 170,
+// CHECK-NEXT:    "offset": 175,
 // CHECK-NEXT:    "col": 16,
 // CHECK-NEXT:    "tokLen": 8
 // CHECK-NEXT:   }
@@ -139,7 +139,7 @@ struct TestFriends {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXMethodDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 187,
+// CHECK-NEXT:   "offset": 193,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 7,
 // CHECK-NEXT:   "col": 8,
@@ -147,12 +147,12 @@ struct TestFriends {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 182,
+// CHECK-NEXT:    "offset": 188,
 // CHECK-NEXT:    "col": 3,
 // CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 195,
+// CHECK-NEXT:    "offset": 201,
 // CHECK-NEXT:    "col": 16,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
@@ -168,7 +168,7 @@ struct TestFriends {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXMethodDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 205,
+// CHECK-NEXT:   "offset": 212,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 8,
 // CHECK-NEXT:   "col": 8,
@@ -176,12 +176,12 @@ struct TestFriends {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 200,
+// CHECK-NEXT:    "offset": 207,
 // CHECK-NEXT:    "col": 3,
 // CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 213,
+// CHECK-NEXT:    "offset": 220,
 // CHECK-NEXT:    "col": 16,
 // CHECK-NEXT:    "tokLen": 2
 // CHECK-NEXT:   }
@@ -197,7 +197,7 @@ struct TestFriends {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXMethodDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 232,
+// CHECK-NEXT:   "offset": 240,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 9,
 // CHECK-NEXT:   "col": 16,
@@ -205,12 +205,12 @@ struct TestFriends {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 219,
+// CHECK-NEXT:    "offset": 227,
 // CHECK-NEXT:    "col": 3,
 // CHECK-NEXT:    "tokLen": 7
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 253,
+// CHECK-NEXT:    "offset": 261,
 // CHECK-NEXT:    "col": 37,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
@@ -226,42 +226,54 @@ struct TestFriends {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 243,
+// CHECK-NEXT:     "offset": 251,
 // CHECK-NEXT:     "col": 27,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 238,
+// CHECK-NEXT:      "offset": 246,
 // CHECK-NEXT:      "col": 22,
 // CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 238,
+// CHECK-NEXT:      "offset": 246,
 // CHECK-NEXT:      "col": 22,
 // CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "float"
-// CHECK-NEXT:    }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "typeDetails": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "id": "0x{{.*}}",
+// CHECK-NEXT:      "kind": "BuiltinType",
+// CHECK-NEXT:      "type": {
+// CHECK-NEXT:       "qualType": "float"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "qualDetails": [
+// CHECK-NEXT:       "fpp"
+// CHECK-NEXT:      ]
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
 // CHECK-NEXT:   },
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 249,
+// CHECK-NEXT:     "offset": 257,
 // CHECK-NEXT:     "col": 33,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 245,
+// CHECK-NEXT:      "offset": 253,
 // CHECK-NEXT:      "col": 29,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 251,
+// CHECK-NEXT:      "offset": 259,
 // CHECK-NEXT:      "col": 35,
 // CHECK-NEXT:      "tokLen": 2
 // CHECK-NEXT:     }
@@ -276,12 +288,12 @@ struct TestFriends {
 // CHECK-NEXT:      "kind": "IntegerLiteral",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": 251,
+// CHECK-NEXT:        "offset": 259,
 // CHECK-NEXT:        "col": 35,
 // CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 251,
+// CHECK-NEXT:        "offset": 259,
 // CHECK-NEXT:        "col": 35,
 // CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       }
@@ -291,6 +303,17 @@ struct TestFriends {
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "valueCategory": "prvalue",
 // CHECK-NEXT:      "value": "12"
+// CHECK-NEXT:     },
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "id": "0x{{.*}}",
+// CHECK-NEXT:      "kind": "BuiltinType",
+// CHECK-NEXT:      "type": {
+// CHECK-NEXT:       "qualType": "int"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "qualDetails": [
+// CHECK-NEXT:       "signed",
+// CHECK-NEXT:       "integer"
+// CHECK-NEXT:      ]
 // CHECK-NEXT:     }
 // CHECK-NEXT:    ]
 // CHECK-NEXT:   }
@@ -301,7 +324,7 @@ struct TestFriends {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXMethodDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 271,
+// CHECK-NEXT:   "offset": 280,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 10,
 // CHECK-NEXT:   "col": 16,
@@ -309,12 +332,12 @@ struct TestFriends {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 258,
+// CHECK-NEXT:    "offset": 267,
 // CHECK-NEXT:    "col": 3,
 // CHECK-NEXT:    "tokLen": 7
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 281,
+// CHECK-NEXT:    "offset": 290,
 // CHECK-NEXT:    "col": 26,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
@@ -332,7 +355,7 @@ struct TestFriends {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXMethodDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 343,
+// CHECK-NEXT:   "offset": 356,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 14,
 // CHECK-NEXT:   "col": 8,
@@ -340,12 +363,12 @@ struct TestFriends {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 338,
+// CHECK-NEXT:    "offset": 351,
 // CHECK-NEXT:    "col": 3,
 // CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 367,
+// CHECK-NEXT:    "offset": 380,
 // CHECK-NEXT:    "col": 32,
 // CHECK-NEXT:    "tokLen": 8
 // CHECK-NEXT:   }
@@ -360,42 +383,54 @@ struct TestFriends {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 354,
+// CHECK-NEXT:     "offset": 367,
 // CHECK-NEXT:     "col": 19,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 349,
+// CHECK-NEXT:      "offset": 362,
 // CHECK-NEXT:      "col": 14,
 // CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 349,
+// CHECK-NEXT:      "offset": 362,
 // CHECK-NEXT:      "col": 14,
 // CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "float"
-// CHECK-NEXT:    }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "typeDetails": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "id": "0x{{.*}}",
+// CHECK-NEXT:      "kind": "BuiltinType",
+// CHECK-NEXT:      "type": {
+// CHECK-NEXT:       "qualType": "float"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "qualDetails": [
+// CHECK-NEXT:       "fpp"
+// CHECK-NEXT:      ]
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
 // CHECK-NEXT:   },
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 360,
+// CHECK-NEXT:     "offset": 373,
 // CHECK-NEXT:     "col": 25,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 356,
+// CHECK-NEXT:      "offset": 369,
 // CHECK-NEXT:      "col": 21,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 362,
+// CHECK-NEXT:      "offset": 375,
 // CHECK-NEXT:      "col": 27,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     }
@@ -410,12 +445,12 @@ struct TestFriends {
 // CHECK-NEXT:      "kind": "IntegerLiteral",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": 362,
+// CHECK-NEXT:        "offset": 375,
 // CHECK-NEXT:        "col": 27,
 // CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 362,
+// CHECK-NEXT:        "offset": 375,
 // CHECK-NEXT:        "col": 27,
 // CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       }
@@ -425,6 +460,17 @@ struct TestFriends {
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "valueCategory": "prvalue",
 // CHECK-NEXT:      "value": "100"
+// CHECK-NEXT:     },
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "id": "0x{{.*}}",
+// CHECK-NEXT:      "kind": "BuiltinType",
+// CHECK-NEXT:      "type": {
+// CHECK-NEXT:       "qualType": "int"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "qualDetails": [
+// CHECK-NEXT:       "signed",
+// CHECK-NEXT:       "integer"
+// CHECK-NEXT:      ]
 // CHECK-NEXT:     }
 // CHECK-NEXT:    ]
 // CHECK-NEXT:   },
@@ -433,12 +479,12 @@ struct TestFriends {
 // CHECK-NEXT:    "kind": "OverrideAttr",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 367,
+// CHECK-NEXT:      "offset": 380,
 // CHECK-NEXT:      "col": 32,
 // CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 367,
+// CHECK-NEXT:      "offset": 380,
 // CHECK-NEXT:      "col": 32,
 // CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     }
@@ -451,7 +497,7 @@ struct TestFriends {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXMethodDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 399,
+// CHECK-NEXT:   "offset": 416,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 18,
 // CHECK-NEXT:   "col": 8,
@@ -459,12 +505,12 @@ struct TestFriends {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 394,
+// CHECK-NEXT:    "offset": 411,
 // CHECK-NEXT:    "col": 3,
 // CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 405,
+// CHECK-NEXT:    "offset": 422,
 // CHECK-NEXT:    "col": 14,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
@@ -480,7 +526,7 @@ struct TestFriends {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "CXXMethodDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 419,
+// CHECK-NEXT:   "offset": 438,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 20,
 // CHECK-NEXT:   "col": 9,
@@ -488,12 +534,12 @@ struct TestFriends {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 411,
+// CHECK-NEXT:    "offset": 430,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 428,
+// CHECK-NEXT:    "offset": 447,
 // CHECK-NEXT:    "col": 18,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
@@ -511,12 +557,12 @@ struct TestFriends {
 // CHECK-NEXT:    "kind": "CompoundStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 427,
+// CHECK-NEXT:      "offset": 446,
 // CHECK-NEXT:      "col": 17,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 428,
+// CHECK-NEXT:      "offset": 447,
 // CHECK-NEXT:      "col": 18,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -529,7 +575,7 @@ struct TestFriends {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 446,
+// CHECK-NEXT:   "offset": 467,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 22,
 // CHECK-NEXT:   "col": 6,
@@ -537,12 +583,12 @@ struct TestFriends {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 441,
+// CHECK-NEXT:    "offset": 462,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 452,
+// CHECK-NEXT:    "offset": 473,
 // CHECK-NEXT:    "col": 12,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
@@ -559,7 +605,7 @@ struct TestFriends {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 460,
+// CHECK-NEXT:   "offset": 482,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 23,
 // CHECK-NEXT:   "col": 6,
@@ -567,12 +613,12 @@ struct TestFriends {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 455,
+// CHECK-NEXT:    "offset": 477,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 470,
+// CHECK-NEXT:    "offset": 492,
 // CHECK-NEXT:    "col": 16,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
@@ -588,7 +634,7 @@ struct TestFriends {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 478,
+// CHECK-NEXT:   "offset": 501,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 24,
 // CHECK-NEXT:   "col": 6,
@@ -596,12 +642,12 @@ struct TestFriends {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 473,
+// CHECK-NEXT:    "offset": 496,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 496,
+// CHECK-NEXT:    "offset": 519,
 // CHECK-NEXT:    "col": 24,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
@@ -616,18 +662,18 @@ struct TestFriends {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 488,
+// CHECK-NEXT:     "offset": 511,
 // CHECK-NEXT:     "col": 16,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 484,
+// CHECK-NEXT:      "offset": 507,
 // CHECK-NEXT:      "col": 12,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 488,
+// CHECK-NEXT:      "offset": 511,
 // CHECK-NEXT:      "col": 16,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -635,24 +681,37 @@ struct TestFriends {
 // CHECK-NEXT:    "name": "a",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
-// CHECK-NEXT:    }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "typeDetails": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "id": "0x{{.*}}",
+// CHECK-NEXT:      "kind": "BuiltinType",
+// CHECK-NEXT:      "type": {
+// CHECK-NEXT:       "qualType": "int"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "qualDetails": [
+// CHECK-NEXT:       "signed",
+// CHECK-NEXT:       "integer"
+// CHECK-NEXT:      ]
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
 // CHECK-NEXT:   },
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 495,
+// CHECK-NEXT:     "offset": 518,
 // CHECK-NEXT:     "col": 23,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 491,
+// CHECK-NEXT:      "offset": 514,
 // CHECK-NEXT:      "col": 19,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 495,
+// CHECK-NEXT:      "offset": 518,
 // CHECK-NEXT:      "col": 23,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -660,7 +719,20 @@ struct TestFriends {
 // CHECK-NEXT:    "name": "b",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
-// CHECK-NEXT:    }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "typeDetails": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "qualDetails": [
+// CHECK-NEXT:       "signed",
+// CHECK-NEXT:       "integer"
+// CHECK-NEXT:      ],
+// CHECK-NEXT:      "typeDetails": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "refId": "0x{{.*}}"
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
@@ -669,7 +741,7 @@ struct TestFriends {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 504,
+// CHECK-NEXT:   "offset": 528,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 25,
 // CHECK-NEXT:   "col": 6,
@@ -677,12 +749,12 @@ struct TestFriends {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 499,
+// CHECK-NEXT:    "offset": 523,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 527,
+// CHECK-NEXT:    "offset": 551,
 // CHECK-NEXT:    "col": 29,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
@@ -697,18 +769,18 @@ struct TestFriends {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 514,
+// CHECK-NEXT:     "offset": 538,
 // CHECK-NEXT:     "col": 16,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 510,
+// CHECK-NEXT:      "offset": 534,
 // CHECK-NEXT:      "col": 12,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 514,
+// CHECK-NEXT:      "offset": 538,
 // CHECK-NEXT:      "col": 16,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -716,24 +788,37 @@ struct TestFriends {
 // CHECK-NEXT:    "name": "a",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
-// CHECK-NEXT:    }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "typeDetails": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "id": "0x{{.*}}",
+// CHECK-NEXT:      "kind": "BuiltinType",
+// CHECK-NEXT:      "type": {
+// CHECK-NEXT:       "qualType": "int"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "qualDetails": [
+// CHECK-NEXT:       "signed",
+// CHECK-NEXT:       "integer"
+// CHECK-NEXT:      ]
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
 // CHECK-NEXT:   },
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 521,
+// CHECK-NEXT:     "offset": 545,
 // CHECK-NEXT:     "col": 23,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 517,
+// CHECK-NEXT:      "offset": 541,
 // CHECK-NEXT:      "col": 19,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 525,
+// CHECK-NEXT:      "offset": 549,
 // CHECK-NEXT:      "col": 27,
 // CHECK-NEXT:      "tokLen": 2
 // CHECK-NEXT:     }
@@ -749,12 +834,12 @@ struct TestFriends {
 // CHECK-NEXT:      "kind": "IntegerLiteral",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": 525,
+// CHECK-NEXT:        "offset": 549,
 // CHECK-NEXT:        "col": 27,
 // CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 525,
+// CHECK-NEXT:        "offset": 549,
 // CHECK-NEXT:        "col": 27,
 // CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       }
@@ -764,6 +849,17 @@ struct TestFriends {
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "valueCategory": "prvalue",
 // CHECK-NEXT:      "value": "12"
+// CHECK-NEXT:     },
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "qualDetails": [
+// CHECK-NEXT:       "signed",
+// CHECK-NEXT:       "integer"
+// CHECK-NEXT:      ],
+// CHECK-NEXT:      "typeDetails": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "refId": "0x{{.*}}"
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
 // CHECK-NEXT:     }
 // CHECK-NEXT:    ]
 // CHECK-NEXT:   }
@@ -774,7 +870,7 @@ struct TestFriends {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 545,
+// CHECK-NEXT:   "offset": 570,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 26,
 // CHECK-NEXT:   "col": 16,
@@ -782,12 +878,12 @@ struct TestFriends {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 530,
+// CHECK-NEXT:    "offset": 555,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 9
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 555,
+// CHECK-NEXT:    "offset": 580,
 // CHECK-NEXT:    "col": 26,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
@@ -804,7 +900,7 @@ struct TestFriends {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 570,
+// CHECK-NEXT:   "offset": 596,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 27,
 // CHECK-NEXT:   "col": 13,
@@ -812,12 +908,12 @@ struct TestFriends {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 558,
+// CHECK-NEXT:    "offset": 584,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 580,
+// CHECK-NEXT:    "offset": 606,
 // CHECK-NEXT:    "col": 23,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
@@ -834,7 +930,7 @@ struct TestFriends {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 595,
+// CHECK-NEXT:   "offset": 622,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 28,
 // CHECK-NEXT:   "col": 13,
@@ -842,12 +938,12 @@ struct TestFriends {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 583,
+// CHECK-NEXT:    "offset": 610,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 605,
+// CHECK-NEXT:    "offset": 632,
 // CHECK-NEXT:    "col": 23,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
@@ -864,7 +960,7 @@ struct TestFriends {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 620,
+// CHECK-NEXT:   "offset": 648,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 29,
 // CHECK-NEXT:   "col": 13,
@@ -872,12 +968,12 @@ struct TestFriends {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 608,
+// CHECK-NEXT:    "offset": 636,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 630,
+// CHECK-NEXT:    "offset": 658,
 // CHECK-NEXT:    "col": 23,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
@@ -894,7 +990,7 @@ struct TestFriends {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 638,
+// CHECK-NEXT:   "offset": 667,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 30,
 // CHECK-NEXT:   "col": 6,
@@ -902,12 +998,12 @@ struct TestFriends {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 633,
+// CHECK-NEXT:    "offset": 662,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 650,
+// CHECK-NEXT:    "offset": 679,
 // CHECK-NEXT:    "col": 18,
 // CHECK-NEXT:    "tokLen": 8
 // CHECK-NEXT:   }
@@ -923,7 +1019,7 @@ struct TestFriends {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 665,
+// CHECK-NEXT:   "offset": 695,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 31,
 // CHECK-NEXT:   "col": 6,
@@ -931,12 +1027,12 @@ struct TestFriends {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 660,
+// CHECK-NEXT:    "offset": 690,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 692,
+// CHECK-NEXT:    "offset": 722,
 // CHECK-NEXT:    "col": 33,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
@@ -952,7 +1048,7 @@ struct TestFriends {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 700,
+// CHECK-NEXT:   "offset": 731,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 32,
 // CHECK-NEXT:   "col": 6,
@@ -960,12 +1056,12 @@ struct TestFriends {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 695,
+// CHECK-NEXT:    "offset": 726,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 723,
+// CHECK-NEXT:    "offset": 754,
 // CHECK-NEXT:    "col": 29,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
@@ -981,7 +1077,7 @@ struct TestFriends {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "FunctionTemplateDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 751,
+// CHECK-NEXT:   "offset": 785,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 35,
 // CHECK-NEXT:   "col": 3,
@@ -989,13 +1085,13 @@ struct TestFriends {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 727,
+// CHECK-NEXT:    "offset": 760,
 // CHECK-NEXT:    "line": 34,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 8
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 760,
+// CHECK-NEXT:    "offset": 794,
 // CHECK-NEXT:    "line": 35,
 // CHECK-NEXT:    "col": 12,
 // CHECK-NEXT:    "tokLen": 1
@@ -1007,19 +1103,19 @@ struct TestFriends {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "TemplateTypeParmDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 746,
+// CHECK-NEXT:     "offset": 779,
 // CHECK-NEXT:     "line": 34,
 // CHECK-NEXT:     "col": 20,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 737,
+// CHECK-NEXT:      "offset": 770,
 // CHECK-NEXT:      "col": 11,
 // CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 746,
+// CHECK-NEXT:      "offset": 779,
 // CHECK-NEXT:      "col": 20,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -1034,19 +1130,19 @@ struct TestFriends {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FunctionDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 751,
+// CHECK-NEXT:     "offset": 785,
 // CHECK-NEXT:     "line": 35,
 // CHECK-NEXT:     "col": 3,
 // CHECK-NEXT:     "tokLen": 6
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 749,
+// CHECK-NEXT:      "offset": 783,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 760,
+// CHECK-NEXT:      "offset": 794,
 // CHECK-NEXT:      "col": 12,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -1060,25 +1156,56 @@ struct TestFriends {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
-// CHECK-NEXT:       "offset": 760,
+// CHECK-NEXT:       "offset": 794,
 // CHECK-NEXT:       "col": 12,
 // CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": 758,
+// CHECK-NEXT:        "offset": 792,
 // CHECK-NEXT:        "col": 10,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 759,
+// CHECK-NEXT:        "offset": 793,
 // CHECK-NEXT:        "col": 11,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "T &"
-// CHECK-NEXT:      }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "typeDetails": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}",
+// CHECK-NEXT:        "kind": "LValueReferenceType",
+// CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "qualType": "T &"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "isDependent": true,
+// CHECK-NEXT:        "isInstantiationDependent": true,
+// CHECK-NEXT:        "qualDetails": [],
+// CHECK-NEXT:        "typeDetails": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "id": "0x{{.*}}",
+// CHECK-NEXT:          "kind": "TemplateTypeParmType",
+// CHECK-NEXT:          "type": {
+// CHECK-NEXT:           "qualType": "T"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "isDependent": true,
+// CHECK-NEXT:          "isInstantiationDependent": true,
+// CHECK-NEXT:          "depth": 0,
+// CHECK-NEXT:          "index": 0,
+// CHECK-NEXT:          "decl": {
+// CHECK-NEXT:           "id": "0x{{.*}}",
+// CHECK-NEXT:           "kind": "TemplateTypeParmDecl",
+// CHECK-NEXT:           "name": "T"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "qualDetails": []
+// CHECK-NEXT:         }
+// CHECK-NEXT:        ]
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
 // CHECK-NEXT:     }
 // CHECK-NEXT:    ]
 // CHECK-NEXT:   }
@@ -1089,7 +1216,7 @@ struct TestFriends {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 769,
+// CHECK-NEXT:   "offset": 805,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 37,
 // CHECK-NEXT:   "col": 6,
@@ -1097,12 +1224,12 @@ struct TestFriends {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 764,
+// CHECK-NEXT:    "offset": 800,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 782,
+// CHECK-NEXT:    "offset": 818,
 // CHECK-NEXT:    "col": 19,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
@@ -1117,37 +1244,50 @@ struct TestFriends {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 779,
+// CHECK-NEXT:     "offset": 815,
 // CHECK-NEXT:     "col": 16,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 776,
+// CHECK-NEXT:      "offset": 812,
 // CHECK-NEXT:      "col": 13,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 776,
+// CHECK-NEXT:      "offset": 812,
 // CHECK-NEXT:      "col": 13,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
-// CHECK-NEXT:    }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "typeDetails": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "id": "0x{{.*}}",
+// CHECK-NEXT:      "kind": "BuiltinType",
+// CHECK-NEXT:      "type": {
+// CHECK-NEXT:       "qualType": "int"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "qualDetails": [
+// CHECK-NEXT:       "signed",
+// CHECK-NEXT:       "integer"
+// CHECK-NEXT:      ]
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
 // CHECK-NEXT:   },
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CompoundStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 781,
+// CHECK-NEXT:      "offset": 817,
 // CHECK-NEXT:      "col": 18,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 782,
+// CHECK-NEXT:      "offset": 818,
 // CHECK-NEXT:      "col": 19,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -1160,7 +1300,7 @@ struct TestFriends {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 789,
+// CHECK-NEXT:   "offset": 826,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 38,
 // CHECK-NEXT:   "col": 6,
@@ -1168,12 +1308,12 @@ struct TestFriends {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 784,
+// CHECK-NEXT:    "offset": 821,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 807,
+// CHECK-NEXT:    "offset": 844,
 // CHECK-NEXT:    "col": 24,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
@@ -1189,37 +1329,50 @@ struct TestFriends {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 799,
+// CHECK-NEXT:     "offset": 836,
 // CHECK-NEXT:     "col": 16,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 796,
+// CHECK-NEXT:      "offset": 833,
 // CHECK-NEXT:      "col": 13,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 796,
+// CHECK-NEXT:      "offset": 833,
 // CHECK-NEXT:      "col": 13,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
-// CHECK-NEXT:    }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "typeDetails": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "id": "0x{{.*}}",
+// CHECK-NEXT:      "kind": "BuiltinType",
+// CHECK-NEXT:      "type": {
+// CHECK-NEXT:       "qualType": "int"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "qualDetails": [
+// CHECK-NEXT:       "signed",
+// CHECK-NEXT:       "integer"
+// CHECK-NEXT:      ]
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
 // CHECK-NEXT:   },
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CompoundStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 806,
+// CHECK-NEXT:      "offset": 843,
 // CHECK-NEXT:      "col": 23,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 807,
+// CHECK-NEXT:      "offset": 844,
 // CHECK-NEXT:      "col": 24,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -1232,7 +1385,7 @@ struct TestFriends {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "ClassTemplateDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": 905,
+// CHECK-NEXT:   "offset": 949,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 45,
 // CHECK-NEXT:   "col": 8,
@@ -1240,13 +1393,13 @@ struct TestFriends {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 872,
+// CHECK-NEXT:    "offset": 915,
 // CHECK-NEXT:    "line": 44,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 8
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 937,
+// CHECK-NEXT:    "offset": 983,
 // CHECK-NEXT:    "line": 47,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -1258,19 +1411,19 @@ struct TestFriends {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "TemplateTypeParmDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 894,
+// CHECK-NEXT:     "offset": 937,
 // CHECK-NEXT:     "line": 44,
 // CHECK-NEXT:     "col": 23,
 // CHECK-NEXT:     "tokLen": 2
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 882,
+// CHECK-NEXT:      "offset": 925,
 // CHECK-NEXT:      "col": 11,
 // CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 894,
+// CHECK-NEXT:      "offset": 937,
 // CHECK-NEXT:      "col": 23,
 // CHECK-NEXT:      "tokLen": 2
 // CHECK-NEXT:     }
@@ -1286,19 +1439,19 @@ struct TestFriends {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": 905,
+// CHECK-NEXT:     "offset": 949,
 // CHECK-NEXT:     "line": 45,
 // CHECK-NEXT:     "col": 8,
 // CHECK-NEXT:     "tokLen": 11
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 898,
+// CHECK-NEXT:      "offset": 942,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 937,
+// CHECK-NEXT:      "offset": 983,
 // CHECK-NEXT:      "line": 47,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 1
@@ -1362,19 +1515,19 @@ struct TestFriends {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "CXXRecordDecl",
 // CHECK-NEXT:      "loc": {
-// CHECK-NEXT:       "offset": 905,
+// CHECK-NEXT:       "offset": 949,
 // CHECK-NEXT:       "line": 45,
 // CHECK-NEXT:       "col": 8,
 // CHECK-NEXT:       "tokLen": 11
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": 898,
+// CHECK-NEXT:        "offset": 942,
 // CHECK-NEXT:        "col": 1,
 // CHECK-NEXT:        "tokLen": 6
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 905,
+// CHECK-NEXT:        "offset": 949,
 // CHECK-NEXT:        "col": 8,
 // CHECK-NEXT:        "tokLen": 11
 // CHECK-NEXT:       }
@@ -1387,19 +1540,19 @@ struct TestFriends {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "FriendDecl",
 // CHECK-NEXT:      "loc": {
-// CHECK-NEXT:       "offset": 930,
+// CHECK-NEXT:       "offset": 975,
 // CHECK-NEXT:       "line": 46,
 // CHECK-NEXT:       "col": 12,
 // CHECK-NEXT:       "tokLen": 2
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": 923,
+// CHECK-NEXT:        "offset": 968,
 // CHECK-NEXT:        "col": 5,
 // CHECK-NEXT:        "tokLen": 6
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 932,
+// CHECK-NEXT:        "offset": 977,
 // CHECK-NEXT:        "col": 14,
 // CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       }

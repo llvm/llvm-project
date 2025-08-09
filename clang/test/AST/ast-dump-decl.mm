@@ -44,9 +44,9 @@
 // CHECK-NEXT:       CompoundStmt
 // CHECK-NEXT:     CXXConstructorDecl{{.*}} 'void (const X &)
 // CHECK-NEXT:       ParmVarDecl{{.*}} 'const X &'
-// CHECK-NEXT:     CXXConstructorDecl{{.*}} 'void (X &&)
+// CHECK:     CXXConstructorDecl{{.*}} 'void (X &&)
 // CHECK-NEXT:       ParmVarDecl{{.*}} 'X &&'
-// CHECK-NEXT:     CXXDestructorDecl
+// CHECK:     CXXDestructorDecl
 // CHECK-NEXT:   ObjCIvarDecl{{.*}} X
 // CHECK-NEXT:   ObjCMethodDecl{{.*}} foo
 

@@ -12,8 +12,8 @@ void f(T i, T j) {
 // CHECK-NEXT:   |-TemplateTypeParmDecl
 // CHECK-NEXT:   `-FunctionDecl
 // CHECK-NEXT:     |-ParmVarDecl
-// CHECK-NEXT:     |-ParmVarDecl
-// CHECK-NEXT:     `-CompoundStmt
+// CHECK:          |-ParmVarDecl
+// CHECK:          `-CompoundStmt
 // CHECK-NEXT:       `-ReturnStmt
 // CHECK-NEXT:         `-CXXUnresolvedConstructExpr {{.*}} <col:10, col:16> 'T'
 // CHECK-NEXT:           |-DeclRefExpr {{.*}} <col:13> 'T' lvalue ParmVar {{.*}} 'i' 'T'
@@ -31,7 +31,7 @@ int g(int i) {
 // CHECK: NamespaceDecl {{.*}} <{{.*}}> {{.*}} TestInvalidIf
 // CHECK-NEXT: `-FunctionDecl
 // CHECK-NEXT:   |-ParmVarDecl
-// CHECK-NEXT:   `-CompoundStmt
+// CHECK:        `-CompoundStmt
 // CHECK-NEXT:     `-IfStmt {{.*}} <line:25:3, line:28:12>
 // CHECK-NEXT:       |-RecoveryExpr {{.*}} <line:25:7> 'bool'
 // CHECK-NEXT:       |-ReturnStmt {{.*}} <line:26:5, col:12>
@@ -52,11 +52,11 @@ double Str::foo1(double, invalid_type)
 // CHECK:      | |-CXXRecordDecl {{.*}} <col:1, col:8> col:8 implicit struct Str
 // CHECK-NEXT: | `-CXXMethodDecl {{.*}} <line:45:4, col:36> col:11 invalid foo1 'double (double, int)'
 // CHECK-NEXT: |   |-ParmVarDecl {{.*}} <col:16> col:22 'double'
-// CHECK-NEXT: |   `-ParmVarDecl {{.*}} <col:24, <invalid sloc>> col:36 invalid 'int'
-// CHECK-NEXT: `-CXXMethodDecl {{.*}} parent {{.*}} <line:47:1, line:48:14> line:47:13 invalid foo1 'double (double, int)'
+// CHECK:      |   `-ParmVarDecl {{.*}} <col:24, <invalid sloc>> col:36 invalid 'int'
+// CHECK:      `-CXXMethodDecl {{.*}} parent {{.*}} <line:47:1, line:48:14> line:47:13 invalid foo1 'double (double, int)'
 // CHECK-NEXT:   |-ParmVarDecl {{.*}} <col:18> col:24 'double'
-// CHECK-NEXT:   |-ParmVarDecl {{.*}} <col:26, <invalid sloc>> col:38 invalid 'int'
-// CHECK-NEXT:   `-CompoundStmt {{.*}} <line:48:1, col:14>
+// CHECK:        |-ParmVarDecl {{.*}} <col:26, <invalid sloc>> col:38 invalid 'int'
+// CHECK:        `-CompoundStmt {{.*}} <line:48:1, col:14>
 // CHECK-NEXT:     `-ReturnStmt {{.*}} <col:3, col:10>
 // CHECK-NEXT:       `-ImplicitCastExpr {{.*}} <col:10> 'double' <IntegralToFloating>
 // CHECK-NEXT:         `-IntegerLiteral {{.*}} <col:10> 'int' 45

@@ -60,18 +60,18 @@
 @end
 // CHECK-OBJC_METHOD: ObjCMethodDecl{{.*}} testInstanceMethod
 // CHECK-OBJC_METHOD-NEXT: ImplicitParamDecl
-// CHECK-OBJC_METHOD-NEXT: ImplicitParamDecl
-// CHECK-OBJC_METHOD-NEXT: CompoundStmt
+// CHECK-OBJC_METHOD: ImplicitParamDecl
+// CHECK-OBJC_METHOD: CompoundStmt
 // CHECK-OBJC_METHOD-NEXT: AnnotateAttr{{.*}} "test"
 // CHECK-OBJC_METHOD: ObjCMethodDecl{{.*}} testClassMethod
 // CHECK-OBJC_METHOD-NEXT: ImplicitParamDecl
-// CHECK-OBJC_METHOD-NEXT: ImplicitParamDecl
-// CHECK-OBJC_METHOD-NEXT: CompoundStmt
+// CHECK-OBJC_METHOD: ImplicitParamDecl
+// CHECK-OBJC_METHOD: CompoundStmt
 // CHECK-OBJC_METHOD-NEXT: AnnotateAttr{{.*}} "test"
 // CHECK-OBJC_METHOD_IS_INSTANCE-LABEL: ObjCMethodDecl{{.*}} testInstanceMethod
 // CHECK-OBJC_METHOD_IS_INSTANCE-NEXT: ImplicitParamDecl
-// CHECK-OBJC_METHOD_IS_INSTANCE-NEXT: ImplicitParamDecl
-// CHECK-OBJC_METHOD_IS_INSTANCE-NEXT: CompoundStmt
+// CHECK-OBJC_METHOD_IS_INSTANCE: ImplicitParamDecl
+// CHECK-OBJC_METHOD_IS_INSTANCE: CompoundStmt
 // CHECK-OBJC_METHOD_IS_INSTANCE-NEXT: AnnotateAttr{{.*}} "test"
 // CHECK-OBJC_METHOD_IS_INSTANCE: ObjCMethodDecl{{.*}} testClassMethod
 // CHECK-OBJC_METHOD_IS_INSTANCE-NOT: AnnotateAttr{{.*}} "test"

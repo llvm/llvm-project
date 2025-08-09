@@ -77,51 +77,51 @@ int main(void) {
 // C_FLOAT-NEXT: | | `-ReturnStmt [[ADDR_2:0x[a-z0-9]*]] <line:29:3, line:15:34>
 // C_FLOAT-NEXT: | |   `-ImplicitCastExpr [[ADDR_3:0x[a-z0-9]*]] <col:34> 'float' <IntegralToFloating>
 // C_FLOAT-NEXT: | |     `-IntegerLiteral [[ADDR_4:0x[a-z0-9]*]] <col:34> 'int' 0
-// C_FLOAT-NEXT: | `-OverloadableAttr [[ADDR_5:0x[a-z0-9]*]] <line:10:37>
+// C_FLOAT-NEXT: | `-attrDetails: OverloadableAttr [[ADDR_5:0x[a-z0-9]*]] <line:10:37>
 // C_FLOAT-NEXT: |-FunctionDecl [[ADDR_6:0x[a-z0-9]*]] <col:22, line:34:1> line:32:11 used also_before 'float (int)'
 // C_FLOAT-NEXT: | |-ParmVarDecl [[ADDR_7:0x[a-z0-9]*]] <col:23, col:27> col:27 i 'int'
-// C_FLOAT-NEXT: | |-CompoundStmt [[ADDR_8:0x[a-z0-9]*]] <col:30, line:34:1>
+// C_FLOAT:      | |-CompoundStmt [[ADDR_8:0x[a-z0-9]*]] <col:30, line:34:1>
 // C_FLOAT-NEXT: | | `-ReturnStmt [[ADDR_9:0x[a-z0-9]*]] <line:33:3, line:15:34>
 // C_FLOAT-NEXT: | |   `-ImplicitCastExpr [[ADDR_10:0x[a-z0-9]*]] <col:34> 'float' <IntegralToFloating>
 // C_FLOAT-NEXT: | |     `-IntegerLiteral [[ADDR_11:0x[a-z0-9]*]] <col:34> 'int' 0
-// C_FLOAT-NEXT: | `-OverloadableAttr [[ADDR_12:0x[a-z0-9]*]] <line:10:37>
+// C_FLOAT-NEXT: | `-attrDetails: OverloadableAttr [[ADDR_12:0x[a-z0-9]*]] <line:10:37>
 // C_FLOAT-NEXT: |-FunctionDecl [[ADDR_13:0x[a-z0-9]*]] <col:22, line:40:1> line:10:22 also_before[implementation={extension(disable_implicit_base)}] 'int ({{.*}})'
 // C_FLOAT-NEXT: | |-CompoundStmt [[ADDR_14:0x[a-z0-9]*]] <line:38:23, line:40:1>
 // C_FLOAT-NEXT: | | `-ReturnStmt [[ADDR_15:0x[a-z0-9]*]] <line:39:3, line:16:37>
 // C_FLOAT-NEXT: | |   `-IntegerLiteral [[ADDR_16:0x[a-z0-9]*]] <col:37> 'int' 1
-// C_FLOAT-NEXT: | `-OverloadableAttr [[ADDR_17:0x[a-z0-9]*]] <line:10:37>
+// C_FLOAT-NEXT: | `-attrDetails: OverloadableAttr [[ADDR_17:0x[a-z0-9]*]] <line:10:37>
 // C_FLOAT-NEXT: |-FunctionDecl [[ADDR_18:0x[a-z0-9]*]] <col:22, line:44:1> line:10:22 also_before[implementation={extension(disable_implicit_base)}] 'int (int)'
 // C_FLOAT-NEXT: | |-ParmVarDecl [[ADDR_19:0x[a-z0-9]*]] <line:42:17, col:21> col:21 i 'int'
-// C_FLOAT-NEXT: | |-CompoundStmt [[ADDR_20:0x[a-z0-9]*]] <col:24, line:44:1>
+// C_FLOAT:      | |-CompoundStmt [[ADDR_20:0x[a-z0-9]*]] <col:24, line:44:1>
 // C_FLOAT-NEXT: | | `-ReturnStmt [[ADDR_21:0x[a-z0-9]*]] <line:43:3, line:16:37>
 // C_FLOAT-NEXT: | |   `-IntegerLiteral [[ADDR_22:0x[a-z0-9]*]] <col:37> 'int' 1
-// C_FLOAT-NEXT: | `-OverloadableAttr [[ADDR_23:0x[a-z0-9]*]] <line:10:37>
+// C_FLOAT-NEXT: | `-attrDetails: OverloadableAttr [[ADDR_23:0x[a-z0-9]*]] <line:10:37>
 // C_FLOAT-NEXT: |-FunctionDecl [[ADDR_24:0x[a-z0-9]*]] <col:22, line:49:1> line:10:22 also_after[implementation={extension(disable_implicit_base)}] 'int (double)'
 // C_FLOAT-NEXT: | |-ParmVarDecl [[ADDR_25:0x[a-z0-9]*]] <line:47:16, col:23> col:23 d 'double'
-// C_FLOAT-NEXT: | |-CompoundStmt [[ADDR_26:0x[a-z0-9]*]] <col:26, line:49:1>
+// C_FLOAT:      | |-CompoundStmt [[ADDR_26:0x[a-z0-9]*]] <col:26, line:49:1>
 // C_FLOAT-NEXT: | | `-ReturnStmt [[ADDR_27:0x[a-z0-9]*]] <line:48:3, line:18:37>
 // C_FLOAT-NEXT: | |   `-IntegerLiteral [[ADDR_28:0x[a-z0-9]*]] <col:37> 'int' 0
-// C_FLOAT-NEXT: | `-OverloadableAttr [[ADDR_29:0x[a-z0-9]*]] <line:10:37>
+// C_FLOAT-NEXT: | `-attrDetails: OverloadableAttr [[ADDR_29:0x[a-z0-9]*]] <line:10:37>
 // C_FLOAT-NEXT: |-FunctionDecl [[ADDR_30:0x[a-z0-9]*]] <col:22, line:53:1> line:10:22 also_after[implementation={extension(disable_implicit_base)}] 'int (long)'
 // C_FLOAT-NEXT: | |-ParmVarDecl [[ADDR_31:0x[a-z0-9]*]] <line:51:16, col:21> col:21 l 'long'
-// C_FLOAT-NEXT: | |-CompoundStmt [[ADDR_32:0x[a-z0-9]*]] <col:24, line:53:1>
+// C_FLOAT:      | |-CompoundStmt [[ADDR_32:0x[a-z0-9]*]] <col:24, line:53:1>
 // C_FLOAT-NEXT: | | `-ReturnStmt [[ADDR_33:0x[a-z0-9]*]] <line:52:3, line:18:37>
 // C_FLOAT-NEXT: | |   `-IntegerLiteral [[ADDR_34:0x[a-z0-9]*]] <col:37> 'int' 0
-// C_FLOAT-NEXT: | `-OverloadableAttr [[ADDR_35:0x[a-z0-9]*]] <line:10:37>
+// C_FLOAT-NEXT: | `-attrDetails: OverloadableAttr [[ADDR_35:0x[a-z0-9]*]] <line:10:37>
 // C_FLOAT-NEXT: |-FunctionDecl [[ADDR_36:0x[a-z0-9]*]] <col:22, line:59:1> line:57:11 used also_after 'float (double)'
 // C_FLOAT-NEXT: | |-ParmVarDecl [[ADDR_37:0x[a-z0-9]*]] <col:22, col:29> col:29 d 'double'
-// C_FLOAT-NEXT: | |-CompoundStmt [[ADDR_38:0x[a-z0-9]*]] <col:32, line:59:1>
+// C_FLOAT:      | |-CompoundStmt [[ADDR_38:0x[a-z0-9]*]] <col:32, line:59:1>
 // C_FLOAT-NEXT: | | `-ReturnStmt [[ADDR_39:0x[a-z0-9]*]] <line:58:3, line:17:34>
 // C_FLOAT-NEXT: | |   `-ImplicitCastExpr [[ADDR_40:0x[a-z0-9]*]] <col:34> 'float' <IntegralToFloating>
 // C_FLOAT-NEXT: | |     `-IntegerLiteral [[ADDR_41:0x[a-z0-9]*]] <col:34> 'int' 1
-// C_FLOAT-NEXT: | `-OverloadableAttr [[ADDR_42:0x[a-z0-9]*]] <line:10:37>
+// C_FLOAT-NEXT: | `-attrDetails: OverloadableAttr [[ADDR_42:0x[a-z0-9]*]] <line:10:37>
 // C_FLOAT-NEXT: |-FunctionDecl [[ADDR_43:0x[a-z0-9]*]] <col:22, line:63:1> line:61:11 used also_after 'float (long)'
 // C_FLOAT-NEXT: | |-ParmVarDecl [[ADDR_44:0x[a-z0-9]*]] <col:22, col:27> col:27 l 'long'
-// C_FLOAT-NEXT: | |-CompoundStmt [[ADDR_45:0x[a-z0-9]*]] <col:30, line:63:1>
+// C_FLOAT:      | |-CompoundStmt [[ADDR_45:0x[a-z0-9]*]] <col:30, line:63:1>
 // C_FLOAT-NEXT: | | `-ReturnStmt [[ADDR_46:0x[a-z0-9]*]] <line:62:3, line:17:34>
 // C_FLOAT-NEXT: | |   `-ImplicitCastExpr [[ADDR_47:0x[a-z0-9]*]] <col:34> 'float' <IntegralToFloating>
 // C_FLOAT-NEXT: | |     `-IntegerLiteral [[ADDR_48:0x[a-z0-9]*]] <col:34> 'int' 1
-// C_FLOAT-NEXT: | `-OverloadableAttr [[ADDR_49:0x[a-z0-9]*]] <line:10:37>
+// C_FLOAT-NEXT: | `-attrDetails: OverloadableAttr [[ADDR_49:0x[a-z0-9]*]] <line:10:37>
 // C_FLOAT-NEXT: `-FunctionDecl [[ADDR_50:0x[a-z0-9]*]] <line:65:1, line:68:1> line:65:5 main 'int ({{.*}})'
 // C_FLOAT-NEXT:   `-CompoundStmt [[ADDR_51:0x[a-z0-9]*]] <col:16, line:68:1>
 // C_FLOAT-NEXT:     `-ReturnStmt [[ADDR_52:0x[a-z0-9]*]] <line:67:3, col:94>
@@ -158,7 +158,7 @@ int main(void) {
 // CXX_FLOAT-NEXT: |       `-IntegerLiteral [[ADDR_4:0x[a-z0-9]*]] <col:34> 'int' 0
 // CXX_FLOAT-NEXT: |-FunctionDecl [[ADDR_5:0x[a-z0-9]*]] <line:14:19, line:34:1> line:32:11 used also_before 'float (int)'
 // CXX_FLOAT-NEXT: | |-ParmVarDecl [[ADDR_6:0x[a-z0-9]*]] <col:23, col:27> col:27 i 'int'
-// CXX_FLOAT-NEXT: | `-CompoundStmt [[ADDR_7:0x[a-z0-9]*]] <col:30, line:34:1>
+// CXX_FLOAT: | `-CompoundStmt [[ADDR_7:0x[a-z0-9]*]] <col:30, line:34:1>
 // CXX_FLOAT-NEXT: |   `-ReturnStmt [[ADDR_8:0x[a-z0-9]*]] <line:33:3, line:15:34>
 // CXX_FLOAT-NEXT: |     `-ImplicitCastExpr [[ADDR_9:0x[a-z0-9]*]] <col:34> 'float' <IntegralToFloating>
 // CXX_FLOAT-NEXT: |       `-IntegerLiteral [[ADDR_10:0x[a-z0-9]*]] <col:34> 'int' 0
@@ -168,28 +168,28 @@ int main(void) {
 // CXX_FLOAT-NEXT: |     `-IntegerLiteral [[ADDR_14:0x[a-z0-9]*]] <col:37> 'int' 1
 // CXX_FLOAT-NEXT: |-FunctionDecl [[ADDR_15:0x[a-z0-9]*]] <line:42:1, line:44:1> line:42:1 also_before[implementation={extension(disable_implicit_base)}] 'int (int)'
 // CXX_FLOAT-NEXT: | |-ParmVarDecl [[ADDR_16:0x[a-z0-9]*]] <col:17, col:21> col:21 i 'int'
-// CXX_FLOAT-NEXT: | `-CompoundStmt [[ADDR_17:0x[a-z0-9]*]] <col:24, line:44:1>
+// CXX_FLOAT: | `-CompoundStmt [[ADDR_17:0x[a-z0-9]*]] <col:24, line:44:1>
 // CXX_FLOAT-NEXT: |   `-ReturnStmt [[ADDR_18:0x[a-z0-9]*]] <line:43:3, line:16:37>
 // CXX_FLOAT-NEXT: |     `-IntegerLiteral [[ADDR_19:0x[a-z0-9]*]] <col:37> 'int' 1
 // CXX_FLOAT-NEXT: |-FunctionDecl [[ADDR_20:0x[a-z0-9]*]] <line:47:1, line:49:1> line:47:1 also_after[implementation={extension(disable_implicit_base)}] 'int (double)'
 // CXX_FLOAT-NEXT: | |-ParmVarDecl [[ADDR_21:0x[a-z0-9]*]] <col:16, col:23> col:23 d 'double'
-// CXX_FLOAT-NEXT: | `-CompoundStmt [[ADDR_22:0x[a-z0-9]*]] <col:26, line:49:1>
+// CXX_FLOAT: | `-CompoundStmt [[ADDR_22:0x[a-z0-9]*]] <col:26, line:49:1>
 // CXX_FLOAT-NEXT: |   `-ReturnStmt [[ADDR_23:0x[a-z0-9]*]] <line:48:3, line:18:37>
 // CXX_FLOAT-NEXT: |     `-IntegerLiteral [[ADDR_24:0x[a-z0-9]*]] <col:37> 'int' 0
 // CXX_FLOAT-NEXT: |-FunctionDecl [[ADDR_25:0x[a-z0-9]*]] <line:51:1, line:53:1> line:51:1 also_after[implementation={extension(disable_implicit_base)}] 'int (long)'
 // CXX_FLOAT-NEXT: | |-ParmVarDecl [[ADDR_26:0x[a-z0-9]*]] <col:16, col:21> col:21 l 'long'
-// CXX_FLOAT-NEXT: | `-CompoundStmt [[ADDR_27:0x[a-z0-9]*]] <col:24, line:53:1>
+// CXX_FLOAT: | `-CompoundStmt [[ADDR_27:0x[a-z0-9]*]] <col:24, line:53:1>
 // CXX_FLOAT-NEXT: |   `-ReturnStmt [[ADDR_28:0x[a-z0-9]*]] <line:52:3, line:18:37>
 // CXX_FLOAT-NEXT: |     `-IntegerLiteral [[ADDR_29:0x[a-z0-9]*]] <col:37> 'int' 0
 // CXX_FLOAT-NEXT: |-FunctionDecl [[ADDR_30:0x[a-z0-9]*]] <line:14:19, line:59:1> line:57:11 used also_after 'float (double)'
 // CXX_FLOAT-NEXT: | |-ParmVarDecl [[ADDR_31:0x[a-z0-9]*]] <col:22, col:29> col:29 d 'double'
-// CXX_FLOAT-NEXT: | `-CompoundStmt [[ADDR_32:0x[a-z0-9]*]] <col:32, line:59:1>
+// CXX_FLOAT: | `-CompoundStmt [[ADDR_32:0x[a-z0-9]*]] <col:32, line:59:1>
 // CXX_FLOAT-NEXT: |   `-ReturnStmt [[ADDR_33:0x[a-z0-9]*]] <line:58:3, line:17:34>
 // CXX_FLOAT-NEXT: |     `-ImplicitCastExpr [[ADDR_34:0x[a-z0-9]*]] <col:34> 'float' <IntegralToFloating>
 // CXX_FLOAT-NEXT: |       `-IntegerLiteral [[ADDR_35:0x[a-z0-9]*]] <col:34> 'int' 1
 // CXX_FLOAT-NEXT: |-FunctionDecl [[ADDR_36:0x[a-z0-9]*]] <line:14:19, line:63:1> line:61:11 used also_after 'float (long)'
 // CXX_FLOAT-NEXT: | |-ParmVarDecl [[ADDR_37:0x[a-z0-9]*]] <col:22, col:27> col:27 l 'long'
-// CXX_FLOAT-NEXT: | `-CompoundStmt [[ADDR_38:0x[a-z0-9]*]] <col:30, line:63:1>
+// CXX_FLOAT: | `-CompoundStmt [[ADDR_38:0x[a-z0-9]*]] <col:30, line:63:1>
 // CXX_FLOAT-NEXT: |   `-ReturnStmt [[ADDR_39:0x[a-z0-9]*]] <line:62:3, line:17:34>
 // CXX_FLOAT-NEXT: |     `-ImplicitCastExpr [[ADDR_40:0x[a-z0-9]*]] <col:34> 'float' <IntegralToFloating>
 // CXX_FLOAT-NEXT: |       `-IntegerLiteral [[ADDR_41:0x[a-z0-9]*]] <col:34> 'int' 1
@@ -226,52 +226,52 @@ int main(void) {
 // C_INT-NEXT: | |-CompoundStmt [[ADDR_1:0x[a-z0-9]*]] <col:29, line:30:1>
 // C_INT-NEXT: | | `-ReturnStmt [[ADDR_2:0x[a-z0-9]*]] <line:29:3, line:21:34>
 // C_INT-NEXT: | |   `-IntegerLiteral [[ADDR_3:0x[a-z0-9]*]] <col:34> 'int' 1
-// C_INT-NEXT: | |-OverloadableAttr [[ADDR_4:0x[a-z0-9]*]] <line:10:37>
-// C_INT-NEXT: | `-OMPDeclareVariantAttr [[ADDR_5:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={extension(disable_implicit_base)}
+// C_INT-NEXT: | |-attrDetails: OverloadableAttr [[ADDR_4:0x[a-z0-9]*]] <line:10:37>
+// C_INT-NEXT: | `-attrDetails: OMPDeclareVariantAttr [[ADDR_5:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={extension(disable_implicit_base)}
 // C_INT-NEXT: |   `-DeclRefExpr [[ADDR_6:0x[a-z0-9]*]] <col:22> 'int ({{.*}})' Function [[ADDR_7:0x[a-z0-9]*]] 'also_before[implementation={extension(disable_implicit_base)}]' 'int ({{.*}})'
 // C_INT-NEXT: |-FunctionDecl [[ADDR_8:0x[a-z0-9]*]] <col:22, line:34:1> line:32:11 used also_before 'int (int)'
 // C_INT-NEXT: | |-ParmVarDecl [[ADDR_9:0x[a-z0-9]*]] <col:23, col:27> col:27 i 'int'
-// C_INT-NEXT: | |-CompoundStmt [[ADDR_10:0x[a-z0-9]*]] <col:30, line:34:1>
+// C_INT: | |-CompoundStmt [[ADDR_10:0x[a-z0-9]*]] <col:30, line:34:1>
 // C_INT-NEXT: | | `-ReturnStmt [[ADDR_11:0x[a-z0-9]*]] <line:33:3, line:21:34>
 // C_INT-NEXT: | |   `-IntegerLiteral [[ADDR_12:0x[a-z0-9]*]] <col:34> 'int' 1
-// C_INT-NEXT: | |-OverloadableAttr [[ADDR_13:0x[a-z0-9]*]] <line:10:37>
-// C_INT-NEXT: | `-OMPDeclareVariantAttr [[ADDR_14:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={extension(disable_implicit_base)}
+// C_INT-NEXT: | |-attrDetails: OverloadableAttr [[ADDR_13:0x[a-z0-9]*]] <line:10:37>
+// C_INT-NEXT: | `-attrDetails: OMPDeclareVariantAttr [[ADDR_14:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={extension(disable_implicit_base)}
 // C_INT-NEXT: |   `-DeclRefExpr [[ADDR_15:0x[a-z0-9]*]] <col:22> 'int (int)' Function [[ADDR_16:0x[a-z0-9]*]] 'also_before[implementation={extension(disable_implicit_base)}]' 'int (int)'
 // C_INT-NEXT: |-FunctionDecl [[ADDR_7]] <col:22, line:40:1> line:10:22 also_before[implementation={extension(disable_implicit_base)}] 'int ({{.*}})'
 // C_INT-NEXT: | |-CompoundStmt [[ADDR_17:0x[a-z0-9]*]] <line:38:23, line:40:1>
 // C_INT-NEXT: | | `-ReturnStmt [[ADDR_18:0x[a-z0-9]*]] <line:39:3, line:22:37>
 // C_INT-NEXT: | |   `-IntegerLiteral [[ADDR_19:0x[a-z0-9]*]] <col:37> 'int' 0
-// C_INT-NEXT: | `-OverloadableAttr [[ADDR_20:0x[a-z0-9]*]] <line:10:37>
+// C_INT-NEXT: | `-attrDetails: OverloadableAttr [[ADDR_20:0x[a-z0-9]*]] <line:10:37>
 // C_INT-NEXT: |-FunctionDecl [[ADDR_16]] <col:22, line:44:1> line:10:22 also_before[implementation={extension(disable_implicit_base)}] 'int (int)'
 // C_INT-NEXT: | |-ParmVarDecl [[ADDR_21:0x[a-z0-9]*]] <line:42:17, col:21> col:21 i 'int'
-// C_INT-NEXT: | |-CompoundStmt [[ADDR_22:0x[a-z0-9]*]] <col:24, line:44:1>
+// C_INT: | |-CompoundStmt [[ADDR_22:0x[a-z0-9]*]] <col:24, line:44:1>
 // C_INT-NEXT: | | `-ReturnStmt [[ADDR_23:0x[a-z0-9]*]] <line:43:3, line:22:37>
 // C_INT-NEXT: | |   `-IntegerLiteral [[ADDR_24:0x[a-z0-9]*]] <col:37> 'int' 0
-// C_INT-NEXT: | `-OverloadableAttr [[ADDR_25:0x[a-z0-9]*]] <line:10:37>
+// C_INT-NEXT: | `-attrDetails: OverloadableAttr [[ADDR_25:0x[a-z0-9]*]] <line:10:37>
 // C_INT-NEXT: |-FunctionDecl [[ADDR_26:0x[a-z0-9]*]] <col:22, line:49:1> line:10:22 also_after[implementation={extension(disable_implicit_base)}] 'int (double)'
 // C_INT-NEXT: | |-ParmVarDecl [[ADDR_27:0x[a-z0-9]*]] <line:47:16, col:23> col:23 d 'double'
-// C_INT-NEXT: | |-CompoundStmt [[ADDR_28:0x[a-z0-9]*]] <col:26, line:49:1>
+// C_INT: | |-CompoundStmt [[ADDR_28:0x[a-z0-9]*]] <col:26, line:49:1>
 // C_INT-NEXT: | | `-ReturnStmt [[ADDR_29:0x[a-z0-9]*]] <line:48:3, line:24:37>
 // C_INT-NEXT: | |   `-IntegerLiteral [[ADDR_30:0x[a-z0-9]*]] <col:37> 'int' 1
-// C_INT-NEXT: | `-OverloadableAttr [[ADDR_31:0x[a-z0-9]*]] <line:10:37>
+// C_INT-NEXT: | `-attrDetails: OverloadableAttr [[ADDR_31:0x[a-z0-9]*]] <line:10:37>
 // C_INT-NEXT: |-FunctionDecl [[ADDR_32:0x[a-z0-9]*]] <col:22, line:53:1> line:10:22 also_after[implementation={extension(disable_implicit_base)}] 'int (long)'
 // C_INT-NEXT: | |-ParmVarDecl [[ADDR_33:0x[a-z0-9]*]] <line:51:16, col:21> col:21 l 'long'
-// C_INT-NEXT: | |-CompoundStmt [[ADDR_34:0x[a-z0-9]*]] <col:24, line:53:1>
+// C_INT: | |-CompoundStmt [[ADDR_34:0x[a-z0-9]*]] <col:24, line:53:1>
 // C_INT-NEXT: | | `-ReturnStmt [[ADDR_35:0x[a-z0-9]*]] <line:52:3, line:24:37>
 // C_INT-NEXT: | |   `-IntegerLiteral [[ADDR_36:0x[a-z0-9]*]] <col:37> 'int' 1
-// C_INT-NEXT: | `-OverloadableAttr [[ADDR_37:0x[a-z0-9]*]] <line:10:37>
+// C_INT-NEXT: | `-attrDetails: OverloadableAttr [[ADDR_37:0x[a-z0-9]*]] <line:10:37>
 // C_INT-NEXT: |-FunctionDecl [[ADDR_38:0x[a-z0-9]*]] <col:22, line:59:1> line:57:11 used also_after 'int (double)'
 // C_INT-NEXT: | |-ParmVarDecl [[ADDR_39:0x[a-z0-9]*]] <col:22, col:29> col:29 d 'double'
-// C_INT-NEXT: | |-CompoundStmt [[ADDR_40:0x[a-z0-9]*]] <col:32, line:59:1>
+// C_INT: | |-CompoundStmt [[ADDR_40:0x[a-z0-9]*]] <col:32, line:59:1>
 // C_INT-NEXT: | | `-ReturnStmt [[ADDR_41:0x[a-z0-9]*]] <line:58:3, line:23:34>
 // C_INT-NEXT: | |   `-IntegerLiteral [[ADDR_42:0x[a-z0-9]*]] <col:34> 'int' 0
-// C_INT-NEXT: | `-OverloadableAttr [[ADDR_43:0x[a-z0-9]*]] <line:10:37>
+// C_INT-NEXT: | `-attrDetails: OverloadableAttr [[ADDR_43:0x[a-z0-9]*]] <line:10:37>
 // C_INT-NEXT: |-FunctionDecl [[ADDR_44:0x[a-z0-9]*]] <col:22, line:63:1> line:61:11 used also_after 'int (long)'
 // C_INT-NEXT: | |-ParmVarDecl [[ADDR_45:0x[a-z0-9]*]] <col:22, col:27> col:27 l 'long'
-// C_INT-NEXT: | |-CompoundStmt [[ADDR_46:0x[a-z0-9]*]] <col:30, line:63:1>
+// C_INT: | |-CompoundStmt [[ADDR_46:0x[a-z0-9]*]] <col:30, line:63:1>
 // C_INT-NEXT: | | `-ReturnStmt [[ADDR_47:0x[a-z0-9]*]] <line:62:3, line:23:34>
 // C_INT-NEXT: | |   `-IntegerLiteral [[ADDR_48:0x[a-z0-9]*]] <col:34> 'int' 0
-// C_INT-NEXT: | `-OverloadableAttr [[ADDR_49:0x[a-z0-9]*]] <line:10:37>
+// C_INT-NEXT: | `-attrDetails: OverloadableAttr [[ADDR_49:0x[a-z0-9]*]] <line:10:37>
 // C_INT-NEXT: `-FunctionDecl [[ADDR_50:0x[a-z0-9]*]] <line:65:1, line:68:1> line:65:5 main 'int ({{.*}})'
 // C_INT-NEXT:   `-CompoundStmt [[ADDR_51:0x[a-z0-9]*]] <col:16, line:68:1>
 // C_INT-NEXT:     `-ReturnStmt [[ADDR_52:0x[a-z0-9]*]] <line:67:3, col:94>
@@ -319,14 +319,14 @@ int main(void) {
 // CXX_INT-NEXT: | |-CompoundStmt [[ADDR_1:0x[a-z0-9]*]] <col:29, line:30:1>
 // CXX_INT-NEXT: | | `-ReturnStmt [[ADDR_2:0x[a-z0-9]*]] <line:29:3, line:21:34>
 // CXX_INT-NEXT: | |   `-IntegerLiteral [[ADDR_3:0x[a-z0-9]*]] <col:34> 'int' 1
-// CXX_INT-NEXT: | `-OMPDeclareVariantAttr [[ADDR_4:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={extension(disable_implicit_base)}
+// CXX_INT-NEXT: | `-attrDetails: OMPDeclareVariantAttr [[ADDR_4:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={extension(disable_implicit_base)}
 // CXX_INT-NEXT: |   `-DeclRefExpr [[ADDR_5:0x[a-z0-9]*]] <line:38:1> 'int ({{.*}})' Function [[ADDR_6:0x[a-z0-9]*]] 'also_before[implementation={extension(disable_implicit_base)}]' 'int ({{.*}})'
 // CXX_INT-NEXT: |-FunctionDecl [[ADDR_7:0x[a-z0-9]*]] <line:20:19, line:34:1> line:32:11 used also_before 'int (int)'
 // CXX_INT-NEXT: | |-ParmVarDecl [[ADDR_8:0x[a-z0-9]*]] <col:23, col:27> col:27 i 'int'
-// CXX_INT-NEXT: | |-CompoundStmt [[ADDR_9:0x[a-z0-9]*]] <col:30, line:34:1>
+// CXX_INT: | |-CompoundStmt [[ADDR_9:0x[a-z0-9]*]] <col:30, line:34:1>
 // CXX_INT-NEXT: | | `-ReturnStmt [[ADDR_10:0x[a-z0-9]*]] <line:33:3, line:21:34>
 // CXX_INT-NEXT: | |   `-IntegerLiteral [[ADDR_11:0x[a-z0-9]*]] <col:34> 'int' 1
-// CXX_INT-NEXT: | `-OMPDeclareVariantAttr [[ADDR_12:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={extension(disable_implicit_base)}
+// CXX_INT-NEXT: | `-attrDetails: OMPDeclareVariantAttr [[ADDR_12:0x[a-z0-9]*]] <<invalid sloc>> Implicit implementation={extension(disable_implicit_base)}
 // CXX_INT-NEXT: |   `-DeclRefExpr [[ADDR_13:0x[a-z0-9]*]] <line:42:1> 'int (int)' Function [[ADDR_14:0x[a-z0-9]*]] 'also_before[implementation={extension(disable_implicit_base)}]' 'int (int)'
 // CXX_INT-NEXT: |-FunctionDecl [[ADDR_6]] <line:38:1, line:40:1> line:38:1 also_before[implementation={extension(disable_implicit_base)}] 'int ({{.*}})'
 // CXX_INT-NEXT: | `-CompoundStmt [[ADDR_15:0x[a-z0-9]*]] <col:23, line:40:1>
@@ -334,27 +334,27 @@ int main(void) {
 // CXX_INT-NEXT: |     `-IntegerLiteral [[ADDR_17:0x[a-z0-9]*]] <col:37> 'int' 0
 // CXX_INT-NEXT: |-FunctionDecl [[ADDR_14]] <line:42:1, line:44:1> line:42:1 also_before[implementation={extension(disable_implicit_base)}] 'int (int)'
 // CXX_INT-NEXT: | |-ParmVarDecl [[ADDR_18:0x[a-z0-9]*]] <col:17, col:21> col:21 i 'int'
-// CXX_INT-NEXT: | `-CompoundStmt [[ADDR_19:0x[a-z0-9]*]] <col:24, line:44:1>
+// CXX_INT: | `-CompoundStmt [[ADDR_19:0x[a-z0-9]*]] <col:24, line:44:1>
 // CXX_INT-NEXT: |   `-ReturnStmt [[ADDR_20:0x[a-z0-9]*]] <line:43:3, line:22:37>
 // CXX_INT-NEXT: |     `-IntegerLiteral [[ADDR_21:0x[a-z0-9]*]] <col:37> 'int' 0
 // CXX_INT-NEXT: |-FunctionDecl [[ADDR_22:0x[a-z0-9]*]] <line:47:1, line:49:1> line:47:1 also_after[implementation={extension(disable_implicit_base)}] 'int (double)'
 // CXX_INT-NEXT: | |-ParmVarDecl [[ADDR_23:0x[a-z0-9]*]] <col:16, col:23> col:23 d 'double'
-// CXX_INT-NEXT: | `-CompoundStmt [[ADDR_24:0x[a-z0-9]*]] <col:26, line:49:1>
+// CXX_INT: | `-CompoundStmt [[ADDR_24:0x[a-z0-9]*]] <col:26, line:49:1>
 // CXX_INT-NEXT: |   `-ReturnStmt [[ADDR_25:0x[a-z0-9]*]] <line:48:3, line:24:37>
 // CXX_INT-NEXT: |     `-IntegerLiteral [[ADDR_26:0x[a-z0-9]*]] <col:37> 'int' 1
 // CXX_INT-NEXT: |-FunctionDecl [[ADDR_27:0x[a-z0-9]*]] <line:51:1, line:53:1> line:51:1 also_after[implementation={extension(disable_implicit_base)}] 'int (long)'
 // CXX_INT-NEXT: | |-ParmVarDecl [[ADDR_28:0x[a-z0-9]*]] <col:16, col:21> col:21 l 'long'
-// CXX_INT-NEXT: | `-CompoundStmt [[ADDR_29:0x[a-z0-9]*]] <col:24, line:53:1>
+// CXX_INT: | `-CompoundStmt [[ADDR_29:0x[a-z0-9]*]] <col:24, line:53:1>
 // CXX_INT-NEXT: |   `-ReturnStmt [[ADDR_30:0x[a-z0-9]*]] <line:52:3, line:24:37>
 // CXX_INT-NEXT: |     `-IntegerLiteral [[ADDR_31:0x[a-z0-9]*]] <col:37> 'int' 1
 // CXX_INT-NEXT: |-FunctionDecl [[ADDR_32:0x[a-z0-9]*]] <line:20:19, line:59:1> line:57:11 used also_after 'int (double)'
 // CXX_INT-NEXT: | |-ParmVarDecl [[ADDR_33:0x[a-z0-9]*]] <col:22, col:29> col:29 d 'double'
-// CXX_INT-NEXT: | `-CompoundStmt [[ADDR_34:0x[a-z0-9]*]] <col:32, line:59:1>
+// CXX_INT: | `-CompoundStmt [[ADDR_34:0x[a-z0-9]*]] <col:32, line:59:1>
 // CXX_INT-NEXT: |   `-ReturnStmt [[ADDR_35:0x[a-z0-9]*]] <line:58:3, line:23:34>
 // CXX_INT-NEXT: |     `-IntegerLiteral [[ADDR_36:0x[a-z0-9]*]] <col:34> 'int' 0
 // CXX_INT-NEXT: |-FunctionDecl [[ADDR_37:0x[a-z0-9]*]] <line:20:19, line:63:1> line:61:11 used also_after 'int (long)'
 // CXX_INT-NEXT: | |-ParmVarDecl [[ADDR_38:0x[a-z0-9]*]] <col:22, col:27> col:27 l 'long'
-// CXX_INT-NEXT: | `-CompoundStmt [[ADDR_39:0x[a-z0-9]*]] <col:30, line:63:1>
+// CXX_INT: | `-CompoundStmt [[ADDR_39:0x[a-z0-9]*]] <col:30, line:63:1>
 // CXX_INT-NEXT: |   `-ReturnStmt [[ADDR_40:0x[a-z0-9]*]] <line:62:3, line:23:34>
 // CXX_INT-NEXT: |     `-IntegerLiteral [[ADDR_41:0x[a-z0-9]*]] <col:34> 'int' 0
 // CXX_INT-NEXT: `-FunctionDecl [[ADDR_42:0x[a-z0-9]*]] <line:65:1, line:68:1> line:65:5 main 'int ({{.*}})'

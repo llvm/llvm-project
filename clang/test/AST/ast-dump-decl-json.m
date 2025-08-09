@@ -89,7 +89,7 @@ void f(void) {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "ObjCInterfaceDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 180,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 9,
 // CHECK-NEXT:   "col": 12,
@@ -97,12 +97,12 @@ void f(void) {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 169,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 203,
 // CHECK-NEXT:    "line": 10,
 // CHECK-NEXT:    "col": 2,
 // CHECK-NEXT:    "tokLen": 3
@@ -126,7 +126,7 @@ void f(void) {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "ObjCImplementationDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 226,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 12,
 // CHECK-NEXT:   "col": 17,
@@ -134,12 +134,12 @@ void f(void) {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 210,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 382,
 // CHECK-NEXT:    "line": 19,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -159,19 +159,19 @@ void f(void) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ObjCIvarDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 252,
 // CHECK-NEXT:     "line": 13,
 // CHECK-NEXT:     "col": 7,
 // CHECK-NEXT:     "tokLen": 10
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 248,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 252,
 // CHECK-NEXT:      "col": 7,
 // CHECK-NEXT:      "tokLen": 10
 // CHECK-NEXT:     }
@@ -186,19 +186,19 @@ void f(void) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ObjCIvarDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 280,
 // CHECK-NEXT:     "line": 14,
 // CHECK-NEXT:     "col": 16,
 // CHECK-NEXT:     "tokLen": 10
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 276,
 // CHECK-NEXT:      "col": 12,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 280,
 // CHECK-NEXT:      "col": 16,
 // CHECK-NEXT:      "tokLen": 10
 // CHECK-NEXT:     }
@@ -213,19 +213,19 @@ void f(void) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ObjCIvarDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 310,
 // CHECK-NEXT:     "line": 15,
 // CHECK-NEXT:     "col": 18,
 // CHECK-NEXT:     "tokLen": 12
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 306,
 // CHECK-NEXT:      "col": 14,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 310,
 // CHECK-NEXT:      "col": 18,
 // CHECK-NEXT:      "tokLen": 12
 // CHECK-NEXT:     }
@@ -240,19 +240,19 @@ void f(void) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ObjCIvarDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 339,
 // CHECK-NEXT:     "line": 16,
 // CHECK-NEXT:     "col": 15,
 // CHECK-NEXT:     "tokLen": 9
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 335,
 // CHECK-NEXT:      "col": 11,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 339,
 // CHECK-NEXT:      "col": 15,
 // CHECK-NEXT:      "tokLen": 9
 // CHECK-NEXT:     }
@@ -267,19 +267,19 @@ void f(void) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ObjCIvarDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 366,
 // CHECK-NEXT:     "line": 17,
 // CHECK-NEXT:     "col": 16,
 // CHECK-NEXT:     "tokLen": 10
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 362,
 // CHECK-NEXT:      "col": 12,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 366,
 // CHECK-NEXT:      "col": 16,
 // CHECK-NEXT:      "tokLen": 10
 // CHECK-NEXT:     }
@@ -297,7 +297,7 @@ void f(void) {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "ObjCMethodDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 430,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 23,
 // CHECK-NEXT:   "col": 1,
@@ -305,12 +305,12 @@ void f(void) {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 430,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 469,
 // CHECK-NEXT:    "col": 40,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
@@ -327,18 +327,18 @@ void f(void) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 463,
 // CHECK-NEXT:     "col": 34,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 459,
 // CHECK-NEXT:      "col": 30,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 463,
 // CHECK-NEXT:      "col": 34,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -346,7 +346,20 @@ void f(void) {
 // CHECK-NEXT:    "name": "i",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
-// CHECK-NEXT:    }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "typeDetails": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "id": "0x{{.*}}",
+// CHECK-NEXT:      "kind": "BuiltinType",
+// CHECK-NEXT:      "type": {
+// CHECK-NEXT:       "qualType": "int"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "qualDetails": [
+// CHECK-NEXT:       "signed",
+// CHECK-NEXT:       "integer"
+// CHECK-NEXT:      ]
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
@@ -355,7 +368,7 @@ void f(void) {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "ObjCMethodDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 516,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 27,
 // CHECK-NEXT:   "col": 1,
@@ -363,12 +376,12 @@ void f(void) {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 516,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 572,
 // CHECK-NEXT:    "line": 29,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -394,7 +407,32 @@ void f(void) {
 // CHECK-NEXT:    "name": "self",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "testObjCMethodDecl *"
-// CHECK-NEXT:    }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "typeDetails": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "id": "0x{{.*}}",
+// CHECK-NEXT:      "kind": "ObjCObjectPointerType",
+// CHECK-NEXT:      "type": {
+// CHECK-NEXT:       "qualType": "testObjCMethodDecl *"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "qualDetails": [],
+// CHECK-NEXT:      "typeDetails": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}",
+// CHECK-NEXT:        "kind": "ObjCInterfaceType",
+// CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "qualType": "testObjCMethodDecl"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "decl": {
+// CHECK-NEXT:         "id": "0x{{.*}}",
+// CHECK-NEXT:         "kind": "ObjCInterfaceDecl",
+// CHECK-NEXT:         "name": "testObjCMethodDecl"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "qualDetails": []
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
 // CHECK-NEXT:   },
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
@@ -410,25 +448,64 @@ void f(void) {
 // CHECK-NEXT:     "desugaredQualType": "SEL *",
 // CHECK-NEXT:     "qualType": "SEL",
 // CHECK-NEXT:     "typeAliasDeclId": "0x{{.*}}"
-// CHECK-NEXT:    }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "typeDetails": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "id": "0x{{.*}}",
+// CHECK-NEXT:      "kind": "TypedefType",
+// CHECK-NEXT:      "type": {
+// CHECK-NEXT:       "qualType": "SEL"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "decl": {
+// CHECK-NEXT:       "id": "0x{{.*}}",
+// CHECK-NEXT:       "kind": "TypedefDecl",
+// CHECK-NEXT:       "name": "SEL"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "qualDetails": [
+// CHECK-NEXT:       "ptr"
+// CHECK-NEXT:      ],
+// CHECK-NEXT:      "typeDetails": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}",
+// CHECK-NEXT:        "kind": "PointerType",
+// CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "qualType": "SEL *"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "qualDetails": [
+// CHECK-NEXT:         "ptr"
+// CHECK-NEXT:        ],
+// CHECK-NEXT:        "typeDetails": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "id": "0x{{.*}}",
+// CHECK-NEXT:          "kind": "BuiltinType",
+// CHECK-NEXT:          "type": {
+// CHECK-NEXT:           "qualType": "SEL"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "qualDetails": []
+// CHECK-NEXT:         }
+// CHECK-NEXT:        ]
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
 // CHECK-NEXT:   },
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 549,
 // CHECK-NEXT:     "line": 27,
 // CHECK-NEXT:     "col": 34,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 545,
 // CHECK-NEXT:      "col": 30,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 549,
 // CHECK-NEXT:      "col": 34,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -436,19 +513,32 @@ void f(void) {
 // CHECK-NEXT:    "name": "i",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
-// CHECK-NEXT:    }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "typeDetails": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "id": "0x{{.*}}",
+// CHECK-NEXT:      "kind": "BuiltinType",
+// CHECK-NEXT:      "type": {
+// CHECK-NEXT:       "qualType": "int"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "qualDetails": [
+// CHECK-NEXT:       "signed",
+// CHECK-NEXT:       "integer"
+// CHECK-NEXT:      ]
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
 // CHECK-NEXT:   },
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CompoundStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 556,
 // CHECK-NEXT:      "col": 41,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 572,
 // CHECK-NEXT:      "line": 29,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 1
@@ -460,13 +550,13 @@ void f(void) {
 // CHECK-NEXT:      "kind": "ReturnStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": {{[0-9]+}},
+// CHECK-NEXT:        "offset": 561,
 // CHECK-NEXT:        "line": 28,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 6
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": {{[0-9]+}},
+// CHECK-NEXT:        "offset": 568,
 // CHECK-NEXT:        "col": 10,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -477,12 +567,12 @@ void f(void) {
 // CHECK-NEXT:        "kind": "IntegerLiteral",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
-// CHECK-NEXT:          "offset": {{[0-9]+}},
+// CHECK-NEXT:          "offset": 568,
 // CHECK-NEXT:          "col": 10,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
-// CHECK-NEXT:          "offset": {{[0-9]+}},
+// CHECK-NEXT:          "offset": 568,
 // CHECK-NEXT:          "col": 10,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -504,7 +594,7 @@ void f(void) {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "ObjCProtocolDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 593,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 32,
 // CHECK-NEXT:   "col": 11,
@@ -512,12 +602,12 @@ void f(void) {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 583,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 631,
 // CHECK-NEXT:    "line": 34,
 // CHECK-NEXT:    "col": 2,
 // CHECK-NEXT:    "tokLen": 3
@@ -529,19 +619,19 @@ void f(void) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ObjCMethodDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 615,
 // CHECK-NEXT:     "line": 33,
 // CHECK-NEXT:     "col": 1,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 615,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 627,
 // CHECK-NEXT:      "col": 13,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -560,7 +650,7 @@ void f(void) {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "ObjCInterfaceDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 649,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 36,
 // CHECK-NEXT:   "col": 12,
@@ -568,12 +658,12 @@ void f(void) {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 638,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 688,
 // CHECK-NEXT:    "line": 38,
 // CHECK-NEXT:    "col": 2,
 // CHECK-NEXT:    "tokLen": 3
@@ -603,19 +693,19 @@ void f(void) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ObjCMethodDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 672,
 // CHECK-NEXT:     "line": 37,
 // CHECK-NEXT:     "col": 1,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 672,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 684,
 // CHECK-NEXT:      "col": 13,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -634,7 +724,7 @@ void f(void) {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "ObjCImplementationDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 711,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 40,
 // CHECK-NEXT:   "col": 17,
@@ -642,12 +732,12 @@ void f(void) {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 695,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 764,
 // CHECK-NEXT:    "line": 45,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -669,19 +759,19 @@ void f(void) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ObjCIvarDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 738,
 // CHECK-NEXT:     "line": 41,
 // CHECK-NEXT:     "col": 7,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 734,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 738,
 // CHECK-NEXT:      "col": 7,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -696,19 +786,19 @@ void f(void) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ObjCMethodDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 745,
 // CHECK-NEXT:     "line": 43,
 // CHECK-NEXT:     "col": 1,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 745,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 761,
 // CHECK-NEXT:      "line": 44,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 1
@@ -733,7 +823,32 @@ void f(void) {
 // CHECK-NEXT:      "name": "self",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "TestObjCClass *"
-// CHECK-NEXT:      }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "typeDetails": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}",
+// CHECK-NEXT:        "kind": "ObjCObjectPointerType",
+// CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "qualType": "TestObjCClass *"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "qualDetails": [],
+// CHECK-NEXT:        "typeDetails": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "id": "0x{{.*}}",
+// CHECK-NEXT:          "kind": "ObjCInterfaceType",
+// CHECK-NEXT:          "type": {
+// CHECK-NEXT:           "qualType": "TestObjCClass"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "decl": {
+// CHECK-NEXT:           "id": "0x{{.*}}",
+// CHECK-NEXT:           "kind": "ObjCInterfaceDecl",
+// CHECK-NEXT:           "name": "TestObjCClass"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "qualDetails": []
+// CHECK-NEXT:         }
+// CHECK-NEXT:        ]
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
 // CHECK-NEXT:      "id": "0x{{.*}}",
@@ -749,20 +864,59 @@ void f(void) {
 // CHECK-NEXT:       "desugaredQualType": "SEL *",
 // CHECK-NEXT:       "qualType": "SEL",
 // CHECK-NEXT:       "typeAliasDeclId": "0x{{.*}}"
-// CHECK-NEXT:      }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "typeDetails": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}",
+// CHECK-NEXT:        "kind": "TypedefType",
+// CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "qualType": "SEL"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "decl": {
+// CHECK-NEXT:         "id": "0x{{.*}}",
+// CHECK-NEXT:         "kind": "TypedefDecl",
+// CHECK-NEXT:         "name": "SEL"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "qualDetails": [
+// CHECK-NEXT:         "ptr"
+// CHECK-NEXT:        ],
+// CHECK-NEXT:        "typeDetails": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "id": "0x{{.*}}",
+// CHECK-NEXT:          "kind": "PointerType",
+// CHECK-NEXT:          "type": {
+// CHECK-NEXT:           "qualType": "SEL *"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "qualDetails": [
+// CHECK-NEXT:           "ptr"
+// CHECK-NEXT:          ],
+// CHECK-NEXT:          "typeDetails": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:            "id": "0x{{.*}}",
+// CHECK-NEXT:            "kind": "BuiltinType",
+// CHECK-NEXT:            "type": {
+// CHECK-NEXT:             "qualType": "SEL"
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "qualDetails": []
+// CHECK-NEXT:           }
+// CHECK-NEXT:          ]
+// CHECK-NEXT:         }
+// CHECK-NEXT:        ]
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "CompoundStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": {{[0-9]+}},
+// CHECK-NEXT:        "offset": 758,
 // CHECK-NEXT:        "line": 43,
 // CHECK-NEXT:        "col": 14,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": {{[0-9]+}},
+// CHECK-NEXT:        "offset": 761,
 // CHECK-NEXT:        "line": 44,
 // CHECK-NEXT:        "col": 1,
 // CHECK-NEXT:        "tokLen": 1
@@ -778,7 +932,7 @@ void f(void) {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "ObjCCategoryDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 783,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 47,
 // CHECK-NEXT:   "col": 12,
@@ -786,12 +940,12 @@ void f(void) {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 772,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 841,
 // CHECK-NEXT:    "line": 49,
 // CHECK-NEXT:    "col": 2,
 // CHECK-NEXT:    "tokLen": 3
@@ -820,19 +974,19 @@ void f(void) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ObjCMethodDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 825,
 // CHECK-NEXT:     "line": 48,
 // CHECK-NEXT:     "col": 1,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 825,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 837,
 // CHECK-NEXT:      "col": 13,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -851,7 +1005,7 @@ void f(void) {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "ObjCInterfaceDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 859,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 51,
 // CHECK-NEXT:   "col": 12,
@@ -859,12 +1013,12 @@ void f(void) {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 848,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 897,
 // CHECK-NEXT:    "line": 53,
 // CHECK-NEXT:    "col": 2,
 // CHECK-NEXT:    "tokLen": 3
@@ -892,19 +1046,19 @@ void f(void) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ObjCTypeParamDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 880,
 // CHECK-NEXT:     "line": 51,
 // CHECK-NEXT:     "col": 33,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 880,
 // CHECK-NEXT:      "col": 33,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 880,
 // CHECK-NEXT:      "col": 33,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -922,7 +1076,7 @@ void f(void) {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "ObjCCategoryImplDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 920,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 55,
 // CHECK-NEXT:   "col": 17,
@@ -930,12 +1084,12 @@ void f(void) {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 904,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 977,
 // CHECK-NEXT:    "line": 58,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -957,19 +1111,19 @@ void f(void) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ObjCMethodDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 958,
 // CHECK-NEXT:     "line": 56,
 // CHECK-NEXT:     "col": 1,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 958,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 974,
 // CHECK-NEXT:      "line": 57,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 1
@@ -994,7 +1148,32 @@ void f(void) {
 // CHECK-NEXT:      "name": "self",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "TestObjCClass *"
-// CHECK-NEXT:      }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "typeDetails": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}",
+// CHECK-NEXT:        "kind": "ObjCObjectPointerType",
+// CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "qualType": "TestObjCClass *"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "qualDetails": [],
+// CHECK-NEXT:        "typeDetails": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "id": "0x{{.*}}",
+// CHECK-NEXT:          "kind": "ObjCInterfaceType",
+// CHECK-NEXT:          "type": {
+// CHECK-NEXT:           "qualType": "TestObjCClass"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "decl": {
+// CHECK-NEXT:           "id": "0x{{.*}}",
+// CHECK-NEXT:           "kind": "ObjCInterfaceDecl",
+// CHECK-NEXT:           "name": "TestObjCClass"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "qualDetails": []
+// CHECK-NEXT:         }
+// CHECK-NEXT:        ]
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
 // CHECK-NEXT:      "id": "0x{{.*}}",
@@ -1010,20 +1189,59 @@ void f(void) {
 // CHECK-NEXT:       "desugaredQualType": "SEL *",
 // CHECK-NEXT:       "qualType": "SEL",
 // CHECK-NEXT:       "typeAliasDeclId": "0x{{.*}}"
-// CHECK-NEXT:      }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "typeDetails": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}",
+// CHECK-NEXT:        "kind": "TypedefType",
+// CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "qualType": "SEL"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "decl": {
+// CHECK-NEXT:         "id": "0x{{.*}}",
+// CHECK-NEXT:         "kind": "TypedefDecl",
+// CHECK-NEXT:         "name": "SEL"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "qualDetails": [
+// CHECK-NEXT:         "ptr"
+// CHECK-NEXT:        ],
+// CHECK-NEXT:        "typeDetails": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "id": "0x{{.*}}",
+// CHECK-NEXT:          "kind": "PointerType",
+// CHECK-NEXT:          "type": {
+// CHECK-NEXT:           "qualType": "SEL *"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "qualDetails": [
+// CHECK-NEXT:           "ptr"
+// CHECK-NEXT:          ],
+// CHECK-NEXT:          "typeDetails": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:            "id": "0x{{.*}}",
+// CHECK-NEXT:            "kind": "BuiltinType",
+// CHECK-NEXT:            "type": {
+// CHECK-NEXT:             "qualType": "SEL"
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "qualDetails": []
+// CHECK-NEXT:           }
+// CHECK-NEXT:          ]
+// CHECK-NEXT:         }
+// CHECK-NEXT:        ]
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "CompoundStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": {{[0-9]+}},
+// CHECK-NEXT:        "offset": 971,
 // CHECK-NEXT:        "line": 56,
 // CHECK-NEXT:        "col": 14,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": {{[0-9]+}},
+// CHECK-NEXT:        "offset": 974,
 // CHECK-NEXT:        "line": 57,
 // CHECK-NEXT:        "col": 1,
 // CHECK-NEXT:        "tokLen": 1
@@ -1039,7 +1257,7 @@ void f(void) {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "ObjCCompatibleAliasDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 985,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 60,
 // CHECK-NEXT:   "col": 1,
@@ -1047,12 +1265,12 @@ void f(void) {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 985,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 985,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
@@ -1069,7 +1287,7 @@ void f(void) {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "ObjCInterfaceDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 1051,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 62,
 // CHECK-NEXT:   "col": 12,
@@ -1077,12 +1295,12 @@ void f(void) {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 1040,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 1150,
 // CHECK-NEXT:    "line": 65,
 // CHECK-NEXT:    "col": 2,
 // CHECK-NEXT:    "tokLen": 3
@@ -1105,19 +1323,19 @@ void f(void) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ObjCPropertyDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 1123,
 // CHECK-NEXT:     "line": 63,
 // CHECK-NEXT:     "col": 52,
 // CHECK-NEXT:     "tokLen": 3
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1072,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1123,
 // CHECK-NEXT:      "col": 52,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     }
@@ -1145,19 +1363,19 @@ void f(void) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ObjCPropertyDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 1143,
 // CHECK-NEXT:     "line": 64,
 // CHECK-NEXT:     "col": 15,
 // CHECK-NEXT:     "tokLen": 3
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1129,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1143,
 // CHECK-NEXT:      "col": 15,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     }
@@ -1175,19 +1393,19 @@ void f(void) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ObjCMethodDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 1123,
 // CHECK-NEXT:     "line": 63,
 // CHECK-NEXT:     "col": 52,
 // CHECK-NEXT:     "tokLen": 3
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1123,
 // CHECK-NEXT:      "col": 52,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1123,
 // CHECK-NEXT:      "col": 52,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     }
@@ -1204,18 +1422,18 @@ void f(void) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ObjCMethodDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 1123,
 // CHECK-NEXT:     "col": 52,
 // CHECK-NEXT:     "tokLen": 3
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1123,
 // CHECK-NEXT:      "col": 52,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1123,
 // CHECK-NEXT:      "col": 52,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     }
@@ -1232,18 +1450,18 @@ void f(void) {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
-// CHECK-NEXT:       "offset": {{[0-9]+}},
+// CHECK-NEXT:       "offset": 1123,
 // CHECK-NEXT:       "col": 52,
 // CHECK-NEXT:       "tokLen": 3
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": {{[0-9]+}},
+// CHECK-NEXT:        "offset": 1123,
 // CHECK-NEXT:        "col": 52,
 // CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": {{[0-9]+}},
+// CHECK-NEXT:        "offset": 1123,
 // CHECK-NEXT:        "col": 52,
 // CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       }
@@ -1251,7 +1469,20 @@ void f(void) {
 // CHECK-NEXT:      "name": "foo",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "int"
-// CHECK-NEXT:      }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "typeDetails": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}",
+// CHECK-NEXT:        "kind": "BuiltinType",
+// CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "qualType": "int"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "qualDetails": [
+// CHECK-NEXT:         "signed",
+// CHECK-NEXT:         "integer"
+// CHECK-NEXT:        ]
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
 // CHECK-NEXT:     }
 // CHECK-NEXT:    ]
 // CHECK-NEXT:   },
@@ -1259,19 +1490,19 @@ void f(void) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ObjCMethodDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 1143,
 // CHECK-NEXT:     "line": 64,
 // CHECK-NEXT:     "col": 15,
 // CHECK-NEXT:     "tokLen": 3
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1143,
 // CHECK-NEXT:      "col": 15,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1143,
 // CHECK-NEXT:      "col": 15,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     }
@@ -1288,18 +1519,18 @@ void f(void) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ObjCMethodDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 1143,
 // CHECK-NEXT:     "col": 15,
 // CHECK-NEXT:     "tokLen": 3
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1143,
 // CHECK-NEXT:      "col": 15,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1143,
 // CHECK-NEXT:      "col": 15,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     }
@@ -1316,18 +1547,18 @@ void f(void) {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
-// CHECK-NEXT:       "offset": {{[0-9]+}},
+// CHECK-NEXT:       "offset": 1143,
 // CHECK-NEXT:       "col": 15,
 // CHECK-NEXT:       "tokLen": 3
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": {{[0-9]+}},
+// CHECK-NEXT:        "offset": 1143,
 // CHECK-NEXT:        "col": 15,
 // CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": {{[0-9]+}},
+// CHECK-NEXT:        "offset": 1143,
 // CHECK-NEXT:        "col": 15,
 // CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       }
@@ -1335,7 +1566,20 @@ void f(void) {
 // CHECK-NEXT:      "name": "bar",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "int"
-// CHECK-NEXT:      }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "typeDetails": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "qualDetails": [
+// CHECK-NEXT:         "signed",
+// CHECK-NEXT:         "integer"
+// CHECK-NEXT:        ],
+// CHECK-NEXT:        "typeDetails": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "refId": "0x{{.*}}"
+// CHECK-NEXT:         }
+// CHECK-NEXT:        ]
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
 // CHECK-NEXT:     }
 // CHECK-NEXT:    ]
 // CHECK-NEXT:   }
@@ -1346,7 +1590,7 @@ void f(void) {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "ObjCImplementationDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 1173,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 67,
 // CHECK-NEXT:   "col": 17,
@@ -1354,12 +1598,12 @@ void f(void) {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 1157,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 1244,
 // CHECK-NEXT:    "line": 72,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -1379,19 +1623,19 @@ void f(void) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ObjCIvarDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 1199,
 // CHECK-NEXT:     "line": 68,
 // CHECK-NEXT:     "col": 7,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1195,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1199,
 // CHECK-NEXT:      "col": 7,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -1406,19 +1650,19 @@ void f(void) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ObjCPropertyImplDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 1218,
 // CHECK-NEXT:     "line": 70,
 // CHECK-NEXT:     "col": 13,
 // CHECK-NEXT:     "tokLen": 3
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1206,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1222,
 // CHECK-NEXT:      "col": 17,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -1443,19 +1687,19 @@ void f(void) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ObjCIvarDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 1238,
 // CHECK-NEXT:     "line": 71,
 // CHECK-NEXT:     "col": 13,
 // CHECK-NEXT:     "tokLen": 3
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1238,
 // CHECK-NEXT:      "col": 13,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1238,
 // CHECK-NEXT:      "col": 13,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     }
@@ -1471,18 +1715,18 @@ void f(void) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ObjCPropertyImplDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 1238,
 // CHECK-NEXT:     "col": 13,
 // CHECK-NEXT:     "tokLen": 3
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1226,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1238,
 // CHECK-NEXT:      "col": 13,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     }
@@ -1507,19 +1751,19 @@ void f(void) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ObjCMethodDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 1206,
 // CHECK-NEXT:     "line": 70,
 // CHECK-NEXT:     "col": 1,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1206,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1218,
 // CHECK-NEXT:      "col": 13,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     }
@@ -1536,18 +1780,18 @@ void f(void) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ObjCMethodDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 1206,
 // CHECK-NEXT:     "col": 1,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1206,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1218,
 // CHECK-NEXT:      "col": 13,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     }
@@ -1564,19 +1808,19 @@ void f(void) {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
-// CHECK-NEXT:       "offset": {{[0-9]+}},
+// CHECK-NEXT:       "offset": 1123,
 // CHECK-NEXT:       "line": 63,
 // CHECK-NEXT:       "col": 52,
 // CHECK-NEXT:       "tokLen": 3
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": {{[0-9]+}},
+// CHECK-NEXT:        "offset": 1123,
 // CHECK-NEXT:        "col": 52,
 // CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": {{[0-9]+}},
+// CHECK-NEXT:        "offset": 1123,
 // CHECK-NEXT:        "col": 52,
 // CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       }
@@ -1584,7 +1828,20 @@ void f(void) {
 // CHECK-NEXT:      "name": "foo",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "int"
-// CHECK-NEXT:      }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "typeDetails": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}",
+// CHECK-NEXT:        "kind": "BuiltinType",
+// CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "qualType": "int"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "qualDetails": [
+// CHECK-NEXT:         "signed",
+// CHECK-NEXT:         "integer"
+// CHECK-NEXT:        ]
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
 // CHECK-NEXT:     }
 // CHECK-NEXT:    ]
 // CHECK-NEXT:   },
@@ -1592,19 +1849,19 @@ void f(void) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ObjCMethodDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 1226,
 // CHECK-NEXT:     "line": 71,
 // CHECK-NEXT:     "col": 1,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1226,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1238,
 // CHECK-NEXT:      "col": 13,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     }
@@ -1621,18 +1878,18 @@ void f(void) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ObjCMethodDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 1226,
 // CHECK-NEXT:     "col": 1,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1226,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1238,
 // CHECK-NEXT:      "col": 13,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     }
@@ -1649,19 +1906,19 @@ void f(void) {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
-// CHECK-NEXT:       "offset": {{[0-9]+}},
+// CHECK-NEXT:       "offset": 1143,
 // CHECK-NEXT:       "line": 64,
 // CHECK-NEXT:       "col": 15,
 // CHECK-NEXT:       "tokLen": 3
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": {{[0-9]+}},
+// CHECK-NEXT:        "offset": 1143,
 // CHECK-NEXT:        "col": 15,
 // CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": {{[0-9]+}},
+// CHECK-NEXT:        "offset": 1143,
 // CHECK-NEXT:        "col": 15,
 // CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       }
@@ -1669,7 +1926,20 @@ void f(void) {
 // CHECK-NEXT:      "name": "bar",
 // CHECK-NEXT:      "type": {
 // CHECK-NEXT:       "qualType": "int"
-// CHECK-NEXT:      }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "typeDetails": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "qualDetails": [
+// CHECK-NEXT:         "signed",
+// CHECK-NEXT:         "integer"
+// CHECK-NEXT:        ],
+// CHECK-NEXT:        "typeDetails": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "refId": "0x{{.*}}"
+// CHECK-NEXT:         }
+// CHECK-NEXT:        ]
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
 // CHECK-NEXT:     }
 // CHECK-NEXT:    ]
 // CHECK-NEXT:   }
@@ -1680,7 +1950,7 @@ void f(void) {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 1257,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 74,
 // CHECK-NEXT:   "col": 6,
@@ -1688,12 +1958,12 @@ void f(void) {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 1252,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 1305,
 // CHECK-NEXT:    "line": 76,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -1709,19 +1979,19 @@ void f(void) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "offset": {{[0-9]+}},
+// CHECK-NEXT:     "offset": 1275,
 // CHECK-NEXT:     "line": 74,
 // CHECK-NEXT:     "col": 24,
 // CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1271,
 // CHECK-NEXT:      "col": 20,
 // CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1275,
 // CHECK-NEXT:      "col": 24,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -1730,19 +2000,32 @@ void f(void) {
 // CHECK-NEXT:    "name": "x",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "int"
-// CHECK-NEXT:    }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "typeDetails": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "id": "0x{{.*}}",
+// CHECK-NEXT:      "kind": "BuiltinType",
+// CHECK-NEXT:      "type": {
+// CHECK-NEXT:       "qualType": "int"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "qualDetails": [
+// CHECK-NEXT:       "signed",
+// CHECK-NEXT:       "integer"
+// CHECK-NEXT:      ]
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
 // CHECK-NEXT:   },
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CompoundStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1278,
 // CHECK-NEXT:      "col": 27,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": {{[0-9]+}},
+// CHECK-NEXT:      "offset": 1305,
 // CHECK-NEXT:      "line": 76,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 1
@@ -1754,13 +2037,13 @@ void f(void) {
 // CHECK-NEXT:      "kind": "ExprWithCleanups",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": {{[0-9]+}},
+// CHECK-NEXT:        "offset": 1283,
 // CHECK-NEXT:        "line": 75,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": {{[0-9]+}},
+// CHECK-NEXT:        "offset": 1301,
 // CHECK-NEXT:        "col": 21,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -1782,12 +2065,12 @@ void f(void) {
 // CHECK-NEXT:        "kind": "BlockExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
-// CHECK-NEXT:          "offset": {{[0-9]+}},
+// CHECK-NEXT:          "offset": 1283,
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
-// CHECK-NEXT:          "offset": {{[0-9]+}},
+// CHECK-NEXT:          "offset": 1301,
 // CHECK-NEXT:          "col": 21,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -1801,18 +2084,18 @@ void f(void) {
 // CHECK-NEXT:          "id": "0x{{.*}}",
 // CHECK-NEXT:          "kind": "BlockDecl",
 // CHECK-NEXT:          "loc": {
-// CHECK-NEXT:           "offset": {{[0-9]+}},
+// CHECK-NEXT:           "offset": 1283,
 // CHECK-NEXT:           "col": 3,
 // CHECK-NEXT:           "tokLen": 1
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
-// CHECK-NEXT:            "offset": {{[0-9]+}},
+// CHECK-NEXT:            "offset": 1283,
 // CHECK-NEXT:            "col": 3,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
-// CHECK-NEXT:            "offset": {{[0-9]+}},
+// CHECK-NEXT:            "offset": 1301,
 // CHECK-NEXT:            "col": 21,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -1823,18 +2106,18 @@ void f(void) {
 // CHECK-NEXT:            "id": "0x{{.*}}",
 // CHECK-NEXT:            "kind": "ParmVarDecl",
 // CHECK-NEXT:            "loc": {
-// CHECK-NEXT:             "offset": {{[0-9]+}},
+// CHECK-NEXT:             "offset": 1289,
 // CHECK-NEXT:             "col": 9,
 // CHECK-NEXT:             "tokLen": 1
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
-// CHECK-NEXT:              "offset": {{[0-9]+}},
+// CHECK-NEXT:              "offset": 1285,
 // CHECK-NEXT:              "col": 5,
 // CHECK-NEXT:              "tokLen": 3
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
-// CHECK-NEXT:              "offset": {{[0-9]+}},
+// CHECK-NEXT:              "offset": 1289,
 // CHECK-NEXT:              "col": 9,
 // CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
@@ -1842,7 +2125,20 @@ void f(void) {
 // CHECK-NEXT:            "name": "y",
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "qualType": "int"
-// CHECK-NEXT:            }
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "typeDetails": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:              "qualDetails": [
+// CHECK-NEXT:               "signed",
+// CHECK-NEXT:               "integer"
+// CHECK-NEXT:              ],
+// CHECK-NEXT:              "typeDetails": [
+// CHECK-NEXT:               {
+// CHECK-NEXT:                "refId": "0x{{.*}}"
+// CHECK-NEXT:               }
+// CHECK-NEXT:              ]
+// CHECK-NEXT:             }
+// CHECK-NEXT:            ]
 // CHECK-NEXT:           },
 // CHECK-NEXT:           {
 // CHECK-NEXT:            "kind": "Capture",
@@ -1860,12 +2156,12 @@ void f(void) {
 // CHECK-NEXT:            "kind": "CompoundStmt",
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
-// CHECK-NEXT:              "offset": {{[0-9]+}},
+// CHECK-NEXT:              "offset": 1296,
 // CHECK-NEXT:              "col": 16,
 // CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
-// CHECK-NEXT:              "offset": {{[0-9]+}},
+// CHECK-NEXT:              "offset": 1301,
 // CHECK-NEXT:              "col": 21,
 // CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
@@ -1876,12 +2172,12 @@ void f(void) {
 // CHECK-NEXT:              "kind": "ImplicitCastExpr",
 // CHECK-NEXT:              "range": {
 // CHECK-NEXT:               "begin": {
-// CHECK-NEXT:                "offset": {{[0-9]+}},
+// CHECK-NEXT:                "offset": 1298,
 // CHECK-NEXT:                "col": 18,
 // CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
-// CHECK-NEXT:                "offset": {{[0-9]+}},
+// CHECK-NEXT:                "offset": 1298,
 // CHECK-NEXT:                "col": 18,
 // CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               }
@@ -1897,12 +2193,12 @@ void f(void) {
 // CHECK-NEXT:                "kind": "DeclRefExpr",
 // CHECK-NEXT:                "range": {
 // CHECK-NEXT:                 "begin": {
-// CHECK-NEXT:                  "offset": {{[0-9]+}},
+// CHECK-NEXT:                  "offset": 1298,
 // CHECK-NEXT:                  "col": 18,
 // CHECK-NEXT:                  "tokLen": 1
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "end": {
-// CHECK-NEXT:                  "offset": {{[0-9]+}},
+// CHECK-NEXT:                  "offset": 1298,
 // CHECK-NEXT:                  "col": 18,
 // CHECK-NEXT:                  "tokLen": 1
 // CHECK-NEXT:                 }
@@ -1918,6 +2214,18 @@ void f(void) {
 // CHECK-NEXT:                 "type": {
 // CHECK-NEXT:                  "qualType": "int"
 // CHECK-NEXT:                 }
+// CHECK-NEXT:                },
+// CHECK-NEXT:                "qualType": {
+// CHECK-NEXT:                 "id": "0x{{.*}}",
+// CHECK-NEXT:                 "kind": "QualType",
+// CHECK-NEXT:                 "type": {
+// CHECK-NEXT:                  "qualType": "const int"
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "qualifiers": "const",
+// CHECK-NEXT:                 "qualDetails": [
+// CHECK-NEXT:                  "signed",
+// CHECK-NEXT:                  "integer"
+// CHECK-NEXT:                 ]
 // CHECK-NEXT:                }
 // CHECK-NEXT:               }
 // CHECK-NEXT:              ]
@@ -1939,7 +2247,7 @@ void f(void) {
 // CHECK-NOT: {{^}}Dumping
 // CHECK:  "kind": "VarDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "offset": {{[0-9]+}},
+// CHECK-NEXT:   "offset": 1382,
 // CHECK-NEXT:   "file": "{{.*}}",
 // CHECK-NEXT:   "line": 83,
 // CHECK-NEXT:   "col": 21,
@@ -1947,12 +2255,12 @@ void f(void) {
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 1364,
 // CHECK-NEXT:    "col": 3,
 // CHECK-NEXT:    "tokLen": 10
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": {{[0-9]+}},
+// CHECK-NEXT:    "offset": 1382,
 // CHECK-NEXT:    "col": 21,
 // CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   }
@@ -1961,5 +2269,127 @@ void f(void) {
 // CHECK-NEXT:  "type": {
 // CHECK-NEXT:   "desugaredQualType": "int",
 // CHECK-NEXT:   "qualType": "typeof (B.foo)"
-// CHECK-NEXT:  }
+// CHECK-NEXT:  },
+// CHECK-NEXT:  "typeDetails": [
+// CHECK-NEXT:   {
+// CHECK-NEXT:    "id": "0x{{.*}}",
+// CHECK-NEXT:    "kind": "TypeOfExprType",
+// CHECK-NEXT:    "type": {
+// CHECK-NEXT:     "qualType": "typeof (B.foo)"
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "qualDetails": [
+// CHECK-NEXT:     "signed",
+// CHECK-NEXT:     "integer"
+// CHECK-NEXT:    ],
+// CHECK-NEXT:    "inner": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "id": "0x{{.*}}",
+// CHECK-NEXT:      "kind": "PseudoObjectExpr",
+// CHECK-NEXT:      "range": {
+// CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "offset": 1374,
+// CHECK-NEXT:        "col": 13,
+// CHECK-NEXT:        "tokLen": 1
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "offset": 1380,
+// CHECK-NEXT:        "col": 19,
+// CHECK-NEXT:        "tokLen": 1
+// CHECK-NEXT:       }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "type": {
+// CHECK-NEXT:       "qualType": "int"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "valueCategory": "prvalue",
+// CHECK-NEXT:      "inner": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}",
+// CHECK-NEXT:        "kind": "ParenExpr",
+// CHECK-NEXT:        "range": {
+// CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 1374,
+// CHECK-NEXT:          "col": 13,
+// CHECK-NEXT:          "tokLen": 1
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 1380,
+// CHECK-NEXT:          "col": 19,
+// CHECK-NEXT:          "tokLen": 1
+// CHECK-NEXT:         }
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "qualType": "<pseudo-object type>"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "valueCategory": "lvalue",
+// CHECK-NEXT:        "inner": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "id": "0x{{.*}}",
+// CHECK-NEXT:          "kind": "ObjCPropertyRefExpr",
+// CHECK-NEXT:          "range": {
+// CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "offset": 1375,
+// CHECK-NEXT:            "col": 14,
+// CHECK-NEXT:            "tokLen": 1
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "offset": 1377,
+// CHECK-NEXT:            "col": 16,
+// CHECK-NEXT:            "tokLen": 3
+// CHECK-NEXT:           }
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "type": {
+// CHECK-NEXT:           "qualType": "<pseudo-object type>"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "valueCategory": "lvalue",
+// CHECK-NEXT:          "propertyKind": "implicit",
+// CHECK-NEXT:          "getter": {
+// CHECK-NEXT:           "id": "0x{{.*}}",
+// CHECK-NEXT:           "kind": "ObjCMethodDecl",
+// CHECK-NEXT:           "name": "foo"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "isMessagingGetter": true
+// CHECK-NEXT:         }
+// CHECK-NEXT:        ]
+// CHECK-NEXT:       },
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}",
+// CHECK-NEXT:        "kind": "ObjCMessageExpr",
+// CHECK-NEXT:        "range": {
+// CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "offset": 1377,
+// CHECK-NEXT:          "col": 16,
+// CHECK-NEXT:          "tokLen": 3
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "offset": 1377,
+// CHECK-NEXT:          "col": 16,
+// CHECK-NEXT:          "tokLen": 3
+// CHECK-NEXT:         }
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "qualType": "int"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "valueCategory": "prvalue",
+// CHECK-NEXT:        "selector": "foo",
+// CHECK-NEXT:        "receiverKind": "class",
+// CHECK-NEXT:        "classType": {
+// CHECK-NEXT:         "qualType": "B"
+// CHECK-NEXT:        }
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
+// CHECK-NEXT:     },
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "id": "0x{{.*}}",
+// CHECK-NEXT:      "kind": "BuiltinType",
+// CHECK-NEXT:      "type": {
+// CHECK-NEXT:       "qualType": "int"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "qualDetails": [
+// CHECK-NEXT:       "signed",
+// CHECK-NEXT:       "integer"
+// CHECK-NEXT:      ]
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
+// CHECK-NEXT:   }
+// CHECK-NEXT:  ]
 // CHECK-NEXT: }

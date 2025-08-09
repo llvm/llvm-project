@@ -17,12 +17,12 @@ float func_16(float x, float y) {
 // CHECK:  "kind": "CompoundStmt",
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
-// CHECK-NEXT:    "offset": 116,
+// CHECK-NEXT:    "offset": {{.*}},
 // CHECK-NEXT:    "col": 33,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "offset": 249,
+// CHECK-NEXT:    "offset": {{.*}},
 // CHECK-NEXT:    "line": 10,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
@@ -37,13 +37,13 @@ float func_16(float x, float y) {
 // CHECK-NEXT:    "kind": "IfStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 160,
+// CHECK-NEXT:      "offset": {{.*}},
 // CHECK-NEXT:      "line": 5,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 2
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 231,
+// CHECK-NEXT:      "offset": {{.*}},
 // CHECK-NEXT:      "line": 8,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 1
@@ -55,13 +55,13 @@ float func_16(float x, float y) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": 164,
+// CHECK-NEXT:        "offset": {{.*}},
 // CHECK-NEXT:        "line": 5,
 // CHECK-NEXT:        "col": 7,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 168,
+// CHECK-NEXT:        "offset": {{.*}},
 // CHECK-NEXT:        "col": 11,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -77,12 +77,12 @@ float func_16(float x, float y) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
-// CHECK-NEXT:          "offset": 164,
+// CHECK-NEXT:          "offset": {{.*}},
 // CHECK-NEXT:          "col": 7,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
-// CHECK-NEXT:          "offset": 164,
+// CHECK-NEXT:          "offset": {{.*}},
 // CHECK-NEXT:          "col": 7,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -98,12 +98,12 @@ float func_16(float x, float y) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
-// CHECK-NEXT:            "offset": 164,
+// CHECK-NEXT:            "offset": {{.*}},
 // CHECK-NEXT:            "col": 7,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
-// CHECK-NEXT:            "offset": 164,
+// CHECK-NEXT:            "offset": {{.*}},
 // CHECK-NEXT:            "col": 7,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -119,6 +119,12 @@ float func_16(float x, float y) {
 // CHECK-NEXT:           "type": {
 // CHECK-NEXT:            "qualType": "float"
 // CHECK-NEXT:           }
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "qualType": {
+// CHECK-NEXT:           "refId": "0x{{.*}}",
+// CHECK-NEXT:           "qualDetails": [
+// CHECK-NEXT:            "fpp"
+// CHECK-NEXT:           ]
 // CHECK-NEXT:          }
 // CHECK-NEXT:         }
 // CHECK-NEXT:        ]
@@ -128,12 +134,12 @@ float func_16(float x, float y) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
-// CHECK-NEXT:          "offset": 168,
+// CHECK-NEXT:          "offset": {{.*}},
 // CHECK-NEXT:          "col": 11,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
-// CHECK-NEXT:          "offset": 168,
+// CHECK-NEXT:          "offset": {{.*}},
 // CHECK-NEXT:          "col": 11,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -149,12 +155,12 @@ float func_16(float x, float y) {
 // CHECK-NEXT:          "kind": "IntegerLiteral",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
-// CHECK-NEXT:            "offset": 168,
+// CHECK-NEXT:            "offset": {{.*}},
 // CHECK-NEXT:            "col": 11,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
-// CHECK-NEXT:            "offset": 168,
+// CHECK-NEXT:            "offset": {{.*}},
 // CHECK-NEXT:            "col": 11,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -174,12 +180,12 @@ float func_16(float x, float y) {
 // CHECK-NEXT:      "kind": "CompoundStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": 171,
+// CHECK-NEXT:        "offset": {{.*}},
 // CHECK-NEXT:        "col": 14,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 231,
+// CHECK-NEXT:        "offset": {{.*}},
 // CHECK-NEXT:        "line": 8,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
@@ -194,13 +200,13 @@ float func_16(float x, float y) {
 // CHECK-NEXT:        "kind": "ReturnStmt",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
-// CHECK-NEXT:          "offset": 215,
+// CHECK-NEXT:          "offset": {{.*}},
 // CHECK-NEXT:          "line": 7,
 // CHECK-NEXT:          "col": 5,
 // CHECK-NEXT:          "tokLen": 6
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
-// CHECK-NEXT:          "offset": 226,
+// CHECK-NEXT:          "offset": {{.*}},
 // CHECK-NEXT:          "col": 16,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -211,12 +217,12 @@ float func_16(float x, float y) {
 // CHECK-NEXT:          "kind": "BinaryOperator",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
-// CHECK-NEXT:            "offset": 222,
+// CHECK-NEXT:            "offset": {{.*}},
 // CHECK-NEXT:            "col": 12,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
-// CHECK-NEXT:            "offset": 226,
+// CHECK-NEXT:            "offset": {{.*}},
 // CHECK-NEXT:            "col": 16,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -232,12 +238,12 @@ float func_16(float x, float y) {
 // CHECK-NEXT:            "kind": "ImplicitCastExpr",
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
-// CHECK-NEXT:              "offset": 222,
+// CHECK-NEXT:              "offset": {{.*}},
 // CHECK-NEXT:              "col": 12,
 // CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
-// CHECK-NEXT:              "offset": 222,
+// CHECK-NEXT:              "offset": {{.*}},
 // CHECK-NEXT:              "col": 12,
 // CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
@@ -253,12 +259,12 @@ float func_16(float x, float y) {
 // CHECK-NEXT:              "kind": "DeclRefExpr",
 // CHECK-NEXT:              "range": {
 // CHECK-NEXT:               "begin": {
-// CHECK-NEXT:                "offset": 222,
+// CHECK-NEXT:                "offset": {{.*}},
 // CHECK-NEXT:                "col": 12,
 // CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
-// CHECK-NEXT:                "offset": 222,
+// CHECK-NEXT:                "offset": {{.*}},
 // CHECK-NEXT:                "col": 12,
 // CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               }
@@ -274,6 +280,12 @@ float func_16(float x, float y) {
 // CHECK-NEXT:               "type": {
 // CHECK-NEXT:                "qualType": "float"
 // CHECK-NEXT:               }
+// CHECK-NEXT:              },
+// CHECK-NEXT:              "qualType": {
+// CHECK-NEXT:               "refId": "0x{{.*}}",
+// CHECK-NEXT:               "qualDetails": [
+// CHECK-NEXT:                "fpp"
+// CHECK-NEXT:               ]
 // CHECK-NEXT:              }
 // CHECK-NEXT:             }
 // CHECK-NEXT:            ]
@@ -283,12 +295,12 @@ float func_16(float x, float y) {
 // CHECK-NEXT:            "kind": "ImplicitCastExpr",
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
-// CHECK-NEXT:              "offset": 226,
+// CHECK-NEXT:              "offset": {{.*}},
 // CHECK-NEXT:              "col": 16,
 // CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
-// CHECK-NEXT:              "offset": 226,
+// CHECK-NEXT:              "offset": {{.*}},
 // CHECK-NEXT:              "col": 16,
 // CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
@@ -304,12 +316,12 @@ float func_16(float x, float y) {
 // CHECK-NEXT:              "kind": "DeclRefExpr",
 // CHECK-NEXT:              "range": {
 // CHECK-NEXT:               "begin": {
-// CHECK-NEXT:                "offset": 226,
+// CHECK-NEXT:                "offset": {{.*}},
 // CHECK-NEXT:                "col": 16,
 // CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
-// CHECK-NEXT:                "offset": 226,
+// CHECK-NEXT:                "offset": {{.*}},
 // CHECK-NEXT:                "col": 16,
 // CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               }
@@ -325,6 +337,12 @@ float func_16(float x, float y) {
 // CHECK-NEXT:               "type": {
 // CHECK-NEXT:                "qualType": "float"
 // CHECK-NEXT:               }
+// CHECK-NEXT:              },
+// CHECK-NEXT:              "qualType": {
+// CHECK-NEXT:               "refId": "0x{{.*}}",
+// CHECK-NEXT:               "qualDetails": [
+// CHECK-NEXT:                "fpp"
+// CHECK-NEXT:               ]
 // CHECK-NEXT:              }
 // CHECK-NEXT:             }
 // CHECK-NEXT:            ]
@@ -342,13 +360,13 @@ float func_16(float x, float y) {
 // CHECK-NEXT:    "kind": "ReturnStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
-// CHECK-NEXT:      "offset": 235,
+// CHECK-NEXT:      "offset": {{.*}},
 // CHECK-NEXT:      "line": 9,
 // CHECK-NEXT:      "col": 3,
 // CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "offset": 246,
+// CHECK-NEXT:      "offset": {{.*}},
 // CHECK-NEXT:      "col": 14,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -359,12 +377,12 @@ float func_16(float x, float y) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "offset": 242,
+// CHECK-NEXT:        "offset": {{.*}},
 // CHECK-NEXT:        "col": 10,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
-// CHECK-NEXT:        "offset": 246,
+// CHECK-NEXT:        "offset": {{.*}},
 // CHECK-NEXT:        "col": 14,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
@@ -380,12 +398,12 @@ float func_16(float x, float y) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
-// CHECK-NEXT:          "offset": 242,
+// CHECK-NEXT:          "offset": {{.*}},
 // CHECK-NEXT:          "col": 10,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
-// CHECK-NEXT:          "offset": 242,
+// CHECK-NEXT:          "offset": {{.*}},
 // CHECK-NEXT:          "col": 10,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -401,12 +419,12 @@ float func_16(float x, float y) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
-// CHECK-NEXT:            "offset": 242,
+// CHECK-NEXT:            "offset": {{.*}},
 // CHECK-NEXT:            "col": 10,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
-// CHECK-NEXT:            "offset": 242,
+// CHECK-NEXT:            "offset": {{.*}},
 // CHECK-NEXT:            "col": 10,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -422,6 +440,12 @@ float func_16(float x, float y) {
 // CHECK-NEXT:           "type": {
 // CHECK-NEXT:            "qualType": "float"
 // CHECK-NEXT:           }
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "qualType": {
+// CHECK-NEXT:           "refId": "0x{{.*}}",
+// CHECK-NEXT:           "qualDetails": [
+// CHECK-NEXT:            "fpp"
+// CHECK-NEXT:           ]
 // CHECK-NEXT:          }
 // CHECK-NEXT:         }
 // CHECK-NEXT:        ]
@@ -431,12 +455,12 @@ float func_16(float x, float y) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
-// CHECK-NEXT:          "offset": 246,
+// CHECK-NEXT:          "offset": {{.*}},
 // CHECK-NEXT:          "col": 14,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
-// CHECK-NEXT:          "offset": 246,
+// CHECK-NEXT:          "offset": {{.*}},
 // CHECK-NEXT:          "col": 14,
 // CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
@@ -452,12 +476,12 @@ float func_16(float x, float y) {
 // CHECK-NEXT:          "kind": "DeclRefExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
-// CHECK-NEXT:            "offset": 246,
+// CHECK-NEXT:            "offset": {{.*}},
 // CHECK-NEXT:            "col": 14,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
-// CHECK-NEXT:            "offset": 246,
+// CHECK-NEXT:            "offset": {{.*}},
 // CHECK-NEXT:            "col": 14,
 // CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
@@ -473,6 +497,12 @@ float func_16(float x, float y) {
 // CHECK-NEXT:           "type": {
 // CHECK-NEXT:            "qualType": "float"
 // CHECK-NEXT:           }
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "qualType": {
+// CHECK-NEXT:           "refId": "0x{{.*}}",
+// CHECK-NEXT:           "qualDetails": [
+// CHECK-NEXT:            "fpp"
+// CHECK-NEXT:           ]
 // CHECK-NEXT:          }
 // CHECK-NEXT:         }
 // CHECK-NEXT:        ]

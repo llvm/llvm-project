@@ -312,5 +312,5 @@ struct CheckNoCleanup {
   static constexpr char kConstant = '+';
 // CHECK: `-VarDecl {{.*}} kConstant 'const char' static inline constexpr cinit
 // CHECK-NEXT: |-value: Int 43
-// CHECK-NEXT: `-CharacterLiteral {{.*}} 'char' 43
+// CHECK-NEXT: |-CharacterLiteral {{.*}} 'char' 43
 };

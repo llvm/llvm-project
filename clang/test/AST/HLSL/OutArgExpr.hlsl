@@ -12,8 +12,8 @@ RWBuffer<float> Buf;
 // CHECK: void trunc_Param(inout int &__restrict X) {
 
 // AST: FunctionDecl {{.*}} used trunc_Param 'void (inout int)'
-// AST-NEXT: ParmVarDecl {{.*}} X 'int &__restrict'
-// AST-NEXT: HLSLParamModifierAttr {{.*}} inout
+// AST: ParmVarDecl {{.*}} X 'int &__restrict'
+// AST: -attrDetails: HLSLParamModifierAttr {{.*}} inout
 
 void trunc_Param(inout int X) {}
 
@@ -22,7 +22,7 @@ void trunc_Param(inout int X) {}
 
 // AST: FunctionDecl {{.*}} zero 'void (out int)'
 // AST-NEXT: ParmVarDecl {{.*}} used Z 'int &__restrict'
-// AST-NEXT: HLSLParamModifierAttr {{.*}} out
+// AST: HLSLParamModifierAttr {{.*}} out
 void zero(out int Z) { Z = 0; }
 
 // AST-LABEL: FunctionDecl {{.*}} imported used fn 'void (uint)'

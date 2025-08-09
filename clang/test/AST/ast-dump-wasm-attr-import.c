@@ -25,20 +25,20 @@ void calls(void) {
 }
 
 // CHECK: |-FunctionDecl {{.+}} used red 'void (void)'
-// CHECK: | |-WebAssemblyImportNameAttr {{.+}} "import_red"
-// CHECK: | `-WebAssemblyImportModuleAttr {{.+}} "mod"
+// CHECK: | |-attrDetails: WebAssemblyImportNameAttr {{.+}} "import_red"
+// CHECK: | `-attrDetails: WebAssemblyImportModuleAttr {{.+}} "mod"
 // CHECK: |-FunctionDecl {{.+}} used orange 'void (void)'
-// CHECK: | |-WebAssemblyImportNameAttr {{.+}} "import_orange"
-// CHECK: | `-WebAssemblyImportModuleAttr {{.+}} "mod"
+// CHECK: | |-attrDetails: WebAssemblyImportNameAttr {{.+}} "import_orange"
+// CHECK: | `-attrDetails: WebAssemblyImportModuleAttr {{.+}} "mod"
 // CHECK: |-FunctionDecl {{.+}} used yellow 'void (void)'
-// CHECK: | |-WebAssemblyImportNameAttr {{.+}} "import_yellow"
-// CHECK: | `-WebAssemblyImportModuleAttr {{.+}} "mod"
+// CHECK: | |-attrDetails: WebAssemblyImportNameAttr {{.+}} "import_yellow"
+// CHECK: | `-attrDetails: WebAssemblyImportModuleAttr {{.+}} "mod"
 // CHECK: |-FunctionDecl {{.+}} used red 'void (void)'
-// CHECK: | |-WebAssemblyImportNameAttr {{.+}} Inherited "import_red"
-// CHECK: | `-WebAssemblyImportModuleAttr {{.+}} Inherited "mod"
+// CHECK: | |-attrDetails: WebAssemblyImportNameAttr {{.+}} Inherited "import_red"
+// CHECK: | `-attrDetails: WebAssemblyImportModuleAttr {{.+}} Inherited "mod"
 // CHECK: |-FunctionDecl {{.+}} used orange 'void (void)'
-// CHECK: | |-WebAssemblyImportNameAttr {{.+}} Inherited "import_orange"
-// CHECK: | `-WebAssemblyImportModuleAttr {{.+}} Inherited "mod"
+// CHECK: | |-attrDetails: WebAssemblyImportNameAttr {{.+}} Inherited "import_orange"
+// CHECK: | `-attrDetails: WebAssemblyImportModuleAttr {{.+}} Inherited "mod"
 // CHECK: |-FunctionDecl {{.+}} used yellow 'void (void)'
-// CHECK: | |-WebAssemblyImportNameAttr {{.+}} Inherited "import_yellow"
-// CHECK: | `-WebAssemblyImportModuleAttr {{.+}} Inherited "mod"
+// CHECK: | |-attrDetails: WebAssemblyImportNameAttr {{.+}} Inherited "import_yellow"
+// CHECK: | `-attrDetails: WebAssemblyImportModuleAttr {{.+}} Inherited "mod"

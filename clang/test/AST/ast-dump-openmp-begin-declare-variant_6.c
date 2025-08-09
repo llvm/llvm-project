@@ -28,21 +28,34 @@ int main(void) {
 //  - we see the specialization in the AST
 //  - we do use the original pointers for the calls as the variants are not applicable (this is not the ibm compiler).
 
-// CHECK:      |-FunctionDecl [[ADDR_0:0x[a-z0-9]*]] <{{.*}}, line:7:1> line:5:5 used also_before 'int ({{.*}})'
-// CHECK-NEXT: | `-CompoundStmt [[ADDR_1:0x[a-z0-9]*]] <col:23, line:7:1>
-// CHECK-NEXT: |  `-ReturnStmt [[ADDR_2:0x[a-z0-9]*]] <line:6:3, col:10>
-// CHECK-NEXT: |    `-IntegerLiteral [[ADDR_3:0x[a-z0-9]*]] <col:10> 'int' 0
-// CHECK-NEXT: |-FunctionDecl [[ADDR_17:0x[a-z0-9]*]] <line:18:1, line:20:1> line:18:5 used also_after 'int ({{.*}})'
-// CHECK-NEXT: | `-CompoundStmt [[ADDR_18:0x[a-z0-9]*]] <col:22, line:20:1>
-// CHECK-NEXT: |  `-ReturnStmt [[ADDR_19:0x[a-z0-9]*]] <line:19:3, col:10>
-// CHECK-NEXT: |    `-IntegerLiteral [[ADDR_20:0x[a-z0-9]*]] <col:10> 'int' 0
-// CHECK-NEXT: `-FunctionDecl [[ADDR_22:0x[a-z0-9]*]] <line:22:1, line:25:1> line:22:5 main 'int ({{.*}})'
-// CHECK-NEXT:   `-CompoundStmt [[ADDR_23:0x[a-z0-9]*]] <col:16, line:25:1>
-// CHECK-NEXT:     `-ReturnStmt [[ADDR_24:0x[a-z0-9]*]] <line:24:3, col:37>
-// CHECK-NEXT:       `-BinaryOperator [[ADDR_25:0x[a-z0-9]*]] <col:10, col:37> 'int' '+'
-// CHECK-NEXT:         |-CallExpr [[ADDR_26:0x[a-z0-9]*]] <col:10, col:21> 'int'
-// CHECK-NEXT:         | `-ImplicitCastExpr [[ADDR_27:0x[a-z0-9]*]] <col:10> 'int (*)({{.*}})' <FunctionToPointerDecay>
-// CHECK-NEXT:         |   `-DeclRefExpr [[ADDR_28:0x[a-z0-9]*]] <col:10> 'int ({{.*}})' {{.*}}Function [[ADDR_17]] 'also_after' 'int ({{.*}})'
-// CHECK-NEXT:         `-CallExpr [[ADDR_29:0x[a-z0-9]*]] <col:25, col:37> 'int'
-// CHECK-NEXT:           `-ImplicitCastExpr [[ADDR_30:0x[a-z0-9]*]] <col:25> 'int (*)({{.*}})' <FunctionToPointerDecay>
-// CHECK-NEXT:             `-DeclRefExpr [[ADDR_31:0x[a-z0-9]*]] <col:25> 'int ({{.*}})' {{.*}}Function [[ADDR_0]] 'also_before' 'int ({{.*}})'
+// CHECK: TranslationUnitDecl {{.*}} <<invalid sloc>> <invalid sloc>
+// CHECK-NEXT: |-TypedefDecl {{.*}} <<invalid sloc>> <invalid sloc> implicit __int128_t '__int128'
+// CHECK-NEXT: | `-typeDetails: BuiltinType {{.*}} '__int128'
+// CHECK-NEXT: |-TypedefDecl {{.*}} <<invalid sloc>> <invalid sloc> implicit __uint128_t 'unsigned __int128'
+// CHECK-NEXT: | `-typeDetails: BuiltinType {{.*}} 'unsigned __int128'
+// CHECK-NEXT: |-TypedefDecl {{.*}} <<invalid sloc>> <invalid sloc> implicit __NSConstantString
+// CHECK-NEXT: | `-typeDetails: RecordType {{.*}}
+// CHECK: |-TypedefDecl {{.*}} <<invalid sloc>> <invalid sloc> implicit __builtin_ms_va_list 'char *'
+// CHECK-NEXT: | `-typeDetails: PointerType {{.*}} 'char *'
+// CHECK-NEXT: |   `-typeDetails: BuiltinType {{.*}} 'char'
+// CHECK-NEXT: |-TypedefDecl {{.*}} 
+// CHECK-NEXT: | `-typeDetails: ConstantArrayType {{.*}} 
+// CHECK: |   `-typeDetails: RecordType {{.*}} 
+// CHECK: |-FunctionDecl {{.*}}
+// CHECK-NEXT: | `-CompoundStmt {{.*}} <col:23, line:7:1>
+// CHECK-NEXT: |   `-ReturnStmt {{.*}} <line:6:3, col:10>
+// CHECK-NEXT: |     `-IntegerLiteral {{.*}} <col:10> 'int' 0
+// CHECK-NEXT: |-FunctionDecl {{.*}} 
+// CHECK-NEXT: | `-CompoundStmt {{.*}} <col:22, line:20:1>
+// CHECK-NEXT: |   `-ReturnStmt {{.*}} <line:19:3, col:10>
+// CHECK-NEXT: |     `-IntegerLiteral {{.*}} <col:10> 'int' 0
+// CHECK-NEXT: `-FunctionDecl {{.*}}
+// CHECK-NEXT:   `-CompoundStmt {{.*}} <col:16, line:25:1>
+// CHECK-NEXT:     `-ReturnStmt {{.*}} <line:24:3, col:37>
+// CHECK-NEXT:       `-BinaryOperator {{.*}} <col:10, col:37> 'int' '+'
+// CHECK-NEXT:         |-CallExpr {{.*}} <col:10, col:21> 'int'
+// CHECK-NEXT:         | `-ImplicitCastExpr {{.*}} 
+// CHECK-NEXT:         |   `-DeclRefExpr {{.*}}
+// CHECK-NEXT:         `-CallExpr {{.*}} <col:25, col:37> 'int'
+// CHECK-NEXT:           `-ImplicitCastExpr {{.*}}
+// CHECK-NEXT:             `-DeclRefExpr {{.*}}

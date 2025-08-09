@@ -17,28 +17,28 @@
 
 namespace testNamespace {
 // CHECK-NAMESPACE: NamespaceDecl{{.*}} testNamespace
-// CHECK-NAMESPACE-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-NAMESPACE: AnnotateAttr{{.*}} "test"
 
 typedef int testTypedef;
 // CHECK-TYPE_ALIAS: TypedefDecl{{.*}} testTypedef
-// CHECK-TYPE_ALIAS-NEXT: BuiltinType
-// CHECK-TYPE_ALIAS-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-TYPE_ALIAS: BuiltinType
+// CHECK-TYPE_ALIAS: AnnotateAttr{{.*}} "test"
 
 using testTypeAlias = double;
 // CHECK-TYPE_ALIAS: TypeAliasDecl{{.*}} testTypeAlias
-// CHECK-TYPE_ALIAS-NEXT: BuiltinType
-// CHECK-TYPE_ALIAS-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-TYPE_ALIAS: BuiltinType
+// CHECK-TYPE_ALIAS: AnnotateAttr{{.*}} "test"
 
 enum testEnum {
   testEnumCase1,
   testEnumCase2
 };
 // CHECK-ENUM: EnumDecl{{.*}} testEnum
-// CHECK-ENUM-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-ENUM: AnnotateAttr{{.*}} "test"
 // CHECK-ENUM_CONSTANT: EnumConstantDecl{{.*}} testEnumCase1
-// CHECK-ENUM_CONSTANT-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-ENUM_CONSTANT: AnnotateAttr{{.*}} "test"
 // CHECK-ENUM_CONSTANT: EnumConstantDecl{{.*}} testEnumCase2
-// CHECK-ENUM_CONSTANT-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-ENUM_CONSTANT: AnnotateAttr{{.*}} "test"
 
 struct testStructRecord {
   int testStructRecordField;
@@ -48,7 +48,7 @@ struct testStructRecord {
 // CHECK-RECORD_UNLESS_IS_UNION-LABEL: CXXRecordDecl{{.*}} testStructRecord
 // CHECK-RECORD_UNLESS_IS_UNION:         AnnotateAttr{{.*}} "test"
 // CHECK-FIELD: FieldDecl{{.*}} testStructRecordField
-// CHECK-FIELD-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-FIELD: AnnotateAttr{{.*}} "test"
 
 class testClassRecord {
   int testClassRecordField;
@@ -58,7 +58,7 @@ class testClassRecord {
 // CHECK-RECORD_UNLESS_IS_UNION-LABEL: CXXRecordDecl{{.*}} testClassRecord
 // CHECK-RECORD_UNLESS_IS_UNION:         AnnotateAttr{{.*}} "test"
 // CHECK-FIELD: FieldDecl{{.*}} testClassRecordField
-// CHECK-FIELD-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-FIELD: AnnotateAttr{{.*}} "test"
 
 union testUnionRecord {
   int testUnionRecordField;
@@ -68,26 +68,26 @@ union testUnionRecord {
 // CHECK-RECORD_UNLESS_IS_UNION-LABEL: CXXRecordDecl{{.*}} testUnionRecord
 // CHECK-RECORD_UNLESS_IS_UNION-NOT: AnnotateAttr{{.*}} "test"
 // CHECK-FIELD: FieldDecl{{.*}} testUnionRecordField
-// CHECK-FIELD-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-FIELD: AnnotateAttr{{.*}} "test"
 
 // CHECK-RECORD_UNLESS_IS_UNION-LABEL: CXXRecordDecl
 void testFunctionDecl();
 // CHECK-FUNCTION: FunctionDecl{{.*}} testFunctionDecl
-// CHECK-FUNCTION-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-FUNCTION: AnnotateAttr{{.*}} "test"
 // CHECK-HAS_TYPE_FUNCTION_TYPE: FunctionDecl{{.*}} testFunctionDecl
-// CHECK-HAS_TYPE_FUNCTION_TYPE-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-HAS_TYPE_FUNCTION_TYPE: AnnotateAttr{{.*}} "test"
 
 void testFunctionDecl() { }
 // CHECK-FUNCTION: FunctionDecl{{.*}} testFunctionDecl
-// CHECK-FUNCTION-NEXT: CompoundStmt
-// CHECK-FUNCTION-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-FUNCTION: CompoundStmt
+// CHECK-FUNCTION: AnnotateAttr{{.*}} "test"
 // CHECK-HAS_TYPE_FUNCTION_TYPE: FunctionDecl{{.*}} testFunctionDecl
-// CHECK-HAS_TYPE_FUNCTION_TYPE-NEXT: CompoundStmt
-// CHECK-HAS_TYPE_FUNCTION_TYPE-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-HAS_TYPE_FUNCTION_TYPE: CompoundStmt
+// CHECK-HAS_TYPE_FUNCTION_TYPE: AnnotateAttr{{.*}} "test"
 
 void (*testFunctionVar)();
 // CHECK-HAS_TYPE_FUNCTION_TYPE: VarDecl{{.*}} testFunctionVar
-// CHECK-HAS_TYPE_FUNCTION_TYPE-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-HAS_TYPE_FUNCTION_TYPE: AnnotateAttr{{.*}} "test"
 // 'function' should not apply to variables with a function type!
 // CHECK-FUNCTION: VarDecl{{.*}} testFunctionVar
 // CHECK-FUNCTION-NOT: AnnotateAttr{{.*}} "test"
@@ -99,69 +99,69 @@ class testMethods {
 void testMethods::testMethod() { }
 void testFunctionNotMethod();
 // CHECK-FUNCTION-LABEL: CXXConstructorDecl{{.*}} testMethods
-// CHECK-FUNCTION-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-FUNCTION: AnnotateAttr{{.*}} "test"
 // CHECK-FUNCTION_IS_MEMBER: CXXConstructorDecl{{.*}} testMethods
-// CHECK-FUNCTION_IS_MEMBER-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-FUNCTION_IS_MEMBER: AnnotateAttr{{.*}} "test"
 // CHECK-HAS_TYPE_FUNCTION_TYPE: CXXConstructorDecl{{.*}} testMethods
-// CHECK-HAS_TYPE_FUNCTION_TYPE-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-HAS_TYPE_FUNCTION_TYPE: AnnotateAttr{{.*}} "test"
 // CHECK-FUNCTION: CXXMethodDecl{{.*}} testMethod
-// CHECK-FUNCTION-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-FUNCTION: AnnotateAttr{{.*}} "test"
 // CHECK-FUNCTION_IS_MEMBER: CXXMethodDecl{{.*}} testMethod
-// CHECK-FUNCTION_IS_MEMBER-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-FUNCTION_IS_MEMBER: AnnotateAttr{{.*}} "test"
 // CHECK-HAS_TYPE_FUNCTION_TYPE: CXXMethodDecl{{.*}} testMethod
-// CHECK-HAS_TYPE_FUNCTION_TYPE-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-HAS_TYPE_FUNCTION_TYPE: AnnotateAttr{{.*}} "test"
 // CHECK-FUNCTION: CXXMethodDecl{{.*}} testMethod
-// CHECK-FUNCTION-NEXT: CompoundStmt
-// CHECK-FUNCTION-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-FUNCTION: CompoundStmt
+// CHECK-FUNCTION: AnnotateAttr{{.*}} "test"
 // CHECK-FUNCTION_IS_MEMBER: CXXMethodDecl{{.*}} testMethod
-// CHECK-FUNCTION_IS_MEMBER-NEXT: CompoundStmt
-// CHECK-CXX_METHOD-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-FUNCTION_IS_MEMBER: CompoundStmt
+// CHECK-CXX_METHOD: AnnotateAttr{{.*}} "test"
 // CHECK-HAS_TYPE_FUNCTION_TYPE: CXXMethodDecl{{.*}} testMethod
-// CHECK-HAS_TYPE_FUNCTION_TYPE-NEXT: CompoundStmt
-// CHECK-HAS_TYPE_FUNCTION_TYPE-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-HAS_TYPE_FUNCTION_TYPE: CompoundStmt
+// CHECK-HAS_TYPE_FUNCTION_TYPE: AnnotateAttr{{.*}} "test"
 // CHECK-FUNCTION_IS_MEMBER: FunctionDecl{{.*}} testFunctionNotMethod
 // CHECK-FUNCTION_IS_MEMBER-NOT: AnnotateAttr{{.*}} "test"
 
 int testVariable;
 // CHECK-VARIABLE: VarDecl{{.*}} testVariable
-// CHECK-VARIABLE-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-VARIABLE: AnnotateAttr{{.*}} "test"
 // CHECK-VARIABLE_IS_GLOBAL-LABEL: VarDecl{{.*}} testVariable
-// CHECK-VARIABLE_IS_GLOBAL-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-VARIABLE_IS_GLOBAL: AnnotateAttr{{.*}} "test"
 // CHECK-VARIABLE_IS_PARAMETER-LABEL: VarDecl{{.*}} testVariable
 // CHECK-VARIABLE_IS_PARAMETER-NOT: AnnotateAttr{{.*}} "test"
 // CHECK-VARIABLE_UNLESS_IS_PARAMETER-LABEL: VarDecl{{.*}} testVariable
-// CHECK-VARIABLE_UNLESS_IS_PARAMETER-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-VARIABLE_UNLESS_IS_PARAMETER: AnnotateAttr{{.*}} "test"
 void testVarFunction(int testParam) {
 // CHECK-VARIABLE: VarDecl{{.*}} testParam
-// CHECK-VARIABLE-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-VARIABLE: AnnotateAttr{{.*}} "test"
 // CHECK-VARIABLE_IS_GLOBAL-LABEL: VarDecl{{.*}} testParam
 // CHECK-VARIABLE_IS_GLOBAL-NOT: AnnotateAttr{{.*}} "test"
 // CHECK-VARIABLE_IS_PARAMETER-LABEL: VarDecl{{.*}} testParam
-// CHECK-VARIABLE_IS_PARAMETER-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-VARIABLE_IS_PARAMETER: AnnotateAttr{{.*}} "test"
 // CHECK-VARIABLE_UNLESS_IS_PARAMETER-LABEL: VarDecl{{.*}} testParam
 // CHECK-VARIABLE_UNLESS_IS_PARAMETER-NOT: AnnotateAttr{{.*}} "test"
 
   int testLocalVariable;
 // CHECK-VARIABLE: VarDecl{{.*}} testLocalVariable
-// CHECK-VARIABLE-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-VARIABLE: AnnotateAttr{{.*}} "test"
 // CHECK-VARIABLE_IS_GLOBAL-LABEL: VarDecl{{.*}} testLocalVariable
 // CHECK-VARIABLE_IS_GLOBAL-NOT: AnnotateAttr{{.*}} "test"
 // CHECK-VARIABLE_IS_PARAMETER-LABEL: VarDecl{{.*}} testLocalVariable
 // CHECK-VARIABLE_IS_PARAMETER-NOT: AnnotateAttr{{.*}} "test"
 // CHECK-VARIABLE_UNLESS_IS_PARAMETER-LABEL: VarDecl{{.*}} testLocalVariable
-// CHECK-VARIABLE_UNLESS_IS_PARAMETER-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-VARIABLE_UNLESS_IS_PARAMETER: AnnotateAttr{{.*}} "test"
 }
 class testVarClass {
   static int testStaticVar;
 };
 // CHECK-VARIABLE: VarDecl{{.*}} testStaticVar
-// CHECK-VARIABLE-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-VARIABLE: AnnotateAttr{{.*}} "test"
 // CHECK-VARIABLE_IS_GLOBAL-LABEL: VarDecl{{.*}} testStaticVar
-// CHECK-VARIABLE_IS_GLOBAL-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-VARIABLE_IS_GLOBAL: AnnotateAttr{{.*}} "test"
 // CHECK-VARIABLE_IS_PARAMETER-LABEL: VarDecl{{.*}} testStaticVar
 // CHECK-VARIABLE_IS_PARAMETER-NOT: AnnotateAttr{{.*}} "test"
 // CHECK-VARIABLE_UNLESS_IS_PARAMETER-LABEL: VarDecl{{.*}} testStaticVar
-// CHECK-VARIABLE_UNLESS_IS_PARAMETER-NEXT: AnnotateAttr{{.*}} "test"
+// CHECK-VARIABLE_UNLESS_IS_PARAMETER: AnnotateAttr{{.*}} "test"
 
 
 }

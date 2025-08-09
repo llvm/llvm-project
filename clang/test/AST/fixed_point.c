@@ -54,41 +54,41 @@ _Sat _Fract sat_fract;
 _Sat long _Fract sat_long_fract;
 
 //CHECK:      |-VarDecl {{.*}} s_short_accum 'short _Accum'
-//CHECK-NEXT: |-VarDecl {{.*}} s_accum '_Accum'
-//CHECK-NEXT: |-VarDecl {{.*}} s_long_accum 'long _Accum'
-//CHECK-NEXT: |-VarDecl {{.*}} u_short_accum 'unsigned short _Accum'
-//CHECK-NEXT: |-VarDecl {{.*}} u_accum 'unsigned _Accum'
-//CHECK-NEXT: |-VarDecl {{.*}} u_long_accum 'unsigned long _Accum'
-//CHECK-NEXT: |-VarDecl {{.*}} s_short_fract 'short _Fract'
-//CHECK-NEXT: |-VarDecl {{.*}} s_fract '_Fract'
-//CHECK-NEXT: |-VarDecl {{.*}} s_long_fract 'long _Fract'
-//CHECK-NEXT: |-VarDecl {{.*}} u_short_fract 'unsigned short _Fract'
-//CHECK-NEXT: |-VarDecl {{.*}} u_fract 'unsigned _Fract'
-//CHECK-NEXT: |-VarDecl {{.*}} u_long_fract 'unsigned long _Fract'
-//CHECK-NEXT: |-VarDecl {{.*}} short_accum 'short _Accum'
-//CHECK-NEXT: |-VarDecl {{.*}} accum '_Accum'
-//CHECK-NEXT: |-VarDecl {{.*}} long_accum 'long _Accum'
-//CHECK-NEXT: |-VarDecl {{.*}} short_fract 'short _Fract'
-//CHECK-NEXT: |-VarDecl {{.*}} fract '_Fract'
-//CHECK-NEXT: |-VarDecl {{.*}} long_fract 'long _Fract'
-//CHECK-NEXT: |-VarDecl {{.*}} sat_s_short_accum '_Sat short _Accum'
-//CHECK-NEXT: |-VarDecl {{.*}} sat_s_accum '_Sat _Accum'
-//CHECK-NEXT: |-VarDecl {{.*}} sat_s_long_accum '_Sat long _Accum'
-//CHECK-NEXT: |-VarDecl {{.*}} sat_u_short_accum '_Sat unsigned short _Accum'
-//CHECK-NEXT: |-VarDecl {{.*}} sat_u_accum '_Sat unsigned _Accum'
-//CHECK-NEXT: |-VarDecl {{.*}} sat_u_long_accum '_Sat unsigned long _Accum'
-//CHECK-NEXT: |-VarDecl {{.*}} sat_s_short_fract '_Sat short _Fract'
-//CHECK-NEXT: |-VarDecl {{.*}} sat_s_fract '_Sat _Fract'
-//CHECK-NEXT: |-VarDecl {{.*}} sat_s_long_fract '_Sat long _Fract'
-//CHECK-NEXT: |-VarDecl {{.*}} sat_u_short_fract '_Sat unsigned short _Fract'
-//CHECK-NEXT: |-VarDecl {{.*}} sat_u_fract '_Sat unsigned _Fract'
-//CHECK-NEXT: |-VarDecl {{.*}} sat_u_long_fract '_Sat unsigned long _Fract'
-//CHECK-NEXT: |-VarDecl {{.*}} sat_short_accum '_Sat short _Accum'
-//CHECK-NEXT: |-VarDecl {{.*}} sat_accum '_Sat _Accum'
-//CHECK-NEXT: |-VarDecl {{.*}} sat_long_accum '_Sat long _Accum'
-//CHECK-NEXT: |-VarDecl {{.*}} sat_short_fract '_Sat short _Fract'
-//CHECK-NEXT: |-VarDecl {{.*}} sat_fract '_Sat _Fract'
-//CHECK-NEXT: |-VarDecl {{.*}} sat_long_fract '_Sat long _Fract'
+//CHECK: |-VarDecl {{.*}} s_accum '_Accum'
+//CHECK: |-VarDecl {{.*}} s_long_accum 'long _Accum'
+//CHECK: |-VarDecl {{.*}} u_short_accum 'unsigned short _Accum'
+//CHECK: |-VarDecl {{.*}} u_accum 'unsigned _Accum'
+//CHECK: |-VarDecl {{.*}} u_long_accum 'unsigned long _Accum'
+//CHECK: |-VarDecl {{.*}} s_short_fract 'short _Fract'
+//CHECK: |-VarDecl {{.*}} s_fract '_Fract'
+//CHECK: |-VarDecl {{.*}} s_long_fract 'long _Fract'
+//CHECK: |-VarDecl {{.*}} u_short_fract 'unsigned short _Fract'
+//CHECK: |-VarDecl {{.*}} u_fract 'unsigned _Fract'
+//CHECK: |-VarDecl {{.*}} u_long_fract 'unsigned long _Fract'
+//CHECK: |-VarDecl {{.*}} short_accum 'short _Accum'
+//CHECK: |-VarDecl {{.*}} accum '_Accum'
+//CHECK: |-VarDecl {{.*}} long_accum 'long _Accum'
+//CHECK: |-VarDecl {{.*}} short_fract 'short _Fract'
+//CHECK: |-VarDecl {{.*}} fract '_Fract'
+//CHECK: |-VarDecl {{.*}} long_fract 'long _Fract'
+//CHECK: |-VarDecl {{.*}} sat_s_short_accum '_Sat short _Accum'
+//CHECK: |-VarDecl {{.*}} sat_s_accum '_Sat _Accum'
+//CHECK: |-VarDecl {{.*}} sat_s_long_accum '_Sat long _Accum'
+//CHECK: |-VarDecl {{.*}} sat_u_short_accum '_Sat unsigned short _Accum'
+//CHECK: |-VarDecl {{.*}} sat_u_accum '_Sat unsigned _Accum'
+//CHECK: |-VarDecl {{.*}} sat_u_long_accum '_Sat unsigned long _Accum'
+//CHECK: |-VarDecl {{.*}} sat_s_short_fract '_Sat short _Fract'
+//CHECK: |-VarDecl {{.*}} sat_s_fract '_Sat _Fract'
+//CHECK: |-VarDecl {{.*}} sat_s_long_fract '_Sat long _Fract'
+//CHECK: |-VarDecl {{.*}} sat_u_short_fract '_Sat unsigned short _Fract'
+//CHECK: |-VarDecl {{.*}} sat_u_fract '_Sat unsigned _Fract'
+//CHECK: |-VarDecl {{.*}} sat_u_long_fract '_Sat unsigned long _Fract'
+//CHECK: |-VarDecl {{.*}} sat_short_accum '_Sat short _Accum'
+//CHECK: |-VarDecl {{.*}} sat_accum '_Sat _Accum'
+//CHECK: |-VarDecl {{.*}} sat_long_accum '_Sat long _Accum'
+//CHECK: |-VarDecl {{.*}} sat_short_fract '_Sat short _Fract'
+//CHECK: |-VarDecl {{.*}} sat_fract '_Sat _Fract'
+//CHECK: |-VarDecl {{.*}} sat_long_fract '_Sat long _Fract'
 
 #define MIX_TYPE_SPEC(SPEC, SIGN, SIZE, ID) \
   SPEC SIGN SIZE _Accum ID; \
@@ -106,20 +106,20 @@ MIX_VOLATILE(signed, short, vol_s_short_accum)
 MIX_ATOMIC(signed, short, atm_s_short_accum)
 MIX_CONST(signed, short, const_s_short_accum)
 
-// CHECK-NEXT: |-VarDecl {{.*}} vol_s_short_accum 'volatile short _Accum'
-// CHECK-NEXT: |-VarDecl {{.*}} vol_s_short_accum2 'volatile short _Accum'
-// CHECK-NEXT: |-VarDecl {{.*}} vol_s_short_accum3 'volatile short _Accum'
-// CHECK-NEXT: |-VarDecl {{.*}} vol_s_short_accum4 'volatile short _Accum'
+// CHECK: |-VarDecl {{.*}} vol_s_short_accum 'volatile short _Accum'
+// CHECK: |-VarDecl {{.*}} vol_s_short_accum2 'volatile short _Accum'
+// CHECK: |-VarDecl {{.*}} vol_s_short_accum3 'volatile short _Accum'
+// CHECK: |-VarDecl {{.*}} vol_s_short_accum4 'volatile short _Accum'
 
-// CHECK-NEXT: |-VarDecl {{.*}} atm_s_short_accum '_Atomic(short _Accum)'
-// CHECK-NEXT: |-VarDecl {{.*}} atm_s_short_accum2 '_Atomic(short _Accum)'
-// CHECK-NEXT: |-VarDecl {{.*}} atm_s_short_accum3 '_Atomic(short _Accum)'
-// CHECK-NEXT: |-VarDecl {{.*}} atm_s_short_accum4 '_Atomic(short _Accum)'
+// CHECK: |-VarDecl {{.*}} atm_s_short_accum '_Atomic(short _Accum)'
+// CHECK: |-VarDecl {{.*}} atm_s_short_accum2 '_Atomic(short _Accum)'
+// CHECK: |-VarDecl {{.*}} atm_s_short_accum3 '_Atomic(short _Accum)'
+// CHECK: |-VarDecl {{.*}} atm_s_short_accum4 '_Atomic(short _Accum)'
 
-// CHECK-NEXT: |-VarDecl {{.*}} const_s_short_accum 'const short _Accum'
-// CHECK-NEXT: |-VarDecl {{.*}} const_s_short_accum2 'const short _Accum'
-// CHECK-NEXT: |-VarDecl {{.*}} const_s_short_accum3 'const short _Accum'
-// CHECK-NEXT: |-VarDecl {{.*}} const_s_short_accum4 'const short _Accum'
+// CHECK: |-VarDecl {{.*}} const_s_short_accum 'const short _Accum'
+// CHECK: |-VarDecl {{.*}} const_s_short_accum2 'const short _Accum'
+// CHECK: |-VarDecl {{.*}} const_s_short_accum3 'const short _Accum'
+// CHECK: |-VarDecl {{.*}} const_s_short_accum4 'const short _Accum'
 
 /* Typedefs */
 
@@ -208,42 +208,42 @@ SatF_t    SatF_type;
 SatlF_t   SatlF_type;
 
 //CHECK:      |-VarDecl {{.*}} SsA_type 'SsA_t':'short _Accum'
-//CHECK-NEXT: |-VarDecl {{.*}} SA_type 'SA_t':'_Accum'
-//CHECK-NEXT: |-VarDecl {{.*}} SlA_type 'SlA_t':'long _Accum'
-//CHECK-NEXT: |-VarDecl {{.*}} UsA_type 'UsA_t':'unsigned short _Accum'
-//CHECK-NEXT: |-VarDecl {{.*}} UA_type 'UA_t':'unsigned _Accum'
-//CHECK-NEXT: |-VarDecl {{.*}} UlA_type 'UlA_t':'unsigned long _Accum'
-//CHECK-NEXT: |-VarDecl {{.*}} SsF_type 'SsF_t':'short _Fract'
-//CHECK-NEXT: |-VarDecl {{.*}} SF_type 'SF_t':'_Fract'
-//CHECK-NEXT: |-VarDecl {{.*}} SlF_type 'SlF_t':'long _Fract'
-//CHECK-NEXT: |-VarDecl {{.*}} UsF_type 'UsF_t':'unsigned short _Fract'
-//CHECK-NEXT: |-VarDecl {{.*}} UF_type 'UF_t':'unsigned _Fract'
-//CHECK-NEXT: |-VarDecl {{.*}} UlF_type 'UlF_t':'unsigned long _Fract'
-//CHECK-NEXT: |-VarDecl {{.*}} sA_type 'sA_t':'short _Accum'
-//CHECK-NEXT: |-VarDecl {{.*}} A_type 'A_t':'_Accum'
-//CHECK-NEXT: |-VarDecl {{.*}} lA_type 'lA_t':'long _Accum'
-//CHECK-NEXT: |-VarDecl {{.*}} sF_type 'sF_t':'short _Fract'
-//CHECK-NEXT: |-VarDecl {{.*}} F_type 'F_t':'_Fract'
-//CHECK-NEXT: |-VarDecl {{.*}} lF_type 'lF_t':'long _Fract'
+//CHECK: |-VarDecl {{.*}} SA_type 'SA_t':'_Accum'
+//CHECK: |-VarDecl {{.*}} SlA_type 'SlA_t':'long _Accum'
+//CHECK: |-VarDecl {{.*}} UsA_type 'UsA_t':'unsigned short _Accum'
+//CHECK: |-VarDecl {{.*}} UA_type 'UA_t':'unsigned _Accum'
+//CHECK: |-VarDecl {{.*}} UlA_type 'UlA_t':'unsigned long _Accum'
+//CHECK: |-VarDecl {{.*}} SsF_type 'SsF_t':'short _Fract'
+//CHECK: |-VarDecl {{.*}} SF_type 'SF_t':'_Fract'
+//CHECK: |-VarDecl {{.*}} SlF_type 'SlF_t':'long _Fract'
+//CHECK: |-VarDecl {{.*}} UsF_type 'UsF_t':'unsigned short _Fract'
+//CHECK: |-VarDecl {{.*}} UF_type 'UF_t':'unsigned _Fract'
+//CHECK: |-VarDecl {{.*}} UlF_type 'UlF_t':'unsigned long _Fract'
+//CHECK: |-VarDecl {{.*}} sA_type 'sA_t':'short _Accum'
+//CHECK: |-VarDecl {{.*}} A_type 'A_t':'_Accum'
+//CHECK: |-VarDecl {{.*}} lA_type 'lA_t':'long _Accum'
+//CHECK: |-VarDecl {{.*}} sF_type 'sF_t':'short _Fract'
+//CHECK: |-VarDecl {{.*}} F_type 'F_t':'_Fract'
+//CHECK: |-VarDecl {{.*}} lF_type 'lF_t':'long _Fract'
 
-//CHECK-NEXT: |-VarDecl {{.*}} SatSsA_type 'SatSsA_t':'_Sat short _Accum'
-//CHECK-NEXT: |-VarDecl {{.*}} SatSA_type 'SatSA_t':'_Sat _Accum'
-//CHECK-NEXT: |-VarDecl {{.*}} SatSlA_type 'SatSlA_t':'_Sat long _Accum'
-//CHECK-NEXT: |-VarDecl {{.*}} SatUsA_type 'SatUsA_t':'_Sat unsigned short _Accum'
-//CHECK-NEXT: |-VarDecl {{.*}} SatUA_type 'SatUA_t':'_Sat unsigned _Accum'
-//CHECK-NEXT: |-VarDecl {{.*}} SatUlA_type 'SatUlA_t':'_Sat unsigned long _Accum'
-//CHECK-NEXT: |-VarDecl {{.*}} SatSsF_type 'SatSsF_t':'_Sat short _Fract'
-//CHECK-NEXT: |-VarDecl {{.*}} SatSF_type 'SatSF_t':'_Sat _Fract'
-//CHECK-NEXT: |-VarDecl {{.*}} SatSlF_type 'SatSlF_t':'_Sat long _Fract'
-//CHECK-NEXT: |-VarDecl {{.*}} SatUsF_type 'SatUsF_t':'_Sat unsigned short _Fract'
-//CHECK-NEXT: |-VarDecl {{.*}} SatUF_type 'SatUF_t':'_Sat unsigned _Fract'
-//CHECK-NEXT: |-VarDecl {{.*}} SatUlF_type 'SatUlF_t':'_Sat unsigned long _Fract'
-//CHECK-NEXT: |-VarDecl {{.*}} SatsA_type 'SatsA_t':'_Sat short _Accum'
-//CHECK-NEXT: |-VarDecl {{.*}} SatA_type 'SatA_t':'_Sat _Accum'
-//CHECK-NEXT: |-VarDecl {{.*}} SatlA_type 'SatlA_t':'_Sat long _Accum'
-//CHECK-NEXT: |-VarDecl {{.*}} SatsF_type 'SatsF_t':'_Sat short _Fract'
-//CHECK-NEXT: |-VarDecl {{.*}} SatF_type 'SatF_t':'_Sat _Fract'
-//CHECK-NEXT: |-VarDecl {{.*}} SatlF_type 'SatlF_t':'_Sat long _Fract'
+//CHECK: |-VarDecl {{.*}} SatSsA_type 'SatSsA_t':'_Sat short _Accum'
+//CHECK: |-VarDecl {{.*}} SatSA_type 'SatSA_t':'_Sat _Accum'
+//CHECK: |-VarDecl {{.*}} SatSlA_type 'SatSlA_t':'_Sat long _Accum'
+//CHECK: |-VarDecl {{.*}} SatUsA_type 'SatUsA_t':'_Sat unsigned short _Accum'
+//CHECK: |-VarDecl {{.*}} SatUA_type 'SatUA_t':'_Sat unsigned _Accum'
+//CHECK: |-VarDecl {{.*}} SatUlA_type 'SatUlA_t':'_Sat unsigned long _Accum'
+//CHECK: |-VarDecl {{.*}} SatSsF_type 'SatSsF_t':'_Sat short _Fract'
+//CHECK: |-VarDecl {{.*}} SatSF_type 'SatSF_t':'_Sat _Fract'
+//CHECK: |-VarDecl {{.*}} SatSlF_type 'SatSlF_t':'_Sat long _Fract'
+//CHECK: |-VarDecl {{.*}} SatUsF_type 'SatUsF_t':'_Sat unsigned short _Fract'
+//CHECK: |-VarDecl {{.*}} SatUF_type 'SatUF_t':'_Sat unsigned _Fract'
+//CHECK: |-VarDecl {{.*}} SatUlF_type 'SatUlF_t':'_Sat unsigned long _Fract'
+//CHECK: |-VarDecl {{.*}} SatsA_type 'SatsA_t':'_Sat short _Accum'
+//CHECK: |-VarDecl {{.*}} SatA_type 'SatA_t':'_Sat _Accum'
+//CHECK: |-VarDecl {{.*}} SatlA_type 'SatlA_t':'_Sat long _Accum'
+//CHECK: |-VarDecl {{.*}} SatsF_type 'SatsF_t':'_Sat short _Fract'
+//CHECK: |-VarDecl {{.*}} SatF_type 'SatF_t':'_Sat _Fract'
+//CHECK: |-VarDecl {{.*}} SatlF_type 'SatlF_t':'_Sat long _Fract'
 
 // Fixed point literal exponent syntax
 _Accum decexp1 = 1.575e1k;
@@ -259,28 +259,28 @@ _Accum hexexp4 = 0x30000P-10k;
 _Accum zeroexp1 = 1e0k;
 _Accum zeroexp2 = 1e-0k;
 
-//CHECK-NEXT: |-VarDecl {{.*}} decexp1 '_Accum' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} '_Accum' 15.75
-//CHECK-NEXT: |-VarDecl {{.*}} decexp2 '_Accum' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} '_Accum' 15.75
-//CHECK-NEXT: |-VarDecl {{.*}} decexp3 '_Accum' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} '_Accum' 15.75
-//CHECK-NEXT: |-VarDecl {{.*}} decexp4 '_Accum' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} '_Accum' 15.75
+//CHECK: |-VarDecl {{.*}} decexp1 '_Accum' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} '_Accum' 15.75
+//CHECK: |-VarDecl {{.*}} decexp2 '_Accum' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} '_Accum' 15.75
+//CHECK: |-VarDecl {{.*}} decexp3 '_Accum' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} '_Accum' 15.75
+//CHECK: |-VarDecl {{.*}} decexp4 '_Accum' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} '_Accum' 15.75
 
-//CHECK-NEXT: |-VarDecl {{.*}} hexexp1 '_Accum' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} '_Accum' 192.0
-//CHECK-NEXT: |-VarDecl {{.*}} hexexp2 '_Accum' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} '_Accum' 192.0
-//CHECK-NEXT: |-VarDecl {{.*}} hexexp3 '_Accum' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} '_Accum' 192.0
-//CHECK-NEXT: |-VarDecl {{.*}} hexexp4 '_Accum' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} '_Accum' 192.0
+//CHECK: |-VarDecl {{.*}} hexexp1 '_Accum' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} '_Accum' 192.0
+//CHECK: |-VarDecl {{.*}} hexexp2 '_Accum' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} '_Accum' 192.0
+//CHECK: |-VarDecl {{.*}} hexexp3 '_Accum' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} '_Accum' 192.0
+//CHECK: |-VarDecl {{.*}} hexexp4 '_Accum' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} '_Accum' 192.0
 
-//CHECK-NEXT: |-VarDecl {{.*}} zeroexp1 '_Accum' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} '_Accum' 1.0
-//CHECK-NEXT: |-VarDecl {{.*}} zeroexp2 '_Accum' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} '_Accum' 1.0
+//CHECK: |-VarDecl {{.*}} zeroexp1 '_Accum' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} '_Accum' 1.0
+//CHECK: |-VarDecl {{.*}} zeroexp2 '_Accum' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} '_Accum' 1.0
 
 // Fixed point literal values
 _Accum literal1 = 2.5k;       // Precise decimal
@@ -297,20 +297,20 @@ _Accum literal7 = 1.11111k;   // After some point after the radix, adding any mo
                               // This results in the same value being stored for
                               // the type.
 
-//CHECK-NEXT: |-VarDecl {{.*}} literal1 '_Accum' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} '_Accum' 2.5
-//CHECK-NEXT: |-VarDecl {{.*}} literal2 '_Accum' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} '_Accum' 0.0
-//CHECK-NEXT: |-VarDecl {{.*}} literal3 '_Accum' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} '_Accum' 1.0999755859375
-//CHECK-NEXT: |-VarDecl {{.*}} literal4 '_Accum' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} '_Accum' 1.1099853515625
-//CHECK-NEXT: |-VarDecl {{.*}} literal5 '_Accum' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} '_Accum' 1.110992431640625
-//CHECK-NEXT: |-VarDecl {{.*}} literal6 '_Accum' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} '_Accum' 1.111083984375
-//CHECK-NEXT: |-VarDecl {{.*}} literal7 '_Accum' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} '_Accum' 1.111083984375
+//CHECK: |-VarDecl {{.*}} literal1 '_Accum' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} '_Accum' 2.5
+//CHECK: |-VarDecl {{.*}} literal2 '_Accum' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} '_Accum' 0.0
+//CHECK: |-VarDecl {{.*}} literal3 '_Accum' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} '_Accum' 1.0999755859375
+//CHECK: |-VarDecl {{.*}} literal4 '_Accum' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} '_Accum' 1.1099853515625
+//CHECK: |-VarDecl {{.*}} literal5 '_Accum' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} '_Accum' 1.110992431640625
+//CHECK: |-VarDecl {{.*}} literal6 '_Accum' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} '_Accum' 1.111083984375
+//CHECK: |-VarDecl {{.*}} literal7 '_Accum' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} '_Accum' 1.111083984375
 
 long _Accum longaccumliteral     = 0.99999999lk;
 long _Accum longaccumliteral2    = 0.999999999lk;
@@ -319,43 +319,43 @@ long _Fract longfractliteral     = 0.99999999lr;
 long _Fract longfractliteral2    = 0.999999999lr;
 long _Fract verylongfractliteral = 0.99999999999999999999999999lr;
 
-//CHECK-NEXT: |-VarDecl {{.*}} longaccumliteral 'long _Accum' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} 'long _Accum' 0.999999989755451679229736328125
-//CHECK-NEXT: |-VarDecl {{.*}} longaccumliteral2 'long _Accum' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} 'long _Accum' 0.9999999986030161380767822265625
-//CHECK-NEXT: |-VarDecl {{.*}} verylongaccumliteral 'long _Accum' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} 'long _Accum' 0.9999999995343387126922607421875
-//CHECK-NEXT: |-VarDecl {{.*}} longfractliteral 'long _Fract' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} 'long _Fract' 0.999999989755451679229736328125
-//CHECK-NEXT: |-VarDecl {{.*}} longfractliteral2 'long _Fract' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} 'long _Fract' 0.9999999986030161380767822265625
-//CHECK-NEXT: |-VarDecl {{.*}} verylongfractliteral 'long _Fract' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} 'long _Fract' 0.9999999995343387126922607421875
+//CHECK: |-VarDecl {{.*}} longaccumliteral 'long _Accum' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} 'long _Accum' 0.999999989755451679229736328125
+//CHECK: |-VarDecl {{.*}} longaccumliteral2 'long _Accum' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} 'long _Accum' 0.9999999986030161380767822265625
+//CHECK: |-VarDecl {{.*}} verylongaccumliteral 'long _Accum' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} 'long _Accum' 0.9999999995343387126922607421875
+//CHECK: |-VarDecl {{.*}} longfractliteral 'long _Fract' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} 'long _Fract' 0.999999989755451679229736328125
+//CHECK: |-VarDecl {{.*}} longfractliteral2 'long _Fract' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} 'long _Fract' 0.9999999986030161380767822265625
+//CHECK: |-VarDecl {{.*}} verylongfractliteral 'long _Fract' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} 'long _Fract' 0.9999999995343387126922607421875
 
 unsigned _Accum uliteral1 = 2.5uk;    // Unsigned
 _Accum literal8 = -2.5k;              // Negative
 
-//CHECK-NEXT: |-VarDecl {{.*}} uliteral1 'unsigned _Accum' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} 'unsigned _Accum' 2.5
-//CHECK-NEXT: |-VarDecl {{.*}} literal8 '_Accum' cinit
-//CHECK-NEXT:   `-UnaryOperator {{.*}} '_Accum' prefix '-'
-//CHECK-NEXT:     `-FixedPointLiteral {{.*}} '_Accum' 2.5
+//CHECK: |-VarDecl {{.*}} uliteral1 'unsigned _Accum' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} 'unsigned _Accum' 2.5
+//CHECK: |-VarDecl {{.*}} literal8 '_Accum' cinit
+//CHECK:   |-UnaryOperator {{.*}} '_Accum' prefix '-'
+//CHECK:     `-FixedPointLiteral {{.*}} '_Accum' 2.5
 
 short _Accum  literalexact1 = 0.9921875hk;  // Exact value
 _Accum        literalexact2 = 0.999969482421875k;
 
-//CHECK-NEXT: |-VarDecl {{.*}} literalexact1 'short _Accum' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} 'short _Accum' 0.9921875
-//CHECK-NEXT: |-VarDecl {{.*}} literalexact2 '_Accum' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} '_Accum' 0.999969482421875
+//CHECK: |-VarDecl {{.*}} literalexact1 'short _Accum' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} 'short _Accum' 0.9921875
+//CHECK: |-VarDecl {{.*}} literalexact2 '_Accum' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} '_Accum' 0.999969482421875
 
 // Unfortunately we do not have enough space to store the exact decimal value of
 // 0.9999999995343387126922607421875 ((1 << 31) - 1), but we can still use a
 // large number of 9s to get the max fractional value.
 long _Accum   long_accum_max = 0.999999999999999999999999999lk;
 
-//CHECK-NEXT: |-VarDecl {{.*}} long_accum_max 'long _Accum' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} 'long _Accum' 0.9999999995343387126922607421875
+//CHECK: |-VarDecl {{.*}} long_accum_max 'long _Accum' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} 'long _Accum' 0.9999999995343387126922607421875
 
 // Epsilon
 short _Accum  short_accum_eps   = 0.0078125hk;
@@ -365,18 +365,18 @@ _Accum        accum_eps2        = 0.000030517578124k;
 long _Accum   long_accum_eps    = 0x1p-31lk;
 long _Accum   long_accum_eps2   = 0x0.99999999p-31lk;
 
-//CHECK-NEXT: |-VarDecl {{.*}} short_accum_eps 'short _Accum' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} 'short _Accum' 0.0078125
-//CHECK-NEXT: |-VarDecl {{.*}} short_accum_eps2 'short _Accum' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} 'short _Accum' 0.0
-//CHECK-NEXT: |-VarDecl {{.*}} accum_eps '_Accum' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} '_Accum' 0.000030517578125
-//CHECK-NEXT: |-VarDecl {{.*}} accum_eps2 '_Accum' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} '_Accum' 0.0
-//CHECK-NEXT: |-VarDecl {{.*}} long_accum_eps 'long _Accum' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} 'long _Accum' 0.0000000004656612873077392578125
-//CHECK-NEXT: |-VarDecl {{.*}} long_accum_eps2 'long _Accum' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} 'long _Accum' 0.0
+//CHECK: |-VarDecl {{.*}} short_accum_eps 'short _Accum' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} 'short _Accum' 0.0078125
+//CHECK: |-VarDecl {{.*}} short_accum_eps2 'short _Accum' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} 'short _Accum' 0.0
+//CHECK: |-VarDecl {{.*}} accum_eps '_Accum' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} '_Accum' 0.000030517578125
+//CHECK: |-VarDecl {{.*}} accum_eps2 '_Accum' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} '_Accum' 0.0
+//CHECK: |-VarDecl {{.*}} long_accum_eps 'long _Accum' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} 'long _Accum' 0.0000000004656612873077392578125
+//CHECK: |-VarDecl {{.*}} long_accum_eps2 'long _Accum' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} 'long _Accum' 0.0
 
 // Fract literals can be one but evaluate to the respective Fract max
 short _Fract           short_fract_one   = 1.0hr;
@@ -386,21 +386,21 @@ unsigned short _Fract  u_short_fract_one = 1.0uhr;
 unsigned _Fract        u_fract_one       = 1.0ur;
 unsigned long _Fract   u_long_fract_one  = 1.0ulr;
 
-//CHECK-NEXT: |-VarDecl {{.*}} short_fract_one 'short _Fract' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} 'short _Fract' 0.9921875
-//CHECK-NEXT: |-VarDecl {{.*}} fract_one '_Fract' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} '_Fract' 0.999969482421875
-//CHECK-NEXT: |-VarDecl {{.*}} long_fract_one 'long _Fract' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} 'long _Fract' 0.9999999995343387126922607421875
+//CHECK: |-VarDecl {{.*}} short_fract_one 'short _Fract' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} 'short _Fract' 0.9921875
+//CHECK: |-VarDecl {{.*}} fract_one '_Fract' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} '_Fract' 0.999969482421875
+//CHECK: |-VarDecl {{.*}} long_fract_one 'long _Fract' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} 'long _Fract' 0.9999999995343387126922607421875
 
-//CHECK-NEXT: |-VarDecl {{.*}} u_short_fract_one 'unsigned short _Fract' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} 'unsigned short _Fract' 0.99609375
-//CHECK-NEXT: |-VarDecl {{.*}} u_fract_one 'unsigned _Fract' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} 'unsigned _Fract' 0.9999847412109375
-//CHECK-NEXT: |-VarDecl {{.*}} u_long_fract_one 'unsigned long _Fract' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} 'unsigned long _Fract' 0.99999999976716935634613037109375
+//CHECK: |-VarDecl {{.*}} u_short_fract_one 'unsigned short _Fract' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} 'unsigned short _Fract' 0.99609375
+//CHECK: |-VarDecl {{.*}} u_fract_one 'unsigned _Fract' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} 'unsigned _Fract' 0.9999847412109375
+//CHECK: |-VarDecl {{.*}} u_long_fract_one 'unsigned long _Fract' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} 'unsigned long _Fract' 0.99999999976716935634613037109375
 
 _Accum literallast = 1.0k;    // One
 
-//CHECK-NEXT: `-VarDecl {{.*}} literallast '_Accum' cinit
-//CHECK-NEXT:   `-FixedPointLiteral {{.*}} '_Accum' 1.0
+//CHECK: `-VarDecl {{.*}} literallast '_Accum' cinit
+//CHECK:   |-FixedPointLiteral {{.*}} '_Accum' 1.0

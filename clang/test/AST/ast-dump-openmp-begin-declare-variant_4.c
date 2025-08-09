@@ -22,7 +22,7 @@ int test(void) {
 //  - we pick the right callees
 
 // CHECK:      |-FunctionDecl [[ADDR_0:0x[a-z0-9]*]] <{{.*}}, col:21> col:5 implicit used also_before 'int ({{.*}})'
-// CHECK-NEXT: | `-OMPDeclareVariantAttr [[ADDR_1:0x[a-z0-9]*]] <<invalid sloc>> Implicit device={kind(cpu)}
+// CHECK-NEXT: | `-attrDetails: OMPDeclareVariantAttr [[ADDR_1:0x[a-z0-9]*]] <<invalid sloc>> Implicit device={kind(cpu)}
 // CHECK-NEXT: |   `-DeclRefExpr [[ADDR_2:0x[a-z0-9]*]] <col:1> 'int ({{.*}})' Function [[ADDR_3:0x[a-z0-9]*]] 'also_before[device={kind(cpu)}]' 'int ({{.*}})'
 // CHECK-NEXT: |-FunctionDecl [[ADDR_3]] <col:1, line:8:1> line:6:1 also_before[device={kind(cpu)}] 'int ({{.*}})'
 // CHECK-NEXT: | `-CompoundStmt [[ADDR_4:0x[a-z0-9]*]] <col:23, line:8:1>
