@@ -1,7 +1,9 @@
-// RUN: %clang_cc1 -fsyntax-only -pedantic -std=c++11 -verify=expected,cxx11-17 -triple x86_64-apple-darwin %s
-// RUN: %clang_cc1 -fsyntax-only -pedantic -std=c++17 -verify=expected,cxx11-17 -triple x86_64-apple-darwin %s
-// RUN: %clang_cc1 -fsyntax-only -pedantic -std=c++20 -verify -triple x86_64-apple-darwin %s
-// RUN: not %clang_cc1 -fsyntax-only -fdiagnostics-parseable-fixits -std=c++20 -triple x86_64-apple-darwin %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -fsyntax-only -pedantic -std=c++11 -verify=expected,cxx11-17,cxx11-20 -triple x86_64-apple-darwin %s
+// RUN: %clang_cc1 -fsyntax-only -pedantic -std=c++17 -verify=expected,cxx11-17,cxx11-20 -triple x86_64-apple-darwin %s
+// RUN: %clang_cc1 -fsyntax-only -pedantic -std=c++20 -verify=expected,cxx11-20 -triple x86_64-apple-darwin %s
+// RUN: %clang_cc1 -fsyntax-only -pedantic -std=c++23 -verify=expected,cxx23 -triple x86_64-apple-darwin %s
+// RUN: not %clang_cc1 -fsyntax-only -fdiagnostics-parseable-fixits -std=c++20 -triple x86_64-apple-darwin %s 2>&1 | FileCheck %s --check-prefix=CXX20
+// RUN: not %clang_cc1 -fsyntax-only -fdiagnostics-parseable-fixits -std=c++23 -triple x86_64-apple-darwin %s 2>&1 | FileCheck %s --check-prefix=CXX23
 
 enum class E1 {
   Val1 = 1L
@@ -130,10 +132,13 @@ namespace rdar9366066 {
 
   void f(X x) {
     x % X::value; // expected-error{{invalid operands to binary expression ('X' and 'rdar9366066::X')}}
-                  // expected-note@-1{{no implicit conversion for scoped enum; consider casting to underlying type}}
-                  // expected-note@-2{{no implicit conversion for scoped enum; consider casting to underlying type}}
+                  // cxx11-20-note@-1{{no implicit conversion for scoped enum; consider casting to underlying type}}
+                  // cxx23-note@-2{{no implicit conversion for scoped enum; consider using std::to_underlying}}
+                  // cxx11-20-note@-3{{no implicit conversion for scoped enum; consider casting to underlying type}}
+                  // cxx23-note@-4{{no implicit conversion for scoped enum; consider using std::to_underlying}}
     x % 8; // expected-error{{invalid operands to binary expression ('X' and 'int')}}
-           // expected-note@-1{{no implicit conversion for scoped enum; consider casting to underlying type}}
+           // cxx11-20-note@-1{{no implicit conversion for scoped enum; consider casting to underlying type}}
+           // cxx23-note@-2{{no implicit conversion for scoped enum; consider using std::to_underlying}}
   }
 }
 
@@ -376,141 +381,237 @@ namespace GH24265 {
 
   void f() {
     E_int::e + E_long::e; // expected-error {{invalid operands to binary expression ('GH24265::E_int' and 'GH24265::E_long')}}
-                          // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
-                          // CHECK: fix-it:{{.*}}:{[[@LINE-2]]:5-[[@LINE-2]]:5}:"static_cast<int>("
-                          // CHECK: fix-it:{{.*}}:{[[@LINE-3]]:12-[[@LINE-3]]:12}:")"
-                          // expected-note@-4 {{no implicit conversion for scoped enum; consider casting to underlying type}}
-                          // CHECK: fix-it:{{.*}}:{[[@LINE-5]]:16-[[@LINE-5]]:16}:"static_cast<long>("
-                          // CHECK: fix-it:{{.*}}:{[[@LINE-6]]:24-[[@LINE-6]]:24}:")"
+                          // cxx11-20-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+                          // CXX20: fix-it:{{.*}}:{[[@LINE-2]]:5-[[@LINE-2]]:5}:"static_cast<int>("
+                          // CXX20: fix-it:{{.*}}:{[[@LINE-3]]:12-[[@LINE-3]]:12}:")"
+                          // cxx23-note@-4 {{no implicit conversion for scoped enum; consider using std::to_underlying}}
+                          // CXX23: fix-it:{{.*}}:{[[@LINE-5]]:5-[[@LINE-5]]:5}:"std::to_underlying("
+                          // CXX23: fix-it:{{.*}}:{[[@LINE-6]]:12-[[@LINE-6]]:12}:")"
+                          // cxx11-20-note@-7 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+                          // CXX20: fix-it:{{.*}}:{[[@LINE-8]]:16-[[@LINE-8]]:16}:"static_cast<long>("
+                          // CXX20: fix-it:{{.*}}:{[[@LINE-9]]:24-[[@LINE-9]]:24}:")"
+                          // cxx23-note@-10 {{no implicit conversion for scoped enum; consider using std::to_underlying}}
+                          // CXX23: fix-it:{{.*}}:{[[@LINE-11]]:16-[[@LINE-11]]:16}:"std::to_underlying("
+                          // CXX23: fix-it:{{.*}}:{[[@LINE-12]]:24-[[@LINE-12]]:24}:")"
     E_int::e + 0; // expected-error {{invalid operands to binary expression ('GH24265::E_int' and 'int')}}
-                  // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
-                  // CHECK: fix-it:{{.*}}:{[[@LINE-2]]:5-[[@LINE-2]]:5}:"static_cast<int>("
-                  // CHECK: fix-it:{{.*}}:{[[@LINE-3]]:12-[[@LINE-3]]:12}:")"
+                  // cxx11-20-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+                  // CXX20: fix-it:{{.*}}:{[[@LINE-2]]:5-[[@LINE-2]]:5}:"static_cast<int>("
+                  // CXX20: fix-it:{{.*}}:{[[@LINE-3]]:12-[[@LINE-3]]:12}:")"
+                  // cxx23-note@-4 {{no implicit conversion for scoped enum; consider using std::to_underlying}}
+                  // CXX23: fix-it:{{.*}}:{[[@LINE-5]]:5-[[@LINE-5]]:5}:"std::to_underlying("
+                  // CXX23: fix-it:{{.*}}:{[[@LINE-6]]:12-[[@LINE-6]]:12}:")"
 
     0 * E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
-                  // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
-                  // CHECK: fix-it:{{.*}}:{[[@LINE-2]]:9-[[@LINE-2]]:9}:"static_cast<int>("
-                  // CHECK: fix-it:{{.*}}:{[[@LINE-3]]:16-[[@LINE-3]]:16}:")"
+                  // cxx11-20-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+                  // CXX20: fix-it:{{.*}}:{[[@LINE-2]]:9-[[@LINE-2]]:9}:"static_cast<int>("
+                  // CXX20: fix-it:{{.*}}:{[[@LINE-3]]:16-[[@LINE-3]]:16}:")"
+                  // cxx23-note@-4 {{no implicit conversion for scoped enum; consider using std::to_underlying}}
+                  // CXX23: fix-it:{{.*}}:{[[@LINE-5]]:9-[[@LINE-5]]:9}:"std::to_underlying("
+                  // CXX23: fix-it:{{.*}}:{[[@LINE-6]]:16-[[@LINE-6]]:16}:")"
     0 / E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
-                  // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
-                  // CHECK: fix-it:{{.*}}:{[[@LINE-2]]:9-[[@LINE-2]]:9}:"static_cast<int>("
-                  // CHECK: fix-it:{{.*}}:{[[@LINE-3]]:16-[[@LINE-3]]:16}:")"
+                  // cxx11-20-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+                  // CXX20: fix-it:{{.*}}:{[[@LINE-2]]:9-[[@LINE-2]]:9}:"static_cast<int>("
+                  // CXX20: fix-it:{{.*}}:{[[@LINE-3]]:16-[[@LINE-3]]:16}:")"
+                  // cxx23-note@-4 {{no implicit conversion for scoped enum; consider using std::to_underlying}}
+                  // CXX23: fix-it:{{.*}}:{[[@LINE-5]]:9-[[@LINE-5]]:9}:"std::to_underlying("
+                  // CXX23: fix-it:{{.*}}:{[[@LINE-6]]:16-[[@LINE-6]]:16}:")"
     0 % E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
-                  // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
-                  // CHECK: fix-it:{{.*}}:{[[@LINE-2]]:9-[[@LINE-2]]:9}:"static_cast<int>("
-                  // CHECK: fix-it:{{.*}}:{[[@LINE-3]]:16-[[@LINE-3]]:16}:")"
+                  // cxx11-20-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+                  // CXX20: fix-it:{{.*}}:{[[@LINE-2]]:9-[[@LINE-2]]:9}:"static_cast<int>("
+                  // CXX20: fix-it:{{.*}}:{[[@LINE-3]]:16-[[@LINE-3]]:16}:")"
+                  // cxx23-note@-4 {{no implicit conversion for scoped enum; consider using std::to_underlying}}
+                  // CXX23: fix-it:{{.*}}:{[[@LINE-5]]:9-[[@LINE-5]]:9}:"std::to_underlying("
+                  // CXX23: fix-it:{{.*}}:{[[@LINE-6]]:16-[[@LINE-6]]:16}:")"
     0 + E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
-                  // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
-                  // CHECK: fix-it:{{.*}}:{[[@LINE-2]]:9-[[@LINE-2]]:9}:"static_cast<int>("
-                  // CHECK: fix-it:{{.*}}:{[[@LINE-3]]:16-[[@LINE-3]]:16}:")"
+                  // cxx11-20-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+                  // CXX20: fix-it:{{.*}}:{[[@LINE-2]]:9-[[@LINE-2]]:9}:"static_cast<int>("
+                  // CXX20: fix-it:{{.*}}:{[[@LINE-3]]:16-[[@LINE-3]]:16}:")"
+                  // cxx23-note@-4 {{no implicit conversion for scoped enum; consider using std::to_underlying}}
+                  // CXX23: fix-it:{{.*}}:{[[@LINE-5]]:9-[[@LINE-5]]:9}:"std::to_underlying("
+                  // CXX23: fix-it:{{.*}}:{[[@LINE-6]]:16-[[@LINE-6]]:16}:")"
     0 - E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
-                  // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
-                  // CHECK: fix-it:{{.*}}:{[[@LINE-2]]:9-[[@LINE-2]]:9}:"static_cast<int>("
-                  // CHECK: fix-it:{{.*}}:{[[@LINE-3]]:16-[[@LINE-3]]:16}:")"
+                  // cxx11-20-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+                  // CXX20: fix-it:{{.*}}:{[[@LINE-2]]:9-[[@LINE-2]]:9}:"static_cast<int>("
+                  // CXX20: fix-it:{{.*}}:{[[@LINE-3]]:16-[[@LINE-3]]:16}:")"
+                  // cxx23-note@-4 {{no implicit conversion for scoped enum; consider using std::to_underlying}}
+                  // CXX23: fix-it:{{.*}}:{[[@LINE-5]]:9-[[@LINE-5]]:9}:"std::to_underlying("
+                  // CXX23: fix-it:{{.*}}:{[[@LINE-6]]:16-[[@LINE-6]]:16}:")"
     0 << E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
-                   // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
-                   // CHECK: fix-it:{{.*}}:{[[@LINE-2]]:10-[[@LINE-2]]:10}:"static_cast<int>("
-                   // CHECK: fix-it:{{.*}}:{[[@LINE-3]]:17-[[@LINE-3]]:17}:")"
+                   // cxx11-20-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+                   // CXX20: fix-it:{{.*}}:{[[@LINE-2]]:10-[[@LINE-2]]:10}:"static_cast<int>("
+                   // CXX20: fix-it:{{.*}}:{[[@LINE-3]]:17-[[@LINE-3]]:17}:")"
+                   // cxx23-note@-4 {{no implicit conversion for scoped enum; consider using std::to_underlying}}
+                   // CXX23: fix-it:{{.*}}:{[[@LINE-5]]:10-[[@LINE-5]]:10}:"std::to_underlying("
+                   // CXX23: fix-it:{{.*}}:{[[@LINE-6]]:17-[[@LINE-6]]:17}:")"
     0 >> E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
-                   // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
-                   // CHECK: fix-it:{{.*}}:{[[@LINE-2]]:10-[[@LINE-2]]:10}:"static_cast<int>("
-                   // CHECK: fix-it:{{.*}}:{[[@LINE-3]]:17-[[@LINE-3]]:17}:")"
+                   // cxx11-20-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+                   // CXX20: fix-it:{{.*}}:{[[@LINE-2]]:10-[[@LINE-2]]:10}:"static_cast<int>("
+                   // CXX20: fix-it:{{.*}}:{[[@LINE-3]]:17-[[@LINE-3]]:17}:")"
+                   // cxx23-note@-4 {{no implicit conversion for scoped enum; consider using std::to_underlying}}
+                   // CXX23: fix-it:{{.*}}:{[[@LINE-5]]:10-[[@LINE-5]]:10}:"std::to_underlying("
+                   // CXX23: fix-it:{{.*}}:{[[@LINE-6]]:17-[[@LINE-6]]:17}:")"
 
     #if __cplusplus >= 202002L
     0 <=> E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
-                    // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
-                    // CHECK: fix-it:{{.*}}:{[[@LINE-2]]:11-[[@LINE-2]]:11}:"static_cast<int>("
-                    // CHECK: fix-it:{{.*}}:{[[@LINE-3]]:18-[[@LINE-3]]:18}:")"
+                    // cxx11-20-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+                    // CXX20: fix-it:{{.*}}:{[[@LINE-2]]:11-[[@LINE-2]]:11}:"static_cast<int>("
+                    // CXX20: fix-it:{{.*}}:{[[@LINE-3]]:18-[[@LINE-3]]:18}:")"
+                    // cxx23-note@-4 {{no implicit conversion for scoped enum; consider using std::to_underlying}}
+                    // CXX23: fix-it:{{.*}}:{[[@LINE-5]]:11-[[@LINE-5]]:11}:"std::to_underlying("
+                    // CXX23: fix-it:{{.*}}:{[[@LINE-6]]:18-[[@LINE-6]]:18}:")"
     #endif
 
     0 < E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
-                  // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
-                  // CHECK: fix-it:{{.*}}:{[[@LINE-2]]:9-[[@LINE-2]]:9}:"static_cast<int>("
-                  // CHECK: fix-it:{{.*}}:{[[@LINE-3]]:16-[[@LINE-3]]:16}:")"
+                  // cxx11-20-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+                  // CXX20: fix-it:{{.*}}:{[[@LINE-2]]:9-[[@LINE-2]]:9}:"static_cast<int>("
+                  // CXX20: fix-it:{{.*}}:{[[@LINE-3]]:16-[[@LINE-3]]:16}:")"
+                  // cxx23-note@-4 {{no implicit conversion for scoped enum; consider using std::to_underlying}}
+                  // CXX23: fix-it:{{.*}}:{[[@LINE-5]]:9-[[@LINE-5]]:9}:"std::to_underlying("
+                  // CXX23: fix-it:{{.*}}:{[[@LINE-6]]:16-[[@LINE-6]]:16}:")"
     0 > E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
-                  // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
-                  // CHECK: fix-it:{{.*}}:{[[@LINE-2]]:9-[[@LINE-2]]:9}:"static_cast<int>("
-                  // CHECK: fix-it:{{.*}}:{[[@LINE-3]]:16-[[@LINE-3]]:16}:")"
+                  // cxx11-20-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+                  // CXX20: fix-it:{{.*}}:{[[@LINE-2]]:9-[[@LINE-2]]:9}:"static_cast<int>("
+                  // CXX20: fix-it:{{.*}}:{[[@LINE-3]]:16-[[@LINE-3]]:16}:")"
+                  // cxx23-note@-4 {{no implicit conversion for scoped enum; consider using std::to_underlying}}
+                  // CXX23: fix-it:{{.*}}:{[[@LINE-5]]:9-[[@LINE-5]]:9}:"std::to_underlying("
+                  // CXX23: fix-it:{{.*}}:{[[@LINE-6]]:16-[[@LINE-6]]:16}:")"
     0 <= E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
-                   // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
-                   // CHECK: fix-it:{{.*}}:{[[@LINE-2]]:10-[[@LINE-2]]:10}:"static_cast<int>("
-                   // CHECK: fix-it:{{.*}}:{[[@LINE-3]]:17-[[@LINE-3]]:17}:")"
+                   // cxx11-20-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+                   // CXX20: fix-it:{{.*}}:{[[@LINE-2]]:10-[[@LINE-2]]:10}:"static_cast<int>("
+                   // CXX20: fix-it:{{.*}}:{[[@LINE-3]]:17-[[@LINE-3]]:17}:")"
+                   // cxx23-note@-4 {{no implicit conversion for scoped enum; consider using std::to_underlying}}
+                   // CXX23: fix-it:{{.*}}:{[[@LINE-5]]:10-[[@LINE-5]]:10}:"std::to_underlying("
+                   // CXX23: fix-it:{{.*}}:{[[@LINE-6]]:17-[[@LINE-6]]:17}:")"
     0 >= E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
-                   // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
-                   // CHECK: fix-it:{{.*}}:{[[@LINE-2]]:10-[[@LINE-2]]:10}:"static_cast<int>("
-                   // CHECK: fix-it:{{.*}}:{[[@LINE-3]]:17-[[@LINE-3]]:17}:")"
+                   // cxx11-20-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+                   // CXX20: fix-it:{{.*}}:{[[@LINE-2]]:10-[[@LINE-2]]:10}:"static_cast<int>("
+                   // CXX20: fix-it:{{.*}}:{[[@LINE-3]]:17-[[@LINE-3]]:17}:")"
+                   // cxx23-note@-4 {{no implicit conversion for scoped enum; consider using std::to_underlying}}
+                   // CXX23: fix-it:{{.*}}:{[[@LINE-5]]:10-[[@LINE-5]]:10}:"std::to_underlying("
+                   // CXX23: fix-it:{{.*}}:{[[@LINE-6]]:17-[[@LINE-6]]:17}:")"
     0 == E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
-                   // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
-                   // CHECK: fix-it:{{.*}}:{[[@LINE-2]]:10-[[@LINE-2]]:10}:"static_cast<int>("
-                   // CHECK: fix-it:{{.*}}:{[[@LINE-3]]:17-[[@LINE-3]]:17}:")"
+                   // cxx11-20-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+                   // CXX20: fix-it:{{.*}}:{[[@LINE-2]]:10-[[@LINE-2]]:10}:"static_cast<int>("
+                   // CXX20: fix-it:{{.*}}:{[[@LINE-3]]:17-[[@LINE-3]]:17}:")"
+                   // cxx23-note@-4 {{no implicit conversion for scoped enum; consider using std::to_underlying}}
+                   // CXX23: fix-it:{{.*}}:{[[@LINE-5]]:10-[[@LINE-5]]:10}:"std::to_underlying("
+                   // CXX23: fix-it:{{.*}}:{[[@LINE-6]]:17-[[@LINE-6]]:17}:")"
     0 != E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
-                   // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
-                   // CHECK: fix-it:{{.*}}:{[[@LINE-2]]:10-[[@LINE-2]]:10}:"static_cast<int>("
-                   // CHECK: fix-it:{{.*}}:{[[@LINE-3]]:17-[[@LINE-3]]:17}:")"
+                   // cxx11-20-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+                   // CXX20: fix-it:{{.*}}:{[[@LINE-2]]:10-[[@LINE-2]]:10}:"static_cast<int>("
+                   // CXX20: fix-it:{{.*}}:{[[@LINE-3]]:17-[[@LINE-3]]:17}:")"
+                   // cxx23-note@-4 {{no implicit conversion for scoped enum; consider using std::to_underlying}}
+                   // CXX23: fix-it:{{.*}}:{[[@LINE-5]]:10-[[@LINE-5]]:10}:"std::to_underlying("
+                   // CXX23: fix-it:{{.*}}:{[[@LINE-6]]:17-[[@LINE-6]]:17}:")"
     0 & E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
-                  // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
-                  // CHECK: fix-it:{{.*}}:{[[@LINE-2]]:9-[[@LINE-2]]:9}:"static_cast<int>("
-                  // CHECK: fix-it:{{.*}}:{[[@LINE-3]]:16-[[@LINE-3]]:16}:")"
+                  // cxx11-20-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+                  // CXX20: fix-it:{{.*}}:{[[@LINE-2]]:9-[[@LINE-2]]:9}:"static_cast<int>("
+                  // CXX20: fix-it:{{.*}}:{[[@LINE-3]]:16-[[@LINE-3]]:16}:")"
+                  // cxx23-note@-4 {{no implicit conversion for scoped enum; consider using std::to_underlying}}
+                  // CXX23: fix-it:{{.*}}:{[[@LINE-5]]:9-[[@LINE-5]]:9}:"std::to_underlying("
+                  // CXX23: fix-it:{{.*}}:{[[@LINE-6]]:16-[[@LINE-6]]:16}:")"
     0 ^ E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
-                  // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
-                  // CHECK: fix-it:{{.*}}:{[[@LINE-2]]:9-[[@LINE-2]]:9}:"static_cast<int>("
-                  // CHECK: fix-it:{{.*}}:{[[@LINE-3]]:16-[[@LINE-3]]:16}:")"
+                  // cxx11-20-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+                  // CXX20: fix-it:{{.*}}:{[[@LINE-2]]:9-[[@LINE-2]]:9}:"static_cast<int>("
+                  // CXX20: fix-it:{{.*}}:{[[@LINE-3]]:16-[[@LINE-3]]:16}:")"
+                  // cxx23-note@-4 {{no implicit conversion for scoped enum; consider using std::to_underlying}}
+                  // CXX23: fix-it:{{.*}}:{[[@LINE-5]]:9-[[@LINE-5]]:9}:"std::to_underlying("
+                  // CXX23: fix-it:{{.*}}:{[[@LINE-6]]:16-[[@LINE-6]]:16}:")"
     0 | E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
-                  // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
-                  // CHECK: fix-it:{{.*}}:{[[@LINE-2]]:9-[[@LINE-2]]:9}:"static_cast<int>("
-                  // CHECK: fix-it:{{.*}}:{[[@LINE-3]]:16-[[@LINE-3]]:16}:")"
+                  // cxx11-20-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+                  // CXX20: fix-it:{{.*}}:{[[@LINE-2]]:9-[[@LINE-2]]:9}:"static_cast<int>("
+                  // CXX20: fix-it:{{.*}}:{[[@LINE-3]]:16-[[@LINE-3]]:16}:")"
+                  // cxx23-note@-4 {{no implicit conversion for scoped enum; consider using std::to_underlying}}
+                  // CXX23: fix-it:{{.*}}:{[[@LINE-5]]:9-[[@LINE-5]]:9}:"std::to_underlying("
+                  // CXX23: fix-it:{{.*}}:{[[@LINE-6]]:16-[[@LINE-6]]:16}:")"
     0 && E_int::e; // expected-error {{value of type 'GH24265::E_int' is not contextually convertible to 'bool'}}
                    // expected-error@-1 {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
-                   // expected-note@-2 {{no implicit conversion for scoped enum; consider casting to underlying type}}
-                   // CHECK: fix-it:{{.*}}:{[[@LINE-3]]:10-[[@LINE-3]]:10}:"static_cast<int>("
-                   // CHECK: fix-it:{{.*}}:{[[@LINE-4]]:17-[[@LINE-4]]:17}:")"
+                   // cxx11-20-note@-2 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+                   // CXX20: fix-it:{{.*}}:{[[@LINE-3]]:10-[[@LINE-3]]:10}:"static_cast<int>("
+                   // CXX20: fix-it:{{.*}}:{[[@LINE-4]]:17-[[@LINE-4]]:17}:")"
+                   // cxx23-note@-5 {{no implicit conversion for scoped enum; consider using std::to_underlying}}
+                   // CXX23: fix-it:{{.*}}:{[[@LINE-6]]:10-[[@LINE-6]]:10}:"std::to_underlying("
+                   // CXX23: fix-it:{{.*}}:{[[@LINE-7]]:17-[[@LINE-7]]:17}:")"
     0 || E_int::e; // expected-error {{value of type 'GH24265::E_int' is not contextually convertible to 'bool'}}
                    // expected-error@-1 {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
-                   // expected-note@-2 {{no implicit conversion for scoped enum; consider casting to underlying type}}
-                   // CHECK: fix-it:{{.*}}:{[[@LINE-3]]:10-[[@LINE-3]]:10}:"static_cast<int>("
-                   // CHECK: fix-it:{{.*}}:{[[@LINE-4]]:17-[[@LINE-4]]:17}:")"
+                   // cxx11-20-note@-2 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+                   // CXX20: fix-it:{{.*}}:{[[@LINE-3]]:10-[[@LINE-3]]:10}:"static_cast<int>("
+                   // CXX20: fix-it:{{.*}}:{[[@LINE-4]]:17-[[@LINE-4]]:17}:")"
+                   // cxx23-note@-5 {{no implicit conversion for scoped enum; consider using std::to_underlying}}
+                   // CXX23: fix-it:{{.*}}:{[[@LINE-6]]:10-[[@LINE-6]]:10}:"std::to_underlying("
+                   // CXX23: fix-it:{{.*}}:{[[@LINE-7]]:17-[[@LINE-7]]:17}:")"
 
     int a;
     a *= E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
-                   // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
-                   // CHECK: fix-it:{{.*}}:{[[@LINE-2]]:10-[[@LINE-2]]:10}:"static_cast<int>("
-                   // CHECK: fix-it:{{.*}}:{[[@LINE-3]]:17-[[@LINE-3]]:17}:")"
+                   // cxx11-20-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+                   // CXX20: fix-it:{{.*}}:{[[@LINE-2]]:10-[[@LINE-2]]:10}:"static_cast<int>("
+                   // CXX20: fix-it:{{.*}}:{[[@LINE-3]]:17-[[@LINE-3]]:17}:")"
+                   // cxx23-note@-4 {{no implicit conversion for scoped enum; consider using std::to_underlying}}
+                   // CXX23: fix-it:{{.*}}:{[[@LINE-5]]:10-[[@LINE-5]]:10}:"std::to_underlying("
+                   // CXX23: fix-it:{{.*}}:{[[@LINE-6]]:17-[[@LINE-6]]:17}:")"
     a /= E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
-                   // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
-                   // CHECK: fix-it:{{.*}}:{[[@LINE-2]]:10-[[@LINE-2]]:10}:"static_cast<int>("
-                   // CHECK: fix-it:{{.*}}:{[[@LINE-3]]:17-[[@LINE-3]]:17}:")"
+                   // cxx11-20-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+                   // CXX20: fix-it:{{.*}}:{[[@LINE-2]]:10-[[@LINE-2]]:10}:"static_cast<int>("
+                   // CXX20: fix-it:{{.*}}:{[[@LINE-3]]:17-[[@LINE-3]]:17}:")"
+                   // cxx23-note@-4 {{no implicit conversion for scoped enum; consider using std::to_underlying}}
+                   // CXX23: fix-it:{{.*}}:{[[@LINE-5]]:10-[[@LINE-5]]:10}:"std::to_underlying("
+                   // CXX23: fix-it:{{.*}}:{[[@LINE-6]]:17-[[@LINE-6]]:17}:")"
     a %= E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
-                   // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
-                   // CHECK: fix-it:{{.*}}:{[[@LINE-2]]:10-[[@LINE-2]]:10}:"static_cast<int>("
-                   // CHECK: fix-it:{{.*}}:{[[@LINE-3]]:17-[[@LINE-3]]:17}:")"
+                   // cxx11-20-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+                   // CXX20: fix-it:{{.*}}:{[[@LINE-2]]:10-[[@LINE-2]]:10}:"static_cast<int>("
+                   // CXX20: fix-it:{{.*}}:{[[@LINE-3]]:17-[[@LINE-3]]:17}:")"
+                   // cxx23-note@-4 {{no implicit conversion for scoped enum; consider using std::to_underlying}}
+                   // CXX23: fix-it:{{.*}}:{[[@LINE-5]]:10-[[@LINE-5]]:10}:"std::to_underlying("
+                   // CXX23: fix-it:{{.*}}:{[[@LINE-6]]:17-[[@LINE-6]]:17}:")"
     a += E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
-                   // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
-                   // CHECK: fix-it:{{.*}}:{[[@LINE-2]]:10-[[@LINE-2]]:10}:"static_cast<int>("
-                   // CHECK: fix-it:{{.*}}:{[[@LINE-3]]:17-[[@LINE-3]]:17}:")"
+                   // cxx11-20-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+                   // CXX20: fix-it:{{.*}}:{[[@LINE-2]]:10-[[@LINE-2]]:10}:"static_cast<int>("
+                   // CXX20: fix-it:{{.*}}:{[[@LINE-3]]:17-[[@LINE-3]]:17}:")"
+                   // cxx23-note@-4 {{no implicit conversion for scoped enum; consider using std::to_underlying}}
+                   // CXX23: fix-it:{{.*}}:{[[@LINE-5]]:10-[[@LINE-5]]:10}:"std::to_underlying("
+                   // CXX23: fix-it:{{.*}}:{[[@LINE-6]]:17-[[@LINE-6]]:17}:")"
     a -= E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
-                   // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
-                   // CHECK: fix-it:{{.*}}:{[[@LINE-2]]:10-[[@LINE-2]]:10}:"static_cast<int>("
-                   // CHECK: fix-it:{{.*}}:{[[@LINE-3]]:17-[[@LINE-3]]:17}:")"
+                   // cxx11-20-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+                   // CXX20: fix-it:{{.*}}:{[[@LINE-2]]:10-[[@LINE-2]]:10}:"static_cast<int>("
+                   // CXX20: fix-it:{{.*}}:{[[@LINE-3]]:17-[[@LINE-3]]:17}:")"
+                   // cxx23-note@-4 {{no implicit conversion for scoped enum; consider using std::to_underlying}}
+                   // CXX23: fix-it:{{.*}}:{[[@LINE-5]]:10-[[@LINE-5]]:10}:"std::to_underlying("
+                   // CXX23: fix-it:{{.*}}:{[[@LINE-6]]:17-[[@LINE-6]]:17}:")"
     a <<= E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
-                    // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
-                    // CHECK: fix-it:{{.*}}:{[[@LINE-2]]:11-[[@LINE-2]]:11}:"static_cast<int>("
-                    // CHECK: fix-it:{{.*}}:{[[@LINE-3]]:18-[[@LINE-3]]:18}:")"
+                    // cxx11-20-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+                    // CXX20: fix-it:{{.*}}:{[[@LINE-2]]:11-[[@LINE-2]]:11}:"static_cast<int>("
+                    // CXX20: fix-it:{{.*}}:{[[@LINE-3]]:18-[[@LINE-3]]:18}:")"
+                    // cxx23-note@-4 {{no implicit conversion for scoped enum; consider using std::to_underlying}}
+                    // CXX23: fix-it:{{.*}}:{[[@LINE-5]]:11-[[@LINE-5]]:11}:"std::to_underlying("
+                    // CXX23: fix-it:{{.*}}:{[[@LINE-6]]:18-[[@LINE-6]]:18}:")"
     a >>= E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
-                    // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
-                    // CHECK: fix-it:{{.*}}:{[[@LINE-2]]:11-[[@LINE-2]]:11}:"static_cast<int>("
-                    // CHECK: fix-it:{{.*}}:{[[@LINE-3]]:18-[[@LINE-3]]:18}:")"
+                    // cxx11-20-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+                    // CXX20: fix-it:{{.*}}:{[[@LINE-2]]:11-[[@LINE-2]]:11}:"static_cast<int>("
+                    // CXX20: fix-it:{{.*}}:{[[@LINE-3]]:18-[[@LINE-3]]:18}:")"
+                    // cxx23-note@-4 {{no implicit conversion for scoped enum; consider using std::to_underlying}}
+                    // CXX23: fix-it:{{.*}}:{[[@LINE-5]]:11-[[@LINE-5]]:11}:"std::to_underlying("
+                    // CXX23: fix-it:{{.*}}:{[[@LINE-6]]:18-[[@LINE-6]]:18}:")"
     a &= E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
-                   // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
-                   // CHECK: fix-it:{{.*}}:{[[@LINE-2]]:10-[[@LINE-2]]:10}:"static_cast<int>("
-                   // CHECK: fix-it:{{.*}}:{[[@LINE-3]]:17-[[@LINE-3]]:17}:")"
+                   // cxx11-20-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+                   // CXX20: fix-it:{{.*}}:{[[@LINE-2]]:10-[[@LINE-2]]:10}:"static_cast<int>("
+                   // CXX20: fix-it:{{.*}}:{[[@LINE-3]]:17-[[@LINE-3]]:17}:")"
+                   // cxx23-note@-4 {{no implicit conversion for scoped enum; consider using std::to_underlying}}
+                   // CXX23: fix-it:{{.*}}:{[[@LINE-5]]:10-[[@LINE-5]]:10}:"std::to_underlying("
+                   // CXX23: fix-it:{{.*}}:{[[@LINE-6]]:17-[[@LINE-6]]:17}:")"
     a ^= E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
-                   // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
-                   // CHECK: fix-it:{{.*}}:{[[@LINE-2]]:10-[[@LINE-2]]:10}:"static_cast<int>("
-                   // CHECK: fix-it:{{.*}}:{[[@LINE-3]]:17-[[@LINE-3]]:17}:")"
+                   // cxx11-20-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+                   // CXX20: fix-it:{{.*}}:{[[@LINE-2]]:10-[[@LINE-2]]:10}:"static_cast<int>("
+                   // CXX20: fix-it:{{.*}}:{[[@LINE-3]]:17-[[@LINE-3]]:17}:")"
+                   // cxx23-note@-4 {{no implicit conversion for scoped enum; consider using std::to_underlying}}
+                   // CXX23: fix-it:{{.*}}:{[[@LINE-5]]:10-[[@LINE-5]]:10}:"std::to_underlying("
+                   // CXX23: fix-it:{{.*}}:{[[@LINE-6]]:17-[[@LINE-6]]:17}:")"
     a |= E_int::e; // expected-error {{invalid operands to binary expression ('int' and 'GH24265::E_int')}}
-                   // expected-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
-                   // CHECK: fix-it:{{.*}}:{[[@LINE-2]]:10-[[@LINE-2]]:10}:"static_cast<int>("
-                   // CHECK: fix-it:{{.*}}:{[[@LINE-3]]:17-[[@LINE-3]]:17}:")"
+                   // cxx11-20-note@-1 {{no implicit conversion for scoped enum; consider casting to underlying type}}
+                   // CXX20: fix-it:{{.*}}:{[[@LINE-2]]:10-[[@LINE-2]]:10}:"static_cast<int>("
+                   // CXX20: fix-it:{{.*}}:{[[@LINE-3]]:17-[[@LINE-3]]:17}:")"
+                   // cxx23-note@-4 {{no implicit conversion for scoped enum; consider using std::to_underlying}}
+                   // CXX23: fix-it:{{.*}}:{[[@LINE-5]]:10-[[@LINE-5]]:10}:"std::to_underlying("
+                   // CXX23: fix-it:{{.*}}:{[[@LINE-6]]:17-[[@LINE-6]]:17}:")"
 
     // TODO: These do not have the diagnostic yet
     E_int b;
