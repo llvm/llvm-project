@@ -30,12 +30,6 @@ define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; RV32-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT5]]
 ; RV32-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; RV32:       vector.ph:
-; RV32-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; RV32-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 2
-; RV32-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP4]], 1
-; RV32-NEXT:    [[N_RND_UP:%.*]] = add i64 625, [[TMP2]]
-; RV32-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP4]]
-; RV32-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; RV32-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; RV32-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 2
 ; RV32-NEXT:    [[TMP7:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
@@ -110,12 +104,6 @@ define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; RV64-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT5]]
 ; RV64-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; RV64:       vector.ph:
-; RV64-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; RV64-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 2
-; RV64-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP4]], 1
-; RV64-NEXT:    [[N_RND_UP:%.*]] = add i64 625, [[TMP2]]
-; RV64-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP4]]
-; RV64-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; RV64-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; RV64-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 2
 ; RV64-NEXT:    [[TMP7:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()

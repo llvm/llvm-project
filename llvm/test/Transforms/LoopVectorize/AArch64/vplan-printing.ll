@@ -73,7 +73,6 @@ define i32 @print_partial_reduction(ptr %a, ptr %b) {
 ; CHECK-NEXT: }
 ; CHECK: VPlan 'Final VPlan for VF={8,16},UF={1}' {
 ; CHECK-NEXT: Live-in ir<[[EP_VFxUF:.+]]> = VF * UF
-; CHECK-NEXT: Live-in ir<[[EP_VEC_TC:.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<1024> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
@@ -83,7 +82,9 @@ define i32 @print_partial_reduction(ptr %a, ptr %b) {
 ; CHECK-NEXT: Successor(s): ir-bb<scalar.ph>, ir-bb<vector.ph>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<vector.ph>:
-; CHECK-NEXT:   EMIT vp<[[RDX_START:%.+]]> = reduction-start-vector ir<0>, ir<0>, ir<4>
+; CHECK-NEXT:  EMIT vp<%n.mod.vf> = urem ir<1024>, ir<16>
+; CHECK-NEXT:  EMIT vp<[[VEC_TC:%.+]]> = sub ir<1024>, vp<%n.mod.vf>
+; CHECK-NEXT:  EMIT vp<[[RDX_START:%.+]]> = reduction-start-vector ir<0>, ir<0>, ir<4>
 ; CHECK-NEXT: Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.body:
@@ -98,12 +99,12 @@ define i32 @print_partial_reduction(ptr %a, ptr %b) {
 ; CHECK-NEXT:   WIDEN ir<%mul> = mul ir<%ext.b>, ir<%ext.a>
 ; CHECK-NEXT:   PARTIAL-REDUCE ir<%add> = add ir<%accum>, ir<%mul>
 ; CHECK-NEXT:   EMIT vp<[[EP_IV_NEXT:%.+]]> = add nuw vp<[[EP_IV]]>, ir<16>
-; CHECK-NEXT:   EMIT branch-on-count vp<[[EP_IV_NEXT]]>, ir<1024>
+; CHECK-NEXT:   EMIT branch-on-count vp<[[EP_IV_NEXT]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT: Successor(s): middle.block, vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[RED_RESULT:%.+]]> = compute-reduction-result ir<%accum>, ir<%add>
-; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<1024>, ir<1024>
+; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<1024>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, ir-bb<scalar.ph>
 ; CHECK-EMPTY:
@@ -112,7 +113,7 @@ define i32 @print_partial_reduction(ptr %a, ptr %b) {
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<scalar.ph>:
-; CHECK-NEXT:   EMIT-SCALAR vp<[[EP_RESUME:%.+]]> = phi [ ir<1024>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:   EMIT-SCALAR vp<[[EP_RESUME:%.+]]> = phi [ vp<[[VEC_TC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:   EMIT-SCALAR vp<[[EP_MERGE:%.+]]> = phi [ vp<[[RED_RESULT]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT: Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:

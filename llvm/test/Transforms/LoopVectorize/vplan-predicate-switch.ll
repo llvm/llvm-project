@@ -5,16 +5,15 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK:      VPlan 'Final VPlan for VF={2},UF={1}' {
 ; CHECK-NEXT: Live-in ir<[[VF:.+]]> = VF
 ; CHECK-NEXT: Live-in ir<[[VFxUF:.+]]> = VF * UF
-; CHECK-NEXT: Live-in ir<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: ir<%0> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
 ; CHECK-NEXT: Successor(s): ir-bb<scalar.ph>, ir-bb<vector.ph>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<vector.ph>:
-; CHECK-NEXT:   IR %n.mod.vf = urem i64 %0, 2
-; CHECK-NEXT:   IR %n.vec = sub i64 %0, %n.mod.vf
-; CHECK-NEXT:   vp<[[END:%.+]]> = DERIVED-IV ir<%start> + ir<%n.vec> * ir<1>
+; CHECK-NEXT:   EMIT vp<%n.mod.vf> = urem ir<%0>, ir<2>
+; CHECK-NEXT:   EMIT vp<[[VTC:%.+]]> = sub ir<%0>, vp<%n.mod.vf>
+; CHECK-NEXT:   vp<[[END:%.+]]> = DERIVED-IV ir<%start> + vp<[[VTC]]> * ir<1>
 ; CHECK-NEXT: Successor(s): vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.body:
@@ -78,11 +77,11 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: default.2:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, ir<[[VFxUF]]>
-; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, ir<[[VTC]]>
+; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
 ; CHECK-NEXT: Successor(s): middle.block, vector.body
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
-; CHECK-NEXT:   EMIT vp<[[MIDDLE_CMP:%.+]]> = icmp eq ir<%0>, ir<[[VTC]]>
+; CHECK-NEXT:   EMIT vp<[[MIDDLE_CMP:%.+]]> = icmp eq ir<%0>, vp<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[MIDDLE_CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, ir-bb<scalar.ph>
 ; CHECK-EMPTY:

@@ -3969,7 +3969,7 @@ public:
   }
 
   /// Prepare the plan for execution, setting up the required live-in values.
-  void prepareToExecute(Value *VectorTripCount, VPTransformState &State);
+  void prepareToExecute(VPTransformState &State);
 
   /// Generate the IR code for this VPlan.
   void execute(VPTransformState *State);
