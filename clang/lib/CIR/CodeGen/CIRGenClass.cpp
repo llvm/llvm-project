@@ -120,10 +120,8 @@ static void emitMemberInitializer(CIRGenFunction &cgf,
 
 static bool isInitializerOfDynamicClass(const CXXCtorInitializer *baseInit) {
   const Type *baseType = baseInit->getBaseClass();
-  const auto *baseClassDecl = cast<CXXRecordDecl>(baseType->castAs<RecordType>()
-                                                      ->getOriginalDecl()
-                                                      ->getDefinitionOrSelf()
-                                                      ->getDefinitionOrSelf());
+  const auto *baseClassDecl = cast<CXXRecordDecl>(
+      baseType->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf());
   return baseClassDecl->isDynamicClass();
 }
 
