@@ -143,7 +143,6 @@ private:
           "If a loop construct has been fully unrolled, it cannot then be tiled"_err_en_US,
           parser::ToUpperCaseLetters(dir.source.ToString()));
     };
-
     nextIt = it;
     while (++nextIt != block.end()) {
       // Ignore compiler directives.
@@ -159,14 +158,16 @@ private:
         if (innerDir.v == llvm::omp::Directive::OMPD_tile) {
           auto &innerLoopVariant =
               std::get<std::optional<parser::NestedConstruct>>(loops.back()->t);
-          auto &innerLoop =
-              std::get<common::Indirection<parser::OpenMPLoopConstruct>>(
-                  innerLoopVariant.value());
-          innerLoop = std::move(*innerOmpLoop);
-          // Retrieveing the address so that DoConstruct or inner loop can be
-          // set later.
-          loops.push_back(&(innerLoop.value()));
-          nextIt = block.erase(nextIt);
+          if (innerLoopVariant.has_value()) {
+            auto *innerLoop =
+                std::get_if<common::Indirection<parser::OpenMPLoopConstruct>>(
+                    &(innerLoopVariant.value()));
+            *innerLoop = std::move(*innerOmpLoop);
+            // Retrieveing the address so that DoConstruct or inner loop can be
+            // set later.
+            loops.push_back(&(innerLoop->value()));
+            nextIt = block.erase(nextIt);
+          }
         }
       }
 

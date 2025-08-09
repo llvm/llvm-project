@@ -422,8 +422,8 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
               beginClauseList =
                   &std::get<parser::OmpClauseList>(beginDirective.t);
 
-              // FIXME(JAN): For now we check if there is an inner
-              // OpenMPLoopConstruct, and extract the size clause from there
+              // For now we check if there is an inner OpenMPLoopConstruct, and
+              // extract the size clause from there
               const auto &nestedOptional =
                   std::get<std::optional<parser::NestedConstruct>>(
                       ompConstruct.t);
