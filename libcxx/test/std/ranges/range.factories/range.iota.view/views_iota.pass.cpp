@@ -49,8 +49,7 @@ struct X {};
 template <typename IntT>
 concept CanDoubleWrap = requires(IntT i) { std::views::iota(std::views::iota(i)); };
 
-constexpr bool
-test() {
+constexpr bool test() {
   testType<SomeInt>(SomeInt(10));
   testType<SomeInt>(IntComparableWith(SomeInt(10)));
   testType<signed long>(IntComparableWith<signed long>(10));
