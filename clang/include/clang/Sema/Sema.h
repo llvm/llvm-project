@@ -15212,6 +15212,17 @@ public:
   QualType BuiltinDecay(QualType BaseType, SourceLocation Loc);
   QualType BuiltinAddReference(QualType BaseType, UTTKind UKind,
                                SourceLocation Loc);
+
+  QualType BuiltinAddRValueReference(QualType BaseType, SourceLocation Loc) {
+    return BuiltinAddReference(BaseType, UnaryTransformType::AddRvalueReference,
+                               Loc);
+  }
+
+  QualType BuiltinAddLValueReference(QualType BaseType, SourceLocation Loc) {
+    return BuiltinAddReference(BaseType, UnaryTransformType::AddLvalueReference,
+                               Loc);
+  }
+
   QualType BuiltinRemoveExtent(QualType BaseType, UTTKind UKind,
                                SourceLocation Loc);
   QualType BuiltinRemoveReference(QualType BaseType, UTTKind UKind,
@@ -15225,6 +15236,9 @@ public:
                                       SourceLocation Loc);
   QualType BuiltinChangeSignedness(QualType BaseType, UTTKind UKind,
                                    SourceLocation Loc);
+
+  bool BuiltinIsConvertible(QualType From, QualType To, SourceLocation Loc,
+                            bool CheckNothrow = false);
 
   bool BuiltinIsBaseOf(SourceLocation RhsTLoc, QualType LhsT, QualType RhsT);
 
