@@ -2129,12 +2129,12 @@ namespace {
     typedef ConstEvaluatedExprVisitor<BreakContinueFinder> Inherited;
 
     void VisitContinueStmt(const ContinueStmt* E) {
-      ContinueLoc = E->getContinueLoc();
+      ContinueLoc = E->getKwLoc();
     }
 
     void VisitBreakStmt(const BreakStmt* E) {
       if (!InSwitch)
-        BreakLoc = E->getBreakLoc();
+        BreakLoc = E->getKwLoc();
     }
 
     void VisitSwitchStmt(const SwitchStmt* S) {
