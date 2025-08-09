@@ -50,8 +50,6 @@ struct FakeFrame {
 // any memory accesses solely based on 'this' and stack_size_log.
 // Allocate() flips the appropriate allocation flag atomically, thus achieving
 // async-signal safety.
-// Allocate() flips the appropriate allocation flag atomically, thus achieving
-// async-signal safety.
 // This allocator does not have quarantine per se, but it tries to allocate the
 // frames in round robin fashion to maximize the delay between a deallocation
 // and the next allocation.
