@@ -17,6 +17,7 @@ endif()
 add_clang_library(clangDriver
   Action.cpp
   Compilation.cpp
+  DependencyScanner.cpp
   Distro.cpp
   Driver.cpp
   DriverOptions.cpp
@@ -98,5 +99,7 @@ add_clang_library(clangDriver
 
   LINK_LIBS
   clangBasic
+  clangDependencyScanning
+  clangLex
   ${system_libs}
   )
