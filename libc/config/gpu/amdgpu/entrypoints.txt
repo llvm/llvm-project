@@ -619,6 +619,9 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.bf16add
   libc.src.math.bf16addf
   libc.src.math.bf16addl
+  libc.src.math.bf16mul
+  libc.src.math.bf16mulf
+  libc.src.math.bf16mull
   libc.src.math.bf16sub
   libc.src.math.bf16subf
   libc.src.math.bf16subl
