@@ -351,6 +351,15 @@ export namespace std {
       using std::ranges::views::cartesian_product;
     }
 #endif
+
+#if _LIBCPP_STD_VER >= 26
+    // [range.cache.latest],  Cache latest view
+    using std::ranges::cache_latest_view;
+
+    namespace views {
+      using std::ranges::views::cache_latest;
+    }
+#endif
   } // namespace ranges
 
   namespace views = ranges::views;
