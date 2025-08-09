@@ -981,6 +981,20 @@ struct WriteMemoryResponseBody {
 };
 llvm::json::Value toJSON(const WriteMemoryResponseBody &);
 
+struct DAPGetModuleSymbolsArguments {
+  /// The module for which to retrieve symbols.
+  std::string moduleId;
+};
+bool fromJSON(const llvm::json::Value &,
+              DAPGetModuleSymbolsArguments &, llvm::json::Path);
+
+/// Response to `getModuleSymbols` request.
+struct DAPGetModuleSymbolsResponseBody {
+  /// The symbols for the specified module.
+  std::vector<DAPSymbol> symbols;
+};
+llvm::json::Value toJSON(const DAPGetModuleSymbolsResponseBody &);
+
 } // namespace lldb_dap::protocol
 
 #endif

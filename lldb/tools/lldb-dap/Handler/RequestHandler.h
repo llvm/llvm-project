@@ -594,6 +594,16 @@ public:
   llvm::Error Run(const protocol::CancelArguments &args) const override;
 };
 
+class DAPGetModuleSymbolsRequestHandler
+    : public RequestHandler<protocol::DAPGetModuleSymbolsArguments,
+                            llvm::Expected<protocol::DAPGetModuleSymbolsResponseBody>> {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral GetCommand() { return "dapGetModuleSymbols"; }
+  llvm::Expected<protocol::DAPGetModuleSymbolsResponseBody>
+  Run(const protocol::DAPGetModuleSymbolsArguments &args) const override;
+};
+
 /// A request used in testing to get the details on all breakpoints that are
 /// currently set in the target. This helps us to test "setBreakpoints" and
 /// "setFunctionBreakpoints" requests to verify we have the correct set of
