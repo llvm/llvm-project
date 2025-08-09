@@ -16,6 +16,7 @@
 #include "DefinitionBlockSeparator.h"
 #include "IntegerLiteralSeparatorFixer.h"
 #include "NamespaceEndCommentsFixer.h"
+#include "NumericLiteralCaseFixer.h"
 #include "ObjCPropertyAttributeOrderFixer.h"
 #include "QualifierAlignmentFixer.h"
 #include "SortJavaScriptImports.h"
@@ -469,6 +470,25 @@ struct ScalarEnumerationTraits<FormatStyle::NamespaceIndentationKind> {
     IO.enumCase(Value, "None", FormatStyle::NI_None);
     IO.enumCase(Value, "Inner", FormatStyle::NI_Inner);
     IO.enumCase(Value, "All", FormatStyle::NI_All);
+  }
+};
+
+template <>
+struct ScalarEnumerationTraits<FormatStyle::NumericLiteralComponentStyle> {
+  static void enumeration(IO &IO,
+                          FormatStyle::NumericLiteralComponentStyle &Value) {
+    IO.enumCase(Value, "Leave", FormatStyle::NLCS_Leave);
+    IO.enumCase(Value, "Upper", FormatStyle::NLCS_Upper);
+    IO.enumCase(Value, "Lower", FormatStyle::NLCS_Lower);
+  }
+};
+
+template <> struct MappingTraits<FormatStyle::NumericLiteralCaseStyle> {
+  static void mapping(IO &IO, FormatStyle::NumericLiteralCaseStyle &Base) {
+    IO.mapOptional("ExponentLetter", Base.ExponentLetter);
+    IO.mapOptional("HexDigit", Base.HexDigit);
+    IO.mapOptional("Prefix", Base.Prefix);
+    IO.mapOptional("Suffix", Base.Suffix);
   }
 };
 
@@ -1110,6 +1130,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("MaxEmptyLinesToKeep", Style.MaxEmptyLinesToKeep);
     IO.mapOptional("NamespaceIndentation", Style.NamespaceIndentation);
     IO.mapOptional("NamespaceMacros", Style.NamespaceMacros);
+    IO.mapOptional("NumericLiteralCase", Style.NumericLiteralCase);
     IO.mapOptional("ObjCBinPackProtocolList", Style.ObjCBinPackProtocolList);
     IO.mapOptional("ObjCBlockIndentWidth", Style.ObjCBlockIndentWidth);
     IO.mapOptional("ObjCBreakBeforeNestedBlockParam",
@@ -1635,6 +1656,10 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.LineEnding = FormatStyle::LE_DeriveLF;
   LLVMStyle.MaxEmptyLinesToKeep = 1;
   LLVMStyle.NamespaceIndentation = FormatStyle::NI_None;
+  LLVMStyle.NumericLiteralCase = {/*ExponentLetter=*/FormatStyle::NLCS_Leave,
+                                  /*HexDigit=*/FormatStyle::NLCS_Leave,
+                                  /*Prefix=*/FormatStyle::NLCS_Leave,
+                                  /*Suffix=*/FormatStyle::NLCS_Leave};
   LLVMStyle.ObjCBinPackProtocolList = FormatStyle::BPS_Auto;
   LLVMStyle.ObjCBlockIndentWidth = 2;
   LLVMStyle.ObjCBreakBeforeNestedBlockParam = true;
@@ -3872,6 +3897,12 @@ reformat(const FormatStyle &Style, StringRef Code,
     return IntegerLiteralSeparatorFixer().process(Env, Expanded);
   });
 
+  if (NumericLiteralCaseFixer::isActive(Style)) {
+    Passes.emplace_back([&](const Environment &Env) {
+      return NumericLiteralCaseFixer().process(Env, Expanded);
+    });
+  }
+
   if (Style.isCpp()) {
     if (Style.QualifierAlignment != FormatStyle::QAS_Leave)
       addQualifierAlignmentFixerPasses(Expanded, Passes);
@@ -3983,8 +4014,8 @@ reformat(const FormatStyle &Style, StringRef Code,
 
   if (Style.QualifierAlignment != FormatStyle::QAS_Leave) {
     // Don't make replacements that replace nothing. QualifierAlignment can
-    // produce them if one of its early passes changes e.g. `const volatile` to
-    // `volatile const` and then a later pass changes it back again.
+    // produce them if one of its early passes changes e.g. `const volatile`
+    // to `volatile const` and then a later pass changes it back again.
     tooling::Replacements NonNoOpFixes;
     for (const tooling::Replacement &Fix : Fixes) {
       StringRef OriginalCode = Code.substr(Fix.getOffset(), Fix.getLength());

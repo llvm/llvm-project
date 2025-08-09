@@ -273,6 +273,8 @@ AST Matchers
 
 clang-format
 ------------
+- Add ``NumericLiteralCase`` option for enforcing character case in numeric
+  literals.
 
 libclang
 --------
