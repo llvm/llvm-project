@@ -18,8 +18,6 @@ define void @test_widen(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
 ; TFNONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP3]]
 ; TFNONE-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
-; TFNONE-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; TFNONE-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 2
 ; TFNONE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TFNONE:       [[VECTOR_BODY]]:
 ; TFNONE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -28,7 +26,7 @@ define void @test_widen(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:    [[TMP7:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[WIDE_LOAD]], <vscale x 2 x i1> splat (i1 true))
 ; TFNONE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
 ; TFNONE-NEXT:    store <vscale x 2 x i64> [[TMP7]], ptr [[TMP8]], align 8
-; TFNONE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
+; TFNONE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; TFNONE-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; TFNONE-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; TFNONE:       [[MIDDLE_BLOCK]]:
@@ -141,8 +139,6 @@ define void @test_if_then(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
 ; TFNONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP3]]
 ; TFNONE-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
-; TFNONE-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; TFNONE-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 2
 ; TFNONE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TFNONE:       [[VECTOR_BODY]]:
 ; TFNONE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -153,7 +149,7 @@ define void @test_if_then(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP7]], <vscale x 2 x i64> [[TMP8]], <vscale x 2 x i64> zeroinitializer
 ; TFNONE-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[INDEX]]
 ; TFNONE-NEXT:    store <vscale x 2 x i64> [[PREDPHI]], ptr [[TMP10]], align 8
-; TFNONE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
+; TFNONE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; TFNONE-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; TFNONE-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; TFNONE:       [[MIDDLE_BLOCK]]:
@@ -168,10 +164,10 @@ define void @test_if_then(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[TMP12]], 50
 ; TFNONE-NEXT:    br i1 [[CMP]], label %[[IF_THEN:.*]], label %[[IF_END]]
 ; TFNONE:       [[IF_THEN]]:
-; TFNONE-NEXT:    [[TMP13:%.*]] = call i64 @foo(i64 [[TMP12]]) #[[ATTR4]]
+; TFNONE-NEXT:    [[TMP9:%.*]] = call i64 @foo(i64 [[TMP12]]) #[[ATTR4]]
 ; TFNONE-NEXT:    br label %[[IF_END]]
 ; TFNONE:       [[IF_END]]:
-; TFNONE-NEXT:    [[TMP14:%.*]] = phi i64 [ [[TMP13]], %[[IF_THEN]] ], [ 0, %[[FOR_BODY]] ]
+; TFNONE-NEXT:    [[TMP14:%.*]] = phi i64 [ [[TMP9]], %[[IF_THEN]] ], [ 0, %[[FOR_BODY]] ]
 ; TFNONE-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[INDVARS_IV]]
 ; TFNONE-NEXT:    store i64 [[TMP14]], ptr [[ARRAYIDX1]], align 8
 ; TFNONE-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -292,8 +288,6 @@ define void @test_widen_if_then_else(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
 ; TFNONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP3]]
 ; TFNONE-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
-; TFNONE-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; TFNONE-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 2
 ; TFNONE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TFNONE:       [[VECTOR_BODY]]:
 ; TFNONE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -306,7 +300,7 @@ define void @test_widen_if_then_else(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP7]], <vscale x 2 x i64> [[TMP10]], <vscale x 2 x i64> [[TMP9]]
 ; TFNONE-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[INDEX]]
 ; TFNONE-NEXT:    store <vscale x 2 x i64> [[PREDPHI]], ptr [[TMP11]], align 8
-; TFNONE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
+; TFNONE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; TFNONE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; TFNONE-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; TFNONE:       [[MIDDLE_BLOCK]]:
@@ -460,8 +454,6 @@ define void @test_widen_nomask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
 ; TFNONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP3]]
 ; TFNONE-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
-; TFNONE-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; TFNONE-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 2
 ; TFNONE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TFNONE:       [[VECTOR_BODY]]:
 ; TFNONE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -470,7 +462,7 @@ define void @test_widen_nomask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:    [[TMP7:%.*]] = call <vscale x 2 x i64> @foo_vector_nomask(<vscale x 2 x i64> [[WIDE_LOAD]])
 ; TFNONE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
 ; TFNONE-NEXT:    store <vscale x 2 x i64> [[TMP7]], ptr [[TMP8]], align 8
-; TFNONE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
+; TFNONE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; TFNONE-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; TFNONE-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; TFNONE:       [[MIDDLE_BLOCK]]:
@@ -515,8 +507,6 @@ define void @test_widen_nomask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFFALLBACK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
 ; TFFALLBACK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP3]]
 ; TFFALLBACK-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
-; TFFALLBACK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; TFFALLBACK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 2
 ; TFFALLBACK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TFFALLBACK:       [[VECTOR_BODY]]:
 ; TFFALLBACK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -525,7 +515,7 @@ define void @test_widen_nomask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFFALLBACK-NEXT:    [[TMP7:%.*]] = call <vscale x 2 x i64> @foo_vector_nomask(<vscale x 2 x i64> [[WIDE_LOAD]])
 ; TFFALLBACK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
 ; TFFALLBACK-NEXT:    store <vscale x 2 x i64> [[TMP7]], ptr [[TMP8]], align 8
-; TFFALLBACK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
+; TFFALLBACK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; TFFALLBACK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; TFFALLBACK-NEXT:    br i1 [[TMP9]], label %[[FOR_BODY:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; TFFALLBACK:       [[FOR_BODY]]:
@@ -589,8 +579,6 @@ define void @test_widen_optmask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
 ; TFNONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP3]]
 ; TFNONE-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
-; TFNONE-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; TFNONE-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 2
 ; TFNONE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TFNONE:       [[VECTOR_BODY]]:
 ; TFNONE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -599,7 +587,7 @@ define void @test_widen_optmask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:    [[TMP7:%.*]] = call <vscale x 2 x i64> @foo_vector_nomask(<vscale x 2 x i64> [[WIDE_LOAD]])
 ; TFNONE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
 ; TFNONE-NEXT:    store <vscale x 2 x i64> [[TMP7]], ptr [[TMP8]], align 8
-; TFNONE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
+; TFNONE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; TFNONE-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; TFNONE-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; TFNONE:       [[MIDDLE_BLOCK]]:
@@ -737,8 +725,6 @@ define double @test_widen_fmuladd_and_call(ptr noalias %a, ptr readnone %b, doub
 ; TFNONE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
 ; TFNONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP3]]
 ; TFNONE-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
-; TFNONE-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; TFNONE-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 2
 ; TFNONE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x double> poison, double [[M]], i64 0
 ; TFNONE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x double> [[BROADCAST_SPLATINSERT]], <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
 ; TFNONE-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -753,7 +739,7 @@ define double @test_widen_fmuladd_and_call(ptr noalias %a, ptr readnone %b, doub
 ; TFNONE-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
 ; TFNONE-NEXT:    store <vscale x 2 x i64> [[TMP9]], ptr [[TMP10]], align 8
 ; TFNONE-NEXT:    [[TMP11]] = call double @llvm.vector.reduce.fadd.nxv2f64(double [[VEC_PHI]], <vscale x 2 x double> [[TMP7]])
-; TFNONE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
+; TFNONE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; TFNONE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; TFNONE-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; TFNONE:       [[MIDDLE_BLOCK]]:
@@ -926,8 +912,6 @@ define void @test_widen_exp_v2(ptr noalias %p2, ptr noalias %p, i64 %n) #5 {
 ; TFNONE-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 2
 ; TFNONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP4]]
 ; TFNONE-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
-; TFNONE-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; TFNONE-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 2
 ; TFNONE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TFNONE:       [[VECTOR_BODY]]:
 ; TFNONE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -942,7 +926,7 @@ define void @test_widen_exp_v2(ptr noalias %p2, ptr noalias %p, i64 %n) #5 {
 ; TFNONE-NEXT:    [[TMP13:%.*]] = sub i32 [[TMP12]], 1
 ; TFNONE-NEXT:    [[TMP14:%.*]] = extractelement <vscale x 2 x double> [[PREDPHI]], i32 [[TMP13]]
 ; TFNONE-NEXT:    store double [[TMP14]], ptr [[P]], align 8
-; TFNONE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]
+; TFNONE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP4]]
 ; TFNONE-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; TFNONE-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; TFNONE:       [[MIDDLE_BLOCK]]:

@@ -28,12 +28,6 @@ define void @fadd(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; ZVFHMIN-NEXT:  [[ENTRY:.*]]:
 ; ZVFHMIN-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; ZVFHMIN:       [[VECTOR_PH]]:
-; ZVFHMIN-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
-; ZVFHMIN-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP9]], 8
-; ZVFHMIN-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP10]], 1
-; ZVFHMIN-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], [[TMP3]]
-; ZVFHMIN-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP10]]
-; ZVFHMIN-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; ZVFHMIN-NEXT:    [[TMP12:%.*]] = call i64 @llvm.vscale.i64()
 ; ZVFHMIN-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP12]], 8
 ; ZVFHMIN-NEXT:    br label %[[VECTOR_BODY:.*]]
