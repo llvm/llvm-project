@@ -322,6 +322,7 @@ CODEGENOPT(TimeTrace         , 1, 0, Benign) ///< Set when -ftime-trace is enabl
 VALUE_CODEGENOPT(TimeTraceGranularity, 32, 500, Benign) ///< Minimum time granularity (in microseconds),
                                                         ///< traced by time profiler
 CODEGENOPT(InterchangeLoops  , 1, 0, Benign) ///< Run loop-interchange.
+CODEGENOPT(FuseLoops         , 1, 0, Benign) ///< Run loop-fusion.
 CODEGENOPT(UnrollLoops       , 1, 0, Benign) ///< Control whether loops are unrolled.
 CODEGENOPT(RerollLoops       , 1, 0, Benign) ///< Control whether loops are rerolled.
 CODEGENOPT(NoUseJumpTables   , 1, 0, Benign) ///< Set when -fno-jump-tables is enabled.
