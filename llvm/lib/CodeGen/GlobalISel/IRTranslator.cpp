@@ -2786,11 +2786,15 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
   if (CI.isInlineAsm())
     return translateInlineAsm(CI, MIRBuilder);
 
-  diagnoseDontCall(CI);
-
   Intrinsic::ID ID = F ? F->getIntrinsicID() : Intrinsic::not_intrinsic;
-  if (!F || ID == Intrinsic::not_intrinsic)
-    return translateCallBase(CI, MIRBuilder);
+  if (!F || ID == Intrinsic::not_intrinsic) {
+    bool Result = translateCallBase(CI, MIRBuilder);
+    if (Result) {
+      diagnoseDontCall(CI);
+      return true;
+    }
+    return false;
+  }
 
   assert(ID != Intrinsic::not_intrinsic && "unknown intrinsic");
 
