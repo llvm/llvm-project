@@ -52,6 +52,15 @@ cl::opt<float> TypeWeight("ir2vec-type-weight", cl::Optional, cl::init(0.5),
 cl::opt<float> ArgWeight("ir2vec-arg-weight", cl::Optional, cl::init(0.2),
                          cl::desc("Weight for argument embeddings"),
                          cl::cat(IR2VecCategory));
+cl::opt<IR2VecKind> IR2VecEmbeddingKind(
+    "ir2vec-kind", cl::Optional,
+    cl::values(clEnumValN(IR2VecKind::Symbolic, "symbolic",
+                          "Generate symbolic embeddings"),
+               clEnumValN(IR2VecKind::FlowAware, "flow-aware",
+                          "Generate flow-aware embeddings")),
+    cl::init(IR2VecKind::Symbolic), cl::desc("IR2Vec embedding kind"),
+    cl::cat(IR2VecCategory));
+
 } // namespace ir2vec
 } // namespace llvm
 
@@ -149,6 +158,8 @@ std::unique_ptr<Embedder> Embedder::create(IR2VecKind Mode, const Function &F,
   switch (Mode) {
   case IR2VecKind::Symbolic:
     return std::make_unique<SymbolicEmbedder>(F, Vocab);
+  case IR2VecKind::FlowAware:
+    return std::make_unique<FlowAwareEmbedder>(F, Vocab);
   }
   return nullptr;
 }
@@ -180,6 +191,17 @@ const Embedding &Embedder::getFunctionVector() const {
   return FuncVector;
 }
 
+void Embedder::computeEmbeddings() const {
+  if (F.isDeclaration())
+    return;
+
+  // Consider only the basic blocks that are reachable from entry
+  for (const BasicBlock *BB : depth_first(&F)) {
+    computeEmbeddings(*BB);
+    FuncVector += BBVecMap[BB];
+  }
+}
+
 void SymbolicEmbedder::computeEmbeddings(const BasicBlock &BB) const {
   Embedding BBVector(Dimension, 0);
 
@@ -196,15 +218,46 @@ void SymbolicEmbedder::computeEmbeddings(const BasicBlock &BB) const {
   BBVecMap[&BB] = BBVector;
 }
 
-void SymbolicEmbedder::computeEmbeddings() const {
-  if (F.isDeclaration())
-    return;
+void FlowAwareEmbedder::computeEmbeddings(const BasicBlock &BB) const {
+  Embedding BBVector(Dimension, 0);
 
-  // Consider only the basic blocks that are reachable from entry
-  for (const BasicBlock *BB : depth_first(&F)) {
-    computeEmbeddings(*BB);
-    FuncVector += BBVecMap[BB];
+  // We consider only the non-debug and non-pseudo instructions
+  for (const auto &I : BB.instructionsWithoutDebug()) {
+    // TODO: Handle call instructions differently.
+    // For now, we treat them like other instructions
+    Embedding ArgEmb(Dimension, 0);
+    for (const auto &Op : I.operands()) {
+      // If the operand is defined elsewhere, we use its embedding
+      if (const Instruction *DefInst = dyn_cast<Instruction>(Op)) {
+        auto DefIt = InstVecMap.find(DefInst);
+        assert(DefIt != InstVecMap.end() &&
+               "Instruction should have been processed before its operands");
+        if (DefIt != InstVecMap.end()) {
+          ArgEmb += DefIt->second;
+          continue;
+        }
+        // If the definition is not in the map, we use the vocabulary
+        // Not expected, but handle it gracefully
+        LLVM_DEBUG(dbgs() << "Warning: Operand defined by instruction not "
+                             "found in InstVecMap: "
+                          << *DefInst << "\n");
+        ArgEmb += Vocab[Op];
+      }
+      // If the operand is not defined by an instruction, we use the vocabulary
+      else {
+        LLVM_DEBUG(errs() << "Using embedding from vocabulary for operand: "
+                          << *Op << "=" << Vocab[Op][0] << "\n");
+        ArgEmb += Vocab[Op];
+      }
+    }
+    // Create the instruction vector by combining opcode, type, and arguments
+    // embeddings
+    auto InstVector =
+        Vocab[I.getOpcode()] + Vocab[I.getType()->getTypeID()] + ArgEmb;
+    InstVecMap[&I] = InstVector;
+    BBVector += InstVector;
   }
+  BBVecMap[&BB] = BBVector;
 }
 
 // ==----------------------------------------------------------------------===//
@@ -552,8 +605,11 @@ PreservedAnalyses IR2VecPrinterPass::run(Module &M,
   assert(Vocabulary.isValid() && "IR2Vec Vocabulary is invalid");
 
   for (Function &F : M) {
-    std::unique_ptr<Embedder> Emb =
-        Embedder::create(IR2VecKind::Symbolic, F, Vocabulary);
+    std::unique_ptr<Embedder> Emb;
+    if (IR2VecEmbeddingKind == IR2VecKind::Symbolic)
+      Emb = Embedder::create(IR2VecKind::Symbolic, F, Vocabulary);
+    else
+      Emb = Embedder::create(IR2VecKind::FlowAware, F, Vocabulary);
     if (!Emb) {
       OS << "Error creating IR2Vec embeddings \n";
       continue;
