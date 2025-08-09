@@ -275,6 +275,17 @@ void *allocateDefaultArgStorageChain(const ASTContext &C) {
   return new (C) char[sizeof(void*) * 2];
 }
 
+bool isPackProducingBuiltinTemplate(const TemplateDecl *D) {
+  auto *BD = llvm::dyn_cast<BuiltinTemplateDecl>(D);
+  return BD && BD->getBuiltinTemplateKind() == clang::BTK__builtin_dedup_pack;
+}
+
+bool isPackProducingBuiltinTemplateName(TemplateName N) {
+  if (N.getKind() == TemplateName::DeducedTemplate)
+    return false;
+  auto *T = N.getTemplateDeclAndDefaultArgs().first;
+  return T && isPackProducingBuiltinTemplate(T);
+}
 } // namespace clang
 
 //===----------------------------------------------------------------------===//
@@ -307,8 +318,9 @@ bool TemplateDecl::hasAssociatedConstraints() const {
 bool TemplateDecl::isTypeAlias() const {
   switch (getKind()) {
   case TemplateDecl::TypeAliasTemplate:
-  case TemplateDecl::BuiltinTemplate:
     return true;
+  case TemplateDecl::BuiltinTemplate:
+    return !isPackProducingBuiltinTemplate(this);
   default:
     return false;
   };

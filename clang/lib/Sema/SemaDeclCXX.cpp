@@ -17992,7 +17992,12 @@ DeclResult Sema::ActOnTemplatedFriendTag(
   collectUnexpandedParameterPacks(QualifierLoc, Unexpanded);
   unsigned FriendDeclDepth = TempParamLists.front()->getDepth();
   for (UnexpandedParameterPack &U : Unexpanded) {
-    if (getDepthAndIndex(U).first >= FriendDeclDepth) {
+    unsigned Depth;
+    if (auto DI = getDepthAndIndex(U))
+      Depth = DI->first;
+    else
+      continue;
+    if (Depth >= FriendDeclDepth) {
       auto *ND = dyn_cast<NamedDecl *>(U.first);
       if (!ND)
         ND = cast<const TemplateTypeParmType *>(U.first)->getDecl();

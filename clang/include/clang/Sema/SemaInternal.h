@@ -15,7 +15,9 @@
 #define LLVM_CLANG_SEMA_SEMAINTERNAL_H
 
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/Type.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaDiagnostic.h"
@@ -71,12 +73,17 @@ inline std::pair<unsigned, unsigned> getDepthAndIndex(const NamedDecl *ND) {
 }
 
 /// Retrieve the depth and index of an unexpanded parameter pack.
-inline std::pair<unsigned, unsigned>
+/// Returns nullopt when the unexpanded packs do not correspond to template
+/// parameters, e.g. __builtin_dedup_types.
+inline std::optional<std::pair<unsigned, unsigned>>
 getDepthAndIndex(UnexpandedParameterPack UPP) {
   if (const auto *TTP = dyn_cast<const TemplateTypeParmType *>(UPP.first))
     return std::make_pair(TTP->getDepth(), TTP->getIndex());
-
-  return getDepthAndIndex(cast<NamedDecl *>(UPP.first));
+  if (isa<NamedDecl *>(UPP.first))
+    return getDepthAndIndex(cast<NamedDecl *>(UPP.first));
+  assert(isa<const TemplateSpecializationType *>(UPP.first) ||
+         isa<const SubstBuiltinTemplatePackType *>(UPP.first));
+  return std::nullopt;
 }
 
 class TypoCorrectionConsumer : public VisibleDeclConsumer {
