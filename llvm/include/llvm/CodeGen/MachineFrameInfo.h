@@ -76,6 +76,36 @@ public:
   bool isSpilledToReg()                    const { return SpilledToReg; }
 };
 
+class SaveRestorePoints {
+public:
+  using PointsMap = DenseMap<MachineBasicBlock *, std::vector<CalleeSavedInfo>>;
+
+private:
+  PointsMap Map;
+
+public:
+  const PointsMap &get() const { return Map; }
+
+  std::vector<CalleeSavedInfo> getCSInfo(MachineBasicBlock *MBB) const {
+    return Map.lookup(MBB);
+  }
+
+  void set(PointsMap &&CSI) { Map = std::move(CSI); }
+
+  MachineBasicBlock *findAny(const CalleeSavedInfo &Match) const {
+    for (auto [BB, CSIV] : Map) {
+      for (auto &CSI : CSIV) {
+        if (CSI.getReg() == Match.getReg())
+          return BB;
+      }
+    }
+    return nullptr;
+  }
+
+  void clear() { Map.clear(); }
+  bool empty() const { return Map.empty(); }
+};
+
 /// The MachineFrameInfo class represents an abstract stack frame until
 /// prolog/epilog code is inserted.  This class is key to allowing stack frame
 /// representation optimizations, such as frame pointer elimination.  It also
@@ -333,9 +363,16 @@ private:
   bool HasTailCall = false;
 
   /// Not null, if shrink-wrapping found a better place for the prologue.
-  MachineBasicBlock *Save = nullptr;
+  MachineBasicBlock *Prolog = nullptr;
   /// Not null, if shrink-wrapping found a better place for the epilogue.
-  MachineBasicBlock *Restore = nullptr;
+  MachineBasicBlock *Epilog = nullptr;
+
+  /// Not empty, if shrink-wrapping found a better place for saving callee
+  /// saves.
+  SaveRestorePoints SavePoints;
+  /// Not empty, if shrink-wrapping found a better place for restoring callee
+  /// saves.
+  SaveRestorePoints RestorePoints;
 
   /// Size of the UnsafeStack Frame
   uint64_t UnsafeStackSize = 0;
@@ -814,6 +851,27 @@ public:
   /// \copydoc getCalleeSavedInfo()
   std::vector<CalleeSavedInfo> &getCalleeSavedInfo() { return CSInfo; }
 
+  /// Returns callee saved info vector for provided save point in
+  /// the current function.
+  std::vector<CalleeSavedInfo> getSaveCSInfo(MachineBasicBlock *MBB) const {
+    return SavePoints.getCSInfo(MBB);
+  }
+
+  /// Returns callee saved info vector for provided restore point
+  /// in the current function.
+  const std::vector<CalleeSavedInfo>
+  getRestoreCSInfo(MachineBasicBlock *MBB) const {
+    return RestorePoints.getCSInfo(MBB);
+  }
+
+  MachineBasicBlock *findSpilledIn(const CalleeSavedInfo &CSI) const {
+    return SavePoints.findAny(CSI);
+  }
+
+  MachineBasicBlock *findRestoredIn(const CalleeSavedInfo &CSI) const {
+    return RestorePoints.findAny(CSI);
+  }
+
   /// Used by prolog/epilog inserter to set the function's callee saved
   /// information.
   void setCalleeSavedInfo(std::vector<CalleeSavedInfo> CSI) {
@@ -825,10 +883,38 @@ public:
 
   void setCalleeSavedInfoValid(bool v) { CSIValid = v; }
 
-  MachineBasicBlock *getSavePoint() const { return Save; }
-  void setSavePoint(MachineBasicBlock *NewSave) { Save = NewSave; }
-  MachineBasicBlock *getRestorePoint() const { return Restore; }
-  void setRestorePoint(MachineBasicBlock *NewRestore) { Restore = NewRestore; }
+  const SaveRestorePoints::PointsMap &getRestorePoints() const {
+    return RestorePoints.get();
+  }
+
+  const SaveRestorePoints::PointsMap &getSavePoints() const {
+    return SavePoints.get();
+  }
+
+  void setSavePoints(SaveRestorePoints::PointsMap NewSavePoints) {
+    SavePoints.set(std::move(NewSavePoints));
+  }
+
+  void setRestorePoints(SaveRestorePoints::PointsMap NewRestorePoints) {
+    RestorePoints.set(std::move(NewRestorePoints));
+  }
+
+  static SaveRestorePoints::PointsMap constructSaveRestorePoints(
+      const SaveRestorePoints::PointsMap &SRPoints,
+      const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &BBMap) {
+    SaveRestorePoints::PointsMap Pts{};
+    for (auto &Src : SRPoints)
+      Pts.insert({BBMap.find(Src.first)->second, Src.second});
+    return Pts;
+  }
+
+  MachineBasicBlock *getProlog() const { return Prolog; }
+  void setProlog(MachineBasicBlock *BB) { Prolog = BB; }
+  MachineBasicBlock *getEpilog() const { return Epilog; }
+  void setEpilog(MachineBasicBlock *BB) { Epilog = BB; }
+
+  void clearSavePoints() { SavePoints.clear(); }
+  void clearRestorePoints() { RestorePoints.clear(); }
 
   uint64_t getUnsafeStackSize() const { return UnsafeStackSize; }
   void setUnsafeStackSize(uint64_t Size) { UnsafeStackSize = Size; }

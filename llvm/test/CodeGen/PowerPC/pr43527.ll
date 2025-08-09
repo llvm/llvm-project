@@ -18,6 +18,7 @@ define dso_local void @test(i64 %arg, i64 %arg1, ptr %arg2) {
 ; CHECK-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stdu r1, -64(r1)
 ; CHECK-NEXT:    mr r30, r5
 ; CHECK-NEXT:    sub r29, r4, r3
@@ -36,7 +37,6 @@ define dso_local void @test(i64 %arg, i64 %arg1, ptr %arg2) {
 ; CHECK-NEXT:  # %bb.4: # %bb15
 ; CHECK-NEXT:    addi r1, r1, 64
 ; CHECK-NEXT:    ld r0, 16(r1)
-; CHECK-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld r28, -32(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    mtlr r0

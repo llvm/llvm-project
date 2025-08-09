@@ -31,47 +31,61 @@ liveins:
   - { reg: '$esi' }
 # CHECK: frameInfo:
 # CHECK:      savePoint:
+# CHECK-NEXT:   - point:           '%bb.1'
+# CHECK-NEXT:     registers:
+# CHECK-NEXT:       - '$eax'
 # CHECK-NEXT:   - point:           '%bb.2'
-# CHECK-NEXT:     registers:       []
-# CHECK:      restorePoint:
+# CHECK-NEXT:     registers:
+# CHECK-NEXT:       - '$edi'
+# CHECK-NEXT: restorePoint:
 # CHECK-NEXT:   - point:           '%bb.2'
-# CHECK-NEXT:     registers:       []
+# CHECK-NEXT:     registers:
+# CHECK-NEXT:       - '$edi'
+# CHECK-NEXT:   - point:           '%bb.3'
+# CHECK-NEXT:     registers:
+# CHECK-NEXT:       - '$eax'
+
 # CHECK: stack
 frameInfo:
   maxAlignment:  4
   hasCalls:      true
-  savePoint:     '%bb.2'
-  restorePoint:  '%bb.2'
+  savePoint:
+    - point:     '%bb.1'
+      registers:
+        - '$eax'
+    - point:     '%bb.2'
+      registers:
+        - '$edi'
+  restorePoint:  
+    - point:     '%bb.2'
+      registers:
+        - '$edi'
+    - point:     '%bb.3'
+      registers:
+        - '$eax'
 stack:
   - { id: 0, name: tmp, offset: 0, size: 4, alignment: 4 }
 body: |
   bb.0:
     successors: %bb.2, %bb.1
     liveins: $edi, $esi
-
     $eax = COPY $edi
     CMP32rr $eax, killed $esi, implicit-def $eflags
     JCC_1 %bb.2, 12, implicit killed $eflags
-
   bb.1:
     successors: %bb.3
     liveins: $eax
-
     JMP_1 %bb.3
-
   bb.2.true:
     successors: %bb.3
     liveins: $eax
-
     MOV32mr %stack.0.tmp, 1, _, 0, _, killed $eax
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $ssp, implicit-def dead $eflags, implicit $rsp, implicit $ssp
     $rsi = LEA64r %stack.0.tmp, 1, _, 0, _
     $edi = MOV32r0 implicit-def dead $eflags
     CALL64pcrel32 @doSomething, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit $rsi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
     ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $ssp, implicit-def dead $eflags, implicit $rsp, implicit $ssp
-
   bb.3.false:
     liveins: $eax
-
     RET64 $eax
 ...

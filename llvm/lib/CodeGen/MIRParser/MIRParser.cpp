@@ -124,6 +124,10 @@ public:
   bool initializeFrameInfo(PerFunctionMIParsingState &PFS,
                            const yaml::MachineFunction &YamlMF);
 
+  bool initializeSaveRestorePoints(PerFunctionMIParsingState &PFS,
+                                   const yaml::SaveRestorePoints &YamlSRPoints,
+                                   bool IsSavePoints);
+
   bool initializeCallSiteInfo(PerFunctionMIParsingState &PFS,
                               const yaml::MachineFunction &YamlMF);
 
@@ -867,18 +871,12 @@ bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
   MFI.setHasTailCall(YamlMFI.HasTailCall);
   MFI.setCalleeSavedInfoValid(YamlMFI.IsCalleeSavedInfoValid);
   MFI.setLocalFrameSize(YamlMFI.LocalFrameSize);
-  if (!YamlMFI.SavePoint.Value.empty()) {
-    MachineBasicBlock *MBB = nullptr;
-    if (parseMBBReference(PFS, MBB, YamlMFI.SavePoint))
-      return true;
-    MFI.setSavePoint(MBB);
-  }
-  if (!YamlMFI.RestorePoint.Value.empty()) {
-    MachineBasicBlock *MBB = nullptr;
-    if (parseMBBReference(PFS, MBB, YamlMFI.RestorePoint))
-      return true;
-    MFI.setRestorePoint(MBB);
-  }
+  if (initializeSaveRestorePoints(PFS, YamlMFI.SavePoints,
+                                  /*IsSavePoints=*/true))
+    return true;
+  if (initializeSaveRestorePoints(PFS, YamlMFI.RestorePoints,
+                                  /*IsSavePoints=*/false))
+    return true;
 
   std::vector<CalleeSavedInfo> CSIInfo;
   // Initialize the fixed frame objects.
@@ -1090,6 +1088,52 @@ bool MIRParserImpl::initializeConstantPool(PerFunctionMIParsingState &PFS,
                    Twine("redefinition of constant pool item '%const.") +
                        Twine(YamlConstant.ID.Value) + "'");
   }
+  return false;
+}
+
+// Return true if basic block was incorrectly specified in MIR
+bool MIRParserImpl::initializeSaveRestorePoints(
+    PerFunctionMIParsingState &PFS, const yaml::SaveRestorePoints &YamlSRPoints,
+    bool IsSavePoints) {
+  SMDiagnostic Error;
+  MachineBasicBlock *MBB = nullptr;
+  llvm::SaveRestorePoints::PointsMap SRPoints;
+  MachineFunction &MF = PFS.MF;
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  if (std::holds_alternative<std::vector<yaml::SaveRestorePointEntry>>(
+          YamlSRPoints)) {
+    const auto &VectorRepr =
+        std::get<std::vector<yaml::SaveRestorePointEntry>>(YamlSRPoints);
+    if (VectorRepr.empty())
+      return false;
+
+    for (const auto &[EntryMBB, EntryRegisters] : VectorRepr) {
+      if (parseMBBReference(PFS, MBB, EntryMBB.Value))
+        return true;
+
+      std::vector<CalleeSavedInfo> Registers;
+      for (auto &RegStr : EntryRegisters) {
+        Register Reg;
+        if (parseNamedRegisterReference(PFS, Reg, RegStr.Value, Error))
+          return error(Error, RegStr.SourceRange);
+        Registers.push_back(CalleeSavedInfo(Reg));
+      }
+      SRPoints.try_emplace(MBB, std::move(Registers));
+    }
+  } else {
+    yaml::StringValue StringRepr = std::get<yaml::StringValue>(YamlSRPoints);
+    if (StringRepr.Value.empty())
+      return false;
+    if (parseMBBReference(PFS, MBB, StringRepr))
+      return true;
+    SRPoints.try_emplace(MBB, MFI.getCalleeSavedInfo());
+  }
+
+  if (IsSavePoints)
+    MFI.setSavePoints(SRPoints);
+  else
+    MFI.setRestorePoints(SRPoints);
   return false;
 }
 

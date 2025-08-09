@@ -92,11 +92,11 @@ static void cloneFrameInfo(
   DstMFI.setCVBytesOfCalleeSavedRegisters(
       SrcMFI.getCVBytesOfCalleeSavedRegisters());
 
-  if (MachineBasicBlock *SavePt = SrcMFI.getSavePoint())
-    DstMFI.setSavePoint(Src2DstMBB.find(SavePt)->second);
-  if (MachineBasicBlock *RestorePt = SrcMFI.getRestorePoint())
-    DstMFI.setRestorePoint(Src2DstMBB.find(RestorePt)->second);
+  DstMFI.setSavePoints(MachineFrameInfo::constructSaveRestorePoints(
+      SrcMFI.getSavePoints(), Src2DstMBB));
 
+  DstMFI.setRestorePoints(MachineFrameInfo::constructSaveRestorePoints(
+      SrcMFI.getRestorePoints(), Src2DstMBB));
 
   auto CopyObjectProperties = [](MachineFrameInfo &DstMFI,
                                  const MachineFrameInfo &SrcMFI, int FI) {
