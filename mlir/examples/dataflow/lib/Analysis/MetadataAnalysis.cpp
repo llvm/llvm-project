@@ -99,7 +99,7 @@ LogicalResult MetadataAnalysis::visitOperation(
     isChanged |= result->join(latticeValue);
 
     // All lattice of operands of op are joined to the lattice of result.
-    for (auto operand : operands)
+    for (MetadataLatticeValueLattice *operand : operands)
       isChanged |= result->join(*operand);
 
     propagateIfChanged(result, isChanged);
