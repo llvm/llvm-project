@@ -20,7 +20,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/ExternalASTSource.h"
-#include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/NestedNameSpecifierBase.h"
 #include "clang/AST/Redeclarable.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/AddressSpaces.h"
@@ -833,9 +833,9 @@ public:
 
   /// Retrieve the nested-name-specifier that qualifies the name of this
   /// declaration, if it was present in the source.
-  NestedNameSpecifier *getQualifier() const {
+  NestedNameSpecifier getQualifier() const {
     return hasExtInfo() ? getExtInfo()->QualifierLoc.getNestedNameSpecifier()
-                        : nullptr;
+                        : std::nullopt;
   }
 
   /// Retrieve the nested-name-specifier (with source-location
@@ -3943,9 +3943,9 @@ public:
 
   /// Retrieve the nested-name-specifier that qualifies the name of this
   /// declaration, if it was present in the source.
-  NestedNameSpecifier *getQualifier() const {
+  NestedNameSpecifier getQualifier() const {
     return hasExtInfo() ? getExtInfo()->QualifierLoc.getNestedNameSpecifier()
-                        : nullptr;
+                        : std::nullopt;
   }
 
   /// Retrieve the nested-name-specifier (with source-location

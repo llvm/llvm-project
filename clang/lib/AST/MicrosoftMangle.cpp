@@ -3246,11 +3246,11 @@ void MicrosoftCXXNameMangler::mangleTagTypeKind(TagTypeKind TTK) {
 }
 void MicrosoftCXXNameMangler::mangleType(const EnumType *T, Qualifiers,
                                          SourceRange) {
-  mangleType(cast<TagType>(T)->getDecl());
+  mangleType(cast<TagType>(T)->getOriginalDecl()->getDefinitionOrSelf());
 }
 void MicrosoftCXXNameMangler::mangleType(const RecordType *T, Qualifiers,
                                          SourceRange) {
-  mangleType(cast<TagType>(T)->getDecl());
+  mangleType(cast<TagType>(T)->getOriginalDecl()->getDefinitionOrSelf());
 }
 void MicrosoftCXXNameMangler::mangleType(const TagDecl *TD) {
   mangleTagTypeKind(TD->getTagKind());

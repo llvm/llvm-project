@@ -2012,8 +2012,7 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
     } else if (const BuiltinType *BTy = BaseTy->getAs<BuiltinType>()) {
       performBuiltinTypeAlignmentUpgrade(BTy);
     } else if (const RecordType *RT = BaseTy->getAs<RecordType>()) {
-      const RecordDecl *RD = RT->getDecl();
-      assert(RD && "Expected non-null RecordDecl.");
+      const RecordDecl *RD = RT->getOriginalDecl();
       const ASTRecordLayout &FieldRecord = Context.getASTRecordLayout(RD);
       PreferredAlign = FieldRecord.getPreferredAlignment();
     }
@@ -2714,7 +2713,7 @@ MicrosoftRecordLayoutBuilder::getAdjustedElementInfo(
   else {
     if (auto RT =
             FD->getType()->getBaseElementTypeUnsafe()->getAs<RecordType>()) {
-      auto const &Layout = Context.getASTRecordLayout(RT->getDecl());
+      auto const &Layout = Context.getASTRecordLayout(RT->getOriginalDecl());
       EndsWithZeroSizedObject = Layout.endsWithZeroSizedObject();
       FieldRequiredAlignment = std::max(FieldRequiredAlignment,
                                         Layout.getRequiredAlignment());
@@ -3697,8 +3696,8 @@ static void DumpRecordLayout(raw_ostream &OS, const RecordDecl *RD,
 
     // Recursively dump fields of record type.
     if (auto RT = Field->getType()->getAs<RecordType>()) {
-      DumpRecordLayout(OS, RT->getDecl(), C, FieldOffset, IndentLevel,
-                       Field->getName().data(),
+      DumpRecordLayout(OS, RT->getOriginalDecl()->getDefinitionOrSelf(), C,
+                       FieldOffset, IndentLevel, Field->getName().data(),
                        /*PrintSizeInfo=*/false,
                        /*IncludeVirtualBases=*/true);
       continue;

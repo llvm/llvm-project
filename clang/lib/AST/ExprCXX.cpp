@@ -1687,10 +1687,9 @@ CXXRecordDecl *UnresolvedMemberExpr::getNamingClass() {
   // It can't be dependent: after all, we were actually able to do the
   // lookup.
   CXXRecordDecl *Record = nullptr;
-  auto *NNS = getQualifier();
-  if (NNS && NNS->getKind() != NestedNameSpecifier::Super) {
-    const Type *T = getQualifier()->getAsType();
-    assert(T && "qualifier in member expression does not name type");
+  if (NestedNameSpecifier Qualifier = getQualifier();
+      Qualifier.getKind() == NestedNameSpecifier::Kind::Type) {
+    const Type *T = getQualifier().getAsType();
     Record = T->getAsCXXRecordDecl();
     assert(Record && "qualifier in member expression does not name record");
   }
