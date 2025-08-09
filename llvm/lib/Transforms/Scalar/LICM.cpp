@@ -857,9 +857,17 @@ public:
     }
 
     // Now finally clone BI.
-    ReplaceInstWithInst(
-        HoistTarget->getTerminator(),
-        BranchInst::Create(HoistTrueDest, HoistFalseDest, BI->getCondition()));
+    auto *NewBI =
+        BranchInst::Create(HoistTrueDest, HoistFalseDest, BI->getCondition(),
+                           HoistTarget->getTerminator()->getIterator());
+    HoistTarget->getTerminator()->eraseFromParent();
+    // Handle "performance-related" metadata. In particular:
+    // - md_prof: it should also come from the original branch - since the
+    // condition was hoisted, the branch probabilities shouldn't change.
+    // // FIXME: Issue #152767: debug info should also be the same as the
+    // original branch, **if** the user explicitly indicates that.
+    if (!ProfcheckDisableMetadataFixes)
+      NewBI->copyMetadata(*BI, {LLVMContext::MD_prof});
     ++NumClonedBranches;
 
     assert(CurLoop->getLoopPreheader() &&

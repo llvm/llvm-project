@@ -44,6 +44,7 @@ class LoopNest;
 
 extern cl::opt<unsigned> SetLicmMssaOptCap;
 extern cl::opt<unsigned> SetLicmMssaNoAccForPromotionCap;
+LLVM_ABI extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 
 struct LICMOptions {
   unsigned MssaOptCap;
