@@ -136,8 +136,8 @@ class FakeStack {
   //    and   ((1 << stack_size_log) * class_id) is aligned to
   //          1<<kMaxStackFrameSizeLog
   // 4) BytesInSizeClass(class_id) * pos is aligned to
-  //    BytesInSizeClass(class_id);
-  // The sum of these is aligned to BytesInSizeClass(max_class_id).
+  //    BytesInSizeClass(class_id)
+  // The sum of these is aligned to BytesInSizeClass(class_id).
   u8 *GetFrame(uptr stack_size_log, uptr class_id, uptr pos) {
     return reinterpret_cast<u8 *>(this) + kFlagsOffset +
            SizeRequiredForFlags(stack_size_log) +
