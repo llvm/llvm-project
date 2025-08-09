@@ -205,7 +205,7 @@ CanQualType CIRGenTypes::deriveThisType(const CXXRecordDecl *rd,
                                         const CXXMethodDecl *md) {
   QualType recTy;
   if (rd) {
-    recTy = getASTContext().getTagDeclType(rd)->getCanonicalTypeInternal();
+    recTy = getASTContext().getCanonicalTagType(rd);
   } else {
     // This can happen with the MS ABI. It shouldn't need anything more than
     // setting recTy to VoidTy here, but we're flagging it for now because we
@@ -267,7 +267,9 @@ void CIRGenFunction::emitDelegateCallArg(CallArgList &args,
   // Deactivate the cleanup for the callee-destructed param that was pushed.
   assert(!cir::MissingFeatures::thunks());
   if (type->isRecordType() &&
-      type->castAs<RecordType>()->getDecl()->isParamDestroyedInCallee() &&
+      type->castAs<RecordType>()
+          ->getOriginalDecl()
+          ->isParamDestroyedInCallee() &&
       param->needsDestruction(getContext())) {
     cgm.errorNYI(param->getSourceRange(),
                  "emitDelegateCallArg: callee-destructed param");
@@ -667,8 +669,9 @@ void CIRGenFunction::emitCallArg(CallArgList &args, const clang::Expr *e,
   // In the Microsoft C++ ABI, aggregate arguments are destructed by the callee.
   // However, we still have to push an EH-only cleanup in case we unwind before
   // we make it to the call.
-  if (argType->isRecordType() &&
-      argType->castAs<RecordType>()->getDecl()->isParamDestroyedInCallee()) {
+  if (argType->isRecordType() && argType->castAs<RecordType>()
+                                     ->getOriginalDecl()
+                                     ->isParamDestroyedInCallee()) {
     assert(!cir::MissingFeatures::msabi());
     cgm.errorNYI(e->getSourceRange(), "emitCallArg: msabi is NYI");
   }

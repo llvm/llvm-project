@@ -86,7 +86,7 @@ static void emitMemberInitializer(CIRGenFunction &cgf,
   QualType fieldType = field->getType();
 
   mlir::Value thisPtr = cgf.loadCXXThis();
-  QualType recordTy = cgf.getContext().getTypeDeclType(classDecl);
+  QualType recordTy = cgf.getContext().getCanonicalTypeDeclType(classDecl);
 
   // If a base constructor is being emitted, create an LValue that has the
   // non-virtual alignment.
@@ -121,7 +121,7 @@ static void emitMemberInitializer(CIRGenFunction &cgf,
 static bool isInitializerOfDynamicClass(const CXXCtorInitializer *baseInit) {
   const Type *baseType = baseInit->getBaseClass();
   const auto *baseClassDecl =
-      cast<CXXRecordDecl>(baseType->castAs<RecordType>()->getDecl());
+      cast<CXXRecordDecl>(baseType->castAs<RecordType>()->getOriginalDecl());
   return baseClassDecl->isDynamicClass();
 }
 
@@ -161,7 +161,7 @@ void CIRGenFunction::emitBaseInitializer(mlir::Location loc,
 
   const Type *baseType = baseInit->getBaseClass();
   const auto *baseClassDecl =
-      cast<CXXRecordDecl>(baseType->castAs<RecordType>()->getDecl());
+      cast<CXXRecordDecl>(baseType->castAs<RecordType>()->getOriginalDecl());
 
   bool isBaseVirtual = baseInit->isBaseVirtual();
 
@@ -377,7 +377,7 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
   //
   // Note that these are complete objects and so we don't need to
   // use the non-virtual size or alignment.
-  QualType type = getContext().getTypeDeclType(ctor->getParent());
+  QualType type = getContext().getCanonicalTypeDeclType(ctor->getParent());
   CharUnits eltAlignment = arrayBase.getAlignment().alignmentOfArrayElement(
       getContext().getTypeSizeInChars(type));
 
@@ -484,7 +484,7 @@ void CIRGenFunction::emitImplicitAssignmentOperatorBody(FunctionArgList &args) {
 void CIRGenFunction::destroyCXXObject(CIRGenFunction &cgf, Address addr,
                                       QualType type) {
   const RecordType *rtype = type->castAs<RecordType>();
-  const CXXRecordDecl *record = cast<CXXRecordDecl>(rtype->getDecl());
+  const CXXRecordDecl *record = cast<CXXRecordDecl>(rtype->getOriginalDecl());
   const CXXDestructorDecl *dtor = record->getDestructor();
   // TODO(cir): Unlike traditional codegen, CIRGen should actually emit trivial
   // dtors which shall be removed on later CIR passes. However, only remove this

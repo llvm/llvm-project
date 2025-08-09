@@ -997,7 +997,7 @@ static bool isVarDeclStrongDefinition(const ASTContext &astContext,
       return true;
 
     if (const auto *rt = varType->getAs<RecordType>()) {
-      const RecordDecl *rd = rt->getDecl();
+      const RecordDecl *rd = rt->getOriginalDecl();
       for (const FieldDecl *fd : rd->fields()) {
         if (fd->isBitField())
           continue;
@@ -2067,7 +2067,7 @@ CharUnits CIRGenModule::computeNonVirtualBaseClassOffset(
     const ASTRecordLayout &layout = astContext.getASTRecordLayout(rd);
 
     const auto *baseDecl = cast<CXXRecordDecl>(
-        base->getType()->castAs<clang::RecordType>()->getDecl());
+        base->getType()->castAs<clang::RecordType>()->getOriginalDecl());
 
     // Add the offset.
     offset += layout.getBaseClassOffset(baseDecl);
