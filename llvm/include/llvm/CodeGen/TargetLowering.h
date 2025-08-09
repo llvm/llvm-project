@@ -547,10 +547,10 @@ public:
   // intermediate results in f32 precision and range.
   virtual bool softPromoteHalfType() const { return false; }
 
-  // Return true if, for soft-promoted half, the half type should be passed
-  // passed to and returned from functions as f32. The default behavior is to
-  // pass as i16. If soft-promoted half is not used, this function is ignored
-  // and values are always passed and returned as f32.
+  // Return true if, for soft-promoted half, the half type should be passed to
+  // and returned from functions as f32. The default behavior is to pass as
+  // i16. If soft-promoted half is not used, this function is ignored and
+  // values are always passed and returned as f32.
   virtual bool useFPRegsForHalfType() const { return false; }
 
   // There are two general methods for expanding a BUILD_VECTOR node:
