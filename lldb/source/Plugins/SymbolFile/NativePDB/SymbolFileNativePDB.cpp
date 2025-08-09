@@ -39,6 +39,7 @@
 #include "llvm/DebugInfo/PDB/Native/ModuleDebugStream.h"
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
+#include "llvm/DebugInfo/PDB/Native/PublicsStream.h"
 #include "llvm/DebugInfo/PDB/Native/SymbolStream.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/DebugInfo/PDB/PDB.h"
@@ -500,7 +501,9 @@ lldb::FunctionSP SymbolFileNativePDB::CreateFunction(PdbCompilandSymId func_id,
     return nullptr;
 
   PdbTypeSymId sig_id(proc.FunctionType, false);
-  Mangled mangled(proc.Name);
+  auto mangled_opt =
+      FindMangledSymbol(SegmentOffset(proc.Segment, proc.CodeOffset));
+  Mangled mangled(mangled_opt.value_or(proc.Name));
   FunctionSP func_sp = std::make_shared<Function>(
       &comp_unit, toOpaqueUid(func_id), toOpaqueUid(sig_id), mangled,
       func_type.get(), func_addr,
@@ -2440,4 +2443,68 @@ SymbolFileNativePDB::GetContextForType(TypeIndex ti) {
     break;
   }
   return ctx;
+}
+
+std::optional<llvm::StringRef>
+SymbolFileNativePDB::FindMangledFunctionName(PdbCompilandSymId func_id) {
+  const CompilandIndexItem *cci =
+      m_index->compilands().GetCompiland(func_id.modi);
+  if (!cci)
+    return std::nullopt;
+
+  CVSymbol sym_record = cci->m_debug_stream.readSymbolAtOffset(func_id.offset);
+  if (sym_record.kind() != S_LPROC32 && sym_record.kind() != S_GPROC32)
+    return std::nullopt;
+
+  ProcSym proc(static_cast<SymbolRecordKind>(sym_record.kind()));
+  cantFail(SymbolDeserializer::deserializeAs<ProcSym>(sym_record, proc));
+  return FindMangledSymbol(SegmentOffset(proc.Segment, proc.CodeOffset));
+}
+
+/// Find the mangled name of a function at \a so.
+///
+/// This is similar to the NearestSym function from Microsoft's PDB reference:
+/// https://github.com/microsoft/microsoft-pdb/blob/805655a28bd8198004be2ac27e6e0290121a5e89/PDB/dbi/gsi.cpp#L1492-L1581
+/// The main difference is that we search for the exact symbol.
+///
+/// \param so[in] The address of the function given by its segment and code
+/// offset.
+/// \return The mangled function name if found. Otherwise an empty optional.
+std::optional<llvm::StringRef>
+SymbolFileNativePDB::FindMangledSymbol(SegmentOffset so) {
+  // The address map is sorted by address, so we do binary search.
+  // Each element is an offset into the symbols for a public symbol.
+  auto lo = m_index->publics().getAddressMap().begin();
+  auto hi = m_index->publics().getAddressMap().end();
+  hi -= 1;
+
+  while (lo < hi) {
+    auto tgt = lo + ((hi - lo + 1) / 2);
+    auto val = tgt->value();
+    auto sym = m_index->symrecords().readRecord(val);
+    if (sym.kind() != S_PUB32)
+      return std::nullopt; // this is most likely corrupted debug info
+
+    PublicSym32 psym =
+        llvm::cantFail(SymbolDeserializer::deserializeAs<PublicSym32>(sym));
+    SegmentOffset cur(psym.Segment, psym.Offset);
+    if (so < cur) {
+      tgt -= 1;
+      hi = tgt;
+    } else if (so == cur)
+      return psym.Name;
+    else
+      lo = tgt;
+  }
+
+  // We might've found something, check if it's the symbol we're searching for
+  auto val = lo->value();
+  auto sym = m_index->symrecords().readRecord(val);
+  if (sym.kind() != S_PUB32)
+    return std::nullopt;
+  PublicSym32 psym =
+      llvm::cantFail(SymbolDeserializer::deserializeAs<PublicSym32>(sym));
+  if (psym.Segment != so.segment || psym.Offset != so.offset)
+    return std::nullopt;
+  return psym.Name;
 }
