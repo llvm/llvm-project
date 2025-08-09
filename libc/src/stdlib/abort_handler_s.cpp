@@ -11,8 +11,9 @@
 #include "hdr/types/errno_t.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
-#include <stdio.h>
-#include <stdlib.h>
+#include "src/stdio/fflush.h"
+#include "src/stdio/fprintf.h"
+#include "src/stdlib/abort.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

@@ -677,6 +677,9 @@ add_entrypoint_object(
     libc.src.__support.macros.config
     libc.src.__support.macros.attributes
     libc.src.__support.File.file
+    libc.src.stdio.fflush
+    libc.src.stdio.fprintf
+    libc.src.stdlib.abort
 )
 
 add_header_library(
