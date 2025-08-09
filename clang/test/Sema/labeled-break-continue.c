@@ -142,7 +142,6 @@ void f7() {
 
 
 // TODO:
-//  - Compat diags
 //  - Add tests for all the stuff that ActOnBreakStmt normally checks (SEH __finally etc.)
 //  - C++ support: range-based for loops
 //  - ObjC support: 'for in' loops

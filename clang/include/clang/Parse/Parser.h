@@ -7484,6 +7484,8 @@ public:
   /// \endverbatim
   StmtResult ParseReturnStatement();
 
+  StmtResult ParseBreakOrContinueStatement(bool IsContinue);
+
   StmtResult ParsePragmaLoopHint(StmtVector &Stmts, ParsedStmtContext StmtCtx,
                                  SourceLocation *TrailingElseLoc,
                                  ParsedAttributes &Attrs);
