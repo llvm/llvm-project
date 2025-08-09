@@ -8,8 +8,7 @@
 
 #include "MulTest.h"
 
-#include "src/math/bf16mul.h"
-
 #include "src/__support/FPUtil/bfloat16.h"
+#include "src/math/bf16mul.h"
 
 LIST_MUL_TESTS(bfloat16, double, LIBC_NAMESPACE::bf16mul)
