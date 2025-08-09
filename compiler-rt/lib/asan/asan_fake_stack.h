@@ -125,7 +125,7 @@ class FakeStack {
   //
   // Note that alignment to 1<<kMaxStackFrameSizeLog (aka
   // BytesInSizeClass(max_class_id)) implies alignment to BytesInSizeClass()
-  // for any class_id, since the class sizes are increasing powers of 2.
+  // for any class_id, since the class sizes are increasing powers of 2. [*]
   //
   // 1) 'this' is aligned to 1<<kMaxStackFrameSizeLog (see FakeStack::Create)
   // 2) (kFlagsOffset + SizeRequiredForFlags()) is aligned to
@@ -138,6 +138,12 @@ class FakeStack {
   // 4) BytesInSizeClass(class_id) * pos is aligned to
   //    BytesInSizeClass(class_id)
   // The sum of these is aligned to BytesInSizeClass(class_id).
+  //
+  // This is nearly-optimal: we must ensure that GetFrame() is aligned to
+  // BytesInSizeClass(max_class_id)) when called with max_class_id, and
+  // alignment implies a cost of up to (1<<kMaxStackFrameSizeLog) bytes. Our
+  // alignment in steps 1) and 2) incur nearly double this cost.
+  // Corollary of [*]: we pay the cost of aligning to
   u8 *GetFrame(uptr stack_size_log, uptr class_id, uptr pos) {
     return reinterpret_cast<u8 *>(this) + kFlagsOffset +
            SizeRequiredForFlags(stack_size_log) +
