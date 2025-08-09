@@ -81,4 +81,4 @@ Named maintainers, if available, should be contacted first, as they're more acti
 #### Accessory Dialects
 * ‘bufferization’ Dialect (tensor, [@matthias-springer](https://github.com/matthias-springer))
 * ‘ml_program’ Dialect ([@jpienaar](https://github.com/jpienaar))
-* ‘quant’ Dialect (unmaintained)
+* ‘quant’ Dialect ([@javedabsar](https://github.com/javedabsar1))
