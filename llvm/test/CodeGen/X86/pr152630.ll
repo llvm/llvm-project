@@ -6,7 +6,7 @@ define i32 @pr152630(i1 %cond) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    decl %edi
-; CHECK-NEXT:    cmpl $255, %edi
+; CHECK-NEXT:    cmpl $-1, %edi
 ; CHECK-NEXT:    je .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    movzbl %dil, %eax
