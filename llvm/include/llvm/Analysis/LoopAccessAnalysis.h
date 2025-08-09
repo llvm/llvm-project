@@ -183,10 +183,13 @@ public:
   MemoryDepChecker(PredicatedScalarEvolution &PSE, AssumptionCache *AC,
                    DominatorTree *DT, const Loop *L,
                    const DenseMap<Value *, const SCEV *> &SymbolicStrides,
-                   unsigned MaxTargetVectorWidthInBits)
+                   unsigned MaxTargetVectorWidthInBits,
+                   bool AllowNonPow2StoreLoadForwardDistance)
       : PSE(PSE), AC(AC), DT(DT), InnermostLoop(L),
         SymbolicStrides(SymbolicStrides),
-        MaxTargetVectorWidthInBits(MaxTargetVectorWidthInBits) {}
+        MaxTargetVectorWidthInBits(MaxTargetVectorWidthInBits),
+        AllowNonPow2StoreLoadForwardDistance(
+            AllowNonPow2StoreLoadForwardDistance) {}
 
   /// Register the location (instructions are given increasing numbers)
   /// of a write access.
@@ -223,17 +226,29 @@ public:
 
   /// Return true if there are no store-load forwarding dependencies.
   bool isSafeForAnyStoreLoadForwardDistances() const {
-    return MaxStoreLoadForwardSafeDistanceInBits ==
-           std::numeric_limits<uint64_t>::max();
+    return MaxPowerOf2StoreLoadForwardSafeDistanceInBits ==
+               std::numeric_limits<uint64_t>::max() &&
+           MaxNonPowerOf2StoreLoadForwardSafeDistanceInBits ==
+               std::numeric_limits<uint64_t>::max();
   }
 
-  /// Return safe power-of-2 number of elements, which do not prevent store-load
-  /// forwarding, multiplied by the size of the elements in bits.
-  uint64_t getStoreLoadForwardSafeDistanceInBits() const {
+  /// Return safe number of elements, which do not prevent store-load
+  /// forwarding, multiplied by the size of the elements in bits (power-of-2).
+  uint64_t getPowerOf2StoreLoadForwardSafeDistanceInBits() const {
     assert(!isSafeForAnyStoreLoadForwardDistances() &&
            "Expected the distance, that prevent store-load forwarding, to be "
            "set.");
-    return MaxStoreLoadForwardSafeDistanceInBits;
+    return MaxPowerOf2StoreLoadForwardSafeDistanceInBits;
+  }
+
+  /// Return safe number of elements, which do not prevent store-load
+  /// forwarding, multiplied by the size of the elements in bits
+  /// (non-power-of-2).
+  uint64_t getNonPowerOf2StoreLoadForwardSafeDistanceInBits() const {
+    assert(!isSafeForAnyStoreLoadForwardDistances() &&
+           "Expected the distance, that prevent store-load forwarding, to be "
+           "set.");
+    return MaxNonPowerOf2StoreLoadForwardSafeDistanceInBits;
   }
 
   /// In same cases when the dependency check fails we can still
@@ -337,9 +352,14 @@ private:
   /// restrictive.
   uint64_t MaxSafeVectorWidthInBits = -1U;
 
-  /// Maximum power-of-2 number of elements, which do not prevent store-load
-  /// forwarding, multiplied by the size of the elements in bits.
-  uint64_t MaxStoreLoadForwardSafeDistanceInBits =
+  /// Maximum number of elements, which do not prevent store-load forwarding,
+  /// multiplied by the size of the elements in bits (power-of-2).
+  uint64_t MaxPowerOf2StoreLoadForwardSafeDistanceInBits =
+      std::numeric_limits<uint64_t>::max();
+
+  /// Maximum number of elements, which do not prevent store-load forwarding,
+  /// multiplied by the size of the elements in bits (non-power-of-2).
+  uint64_t MaxNonPowerOf2StoreLoadForwardSafeDistanceInBits =
       std::numeric_limits<uint64_t>::max();
 
   /// Whether we should try to vectorize the loop with runtime checks, if the
@@ -365,6 +385,10 @@ private:
   /// backwards dependence with non-constant stride should be classified as
   /// backwards-vectorizable or unknown (triggering a runtime check).
   unsigned MaxTargetVectorWidthInBits = 0;
+
+  /// True if current target supports non-power-of-2 dependence distances,
+  /// allows to support non-power-of-2 store-load forwarding distance analysis.
+  bool AllowNonPow2StoreLoadForwardDistance = false;
 
   /// Mapping of SCEV expressions to their expanded pointer bounds (pair of
   /// start and end pointer expressions).
