@@ -595,8 +595,9 @@ public:
 };
 
 class DAPGetModuleSymbolsRequestHandler
-    : public RequestHandler<protocol::DAPGetModuleSymbolsArguments,
-                            llvm::Expected<protocol::DAPGetModuleSymbolsResponseBody>> {
+    : public RequestHandler<
+          protocol::DAPGetModuleSymbolsArguments,
+          llvm::Expected<protocol::DAPGetModuleSymbolsResponseBody>> {
 public:
   using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "dapGetModuleSymbols"; }

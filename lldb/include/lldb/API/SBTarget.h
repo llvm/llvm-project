@@ -324,6 +324,8 @@ public:
 
   lldb::SBModule FindModule(const lldb::SBFileSpec &file_spec);
 
+  lldb::SBModule FindModule(const lldb::SBModuleSpec &module_spec);
+
   /// Find compile units related to *this target and passed source
   /// file.
   ///

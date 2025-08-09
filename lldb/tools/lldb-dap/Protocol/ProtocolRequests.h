@@ -982,11 +982,14 @@ struct WriteMemoryResponseBody {
 llvm::json::Value toJSON(const WriteMemoryResponseBody &);
 
 struct DAPGetModuleSymbolsArguments {
-  /// The module for which to retrieve symbols.
-  std::string moduleId;
+  /// The module UUID for which to retrieve symbols.
+  std::optional<std::string> moduleId;
+
+  /// The module path.
+  std::optional<std::string> moduleName;
 };
-bool fromJSON(const llvm::json::Value &,
-              DAPGetModuleSymbolsArguments &, llvm::json::Path);
+bool fromJSON(const llvm::json::Value &, DAPGetModuleSymbolsArguments &,
+              llvm::json::Path);
 
 /// Response to `getModuleSymbols` request.
 struct DAPGetModuleSymbolsResponseBody {
