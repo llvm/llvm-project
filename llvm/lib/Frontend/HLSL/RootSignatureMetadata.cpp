@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Frontend/HLSL/RootSignatureMetadata.h"
+#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Frontend/HLSL/RootSignatureValidations.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Metadata.h"
@@ -540,11 +541,15 @@ Error MetadataParser::validateRootSignature(
     assert(dxbc::isValidParameterType(Info.Header.ParameterType) &&
            "Invalid value for ParameterType");
 
-    switch (Info.Header.ParameterType) {
-
-    case to_underlying(dxbc::RootParameterType::CBV):
-    case to_underlying(dxbc::RootParameterType::UAV):
-    case to_underlying(dxbc::RootParameterType::SRV): {
+    dxbc::RootParameterType PT =
+        static_cast<dxbc::RootParameterType>(Info.Header.ParameterType);
+    switch (PT) {
+    case dxbc::RootParameterType::Constants32Bit:
+      // ToDo: Add proper validation.
+      continue;
+    case dxbc::RootParameterType::CBV:
+    case dxbc::RootParameterType::UAV:
+    case dxbc::RootParameterType::SRV: {
       const dxbc::RTS0::v2::RootDescriptor &Descriptor =
           RSD.ParametersContainer.getRootDescriptor(Info.Location);
       if (!hlsl::rootsig::verifyRegisterValue(Descriptor.ShaderRegister))
@@ -569,7 +574,7 @@ Error MetadataParser::validateRootSignature(
       }
       break;
     }
-    case to_underlying(dxbc::RootParameterType::DescriptorTable): {
+    case dxbc::RootParameterType::DescriptorTable: {
       const mcdxbc::DescriptorTable &Table =
           RSD.ParametersContainer.getDescriptorTable(Info.Location);
       for (const dxbc::RTS0::v2::DescriptorRange &Range : Table) {

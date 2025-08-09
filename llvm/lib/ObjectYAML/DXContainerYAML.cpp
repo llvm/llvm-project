@@ -424,22 +424,29 @@ void MappingContextTraits<DXContainerYAML::RootParameterLocationYaml,
   IO.mapRequired("ParameterType", L.Header.Type);
   IO.mapRequired("ShaderVisibility", L.Header.Visibility);
 
-  switch (L.Header.Type) {
-  case llvm::to_underlying(dxbc::RootParameterType::Constants32Bit): {
+  // If a parameter type is invalid, we don't have a body to parse.
+  if (!dxbc::isValidParameterType(L.Header.Type))
+    return;
+
+  // parses the body of a given root parameter type
+  dxbc::RootParameterType PT =
+      static_cast<dxbc::RootParameterType>(L.Header.Type);
+  switch (PT) {
+  case dxbc::RootParameterType::Constants32Bit: {
     DXContainerYAML::RootConstantsYaml &Constants =
         S.Parameters.getOrInsertConstants(L);
     IO.mapRequired("Constants", Constants);
     break;
   }
-  case llvm::to_underlying(dxbc::RootParameterType::CBV):
-  case llvm::to_underlying(dxbc::RootParameterType::SRV):
-  case llvm::to_underlying(dxbc::RootParameterType::UAV): {
+  case dxbc::RootParameterType::CBV:
+  case dxbc::RootParameterType::SRV:
+  case dxbc::RootParameterType::UAV: {
     DXContainerYAML::RootDescriptorYaml &Descriptor =
         S.Parameters.getOrInsertDescriptor(L);
     IO.mapRequired("Descriptor", Descriptor);
     break;
   }
-  case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
+  case dxbc::RootParameterType::DescriptorTable: {
     DXContainerYAML::DescriptorTableYaml &Table =
         S.Parameters.getOrInsertTable(L);
     IO.mapRequired("Table", Table);
