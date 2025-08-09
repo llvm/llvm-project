@@ -100,6 +100,9 @@ protected:
            "i32*>, <8 x i1>, i32) ";
     Str << " declare <8 x i32> @llvm.vp.load.v8i32.p0v8i32(<8 x i32>*, <8 x "
            "i1>, i32) ";
+    Str << " declare {<8 x i32>, i32} "
+           "@llvm.vp.load.ff.v8i32.p0v8i32(<8 x "
+           "i32>*, <8 x i1>, i32) ";
     Str << "declare <8 x i32> "
            "@llvm.experimental.vp.strided.load.v8i32.i32(i32*, i32, <8 "
            "x i1>, i32) ";

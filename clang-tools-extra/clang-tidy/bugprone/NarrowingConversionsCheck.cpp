@@ -555,13 +555,20 @@ bool NarrowingConversionsCheck::handleConditionalOperator(
     // We have an expression like so: `output = cond ? lhs : rhs`
     // From the point of view of narrowing conversion we treat it as two
     // expressions `output = lhs` and `output = rhs`.
-    handleBinaryOperator(Context, CO->getLHS()->getExprLoc(), Lhs,
-                         *CO->getLHS());
-    handleBinaryOperator(Context, CO->getRHS()->getExprLoc(), Lhs,
-                         *CO->getRHS());
+    handleConditionalOperatorArgument(Context, Lhs, CO->getLHS());
+    handleConditionalOperatorArgument(Context, Lhs, CO->getRHS());
     return true;
   }
   return false;
+}
+
+void NarrowingConversionsCheck::handleConditionalOperatorArgument(
+    const ASTContext &Context, const Expr &Lhs, const Expr *Arg) {
+  if (const auto *ICE = llvm::dyn_cast<ImplicitCastExpr>(Arg))
+    if (!Arg->getIntegerConstantExpr(Context))
+      Arg = ICE->getSubExpr();
+
+  handleBinaryOperator(Context, Arg->getExprLoc(), Lhs, *Arg);
 }
 
 void NarrowingConversionsCheck::handleImplicitCast(

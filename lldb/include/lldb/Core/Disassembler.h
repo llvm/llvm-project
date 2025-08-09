@@ -169,7 +169,7 @@ public:
 
   virtual bool IsAuthenticated() = 0;
 
-  bool CanSetBreakpoint ();
+  bool CanSetBreakpoint();
 
   virtual size_t Decode(const Disassembler &disassembler,
                         const DataExtractor &data,
@@ -282,7 +282,7 @@ std::function<bool(const Instruction::Operand &)> FetchImmOp(int64_t &imm);
 
 std::function<bool(const Instruction::Operand &)>
 MatchOpType(Instruction::Operand::Type type);
-}
+} // namespace OperandMatchers
 
 class InstructionList {
 public:
@@ -290,6 +290,8 @@ public:
   ~InstructionList();
 
   size_t GetSize() const;
+
+  size_t GetTotalByteSize() const;
 
   uint32_t GetMaxOpcocdeByteSize() const;
 
@@ -314,20 +316,19 @@ public:
   /// @param[in] ignore_calls
   ///     It true, then fine the first branch instruction that isn't
   ///     a function call (a branch that calls and returns to the next
-  ///     instruction). If false, find the instruction index of any 
+  ///     instruction). If false, find the instruction index of any
   ///     branch in the list.
-  ///     
+  ///
   /// @param[out] found_calls
-  ///     If non-null, this will be set to true if any calls were found in 
+  ///     If non-null, this will be set to true if any calls were found in
   ///     extending the range.
-  ///    
+  ///
   /// @return
   ///     The instruction index of the first branch that is at or past
-  ///     \a start. Returns UINT32_MAX if no matching branches are 
+  ///     \a start. Returns UINT32_MAX if no matching branches are
   ///     found.
   //------------------------------------------------------------------
-  uint32_t GetIndexOfNextBranchInstruction(uint32_t start,
-                                           bool ignore_calls,
+  uint32_t GetIndexOfNextBranchInstruction(uint32_t start, bool ignore_calls,
                                            bool *found_calls) const;
 
   uint32_t GetIndexOfInstructionAtLoadAddress(lldb::addr_t load_addr,
@@ -443,10 +444,11 @@ public:
                           const ExecutionContext &exe_ctx, const Address &start,
                           Limit limit, bool mixed_source_and_assembly,
                           uint32_t num_mixed_context_lines, uint32_t options,
-                          Stream &strm);
+                          Stream &strm, bool enable_rich_annotations = false);
 
   static bool Disassemble(Debugger &debugger, const ArchSpec &arch,
-                          StackFrame &frame, Stream &strm);
+                          StackFrame &frame, Stream &strm,
+                          bool enable_rich_annotations = false);
 
   // Constructors and Destructors
   Disassembler(const ArchSpec &arch, const char *flavor);
@@ -456,7 +458,7 @@ public:
                          const ExecutionContext &exe_ctx,
                          bool mixed_source_and_assembly,
                          uint32_t num_mixed_context_lines, uint32_t options,
-                         Stream &strm);
+                         Stream &strm, bool enable_rich_annotations = false);
 
   size_t ParseInstructions(Target &target, Address address, Limit limit,
                            Stream *error_strm_ptr,
