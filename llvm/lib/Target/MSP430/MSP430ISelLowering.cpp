@@ -377,6 +377,7 @@ static void AnalyzeArguments(CCState &State,
   for (unsigned i = 0, e = ArgsParts.size(); i != e; i++) {
     MVT ArgVT = Args[ValNo].VT;
     ISD::ArgFlagsTy ArgFlags = Args[ValNo].Flags;
+    Type *OrigTy = Args[ValNo].OrigTy;
     MVT LocVT = ArgVT;
     CCValAssign::LocInfo LocInfo = CCValAssign::Full;
 
@@ -411,7 +412,8 @@ static void AnalyzeArguments(CCState &State,
       RegsLeft -= 1;
 
       UsedStack = true;
-      CC_MSP430_AssignStack(ValNo++, ArgVT, LocVT, LocInfo, ArgFlags, State);
+      CC_MSP430_AssignStack(ValNo++, ArgVT, LocVT, LocInfo, ArgFlags, OrigTy,
+                            State);
     } else if (Parts <= RegsLeft) {
       for (unsigned j = 0; j < Parts; j++) {
         MCRegister Reg = State.AllocateReg(RegList);
@@ -421,7 +423,8 @@ static void AnalyzeArguments(CCState &State,
     } else {
       UsedStack = true;
       for (unsigned j = 0; j < Parts; j++)
-        CC_MSP430_AssignStack(ValNo++, ArgVT, LocVT, LocInfo, ArgFlags, State);
+        CC_MSP430_AssignStack(ValNo++, ArgVT, LocVT, LocInfo, ArgFlags, OrigTy,
+                              State);
     }
   }
 }

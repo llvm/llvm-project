@@ -267,7 +267,7 @@ private:
 private:
   CCAssignFn *CCAssignFnForCall(CallingConv::ID CC) const;
   bool processCallArgs(CallLoweringInfo &CLI, SmallVectorImpl<MVT> &ArgVTs,
-                       unsigned &NumBytes);
+                       SmallVectorImpl<Type *> &OrigTys, unsigned &NumBytes);
   bool finishCall(CallLoweringInfo &CLI, unsigned NumBytes);
 
 public:
@@ -3011,11 +3011,13 @@ bool AArch64FastISel::fastLowerArguments() {
 
 bool AArch64FastISel::processCallArgs(CallLoweringInfo &CLI,
                                       SmallVectorImpl<MVT> &OutVTs,
+                                      SmallVectorImpl<Type *> &OrigTys,
                                       unsigned &NumBytes) {
   CallingConv::ID CC = CLI.CallConv;
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CC, false, *FuncInfo.MF, ArgLocs, *Context);
-  CCInfo.AnalyzeCallOperands(OutVTs, CLI.OutFlags, CCAssignFnForCall(CC));
+  CCInfo.AnalyzeCallOperands(OutVTs, CLI.OutFlags, OrigTys,
+                             CCAssignFnForCall(CC));
 
   // Get a count of how many bytes are to be pushed on the stack.
   NumBytes = CCInfo.getStackSize();
@@ -3194,6 +3196,7 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
 
   // Set up the argument vectors.
   SmallVector<MVT, 16> OutVTs;
+  SmallVector<Type *, 16> OrigTys;
   OutVTs.reserve(CLI.OutVals.size());
 
   for (auto *Val : CLI.OutVals) {
@@ -3207,6 +3210,7 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
       return false;
 
     OutVTs.push_back(VT);
+    OrigTys.push_back(Val->getType());
   }
 
   Address Addr;
@@ -3222,7 +3226,7 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
 
   // Handle the arguments now that we've gotten them.
   unsigned NumBytes;
-  if (!processCallArgs(CLI, OutVTs, NumBytes))
+  if (!processCallArgs(CLI, OutVTs, OrigTys, NumBytes))
     return false;
 
   const AArch64RegisterInfo *RegInfo = Subtarget->getRegisterInfo();
