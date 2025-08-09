@@ -1,17 +1,17 @@
-REQUIRE: x86-registered-target
-
 DEFINE: %{local} = 0x3000
 DEFINE: %{addr1l} = E8
 DEFINE: %{addr3l} = D8
-RUN: yaml2obj %p/Inputs/pseudoreloc.x86_64.yaml | llvm-readobj --coff-pseudoreloc - 2>&1 \
-RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-X64 --match-full-lines --implicit-check-not=warning \
-RUN:       -D#WORD=8 -D#SYM1=0x20%{addr1l} -D#SYM3=0x20%{addr3l} -D#LOCAL1A=%{local} -DPREFIX=
+RUN: yaml2obj  -o %t.exe-x86_64 %p/Inputs/pseudoreloc.x86_64.yaml
+RUN: llvm-readobj %t.exe-x86_64 --coff-pseudoreloc 2>&1 | \
+RUN:   FileCheck %s --check-prefixes=CHECK,CHECK-X64 --match-full-lines --implicit-check-not=warning \
+RUN:     -D#WORD=8 -D#SYM1=0x20%{addr1l} -D#SYM3=0x20%{addr3l} -D#LOCAL1A=%{local} -DPREFIX=
 
 REDEFINE: %{addr1l} = B0
 REDEFINE: %{addr3l} = BC
-RUN: yaml2obj %p/Inputs/pseudoreloc.i386.yaml   | llvm-readobj --coff-pseudoreloc - 2>&1 \
-RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-386 --match-full-lines --implicit-check-not=warning \
-RUN:       -D#WORD=4 -D#SYM1=0x20%{addr1l} -D#SYM3=0x20%{addr3l} -D#LOCAL1A=%{local} -DPREFIX=_
+RUN: yaml2obj   -o %t.exe-i386  %p/Inputs/pseudoreloc.i386.yaml
+RUN: llvm-readobj  %t.exe-i386  --coff-pseudoreloc 2>&1 | \
+RUN:   FileCheck %s --check-prefixes=CHECK,CHECK-386 --match-full-lines --implicit-check-not=warning \
+RUN:     -D#WORD=4 -D#SYM1=0x20%{addr1l} -D#SYM3=0x20%{addr3l} -D#LOCAL1A=%{local} -DPREFIX=_
 
 CHECK-X64:      Format: COFF-x86-64
 CHECK-X64-NEXT: Arch: x86_64
@@ -56,85 +56,89 @@ CHECK-NEXT:   BitWidth: [[#BW]]
 CHECK-NEXT:  }
 CHECK-NEXT: ]
 
-
-; check that silently ignore when imported symbol name is not found
-RUN: sed -E -e '/Name: *\.rdata/,/Name:/{/SectionData:/{s/%{addr1l}200000/30000000/;s/%{addr3l}200000/00FFFF00/}}' %p/Inputs/pseudoreloc.i386.yaml \
-RUN:   | yaml2obj | llvm-readobj --coff-pseudoreloc - 2>&1 \
-RUN:   | FileCheck %s --check-prefix=INVALIDSYMBOL --match-full-lines -D#LOCAL1A=%{local} --implicit-check-not=warning
+; Test that llvm-readobj silently ignores missing imported symbol names.
+RUN: sed -E -e '/Name: *\.rdata/,/Name:/{/SectionData:/{s/%{addr1l}200000/30000000/;s/%{addr3l}200000/00FFFF00/}}' %p/Inputs/pseudoreloc.i386.yaml | \
+RUN:   yaml2obj -o %t.corrupted-iat.exe-i386
+RUN: llvm-readobj  %t.corrupted-iat.exe-i386 --coff-pseudoreloc 2>&1 | \
+RUN:   FileCheck %s --check-prefix=INVALIDSYMBOL --match-full-lines -D#LOCAL1A=%{local} --implicit-check-not=warning
 
 INVALIDSYMBOL:      Symbol: 0x30
 INVALIDSYMBOL-NEXT: Target: 0x[[#%X,LOCAL1A]]
 INVALIDSYMBOL:      Symbol: 0xFFFF00
 INVALIDSYMBOL-NEXT: Target: 0x[[#%X,LOCAL1A+8]]
 
+; Assume the position of the relocation list for further tests.
+RUN: yaml2obj %p/Inputs/pseudoreloc.i386.yaml | llvm-readobj --syms - | \
+RUN:   FileCheck %s --check-prefix=RELOCPOS --match-full-lines
 
-; check that shows empty list when the relocation list has no contents
-RUN: sed -E -e '/__RUNTIME_PSEUDO_RELOC_LIST_END__/,/Name:/{/Value:/s/[0-9]+/20/}' %p/Inputs/pseudoreloc.i386.yaml \
-RUN:   | yaml2obj | llvm-readobj --coff-pseudoreloc - 2>&1 \
-RUN:   | FileCheck %s --check-prefix=EMPTY --implicit-check-not=warning
+RELOCPOS: Name: ___RUNTIME_PSEUDO_RELOC_LIST_END__
+RELOCPOS-NEXT: Value: 80
+RELOCPOS: Name: ___RUNTIME_PSEUDO_RELOC_LIST__
+RELOCPOS-NEXT: Value: 8
+
+; Test that llvm-readobj shows an empty list if the relocation list has no contents.
+RUN: sed -E -e '/__RUNTIME_PSEUDO_RELOC_LIST_END__/,/Name:/{/Value:/s/[0-9]+/20/}' %p/Inputs/pseudoreloc.i386.yaml | \
+RUN:   yaml2obj -o %t.empty-list.exe-i386
+RUN: llvm-readobj  %t.empty-list.exe-i386 --coff-pseudoreloc 2>&1 | \
+RUN:   FileCheck %s --check-prefix=EMPTY --implicit-check-not=warning
+
+RUN: sed -E -e '/__RUNTIME_PSEUDO_RELOC_LIST_END__/,/Name:/{/Value:/s/[0-9]+/8/}' %p/Inputs/pseudoreloc.i386.yaml | \
+RUN:   yaml2obj -o %t.noheader.exe-i386
+RUN: llvm-readobj  %t.noheader.exe-i386 --coff-pseudoreloc 2>&1 | \
+RUN:   FileCheck %s --check-prefix=EMPTY --implicit-check-not=warning
+
+; Test that llvm-readobj shows an empty list if the image is stripped.
+RUN: llvm-readobj --coff-pseudoreloc %p/Inputs/imports.exe.coff-i386 2>&1 | \
+RUN:   FileCheck %s --check-prefix=EMPTY --implicit-check-not=warning
+
+; Test that llvm-readobj warns if the marker symbol of the relocation list is absent from the symbol table.
+RUN: sed -e 's/__RUNTIME//' %p/Inputs/pseudoreloc.i386.yaml | \
+RUN:   yaml2obj -o %t.nosymbol.exe-i386
+RUN: llvm-readobj  %t.nosymbol.exe-i386 --coff-pseudoreloc 2>&1 | \
+RUN:   FileCheck %s --check-prefixes=EMPTY,WARN-MISSINGMARKER
+
+; Test that llvm-readobj shows an empty list if a .obj is specified.
+RUN: llvm-readobj --coff-pseudoreloc %p/Inputs/trivial.obj.coff-i386 2>&1 | \
+RUN:   FileCheck %s --check-prefix=EMPTY --implicit-check-not=warning
+
+; Test that llvm-readobj warns if the header of the relocation list is broken.
+RUN: sed -E -e '/__RUNTIME_PSEUDO_RELOC_LIST__/,/Name:/{/Value:/s/[0-9]+/20/}' %p/Inputs/pseudoreloc.i386.yaml | \
+RUN:   yaml2obj -o %t.corrupted-header.exe-i386
+RUN: llvm-readobj  %t.corrupted-header.exe-i386 --coff-pseudoreloc 2>&1 | \
+RUN:   FileCheck %s --check-prefixes=EMPTY,WARN-INVALIDHEADER
+
+; Test that llvm-readobj warns if end < start.
+RUN: sed -E -e '/__RUNTIME_PSEUDO_RELOC_LIST_END__/,/Name:/{/Value:/s/[0-9]+/8/}' \
+RUN:        -e '/__RUNTIME_PSEUDO_RELOC_LIST__/,/Name:/{/Value:/s/[0-9]+/20/}' %p/Inputs/pseudoreloc.i386.yaml | \
+RUN:   yaml2obj -o %t.negative-size.exe-i386
+RUN: llvm-readobj  %t.negative-size.exe-i386 --coff-pseudoreloc 2>&1 | \
+RUN:   FileCheck %s --check-prefixes=EMPTY,WARN-LOWEREND
+
+; Test that llvm-readobj warns if the marker symbol points out of the section space.
+RUN: sed -E -e '/__RUNTIME_PSEUDO_RELOC_LIST_END__/,/Name:/{/Value:/s/[0-9]+/9999/}' \
+RUN:        -e '/__RUNTIME_PSEUDO_RELOC_LIST__/,/Name:/{/Value:/s/[0-9]+/8888/}' %p/Inputs/pseudoreloc.i386.yaml | \
+RUN:   yaml2obj -o %t.outofrange-both.exe-i386
+RUN: llvm-readobj  %t.outofrange-both.exe-i386 --coff-pseudoreloc 2>&1 | \
+RUN:   FileCheck %s --check-prefixes=EMPTY,WARN-OUTOFRANGE
+
+RUN: sed -E -e '/__RUNTIME_PSEUDO_RELOC_LIST_END__/,/Name:/{/Value:/s/[0-9]+/9999/}' %p/Inputs/pseudoreloc.i386.yaml | \
+RUN:   yaml2obj -o %t.outofrange-end.exe-i386
+RUN: llvm-readobj  %t.outofrange-end.exe-i386 --coff-pseudoreloc 2>&1 | \
+RUN:   FileCheck %s --check-prefixes=EMPTY,WARN-OUTOFRANGE
 
 EMPTY:      Format: COFF-i386
 EMPTY-NEXT: Arch: i386
 EMPTY-NEXT: AddressSize: 32bit
 EMPTY-NEXT: PseudoReloc [
+WARN-MISSINGMARKER-NEXT: the marker symbols for runtime pseudo-relocation were not found
+WARN-INVALIDHEADER-NEXT: invalid runtime pseudo-relocation records
+WARN-LOWEREND-NEXT: the begin marker symbol for runtime pseudo-relocation must point lower address than where the end marker points
+WARN-OUTOFRANGE-NEXT: the marker symbol of runtime pseudo-relocation points to out of the valid address space
 EMPTY-NEXT: ]
 
-
-; assume position of the relocation list for further tests
-RUN: yaml2obj %p/Inputs/pseudoreloc.i386.yaml | llvm-readobj --syms - | FileCheck %s --check-prefix=RELOCPOS --match-full-lines
-
-RELOCPOS: Name: ___RUNTIME_PSEUDO_RELOC_LIST__
-RELOCPOS-NEXT: Value: 8
-
-
-; check that shows message if the header of the relocation list is broken or missing
-RUN: sed -E -e '/__RUNTIME_PSEUDO_RELOC_LIST__/,/Name:/{/Value:/s/[0-9]+/20/}' %p/Inputs/pseudoreloc.i386.yaml \
-RUN:   | yaml2obj | llvm-readobj --coff-pseudoreloc - 2>&1 | FileCheck %s --check-prefix=NOHEADER
-
-RUN: sed -E -e '/__RUNTIME_PSEUDO_RELOC_LIST_END__/,/Name:/{/Value:/s/[0-9]+/8/}' %p/Inputs/pseudoreloc.i386.yaml \
-RUN:   | yaml2obj | llvm-readobj --coff-pseudoreloc - 2>&1 | FileCheck %s --check-prefix=EMPTY --implicit-check-not=warning
-
-NOHEADER: invalid runtime pseudo-relocation records
-
-
-; check that warn if end < start
-RUN: sed -E -e '/__RUNTIME_PSEUDO_RELOC_LIST_END__/,/Name:/{/Value:/s/[0-9]+/8/}' \
-RUN:        -e '/__RUNTIME_PSEUDO_RELOC_LIST__/,/Name:/{/Value:/s/[0-9]+/20/}' %p/Inputs/pseudoreloc.i386.yaml \
-RUN:   | yaml2obj | llvm-readobj --coff-pseudoreloc - 2>&1 | FileCheck %s --check-prefix=LOWEREND
-
-LOWEREND: the begin marker symbol for runtime pseudo-relocation must point lower address than where the end marker points
-
-
-; check that warn if the relocation list points out of section space
-RUN: sed -E -e '/__RUNTIME_PSEUDO_RELOC_LIST_END__/,/Name:/{/Value:/s/[0-9]+/9999/}' \
-RUN:        -e '/__RUNTIME_PSEUDO_RELOC_LIST__/,/Name:/{/Value:/s/[0-9]+/8888/}' %p/Inputs/pseudoreloc.i386.yaml \
-RUN:   | yaml2obj | llvm-readobj --coff-pseudoreloc - 2>&1 | FileCheck %s --check-prefix=OUTOFRANGE
-
-RUN: sed -E -e '/__RUNTIME_PSEUDO_RELOC_LIST_END__/,/Name:/{/Value:/s/[0-9]+/9999/}' %p/Inputs/pseudoreloc.i386.yaml \
-RUN:   | yaml2obj | llvm-readobj --coff-pseudoreloc - 2>&1 | FileCheck %s --check-prefix=OUTOFRANGE
-
-OUTOFRANGE: the marker symbol of runtime pseudo-relocation points to out of the valid address space
-
-
-; check that warn if image is stripped
-RUN: llvm-readobj --coff-pseudoreloc %p/Inputs/imports.exe.coff-i386 2>&1 | FileCheck %s --check-prefix=EMPTY --implicit-check-not=warning
-
-
-; check that warn if the relocation list is missing (intended for MSVC-made binaries)
-RUN: sed -e 's/__RUNTIME//' %p/Inputs/pseudoreloc.i386.yaml \
-RUN:   | yaml2obj | llvm-readobj --coff-pseudoreloc - 2>&1 | FileCheck %s --check-prefix=NORELOC
-
-NORELOC: the marker symbols for runtime pseudo-relocation were not found
-
-
-; check that warn if .obj is specified
-RUN: llvm-readobj --coff-pseudoreloc %p/Inputs/trivial.obj.coff-i386 2>&1 | FileCheck %s --check-prefix=EMPTY
-
-
-pseudoreloc.*.yaml is generated by following script:
+To regenerate Inputs/pseudoreloc.*.yaml, run following one-liner and review actual address map:
 
 $ split-file pseudoreloc.test /tmp/pseudoreloc && bash /tmp/pseudoreloc/generate.sh && cp /tmp/pseudoreloc/*.yaml Inputs/
-
 
 #--- generate.sh
 cd "$(dirname $0)"
@@ -158,15 +162,12 @@ ld.lld -m i386pep -S import.x86_64.o export1.x86_64.dll export2.x86_64.dll -o ps
   --disable-dynamicbase --disable-reloc-section
 obj2yaml pseudoreloc.x86_64.exe -o pseudoreloc.x86_64.yaml
 
-
 #--- export1.ll
 @sym1 = dso_local dllexport global [4 x i8] c"\11\22\33\44"
 @sym2 = dso_local dllexport global [4 x i8] c"\55\66\77\88"
 
-
 #--- export2.ll
 @sym3 = dso_local dllexport global [4 x i8] c"\AA\BB\CC\DD"
-
 
 #--- import.ll
 @__RUNTIME_PSEUDO_RELOC_LIST__ = external dso_local constant ptr
