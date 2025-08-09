@@ -131,7 +131,7 @@ class FakeStack {
   // 2) (kFlagsOffset + SizeRequiredForFlags()) is aligned to
   //    1<<kMaxStackFrameSizeLog (see SizeRequiredForFlags())
   // 3) We know that stack_size_log >= kMaxStackFrameSizeLog (otherwise you
-  //    couldn't store a single frame in the entire stack)
+  //    couldn't store a single frame of that size in the entire stack)
   //    hence (1 << stack_size_log) is aligned to 1<<kMaxStackFrameSizeLog
   //    and   ((1 << stack_size_log) * class_id) is aligned to
   //          1<<kMaxStackFrameSizeLog
