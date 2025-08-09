@@ -226,6 +226,10 @@ private:
   }
 };
 
+enum class DeviceQueryKind {
+  DEVICE_QUERY_MAX_SHARED_TEAM_MEM = 0,
+};
+
 /// Class wrapping a __tgt_device_image and its offload entry table on a
 /// specific device. This class is responsible for storing and managing
 /// the offload entries for an image on a device.
@@ -312,12 +316,15 @@ struct GenericKernelTy {
                AsyncInfoWrapperTy &AsyncInfoWrapper) const;
   virtual Error launchImpl(GenericDeviceTy &GenericDevice,
                            uint32_t NumThreads[3], uint32_t NumBlocks[3],
-                           KernelArgsTy &KernelArgs,
+                           uint32_t DynBlockMemSize, KernelArgsTy &KernelArgs,
                            KernelLaunchParamsTy LaunchParams,
                            AsyncInfoWrapperTy &AsyncInfoWrapper) const = 0;
 
   /// Get the kernel name.
   const char *getName() const { return Name.c_str(); }
+
+  /// Get the size of the static per-block memory consumed by the kernel.
+  uint32_t getStaticBlockMemSize() const { return StaticBlockMemSize; };
 
   /// Get the kernel image.
   DeviceImageTy &getImage() const {
@@ -331,9 +338,9 @@ struct GenericKernelTy {
   }
 
   /// Return a device pointer to a new kernel launch environment.
-  Expected<KernelLaunchEnvironmentTy *>
-  getKernelLaunchEnvironment(GenericDeviceTy &GenericDevice, uint32_t Version,
-                             AsyncInfoWrapperTy &AsyncInfo) const;
+  Expected<KernelLaunchEnvironmentTy *> getKernelLaunchEnvironment(
+      GenericDeviceTy &GenericDevice, const KernelArgsTy &KernelArgs,
+      void *FallbackBlockMem, AsyncInfoWrapperTy &AsyncInfo) const;
 
   /// Indicate whether an execution mode is valid.
   static bool isValidExecutionMode(OMPTgtExecModeFlags ExecutionMode) {
@@ -424,6 +431,9 @@ protected:
 
   /// The maximum number of threads which the kernel could leverage.
   uint32_t MaxNumThreads;
+
+  /// The static memory sized per block.
+  uint32_t StaticBlockMemSize = 0;
 
   /// The kernel environment, including execution flags.
   KernelEnvironmentTy KernelEnvironment;
@@ -730,6 +740,12 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Get the device identifier within the corresponding plugin. Notice that
   /// this id is not unique between different plugins; they may overlap.
   int32_t getDeviceId() const { return DeviceId; }
+
+  /// Get the total shared memory per block that can be used in any kernel.
+  uint32_t getMaxBlockSharedMemSize() const { return MaxBlockSharedMemSize; }
+
+  /// Indicate whether the device has native block shared memory.
+  bool hasNativeBlockSharedMem() const { return HasNativeBlockSharedMem; }
 
   /// Set the context of the device if needed, before calling device-specific
   /// functions. Plugins may implement this function as a no-op if not needed.
@@ -1132,6 +1148,12 @@ protected:
   std::atomic<bool> OmptInitialized;
 #endif
 
+  /// The total per-block shared memory that a kernel may use.
+  uint32_t MaxBlockSharedMemSize = 0;
+
+  /// Whether the device has native block shared memory.
+  bool HasNativeBlockSharedMem = false;
+
 private:
   DeviceMemoryPoolTy DeviceMemoryPool = {nullptr, 0};
   DeviceMemoryPoolTrackingTy DeviceMemoryPoolTracking = {0, 0, ~0U, 0};
@@ -1346,6 +1368,9 @@ public:
 
   /// Prints information about the given devices supported by the plugin.
   void print_device_info(int32_t DeviceId);
+
+  /// Retrieve information about the given device.
+  int64_t query_device_info(int32_t DeviceId, DeviceQueryKind Query);
 
   /// Creates an event in the given plugin if supported.
   int32_t create_event(int32_t DeviceId, void **EventPtr);

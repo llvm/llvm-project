@@ -148,13 +148,21 @@ struct CUDAKernelTy : public GenericKernelTy {
     // The maximum number of threads cannot exceed the maximum of the kernel.
     MaxNumThreads = std::min(MaxNumThreads, (uint32_t)MaxThreads);
 
+    int SharedMemSize;
+    Res = cuFuncGetAttribute(&SharedMemSize,
+                             CU_FUNC_ATTRIBUTE_SHARED_SIZE_BYTES, Func);
+    if (auto Err = Plugin::check(Res, "Error in cuFuncGetAttribute: %s"))
+      return Err;
+
+    StaticBlockMemSize = SharedMemSize;
+
     return Plugin::success();
   }
 
   /// Launch the CUDA kernel function.
   Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads[3],
-                   uint32_t NumBlocks[3], KernelArgsTy &KernelArgs,
-                   KernelLaunchParamsTy LaunchParams,
+                   uint32_t NumBlocks[3], uint32_t DynBlockMemSize,
+                   KernelArgsTy &KernelArgs, KernelLaunchParamsTy LaunchParams,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override;
 
 private:
@@ -162,7 +170,7 @@ private:
   CUfunction Func;
   /// The maximum amount of dynamic shared memory per thread group. By default,
   /// this is set to 48 KB.
-  mutable uint32_t MaxDynCGroupMemLimit = 49152;
+  mutable uint32_t MaxDynBlockMemSize = 49152;
 };
 
 /// Class wrapping a CUDA stream reference. These are the objects handled by the
@@ -357,6 +365,15 @@ struct CUDADeviceTy : public GenericDeviceTy {
     if (auto Err = getDeviceAttr(CU_DEVICE_ATTRIBUTE_WARP_SIZE, WarpSize))
       return Err;
     HardwareParallelism = NumMuliprocessors * (MaxThreadsPerSM / WarpSize);
+
+    uint32_t MaxSharedMem;
+    if (auto Err = getDeviceAttr(
+            CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK, MaxSharedMem))
+      return Err;
+    MaxBlockSharedMemSize = MaxSharedMem;
+
+    // Supports block shared memory natively.
+    HasNativeBlockSharedMem = true;
 
     return Plugin::success();
   }
@@ -1239,7 +1256,7 @@ private:
     KernelArgsTy KernelArgs = {};
     uint32_t NumBlocksAndThreads[3] = {1u, 1u, 1u};
     if (auto Err = CUDAKernel.launchImpl(
-            *this, NumBlocksAndThreads, NumBlocksAndThreads, KernelArgs,
+            *this, NumBlocksAndThreads, NumBlocksAndThreads, 0, KernelArgs,
             KernelLaunchParamsTy{}, AsyncInfoWrapper))
       return Err;
 
@@ -1285,6 +1302,7 @@ private:
 
 Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                uint32_t NumThreads[3], uint32_t NumBlocks[3],
+                               uint32_t DynBlockMemSize,
                                KernelArgsTy &KernelArgs,
                                KernelLaunchParamsTy LaunchParams,
                                AsyncInfoWrapperTy &AsyncInfoWrapper) const {
@@ -1293,9 +1311,6 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   CUstream Stream;
   if (auto Err = CUDADevice.getStream(AsyncInfoWrapper, Stream))
     return Err;
-
-  uint32_t MaxDynCGroupMem =
-      std::max(KernelArgs.DynCGroupMem, GenericDevice.getDynamicMemorySize());
 
   void *Config[] = {CU_LAUNCH_PARAM_BUFFER_POINTER, LaunchParams.Data,
                     CU_LAUNCH_PARAM_BUFFER_SIZE,
@@ -1308,18 +1323,18 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
     GenericDevice.Plugin.getRPCServer().Thread->notify();
 
   // In case we require more memory than the current limit.
-  if (MaxDynCGroupMem >= MaxDynCGroupMemLimit) {
+  if (DynBlockMemSize >= MaxDynBlockMemSize) {
     CUresult AttrResult = cuFuncSetAttribute(
-        Func, CU_FUNC_ATTRIBUTE_MAX_DYNAMIC_SHARED_SIZE_BYTES, MaxDynCGroupMem);
+        Func, CU_FUNC_ATTRIBUTE_MAX_DYNAMIC_SHARED_SIZE_BYTES, DynBlockMemSize);
     Plugin::check(
         AttrResult,
         "Error in cuLaunchKernel while setting the memory limits: %s");
-    MaxDynCGroupMemLimit = MaxDynCGroupMem;
+    MaxDynBlockMemSize = DynBlockMemSize;
   }
 
   CUresult Res = cuLaunchKernel(Func, NumBlocks[0], NumBlocks[1], NumBlocks[2],
                                 NumThreads[0], NumThreads[1], NumThreads[2],
-                                MaxDynCGroupMem, Stream, nullptr, Config);
+                                DynBlockMemSize, Stream, nullptr, Config);
 
   // Register a callback to indicate when the kernel is complete.
   if (GenericDevice.getRPCServer())
