@@ -2022,11 +2022,12 @@ void COFFDumper::printCOFFPseudoReloc() {
   }
 
   struct SymbolEntry {
+    uint32_t RVA;
     COFFSymbolRef Symbol;
     const coff_section *Section;
     StringRef SymbolName;
   };
-  std::map<uint32_t, SymbolEntry> RVASymbolMap;
+  SmallVector<SymbolEntry> RVASymbolMap;
   COFFSymbolRef RelocBegin, RelocEnd;
   for (uint32_t i = 0; i < Count; ++i) {
     Expected<COFFSymbolRef> Sym = Obj->getSymbol(i);
@@ -2055,8 +2056,8 @@ void COFFDumper::printCOFFPseudoReloc() {
       consumeError(Sec.takeError());
       continue;
     }
-    RVASymbolMap.emplace((*Sec)->VirtualAddress + Sym->getValue(),
-                         SymbolEntry{*Sym, *Sec, *Name});
+    RVASymbolMap.push_back(
+        {(*Sec)->VirtualAddress + Sym->getValue(), *Sym, *Sec, *Name});
   }
   if (!RelocBegin.getRawPtr() || !RelocEnd.getRawPtr()) {
     W.startLine()
@@ -2181,6 +2182,14 @@ void COFFDumper::printCOFFPseudoReloc() {
     DenseMap<uint32_t, StringRef> ImportedSymbols;
   };
   CachingImportedSymbolLookup ImportedSymbols(Obj);
+  llvm::stable_sort(RVASymbolMap, [](const auto &x, const auto &y) {
+    return x.RVA < y.RVA;
+  });
+  RVASymbolMap.erase(llvm::unique(RVASymbolMap,
+                                  [](const auto &x, const auto &y) {
+                                    return x.RVA == y.RVA;
+                                  }),
+                     RVASymbolMap.end());
 
   ListScope D(W, "PseudoReloc");
   for (const auto &Reloc : RelocRecords) {
@@ -2191,20 +2200,22 @@ void COFFDumper::printCOFFPseudoReloc() {
       W.printString("SymbolName", *Sym);
 
     W.printHex("Target", Reloc.Target);
-    if (auto Ite = RVASymbolMap.upper_bound(Reloc.Target.value());
+    if (auto Ite = llvm::upper_bound(
+            RVASymbolMap, Reloc.Target.value(),
+            [](uint32_t RVA, const auto &Sym) { return RVA < Sym.RVA; });
         Ite == RVASymbolMap.begin())
       W.printSymbolOffset("TargetSymbol", "(base)", Reloc.Target);
-    else if (const uint32_t Offset = Reloc.Target.value() - (--Ite)->first;
+    else if (const uint32_t Offset = Reloc.Target.value() - (--Ite)->RVA;
              Offset == 0)
-      W.printString("TargetSymbol", Ite->second.SymbolName);
-    else if (Offset < Ite->second.Section->VirtualSize)
-      W.printSymbolOffset("TargetSymbol", Ite->second.SymbolName, Offset);
+      W.printString("TargetSymbol", Ite->SymbolName);
+    else if (Offset < Ite->Section->VirtualSize)
+      W.printSymbolOffset("TargetSymbol", Ite->SymbolName, Offset);
     else if (++Ite == RVASymbolMap.end())
       W.printSymbolOffset("TargetSymbol", "(base)", Reloc.Target);
     else if (Expected<StringRef> NameOrErr =
-                 Obj->getSectionName(Ite->second.Section)) {
+                 Obj->getSectionName(Ite->Section)) {
       W.printSymbolOffset("TargetSymbol", *NameOrErr,
-                          Reloc.Target - Ite->second.Section->VirtualAddress);
+                          Reloc.Target - Ite->Section->VirtualAddress);
     } else {
       consumeError(NameOrErr.takeError());
       W.printSymbolOffset("TargetSymbol", "(base)", Reloc.Target);
