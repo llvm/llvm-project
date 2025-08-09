@@ -34,6 +34,7 @@ class Fact;
 class FactManager;
 class LoanPropagationAnalysis;
 class ExpiredLoansAnalysis;
+class LiveOriginAnalysis;
 struct LifetimeFactory;
 
 /// A generic, type-safe wrapper for an ID, distinguished by its `Tag` type.
@@ -97,6 +98,9 @@ public:
   /// their Path.
   std::vector<LoanID> getLoanIDForVar(const VarDecl *VD) const;
 
+  /// Returns the set of live origins at a specific program point.
+  OriginSet getLiveOriginsAtPoint(ProgramPoint PP) const;
+
   /// Retrieves program points that were specially marked in the source code
   /// for testing.
   ///
@@ -114,6 +118,7 @@ private:
   std::unique_ptr<FactManager> FactMgr;
   std::unique_ptr<LoanPropagationAnalysis> LoanPropagation;
   std::unique_ptr<ExpiredLoansAnalysis> ExpiredLoans;
+  std::unique_ptr<LiveOriginAnalysis> LiveOrigins;
 };
 } // namespace internal
 } // namespace clang::lifetimes
