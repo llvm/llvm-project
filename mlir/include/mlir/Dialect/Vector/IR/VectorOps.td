@@ -1382,6 +1382,11 @@ def Vector_TransferReadOp :
     An additional `1` broadcast is required. On a GPU this broadcast could be
     implemented using a warp-shuffle if loop `j` were mapped to `threadIdx.x`.
 
+    An optional `alignment` attribute allows to specify the byte alignment of the
+    gather operation. It must be a positive power of 2. The operation must access
+    memory at an address aligned to this boundary. Violations may lead to
+    architecture-specific faults or performance penalties.
+
     Syntax
     ```
     operation ::= ssa-id `=` `vector.transfer_read` ssa-use-list
@@ -1714,7 +1719,6 @@ def Vector_LoadOp : Vector_Op<"load", [
     load operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violations may lead to
     architecture-specific faults or performance penalties.
-    A value of 0 indicates no specific alignment requirement.
   }];
 
   let arguments = (ins Arg<AnyMemRef, "the reference to load from",
@@ -1830,7 +1834,6 @@ def Vector_StoreOp : Vector_Op<"store", [
     store operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violations may lead to
     architecture-specific faults or performance penalties.
-    A value of 0 indicates no specific alignment requirement.
   }];
 
   let arguments = (ins
@@ -1919,7 +1922,6 @@ def Vector_MaskedLoadOp :
     load operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violations may lead to
     architecture-specific faults or performance penalties.
-    A value of 0 indicates no specific alignment requirement.
   }];
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
@@ -2012,7 +2014,6 @@ def Vector_MaskedStoreOp :
     store operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violations may lead to
     architecture-specific faults or performance penalties.
-    A value of 0 indicates no specific alignment requirement.
   }];
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
@@ -2182,6 +2183,11 @@ def Vector_ScatterOp :
     correspond to those of the `llvm.masked.scatter`
     [intrinsic](https://llvm.org/docs/LangRef.html#llvm-masked-scatter-intrinsics).
 
+    An optional `alignment` attribute allows to specify the byte alignment of the
+    scatter operation. It must be a positive power of 2. The operation must access
+    memory at an address aligned to this boundary. Violations may lead to
+    architecture-specific faults or performance penalties.
+
     Examples:
 
     ```mlir
@@ -2259,6 +2265,11 @@ def Vector_ExpandLoadOp :
     hardware ISA support for an expand. The semantics of the operation closely
     correspond to those of the `llvm.masked.expandload`
     [intrinsic](https://llvm.org/docs/LangRef.html#llvm-masked-expandload-intrinsics).
+
+    An optional `alignment` attribute allows to specify the byte alignment of the
+    load operation. It must be a positive power of 2. The operation must access
+    memory at an address aligned to this boundary. Violations may lead to
+    architecture-specific faults or performance penalties.
 
     Note, at the moment this Op is only available for fixed-width vectors.
 
@@ -2352,6 +2363,11 @@ def Vector_CompressStoreOp :
     hardware ISA support for a compress. The semantics of the operation closely
     correspond to those of the `llvm.masked.compressstore`
     [intrinsic](https://llvm.org/docs/LangRef.html#llvm-masked-compressstore-intrinsics).
+
+    An optional `alignment` attribute allows to specify the byte alignment of the
+    store operation. It must be a positive power of 2. The operation must access
+    memory at an address aligned to this boundary. Violations may lead to
+    architecture-specific faults or performance penalties.
 
     Note, at the moment this Op is only available for fixed-width vectors.
 
