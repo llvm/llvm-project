@@ -150,6 +150,10 @@ Improvements to Clang's diagnostics
 - Fixed fix-it hint for fold expressions. Clang now correctly places the suggested right
   parenthesis when diagnosing malformed fold expressions. (#GH151787)
 
+- Fixed false positives in ``-Waddress-of-packed-member`` diagnostics when
+  potential misaligned members get processed before they can get discarded.
+  (#GH144729)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
