@@ -2002,11 +2002,12 @@ void COFFDumper::printCOFFBaseReloc() {
 }
 
 void COFFDumper::printCOFFPseudoReloc() {
-  if (!Obj->getDOSHeader()) {
-    W.startLine()
-        << "pseudo-relocation is only meaningful for a PE image file\n";
+  ListScope D(W, "PseudoReloc");
+  W.flush();
+
+  // Pseudo-relocation is only meaningful for a PE image file.
+  if (!Obj->getDOSHeader())
     return;
-  }
 
   const StringRef RelocBeginName = Obj->getArch() == Triple::x86
                                        ? "___RUNTIME_PSEUDO_RELOC_LIST__"
@@ -2016,10 +2017,9 @@ void COFFDumper::printCOFFPseudoReloc() {
                                      : "__RUNTIME_PSEUDO_RELOC_LIST_END__";
 
   uint32_t Count = Obj->getNumberOfSymbols();
-  if (Count == 0) {
-    W.startLine() << "the symbol table has been stripped\n";
+  // Skip if no symbol was found (maybe stripped).
+  if (Count == 0)
     return;
-  }
 
   struct SymbolEntry {
     uint32_t RVA;
@@ -2030,68 +2030,88 @@ void COFFDumper::printCOFFPseudoReloc() {
   SmallVector<SymbolEntry> RVASymbolMap;
   COFFSymbolRef RelocBegin, RelocEnd;
   for (uint32_t i = 0; i < Count; ++i) {
-    Expected<COFFSymbolRef> Sym = Obj->getSymbol(i);
-    if (!Sym) {
-      consumeError(Sym.takeError());
-      continue;
-    }
-    i += Sym->getNumberOfAuxSymbols();
-
-    if (Sym->getSectionNumber() <= 0)
-      continue;
-    Expected<StringRef> Name = Obj->getSymbolName(*Sym);
-    if (!Name) {
-      consumeError(Name.takeError());
+    COFFSymbolRef Sym;
+    if (Expected<COFFSymbolRef> SymOrErr = Obj->getSymbol(i))
+      Sym = *SymOrErr;
+    else {
+      reportWarning(SymOrErr.takeError(), Obj->getFileName());
       continue;
     }
 
-    if (*Name == RelocBeginName)
-      RelocBegin = *Sym;
-    else if (*Name == RelocEndName)
-      RelocEnd = *Sym;
+    i += Sym.getNumberOfAuxSymbols();
 
-    Expected<const coff_section *> Sec =
-        Obj->getSection(Sym->getSectionNumber());
-    if (!Sec) {
-      consumeError(Sec.takeError());
+    if (Sym.getSectionNumber() <= 0)
+      continue;
+
+    StringRef Name;
+    if (Expected<StringRef> NameOrErr = Obj->getSymbolName(Sym))
+      Name = *NameOrErr;
+    else {
+      reportWarning(NameOrErr.takeError(), Obj->getFileName());
       continue;
     }
+
+    if (Name == RelocBeginName)
+      RelocBegin = Sym;
+    else if (Name == RelocEndName)
+      RelocEnd = Sym;
+
+    const coff_section *Sec = nullptr;
+    if (Expected<const coff_section *> SecOrErr =
+            Obj->getSection(Sym.getSectionNumber()))
+      Sec = *SecOrErr;
+    else {
+      reportWarning(SecOrErr.takeError(), Obj->getFileName());
+      continue;
+    }
+
     RVASymbolMap.push_back(
-        {(*Sec)->VirtualAddress + Sym->getValue(), *Sym, *Sec, *Name});
+        {Sec->VirtualAddress + Sym.getValue(), Sym, Sec, Name});
   }
+
   if (!RelocBegin.getRawPtr() || !RelocEnd.getRawPtr()) {
-    W.startLine()
-        << "the symbols for runtime pseudo-relocation are not found\n";
-    return;
-  }
-
-  if (RelocEnd.getValue() < RelocBegin.getValue()) {
-    reportWarning(createStringError("the symbols for runtime pseudo-relocation "
-                                    "don't consist a valid region"),
-                  Obj->getFileName());
-    return;
-  }
-
-  Expected<const coff_section *> Section =
-      Obj->getSection(RelocBegin.getSectionNumber());
-  if (auto E = Section.takeError()) {
-    reportWarning(std::move(E), Obj->getFileName());
-    return;
-  }
-
-  ArrayRef<uint8_t> Data;
-  if (auto E = Obj->getSectionContents(*Section, Data)) {
-    reportWarning(std::move(E), Obj->getFileName());
-    return;
-  }
-  if (Data.size() <= RelocBegin.getValue() ||
-      Data.size() <= RelocEnd.getValue()) {
     reportWarning(
-        createStringError("the region of runtime pseudo-relocation records "
-                          "points to out of the valid location"),
+        createStringError(
+            "the marker symbols for runtime pseudo-relocation were not found"),
         Obj->getFileName());
     return;
   }
+
+  const coff_section *Section = nullptr;
+  if (Expected<const coff_section *> SecOrErr =
+          Obj->getSection(RelocBegin.getSectionNumber()))
+    Section = *SecOrErr;
+  else
+    return reportWarning(SecOrErr.takeError(), Obj->getFileName());
+
+  if (RelocBegin.getSectionNumber() != RelocEnd.getSectionNumber())
+    return reportWarning(
+        createStringError(
+            "the marker symbols for runtime pseudo-relocation must "
+            "point a same section"),
+        Obj->getFileName());
+
+  // Skip if the relocation list is empty.
+  if (RelocBegin.getValue() == RelocEnd.getValue())
+    return;
+
+  if (RelocEnd.getValue() < RelocBegin.getValue())
+    return reportWarning(
+        createStringError(
+            "the begin marker symbol for runtime pseudo-relocation must point "
+            "lower address than where the end marker points"),
+        Obj->getFileName());
+
+  ArrayRef<uint8_t> Data;
+  if (auto E = Obj->getSectionContents(Section, Data))
+    return reportWarning(std::move(E), Obj->getFileName());
+
+  if (Data.size() <= RelocBegin.getValue() ||
+      Data.size() <= RelocEnd.getValue())
+    return reportWarning(
+        createStringError("the marker symbol of runtime pseudo-relocation "
+                          "points to out of the valid address space"),
+        Obj->getFileName());
 
   ArrayRef<uint8_t> RawRelocs =
       Data.take_front(RelocEnd.getValue()).drop_front(RelocBegin.getValue());
@@ -2104,12 +2124,11 @@ void COFFDumper::printCOFFPseudoReloc() {
   };
   const PseudoRelocationHeader HeaderV2(1);
   if (RawRelocs.size() < sizeof(HeaderV2) ||
-      (memcmp(RawRelocs.data(), &HeaderV2, sizeof(HeaderV2)) != 0)) {
-    reportWarning(
+      (memcmp(RawRelocs.data(), &HeaderV2, sizeof(HeaderV2)) != 0))
+    return reportWarning(
         createStringError("invalid runtime pseudo-relocation records"),
         Obj->getFileName());
-    return;
-  }
+
   struct alignas(4) PseudoRelocationRecord {
     support::ulittle32_t Symbol;
     support::ulittle32_t Target;
@@ -2191,7 +2210,6 @@ void COFFDumper::printCOFFPseudoReloc() {
                                   }),
                      RVASymbolMap.end());
 
-  ListScope D(W, "PseudoReloc");
   for (const auto &Reloc : RelocRecords) {
     DictScope Entry(W, "Entry");
 
@@ -2217,7 +2235,7 @@ void COFFDumper::printCOFFPseudoReloc() {
       W.printSymbolOffset("TargetSymbol", *NameOrErr,
                           Reloc.Target - Ite->Section->VirtualAddress);
     } else {
-      consumeError(NameOrErr.takeError());
+      reportWarning(NameOrErr.takeError(), Obj->getFileName());
       W.printSymbolOffset("TargetSymbol", "(base)", Reloc.Target);
     }
 
