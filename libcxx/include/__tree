@@ -1334,7 +1334,7 @@ private:
 #ifdef _LIBCPP_COMPILER_CLANG_BASED // FIXME: GCC complains about not being able to always_inline a recursive function
   _LIBCPP_HIDE_FROM_ABI
 #endif
-  __node_pointer
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 __node_pointer
   __copy_construct_tree(__node_pointer __src) {
     if (!__src)
       return nullptr;
