@@ -1011,7 +1011,7 @@ public:
   RValue emitCXXMemberOrOperatorMemberCallExpr(
       const clang::CallExpr *ce, const clang::CXXMethodDecl *md,
       ReturnValueSlot returnValue, bool hasQualifier,
-      clang::NestedNameSpecifier *qualifier, bool isArrow,
+      clang::NestedNameSpecifier qualifier, bool isArrow,
       const clang::Expr *base);
 
   mlir::Value emitCXXNewExpr(const CXXNewExpr *e);
