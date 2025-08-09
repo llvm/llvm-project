@@ -1029,6 +1029,27 @@ void JumpScopeChecker::CheckJump(Stmt *From, Stmt *To, SourceLocation DiagLoc,
                                  unsigned JumpDiagError,
                                  unsigned JumpDiagWarning,
                                  unsigned JumpDiagCompat) {
+  auto DiagnoseInvalidBreakInOpenACCComputeConstruct = [&](unsigned Scope) {
+    auto GetParent = [&](unsigned S) -> unsigned {
+      if (S >= Scopes.size()) return S;
+      return Scopes[S].ParentScope;
+    };
+
+    // For labeled break, check if we're inside an OpenACC construct; those
+    // form a separate scope around the loop, so we need to go up a few scopes
+    // from the target.
+    if (isa<BreakStmt>(From)) {
+      unsigned OpenACCScope = GetParent(GetParent(Scope));
+      if (OpenACCScope < Scopes.size() &&
+          Scopes[OpenACCScope].InDiag ==
+              diag::note_acc_branch_into_compute_construct) {
+        S.Diag(From->getBeginLoc(),
+               diag::err_acc_branch_in_out_compute_construct)
+            << /*branch*/ 0 << /*out of */ 0;
+      }
+    }
+  };
+
   if (CHECK_PERMISSIVE(!LabelAndGotoScopes.count(From)))
     return;
   if (CHECK_PERMISSIVE(!LabelAndGotoScopes.count(To)))
@@ -1037,14 +1058,18 @@ void JumpScopeChecker::CheckJump(Stmt *From, Stmt *To, SourceLocation DiagLoc,
   unsigned FromScope = LabelAndGotoScopes[From];
   unsigned ToScope = LabelAndGotoScopes[To];
 
-  // Common case: exactly the same scope, which is fine.
-  if (FromScope == ToScope) return;
+  // Common case: exactly the same scope, which is usually fine.
+  if (FromScope == ToScope) {
+    DiagnoseInvalidBreakInOpenACCComputeConstruct(ToScope);
+    return;
+  }
 
   // Warn on gotos out of __finally blocks.
   if (isa<GotoStmt, IndirectGotoStmt, LoopControlStmt>(From)) {
     // If FromScope > ToScope, FromScope is more nested and the jump goes to a
     // less nested scope.  Check if it crosses a __finally along the way.
-    for (unsigned I = FromScope; I > ToScope; I = Scopes[I].ParentScope) {
+    unsigned I = FromScope;
+    for (; I > ToScope; I = Scopes[I].ParentScope) {
       if (Scopes[I].InDiag == diag::note_protected_by_seh_finally) {
         S.Diag(From->getBeginLoc(), diag::warn_jump_out_of_seh_finally);
         break;
@@ -1055,11 +1080,22 @@ void JumpScopeChecker::CheckJump(Stmt *From, Stmt *To, SourceLocation DiagLoc,
         break;
       } else if (Scopes[I].InDiag ==
                  diag::note_acc_branch_into_compute_construct) {
+        // For consistency, emit the same diagnostic that ActOnBreakStmt() and
+        // ActOnContinueStmt() emit for non-labeled break/continue.
+        if (isa<LoopControlStmt>(From)) {
+          S.Diag(From->getBeginLoc(),
+                 diag::err_acc_branch_in_out_compute_construct)
+              << /*branch*/ 0 << /*out of */ 0;
+          return;
+        }
+
         S.Diag(From->getBeginLoc(), diag::err_goto_into_protected_scope);
         S.Diag(Scopes[I].Loc, diag::note_acc_branch_out_of_compute_construct);
         return;
       }
     }
+
+    DiagnoseInvalidBreakInOpenACCComputeConstruct(I);
   }
 
   unsigned CommonScope = GetDeepestCommonScope(FromScope, ToScope);

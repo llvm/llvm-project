@@ -3331,6 +3331,16 @@ StmtResult Sema::ActOnBreakStmt(SourceLocation BreakLoc, Scope *CurScope,
     // C99 6.8.6.3p1: A break shall appear only in or as a switch/loop body.
     return StmtError(Diag(BreakLoc, diag::err_break_not_in_loop_or_switch));
   }
+
+  // FIXME: We currently omit this check for labeled 'break' statements; this
+  // is fine since trying to label an OpenMP loop causes an error because we
+  // expect a ForStmt, not a LabelStmt. Trying to branch out of a loop that
+  // contains the OpenMP loop also doesn't work because the former is outlined
+  // into a separate function, i.e. the target label and 'break' are not in
+  // the same function. What's not great is that we only print 'use of
+  // undeclared label', which is a bit confusing because to the user the label
+  // does in fact appear to be declared. It would be better to print a more
+  // helpful error message instead, but that seems complicated.
   if (S->isOpenMPLoopScope())
     return StmtError(Diag(BreakLoc, diag::err_omp_loop_cannot_use_stmt)
                      << "break");
