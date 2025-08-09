@@ -90,7 +90,7 @@ LogicalResult MetadataAnalysis::visitOperation(
   // into the current lattice element for all of our results.`results` stores
   // the lattices corresponding to the results of op, We use a loop to traverse
   // them.
-  for (auto result : results) {
+  for (MetadataLatticeValueLattice *result : results) {
 
     // `isChanged` records whether the result has been changed.
     ChangeResult isChanged = ChangeResult::NoChange;
