@@ -244,6 +244,10 @@ ABIInfo::getOptimalVectorMemoryType(llvm::FixedVectorType *T,
   return T;
 }
 
+ABIArgInfo ABIInfo::classifyArgForArm64ECVarArg(QualType Ty) const {
+  llvm_unreachable("Only implemented for x86");
+}
+
 // Pin the vtable to this file.
 SwiftABIInfo::~SwiftABIInfo() = default;
 
