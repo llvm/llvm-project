@@ -95,7 +95,7 @@ ompt_start_tool_result_t *ompt_start_tool(unsigned int omp_version,
 
 // CHECK: {{^}}0: NULL_POINTER=[[NULL:.*$]]
 
-// CHECK: ompt_event_implicit_task_begin: task_id=[[TASK_ID:[0-9]+]]
+// CHECK: ompt_event_implicit_task_begin: task_id=[[TASK_ID:[0-f]+]]
 // CHECK-SAME: memory_addr=[[NULL]], memory_size=0, result=0
 
 // CHECK: ompt_event_task_create: task_id=[[TASK_ID_0:[0-9]+]]

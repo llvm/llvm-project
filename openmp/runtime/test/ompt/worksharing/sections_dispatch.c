@@ -28,8 +28,8 @@ int main()
   // CHECK: 0: NULL_POINTER=[[NULL:.*$]]
 
   // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_sections_begin:
-  // CHECK-SAME: parallel_id=[[PARALLEL_ID:[0-9]+]],
-  // CHECK-SAME: task_id=[[TASK_ID:[0-9]+]],
+  // CHECK-SAME: parallel_id=[[PARALLEL_ID:[0-f]+]],
+  // CHECK-SAME: task_id=[[TASK_ID:[0-f]+]],
   // CHECK-SAME: codeptr_ra=[[SECT_BEGIN:(0x)?[0-f]+]], count=2
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_section_begin:
   // CHECK-SAME: parallel_id=[[PARALLEL_ID]], task_id=[[TASK_ID]]
@@ -39,7 +39,7 @@ int main()
   // CHECK-SAME: codeptr_ra=[[SECT_END:(0x)?[0-f]+]]
 
   // CHECK: {{^}}[[THREAD_ID:[0-9]+]]: ompt_event_sections_begin:
-  // CHECK-SAME: parallel_id=[[PARALLEL_ID]], task_id=[[TASK_ID:[0-9]+]],
+  // CHECK-SAME: parallel_id=[[PARALLEL_ID]], task_id=[[TASK_ID:[0-f]+]],
   // CHECK-SAME: codeptr_ra=[[SECT_BEGIN]], count=2
   // CHECK: {{^}}[[THREAD_ID]]: ompt_event_section_begin:
   // CHECK-SAME: parallel_id=[[PARALLEL_ID]], task_id=[[TASK_ID]]

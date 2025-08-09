@@ -1074,6 +1074,8 @@ static void on_ompt_callback_error(ompt_severity_t severity,
          codeptr_ra);
 }
 
+#ifndef SKIP_CALLBACK_REGISTRATION
+
 int ompt_initialize(
   ompt_function_lookup_t lookup,
   int initial_device_num,
@@ -1147,6 +1149,7 @@ ompt_start_tool_result_t* ompt_start_tool(
 #ifdef __cplusplus
 }
 #endif
+#endif // ifndef SKIP_CALLBACK_REGISTRATION
 #endif // ifndef USE_PRIVATE_TOOL
 #ifdef _OMPT_TESTS
 #undef _OMPT_TESTS
