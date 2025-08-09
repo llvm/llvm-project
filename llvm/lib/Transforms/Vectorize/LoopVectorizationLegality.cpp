@@ -1777,15 +1777,9 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   }
   // Speculative loads need to be unit-stride.
   for (LoadInst *LI : NonDerefLoads) {
-    if (LI->getParent() != TheLoop->getHeader()) {
-      reportVectorizationFailure("Cannot vectorize predicated speculative load",
-                                 "SpeculativeLoadNeedsPredication", ORE,
-                                 TheLoop);
-      return false;
-    }
     int Stride = isConsecutivePtr(LI->getType(), LI->getPointerOperand());
     if (Stride != 1) {
-      reportVectorizationFailure("Loop contains non-unit-stride load",
+      reportVectorizationFailure("Loop contains strided unbound access",
                                  "Cannot vectorize early exit loop with "
                                  "speculative non-unit-stride load",
                                  "SpeculativeNonUnitStrideLoadEarlyExitLoop",
@@ -1794,6 +1788,13 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
     }
     SpeculativeLoads.insert(LI);
     LLVM_DEBUG(dbgs() << "LV: Found speculative load: " << *LI << "\n");
+  }
+  // Support single Speculative load for now.
+  if (NonDerefLoads.size() > 1) {
+      reportVectorizationFailure("Loop contains more than one unbound access",
+                                 "TooManySpeculativeLoadInEarlyExitLoop",
+                                 ORE, TheLoop);
+      return false;
   }
 
   [[maybe_unused]] const SCEV *SymbolicMaxBTC =
