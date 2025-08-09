@@ -1342,18 +1342,18 @@ private:
     __node_holder __new_node = __construct_node(__src->__value_);
 
     unique_ptr<__node, __tree_deleter> __left(
-        __copy_construct_tree(static_cast<__node_pointer>(__src->__left_)), __node_alloc_);
-    __node_pointer __right = __copy_construct_tree(static_cast<__node_pointer>(__src->__right_));
+        __copy_construct_tree(std::__static_fancy_pointer_cast<__node_pointer>(__src->__left_)), __node_alloc_);
+    __node_pointer __right = __copy_construct_tree(std::__static_fancy_pointer_cast<__node_pointer>(__src->__right_));
 
     __node_pointer __new_node_ptr = __new_node.release();
 
     __new_node_ptr->__is_black_ = __src->__is_black_;
-    __new_node_ptr->__left_     = static_cast<__node_base_pointer>(__left.release());
-    __new_node_ptr->__right_    = static_cast<__node_base_pointer>(__right);
+    __new_node_ptr->__left_     = std::__static_fancy_pointer_cast<__node_base_pointer>(__left.release());
+    __new_node_ptr->__right_    = std::__static_fancy_pointer_cast<__node_base_pointer>(__right);
     if (__new_node_ptr->__left_)
-      __new_node_ptr->__left_->__parent_ = static_cast<__end_node_pointer>(__new_node_ptr);
+      __new_node_ptr->__left_->__parent_ = std::__static_fancy_pointer_cast<__end_node_pointer>(__new_node_ptr);
     if (__new_node_ptr->__right_)
-      __new_node_ptr->__right_->__parent_ = static_cast<__end_node_pointer>(__new_node_ptr);
+      __new_node_ptr->__right_->__parent_ = std::__static_fancy_pointer_cast<__end_node_pointer>(__new_node_ptr);
     return __new_node_ptr;
   }
 
@@ -1363,7 +1363,7 @@ private:
 #ifdef _LIBCPP_COMPILER_CLANG_BASED // FIXME: GCC complains about not being able to always_inline a recursive function
   _LIBCPP_HIDE_FROM_ABI
 #endif
-  __node_pointer
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 __node_pointer
   __copy_assign_tree(__node_pointer __dest, __node_pointer __src) {
     if (!__src) {
       destroy(__dest);
@@ -1375,24 +1375,24 @@ private:
 
     // If we already have a left node in the destination tree, reuse it and copy-assign recursively
     if (__dest->__left_) {
-      __dest->__left_ = static_cast<__node_base_pointer>(__copy_assign_tree(
-          static_cast<__node_pointer>(__dest->__left_), static_cast<__node_pointer>(__src->__left_)));
+      __dest->__left_ = std::__static_fancy_pointer_cast<__node_base_pointer>(__copy_assign_tree(
+          std::__static_fancy_pointer_cast<__node_pointer>(__dest->__left_), std::__static_fancy_pointer_cast<__node_pointer>(__src->__left_)));
 
       // Otherwise, we must create new nodes; copy-construct from here on
     } else if (__src->__left_) {
-      auto __new_left       = __copy_construct_tree(static_cast<__node_pointer>(__src->__left_));
-      __dest->__left_       = static_cast<__node_base_pointer>(__new_left);
-      __new_left->__parent_ = static_cast<__end_node_pointer>(__dest);
+      auto __new_left       = __copy_construct_tree(std::__static_fancy_pointer_cast<__node_pointer>(__src->__left_));
+      __dest->__left_       = std::__static_fancy_pointer_cast<__node_base_pointer>(__new_left);
+      __new_left->__parent_ = std::__static_fancy_pointer_cast<__end_node_pointer>(__dest);
     }
 
     // Identical to the left case above, just for the right nodes
     if (__dest->__right_) {
-      __dest->__right_ = static_cast<__node_base_pointer>(__copy_assign_tree(
-          static_cast<__node_pointer>(__dest->__right_), static_cast<__node_pointer>(__src->__right_)));
+      __dest->__right_ = std::__static_fancy_pointer_cast<__node_base_pointer>(__copy_assign_tree(
+          std::__static_fancy_pointer_cast<__node_pointer>(__dest->__right_), std::__static_fancy_pointer_cast<__node_pointer>(__src->__right_)));
     } else if (__src->__right_) {
-      auto __new_right       = __copy_construct_tree(static_cast<__node_pointer>(__src->__right_));
-      __dest->__right_       = static_cast<__node_base_pointer>(__new_right);
-      __new_right->__parent_ = static_cast<__end_node_pointer>(__dest);
+      auto __new_right       = __copy_construct_tree(std::__static_fancy_pointer_cast<__node_pointer>(__src->__right_));
+      __dest->__right_       = std::__static_fancy_pointer_cast<__node_base_pointer>(__new_right);
+      __new_right->__parent_ = std::__static_fancy_pointer_cast<__end_node_pointer>(__dest);
     }
 
     return __dest;
@@ -1469,14 +1469,14 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree<_Tp, _Compare, _Allocator>& __tree<_Tp, _Co
   __copy_assign_alloc(__t);
 
   if (__size_ != 0) {
-    *__root_ptr() = static_cast<__node_base_pointer>(__copy_assign_tree(__root(), __t.__root()));
+    *__root_ptr() = std::__static_fancy_pointer_cast<__node_base_pointer>(__copy_assign_tree(__root(), __t.__root()));
   } else {
-    *__root_ptr() = static_cast<__node_base_pointer>(__copy_construct_tree(__t.__root()));
+    *__root_ptr() = std::__static_fancy_pointer_cast<__node_base_pointer>(__copy_construct_tree(__t.__root()));
     if (__root())
       __root()->__parent_ = __end_node();
   }
   __begin_node_ =
-      __end_node()->__left_ ? static_cast<__end_node_pointer>(std::__tree_min(__end_node()->__left_)) : __end_node();
+      __end_node()->__left_ ? std::__static_fancy_pointer_cast<__end_node_pointer>(std::__tree_min(__end_node()->__left_)) : __end_node();
   __size_ = __t.size();
 
   return *this;
@@ -1533,9 +1533,9 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree<_Tp, _Compare, _Allocator>::__tree(const __
   if (__t.size() == 0)
     return;
 
-  *__root_ptr()       = static_cast<__node_base_pointer>(__copy_construct_tree(__t.__root()));
+  *__root_ptr()       = std::__static_fancy_pointer_cast<__node_base_pointer>(__copy_construct_tree(__t.__root()));
   __root()->__parent_ = __end_node();
-  __begin_node_       = static_cast<__end_node_pointer>(std::__tree_min(__end_node()->__left_));
+  __begin_node_       = std::__static_fancy_pointer_cast<__end_node_pointer>(std::__tree_min(__end_node()->__left_));
   __size_             = __t.size();
 }
 
