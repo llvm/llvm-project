@@ -141,6 +141,16 @@ static void diagnoseNonConstexprBuiltin(InterpState &S, CodePtr OpPC,
     S.CCEDiag(Loc, diag::note_invalid_subexpr_in_const_expr);
 }
 
+// Same implementation as Compiler::getRoundingMode.
+static llvm::RoundingMode getRoundingMode(const InterpState &S, const Expr *E) {
+  FPOptions FPO = E->getFPFeaturesInEffect(S.Ctx.getLangOpts());
+
+  if (FPO.getRoundingMode() == llvm::RoundingMode::Dynamic)
+    return llvm::RoundingMode::NearestTiesToEven;
+
+  return FPO.getRoundingMode();
+}
+
 static bool interp__builtin_is_constant_evaluated(InterpState &S, CodePtr OpPC,
                                                   const InterpFrame *Frame,
                                                   const CallExpr *Call) {
@@ -2320,6 +2330,62 @@ static bool interp__builtin_elementwise_sat(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_elementwise_fma(InterpState &S, CodePtr OpPC,
+                                            const CallExpr *Call) {
+  assert(Call->getNumArgs() == 3);
+
+  llvm::RoundingMode RM = getRoundingMode(S, Call);
+  const QualType Arg1Type = Call->getArg(0)->getType();
+  const QualType Arg2Type = Call->getArg(1)->getType();
+  const QualType Arg3Type = Call->getArg(2)->getType();
+
+  // Non-vector floating point types.
+  if (!Arg1Type->isVectorType()) {
+    assert(!Arg2Type->isVectorType());
+    assert(!Arg3Type->isVectorType());
+
+    const Floating &Z = S.Stk.pop<Floating>();
+    const Floating &Y = S.Stk.pop<Floating>();
+    const Floating &X = S.Stk.pop<Floating>();
+    APFloat F = X.getAPFloat();
+    F.fusedMultiplyAdd(Y.getAPFloat(), Z.getAPFloat(), RM);
+    Floating Result = S.allocFloat(X.getSemantics());
+    Result.copy(F);
+    S.Stk.push<Floating>(Result);
+    return true;
+  }
+
+  // Vector type.
+  assert(Arg1Type->isVectorType() &&
+         Arg2Type->isVectorType() &&
+         Arg3Type->isVectorType());
+
+  const VectorType *VecT = Arg1Type->castAs<VectorType>();
+  const QualType ElemT = VecT->getElementType();
+  unsigned NumElems = VecT->getNumElements();
+
+  assert(ElemT == Arg2Type->castAs<VectorType>()->getElementType() &&
+         ElemT == Arg3Type->castAs<VectorType>()->getElementType());
+  assert(NumElems == Arg2Type->castAs<VectorType>()->getNumElements() &&
+         NumElems == Arg3Type->castAs<VectorType>()->getNumElements());
+  assert(ElemT->isRealFloatingType());
+
+  const Pointer &VZ = S.Stk.pop<Pointer>();
+  const Pointer &VY = S.Stk.pop<Pointer>();
+  const Pointer &VX = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+  for (unsigned I = 0; I != NumElems; ++I) {
+    using T = PrimConv<PT_Float>::T;
+    APFloat X = VX.elem<T>(I).getAPFloat();
+    APFloat Y = VY.elem<T>(I).getAPFloat();
+    APFloat Z = VZ.elem<T>(I).getAPFloat();
+    (void)X.fusedMultiplyAdd(Y, Z, RM);
+    Dst.elem<Floating>(I) = Floating(X);
+  }
+  Dst.initializeAllElements();
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
   if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
@@ -2726,6 +2792,9 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_elementwise_add_sat:
   case Builtin::BI__builtin_elementwise_sub_sat:
     return interp__builtin_elementwise_sat(S, OpPC, Call, BuiltinID);
+
+  case Builtin::BI__builtin_elementwise_fma:
+    return interp__builtin_elementwise_fma(S, OpPC, Call);
 
   default:
     S.FFDiag(S.Current->getLocation(OpPC),
