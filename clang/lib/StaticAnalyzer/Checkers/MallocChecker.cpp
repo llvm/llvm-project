@@ -78,6 +78,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -1095,6 +1096,47 @@ public:
     state = state->remove<RegionState>(sym);
     return true;
   }
+};
+
+/// EscapeTrackedCallback - A SymbolVisitor that marks allocated symbols as
+/// escaped.
+///
+/// This visitor is used to suppress false positive leak reports when smart
+/// pointers are nested in temporary objects passed by value to functions. When
+/// the analyzer can't see the destructor calls for temporary objects, it may
+/// incorrectly report leaks for memory that will be properly freed by the smart
+/// pointer destructors.
+///
+/// The visitor traverses reachable symbols from a given set of memory regions
+/// (typically smart pointer field regions) and marks any allocated symbols as
+/// escaped. Escaped symbols are not reported as leaks by checkDeadSymbols.
+class EscapeTrackedCallback final : public SymbolVisitor {
+  ProgramStateRef State;
+
+  explicit EscapeTrackedCallback(ProgramStateRef S) : State(std::move(S)) {}
+
+  bool VisitSymbol(SymbolRef Sym) override {
+    if (const RefState *RS = State->get<RegionState>(Sym)) {
+      if (RS->isAllocated() || RS->isAllocatedOfSizeZero()) {
+        State = State->set<RegionState>(Sym, RefState::getEscaped(RS));
+      }
+    }
+    return true;
+  }
+
+public:
+  /// Escape tracked regions reachable from the given roots.
+  static ProgramStateRef
+  EscapeTrackedRegionsReachableFrom(ArrayRef<const MemRegion *> Roots,
+                                    ProgramStateRef State) {
+    EscapeTrackedCallback Visitor(State);
+    for (const MemRegion *R : Roots) {
+      State->scanReachableSymbols(loc::MemRegionVal(R), Visitor);
+    }
+    return Visitor.State;
+  }
+
+  friend class SymbolVisitor;
 };
 } // end anonymous namespace
 
@@ -3068,11 +3110,196 @@ void MallocChecker::checkDeadSymbols(SymbolReaper &SymReaper,
   C.addTransition(state->set<RegionState>(RS), N);
 }
 
+// Allowlist of owning smart pointers we want to recognize.
+// Start with unique_ptr and shared_ptr. (intentionally exclude weak_ptr)
+static bool isSmartOwningPtrType(QualType QT) {
+  QT = QT->getCanonicalTypeUnqualified();
+
+  // First try TemplateSpecializationType (for std smart pointers)
+  if (const auto *TST = QT->getAs<TemplateSpecializationType>()) {
+    const TemplateDecl *TD = TST->getTemplateName().getAsTemplateDecl();
+    if (!TD)
+      return false;
+
+    const auto *ND = dyn_cast_or_null<NamedDecl>(TD->getTemplatedDecl());
+    if (!ND)
+      return false;
+
+    // Check if it's in std namespace
+    if (!isWithinStdNamespace(ND))
+      return false;
+
+    StringRef Name = ND->getName();
+    return Name == "unique_ptr" || Name == "shared_ptr";
+  }
+
+  // Also try RecordType (for custom smart pointer implementations)
+  if (const auto *RD = QT->getAsCXXRecordDecl()) {
+    StringRef Name = RD->getName();
+    if (Name == "unique_ptr" || Name == "shared_ptr") {
+      // Accept any custom unique_ptr or shared_ptr implementation
+      return true;
+    }
+  }
+
+  return false;
+}
+
+static bool hasSmartPtrField(const CXXRecordDecl *CRD) {
+  // Check direct fields
+  if (llvm::any_of(CRD->fields(), [](const FieldDecl *FD) {
+        return isSmartOwningPtrType(FD->getType());
+      }))
+    return true;
+
+  // Check fields from base classes
+  for (const CXXBaseSpecifier &Base : CRD->bases()) {
+    if (const CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl()) {
+      if (hasSmartPtrField(BaseDecl))
+        return true;
+    }
+  }
+  return false;
+}
+
+static bool isRvalueByValueRecord(const Expr *AE) {
+  if (AE->isGLValue())
+    return false;
+
+  QualType T = AE->getType();
+  if (!T->isRecordType() || T->isReferenceType())
+    return false;
+
+  // Accept common temp/construct forms but don't overfit.
+  return isa<CXXTemporaryObjectExpr, MaterializeTemporaryExpr, CXXConstructExpr,
+             InitListExpr, ImplicitCastExpr, CXXBindTemporaryExpr>(AE);
+}
+
+static bool isRvalueByValueRecordWithSmartPtr(const Expr *AE) {
+  if (!isRvalueByValueRecord(AE))
+    return false;
+
+  const auto *CRD = AE->getType()->getAsCXXRecordDecl();
+  return CRD && hasSmartPtrField(CRD);
+}
+
+static ProgramStateRef escapeAllAllocatedSymbols(ProgramStateRef State) {
+  RegionStateTy RS = State->get<RegionState>();
+  ProgramStateRef NewState = State;
+  for (auto [Sym, RefSt] : RS) {
+    if (RefSt.isAllocated() || RefSt.isAllocatedOfSizeZero()) {
+      NewState = NewState->set<RegionState>(Sym, RefState::getEscaped(&RefSt));
+    }
+  }
+  return NewState;
+}
+
+static void collectDirectSmartOwningPtrFieldRegions(
+    const MemRegion *Base, QualType RecQT, CheckerContext &C,
+    SmallVectorImpl<const MemRegion *> &Out) {
+  if (!Base)
+    return;
+  const auto *CRD = RecQT->getAsCXXRecordDecl();
+  if (!CRD)
+    return;
+
+  // Collect direct fields
+  for (const FieldDecl *FD : CRD->fields()) {
+    if (!isSmartOwningPtrType(FD->getType()))
+      continue;
+    SVal L = C.getState()->getLValue(FD, loc::MemRegionVal(Base));
+    if (const MemRegion *FR = L.getAsRegion())
+      Out.push_back(FR);
+  }
+
+  // Collect fields from base classes
+  for (const CXXBaseSpecifier &BaseSpec : CRD->bases()) {
+    if (const CXXRecordDecl *BaseDecl =
+            BaseSpec.getType()->getAsCXXRecordDecl()) {
+      // Get the base class region
+      SVal BaseL = C.getState()->getLValue(BaseDecl, Base->getAs<SubRegion>(),
+                                           BaseSpec.isVirtual());
+      if (const MemRegion *BaseRegion = BaseL.getAsRegion()) {
+        // Recursively collect fields from this base class
+        collectDirectSmartOwningPtrFieldRegions(BaseRegion, BaseSpec.getType(),
+                                                C, Out);
+      }
+    }
+  }
+}
+
 void MallocChecker::checkPostCall(const CallEvent &Call,
                                   CheckerContext &C) const {
+  // Keep existing post-call handlers.
   if (const auto *PostFN = PostFnMap.lookup(Call)) {
     (*PostFN)(this, C.getState(), Call, C);
-    return;
+  }
+
+  SmallVector<const MemRegion *, 8> SmartPtrFieldRoots;
+
+  for (unsigned I = 0, E = Call.getNumArgs(); I != E; ++I) {
+    const Expr *AE = Call.getArgExpr(I);
+    if (!AE)
+      continue;
+    AE = AE->IgnoreParenImpCasts();
+
+    if (!isRvalueByValueRecordWithSmartPtr(AE))
+      continue;
+
+    // Find a region for the argument.
+    SVal VCall = Call.getArgSVal(I);
+    SVal VExpr = C.getSVal(AE);
+    const MemRegion *RCall = VCall.getAsRegion();
+    const MemRegion *RExpr = VExpr.getAsRegion();
+
+    const MemRegion *Base = RCall ? RCall : RExpr;
+    if (!Base) {
+      // Fallback: if we have a by-value record with smart pointer fields but no
+      // region, mark all allocated symbols as escaped
+      ProgramStateRef State = C.getState();
+      ProgramStateRef NewState = escapeAllAllocatedSymbols(State);
+      if (NewState != State)
+        C.addTransition(NewState);
+      continue;
+    }
+
+    // Push direct smart owning pointer field regions only (precise root set).
+    collectDirectSmartOwningPtrFieldRegions(Base, AE->getType(), C,
+                                            SmartPtrFieldRoots);
+  }
+
+  // Escape only from those field roots; do nothing if empty.
+  if (!SmartPtrFieldRoots.empty()) {
+    ProgramStateRef State = C.getState();
+    ProgramStateRef NewState =
+        EscapeTrackedCallback::EscapeTrackedRegionsReachableFrom(
+            SmartPtrFieldRoots, State);
+    if (NewState != State) {
+      C.addTransition(NewState);
+    } else {
+      // Fallback: if we have by-value record arguments but no smart pointer
+      // fields detected, check if any of the arguments are by-value records
+      // with smart pointer fields
+      bool hasByValueRecordWithSmartPtr = false;
+      for (unsigned I = 0, E = Call.getNumArgs(); I != E; ++I) {
+        const Expr *AE = Call.getArgExpr(I);
+        if (!AE)
+          continue;
+        AE = AE->IgnoreParenImpCasts();
+
+        if (isRvalueByValueRecordWithSmartPtr(AE)) {
+          hasByValueRecordWithSmartPtr = true;
+          break;
+        }
+      }
+
+      if (hasByValueRecordWithSmartPtr) {
+        ProgramStateRef State = C.getState();
+        ProgramStateRef NewState = escapeAllAllocatedSymbols(State);
+        if (NewState != State)
+          C.addTransition(NewState);
+      }
+    }
   }
 }
 
@@ -3194,7 +3421,6 @@ void MallocChecker::checkEscapeOnReturn(const ReturnStmt *S,
   if (!Sym)
     // If we are returning a field of the allocated struct or an array element,
     // the callee could still free the memory.
-    // TODO: This logic should be a part of generic symbol escape callback.
     if (const MemRegion *MR = RetVal.getAsRegion())
       if (isa<FieldRegion, ElementRegion>(MR))
         if (const SymbolicRegion *BMR =
