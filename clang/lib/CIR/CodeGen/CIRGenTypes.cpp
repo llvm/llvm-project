@@ -185,7 +185,8 @@ isSafeToConvert(QualType qt, CIRGenTypes &cgt,
 
   // If this is a record, check it.
   if (const auto *rt = qt->getAs<RecordType>())
-    return isSafeToConvert(rt->getOriginalDecl(), cgt, alreadyChecked);
+    return isSafeToConvert(rt->getOriginalDecl()->getDefinitionOrSelf(), cgt,
+                           alreadyChecked);
 
   // If this is an array, check the elements, which are embedded inline.
   if (const auto *at = cgt.getASTContext().getAsArrayType(qt))
@@ -464,7 +465,8 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   }
 
   case Type::Enum: {
-    const EnumDecl *ed = cast<EnumType>(ty)->getOriginalDecl();
+    const EnumDecl *ed =
+        cast<EnumType>(ty)->getOriginalDecl()->getDefinitionOrSelf();
     if (auto integerType = ed->getIntegerType(); !integerType.isNull())
       return convertType(integerType);
     // Return a placeholder 'i32' type.  This can be changed later when the
@@ -555,7 +557,7 @@ bool CIRGenTypes::isZeroInitializable(clang::QualType t) {
   }
 
   if (const RecordType *rt = t->getAs<RecordType>()) {
-    const RecordDecl *rd = rt->getOriginalDecl();
+    const RecordDecl *rd = rt->getOriginalDecl()->getDefinitionOrSelf();
     return isZeroInitializable(rd);
   }
 
