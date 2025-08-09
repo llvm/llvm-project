@@ -3237,22 +3237,27 @@ def GPU_BroadcastLaneOp : GPU_Op<"broadcast_lane",
                  GPU_BroadcastTypeAttr:$broadcast_type)> {
   let summary = "Broadcasts a value from the specific lane across subgroup";
   let description = [{
-      Broadcasts the value from the one lane to the all lanes in subgroup.
+      Broadcasts a value from one lane to all lanes in a subgroup. The
+      result is guaranteed to be uniform across the subgroup.
 
-      The possible broadcats types are:
+      The possible broadcast types are:
 
-      * `first_lane` - first active lane in subgroup.
-      * `lane` - from the specified lane, lane index must be withing subgroup.
-      * `any_lane` - if `src` value is uniform across all the subgroup
-      lanes return it unchanged, otherwise result is poison. This variant
-      essentially an uniformity hint for the compiler, conveying that
-      specific value is uniform across all subgroup lanes. Dropping `any_lane`
-      broadcast will not change the code semantics.
-      ```
+      * `first_lane` - broadcasts the value from the first active lane in the
+      subgroup.
+      * `lane` - broadcasts from the specified lane. The lane index must be
+      uniform and within the subgroup size. The result is poison if the lane
+      index is invalid or non-subgroup-uniform.
+      * `any_lane` - broadcasts the value from any lane of the subgroup,
+      active or inactive, assuming the input is already subgroup uniform. The
+      result is poison if the input is not uniform. This is useful to convey
+      uniformity to the compiler to enable more optimizations. Also, it allows
+      more speculation opportunities than `first_lane` since `first_lane`
+      results can depend on active lanes which may change during speculation
+      across control flow.
   }];
   let results = (outs AnyType:$result);
   let assemblyFormat = [{
-    $src `,` $broadcast_type ($lane^)?  attr-dict `:` type($result)
+    $src `,` $broadcast_type ($lane^)? attr-dict `:` type($result)
   }];
   let hasVerifier = 1;
 }
