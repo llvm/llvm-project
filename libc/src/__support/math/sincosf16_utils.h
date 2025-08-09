@@ -16,6 +16,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+namespace sincosf16_internal {
+
 // Lookup table for sin(k * pi / 32) with k = 0, ..., 63.
 // Table is generated with Sollya as follows:
 // > display = hexadecimmal;
@@ -66,7 +68,7 @@ LIBC_INLINE int32_t range_reduction_sincosf16(float x, float &y) {
   return static_cast<int32_t>(kd);
 }
 
-static LIBC_INLINE void sincosf16_poly_eval(int32_t k, float y, float &sin_k,
+LIBC_INLINE static void sincosf16_poly_eval(int32_t k, float y, float &sin_k,
                                             float &cos_k, float &sin_y,
                                             float &cosm1_y) {
 
@@ -106,6 +108,8 @@ LIBC_INLINE void sincospif16_eval(float xf, float &sin_k, float &cos_k,
 
   sincosf16_poly_eval(k, y, sin_k, cos_k, sin_y, cosm1_y);
 }
+
+} // namespace sincosf16_internal
 
 } // namespace LIBC_NAMESPACE_DECL
 
