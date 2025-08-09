@@ -24,6 +24,7 @@
 #  include <wctype.h>
 #endif
 
+#include <langinfo.h>
 #include <xlocale.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -60,6 +61,11 @@ inline _LIBCPP_HIDE_FROM_ABI char* __setlocale(int __category, char const* __loc
 }
 
 inline _LIBCPP_HIDE_FROM_ABI __lconv_t* __localeconv(__locale_t& __loc) { return ::localeconv_l(__loc); }
+
+inline _LIBCPP_HIDE_FROM_ABI char* __nl_langinfo_l(int __category_mask, __locale_t __l) {
+  return ::nl_langinfo_l(__category_mask, __l);
+}
+
 #endif // _LIBCPP_BUILDING_LIBRARY
 
 //

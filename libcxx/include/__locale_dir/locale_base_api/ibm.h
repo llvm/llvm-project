@@ -14,6 +14,7 @@
 #  include <__support/ibm/locale_mgmt_zos.h>
 #endif // defined(__MVS__)
 
+#include <langinfo.h>
 #include <locale.h>
 #include <stdarg.h>
 #include <stdio.h>
