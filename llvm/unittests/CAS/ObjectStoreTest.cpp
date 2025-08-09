@@ -313,7 +313,7 @@ static void testBlobsParallel(ObjectStore &Read1, ObjectStore &Read2,
 
   auto Consumer = [&](unsigned I, ObjectStore *CAS) {
     std::optional<CASID> ID;
-    {
+    if (!ID) {
       // Busy wait.
       std::lock_guard<std::mutex> L(NodesMtx);
       ID = CreatedNodes[I];
