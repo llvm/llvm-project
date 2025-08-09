@@ -196,7 +196,8 @@ break; \
     // Don't desugar through the primary typedef of an anonymous type.
     if (const TagType *UTT = Underlying->getAs<TagType>())
       if (const TypedefType *QTT = dyn_cast<TypedefType>(QT))
-        if (UTT->getDecl()->getTypedefNameForAnonDecl() == QTT->getDecl())
+        if (UTT->getOriginalDecl()->getTypedefNameForAnonDecl() ==
+            QTT->getDecl())
           break;
 
     // Record that we actually looked through an opaque type here.
@@ -457,13 +458,12 @@ void clang::FormatASTNodeDiagnosticArgument(
       ND->getNameForDiagnostic(OS, Context.getPrintingPolicy(), Qualified);
       break;
     }
-    case DiagnosticsEngine::ak_nestednamespec: {
-      NestedNameSpecifier *NNS = reinterpret_cast<NestedNameSpecifier*>(Val);
-      NNS->print(OS, Context.getPrintingPolicy(),
+    case DiagnosticsEngine::ak_nestednamespec:
+      NestedNameSpecifier::getFromVoidPointer(reinterpret_cast<void *>(Val))
+          .print(OS, Context.getPrintingPolicy(),
                  /*ResolveTemplateArguments=*/false,
                  /*PrintFinalScopeResOp=*/false);
       break;
-    }
     case DiagnosticsEngine::ak_declcontext: {
       DeclContext *DC = reinterpret_cast<DeclContext *> (Val);
       assert(DC && "Should never have a null declaration context");
@@ -1153,7 +1153,7 @@ class TemplateDiff {
       return nullptr;
 
     const ClassTemplateSpecializationDecl *CTSD =
-        dyn_cast<ClassTemplateSpecializationDecl>(RT->getDecl());
+        dyn_cast<ClassTemplateSpecializationDecl>(RT->getOriginalDecl());
 
     if (!CTSD)
       return nullptr;

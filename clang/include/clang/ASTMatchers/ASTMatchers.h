@@ -7775,7 +7775,7 @@ AST_MATCHER_FUNCTION_P_OVERLOAD(
 ///   matches "A::"
 AST_MATCHER_P(NestedNameSpecifier, specifiesType,
               internal::Matcher<QualType>, InnerMatcher) {
-  if (!Node.getAsType())
+  if (Node.getKind() != NestedNameSpecifier::Kind::Type)
     return false;
   return InnerMatcher.matches(QualType(Node.getAsType(), 0), Finder, Builder);
 }
@@ -7793,8 +7793,12 @@ AST_MATCHER_P(NestedNameSpecifier, specifiesType,
 ///   matches "A::"
 AST_MATCHER_P(NestedNameSpecifierLoc, specifiesTypeLoc,
               internal::Matcher<TypeLoc>, InnerMatcher) {
-  return Node && Node.getNestedNameSpecifier()->getAsType() &&
-         InnerMatcher.matches(Node.getTypeLoc(), Finder, Builder);
+  if (!Node)
+    return false;
+  TypeLoc TL = Node.getAsTypeLoc();
+  if (!TL)
+    return false;
+  return InnerMatcher.matches(TL, Finder, Builder);
 }
 
 /// Matches on the prefix of a \c NestedNameSpecifier.
@@ -7809,10 +7813,21 @@ AST_MATCHER_P(NestedNameSpecifierLoc, specifiesTypeLoc,
 AST_MATCHER_P_OVERLOAD(NestedNameSpecifier, hasPrefix,
                        internal::Matcher<NestedNameSpecifier>, InnerMatcher,
                        0) {
-  const NestedNameSpecifier *NextNode = Node.getPrefix();
+  NestedNameSpecifier NextNode = std::nullopt;
+  switch (Node.getKind()) {
+  case NestedNameSpecifier::Kind::Namespace:
+    NextNode = Node.getAsNamespaceAndPrefix().Prefix;
+    break;
+  case NestedNameSpecifier::Kind::Type:
+    NextNode = Node.getAsType()->getPrefix();
+    break;
+  default:
+    break;
+  }
+
   if (!NextNode)
     return false;
-  return InnerMatcher.matches(*NextNode, Finder, Builder);
+  return InnerMatcher.matches(NextNode, Finder, Builder);
 }
 
 /// Matches on the prefix of a \c NestedNameSpecifierLoc.
@@ -7827,7 +7842,12 @@ AST_MATCHER_P_OVERLOAD(NestedNameSpecifier, hasPrefix,
 AST_MATCHER_P_OVERLOAD(NestedNameSpecifierLoc, hasPrefix,
                        internal::Matcher<NestedNameSpecifierLoc>, InnerMatcher,
                        1) {
-  NestedNameSpecifierLoc NextNode = Node.getPrefix();
+  NestedNameSpecifierLoc NextNode;
+  if (TypeLoc TL = Node.getAsTypeLoc())
+    NextNode = TL.getPrefix();
+  else
+    NextNode = Node.getAsNamespaceAndPrefix().Prefix;
+
   if (!NextNode)
     return false;
   return InnerMatcher.matches(NextNode, Finder, Builder);
@@ -7845,9 +7865,13 @@ AST_MATCHER_P_OVERLOAD(NestedNameSpecifierLoc, hasPrefix,
 ///   matches "ns::"
 AST_MATCHER_P(NestedNameSpecifier, specifiesNamespace,
               internal::Matcher<NamespaceDecl>, InnerMatcher) {
-  if (auto *NS = dyn_cast_if_present<NamespaceDecl>(Node.getAsNamespace()))
-    return InnerMatcher.matches(*NS, Finder, Builder);
-  return false;
+  if (Node.getKind() != NestedNameSpecifier::Kind::Namespace)
+    return false;
+  const auto *Namespace =
+      dyn_cast<NamespaceDecl>(Node.getAsNamespaceAndPrefix().Namespace);
+  if (!Namespace)
+    return false;
+  return InnerMatcher.matches(*Namespace, Finder, Builder);
 }
 
 /// Matches attributes.

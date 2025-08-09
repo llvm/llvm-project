@@ -110,8 +110,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      const TemplateArgumentLoc &Arg1,
                                      const TemplateArgumentLoc &Arg2);
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
-                                     NestedNameSpecifier *NNS1,
-                                     NestedNameSpecifier *NNS2);
+                                     NestedNameSpecifier NNS1,
+                                     NestedNameSpecifier NNS2);
 static bool IsStructurallyEquivalent(const IdentifierInfo *Name1,
                                      const IdentifierInfo *Name2);
 
@@ -579,35 +579,30 @@ static bool IsStructurallyEquivalent(const IdentifierInfo *Name1,
 
 /// Determine whether two nested-name-specifiers are equivalent.
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
-                                     NestedNameSpecifier *NNS1,
-                                     NestedNameSpecifier *NNS2) {
-  if (NNS1->getKind() != NNS2->getKind())
+                                     NestedNameSpecifier NNS1,
+                                     NestedNameSpecifier NNS2) {
+  auto Kind = NNS1.getKind();
+  if (Kind != NNS2.getKind())
     return false;
-
-  NestedNameSpecifier *Prefix1 = NNS1->getPrefix(),
-                      *Prefix2 = NNS2->getPrefix();
-  if ((bool)Prefix1 != (bool)Prefix2)
-    return false;
-
-  if (Prefix1)
-    if (!IsStructurallyEquivalent(Context, Prefix1, Prefix2))
-      return false;
-
-  switch (NNS1->getKind()) {
-  case NestedNameSpecifier::Identifier:
-    return IsStructurallyEquivalent(NNS1->getAsIdentifier(),
-                                    NNS2->getAsIdentifier());
-  case NestedNameSpecifier::Namespace:
-    return IsStructurallyEquivalent(Context, NNS1->getAsNamespace(),
-                                    NNS2->getAsNamespace());
-  case NestedNameSpecifier::TypeSpec:
-    return IsStructurallyEquivalent(Context, QualType(NNS1->getAsType(), 0),
-                                    QualType(NNS2->getAsType(), 0));
-  case NestedNameSpecifier::Global:
+  switch (Kind) {
+  case NestedNameSpecifier::Kind::Null:
+  case NestedNameSpecifier::Kind::Global:
     return true;
-  case NestedNameSpecifier::Super:
-    return IsStructurallyEquivalent(Context, NNS1->getAsRecordDecl(),
-                                    NNS2->getAsRecordDecl());
+  case NestedNameSpecifier::Kind::Namespace: {
+    auto [Namespace1, Prefix1] = NNS1.getAsNamespaceAndPrefix();
+    auto [Namespace2, Prefix2] = NNS2.getAsNamespaceAndPrefix();
+    if (!IsStructurallyEquivalent(Context,
+                                  const_cast<NamespaceBaseDecl *>(Namespace1),
+                                  const_cast<NamespaceBaseDecl *>(Namespace2)))
+      return false;
+    return IsStructurallyEquivalent(Context, Prefix1, Prefix2);
+  }
+  case NestedNameSpecifier::Kind::Type:
+    return IsStructurallyEquivalent(Context, QualType(NNS1.getAsType(), 0),
+                                    QualType(NNS2.getAsType(), 0));
+  case NestedNameSpecifier::Kind::MicrosoftSuper:
+    return IsStructurallyEquivalent(Context, NNS1.getAsMicrosoftSuper(),
+                                    NNS2.getAsMicrosoftSuper());
   }
   return false;
 }
@@ -615,9 +610,7 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      const DependentTemplateStorage &S1,
                                      const DependentTemplateStorage &S2) {
-  if (NestedNameSpecifier *NNS1 = S1.getQualifier(), *NNS2 = S2.getQualifier();
-      !NNS1 != !NNS2 ||
-      (NNS1 && !IsStructurallyEquivalent(Context, NNS1, NNS2)))
+  if (!IsStructurallyEquivalent(Context, S1.getQualifier(), S2.getQualifier()))
     return false;
 
   IdentifierOrOverloadedOperator IO1 = S1.getName(), IO2 = S2.getName();
@@ -885,10 +878,10 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       // Treat the enumeration as its underlying type and use the builtin type
       // class comparison.
       if (T1->getTypeClass() == Type::Enum) {
-        T1 = T1->getAs<EnumType>()->getDecl()->getIntegerType();
+        T1 = T1->getAs<EnumType>()->getOriginalDecl()->getIntegerType();
         assert(T2->isBuiltinType() && !T1.isNull()); // Sanity check
       } else if (T2->getTypeClass() == Type::Enum) {
-        T2 = T2->getAs<EnumType>()->getDecl()->getIntegerType();
+        T2 = T2->getAs<EnumType>()->getOriginalDecl()->getIntegerType();
         assert(T1->isBuiltinType() && !T2.isNull()); // Sanity check
       }
       TC = Type::Builtin;
@@ -1544,8 +1537,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   // types
   if (Field1->isAnonymousStructOrUnion() &&
       Field2->isAnonymousStructOrUnion()) {
-    RecordDecl *D1 = Field1->getType()->castAs<RecordType>()->getDecl();
-    RecordDecl *D2 = Field2->getType()->castAs<RecordType>()->getDecl();
+    RecordDecl *D1 = Field1->getType()->castAs<RecordType>()->getOriginalDecl();
+    RecordDecl *D2 = Field2->getType()->castAs<RecordType>()->getOriginalDecl();
     return IsStructurallyEquivalent(Context, D1, D2);
   }
 
@@ -2613,7 +2606,7 @@ StructuralEquivalenceContext::findUntaggedStructOrUnionIndex(RecordDecl *Anon) {
     // struct { ... } A;
     QualType FieldType = F->getType();
     if (const auto *RecType = dyn_cast<RecordType>(FieldType)) {
-      const RecordDecl *RecDecl = RecType->getDecl();
+      const RecordDecl *RecDecl = RecType->getOriginalDecl();
       if (RecDecl->getDeclContext() == Owner && !RecDecl->getIdentifier()) {
         if (Context.hasSameType(FieldType, AnonTy))
           break;

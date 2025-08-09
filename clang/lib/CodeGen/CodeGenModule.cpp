@@ -4152,9 +4152,11 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
 // Check if T is a class type with a destructor that's not dllimport.
 static bool HasNonDllImportDtor(QualType T) {
   if (const auto *RT = T->getBaseElementTypeUnsafe()->getAs<RecordType>())
-    if (CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(RT->getDecl()))
+    if (auto *RD = dyn_cast<CXXRecordDecl>(RT->getOriginalDecl())) {
+      RD = RD->getDefinitionOrSelf();
       if (RD->getDestructor() && !RD->getDestructor()->hasAttr<DLLImportAttr>())
         return true;
+    }
 
   return false;
 }
@@ -6029,7 +6031,7 @@ static bool isVarDeclStrongDefinition(const ASTContext &Context,
       return true;
 
     if (const auto *RT = VarType->getAs<RecordType>()) {
-      const RecordDecl *RD = RT->getDecl();
+      const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
       for (const FieldDecl *FD : RD->fields()) {
         if (FD->isBitField())
           continue;

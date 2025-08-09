@@ -2157,7 +2157,7 @@ Error ASTNodeImporter::ImportDeclParts(
       const Type *LeafT =
           getLeafPointeeType(P->getType().getCanonicalType().getTypePtr());
       auto *RT = dyn_cast<RecordType>(LeafT);
-      if (RT && RT->getDecl() == D) {
+      if (RT && RT->getOriginalDecl() == D) {
         Importer.FromDiag(D->getLocation(), diag::err_unsupported_ast_node)
             << D->getDeclKindName();
         return make_error<ASTImportError>(ASTImportError::UnsupportedConstruct);
@@ -2410,8 +2410,8 @@ Error ASTNodeImporter::ImportFieldDeclDefinition(const FieldDecl *From,
     const RecordType *RecordTo = ToType->getAs<RecordType>();
 
     if (RecordFrom && RecordTo) {
-      FromRecordDecl = RecordFrom->getDecl();
-      ToRecordDecl = RecordTo->getDecl();
+      FromRecordDecl = RecordFrom->getOriginalDecl();
+      ToRecordDecl = RecordTo->getOriginalDecl();
     }
   }
 
@@ -3207,7 +3207,7 @@ ExpectedDecl ASTNodeImporter::VisitEnumDecl(EnumDecl *D) {
 
       if (auto *Typedef = dyn_cast<TypedefNameDecl>(FoundDecl)) {
         if (const auto *Tag = Typedef->getUnderlyingType()->getAs<TagType>())
-          FoundDecl = Tag->getDecl();
+          FoundDecl = Tag->getOriginalDecl();
       }
 
       if (auto *FoundEnum = dyn_cast<EnumDecl>(FoundDecl)) {
@@ -3338,7 +3338,7 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
       Decl *Found = FoundDecl;
       if (auto *Typedef = dyn_cast<TypedefNameDecl>(Found)) {
         if (const auto *Tag = Typedef->getUnderlyingType()->getAs<TagType>())
-          Found = Tag->getDecl();
+          Found = Tag->getOriginalDecl();
       }
 
       if (auto *FoundRecord = dyn_cast<RecordDecl>(Found)) {
@@ -3759,11 +3759,12 @@ public:
   }
 
   std::optional<bool> VisitTagType(const TagType *T) {
-    if (auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(T->getDecl()))
+    if (auto *Spec =
+            dyn_cast<ClassTemplateSpecializationDecl>(T->getOriginalDecl()))
       for (const auto &Arg : Spec->getTemplateArgs().asArray())
         if (checkTemplateArgument(Arg))
           return true;
-    return isAncestorDeclContextOf(ParentDC, T->getDecl());
+    return isAncestorDeclContextOf(ParentDC, T->getOriginalDecl());
   }
 
   std::optional<bool> VisitPointerType(const PointerType *T) {
@@ -9971,46 +9972,34 @@ Expected<Stmt *> ASTImporter::Import(Stmt *FromS) {
   return ToSOrErr;
 }
 
-Expected<NestedNameSpecifier *>
-ASTImporter::Import(NestedNameSpecifier *FromNNS) {
-  if (!FromNNS)
-    return nullptr;
-
-  NestedNameSpecifier *Prefix = nullptr;
-  if (Error Err = importInto(Prefix, FromNNS->getPrefix()))
-    return std::move(Err);
-
-  switch (FromNNS->getKind()) {
-  case NestedNameSpecifier::Identifier:
-    assert(FromNNS->getAsIdentifier() && "NNS should contain identifier.");
-    return NestedNameSpecifier::Create(ToContext, Prefix,
-                                       Import(FromNNS->getAsIdentifier()));
-
-  case NestedNameSpecifier::Namespace:
-    if (ExpectedDecl NSOrErr = Import(FromNNS->getAsNamespace())) {
-      return NestedNameSpecifier::Create(ToContext, Prefix,
-                                         cast<NamespaceBaseDecl>(*NSOrErr));
-    } else
+Expected<NestedNameSpecifier> ASTImporter::Import(NestedNameSpecifier FromNNS) {
+  switch (FromNNS.getKind()) {
+  case NestedNameSpecifier::Kind::Null:
+  case NestedNameSpecifier::Kind::Global:
+    return FromNNS;
+  case NestedNameSpecifier::Kind::Namespace: {
+    auto [Namespace, Prefix] = FromNNS.getAsNamespaceAndPrefix();
+    auto NSOrErr = Import(Namespace);
+    if (!NSOrErr)
       return NSOrErr.takeError();
-
-  case NestedNameSpecifier::Global:
-    return NestedNameSpecifier::GlobalSpecifier(ToContext);
-
-  case NestedNameSpecifier::Super:
-    if (ExpectedDecl RDOrErr = Import(FromNNS->getAsRecordDecl()))
-      return NestedNameSpecifier::SuperSpecifier(ToContext,
-                                                 cast<CXXRecordDecl>(*RDOrErr));
+    auto PrefixOrErr = Import(Prefix);
+    if (!PrefixOrErr)
+      return PrefixOrErr.takeError();
+    return NestedNameSpecifier(ToContext, cast<NamespaceBaseDecl>(*NSOrErr),
+                               *PrefixOrErr);
+  }
+  case NestedNameSpecifier::Kind::MicrosoftSuper:
+    if (ExpectedDecl RDOrErr = Import(FromNNS.getAsMicrosoftSuper()))
+      return NestedNameSpecifier(cast<CXXRecordDecl>(*RDOrErr));
     else
       return RDOrErr.takeError();
-
-  case NestedNameSpecifier::TypeSpec:
-    if (ExpectedTypePtr TyOrErr = Import(FromNNS->getAsType())) {
-      return NestedNameSpecifier::Create(ToContext, Prefix, *TyOrErr);
+  case NestedNameSpecifier::Kind::Type:
+    if (ExpectedTypePtr TyOrErr = Import(FromNNS.getAsType())) {
+      return NestedNameSpecifier(*TyOrErr);
     } else {
       return TyOrErr.takeError();
     }
   }
-
   llvm_unreachable("Invalid nested name specifier kind");
 }
 
@@ -10024,64 +10013,62 @@ ASTImporter::Import(NestedNameSpecifierLoc FromNNS) {
   // serialization in reverse order.
   while (NNS) {
     NestedNames.push_back(NNS);
-    NNS = NNS.getPrefix();
+    NNS = NNS.getAsNamespaceAndPrefix().Prefix;
   }
 
   NestedNameSpecifierLocBuilder Builder;
 
   while (!NestedNames.empty()) {
     NNS = NestedNames.pop_back_val();
-    NestedNameSpecifier *Spec = nullptr;
+    NestedNameSpecifier Spec = std::nullopt;
     if (Error Err = importInto(Spec, NNS.getNestedNameSpecifier()))
       return std::move(Err);
 
-    NestedNameSpecifier::SpecifierKind Kind = Spec->getKind();
+    NestedNameSpecifier::Kind Kind = Spec.getKind();
 
     SourceLocation ToLocalBeginLoc, ToLocalEndLoc;
-    if (Kind != NestedNameSpecifier::Super) {
+    if (Kind != NestedNameSpecifier::Kind::MicrosoftSuper) {
       if (Error Err = importInto(ToLocalBeginLoc, NNS.getLocalBeginLoc()))
         return std::move(Err);
 
-      if (Kind != NestedNameSpecifier::Global)
+      if (Kind != NestedNameSpecifier::Kind::Global)
         if (Error Err = importInto(ToLocalEndLoc, NNS.getLocalEndLoc()))
           return std::move(Err);
     }
 
     switch (Kind) {
-    case NestedNameSpecifier::Identifier:
-      Builder.Extend(getToContext(), Spec->getAsIdentifier(), ToLocalBeginLoc,
-                     ToLocalEndLoc);
+    case NestedNameSpecifier::Kind::Namespace:
+      Builder.Extend(getToContext(), Spec.getAsNamespaceAndPrefix().Namespace,
+                     ToLocalBeginLoc, ToLocalEndLoc);
       break;
 
-    case NestedNameSpecifier::Namespace:
-      Builder.Extend(getToContext(), Spec->getAsNamespace(), ToLocalBeginLoc,
-                     ToLocalEndLoc);
-      break;
-
-    case NestedNameSpecifier::TypeSpec: {
+    case NestedNameSpecifier::Kind::Type: {
       SourceLocation ToTLoc;
-      if (Error Err = importInto(ToTLoc, NNS.getTypeLoc().getBeginLoc()))
+      if (Error Err = importInto(ToTLoc, NNS.castAsTypeLoc().getBeginLoc()))
         return std::move(Err);
       TypeSourceInfo *TSI = getToContext().getTrivialTypeSourceInfo(
-          QualType(Spec->getAsType(), 0), ToTLoc);
-      Builder.Extend(getToContext(), TSI->getTypeLoc(), ToLocalEndLoc);
+          QualType(Spec.getAsType(), 0), ToTLoc);
+      Builder.Make(getToContext(), TSI->getTypeLoc(), ToLocalEndLoc);
       break;
     }
 
-    case NestedNameSpecifier::Global:
+    case NestedNameSpecifier::Kind::Global:
       Builder.MakeGlobal(getToContext(), ToLocalBeginLoc);
       break;
 
-    case NestedNameSpecifier::Super: {
+    case NestedNameSpecifier::Kind::MicrosoftSuper: {
       auto ToSourceRangeOrErr = Import(NNS.getSourceRange());
       if (!ToSourceRangeOrErr)
         return ToSourceRangeOrErr.takeError();
 
-      Builder.MakeSuper(getToContext(), Spec->getAsRecordDecl(),
-                        ToSourceRangeOrErr->getBegin(),
-                        ToSourceRangeOrErr->getEnd());
+      Builder.MakeMicrosoftSuper(getToContext(), Spec.getAsMicrosoftSuper(),
+                                 ToSourceRangeOrErr->getBegin(),
+                                 ToSourceRangeOrErr->getEnd());
+      break;
     }
-  }
+    case NestedNameSpecifier::Kind::Null:
+      llvm_unreachable("unexpected null nested name specifier");
+    }
   }
 
   return Builder.getWithLocInContext(getToContext());
