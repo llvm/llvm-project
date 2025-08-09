@@ -216,6 +216,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
     setTargetDAGCombine(ISD::TRUNCATE);
 
+    setTargetDAGCombine(ISD::SHL);
     // Support saturating add/sub for i8x16 and i16x8
     for (auto Op : {ISD::SADDSAT, ISD::UADDSAT, ISD::SSUBSAT, ISD::USUBSAT})
       for (auto T : {MVT::v16i8, MVT::v8i16})
@@ -3562,6 +3563,21 @@ static SDValue performMulCombine(SDNode *N,
       {0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30});
 }
 
+static SDValue performSHLCombine(SDNode *N, SelectionDAG &DAG) {
+  assert(N->getOpcode() == ISD::SHL);
+  if (N->getValueType(0) != MVT::i64)
+    return SDValue();
+  using namespace llvm::SDPatternMatch;
+  SDValue A, B;
+  APInt I;
+  if (sd_match(N,
+               m_Shl(m_Value(A), m_ZExt(m_And(m_Value(B), m_ConstInt(I)))))) {
+    if (I.getSExtValue() == 63)
+      return DAG.getNode(ISD::SHL, SDLoc(N), MVT::i64, {A, B});
+  }
+  return SDValue();
+}
+
 SDValue
 WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
@@ -3597,5 +3613,7 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
   }
   case ISD::MUL:
     return performMulCombine(N, DCI);
+  case ISD::SHL:
+    return performSHLCombine(N, DCI.DAG);
   }
 }
