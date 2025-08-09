@@ -1332,24 +1332,24 @@ private:
   public:
     using pointer = __node_pointer;
 
-    _LIBCPP_HIDE_FROM_ABI __tree_deleter(__node_allocator& __alloc) : __alloc_(__alloc) {}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree_deleter(__node_allocator& __alloc) : __alloc_(__alloc) {}
 
 #ifdef _LIBCPP_COMPILER_CLANG_BASED // FIXME: GCC complains about not being able to always_inline a recursive function
     _LIBCPP_HIDE_FROM_ABI
 #endif
-    void
+    _LIBCPP_CONSTEXPR_SINCE_CXX26 void
     operator()(__node_pointer __ptr) {
       if (!__ptr)
         return;
 
-      (*this)(static_cast<__node_pointer>(__ptr->__left_));
+      (*this)(std::__static_fancy_pointer_cast<__node_pointer>(__ptr->__left_));
 
       auto __right = __ptr->__right_;
 
       __node_traits::destroy(__alloc_, std::addressof(__ptr->__value_));
       __node_traits::deallocate(__alloc_, __ptr, 1);
 
-      (*this)(static_cast<__node_pointer>(__right));
+      (*this)(std::__static_fancy_pointer_cast<__node_pointer>(__right));
     }
   };
 
