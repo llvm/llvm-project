@@ -8,6 +8,7 @@
 
 #include "src/math/fminimum_mag_numbf16.h"
 #include "src/__support/FPUtil/BasicOperations.h"
+#include "src/__support/FPUtil/bfloat16.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 
