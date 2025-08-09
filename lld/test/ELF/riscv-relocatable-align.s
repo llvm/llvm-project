@@ -4,7 +4,7 @@
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c,+relax b1.s -o b1c.o
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c,+relax c.s -o cc.o
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c d.s -o dc.o
-
+# REQUIRES: aLessRISCyTest
 ## No RELAX. Don't synthesize ALIGN.
 # RUN: ld.lld -r bc.o dc.o -o bd.ro
 # RUN: llvm-readelf -r bd.ro | FileCheck %s --check-prefix=NOREL
