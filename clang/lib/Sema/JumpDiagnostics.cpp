@@ -402,6 +402,12 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
     return;
   }
 
+  case Stmt::CXXForRangeStmtClass: {
+    BuildScopeInformationForLoopOrSwitch(S, cast<CXXForRangeStmt>(S)->getBody(),
+                                         ParentScope);
+    return;
+  }
+
   case Stmt::IfStmtClass: {
     IfStmt *IS = cast<IfStmt>(S);
     if (!(IS->isConstexpr() || IS->isConsteval() ||
