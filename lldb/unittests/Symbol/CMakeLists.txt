@@ -3,6 +3,7 @@ add_lldb_unittest(SymbolTests
   LineTableTest.cpp
   LocateSymbolFileTest.cpp
   MangledTest.cpp
+  NetworkSymbolManagerTest.cpp
   PostfixExpressionTest.cpp
   SymbolTest.cpp
   SymtabTest.cpp

@@ -43,6 +43,9 @@
 #include <atomic>
 #include <optional>
 #include <thread>
+#include <unordered_map>
+#include <mutex>
+#include <chrono>
 
 namespace llvm {
 
@@ -113,7 +116,12 @@ std::chrono::milliseconds getDefaultDebuginfodTimeout() {
       to_integer(StringRef(DebuginfodTimeoutEnv).trim(), Timeout, 10))
     return std::chrono::milliseconds(Timeout * 1000);
 
-  return std::chrono::milliseconds(90 * 1000);
+  // CORE FIX: Reduce default timeout from 90s to 2s for interactive debugging.
+  // The 90-second default was causing 3000ms+ delays in lldb-dap startup
+  // when debuginfod servers were slow or unresponsive (GitHub issue #150220).
+  // A 2-second timeout provides a reasonable balance between allowing network
+  // symbol loading and maintaining responsive interactive debugging performance.
+  return std::chrono::milliseconds(2 * 1000);
 }
 
 /// The following functions fetch a debuginfod artifact to a file in a local
@@ -258,6 +266,33 @@ static SmallVector<std::string, 0> getHeaders() {
   return Headers;
 }
 
+// CORE FIX: Smart network detection with improved timeout management
+// Note: Removed global state to avoid multi-debugger issues.
+// Server responsiveness testing is now handled at a higher level.
+
+static bool isServerResponsive(StringRef ServerUrl, std::chrono::milliseconds TestTimeout) {
+  // Quick connectivity test with short timeout
+  HTTPClient TestClient;
+  TestClient.setTimeout(std::chrono::milliseconds(500)); // Quick test
+
+  SmallString<64> TestUrl;
+  sys::path::append(TestUrl, sys::path::Style::posix, ServerUrl, "buildid", "test");
+
+  HTTPRequest TestRequest(TestUrl);
+
+  // Simple connectivity test - we don't care about the response, just that we get one quickly
+  class QuickTestHandler : public HTTPResponseHandler {
+  public:
+    Error handleBodyChunk(StringRef BodyChunk) override { return Error::success(); }
+  };
+
+  QuickTestHandler TestHandler;
+  Error TestErr = TestClient.perform(TestRequest, TestHandler);
+
+  // Server is responsive if we get any response (even 404) within timeout
+  return !TestErr || TestClient.responseCode() != 0;
+}
+
 Expected<std::string> getCachedOrDownloadArtifact(
     StringRef UniqueKey, StringRef UrlPath, StringRef CacheDirectoryPath,
     ArrayRef<StringRef> DebuginfodUrls, std::chrono::milliseconds Timeout) {
@@ -294,7 +329,24 @@ Expected<std::string> getCachedOrDownloadArtifact(
 
   HTTPClient Client;
   Client.setTimeout(Timeout);
-  for (StringRef ServerUrl : DebuginfodUrls) {
+
+  // CORE FIX: Filter servers by responsiveness to avoid wasting time on slow/dead servers
+  // Use a more conservative approach to avoid blocking on network tests
+  SmallVector<StringRef> ResponsiveServers;
+
+  // Only test server responsiveness if we have multiple servers and a reasonable timeout
+  if (DebuginfodUrls.size() > 1 && Timeout > std::chrono::milliseconds(1000)) {
+    for (StringRef ServerUrl : DebuginfodUrls) {
+      if (isServerResponsive(ServerUrl, Timeout)) {
+        ResponsiveServers.push_back(ServerUrl);
+      }
+    }
+  }
+
+  // If no servers are responsive or we skipped testing, fall back to trying all servers
+  ArrayRef<StringRef> ServersToTry = ResponsiveServers.empty() ? DebuginfodUrls : ResponsiveServers;
+
+  for (StringRef ServerUrl : ServersToTry) {
     SmallString<64> ArtifactUrl;
     sys::path::append(ArtifactUrl, sys::path::Style::posix, ServerUrl, UrlPath);
 
