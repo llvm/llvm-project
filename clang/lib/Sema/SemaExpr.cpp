@@ -11747,12 +11747,6 @@ QualType Sema::CheckShiftOperands(ExprResult &LHS, ExprResult &RHS,
       !RHSType->hasIntegerRepresentation())
     return InvalidOperands(Loc, LHS, RHS);
 
-  // C++0x: Don't allow scoped enums. FIXME: Use something better than
-  // hasIntegerRepresentation() above instead of this.
-  if (isScopedEnumerationType(LHSType) ||
-      isScopedEnumerationType(RHSType)) {
-    return InvalidOperands(Loc, LHS, RHS);
-  }
   DiagnoseBadShiftValues(*this, LHS, RHS, Loc, Opc, LHSType);
 
   // "The type of the result is that of the promoted left operand."
