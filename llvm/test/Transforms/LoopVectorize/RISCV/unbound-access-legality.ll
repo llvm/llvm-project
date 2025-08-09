@@ -43,7 +43,7 @@ entry:
 for.body:
   %first.addr = phi ptr [ %first, %entry ], [ %first.next, %for.inc ]
   %1 = load i32, ptr %first.addr, align 4
-  %cond2= icmp eq i32 %1, %value
+  %cond2 = icmp eq i32 %1, %value
   br i1 %cond2, label %for.end, label %for.inc
 
 for.inc:
@@ -71,7 +71,7 @@ entry:
 for.body:
   %first.addr = phi ptr [ %first, %entry ], [ %first.next, %for.inc ]
   %1 = load i32, ptr %first.addr, align 4
-  %cond2= icmp eq i32 %1, %value
+  %cond2 = icmp eq i32 %1, %value
   br i1 %cond2, label %for.end, label %for.inc
 
 for.inc:
