@@ -207,7 +207,7 @@ def Tosa_VariableOpBuilder : OpBuilder<
   }]>;
 
 
-// Wrapper over base I32EnumAttr to set common fields.
+ // Wrapper over base I32EnumAttr to set common fields.
 class Tosa_I32Enum<string name, string description, list<I32EnumAttrCase> cases>
      : I32EnumAttr<name, description, cases> {
    let genSpecializedAttr = 0;
@@ -275,6 +275,7 @@ def Tosa_ProfileAttr
 
 def Tosa_ProfileArrayAttr
     : TypedArrayAttrBase<Tosa_ProfileAttr, "TOSA profile array attribute">;
+
 
 // The base class for defining op availability dimensions.
 class Availability {
@@ -380,6 +381,34 @@ class Extension<list<I32EnumAttrCase> extensions> : Availability {
 
   let instance = "ref";
 }
+
+//===----------------------------------------------------------------------===//
+// Iterable attributes.
+//===----------------------------------------------------------------------===//
+// Defined in `section 3. Enumerations` of the TOSA specification.
+
+def Tosa_RESIZE_BILINEAR          : I32EnumAttrCase<"BILINEAR", 1>;
+def Tosa_RESIZE_NEAREST_NEIGHBOR  : I32EnumAttrCase<"NEAREST_NEIGHBOR", 2>;
+
+def Tosa_ResizeTypeAttr
+    : Tosa_I32EnumAttr<"ResizeType", "Supported resize/upsampling strategies", "resize_type",
+                    [Tosa_RESIZE_BILINEAR, Tosa_RESIZE_NEAREST_NEIGHBOR]>;       
+
+def Tosa_NANPROPAGATION_PROPAGATE : I32EnumAttrCase<"PROPAGATE", 1>;
+def Tosa_NANPROPAGATION_IGNORE    : I32EnumAttrCase<"IGNORE", 2>;
+
+def Tosa_NanPropagationAttr
+    : Tosa_I32EnumAttr<"NanPropagation", "Supported NaN propagation strategies", "nan",
+                    [Tosa_NANPROPAGATION_PROPAGATE, Tosa_NANPROPAGATION_IGNORE]>;  
+
+def Tosa_ROUNDING_SINGLE_ROUND    : I32EnumAttrCase<"SINGLE_ROUND", 1>;
+def Tosa_ROUNDING_INEXACT_ROUND   : I32EnumAttrCase<"INEXACT_ROUND", 2>;
+def Tosa_ROUNDING_DOUBLE_ROUND    : I32EnumAttrCase<"DOUBLE_ROUND", 3>;
+
+def Tosa_RoundingTypeAttr
+    : Tosa_I32EnumAttr<"RoundingType", "Supported rounding modes", "rounding_type",
+                    [Tosa_ROUNDING_SINGLE_ROUND, Tosa_ROUNDING_INEXACT_ROUND, Tosa_ROUNDING_DOUBLE_ROUND]>;                         
+
 
 //===----------------------------------------------------------------------===//
 // TOSA Interfaces.
