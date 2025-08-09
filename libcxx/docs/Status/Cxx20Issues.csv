@@ -151,7 +151,7 @@
 "`LWG3184 <https://wg21.link/LWG3184>`__","Inconsistencies in ``bind_front``\  wording","2019-07 (Cologne)","|Complete|","13",""
 "`LWG3185 <https://wg21.link/LWG3185>`__","Uses-allocator construction functions missing ``constexpr``\  and ``noexcept``\ ","2019-07 (Cologne)","|Complete|","16",""
 "`LWG3186 <https://wg21.link/LWG3186>`__","``ranges``\  removal, partition, and ``partial_sort_copy``\  algorithms discard useful information","2019-07 (Cologne)","|Complete|","15",""
-"`LWG3187 <https://wg21.link/LWG3187>`__","`P0591R4 <https://wg21.link/p0591r4>`__ reverted DR 2586 fixes to ``scoped_allocator_adaptor::construct()``\ ","2019-07 (Cologne)","","",""
+"`LWG3187 <https://wg21.link/LWG3187>`__","`P0591R4 <https://wg21.link/p0591r4>`__ reverted DR 2586 fixes to ``scoped_allocator_adaptor::construct()``\ ","2019-07 (Cologne)","|Complete|","22",""
 "`LWG3191 <https://wg21.link/LWG3191>`__","``std::ranges::shuffle``\  synopsis does not match algorithm definition","2019-07 (Cologne)","|Complete|","15",""
 "`LWG3196 <https://wg21.link/LWG3196>`__","``std::optional<T>``\  is ill-formed is ``T``\  is an array","2019-07 (Cologne)","|Complete|","",""
 "`LWG3198 <https://wg21.link/LWG3198>`__","Bad constraint on ``std::span::span()``\ ","2019-07 (Cologne)","|Complete|","",""

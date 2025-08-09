@@ -16,6 +16,7 @@
 #include <__type_traits/enable_if.h>
 #include <__type_traits/remove_cv.h>
 #include <__utility/declval.h>
+#include <__utility/integer_sequence.h>
 #include <__utility/pair.h>
 #include <__utility/piecewise_construct.h>
 #include <tuple>
@@ -28,6 +29,43 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+
+// TODO: Guard this furtherly with _LIBCPP_STD_VER < 20 once P0591R4 is fully implemented.
+#if !defined(_LIBCPP_CXX03_LANG)
+
+template <class _Alloc, class... _Args, size_t... _Is>
+_LIBCPP_HIDE_FROM_ABI void __transform_tuple_using_allocator_impl(
+    integral_constant<int, -1>, const _Alloc&, tuple<_Args...>&&, __index_sequence<_Is...>) {
+  static_assert(false, "If uses_allocator_v<T, A> is true, T has to be allocator-constructible");
+}
+
+template <class _Alloc, class... _Args, size_t... _Is>
+_LIBCPP_HIDE_FROM_ABI tuple<_Args&&...> __transform_tuple_using_allocator_impl(
+    integral_constant<int, 0>, const _Alloc&, tuple<_Args...>&& __t, __index_sequence<_Is...>) {
+  return tuple<_Args&&...>(std::move(__t));
+}
+
+template <class _Alloc, class... _Args, size_t... _Is>
+_LIBCPP_HIDE_FROM_ABI tuple<allocator_arg_t, const _Alloc&, _Args&&...> __transform_tuple_using_allocator_impl(
+    integral_constant<int, 1>, const _Alloc& __a, tuple<_Args...>&& __t, __index_sequence<_Is...>) {
+  return tuple<allocator_arg_t, const _Alloc&, _Args&&...>(allocator_arg, __a, std::get<_Is>(std::move(__t))...);
+}
+
+template <class _Alloc, class... _Args, size_t... _Is>
+_LIBCPP_HIDE_FROM_ABI tuple<_Args&&..., const _Alloc&> __transform_tuple_using_allocator_impl(
+    integral_constant<int, 2>, const _Alloc& __a, tuple<_Args...>&& __t, __index_sequence<_Is...>) {
+  return tuple<_Args&&..., const _Alloc&>(std::get<_Is>(std::move(__t))..., __a);
+}
+
+template <class _Tp, class _Alloc, class... _Args>
+_LIBCPP_HIDE_FROM_ABI auto __transform_tuple_using_allocator(const _Alloc& __a, tuple<_Args...>&& __t)
+    -> decltype(std::__transform_tuple_using_allocator_impl(
+        __uses_alloc_ctor<_Tp, _Alloc, _Args...>{}, __a, std::move(__t), __make_index_sequence<sizeof...(_Args)>{})) {
+  return std::__transform_tuple_using_allocator_impl(
+      __uses_alloc_ctor<_Tp, _Alloc, _Args...>{}, __a, std::move(__t), __make_index_sequence<sizeof...(_Args)>{});
+}
+
+#endif // !defined(_LIBCPP_CXX03_LANG)
 
 #if _LIBCPP_STD_VER >= 17
 
