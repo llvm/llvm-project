@@ -601,6 +601,11 @@ static SourceLocation GetUnreachableLoc(const Stmt *S,
     S = Ex->IgnoreParenImpCasts();
 
   switch (S->getStmtClass()) {
+  case Expr::CXXBindTemporaryExprClass: {
+    const CXXBindTemporaryExpr *TemporaryExpr = cast<CXXBindTemporaryExpr>(S);
+    R1 = TemporaryExpr->getTemporary()->getDestructor()->getSourceRange();
+    return R1.getBegin();
+  }
     case Expr::BinaryOperatorClass: {
       const BinaryOperator *BO = cast<BinaryOperator>(S);
       return BO->getOperatorLoc();
