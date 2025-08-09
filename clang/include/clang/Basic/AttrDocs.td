@@ -9371,10 +9371,10 @@ The ``[[clang::coro_await_suspend_destroy]]`` attribute may be applied to a C++
 coroutine awaiter type.  When this attribute is present, the awaiter must
 implement ``void await_suspend_destroy(Promise&)``.  If ``await_ready()``
 returns ``false`` at a suspension point, ``await_suspend_destroy`` will be
-called directly, bypassing the ``await_suspend(std::coroutine_handle<...>)``
-method.  The coroutine being suspended will then be immediately destroyed.
+called directly.  The coroutine being suspended will then be immediately
+destroyed.
 
-Logically, the new behavior is equivalent to this standard code:
+The new behavior is equivalent to this standard code:
 
 .. code-block:: c++
 
@@ -9389,10 +9389,24 @@ stub ``await_suspend()`` as above.  Without ``coro_await_suspend_destroy``
 support, the awaiter will behave nearly identically, with the only difference
 being heap allocation instead of stack allocation for the coroutine frame.
 
-This attribute exists to optimize short-circuiting coroutines—coroutines whose
-suspend points are either (i) trivial (like ``std::suspend_never``), or (ii)
-short-circuiting (like a ``co_await`` that can be expressed in regular control
-flow as):
+This attribute helps optimize short-circuiting coroutines.
+
+A short-circuiting coroutine is one where every ``co_await`` or ``co_yield``
+either immediately produces a value, or exits the coroutine.  In other words,
+they use coroutine syntax to concisely branch out of a synchronous function. 
+Here are close analogs in other languages:
+
+- Rust has ``Result<T>`` and a ``?`` operator to unpack it, while
+  ``folly::result<T>`` is a C++ short-circuiting coroutine, with ``co_await``
+  acting just like ``?``.
+
+- Haskell has ``Maybe`` & ``Error`` monads.  A short-circuiting ``co_await``
+  loosely corresponds to the monadic ``>>=``, whereas a short-circuiting
+  ``std::optional`` coro would be an exact analog of ``Maybe``.
+
+The C++ implementation relies on short-circuiting awaiters.  These either
+resume synchronously, or immediately destroy the awaiting coroutine and return
+control to the parent:
 
 .. code-block:: c++
 
@@ -9404,7 +9418,20 @@ flow as):
     return /* value representing the "execution short-circuited" outcome */;
   }
 
-The benefits of this attribute are:
+Then, a short-ciruiting coroutine is one where all the suspend points are
+either (i) trivial (like ``std::suspend_never``), or (ii) short-circuiting.
+
+Although the coroutine machinery makes them harder to optimize, logically,
+short-circuiting coroutines are like syntax sugar for regular functions where:
+
+- `co_await` allows expressions to return early.
+
+- `unhandled_exception()` lets the coroutine promise type wrap the function
+  body in an implicit try-catch.  This mandatory exception boundary behavior
+  can be desirable in robust, return-value-oriented programs that benefit from
+  short-circuiting coroutines.  If not, the promise can always re-throw.
+
+This attribute improves short-circuiting coroutines in a few ways:
 
 - **Avoid heap allocations for coro frames**: Allocating short-circuiting
   coros on the stack makes code more predictable under memory pressure.
@@ -9423,7 +9450,7 @@ Here is a toy example of a portable short-circuiting awaiter:
 .. code-block:: c++
 
   template <typename T>
-  struct [[clang::coro_await_suspend_destroy]] optional_awaitable {
+  struct [[clang::coro_await_suspend_destroy]] optional_awaiter {
     std::optional<T> opt_;
     bool await_ready() const noexcept { return opt_.has_value(); }
     T await_resume() { return std::move(opt_).value(); }
@@ -9436,21 +9463,6 @@ Here is a toy example of a portable short-circuiting awaiter:
       handle.destroy();
     }
   };
-
-If all suspension points use (i) trivial or (ii) short-circuiting awaiters,
-then the coroutine optimizes more like a plain function, with 2 caveats:
-
-- **Behavior:** The coroutine promise provides an implicit exception boundary
-  (as if wrapping the function in ``try {} catch { unhandled_exception(); }``).
-  This exception handling behavior is usually desirable in robust,
-  return-value-oriented programs that need short-circuiting coroutines.
-  Otherwise, the promise can always re-throw.
-
-- **Speed:** As of 2025, there is still an optimization gap between a
-  realistic short-circuiting coro, and the equivalent (but much more verbose)
-  function.  For a guesstimate, expect 4-5ns per call on x86.  One idea for
-  improvement is to also elide trivial suspends like `std::suspend_never`, in
-  order to hit the `HasCoroSuspend` path in `CoroEarly.cpp`.
 
 }];
 }
