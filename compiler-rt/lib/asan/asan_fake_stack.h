@@ -123,10 +123,9 @@ class FakeStack {
   // correctly if GetFrame() returns addresses aligned to
   // BytesInSizeClass(class_id).
   //
-  // In steps 1-3, we prove an even stronger property: GetFrame() returns
-  // addresses aligned to 1<<kMaxStackFrameSizeLog (aka
-  // BytesInSizeClass(max_class_id)), which implies alignment to
-  // BytesInSizeClass for any class_id, since they are increasing powers of 2.
+  // Note that alignment to 1<<kMaxStackFrameSizeLog (aka
+  // BytesInSizeClass(max_class_id)) implies alignment to BytesInSizeClass for
+  // any class_id, since the class sizes are increasing powers of 2.
   //
   // 1) 'this' is aligned to 1<<kMaxStackFrameSizeLog (see FakeStack::Create)
   // 2) (kFlagsOffset + SizeRequiredForFlags()) is aligned to
