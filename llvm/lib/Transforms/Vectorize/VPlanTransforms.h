@@ -54,21 +54,30 @@ struct VPlanTransforms {
       verifyVPlanIsValid(Plan);
   }
 
-  LLVM_ABI_FOR_TEST static std::unique_ptr<VPlan> buildPlainCFG(Loop *TheLoop,
-                                                                LoopInfo &LI);
+  /// Create a base VPlan0, serving as the common starting point for all later
+  /// candidates. It consists of an initial plain CFG loop with loop blocks from
+  /// \p TheLoop being directly translated to VPBasicBlocks with VPInstruction
+  /// corresponding to the input IR.
+  ///
+  /// The created loop is wrapped in an initial skeleton to facilitate
+  /// vectorization, consisting of a vector pre-header, an exit block for the
+  /// main vector loop (middle.block) and a new block as preheader of the scalar
+  /// loop (scalar.ph). It also adds a canonical IV and its increment, using \p
+  /// InductionTy and \p IVDL, and creates a VPValue expression for the original
+  /// trip count.
+  LLVM_ABI_FOR_TEST static std::unique_ptr<VPlan>
+  buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy, DebugLoc IVDL,
+              PredicatedScalarEvolution &PSE);
 
-  /// Prepare the plan for vectorization. It will introduce a dedicated
-  /// VPBasicBlock for the vector pre-header as well as a VPBasicBlock as exit
-  /// block of the main vector loop (middle.block). If a check is needed to
-  /// guard executing the scalar epilogue loop, it will be added to the middle
-  /// block, together with VPBasicBlocks for the scalar preheader and exit
-  /// blocks. \p InductionTy is the type of the canonical induction and used for
-  /// related values, like the trip count expression.  It also creates a VPValue
-  /// expression for the original trip count.
-  LLVM_ABI_FOR_TEST static void prepareForVectorization(
-      VPlan &Plan, Type *InductionTy, PredicatedScalarEvolution &PSE,
-      bool RequiresScalarEpilogueCheck, bool TailFolded, Loop *TheLoop,
-      DebugLoc IVDL, bool HasUncountableExit, VFRange &Range);
+  /// Update \p Plan to account for all early exits.
+  LLVM_ABI_FOR_TEST static void
+  handleEarlyExits(VPlan &Plan, bool HasUncountableExit, VFRange &Range);
+
+  /// If a check is needed to guard executing the scalar epilogue loop, it will
+  /// be added to the middle block.
+  LLVM_ABI_FOR_TEST static void addMiddleCheck(VPlan &Plan,
+                                               bool RequiresScalarEpilogueCheck,
+                                               bool TailFolded);
 
   /// Replace loops in \p Plan's flat CFG with VPRegionBlocks, turning \p Plan's
   /// flat CFG into a hierarchical CFG.
