@@ -6024,6 +6024,9 @@ void CXXNameMangler::mangleCXXCtorType(CXXCtorType T,
   case Ctor_Base:
     Out << '2';
     break;
+  case Ctor_Unified:
+    Out << '4';
+    break;
   case Ctor_Comdat:
     Out << '5';
     break;
@@ -6050,6 +6053,9 @@ void CXXNameMangler::mangleCXXDtorType(CXXDtorType T) {
     break;
   case Dtor_Base:
     Out << "D2";
+    break;
+  case Dtor_Unified:
+    Out << "D4";
     break;
   case Dtor_Comdat:
     Out << "D5";

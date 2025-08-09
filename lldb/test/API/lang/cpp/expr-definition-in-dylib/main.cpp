@@ -2,6 +2,7 @@
 
 int main() {
   Foo f;
-  Bar b;
+  Base b1;
+  Bar b2;
   return f.method();
 }

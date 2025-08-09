@@ -89,6 +89,9 @@ public:
       case Dtor_Base:
         return false;
 
+      case Dtor_Unified:
+        llvm_unreachable("unexpected unified dtor");
+
       case Dtor_Comdat:
         llvm_unreachable("emitting dtor comdat as function?");
       }
@@ -101,6 +104,9 @@ public:
 
       case Ctor_Base:
         return false;
+
+      case Ctor_Unified:
+        llvm_unreachable("unexpected unified ctor");
 
       case Ctor_CopyingClosure:
       case Ctor_DefaultClosure:

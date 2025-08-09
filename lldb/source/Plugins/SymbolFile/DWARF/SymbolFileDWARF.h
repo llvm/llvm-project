@@ -378,7 +378,9 @@ private:
   /// SymbolFile.
   ///
   /// \returns A valid definition DIE on success.
-  DWARFDIE FindFunctionDefinition(const FunctionCallLabel &label);
+  llvm::Expected<DWARFDIE>
+  FindFunctionDefinition(const FunctionCallLabel &label,
+                         const DWARFDIE &declaration);
 
 protected:
   SymbolFileDWARF(const SymbolFileDWARF &) = delete;

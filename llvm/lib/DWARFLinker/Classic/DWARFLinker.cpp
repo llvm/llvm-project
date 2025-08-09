@@ -11,6 +11,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/NonRelocatableStringpool.h"
 #include "llvm/DWARFLinker/Classic/DWARFLinkerDeclContext.h"
 #include "llvm/DWARFLinker/Classic/DWARFStreamer.h"
@@ -1933,6 +1934,22 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
     OutOffset += 4;
   }
 
+  auto AddNameToAccel = [&](AttributesInfo &Info) {
+    if (Info.MangledName && Info.MangledName != Info.Name)
+      Unit.addNameAccelerator(Die, Info.MangledName,
+                              Tag == dwarf::DW_TAG_inlined_subroutine);
+    if (Info.Name) {
+      if (Info.NameWithoutTemplate)
+        Unit.addNameAccelerator(Die, Info.NameWithoutTemplate,
+                                /* SkipPubSection */ true);
+      Unit.addNameAccelerator(Die, Info.Name,
+                              Tag == dwarf::DW_TAG_inlined_subroutine);
+    }
+    if (Info.Name)
+      addObjCAccelerator(Unit, Die, Info.Name, DebugStrPool,
+                         /* SkipPubSection =*/true);
+  };
+
   // Look for accelerator entries.
   // FIXME: This is slightly wrong. An inline_subroutine without a
   // low_pc, but with AT_ranges might be interesting to get into the
@@ -1941,20 +1958,14 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
       Tag != dwarf::DW_TAG_compile_unit &&
       getDIENames(InputDIE, AttrInfo, DebugStrPool,
                   Tag != dwarf::DW_TAG_inlined_subroutine)) {
-    if (AttrInfo.MangledName && AttrInfo.MangledName != AttrInfo.Name)
-      Unit.addNameAccelerator(Die, AttrInfo.MangledName,
-                              Tag == dwarf::DW_TAG_inlined_subroutine);
-    if (AttrInfo.Name) {
-      if (AttrInfo.NameWithoutTemplate)
-        Unit.addNameAccelerator(Die, AttrInfo.NameWithoutTemplate,
-                                /* SkipPubSection */ true);
-      Unit.addNameAccelerator(Die, AttrInfo.Name,
-                              Tag == dwarf::DW_TAG_inlined_subroutine);
-    }
-    if (AttrInfo.Name)
-      addObjCAccelerator(Unit, Die, AttrInfo.Name, DebugStrPool,
-                         /* SkipPubSection =*/true);
 
+    AddNameToAccel(AttrInfo);
+
+    AttributesInfo SpecAttrInfo;
+    DWARFDie Spec = InputDIE.getAttributeValueAsReferencedDie(
+        llvm::dwarf::DW_AT_specification);
+    if (Spec && getDIENames(Spec, SpecAttrInfo, DebugStrPool))
+      AddNameToAccel(SpecAttrInfo);
   } else if (Tag == dwarf::DW_TAG_namespace) {
     if (!AttrInfo.Name)
       AttrInfo.Name = DebugStrPool.getEntry("(anonymous namespace)");
