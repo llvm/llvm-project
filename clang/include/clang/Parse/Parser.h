@@ -7458,6 +7458,7 @@ public:
   /// \verbatim
   ///       jump-statement:
   ///         'continue' ';'
+  /// [C2y]   'continue' identifier ';'
   /// \endverbatim
   ///
   /// Note: this lets the caller parse the end ';'.
@@ -7468,6 +7469,7 @@ public:
   /// \verbatim
   ///       jump-statement:
   ///         'break' ';'
+  /// [C2y]   'break' identifier ';'
   /// \endverbatim
   ///
   /// Note: this lets the caller parse the end ';'.
