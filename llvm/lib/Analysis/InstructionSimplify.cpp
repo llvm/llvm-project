@@ -6304,7 +6304,8 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
   Value *X;
   switch (IID) {
   case Intrinsic::fabs:
-    if (computeKnownFPSignBit(Op0, Q) == false)
+    if (std::optional<bool> KnownSignBit = computeKnownFPSignBit(Op0, Q);
+        KnownSignBit && *KnownSignBit == false)
       return Op0;
     break;
   case Intrinsic::bswap:
