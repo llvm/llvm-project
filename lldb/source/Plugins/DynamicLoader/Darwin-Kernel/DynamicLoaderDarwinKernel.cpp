@@ -178,6 +178,10 @@ DynamicLoader *DynamicLoaderDarwinKernel::CreateInstance(Process *process,
     // If we have triple like armv7-unknown-unknown, we should try looking for
     // a Darwin kernel.
     case llvm::Triple::UnknownOS:
+      // limiting it to only arm arch to handle cases like armv7-unknown-unknown
+      if (triple_ref.getArch() != llvm::Triple::arm) {
+        return nullptr;
+      }
       break;
     default:
       return nullptr;
