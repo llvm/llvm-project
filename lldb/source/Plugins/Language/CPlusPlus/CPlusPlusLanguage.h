@@ -112,6 +112,32 @@ public:
 
   static bool IsCPPMangledName(llvm::StringRef name);
 
+  static llvm::StringRef GetDemangledBasename(llvm::StringRef demangled,
+                                              const DemangledNameInfo &info);
+
+  static llvm::Expected<llvm::StringRef>
+  GetDemangledTemplateArguments(llvm::StringRef demangled,
+                                const DemangledNameInfo &info);
+
+  static llvm::Expected<llvm::StringRef>
+  GetDemangledReturnTypeLHS(llvm::StringRef demangled,
+                            const DemangledNameInfo &info);
+
+  static llvm::Expected<llvm::StringRef>
+  GetDemangledFunctionQualifiers(llvm::StringRef demangled,
+                                 const DemangledNameInfo &info);
+
+  static llvm::Expected<llvm::StringRef>
+  GetDemangledScope(llvm::StringRef demangled, const DemangledNameInfo &info);
+
+  static llvm::Expected<llvm::StringRef>
+  GetDemangledReturnTypeRHS(llvm::StringRef demangled,
+                            const DemangledNameInfo &info);
+
+  static llvm::Expected<llvm::StringRef>
+  GetDemangledFunctionArguments(llvm::StringRef demangled,
+                                const DemangledNameInfo &info);
+
   // Extract C++ context and identifier from a string using heuristic matching
   // (as opposed to
   // CPlusPlusLanguage::CxxMethodName which has to have a fully qualified C++

@@ -34,12 +34,16 @@ static char *append_hex(uintptr_t d, char *buf, const char *end) {
   return buf;
 }
 
-static void format_msg(const char *kind, uintptr_t caller, char *buf,
-                       const char *end) {
+static void format_msg(const char *kind, uintptr_t caller,
+                       const uintptr_t *address, char *buf, const char *end) {
   buf = append_str("ubsan: ", buf, end);
   buf = append_str(kind, buf, end);
   buf = append_str(" by 0x", buf, end);
   buf = append_hex(caller, buf, end);
+  if (address) {
+    buf = append_str(" address 0x", buf, end);
+    buf = append_hex(*address, buf, end);
+  }
   buf = append_str("\n", buf, end);
   if (buf == end)
     --buf; // Make sure we don't cause a buffer overflow.
@@ -47,7 +51,7 @@ static void format_msg(const char *kind, uintptr_t caller, char *buf,
 }
 
 SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_report_error, const char *kind,
-                             uintptr_t caller) {
+                             uintptr_t caller, const uintptr_t *address) {
   if (caller == 0)
     return;
   while (true) {
@@ -80,15 +84,15 @@ SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_report_error, const char *kind,
     __sanitizer::atomic_store_relaxed(&caller_pcs[sz], caller);
 
     char msg_buf[128];
-    format_msg(kind, caller, msg_buf, msg_buf + sizeof(msg_buf));
+    format_msg(kind, caller, address, msg_buf, msg_buf + sizeof(msg_buf));
     message(msg_buf);
   }
 }
 
 SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_report_error_fatal, const char *kind,
-                             uintptr_t caller) {
+                             uintptr_t caller, const uintptr_t *address) {
   // Use another handlers, in case it's already overriden.
-  __ubsan_report_error(kind, caller);
+  __ubsan_report_error(kind, caller, address);
 }
 
 #if defined(__ANDROID__)
@@ -121,13 +125,13 @@ void NORETURN CheckFailed(const char *file, int, const char *cond, u64, u64) {
 
 #define HANDLER_RECOVER(name, kind)                                            \
   INTERFACE void __ubsan_handle_##name##_minimal() {                           \
-    __ubsan_report_error(kind, GET_CALLER_PC());                               \
+    __ubsan_report_error(kind, GET_CALLER_PC(), nullptr);                      \
   }
 
 #define HANDLER_NORECOVER(name, kind)                                          \
   INTERFACE void __ubsan_handle_##name##_minimal_abort() {                     \
     uintptr_t caller = GET_CALLER_PC();                                        \
-    __ubsan_report_error_fatal(kind, caller);                                  \
+    __ubsan_report_error_fatal(kind, caller, nullptr);                         \
     abort_with_message(kind, caller);                                          \
   }
 
@@ -135,7 +139,25 @@ void NORETURN CheckFailed(const char *file, int, const char *cond, u64, u64) {
   HANDLER_RECOVER(name, kind)                                                  \
   HANDLER_NORECOVER(name, kind)
 
-HANDLER(type_mismatch, "type-mismatch")
+#define HANDLER_RECOVER_PTR(name, kind)                                        \
+  INTERFACE void __ubsan_handle_##name##_minimal(const uintptr_t address) {    \
+    __ubsan_report_error(kind, GET_CALLER_PC(), &address);                     \
+  }
+
+#define HANDLER_NORECOVER_PTR(name, kind)                                      \
+  INTERFACE void __ubsan_handle_##name##_minimal_abort(                        \
+      const uintptr_t address) {                                               \
+    uintptr_t caller = GET_CALLER_PC();                                        \
+    __ubsan_report_error_fatal(kind, caller, &address);                        \
+    abort_with_message(kind, caller);                                          \
+  }
+
+// A version of a handler that takes a pointer to a value.
+#define HANDLER_PTR(name, kind)                                                \
+  HANDLER_RECOVER_PTR(name, kind)                                              \
+  HANDLER_NORECOVER_PTR(name, kind)
+
+HANDLER_PTR(type_mismatch, "type-mismatch")
 HANDLER(alignment_assumption, "alignment-assumption")
 HANDLER(add_overflow, "add-overflow")
 HANDLER(sub_overflow, "sub-overflow")

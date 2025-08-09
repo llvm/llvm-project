@@ -2630,7 +2630,8 @@ StringRef CGDebugInfo::getVTableName(const CXXRecordDecl *RD) {
 // existing information in the DWARF. The type is assumed to be 'void *'.
 void CGDebugInfo::emitVTableSymbol(llvm::GlobalVariable *VTable,
                                    const CXXRecordDecl *RD) {
-  if (!CGM.getTarget().getCXXABI().isItaniumFamily())
+  if (!CGM.getTarget().getCXXABI().isItaniumFamily() ||
+      CGM.getTarget().getTriple().isOSBinFormatCOFF())
     return;
   if (DebugKind <= llvm::codegenoptions::DebugLineTablesOnly)
     return;
@@ -2873,7 +2874,7 @@ static bool isDefinedInClangModule(const RecordDecl *RD) {
       if (!Explicit && CXXDecl->getEnclosingNamespaceContext())
         return false;
       // This is a template, check the origin of the first member.
-      if (CXXDecl->field_begin() == CXXDecl->field_end())
+      if (CXXDecl->fields().empty())
         return TemplateKind == TSK_ExplicitInstantiationDeclaration;
       if (!CXXDecl->field_begin()->isFromASTFile())
         return false;

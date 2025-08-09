@@ -817,10 +817,12 @@ Type::GetTypeScopeAndBasename(llvm::StringRef name) {
     case ':':
       if (prev_is_colon && template_depth == 0) {
         llvm::StringRef scope_name = name.slice(name_begin, pos.index() - 1);
-        // The itanium demangler uses this string to represent anonymous
+        // The demanglers use these strings to represent anonymous
         // namespaces. Convert it to a more language-agnostic form (which is
         // also used in DWARF).
-        if (scope_name == "(anonymous namespace)")
+        if (scope_name == "(anonymous namespace)" ||
+            scope_name == "`anonymous namespace'" ||
+            scope_name == "`anonymous-namespace'")
           scope_name = "";
         result.scope.push_back(scope_name);
         name_begin = pos.index() + 1;

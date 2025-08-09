@@ -3194,7 +3194,7 @@ void AsmPrinter::emitJumpTableSizesSection(const MachineJumpTableInfo &MJTI,
     return;
 
   if (isElf) {
-    MCSymbolELF *LinkedToSym = dyn_cast<MCSymbolELF>(CurrentFnSym);
+    auto *LinkedToSym = static_cast<MCSymbolELF *>(CurrentFnSym);
     int Flags = F.hasComdat() ? static_cast<int>(ELF::SHF_GROUP) : 0;
 
     JumpTableSizesSection = OutContext.getELFSection(
@@ -4702,7 +4702,7 @@ void AsmPrinter::emitXRayTable() {
   const Triple &TT = TM.getTargetTriple();
   // Use PC-relative addresses on all targets.
   if (TT.isOSBinFormatELF()) {
-    auto LinkedToSym = cast<MCSymbolELF>(CurrentFnSym);
+    auto LinkedToSym = static_cast<const MCSymbolELF *>(CurrentFnSym);
     auto Flags = ELF::SHF_ALLOC | ELF::SHF_LINK_ORDER;
     StringRef GroupName;
     if (F.hasComdat()) {
@@ -4825,7 +4825,7 @@ void AsmPrinter::emitPatchableFunctionEntries() {
         Flags |= ELF::SHF_GROUP;
         GroupName = F.getComdat()->getName();
       }
-      LinkedToSym = cast<MCSymbolELF>(CurrentFnSym);
+      LinkedToSym = static_cast<const MCSymbolELF *>(CurrentFnSym);
     }
     OutStreamer->switchSection(OutContext.getELFSection(
         SectionName, ELF::SHT_PROGBITS, Flags, 0, GroupName, F.hasComdat(),

@@ -6769,10 +6769,13 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     break;
   }
   case Intrinsic::lifetime_start:
-  case Intrinsic::lifetime_end:
-    Check(isa<AllocaInst>(Call.getArgOperand(1)),
-          "llvm.lifetime.start/end can only be used on alloca", &Call);
+  case Intrinsic::lifetime_end: {
+    Value *Ptr = Call.getArgOperand(1);
+    Check(isa<AllocaInst>(Ptr) || isa<PoisonValue>(Ptr),
+          "llvm.lifetime.start/end can only be used on alloca or poison",
+          &Call);
     break;
+  }
   };
 
   // Verify that there aren't any unmediated control transfers between funclets.

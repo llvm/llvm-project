@@ -4618,6 +4618,12 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_cvt_scalef32_pk8_fp4_f32:
     case Intrinsic::amdgcn_cvt_scalef32_pk8_fp4_f16:
     case Intrinsic::amdgcn_cvt_scalef32_pk8_fp4_bf16:
+    case Intrinsic::amdgcn_cvt_scalef32_pk16_fp6_f32:
+    case Intrinsic::amdgcn_cvt_scalef32_pk16_bf6_f32:
+    case Intrinsic::amdgcn_cvt_scalef32_pk16_fp6_f16:
+    case Intrinsic::amdgcn_cvt_scalef32_pk16_bf6_f16:
+    case Intrinsic::amdgcn_cvt_scalef32_pk16_fp6_bf16:
+    case Intrinsic::amdgcn_cvt_scalef32_pk16_bf6_bf16:
     case Intrinsic::amdgcn_cvt_scalef32_sr_pk8_fp8_bf16:
     case Intrinsic::amdgcn_cvt_scalef32_sr_pk8_bf8_bf16:
     case Intrinsic::amdgcn_cvt_scalef32_sr_pk8_fp8_f16:
@@ -4627,6 +4633,12 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_cvt_scalef32_sr_pk8_fp4_f32:
     case Intrinsic::amdgcn_cvt_scalef32_sr_pk8_fp4_f16:
     case Intrinsic::amdgcn_cvt_scalef32_sr_pk8_fp4_bf16:
+    case Intrinsic::amdgcn_cvt_scalef32_sr_pk16_fp6_f32:
+    case Intrinsic::amdgcn_cvt_scalef32_sr_pk16_bf6_f32:
+    case Intrinsic::amdgcn_cvt_scalef32_sr_pk16_fp6_f16:
+    case Intrinsic::amdgcn_cvt_scalef32_sr_pk16_bf6_f16:
+    case Intrinsic::amdgcn_cvt_scalef32_sr_pk16_fp6_bf16:
+    case Intrinsic::amdgcn_cvt_scalef32_sr_pk16_bf6_bf16:
     case Intrinsic::amdgcn_sat_pk4_i4_i8:
     case Intrinsic::amdgcn_sat_pk4_u4_u8:
     case Intrinsic::amdgcn_fmed3:
@@ -4786,7 +4798,11 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_wmma_f32_16x16x128_bf8_bf8:
     case Intrinsic::amdgcn_wmma_i32_16x16x64_iu8:
     case Intrinsic::amdgcn_wmma_f32_16x16x128_f8f6f4:
+    case Intrinsic::amdgcn_wmma_scale_f32_16x16x128_f8f6f4:
+    case Intrinsic::amdgcn_wmma_scale16_f32_16x16x128_f8f6f4:
     case Intrinsic::amdgcn_wmma_f32_32x16x128_f4:
+    case Intrinsic::amdgcn_wmma_scale_f32_32x16x128_f4:
+    case Intrinsic::amdgcn_wmma_scale16_f32_32x16x128_f4:
     case Intrinsic::amdgcn_swmmac_f16_16x16x64_f16:
     case Intrinsic::amdgcn_swmmac_bf16_16x16x64_bf16:
     case Intrinsic::amdgcn_swmmac_f32_16x16x64_bf16:

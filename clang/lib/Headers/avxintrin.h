@@ -3777,7 +3777,7 @@ _mm256_set_ps(float __a, float __b, float __c, float __d,
 /// \param __i7
 ///    A 32-bit integral value used to initialize bits [31:0] of the result.
 /// \returns An initialized 256-bit integer vector.
-static __inline __m256i __DEFAULT_FN_ATTRS
+static __inline __m256i __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm256_set_epi32(int __i0, int __i1, int __i2, int __i3,
                  int __i4, int __i5, int __i6, int __i7)
 {
@@ -3825,7 +3825,7 @@ _mm256_set_epi32(int __i0, int __i1, int __i2, int __i3,
 /// \param __w00
 ///    A 16-bit integral value used to initialize bits [15:0] of the result.
 /// \returns An initialized 256-bit integer vector.
-static __inline __m256i __DEFAULT_FN_ATTRS
+static __inline __m256i __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm256_set_epi16(short __w15, short __w14, short __w13, short __w12,
                  short __w11, short __w10, short __w09, short __w08,
                  short __w07, short __w06, short __w05, short __w04,
@@ -3908,7 +3908,7 @@ _mm256_set_epi16(short __w15, short __w14, short __w13, short __w12,
 /// \param __b00
 ///    An 8-bit integral value used to initialize bits [7:0] of the result.
 /// \returns An initialized 256-bit integer vector.
-static __inline __m256i __DEFAULT_FN_ATTRS
+static __inline __m256i __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm256_set_epi8(char __b31, char __b30, char __b29, char __b28,
                 char __b27, char __b26, char __b25, char __b24,
                 char __b23, char __b22, char __b21, char __b20,
@@ -3943,7 +3943,7 @@ _mm256_set_epi8(char __b31, char __b30, char __b29, char __b28,
 /// \param __d
 ///    A 64-bit integral value used to initialize bits [63:0] of the result.
 /// \returns An initialized 256-bit integer vector.
-static __inline __m256i __DEFAULT_FN_ATTRS
+static __inline __m256i __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm256_set_epi64x(long long __a, long long __b, long long __c, long long __d)
 {
   return __extension__ (__m256i)(__v4di){ __d, __c, __b, __a };
@@ -4044,7 +4044,7 @@ _mm256_setr_ps(float __a, float __b, float __c, float __d,
 /// \param __i7
 ///    A 32-bit integral value used to initialize bits [255:224] of the result.
 /// \returns An initialized 256-bit integer vector.
-static __inline __m256i __DEFAULT_FN_ATTRS
+static __inline __m256i __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm256_setr_epi32(int __i0, int __i1, int __i2, int __i3,
                   int __i4, int __i5, int __i6, int __i7)
 {
@@ -4092,7 +4092,7 @@ _mm256_setr_epi32(int __i0, int __i1, int __i2, int __i3,
 /// \param __w00
 ///    A 16-bit integral value used to initialize bits [255:240] of the result.
 /// \returns An initialized 256-bit integer vector.
-static __inline __m256i __DEFAULT_FN_ATTRS
+static __inline __m256i __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm256_setr_epi16(short __w15, short __w14, short __w13, short __w12,
        short __w11, short __w10, short __w09, short __w08,
        short __w07, short __w06, short __w05, short __w04,
@@ -4177,7 +4177,7 @@ _mm256_setr_epi16(short __w15, short __w14, short __w13, short __w12,
 /// \param __b00
 ///    An 8-bit integral value used to initialize bits [255:248] of the result.
 /// \returns An initialized 256-bit integer vector.
-static __inline __m256i __DEFAULT_FN_ATTRS
+static __inline __m256i __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm256_setr_epi8(char __b31, char __b30, char __b29, char __b28,
                  char __b27, char __b26, char __b25, char __b24,
                  char __b23, char __b22, char __b21, char __b20,
@@ -4210,7 +4210,7 @@ _mm256_setr_epi8(char __b31, char __b30, char __b29, char __b28,
 /// \param __d
 ///    A 64-bit integral value used to initialize bits [255:192] of the result.
 /// \returns An initialized 256-bit integer vector.
-static __inline __m256i __DEFAULT_FN_ATTRS
+static __inline __m256i __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm256_setr_epi64x(long long __a, long long __b, long long __c, long long __d)
 {
   return _mm256_set_epi64x(__d, __c, __b, __a);
@@ -4267,7 +4267,7 @@ _mm256_set1_ps(float __w)
 ///    A 32-bit integral value used to initialize each vector element of the
 ///    result.
 /// \returns An initialized 256-bit integer vector of [8 x i32].
-static __inline __m256i __DEFAULT_FN_ATTRS
+static __inline __m256i __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm256_set1_epi32(int __i)
 {
   return _mm256_set_epi32(__i, __i, __i, __i, __i, __i, __i, __i);
@@ -4285,7 +4285,7 @@ _mm256_set1_epi32(int __i)
 ///    A 16-bit integral value used to initialize each vector element of the
 ///    result.
 /// \returns An initialized 256-bit integer vector of [16 x i16].
-static __inline __m256i __DEFAULT_FN_ATTRS
+static __inline __m256i __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm256_set1_epi16(short __w)
 {
   return _mm256_set_epi16(__w, __w, __w, __w, __w, __w, __w, __w,
@@ -4303,7 +4303,7 @@ _mm256_set1_epi16(short __w)
 ///    An 8-bit integral value used to initialize each vector element of the
 ///    result.
 /// \returns An initialized 256-bit integer vector of [32 x i8].
-static __inline __m256i __DEFAULT_FN_ATTRS
+static __inline __m256i __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm256_set1_epi8(char __b)
 {
   return _mm256_set_epi8(__b, __b, __b, __b, __b, __b, __b, __b,
@@ -4324,7 +4324,7 @@ _mm256_set1_epi8(char __b)
 ///    A 64-bit integral value used to initialize each vector element of the
 ///    result.
 /// \returns An initialized 256-bit integer vector of [4 x i64].
-static __inline __m256i __DEFAULT_FN_ATTRS
+static __inline __m256i __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm256_set1_epi64x(long long __q)
 {
   return _mm256_set_epi64x(__q, __q, __q, __q);

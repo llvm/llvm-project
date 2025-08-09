@@ -296,9 +296,9 @@ static bool needsInterworking(const MCAssembler &Asm, const MCSymbol *Sym,
                               unsigned FixupKind) {
   // Create relocations for unconditional branches to function symbols with
   // different execution mode in ELF binaries.
-  if (!Sym || !Sym->isELF())
+  if (!Sym || !Asm.getContext().isELF())
     return false;
-  unsigned Type = cast<MCSymbolELF>(Sym)->getType();
+  unsigned Type = static_cast<const MCSymbolELF *>(Sym)->getType();
   if ((Type == ELF::STT_FUNC || Type == ELF::STT_GNU_IFUNC)) {
     if (Asm.isThumbFunc(Sym) && (FixupKind == ARM::fixup_arm_uncondbranch))
       return true;

@@ -1401,9 +1401,31 @@ bool llvm::isBuildVectorConstantSplat(const Register Reg,
   return false;
 }
 
+bool llvm::isBuildVectorConstantSplat(const Register Reg,
+                                      const MachineRegisterInfo &MRI,
+                                      APInt SplatValue, bool AllowUndef) {
+  if (auto SplatValAndReg = getAnyConstantSplat(Reg, MRI, AllowUndef)) {
+    if (SplatValAndReg->Value.getBitWidth() < SplatValue.getBitWidth())
+      return APInt::isSameValue(
+          SplatValAndReg->Value.sext(SplatValue.getBitWidth()), SplatValue);
+    return APInt::isSameValue(
+        SplatValAndReg->Value,
+        SplatValue.sext(SplatValAndReg->Value.getBitWidth()));
+  }
+
+  return false;
+}
+
 bool llvm::isBuildVectorConstantSplat(const MachineInstr &MI,
                                       const MachineRegisterInfo &MRI,
                                       int64_t SplatValue, bool AllowUndef) {
+  return isBuildVectorConstantSplat(MI.getOperand(0).getReg(), MRI, SplatValue,
+                                    AllowUndef);
+}
+
+bool llvm::isBuildVectorConstantSplat(const MachineInstr &MI,
+                                      const MachineRegisterInfo &MRI,
+                                      APInt SplatValue, bool AllowUndef) {
   return isBuildVectorConstantSplat(MI.getOperand(0).getReg(), MRI, SplatValue,
                                     AllowUndef);
 }

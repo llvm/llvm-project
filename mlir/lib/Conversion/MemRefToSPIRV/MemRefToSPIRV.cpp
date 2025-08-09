@@ -244,6 +244,16 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
+/// Converts memref.load to spirv.Image + spirv.ImageFetch
+class ImageLoadOpPattern final : public OpConversionPattern<memref::LoadOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
 /// Converts memref.store to spirv.Store on integers.
 class IntStoreOpPattern final : public OpConversionPattern<memref::StoreOp> {
 public:
@@ -528,6 +538,17 @@ IntLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
   if (!memrefType.getElementType().isSignlessInteger())
     return failure();
 
+  auto memorySpaceAttr =
+      dyn_cast_if_present<spirv::StorageClassAttr>(memrefType.getMemorySpace());
+  if (!memorySpaceAttr)
+    return rewriter.notifyMatchFailure(
+        loadOp, "missing memory space SPIR-V storage class attribute");
+
+  if (memorySpaceAttr.getValue() == spirv::StorageClass::Image)
+    return rewriter.notifyMatchFailure(
+        loadOp,
+        "failed to lower memref in image storage class to storage buffer");
+
   const auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
   Value accessChain =
       spirv::getElementPtr(typeConverter, memrefType, adaptor.getMemref(),
@@ -644,6 +665,18 @@ LoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
   auto memrefType = cast<MemRefType>(loadOp.getMemref().getType());
   if (memrefType.getElementType().isSignlessInteger())
     return failure();
+
+  auto memorySpaceAttr =
+      dyn_cast_if_present<spirv::StorageClassAttr>(memrefType.getMemorySpace());
+  if (!memorySpaceAttr)
+    return rewriter.notifyMatchFailure(
+        loadOp, "missing memory space SPIR-V storage class attribute");
+
+  if (memorySpaceAttr.getValue() == spirv::StorageClass::Image)
+    return rewriter.notifyMatchFailure(
+        loadOp,
+        "failed to lower memref in image storage class to storage buffer");
+
   Value loadPtr = spirv::getElementPtr(
       *getTypeConverter<SPIRVTypeConverter>(), memrefType, adaptor.getMemref(),
       adaptor.getIndices(), loadOp.getLoc(), rewriter);
@@ -659,6 +692,87 @@ LoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
   auto [memoryAccess, alignment] = *memoryRequirements;
   rewriter.replaceOpWithNewOp<spirv::LoadOp>(loadOp, loadPtr, memoryAccess,
                                              alignment);
+  return success();
+}
+
+LogicalResult
+ImageLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
+                                    ConversionPatternRewriter &rewriter) const {
+  auto memrefType = cast<MemRefType>(loadOp.getMemref().getType());
+
+  auto memorySpaceAttr =
+      dyn_cast_if_present<spirv::StorageClassAttr>(memrefType.getMemorySpace());
+  if (!memorySpaceAttr)
+    return rewriter.notifyMatchFailure(
+        loadOp, "missing memory space SPIR-V storage class attribute");
+
+  if (memorySpaceAttr.getValue() != spirv::StorageClass::Image)
+    return rewriter.notifyMatchFailure(
+        loadOp, "failed to lower memref in non-image storage class to image");
+
+  Value loadPtr = adaptor.getMemref();
+  auto memoryRequirements = calculateMemoryRequirements(loadPtr, loadOp);
+  if (failed(memoryRequirements))
+    return rewriter.notifyMatchFailure(
+        loadOp, "failed to determine memory requirements");
+
+  const auto [memoryAccess, alignment] = *memoryRequirements;
+
+  if (!loadOp.getMemRefType().hasRank())
+    return rewriter.notifyMatchFailure(
+        loadOp, "cannot lower unranked memrefs to SPIR-V images");
+
+  // We currently only support lowering of scalar memref elements to texels in
+  // the R[16|32][f|i|ui] formats. Future work will enable lowering of vector
+  // elements to texels in richer formats.
+  if (!isa<spirv::ScalarType>(loadOp.getMemRefType().getElementType()))
+    return rewriter.notifyMatchFailure(
+        loadOp,
+        "cannot lower memrefs who's element type is not a SPIR-V scalar type"
+        "to SPIR-V images");
+
+  // We currently only support sampled images since OpImageFetch does not work
+  // for plain images and the OpImageRead instruction needs to be materialized
+  // instead or texels need to be accessed via atomics through a texel pointer.
+  // Future work will generalize support to plain images.
+  auto convertedPointeeType = cast<spirv::PointerType>(
+      getTypeConverter()->convertType(loadOp.getMemRefType()));
+  if (!isa<spirv::SampledImageType>(convertedPointeeType.getPointeeType()))
+    return rewriter.notifyMatchFailure(loadOp,
+                                       "cannot lower memrefs which do not "
+                                       "convert to SPIR-V sampled images");
+
+  // Materialize the lowering.
+  Location loc = loadOp->getLoc();
+  auto imageLoadOp =
+      spirv::LoadOp::create(rewriter, loc, loadPtr, memoryAccess, alignment);
+  // Extract the image from the sampled image.
+  auto imageOp = spirv::ImageOp::create(rewriter, loc, imageLoadOp);
+
+  // Build a vector of coordinates or just a scalar index if we have a 1D image.
+  Value coords;
+  if (memrefType.getRank() != 1) {
+    auto coordVectorType = VectorType::get({loadOp.getMemRefType().getRank()},
+                                           adaptor.getIndices().getType()[0]);
+    coords = spirv::CompositeConstructOp::create(rewriter, loc, coordVectorType,
+                                                 adaptor.getIndices());
+  } else {
+    coords = adaptor.getIndices()[0];
+  }
+
+  // Fetch the value out of the image.
+  auto resultVectorType = VectorType::get({4}, loadOp.getType());
+  auto fetchOp = spirv::ImageFetchOp::create(
+      rewriter, loc, resultVectorType, imageOp, coords,
+      mlir::spirv::ImageOperandsAttr{}, ValueRange{});
+
+  // Note that because OpImageFetch returns a rank 4 vector we need to extract
+  // the elements corresponding to the load which will since we only support the
+  // R[16|32][f|i|ui] formats will always be the R(red) 0th vector element.
+  auto compositeExtractOp =
+      spirv::CompositeExtractOp::create(rewriter, loc, fetchOp, 0);
+
+  rewriter.replaceOp(loadOp, compositeExtractOp);
   return success();
 }
 
@@ -953,11 +1067,11 @@ LogicalResult ExtractAlignedPointerAsIndexOpPattern::matchAndRewrite(
 namespace mlir {
 void populateMemRefToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                                    RewritePatternSet &patterns) {
-  patterns
-      .add<AllocaOpPattern, AllocOpPattern, AtomicRMWOpPattern,
-           DeallocOpPattern, IntLoadOpPattern, IntStoreOpPattern, LoadOpPattern,
-           MemorySpaceCastOpPattern, StoreOpPattern, ReinterpretCastPattern,
-           CastPattern, ExtractAlignedPointerAsIndexOpPattern>(
-          typeConverter, patterns.getContext());
+  patterns.add<AllocaOpPattern, AllocOpPattern, AtomicRMWOpPattern,
+               DeallocOpPattern, IntLoadOpPattern, ImageLoadOpPattern,
+               IntStoreOpPattern, LoadOpPattern, MemorySpaceCastOpPattern,
+               StoreOpPattern, ReinterpretCastPattern, CastPattern,
+               ExtractAlignedPointerAsIndexOpPattern>(typeConverter,
+                                                      patterns.getContext());
 }
 } // namespace mlir

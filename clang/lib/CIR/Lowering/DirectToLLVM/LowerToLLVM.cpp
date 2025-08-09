@@ -2212,7 +2212,8 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMVecShuffleDynamicOpLowering,
                CIRToLLVMVecShuffleOpLowering,
                CIRToLLVMVecSplatOpLowering,
-               CIRToLLVMVecTernaryOpLowering
+               CIRToLLVMVecTernaryOpLowering,
+               CIRToLLVMUnreachableOpLowering
       // clang-format on
       >(converter, patterns.getContext());
 
@@ -2266,6 +2267,13 @@ mlir::LogicalResult CIRToLLVMGetMemberOpLowering::matchAndRewrite(
                                                        adaptor.getAddr());
     return mlir::success();
   }
+}
+
+mlir::LogicalResult CIRToLLVMUnreachableOpLowering::matchAndRewrite(
+    cir::UnreachableOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  rewriter.replaceOpWithNewOp<mlir::LLVM::UnreachableOp>(op);
+  return mlir::success();
 }
 
 mlir::LogicalResult CIRToLLVMTrapOpLowering::matchAndRewrite(

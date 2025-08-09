@@ -1668,6 +1668,9 @@ public:
                                       ArrayRef<SDValue> Ops,
                                       MachineMemOperand *MMO,
                                       ISD::MemIndexType IndexType);
+  LLVM_ABI SDValue getLoadFFVP(EVT VT, const SDLoc &DL, SDValue Chain,
+                               SDValue Ptr, SDValue Mask, SDValue EVL,
+                               MachineMemOperand *MMO);
 
   LLVM_ABI SDValue getGetFPEnv(SDValue Chain, const SDLoc &dl, SDValue Ptr,
                                EVT MemVT, MachineMemOperand *MMO);

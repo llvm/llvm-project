@@ -944,6 +944,11 @@ public:
   /// sanitizer is enabled, a runtime check is also emitted.
   mlir::Value emitCheckedArgForAssume(const Expr *e);
 
+  /// Emit a conversion from the specified complex type to the specified
+  /// destination type, where the destination type is an LLVM scalar type.
+  mlir::Value emitComplexToScalarConversion(mlir::Value src, QualType srcTy,
+                                            QualType dstTy, SourceLocation loc);
+
   LValue emitCompoundAssignmentLValue(const clang::CompoundAssignOperator *e);
   LValue emitCompoundLiteralLValue(const CompoundLiteralExpr *e);
 
@@ -1047,6 +1052,8 @@ public:
 
   mlir::Value emitPromotedScalarExpr(const Expr *e, QualType promotionType);
 
+  mlir::Value emitPromotedValue(mlir::Value result, QualType promotionType);
+
   /// Emit the computation of the specified expression of scalar type.
   mlir::Value emitScalarExpr(const clang::Expr *e);
 
@@ -1076,6 +1083,7 @@ public:
                                        cir::UnaryOpKind op, bool isPre);
 
   LValue emitComplexAssignmentLValue(const BinaryOperator *e);
+  LValue emitComplexCompoundAssignmentLValue(const CompoundAssignOperator *e);
 
   void emitCompoundStmt(const clang::CompoundStmt &s);
 
@@ -1223,7 +1231,27 @@ public:
   /// to conserve the high level information.
   mlir::Value emitToMemory(mlir::Value value, clang::QualType ty);
 
+  /// Emit a trap instruction, which is used to abort the program in an abnormal
+  /// way, usually for debugging purposes.
+  /// \p createNewBlock indicates whether to create a new block for the IR
+  /// builder. Since the `cir.trap` operation is a terminator, operations that
+  /// follow a trap cannot be emitted after `cir.trap` in the same block. To
+  /// ensure these operations get emitted successfully, you need to create a new
+  /// dummy block and set the insertion point there before continuing from the
+  /// trap operation.
+  void emitTrap(mlir::Location loc, bool createNewBlock);
+
   LValue emitUnaryOpLValue(const clang::UnaryOperator *e);
+
+  /// Emit a reached-unreachable diagnostic if \p loc is valid and runtime
+  /// checking is enabled. Otherwise, just emit an unreachable instruction.
+  /// \p createNewBlock indicates whether to create a new block for the IR
+  /// builder. Since the `cir.unreachable` operation is a terminator, operations
+  /// that follow an unreachable point cannot be emitted after `cir.unreachable`
+  /// in the same block. To ensure these operations get emitted successfully,
+  /// you need to create a dummy block and set the insertion point there before
+  /// continuing from the unreachable point.
+  void emitUnreachable(clang::SourceLocation loc, bool createNewBlock);
 
   /// This method handles emission of any variable declaration
   /// inside a function, including static vars etc.

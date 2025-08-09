@@ -58,7 +58,7 @@ define void @test(ptr %p, i64 %a, i8 %b) {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_COND1:%.*]]
 ; CHECK:       for.cond:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH1]] ], [ [[ADD:%.*]], [[FOR_BODY:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[SCALAR_PH1]] ], [ [[ADD:%.*]], [[FOR_BODY:%.*]] ]
 ; CHECK-NEXT:    [[ADD]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[CMP_SLT:%.*]] = icmp slt i32 [[IV]], 2
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[A]], 48

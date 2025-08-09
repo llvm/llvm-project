@@ -649,8 +649,8 @@ public:
   bool hasOverlappingBinding() const { return HasOverlappingBinding; }
   void setHasOverlappingBinding(bool Value) { HasOverlappingBinding = Value; }
 
-  LLVM_ABI std::optional<uint32_t>
-  findAvailableBinding(dxil::ResourceClass RC, uint32_t Space, int32_t Size) {
+  std::optional<uint32_t> findAvailableBinding(dxil::ResourceClass RC,
+                                               uint32_t Space, int32_t Size) {
     return Bindings.findAvailableBinding(RC, Space, Size);
   }
 

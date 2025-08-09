@@ -383,6 +383,7 @@ void CIRGenFunction::LexicalScope::emitImplicitReturn() {
         !mayDropFunctionReturn(fd->getASTContext(), fd->getReturnType());
 
     if (shouldEmitUnreachable) {
+      assert(!cir::MissingFeatures::sanitizers());
       if (cgf.cgm.getCodeGenOpts().OptimizationLevel == 0)
         builder.create<cir::TrapOp>(localScope->endLoc);
       else
@@ -784,9 +785,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     }
     if (!ty->isAnyComplexType())
       return emitCompoundAssignmentLValue(cast<CompoundAssignOperator>(e));
-    cgm.errorNYI(e->getSourceRange(),
-                 "CompoundAssignOperator with ComplexType");
-    return LValue();
+
+    return emitComplexCompoundAssignmentLValue(cast<CompoundAssignOperator>(e));
   }
   case Expr::CallExprClass:
   case Expr::CXXMemberCallExprClass:

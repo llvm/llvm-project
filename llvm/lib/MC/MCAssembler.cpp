@@ -945,6 +945,14 @@ bool MCAssembler::relaxFill(MCFillFragment &F) {
   return true;
 }
 
+bool MCAssembler::relaxOrg(MCOrgFragment &F) {
+  uint64_t Size = computeFragmentSize(F);
+  if (F.getSize() == Size)
+    return false;
+  F.setSize(Size);
+  return true;
+}
+
 bool MCAssembler::relaxFragment(MCFragment &F) {
   switch(F.getKind()) {
   default:
@@ -966,6 +974,8 @@ bool MCAssembler::relaxFragment(MCFragment &F) {
     return relaxCVDefRange(cast<MCCVDefRangeFragment>(F));
   case MCFragment::FT_Fill:
     return relaxFill(cast<MCFillFragment>(F));
+  case MCFragment::FT_Org:
+    return relaxOrg(static_cast<MCOrgFragment &>(F));
   }
 }
 
