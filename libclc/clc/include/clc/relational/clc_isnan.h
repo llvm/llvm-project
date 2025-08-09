@@ -13,7 +13,7 @@
 #include <clc/clctypes.h>
 
 #define _CLC_ISNAN_DECL(RET_TYPE, ARG_TYPE)                                    \
-  _CLC_OVERLOAD _CLC_DECL RET_TYPE __clc_isnan(ARG_TYPE);
+  _CLC_OVERLOAD _CLC_CONST _CLC_DECL RET_TYPE __clc_isnan(ARG_TYPE);
 
 #define _CLC_VECTOR_ISNAN_DECL(RET_TYPE, ARG_TYPE)                             \
   _CLC_ISNAN_DECL(RET_TYPE##2, ARG_TYPE##2)                                    \

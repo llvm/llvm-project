@@ -10,7 +10,7 @@
 #if (__CLC_VECSIZE_OR_1 == 1 || __CLC_VECSIZE_OR_1 == 2 ||                     \
      __CLC_VECSIZE_OR_1 == 3 || __CLC_VECSIZE_OR_1 == 4)
 
-_CLC_OVERLOAD _CLC_DECL
+_CLC_OVERLOAD _CLC_CONST _CLC_DECL
 #ifdef __CLC_GEOMETRIC_RET_GENTYPE
     __CLC_GENTYPE
 #else
