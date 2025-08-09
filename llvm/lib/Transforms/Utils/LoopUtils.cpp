@@ -937,6 +937,7 @@ constexpr Intrinsic::ID llvm::getReductionIntrinsicID(RecurKind RK) {
     return Intrinsic::vector_reduce_umax;
   case RecurKind::UMin:
     return Intrinsic::vector_reduce_umin;
+  case RecurKind::OrderedFCmpSelect:
   case RecurKind::FMax:
   case RecurKind::FMaxNum:
     return Intrinsic::vector_reduce_fmax;
@@ -1088,6 +1089,7 @@ CmpInst::Predicate llvm::getMinMaxReductionPredicate(RecurKind RK) {
     return CmpInst::ICMP_SGT;
   case RecurKind::FMin:
     return CmpInst::FCMP_OLT;
+  case RecurKind::OrderedFCmpSelect:
   case RecurKind::FMax:
     return CmpInst::FCMP_OGT;
   // We do not add FMinimum/FMaximum recurrence kind here since there is no
@@ -1310,6 +1312,7 @@ Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
   case RecurKind::SMin:
   case RecurKind::UMax:
   case RecurKind::UMin:
+  case RecurKind::OrderedFCmpSelect:
   case RecurKind::FMax:
   case RecurKind::FMin:
   case RecurKind::FMinNum:
