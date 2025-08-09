@@ -20,6 +20,7 @@
 #include "AVR.h"
 #include "AVRMachineFunctionInfo.h"
 #include "AVRTargetObjectFile.h"
+#include "AVRTargetTransformInfo.h"
 #include "MCTargetDesc/AVRMCTargetDesc.h"
 #include "TargetInfo/AVRTargetInfo.h"
 
@@ -28,7 +29,7 @@
 namespace llvm {
 
 static const char *AVRDataLayout =
-    "e-P1-p:16:8-i8:8-i16:8-i32:8-i64:8-f32:8-f64:8-n8-a:8";
+    "e-P1-p:16:8-i8:8-i16:8-i32:8-i64:8-f32:8-f64:8-n8-n16:8-a:8";
 
 /// Processes a CPU name.
 static StringRef getCPU(StringRef CPU) {
@@ -62,7 +63,9 @@ namespace {
 class AVRPassConfig : public TargetPassConfig {
 public:
   AVRPassConfig(AVRTargetMachine &TM, PassManagerBase &PM)
-      : TargetPassConfig(TM, PM) {}
+      : TargetPassConfig(TM, PM) {
+    EnableLoopTermFold = true;
+  }
 
   AVRTargetMachine &getAVRTargetMachine() const {
     return getTM<AVRTargetMachine>();
@@ -105,6 +108,11 @@ const AVRSubtarget *AVRTargetMachine::getSubtargetImpl() const {
 
 const AVRSubtarget *AVRTargetMachine::getSubtargetImpl(const Function &) const {
   return &SubTarget;
+}
+
+TargetTransformInfo
+AVRTargetMachine::getTargetTransformInfo(const Function &F) const {
+  return TargetTransformInfo(std::make_unique<AVRTTIImpl>(this, F));
 }
 
 MachineFunctionInfo *AVRTargetMachine::createMachineFunctionInfo(
