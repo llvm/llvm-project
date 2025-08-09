@@ -1365,8 +1365,8 @@ Instruction *InstCombinerImpl::foldNextMultiply(ICmpInst &Cmp) {
       return nullptr;
   }
 
-  // Guard against weird special-case where Op1 gets optimized to constant. Leave it constant
-  // fonder.
+  // Guard against weird special-case where Op1 gets optimized to constant.
+  // Leave it constant fonder.
   if (match(Op1, m_APInt(NumCost)))
     return nullptr;
 
