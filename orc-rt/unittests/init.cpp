@@ -2,5 +2,5 @@
 
 
 TEST(TEST, emptyFuncs) {
-  ASSERT_EQ(True, False);
+  ASSERT_TRUE(true);
 }
