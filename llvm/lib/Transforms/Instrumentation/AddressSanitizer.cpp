@@ -3563,6 +3563,10 @@ void FunctionStackPoisoner::processStaticAllocas() {
       // void *FakeStack = __asan_option_detect_stack_use_after_return
       //     ? __asan_stack_malloc_N(LocalStackSize)
       //     : nullptr;
+      // where _N is the size class of AlignedLocalStackSize
+      // (we still only allocate LocalStackSize, not AlignedLocalStackSize, to
+      //  maximize poisoning)
+      //
       // void *LocalStackBase = (FakeStack) ? FakeStack :
       //                        alloca(LocalStackSize);
       Constant *OptionDetectUseAfterReturn = F.getParent()->getOrInsertGlobal(
@@ -3575,9 +3579,9 @@ void FunctionStackPoisoner::processStaticAllocas() {
       IRBuilder<> IRBIf(Term);
       StackMallocIdx = StackMallocSizeClass(AlignedLocalStackSize);
       assert(StackMallocIdx <= kMaxAsanStackMallocSizeClass);
-      Value *FakeStackValue = RTCI.createRuntimeCall(
-          IRBIf, AsanStackMallocFunc[StackMallocIdx],
-          ConstantInt::get(IntptrTy, AlignedLocalStackSize));
+      Value *FakeStackValue =
+          RTCI.createRuntimeCall(IRBIf, AsanStackMallocFunc[StackMallocIdx],
+                                 ConstantInt::get(IntptrTy, LocalStackSize));
       IRB.SetInsertPoint(InsBefore);
       FakeStack = createPHI(IRB, UseAfterReturnIsEnabled, FakeStackValue, Term,
                             ConstantInt::get(IntptrTy, 0));
@@ -3587,9 +3591,9 @@ void FunctionStackPoisoner::processStaticAllocas() {
       // void *LocalStackBase = (FakeStack) ? FakeStack :
       //                        alloca(LocalStackSize);
       StackMallocIdx = StackMallocSizeClass(AlignedLocalStackSize);
-      FakeStack = RTCI.createRuntimeCall(
-          IRB, AsanStackMallocFunc[StackMallocIdx],
-          ConstantInt::get(IntptrTy, AlignedLocalStackSize));
+      FakeStack =
+          RTCI.createRuntimeCall(IRB, AsanStackMallocFunc[StackMallocIdx],
+                                 ConstantInt::get(IntptrTy, LocalStackSize));
     }
     Value *NoFakeStack =
         IRB.CreateICmpEQ(FakeStack, Constant::getNullValue(IntptrTy));
