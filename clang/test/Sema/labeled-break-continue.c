@@ -37,6 +37,10 @@ void f2() {
     break l2; // expected-error {{'break' label does not name an enclosing loop or 'switch'}}
     continue l2; // expected-error {{'continue' label does not name an enclosing loop}}
   }
+
+  break l3; // expected-error {{'break' label does not name an enclosing loop or 'switch'}}
+  continue l3; // expected-error {{'continue' label does not name an enclosing loop}}
+  l3: while (true) {}
 }
 
 void f3() {
