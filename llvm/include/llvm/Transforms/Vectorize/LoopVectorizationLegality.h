@@ -445,6 +445,11 @@ public:
   /// Returns a list of all known histogram operations in the loop.
   bool hasHistograms() const { return !Histograms.empty(); }
 
+  /// Returns the loads that may fault and need to be speculative.
+  const SmallPtrSetImpl<const Instruction *> &getSpeculativeLoads() const {
+    return SpeculativeLoads;
+  }
+
   PredicatedScalarEvolution *getPredicatedScalarEvolution() const {
     return &PSE;
   }
@@ -629,6 +634,9 @@ private:
   /// load -> update -> store instructions where multiple lanes in a vector
   /// may work on the same memory location.
   SmallVector<HistogramInfo, 1> Histograms;
+
+  /// Hold all loads that need to be speculative.
+  SmallPtrSet<const Instruction *, 4> SpeculativeLoads;
 
   /// BFI and PSI are used to check for profile guided size optimizations.
   BlockFrequencyInfo *BFI;

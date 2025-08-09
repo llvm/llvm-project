@@ -1457,6 +1457,10 @@ bool TargetTransformInfo::supportsScalableVectors() const {
   return TTIImpl->supportsScalableVectors();
 }
 
+bool TargetTransformInfo::supportsSpeculativeLoads() const {
+  return TTIImpl->supportsSpeculativeLoads();
+}
+
 bool TargetTransformInfo::enableScalableVectorization() const {
   return TTIImpl->enableScalableVectorization();
 }

@@ -1110,6 +1110,8 @@ public:
 
   virtual bool supportsScalableVectors() const { return false; }
 
+  virtual bool supportsSpeculativeLoads() const { return false; }
+
   virtual bool enableScalableVectorization() const { return false; }
 
   virtual bool hasActiveVectorLength() const { return false; }
