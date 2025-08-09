@@ -1360,7 +1360,8 @@ Instruction *InstCombinerImpl::foldNextMultiply(ICmpInst &Cmp) {
     if (!match(Neg, m_Sub(m_Zero(), m_Value(Value))))
       return nullptr;
 
-    // mask = add %val, -1. No commutative here, since it's canonical representation for sub %val, -1
+    // mask = add %val, -1. No commutative here, since it's canonical
+    // representation for sub %val, -1
     if (!match(Mask, m_Add(m_Value(Value), m_AllOnes()))) {
       if (match(Num, m_Add(m_Value(Value), m_AllOnes()))) {
         std::swap(Mask, Num);
