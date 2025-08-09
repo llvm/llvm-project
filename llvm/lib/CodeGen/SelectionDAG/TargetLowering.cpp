@@ -5125,10 +5125,11 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
           !ISD::isUnsignedIntSetCC(Cond))) &&
         isTypeDesirableForOp(ISD::SETCC, N0.getOperand(0).getValueType())) {
       EVT NewVT = N0.getOperand(0).getValueType();
-      SDValue NewConst = DAG.getConstant(ISD::isSignedIntSetCC(Cond)
-                                             ? C1.sext(NewVT.getSizeInBits())
-                                             : C1.zext(NewVT.getSizeInBits()),
-                                         dl, NewVT);
+      SDValue NewConst = DAG.getConstant(
+          (N0->getFlags().hasNoSignedWrap() && !ISD::isUnsignedIntSetCC(Cond))
+              ? C1.sext(NewVT.getSizeInBits())
+              : C1.zext(NewVT.getSizeInBits()),
+          dl, NewVT);
       return DAG.getSetCC(dl, VT, N0.getOperand(0), NewConst, Cond);
     }
 
