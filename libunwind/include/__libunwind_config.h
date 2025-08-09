@@ -11,6 +11,8 @@
 
 #define _LIBUNWIND_VERSION 15000
 
+// Disable clang-format as it makes the huge conditions unreadable.
+// clang-format off
 #if defined(__arm__) && !defined(__USING_SJLJ_EXCEPTIONS__) && \
     !defined(__ARM_DWARF_EH__) && !defined(__SEH__)
 #define _LIBUNWIND_ARM_EHABI
@@ -136,17 +138,16 @@
 #    error "Unsupported MIPS ABI and/or environment"
 #  endif
 #  define _LIBUNWIND_HIGHEST_DWARF_REGISTER _LIBUNWIND_HIGHEST_DWARF_REGISTER_MIPS
-#elif defined(__sparc__) && defined(__arch64__)
-#define _LIBUNWIND_TARGET_SPARC64 1
-#define _LIBUNWIND_HIGHEST_DWARF_REGISTER                                      \
-  _LIBUNWIND_HIGHEST_DWARF_REGISTER_SPARC64
-#define _LIBUNWIND_CONTEXT_SIZE 33
-#define _LIBUNWIND_CURSOR_SIZE 45
+# elif defined(__sparc__) && defined(__arch64__)
+#  define _LIBUNWIND_TARGET_SPARC64 1
+#  define _LIBUNWIND_HIGHEST_DWARF_REGISTER LIBUNWIND_HIGHEST_DWARF_REGISTER_SPARC64
+#  define _LIBUNWIND_CONTEXT_SIZE 33
+#  define _LIBUNWIND_CURSOR_SIZE 45
 # elif defined(__sparc__)
-  #define _LIBUNWIND_TARGET_SPARC 1
-  #define _LIBUNWIND_HIGHEST_DWARF_REGISTER _LIBUNWIND_HIGHEST_DWARF_REGISTER_SPARC
-  #define _LIBUNWIND_CONTEXT_SIZE 16
-  #define _LIBUNWIND_CURSOR_SIZE 23
+#  define _LIBUNWIND_TARGET_SPARC 1
+#  define _LIBUNWIND_HIGHEST_DWARF_REGISTER _LIBUNWIND_HIGHEST_DWARF_REGISTER_SPARC
+#  define _LIBUNWIND_CONTEXT_SIZE 16
+#  define _LIBUNWIND_CURSOR_SIZE 23
 # elif defined(__riscv)
 #  define _LIBUNWIND_TARGET_RISCV 1
 #  if defined(__riscv_flen)
@@ -162,7 +163,7 @@
 #  else
 #   error "Unsupported RISC-V ABI"
 #  endif
-# define _LIBUNWIND_HIGHEST_DWARF_REGISTER _LIBUNWIND_HIGHEST_DWARF_REGISTER_RISCV
+#  define _LIBUNWIND_HIGHEST_DWARF_REGISTER _LIBUNWIND_HIGHEST_DWARF_REGISTER_RISCV
 # elif defined(__ve__)
 #  define _LIBUNWIND_TARGET_VE 1
 #  define _LIBUNWIND_CONTEXT_SIZE 67
@@ -173,20 +174,19 @@
 #  define _LIBUNWIND_CONTEXT_SIZE 34
 #  define _LIBUNWIND_CURSOR_SIZE 46
 #  define _LIBUNWIND_HIGHEST_DWARF_REGISTER _LIBUNWIND_HIGHEST_DWARF_REGISTER_S390X
-#elif defined(__loongarch__)
-#define _LIBUNWIND_TARGET_LOONGARCH 1
-#if __loongarch_grlen == 64
-#define _LIBUNWIND_CONTEXT_SIZE 65
-#define _LIBUNWIND_CURSOR_SIZE 77
-#else
-#error "Unsupported LoongArch ABI"
-#endif
-#define _LIBUNWIND_HIGHEST_DWARF_REGISTER                                      \
-  _LIBUNWIND_HIGHEST_DWARF_REGISTER_LOONGARCH
-#elif defined(__wasm__)
+# elif defined(__loongarch__)
+#  define _LIBUNWIND_TARGET_LOONGARCH 1
+#  if __loongarch_grlen == 64
+#   define _LIBUNWIND_CONTEXT_SIZE 65
+#   define _LIBUNWIND_CURSOR_SIZE 77
+#  else
+#   error "Unsupported LoongArch ABI"
+#  endif
+#  define _LIBUNWIND_HIGHEST_DWARF_REGISTER _LIBUNWIND_HIGHEST_DWARF_REGISTER_LOONGARCH
+# elif defined(__wasm__)
 // Unused
-#define _LIBUNWIND_CONTEXT_SIZE 0
-#define _LIBUNWIND_CURSOR_SIZE 0
+#  define _LIBUNWIND_CONTEXT_SIZE 0
+#  define _LIBUNWIND_CURSOR_SIZE 0
 # else
 #  error "Unsupported architecture."
 # endif
@@ -211,5 +211,6 @@
 # define _LIBUNWIND_CURSOR_SIZE 204
 # define _LIBUNWIND_HIGHEST_DWARF_REGISTER 287
 #endif // _LIBUNWIND_IS_NATIVE_ONLY
+// clang-format on
 
 #endif // ____LIBUNWIND_CONFIG_H__
