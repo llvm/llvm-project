@@ -40,6 +40,13 @@ TEST_CONSTEXPR_CXX26 bool test() {
     P result = example.equal_range(C2Int{5});
     assert(result.first == result.second);
   }
+  {
+    using M = std::map<int, double, transparent_less_nonempty>;
+    using P = std::pair<typename M::iterator, typename M::iterator>;
+    M example;
+    P result = example.equal_range(C2Int{5});
+    assert(result.first == result.second);
+  }
   return true;
 }
 

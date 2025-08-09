@@ -72,8 +72,6 @@ define void @low_vf_ic_is_better(ptr nocapture noundef %p, i32 %tc, i16 noundef 
 ; CHECK-VS1-NEXT:    [[TMP17:%.*]] = mul nuw i64 [[TMP16]], 16
 ; CHECK-VS1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], [[TMP17]]
 ; CHECK-VS1-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; CHECK-VS1-NEXT:    [[TMP18:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-VS1-NEXT:    [[TMP19:%.*]] = mul nuw i64 [[TMP18]], 16
 ; CHECK-VS1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[CONV]], i64 0
 ; CHECK-VS1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
 ; CHECK-VS1-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -84,7 +82,7 @@ define void @low_vf_ic_is_better(ptr nocapture noundef %p, i32 %tc, i16 noundef 
 ; CHECK-VS1-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 16 x i8>, ptr [[TMP22]], align 1
 ; CHECK-VS1-NEXT:    [[TMP24:%.*]] = add <vscale x 16 x i8> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
 ; CHECK-VS1-NEXT:    store <vscale x 16 x i8> [[TMP24]], ptr [[TMP22]], align 1
-; CHECK-VS1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP19]]
+; CHECK-VS1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP17]]
 ; CHECK-VS1-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-VS1-NEXT:    br i1 [[TMP25]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-VS1:       [[MIDDLE_BLOCK]]:
@@ -103,8 +101,6 @@ define void @low_vf_ic_is_better(ptr nocapture noundef %p, i32 %tc, i16 noundef 
 ; CHECK-VS1-NEXT:    [[TMP29:%.*]] = mul nuw i64 [[TMP28]], 8
 ; CHECK-VS1-NEXT:    [[N_MOD_VF2:%.*]] = urem i64 [[TMP3]], [[TMP29]]
 ; CHECK-VS1-NEXT:    [[N_VEC3:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF2]]
-; CHECK-VS1-NEXT:    [[TMP30:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-VS1-NEXT:    [[TMP31:%.*]] = mul nuw i64 [[TMP30]], 8
 ; CHECK-VS1-NEXT:    [[TMP39:%.*]] = add i64 [[TMP0]], [[N_VEC3]]
 ; CHECK-VS1-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <vscale x 8 x i8> poison, i8 [[CONV]], i64 0
 ; CHECK-VS1-NEXT:    [[BROADCAST_SPLAT8:%.*]] = shufflevector <vscale x 8 x i8> [[BROADCAST_SPLATINSERT7]], <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
@@ -116,7 +112,7 @@ define void @low_vf_ic_is_better(ptr nocapture noundef %p, i32 %tc, i16 noundef 
 ; CHECK-VS1-NEXT:    [[WIDE_LOAD6:%.*]] = load <vscale x 8 x i8>, ptr [[TMP33]], align 1
 ; CHECK-VS1-NEXT:    [[TMP35:%.*]] = add <vscale x 8 x i8> [[WIDE_LOAD6]], [[BROADCAST_SPLAT8]]
 ; CHECK-VS1-NEXT:    store <vscale x 8 x i8> [[TMP35]], ptr [[TMP33]], align 1
-; CHECK-VS1-NEXT:    [[INDEX_NEXT9]] = add nuw i64 [[INDEX5]], [[TMP31]]
+; CHECK-VS1-NEXT:    [[INDEX_NEXT9]] = add nuw i64 [[INDEX5]], [[TMP29]]
 ; CHECK-VS1-NEXT:    [[TMP36:%.*]] = icmp eq i64 [[INDEX_NEXT9]], [[N_VEC3]]
 ; CHECK-VS1-NEXT:    br i1 [[TMP36]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK-VS1:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
@@ -176,8 +172,6 @@ define void @low_vf_ic_is_better(ptr nocapture noundef %p, i32 %tc, i16 noundef 
 ; CHECK-VS2-NEXT:    [[TMP17:%.*]] = mul nuw i64 [[TMP16]], 8
 ; CHECK-VS2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], [[TMP17]]
 ; CHECK-VS2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; CHECK-VS2-NEXT:    [[TMP18:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-VS2-NEXT:    [[TMP19:%.*]] = mul nuw i64 [[TMP18]], 8
 ; CHECK-VS2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i8> poison, i8 [[CONV]], i64 0
 ; CHECK-VS2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 8 x i8> [[BROADCAST_SPLATINSERT]], <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
 ; CHECK-VS2-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -188,7 +182,7 @@ define void @low_vf_ic_is_better(ptr nocapture noundef %p, i32 %tc, i16 noundef 
 ; CHECK-VS2-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i8>, ptr [[TMP22]], align 1
 ; CHECK-VS2-NEXT:    [[TMP24:%.*]] = add <vscale x 8 x i8> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
 ; CHECK-VS2-NEXT:    store <vscale x 8 x i8> [[TMP24]], ptr [[TMP22]], align 1
-; CHECK-VS2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP19]]
+; CHECK-VS2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP17]]
 ; CHECK-VS2-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-VS2-NEXT:    br i1 [[TMP25]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-VS2:       [[MIDDLE_BLOCK]]:
@@ -207,8 +201,6 @@ define void @low_vf_ic_is_better(ptr nocapture noundef %p, i32 %tc, i16 noundef 
 ; CHECK-VS2-NEXT:    [[TMP29:%.*]] = mul nuw i64 [[TMP28]], 4
 ; CHECK-VS2-NEXT:    [[N_MOD_VF2:%.*]] = urem i64 [[TMP3]], [[TMP29]]
 ; CHECK-VS2-NEXT:    [[N_VEC3:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF2]]
-; CHECK-VS2-NEXT:    [[TMP30:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-VS2-NEXT:    [[TMP31:%.*]] = mul nuw i64 [[TMP30]], 4
 ; CHECK-VS2-NEXT:    [[TMP39:%.*]] = add i64 [[TMP0]], [[N_VEC3]]
 ; CHECK-VS2-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <vscale x 4 x i8> poison, i8 [[CONV]], i64 0
 ; CHECK-VS2-NEXT:    [[BROADCAST_SPLAT8:%.*]] = shufflevector <vscale x 4 x i8> [[BROADCAST_SPLATINSERT7]], <vscale x 4 x i8> poison, <vscale x 4 x i32> zeroinitializer
@@ -220,7 +212,7 @@ define void @low_vf_ic_is_better(ptr nocapture noundef %p, i32 %tc, i16 noundef 
 ; CHECK-VS2-NEXT:    [[WIDE_LOAD6:%.*]] = load <vscale x 4 x i8>, ptr [[TMP33]], align 1
 ; CHECK-VS2-NEXT:    [[TMP35:%.*]] = add <vscale x 4 x i8> [[WIDE_LOAD6]], [[BROADCAST_SPLAT8]]
 ; CHECK-VS2-NEXT:    store <vscale x 4 x i8> [[TMP35]], ptr [[TMP33]], align 1
-; CHECK-VS2-NEXT:    [[INDEX_NEXT9]] = add nuw i64 [[INDEX5]], [[TMP31]]
+; CHECK-VS2-NEXT:    [[INDEX_NEXT9]] = add nuw i64 [[INDEX5]], [[TMP29]]
 ; CHECK-VS2-NEXT:    [[TMP36:%.*]] = icmp eq i64 [[INDEX_NEXT9]], [[N_VEC3]]
 ; CHECK-VS2-NEXT:    br i1 [[TMP36]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK-VS2:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
@@ -416,12 +408,6 @@ define void @overflow_indvar_known_false(ptr nocapture noundef %p, i32 noundef %
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 16
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[TMP1]], [[TMP4]]
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP3]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP7]], 16
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 [[TMP1]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[CONV]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
@@ -434,7 +420,7 @@ define void @overflow_indvar_known_false(ptr nocapture noundef %p, i32 noundef %
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr [[TMP13]], i32 1, <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i8> poison)
 ; CHECK-NEXT:    [[TMP15:%.*]] = add <vscale x 16 x i8> [[WIDE_MASKED_LOAD]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[TMP15]], ptr [[TMP13]], i32 1, <vscale x 16 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP8]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP3]]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX_NEXT]], i64 [[TMP1]])
 ; CHECK-NEXT:    [[TMP16:%.*]] = xor <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <vscale x 16 x i1> [[TMP16]], i32 0

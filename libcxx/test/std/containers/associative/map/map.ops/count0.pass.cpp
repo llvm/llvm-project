@@ -33,6 +33,10 @@ TEST_CONSTEXPR_CXX26 bool test() {
     typedef std::map<int, double, transparent_less_not_referenceable> M;
     assert(M().count(C2Int{5}) == 0);
   }
+  {
+    using M = std::map<int, double, transparent_less_nonempty>;
+    assert(M().count(C2Int{5}) == 0);
+  }
   return true;
 }
 

@@ -36,6 +36,11 @@ TEST_CONSTEXPR_CXX26 bool test() {
     M example;
     assert(example.lower_bound(C2Int{5}) == example.end());
   }
+  {
+    using M = std::map<int, double, transparent_less_nonempty>;
+    M example;
+    assert(example.lower_bound(C2Int{5}) == example.end());
+  }
   return true;
 }
 

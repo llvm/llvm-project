@@ -1,3 +1,8 @@
+if(NOT TARGET libc)
+    message(WARNING "Cannot run conformance tests without the LLVM C library")
+    return()
+endif()
+
 add_conformance_test(acosf AcosfTest.cpp)
 add_conformance_test(acoshf AcoshfTest.cpp)
 add_conformance_test(asinf AsinfTest.cpp)
