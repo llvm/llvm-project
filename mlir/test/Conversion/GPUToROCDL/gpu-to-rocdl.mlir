@@ -701,7 +701,7 @@ gpu.module @test_module {
     // CHECK: %[[#CAST_VALUE:]] = llvm.bitcast %[[#VALUE]] : f32 to i32
     // CHECK: %[[#PERMUTE:]] = rocdl.ds_bpermute %[[#ALIGNED_DST_LANE]], %[[#CAST_VALUE]] : (i32, i32) -> i32
     // CHECK: %[[#CAST_SHFL_VALUE:]] = llvm.bitcast %[[#PERMUTE]] : i32 to f32
-    %shfli, %predi = gpu.shuffle idx %arg0, %arg1, %arg2 : f32 
+    %shfli, %predi = gpu.shuffle idx %arg0, %arg1, %arg2 : f32
     // *** UP mode shuffle ***
     // CHECK: %[[#LANE_ID:]] = rocdl.mbcnt.hi
     // CHECK: %[[#ZERO:]] = llvm.mlir.constant(0 : i32) : i32
@@ -775,4 +775,20 @@ gpu.module @test_module {
     %bDimX = gpu.block_dim x upper_bound 2147483647
     func.return %bDimX : index
   }
+}
+
+// -----
+
+gpu.module @test_module {
+// CHECK-LABEL: func @broadcast
+//  CHECK-SAME:   (%[[ARG:.*]]: i64, %[[IDX:.*]]: i32)
+func.func @broadcast(%arg0 : index, %arg1 : i32) -> (index, index, index) {
+//       CHECK:   %{{.*}} = rocdl.readfirstlane %[[ARG]] : i64
+//       CHECK:   %{{.*}} = rocdl.readfirstlane %[[ARG]] : i64
+//       CHECK:   %{{.*}} = rocdl.readlane %[[ARG]], %[[IDX]] : (i64, i32) -> i64
+  %0 = gpu.broadcast_lane %arg0, first_lane : index
+  %1 = gpu.broadcast_lane %arg0, any_lane : index
+  %2 = gpu.broadcast_lane %arg0, lane %arg1 : index
+  func.return %0, %1, %2 : index, index, index
+}
 }
