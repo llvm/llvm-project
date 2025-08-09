@@ -140,12 +140,3 @@ void f7() {
     continue d; // expected-error {{use of undeclared label 'd'}}
   }
 }
-
-
-// TODO:
-//  - Add tests for all the stuff that ActOnBreakStmt normally checks (SEH __finally etc.)
-//  - C++ support: range-based for loops
-//  - ObjC support: 'for in' loops
-//  - Constant evaluation
-//  - Template instantiation (need to get the instantiated LabelDecl)
-//  - Tests for TextNodeDumper / JSONNodeDumper / AST printing

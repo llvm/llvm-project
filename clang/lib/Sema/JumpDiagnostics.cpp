@@ -84,7 +84,9 @@ private:
                              unsigned &ParentScope);
   void BuildScopeInformation(CompoundLiteralExpr *CLE, unsigned &ParentScope);
   void BuildScopeInformation(Stmt *S, unsigned &origParentScope);
-  void BuildScopeInformationForLoopOrSwitch(Stmt *S, Stmt *Body, unsigned& ParentScope);
+  void BuildScopeInformationForLoopOrSwitch(Stmt *S, Stmt *Body,
+                                            unsigned &ParentScope,
+                                            unsigned InDiag = 0);
 
   void VerifyJumps();
   void VerifyIndirectJumps();
@@ -306,7 +308,7 @@ void JumpScopeChecker::BuildScopeInformation(CompoundLiteralExpr *CLE,
 /// The loop condition etc. are *not* included in it though; this forbids doing
 /// horrible things such as 'x: while (({ continue x; })) {}'.
 void JumpScopeChecker::BuildScopeInformationForLoopOrSwitch(
-    Stmt *S, Stmt *Body, unsigned &ParentScope) {
+    Stmt *S, Stmt *Body, unsigned &ParentScope, unsigned InDiag) {
   for (Stmt *Child : S->children()) {
     if (!Child || Child == Body)
       continue;
@@ -314,7 +316,7 @@ void JumpScopeChecker::BuildScopeInformationForLoopOrSwitch(
   }
 
   unsigned NewParentScope = Scopes.size();
-  Scopes.push_back(GotoScope(ParentScope, 0, 0, S->getBeginLoc()));
+  Scopes.push_back(GotoScope(ParentScope, InDiag, 0, S->getBeginLoc()));
   LabelAndGotoScopes[S] = NewParentScope;
   BuildScopeInformation(Body, NewParentScope);
 }
@@ -340,10 +342,9 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
 
   case Stmt::ObjCForCollectionStmtClass: {
     auto *CS = cast<ObjCForCollectionStmt>(S);
-    unsigned Diag = diag::note_protected_by_objc_fast_enumeration;
-    unsigned NewParentScope = Scopes.size();
-    Scopes.push_back(GotoScope(ParentScope, Diag, 0, S->getBeginLoc()));
-    BuildScopeInformation(CS->getBody(), NewParentScope);
+    BuildScopeInformationForLoopOrSwitch(
+        S, CS->getBody(), ParentScope,
+        diag::note_protected_by_objc_fast_enumeration);
     return;
   }
 
