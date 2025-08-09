@@ -62,6 +62,7 @@ LLVM_ABI bool DisplayGraph(StringRef Filename, bool wait = true,
                            GraphProgram::Name program = GraphProgram::DOT);
 
 template <typename GraphType, typename Derived> class GraphWriterBase {
+protected:
   raw_ostream &O;
   const GraphType &G;
   bool RenderUsingHTML = false;
@@ -73,6 +74,7 @@ template <typename GraphType, typename Derived> class GraphWriterBase {
   using child_iterator = typename GTraits::ChildIteratorType;
   DOTTraits DTraits;
 
+private:
   static_assert(std::is_pointer_v<NodeRef>,
                 "FIXME: Currently GraphWriterBase requires the NodeRef type to "
                 "be a pointer.\nThe pointer usage should be moved to "
