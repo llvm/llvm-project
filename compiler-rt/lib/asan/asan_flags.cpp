@@ -241,6 +241,8 @@ void InitializeFlags() {
         InitializeDefaultFlags();
         ProcessFlags();
         ApplyFlags();
+        if (!common_flags()->symbolize)
+          Symbolizer::ClearTools();
       });
 
 #  if CAN_SANITIZE_UB
