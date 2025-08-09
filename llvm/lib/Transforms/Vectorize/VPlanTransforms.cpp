@@ -3289,38 +3289,37 @@ void VPlanTransforms::materializeBuildVectors(VPlan &Plan) {
   auto VPBBsInsideLoopRegion = VPBlockUtils::blocksOnly<VPBasicBlock>(
       vp_depth_first_shallow(LoopRegion->getEntry()));
   // Materialize Build(Struct)Vector for all replicating VPReplicateRecipes,
-  // excluding ones in replicate regions. Those are not unrolled explicitly yet.
+  // excluding ones in replicate regions. Those are not materialized explicitly
+  // yet. Those vector users are still handled in VPReplicateRegion::execute(),
+  // via shouldPack().
+  // TODO: materialize build vectors for replicating recipes in replicating
+  // regions.
+  // TODO: materialize build vectors for VPInstructions.
   for (VPBasicBlock *VPBB :
        concat<VPBasicBlock *>(VPBBsOutsideLoopRegion, VPBBsInsideLoopRegion)) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
-      if (!RepR || RepR->isSingleScalar())
-        continue;
-      VPInstruction *BuildVector = nullptr;
-      for (VPUser *U : to_vector(RepR->users())) {
+      auto UsesVectorOrInsideReplicateRegions = [RepR, LoopRegion](VPUser *U) {
         VPRegionBlock *ParentRegion =
             cast<VPRecipeBase>(U)->getParent()->getParent();
-        if (U->usesScalars(RepR) && ParentRegion == LoopRegion)
-          continue;
+        return !U->usesScalars(RepR) || ParentRegion != LoopRegion;
+      };
+      if (!RepR || RepR->isSingleScalar() ||
+          none_of(RepR->users(), UsesVectorOrInsideReplicateRegions))
+        continue;
 
-        if (!BuildVector) {
-          Type *ScalarTy = TypeInfo.inferScalarType(RepR);
-          unsigned Opc = ScalarTy->isStructTy()
-                             ? VPInstruction::BuildStructVector
-                             : VPInstruction::BuildVector;
-          BuildVector = new VPInstruction(Opc, {RepR});
-          BuildVector->insertAfter(RepR);
-        }
+      Type *ScalarTy = TypeInfo.inferScalarType(RepR);
+      unsigned Opcode = ScalarTy->isStructTy()
+                            ? VPInstruction::BuildStructVector
+                            : VPInstruction::BuildVector;
+      auto *BuildVector = new VPInstruction(Opcode, {RepR});
+      BuildVector->insertAfter(RepR);
 
-        // Only update a single operand per users, as the same user is added
-        // multiple times, once per use.
-        // TODO: Introduce de-duplicating iterator over users.
-        for (unsigned Idx = 0; Idx != U->getNumOperands(); ++Idx)
-          if (U->getOperand(Idx) == RepR) {
-            U->setOperand(Idx, BuildVector);
-            break;
-          }
-      }
+      RepR->replaceUsesWithIf(
+          BuildVector, [BuildVector, &UsesVectorOrInsideReplicateRegions](
+                           VPUser &U, unsigned) {
+            return &U != BuildVector && UsesVectorOrInsideReplicateRegions(&U);
+          });
     }
   }
 }

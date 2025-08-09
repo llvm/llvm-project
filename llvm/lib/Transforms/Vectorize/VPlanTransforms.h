@@ -276,8 +276,8 @@ struct VPlanTransforms {
   static void materializeBackedgeTakenCount(VPlan &Plan,
                                             VPBasicBlock *VectorPH);
 
-  /// Add explicit Build[Struct]Vector recipes that combine scalar values
-  /// produced by VPReplicateRecipes to a single vector.
+  /// Add explicit Build[Struct]Vector recipes that combine multiple scalar
+  /// values into single vectors.
   static void materializeBuildVectors(VPlan &Plan);
 
   /// Try to convert a plan with interleave groups with VF elements to a plan
