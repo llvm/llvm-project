@@ -13,6 +13,9 @@
 #include "gtest/gtest.h"
 #include <optional>
 
+#include "../../test/lib/Dialect/Test/TestDialect.h"
+#include "../../test/lib/Dialect/Test/TestOps.h"
+
 using namespace mlir;
 
 namespace {
@@ -78,6 +81,43 @@ setPropertiesFromAttribute(TestProperties &prop, Attribute attr,
   return success();
 }
 
+/// Convert an attribute to a TestProperties struct, optionally emit errors
+/// through the provided diagnostic if any. This is used for example during
+/// parsing with the generic format.
+static LogicalResult
+setPropertyFromAttribute(TestProperties &prop, StringRef name, Attribute attr,
+                         function_ref<InFlightDiagnostic()> emitError) {
+  if (name == "a") {
+    auto v = dyn_cast<IntegerAttr>(attr);
+    if (!v)
+      return failure();
+    prop.a = v.getValue().getSExtValue();
+    return success();
+  }
+  if (name == "b") {
+    auto v = dyn_cast<FloatAttr>(attr);
+    if (!v)
+      return failure();
+    prop.b = v.getValue().convertToFloat();
+    return success();
+  }
+  if (name == "array") {
+    auto v = dyn_cast<DenseI64ArrayAttr>(attr);
+    if (!v)
+      return failure();
+    prop.array.assign(v.asArrayRef().begin(), v.asArrayRef().end());
+    return success();
+  }
+  if (name == "label") {
+    auto v = dyn_cast<StringAttr>(attr);
+    if (!v)
+      return failure();
+    prop.label = std::make_shared<std::string>(v.getValue());
+    return success();
+  }
+  return failure();
+}
+
 /// Convert a TestProperties struct to a DictionaryAttr, this is used for
 /// example during printing with the generic format.
 static Attribute getPropertiesAsAttribute(MLIRContext *ctx,
@@ -90,6 +130,20 @@ static Attribute getPropertiesAsAttribute(MLIRContext *ctx,
   attrs.push_back(b.getNamedAttr(
       "label", b.getStringAttr(prop.label ? *prop.label : "<nullptr>")));
   return b.getDictionaryAttr(attrs);
+}
+
+/// Convert a named property in TestProperties struct to an attribute, this is
+/// used for example during printing with the generic format.
+static FailureOr<Attribute> getPropertyAsAttribute(MLIRContext *ctx,
+                                                   const TestProperties &prop,
+                                                   StringRef name) {
+  Builder b{ctx};
+  return llvm::StringSwitch<FailureOr<Attribute>>(name)
+      .Case("a", b.getI32IntegerAttr(prop.a))
+      .Case("b", b.getF32FloatAttr(prop.b))
+      .Case("array", b.getDenseI64ArrayAttr(prop.array))
+      .Case("label", b.getStringAttr(prop.label ? *prop.label : "<nullptr>"))
+      .Default(failure());
 }
 
 inline llvm::hash_code computeHash(const TestProperties &prop) {
@@ -419,4 +473,94 @@ TEST(OpPropertiesTest, withoutPropertiesDiscardableAttrs) {
   EXPECT_TRUE(hash(op.get()) == hash(reparsed.get()));
 }
 
+TEST(OpPropertiesTest, PropertiesAsAttrs) {
+  MLIRContext context;
+  context.getOrLoadDialect<TestOpPropertiesDialect>();
+  ParserConfig config(&context);
+  // Parse the operation with some properties.
+  OwningOpRef<Operation *> op = parseSourceString(mlirSrc, config);
+  ASSERT_TRUE(op.get() != nullptr);
+  auto opWithProp = dyn_cast<OpWithProperties>(op.get());
+  ASSERT_TRUE(opWithProp);
+  {
+    // Check the attr dict.
+    std::string output;
+    llvm::raw_string_ostream os(output);
+    opWithProp->getPropertiesAsAttribute().print(os);
+    ASSERT_STREQ("{a = -42 : i32, "
+                 "array = array<i64: 40, 41>, "
+                 "b = -4.200000e+01 : f32, "
+                 "label = \"bar foo\"}",
+                 output.c_str());
+  }
+  auto getAttr = [&](FailureOr<Attribute> attr) {
+    EXPECT_TRUE(succeeded(attr));
+    return *attr;
+  };
+  // Get and mutate single properties.
+  auto a = cast<IntegerAttr>(getAttr(op->getPropertyAsAttribute("a")));
+  auto label = cast<StringAttr>(getAttr(op->getPropertyAsAttribute("label")));
+  std::string newLabel = label.getValue().str() + " " +
+                         std::to_string(a.getValue().getSExtValue());
+  {
+    EXPECT_TRUE(succeeded(op->setPropertyFromAttribute(
+        "label", StringAttr::get(&context, newLabel),
+        [&]() { return op->emitError(); })));
+    std::string output;
+    llvm::raw_string_ostream os(output);
+    opWithProp.print(os);
+    StringRef view(output);
+    EXPECT_TRUE(view.contains("label = \"bar foo -42\""));
+  }
+  // Expect error because the named prop doesn't exist.
+  EXPECT_TRUE(failed(
+      op->setPropertyFromAttribute("s", a, [&]() { return op->emitError(); })));
+}
+
+TEST(OpPropertiesTest, TblgenOpProperties) {
+  MLIRContext context;
+  context.getOrLoadDialect<test::TestDialect>();
+  ParserConfig config(&context);
+  // Parse the operation with some properties.
+  OwningOpRef<Operation *> op = parseSourceString(R"mlir(
+    test.with_properties a = 32, b = "foo", c = "bar",
+      flag = true, array = [1, 2, 3, 4], array32 = [5, 6]
+    )mlir",
+                                                  config);
+  ASSERT_TRUE(op.get() != nullptr);
+  auto opWithProp = dyn_cast<test::TestOpWithProperties>(op.get());
+  ASSERT_TRUE(opWithProp);
+  {
+    // Check the attr dict.
+    std::string output;
+    llvm::raw_string_ostream os(output);
+    opWithProp->getPropertiesAsAttribute().print(os);
+    StringRef view(output);
+    EXPECT_TRUE(view.contains("a = 32"));
+    EXPECT_TRUE(view.contains("b = \"foo\""));
+  }
+  {
+    // Modify a prop.
+    std::string output;
+    llvm::raw_string_ostream os(output);
+    ASSERT_TRUE(succeeded(opWithProp->setPropertyFromAttribute(
+        "a", IntegerAttr::get(IntegerType::get(&context, 32), 42),
+        [&]() { return opWithProp->emitError(); })));
+    opWithProp->print(os);
+    StringRef view(output);
+    EXPECT_FALSE(view.contains("a = 32"));
+    EXPECT_TRUE(view.contains("a = 42"));
+    EXPECT_TRUE(view.contains("b = \"foo\""));
+  }
+  {
+    // Get a prop.
+    std::string output;
+    llvm::raw_string_ostream os(output);
+    FailureOr<Attribute> prop = opWithProp->getPropertyAsAttribute("flag");
+    ASSERT_TRUE(succeeded(prop));
+    auto flagAttr = dyn_cast_or_null<BoolAttr>(*prop);
+    ASSERT_TRUE(flagAttr);
+    EXPECT_TRUE(flagAttr.getValue());
+  }
+}
 } // namespace
