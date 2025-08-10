@@ -188,6 +188,7 @@ Bug Fixes to C++ Support
   (``[[assume(expr)]]``) creates temporary objects.
 - Fix the dynamic_cast to final class optimization to correctly handle
   casts that are guaranteed to fail (#GH137518).
+- Fix bug rejecting partial specialization of variable templates with auto NTTPs (#GH118190).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

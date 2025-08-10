@@ -311,14 +311,14 @@ struct OpOrInterfaceRewritePatternBase : public RewritePattern {
 /// opposed to a raw Operation.
 template <typename SourceOp>
 struct OpRewritePattern
-    : public detail::OpOrInterfaceRewritePatternBase<SourceOp> {
+    : public mlir::detail::OpOrInterfaceRewritePatternBase<SourceOp> {
 
   /// Patterns must specify the root operation name they match against, and can
   /// also specify the benefit of the pattern matching and a list of generated
   /// ops.
   OpRewritePattern(MLIRContext *context, PatternBenefit benefit = 1,
                    ArrayRef<StringRef> generatedNames = {})
-      : detail::OpOrInterfaceRewritePatternBase<SourceOp>(
+      : mlir::detail::OpOrInterfaceRewritePatternBase<SourceOp>(
             SourceOp::getOperationName(), benefit, context, generatedNames) {}
 };
 
@@ -327,10 +327,10 @@ struct OpRewritePattern
 /// of a raw Operation.
 template <typename SourceOp>
 struct OpInterfaceRewritePattern
-    : public detail::OpOrInterfaceRewritePatternBase<SourceOp> {
+    : public mlir::detail::OpOrInterfaceRewritePatternBase<SourceOp> {
 
   OpInterfaceRewritePattern(MLIRContext *context, PatternBenefit benefit = 1)
-      : detail::OpOrInterfaceRewritePatternBase<SourceOp>(
+      : mlir::detail::OpOrInterfaceRewritePatternBase<SourceOp>(
             Pattern::MatchInterfaceOpTypeTag(), SourceOp::getInterfaceID(),
             benefit, context) {}
 };
