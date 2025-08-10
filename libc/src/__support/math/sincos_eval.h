@@ -18,7 +18,9 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-namespace generic {
+namespace math {
+
+namespace sincos_eval_internal {
 
 using fputil::DoubleDouble;
 using Float128 = fputil::DyadicFloat<128>;
@@ -131,7 +133,9 @@ LIBC_INLINE void sincos_eval(const Float128 &u, Float128 &sin_u,
                            COS_COEFFS[6]);
 }
 
-} // namespace generic
+} // namespace sincos_eval_internal
+
+} // namespace math
 
 } // namespace LIBC_NAMESPACE_DECL
 
