@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -std=c++2c -verify %s
 
 template <class T> concept A = (T(), true);
-template <class T> concept C = A<T> && true;
+template <class T> concept C = A<T> && true; // #C
 template <class T> concept D = A<T> && __is_same(T, int);
 
 
@@ -154,42 +154,69 @@ consteval int Or3() requires (C<typename T::type> || ... || C<typename U::type>)
 static_assert(And1<>() == 1);
 static_assert(And1<S>() == 1);
 static_assert(And1<S, S>() == 1);
+// FIXME: The diagnostics are not so great
 static_assert(And1<int>() == 1); // expected-error {{no matching function for call to 'And1'}}
-                                 // expected-note@#and1 {{candidate template ignored: failed template argument deduction}}
+                                 // expected-note@#and1 {{candidate template ignored: constraints not satisfied [with T = <int>]}}
+                                 // expected-note@#and1 {{because 'typename T::type' does not satisfy 'C'}}
+                                 // expected-note@#C {{because 'T' does not satisfy 'A'}}
 
 static_assert(And1<S, int>() == 1); // expected-error {{no matching function for call to 'And1'}}
-                                   // expected-note@#and1 {{candidate template ignored: failed template argument deduction}}
+                                   // expected-note@#and1 {{candidate template ignored: constraints not satisfied [with T = <S, int>]}}
+                                   // expected-note@#and1 {{because 'typename T::type' does not satisfy 'C'}}
+                                   // expected-note@#C {{because 'T' does not satisfy 'A'}}
 
 static_assert(And1<int, S>() == 1); // expected-error {{no matching function for call to 'And1'}}
-                                   // expected-note@#and1 {{candidate template ignored: failed template argument deduction}}
+                                   // expected-note@#and1 {{candidate template ignored: constraints not satisfied [with T = <int, S>]}}
+                                   // expected-note@#and1 {{because 'typename T::type' does not satisfy 'C'}}
+                                   // expected-note@#C {{because 'T' does not satisfy 'A'}}
 
 static_assert(And2<S>() == 2);
 static_assert(And2<S, S>() == 2);
-static_assert(And2<int>() == 2);  // expected-error {{no matching function for call to 'And2'}} \
-                                  // expected-note@#and2 {{candidate template ignored: failed template argument deduction}}
+static_assert(And2<int>() == 2);  // expected-error {{no matching function for call to 'And2'}}
+                                  // expected-note@#and2 {{candidate template ignored: constraints not satisfied [with T = int, U = <>]}}
+                                  // expected-note@#and2 {{because 'typename U::type' does not satisfy 'C'}}
+                                  // expected-note@#C {{because 'T' does not satisfy 'A'}}
+
 
 static_assert(And2<int, int>() == 2);  // expected-error {{no matching function for call to 'And2'}}
-                                      // expected-note@#and2 {{candidate template ignored: failed template argument deduction}}
+                                      // expected-note@#and2 {{candidate template ignored: constraints not satisfied [with T = S, U = <int>]}} \
+                                      // expected-note@#and2 {{because 'typename U::type' does not satisfy 'C'}}
+                                   // expected-note@#C {{because 'T' does not satisfy 'A'}}
 
 static_assert(And2<S, int>() == 2); // expected-error {{no matching function for call to 'And2'}}
-                                   // expected-note@#and2 {{candidate template ignored: failed template argument deduction}}
+                                   // expected-note@#and2 {{candidate template ignored: constraints not satisfied [with T = int, U = <S>]}}
+                                   // expected-note@#and2 {{because 'typename T::type' does not satisfy 'C'}}
+                                 // expected-note@#C {{because 'T' does not satisfy 'A'}}
 
 static_assert(And2<int, S>() == 2); // expected-error {{no matching function for call to 'And2'}}
-                                   // expected-note@#and2 {{candidate template ignored: failed template argument deduction}}
+                                   // expected-note@#and2 {{candidate template ignored: constraints not satisfied [with T = int, U = <int>]}}
+                                   // expected-note@#and2 {{because 'typename T::type' does not satisfy 'C'}}
+                                 // expected-note@#C {{because 'T' does not satisfy 'A'}}
 
 static_assert(And3<S>() == 3);
 static_assert(And3<S, S>() == 3);
 static_assert(And3<int>() == 3);   // expected-error {{no matching function for call to 'And3'}}
-                                   // expected-note@#and3 {{candidate template ignored: failed template argument deduction}}
+                                   // expected-note@#and3 {{candidate template ignored: constraints not satisfied [with T = int, U = <>]}}
+                                   // expected-note@#and3 {{because 'typename T::type' does not satisfy 'C'}}
+                                   // expected-note@#C {{because 'T' does not satisfy 'A'}}
+
 
 static_assert(And3<int, int>() == 3);  // expected-error {{no matching function for call to 'And3'}}
-                                      // expected-note@#and3 {{candidate template ignored: failed template argument deduction}}
+                                      // expected-note@#and3 {{candidate template ignored: constraints not satisfied [with T = int, U = <int>]}}
+                                      // expected-note@#and3 {{because 'typename T::type' does not satisfy 'C'}}
+                                     // expected-note@#C {{because 'T' does not satisfy 'A'}}
+
 
 static_assert(And3<S, int>() == 3); // expected-error {{no matching function for call to 'And3'}}
-                                   // expected-note@#and3 {{candidate template ignored: failed template argument deduction}}
+                                   // expected-note@#and3 {{candidate template ignored: constraints not satisfied [with T = S, U = <int>]}}
+                                   // expected-note@#and3 {{because 'typename U::type' does not satisfy 'C'}}
+                                   // expected-note@#C {{because 'T' does not satisfy 'A'}}
+
 
 static_assert(And3<int, S>() == 3); // expected-error {{no matching function for call to 'And3'}}
-                                   // expected-note@#and3 {{candidate template ignored: failed template argument deduction}}
+                                   // expected-note@#and3 {{candidate template ignored: constraints not satisfied [with T = int, U = <S>]}}
+                                   // expected-note@#and3 {{because 'typename T::type' does not satisfy 'C'}}
+                                   // expected-note@#C {{because 'T' does not satisfy 'A'}}
 
 
 static_assert(Or1<>() == 1); // expected-error {{no matching function for call to 'Or1'}}
@@ -200,19 +227,25 @@ static_assert(Or1<S, int>() == 1);
 static_assert(Or1<S, S>() == 1);
 static_assert(Or1<int>() == 1); // expected-error {{no matching function for call to 'Or1'}}
                                 // expected-note@#or1 {{candidate template ignored: constraints not satisfied}}
+                                // expected-note@#or1 {{because 'typename T::type' does not satisfy 'C'}}
+                                // expected-note@#C {{because 'T' does not satisfy 'A'}}
 
 static_assert(Or2<S>() == 2);
 static_assert(Or2<int, S>() == 2);
 static_assert(Or2<S, int>() == 2);
 static_assert(Or2<S, S>() == 2);
 static_assert(Or2<int>() == 2); // expected-error {{no matching function for call to 'Or2'}}
-                                // expected-note@#or2 {{candidate template ignored: failed template argument deduction}}
+                                // expected-note@#or2 {{candidate template ignored: constraints not satisfied [with T = int, U = <>]}}
+                                // expected-note@#or2 {{because 'typename T::type' does not satisfy 'C'}}
+                                // expected-note@#C {{because 'T' does not satisfy 'A'}}
 static_assert(Or3<S>() == 3);
 static_assert(Or3<int, S>() == 3);
 static_assert(Or3<S, int>() == 3);
 static_assert(Or3<S, S>() == 3);
 static_assert(Or3<int>() == 3); // expected-error {{no matching function for call to 'Or3'}}
                                 // expected-note@#or3 {{candidate template ignored: constraints not satisfied}}
+                                // expected-note@#or3 {{because 'typename T::type' does not satisfy 'C'}}
+                                // expected-note@#C {{because 'T' does not satisfy 'A'}}
 }
 
 namespace bool_conversion_break {
@@ -222,7 +255,7 @@ struct Thingy {
     static constexpr int compare(const Thingy&) {return 1;}
 };
 template <typename ...T, typename ...U>
-void f(A<T ...> *, A<U ...> *) // expected-note {{candidate template ignored: failed template argument deduction}}
+void f(A<T ...> *, A<U ...> *) // expected-note {{candidate template ignored: constraints not satisfied}}
 requires (T::compare(U{}) && ...); // expected-error {{atomic constraint must be of type 'bool' (found 'int')}}
 
 void g() {

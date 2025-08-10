@@ -4820,14 +4820,20 @@ ExprResult Sema::CheckConceptTemplateId(
 
   DiagnoseUseOfDecl(NamedConcept, ConceptNameInfo.getLoc());
 
+  // There's a bug with CTAI.CanonicalConverted.
+  // If the template argument contains a DependentDecltypeType that includes a
+  // TypeAliasType, and the same written type had occurred previously in the
+  // source, then the DependentDecltypeType would be canonicalized to that
+  // previous type which would mess up the substitution.
+  // FIXME: Reland https://github.com/llvm/llvm-project/pull/101782 properly!
   auto *CSD = ImplicitConceptSpecializationDecl::Create(
       Context, NamedConcept->getDeclContext(), NamedConcept->getLocation(),
-      CTAI.CanonicalConverted);
+      CTAI.SugaredConverted);
   ConstraintSatisfaction Satisfaction;
   bool AreArgsDependent =
       TemplateSpecializationType::anyDependentTemplateArguments(
-          *TemplateArgs, CTAI.CanonicalConverted);
-  MultiLevelTemplateArgumentList MLTAL(NamedConcept, CTAI.CanonicalConverted,
+          *TemplateArgs, CTAI.SugaredConverted);
+  MultiLevelTemplateArgumentList MLTAL(NamedConcept, CTAI.SugaredConverted,
                                        /*Final=*/false);
       auto *CL = ConceptReference::Create(
       Context,
@@ -4849,11 +4855,11 @@ ExprResult Sema::CheckConceptTemplateId(
           SourceRange(SS.isSet() ? SS.getBeginLoc() : ConceptNameInfo.getLoc(),
                       TemplateArgs->getRAngleLoc()),
         Satisfaction, CL);
+    Satisfaction.ContainsErrors = Error;
   }
 
-  if (!DoCheckConstraintSatisfaction)
-    Satisfaction.IsSatisfied = false;
-  Satisfaction.ContainsErrors = Error;
+  if (Error)
+    return ExprError();
 
   return ConceptSpecializationExpr::Create(
       Context, CL, CSD, AreArgsDependent ? nullptr : &Satisfaction);
@@ -6122,7 +6128,7 @@ bool Sema::CheckTemplateArgumentList(
     CXXThisScopeRAII Scope(*this, RD, ThisQuals, RD != nullptr);
 
     MultiLevelTemplateArgumentList MLTAL = getTemplateInstantiationArgs(
-        Template, NewContext, /*Final=*/false, CTAI.CanonicalConverted,
+        Template, NewContext, /*Final=*/true, CTAI.SugaredConverted,
         /*RelativeToPrimary=*/true,
         /*Pattern=*/nullptr,
         /*ForConceptInstantiation=*/true);

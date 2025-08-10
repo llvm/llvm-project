@@ -17,9 +17,9 @@ constexpr bool A<x>::far() {
       b.data_member;
       requires A<x-1>::far(); // #Invalid
       // expected-error@#Invalid {{recursive template instantiation exceeded maximum depth}}
-      // expected-note@#Invalid 2{{in instantiation}}
-      // expected-note@#Invalid 1 {{while}}
+      // expected-note@#Invalid 3 {{while}}
       // expected-note@#Invalid {{contexts in backtrace}}
+      // expected-note@#Invalid {{use -ftemplate-depth=N to increase}}
     };
 }
 static_assert(A<1>::far());

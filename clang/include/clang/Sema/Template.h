@@ -234,7 +234,8 @@ enum class TemplateSubstitutionKind : char {
     /// Replaces the current 'innermost' level with the provided argument list.
     /// This is useful for type deduction cases where we need to get the entire
     /// list from the AST, but then add the deduced innermost list.
-    void replaceInnermostTemplateArguments(Decl *AssociatedDecl, ArgList Args) {
+    void replaceInnermostTemplateArguments(Decl *AssociatedDecl, ArgList Args,
+                                           bool Final = false) {
       assert((!TemplateArgumentLists.empty() || NumRetainedOuterLevels) &&
              "Replacing in an empty list?");
 
@@ -249,7 +250,7 @@ enum class TemplateSubstitutionKind : char {
       } else {
         --NumRetainedOuterLevels;
         TemplateArgumentLists.push_back(
-            {{AssociatedDecl, /*Final=*/false}, Args});
+            {{AssociatedDecl, /*Final=*/Final}, Args});
       }
     }
 
