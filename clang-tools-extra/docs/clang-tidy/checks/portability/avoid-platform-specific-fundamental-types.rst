@@ -3,8 +3,8 @@
 portability-avoid-platform-specific-fundamental-types
 =====================================================
 
-Finds fundamental types (e.g. ``int``, ``float``) and recommends using typedefs
-or fixed-width types to improve portability across different platforms.
+Detects fundamental types (``int``, ``short``, ``long``, ``long long``, ``char``
+, ``float``, etc) and warns against their use due to platform-dependent behavior.
 
 This check detects fundamental types (``int``, ``short``, ``long``, ``float``,
 ``char`` and their ``unsigned`` or ``signed`` variants) and warns against their
