@@ -768,6 +768,9 @@ namespace nonstd {
 template <bool Condition, typename T = void>
 struct enable_if : std::enable_if<Condition, T> {};
 
+template <bool Condition, typename T = void>
+using enable_if_t = typename enable_if<Condition, T>::type;
+
 }
 
 template <typename T>
@@ -775,13 +778,24 @@ typename nonstd::enable_if<some_type_trait<T>::value, void>::type nonstd_enable_
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use C++20 requires constraints instead of enable_if [modernize-use-constraints]
 // CHECK-FIXES: {{^}}void nonstd_enable_if() requires some_type_trait<T>::value {}{{$}}
 
+template <typename T>
+nonstd::enable_if_t<some_type_trait<T>::value, void> nonstd_enable_if_t() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use C++20 requires constraints instead of enable_if [modernize-use-constraints]
+// CHECK-FIXES: {{^}}void nonstd_enable_if_t() requires some_type_trait<T>::value {}{{$}}
+
 // But only if the non-standard enable_if has the same signature as the standard one.
 namespace boost {
 
 template <typename Condition, typename T = void>
 struct enable_if : std::enable_if<Condition::value, T> {};
 
+template <typename Condition, typename T = void>
+using enable_if_t = typename enable_if<Condition, T>::type;
+
 }
 
 template <typename T>
 typename boost::enable_if<some_type_trait<T>, void>::type boost_enable_if() {}
+
+template <typename T>
+boost::enable_if_t<some_type_trait<T>, void> boost_enable_if_t() {}
