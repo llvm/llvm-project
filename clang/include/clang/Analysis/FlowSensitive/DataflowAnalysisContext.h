@@ -42,6 +42,18 @@ struct ContextSensitiveOptions {
   unsigned Depth = 2;
 };
 
+/// A simple representation of essential elements of the logical context used in
+/// environments. Designed for import/export for applications requiring
+/// serialization support.
+struct SimpleLogicalContext {
+  // Global invariant that applies for all definitions in the context.
+  const Formula *Invariant;
+  // Flow-condition tokens in the context.
+  llvm::DenseMap<Atom, const Formula *> TokenDefs;
+  // Dependencies between flow-condition definitions.
+  llvm::DenseMap<Atom, llvm::DenseSet<Atom>> TokenDeps;
+};
+
 /// Owns objects that encompass the state of a program and stores context that
 /// is used during dataflow analysis.
 class DataflowAnalysisContext {
@@ -186,29 +198,6 @@ public:
 
   Arena &arena() { return *A; }
 
-  const Formula *getInvariant() const { return Invariant; }
-
-  /// Returns null if no constraints are associated with `Token`.
-  const Formula *getFlowConditionConstraints(Atom Token) const {
-    auto ConstraintsIt = FlowConditionConstraints.find(Token);
-    if (ConstraintsIt == FlowConditionConstraints.end())
-      return nullptr;
-    return ConstraintsIt->second;
-  }
-
-  /// Returns null if no deps are found.
-  const llvm::DenseSet<Atom> *getFlowConditionDeps(Atom Token) const {
-    auto DepsIt = FlowConditionDeps.find(Token);
-    if (DepsIt == FlowConditionDeps.end())
-      return nullptr;
-    return &DepsIt->second;
-  }
-
-  /// Computes the transitive closure of reachable atoms from `Tokens`, through
-  /// the dependency graph.
-  llvm::DenseSet<Atom>
-  getTransitiveClosure(const llvm::DenseSet<Atom> &Tokens) const;
-
   /// Returns the outcome of satisfiability checking on `Constraints`.
   ///
   /// Flow conditions are not incorporated, so they may need to be manually
@@ -239,6 +228,14 @@ public:
     return {};
   }
 
+  /// Export the logical-context portions of `AC`, limited to the given target
+  /// flow-condition tokens.
+  SimpleLogicalContext
+  exportLogicalContext(llvm::DenseSet<dataflow::Atom> TargetTokens) const;
+
+  /// Initializes this context's "logical" components with `LC`.
+  void initLogicalContext(SimpleLogicalContext LC);
+
 private:
   friend class Environment;
 
@@ -259,6 +256,11 @@ private:
   ///    `DataflowAnalysisContext will take ownership of `OwnedSolver`).
   DataflowAnalysisContext(Solver &S, std::unique_ptr<Solver> &&OwnedSolver,
                           Options Opts);
+
+  /// Computes the transitive closure of reachable atoms from `Tokens`, through
+  /// the dependency graph.
+  llvm::DenseSet<Atom>
+  getTransitiveClosure(const llvm::DenseSet<Atom> &Tokens) const;
 
   // Extends the set of modeled field declarations.
   void addModeledFields(const FieldSet &Fields);

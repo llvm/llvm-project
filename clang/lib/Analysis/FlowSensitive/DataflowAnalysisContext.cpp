@@ -262,6 +262,65 @@ void DataflowAnalysisContext::addTransitiveFlowConditionConstraints(
   }
 }
 
+static void getReferencedAtoms(const Formula &F,
+                               llvm::DenseSet<dataflow::Atom> &Refs) {
+  switch (F.kind()) {
+    case Formula::AtomRef:
+      Refs.insert(F.getAtom());
+      break;
+    case Formula::Literal:
+      break;
+    case Formula::Not:
+      getReferencedAtoms(*F.operands()[0], Refs);
+      break;
+    case Formula::And:
+    case Formula::Or:
+    case Formula::Implies:
+    case Formula::Equal:
+      ArrayRef<const Formula *> Operands = F.operands();
+      getReferencedAtoms(*Operands[0], Refs);
+      getReferencedAtoms(*Operands[1], Refs);
+      break;
+  }
+}
+
+SimpleLogicalContext DataflowAnalysisContext::exportLogicalContext(
+    llvm::DenseSet<dataflow::Atom> TargetTokens) const {
+  SimpleLogicalContext LC;
+
+  if (Invariant != nullptr) {
+    LC.Invariant = Invariant;
+    getReferencedAtoms(*Invariant, TargetTokens);
+  }
+
+  llvm::DenseSet<dataflow::Atom> ReachableTokens =
+      getTransitiveClosure(TargetTokens);
+
+  for (dataflow::Atom Token : ReachableTokens) {
+    // Only process the token if it is constrained. Unconstrained tokens don't
+    // have dependencies.
+    auto ConstraintsIt = FlowConditionConstraints.find(Token);
+    if (ConstraintsIt == FlowConditionConstraints.end())
+      continue;
+    LC.TokenDefs[Token] = ConstraintsIt->second;
+
+    if (auto DepsIt = FlowConditionDeps.find(Token);
+        DepsIt != FlowConditionDeps.end())
+      LC.TokenDeps[Token] = DepsIt->second;
+  }
+
+  return LC;
+}
+
+void DataflowAnalysisContext::initLogicalContext(SimpleLogicalContext LC) {
+  Invariant = LC.Invariant;
+  FlowConditionConstraints = std::move(LC.TokenDefs);
+  // TODO: The dependencies in `LC.TokenDeps` can be reconstructed from
+  // `LC.TokenDefs`. Give the caller the option to reconstruct, , rather than
+  // providing them directly, to save caller space (memory/disk).
+  FlowConditionDeps = std::move(LC.TokenDeps);
+}
+
 static void printAtomList(const llvm::SmallVector<Atom> &Atoms,
                           llvm::raw_ostream &OS) {
   OS << "(";
