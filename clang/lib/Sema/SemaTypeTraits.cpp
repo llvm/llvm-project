@@ -2519,7 +2519,7 @@ static void DiagnoseNonStandardLayoutReason(Sema &SemaRef, SourceLocation Loc,
         << diag::TraitNotSatisfiedReason::MultipleDataBase;
   }
   if (D->isPolymorphic()) {
-    // Find the best location to point “defined here” at.
+    // Find the best location to point "defined here" at.
     const CXXMethodDecl *VirtualMD = nullptr;
     // First, look for a virtual method.
     for (const auto *M : D->methods()) {
@@ -2607,7 +2607,7 @@ static void DiagnoseNonTriviallyDefaultConstructibleReason(Sema &SemaRef,
   }
 
   // Check if the class has a deleted constructor
-  if (D->hasDeletedDefaultConstructor()) {
+  if (D->hasDefaultConstructor() && !D->hasTrivialDefaultConstructor()) {
     SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
         << diag::TraitNotSatisfiedReason::DeletedCtr << /*Copy*/ 0
         << D->getLocation();
@@ -2633,7 +2633,8 @@ static void DiagnoseNonTriviallyDefaultConstructibleReason(Sema &SemaRef,
           << diag::TraitNotSatisfiedReason::VBase << Base.getType()
           << Base.getSourceRange();
     }
-    if (!Base.getType()->isTriviallyDefaultConstructibleType()) {
+    const CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
+    if (BaseDecl && !BaseDecl->hasTrivialDefaultConstructor()) {
       SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
           << diag::TraitNotSatisfiedReason::NTDCBase << Base.getType()
           << Base.getSourceRange();
@@ -2642,7 +2643,8 @@ static void DiagnoseNonTriviallyDefaultConstructibleReason(Sema &SemaRef,
 
   // Check non-static data members
   for (const FieldDecl *Field : D->fields()) {
-    if (!Field->getType()->isTriviallyDefaultConstructibleType()) {
+    const CXXRecordDecl *FieldDecl = Field->getType()->getAsCXXRecordDecl();
+    if (FieldDecl && !FieldDecl->hasTrivialDefaultConstructor()) {
       SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
           << diag::TraitNotSatisfiedReason::NTDCField << Field
           << Field->getType() << Field->getSourceRange();
@@ -2653,7 +2655,8 @@ static void DiagnoseNonTriviallyDefaultConstructibleReason(Sema &SemaRef,
   if (D->isUnion()) {
     bool HasNonTrivialMember = false;
     for (const FieldDecl *Field : D->fields()) {
-      if (!Field->getType()->isTriviallyDefaultConstructibleType()) {
+      const CXXRecordDecl *FieldDecl = Field->getType()->getAsCXXRecordDecl();
+      if (FieldDecl && !FieldDecl->hasTrivialDefaultConstructor()) {
         HasNonTrivialMember = true;
         break;
       }
