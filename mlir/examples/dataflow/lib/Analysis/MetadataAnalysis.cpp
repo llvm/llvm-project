@@ -34,14 +34,14 @@ MetadataLatticeValue::join(const MetadataLatticeValue &lhs,
   // directly insert the metadata of rhs into the metadata of lhs.If lhs and rhs
   // have overlapping attributes, keep the attribute value in lhs unchanged.
   MetadataLatticeValue result;
-  for (const llvm::StringMapEntry<mlir::Attribute> &lhsIt : lhs.metadata) {
+  for (auto &&lhsIt : lhs.metadata) {
     result.metadata.insert(
-        std::pair<StringRef, Attribute>(lhsIt.getKey(), lhsIt.getValue()));
+        std::pair<StringAttr, Attribute>(lhsIt.first, lhsIt.second));
   }
 
   for (auto &&rhsIt : rhs.metadata) {
     result.metadata.insert(
-        std::pair<StringRef, Attribute>(rhsIt.getKey(), rhsIt.getValue()));
+        std::pair<StringAttr, Attribute>(rhsIt.first, rhsIt.second));
   }
   return result;
 }
@@ -54,7 +54,7 @@ bool MetadataLatticeValue::operator==(const MetadataLatticeValue &rhs) const {
 
   // Check that `rhs` contains the same metadata.
   for (auto &&it : metadata) {
-    auto rhsIt = rhs.metadata.find(it.getKey());
+    auto rhsIt = rhs.metadata.find(it.first);
     if (rhsIt == rhs.metadata.end() || it.second != rhsIt->second)
       return false;
   }
@@ -62,9 +62,12 @@ bool MetadataLatticeValue::operator==(const MetadataLatticeValue &rhs) const {
 }
 
 void MetadataLatticeValue::print(llvm::raw_ostream &os) const {
+  SmallVector<StringAttr> metadataKey(metadata.keys());
+  std::sort(metadataKey.begin(), metadataKey.end(),
+            [&](StringAttr a, StringAttr b) { return a < b; });
   os << "{";
-  for (auto &&iter : metadata) {
-    os << iter.getKey() << ": " << iter.getValue() << ", ";
+  for (StringAttr key : metadataKey) {
+    os << key << ": " << metadata.at(key) << ", ";
   }
   os << "\b\b}\n";
 }

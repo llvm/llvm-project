@@ -7,7 +7,7 @@ constructs, of which MLIR has many (Block-based branches, Region-based branches,
 CallGraph, etc), and it isn't always clear how best to go about performing the
 propagation. To help writing these types of analyses in MLIR, this document
 details several utilities that simplify the process and make it a bit more
-approachable. The code from that tutorial can be found in `mlir/examples/dataflow`.
+approachable. The code from this tutorial can be found in `mlir/examples/dataflow`.
 
 ## Forward Dataflow Analysis
 
@@ -79,60 +79,54 @@ struct MetadataLatticeValue {
     }
   }
 
-  /// This method conservatively joins the information held by `lhs` and `rhs`
-  /// into a new value. This method is required to be monotonic. `monotonicity`
-  /// is implied by the satisfaction of the following axioms:
-  ///   * idempotence:   join(x,x) == x
-  ///   * commutativity: join(x,y) == join(y,x)
-  ///   * associativity: join(x,join(y,z)) == join(join(x,y),z)
-  ///
-  /// When the above axioms are satisfied, we achieve `monotonicity`:
-  ///   * monotonicity: join(x, join(x,y)) == join(x,y)
   static MetadataLatticeValue join(const MetadataLatticeValue &lhs,
                                    const MetadataLatticeValue &rhs) {
-    // To join `lhs` and `rhs` we will define a simple policy, which is that we
-    // directly insert the metadata of rhs into the metadata of lhs.If lhs and rhs
-    // have overlapping attributes, keep the attribute value in lhs unchanged.
-    MetadataLatticeValue result;
-    for (auto &&lhsIt : lhs.metadata) {
-      result.metadata.insert(
-          std::pair<StringRef, Attribute>(lhsIt.getKey(), lhsIt.getValue()));
-    }
-
-    for (auto &&rhsIt : rhs.metadata) {
-      result.metadata.insert(
-          std::pair<StringRef, Attribute>(rhsIt.getKey(), rhsIt.getValue()));
-    }
-    return result;
+  // To join `lhs` and `rhs` we will define a simple policy, which is that we
+  // directly insert the metadata of rhs into the metadata of lhs.If lhs and rhs
+  // have overlapping attributes, keep the attribute value in lhs unchanged.
+  MetadataLatticeValue result;
+  for (auto &&lhsIt : lhs.metadata) {
+    result.metadata.insert(
+        std::pair<StringAttr, Attribute>(lhsIt.first, lhsIt.second));
   }
+
+  for (auto &&rhsIt : rhs.metadata) {
+    result.metadata.insert(
+        std::pair<StringAttr, Attribute>(rhsIt.first, rhsIt.second));
+  }
+  return result;
+}
 
   /// A simple comparator that checks to see if this value is equal to the one
   /// provided.
   bool operator==(const MetadataLatticeValue &rhs) const {
-    if (metadata.size() != rhs.metadata.size())
-      return false;
+  if (metadata.size() != rhs.metadata.size())
+    return false;
 
-    // Check that `rhs` contains the same metadata.
-    for (auto &&it : metadata) {
-      auto rhsIt = rhs.metadata.find(it.getKey());
-      if (rhsIt == rhs.metadata.end() || it.second != rhsIt->second)
-        return false;
-    }
-    return true;
+  // Check that `rhs` contains the same metadata.
+  for (auto &&it : metadata) {
+    auto rhsIt = rhs.metadata.find(it.first);
+    if (rhsIt == rhs.metadata.end() || it.second != rhsIt->second)
+      return false;
   }
+  return true;
+}
 
   /// Print data in metadata.
-  void print(llvm::raw_ostream &os) const {
-    os << "{";
-    for (auto&& iter : metadata) {
-      os << iter.getKey() << ": " << iter.getValue() << ", ";
-    }
-    os << "\b\b}\n";
+  void print(llvm::raw_ostream &os) const  {
+  SmallVector<StringAttr> metadataKey(metadata.keys());
+  std::sort(metadataKey.begin(), metadataKey.end(),
+            [&](StringAttr a, StringAttr b) { return a < b; });
+  os << "{";
+  for (StringAttr key : metadataKey) {
+    os << key << ": " << metadata.at(key) << ", ";
   }
+  os << "\b\b}\n";
+}
 
   /// Our value represents the combined metadata, which is originally a
   /// DictionaryAttr, so we use a map.
-  llvm::StringMap<Attribute> metadata;
+  DenseMap<StringAttr, Attribute> metadata;
 };
 ```
 
@@ -314,6 +308,6 @@ func.func @single_join(%arg0 : index, %arg1 : index) -> index {
 The above IR will print the following after running pass.
 
 ```
-{likes_pizza: true}
-{likes_pizza: true}
+%0 = arith.addi %arg0, %arg1 {metadata = {likes_pizza = true}} : index : {"likes_pizza": true} 
+%1 = arith.addi %0, %arg1 : index : {"likes_pizza": true} 
 ```

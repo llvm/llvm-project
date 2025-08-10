@@ -42,6 +42,8 @@ public:
       if (op->getNumResults()) {
         Value result = op->getResult(0);
         auto lattice = solver.lookupState<MetadataLatticeValueLattice>(result);
+        llvm::outs() << OpWithFlags(op, OpPrintingFlags().skipRegions())
+                     << " : ";
         lattice->print(llvm::outs());
       }
     });

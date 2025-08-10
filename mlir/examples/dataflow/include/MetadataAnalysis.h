@@ -41,7 +41,7 @@ struct MetadataLatticeValue {
 
   /// Our value represents the combined metadata, which is originally a
   /// DictionaryAttr, so we use a map.
-  llvm::StringMap<Attribute> metadata;
+  DenseMap<StringAttr, Attribute> metadata;
 };
 
 namespace dataflow {
