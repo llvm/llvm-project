@@ -317,27 +317,19 @@ public:
 
     template <class Up, class ...Args>
     void construct(Up* p, Args&&... args) {
-  #if TEST_STD_VER >= 26
-  if(TEST_IS_CONSTANT_EVALUATED) {
-
-      // TODO: This restriction relies on UB where std::__tree_node is not initialized
+      // FIXME: This test relies on UB where std::__tree_node is not initialized
       // and only the "Container::value_type" is initialized
       // Need to figure out the right way to solve this without breaking both conditions
-      // 1 of 2) Initializating tree_node in the __tree codebase
+      // 1 of 2) Initializating tree_node in the __tree codebase (at constexpr time)
       // 2 of 2) Ensuring construct is only instantatiated for value_type
 
-      // static_assert((std::is_same<Up, AllowConstructT>::value),
-      //               "Only allowed to construct Up");
+      // as the test in map/map.access/index_rv_key.pass.cpp (and others)
+      // rely on a static object (so can't be used at constpex time)
+      // so it is avoided at this moment
 
-  } else {
-  #else
       static_assert((std::is_same<Up, AllowConstructT>::value),
                     "Only allowed to construct Up");
-  #endif
 
-  #if TEST_STD_VER >= 26
-  }
-  #endif
 
       assert(controller->check<Args&&...>());
       {
