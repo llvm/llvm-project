@@ -1161,6 +1161,16 @@ public:
 // ConversionConfig
 //===----------------------------------------------------------------------===//
 
+/// An enum to control folding behavior during dialect conversion.
+enum class DialectConversionFoldingMode {
+  /// Never attempt to fold.
+  Never,
+  /// Only attempt to fold not legal operations before applying patterns.
+  BeforePatterns,
+  /// Only attempt to fold not legal operations after applying patterns.
+  AfterPatterns,
+};
+
 /// Dialect conversion configuration.
 struct ConversionConfig {
   /// An optional callback used to notify about match failure diagnostics during
@@ -1243,6 +1253,10 @@ struct ConversionConfig {
   /// your patterns do not trigger any IR rollbacks. For details, see
   /// https://discourse.llvm.org/t/rfc-a-new-one-shot-dialect-conversion-driver/79083.
   bool allowPatternRollback = true;
+
+  /// The folding mode to use during conversion.
+  DialectConversionFoldingMode foldingMode =
+      DialectConversionFoldingMode::BeforePatterns;
 };
 
 //===----------------------------------------------------------------------===//
