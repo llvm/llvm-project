@@ -78,11 +78,11 @@ struct InstRegexOp : public SetTheory::Operator {
   void apply(SetTheory &ST, const DagInit *Expr, SetTheory::RecSet &Elts,
              ArrayRef<SMLoc> Loc) override {
     ArrayRef<const CodeGenInstruction *> Generics =
-        Target.getGenericInstructionsByEnumValue();
+        Target.getGenericInstructions();
     ArrayRef<const CodeGenInstruction *> Pseudos =
-        Target.getTargetPseudoInstructionsByEnumValue();
+        Target.getTargetPseudoInstructions();
     ArrayRef<const CodeGenInstruction *> NonPseudos =
-        Target.getTargetNonPseudoInstructionsByEnumValue();
+        Target.getTargetNonPseudoInstructions();
 
     for (const Init *Arg : Expr->getArgs()) {
       const StringInit *SI = dyn_cast<StringInit>(Arg);
@@ -587,7 +587,7 @@ void CodeGenSchedModels::collectSchedRW() {
 
   // Find all SchedReadWrites referenced by instruction defs.
   ConstRecVec SWDefs, SRDefs;
-  for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {
+  for (const CodeGenInstruction *Inst : Target.getInstructions()) {
     const Record *SchedDef = Inst->TheDef;
     if (SchedDef->isValueUnset("SchedRW"))
       continue;
@@ -836,7 +836,7 @@ void CodeGenSchedModels::collectSchedClasses() {
 
   // Create a SchedClass for each unique combination of itinerary class and
   // SchedRW list.
-  for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {
+  for (const CodeGenInstruction *Inst : Target.getInstructions()) {
     const Record *ItinDef = Inst->TheDef->getValueAsDef("Itinerary");
     IdxVec Writes, Reads;
     if (!Inst->TheDef->isValueUnset("SchedRW"))
@@ -861,7 +861,7 @@ void CodeGenSchedModels::collectSchedClasses() {
   LLVM_DEBUG(
       dbgs()
       << "\n+++ ITINERARIES and/or MACHINE MODELS (collectSchedClasses) +++\n");
-  for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {
+  for (const CodeGenInstruction *Inst : Target.getInstructions()) {
     StringRef InstName = Inst->TheDef->getName();
     unsigned SCIdx = getSchedClassIdx(*Inst);
     if (!SCIdx) {
@@ -1922,7 +1922,7 @@ void CodeGenSchedModels::checkCompleteness() {
     const bool HasItineraries = ProcModel.hasItineraries();
     if (!ProcModel.ModelDef->getValueAsBit("CompleteModel"))
       continue;
-    for (const CodeGenInstruction *Inst : Target.getInstructionsByEnumValue()) {
+    for (const CodeGenInstruction *Inst : Target.getInstructions()) {
       if (Inst->hasNoSchedulingInfo)
         continue;
       if (ProcModel.isUnsupported(*Inst))
@@ -2114,7 +2114,8 @@ void CodeGenSchedModels::addWriteRes(const Record *ProcWriteResDef,
     const Record *WRDef = ProcWriteResDef->getValueAsDef("WriteType");
     if (!WRMap.try_emplace(WRDef, ProcWriteResDef).second)
       PrintFatalError(ProcWriteResDef->getLoc(),
-                      "WriteType already used in another WriteRes");
+                      "WriteType of " + WRDef->getName() +
+                          " already used in another WriteRes");
   }
 
   // Visit ProcResourceKinds referenced by the newly discovered WriteRes.
@@ -2148,7 +2149,8 @@ void CodeGenSchedModels::addReadAdvance(const Record *ProcReadAdvanceDef,
     const Record *RADef = ProcReadAdvanceDef->getValueAsDef("ReadType");
     if (!RAMap.try_emplace(RADef, ProcReadAdvanceDef).second)
       PrintFatalError(ProcReadAdvanceDef->getLoc(),
-                      "ReadType already used in another ReadAdvance");
+                      "ReadType of " + RADef->getName() +
+                          " already used in another ReadAdvance");
   }
 }
 

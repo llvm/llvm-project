@@ -16,7 +16,6 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
@@ -40,7 +39,7 @@ public:
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
-                  MutableArrayRef<char> Data, uint64_t Value, bool) override;
+                  uint8_t *Data, uint64_t Value, bool) override;
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override;
@@ -81,8 +80,7 @@ bool WebAssemblyAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
 
 void WebAssemblyAsmBackend::applyFixup(const MCFragment &F,
                                        const MCFixup &Fixup,
-                                       const MCValue &Target,
-                                       MutableArrayRef<char> Data,
+                                       const MCValue &Target, uint8_t *Data,
                                        uint64_t Value, bool IsResolved) {
   if (!IsResolved)
     Asm->getWriter().recordRelocation(F, Fixup, Target, Value);
@@ -97,13 +95,13 @@ void WebAssemblyAsmBackend::applyFixup(const MCFragment &F,
   // Shift the value into position.
   Value <<= Info.TargetOffset;
 
-  unsigned Offset = Fixup.getOffset();
-  assert(Offset + NumBytes <= Data.size() && "Invalid fixup offset!");
+  assert(Fixup.getOffset() + NumBytes <= F.getSize() &&
+         "Invalid fixup offset!");
 
   // For each byte of the fragment that the fixup touches, mask in the
   // bits from the fixup value.
   for (unsigned I = 0; I != NumBytes; ++I)
-    Data[Offset + I] |= uint8_t((Value >> (I * 8)) & 0xff);
+    Data[I] |= uint8_t((Value >> (I * 8)) & 0xff);
 }
 
 std::unique_ptr<MCObjectTargetWriter>

@@ -123,8 +123,8 @@ public:
   template <class _RandomAccessIterator2>
   _LIBCPP_HIDE_FROM_ABI pair<_RandomAccessIterator2, _RandomAccessIterator2>
   operator()(_RandomAccessIterator2 __first, _RandomAccessIterator2 __last) const {
-    static_assert(__is_same_uncvref<typename iterator_traits<_RandomAccessIterator1>::value_type,
-                                    typename iterator_traits<_RandomAccessIterator2>::value_type>::value,
+    static_assert(is_same_v<__remove_cvref_t<typename iterator_traits<_RandomAccessIterator1>::value_type>,
+                            __remove_cvref_t<typename iterator_traits<_RandomAccessIterator2>::value_type>>,
                   "Corpus and Pattern iterators must point to the same type");
     if (__first == __last)
       return std::make_pair(__last, __last);
@@ -254,8 +254,8 @@ public:
   template <class _RandomAccessIterator2>
   _LIBCPP_HIDE_FROM_ABI pair<_RandomAccessIterator2, _RandomAccessIterator2>
   operator()(_RandomAccessIterator2 __first, _RandomAccessIterator2 __last) const {
-    static_assert(__is_same_uncvref<typename std::iterator_traits<_RandomAccessIterator1>::value_type,
-                                    typename std::iterator_traits<_RandomAccessIterator2>::value_type>::value,
+    static_assert(is_same_v<__remove_cvref_t<typename std::iterator_traits<_RandomAccessIterator1>::value_type>,
+                            __remove_cvref_t<typename std::iterator_traits<_RandomAccessIterator2>::value_type>>,
                   "Corpus and Pattern iterators must point to the same type");
     if (__first == __last)
       return std::make_pair(__last, __last);

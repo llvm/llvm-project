@@ -75,6 +75,18 @@ public:
     return getConstant(loc, cir::IntAttr::get(ty, value));
   }
 
+  mlir::Value getSignedInt(mlir::Location loc, int64_t val, unsigned numBits) {
+    auto type = cir::IntType::get(getContext(), numBits, /*isSigned=*/true);
+    return getConstAPInt(loc, type,
+                         llvm::APInt(numBits, val, /*isSigned=*/true));
+  }
+
+  mlir::Value getUnsignedInt(mlir::Location loc, uint64_t val,
+                             unsigned numBits) {
+    auto type = cir::IntType::get(getContext(), numBits, /*isSigned=*/false);
+    return getConstAPInt(loc, type, llvm::APInt(numBits, val));
+  }
+
   // Creates constant null value for integral type ty.
   cir::ConstantOp getNullValue(mlir::Type ty, mlir::Location loc) {
     return getConstant(loc, getZeroInitAttr(ty));
@@ -129,6 +141,22 @@ public:
   cir::BoolAttr getTrueAttr() { return getCIRBoolAttr(true); }
   cir::BoolAttr getFalseAttr() { return getCIRBoolAttr(false); }
 
+  mlir::Value createComplexCreate(mlir::Location loc, mlir::Value real,
+                                  mlir::Value imag) {
+    auto resultComplexTy = cir::ComplexType::get(real.getType());
+    return create<cir::ComplexCreateOp>(loc, resultComplexTy, real, imag);
+  }
+
+  mlir::Value createComplexReal(mlir::Location loc, mlir::Value operand) {
+    auto operandTy = mlir::cast<cir::ComplexType>(operand.getType());
+    return create<cir::ComplexRealOp>(loc, operandTy.getElementType(), operand);
+  }
+
+  mlir::Value createComplexImag(mlir::Location loc, mlir::Value operand) {
+    auto operandTy = mlir::cast<cir::ComplexType>(operand.getType());
+    return create<cir::ComplexImagOp>(loc, operandTy.getElementType(), operand);
+  }
+
   mlir::Value createNot(mlir::Value value) {
     return create<cir::UnaryOp>(value.getLoc(), value.getType(),
                                 cir::UnaryOpKind::Not, value);
@@ -167,6 +195,11 @@ public:
   /// Create a continue operation.
   cir::ContinueOp createContinue(mlir::Location loc) {
     return create<cir::ContinueOp>(loc);
+  }
+
+  mlir::Value createUnaryOp(mlir::Location loc, cir::UnaryOpKind kind,
+                            mlir::Value operand) {
+    return create<cir::UnaryOp>(loc, kind, operand);
   }
 
   mlir::TypedAttr getConstPtrAttr(mlir::Type type, int64_t value) {
@@ -412,6 +445,10 @@ public:
   cir::CmpOp createCompare(mlir::Location loc, cir::CmpOpKind kind,
                            mlir::Value lhs, mlir::Value rhs) {
     return create<cir::CmpOp>(loc, getBoolTy(), kind, lhs, rhs);
+  }
+
+  mlir::Value createIsNaN(mlir::Location loc, mlir::Value operand) {
+    return createCompare(loc, cir::CmpOpKind::ne, operand, operand);
   }
 
   mlir::Value createShift(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,

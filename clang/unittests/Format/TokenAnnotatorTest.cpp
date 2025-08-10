@@ -390,6 +390,10 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   EXPECT_TOKEN(Tokens[20], tok::l_brace, TT_CompoundRequirementLBrace);
   EXPECT_TOKEN(Tokens[22], tok::star, TT_BinaryOperator);
 
+  Tokens = annotate("bool foo = requires { static_cast<Foo &&>(1); };");
+  ASSERT_EQ(Tokens.size(), 17u) << Tokens;
+  EXPECT_TOKEN(Tokens[8], tok::ampamp, TT_PointerOrReference);
+
   Tokens = annotate("return s.operator int *();");
   ASSERT_EQ(Tokens.size(), 10u) << Tokens;
   // Not TT_FunctionDeclarationName.
@@ -614,7 +618,7 @@ TEST_F(TokenAnnotatorTest, UnderstandsStructs) {
   EXPECT_TOKEN(Tokens[19], tok::l_brace, TT_StructLBrace);
   EXPECT_TOKEN(Tokens[20], tok::r_brace, TT_StructRBrace);
 
-  constexpr StringRef Code{"struct EXPORT StructName {};"};
+  constexpr StringRef Code("struct EXPORT StructName {};");
 
   Tokens = annotate(Code);
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
@@ -3954,7 +3958,7 @@ TEST_F(TokenAnnotatorTest, SplitPenalty) {
 }
 
 TEST_F(TokenAnnotatorTest, TemplateName) {
-  constexpr StringRef Code{"return Foo < A || B > (C ^ D);"};
+  constexpr StringRef Code("return Foo < A || B > (C ^ D);");
 
   auto Tokens = annotate(Code);
   ASSERT_EQ(Tokens.size(), 14u) << Tokens;
@@ -4124,6 +4128,13 @@ TEST_F(TokenAnnotatorTest, JsonCodeInRawString) {
   EXPECT_TOKEN(Tokens[2], tok::colon, TT_DictLiteral);
   EXPECT_TOKEN(Tokens[5], tok::string_literal, TT_SelectorName);
   EXPECT_TOKEN(Tokens[6], tok::colon, TT_DictLiteral);
+}
+
+TEST_F(TokenAnnotatorTest, LineCommentTrailingBackslash) {
+  auto Tokens = annotate("// a \\\n"
+                         "// b");
+  ASSERT_EQ(Tokens.size(), 3u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::comment, TT_LineComment);
 }
 
 } // namespace

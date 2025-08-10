@@ -60,7 +60,7 @@ define void @VF1-VPlanExe(ptr %dst) {
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[DST_PTR:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    store i32 0, ptr [[DST_PTR]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -140,7 +140,7 @@ define void @VF1-VPWidenCanonicalIVRecipeExe(ptr %ptr1) {
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[ADDR:%.*]] = phi ptr [ [[PTR:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[ADDR:%.*]] = phi ptr [ [[PTR:%.*]], [[FOR_BODY]] ], [ [[PTR1]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[ADDR]], align 8
 ; CHECK-NEXT:    [[PTR]] = getelementptr inbounds double, ptr [[ADDR]], i64 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq ptr [[PTR]], [[PTR2]]

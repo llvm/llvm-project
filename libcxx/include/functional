@@ -565,6 +565,7 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 #    include <__functional/bind_front.h>
 #    include <__functional/identity.h>
 #    include <__functional/ranges_operations.h>
+#    include <__type_traits/common_reference.h>
 #    include <__type_traits/unwrap_ref.h>
 #  endif
 

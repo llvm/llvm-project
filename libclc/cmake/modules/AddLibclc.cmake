@@ -120,14 +120,14 @@ function(link_bc)
   endif()
 
   add_custom_command(
-    OUTPUT ${ARG_TARGET}.bc
-    COMMAND ${llvm-link_exe} ${link_flags} -o ${ARG_TARGET}.bc ${LINK_INPUT_ARG}
+    OUTPUT ${LIBCLC_ARCH_OBJFILE_DIR}/${ARG_TARGET}.bc
+    COMMAND ${llvm-link_exe} ${link_flags} -o ${LIBCLC_ARCH_OBJFILE_DIR}/${ARG_TARGET}.bc ${LINK_INPUT_ARG}
     DEPENDS ${llvm-link_target} ${ARG_DEPENDENCIES} ${ARG_INPUTS} ${RSP_FILE}
   )
 
-  add_custom_target( ${ARG_TARGET} ALL DEPENDS ${ARG_TARGET}.bc )
+  add_custom_target( ${ARG_TARGET} ALL DEPENDS ${LIBCLC_ARCH_OBJFILE_DIR}/${ARG_TARGET}.bc )
   set_target_properties( ${ARG_TARGET} PROPERTIES
-    TARGET_FILE ${CMAKE_CURRENT_BINARY_DIR}/${ARG_TARGET}.bc
+    TARGET_FILE ${LIBCLC_ARCH_OBJFILE_DIR}/${ARG_TARGET}.bc
     FOLDER "libclc/Device IR/Linking"
   )
 endfunction()
@@ -164,7 +164,9 @@ function(get_libclc_device_info)
   list( GET TRIPLE 0 ARCH )
 
   # Some targets don't have a specific device architecture to target
-  if( ARG_DEVICE STREQUAL none OR ARCH STREQUAL spirv OR ARCH STREQUAL spirv64 )
+  if( ARG_DEVICE STREQUAL none
+      OR ((ARCH STREQUAL spirv OR ARCH STREQUAL spirv64)
+          AND NOT LIBCLC_USE_SPIRV_BACKEND) )
     set( cpu )
     set( arch_suffix "${ARG_TRIPLE}" )
   else()
@@ -182,7 +184,11 @@ function(get_libclc_device_info)
 
   # Some libclc targets are not real clang triples: return their canonical
   # triples.
-  if( ARCH STREQUAL spirv OR ARCH STREQUAL clspv )
+  if( ARCH STREQUAL spirv AND LIBCLC_USE_SPIRV_BACKEND )
+    set( ARG_TRIPLE "spirv32--" )
+  elseif( ARCH STREQUAL spirv64 AND LIBCLC_USE_SPIRV_BACKEND )
+    set( ARG_TRIPLE "spirv64--" )
+  elseif( ARCH STREQUAL spirv OR ARCH STREQUAL clspv )
     set( ARG_TRIPLE "spir--" )
   elseif( ARCH STREQUAL spirv64 OR ARCH STREQUAL clspv64 )
     set( ARG_TRIPLE "spir64--" )
@@ -207,6 +213,8 @@ endfunction()
 #      libclc architecture/triple suffix
 #  * TRIPLE <string>
 #      Triple used to compile
+#  * PARENT_TARGET <string>
+#      Target into which to group the target builtins
 #
 # Optional Arguments:
 # * CLC_INTERNAL
@@ -229,7 +237,7 @@ endfunction()
 function(add_libclc_builtin_set)
   cmake_parse_arguments(ARG
     "CLC_INTERNAL"
-    "ARCH;TRIPLE;ARCH_SUFFIX"
+    "ARCH;TRIPLE;ARCH_SUFFIX;PARENT_TARGET"
     "LIB_FILES;GEN_FILES;COMPILE_FLAGS;OPT_FLAGS;ALIASES;INTERNAL_LINK_DEPENDENCIES"
     ${ARGN}
   )
@@ -360,38 +368,51 @@ function(add_libclc_builtin_set)
   # llvm-spirv tool.
   if( ARG_ARCH STREQUAL spirv OR ARG_ARCH STREQUAL spirv64 )
     set( obj_suffix ${ARG_ARCH_SUFFIX}.spv )
-    add_custom_command( OUTPUT ${obj_suffix}
-      COMMAND ${llvm-spirv_exe} ${spvflags} -o ${obj_suffix} ${builtins_link_lib}
-      DEPENDS ${llvm-spirv_target} ${builtins_link_lib} ${builtins_link_lib_tgt}
-    )
+    set( libclc_builtins_lib ${LIBCLC_OUTPUT_LIBRARY_DIR}/${obj_suffix} )
+    if ( LIBCLC_USE_SPIRV_BACKEND )
+      add_custom_command( OUTPUT ${libclc_builtins_lib}
+        COMMAND ${clang_exe} --target=${ARG_TRIPLE} -x ir -o ${libclc_builtins_lib} ${builtins_link_lib}
+        DEPENDS ${clang_target} ${builtins_link_lib} ${builtins_link_lib_tgt}
+      )
+    else()
+      add_custom_command( OUTPUT ${libclc_builtins_lib}
+        COMMAND ${llvm-spirv_exe} ${spvflags} -o ${libclc_builtins_lib} ${builtins_link_lib}
+        DEPENDS ${llvm-spirv_target} ${builtins_link_lib} ${builtins_link_lib_tgt}
+      )
+    endif()
   else()
     # Non-SPIR-V targets add an extra step to optimize the bytecode
     set( builtins_opt_lib_tgt builtins.opt.${ARG_ARCH_SUFFIX} )
 
-    add_custom_command( OUTPUT ${builtins_opt_lib_tgt}.bc
-      COMMAND ${opt_exe} ${ARG_OPT_FLAGS} -o ${builtins_opt_lib_tgt}.bc
+    add_custom_command( OUTPUT ${LIBCLC_ARCH_OBJFILE_DIR}/${builtins_opt_lib_tgt}.bc
+      COMMAND ${opt_exe} ${ARG_OPT_FLAGS} -o ${LIBCLC_ARCH_OBJFILE_DIR}/${builtins_opt_lib_tgt}.bc
         ${builtins_link_lib}
       DEPENDS ${opt_target} ${builtins_link_lib} ${builtins_link_lib_tgt}
     )
     add_custom_target( ${builtins_opt_lib_tgt}
-      ALL DEPENDS ${builtins_opt_lib_tgt}.bc
+      ALL DEPENDS ${LIBCLC_ARCH_OBJFILE_DIR}/${builtins_opt_lib_tgt}.bc
     )
     set_target_properties( ${builtins_opt_lib_tgt} PROPERTIES
-      TARGET_FILE ${CMAKE_CURRENT_BINARY_DIR}/${builtins_opt_lib_tgt}.bc
+      TARGET_FILE ${LIBCLC_ARCH_OBJFILE_DIR}/${builtins_opt_lib_tgt}.bc
       FOLDER "libclc/Device IR/Opt"
     )
 
     set( builtins_opt_lib $<TARGET_PROPERTY:${builtins_opt_lib_tgt},TARGET_FILE> )
 
     set( obj_suffix ${ARG_ARCH_SUFFIX}.bc )
-    add_custom_command( OUTPUT ${obj_suffix}
-      COMMAND ${prepare_builtins_exe} -o ${obj_suffix} ${builtins_opt_lib}
-      DEPENDS ${builtins_opt_lib} ${builtins_opt_lib_tgt} ${prepare_builtins_target} )
+    set( libclc_builtins_lib ${LIBCLC_OUTPUT_LIBRARY_DIR}/${obj_suffix} )
+    add_custom_command( OUTPUT ${libclc_builtins_lib}
+      COMMAND ${prepare_builtins_exe} -o ${libclc_builtins_lib} ${builtins_opt_lib}
+      DEPENDS ${builtins_opt_lib} ${builtins_opt_lib_tgt} ${prepare_builtins_target}
+    )
   endif()
 
   # Add a 'prepare' target
-  add_custom_target( prepare-${obj_suffix} ALL DEPENDS ${obj_suffix} )
-  set_target_properties( "prepare-${obj_suffix}" PROPERTIES FOLDER "libclc/Device IR/Prepare" )
+  add_custom_target( prepare-${obj_suffix} ALL DEPENDS ${libclc_builtins_lib} )
+  set_target_properties( "prepare-${obj_suffix}" PROPERTIES
+    TARGET_FILE ${libclc_builtins_lib}
+    FOLDER "libclc/Device IR/Prepare"
+  )
 
   # Also add a 'prepare' target for the triple. Since a triple may have
   # multiple devices, ensure we only try to create the triple target once. The
@@ -400,9 +421,12 @@ function(add_libclc_builtin_set)
     add_custom_target( prepare-${ARG_TRIPLE} ALL )
   endif()
   add_dependencies( prepare-${ARG_TRIPLE} prepare-${obj_suffix} )
+  # Add dependency to top-level pseudo target to ease making other
+  # targets dependent on libclc.
+  add_dependencies( ${ARG_PARENT_TARGET} prepare-${ARG_TRIPLE} )
 
   install(
-    FILES ${CMAKE_CURRENT_BINARY_DIR}/${obj_suffix}
+    FILES ${libclc_builtins_lib}
     DESTINATION "${CMAKE_INSTALL_DATADIR}/clc"
   )
 
@@ -418,20 +442,38 @@ function(add_libclc_builtin_set)
   # * clspv targets don't include all OpenCL builtins
   if( NOT ARG_ARCH MATCHES "^(nvptx|clspv)(64)?$" )
     add_test( NAME external-calls-${obj_suffix}
-      COMMAND ./check_external_calls.sh ${CMAKE_CURRENT_BINARY_DIR}/${obj_suffix} ${LLVM_TOOLS_BINARY_DIR}
+      COMMAND ./check_external_calls.sh ${libclc_builtins_lib} ${LLVM_TOOLS_BINARY_DIR}
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
   endif()
 
-  foreach( a ${ARG_ALIASES} )
+  foreach( a IN LISTS ARG_ALIASES )
+    if(CMAKE_HOST_UNIX OR LLVM_USE_SYMLINKS)
+      cmake_path(RELATIVE_PATH libclc_builtins_lib
+        BASE_DIRECTORY ${LIBCLC_OUTPUT_LIBRARY_DIR}
+        OUTPUT_VARIABLE LIBCLC_LINK_OR_COPY_SOURCE)
+      set(LIBCLC_LINK_OR_COPY create_symlink)
+    else()
+      set(LIBCLC_LINK_OR_COPY_SOURCE ${libclc_builtins_lib})
+      set(LIBCLC_LINK_OR_COPY copy)
+    endif()
+
     set( alias_suffix "${a}-${ARG_TRIPLE}.bc" )
     add_custom_command(
-      OUTPUT ${alias_suffix}
-      COMMAND ${CMAKE_COMMAND} -E create_symlink ${obj_suffix} ${alias_suffix}
-      DEPENDS prepare-${obj_suffix} )
-    add_custom_target( alias-${alias_suffix} ALL DEPENDS ${alias_suffix} )
-    set_target_properties( alias-${alias_suffix} PROPERTIES FOLDER "libclc/Device IR/Aliases" )
-    install( FILES ${CMAKE_CURRENT_BINARY_DIR}/${alias_suffix}
-             DESTINATION "${CMAKE_INSTALL_DATADIR}/clc" )
+      OUTPUT ${LIBCLC_OUTPUT_LIBRARY_DIR}/${alias_suffix}
+      COMMAND ${CMAKE_COMMAND} -E ${LIBCLC_LINK_OR_COPY} ${LIBCLC_LINK_OR_COPY_SOURCE} ${LIBCLC_OUTPUT_LIBRARY_DIR}/${alias_suffix}
+      DEPENDS prepare-${obj_suffix}
+    )
+    add_custom_target( alias-${alias_suffix} ALL
+      DEPENDS ${LIBCLC_OUTPUT_LIBRARY_DIR}/${alias_suffix}
+    )
+    add_dependencies( ${ARG_PARENT_TARGET} alias-${alias_suffix} )
+    set_target_properties( alias-${alias_suffix}
+      PROPERTIES FOLDER "libclc/Device IR/Aliases"
+    )
+    install(
+      FILES ${LIBCLC_OUTPUT_LIBRARY_DIR}/${alias_suffix}
+      DESTINATION "${CMAKE_INSTALL_DATADIR}/clc"
+    )
   endforeach( a )
 endfunction(add_libclc_builtin_set)
 

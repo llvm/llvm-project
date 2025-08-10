@@ -1228,25 +1228,33 @@ template <KnownKind T> struct KnownType {
 
 }
 
-namespace GH115838 {
+namespace CWG2369_Regression_2 {
 
-template<typename T> concept has_x = requires(T t) {{ t.x };};
+template <typename T>
+concept HasFastPropertyForAttribute =
+    requires(T element, int name) { element.propertyForAttribute(name); };
 
-class Publ { public:    int x = 0; };
-class Priv { private:   int x = 0; };
-class Prot { protected: int x = 0; };
-class Same { protected: int x = 0; };
+template <typename OwnerType>
+struct SVGPropertyOwnerRegistry {
+  static int fastAnimatedPropertyLookup() {
+    static_assert (HasFastPropertyForAttribute<OwnerType>);
+    return 1;
+  }
+};
 
-template<typename T> class D;
-template<typename T> requires ( has_x<T>) class D<T>: public T { public: static constexpr bool has = 1; };
-template<typename T> requires (!has_x<T>) class D<T>: public T { public: static constexpr bool has = 0; };
+class SVGCircleElement {
+  friend SVGPropertyOwnerRegistry<SVGCircleElement>;
+  void propertyForAttribute(int);
+};
 
-// "Same" is identical to "Prot" but queried before used.
-static_assert(!has_x<Same>,  "Protected should be invisible.");
-static_assert(!D<Same>::has, "Protected should be invisible.");
+int i = SVGPropertyOwnerRegistry<SVGCircleElement>::fastAnimatedPropertyLookup();
 
-static_assert( D<Publ>::has, "Public should be visible.");
-static_assert(!D<Priv>::has, "Private should be invisible.");
-static_assert(!D<Prot>::has, "Protected should be invisible.");
+}
 
+
+namespace GH149986 {
+template <typename T> concept PerfectSquare = [](){} // expected-note 2{{here}}
+([](auto) { return true; }) < PerfectSquare <class T>;
+// expected-error@-1 {{declaration of 'T' shadows template parameter}} \
+// expected-error@-1 {{a concept definition cannot refer to itself}}
 }

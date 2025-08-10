@@ -32,7 +32,7 @@ void f(void)
 _Complex float g16 = (1.0f + 1.0fi);
 
 // ?: in constant expressions.
-int g17[(3?:1) - 2]; 
+int g17[(3?:1) - 2];
 
 EVAL_EXPR(18, ((int)((void*)10 + 10)) == 20 ? 1 : -1);
 
@@ -150,3 +150,7 @@ struct PR35214_X {
 int PR35214_x;
 int PR35214_y = ((struct PR35214_X *)&PR35214_x)->arr[1]; // expected-error {{not a compile-time constant}}
 int *PR35214_z = &((struct PR35214_X *)&PR35214_x)->arr[1]; // ok, &PR35214_x + 2
+
+
+int * GH149500_p = &(*(int *)0x400);
+static const void *GH149500_q = &(*(const struct sysrq_key_op *)0);

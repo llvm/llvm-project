@@ -291,6 +291,34 @@ define float @fcos_approx(float %a) #0 {
   ret float %r
 }
 
+define float @fsin_approx_ftz(float %a) #0 #1 {
+; CHECK-LABEL: fsin_approx_ftz(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [fsin_approx_ftz_param_0];
+; CHECK-NEXT:    sin.approx.ftz.f32 %r2, %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ret;
+  %r = tail call float @llvm.sin.f32(float %a)
+  ret float %r
+}
+
+define float @fcos_approx_ftz(float %a) #0 #1 {
+; CHECK-LABEL: fcos_approx_ftz(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [fcos_approx_ftz_param_0];
+; CHECK-NEXT:    cos.approx.ftz.f32 %r2, %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    ret;
+  %r = tail call float @llvm.cos.f32(float %a)
+  ret float %r
+}
+
 define float @repeated_div_recip_allowed(i1 %pred, float %a, float %b, float %divisor) {
 ; CHECK-LABEL: repeated_div_recip_allowed(
 ; CHECK:       {

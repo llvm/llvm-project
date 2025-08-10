@@ -18,9 +18,7 @@
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Support/TypeID.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "llvm/Support/Debug.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_LINALGSPECIALIZEGENERICOPSPASS
@@ -236,19 +234,8 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
 
   /// Codegen the different matmul variants.
   if (numOfBatchDims) {
-    if (a == IndexMatchResult::Transposed)
-      return replaceWithMatmulVariant<BatchMatmulTransposeAOp>(rewriter,
-                                                               genericOp);
-    if (b == IndexMatchResult::Transposed)
-      return replaceWithMatmulVariant<BatchMatmulTransposeBOp>(rewriter,
-                                                               genericOp);
     return replaceWithMatmulVariant<BatchMatmulOp>(rewriter, genericOp);
   }
-
-  if (a == IndexMatchResult::Transposed)
-    return replaceWithMatmulVariant<MatmulTransposeAOp>(rewriter, genericOp);
-  if (b == IndexMatchResult::Transposed)
-    return replaceWithMatmulVariant<MatmulTransposeBOp>(rewriter, genericOp);
   return replaceWithMatmulVariant<MatmulOp>(rewriter, genericOp);
 }
 
