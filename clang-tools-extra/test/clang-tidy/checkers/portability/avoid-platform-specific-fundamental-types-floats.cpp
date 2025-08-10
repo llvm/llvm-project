@@ -1,4 +1,10 @@
-// RUN: %check_clang_tidy -std=c++23-or-later %s portability-avoid-platform-specific-fundamental-types %t -- -config="{CheckOptions: [{key: portability-avoid-platform-specific-fundamental-types.WarnOnInts, value: false}, {key: portability-avoid-platform-specific-fundamental-types.WarnOnChars, value: false}]}"
+// RUN: %check_clang_tidy -std=c++23-or-later %s \
+// RUN: portability-avoid-platform-specific-fundamental-types %t -- \
+// RUN: -config="{CheckOptions: \
+// RUN: [{key: portability-avoid-platform-specific-fundamental-types.WarnOnInts, \
+// RUN: value: false}, \
+// RUN: {key: portability-avoid-platform-specific-fundamental-types.WarnOnChars, \
+// RUN: value: false}]}"
 
 // Mock fixed-width float types
 // In reality, these types are aliases to "extended floating point types", and
