@@ -317,8 +317,22 @@ public:
 
     template <class Up, class ...Args>
     void construct(Up* p, Args&&... args) {
+  #if TEST_STD_VER >= 26
+  if(TEST_IS_CONSTANT_EVALUATED) {
+
       static_assert((std::is_same<Up, AllowConstructT>::value),
                     "Only allowed to construct Up");
+
+  } else {
+  #else
+      static_assert((std::is_same<Up, AllowConstructT>::value),
+                    "Only allowed to construct Up");
+  #endif
+
+  #if TEST_STD_VER >= 26
+  }
+  #endif
+
       assert(controller->check<Args&&...>());
       {
         InAllocatorConstructGuard g(controller);
