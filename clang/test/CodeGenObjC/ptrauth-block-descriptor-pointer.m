@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fobjc-arc -fblocks -fptrauth-calls -triple arm64e-apple-ios  -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -fobjc-arc -fblocks -fptrauth-calls -fptrauth-block-descriptor-pointers -triple arm64e-apple-ios  -emit-llvm -o - %s | FileCheck %s
 
 _Static_assert(__has_feature(ptrauth_signed_block_descriptors), "-fptrauth-block-descriptor-pointers should set ptrauth_signed_block_descriptors");
 
