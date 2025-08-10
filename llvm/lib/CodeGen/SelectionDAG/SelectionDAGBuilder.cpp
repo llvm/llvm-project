@@ -6489,6 +6489,32 @@ void SelectionDAGBuilder::visitVectorExtractLastActive(const CallInst &I,
   setValue(&I, Result);
 }
 
+SDValue SelectionDAGBuilder::createProtectedCtSelectFallback(
+    SelectionDAG &DAG, const SDLoc &DL, SDValue Cond, SDValue T, SDValue F,
+    EVT VT) {
+  SDNodeFlags ProtectedFlag;
+  ProtectedFlag.setNoCtSelectOpt(true);
+
+  // Extend cond to VT and normalize to 0 or 1
+  if (Cond.getValueType() != VT)
+    Cond = DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Cond, ProtectedFlag);
+
+  SDValue One = DAG.getConstant(1, DL, VT);
+  SDValue Norm = DAG.getNode(ISD::AND, DL, VT, Cond, One, ProtectedFlag);
+
+  // Mask = 0 - Norm
+  SDValue Zero = DAG.getConstant(0, DL, VT);
+  SDValue Mask = DAG.getNode(ISD::SUB, DL, VT, Zero, Norm, ProtectedFlag);
+
+  SDValue AllOnes = DAG.getAllOnesConstant(DL, VT);
+  SDValue Invert = DAG.getNode(ISD::XOR, DL, VT, Mask, AllOnes, ProtectedFlag);
+
+  // (T & Mask) | (F & ~Mask)
+  SDValue TM = DAG.getNode(ISD::AND, DL, VT, Mask, T, ProtectedFlag);
+  SDValue FM = DAG.getNode(ISD::AND, DL, VT, Invert, F, ProtectedFlag);
+  return DAG.getNode(ISD::OR, DL, VT, TM, FM, ProtectedFlag);
+}
+
 /// Lower the call to the specified intrinsic function.
 void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                                              unsigned Intrinsic) {
@@ -6692,8 +6718,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
       return;
     }
 
-    SDValue Result = DAG.getNode(ISD::SELECT, DL, VT, Cond, A, B);
-    setValue(&I, Result);
+    setValue(&I, createProtectedCtSelectFallback(DAG, DL, Cond, A, B, VT));
     return;
   }
   case Intrinsic::call_preallocated_setup: {

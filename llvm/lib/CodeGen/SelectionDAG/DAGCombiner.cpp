@@ -4116,6 +4116,9 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
   unsigned BitWidth = VT.getScalarSizeInBits();
   SDLoc DL(N);
 
+  if (N->getFlags().hasNoCtSelectOpt())
+    return SDValue();
+
   if (SDValue V = foldSubCtlzNot<EmptyMatchContext>(N, DAG))
     return V;
 
@@ -7447,6 +7450,9 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
   EVT VT = N1.getValueType();
   SDLoc DL(N);
 
+  if (N->getFlags().hasNoCtSelectOpt())
+    return SDValue();
+
   // x & x --> x
   if (N0 == N1)
     return N0;
@@ -8375,11 +8381,73 @@ static SDValue visitORCommutative(SelectionDAG &DAG, SDValue N0, SDValue N1,
   return SDValue();
 }
 
+static inline bool hasCtSelectProtection(const SDValue &V) {
+  if (SDNode *N = V.getNode()) {
+    if (N->getFlags().hasNoCtSelectOpt())
+      return true;
+
+    // if V is (~X) expressed as (xor x, -1) also check X
+    if (V.getOpcode() == ISD::XOR) {
+      if (isAllOnesConstant(V.getOperand(1)) && V.getOperand(0).getNode() &&
+          V.getOperand(0)->getFlags().hasNoCtSelectOpt())
+        return true;
+      if (isAllOnesConstant(V.getOperand(0)) && V.getOperand(1).getNode() &&
+          V.getOperand(1)->getFlags().hasNoCtSelectOpt())
+        return true;
+    }
+  }
+  return false;
+}
+
+static inline bool isComplementPair(const SDValue &M, const SDValue &NM) {
+  // NM == (xor M, -1)
+  if (NM.getOpcode() == ISD::XOR && isAllOnesConstant(NM.getOperand(0)) &&
+      NM.getOperand(1) == M)
+    return true;
+  if (NM.getOpcode() == ISD::XOR && isAllOnesConstant(NM.getOperand(1)) &&
+      NM.getOperand(0) == M)
+    return true;
+
+  // M == (xor NM, -1)
+  if (M.getOpcode() == ISD::XOR && isAllOnesConstant(M.getOperand(0)) &&
+      M.getOperand(1) == NM)
+    return true;
+  if (M.getOpcode() == ISD::XOR && isAllOnesConstant(M.getOperand(1)) &&
+      M.getOperand(0) == NM)
+    return true;
+
+  return false;
+}
+
 SDValue DAGCombiner::visitOR(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N1.getValueType();
   SDLoc DL(N);
+
+  if (N->getFlags().hasNoCtSelectOpt())
+    return SDValue();
+
+  // recognize (and x, m) | (and y, ~m) -> select m, x, y
+  if (N0.getOpcode() == ISD::AND && N1.getOpcode() == ISD::AND) {
+    SDNode *AND0 = N0.getNode();
+    SDNode *AND1 = N1.getNode();
+
+    SDValue X = AND0->getOperand(0);
+    SDValue M = AND0->getOperand(1);
+    SDValue Y = AND1->getOperand(0);
+    SDValue NM = AND1->getOperand(1);
+    // The fold fires only if M and NM are complements.
+    if (isComplementPair(M, NM)) {
+      // bail if any participant is protected
+      if (hasCtSelectProtection(N0) || hasCtSelectProtection(N1) ||
+          hasCtSelectProtection(M) || hasCtSelectProtection(NM) ||
+          hasCtSelectProtection(X) || hasCtSelectProtection(Y)) {
+        // Do not fold to SELECT; keep the masked arithmetic as-is.
+        return SDValue();
+      }
+    }
+  }
 
   // x | x --> x
   if (N0 == N1)
@@ -9925,6 +9993,9 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   SDValue N1 = N->getOperand(1);
   EVT VT = N0.getValueType();
   SDLoc DL(N);
+
+  if (N->getFlags().hasNoCtSelectOpt())
+    return SDValue();
 
   // fold (xor undef, undef) -> 0. This is a common idiom (misuse).
   if (N0.isUndef() && N1.isUndef())
