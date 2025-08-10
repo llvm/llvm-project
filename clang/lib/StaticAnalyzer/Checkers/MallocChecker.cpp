@@ -3115,6 +3115,10 @@ void MallocChecker::checkDeadSymbols(SymbolReaper &SymReaper,
 static bool isSmartOwningPtrType(QualType QT) {
   QT = QT->getCanonicalTypeUnqualified();
 
+  auto isSmartPtrName = [](StringRef Name) {
+    return Name == "unique_ptr" || Name == "shared_ptr";
+  };
+
   // First try TemplateSpecializationType (for std smart pointers)
   if (const auto *TST = QT->getAs<TemplateSpecializationType>()) {
     const TemplateDecl *TD = TST->getTemplateName().getAsTemplateDecl();
@@ -3129,17 +3133,13 @@ static bool isSmartOwningPtrType(QualType QT) {
     if (!isWithinStdNamespace(ND))
       return false;
 
-    StringRef Name = ND->getName();
-    return Name == "unique_ptr" || Name == "shared_ptr";
+    return isSmartPtrName(ND->getName());
   }
 
   // Also try RecordType (for custom smart pointer implementations)
   if (const auto *RD = QT->getAsCXXRecordDecl()) {
-    StringRef Name = RD->getName();
-    if (Name == "unique_ptr" || Name == "shared_ptr") {
-      // Accept any custom unique_ptr or shared_ptr implementation
-      return true;
-    }
+    // Accept any custom unique_ptr or shared_ptr implementation
+    return (isSmartPtrName(RD->getName()));
   }
 
   return false;
