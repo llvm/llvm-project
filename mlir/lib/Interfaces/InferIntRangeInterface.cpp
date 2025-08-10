@@ -28,6 +28,8 @@ const APInt &ConstantIntRanges::smin() const { return sminVal; }
 
 const APInt &ConstantIntRanges::smax() const { return smaxVal; }
 
+unsigned ConstantIntRanges::getBitWidth() const { return umin().getBitWidth(); }
+
 unsigned ConstantIntRanges::getStorageBitwidth(Type type) {
   type = getElementTypeOrSelf(type);
   if (type.isIndex())
@@ -40,6 +42,21 @@ unsigned ConstantIntRanges::getStorageBitwidth(Type type) {
 
 ConstantIntRanges ConstantIntRanges::maxRange(unsigned bitwidth) {
   return fromUnsigned(APInt::getZero(bitwidth), APInt::getMaxValue(bitwidth));
+}
+
+ConstantIntRanges ConstantIntRanges::poison(unsigned bitwidth) {
+  if (bitwidth == 0) {
+    auto zero = APInt::getZero(0);
+    return {zero, zero, zero, zero};
+  }
+
+  // Poison is represented by an empty range.
+  auto zero = APInt::getZero(bitwidth);
+  auto one = zero + 1;
+  auto onem = zero - 1;
+  // For i1 the valid unsigned range is [0, 1] and the valid signed range
+  // is [-1, 0].
+  return {one, zero, zero, onem};
 }
 
 ConstantIntRanges ConstantIntRanges::constant(const APInt &value) {
@@ -85,15 +102,37 @@ ConstantIntRanges
 ConstantIntRanges::rangeUnion(const ConstantIntRanges &other) const {
   // "Not an integer" poisons everything and also cannot be fed to comparison
   // operators.
-  if (umin().getBitWidth() == 0)
+  if (getBitWidth() == 0)
     return *this;
-  if (other.umin().getBitWidth() == 0)
+  if (other.getBitWidth() == 0)
     return other;
 
-  const APInt &uminUnion = umin().ult(other.umin()) ? umin() : other.umin();
-  const APInt &umaxUnion = umax().ugt(other.umax()) ? umax() : other.umax();
-  const APInt &sminUnion = smin().slt(other.smin()) ? smin() : other.smin();
-  const APInt &smaxUnion = smax().sgt(other.smax()) ? smax() : other.smax();
+  APInt uminUnion;
+  APInt umaxUnion;
+  APInt sminUnion;
+  APInt smaxUnion;
+
+  if (isUnsignedPoison()) {
+    uminUnion = other.umin();
+    umaxUnion = other.umax();
+  } else if (other.isUnsignedPoison()) {
+    uminUnion = umin();
+    umaxUnion = umax();
+  } else {
+    uminUnion = umin().ult(other.umin()) ? umin() : other.umin();
+    umaxUnion = umax().ugt(other.umax()) ? umax() : other.umax();
+  }
+
+  if (isSignedPoison()) {
+    sminUnion = other.smin();
+    smaxUnion = other.smax();
+  } else if (other.isSignedPoison()) {
+    sminUnion = smin();
+    smaxUnion = smax();
+  } else {
+    sminUnion = smin().slt(other.smin()) ? smin() : other.smin();
+    smaxUnion = smax().sgt(other.smax()) ? smax() : other.smax();
+  }
 
   return {uminUnion, umaxUnion, sminUnion, smaxUnion};
 }
@@ -102,15 +141,37 @@ ConstantIntRanges
 ConstantIntRanges::intersection(const ConstantIntRanges &other) const {
   // "Not an integer" poisons everything and also cannot be fed to comparison
   // operators.
-  if (umin().getBitWidth() == 0)
+  if (getBitWidth() == 0)
     return *this;
-  if (other.umin().getBitWidth() == 0)
+  if (other.getBitWidth() == 0)
     return other;
 
-  const APInt &uminIntersect = umin().ugt(other.umin()) ? umin() : other.umin();
-  const APInt &umaxIntersect = umax().ult(other.umax()) ? umax() : other.umax();
-  const APInt &sminIntersect = smin().sgt(other.smin()) ? smin() : other.smin();
-  const APInt &smaxIntersect = smax().slt(other.smax()) ? smax() : other.smax();
+  APInt uminIntersect;
+  APInt umaxIntersect;
+  APInt sminIntersect;
+  APInt smaxIntersect;
+
+  if (isUnsignedPoison()) {
+    uminIntersect = umin();
+    umaxIntersect = umax();
+  } else if (other.isUnsignedPoison()) {
+    uminIntersect = other.umin();
+    umaxIntersect = other.umax();
+  } else {
+    uminIntersect = umin().ugt(other.umin()) ? umin() : other.umin();
+    umaxIntersect = umax().ult(other.umax()) ? umax() : other.umax();
+  }
+
+  if (isSignedPoison()) {
+    sminIntersect = smin();
+    smaxIntersect = smax();
+  } else if (other.isSignedPoison()) {
+    sminIntersect = other.smin();
+    smaxIntersect = other.smax();
+  } else {
+    sminIntersect = smin().sgt(other.smin()) ? smin() : other.smin();
+    smaxIntersect = smax().slt(other.smax()) ? smax() : other.smax();
+  }
 
   return {uminIntersect, umaxIntersect, sminIntersect, smaxIntersect};
 }
@@ -122,6 +183,14 @@ std::optional<APInt> ConstantIntRanges::getConstantValue() const {
   if (smin() == smax() && smin().getBitWidth() != 0)
     return smin();
   return std::nullopt;
+}
+
+bool ConstantIntRanges::isSignedPoison() const {
+  return getBitWidth() > 0 && smin().sgt(smax());
+}
+
+bool ConstantIntRanges::isUnsignedPoison() const {
+  return getBitWidth() > 0 && umin().ugt(umax());
 }
 
 raw_ostream &mlir::operator<<(raw_ostream &os, const ConstantIntRanges &range) {
