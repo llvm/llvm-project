@@ -20,18 +20,13 @@ private:
   TypeBuilder &TB;
 
   bool isAggregateType(const Type *Ty) const {
-    return Ty->isStruct() || Ty->isUnion() || Ty->isArray();
-  }
-
-  bool isPromotableIntegerType(const IntegerType *IntTy) const {
-    auto BitWidth = IntTy->getSizeInBits().getFixedValue();
-    return BitWidth > 0 && BitWidth < 32;
+    return Ty->isStruct() || Ty->isVector() || Ty->isArray();
   }
 
 public:
   BPFABIInfo(TypeBuilder &TypeBuilder) : TB(TypeBuilder) {}
 
-  ABIArgInfo classifyReturnType(const Type *RetTy) const override {
+  ABIArgInfo classifyReturnType(const Type *RetTy) const {
     if (RetTy->isVoid())
       return ABIArgInfo::getIgnore();
 
@@ -43,9 +38,8 @@ public:
     }
 
     if (const auto *IntTy = dyn_cast<IntegerType>(RetTy)) {
-      if (IntTy->getSizeInBits().getFixedValue() > 128) {
+      if (IntTy->isBitInt() && IntTy->getSizeInBits().getFixedValue() > 128)
         return ABIArgInfo::getIndirect(RetTy->getAlignment().value());
-      }
     }
 
     return ABIArgInfo::getDirect();
@@ -74,20 +68,12 @@ public:
 
     if (const auto *IntTy = dyn_cast<IntegerType>(ArgTy)) {
       auto BitWidth = IntTy->getSizeInBits().getFixedValue();
-      if (BitWidth > 128)
+      if (IntTy->isBitInt() && BitWidth > 128)
         return ABIArgInfo::getIndirect(ArgTy->getAlignment().value());
 
-      if (isPromotableIntegerType(IntTy)) {
-        const Type *PromotedTy =
-            TB.getIntegerType(32, Align(4), IntTy->isSigned());
-        auto AI = ABIArgInfo::getExtend(PromotedTy);
-
-        IntTy->isSigned() ? AI.setSignExt() : AI.setZeroExt();
-
-        return AI;
-      }
+      if (IntTy->isPromotableIntegerType())
+        return ABIArgInfo::getExtend(ArgTy);
     }
-
     return ABIArgInfo::getDirect();
   }
 

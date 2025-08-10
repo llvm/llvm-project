@@ -39,9 +39,7 @@ public:
   };
 
 private:
-  Kind TheKind;
   const Type *CoercionType;
-  const Type *PaddingType;
   struct DirectAttrInfo {
     unsigned Offset;
     unsigned Align;
@@ -55,20 +53,27 @@ private:
   union {
     DirectAttrInfo DirectAttr;
     IndirectAttrInfo IndirectAttr;
+    unsigned AllocaFieldIndex;
   };
+  union {
+    const Type *PaddingType;
+    const Type *UnpaddedCoerceAndExpandType;
+  };
+  Kind TheKind;
   bool InReg : 1;
   bool PaddingInReg : 1;
   bool SignExt : 1;
   bool ZeroExt : 1;
-  unsigned IndirectAlign : 16;
   bool IndirectByVal : 1;
   bool IndirectRealign : 1;
+  bool SRetAfterThis : 1;
   bool CanBeFlattened : 1;
+  bool InAllocaSRet : 1;
+  bool InAllocaIndirect : 1;
 
   ABIArgInfo(Kind K = Direct)
-      : TheKind(K), CoercionType(nullptr), InReg(false), PaddingInReg(false),
-        SignExt(false), ZeroExt(false), IndirectAlign(0), IndirectByVal(false) {
-  }
+      : CoercionType(nullptr), TheKind(K), InReg(false), PaddingInReg(false),
+        SignExt(false), ZeroExt(false), IndirectByVal(false) {}
 
 public:
   static ABIArgInfo getDirect(const Type *T = nullptr, unsigned Offset = 0,
@@ -124,21 +129,6 @@ public:
       this->ZeroExt = false;
     return *this;
   }
-  //  static ABIArgInfo getSignExtend(ABIArgInfo AI) {
-  // AI.DirectAttr.Offset = 0;
-  // AI.DirectAttr.Align = 0;
-  // AI.ZeroExt = false;
-  //    AI.PaddingType = nullptr;
-  //    return AI;
-  //  }
-  //
-  //  static ABIArgInfo getZeroExtend(ABIArgInfo AI) {
-  // AI.DirectAttr.Offset = 0;
-  // AI.DirectAttr.Align = 0;
-  // AI.ZeroExt = true;
-  //    AI.PaddingType = nullptr;
-  //    return AI;
-  //  }
 
   ABIArgInfo &setZeroExt(bool ZeroExtend = true) {
     this->ZeroExt = ZeroExtend;
@@ -147,10 +137,16 @@ public:
     return *this;
   }
 
-  static ABIArgInfo getIndirect(unsigned Align = 0, bool ByVal = true) {
+  static ABIArgInfo getIndirect(unsigned Align = 0, bool ByVal = true,
+                                unsigned AddrSpace = 0, bool Realign = false,
+                                const Type *Padding = nullptr) {
     ABIArgInfo AI(Indirect);
-    AI.IndirectAlign = Align;
+    AI.IndirectAttr.Align = Align;
+    AI.IndirectAttr.AddrSpace = AddrSpace;
     AI.IndirectByVal = ByVal;
+    AI.IndirectRealign = Realign;
+    AI.SRetAfterThis = false;
+    AI.PaddingType = Padding;
     return AI;
   }
 
@@ -176,19 +172,84 @@ public:
   bool isExtend() const { return TheKind == Extend; }
   bool isExpand() const { return TheKind == Expand; }
   bool isCoerceAndExpand() const { return TheKind == CoerceAndExpand; }
+  bool isIndirectAliased() const { return TheKind == IndirectAliased; }
   bool isInAlloca() const { return TheKind == InAlloca; }
   bool isInReg() const { return InReg; }
   bool isSignExt() const { return SignExt; }
   bool hasPaddingInReg() const { return PaddingInReg; }
 
+  const Type *getPaddingType() const {
+    return canHavePaddingType() ? PaddingType : nullptr;
+  }
+
+  bool canHavePaddingType() const {
+    return isDirect() || isExtend() || isIndirect() || isIndirectAliased() ||
+           isExpand();
+  }
+
+  unsigned getDirectOffset() const {
+    assert((isDirect() || isExtend()) && "Not a direct or extend kind");
+    return DirectAttr.Offset;
+  }
   unsigned getIndirectAlign() const {
-    assert(isIndirect() && "Invalid Kind!");
-    return IndirectAlign;
+    assert((isIndirect() || isIndirectAliased()) && "Invalid Kind!");
+    return IndirectAttr.Align;
+  }
+
+  unsigned getIndirectAddrSpace() const {
+    assert((isIndirect() || isIndirectAliased()) && "Invalid Kind!");
+    return IndirectAttr.AddrSpace;
   }
 
   bool getIndirectByVal() const {
     assert(isIndirect() && "Invalid Kind!");
     return IndirectByVal;
+  }
+  bool getIndirectRealign() const {
+    assert((isIndirect() || isIndirectAliased()) && "Invalid Kind!");
+    return IndirectRealign;
+  }
+
+  bool isSRetAfterThis() const {
+    assert(isIndirect() && "Invalid Kind!");
+    return SRetAfterThis;
+  }
+
+  unsigned getInAllocaFieldIndex() const {
+    assert(isInAlloca() && "Invalid kind!");
+    return AllocaFieldIndex;
+  }
+
+  bool getInAllocaIndirect() const {
+    assert(isInAlloca() && "Invalid kind!");
+    return InAllocaIndirect;
+  }
+
+  bool getInAllocaSRet() const {
+    assert(isInAlloca() && "Invalid kind!");
+    return InAllocaSRet;
+  }
+  const Type *getUnpaddedCoerceAndExpandType() const {
+    assert(isCoerceAndExpand());
+    return UnpaddedCoerceAndExpandType;
+  }
+  bool isZeroExt() const {
+    assert(isExtend() && "Invalid Kind!");
+    return ZeroExt;
+  }
+  bool isNoExt() const {
+    assert(isExtend() && "Invalid Kind!");
+    return !SignExt && !ZeroExt;
+  }
+
+  unsigned getDirectAlign() const {
+    assert((isDirect() || isExtend()) && "Not a direct or extend kind");
+    return DirectAttr.Align;
+  }
+
+  bool getCanBeFlattened() const {
+    assert(isDirect() && "Invalid kind!");
+    return CanBeFlattened;
   }
 
   const Type *getCoerceToType() const {
@@ -257,7 +318,8 @@ public:
   bool isVariadic() const { return allowsOptionalArgs(); }
 
   unsigned getNumRequiredArgs() const {
-    return allowsOptionalArgs() ? NumRequired : 0;
+    assert(allowsOptionalArgs());
+    return NumRequired;
   }
 
   bool operator==(const RequiredArgs &Other) const {
@@ -295,6 +357,19 @@ private:
   friend class TrailingObjects;
 
 public:
+  typedef const ArgInfo *const_arg_iterator;
+  typedef ArgInfo *arg_iterator;
+  void operator delete(void *p) {
+    ::operator delete(p);
+  }
+
+  const_arg_iterator arg_begin() const { return getTrailingObjects(); }
+  const_arg_iterator arg_end() const { return getTrailingObjects() + NumArgs; }
+  arg_iterator arg_begin() { return getTrailingObjects(); }
+  arg_iterator arg_end() { return getTrailingObjects() + NumArgs; }
+
+  unsigned arg_size() const { return NumArgs; }
+
   static ABIFunctionInfo *
   create(CallingConv::ID CC, const Type *ReturnType,
          ArrayRef<const Type *> ArgTypes,
@@ -309,6 +384,10 @@ public:
   const ABICallAttributes &getCallAttributes() const { return CallAttrs; }
   RequiredArgs getRequiredArgs() const { return Required; }
   bool isVariadic() const { return Required.isVariadic(); }
+
+  unsigned getNumRequiredArgs() const {
+    return isVariadic() ? Required.getNumRequiredArgs() : arg_size();
+  }
 
   ArrayRef<ArgInfo> arguments() const {
     return {getTrailingObjects(), NumArgs};

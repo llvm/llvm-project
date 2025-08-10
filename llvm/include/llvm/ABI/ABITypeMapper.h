@@ -19,6 +19,7 @@
 #include "llvm/ABI/Types.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Type.h"
@@ -28,7 +29,8 @@ namespace llvm {
 
 class ABITypeMapper {
 public:
-  explicit ABITypeMapper(LLVMContext &Ctx) : Context(Ctx) {}
+  explicit ABITypeMapper(LLVMContext &Ctx, const DataLayout &DataLayout)
+      : Context(Ctx), DL(DataLayout) {}
 
   Type *convertType(const abi::Type *ABIType);
 
@@ -36,10 +38,13 @@ public:
 
 private:
   LLVMContext &Context;
+  const DataLayout &DL;
 
   DenseMap<const abi::Type *, Type *> TypeCache;
 
   Type *convertIntegerType(const abi::IntegerType *IT);
+
+  Type *convertFieldType(const abi::Type *FieldType);
 
   Type *convertFloatType(const abi::FloatType *FT);
 
@@ -52,8 +57,6 @@ private:
   Type *convertVectorType(const abi::VectorType *VT);
 
   Type *convertStructType(const abi::StructType *ST);
-
-  Type *convertUnionType(const abi::UnionType *UT);
 
   Type *convertVoidType(const abi::VoidType *VT);
 

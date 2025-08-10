@@ -20,7 +20,9 @@
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
+#include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <cstdint>
 
 namespace llvm {
@@ -64,22 +66,15 @@ private:
   void classify(const Type *T, uint64_t OffsetBase, Class &Lo, Class &Hi,
                 bool IsNamedArg, bool IsRegCall = false) const;
 
-  // llvm::Type *getSseTypeAtOffset(llvm::Type *IRType, unsigned IROffset,
-  //                                const Type *SourceTy,
-  //                                unsigned SourceOffset) const;
-
   const Type *getIntegerTypeAtOffset(const Type *IRType, unsigned IROffset,
                                      const Type *SourceTy,
                                      unsigned SourceOffset) const;
-  // llvm::Type *getIntegerTypeAtOffset(llvm::Type *IRType, unsigned IROffset,
-  // 		const Type *SourceTy,
-  // 		unsigned SourceOffset) const;
-  // Type *getIntegerTypeForClass(const Type *OriginalType,
-  //                                 uint64_t OffsetInBytes) const;
 
   const Type *getSSETypeAtOffset(const Type *ABIType, unsigned ABIOffset,
                                  const Type *SourceTy,
                                  unsigned SourceOffset) const;
+  bool isIllegalVectorType(const Type *Ty) const;
+  bool containsMatrixField(const StructType *ST) const;
 
   void computeInfo(ABIFunctionInfo &FI) const override;
   ABIArgInfo getIndirectReturnResult(const Type *Ty) const;
@@ -91,46 +86,14 @@ private:
   const Type *createPairType(const Type *Lo, const Type *Hi) const;
   ABIArgInfo getIndirectResult(const Type *Ty, unsigned FreeIntRegs) const;
 
-  ABIArgInfo classifyReturnType(const Type *RetTy) const override;
+  ABIArgInfo classifyReturnType(const Type *RetTy) const;
   const char *getClassName(Class C) const;
 
-  // ABIArgInfo classifyArgumentType(const Type *Ty, unsigned FreeIntRegs,
-  //                                 unsigned &NeededInt, unsigned &NeededSse,
-  //                                 bool IsNamedArg,
-  //                                 bool IsRegCall = false) const;
-
-  // ABIArgInfo classifyRegCallStructType(const Type *Ty, unsigned &NeededInt,
-  //                                      unsigned &NeededSSE,
-  //                                      unsigned &MaxVectorWidth) const;
-  //
-  // ABIArgInfo classifyRegCallStructTypeImpl(const Type *Ty, unsigned
-  // &NeededInt,
-  //                                          unsigned &NeededSSE,
-  //                                          unsigned &MaxVectorWidth) const;
-  //
-  // bool isIllegalVectorType(const Type *Ty) const;
-
-  // The Functionality of these methods will be moved to
-  // llvm::abi::ABICompatInfo
-
-  // bool honorsRevision98() const { return !TargetTriple.isOSDarwin(); }
-  //
-  // bool classifyIntegerMMXAsSSE() const {
-  //   if (TargetTriple.isOSDarwin() || TargetTriple.isPS() ||
-  //       TargetTriple.isOSFreeBSD())
-  //     return false;
-  //   return true;
-  // }
-  //
-  // bool passInt128VectorsInMem() const {
-  //   // TODO: accept ABICompat info from the frontends
-  //   return TargetTriple.isOSLinux() || TargetTriple.isOSNetBSD();
-  // }
-  //
-  // bool returnCXXRecordGreaterThan128InMem() const {
-  //   // TODO: accept ABICompat info from the frontends
-  //   return true;
-  // }
+  ABIArgInfo classifyArgumentType(const Type *Ty, unsigned FreeIntRegs,
+                                  unsigned &NeededInt, unsigned &NeededSse,
+                                  bool IsNamedArg,
+                                  bool IsRegCall = false) const;
+  const Type *useFirstFieldIfTransparentUnion(const Type *Ty) const;
 
 public:
   X86_64ABIInfo(TypeBuilder &TypeBuilder, const Triple &Triple,
@@ -138,21 +101,6 @@ public:
                 const ABICompatInfo &Compat)
       : ABIInfo(Compat), TB(TypeBuilder), AVXLevel(AVXABILevel),
         Has64BitPointers(Has64BitPtrs), TargetTriple(Triple) {}
-
-  // bool isPassedUsingAVXType(const Type *Type) const {
-  //   unsigned NeededInt, NeededSse;
-  //   ABIArgInfo Info = classifyArgumentType(Type, 0, NeededInt, NeededSse,
-  //                                          /*IsNamedArg=*/true);
-  //
-  //   if (Info.isDirect()) {
-  //     auto *Ty = Info.getCoerceToType();
-  //     if (auto *VectorTy = dyn_cast_or_null<VectorType>(Ty))
-  //       return VectorTy->getSizeInBits().getFixedValue() > 128;
-  //   }
-  //   return false;
-  // }
-
-  // void computeInfo(ABIFunctionInfo &FI) const override;
 
   bool has64BitPointers() const { return Has64BitPointers; }
 };
@@ -184,7 +132,7 @@ void X86_64ABIInfo::postMerge(unsigned AggregateSize, Class &Lo,
     Lo = Memory;
   if (Hi == X87UP && Lo != X87 && getABICompatInfo().Flags.HonorsRevision98)
     Lo = Memory;
-  if (AggregateSize > 128 && (Lo != SSE && Hi != SSEUp))
+  if (AggregateSize > 128 && (Lo != SSE || Hi != SSEUp))
     Lo = Memory;
   if (Hi == SSEUp && Lo != SSE)
     Hi = SSE;
@@ -230,6 +178,20 @@ X86_64ABIInfo::Class X86_64ABIInfo::merge(Class Accum, Class Field) {
 
   return SSE;
 }
+
+bool X86_64ABIInfo::containsMatrixField(const StructType *ST) const {
+  for (const auto &Field : ST->getFields()) {
+    const Type *FieldType = Field.FieldType;
+
+    if (const auto *AT = dyn_cast<ArrayType>(FieldType))
+      return AT->isMatrixType();
+
+    if (const auto *NestedST = dyn_cast<StructType>(FieldType))
+      return containsMatrixField(NestedST);
+  }
+  return false;
+}
+
 void X86_64ABIInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
                              Class &Hi, bool IsNamedArg, bool IsRegCall) const {
   Lo = Hi = NoClass;
@@ -268,9 +230,8 @@ void X86_64ABIInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
     } else if (FltSem == &llvm::APFloat::x87DoubleExtended()) {
       Lo = X87;
       Hi = X87UP;
-    } else {
+    } else
       Current = SSE;
-    }
     return;
   }
   if (T->isPointer()) {
@@ -280,20 +241,18 @@ void X86_64ABIInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
 
   if (const auto *MPT = dyn_cast<MemberPointerType>(T)) {
     if (MPT->isFunctionPointer()) {
-      if (MPT->has64BitPointers()) {
+      if (Has64BitPointers) {
         Lo = Hi = Integer;
       } else {
         uint64_t EB_FuncPtr = OffsetBase / 64;
         uint64_t EB_ThisAdj = (OffsetBase + 64 - 1) / 64;
         if (EB_FuncPtr != EB_ThisAdj) {
           Lo = Hi = Integer;
-        } else {
+        } else
           Current = Integer;
-        }
       }
-    } else {
+    } else
       Current = Integer;
-    }
     return;
   }
 
@@ -328,10 +287,10 @@ void X86_64ABIInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
         if (!getABICompatInfo().Flags.ClassifyIntegerMMXAsSSE &&
             (ElemBits == 64 || ElemBits == 32)) {
           Current = Integer;
-        } else {
+        } else
           Current = SSE;
-        }
-      }
+      } else
+        Current = SSE;
       // If this type crosses an eightbyte boundary, it should be
       // split.
       if (OffsetBase && OffsetBase != 64)
@@ -437,6 +396,10 @@ void X86_64ABIInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
   if (const auto *ST = dyn_cast<StructType>(T)) {
     uint64_t Size = ST->getSizeInBits().getFixedValue();
 
+    if (containsMatrixField(ST)) {
+      Lo = Memory;
+      return;
+    }
 
     // AMD64-ABI 3.2.3p2: Rule 1. If the size of an object is larger
     // than eight eightbytes, ..., it has class MEMORY.
@@ -446,22 +409,19 @@ void X86_64ABIInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
     // AMD64-ABI 3.2.3p2: Rule 2. If a C++ object has either a non-trivial
     // copy constructor or a non-trivial destructor, it is passed by invisible
     // reference.
-    if (ST->isCXXRecord() && (getRecordArgABI(ST))) {
+    if (getRecordArgABI(ST, ST->isCXXRecord()))
       return;
-    }
 
     // Assume variable sized types are passed in memory.
-    if (ST->hasFlexibleArrayMember()) {
+    if (ST->hasFlexibleArrayMember())
       return;
-    }
+
     // Reset Lo class, this will be recomputed.
     Current = NoClass;
 
     // If this is a C++ record, classify the bases first.
     if (ST->isCXXRecord()) {
-      const FieldInfo *BaseClasses = ST->getBaseClasses();
-      for (uint32_t I = 0; I < ST->getNumBaseClasses(); ++I) {
-        const FieldInfo &Base = BaseClasses[I];
+      for (const auto &Base : ST->getBaseClasses()) {
 
         // Classify this field.
         //
@@ -491,29 +451,33 @@ void X86_64ABIInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
     }
 
     // Classify the fields one at a time, merging the results.
-    const FieldInfo *Fields = ST->getFields();
-    uint32_t NumFields = ST->getNumFields();
 
-    for (uint32_t I = 0; I < NumFields; ++I) {
-      const FieldInfo &Field = Fields[I];
+    bool IsUnion = ST->isUnion() && !getABICompatInfo().Flags.Clang11Compat;
+    auto Fields = ST->isUnion() && ST->hasMetadata()
+                      ? ST->getMetadata<UnionMetadata>()->getFields()
+                      : ST->getFields();
+    for (const auto &Field : Fields) {
       uint64_t Offset = OffsetBase + Field.OffsetInBits;
       bool BitField = Field.IsBitField;
 
-	  if (BitField && Field.IsUnnamedBitfield)
-		  continue;
+      if (BitField && Field.IsUnnamedBitfield)
+        continue;
 
-      if (Size > 128 && (Size > getNativeVectorSizeForAVXABI(AVXLevel))) {
+      if (Size > 128 &&
+          ((!IsUnion &&
+            Size != Field.FieldType->getSizeInBits().getFixedValue()) ||
+           Size > getNativeVectorSizeForAVXABI(AVXLevel))) {
         Lo = Memory;
         postMerge(Size, Lo, Hi);
         return;
       }
 
-	  bool IsInMemory = Offset % (Field.FieldType->getAlignment().value() * 8);
+      bool IsInMemory = Offset % (Field.FieldType->getAlignment().value() * 8);
       if (!BitField && IsInMemory) {
-          Lo = Memory;
-          postMerge(Size, Lo, Hi);
-          return;
-        }
+        Lo = Memory;
+        postMerge(Size, Lo, Hi);
+        return;
+      }
 
       Class FieldLo, FieldHi;
 
@@ -530,47 +494,160 @@ void X86_64ABIInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
           FieldLo = Integer;
           FieldHi = EB_Hi ? Integer : NoClass;
         }
-      } else {
+      } else
         classify(Field.FieldType, Offset, FieldLo, FieldHi, IsNamedArg);
-      }
 
       Lo = merge(Lo, FieldLo);
       Hi = merge(Hi, FieldHi);
       if (Lo == Memory || Hi == Memory)
         break;
     }
-    postMerge(Size, Lo, Hi);
-    return;
-  }
-  if (const auto *UT = dyn_cast<UnionType>(T)) {
-    uint64_t Size = UT->getSizeInBits().getFixedValue();
-
-    if (Size > 512)
-      return;
-
-    Current = NoClass;
-
-    const FieldInfo *Fields = UT->getFields();
-    uint32_t NumFields = UT->getNumFields();
-
-    for (uint32_t I = 0; I < NumFields; ++I) {
-      const FieldInfo &Field = Fields[I];
-      uint64_t Offset = OffsetBase;
-
-      Class FieldLo, FieldHi;
-      classify(Field.FieldType, Offset, FieldLo, FieldHi, IsNamedArg);
-      Lo = merge(Lo, FieldLo);
-      Hi = merge(Hi, FieldHi);
-      if (Lo == Memory || Hi == Memory)
-        break;
-    }
-
     postMerge(Size, Lo, Hi);
     return;
   }
 
   Lo = Memory;
   Hi = NoClass;
+}
+
+const Type *
+X86_64ABIInfo::useFirstFieldIfTransparentUnion(const Type *Ty) const {
+  if (const auto *ST = dyn_cast<StructType>(Ty)) {
+    if (ST->isUnion() && ST->isTransparentUnion()) {
+      auto Fields = ST->getFields();
+      if (ST->hasMetadata())
+        Fields = ST->getMetadata<UnionMetadata>()->getFields();
+      assert(!Fields.empty() && "sema created an empty transparent union");
+      return Fields.front().FieldType;
+    }
+  }
+  return Ty;
+}
+
+ABIArgInfo
+X86_64ABIInfo::classifyArgumentType(const Type *Ty, unsigned FreeIntRegs,
+                                    unsigned &NeededInt, unsigned &NeededSSE,
+                                    bool IsNamedArg, bool IsRegCall) const {
+
+  Ty = useFirstFieldIfTransparentUnion(Ty);
+
+  X86_64ABIInfo::Class Lo, Hi;
+  classify(Ty, 0, Lo, Hi, IsNamedArg, IsRegCall);
+
+  // Check some invariants
+  assert((Hi != Memory || Lo == Memory) && "Invalid memory classification.");
+  assert((Hi != SSEUp || Lo == SSE) && "Invalid SSEUp classification.");
+
+  NeededInt = 0;
+  NeededSSE = 0;
+  const Type *ResType = nullptr;
+
+  switch (Lo) {
+  case NoClass:
+    if (Hi == NoClass)
+      return ABIArgInfo::getIgnore();
+    // If the low part is just padding, it takes no register, leave ResType
+    // null.
+    assert((Hi == SSE || Hi == Integer || Hi == X87UP) &&
+           "Unknown missing lo part");
+    break;
+
+    // AMD64-ABI 3.2.3p3: Rule 1. If the class is MEMORY, pass the argument
+    // on the stack.
+  case Memory:
+    // AMD64-ABI 3.2.3p3: Rule 5. If the class is X87, X87UP or
+    // COMPLEX_X87, it is passed in memory.
+  case X87:
+  case Complex_X87:
+    if (getRecordArgABI(dyn_cast<StructType>(Ty)) == RAA_Indirect)
+      ++NeededInt;
+    return getIndirectResult(Ty, FreeIntRegs);
+
+  case SSEUp:
+  case X87UP:
+    llvm_unreachable("Invalid classification for lo word.");
+
+    // AMD64-ABI 3.2.3p3: Rule 2. If the class is INTEGER, the next
+    // available register of the sequence %rdi, %rsi, %rdx, %rcx, %r8
+    // and %r9 is used.
+  case Integer:
+    ++NeededInt;
+
+    // Pick an 8-byte type based on the preferred type.
+    ResType = getIntegerTypeAtOffset(Ty, 0, Ty, 0);
+
+    // If we have a sign or zero extended integer, make sure to return Extend
+    // so that the parameter gets the right LLVM IR attributes.
+    if (Hi == NoClass && ResType->isInteger()) {
+      if (Ty->isInteger() && cast<IntegerType>(Ty)->isPromotableIntegerType())
+        return ABIArgInfo::getExtend(Ty);
+    }
+
+    if (ResType->isInteger() && ResType->getSizeInBits() == 128) {
+      assert(Hi == Integer);
+      ++NeededInt;
+      return ABIArgInfo::getDirect(ResType);
+    }
+    break;
+
+    // AMD64-ABI 3.2.3p3: Rule 3. If the class is SSE, the next
+    // available SSE register is used, the registers are taken in the
+    // order from %xmm0 to %xmm7.
+  case SSE:
+    ResType = getSSETypeAtOffset(Ty, 0, Ty, 0);
+    ++NeededSSE;
+    break;
+  }
+
+  const Type *HighPart = nullptr;
+  switch (Hi) {
+    // Memory was handled previously, Complex_X87 and X87 should
+    // never occur as hi classes, and X87UP must be preceded by X87,
+    // which is passed in memory.
+  case Memory:
+  case X87:
+  case Complex_X87:
+    llvm_unreachable("Invalid classification for hi word.");
+
+  case NoClass:
+    break;
+
+  case Integer:
+    ++NeededInt;
+    // Pick an 8-byte type based on the preferred type.
+    HighPart = getIntegerTypeAtOffset(Ty, 8, Ty, 8);
+
+    if (Lo == NoClass) // Pass HighPart at offset 8 in memory.
+      return ABIArgInfo::getDirect(HighPart, 8);
+    break;
+
+    // X87UP generally doesn't occur here (long double is passed in
+    // memory), except in situations involving unions.
+  case X87UP:
+  case SSE:
+    ++NeededSSE;
+    HighPart = getSSETypeAtOffset(Ty, 8, Ty, 8);
+
+    if (Lo == NoClass) // Pass HighPart at offset 8 in memory.
+      return ABIArgInfo::getDirect(HighPart, 8);
+    break;
+
+    // AMD64-ABI 3.2.3p3: Rule 4. If the class is SSEUP, the
+    // eightbyte is passed in the upper half of the last used SSE
+    // register. This only happens when 128-bit vectors are passed.
+  case SSEUp:
+    assert(Lo == SSE && "Unexpected SSEUp classification");
+    ResType = getByteVectorType(Ty);
+    break;
+  }
+
+  // If a high part was specified, merge it together with the low part. It is
+  // known to pass in the high eightbyte of the result. We do this by forming a
+  // first class struct aggregate with the high and low part: {low, high}
+  if (HighPart)
+    ResType = createPairType(ResType, HighPart);
+
+  return ABIArgInfo::getDirect(ResType);
 }
 
 ABIArgInfo X86_64ABIInfo::classifyReturnType(const Type *RetTy) const {
@@ -607,19 +684,11 @@ ABIArgInfo X86_64ABIInfo::classifyReturnType(const Type *RetTy) const {
     // available register of the sequence %rax, %rdx is used.
   case Integer:
     ResType = getIntegerTypeAtOffset(RetTy, 0, RetTy, 0);
-    if (const auto *IT = dyn_cast<IntegerType>(ResType)) {
-      if (IT->isBool() && RetTy->isInteger() &&
-          cast<IntegerType>(RetTy)->isBool()) {
-        // Convert boolean to i1 for LLVM IR
-        ResType = TB.getIntegerType(1, IT->getAlignment(), false, true);
-        return ABIArgInfo::getExtend(ResType);
-      }
-    }
     // If we have a sign or zero extended integer, make sure to return Extend
     // so that the parameter gets the right LLVM IR attributes.
     if (Hi == NoClass && ResType->isInteger()) {
       if (const IntegerType *IntTy = dyn_cast<IntegerType>(RetTy)) {
-        if (IntTy && isPromotableIntegerType(IntTy)) {
+        if (IntTy->isPromotableIntegerType()) {
           ABIArgInfo Info = ABIArgInfo::getExtend(RetTy);
           return Info;
         }
@@ -750,17 +819,15 @@ const Type *X86_64ABIInfo::createPairType(const Type *Lo,
       const FloatType *FT = cast<FloatType>(Lo);
       if (FT->getSemantics() == &APFloat::IEEEhalf() ||
           FT->getSemantics() == &APFloat::IEEEsingle() ||
-          FT->getSemantics() == &APFloat::BFloat()) {
+          FT->getSemantics() == &APFloat::BFloat())
         AdjustedLo = TB.getFloatType(APFloat::IEEEdouble(), Align(8));
-      }
     }
     // Promote integers and pointers to i64
-    else if (Lo->isInteger() || Lo->isPointer()) {
+    else if (Lo->isInteger() || Lo->isPointer())
       AdjustedLo = TB.getIntegerType(64, Align(8), /*Signed=*/false);
-    } else {
+    else
       assert((Lo->isInteger() || Lo->isPointer()) &&
              "Invalid/unknown low type in pair");
-    }
     unsigned AdjustedLoSize = AdjustedLo->getSizeInBits().getFixedValue() / 8;
     HiStart = alignTo(AdjustedLoSize, HiAlign);
   }
@@ -796,7 +863,7 @@ static bool bitsContainNoUserData(const Type *Ty, unsigned StartBit,
     for (unsigned I = 0; I < AT->getNumElements(); ++I) {
       unsigned EltOffset = I * EltSize;
       if (EltOffset >= EndBit)
-        break; // Elements are sorted by offset
+        break;
 
       unsigned EltStart = (EltOffset < StartBit) ? StartBit - EltOffset : 0;
       if (!bitsContainNoUserData(EltTy, EltStart, EndBit - EltOffset))
@@ -807,6 +874,38 @@ static bool bitsContainNoUserData(const Type *Ty, unsigned StartBit,
 
   // Handle structs - check all fields and base classes
   if (const StructType *ST = dyn_cast<StructType>(Ty)) {
+    if (ST->isUnion() && ST->hasMetadata()) {
+      if (const auto *UnionMeta = ST->getMetadata<UnionMetadata>()) {
+        // Handle union using original fields from metadata
+        for (const auto &Field : UnionMeta->getFields()) {
+          if (Field.IsUnnamedBitfield)
+            continue;
+
+          unsigned FieldStart = (Field.OffsetInBits < StartBit)
+                                    ? StartBit - Field.OffsetInBits
+                                    : 0;
+          unsigned FieldEnd =
+              FieldStart + Field.FieldType->getSizeInBits().getFixedValue();
+
+          // Check if field overlaps with the queried range
+          if (FieldStart < EndBit && FieldEnd > StartBit) {
+            // There's an overlap, so there is user data
+            unsigned RelativeStart =
+                (StartBit > FieldStart) ? StartBit - FieldStart : 0;
+            unsigned RelativeEnd =
+                (EndBit < FieldEnd)
+                    ? EndBit - FieldStart
+                    : Field.FieldType->getSizeInBits().getFixedValue();
+
+            if (!bitsContainNoUserData(Field.FieldType, RelativeStart,
+                                       RelativeEnd)) {
+              return false;
+            }
+          }
+        }
+        return true;
+      }
+    }
     // Check base classes first (for C++ records)
     if (ST->isCXXRecord()) {
       for (unsigned I = 0; I < ST->getNumBaseClasses(); ++I) {
@@ -822,11 +921,10 @@ static bool bitsContainNoUserData(const Type *Ty, unsigned StartBit,
       }
     }
 
-    // Check all fields
     for (unsigned I = 0; I < ST->getNumFields(); ++I) {
       const FieldInfo &Field = ST->getFields()[I];
       if (Field.OffsetInBits >= EndBit)
-        break; // Fields are sorted by offset
+        break;
 
       unsigned FieldStart =
           (Field.OffsetInBits < StartBit) ? StartBit - Field.OffsetInBits : 0;
@@ -846,120 +944,98 @@ const Type *X86_64ABIInfo::getIntegerTypeAtOffset(const Type *ABIType,
                                                   const Type *SourceTy,
                                                   unsigned SourceOffset) const {
   // If we're dealing with an un-offset ABI type, then it means that we're
-  // returning an 8-byte unit starting with it.  See if we can safely use it.
+  // returning an 8-byte unit starting with it. See if we can safely use it.
   if (ABIOffset == 0) {
-    // Pointers and 64-bit integers fill the 8-byte unit
+    // Pointers and int64's always fill the 8-byte unit.
     if ((ABIType->isPointer() && Has64BitPointers) ||
         (ABIType->isInteger() &&
-         cast<IntegerType>(ABIType)->getSizeInBits() == 64)){
+         cast<IntegerType>(ABIType)->getSizeInBits() == 64))
       return ABIType;
-	}
 
     // If we have a 1/2/4-byte integer, we can use it only if the rest of the
-    // goodness in the source type is just tail padding.  This is allowed to
+    // goodness in the source type is just tail padding. This is allowed to
     // kick in for struct {double,int} on the int, but not on
-    // struct{double,int,int} because we wouldn't return the second int.  We
+    // struct{double,int,int} because we wouldn't return the second int. We
     // have to do this analysis on the source type because we can't depend on
     // unions being lowered a specific way etc.
-    if (ABIType->isInteger()) {
-      unsigned BitWidth = cast<IntegerType>(ABIType)->getSizeInBits();
-      if (BitWidth == 8 || BitWidth == 16 || BitWidth == 32) {
-        // Check if the rest is just padding
-        if (bitsContainNoUserData(SourceTy, SourceOffset * 8 + BitWidth,
-                                  SourceOffset * 8 + 64))
-          return ABIType;
-      }
-    } else if (ABIType->isPointer() && !Has64BitPointers) {
-      // Check if the rest is just padding
-      if (bitsContainNoUserData(SourceTy, SourceOffset * 8 + 32,
+    if ((ABIType->isInteger() &&
+         (cast<IntegerType>(ABIType)->getSizeInBits() == 1 ||
+          cast<IntegerType>(ABIType)->getSizeInBits() == 8 ||
+          cast<IntegerType>(ABIType)->getSizeInBits() == 16 ||
+          cast<IntegerType>(ABIType)->getSizeInBits() == 32)) ||
+        (ABIType->isPointer() && !Has64BitPointers)) {
+
+      unsigned BitWidth = ABIType->isPointer()
+                              ? 32
+                              : cast<IntegerType>(ABIType)->getSizeInBits();
+
+      if (bitsContainNoUserData(SourceTy, SourceOffset * 8 + BitWidth,
                                 SourceOffset * 8 + 64))
         return ABIType;
     }
   }
 
-  // Handle structs by recursing into fields
-  if (auto *STy = dyn_cast<StructType>(ABIType)) {
-    const FieldInfo *Fields = STy->getFields();
+  if (const auto *STy = dyn_cast<StructType>(ABIType)) {
+    if (const FieldInfo *Element =
+            STy->getElementContainingOffset(ABIOffset * 8)) {
 
-    // Find field containing the IROffset
-    for (unsigned I = 0; I < STy->getNumFields(); ++I) {
-      const FieldInfo &Field = Fields[I];
-      unsigned FieldOffsetBytes = Field.OffsetInBits / 8;
-      unsigned FieldSizeBytes = Field.FieldType->getSizeInBits() / 8;
-
-      // Check if IROffset falls within this field
-      if (ABIOffset >= FieldOffsetBytes &&
-          ABIOffset < FieldOffsetBytes + FieldSizeBytes) {
-        return getIntegerTypeAtOffset(Field.FieldType,
-                                      ABIOffset - FieldOffsetBytes, SourceTy,
-                                      SourceOffset);
-      }
+      unsigned ElementOffsetBytes = Element->OffsetInBits / 8;
+      return getIntegerTypeAtOffset(Element->FieldType,
+                                    ABIOffset - ElementOffsetBytes, SourceTy,
+                                    SourceOffset);
     }
   }
 
-  // Handle arrays
-  if (auto *ATy = dyn_cast<ArrayType>(ABIType)) {
+  if (const auto *ATy = dyn_cast<ArrayType>(ABIType)) {
     const Type *EltTy = ATy->getElementType();
     unsigned EltSize = EltTy->getSizeInBits() / 8;
-    if (EltSize > 0) { // Avoid division by zero
+    if (EltSize > 0) {
       unsigned EltOffset = (ABIOffset / EltSize) * EltSize;
       return getIntegerTypeAtOffset(EltTy, ABIOffset - EltOffset, SourceTy,
                                     SourceOffset);
     }
   }
 
-  if (ABIType->isInteger() && ABIType->getSizeInBits().getFixedValue() == 128) {
+  // If we have a 128-bit integer, we can pass it safely using an i128
+  // so we return that
+  if (ABIType->isInteger() && ABIType->getSizeInBits() == 128) {
     assert(ABIOffset == 0);
     return ABIType;
   }
 
-  // Default case - use integer type that fits
   unsigned TySizeInBytes =
-      SourceTy->getSizeInBits().getFixedValue() / 8;
-  if (auto *IT = dyn_cast<IntegerType>(SourceTy)){
-	  if (IT->isBitInt())
-		  TySizeInBytes = alignTo(SourceTy->getSizeInBits().getFixedValue(),64)/8;
+      llvm::divideCeil(SourceTy->getSizeInBits().getFixedValue(), 8);
+  if (auto *IT = dyn_cast<IntegerType>(SourceTy)) {
+    if (IT->isBitInt())
+      TySizeInBytes =
+          alignTo(SourceTy->getSizeInBits().getFixedValue(), 64) / 8;
   }
   assert(TySizeInBytes != SourceOffset && "Empty field?");
   unsigned AvailableSize = TySizeInBytes - SourceOffset;
-  return TB.getIntegerType(std::min(AvailableSize, 8U) * 8, Align(1),
-                           /*Signed=*/false);
+  return TB.getIntegerType(std::min(AvailableSize, 8U) * 8, Align(1), false);
 }
 /// Returns the floating point type at the specified offset within a type, or
 /// nullptr if no floating point type is found at that offset.
 const Type *X86_64ABIInfo::getFPTypeAtOffset(const Type *Ty,
                                              unsigned Offset) const {
   // Check for direct match at offset 0
-  if (Offset == 0 && Ty->isFloat()) {
+  if (Offset == 0 && Ty->isFloat())
     return Ty;
-  }
 
   if (const ComplexType *CT = dyn_cast<ComplexType>(Ty)) {
     const Type *ElementType = CT->getElementType();
     unsigned ElementSize = ElementType->getSizeInBits().getFixedValue() / 8;
 
-    if (Offset == 0 || Offset == ElementSize) {
+    if (Offset == 0 || Offset == ElementSize)
       return ElementType;
-    }
     return nullptr;
   }
 
   // Handle struct types by checking each field
   if (const StructType *ST = dyn_cast<StructType>(Ty)) {
-    if (!ST->getNumFields())
-      return nullptr;
-    const FieldInfo *Fields = ST->getFields();
-
-    // Find the field containing the requested offset
-    for (unsigned i = 0; i < ST->getNumFields(); ++i) {
-      unsigned FieldOffset = Fields[i].OffsetInBits / 8;
-      unsigned FieldSize =
-          Fields[i].FieldType->getSizeInBits().getFixedValue() / 8;
-
-      // Check if offset falls within this field
-      if (Offset >= FieldOffset && Offset < FieldOffset + FieldSize) {
-        return getFPTypeAtOffset(Fields[i].FieldType, Offset - FieldOffset);
-      }
+    if (const FieldInfo *Element = ST->getElementContainingOffset(Offset * 8)) {
+      unsigned ElementOffsetBytes = Element->OffsetInBits / 8;
+      return getFPTypeAtOffset(Element->FieldType, Offset - ElementOffsetBytes);
     }
   }
 
@@ -1011,9 +1087,8 @@ const Type *X86_64ABIInfo::getSSETypeAtOffset(const Type *ABIType,
   unsigned T0Size =
       alignTo(T0->getSizeInBits().getFixedValue(), T0->getAlignment().value()) /
       8;
-  if (SourceSize > T0Size) {
+  if (SourceSize > T0Size)
     T1 = getFPTypeAtOffset(ABIType, ABIOffset + T0Size);
-  }
 
   if (T1 == nullptr) {
     if (Is16bitFpTy(T0) && SourceSize > 4)
@@ -1024,9 +1099,9 @@ const Type *X86_64ABIInfo::getSSETypeAtOffset(const Type *ABIType,
   }
   // Handle vector cases
   if (isFloatTypeWithSemantics(T0, APFloat::IEEEsingle()) &&
-      isFloatTypeWithSemantics(T1, APFloat::IEEEsingle())) {
+      isFloatTypeWithSemantics(T1, APFloat::IEEEsingle()))
     return TB.getVectorType(T0, ElementCount::getFixed(2), Align(8));
-  }
+
   if (Is16bitFpTy(T0) && Is16bitFpTy(T1)) {
     const Type *T2 = nullptr;
     if (SourceSize > 4)
@@ -1037,10 +1112,9 @@ const Type *X86_64ABIInfo::getSSETypeAtOffset(const Type *ABIType,
   }
 
   // Mixed half-float cases
-  if (Is16bitFpTy(T0) || Is16bitFpTy(T1)) {
+  if (Is16bitFpTy(T0) || Is16bitFpTy(T1))
     return TB.getVectorType(TB.getFloatType(APFloat::IEEEhalf(), Align(2)),
                             ElementCount::getFixed(4), Align(8));
-  }
 
   // Default to double
   return TB.getFloatType(APFloat::IEEEdouble(), Align(8));
@@ -1087,21 +1161,19 @@ const Type *X86_64ABIInfo::isSingleElementStruct(const Type *Ty) const {
   if (!ST)
     return nullptr;
 
-  if (ST->isPolymorphic()                       ||
-      ST->hasNonTrivialCopyConstructor()        ||
-      ST->hasNonTrivialDestructor()             ||
-      ST->hasFlexibleArrayMember()              ||
-      ST->getNumVirtualBaseClasses() != 0)        
+  if (ST->isPolymorphic() || ST->hasNonTrivialCopyConstructor() ||
+      ST->hasNonTrivialDestructor() || ST->hasFlexibleArrayMember() ||
+      ST->getNumVirtualBaseClasses() != 0)
     return nullptr;
 
   const Type *Found = nullptr;
 
-  for (unsigned I = 0; I < ST->getNumBaseClasses(); ++I) {
-    const Type *BaseTy = ST->getBaseClasses()[I].FieldType;
+  for (const auto &Base : ST->getBaseClasses()) {
+    const Type *BaseTy = Base.FieldType;
     auto *BaseST = dyn_cast<StructType>(BaseTy);
 
     if (!BaseST || isEmptyRecord(BaseST))
-      continue;                               // ignore empty bases
+      continue;
 
     const Type *Elem = isSingleElementStruct(BaseTy);
     if (!Elem || Found)
@@ -1109,8 +1181,10 @@ const Type *X86_64ABIInfo::isSingleElementStruct(const Type *Ty) const {
     Found = Elem;
   }
 
-  for (unsigned I = 0; I < ST->getNumFields(); ++I) {
-    const FieldInfo &FI = ST->getFields()[I];
+  auto Fields = ST->isUnion() && ST->hasMetadata()
+                    ? ST->getMetadata<UnionMetadata>()->getFields()
+                    : ST->getFields();
+  for (const auto &FI : Fields) {
     if (isEmptyField(FI))
       continue;
 
@@ -1126,20 +1200,102 @@ const Type *X86_64ABIInfo::isSingleElementStruct(const Type *Ty) const {
     if (auto *InnerST = dyn_cast<StructType>(FTy))
       Elem = isSingleElementStruct(InnerST);
     else
-      Elem = FTy;                             
+      Elem = FTy;
     if (!Elem || Found)
       return nullptr;
     Found = Elem;
   }
 
   if (!Found)
-    return nullptr;                            
+    return nullptr;
   if (Found->getSizeInBits() != Ty->getSizeInBits())
     return nullptr;
 
   return Found;
 }
 
+bool X86_64ABIInfo::isIllegalVectorType(const Type *Ty) const {
+  if (const auto *VecTy = dyn_cast<VectorType>(Ty)) {
+    uint64_t Size = VecTy->getSizeInBits().getFixedValue();
+    unsigned LargestVector = getNativeVectorSizeForAVXABI(AVXLevel);
+
+    // Vectors <= 64 bits or > largest supported vector size are illegal
+    if (Size <= 64 || Size > LargestVector)
+      return true;
+
+    // Check for 128-bit integer element vectors that should be passed in memory
+    const Type *EltTy = VecTy->getElementType();
+    if (getABICompatInfo().Flags.PassInt128VectorsInMem && EltTy->isInteger()) {
+      const auto *IntTy = cast<IntegerType>(EltTy);
+      if (IntTy->getSizeInBits().getFixedValue() == 128)
+        return true;
+    }
+  }
+  return false;
+}
+
+ABIArgInfo X86_64ABIInfo::getIndirectResult(const Type *Ty,
+                                            unsigned FreeIntRegs) const {
+  // If this is a scalar LLVM value then assume LLVM will pass it in the right
+  // place naturally.
+  //
+  // This assumption is optimistic, as there could be free registers available
+  // when we need to pass this argument in memory, and LLVM could try to pass
+  // the argument in the free register. This does not seem to happen currently,
+  // but this code would be much safer if we could mark the argument with
+  // 'onstack'. See PR12193.
+  if (!isAggregateTypeForABI(Ty) && !isIllegalVectorType(Ty) &&
+      !(Ty->isInteger() && cast<IntegerType>(Ty)->isBitInt())) {
+    return (Ty->isInteger() && cast<IntegerType>(Ty)->isPromotableIntegerType()
+                ? ABIArgInfo::getExtend(Ty)
+                : ABIArgInfo::getDirect());
+  }
+
+  // Check if this is a record type that needs special handling
+  if (auto RecordRAA = getRecordArgABI(Ty))
+    return getNaturalAlignIndirect(Ty, RecordRAA ==
+                                           RecordArgABI::RAA_DirectInMemory);
+
+  // Compute the byval alignment. We specify the alignment of the byval in all
+  // cases so that the mid-level optimizer knows the alignment of the byval.
+  unsigned Align =
+      std::max(static_cast<unsigned>(Ty->getAlignment().value()), 8U);
+
+  // Attempt to avoid passing indirect results using byval when possible. This
+  // is important for good codegen.
+  //
+  // We do this by coercing the value into a scalar type which the backend can
+  // handle naturally (i.e., without using byval).
+  //
+  // For simplicity, we currently only do this when we have exhausted all of the
+  // free integer registers. Doing this when there are free integer registers
+  // would require more care, as we would have to ensure that the coerced value
+  // did not claim the unused register. That would require either reording the
+  // arguments to the function (so that any subsequent inreg values came first),
+  // or only doing this optimization when there were no following arguments that
+  // might be inreg.
+  //
+  // We currently expect it to be rare (particularly in well written code) for
+  // arguments to be passed on the stack when there are still free integer
+  // registers available (this would typically imply large structs being passed
+  // by value), so this seems like a fair tradeoff for now.
+  //
+  // We can revisit this if the backend grows support for 'onstack' parameter
+  // attributes. See PR12193.
+  if (FreeIntRegs == 0) {
+    uint64_t Size = Ty->getSizeInBits().getFixedValue();
+
+    // If this type fits in an eightbyte, coerce it into the matching integral
+    // type, which will end up on the stack (with alignment 8).
+    if (Align == 8 && Size <= 64) {
+      const Type *IntTy =
+          TB.getIntegerType(Size, llvm::Align(8), /*Signed=*/false);
+      return ABIArgInfo::getDirect(IntTy);
+    }
+  }
+
+  return ABIArgInfo::getIndirect(Align);
+}
 
 ABIArgInfo X86_64ABIInfo::getIndirectReturnResult(const Type *Ty) const {
   // If this is a scalar value, handle it specially
@@ -1147,12 +1303,12 @@ ABIArgInfo X86_64ABIInfo::getIndirectReturnResult(const Type *Ty) const {
     // Handle integer types that need extension
     if (Ty->isInteger()) {
       const IntegerType *IntTy = cast<IntegerType>(Ty);
-      if (isPromotableIntegerType(IntTy)) {
+      if (IntTy->isPromotableIntegerType()) {
         ABIArgInfo Info = ABIArgInfo::getExtend(Ty);
         return Info;
       }
-	  if (IntTy->isBitInt())
-		  return getNaturalAlignIndirect(IntTy);
+      if (IntTy->isBitInt())
+        return getNaturalAlignIndirect(IntTy);
     }
     return ABIArgInfo::getDirect();
   }
@@ -1161,9 +1317,77 @@ ABIArgInfo X86_64ABIInfo::getIndirectReturnResult(const Type *Ty) const {
   return getNaturalAlignIndirect(Ty);
 }
 
-void X86_64ABIInfo::computeInfo(ABIFunctionInfo &FI) const {
-  // TODO: Implement proper function info computation
+static bool classifyCXXReturnType(ABIFunctionInfo &FI, const ABIInfo &Info) {
+  const abi::Type *Ty = FI.getReturnType();
+
+  if (const auto *ST = llvm::dyn_cast<abi::StructType>(Ty)) {
+    if (!ST->isCXXRecord() && !ST->canPassInRegisters()) {
+      ABIArgInfo IndirectInfo =
+          ABIArgInfo::getIndirect(ST->getAlignment().value());
+      FI.getReturnInfo() = IndirectInfo;
+      return true;
+    }
+    if (!ST->canPassInRegisters()) {
+      ABIArgInfo IndirectInfo =
+          ABIArgInfo::getIndirect(Ty->getAlignment().value(), false, 0, false);
+      FI.getReturnInfo() = IndirectInfo;
+      return true;
+    }
+  }
+
+  return false;
 }
+
+void X86_64ABIInfo::computeInfo(ABIFunctionInfo &FI) const {
+  CallingConv::ID CallingConv = FI.getCallingConvention();
+
+  if (CallingConv == CallingConv::Win64 ||
+      CallingConv == CallingConv::X86_RegCall)
+    return;
+
+  bool IsRegCall = false;
+
+  unsigned FreeIntRegs = 6;
+  unsigned FreeSSERegs = 8;
+  unsigned NeededInt = 0, NeededSSE = 0;
+
+  if (!classifyCXXReturnType(FI, *this)) {
+    const Type *RetTy = FI.getReturnType();
+    ABIArgInfo RetInfo = classifyReturnType(RetTy);
+    FI.getReturnInfo() = RetInfo;
+  }
+
+  if (FI.getReturnInfo().isIndirect())
+    --FreeIntRegs;
+
+  unsigned NumRequiredArgs = FI.getNumRequiredArgs();
+
+  unsigned ArgNo = 0;
+  for (auto IT = FI.arg_begin(), IE = FI.arg_end(); IT != IE; ++IT, ++ArgNo) {
+    bool IsNamedArg = ArgNo < NumRequiredArgs;
+    const Type *ArgTy = IT->ABIType;
+    NeededInt = 0;
+    NeededSSE = 0;
+
+    ABIArgInfo ArgInfo = classifyArgumentType(ArgTy, FreeIntRegs, NeededInt,
+                                              NeededSSE, IsNamedArg, IsRegCall);
+
+    // AMD64-ABI 3.2.3p3: If there are no registers available for any
+    // eightbyte of an argument, the whole argument is passed on the
+    // stack. If registers have already been assigned for some
+    // eightbytes of such an argument, the assignments get reverted.
+    if (FreeIntRegs >= NeededInt && FreeSSERegs >= NeededSSE) {
+      FreeIntRegs -= NeededInt;
+      FreeSSERegs -= NeededSSE;
+      IT->ArgInfo = ArgInfo;
+    } else {
+      // Not enough registers, pass on stack
+      ABIArgInfo IndirectInfo = getIndirectResult(ArgTy, FreeIntRegs);
+      IT->ArgInfo = IndirectInfo;
+    }
+  }
+}
+
 class X8664TargetCodeGenInfo : public TargetCodeGenInfo {
 public:
   X8664TargetCodeGenInfo(TypeBuilder &TB, const Triple &Triple,

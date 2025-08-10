@@ -47,6 +47,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <optional>
@@ -831,37 +832,192 @@ void computeSPIRKernelABIInfo(CodeGenModule &CGM, CGFunctionInfo &FI);
 }
 } // namespace clang
 
+static QualType getIntegerTypeForExtension(ASTContext &Ctx, llvm::Type *LLVMTy,
+                                           bool IsSigned) {
+  if (auto *IntTy = dyn_cast<llvm::IntegerType>(LLVMTy)) {
+    unsigned BitWidth = IntTy->getBitWidth();
+    return Ctx.getIntTypeForBitwidth(BitWidth, IsSigned);
+  }
+  return QualType();
+}
+
+static bool shouldSignExtend(QualType Ty) {
+  if (Ty->isSignedIntegerType() || Ty->isEnumeralType()) {
+    if (const EnumType *ET = Ty->getAs<EnumType>()) {
+      return ET->getOriginalDecl()->getIntegerType()->isSignedIntegerType();
+    }
+    return true;
+  }
+  return false;
+}
+
 ABIArgInfo CodeGenTypes::convertABIArgInfo(const llvm::abi::ABIArgInfo &AbiInfo,
                                            QualType type) {
   ABIArgInfo result;
 
-  if (AbiInfo.isDirect()) {
+  // To maintain coherence with clang's current impl.
+  if (type->isConstantMatrixType()) {
+    const auto *MT = type->getAs<ConstantMatrixType>();
+    unsigned NumElements = MT->getNumRows() * MT->getNumColumns();
+    llvm::Type *ElementType = ConvertType(MT->getElementType());
+    llvm::Type *VectorType = llvm::VectorType::get(
+        ElementType, llvm::ElementCount::getFixed(NumElements));
+
+    result = ABIArgInfo::getDirect(VectorType);
+    return result;
+  }
+  switch (AbiInfo.getKind()) {
+  case llvm::abi::ABIArgInfo::Direct: {
     llvm::Type *CoercedType = nullptr;
     if (AbiInfo.getCoerceToType())
       CoercedType = ReverseMapper.convertType(AbiInfo.getCoerceToType());
     if (!CoercedType)
       CoercedType = ConvertType(type);
-    result = ABIArgInfo::getDirect(CoercedType);
-  } else if (AbiInfo.isExtend()) {
+
+    llvm::Type *PaddingType = nullptr;
+    if (AbiInfo.getPaddingType())
+      PaddingType = ReverseMapper.convertType(AbiInfo.getPaddingType());
+
+    result = ABIArgInfo::getDirect(CoercedType, AbiInfo.getDirectOffset(),
+                                   PaddingType, AbiInfo.getCanBeFlattened(),
+                                   AbiInfo.getDirectAlign());
+
+    if (AbiInfo.isInReg())
+      result.setInReg(true);
+    if (AbiInfo.hasPaddingInReg())
+      result.setPaddingInReg(true);
+    break;
+  }
+  case llvm::abi::ABIArgInfo::Extend: {
     llvm::Type *CoercedType = nullptr;
-    if (AbiInfo.getCoerceToType())
+    QualType ExtendType = type;
+
+    if (AbiInfo.getCoerceToType()) {
       CoercedType = ReverseMapper.convertType(AbiInfo.getCoerceToType());
-    if (!CoercedType)
-      CoercedType = ConvertType(type);
-    if (AbiInfo.isSignExt()) {
-      result = ABIArgInfo::getSignExtend(type, CoercedType);
-    } else {
-      result = ABIArgInfo::getZeroExtend(type, CoercedType);
+
+      if (CoercedType && CoercedType->isIntegerTy()) {
+        bool IsSigned = AbiInfo.isSignExt() ||
+                        (AbiInfo.isNoExt() && shouldSignExtend(type));
+        ExtendType =
+            getIntegerTypeForExtension(getContext(), CoercedType, IsSigned);
+
+        if (ExtendType.isNull()) {
+          ExtendType = type;
+          if (type->isUnionType() || !type->isIntegralOrEnumerationType()) {
+            unsigned BitWidth =
+                cast<llvm::IntegerType>(CoercedType)->getBitWidth();
+            ExtendType = getContext().getIntTypeForBitwidth(BitWidth, IsSigned);
+          }
+        }
+      }
     }
-  } else if (AbiInfo.isIndirect()) {
-    result = ABIArgInfo::getIndirect(
-        CharUnits::fromQuantity(AbiInfo.getIndirectAlign()), 0);
-  } else if (AbiInfo.isIgnore()) {
-    result = ABIArgInfo::getIgnore();
+
+    if (!CoercedType)
+      CoercedType = ConvertType(type);
+
+    if (!ExtendType->isIntegralOrEnumerationType()) {
+      if (CoercedType && CoercedType->isIntegerTy()) {
+        unsigned BitWidth = cast<llvm::IntegerType>(CoercedType)->getBitWidth();
+        bool IsSigned = AbiInfo.isSignExt() || shouldSignExtend(type);
+        ExtendType = getContext().getIntTypeForBitwidth(BitWidth, IsSigned);
+      } else {
+        ExtendType = getContext().IntTy;
+      }
+    }
+
+    if (AbiInfo.isSignExt()) {
+      result = ABIArgInfo::getSignExtend(ExtendType, CoercedType);
+    } else if (AbiInfo.isZeroExt()) {
+      result = ABIArgInfo::getZeroExtend(ExtendType, CoercedType);
+    } else {
+      result = ABIArgInfo::getExtend(ExtendType, CoercedType);
+    }
+
+    if (AbiInfo.isInReg())
+      result.setInReg(true);
+    break;
+  }
+  case llvm::abi::ABIArgInfo::Indirect: {
+    CharUnits Alignment = CharUnits::fromQuantity(AbiInfo.getIndirectAlign());
+
+    llvm::Type *PaddingType = nullptr;
+    if (AbiInfo.getPaddingType())
+      PaddingType = ReverseMapper.convertType(AbiInfo.getPaddingType());
+
+    result = ABIArgInfo::getIndirect(Alignment, AbiInfo.getIndirectAddrSpace(),
+                                     AbiInfo.getIndirectByVal(),
+                                     AbiInfo.getIndirectRealign(), PaddingType);
+
+    if (AbiInfo.isInReg())
+      result.setInReg(true);
+    if (AbiInfo.isSRetAfterThis())
+      result.setSRetAfterThis(true);
+    break;
+  }
+  case llvm::abi::ABIArgInfo::IndirectAliased: {
+    CharUnits Alignment = CharUnits::fromQuantity(AbiInfo.getIndirectAlign());
+
+    llvm::Type *PaddingType = nullptr;
+    if (AbiInfo.getPaddingType())
+      PaddingType = ReverseMapper.convertType(AbiInfo.getPaddingType());
+
+    result = ABIArgInfo::getIndirectAliased(
+        Alignment, AbiInfo.getIndirectAddrSpace(), AbiInfo.getIndirectRealign(),
+        PaddingType);
+    break;
   }
 
-  if (AbiInfo.isInReg())
-    result.setInReg(true);
+  case llvm::abi::ABIArgInfo::Ignore: {
+    result = ABIArgInfo::getIgnore();
+    break;
+  }
+
+  case llvm::abi::ABIArgInfo::Expand: {
+    llvm::Type *PaddingType = nullptr;
+    if (AbiInfo.getPaddingType())
+      PaddingType = ReverseMapper.convertType(AbiInfo.getPaddingType());
+
+    if (PaddingType) {
+      result = ABIArgInfo::getExpandWithPadding(AbiInfo.hasPaddingInReg(),
+                                                PaddingType);
+    } else {
+      result = ABIArgInfo::getExpand();
+    }
+    break;
+  }
+
+  case llvm::abi::ABIArgInfo::CoerceAndExpand: {
+    llvm::Type *CoerceType = nullptr;
+    llvm::Type *UnpaddedType = nullptr;
+
+    if (AbiInfo.getCoerceToType())
+      CoerceType = ReverseMapper.convertType(AbiInfo.getCoerceToType());
+    if (AbiInfo.getUnpaddedCoerceAndExpandType())
+      UnpaddedType =
+          ReverseMapper.convertType(AbiInfo.getUnpaddedCoerceAndExpandType());
+
+    if (!CoerceType)
+      CoerceType = ConvertType(type);
+    if (!UnpaddedType)
+      UnpaddedType = CoerceType;
+
+    llvm::StructType *CoerceStructType = dyn_cast<llvm::StructType>(CoerceType);
+    if (!CoerceStructType) {
+      CoerceStructType = llvm::StructType::get(CoerceType->getContext());
+    }
+
+    result = ABIArgInfo::getCoerceAndExpand(CoerceStructType, UnpaddedType);
+    break;
+  }
+
+  case llvm::abi::ABIArgInfo::InAlloca: {
+    result = ABIArgInfo::getInAlloca(AbiInfo.getInAllocaFieldIndex(),
+                                     AbiInfo.getInAllocaIndirect());
+    if (AbiInfo.getInAllocaSRet())
+      result.setInAllocaSRet(true);
+    break;
+  }
+  }
 
   return result;
 }
@@ -898,19 +1054,18 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
   // Construct the function info.  We co-allocate the ArgInfos.
   FI = CGFunctionInfo::create(CC, isInstanceMethod, isChainCall, isDelegateCall,
                               info, paramInfos, resultType, argTypes, required);
-
-  SmallVector<const llvm::abi::Type *, 8> MappedArgTypes;
-  for (CanQualType ArgType : argTypes)
-    MappedArgTypes.push_back(Mapper.convertType(ArgType));
-  llvm::abi::ABIFunctionInfo *tempFI = llvm::abi::ABIFunctionInfo::create(
-      CC, Mapper.convertType(resultType), MappedArgTypes);
-  FunctionInfos.InsertNode(FI, insertPos);
+std::unique_ptr<llvm::abi::ABIFunctionInfo> tempFI;
 
   bool inserted = FunctionsBeingProcessed.insert(FI).second;
   (void)inserted;
   assert(inserted && "Recursively being processed?");
 
   bool isBPF = CGM.getTriple().isBPF();
+  const llvm::Triple &Triple = getTarget().getTriple();
+  bool isSysV =
+      Triple.getArch() == llvm::Triple::x86_64 &&
+      (CC == llvm::CallingConv::X86_64_SysV || CC == llvm::CallingConv::C) &&
+      (Triple.isOSLinux() || Triple.isOSGlibc());
 
   // Compute ABI information.
   if (CC == llvm::CallingConv::SPIR_KERNEL) {
@@ -920,16 +1075,35 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
   } else if (info.getCC() == CC_Swift || info.getCC() == CC_SwiftAsync) {
     swiftcall::computeABIInfo(CGM, *FI);
   } else {
-    if (isBPF)
+    if (isBPF || isSysV) {
+  SmallVector<const llvm::abi::Type *, 8> MappedArgTypes;
+  for (CanQualType ArgType : argTypes)
+    MappedArgTypes.push_back(Mapper.convertType(ArgType));
+  tempFI.reset(llvm::abi::ABIFunctionInfo::create(
+      CC, Mapper.convertType(resultType), MappedArgTypes));
+  FunctionInfos.InsertNode(FI, insertPos);
       CGM.fetchABIInfo(TB).computeInfo(*tempFI);
-    else
+    } else {
       CGM.getABIInfo().computeInfo(*FI);
+    }
+  }
+
+  // Non-BPF/SysV path: handle coerce types for direct/extend cases
+  ABIArgInfo &retInfo = FI->getReturnInfo();
+  if (retInfo.canHaveCoerceToType() && retInfo.getCoerceToType() == nullptr) {
+    retInfo.setCoerceToType(ConvertType(FI->getReturnType()));
+  }
+
+  for (auto &I : FI->arguments()) {
+    if (I.info.canHaveCoerceToType() && I.info.getCoerceToType() == nullptr) {
+      I.info.setCoerceToType(ConvertType(I.type));
+    }
   }
 
   // Loop over all of the computed argument and return value info.  If any of
   // them are direct or extend without a specified coerce type, specify the
   // default now.
-  if (isBPF && tempFI) {
+  if ((isBPF || isSysV) && tempFI) {
 
     const auto &abiRetInfo = tempFI->getReturnInfo();
     ABIArgInfo &cgRetInfo = FI->getReturnInfo();
@@ -952,7 +1126,7 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
       argIndex++;
     }
   } else {
-    // Non-BPF path: handle coerce types for direct/extend cases
+    // Non-BPF/SysV path: handle coerce types for direct/extend cases
     ABIArgInfo &retInfo = FI->getReturnInfo();
     if (retInfo.canHaveCoerceToType() && retInfo.getCoerceToType() == nullptr) {
       retInfo.setCoerceToType(ConvertType(FI->getReturnType()));

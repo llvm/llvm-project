@@ -16,6 +16,7 @@
 #include "llvm/ABI/ABITypeMapper.h"
 #include "llvm/ABI/Types.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
@@ -35,10 +36,21 @@ Type *ABITypeMapper::convertType(const abi::Type *ABIType) {
   Type *Result = nullptr;
 
   switch (ABIType->getKind()) {
-  case abi::TypeKind::Integer:
-    Result = IntegerType::get(Context,
-                              cast<abi::IntegerType>(ABIType)->getSizeInBits());
+  case abi::TypeKind::Integer: {
+    const auto *IT = cast<abi::IntegerType>(ABIType);
+    unsigned Bitwidth = IT->getSizeInBits().getFixedValue();
+
+    if (IT->needsMemoryRep()) {
+      if (Bitwidth <= 8) {
+        Bitwidth = 8;
+      } else {
+        Bitwidth = bit_ceil(Bitwidth);
+      }
+    }
+
+    Result = IntegerType::get(Context, Bitwidth);
     break;
+  }
   case abi::TypeKind::Float:
     Result = convertFloatType(cast<abi::FloatType>(ABIType));
     break;
@@ -54,9 +66,6 @@ Type *ABITypeMapper::convertType(const abi::Type *ABIType) {
     break;
   case abi::TypeKind::Struct:
     Result = convertStructType(cast<abi::StructType>(ABIType));
-    break;
-  case abi::TypeKind::Union:
-    Result = convertUnionType(cast<abi::UnionType>(ABIType));
     break;
   case abi::TypeKind::Void:
     Result = Type::getVoidTy(Context);
@@ -87,6 +96,8 @@ Type *ABITypeMapper::convertArrayType(const abi::ArrayType *AT) {
     return nullptr;
 
   uint64_t NumElements = AT->getNumElements();
+  if (AT->isMatrixType())
+    return VectorType::get(ElementType, ElementCount::getFixed(NumElements));
 
   return ArrayType::get(ElementType, NumElements);
 }
@@ -104,15 +115,10 @@ Type *ABITypeMapper::convertVectorType(const abi::VectorType *VT) {
 }
 
 Type *ABITypeMapper::convertStructType(const abi::StructType *ST) {
-  ArrayRef<abi::FieldInfo> FieldsArray(ST->getFields(), ST->getNumFields());
+  ArrayRef<abi::FieldInfo> FieldsArray = ST->getFields();
   return createStructFromFields(FieldsArray, ST->getNumFields(),
-                                ST->getSizeInBits(), ST->getAlignment(), false,
-                                ST->isCoercedStruct());
-}
-
-Type *ABITypeMapper::convertUnionType(const abi::UnionType *UT) {
-  return createStructFromFields(*UT->getFields(), UT->getNumFields(),
-                                UT->getSizeInBits(), UT->getAlignment(), true);
+                                ST->getSizeInBits(), ST->getAlignment(),
+                                ST->isUnion(), ST->isCoercedStruct());
 }
 
 Type *ABITypeMapper::convertComplexType(const abi::ComplexType *CT) {
@@ -120,13 +126,6 @@ Type *ABITypeMapper::convertComplexType(const abi::ComplexType *CT) {
   Type *ElementType = convertType(CT->getElementType());
   if (!ElementType)
     return nullptr;
-  //   // Check if the element type is a float type and is 16 bits (half
-  //   precision)
-  // if (ElementType->isFloatingPointTy() &&
-  // ElementType->getPrimitiveSizeInBits() == 2 /* bytes */ * 8) {
-  //   // Return <2 x half> vector type for complex half
-  //   return VectorType::get(ElementType, ElementCount::getFixed(2));
-  // }
 
   SmallVector<Type *, 2> Fields = {ElementType, ElementType};
   return StructType::get(Context, Fields, /*isPacked=*/false);
@@ -135,26 +134,23 @@ Type *ABITypeMapper::convertComplexType(const abi::ComplexType *CT) {
 Type *
 ABITypeMapper::convertMemberPointerType(const abi::MemberPointerType *MPT) {
 
+  bool Has64BitPointers = DL.getPointerSizeInBits() == 64;
   if (MPT->isFunctionPointer()) {
-    if (MPT->has64BitPointers()) {
+
+    if (Has64BitPointers) {
       // {i64, i64} for function pointer + adjustment
       Type *I64 = IntegerType::get(Context, 64);
       SmallVector<Type *, 2> Fields = {I64, I64};
       return StructType::get(Context, Fields, /*isPacked=*/false);
-    } else {
-      // {i32, i32} for 32-bit systems
-      Type *I32 = IntegerType::get(Context, 32);
-      SmallVector<Type *, 2> Fields = {I32, I32};
-      return StructType::get(Context, Fields, /*isPacked=*/false);
-    }
-  } else {
-    // Data member pointer - single offset value
-    if (MPT->has64BitPointers()) {
-      return IntegerType::get(Context, 64);
-    } else {
-      return IntegerType::get(Context, 32);
-    }
-  }
+    } // {i32, i32} for 32-bit systems
+    Type *I32 = IntegerType::get(Context, 32);
+    SmallVector<Type *, 2> Fields = {I32, I32};
+    return StructType::get(Context, Fields, /*isPacked=*/false);
+
+  } // Data member pointer - single offset value
+  if (Has64BitPointers)
+    return IntegerType::get(Context, 64);
+  return IntegerType::get(Context, 32);
 }
 
 StructType *ABITypeMapper::createStructFromFields(
@@ -177,7 +173,7 @@ StructType *ABITypeMapper::createStructFromFields(
       } else if (FieldType->isFloatingPointTy()) {
         FieldSize = FieldType->getPrimitiveSizeInBits();
       } else if (FieldType->isPointerTy()) {
-        FieldSize = 64; // Assume 64-bit pointers
+        FieldSize = Field.FieldType->getSizeInBits();
       }
 
       if (FieldSize > LargestFieldSize) {
@@ -233,7 +229,7 @@ StructType *ABITypeMapper::createStructFromFields(
         } else if (FieldType->isFloatingPointTy()) {
           CurrentOffset += FieldType->getPrimitiveSizeInBits();
         } else if (FieldType->isPointerTy()) {
-          CurrentOffset += 64; // Assume 64-bit pointers
+          CurrentOffset += Field.FieldType->getSizeInBits();
         } else {
           CurrentOffset += 64; // Conservative estimate
         }

@@ -28,14 +28,31 @@
 namespace clang {
 namespace CodeGen {
 
+struct ABICacheKey {
+  QualType Type;
+  bool InMemory;
+
+  ABICacheKey() = default;
+
+  ABICacheKey(QualType QT, bool InMem = false)
+      : Type(QT.getCanonicalType().getUnqualifiedType()), InMemory(InMem) {}
+
+  bool operator==(const ABICacheKey &Other) const {
+    return Type == Other.Type && InMemory == Other.InMemory;
+  }
+
+  bool operator!=(const ABICacheKey &Other) const { return !(*this == Other); }
+};
+
 class QualTypeMapper {
 private:
   clang::ASTContext &ASTCtx;
   llvm::abi::TypeBuilder Builder;
 
-  llvm::DenseMap<clang::QualType, const llvm::abi::Type *> TypeCache;
+  llvm::DenseMap<ABICacheKey, const llvm::abi::Type *> TypeCache;
 
-  const llvm::abi::Type *convertBuiltinType(const clang::BuiltinType *BT);
+  const llvm::abi::Type *convertBuiltinType(const clang::BuiltinType *BT,
+                                            bool InMemory = false);
   const llvm::abi::Type *convertPointerType(const clang::PointerType *PT);
   const llvm::abi::Type *convertArrayType(const clang::ArrayType *AT);
   const llvm::abi::Type *convertVectorType(const clang::VectorType *VT);
@@ -48,7 +65,8 @@ private:
   const llvm::abi::Type *convertMatrixType(const ConstantMatrixType *MT);
 
   const llvm::abi::StructType *convertStructType(const clang::RecordDecl *RD);
-  const llvm::abi::UnionType *convertUnionType(const clang::RecordDecl *RD);
+  const llvm::abi::StructType *convertUnionType(const clang::RecordDecl *RD,
+                                                bool isTransparent = false);
   const llvm::abi::Type *createPointerTypeForPointee(QualType PointeeType);
   const llvm::abi::StructType *convertCXXRecordType(const CXXRecordDecl *RD,
                                                     bool canPassInRegs);
@@ -67,7 +85,7 @@ public:
   explicit QualTypeMapper(clang::ASTContext &Ctx, llvm::BumpPtrAllocator &Alloc)
       : ASTCtx(Ctx), Builder(Alloc) {}
 
-  const llvm::abi::Type *convertType(clang::QualType QT);
+  const llvm::abi::Type *convertType(clang::QualType QT, bool InMemory = false);
 
   void clearCache() { TypeCache.clear(); }
 
@@ -76,5 +94,33 @@ public:
 
 } // namespace CodeGen
 } // namespace clang
+namespace llvm {
+template <> struct DenseMapInfo<clang::CodeGen::ABICacheKey> {
+  static clang::CodeGen::ABICacheKey getEmptyKey() {
+    clang::CodeGen::ABICacheKey k;
+    k.Type = DenseMapInfo<clang::QualType>::getEmptyKey();
+    k.InMemory = false;
+    return k;
+  }
 
-#endif // !CLANG_CODEGEN_QUALTYPE_MAPPER_H
+  static clang::CodeGen::ABICacheKey getTombstoneKey() {
+    clang::CodeGen::ABICacheKey k;
+    k.Type = DenseMapInfo<clang::QualType>::getTombstoneKey();
+    k.InMemory = true;
+    return k;
+  }
+
+  static unsigned getHashValue(const clang::CodeGen::ABICacheKey &Key) {
+    unsigned TypeHash = (unsigned)((uintptr_t)Key.Type.getAsOpaquePtr()) ^
+                        ((unsigned)((uintptr_t)Key.Type.getAsOpaquePtr() >> 9));
+    return hash_combine(TypeHash, hash_value(Key.InMemory));
+  }
+
+  static bool isEqual(const clang::CodeGen::ABICacheKey &LHS,
+                      const clang::CodeGen::ABICacheKey &RHS) {
+    return LHS.Type == RHS.Type && LHS.InMemory == RHS.InMemory;
+  }
+};
+} // namespace llvm
+
+#endif // CLANG_CODEGEN_QUALTYPE_MAPPER_H

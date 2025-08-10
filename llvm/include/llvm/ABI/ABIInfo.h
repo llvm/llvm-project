@@ -45,11 +45,13 @@ struct ABICompatInfo {
     bool ReturnCXXRecordGreaterThan128InMem : 1;
     bool ClassifyIntegerMMXAsSSE : 1;
     bool HonorsRevision98 : 1;
+    bool Clang11Compat : 1;
 
     ABIFlags()
         : PassInt128VectorsInMem(true),
           ReturnCXXRecordGreaterThan128InMem(true),
-          ClassifyIntegerMMXAsSSE(true), HonorsRevision98(true) {}
+          ClassifyIntegerMMXAsSSE(true), HonorsRevision98(true),
+          Clang11Compat(true) {}
 
   } Flags;
 
@@ -69,18 +71,17 @@ public:
   virtual ~ABIInfo() = default;
 
   RecordArgABI getRecordArgABI(const StructType *ST) const;
-  virtual ABIArgInfo classifyReturnType(const Type *RetTy) const = 0;
-  // virtual ABIArgInfo classifyArgumentType(const Type *ArgTy) const = 0;
+  RecordArgABI getRecordArgABI(const Type *Ty) const;
+  RecordArgABI getRecordArgABI(const StructType *ST, bool IsCxxRecord) const;
   virtual void computeInfo(ABIFunctionInfo &FI) const = 0;
   virtual bool isPassByRef(const Type *Ty) const { return false; }
   const ABICompatInfo &getABICompatInfo() const { return CompatInfo; }
-  ABIArgInfo getNaturalAlignIndirect(const Type *Ty) const;
+  ABIArgInfo getNaturalAlignIndirect(const Type *Ty, bool ByVal = true) const;
   bool isAggregateTypeForABI(const Type *Ty) const;
   bool isPromotableIntegerType(const IntegerType *Ty) const;
-bool isZeroSizedType(const Type *Ty) const;
-bool isEmptyRecord(const StructType *ST)const;
-bool isEmptyField(const FieldInfo &FI)const;
-
+  bool isZeroSizedType(const Type *Ty) const;
+  bool isEmptyRecord(const StructType *ST) const;
+  bool isEmptyField(const FieldInfo &FI) const;
 
   void setABICompatInfo(const ABICompatInfo &Info) { CompatInfo = Info; }
 };
