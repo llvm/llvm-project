@@ -51,7 +51,7 @@ define i32 @chained_recurrences(i32 %x, i64 %y, ptr %src.1, i32 %z, ptr %src.2) 
 ; VSCALEFORTUNING2-NEXT:  [[ENTRY:.*]]:
 ; VSCALEFORTUNING2-NEXT:    [[TMP0:%.*]] = add i64 [[Y]], 1
 ; VSCALEFORTUNING2-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; VSCALEFORTUNING2-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 8
+; VSCALEFORTUNING2-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 3
 ; VSCALEFORTUNING2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
 ; VSCALEFORTUNING2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VSCALEFORTUNING2:       [[VECTOR_PH]]:
@@ -323,7 +323,7 @@ define i16 @reduce_udiv(ptr %src, i16 %x, i64 %N) #0 {
 ; DEFAULT-NEXT:  [[ENTRY:.*]]:
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 8
+; DEFAULT-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 3
 ; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
@@ -379,7 +379,7 @@ define i16 @reduce_udiv(ptr %src, i16 %x, i64 %N) #0 {
 ; VSCALEFORTUNING2-NEXT:  [[ENTRY:.*]]:
 ; VSCALEFORTUNING2-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; VSCALEFORTUNING2-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; VSCALEFORTUNING2-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 8
+; VSCALEFORTUNING2-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 3
 ; VSCALEFORTUNING2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
 ; VSCALEFORTUNING2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VSCALEFORTUNING2:       [[VECTOR_PH]]:

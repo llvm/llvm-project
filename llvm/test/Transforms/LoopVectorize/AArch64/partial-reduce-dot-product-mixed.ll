@@ -10,7 +10,7 @@ define i32 @sudot(ptr %a, ptr %b) #0 {
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 16
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
@@ -56,7 +56,7 @@ define i32 @sudot(ptr %a, ptr %b) #0 {
 ; CHECK-NOI8MM-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NOI8MM-NEXT:  entry:
 ; CHECK-NOI8MM-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NOI8MM-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 16
+; CHECK-NOI8MM-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-NOI8MM-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-NOI8MM:       vector.ph:
 ; CHECK-NOI8MM-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
@@ -125,7 +125,7 @@ define i32 @usdot(ptr %a, ptr %b) #0 {
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 16
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
@@ -171,7 +171,7 @@ define i32 @usdot(ptr %a, ptr %b) #0 {
 ; CHECK-NOI8MM-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NOI8MM-NEXT:  entry:
 ; CHECK-NOI8MM-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NOI8MM-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 16
+; CHECK-NOI8MM-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-NOI8MM-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-NOI8MM:       vector.ph:
 ; CHECK-NOI8MM-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()

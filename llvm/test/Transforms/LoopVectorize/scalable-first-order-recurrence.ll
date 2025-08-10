@@ -20,7 +20,7 @@ define i32 @recurrence_1(ptr nocapture readonly %a, ptr nocapture %b, i32 %n) {
 ; CHECK-VF4UF1-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
 ; CHECK-VF4UF1-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
 ; CHECK-VF4UF1-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-VF4UF1-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 4
+; CHECK-VF4UF1-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
 ; CHECK-VF4UF1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], [[TMP4]]
 ; CHECK-VF4UF1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK-VF4UF1:       [[VECTOR_MEMCHECK]]:
@@ -83,7 +83,7 @@ define i32 @recurrence_1(ptr nocapture readonly %a, ptr nocapture %b, i32 %n) {
 ; CHECK-VF4UF2-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
 ; CHECK-VF4UF2-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
 ; CHECK-VF4UF2-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-VF4UF2-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 8
+; CHECK-VF4UF2-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 3
 ; CHECK-VF4UF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], [[TMP4]]
 ; CHECK-VF4UF2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK-VF4UF2:       [[VECTOR_MEMCHECK]]:
@@ -186,7 +186,7 @@ define i32 @recurrence_2(ptr nocapture readonly %a, i32 %n) {
 ; CHECK-VF4UF1-NEXT:    [[DOTPRE:%.*]] = load i32, ptr [[ARRAYIDX2_PHI_TRANS_INSERT]], align 4
 ; CHECK-VF4UF1-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
 ; CHECK-VF4UF1-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-VF4UF1-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 4
+; CHECK-VF4UF1-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 2
 ; CHECK-VF4UF1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
 ; CHECK-VF4UF1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4UF1:       [[VECTOR_PH]]:
@@ -245,7 +245,7 @@ define i32 @recurrence_2(ptr nocapture readonly %a, i32 %n) {
 ; CHECK-VF4UF2-NEXT:    [[DOTPRE:%.*]] = load i32, ptr [[ARRAYIDX2_PHI_TRANS_INSERT]], align 4
 ; CHECK-VF4UF2-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
 ; CHECK-VF4UF2-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-VF4UF2-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 8
+; CHECK-VF4UF2-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 3
 ; CHECK-VF4UF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
 ; CHECK-VF4UF2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4UF2:       [[VECTOR_PH]]:
@@ -357,7 +357,7 @@ define void @recurrence_3(ptr nocapture readonly %a, ptr nocapture %b, i32 %n, f
 ; CHECK-VF4UF1-NEXT:    [[TMP1:%.*]] = add i32 [[N]], -1
 ; CHECK-VF4UF1-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-VF4UF1-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-VF4UF1-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 4
+; CHECK-VF4UF1-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
 ; CHECK-VF4UF1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], [[TMP4]]
 ; CHECK-VF4UF1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK-VF4UF1:       [[VECTOR_MEMCHECK]]:
@@ -433,7 +433,7 @@ define void @recurrence_3(ptr nocapture readonly %a, ptr nocapture %b, i32 %n, f
 ; CHECK-VF4UF2-NEXT:    [[TMP1:%.*]] = add i32 [[N]], -1
 ; CHECK-VF4UF2-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-VF4UF2-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-VF4UF2-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 8
+; CHECK-VF4UF2-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 3
 ; CHECK-VF4UF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], [[TMP4]]
 ; CHECK-VF4UF2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK-VF4UF2:       [[VECTOR_MEMCHECK]]:
@@ -548,7 +548,7 @@ define i64 @constant_folded_previous_value() {
 ; CHECK-VF4UF1-LABEL: define i64 @constant_folded_previous_value() {
 ; CHECK-VF4UF1-NEXT:  [[ENTRY:.*]]:
 ; CHECK-VF4UF1-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-VF4UF1-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
+; CHECK-VF4UF1-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
 ; CHECK-VF4UF1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1000, [[TMP1]]
 ; CHECK-VF4UF1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4UF1:       [[VECTOR_PH]]:
@@ -574,7 +574,7 @@ define i64 @constant_folded_previous_value() {
 ; CHECK-VF4UF2-LABEL: define i64 @constant_folded_previous_value() {
 ; CHECK-VF4UF2-NEXT:  [[ENTRY:.*]]:
 ; CHECK-VF4UF2-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-VF4UF2-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 8
+; CHECK-VF4UF2-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 3
 ; CHECK-VF4UF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1000, [[TMP1]]
 ; CHECK-VF4UF2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4UF2:       [[VECTOR_PH]]:
@@ -622,7 +622,7 @@ define i32 @extract_second_last_iteration(ptr %cval, i32 %x)  {
 ; CHECK-VF4UF1-SAME: ptr [[CVAL:%.*]], i32 [[X:%.*]]) {
 ; CHECK-VF4UF1-NEXT:  [[ENTRY:.*]]:
 ; CHECK-VF4UF1-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-VF4UF1-NEXT:    [[TMP1:%.*]] = mul nuw i32 [[TMP0]], 4
+; CHECK-VF4UF1-NEXT:    [[TMP1:%.*]] = shl nuw i32 [[TMP0]], 2
 ; CHECK-VF4UF1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 96, [[TMP1]]
 ; CHECK-VF4UF1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4UF1:       [[VECTOR_PH]]:
@@ -668,7 +668,7 @@ define i32 @extract_second_last_iteration(ptr %cval, i32 %x)  {
 ; CHECK-VF4UF2-SAME: ptr [[CVAL:%.*]], i32 [[X:%.*]]) {
 ; CHECK-VF4UF2-NEXT:  [[ENTRY:.*]]:
 ; CHECK-VF4UF2-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-VF4UF2-NEXT:    [[TMP1:%.*]] = mul nuw i32 [[TMP0]], 8
+; CHECK-VF4UF2-NEXT:    [[TMP1:%.*]] = shl nuw i32 [[TMP0]], 3
 ; CHECK-VF4UF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 96, [[TMP1]]
 ; CHECK-VF4UF2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4UF2:       [[VECTOR_PH]]:
@@ -739,7 +739,7 @@ define void @sink_after(ptr %a, ptr %b, i64 %n) {
 ; CHECK-VF4UF1-NEXT:  [[ENTRY:.*]]:
 ; CHECK-VF4UF1-NEXT:    [[DOTPRE:%.*]] = load i16, ptr [[A]], align 2
 ; CHECK-VF4UF1-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-VF4UF1-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
+; CHECK-VF4UF1-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
 ; CHECK-VF4UF1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; CHECK-VF4UF1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK-VF4UF1:       [[VECTOR_MEMCHECK]]:
@@ -796,7 +796,7 @@ define void @sink_after(ptr %a, ptr %b, i64 %n) {
 ; CHECK-VF4UF2-NEXT:  [[ENTRY:.*]]:
 ; CHECK-VF4UF2-NEXT:    [[DOTPRE:%.*]] = load i16, ptr [[A]], align 2
 ; CHECK-VF4UF2-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-VF4UF2-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 8
+; CHECK-VF4UF2-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 3
 ; CHECK-VF4UF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; CHECK-VF4UF2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK-VF4UF2:       [[VECTOR_MEMCHECK]]:

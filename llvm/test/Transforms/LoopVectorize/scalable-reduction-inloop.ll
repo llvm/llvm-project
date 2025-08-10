@@ -7,7 +7,7 @@ define i8 @reduction_add_trunc(ptr noalias nocapture %A) {
 ; CHECK-LABEL: @reduction_add_trunc(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP30:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP31:%.*]] = mul nuw i32 [[TMP30]], 16
+; CHECK-NEXT:    [[TMP31:%.*]] = shl nuw i32 [[TMP30]], 4
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 256, [[TMP31]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:

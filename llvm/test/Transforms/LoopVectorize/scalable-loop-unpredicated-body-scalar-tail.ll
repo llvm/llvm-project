@@ -2,14 +2,14 @@
 ; RUN: opt -S -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -force-target-supports-scalable-vectors=true -scalable-vectorization=on < %s | FileCheck %s --check-prefix=CHECKUF1
 ; RUN: opt -S -passes=loop-vectorize -force-vector-interleave=2 -force-vector-width=4 -force-target-supports-scalable-vectors=true -scalable-vectorization=on < %s | FileCheck %s --check-prefix=CHECKUF2
 
-; For an interleave factor of 2, vscale is scaled by 8 instead of 4.
+; For an interleave factor of 2, vscale is scaled by 8 instead of 4 (and thus shifted left by 3 instead of 2).
 ; There is also the increment for the next iteration, e.g. instead of indexing IDXB, it indexes at IDXB + vscale * 4.
 define void @loop(i64 %N, ptr noalias %a, ptr noalias %b) {
 ; CHECKUF1-LABEL: define void @loop(
 ; CHECKUF1-SAME: i64 [[N:%.*]], ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; CHECKUF1-NEXT:  [[ENTRY:.*:]]
 ; CHECKUF1-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECKUF1-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
+; CHECKUF1-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
 ; CHECKUF1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; CHECKUF1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECKUF1:       [[VECTOR_PH]]:
@@ -37,7 +37,7 @@ define void @loop(i64 %N, ptr noalias %a, ptr noalias %b) {
 ; CHECKUF2-SAME: i64 [[N:%.*]], ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; CHECKUF2-NEXT:  [[ENTRY:.*:]]
 ; CHECKUF2-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECKUF2-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 8
+; CHECKUF2-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 3
 ; CHECKUF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; CHECKUF2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECKUF2:       [[VECTOR_PH]]:

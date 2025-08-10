@@ -11,7 +11,7 @@ define float @fadd_strict(ptr noalias nocapture readonly %a, i64 %n) {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
 ; CHECK:       vector.main.loop.iter.check:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:

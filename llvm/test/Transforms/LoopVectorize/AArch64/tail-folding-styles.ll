@@ -14,7 +14,7 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; NONE-NEXT:  entry:
 ; NONE-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N:%.*]], i64 1)
 ; NONE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; NONE-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
+; NONE-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
 ; NONE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[UMAX]], [[TMP1]]
 ; NONE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NONE:       vector.ph:

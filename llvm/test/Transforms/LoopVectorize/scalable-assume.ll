@@ -6,7 +6,7 @@ define void @test1(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) 
 ; CHECK-SAME: ptr noalias captures(none) [[A:%.*]], ptr noalias readonly captures(none) [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1600, [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -80,7 +80,7 @@ define void @test2(ptr %a, ptr noalias %b) {
 ; CHECK-NEXT:    [[PTRINT2:%.*]] = ptrtoint ptr [[B]] to i64
 ; CHECK-NEXT:    [[MASKCOND4:%.*]] = icmp eq i64 [[PTRINT2]], 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1600, [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -151,7 +151,7 @@ define void @predicated_assume(ptr noalias nocapture readonly %a, ptr noalias no
 ; CHECK-SAME: ptr noalias readonly captures(none) [[A:%.*]], ptr noalias captures(none) [[B:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:

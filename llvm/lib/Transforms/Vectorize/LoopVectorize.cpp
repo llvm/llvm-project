@@ -2305,16 +2305,27 @@ Value *InnerLoopVectorizer::createIterationCountCheck(ElementCount VF,
   Type *CountTy = Count->getType();
   Value *CheckMinIters = Builder.getFalse();
   auto CreateStep = [&]() -> Value * {
+    ElementCount VFTimesUF = VF.multiplyCoefficientBy(UF);
+    Value *VFxUF = nullptr;
+    if (!VFTimesUF.isScalable() ||
+        !isPowerOf2_64(VFTimesUF.getKnownMinValue())) {
+      VFxUF = createStepForVF(Builder, CountTy, VF, UF);
+    } else {
+      VFxUF = Builder.CreateShl(
+          Builder.CreateVScale(CountTy),
+          ConstantInt::get(CountTy, Log2_64(VFTimesUF.getKnownMinValue())), "",
+          true);
+    }
+
     // Create step with max(MinProTripCount, UF * VF).
-    if (UF * VF.getKnownMinValue() >= MinProfitableTripCount.getKnownMinValue())
-      return createStepForVF(Builder, CountTy, VF, UF);
+    if (ElementCount::isKnownGE(VFTimesUF, MinProfitableTripCount))
+      return VFxUF;
 
     Value *MinProfTC =
         createStepForVF(Builder, CountTy, MinProfitableTripCount, 1);
     if (!VF.isScalable())
       return MinProfTC;
-    return Builder.CreateBinaryIntrinsic(
-        Intrinsic::umax, MinProfTC, createStepForVF(Builder, CountTy, VF, UF));
+    return Builder.CreateBinaryIntrinsic(Intrinsic::umax, MinProfTC, VFxUF);
   };
 
   TailFoldingStyle Style = Cost->getTailFoldingStyle();

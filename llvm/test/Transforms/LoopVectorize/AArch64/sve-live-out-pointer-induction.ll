@@ -11,7 +11,7 @@ define ptr @test(ptr %start.1, ptr %start.2, ptr %end) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP4]], 2
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:

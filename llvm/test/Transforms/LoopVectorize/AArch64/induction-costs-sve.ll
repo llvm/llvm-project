@@ -13,7 +13,7 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; DEFAULT-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST]] to i64
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 16
+; DEFAULT-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 4
 ; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; DEFAULT:       [[VECTOR_MEMCHECK]]:

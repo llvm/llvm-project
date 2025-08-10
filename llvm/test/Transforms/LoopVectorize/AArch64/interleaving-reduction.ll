@@ -137,7 +137,7 @@ define i32 @interleave_integer_reduction(ptr %src, i64 %N) {
 ; INTERLEAVE-4-VLA-LABEL: @interleave_integer_reduction(
 ; INTERLEAVE-4-VLA-NEXT:  entry:
 ; INTERLEAVE-4-VLA-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; INTERLEAVE-4-VLA-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 16
+; INTERLEAVE-4-VLA-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
 ; INTERLEAVE-4-VLA-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], [[TMP1]]
 ; INTERLEAVE-4-VLA-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; INTERLEAVE-4-VLA:       vector.ph:

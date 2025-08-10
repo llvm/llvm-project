@@ -37,7 +37,7 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; NO-VP-LABEL: @foo(
 ; NO-VP-NEXT:  entry:
 ; NO-VP-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP0]], 4
+; NO-VP-NEXT:    [[TMP8:%.*]] = shl nuw i64 [[TMP0]], 2
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], [[TMP8]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP:       vector.ph:
@@ -82,7 +82,8 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; NO-VP-DEF-LABEL: @foo(
 ; NO-VP-DEF-NEXT:  entry:
 ; NO-VP-DEF-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-DEF-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], [[TMP0]]
+; NO-VP-DEF-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 0
+; NO-VP-DEF-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], [[TMP2]]
 ; NO-VP-DEF-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP-DEF:       vector.ph:
 ; NO-VP-DEF-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()

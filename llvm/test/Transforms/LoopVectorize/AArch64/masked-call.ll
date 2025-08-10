@@ -904,7 +904,7 @@ define void @test_widen_exp_v2(ptr noalias %p2, ptr noalias %p, i64 %n) #5 {
 ; TFNONE-NEXT:  [[ENTRY:.*]]:
 ; TFNONE-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; TFNONE-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; TFNONE-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 2
+; TFNONE-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 1
 ; TFNONE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
 ; TFNONE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; TFNONE:       [[VECTOR_PH]]:

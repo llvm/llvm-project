@@ -10,12 +10,12 @@ define void @cost_store_i8(ptr %dst) #0 {
 ; DEFAULT-SAME: ptr [[DST:%.*]]) #[[ATTR0:[0-9]+]] {
 ; DEFAULT-NEXT:  iter.check:
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 8
+; DEFAULT-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 3
 ; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 101, [[TMP1]]
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
 ; DEFAULT:       vector.main.loop.iter.check:
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; DEFAULT-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 32
+; DEFAULT-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 5
 ; DEFAULT-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 101, [[TMP3]]
 ; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; DEFAULT:       vector.ph:
