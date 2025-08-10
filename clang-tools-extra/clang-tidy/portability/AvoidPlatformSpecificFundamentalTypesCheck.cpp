@@ -126,73 +126,19 @@ void AvoidPlatformSpecificFundamentalTypesCheck::registerMatchers(
   if (!WarnOnInts && !WarnOnFloats && !WarnOnChars)
     return;
 
-  Finder->addMatcher(
-      varDecl(hasType(PlatformSpecificFundamentalType)).bind("var_decl"), this);
-
-  Finder->addMatcher(
-      functionDecl(returns(PlatformSpecificFundamentalType)).bind("func_decl"),
-      this);
-
-  Finder->addMatcher(
-      parmVarDecl(hasType(PlatformSpecificFundamentalType)).bind("param_decl"),
-      this);
-
-  Finder->addMatcher(
-      fieldDecl(hasType(PlatformSpecificFundamentalType)).bind("field_decl"),
-      this);
-
-  Finder->addMatcher(
-      typedefDecl(hasUnderlyingType(PlatformSpecificFundamentalType))
-          .bind("typedef_decl"),
-      this);
-
-  Finder->addMatcher(typeAliasDecl(hasType(PlatformSpecificFundamentalType))
-                         .bind("alias_decl"),
+  Finder->addMatcher(typeLoc(loc(PlatformSpecificFundamentalType)).bind("type"),
                      this);
 }
 
 void AvoidPlatformSpecificFundamentalTypesCheck::check(
     const MatchFinder::MatchResult &Result) {
-  SourceLocation Loc;
-  QualType QT;
-  SourceRange TypeRange;
-
-  auto SetTypeRange = [&TypeRange](auto Decl) {
-    if (Decl->getTypeSourceInfo())
-      TypeRange = Decl->getTypeSourceInfo()->getTypeLoc().getSourceRange();
-  };
-
-  if (const auto *VD = Result.Nodes.getNodeAs<VarDecl>("var_decl")) {
-    Loc = VD->getLocation();
-    QT = VD->getType();
-    SetTypeRange(VD);
-  } else if (const auto *FD =
-                 Result.Nodes.getNodeAs<FunctionDecl>("func_decl")) {
-    Loc = FD->getLocation();
-    QT = FD->getReturnType();
-    SetTypeRange(FD);
-  } else if (const auto *PD =
-                 Result.Nodes.getNodeAs<ParmVarDecl>("param_decl")) {
-    Loc = PD->getLocation();
-    QT = PD->getType();
-    SetTypeRange(PD);
-  } else if (const auto *FD = Result.Nodes.getNodeAs<FieldDecl>("field_decl")) {
-    Loc = FD->getLocation();
-    QT = FD->getType();
-    SetTypeRange(FD);
-  } else if (const auto *TD =
-                 Result.Nodes.getNodeAs<TypedefDecl>("typedef_decl")) {
-    Loc = TD->getLocation();
-    QT = TD->getUnderlyingType();
-    SetTypeRange(TD);
-  } else if (const auto *AD =
-                 Result.Nodes.getNodeAs<TypeAliasDecl>("alias_decl")) {
-    Loc = AD->getLocation();
-    QT = AD->getUnderlyingType();
-    SetTypeRange(AD);
-  } else {
+  const auto *TL = Result.Nodes.getNodeAs<TypeLoc>("type");
+  if (!TL)
     return;
-  }
+
+  SourceLocation Loc = TL->getBeginLoc();
+  QualType QT = TL->getType();
+  SourceRange TypeRange = TL->getSourceRange();
 
   const std::string TypeName = QT.getAsString();
 
