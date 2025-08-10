@@ -7,6 +7,6 @@ __v2df __attribute__((target("sse4.1"))) foo() {
     return __builtin_ia32_roundpd(v, 2);
 }
 
-__v2df __attribute__((flatten)) bar() {
+__v2df __attribute__((target("no-sse4.1"), flatten)) bar() {
     return foo(); // expected-error {{flatten function 'bar' calls 'foo' which requires target feature 'sse4.1', but the caller is compiled without support for 'sse4.1'}}
 }
