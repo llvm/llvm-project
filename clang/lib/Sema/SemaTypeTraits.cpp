@@ -1963,6 +1963,7 @@ static std::optional<TypeTrait> StdNameToTypeTrait(StringRef Name) {
       .Case("is_assignable", TypeTrait::BTT_IsAssignable)
       .Case("is_empty", TypeTrait::UTT_IsEmpty)
       .Case("is_standard_layout", TypeTrait::UTT_IsStandardLayout)
+      .Case("is_trivially_default_constructible", TypeTrait::UTT_HasTrivialDefaultConstructor)
       .Case("is_constructible", TypeTrait::TT_IsConstructible)
       .Default(std::nullopt);
 }
@@ -2592,6 +2593,108 @@ static void DiagnoseNonStandardLayoutReason(Sema &SemaRef, SourceLocation Loc,
   SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
 }
 
+static void DiagnoseNonTriviallyDefaultConstructibleReason(Sema &SemaRef,
+                                                          SourceLocation Loc,
+                                                          const CXXRecordDecl *D) {
+  SemaRef.Diag(Loc, diag::note_unsatisfied_trait)
+      << D << diag::TraitName::TriviallyDefaultConstructible;
+
+  // Check if the class has a user-provided constructor
+  if (D->hasUserDeclaredConstructor()) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::UserProvidedCtr << /*Copy*/ 0
+        << D->getLocation();
+  }
+
+  // Check if the class has a deleted constructor
+  if (D->hasDeletedDefaultConstructor()) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::DeletedCtr << /*Copy*/ 0
+        << D->getLocation();
+  }
+
+  // Check for virtual functions and virtual base classes
+  if (D->isPolymorphic()) {
+    // Find a virtual function to point to
+    for (const CXXMethodDecl *Method : D->methods()) {
+      if (Method->isVirtual()) {
+        SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+            << diag::TraitNotSatisfiedReason::VirtualFunction << Method
+            << Method->getSourceRange();
+        break;
+      }
+    }
+  }
+
+  // Check base classes
+  for (const CXXBaseSpecifier &Base : D->bases()) {
+    if (Base.isVirtual()) {
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::VBase << Base.getType()
+          << Base.getSourceRange();
+    }
+    if (!Base.getType()->isTriviallyDefaultConstructibleType()) {
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::NTDCBase << Base.getType()
+          << Base.getSourceRange();
+    }
+  }
+
+  // Check non-static data members
+  for (const FieldDecl *Field : D->fields()) {
+    if (!Field->getType()->isTriviallyDefaultConstructibleType()) {
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::NTDCField << Field
+          << Field->getType() << Field->getSourceRange();
+    }
+  }
+
+  // Check if it's a union with non-trivial constructor members
+  if (D->isUnion()) {
+    bool HasNonTrivialMember = false;
+    for (const FieldDecl *Field : D->fields()) {
+      if (!Field->getType()->isTriviallyDefaultConstructibleType()) {
+        HasNonTrivialMember = true;
+        break;
+      }
+    }
+    if (HasNonTrivialMember) {
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::UnionWithUserDeclaredSMF << /*Constructor*/ 0
+          << D->getSourceRange();
+    }
+  }
+
+  SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
+}
+
+static void DiagnoseNonTriviallyDefaultConstructibleReason(Sema &SemaRef,
+                                                          SourceLocation Loc,
+                                                          QualType T) {
+  SemaRef.Diag(Loc, diag::note_unsatisfied_trait)
+      << T << diag::TraitName::TriviallyDefaultConstructible;
+
+  // Check type-level exclusion first.
+  if (T->isVariablyModifiedType()) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::VLA;
+    return;
+  }
+
+  if (T->isReferenceType()) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::Ref;
+    return;
+  }
+  T = T.getNonReferenceType();
+  const CXXRecordDecl *D = T->getAsCXXRecordDecl();
+  if (!D || D->isInvalidDecl())
+    return;
+
+  if (D->hasDefinition())
+    DiagnoseNonTriviallyDefaultConstructibleReason(SemaRef, Loc, D);
+}
+
 void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
   E = E->IgnoreParenImpCasts();
   if (E->containsErrors())
@@ -2620,6 +2723,9 @@ void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
     break;
   case UTT_IsStandardLayout:
     DiagnoseNonStandardLayoutReason(*this, E->getBeginLoc(), Args[0]);
+    break;
+  case UTT_HasTrivialDefaultConstructor:
+    DiagnoseNonTriviallyDefaultConstructibleReason(*this, E->getBeginLoc(), Args[0]);
     break;
   case TT_IsConstructible:
     DiagnoseNonConstructibleReason(*this, E->getBeginLoc(), Args);
