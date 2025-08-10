@@ -79,6 +79,15 @@ struct MetadataLatticeValue {
     }
   }
 
+  /// This method conservatively joins the information held by `lhs` and `rhs`
+  /// into a new value. This method is required to be monotonic. `monotonicity`
+  /// is implied by the satisfaction of the following axioms:
+  ///   * idempotence:   join(x,x) == x
+  ///   * commutativity: join(x,y) == join(y,x)
+  ///   * associativity: join(x,join(y,z)) == join(join(x,y),z)
+  ///
+  /// When the above axioms are satisfied, we achieve `monotonicity`:
+  ///   * monotonicity: join(x, join(x,y)) == join(x,y)
   static MetadataLatticeValue join(const MetadataLatticeValue &lhs,
                                    const MetadataLatticeValue &rhs) {
   // To join `lhs` and `rhs` we will define a simple policy, which is that we
