@@ -3236,6 +3236,8 @@ void MallocChecker::checkPostCall(const CallEvent &Call,
   }
 
   SmallVector<const MemRegion *, 8> SmartPtrFieldRoots;
+  ProgramStateRef State = C.getState();
+  bool needsStateUpdate = false;
 
   for (unsigned I = 0, E = Call.getNumArgs(); I != E; ++I) {
     const Expr *AE = Call.getArgExpr(I);
@@ -3247,35 +3249,29 @@ void MallocChecker::checkPostCall(const CallEvent &Call,
       continue;
 
     // Find a region for the argument.
-    SVal VCall = Call.getArgSVal(I);
-    SVal VExpr = C.getSVal(AE);
-    const MemRegion *RCall = VCall.getAsRegion();
-    const MemRegion *RExpr = VExpr.getAsRegion();
-
-    const MemRegion *Base = RCall ? RCall : RExpr;
-    if (!Base) {
+    SVal ArgVal = Call.getArgSVal(I);
+    const MemRegion *ArgRegion = ArgVal.getAsRegion();
+    if (!ArgRegion) {
       // Fallback: if we have a by-value record with smart pointer fields but no
       // region, mark all allocated symbols as escaped
-      ProgramStateRef State = C.getState();
-      ProgramStateRef NewState = escapeAllAllocatedSymbols(State);
-      if (NewState != State)
-        C.addTransition(NewState);
+      State = escapeAllAllocatedSymbols(State);
+      needsStateUpdate = true;
       continue;
     }
 
     // Push direct smart owning pointer field regions only (precise root set).
-    collectDirectSmartOwningPtrFieldRegions(Base, AE->getType(), C,
+    collectDirectSmartOwningPtrFieldRegions(ArgRegion, AE->getType(), C,
                                             SmartPtrFieldRoots);
   }
 
   // Escape only from those field roots; do nothing if empty.
   if (!SmartPtrFieldRoots.empty()) {
-    ProgramStateRef State = C.getState();
     ProgramStateRef NewState =
         EscapeTrackedCallback::EscapeTrackedRegionsReachableFrom(
             SmartPtrFieldRoots, State);
     if (NewState != State) {
-      C.addTransition(NewState);
+      State = NewState;
+      needsStateUpdate = true;
     } else {
       // Fallback: if we have by-value record arguments but no smart pointer
       // fields detected, check if any of the arguments are by-value records
@@ -3294,12 +3290,15 @@ void MallocChecker::checkPostCall(const CallEvent &Call,
       }
 
       if (hasByValueRecordWithSmartPtr) {
-        ProgramStateRef State = C.getState();
-        ProgramStateRef NewState = escapeAllAllocatedSymbols(State);
-        if (NewState != State)
-          C.addTransition(NewState);
+        State = escapeAllAllocatedSymbols(State);
+        needsStateUpdate = true;
       }
     }
+  }
+
+  // Apply all state changes in a single transition
+  if (needsStateUpdate) {
+    C.addTransition(State);
   }
 }
 
