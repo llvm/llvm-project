@@ -3856,8 +3856,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // Step 1: multiplication of corresponding vector elements
     // We want to take into account the fact that multiplying zero by an
     // uninitialized bit results in an initialized value of zero.
-    // We under-approximate multiplication using the same logic as visitAnd().
-    // This ignores the carrying that may happen during multiplication.
+    // We under-approximate multiplication by treating it as bitwise AND; this
+    // has no false positives but substantial false negatives. We then
+    // compute the shadow using the same logic as visitAnd().
     Value *S1 = getShadow(&I, 0);
     Value *S2 = getShadow(&I, 1);
     Value *V1 = I.getOperand(0);
