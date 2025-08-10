@@ -6493,7 +6493,7 @@ SDValue SelectionDAGBuilder::createProtectedCtSelectFallback(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Cond, SDValue T, SDValue F,
     EVT VT) {
   SDNodeFlags ProtectedFlag;
-  ProtectedFlag.setNoCtSelectOpt(true);
+  ProtectedFlag.setNoMerge(true);
 
   // Extend cond to VT and normalize to 0 or 1
   if (Cond.getValueType() != VT)
@@ -6509,7 +6509,7 @@ SDValue SelectionDAGBuilder::createProtectedCtSelectFallback(
   SDValue AllOnes = DAG.getAllOnesConstant(DL, VT);
   SDValue Invert = DAG.getNode(ISD::XOR, DL, VT, Mask, AllOnes, ProtectedFlag);
 
-  // (T & Mask) | (F & ~Mask)
+  // (or (and T, Mask), (and F, ~Mask))
   SDValue TM = DAG.getNode(ISD::AND, DL, VT, Mask, T, ProtectedFlag);
   SDValue FM = DAG.getNode(ISD::AND, DL, VT, Invert, F, ProtectedFlag);
   return DAG.getNode(ISD::OR, DL, VT, TM, FM, ProtectedFlag);
