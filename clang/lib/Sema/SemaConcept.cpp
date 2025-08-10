@@ -577,7 +577,7 @@ static ExprResult calculateConstraintSatisfaction(
     Satisfaction.ContainsErrors = false;
     ExprResult Expr = calculateConstraintSatisfaction(
         S, FE.getNormalizedPattern(), Template, TemplateNameLoc,
-        *SubstitutedArgs, Satisfaction, UnsignedOrNone(I));
+        MLTAL, Satisfaction, UnsignedOrNone(I));
     if (Expr.isUsable()) {
       if (Out.isUnset())
         Out = Expr;
