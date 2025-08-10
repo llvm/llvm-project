@@ -1028,6 +1028,18 @@ def ReconcileUnrealizedCastsPass : Pass<"reconcile-unrealized-casts"> {
 }
 
 //===----------------------------------------------------------------------===//
+// SCFToAffine
+//===----------------------------------------------------------------------===//
+
+def RaiseSCFToAffinePass : Pass<"raise-scf-to-affine"> {
+  let summary = "Raise SCF to affine ops";
+  let dependentDialects = [
+    "affine::AffineDialect",
+    "scf::SCFDialect",
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // SCFToControlFlow
 //===----------------------------------------------------------------------===//
 
