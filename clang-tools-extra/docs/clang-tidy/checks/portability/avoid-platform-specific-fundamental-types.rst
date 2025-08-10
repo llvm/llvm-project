@@ -136,7 +136,7 @@ Options
    ``unsigned`` variants).
    When `false`, integer types are not flagged.
 
-   Example with `WarnOnInts` enabled:
+   Example with :option:`WarnOnInts` enabled:
 
    .. code-block:: c++
 
