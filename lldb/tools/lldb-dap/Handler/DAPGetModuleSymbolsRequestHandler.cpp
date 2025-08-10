@@ -13,6 +13,7 @@
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBModule.h"
 #include "lldb/API/SBModuleSpec.h"
+#include "lldb/Utility/UUID.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/Support/Error.h"
 #include <cstddef>
@@ -96,10 +97,15 @@ DAPGetModuleSymbolsRequestHandler::Run(
   DAPGetModuleSymbolsResponseBody response;
 
   lldb::SBModuleSpec module_spec;
-  if (args.moduleId)
+  if (args.moduleId) {
+    llvm::SmallVector<uint8_t, 20> uuid_bytes;
+    if (!lldb_private::UUID::DecodeUUIDBytesFromString(*args.moduleId, uuid_bytes).empty())
+      return llvm::make_error<DAPError>("Invalid module ID");
+
     module_spec.SetUUIDBytes(
-        reinterpret_cast<const uint8_t *>(args.moduleId->data()),
-        args.moduleId->size());
+        uuid_bytes.data(),
+        uuid_bytes.size());
+  }
 
   if (args.moduleName) {
     lldb::SBFileSpec file_spec;

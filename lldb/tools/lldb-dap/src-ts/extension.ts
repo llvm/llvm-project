@@ -12,6 +12,7 @@ import {
   ModuleProperty,
 } from "./ui/modules-data-provider";
 import { LogFilePathProvider } from "./logging";
+import { SymbolsProvider } from "./ui/symbols-provider";
 
 /**
  * This class represents the extension and manages its life cycle. Other extensions
@@ -52,10 +53,12 @@ export class LLDBDapExtension extends DisposableContext {
       vscode.window.registerUriHandler(new LaunchUriHandler()),
     );
 
-    vscode.commands.registerCommand(
+    this.pushSubscription(vscode.commands.registerCommand(
       "lldb-dap.modules.copyProperty",
       (node: ModuleProperty) => vscode.env.clipboard.writeText(node.value),
-    );
+    ));
+
+    this.pushSubscription(new SymbolsProvider(sessionTracker));
   }
 }
 
