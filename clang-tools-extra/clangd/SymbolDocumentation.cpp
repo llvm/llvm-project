@@ -302,7 +302,7 @@ void SymbolDocCommentVisitor::visitBlockCommandComment(
 
 void SymbolDocCommentVisitor::paragraphsToMarkup(
     markup::Document &Out,
-    const llvm::SmallVector<const comments::ParagraphComment *> &Paragraphs)
+    const llvm::SmallVectorImpl<const comments::ParagraphComment *> &Paragraphs)
     const {
   if (Paragraphs.empty())
     return;

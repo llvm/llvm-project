@@ -199,10 +199,10 @@ private:
   llvm::SmallDenseMap<unsigned, const comments::ParagraphComment *>
       FreeParagraphs;
 
-  void
-  paragraphsToMarkup(markup::Document &Out,
-                     const llvm::SmallVector<const comments::ParagraphComment *>
-                         &Paragraphs) const;
+  void paragraphsToMarkup(
+      markup::Document &Out,
+      const llvm::SmallVectorImpl<const comments::ParagraphComment *>
+          &Paragraphs) const;
 };
 
 } // namespace clangd
