@@ -8,11 +8,11 @@
 #include <string.h>
 
 struct alignas(4096) page {
-    int x;
+  int x;
 };
 
 struct alignas(16384) larry {
-    int x;
+  int x;
 };
 
 bool misaligned = false;
@@ -23,7 +23,7 @@ void grandchild(void) {
   if (alignment != 0)
     misaligned = true;
 
-  printf ("Grandchild: address modulo alignment %u\n", alignment);
+  printf("Grandchild: address modulo alignment %u\n", alignment);
 }
 
 // Even if the FakeStack frame is aligned by chance to 16384, we can use an
@@ -31,7 +31,7 @@ void grandchild(void) {
 void child(void) {
   page p1;
   uint alignment = (unsigned long)&p1 % alignof(page);
-  printf ("Child: address modulo alignment is %u\n", alignment);
+  printf("Child: address modulo alignment is %u\n", alignment);
   if (alignment != 0)
     misaligned = true;
 
@@ -40,10 +40,10 @@ void child(void) {
 
 // Check whether the FakeStack frame is sufficiently aligned. Alignment can
 // happen by chance, so try this on many threads if you don't want
-void *Thread(void *unused)  {
+void *Thread(void *unused) {
   larry l1;
   uint alignment = (unsigned long)&l1 % alignof(larry);
-  printf ("Thread: address modulo alignment is %u\n", alignment);
+  printf("Thread: address modulo alignment is %u\n", alignment);
   if (alignment != 0)
     misaligned = true;
 
@@ -58,15 +58,15 @@ int main(int argc, char **argv) {
 
   pthread_t t[10];
   for (int i = 0; i < 10; i++) {
-     pthread_create(&t[i], &attr, Thread, 0);
+    pthread_create(&t[i], &attr, Thread, 0);
   }
   pthread_attr_destroy(&attr);
   for (int i = 0; i < 10; i++) {
-     pthread_join(t[i], 0);
+    pthread_join(t[i], 0);
   }
 
   if (misaligned) {
-    printf ("Test failed: not perfectly aligned\n");
+    printf("Test failed: not perfectly aligned\n");
     exit(1);
   }
 
