@@ -2386,11 +2386,13 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
 /// successors of VPBB, if any, are rewired to the new VPIRBasicBlock.
 static void replaceVPBBWithIRVPBB(VPBasicBlock *VPBB, BasicBlock *IRBB) {
   VPIRBasicBlock *IRVPBB = VPBB->getPlan()->createVPIRBasicBlock(IRBB);
-  for (auto &R : make_early_inc_range(*VPBB)) {
-    assert((IRVPBB->empty() || IRVPBB->back().isPhi() || !R.isPhi()) &&
-           "Tried to move phi recipe after a non-phi recipe");
+  auto IP = IRVPBB->begin();
+  for (auto &R : make_early_inc_range(VPBB->phis()))
+    R.moveBefore(*IRVPBB, IP);
+
+  for (auto &R :
+       make_early_inc_range(make_range(VPBB->getFirstNonPhi(), VPBB->end())))
     R.moveBefore(*IRVPBB, IRVPBB->end());
-  }
 
   VPBlockUtils::reassociateBlocks(VPBB, IRVPBB);
   // VPBB is now dead and will be cleaned up when the plan gets destroyed.
@@ -8384,8 +8386,13 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
     LVer.prepareNoAliasMetadata();
   }
 
+  // Create initial base VPlan0, to serve as common starting point for all
+  // candidates built later for specific VF ranges.
+  auto VPlan0 = VPlanTransforms::buildVPlan0(
+      OrigLoop, *LI, Legal->getWidestInductionType(),
+      getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), PSE);
+
   auto MaxVFTimes2 = MaxVF * 2;
-  auto VPlan0 = VPlanTransforms::buildPlainCFG(OrigLoop, *LI);
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
     VFRange SubRange = {VF, MaxVFTimes2};
     if (auto Plan = tryToBuildVPlanWithVPRecipes(
@@ -8624,23 +8631,17 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // visit each basic block after having visited its predecessor basic blocks.
   // ---------------------------------------------------------------------------
 
-  // Create initial VPlan skeleton, having a basic block for the pre-header
-  // which contains SCEV expansions that need to happen before the CFG is
-  // modified; a basic block for the vector pre-header, followed by a region for
-  // the vector loop, followed by the middle basic block. The skeleton vector
-  // loop region contains a header and latch basic blocks.
-
   bool RequiresScalarEpilogueCheck =
       LoopVectorizationPlanner::getDecisionAndClampRange(
           [this](ElementCount VF) {
             return !CM.requiresScalarEpilogue(VF.isVector());
           },
           Range);
-  VPlanTransforms::prepareForVectorization(
-      *Plan, Legal->getWidestInductionType(), PSE, RequiresScalarEpilogueCheck,
-      CM.foldTailByMasking(), OrigLoop,
-      getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()),
-      Legal->hasUncountableEarlyExit(), Range);
+  VPlanTransforms::handleEarlyExits(*Plan, Legal->hasUncountableEarlyExit(),
+                                    Range);
+  VPlanTransforms::addMiddleCheck(*Plan, RequiresScalarEpilogueCheck,
+                                  CM.foldTailByMasking());
+
   VPlanTransforms::createLoopRegions(*Plan);
   VPlanTransforms::createExtractsForLiveOuts(*Plan);
 
@@ -8926,11 +8927,14 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
   assert(!OrigLoop->isInnermost());
   assert(EnableVPlanNativePath && "VPlan-native path is not enabled.");
 
-  auto Plan = VPlanTransforms::buildPlainCFG(OrigLoop, *LI);
-  VPlanTransforms::prepareForVectorization(
-      *Plan, Legal->getWidestInductionType(), PSE, true, false, OrigLoop,
-      getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), false,
-      Range);
+  auto Plan = VPlanTransforms::buildVPlan0(
+      OrigLoop, *LI, Legal->getWidestInductionType(),
+      getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), PSE);
+  VPlanTransforms::handleEarlyExits(*Plan,
+                                    /*HasUncountableExit*/ false, Range);
+  VPlanTransforms::addMiddleCheck(*Plan, /*RequiresScalarEpilogue*/ true,
+                                  /*TailFolded*/ false);
+
   VPlanTransforms::createLoopRegions(*Plan);
 
   for (ElementCount VF : Range)
@@ -9740,6 +9744,9 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
     else if (&*MainScalarPH->begin() != ResumePhi)
       ResumePhi->moveBefore(*MainScalarPH, MainScalarPH->begin());
   }
+  // Add a user to to make sure the resume phi won't get removed.
+  VPBuilder(MainScalarPH)
+      .createNaryOp(VPInstruction::ResumeForEpilogue, ResumePhi);
 }
 
 /// Prepare \p Plan for vectorizing the epilogue loop. That is, re-use expanded

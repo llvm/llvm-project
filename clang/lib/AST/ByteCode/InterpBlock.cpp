@@ -64,7 +64,7 @@ void Block::removePointer(Pointer *P) {
 }
 
 void Block::cleanup() {
-  if (Pointers == nullptr && !IsDynamic && IsDead)
+  if (Pointers == nullptr && !IsDynamic && isDead())
     (reinterpret_cast<DeadBlock *>(this + 1) - 1)->free();
 }
 
@@ -113,8 +113,8 @@ bool Block::hasPointer(const Pointer *P) const {
 #endif
 
 DeadBlock::DeadBlock(DeadBlock *&Root, Block *Blk)
-    : Root(Root), B(~0u, Blk->Desc, Blk->IsStatic, Blk->IsExtern, Blk->IsWeak,
-                    /*isDead=*/true) {
+    : Root(Root), B(~0u, Blk->Desc, Blk->isExtern(), Blk->IsStatic,
+                    Blk->isWeak(), Blk->isDummy(), /*IsDead=*/true) {
   // Add the block to the chain of dead blocks.
   if (Root)
     Root->Prev = this;
