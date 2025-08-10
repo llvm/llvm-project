@@ -8,6 +8,9 @@
 
 // REQUIRES: std-at-least-c++17
 
+// No diagnostic gets emitted when we build with modules.
+// XFAIL: clang-modules-build
+
 // <tuple>
 
 // template <class T, class Tuple> constexpr T make_from_tuple(Tuple&&);
@@ -16,14 +19,16 @@
 #include <tuple>
 #include <utility>
 
+#include "test_macros.h"
+
 void test() {
   // expected-error@*:* {{static assertion failed}}
 
   // Turns to an error since C++26 (Disallow Binding a Returned Glvalue to a Temporary https://wg21.link/P2748R5).
-#if _LIBCPP_STD_VER >= 26
-  // expected-error@*:* {{returning reference to local temporary object}}
+#if TEST_STD_VER >= 26
+  // expected-error@tuple:* {{returning reference to local temporary object}}
 #else
-  // expected-warning@*:* {{returning reference to local temporary object}}
+  // expected-warning@tuple:* {{returning reference to local temporary object}}
 #endif
   std::ignore = std::make_from_tuple<const int&>(std::tuple<char>{});
 }
