@@ -842,6 +842,8 @@ def warn_cxx17_compat_explicit_bool : Warning<
   InGroup<CXXPre20Compat>, DefaultIgnore;
 def ext_explicit_bool : ExtWarn<"explicit(bool) is a C++20 extension">,
   InGroup<CXX20>;
+def err_explicit_bool_requires_cpp20
+    : Error<"explicit(bool) requires C++20 or later">;
 
 /// C++ Templates
 def err_expected_template : Error<"expected template">;

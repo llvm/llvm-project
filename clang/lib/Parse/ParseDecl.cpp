@@ -4174,28 +4174,66 @@ void Parser::ParseDeclarationSpecifiers(
       ConsumedEnd = ExplicitLoc;
       ConsumeToken(); // kw_explicit
       if (Tok.is(tok::l_paren)) {
-        if (getLangOpts().CPlusPlus20 || isExplicitBool() == TPResult::True) {
-          Diag(Tok.getLocation(), getLangOpts().CPlusPlus20
-                                      ? diag::warn_cxx17_compat_explicit_bool
-                                      : diag::ext_explicit_bool);
+        TPResult ExplicitBoolResult = isExplicitBool();
+        if (getLangOpts().CPlusPlus20) {
+          // C++20: Support explicit(bool) with compatibility warning
+          if (ExplicitBoolResult == TPResult::True ||
+              ExplicitBoolResult == TPResult::Ambiguous) {
+            Diag(Tok.getLocation(), diag::warn_cxx17_compat_explicit_bool);
 
-          ExprResult ExplicitExpr(static_cast<Expr *>(nullptr));
-          BalancedDelimiterTracker Tracker(*this, tok::l_paren);
-          Tracker.consumeOpen();
+            ExprResult ExplicitExpr(static_cast<Expr *>(nullptr));
+            BalancedDelimiterTracker Tracker(*this, tok::l_paren);
+            Tracker.consumeOpen();
 
-          EnterExpressionEvaluationContext ConstantEvaluated(
-              Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+            EnterExpressionEvaluationContext ConstantEvaluated(
+                Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
 
-          ExplicitExpr = ParseConstantExpressionInExprEvalContext();
-          ConsumedEnd = Tok.getLocation();
-          if (ExplicitExpr.isUsable()) {
-            CloseParenLoc = Tok.getLocation();
-            Tracker.consumeClose();
-            ExplicitSpec =
-                Actions.ActOnExplicitBoolSpecifier(ExplicitExpr.get());
-          } else
+            ExplicitExpr = ParseConstantExpressionInExprEvalContext();
+            ConsumedEnd = Tok.getLocation();
+            if (ExplicitExpr.isUsable()) {
+              CloseParenLoc = Tok.getLocation();
+              Tracker.consumeClose();
+              ExplicitSpec =
+                  Actions.ActOnExplicitBoolSpecifier(ExplicitExpr.get());
+            } else
+              Tracker.skipToEnd();
+          }
+        } else if (ExplicitBoolResult == TPResult::True) {
+          if (getLangOpts().CPlusPlus17) {
+            // C++17: Allow explicit(bool) as extension for compatibility
+            // This maintains backward compatibility with existing code that
+            // relied on this extension warning behavior
+            Diag(Tok.getLocation(), diag::ext_explicit_bool);
+
+            ExprResult ExplicitExpr(static_cast<Expr *>(nullptr));
+            BalancedDelimiterTracker Tracker(*this, tok::l_paren);
+            Tracker.consumeOpen();
+
+            EnterExpressionEvaluationContext ConstantEvaluated(
+                Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+
+            ExplicitExpr = ParseConstantExpressionInExprEvalContext();
+            ConsumedEnd = Tok.getLocation();
+            if (ExplicitExpr.isUsable()) {
+              CloseParenLoc = Tok.getLocation();
+              Tracker.consumeClose();
+              ExplicitSpec =
+                  Actions.ActOnExplicitBoolSpecifier(ExplicitExpr.get());
+            } else
+              Tracker.skipToEnd();
+          } else {
+            // C++14 and earlier: explicit(bool) causes assertion failure
+            // Emit proper error message instead of crashing
+            Diag(Tok.getLocation(), diag::err_explicit_bool_requires_cpp20);
+
+            // Error recovery: skip the parenthesized expression
+            BalancedDelimiterTracker Tracker(*this, tok::l_paren);
+            Tracker.consumeOpen();
             Tracker.skipToEnd();
-        } else {
+            ConsumedEnd = Tok.getLocation();
+          }
+        } else if (ExplicitBoolResult == TPResult::Ambiguous) {
+          // Ambiguous case: warn about potential C++20 interpretation
           Diag(Tok.getLocation(), diag::warn_cxx20_compat_explicit_bool);
         }
       }
