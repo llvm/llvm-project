@@ -443,8 +443,8 @@ mlir::SparseIterationTypeConverter::SparseIterationTypeConverter() {
 
   addSourceMaterialization([](OpBuilder &builder, IterSpaceType spTp,
                               ValueRange inputs, Location loc) -> Value {
-    return builder
-        .create<UnrealizedConversionCastOp>(loc, TypeRange(spTp), inputs)
+    return UnrealizedConversionCastOp::create(builder, loc, TypeRange(spTp),
+                                              inputs)
         .getResult(0);
   });
 }

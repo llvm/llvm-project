@@ -34,7 +34,7 @@ define void @foo(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) {
 ; SSE-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; SSE-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; SSE:       middle.block:
-; SSE-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
+; SSE-NEXT:    br label [[FOR_COND_CLEANUP:%.*]]
 ; SSE:       scalar.ph:
 ; SSE-NEXT:    br label [[FOR_BODY:%.*]]
 ; SSE:       for.cond.cleanup:
@@ -88,7 +88,7 @@ define void @foo(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) {
 ; AVX1-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; AVX1-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; AVX1:       middle.block:
-; AVX1-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
+; AVX1-NEXT:    br label [[FOR_COND_CLEANUP:%.*]]
 ; AVX1:       scalar.ph:
 ; AVX1-NEXT:    br label [[FOR_BODY:%.*]]
 ; AVX1:       for.cond.cleanup:
@@ -142,7 +142,7 @@ define void @foo(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) {
 ; AVX2-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; AVX2-NEXT:    br i1 [[TMP18]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; AVX2:       middle.block:
-; AVX2-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
+; AVX2-NEXT:    br label [[FOR_COND_CLEANUP:%.*]]
 ; AVX2:       scalar.ph:
 ; AVX2-NEXT:    br label [[FOR_BODY:%.*]]
 ; AVX2:       for.cond.cleanup:

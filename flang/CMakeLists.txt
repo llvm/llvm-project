@@ -317,7 +317,7 @@ if (NOT ENABLE_LINKER_BUILD_ID)
   set(ENABLE_LINKER_BUILD_ID OFF CACHE BOOL "pass --build-id to ld")
 endif()
 
-set(FLANG_DEFAULT_LINKER "" CACHE STRING
+set(FLANG_DEFAULT_LINKER "${CLANG_DEFAULT_LINKER}" CACHE STRING
   "Default linker to use (linker name or absolute path, empty for platform default)")
 
 set(FLANG_DEFAULT_RTLIB "" CACHE STRING

@@ -152,20 +152,20 @@ PackArrayConversion::matchAndRewrite(fir::PackArrayOp op,
 
   // For now we have to always check if the box is present.
   auto isPresent =
-      builder.create<fir::IsPresentOp>(loc, builder.getI1Type(), box);
+      fir::IsPresentOp::create(builder, loc, builder.getI1Type(), box);
 
-  fir::IfOp ifOp = builder.create<fir::IfOp>(loc, boxType, isPresent,
-                                             /*withElseRegion=*/true);
+  fir::IfOp ifOp = fir::IfOp::create(builder, loc, boxType, isPresent,
+                                     /*withElseRegion=*/true);
   builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
   // The box is present.
   auto newBox = genRepackedBox(builder, loc, op);
   if (mlir::failed(newBox))
     return newBox;
-  builder.create<fir::ResultOp>(loc, *newBox);
+  fir::ResultOp::create(builder, loc, *newBox);
 
   // The box is not present. Return original box.
   builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
-  builder.create<fir::ResultOp>(loc, box);
+  fir::ResultOp::create(builder, loc, box);
 
   rewriter.replaceOp(op, ifOp.getResult(0));
   return mlir::success();
@@ -199,8 +199,8 @@ mlir::Value PackArrayConversion::allocateTempBuffer(
     // We need to reset the CFI_attribute_allocatable before
     // returning the temporary box to avoid any mishandling
     // of the temporary box in Fortran runtime.
-    base = builder.create<fir::BoxAddrOp>(loc, fir::boxMemRefType(tempBoxType),
-                                          base);
+    base = fir::BoxAddrOp::create(builder, loc, fir::boxMemRefType(tempBoxType),
+                                  base);
     ptrType = base.getType();
   }
 
@@ -262,23 +262,24 @@ PackArrayConversion::genRepackedBox(fir::FirOpBuilder &builder,
   }
 
   // Create a temporay iff the original is not contigous and is not empty.
-  auto isNotContiguous = builder.genNot(
-      loc, builder.create<fir::IsContiguousBoxOp>(loc, box, op.getInnermost()));
+  auto isNotContiguous =
+      builder.genNot(loc, fir::IsContiguousBoxOp::create(builder, loc, box,
+                                                         op.getInnermost()));
   auto dataAddr =
-      builder.create<fir::BoxAddrOp>(loc, fir::boxMemRefType(boxType), box);
+      fir::BoxAddrOp::create(builder, loc, fir::boxMemRefType(boxType), box);
   auto isNotEmpty =
-      builder.create<fir::IsPresentOp>(loc, builder.getI1Type(), dataAddr);
+      fir::IsPresentOp::create(builder, loc, builder.getI1Type(), dataAddr);
   auto doPack =
-      builder.create<mlir::arith::AndIOp>(loc, isNotContiguous, isNotEmpty);
+      mlir::arith::AndIOp::create(builder, loc, isNotContiguous, isNotEmpty);
 
   fir::IfOp ifOp =
-      builder.create<fir::IfOp>(loc, boxType, doPack, /*withElseRegion=*/true);
+      fir::IfOp::create(builder, loc, boxType, doPack, /*withElseRegion=*/true);
   // Assume that the repacking is unlikely.
   ifOp.setUnlikelyIfWeights();
 
   // Return original box.
   builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
-  builder.create<fir::ResultOp>(loc, box);
+  fir::ResultOp::create(builder, loc, box);
 
   // Create a new box.
   builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
@@ -308,7 +309,7 @@ PackArrayConversion::genRepackedBox(fir::FirOpBuilder &builder,
   if (!op.getNoCopy())
     fir::runtime::genShallowCopy(builder, loc, tempBox, box,
                                  /*resultIsAllocated=*/true);
-  builder.create<fir::ResultOp>(loc, tempBox);
+  fir::ResultOp::create(builder, loc, tempBox);
 
   return ifOp.getResult(0);
 }
@@ -330,15 +331,15 @@ UnpackArrayConversion::matchAndRewrite(fir::UnpackArrayOp op,
 
   // For now we have to always check if the box is present.
   auto isPresent =
-      builder.create<fir::IsPresentOp>(loc, predicateType, originalBox);
+      fir::IsPresentOp::create(builder, loc, predicateType, originalBox);
 
   builder.genIfThen(loc, isPresent).genThen([&]() {
     mlir::Type addrType =
         fir::HeapType::get(fir::extractSequenceType(tempBox.getType()));
     mlir::Value tempAddr =
-        builder.create<fir::BoxAddrOp>(loc, addrType, tempBox);
+        fir::BoxAddrOp::create(builder, loc, addrType, tempBox);
     mlir::Value originalAddr =
-        builder.create<fir::BoxAddrOp>(loc, addrType, originalBox);
+        fir::BoxAddrOp::create(builder, loc, addrType, originalBox);
 
     auto isNotSame = builder.genPtrCompare(loc, mlir::arith::CmpIPredicate::ne,
                                            tempAddr, originalAddr);
@@ -356,7 +357,7 @@ UnpackArrayConversion::matchAndRewrite(fir::UnpackArrayOp op,
           // to the runtime that uses heap memory, even when the stack
           // attribute is set on fir.pack_array.
           if (!op.getStack() || !canAllocateTempOnStack(originalBox))
-            builder.create<fir::FreeMemOp>(loc, tempAddr);
+            fir::FreeMemOp::create(builder, loc, tempAddr);
         })
         .getIfOp()
         .setUnlikelyIfWeights();

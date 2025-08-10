@@ -911,7 +911,7 @@ private:
     setVectorSubscriptElementAddrOp(std::nullopt);
     fir::FirOpBuilder *bldr = &builder;
     getStmtCtx().attachCleanup(
-        [=]() { bldr->create<hlfir::DestroyOp>(loc, elemental); });
+        [=]() { hlfir::DestroyOp::create(*bldr, loc, elemental); });
     return hlfir::EntityWithAttributes{elemental};
   }
 
@@ -1579,7 +1579,7 @@ private:
   }
 
   hlfir::EntityWithAttributes gen(const Fortran::evaluate::NullPointer &expr) {
-    auto nullop = getBuilder().create<hlfir::NullOp>(getLoc());
+    auto nullop = hlfir::NullOp::create(getBuilder(), getLoc());
     return mlir::cast<fir::FortranVariableOpInterface>(nullop.getOperation());
   }
 
@@ -1685,7 +1685,7 @@ private:
         /*isUnordered=*/true, left.isPolymorphic() ? left : mlir::Value{});
     fir::FirOpBuilder *bldr = &builder;
     getStmtCtx().attachCleanup(
-        [=]() { bldr->create<hlfir::DestroyOp>(loc, elemental); });
+        [=]() { hlfir::DestroyOp::create(*bldr, loc, elemental); });
     return hlfir::EntityWithAttributes{elemental};
   }
 
@@ -1736,7 +1736,7 @@ private:
     builder.setIntegerOverflowFlags(iofBackup);
     fir::FirOpBuilder *bldr = &builder;
     getStmtCtx().attachCleanup(
-        [=]() { bldr->create<hlfir::DestroyOp>(loc, elemental); });
+        [=]() { hlfir::DestroyOp::create(*bldr, loc, elemental); });
     return hlfir::EntityWithAttributes{elemental};
   }
 
@@ -1848,8 +1848,15 @@ private:
       for (Fortran::lower::ComponentReverseIterator compIterator(
                ctor.result().derivedTypeSpec());
            !compIterator.lookup(compSym.name());) {
-        const auto &parentType = compIterator.advanceToParentType();
-        llvm::StringRef parentName = toStringRef(parentType.name());
+        // Private parent components have mangled names. Get the name from the
+        // parent symbol.
+        const Fortran::semantics::Symbol *parentCompSym =
+            compIterator.getParentComponent();
+        assert(parentCompSym && "failed to get parent component symbol");
+        std::string parentName =
+            converter.getRecordTypeFieldName(*parentCompSym);
+        // Advance the iterator, but don't use its return value.
+        compIterator.advanceToParentType();
         auto baseRecTy = mlir::cast<fir::RecordType>(
             hlfir::getFortranElementType(currentParent.getType()));
         auto parentCompType = baseRecTy.getType(parentName);

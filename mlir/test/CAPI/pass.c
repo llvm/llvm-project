@@ -486,6 +486,23 @@ void testExternalPass(void) {
       exit(EXIT_FAILURE);
     }
 
+    // Run the pass again and confirm that the initializeCallCount is still 1.
+    MlirLogicalResult second_success = mlirPassManagerRunOnOp(pm, module);
+    if (mlirLogicalResultIsFailure(second_success)) {
+      fprintf(stderr, "Unexpected failure running external pass.\n");
+      exit(EXIT_FAILURE);
+    }
+
+    if (userData.initializeCallCount != 1) {
+      fprintf(stderr, "Expected initializeCallCount to be 1\n");
+      exit(EXIT_FAILURE);
+    }
+
+    if (userData.runCallCount != 2) {
+      fprintf(stderr, "Expected runCallCount to be 2\n");
+      exit(EXIT_FAILURE);
+    }
+
     mlirPassManagerDestroy(pm);
 
     if (userData.destructCallCount != userData.constructCallCount) {

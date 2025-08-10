@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1200 < %s | FileCheck %s
 
 ; CHECK:           .amdgpu_pal_metadata
 ; CHECK-NEXT: ---

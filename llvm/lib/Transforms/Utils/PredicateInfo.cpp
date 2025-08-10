@@ -12,7 +12,6 @@
 
 #include "llvm/Transforms/Utils/PredicateInfo.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -722,7 +721,7 @@ PredicateInfo::~PredicateInfo() {
   CreatedDeclarations.clear();
 
   for (Function *F : FunctionPtrs) {
-    assert(F->user_begin() == F->user_end() &&
+    assert(F->users().empty() &&
            "PredicateInfo consumer did not remove all SSA copies.");
     F->eraseFromParent();
   }

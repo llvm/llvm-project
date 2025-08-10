@@ -177,7 +177,7 @@ static bool threadSafetyCheckIsSmartPointer(Sema &S, const RecordType* RT) {
     return !Result.empty();
   };
 
-  const RecordDecl *Record = RT->getDecl();
+  const RecordDecl *Record = RT->getOriginalDecl()->getDefinitionOrSelf();
   bool foundStarOperator = IsOverloadedOperatorPresent(Record, OO_Star);
   bool foundArrowOperator = IsOverloadedOperatorPresent(Record, OO_Arrow);
   if (foundStarOperator && foundArrowOperator)
@@ -271,7 +271,8 @@ static bool checkRecordTypeForCapability(Sema &S, QualType Ty) {
   if (threadSafetyCheckIsSmartPointer(S, RT))
     return true;
 
-  return checkRecordDeclForAttr<CapabilityAttr>(RT->getDecl());
+  return checkRecordDeclForAttr<CapabilityAttr>(
+      RT->getOriginalDecl()->getDefinitionOrSelf());
 }
 
 static bool checkRecordTypeForScopedCapability(Sema &S, QualType Ty) {
@@ -284,7 +285,8 @@ static bool checkRecordTypeForScopedCapability(Sema &S, QualType Ty) {
   if (RT->isIncompleteType())
     return true;
 
-  return checkRecordDeclForAttr<ScopedLockableAttr>(RT->getDecl());
+  return checkRecordDeclForAttr<ScopedLockableAttr>(
+      RT->getOriginalDecl()->getDefinitionOrSelf());
 }
 
 static bool checkTypedefTypeForCapability(QualType Ty) {
@@ -1254,8 +1256,8 @@ bool Sema::isValidPointerAttrType(QualType T, bool RefOkay) {
   // The nonnull attribute, and other similar attributes, can be applied to a
   // transparent union that contains a pointer type.
   if (const RecordType *UT = T->getAsUnionType()) {
-    if (UT && UT->getDecl()->hasAttr<TransparentUnionAttr>()) {
-      RecordDecl *UD = UT->getDecl();
+    RecordDecl *UD = UT->getOriginalDecl()->getDefinitionOrSelf();
+    if (UD->hasAttr<TransparentUnionAttr>()) {
       for (const auto *I : UD->fields()) {
         QualType QT = I->getType();
         if (QT->isAnyPointerType() || QT->isBlockPointerType())
@@ -1970,6 +1972,13 @@ void clang::inferNoReturnAttr(Sema &S, const Decl *D) {
   if (!FD)
     return;
 
+  // Skip explicit specializations here as they may have
+  // a user-provided definition that may deliberately differ from the primary
+  // template. If an explicit specialization truly never returns, the user
+  // should explicitly mark it with [[noreturn]].
+  if (FD->getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
+    return;
+
   auto *NonConstFD = const_cast<FunctionDecl *>(FD);
   DiagnosticsEngine &Diags = S.getDiagnostics();
   if (Diags.isIgnored(diag::warn_falloff_nonvoid, FD->getLocation()) &&
@@ -2034,7 +2043,8 @@ bool Sema::CheckAttrTarget(const ParsedAttr &AL) {
   // Check whether the attribute is valid on the current target.
   if (!AL.existsInTarget(Context.getTargetInfo())) {
     if (AL.isRegularKeywordAttribute())
-      Diag(AL.getLoc(), diag::err_keyword_not_supported_on_target);
+      Diag(AL.getLoc(), diag::err_keyword_not_supported_on_target)
+          << AL << AL.getRange();
     else
       DiagnoseUnknownAttribute(AL);
     AL.setInvalid();
@@ -3552,7 +3562,9 @@ static void handleFormatArgAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
   Ty = getFunctionOrMethodResultType(D);
   // replace instancetype with the class type
-  auto Instancetype = S.Context.getObjCInstanceTypeDecl()->getTypeForDecl();
+  auto *Instancetype = cast<TypedefType>(S.Context.getTypedefType(
+      ElaboratedTypeKeyword::None, /*Qualifier=*/std::nullopt,
+      S.Context.getObjCInstanceTypeDecl()));
   if (Ty->getAs<TypedefType>() == Instancetype)
     if (auto *OMD = dyn_cast<ObjCMethodDecl>(D))
       if (auto *Interface = OMD->getClassInterface())
@@ -4146,7 +4158,10 @@ static void handleTransparentUnionAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   RecordDecl *RD = nullptr;
   const auto *TD = dyn_cast<TypedefNameDecl>(D);
   if (TD && TD->getUnderlyingType()->isUnionType())
-    RD = TD->getUnderlyingType()->getAsUnionType()->getDecl();
+    RD = TD->getUnderlyingType()
+             ->getAsUnionType()
+             ->getOriginalDecl()
+             ->getDefinitionOrSelf();
   else
     RD = dyn_cast<RecordDecl>(D);
 
@@ -4499,7 +4514,7 @@ void Sema::CheckAlignasUnderalignment(Decl *D) {
   if (const auto *VD = dyn_cast<ValueDecl>(D)) {
     UnderlyingTy = DiagTy = VD->getType();
   } else {
-    UnderlyingTy = DiagTy = Context.getTagDeclType(cast<TagDecl>(D));
+    UnderlyingTy = DiagTy = Context.getCanonicalTagType(cast<TagDecl>(D));
     if (const auto *ED = dyn_cast<EnumDecl>(D))
       UnderlyingTy = ED->getIntegerType();
   }
@@ -4797,10 +4812,10 @@ void Sema::AddModeAttr(Decl *D, const AttributeCommonInfo &CI,
 
 static void handleNonStringAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // This only applies to fields and variable declarations which have an array
-  // type.
+  // type or pointer type, with character elements.
   QualType QT = cast<ValueDecl>(D)->getType();
-  if (!QT->isArrayType() ||
-      !QT->getBaseElementTypeUnsafe()->isAnyCharacterType()) {
+  if ((!QT->isArrayType() && !QT->isPointerType()) ||
+      !QT->getPointeeOrArrayElementType()->isAnyCharacterType()) {
     S.Diag(D->getBeginLoc(), diag::warn_attribute_non_character_array)
         << AL << AL.isRegularKeywordAttribute() << QT << AL.getRange();
     return;
@@ -7432,6 +7447,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_HLSLVkConstantId:
     S.HLSL().handleVkConstantIdAttr(D, AL);
+    break;
+  case ParsedAttr::AT_HLSLVkBinding:
+    S.HLSL().handleVkBindingAttr(D, AL);
     break;
   case ParsedAttr::AT_HLSLSV_GroupThreadID:
     S.HLSL().handleSV_GroupThreadIDAttr(D, AL);
