@@ -3533,7 +3533,8 @@ void FunctionStackPoisoner::processStaticAllocas() {
   // Fake stack frames only guarantee alignment of the frame size.
   // In rare cases, where a frame has small objects with significant alignment
   // needs, we need to place it in a frame that is at least as large as the
-  // required frame alignment.
+  // required frame alignment. (In most modern compilers, sizeof(type)
+  // >= alignof(type), making this impossible.)
   uint64_t AlignedLocalStackSize = std::max(L.FrameSize, L.FrameAlignment);
   bool DoStackMalloc =
       ASan.UseAfterReturn != AsanDetectStackUseAfterReturnMode::Never &&
