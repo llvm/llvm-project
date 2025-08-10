@@ -124,6 +124,11 @@ New checks
   Checks for uses of MLIR's old/to be deprecated ``OpBuilder::create<T>`` form
   and suggests using ``T::create`` instead.
 
+- New :doc:`modernize-replace-with-std-copy
+  <clang-tidy/checks/modernize-replace-with-std-copy>` check.
+
+  Tries to replace calls to ``memmove`` and ``memcpy`` with an equivalent call to ``std::copy_n``.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
