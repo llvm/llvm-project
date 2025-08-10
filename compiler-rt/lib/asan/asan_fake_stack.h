@@ -66,7 +66,7 @@ class FakeStack {
 
   void Destroy(int tid);
 
-  // stack_size_log is at least 15 (stack_size >= 32K).
+  // min_uar_stack_size_log is 16 (stack_size >= 64KB)
   static uptr SizeRequiredForFlags(uptr stack_size_log) {
     return ((uptr)1) << (stack_size_log + 1 - kMinStackFrameSizeLog);
   }
@@ -120,6 +120,10 @@ class FakeStack {
   //
   // 1) (this + kFlagsOffset + SizeRequiredForFlags())) is aligned to
   //    1<<kMaxStackFrameSizeLog (see FakeStack::Create)
+  //
+  //    Note that SizeRequiredForFlags(16) == 2048. If FakeStack::Create() had
+  //    merely returned an address from mmap (4K-aligned), the addition would
+  //    not be 4K-aligned.
   // 2) We know that stack_size_log >= kMaxStackFrameSizeLog (otherwise you
   //    couldn't store a single frame of that size in the entire stack)
   //    hence (1<<stack_size_log) is aligned to 1<<kMaxStackFrameSizeLog
