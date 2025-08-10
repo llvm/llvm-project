@@ -110,8 +110,7 @@ const void *const *SmallPtrSetImplBase::FindBucketFor(const void *Ptr) const {
 /// Grow - Allocate a larger backing store for the buckets and move it over.
 ///
 void SmallPtrSetImplBase::Grow(unsigned NewSize) {
-  const void **OldBuckets = CurArray;
-  const void **OldEnd = EndPointer();
+  auto OldBuckets = buckets();
   bool WasSmall = isSmall();
 
   // Install the new array.  Clear all the buckets to empty.
@@ -123,15 +122,14 @@ void SmallPtrSetImplBase::Grow(unsigned NewSize) {
   memset(CurArray, -1, NewSize*sizeof(void*));
 
   // Copy over all valid entries.
-  for (const void **BucketPtr = OldBuckets; BucketPtr != OldEnd; ++BucketPtr) {
+  for (const void *&Bucket : OldBuckets) {
     // Copy over the element if it is valid.
-    const void *Elt = *BucketPtr;
-    if (Elt != getTombstoneMarker() && Elt != getEmptyMarker())
-      *const_cast<void**>(FindBucketFor(Elt)) = const_cast<void*>(Elt);
+    if (Bucket != getTombstoneMarker() && Bucket != getEmptyMarker())
+      *const_cast<void **>(FindBucketFor(Bucket)) = const_cast<void *>(Bucket);
   }
 
   if (!WasSmall)
-    free(OldBuckets);
+    free(OldBuckets.begin());
   NumNonEmpty -= NumTombstones;
   NumTombstones = 0;
   IsSmall = false;
