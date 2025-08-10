@@ -6608,9 +6608,7 @@ AST_MATCHER(QualType, isSignedInteger) {
 /// \endcode
 /// functionDecl(hasAnyParameter(hasType(isChar())))
 /// matches "a(char)", but not "b(wchar_t)", "c(char8_t)", or "d(double)"
-AST_MATCHER(QualType, isChar) {
-    return Node->isCharType();
-}
+AST_MATCHER(QualType, isChar) { return Node->isCharType(); }
 
 /// Matches QualType nodes that are of wide char type.
 ///
@@ -6623,9 +6621,7 @@ AST_MATCHER(QualType, isChar) {
 /// \endcode
 /// functionDecl(hasAnyParameter(hasType(isWideChar())))
 /// matches "b(wchar_t)", but not "a(char)", "c(char8_t)", or "d(double)"
-AST_MATCHER(QualType, isWideChar) {
-    return Node->isWideCharType();
-}
+AST_MATCHER(QualType, isWideChar) { return Node->isWideCharType(); }
 
 /// Matches QualType nodes that are of any character type.
 ///

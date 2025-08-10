@@ -117,12 +117,11 @@ static std::string getFloatReplacement(const BuiltinType *BT,
 
 void AvoidPlatformSpecificFundamentalTypesCheck::registerMatchers(
     MatchFinder *Finder) {
-  auto PlatformSpecificFundamentalType = qualType(
-      allOf(builtinType(),
-            anyOf(WarnOnInts ? isBuiltinInt() : unless(anything()),
-                  WarnOnFloats ? isBuiltinFloat() : unless(anything()),
-                  WarnOnChars ? isChar() : unless(anything()),
-                  WarnOnChars ? isWideChar() : unless(anything()))));
+  auto PlatformSpecificFundamentalType = qualType(allOf(
+      builtinType(), anyOf(WarnOnInts ? isBuiltinInt() : unless(anything()),
+                           WarnOnFloats ? isBuiltinFloat() : unless(anything()),
+                           WarnOnChars ? isChar() : unless(anything()),
+                           WarnOnChars ? isWideChar() : unless(anything()))));
 
   if (!WarnOnInts && !WarnOnFloats && !WarnOnChars)
     return;
