@@ -47,7 +47,7 @@ namespace { struct S8 {}; }
 template<typename>
 void func8();
 template<> [[clang::sycl_external]] void func8<S8>() {}
-// expected-error@-1{{'clang::sycl_external' attribute does not appear on the first declaration}}
+// expected-warning@-1{{'clang::sycl_external' attribute does not appear on the first declaration}}
 // expected-note@-2{{previous declaration is here}}
 
 // FIXME: The implicit instantiation of func9<S9>() is valid.
@@ -69,8 +69,27 @@ template void test_func9<T9>(); // FIXME: don't diagnose implicit instantiation 
 // The first declaration of a SYCL external function is required to have this attribute.
 // expected-note@+1{{previous declaration is here}}
 int foo();
-// expected-error@+1{{'clang::sycl_external' attribute does not appear on the first declaration}}
+// expected-warning@+1{{'clang::sycl_external' attribute does not appear on the first declaration}}
 [[clang::sycl_external]] int foo();
+
+// expected-note@+1{{previous declaration is here}}
+void goo();
+// expected-warning@+1{{'clang::sycl_external' attribute does not appear on the first declaration}}
+[[clang::sycl_external]] void goo();
+void goo() {}
+
+// expected-note@+1{{previous declaration is here}}
+void hoo() {}
+// expected-warning@+1{{'clang::sycl_external' attribute does not appear on the first declaration}}
+[[clang::sycl_external]] void hoo();
+
+// expected-note@+1{{previous declaration is here}}
+void joo();
+void use_joo() {
+  joo();
+}
+// expected-warning@+1{{'clang::sycl_external' attribute does not appear on the first declaration}}
+[[clang::sycl_external]] void joo();
 
 // Subsequent declarations of a SYCL external function may optionally specify this attribute.
 [[clang::sycl_external]] int boo();

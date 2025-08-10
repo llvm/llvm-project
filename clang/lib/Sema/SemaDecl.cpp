@@ -4099,7 +4099,7 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
     //   optionally use SYCL_EXTERNAL, but this is not required.
     const SYCLExternalAttr *SEA = New->getAttr<SYCLExternalAttr>();
     if (SEA && !Old->hasAttr<SYCLExternalAttr>()) {
-      Diag(SEA->getLocation(), diag::err_attribute_missing_on_first_decl)
+      Diag(SEA->getLocation(), diag::warn_attribute_missing_on_first_decl)
           << SEA;
       Diag(Old->getLocation(), diag::note_previous_declaration);
       New->dropAttr<SYCLExternalAttr>();
