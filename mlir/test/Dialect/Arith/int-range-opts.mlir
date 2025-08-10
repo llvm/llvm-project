@@ -1,4 +1,4 @@
-// RUN: mlir-opt -int-range-optimizations --split-input-file %s | FileCheck %s
+// RUN: mlir-opt --int-range-optimizations --split-input-file %s | FileCheck %s
 
 // CHECK-LABEL: func @test
 //       CHECK:   %[[C:.*]] = arith.constant false
@@ -131,4 +131,14 @@ func.func @wraps() -> i8 {
   %val = test.with_bounds { umin = 63 : ui8, umax = 65 : ui8, smin = 63 : si8, smax = 65 : si8 } : i8
   %mod = arith.remsi %val, %c64 : i8
   return %mod : i8
+}
+
+// -----
+
+// CHECK-LABEL: func @create_poison_op
+// CHECK: %[[RES:.*]] = ub.poison : i32
+// CHECK: return %[[RES]]
+func.func @create_poison_op() -> i32 {
+  %val = test.with_bounds { umin = 1 : i32, umax = 0 : i32, smin = 1 : i32, smax = 0 : i32 } : i32
+  return %val : i32
 }
