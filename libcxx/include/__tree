@@ -1027,10 +1027,15 @@ public:
   __insert_unique_from_orphaned_node(const_iterator __p, __get_node_value_type_t<_Tp>&& __value) {
     // fails here for move_alloc.pass.cpp
     if (__libcpp_is_constant_evaluated()) {
-      __node_allocator& __na = __node_alloc();
-      key_type __kk;
-      __node_traits::construct(__na, std::addressof(__kk), std::move(__value.first));
-      __emplace_hint_unique(__p, std::move(__kk), std::move(__value.second));
+
+      // using __node_value_type = __get_node_value_type_t<value_type>;
+      // __get_node_value_type_t<value_type> __tmp(__value.first, __value.second);
+
+      // __node_allocator& __na = __node_alloc();
+      // key_type __kk;
+      // __node_traits::construct(__na, std::addressof(__kk), std::move(__value.first));
+      // __emplace_hint_unique(__p, std::move(__kk), std::move(__value.second));
+      __emplace_hint_unique(__p, std::move(__value.first), std::move(__value.second));
     } else 
     {
       __emplace_hint_unique(__p, const_cast<key_type&&>(__value.first), std::move(__value.second));
@@ -1210,8 +1215,8 @@ private:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __move_assign_alloc(__tree&, false_type) _NOEXCEPT {}
 
   template <class _From, class _ValueT = _Tp, __enable_if_t<__is_tree_value_type<_ValueT>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static void
-  __assign_value(__get_node_value_type_t<value_type>& __lhs, _From&& __rhs) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
+  __assign_value( __get_node_value_type_t<value_type>& __lhs, _From&& __rhs) {
     using __key_type = __remove_const_t<typename value_type::first_type>;
 
     if (__libcpp_is_constant_evaluated()) {
@@ -1223,9 +1228,12 @@ private:
       // todo: use __node_traits::construct
       // __node_allocator& __na = __lhs.__node_alloc();
       // __node_allocator& __na = __rhs.__node_alloc();
-      // __node_traits::destroy(__na, std::addressof(__lhs));
-      // __node_traits::construct(__na, std::addressof(__lhs), std::move(__tmp));
-      new (std::addressof(__lhs))(__node_value_type)(std::move(__tmp));
+      __node_allocator& __na = __node_alloc();
+      __node_traits::destroy(__na, std::addressof(__lhs));
+
+      // __node_allocator& __na = __rhs.__node_alloc();
+      __node_traits::construct(__na, std::addressof(__lhs), std::move(__tmp));
+      // new (std::addressof(__lhs))(__node_value_type)(std::move(__tmp));
     } else {
       // This is technically UB, since the object was constructed as `const`.
       // Clang doesn't optimize on this currently though.
@@ -1235,7 +1243,7 @@ private:
   }
 
   template <class _To, class _From, class _ValueT = _Tp, __enable_if_t<!__is_tree_value_type<_ValueT>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI static void __assign_value(_To& __lhs, _From&& __rhs) {
+  _LIBCPP_HIDE_FROM_ABI void __assign_value(_To& __lhs, _From&& __rhs) {
     __lhs = std::forward<_From>(__rhs);
   }
 
