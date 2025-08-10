@@ -195,6 +195,11 @@ private:
   /// Update root to include all chains from the Pending list.
   SDValue updateRoot(SmallVectorImpl<SDValue> &Pending);
 
+  /// Given a node representing a floating-point operation and its specified
+  /// exception behavior, this either updates the root or stores the node in
+  /// a list to be added to chains latter.
+  void pushFPOpOutChain(SDValue Result, fp::ExceptionBehavior EB);
+
   /// A unique monotonically increasing number used to order the SDNodes we
   /// create.
   unsigned SDNodeOrder;
