@@ -252,7 +252,7 @@ void LinkerDriver::parseSectionLayout(StringRef path) {
     }
 
     seenSections.insert(sectionNameStr);
-    ctx.config.sectionLayout[sectionNameStr] = index++;
+    ctx.config.sectionOrder[sectionNameStr] = index++;
   }
 }
 

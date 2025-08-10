@@ -1417,7 +1417,7 @@ void Writer::removeUnusedSections() {
 
 void Writer::layoutSections() {
   llvm::TimeTraceScope timeScope("Layout sections");
-  if (ctx.config.sectionLayout.empty())
+  if (ctx.config.sectionOrder.empty())
     return;
 
   std::unordered_map<const OutputSection *, size_t> originalOrder;
@@ -1427,15 +1427,15 @@ void Writer::layoutSections() {
   llvm::stable_sort(
       ctx.outputSections,
       [this, &originalOrder](const OutputSection *a, const OutputSection *b) {
-        auto itA = ctx.config.sectionLayout.find(a->name.str());
-        auto itB = ctx.config.sectionLayout.find(b->name.str());
+        auto itA = ctx.config.sectionOrder.find(a->name.str());
+        auto itB = ctx.config.sectionOrder.find(b->name.str());
 
-        if (itA != ctx.config.sectionLayout.end() &&
-            itB != ctx.config.sectionLayout.end())
+        if (itA != ctx.config.sectionOrder.end() &&
+            itB != ctx.config.sectionOrder.end())
           return itA->second < itB->second;
 
-        if (itA == ctx.config.sectionLayout.end() &&
-            itB == ctx.config.sectionLayout.end())
+        if (itA == ctx.config.sectionOrder.end() &&
+            itB == ctx.config.sectionOrder.end())
           return originalOrder[a] < originalOrder[b];
 
         // Not found in layout file; respect the original order
