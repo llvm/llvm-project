@@ -151,26 +151,40 @@ public:
       case FCmpInst::FCMP_UNO:
         return exactClass(Src, fcNan);
       case FCmpInst::FCMP_OGT: // x > 0
+        if (IsFabs)
+          return exactClass(Src, fcSubnormal | fcNormal | fcInf);
         return exactClass(Src, fcPosSubnormal | fcPosNormal | fcPosInf);
       case FCmpInst::FCMP_UGT: // isnan(x) || x > 0
+        if (IsFabs)
+          return exactClass(Src, fcSubnormal | fcNormal | fcInf | fcNan);
         return exactClass(Src, fcPosSubnormal | fcPosNormal | fcPosInf | fcNan);
       case FCmpInst::FCMP_OGE: // x >= 0
+        if (IsFabs)
+          return exactClass(Src, ~fcNan);
         return exactClass(Src, fcPositive | fcNegZero);
       case FCmpInst::FCMP_UGE: // isnan(x) || x >= 0
+        if (IsFabs)
+          return exactClass(Src, fcAllFlags);
         return exactClass(Src, fcPositive | fcNegZero | fcNan);
       case FCmpInst::FCMP_OLT: // x < 0
+        if (IsFabs)
+          return exactClass(Src, fcNone);
         return exactClass(Src, fcNegSubnormal | fcNegNormal | fcNegInf);
       case FCmpInst::FCMP_ULT: // isnan(x) || x < 0
+        if (IsFabs)
+          return exactClass(Src, fcNan);
         return exactClass(Src, fcNegSubnormal | fcNegNormal | fcNegInf | fcNan);
       case FCmpInst::FCMP_OLE: // x <= 0
+        if (IsFabs)
+          return exactClass(Src, fcZero);
         return exactClass(Src, fcNegative | fcPosZero);
       case FCmpInst::FCMP_ULE: // isnan(x) || x <= 0
+        if (IsFabs)
+          return exactClass(Src, fcZero | fcNan);
         return exactClass(Src, fcNegative | fcPosZero | fcNan);
       default:
         llvm_unreachable("all compare types are handled");
       }
-
-      return {Invalid, fcAllFlags, fcAllFlags};
     }
 
     const bool IsDenormalRHS = (OrigClass & fcSubnormal) == OrigClass;

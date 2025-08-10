@@ -1262,7 +1262,8 @@ define half @fabs_select_fabs(half noundef %x) {
 ; CHECK-NEXT:    [[ABS1:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt half [[ABS1]], 0xH0000
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], half [[X]], half 0xH0000
-; CHECK-NEXT:    ret half [[SEL]]
+; CHECK-NEXT:    [[ABS2:%.*]] = call half @llvm.fabs.f16(half [[SEL]])
+; CHECK-NEXT:    ret half [[ABS2]]
 ;
 entry:
   %abs1 = call half @llvm.fabs.f16(half %x)
