@@ -7,10 +7,10 @@
 define void @store(half %x, ptr %p) nounwind {
 ; CHECK-LABEL: store:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov r30, r20
-; CHECK-NEXT:    mov r31, r21
-; CHECK-NEXT:    std Z+1, r23
-; CHECK-NEXT:    st Z, r22
+; CHECK-NEXT:    mov r30, r22
+; CHECK-NEXT:    mov r31, r23
+; CHECK-NEXT:    std Z+1, r25
+; CHECK-NEXT:    st Z, r24
 ; CHECK-NEXT:    ret
   store half %x, ptr %p
   ret void
@@ -21,8 +21,8 @@ define half @return(ptr %p) nounwind {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    mov r30, r24
 ; CHECK-NEXT:    mov r31, r25
-; CHECK-NEXT:    ld r22, Z
-; CHECK-NEXT:    ldd r23, Z+1
+; CHECK-NEXT:    ld r24, Z
+; CHECK-NEXT:    ldd r25, Z+1
 ; CHECK-NEXT:    ret
   %r = load half, ptr %p
   ret half %r
@@ -79,8 +79,6 @@ define dso_local void @stored(ptr nocapture %a, double %b) local_unnamed_addr no
 ; CHECK-NEXT:    mov r24, r30
 ; CHECK-NEXT:    mov r25, r31
 ; CHECK-NEXT:    rcall __truncdfhf2
-; CHECK-NEXT:    rcall __extendhfsf2
-; CHECK-NEXT:    rcall __truncsfhf2
 ; CHECK-NEXT:    mov r30, r16
 ; CHECK-NEXT:    mov r31, r17
 ; CHECK-NEXT:    std Z+1, r25
@@ -108,8 +106,6 @@ define dso_local void @storef(ptr nocapture %a, float %b) local_unnamed_addr nou
 ; CHECK-NEXT:    mov r24, r18
 ; CHECK-NEXT:    mov r25, r19
 ; CHECK-NEXT:    rcall __truncsfhf2
-; CHECK-NEXT:    rcall __extendhfsf2
-; CHECK-NEXT:    rcall __truncsfhf2
 ; CHECK-NEXT:    mov r30, r16
 ; CHECK-NEXT:    mov r31, r17
 ; CHECK-NEXT:    std Z+1, r25
@@ -126,22 +122,14 @@ entry:
 define void @test_load_store(ptr %in, ptr %out) nounwind {
 ; CHECK-LABEL: test_load_store:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    push r16
-; CHECK-NEXT:    push r17
-; CHECK-NEXT:    mov r16, r22
-; CHECK-NEXT:    mov r17, r23
 ; CHECK-NEXT:    mov r30, r24
 ; CHECK-NEXT:    mov r31, r25
 ; CHECK-NEXT:    ld r24, Z
 ; CHECK-NEXT:    ldd r25, Z+1
-; CHECK-NEXT:    rcall __extendhfsf2
-; CHECK-NEXT:    rcall __truncsfhf2
-; CHECK-NEXT:    mov r30, r16
-; CHECK-NEXT:    mov r31, r17
+; CHECK-NEXT:    mov r30, r22
+; CHECK-NEXT:    mov r31, r23
 ; CHECK-NEXT:    std Z+1, r25
 ; CHECK-NEXT:    st Z, r24
-; CHECK-NEXT:    pop r17
-; CHECK-NEXT:    pop r16
 ; CHECK-NEXT:    ret
   %val = load half, ptr %in
   store half %val, ptr %out
@@ -177,8 +165,6 @@ define void @test_bitcast_to_half(ptr %addr, i16 %in) nounwind {
 define half @from_bits(i16 %x) nounwind {
 ; CHECK-LABEL: from_bits:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov r22, r24
-; CHECK-NEXT:    mov r23, r25
 ; CHECK-NEXT:    ret
   %res = bitcast i16 %x to half
   ret half %res
@@ -187,8 +173,6 @@ define half @from_bits(i16 %x) nounwind {
 define i16 @to_bits(half %x) nounwind {
 ; CHECK-LABEL: to_bits:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov r24, r22
-; CHECK-NEXT:    mov r25, r23
 ; CHECK-NEXT:    ret
     %res = bitcast half %x to i16
     ret i16 %res
@@ -231,8 +215,6 @@ define void @test_trunc32(float %in, ptr %addr) nounwind {
 ; CHECK-NEXT:    mov r16, r20
 ; CHECK-NEXT:    mov r17, r21
 ; CHECK-NEXT:    rcall __truncsfhf2
-; CHECK-NEXT:    rcall __extendhfsf2
-; CHECK-NEXT:    rcall __truncsfhf2
 ; CHECK-NEXT:    mov r30, r16
 ; CHECK-NEXT:    mov r31, r17
 ; CHECK-NEXT:    std Z+1, r25
@@ -249,8 +231,6 @@ define void @test_trunc64(double %in, ptr %addr) nounwind {
 ; CHECK-LABEL: test_trunc64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    rcall __truncdfhf2
-; CHECK-NEXT:    rcall __extendhfsf2
-; CHECK-NEXT:    rcall __truncsfhf2
 ; CHECK-NEXT:    mov r30, r16
 ; CHECK-NEXT:    mov r31, r17
 ; CHECK-NEXT:    std Z+1, r25
@@ -281,8 +261,6 @@ define void @test_sitofp_i64(i64 %a, ptr %p) nounwind {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    rcall __floatdisf
 ; CHECK-NEXT:    rcall __truncsfhf2
-; CHECK-NEXT:    rcall __extendhfsf2
-; CHECK-NEXT:    rcall __truncsfhf2
 ; CHECK-NEXT:    mov r30, r16
 ; CHECK-NEXT:    mov r31, r17
 ; CHECK-NEXT:    std Z+1, r25
@@ -312,8 +290,6 @@ define void @test_uitofp_i64(i64 %a, ptr %p) nounwind {
 ; CHECK-LABEL: test_uitofp_i64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    rcall __floatundisf
-; CHECK-NEXT:    rcall __truncsfhf2
-; CHECK-NEXT:    rcall __extendhfsf2
 ; CHECK-NEXT:    rcall __truncsfhf2
 ; CHECK-NEXT:    mov r30, r16
 ; CHECK-NEXT:    mov r31, r17
@@ -393,8 +369,6 @@ define void @test_trunc32_vec2(<2 x float> %a, ptr %p) nounwind {
 ; CHECK-NEXT:    mov r12, r18
 ; CHECK-NEXT:    mov r13, r19
 ; CHECK-NEXT:    rcall __truncsfhf2
-; CHECK-NEXT:    rcall __extendhfsf2
-; CHECK-NEXT:    rcall __truncsfhf2
 ; CHECK-NEXT:    mov r30, r16
 ; CHECK-NEXT:    mov r31, r17
 ; CHECK-NEXT:    std Z+3, r25
@@ -403,8 +377,6 @@ define void @test_trunc32_vec2(<2 x float> %a, ptr %p) nounwind {
 ; CHECK-NEXT:    mov r23, r13
 ; CHECK-NEXT:    mov r24, r14
 ; CHECK-NEXT:    mov r25, r15
-; CHECK-NEXT:    rcall __truncsfhf2
-; CHECK-NEXT:    rcall __extendhfsf2
 ; CHECK-NEXT:    rcall __truncsfhf2
 ; CHECK-NEXT:    mov r30, r16
 ; CHECK-NEXT:    mov r31, r17
@@ -424,8 +396,6 @@ define void @test_trunc64_vec1(<1 x double> %a, ptr %p) nounwind {
 ; CHECK-LABEL: test_trunc64_vec1:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    rcall __truncdfhf2
-; CHECK-NEXT:    rcall __extendhfsf2
-; CHECK-NEXT:    rcall __truncsfhf2
 ; CHECK-NEXT:    mov r30, r16
 ; CHECK-NEXT:    mov r31, r17
 ; CHECK-NEXT:    std Z+1, r25
@@ -439,51 +409,47 @@ define void @test_trunc64_vec1(<1 x double> %a, ptr %p) nounwind {
 define float @test_sitofp_fadd_i32(i32 %a, ptr %b) nounwind {
 ; CHECK-LABEL: test_sitofp_fadd_i32:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    push r10
-; CHECK-NEXT:    push r11
 ; CHECK-NEXT:    push r12
 ; CHECK-NEXT:    push r13
 ; CHECK-NEXT:    push r14
 ; CHECK-NEXT:    push r15
 ; CHECK-NEXT:    push r16
 ; CHECK-NEXT:    push r17
-; CHECK-NEXT:    mov r16, r24
-; CHECK-NEXT:    mov r17, r25
-; CHECK-NEXT:    mov r14, r22
-; CHECK-NEXT:    mov r15, r23
-; CHECK-NEXT:    mov r30, r20
-; CHECK-NEXT:    mov r31, r21
+; CHECK-NEXT:    mov r16, r20
+; CHECK-NEXT:    mov r17, r21
+; CHECK-NEXT:    rcall __floatsisf
+; CHECK-NEXT:    rcall __truncsfhf2
+; CHECK-NEXT:    mov r14, r24
+; CHECK-NEXT:    mov r15, r25
+; CHECK-NEXT:    mov r30, r16
+; CHECK-NEXT:    mov r31, r17
 ; CHECK-NEXT:    ld r24, Z
 ; CHECK-NEXT:    ldd r25, Z+1
 ; CHECK-NEXT:    rcall __extendhfsf2
-; CHECK-NEXT:    mov r12, r22
-; CHECK-NEXT:    mov r13, r23
-; CHECK-NEXT:    mov r10, r24
-; CHECK-NEXT:    mov r11, r25
-; CHECK-NEXT:    mov r22, r14
-; CHECK-NEXT:    mov r23, r15
-; CHECK-NEXT:    mov r24, r16
-; CHECK-NEXT:    mov r25, r17
-; CHECK-NEXT:    rcall __floatsisf
-; CHECK-NEXT:    rcall __truncsfhf2
+; CHECK-NEXT:    mov r16, r22
+; CHECK-NEXT:    mov r17, r23
+; CHECK-NEXT:    mov r12, r24
+; CHECK-NEXT:    mov r13, r25
+; CHECK-NEXT:    mov r24, r14
+; CHECK-NEXT:    mov r25, r15
 ; CHECK-NEXT:    rcall __extendhfsf2
 ; CHECK-NEXT:    mov r18, r22
 ; CHECK-NEXT:    mov r19, r23
 ; CHECK-NEXT:    mov r20, r24
 ; CHECK-NEXT:    mov r21, r25
-; CHECK-NEXT:    mov r22, r12
-; CHECK-NEXT:    mov r23, r13
-; CHECK-NEXT:    mov r24, r10
-; CHECK-NEXT:    mov r25, r11
+; CHECK-NEXT:    mov r22, r16
+; CHECK-NEXT:    mov r23, r17
+; CHECK-NEXT:    mov r24, r12
+; CHECK-NEXT:    mov r25, r13
 ; CHECK-NEXT:    rcall __addsf3
+; CHECK-NEXT:    rcall __truncsfhf2
+; CHECK-NEXT:    rcall __extendhfsf2
 ; CHECK-NEXT:    pop r17
 ; CHECK-NEXT:    pop r16
 ; CHECK-NEXT:    pop r15
 ; CHECK-NEXT:    pop r14
 ; CHECK-NEXT:    pop r13
 ; CHECK-NEXT:    pop r12
-; CHECK-NEXT:    pop r11
-; CHECK-NEXT:    pop r10
 ; CHECK-NEXT:    ret
   %tmp0 = load half, ptr %b
   %tmp1 = sitofp i32 %a to half
@@ -495,22 +461,20 @@ define float @test_sitofp_fadd_i32(i32 %a, ptr %b) nounwind {
 define half @chained_fp_ops(half %x) {
 ; CHECK-LABEL: chained_fp_ops:
 ; CHECK:       ; %bb.0: ; %start
-; CHECK-NEXT:    mov r24, r22
-; CHECK-NEXT:    mov r25, r23
 ; CHECK-NEXT:    rcall __extendhfsf2
 ; CHECK-NEXT:    mov r18, r22
 ; CHECK-NEXT:    mov r19, r23
 ; CHECK-NEXT:    mov r20, r24
 ; CHECK-NEXT:    mov r21, r25
 ; CHECK-NEXT:    rcall __addsf3
+; CHECK-NEXT:    rcall __truncsfhf2
+; CHECK-NEXT:    rcall __extendhfsf2
 ; CHECK-NEXT:    ldi r18, 0
 ; CHECK-NEXT:    ldi r19, 0
 ; CHECK-NEXT:    ldi r20, 0
 ; CHECK-NEXT:    ldi r21, 63
 ; CHECK-NEXT:    rcall __mulsf3
 ; CHECK-NEXT:    rcall __truncsfhf2
-; CHECK-NEXT:    mov r22, r24
-; CHECK-NEXT:    mov r23, r25
 ; CHECK-NEXT:    ret
 start:
   %y = fmul half %x, 0xH4000
@@ -523,8 +487,6 @@ define half @test_select_cc(half) nounwind {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    push r16
 ; CHECK-NEXT:    push r17
-; CHECK-NEXT:    mov r24, r22
-; CHECK-NEXT:    mov r25, r23
 ; CHECK-NEXT:    rcall __extendhfsf2
 ; CHECK-NEXT:    ldi r16, 0
 ; CHECK-NEXT:    ldi r17, 0
@@ -534,20 +496,13 @@ define half @test_select_cc(half) nounwind {
 ; CHECK-NEXT:    mov r21, r17
 ; CHECK-NEXT:    rcall __nesf2
 ; CHECK-NEXT:    cpi r24, 0
-; CHECK-NEXT:    brne .LBB25_2
+; CHECK-NEXT:    breq .LBB25_2
 ; CHECK-NEXT:  ; %bb.1:
+; CHECK-NEXT:    ldi r16, 0
+; CHECK-NEXT:    ldi r17, 60
+; CHECK-NEXT:  .LBB25_2:
 ; CHECK-NEXT:    mov r24, r16
 ; CHECK-NEXT:    mov r25, r17
-; CHECK-NEXT:    rjmp .LBB25_3
-; CHECK-NEXT:  .LBB25_2:
-; CHECK-NEXT:    ldi r24, 128
-; CHECK-NEXT:    ldi r25, 63
-; CHECK-NEXT:  .LBB25_3:
-; CHECK-NEXT:    mov r22, r16
-; CHECK-NEXT:    mov r23, r17
-; CHECK-NEXT:    rcall __truncsfhf2
-; CHECK-NEXT:    mov r22, r24
-; CHECK-NEXT:    mov r23, r25
 ; CHECK-NEXT:    pop r17
 ; CHECK-NEXT:    pop r16
 ; CHECK-NEXT:    ret
@@ -559,9 +514,7 @@ define half @test_select_cc(half) nounwind {
 define half @fabs(half %x) nounwind {
 ; CHECK-LABEL: fabs:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    andi r23, 127
-; CHECK-NEXT:    ldi r24, 0
-; CHECK-NEXT:    ldi r25, 0
+; CHECK-NEXT:    andi r25, 127
 ; CHECK-NEXT:    ret
   %a = call half @llvm.fabs.f16(half %x)
   ret half %a
@@ -570,23 +523,11 @@ define half @fabs(half %x) nounwind {
 define half @fcopysign(half %x, half %y) nounwind {
 ; CHECK-LABEL: fcopysign:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    push r16
-; CHECK-NEXT:    push r17
-; CHECK-NEXT:    mov r16, r18
-; CHECK-NEXT:    mov r17, r19
-; CHECK-NEXT:    mov r24, r22
-; CHECK-NEXT:    mov r25, r23
-; CHECK-NEXT:    rcall __extendhfsf2
-; CHECK-NEXT:    andi r16, 0
-; CHECK-NEXT:    andi r17, 128
+; CHECK-NEXT:    andi r22, 0
+; CHECK-NEXT:    andi r23, 128
 ; CHECK-NEXT:    andi r25, 127
-; CHECK-NEXT:    or r24, r16
-; CHECK-NEXT:    or r25, r17
-; CHECK-NEXT:    rcall __truncsfhf2
-; CHECK-NEXT:    mov r22, r24
-; CHECK-NEXT:    mov r23, r25
-; CHECK-NEXT:    pop r17
-; CHECK-NEXT:    pop r16
+; CHECK-NEXT:    or r24, r22
+; CHECK-NEXT:    or r25, r23
 ; CHECK-NEXT:    ret
   %a = call half @llvm.copysign.f16(half %x, half %y)
   ret half %a
