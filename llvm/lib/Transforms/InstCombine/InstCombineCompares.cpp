@@ -1324,26 +1324,23 @@ Instruction *InstCombinerImpl::foldICmpWithZero(ICmpInst &Cmp) {
 //      to
 //      icmp eq 0, (and num, val - 1)
 // For value being power of two
-Instruction *InstCombinerImpl::foldNextMultiply(ICmpInst &Cmp) {
-  Value *Op0 = Cmp.getOperand(0);
-  Value *Neg, *Add, *Num, *Mask, *Value;
+Instruction *InstCombinerImpl::foldIsMultipleOfAPowerOfTwo(ICmpInst &Cmp) {
+  Value *Op0 = Cmp.getOperand(0), *Op1 = Cmp.getOperand(1);
+  Value *Neg, *Num, *Mask, *Value;
   CmpPredicate Pred;
   const APInt *NegConst, *MaskConst;
 
-  // Match num + neg
-  if (!match(Op0, m_OneUse(m_c_And(m_Value(Add), m_Value(Neg)))))
+  if (!match(&Cmp, m_c_ICmp(Pred, m_Value(Num),
+                            m_OneUse(m_c_And(
+                                m_OneUse(m_c_Add(m_Value(Num), m_Value(Mask))),
+                                m_Value(Neg))))))
     return nullptr;
 
-  // Match num & mask and handle commutative care
-  if (!match(Op0, m_c_And(m_c_Add(m_Value(Num), m_Value(Mask)), m_Value(Neg))))
+  if (!ICmpInst::isEquality(Pred))
     return nullptr;
 
   // Check the constant case
-  if (match(Neg, m_APInt(NegConst)) && match(Mask, m_APInt(MaskConst))) {
-    // Mask + 1 should be a power-of-two
-    if (!(*MaskConst + 1).isPowerOf2())
-      return nullptr;
-
+  if (match(Neg, m_APInt(NegConst)) && match(Mask, m_LowBitMask(MaskConst))) {
     // Neg = -(Mask + 1)
     if (*NegConst != -(*MaskConst + 1))
       return nullptr;
@@ -1367,11 +1364,7 @@ Instruction *InstCombinerImpl::foldNextMultiply(ICmpInst &Cmp) {
       return nullptr;
   }
 
-  // Verify that Add and Num are connected by ICmp.
-  if (!match(&Cmp, m_c_ICmp(Pred, m_Value(Add), m_Specific(Num))))
-    return nullptr;
-
-  if (!ICmpInst::isEquality(Pred))
+  if (!match(Op0, m_Specific(Num)) && !match(Op1, m_Specific(Num)))
     return nullptr;
 
   // Create new icmp eq (num & (val - 1)), 0
@@ -7705,7 +7698,7 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
   if (Instruction *Res = foldICmpUsingKnownBits(I))
     return Res;
 
-  if (Instruction *Res = foldNextMultiply(I))
+  if (Instruction *Res = foldIsMultipleOfAPowerOfTwo(I))
     return Res;
 
   // Test if the ICmpInst instruction is used exclusively by a select as

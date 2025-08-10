@@ -3454,12 +3454,13 @@ define i1 @val_is_aligend_const_pow2_multiuse(i32 %num) {
   ret i1 %_0
 }
 
+; Applies since number of instructions do not change
 define i1 @val_is_aligend_const_pow2_multiuse1(i32 %num) {
 ; CHECK-LABEL: @val_is_aligend_const_pow2_multiuse1(
 ; CHECK-NEXT:    [[NUM_BIASED:%.*]] = add i32 [[NUM:%.*]], 4095
 ; CHECK-NEXT:    call void @use(i32 [[NUM_BIASED]])
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[NUM]], 4095
-; CHECK-NEXT:    [[_0:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[_2_SROA_0_0:%.*]] = and i32 [[NUM_BIASED]], -4096
+; CHECK-NEXT:    [[_0:%.*]] = icmp eq i32 [[_2_SROA_0_0]], [[NUM]]
 ; CHECK-NEXT:    ret i1 [[_0]]
 ;
   %num.biased = add i32 %num, 4095
