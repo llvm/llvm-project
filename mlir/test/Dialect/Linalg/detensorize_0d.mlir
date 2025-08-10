@@ -53,10 +53,11 @@ func.func @detensor_op_sequence(%arg1: tensor<f32>, %arg2: tensor<f32>) -> tenso
 }
 // CHECK-LABEL: func @detensor_op_sequence
 // CHECK-SAME:    (%[[arg1:.*]]: tensor<f32>, %[[arg2:.*]]: tensor<f32>)
-// CHECK-DAG:     %[[arg1_val:.*]] = tensor.extract %[[arg1]]
-// CHECK-DAG:     %[[arg2_val:.*]] = tensor.extract %[[arg2]]
-// CHECK:         %[[detensored_res:.*]] = arith.addf %[[arg1_val]], %[[arg2_val]]
-// CHECK:         %[[detensored_res2:.*]] = arith.mulf %[[arg1_val]], %[[detensored_res]]
+// CHECK:         %[[arg1_val_1:.*]] = tensor.extract %[[arg1]]
+// CHECK:         %[[arg2_val:.*]] = tensor.extract %[[arg2]]
+// CHECK:         %[[arg1_val_2:.*]] = tensor.extract %[[arg1]]
+// CHECK:         %[[detensored_res:.*]] = arith.addf %[[arg1_val_2]], %[[arg2_val]]
+// CHECK:         %[[detensored_res2:.*]] = arith.mulf %[[arg1_val_1]], %[[detensored_res]]
 // CHECK:         %[[detensored_res3:.*]] = arith.divf %[[detensored_res]], %[[detensored_res2]]
 // CHECK:         %[[new_tensor_res:.*]] = tensor.from_elements %[[detensored_res3]]
 // CHECK:         return %[[new_tensor_res]]

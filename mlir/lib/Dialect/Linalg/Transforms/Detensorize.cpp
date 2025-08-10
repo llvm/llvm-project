@@ -458,6 +458,22 @@ struct LinalgDetensorize
     }
   };
 
+  /// A listener that forwards notifyBlockErased and notifyOperationErased to
+  /// the given callbacks.
+  struct CallbackListener : public RewriterBase::Listener {
+    CallbackListener(std::function<void(Operation *op)> onOperationErased,
+                     std::function<void(Block *block)> onBlockErased)
+        : onOperationErased(onOperationErased), onBlockErased(onBlockErased) {}
+
+    void notifyBlockErased(Block *block) override { onBlockErased(block); }
+    void notifyOperationErased(Operation *op) override {
+      onOperationErased(op);
+    }
+
+    std::function<void(Operation *op)> onOperationErased;
+    std::function<void(Block *block)> onBlockErased;
+  };
+
   void runOnOperation() override {
     MLIRContext *context = &getContext();
     DetensorizeTypeConverter typeConverter;
@@ -551,8 +567,22 @@ struct LinalgDetensorize
     populateBranchOpInterfaceTypeConversionPattern(patterns, typeConverter,
                                                    shouldConvertBranchOperand);
 
-    if (failed(
-            applyFullConversion(getOperation(), target, std::move(patterns))))
+    ConversionConfig config;
+    auto onOperationErased = [&](Operation *op) {
+      opsToDetensor.erase(op);
+      detensorableBranchOps.erase(op);
+    };
+    auto onBlockErased = [&](Block *block) {
+      for (BlockArgument arg : block->getArguments()) {
+        blockArgsToDetensor.erase(arg);
+      }
+    };
+    CallbackListener listener(onOperationErased, onBlockErased);
+
+    config.listener = &listener;
+    config.allowPatternRollback = false;
+    if (failed(applyFullConversion(getOperation(), target, std::move(patterns),
+                                   config)))
       signalPassFailure();
 
     RewritePatternSet canonPatterns(context);
