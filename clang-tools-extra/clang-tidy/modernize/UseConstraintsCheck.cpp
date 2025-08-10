@@ -8,6 +8,7 @@
 
 #include "UseConstraintsCheck.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 
@@ -76,6 +77,15 @@ matchEnableIfSpecializationImplTypename(TypeLoc TheType) {
     const TemplateDecl *TD =
         Specialization->getTemplateName().getAsTemplateDecl();
     if (!TD || TD->getName() != "enable_if")
+      return std::nullopt;
+
+    const TemplateParameterList *Params = TD->getTemplateParameters();
+    if (Params->size() != 2)
+      return std::nullopt;
+
+    const auto *FirstParam =
+        dyn_cast<NonTypeTemplateParmDecl>(Params->getParam(0));
+    if (!FirstParam || !FirstParam->getType()->isBooleanType())
       return std::nullopt;
 
     int NumArgs = SpecializationLoc.getNumArgs();
