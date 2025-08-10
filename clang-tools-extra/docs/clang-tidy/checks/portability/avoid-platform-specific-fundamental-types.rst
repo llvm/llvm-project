@@ -184,7 +184,7 @@ Options
    ``float64_t`` instead of ``float`` and ``double`` respectively, when the
    target platform supports standard IEEE754 sizes.
 
-   Example with ``WarnOnFloats`` enabled:
+   Example with :option:`WarnOnFloats` enabled:
 
    .. code-block:: c++
 
