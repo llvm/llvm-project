@@ -186,6 +186,10 @@ Changes in existing checks
   <clang-tidy/checks/portability/template-virtual-member-function>` check to
   avoid false positives on pure virtual member functions.
 
+- Improved :doc:`readability-container-size-empty
+  <clang-tidy/checks/readability/container-size-empty>` check by correctly
+  generating fix-it hints when size method is called from implicit ``this``.
+
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check by ignoring
   declarations in system headers.
