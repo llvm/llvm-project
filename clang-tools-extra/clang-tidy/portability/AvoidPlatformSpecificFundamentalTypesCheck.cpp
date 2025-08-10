@@ -121,7 +121,8 @@ void AvoidPlatformSpecificFundamentalTypesCheck::registerMatchers(
       allOf(builtinType(),
             anyOf(WarnOnInts ? isBuiltinInt() : unless(anything()),
                   WarnOnFloats ? isBuiltinFloat() : unless(anything()),
-                  WarnOnChars ? isAnyCharacter() : unless(anything()))));
+                  WarnOnChars ? isChar() : unless(anything()),
+                  WarnOnChars ? isWideChar() : unless(anything()))));
 
   if (!WarnOnInts && !WarnOnFloats && !WarnOnChars)
     return;
@@ -139,6 +140,10 @@ void AvoidPlatformSpecificFundamentalTypesCheck::check(
   SourceLocation Loc = TL->getBeginLoc();
   QualType QT = TL->getType();
   SourceRange TypeRange = TL->getSourceRange();
+
+  // Skip implicit type locations, such as literals
+  if (!Loc.isValid() || !TypeRange.isValid())
+    return;
 
   const std::string TypeName = QT.getAsString();
 
@@ -165,7 +170,7 @@ void AvoidPlatformSpecificFundamentalTypesCheck::check(
                 "consider using a 'typedef' or fixed-width type instead")
           << TypeName;
     }
-  } else if (QT->isAnyCharacterType()) {
+  } else if (QT->isCharType() || QT->isWideCharType()) {
     diag(Loc, "avoid using platform-dependent character type '%0'; "
               "consider using 'char8_t' for text or 'std::byte' for bytes")
         << TypeName;

@@ -18,13 +18,13 @@ unsigned char global_unsigned_char = 'c';
 
 // Function parameters
 void func_with_char_param(char param) {}
-// CHECK-MESSAGES: :[[@LINE-1]]:28: warning: avoid using platform-dependent character type 'char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+// CHECK-MESSAGES: :[[@LINE-1]]:27: warning: avoid using platform-dependent character type 'char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
 
 void func_with_signed_char_param(signed char param) {}
-// CHECK-MESSAGES: :[[@LINE-1]]:35: warning: avoid using platform-dependent character type 'signed char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+// CHECK-MESSAGES: :[[@LINE-1]]:34: warning: avoid using platform-dependent character type 'signed char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
 
 void func_with_unsigned_char_param(unsigned char param) {}
-// CHECK-MESSAGES: :[[@LINE-1]]:37: warning: avoid using platform-dependent character type 'unsigned char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
+// CHECK-MESSAGES: :[[@LINE-1]]:36: warning: avoid using platform-dependent character type 'unsigned char'; consider using 'char8_t' for text or 'std::byte' for bytes [portability-avoid-platform-specific-fundamental-types]
 
 // Function return types
 char func_returning_char() { return 'a'; }
