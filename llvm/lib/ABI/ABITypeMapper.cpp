@@ -55,9 +55,6 @@ Type *ABITypeMapper::convertType(const abi::Type *ABIType) {
   case abi::TypeKind::Struct:
     Result = convertStructType(cast<abi::StructType>(ABIType));
     break;
-  case abi::TypeKind::Union:
-    Result = convertUnionType(cast<abi::UnionType>(ABIType));
-    break;
   case abi::TypeKind::Void:
     Result = Type::getVoidTy(Context);
     break;
@@ -87,6 +84,8 @@ Type *ABITypeMapper::convertArrayType(const abi::ArrayType *AT) {
     return nullptr;
 
   uint64_t NumElements = AT->getNumElements();
+  if (AT->isMatrixType())
+    return VectorType::get(ElementType, ElementCount::getFixed(NumElements));
 
   return ArrayType::get(ElementType, NumElements);
 }
@@ -104,15 +103,10 @@ Type *ABITypeMapper::convertVectorType(const abi::VectorType *VT) {
 }
 
 Type *ABITypeMapper::convertStructType(const abi::StructType *ST) {
-  ArrayRef<abi::FieldInfo> FieldsArray(ST->getFields(), ST->getNumFields());
+  ArrayRef<abi::FieldInfo> FieldsArray = ST->getFields();
   return createStructFromFields(FieldsArray, ST->getNumFields(),
-                                ST->getSizeInBits(), ST->getAlignment(), false,
-                                ST->isCoercedStruct());
-}
-
-Type *ABITypeMapper::convertUnionType(const abi::UnionType *UT) {
-  return createStructFromFields(*UT->getFields(), UT->getNumFields(),
-                                UT->getSizeInBits(), UT->getAlignment(), true);
+                                ST->getSizeInBits(), ST->getAlignment(),
+                                ST->isUnion(), ST->isCoercedStruct());
 }
 
 Type *ABITypeMapper::convertComplexType(const abi::ComplexType *CT) {
@@ -120,13 +114,6 @@ Type *ABITypeMapper::convertComplexType(const abi::ComplexType *CT) {
   Type *ElementType = convertType(CT->getElementType());
   if (!ElementType)
     return nullptr;
-  //   // Check if the element type is a float type and is 16 bits (half
-  //   precision)
-  // if (ElementType->isFloatingPointTy() &&
-  // ElementType->getPrimitiveSizeInBits() == 2 /* bytes */ * 8) {
-  //   // Return <2 x half> vector type for complex half
-  //   return VectorType::get(ElementType, ElementCount::getFixed(2));
-  // }
 
   SmallVector<Type *, 2> Fields = {ElementType, ElementType};
   return StructType::get(Context, Fields, /*isPacked=*/false);
@@ -177,7 +164,7 @@ StructType *ABITypeMapper::createStructFromFields(
       } else if (FieldType->isFloatingPointTy()) {
         FieldSize = FieldType->getPrimitiveSizeInBits();
       } else if (FieldType->isPointerTy()) {
-        FieldSize = 64; // Assume 64-bit pointers
+        FieldSize = Field.FieldType->getSizeInBits();
       }
 
       if (FieldSize > LargestFieldSize) {
@@ -233,7 +220,7 @@ StructType *ABITypeMapper::createStructFromFields(
         } else if (FieldType->isFloatingPointTy()) {
           CurrentOffset += FieldType->getPrimitiveSizeInBits();
         } else if (FieldType->isPointerTy()) {
-          CurrentOffset += 64; // Assume 64-bit pointers
+          CurrentOffset += Field.FieldType->getSizeInBits();
         } else {
           CurrentOffset += 64; // Conservative estimate
         }

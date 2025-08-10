@@ -30,10 +30,14 @@ typedef __attribute__((vector_size(64))) float my_m512;
 
 my_m256 SYSV_CC get_m256(void);
 void SYSV_CC take_m256(my_m256);
+my_m512 SYSV_CC get_m512(void);
+void SYSV_CC take_m512(my_m512);
 
 void use_vectors(void) {
   my_m256 v1 = get_m256();
   take_m256(v1);
+  my_m512 v2 = get_m512();
+  take_m512(v2);
 }
 
 // CHECK: define {{(dso_local )?}}void @use_vectors()

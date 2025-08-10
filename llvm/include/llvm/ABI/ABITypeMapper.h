@@ -53,8 +53,6 @@ private:
 
   Type *convertStructType(const abi::StructType *ST);
 
-  Type *convertUnionType(const abi::UnionType *UT);
-
   Type *convertVoidType(const abi::VoidType *VT);
 
   Type *getFloatTypeForSemantics(const fltSemantics &Semantics);

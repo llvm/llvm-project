@@ -20,7 +20,7 @@ private:
   TypeBuilder &TB;
 
   bool isAggregateType(const Type *Ty) const {
-    return Ty->isStruct() || Ty->isUnion() || Ty->isArray();
+    return Ty->isStruct() || Ty->isVector() || Ty->isArray();
   }
 
   bool isPromotableIntegerType(const IntegerType *IntTy) const {
@@ -31,7 +31,7 @@ private:
 public:
   BPFABIInfo(TypeBuilder &TypeBuilder) : TB(TypeBuilder) {}
 
-  ABIArgInfo classifyReturnType(const Type *RetTy) const override {
+  ABIArgInfo classifyReturnType(const Type *RetTy) const {
     if (RetTy->isVoid())
       return ABIArgInfo::getIgnore();
 
@@ -51,7 +51,7 @@ public:
     return ABIArgInfo::getDirect();
   }
 
-  ABIArgInfo classifyArgumentType(const Type *ArgTy) const {
+  ABIArgInfo classifyBPFArgumentType(const Type *ArgTy) const {
     if (isAggregateType(ArgTy)) {
       auto SizeInBits = ArgTy->getSizeInBits().getFixedValue();
       if (SizeInBits == 0)
@@ -94,7 +94,7 @@ public:
   void computeInfo(ABIFunctionInfo &FI) const override {
     FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
     for (auto &I : FI.arguments()) {
-      I.ArgInfo = classifyArgumentType(I.ABIType);
+      I.ArgInfo = classifyBPFArgumentType(I.ABIType);
     }
   }
 };

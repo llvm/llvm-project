@@ -48,7 +48,8 @@ private:
   const llvm::abi::Type *convertMatrixType(const ConstantMatrixType *MT);
 
   const llvm::abi::StructType *convertStructType(const clang::RecordDecl *RD);
-  const llvm::abi::UnionType *convertUnionType(const clang::RecordDecl *RD);
+  const llvm::abi::StructType *convertUnionType(const clang::RecordDecl *RD,
+                                                bool isTransparent = false);
   const llvm::abi::Type *createPointerTypeForPointee(QualType PointeeType);
   const llvm::abi::StructType *convertCXXRecordType(const CXXRecordDecl *RD,
                                                     bool canPassInRegs);
