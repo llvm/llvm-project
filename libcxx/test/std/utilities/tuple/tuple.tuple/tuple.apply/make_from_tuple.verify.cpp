@@ -9,7 +9,7 @@
 // REQUIRES: std-at-least-c++17
 
 // No diagnostic gets emitted when we build with modules.
-// XFAIL: clang-modules-build
+// XFAIL: (c++17 && clang-modules-build)
 
 // <tuple>
 
