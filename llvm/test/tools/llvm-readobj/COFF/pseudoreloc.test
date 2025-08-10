@@ -71,6 +71,10 @@ INVALIDSYMBOL-NEXT: Target: 0x[[#%X,LOCAL1A+4]]
 ; Assume the position of the section and the relocation list for further tests.
 RUN: FileCheck --input-file=%p/Inputs/pseudoreloc.i386.yaml %s --check-prefix=RELOCPOS --match-full-lines
 
+RELOCPOS:     sections:
+RELOCPOS-NOT:   - Name:
+RELOCPOS:       - Name:            .text
+RELOCPOS-NOT:   - Name:
 RELOCPOS:       - Name:            .rdata
 RELOCPOS-NEXT:    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
 RELOCPOS-NEXT:    VirtualAddress:  8192
@@ -81,6 +85,14 @@ RELOCPOS:       - Name: ___RUNTIME_PSEUDO_RELOC_LIST_END__
 RELOCPOS-NEXT:    Value: {{\[\[END=80\]\]}}
 RELOCPOS:       - Name: ___RUNTIME_PSEUDO_RELOC_LIST__
 RELOCPOS-NEXT:    Value: {{\[\[BEGIN=8\]\]}}
+RELOCPOS-NEXT:    SectionNumber: {{\[\[SECTION_OF_BEGIN=2\]\]}}
+
+; Test that llvm-readobj warns if a symbol belongs to a nonexistent section.
+RUN: yaml2obj  -o %t.nosection.exe-i386 %p/Inputs/pseudoreloc.i386.yaml -DSECTION_OF_LOCAL2A=999
+RUN: llvm-readobj %t.nosection.exe-i386 --coff-pseudoreloc 2>&1 | \
+RUN:   FileCheck %s --check-prefixes=WARN-NOSECTION
+
+WARN-NOSECTION: section index out of bounds
 
 ; Test that llvm-readobj shows an empty list if the relocation list has no contents.
 RUN: yaml2obj  -o %t.empty-list.exe-i386 %p/Inputs/pseudoreloc.i386.yaml -DEND=20
@@ -125,6 +137,11 @@ RUN: yaml2obj  -o %t.outofrange-end.exe-i386 %p/Inputs/pseudoreloc.i386.yaml -DE
 RUN: llvm-readobj %t.outofrange-end.exe-i386 --coff-pseudoreloc 2>&1 | \
 RUN:   FileCheck %s --check-prefixes=EMPTY,WARN-OUTOFRANGE
 
+; Test that llvm-readobj warns if the marker symbols point different sections.
+RUN: yaml2obj  -o %t.section-differs.exe-i386 %p/Inputs/pseudoreloc.i386.yaml -DSECTION_OF_BEGIN=1
+RUN: llvm-readobj %t.section-differs.exe-i386 --coff-pseudoreloc 2>&1 | \
+RUN:   FileCheck %s --check-prefixes=EMPTY,WARN-SECTIONDIFFERS
+
 EMPTY:      Format: COFF-i386
 EMPTY-NEXT: Arch: i386
 EMPTY-NEXT: AddressSize: 32bit
@@ -133,6 +150,7 @@ WARN-MISSINGMARKER-NEXT: the marker symbols for runtime pseudo-relocation were n
 WARN-INVALIDHEADER-NEXT: invalid runtime pseudo-relocation records
 WARN-LOWEREND-NEXT: the begin marker symbol for runtime pseudo-relocation must point lower address than where the end marker points
 WARN-OUTOFRANGE-NEXT: the marker symbol of runtime pseudo-relocation points to out of the valid address space
+WARN-SECTIONDIFFERS-NEXT: the marker symbols for runtime pseudo-relocation must point a same section
 EMPTY-NEXT: ]
 
 To regenerate Inputs/pseudoreloc.*.yaml, run following one-liner and review actual address map:
@@ -161,9 +179,11 @@ generate() {
   llvm-readobj --coff-imports --syms --section-headers pseudoreloc.$arch.exe > dump.$arch.txt
   local begin=$(sed -n -e '/__RUNTIME_PSEUDO_RELOC_LIST__/,/Value:/{/Value:/{s/ *Value: *//p;q}}' dump.$arch.txt)
 
-  # Make
-  #  - the referenced symbol in 1st and 2nd relocation entry parametarizable
-  #  - the marker symbols' value parameterizable
+  # Make these parameterizable:
+  #  - the referenced symbol in 1st and 2nd relocation entry
+  #  - the marker symbols' value
+  #  - a section which the marker symbol belongs to
+  #  - a section which the symbol of the relocation target belongs to
   sed -E -f - pseudoreloc.$arch.yaml.orig <<EOT > pseudoreloc.$arch.yaml
 /- Name: *\\.rdata/,/SectionData:/{
   s/( *SectionData: *[0-9A-F]{$(($begin * 2 + 24))})(.{8})(.{16})(.{8})/\\1[[SYMBOL0=\\2]]\\3[[SYMBOL1=\\4]]/
@@ -173,6 +193,12 @@ generate() {
 }
 /__RUNTIME_PSEUDO_RELOC_LIST__/,/Value:/{
   /Value:/s/([0-9]+)/[[BEGIN=\1]]/
+}
+/__RUNTIME_PSEUDO_RELOC_LIST__/,/SectionNumber:/{
+  /SectionNumber:/s/([0-9]+)/[[SECTION_OF_BEGIN=\1]]/
+}
+/local2a/,/SectionNumber:/{
+  /SectionNumber:/s/([0-9]+)/[[SECTION_OF_LOCAL2A=\1]]/
 }
 EOT
 

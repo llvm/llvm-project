@@ -92,7 +92,7 @@ symbols:
     StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
   - Name:            local2a
     Value:           8
-    SectionNumber:   3
+    SectionNumber:   [[SECTION_OF_LOCAL2A=3]]
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
@@ -116,7 +116,7 @@ symbols:
     StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
   - Name:            __RUNTIME_PSEUDO_RELOC_LIST__
     Value:           [[BEGIN=8]]
-    SectionNumber:   2
+    SectionNumber:   [[SECTION_OF_BEGIN=2]]
     SimpleType:      IMAGE_SYM_TYPE_NULL
     ComplexType:     IMAGE_SYM_DTYPE_NULL
     StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
