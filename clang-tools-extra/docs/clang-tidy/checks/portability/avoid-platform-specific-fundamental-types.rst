@@ -131,10 +131,10 @@ Options
 
 .. option:: WarnOnInts
 
-   When `true` (default), the check will warn about fundamental integer types
+   When `true`, the check will warn about fundamental integer types
    (``short``, ``int``, ``long``, ``long long`` and their ``signed`` and 
    ``unsigned`` variants).
-   When `false`, integer types are not flagged.
+   When `false`, integer types are not flagged. Default is `true`
 
    Example with :option:`WarnOnInts` enabled:
 
@@ -170,7 +170,7 @@ Options
 
 .. option:: WarnOnFloats
 
-   When `true` (default), the check will warn about floating point types
+   When `true`, the check will warn about floating point types
    (``float`` and ``double``).
    When `false`, floating point types are not flagged.
 
@@ -183,6 +183,8 @@ Options
    When this option is enabled, the check will suggest using ``float32_t`` and
    ``float64_t`` instead of ``float`` and ``double`` respectively, when the
    target platform supports standard IEEE754 sizes.
+
+   Default is `true`
 
    Example with :option:`WarnOnFloats` enabled:
 
@@ -202,7 +204,7 @@ Options
 
 .. option:: WarnOnChars
 
-   When `true` (default), the check will warn about character types (``char``,
+   When `true`, the check will warn about character types (``char``,
    ``signed char``, and ``unsigned char``).
    When `false`, character types are not flagged.
 
@@ -215,6 +217,8 @@ Options
    When this option is enabled, the check will suggest using explicit signedness
    or typedefs to make the intent clear and ensure consistent behavior across
    platforms.
+
+   Default is `true`.
 
    Example with :option:`WarnOnChars` enabled:
 
