@@ -145,7 +145,7 @@ void AvoidPlatformSpecificFundamentalTypesCheck::check(
   if (!Loc.isValid() || !TypeRange.isValid())
     return;
 
-  const std::string TypeName = QT.getAsString();
+  const std::string TypeName = QT.getUnqualifiedType().getAsString();
 
   const auto *BT = QT->getAs<BuiltinType>();
 
