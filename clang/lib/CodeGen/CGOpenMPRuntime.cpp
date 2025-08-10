@@ -6759,16 +6759,39 @@ llvm::Value *CGOpenMPRuntime::emitNumThreadsForTargetDirective(
 namespace {
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
+// Utility to safely compare expression locations for deterministic ordering.
+// This function asserts that both expressions have valid source locations.
+static bool compareExprLocs(const Expr *LHS, const Expr *RHS) {
+  // Assert that neither LHS nor RHS can be null
+  assert(LHS && "LHS expression cannot be null");
+  assert(RHS && "RHS expression cannot be null");
+
+  // Get source locations
+  SourceLocation LocLHS = LHS->getExprLoc();
+  SourceLocation LocRHS = RHS->getExprLoc();
+
+  // Assert that we have valid source locations
+  assert(LocLHS.isValid() && "LHS expression must have valid source location");
+  assert(LocRHS.isValid() && "RHS expression must have valid source location");
+
+  // Compare source locations for deterministic ordering
+  bool result = LocLHS < LocRHS;
+  return result;
+}
+
 // Utility to handle information from clauses associated with a given
 // construct that use mappable expressions (e.g. 'map' clause, 'to' clause).
 // It provides a convenient interface to obtain the information and generate
 // code for that information.
 class MappableExprsHandler {
 public:
-  // Custom comparator for attach-ptr expessions that compares them by
+  // Custom comparator for attach-pointer expressions that compares them by
   // complexity (i.e. their component-depth) first, then semantically.
   struct AttachPtrExprComparator {
     const MappableExprsHandler *Handler;
+    // Cache of previous comparison results.
+    mutable llvm::DenseMap<std::pair<const Expr *, const Expr *>, bool>
+        CachedComparisonResults;
 
     AttachPtrExprComparator(const MappableExprsHandler *H) : Handler(H) {}
 
@@ -6790,9 +6813,10 @@ public:
       // std::nullopt (no attach pointer) has lowest complexity
       if (!DepthLHS.has_value() && !DepthRHS.has_value()) {
         // Both have same complexity, now check semantic equality
-        if (areSemanticallyEqual(LHS, RHS))
-          return false;   // They are semantically equal
-        return LHS < RHS; // Use pointer comparison for consistent ordering
+        if (areEqual(LHS, RHS))
+          return false;
+        // Different semantically, compare by location
+        return compareExprLocs(LHS, RHS);
       }
       if (!DepthLHS.has_value())
         return true; // LHS has lower complexity
@@ -6804,25 +6828,176 @@ public:
         return DepthLHS.value() < DepthRHS.value();
 
       // Same complexity, now check semantic equality
-      if (areSemanticallyEqual(LHS, RHS))
-        return false; // They are semantically equal
+      if (areEqual(LHS, RHS))
+        return false;
+      // Different semantically, compare by location
+      return compareExprLocs(LHS, RHS);
+    }
 
-      // Same complexity but semantically different exprs. Use pointer
-      // comparison as a fallback to break the tie.
-      return LHS < RHS;
+  public:
+    bool areEqual(const Expr *LHS, const Expr *RHS) const {
+      // Check cache first for faster lookup
+      auto CachedResultIt = CachedComparisonResults.find({LHS, RHS});
+      if (CachedResultIt != CachedComparisonResults.end())
+        return CachedResultIt->second;
+
+      bool ComparisonResult = areSemanticallyEqual(LHS, RHS);
+
+      // Cache the result for future lookups (both orders since semantic
+      // equality is commutative)
+      CachedComparisonResults[{LHS, RHS}] = ComparisonResult;
+      CachedComparisonResults[{RHS, LHS}] = ComparisonResult;
+      return ComparisonResult;
     }
 
   private:
+    // Helper function to compare attach-pointer expressions semantically.
+    // This function handles various expression types that can be part of an
+    // attach-pointer.
     bool areSemanticallyEqual(const Expr *LHS, const Expr *RHS) const {
-      // For DeclRefExpr, compare by the referenced declaration directly
-      if (const auto *LHSDeclRef = dyn_cast<DeclRefExpr>(LHS)) {
-        if (const auto *RHSDeclRef = dyn_cast<DeclRefExpr>(RHS)) {
-          if (LHSDeclRef->getDecl() == RHSDeclRef->getDecl())
-            return true; // They reference the same declaration
-        }
+      if (LHS == RHS)
+        return true;
+
+      // If only one is null, they aren't equal
+      if (!LHS || !RHS)
+        return false;
+
+      ASTContext &Ctx = Handler->CGF.getContext();
+      // Strip away parentheses and no-op casts to get to the core expression
+      LHS = LHS->IgnoreParenNoopCasts(Ctx);
+      RHS = RHS->IgnoreParenNoopCasts(Ctx);
+
+      // Direct pointer comparison of the underlying expressions
+      if (LHS == RHS)
+        return true;
+
+      // Check if the expression classes match
+      if (LHS->getStmtClass() != RHS->getStmtClass())
+        return false;
+
+      // Handle DeclRefExpr (variable references)
+      if (const auto *LD = dyn_cast<DeclRefExpr>(LHS)) {
+        const auto *RD = dyn_cast<DeclRefExpr>(RHS);
+        if (!RD)
+          return false;
+        return LD->getDecl()->getCanonicalDecl() ==
+               RD->getDecl()->getCanonicalDecl();
       }
 
-      // Use Expr::isSameComparisonOperand for other semantic comparisons
+      // Handle ArraySubscriptExpr (array indexing like a[i])
+      if (const auto *LA = dyn_cast<ArraySubscriptExpr>(LHS)) {
+        const auto *RA = dyn_cast<ArraySubscriptExpr>(RHS);
+        if (!RA)
+          return false;
+        return areSemanticallyEqual(LA->getBase(), RA->getBase()) &&
+               areSemanticallyEqual(LA->getIdx(), RA->getIdx());
+      }
+
+      // Handle MemberExpr (member access like s.m or p->m)
+      if (const auto *LM = dyn_cast<MemberExpr>(LHS)) {
+        const auto *RM = dyn_cast<MemberExpr>(RHS);
+        if (!RM)
+          return false;
+        if (LM->getMemberDecl()->getCanonicalDecl() !=
+            RM->getMemberDecl()->getCanonicalDecl())
+          return false;
+        return areSemanticallyEqual(LM->getBase(), RM->getBase());
+      }
+
+      // Handle UnaryOperator (unary operations like *p, &x, etc.)
+      if (const auto *LU = dyn_cast<UnaryOperator>(LHS)) {
+        const auto *RU = dyn_cast<UnaryOperator>(RHS);
+        if (!RU)
+          return false;
+        if (LU->getOpcode() != RU->getOpcode())
+          return false;
+        return areSemanticallyEqual(LU->getSubExpr(), RU->getSubExpr());
+      }
+
+      // Handle BinaryOperator (binary operations like p + offset)
+      if (const auto *LB = dyn_cast<BinaryOperator>(LHS)) {
+        const auto *RB = dyn_cast<BinaryOperator>(RHS);
+        if (!RB)
+          return false;
+        if (LB->getOpcode() != RB->getOpcode())
+          return false;
+        return areSemanticallyEqual(LB->getLHS(), RB->getLHS()) &&
+               areSemanticallyEqual(LB->getRHS(), RB->getRHS());
+      }
+
+      // Handle ArraySectionExpr (array sections like a[0:1])
+      // Attach pointers should not contain array-sections, but currently we
+      // don't emit an error.
+      if (const auto *LAS = dyn_cast<ArraySectionExpr>(LHS)) {
+        const auto *RAS = dyn_cast<ArraySectionExpr>(RHS);
+        if (!RAS)
+          return false;
+        return areSemanticallyEqual(LAS->getBase(), RAS->getBase()) &&
+               areSemanticallyEqual(LAS->getLowerBound(),
+                                    RAS->getLowerBound()) &&
+               areSemanticallyEqual(LAS->getLength(), RAS->getLength());
+      }
+
+      // Handle CastExpr (explicit casts)
+      if (const auto *LC = dyn_cast<CastExpr>(LHS)) {
+        const auto *RC = dyn_cast<CastExpr>(RHS);
+        if (!RC)
+          return false;
+        if (LC->getCastKind() != RC->getCastKind())
+          return false;
+        return areSemanticallyEqual(LC->getSubExpr(), RC->getSubExpr());
+      }
+
+      // Handle CXXThisExpr (this pointer)
+      if (isa<CXXThisExpr>(LHS) && isa<CXXThisExpr>(RHS))
+        return true;
+
+      // Handle IntegerLiteral (integer constants)
+      if (const auto *LI = dyn_cast<IntegerLiteral>(LHS)) {
+        const auto *RI = dyn_cast<IntegerLiteral>(RHS);
+        if (!RI)
+          return false;
+        return LI->getValue() == RI->getValue();
+      }
+
+      // Handle CharacterLiteral (character constants)
+      if (const auto *LC = dyn_cast<CharacterLiteral>(LHS)) {
+        const auto *RC = dyn_cast<CharacterLiteral>(RHS);
+        if (!RC)
+          return false;
+        return LC->getValue() == RC->getValue();
+      }
+
+      // Handle FloatingLiteral (floating point constants)
+      if (const auto *LF = dyn_cast<FloatingLiteral>(LHS)) {
+        const auto *RF = dyn_cast<FloatingLiteral>(RHS);
+        if (!RF)
+          return false;
+        // Use bitwise comparison for floating point literals
+        return LF->getValue().bitwiseIsEqual(RF->getValue());
+      }
+
+      // Handle StringLiteral (string constants)
+      if (const auto *LS = dyn_cast<StringLiteral>(LHS)) {
+        const auto *RS = dyn_cast<StringLiteral>(RHS);
+        if (!RS)
+          return false;
+        return LS->getString() == RS->getString();
+      }
+
+      // Handle CXXNullPtrLiteralExpr (nullptr)
+      if (isa<CXXNullPtrLiteralExpr>(LHS) && isa<CXXNullPtrLiteralExpr>(RHS))
+        return true;
+
+      // Handle CXXBoolLiteralExpr (true/false)
+      if (const auto *LB = dyn_cast<CXXBoolLiteralExpr>(LHS)) {
+        const auto *RB = dyn_cast<CXXBoolLiteralExpr>(RHS);
+        if (!RB)
+          return false;
+        return LB->getValue() == RB->getValue();
+      }
+
+      // Fallback for other forms - use the existing comparison method
       return Expr::isSameComparisonOperand(LHS, RHS);
     }
   };
@@ -8673,8 +8848,11 @@ private:
           }
         };
 
-    auto &&IsMapInfoExist = [&Info, this](CodeGenFunction &CGF, const ValueDecl *VD,
-                                    const Expr *IE, bool IsDevAddr) -> bool {
+    auto &&IsMapInfoExist = [&Info, this](CodeGenFunction &CGF,
+                                          const ValueDecl *VD, const Expr *IE,
+                                          const Expr *DesiredAttachPtrExpr,
+                                          const Expr *DesiredFirstComponentExpr,
+                                          bool IsDevAddr) -> bool {
       // We potentially have map information for this declaration already.
       // Look for the first set of components that refer to it. If found,
       // return true.
@@ -8685,19 +8863,55 @@ private:
       if (It != Info.end()) {
         bool Found = false;
         for (auto &Data : It->second) {
-          auto *CI = llvm::find_if(Data, [VD](const MapInfo &MI) {
-            return MI.Components.back().getAssociatedDeclaration() == VD;
-          });
-          // If we found a map entry, signal that the pointer has to be
-          // returned and move on to the next declaration. Exclude cases where
-          // the base pointer is mapped as array subscript, array section or
-          // array shaping. The base address is passed as a pointer to base in
-          // this case (i.e. as a PTR_AND_OBJ) and cannot be used as a base
-          // for use_device_ptr list item. However, we don't use PTR_AND_OBJ
-          // mapping for any pointers when using ATTACH-style mapping.
-          if (CI != Data.end()) {
+          // Select the best candidate among all matches in this bucket, rather
+          // than stopping at the first one. This avoids accidentally picking a
+          // more complex component list (e.g., xpp[1][1]) when a simpler one
+          // (e.g., xpp[1]) exists and is the intended attach target for
+          // use_device_addr/use_device_ptr.
+          MapInfo *CI = nullptr;
+          MapInfo *ChosenFirst = nullptr;
+          MapInfo *ChosenAttach = nullptr;
+          MapInfo *ChosenFallback = nullptr;
+          for (auto &MI : Data) {
+            bool Match = MI.Components.back().getAssociatedDeclaration() == VD;
+            if (!Match)
+              continue;
+            // 1) Prefer exact match on first component (e.g., xpp[1]).
+            if (DesiredFirstComponentExpr && !MI.Components.empty() &&
+                AttachPtrExprComparator(this).areEqual(
+                    MI.Components.front().getAssociatedExpression(),
+                    DesiredFirstComponentExpr)) {
+              if (!ChosenFirst ||
+                  MI.Components.size() < ChosenFirst->Components.size())
+                ChosenFirst = &MI;
+            }
+            // 2) Next preference: exact match on attach-pointer (e.g., xpp).
+            const Expr *MIAP = getAttachPtrExpr(MI.Components);
+            if (DesiredAttachPtrExpr && AttachPtrExprComparator(this).areEqual(
+                                            MIAP, DesiredAttachPtrExpr)) {
+              if (!ChosenAttach ||
+                  MI.Components.size() < ChosenAttach->Components.size())
+                ChosenAttach = &MI;
+            }
+            // 3) Fallback: least complex among all matches.
+            if (!ChosenFallback ||
+                MI.Components.size() < ChosenFallback->Components.size())
+              ChosenFallback = &MI;
+          }
+
+          if (!CI) {
+            if (ChosenFirst) {
+              CI = ChosenFirst;
+            } else if (ChosenAttach) {
+              CI = ChosenAttach;
+            } else if (ChosenFallback) {
+              CI = ChosenFallback;
+            }
+          }
+
+          if (CI) {
             if (IsDevAddr) {
-              CI->ForDeviceAddr = IsDevAddr;
+              CI->ForDeviceAddr = true;
               CI->ReturnDevicePointer = true;
               Found = true;
               break;
@@ -8744,7 +8958,12 @@ private:
         const ValueDecl *VD = Components.back().getAssociatedDeclaration();
         VD = cast<ValueDecl>(VD->getCanonicalDecl());
         const Expr *IE = Components.back().getAssociatedExpression();
-        if (IsMapInfoExist(CGF, VD, IE, /*IsDevAddr=*/false))
+        const Expr *DesiredAttach = getAttachPtrExpr(Components);
+        const Expr *DesiredFirst =
+            Components.empty() ? nullptr
+                               : Components.front().getAssociatedExpression();
+        if (IsMapInfoExist(CGF, VD, IE, DesiredAttach, DesiredFirst,
+                           /*IsDevAddr=*/false))
           continue;
         MapInfoGen(CGF, IE, VD, Components, C->isImplicit(),
                    /*IsDevAddr=*/false);
@@ -8766,7 +8985,23 @@ private:
           continue;
         VD = cast<ValueDecl>(VD->getCanonicalDecl());
         const Expr *IE = std::get<1>(L).back().getAssociatedExpression();
-        if (IsMapInfoExist(CGF, VD, IE, /*IsDevAddr=*/true))
+        const Expr *DesiredAttach = getAttachPtrExpr(Components);
+        if (const auto *ASE_IE = dyn_cast_or_null<ArraySubscriptExpr>(
+                IE->IgnoreParenImpCasts())) {
+          const Expr *BaseIE = ASE_IE->getBase()->IgnoreParenImpCasts();
+          if (!isa<DeclRefExpr>(BaseIE)) {
+            llvm::errs() << "error: use_device_addr expects base-pointer to be "
+                            "an identifier (e.g., xpp or xpp[1]); got: ";
+            IE->dump();
+            // Continue without marking; fall back to generating a zero-size
+            // entry if needed.
+          }
+        }
+        const Expr *DesiredFirst =
+            Components.empty() ? nullptr
+                               : Components.front().getAssociatedExpression();
+        if (IsMapInfoExist(CGF, VD, IE, DesiredAttach, DesiredFirst,
+                           /*IsDevAddr=*/true))
           continue;
         MapInfoGen(CGF, IE, VD, Components, C->isImplicit(),
                    /*IsDevAddr=*/true);
@@ -8774,27 +9009,51 @@ private:
     }
 
     for (const auto &Data : Info) {
-      StructRangeInfoTy PartialStruct;
-      // Current struct information:
       MapCombinedInfoTy CurInfo;
-      // Current struct base information:
-      MapCombinedInfoTy StructBaseCurInfo;
       const Decl *D = Data.first;
       const ValueDecl *VD = cast_or_null<ValueDecl>(D);
+      // Group component lists by their AttachPtrExpr and process them in order
+      // of increasing complexity (nullptr first, then simple expressions like
+      // p, then more complex ones like p[0], etc.)
+      //
+      // This is similar to how generateInfoForCaptureFromClauseInfo handles
+      // grouping for target constructs.
+      std::map<const Expr *, SmallVector<MapInfo, 8>, AttachPtrExprComparator>
+          AttachPtrGroups{AttachPtrExprComparator(this)};
+
+      // Collect all MapInfo entries and group them by AttachPtrExpr
       for (const auto &M : Data.second) {
         for (const MapInfo &L : M) {
           assert(!L.Components.empty() &&
                  "Not expecting declaration with no component lists.");
 
+          const Expr *AttachPtrExpr = getAttachPtrExpr(L.Components);
+          AttachPtrGroups[AttachPtrExpr].push_back(L);
+        }
+      }
+
+      // Process each group in order of their attach-pointers increasing
+      // complexity.
+      for (const auto &Entry : AttachPtrGroups) {
+        const SmallVector<MapInfo, 8> &GroupLists = Entry.second;
+        if (GroupLists.empty())
+          continue;
+
+        StructRangeInfoTy PartialStruct;
+        MapCombinedInfoTy GroupCurInfo;
+        // Current group's struct base information:
+        MapCombinedInfoTy GroupStructBaseCurInfo;
+        for (const MapInfo &L : GroupLists) {
           // Remember the current base pointer index.
-          unsigned CurrentBasePointersIdx = CurInfo.BasePointers.size();
+          unsigned CurrentBasePointersIdx = GroupCurInfo.BasePointers.size();
           unsigned StructBasePointersIdx =
-              StructBaseCurInfo.BasePointers.size();
-          CurInfo.NonContigInfo.IsNonContiguous =
+              GroupStructBaseCurInfo.BasePointers.size();
+
+          GroupCurInfo.NonContigInfo.IsNonContiguous =
               L.Components.back().isNonContiguous();
           generateInfoForComponentList(
               L.MapType, L.MapModifiers, L.MotionModifiers, L.Components,
-              CurInfo, StructBaseCurInfo, PartialStruct,
+              GroupCurInfo, GroupStructBaseCurInfo, PartialStruct,
               /*IsFirstComponentList=*/false, L.IsImplicit,
               /*GenerateAllInfoForClauses*/ true, L.Mapper, L.ForDeviceAddr, VD,
               L.VarRef, /*OverlappedElements*/ {});
@@ -8802,12 +9061,12 @@ private:
           // If this entry relates to a device pointer, set the relevant
           // declaration and add the 'return pointer' flag.
           if (L.ReturnDevicePointer) {
-            // Check whether a value was added to either CurInfo or
-            // StructBaseCurInfo and error if no value was added to either of
-            // them:
-            assert((CurrentBasePointersIdx < CurInfo.BasePointers.size() ||
+            // Check whether a value was added to either GroupCurInfo or
+            // GroupStructBaseCurInfo and error if no value was added to either
+            // of them:
+            assert((CurrentBasePointersIdx < GroupCurInfo.BasePointers.size() ||
                     StructBasePointersIdx <
-                        StructBaseCurInfo.BasePointers.size()) &&
+                        GroupStructBaseCurInfo.BasePointers.size()) &&
                    "Unexpected number of mapped base pointers.");
 
             // Choose a base pointer index which is always valid:
@@ -8816,29 +9075,48 @@ private:
             assert(RelevantVD &&
                    "No relevant declaration related with device pointer??");
 
-            // If StructBaseCurInfo has been updated this iteration then work on
-            // the first new entry added to it i.e. make sure that when multiple
-            // values are added to any of the lists, the first value added is
-            // being modified by the assignments below (not the last value
-            // added).
-            if (StructBasePointersIdx < StructBaseCurInfo.BasePointers.size()) {
-              StructBaseCurInfo.DevicePtrDecls[StructBasePointersIdx] =
+            // If GroupStructBaseCurInfo has been updated this iteration then
+            // work on the first new entry added to it i.e. make sure that when
+            // multiple values are added to any of the lists, the first value
+            // added is being modified by the assignments below (not the last
+            // value added).
+            if (StructBasePointersIdx <
+                GroupStructBaseCurInfo.BasePointers.size()) {
+              GroupStructBaseCurInfo.DevicePtrDecls[StructBasePointersIdx] =
                   RelevantVD;
-              StructBaseCurInfo.DevicePointers[StructBasePointersIdx] =
+              GroupStructBaseCurInfo.DevicePointers[StructBasePointersIdx] =
                   L.ForDeviceAddr ? DeviceInfoTy::Address
                                   : DeviceInfoTy::Pointer;
-              StructBaseCurInfo.Types[StructBasePointersIdx] |=
+              GroupStructBaseCurInfo.Types[StructBasePointersIdx] |=
                   OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM;
             } else {
-              CurInfo.DevicePtrDecls[CurrentBasePointersIdx] = RelevantVD;
-              CurInfo.DevicePointers[CurrentBasePointersIdx] =
+              GroupCurInfo.DevicePtrDecls[CurrentBasePointersIdx] = RelevantVD;
+              GroupCurInfo.DevicePointers[CurrentBasePointersIdx] =
                   L.ForDeviceAddr ? DeviceInfoTy::Address
                                   : DeviceInfoTy::Pointer;
-              CurInfo.Types[CurrentBasePointersIdx] |=
+              GroupCurInfo.Types[CurrentBasePointersIdx] |=
                   OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM;
             }
           }
         }
+
+        // If there is an entry in PartialStruct it means we have a struct with
+        // individual members mapped. Emit an extra combined entry.
+        MapCombinedInfoTy AttachCombinedInfo;
+        if (PartialStruct.Base.isValid()) {
+          CurInfo.append(PartialStruct.PreliminaryMapData);
+          emitCombinedEntry(
+              CurInfo, AttachCombinedInfo, GroupCurInfo.Types, PartialStruct,
+              /*IsMapThis*/ !VD, OMPBuilder, VD,
+              /*OffsetForMemberOfFlag=*/0, /*NotTargetParam=*/true);
+        }
+
+        // Append this group's results to the overall CurInfo in the correct
+        // order: combined-entry -> individual-field-entries -> attach-entry
+        // First append struct base info, then component info
+        CurInfo.append(GroupStructBaseCurInfo);
+        CurInfo.append(GroupCurInfo);
+        CurInfo.append(AttachCombinedInfo);
       }
 
       // Append any pending zero-length pointers which are struct members and
@@ -8884,28 +9162,8 @@ private:
         }
       }
 
-      // Unify entries in one list making sure the struct mapping precedes the
-      // individual fields:
-      MapCombinedInfoTy UnionCurInfo;
-      UnionCurInfo.append(StructBaseCurInfo);
-      UnionCurInfo.append(CurInfo);
-
-      // If there is an entry in PartialStruct it means we have a struct with
-      // individual members mapped. Emit an extra combined entry.
-      MapCombinedInfoTy AttachCombinedInfo;
-      if (PartialStruct.Base.isValid()) {
-        UnionCurInfo.NonContigInfo.Dims.push_back(0);
-        // Emit a combined entry:
-        emitCombinedEntry(CombinedInfo, AttachCombinedInfo, UnionCurInfo.Types,
-                          PartialStruct,
-                          /*IsMapThis*/ !VD, OMPBuilder, VD,
-                          /*OffsetForMemberOfFlag=*/0, /*NotTargetParam=*/true);
-      }
-
       // We need to append the results of this capture to what we already have.
-      CombinedInfo.append(UnionCurInfo);
-      // Append AttachCombinedInfo after UnionCurInfo
-      CombinedInfo.append(AttachCombinedInfo);
+      CombinedInfo.append(CurInfo);
     }
     // Append data for use_device_ptr clauses.
     CombinedInfo.append(UseDeviceDataCombinedInfo);
@@ -9400,7 +9658,8 @@ public:
     //   map(ps->pt->d, ps->pt->e) | ps->pt
 
     // Group component lists by their AttachPtrExpr
-    llvm::MapVector<const Expr *, MapDataArrayTy> AttachPtrGroups;
+    std::map<const Expr *, MapDataArrayTy, AttachPtrExprComparator>
+        AttachPtrGroups{AttachPtrExprComparator(this)};
 
     for (const MapData &L : DeclComponentListsFromClauses) {
       OMPClauseMappableExprCommon::MappableExprComponentListRef Components =
