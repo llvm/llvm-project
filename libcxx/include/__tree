@@ -1026,15 +1026,12 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
   __insert_unique_from_orphaned_node(const_iterator __p, __get_node_value_type_t<_Tp>&& __value) {
     // fails here for move_alloc.pass.cpp
-    if (__libcpp_is_constant_evaluated()) {
-
-      // using __node_value_type = __get_node_value_type_t<value_type>;
-      // __get_node_value_type_t<value_type> __tmp(__value.first, __value.second);
-
-      // __node_allocator& __na = __node_alloc();
-      // key_type __kk;
-      // __node_traits::construct(__na, std::addressof(__kk), std::move(__value.first));
-      // __emplace_hint_unique(__p, std::move(__kk), std::move(__value.second));
+    if ( 
+      (
+        _LIBCPP_STD_VER >= 26
+      )
+      && 
+      __libcpp_is_constant_evaluated()) {
       __emplace_hint_unique(__p, std::move(__value.first), std::move(__value.second));
     } else 
     {
@@ -1219,21 +1216,22 @@ private:
   __assign_value( __get_node_value_type_t<value_type>& __lhs, _From&& __rhs) {
     using __key_type = __remove_const_t<typename value_type::first_type>;
 
-    if (__libcpp_is_constant_evaluated()) {
+    if (
+      (
+        _LIBCPP_STD_VER >= 26
+      )
+      && 
+      __libcpp_is_constant_evaluated()) {
       using __node_value_type = __get_node_value_type_t<value_type>;
       __get_node_value_type_t<value_type> __tmp(__rhs.first, __rhs.second);
       // const_cast is not allowed at constexpr time.
       // we get around this by deleting and creating a new node value
+      // note: this does not work for `const MoveOnly` keys at constexpr time
       __lhs.~__node_value_type();
-      // todo: use __node_traits::construct
-      // __node_allocator& __na = __lhs.__node_alloc();
-      // __node_allocator& __na = __rhs.__node_alloc();
       __node_allocator& __na = __node_alloc();
       __node_traits::destroy(__na, std::addressof(__lhs));
-
-      // __node_allocator& __na = __rhs.__node_alloc();
+      // Fails here for `std/containers/associative/map/map.cons/move_assign.pass.cpp`
       __node_traits::construct(__na, std::addressof(__lhs), std::move(__tmp));
-      // new (std::addressof(__lhs))(__node_value_type)(std::move(__tmp));
     } else {
       // This is technically UB, since the object was constructed as `const`.
       // Clang doesn't optimize on this currently though.
@@ -1899,10 +1897,16 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 typename __tree<_Tp, _Compare, _Allocator>::__node
 __tree<_Tp, _Compare, _Allocator>::__construct_node(_Args&&... __args) {
   __node_allocator& __na = __node_alloc();
   __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
+
+  #if _LIBCPP_STD_VER >= 26
+  #else 
+  #endif
+
   // here.... for same_as failure
   // __node_traits::construct(__na, std::addressof(*__h), std::forward<_Args>(__args)...);
-  __node_traits::construct(__na, std::addressof(__h->__value_), std::forward<_Args>(__args)...);
   // note: construction of subobject of object outside its lifetime is not allowed in a constant expression
+  __node_traits::construct(__na, std::addressof(__h->__value_), std::forward<_Args>(__args)...);
+
   __h.get_deleter().__value_constructed = true;
   return __h;
 }
