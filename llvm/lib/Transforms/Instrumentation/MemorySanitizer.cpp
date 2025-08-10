@@ -2865,6 +2865,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   void visitMul(BinaryOperator &I) {
+    // TODO: this can only handle zero bits that are part of statically-known
+    //       constants. Consider under-approximating the multiplication as AND
+    //       (which ignores the carry), and using the visitAnd() logic.
     Constant *constOp0 = dyn_cast<Constant>(I.getOperand(0));
     Constant *constOp1 = dyn_cast<Constant>(I.getOperand(1));
     if (constOp0 && !constOp1)
@@ -3827,19 +3830,67 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   // Instrument multiply-add intrinsic.
+  //
+  // e.g., <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %a, <8 x i16> %b)
+  //       <1 x i64> @llvm.x86.mmx.pmadd.wd(<1 x i64> %a, <1 x i64> %b)
   void handleVectorPmaddIntrinsic(IntrinsicInst &I,
                                   unsigned MMXEltSizeInBits = 0) {
-    Type *ResTy =
-        MMXEltSizeInBits ? getMMXVectorTy(MMXEltSizeInBits * 2) : I.getType();
     IRBuilder<> IRB(&I);
-    auto *Shadow0 = getShadow(&I, 0);
-    auto *Shadow1 = getShadow(&I, 1);
-    Value *S = IRB.CreateOr(Shadow0, Shadow1);
-    S = IRB.CreateBitCast(S, ResTy);
-    S = IRB.CreateSExt(IRB.CreateICmpNE(S, Constant::getNullValue(ResTy)),
-                       ResTy);
-    S = IRB.CreateBitCast(S, getShadowTy(&I));
-    setShadow(&I, S);
+
+    Type *ReturnType =
+        MMXEltSizeInBits ? getMMXVectorTy(MMXEltSizeInBits * 2) : I.getType();
+    assert(isa<FixedVectorType>(ReturnType));
+
+    assert(I.arg_size() == 2);
+    [[maybe_unused]] FixedVectorType *ParamType =
+        cast<FixedVectorType>(I.getArgOperand(0)->getType());
+    assert(ParamType == I.getArgOperand(1)->getType());
+
+    if (!MMXEltSizeInBits)
+      assert(ParamType->getNumElements() ==
+             2 * cast<FixedVectorType>(ReturnType)->getNumElements());
+
+    assert(ParamType->getPrimitiveSizeInBits() ==
+           ReturnType->getPrimitiveSizeInBits());
+
+    // Step 1: multiplication of corresponding vector elements
+    // We want to take into account the fact that multiplying zero by an
+    // uninitialized bit results in an initialized value of zero.
+    // We under-approximate multiplication using the same logic as visitAnd().
+    // This ignores the carrying that may happen during multiplication.
+    Value *S1 = getShadow(&I, 0);
+    Value *S2 = getShadow(&I, 1);
+    Value *V1 = I.getOperand(0);
+    Value *V2 = I.getOperand(1);
+
+    Value *S1S2 = IRB.CreateAnd(S1, S2);
+    Value *V1S2 = IRB.CreateAnd(V1, S2);
+    Value *S1V2 = IRB.CreateAnd(S1, V2);
+
+    // After multiplying e.g., <8 x i16> %a, <8 x i16> %b, we have
+    // <8 x i16> %ab.
+    Value *ShadowAB = IRB.CreateOr({S1S2, V1S2, S1V2});
+    // For MMX, %ab has a misleading type e.g., <1 x i64>.
+    if (MMXEltSizeInBits)
+      ShadowAB = IRB.CreateBitCast(ShadowAB, getMMXVectorTy(MMXEltSizeInBits));
+
+    // Step 2: pairwise/horizontal add
+    // Handle it similarly to handlePairwiseShadowOrIntrinsic().
+    unsigned TotalNumElems =
+        cast<FixedVectorType>(ReturnType)->getNumElements() * 2;
+    SmallVector<int, 8> EvenMask;
+    SmallVector<int, 8> OddMask;
+    for (unsigned X = 0; X < TotalNumElems - 1; X += 2) {
+      EvenMask.push_back(X);
+      OddMask.push_back(X + 1);
+    }
+    Value *EvenShadow = IRB.CreateShuffleVector(ShadowAB, EvenMask);
+    Value *OddShadow = IRB.CreateShuffleVector(ShadowAB, OddMask);
+
+    Value *OrShadow = IRB.CreateOr(EvenShadow, OddShadow);
+    OrShadow = CreateShadowCast(IRB, OrShadow, getShadowTy(&I));
+
+    setShadow(&I, OrShadow);
     setOriginForNaryOp(I);
   }
 
@@ -5378,6 +5429,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx2_pmadd_wd:
     case Intrinsic::x86_ssse3_pmadd_ub_sw_128:
     case Intrinsic::x86_avx2_pmadd_ub_sw:
+    case Intrinsic::x86_avx512_pmaddw_d_512:
+    case Intrinsic::x86_avx512_pmaddubs_w_512:
       handleVectorPmaddIntrinsic(I);
       break;
 
