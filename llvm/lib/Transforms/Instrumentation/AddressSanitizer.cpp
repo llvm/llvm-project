@@ -3530,15 +3530,9 @@ void FunctionStackPoisoner::processStaticAllocas() {
   auto DescriptionString = ComputeASanStackFrameDescription(SVD);
   LLVM_DEBUG(dbgs() << DescriptionString << " --- " << L.FrameSize << "\n");
   uint64_t LocalStackSize = L.FrameSize;
-  // Fake stack frames only guarantee alignment of the frame size.
-  // In rare cases, where a frame has small objects with significant alignment
-  // needs, we need to place it in a frame that is at least as large as the
-  // required frame alignment. (In most modern compilers, sizeof(type)
-  // >= alignof(type), making this impossible.)
-  uint64_t AlignedLocalStackSize = std::max(L.FrameSize, L.FrameAlignment);
   bool DoStackMalloc =
       ASan.UseAfterReturn != AsanDetectStackUseAfterReturnMode::Never &&
-      !ASan.CompileKernel && AlignedLocalStackSize <= kMaxStackMallocSize;
+      !ASan.CompileKernel && LocalStackSize <= kMaxStackMallocSize;
   bool DoDynamicAlloca = ClDynamicAllocaStack;
   // Don't do dynamic alloca or stack malloc if:
   // 1) There is inline asm: too often it makes assumptions on which registers
@@ -3564,10 +3558,6 @@ void FunctionStackPoisoner::processStaticAllocas() {
       // void *FakeStack = __asan_option_detect_stack_use_after_return
       //     ? __asan_stack_malloc_N(LocalStackSize)
       //     : nullptr;
-      // where _N is the size class of AlignedLocalStackSize
-      // (we still only allocate LocalStackSize, not AlignedLocalStackSize, to
-      //  maximize poisoning)
-      //
       // void *LocalStackBase = (FakeStack) ? FakeStack :
       //                        alloca(LocalStackSize);
       Constant *OptionDetectUseAfterReturn = F.getParent()->getOrInsertGlobal(
@@ -3578,7 +3568,7 @@ void FunctionStackPoisoner::processStaticAllocas() {
       Instruction *Term =
           SplitBlockAndInsertIfThen(UseAfterReturnIsEnabled, InsBefore, false);
       IRBuilder<> IRBIf(Term);
-      StackMallocIdx = StackMallocSizeClass(AlignedLocalStackSize);
+      StackMallocIdx = StackMallocSizeClass(LocalStackSize);
       assert(StackMallocIdx <= kMaxAsanStackMallocSizeClass);
       Value *FakeStackValue =
           RTCI.createRuntimeCall(IRBIf, AsanStackMallocFunc[StackMallocIdx],
@@ -3591,7 +3581,7 @@ void FunctionStackPoisoner::processStaticAllocas() {
       // void *FakeStack = __asan_stack_malloc_N(LocalStackSize);
       // void *LocalStackBase = (FakeStack) ? FakeStack :
       //                        alloca(LocalStackSize);
-      StackMallocIdx = StackMallocSizeClass(AlignedLocalStackSize);
+      StackMallocIdx = StackMallocSizeClass(LocalStackSize);
       FakeStack =
           RTCI.createRuntimeCall(IRB, AsanStackMallocFunc[StackMallocIdx],
                                  ConstantInt::get(IntptrTy, LocalStackSize));
