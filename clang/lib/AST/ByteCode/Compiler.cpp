@@ -1931,15 +1931,10 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
               dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts())) {
         PrimType TargetT = classifyPrim(Init->getType());
 
-        auto Eval = [&](const Expr *Init, unsigned ElemIndex) {
-          PrimType InitT = classifyPrim(Init->getType());
-          if (!this->visit(Init))
+        auto Eval = [&](const IntegerLiteral *IL, unsigned ElemIndex) {
+          if (!this->emitConst(IL->getValue(), Init))
             return false;
-          if (InitT != TargetT) {
-            if (!this->emitCast(InitT, TargetT, E))
-              return false;
-          }
-          return this->emitInitElem(TargetT, ElemIndex, Init);
+          return this->emitInitElem(TargetT, ElemIndex, IL);
         };
         if (!EmbedS->doForEachDataElement(Eval, ElementIndex))
           return false;
@@ -2061,11 +2056,15 @@ bool Compiler<Emitter>::visitArrayElemInit(unsigned ElemIndex, const Expr *Init,
 template <class Emitter>
 bool Compiler<Emitter>::visitCallArgs(ArrayRef<const Expr *> Args,
                                       const FunctionDecl *FuncDecl,
-                                      bool Activate) {
+                                      bool Activate, bool IsOperatorCall) {
   assert(VarScope->getKind() == ScopeKind::Call);
   llvm::BitVector NonNullArgs;
   if (FuncDecl && FuncDecl->hasAttr<NonNullAttr>())
     NonNullArgs = collectNonNullArgs(FuncDecl, Args);
+
+  bool ExplicitMemberFn = false;
+  if (const auto *MD = dyn_cast_if_present<CXXMethodDecl>(FuncDecl))
+    ExplicitMemberFn = MD->isExplicitObjectMemberFunction();
 
   unsigned ArgIndex = 0;
   for (const Expr *Arg : Args) {
@@ -2074,8 +2073,19 @@ bool Compiler<Emitter>::visitCallArgs(ArrayRef<const Expr *> Args,
         return false;
     } else {
 
-      std::optional<unsigned> LocalIndex = allocateLocal(
-          Arg, Arg->getType(), /*ExtendingDecl=*/nullptr, ScopeKind::Call);
+      DeclTy Source = Arg;
+      if (FuncDecl) {
+        // Try to use the parameter declaration instead of the argument
+        // expression as a source.
+        unsigned DeclIndex = ArgIndex - IsOperatorCall + ExplicitMemberFn;
+        if (DeclIndex < FuncDecl->getNumParams())
+          Source = FuncDecl->getParamDecl(ArgIndex - IsOperatorCall +
+                                          ExplicitMemberFn);
+      }
+
+      std::optional<unsigned> LocalIndex =
+          allocateLocal(std::move(Source), Arg->getType(),
+                        /*ExtendingDecl=*/nullptr, ScopeKind::Call);
       if (!LocalIndex)
         return false;
 
@@ -4488,14 +4498,6 @@ template <class Emitter>
 unsigned Compiler<Emitter>::allocateLocalPrimitive(
     DeclTy &&Src, PrimType Ty, bool IsConst, const ValueDecl *ExtendingDecl,
     ScopeKind SC, bool IsConstexprUnknown) {
-  // Make sure we don't accidentally register the same decl twice.
-  if (const auto *VD =
-          dyn_cast_if_present<ValueDecl>(Src.dyn_cast<const Decl *>())) {
-    assert(!P.getGlobal(VD));
-    assert(!Locals.contains(VD));
-    (void)VD;
-  }
-
   // FIXME: There are cases where Src.is<Expr*>() is wrong, e.g.
   //   (int){12} in C. Consider using Expr::isTemporaryObject() instead
   //   or isa<MaterializeTemporaryExpr>().
@@ -4517,19 +4519,11 @@ std::optional<unsigned>
 Compiler<Emitter>::allocateLocal(DeclTy &&Src, QualType Ty,
                                  const ValueDecl *ExtendingDecl, ScopeKind SC,
                                  bool IsConstexprUnknown) {
-  // Make sure we don't accidentally register the same decl twice.
-  if ([[maybe_unused]] const auto *VD =
-          dyn_cast_if_present<ValueDecl>(Src.dyn_cast<const Decl *>())) {
-    assert(!P.getGlobal(VD));
-    assert(!Locals.contains(VD));
-  }
-
   const ValueDecl *Key = nullptr;
   const Expr *Init = nullptr;
   bool IsTemporary = false;
   if (auto *VD = dyn_cast_if_present<ValueDecl>(Src.dyn_cast<const Decl *>())) {
     Key = VD;
-    Ty = VD->getType();
 
     if (const auto *VarD = dyn_cast<VarDecl>(VD))
       Init = VarD->getInit();
@@ -5166,7 +5160,8 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
       return false;
   }
 
-  if (!this->visitCallArgs(Args, FuncDecl, IsAssignmentOperatorCall))
+  if (!this->visitCallArgs(Args, FuncDecl, IsAssignmentOperatorCall,
+                           isa<CXXOperatorCallExpr>(E)))
     return false;
 
   // Undo the argument reversal we did earlier.
