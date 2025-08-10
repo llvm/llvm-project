@@ -18,6 +18,12 @@
 
 void test() {
   // expected-error@*:* {{static assertion failed}}
+
+  // Turns to an error since C++26 (Disallow Binding a Returned Glvalue to a Temporary https://wg21.link/P2748R5).
+#if _LIBCPP_STD_VER >= 26
   // expected-error@*:* {{returning reference to local temporary object}}
+#else
+  // expected-warning@*:* {{returning reference to local temporary object}}
+#endif
   std::ignore = std::make_from_tuple<const int&>(std::tuple<char>{});
 }
