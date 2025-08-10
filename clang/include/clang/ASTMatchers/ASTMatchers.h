@@ -6580,7 +6580,7 @@ AST_MATCHER(QualType, isChar) {
 ///   void c(char8_t);
 ///   void d(double);
 /// \endcode
-/// functionDecl(hasAnyParameter(hasType(isChar())))
+/// functionDecl(hasAnyParameter(hasType(isWideChar())))
 /// matches "b(wchar_t)", but not "a(char)", "c(char8_t)", or "d(double)"
 AST_MATCHER(QualType, isWideChar) {
     return Node->isWideCharType();
