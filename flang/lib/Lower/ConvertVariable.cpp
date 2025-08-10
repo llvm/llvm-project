@@ -1893,13 +1893,6 @@ fir::FortranVariableFlagsAttr Fortran::lower::translateSymbolAttributes(
   return fir::FortranVariableFlagsAttr::get(mlirContext, flags);
 }
 
-cuf::DataAttributeAttr Fortran::lower::translateSymbolCUFDataAttribute(
-    mlir::MLIRContext *mlirContext, const Fortran::semantics::Symbol &sym) {
-  std::optional<Fortran::common::CUDADataAttr> cudaAttr =
-      Fortran::semantics::GetCUDADataAttr(&sym.GetUltimate());
-  return cuf::getDataAttribute(mlirContext, cudaAttr);
-}
-
 static bool
 isCapturedInInternalProcedure(Fortran::lower::AbstractConverter &converter,
                               const Fortran::semantics::Symbol &sym) {

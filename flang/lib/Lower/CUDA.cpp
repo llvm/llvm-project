@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/CUDA.h"
+#include "flang/Lower/AbstractConverter.h"
+#include "flang/Optimizer/Builder/Todo.h"
 
 #define DEBUG_TYPE "flang-lower-cuda"
 
@@ -145,4 +147,11 @@ mlir::Type Fortran::lower::gatherDeviceComponentCoordinatesAndType(
   if (coordinates.empty())
     TODO(loc, "device resident component in complex derived-type hierarchy");
   return fieldTy;
+}
+
+cuf::DataAttributeAttr Fortran::lower::translateSymbolCUFDataAttribute(
+    mlir::MLIRContext *mlirContext, const Fortran::semantics::Symbol &sym) {
+  std::optional<Fortran::common::CUDADataAttr> cudaAttr =
+      Fortran::semantics::GetCUDADataAttr(&sym.GetUltimate());
+  return cuf::getDataAttribute(mlirContext, cudaAttr);
 }

@@ -39,6 +39,12 @@ def AS_match {
   code global = [{
    return ChkMemSDNodeAddressSpace(N, llvm::ADDRESS_SPACE_GLOBAL);
   }];
+  code const = [{
+   return ChkMemSDNodeAddressSpace(N, llvm::ADDRESS_SPACE_CONST);
+  }];
+  code param = [{
+   return ChkMemSDNodeAddressSpace(N, llvm::ADDRESS_SPACE_PARAM);
+  }];
 }
 
 
@@ -950,32 +956,46 @@ foreach dim = 3...5 in {
 defm TMA_TENSOR_PF_TILE_GATHER4_2D : TMA_TENSOR_PREFETCH_INTR<5, "tile_gather4",
                                      [hasTMACTAGroupSupport]>;
 
-//Prefetch and Prefetchu 
+//Prefetchu and Prefetch
 
-let Predicates = [hasPTX<80>, hasSM<90>] in {
-  class PREFETCH_INTRS<string InstName> :
-            BasicNVPTXInst<(outs), (ins ADDR:$addr),
-            InstName,
-            [(!cast<Intrinsic>(!strconcat("int_nvvm_",
-            !subst(".", "_", InstName))) addr:$addr)]>;
+defvar frag_pat = (int_nvvm_prefetch_tensormap node:$addr);
 
-  def PREFETCH_L1 : PREFETCH_INTRS<"prefetch.L1">;
-  def PREFETCH_L2 : PREFETCH_INTRS<"prefetch.L2">;
-  def PREFETCH_GLOBAL_L1 : PREFETCH_INTRS<"prefetch.global.L1">;
-  def PREFETCH_LOCAL_L1  : PREFETCH_INTRS<"prefetch.local.L1">;
-  def PREFETCH_GLOBAL_L2 : PREFETCH_INTRS<"prefetch.global.L2">;
-  def PREFETCH_LOCAL_L2 : PREFETCH_INTRS<"prefetch.local.L2">;
-
-  def PREFETCH_GLOBAL_L2_EVICT_NORMAL : BasicNVPTXInst<(outs), (ins ADDR:$addr),
-                                        "prefetch.global.L2::evict_normal",
-                                        [(int_nvvm_prefetch_global_L2_evict_normal addr:$addr)]>;
-
-  def PREFETCH_GLOBAL_L2_EVICT_LAST   : BasicNVPTXInst<(outs), (ins ADDR:$addr),
-                                        "prefetch.global.L2::evict_last",
-                                        [(int_nvvm_prefetch_global_L2_evict_last addr:$addr)]>;
-
-  def PREFETCHU_L1 : PREFETCH_INTRS<"prefetchu.L1">;
+multiclass PREFETCH_TENSORMAP_PATFRAG<string suffix, code predicate> {
+  def !tolower(suffix) : PatFrag<!setdagop(frag_pat, ops), frag_pat, predicate>;
 }
+
+defm prefetch_tensormap_ : PREFETCH_TENSORMAP_PATFRAG<"CONST", AS_match.const>;
+defm prefetch_tensormap_ : PREFETCH_TENSORMAP_PATFRAG<"GENERIC", AS_match.generic>;
+defm prefetch_tensormap_ : PREFETCH_TENSORMAP_PATFRAG<"PARAM", AS_match.param>;
+
+multiclass PREFETCH_TENSORMAP_INST<string addrspace_name, PatFrag pattern_frag> {
+  def "" : BasicNVPTXInst<(outs), (ins ADDR:$addr),
+           "prefetch" # addrspace_name # ".tensormap",
+           [(pattern_frag addr:$addr)]>,
+           Requires<[hasPTX<80>, hasSM<90>]>;
+}
+
+defm PREFETCH_CONST_TENSORMAP   : PREFETCH_TENSORMAP_INST<".const", prefetch_tensormap_const>;
+defm PREFETCH_GENERIC_TENSORMAP : PREFETCH_TENSORMAP_INST<"", prefetch_tensormap_generic>;
+defm PREFETCH_PARAM_TENSORMAP   : PREFETCH_TENSORMAP_INST<".param", prefetch_tensormap_param>;
+  
+class PREFETCH_INTRS<string InstName, Intrinsic Intr> :
+          BasicNVPTXInst<(outs), (ins ADDR:$addr),
+          InstName,
+          [(Intr addr:$addr)]>,
+          Requires<[hasPTX<80>, hasSM<90>]>;
+
+def PREFETCHU_L1 : PREFETCH_INTRS<"prefetchu.L1", int_nvvm_prefetchu_L1>;   
+def PREFETCH_L1 : PREFETCH_INTRS<"prefetch.L1", int_nvvm_prefetch_L1>;
+def PREFETCH_L2 : PREFETCH_INTRS<"prefetch.L2", int_nvvm_prefetch_L2>;
+def PREFETCH_GLOBAL_L1 : PREFETCH_INTRS<"prefetch.global.L1", int_nvvm_prefetch_global_L1>;
+def PREFETCH_LOCAL_L1 : PREFETCH_INTRS<"prefetch.local.L1", int_nvvm_prefetch_local_L1>;
+def PREFETCH_GLOBAL_L2 : PREFETCH_INTRS<"prefetch.global.L2", int_nvvm_prefetch_global_L2>;
+def PREFETCH_LOCAL_L2 : PREFETCH_INTRS<"prefetch.local.L2", int_nvvm_prefetch_local_L2>;
+def PREFETCH_GLOBAL_L2_EVICT_NORMAL : PREFETCH_INTRS<"prefetch.global.L2::evict_normal", 
+                                      int_nvvm_prefetch_global_L2_evict_normal>;
+def PREFETCH_GLOBAL_L2_EVICT_LAST : PREFETCH_INTRS<"prefetch.global.L2::evict_last", 
+                                    int_nvvm_prefetch_global_L2_evict_last>;
 
 //Applypriority intrinsics
 class APPLYPRIORITY_L2_INTRS<string addrspace> :
