@@ -50,9 +50,8 @@ export class SymbolsProvider extends DisposableContext {
         return;
     }
 
-    let symbols = [];
     try {
-      symbols = await this.getSymbolsForModule(session, selectedModule.module.id.toString());
+      const symbols = await this.getSymbolsForModule(session, selectedModule.module.id.toString());
       this.showSymbolsForModule(selectedModule.module.name.toString(), symbols);
     } catch (error) {
       if (error instanceof Error) {
@@ -63,8 +62,6 @@ export class SymbolsProvider extends DisposableContext {
       
       return;
     }
-
-    this.showSymbolsForModule(selectedModule.module.name.toString(), symbols);
   }
 
   private async getSymbolsForModule(session: vscode.DebugSession, moduleId: string): Promise<DAPSymbol[]> {
@@ -85,11 +82,20 @@ export class SymbolsProvider extends DisposableContext {
     )) || [];
   }
 
-  private showSymbolsForModule(moduleName: string, symbols: DAPSymbol[]) {
-    console.log(`Showing symbols for module: ${moduleName}`);
-    symbols.forEach(symbol => {
-      console.log(` - ${symbol.name} (${symbol.type})`);
-    });
+  private async showSymbolsForModule(moduleName: string, symbols: DAPSymbol[]) {
+    const panel = vscode.window.createWebviewPanel(
+      "lldb-dap.symbols",
+      `Symbols for ${moduleName}`,
+      vscode.ViewColumn.Active,
+      {}
+    );
+
+    panel.webview.html = SymbolsProvider.getHTMLContentForSymbols(moduleName, symbols);
+  }
+
+  private static getHTMLContentForSymbols(moduleName: string, symbols: DAPSymbol[]): string {
+    const symbolLines = symbols.map(symbol => ` - ${symbol.name} (${symbol.type})`);
+    return `Symbols for module: ${moduleName}\n${symbolLines.join("\n")}`;
   }
 }
 
