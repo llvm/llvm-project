@@ -85,3 +85,4 @@ double should_not_warn_double = 2.71828;
 char8_t utf8 = u8'a';
 char16_t utf16 = u'a';
 char32_t utf32 = U'a';
+std::byte null{0};
