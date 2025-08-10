@@ -1507,7 +1507,7 @@ struct TestLegalizePatternDriver
     ConversionTarget target(getContext());
     target.addLegalOp<ModuleOp>();
     target.addLegalOp<LegalOpA, LegalOpB, LegalOpC, TestCastOp, TestValidOp,
-                      TerminatorOp, TestConstantOp, OneRegionOp,
+                      TerminatorOp, TestOpConstant, OneRegionOp,
                       TestValidProducerOp, TestValidConsumerOp>();
     target.addLegalOp(OperationName("test.legal_op", &getContext()));
     target
