@@ -2259,6 +2259,7 @@ OperationLegalizer::legalize(Operation *op,
 
   // If the operation is not legal, try to fold it in-place if the folding mode
   // is 'BeforePatterns'. 'Never' will skip this.
+  const ConversionConfig &config = rewriter.getConfig();
   if (config.foldingMode == DialectConversionFoldingMode::BeforePatterns) {
     if (succeeded(legalizeWithFold(op, rewriter))) {
       LLVM_DEBUG({
