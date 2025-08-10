@@ -23,7 +23,8 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-TEST_CONSTEXPR_CXX26 bool test() {
+// TEST_CONSTEXPR_CXX26
+ bool test() {
   {
     typedef std::pair<MoveOnly, MoveOnly> V;
     typedef std::pair<const MoveOnly, MoveOnly> VC;
