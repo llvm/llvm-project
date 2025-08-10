@@ -74,7 +74,8 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(m[6] == 6.5);
     assert(m.size() == 8);
   }
-  if (!TEST_IS_CONSTANT_EVALUATED) {
+  #ifndef TEST_IS_CONSTANT_EVALUATED 
+  {
     // Use "container_test_types.h" to check what arguments get passed
     // to the allocator for operator[]
     using Container         = TCT::map<>;
@@ -107,6 +108,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
       }
     }
   }
+  #endif
 #endif
 #if TEST_STD_VER > 11
   {

@@ -317,6 +317,9 @@ public:
 
     template <class Up, class ...Args>
     void construct(Up* p, Args&&... args) {
+#if TEST_STD_VER >= 26 
+if(std::__libcpp_is_constant_evaluated()) {
+
       // FIXME: This test relies on UB where std::__tree_node is not initialized
       // and only the "Container::value_type" is initialized
       // Need to figure out the right way to solve this without breaking both conditions
@@ -327,8 +330,12 @@ public:
       // rely on a static object (so can't be used at constpex time)
       // so it is avoided at this moment
 
+} else
+#endif
+      {
       static_assert((std::is_same<Up, AllowConstructT>::value),
                     "Only allowed to construct Up");
+      }
 
 
       assert(controller->check<Args&&...>());
