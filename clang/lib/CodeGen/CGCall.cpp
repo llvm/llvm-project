@@ -5247,7 +5247,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
          (TargetDecl->hasAttr<TargetAttr>() ||
           (CurFuncDecl && CurFuncDecl->hasAttr<TargetAttr>()))) ||
         (CurFuncDecl && CurFuncDecl->hasAttr<FlattenAttr>() &&
-         TargetDecl->hasAttr<TargetAttr>()))
+         (CurFuncDecl->hasAttr<TargetAttr>() ||
+          TargetDecl->hasAttr<TargetAttr>())))
       checkTargetFeatures(Loc, FD);
   }
 
