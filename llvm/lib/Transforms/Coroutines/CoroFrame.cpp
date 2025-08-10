@@ -987,21 +987,21 @@ static void finalizeBasicBlockCloneAndTrackSuccessors(
   //  it will use VMap to do so
   // in addition, it will add the node successors to SuccessorBlocksSet
 
-        // Remap the instructions, VMap here aggregates instructions across
-        // multiple BasicBlocks, and we assume that traversal is reversed post-order,
-        // therefore successor blocks (for example instructions having funclet
-        // tags) will be mapped correctly to the new cloned cleanuppad
-        for (Instruction &ClonedBlockInstruction : *ClonedBlock) {
-          RemapInstruction(&ClonedBlockInstruction, VMap,
-RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
-        }
+  // Remap the instructions, VMap here aggregates instructions across
+  // multiple BasicBlocks, and we assume that traversal is reversed post-order,
+  // therefore successor blocks (for example instructions having funclet
+  // tags) will be mapped correctly to the new cloned cleanuppad
+  for (Instruction &ClonedBlockInstruction : *ClonedBlock) {
+    RemapInstruction(&ClonedBlockInstruction, VMap,
+                     RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+  }
 
-        const auto &InitialBlockTerminator = InitialBlock->getTerminator();
+  const auto &InitialBlockTerminator = InitialBlock->getTerminator();
 
-        // If it's cleanupret, find the correspondant cleanuppad (use the VMap to
-        // find it).
-        if (auto *InitialBlockTerminatorCleanupReturn =
-dyn_cast<CleanupReturnInst>(InitialBlockTerminator)) {
+  // If it's cleanupret, find the correspondant cleanuppad (use the VMap to
+  // find it).
+  if (auto *InitialBlockTerminatorCleanupReturn =
+          dyn_cast<CleanupReturnInst>(InitialBlockTerminator)) {
     // if none found do nothing
     if (VMap.find(InitialBlockTerminatorCleanupReturn->getCleanupPad()) ==
         VMap.end()) {
@@ -1009,32 +1009,32 @@ dyn_cast<CleanupReturnInst>(InitialBlockTerminator)) {
     }
 
     auto *ClonedBlockTerminatorCleanupReturn =
-cast<CleanupReturnInst>(ClonedBlock->getTerminator());
+        cast<CleanupReturnInst>(ClonedBlock->getTerminator());
 
-          // Assuming reversed post-order traversal
+    // Assuming reversed post-order traversal
     llvm::Value *ClonedBlockCleanupPadValue =
         VMap[InitialBlockTerminatorCleanupReturn->getCleanupPad()];
     auto *ClonedBlockCleanupPad =
-cast<CleanupPadInst>(ClonedBlockCleanupPadValue);
-            ClonedBlockTerminatorCleanupReturn->setCleanupPad(ClonedBlockCleanupPad);
-          
-        // If it's a branch/invoke, keep track of its successors, we want to
-          // calculate dominance between CoroBegin and them also
-        } else if (auto *InitialBlockTerminatorBranch =
-dyn_cast<BranchInst>(InitialBlockTerminator)) {
-          for (unsigned int successorIdx = 0;
-successorIdx < InitialBlockTerminatorBranch->getNumSuccessors();
-++successorIdx) {
-            SuccessorBlocksSet.insert(
+        cast<CleanupPadInst>(ClonedBlockCleanupPadValue);
+    ClonedBlockTerminatorCleanupReturn->setCleanupPad(ClonedBlockCleanupPad);
+
+    // If it's a branch/invoke, keep track of its successors, we want to
+    // calculate dominance between CoroBegin and them also
+  } else if (auto *InitialBlockTerminatorBranch =
+                 dyn_cast<BranchInst>(InitialBlockTerminator)) {
+    for (unsigned int successorIdx = 0;
+         successorIdx < InitialBlockTerminatorBranch->getNumSuccessors();
+         ++successorIdx) {
+      SuccessorBlocksSet.insert(
           InitialBlockTerminatorBranch->getSuccessor(successorIdx));
-          }
-        } else if (auto *InitialBlockTerminatorInvoke =
-dyn_cast<InvokeInst>(InitialBlockTerminator)) {
+    }
+  } else if (auto *InitialBlockTerminatorInvoke =
+                 dyn_cast<InvokeInst>(InitialBlockTerminator)) {
     SuccessorBlocksSet.insert(InitialBlockTerminatorInvoke->getUnwindDest());
   } else if (isa<ReturnInst>(InitialBlockTerminator)) {
     // No action needed
-        } else {
-          InitialBlockTerminator->print(dbgs());
+  } else {
+    InitialBlockTerminator->print(dbgs());
     report_fatal_error("Terminator is not implemented in "
                        "finalizeBasicBlockCloneAndTrackSuccessors");
   }
@@ -1051,12 +1051,12 @@ void splitIfBasicBlockPredecessors(
   std::copy_if(Predecessors.begin(), Predecessors.end(),
                std::back_inserter(InitialBlockPredecessors), Predicate);
 
-        // Fixups on the predecessors terminator - point them to ReplacementBlock.
+  // Fixups on the predecessors terminator - point them to ReplacementBlock.
   for (auto *InitialBlockPredecessor : InitialBlockPredecessors) {
     auto *InitialBlockPredecessorTerminator =
         InitialBlockPredecessor->getTerminator();
     if (auto *InitialBlockPredecessorTerminatorInvoke =
-dyn_cast<InvokeInst>(InitialBlockPredecessorTerminator)) {
+            dyn_cast<InvokeInst>(InitialBlockPredecessorTerminator)) {
       if (InitialBlock ==
           InitialBlockPredecessorTerminatorInvoke->getUnwindDest()) {
         InitialBlockPredecessorTerminatorInvoke->setUnwindDest(
@@ -1066,16 +1066,16 @@ dyn_cast<InvokeInst>(InitialBlockPredecessorTerminator)) {
             ReplacementBlock);
       }
     } else if (auto *InitialBlockPredecessorTerminatorBranch =
-dyn_cast<BranchInst>(InitialBlockPredecessorTerminator)) {
-            for (unsigned int successorIdx = 0;
-                successorIdx <
+                   dyn_cast<BranchInst>(InitialBlockPredecessorTerminator)) {
+      for (unsigned int successorIdx = 0;
+           successorIdx <
            InitialBlockPredecessorTerminatorBranch->getNumSuccessors();
-                ++successorIdx) {
-              if (InitialBlock ==
-InitialBlockPredecessorTerminatorBranch->getSuccessor(
-successorIdx)) {
-                InitialBlockPredecessorTerminatorBranch->setSuccessor(
-successorIdx, ReplacementBlock);
+           ++successorIdx) {
+        if (InitialBlock ==
+            InitialBlockPredecessorTerminatorBranch->getSuccessor(
+                successorIdx)) {
+          InitialBlockPredecessorTerminatorBranch->setSuccessor(
+              successorIdx, ReplacementBlock);
         }
       }
     } else if (auto *InitialBlockPredecessorTerminatorCleanupReturn =
@@ -1083,8 +1083,8 @@ successorIdx, ReplacementBlock);
                        InitialBlockPredecessorTerminator)) {
       InitialBlockPredecessorTerminatorCleanupReturn->setUnwindDest(
           ReplacementBlock);
-          } else {
-            InitialBlockPredecessorTerminator->print(dbgs());
+    } else {
+      InitialBlockPredecessorTerminator->print(dbgs());
       report_fatal_error(
           "Terminator is not implemented in splitIfBasicBlockPredecessors");
     }
@@ -1111,15 +1111,15 @@ splitBasicBlocksNotDominatedByCoroBegin(const FrameDataInfo &FrameData,
       if (!DT.dominates(Shape.CoroBegin, CurrentBlock)) {
         SpillUserBlocksSet.insert(CurrentBlock);
       }
-          }
-        }
-        
-        // Run is in reversed post order, to enforce visiting predecessors before
+    }
+  }
+
+  // Run is in reversed post order, to enforce visiting predecessors before
   // successors
   for (BasicBlock *CurrentBlock : ReversePostOrderTraversal<Function *>(F)) {
     if (!SpillUserBlocksSet.contains(CurrentBlock)) {
-        continue;
-      }
+      continue;
+    }
     SpillUserBlocksSet.erase(CurrentBlock);
 
     // Preserve the current node. the duplicate will become the unspilled

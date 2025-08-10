@@ -377,7 +377,7 @@ static void replaceUnwindCoroEnd(AnyCoroEndInst *End, const coro::Shape &Shape,
   if (auto Bundle = End->getOperandBundle(LLVMContext::OB_funclet)) {
     auto *FromPad = cast<CleanupPadInst>(Bundle->Inputs[0]);
 
-    // If the terminator is an invoke, 
+    // If the terminator is an invoke,
     // set the cleanupret unwind destination the same as the other edges, to
     // avoid validation errors
     BasicBlock *UBB = nullptr;
