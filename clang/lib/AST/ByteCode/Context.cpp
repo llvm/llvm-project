@@ -501,7 +501,7 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
   // elsewhere in the code.
   QualType Ty = FuncDecl->getReturnType();
   bool HasRVO = false;
-  if (!Ty->isVoidType() && !classify(Ty)) {
+  if (!Ty->isVoidType() && !canClassify(Ty)) {
     HasRVO = true;
     ParamTypes.push_back(PT_Ptr);
     ParamOffsets.push_back(ParamOffset);
