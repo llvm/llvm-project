@@ -269,6 +269,8 @@ struct __tgt_target_non_contig {
   uint64_t Stride;
 };
 
+// clang-format on
+
 #ifdef __cplusplus
 extern "C" {
 #endif
