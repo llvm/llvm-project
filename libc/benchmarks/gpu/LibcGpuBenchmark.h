@@ -11,7 +11,6 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/config.h"
-#include "src/stdlib/rand.h"
 #include "src/time/clock.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -109,6 +108,35 @@ private:
   }
 };
 
+class RandomGenerator {
+  uint64_t state;
+
+  static inline uint64_t splitmix64(uint64_t x) noexcept {
+    x += 0x9E3779B97F4A7C15ULL;
+    x = (x ^ (x >> 30)) * 0xBF58476D1CE4E5B9ULL;
+    x = (x ^ (x >> 27)) * 0x94D049BB133111EBULL;
+    x = (x ^ (x >> 31));
+    return x ? x : 0x9E3779B97F4A7C15ULL;
+  }
+
+public:
+  explicit inline RandomGenerator(uint64_t seed) noexcept
+      : state(splitmix64(seed)) {}
+
+  inline uint64_t next64() noexcept {
+    uint64_t x = state;
+    x ^= x >> 12;
+    x ^= x << 25;
+    x ^= x >> 27;
+    state = x;
+    return x * 0x2545F4914F6CDD1DULL;
+  }
+
+  inline uint32_t next32() noexcept {
+    return static_cast<uint32_t>(next64() >> 32);
+  }
+};
+
 // We want our random values to be approximately
 // Output: a random number with the exponent field between min_exp and max_exp,
 // i.e. 2^min_exp <= |real_value| < 2^(max_exp + 1),
@@ -117,7 +145,8 @@ private:
 //   EXP_BIAS + 1 corresponding to inf or nan.
 template <typename T>
 static T
-get_rand_input(int max_exp = LIBC_NAMESPACE::fputil::FPBits<T>::EXP_BIAS,
+get_rand_input(RandomGenerator &rng,
+               int max_exp = LIBC_NAMESPACE::fputil::FPBits<T>::EXP_BIAS,
                int min_exp = -LIBC_NAMESPACE::fputil::FPBits<T>::EXP_BIAS) {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
 
@@ -126,10 +155,9 @@ get_rand_input(int max_exp = LIBC_NAMESPACE::fputil::FPBits<T>::EXP_BIAS,
                                                uint64_t, uint32_t>;
   RandType bits;
   if constexpr (cpp::is_same_v<T, uint64_t>)
-    bits = (static_cast<uint64_t>(LIBC_NAMESPACE::rand()) << 32) |
-           static_cast<uint64_t>(LIBC_NAMESPACE::rand());
+    bits = rng.next64();
   else
-    bits = LIBC_NAMESPACE::rand();
+    bits = rng.next32();
   double scale =
       static_cast<double>(max_exp - min_exp + 1) / (2 * FPBits::EXP_BIAS + 1);
   FPBits fp(bits);
@@ -146,10 +174,12 @@ template <typename T> class MathPerf {
 
 public:
   template <size_t N = 1>
-  static uint64_t run_throughput_in_range(T f(T), int min_exp, int max_exp) {
+  static uint64_t run_throughput_in_range(T f(T), int min_exp, int max_exp,
+                                          uint64_t seed = N) {
     cpp::array<T, N> inputs;
+    RandomGenerator rng((seed << 32) ^ gpu::get_thread_id());
     for (size_t i = 0; i < N; ++i)
-      inputs[i] = get_rand_input<T>(min_exp, max_exp);
+      inputs[i] = get_rand_input<T>(rng, min_exp, max_exp);
 
     uint64_t total_time = LIBC_NAMESPACE::throughput(f, inputs);
 
@@ -160,12 +190,13 @@ public:
   template <size_t N = 1>
   static uint64_t run_throughput_in_range(T f(T, T), int arg1_min_exp,
                                           int arg1_max_exp, int arg2_min_exp,
-                                          int arg2_max_exp) {
+                                          int arg2_max_exp, uint64_t seed = N) {
     cpp::array<T, N> inputs1;
     cpp::array<T, N> inputs2;
+    RandomGenerator rng((seed << 32) ^ gpu::get_thread_id());
     for (size_t i = 0; i < N; ++i) {
-      inputs1[i] = get_rand_input<T>(arg1_min_exp, arg1_max_exp);
-      inputs2[i] = get_rand_input<T>(arg2_min_exp, arg2_max_exp);
+      inputs1[i] = get_rand_input<T>(rng, arg1_min_exp, arg1_max_exp);
+      inputs2[i] = get_rand_input<T>(rng, arg2_min_exp, arg2_max_exp);
     }
 
     uint64_t total_time = LIBC_NAMESPACE::throughput(f, inputs1, inputs2);
