@@ -1027,15 +1027,9 @@ public:
   __insert_unique_from_orphaned_node(const_iterator __p, __get_node_value_type_t<_Tp>&& __value) {
     // fails here for move_alloc.pass.cpp
     if (__libcpp_is_constant_evaluated()) {
-      __node_allocator& __na = __value.__node_alloc();
-      // __node_traits::destroy(__na, std::addressof(__lhs));
-      // __node_traits::construct(__na, std::addressof(__lhs), std::move(__tmp));
+      __node_allocator& __na = __node_alloc();
       key_type __kk;
-      // new (std::addressof(__kk))(key_type)(__value.first);
-      // todo: this is wrong
       __node_traits::construct(__na, std::addressof(__kk), std::move(__value.first));
-      // __node_holder __h = __construct_node(std::forward<_Args>(__args)...);?
-      // __node_holder __h = __construct_node(__value);?
       __emplace_hint_unique(__p, std::move(__kk), std::move(__value.second));
     } else 
     {
