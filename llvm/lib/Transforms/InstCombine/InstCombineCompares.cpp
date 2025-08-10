@@ -1325,15 +1325,14 @@ Instruction *InstCombinerImpl::foldICmpWithZero(ICmpInst &Cmp) {
 //      icmp eq 0, (and num, val - 1)
 // For value being power of two
 Instruction *InstCombinerImpl::foldIsMultipleOfAPowerOfTwo(ICmpInst &Cmp) {
-  Value *Op0 = Cmp.getOperand(0), *Op1 = Cmp.getOperand(1);
   Value *Neg, *Num, *Mask, *Value;
   CmpPredicate Pred;
   const APInt *NegConst, *MaskConst;
 
   if (!match(&Cmp, m_c_ICmp(Pred, m_Value(Num),
-                            m_OneUse(m_c_And(
-                                m_OneUse(m_c_Add(m_Value(Num), m_Value(Mask))),
-                                m_Value(Neg))))))
+                            m_OneUse(m_c_And(m_OneUse(m_c_Add(m_Deferred(Num),
+                                                              m_Value(Mask))),
+                                             m_Value(Neg))))))
     return nullptr;
 
   if (!ICmpInst::isEquality(Pred))
@@ -1363,9 +1362,6 @@ Instruction *InstCombinerImpl::foldIsMultipleOfAPowerOfTwo(ICmpInst &Cmp) {
     if (!isKnownToBeAPowerOfTwo(Value, false, &Cmp))
       return nullptr;
   }
-
-  if (!match(Op0, m_Specific(Num)) && !match(Op1, m_Specific(Num)))
-    return nullptr;
 
   // Create new icmp eq (num & (val - 1)), 0
   auto NewAnd = Builder.CreateAnd(Num, Mask);
