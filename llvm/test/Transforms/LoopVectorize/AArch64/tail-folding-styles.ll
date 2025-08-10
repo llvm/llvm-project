@@ -73,7 +73,6 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA:       middle.block:
 ; DATA-NEXT:    br label [[WHILE_END_LOOPEXIT:%.*]]
 ; DATA:       scalar.ph:
-; DATA-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; DATA-NEXT:    br label [[WHILE_BODY:%.*]]
 ; DATA:       while.body:
 ; DATA-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH]] ]
@@ -118,7 +117,6 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA_NO_LANEMASK:       middle.block:
 ; DATA_NO_LANEMASK-NEXT:    br label [[WHILE_END_LOOPEXIT:%.*]]
 ; DATA_NO_LANEMASK:       scalar.ph:
-; DATA_NO_LANEMASK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; DATA_NO_LANEMASK-NEXT:    br label [[WHILE_BODY:%.*]]
 ; DATA_NO_LANEMASK:       while.body:
 ; DATA_NO_LANEMASK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH]] ]
@@ -154,7 +152,6 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA_AND_CONTROL:       middle.block:
 ; DATA_AND_CONTROL-NEXT:    br label [[WHILE_END_LOOPEXIT:%.*]]
 ; DATA_AND_CONTROL:       scalar.ph:
-; DATA_AND_CONTROL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; DATA_AND_CONTROL-NEXT:    br label [[WHILE_BODY:%.*]]
 ; DATA_AND_CONTROL:       while.body:
 ; DATA_AND_CONTROL-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH]] ]
@@ -195,7 +192,6 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA_AND_CONTROL_NO_RT_CHECK:       middle.block:
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    br label [[WHILE_END_LOOPEXIT:%.*]]
 ; DATA_AND_CONTROL_NO_RT_CHECK:       scalar.ph:
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
 ; DATA_AND_CONTROL_NO_RT_CHECK:       while.body:
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH]] ]
