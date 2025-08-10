@@ -125,3 +125,57 @@ void test() {
 }
 
 } // namespace base_class_smart_ptr_PR60896
+
+//===----------------------------------------------------------------------===//
+// Check that we don't report leaks for multiple owning arguments
+//===----------------------------------------------------------------------===//
+namespace multiple_owning_args_PR60896 {
+
+// Custom unique_ptr implementation for testing
+template <typename T>
+struct unique_ptr {
+  T* ptr;
+  unique_ptr(T* p) : ptr(p) {}
+  ~unique_ptr() { delete ptr; }
+  unique_ptr(unique_ptr&& other) : ptr(other.ptr) { other.ptr = nullptr; }
+  T* get() const { return ptr; }
+};
+
+template <typename T, typename... Args>
+unique_ptr<T> make_unique(Args&&... args) {
+  return unique_ptr<T>(new T(args...));
+}
+
+// Struct with single smart pointer field
+struct SinglePtr {
+  unique_ptr<int> ptr;
+  SinglePtr(unique_ptr<int>&& p) : ptr(static_cast<unique_ptr<int>&&>(p)) {}
+};
+
+// Struct with multiple smart pointer fields
+struct MultiPtr {
+  unique_ptr<int> ptr1;
+  unique_ptr<int> ptr2;
+  unique_ptr<int> ptr3;
+  
+  MultiPtr(unique_ptr<int>&& p1, unique_ptr<int>&& p2, unique_ptr<int>&& p3)
+    : ptr1(static_cast<unique_ptr<int>&&>(p1))
+    , ptr2(static_cast<unique_ptr<int>&&>(p2))
+    , ptr3(static_cast<unique_ptr<int>&&>(p3)) {}
+};
+
+void addMultiple(SinglePtr single, MultiPtr multi) {
+  // All unique_ptr destructors will be called when the objects go out of scope
+  // This tests handling of multiple by-value arguments with smart pointer fields
+}
+
+void test() {
+  // No warning should be emitted - all memory is properly managed by unique_ptr
+  // in the temporary objects, which will properly clean up the memory
+  addMultiple(
+    SinglePtr(make_unique<int>(1)),
+    MultiPtr(make_unique<int>(2), make_unique<int>(3), make_unique<int>(4))
+  );
+}
+
+} // namespace multiple_owning_args_PR60896
