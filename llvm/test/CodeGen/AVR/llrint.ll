@@ -4,7 +4,7 @@
 ; FIXME: crash "Input type needs to be promoted!"
 ; define i64 @testmsxh_builtin(half %x) {
 ; entry:
-;   %0 = tail call i64 @llvm.llrint.f16(half %x)
+;   %0 = tail call i64 @llvm.llrint.i64.f16(half %x)
 ;   ret i64 %0
 ; }
 
@@ -14,7 +14,7 @@ define i64 @testmsxs_builtin(float %x) {
 ; CHECK-NEXT:    call llrintf
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call i64 @llvm.llrint.f32(float %x)
+  %0 = tail call i64 @llvm.llrint.i64.f32(float %x)
   ret i64 %0
 }
 
@@ -24,7 +24,7 @@ define i64 @testmsxd_builtin(double %x) {
 ; CHECK-NEXT:    call llrint
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call i64 @llvm.llrint.f64(double %x)
+  %0 = tail call i64 @llvm.llrint.i64.f64(double %x)
   ret i64 %0
 }
 
@@ -35,9 +35,9 @@ define i64 @testmsxq_builtin(fp128 %x) {
 ; CHECK-NEXT:    call llrintl
 ; CHECK-NEXT:    ret
 entry:
-  %0 = tail call i64 @llvm.llrint.fp128(fp128 %x)
+  %0 = tail call i64 @llvm.llrint.i64.fp128(fp128 %x)
   ret i64 %0
 }
 
-declare i64 @llvm.llrint.f32(float) nounwind readnone
-declare i64 @llvm.llrint.f64(double) nounwind readnone
+declare i64 @llvm.llrint.i64.f32(float) nounwind readnone
+declare i64 @llvm.llrint.i64.f64(double) nounwind readnone

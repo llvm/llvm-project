@@ -7,7 +7,7 @@
 ; HARDFP:       bl      llrintf
 define i64 @testmsxh_builtin(half %x) {
 entry:
-  %0 = tail call i64 @llvm.llrint.f16(half %x)
+  %0 = tail call i64 @llvm.llrint.i64.f16(half %x)
   ret i64 %0
 }
 
@@ -17,7 +17,7 @@ entry:
 ; HARDFP:       bl      llrintf
 define i64 @testmsxs_builtin(float %x) {
 entry:
-  %0 = tail call i64 @llvm.llrint.f32(float %x)
+  %0 = tail call i64 @llvm.llrint.i64.f32(float %x)
   ret i64 %0
 }
 
@@ -27,7 +27,7 @@ entry:
 ; HARDFP:       bl      llrint
 define i64 @testmsxd_builtin(double %x) {
 entry:
-  %0 = tail call i64 @llvm.llrint.f64(double %x)
+  %0 = tail call i64 @llvm.llrint.i64.f64(double %x)
   ret i64 %0
 }
 
@@ -38,9 +38,9 @@ entry:
 ; HARDFP:       bl      llrintl
 define i64 @testmsxq_builtin(fp128 %x) {
 entry:
-  %0 = tail call i64 @llvm.llrint.f128(fp128 %x)
+  %0 = tail call i64 @llvm.llrint.i64.f128(fp128 %x)
   ret i64 %0
 }
 
-declare i64 @llvm.llrint.f32(float) nounwind readnone
-declare i64 @llvm.llrint.f64(double) nounwind readnone
+declare i64 @llvm.llrint.i64.f32(float) nounwind readnone
+declare i64 @llvm.llrint.i64.f64(double) nounwind readnone

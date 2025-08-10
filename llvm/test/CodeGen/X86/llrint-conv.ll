@@ -42,7 +42,7 @@ define i64 @testmsxh(half %x) nounwind {
 ; X64-SSE-NEXT:    popq %rcx
 ; X64-SSE-NEXT:    retq
 entry:
-  %0 = tail call i64 @llvm.llrint.f16(half %x)
+  %0 = tail call i64 @llvm.llrint.i64.f16(half %x)
   ret i64 %0
 }
 
@@ -103,7 +103,7 @@ define i64 @testmsxs(float %x) nounwind {
 ; X64-AVX-NEXT:    vcvtss2si %xmm0, %rax
 ; X64-AVX-NEXT:    retq
 entry:
-  %0 = tail call i64 @llvm.llrint.f32(float %x)
+  %0 = tail call i64 @llvm.llrint.i64.f32(float %x)
   ret i64 %0
 }
 
@@ -164,7 +164,7 @@ define i64 @testmsxd(double %x) nounwind {
 ; X64-AVX-NEXT:    vcvtsd2si %xmm0, %rax
 ; X64-AVX-NEXT:    retq
 entry:
-  %0 = tail call i64 @llvm.llrint.f64(double %x)
+  %0 = tail call i64 @llvm.llrint.i64.f64(double %x)
   ret i64 %0
 }
 
@@ -190,7 +190,7 @@ define i64 @testmsll(x86_fp80 %x) nounwind {
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
 ; X64-NEXT:    retq
 entry:
-  %0 = tail call i64 @llvm.llrint.f80(x86_fp80 %x)
+  %0 = tail call i64 @llvm.llrint.i64.f80(x86_fp80 %x)
   ret i64 %0
 }
 
@@ -245,10 +245,10 @@ define i64 @testmslq(fp128 %x) nounwind {
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    jmp llrintl@PLT # TAILCALL
 entry:
-  %0 = tail call i64 @llvm.llrint.fp128(fp128 %x)
+  %0 = tail call i64 @llvm.llrint.i64.fp128(fp128 %x)
   ret i64 %0
 }
 
-declare i64 @llvm.llrint.f32(float) nounwind readnone
-declare i64 @llvm.llrint.f64(double) nounwind readnone
-declare i64 @llvm.llrint.f80(x86_fp80) nounwind readnone
+declare i64 @llvm.llrint.i64.f32(float) nounwind readnone
+declare i64 @llvm.llrint.i64.f64(double) nounwind readnone
+declare i64 @llvm.llrint.i64.f80(x86_fp80) nounwind readnone
