@@ -3441,6 +3441,10 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                            KernelArgs.DynCGroupMem);
   }
 
+  // Increase to the requested dynamic memory size for the device if needed.
+  DynBlockMemSize =
+      std::max(DynBlockMemSize, GenericDevice.getDynamicMemorySize());
+
   // Push the kernel launch into the stream.
   return Stream->pushKernelLaunch(*this, AllArgs, NumThreads, NumBlocks,
                                   getStaticBlockMemSize() + DynBlockMemSize,

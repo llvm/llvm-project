@@ -1322,6 +1322,10 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   if (GenericDevice.getRPCServer())
     GenericDevice.Plugin.getRPCServer().Thread->notify();
 
+  // Increase to the requested dynamic memory size for the device if needed.
+  DynBlockMemSize =
+      std::max(DynBlockMemSize, GenericDevice.getDynamicMemorySize());
+
   // In case we require more memory than the current limit.
   if (DynBlockMemSize >= MaxDynBlockMemSize) {
     CUresult AttrResult = cuFuncSetAttribute(

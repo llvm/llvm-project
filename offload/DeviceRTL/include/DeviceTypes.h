@@ -163,8 +163,13 @@ typedef enum omp_allocator_handle_t {
 
 ///}
 
+/// The OpenMP access group type. The criterion for grupping tasks using a
+/// specific grouping property.
 enum omp_access_t {
+  /// Groups the tasks based on the contention group to which they belong.
   omp_access_cgroup = 0,
+  /// Groups the tasks based on the parallel region to which they bind.
+  omp_access_pteam = 1,
 };
 
 #endif

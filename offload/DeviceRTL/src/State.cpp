@@ -163,14 +163,15 @@ struct DynCGroupMemTy {
     Size = 0;
     Ptr = nullptr;
     IsFallback = false;
-    if (KLE) {
-      Size = KLE->DynCGroupMemSize;
-      if (void *Fallback = KLE->DynCGroupMemFallback) {
-        Ptr = static_cast<char *>(Fallback) + Size * omp_get_team_num();
-        IsFallback = true;
-      } else {
-        Ptr = static_cast<char *>(NativeDynCGroup);
-      }
+    if (!KLE)
+      return;
+
+    Size = KLE->DynCGroupMemSize;
+    if (void *Fallback = KLE->DynCGroupMemFallback) {
+      Ptr = static_cast<char *>(Fallback) + Size * omp_get_team_num();
+      IsFallback = true;
+    } else {
+      Ptr = static_cast<char *>(NativeDynCGroup);
     }
   }
 
@@ -466,7 +467,7 @@ int omp_is_initial_device(void) { return 0; }
 
 void *omp_get_dyn_groupprivate_ptr(size_t Offset, int *IsFallback,
                                    omp_access_t) {
-  if (IsFallback != NULL)
+  if (IsFallback != nullptr)
     *IsFallback = DynCGroupMem.isFallback();
   return DynCGroupMem.getPtr(Offset);
 }
