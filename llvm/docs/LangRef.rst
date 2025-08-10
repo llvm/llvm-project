@@ -12571,10 +12571,11 @@ Example:
 """"""""
 This example assumes pointers in address space 1 are 64 bits in size with an
 address width of 32 bits (``p1:64:64:64:32`` :ref:`datalayout string<langref_datalayout>`)
+
 .. code-block:: llvm
 
-      %X = ptrtoaddr ptr addrspace(1) %P to i32  ; extracts low 32 bits of pointer
-      %Y = ptrtoaddr <4 x ptr addrspace(1)> %P to <4 x i32>; yields vector of low 32 bits for each pointer
+      %X = ptrtoaddr ptr addrspace(1) %P to i32              ; extracts low 32 bits of pointer
+      %Y = ptrtoaddr <4 x ptr addrspace(1)> %P to <4 x i32>  ; yields vector of low 32 bits for each pointer
 
 
 .. _i_inttoptr:
