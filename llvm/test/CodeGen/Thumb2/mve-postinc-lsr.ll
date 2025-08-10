@@ -576,10 +576,10 @@ define i32 @arm_nn_mat_mul_core_4x_s8(i32 %row_elements, i32 %offset, ptr %row_b
 ; CHECK-NEXT:    mov.w r8, #0
 ; CHECK-NEXT:    movs r4, #0
 ; CHECK-NEXT:    mov.w r10, #0
-; CHECK-NEXT:    movs r6, #0
 ; CHECK-NEXT:    adds r7, r2, r1
 ; CHECK-NEXT:    add.w r1, r1, r1, lsl #1
 ; CHECK-NEXT:    add r1, r2
+; CHECK-NEXT:    movs r6, #0
 ; CHECK-NEXT:    dlstp.8 lr, r0
 ; CHECK-NEXT:  .LBB4_2: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
