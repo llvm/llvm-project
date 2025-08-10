@@ -1,15 +1,13 @@
 // Create bitcode bundle
 // RUN: clang -c -x hip --offload-arch=gfx900 --offload-arch=gfx1030 \
-// RUN:    -nogpulib -nogpuinc \
+// RUN:    -nogpulib -nogpuinc -emit-llvm \
 // RUN:    --gpu-bundle-output --offload-device-only \
-// RUN:    -fgpu-rdc \
 // RUN:    %s -o %t.bundle.bc
 //
 // Create compressed bitcode bundle (add --offload-compress flag)
 // RUN: clang -c -x hip --offload-arch=gfx900 --offload-arch=gfx1030 \
-// RUN:    -nogpulib -nogpuinc \
+// RUN:    -nogpulib -nogpuinc -emit-llvm \
 // RUN:    --gpu-bundle-output --offload-device-only \
-// RUN:    -fgpu-rdc \
 // RUN:    --offload-compress \
 // RUN:    %s -o %t.compressed-bundle.bc
 //

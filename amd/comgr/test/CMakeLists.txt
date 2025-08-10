@@ -44,9 +44,9 @@ endmacro()
 macro(add_test_input_bitcode_bundle name input output)
   add_custom_command(
     OUTPUT "${output}"
-    COMMAND "$<TARGET_FILE:clang>" -c --offload-arch=gfx900 -emit-llvm -fgpu-rdc
+    COMMAND "$<TARGET_FILE:clang>" -c --offload-arch=gfx900 -emit-llvm
     --gpu-bundle-output ${ARGN} "${CMAKE_CURRENT_SOURCE_DIR}/${input}" -nogpulib -nogpuinc
-    -o "${output}"
+    --offload-device-only -o "${output}"
     VERBATIM
     DEPENDS clang lld "${input}")
   add_custom_target("${name}"
