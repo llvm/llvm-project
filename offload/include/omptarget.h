@@ -107,7 +107,7 @@ enum TargetAllocTy : int32_t {
 
 inline KernelArgsTy CTorDTorKernelArgs = {1,       0,       nullptr,   nullptr,
 	     nullptr, nullptr, nullptr,   nullptr,
-	     0,      {0,0,0},       {1, 0, 0}, {1, 0, 0}, 0};
+	     0,      {0,0,0,0},       {1, 0, 0}, {1, 0, 0}, 0};
 
 struct DeviceTy;
 
@@ -273,10 +273,22 @@ struct __tgt_target_non_contig {
 extern "C" {
 #endif
 
+/// The OpenMP access group type. The criterion for grupping tasks using a
+/// specific grouping property.
+enum omp_access_t {
+  /// Groups the tasks based on the contention group to which they belong.
+  omp_access_cgroup = 0,
+  /// Groups the tasks based on the parallel region to which they bind.
+  omp_access_pteam = 1,
+};
+
 void ompx_dump_mapping_tables(void);
 int omp_get_num_devices(void);
 int omp_get_device_num(void);
 int omp_get_initial_device(void);
+size_t
+omp_get_groupprivate_limit(int device_num,
+                           omp_access_t access_group = omp_access_cgroup);
 void *omp_target_alloc(size_t Size, int DeviceNum);
 void omp_target_free(void *DevicePtr, int DeviceNum);
 int omp_target_is_present(const void *Ptr, int DeviceNum);

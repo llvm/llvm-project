@@ -40,6 +40,7 @@ VERS1.0 {
     omp_get_num_devices;
     omp_get_device_num;
     omp_get_initial_device;
+    omp_get_groupprivate_limit;
     omp_target_alloc;
     omp_target_free;
     omp_target_is_present;

@@ -98,6 +98,20 @@ EXTERN int omp_get_initial_device(void) {
   return HostDevice;
 }
 
+EXTERN size_t omp_get_groupprivate_limit(int DeviceNum,
+                                         omp_access_t AccessGroup) {
+  TIMESCOPE();
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
+  if (DeviceNum == omp_get_initial_device())
+    return 0;
+
+  auto DeviceOrErr = PM->getDevice(DeviceNum);
+  if (!DeviceOrErr)
+    FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
+
+  return DeviceOrErr->getMaxSharedTeamMemory();
+}
+
 EXTERN void *omp_target_alloc(size_t Size, int DeviceNum) {
   TIMESCOPE_WITH_DETAILS("dst_dev=" + std::to_string(DeviceNum) +
                          ";size=" + std::to_string(Size));
