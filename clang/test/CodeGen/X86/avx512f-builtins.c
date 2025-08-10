@@ -10502,7 +10502,7 @@ __m512d test_mm512_set_pd (double __A, double __B, double __C, double __D,
     //CHECK: insertelement{{.*}}i32 7
   return _mm512_set_pd( __A, __B, __C, __D, __E, __F, __G, __H);
 }
-TEST_CONSTEXPR(match_m512d(_mm512_set_pd(200, 400, 600, 800, 1000, 1200, 1400, 1600), 200, 400, 600, 800, 1000, 1200, 1400, 1600));
+TEST_CONSTEXPR(match_m512d(_mm512_set_pd(20.0, 40.0, 60.0, 80.0, 100.0, 120.0, 140.0, 160.0), 20.0, 40.0, 60.0, 80.0, 100.0, 120.0, 140.0, 160.0));
 
 __m512d test_mm512_setr_pd (double __A, double __B, double __C, double __D,
                            double __E, double __F, double __G, double __H)
@@ -10526,7 +10526,7 @@ __m512d test_mm512_setr_pd (double __A, double __B, double __C, double __D,
     //CHECK: insertelement{{.*}}i32 7
   return _mm512_setr_pd( __A, __B, __C, __D, __E, __F, __G, __H);
 }
-TEST_CONSTEXPR(match_m512d(_mm512_setr_pd(-20, 40, -60, 80, -100, 120, -140, 160), -20, 40, -60, 80, -100, 120, -140, 160));
+TEST_CONSTEXPR(match_m512d(_mm512_setr_pd(-20.0, 40.0, -60.0, 80.0, -100.0, 120.0, -140.0, 160.0), -20.0, 40.0, -60.0, 80.0, -100.0, 120.0, -140.0, 160.0));
 
 __m512 test_mm512_set_ps (float __A, float __B, float __C, float __D,
                           float __E, float __F, float __G, float __H,
