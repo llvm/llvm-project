@@ -1,10 +1,17 @@
-// RUN: %check_clang_tidy -std=c++11-or-later %s \
+// RUN: %check_clang_tidy -std=c++20-or-later %s \
 // RUN: portability-avoid-platform-specific-fundamental-types %t -- \
 // RUN: -config="{CheckOptions: \
 // RUN: [{key: portability-avoid-platform-specific-fundamental-types.WarnOnInts, \
 // RUN: value: false}, \
 // RUN: {key: portability-avoid-platform-specific-fundamental-types.WarnOnFloats, \
 // RUN: value: false}]}"
+
+// Mock byte
+// NOLINTBEGIN(portability-avoid-platform-specific-fundamental-types)
+namespace std {
+enum class byte : unsigned char {};
+}
+// NOLINTEND(portability-avoid-platform-specific-fundamental-types)
 
 // Test character types that should trigger warnings when WarnOnChars is enabled
 char global_char = 'a';
@@ -73,3 +80,8 @@ int should_not_warn_int = 42;
 long should_not_warn_long = 100L;
 float should_not_warn_float = 3.14f;
 double should_not_warn_double = 2.71828;
+
+// Test that unicode characters are not flagged
+char8_t utf8 = u8'a';
+char16_t utf16 = u'a';
+char32_t utf32 = U'a';
