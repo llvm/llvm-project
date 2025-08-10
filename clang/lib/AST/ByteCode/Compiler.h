@@ -306,7 +306,7 @@ protected:
   bool visitArrayElemInit(unsigned ElemIndex, const Expr *Init,
                           OptPrimType InitT);
   bool visitCallArgs(ArrayRef<const Expr *> Args, const FunctionDecl *FuncDecl,
-                     bool Activate);
+                     bool Activate, bool IsOperatorCall);
 
   /// Creates a local primitive value.
   unsigned allocateLocalPrimitive(DeclTy &&Decl, PrimType Ty, bool IsConst,
