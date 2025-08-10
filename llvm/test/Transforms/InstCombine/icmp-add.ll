@@ -3301,6 +3301,8 @@ entry:
   ret i1 %cmp
 }
 
+; PR 152851
+
 define i1 @val_is_aligend_sub(i32 %num, i32 %val) {
 ; CHECK-LABEL: @val_is_aligend_sub(
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 [[NUM:%.*]])
@@ -3406,8 +3408,8 @@ define i1 @val_is_aligend_const_pow2(i32 %num) {
 }
 
 ; Should not work for non-power-of-two cases
-define i1 @val_is_aligend_const_non-pow2(i32 %num) {
-; CHECK-LABEL: @val_is_aligend_const_non-pow2(
+define i1 @val_is_aligend_const_non_pow2(i32 %num) {
+; CHECK-LABEL: @val_is_aligend_const_non_pow2(
 ; CHECK-NEXT:    [[NUM_BIASED:%.*]] = add i32 [[NUM:%.*]], 6
 ; CHECK-NEXT:    [[_2_SROA_0_0:%.*]] = and i32 [[NUM_BIASED]], -7
 ; CHECK-NEXT:    [[_0:%.*]] = icmp eq i32 [[_2_SROA_0_0]], [[NUM]]
@@ -3433,6 +3435,65 @@ define i1 @val_is_aligend_non_pow(i32 %num, i32 %val) {
 
   %num.biased = add i32 %num, %mask
   %_2.sroa.0.0 = and i32 %num.biased, %neg
+  %_0 = icmp eq i32 %_2.sroa.0.0, %num
+  ret i1 %_0
+}
+
+define i1 @val_is_aligend_const_pow2_multiuse(i32 %num) {
+; CHECK-LABEL: @val_is_aligend_const_pow2_multiuse(
+; CHECK-NEXT:    [[NUM_BIASED:%.*]] = add i32 [[NUM:%.*]], 4095
+; CHECK-NEXT:    [[_2_SROA_0_0:%.*]] = and i32 [[NUM_BIASED]], -4096
+; CHECK-NEXT:    call void @use(i32 [[_2_SROA_0_0]])
+; CHECK-NEXT:    [[_0:%.*]] = icmp eq i32 [[_2_SROA_0_0]], [[NUM]]
+; CHECK-NEXT:    ret i1 [[_0]]
+;
+  %num.biased = add i32 %num, 4095
+  %_2.sroa.0.0 = and i32 %num.biased, -4096
+  call void @use(i32 %_2.sroa.0.0)
+  %_0 = icmp eq i32 %_2.sroa.0.0, %num
+  ret i1 %_0
+}
+
+define i1 @val_is_aligend_const_pow2_multiuse1(i32 %num) {
+; CHECK-LABEL: @val_is_aligend_const_pow2_multiuse1(
+; CHECK-NEXT:    [[NUM_BIASED:%.*]] = add i32 [[NUM:%.*]], 4095
+; CHECK-NEXT:    call void @use(i32 [[NUM_BIASED]])
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[NUM]], 4095
+; CHECK-NEXT:    [[_0:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[_0]]
+;
+  %num.biased = add i32 %num, 4095
+  call void @use(i32 %num.biased)
+  %_2.sroa.0.0 = and i32 %num.biased, -4096
+  %_0 = icmp eq i32 %_2.sroa.0.0, %num
+  ret i1 %_0
+}
+
+define i1 @val_is_aligend_add_multiuse(i32 %num, i32 %val) {
+; CHECK-LABEL: @val_is_aligend_add_multiuse(
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 [[VAL:%.*]])
+; CHECK-NEXT:    [[POW:%.*]] = icmp eq i32 [[TMP1]], 1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[POW]])
+; CHECK-NEXT:    [[MASK:%.*]] = add i32 [[VAL]], -1
+; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i32 0, [[VAL]]
+; CHECK-NEXT:    [[NUM_BIASED:%.*]] = add i32 [[NUM:%.*]], [[MASK]]
+; CHECK-NEXT:    [[_2_SROA_0_0:%.*]] = and i32 [[NUM_BIASED]], [[NEG]]
+; CHECK-NEXT:    call void @use(i32 [[_2_SROA_0_0]])
+; CHECK-NEXT:    [[_0:%.*]] = icmp eq i32 [[_2_SROA_0_0]], [[NUM]]
+; CHECK-NEXT:    ret i1 [[_0]]
+;
+  %1 = tail call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 %val)
+  %pow = icmp eq i32 %1, 1
+  call void @llvm.assume(i1 %pow)
+
+  %mask = add i32 %val, -1
+  %neg = sub nsw i32 0, %val
+
+  %num.biased = add i32 %num, %mask
+  %_2.sroa.0.0 = and i32 %num.biased, %neg
+
+  call void @use(i32 %_2.sroa.0.0)
+
   %_0 = icmp eq i32 %_2.sroa.0.0, %num
   ret i1 %_0
 }

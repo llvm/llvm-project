@@ -1325,26 +1325,18 @@ Instruction *InstCombinerImpl::foldICmpWithZero(ICmpInst &Cmp) {
 //      icmp eq 0, (and num, val - 1)
 // For value being power of two
 Instruction *InstCombinerImpl::foldNextMultiply(ICmpInst &Cmp) {
-  Value *Op0 = Cmp.getOperand(0), *Op1 = Cmp.getOperand(1);
+  Value *Op0 = Cmp.getOperand(0);
   Value *Neg, *Add, *Num, *Mask, *Value;
-  CmpInst::Predicate Pred = Cmp.getPredicate();
-  const APInt *NegConst, *MaskConst, *NumCost;
-
-  if (!ICmpInst::isEquality(Pred))
-    return nullptr;
+  CmpPredicate Pred;
+  const APInt *NegConst, *MaskConst;
 
   // Match num + neg
-  if (!match(Op0, m_c_And(m_Value(Add), m_Value(Neg))))
+  if (!match(Op0, m_OneUse(m_c_And(m_Value(Add), m_Value(Neg)))))
     return nullptr;
 
   // Match num & mask and handle commutative care
-  if (!match(Add, m_c_Add(m_Value(Num), m_Value(Mask)))) {
-    if (match(Neg, m_c_Add(m_Value(Num), m_Value(Mask)))) {
-      std::swap(Add, Neg);
-    } else {
-      return nullptr;
-    }
-  }
+  if (!match(Op0, m_c_And(m_c_Add(m_Value(Num), m_Value(Mask)), m_Value(Neg))))
+    return nullptr;
 
   // Check the constant case
   if (match(Neg, m_APInt(NegConst)) && match(Mask, m_APInt(MaskConst))) {
@@ -1375,12 +1367,11 @@ Instruction *InstCombinerImpl::foldNextMultiply(ICmpInst &Cmp) {
       return nullptr;
   }
 
-  // Guard against weird special-case where Op1 gets optimized to constant.
-  // Leave it constant fonder.
-  if (match(Op1, m_APInt(NumCost)))
+  // Verify that Add and Num are connected by ICmp.
+  if (!match(&Cmp, m_c_ICmp(Pred, m_Value(Add), m_Specific(Num))))
     return nullptr;
 
-  if (!match(Op1, m_Value(Num)))
+  if (!ICmpInst::isEquality(Pred))
     return nullptr;
 
   // Create new icmp eq (num & (val - 1)), 0
