@@ -10,37 +10,37 @@ define void @fn() presplitcoroutine {
 ; CHECK-NEXT:    [[GEP_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[ESCAPE_GEP]], i64 8
 ; CHECK-NEXT:    [[ESCAPE_STORE:%.*]] = alloca [500 x i8], align 16
 ; CHECK-NEXT:    [[STORE_PTR:%.*]] = alloca ptr, align 8
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 500, ptr [[ESCAPE_STORE]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[STORE_PTR]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[ESCAPE_STORE]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[STORE_PTR]])
 ; CHECK-NEXT:    store ptr [[ESCAPE_STORE]], ptr [[STORE_PTR]], align 8
 ; CHECK-NEXT:    [[ESCAPE_CALL:%.*]] = alloca [500 x i8], align 16
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 500, ptr [[ESCAPE_CALL]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[ESCAPE_CALL]])
 ; CHECK-NEXT:    call void @capture(ptr [[ESCAPE_CALL]])
 ; CHECK-NEXT:    [[UNUSED:%.*]] = call i8 @llvm.coro.suspend(token none, i1 false)
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 500, ptr [[ESCAPE_GEP]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[ESCAPE_GEP]])
 ; CHECK-NEXT:    call void @capture(ptr [[GEP_PTR]])
 ; CHECK-NEXT:    call void @capture(ptr [[STORE_PTR]])
 ; CHECK-NEXT:    br label %[[END:.*]]
 ; CHECK:       [[END]]:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 500, ptr [[ESCAPE_GEP]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 500, ptr [[ESCAPE_STORE]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 500, ptr [[ESCAPE_CALL]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr [[STORE_PTR]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[ESCAPE_GEP]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[ESCAPE_STORE]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[ESCAPE_CALL]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[STORE_PTR]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %escape.gep = alloca [500 x i8], align 16
-  call void @llvm.lifetime.start.p0(i64 500, ptr %escape.gep)
+  call void @llvm.lifetime.start.p0(ptr %escape.gep)
   %gep.ptr = getelementptr inbounds nuw i8, ptr %escape.gep, i64 8
 
   %escape.store = alloca [500 x i8], align 16
   %store.ptr = alloca ptr, align 8
-  call void @llvm.lifetime.start.p0(i64 500, ptr %escape.store)
-  call void @llvm.lifetime.start.p0(i64 8, ptr %store.ptr)
+  call void @llvm.lifetime.start.p0(ptr %escape.store)
+  call void @llvm.lifetime.start.p0(ptr %store.ptr)
   store ptr %escape.store, ptr %store.ptr, align 8
 
   %escape.call = alloca [500 x i8], align 16
-  call void @llvm.lifetime.start.p0(i64 500, ptr %escape.call)
+  call void @llvm.lifetime.start.p0(ptr %escape.call)
   call void @capture(ptr %escape.call)
 
   %unused = call i8 @llvm.coro.suspend(token none, i1 false)
@@ -48,10 +48,10 @@ entry:
   call void @capture(ptr %store.ptr)
   br label %end
 end:
-  call void @llvm.lifetime.end.p0(i64 500, ptr %escape.gep)
-  call void @llvm.lifetime.end.p0(i64 500, ptr %escape.store)
-  call void @llvm.lifetime.end.p0(i64 500, ptr %escape.call)
-  call void @llvm.lifetime.end.p0(i64 8, ptr %store.ptr)
+  call void @llvm.lifetime.end.p0(ptr %escape.gep)
+  call void @llvm.lifetime.end.p0(ptr %escape.store)
+  call void @llvm.lifetime.end.p0(ptr %escape.call)
+  call void @llvm.lifetime.end.p0(ptr %store.ptr)
   ret void
 }
 

@@ -164,12 +164,6 @@ void LifetimeMover::visitStoreInst(StoreInst &SI) {
 }
 
 void LifetimeMover::visitIntrinsicInst(IntrinsicInst &II) {
-  // When we found the lifetime markers refers to a
-  // subrange of the original alloca, ignore the lifetime
-  // markers to avoid misleading the analysis.
-  if (!IsOffsetKnown || !Offset.isZero())
-    return Base::visitIntrinsicInst(II);
-
   // lifetime markers are not actual uses
   switch (II.getIntrinsicID()) {
   case Intrinsic::lifetime_start:
@@ -233,7 +227,7 @@ bool LifetimeMover::sinkLifetimeStartMarkers(AllocaInst *AI) {
     }
 
     auto *NewStart = LifetimeStarts[0]->clone();
-    NewStart->replaceUsesOfWith(NewStart->getOperand(1), AI);
+    NewStart->replaceUsesOfWith(NewStart->getOperand(0), AI);
     if (DomPoint->isTerminator())
       NewStart->insertBefore(
           cast<InvokeInst>(DomPoint)->getNormalDest()->getFirstNonPHIIt());

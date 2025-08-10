@@ -11,7 +11,7 @@ entry:
   %size = call i32 @llvm.coro.size.i32()
   %mem = call ptr @malloc(i32 %size)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr %mem)
-  call void @llvm.lifetime.start.p0(i64 500, ptr %large.alloca)
+  call void @llvm.lifetime.start.p0(ptr %large.alloca)
   %value = load i8, ptr %large.alloca, align 1
   call void @consume(i8 %value)
   %0 = call i8 @llvm.coro.suspend(token none, i1 false)
@@ -24,7 +24,7 @@ suspend:
   br label %cleanup
 
 cleanup:
-  call void @llvm.lifetime.end.p0(i64 500, ptr %large.alloca)
+  call void @llvm.lifetime.end.p0(ptr %large.alloca)
   %1 = call ptr @llvm.coro.free(token %id, ptr %mem)
   call void @free(ptr %mem)
   br label %exit

@@ -8,7 +8,7 @@ define void @fn1() presplitcoroutine {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TESTVAL:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 500, ptr nonnull [[TESTVAL]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TESTVAL]])
 ; CHECK-NEXT:    br label %[[FOR_COND:.*]]
 ; CHECK:       [[FOR_COND]]:
 ; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[FOR_BODY:.*]] ]
@@ -21,7 +21,7 @@ define void @fn1() presplitcoroutine {
 ; CHECK-NEXT:    [[INC]] = add nsw i32 [[TMP1]], 1
 ; CHECK-NEXT:    br label %[[FOR_COND]]
 ; CHECK:       [[FOR_COND_CLEANUP]]:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 500, ptr nonnull [[TESTVAL]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TESTVAL]])
 ; CHECK-NEXT:    [[UNUSED:%.*]] = call i8 @llvm.coro.suspend(token none, i1 false)
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
@@ -30,7 +30,7 @@ define void @fn1() presplitcoroutine {
 entry:
   %testval = alloca i32, align 4
   %i = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 500, ptr nonnull %testval)
+  call void @llvm.lifetime.start.p0(ptr nonnull %testval)
   br label %for.cond
 
 for.cond:                                         ; preds = %for.body, %coro.init
@@ -50,7 +50,7 @@ for.cond.cleanup:
   br label %exit
 
 exit:
-  call void @llvm.lifetime.end.p0(i64 500, ptr nonnull %testval)
+  call void @llvm.lifetime.end.p0(ptr nonnull %testval)
   ret void
 }
 
@@ -60,18 +60,18 @@ define void @fn2(i1 %cond) presplitcoroutine {
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TESTVAL:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 500, ptr nonnull [[TESTVAL]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TESTVAL]])
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[UNUSED:%.*]] = call i8 @llvm.coro.suspend(token none, i1 false)
 ; CHECK-NEXT:    br i1 %cond, label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 500, ptr nonnull [[TESTVAL]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TESTVAL]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %testval = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 500, ptr nonnull %testval)
+  call void @llvm.lifetime.start.p0(ptr nonnull %testval)
   br label %loop
 
 loop:
@@ -79,6 +79,6 @@ loop:
   br i1 %cond, label %exit, label %loop
 
 exit:
-  call void @llvm.lifetime.end.p0(i64 500, ptr nonnull %testval)
+  call void @llvm.lifetime.end.p0(ptr nonnull %testval)
   ret void
 }

@@ -8,20 +8,20 @@ define void @fn1() presplitcoroutine {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[VALUE:%.*]] = alloca i64, align 8
 ; CHECK-NEXT:    %unused = call i8 @llvm.coro.suspend(token none, i1 false)
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr nonnull [[VALUE]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[VALUE]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[VALUE]], align 8
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr nonnull [[VALUE]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr nonnull [[VALUE]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[VALUE]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[VALUE]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[VALUE]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %value = alloca i64, align 8
-  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %value)
+  call void @llvm.lifetime.start.p0(ptr %value)
   %unused = call i8 @llvm.coro.suspend(token none, i1 false)
   %0 = load ptr, ptr %value, align 8
-  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %value)
-  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %value)
+  call void @llvm.lifetime.end.p0(ptr %value)
+  call void @llvm.lifetime.start.p0(ptr %value)
   %1 = load ptr, ptr %value, align 8
   ret void
 }
@@ -33,15 +33,15 @@ define void @fn2(i1 %cond) presplitcoroutine {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[VALUE:%.*]] = alloca i8, align 8
 ; CHECK-NEXT:    %unused1 = call i8 @llvm.coro.suspend(token none, i1 false)
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[VALUE]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[VALUE]])
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[VALUE]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[VALUE]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[VALUE]], align 8
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 24, ptr nonnull [[VALUE]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[VALUE]])
 ; CHECK-NEXT:    br i1 %cond, label %[[LOOP]], label %[[END:.*]]
 ; CHECK:       [[END]]:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 24, ptr nonnull [[VALUE]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[VALUE]])
 ; CHECK-NEXT:    %unused2 = call i8 @llvm.coro.suspend(token none, i1 false)
 ; CHECK-NEXT:    ret void
 ;
@@ -51,9 +51,9 @@ entry:
   br label %loop
 
 loop:
-  call void @llvm.lifetime.start.p0(i64 24, ptr nonnull %value)
+  call void @llvm.lifetime.start.p0(ptr %value)
   %0 = load i8, ptr %value, align 8
-  call void @llvm.lifetime.end.p0(i64 24, ptr nonnull %value)
+  call void @llvm.lifetime.end.p0(ptr %value)
   br i1 %cond, label %loop, label %end
 
 end:

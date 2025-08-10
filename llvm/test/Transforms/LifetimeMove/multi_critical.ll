@@ -9,22 +9,22 @@ define void @many_critical1() presplitcoroutine {
 ; CHECK-NEXT:    [[LARGE_ALLOCA:%.*]] = alloca [500 x i8], align 16
 ; CHECK-NEXT:    [[SP1:%.*]] = call i8 @llvm.coro.suspend(token none, i1 false)
 ; CHECK-NEXT:    [[SP2:%.*]] = call i8 @llvm.coro.suspend(token none, i1 false)
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 500, ptr [[LARGE_ALLOCA]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[LARGE_ALLOCA]])
 ; CHECK-NEXT:    [[VALUE:%.*]] = load i8, ptr [[LARGE_ALLOCA]], align 1
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 500, ptr [[LARGE_ALLOCA]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[LARGE_ALLOCA]])
 ; CHECK-NEXT:    [[SP3:%.*]] = call i8 @llvm.coro.suspend(token none, i1 false)
 ; CHECK-NEXT:    [[SP4:%.*]] = call i8 @llvm.coro.suspend(token none, i1 false)
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %large.alloca = alloca [500 x i8], align 16
-  call void @llvm.lifetime.start.p0(i64 500, ptr %large.alloca)
+  call void @llvm.lifetime.start.p0(ptr %large.alloca)
   %sp1 = call i8 @llvm.coro.suspend(token none, i1 false)
   %sp2 = call i8 @llvm.coro.suspend(token none, i1 false)
   %value = load i8, ptr %large.alloca, align 1
   %sp3 = call i8 @llvm.coro.suspend(token none, i1 false)
   %sp4 = call i8 @llvm.coro.suspend(token none, i1 false)
-  call void @llvm.lifetime.end.p0(i64 500, ptr %large.alloca)
+  call void @llvm.lifetime.end.p0(ptr %large.alloca)
   ret void
 }
 
@@ -39,13 +39,13 @@ define void @many_critical2() presplitcoroutine {
 ; CHECK-NEXT:    br label %[[LABEL2:.*]]
 ; CHECK:       [[LABEL2]]:
 ; CHECK-NEXT:    [[SP2:%.*]] = call i8 @llvm.coro.suspend(token none, i1 false)
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 500, ptr [[LARGE_ALLOCA]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[LARGE_ALLOCA]])
 ; CHECK-NEXT:    br label %[[USE:.*]]
 ; CHECK:       [[USE]]:
 ; CHECK-NEXT:    [[VALUE:%.*]] = load i8, ptr [[LARGE_ALLOCA]], align 1
 ; CHECK-NEXT:    br label %[[LABEL3:.*]]
 ; CHECK:       [[LABEL3]]:
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 500, ptr [[LARGE_ALLOCA]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[LARGE_ALLOCA]])
 ; CHECK-NEXT:    [[SP3:%.*]] = call i8 @llvm.coro.suspend(token none, i1 false)
 ; CHECK-NEXT:    br label %[[LABEL4:.*]]
 ; CHECK:       [[LABEL4]]:
@@ -56,7 +56,7 @@ define void @many_critical2() presplitcoroutine {
 ;
 entry:
   %large.alloca = alloca [500 x i8], align 16
-  call void @llvm.lifetime.start.p0(i64 500, ptr %large.alloca)
+  call void @llvm.lifetime.start.p0(ptr %large.alloca)
   br label %label1
 label1:
   %sp1 = call i8 @llvm.coro.suspend(token none, i1 false)
@@ -74,6 +74,6 @@ label4:
   %sp4 = call i8 @llvm.coro.suspend(token none, i1 false)
   br label %end
 end:
-  call void @llvm.lifetime.end.p0(i64 500, ptr %large.alloca)
+  call void @llvm.lifetime.end.p0(ptr %large.alloca)
   ret void
 }
