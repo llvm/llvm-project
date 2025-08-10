@@ -3186,6 +3186,56 @@ def CIR_AssumeOp : CIR_Op<"assume"> {
   }];
 }
 
+def CIR_AssumeAlignedOp : CIR_Op<"assume_aligned", [
+  Pure, AllTypesMatch<["pointer", "result"]>
+]> {
+  let summary = "Tell the optimizer that a pointer is aligned";
+  let description = [{
+    The `cir.assume_aligned` operation takes two or three arguments. The first
+    argument `pointer` gives the pointer value whose alignment is to be assumed,
+    and the second argument `align` is an integer attribute that gives the
+    assumed alignment.
+
+    The `offset` argument is optional. If given, it represents misalignment
+    offset. When it's present, this operation tells the optimizer that the
+    pointer is always misaligned to the alignment by `offset` bytes, a.k.a. the
+    pointer yielded by `(char *)pointer - offset` is aligned to the specified
+    alignment. Note that the `offset` argument is an SSA value rather than an
+    attribute, which means that you could pass a dynamically determined value
+    as the mialignment offset.
+
+    The result of this operation has the same value as the `pointer` argument,
+    but it additionally carries any alignment information indicated by this
+    operation.
+
+    This operation corresponds to the `__builtin_assume_aligned` builtin
+    function.
+
+    Example:
+
+    ```mlir
+    // Assume that %0 is a CIR pointer value of type !cir.ptr<!s32i>
+    %1 = cir.assume_aligned %0 alignment 16 : !cir.ptr<!s32i>
+
+    // With a misalignment offset of 4 bytes:
+    %2 = cir.const #cir.int<4> : !u64i
+    %3 = cir.assume_aligned %0 alignment 16 [offset %2 : !u64i] : !cir.ptr<!s32i>
+    ```
+  }];
+
+  let arguments = (ins CIR_PointerType:$pointer,
+                       I64Attr:$alignment,
+                       Optional<CIR_IntType>:$offset);
+  let results = (outs CIR_PointerType:$result);
+
+  let assemblyFormat = [{
+    $pointer
+    `alignment` $alignment
+    (`[` `offset` $offset^ `:` type($offset) `]`)?
+    `:` qualified(type($pointer)) attr-dict
+  }];
+}
+
 def CIR_AssumeSepStorageOp : CIR_Op<"assume_separate_storage", [
   SameTypeOperands
 ]> {
