@@ -11,8 +11,6 @@ define { half, half } @test_sincos_f16(half %a) #0 {
 ; CHECK-NEXT:    push r15
 ; CHECK-NEXT:    push r16
 ; CHECK-NEXT:    push r17
-; CHECK-NEXT:    mov r24, r22
-; CHECK-NEXT:    mov r25, r23
 ; CHECK-NEXT:    rcall __extendhfsf2
 ; CHECK-NEXT:    mov r16, r22
 ; CHECK-NEXT:    mov r17, r23
@@ -28,10 +26,8 @@ define { half, half } @test_sincos_f16(half %a) #0 {
 ; CHECK-NEXT:    mov r25, r15
 ; CHECK-NEXT:    rcall cos
 ; CHECK-NEXT:    rcall __truncsfhf2
-; CHECK-NEXT:    mov r22, r24
-; CHECK-NEXT:    mov r23, r25
-; CHECK-NEXT:    mov r18, r12
-; CHECK-NEXT:    mov r19, r13
+; CHECK-NEXT:    mov r22, r12
+; CHECK-NEXT:    mov r23, r13
 ; CHECK-NEXT:    pop r17
 ; CHECK-NEXT:    pop r16
 ; CHECK-NEXT:    pop r15
@@ -46,13 +42,9 @@ define { half, half } @test_sincos_f16(half %a) #0 {
 define half @test_sincos_f16_only_use_sin(half %a) #0 {
 ; CHECK-LABEL: test_sincos_f16_only_use_sin:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov r24, r22
-; CHECK-NEXT:    mov r25, r23
 ; CHECK-NEXT:    rcall __extendhfsf2
 ; CHECK-NEXT:    rcall sin
 ; CHECK-NEXT:    rcall __truncsfhf2
-; CHECK-NEXT:    mov r22, r24
-; CHECK-NEXT:    mov r23, r25
 ; CHECK-NEXT:    ret
   %result = call { half, half } @llvm.sincos.f16(half %a)
   %result.0 = extractvalue { half, half } %result, 0
@@ -62,13 +54,9 @@ define half @test_sincos_f16_only_use_sin(half %a) #0 {
 define half @test_sincos_f16_only_use_cos(half %a) #0 {
 ; CHECK-LABEL: test_sincos_f16_only_use_cos:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov r24, r22
-; CHECK-NEXT:    mov r25, r23
 ; CHECK-NEXT:    rcall __extendhfsf2
 ; CHECK-NEXT:    rcall cos
 ; CHECK-NEXT:    rcall __truncsfhf2
-; CHECK-NEXT:    mov r22, r24
-; CHECK-NEXT:    mov r23, r25
 ; CHECK-NEXT:    ret
   %result = call { half, half } @llvm.sincos.f16(half %a)
   %result.1 = extractvalue { half, half } %result, 1
@@ -90,48 +78,50 @@ define { <2 x half>, <2 x half> } @test_sincos_v2f16(<2 x half> %a) #0 {
 ; CHECK-NEXT:    push r15
 ; CHECK-NEXT:    push r16
 ; CHECK-NEXT:    push r17
-; CHECK-NEXT:    mov r10, r22
-; CHECK-NEXT:    mov r11, r23
+; CHECK-NEXT:    mov r16, r24
+; CHECK-NEXT:    mov r17, r25
+; CHECK-NEXT:    mov r24, r22
+; CHECK-NEXT:    mov r25, r23
 ; CHECK-NEXT:    rcall __extendhfsf2
-; CHECK-NEXT:    mov r16, r22
-; CHECK-NEXT:    mov r17, r23
-; CHECK-NEXT:    mov r14, r24
-; CHECK-NEXT:    mov r15, r25
-; CHECK-NEXT:    rcall sin
-; CHECK-NEXT:    rcall __truncsfhf2
+; CHECK-NEXT:    mov r14, r22
+; CHECK-NEXT:    mov r15, r23
 ; CHECK-NEXT:    mov r12, r24
 ; CHECK-NEXT:    mov r13, r25
-; CHECK-NEXT:    mov r24, r10
-; CHECK-NEXT:    mov r25, r11
-; CHECK-NEXT:    rcall __extendhfsf2
-; CHECK-NEXT:    mov r10, r22
-; CHECK-NEXT:    mov r11, r23
-; CHECK-NEXT:    mov r8, r24
-; CHECK-NEXT:    mov r9, r25
-; CHECK-NEXT:    rcall cos
-; CHECK-NEXT:    rcall __truncsfhf2
-; CHECK-NEXT:    mov r6, r24
-; CHECK-NEXT:    mov r7, r25
-; CHECK-NEXT:    mov r22, r10
-; CHECK-NEXT:    mov r23, r11
-; CHECK-NEXT:    mov r24, r8
-; CHECK-NEXT:    mov r25, r9
 ; CHECK-NEXT:    rcall sin
 ; CHECK-NEXT:    rcall __truncsfhf2
 ; CHECK-NEXT:    mov r10, r24
 ; CHECK-NEXT:    mov r11, r25
+; CHECK-NEXT:    mov r24, r16
+; CHECK-NEXT:    mov r25, r17
+; CHECK-NEXT:    rcall __extendhfsf2
+; CHECK-NEXT:    mov r16, r22
+; CHECK-NEXT:    mov r17, r23
+; CHECK-NEXT:    mov r8, r24
+; CHECK-NEXT:    mov r9, r25
+; CHECK-NEXT:    rcall sin
+; CHECK-NEXT:    rcall __truncsfhf2
+; CHECK-NEXT:    mov r6, r24
+; CHECK-NEXT:    mov r7, r25
+; CHECK-NEXT:    mov r22, r14
+; CHECK-NEXT:    mov r23, r15
+; CHECK-NEXT:    mov r24, r12
+; CHECK-NEXT:    mov r25, r13
+; CHECK-NEXT:    rcall cos
+; CHECK-NEXT:    rcall __truncsfhf2
+; CHECK-NEXT:    mov r14, r24
+; CHECK-NEXT:    mov r15, r25
 ; CHECK-NEXT:    mov r22, r16
 ; CHECK-NEXT:    mov r23, r17
-; CHECK-NEXT:    mov r24, r14
-; CHECK-NEXT:    mov r25, r15
+; CHECK-NEXT:    mov r24, r8
+; CHECK-NEXT:    mov r25, r9
 ; CHECK-NEXT:    rcall cos
 ; CHECK-NEXT:    rcall __truncsfhf2
 ; CHECK-NEXT:    mov r18, r10
 ; CHECK-NEXT:    mov r19, r11
-; CHECK-NEXT:    mov r20, r12
-; CHECK-NEXT:    mov r21, r13
-; CHECK-NEXT:    mov r22, r6
-; CHECK-NEXT:    mov r23, r7
+; CHECK-NEXT:    mov r20, r6
+; CHECK-NEXT:    mov r21, r7
+; CHECK-NEXT:    mov r22, r14
+; CHECK-NEXT:    mov r23, r15
 ; CHECK-NEXT:    pop r17
 ; CHECK-NEXT:    pop r16
 ; CHECK-NEXT:    pop r15
