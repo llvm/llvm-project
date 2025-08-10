@@ -4,6 +4,7 @@
 // RUN: %clang_cc1 -x c++ -ffreestanding -flax-vector-conversions=none %s -triple=i686-unknown-unknown -target-feature +avx512fp16 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK
 
 #include <immintrin.h>
+#include "builtin_test_helpers.h"
 
 _Float16 test_mm512_cvtsh_h(__m512h __A) {
   // CHECK-LABEL: test_mm512_cvtsh_h
