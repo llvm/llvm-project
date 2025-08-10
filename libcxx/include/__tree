@@ -1879,8 +1879,6 @@ pair<typename __tree<_Tp, _Compare, _Allocator>::iterator, bool>
         const_iterator __p, _Key const& __k, _Args&&... __args) {
   __end_node_pointer __parent;
   __node_base_pointer __dummy;
-  // min_pointer<std::__tree_node_base<min_pointer<void>>>
-
   __node_base_pointer& __child = __find_equal(__p, __parent, __dummy, __k);
   __node_pointer __r           = std::__static_fancy_pointer_cast<__node_pointer>(__child);
   bool __inserted              = false;
@@ -1899,8 +1897,9 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 typename __tree<_Tp, _Compare, _Allocator>::__node
 __tree<_Tp, _Compare, _Allocator>::__construct_node(_Args&&... __args) {
   __node_allocator& __na = __node_alloc();
   __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
-  __node_traits::construct(__na, std::addressof(*__h), std::forward<_Args>(__args)...);
-  // __node_traits::construct(__na, std::addressof(__h->__value_), std::forward<_Args>(__args)...);
+  // here.... for same_as failure
+  // __node_traits::construct(__na, std::addressof(*__h), std::forward<_Args>(__args)...);
+  __node_traits::construct(__na, std::addressof(__h->__value_), std::forward<_Args>(__args)...);
   // note: construction of subobject of object outside its lifetime is not allowed in a constant expression
   __h.get_deleter().__value_constructed = true;
   return __h;
