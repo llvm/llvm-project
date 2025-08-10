@@ -32,6 +32,29 @@ using namespace mlir;
 // General utilities
 //===----------------------------------------------------------------------===//
 
+/// If any of the arguments are poison, return poison.
+static ConstantIntRanges
+propagatePoison(const ConstantIntRanges &newRange,
+                ArrayRef<ConstantIntRanges> argRanges) {
+  APInt umin = newRange.umin();
+  APInt umax = newRange.umax();
+  APInt smin = newRange.smin();
+  APInt smax = newRange.smax();
+
+  unsigned width = umin.getBitWidth();
+  for (const ConstantIntRanges &argRange : argRanges) {
+    if (argRange.isSignedPoison()) {
+      smin = APInt::getZero(width);
+      smax = smin - 1;
+    }
+    if (argRange.isUnsignedPoison()) {
+      umax = APInt::getZero(width);
+      umin = umax + 1;
+    }
+  }
+  return {umin, umax, smin, smax};
+}
+
 /// Function that evaluates the result of doing something on arithmetic
 /// constants and returns std::nullopt on overflow.
 using ConstArithFn =
@@ -114,7 +137,7 @@ mlir::intrange::inferIndexOp(const InferRangeFn &inferFn,
     // Returing the 64-bit result preserves more information.
     return sixtyFour;
   ConstantIntRanges merged = sixtyFour.rangeUnion(thirtyTwoAsSixtyFour);
-  return merged;
+  return propagatePoison(merged, argRanges);
 }
 
 ConstantIntRanges mlir::intrange::extRange(const ConstantIntRanges &range,
@@ -123,21 +146,21 @@ ConstantIntRanges mlir::intrange::extRange(const ConstantIntRanges &range,
   APInt umax = range.umax().zext(destWidth);
   APInt smin = range.smin().sext(destWidth);
   APInt smax = range.smax().sext(destWidth);
-  return {umin, umax, smin, smax};
+  return propagatePoison({umin, umax, smin, smax}, range);
 }
 
 ConstantIntRanges mlir::intrange::extUIRange(const ConstantIntRanges &range,
                                              unsigned destWidth) {
   APInt umin = range.umin().zext(destWidth);
   APInt umax = range.umax().zext(destWidth);
-  return ConstantIntRanges::fromUnsigned(umin, umax);
+  return propagatePoison(ConstantIntRanges::fromUnsigned(umin, umax), range);
 }
 
 ConstantIntRanges mlir::intrange::extSIRange(const ConstantIntRanges &range,
                                              unsigned destWidth) {
   APInt smin = range.smin().sext(destWidth);
   APInt smax = range.smax().sext(destWidth);
-  return ConstantIntRanges::fromSigned(smin, smax);
+  return propagatePoison(ConstantIntRanges::fromSigned(smin, smax), range);
 }
 
 ConstantIntRanges mlir::intrange::truncRange(const ConstantIntRanges &range,
@@ -173,7 +196,7 @@ ConstantIntRanges mlir::intrange::truncRange(const ConstantIntRanges &range,
                                  : range.smin().trunc(destWidth);
   APInt smax = hasSignedOverflow ? APInt::getSignedMaxValue(destWidth)
                                  : range.smax().trunc(destWidth);
-  return {umin, umax, smin, smax};
+  return propagatePoison({umin, umax, smin, smax}, range);
 }
 
 //===----------------------------------------------------------------------===//
@@ -206,7 +229,7 @@ mlir::intrange::inferAdd(ArrayRef<ConstantIntRanges> argRanges,
       uadd, lhs.umin(), rhs.umin(), lhs.umax(), rhs.umax(), /*isSigned=*/false);
   ConstantIntRanges srange = computeBoundsBy(
       sadd, lhs.smin(), rhs.smin(), lhs.smax(), rhs.smax(), /*isSigned=*/true);
-  return urange.intersection(srange);
+  return propagatePoison(urange.intersection(srange), argRanges);
 }
 
 //===----------------------------------------------------------------------===//
@@ -238,7 +261,7 @@ mlir::intrange::inferSub(ArrayRef<ConstantIntRanges> argRanges,
       usub, lhs.umin(), rhs.umax(), lhs.umax(), rhs.umin(), /*isSigned=*/false);
   ConstantIntRanges srange = computeBoundsBy(
       ssub, lhs.smin(), rhs.smax(), lhs.smax(), rhs.smin(), /*isSigned=*/true);
-  return urange.intersection(srange);
+  return propagatePoison(urange.intersection(srange), argRanges);
 }
 
 //===----------------------------------------------------------------------===//
@@ -273,7 +296,7 @@ mlir::intrange::inferMul(ArrayRef<ConstantIntRanges> argRanges,
   ConstantIntRanges srange =
       minMaxBy(smul, {lhs.smin(), lhs.smax()}, {rhs.smin(), rhs.smax()},
                /*isSigned=*/true);
-  return urange.intersection(srange);
+  return propagatePoison(urange.intersection(srange), argRanges);
 }
 
 //===----------------------------------------------------------------------===//
@@ -305,7 +328,8 @@ static ConstantIntRanges inferDivURange(const ConstantIntRanges &lhs,
 
   // X u/ Y u<= X.
   APInt umax = lhsMax;
-  return ConstantIntRanges::fromUnsigned(umin, umax);
+  return propagatePoison(ConstantIntRanges::fromUnsigned(umin, umax),
+                         {lhs, rhs});
 }
 
 ConstantIntRanges
@@ -350,10 +374,12 @@ static ConstantIntRanges inferDivSRange(const ConstantIntRanges &lhs,
       APInt result = a.sdiv_ov(b, overflowed);
       return overflowed ? std::optional<APInt>() : fixup(a, b, result);
     };
-    return minMaxBy(sdiv, {lhsMin, lhsMax}, {rhsMin, rhsMax},
-                    /*isSigned=*/true);
+    return propagatePoison(minMaxBy(sdiv, {lhsMin, lhsMax}, {rhsMin, rhsMax},
+                                    /*isSigned=*/true),
+                           {lhs, rhs});
   }
-  return ConstantIntRanges::maxRange(rhsMin.getBitWidth());
+  return propagatePoison(ConstantIntRanges::maxRange(rhsMin.getBitWidth()),
+                         {lhs, rhs});
 }
 
 ConstantIntRanges
@@ -394,7 +420,7 @@ mlir::intrange::inferCeilDivS(ArrayRef<ConstantIntRanges> argRanges) {
     auto newLhs = ConstantIntRanges::fromSigned(lhs.smin() + 1, lhs.smax());
     result = result.rangeUnion(inferDivSRange(newLhs, rhs, ceilDivSIFix));
   }
-  return result;
+  return propagatePoison(result, argRanges);
 }
 
 ConstantIntRanges
@@ -423,6 +449,9 @@ mlir::intrange::inferRemS(ArrayRef<ConstantIntRanges> argRanges) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
   const APInt &lhsMin = lhs.smin(), &lhsMax = lhs.smax(), &rhsMin = rhs.smin(),
               &rhsMax = rhs.smax();
+
+  if (lhs.isSignedPoison() || rhs.isSignedPoison())
+    return ConstantIntRanges::poison(rhsMin.getBitWidth());
 
   unsigned width = rhsMax.getBitWidth();
   APInt smin = APInt::getSignedMinValue(width);
@@ -462,6 +491,9 @@ mlir::intrange::inferRemU(ArrayRef<ConstantIntRanges> argRanges) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
   const APInt &rhsMin = rhs.umin(), &rhsMax = rhs.umax();
 
+  if (lhs.isUnsignedPoison() || rhs.isUnsignedPoison())
+    return ConstantIntRanges::poison(rhsMin.getBitWidth());
+
   unsigned width = rhsMin.getBitWidth();
   APInt umin = APInt::getZero(width);
   // Remainder can't be larger than either of its arguments.
@@ -491,6 +523,8 @@ mlir::intrange::inferRemU(ArrayRef<ConstantIntRanges> argRanges) {
 ConstantIntRanges
 mlir::intrange::inferMaxS(ArrayRef<ConstantIntRanges> argRanges) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
+  if (lhs.isSignedPoison() || rhs.isSignedPoison())
+    return ConstantIntRanges::poison(lhs.smin().getBitWidth());
 
   const APInt &smin = lhs.smin().sgt(rhs.smin()) ? lhs.smin() : rhs.smin();
   const APInt &smax = lhs.smax().sgt(rhs.smax()) ? lhs.smax() : rhs.smax();
@@ -500,6 +534,8 @@ mlir::intrange::inferMaxS(ArrayRef<ConstantIntRanges> argRanges) {
 ConstantIntRanges
 mlir::intrange::inferMaxU(ArrayRef<ConstantIntRanges> argRanges) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
+  if (lhs.isUnsignedPoison() || rhs.isUnsignedPoison())
+    return ConstantIntRanges::poison(lhs.umin().getBitWidth());
 
   const APInt &umin = lhs.umin().ugt(rhs.umin()) ? lhs.umin() : rhs.umin();
   const APInt &umax = lhs.umax().ugt(rhs.umax()) ? lhs.umax() : rhs.umax();
@@ -509,6 +545,8 @@ mlir::intrange::inferMaxU(ArrayRef<ConstantIntRanges> argRanges) {
 ConstantIntRanges
 mlir::intrange::inferMinS(ArrayRef<ConstantIntRanges> argRanges) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
+  if (lhs.isSignedPoison() || rhs.isSignedPoison())
+    return ConstantIntRanges::poison(lhs.smin().getBitWidth());
 
   const APInt &smin = lhs.smin().slt(rhs.smin()) ? lhs.smin() : rhs.smin();
   const APInt &smax = lhs.smax().slt(rhs.smax()) ? lhs.smax() : rhs.smax();
@@ -518,6 +556,8 @@ mlir::intrange::inferMinS(ArrayRef<ConstantIntRanges> argRanges) {
 ConstantIntRanges
 mlir::intrange::inferMinU(ArrayRef<ConstantIntRanges> argRanges) {
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
+  if (lhs.isUnsignedPoison() || rhs.isUnsignedPoison())
+    return ConstantIntRanges::poison(lhs.umin().getBitWidth());
 
   const APInt &umin = lhs.umin().ult(rhs.umin()) ? lhs.umin() : rhs.umin();
   const APInt &umax = lhs.umax().ult(rhs.umax()) ? lhs.umax() : rhs.umax();
@@ -549,8 +589,10 @@ mlir::intrange::inferAnd(ArrayRef<ConstantIntRanges> argRanges) {
   auto andi = [](const APInt &a, const APInt &b) -> std::optional<APInt> {
     return a & b;
   };
-  return minMaxBy(andi, {lhsZeros, lhsOnes}, {rhsZeros, rhsOnes},
-                  /*isSigned=*/false);
+  return propagatePoison(minMaxBy(andi, {lhsZeros, lhsOnes},
+                                  {rhsZeros, rhsOnes},
+                                  /*isSigned=*/false),
+                         argRanges);
 }
 
 ConstantIntRanges
@@ -560,8 +602,9 @@ mlir::intrange::inferOr(ArrayRef<ConstantIntRanges> argRanges) {
   auto ori = [](const APInt &a, const APInt &b) -> std::optional<APInt> {
     return a | b;
   };
-  return minMaxBy(ori, {lhsZeros, lhsOnes}, {rhsZeros, rhsOnes},
-                  /*isSigned=*/false);
+  return propagatePoison(minMaxBy(ori, {lhsZeros, lhsOnes}, {rhsZeros, rhsOnes},
+                                  /*isSigned=*/false),
+                         argRanges);
 }
 
 /// Get bitmask of all bits which can change while iterating in
@@ -578,6 +621,9 @@ mlir::intrange::inferXor(ArrayRef<ConstantIntRanges> argRanges) {
   // Construct mask of varying bits for both ranges, xor values and then replace
   // masked bits with 0s and 1s to get min and max values respectively.
   ConstantIntRanges lhs = argRanges[0], rhs = argRanges[1];
+  if (lhs.isUnsignedPoison() || rhs.isUnsignedPoison())
+    return ConstantIntRanges::poison(lhs.umin().getBitWidth());
+
   APInt mask = getVaryingBitsMask(lhs) | getVaryingBitsMask(rhs);
   APInt res = lhs.umin() ^ rhs.umin();
   APInt min = res & ~mask;
@@ -620,7 +666,7 @@ mlir::intrange::inferShl(ArrayRef<ConstantIntRanges> argRanges,
   ConstantIntRanges srange =
       minMaxBy(sshl, {lhs.smin(), lhs.smax()}, {rhsUMin, rhsUMax},
                /*isSigned=*/true);
-  return urange.intersection(srange);
+  return propagatePoison(urange.intersection(srange), argRanges);
 }
 
 ConstantIntRanges
@@ -631,8 +677,10 @@ mlir::intrange::inferShrS(ArrayRef<ConstantIntRanges> argRanges) {
     return r.uge(r.getBitWidth()) ? std::optional<APInt>() : l.ashr(r);
   };
 
-  return minMaxBy(ashr, {lhs.smin(), lhs.smax()}, {rhs.umin(), rhs.umax()},
-                  /*isSigned=*/true);
+  return propagatePoison(minMaxBy(ashr, {lhs.smin(), lhs.smax()},
+                                  {rhs.umin(), rhs.umax()},
+                                  /*isSigned=*/true),
+                         argRanges);
 }
 
 ConstantIntRanges
@@ -642,8 +690,10 @@ mlir::intrange::inferShrU(ArrayRef<ConstantIntRanges> argRanges) {
   auto lshr = [](const APInt &l, const APInt &r) -> std::optional<APInt> {
     return r.uge(r.getBitWidth()) ? std::optional<APInt>() : l.lshr(r);
   };
-  return minMaxBy(lshr, {lhs.umin(), lhs.umax()}, {rhs.umin(), rhs.umax()},
-                  /*isSigned=*/false);
+  return propagatePoison(minMaxBy(lshr, {lhs.umin(), lhs.umax()},
+                                  {rhs.umin(), rhs.umax()},
+                                  /*isSigned=*/false),
+                         argRanges);
 }
 
 //===----------------------------------------------------------------------===//
