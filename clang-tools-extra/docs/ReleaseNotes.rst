@@ -136,9 +136,9 @@ Changes in existing checks
 - Improved :doc:`misc-header-include-cycle
   <clang-tidy/checks/misc/header-include-cycle>` check performance.
 
-- Fixed a :doc:`modernize-use-constraints
-  <clang-tidy/checks/modernize/use-constraints>` crash on uses of
-  nonstandard ``enable_if``s with a signature different from
+- Improved :doc:`modernize-use-constraints
+  <clang-tidy/checks/modernize/use-constraints>` check by fixing a crash on
+  uses of non-standard ``enable_if`` with a signature different from
   ``std::enable_if`` (such as ``boost::enable_if``).
 
 - Improved :doc:`modernize-use-designated-initializers

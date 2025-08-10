@@ -762,7 +762,7 @@ struct some_type_trait {
   static constexpr bool value = true;
 };
 
-// Fix-its are offered even for a nonstandard enable_if.
+// Fix-its are offered even for a non-standard enable_if.
 namespace nonstd {
 
 template <bool Condition, typename T = void>
@@ -775,7 +775,7 @@ typename nonstd::enable_if<some_type_trait<T>::value, void>::type nonstd_enable_
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use C++20 requires constraints instead of enable_if [modernize-use-constraints]
 // CHECK-FIXES: {{^}}void nonstd_enable_if() requires some_type_trait<T>::value {}{{$}}
 
-// But only if the nonstandard enable_if has the same signature as the standard one.
+// But only if the non-standard enable_if has the same signature as the standard one.
 namespace boost {
 
 template <typename Condition, typename T = void>
