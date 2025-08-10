@@ -18,7 +18,7 @@
 define void @vector_reverse_i32(ptr noalias %A, ptr noalias %B) {
 ; RV64-LABEL: define void @vector_reverse_i32(
 ; RV64-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) #[[ATTR0:[0-9]+]] {
-; RV64-NEXT:  [[ENTRY:.*]]:
+; RV64-NEXT:  [[ENTRY:.*:]]
 ; RV64-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; RV64:       [[VECTOR_PH]]:
 ; RV64-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
@@ -57,13 +57,12 @@ define void @vector_reverse_i32(ptr noalias %A, ptr noalias %B) {
 ; RV64:       [[MIDDLE_BLOCK]]:
 ; RV64-NEXT:    br [[EXIT:label %.*]]
 ; RV64:       [[SCALAR_PH]]:
-; RV64-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1023, %[[ENTRY]] ]
 ; RV64-NEXT:    br label %[[FOR_BODY:.*]]
 ; RV64:       [[FOR_BODY]]:
 ;
 ; RV32-LABEL: define void @vector_reverse_i32(
 ; RV32-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) #[[ATTR0:[0-9]+]] {
-; RV32-NEXT:  [[ENTRY:.*]]:
+; RV32-NEXT:  [[ENTRY:.*:]]
 ; RV32-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; RV32:       [[VECTOR_PH]]:
 ; RV32-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
@@ -100,7 +99,6 @@ define void @vector_reverse_i32(ptr noalias %A, ptr noalias %B) {
 ; RV32:       [[MIDDLE_BLOCK]]:
 ; RV32-NEXT:    br [[EXIT:label %.*]]
 ; RV32:       [[SCALAR_PH]]:
-; RV32-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1023, %[[ENTRY]] ]
 ; RV32-NEXT:    br label %[[FOR_BODY:.*]]
 ; RV32:       [[FOR_BODY]]:
 ;
@@ -717,7 +715,7 @@ for.body:                                         ; preds = %for.body.preheader,
 define void @vector_reverse_f32_simplify(ptr noalias %A, ptr noalias %B) {
 ; RV64-LABEL: define void @vector_reverse_f32_simplify(
 ; RV64-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) #[[ATTR0]] {
-; RV64-NEXT:  [[ENTRY:.*]]:
+; RV64-NEXT:  [[ENTRY:.*:]]
 ; RV64-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; RV64:       [[VECTOR_PH]]:
 ; RV64-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
@@ -756,13 +754,12 @@ define void @vector_reverse_f32_simplify(ptr noalias %A, ptr noalias %B) {
 ; RV64:       [[MIDDLE_BLOCK]]:
 ; RV64-NEXT:    br [[EXIT:label %.*]]
 ; RV64:       [[SCALAR_PH]]:
-; RV64-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1023, %[[ENTRY]] ]
 ; RV64-NEXT:    br label %[[FOR_BODY:.*]]
 ; RV64:       [[FOR_BODY]]:
 ;
 ; RV32-LABEL: define void @vector_reverse_f32_simplify(
 ; RV32-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) #[[ATTR0]] {
-; RV32-NEXT:  [[ENTRY:.*]]:
+; RV32-NEXT:  [[ENTRY:.*:]]
 ; RV32-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; RV32:       [[VECTOR_PH]]:
 ; RV32-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
@@ -799,7 +796,6 @@ define void @vector_reverse_f32_simplify(ptr noalias %A, ptr noalias %B) {
 ; RV32:       [[MIDDLE_BLOCK]]:
 ; RV32-NEXT:    br [[EXIT:label %.*]]
 ; RV32:       [[SCALAR_PH]]:
-; RV32-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1023, %[[ENTRY]] ]
 ; RV32-NEXT:    br label %[[FOR_BODY:.*]]
 ; RV32:       [[FOR_BODY]]:
 ;

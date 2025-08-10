@@ -34,7 +34,6 @@ define void @value_defined_in_loop1_used_for_trip_counts(i32 %start, i1 %c, ptr 
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT_1_LOOPEXIT1:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[LOOP_3_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[LOOP_3:.*]]
 ; CHECK:       [[LOOP_2_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[LOOP_2:.*]]
