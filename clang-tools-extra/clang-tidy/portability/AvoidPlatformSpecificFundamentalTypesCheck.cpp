@@ -22,6 +22,7 @@ AST_MATCHER(clang::QualType, isBuiltinInt) {
   if (!BT)
     return false;
 
+  // BT->isInteger() would detect char and bool
   switch (BT->getKind()) {
   case clang::BuiltinType::Short:
   case clang::BuiltinType::UShort:
@@ -58,7 +59,13 @@ AvoidPlatformSpecificFundamentalTypesCheck::
       WarnOnChars(Options.get("WarnOnChars", true)),
       IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
                                                utils::IncludeSorter::IS_LLVM),
-                      areDiagsSelfContained()) {}
+                      areDiagsSelfContained()) {
+  if (!WarnOnFloats && !WarnOnInts && !WarnOnChars)
+    this->configurationDiag(
+        "The check 'portability-avoid-platform-specific-fundamental-types' "
+        "will not perform any analysis because 'WarnOnFloats', 'WarnOnInts' "
+        "and 'WarnOnChars' are all false.");
+}
 
 void AvoidPlatformSpecificFundamentalTypesCheck::registerPPCallbacks(
     const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
