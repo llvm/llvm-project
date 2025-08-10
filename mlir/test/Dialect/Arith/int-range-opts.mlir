@@ -1,4 +1,4 @@
-// RUN: mlir-opt -int-range-optimizations --split-input-file %s | FileCheck %s
+// RUN: mlir-opt --int-range-optimizations --split-input-file %s | FileCheck %s
 
 // CHECK-LABEL: func @test
 //       CHECK:   %[[C:.*]] = arith.constant false
@@ -147,4 +147,14 @@ func.func @analysis_crash(%arg0: i32, %arg1: tensor<128xi1>) -> tensor<128xi64> 
   // Make sure the analysis doesn't crash when materializing the range as a tensor constant.
   %2 = arith.extsi %1 : tensor<128xi32> to tensor<128xi64>
   return %2 : tensor<128xi64>
+}
+
+// -----
+
+// CHECK-LABEL: func @create_poison_op
+// CHECK: %[[RES:.*]] = ub.poison : i32
+// CHECK: return %[[RES]]
+func.func @create_poison_op() -> i32 {
+  %val = test.with_bounds { umin = 1 : i32, umax = 0 : i32, smin = 1 : i32, smax = 0 : i32 } : i32
+  return %val : i32
 }

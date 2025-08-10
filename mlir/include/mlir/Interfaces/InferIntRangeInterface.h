@@ -51,6 +51,9 @@ public:
   /// The maximum value of an integer when it is interpreted as signed.
   const APInt &smax() const;
 
+  /// Get the bitwidth of the ranges.
+  unsigned getBitWidth() const;
+
   /// Return the bitwidth that should be used for integer ranges describing
   /// `type`. For concrete integer types, this is their bitwidth, for `index`,
   /// this is the internal storage bitwidth of `index` attributes, and for
@@ -61,6 +64,10 @@ public:
   /// `bitwidth`, that is - [0, uint_max(width)]/[sint_min(width),
   /// sint_max(width)].
   static ConstantIntRanges maxRange(unsigned bitwidth);
+
+  /// Create a poisoned range, i.e. a range that represents no valid integer
+  /// values.
+  static ConstantIntRanges poison(unsigned bitwidth);
 
   /// Create a `ConstantIntRanges` with a constant value - that is, with the
   /// bounds [value, value] for both its signed interpretations.
@@ -95,6 +102,14 @@ public:
   /// indicate that the value it bounds is a constant, return that constant
   /// value.
   std::optional<APInt> getConstantValue() const;
+
+  /// Returns true if signed range is poisoned, i.e. no valid signed value
+  /// can be represented.
+  bool isSignedPoison() const;
+
+  /// Returns true if unsigned range is poisoned, i.e. no valid unsigned value
+  /// can be represented.
+  bool isUnsignedPoison() const;
 
   friend raw_ostream &operator<<(raw_ostream &os,
                                  const ConstantIntRanges &range);

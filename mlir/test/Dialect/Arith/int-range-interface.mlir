@@ -663,6 +663,26 @@ func.func @select_union(%arg0 : index, %arg1 : i1) -> i1 {
     func.return %5 : i1
 }
 
+// CHECK-LABEL: func @select_poison
+// CHECK: test.reflect_bounds {smax = 10 : index, smin = 0 : index, umax = 10 : index, umin = 0 : index}
+func.func @select_poison(%arg0: i1) -> index {
+    %0 = test.with_bounds { umin = 0 : index, umax = 10 : index, smin = 0 : index, smax = 10 : index } : index
+    %1 = test.with_bounds { umin = 1 : index, umax = 0 : index, smin = 1 : index, smax = 0 : index } : index
+    %2 = arith.select %arg0, %0, %1 : index
+    %3 = test.reflect_bounds %2 : index
+    func.return %3 : index
+}
+
+// CHECK-LABEL: func @add_posion
+// CHECK: test.reflect_bounds {smax = -1 : index, smin = 0 : index, umax = 0 : index, umin = 1 : index}
+func.func @add_posion() -> index {
+    %0 = test.with_bounds { umin = 0 : index, umax = 10 : index, smin = 0 : index, smax = 10 : index } : index
+    %1 = test.with_bounds { umin = 1 : index, umax = 0 : index, smin = 1 : index, smax = 0 : index } : index
+    %2 = arith.addi %0, %1 : index
+    %3 = test.reflect_bounds %2 : index
+    func.return %3 : index
+}
+
 // CHECK-LABEL: func @if_union
 // CHECK: %[[true:.*]] = arith.constant true
 // CHECK: return %[[true]]
