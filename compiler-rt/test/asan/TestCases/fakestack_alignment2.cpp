@@ -8,13 +8,13 @@
 #include <string.h>
 
 struct alignas(4096) page {
-    int x;
+  int x;
 };
 
-void *Thread(void *unused)  {
+void *Thread(void *unused) {
   page p1;
   uint alignment = (unsigned long)&p1 % alignof(page);
-  printf ("Thread: address modulo alignment is %u\n", alignment);
+  printf("Thread: address modulo alignment is %u\n", alignment);
   assert(alignment == 0);
 
   return NULL;
@@ -26,7 +26,7 @@ int main(int argc, char **argv) {
 
   // When the stack size is 1<<16, FakeStack's GetFrame() is out of alignment,
   // because SizeRequiredForFlags(16) == 2K.
-  pthread_attr_setstacksize(&attr, 1<<16);
+  pthread_attr_setstacksize(&attr, 1 << 16);
 
   pthread_t t;
   pthread_create(&t, &attr, Thread, 0);
