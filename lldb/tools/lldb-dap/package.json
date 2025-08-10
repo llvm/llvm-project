@@ -259,6 +259,11 @@
       {
         "command": "lldb-dap.modules.copyProperty",
         "title": "Copy Value"
+      },
+      {
+        "category": "lldb-dap",
+        "command": "lldb-dap.modules.showSymbols",
+        "title": "Show Module Symbols"
       }
     ],
     "menus": {
@@ -266,6 +271,10 @@
         {
           "command": "lldb-dap.modules.copyProperty",
           "when": "false"
+        },
+        {
+          "command": "lldb-dap.modules.showSymbols",
+          "when": "debuggersAvailable && debugType == 'lldb-dap'"
         }
       ],
       "view/item/context": [
