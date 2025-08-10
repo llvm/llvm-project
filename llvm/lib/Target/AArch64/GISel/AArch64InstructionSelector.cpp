@@ -1697,7 +1697,7 @@ bool AArch64InstructionSelector::selectCompareBranchFedByFCmp(
   emitFPCompare(FCmp.getOperand(2).getReg(), FCmp.getOperand(3).getReg(), MIB,
                 Pred);
   AArch64CC::CondCode CC1, CC2;
-  changeFCMPPredToAArch64CC(static_cast<CmpInst::Predicate>(Pred), CC1, CC2);
+  changeFCMPPredToAArch64CC(Pred, CC1, CC2);
   MachineBasicBlock *DestMBB = I.getOperand(1).getMBB();
   MIB.buildInstr(AArch64::Bcc, {}, {}).addImm(CC1).addMBB(DestMBB);
   if (CC2 != AArch64CC::AL)

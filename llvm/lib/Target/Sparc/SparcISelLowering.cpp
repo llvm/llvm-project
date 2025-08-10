@@ -1179,7 +1179,7 @@ static void fixupVariableFloatArgs(SmallVectorImpl<CCValAssign> &ArgLocs,
     if (!VA.isRegLoc() || (ValTy != MVT::f64 && ValTy != MVT::f128))
       continue;
     // The fixed arguments to a varargs function still go in FP registers.
-    if (Outs[VA.getValNo()].IsFixed)
+    if (!Outs[VA.getValNo()].Flags.isVarArg())
       continue;
 
     // This floating point argument should be reassigned.

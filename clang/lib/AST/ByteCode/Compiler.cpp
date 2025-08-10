@@ -185,6 +185,31 @@ private:
   bool OldFlag;
 };
 
+/// When generating code for e.g. implicit field initializers in constructors,
+/// we don't have anything to point to in case the initializer causes an error.
+/// In that case, we need to disable location tracking for the initializer so
+/// we later point to the call range instead.
+template <class Emitter> class LocOverrideScope final {
+public:
+  LocOverrideScope(Compiler<Emitter> *Ctx, SourceInfo NewValue,
+                   bool Enabled = true)
+      : Ctx(Ctx), OldFlag(Ctx->LocOverride), Enabled(Enabled) {
+
+    if (Enabled)
+      Ctx->LocOverride = NewValue;
+  }
+
+  ~LocOverrideScope() {
+    if (Enabled)
+      Ctx->LocOverride = OldFlag;
+  }
+
+private:
+  Compiler<Emitter> *Ctx;
+  std::optional<SourceInfo> OldFlag;
+  bool Enabled;
+};
+
 } // namespace interp
 } // namespace clang
 
@@ -201,6 +226,28 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
       return this->emitInvalidCast(CastKind::Volatile, /*Fatal=*/true, CE);
 
     OptPrimType SubExprT = classify(SubExpr->getType());
+    // Try to load the value directly. This is purely a performance
+    // optimization.
+    if (SubExprT) {
+      if (const auto *DRE = dyn_cast<DeclRefExpr>(SubExpr)) {
+        const ValueDecl *D = DRE->getDecl();
+        bool IsReference = D->getType()->isReferenceType();
+
+        if (!IsReference) {
+          if (Context::shouldBeGloballyIndexed(D)) {
+            if (auto GlobalIndex = P.getGlobal(D))
+              return this->emitGetGlobal(*SubExprT, *GlobalIndex, CE);
+          } else if (auto It = Locals.find(D); It != Locals.end()) {
+            return this->emitGetLocal(*SubExprT, It->second.Offset, CE);
+          } else if (const auto *PVD = dyn_cast<ParmVarDecl>(D)) {
+            if (auto It = this->Params.find(PVD); It != this->Params.end()) {
+              return this->emitGetParam(*SubExprT, It->second.Offset, CE);
+            }
+          }
+        }
+      }
+    }
+
     // Prepare storage for the result.
     if (!Initializing && !SubExprT) {
       std::optional<unsigned> LocalIndex = allocateLocal(SubExpr);
@@ -331,6 +378,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_FloatingToIntegral: {
+    if (!CE->getType()->isIntegralOrEnumerationType())
+      return false;
     if (!this->visit(SubExpr))
       return false;
     PrimType ToT = classifyPrim(CE);
@@ -504,9 +553,10 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     // Possibly diagnose casts to enum types if the target type does not
     // have a fixed size.
     if (Ctx.getLangOpts().CPlusPlus && CE->getType()->isEnumeralType()) {
-      if (const auto *ET = CE->getType().getCanonicalType()->castAs<EnumType>();
-          !ET->getDecl()->isFixed()) {
-        if (!this->emitCheckEnumValue(*FromT, ET->getDecl(), CE))
+      const auto *ET = CE->getType().getCanonicalType()->castAs<EnumType>();
+      const auto *ED = ET->getOriginalDecl()->getDefinitionOrSelf();
+      if (!ED->isFixed()) {
+        if (!this->emitCheckEnumValue(*FromT, ED, CE))
           return false;
       }
     }
@@ -617,8 +667,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_VectorSplat: {
-    assert(!classify(CE->getType()));
-    assert(classify(SubExpr->getType()));
+    assert(!canClassify(CE->getType()));
+    assert(canClassify(SubExpr->getType()));
     assert(CE->getType()->isVectorType());
 
     if (!Initializing) {
@@ -1369,10 +1419,15 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
   // BitAdd/BitOr/BitXor/Shl/Shr doesn't support bool type, we need perform the
   // integer promotion.
   bool NeedIntPromot = ElemT == PT_Bool && (E->isBitwiseOp() || E->isShiftOp());
-  QualType PromotTy =
-      Ctx.getASTContext().getPromotedIntegerType(Ctx.getASTContext().BoolTy);
-  PrimType PromotT = classifyPrim(PromotTy);
-  PrimType OpT = NeedIntPromot ? PromotT : ElemT;
+  QualType PromotTy;
+  PrimType PromotT = PT_Bool;
+  PrimType OpT = ElemT;
+  if (NeedIntPromot) {
+    PromotTy =
+        Ctx.getASTContext().getPromotedIntegerType(Ctx.getASTContext().BoolTy);
+    PromotT = classifyPrim(PromotTy);
+    OpT = PromotT;
+  }
 
   auto getElem = [=](unsigned Offset, PrimType ElemT, unsigned Index) {
     if (!this->emitGetLocal(PT_Ptr, Offset, E))
@@ -2009,11 +2064,13 @@ bool Compiler<Emitter>::visitCallArgs(ArrayRef<const Expr *> Args,
                                       const FunctionDecl *FuncDecl,
                                       bool Activate) {
   assert(VarScope->getKind() == ScopeKind::Call);
-  llvm::BitVector NonNullArgs = collectNonNullArgs(FuncDecl, Args);
+  llvm::BitVector NonNullArgs;
+  if (FuncDecl && FuncDecl->hasAttr<NonNullAttr>())
+    NonNullArgs = collectNonNullArgs(FuncDecl, Args);
 
   unsigned ArgIndex = 0;
   for (const Expr *Arg : Args) {
-    if (OptPrimType T = classify(Arg)) {
+    if (canClassify(Arg)) {
       if (!this->visit(Arg))
         return false;
     } else {
@@ -2035,7 +2092,7 @@ bool Compiler<Emitter>::visitCallArgs(ArrayRef<const Expr *> Args,
         return false;
     }
 
-    if (FuncDecl && NonNullArgs[ArgIndex]) {
+    if (!NonNullArgs.empty() && NonNullArgs[ArgIndex]) {
       PrimType ArgT = classify(Arg).value_or(PT_Ptr);
       if (ArgT == PT_Ptr) {
         if (!this->emitCheckNonNullArg(ArgT, Arg))
@@ -3098,7 +3155,7 @@ bool Compiler<Emitter>::VisitCXXNoexceptExpr(const CXXNoexceptExpr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::VisitCXXConstructExpr(const CXXConstructExpr *E) {
   QualType T = E->getType();
-  assert(!classify(T));
+  assert(!canClassify(T));
 
   if (T->isRecordType()) {
     const CXXConstructorDecl *Ctor = E->getConstructor();
@@ -3850,10 +3907,7 @@ template <class Emitter>
 bool Compiler<Emitter>::VisitAddrLabelExpr(const AddrLabelExpr *E) {
   assert(E->getType()->isVoidPointerType());
 
-  unsigned Offset =
-      allocateLocalPrimitive(E->getLabel(), PT_Ptr, /*IsConst=*/true);
-
-  return this->emitGetLocal(PT_Ptr, Offset, E);
+  return this->emitDummyPtr(E, E);
 }
 
 template <class Emitter>
@@ -4096,7 +4150,7 @@ template <class Emitter> bool Compiler<Emitter>::visit(const Expr *E) {
 
   // Create local variable to hold the return value.
   if (!E->isGLValue() && !E->getType()->isAnyComplexType() &&
-      !classify(E->getType())) {
+      !canClassify(E->getType())) {
     std::optional<unsigned> LocalIndex = allocateLocal(E);
     if (!LocalIndex)
       return false;
@@ -4116,7 +4170,7 @@ template <class Emitter> bool Compiler<Emitter>::visit(const Expr *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::visitInitializer(const Expr *E) {
-  assert(!classify(E->getType()));
+  assert(!canClassify(E->getType()));
 
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/false,
                              /*NewInitializing=*/true);
@@ -4323,7 +4377,7 @@ bool Compiler<Emitter>::visitZeroArrayInitializer(QualType T, const Expr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::visitAssignment(const Expr *LHS, const Expr *RHS,
                                         const Expr *E) {
-  if (!classify(E->getType()))
+  if (!canClassify(E->getType()))
     return false;
 
   if (!this->visit(RHS))
@@ -4536,7 +4590,7 @@ const RecordType *Compiler<Emitter>::getRecordTy(QualType Ty) {
 
 template <class Emitter> Record *Compiler<Emitter>::getRecord(QualType Ty) {
   if (const auto *RecordTy = getRecordTy(Ty))
-    return getRecord(RecordTy->getDecl());
+    return getRecord(RecordTy->getOriginalDecl()->getDefinitionOrSelf());
   return nullptr;
 }
 
@@ -5888,7 +5942,7 @@ bool Compiler<Emitter>::emitLambdaStaticInvokerBody(const CXXMethodDecl *MD) {
 
   const CXXRecordDecl *ClosureClass = MD->getParent();
   const CXXMethodDecl *LambdaCallOp = ClosureClass->getLambdaCallOperator();
-  assert(ClosureClass->captures_begin() == ClosureClass->captures_end());
+  assert(ClosureClass->captures().empty());
   const Function *Func = this->getFunction(LambdaCallOp);
   if (!Func)
     return false;
@@ -5941,6 +5995,23 @@ bool Compiler<Emitter>::checkLiteralType(const Expr *E) {
   return this->emitCheckLiteralType(E->getType().getTypePtr(), E);
 }
 
+static bool initNeedsOverridenLoc(const CXXCtorInitializer *Init) {
+  const Expr *InitExpr = Init->getInit();
+
+  if (!Init->isWritten() && !Init->isInClassMemberInitializer() &&
+      !isa<CXXConstructExpr>(InitExpr))
+    return true;
+
+  if (const auto *CE = dyn_cast<CXXConstructExpr>(InitExpr)) {
+    const CXXConstructorDecl *Ctor = CE->getConstructor();
+    if (Ctor->isDefaulted() && Ctor->isCopyOrMoveConstructor() &&
+        Ctor->isTrivial())
+      return true;
+  }
+
+  return false;
+}
+
 template <class Emitter>
 bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
   assert(!ReturnType);
@@ -5986,6 +6057,8 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
   bool IsUnion = R->isUnion();
 
   if (IsUnion && Ctor->isCopyOrMoveConstructor()) {
+    LocOverrideScope<Emitter> LOS(this, SourceInfo{});
+
     if (R->getNumFields() == 0)
       return this->emitRetVoid(Ctor);
     // union copy and move ctors are special.
@@ -6012,6 +6085,8 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
     if (const FieldDecl *Member = Init->getMember()) {
       const Record::Field *F = R->getField(Member);
 
+      LocOverrideScope<Emitter> LOS(this, SourceInfo{},
+                                    initNeedsOverridenLoc(Init));
       if (!emitFieldInitializer(F, F->Offset, InitExpr, IsUnion))
         return false;
     } else if (const Type *Base = Init->getBaseClass()) {
@@ -6040,7 +6115,8 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
       if (!this->emitFinishInitPop(InitExpr))
         return false;
     } else if (const IndirectFieldDecl *IFD = Init->getIndirectMember()) {
-
+      LocOverrideScope<Emitter> LOS(this, SourceInfo{},
+                                    initNeedsOverridenLoc(Init));
       assert(IFD->getChainingSize() >= 2);
 
       unsigned NestedFieldOffset = 0;
@@ -6118,6 +6194,8 @@ bool Compiler<Emitter>::compileDestructor(const CXXDestructorDecl *Dtor) {
 
   assert(R);
   if (!R->isUnion()) {
+
+    LocOverrideScope<Emitter> LOS(this, SourceInfo{});
     // First, destroy all fields.
     for (const Record::Field &Field : llvm::reverse(R->fields())) {
       const Descriptor *D = Field.Desc;
@@ -7061,10 +7139,6 @@ bool Compiler<Emitter>::emitDestruction(const Descriptor *Desc,
   assert(Desc);
   assert(!Desc->isPrimitive());
   assert(!Desc->isPrimitiveArray());
-
-  // Can happen if the decl is invalid.
-  if (Desc->isDummy())
-    return true;
 
   // Arrays.
   if (Desc->isArray()) {

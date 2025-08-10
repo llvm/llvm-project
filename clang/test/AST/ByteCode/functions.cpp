@@ -622,7 +622,7 @@ namespace FromIntegral {
   int a[(int)DoubleFn((void*)-1)()]; // both-error {{not allowed at file scope}} \
                                     // both-warning {{variable length arrays}}
   int b[(int)DoubleFn((void*)(-1 + 1))()]; // both-error {{not allowed at file scope}} \
-                                           // expected-note {{evaluates to a null function pointer}} \
+                                           // both-note {{evaluates to a null function pointer}} \
                                            // both-warning {{variable length arrays}}
 #endif
 }
@@ -707,4 +707,9 @@ namespace NoDiags {
     hd_fun<1>();
     return true;
   }
+}
+
+namespace EnableIfWithTemporary {
+  struct A { ~A(); };
+  int &h() __attribute__((enable_if((A(), true), ""))); // both-warning {{clang extension}}
 }
