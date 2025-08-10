@@ -14,9 +14,6 @@
 
 namespace clang::tidy::portability {
 
-/// Find fundamental platform-dependent types and recommend using typedefs or
-/// fixed-width types.
-///
 /// Detects fundamental types (int, short, long, long long, char, float, etc)
 /// and warns against their use due to platform-dependent behavior.
 ///
