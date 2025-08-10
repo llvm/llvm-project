@@ -4,7 +4,8 @@ portability-avoid-platform-specific-fundamental-types
 =====================================================
 
 Detects fundamental types (``int``, ``short``, ``long``, ``long long``, ``char``
-, ``float``, etc) and warns against their use due to platform-dependent behavior.
+, ``float``, etc) and warns against their use due to platform-dependent 
+behavior.
 
 This check detects fundamental types (``int``, ``short``, ``long``, ``float``,
 ``char`` and their ``unsigned`` or ``signed`` variants) and warns against their
@@ -176,8 +177,8 @@ Options
 
    Floating point types can have platform-dependent behavior:
 
-   - ``float`` is typically 32-bit IEEE754, but can vary on some platforms
-   - ``double`` is typically 64-bit IEEE754, but on some microcontrollers
+  - ``float`` is typically 32-bit IEEE754, but can vary on some platforms
+  - ``double`` is typically 64-bit IEEE754, but on some microcontrollers
     without a 64-bit FPU it can be 32 bits
 
    When this option is enabled, the check will suggest using ``float32_t`` and
