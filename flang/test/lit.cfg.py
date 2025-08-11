@@ -172,6 +172,13 @@ if config.flang_standalone_build:
 else:
     llvm_config.add_tool_substitutions(tools, config.llvm_tools_dir)
 
+llvm_config.use_clang(required=False)
+
+# Include path for C headers that define Flang's Fortran ABI.
+config.substitutions.append(
+    ("%include", os.path.join(config.flang_source_dir, "include"))
+)
+
 # Enable libpgmath testing
 result = lit_config.params.get("LIBPGMATH")
 if result:
