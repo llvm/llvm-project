@@ -36,7 +36,7 @@ STATISTIC(VocabMissCounter,
 
 namespace llvm {
 namespace ir2vec {
-static cl::OptionCategory IR2VecCategory("IR2Vec Options");
+LLVM_EXTERNAL_VISIBILITY cl::OptionCategory IR2VecCategory("IR2Vec Options");
 
 // FIXME: Use a default vocab when not specified
 static cl::opt<std::string>
