@@ -1612,7 +1612,7 @@ define i32 @f128_libcall(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, i32 %a, i32
 ; CHECK0-NEXT:  .LBB27_4:
 ; CHECK0-NEXT:    cmp w0, #0
 ; CHECK0-NEXT:    .cfi_restore vg
-; CHECK0-NEXT:    cset w21, lt
+; CHECK0-NEXT:    cset w21, mi
 ; CHECK0-NEXT:    bl __arm_sme_state
 ; CHECK0-NEXT:    and x22, x0, #0x1
 ; CHECK0-NEXT:    .cfi_offset vg, -40
@@ -1627,7 +1627,7 @@ define i32 @f128_libcall(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, i32 %a, i32
 ; CHECK0-NEXT:    smstart sm
 ; CHECK0-NEXT:  .LBB27_8:
 ; CHECK0-NEXT:    cmp w0, #0
-; CHECK0-NEXT:    cset w8, ge
+; CHECK0-NEXT:    cset w8, pl
 ; CHECK0-NEXT:    tst w8, w21
 ; CHECK0-NEXT:    csel w0, w20, w19, ne
 ; CHECK0-NEXT:    .cfi_restore vg
@@ -1701,7 +1701,7 @@ define i32 @f128_libcall(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, i32 %a, i32
 ; CHECK64-NEXT:  .LBB27_4:
 ; CHECK64-NEXT:    cmp w0, #0
 ; CHECK64-NEXT:    .cfi_restore vg
-; CHECK64-NEXT:    cset w21, lt
+; CHECK64-NEXT:    cset w21, mi
 ; CHECK64-NEXT:    bl __arm_sme_state
 ; CHECK64-NEXT:    and x22, x0, #0x1
 ; CHECK64-NEXT:    .cfi_offset vg, -48
@@ -1716,7 +1716,7 @@ define i32 @f128_libcall(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, i32 %a, i32
 ; CHECK64-NEXT:    smstart sm
 ; CHECK64-NEXT:  .LBB27_8:
 ; CHECK64-NEXT:    cmp w0, #0
-; CHECK64-NEXT:    cset w8, ge
+; CHECK64-NEXT:    cset w8, pl
 ; CHECK64-NEXT:    tst w8, w21
 ; CHECK64-NEXT:    csel w0, w20, w19, ne
 ; CHECK64-NEXT:    .cfi_restore vg
@@ -1799,7 +1799,7 @@ define i32 @f128_libcall(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, i32 %a, i32
 ; CHECK1024-NEXT:  .LBB27_4:
 ; CHECK1024-NEXT:    cmp w0, #0
 ; CHECK1024-NEXT:    .cfi_restore vg
-; CHECK1024-NEXT:    cset w21, lt
+; CHECK1024-NEXT:    cset w21, mi
 ; CHECK1024-NEXT:    bl __arm_sme_state
 ; CHECK1024-NEXT:    and x22, x0, #0x1
 ; CHECK1024-NEXT:    .cfi_offset vg, -48
@@ -1815,7 +1815,7 @@ define i32 @f128_libcall(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, i32 %a, i32
 ; CHECK1024-NEXT:    smstart sm
 ; CHECK1024-NEXT:  .LBB27_8:
 ; CHECK1024-NEXT:    cmp w0, #0
-; CHECK1024-NEXT:    cset w8, ge
+; CHECK1024-NEXT:    cset w8, pl
 ; CHECK1024-NEXT:    tst w8, w21
 ; CHECK1024-NEXT:    csel w0, w20, w19, ne
 ; CHECK1024-NEXT:    .cfi_restore vg
