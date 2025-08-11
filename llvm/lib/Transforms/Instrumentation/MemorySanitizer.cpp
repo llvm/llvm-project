@@ -3870,16 +3870,19 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *S2 = getShadow(&I, 1);
 
     if (EltSizeInBits) {
-        if (I.arg_size() != 3)
-          ReturnType = cast<FixedVectorType>(getMMXVectorTy(EltSizeInBits * ReductionFactor, ReturnType->getPrimitiveSizeInBits()));
+      if (I.arg_size() != 3)
+        ReturnType = cast<FixedVectorType>(
+            getMMXVectorTy(EltSizeInBits * ReductionFactor,
+                           ReturnType->getPrimitiveSizeInBits()));
 
-        ParamType = cast<FixedVectorType>(getMMXVectorTy(EltSizeInBits, ParamType->getPrimitiveSizeInBits()));
+      ParamType = cast<FixedVectorType>(
+          getMMXVectorTy(EltSizeInBits, ParamType->getPrimitiveSizeInBits()));
 
-        V1 = IRB.CreateBitCast(V1, ParamType);
-        V2 = IRB.CreateBitCast(V2, ParamType);
+      V1 = IRB.CreateBitCast(V1, ParamType);
+      V2 = IRB.CreateBitCast(V2, ParamType);
 
-        S1 = IRB.CreateBitCast(S1, getShadowTy(ParamType));
-        S2 = IRB.CreateBitCast(S2, getShadowTy(ParamType));
+      S1 = IRB.CreateBitCast(S1, getShadowTy(ParamType));
+      S2 = IRB.CreateBitCast(S2, getShadowTy(ParamType));
     }
 
     assert(ParamType->getNumElements() ==
