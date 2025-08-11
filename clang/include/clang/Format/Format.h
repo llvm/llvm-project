@@ -1355,28 +1355,28 @@ struct FormatStyle {
     BWACS_Always
   };
 
+  /// Override wrapping of empty records.
   enum BraceWrapEmptyRecordStyle : int8_t {
     /// Use default wrapping rules for records
-    /// (AfterClass,AfterStruct,AfterUnion)
+    /// (``AfterClass``,``AfterStruct``,``AfterUnion``).
     /// \code
-    /// class foo
-    /// {
-    ///   int foo;
-    /// };
+    ///   class foo
+    ///   {
+    ///     int foo;
+    ///   };
     ///
-    /// class foo
-    /// {
-    /// };
+    ///   class foo
+    ///   {};
     /// \endcode
     BWER_Default,
-    /// Override wrapping for empty records
+    /// Override wrapping for empty records.
     /// \code
-    /// class foo
-    /// {
-    ///   int foo;
-    /// };
+    ///   class foo
+    ///   {
+    ///     int foo;
+    ///   };
     ///
-    /// class foo {};
+    ///   class foo {};
     /// \endcode
     BWER_Never
   };

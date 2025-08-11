@@ -2584,8 +2584,9 @@ the configuration (without a prefix: ``Auto``).
 
     Possible values:
 
-    * ``BWËR_Never`` (in configuration: ``Never``)
-      Never wrap braces of empty records.
+    * ``BWER_Default`` (in configuration: ``Default``)
+      Use default wrapping rules for records
+      (``AfterClass``,``AfterStruct``,``AfterUnion``).
 
       .. code-block:: c++
 
@@ -2593,11 +2594,12 @@ the configuration (without a prefix: ``Auto``).
         {
           int foo;
         };
-        
-        class foo{};
 
-    * ``BWER_Default`` (in configuration: ``MultiLine``)
-      Use default wrapping rules for records. (``AfterClass``, ``AfterStruct``, ``AfterUnion``)
+        class foo
+        {};
+
+    * ``BWER_Never`` (in configuration: ``Never``)
+      Override wrapping for empty records.
 
       .. code-block:: c++
 
@@ -2605,10 +2607,10 @@ the configuration (without a prefix: ``Auto``).
         {
           int foo;
         };
-        
-        class foo
-        {
-        };
+
+        class foo {};
+
+
 
 .. _BracedInitializerIndentWidth:
 

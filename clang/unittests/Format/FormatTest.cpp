@@ -15624,24 +15624,36 @@ TEST_F(FormatTest, WrapEmptyRecords) {
   Style.BraceWrapping.AfterUnion = true;
   Style.BraceWrapping.SplitEmptyRecord = false;
 
-  verifyFormat("class foo\n{\n  void bar();\n};", Style);
+  verifyFormat("class foo\n{\n"
+    "  void bar();\n"
+    "};", Style);
   verifyFormat("class foo\n{};", Style);
 
-  verifyFormat("struct foo\n{\n  int bar;\n};", Style);
+  verifyFormat("struct foo\n{\n"
+    "  int bar;\n"
+    "};", Style);
   verifyFormat("struct foo\n{};", Style);
 
-  verifyFormat("union foo\n{\n  int bar;\n};", Style);
+  verifyFormat("union foo\n{\n"
+    "  int bar;\n"
+    "};", Style);
   verifyFormat("union foo\n{};", Style);
 
   Style.BraceWrapping.WrapEmptyRecord = FormatStyle::BWER_Never;
 
-  verifyFormat("class foo\n{\n  void bar();\n};", Style);
+  verifyFormat("class foo\n{\n"
+    "  void bar();\n"
+    "};", Style);
   verifyFormat("class foo {};", Style);
 
-  verifyFormat("struct foo\n{\n  int bar;\n};", Style);
+  verifyFormat("struct foo\n{\n"
+    "  int bar;\n"
+    "};", Style);
   verifyFormat("struct foo {};", Style);
 
-  verifyFormat("union foo\n{\n  int bar;\n};", Style);
+  verifyFormat("union foo\n{\n"
+    "  int bar;\n"
+    "};", Style);
   verifyFormat("union foo {};", Style);
 }
 
