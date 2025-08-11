@@ -51,7 +51,6 @@ define void @test(ptr noalias nocapture %a, ptr noalias nocapture %b, i32 %v) {
 ; VLENUNK:       middle.block:
 ; VLENUNK-NEXT:    br label [[FOR_END:%.*]]
 ; VLENUNK:       scalar.ph:
-; VLENUNK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; VLENUNK-NEXT:    br label [[FOR_BODY:%.*]]
 ; VLENUNK:       for.body:
 ; VLENUNK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]

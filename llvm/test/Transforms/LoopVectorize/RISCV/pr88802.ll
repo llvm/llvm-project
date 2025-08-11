@@ -49,7 +49,6 @@ define void @test(ptr %p, i64 %a, i8 %b) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT1:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_COND1:%.*]]
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[SCALAR_PH1]] ], [ [[ADD:%.*]], [[FOR_BODY:%.*]] ]
