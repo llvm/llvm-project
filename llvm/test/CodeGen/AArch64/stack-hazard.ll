@@ -673,6 +673,7 @@ define i32 @csr_x18_25_d8_15_allocdi64_locallystreaming(i64 %d, double %e) "aarc
 ; CHECK0-NEXT:    .cfi_restore w23
 ; CHECK0-NEXT:    .cfi_restore w24
 ; CHECK0-NEXT:    .cfi_restore w25
+; CHECK0-NEXT:    .cfi_restore vg
 ; CHECK0-NEXT:    .cfi_restore w30
 ; CHECK0-NEXT:    .cfi_restore w29
 ; CHECK0-NEXT:    .cfi_restore b8
@@ -746,6 +747,7 @@ define i32 @csr_x18_25_d8_15_allocdi64_locallystreaming(i64 %d, double %e) "aarc
 ; CHECK64-NEXT:    .cfi_restore w23
 ; CHECK64-NEXT:    .cfi_restore w24
 ; CHECK64-NEXT:    .cfi_restore w25
+; CHECK64-NEXT:    .cfi_restore vg
 ; CHECK64-NEXT:    .cfi_restore w30
 ; CHECK64-NEXT:    .cfi_restore w29
 ; CHECK64-NEXT:    .cfi_restore b8
@@ -832,6 +834,7 @@ define i32 @csr_x18_25_d8_15_allocdi64_locallystreaming(i64 %d, double %e) "aarc
 ; CHECK1024-NEXT:    .cfi_restore w23
 ; CHECK1024-NEXT:    .cfi_restore w24
 ; CHECK1024-NEXT:    .cfi_restore w25
+; CHECK1024-NEXT:    .cfi_restore vg
 ; CHECK1024-NEXT:    .cfi_restore w30
 ; CHECK1024-NEXT:    .cfi_restore w29
 ; CHECK1024-NEXT:    .cfi_restore b8
@@ -1644,6 +1647,7 @@ define i32 @f128_libcall(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, i32 %a, i32
 ; CHECK0-NEXT:    .cfi_restore w20
 ; CHECK0-NEXT:    .cfi_restore w21
 ; CHECK0-NEXT:    .cfi_restore w22
+; CHECK0-NEXT:    .cfi_restore vg
 ; CHECK0-NEXT:    .cfi_restore w30
 ; CHECK0-NEXT:    .cfi_restore w29
 ; CHECK0-NEXT:    .cfi_restore b8
@@ -1732,6 +1736,7 @@ define i32 @f128_libcall(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, i32 %a, i32
 ; CHECK64-NEXT:    .cfi_restore w21
 ; CHECK64-NEXT:    .cfi_restore w22
 ; CHECK64-NEXT:    .cfi_restore w28
+; CHECK64-NEXT:    .cfi_restore vg
 ; CHECK64-NEXT:    .cfi_restore w30
 ; CHECK64-NEXT:    .cfi_restore w29
 ; CHECK64-NEXT:    .cfi_restore b8
@@ -1835,6 +1840,7 @@ define i32 @f128_libcall(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, i32 %a, i32
 ; CHECK1024-NEXT:    .cfi_restore w21
 ; CHECK1024-NEXT:    .cfi_restore w22
 ; CHECK1024-NEXT:    .cfi_restore w28
+; CHECK1024-NEXT:    .cfi_restore vg
 ; CHECK1024-NEXT:    .cfi_restore w30
 ; CHECK1024-NEXT:    .cfi_restore w29
 ; CHECK1024-NEXT:    .cfi_restore b8
@@ -1974,6 +1980,7 @@ define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, 
 ; CHECK0-NEXT:    .cfi_restore w26
 ; CHECK0-NEXT:    .cfi_restore w27
 ; CHECK0-NEXT:    .cfi_restore w28
+; CHECK0-NEXT:    .cfi_restore vg
 ; CHECK0-NEXT:    .cfi_restore w30
 ; CHECK0-NEXT:    .cfi_restore w29
 ; CHECK0-NEXT:    ret
@@ -2101,6 +2108,7 @@ define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, 
 ; CHECK64-NEXT:    .cfi_restore w26
 ; CHECK64-NEXT:    .cfi_restore w27
 ; CHECK64-NEXT:    .cfi_restore w28
+; CHECK64-NEXT:    .cfi_restore vg
 ; CHECK64-NEXT:    .cfi_restore w30
 ; CHECK64-NEXT:    .cfi_restore w29
 ; CHECK64-NEXT:    ret
@@ -2234,6 +2242,7 @@ define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, 
 ; CHECK1024-NEXT:    .cfi_restore w26
 ; CHECK1024-NEXT:    .cfi_restore w27
 ; CHECK1024-NEXT:    .cfi_restore w28
+; CHECK1024-NEXT:    .cfi_restore vg
 ; CHECK1024-NEXT:    .cfi_restore w30
 ; CHECK1024-NEXT:    .cfi_restore w29
 ; CHECK1024-NEXT:    ret
@@ -2364,6 +2373,7 @@ define i32 @svecc_alloca_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8
 ; CHECK0-NEXT:    .cfi_restore w26
 ; CHECK0-NEXT:    .cfi_restore w27
 ; CHECK0-NEXT:    .cfi_restore w28
+; CHECK0-NEXT:    .cfi_restore vg
 ; CHECK0-NEXT:    .cfi_restore w30
 ; CHECK0-NEXT:    .cfi_restore w29
 ; CHECK0-NEXT:    ret
@@ -2490,6 +2500,7 @@ define i32 @svecc_alloca_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8
 ; CHECK64-NEXT:    .cfi_restore w26
 ; CHECK64-NEXT:    .cfi_restore w27
 ; CHECK64-NEXT:    .cfi_restore w28
+; CHECK64-NEXT:    .cfi_restore vg
 ; CHECK64-NEXT:    .cfi_restore w30
 ; CHECK64-NEXT:    .cfi_restore w29
 ; CHECK64-NEXT:    ret
@@ -2622,6 +2633,7 @@ define i32 @svecc_alloca_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8
 ; CHECK1024-NEXT:    .cfi_restore w26
 ; CHECK1024-NEXT:    .cfi_restore w27
 ; CHECK1024-NEXT:    .cfi_restore w28
+; CHECK1024-NEXT:    .cfi_restore vg
 ; CHECK1024-NEXT:    .cfi_restore w30
 ; CHECK1024-NEXT:    .cfi_restore w29
 ; CHECK1024-NEXT:    ret
@@ -2872,6 +2884,7 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK0-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK0-NEXT:    .cfi_restore w19
 ; CHECK0-NEXT:    .cfi_restore w20
+; CHECK0-NEXT:    .cfi_restore vg
 ; CHECK0-NEXT:    .cfi_restore w30
 ; CHECK0-NEXT:    .cfi_restore w29
 ; CHECK0-NEXT:    .cfi_restore b8
@@ -2947,6 +2960,7 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK64-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK64-NEXT:    .cfi_restore w19
 ; CHECK64-NEXT:    .cfi_restore w20
+; CHECK64-NEXT:    .cfi_restore vg
 ; CHECK64-NEXT:    .cfi_restore w30
 ; CHECK64-NEXT:    .cfi_restore w29
 ; CHECK64-NEXT:    .cfi_restore b8
@@ -3031,6 +3045,7 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK1024-NEXT:    .cfi_restore w19
 ; CHECK1024-NEXT:    .cfi_restore w20
 ; CHECK1024-NEXT:    .cfi_restore w28
+; CHECK1024-NEXT:    .cfi_restore vg
 ; CHECK1024-NEXT:    .cfi_restore w30
 ; CHECK1024-NEXT:    .cfi_restore w29
 ; CHECK1024-NEXT:    .cfi_restore b8
@@ -3283,6 +3298,7 @@ define i32 @svecc_call_dynamic_alloca(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x
 ; CHECK0-NEXT:    .cfi_restore w26
 ; CHECK0-NEXT:    .cfi_restore w27
 ; CHECK0-NEXT:    .cfi_restore w28
+; CHECK0-NEXT:    .cfi_restore vg
 ; CHECK0-NEXT:    .cfi_restore w30
 ; CHECK0-NEXT:    .cfi_restore w29
 ; CHECK0-NEXT:    ret
@@ -3421,6 +3437,7 @@ define i32 @svecc_call_dynamic_alloca(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x
 ; CHECK64-NEXT:    .cfi_restore w26
 ; CHECK64-NEXT:    .cfi_restore w27
 ; CHECK64-NEXT:    .cfi_restore w28
+; CHECK64-NEXT:    .cfi_restore vg
 ; CHECK64-NEXT:    .cfi_restore w30
 ; CHECK64-NEXT:    .cfi_restore w29
 ; CHECK64-NEXT:    ret
@@ -3566,6 +3583,7 @@ define i32 @svecc_call_dynamic_alloca(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x
 ; CHECK1024-NEXT:    .cfi_restore w26
 ; CHECK1024-NEXT:    .cfi_restore w27
 ; CHECK1024-NEXT:    .cfi_restore w28
+; CHECK1024-NEXT:    .cfi_restore vg
 ; CHECK1024-NEXT:    .cfi_restore w30
 ; CHECK1024-NEXT:    .cfi_restore w29
 ; CHECK1024-NEXT:    ret
@@ -3699,6 +3717,7 @@ define i32 @svecc_call_realign(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x 16 x i
 ; CHECK0-NEXT:    .cfi_restore w26
 ; CHECK0-NEXT:    .cfi_restore w27
 ; CHECK0-NEXT:    .cfi_restore w28
+; CHECK0-NEXT:    .cfi_restore vg
 ; CHECK0-NEXT:    .cfi_restore w30
 ; CHECK0-NEXT:    .cfi_restore w29
 ; CHECK0-NEXT:    ret
@@ -3827,6 +3846,7 @@ define i32 @svecc_call_realign(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x 16 x i
 ; CHECK64-NEXT:    .cfi_restore w26
 ; CHECK64-NEXT:    .cfi_restore w27
 ; CHECK64-NEXT:    .cfi_restore w28
+; CHECK64-NEXT:    .cfi_restore vg
 ; CHECK64-NEXT:    .cfi_restore w30
 ; CHECK64-NEXT:    .cfi_restore w29
 ; CHECK64-NEXT:    ret
@@ -3961,6 +3981,7 @@ define i32 @svecc_call_realign(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x 16 x i
 ; CHECK1024-NEXT:    .cfi_restore w26
 ; CHECK1024-NEXT:    .cfi_restore w27
 ; CHECK1024-NEXT:    .cfi_restore w28
+; CHECK1024-NEXT:    .cfi_restore vg
 ; CHECK1024-NEXT:    .cfi_restore w30
 ; CHECK1024-NEXT:    .cfi_restore w29
 ; CHECK1024-NEXT:    ret
