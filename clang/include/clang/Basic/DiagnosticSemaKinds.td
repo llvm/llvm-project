@@ -6077,7 +6077,7 @@ def err_pack_outside_template : Error<
 def err_builtin_pack_outside_template
     : Error<"%0 cannot be used outside of template">;
 
-def err_unsupported_builtin_template_pack_position
+def err_unsupported_builtin_template_pack_expansion
     : Error<"expansions of %0 are not supported here. Only expansions in "
             "template arguments and class bases are supported">;
 

@@ -862,7 +862,7 @@ bool Sema::CheckParameterPacksForExpansion(
       // It is not yet supported in many positions.
       Diag(PatternRange.getBegin().isValid() ? PatternRange.getBegin()
                                              : EllipsisLoc,
-           diag::err_unsupported_builtin_template_pack_position)
+           diag::err_unsupported_builtin_template_pack_expansion)
           << TST->getTemplateName();
       return true;
     } else if (auto *S =

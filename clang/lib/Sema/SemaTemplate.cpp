@@ -5917,7 +5917,7 @@ bool Sema::CheckTemplateArgumentList(
         assert(isPackProducingBuiltinTemplateName(TST->getTemplateName()));
         // It is not yet supported in many positions.
         Diag(TL.getEllipsisLoc(),
-             diag::err_unsupported_builtin_template_pack_position)
+             diag::err_unsupported_builtin_template_pack_expansion)
             << TST->getTemplateName();
         return true;
       }
