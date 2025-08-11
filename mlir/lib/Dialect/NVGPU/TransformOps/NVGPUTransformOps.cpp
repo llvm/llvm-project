@@ -38,9 +38,6 @@ using namespace mlir::NVVM;
 using namespace mlir::transform;
 
 #define DEBUG_TYPE "nvgpu-transforms"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
-#define DBGSNL() (llvm::dbgs() << "\n")
-#define LDBG(X) LLVM_DEBUG(DBGS() << (X) << "\n")
 
 //===----------------------------------------------------------------------===//
 // Apply...ConversionPatternsOp
@@ -333,15 +330,15 @@ static Operation *replaceOpWithPredicatedOp(RewriterBase &rewriter,
   //   srcElement = (pred) ?  prevSrcElements : 0;
   //
   Location loc = asyncCopyOp->getLoc();
-  Value dstElements =
-      rewriter.create<arith::ConstantOp>(loc, asyncCopyOp.getDstElementsAttr());
+  Value dstElements = arith::ConstantOp::create(
+      rewriter, loc, asyncCopyOp.getDstElementsAttr());
   Value originalSrcElement =
       asyncCopyOp.getSrcElements() ? asyncCopyOp.getSrcElements() : dstElements;
-  Value c0Index = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-  auto srcElements = rewriter.create<arith::SelectOp>(
-      loc, predicate, originalSrcElement, c0Index);
-  auto asyncCopyZeroFillOp = rewriter.create<nvgpu::DeviceAsyncCopyOp>(
-      loc, nvgpu::DeviceAsyncTokenType::get(asyncCopyOp.getContext()),
+  Value c0Index = arith::ConstantIndexOp::create(rewriter, loc, 0);
+  auto srcElements = arith::SelectOp::create(rewriter, loc, predicate,
+                                             originalSrcElement, c0Index);
+  auto asyncCopyZeroFillOp = nvgpu::DeviceAsyncCopyOp::create(
+      rewriter, loc, nvgpu::DeviceAsyncTokenType::get(asyncCopyOp.getContext()),
       asyncCopyOp.getDst(), asyncCopyOp.getDstIndices(), asyncCopyOp.getSrc(),
       asyncCopyOp.getSrcIndices(), asyncCopyOp.getDstElements(), srcElements,
       UnitAttr());
@@ -675,7 +672,7 @@ MmaSyncBuilder::buildMemRefLoads(OpBuilder &b, Location loc,
   for (auto indexing : indexings) {
     Value row = getValueOrCreateConstantIndexOp(b, loc, aff(indexing.row()));
     Value col = getValueOrCreateConstantIndexOp(b, loc, aff(indexing.col()));
-    auto load = b.create<memref::LoadOp>(loc, memref, ValueRange{row, col});
+    auto load = memref::LoadOp::create(b, loc, memref, ValueRange{row, col});
     res.push_back(load);
   }
   return res;
@@ -688,7 +685,7 @@ Value MmaSyncBuilder::buildMmaSyncMemRefLoadOperand(
 
   Type elementType = getElementTypeOrSelf(memref.getType());
   auto vt = VectorType::get(vectorShape, elementType);
-  Value res = b.create<vector::SplatOp>(loc, vt, loads[0]);
+  Value res = vector::BroadcastOp::create(b, loc, vt, loads[0]);
   foreachIndividualVectorElement(
       res,
       /*applyFn=*/
@@ -697,7 +694,7 @@ Value MmaSyncBuilder::buildMmaSyncMemRefLoadOperand(
       },
       /*reduceFn=*/
       [&](Value v, int64_t linearIdx, ArrayRef<int64_t> indices) {
-        res = b.create<vector::InsertOp>(loc, v, res, indices);
+        res = vector::InsertOp::create(b, loc, v, res, indices);
       });
 
   return res;
@@ -715,7 +712,7 @@ SmallVector<Operation *> MmaSyncBuilder::buildMemRefStores(
     Value row = getValueOrCreateConstantIndexOp(b, loc, aff(indexing.row()));
     Value col = getValueOrCreateConstantIndexOp(b, loc, aff(indexing.col()));
     Operation *store =
-        b.create<memref::StoreOp>(loc, val, memref, ValueRange{row, col});
+        memref::StoreOp::create(b, loc, val, memref, ValueRange{row, col});
     res.push_back(store);
   }
   return res;
@@ -730,7 +727,7 @@ SmallVector<Operation *> MmaSyncBuilder::buildMmaSyncMemRefStoreOperand(
       vectorToStore,
       /*applyFn=*/
       [&](Value v, int64_t linearIdx, ArrayRef<int64_t> indices) {
-        return b.create<vector::ExtractOp>(loc, vectorToStore, indices);
+        return vector::ExtractOp::create(b, loc, vectorToStore, indices);
       },
       /*reduceFn=*/
       [&](Value v, int64_t linearIdx, ArrayRef<int64_t> indices) {
@@ -810,8 +807,8 @@ FailureOr<Operation *> MmaSyncBuilder::buildMmaSync(LinalgOp linalgOp) {
                                             rhsIndexFn, rhsShape);
   Value res = buildMmaSyncMemRefLoadOperand(b, loc, laneId, resMemRef,
                                             resIndexFn, resShape);
-  res = b.create<nvgpu::MmaSyncOp>(loc, lhs, rhs, res, info.mmaShape,
-                                   info.tf32Enabled);
+  res = nvgpu::MmaSyncOp::create(b, loc, lhs, rhs, res, info.mmaShape,
+                                 info.tf32Enabled);
   buildMmaSyncMemRefStoreOperand(b, loc, res, laneId, resMemRef, resIndexFn,
                                  resShape);
   return res.getDefiningOp();
@@ -832,8 +829,8 @@ DiagnosedSilenceableFailure transform::RewriteMatmulAsMmaSyncOp::applyToOne(
     }
     Location loc = linalgOp.getLoc();
     // TODO: more robust computation of laneId, for now assume a single warp.
-    Value laneId = rewriter.create<gpu::ThreadIdOp>(
-        loc, rewriter.getIndexType(), gpu::Dimension::x);
+    Value laneId = gpu::ThreadIdOp::create(
+        rewriter, loc, rewriter.getIndexType(), gpu::Dimension::x);
     if (succeeded(MmaSyncBuilder(rewriter, loc, laneId).buildMmaSync(linalgOp)))
       fail = false;
   }
@@ -897,12 +894,12 @@ SmallVector<Operation *> HopperBuilder::buildPredicateLoadsOnThread0(
     ArrayRef<TypedValue<MemRefType>> sharedMemBuffers,
     TypedValue<nvgpu::MBarrierGroupType> barrier) {
   SmallVector<Operation *> loadOps;
-  Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-  Value tidx = rewriter.create<gpu::ThreadIdOp>(loc, gpu::Dimension::x);
-  Value cond =
-      rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq, tidx, zero);
+  Value zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
+  Value tidx = gpu::ThreadIdOp::create(rewriter, loc, gpu::Dimension::x);
+  Value cond = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::eq,
+                                     tidx, zero);
   // clang-format off
-  rewriter.create<scf::IfOp>(
+  scf::IfOp::create(rewriter,
     /*location=*/loc,
     /*conditional=*/cond,
     /*thenBuilder=*/
@@ -917,14 +914,14 @@ SmallVector<Operation *> HopperBuilder::buildPredicateLoadsOnThread0(
       // TODO: Note that cutlass predeclares the barrier arrive tx before the tma.async.load.
       // This may or may not have perf implications.
       buildBarrierArriveTx(barrier, sizes);
-      rewriter.create<scf::YieldOp>(loc);
+      scf::YieldOp::create(rewriter, loc);
     },
     /*elseBuilder=*/
     [&](OpBuilder &lb, Location loc) {
       // TODO: is this for no-thread divergence?
       // Should we just yield the size and hoist?
       buildBarrierArriveTx(barrier, getAsIndexOpFoldResult(rewriter.getContext(), 0));
-      rewriter.create<scf::YieldOp>(loc);
+      scf::YieldOp::create(rewriter, loc);
     });
   // clang-format on
   return loadOps;
@@ -939,14 +936,15 @@ static Attribute getSharedAddressSpaceAttribute(OpBuilder &b) {
 TypedValue<nvgpu::MBarrierGroupType>
 HopperBuilder::buildAndInitBarrierInSharedMemory(OpFoldResult numThreads) {
   auto sharedMemorySpace = getSharedAddressSpaceAttribute(rewriter);
-  Value barrier = rewriter.create<nvgpu::MBarrierCreateOp>(
-      loc,
+  Value barrier = nvgpu::MBarrierCreateOp::create(
+      rewriter, loc,
       nvgpu::MBarrierGroupType::get(rewriter.getContext(), sharedMemorySpace));
-  Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-  rewriter.create<nvgpu::MBarrierInitOp>(
-      loc, barrier, getValueOrCreateConstantIndexOp(rewriter, loc, numThreads),
-      zero, Value());
-  rewriter.create<gpu::BarrierOp>(loc);
+  Value zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
+  nvgpu::MBarrierInitOp::create(
+      rewriter, loc, barrier,
+      getValueOrCreateConstantIndexOp(rewriter, loc, numThreads), zero,
+      Value());
+  gpu::BarrierOp::create(rewriter, loc);
   return cast<TypedValue<nvgpu::MBarrierGroupType>>(barrier);
 }
 
@@ -955,8 +953,8 @@ HopperBuilder::buildGlobalMemRefDescriptor(TypedValue<MemRefType> memref,
                                            gpu::LaunchOp launchOp) {
   OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPoint(launchOp);
-  Value unrankedMemRef = rewriter.create<memref::CastOp>(
-      loc,
+  Value unrankedMemRef = memref::CastOp::create(
+      rewriter, loc,
       UnrankedMemRefType::get(memref.getType().getElementType(),
                               memref.getType().getMemorySpace()),
       memref);
@@ -966,8 +964,8 @@ HopperBuilder::buildGlobalMemRefDescriptor(TypedValue<MemRefType> memref,
       getValueOrCreateConstantIndexOp(rewriter, loc, mixedSizes);
 
   auto sharedMemorySpace = getSharedAddressSpaceAttribute(rewriter);
-  Value desc = rewriter.create<nvgpu::TmaCreateDescriptorOp>(
-      loc,
+  Value desc = nvgpu::TmaCreateDescriptorOp::create(
+      rewriter, loc,
       nvgpu::TensorMapDescriptorType::get(
           rewriter.getContext(),
           MemRefType::Builder(memref.getType())
@@ -985,10 +983,10 @@ OpFoldResult HopperBuilder::buildTmaAsyncLoad(
     TypedValue<nvgpu::MBarrierGroupType> barrier,
     SmallVectorImpl<Operation *> &loadOps) {
   MLIRContext *ctx = rewriter.getContext();
-  Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-  Operation *loadOp = rewriter.create<nvgpu::TmaAsyncLoadOp>(
-      loc, sharedMemref, barrier, globalDesc, ValueRange{zero, zero}, zero,
-      Value(), Value());
+  Value zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
+  Operation *loadOp = nvgpu::TmaAsyncLoadOp::create(
+      rewriter, loc, sharedMemref, barrier, globalDesc, ValueRange{zero, zero},
+      zero, Value(), Value());
   loadOps.push_back(loadOp);
   auto mixedSizes = memref::getMixedSizes(rewriter, loc, sharedMemref);
   SmallVector<AffineExpr> symbols(mixedSizes.size());
@@ -1012,23 +1010,23 @@ void HopperBuilder::buildBarrierArriveTx(
   OpFoldResult size =
       affine::makeComposedFoldedAffineApply(rewriter, loc, sumExpr, mixedSizes);
   Value sizeVal = getValueOrCreateConstantIndexOp(rewriter, loc, size);
-  Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-  rewriter.create<nvgpu::MBarrierArriveExpectTxOp>(loc, barrier, sizeVal, zero,
-                                                   Value());
+  Value zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
+  nvgpu::MBarrierArriveExpectTxOp::create(rewriter, loc, barrier, sizeVal, zero,
+                                          Value());
 }
 
 void HopperBuilder::buildTryWaitParity(
     TypedValue<nvgpu::MBarrierGroupType> barrier) {
   Type i1 = rewriter.getI1Type();
-  Value parity = rewriter.create<LLVM::ConstantOp>(loc, i1, 0);
+  Value parity = LLVM::ConstantOp::create(rewriter, loc, i1, 0);
   // 10M is an arbitrary, not too small or too big number to specify the number
   // of ticks before retry.
   // TODO: hoist this in a default dialect constant.
   Value ticksBeforeRetry =
-      rewriter.create<arith::ConstantIndexOp>(loc, 10000000);
-  Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-  rewriter.create<nvgpu::MBarrierTryWaitParityOp>(loc, barrier, parity,
-                                                  ticksBeforeRetry, zero);
+      arith::ConstantIndexOp::create(rewriter, loc, 10000000);
+  Value zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
+  nvgpu::MBarrierTryWaitParityOp::create(rewriter, loc, barrier, parity,
+                                         ticksBeforeRetry, zero);
 }
 
 //===----------------------------------------------------------------------===//

@@ -1131,7 +1131,8 @@ void CGNVCUDARuntime::handleVarRegistration(const VarDecl *D,
     // Builtin surfaces and textures and their template arguments are
     // also registered with CUDA runtime.
     const auto *TD = cast<ClassTemplateSpecializationDecl>(
-        D->getType()->castAs<RecordType>()->getDecl());
+                         D->getType()->castAs<RecordType>()->getOriginalDecl())
+                         ->getDefinitionOrSelf();
     const TemplateArgumentList &Args = TD->getTemplateArgs();
     if (TD->hasAttr<CUDADeviceBuiltinSurfaceTypeAttr>()) {
       assert(Args.size() == 2 &&
@@ -1280,7 +1281,8 @@ llvm::Function *CGNVCUDARuntime::finalizeModule() {
     return nullptr;
   }
   if (CGM.getLangOpts().OffloadViaLLVM ||
-      (CGM.getLangOpts().OffloadingNewDriver && RelocatableDeviceCode))
+      (CGM.getLangOpts().OffloadingNewDriver &&
+       (CGM.getLangOpts().HIP || RelocatableDeviceCode)))
     createOffloadingEntries();
   else
     return makeModuleCtorFunction();

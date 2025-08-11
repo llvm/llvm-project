@@ -754,11 +754,11 @@ implicit none
   end interface
 
   interface __popc
-    attributes(device) integer function __popc(i) bind(c)
+    attributes(device) integer function __popc(i) bind(c, name='__nv_popc')
       !dir$ ignore_tkr (d) i
       integer, value :: i
     end function
-    attributes(device) integer function __popcll(i) bind(c)
+    attributes(device) integer function __popcll(i) bind(c, name='__nv_popcll')
       !dir$ ignore_tkr (d) i
       integer(8), value :: i
     end function
@@ -958,7 +958,17 @@ implicit none
   ! Time function
 
   interface
+    attributes(device) integer function clock()
+    end function
+  end interface
+
+  interface
     attributes(device) integer(8) function clock64()
+    end function
+  end interface
+
+  interface
+    attributes(device) integer(8) function globalTimer()
     end function
   end interface
 

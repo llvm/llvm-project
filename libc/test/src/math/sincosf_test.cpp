@@ -8,14 +8,14 @@
 
 #include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/math/sincosf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "test/src/math/sdcomp26094.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include <stdint.h>
+#include "hdr/stdint_proxy.h"
 
 using LlvmLibcSinCosfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
@@ -24,7 +24,7 @@ using LIBC_NAMESPACE::testing::SDCOMP26094_VALUES;
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 TEST_F(LlvmLibcSinCosfTest, SpecialNumbers) {
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
   float sin, cos;
 
   LIBC_NAMESPACE::sincosf(aNaN, &sin, &cos);
@@ -164,7 +164,7 @@ TEST_F(LlvmLibcSinCosfTest, SpecialValues) {
   }
 }
 
-// SDCOMP-26094: check sinf in the cases for which the range reducer
+// SDCOMP-26094: check sincosf in the cases for which the range reducer
 // returns values furthest beyond its nominal upper bound of pi/4.
 TEST_F(LlvmLibcSinCosfTest, SDCOMP_26094) {
   for (uint32_t v : SDCOMP26094_VALUES) {

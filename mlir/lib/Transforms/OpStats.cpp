@@ -8,10 +8,8 @@
 
 #include "mlir/Transforms/Passes.h"
 
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/OperationSupport.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 

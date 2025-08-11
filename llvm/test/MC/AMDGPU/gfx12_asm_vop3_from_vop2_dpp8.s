@@ -3,6 +3,8 @@
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize64,+real-true16 -show-encoding %s | FileCheck --check-prefixes=GFX12,W64 %s
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize32,+real-true16 -filetype=null %s 2>&1 | FileCheck --check-prefix=W32-ERR --implicit-check-not=error: %s
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize64,+real-true16 -filetype=null %s 2>&1 | FileCheck --check-prefix=W64-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1250 -mattr=+wavefrontsize32,+real-true16 -show-encoding %s | FileCheck --check-prefixes=GFX12,W32 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1250 -mattr=-wavefrontsize32,+wavefrontsize64,+real-true16 -show-encoding %s | FileCheck --check-prefixes=GFX12,W64 %s
 
 v_add_co_ci_u32_e64_dpp v5, s6, v1, v2, s3 dpp8:[7,6,5,4,3,2,1,0]
 // W32: v_add_co_ci_u32_e64_dpp v5, s6, v1, v2, s3 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x06,0x20,0xd5,0xe9,0x04,0x0e,0x00,0x01,0x77,0x39,0x05]

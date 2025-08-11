@@ -87,7 +87,7 @@ if.else:                                          ; preds = %lbl1
   ]
 
 if.end12:                                         ; preds = %cleanup.cont11s, %cleanup.cont
-  call void @llvm.lifetime.end.p0(i64 1, ptr undef)
+  call i16 @g(i16 1)
   ret void
 
 unreachable:                                      ; preds = %if.else, %for.end5
@@ -95,6 +95,3 @@ unreachable:                                      ; preds = %if.else, %for.end5
 }
 
 declare i16 @g(i16)
-
-; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)

@@ -68,7 +68,7 @@ public:
   /// the seeds in a bundle. This allows constant time evaluation
   /// and "removal" from the list.
   void setUsed(Instruction *I) {
-    auto It = std::find(begin(), end(), I);
+    auto It = llvm::find(*this, I);
     assert(It != end() && "Instruction not in the bundle!");
     auto Idx = It - begin();
     setUsed(Idx, 1, /*VerifyUnused=*/false);
@@ -307,7 +307,8 @@ class SeedCollector {
   }
 
 public:
-  LLVM_ABI SeedCollector(BasicBlock *BB, ScalarEvolution &SE);
+  LLVM_ABI SeedCollector(BasicBlock *BB, ScalarEvolution &SE,
+                         bool CollectStores, bool CollectLoads);
   LLVM_ABI ~SeedCollector();
 
   iterator_range<SeedContainer::iterator> getStoreSeeds() {

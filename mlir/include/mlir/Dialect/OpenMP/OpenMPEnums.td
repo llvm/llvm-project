@@ -263,4 +263,34 @@ def VariableCaptureKindAttr : OpenMP_EnumAttr<VariableCaptureKind,
   let assemblyFormat = "`(` $value `)`";
 }
 
+
+//===----------------------------------------------------------------------===//
+// allocator_handle enum.
+//===----------------------------------------------------------------------===//
+
+def OpenMP_AllocatorHandleNullAllocator : I32EnumAttrCase<"omp_null_allocator", 0>;
+def OpenMP_AllocatorHandleDefaultMemAlloc : I32EnumAttrCase<"omp_default_mem_alloc", 1>;
+def OpenMP_AllocatorHandleLargeCapMemAlloc : I32EnumAttrCase<"omp_large_cap_mem_alloc", 2>;
+def OpenMP_AllocatorHandleConstMemAlloc : I32EnumAttrCase<"omp_const_mem_alloc", 3>;
+def OpenMP_AllocatorHandleHighBwMemAlloc : I32EnumAttrCase<"omp_high_bw_mem_alloc", 4>;
+def OpenMP_AllocatorHandleLowLatMemAlloc : I32EnumAttrCase<"omp_low_lat_mem_alloc", 5>;
+def OpenMP_AllocatorHandleCgroupMemAlloc : I32EnumAttrCase<"omp_cgroup_mem_alloc", 6>;
+def OpenMP_AllocatorHandlePteamMemAlloc : I32EnumAttrCase<"omp_pteam_mem_alloc", 7>;
+def OpenMP_AllocatorHandlethreadMemAlloc : I32EnumAttrCase<"omp_thread_mem_alloc", 8>;
+
+def AllocatorHandle : OpenMP_I32EnumAttr<
+    "AllocatorHandle",
+    "OpenMP allocator_handle", [
+      OpenMP_AllocatorHandleNullAllocator,
+      OpenMP_AllocatorHandleDefaultMemAlloc,
+      OpenMP_AllocatorHandleLargeCapMemAlloc,
+      OpenMP_AllocatorHandleConstMemAlloc,
+      OpenMP_AllocatorHandleHighBwMemAlloc,
+      OpenMP_AllocatorHandleLowLatMemAlloc,
+      OpenMP_AllocatorHandleCgroupMemAlloc,
+      OpenMP_AllocatorHandlePteamMemAlloc,
+      OpenMP_AllocatorHandlethreadMemAlloc
+    ]>;
+
+def AllocatorHandleAttr : OpenMP_EnumAttr<AllocatorHandle, "allocator_handle">;
 #endif // OPENMP_ENUMS

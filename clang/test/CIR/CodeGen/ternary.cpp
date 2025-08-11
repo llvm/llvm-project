@@ -9,7 +9,7 @@ int x(int y) {
   return y > 0 ? 3 : 5;
 }
 
-// CIR-LABEL: cir.func @_Z1xi(
+// CIR-LABEL: cir.func{{.*}} @_Z1xi(
 // CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}) -> !s32i {
 // CIR: [[Y:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["y", init] {alignment = 4 : i64}
 // CIR: [[RETVAL:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
@@ -24,7 +24,7 @@ int x(int y) {
 // CIR: [[RETVAL_VAL:%.+]] = cir.load [[RETVAL]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.return [[RETVAL_VAL]] : !s32i
 
-// LLVM-LABEL: define i32 @_Z1xi(
+// LLVM-LABEL: define{{.*}} i32 @_Z1xi(
 // LLVM-SAME: i32 %[[ARG0:.+]])
 // LLVM: %[[Y:.*]] = alloca i32
 // LLVM: %[[RETVAL:.*]] = alloca i32
@@ -36,7 +36,7 @@ int x(int y) {
 // LLVM: %[[RESULT:.*]] = load i32, ptr %[[RETVAL]]
 // LLVM: ret i32 %[[RESULT]]
 
-// OGCG-LABEL: define dso_local noundef i32 @_Z1xi(
+// OGCG-LABEL: define{{.*}} i32 @_Z1xi(
 // OGCG-SAME: i32 {{.*}} %[[ARG0:.+]])
 // OGCG: %[[Y:.*]] = alloca i32
 // OGCG: store i32 %[[ARG0]], ptr %[[Y]]
@@ -51,7 +51,7 @@ int foo(int a, int b) {
   return 0;
 }
 
-// CIR-LABEL: cir.func @_Z3fooii(
+// CIR-LABEL: cir.func{{.*}} @_Z3fooii(
 // CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}, %[[ARG1:.*]]: !s32i {{.*}}) -> !s32i {
 // CIR: [[A:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init] {alignment = 4 : i64}
 // CIR: [[B:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init] {alignment = 4 : i64}
@@ -83,7 +83,7 @@ int foo(int a, int b) {
 // CIR: [[RETVAL_VAL2:%.+]] = cir.load [[RETVAL]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.return [[RETVAL_VAL2]] : !s32i
 
-// LLVM-LABEL: define i32 @_Z3fooii(
+// LLVM-LABEL: define{{.*}} i32 @_Z3fooii(
 // LLVM-SAME: i32 %[[ARG0:.*]], i32 %[[ARG1:.*]])
 // LLVM: %[[A:.*]] = alloca i32
 // LLVM: %[[B:.*]] = alloca i32
@@ -116,7 +116,7 @@ int foo(int a, int b) {
 // LLVM: %[[RET2:.*]] = load i32, ptr %[[RETVAL]]
 // LLVM: ret i32 %[[RET2]]
 
-// OGCG-LABEL: define dso_local noundef i32 @_Z3fooii(
+// OGCG-LABEL: define{{.*}} i32 @_Z3fooii(
 // OGCG-SAME: i32 {{.*}} %[[ARG0:.*]], i32 {{.*}} %[[ARG1:.*]])
 // OGCG: %[[RETVAL:.*]] = alloca i32
 // OGCG: %[[A:.*]] = alloca i32
