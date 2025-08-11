@@ -3833,11 +3833,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   //
   // For the three-operand form:
   //       <4 x i32> @llvm.x86.avx512.vpdpbusd.128(<4 x i32>, <4 x i32>, <4 x i32>)
-  // the horizontal addition is "quadwise" instead of pairwise (note the first
-  // two operands are typically interpreted as bytes or words), and it is
-  // accumulated with the third operand.
+  // the result of multiply-add'ing the first two operands is accumulated with
+  // the third operand.
   void handleVectorPmaddIntrinsic(IntrinsicInst &I, unsigned ReductionFactor,
-                                  unsigned MMXEltSizeInBits = 0) {
+                                  unsigned EltSizeInBits = 0) {
     IRBuilder<> IRB(&I);
 
     FixedVectorType *ReturnType = cast<FixedVectorType>(I.getType());
@@ -3860,11 +3859,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *S1 = getShadow(&I, 0);
     Value *S2 = getShadow(&I, 1);
 
-    if (MMXEltSizeInBits) {
+    if (EltSizeInBits) {
         if (I.arg_size() != 3)
-          ReturnType = cast<FixedVectorType>(getMMXVectorTy(MMXEltSizeInBits * 2, ReturnType->getPrimitiveSizeInBits()));
+          ReturnType = cast<FixedVectorType>(getMMXVectorTy(EltSizeInBits * ReductionFactor, ReturnType->getPrimitiveSizeInBits()));
 
-        ParamType = cast<FixedVectorType>(getMMXVectorTy(MMXEltSizeInBits, ParamType->getPrimitiveSizeInBits()));
+        ParamType = cast<FixedVectorType>(getMMXVectorTy(EltSizeInBits, ParamType->getPrimitiveSizeInBits()));
 
         V1 = IRB.CreateBitCast(V1, ParamType);
         V2 = IRB.CreateBitCast(V2, ParamType);
@@ -3872,10 +3871,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         S1 = IRB.CreateBitCast(S1, getShadowTy(ParamType));
         S2 = IRB.CreateBitCast(S2, getShadowTy(ParamType));
     }
-
-    if (I.arg_size() != 3)
-      assert(ParamType->getNumElements() ==
-             2 * ReturnType->getNumElements());
 
     Value *S1S2 = IRB.CreateOr(S1, S2);
 
@@ -3896,10 +3891,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     //
     // Handle it similarly to handlePairwiseShadowOrIntrinsic().
 
-    unsigned TotalNumElems = ReturnType->getNumElements() * ReductionFactor;
+    assert(ParamType->getNumElements() ==
+           ReturnType->getNumElements() * ReductionFactor);
+
+    unsigned TotalNumElems = ParamType->getNumElements();
     Value *OrShadow = nullptr;
     for (unsigned i = 0; i < ReductionFactor; i++) {
-      SmallVector<int, 8> Mask;
+      SmallVector<int, 16> Mask;
       for (unsigned X = 0; X < TotalNumElems; X += ReductionFactor)
         Mask.push_back(X + i);
 
@@ -3912,7 +3910,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
 
     // Extend to <4 x i32>
-    OrShadow = CreateShadowCast(IRB, OrShadow, getShadowTy(&I));
+    OrShadow = IRB.CreateZExt(OrShadow, getShadowTy(&I));
 
     // Accumulate
     if (I.arg_size() == 3)
