@@ -225,9 +225,9 @@ struct VPlanTransforms {
   ///  * Makes EVL-Phi concrete.
   //   * Removes CanonicalIV and increment.
   ///  * Replaces the exit condition from
-  ///      (branch-on-cond CanonicalIVInc, VectorTripCount)
+  ///      (branch-on-count CanonicalIVInc, VectorTripCount)
   ///    to
-  ///      (branch-on-cond AVLNext, 0)
+  ///      (branch-on-cond eq AVLNext, 0)
   static void canonicalizeEVLLoops(VPlan &Plan);
 
   /// Lower abstract recipes to concrete ones, that can be codegen'd. Use \p

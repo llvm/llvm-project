@@ -2458,7 +2458,7 @@ void VPlanTransforms::canonicalizeEVLLoops(VPlan &Plan) {
 
   // Replace the use of VectorTripCount in the latch-exiting block.
   // Before: (branch-on-count EVLIVInc, VectorTripCount)
-  // After: (branch-on-count AVLNext, 0)
+  // After: (branch-on-cond eq AVLNext, 0)
 
   VPBasicBlock *LatchExiting =
       HeaderVPBB->getPredecessors()[1]->getEntryBasicBlock();
@@ -2473,10 +2473,12 @@ void VPlanTransforms::canonicalizeEVLLoops(VPlan &Plan) {
          "Unexpected terminator in EVL loop");
 
   Type *AVLTy = VPTypeAnalysis(Plan).inferScalarType(AVLNext);
-
-  LatchExitingBr->setOperand(0, AVLNext);
-  LatchExitingBr->setOperand(
-      1, Plan.getOrAddLiveIn(ConstantInt::getNullValue(AVLTy)));
+  VPBuilder Builder(LatchExitingBr);
+  VPValue *Cmp =
+      Builder.createICmp(CmpInst::ICMP_EQ, AVLNext,
+                         Plan.getOrAddLiveIn(ConstantInt::getNullValue(AVLTy)));
+  Builder.createNaryOp(VPInstruction::BranchOnCond, Cmp);
+  LatchExitingBr->eraseFromParent();
 }
 
 void VPlanTransforms::dropPoisonGeneratingRecipes(
