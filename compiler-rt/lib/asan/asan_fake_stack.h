@@ -56,6 +56,9 @@ struct FakeFrame {
 class FakeStack {
   static const uptr kMinStackFrameSizeLog = 6;  // Min frame is 64B.
   static const uptr kMaxStackFrameSizeLog = 16;  // Max stack frame is 64K.
+  static_assert(kMaxStackFrameSizeLog >= kMinStackFrameSizeLog);
+
+  static const u64 kMaxStackFrameSize = 1 << kMaxStackFrameSizeLog;
 
  public:
   static const uptr kNumberOfSizeClasses =

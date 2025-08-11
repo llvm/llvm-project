@@ -54,8 +54,9 @@ FakeStack *FakeStack::Create(uptr stack_size_log) {
     stack_size_log = kMinStackSizeLog;
   if (stack_size_log > kMaxStackSizeLog)
     stack_size_log = kMaxStackSizeLog;
+  CHECK_LE(kMaxStackFrameSizeLog, stack_size_log);
   uptr size = RequiredSize(stack_size_log);
-  uptr padded_size = size + (1 << kMaxStackFrameSizeLog);
+  uptr padded_size = size + kMaxStackFrameSize;
   void *true_res = reinterpret_cast<void *>(
       flags()->uar_noreserve ? MmapNoReserveOrDie(padded_size, "FakeStack")
                              : MmapOrDie(padded_size, "FakeStack"));
@@ -64,7 +65,7 @@ FakeStack *FakeStack::Create(uptr stack_size_log) {
   // (1 << kMaxStackFrameSizeLog).
   // We didn't use MmapAlignedOrDieOnFatalError, because it requires that the
   // *size* is a power of 2, which is an overly strong condition.
-  static_assert(alignof(FakeStack) <= (1 << kMaxStackFrameSizeLog));
+  static_assert(alignof(FakeStack) <= kMaxStackFrameSize);
   FakeStack *res = reinterpret_cast<FakeStack *>(
       RoundUpTo(
           (uptr)true_res + kFlagsOffset + SizeRequiredForFlags(stack_size_log),
@@ -94,8 +95,7 @@ void FakeStack::Destroy(int tid) {
     Report("T%d: FakeStack destroyed: %s\n", tid, str.data());
   }
   uptr size = RequiredSize(stack_size_log_);
-  uptr padded_size = size + (1 << kMaxStackFrameSizeLog);
-  void *true_start = this->true_start;
+  uptr padded_size = size + kMaxStackFrameSize;
   FlushUnneededASanShadowMemory(reinterpret_cast<uptr>(true_start),
                                 padded_size);
   UnmapOrDie(true_start, padded_size);
