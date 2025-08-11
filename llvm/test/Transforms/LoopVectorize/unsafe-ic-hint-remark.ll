@@ -1,10 +1,8 @@
-; REQUIRES: asserts
-; RUN: opt -passes=loop-vectorize -pass-remarks-analysis=loop-vectorize -debug-only=loop-vectorize -S < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=loop-vectorize -pass-remarks-analysis=loop-vectorize -S < %s 2>&1 | FileCheck %s
 
 ; Make sure the unsafe user specified interleave count is ignored.
 
-; CHECK: LV: Disabling interleaving as user-specified interleave count is unsafe.
-; CHECK: remark: <unknown>:0:0: User-specified interleave count is not safe, interleave count is set to 1.
+; CHECK: remark: <unknown>:0:0: Ignoring user-specified interleave count due to possibly unsafe dependencies in the loop.
 ; CHECK-LABEL: @loop_distance_4
 define void @loop_distance_4(i64 %N, ptr %a, ptr %b) {
 entry:

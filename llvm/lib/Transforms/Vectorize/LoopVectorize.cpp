@@ -9911,11 +9911,10 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   }
 
   if (UserIC > 0 && UserIC != SafeUserIC) {
-    LLVM_DEBUG(dbgs() << "LV: Disabling interleaving as user-specified "
-                         "interleave count is unsafe.\n");
+    LLVM_DEBUG(dbgs() << "LV: Ignoring user-specified interleave count.\n");
     IntDiagMsg = {"InterleavingUnsafe",
-                  "User-specified interleave count is not safe, interleave "
-                  "count is set to 1."};
+                  "Ignoring user-specified interleave count due to possibly "
+                  "unsafe dependencies in the loop."};
     InterleaveLoop = false;
   } else if (!LVP.hasPlanWithVF(VF.Width) && SafeUserIC > 1) {
     // Tell the user interleaving was avoided up-front, despite being explicitly
