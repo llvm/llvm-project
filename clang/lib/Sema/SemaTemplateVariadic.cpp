@@ -9,15 +9,10 @@
 //===----------------------------------------------------------------------===/
 
 #include "TypeLocBuilder.h"
-#include "clang/AST/DeclTemplate.h"
-#include "clang/AST/DependenceFlags.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprObjC.h"
-#include "clang/AST/TemplateBase.h"
-#include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
-#include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/ParsedTemplate.h"
@@ -25,9 +20,7 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/SaveAndRestore.h"
-#include <memory>
 #include <optional>
 
 using namespace clang;
