@@ -3301,13 +3301,13 @@ void VPlanTransforms::materializeBuildVectors(VPlan &Plan) {
        concat<VPBasicBlock *>(VPBBsOutsideLoopRegion, VPBBsInsideLoopRegion)) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
-      auto UsesVectorOrInsideReplicateRegions = [RepR, LoopRegion](VPUser *U) {
+      auto UsesVectorOrInsideReplicateRegion = [RepR, LoopRegion](VPUser *U) {
         VPRegionBlock *ParentRegion =
             cast<VPRecipeBase>(U)->getParent()->getParent();
         return !U->usesScalars(RepR) || ParentRegion != LoopRegion;
       };
       if (!RepR || RepR->isSingleScalar() ||
-          none_of(RepR->users(), UsesVectorOrInsideReplicateRegions))
+          none_of(RepR->users(), UsesVectorOrInsideReplicateRegion))
         continue;
 
       Type *ScalarTy = TypeInfo.inferScalarType(RepR);
@@ -3318,9 +3318,9 @@ void VPlanTransforms::materializeBuildVectors(VPlan &Plan) {
       BuildVector->insertAfter(RepR);
 
       RepR->replaceUsesWithIf(
-          BuildVector, [BuildVector, &UsesVectorOrInsideReplicateRegions](
+          BuildVector, [BuildVector, &UsesVectorOrInsideReplicateRegion](
                            VPUser &U, unsigned) {
-            return &U != BuildVector && UsesVectorOrInsideReplicateRegions(&U);
+            return &U != BuildVector && UsesVectorOrInsideReplicateRegion(&U);
           });
     }
   }
