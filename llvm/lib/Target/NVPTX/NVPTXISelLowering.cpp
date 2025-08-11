@@ -680,6 +680,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // No support for these operations with v2f32.
   setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v2f32, Expand);
   setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v2f32, Expand);
+  // Need custom lowering in case the index is dynamic.
+  setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2f32, Custom);
 
   // Custom conversions to/from v2i8.
   setOperationAction(ISD::BITCAST, MVT::v2i8, Custom);
