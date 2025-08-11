@@ -333,9 +333,9 @@ private:
   bool HasTailCall = false;
 
   /// Not empty, if shrink-wrapping found a better place for the prologue.
-  std::vector<MachineBasicBlock *> SavePoints;
+  SmallVector<MachineBasicBlock *, 4> SavePoints;
   /// Not empty, if shrink-wrapping found a better place for the epilogue.
-  std::vector<MachineBasicBlock *> RestorePoints;
+  SmallVector<MachineBasicBlock *, 4> RestorePoints;
 
   /// Size of the UnsafeStack Frame
   uint64_t UnsafeStackSize = 0;
@@ -825,21 +825,25 @@ public:
 
   void setCalleeSavedInfoValid(bool v) { CSIValid = v; }
 
-  const std::vector<MachineBasicBlock *> &getSavePoints() const {
-    return SavePoints;
+  ArrayRef<MachineBasicBlock *> getSavePoints() const { return SavePoints; }
+  void setSavePoints(ArrayRef<MachineBasicBlock *> NewSavePoints) {
+    SavePoints = SmallVector<MachineBasicBlock *>(NewSavePoints);
   }
-  void setSavePoints(std::vector<MachineBasicBlock *> NewSavePoints) {
-    SavePoints = std::move(NewSavePoints);
-  }
-  const std::vector<MachineBasicBlock *> getRestorePoints() const {
+  ArrayRef<MachineBasicBlock *> getRestorePoints() const {
     return RestorePoints;
   }
-  void setRestorePoints(std::vector<MachineBasicBlock *> NewRestorePoints) {
-    RestorePoints = std::move(NewRestorePoints);
+  void setRestorePoints(ArrayRef<MachineBasicBlock *> NewRestorePoints) {
+    RestorePoints = SmallVector<MachineBasicBlock *>(NewRestorePoints);
   }
 
-  void clearSavePoints() { SavePoints.clear(); }
-  void clearRestorePoints() { RestorePoints.clear(); }
+  static SmallVector<MachineBasicBlock *> constructSaveRestorePoints(
+      const ArrayRef<MachineBasicBlock *> SRPoints,
+      const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &BBMap) {
+    SmallVector<MachineBasicBlock *, 4> Pts;
+    for (auto &Src : SRPoints)
+      Pts.push_back(BBMap.find(Src)->second);
+    return Pts;
+  }
 
   uint64_t getUnsafeStackSize() const { return UnsafeStackSize; }
   void setUnsafeStackSize(uint64_t Size) { UnsafeStackSize = Size; }

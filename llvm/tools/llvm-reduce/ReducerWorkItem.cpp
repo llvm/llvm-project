@@ -94,21 +94,15 @@ static void cloneFrameInfo(
 
   assert(SrcMFI.getSavePoints().size() < 2 &&
          "MFI can't contain multiple save points!");
-  if (!SrcMFI.getSavePoints().empty()) {
-    MachineBasicBlock *SavePt = SrcMFI.getSavePoints().front();
-    std::vector<MachineBasicBlock *> SavePts;
-    SavePts.push_back(Src2DstMBB.find(SavePt)->second);
-    DstMFI.setSavePoints(SavePts);
-  }
+
+  DstMFI.setSavePoints(MachineFrameInfo::constructSaveRestorePoints(
+      SrcMFI.getSavePoints(), Src2DstMBB));
 
   assert(SrcMFI.getRestorePoints().size() < 2 &&
          "MFI can't contain multiple restore points!");
-  if (!SrcMFI.getRestorePoints().empty()) {
-    MachineBasicBlock *RestorePt = SrcMFI.getRestorePoints().front();
-    std::vector<MachineBasicBlock *> RestorePts;
-    RestorePts.push_back(Src2DstMBB.find(RestorePt)->second);
-    DstMFI.setRestorePoints(RestorePts);
-  }
+
+  DstMFI.setRestorePoints(MachineFrameInfo::constructSaveRestorePoints(
+      SrcMFI.getRestorePoints(), Src2DstMBB));
 
   auto CopyObjectProperties = [](MachineFrameInfo &DstMFI,
                                  const MachineFrameInfo &SrcMFI, int FI) {

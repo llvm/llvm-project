@@ -152,7 +152,7 @@ static void convertMFI(ModuleSlotTracker &MST, yaml::MachineFrameInfo &YamlMFI,
                        const MachineFrameInfo &MFI);
 static void convertSRPoints(ModuleSlotTracker &MST,
                             yaml::SaveRestorePoints &YamlSRPoints,
-                            std::vector<MachineBasicBlock *> SaveRestorePoints);
+                            ArrayRef<MachineBasicBlock *> SaveRestorePoints);
 static void convertStackObjects(yaml::MachineFunction &YMF,
                                 const MachineFunction &MF,
                                 ModuleSlotTracker &MST, MFPrintState &State);
@@ -617,7 +617,7 @@ static void convertMCP(yaml::MachineFunction &MF,
 
 static void convertSRPoints(ModuleSlotTracker &MST,
                             yaml::SaveRestorePoints &YamlSRPoints,
-                            std::vector<MachineBasicBlock *> SRPoints) {
+                            ArrayRef<MachineBasicBlock *> SRPoints) {
   auto &Points =
       std::get<std::vector<yaml::SaveRestorePointEntry>>(YamlSRPoints);
   for (const auto &MBB : SRPoints) {

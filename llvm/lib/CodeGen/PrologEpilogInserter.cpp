@@ -351,8 +351,8 @@ bool PEIImpl::run(MachineFunction &MF) {
   delete RS;
   SaveBlocks.clear();
   RestoreBlocks.clear();
-  MFI.clearSavePoints();
-  MFI.clearRestorePoints();
+  MFI.setSavePoints({});
+  MFI.setRestorePoints({});
   return true;
 }
 
@@ -429,13 +429,11 @@ void PEIImpl::calculateSaveRestoreBlocks(MachineFunction &MF) {
 
   // Use the points found by shrink-wrapping, if any.
   if (!MFI.getSavePoints().empty()) {
-    assert(MFI.getSavePoints().size() < 2 &&
-           "MFI can't contain multiple save points!");
+    assert(MFI.getSavePoints().size() == 1 &&
+           "Multiple save points are not yet supported!");
     SaveBlocks.push_back(MFI.getSavePoints().front());
-    assert(!MFI.getRestorePoints().empty() &&
-           "Both restore and save must be set");
-    assert(MFI.getRestorePoints().size() < 2 &&
-           "MFI can't contain multiple restore points!");
+    assert(MFI.getRestorePoints().size() == 1 &&
+           "Multiple restore points are not yet supported!");
     MachineBasicBlock *RestoreBlock = MFI.getRestorePoints().front();
     // If RestoreBlock does not have any successor and is not a return block
     // then the end point is unreachable and we do not need to insert any
@@ -445,15 +443,13 @@ void PEIImpl::calculateSaveRestoreBlocks(MachineFunction &MF) {
     return;
   }
 
-  if (MFI.getSavePoints().empty()) {
-    // Save refs to entry and return blocks.
-    SaveBlocks.push_back(&MF.front());
-    for (MachineBasicBlock &MBB : MF) {
-      if (MBB.isEHFuncletEntry())
-        SaveBlocks.push_back(&MBB);
-      if (MBB.isReturnBlock())
-        RestoreBlocks.push_back(&MBB);
-    }
+  // Save refs to entry and return blocks.
+  SaveBlocks.push_back(&MF.front());
+  for (MachineBasicBlock &MBB : MF) {
+    if (MBB.isEHFuncletEntry())
+      SaveBlocks.push_back(&MBB);
+    if (MBB.isReturnBlock())
+      RestoreBlocks.push_back(&MBB);
   }
 }
 
@@ -566,7 +562,7 @@ static void updateLiveness(MachineFunction &MF) {
   MachineBasicBlock *Entry = &MF.front();
 
   assert(MFI.getSavePoints().size() < 2 &&
-         "MFI can't contain multiple save points!");
+         "Multiple save points not yet supported!");
   MachineBasicBlock *Save =
       MFI.getSavePoints().empty() ? nullptr : MFI.getSavePoints().front();
 
@@ -580,7 +576,7 @@ static void updateLiveness(MachineFunction &MF) {
   Visited.insert(Save);
 
   assert(MFI.getRestorePoints().size() < 2 &&
-         "MFI can't contain multiple restore points!");
+         "Multiple restore points not yet supported!");
   MachineBasicBlock *Restore =
       MFI.getRestorePoints().empty() ? nullptr : MFI.getRestorePoints().front();
   if (Restore)
