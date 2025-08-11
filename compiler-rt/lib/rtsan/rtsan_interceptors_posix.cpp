@@ -84,6 +84,14 @@ static pthread_cond_t *init_cond(pthread_cond_t *c, bool force = false) {
   return (pthread_cond_t *)cond;
 }
 
+static void destroy_cond(pthread_cond_t *cond) {
+  if (common_flags()->legacy_pthread_cond) {
+    // Free our aux cond and zero the pointer to not leave dangling pointers.
+    WRAP(free)(cond);
+    atomic_store((atomic_uintptr_t *)cond, 0, memory_order_relaxed);
+  }
+}
+
 // Filesystem
 
 INTERCEPTOR(int, open, const char *path, int oflag, ...) {
@@ -835,11 +843,7 @@ INTERCEPTOR(int, pthread_cond_destroy, pthread_cond_t *cond) {
   __rtsan_notify_intercepted_call("pthread_cond_destroy");
   pthread_cond_t *c = init_cond(cond);
   int res = REAL(pthread_cond_destroy)(c);
-  if (common_flags()->legacy_pthread_cond) {
-    // Free our aux cond and zero the pointer to not leave dangling pointers.
-    WRAP(free)(c);
-    atomic_store((atomic_uintptr_t *)c, 0, memory_order_relaxed);
-  }
+  destroy_cond(c);
   return res;
 }
 
