@@ -1311,9 +1311,10 @@ ParsedTemplateArgument Parser::ParseTemplateTemplateArgument() {
   // values, they would not have a well-defined semantics outside template
   // arguments.
   if (auto *T = !Result.isInvalid()
-                    ? Result.getAsTemplate().get().getAsTemplateDecl()
+                    ? dyn_cast_or_null<BuiltinTemplateDecl>(
+                          Result.getAsTemplate().get().getAsTemplateDecl())
                     : nullptr;
-      T && isPackProducingBuiltinTemplate(T)) {
+      T && T->isPackProducingBuiltinTemplate()) {
     Actions.diagnoseMissingTemplateArguments(Result.getAsTemplate().get(),
                                              Result.getLocation());
   }

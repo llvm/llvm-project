@@ -275,17 +275,6 @@ void *allocateDefaultArgStorageChain(const ASTContext &C) {
   return new (C) char[sizeof(void*) * 2];
 }
 
-bool isPackProducingBuiltinTemplate(const TemplateDecl *D) {
-  auto *BD = llvm::dyn_cast<BuiltinTemplateDecl>(D);
-  return BD && BD->getBuiltinTemplateKind() == clang::BTK__builtin_dedup_pack;
-}
-
-bool isPackProducingBuiltinTemplateName(TemplateName N) {
-  if (N.getKind() == TemplateName::DeducedTemplate)
-    return false;
-  auto *T = N.getTemplateDeclAndDefaultArgs().first;
-  return T && isPackProducingBuiltinTemplate(T);
-}
 } // namespace clang
 
 //===----------------------------------------------------------------------===//
@@ -320,7 +309,7 @@ bool TemplateDecl::isTypeAlias() const {
   case TemplateDecl::TypeAliasTemplate:
     return true;
   case TemplateDecl::BuiltinTemplate:
-    return !isPackProducingBuiltinTemplate(this);
+    return cast<BuiltinTemplateDecl>(this)->isPackProducingBuiltinTemplate();
   default:
     return false;
   };
@@ -1611,6 +1600,18 @@ BuiltinTemplateDecl::BuiltinTemplateDecl(const ASTContext &C, DeclContext *DC,
     : TemplateDecl(BuiltinTemplate, DC, SourceLocation(), Name,
                    createBuiltinTemplateParameterList(C, DC, BTK)),
       BTK(BTK) {}
+
+bool BuiltinTemplateDecl::isPackProducingBuiltinTemplate() const {
+  return getBuiltinTemplateKind() == clang::BTK__builtin_dedup_pack;
+}
+
+bool clang::isPackProducingBuiltinTemplateName(TemplateName N) {
+  if (N.getKind() == TemplateName::DeducedTemplate)
+    return false;
+  auto *T =
+      dyn_cast<BuiltinTemplateDecl>(N.getTemplateDeclAndDefaultArgs().first);
+  return T && T->isPackProducingBuiltinTemplate();
+}
 
 TemplateParamObjectDecl *TemplateParamObjectDecl::Create(const ASTContext &C,
                                                          QualType T,
