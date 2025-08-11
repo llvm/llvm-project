@@ -5710,11 +5710,9 @@ ASTContext::getSubstBuiltinTemplatePack(const TemplateArgument &ArgPack) {
     return QualType(T, 0);
 
   QualType Canon;
-  {
-    TemplateArgument CanonArgPack = getCanonicalTemplateArgument(ArgPack);
-    if (!CanonArgPack.structurallyEquals(ArgPack))
-      Canon = getSubstBuiltinTemplatePack(CanonArgPack);
-  }
+  TemplateArgument CanonArgPack = getCanonicalTemplateArgument(ArgPack);
+  if (!CanonArgPack.structurallyEquals(ArgPack))
+    Canon = getSubstBuiltinTemplatePack(CanonArgPack);
 
   auto *PackType = new (*this, alignof(SubstBuiltinTemplatePackType))
       SubstBuiltinTemplatePackType(Canon, ArgPack);
