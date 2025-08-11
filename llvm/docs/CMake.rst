@@ -615,11 +615,11 @@ enabled sub-projects. Nearly all of these variable names begin with
   .. note::
     The list should not have duplicates with ``LLVM_ENABLE_PROJECTS``.
 
-  The full list is:
+  To list all possible runtimes, include an invalid name. For example
+  ``-DLLVM_ENABLE_RUNTIMES=notaruntime``. The resulting CMake error will list
+  the possible runtime names.
 
-  ``libc;libunwind;libcxxabi;libcxx;compiler-rt;openmp;llvm-libgcc;offload``
-
-  To enable all of them, use:
+  To enable all of the runtimes, use:
 
   ``LLVM_ENABLE_RUNTIMES=all``
 

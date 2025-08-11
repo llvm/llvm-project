@@ -74,6 +74,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case Instruction::ExtractElement:
   case Instruction::Freeze:
   case VPInstruction::ReductionStartVector:
+  case VPInstruction::ResumeForEpilogue:
     return inferScalarType(R->getOperand(0));
   case Instruction::Select: {
     Type *ResTy = inferScalarType(R->getOperand(1));
@@ -128,6 +129,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     return IntegerType::get(Ctx, 1);
   case VPInstruction::Broadcast:
   case VPInstruction::PtrAdd:
+  case VPInstruction::WidePtrAdd:
     // Return the type based on first operand.
     return inferScalarType(R->getOperand(0));
   case VPInstruction::BranchOnCond:
