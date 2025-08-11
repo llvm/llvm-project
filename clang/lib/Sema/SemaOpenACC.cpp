@@ -646,8 +646,17 @@ ExprResult CheckVarType(SemaOpenACC &S, OpenACCClauseKind CK, Expr *VarExpr,
   if (auto *RefTy = InnerTy->getAs<ReferenceType>())
     InnerTy = RefTy->getPointeeType();
 
-  if (auto *ArrTy = InnerTy->getAsArrayTypeUnsafe())
+  if (auto *ArrTy = InnerTy->getAsArrayTypeUnsafe()) {
+    // Non constant arrays decay to 'pointer', so warn and return that we're
+    // successful.
+    if (!ArrTy->isConstantArrayType()) {
+      S.Diag(InnerLoc, clang::diag::warn_acc_var_referenced_non_const_array)
+          << InnerTy << CK;
+      return VarExpr;
+    }
+
     return CheckVarType(S, CK, VarExpr, InnerLoc, ArrTy->getElementType());
+  }
 
   auto *RD = InnerTy->getAsCXXRecordDecl();
 
@@ -2575,7 +2584,8 @@ SemaOpenACC::ActOnOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc) {
   return BuildOpenACCAsteriskSizeExpr(AsteriskLoc);
 }
 
-VarDecl *SemaOpenACC::CreateInitRecipe(const Expr *VarExpr) {
+std::pair<VarDecl *, VarDecl *>
+SemaOpenACC::CreateInitRecipe(OpenACCClauseKind CK, const Expr *VarExpr) {
   // Strip off any array subscripts/array section exprs to get to the type of
   // the variable.
   while (isa_and_present<ArraySectionExpr, ArraySubscriptExpr>(VarExpr)) {
@@ -2589,7 +2599,7 @@ VarDecl *SemaOpenACC::CreateInitRecipe(const Expr *VarExpr) {
   // fill in with nullptr.  We'll count on TreeTransform to make this if
   // necessary.
   if (!VarExpr || VarExpr->getType()->isDependentType())
-    return nullptr;
+    return {nullptr, nullptr};
 
   QualType VarTy =
       VarExpr->getType().getNonReferenceType().getUnqualifiedType();
@@ -2601,8 +2611,9 @@ VarDecl *SemaOpenACC::CreateInitRecipe(const Expr *VarExpr) {
       getASTContext().getTrivialTypeSourceInfo(VarTy), SC_Auto);
 
   ExprResult Init;
+  VarDecl *Temporary = nullptr;
 
-  {
+  if (CK == OpenACCClauseKind::Private) {
     // Trap errors so we don't get weird ones here. If we can't init, we'll just
     // swallow the errors.
     Sema::TentativeAnalysisScope Trap{SemaRef};
@@ -2612,6 +2623,12 @@ VarDecl *SemaOpenACC::CreateInitRecipe(const Expr *VarExpr) {
 
     InitializationSequence InitSeq(SemaRef.SemaRef, Entity, Kind, {});
     Init = InitSeq.Perform(SemaRef.SemaRef, Entity, Kind, {});
+  } else if (CK == OpenACCClauseKind::FirstPrivate) {
+    // TODO: OpenACC: Implement this to do a 'copy' operation.
+  } else if (CK == OpenACCClauseKind::Reduction) {
+    // TODO: OpenACC: Implement this for whatever reduction needs.
+  } else {
+    llvm_unreachable("Unknown clause kind in CreateInitRecipe");
   }
 
   if (Init.get()) {
@@ -2619,5 +2636,5 @@ VarDecl *SemaOpenACC::CreateInitRecipe(const Expr *VarExpr) {
     Recipe->setInitStyle(VarDecl::CallInit);
   }
 
-  return Recipe;
+  return {Recipe, Temporary};
 }
