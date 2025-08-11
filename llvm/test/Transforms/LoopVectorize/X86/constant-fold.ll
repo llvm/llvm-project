@@ -19,13 +19,12 @@ define void @f1() {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i16 0 to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [2 x ptr], ptr @b, i16 0, i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr ptr, ptr [[TMP1]], i32 0
-; CHECK-NEXT:    store <2 x ptr> <ptr @a, ptr @a>, ptr [[TMP2]], align 8
+; CHECK-NEXT:    store <2 x ptr> <ptr @a, ptr @a>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label [[BB3:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 2, [[MIDDLE_BLOCK]] ], [ 0, [[BB1:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 0, [[BB1:%.*]] ]
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[C_1_0:%.*]] = phi i16 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[_TMP9:%.*]], [[BB2]] ]
@@ -115,10 +114,9 @@ define void @redundant_or_1(ptr %dst, i1 %c.0, i1 %c.1) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    br i1 [[C_0]], label [[LOOP_LATCH]], label [[THEN_1:%.*]]
 ; CHECK:       then.1:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[IV]], 2
@@ -218,10 +216,9 @@ define void @redundant_or_2(ptr %dst, i1 %c.0, i1 %c.1) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    br i1 [[C_1]], label [[LOOP_LATCH]], label [[THEN_1:%.*]]
 ; CHECK:       then.1:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[IV]], 2

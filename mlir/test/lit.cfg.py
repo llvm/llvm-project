@@ -224,6 +224,9 @@ if config.enable_cuda_runner:
 if config.enable_sycl_runner:
     tools.extend([add_runtime("mlir_sycl_runtime")])
 
+if config.enable_levelzero_runner:
+    tools.extend([add_runtime("mlir_levelzero_runtime")])
+
 if config.enable_spirv_cpu_runner:
     tools.extend([add_runtime("mlir_spirv_cpu_runtime")])
 
@@ -342,7 +345,6 @@ if config.enable_assertions:
     config.available_features.add("asserts")
 else:
     config.available_features.add("noasserts")
-
 
 def have_host_jit_feature_support(feature_name):
     mlir_runner_exe = lit.util.which("mlir-runner", config.mlir_tools_dir)

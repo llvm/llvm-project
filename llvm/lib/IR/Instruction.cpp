@@ -817,6 +817,7 @@ const char *Instruction::getOpcodeName(unsigned OpCode) {
   case UIToFP:        return "uitofp";
   case SIToFP:        return "sitofp";
   case IntToPtr:      return "inttoptr";
+  case PtrToAddr:     return "ptrtoaddr";
   case PtrToInt:      return "ptrtoint";
   case BitCast:       return "bitcast";
   case AddrSpaceCast: return "addrspacecast";
@@ -942,14 +943,13 @@ bool Instruction::isIdenticalToWhenDefined(const Instruction *I,
 
   // We have two instructions of identical opcode and #operands.  Check to see
   // if all operands are the same.
-  if (!std::equal(op_begin(), op_end(), I->op_begin()))
+  if (!equal(operands(), I->operands()))
     return false;
 
   // WARNING: this logic must be kept in sync with EliminateDuplicatePHINodes()!
-  if (const PHINode *thisPHI = dyn_cast<PHINode>(this)) {
-    const PHINode *otherPHI = cast<PHINode>(I);
-    return std::equal(thisPHI->block_begin(), thisPHI->block_end(),
-                      otherPHI->block_begin());
+  if (const PHINode *Phi = dyn_cast<PHINode>(this)) {
+    const PHINode *OtherPhi = cast<PHINode>(I);
+    return equal(Phi->blocks(), OtherPhi->blocks());
   }
 
   return this->hasSameSpecialState(I, /*IgnoreAlignment=*/false,

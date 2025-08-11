@@ -142,8 +142,8 @@ struct TransferReadPermutationLowering
 
     // Transpose result of transfer_read.
     SmallVector<int64_t> transposePerm(permutation.begin(), permutation.end());
-    return rewriter
-        .create<vector::TransposeOp>(op.getLoc(), newRead, transposePerm)
+    return vector::TransposeOp::create(rewriter, op.getLoc(), newRead,
+                                       transposePerm)
         .getResult();
   }
 };
@@ -371,8 +371,8 @@ struct TransferOpReduceRank
         rewriter, op.getLoc(), newReadType, op.getBase(), op.getIndices(),
         AffineMapAttr::get(newMap), op.getPadding(), op.getMask(),
         newInBoundsAttr);
-    return rewriter
-        .create<vector::BroadcastOp>(op.getLoc(), originalVecType, newRead)
+    return vector::BroadcastOp::create(rewriter, op.getLoc(), originalVecType,
+                                       newRead)
         .getVector();
   }
 };
@@ -468,7 +468,7 @@ struct TransferReadToVectorLoadLowering
             read, "vector type is not rank 1, can't create masked load, needs "
                   "VectorToSCF");
 
-      Value fill = vector::SplatOp::create(
+      Value fill = vector::BroadcastOp::create(
           rewriter, read.getLoc(), unbroadcastedVectorType, read.getPadding());
       res = vector::MaskedLoadOp::create(
           rewriter, read.getLoc(), unbroadcastedVectorType, read.getBase(),

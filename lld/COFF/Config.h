@@ -223,6 +223,9 @@ struct Configuration {
   StringRef manifestUIAccess = "'false'";
   StringRef manifestFile;
 
+  // used for /arm64xsameaddress
+  std::vector<std::pair<Symbol *, Symbol *>> sameAddresses;
+
   // used for /dwodir
   StringRef dwoDir;
 

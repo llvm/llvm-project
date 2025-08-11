@@ -137,32 +137,41 @@ class MapInfoFinalizationPass
         !fir::factory::isOptionalArgument(descriptor.getDefiningOp()))
       return descriptor;
 
-    mlir::Value &slot = localBoxAllocas[descriptor.getDefiningOp()];
-    if (slot) {
-      return slot;
+    mlir::Value &alloca = localBoxAllocas[descriptor.getDefiningOp()];
+    mlir::Location loc = boxMap->getLoc();
+
+    if (!alloca) {
+      // The fir::BoxOffsetOp only works with !fir.ref<!fir.box<...>> types, as
+      // allowing it to access non-reference box operations can cause some
+      // problematic SSA IR. However, in the case of assumed shape's the type
+      // is not a !fir.ref, in these cases to retrieve the appropriate
+      // !fir.ref<!fir.box<...>> to access the data we need to map we must
+      // perform an alloca and then store to it and retrieve the data from the
+      // new alloca.
+      mlir::OpBuilder::InsertPoint insPt = builder.saveInsertionPoint();
+      mlir::Block *allocaBlock = builder.getAllocaBlock();
+      assert(allocaBlock && "No alloca block found for this top level op");
+      builder.setInsertionPointToStart(allocaBlock);
+
+      mlir::Type allocaType = descriptor.getType();
+      if (fir::isBoxAddress(allocaType))
+        allocaType = fir::unwrapRefType(allocaType);
+      alloca = fir::AllocaOp::create(builder, loc, allocaType);
+      builder.restoreInsertionPoint(insPt);
     }
 
-    // The fir::BoxOffsetOp only works with !fir.ref<!fir.box<...>> types, as
-    // allowing it to access non-reference box operations can cause some
-    // problematic SSA IR. However, in the case of assumed shape's the type
-    // is not a !fir.ref, in these cases to retrieve the appropriate
-    // !fir.ref<!fir.box<...>> to access the data we need to map we must
-    // perform an alloca and then store to it and retrieve the data from the new
-    // alloca.
-    mlir::OpBuilder::InsertPoint insPt = builder.saveInsertionPoint();
-    mlir::Block *allocaBlock = builder.getAllocaBlock();
-    mlir::Location loc = boxMap->getLoc();
-    assert(allocaBlock && "No alloca block found for this top level op");
-    builder.setInsertionPointToStart(allocaBlock);
-
-    mlir::Type allocaType = descriptor.getType();
-    if (fir::isBoxAddress(allocaType))
-      allocaType = fir::unwrapRefType(allocaType);
-    auto alloca = fir::AllocaOp::create(builder, loc, allocaType);
-    builder.restoreInsertionPoint(insPt);
     // We should only emit a store if the passed in data is present, it is
     // possible a user passes in no argument to an optional parameter, in which
     // case we cannot store or we'll segfault on the emitted memcpy.
+    // TODO: We currently emit a present -> load/store every time we use a
+    // mapped value that requires a local allocation, this isn't the most
+    // efficient, although, it is more correct in a lot of situations. One
+    // such situation is emitting a this series of instructions in separate
+    // segments of a branch (e.g. two target regions in separate else/if branch
+    // mapping the same function argument), however, it would be nice to be able
+    // to optimize these situations e.g. raising the load/store out of the
+    // branch if possible. But perhaps this is best left to lower level
+    // optimisation passes.
     auto isPresent =
         fir::IsPresentOp::create(builder, loc, builder.getI1Type(), descriptor);
     builder.genIfOp(loc, {}, isPresent, false)
@@ -171,7 +180,7 @@ class MapInfoFinalizationPass
           fir::StoreOp::create(builder, loc, descriptor, alloca);
         })
         .end();
-    return slot = alloca;
+    return alloca;
   }
 
   /// Function that generates a FIR operation accessing the descriptor's
