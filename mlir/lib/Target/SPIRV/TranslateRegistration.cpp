@@ -79,10 +79,6 @@ void registerFromSPIRVTranslation() {
 // Serialization registration
 //===----------------------------------------------------------------------===//
 
-// Static variable is probably not ideal, but it lets us have unique files names
-// without taking additional parameters from `mlir-translate`.
-static size_t validationFileCounter = 0;
-
 static LogicalResult
 serializeModule(spirv::ModuleOp moduleOp, raw_ostream &output,
                 const spirv::SerializationOptions &options) {
@@ -106,18 +102,22 @@ serializeModule(spirv::ModuleOp moduleOp, raw_ostream &output,
         return failure();
       }
     }
-    std::string errorMessage;
-    std::string filename =
-        options.validationFilePrefix + std::to_string(validationFileCounter++);
-    std::unique_ptr<llvm::ToolOutputFile> validationOutput =
-        openOutputFile(filename, &errorMessage);
-    if (!validationOutput) {
-      llvm::errs() << errorMessage << "\n";
+
+    SmallString<128> filename;
+    int fd;
+
+    std::error_code errorCode = llvm::sys::fs::createUniqueFile(
+        options.validationFilePrefix + "%%%%%%", fd, filename);
+    if (errorCode) {
+      llvm::errs() << "error creating validation output file: "
+                   << errorCode.message() << "\n";
       return failure();
     }
-    validationOutput->os().write(reinterpret_cast<char *>(binary.data()),
-                                 sizeInBytes);
-    validationOutput->keep();
+
+    llvm::raw_fd_ostream validationOutput(fd, /*shouldClose=*/true);
+    validationOutput.write(reinterpret_cast<char *>(binary.data()),
+                           sizeInBytes);
+    validationOutput.flush();
   }
 
   return mlir::success();
