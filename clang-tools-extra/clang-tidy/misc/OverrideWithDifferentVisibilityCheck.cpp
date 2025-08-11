@@ -17,7 +17,7 @@ using namespace clang;
 namespace {
 
 AST_MATCHER(NamedDecl, isOperatorDecl) {
-  DeclarationName::NameKind NK = Node.getDeclName().getNameKind();
+  DeclarationName::NameKind const NK = Node.getDeclName().getNameKind();
   return NK != DeclarationName::Identifier &&
          NK != DeclarationName::CXXConstructorName &&
          NK != DeclarationName::CXXDestructorName;
@@ -70,11 +70,11 @@ void OverrideWithDifferentVisibilityCheck::storeOptions(
 
 void OverrideWithDifferentVisibilityCheck::registerMatchers(
     MatchFinder *Finder) {
-  auto IgnoredDecl =
+  const auto IgnoredDecl =
       namedDecl(matchers::matchesAnyListedName(IgnoredFunctions));
-  auto FilterDestructors =
+  const auto FilterDestructors =
       CheckDestructors ? decl() : decl(unless(cxxDestructorDecl()));
-  auto FilterOperators =
+  const auto FilterOperators =
       CheckOperators ? namedDecl() : namedDecl(unless(isOperatorDecl()));
   Finder->addMatcher(
       cxxMethodDecl(
@@ -90,19 +90,21 @@ void OverrideWithDifferentVisibilityCheck::registerMatchers(
 
 void OverrideWithDifferentVisibilityCheck::check(
     const MatchFinder::MatchResult &Result) {
-  const auto *MatchedFunction = Result.Nodes.getNodeAs<FunctionDecl>("func");
+  const auto *const MatchedFunction =
+      Result.Nodes.getNodeAs<FunctionDecl>("func");
   if (!MatchedFunction->isCanonicalDecl())
     return;
 
-  const auto *ParentClass = Result.Nodes.getNodeAs<CXXRecordDecl>("class");
-  const auto *BaseClass = Result.Nodes.getNodeAs<CXXRecordDecl>("base");
+  const auto *const ParentClass =
+      Result.Nodes.getNodeAs<CXXRecordDecl>("class");
+  const auto *const BaseClass = Result.Nodes.getNodeAs<CXXRecordDecl>("base");
   CXXBasePaths Paths;
   if (!ParentClass->isDerivedFrom(BaseClass, Paths))
     return;
 
-  const auto *OverriddenFunction =
+  const auto *const OverriddenFunction =
       Result.Nodes.getNodeAs<FunctionDecl>("base_func");
-  AccessSpecifier ActualAccess = MatchedFunction->getAccess();
+  AccessSpecifier const ActualAccess = MatchedFunction->getAccess();
   AccessSpecifier OverriddenAccess = OverriddenFunction->getAccess();
 
   const CXXBaseSpecifier *InheritanceWithStrictVisibility = nullptr;
