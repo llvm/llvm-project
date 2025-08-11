@@ -133,8 +133,9 @@ static void instantiateDependentAlignedAttr(
   // FIXME: Use the actual location of the ellipsis.
   SourceLocation EllipsisLoc = Aligned->getLocation();
   if (S.CheckParameterPacksForExpansion(EllipsisLoc, Aligned->getRange(),
-                                        Unexpanded, TemplateArgs, true, Expand,
-                                        RetainExpansion, NumExpansions))
+                                        Unexpanded, TemplateArgs,
+                                        /*FailOnPackProducingTemplates=*/true,
+                                        Expand, RetainExpansion, NumExpansions))
     return;
 
   if (!Expand) {
@@ -1914,8 +1915,8 @@ Decl *TemplateDeclInstantiator::VisitFriendDecl(FriendDecl *D) {
         UnsignedOrNone NumExpansions = std::nullopt;
         if (SemaRef.CheckParameterPacksForExpansion(
                 D->getEllipsisLoc(), D->getSourceRange(), Unexpanded,
-                TemplateArgs, true, ShouldExpand, RetainExpansion,
-                NumExpansions))
+                TemplateArgs, /*FailOnPackProducingTemplates=*/true,
+                ShouldExpand, RetainExpansion, NumExpansions))
           return nullptr;
 
         assert(!RetainExpansion &&
@@ -3478,8 +3479,8 @@ Decl *TemplateDeclInstantiator::VisitTemplateTypeParmDecl(
                           TC->hasExplicitTemplateArgs()
                               ? TC->getTemplateArgsAsWritten()->getRAngleLoc()
                               : TC->getConceptNameInfo().getEndLoc()),
-              Unexpanded, TemplateArgs, true, Expand, RetainExpansion,
-              NumExpanded))
+              Unexpanded, TemplateArgs, /*FailOnPackProducingTemplates=*/true,
+              Expand, RetainExpansion, NumExpanded))
         return nullptr;
     }
   }
@@ -3569,7 +3570,8 @@ Decl *TemplateDeclInstantiator::VisitNonTypeTemplateParmDecl(
     UnsignedOrNone NumExpansions = OrigNumExpansions;
     if (SemaRef.CheckParameterPacksForExpansion(
             Expansion.getEllipsisLoc(), Pattern.getSourceRange(), Unexpanded,
-            TemplateArgs, true, Expand, RetainExpansion, NumExpansions))
+            TemplateArgs, /*FailOnPackProducingTemplates=*/true, Expand,
+            RetainExpansion, NumExpansions))
       return nullptr;
 
     if (Expand) {
@@ -3737,7 +3739,8 @@ TemplateDeclInstantiator::VisitTemplateTemplateParmDecl(
     UnsignedOrNone NumExpansions = std::nullopt;
     if (SemaRef.CheckParameterPacksForExpansion(
             D->getLocation(), TempParams->getSourceRange(), Unexpanded,
-            TemplateArgs, true, Expand, RetainExpansion, NumExpansions))
+            TemplateArgs, /*FailOnPackProducingTemplates=*/true, Expand,
+            RetainExpansion, NumExpansions))
       return nullptr;
 
     if (Expand) {
@@ -4011,7 +4014,8 @@ Decl *TemplateDeclInstantiator::instantiateUnresolvedUsingDecl(
     UnsignedOrNone NumExpansions = std::nullopt;
     if (SemaRef.CheckParameterPacksForExpansion(
             D->getEllipsisLoc(), D->getSourceRange(), Unexpanded, TemplateArgs,
-            true, Expand, RetainExpansion, NumExpansions))
+            /*FailOnPackProducingTemplates=*/true, Expand, RetainExpansion,
+            NumExpansions))
       return nullptr;
 
     // This declaration cannot appear within a function template signature,
@@ -6409,10 +6413,10 @@ Sema::InstantiateMemInitializers(CXXConstructorDecl *New,
       bool ShouldExpand = false;
       bool RetainExpansion = false;
       UnsignedOrNone NumExpansions = std::nullopt;
-      if (CheckParameterPacksForExpansion(Init->getEllipsisLoc(),
-                                          BaseTL.getSourceRange(), Unexpanded,
-                                          TemplateArgs, true, ShouldExpand,
-                                          RetainExpansion, NumExpansions)) {
+      if (CheckParameterPacksForExpansion(
+              Init->getEllipsisLoc(), BaseTL.getSourceRange(), Unexpanded,
+              TemplateArgs, /*FailOnPackProducingTemplates=*/true, ShouldExpand,
+              RetainExpansion, NumExpansions)) {
         AnyErrors = true;
         New->setInvalidDecl();
         continue;

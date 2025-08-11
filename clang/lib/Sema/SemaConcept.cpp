@@ -307,7 +307,8 @@ static UnsignedOrNone EvaluateFoldExpandedConstraintSize(
   UnsignedOrNone NumExpansions = FE->getNumExpansions();
   if (S.CheckParameterPacksForExpansion(
           FE->getEllipsisLoc(), Pattern->getSourceRange(), Unexpanded, MLTAL,
-          true, Expand, RetainExpansion, NumExpansions) ||
+          /*FailOnPackProducingTemplates=*/true, Expand, RetainExpansion,
+          NumExpansions) ||
       !Expand || RetainExpansion)
     return std::nullopt;
 

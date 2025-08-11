@@ -3562,8 +3562,9 @@ PreparePackForExpansion(Sema &S, const CXXBaseSpecifier &Base,
     Info.RetainExpansion = false;
     Info.NumExpansions = std::nullopt;
     return S.CheckParameterPacksForExpansion(
-        BaseEllipsisLoc, BaseSourceRange, Unexpanded, TemplateArgs, false,
-        Info.Expand, Info.RetainExpansion, Info.NumExpansions);
+        BaseEllipsisLoc, BaseSourceRange, Unexpanded, TemplateArgs,
+        /*FailOnPackProducingTemplates=*/false, Info.Expand,
+        Info.RetainExpansion, Info.NumExpansions);
   };
 
   if (ComputeInfo(Base.getTypeSourceInfo(), false, Info))
