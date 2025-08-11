@@ -277,7 +277,7 @@ public:
   Register getPStateSMReg() const { return PStateSMReg; };
   void setPStateSMReg(Register Reg) { PStateSMReg = Reg; };
 
-  unsigned IsPStateSMRegUsed() const { return PStateSMRegUsed; };
+  unsigned isPStateSMRegUsed() const { return PStateSMRegUsed; };
   void setPStateSMRegUsed(bool Used = true) { PStateSMRegUsed = Used; };
 
   int64_t getVGIdx() const { return VGIdx; };

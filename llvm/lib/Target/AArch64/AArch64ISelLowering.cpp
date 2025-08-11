@@ -3107,7 +3107,8 @@ AArch64TargetLowering::EmitEntryPStateSM(MachineInstr &MI,
   MachineFunction *MF = BB->getParent();
   AArch64FunctionInfo *FuncInfo = MF->getInfo<AArch64FunctionInfo>();
   const TargetInstrInfo *TII = Subtarget->getInstrInfo();
-  if (FuncInfo->IsPStateSMRegUsed()) {
+  Register ResultReg = MI.getOperand(0).getReg();
+  if (FuncInfo->isPStateSMRegUsed()) {
     const AArch64RegisterInfo *TRI = Subtarget->getRegisterInfo();
     BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::BL))
         .addExternalSymbol("__arm_sme_state")
@@ -3115,15 +3116,13 @@ AArch64TargetLowering::EmitEntryPStateSM(MachineInstr &MI,
         .addRegMask(TRI->getCallPreservedMask(
             *MF, CallingConv::
                      AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2));
-    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY),
-            MI.getOperand(0).getReg())
+    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY), ResultReg)
         .addReg(AArch64::X0);
   } else {
-    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY),
-            MI.getOperand(0).getReg())
-        .addReg(AArch64::XZR);
+    assert(MI.getMF()->getRegInfo().use_empty(ResultReg) &&
+           "Expected no users of the entry pstate.sm!");
   }
-  BB->remove_instr(&MI);
+  MI.eraseFromParent();
   return BB;
 }
 
