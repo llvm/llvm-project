@@ -34,6 +34,7 @@
     "@vscode/vsce": "^3.2.2",
     "prettier": "^3.4.2",
     "prettier-plugin-curly": "^0.3.1",
+    "tabulator-tables": "^6.3.1",
     "typescript": "^5.7.3"
   },
   "activationEvents": [
@@ -42,8 +43,9 @@
   ],
   "main": "./out/extension",
   "scripts": {
-    "vscode:prepublish": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
+    "bundle-assets": "cp node_modules/tabulator-tables/dist/js/tabulator.min.js ./out/ && cp node_modules/tabulator-tables/dist/css/tabulator.min.css ./out/",
+    "vscode:prepublish": "npm run bundle-assets && tsc -p ./",
+    "watch": "npm run bundle-assets && tsc -watch -p ./",
     "format": "npx prettier './src-ts/' --write",
     "package": "rm -rf ./out/lldb-dap.vsix && vsce package --out ./out/lldb-dap.vsix",
     "publish": "vsce publish",

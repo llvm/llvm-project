@@ -20,6 +20,7 @@ import { SymbolsProvider } from "./ui/symbols-provider";
  */
 export class LLDBDapExtension extends DisposableContext {
   constructor(
+    context: vscode.ExtensionContext,
     logger: vscode.LogOutputChannel,
     logFilePath: LogFilePathProvider,
     outputChannel: vscode.OutputChannel,
@@ -58,7 +59,7 @@ export class LLDBDapExtension extends DisposableContext {
       (node: ModuleProperty) => vscode.env.clipboard.writeText(node.value),
     ));
 
-    this.pushSubscription(new SymbolsProvider(sessionTracker));
+    this.pushSubscription(new SymbolsProvider(sessionTracker, context));
   }
 }
 
@@ -70,7 +71,7 @@ export async function activate(context: vscode.ExtensionContext) {
   outputChannel.info("LLDB-DAP extension activating...");
   const logFilePath = new LogFilePathProvider(context, outputChannel);
   context.subscriptions.push(
-    new LLDBDapExtension(outputChannel, logFilePath, outputChannel),
+    new LLDBDapExtension(context, outputChannel, logFilePath, outputChannel),
   );
   outputChannel.info("LLDB-DAP extension activated");
 }

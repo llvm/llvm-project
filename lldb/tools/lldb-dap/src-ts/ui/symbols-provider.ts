@@ -5,7 +5,10 @@ import { DebugSessionTracker } from "../debug-session-tracker";
 import { DisposableContext } from "../disposable-context";
 
 export class SymbolsProvider extends DisposableContext {
-  constructor(private readonly tracker: DebugSessionTracker) {
+  constructor(
+    private readonly tracker: DebugSessionTracker,
+    private readonly extensionContext: vscode.ExtensionContext,
+  ) {
     super();
 
     this.pushSubscription(vscode.commands.registerCommand(
@@ -87,15 +90,59 @@ export class SymbolsProvider extends DisposableContext {
       "lldb-dap.symbols",
       `Symbols for ${moduleName}`,
       vscode.ViewColumn.Active,
-      {}
+      {
+        enableScripts: true,
+        localResourceRoots: [
+          this.getExtensionResourcePath()
+        ]
+      }
     );
 
-    panel.webview.html = SymbolsProvider.getHTMLContentForSymbols(moduleName, symbols);
+    const tabulatorJsPath = panel.webview.asWebviewUri(vscode.Uri.joinPath(this.getExtensionResourcePath(), "tabulator.min.js"));
+    const tabulatorCssPath = panel.webview.asWebviewUri(vscode.Uri.joinPath(this.getExtensionResourcePath(), "tabulator.min.css"));
+
+    panel.webview.html = this.getHTMLContentForSymbols(tabulatorJsPath, tabulatorCssPath, symbols);
   }
 
-  private static getHTMLContentForSymbols(moduleName: string, symbols: DAPSymbol[]): string {
-    const symbolLines = symbols.map(symbol => ` - ${symbol.name} (${symbol.type})`);
-    return `Symbols for module: ${moduleName}\n${symbolLines.join("\n")}`;
+  private getHTMLContentForSymbols(tabulatorJsPath: vscode.Uri, tabulatorCssPath: vscode.Uri, symbols: DAPSymbol[]): string {
+    const dataJson = JSON.stringify(symbols);
+    return `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link href="${tabulatorCssPath}" rel="stylesheet">
+    <style>
+      body { font-family: sans-serif; margin: 0; padding: 0; }
+      #table { height: 100vh; }
+    </style>
+</head>
+<body>
+    <div id="table"></div>
+    <script src="${tabulatorJsPath}"></script>
+    <script>
+        const tableData = ${dataJson};
+        new Tabulator("#table", {
+            data: tableData,
+            layout: "fitColumns",
+            columns: [
+                {title: "User ID", field: "userId", sorter: "number"},
+                {title: "Debug", field: "isDebug", sorter: "boolean"},
+                {title: "Synthetic", field: "isSynthetic", sorter: "boolean"},
+                {title: "External", field: "isExternal", sorter: "boolean"},
+                {title: "Type", field: "type", sorter: "string"},
+                {title: "File Address", field: "fileAddress", sorter: "number"},
+                {title: "Load Address", field: "loadAddress", sorter: "number"},
+                {title: "Size", field: "size", sorter: "number"},
+                {title: "Name", field: "name", sorter: "string"},
+            ]
+        });
+    </script>
+</body>
+</html>`;
+  }
+
+  private getExtensionResourcePath(): vscode.Uri {
+    return vscode.Uri.joinPath(this.extensionContext.extensionUri, "out");
   }
 }
 
