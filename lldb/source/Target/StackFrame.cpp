@@ -62,7 +62,8 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
                        const SymbolContext *sc_ptr)
     : m_thread_wp(thread_sp), m_frame_index(frame_idx),
       m_concrete_frame_index(unwind_frame_index), m_reg_context_sp(),
-      m_id(pc, cfa), m_frame_code_addr(pc), m_sc(), m_flags(), m_frame_base(),
+      m_id(pc, cfa, nullptr, thread_sp->GetProcess().get()),
+      m_frame_code_addr(pc), m_sc(), m_flags(), m_frame_base(),
       m_frame_base_error(), m_cfa_is_valid(cfa_is_valid),
       m_stack_frame_kind(kind),
       m_behaves_like_zeroth_frame(behaves_like_zeroth_frame),
@@ -72,7 +73,7 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
   // recursive functions properly aren't confused with one another on a history
   // stack.
   if (IsHistorical() && !m_cfa_is_valid) {
-    m_id.SetCFA(m_frame_index);
+    m_id.SetCFA(m_frame_index, thread_sp->GetProcess().get());
   }
 
   if (sc_ptr != nullptr) {
@@ -88,9 +89,11 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
                        const SymbolContext *sc_ptr)
     : m_thread_wp(thread_sp), m_frame_index(frame_idx),
       m_concrete_frame_index(unwind_frame_index),
-      m_reg_context_sp(reg_context_sp), m_id(pc, cfa), m_frame_code_addr(pc),
-      m_sc(), m_flags(), m_frame_base(), m_frame_base_error(),
-      m_cfa_is_valid(true), m_stack_frame_kind(StackFrame::Kind::Regular),
+      m_reg_context_sp(reg_context_sp),
+      m_id(pc, cfa, nullptr, thread_sp->GetProcess().get()),
+      m_frame_code_addr(pc), m_sc(), m_flags(), m_frame_base(),
+      m_frame_base_error(), m_cfa_is_valid(true),
+      m_stack_frame_kind(StackFrame::Kind::Regular),
       m_behaves_like_zeroth_frame(behaves_like_zeroth_frame),
       m_variable_list_sp(), m_variable_list_value_objects(),
       m_recognized_frame_sp(), m_disassembly(), m_mutex() {
@@ -114,7 +117,8 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
     : m_thread_wp(thread_sp), m_frame_index(frame_idx),
       m_concrete_frame_index(unwind_frame_index),
       m_reg_context_sp(reg_context_sp),
-      m_id(pc_addr.GetLoadAddress(thread_sp->CalculateTarget().get()), cfa),
+      m_id(pc_addr.GetLoadAddress(thread_sp->CalculateTarget().get()), cfa,
+           nullptr, thread_sp->GetProcess().get()),
       m_frame_code_addr(pc_addr), m_sc(), m_flags(), m_frame_base(),
       m_frame_base_error(), m_cfa_is_valid(true),
       m_stack_frame_kind(StackFrame::Kind::Regular),
@@ -2054,7 +2058,9 @@ void StackFrame::UpdatePreviousFrameFromCurrentFrame(StackFrame &curr_frame) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   assert(GetStackID() ==
          curr_frame.GetStackID());     // TODO: remove this after some testing
-  m_id.SetPC(curr_frame.m_id.GetPC()); // Update the Stack ID PC value
+  m_id.SetPC(
+      curr_frame.m_id.GetPC(),
+      curr_frame.CalculateProcess().get()); // Update the Stack ID PC value
   assert(GetThread() == curr_frame.GetThread());
   m_frame_index = curr_frame.m_frame_index;
   m_concrete_frame_index = curr_frame.m_concrete_frame_index;
