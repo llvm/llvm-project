@@ -3834,18 +3834,16 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                                   unsigned MMXEltSizeInBits = 0) {
     IRBuilder<> IRB(&I);
 
-    Type *ReturnType =
-        MMXEltSizeInBits ? getMMXVectorTy(MMXEltSizeInBits * 2) : I.getType();
+    FixedVectorType *ReturnType = cast<FixedVectorType>(I.getType());
     assert(isa<FixedVectorType>(ReturnType));
 
     assert(I.arg_size() == 2);
-    [[maybe_unused]] FixedVectorType *ParamType =
+    FixedVectorType *ParamType =
         cast<FixedVectorType>(I.getArgOperand(0)->getType());
     assert(ParamType == I.getArgOperand(1)->getType());
 
-    if (!MMXEltSizeInBits)
-      assert(ParamType->getNumElements() ==
-             2 * cast<FixedVectorType>(ReturnType)->getNumElements());
+    Value *V1 = I.getOperand(0);
+    Value *V2 = I.getOperand(1);
 
     assert(ParamType->getPrimitiveSizeInBits() ==
            ReturnType->getPrimitiveSizeInBits());
@@ -3853,8 +3851,20 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // Step 1: multiplication of corresponding vector elements
     Value *S1 = getShadow(&I, 0);
     Value *S2 = getShadow(&I, 1);
-    Value *V1 = I.getOperand(0);
-    Value *V2 = I.getOperand(1);
+
+    if (MMXEltSizeInBits) {
+        ReturnType = cast<FixedVectorType>(getMMXVectorTy(MMXEltSizeInBits * 2));
+        ParamType = cast<FixedVectorType>(getMMXVectorTy(MMXEltSizeInBits));
+
+        V1 = IRB.CreateBitCast(V1, ParamType);
+        V2 = IRB.CreateBitCast(V2, ParamType);
+
+        S1 = IRB.CreateBitCast(S1, getShadowTy(ParamType));
+        S2 = IRB.CreateBitCast(S2, getShadowTy(ParamType));
+    }
+
+    assert(ParamType->getNumElements() ==
+           2 * ReturnType->getNumElements());
 
     Value *S1S2 = IRB.CreateOr(S1, S2);
 
@@ -3869,15 +3879,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // <8 x i32> %ab, but we cheated and ended up with <8 x i16>.
     S1S2 = IRB.CreateAnd(S1S2, IRB.CreateSExt(V1AndV2NotZero, S1S2->getType()));
 
-    // For MMX, %ab has a misleading type e.g., <1 x i64>.
-    if (MMXEltSizeInBits)
-      S1S2 = IRB.CreateBitCast(S1S2, getMMXVectorTy(MMXEltSizeInBits));
-
     // Step 2: pairwise/horizontal add
     // Collapse <8 x i16> into <4 x i32>
     // Handle it similarly to handlePairwiseShadowOrIntrinsic().
-    unsigned TotalNumElems =
-        cast<FixedVectorType>(ReturnType)->getNumElements() * 2;
+    unsigned TotalNumElems = ReturnType->getNumElements() * 2;
     SmallVector<int, 8> EvenMask;
     SmallVector<int, 8> OddMask;
     for (unsigned X = 0; X < TotalNumElems - 1; X += 2) {

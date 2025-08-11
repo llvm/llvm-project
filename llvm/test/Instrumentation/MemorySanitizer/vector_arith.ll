@@ -45,13 +45,16 @@ define <1 x i64> @Test_ssse3_pmadd_ub_sw(<1 x i64> %a, <1 x i64> %b) sanitize_me
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <1 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <1 x i64>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = or <1 x i64> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <1 x i64> [[A]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <1 x i64> [[B]], zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = and <1 x i1> [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[TMP14:%.*]] = sext <1 x i1> [[TMP5]] to <1 x i64>
-; CHECK-NEXT:    [[TMP13:%.*]] = and <1 x i64> [[TMP2]], [[TMP14]]
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <1 x i64> [[TMP13]] to <8 x i8>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <1 x i64> [[B]] to <8 x i8>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <1 x i64> [[TMP0]] to <8 x i8>
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <1 x i64> [[TMP1]] to <8 x i8>
+; CHECK-NEXT:    [[TMP13:%.*]] = or <8 x i8> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp ne <8 x i8> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp ne <8 x i8> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP16:%.*]] = and <8 x i1> [[TMP14]], [[TMP15]]
+; CHECK-NEXT:    [[TMP17:%.*]] = sext <8 x i1> [[TMP16]] to <8 x i8>
+; CHECK-NEXT:    [[TMP7:%.*]] = and <8 x i8> [[TMP13]], [[TMP17]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <8 x i8> [[TMP7]], <8 x i8> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <8 x i8> [[TMP7]], <8 x i8> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
 ; CHECK-NEXT:    [[TMP10:%.*]] = or <4 x i8> [[TMP8]], [[TMP9]]
