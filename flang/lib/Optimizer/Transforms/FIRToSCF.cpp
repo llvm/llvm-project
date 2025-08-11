@@ -10,7 +10,6 @@
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include <mlir/Support/LLVM.h>
 
 namespace fir {
 #define GEN_PASS_DEF_FIRTOSCFPASS
