@@ -1071,10 +1071,10 @@ else:
 
 define void @trunc_nuw_i1_condition(i32 %V) {
 ; CHECK-LABEL: @trunc_nuw_i1_condition(
-; CHECK-NEXT:    [[C1:%.*]] = icmp ne i32 [[V:%.*]], 2
-; CHECK-NEXT:    [[C2:%.*]] = trunc nuw i32 [[V]] to i1
-; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[C1]], i1 [[C2]], i1 false
-; CHECK-NEXT:    br i1 [[OR_COND]], label [[F:%.*]], label [[T:%.*]]
+; CHECK-NEXT:    switch i32 [[V:%.*]], label [[F:%.*]] [
+; CHECK-NEXT:      i32 2, label [[T:%.*]]
+; CHECK-NEXT:      i32 0, label [[T]]
+; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
 ; CHECK:       T:
