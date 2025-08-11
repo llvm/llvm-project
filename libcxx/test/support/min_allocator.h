@@ -221,6 +221,14 @@ public:
   TEST_CONSTEXPR_CXX14 min_pointer(std::nullptr_t) TEST_NOEXCEPT : ptr_(nullptr) {}
   TEST_CONSTEXPR_CXX14 explicit min_pointer(min_pointer<void, ID> p) TEST_NOEXCEPT : ptr_(static_cast<T*>(p.ptr_)) {}
 
+  template <class U, typename std::enable_if<std::is_convertible<U*, T*>::value, int>::type = 0>
+  TEST_CONSTEXPR_CXX14 min_pointer(min_pointer<U, ID> p) TEST_NOEXCEPT : ptr_(p.ptr_) {}
+
+  template <class U,
+            typename std::enable_if<!std::is_convertible<U*, T*>::value && std::is_constructible<U*, T*>::value,
+                                    int>::type = 0>
+  explicit TEST_CONSTEXPR_CXX14 min_pointer(min_pointer<U, ID> p) TEST_NOEXCEPT : ptr_(static_cast<T*>(p.ptr_)) {}
+
   TEST_CONSTEXPR_CXX14 explicit operator bool() const { return ptr_ != nullptr; }
 
   typedef std::ptrdiff_t difference_type;

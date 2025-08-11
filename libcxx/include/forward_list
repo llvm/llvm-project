@@ -363,7 +363,7 @@ class __forward_list_iterator {
   _LIBCPP_HIDE_FROM_ABI explicit __forward_list_iterator(__begin_node_pointer __p) _NOEXCEPT : __ptr_(__p) {}
 
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI explicit __forward_list_iterator(__node_pointer __p) _NOEXCEPT
-      : __ptr_(std::__static_fancy_pointer_cast<__begin_node_pointer>(__p)) {}
+      : __ptr_(__p) {}
 
   template <class, class>
   friend class forward_list;
@@ -380,14 +380,14 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI __forward_list_iterator() _NOEXCEPT : __ptr_(nullptr) {}
 
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI reference operator*() const {
-    return std::__static_fancy_pointer_cast<__node_pointer>(__ptr_)->__get_value();
+    return static_cast<__node_pointer>(__ptr_)->__get_value();
   }
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI pointer operator->() const {
-    return pointer_traits<pointer>::pointer_to(std::__static_fancy_pointer_cast<__node_pointer>(__ptr_)->__get_value());
+    return pointer_traits<pointer>::pointer_to(static_cast<__node_pointer>(__ptr_)->__get_value());
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI __forward_list_iterator& operator++() {
-    __ptr_ = std::__static_fancy_pointer_cast<__begin_node_pointer>(__ptr_->__next_);
+    __ptr_ = __ptr_->__next_;
     return *this;
   }
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI __forward_list_iterator operator++(int) {
@@ -425,10 +425,6 @@ class __forward_list_const_iterator {
   _LIBCPP_CONSTEXPR_SINCE_CXX26
   _LIBCPP_HIDE_FROM_ABI explicit __forward_list_const_iterator(__begin_node_pointer __p) _NOEXCEPT : __ptr_(__p) {}
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX26
-  _LIBCPP_HIDE_FROM_ABI explicit __forward_list_const_iterator(__node_pointer __p) _NOEXCEPT
-      : __ptr_(std::__static_fancy_pointer_cast<__begin_node_pointer>(__p)) {}
-
   template <class, class>
   friend class forward_list;
 
@@ -444,14 +440,14 @@ public:
   __forward_list_const_iterator(__forward_list_iterator<__node_pointer> __p) _NOEXCEPT : __ptr_(__p.__ptr_) {}
 
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI reference operator*() const {
-    return std::__static_fancy_pointer_cast<__node_pointer>(__ptr_)->__get_value();
+    return static_cast<__node_pointer>(__ptr_)->__get_value();
   }
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI pointer operator->() const {
-    return pointer_traits<pointer>::pointer_to(std::__static_fancy_pointer_cast<__node_pointer>(__ptr_)->__get_value());
+    return pointer_traits<pointer>::pointer_to(static_cast<__node_pointer>(__ptr_)->__get_value());
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI __forward_list_const_iterator& operator++() {
-    __ptr_ = std::__static_fancy_pointer_cast<__begin_node_pointer>(__ptr_->__next_);
+    __ptr_ = __ptr_->__next_;
     return *this;
   }
   _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI __forward_list_const_iterator operator++(int) {
@@ -943,8 +939,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 inline forward_list<_Tp, _Alloc>::forward_list(con
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX26 forward_list<_Tp, _Alloc>::forward_list(size_type __n) {
   if (__n > 0) {
-    for (__begin_node_pointer __p = __base::__before_begin(); __n > 0;
-         --__n, __p = std::__static_fancy_pointer_cast<__begin_node_pointer>(__p->__next_)) {
+    for (__begin_node_pointer __p = __base::__before_begin(); __n > 0; --__n, __p = __p->__next_) {
       __p->__next_ = this->__create_node(/* next = */ nullptr);
     }
   }
@@ -955,8 +950,7 @@ template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX26 forward_list<_Tp, _Alloc>::forward_list(size_type __n, const allocator_type& __base_alloc)
     : __base(__base_alloc) {
   if (__n > 0) {
-    for (__begin_node_pointer __p = __base::__before_begin(); __n > 0;
-         --__n, __p = std::__static_fancy_pointer_cast<__begin_node_pointer>(__p->__next_)) {
+    for (__begin_node_pointer __p = __base::__before_begin(); __n > 0; --__n, __p = __p->__next_) {
       __p->__next_ = this->__create_node(/* next = */ nullptr);
     }
   }
@@ -1198,7 +1192,7 @@ forward_list<_Tp, _Alloc>::__insert_after(const_iterator __p, size_type __n, _Ar
 #  endif // _LIBCPP_HAS_EXCEPTIONS
     __last->__next_ = __r->__next_;
     __r->__next_    = __first;
-    __r             = std::__static_fancy_pointer_cast<__begin_node_pointer>(__last);
+    __r             = __last;
   }
   return iterator(__r);
 }
@@ -1239,7 +1233,7 @@ forward_list<_Tp, _Alloc>::__insert_after_with_sentinel(const_iterator __p, _Inp
 
     __last->__next_ = __r->__next_;
     __r->__next_    = __first;
-    __r             = std::__static_fancy_pointer_cast<__begin_node_pointer>(__last);
+    __r             = __last;
   }
 
   return iterator(__r);
@@ -1258,7 +1252,7 @@ forward_list<_Tp, _Alloc>::erase_after(const_iterator __f) {
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX26 typename forward_list<_Tp, _Alloc>::iterator
 forward_list<_Tp, _Alloc>::erase_after(const_iterator __f, const_iterator __l) {
-  __node_pointer __e = std::__static_fancy_pointer_cast<__node_pointer>(__l.__ptr_);
+  __node_pointer __e = static_cast<__node_pointer>(__l.__ptr_);
   if (__f != __l) {
     __begin_node_pointer __bp = __f.__ptr_;
 
@@ -1324,7 +1318,7 @@ forward_list<_Tp, _Alloc>::splice_after(const_iterator __p, forward_list& /*__ot
   if (__p != __i && __p != __lm1) {
     __i.__ptr_->__next_   = __lm1.__ptr_->__next_;
     __lm1.__ptr_->__next_ = __p.__ptr_->__next_;
-    __p.__ptr_->__next_   = std::__static_fancy_pointer_cast<__node_pointer>(__lm1.__ptr_);
+    __p.__ptr_->__next_   = static_cast<__node_pointer>(__lm1.__ptr_);
   }
 }
 
@@ -1338,7 +1332,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void forward_list<_Tp, _Alloc>::splice_after(
     if (__f != __lm1) {
       __lm1.__ptr_->__next_ = __p.__ptr_->__next_;
       __p.__ptr_->__next_   = __f.__ptr_->__next_;
-      __f.__ptr_->__next_   = std::__static_fancy_pointer_cast<__node_pointer>(__l.__ptr_);
+      __f.__ptr_->__next_   = static_cast<__node_pointer>(__l.__ptr_);
     }
   }
 }
@@ -1418,7 +1412,7 @@ forward_list<_Tp, _Alloc>::unique(_BinaryPredicate __binary_pred) {
     iterator __j = std::next(__i);
     for (; __j != __e && __binary_pred(*__i, *__j); ++__j)
       ++__count_removed;
-    if (__i.__ptr_->__next_ != std::__static_fancy_pointer_cast<__node_pointer>(__j.__ptr_))
+    if (__i.__ptr_->__next_ != static_cast<__node_pointer>(__j.__ptr_))
       __deleted_nodes.splice_after(__deleted_nodes.before_begin(), *this, __i, __j);
     __i = __j;
   }
@@ -1498,7 +1492,7 @@ forward_list<_Tp, _Alloc>::__sort(__node_pointer __f1, difference_type __sz, _Co
   }
   difference_type __sz1 = __sz / 2;
   difference_type __sz2 = __sz - __sz1;
-  __node_pointer __t    = std::__static_fancy_pointer_cast<__node_pointer>(std::next(iterator(__f1), __sz1 - 1).__ptr_);
+  __node_pointer __t    = static_cast<__node_pointer>(std::next(iterator(__f1), __sz1 - 1).__ptr_);
   __node_pointer __f2   = __t->__next_;
   __t->__next_          = nullptr;
   return __merge(__sort(__f1, __sz1, __comp), __sort(__f2, __sz2, __comp), __comp);
