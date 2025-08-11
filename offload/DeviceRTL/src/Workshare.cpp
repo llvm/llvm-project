@@ -824,7 +824,8 @@ public:
   /// \param[in] OneIterationPerThread Assume that one thread executes
   ///                                  only one loop iter or one block chunk
   static void Distribute(IdentTy *Loc, void (*LoopBody)(Ty, void *), void *Arg,
-                         Ty NumIters, Ty BlockChunk, uint8_t OneIterationPerThread) {
+                         Ty NumIters, Ty BlockChunk,
+                         uint8_t OneIterationPerThread) {
     ASSERT(icv::Level == 0, "Bad distribute");
     ASSERT(icv::ActiveLevel == 0, "Bad distribute");
     ASSERT(state::ParallelRegionFn == nullptr, "Bad distribute");
