@@ -1,4 +1,5 @@
 #include "LibcGpuBenchmark.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/algorithm.h"
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/atomic.h"
@@ -160,8 +161,9 @@ void Benchmark::run_benchmarks() {
   gpu::sync_threads();
 }
 
-BenchmarkResult benchmark(const BenchmarkOptions &options,
-                          cpp::function<uint64_t(void)> wrapper_func) {
+BenchmarkResult
+benchmark(const BenchmarkOptions &options,
+          const cpp::function<uint64_t(uint32_t)> &wrapper_func) {
   BenchmarkResult result;
   RuntimeEstimationProgression rep;
   uint32_t total_iterations = 0;
@@ -181,11 +183,13 @@ BenchmarkResult benchmark(const BenchmarkOptions &options,
   for (int i = 0; i < overhead_iterations; i++)
     overhead = cpp::min(overhead, LIBC_NAMESPACE::overhead());
 
+  uint32_t call_index = 0;
+
   for (int64_t time_budget = options.max_duration; time_budget >= 0;) {
     uint64_t sample_cycles = 0;
     const clock_t start = static_cast<double>(clock());
     for (uint32_t i = 0; i < iterations; i++) {
-      auto wrapper_intermediate = wrapper_func();
+      auto wrapper_intermediate = wrapper_func(call_index++);
       uint64_t current_result = wrapper_intermediate - overhead;
       max = cpp::max(max, current_result);
       min = cpp::min(min, current_result);
@@ -223,7 +227,7 @@ BenchmarkResult benchmark(const BenchmarkOptions &options,
   result.total_iterations = total_iterations;
   result.total_time = total_time / total_iterations;
   return result;
-};
+}
 
 } // namespace benchmarks
 } // namespace LIBC_NAMESPACE_DECL

@@ -1,8 +1,9 @@
 #include "benchmarks/gpu/LibcGpuBenchmark.h"
 
+#include "hdr/stdint_proxy.h"
 #include "src/ctype/isalpha.h"
 
-uint64_t BM_IsAlpha() {
+uint64_t BM_IsAlpha(uint32_t /*call_index*/) {
   char x = 'c';
   return LIBC_NAMESPACE::latency(LIBC_NAMESPACE::isalpha, x);
 }
