@@ -1146,18 +1146,101 @@ def XeGPU_ConvertLayoutOp: XeGPU_Op<"convert_layout", [Pure, AllTypesMatch<["sou
     let hasCanonicalizer = 1;
 }
 
-def XeGPU_CreateMatrixDescOp: XeGPU_Op<"create_matrix_desc"> {
+def XeGPU_CreateMatrixDescOp: XeGPU_Op<"create_matrix_desc", [Pure]>  {
   let summary = "Create a matrix descriptor.";
   let description = [{
     Matrices are treated as 2D units.
     In case the ROI rank is >2, the two fastest changing dimensions
     represent a 2D unit and other dimensions specify the multiple
     of these units that are stacked vertically.
+    Arguments:
+     - `source` : a base address of SLM allocation.
     Results:
      - `matrix_desc` : a descriptor for SLM allocation.
   }];
+  let arguments = (ins XeGPU_BaseAddrType:$source);
   let results = (outs XeGPU_MatrixDesc:$matrix_desc);
-  let assemblyFormat = "attr-dict `:` type($matrix_desc)";
+  let assemblyFormat = "$source prop-dict attr-dict `:` type($source) `->` type($matrix_desc)";
 }
+
+def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>]>  {
+  let arguments = (ins XeGPU_MatrixDesc:$matrix_desc,
+    Variadic<Index>: $offsets,
+    DenseI64ArrayAttr: $const_offsets,
+    OptionalAttr<XeGPU_LayoutAttr>:$layout
+  );
+  let results = (outs XeGPU_ValueType:$res);
+  let assemblyFormat = [{
+    $matrix_desc `` custom<DynamicIndexList>($offsets, $const_offsets)
+    prop-dict attr-dict `:` functional-type(operands, results)
+  }];
+  let summary = "Load matrix from SLM.";
+  let description = [{
+    This operation loads a matrix from the SLM using the matrix descriptor.
+    There are additional parameters and attributes that support loading, but they must only
+    be specified for a work-item level operation.
+
+    General rules:
+    1. Non-WI-level code must not specify optional attributes.
+    2. If the load uses `vector` semantics, all of the vector attributes must be specified.
+    3. If the load uses `array` semantics, all of the array attributes must be specified.
+
+    Arguments:
+     - `matrix_desc` : a matrix descriptor (SLM allocation + matrix type).
+     - `offsets`     : Coordinates of the matrix to load.
+    Results:
+      - `res` : loaded matrix elements.
+  }];
+
+  let builders = [
+    // OpBuilder<(ins "Type":$res, "TypedValue<MatrixDescType>": $matrix_desc, "llvm::ArrayRef<OpFoldResult>": $offsets, "LayoutAttr": $layout)>,
+  ];
+  let extraClassDeclaration = [{
+    SmallVector<OpFoldResult> getMixedOffsets() {
+      return getMixedValues(getConstOffsets(), getOffsets(), getContext());
+    }
+  }];
+  // let hasVerifier = 1;
+}
+
+def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix"> {
+  let arguments = (ins
+    XeGPU_MatrixDesc:$matrix_desc,
+    XeGPU_ValueType:$data,
+    Variadic<Index>: $offsets,
+    DenseI64ArrayAttr: $const_offsets,
+    OptionalAttr<XeGPU_LayoutAttr>:$layout
+  );
+  let assemblyFormat = [{
+    $matrix_desc `` custom<DynamicIndexList>($offsets, $const_offsets) `,` $data
+    prop-dict attr-dict `:` type(operands)
+  }];
+  let summary = "Store matrix from SLM.";
+  let description = [{
+    This operation stores workitem's `data` fragment of the matrix to the SLM (`matrix_desc`).
+    There are additional parameters and attributes that support loading, but they must only
+    be specified for a work-item level operation.
+
+    General rules:
+    1. Non-WI-level code must not specify optional attributes.
+    2. If the store uses `vector` semantics, all of the vector attributes must be specified.
+
+    Arguments:
+     - `matrix_desc` : a matrix descriptor.
+     - `data`        : data to be stored to the matrix.
+     - `offsets`     : Coordinates of the matrix where the data will be stored.
+  }];
+  let builders = [
+    // OpBuilder<(ins "TypedValue<MatrixDescType>": $matrix_desc,  "Value" : $data, "llvm::ArrayRef<OpFoldResult>": $offsets, "LayoutAttr": $layout)>,
+  ];
+  let extraClassDeclaration = [{
+    SmallVector<OpFoldResult> getMixedOffsets() {
+      Builder b(getContext());
+      return getMixedValues(getConstOffsets(), getOffsets(), b);
+    }
+  }];
+  // let hasVerifier = 1;
+}
+
 
 #endif // MLIR_DIALECT_XEGPU_IR_XEGPUOPS_TD
