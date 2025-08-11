@@ -880,7 +880,8 @@ bool RISCVAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
 
   // If linker relaxation is enabled and supported by the current fixup, then we
   // always want to generate a relocation.
-  bool NeedsRelax = Fixup.isLinkerRelaxable() && relaxableFixupNeedsRelocation(Fixup.getKind());
+  bool NeedsRelax = Fixup.isLinkerRelaxable() &&
+                    relaxableFixupNeedsRelocation(Fixup.getKind());
   if (NeedsRelax)
     IsResolved = false;
 
@@ -897,7 +898,8 @@ bool RISCVAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
     if (NeedsRelax) {
       // Some Fixups get a RELAX relocation, record it (directly) after we add
       // the relocation.
-      MCFixup RelaxFixup = MCFixup::create(Fixup.getOffset(), nullptr, ELF::R_RISCV_RELAX);
+      MCFixup RelaxFixup =
+          MCFixup::create(Fixup.getOffset(), nullptr, ELF::R_RISCV_RELAX);
       MCValue RelaxTarget = MCValue::get(nullptr);
       uint64_t RelaxValue;
       Asm->getWriter().recordRelocation(F, RelaxFixup, RelaxTarget, RelaxValue);
