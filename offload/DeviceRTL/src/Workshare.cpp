@@ -698,7 +698,7 @@ template <typename Ty> class StaticLoopChunker {
   static void NormalizedLoopNestNoChunk(void (*LoopBody)(Ty, void *), void *Arg,
                                         Ty NumBlocks, Ty BId, Ty NumThreads,
                                         Ty TId, Ty NumIters,
-                                        bool OneIterationPerThread) {
+                                        uint8_t OneIterationPerThread) {
     Ty KernelIteration = NumBlocks * NumThreads;
 
     // Start index in the normalized space.
@@ -729,7 +729,7 @@ template <typename Ty> class StaticLoopChunker {
                                         Ty BlockChunk, Ty NumBlocks, Ty BId,
                                         Ty ThreadChunk, Ty NumThreads, Ty TId,
                                         Ty NumIters,
-                                        bool OneIterationPerThread) {
+                                        uint8_t OneIterationPerThread) {
     Ty KernelIteration = NumBlocks * BlockChunk;
 
     // Start index in the chunked space.
@@ -777,7 +777,7 @@ public:
   ///                                  only one loop iter or one thread chunk
   static void For(IdentTy *Loc, void (*LoopBody)(Ty, void *), void *Arg,
                   Ty NumIters, Ty NumThreads, Ty ThreadChunk,
-                  int8_t OneIterationPerThread) {
+                  uint8_t OneIterationPerThread) {
     ASSERT(NumIters >= 0, "Bad iteration count");
     ASSERT(ThreadChunk >= 0, "Bad thread count");
 
@@ -824,7 +824,7 @@ public:
   /// \param[in] OneIterationPerThread Assume that one thread executes
   ///                                  only one loop iter or one block chunk
   static void Distribute(IdentTy *Loc, void (*LoopBody)(Ty, void *), void *Arg,
-                         Ty NumIters, Ty BlockChunk, Ty OneIterationPerThread) {
+                         Ty NumIters, Ty BlockChunk, uint8_t OneIterationPerThread) {
     ASSERT(icv::Level == 0, "Bad distribute");
     ASSERT(icv::ActiveLevel == 0, "Bad distribute");
     ASSERT(state::ParallelRegionFn == nullptr, "Bad distribute");
@@ -882,7 +882,7 @@ public:
   static void DistributeFor(IdentTy *Loc, void (*LoopBody)(Ty, void *),
                             void *Arg, Ty NumIters, Ty NumThreads,
                             Ty BlockChunk, Ty ThreadChunk,
-                            Ty OneIterationPerThread) {
+                            uint8_t OneIterationPerThread) {
     ASSERT(icv::Level == 1, "Bad distribute");
     ASSERT(icv::ActiveLevel == 1, "Bad distribute");
     ASSERT(state::ParallelRegionFn == nullptr, "Bad distribute");
@@ -939,7 +939,7 @@ public:
   __kmpc_distribute_for_static_loop##BW(                                       \
       IdentTy *loc, void (*fn)(TY, void *), void *arg, TY num_iters,           \
       TY num_threads, TY block_chunk, TY thread_chunk,                         \
-      int8_t one_iteration_per_thread) {                                       \
+      uint8_t one_iteration_per_thread) {                                      \
     ompx::StaticLoopChunker<TY>::DistributeFor(                                \
         loc, fn, arg, num_iters, num_threads, block_chunk, thread_chunk,       \
         one_iteration_per_thread);                                             \
@@ -947,13 +947,13 @@ public:
   [[gnu::flatten, clang::always_inline]] void                                  \
   __kmpc_distribute_static_loop##BW(IdentTy *loc, void (*fn)(TY, void *),      \
                                     void *arg, TY num_iters, TY block_chunk,   \
-                                    int8_t one_iteration_per_thread) {         \
+                                    uint8_t one_iteration_per_thread) {        \
     ompx::StaticLoopChunker<TY>::Distribute(                                   \
         loc, fn, arg, num_iters, block_chunk, one_iteration_per_thread);       \
   }                                                                            \
   [[gnu::flatten, clang::always_inline]] void __kmpc_for_static_loop##BW(      \
       IdentTy *loc, void (*fn)(TY, void *), void *arg, TY num_iters,           \
-      TY num_threads, TY thread_chunk, int8_t one_iteration_per_thread) {      \
+      TY num_threads, TY thread_chunk, uint8_t one_iteration_per_thread) {     \
     ompx::StaticLoopChunker<TY>::For(loc, fn, arg, num_iters, num_threads,     \
                                      thread_chunk, one_iteration_per_thread);  \
   }
