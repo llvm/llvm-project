@@ -5749,16 +5749,15 @@ int DoubleAPFloat::getExactLog2Abs() const {
   return getFirst().getExactLog2Abs();
 }
 
-int ilogb(const DoubleAPFloat& Arg) {
-  const APFloat& Hi = Arg.getFirst();
-  const APFloat& Lo = Arg.getSecond();
+int ilogb(const DoubleAPFloat &Arg) {
+  const APFloat &Hi = Arg.getFirst();
+  const APFloat &Lo = Arg.getSecond();
   int IlogbResult = ilogb(Hi);
   // Zero and non-finite values can delegate to ilogb(Hi).
   if (Arg.getCategory() != fcNormal)
     return IlogbResult;
   // If Lo can't change the binade, we can delegate to ilogb(Hi).
-  if (Lo.isZero() ||
-      Hi.isNegative() == Lo.isNegative())
+  if (Lo.isZero() || Hi.isNegative() == Lo.isNegative())
     return IlogbResult;
   if (Hi.getExactLog2Abs() == INT_MIN)
     return IlogbResult;
@@ -5777,10 +5776,101 @@ DoubleAPFloat scalbn(const DoubleAPFloat &Arg, int Exp,
 DoubleAPFloat frexp(const DoubleAPFloat &Arg, int &Exp,
                     APFloat::roundingMode RM) {
   assert(Arg.Semantics == &semPPCDoubleDouble && "Unexpected Semantics");
-  APFloat First = frexp(Arg.Floats[0], Exp, RM);
-  APFloat Second = Arg.Floats[1];
-  if (Arg.getCategory() == APFloat::fcNormal)
-    Second = scalbn(Second, -Exp, RM);
+
+  // Get the unbiased exponent e of the number, where |Arg| = m * 2^e for m in
+  // [1.0, 2.0).
+  Exp = ilogb(Arg);
+
+  // For NaNs, quiet any signaling NaN and return the result, as per standard
+  // practice.
+  if (Exp == APFloat::IEK_NaN) {
+    DoubleAPFloat Quiet{Arg};
+    Quiet.getFirst().makeQuiet();
+    return Quiet;
+  }
+
+  // For infinity, return it unchanged. The exponent remains IEK_Inf.
+  if (Exp == APFloat::IEK_Inf)
+    return Arg;
+
+  // For zero, the fraction is zero and the standard requires the exponent be 0.
+  if (Exp == APFloat::IEK_Zero) {
+    Exp = 0;
+    return Arg;
+  }
+
+  const APFloat &Hi = Arg.getFirst();
+  const APFloat &Lo = Arg.getSecond();
+
+  // frexp requires the fraction's absolute value to be in [0.5, 1.0).
+  // ilogb provides an exponent for an absolute value in [1.0, 2.0).
+  // Increment the exponent to ensure the fraction is in the correct range.
+  ++Exp;
+
+  const bool SignsDisagree = Hi.isNegative() != Lo.isNegative();
+  APFloat Second = Lo;
+  if (Arg.getCategory() == APFloat::fcNormal && Lo.isFiniteNonZero()) {
+    roundingMode LoRoundingMode;
+    // The interpretation of rmTowardZero depends on the sign of the combined
+    // Arg rather than the sign of the component.
+    if (RM == rmTowardZero)
+      LoRoundingMode = Arg.isNegative() ? rmTowardPositive : rmTowardNegative;
+    // For rmNearestTiesToAway, we face a similar problem. If signs disagree,
+    // Lo is a correction *toward* zero relative to Hi. Rounding Lo
+    // "away from zero" based on its own sign would move the value in the
+    // wrong direction. As a safe proxy, we use rmNearestTiesToEven, which is
+    // direction-agnostic. We only need to bother with this if Lo is scaled
+    // down.
+    else if (RM == rmNearestTiesToAway && SignsDisagree && Exp > 0)
+      LoRoundingMode = rmNearestTiesToEven;
+    else
+      LoRoundingMode = RM;
+    Second = scalbn(Lo, -Exp, LoRoundingMode);
+    // The rmNearestTiesToEven proxy is correct most of the time, but it
+    // differs from rmNearestTiesToAway when the scaled value of Lo is an
+    // exact midpoint.
+    // NOTE: This is morally equivalent to roundTiesTowardZero.
+    if (RM == rmNearestTiesToAway && LoRoundingMode == rmNearestTiesToEven) {
+      // Re-scale the result back to check if rounding occurred.
+      const APFloat RecomposedLo = scalbn(Second, Exp, rmNearestTiesToEven);
+      if (RecomposedLo != Lo) {
+        // RoundingError tells us which direction we rounded:
+        //   - RoundingError > 0: we rounded up.
+        //   - RoundingError < 0: we down up.
+        const APFloat RoundingError = RecomposedLo - Lo;
+        // Determine if scalbn(Lo, -Exp) landed exactly on a midpoint.
+        // We do this by checking if the absolute rounding error is exactly
+        // half a ULP of the result.
+        const APFloat UlpOfSecond = harrisonUlp(Second);
+        const APFloat ScaledUlpOfSecond =
+            scalbn(UlpOfSecond, Exp - 1, rmNearestTiesToEven);
+        const bool IsMidpoint = abs(RoundingError) == ScaledUlpOfSecond;
+        const bool RoundedLoAway =
+            Second.isNegative() == RoundingError.isNegative();
+        // The sign of Hi and Lo disagree and we rounded Lo away: we must
+        // decrease the magnitude of Second to increase the magnitude
+        // First+Second.
+        if (IsMidpoint && RoundedLoAway)
+          Second.next(/*nextDown=*/!Second.isNegative());
+      }
+    }
+    // Handle a tricky edge case where Arg is slightly less than a power of two
+    // (e.g., Arg = 2^k - epsilon). In this situation:
+    // 1. Hi is 2^k, and Lo is a small negative value -epsilon.
+    // 2. ilogb(Arg) correctly returns k-1.
+    // 3. Our initial Exp becomes (k-1) + 1 = k.
+    // 4. Scaling Hi (2^k) by 2^-k would yield a magnitude of 1.0 and
+    //    scaling Lo by 2^-k would yield zero. This would make the result 1.0
+    //    which is an invalid fraction, as the required interval is [0.5, 1.0).
+    // We detect this specific case by checking if Hi is a power of two and if
+    // the scaled Lo underflowed to zero. The fix: Increment Exp to k+1. This
+    // adjusts the scale factor, causing Hi to be scaled to 0.5, which is a
+    // valid fraction.
+    if (Second.isZero() && SignsDisagree && Hi.getExactLog2Abs() != INT_MIN)
+      ++Exp;
+  }
+
+  APFloat First = scalbn(Hi, -Exp, RM);
   return DoubleAPFloat(semPPCDoubleDouble, std::move(First), std::move(Second));
 }
 
