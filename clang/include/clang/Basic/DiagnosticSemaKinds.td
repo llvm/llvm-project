@@ -6075,7 +6075,7 @@ def err_pack_outside_template : Error<
   "pack declaration outside of template">;
 
 def err_builtin_pack_outside_template
-    : Error<"builtin returning packs used outside of template">;
+    : Error<"%0 cannot be used outside of template">;
 
 def err_unsupported_builtin_template_pack_position
     : Error<"expansions of %0 are not supported here. Only expansions in "
