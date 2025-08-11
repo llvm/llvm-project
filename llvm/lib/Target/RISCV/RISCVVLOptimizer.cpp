@@ -491,6 +491,18 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   // vfirst find-first-set mask bit
   case RISCV::VCPOP_M:
   case RISCV::VFIRST_M:
+  // Vector Crypto
+  case RISCV::VANDN_VV:
+  case RISCV::VANDN_VX:
+  case RISCV::VBREV_V:
+  case RISCV::VCLZ_V:
+  case RISCV::VCPOP_V:
+  case RISCV::VCTZ_V:
+  case RISCV::VROL_VV:
+  case RISCV::VROL_VX:
+  case RISCV::VROR_VI:
+  case RISCV::VROR_VV:
+  case RISCV::VROR_VX:
     return MILog2SEW;
 
   // Vector Widening Integer Add/Subtract
@@ -1025,6 +1037,17 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VWSLL_VI:
   case RISCV::VWSLL_VX:
   case RISCV::VWSLL_VV:
+  case RISCV::VANDN_VV:
+  case RISCV::VANDN_VX:
+  case RISCV::VBREV_V:
+  case RISCV::VCLZ_V:
+  case RISCV::VCPOP_V:
+  case RISCV::VCTZ_V:
+  case RISCV::VROL_VV:
+  case RISCV::VROL_VX:
+  case RISCV::VROR_VI:
+  case RISCV::VROR_VV:
+  case RISCV::VROR_VX:
 
   // Vector Mask Instructions
   // Vector Mask-Register Logical Instructions
