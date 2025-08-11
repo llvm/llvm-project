@@ -225,7 +225,7 @@ bool fromJSON(const json::Value &Params, InitializeRequestArguments &IRA,
 
 bool fromJSON(const json::Value &Params, Configuration &C, json::Path P) {
   json::ObjectMapper O(Params, P);
-  return O.mapOptional("debuggerRoot", C.debuggerRoot) &&
+  bool success = O.mapOptional("debuggerRoot", C.debuggerRoot) &&
          O.mapOptional("enableAutoVariableSummaries",
                        C.enableAutoVariableSummaries) &&
          O.mapOptional("enableSyntheticChildDebugging",
@@ -248,6 +248,8 @@ bool fromJSON(const json::Value &Params, Configuration &C, json::Path P) {
          O.mapOptional("platformName", C.platformName) &&
          parseSourceMap(Params, C.sourceMap, P) &&
          parseTimeout(Params, C.timeout, P);
+
+  return success;
 }
 
 bool fromJSON(const json::Value &Params, BreakpointLocationsArguments &BLA,

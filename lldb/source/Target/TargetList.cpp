@@ -26,6 +26,8 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/FileSystem.h"
 
+#include "lldb/Host/ThreadLauncher.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -331,8 +333,27 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
       if (user_exe_path_is_bundle)
         exe_module_sp->GetFileSpec().GetPath(resolved_bundle_exe_path,
                                              sizeof(resolved_bundle_exe_path));
-      if (target_sp->GetPreloadSymbols())
-        exe_module_sp->PreloadSymbols();
+      // CORE FIX: Make symbol preloading non-blocking for interactive debugging.
+      // Previously, PreloadSymbols() would block target creation waiting for
+      // network symbol loading to complete, causing 3000ms+ delays.
+      // Now we defer symbol loading to background using LLDB's thread launcher.
+      if (target_sp->GetPreloadSymbols()) {
+        // Use LLDB's ThreadLauncher for proper thread management
+        auto thread_result = ThreadLauncher::LaunchThread(
+            "symbol-preload",
+            [exe_module_sp]() -> lldb::thread_result_t {
+              // Preload symbols in background
+              exe_module_sp->PreloadSymbols();
+              return 0;
+            });
+
+        if (!thread_result) {
+          // If thread launch fails, fall back to synchronous loading
+          // This ensures symbols are still loaded even if threading fails
+          exe_module_sp->PreloadSymbols();
+        }
+        // Don't wait for completion to maintain non-blocking behavior
+      }
     }
   } else {
     // No file was specified, just create an empty target with any arch if a
