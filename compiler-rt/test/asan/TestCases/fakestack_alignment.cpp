@@ -1,4 +1,12 @@
-// RUN: %clangxx_asan -fsanitize-address-use-after-return=always -O0 %s -o %t && %run %t 2>&1
+// This deterministically fails: when the stack size is 1<<16, FakeStack's
+// GetFrame() is out of alignment, because SizeRequiredForFlags(16) == 2K.
+// RUN: %clangxx_asan -fsanitize-address-use-after-return=always -O0 -DALIGNMENT=4096 -DTHREAD_COUNT=1 -DTHREAD_STACK_SIZE=65536 %s -o %t && %run %t 2>&1
+
+// The FakeStack frame is not guaranteed to be aligned, but alignment can
+// happen by chance, so try this on many threads.
+// RUN: %clangxx_asan -fsanitize-address-use-after-return=always -O0 -DALIGNMENT=8192 -DTHREAD_COUNT=32 -DTHREAD_STACK_SIZE=131072 %s -o %t && %run %t 2>&1
+// RUN: %clangxx_asan -fsanitize-address-use-after-return=always -O0 -DALIGNMENT=16384 -DTHREAD_COUNT=32 -DTHREAD_STACK_SIZE=131072 %s -o %t && %run %t 2>&1
+
 // XFAIL: *
 
 #include <assert.h>
@@ -7,11 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct alignas(4096) page {
-  int x;
-};
-
-struct alignas(16384) larry {
+struct alignas(ALIGNMENT) big_object {
   int x;
 };
 
@@ -20,13 +24,11 @@ bool misaligned = false;
 // Check whether the FakeStack frame is sufficiently aligned. Alignment can
 // happen by chance, so try this on many threads.
 void *Thread(void *unused) {
-  larry l1;
-  uint alignment = (unsigned long)&l1 % alignof(larry);
+  big_object x;
+  uint alignment = (unsigned long)&x % alignof(big_object);
   printf("Thread: address modulo alignment is %u\n", alignment);
   if (alignment != 0)
     misaligned = true;
-
-  child();
 
   return NULL;
 }
@@ -34,15 +36,18 @@ void *Thread(void *unused) {
 int main(int argc, char **argv) {
   pthread_attr_t attr;
   pthread_attr_init(&attr);
+  #ifdef THREAD_STACK_SIZE
+  pthread_attr_setstacksize(&attr, THREAD_STACK_SIZE);
+  #endif
 
-  pthread_t t[32];
-  for (int i = 0; i < 32; i++) {
+  pthread_t t[THREAD_COUNT];
+  for (int i = 0; i < THREAD_COUNT; i++)
     pthread_create(&t[i], &attr, Thread, 0);
-  }
+
   pthread_attr_destroy(&attr);
-  for (int i = 0; i < 32; i++) {
+
+  for (int i = 0; i < THREAD_COUNT; i++)
     pthread_join(t[i], 0);
-  }
 
   if (misaligned) {
     printf("Test failed: not perfectly aligned\n");
