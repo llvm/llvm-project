@@ -6,6 +6,8 @@
 ## This tests that we correctly emit relocations for linker relaxation when
 ## relaxing `JAL` to `QC.E.JAL`.
 
+## PR150071
+
 .global foo
 
 # CHECK-LABEL: <branch_over_relaxable>:
