@@ -62,6 +62,8 @@ static void emitCATTR(raw_ostream &OS, StringRef Name, GOFF::ESDRmode Rmode,
     OS << ',';
     OS << "RMODE(";
     switch (Rmode) {
+    case GOFF::ESD_RMODE_None:
+      llvm_unreachable("");
     case GOFF::ESD_RMODE_24:
       OS << "24";
       break;
@@ -71,8 +73,6 @@ static void emitCATTR(raw_ostream &OS, StringRef Name, GOFF::ESDRmode Rmode,
     case GOFF::ESD_RMODE_64:
       OS << "64";
       break;
-    case GOFF::ESD_RMODE_None:
-      llvm_unreachable("GOFF::ESD_RMODE_None should not be handled here");
     }
     OS << ')';
   }
