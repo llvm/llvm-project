@@ -535,69 +535,136 @@ unsigned GCNSubtarget::getMaxNumVGPRs(const MachineFunction &MF) const {
   return getBaseMaxNumVGPRs(F, MFI.getWavesPerEU());
 }
 
-bool GCNSubtarget::isRealSchedDependency(MachineInstr *DefI, int DefOpIdx,
-                                         MachineInstr *UseI,
-                                         int UseOpIdx) const {
-  // From the (gfx942, for example) ISA:
-  // "Packed 32-bit instructions operate on 2 dwords at a time and those
-  // operands must be two-dword aligned (i.e. an even VGPR address). Output
-  // modifiers are not supported for these instructions. OPSEL and OPSEL_HI work
-  // to select the first or second DWORD for each source."
-  // -> We can save dependencies on VGPRs by analyzing the operand selection.
-  // See also
-  // https://llvm.org/docs/AMDGPUModifierSyntax.html#amdgpu-synid-op-sel
-
-  if (!InstrInfo.isVOP3P(*UseI))
-    return true;
-  MachineOperand &DefOp = DefI->getOperand(DefOpIdx);
-  if (!DefOp.isReg() || !DefOp.getReg().isPhysical())
-    return true;
-  MachineOperand &UseOp = UseI->getOperand(UseOpIdx);
-  if (!UseOp.isReg() || !UseOp.getReg().isPhysical())
-    return true;
-
+// Check to which source operand UseOpIdx points to and return a pointer to the
+// operand of the corresponding source modifier.
+// Return nullptr if UseOpIdx either doesn't point to src0/1/2 or if there is no
+// operand for the corresponding source modifier.
+static MachineOperand *
+getVOP3PSourceModifierFromOpIdx(MachineInstr *UseI, int UseOpIdx,
+                                const SIInstrInfo &InstrInfo) {
   AMDGPU::OpName UseModName;
-  if (AMDGPU::getNamedOperandIdx(UseI->getOpcode(), AMDGPU::OpName::src0) ==
-      UseOpIdx)
+  unsigned UseOpcode = UseI->getOpcode();
+  if (AMDGPU::getNamedOperandIdx(UseOpcode, AMDGPU::OpName::src0) == UseOpIdx)
     UseModName = AMDGPU::OpName::src0_modifiers;
-  else if (AMDGPU::getNamedOperandIdx(UseI->getOpcode(),
-                                      AMDGPU::OpName::src1) == UseOpIdx)
+  else if (AMDGPU::getNamedOperandIdx(UseOpcode, AMDGPU::OpName::src1) ==
+           UseOpIdx)
     UseModName = AMDGPU::OpName::src1_modifiers;
-  else if (AMDGPU::getNamedOperandIdx(UseI->getOpcode(),
-                                      AMDGPU::OpName::src2) == UseOpIdx)
+  else if (AMDGPU::getNamedOperandIdx(UseOpcode, AMDGPU::OpName::src2) ==
+           UseOpIdx)
     UseModName = AMDGPU::OpName::src2_modifiers;
   else
-    return true;
-  MachineOperand *UseOpMod = InstrInfo.getNamedOperand(*UseI, UseModName);
+    return nullptr;
+  return InstrInfo.getNamedOperand(*UseI, UseModName);
+}
+
+// Get the subreg idx of the subreg that is used by the given VOP3P instruction
+// operand, considering the given op_sel and op_sel_hi modifiers.
+static unsigned getUsedVOP3PSubRegIdx(const SIRegisterInfo *TRI,
+                                      const MachineRegisterInfo &MRI,
+                                      const SIInstrInfo &InstrInfo,
+                                      const MachineOperand &Op, int64_t OpSel,
+                                      int64_t OpSelHi) {
+  unsigned RegSize;
+
+  if (InstrInfo.isVOP3PMix(*Op.getParent()))
+    RegSize = OpSelHi ? 32 : 64;
+  else if (unsigned SubRegIdx = Op.getSubReg())
+    RegSize = TRI->getSubRegIdxSize(SubRegIdx);
+  else
+    RegSize = TRI->getRegSizeInBits(Op.getReg(), MRI);
+
+  assert((RegSize == 64 || RegSize == 32) && "unexpected VOP3P operand size");
+
+  switch (RegSize) {
+  case 32:
+    return OpSel ? AMDGPU::hi16 : AMDGPU::lo16;
+  case 64:
+    return OpSel ? AMDGPU::sub1 : AMDGPU::sub0;
+  default:
+    llvm::reportFatalInternalError("currently unsupported VOP3P operand size");
+  }
+}
+
+std::pair<bool, std::optional<Register>>
+GCNSubtarget::getRealSchedDependency(MachineInstr *DefI, int DefOpIdx,
+                                     MachineInstr *UseI, int UseOpIdx) const {
+  if (!InstrInfo.isVOP3P(*UseI) || InstrInfo.isWMMA(*UseI) ||
+      InstrInfo.isSWMMAC(*UseI))
+    return {true, std::nullopt};
+
+  MachineOperand *UseOpMod =
+      getVOP3PSourceModifierFromOpIdx(UseI, UseOpIdx, InstrInfo);
   if (!UseOpMod)
-    return true;
-  // Check whether all parts of the register are being used (= op_sel and
-  // op_sel_hi differ). In that case we can return early.
-  int64_t OpSel = UseOpMod->getImm() & SISrcMods::OP_SEL_0;
-  int64_t OpSelHi = UseOpMod->getImm() & SISrcMods::OP_SEL_1;
-  if ((!OpSel || !OpSelHi) && (OpSel || OpSelHi))
-    return true;
+    return {true, std::nullopt};
+
+  MachineOperand &DefOp = DefI->getOperand(DefOpIdx);
+  MachineOperand &UseOp = UseI->getOperand(UseOpIdx);
+  if (!UseOp.isReg())
+    return {true, std::nullopt};
+  Register DefReg = DefOp.getReg();
+  Register UseReg = UseOp.getReg();
+
+  bool IsVirtual = DefReg.isVirtual() && UseReg.isVirtual();
+  assert((IsVirtual || (DefReg.isPhysical() && UseReg.isPhysical())) &&
+         "register virtual/physical mismatch");
 
   const SIRegisterInfo *TRI = getRegisterInfo();
   const MachineRegisterInfo &MRI = UseI->getParent()->getParent()->getRegInfo();
-  MCRegister DefReg = DefOp.getReg().asMCReg();
-  MCRegister UseReg = UseOp.getReg().asMCReg();
-  // We specifically look for a packed 32bit Use and smaller Def.
-  if (TRI->getRegSizeInBits(UseReg, MRI) != 64 ||
-      TRI->getRegSizeInBits(DefReg, MRI) > 32)
-    return true;
-  SmallVector<MCRegUnit, 2> DefRegUnits(TRI->regunits(DefReg));
-  assert(DefRegUnits.size() <= 2 && "unexpected number of register units");
-  SmallVector<MCRegUnit, 4> UseRegUnits(TRI->regunits(UseReg));
-  assert(UseRegUnits.size() == 4 && "unexpected number of register units");
 
-  auto FindRegunit = [&DefRegUnits](MCRegUnit A, MCRegUnit B) {
-    return llvm::find_if(DefRegUnits, [A, B](MCRegUnit RU) {
-             return RU == A || RU == B;
-           }) != DefRegUnits.end();
-  };
-  return OpSel ? FindRegunit(UseRegUnits[2], UseRegUnits[3])
-               : FindRegunit(UseRegUnits[0], UseRegUnits[1]);
+  // Note: the FMA_MIX* and MAD_MIX* instructions have different semantics for
+  // the op_sel and op_sel_hi source modifiers:
+  // - op_sel: selects low/high operand bits as input to the operation;
+  //           has only meaning for 16-bit source operands
+  // - op_sel_hi: specifies the size of the source operands (16 or 32 bits);
+  //              a value of 0 indicates 32 bit, 1 indicates 16 bit
+  // For the other VOP3P instructions, the semantics are:
+  // - op_sel: selects low/high operand bits as input to the operation which
+  //           results in the lower-half of the destination
+  // - op_sel_hi: selects the low/high operand bits as input to the operation
+  //              which results in the higher-half of the destination
+  int64_t OpSel = UseOpMod->getImm() & SISrcMods::OP_SEL_0;
+  int64_t OpSelHi = UseOpMod->getImm() & SISrcMods::OP_SEL_1;
+  // First, check if all parts of the register are being used (= op_sel and
+  // op_sel_hi differ for VOP3P or op_sel_hi=0 for VOP3PMix). In that case we
+  // can return early.
+  if ((!InstrInfo.isVOP3PMix(*UseI) && (!OpSel || !OpSelHi) &&
+       (OpSel || OpSelHi)) ||
+      (InstrInfo.isVOP3PMix(*UseI) && !OpSelHi)) {
+    // An optimization we can still make: we can restrict the dependency to the
+    // smaller register. At least when we're dealing with physical registers.
+    // For virtual registers, we currently have to stick to the SSA value
+    // itself because we cannot construct a subreg for a virtual register.
+    bool IsDefSmaller = !IsVirtual && TRI->getRegSizeInBits(DefReg, MRI) <=
+                                          TRI->getRegSizeInBits(UseReg, MRI);
+    return {true, IsDefSmaller ? DefReg : UseReg};
+  }
+  // Otherwise, we now know that only one of two parts is being used. This
+  // allows us to return the subreg that is actually being used.
+  unsigned UseSubRegIdx =
+      getUsedVOP3PSubRegIdx(TRI, MRI, InstrInfo, UseOp, OpSel, OpSelHi);
+
+  bool IsRealDep;
+  if (IsVirtual) {
+    // If the definition isn't restricted to a sub-register, there is no point
+    // in further analysis. This check makes only sense for virtual registers
+    // because physical registers may form a tuple and thus be part of a
+    // superregister although they are not a subregister themselves (vgpr0 is a
+    // "subreg" of vgpr0_vgpr1 without being a subreg in itself).
+    unsigned DefSubRegIdx = DefOp.getSubReg();
+    if (!DefSubRegIdx)
+      return {true, std::nullopt};
+    // Get the subreg idx of the selected part of the use.
+    LaneBitmask DefLaneMask = TRI->getSubRegIndexLaneMask(DefSubRegIdx);
+    LaneBitmask UseLaneMask = TRI->getSubRegIndexLaneMask(UseSubRegIdx);
+    IsRealDep = (DefLaneMask & UseLaneMask).any();
+  } else {
+    assert(DefReg.isPhysical() && UseReg.isPhysical());
+
+    MCRegister UseMCReg = TRI->getSubReg(UseReg.asMCReg(), UseSubRegIdx);
+    IsRealDep = TRI->regsOverlap(UseMCReg, DefReg);
+  }
+
+  return {IsRealDep, IsRealDep ? std::optional(DefReg) : std::nullopt};
 }
 
 void GCNSubtarget::adjustSchedDependency(
@@ -610,7 +677,12 @@ void GCNSubtarget::adjustSchedDependency(
   MachineInstr *DefI = Def->getInstr();
   MachineInstr *UseI = Use->getInstr();
 
-  if (!isRealSchedDependency(DefI, DefOpIdx, UseI, UseOpIdx)) {
+  if (const auto &[IsRealDep, Reg] =
+          getRealSchedDependency(DefI, DefOpIdx, UseI, UseOpIdx);
+      IsRealDep) {
+    if (Reg)
+      Dep.setReg(*Reg);
+  } else {
     Dep = SDep(Def, SDep::Artificial);
     return; // this is not a data dependency anymore
   }
