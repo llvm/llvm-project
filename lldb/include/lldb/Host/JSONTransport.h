@@ -143,11 +143,11 @@ protected:
   virtual llvm::Error WriteImpl(const std::string &message) = 0;
   virtual llvm::Expected<std::vector<std::string>> Parse() = 0;
 
+  static constexpr size_t kReadBufferSize = 1024;
+
   lldb::IOObjectSP m_input;
   lldb::IOObjectSP m_output;
-  llvm::SmallString<128> m_buffer;
-
-  static constexpr size_t kReadBufferSize = 1024;
+  llvm::SmallString<kReadBufferSize> m_buffer;
 };
 
 /// A transport class for JSON with a HTTP header.
