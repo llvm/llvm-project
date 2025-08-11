@@ -51,12 +51,12 @@ int main(int argc, char **argv) {
 #endif
 
   pthread_t threads[THREAD_COUNT];
-  for (pthread_t& t : threads)
+  for (pthread_t &t : threads)
     pthread_create(&t, &attr, Thread, 0);
 
   pthread_attr_destroy(&attr);
 
-  for (pthread_t& t : threads)
+  for (pthread_t &t : threads)
     pthread_join(t, 0);
 
   if (misaligned) {
