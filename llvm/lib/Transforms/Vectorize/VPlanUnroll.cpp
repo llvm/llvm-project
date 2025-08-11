@@ -567,7 +567,8 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
                      VPI->getOpcode() != VPInstruction::BuildStructVector))
           continue;
         assert(VPI->getNumOperands() == 1 &&
-               "Build(Struct)Vector must have a single operand before replicating by VF"");
+               "Build(Struct)Vector must have a single operand before "
+               "replicating by VF");
         VPI->setOperand(0, LaneDefs[0]);
         for (VPValue *Def : drop_begin(LaneDefs))
           VPI->addOperand(Def);
