@@ -1949,17 +1949,21 @@ static bool isSafeDependenceDistance(const DataLayout &DL, ScalarEvolution &SE,
 
 /// Check the dependence for two accesses with the same stride \p Stride.
 /// \p Distance is the positive distance in bytes, and \p TypeByteSize is type
-/// size in bytes.
+/// size of source and sink in bytes.
+/// TODO: Relax HasSameSize check in caller.
 ///
 /// \returns true if they are independent.
-static bool areStridedAccessesIndependent(uint64_t Distance, uint64_t Stride,
-                                          uint64_t TypeByteSize) {
+static bool
+areStridedAccessesIndependent(uint64_t Distance, uint64_t Stride,
+                              std::pair<uint64_t, uint64_t> TypeByteSize) {
   assert(Stride > 1 && "The stride must be greater than 1");
-  assert(TypeByteSize > 0 && "The type size in byte must be non-zero");
+  assert(TypeByteSize.first > 0 && TypeByteSize.second > 0 &&
+         "The type size in byte must be non-zero");
   assert(Distance > 0 && "The distance must be non-zero");
 
-  // Skip if the distance is not multiple of type byte size.
-  if (Distance % TypeByteSize)
+  // Skip if the distance is not multiple of type byte size of either source or
+  // sink.
+  if (Distance % TypeByteSize.first || Distance % TypeByteSize.second)
     return false;
 
   // No dependence if the distance is not multiple of the stride.
@@ -2090,14 +2094,12 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
     return MemoryDepChecker::Dependence::Unknown;
   }
 
-  TypeSize AStoreSz = DL.getTypeStoreSize(ATy);
-  TypeSize BStoreSz = DL.getTypeStoreSize(BTy);
-
-  // If store sizes are not the same, set TypeByteSize to zero, so we can check
-  // it in the caller isDependent.
   uint64_t ASz = DL.getTypeAllocSize(ATy);
   uint64_t BSz = DL.getTypeAllocSize(BTy);
-  uint64_t TypeByteSize = (AStoreSz == BStoreSz) ? BSz : 0;
+
+  // Both the source and sink sizes are neeeded in dependence checks, depending
+  // on the use.
+  std::pair<uint64_t, uint64_t> TypeByteSize(ASz, BSz);
 
   uint64_t StrideAScaled = std::abs(StrideAPtrInt) * ASz;
   uint64_t StrideBScaled = std::abs(StrideBPtrInt) * BSz;
@@ -2119,8 +2121,23 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
     return Dependence::Unknown;
   }
 
+  // When the distance is possibly zero, we're reading/writing the same memory
+  // location: if the store sizes are not equal, fail with an unknown
+  // dependence.
+  TypeSize AStoreSz = DL.getTypeStoreSize(ATy);
+  TypeSize BStoreSz = DL.getTypeStoreSize(BTy);
+  if (AStoreSz != BStoreSz && !SE.isKnownNonZero(Dist)) {
+    LLVM_DEBUG(dbgs() << "LAA: possibly zero dependence distance with "
+                         "different type sizes\n");
+    return Dependence::Unknown;
+  }
+
+  // TODO: Remove this.
+  bool HasSameSize = AStoreSz == BStoreSz;
+
   return DepDistanceStrideAndSizeInfo(Dist, MaxStride, CommonStride,
-                                      TypeByteSize, AIsWrite, BIsWrite);
+                                      TypeByteSize, HasSameSize, AIsWrite,
+                                      BIsWrite);
 }
 
 MemoryDepChecker::Dependence::DepType
@@ -2152,9 +2169,8 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
     return std::get<Dependence::DepType>(Res);
   }
 
-  auto &[Dist, MaxStride, CommonStride, TypeByteSize, AIsWrite, BIsWrite] =
-      std::get<DepDistanceStrideAndSizeInfo>(Res);
-  bool HasSameSize = TypeByteSize > 0;
+  auto &[Dist, MaxStride, CommonStride, TypeByteSize, HasSameSize, AIsWrite,
+         BIsWrite] = std::get<DepDistanceStrideAndSizeInfo>(Res);
 
   ScalarEvolution &SE = *PSE.getSE();
   auto &DL = InnermostLoop->getHeader()->getDataLayout();
@@ -2194,13 +2210,8 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   // Negative distances are not plausible dependencies.
   if (SE.isKnownNonPositive(Dist)) {
     if (SE.isKnownNonNegative(Dist)) {
-      if (HasSameSize) {
-        // Write to the same location with the same size.
-        return Dependence::Forward;
-      }
-      LLVM_DEBUG(dbgs() << "LAA: possibly zero dependence difference but "
-                           "different type sizes\n");
-      return Dependence::Unknown;
+      // Write to the same location with the same size.
+      return Dependence::Forward;
     }
 
     bool IsTrueDataDependence = (AIsWrite && !BIsWrite);
@@ -2218,7 +2229,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
                                               : Dependence::Unknown;
       }
       if (!HasSameSize ||
-          couldPreventStoreLoadForward(ConstDist, TypeByteSize)) {
+          couldPreventStoreLoadForward(ConstDist, TypeByteSize.first)) {
         LLVM_DEBUG(
             dbgs() << "LAA: Forward but may prevent st->ld forwarding\n");
         return Dependence::ForwardButPreventsForwarding;
@@ -2284,7 +2295,8 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   // We know that Dist is positive, but it may not be constant. Use the signed
   // minimum for computations below, as this ensures we compute the closest
   // possible dependence distance.
-  uint64_t MinDistanceNeeded = MaxStride * (MinNumIter - 1) + TypeByteSize;
+  uint64_t MinDistanceNeeded =
+      MaxStride * (MinNumIter - 1) + TypeByteSize.first;
   if (MinDistanceNeeded > static_cast<uint64_t>(MinDistance)) {
     if (!ConstDist) {
       // For non-constant distances, we checked the lower bound of the
@@ -2312,14 +2324,15 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
 
   bool IsTrueDataDependence = (!AIsWrite && BIsWrite);
   if (IsTrueDataDependence && EnableForwardingConflictDetection && ConstDist &&
-      couldPreventStoreLoadForward(MinDistance, TypeByteSize, *CommonStride))
+      couldPreventStoreLoadForward(MinDistance, TypeByteSize.first,
+                                   *CommonStride))
     return Dependence::BackwardVectorizableButPreventsForwarding;
 
   uint64_t MaxVF = MinDepDistBytes / MaxStride;
   LLVM_DEBUG(dbgs() << "LAA: Positive min distance " << MinDistance
                     << " with max VF = " << MaxVF << '\n');
 
-  uint64_t MaxVFInBits = MaxVF * TypeByteSize * 8;
+  uint64_t MaxVFInBits = MaxVF * TypeByteSize.first * 8;
   if (!ConstDist && MaxVFInBits < MaxTargetVectorWidthInBits) {
     // For non-constant distances, we checked the lower bound of the dependence
     // distance and the distance may be larger at runtime (and safe for
