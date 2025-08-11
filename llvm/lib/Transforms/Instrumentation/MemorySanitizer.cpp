@@ -2766,7 +2766,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (I.arg_size() == 2)
       SecondArgShadow = getShadow(&I, 1);
 
-    Value *OrShadow = horizontalReduce(I, /*ReductionFactor=*/ 2, FirstArgShadow,
+    Value *OrShadow = horizontalReduce(I, /*ReductionFactor=*/2, FirstArgShadow,
                                        SecondArgShadow);
 
     OrShadow = CreateShadowCast(IRB, OrShadow, getShadowTy(&I));
@@ -2823,11 +2823,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *SecondArgShadow = nullptr;
     if (I.arg_size() == 2) {
       SecondArgShadow = getShadow(&I, 1);
-      SecondArgShadow = IRB.CreateBitCast(SecondArgShadow,
-                                          ReinterpretShadowTy);
+      SecondArgShadow = IRB.CreateBitCast(SecondArgShadow, ReinterpretShadowTy);
     }
 
-    Value *OrShadow = horizontalReduce(I, /*ReductionFactor=*/ 2, FirstArgShadow,
+    Value *OrShadow = horizontalReduce(I, /*ReductionFactor=*/2, FirstArgShadow,
                                        SecondArgShadow);
 
     OrShadow = CreateShadowCast(IRB, OrShadow, getShadowTy(&I));
