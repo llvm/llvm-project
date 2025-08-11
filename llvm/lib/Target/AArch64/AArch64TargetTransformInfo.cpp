@@ -4336,7 +4336,7 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
 }
 
 InstructionCost
-AArch64TTIImpl::getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
+AArch64TTIImpl::getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
                                           const SCEV *Ptr) const {
   // Address computations in vectorized code with non-consecutive addresses will
   // likely result in more instructions compared to scalar code where the
@@ -4345,7 +4345,7 @@ AArch64TTIImpl::getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
   unsigned NumVectorInstToHideOverhead = NeonNonConstStrideOverhead;
   int MaxMergeDistance = 64;
 
-  if (Ty->isVectorTy() && SE &&
+  if (PtrTy->isVectorTy() && SE &&
       !BaseT::isConstantStridedAccessLessThan(SE, Ptr, MaxMergeDistance + 1))
     return NumVectorInstToHideOverhead;
 
@@ -4414,7 +4414,7 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
   }
 
   if (Opcode == Instruction::FCmp) {
-    if (auto Cost = getFP16BF16PromoteCost(
+    if (auto PromotedCost = getFP16BF16PromoteCost(
             ValTy, CostKind, Op1Info, Op2Info, /*IncludeTrunc=*/false,
             [&](Type *PromotedTy) {
               InstructionCost Cost =
@@ -4428,7 +4428,7 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
                     TTI::CastContextHint::None, CostKind);
               return Cost;
             }))
-      return *Cost;
+      return *PromotedCost;
 
     auto LT = getTypeLegalizationCost(ValTy);
     // Model unknown fp compares as a libcall.
