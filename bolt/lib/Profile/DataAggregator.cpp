@@ -614,6 +614,11 @@ Error DataAggregator::readProfile(BinaryContext &BC) {
     convertBranchData(Function);
   }
 
+  for (auto &BFI : BC.getBinaryFunctions()) {
+    BinaryFunction &BF = BFI.second;
+    readSampleData(BF);
+  }
+
   if (opts::AggregateOnly) {
     if (opts::ProfileFormat == opts::ProfileFormatKind::PF_Fdata)
       if (std::error_code EC = writeAggregatedFile(opts::OutputFilename))
@@ -663,6 +668,9 @@ void DataAggregator::processProfile(BinaryContext &BC) {
     llvm::stable_sort(FuncBranches.second.Data);
     llvm::stable_sort(FuncBranches.second.EntryData);
   }
+
+  for (auto &FuncSamples : NamesToSamples)
+    llvm::stable_sort(FuncSamples.second.Data);
 
   for (auto &MemEvents : NamesToMemEvents)
     llvm::stable_sort(MemEvents.second.Data);
