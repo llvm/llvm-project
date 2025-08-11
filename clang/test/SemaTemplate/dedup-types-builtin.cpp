@@ -105,7 +105,7 @@ struct UseAsTemplateWrapper {
                                                // expected-note@* {{template declaration from hidden source}}
 };
 
-// === Check how expansions in various positions of the AST behave.
+// === Check how expansions in various contexts behave.
 // The following cases are not supported yet, should produce an error.
 template <class... T>
 struct DedupBases : __builtin_dedup_pack<T...>... {};

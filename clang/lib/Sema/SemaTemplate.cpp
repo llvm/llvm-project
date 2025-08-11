@@ -5886,7 +5886,7 @@ bool Sema::CheckTemplateArgumentList(
       }
     }
 
-    // Check for builtins producing template packs at this position, we do not
+    // Check for builtins producing template packs in this context, we do not
     // support them yet.
     if (const NonTypeTemplateParmDecl *NTTP =
             dyn_cast<NonTypeTemplateParmDecl>(*Param);
@@ -5901,7 +5901,7 @@ bool Sema::CheckTemplateArgumentList(
         if (!TST)
           continue;
         assert(isPackProducingBuiltinTemplateName(TST->getTemplateName()));
-        // It is not yet supported in many positions.
+        // Expanding a built-in pack in this context is not yet supported.
         Diag(TL.getEllipsisLoc(),
              diag::err_unsupported_builtin_template_pack_expansion)
             << TST->getTemplateName();
