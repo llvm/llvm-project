@@ -17,6 +17,7 @@
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinDialect.td"
 include "mlir/IR/BuiltinTypeInterfaces.td"
+include "mlir/IR/QuantizationInterface.td"
 include "mlir/IR/CommonTypeConstraints.td"
 
 // TODO: Currently the types defined in this file are prefixed with `Builtin_`.
@@ -501,7 +502,7 @@ def Builtin_Index : Builtin_Type<"Index", "index",
 //===----------------------------------------------------------------------===//
 
 def Builtin_Integer : Builtin_Type<"Integer", "integer",
-    [VectorElementTypeInterface]> {
+    [VectorElementTypeInterface, QuantizationInterface]> {
   let summary = "Integer type with arbitrary precision up to a fixed limit";
   let description = [{
     Syntax:
@@ -558,6 +559,32 @@ def Builtin_Integer : Builtin_Type<"Integer", "integer",
     /// Integer representation maximal bitwidth.
     /// Note: This is aligned with the maximum width of llvm::IntegerType.
     static constexpr unsigned kMaxWidth = (1 << 24) - 1;
+
+    /// QuantizationInterface method implementations
+    /// Return true if this is a signed integer type.
+    bool isStorageSigned() const { return !isUnsigned(); }
+    /// Get the bit width of this integer type.
+    unsigned getStorageWidth() const { return getWidth(); }
+    
+    /// Get default minimum value for this integer type.
+    int64_t getDefaultMinimum() const {
+      if (isStorageSigned()) {
+        return llvm::minIntN(getStorageWidth());
+      }
+      return 0;
+    }
+    /// Get default maximum value for this integer type.
+    int64_t getDefaultMaximum() const {
+      if (isStorageSigned()) {
+        return llvm::maxIntN(getStorageWidth());
+      }
+      return llvm::maxUIntN(getStorageWidth());
+    }
+    
+    /// Get the storage type as a string.
+    std::string getStorageType() const {
+      return (isStorageSigned() ? "i" : "u") + std::to_string(getWidth());
+    }
   }];
 }
 
