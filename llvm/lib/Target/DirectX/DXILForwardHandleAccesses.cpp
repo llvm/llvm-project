@@ -89,7 +89,7 @@ static bool forwardHandleAccesses(Function &F, DominatorTree &DT) {
         case Intrinsic::lifetime_end:
           if (II->arg_size() >= 1) {
             Value *Ptr = II->getArgOperand(0);
-            if (auto *Alloca = dyn_cast<AllocaInst>(Ptr->stripPointerCasts()))
+            if (auto *Alloca = dyn_cast<AllocaInst>(Ptr))
               LifeTimeIntrinsicMap[Alloca].push_back(II);
           }
           break;
