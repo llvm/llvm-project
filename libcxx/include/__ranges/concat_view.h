@@ -111,7 +111,7 @@ concept __concat_is_bidirectional =
     (__all_bidirectional<_Const, _Rs...>) && (__all_common_ignore_last<_Const, _Rs...>::value);
 
 template <input_range... _Views>
-  requires(view<_Views> && ...) && (sizeof...(_Views) > 0) && __concatable<_Views...>
+  requires((view<_Views> && ...) && (sizeof...(_Views) > 0) && __concatable<_Views...>)
 class concat_view : public view_interface<concat_view<_Views...>> {
   tuple<_Views...> __views_;
 
@@ -210,7 +210,7 @@ public:
 };
 
 template <input_range... _Views>
-  requires(view<_Views> && ...) && (sizeof...(_Views) > 0) && __concatable<_Views...>
+  requires((view<_Views> && ...) && (sizeof...(_Views) > 0) && __concatable<_Views...>)
 template <bool _Const>
 class concat_view<_Views...>::__iterator : public __concat_view_iterator_category<_Const, _Views...> {
 public:
