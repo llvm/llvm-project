@@ -213,9 +213,9 @@ struct SimplifyAllocConst : public OpRewritePattern<AllocLikeOp> {
     assert(dynamicSizes.size() == newMemRefType.getNumDynamicDims());
 
     // Create and insert the alloc op for the new memref.
-    auto newAlloc = rewriter.create<AllocLikeOp>(
-        alloc.getLoc(), newMemRefType, dynamicSizes, alloc.getSymbolOperands(),
-        alloc.getAlignmentAttr());
+    auto newAlloc = AllocLikeOp::create(rewriter, alloc.getLoc(), newMemRefType,
+                                        dynamicSizes, alloc.getSymbolOperands(),
+                                        alloc.getAlignmentAttr());
     // Insert a cast so we have the same type as the old alloc.
     rewriter.replaceOpWithNewOp<CastOp>(alloc, alloc.getType(), newAlloc);
     return success();
@@ -715,51 +715,6 @@ OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 namespace {
-/// If the source/target of a CopyOp is a CastOp that does not modify the shape
-/// and element type, the cast can be skipped. Such CastOps only cast the layout
-/// of the type.
-struct FoldCopyOfCast : public OpRewritePattern<CopyOp> {
-  using OpRewritePattern<CopyOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(CopyOp copyOp,
-                                PatternRewriter &rewriter) const override {
-    bool modified = false;
-
-    // Check source.
-    if (auto castOp = copyOp.getSource().getDefiningOp<CastOp>()) {
-      auto fromType = llvm::dyn_cast<MemRefType>(castOp.getSource().getType());
-      auto toType = llvm::dyn_cast<MemRefType>(castOp.getSource().getType());
-
-      if (fromType && toType) {
-        if (fromType.getShape() == toType.getShape() &&
-            fromType.getElementType() == toType.getElementType()) {
-          rewriter.modifyOpInPlace(copyOp, [&] {
-            copyOp.getSourceMutable().assign(castOp.getSource());
-          });
-          modified = true;
-        }
-      }
-    }
-
-    // Check target.
-    if (auto castOp = copyOp.getTarget().getDefiningOp<CastOp>()) {
-      auto fromType = llvm::dyn_cast<MemRefType>(castOp.getSource().getType());
-      auto toType = llvm::dyn_cast<MemRefType>(castOp.getSource().getType());
-
-      if (fromType && toType) {
-        if (fromType.getShape() == toType.getShape() &&
-            fromType.getElementType() == toType.getElementType()) {
-          rewriter.modifyOpInPlace(copyOp, [&] {
-            copyOp.getTargetMutable().assign(castOp.getSource());
-          });
-          modified = true;
-        }
-      }
-    }
-
-    return success(modified);
-  }
-};
 
 /// Fold memref.copy(%x, %x).
 struct FoldSelfCopy : public OpRewritePattern<CopyOp> {
@@ -797,22 +752,28 @@ struct FoldEmptyCopy final : public OpRewritePattern<CopyOp> {
 
 void CopyOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
-  results.add<FoldCopyOfCast, FoldEmptyCopy, FoldSelfCopy>(context);
+  results.add<FoldEmptyCopy, FoldSelfCopy>(context);
 }
 
-LogicalResult CopyOp::fold(FoldAdaptor adaptor,
-                           SmallVectorImpl<OpFoldResult> &results) {
-  /// copy(memrefcast) -> copy
-  bool folded = false;
-  Operation *op = *this;
+/// If the source/target of a CopyOp is a CastOp that does not modify the shape
+/// and element type, the cast can be skipped. Such CastOps only cast the layout
+/// of the type.
+static LogicalResult FoldCopyOfCast(CopyOp op) {
   for (OpOperand &operand : op->getOpOperands()) {
     auto castOp = operand.get().getDefiningOp<memref::CastOp>();
     if (castOp && memref::CastOp::canFoldIntoConsumerOp(castOp)) {
       operand.set(castOp.getOperand());
-      folded = true;
+      return success();
     }
   }
-  return success(folded);
+  return failure();
+}
+
+LogicalResult CopyOp::fold(FoldAdaptor adaptor,
+                           SmallVectorImpl<OpFoldResult> &results) {
+
+  /// copy(memrefcast) -> copy
+  return FoldCopyOfCast(*this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -836,7 +797,7 @@ void DimOp::getAsmResultNames(function_ref<void(Value, StringRef)> setNameFn) {
 void DimOp::build(OpBuilder &builder, OperationState &result, Value source,
                   int64_t index) {
   auto loc = result.location;
-  Value indexValue = builder.create<arith::ConstantIndexOp>(loc, index);
+  Value indexValue = arith::ConstantIndexOp::create(builder, loc, index);
   build(builder, result, source, indexValue);
 }
 
@@ -1083,9 +1044,9 @@ struct DimOfMemRefReshape : public OpRewritePattern<DimOp> {
     rewriter.setInsertionPointAfter(reshape);
     Location loc = dim.getLoc();
     Value load =
-        rewriter.create<LoadOp>(loc, reshape.getShape(), dim.getIndex());
+        LoadOp::create(rewriter, loc, reshape.getShape(), dim.getIndex());
     if (load.getType() != dim.getType())
-      load = rewriter.create<arith::IndexCastOp>(loc, dim.getType(), load);
+      load = arith::IndexCastOp::create(rewriter, loc, dim.getType(), load);
     rewriter.replaceOp(dim, load);
     return success();
   }
@@ -1358,8 +1319,9 @@ static bool replaceConstantUsesOf(OpBuilder &rewriter, Location loc,
     assert(isa<Attribute>(maybeConstant) &&
            "The constified value should be either unchanged (i.e., == result) "
            "or a constant");
-    Value constantVal = rewriter.create<arith::ConstantIndexOp>(
-        loc, llvm::cast<IntegerAttr>(cast<Attribute>(maybeConstant)).getInt());
+    Value constantVal = arith::ConstantIndexOp::create(
+        rewriter, loc,
+        llvm::cast<IntegerAttr>(cast<Attribute>(maybeConstant)).getInt());
     for (Operation *op : llvm::make_early_inc_range(result.getUsers())) {
       // modifyOpInPlace: lambda cannot capture structured bindings in C++17
       // yet.
@@ -2587,8 +2549,9 @@ public:
       rewriter.modifyOpInPlace(
           op, [&]() { op.getSrcMutable().assign(cast.getSource()); });
     } else {
-      Value newOp = rewriter.create<CollapseShapeOp>(
-          op->getLoc(), cast.getSource(), op.getReassociationIndices());
+      Value newOp =
+          CollapseShapeOp::create(rewriter, op->getLoc(), cast.getSource(),
+                                  op.getReassociationIndices());
       rewriter.replaceOpWithNewOp<CastOp>(op, op.getType(), newOp);
     }
     return success();
@@ -3045,15 +3008,15 @@ SmallVector<Range, 8> mlir::getOrCreateRanges(OffsetSizeAndStrideOpInterface op,
     Value offset =
         op.isDynamicOffset(idx)
             ? op.getDynamicOffset(idx)
-            : b.create<arith::ConstantIndexOp>(loc, op.getStaticOffset(idx));
+            : arith::ConstantIndexOp::create(b, loc, op.getStaticOffset(idx));
     Value size =
         op.isDynamicSize(idx)
             ? op.getDynamicSize(idx)
-            : b.create<arith::ConstantIndexOp>(loc, op.getStaticSize(idx));
+            : arith::ConstantIndexOp::create(b, loc, op.getStaticSize(idx));
     Value stride =
         op.isDynamicStride(idx)
             ? op.getDynamicStride(idx)
-            : b.create<arith::ConstantIndexOp>(loc, op.getStaticStride(idx));
+            : arith::ConstantIndexOp::create(b, loc, op.getStaticStride(idx));
     res.emplace_back(Range{offset, size, stride});
   }
   return res;
@@ -3212,8 +3175,8 @@ public:
     if (!resultType)
       return failure();
 
-    Value newSubView = rewriter.create<SubViewOp>(
-        subViewOp.getLoc(), resultType, castOp.getSource(),
+    Value newSubView = SubViewOp::create(
+        rewriter, subViewOp.getLoc(), resultType, castOp.getSource(),
         subViewOp.getOffsets(), subViewOp.getSizes(), subViewOp.getStrides(),
         subViewOp.getStaticOffsets(), subViewOp.getStaticSizes(),
         subViewOp.getStaticStrides());
@@ -3534,9 +3497,9 @@ struct ViewOpShapeFolder : public OpRewritePattern<ViewOp> {
       return failure();
 
     // Create new ViewOp.
-    auto newViewOp = rewriter.create<ViewOp>(
-        viewOp.getLoc(), newMemRefType, viewOp.getOperand(0),
-        viewOp.getByteShift(), newOperands);
+    auto newViewOp = ViewOp::create(rewriter, viewOp.getLoc(), newMemRefType,
+                                    viewOp.getOperand(0), viewOp.getByteShift(),
+                                    newOperands);
     // Insert a cast so we have the same type as the old memref type.
     rewriter.replaceOpWithNewOp<CastOp>(viewOp, viewOp.getType(), newViewOp);
     return success();

@@ -51,8 +51,6 @@ struct s {
 };
 
 EVAL_EXPR(19, ((int)&*(char*)10 == 10 ? 1 : -1));
-// ref-error@-1 {{expression is not an integer constant expression}} \
-// ref-note@-1 {{dereferencing a null pointer}}
 
 #ifndef NEW_INTERP
 EVAL_EXPR(20, __builtin_constant_p(*((int*) 10)));
@@ -182,6 +180,9 @@ typedef __INTPTR_TYPE__ intptr_t;
 const intptr_t A = (intptr_t)(((int*) 0) + 1);
 const intptr_t B = (intptr_t)(((char*)0) + 3);
 _Static_assert(A > B, "");
+int * GH149500_p = &(*(int *)0x400);
+static const void *GH149500_q = &(*(const struct sysrq_key_op *)0);
+
 #else
 #error :(
 #endif

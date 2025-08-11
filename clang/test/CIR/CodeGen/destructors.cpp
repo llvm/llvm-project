@@ -31,11 +31,11 @@ out_of_line_destructor::~out_of_line_destructor() {
 // OGCG:   ret void
 
 // CIR: cir.func dso_local @_ZN22out_of_line_destructorD1Ev(%{{.+}}: !cir.ptr<!rec_out_of_line_destructor>
-// CIR:  cir.call @_Z13some_functionv() nothrow : () -> ()
+// CIR:  cir.call @_ZN22out_of_line_destructorD2Ev(%{{.*}}) nothrow : (!cir.ptr<!rec_out_of_line_destructor>)
 // CIR:  cir.return
 
 // LLVM: define dso_local void @_ZN22out_of_line_destructorD1Ev(ptr %{{.+}})
-// LLVM:   call void @_Z13some_functionv()
+// LLVM:   call void @_ZN22out_of_line_destructorD2Ev
 // LLVM:   ret void
 
 // OGCG: define dso_local void @_ZN22out_of_line_destructorD1Ev(ptr {{.*}}%{{.+}})

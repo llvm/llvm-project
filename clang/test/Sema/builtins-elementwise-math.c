@@ -386,6 +386,96 @@ void test_builtin_elementwise_minimum(int i, short s, float f, double d, float4 
   // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was '_Complex float')}}
 }
 
+void test_builtin_elementwise_maximumnum(int i, short s, float f, double d, float4 fv, double4 dv, int3 iv, unsigned3 uv, int *p) {
+  i = __builtin_elementwise_maximumnum(p, d);
+  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'int *')}}
+
+  struct Foo foo = __builtin_elementwise_maximumnum(d, d);
+  // expected-error@-1 {{initializing 'struct Foo' with an expression of incompatible type 'double'}}
+
+  i = __builtin_elementwise_maximumnum(i);
+  // expected-error@-1 {{too few arguments to function call, expected 2, have 1}}
+
+  i = __builtin_elementwise_maximumnum();
+  // expected-error@-1 {{too few arguments to function call, expected 2, have 0}}
+
+  i = __builtin_elementwise_maximumnum(i, i, i);
+  // expected-error@-1 {{too many arguments to function call, expected 2, have 3}}
+
+  i = __builtin_elementwise_maximumnum(fv, iv);
+  // expected-error@-1 {{arguments are of different types ('float4' (vector of 4 'float' values) vs 'int3' (vector of 3 'int' values))}}
+
+  i = __builtin_elementwise_maximumnum(uv, iv);
+  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'unsigned3' (vector of 3 'unsigned int' values))}}
+
+  dv = __builtin_elementwise_maximumnum(fv, dv);
+  // expected-error@-1 {{arguments are of different types ('float4' (vector of 4 'float' values) vs 'double4' (vector of 4 'double' values))}}
+
+  d = __builtin_elementwise_maximumnum(f, d);
+  // expected-error@-1 {{arguments are of different types ('float' vs 'double')}}
+
+  fv = __builtin_elementwise_maximumnum(fv, fv);
+
+  i = __builtin_elementwise_maximumnum(iv, iv);
+  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'int3' (vector of 3 'int' values))}}
+
+  i = __builtin_elementwise_maximumnum(i, i);
+  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'int')}}
+
+  int A[10];
+  A = __builtin_elementwise_maximumnum(A, A);
+  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'int *')}}
+
+  _Complex float c1, c2;
+  c1 = __builtin_elementwise_maximumnum(c1, c2);
+  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was '_Complex float')}}
+}
+
+void test_builtin_elementwise_minimumnum(int i, short s, float f, double d, float4 fv, double4 dv, int3 iv, unsigned3 uv, int *p) {
+  i = __builtin_elementwise_minimumnum(p, d);
+  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'int *')}}
+
+  struct Foo foo = __builtin_elementwise_minimumnum(d, d);
+  // expected-error@-1 {{initializing 'struct Foo' with an expression of incompatible type 'double'}}
+
+  i = __builtin_elementwise_minimumnum(i);
+  // expected-error@-1 {{too few arguments to function call, expected 2, have 1}}
+
+  i = __builtin_elementwise_minimumnum();
+  // expected-error@-1 {{too few arguments to function call, expected 2, have 0}}
+
+  i = __builtin_elementwise_minimumnum(i, i, i);
+  // expected-error@-1 {{too many arguments to function call, expected 2, have 3}}
+
+  i = __builtin_elementwise_minimumnum(fv, iv);
+  // expected-error@-1 {{arguments are of different types ('float4' (vector of 4 'float' values) vs 'int3' (vector of 3 'int' values))}}
+
+  i = __builtin_elementwise_minimumnum(uv, iv);
+  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'unsigned3' (vector of 3 'unsigned int' values))}}
+
+  dv = __builtin_elementwise_minimumnum(fv, dv);
+  // expected-error@-1 {{arguments are of different types ('float4' (vector of 4 'float' values) vs 'double4' (vector of 4 'double' values))}}
+
+  d = __builtin_elementwise_minimumnum(f, d);
+  // expected-error@-1 {{arguments are of different types ('float' vs 'double')}}
+
+  fv = __builtin_elementwise_minimumnum(fv, fv);
+
+  i = __builtin_elementwise_minimumnum(iv, iv);
+  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'int3' (vector of 3 'int' values))}}
+
+  i = __builtin_elementwise_minimumnum(i, i);
+  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'int')}}
+
+  int A[10];
+  A = __builtin_elementwise_minimumnum(A, A);
+  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'int *')}}
+
+  _Complex float c1, c2;
+  c1 = __builtin_elementwise_minimumnum(c1, c2);
+  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was '_Complex float')}}
+}
+
 void test_builtin_elementwise_bitreverse(int i, float f, double d, float4 v, int3 iv, unsigned u, unsigned4 uv) {
 
   struct Foo s = __builtin_elementwise_bitreverse(i);

@@ -214,7 +214,7 @@ static constexpr bool can_make_from_tuple =
 template <class T, class Tuple>
 auto test_make_from_tuple_impl(T&&, Tuple&& t)
     -> decltype(std::__make_from_tuple_impl<T>(
-                    t, typename std::__make_tuple_indices< std::tuple_size_v<std::remove_reference_t<Tuple>>>::type{}),
+                    t, typename std::make_index_sequence<std::tuple_size_v<std::remove_reference_t<Tuple>>>()),
                 std::uint8_t()) {
   return 0;
 }

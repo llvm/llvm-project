@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti -mattr=-promote-alloca -verify-machineinstrs < %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-promote-alloca -verify-machineinstrs < %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti -mattr=-promote-alloca < %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-promote-alloca < %s
 
 ; Test that INSERT_SUBREG instructions don't have non-register operands after
 ; instruction selection.

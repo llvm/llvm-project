@@ -627,6 +627,14 @@ const MFMA_F8F6F4_Info *getMFMA_F8F6F4_WithFormatArgs(unsigned CBSZ,
                                                       unsigned BLGP,
                                                       unsigned F8F8Opcode);
 
+LLVM_READNONE
+uint8_t wmmaScaleF8F6F4FormatToNumRegs(unsigned Fmt);
+
+LLVM_READONLY
+const MFMA_F8F6F4_Info *getWMMA_F8F6F4_WithFormatArgs(unsigned FmtA,
+                                                      unsigned FmtB,
+                                                      unsigned F8F8Opcode);
+
 LLVM_READONLY
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,
                                                   uint8_t NumComponents,
@@ -1003,6 +1011,12 @@ bool isReadOnlySegment(const GlobalValue *GV);
 /// \returns True if constants should be emitted to .text section for given
 /// target triple \p TT, false otherwise.
 bool shouldEmitConstantsToTextSection(const Triple &TT);
+
+/// Returns a valid charcode or 0 in the first entry if this is a valid physical
+/// register constraint. Followed by the start register number, and the register
+/// width. Does not validate the number of registers exists in the class.
+std::tuple<char, unsigned, unsigned>
+parseAsmConstraintPhysReg(StringRef Constraint);
 
 /// \returns Integer value requested using \p F's \p Name attribute.
 ///
@@ -1423,7 +1437,8 @@ constexpr bool isShader(CallingConv::ID CC) {
 
 LLVM_READNONE
 constexpr bool isGraphics(CallingConv::ID CC) {
-  return isShader(CC) || CC == CallingConv::AMDGPU_Gfx;
+  return isShader(CC) || CC == CallingConv::AMDGPU_Gfx ||
+         CC == CallingConv::AMDGPU_Gfx_WholeWave;
 }
 
 LLVM_READNONE
@@ -1627,6 +1642,7 @@ inline unsigned getOperandSize(const MCOperandInfo &OpInfo) {
   case AMDGPU::OPERAND_REG_IMM_V2INT16:
   case AMDGPU::OPERAND_REG_IMM_V2BF16:
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
     return 2;
 
   default:
@@ -1693,6 +1709,8 @@ bool isArgPassedInSGPR(const Argument *Arg);
 
 bool isArgPassedInSGPR(const CallBase *CB, unsigned ArgNo);
 
+LLVM_READONLY bool isPackedFP32Inst(unsigned Opc);
+
 LLVM_READONLY
 bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
                                       int64_t EncodedOffset);
@@ -1747,6 +1765,9 @@ bool isIntrinsicSourceOfDivergence(unsigned IntrID);
 
 /// \returns true if the intrinsic is uniform
 bool isIntrinsicAlwaysUniform(unsigned IntrID);
+
+/// \returns true if a memory instruction supports scale_offset modifier.
+bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode);
 
 /// \returns lds block size in terms of dwords. \p
 /// This is used to calculate the lds size encoded for PAL metadata 3.0+ which

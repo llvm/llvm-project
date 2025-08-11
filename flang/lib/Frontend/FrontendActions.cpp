@@ -164,8 +164,9 @@ static void addDependentLibs(mlir::ModuleOp mlirModule, CompilerInstance &ci) {
   // Add linker options specified by --dependent-lib
   auto builder = mlir::OpBuilder(mlirModule.getRegion());
   for (const std::string &lib : libs) {
-    builder.create<mlir::LLVM::LinkerOptionsOp>(
-        mlirModule.getLoc(), builder.getStrArrayAttr({"/DEFAULTLIB:" + lib}));
+    mlir::LLVM::LinkerOptionsOp::create(
+        builder, mlirModule.getLoc(),
+        builder.getStrArrayAttr({"/DEFAULTLIB:" + lib}));
   }
 }
 

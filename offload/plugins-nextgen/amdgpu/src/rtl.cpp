@@ -1115,6 +1115,18 @@ private:
     return Plugin::success();
   }
 
+  /// Complete pending post actions until and including the event in target
+  /// slot.
+  Error completeUntil(uint32_t TargetSlot) {
+    for (uint32_t Slot = 0; Slot <= TargetSlot; ++Slot) {
+      // Take the post action of the operation if any.
+      if (auto Err = Slots[Slot].performAction())
+        return Err;
+    }
+
+    return Plugin::success();
+  }
+
   /// Make the current stream wait on a specific operation of another stream.
   /// The idea is to make the current stream waiting on two signals: 1) the last
   /// signal of the current stream, and 2) the last signal of the other stream.
@@ -1502,6 +1514,11 @@ public:
     return complete();
   }
 
+  /// Synchronize the stream until the given event. The current thread waits
+  /// until the provided event is finalized, and it performs the pending post
+  /// actions for that and prior events.
+  Error synchronizeOn(AMDGPUEventTy &Event);
+
   /// Query the stream and complete pending post actions if operations finished.
   /// Return whether all the operations completed. This operation does not block
   /// the calling thread.
@@ -1575,6 +1592,21 @@ struct AMDGPUEventTy {
     return Stream.waitEvent(*this);
   }
 
+  Error sync() {
+    std::lock_guard<std::mutex> Lock(Mutex);
+
+    if (!RecordedStream)
+      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                           "event does not have any recorded stream");
+
+    // No need to wait on anything, the recorded stream already finished the
+    // corresponding operation.
+    if (RecordedSlot < 0)
+      return Plugin::success();
+
+    return RecordedStream->synchronizeOn(*this);
+  }
+
 protected:
   /// The stream registered in this event.
   AMDGPUStreamTy *RecordedStream;
@@ -1628,6 +1660,27 @@ Error AMDGPUStreamTy::waitEvent(const AMDGPUEventTy &Event) {
 
   // Otherwise, make the current stream wait on the other stream's operation.
   return waitOnStreamOperation(RecordedStream, Event.RecordedSlot);
+}
+
+Error AMDGPUStreamTy::synchronizeOn(AMDGPUEventTy &Event) {
+  std::lock_guard<std::mutex> Lock(Mutex);
+
+  // If this event was for an older sync cycle, it has already been finalized
+  if (Event.RecordedSyncCycle < SyncCycle)
+    return Plugin::success();
+  assert(Event.RecordedSyncCycle == SyncCycle && "event is from the future?");
+
+  // Wait until the requested slot has completed
+  if (auto Err = Slots[Event.RecordedSlot].Signal->wait(
+          StreamBusyWaitMicroseconds, &Device))
+    return Err;
+
+  // If the event is the last one in the stream, just do a full finalize
+  if (Event.RecordedSlot == last())
+    return complete();
+
+  // Otherwise, only finalize until the appropriate event
+  return completeUntil(Event.RecordedSlot);
 }
 
 struct AMDGPUStreamManagerTy final
@@ -2179,16 +2232,11 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   /// Get the stream of the asynchronous info structure or get a new one.
   Error getStream(AsyncInfoWrapperTy &AsyncInfoWrapper,
                   AMDGPUStreamTy *&Stream) {
-    // Get the stream (if any) from the async info.
-    Stream = AsyncInfoWrapper.getQueueAs<AMDGPUStreamTy *>();
-    if (!Stream) {
-      // There was no stream; get an idle one.
-      if (auto Err = AMDGPUStreamManager.getResource(Stream))
-        return Err;
-
-      // Modify the async info's stream.
-      AsyncInfoWrapper.setQueueAs<AMDGPUStreamTy *>(Stream);
-    }
+    auto WrapperStream =
+        AsyncInfoWrapper.getOrInitQueue<AMDGPUStreamTy *>(AMDGPUStreamManager);
+    if (!WrapperStream)
+      return WrapperStream.takeError();
+    Stream = *WrapperStream;
     return Plugin::success();
   }
 
@@ -2243,7 +2291,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
 
   /// Synchronize current thread with the pending operations on the async info.
-  Error synchronizeImpl(__tgt_async_info &AsyncInfo) override {
+  Error synchronizeImpl(__tgt_async_info &AsyncInfo,
+                        bool ReleaseQueue) override {
     AMDGPUStreamTy *Stream =
         reinterpret_cast<AMDGPUStreamTy *>(AsyncInfo.Queue);
     assert(Stream && "Invalid stream");
@@ -2254,8 +2303,11 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     // Once the stream is synchronized, return it to stream pool and reset
     // AsyncInfo. This is to make sure the synchronization only works for its
     // own tasks.
-    AsyncInfo.Queue = nullptr;
-    return AMDGPUStreamManager.returnResource(Stream);
+    if (ReleaseQueue) {
+      AsyncInfo.Queue = nullptr;
+      return AMDGPUStreamManager.returnResource(Stream);
+    }
+    return Plugin::success();
   }
 
   /// Query for the completion of the pending operations on the async info.
@@ -2538,10 +2590,21 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return Event->wait(*Stream);
   }
 
+  Expected<bool> hasPendingWorkImpl(AsyncInfoWrapperTy &AsyncInfo) override {
+    auto Stream = AsyncInfo.getQueueAs<AMDGPUStreamTy *>();
+    if (!Stream)
+      return false;
+
+    auto Query = Stream->query();
+    if (Query)
+      return !*Query;
+    return Query.takeError();
+  }
+
   /// Synchronize the current thread with the event.
   Error syncEventImpl(void *EventPtr) override {
-    return Plugin::error(ErrorCode::UNIMPLEMENTED,
-                         "synchronize event not implemented");
+    AMDGPUEventTy *Event = reinterpret_cast<AMDGPUEventTy *>(EventPtr);
+    return Event->sync();
   }
 
   /// Print information about the device.
@@ -2562,7 +2625,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     Status2 = hsa_system_get_info(HSA_SYSTEM_INFO_VERSION_MINOR, &Minor);
     if (Status == HSA_STATUS_SUCCESS && Status2 == HSA_STATUS_SUCCESS)
       Info.add("HSA Runtime Version",
-               std::to_string(Major) + "." + std::to_string(Minor));
+               std::to_string(Major) + "." + std::to_string(Minor), "",
+               DeviceInfo::DRIVER_VERSION);
 
     Info.add("HSA OpenMP Device Number", DeviceId);
 
@@ -2572,11 +2636,11 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     Status = getDeviceAttrRaw(HSA_AGENT_INFO_NAME, TmpChar);
     if (Status == HSA_STATUS_SUCCESS)
-      Info.add("Device Name", TmpChar);
+      Info.add("Device Name", TmpChar, "", DeviceInfo::NAME);
 
     Status = getDeviceAttrRaw(HSA_AGENT_INFO_VENDOR_NAME, TmpChar);
     if (Status == HSA_STATUS_SUCCESS)
-      Info.add("Vendor Name", TmpChar);
+      Info.add("Vendor Name", TmpChar, "", DeviceInfo::VENDOR);
 
     hsa_device_type_t DevType;
     Status = getDeviceAttrRaw(HSA_AGENT_INFO_DEVICE, DevType);
@@ -2648,11 +2712,14 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     Status = getDeviceAttrRaw(HSA_AGENT_INFO_WORKGROUP_MAX_SIZE, TmpUInt);
     if (Status == HSA_STATUS_SUCCESS)
-      Info.add("Workgroup Max Size", TmpUInt);
+      Info.add("Workgroup Max Size", TmpUInt, "",
+               DeviceInfo::MAX_WORK_GROUP_SIZE);
 
     Status = getDeviceAttrRaw(HSA_AGENT_INFO_WORKGROUP_MAX_DIM, WorkgrpMaxDim);
     if (Status == HSA_STATUS_SUCCESS) {
-      auto &MaxSize = *Info.add("Workgroup Max Size per Dimension");
+      auto &MaxSize =
+          *Info.add("Workgroup Max Size per Dimension", std::monostate{}, "",
+                    DeviceInfo::MAX_WORK_GROUP_SIZE_PER_DIMENSION);
       MaxSize.add("x", WorkgrpMaxDim[0]);
       MaxSize.add("y", WorkgrpMaxDim[1]);
       MaxSize.add("z", WorkgrpMaxDim[2]);
@@ -2886,6 +2953,40 @@ private:
       return Plugin::success();
     }
     return Plugin::success();
+  }
+
+  bool checkIfCoarseGrainMemoryNearOrAbove64GB() {
+    for (AMDGPUMemoryPoolTy *Pool : AllMemoryPools) {
+      if (!Pool->isGlobal() || !Pool->isCoarseGrained())
+        continue;
+      uint64_t Value;
+      hsa_status_t Status =
+          Pool->getAttrRaw(HSA_AMD_MEMORY_POOL_INFO_SIZE, Value);
+      if (Status != HSA_STATUS_SUCCESS)
+        continue;
+      constexpr uint64_t Almost64Gig = 0xFF0000000;
+      if (Value >= Almost64Gig)
+        return true;
+    }
+    return false; // CoarseGrain pool w/ 64GB or more capacity not found
+  }
+
+  size_t getMemoryManagerSizeThreshold() override {
+    // Targeting high memory capacity GPUs such as
+    // data center GPUs.
+    if (checkIfCoarseGrainMemoryNearOrAbove64GB()) {
+      // Set GenericDeviceTy::MemoryManager's Threshold to 3GiB,
+      // if threshold is not already set by ENV var
+      // LIBOMPTARGET_MEMORY_MANAGER_THRESHOLD.
+      // This MemoryManager is used for omp_target_alloc(), OpenMP
+      // (non-usm) map clause, etc.
+      //
+      // Ideally, this kind of pooling is best performed at
+      // a common level (e.g, user side of HSA) between OpenMP and HIP
+      // but that feature does not exist (yet).
+      return 3ul * 1024 * 1024 * 1024 /* 3 GiB */;
+    }
+    return 0;
   }
 
   /// Envar for controlling the number of HSA queues per device. High number of

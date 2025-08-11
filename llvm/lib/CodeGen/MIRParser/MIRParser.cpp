@@ -504,13 +504,21 @@ bool MIRParserImpl::initializeCallSiteInfo(
         return error(Error, ArgRegPair.Reg.SourceRange);
       CSInfo.ArgRegPairs.emplace_back(Reg, ArgRegPair.ArgNo);
     }
+    if (!YamlCSInfo.CalleeTypeIds.empty()) {
+      for (auto CalleeTypeId : YamlCSInfo.CalleeTypeIds) {
+        IntegerType *Int64Ty = Type::getInt64Ty(Context);
+        CSInfo.CalleeTypeIds.push_back(ConstantInt::get(Int64Ty, CalleeTypeId,
+                                                        /*isSigned=*/false));
+      }
+    }
 
-    if (TM.Options.EmitCallSiteInfo)
+    if (TM.Options.EmitCallSiteInfo || TM.Options.EmitCallGraphSection)
       MF.addCallSiteInfo(&*CallI, std::move(CSInfo));
   }
 
-  if (YamlMF.CallSitesInfo.size() && !TM.Options.EmitCallSiteInfo)
-    return error(Twine("Call site info provided but not used"));
+  if (!YamlMF.CallSitesInfo.empty() &&
+      !(TM.Options.EmitCallSiteInfo || TM.Options.EmitCallGraphSection))
+    return error("call site info provided but not used");
   return false;
 }
 
@@ -521,7 +529,7 @@ void MIRParserImpl::setupDebugValueTracking(
   unsigned MaxInstrNum = 0;
   for (auto &MBB : MF)
     for (auto &MI : MBB)
-      MaxInstrNum = std::max((unsigned)MI.peekDebugInstrNum(), MaxInstrNum);
+      MaxInstrNum = std::max(MI.peekDebugInstrNum(), MaxInstrNum);
   MF.setDebugInstrNumberingCount(MaxInstrNum);
 
   // Load any substitutions.
