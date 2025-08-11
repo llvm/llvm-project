@@ -2530,7 +2530,11 @@ public:
 
   /// Return the VPValues stored by this interleave group. If it is a load
   /// interleave group, return an empty ArrayRef.
-  virtual ArrayRef<VPValue *> getStoredValues() const = 0;
+  ArrayRef<VPValue *> getStoredValues() const {
+    return ArrayRef<VPValue *>(op_end() -
+                                   (getNumStoreOperands() + (HasMask ? 1 : 0)),
+                               getNumStoreOperands());
+  }
 };
 
 /// VPInterleaveRecipe is a recipe for transforming an interleave group of load
@@ -2571,13 +2575,6 @@ public:
 
   unsigned getNumStoreOperands() const override {
     return getNumOperands() - (HasMask ? 2 : 1);
-  }
-
-  ArrayRef<VPValue *> getStoredValues() const override {
-    // The first operand is the address, followed by the stored values, followed
-    // by an optional mask.
-    return ArrayRef<VPValue *>(op_begin(), getNumOperands())
-        .slice(1, getNumStoreOperands());
   }
 };
 
@@ -2627,13 +2624,6 @@ public:
 
   unsigned getNumStoreOperands() const override {
     return getNumOperands() - (HasMask ? 3 : 2);
-  }
-
-  ArrayRef<VPValue *> getStoredValues() const override {
-    // The first operand is the address, and the second operand is EVL, followed
-    // by the stored values, followe by an optional mask.
-    return ArrayRef<VPValue *>(op_begin(), getNumOperands())
-        .slice(2, getNumStoreOperands());
   }
 };
 
