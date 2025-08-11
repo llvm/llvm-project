@@ -769,6 +769,11 @@ bool VectorCombine::foldInsExtBinop(Instruction &I) {
   if (!ResultTy)
     return false;
 
+  // Avoid splitting the unfoldable constant expression binop(x,y), otherwise
+  // binop(insert(x,a,idx),insert(y,b,idx)) may be folded back and forth.
+  if (match(VecBinOp, m_BinOp(m_Constant(), m_Constant())))
+    return false;
+
   // TODO: Attempt to detect m_ExtractElt for scalar operands and convert to
   // shuffle?
 
@@ -1250,6 +1255,10 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
   InstructionCost NewCost =
       ScalarOpCost + TTI.getVectorInstrCost(Instruction::InsertElement, VecTy,
                                             CostKind, *Index, NewVecC);
+  // Additional cost for unfoldable constant expression.
+  if (!NewVecC)
+    NewCost += VectorOpCost;
+
   for (auto [Idx, Op, VecC, Scalar] : enumerate(Ops, VecCs, ScalarOps)) {
     if (!Scalar || (II && isVectorIntrinsicWithScalarOpAtArg(
                               II->getIntrinsicID(), Idx, &TTI)))
