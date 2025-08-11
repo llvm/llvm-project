@@ -583,7 +583,7 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
   //   `R_RISCV_RELAX` relocation.
   //
   // The actual emission of `R_RISCV_RELAX` will be handled in
-  // `RISCVAsmBackend`.
+  // `RISCVAsmBackend::applyFixup`.
   bool RelaxCandidate = false;
   auto AsmRelaxToLinkerRelaxableWithFeature = [&](unsigned Feature) -> void {
     if (!STI.hasFeature(RISCV::FeatureExactAssembly) && STI.hasFeature(Feature))

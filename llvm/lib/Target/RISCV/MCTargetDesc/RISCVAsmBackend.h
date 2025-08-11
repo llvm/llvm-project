@@ -44,7 +44,6 @@ public:
                 uint64_t &FixedValue, bool IsResolved);
 
   void maybeAddVendorReloc(const MCFragment &, const MCFixup &);
-  void maybeAddRelaxReloc(const MCFragment &, const MCFixup &);
 
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
                   uint8_t *Data, uint64_t Value, bool IsResolved) override;

@@ -3,6 +3,9 @@
 # RUN:    | llvm-objdump -dr -M no-aliases - \
 # RUN:    | FileCheck %s
 
+## This tests that we correctly emit relocations for linker relaxation when
+## relaxing `JAL` to `QC.E.JAL`.
+
 .global foo
 
 # CHECK-LABEL: <branch_over_relaxable>:
