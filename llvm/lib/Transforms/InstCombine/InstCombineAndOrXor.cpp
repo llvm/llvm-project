@@ -3605,16 +3605,11 @@ static bool matchSubIntegerPackFromVector(Value *V, Value *&Vec,
                                           int64_t &VecOffset,
                                           SmallBitVector &Mask,
                                           const DataLayout &DL) {
-  static const auto m_ConstShlOrSelf = [](const auto &Base, uint64_t &ShlAmt) {
-    ShlAmt = 0;
-    return m_CombineOr(m_Shl(Base, m_ConstantInt(ShlAmt)), Base);
-  };
-
   // First try to match extractelement -> zext -> shl
   uint64_t VecIdx, ShlAmt;
-  if (match(V, m_ConstShlOrSelf(m_ZExtOrSelf(m_ExtractElt(
-                                    m_Value(Vec), m_ConstantInt(VecIdx))),
-                                ShlAmt))) {
+  if (match(V, m_ShlOrSelf(m_ZExtOrSelf(m_ExtractElt(m_Value(Vec),
+                                                     m_ConstantInt(VecIdx))),
+                           ShlAmt))) {
     auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType());
     if (!VecTy)
       return false;
