@@ -11302,8 +11302,8 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
         Chains.push_back(Hi.getValue(1));
       if (Lo->getOpcode() == ISD::LOAD)
         Chains.push_back(Lo.getValue(1));
-      Pairs.push_back(DAG.getNode(PPCISD::PAIR_BUILD, dl, MVT::v256i1,
-                                  {Hi, Lo}));
+      Pairs.push_back(
+          DAG.getNode(PPCISD::PAIR_BUILD, dl, MVT::v256i1, {Hi, Lo}));
     }
     SDValue TF = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Chains);
     SDValue Value = DMFInsert1024(Pairs, SDLoc(Op), DAG);
@@ -11648,9 +11648,8 @@ SDValue PPCTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
         0);
   }
   case Intrinsic::ppc_mma_disassemble_dmr: {
-    return
-        DAG.getStore(DAG.getEntryNode(), DL, Op.getOperand(ArgStart + 2),
-                     Op.getOperand(ArgStart + 1), MachinePointerInfo());
+    return DAG.getStore(DAG.getEntryNode(), DL, Op.getOperand(ArgStart + 2),
+                        Op.getOperand(ArgStart + 1), MachinePointerInfo());
   }
   default:
     break;
@@ -12155,8 +12154,8 @@ SDValue PPCTargetLowering::DMFInsert1024(const SmallVectorImpl<SDValue> &Pairs,
   SDValue RC = DAG.getTargetConstant(PPC::DMRRCRegClassID, dl, MVT::i32);
   const SDValue Ops[] = {RC, Lo, LoSub, Hi, HiSub};
 
-  return
-      SDValue(DAG.getMachineNode(PPC::REG_SEQUENCE, dl, MVT::v1024i1, Ops), 0);
+  return SDValue(DAG.getMachineNode(PPC::REG_SEQUENCE, dl, MVT::v1024i1, Ops),
+                 0);
 }
 
 SDValue PPCTargetLowering::LowerVectorLoad(SDValue Op,
