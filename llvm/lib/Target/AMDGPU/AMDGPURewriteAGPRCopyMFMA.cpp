@@ -96,8 +96,10 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::run(MachineFunction &MF) const {
     return false;
 
   // Early exit if no AGPRs were assigned.
-  if (!LRM.isPhysRegUsed(AMDGPU::AGPR0))
+  if (!LRM.isPhysRegUsed(AMDGPU::AGPR0)) {
+    LLVM_DEBUG(dbgs() << "skipping function that did not allocate AGPRs\n");
     return false;
+  }
 
   bool MadeChange = false;
 

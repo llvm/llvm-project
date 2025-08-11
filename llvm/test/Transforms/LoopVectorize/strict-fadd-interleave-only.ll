@@ -25,8 +25,6 @@ define float @pr70988() {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[INDEX_NEXT:%.*]], [[LOOP]] ]
@@ -60,8 +58,6 @@ define float @pr70988() {
 ; CHECK-ALM:       middle.block:
 ; CHECK-ALM-NEXT:    br label [[EXIT:%.*]]
 ; CHECK-ALM:       scalar.ph:
-; CHECK-ALM-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
-; CHECK-ALM-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ]
 ; CHECK-ALM-NEXT:    br label [[LOOP:%.*]]
 ; CHECK-ALM:       loop:
 ; CHECK-ALM-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[INDEX_NEXT:%.*]], [[LOOP]] ]
@@ -129,8 +125,6 @@ define float @pr72720reduction_using_active_lane_mask(ptr %src) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[NARROW:%.*]], [[LOOP]] ]
@@ -181,8 +175,6 @@ define float @pr72720reduction_using_active_lane_mask(ptr %src) {
 ; CHECK-ALM:       middle.block:
 ; CHECK-ALM-NEXT:    br label [[EXIT:%.*]]
 ; CHECK-ALM:       scalar.ph:
-; CHECK-ALM-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
-; CHECK-ALM-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ]
 ; CHECK-ALM-NEXT:    br label [[LOOP:%.*]]
 ; CHECK-ALM:       loop:
 ; CHECK-ALM-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[NARROW:%.*]], [[LOOP]] ]
@@ -239,8 +231,6 @@ define float @fadd_reduction_with_live_in(float %inc) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
@@ -275,8 +265,6 @@ define float @fadd_reduction_with_live_in(float %inc) {
 ; CHECK-ALM:       middle.block:
 ; CHECK-ALM-NEXT:    br label [[EXIT:%.*]]
 ; CHECK-ALM:       scalar.ph:
-; CHECK-ALM-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
-; CHECK-ALM-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ]
 ; CHECK-ALM-NEXT:    br label [[LOOP:%.*]]
 ; CHECK-ALM:       loop:
 ; CHECK-ALM-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]

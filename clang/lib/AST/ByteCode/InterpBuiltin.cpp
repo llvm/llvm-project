@@ -459,12 +459,13 @@ static bool interp__builtin_isinf(InterpState &S, CodePtr OpPC,
                                   const InterpFrame *Frame, bool CheckSign,
                                   const CallExpr *Call) {
   const Floating &Arg = S.Stk.pop<Floating>();
-  bool IsInf = Arg.isInf();
+  APFloat F = Arg.getAPFloat();
+  bool IsInf = F.isInfinity();
 
   if (CheckSign)
-    pushInteger(S, IsInf ? (Arg.isNegative() ? -1 : 1) : 0, Call->getType());
+    pushInteger(S, IsInf ? (F.isNegative() ? -1 : 1) : 0, Call->getType());
   else
-    pushInteger(S, Arg.isInf(), Call->getType());
+    pushInteger(S, IsInf, Call->getType());
   return true;
 }
 
@@ -1544,8 +1545,7 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
   // Composite arrays
   if (IsArray) {
     const Descriptor *Desc =
-        S.P.createDescriptor(NewCall, ElemType.getTypePtr(),
-                             IsArray ? std::nullopt : Descriptor::InlineDescMD);
+        S.P.createDescriptor(NewCall, ElemType.getTypePtr(), std::nullopt);
     Block *B =
         Allocator.allocate(Desc, NumElems.getZExtValue(), S.Ctx.getEvalID(),
                            DynamicAllocator::Form::Operator);
@@ -1558,9 +1558,8 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
   QualType AllocType = S.getASTContext().getConstantArrayType(
       ElemType, NumElems, nullptr, ArraySizeModifier::Normal, 0);
 
-  const Descriptor *Desc =
-      S.P.createDescriptor(NewCall, AllocType.getTypePtr(),
-                           IsArray ? std::nullopt : Descriptor::InlineDescMD);
+  const Descriptor *Desc = S.P.createDescriptor(NewCall, AllocType.getTypePtr(),
+                                                Descriptor::InlineDescMD);
   Block *B = Allocator.allocate(Desc, S.getContext().getEvalID(),
                                 DynamicAllocator::Form::Operator);
   assert(B);

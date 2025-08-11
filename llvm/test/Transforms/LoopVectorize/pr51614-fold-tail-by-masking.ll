@@ -63,8 +63,6 @@ define dso_local i16 @reverse_interleave_load_fold_mask() optsize {
 ; CHECK-NEXT:    [[TMP28:%.*]] = call i16 @llvm.vector.reduce.add.v2i16(<2 x i16> [[TMP26]])
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 41, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i16 [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ 41, [[SCALAR_PH]] ], [ [[IVMINUS1:%.*]], [[LOOP]] ]

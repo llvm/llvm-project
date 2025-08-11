@@ -23,8 +23,8 @@ define void @load_store(ptr %p) {
 ; LMUL1-NEXT:    [[TMP5:%.*]] = add <vscale x 1 x i64> [[WIDE_LOAD]], splat (i64 1)
 ; LMUL1-NEXT:    store <vscale x 1 x i64> [[TMP5]], ptr [[TMP3]], align 8
 ; LMUL1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
-; LMUL1-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; LMUL1-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; LMUL1-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; LMUL1-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; LMUL1:       middle.block:
 ; LMUL1-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
 ; LMUL1-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
@@ -66,7 +66,6 @@ define void @load_store(ptr %p) {
 ; LMUL2:       middle.block:
 ; LMUL2-NEXT:    br label [[FOR_END:%.*]]
 ; LMUL2:       scalar.ph:
-; LMUL2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; LMUL2-NEXT:    br label [[FOR_BODY:%.*]]
 ; LMUL2:       for.body:
 ; LMUL2-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -103,7 +102,6 @@ define void @load_store(ptr %p) {
 ; LMUL4:       middle.block:
 ; LMUL4-NEXT:    br label [[FOR_END:%.*]]
 ; LMUL4:       scalar.ph:
-; LMUL4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; LMUL4-NEXT:    br label [[FOR_BODY:%.*]]
 ; LMUL4:       for.body:
 ; LMUL4-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -140,7 +138,6 @@ define void @load_store(ptr %p) {
 ; LMUL8:       middle.block:
 ; LMUL8-NEXT:    br label [[FOR_END:%.*]]
 ; LMUL8:       scalar.ph:
-; LMUL8-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; LMUL8-NEXT:    br label [[FOR_BODY:%.*]]
 ; LMUL8:       for.body:
 ; LMUL8-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]

@@ -62,6 +62,7 @@ LLVM_ABI bool DisplayGraph(StringRef Filename, bool wait = true,
                            GraphProgram::Name program = GraphProgram::DOT);
 
 template <typename GraphType, typename Derived> class GraphWriterBase {
+protected:
   raw_ostream &O;
   const GraphType &G;
   bool RenderUsingHTML = false;
