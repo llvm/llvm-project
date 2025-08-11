@@ -3977,6 +3977,11 @@ void SelectionDAGBuilder::visitSIToFP(const User &I) {
   setValue(&I, DAG.getNode(ISD::SINT_TO_FP, getCurSDLoc(), DestVT, N));
 }
 
+void SelectionDAGBuilder::visitPtrToAddr(const User &I) {
+  // FIXME: this is not correct for pointers with addr width != pointer width
+  visitPtrToInt(I);
+}
+
 void SelectionDAGBuilder::visitPtrToInt(const User &I) {
   // What to do depends on the size of the integer and the size of the pointer.
   // We can either truncate, zero extend, or no-op, accordingly.
@@ -7597,7 +7602,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     if (TM.getOptLevel() == CodeGenOptLevel::None)
       return;
 
-    const AllocaInst *LifetimeObject = dyn_cast<AllocaInst>(I.getArgOperand(1));
+    const AllocaInst *LifetimeObject = dyn_cast<AllocaInst>(I.getArgOperand(0));
     if (!LifetimeObject)
       return;
 
