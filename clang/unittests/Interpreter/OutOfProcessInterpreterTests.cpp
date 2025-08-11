@@ -137,7 +137,10 @@ TEST_F(InterpreterTestBase, SanityWithRemoteExecution) {
   llvm::Triple SystemTriple(llvm::sys::getProcessTriple());
 
   // FIXME: In the future, support more platforms beyond linux-x86_64 and macOS.
-  if (!SystemTriple.isOSDarwin() && !SystemTriple.isOSLinux()) {
+  if (!(SystemTriple.isOSDarwin() &&
+        SystemTriple.getArch() == llvm::Triple::Darwin) &&
+      !(SystemTriple.isOSLinux() &&
+        SystemTriple.getArch() == llvm::Triple::x86_64)) {
     GTEST_SKIP()
         << "Out-of-process interpreter only supports linux-x86_64 and macos";
   }
