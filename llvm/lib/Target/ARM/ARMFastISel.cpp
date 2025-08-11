@@ -1943,8 +1943,11 @@ bool ARMFastISel::ProcessCallArgs(SmallVectorImpl<Value*> &Args,
                                   unsigned &NumBytes,
                                   bool isVarArg) {
   SmallVector<CCValAssign, 16> ArgLocs;
+  SmallVector<Type *, 16> OrigTys;
+  for (Value *Arg : Args)
+    OrigTys.push_back(Arg->getType());
   CCState CCInfo(CC, isVarArg, *FuncInfo.MF, ArgLocs, *Context);
-  CCInfo.AnalyzeCallOperands(ArgVTs, ArgFlags,
+  CCInfo.AnalyzeCallOperands(ArgVTs, ArgFlags, OrigTys,
                              CCAssignFnForCall(CC, false, isVarArg));
 
   // Check that we can handle all of the arguments. If we can't, then bail out
@@ -2093,7 +2096,8 @@ bool ARMFastISel::FinishCall(MVT RetVT, SmallVectorImpl<Register> &UsedRegs,
   if (RetVT != MVT::isVoid) {
     SmallVector<CCValAssign, 16> RVLocs;
     CCState CCInfo(CC, isVarArg, *FuncInfo.MF, RVLocs, *Context);
-    CCInfo.AnalyzeCallResult(RetVT, CCAssignFnForCall(CC, true, isVarArg));
+    CCInfo.AnalyzeCallResult(RetVT, I->getType(),
+                             CCAssignFnForCall(CC, true, isVarArg));
 
     // Copy all of the result registers out of their specified physreg.
     if (RVLocs.size() == 2 && RetVT == MVT::f64) {
@@ -2278,7 +2282,7 @@ bool ARMFastISel::ARMEmitLibcall(const Instruction *I, RTLIB::Libcall Call) {
   if (RetVT != MVT::isVoid && RetVT != MVT::i32) {
     SmallVector<CCValAssign, 16> RVLocs;
     CCState CCInfo(CC, false, *FuncInfo.MF, RVLocs, *Context);
-    CCInfo.AnalyzeCallResult(RetVT, CCAssignFnForCall(CC, true, false));
+    CCInfo.AnalyzeCallResult(RetVT, RetTy, CCAssignFnForCall(CC, true, false));
     if (RVLocs.size() >= 2 && RetVT != MVT::f64)
       return false;
   }
@@ -2389,7 +2393,8 @@ bool ARMFastISel::SelectCall(const Instruction *I,
       RetVT != MVT::i16 && RetVT != MVT::i32) {
     SmallVector<CCValAssign, 16> RVLocs;
     CCState CCInfo(CC, isVarArg, *FuncInfo.MF, RVLocs, *Context);
-    CCInfo.AnalyzeCallResult(RetVT, CCAssignFnForCall(CC, true, isVarArg));
+    CCInfo.AnalyzeCallResult(RetVT, RetTy,
+                             CCAssignFnForCall(CC, true, isVarArg));
     if (RVLocs.size() >= 2 && RetVT != MVT::f64)
       return false;
   }
