@@ -30,11 +30,15 @@ class SBModuleAPICase(TestBase):
         # Test that the executable module has no object name (usually the first module in the target)
         exe_module = target_exe.GetModuleAtIndex(0)
         self.assertTrue(exe_module.IsValid(), "Executable module is valid")
-        self.assertIsNone(exe_module.GetObjectName(), "a.out should have no object name")
+        self.assertIsNone(
+            exe_module.GetObjectName(), "a.out should have no object name"
+        )
 
         # check archive member names
         module_specs = lldb.SBModuleSpecList.GetModuleSpecifications(libfoo_path)
-        self.assertGreater(module_specs.GetSize(), 0, "Archive should have at least one module spec")
+        self.assertGreater(
+            module_specs.GetSize(), 0, "Archive should have at least one module spec"
+        )
         found = set()
         expected = {"a.o", "b.o"}
         for i in range(module_specs.GetSize()):
@@ -42,13 +46,15 @@ class SBModuleAPICase(TestBase):
             obj_name = spec.GetObjectName()
             self.assertIsInstance(obj_name, str)
             self.assertIn(obj_name, expected, f"Unexpected object name: {obj_name}")
-            #create a module from the arhive using the sepc
+            # create a module from the arhive using the sepc
             module = lldb.SBModule(spec)
             self.assertTrue(module.IsValid(), "Module is valid")
             self.assertTrue(module.IsValid(), f"Module for {obj_name} is valid")
-            self.assertEqual(module.GetObjectName(), obj_name, f"Object name for {obj_name} matches")
+            self.assertEqual(
+                module.GetObjectName(), obj_name, f"Object name for {obj_name} matches"
+            )
             found.add(obj_name)
-            
+
         self.assertEqual(found, expected, "Did not find all expected archive members")
 
     @skipUnlessDarwin
