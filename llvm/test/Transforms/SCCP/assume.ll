@@ -74,14 +74,10 @@ define void @trunc_nuw(i8 %v) {
 ; CHECK-LABEL: @trunc_nuw(
 ; CHECK-NEXT:    [[A:%.*]] = trunc nuw i8 [[V:%.*]] to i1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A]])
-; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[V]], 0
-; CHECK-NEXT:    call void @use(i1 [[C1]])
-; CHECK-NEXT:    [[C2:%.*]] = icmp ne i8 [[V]], 0
-; CHECK-NEXT:    call void @use(i1 [[C2]])
-; CHECK-NEXT:    [[C3:%.*]] = icmp eq i8 0, [[V]]
-; CHECK-NEXT:    call void @use(i1 [[C3]])
-; CHECK-NEXT:    [[C4:%.*]] = icmp ne i8 0, [[V]]
-; CHECK-NEXT:    call void @use(i1 [[C4]])
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ;
   %a = trunc nuw i8 %v to i1
