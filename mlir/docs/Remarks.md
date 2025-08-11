@@ -55,6 +55,8 @@ context.enableOptimizationRemarks(/*streamer=*/nullptr,
 If you want to persist remarks to a file in YAML or bitstream format, use
 `mlir::remark::LLVMRemarkStreamer` (helper shown below):
 
+You can read more information about [LLVM's Remark from here](https://llvm.org/docs/Remarks.html).
+
 ```c++
 #include "mlir/Remark/RemarkStreamer.h"
 
@@ -92,7 +94,7 @@ LogicalResult MyPass::runOnOperation() {
 
   // MISSED: explain why + suggest a fix
   reportOptimizationMiss(loc, "unroll", "MyPass",
-                         /*suggestion=*/"increase unroll factor to >=4")
+                         /*suggestion=*/[&](){ return "increase unroll factor to >=4"; })
       << "not profitable at this size";
 
   // FAILURE: action attempted but failed

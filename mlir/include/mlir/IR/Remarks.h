@@ -362,13 +362,13 @@ inline InFlightRemark reportOptimizationPass(Location loc, StringRef cat,
 }
 
 /// Report an optimization remark that was missed.
-inline InFlightRemark reportOptimizationMiss(Location loc, StringRef cat,
-                                             StringRef passName,
-                                             StringRef suggestion) {
+inline InFlightRemark
+reportOptimizationMiss(Location loc, StringRef cat, StringRef passName,
+                       llvm::function_ref<std::string()> makeSuggestion) {
   auto r =
       withEngine(&RemarkEngine::emitOptimizationRemarkMiss, loc, passName, cat);
   if (r)
-    r << suggest(suggestion);
+    r << suggest(makeSuggestion());
   return r;
 }
 /// Report an optimization failure remark.
