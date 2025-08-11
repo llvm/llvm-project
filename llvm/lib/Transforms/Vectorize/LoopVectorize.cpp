@@ -5297,11 +5297,12 @@ LoopVectorizationCostModel::getUniformMemOpCost(Instruction *I,
   assert(Legal->isUniformMemOp(*I, VF));
 
   Type *ValTy = getLoadStoreType(I);
+  Type *PtrTy = getLoadStorePointerOperand(I)->getType();
   auto *VectorTy = cast<VectorType>(toVectorTy(ValTy, VF));
   const Align Alignment = getLoadStoreAlignment(I);
   unsigned AS = getLoadStoreAddressSpace(I);
   if (isa<LoadInst>(I)) {
-    return TTI.getAddressComputationCost(ValTy) +
+    return TTI.getAddressComputationCost(PtrTy) +
            TTI.getMemoryOpCost(Instruction::Load, ValTy, Alignment, AS,
                                CostKind) +
            TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast, VectorTy,
@@ -5314,7 +5315,7 @@ LoopVectorizationCostModel::getUniformMemOpCost(Instruction *I,
   // VF.getKnownMinValue() - 1 from a scalable vector. This does not represent
   // the actual generated code, which involves extracting the last element of
   // a scalable vector where the lane to extract is unknown at compile time.
-  return TTI.getAddressComputationCost(ValTy) +
+  return TTI.getAddressComputationCost(PtrTy) +
          TTI.getMemoryOpCost(Instruction::Store, ValTy, Alignment, AS,
                              CostKind) +
          (IsLoopInvariantStoreValue
@@ -5330,8 +5331,9 @@ LoopVectorizationCostModel::getGatherScatterCost(Instruction *I,
   auto *VectorTy = cast<VectorType>(toVectorTy(ValTy, VF));
   const Align Alignment = getLoadStoreAlignment(I);
   const Value *Ptr = getLoadStorePointerOperand(I);
+  Type *PtrTy = toVectorTy(Ptr->getType(), VF);
 
-  return TTI.getAddressComputationCost(VectorTy) +
+  return TTI.getAddressComputationCost(PtrTy) +
          TTI.getGatherScatterOpCost(I->getOpcode(), VectorTy, Ptr,
                                     Legal->isMaskRequired(I), Alignment,
                                     CostKind, I);
@@ -5566,11 +5568,12 @@ LoopVectorizationCostModel::getMemoryInstructionCost(Instruction *I,
   // moment.
   if (VF.isScalar()) {
     Type *ValTy = getLoadStoreType(I);
+    Type *PtrTy = getLoadStorePointerOperand(I)->getType();
     const Align Alignment = getLoadStoreAlignment(I);
     unsigned AS = getLoadStoreAddressSpace(I);
 
     TTI::OperandValueInfo OpInfo = TTI::getOperandInfo(I->getOperand(0));
-    return TTI.getAddressComputationCost(ValTy) +
+    return TTI.getAddressComputationCost(PtrTy) +
            TTI.getMemoryOpCost(I->getOpcode(), ValTy, Alignment, AS, CostKind,
                                OpInfo, I);
   }
