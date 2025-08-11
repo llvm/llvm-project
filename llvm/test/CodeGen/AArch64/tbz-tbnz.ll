@@ -200,18 +200,18 @@ define void @test8(i64 %val1, i64 %val2, i64 %val3) {
 ; CHECK-SD-LABEL: test8:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    tst x0, x1
-; CHECK-SD-NEXT:    b.ge .LBB7_3
+; CHECK-SD-NEXT:    b.pl .LBB7_3
 ; CHECK-SD-NEXT:  // %bb.1:
 ; CHECK-SD-NEXT:    and x8, x1, x2
 ; CHECK-SD-NEXT:    tbnz x8, #63, .LBB7_3
 ; CHECK-SD-NEXT:  // %bb.2: // %if.then2
 ; CHECK-SD-NEXT:    tst x0, x1, lsl #63
-; CHECK-SD-NEXT:    b.lt .LBB7_4
+; CHECK-SD-NEXT:    b.mi .LBB7_4
 ; CHECK-SD-NEXT:  .LBB7_3: // %if.end
 ; CHECK-SD-NEXT:    ret
 ; CHECK-SD-NEXT:  .LBB7_4: // %if.then3
 ; CHECK-SD-NEXT:    tst x0, x1, lsl #62
-; CHECK-SD-NEXT:    b.lt .LBB7_3
+; CHECK-SD-NEXT:    b.mi .LBB7_3
 ; CHECK-SD-NEXT:  // %bb.5: // %if.then4
 ; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
@@ -223,18 +223,18 @@ define void @test8(i64 %val1, i64 %val2, i64 %val3) {
 ; CHECK-GI-LABEL: test8:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    tst x0, x1
-; CHECK-GI-NEXT:    b.ge .LBB7_3
+; CHECK-GI-NEXT:    b.pl .LBB7_3
 ; CHECK-GI-NEXT:  // %bb.1:
 ; CHECK-GI-NEXT:    tst x1, x2
-; CHECK-GI-NEXT:    b.lt .LBB7_3
+; CHECK-GI-NEXT:    b.mi .LBB7_3
 ; CHECK-GI-NEXT:  // %bb.2: // %if.then2
 ; CHECK-GI-NEXT:    tst x0, x1, lsl #63
-; CHECK-GI-NEXT:    b.lt .LBB7_4
+; CHECK-GI-NEXT:    b.mi .LBB7_4
 ; CHECK-GI-NEXT:  .LBB7_3: // %if.end
 ; CHECK-GI-NEXT:    ret
 ; CHECK-GI-NEXT:  .LBB7_4: // %if.then3
 ; CHECK-GI-NEXT:    tst x0, x1, lsl #62
-; CHECK-GI-NEXT:    b.lt .LBB7_3
+; CHECK-GI-NEXT:    b.mi .LBB7_3
 ; CHECK-GI-NEXT:  // %bb.5: // %if.then4
 ; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16

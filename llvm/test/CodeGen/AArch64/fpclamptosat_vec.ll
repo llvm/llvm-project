@@ -1009,9 +1009,9 @@ define <2 x i64> @ustest_f64i64_mm(<2 x double> %x) {
 ; CHECK-NEXT:    csel x11, x19, xzr, lt
 ; CHECK-NEXT:    cmp x10, #0
 ; CHECK-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    csel x10, xzr, x11, lt
+; CHECK-NEXT:    csel x10, xzr, x11, mi
 ; CHECK-NEXT:    cmp x9, #0
-; CHECK-NEXT:    csel x8, xzr, x8, lt
+; CHECK-NEXT:    csel x8, xzr, x8, mi
 ; CHECK-NEXT:    fmov d0, x10
 ; CHECK-NEXT:    fmov d1, x8
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
@@ -1104,9 +1104,9 @@ define <2 x i64> @ustest_f32i64_mm(<2 x float> %x) {
 ; CHECK-NEXT:    csel x11, x19, xzr, lt
 ; CHECK-NEXT:    cmp x10, #0
 ; CHECK-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    csel x10, xzr, x11, lt
+; CHECK-NEXT:    csel x10, xzr, x11, mi
 ; CHECK-NEXT:    cmp x9, #0
-; CHECK-NEXT:    csel x8, xzr, x8, lt
+; CHECK-NEXT:    csel x8, xzr, x8, mi
 ; CHECK-NEXT:    fmov d0, x10
 ; CHECK-NEXT:    fmov d1, x8
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
@@ -1215,9 +1215,9 @@ define <2 x i64> @ustest_f16i64_mm(<2 x half> %x) {
 ; CHECK-NEXT:    csel x11, x19, xzr, lt
 ; CHECK-NEXT:    cmp x10, #0
 ; CHECK-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    csel x10, xzr, x11, lt
+; CHECK-NEXT:    csel x10, xzr, x11, mi
 ; CHECK-NEXT:    cmp x9, #0
-; CHECK-NEXT:    csel x8, xzr, x8, lt
+; CHECK-NEXT:    csel x8, xzr, x8, mi
 ; CHECK-NEXT:    fmov d0, x10
 ; CHECK-NEXT:    fmov d1, x8
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]

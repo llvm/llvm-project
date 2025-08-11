@@ -34,42 +34,6 @@ declare <2 x i32> @llvm.aarch64.neon.raddhn.v2i32(<2 x i64>, <2 x i64>)
 declare <4 x i16> @llvm.aarch64.neon.raddhn.v4i16(<4 x i32>, <4 x i32>)
 declare <8 x i8> @llvm.aarch64.neon.raddhn.v8i8(<8 x i16>, <8 x i16>)
 
-define <8 x i16> @test_vaddl_s8(<8 x i8> %a, <8 x i8> %b) {
-; CHECK-LABEL: test_vaddl_s8:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    saddl v0.8h, v0.8b, v1.8b
-; CHECK-NEXT:    ret
-entry:
-  %vmovl.i.i = sext <8 x i8> %a to <8 x i16>
-  %vmovl.i2.i = sext <8 x i8> %b to <8 x i16>
-  %add.i = add <8 x i16> %vmovl.i.i, %vmovl.i2.i
-  ret <8 x i16> %add.i
-}
-
-define <4 x i32> @test_vaddl_s16(<4 x i16> %a, <4 x i16> %b) {
-; CHECK-LABEL: test_vaddl_s16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    saddl v0.4s, v0.4h, v1.4h
-; CHECK-NEXT:    ret
-entry:
-  %vmovl.i.i = sext <4 x i16> %a to <4 x i32>
-  %vmovl.i2.i = sext <4 x i16> %b to <4 x i32>
-  %add.i = add <4 x i32> %vmovl.i.i, %vmovl.i2.i
-  ret <4 x i32> %add.i
-}
-
-define <2 x i64> @test_vaddl_s32(<2 x i32> %a, <2 x i32> %b) {
-; CHECK-LABEL: test_vaddl_s32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    saddl v0.2d, v0.2s, v1.2s
-; CHECK-NEXT:    ret
-entry:
-  %vmovl.i.i = sext <2 x i32> %a to <2 x i64>
-  %vmovl.i2.i = sext <2 x i32> %b to <2 x i64>
-  %add.i = add <2 x i64> %vmovl.i.i, %vmovl.i2.i
-  ret <2 x i64> %add.i
-}
-
 define void @test_commutable_vaddl_s8(<8 x i8> %a, <8 x i8> %b, ptr %c) {
 ; CHECK-LABEL: test_commutable_vaddl_s8:
 ; CHECK:       // %bb.0: // %entry
@@ -85,42 +49,6 @@ entry:
   %c.gep.1 = getelementptr i8, ptr %c, i64 16
   store <8 x i16> %add.i2, ptr %c.gep.1
   ret void
-}
-
-define <8 x i16> @test_vaddl_u8(<8 x i8> %a, <8 x i8> %b) {
-; CHECK-LABEL: test_vaddl_u8:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uaddl v0.8h, v0.8b, v1.8b
-; CHECK-NEXT:    ret
-entry:
-  %vmovl.i.i = zext <8 x i8> %a to <8 x i16>
-  %vmovl.i2.i = zext <8 x i8> %b to <8 x i16>
-  %add.i = add <8 x i16> %vmovl.i.i, %vmovl.i2.i
-  ret <8 x i16> %add.i
-}
-
-define <4 x i32> @test_vaddl_u16(<4 x i16> %a, <4 x i16> %b) {
-; CHECK-LABEL: test_vaddl_u16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uaddl v0.4s, v0.4h, v1.4h
-; CHECK-NEXT:    ret
-entry:
-  %vmovl.i.i = zext <4 x i16> %a to <4 x i32>
-  %vmovl.i2.i = zext <4 x i16> %b to <4 x i32>
-  %add.i = add <4 x i32> %vmovl.i.i, %vmovl.i2.i
-  ret <4 x i32> %add.i
-}
-
-define <2 x i64> @test_vaddl_u32(<2 x i32> %a, <2 x i32> %b) {
-; CHECK-LABEL: test_vaddl_u32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uaddl v0.2d, v0.2s, v1.2s
-; CHECK-NEXT:    ret
-entry:
-  %vmovl.i.i = zext <2 x i32> %a to <2 x i64>
-  %vmovl.i2.i = zext <2 x i32> %b to <2 x i64>
-  %add.i = add <2 x i64> %vmovl.i.i, %vmovl.i2.i
-  ret <2 x i64> %add.i
 }
 
 define void @test_commutable_vaddl_u8(<8 x i8> %a, <8 x i8> %b, ptr %c) {
@@ -2926,9 +2854,9 @@ define <8 x i16> @cmplx_mul_combined_re_im(<8 x i16> noundef %a, i64 %scale.coer
 ; CHECK-GI-LABEL: cmplx_mul_combined_re_im:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    lsr x9, x0, #16
-; CHECK-GI-NEXT:    adrp x8, .LCPI198_0
+; CHECK-GI-NEXT:    adrp x8, .LCPI192_0
 ; CHECK-GI-NEXT:    rev32 v4.8h, v0.8h
-; CHECK-GI-NEXT:    ldr q3, [x8, :lo12:.LCPI198_0]
+; CHECK-GI-NEXT:    ldr q3, [x8, :lo12:.LCPI192_0]
 ; CHECK-GI-NEXT:    fmov d1, x9
 ; CHECK-GI-NEXT:    dup v2.8h, v1.h[0]
 ; CHECK-GI-NEXT:    sqneg v1.8h, v2.8h

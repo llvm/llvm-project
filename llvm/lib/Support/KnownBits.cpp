@@ -888,11 +888,19 @@ KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
   Res.Zero |= (~BottomKnown).getLoBits(ResultBitsKnown);
   Res.One = BottomKnown.getLoBits(ResultBitsKnown);
 
-  // If we're self-multiplying then bit[1] is guaranteed to be zero.
-  if (NoUndefSelfMultiply && BitWidth > 1) {
-    assert(Res.One[1] == 0 &&
-           "Self-multiplication failed Quadratic Reciprocity!");
-    Res.Zero.setBit(1);
+  if (NoUndefSelfMultiply) {
+    // If X has at least TZ trailing zeroes, then bit (2 * TZ + 1) must be zero.
+    unsigned TwoTZP1 = 2 * TrailZero0 + 1;
+    if (TwoTZP1 < BitWidth)
+      Res.Zero.setBit(TwoTZP1);
+
+    // If X has exactly TZ trailing zeros, then bit (2 * TZ + 2) must also be
+    // zero.
+    if (TrailZero0 < BitWidth && LHS.One[TrailZero0]) {
+      unsigned TwoTZP2 = TwoTZP1 + 1;
+      if (TwoTZP2 < BitWidth)
+        Res.Zero.setBit(TwoTZP2);
+    }
   }
 
   return Res;

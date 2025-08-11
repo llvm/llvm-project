@@ -1327,45 +1327,6 @@ inline BinaryOp_match<LHS, RHS, Instruction::AShr> m_AShr(const LHS &L,
   return BinaryOp_match<LHS, RHS, Instruction::AShr>(L, R);
 }
 
-template <typename LHS_t, unsigned Opcode> struct ShiftLike_match {
-  LHS_t L;
-  uint64_t &R;
-
-  ShiftLike_match(const LHS_t &LHS, uint64_t &RHS) : L(LHS), R(RHS) {}
-
-  template <typename OpTy> bool match(OpTy *V) const {
-    if (auto *Op = dyn_cast<BinaryOperator>(V)) {
-      if (Op->getOpcode() == Opcode)
-        return m_ConstantInt(R).match(Op->getOperand(1)) &&
-               L.match(Op->getOperand(0));
-    }
-    // Interpreted as shiftop V, 0
-    R = 0;
-    return L.match(V);
-  }
-};
-
-/// Matches shl L, ConstShAmt or L itself.
-template <typename LHS>
-inline ShiftLike_match<LHS, Instruction::Shl> m_ShlOrSelf(const LHS &L,
-                                                          uint64_t &R) {
-  return ShiftLike_match<LHS, Instruction::Shl>(L, R);
-}
-
-/// Matches lshr L, ConstShAmt or L itself.
-template <typename LHS>
-inline ShiftLike_match<LHS, Instruction::LShr> m_LShrOrSelf(const LHS &L,
-                                                            uint64_t &R) {
-  return ShiftLike_match<LHS, Instruction::LShr>(L, R);
-}
-
-/// Matches ashr L, ConstShAmt or L itself.
-template <typename LHS>
-inline ShiftLike_match<LHS, Instruction::AShr> m_AShrOrSelf(const LHS &L,
-                                                            uint64_t &R) {
-  return ShiftLike_match<LHS, Instruction::AShr>(L, R);
-}
-
 template <typename LHS_t, typename RHS_t, unsigned Opcode,
           unsigned WrapFlags = 0, bool Commutable = false>
 struct OverflowingBinaryOp_match {

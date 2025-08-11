@@ -66,6 +66,7 @@ struct PtrAddChain {
   int64_t Imm;
   Register Base;
   const RegisterBank *Bank;
+  unsigned Flags;
 };
 
 struct RegisterImmPair {

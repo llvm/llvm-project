@@ -27,12 +27,11 @@ namespace llvm {
 static void removeSSACopy(Function &F) {
   for (BasicBlock &BB : F) {
     for (Instruction &Inst : llvm::make_early_inc_range(BB)) {
-      if (auto *II = dyn_cast<IntrinsicInst>(&Inst)) {
-        if (II->getIntrinsicID() != Intrinsic::ssa_copy)
-          continue;
-        Inst.replaceAllUsesWith(II->getOperand(0));
-        Inst.eraseFromParent();
-      }
+      auto *BC = dyn_cast<BitCastInst>(&Inst);
+      if (!BC || BC->getType() != BC->getOperand(0)->getType())
+        continue;
+      Inst.replaceAllUsesWith(BC->getOperand(0));
+      Inst.eraseFromParent();
     }
   }
 }
