@@ -8851,7 +8851,6 @@ private:
     auto &&IsMapInfoExist = [&Info, this](CodeGenFunction &CGF,
                                           const ValueDecl *VD, const Expr *IE,
                                           const Expr *DesiredAttachPtrExpr,
-                                          const Expr *DesiredFirstComponentExpr,
                                           bool IsDevAddr) -> bool {
       // We potentially have map information for this declaration already.
       // Look for the first set of components that refer to it. If found,
@@ -8863,51 +8862,20 @@ private:
       if (It != Info.end()) {
         bool Found = false;
         for (auto &Data : It->second) {
-          // Select the best candidate among all matches in this bucket, rather
-          // than stopping at the first one. This avoids accidentally picking a
-          // more complex component list (e.g., xpp[1][1]) when a simpler one
-          // (e.g., xpp[1]) exists and is the intended attach target for
-          // use_device_addr/use_device_ptr.
           MapInfo *CI = nullptr;
-          MapInfo *ChosenFirst = nullptr;
-          MapInfo *ChosenAttach = nullptr;
-          MapInfo *ChosenFallback = nullptr;
-          for (auto &MI : Data) {
-            bool Match = MI.Components.back().getAssociatedDeclaration() == VD;
-            if (!Match)
-              continue;
-            // 1) Prefer exact match on first component (e.g., xpp[1]).
-            if (DesiredFirstComponentExpr && !MI.Components.empty() &&
-                AttachPtrExprComparator(this).areEqual(
-                    MI.Components.front().getAssociatedExpression(),
-                    DesiredFirstComponentExpr)) {
-              if (!ChosenFirst ||
-                  MI.Components.size() < ChosenFirst->Components.size())
-                ChosenFirst = &MI;
-            }
-            // 2) Next preference: exact match on attach-pointer (e.g., xpp).
-            const Expr *MIAP = getAttachPtrExpr(MI.Components);
-            if (DesiredAttachPtrExpr && AttachPtrExprComparator(this).areEqual(
-                                            MIAP, DesiredAttachPtrExpr)) {
-              if (!ChosenAttach ||
-                  MI.Components.size() < ChosenAttach->Components.size())
-                ChosenAttach = &MI;
-            }
-            // 3) Fallback: least complex among all matches.
-            if (!ChosenFallback ||
-                MI.Components.size() < ChosenFallback->Components.size())
-              ChosenFallback = &MI;
-          }
+          // We potentially have multiple maps for the same decl. We need to
+          // only consider those for which the attach-ptr matches the desired
+          // attach-ptr. If found, return the first such map.
+          auto *It = llvm::find_if(Data, [&](const MapInfo &MI) {
+            if (MI.Components.back().getAssociatedDeclaration() != VD)
+              return false;
 
-          if (!CI) {
-            if (ChosenFirst) {
-              CI = ChosenFirst;
-            } else if (ChosenAttach) {
-              CI = ChosenAttach;
-            } else if (ChosenFallback) {
-              CI = ChosenFallback;
-            }
-          }
+            return AttachPtrExprComparator(this).areEqual(
+                getAttachPtrExpr(MI.Components), DesiredAttachPtrExpr);
+          });
+
+          if (It != Data.end())
+            CI = &*It;
 
           if (CI) {
             if (IsDevAddr) {
@@ -8958,11 +8926,13 @@ private:
         const ValueDecl *VD = Components.back().getAssociatedDeclaration();
         VD = cast<ValueDecl>(VD->getCanonicalDecl());
         const Expr *IE = Components.back().getAssociatedExpression();
-        const Expr *DesiredAttach = getAttachPtrExpr(Components);
-        const Expr *DesiredFirst =
-            Components.empty() ? nullptr
-                               : Components.front().getAssociatedExpression();
-        if (IsMapInfoExist(CGF, VD, IE, DesiredAttach, DesiredFirst,
+        // For use_device_ptr, we match an existing map clause if its attach-ptr
+        // is same as the use_device_ptr operand. e.g.
+        //   map(p[1]) use_device_ptr(p)     // match
+        //   map(ps->a) use_device_ptr(ps)   // match
+        //   map(p) use_device_ptr(p)        // no match
+        const Expr *UDPFirstExpr = Components.front().getAssociatedExpression();
+        if (IsMapInfoExist(CGF, VD, IE, /*DesiredAttachPtrExpr=*/UDPFirstExpr,
                            /*IsDevAddr=*/false))
           continue;
         MapInfoGen(CGF, IE, VD, Components, C->isImplicit(),
@@ -8985,22 +8955,15 @@ private:
           continue;
         VD = cast<ValueDecl>(VD->getCanonicalDecl());
         const Expr *IE = std::get<1>(L).back().getAssociatedExpression();
-        const Expr *DesiredAttach = getAttachPtrExpr(Components);
-        if (const auto *ASE_IE = dyn_cast_or_null<ArraySubscriptExpr>(
-                IE->IgnoreParenImpCasts())) {
-          const Expr *BaseIE = ASE_IE->getBase()->IgnoreParenImpCasts();
-          if (!isa<DeclRefExpr>(BaseIE)) {
-            llvm::errs() << "error: use_device_addr expects base-pointer to be "
-                            "an identifier (e.g., xpp or xpp[1]); got: ";
-            IE->dump();
-            // Continue without marking; fall back to generating a zero-size
-            // entry if needed.
-          }
-        }
-        const Expr *DesiredFirst =
-            Components.empty() ? nullptr
-                               : Components.front().getAssociatedExpression();
-        if (IsMapInfoExist(CGF, VD, IE, DesiredAttach, DesiredFirst,
+        // For use_device_addr, we match an existing map clause if its attach-ptr
+        // is same as the attach-ptr of the use_device_addr clause. e.g.
+        //   map(p) use_device_addr(p)         // match
+        //   map(p[1]) use_device_addr(p[0])   // match
+        //   map(ps->a) use_device_addr(ps->b) // match
+        //   map(p) use_device_addr(p[0])      // no match
+        const Expr *UDAAttachPtrExpr = getAttachPtrExpr(Components);
+        if (IsMapInfoExist(CGF, VD, IE,
+                           /*DesiredAttachPtrExpr=*/UDAAttachPtrExpr,
                            /*IsDevAddr=*/true))
           continue;
         MapInfoGen(CGF, IE, VD, Components, C->isImplicit(),
