@@ -15,7 +15,6 @@
 #include "flang-rt/runtime/tools.h"
 #include "flang-rt/runtime/type-info.h"
 #include "flang-rt/runtime/work-queue.h"
-#include "flang/Runtime/stop.h"
 
 namespace Fortran::runtime {
 
