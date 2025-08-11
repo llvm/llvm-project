@@ -13,6 +13,9 @@ let Command = "target modules dump separate debug info" in {
     Desc<"Output the details in JSON format.">;
   def tm_errors_only : Option<"errors-only", "e">, Group<1>,
     Desc<"Filter to show only debug info files with errors.">;
+  def tm_force_load_all_debug_info : Option<"force-load-all-debug-info", "f">,
+                                     Group<1>,
+                                     Desc<"Load all debug info files.">;
 }
 
 let Command = "help" in {
@@ -92,6 +95,12 @@ let Command = "breakpoint modify" in {
   def breakpoint_modify_condition : Option<"condition", "c">, Group<1>,
     Arg<"Expression">, Desc<"The breakpoint stops only if this condition "
     "expression evaluates to true.">;
+  def breakpoint_modify_condition_language
+      : Option<"condition-language", "Y">,
+        Group<1>,
+        Arg<"Language">,
+        Desc<"Specifies the Language to use when executing the breakpoint's "
+             "condition expression.">;
   def breakpoint_modify_auto_continue : Option<"auto-continue", "G">, Group<1>,
     Arg<"Boolean">,
     Desc<"The breakpoint will auto-continue after running its commands.">;
@@ -196,7 +205,7 @@ let Command = "breakpoint set" in {
     "identifiers). If not set the target.language setting is used.">;
   def breakpoint_set_skip_prologue : Option<"skip-prologue", "K">,
     Arg<"Boolean">, Groups<[1,3,4,5,6,7,8,12]>,
-    Desc<"sKip the prologue if the breakpoint is at the beginning of a "
+    Desc<"Skip the prologue if the breakpoint is at the beginning of a "
     "function. If not set the target.skip-prologue setting is used.">;
   def breakpoint_set_breakpoint_name : Option<"breakpoint-name", "N">,
     Arg<"BreakpointName">,
@@ -1482,13 +1491,15 @@ let Command = "statistics dump" in {
     "this is turned off unless specified. "
     "In default mode, if both '--targets' and '--modules' are 'true', a list "
     "of module identifiers will be added to the 'targets' section.">;
-  def statistics_dump_transcript: Option<"transcript", "t">, Group<1>,
-    Arg<"Boolean">,
-    Desc<"If the setting interpreter.save-transcript is enabled and this "
-    "option is 'true', include a JSON array with all commands the user and/or "
-    "scripts executed during a debug session. "
-    "Defaults to true, unless the '--summary' mode is enabled, in which case "
-    "this is turned off unless specified.">;
+  def statistics_dump_transcript
+      : Option<"transcript", "t">,
+        Group<1>,
+        Arg<"Boolean">,
+        Desc<"If the setting interpreter.save-transcript is enabled and this "
+             "option is 'true', include a JSON array with all commands the "
+             "user and/or "
+             "scripts executed during a debug session. "
+             "Defaults to false. ">;
   def statistics_dump_plugins
       : Option<"plugins", "p">,
         Group<1>,

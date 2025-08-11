@@ -15,12 +15,19 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclGroup.h"
 #include "clang/AST/Mangle.h"
+#include "clang/Basic/Version.h"
+#include "clang/Config/config.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Interpreter/Interpreter.h"
+#include "clang/Interpreter/RemoteJITUtils.h"
 #include "clang/Interpreter/Value.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/Support/Error.h"
+#include "llvm/TargetParser/Host.h"
+
+#include "llvm/TargetParser/Host.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -31,6 +38,12 @@ int Global = 42;
 // JIT reports symbol not found on Windows without the visibility attribute.
 REPL_EXTERNAL_VISIBILITY int getGlobal() { return Global; }
 REPL_EXTERNAL_VISIBILITY void setGlobal(int val) { Global = val; }
+
+#ifdef _WIN32
+#define STDIN_FILENO 0
+#define STDOUT_FILENO 1
+#define STDERR_FILENO 2
+#endif
 
 namespace {
 
@@ -158,12 +171,12 @@ TEST_F(InterpreterTest, UndoCommand) {
 
   // Fail to undo.
   auto Err1 = Interp->Undo();
-  EXPECT_EQ("Operation failed. Too many undos",
+  EXPECT_EQ("Operation failed. No input left to undo",
             llvm::toString(std::move(Err1)));
   auto Err2 = Interp->Parse("int foo = 42;");
   EXPECT_TRUE(!!Err2);
   auto Err3 = Interp->Undo(2);
-  EXPECT_EQ("Operation failed. Too many undos",
+  EXPECT_EQ("Operation failed. Wanted to undo 2 inputs, only have 1.",
             llvm::toString(std::move(Err3)));
 
   // Succeed to undo.
@@ -389,6 +402,26 @@ TEST_F(InterpreterTest, Value) {
   EXPECT_TRUE(V9.getType()->isMemberFunctionPointerType());
   EXPECT_EQ(V9.getKind(), Value::K_PtrOrObj);
   EXPECT_TRUE(V9.isManuallyAlloc());
+
+  Value V10;
+  llvm::cantFail(Interp->ParseAndExecute(
+      "enum D : unsigned int {Zero = 0, One}; One", &V10));
+
+  std::string prettyType;
+  llvm::raw_string_ostream OSType(prettyType);
+  V10.printType(OSType);
+  EXPECT_STREQ(prettyType.c_str(), "D");
+
+  // FIXME: We should print only the value or the constant not the type.
+  std::string prettyData;
+  llvm::raw_string_ostream OSData(prettyData);
+  V10.printData(OSData);
+  EXPECT_STREQ(prettyData.c_str(), "(One) : unsigned int 1");
+
+  std::string prettyPrint;
+  llvm::raw_string_ostream OSPrint(prettyPrint);
+  V10.print(OSPrint);
+  EXPECT_STREQ(prettyPrint.c_str(), "(D) (One) : unsigned int 1\n");
 }
 
 TEST_F(InterpreterTest, TranslationUnit_CanonicalDecl) {

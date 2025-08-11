@@ -685,9 +685,11 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
     }
   }
   const size_t opcode_pos = ss.GetSizeOfLastLine();
-  const std::string &opcode_name =
-      show_color ? m_markup_opcode_name : m_opcode_name;
+  std::string &opcode_name = show_color ? m_markup_opcode_name : m_opcode_name;
   const std::string &mnemonics = show_color ? m_markup_mnemonics : m_mnemonics;
+
+  if (opcode_name.empty())
+    opcode_name = "<unknown>";
 
   // The default opcode size of 7 characters is plenty for most architectures
   // but some like arm can pull out the occasional vqrshrun.s16.  We won't get
@@ -1012,6 +1014,16 @@ uint32_t InstructionList::GetMaxOpcocdeByteSize() const {
       max_inst_size = inst_size;
   }
   return max_inst_size;
+}
+
+size_t InstructionList::GetTotalByteSize() const {
+  size_t total_byte_size = 0;
+  collection::const_iterator pos, end;
+  for (pos = m_instructions.begin(), end = m_instructions.end(); pos != end;
+       ++pos) {
+    total_byte_size += (*pos)->GetOpcode().GetByteSize();
+  }
+  return total_byte_size;
 }
 
 InstructionSP InstructionList::GetInstructionAtIndex(size_t idx) const {

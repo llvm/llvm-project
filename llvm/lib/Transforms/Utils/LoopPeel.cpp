@@ -545,8 +545,11 @@ countToEliminateCompares(Loop &L, unsigned MaxPeelCount, ScalarEvolution &SE,
     const SCEV *IterVal = AddRec->evaluateAtIteration(
         SE.getConstant(AddRec->getType(), NewPeelCount), SE);
     if (!PeelWhilePredicateIsKnown(NewPeelCount, IterVal, BoundSCEV, Step,
-                                   Pred))
+                                   Pred)) {
+      if (shouldPeelLastIteration(L, Pred, AddRec, BoundSCEV, SE, TTI))
+        DesiredPeelCountLast = 1;
       return;
+    }
     DesiredPeelCount = NewPeelCount;
   };
 

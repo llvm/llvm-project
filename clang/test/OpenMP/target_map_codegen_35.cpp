@@ -27,11 +27,11 @@ public:
   void foo();
 };
 
-// CK35-DAG: [[SIZE_TO:@.+]] = private {{.*}}constant [4 x i64] [i64 0, i64 0, i64 0, i64 8]
+// CK35-DAG: [[SIZE_TO:@.+]] = private {{.*}}constant [3 x i64] [i64 0, i64 0, i64 8]
 // TARGET_PARAM = 0x20
 // MEMBER_OF_1 | TO = 0x1000000000001
 // MEMBER_OF_1 | PTR_AND_OBJ | TO = 0x1000000000011
-// CK35-DAG: [[MTYPE_TO:@.+]] = {{.+}}constant [4 x i64] [i64 [[#0x20]], i64 [[#0x1000000000001]], i64 [[#0x1000000000001]], i64 [[#0x1000000000011]]]
+// CK35-DAG: [[MTYPE_TO:@.+]] = {{.+}}constant [3 x i64] [i64 [[#0x20]], i64 [[#0x1000000000001]], i64 [[#0x1000000000011]]]
 // CK35-DAG: [[SIZE_FROM:@.+]] = private {{.*}}constant [2 x i64] [i64 0, i64 8]
 // TARGET_PARAM = 0x20
 // MEMBER_OF_1 | PTR_AND_OBJ | FROM = 0x1000000000012
@@ -86,35 +86,14 @@ void ref_map() {
   // CK35-DAG: [[B_BEGIN_INTPTR]] = ptrtoint ptr [[B_BEGIN_VOID:%.+]] to i64
   // CK35-DAG: [[B_ADDR:%.+]] = getelementptr inbounds nuw %class.S, ptr [[S_ADDR]], i32 0, i32 1
 
-  // pass MEMBER_OF_1 | TO {&s, &s.b+1, ((ptr)(&s+1)-(ptr)(&s.b+1))} to copy the data of remainder of s.
+  // pass MEMBER_OF_1 | PTR_AND_OBJ | TO {&s, &s.b, 8|4} to copy the data of s.b.
 
   // CK35-DAG: [[BP2:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 2
   // CK35-DAG: [[P2:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 2
-  // CK35-DAG: [[S2:%.+]] = getelementptr inbounds {{.+}}[[S]], i{{.+}} 0, i{{.+}} 2
 
 
   // CK35-DAG: store ptr [[S_ADDR]], ptr [[BP2]],
-  // CK35-DAG: store ptr [[B_END:%.+]], ptr [[P2]],
-  // CK35-DAG: store i64 [[REM_SIZE:%.+]], ptr [[S2]],
-
-  // CK35-DAG: [[B_END]] = getelementptr ptr, ptr [[B_ADDR]], i{{.+}} 1
-
-  // CK35-DAG: [[REM_SIZE]] = sdiv exact i64 [[SZ:%.+]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-  // CK35-DAG: [[SZ]] = sub i64 [[S_END_INTPTR:%.+]], [[B_END_INTPTR:%.+]]
-  // CK35-DAG: [[B_END_INTPTR]] = ptrtoint ptr [[B_END_VOID:%.+]] to i64
-  // CK35-DAG: [[S_END_INTPTR]] = ptrtoint ptr [[S_END_VOID:%.+]] to i64
-  // CK35-DAG: [[S_END_VOID]] = getelementptr i8, ptr [[S_LAST:%.+]], i{{.+}} 1
-  // CK35-64-DAG: [[S_LAST]] = getelementptr i8, ptr [[S_VOIDPTR:%.+]], i64 15
-  // CK35-32-DAG: [[S_LAST]] = getelementptr i8, ptr [[S_VOIDPTR:%.+]], i32 7
-
-  // pass MEMBER_OF_1 | PTR_AND_OBJ | TO {&s, &s.b, 8|4} to copy the data of s.b.
-
-  // CK35-DAG: [[BP3:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 3
-  // CK35-DAG: [[P3:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 3
-
-
-  // CK35-DAG: store ptr [[S_ADDR]], ptr [[BP3]],
-  // CK35-DAG: store ptr [[B_ADDR:%.+]], ptr [[P3]],
+  // CK35-DAG: store ptr [[B_ADDR:%.+]], ptr [[P2]],
 
   // CK35-DAG: [[B_ADDR]] = load ptr, ptr [[B_REF:%.+]], align {{[0-9]+}}, !nonnull !{{[0-9]+}}, !align !{{[0-9]+}}
   // CK35-DAG: [[B_REF]] = getelementptr inbounds nuw %class.S, ptr [[S_ADDR]], i32 0, i32 1

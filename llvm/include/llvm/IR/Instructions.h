@@ -4956,7 +4956,7 @@ protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
 
-  /// Clone an identical PtrToIntInst.
+  /// Clone an identical PtrToAddrInst.
   PtrToAddrInst *cloneImpl() const;
 
 public:

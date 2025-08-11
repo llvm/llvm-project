@@ -101,8 +101,10 @@ void header_exportable_declarations::registerMatchers(clang::ast_matchers::Match
             // Looks at the common locations where headers store their data
             // * header
             // * __header/*.h
+            // * __header_dir/*.h // Used for transitioning from __header
             // * __fwd/header.h
             anyOf(isExpansionInFileMatching(("v1/__" + filename_ + "/").str()),
+                  isExpansionInFileMatching(("v1/__" + filename_ + "_dir/").str()),
                   isExpansionInFileMatching(extra_header_),
                   isExpansionInFileMatching(("v1/__fwd/" + filename_ + "\\.h$").str()),
                   isExpansionInFileMatching(("v1/" + filename_ + "$").str())),

@@ -1,7 +1,7 @@
-; RUN: not --crash llc < %s -mtriple=thumb-none-eabi -mcpu=cortex-m4 2>&1 | FileCheck %s --check-prefix=V7M
+; RUN: not llc < %s -mtriple=thumb-none-eabi -mcpu=cortex-m4 2>&1 | FileCheck %s --check-prefix=V7M
 ; RUN: llc < %s -mtriple=thumbv8m.base-none-eabi 2>&1 | FileCheck %s
 
-; V7M: LLVM ERROR: Invalid register name "sp_ns".
+; V7M: error: <unknown>:0:0: invalid register "sp_ns" for llvm.read_register
 
 define i32 @read_mclass_registers() nounwind {
 entry:

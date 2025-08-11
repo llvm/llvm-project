@@ -486,11 +486,6 @@ def fsub_mlx : PatFrag<(ops node:$lhs, node:$rhs),(fsub node:$lhs, node:$rhs),[{
   return hasNoVMLxHazardUse(N);
 }]>;
 
-// An 'fadd' node which can be contracted into a fma
-def fadd_contract : PatFrag<(ops node:$lhs, node:$rhs),(fadd node:$lhs, node:$rhs),[{
-  return N->getFlags().hasAllowContract();
-}]>;
-
 def imm_even : ImmLeaf<i32, [{ return (Imm & 1) == 0; }]>;
 def imm_odd : ImmLeaf<i32, [{ return (Imm & 1) == 1; }]>;
 
@@ -2387,29 +2382,13 @@ def UDF : AInoP<(outs), (ins imm0_65535:$imm16), MiscFrm, NoItinerary,
 /*
  * A5.4 Permanently UNDEFINED instructions.
  *
- * For most targets use UDF #65006, for which the OS will generate SIGTRAP.
- * Other UDF encodings generate SIGILL.
+ * Targets use UDF #65006, for which the OS will generate SIGTRAP.
  *
- * NaCl's OS instead chooses an ARM UDF encoding that's also a UDF in Thumb.
- * Encoding A1:
- *  1110 0111 1111 iiii iiii iiii 1111 iiii
- * Encoding T1:
- *  1101 1110 iiii iiii
- * It uses the following encoding:
- *  1110 0111 1111 1110 1101 1110 1111 0000
- *  - In ARM: UDF #60896;
- *  - In Thumb: UDF #254 followed by a branch-to-self.
  */
-let isTrap = 1 in
-def TRAPNaCl : AXI<(outs), (ins), MiscFrm, NoItinerary,
-               "trap", [(trap)]>,
-           Requires<[IsARM,UseNaClTrap]> {
-  let Inst = 0xe7fedef0;
-}
 let isTrap = 1 in
 def TRAP : AXI<(outs), (ins), MiscFrm, NoItinerary,
                "trap", [(trap)]>,
-           Requires<[IsARM,DontUseNaClTrap]> {
+           Requires<[IsARM]> {
   let Inst = 0xe7ffdefe;
 }
 

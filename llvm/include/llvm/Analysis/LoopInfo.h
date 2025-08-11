@@ -18,7 +18,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/GenericLoopInfo.h"
+#include "llvm/Support/GenericLoopInfoImpl.h"
 #include <optional>
 #include <utility>
 
@@ -59,11 +59,12 @@ public:
   };
 
   /// Return true if the specified value is loop invariant.
-  bool isLoopInvariant(const Value *V) const;
+  bool isLoopInvariant(const Value *V, bool HasCoroSuspendInst = false) const;
 
   /// Return true if all the operands of the specified instruction are loop
   /// invariant.
-  bool hasLoopInvariantOperands(const Instruction *I) const;
+  bool hasLoopInvariantOperands(const Instruction *I,
+                                bool HasCoroSuspendInst = false) const;
 
   /// If the given value is an instruction inside of the loop and it can be
   /// hoisted, do so to make it trivially loop-invariant.

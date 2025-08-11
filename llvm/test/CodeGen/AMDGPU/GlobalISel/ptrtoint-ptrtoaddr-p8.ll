@@ -5,8 +5,107 @@
 ;; Also all functions are zeroext to show that non-address bits are masked off
 ;; instead of filling them with arbitrary data
 
-define zeroext i128 @ptrtoint(ptr addrspace(8) %ignored, ptr addrspace(8) %ptr) {
-; CHECK-LABEL: ptrtoint:
+define zeroext i32 @ptrtoint_as5(ptr addrspace(5) %ignored, ptr addrspace(5) %ptr) {
+; CHECK-LABEL: ptrtoint_as5:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v0, v1
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %ret = ptrtoint ptr addrspace(5) %ptr to i32
+  ret i32 %ret
+}
+
+define zeroext i32 @ptrtoaddr_as5(ptr addrspace(5) %ignored, ptr addrspace(5) %ptr) {
+; CHECK-LABEL: ptrtoaddr_as5:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v0, v1
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %ret = ptrtoaddr ptr addrspace(5) %ptr to i32
+  ret i32 %ret
+}
+
+define <2 x i32> @ptrtoint_vec_as5(ptr addrspace(5) %ignored, <2 x ptr addrspace(5)> %ptr) {
+; CHECK-LABEL: ptrtoint_vec_as5:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v0, v1
+; CHECK-NEXT:    v_mov_b32_e32 v1, v2
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %ret = ptrtoint <2 x ptr addrspace(5)> %ptr to <2 x i32>
+  ret <2 x i32> %ret
+}
+
+define <2 x i32> @ptrtoaddr_vec_as5(ptr addrspace(5) %ignored, <2 x ptr addrspace(5)> %ptr) {
+; CHECK-LABEL: ptrtoaddr_vec_as5:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v0, v1
+; CHECK-NEXT:    v_mov_b32_e32 v1, v2
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %ret = ptrtoaddr <2 x ptr addrspace(5)> %ptr to <2 x i32>
+  ret <2 x i32> %ret
+}
+
+define zeroext i256 @ptrtoint_ext_as5(ptr addrspace(5) %ignored, ptr addrspace(5) %ptr) {
+; CHECK-LABEL: ptrtoint_ext_as5:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v0, v1
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0
+; CHECK-NEXT:    v_mov_b32_e32 v3, 0
+; CHECK-NEXT:    v_mov_b32_e32 v4, 0
+; CHECK-NEXT:    v_mov_b32_e32 v5, 0
+; CHECK-NEXT:    v_mov_b32_e32 v6, 0
+; CHECK-NEXT:    v_mov_b32_e32 v7, 0
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %ret = ptrtoint ptr addrspace(5) %ptr to i256
+  ret i256 %ret
+}
+
+;; Check that we extend the offset to i256 instead of reinterpreting all bits.
+define zeroext i256 @ptrtoaddr_ext_as5(ptr addrspace(5) %ignored, ptr addrspace(5) %ptr) {
+; CHECK-LABEL: ptrtoaddr_ext_as5:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v0, v1
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0
+; CHECK-NEXT:    v_mov_b32_e32 v3, 0
+; CHECK-NEXT:    v_mov_b32_e32 v4, 0
+; CHECK-NEXT:    v_mov_b32_e32 v5, 0
+; CHECK-NEXT:    v_mov_b32_e32 v6, 0
+; CHECK-NEXT:    v_mov_b32_e32 v7, 0
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %addr = ptrtoaddr ptr addrspace(5) %ptr to i32
+  %ret = zext i32 %addr to i256
+  ret i256 %ret
+}
+
+define zeroext i32 @ptrtoint_trunc_as5(ptr addrspace(5) %ignored, ptr addrspace(5) %ptr) {
+; CHECK-LABEL: ptrtoint_trunc_as5:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v0, v1
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %ret = ptrtoint ptr addrspace(5) %ptr to i32
+  ret i32 %ret
+}
+
+define zeroext i16 @ptrtoaddr_trunc_as5(ptr addrspace(5) %ignored, ptr addrspace(5) %ptr) {
+; CHECK-LABEL: ptrtoaddr_trunc_as5:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_and_b32_e32 v0, 0xffff, v1
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %addr = ptrtoaddr ptr addrspace(5) %ptr to i32
+  %ret = trunc i32 %addr to i16
+  ret i16 %ret
+}
+
+define zeroext i128 @ptrtoint_as8(ptr addrspace(8) %ignored, ptr addrspace(8) %ptr) {
+; CHECK-LABEL: ptrtoint_as8:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v4
@@ -18,8 +117,8 @@ define zeroext i128 @ptrtoint(ptr addrspace(8) %ignored, ptr addrspace(8) %ptr) 
   ret i128 %ret
 }
 
-define zeroext i48 @ptrtoaddr(ptr addrspace(8) %ignored, ptr addrspace(8) %ptr) {
-; CHECK-LABEL: ptrtoaddr:
+define zeroext i48 @ptrtoaddr_as8(ptr addrspace(8) %ignored, ptr addrspace(8) %ptr) {
+; CHECK-LABEL: ptrtoaddr_as8:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_and_b32_e32 v1, 0xffff, v5
@@ -29,8 +128,8 @@ define zeroext i48 @ptrtoaddr(ptr addrspace(8) %ignored, ptr addrspace(8) %ptr) 
   ret i48 %ret
 }
 
-define <2 x i128> @ptrtoint_vec(ptr addrspace(8) %ignored, <2 x ptr addrspace(8)> %ptr) {
-; CHECK-LABEL: ptrtoint_vec:
+define <2 x i128> @ptrtoint_vec_as8(ptr addrspace(8) %ignored, <2 x ptr addrspace(8)> %ptr) {
+; CHECK-LABEL: ptrtoint_vec_as8:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v4
@@ -47,21 +146,22 @@ define <2 x i128> @ptrtoint_vec(ptr addrspace(8) %ignored, <2 x ptr addrspace(8)
 }
 
 ;; Note: needs to be 2 x i64 instead of 2 x i48 since the latter is not supported.
-define <2 x i64> @ptrtoaddr_vec(ptr addrspace(8) %ignored, <2 x ptr addrspace(8)> %ptr) {
-; CHECK-LABEL: ptrtoaddr_vec:
+define <2 x i64> @ptrtoaddr_vec_as8(ptr addrspace(8) %ignored, <2 x ptr addrspace(8)> %ptr) {
+; CHECK-LABEL: ptrtoaddr_vec_as8:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v4
-; CHECK-NEXT:    v_mov_b32_e32 v1, v5
+; CHECK-NEXT:    v_and_b32_e32 v1, 0xffff, v5
+; CHECK-NEXT:    v_and_b32_e32 v3, 0xffff, v9
 ; CHECK-NEXT:    v_mov_b32_e32 v2, v8
-; CHECK-NEXT:    v_mov_b32_e32 v3, v9
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %ret = ptrtoaddr <2 x ptr addrspace(8)> %ptr to <2 x i64>
+  %addr = ptrtoaddr <2 x ptr addrspace(8)> %ptr to <2 x i48>
+  %ret = zext <2 x i48> %addr to <2 x i64>
   ret <2 x i64> %ret
 }
 
-define zeroext i256 @ptrtoint_ext(ptr addrspace(8) %ignored, ptr addrspace(8) %ptr) {
-; CHECK-LABEL: ptrtoint_ext:
+define zeroext i256 @ptrtoint_ext_as8(ptr addrspace(8) %ignored, ptr addrspace(8) %ptr) {
+; CHECK-LABEL: ptrtoint_ext_as8:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v4
@@ -78,26 +178,26 @@ define zeroext i256 @ptrtoint_ext(ptr addrspace(8) %ignored, ptr addrspace(8) %p
 }
 
 ;; Check that we extend the offset to i256 instead of reinterpreting all bits.
-;; FIXME: this is wrong, we are removing the trunc to i48:
-define zeroext i256 @ptrtoaddr_ext(ptr addrspace(8) %ignored, ptr addrspace(8) %ptr) {
-; CHECK-LABEL: ptrtoaddr_ext:
+define zeroext i256 @ptrtoaddr_ext_as8(ptr addrspace(8) %ignored, ptr addrspace(8) %ptr) {
+; CHECK-LABEL: ptrtoaddr_ext_as8:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v4
-; CHECK-NEXT:    v_mov_b32_e32 v1, v5
-; CHECK-NEXT:    v_mov_b32_e32 v2, v6
-; CHECK-NEXT:    v_mov_b32_e32 v3, v7
+; CHECK-NEXT:    v_and_b32_e32 v1, 0xffff, v5
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0
+; CHECK-NEXT:    v_mov_b32_e32 v3, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v4, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v5, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v6, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v7, 0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %ret = ptrtoaddr ptr addrspace(8) %ptr to i256
+  %addr = ptrtoaddr ptr addrspace(8) %ptr to i48
+  %ret = zext i48 %addr to i256
   ret i256 %ret
 }
 
-define zeroext i64 @ptrtoint_trunc(ptr addrspace(8) %ignored, ptr addrspace(8) %ptr) {
-; CHECK-LABEL: ptrtoint_trunc:
+define zeroext i64 @ptrtoint_trunc_as8(ptr addrspace(8) %ignored, ptr addrspace(8) %ptr) {
+; CHECK-LABEL: ptrtoint_trunc_as8:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v4
@@ -107,12 +207,13 @@ define zeroext i64 @ptrtoint_trunc(ptr addrspace(8) %ignored, ptr addrspace(8) %
   ret i64 %ret
 }
 
-define zeroext i16 @ptrtoaddr_trunc(ptr addrspace(8) %ignored, ptr addrspace(8) %ptr) {
-; CHECK-LABEL: ptrtoaddr_trunc:
+define zeroext i16 @ptrtoaddr_trunc_as8(ptr addrspace(8) %ignored, ptr addrspace(8) %ptr) {
+; CHECK-LABEL: ptrtoaddr_trunc_as8:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_and_b32_e32 v0, 0xffff, v4
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %ret = ptrtoaddr ptr addrspace(8) %ptr to i16
+  %addr = ptrtoaddr ptr addrspace(8) %ptr to i48
+  %ret = trunc i48 %addr to i16
   ret i16 %ret
 }

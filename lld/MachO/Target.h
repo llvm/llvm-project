@@ -124,8 +124,6 @@ public:
     llvm_unreachable("Unsupported architecture for dtrace symbols");
   }
 
-  virtual void applyOptimizationHints(uint8_t *, const ObjFile &) const {};
-
   uint32_t magic;
   llvm::MachO::CPUType cpuType;
   uint32_t cpuSubtype;
