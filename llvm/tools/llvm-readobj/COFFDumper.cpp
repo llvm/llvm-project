@@ -2162,21 +2162,21 @@ void COFFDumper::printCOFFPseudoReloc() {
       });
     }
 
-    const StringRef *find(uint32_t EntryRVA) {
+    Expected<StringRef> find(uint32_t EntryRVA) {
       if (auto Ite = ImportedSymbols.find(EntryRVA);
           Ite != ImportedSymbols.end())
-        return &Ite->second;
+        return Ite->second;
 
       auto Ite = llvm::upper_bound(
           ImportDirectories, EntryRVA,
           [](uint32_t RVA, const auto &D) { return RVA < D.StartRVA; });
       if (Ite == ImportDirectories.begin())
-        return nullptr;
+        return createStringError("the reference of the symbol points out of the import table");
 
       --Ite;
       uint32_t RVA = Ite->StartRVA;
       if (Ite->EndRVA != 0 && Ite->EndRVA <= RVA)
-        return nullptr;
+        return createStringError("the reference of the symbol points out of the import table");
       // Search with linear iteration to care if padding or garbage exist
       // between ImportDirectoryEntry
       for (auto S : Ite->EntryRef.imported_symbols()) {
@@ -2186,13 +2186,15 @@ void COFFDumper::printCOFFPseudoReloc() {
             reportWarning(std::move(E), Obj->getFileName());
             NameDst = "(no symbol)";
           }
-          return &NameDst;
+          return NameDst;
         }
         RVA += Obj->is64() ? 8 : 4;
+        if (EntryRVA < RVA)
+          return createStringError("the reference of the symbol doesn't point imported symbol properly");
       }
       Ite->EndRVA = RVA;
 
-      return nullptr;
+      return createStringError("the reference of the symbol points out of the import table");
     }
 
   private:
@@ -2214,8 +2216,12 @@ void COFFDumper::printCOFFPseudoReloc() {
     DictScope Entry(W, "Entry");
 
     W.printHex("Symbol", Reloc.Symbol);
-    if (const StringRef *Sym = ImportedSymbols.find(Reloc.Symbol))
-      W.printString("SymbolName", *Sym);
+    if (Expected<StringRef> SymOrErr = ImportedSymbols.find(Reloc.Symbol))
+      W.printString("SymbolName", *SymOrErr);
+    else {
+      reportWarning(SymOrErr.takeError(), Obj->getFileName());
+      W.printString("SymbolName", "(missing)");
+    }
 
     W.printHex("Target", Reloc.Target);
     if (auto Ite = llvm::upper_bound(
