@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --form-expressions --verify-diagnostics --split-input-file | FileCheck %s
+// RUN: mlir-opt %s -form-expressions | FileCheck %s
 
 // CHECK-LABEL: func.func @single_expression(
 // CHECK-SAME:                               %[[VAL_0:.*]]: i32, %[[VAL_1:.*]]: i32, %[[VAL_2:.*]]: i32, %[[VAL_3:.*]]: i32) -> i1 {
@@ -83,7 +83,6 @@ func.func @expression_with_dereference(%arg0: i32, %arg1: i32, %arg2: !emitc.ptr
   return %c : i1
 }
 
-
 // CHECK-LABEL: func.func @expression_with_address_taken(
 // CHECK-SAME:      %[[VAL_0:.*]]: i32, %[[VAL_1:.*]]: i32, %[[VAL_2:.*]]: !emitc.ptr<i32>) -> i1 {
 // CHECK:         %[[VAL_3:.*]] = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
@@ -121,9 +120,8 @@ func.func @no_nested_expression(%arg0: i32, %arg1: i32) -> i1 {
   return %a : i1
 }
 
-
 // CHECK-LABEL: func.func @single_result_requirement
-//   CHECK-NOT:  emitc.expression
+// CHECK-NOT:  emitc.expression
 
 func.func @single_result_requirement() -> (i32, i32) {
   %0:2 = emitc.call_opaque "foo" () : () -> (i32, i32)
@@ -151,7 +149,6 @@ func.func @single_result_requirement() -> (i32, i32) {
 // CHECK:           }
 // CHECK:           return %[[VAL_9]] : i1
 // CHECK:         }
-
 
 func.func @expression_with_load(%arg0: i32, %arg1: !emitc.ptr<i32>) -> i1 {
   %c0 = "emitc.constant"() {value = 0 : i64} : () -> i64

@@ -1675,13 +1675,14 @@ public:
 
   /// \returns The cost of the address computation. For most targets this can be
   /// merged into the instruction indexing mode. Some targets might want to
-  /// distinguish between address computation for memory operations on vector
-  /// types and scalar types. Such targets should override this function.
-  /// The 'SE' parameter holds pointer for the scalar evolution object which
-  /// is used in order to get the Ptr step value in case of constant stride.
-  /// The 'Ptr' parameter holds SCEV of the access pointer.
-  LLVM_ABI InstructionCost getAddressComputationCost(
-      Type *Ty, ScalarEvolution *SE = nullptr, const SCEV *Ptr = nullptr) const;
+  /// distinguish between address computation for memory operations with vector
+  /// pointer types and scalar pointer types. Such targets should override this
+  /// function. \p SE holds the pointer for the scalar evolution object which
+  /// was used in order to get the Ptr step value. \p Ptr holds the SCEV of the
+  /// access pointer.
+  LLVM_ABI InstructionCost
+  getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE = nullptr,
+                            const SCEV *Ptr = nullptr) const;
 
   /// \returns The cost, if any, of keeping values of the given types alive
   /// over a callsite.

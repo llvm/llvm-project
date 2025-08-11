@@ -112,4 +112,15 @@ def GenericLoopConversionPass
   ];
 }
 
+def AutomapToTargetDataPass
+    : Pass<"omp-automap-to-target-data", "::mlir::ModuleOp"> {
+  let summary = "Insert OpenMP target data operations for AUTOMAP variables";
+  let description = [{
+    Inserts `omp.target_enter_data` and `omp.target_exit_data` operations to
+    map variables marked with the `AUTOMAP` modifier when their allocation
+    or deallocation is detected in the FIR.
+  }];
+  let dependentDialects = ["mlir::omp::OpenMPDialect"];
+}
+
 #endif //FORTRAN_OPTIMIZER_OPENMP_PASSES

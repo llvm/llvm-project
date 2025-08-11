@@ -571,8 +571,7 @@ createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
       Kind, FPBinOp, StartV, CanonicalIV, Step, "offset.idx");
 
   // Truncate base induction if needed.
-  Type *CanonicalIVType = CanonicalIV->getScalarType();
-  VPTypeAnalysis TypeInfo(CanonicalIVType);
+  VPTypeAnalysis TypeInfo(Plan);
   Type *ResultTy = TypeInfo.inferScalarType(BaseIV);
   if (TruncI) {
     Type *TruncTy = TruncI->getType();
@@ -868,7 +867,7 @@ optimizeLatchExitInductionUser(VPlan &Plan, VPTypeAnalysis &TypeInfo,
 void VPlanTransforms::optimizeInductionExitUsers(
     VPlan &Plan, DenseMap<VPValue *, VPValue *> &EndValues) {
   VPBlockBase *MiddleVPBB = Plan.getMiddleBlock();
-  VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType());
+  VPTypeAnalysis TypeInfo(Plan);
   for (VPIRBasicBlock *ExitVPBB : Plan.getExitBlocks()) {
     for (VPRecipeBase &R : ExitVPBB->phis()) {
       auto *ExitIRI = cast<VPIRPhi>(&R);
@@ -1041,7 +1040,7 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
 #ifndef NDEBUG
     // Verify that the cached type info is for both A and its users is still
     // accurate by comparing it to freshly computed types.
-    VPTypeAnalysis TypeInfo2(Plan->getCanonicalIV()->getScalarType());
+    VPTypeAnalysis TypeInfo2(*Plan);
     assert(TypeInfo.inferScalarType(A) == TypeInfo2.inferScalarType(A));
     for (VPUser *U : A->users()) {
       auto *R = cast<VPRecipeBase>(U);
@@ -1221,7 +1220,7 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
 void VPlanTransforms::simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy) {
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getEntry());
-  VPTypeAnalysis TypeInfo(&CanonicalIVTy);
+  VPTypeAnalysis TypeInfo(Plan);
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       simplifyRecipe(R, TypeInfo);
@@ -1799,8 +1798,7 @@ void VPlanTransforms::truncateToMinimalBitwidths(
   // other uses have different types for their operands, making them invalidly
   // typed.
   DenseMap<VPValue *, VPWidenCastRecipe *> ProcessedTruncs;
-  Type *CanonicalIVType = Plan.getCanonicalIV()->getScalarType();
-  VPTypeAnalysis TypeInfo(CanonicalIVType);
+  VPTypeAnalysis TypeInfo(Plan);
   VPBasicBlock *PH = Plan.getVectorPreheader();
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getVectorLoopRegion()))) {
@@ -1828,8 +1826,7 @@ void VPlanTransforms::truncateToMinimalBitwidths(
       assert(OldResTy->isIntegerTy() && "only integer types supported");
       (void)OldResSizeInBits;
 
-      LLVMContext &Ctx = CanonicalIVType->getContext();
-      auto *NewResTy = IntegerType::get(Ctx, NewResSizeInBits);
+      auto *NewResTy = IntegerType::get(Plan.getContext(), NewResSizeInBits);
 
       // Any wrapping introduced by shrinking this operation shouldn't be
       // considered undefined behavior. So, we can't unconditionally copy
@@ -2172,9 +2169,7 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
 
 /// Replace recipes with their EVL variants.
 static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
-  Type *CanonicalIVType = Plan.getCanonicalIV()->getScalarType();
-  VPTypeAnalysis TypeInfo(CanonicalIVType);
-  LLVMContext &Ctx = CanonicalIVType->getContext();
+  VPTypeAnalysis TypeInfo(Plan);
   VPValue *AllOneMask = Plan.getTrue();
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
@@ -2213,9 +2208,9 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
     VPValue *MaxEVL = &Plan.getVF();
     // Emit VPScalarCastRecipe in preheader if VF is not a 32 bits integer.
     VPBuilder Builder(LoopRegion->getPreheaderVPBB());
-    MaxEVL = Builder.createScalarZExtOrTrunc(MaxEVL, Type::getInt32Ty(Ctx),
-                                             TypeInfo.inferScalarType(MaxEVL),
-                                             DebugLoc());
+    MaxEVL = Builder.createScalarZExtOrTrunc(
+        MaxEVL, Type::getInt32Ty(Plan.getContext()),
+        TypeInfo.inferScalarType(MaxEVL), DebugLoc());
 
     Builder.setInsertPoint(Header, Header->getFirstNonPhi());
     VPValue *PrevEVL =
@@ -2230,7 +2225,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                        m_VPValue(V1), m_VPValue(V2))))
           continue;
         VPValue *Imm = Plan.getOrAddLiveIn(
-            ConstantInt::getSigned(Type::getInt32Ty(Ctx), -1));
+            ConstantInt::getSigned(Type::getInt32Ty(Plan.getContext()), -1));
         VPWidenIntrinsicRecipe *VPSplice = new VPWidenIntrinsicRecipe(
             Intrinsic::experimental_vp_splice,
             {V1, V2, Imm, AllOneMask, PrevEVL, &EVL},
@@ -2370,7 +2365,7 @@ void VPlanTransforms::addExplicitVectorLength(
   Builder.setInsertPoint(CanonicalIVIncrement);
   VPValue *OpVPEVL = VPEVL;
 
-  auto *I32Ty = Type::getInt32Ty(CanIVTy->getContext());
+  auto *I32Ty = Type::getInt32Ty(Plan.getContext());
   OpVPEVL = Builder.createScalarZExtOrTrunc(
       OpVPEVL, CanIVTy, I32Ty, CanonicalIVIncrement->getDebugLoc());
 
@@ -2712,7 +2707,7 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
 
   // Construct the initial value of the vector IV in the vector loop preheader.
   Type *IVIntTy =
-      IntegerType::get(StepTy->getContext(), StepTy->getScalarSizeInBits());
+      IntegerType::get(Plan->getContext(), StepTy->getScalarSizeInBits());
   VPValue *Init = Builder.createNaryOp(VPInstruction::StepVector, {}, IVIntTy);
   if (StepTy->isFloatingPointTy())
     Init = Builder.createWidenCast(Instruction::UIToFP, Init, StepTy);
@@ -2841,7 +2836,7 @@ void VPlanTransforms::dissolveLoopRegions(VPlan &Plan) {
 
 void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
                                                Type &CanonicalIVTy) {
-  VPTypeAnalysis TypeInfo(&CanonicalIVTy);
+  VPTypeAnalysis TypeInfo(Plan);
   SmallVector<VPRecipeBase *> ToRemove;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
@@ -3408,9 +3403,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
   if (VF.isScalable() || !VectorLoop)
     return;
 
-  VPCanonicalIVPHIRecipe *CanonicalIV = Plan.getCanonicalIV();
-  Type *CanonicalIVType = CanonicalIV->getScalarType();
-  VPTypeAnalysis TypeInfo(CanonicalIVType);
+  VPTypeAnalysis TypeInfo(Plan);
 
   unsigned FixedVF = VF.getFixedValue();
   SmallVector<VPInterleaveRecipe *> StoreGroups;

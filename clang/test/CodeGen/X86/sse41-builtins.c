@@ -9,6 +9,7 @@
 
 
 #include <immintrin.h>
+#include "builtin_test_helpers.h"
 
 // NOTE: This should match the tests in llvm/test/CodeGen/X86/sse41-intrinsics-fast-isel.ll
 
@@ -86,12 +87,16 @@ __m128i test_mm_cvtepi8_epi16(__m128i a) {
   return _mm_cvtepi8_epi16(a);
 }
 
+TEST_CONSTEXPR(match_v8hi(_mm_cvtepi8_epi16(_mm_setr_epi8(-3, 2, -1, 0, 1, -2, 3, -4, 0, 0, 0, 0, 0, 0, 0, 0)), -3, 2, -1, 0, 1, -2, 3, -4));
+
 __m128i test_mm_cvtepi8_epi32(__m128i a) {
   // CHECK-LABEL: test_mm_cvtepi8_epi32
   // CHECK: shufflevector <16 x i8> {{.*}}, <16 x i8> {{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // CHECK: sext <4 x i8> {{.*}} to <4 x i32>
   return _mm_cvtepi8_epi32(a);
 }
+
+TEST_CONSTEXPR(match_v4si(_mm_cvtepi8_epi32(_mm_setr_epi8(-3, 2, -1, 0, 1, -2, 3, -4, 0, 0, 0, 0, 0, 0, 0, 0)), -3, 2, -1, 0));
 
 __m128i test_mm_cvtepi8_epi64(__m128i a) {
   // CHECK-LABEL: test_mm_cvtepi8_epi64
@@ -100,12 +105,16 @@ __m128i test_mm_cvtepi8_epi64(__m128i a) {
   return _mm_cvtepi8_epi64(a);
 }
 
+TEST_CONSTEXPR(match_v2di(_mm_cvtepi8_epi64(_mm_setr_epi8(-3, 2, -1, 0, 1, -2, 3, -4, 0, 0, 0, 0, 0, 0, 0, 0)), -3, 2));
+
 __m128i test_mm_cvtepi16_epi32(__m128i a) {
   // CHECK-LABEL: test_mm_cvtepi16_epi32
   // CHECK: shufflevector <8 x i16> {{.*}}, <8 x i16> {{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // CHECK: sext <4 x i16> {{.*}} to <4 x i32>
   return _mm_cvtepi16_epi32(a);
 }
+
+TEST_CONSTEXPR(match_v4si(_mm_cvtepi16_epi32(_mm_setr_epi16(-300, 2, -1, 0, 1, -2, 3, -4)), -300, 2, -1, 0));
 
 __m128i test_mm_cvtepi16_epi64(__m128i a) {
   // CHECK-LABEL: test_mm_cvtepi16_epi64
@@ -114,12 +123,16 @@ __m128i test_mm_cvtepi16_epi64(__m128i a) {
   return _mm_cvtepi16_epi64(a);
 }
 
+TEST_CONSTEXPR(match_v2di(_mm_cvtepi16_epi64(_mm_setr_epi16(-300, 2, -1, 0, 1, -2, 3, -4)), -300, 2));
+
 __m128i test_mm_cvtepi32_epi64(__m128i a) {
   // CHECK-LABEL: test_mm_cvtepi32_epi64
   // CHECK: shufflevector <4 x i32> {{.*}}, <4 x i32> {{.*}}, <2 x i32> <i32 0, i32 1>
   // CHECK: sext <2 x i32> {{.*}} to <2 x i64>
   return _mm_cvtepi32_epi64(a);
 }
+
+TEST_CONSTEXPR(match_v2di(_mm_cvtepi32_epi64(_mm_setr_epi32(-70000, 2, -1, 0)), -70000, 2));
 
 __m128i test_mm_cvtepu8_epi16(__m128i a) {
   // CHECK-LABEL: test_mm_cvtepu8_epi16
@@ -128,12 +141,16 @@ __m128i test_mm_cvtepu8_epi16(__m128i a) {
   return _mm_cvtepu8_epi16(a);
 }
 
+TEST_CONSTEXPR(match_v8hi(_mm_cvtepu8_epi16(_mm_setr_epi8(-3, 2, -1, 0, 1, -2, 3, -4, 0, 0, 0, 0, 0, 0, 0, 0)), 253, 2, 255, 0, 1, 254, 3, 252));
+
 __m128i test_mm_cvtepu8_epi32(__m128i a) {
   // CHECK-LABEL: test_mm_cvtepu8_epi32
   // CHECK: shufflevector <16 x i8> {{.*}}, <16 x i8> {{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // CHECK: zext <4 x i8> {{.*}} to <4 x i32>
   return _mm_cvtepu8_epi32(a);
 }
+
+TEST_CONSTEXPR(match_v4si(_mm_cvtepu8_epi32(_mm_setr_epi8(-3, 2, -1, 0, 1, -2, 3, -4, 0, 0, 0, 0, 0, 0, 0, 0)), 253, 2, 255, 0));
 
 __m128i test_mm_cvtepu8_epi64(__m128i a) {
   // CHECK-LABEL: test_mm_cvtepu8_epi64
@@ -142,12 +159,16 @@ __m128i test_mm_cvtepu8_epi64(__m128i a) {
   return _mm_cvtepu8_epi64(a);
 }
 
+TEST_CONSTEXPR(match_v2di(_mm_cvtepu8_epi64(_mm_setr_epi8(-3, 2, -1, 0, 1, -2, 3, -4, 0, 0, 0, 0, 0, 0, 0, 0)), 253, 2));
+
 __m128i test_mm_cvtepu16_epi32(__m128i a) {
   // CHECK-LABEL: test_mm_cvtepu16_epi32
   // CHECK: shufflevector <8 x i16> {{.*}}, <8 x i16> {{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // CHECK: zext <4 x i16> {{.*}} to <4 x i32>
   return _mm_cvtepu16_epi32(a);
 }
+
+TEST_CONSTEXPR(match_v4si(_mm_cvtepu16_epi32(_mm_setr_epi16(-300, 2, -1, 0, 1, -2, 3, -4)), 65236, 2, 65535, 0));
 
 __m128i test_mm_cvtepu16_epi64(__m128i a) {
   // CHECK-LABEL: test_mm_cvtepu16_epi64
@@ -156,12 +177,16 @@ __m128i test_mm_cvtepu16_epi64(__m128i a) {
   return _mm_cvtepu16_epi64(a);
 }
 
+TEST_CONSTEXPR(match_v2di(_mm_cvtepu16_epi64(_mm_setr_epi16(-300, 2, -1, 0, 1, -2, 3, -4)), 65236, 2));
+
 __m128i test_mm_cvtepu32_epi64(__m128i a) {
   // CHECK-LABEL: test_mm_cvtepu32_epi64
   // CHECK: shufflevector <4 x i32> {{.*}}, <4 x i32> {{.*}}, <2 x i32> <i32 0, i32 1>
   // CHECK: zext <2 x i32> {{.*}} to <2 x i64>
   return _mm_cvtepu32_epi64(a);
 }
+
+TEST_CONSTEXPR(match_v2di(_mm_cvtepu32_epi64(_mm_setr_epi32(-70000, 2, -1, 0)), 4294897296, 2));
 
 __m128d test_mm_dp_pd(__m128d x, __m128d y) {
   // CHECK-LABEL: test_mm_dp_pd

@@ -329,14 +329,16 @@ def DeclareTargetInterface : OpInterface<"DeclareTargetInterface"> {
       /*retTy=*/"void",
       /*methodName=*/"setDeclareTarget",
       (ins "mlir::omp::DeclareTargetDeviceType":$deviceType,
-            "mlir::omp::DeclareTargetCaptureClause":$captureClause), [{}], [{
+           "mlir::omp::DeclareTargetCaptureClause":$captureClause,
+           "bool":$automap), [{}], [{
         $_op->setAttr("omp.declare_target",
                   mlir::omp::DeclareTargetAttr::get(
                       $_op->getContext(),
                       mlir::omp::DeclareTargetDeviceTypeAttr::get(
                           $_op->getContext(), deviceType),
                       mlir::omp::DeclareTargetCaptureClauseAttr::get(
-                          $_op->getContext(), captureClause)));
+                          $_op->getContext(), captureClause),
+                      mlir::BoolAttr::get($_op->getContext(), automap)));
       }]>,
       InterfaceMethod<
       /*description=*/[{
@@ -374,6 +376,19 @@ def DeclareTargetInterface : OpInterface<"DeclareTargetInterface"> {
           if (auto dAttr = llvm::dyn_cast_or_null<mlir::omp::DeclareTargetAttr>(dTar))
             return dAttr.getCaptureClause().getValue();
         return {};
+      }]>,
+      InterfaceMethod<
+      /*description=*/[{
+        Return true if the DeclareTarget attribute has the AUTOMAP modifier.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"getDeclareTargetAutomap",
+      (ins), [{}], [{
+        if (mlir::Attribute dTar = $_op->getAttr("omp.declare_target"))
+          if (auto dAttr = llvm::dyn_cast_or_null<mlir::omp::DeclareTargetAttr>(dTar))
+            if (auto autoVal = dAttr.getAutomap())
+              return autoVal.getValue();
+         return false;
       }]>
   ];
 }

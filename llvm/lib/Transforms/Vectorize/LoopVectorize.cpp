@@ -4022,8 +4022,7 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
       if (VF.isScalar())
         continue;
 
-      VPCostContext CostCtx(CM.TTI, *CM.TLI, Legal->getWidestInductionType(),
-                            CM, CM.CostKind);
+      VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, CM.CostKind);
       precomputeCosts(*Plan, VF, CostCtx);
       auto Iter = vp_depth_first_deep(Plan->getVectorLoopRegion()->getEntry());
       for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
@@ -4131,7 +4130,7 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
 static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
                                 const TargetTransformInfo &TTI) {
   assert(VF.isVector() && "Checking a scalar VF?");
-  VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType());
+  VPTypeAnalysis TypeInfo(Plan);
   DenseSet<VPRecipeBase *> EphemeralRecipes;
   collectEphemeralRecipesForVPlan(Plan, EphemeralRecipes);
   // Set of already visited types.
@@ -4279,8 +4278,7 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
 
       // Add on other costs that are modelled in VPlan, but not in the legacy
       // cost model.
-      VPCostContext CostCtx(CM.TTI, *CM.TLI, CM.Legal->getWidestInductionType(),
-                            CM, CM.CostKind);
+      VPCostContext CostCtx(CM.TTI, *CM.TLI, *P, CM, CM.CostKind);
       VPRegionBlock *VectorRegion = P->getVectorLoopRegion();
       assert(VectorRegion && "Expected to have a vector region!");
       for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
@@ -5297,11 +5295,12 @@ LoopVectorizationCostModel::getUniformMemOpCost(Instruction *I,
   assert(Legal->isUniformMemOp(*I, VF));
 
   Type *ValTy = getLoadStoreType(I);
+  Type *PtrTy = getLoadStorePointerOperand(I)->getType();
   auto *VectorTy = cast<VectorType>(toVectorTy(ValTy, VF));
   const Align Alignment = getLoadStoreAlignment(I);
   unsigned AS = getLoadStoreAddressSpace(I);
   if (isa<LoadInst>(I)) {
-    return TTI.getAddressComputationCost(ValTy) +
+    return TTI.getAddressComputationCost(PtrTy) +
            TTI.getMemoryOpCost(Instruction::Load, ValTy, Alignment, AS,
                                CostKind) +
            TTI.getShuffleCost(TargetTransformInfo::SK_Broadcast, VectorTy,
@@ -5314,7 +5313,7 @@ LoopVectorizationCostModel::getUniformMemOpCost(Instruction *I,
   // VF.getKnownMinValue() - 1 from a scalable vector. This does not represent
   // the actual generated code, which involves extracting the last element of
   // a scalable vector where the lane to extract is unknown at compile time.
-  return TTI.getAddressComputationCost(ValTy) +
+  return TTI.getAddressComputationCost(PtrTy) +
          TTI.getMemoryOpCost(Instruction::Store, ValTy, Alignment, AS,
                              CostKind) +
          (IsLoopInvariantStoreValue
@@ -5330,8 +5329,9 @@ LoopVectorizationCostModel::getGatherScatterCost(Instruction *I,
   auto *VectorTy = cast<VectorType>(toVectorTy(ValTy, VF));
   const Align Alignment = getLoadStoreAlignment(I);
   const Value *Ptr = getLoadStorePointerOperand(I);
+  Type *PtrTy = toVectorTy(Ptr->getType(), VF);
 
-  return TTI.getAddressComputationCost(VectorTy) +
+  return TTI.getAddressComputationCost(PtrTy) +
          TTI.getGatherScatterOpCost(I->getOpcode(), VectorTy, Ptr,
                                     Legal->isMaskRequired(I), Alignment,
                                     CostKind, I);
@@ -5566,11 +5566,12 @@ LoopVectorizationCostModel::getMemoryInstructionCost(Instruction *I,
   // moment.
   if (VF.isScalar()) {
     Type *ValTy = getLoadStoreType(I);
+    Type *PtrTy = getLoadStorePointerOperand(I)->getType();
     const Align Alignment = getLoadStoreAlignment(I);
     unsigned AS = getLoadStoreAddressSpace(I);
 
     TTI::OperandValueInfo OpInfo = TTI::getOperandInfo(I->getOperand(0));
-    return TTI.getAddressComputationCost(ValTy) +
+    return TTI.getAddressComputationCost(PtrTy) +
            TTI.getMemoryOpCost(I->getOpcode(), ValTy, Alignment, AS, CostKind,
                                OpInfo, I);
   }
@@ -6929,8 +6930,7 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
 
 InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan,
                                                ElementCount VF) const {
-  VPCostContext CostCtx(CM.TTI, *CM.TLI, Legal->getWidestInductionType(), CM,
-                        CM.CostKind);
+  VPCostContext CostCtx(CM.TTI, *CM.TLI, Plan, CM, CM.CostKind);
   InstructionCost Cost = precomputeCosts(Plan, VF, CostCtx);
 
   // Now compute and add the VPlan-based cost.
@@ -7131,8 +7131,7 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   // simplifications not accounted for in the legacy cost model. If that's the
   // case, don't trigger the assertion, as the extra simplifications may cause a
   // different VF to be picked by the VPlan-based cost model.
-  VPCostContext CostCtx(CM.TTI, *CM.TLI, Legal->getWidestInductionType(), CM,
-                        CM.CostKind);
+  VPCostContext CostCtx(CM.TTI, *CM.TLI, BestPlan, CM, CM.CostKind);
   precomputeCosts(BestPlan, BestFactor.Width, CostCtx);
   // Verify that the VPlan-based and legacy cost models agree, except for VPlans
   // with early exits and plans with additional VPlan simplifications. The
@@ -7270,8 +7269,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
     ++LoopsEarlyExitVectorized;
   // TODO: Move to VPlan transform stage once the transition to the VPlan-based
   // cost model is complete for better cost estimates.
-  VPlanTransforms::runPass(VPlanTransforms::unrollByUF, BestVPlan, BestUF,
-                           OrigLoop->getHeader()->getContext());
+  VPlanTransforms::runPass(VPlanTransforms::unrollByUF, BestVPlan, BestUF);
   VPlanTransforms::runPass(VPlanTransforms::replicateByVF, BestVPlan, BestVF);
   VPlanTransforms::runPass(VPlanTransforms::materializeBroadcasts, BestVPlan);
   bool HasBranchWeights =
@@ -8459,7 +8457,7 @@ static VPInstruction *addResumePhiRecipeForInduction(
 /// \p IVEndValues.
 static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan,
                                 DenseMap<VPValue *, VPValue *> &IVEndValues) {
-  VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType());
+  VPTypeAnalysis TypeInfo(Plan);
   auto *ScalarPH = Plan.getScalarPreheader();
   auto *MiddleVPBB = cast<VPBasicBlock>(ScalarPH->getPredecessors()[0]);
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
@@ -8842,8 +8840,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // TODO: Enable following transform when the EVL-version of extended-reduction
   // and mulacc-reduction are implemented.
   if (!CM.foldTailWithEVL()) {
-    VPCostContext CostCtx(CM.TTI, *CM.TLI, Legal->getWidestInductionType(), CM,
-                          CM.CostKind);
+    VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, CM.CostKind);
     VPlanTransforms::runPass(VPlanTransforms::convertToAbstractRecipes, *Plan,
                              CostCtx, Range);
   }
@@ -10123,8 +10120,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     // Check if it is profitable to vectorize with runtime checks.
     bool ForceVectorization =
         Hints.getForce() == LoopVectorizeHints::FK_Enabled;
-    VPCostContext CostCtx(CM.TTI, *CM.TLI, CM.Legal->getWidestInductionType(),
-                          CM, CM.CostKind);
+    VPCostContext CostCtx(CM.TTI, *CM.TLI, LVP.getPlanFor(VF.Width), CM,
+                          CM.CostKind);
     if (!ForceVectorization &&
         !isOutsideLoopWorkProfitable(Checks, VF, L, PSE, CostCtx,
                                      LVP.getPlanFor(VF.Width), SEL,

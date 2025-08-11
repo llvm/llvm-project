@@ -24,7 +24,7 @@ from dex.utils.Exceptions import DebuggerException
 from dex.debugger.DebuggerControllers.DefaultController import DefaultController
 
 from dex.debugger.dbgeng.dbgeng import DbgEng
-from dex.debugger.lldb.LLDB import LLDB
+from dex.debugger.lldb.LLDB import LLDB, LLDBDAP
 from dex.debugger.visualstudio.VisualStudio2015 import VisualStudio2015
 from dex.debugger.visualstudio.VisualStudio2017 import VisualStudio2017
 from dex.debugger.visualstudio.VisualStudio2019 import VisualStudio2019
@@ -39,6 +39,7 @@ def _get_potential_debuggers():  # noqa
     return {
         DbgEng.get_option_name(): DbgEng,
         LLDB.get_option_name(): LLDB,
+        LLDBDAP.get_option_name(): LLDBDAP,
         VisualStudio2015.get_option_name(): VisualStudio2015,
         VisualStudio2017.get_option_name(): VisualStudio2017,
         VisualStudio2019.get_option_name(): VisualStudio2019,
@@ -65,7 +66,27 @@ def add_debugger_tool_base_arguments(parser, defaults):
         metavar="<file>",
         default=None,
         display_default=defaults.lldb_executable,
-        help="location of LLDB executable",
+        help="location of `lldb` executable for --debugger=lldb, or `lldb-dap` for --debugger=lldb-dap",
+    )
+    dap_group = parser.add_argument_group("DAP Debugger arguments")
+    dap_group.add_argument(
+        "--dap-message-log",
+        type=str,
+        metavar="<filepath>",
+        default=None,
+        help="log file for messages between Dexter and the debug adapter; set to '-' to log to stdout",
+    )
+    dap_group.add_argument(
+        "--colorize-dap-log",
+        action="store_true",
+        default=False,
+        help="apply colors to the logged DAP messages",
+    )
+    dap_group.add_argument(
+        "--format-dap-log",
+        type=str,
+        default="pretty",
+        choices=["oneline", "pretty"],
     )
 
 
@@ -156,7 +177,7 @@ def handle_debugger_tool_base_options(context, defaults):  # noqa
     if options.lldb_executable is None:
         options.lldb_executable = defaults.lldb_executable
     else:
-        if getattr(options, "debugger", "lldb") != "lldb":
+        if getattr(options, "debugger", "lldb") not in ("lldb", "lldb-dap"):
             _warn_meaningless_option(context, "--lldb-executable")
 
         options.lldb_executable = os.path.abspath(options.lldb_executable)
@@ -164,6 +185,9 @@ def handle_debugger_tool_base_options(context, defaults):  # noqa
             raise ToolArgumentError(
                 '<d>could not find</> <r>"{}"</>'.format(options.lldb_executable)
             )
+
+    if options.dap_message_log is not None and options.dap_message_log != "-":
+        options.dap_message_log = os.path.abspath(options.dap_message_log)
 
 
 def handle_debugger_tool_options(context, defaults):  # noqa

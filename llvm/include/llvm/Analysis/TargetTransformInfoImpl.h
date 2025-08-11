@@ -937,7 +937,8 @@ public:
   // Assume that we have a register of the right size for the type.
   virtual unsigned getNumberOfParts(Type *Tp) const { return 1; }
 
-  virtual InstructionCost getAddressComputationCost(Type *Tp, ScalarEvolution *,
+  virtual InstructionCost getAddressComputationCost(Type *PtrTy,
+                                                    ScalarEvolution *,
                                                     const SCEV *) const {
     return 0;
   }
