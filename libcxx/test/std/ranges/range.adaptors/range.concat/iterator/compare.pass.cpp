@@ -29,6 +29,7 @@ constexpr void test() {
   };
 
   {
+    // test with one view
     std::array<int, 5> array{0, 1, 2, 3, 4};
     ConcatView view                          = make_concat_view(array.data(), array.data() + array.size());
     decltype(auto) it1                       = view.begin();
@@ -38,6 +39,22 @@ constexpr void test() {
 
     ++it1;
     assert(!(it1 == it2));
+  }
+
+  {
+    // test with more than one view
+    constexpr static std::array<int, 3> array1{0, 1, 2};
+    constexpr static std::array<int, 3> array2{0, 1, 2};
+    constexpr static std::ranges::concat_view view(std::views::all(array1), std::views::all(array2));
+    decltype(auto) it1                       = view.begin();
+    decltype(auto) it2                       = view.begin();
+    std::same_as<bool> decltype(auto) result = (it1 == it2);
+    assert(result);
+
+    ++it2; ++it2;
+    assert(!(it1 == it2));
+    ++it2;
+    assert(*it1 == *it2);
   }
 
   {

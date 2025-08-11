@@ -16,12 +16,12 @@
 #include "../types.h"
 
 constexpr void test() {
-  // Test with a single satisfied value
+  // Test with a single view
   {
     constexpr static std::array<int, 5> array{0, 1, 2, 3, 4};
     constexpr static std::ranges::concat_view view(std::views::all(array));
     auto it = std::ranges::next(view.begin(), view.end());
-    assert(it == view.end()); // test the test
+    assert(it == view.end());
 
     auto& result = --it;
     ASSERT_SAME_TYPE(decltype(result)&, decltype(--it));
@@ -29,18 +29,20 @@ constexpr void test() {
     assert(result == view.begin() + 4);
   }
 
-  // Test with more than one satisfied value
+  // Test with more than one view
   {
-    constexpr static std::array<int, 5> array{0, 1, 2, 3, 4};
-    constexpr static std::ranges::concat_view view(std::views::all(array));
+    constexpr static std::array<int, 3> array{0, 1, 2};
+    constexpr static std::array<int, 3> array1{3, 4, 5};
+    constexpr std::ranges::concat_view view(std::views::all(array), std::views::all(array1));
     auto it = std::ranges::next(view.begin(), view.end());
-    assert(it == view.end()); // test the test
+    assert(it == view.end());
 
     auto& result = --it;
     assert(&result == &it);
 
     --it;
-    assert(it == view.begin() + 3);
+    assert(*it == 4);
+    assert(it == view.begin() + 4);
   }
 
   // Test going forward and then backward on the same iterator
