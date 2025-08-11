@@ -1317,7 +1317,7 @@ func.func @maskedload_negative_alignment(%base: memref<4xi32>, %mask: vector<32x
 
 // -----
 
-func.func @maskedload_nonpoweroftwo_alignment(%base: memref<4xi32>, %mask: vector<32xi1>, %pass: vector<1xi32>, %index: index) {
+func.func @maskedload_non_power_of_2_alignment(%base: memref<4xi32>, %mask: vector<32xi1>, %pass: vector<1xi32>, %index: index) {
   // expected-error@below {{'vector.maskedload' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
   %val = vector.maskedload %base[%index], %mask, %pass { alignment = 3 } : memref<4xi32>, vector<32xi1>, vector<1xi32> into vector<1xi32>
   return
@@ -1368,7 +1368,7 @@ func.func @maskedstore_negative_alignment(%base: memref<4xi32>, %mask: vector<32
 
 // -----
 
-func.func @maskedstore_nonpoweroftwo_alignment(%base: memref<4xi32>, %mask: vector<32xi1>, %value: vector<1xi32>, %index: index) {
+func.func @maskedstore_non_power_of_2_alignment(%base: memref<4xi32>, %mask: vector<32xi1>, %value: vector<1xi32>, %index: index) {
   // expected-error@below {{'vector.maskedstore' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
   vector.maskedstore %base[%index], %mask, %value { alignment = 3 } : memref<4xi32>, vector<32xi1>, vector<1xi32> into vector<1xi32>
   return
@@ -1470,7 +1470,7 @@ func.func @gather_pass_thru_type_mismatch(%base: memref<?xf32>, %indices: vector
 
 // -----
 
-func.func @gather_invalid_alignment(%base: memref<16xf32>, %indices: vector<16xi32>,
+func.func @gather_negative_alignment(%base: memref<16xf32>, %indices: vector<16xi32>,
                                 %mask: vector<16xi1>, %pass_thru: vector<16xf32>, %c0 : index) {
   // expected-error@+2 {{'vector.gather' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
   %0 = vector.gather %base[%c0][%indices], %mask, %pass_thru
@@ -1479,7 +1479,7 @@ func.func @gather_invalid_alignment(%base: memref<16xf32>, %indices: vector<16xi
 
 // -----
 
-func.func @gather_invalid_alignment(%base: memref<16xf32>, %indices: vector<16xi32>,
+func.func @gather_non_power_of_two_alignment(%base: memref<16xf32>, %indices: vector<16xi32>,
                                 %mask: vector<16xi1>, %pass_thru: vector<16xf32>, %c0 : index) {
   // expected-error@+2 {{'vector.gather' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
   %0 = vector.gather %base[%c0][%indices], %mask, %pass_thru
@@ -1549,7 +1549,7 @@ func.func @scatter_dim_mask_mismatch(%base: memref<?xf32>, %indices: vector<16xi
 
 // -----
 
-func.func @scatter_invalid_alignment(%base: memref<?xf32>, %indices: vector<16xi32>,
+func.func @scatter_negative_alignment(%base: memref<?xf32>, %indices: vector<16xi32>,
                                 %mask: vector<16xi1>, %value: vector<16xf32>, %c0: index) {
   // expected-error@+1 {{'vector.scatter' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
   vector.scatter %base[%c0][%indices], %mask, %value { alignment = -1 }
@@ -1558,7 +1558,7 @@ func.func @scatter_invalid_alignment(%base: memref<?xf32>, %indices: vector<16xi
 
 // -----
 
-func.func @scatter_invalid_alignment(%base: memref<?xf32>, %indices: vector<16xi32>,
+func.func @scatter_non_power_of_2_alignment(%base: memref<?xf32>, %indices: vector<16xi32>,
                                 %mask: vector<16xi1>, %value: vector<16xf32>, %c0: index) {
   // expected-error@+1 {{'vector.scatter' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
   vector.scatter %base[%c0][%indices], %mask, %value { alignment = 3 }
@@ -1607,14 +1607,14 @@ func.func @expand_memref_mismatch(%base: memref<?x?xf32>, %mask: vector<16xi1>, 
 
 // -----
 
-func.func @expand_invalid_alignment(%base: memref<?xf32>, %mask: vector<16xi1>, %pass_thru: vector<16xf32>, %c0: index) {
+func.func @expand_negative_alignment(%base: memref<?xf32>, %mask: vector<16xi1>, %pass_thru: vector<16xf32>, %c0: index) {
   // expected-error@+1 {{'vector.expandload' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
   %0 = vector.expandload %base[%c0], %mask, %pass_thru { alignment = -1 } : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
 }
 
 // -----
 
-func.func @expand_invalid_alignment(%base: memref<?xf32>, %mask: vector<16xi1>, %pass_thru: vector<16xf32>, %c0: index) {
+func.func @expand_non_power_of_2_alignment(%base: memref<?xf32>, %mask: vector<16xi1>, %pass_thru: vector<16xf32>, %c0: index) {
   // expected-error@+1 {{'vector.expandload' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
   %0 = vector.expandload %base[%c0], %mask, %pass_thru { alignment = 3 } : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
 }
@@ -1653,14 +1653,14 @@ func.func @compress_memref_mismatch(%base: memref<?x?xf32>, %mask: vector<16xi1>
 
 // -----
 
-func.func @compress_invalid_alignment(%base: memref<?xf32>, %mask: vector<16xi1>, %value: vector<16xf32>, %c0: index) {
+func.func @compress_negative_alignment(%base: memref<?xf32>, %mask: vector<16xi1>, %value: vector<16xf32>, %c0: index) {
   // expected-error @below {{'vector.compressstore' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
   vector.compressstore %base[%c0], %mask, %value { alignment = -1 } : memref<?xf32>, vector<16xi1>, vector<16xf32>
 }
 
 // -----
 
-func.func @compress_invalid_alignment(%base: memref<?xf32>, %mask: vector<16xi1>, %value: vector<16xf32>, %c0: index) {
+func.func @compress_non_power_of_2_alignment(%base: memref<?xf32>, %mask: vector<16xi1>, %value: vector<16xf32>, %c0: index) {
   // expected-error @below {{'vector.compressstore' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
   vector.compressstore %base[%c0], %mask, %value { alignment = 3 } : memref<?xf32>, vector<16xi1>, vector<16xf32>
 }
@@ -2016,7 +2016,7 @@ func.func @vector_load(%src : memref<?xi8>) {
 
 // -----
 
-func.func @invalid_load_alignment(%memref: memref<4xi32>, %c0: index) {
+func.func @load_negative_alignment(%memref: memref<4xi32>, %c0: index) {
   // expected-error @below {{'vector.load' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
   %val = vector.load %memref[%c0] { alignment = -1 } : memref<4xi32>, vector<4xi32>
   return
@@ -2024,7 +2024,7 @@ func.func @invalid_load_alignment(%memref: memref<4xi32>, %c0: index) {
 
 // -----
 
-func.func @invalid_load_alignment(%memref: memref<4xi32>, %c0: index) {
+func.func @load_non_pow_of_2_alignment(%memref: memref<4xi32>, %c0: index) {
   // expected-error @below {{'vector.load' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
   %val = vector.load %memref[%c0] { alignment = 3 } : memref<4xi32>, vector<4xi32>
   return
@@ -2045,7 +2045,7 @@ func.func @vector_store(%dest : memref<?xi8>, %vec : vector<16x16xi8>) {
 
 // -----
 
-func.func @invalid_store_alignment(%memref: memref<4xi32>, %val: vector<4xi32>, %c0: index) {
+func.func @store_negative_alignment(%memref: memref<4xi32>, %val: vector<4xi32>, %c0: index) {
   // expected-error @below {{'vector.store' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
   vector.store %val, %memref[%c0] { alignment = -1 } : memref<4xi32>, vector<4xi32>
   return
@@ -2053,7 +2053,7 @@ func.func @invalid_store_alignment(%memref: memref<4xi32>, %val: vector<4xi32>, 
 
 // -----
 
-func.func @invalid_store_alignment(%memref: memref<4xi32>, %val: vector<4xi32>, %c0: index) {
+func.func @store_non_pow_of_2_alignment(%memref: memref<4xi32>, %val: vector<4xi32>, %c0: index) {
   // expected-error @below {{'vector.store' op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive and whose value is a power of two > 0}}
   vector.store %val, %memref[%c0] { alignment = 3 } : memref<4xi32>, vector<4xi32>
   return
