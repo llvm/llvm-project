@@ -26,6 +26,7 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Parser/openmp-utils.h"
 #include "flang/Semantics/attr.h"
+#include "flang/Semantics/openmp-directive-sets.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallSet.h"
@@ -46,7 +47,7 @@ bool DataSharingProcessor::OMPConstructSymbolVisitor::isSymbolDefineBy(
 static bool isConstructWithTopLevelTarget(lower::pft::Evaluation &eval) {
   const auto *ompEval = eval.getIf<parser::OpenMPConstruct>();
   if (ompEval) {
-    auto dir = parser::omp::GetOmpDirectiveName(ompEval).v;
+    auto dir = parser::omp::GetOmpDirectiveName(*ompEval).v;
     if (llvm::omp::topTargetSet.test(dir))
       return true;
   }
