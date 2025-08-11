@@ -2691,7 +2691,17 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
  // Perform a bitwise OR on the horizontal pairs (or other specified grouping)
-  // of elements. This is convenient for instrumenting horizontal add/sub.
+  // of elements.
+  //
+  // For example, suppose we have:
+  //   VectorA: <a1, a2, a3, a4, a5, a6>
+  //   VectorB: <b1, b2, b3, b4, b5, b6>
+  //   ReductionFactor: 3.
+  // The output would be:
+  //   <a1|a2|a3, a4|a5|a6, b1|b2|b3, b4|b5|b6>
+  //
+  // This is convenient for instrumenting horizontal add/sub.
+  // For bitwise OR on "vertical" pairs, see maybeHandleSimpleNomemIntrinsic().
   Value *horizontalReduce(IntrinsicInst &I, unsigned ReductionFactor,
                           Value *VectorA, Value *VectorB) {
     assert(isa<FixedVectorType>(VectorA->getType()));
@@ -3227,7 +3237,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// Caller guarantees that this intrinsic does not access memory.
   ///
   /// TODO: "horizontal"/"pairwise" intrinsics are often incorrectly matched by
-  ///       by this handler.
+  ///       by this handler. See horizontalReduce().
   [[maybe_unused]] bool
   maybeHandleSimpleNomemIntrinsic(IntrinsicInst &I,
                                   unsigned int trailingFlags) {
