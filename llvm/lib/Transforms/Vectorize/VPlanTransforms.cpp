@@ -2242,47 +2242,49 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
     }
   }
 
-  // Try to optimize header mask recipes away to their EVL variants.
+  // Replace header masks with a mask equivalent to predicating by EVL:
+  //
+  // icmp ule widen-canonical-iv backedge-taken-count
+  // ->
+  // icmp ult step-vector, EVL
+  VPRecipeBase *EVLR = EVL.getDefiningRecipe();
+  VPBuilder Builder(EVLR->getParent(), std::next(EVLR->getIterator()));
+  Type *EVLType = TypeInfo.inferScalarType(&EVL);
+  VPValue *EVLMask = Builder.createICmp(
+      CmpInst::ICMP_ULT,
+      Builder.createNaryOp(VPInstruction::StepVector, {}, EVLType), &EVL);
   for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
-    // TODO: Split optimizeMaskToEVL out and move into
-    // VPlanTransforms::optimize. transformRecipestoEVLRecipes should be run in
-    // tryToBuildVPlanWithVPRecipes beforehand.
-    for (VPUser *U : collectUsersRecursively(HeaderMask)) {
-      auto *CurRecipe = cast<VPRecipeBase>(U);
-      VPRecipeBase *EVLRecipe =
-          optimizeMaskToEVL(HeaderMask, *CurRecipe, TypeInfo, *AllOneMask, EVL);
-      if (!EVLRecipe)
-        continue;
-
-      [[maybe_unused]] unsigned NumDefVal = EVLRecipe->getNumDefinedValues();
-      assert(NumDefVal == CurRecipe->getNumDefinedValues() &&
-             "New recipe must define the same number of values as the "
-             "original.");
-      assert(
-          NumDefVal <= 1 &&
-          "Only supports recipes with a single definition or without users.");
-      EVLRecipe->insertBefore(CurRecipe);
-      if (isa<VPSingleDefRecipe, VPWidenLoadEVLRecipe>(EVLRecipe)) {
-        VPValue *CurVPV = CurRecipe->getVPSingleValue();
-        CurVPV->replaceAllUsesWith(EVLRecipe->getVPSingleValue());
-      }
-      ToErase.push_back(CurRecipe);
-    }
-
-    // Replace header masks with a mask equivalent to predicating by EVL:
-    //
-    // icmp ule widen-canonical-iv backedge-taken-count
-    // ->
-    // icmp ult step-vector, EVL
-    VPRecipeBase *EVLR = EVL.getDefiningRecipe();
-    VPBuilder Builder(EVLR->getParent(), std::next(EVLR->getIterator()));
-    Type *EVLType = TypeInfo.inferScalarType(&EVL);
-    VPValue *EVLMask = Builder.createICmp(
-        CmpInst::ICMP_ULT,
-        Builder.createNaryOp(VPInstruction::StepVector, {}, EVLType), &EVL);
     HeaderMask->replaceAllUsesWith(EVLMask);
     ToErase.push_back(HeaderMask->getDefiningRecipe());
   }
+
+  // Try to optimize header mask recipes away to their EVL variants.
+  // TODO: Split optimizeMaskToEVL out and move into
+  // VPlanTransforms::optimize. transformRecipestoEVLRecipes should be run in
+  // tryToBuildVPlanWithVPRecipes beforehand.
+  for (VPUser *U : collectUsersRecursively(EVLMask)) {
+    auto *CurRecipe = cast<VPRecipeBase>(U);
+    VPRecipeBase *EVLRecipe =
+        optimizeMaskToEVL(EVLMask, *CurRecipe, TypeInfo, *AllOneMask, EVL);
+    if (!EVLRecipe)
+      continue;
+
+    [[maybe_unused]] unsigned NumDefVal = EVLRecipe->getNumDefinedValues();
+    assert(NumDefVal == CurRecipe->getNumDefinedValues() &&
+           "New recipe must define the same number of values as the "
+           "original.");
+    assert(NumDefVal <= 1 &&
+           "Only supports recipes with a single definition or without users.");
+    EVLRecipe->insertBefore(CurRecipe);
+    if (isa<VPSingleDefRecipe, VPWidenLoadEVLRecipe>(EVLRecipe)) {
+      VPValue *CurVPV = CurRecipe->getVPSingleValue();
+      CurVPV->replaceAllUsesWith(EVLRecipe->getVPSingleValue());
+    }
+    ToErase.push_back(CurRecipe);
+  }
+  // Remove dead EVL mask.
+  if (EVLMask->getNumUsers() == 0)
+    EVLMask->getDefiningRecipe()->eraseFromParent();
 
   for (VPRecipeBase *R : reverse(ToErase)) {
     SmallVector<VPValue *> PossiblyDead(R->operands());
@@ -2579,10 +2581,10 @@ void VPlanTransforms::createInterleaveGroups(
     auto *InsertPos =
         cast<VPWidenMemoryRecipe>(RecipeBuilder.getRecipe(IRInsertPos));
 
-    bool InBounds = false;
+    GEPNoWrapFlags NW = GEPNoWrapFlags::none();
     if (auto *Gep = dyn_cast<GetElementPtrInst>(
             getLoadStorePointerOperand(IRInsertPos)->stripPointerCasts()))
-      InBounds = Gep->isInBounds();
+      NW = Gep->getNoWrapFlags().withoutNoUnsignedWrap();
 
     // Get or create the start address for the interleave group.
     auto *Start =
@@ -2606,8 +2608,9 @@ void VPlanTransforms::createInterleaveGroups(
       VPValue *OffsetVPV =
           Plan.getOrAddLiveIn(ConstantInt::get(Plan.getContext(), -Offset));
       VPBuilder B(InsertPos);
-      Addr = InBounds ? B.createInBoundsPtrAdd(InsertPos->getAddr(), OffsetVPV)
-                      : B.createPtrAdd(InsertPos->getAddr(), OffsetVPV);
+      Addr = NW.isInBounds()
+                 ? B.createInBoundsPtrAdd(InsertPos->getAddr(), OffsetVPV)
+                 : B.createPtrAdd(InsertPos->getAddr(), OffsetVPV);
     }
     // If the group is reverse, adjust the index to refer to the last vector
     // lane instead of the first. We adjust the index from the first vector
@@ -2616,9 +2619,7 @@ void VPlanTransforms::createInterleaveGroups(
     if (IG->isReverse()) {
       auto *ReversePtr = new VPVectorEndPointerRecipe(
           Addr, &Plan.getVF(), getLoadStoreType(IRInsertPos),
-          -(int64_t)IG->getFactor(),
-          InBounds ? GEPNoWrapFlags::inBounds() : GEPNoWrapFlags::none(),
-          InsertPos->getDebugLoc());
+          -(int64_t)IG->getFactor(), NW, InsertPos->getDebugLoc());
       ReversePtr->insertBefore(InsertPos);
       Addr = ReversePtr;
     }

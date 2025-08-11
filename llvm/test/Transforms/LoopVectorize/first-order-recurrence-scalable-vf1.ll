@@ -87,10 +87,10 @@ define void @pr97452_scalable_vf1_for_no_live_out(ptr %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 1 x i64> @llvm.vector.splice.nxv1i64(<vscale x 1 x i64> [[VECTOR_RECUR]], <vscale x 1 x i64> [[WIDE_LOAD]], i32 -1)
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <vscale x 1 x i64> [[TMP7]], ptr [[TMP8]], align 8
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 23
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+ CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP12:%.*]] = sub i32 [[TMP11]], 1
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <vscale x 1 x i64> [[WIDE_LOAD]], i32 [[TMP12]]

@@ -62,7 +62,6 @@ define void @load_store(ptr %p) {
 ; LMUL2:       middle.block:
 ; LMUL2-NEXT:    br label [[FOR_END:%.*]]
 ; LMUL2:       scalar.ph:
-; LMUL2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; LMUL2-NEXT:    br label [[FOR_BODY:%.*]]
 ; LMUL2:       for.body:
 ; LMUL2-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -99,7 +98,6 @@ define void @load_store(ptr %p) {
 ; LMUL4:       middle.block:
 ; LMUL4-NEXT:    br label [[FOR_END:%.*]]
 ; LMUL4:       scalar.ph:
-; LMUL4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; LMUL4-NEXT:    br label [[FOR_BODY:%.*]]
 ; LMUL4:       for.body:
 ; LMUL4-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
@@ -136,7 +134,6 @@ define void @load_store(ptr %p) {
 ; LMUL8:       middle.block:
 ; LMUL8-NEXT:    br label [[FOR_END:%.*]]
 ; LMUL8:       scalar.ph:
-; LMUL8-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; LMUL8-NEXT:    br label [[FOR_BODY:%.*]]
 ; LMUL8:       for.body:
 ; LMUL8-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
