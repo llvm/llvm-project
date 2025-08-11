@@ -1676,7 +1676,7 @@ public:
   /// \returns The cost of the address computation. For most targets this can be
   /// merged into the instruction indexing mode. Some targets might want to
   /// distinguish between address computation for memory operations with vector
-  /// types and scalar pointer types. Such targets should override this
+  /// pointer types and scalar pointer types. Such targets should override this
   /// function. \p SE holds the pointer for the scalar evolution object which is
   /// used in order to get the Ptr step value in case of constant stride. \p Ptr
   /// holds the SCEV of the access pointer.
