@@ -107,11 +107,9 @@ define <2 x i32> @ustest_f64i32(<2 x double> %x) {
 ; CHECK-NEXT:    v128.bitselect
 ; CHECK-NEXT:    local.tee 0
 ; CHECK-NEXT:    v128.const 0, 0
-; CHECK-NEXT:    local.tee 1
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64x2.gt_s
-; CHECK-NEXT:    v128.bitselect
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.and
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i8x16.shuffle 0, 1, 2, 3, 8, 9, 10, 11, 0, 1, 2, 3, 0, 1, 2, 3
 ; CHECK-NEXT:    # fallthrough-return
@@ -1558,11 +1556,9 @@ define <2 x i32> @ustest_f64i32_mm(<2 x double> %x) {
 ; CHECK-NEXT:    v128.bitselect
 ; CHECK-NEXT:    local.tee 0
 ; CHECK-NEXT:    v128.const 0, 0
-; CHECK-NEXT:    local.tee 1
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    i64x2.gt_s
-; CHECK-NEXT:    v128.bitselect
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.and
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i8x16.shuffle 0, 1, 2, 3, 8, 9, 10, 11, 0, 1, 2, 3, 0, 1, 2, 3
 ; CHECK-NEXT:    # fallthrough-return

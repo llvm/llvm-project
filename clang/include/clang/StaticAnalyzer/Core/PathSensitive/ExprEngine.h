@@ -499,9 +499,6 @@ public:
   void VisitGuardedExpr(const Expr *Ex, const Expr *L, const Expr *R,
                         ExplodedNode *Pred, ExplodedNodeSet &Dst);
 
-  void VisitInitListExpr(const InitListExpr *E, ExplodedNode *Pred,
-                         ExplodedNodeSet &Dst);
-
   /// VisitAttributedStmt - Transfer function logic for AttributedStmt.
   void VisitAttributedStmt(const AttributedStmt *A, ExplodedNode *Pred,
                            ExplodedNodeSet &Dst);
@@ -591,6 +588,10 @@ public:
                                 ExplodedNode *Pred,
                                 ExplodedNodeSet &Dst);
 
+  void ConstructInitList(const Expr *Source, ArrayRef<Expr *> Args,
+                         bool IsTransparent, ExplodedNode *Pred,
+                         ExplodedNodeSet &Dst);
+
   /// evalEagerlyAssumeBifurcation - Given the nodes in 'Src', eagerly assume
   /// concrete boolean values for 'Ex', storing the resulting nodes in 'Dst'.
   void evalEagerlyAssumeBifurcation(ExplodedNodeSet &Dst, ExplodedNodeSet &Src,
@@ -659,7 +660,7 @@ private:
   /// evalBind - Handle the semantics of binding a value to a specific location.
   ///  This method is used by evalStore, VisitDeclStmt, and others.
   void evalBind(ExplodedNodeSet &Dst, const Stmt *StoreE, ExplodedNode *Pred,
-                SVal location, SVal Val, bool atDeclInit = false,
+                SVal location, SVal Val, bool AtDeclInit = false,
                 const ProgramPoint *PP = nullptr);
 
   ProgramStateRef

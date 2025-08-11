@@ -17,8 +17,7 @@ define bfloat @test_fadd(bfloat %0, bfloat %1) {
 ; SM70-LABEL: test_fadd(
 ; SM70:       {
 ; SM70-NEXT:    .reg .pred %p<2>;
-; SM70-NEXT:    .reg .b16 %rs<2>;
-; SM70-NEXT:    .reg .b32 %r<11>;
+; SM70-NEXT:    .reg .b32 %r<12>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    ld.param.b16 %r1, [test_fadd_param_1];
@@ -32,8 +31,8 @@ define bfloat @test_fadd(bfloat %0, bfloat %1) {
 ; SM70-NEXT:    setp.nan.f32 %p1, %r5, %r5;
 ; SM70-NEXT:    or.b32 %r9, %r5, 4194304;
 ; SM70-NEXT:    selp.b32 %r10, %r9, %r8, %p1;
-; SM70-NEXT:    mov.b32 {_, %rs1}, %r10;
-; SM70-NEXT:    st.param.b16 [func_retval0], %rs1;
+; SM70-NEXT:    shr.u32 %r11, %r10, 16;
+; SM70-NEXT:    st.param.b16 [func_retval0], %r11;
 ; SM70-NEXT:    ret;
 ;
 ; SM80-LABEL: test_fadd(
@@ -81,8 +80,7 @@ define bfloat @test_fsub(bfloat %0, bfloat %1) {
 ; SM70-LABEL: test_fsub(
 ; SM70:       {
 ; SM70-NEXT:    .reg .pred %p<2>;
-; SM70-NEXT:    .reg .b16 %rs<2>;
-; SM70-NEXT:    .reg .b32 %r<11>;
+; SM70-NEXT:    .reg .b32 %r<12>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    ld.param.b16 %r1, [test_fsub_param_1];
@@ -96,8 +94,8 @@ define bfloat @test_fsub(bfloat %0, bfloat %1) {
 ; SM70-NEXT:    setp.nan.f32 %p1, %r5, %r5;
 ; SM70-NEXT:    or.b32 %r9, %r5, 4194304;
 ; SM70-NEXT:    selp.b32 %r10, %r9, %r8, %p1;
-; SM70-NEXT:    mov.b32 {_, %rs1}, %r10;
-; SM70-NEXT:    st.param.b16 [func_retval0], %rs1;
+; SM70-NEXT:    shr.u32 %r11, %r10, 16;
+; SM70-NEXT:    st.param.b16 [func_retval0], %r11;
 ; SM70-NEXT:    ret;
 ;
 ; SM80-LABEL: test_fsub(
@@ -146,37 +144,35 @@ define <2 x bfloat> @test_faddx2(<2 x bfloat> %a, <2 x bfloat> %b) #0 {
 ; SM70:       {
 ; SM70-NEXT:    .reg .pred %p<3>;
 ; SM70-NEXT:    .reg .b16 %rs<5>;
-; SM70-NEXT:    .reg .b32 %r<24>;
+; SM70-NEXT:    .reg .b32 %r<22>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.b32 %r1, [test_faddx2_param_0];
-; SM70-NEXT:    ld.param.b32 %r2, [test_faddx2_param_1];
-; SM70-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
+; SM70-NEXT:    ld.param.v2.b16 {%rs1, %rs2}, [test_faddx2_param_0];
+; SM70-NEXT:    ld.param.v2.b16 {%rs3, %rs4}, [test_faddx2_param_1];
+; SM70-NEXT:    cvt.u32.u16 %r1, %rs4;
+; SM70-NEXT:    shl.b32 %r2, %r1, 16;
 ; SM70-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM70-NEXT:    shl.b32 %r4, %r3, 16;
-; SM70-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
-; SM70-NEXT:    cvt.u32.u16 %r5, %rs4;
-; SM70-NEXT:    shl.b32 %r6, %r5, 16;
-; SM70-NEXT:    add.rn.f32 %r7, %r6, %r4;
-; SM70-NEXT:    bfe.u32 %r8, %r7, 16, 1;
-; SM70-NEXT:    add.s32 %r9, %r8, %r7;
-; SM70-NEXT:    add.s32 %r10, %r9, 32767;
-; SM70-NEXT:    setp.nan.f32 %p1, %r7, %r7;
-; SM70-NEXT:    or.b32 %r11, %r7, 4194304;
-; SM70-NEXT:    selp.b32 %r12, %r11, %r10, %p1;
+; SM70-NEXT:    add.rn.f32 %r5, %r4, %r2;
+; SM70-NEXT:    bfe.u32 %r6, %r5, 16, 1;
+; SM70-NEXT:    add.s32 %r7, %r6, %r5;
+; SM70-NEXT:    add.s32 %r8, %r7, 32767;
+; SM70-NEXT:    setp.nan.f32 %p1, %r5, %r5;
+; SM70-NEXT:    or.b32 %r9, %r5, 4194304;
+; SM70-NEXT:    selp.b32 %r10, %r9, %r8, %p1;
+; SM70-NEXT:    cvt.u32.u16 %r11, %rs3;
+; SM70-NEXT:    shl.b32 %r12, %r11, 16;
 ; SM70-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM70-NEXT:    shl.b32 %r14, %r13, 16;
-; SM70-NEXT:    cvt.u32.u16 %r15, %rs3;
-; SM70-NEXT:    shl.b32 %r16, %r15, 16;
-; SM70-NEXT:    add.rn.f32 %r17, %r16, %r14;
-; SM70-NEXT:    bfe.u32 %r18, %r17, 16, 1;
-; SM70-NEXT:    add.s32 %r19, %r18, %r17;
-; SM70-NEXT:    add.s32 %r20, %r19, 32767;
-; SM70-NEXT:    setp.nan.f32 %p2, %r17, %r17;
-; SM70-NEXT:    or.b32 %r21, %r17, 4194304;
-; SM70-NEXT:    selp.b32 %r22, %r21, %r20, %p2;
-; SM70-NEXT:    prmt.b32 %r23, %r22, %r12, 0x7632U;
-; SM70-NEXT:    st.param.b32 [func_retval0], %r23;
+; SM70-NEXT:    add.rn.f32 %r15, %r14, %r12;
+; SM70-NEXT:    bfe.u32 %r16, %r15, 16, 1;
+; SM70-NEXT:    add.s32 %r17, %r16, %r15;
+; SM70-NEXT:    add.s32 %r18, %r17, 32767;
+; SM70-NEXT:    setp.nan.f32 %p2, %r15, %r15;
+; SM70-NEXT:    or.b32 %r19, %r15, 4194304;
+; SM70-NEXT:    selp.b32 %r20, %r19, %r18, %p2;
+; SM70-NEXT:    prmt.b32 %r21, %r20, %r10, 0x7632U;
+; SM70-NEXT:    st.param.b32 [func_retval0], %r21;
 ; SM70-NEXT:    ret;
 ;
 ; SM80-LABEL: test_faddx2(
@@ -184,31 +180,29 @@ define <2 x bfloat> @test_faddx2(<2 x bfloat> %a, <2 x bfloat> %b) #0 {
 ; SM80-NEXT:    .reg .b32 %r<5>;
 ; SM80-EMPTY:
 ; SM80-NEXT:  // %bb.0:
-; SM80-NEXT:    ld.param.b32 %r1, [test_faddx2_param_1];
-; SM80-NEXT:    ld.param.b32 %r2, [test_faddx2_param_0];
+; SM80-NEXT:    ld.param.b32 %r1, [test_faddx2_param_0];
+; SM80-NEXT:    ld.param.b32 %r2, [test_faddx2_param_1];
 ; SM80-NEXT:    mov.b32 %r3, 1065369472;
-; SM80-NEXT:    fma.rn.bf16x2 %r4, %r2, %r3, %r1;
+; SM80-NEXT:    fma.rn.bf16x2 %r4, %r1, %r3, %r2;
 ; SM80-NEXT:    st.param.b32 [func_retval0], %r4;
 ; SM80-NEXT:    ret;
 ;
 ; SM80-FTZ-LABEL: test_faddx2(
 ; SM80-FTZ:       {
 ; SM80-FTZ-NEXT:    .reg .b16 %rs<5>;
-; SM80-FTZ-NEXT:    .reg .b32 %r<10>;
+; SM80-FTZ-NEXT:    .reg .b32 %r<8>;
 ; SM80-FTZ-EMPTY:
 ; SM80-FTZ-NEXT:  // %bb.0:
-; SM80-FTZ-NEXT:    ld.param.b32 %r1, [test_faddx2_param_0];
-; SM80-FTZ-NEXT:    ld.param.b32 %r2, [test_faddx2_param_1];
-; SM80-FTZ-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
-; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r3, %rs1;
-; SM80-FTZ-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
-; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r4, %rs3;
-; SM80-FTZ-NEXT:    add.rn.ftz.f32 %r5, %r4, %r3;
-; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r6, %rs2;
-; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r7, %rs4;
-; SM80-FTZ-NEXT:    add.rn.ftz.f32 %r8, %r7, %r6;
-; SM80-FTZ-NEXT:    cvt.rn.bf16x2.f32 %r9, %r8, %r5;
-; SM80-FTZ-NEXT:    st.param.b32 [func_retval0], %r9;
+; SM80-FTZ-NEXT:    ld.param.v2.b16 {%rs1, %rs2}, [test_faddx2_param_0];
+; SM80-FTZ-NEXT:    ld.param.v2.b16 {%rs3, %rs4}, [test_faddx2_param_1];
+; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r1, %rs3;
+; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r2, %rs1;
+; SM80-FTZ-NEXT:    add.rn.ftz.f32 %r3, %r2, %r1;
+; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r4, %rs4;
+; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r5, %rs2;
+; SM80-FTZ-NEXT:    add.rn.ftz.f32 %r6, %r5, %r4;
+; SM80-FTZ-NEXT:    cvt.rn.bf16x2.f32 %r7, %r6, %r3;
+; SM80-FTZ-NEXT:    st.param.b32 [func_retval0], %r7;
 ; SM80-FTZ-NEXT:    ret;
 ;
 ; SM90-LABEL: test_faddx2(
@@ -216,9 +210,9 @@ define <2 x bfloat> @test_faddx2(<2 x bfloat> %a, <2 x bfloat> %b) #0 {
 ; SM90-NEXT:    .reg .b32 %r<4>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b32 %r1, [test_faddx2_param_1];
-; SM90-NEXT:    ld.param.b32 %r2, [test_faddx2_param_0];
-; SM90-NEXT:    add.rn.bf16x2 %r3, %r2, %r1;
+; SM90-NEXT:    ld.param.b32 %r1, [test_faddx2_param_0];
+; SM90-NEXT:    ld.param.b32 %r2, [test_faddx2_param_1];
+; SM90-NEXT:    add.rn.bf16x2 %r3, %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r3;
 ; SM90-NEXT:    ret;
   %r = fadd <2 x bfloat> %a, %b
@@ -230,37 +224,35 @@ define <2 x bfloat> @test_fsubx2(<2 x bfloat> %a, <2 x bfloat> %b) #0 {
 ; SM70:       {
 ; SM70-NEXT:    .reg .pred %p<3>;
 ; SM70-NEXT:    .reg .b16 %rs<5>;
-; SM70-NEXT:    .reg .b32 %r<24>;
+; SM70-NEXT:    .reg .b32 %r<22>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.b32 %r1, [test_fsubx2_param_0];
-; SM70-NEXT:    ld.param.b32 %r2, [test_fsubx2_param_1];
-; SM70-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
+; SM70-NEXT:    ld.param.v2.b16 {%rs1, %rs2}, [test_fsubx2_param_0];
+; SM70-NEXT:    ld.param.v2.b16 {%rs3, %rs4}, [test_fsubx2_param_1];
+; SM70-NEXT:    cvt.u32.u16 %r1, %rs4;
+; SM70-NEXT:    shl.b32 %r2, %r1, 16;
 ; SM70-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM70-NEXT:    shl.b32 %r4, %r3, 16;
-; SM70-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
-; SM70-NEXT:    cvt.u32.u16 %r5, %rs4;
-; SM70-NEXT:    shl.b32 %r6, %r5, 16;
-; SM70-NEXT:    sub.rn.f32 %r7, %r6, %r4;
-; SM70-NEXT:    bfe.u32 %r8, %r7, 16, 1;
-; SM70-NEXT:    add.s32 %r9, %r8, %r7;
-; SM70-NEXT:    add.s32 %r10, %r9, 32767;
-; SM70-NEXT:    setp.nan.f32 %p1, %r7, %r7;
-; SM70-NEXT:    or.b32 %r11, %r7, 4194304;
-; SM70-NEXT:    selp.b32 %r12, %r11, %r10, %p1;
+; SM70-NEXT:    sub.rn.f32 %r5, %r4, %r2;
+; SM70-NEXT:    bfe.u32 %r6, %r5, 16, 1;
+; SM70-NEXT:    add.s32 %r7, %r6, %r5;
+; SM70-NEXT:    add.s32 %r8, %r7, 32767;
+; SM70-NEXT:    setp.nan.f32 %p1, %r5, %r5;
+; SM70-NEXT:    or.b32 %r9, %r5, 4194304;
+; SM70-NEXT:    selp.b32 %r10, %r9, %r8, %p1;
+; SM70-NEXT:    cvt.u32.u16 %r11, %rs3;
+; SM70-NEXT:    shl.b32 %r12, %r11, 16;
 ; SM70-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM70-NEXT:    shl.b32 %r14, %r13, 16;
-; SM70-NEXT:    cvt.u32.u16 %r15, %rs3;
-; SM70-NEXT:    shl.b32 %r16, %r15, 16;
-; SM70-NEXT:    sub.rn.f32 %r17, %r16, %r14;
-; SM70-NEXT:    bfe.u32 %r18, %r17, 16, 1;
-; SM70-NEXT:    add.s32 %r19, %r18, %r17;
-; SM70-NEXT:    add.s32 %r20, %r19, 32767;
-; SM70-NEXT:    setp.nan.f32 %p2, %r17, %r17;
-; SM70-NEXT:    or.b32 %r21, %r17, 4194304;
-; SM70-NEXT:    selp.b32 %r22, %r21, %r20, %p2;
-; SM70-NEXT:    prmt.b32 %r23, %r22, %r12, 0x7632U;
-; SM70-NEXT:    st.param.b32 [func_retval0], %r23;
+; SM70-NEXT:    sub.rn.f32 %r15, %r14, %r12;
+; SM70-NEXT:    bfe.u32 %r16, %r15, 16, 1;
+; SM70-NEXT:    add.s32 %r17, %r16, %r15;
+; SM70-NEXT:    add.s32 %r18, %r17, 32767;
+; SM70-NEXT:    setp.nan.f32 %p2, %r15, %r15;
+; SM70-NEXT:    or.b32 %r19, %r15, 4194304;
+; SM70-NEXT:    selp.b32 %r20, %r19, %r18, %p2;
+; SM70-NEXT:    prmt.b32 %r21, %r20, %r10, 0x7632U;
+; SM70-NEXT:    st.param.b32 [func_retval0], %r21;
 ; SM70-NEXT:    ret;
 ;
 ; SM80-LABEL: test_fsubx2(
@@ -269,30 +261,28 @@ define <2 x bfloat> @test_fsubx2(<2 x bfloat> %a, <2 x bfloat> %b) #0 {
 ; SM80-EMPTY:
 ; SM80-NEXT:  // %bb.0:
 ; SM80-NEXT:    ld.param.b32 %r1, [test_fsubx2_param_0];
-; SM80-NEXT:    ld.param.b32 %r2, [test_fsubx2_param_1];
-; SM80-NEXT:    mov.b32 %r3, -1082081408;
-; SM80-NEXT:    fma.rn.bf16x2 %r4, %r2, %r3, %r1;
+; SM80-NEXT:    mov.b32 %r2, -1082081408;
+; SM80-NEXT:    ld.param.b32 %r3, [test_fsubx2_param_1];
+; SM80-NEXT:    fma.rn.bf16x2 %r4, %r3, %r2, %r1;
 ; SM80-NEXT:    st.param.b32 [func_retval0], %r4;
 ; SM80-NEXT:    ret;
 ;
 ; SM80-FTZ-LABEL: test_fsubx2(
 ; SM80-FTZ:       {
 ; SM80-FTZ-NEXT:    .reg .b16 %rs<5>;
-; SM80-FTZ-NEXT:    .reg .b32 %r<10>;
+; SM80-FTZ-NEXT:    .reg .b32 %r<8>;
 ; SM80-FTZ-EMPTY:
 ; SM80-FTZ-NEXT:  // %bb.0:
-; SM80-FTZ-NEXT:    ld.param.b32 %r1, [test_fsubx2_param_0];
-; SM80-FTZ-NEXT:    ld.param.b32 %r2, [test_fsubx2_param_1];
-; SM80-FTZ-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
-; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r3, %rs1;
-; SM80-FTZ-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
-; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r4, %rs3;
-; SM80-FTZ-NEXT:    sub.rn.ftz.f32 %r5, %r4, %r3;
-; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r6, %rs2;
-; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r7, %rs4;
-; SM80-FTZ-NEXT:    sub.rn.ftz.f32 %r8, %r7, %r6;
-; SM80-FTZ-NEXT:    cvt.rn.bf16x2.f32 %r9, %r8, %r5;
-; SM80-FTZ-NEXT:    st.param.b32 [func_retval0], %r9;
+; SM80-FTZ-NEXT:    ld.param.v2.b16 {%rs1, %rs2}, [test_fsubx2_param_0];
+; SM80-FTZ-NEXT:    ld.param.v2.b16 {%rs3, %rs4}, [test_fsubx2_param_1];
+; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r1, %rs3;
+; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r2, %rs1;
+; SM80-FTZ-NEXT:    sub.rn.ftz.f32 %r3, %r2, %r1;
+; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r4, %rs4;
+; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r5, %rs2;
+; SM80-FTZ-NEXT:    sub.rn.ftz.f32 %r6, %r5, %r4;
+; SM80-FTZ-NEXT:    cvt.rn.bf16x2.f32 %r7, %r6, %r3;
+; SM80-FTZ-NEXT:    st.param.b32 [func_retval0], %r7;
 ; SM80-FTZ-NEXT:    ret;
 ;
 ; SM90-LABEL: test_fsubx2(
@@ -300,9 +290,9 @@ define <2 x bfloat> @test_fsubx2(<2 x bfloat> %a, <2 x bfloat> %b) #0 {
 ; SM90-NEXT:    .reg .b32 %r<4>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b32 %r1, [test_fsubx2_param_1];
-; SM90-NEXT:    ld.param.b32 %r2, [test_fsubx2_param_0];
-; SM90-NEXT:    sub.rn.bf16x2 %r3, %r2, %r1;
+; SM90-NEXT:    ld.param.b32 %r1, [test_fsubx2_param_0];
+; SM90-NEXT:    ld.param.b32 %r2, [test_fsubx2_param_1];
+; SM90-NEXT:    sub.rn.bf16x2 %r3, %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r3;
 ; SM90-NEXT:    ret;
   %r = fsub <2 x bfloat> %a, %b
@@ -314,37 +304,35 @@ define <2 x bfloat> @test_fmulx2(<2 x bfloat> %a, <2 x bfloat> %b) #0 {
 ; SM70:       {
 ; SM70-NEXT:    .reg .pred %p<3>;
 ; SM70-NEXT:    .reg .b16 %rs<5>;
-; SM70-NEXT:    .reg .b32 %r<24>;
+; SM70-NEXT:    .reg .b32 %r<22>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.b32 %r1, [test_fmulx2_param_0];
-; SM70-NEXT:    ld.param.b32 %r2, [test_fmulx2_param_1];
-; SM70-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
+; SM70-NEXT:    ld.param.v2.b16 {%rs1, %rs2}, [test_fmulx2_param_0];
+; SM70-NEXT:    ld.param.v2.b16 {%rs3, %rs4}, [test_fmulx2_param_1];
+; SM70-NEXT:    cvt.u32.u16 %r1, %rs4;
+; SM70-NEXT:    shl.b32 %r2, %r1, 16;
 ; SM70-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM70-NEXT:    shl.b32 %r4, %r3, 16;
-; SM70-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
-; SM70-NEXT:    cvt.u32.u16 %r5, %rs4;
-; SM70-NEXT:    shl.b32 %r6, %r5, 16;
-; SM70-NEXT:    mul.rn.f32 %r7, %r6, %r4;
-; SM70-NEXT:    bfe.u32 %r8, %r7, 16, 1;
-; SM70-NEXT:    add.s32 %r9, %r8, %r7;
-; SM70-NEXT:    add.s32 %r10, %r9, 32767;
-; SM70-NEXT:    setp.nan.f32 %p1, %r7, %r7;
-; SM70-NEXT:    or.b32 %r11, %r7, 4194304;
-; SM70-NEXT:    selp.b32 %r12, %r11, %r10, %p1;
+; SM70-NEXT:    mul.rn.f32 %r5, %r4, %r2;
+; SM70-NEXT:    bfe.u32 %r6, %r5, 16, 1;
+; SM70-NEXT:    add.s32 %r7, %r6, %r5;
+; SM70-NEXT:    add.s32 %r8, %r7, 32767;
+; SM70-NEXT:    setp.nan.f32 %p1, %r5, %r5;
+; SM70-NEXT:    or.b32 %r9, %r5, 4194304;
+; SM70-NEXT:    selp.b32 %r10, %r9, %r8, %p1;
+; SM70-NEXT:    cvt.u32.u16 %r11, %rs3;
+; SM70-NEXT:    shl.b32 %r12, %r11, 16;
 ; SM70-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM70-NEXT:    shl.b32 %r14, %r13, 16;
-; SM70-NEXT:    cvt.u32.u16 %r15, %rs3;
-; SM70-NEXT:    shl.b32 %r16, %r15, 16;
-; SM70-NEXT:    mul.rn.f32 %r17, %r16, %r14;
-; SM70-NEXT:    bfe.u32 %r18, %r17, 16, 1;
-; SM70-NEXT:    add.s32 %r19, %r18, %r17;
-; SM70-NEXT:    add.s32 %r20, %r19, 32767;
-; SM70-NEXT:    setp.nan.f32 %p2, %r17, %r17;
-; SM70-NEXT:    or.b32 %r21, %r17, 4194304;
-; SM70-NEXT:    selp.b32 %r22, %r21, %r20, %p2;
-; SM70-NEXT:    prmt.b32 %r23, %r22, %r12, 0x7632U;
-; SM70-NEXT:    st.param.b32 [func_retval0], %r23;
+; SM70-NEXT:    mul.rn.f32 %r15, %r14, %r12;
+; SM70-NEXT:    bfe.u32 %r16, %r15, 16, 1;
+; SM70-NEXT:    add.s32 %r17, %r16, %r15;
+; SM70-NEXT:    add.s32 %r18, %r17, 32767;
+; SM70-NEXT:    setp.nan.f32 %p2, %r15, %r15;
+; SM70-NEXT:    or.b32 %r19, %r15, 4194304;
+; SM70-NEXT:    selp.b32 %r20, %r19, %r18, %p2;
+; SM70-NEXT:    prmt.b32 %r21, %r20, %r10, 0x7632U;
+; SM70-NEXT:    st.param.b32 [func_retval0], %r21;
 ; SM70-NEXT:    ret;
 ;
 ; SM80-LABEL: test_fmulx2(
@@ -352,31 +340,29 @@ define <2 x bfloat> @test_fmulx2(<2 x bfloat> %a, <2 x bfloat> %b) #0 {
 ; SM80-NEXT:    .reg .b32 %r<5>;
 ; SM80-EMPTY:
 ; SM80-NEXT:  // %bb.0:
-; SM80-NEXT:    ld.param.b32 %r1, [test_fmulx2_param_1];
-; SM80-NEXT:    ld.param.b32 %r2, [test_fmulx2_param_0];
-; SM80-NEXT:    mov.b32 %r3, -2147450880;
-; SM80-NEXT:    fma.rn.bf16x2 %r4, %r2, %r1, %r3;
+; SM80-NEXT:    ld.param.b32 %r1, [test_fmulx2_param_0];
+; SM80-NEXT:    mov.b32 %r2, -2147450880;
+; SM80-NEXT:    ld.param.b32 %r3, [test_fmulx2_param_1];
+; SM80-NEXT:    fma.rn.bf16x2 %r4, %r1, %r3, %r2;
 ; SM80-NEXT:    st.param.b32 [func_retval0], %r4;
 ; SM80-NEXT:    ret;
 ;
 ; SM80-FTZ-LABEL: test_fmulx2(
 ; SM80-FTZ:       {
 ; SM80-FTZ-NEXT:    .reg .b16 %rs<5>;
-; SM80-FTZ-NEXT:    .reg .b32 %r<10>;
+; SM80-FTZ-NEXT:    .reg .b32 %r<8>;
 ; SM80-FTZ-EMPTY:
 ; SM80-FTZ-NEXT:  // %bb.0:
-; SM80-FTZ-NEXT:    ld.param.b32 %r1, [test_fmulx2_param_0];
-; SM80-FTZ-NEXT:    ld.param.b32 %r2, [test_fmulx2_param_1];
-; SM80-FTZ-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
-; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r3, %rs1;
-; SM80-FTZ-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
-; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r4, %rs3;
-; SM80-FTZ-NEXT:    mul.rn.ftz.f32 %r5, %r4, %r3;
-; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r6, %rs2;
-; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r7, %rs4;
-; SM80-FTZ-NEXT:    mul.rn.ftz.f32 %r8, %r7, %r6;
-; SM80-FTZ-NEXT:    cvt.rn.bf16x2.f32 %r9, %r8, %r5;
-; SM80-FTZ-NEXT:    st.param.b32 [func_retval0], %r9;
+; SM80-FTZ-NEXT:    ld.param.v2.b16 {%rs1, %rs2}, [test_fmulx2_param_0];
+; SM80-FTZ-NEXT:    ld.param.v2.b16 {%rs3, %rs4}, [test_fmulx2_param_1];
+; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r1, %rs3;
+; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r2, %rs1;
+; SM80-FTZ-NEXT:    mul.rn.ftz.f32 %r3, %r2, %r1;
+; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r4, %rs4;
+; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r5, %rs2;
+; SM80-FTZ-NEXT:    mul.rn.ftz.f32 %r6, %r5, %r4;
+; SM80-FTZ-NEXT:    cvt.rn.bf16x2.f32 %r7, %r6, %r3;
+; SM80-FTZ-NEXT:    st.param.b32 [func_retval0], %r7;
 ; SM80-FTZ-NEXT:    ret;
 ;
 ; SM90-LABEL: test_fmulx2(
@@ -384,9 +370,9 @@ define <2 x bfloat> @test_fmulx2(<2 x bfloat> %a, <2 x bfloat> %b) #0 {
 ; SM90-NEXT:    .reg .b32 %r<4>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b32 %r1, [test_fmulx2_param_1];
-; SM90-NEXT:    ld.param.b32 %r2, [test_fmulx2_param_0];
-; SM90-NEXT:    mul.rn.bf16x2 %r3, %r2, %r1;
+; SM90-NEXT:    ld.param.b32 %r1, [test_fmulx2_param_0];
+; SM90-NEXT:    ld.param.b32 %r2, [test_fmulx2_param_1];
+; SM90-NEXT:    mul.rn.bf16x2 %r3, %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r3;
 ; SM90-NEXT:    ret;
   %r = fmul <2 x bfloat> %a, %b
@@ -398,97 +384,89 @@ define <2 x bfloat> @test_fdiv(<2 x bfloat> %a, <2 x bfloat> %b) #0 {
 ; SM70:       {
 ; SM70-NEXT:    .reg .pred %p<3>;
 ; SM70-NEXT:    .reg .b16 %rs<5>;
-; SM70-NEXT:    .reg .b32 %r<24>;
+; SM70-NEXT:    .reg .b32 %r<22>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.b32 %r1, [test_fdiv_param_0];
-; SM70-NEXT:    ld.param.b32 %r2, [test_fdiv_param_1];
-; SM70-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
+; SM70-NEXT:    ld.param.v2.b16 {%rs1, %rs2}, [test_fdiv_param_0];
+; SM70-NEXT:    ld.param.v2.b16 {%rs3, %rs4}, [test_fdiv_param_1];
+; SM70-NEXT:    cvt.u32.u16 %r1, %rs4;
+; SM70-NEXT:    shl.b32 %r2, %r1, 16;
 ; SM70-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM70-NEXT:    shl.b32 %r4, %r3, 16;
-; SM70-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
-; SM70-NEXT:    cvt.u32.u16 %r5, %rs4;
-; SM70-NEXT:    shl.b32 %r6, %r5, 16;
-; SM70-NEXT:    div.rn.f32 %r7, %r6, %r4;
-; SM70-NEXT:    bfe.u32 %r8, %r7, 16, 1;
-; SM70-NEXT:    add.s32 %r9, %r8, %r7;
-; SM70-NEXT:    add.s32 %r10, %r9, 32767;
-; SM70-NEXT:    setp.nan.f32 %p1, %r7, %r7;
-; SM70-NEXT:    or.b32 %r11, %r7, 4194304;
-; SM70-NEXT:    selp.b32 %r12, %r11, %r10, %p1;
+; SM70-NEXT:    div.rn.f32 %r5, %r4, %r2;
+; SM70-NEXT:    bfe.u32 %r6, %r5, 16, 1;
+; SM70-NEXT:    add.s32 %r7, %r6, %r5;
+; SM70-NEXT:    add.s32 %r8, %r7, 32767;
+; SM70-NEXT:    setp.nan.f32 %p1, %r5, %r5;
+; SM70-NEXT:    or.b32 %r9, %r5, 4194304;
+; SM70-NEXT:    selp.b32 %r10, %r9, %r8, %p1;
+; SM70-NEXT:    cvt.u32.u16 %r11, %rs3;
+; SM70-NEXT:    shl.b32 %r12, %r11, 16;
 ; SM70-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM70-NEXT:    shl.b32 %r14, %r13, 16;
-; SM70-NEXT:    cvt.u32.u16 %r15, %rs3;
-; SM70-NEXT:    shl.b32 %r16, %r15, 16;
-; SM70-NEXT:    div.rn.f32 %r17, %r16, %r14;
-; SM70-NEXT:    bfe.u32 %r18, %r17, 16, 1;
-; SM70-NEXT:    add.s32 %r19, %r18, %r17;
-; SM70-NEXT:    add.s32 %r20, %r19, 32767;
-; SM70-NEXT:    setp.nan.f32 %p2, %r17, %r17;
-; SM70-NEXT:    or.b32 %r21, %r17, 4194304;
-; SM70-NEXT:    selp.b32 %r22, %r21, %r20, %p2;
-; SM70-NEXT:    prmt.b32 %r23, %r22, %r12, 0x7632U;
-; SM70-NEXT:    st.param.b32 [func_retval0], %r23;
+; SM70-NEXT:    div.rn.f32 %r15, %r14, %r12;
+; SM70-NEXT:    bfe.u32 %r16, %r15, 16, 1;
+; SM70-NEXT:    add.s32 %r17, %r16, %r15;
+; SM70-NEXT:    add.s32 %r18, %r17, 32767;
+; SM70-NEXT:    setp.nan.f32 %p2, %r15, %r15;
+; SM70-NEXT:    or.b32 %r19, %r15, 4194304;
+; SM70-NEXT:    selp.b32 %r20, %r19, %r18, %p2;
+; SM70-NEXT:    prmt.b32 %r21, %r20, %r10, 0x7632U;
+; SM70-NEXT:    st.param.b32 [func_retval0], %r21;
 ; SM70-NEXT:    ret;
 ;
 ; SM80-LABEL: test_fdiv(
 ; SM80:       {
 ; SM80-NEXT:    .reg .b16 %rs<5>;
-; SM80-NEXT:    .reg .b32 %r<10>;
+; SM80-NEXT:    .reg .b32 %r<8>;
 ; SM80-EMPTY:
 ; SM80-NEXT:  // %bb.0:
-; SM80-NEXT:    ld.param.b32 %r1, [test_fdiv_param_0];
-; SM80-NEXT:    ld.param.b32 %r2, [test_fdiv_param_1];
-; SM80-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
-; SM80-NEXT:    cvt.f32.bf16 %r3, %rs1;
-; SM80-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
-; SM80-NEXT:    cvt.f32.bf16 %r4, %rs3;
-; SM80-NEXT:    div.rn.f32 %r5, %r4, %r3;
-; SM80-NEXT:    cvt.f32.bf16 %r6, %rs2;
-; SM80-NEXT:    cvt.f32.bf16 %r7, %rs4;
-; SM80-NEXT:    div.rn.f32 %r8, %r7, %r6;
-; SM80-NEXT:    cvt.rn.bf16x2.f32 %r9, %r8, %r5;
-; SM80-NEXT:    st.param.b32 [func_retval0], %r9;
+; SM80-NEXT:    ld.param.v2.b16 {%rs1, %rs2}, [test_fdiv_param_0];
+; SM80-NEXT:    ld.param.v2.b16 {%rs3, %rs4}, [test_fdiv_param_1];
+; SM80-NEXT:    cvt.f32.bf16 %r1, %rs3;
+; SM80-NEXT:    cvt.f32.bf16 %r2, %rs1;
+; SM80-NEXT:    div.rn.f32 %r3, %r2, %r1;
+; SM80-NEXT:    cvt.f32.bf16 %r4, %rs4;
+; SM80-NEXT:    cvt.f32.bf16 %r5, %rs2;
+; SM80-NEXT:    div.rn.f32 %r6, %r5, %r4;
+; SM80-NEXT:    cvt.rn.bf16x2.f32 %r7, %r6, %r3;
+; SM80-NEXT:    st.param.b32 [func_retval0], %r7;
 ; SM80-NEXT:    ret;
 ;
 ; SM80-FTZ-LABEL: test_fdiv(
 ; SM80-FTZ:       {
 ; SM80-FTZ-NEXT:    .reg .b16 %rs<5>;
-; SM80-FTZ-NEXT:    .reg .b32 %r<10>;
+; SM80-FTZ-NEXT:    .reg .b32 %r<8>;
 ; SM80-FTZ-EMPTY:
 ; SM80-FTZ-NEXT:  // %bb.0:
-; SM80-FTZ-NEXT:    ld.param.b32 %r1, [test_fdiv_param_0];
-; SM80-FTZ-NEXT:    ld.param.b32 %r2, [test_fdiv_param_1];
-; SM80-FTZ-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
-; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r3, %rs1;
-; SM80-FTZ-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
-; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r4, %rs3;
-; SM80-FTZ-NEXT:    div.rn.ftz.f32 %r5, %r4, %r3;
-; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r6, %rs2;
-; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r7, %rs4;
-; SM80-FTZ-NEXT:    div.rn.ftz.f32 %r8, %r7, %r6;
-; SM80-FTZ-NEXT:    cvt.rn.bf16x2.f32 %r9, %r8, %r5;
-; SM80-FTZ-NEXT:    st.param.b32 [func_retval0], %r9;
+; SM80-FTZ-NEXT:    ld.param.v2.b16 {%rs1, %rs2}, [test_fdiv_param_0];
+; SM80-FTZ-NEXT:    ld.param.v2.b16 {%rs3, %rs4}, [test_fdiv_param_1];
+; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r1, %rs3;
+; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r2, %rs1;
+; SM80-FTZ-NEXT:    div.rn.ftz.f32 %r3, %r2, %r1;
+; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r4, %rs4;
+; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r5, %rs2;
+; SM80-FTZ-NEXT:    div.rn.ftz.f32 %r6, %r5, %r4;
+; SM80-FTZ-NEXT:    cvt.rn.bf16x2.f32 %r7, %r6, %r3;
+; SM80-FTZ-NEXT:    st.param.b32 [func_retval0], %r7;
 ; SM80-FTZ-NEXT:    ret;
 ;
 ; SM90-LABEL: test_fdiv(
 ; SM90:       {
 ; SM90-NEXT:    .reg .b16 %rs<5>;
-; SM90-NEXT:    .reg .b32 %r<10>;
+; SM90-NEXT:    .reg .b32 %r<8>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b32 %r1, [test_fdiv_param_0];
-; SM90-NEXT:    ld.param.b32 %r2, [test_fdiv_param_1];
-; SM90-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
-; SM90-NEXT:    cvt.f32.bf16 %r3, %rs1;
-; SM90-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
-; SM90-NEXT:    cvt.f32.bf16 %r4, %rs3;
-; SM90-NEXT:    div.rn.f32 %r5, %r4, %r3;
-; SM90-NEXT:    cvt.f32.bf16 %r6, %rs2;
-; SM90-NEXT:    cvt.f32.bf16 %r7, %rs4;
-; SM90-NEXT:    div.rn.f32 %r8, %r7, %r6;
-; SM90-NEXT:    cvt.rn.bf16x2.f32 %r9, %r8, %r5;
-; SM90-NEXT:    st.param.b32 [func_retval0], %r9;
+; SM90-NEXT:    ld.param.v2.b16 {%rs1, %rs2}, [test_fdiv_param_0];
+; SM90-NEXT:    ld.param.v2.b16 {%rs3, %rs4}, [test_fdiv_param_1];
+; SM90-NEXT:    cvt.f32.bf16 %r1, %rs3;
+; SM90-NEXT:    cvt.f32.bf16 %r2, %rs1;
+; SM90-NEXT:    div.rn.f32 %r3, %r2, %r1;
+; SM90-NEXT:    cvt.f32.bf16 %r4, %rs4;
+; SM90-NEXT:    cvt.f32.bf16 %r5, %rs2;
+; SM90-NEXT:    div.rn.f32 %r6, %r5, %r4;
+; SM90-NEXT:    cvt.rn.bf16x2.f32 %r7, %r6, %r3;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r7;
 ; SM90-NEXT:    ret;
   %r = fdiv <2 x bfloat> %a, %b
   ret <2 x bfloat> %r
@@ -571,8 +549,7 @@ define bfloat @test_fptrunc_float(float %a) #0 {
 ; SM70-LABEL: test_fptrunc_float(
 ; SM70:       {
 ; SM70-NEXT:    .reg .pred %p<2>;
-; SM70-NEXT:    .reg .b16 %rs<2>;
-; SM70-NEXT:    .reg .b32 %r<7>;
+; SM70-NEXT:    .reg .b32 %r<8>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    ld.param.b32 %r1, [test_fptrunc_float_param_0];
@@ -582,8 +559,8 @@ define bfloat @test_fptrunc_float(float %a) #0 {
 ; SM70-NEXT:    setp.nan.f32 %p1, %r1, %r1;
 ; SM70-NEXT:    or.b32 %r5, %r1, 4194304;
 ; SM70-NEXT:    selp.b32 %r6, %r5, %r4, %p1;
-; SM70-NEXT:    mov.b32 {_, %rs1}, %r6;
-; SM70-NEXT:    st.param.b16 [func_retval0], %rs1;
+; SM70-NEXT:    shr.u32 %r7, %r6, 16;
+; SM70-NEXT:    st.param.b16 [func_retval0], %r7;
 ; SM70-NEXT:    ret;
 ;
 ; SM80-LABEL: test_fptrunc_float(
@@ -626,8 +603,7 @@ define bfloat @test_fadd_imm_1(bfloat %a) #0 {
 ; SM70-LABEL: test_fadd_imm_1(
 ; SM70:       {
 ; SM70-NEXT:    .reg .pred %p<2>;
-; SM70-NEXT:    .reg .b16 %rs<2>;
-; SM70-NEXT:    .reg .b32 %r<9>;
+; SM70-NEXT:    .reg .b32 %r<10>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    ld.param.b16 %r1, [test_fadd_imm_1_param_0];
@@ -639,8 +615,8 @@ define bfloat @test_fadd_imm_1(bfloat %a) #0 {
 ; SM70-NEXT:    setp.nan.f32 %p1, %r3, %r3;
 ; SM70-NEXT:    or.b32 %r7, %r3, 4194304;
 ; SM70-NEXT:    selp.b32 %r8, %r7, %r6, %p1;
-; SM70-NEXT:    mov.b32 {_, %rs1}, %r8;
-; SM70-NEXT:    st.param.b16 [func_retval0], %rs1;
+; SM70-NEXT:    shr.u32 %r9, %r8, 16;
+; SM70-NEXT:    st.param.b16 [func_retval0], %r9;
 ; SM70-NEXT:    ret;
 ;
 ; SM80-LABEL: test_fadd_imm_1(
@@ -712,28 +688,28 @@ define <8 x float> @test_extload_bf16x8(ptr addrspace(3) noundef %arg) #0 {
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    ld.param.b64 %rd1, [test_extload_bf16x8_param_0];
 ; SM70-NEXT:    ld.shared.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
-; SM70-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM70-NEXT:    mov.b32 {%rs3, %rs4}, %r2;
-; SM70-NEXT:    mov.b32 {%rs5, %rs6}, %r3;
-; SM70-NEXT:    mov.b32 {%rs7, %rs8}, %r4;
-; SM70-NEXT:    cvt.u32.u16 %r5, %rs8;
+; SM70-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
+; SM70-NEXT:    cvt.u32.u16 %r5, %rs2;
 ; SM70-NEXT:    shl.b32 %r6, %r5, 16;
-; SM70-NEXT:    cvt.u32.u16 %r7, %rs7;
+; SM70-NEXT:    cvt.u32.u16 %r7, %rs1;
 ; SM70-NEXT:    shl.b32 %r8, %r7, 16;
-; SM70-NEXT:    cvt.u32.u16 %r9, %rs6;
+; SM70-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
+; SM70-NEXT:    cvt.u32.u16 %r9, %rs4;
 ; SM70-NEXT:    shl.b32 %r10, %r9, 16;
-; SM70-NEXT:    cvt.u32.u16 %r11, %rs5;
+; SM70-NEXT:    cvt.u32.u16 %r11, %rs3;
 ; SM70-NEXT:    shl.b32 %r12, %r11, 16;
-; SM70-NEXT:    cvt.u32.u16 %r13, %rs4;
+; SM70-NEXT:    mov.b32 {%rs5, %rs6}, %r4;
+; SM70-NEXT:    cvt.u32.u16 %r13, %rs6;
 ; SM70-NEXT:    shl.b32 %r14, %r13, 16;
-; SM70-NEXT:    cvt.u32.u16 %r15, %rs3;
+; SM70-NEXT:    cvt.u32.u16 %r15, %rs5;
 ; SM70-NEXT:    shl.b32 %r16, %r15, 16;
-; SM70-NEXT:    cvt.u32.u16 %r17, %rs2;
+; SM70-NEXT:    mov.b32 {%rs7, %rs8}, %r3;
+; SM70-NEXT:    cvt.u32.u16 %r17, %rs8;
 ; SM70-NEXT:    shl.b32 %r18, %r17, 16;
-; SM70-NEXT:    cvt.u32.u16 %r19, %rs1;
+; SM70-NEXT:    cvt.u32.u16 %r19, %rs7;
 ; SM70-NEXT:    shl.b32 %r20, %r19, 16;
-; SM70-NEXT:    st.param.v4.b32 [func_retval0], {%r20, %r18, %r16, %r14};
-; SM70-NEXT:    st.param.v4.b32 [func_retval0+16], {%r12, %r10, %r8, %r6};
+; SM70-NEXT:    st.param.v4.b32 [func_retval0+16], {%r20, %r18, %r16, %r14};
+; SM70-NEXT:    st.param.v4.b32 [func_retval0], {%r12, %r10, %r8, %r6};
 ; SM70-NEXT:    ret;
 ;
 ; SM80-LABEL: test_extload_bf16x8(
@@ -745,20 +721,20 @@ define <8 x float> @test_extload_bf16x8(ptr addrspace(3) noundef %arg) #0 {
 ; SM80-NEXT:  // %bb.0:
 ; SM80-NEXT:    ld.param.b64 %rd1, [test_extload_bf16x8_param_0];
 ; SM80-NEXT:    ld.shared.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
-; SM80-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM80-NEXT:    mov.b32 {%rs3, %rs4}, %r2;
-; SM80-NEXT:    mov.b32 {%rs5, %rs6}, %r3;
-; SM80-NEXT:    mov.b32 {%rs7, %rs8}, %r4;
-; SM80-NEXT:    cvt.f32.bf16 %r5, %rs8;
-; SM80-NEXT:    cvt.f32.bf16 %r6, %rs7;
-; SM80-NEXT:    cvt.f32.bf16 %r7, %rs6;
-; SM80-NEXT:    cvt.f32.bf16 %r8, %rs5;
-; SM80-NEXT:    cvt.f32.bf16 %r9, %rs4;
-; SM80-NEXT:    cvt.f32.bf16 %r10, %rs3;
-; SM80-NEXT:    cvt.f32.bf16 %r11, %rs2;
-; SM80-NEXT:    cvt.f32.bf16 %r12, %rs1;
-; SM80-NEXT:    st.param.v4.b32 [func_retval0], {%r12, %r11, %r10, %r9};
-; SM80-NEXT:    st.param.v4.b32 [func_retval0+16], {%r8, %r7, %r6, %r5};
+; SM80-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
+; SM80-NEXT:    cvt.f32.bf16 %r5, %rs2;
+; SM80-NEXT:    cvt.f32.bf16 %r6, %rs1;
+; SM80-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
+; SM80-NEXT:    cvt.f32.bf16 %r7, %rs4;
+; SM80-NEXT:    cvt.f32.bf16 %r8, %rs3;
+; SM80-NEXT:    mov.b32 {%rs5, %rs6}, %r4;
+; SM80-NEXT:    cvt.f32.bf16 %r9, %rs6;
+; SM80-NEXT:    cvt.f32.bf16 %r10, %rs5;
+; SM80-NEXT:    mov.b32 {%rs7, %rs8}, %r3;
+; SM80-NEXT:    cvt.f32.bf16 %r11, %rs8;
+; SM80-NEXT:    cvt.f32.bf16 %r12, %rs7;
+; SM80-NEXT:    st.param.v4.b32 [func_retval0+16], {%r12, %r11, %r10, %r9};
+; SM80-NEXT:    st.param.v4.b32 [func_retval0], {%r8, %r7, %r6, %r5};
 ; SM80-NEXT:    ret;
 ;
 ; SM80-FTZ-LABEL: test_extload_bf16x8(
@@ -770,20 +746,20 @@ define <8 x float> @test_extload_bf16x8(ptr addrspace(3) noundef %arg) #0 {
 ; SM80-FTZ-NEXT:  // %bb.0:
 ; SM80-FTZ-NEXT:    ld.param.b64 %rd1, [test_extload_bf16x8_param_0];
 ; SM80-FTZ-NEXT:    ld.shared.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
-; SM80-FTZ-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM80-FTZ-NEXT:    mov.b32 {%rs3, %rs4}, %r2;
-; SM80-FTZ-NEXT:    mov.b32 {%rs5, %rs6}, %r3;
-; SM80-FTZ-NEXT:    mov.b32 {%rs7, %rs8}, %r4;
-; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r5, %rs8;
-; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r6, %rs7;
-; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r7, %rs6;
-; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r8, %rs5;
-; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r9, %rs4;
-; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r10, %rs3;
-; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r11, %rs2;
-; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r12, %rs1;
-; SM80-FTZ-NEXT:    st.param.v4.b32 [func_retval0], {%r12, %r11, %r10, %r9};
-; SM80-FTZ-NEXT:    st.param.v4.b32 [func_retval0+16], {%r8, %r7, %r6, %r5};
+; SM80-FTZ-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
+; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r5, %rs2;
+; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r6, %rs1;
+; SM80-FTZ-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
+; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r7, %rs4;
+; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r8, %rs3;
+; SM80-FTZ-NEXT:    mov.b32 {%rs5, %rs6}, %r4;
+; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r9, %rs6;
+; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r10, %rs5;
+; SM80-FTZ-NEXT:    mov.b32 {%rs7, %rs8}, %r3;
+; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r11, %rs8;
+; SM80-FTZ-NEXT:    cvt.ftz.f32.bf16 %r12, %rs7;
+; SM80-FTZ-NEXT:    st.param.v4.b32 [func_retval0+16], {%r12, %r11, %r10, %r9};
+; SM80-FTZ-NEXT:    st.param.v4.b32 [func_retval0], {%r8, %r7, %r6, %r5};
 ; SM80-FTZ-NEXT:    ret;
 ;
 ; SM90-LABEL: test_extload_bf16x8(
@@ -795,20 +771,20 @@ define <8 x float> @test_extload_bf16x8(ptr addrspace(3) noundef %arg) #0 {
 ; SM90-NEXT:  // %bb.0:
 ; SM90-NEXT:    ld.param.b64 %rd1, [test_extload_bf16x8_param_0];
 ; SM90-NEXT:    ld.shared.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
-; SM90-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; SM90-NEXT:    mov.b32 {%rs3, %rs4}, %r2;
-; SM90-NEXT:    mov.b32 {%rs5, %rs6}, %r3;
-; SM90-NEXT:    mov.b32 {%rs7, %rs8}, %r4;
-; SM90-NEXT:    cvt.f32.bf16 %r5, %rs8;
-; SM90-NEXT:    cvt.f32.bf16 %r6, %rs7;
-; SM90-NEXT:    cvt.f32.bf16 %r7, %rs6;
-; SM90-NEXT:    cvt.f32.bf16 %r8, %rs5;
-; SM90-NEXT:    cvt.f32.bf16 %r9, %rs4;
-; SM90-NEXT:    cvt.f32.bf16 %r10, %rs3;
-; SM90-NEXT:    cvt.f32.bf16 %r11, %rs2;
-; SM90-NEXT:    cvt.f32.bf16 %r12, %rs1;
-; SM90-NEXT:    st.param.v4.b32 [func_retval0], {%r12, %r11, %r10, %r9};
-; SM90-NEXT:    st.param.v4.b32 [func_retval0+16], {%r8, %r7, %r6, %r5};
+; SM90-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
+; SM90-NEXT:    cvt.f32.bf16 %r5, %rs2;
+; SM90-NEXT:    cvt.f32.bf16 %r6, %rs1;
+; SM90-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
+; SM90-NEXT:    cvt.f32.bf16 %r7, %rs4;
+; SM90-NEXT:    cvt.f32.bf16 %r8, %rs3;
+; SM90-NEXT:    mov.b32 {%rs5, %rs6}, %r4;
+; SM90-NEXT:    cvt.f32.bf16 %r9, %rs6;
+; SM90-NEXT:    cvt.f32.bf16 %r10, %rs5;
+; SM90-NEXT:    mov.b32 {%rs7, %rs8}, %r3;
+; SM90-NEXT:    cvt.f32.bf16 %r11, %rs8;
+; SM90-NEXT:    cvt.f32.bf16 %r12, %rs7;
+; SM90-NEXT:    st.param.v4.b32 [func_retval0+16], {%r12, %r11, %r10, %r9};
+; SM90-NEXT:    st.param.v4.b32 [func_retval0], {%r8, %r7, %r6, %r5};
 ; SM90-NEXT:    ret;
   %load = load <8 x bfloat>, ptr addrspace(3) %arg, align 16
   %res = fpext <8 x bfloat> %load to <8 x float>
@@ -929,8 +905,8 @@ define bfloat @test_sitofp_i16(i16 %a) {
 ; SM70-LABEL: test_sitofp_i16(
 ; SM70:       {
 ; SM70-NEXT:    .reg .pred %p<2>;
-; SM70-NEXT:    .reg .b16 %rs<3>;
-; SM70-NEXT:    .reg .b32 %r<7>;
+; SM70-NEXT:    .reg .b16 %rs<2>;
+; SM70-NEXT:    .reg .b32 %r<8>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    ld.param.b16 %rs1, [test_sitofp_i16_param_0];
@@ -941,8 +917,8 @@ define bfloat @test_sitofp_i16(i16 %a) {
 ; SM70-NEXT:    setp.nan.f32 %p1, %r1, %r1;
 ; SM70-NEXT:    or.b32 %r5, %r1, 4194304;
 ; SM70-NEXT:    selp.b32 %r6, %r5, %r4, %p1;
-; SM70-NEXT:    mov.b32 {_, %rs2}, %r6;
-; SM70-NEXT:    st.param.b16 [func_retval0], %rs2;
+; SM70-NEXT:    shr.u32 %r7, %r6, 16;
+; SM70-NEXT:    st.param.b16 [func_retval0], %r7;
 ; SM70-NEXT:    ret;
 ;
 ; SM80-LABEL: test_sitofp_i16(
@@ -986,8 +962,8 @@ define bfloat @test_uitofp_i8(i8 %a) {
 ; SM70-LABEL: test_uitofp_i8(
 ; SM70:       {
 ; SM70-NEXT:    .reg .pred %p<2>;
-; SM70-NEXT:    .reg .b16 %rs<3>;
-; SM70-NEXT:    .reg .b32 %r<7>;
+; SM70-NEXT:    .reg .b16 %rs<2>;
+; SM70-NEXT:    .reg .b32 %r<8>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    ld.param.b8 %rs1, [test_uitofp_i8_param_0];
@@ -998,8 +974,8 @@ define bfloat @test_uitofp_i8(i8 %a) {
 ; SM70-NEXT:    setp.nan.f32 %p1, %r1, %r1;
 ; SM70-NEXT:    or.b32 %r5, %r1, 4194304;
 ; SM70-NEXT:    selp.b32 %r6, %r5, %r4, %p1;
-; SM70-NEXT:    mov.b32 {_, %rs2}, %r6;
-; SM70-NEXT:    st.param.b16 [func_retval0], %rs2;
+; SM70-NEXT:    shr.u32 %r7, %r6, 16;
+; SM70-NEXT:    st.param.b16 [func_retval0], %r7;
 ; SM70-NEXT:    ret;
 ;
 ; SM80-LABEL: test_uitofp_i8(
@@ -1043,8 +1019,8 @@ define bfloat @test_uitofp_i1(i1 %a) {
 ; SM70-LABEL: test_uitofp_i1(
 ; SM70:       {
 ; SM70-NEXT:    .reg .pred %p<3>;
-; SM70-NEXT:    .reg .b16 %rs<4>;
-; SM70-NEXT:    .reg .b32 %r<8>;
+; SM70-NEXT:    .reg .b16 %rs<3>;
+; SM70-NEXT:    .reg .b32 %r<9>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    ld.param.b8 %rs1, [test_uitofp_i1_param_0];
@@ -1058,8 +1034,8 @@ define bfloat @test_uitofp_i1(i1 %a) {
 ; SM70-NEXT:    setp.nan.f32 %p2, %r2, %r2;
 ; SM70-NEXT:    or.b32 %r6, %r2, 4194304;
 ; SM70-NEXT:    selp.b32 %r7, %r6, %r5, %p2;
-; SM70-NEXT:    mov.b32 {_, %rs3}, %r7;
-; SM70-NEXT:    st.param.b16 [func_retval0], %rs3;
+; SM70-NEXT:    shr.u32 %r8, %r7, 16;
+; SM70-NEXT:    st.param.b16 [func_retval0], %r8;
 ; SM70-NEXT:    ret;
 ;
 ; SM80-LABEL: test_uitofp_i1(
@@ -1116,8 +1092,8 @@ define bfloat @test_uitofp_i16(i16 %a) {
 ; SM70-LABEL: test_uitofp_i16(
 ; SM70:       {
 ; SM70-NEXT:    .reg .pred %p<2>;
-; SM70-NEXT:    .reg .b16 %rs<3>;
-; SM70-NEXT:    .reg .b32 %r<7>;
+; SM70-NEXT:    .reg .b16 %rs<2>;
+; SM70-NEXT:    .reg .b32 %r<8>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    ld.param.b16 %rs1, [test_uitofp_i16_param_0];
@@ -1128,8 +1104,8 @@ define bfloat @test_uitofp_i16(i16 %a) {
 ; SM70-NEXT:    setp.nan.f32 %p1, %r1, %r1;
 ; SM70-NEXT:    or.b32 %r5, %r1, 4194304;
 ; SM70-NEXT:    selp.b32 %r6, %r5, %r4, %p1;
-; SM70-NEXT:    mov.b32 {_, %rs2}, %r6;
-; SM70-NEXT:    st.param.b16 [func_retval0], %rs2;
+; SM70-NEXT:    shr.u32 %r7, %r6, 16;
+; SM70-NEXT:    st.param.b16 [func_retval0], %r7;
 ; SM70-NEXT:    ret;
 ;
 ; SM80-LABEL: test_uitofp_i16(
@@ -1173,8 +1149,7 @@ define bfloat @test_uitofp_i32(i32 %a) {
 ; SM70-LABEL: test_uitofp_i32(
 ; SM70:       {
 ; SM70-NEXT:    .reg .pred %p<2>;
-; SM70-NEXT:    .reg .b16 %rs<2>;
-; SM70-NEXT:    .reg .b32 %r<8>;
+; SM70-NEXT:    .reg .b32 %r<9>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    ld.param.b32 %r1, [test_uitofp_i32_param_0];
@@ -1185,8 +1160,8 @@ define bfloat @test_uitofp_i32(i32 %a) {
 ; SM70-NEXT:    setp.nan.f32 %p1, %r2, %r2;
 ; SM70-NEXT:    or.b32 %r6, %r2, 4194304;
 ; SM70-NEXT:    selp.b32 %r7, %r6, %r5, %p1;
-; SM70-NEXT:    mov.b32 {_, %rs1}, %r7;
-; SM70-NEXT:    st.param.b16 [func_retval0], %rs1;
+; SM70-NEXT:    shr.u32 %r8, %r7, 16;
+; SM70-NEXT:    st.param.b16 [func_retval0], %r8;
 ; SM70-NEXT:    ret;
 ;
 ; SM80-LABEL: test_uitofp_i32(
@@ -1231,8 +1206,7 @@ define bfloat @test_uitofp_i64(i64 %a) {
 ; SM70-LABEL: test_uitofp_i64(
 ; SM70:       {
 ; SM70-NEXT:    .reg .pred %p<2>;
-; SM70-NEXT:    .reg .b16 %rs<2>;
-; SM70-NEXT:    .reg .b32 %r<7>;
+; SM70-NEXT:    .reg .b32 %r<8>;
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
@@ -1244,8 +1218,8 @@ define bfloat @test_uitofp_i64(i64 %a) {
 ; SM70-NEXT:    setp.nan.f32 %p1, %r1, %r1;
 ; SM70-NEXT:    or.b32 %r5, %r1, 4194304;
 ; SM70-NEXT:    selp.b32 %r6, %r5, %r4, %p1;
-; SM70-NEXT:    mov.b32 {_, %rs1}, %r6;
-; SM70-NEXT:    st.param.b16 [func_retval0], %rs1;
+; SM70-NEXT:    shr.u32 %r7, %r6, 16;
+; SM70-NEXT:    st.param.b16 [func_retval0], %r7;
 ; SM70-NEXT:    ret;
 ;
 ; SM80-LABEL: test_uitofp_i64(
@@ -1292,8 +1266,7 @@ define bfloat @test_roundeven(bfloat %a) {
 ; SM70-LABEL: test_roundeven(
 ; SM70:       {
 ; SM70-NEXT:    .reg .pred %p<2>;
-; SM70-NEXT:    .reg .b16 %rs<2>;
-; SM70-NEXT:    .reg .b32 %r<9>;
+; SM70-NEXT:    .reg .b32 %r<10>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    ld.param.b16 %r1, [test_roundeven_param_0];
@@ -1305,8 +1278,8 @@ define bfloat @test_roundeven(bfloat %a) {
 ; SM70-NEXT:    setp.nan.f32 %p1, %r3, %r3;
 ; SM70-NEXT:    or.b32 %r7, %r3, 4194304;
 ; SM70-NEXT:    selp.b32 %r8, %r7, %r6, %p1;
-; SM70-NEXT:    mov.b32 {_, %rs1}, %r8;
-; SM70-NEXT:    st.param.b16 [func_retval0], %rs1;
+; SM70-NEXT:    shr.u32 %r9, %r8, 16;
+; SM70-NEXT:    st.param.b16 [func_retval0], %r9;
 ; SM70-NEXT:    ret;
 ;
 ; SM80-LABEL: test_roundeven(
@@ -1366,9 +1339,9 @@ define bfloat @test_maximum(bfloat %a, bfloat %b) {
 ; SM70-NEXT:    selp.b16 %rs3, %rs1, %rs2, %p1;
 ; SM70-NEXT:    setp.nan.f32 %p2, %r4, %r2;
 ; SM70-NEXT:    selp.b16 %rs4, 0x7FC0, %rs3, %p2;
-; SM70-NEXT:    setp.eq.s16 %p3, %rs1, 0;
+; SM70-NEXT:    setp.eq.b16 %p3, %rs1, 0;
 ; SM70-NEXT:    selp.b16 %rs5, %rs1, %rs4, %p3;
-; SM70-NEXT:    setp.eq.s16 %p4, %rs2, 0;
+; SM70-NEXT:    setp.eq.b16 %p4, %rs2, 0;
 ; SM70-NEXT:    selp.b16 %rs6, %rs2, %rs5, %p4;
 ; SM70-NEXT:    cvt.u32.u16 %r5, %rs4;
 ; SM70-NEXT:    shl.b32 %r6, %r5, 16;
@@ -1417,8 +1390,7 @@ define bfloat @test_maxnum(bfloat %a, bfloat %b) {
 ; SM70-LABEL: test_maxnum(
 ; SM70:       {
 ; SM70-NEXT:    .reg .pred %p<2>;
-; SM70-NEXT:    .reg .b16 %rs<2>;
-; SM70-NEXT:    .reg .b32 %r<11>;
+; SM70-NEXT:    .reg .b32 %r<12>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    ld.param.b16 %r1, [test_maxnum_param_1];
@@ -1432,8 +1404,8 @@ define bfloat @test_maxnum(bfloat %a, bfloat %b) {
 ; SM70-NEXT:    setp.nan.f32 %p1, %r5, %r5;
 ; SM70-NEXT:    or.b32 %r9, %r5, 4194304;
 ; SM70-NEXT:    selp.b32 %r10, %r9, %r8, %p1;
-; SM70-NEXT:    mov.b32 {_, %rs1}, %r10;
-; SM70-NEXT:    st.param.b16 [func_retval0], %rs1;
+; SM70-NEXT:    shr.u32 %r11, %r10, 16;
+; SM70-NEXT:    st.param.b16 [func_retval0], %r11;
 ; SM70-NEXT:    ret;
 ;
 ; SM80-LABEL: test_maxnum(
@@ -1477,47 +1449,44 @@ define <2 x bfloat> @test_maximum_v2(<2 x bfloat> %a, <2 x bfloat> %b) {
 ; SM70:       {
 ; SM70-NEXT:    .reg .pred %p<11>;
 ; SM70-NEXT:    .reg .b16 %rs<15>;
-; SM70-NEXT:    .reg .b32 %r<16>;
+; SM70-NEXT:    .reg .b32 %r<13>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.b32 %r1, [test_maximum_v2_param_0];
-; SM70-NEXT:    ld.param.b32 %r2, [test_maximum_v2_param_1];
-; SM70-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
+; SM70-NEXT:    ld.param.v2.b16 {%rs1, %rs2}, [test_maximum_v2_param_0];
+; SM70-NEXT:    ld.param.v2.b16 {%rs3, %rs4}, [test_maximum_v2_param_1];
+; SM70-NEXT:    cvt.u32.u16 %r1, %rs4;
+; SM70-NEXT:    shl.b32 %r2, %r1, 16;
 ; SM70-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM70-NEXT:    shl.b32 %r4, %r3, 16;
-; SM70-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
-; SM70-NEXT:    cvt.u32.u16 %r5, %rs4;
-; SM70-NEXT:    shl.b32 %r6, %r5, 16;
-; SM70-NEXT:    setp.gt.f32 %p1, %r6, %r4;
-; SM70-NEXT:    selp.b16 %rs5, %rs4, %rs2, %p1;
-; SM70-NEXT:    setp.nan.f32 %p2, %r6, %r4;
+; SM70-NEXT:    setp.gt.f32 %p1, %r4, %r2;
+; SM70-NEXT:    selp.b16 %rs5, %rs2, %rs4, %p1;
+; SM70-NEXT:    setp.nan.f32 %p2, %r4, %r2;
 ; SM70-NEXT:    selp.b16 %rs6, 0x7FC0, %rs5, %p2;
-; SM70-NEXT:    setp.eq.s16 %p3, %rs4, 0;
-; SM70-NEXT:    selp.b16 %rs7, %rs4, %rs6, %p3;
-; SM70-NEXT:    setp.eq.s16 %p4, %rs2, 0;
-; SM70-NEXT:    selp.b16 %rs8, %rs2, %rs7, %p4;
-; SM70-NEXT:    cvt.u32.u16 %r7, %rs6;
-; SM70-NEXT:    shl.b32 %r8, %r7, 16;
-; SM70-NEXT:    setp.eq.f32 %p5, %r8, 0f00000000;
+; SM70-NEXT:    setp.eq.b16 %p3, %rs2, 0;
+; SM70-NEXT:    selp.b16 %rs7, %rs2, %rs6, %p3;
+; SM70-NEXT:    setp.eq.b16 %p4, %rs4, 0;
+; SM70-NEXT:    selp.b16 %rs8, %rs4, %rs7, %p4;
+; SM70-NEXT:    cvt.u32.u16 %r5, %rs6;
+; SM70-NEXT:    shl.b32 %r6, %r5, 16;
+; SM70-NEXT:    setp.eq.f32 %p5, %r6, 0f00000000;
 ; SM70-NEXT:    selp.b16 %rs9, %rs8, %rs6, %p5;
+; SM70-NEXT:    cvt.u32.u16 %r7, %rs3;
+; SM70-NEXT:    shl.b32 %r8, %r7, 16;
 ; SM70-NEXT:    cvt.u32.u16 %r9, %rs1;
 ; SM70-NEXT:    shl.b32 %r10, %r9, 16;
-; SM70-NEXT:    cvt.u32.u16 %r11, %rs3;
-; SM70-NEXT:    shl.b32 %r12, %r11, 16;
-; SM70-NEXT:    setp.gt.f32 %p6, %r12, %r10;
-; SM70-NEXT:    selp.b16 %rs10, %rs3, %rs1, %p6;
-; SM70-NEXT:    setp.nan.f32 %p7, %r12, %r10;
+; SM70-NEXT:    setp.gt.f32 %p6, %r10, %r8;
+; SM70-NEXT:    selp.b16 %rs10, %rs1, %rs3, %p6;
+; SM70-NEXT:    setp.nan.f32 %p7, %r10, %r8;
 ; SM70-NEXT:    selp.b16 %rs11, 0x7FC0, %rs10, %p7;
-; SM70-NEXT:    setp.eq.s16 %p8, %rs3, 0;
-; SM70-NEXT:    selp.b16 %rs12, %rs3, %rs11, %p8;
-; SM70-NEXT:    setp.eq.s16 %p9, %rs1, 0;
-; SM70-NEXT:    selp.b16 %rs13, %rs1, %rs12, %p9;
-; SM70-NEXT:    cvt.u32.u16 %r13, %rs11;
-; SM70-NEXT:    shl.b32 %r14, %r13, 16;
-; SM70-NEXT:    setp.eq.f32 %p10, %r14, 0f00000000;
+; SM70-NEXT:    setp.eq.b16 %p8, %rs1, 0;
+; SM70-NEXT:    selp.b16 %rs12, %rs1, %rs11, %p8;
+; SM70-NEXT:    setp.eq.b16 %p9, %rs3, 0;
+; SM70-NEXT:    selp.b16 %rs13, %rs3, %rs12, %p9;
+; SM70-NEXT:    cvt.u32.u16 %r11, %rs11;
+; SM70-NEXT:    shl.b32 %r12, %r11, 16;
+; SM70-NEXT:    setp.eq.f32 %p10, %r12, 0f00000000;
 ; SM70-NEXT:    selp.b16 %rs14, %rs13, %rs11, %p10;
-; SM70-NEXT:    mov.b32 %r15, {%rs14, %rs9};
-; SM70-NEXT:    st.param.b32 [func_retval0], %r15;
+; SM70-NEXT:    st.param.v2.b16 [func_retval0], {%rs14, %rs9};
 ; SM70-NEXT:    ret;
 ;
 ; SM80-LABEL: test_maximum_v2(
@@ -1525,9 +1494,9 @@ define <2 x bfloat> @test_maximum_v2(<2 x bfloat> %a, <2 x bfloat> %b) {
 ; SM80-NEXT:    .reg .b32 %r<4>;
 ; SM80-EMPTY:
 ; SM80-NEXT:  // %bb.0:
-; SM80-NEXT:    ld.param.b32 %r1, [test_maximum_v2_param_1];
-; SM80-NEXT:    ld.param.b32 %r2, [test_maximum_v2_param_0];
-; SM80-NEXT:    max.NaN.bf16x2 %r3, %r2, %r1;
+; SM80-NEXT:    ld.param.b32 %r1, [test_maximum_v2_param_0];
+; SM80-NEXT:    ld.param.b32 %r2, [test_maximum_v2_param_1];
+; SM80-NEXT:    max.NaN.bf16x2 %r3, %r1, %r2;
 ; SM80-NEXT:    st.param.b32 [func_retval0], %r3;
 ; SM80-NEXT:    ret;
 ;
@@ -1536,9 +1505,9 @@ define <2 x bfloat> @test_maximum_v2(<2 x bfloat> %a, <2 x bfloat> %b) {
 ; SM80-FTZ-NEXT:    .reg .b32 %r<4>;
 ; SM80-FTZ-EMPTY:
 ; SM80-FTZ-NEXT:  // %bb.0:
-; SM80-FTZ-NEXT:    ld.param.b32 %r1, [test_maximum_v2_param_1];
-; SM80-FTZ-NEXT:    ld.param.b32 %r2, [test_maximum_v2_param_0];
-; SM80-FTZ-NEXT:    max.NaN.bf16x2 %r3, %r2, %r1;
+; SM80-FTZ-NEXT:    ld.param.b32 %r1, [test_maximum_v2_param_0];
+; SM80-FTZ-NEXT:    ld.param.b32 %r2, [test_maximum_v2_param_1];
+; SM80-FTZ-NEXT:    max.NaN.bf16x2 %r3, %r1, %r2;
 ; SM80-FTZ-NEXT:    st.param.b32 [func_retval0], %r3;
 ; SM80-FTZ-NEXT:    ret;
 ;
@@ -1547,9 +1516,9 @@ define <2 x bfloat> @test_maximum_v2(<2 x bfloat> %a, <2 x bfloat> %b) {
 ; SM90-NEXT:    .reg .b32 %r<4>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b32 %r1, [test_maximum_v2_param_1];
-; SM90-NEXT:    ld.param.b32 %r2, [test_maximum_v2_param_0];
-; SM90-NEXT:    max.NaN.bf16x2 %r3, %r2, %r1;
+; SM90-NEXT:    ld.param.b32 %r1, [test_maximum_v2_param_0];
+; SM90-NEXT:    ld.param.b32 %r2, [test_maximum_v2_param_1];
+; SM90-NEXT:    max.NaN.bf16x2 %r3, %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r3;
 ; SM90-NEXT:    ret;
   %r = call <2 x bfloat> @llvm.maximum.v2bf16(<2 x bfloat> %a, <2 x bfloat> %b)
@@ -1561,37 +1530,35 @@ define <2 x bfloat> @test_maxnum_v2(<2 x bfloat> %a, <2 x bfloat> %b) {
 ; SM70:       {
 ; SM70-NEXT:    .reg .pred %p<3>;
 ; SM70-NEXT:    .reg .b16 %rs<5>;
-; SM70-NEXT:    .reg .b32 %r<24>;
+; SM70-NEXT:    .reg .b32 %r<22>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
-; SM70-NEXT:    ld.param.b32 %r1, [test_maxnum_v2_param_0];
-; SM70-NEXT:    ld.param.b32 %r2, [test_maxnum_v2_param_1];
-; SM70-NEXT:    mov.b32 {%rs1, %rs2}, %r2;
+; SM70-NEXT:    ld.param.v2.b16 {%rs1, %rs2}, [test_maxnum_v2_param_0];
+; SM70-NEXT:    ld.param.v2.b16 {%rs3, %rs4}, [test_maxnum_v2_param_1];
+; SM70-NEXT:    cvt.u32.u16 %r1, %rs4;
+; SM70-NEXT:    shl.b32 %r2, %r1, 16;
 ; SM70-NEXT:    cvt.u32.u16 %r3, %rs2;
 ; SM70-NEXT:    shl.b32 %r4, %r3, 16;
-; SM70-NEXT:    mov.b32 {%rs3, %rs4}, %r1;
-; SM70-NEXT:    cvt.u32.u16 %r5, %rs4;
-; SM70-NEXT:    shl.b32 %r6, %r5, 16;
-; SM70-NEXT:    max.f32 %r7, %r6, %r4;
-; SM70-NEXT:    bfe.u32 %r8, %r7, 16, 1;
-; SM70-NEXT:    add.s32 %r9, %r8, %r7;
-; SM70-NEXT:    add.s32 %r10, %r9, 32767;
-; SM70-NEXT:    setp.nan.f32 %p1, %r7, %r7;
-; SM70-NEXT:    or.b32 %r11, %r7, 4194304;
-; SM70-NEXT:    selp.b32 %r12, %r11, %r10, %p1;
+; SM70-NEXT:    max.f32 %r5, %r4, %r2;
+; SM70-NEXT:    bfe.u32 %r6, %r5, 16, 1;
+; SM70-NEXT:    add.s32 %r7, %r6, %r5;
+; SM70-NEXT:    add.s32 %r8, %r7, 32767;
+; SM70-NEXT:    setp.nan.f32 %p1, %r5, %r5;
+; SM70-NEXT:    or.b32 %r9, %r5, 4194304;
+; SM70-NEXT:    selp.b32 %r10, %r9, %r8, %p1;
+; SM70-NEXT:    cvt.u32.u16 %r11, %rs3;
+; SM70-NEXT:    shl.b32 %r12, %r11, 16;
 ; SM70-NEXT:    cvt.u32.u16 %r13, %rs1;
 ; SM70-NEXT:    shl.b32 %r14, %r13, 16;
-; SM70-NEXT:    cvt.u32.u16 %r15, %rs3;
-; SM70-NEXT:    shl.b32 %r16, %r15, 16;
-; SM70-NEXT:    max.f32 %r17, %r16, %r14;
-; SM70-NEXT:    bfe.u32 %r18, %r17, 16, 1;
-; SM70-NEXT:    add.s32 %r19, %r18, %r17;
-; SM70-NEXT:    add.s32 %r20, %r19, 32767;
-; SM70-NEXT:    setp.nan.f32 %p2, %r17, %r17;
-; SM70-NEXT:    or.b32 %r21, %r17, 4194304;
-; SM70-NEXT:    selp.b32 %r22, %r21, %r20, %p2;
-; SM70-NEXT:    prmt.b32 %r23, %r22, %r12, 0x7632U;
-; SM70-NEXT:    st.param.b32 [func_retval0], %r23;
+; SM70-NEXT:    max.f32 %r15, %r14, %r12;
+; SM70-NEXT:    bfe.u32 %r16, %r15, 16, 1;
+; SM70-NEXT:    add.s32 %r17, %r16, %r15;
+; SM70-NEXT:    add.s32 %r18, %r17, 32767;
+; SM70-NEXT:    setp.nan.f32 %p2, %r15, %r15;
+; SM70-NEXT:    or.b32 %r19, %r15, 4194304;
+; SM70-NEXT:    selp.b32 %r20, %r19, %r18, %p2;
+; SM70-NEXT:    prmt.b32 %r21, %r20, %r10, 0x7632U;
+; SM70-NEXT:    st.param.b32 [func_retval0], %r21;
 ; SM70-NEXT:    ret;
 ;
 ; SM80-LABEL: test_maxnum_v2(
@@ -1599,9 +1566,9 @@ define <2 x bfloat> @test_maxnum_v2(<2 x bfloat> %a, <2 x bfloat> %b) {
 ; SM80-NEXT:    .reg .b32 %r<4>;
 ; SM80-EMPTY:
 ; SM80-NEXT:  // %bb.0:
-; SM80-NEXT:    ld.param.b32 %r1, [test_maxnum_v2_param_1];
-; SM80-NEXT:    ld.param.b32 %r2, [test_maxnum_v2_param_0];
-; SM80-NEXT:    max.bf16x2 %r3, %r2, %r1;
+; SM80-NEXT:    ld.param.b32 %r1, [test_maxnum_v2_param_0];
+; SM80-NEXT:    ld.param.b32 %r2, [test_maxnum_v2_param_1];
+; SM80-NEXT:    max.bf16x2 %r3, %r1, %r2;
 ; SM80-NEXT:    st.param.b32 [func_retval0], %r3;
 ; SM80-NEXT:    ret;
 ;
@@ -1610,9 +1577,9 @@ define <2 x bfloat> @test_maxnum_v2(<2 x bfloat> %a, <2 x bfloat> %b) {
 ; SM80-FTZ-NEXT:    .reg .b32 %r<4>;
 ; SM80-FTZ-EMPTY:
 ; SM80-FTZ-NEXT:  // %bb.0:
-; SM80-FTZ-NEXT:    ld.param.b32 %r1, [test_maxnum_v2_param_1];
-; SM80-FTZ-NEXT:    ld.param.b32 %r2, [test_maxnum_v2_param_0];
-; SM80-FTZ-NEXT:    max.bf16x2 %r3, %r2, %r1;
+; SM80-FTZ-NEXT:    ld.param.b32 %r1, [test_maxnum_v2_param_0];
+; SM80-FTZ-NEXT:    ld.param.b32 %r2, [test_maxnum_v2_param_1];
+; SM80-FTZ-NEXT:    max.bf16x2 %r3, %r1, %r2;
 ; SM80-FTZ-NEXT:    st.param.b32 [func_retval0], %r3;
 ; SM80-FTZ-NEXT:    ret;
 ;
@@ -1621,13 +1588,31 @@ define <2 x bfloat> @test_maxnum_v2(<2 x bfloat> %a, <2 x bfloat> %b) {
 ; SM90-NEXT:    .reg .b32 %r<4>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b32 %r1, [test_maxnum_v2_param_1];
-; SM90-NEXT:    ld.param.b32 %r2, [test_maxnum_v2_param_0];
-; SM90-NEXT:    max.bf16x2 %r3, %r2, %r1;
+; SM90-NEXT:    ld.param.b32 %r1, [test_maxnum_v2_param_0];
+; SM90-NEXT:    ld.param.b32 %r2, [test_maxnum_v2_param_1];
+; SM90-NEXT:    max.bf16x2 %r3, %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r3;
 ; SM90-NEXT:    ret;
   %r = call <2 x bfloat> @llvm.maxnum.v2bf16(<2 x bfloat> %a, <2 x bfloat> %b)
   ret <2 x bfloat> %r
+}
+
+define void @store_bf16(ptr %p1, ptr %p2, bfloat %v) {
+; CHECK-LABEL: store_bf16(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b16 %rs<2>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [store_bf16_param_0];
+; CHECK-NEXT:    ld.param.b16 %rs1, [store_bf16_param_2];
+; CHECK-NEXT:    st.b16 [%rd1], %rs1;
+; CHECK-NEXT:    ld.param.b64 %rd2, [store_bf16_param_1];
+; CHECK-NEXT:    st.b16 [%rd2], 0x3F80;
+; CHECK-NEXT:    ret;
+  store bfloat %v, ptr %p1
+  store bfloat 1.0, ptr %p2
+  ret void
 }
 
 declare bfloat @llvm.maximum.bf16(bfloat, bfloat)

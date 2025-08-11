@@ -66,9 +66,9 @@ void SwiftAggLowering::addTypedData(QualType type, CharUnits begin) {
 
   // Record types.
   if (auto recType = type->getAs<RecordType>()) {
-    addTypedData(recType->getDecl(), begin);
+    addTypedData(recType->getOriginalDecl(), begin);
 
-  // Array types.
+    // Array types.
   } else if (type->isArrayType()) {
     // Incomplete array types (flexible array members?) don't provide
     // data to lay out, and the other cases shouldn't be possible.
@@ -814,7 +814,7 @@ static ABIArgInfo classifyType(CodeGenModule &CGM, CanQualType type,
                                bool forReturn) {
   unsigned IndirectAS = CGM.getDataLayout().getAllocaAddrSpace();
   if (auto recordType = dyn_cast<RecordType>(type)) {
-    auto record = recordType->getDecl();
+    auto record = recordType->getOriginalDecl();
     auto &layout = CGM.getContext().getASTRecordLayout(record);
 
     if (mustPassRecordIndirectly(CGM, record))
@@ -822,7 +822,8 @@ static ABIArgInfo classifyType(CodeGenModule &CGM, CanQualType type,
                                      /*AddrSpace=*/IndirectAS, /*byval=*/false);
 
     SwiftAggLowering lowering(CGM);
-    lowering.addTypedData(recordType->getDecl(), CharUnits::Zero(), layout);
+    lowering.addTypedData(recordType->getOriginalDecl(), CharUnits::Zero(),
+                          layout);
     lowering.finish();
 
     return classifyExpandedType(lowering, forReturn, layout.getAlignment(),

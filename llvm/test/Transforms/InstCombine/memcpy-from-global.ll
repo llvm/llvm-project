@@ -178,14 +178,14 @@ define void @test4() {
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64, ptr)
+declare void @llvm.lifetime.start.p0(ptr)
 define void @test5() {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    call void @baz(ptr nonnull byval(i8) @G)
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %T
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %A)
+  call void @llvm.lifetime.start.p0(ptr %A)
   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %A, ptr align 4 @G, i64 124, i1 false)
   call void @baz(ptr byval(i8) %A)
   ret void
@@ -308,7 +308,7 @@ define float @test11(i64 %i) {
 
 entry:
   %a = alloca [4 x float], align 4
-  call void @llvm.lifetime.start.p0(i64 16, ptr %a)
+  call void @llvm.lifetime.start.p0(ptr %a)
   call void @llvm.memcpy.p0.p1.i64(ptr align 4 %a, ptr addrspace(1) align 4 @I, i64 16, i1 false)
   %g = getelementptr inbounds [4 x float], ptr %a, i64 0, i64 %i
   %r = load float, ptr %g, align 4
@@ -320,7 +320,7 @@ define float @test11_volatile(i64 %i) {
 ; CHECK-LABEL: @test11_volatile(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca [4 x float], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr nonnull [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[A]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p1.i64(ptr align 4 [[A]], ptr addrspace(1) align 4 @I, i64 16, i1 true)
 ; CHECK-NEXT:    [[G:%.*]] = getelementptr inbounds [4 x float], ptr [[A]], i64 0, i64 [[I:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = load float, ptr [[G]], align 4
@@ -329,7 +329,7 @@ define float @test11_volatile(i64 %i) {
 
 entry:
   %a = alloca [4 x float], align 4
-  call void @llvm.lifetime.start.p0(i64 16, ptr %a)
+  call void @llvm.lifetime.start.p0(ptr %a)
   call void @llvm.memcpy.p0.p1.i64(ptr align 4 %a, ptr addrspace(1) align 4 @I, i64 16, i1 true)
   %g = getelementptr inbounds [4 x float], ptr %a, i64 0, i64 %i
   %r = load float, ptr %g, align 4

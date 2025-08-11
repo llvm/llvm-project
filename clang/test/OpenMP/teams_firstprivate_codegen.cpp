@@ -458,9 +458,9 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK9-NEXT:    store ptr [[S_ARR]], ptr [[S_ARR_ADDR]], align 8
 // CHECK9-NEXT:    store ptr [[VAR]], ptr [[VAR_ADDR]], align 8
 // CHECK9-NEXT:    store i64 [[SIVAR]], ptr [[SIVAR_ADDR]], align 8
-// CHECK9-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[VEC_ADDR]], align 8
-// CHECK9-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[S_ARR_ADDR]], align 8
-// CHECK9-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[VAR_ADDR]], align 8
+// CHECK9-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[VEC_ADDR]], align 8, !nonnull [[META11:![0-9]+]], !align [[META12:![0-9]+]]
+// CHECK9-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[S_ARR_ADDR]], align 8, !nonnull [[META11]], !align [[META12]]
+// CHECK9-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[VAR_ADDR]], align 8, !nonnull [[META11]], !align [[META12]]
 // CHECK9-NEXT:    [[TMP3:%.*]] = load i32, ptr [[T_VAR_ADDR]], align 4
 // CHECK9-NEXT:    store i32 [[TMP3]], ptr [[T_VAR_CASTED]], align 4
 // CHECK9-NEXT:    [[TMP4:%.*]] = load i64, ptr [[T_VAR_CASTED]], align 8
@@ -493,9 +493,9 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK9-NEXT:    store ptr [[S_ARR]], ptr [[S_ARR_ADDR]], align 8
 // CHECK9-NEXT:    store ptr [[VAR]], ptr [[VAR_ADDR]], align 8
 // CHECK9-NEXT:    store i64 [[SIVAR]], ptr [[SIVAR_ADDR]], align 8
-// CHECK9-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[VEC_ADDR]], align 8
-// CHECK9-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[S_ARR_ADDR]], align 8
-// CHECK9-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[VAR_ADDR]], align 8
+// CHECK9-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[VEC_ADDR]], align 8, !nonnull [[META11]], !align [[META12]]
+// CHECK9-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[S_ARR_ADDR]], align 8, !nonnull [[META11]], !align [[META12]]
+// CHECK9-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[VAR_ADDR]], align 8, !nonnull [[META11]], !align [[META12]]
 // CHECK9-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[VEC1]], ptr align 4 [[TMP0]], i64 8, i1 false)
 // CHECK9-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[S_ARR2]], i32 0, i32 0
 // CHECK9-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAY_BEGIN]], i64 2
@@ -808,7 +808,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK9-NEXT:    store ptr [[T]], ptr [[T_INDIRECT_ADDR]], align 8
 // CHECK9-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK9-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
-// CHECK9-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
+// CHECK9-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8, !nonnull [[META11]], !align [[META12]]
 // CHECK9-NEXT:    [[F2:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[TMP0]], i32 0, i32 0
 // CHECK9-NEXT:    [[TMP1:%.*]] = load float, ptr [[F2]], align 4
 // CHECK9-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_ST:%.*]], ptr [[T]], i32 0, i32 0
@@ -872,9 +872,9 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK9-NEXT:    store ptr [[VEC]], ptr [[VEC_ADDR]], align 8
 // CHECK9-NEXT:    store ptr [[S_ARR]], ptr [[S_ARR_ADDR]], align 8
 // CHECK9-NEXT:    store ptr [[VAR]], ptr [[VAR_ADDR]], align 8
-// CHECK9-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[VEC_ADDR]], align 8
-// CHECK9-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[S_ARR_ADDR]], align 8
-// CHECK9-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[VAR_ADDR]], align 8
+// CHECK9-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[VEC_ADDR]], align 8, !nonnull [[META11]], !align [[META12]]
+// CHECK9-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[S_ARR_ADDR]], align 8, !nonnull [[META11]], !align [[META12]]
+// CHECK9-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[VAR_ADDR]], align 8, !nonnull [[META11]], !align [[META12]]
 // CHECK9-NEXT:    [[TMP3:%.*]] = load i32, ptr [[T_VAR_ADDR]], align 4
 // CHECK9-NEXT:    store i32 [[TMP3]], ptr [[T_VAR_CASTED]], align 4
 // CHECK9-NEXT:    [[TMP4:%.*]] = load i64, ptr [[T_VAR_CASTED]], align 8
@@ -902,9 +902,9 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK9-NEXT:    store i64 [[T_VAR]], ptr [[T_VAR_ADDR]], align 8
 // CHECK9-NEXT:    store ptr [[S_ARR]], ptr [[S_ARR_ADDR]], align 8
 // CHECK9-NEXT:    store ptr [[VAR]], ptr [[VAR_ADDR]], align 8
-// CHECK9-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[VEC_ADDR]], align 8
-// CHECK9-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[S_ARR_ADDR]], align 8
-// CHECK9-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[VAR_ADDR]], align 8
+// CHECK9-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[VEC_ADDR]], align 8, !nonnull [[META11]], !align [[META12]]
+// CHECK9-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[S_ARR_ADDR]], align 8, !nonnull [[META11]], !align [[META12]]
+// CHECK9-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[VAR_ADDR]], align 8, !nonnull [[META11]], !align [[META12]]
 // CHECK9-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 128 [[VEC1]], ptr align 128 [[TMP0]], i64 8, i1 false)
 // CHECK9-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[S_ARR2]], i32 0, i32 0
 // CHECK9-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAY_BEGIN]], i64 2
@@ -1032,7 +1032,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK9-NEXT:    store ptr [[T]], ptr [[T_INDIRECT_ADDR]], align 8
 // CHECK9-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK9-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
-// CHECK9-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
+// CHECK9-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8, !nonnull [[META11]], !align [[META12]]
 // CHECK9-NEXT:    [[F2:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0]], ptr [[TMP0]], i32 0, i32 0
 // CHECK9-NEXT:    [[TMP1:%.*]] = load i32, ptr [[F2]], align 4
 // CHECK9-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_ST:%.*]], ptr [[T]], i32 0, i32 0
@@ -1250,9 +1250,9 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK11-NEXT:    store ptr [[S_ARR]], ptr [[S_ARR_ADDR]], align 4
 // CHECK11-NEXT:    store ptr [[VAR]], ptr [[VAR_ADDR]], align 4
 // CHECK11-NEXT:    store i32 [[SIVAR]], ptr [[SIVAR_ADDR]], align 4
-// CHECK11-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[VEC_ADDR]], align 4
-// CHECK11-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[S_ARR_ADDR]], align 4
-// CHECK11-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[VAR_ADDR]], align 4
+// CHECK11-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[VEC_ADDR]], align 4, !nonnull [[META12:![0-9]+]], !align [[META13:![0-9]+]]
+// CHECK11-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[S_ARR_ADDR]], align 4, !nonnull [[META12]], !align [[META13]]
+// CHECK11-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[VAR_ADDR]], align 4, !nonnull [[META12]], !align [[META13]]
 // CHECK11-NEXT:    [[TMP3:%.*]] = load i32, ptr [[T_VAR_ADDR]], align 4
 // CHECK11-NEXT:    store i32 [[TMP3]], ptr [[T_VAR_CASTED]], align 4
 // CHECK11-NEXT:    [[TMP4:%.*]] = load i32, ptr [[T_VAR_CASTED]], align 4
@@ -1285,9 +1285,9 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK11-NEXT:    store ptr [[S_ARR]], ptr [[S_ARR_ADDR]], align 4
 // CHECK11-NEXT:    store ptr [[VAR]], ptr [[VAR_ADDR]], align 4
 // CHECK11-NEXT:    store i32 [[SIVAR]], ptr [[SIVAR_ADDR]], align 4
-// CHECK11-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[VEC_ADDR]], align 4
-// CHECK11-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[S_ARR_ADDR]], align 4
-// CHECK11-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[VAR_ADDR]], align 4
+// CHECK11-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[VEC_ADDR]], align 4, !nonnull [[META12]], !align [[META13]]
+// CHECK11-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[S_ARR_ADDR]], align 4, !nonnull [[META12]], !align [[META13]]
+// CHECK11-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[VAR_ADDR]], align 4, !nonnull [[META12]], !align [[META13]]
 // CHECK11-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[VEC1]], ptr align 4 [[TMP0]], i32 8, i1 false)
 // CHECK11-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S], ptr [[S_ARR2]], i32 0, i32 0
 // CHECK11-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARRAY_BEGIN]], i32 2
@@ -1600,7 +1600,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK11-NEXT:    store ptr [[T]], ptr [[T_INDIRECT_ADDR]], align 4
 // CHECK11-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
 // CHECK11-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S:%.*]], ptr [[THIS1]], i32 0, i32 0
-// CHECK11-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 4
+// CHECK11-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 4, !nonnull [[META12]], !align [[META13]]
 // CHECK11-NEXT:    [[F2:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[TMP0]], i32 0, i32 0
 // CHECK11-NEXT:    [[TMP1:%.*]] = load float, ptr [[F2]], align 4
 // CHECK11-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_ST:%.*]], ptr [[T]], i32 0, i32 0
@@ -1664,9 +1664,9 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK11-NEXT:    store ptr [[VEC]], ptr [[VEC_ADDR]], align 4
 // CHECK11-NEXT:    store ptr [[S_ARR]], ptr [[S_ARR_ADDR]], align 4
 // CHECK11-NEXT:    store ptr [[VAR]], ptr [[VAR_ADDR]], align 4
-// CHECK11-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[VEC_ADDR]], align 4
-// CHECK11-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[S_ARR_ADDR]], align 4
-// CHECK11-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[VAR_ADDR]], align 4
+// CHECK11-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[VEC_ADDR]], align 4, !nonnull [[META12]], !align [[META13]]
+// CHECK11-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[S_ARR_ADDR]], align 4, !nonnull [[META12]], !align [[META13]]
+// CHECK11-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[VAR_ADDR]], align 4, !nonnull [[META12]], !align [[META13]]
 // CHECK11-NEXT:    [[TMP3:%.*]] = load i32, ptr [[T_VAR_ADDR]], align 4
 // CHECK11-NEXT:    store i32 [[TMP3]], ptr [[T_VAR_CASTED]], align 4
 // CHECK11-NEXT:    [[TMP4:%.*]] = load i32, ptr [[T_VAR_CASTED]], align 4
@@ -1694,9 +1694,9 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK11-NEXT:    store i32 [[T_VAR]], ptr [[T_VAR_ADDR]], align 4
 // CHECK11-NEXT:    store ptr [[S_ARR]], ptr [[S_ARR_ADDR]], align 4
 // CHECK11-NEXT:    store ptr [[VAR]], ptr [[VAR_ADDR]], align 4
-// CHECK11-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[VEC_ADDR]], align 4
-// CHECK11-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[S_ARR_ADDR]], align 4
-// CHECK11-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[VAR_ADDR]], align 4
+// CHECK11-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[VEC_ADDR]], align 4, !nonnull [[META12]], !align [[META13]]
+// CHECK11-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[S_ARR_ADDR]], align 4, !nonnull [[META12]], !align [[META13]]
+// CHECK11-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[VAR_ADDR]], align 4, !nonnull [[META12]], !align [[META13]]
 // CHECK11-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 128 [[VEC1]], ptr align 128 [[TMP0]], i32 8, i1 false)
 // CHECK11-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [2 x %struct.S.0], ptr [[S_ARR2]], i32 0, i32 0
 // CHECK11-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[STRUCT_S_0]], ptr [[ARRAY_BEGIN]], i32 2
@@ -1824,7 +1824,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK11-NEXT:    store ptr [[T]], ptr [[T_INDIRECT_ADDR]], align 4
 // CHECK11-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
 // CHECK11-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0:%.*]], ptr [[THIS1]], i32 0, i32 0
-// CHECK11-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 4
+// CHECK11-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 4, !nonnull [[META12]], !align [[META13]]
 // CHECK11-NEXT:    [[F2:%.*]] = getelementptr inbounds nuw [[STRUCT_S_0]], ptr [[TMP0]], i32 0, i32 0
 // CHECK11-NEXT:    [[TMP1:%.*]] = load i32, ptr [[F2]], align 4
 // CHECK11-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_ST:%.*]], ptr [[T]], i32 0, i32 0
@@ -1997,7 +1997,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK17-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
 // CHECK17-NEXT:    [[TMP1:%.*]] = load i64, ptr [[VLA_ADDR3]], align 8
 // CHECK17-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR5]], align 8
-// CHECK17-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[VLA2_ADDR]], align 8
+// CHECK17-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[VLA2_ADDR]], align 8, !nonnull [[META8:![0-9]+]], !align [[META9:![0-9]+]]
 // CHECK17-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[S_ADDR]], align 8
 // CHECK17-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[VLA1_ADDR]], align 8
 // CHECK17-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[A_ADDR]], align 8
@@ -2031,11 +2031,11 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK17-NEXT:    store i64 [[VLA2]], ptr [[VLA_ADDR3]], align 8
 // CHECK17-NEXT:    store i64 [[VLA4]], ptr [[VLA_ADDR5]], align 8
 // CHECK17-NEXT:    store ptr [[VLA26]], ptr [[VLA2_ADDR]], align 8
-// CHECK17-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR]], align 8
+// CHECK17-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR]], align 8, !nonnull [[META8]], !align [[META10:![0-9]+]]
 // CHECK17-NEXT:    [[TMP1:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
 // CHECK17-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR3]], align 8
 // CHECK17-NEXT:    [[TMP3:%.*]] = load i64, ptr [[VLA_ADDR5]], align 8
-// CHECK17-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[VLA2_ADDR]], align 8
+// CHECK17-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[VLA2_ADDR]], align 8, !nonnull [[META8]], !align [[META9]]
 // CHECK17-NEXT:    [[TMP5:%.*]] = call ptr @llvm.stacksave.p0()
 // CHECK17-NEXT:    store ptr [[TMP5]], ptr [[SAVED_STACK]], align 8
 // CHECK17-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP2]], [[TMP3]]
@@ -2235,7 +2235,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK17-NEXT:    [[TMP0:%.*]] = load i64, ptr [[VLA_ADDR]], align 8
 // CHECK17-NEXT:    [[TMP1:%.*]] = load i64, ptr [[VLA_ADDR3]], align 8
 // CHECK17-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR5]], align 8
-// CHECK17-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[VLA2_ADDR]], align 8
+// CHECK17-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[VLA2_ADDR]], align 8, !nonnull [[META8]], !align [[META9]]
 // CHECK17-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK17-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[VLA1_ADDR]], align 8
 // CHECK17-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[S_ADDR]], align 8
@@ -2273,8 +2273,8 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK17-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK17-NEXT:    [[TMP2:%.*]] = load i64, ptr [[VLA_ADDR3]], align 8
 // CHECK17-NEXT:    [[TMP3:%.*]] = load i64, ptr [[VLA_ADDR5]], align 8
-// CHECK17-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[VLA2_ADDR]], align 8
-// CHECK17-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[N_ADDR]], align 8
+// CHECK17-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[VLA2_ADDR]], align 8, !nonnull [[META8]], !align [[META9]]
+// CHECK17-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[N_ADDR]], align 8, !nonnull [[META8]], !align [[META10]]
 // CHECK17-NEXT:    [[TMP6:%.*]] = call ptr @llvm.stacksave.p0()
 // CHECK17-NEXT:    store ptr [[TMP6]], ptr [[SAVED_STACK]], align 8
 // CHECK17-NEXT:    [[TMP7:%.*]] = mul nuw i64 [[TMP2]], [[TMP3]]
@@ -2460,7 +2460,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK19-NEXT:    [[TMP0:%.*]] = load i32, ptr [[VLA_ADDR]], align 4
 // CHECK19-NEXT:    [[TMP1:%.*]] = load i32, ptr [[VLA_ADDR3]], align 4
 // CHECK19-NEXT:    [[TMP2:%.*]] = load i32, ptr [[VLA_ADDR5]], align 4
-// CHECK19-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[VLA2_ADDR]], align 4
+// CHECK19-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[VLA2_ADDR]], align 4, !nonnull [[META8:![0-9]+]], !align [[META9:![0-9]+]]
 // CHECK19-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[S_ADDR]], align 4
 // CHECK19-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[VLA1_ADDR]], align 4
 // CHECK19-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[A_ADDR]], align 4
@@ -2494,11 +2494,11 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK19-NEXT:    store i32 [[VLA2]], ptr [[VLA_ADDR3]], align 4
 // CHECK19-NEXT:    store i32 [[VLA4]], ptr [[VLA_ADDR5]], align 4
 // CHECK19-NEXT:    store ptr [[VLA26]], ptr [[VLA2_ADDR]], align 4
-// CHECK19-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR]], align 4
+// CHECK19-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[N_ADDR]], align 4, !nonnull [[META8]], !align [[META9]]
 // CHECK19-NEXT:    [[TMP1:%.*]] = load i32, ptr [[VLA_ADDR]], align 4
 // CHECK19-NEXT:    [[TMP2:%.*]] = load i32, ptr [[VLA_ADDR3]], align 4
 // CHECK19-NEXT:    [[TMP3:%.*]] = load i32, ptr [[VLA_ADDR5]], align 4
-// CHECK19-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[VLA2_ADDR]], align 4
+// CHECK19-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[VLA2_ADDR]], align 4, !nonnull [[META8]], !align [[META9]]
 // CHECK19-NEXT:    [[TMP5:%.*]] = call ptr @llvm.stacksave.p0()
 // CHECK19-NEXT:    store ptr [[TMP5]], ptr [[SAVED_STACK]], align 4
 // CHECK19-NEXT:    [[TMP6:%.*]] = mul nuw i32 [[TMP2]], [[TMP3]]
@@ -2696,7 +2696,7 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK19-NEXT:    [[TMP0:%.*]] = load i32, ptr [[VLA_ADDR]], align 4
 // CHECK19-NEXT:    [[TMP1:%.*]] = load i32, ptr [[VLA_ADDR3]], align 4
 // CHECK19-NEXT:    [[TMP2:%.*]] = load i32, ptr [[VLA_ADDR5]], align 4
-// CHECK19-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[VLA2_ADDR]], align 4
+// CHECK19-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[VLA2_ADDR]], align 4, !nonnull [[META8]], !align [[META9]]
 // CHECK19-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
 // CHECK19-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[VLA1_ADDR]], align 4
 // CHECK19-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[S_ADDR]], align 4
@@ -2734,8 +2734,8 @@ void array_func(float a[3], St s[2], int n, long double vla1[n]) {
 // CHECK19-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 4
 // CHECK19-NEXT:    [[TMP2:%.*]] = load i32, ptr [[VLA_ADDR3]], align 4
 // CHECK19-NEXT:    [[TMP3:%.*]] = load i32, ptr [[VLA_ADDR5]], align 4
-// CHECK19-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[VLA2_ADDR]], align 4
-// CHECK19-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[N_ADDR]], align 4
+// CHECK19-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[VLA2_ADDR]], align 4, !nonnull [[META8]], !align [[META9]]
+// CHECK19-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[N_ADDR]], align 4, !nonnull [[META8]], !align [[META9]]
 // CHECK19-NEXT:    [[TMP6:%.*]] = call ptr @llvm.stacksave.p0()
 // CHECK19-NEXT:    store ptr [[TMP6]], ptr [[SAVED_STACK]], align 4
 // CHECK19-NEXT:    [[TMP7:%.*]] = mul nuw i32 [[TMP2]], [[TMP3]]

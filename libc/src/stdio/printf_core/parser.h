@@ -25,7 +25,7 @@
 #include "src/__support/fixed_point/fx_rep.h"
 #endif // LIBC_INTERNAL_PRINTF_HAS_FIXED_POINT
 #ifndef LIBC_COPT_PRINTF_DISABLE_STRERROR
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #endif // LIBC_COPT_PRINTF_DISABLE_STRERROR
 
 namespace LIBC_NAMESPACE_DECL {

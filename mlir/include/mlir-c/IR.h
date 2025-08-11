@@ -813,6 +813,13 @@ MLIR_CAPI_EXPORTED void mlirOperationMoveAfter(MlirOperation op,
 MLIR_CAPI_EXPORTED void mlirOperationMoveBefore(MlirOperation op,
                                                 MlirOperation other);
 
+/// Given an operation 'other' that is within the same parent block, return
+/// whether the current operation is before 'other' in the operation list
+/// of the parent block.
+/// Note: This function has an average complexity of O(1), but worst case may
+/// take O(N) where N is the number of operations within the parent block.
+MLIR_CAPI_EXPORTED bool mlirOperationIsBeforeInBlock(MlirOperation op,
+                                                     MlirOperation other);
 /// Operation walk result.
 typedef enum MlirWalkResult {
   MlirWalkResultAdvance,
@@ -985,6 +992,24 @@ MLIR_CAPI_EXPORTED MlirValue mlirBlockGetArgument(MlirBlock block,
 /// several times with consecutive chunks of the string.
 MLIR_CAPI_EXPORTED void
 mlirBlockPrint(MlirBlock block, MlirStringCallback callback, void *userData);
+
+/// Returns the number of successor blocks of the block.
+MLIR_CAPI_EXPORTED intptr_t mlirBlockGetNumSuccessors(MlirBlock block);
+
+/// Returns `pos`-th successor of the block.
+MLIR_CAPI_EXPORTED MlirBlock mlirBlockGetSuccessor(MlirBlock block,
+                                                   intptr_t pos);
+
+/// Returns the number of predecessor blocks of the block.
+MLIR_CAPI_EXPORTED intptr_t mlirBlockGetNumPredecessors(MlirBlock block);
+
+/// Returns `pos`-th predecessor of the block.
+///
+/// WARNING: This getter is more expensive than the others here because
+/// the impl actually iterates the use-def chain (of block operands) anew for
+/// each indexed access.
+MLIR_CAPI_EXPORTED MlirBlock mlirBlockGetPredecessor(MlirBlock block,
+                                                     intptr_t pos);
 
 //===----------------------------------------------------------------------===//
 // Value API.

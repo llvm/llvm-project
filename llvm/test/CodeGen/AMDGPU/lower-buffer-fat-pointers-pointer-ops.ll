@@ -277,7 +277,7 @@ define <2 x i32> @ptrtoaddr_vec(<2 x ptr addrspace(7)> %ptr) {
   ret <2 x i32> %ret
 }
 
-;; Check that we extend the offset to i160 instead of reinterpreting all bits.
+;; Check that we extend the offset to i160.
 define i160 @ptrtoaddr_ext(ptr addrspace(7) %ptr) {
 ; CHECK-LABEL: define i160 @ptrtoaddr_ext
 ; CHECK-SAME: ({ ptr addrspace(8), i32 } [[PTR:%.*]]) #[[ATTR0]] {
@@ -286,10 +286,12 @@ define i160 @ptrtoaddr_ext(ptr addrspace(7) %ptr) {
 ; CHECK-NEXT:    [[RET:%.*]] = zext i32 [[PTR_OFF]] to i160
 ; CHECK-NEXT:    ret i160 [[RET]]
 ;
-  %ret = ptrtoaddr ptr addrspace(7) %ptr to i160
-  ret i160 %ret
+  %addr = ptrtoaddr ptr addrspace(7) %ptr to i32
+  %ext = zext i32 %addr to i160
+  ret i160 %ext
 }
 
+;; Check that we truncate the offset to i16.
 define i16 @ptrtoaddr_trunc(ptr addrspace(7) %ptr) {
 ; CHECK-LABEL: define i16 @ptrtoaddr_trunc
 ; CHECK-SAME: ({ ptr addrspace(8), i32 } [[PTR:%.*]]) #[[ATTR0]] {
@@ -298,8 +300,9 @@ define i16 @ptrtoaddr_trunc(ptr addrspace(7) %ptr) {
 ; CHECK-NEXT:    [[RET:%.*]] = trunc i32 [[PTR_OFF]] to i16
 ; CHECK-NEXT:    ret i16 [[RET]]
 ;
-  %ret = ptrtoaddr ptr addrspace(7) %ptr to i16
-  ret i16 %ret
+  %addr = ptrtoaddr ptr addrspace(7) %ptr to i32
+  %trunc = trunc i32 %addr to i16
+  ret i16 %trunc
 }
 
 define ptr addrspace(7) @inttoptr(i160 %v) {

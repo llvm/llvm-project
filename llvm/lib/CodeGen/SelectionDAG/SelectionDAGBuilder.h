@@ -56,7 +56,6 @@ class CleanupPadInst;
 class CleanupReturnInst;
 class Constant;
 class ConstrainedFPIntrinsic;
-class DbgValueInst;
 class DataLayout;
 class DIExpression;
 class DILocalVariable;
@@ -633,6 +632,8 @@ private:
   void visitVectorExtractLastActive(const CallInst &I, unsigned Intrinsic);
   void visitVPLoad(const VPIntrinsic &VPIntrin, EVT VT,
                    const SmallVectorImpl<SDValue> &OpValues);
+  void visitVPLoadFF(const VPIntrinsic &VPIntrin, EVT VT, EVT EVLVT,
+                     const SmallVectorImpl<SDValue> &OpValues);
   void visitVPStore(const VPIntrinsic &VPIntrin,
                     const SmallVectorImpl<SDValue> &OpValues);
   void visitVPGather(const VPIntrinsic &VPIntrin, EVT VT,

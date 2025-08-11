@@ -6,11 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef __CLC_OPENCL_MATH_ERF_H__
+#define __CLC_OPENCL_MATH_ERF_H__
+
 #undef erfc
 
 #define __CLC_BODY <clc/math/unary_decl.inc>
-#define __CLC_FUNCTION erf
+#define FUNCTION erf
 
 #include <clc/math/gentype.inc>
 
-#undef __CLC_FUNCTION
+#undef FUNCTION
+
+#endif // __CLC_OPENCL_MATH_ERF_H__
