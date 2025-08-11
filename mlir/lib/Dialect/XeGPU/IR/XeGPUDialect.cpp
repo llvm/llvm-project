@@ -6,12 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Affine/Utils.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
+#include "mlir/Dialect/Index/IR/IndexOps.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPUTargetInfo.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/Debug.h"
 
 using std::optional;
 
@@ -31,6 +35,57 @@ void XeGPUDialect::initialize() {
 #define GET_ATTRDEF_LIST
 #include <mlir/Dialect/XeGPU/IR/XeGPUAttrs.cpp.inc>
       >();
+}
+
+/// Generates instructions to compute offsets for a subgroup identified by
+/// its multidimensional indices (sgId), using the specified subgroup layout
+/// (sgLayout), subgroup data dimensions (sizePerSg), and the overall data
+/// dimensions (sizePerWg).
+static SmallVector<SmallVector<Value>>
+genOffsetsComputingInsts(OpBuilder &builder, Location loc,
+                         SmallVector<Value> sgId, ArrayRef<int64_t> sgLayout,
+                         ArrayRef<int64_t> sizePerSg,
+                         ArrayRef<int64_t> sizePerWg) {
+
+  SmallVector<SmallVector<Value>> offsets;
+
+  // nd local offset, localOffset[i] = sgId[i] * sizePerSg[i]
+  SmallVector<Value> localOffsets = llvm::map_to_vector(
+      llvm::zip(sgId, sizePerSg), [&](const auto &t) -> Value {
+        return builder.createOrFold<index::MulOp>(
+            loc, std::get<0>(t),
+            builder.createOrFold<arith::ConstantIndexOp>(loc, std::get<1>(t)));
+      });
+
+  // distUnit[i] is the minimum value between sizePerWg[i] and
+  // sgLayout[i] * sizePerSg[i]
+  SmallVector<int64_t> distUnit = llvm::map_to_vector(
+      llvm::zip_equal(sizePerWg, computeElementwiseMul(sgLayout, sizePerSg)),
+      [](const auto &t) { return std::min(std::get<0>(t), std::get<1>(t)); });
+
+  for (SmallVector<int64_t> unitOffs :
+       StaticTileOffsetRange(sizePerWg, distUnit)) {
+    SmallVector<Value> base =
+        llvm::map_to_vector(unitOffs, [&](int64_t d) -> Value {
+          return builder.create<arith::ConstantIndexOp>(loc, d);
+        });
+
+    SmallVector<Value> adds = llvm::map_to_vector(
+        llvm::zip_equal(base, localOffsets), [&](const auto &t) -> Value {
+          return builder.createOrFold<arith::AddIOp>(loc, std::get<0>(t),
+                                                     std::get<1>(t));
+        });
+
+    SmallVector<Value> mods = llvm::map_to_vector(
+        llvm::zip_equal(adds, sizePerWg), [&](const auto &t) -> Value {
+          return builder.createOrFold<index::RemUOp>(
+              loc, std::get<0>(t),
+              builder.create<arith::ConstantIndexOp>(loc, std::get<1>(t)));
+        });
+
+    offsets.push_back(mods);
+  }
+  return offsets;
 }
 
 // Checks if the given shape can be evenly distributed based on the layout
@@ -209,6 +264,148 @@ LayoutAttr::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
   }
 
   return success();
+}
+
+FailureOr<SmallVector<Value>>
+LayoutAttr::delinearizeSubgroupId(OpBuilder &builder, Location loc,
+                                  Value linearId) {
+  // delinearizeSubgroupId is only available for
+  // workgroup-level layout attribute
+  if (!isWgLayout())
+    return failure();
+
+  // TODO: handle order attribute
+  auto hasDefaultOrder = [&]() {
+    DenseI32ArrayAttr order = getOrder();
+    return !order || isIdentityPermutation(llvm::to_vector_of<int64_t>(
+                         llvm::reverse(order.asArrayRef())));
+  };
+  if (!hasDefaultOrder())
+    return mlir::emitError(loc, "order attribute is currently not supported.");
+
+  auto dims = llvm::map_to_vector(*getSgLayoutAsInt(), [&](int64_t d) -> Value {
+    return builder.createOrFold<arith::ConstantIndexOp>(loc, d);
+  });
+
+  return affine::delinearizeIndex(builder, loc, linearId, dims);
+}
+
+/// Implements LayoutTrait::getOffsets to generate instructions for
+/// computing multi-dimensional offsets when distributed by LayoutAttr.
+FailureOr<SmallVector<SmallVector<Value>>>
+LayoutAttr::getOffsets(OpBuilder &builder, Location loc, Value linearId,
+                       ArrayRef<int64_t> shape) {
+  if (!isWgLayout())
+    return failure();
+
+  SmallVector<int64_t> sgLayout = getSgLayoutAsInt().value();
+  SmallVector<int64_t> sgShape;
+  if (auto maybeSgShape = getSgDataAsInt())
+    sgShape = maybeSgShape.value();
+  else if (auto derivedShape = computeShapeRatio(shape, sgLayout))
+    sgShape = derivedShape.value();
+  else
+    return failure();
+
+  // delinearize Ids
+  auto maybeIds = delinearizeSubgroupId(builder, loc, linearId);
+  if (failed(maybeIds))
+    return failure();
+  SmallVector<Value> sgIds = *maybeIds;
+
+  return genOffsetsComputingInsts(builder, loc, sgIds, sgLayout, sgShape,
+                                  shape);
+}
+
+//===----------------------------------------------------------------------===//
+// XeGPU_SliceAttr
+//===----------------------------------------------------------------------===//
+LogicalResult
+SliceAttr::verify(llvm::function_ref<InFlightDiagnostic()> emitError,
+                  xegpu::LayoutTrait parent, DenseI64ArrayAttr dims) {
+  if (!parent || !dims)
+    return emitError() << "expected parent layout and dims attribute";
+
+  int64_t rank = parent.getRank();
+
+  // check every element in dims is unique and smaller than rank
+  llvm::SmallDenseSet<int64_t> seen;
+  for (int64_t dim : dims.asArrayRef()) {
+    if (dim < 0 || dim >= rank)
+      return emitError() << "invalid dim (" << dim << ") in slice attribute.";
+    if (!seen.insert(dim).second)
+      return emitError() << "repeated dim (" << dim << ") in slice attribute.";
+  }
+  return success();
+}
+
+SliceAttr SliceAttr::flatten() const {
+  xegpu::LayoutTrait parent = getParent();
+  SmallVector<DenseI64ArrayAttr> slicedDims({getDims()});
+
+  while (auto sliceAttr = dyn_cast<xegpu::SliceAttr>(parent)) {
+    parent = sliceAttr.getParent();
+    slicedDims.push_back(sliceAttr.getDims());
+  }
+
+  auto layoutAttr = dyn_cast<xegpu::LayoutAttr>(parent);
+  SmallVector<int64_t> indices =
+      llvm::to_vector(llvm::seq<int64_t>(0, layoutAttr.getRank()));
+
+  // get remaining dims (flattend) by applying slice ops with all slicedDims
+  SmallVector<int64_t> remainingDims(indices);
+  for (auto dim : llvm::reverse(slicedDims))
+    remainingDims = XeGPUDialect::slice(llvm::ArrayRef<int64_t>(remainingDims),
+                                        dim.asArrayRef());
+
+  // get flattend sliced dims by applying slice ops with the remaining dims
+  SmallVector<int64_t> flattendDims = XeGPUDialect::slice(
+      llvm::ArrayRef<int64_t>(indices), llvm::ArrayRef<int64_t>(remainingDims));
+
+  return xegpu::SliceAttr::get(
+      getContext(), layoutAttr,
+      DenseI64ArrayAttr::get(getContext(), flattendDims));
+}
+
+FailureOr<SmallVector<Value>>
+SliceAttr::delinearizeSubgroupId(OpBuilder &builder, Location loc,
+                                 Value linearId) {
+  SliceAttr attr = flatten();
+  auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+  return parent.delinearizeSubgroupId(builder, loc, linearId);
+}
+
+/// Implements LayoutTrait::getOffsets to generate instructions for
+/// computing multi-dimensional offsets when distributed by SliceAttr.
+FailureOr<SmallVector<SmallVector<Value>>>
+SliceAttr::getOffsets(OpBuilder &builder, Location loc, Value linearId,
+                      ArrayRef<int64_t> shape) {
+  assert(getRank() == static_cast<int64_t>(shape.size()) && "invalid shape.");
+  if (!isWgLayout())
+    return failure();
+
+  SmallVector<int64_t> sgLayout = getSgLayoutAsInt().value();
+  SmallVector<int64_t> sgShape;
+  if (auto maybeSgShape = getSgDataAsInt())
+    sgShape = maybeSgShape.value();
+  else if (auto derivedShape = computeShapeRatio(shape, sgLayout))
+    sgShape = derivedShape.value();
+  else
+    return failure();
+
+  // delinearize Ids
+  auto maybeIds = delinearizeSubgroupId(builder, loc, linearId);
+  if (failed(maybeIds))
+    return failure();
+
+  // The effective sgIds for offsets computing correspond
+  // to the dims that are not sliced.
+  ArrayRef<int64_t> dims = flatten().getDims().asArrayRef();
+  SmallVector<Value> sgIds =
+      XeGPUDialect::slice(ArrayRef<Value>(*maybeIds), dims);
+
+  return genOffsetsComputingInsts(builder, loc, sgIds, sgLayout, sgShape,
+                                  shape);
 }
 
 //===----------------------------------------------------------------------===//
