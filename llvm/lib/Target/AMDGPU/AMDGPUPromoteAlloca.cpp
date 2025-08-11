@@ -1512,6 +1512,8 @@ size_t AMDGPUPromoteAllocaImpl::getSGPRPressureEstimate(AllocaInst &I) {
       if (!RIt->getType()->isVectorTy())
         CurrentlyLive.erase(&*RIt);
     }
+
+    SGPRLiveIns[BB] = CurrentlyLive;
   }
 
   llvm_unreachable("Woops, we fell off the edge of the world.  Bye bye.");
@@ -1544,6 +1546,8 @@ size_t AMDGPUPromoteAllocaImpl::getVGPRPressureEstimate(AllocaInst &I) {
       if (RIt->getType()->isVectorTy())
         CurrentlyLive.erase(&*RIt);
     }
+
+    VGPRLiveIns[BB] = CurrentlyLive;
   }
 
   llvm_unreachable("Woops, we fell off the edge of the world.  Bye bye.");
