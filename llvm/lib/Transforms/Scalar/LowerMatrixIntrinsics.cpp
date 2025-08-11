@@ -263,6 +263,7 @@ static bool isUniformShape(Value *V) {
     case llvm::Instruction::FPExt:
       return true;
     case llvm::Instruction::AddrSpaceCast:
+    case CastInst::PtrToAddr:
     case CastInst::PtrToInt:
     case CastInst::IntToPtr:
       return false;
@@ -2166,7 +2167,7 @@ public:
 
         // If the loads don't alias the lifetime.end, it won't interfere with
         // fusion.
-        MemoryLocation EndLoc = MemoryLocation::getForArgument(End, 1, nullptr);
+        MemoryLocation EndLoc = MemoryLocation::getForArgument(End, 0, nullptr);
         if (!EndLoc.Ptr)
           continue;
         if (AA->isNoAlias(Load0Loc, EndLoc) && AA->isNoAlias(Load1Loc, EndLoc))
@@ -2382,7 +2383,7 @@ public:
       llvm::copy(C.vectors(), std::back_inserter(CondV));
     } else {
       CondV.resize(A.getNumVectors());
-      std::fill(CondV.begin(), CondV.end(), Cond);
+      llvm::fill(CondV, Cond);
     }
 
     for (auto [CV, AV, BV] : llvm::zip_equal(CondV, A.vectors(), B.vectors()))

@@ -1418,3 +1418,15 @@ constexpr int usingDirectiveDecl() {
   return FB;
 }
 static_assert(usingDirectiveDecl() == 10, "");
+
+namespace OnePastEndCmp {
+  struct S {
+   int a;
+   int b;
+  };
+
+  constexpr S s{12,13};
+  constexpr const int *p = &s.a;
+  constexpr const int *q = &s.a + 1;
+  static_assert(p != q, "");
+}

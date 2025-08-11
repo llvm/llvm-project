@@ -49,32 +49,17 @@ uint32_t DIType::getAlignInBits() const {
 const DIExpression::FragmentInfo DebugVariable::DefaultFragment = {
     std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::min()};
 
-DebugVariable::DebugVariable(const DbgVariableIntrinsic *DII)
-    : Variable(DII->getVariable()),
-      Fragment(DII->getExpression()->getFragmentInfo()),
-      InlinedAt(DII->getDebugLoc().getInlinedAt()) {}
-
 DebugVariable::DebugVariable(const DbgVariableRecord *DVR)
     : Variable(DVR->getVariable()),
       Fragment(DVR->getExpression()->getFragmentInfo()),
       InlinedAt(DVR->getDebugLoc().getInlinedAt()) {}
 
-DebugVariableAggregate::DebugVariableAggregate(const DbgVariableIntrinsic *DVI)
-    : DebugVariable(DVI->getVariable(), std::nullopt,
-                    DVI->getDebugLoc()->getInlinedAt()) {}
-
 DILocation::DILocation(LLVMContext &C, StorageType Storage, unsigned Line,
                        unsigned Column, uint64_t AtomGroup, uint8_t AtomRank,
                        ArrayRef<Metadata *> MDs, bool ImplicitCode)
-    : MDNode(C, DILocationKind, Storage, MDs)
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
-      ,
-      AtomGroup(AtomGroup), AtomRank(AtomRank)
-#endif
-{
-#ifdef EXPERIMENTAL_KEY_INSTRUCTIONS
+    : MDNode(C, DILocationKind, Storage, MDs), AtomGroup(AtomGroup),
+      AtomRank(AtomRank) {
   assert(AtomRank <= 7 && "AtomRank number should fit in 3 bits");
-#endif
   if (AtomGroup)
     C.updateDILocationAtomGroupWaterline(AtomGroup + 1);
 
@@ -1021,7 +1006,7 @@ DIDerivedType *DIDerivedType::getImpl(
 std::optional<DIDerivedType::PtrAuthData>
 DIDerivedType::getPtrAuthData() const {
   return getTag() == dwarf::DW_TAG_LLVM_ptrauth_type
-             ? std::optional<PtrAuthData>(PtrAuthData(SubclassData32))
+             ? std::make_optional<PtrAuthData>(SubclassData32)
              : std::nullopt;
 }
 
@@ -1292,11 +1277,12 @@ const char *DICompileUnit::nameTableKindString(DebugNameTableKind NTK) {
 DISubprogram::DISubprogram(LLVMContext &C, StorageType Storage, unsigned Line,
                            unsigned ScopeLine, unsigned VirtualIndex,
                            int ThisAdjustment, DIFlags Flags, DISPFlags SPFlags,
-                           ArrayRef<Metadata *> Ops)
+                           bool UsesKeyInstructions, ArrayRef<Metadata *> Ops)
     : DILocalScope(C, DISubprogramKind, Storage, dwarf::DW_TAG_subprogram, Ops),
       Line(Line), ScopeLine(ScopeLine), VirtualIndex(VirtualIndex),
       ThisAdjustment(ThisAdjustment), Flags(Flags), SPFlags(SPFlags) {
   static_assert(dwarf::DW_VIRTUALITY_max < 4, "Virtuality out of range");
+  SubclassData1 = UsesKeyInstructions;
 }
 DISubprogram::DISPFlags
 DISubprogram::toSPFlags(bool IsLocalToUnit, bool IsDefinition, bool IsOptimized,
@@ -1395,7 +1381,7 @@ DISubprogram *DISubprogram::getImpl(
     int ThisAdjustment, DIFlags Flags, DISPFlags SPFlags, Metadata *Unit,
     Metadata *TemplateParams, Metadata *Declaration, Metadata *RetainedNodes,
     Metadata *ThrownTypes, Metadata *Annotations, MDString *TargetFuncName,
-    StorageType Storage, bool ShouldCreate) {
+    bool UsesKeyInstructions, StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
   assert(isCanonical(LinkageName) && "Expected canonical MDString");
   assert(isCanonical(TargetFuncName) && "Expected canonical MDString");
@@ -1404,7 +1390,7 @@ DISubprogram *DISubprogram::getImpl(
                          ContainingType, VirtualIndex, ThisAdjustment, Flags,
                          SPFlags, Unit, TemplateParams, Declaration,
                          RetainedNodes, ThrownTypes, Annotations,
-                         TargetFuncName));
+                         TargetFuncName, UsesKeyInstructions));
   SmallVector<Metadata *, 13> Ops = {
       File,           Scope,          Name,        LinkageName,
       Type,           Unit,           Declaration, RetainedNodes,
@@ -1424,10 +1410,10 @@ DISubprogram *DISubprogram::getImpl(
       }
     }
   }
-  DEFINE_GETIMPL_STORE_N(
-      DISubprogram,
-      (Line, ScopeLine, VirtualIndex, ThisAdjustment, Flags, SPFlags), Ops,
-      Ops.size());
+  DEFINE_GETIMPL_STORE_N(DISubprogram,
+                         (Line, ScopeLine, VirtualIndex, ThisAdjustment, Flags,
+                          SPFlags, UsesKeyInstructions),
+                         Ops, Ops.size());
 }
 
 bool DISubprogram::describes(const Function *F) const {
@@ -1616,18 +1602,27 @@ std::optional<uint64_t> DIVariable::getSizeInBits() const {
 }
 
 DILabel::DILabel(LLVMContext &C, StorageType Storage, unsigned Line,
+                 unsigned Column, bool IsArtificial,
+                 std::optional<unsigned> CoroSuspendIdx,
                  ArrayRef<Metadata *> Ops)
     : DINode(C, DILabelKind, Storage, dwarf::DW_TAG_label, Ops) {
-  SubclassData32 = Line;
+  this->SubclassData32 = Line;
+  this->Column = Column;
+  this->IsArtificial = IsArtificial;
+  this->CoroSuspendIdx = CoroSuspendIdx;
 }
 DILabel *DILabel::getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name,
-                          Metadata *File, unsigned Line, StorageType Storage,
-                          bool ShouldCreate) {
+                          Metadata *File, unsigned Line, unsigned Column,
+                          bool IsArtificial,
+                          std::optional<unsigned> CoroSuspendIdx,
+                          StorageType Storage, bool ShouldCreate) {
   assert(Scope && "Expected scope");
   assert(isCanonical(Name) && "Expected canonical MDString");
-  DEFINE_GETIMPL_LOOKUP(DILabel, (Scope, Name, File, Line));
+  DEFINE_GETIMPL_LOOKUP(
+      DILabel, (Scope, Name, File, Line, Column, IsArtificial, CoroSuspendIdx));
   Metadata *Ops[] = {Scope, Name, File};
-  DEFINE_GETIMPL_STORE(DILabel, (Line), Ops);
+  DEFINE_GETIMPL_STORE(DILabel, (Line, Column, IsArtificial, CoroSuspendIdx),
+                       Ops);
 }
 
 DIExpression *DIExpression::getImpl(LLVMContext &Context,

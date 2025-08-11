@@ -499,7 +499,7 @@ multiclass RVVPseudoVWCVTBuiltin<string IR, string MName, string type_range,
           if (PolicyAttrs & RVV_VTA)
             Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
         }
-        auto ElemTy = cast<llvm::VectorType>(ResultType)->getElementType();
+        auto ElemTy = cast<llvm::VectorType>(Ops[1]->getType())->getElementType();
         Ops.insert(Ops.begin() + 2, llvm::Constant::getNullValue(ElemTy));
         if (IsMasked) {
           Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
@@ -2313,7 +2313,7 @@ defm vrgather : RVVOutBuiltinSet<"vrgather_vv", "csilxfdy",
                                  [["vv", "v", "vvUv"]]>;
 defm vrgather : RVVOutBuiltinSet<"vrgather_vx", "csilxfdy",
                                  [["vx", "v", "vvz"]]>;
-defm vrgatherei16 : RVVOutBuiltinSet<"vrgatherei16_vv", "csilxfd",
+defm vrgatherei16 : RVVOutBuiltinSet<"vrgatherei16_vv", "csilxfdy",
                                      [["vv", "v", "vv(Log2EEW:4)Uv"]]>;
 // unsigned type
 defm vrgather : RVVOutBuiltinSet<"vrgather_vv", "csil",

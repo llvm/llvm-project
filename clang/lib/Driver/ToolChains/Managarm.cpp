@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Managarm.h"
-#include "Arch/ARM.h"
 #include "Arch/RISCV.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/CommonArgs.h"

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -fobjc-arc -fobjc-runtime-has-weak -fobjc-weak -verify -fblocks -fobjc-exceptions %s
+// RUN: %clang_cc1 -std=c++11 -fobjc-arc -fobjc-runtime-has-weak -fobjc-weak -verify -fblocks -fobjc-exceptions -emit-llvm -o - %s
 
 // "Move" semantics, trivial version.
 void move_it(__strong id &&from) {
@@ -13,6 +13,11 @@ void move_it(__strong id &&from) {
 
 // don't warn about this
 extern "C" A* MakeA();
+
+void test_nonexistent_method(A *a) {
+  // This used to crash in codegen.
+  auto a1 = [a foo]; // expected-error {{no visible @interface for 'A' declares the selector 'foo'}}
+}
 
 // Ensure that deduction works with lifetime qualifiers.
 void deduction(id obj) {

@@ -68,6 +68,7 @@ endif()
 llvm_canonicalize_cmake_booleans(
   LLVM_BUILD_EXAMPLES
   LLVM_HAS_NVPTX_TARGET
+  LLVM_INCLUDE_SPIRV_TOOLS_TESTS
   MLIR_ENABLE_BINDINGS_PYTHON
   MLIR_ENABLE_CUDA_RUNNER
   MLIR_ENABLE_ROCM_CONVERSIONS
@@ -166,6 +167,10 @@ if(MLIR_ENABLE_SYCL_RUNNER)
   list(APPEND MLIR_TEST_DEPENDS mlir_sycl_runtime)
 endif()
 
+if(MLIR_ENABLE_LEVELZERO_RUNNER)
+  list(APPEND MLIR_TEST_DEPENDS mlir_levelzero_runtime)
+endif()
+
 if (MLIR_RUN_ARM_SME_TESTS AND NOT ARM_SME_ABI_ROUTINES_SHLIB)
   list(APPEND MLIR_TEST_DEPENDS mlir_arm_sme_abi_stubs)
 endif()
@@ -215,6 +220,11 @@ if(MLIR_ENABLE_BINDINGS_PYTHON)
   list(APPEND MLIR_TEST_DEPENDS
     MLIRPythonModules
   )
+endif()
+
+if (LLVM_INCLUDE_SPIRV_TOOLS_TESTS)
+  list(APPEND MLIR_TEST_DEPENDS spirv-as)
+  list(APPEND MLIR_TEST_DEPENDS spirv-val)
 endif()
 
 # This target can be used to just build the dependencies

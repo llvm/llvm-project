@@ -31,6 +31,7 @@
 ; DEFAULT-NEXT: Live Register Matrix
 ; DEFAULT-NEXT: Greedy Register Allocator
 ; DEFAULT-NEXT: GCN NSA Reassign
+; DEFAULT-NEXT: AMDGPU Rewrite AGPR-Copy-MFMA
 ; DEFAULT-NEXT: Virtual Register Rewriter
 ; DEFAULT-NEXT: AMDGPU Mark Last Scratch Load
 ; DEFAULT-NEXT: Stack Slot Coloring
@@ -77,6 +78,7 @@
 ; BASIC-DEFAULT-NEXT: Live Register Matrix
 ; BASIC-DEFAULT-NEXT: Greedy Register Allocator
 ; BASIC-DEFAULT-NEXT: GCN NSA Reassign
+; BASIC-DEFAULT-NEXT: AMDGPU Rewrite AGPR-Copy-MFMA
 ; BASIC-DEFAULT-NEXT: Virtual Register Rewriter
 ; BASIC-DEFAULT-NEXT: AMDGPU Mark Last Scratch Load
 ; BASIC-DEFAULT-NEXT: Stack Slot Coloring
@@ -99,6 +101,7 @@
 ; DEFAULT-BASIC-NEXT: Live Register Matrix
 ; DEFAULT-BASIC-NEXT: Basic Register Allocator
 ; DEFAULT-BASIC-NEXT: GCN NSA Reassign
+; DEFAULT-BASIC-NEXT: AMDGPU Rewrite AGPR-Copy-MFMA
 ; DEFAULT-BASIC-NEXT: Virtual Register Rewriter
 ; DEFAULT-BASIC-NEXT: AMDGPU Mark Last Scratch Load
 ; DEFAULT-BASIC-NEXT: Stack Slot Coloring
@@ -127,6 +130,7 @@
 ; BASIC-BASIC-NEXT: Live Register Matrix
 ; BASIC-BASIC-NEXT: Basic Register Allocator
 ; BASIC-BASIC-NEXT: GCN NSA Reassign
+; BASIC-BASIC-NEXT: AMDGPU Rewrite AGPR-Copy-MFMA
 ; BASIC-BASIC-NEXT: Virtual Register Rewriter
 ; BASIC-BASIC-NEXT: AMDGPU Mark Last Scratch Load
 ; BASIC-BASIC-NEXT: Stack Slot Coloring

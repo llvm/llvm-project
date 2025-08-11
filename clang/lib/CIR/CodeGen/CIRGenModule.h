@@ -90,6 +90,8 @@ private:
   /// for FunctionDecls's.
   CIRGenFunction *curCGF = nullptr;
 
+  llvm::SmallVector<mlir::Attribute> globalScopeAsm;
+
 public:
   mlir::ModuleOp getModule() const { return theModule; }
   CIRGenBuilderTy &getBuilder() { return builder; }
@@ -166,7 +168,7 @@ public:
   /// constructed for. If valid, the attributes applied to this decl may
   /// contribute to the function attributes and calling convention.
   void constructAttributeList(CIRGenCalleeInfo calleeInfo,
-                              cir::SideEffect &sideEffect);
+                              mlir::NamedAttrList &attrs);
 
   /// Return a constant array for the given string.
   mlir::Attribute getConstantArrayFromStringLiteral(const StringLiteral *e);
@@ -252,9 +254,18 @@ public:
   getAddrOfGlobal(clang::GlobalDecl gd,
                   ForDefinition_t isForDefinition = NotForDefinition);
 
+  /// Emit type info if type of an expression is a variably modified
+  /// type. Also emit proper debug info for cast types.
+  void emitExplicitCastExprType(const ExplicitCastExpr *e,
+                                CIRGenFunction *cgf = nullptr);
+
   /// Emit code for a single global function or variable declaration. Forward
   /// declarations are emitted lazily.
   void emitGlobal(clang::GlobalDecl gd);
+
+  void emitAliasForGlobal(llvm::StringRef mangledName, mlir::Operation *op,
+                          GlobalDecl aliasGD, cir::FuncOp aliasee,
+                          cir::GlobalLinkageKind linkage);
 
   mlir::Type convertType(clang::QualType type);
 
@@ -303,6 +314,9 @@ public:
   void maybeSetTrivialComdat(const clang::Decl &d, mlir::Operation *op);
 
   static void setInitializer(cir::GlobalOp &op, mlir::Attribute value);
+
+  void replaceUsesOfNonProtoTypeWithRealFunction(mlir::Operation *old,
+                                                 cir::FuncOp newFn);
 
   cir::FuncOp
   getOrCreateCIRFunction(llvm::StringRef mangledName, mlir::Type funcType,
@@ -358,6 +372,8 @@ public:
   cir::GlobalLinkageKind getCIRLinkageVarDefinition(const VarDecl *vd,
                                                     bool isConstant);
 
+  void addReplacement(llvm::StringRef name, mlir::Operation *op);
+
   /// Helpers to emit "not yet implemented" error diagnostics
   DiagnosticBuilder errorNYI(SourceLocation, llvm::StringRef);
 
@@ -396,6 +412,17 @@ private:
   // An ordered map of canonical GlobalDecls to their mangled names.
   llvm::MapVector<clang::GlobalDecl, llvm::StringRef> mangledDeclNames;
   llvm::StringMap<clang::GlobalDecl, llvm::BumpPtrAllocator> manglings;
+
+  // FIXME: should we use llvm::TrackingVH<mlir::Operation> here?
+  typedef llvm::StringMap<mlir::Operation *> ReplacementsTy;
+  ReplacementsTy replacements;
+  /// Call replaceAllUsesWith on all pairs in replacements.
+  void applyReplacements();
+
+  /// A helper function to replace all uses of OldF to NewF that replace
+  /// the type of pointer arguments. This is not needed to tradtional
+  /// pipeline since LLVM has opaque pointers but CIR not.
+  void replacePointerTypeArgs(cir::FuncOp oldF, cir::FuncOp newF);
 
   void setNonAliasAttributes(GlobalDecl gd, mlir::Operation *op);
 };

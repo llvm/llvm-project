@@ -16,6 +16,7 @@
 #include "LLDBUtils.h"
 #include "OutputRedirector.h"
 #include "Protocol/ProtocolBase.h"
+#include "Protocol/ProtocolEvents.h"
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
 #include "ProtocolUtils.h"
@@ -623,6 +624,17 @@ ReplMode DAP::DetectReplMode(lldb::SBFrame frame, std::string &expression,
   llvm_unreachable("enum cases exhausted.");
 }
 
+std::optional<protocol::Source> DAP::ResolveSource(const lldb::SBFrame &frame) {
+  if (!frame.IsValid())
+    return std::nullopt;
+
+  const lldb::SBAddress frame_pc = frame.GetPCAddress();
+  if (DisplayAssemblySource(debugger, frame_pc))
+    return ResolveAssemblySource(frame_pc);
+
+  return CreateSource(frame.GetLineEntry().GetFileSpec());
+}
+
 std::optional<protocol::Source> DAP::ResolveSource(lldb::SBAddress address) {
   if (DisplayAssemblySource(debugger, address))
     return ResolveAssemblySource(address);
@@ -971,7 +983,7 @@ llvm::Error DAP::Loop() {
 
           if (const protocol::Request *req =
                   std::get_if<protocol::Request>(&*next);
-              req && req->arguments == "disconnect")
+              req && req->command == "disconnect")
             disconnecting = true;
 
           const std::optional<CancelArguments> cancel_args =
@@ -1342,37 +1354,37 @@ void DAP::EventThread() {
             event_mask & lldb::SBTarget::eBroadcastBitSymbolsChanged) {
           const uint32_t num_modules =
               lldb::SBTarget::GetNumModulesFromEvent(event);
+          const bool remove_module =
+              event_mask & lldb::SBTarget::eBroadcastBitModulesUnloaded;
+
           std::lock_guard<std::mutex> guard(modules_mutex);
           for (uint32_t i = 0; i < num_modules; ++i) {
             lldb::SBModule module =
                 lldb::SBTarget::GetModuleAtIndexFromEvent(i, event);
-            if (!module.IsValid())
-              continue;
-            llvm::StringRef module_id = module.GetUUIDString();
-            if (module_id.empty())
+
+            std::optional<protocol::Module> p_module =
+                CreateModule(target, module, remove_module);
+            if (!p_module)
               continue;
 
-            llvm::StringRef reason;
-            bool id_only = false;
-            if (modules.contains(module_id)) {
-              if (event_mask & lldb::SBTarget::eBroadcastBitModulesUnloaded) {
-                modules.erase(module_id);
-                reason = "removed";
-                id_only = true;
-              } else {
-                reason = "changed";
-              }
-            } else {
+            llvm::StringRef module_id = p_module->id;
+
+            const bool module_exists = modules.contains(module_id);
+            if (remove_module && module_exists) {
+              modules.erase(module_id);
+              Send(protocol::Event{
+                  "module", ModuleEventBody{std::move(p_module).value(),
+                                            ModuleEventBody::eReasonRemoved}});
+            } else if (module_exists) {
+              Send(protocol::Event{
+                  "module", ModuleEventBody{std::move(p_module).value(),
+                                            ModuleEventBody::eReasonChanged}});
+            } else if (!remove_module) {
               modules.insert(module_id);
-              reason = "new";
+              Send(protocol::Event{
+                  "module", ModuleEventBody{std::move(p_module).value(),
+                                            ModuleEventBody::eReasonNew}});
             }
-
-            llvm::json::Object body;
-            body.try_emplace("reason", reason);
-            body.try_emplace("module", CreateModule(target, module, id_only));
-            llvm::json::Object module_event = CreateEventObject("module");
-            module_event.try_emplace("body", std::move(body));
-            SendJSON(llvm::json::Value(std::move(module_event)));
           }
         }
       } else if (lldb::SBBreakpoint::EventIsBreakpointEvent(event)) {
@@ -1394,11 +1406,15 @@ void DAP::EventThread() {
             // avoids sending paths that should be source mapped. Note that
             // CreateBreakpoint doesn't apply source mapping and certain
             // implementation ignore the source part of this event anyway.
-            llvm::json::Value source_bp = bp.ToProtocolBreakpoint();
-            source_bp.getAsObject()->erase("source");
+            protocol::Breakpoint protocol_bp = bp.ToProtocolBreakpoint();
+
+            // "source" is not needed here, unless we add adapter data to be
+            // saved by the client.
+            if (protocol_bp.source && !protocol_bp.source->adapterData)
+              protocol_bp.source = std::nullopt;
 
             llvm::json::Object body;
-            body.try_emplace("breakpoint", source_bp);
+            body.try_emplace("breakpoint", protocol_bp);
             body.try_emplace("reason", "changed");
 
             llvm::json::Object bp_event = CreateEventObject("breakpoint");
@@ -1479,8 +1495,9 @@ std::vector<protocol::Breakpoint> DAP::SetSourceBreakpoints(
 
       protocol::Breakpoint response_breakpoint =
           iv->second.ToProtocolBreakpoint();
-      response_breakpoint.source = source;
 
+      if (!response_breakpoint.source)
+        response_breakpoint.source = source;
       if (!response_breakpoint.line &&
           src_bp.GetLine() != LLDB_INVALID_LINE_NUMBER)
         response_breakpoint.line = src_bp.GetLine();
@@ -1542,6 +1559,7 @@ void DAP::RegisterRequests() {
   RegisterRequest<StepOutRequestHandler>();
   RegisterRequest<ThreadsRequestHandler>();
   RegisterRequest<VariablesRequestHandler>();
+  RegisterRequest<WriteMemoryRequestHandler>();
 
   // Custom requests
   RegisterRequest<CompileUnitsRequestHandler>();

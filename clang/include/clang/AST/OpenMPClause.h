@@ -295,7 +295,8 @@ protected:
 
   /// Fetches list of variables associated with this clause.
   MutableArrayRef<Expr *> getVarRefs() {
-    return static_cast<T *>(this)->template getTrailingObjects<Expr *>(NumVars);
+    return static_cast<T *>(this)->template getTrailingObjectsNonStrict<Expr *>(
+        NumVars);
   }
 
   /// Sets the list of variables for this clause.
@@ -334,8 +335,8 @@ public:
 
   /// Fetches list of all variables in the clause.
   ArrayRef<const Expr *> getVarRefs() const {
-    return static_cast<const T *>(this)->template getTrailingObjects<Expr *>(
-        NumVars);
+    return static_cast<const T *>(this)
+        ->template getTrailingObjectsNonStrict<Expr *>(NumVars);
   }
 };
 
@@ -380,7 +381,7 @@ public:
 
   MutableArrayRef<OpenMPDirectiveKind> getDirectiveKinds() {
     return static_cast<T *>(this)
-        ->template getTrailingObjects<OpenMPDirectiveKind>(NumKinds);
+        ->template getTrailingObjectsNonStrict<OpenMPDirectiveKind>(NumKinds);
   }
 
   void setDirectiveKinds(ArrayRef<OpenMPDirectiveKind> DK) {
@@ -1775,7 +1776,8 @@ public:
   }
 };
 
-/// This represents 'severity' clause in the '#pragma omp error' directive
+/// This represents the 'severity' clause in the '#pragma omp error' and the
+/// '#pragma omp parallel' directives.
 ///
 /// \code
 /// #pragma omp error severity(fatal)
@@ -1855,7 +1857,8 @@ public:
   }
 };
 
-/// This represents 'message' clause in the '#pragma omp error' directive
+/// This represents the 'message' clause in the '#pragma omp error' and the
+/// '#pragma omp parallel' directives.
 ///
 /// \code
 /// #pragma omp error message("GNU compiler required.")
@@ -5921,15 +5924,17 @@ protected:
   /// Get the unique declarations that are in the trailing objects of the
   /// class.
   MutableArrayRef<ValueDecl *> getUniqueDeclsRef() {
-    return static_cast<T *>(this)->template getTrailingObjects<ValueDecl *>(
-        NumUniqueDeclarations);
+    return static_cast<T *>(this)
+        ->template getTrailingObjectsNonStrict<ValueDecl *>(
+            NumUniqueDeclarations);
   }
 
   /// Get the unique declarations that are in the trailing objects of the
   /// class.
   ArrayRef<ValueDecl *> getUniqueDeclsRef() const {
     return static_cast<const T *>(this)
-        ->template getTrailingObjects<ValueDecl *>(NumUniqueDeclarations);
+        ->template getTrailingObjectsNonStrict<ValueDecl *>(
+            NumUniqueDeclarations);
   }
 
   /// Set the unique declarations that are in the trailing objects of the
@@ -5943,15 +5948,15 @@ protected:
   /// Get the number of lists per declaration that are in the trailing
   /// objects of the class.
   MutableArrayRef<unsigned> getDeclNumListsRef() {
-    return static_cast<T *>(this)->template getTrailingObjects<unsigned>(
-        NumUniqueDeclarations);
+    return static_cast<T *>(this)
+        ->template getTrailingObjectsNonStrict<unsigned>(NumUniqueDeclarations);
   }
 
   /// Get the number of lists per declaration that are in the trailing
   /// objects of the class.
   ArrayRef<unsigned> getDeclNumListsRef() const {
-    return static_cast<const T *>(this)->template getTrailingObjects<unsigned>(
-        NumUniqueDeclarations);
+    return static_cast<const T *>(this)
+        ->template getTrailingObjectsNonStrict<unsigned>(NumUniqueDeclarations);
   }
 
   /// Set the number of lists per declaration that are in the trailing
@@ -5966,7 +5971,8 @@ protected:
   /// objects of the class. They are appended after the number of lists.
   MutableArrayRef<unsigned> getComponentListSizesRef() {
     return MutableArrayRef<unsigned>(
-        static_cast<T *>(this)->template getTrailingObjects<unsigned>() +
+        static_cast<T *>(this)
+                ->template getTrailingObjectsNonStrict<unsigned>() +
             NumUniqueDeclarations,
         NumComponentLists);
   }
@@ -5975,7 +5981,8 @@ protected:
   /// objects of the class. They are appended after the number of lists.
   ArrayRef<unsigned> getComponentListSizesRef() const {
     return ArrayRef<unsigned>(
-        static_cast<const T *>(this)->template getTrailingObjects<unsigned>() +
+        static_cast<const T *>(this)
+                ->template getTrailingObjectsNonStrict<unsigned>() +
             NumUniqueDeclarations,
         NumComponentLists);
   }
@@ -5991,13 +5998,15 @@ protected:
   /// Get the components that are in the trailing objects of the class.
   MutableArrayRef<MappableComponent> getComponentsRef() {
     return static_cast<T *>(this)
-        ->template getTrailingObjects<MappableComponent>(NumComponents);
+        ->template getTrailingObjectsNonStrict<MappableComponent>(
+            NumComponents);
   }
 
   /// Get the components that are in the trailing objects of the class.
   ArrayRef<MappableComponent> getComponentsRef() const {
     return static_cast<const T *>(this)
-        ->template getTrailingObjects<MappableComponent>(NumComponents);
+        ->template getTrailingObjectsNonStrict<MappableComponent>(
+            NumComponents);
   }
 
   /// Set the components that are in the trailing objects of the class.

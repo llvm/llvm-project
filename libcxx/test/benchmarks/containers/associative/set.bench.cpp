@@ -27,6 +27,7 @@ struct support::adapt_operations<std::set<K>> {
 
 int main(int argc, char** argv) {
   support::associative_container_benchmarks<std::set<int>>("std::set<int>");
+  support::associative_container_benchmarks<std::set<std::string>>("std::set<std::string>");
 
   benchmark::Initialize(&argc, argv);
   benchmark::RunSpecifiedBenchmarks();

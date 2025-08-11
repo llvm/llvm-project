@@ -85,6 +85,8 @@ private:
   bool handleConditionalOperator(const ASTContext &Context, const Expr &Lhs,
                                  const Expr &Rhs);
 
+  void handleConditionalOperatorArgument(const ASTContext &Context,
+                                         const Expr &Lhs, const Expr *Arg);
   void handleImplicitCast(const ASTContext &Context,
                           const ImplicitCastExpr &Cast);
 

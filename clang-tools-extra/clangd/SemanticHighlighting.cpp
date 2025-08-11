@@ -597,7 +597,7 @@ private:
 std::optional<HighlightingModifier> scopeModifier(const NamedDecl *D) {
   const DeclContext *DC = D->getDeclContext();
   // Injected "Foo" within the class "Foo" has file scope, not class scope.
-  if (auto *R = dyn_cast_or_null<RecordDecl>(D))
+  if (auto *R = dyn_cast_or_null<CXXRecordDecl>(D))
     if (R->isInjectedClassName())
       DC = DC->getParent();
   // Lambda captures are considered function scope, not class scope.
@@ -1125,21 +1125,6 @@ public:
       break;
     }
     return RecursiveASTVisitor::TraverseTemplateArgumentLoc(L);
-  }
-
-  // findExplicitReferences will walk nested-name-specifiers and
-  // find anything that can be resolved to a Decl. However, non-leaf
-  // components of nested-name-specifiers which are dependent names
-  // (kind "Identifier") cannot be resolved to a decl, so we visit
-  // them here.
-  bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc Q) {
-    if (NestedNameSpecifier *NNS = Q.getNestedNameSpecifier()) {
-      if (NNS->getKind() == NestedNameSpecifier::Identifier)
-        H.addToken(Q.getLocalBeginLoc(), HighlightingKind::Type)
-            .addModifier(HighlightingModifier::DependentName)
-            .addModifier(HighlightingModifier::ClassScope);
-    }
-    return RecursiveASTVisitor::TraverseNestedNameSpecifierLoc(Q);
   }
 
 private:
