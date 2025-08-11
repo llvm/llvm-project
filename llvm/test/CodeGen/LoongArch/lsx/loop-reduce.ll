@@ -10,18 +10,17 @@
 define dso_local void @foo() local_unnamed_addr {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lu12i.w $a0, -2
+; CHECK-NEXT:    ori $a0, $zero, 1024
 ; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(a)
 ; CHECK-NEXT:    addi.d $a1, $a1, %pc_lo12(a)
-; CHECK-NEXT:    lu12i.w $a2, 2
 ; CHECK-NEXT:    .p2align 4, , 16
 ; CHECK-NEXT:  .LBB0_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add.d $a3, $a1, $a0
-; CHECK-NEXT:    vldx $vr0, $a3, $a2
+; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vshuf4i.w $vr0, $vr0, 9
-; CHECK-NEXT:    addi.d $a0, $a0, 16
-; CHECK-NEXT:    vstx $vr0, $a3, $a2
+; CHECK-NEXT:    vst $vr0, $a1, 0
+; CHECK-NEXT:    addi.d $a0, $a0, -2
+; CHECK-NEXT:    addi.d $a1, $a1, 16
 ; CHECK-NEXT:    bnez $a0, .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %for.end
 ; CHECK-NEXT:    ret

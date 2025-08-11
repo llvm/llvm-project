@@ -8384,7 +8384,14 @@ bool LoongArchTargetLowering::isLegalAddressingMode(const DataLayout &DL,
   //  2. reg + 12-bit signed offset
   //  3. reg + 14-bit signed offset left-shifted by 2
   //  4. reg1 + reg2
-  // TODO: Add more checks after support vector extension.
+  //
+  // LoongArch LSX/LASX vector extension has three basic addressing modes:
+  //  1. reg + 12-bit signed offset
+  //  2. reg + {12/11/10/9}-bit or 8-bit signed offset multiplied by element
+  //  width. ie.
+  //     si8,  si8<<1,  si8<<2, si8<<3
+  //    si12, si11<<1, si10<<2, si9<<3
+  //  3. reg1 + reg2
 
   // No global is ever allowed as a base.
   if (AM.BaseGV)
@@ -8392,8 +8399,8 @@ bool LoongArchTargetLowering::isLegalAddressingMode(const DataLayout &DL,
 
   // Require a 12-bit signed offset or 14-bit signed offset left-shifted by 2
   // with `UAL` feature.
-  if (!isInt<12>(AM.BaseOffs) &&
-      !(isShiftedInt<14, 2>(AM.BaseOffs) && Subtarget.hasUAL()))
+  if (!isInt<12>(AM.BaseOffs) && !(isShiftedInt<14, 2>(AM.BaseOffs) &&
+                                   Subtarget.hasUAL() && !isa<VectorType>(Ty)))
     return false;
 
   switch (AM.Scale) {

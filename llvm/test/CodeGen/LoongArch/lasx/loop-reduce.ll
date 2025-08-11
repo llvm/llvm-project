@@ -10,26 +10,25 @@
 define dso_local void @foo() local_unnamed_addr {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lu12i.w $a0, -2
-; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI0_0)
-; CHECK-NEXT:    xvld $xr0, $a1, %pc_lo12(.LCPI0_0)
-; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI0_1)
-; CHECK-NEXT:    xvld $xr1, $a1, %pc_lo12(.LCPI0_1)
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI0_0)
+; CHECK-NEXT:    xvld $xr0, $a0, %pc_lo12(.LCPI0_0)
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI0_1)
+; CHECK-NEXT:    xvld $xr1, $a0, %pc_lo12(.LCPI0_1)
+; CHECK-NEXT:    ori $a0, $zero, 1024
 ; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(a)
 ; CHECK-NEXT:    addi.d $a1, $a1, %pc_lo12(a)
-; CHECK-NEXT:    lu12i.w $a2, 2
 ; CHECK-NEXT:    .p2align 4, , 16
 ; CHECK-NEXT:  .LBB0_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add.d $a3, $a1, $a0
-; CHECK-NEXT:    xvldx $xr2, $a3, $a2
+; CHECK-NEXT:    xvld $xr2, $a1, 0
 ; CHECK-NEXT:    xvpermi.d $xr3, $xr2, 78
 ; CHECK-NEXT:    xvori.b $xr4, $xr0, 0
 ; CHECK-NEXT:    xvshuf.d $xr4, $xr0, $xr3
 ; CHECK-NEXT:    xvori.b $xr3, $xr1, 0
 ; CHECK-NEXT:    xvshuf.w $xr3, $xr4, $xr2
-; CHECK-NEXT:    addi.d $a0, $a0, 16
-; CHECK-NEXT:    xvstx $xr3, $a3, $a2
+; CHECK-NEXT:    xvst $xr3, $a1, 0
+; CHECK-NEXT:    addi.d $a0, $a0, -2
+; CHECK-NEXT:    addi.d $a1, $a1, 16
 ; CHECK-NEXT:    bnez $a0, .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %for.end
 ; CHECK-NEXT:    ret
