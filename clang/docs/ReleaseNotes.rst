@@ -552,6 +552,7 @@ Sanitizers
 
 Python Binding Changes
 ----------------------
+- Exposed `clang_getCursorLanguage` via `Cursor.language`.
 
 OpenMP Support
 --------------
