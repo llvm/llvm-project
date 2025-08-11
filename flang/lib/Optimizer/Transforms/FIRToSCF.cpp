@@ -140,7 +140,7 @@ struct IterWhileConversion : public OpRewritePattern<fir::IterWhileOp> {
     auto afterArgs = scfWhileOp.getAfter().getArguments();
 
     SmallVector<Value> argReplacements;
-    for (auto [oldArg, newVal] :
+    for (auto [_, newVal] :
          llvm::zip(iterWhileOp.getBody()->getArguments(), afterArgs))
       argReplacements.push_back(newVal);
 
