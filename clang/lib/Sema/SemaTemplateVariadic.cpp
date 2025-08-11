@@ -870,11 +870,10 @@ bool Sema::CheckParameterPacksForExpansion(
         continue;
 
       // It is not yet supported in certain contexts.
-      Diag(PatternRange.getBegin().isValid() ? PatternRange.getBegin()
-                                             : EllipsisLoc,
-           diag::err_unsupported_builtin_template_pack_expansion)
-          << TST->getTemplateName();
-      return true;
+      return Diag(PatternRange.getBegin().isValid() ? PatternRange.getBegin()
+                                                    : EllipsisLoc,
+                  diag::err_unsupported_builtin_template_pack_expansion)
+             << TST->getTemplateName();
     } else if (auto *S =
                    ParmPack.first
                        .dyn_cast<const SubstBuiltinTemplatePackType *>()) {
