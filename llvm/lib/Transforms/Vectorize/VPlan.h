@@ -1019,6 +1019,9 @@ public:
     /// The lane specifies an index into a vector formed by combining all vector
     /// operands (all operands after the first one).
     ExtractLane,
+    /// Explicit user for the resume phi of the canonical induction in the main
+    /// VPlan, used by the epilogue vector loop.
+    ResumeForEpilogue
 
   };
 
@@ -2438,11 +2441,11 @@ public:
     // TODO: extend the masked interleaved-group support to reversed access.
     assert((!Mask || !IG->isReverse()) &&
            "Reversed masked interleave-group not supported.");
-    for (unsigned i = 0; i < IG->getFactor(); ++i)
-      if (Instruction *I = IG->getMember(i)) {
-        if (I->getType()->isVoidTy())
+    for (unsigned I = 0; I < IG->getFactor(); ++I)
+      if (Instruction *Inst = IG->getMember(I)) {
+        if (Inst->getType()->isVoidTy())
           continue;
-        new VPValue(I, this);
+        new VPValue(Inst, this);
       }
 
     for (auto *SV : StoredValues)
@@ -3999,7 +4002,7 @@ public:
   }
 
   /// Prepare the plan for execution, setting up the required live-in values.
-  void prepareToExecute(Value *VectorTripCount, VPTransformState &State);
+  void prepareToExecute(VPTransformState &State);
 
   /// Generate the IR code for this VPlan.
   void execute(VPTransformState *State);

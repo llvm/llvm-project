@@ -517,6 +517,7 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
   case VPInstruction::PtrAdd:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::AnyOf:
+  case VPInstruction::Not:
     return true;
   default:
     return false;
@@ -569,7 +570,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
 
   switch (getOpcode()) {
   case VPInstruction::Not: {
-    Value *A = State.get(getOperand(0));
+    bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
+    Value *A = State.get(getOperand(0), OnlyFirstLaneUsed);
     return Builder.CreateNot(A, Name);
   }
   case Instruction::ExtractElement: {
@@ -922,6 +924,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
 
     return Res;
   }
+  case VPInstruction::ResumeForEpilogue:
+    return State.get(getOperand(0), true);
   default:
     llvm_unreachable("Unsupported opcode for instruction");
   }
@@ -1027,6 +1031,7 @@ bool VPInstruction::isSingleScalar() const {
   switch (getOpcode()) {
   case Instruction::PHI:
   case VPInstruction::ExplicitVectorLength:
+  case VPInstruction::ResumeForEpilogue:
     return true;
   default:
     return isScalarCast();
@@ -1076,6 +1081,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case Instruction::FCmp:
   case Instruction::ICmp:
   case Instruction::Select:
+  case Instruction::PHI:
   case VPInstruction::AnyOf:
   case VPInstruction::BuildStructVector:
   case VPInstruction::BuildVector:
@@ -1116,6 +1122,7 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   case Instruction::Select:
   case Instruction::Or:
   case Instruction::Freeze:
+  case VPInstruction::Not:
     // TODO: Cover additional opcodes.
     return vputils::onlyFirstLaneUsed(this);
   case VPInstruction::ActiveLaneMask:
@@ -1250,6 +1257,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ReductionStartVector:
     O << "reduction-start-vector";
+    break;
+  case VPInstruction::ResumeForEpilogue:
+    O << "resume-for-epilogue";
     break;
   default:
     O << Instruction::getOpcodeName(getOpcode());
@@ -3097,9 +3107,10 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
     // Currently, ARM will use the underlying IR to calculate gather/scatter
     // instruction cost.
     const Value *Ptr = getLoadStorePointerOperand(&Ingredient);
+    Type *PtrTy = toVectorTy(Ptr->getType(), VF);
     assert(!Reverse &&
            "Inconsecutive memory access should not have the order.");
-    return Ctx.TTI.getAddressComputationCost(Ty) +
+    return Ctx.TTI.getAddressComputationCost(PtrTy) +
            Ctx.TTI.getGatherScatterOpCost(Opcode, Ty, Ptr, IsMasked, Alignment,
                                           Ctx.CostKind, &Ingredient);
   }
