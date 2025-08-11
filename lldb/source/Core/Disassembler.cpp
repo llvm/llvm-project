@@ -26,7 +26,10 @@
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Symbol/Variable.h"
+#include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
@@ -165,14 +168,12 @@ Disassembler::DisassembleBytes(const ArchSpec &arch, const char *plugin_name,
   return disasm_sp;
 }
 
-bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
-                               const char *plugin_name, const char *flavor,
-                               const char *cpu, const char *features,
-                               const ExecutionContext &exe_ctx,
-                               const Address &address, Limit limit,
-                               bool mixed_source_and_assembly,
-                               uint32_t num_mixed_context_lines,
-                               uint32_t options, Stream &strm) {
+bool Disassembler::Disassemble(
+    Debugger &debugger, const ArchSpec &arch, const char *plugin_name,
+    const char *flavor, const char *cpu, const char *features,
+    const ExecutionContext &exe_ctx, const Address &address, Limit limit,
+    bool mixed_source_and_assembly, uint32_t num_mixed_context_lines,
+    uint32_t options, Stream &strm, bool enable_rich_annotations) {
   if (!exe_ctx.GetTargetPtr())
     return false;
 
@@ -187,9 +188,10 @@ bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
   if (bytes_disassembled == 0)
     return false;
 
-  disasm_sp->PrintInstructions(debugger, arch, exe_ctx,
-                               mixed_source_and_assembly,
-                               num_mixed_context_lines, options, strm);
+  disasm_sp->PrintInstructions(
+      debugger, arch, exe_ctx, mixed_source_and_assembly,
+      num_mixed_context_lines, options, strm,
+      /*enable_rich_annotations=*/enable_rich_annotations);
   return true;
 }
 
@@ -284,7 +286,8 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
                                      const ExecutionContext &exe_ctx,
                                      bool mixed_source_and_assembly,
                                      uint32_t num_mixed_context_lines,
-                                     uint32_t options, Stream &strm) {
+                                     uint32_t options, Stream &strm,
+                                     bool enable_rich_annotations) {
   // We got some things disassembled...
   size_t num_instructions_found = GetInstructionList().GetSize();
 
@@ -542,7 +545,7 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
           (options & eOptionShowControlFlowKind) != 0;
       inst->Dump(&strm, max_opcode_byte_size, true, show_bytes,
                  show_control_flow_kind, &exe_ctx, &sc, &prev_sc, nullptr,
-                 address_text_size);
+                 address_text_size, enable_rich_annotations);
       strm.EOL();
     } else {
       break;
@@ -551,7 +554,8 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
 }
 
 bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
-                               StackFrame &frame, Stream &strm) {
+                               StackFrame &frame, Stream &strm,
+                               bool enable_rich_annotations) {
   constexpr const char *plugin_name = nullptr;
   constexpr const char *flavor = nullptr;
   constexpr const char *cpu = nullptr;
@@ -638,7 +642,8 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
                        const SymbolContext *sym_ctx,
                        const SymbolContext *prev_sym_ctx,
                        const FormatEntity::Entry *disassembly_addr_format,
-                       size_t max_address_text_size) {
+                       size_t max_address_text_size,
+                       bool enable_rich_annotations) {
   size_t opcode_column_width = 7;
   const size_t operand_column_width = 25;
 
@@ -704,6 +709,104 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
   ss.FillLastLineToColumn(opcode_pos + opcode_column_width, ' ');
   ss.PutCString(mnemonics);
 
+  // Add rich variable location annotations to the disassembly output.
+  //
+  // For each instruction, this block attempts to resolve in-scope variables
+  // and determine if the current PC falls within their
+  // DWARF location entry. If so, it prints a simplified annotation using the
+  // variable name and its resolved location (e.g., "var = reg; " ).
+  //
+  // Annotations are only included if the variable has a valid DWARF location
+  // entry, and the location string is non-empty after filtering. Decoding
+  // errors and DWARF opcodes are intentionally omitted to keep the output
+  // concise and user-friendly.
+  //
+  // The goal is to give users helpful live variable hints alongside the
+  // disassembled instruction stream, similar to how debug information
+  // enhances source-level debugging.
+
+  const size_t annotation_column = 150;
+
+  auto annotate_variables = [&]() {
+    StackFrame *frame = exe_ctx->GetFramePtr();
+    TargetSP target_sp = exe_ctx->GetTargetSP();
+    if (!frame || !target_sp)
+      return;
+
+    addr_t current_pc = m_address.GetLoadAddress(target_sp.get());
+    addr_t original_pc =
+        frame->GetFrameCodeAddress().GetLoadAddress(target_sp.get());
+
+    if (!frame->ChangePC(current_pc))
+      return;
+
+    VariableListSP var_list_sp = frame->GetInScopeVariableList(true);
+    if (!var_list_sp)
+      return;
+
+    SymbolContext sc = frame->GetSymbolContext(eSymbolContextFunction);
+    addr_t func_load_addr = LLDB_INVALID_ADDRESS;
+    if (sc.function)
+      func_load_addr =
+          sc.function->GetAddress().GetLoadAddress(target_sp.get());
+
+    // Only annotate if the current disassembly line is short enough
+    // to keep annotations aligned past the desired annotation_column.
+    if (ss.GetSizeOfLastLine() >= annotation_column)
+      return;
+
+    std::vector<std::string> annotations;
+
+    for (const VariableSP &var_sp : *var_list_sp) {
+      if (!var_sp)
+        continue;
+
+      const char *name = var_sp->GetName().AsCString();
+      auto &expr_list = var_sp->LocationExpressionList();
+      if (!expr_list.IsValid())
+        continue;
+
+      // Handle std::optional<DWARFExpressionEntry>.
+      if (auto entryOrErr = expr_list.GetExpressionEntryAtAddress(
+              func_load_addr, current_pc)) {
+        auto entry = *entryOrErr;
+        // Check if entry has a file_range, and filter on address if so.
+        if (!entry.file_range || entry.file_range->ContainsFileAddress(
+                                     (current_pc - func_load_addr) +
+                                     expr_list.GetFuncFileAddress())) {
+
+          StreamString loc_str;
+          ABI *abi = exe_ctx->GetProcessPtr()->GetABI().get();
+          llvm::DIDumpOptions opts;
+          opts.ShowAddresses = false;
+          opts.PrintRegisterOnly =
+              true; // <-- important: suppress DW_OP_... annotations, etc.
+
+          entry.expr->DumpLocation(&loc_str, eDescriptionLevelBrief, abi, opts);
+
+          // Only include if not empty.
+          llvm::StringRef loc_clean =
+              llvm::StringRef(loc_str.GetString()).trim();
+          if (!loc_clean.empty()) {
+            annotations.push_back(llvm::formatv("{0} = {1}", name, loc_clean));
+          }
+        }
+      }
+    }
+
+    if (!annotations.empty()) {
+      ss.FillLastLineToColumn(annotation_column, ' ');
+      ss.PutCString(" ; ");
+      ss.PutCString(llvm::join(annotations, ", "));
+    }
+
+    frame->ChangePC(original_pc);
+  };
+
+  if (enable_rich_annotations && exe_ctx && exe_ctx->GetFramePtr()) {
+    annotate_variables();
+  }
+
   if (!m_comment.empty()) {
     ss.FillLastLineToColumn(
         opcode_pos + opcode_column_width + operand_column_width, ' ');
@@ -724,9 +827,7 @@ bool Instruction::DumpEmulation(const ArchSpec &arch) {
   return false;
 }
 
-bool Instruction::CanSetBreakpoint () {
-  return !HasDelaySlot();
-}
+bool Instruction::CanSetBreakpoint() { return !HasDelaySlot(); }
 
 bool Instruction::HasDelaySlot() {
   // Default is false.
@@ -1073,10 +1174,8 @@ void InstructionList::Append(lldb::InstructionSP &inst_sp) {
     m_instructions.push_back(inst_sp);
 }
 
-uint32_t
-InstructionList::GetIndexOfNextBranchInstruction(uint32_t start,
-                                                 bool ignore_calls,
-                                                 bool *found_calls) const {
+uint32_t InstructionList::GetIndexOfNextBranchInstruction(
+    uint32_t start, bool ignore_calls, bool *found_calls) const {
   size_t num_instructions = m_instructions.size();
 
   uint32_t next_branch = UINT32_MAX;
