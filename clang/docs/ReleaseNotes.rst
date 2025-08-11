@@ -55,7 +55,7 @@ C/C++ Language Potentially Breaking Changes
   case for old-style offsetof idioms like ``((int)(&(((struct S *)0)->field)))``, to
   ensure they are not caught by these optimizations.  It is also possible to use
   ``-fwrapv-pointer`` or   ``-fno-delete-null-pointer-checks`` to make pointer arithmetic
-  on null pointers well-defined. (#GH130734, #GH130742, #GH130952)
+  on null pointers well-defined. (#GH130734, #GH130952)
 
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
@@ -953,7 +953,6 @@ Bug Fixes to C++ Support
 - Fixed an access checking bug when initializing non-aggregates in default arguments (#GH62444), (#GH83608)
 - Fixed a pack substitution bug in deducing class template partial specializations. (#GH53609)
 - Fixed a crash when constant evaluating some explicit object member assignment operators. (#GH142835)
-- Fixed an access checking bug when substituting into concepts (#GH115838)
 - Fix a bug where private access specifier of overloaded function not respected. (#GH107629)
 - Correctly handles calling an explicit object member function template overload set
   through its address (``(&Foo::bar<baz>)()``).
