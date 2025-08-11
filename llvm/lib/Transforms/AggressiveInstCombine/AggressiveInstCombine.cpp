@@ -617,7 +617,7 @@ struct LoadOps {
   LoadInst *RootInsert = nullptr;
   bool FoundRoot = false;
   uint64_t LoadSize = 0;
-  uint64_t Shift = 0;
+  const APInt *Shift = nullptr;
   Type *ZextType;
   AAMDNodes AATags;
 };
@@ -627,15 +627,17 @@ struct LoadOps {
 // (ZExt(L1) << shift1) | ZExt(L2) -> ZExt(L3)
 static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
                                AliasAnalysis &AA) {
-  uint64_t ShAmt2;
+  const APInt *ShAmt2 = nullptr;
   Value *X;
   Instruction *L1, *L2;
 
   // Go to the last node with loads.
-  if (match(V, m_OneUse(m_c_Or(m_Value(X),
-                               m_OneUse(m_ShlOrSelf(m_OneUse(m_ZExt(m_OneUse(
-                                                        m_Instruction(L2)))),
-                                                    ShAmt2)))))) {
+  if (match(V, m_OneUse(m_c_Or(
+                   m_Value(X),
+                   m_OneUse(m_Shl(m_OneUse(m_ZExt(m_OneUse(m_Instruction(L2)))),
+                                  m_APInt(ShAmt2)))))) ||
+      match(V, m_OneUse(m_Or(m_Value(X),
+                             m_OneUse(m_ZExt(m_OneUse(m_Instruction(L2)))))))) {
     if (!foldLoadsRecursive(X, LOps, DL, AA) && LOps.FoundRoot)
       // Avoid Partial chain merge.
       return false;
@@ -644,10 +646,11 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
 
   // Check if the pattern has loads
   LoadInst *LI1 = LOps.Root;
-  uint64_t ShAmt1 = LOps.Shift;
+  const APInt *ShAmt1 = LOps.Shift;
   if (LOps.FoundRoot == false &&
-      match(X, m_OneUse(m_ShlOrSelf(
-                   m_OneUse(m_ZExt(m_OneUse(m_Instruction(L1)))), ShAmt1)))) {
+      (match(X, m_OneUse(m_ZExt(m_Instruction(L1)))) ||
+       match(X, m_OneUse(m_Shl(m_OneUse(m_ZExt(m_OneUse(m_Instruction(L1)))),
+                               m_APInt(ShAmt1)))))) {
     LI1 = dyn_cast<LoadInst>(L1);
   }
   LoadInst *LI2 = dyn_cast<LoadInst>(L2);
@@ -723,6 +726,13 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
   if (IsBigEndian)
     std::swap(ShAmt1, ShAmt2);
 
+  // Find Shifts values.
+  uint64_t Shift1 = 0, Shift2 = 0;
+  if (ShAmt1)
+    Shift1 = ShAmt1->getZExtValue();
+  if (ShAmt2)
+    Shift2 = ShAmt2->getZExtValue();
+
   // First load is always LI1. This is where we put the new load.
   // Use the merged load size available from LI1 for forward loads.
   if (LOps.FoundRoot) {
@@ -737,7 +747,7 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
   uint64_t ShiftDiff = IsBigEndian ? LoadSize2 : LoadSize1;
   uint64_t PrevSize =
       DL.getTypeStoreSize(IntegerType::get(LI1->getContext(), LoadSize1));
-  if ((ShAmt2 - ShAmt1) != ShiftDiff || (Offset2 - Offset1) != PrevSize)
+  if ((Shift2 - Shift1) != ShiftDiff || (Offset2 - Offset1) != PrevSize)
     return false;
 
   // Update LOps
@@ -814,7 +824,7 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
   // Check if shift needed. We need to shift with the amount of load1
   // shift if not zero.
   if (LOps.Shift)
-    NewOp = Builder.CreateShl(NewOp, LOps.Shift);
+    NewOp = Builder.CreateShl(NewOp, ConstantInt::get(I.getContext(), *LOps.Shift));
   I.replaceAllUsesWith(NewOp);
 
   return true;
@@ -850,9 +860,11 @@ static std::optional<PartStore> matchPartStore(Instruction &I,
     return std::nullopt;
 
   uint64_t ValWidth = StoredTy->getPrimitiveSizeInBits();
-  uint64_t ValOffset;
+  uint64_t ValOffset = 0;
   Value *Val;
-  if (!match(StoredVal, m_Trunc(m_LShrOrSelf(m_Value(Val), ValOffset))))
+  if (!match(StoredVal, m_CombineOr(m_Trunc(m_LShr(m_Value(Val),
+                                                   m_ConstantInt(ValOffset))),
+                                    m_Trunc(m_Value(Val)))))
     return std::nullopt;
 
   Value *Ptr = Store->getPointerOperand();
