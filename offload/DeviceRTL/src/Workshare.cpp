@@ -767,9 +767,17 @@ template <typename Ty> class StaticLoopChunker {
 
 public:
   /// Worksharing `for`-loop.
+  /// \param[in] Loc Description of source location
+  /// \param[in] LoopBody Function which corresponds to loop body
+  /// \param[in] Arg Pointer to struct which contains loop body args
+  /// \param[in] NumIters Number of loop iterations
+  /// \param[in] NumThreads Number of GPU threads
+  /// \param[in] ThreadChunk Size of thread chunk
+  /// \param[in] OneIterationPerThread Assume that one thread executes
+  ///                                  only one loop iter or one thread chunk
   static void For(IdentTy *Loc, void (*LoopBody)(Ty, void *), void *Arg,
                   Ty NumIters, Ty NumThreads, Ty ThreadChunk,
-                  Ty OneIterationPerThread) {
+                  int8_t OneIterationPerThread) {
     ASSERT(NumIters >= 0, "Bad iteration count");
     ASSERT(ThreadChunk >= 0, "Bad thread count");
 
@@ -808,6 +816,13 @@ public:
   }
 
   /// Worksharing `distribute`-loop.
+  /// \param[in] Loc Description of source location
+  /// \param[in] LoopBody Function which corresponds to loop body
+  /// \param[in] Arg Pointer to struct which contains loop body args
+  /// \param[in] NumIters Number of loop iterations
+  /// \param[in] BlockChunk Size of block chunk
+  /// \param[in] OneIterationPerThread Assume that one thread executes
+  ///                                  only one loop iter or one block chunk
   static void Distribute(IdentTy *Loc, void (*LoopBody)(Ty, void *), void *Arg,
                          Ty NumIters, Ty BlockChunk, Ty OneIterationPerThread) {
     ASSERT(icv::Level == 0, "Bad distribute");
@@ -855,6 +870,15 @@ public:
   }
 
   /// Worksharing `distribute parallel for`-loop.
+  /// \param[in] Loc Description of source location
+  /// \param[in] LoopBody Function which corresponds to loop body
+  /// \param[in] Arg Pointer to struct which contains loop body args
+  /// \param[in] NumIters Number of loop iterations
+  /// \param[in] NumThreads Number of GPU threads
+  /// \param[in] BlockChunk Size of block chunk
+  /// \param[in] ThreadChunk Size of thread chunk
+  /// \param[in] OneIterationPerThread Assume that one thread executes
+  ///                                  only one loop iter or one block chunk
   static void DistributeFor(IdentTy *Loc, void (*LoopBody)(Ty, void *),
                             void *Arg, Ty NumIters, Ty NumThreads,
                             Ty BlockChunk, Ty ThreadChunk,
@@ -915,7 +939,7 @@ public:
   __kmpc_distribute_for_static_loop##BW(                                       \
       IdentTy *loc, void (*fn)(TY, void *), void *arg, TY num_iters,           \
       TY num_threads, TY block_chunk, TY thread_chunk,                         \
-      TY one_iteration_per_thread) {                                           \
+      int8_t one_iteration_per_thread) {                                       \
     ompx::StaticLoopChunker<TY>::DistributeFor(                                \
         loc, fn, arg, num_iters, num_threads, block_chunk, thread_chunk,       \
         one_iteration_per_thread);                                             \
@@ -923,13 +947,13 @@ public:
   [[gnu::flatten, clang::always_inline]] void                                  \
   __kmpc_distribute_static_loop##BW(IdentTy *loc, void (*fn)(TY, void *),      \
                                     void *arg, TY num_iters, TY block_chunk,   \
-                                    TY one_iteration_per_thread) {             \
+                                    int8_t one_iteration_per_thread) {         \
     ompx::StaticLoopChunker<TY>::Distribute(                                   \
         loc, fn, arg, num_iters, block_chunk, one_iteration_per_thread);       \
   }                                                                            \
   [[gnu::flatten, clang::always_inline]] void __kmpc_for_static_loop##BW(      \
       IdentTy *loc, void (*fn)(TY, void *), void *arg, TY num_iters,           \
-      TY num_threads, TY thread_chunk, TY one_iteration_per_thread) {          \
+      TY num_threads, TY thread_chunk, int8_t one_iteration_per_thread) {      \
     ompx::StaticLoopChunker<TY>::For(loc, fn, arg, num_iters, num_threads,     \
                                      thread_chunk, one_iteration_per_thread);  \
   }
