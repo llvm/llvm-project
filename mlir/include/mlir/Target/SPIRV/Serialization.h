@@ -38,10 +38,10 @@ struct SerializationOptions {
   std::string validationFilePrefix = "";
 };
 
-/// Serializes the given SPIR-V `module` and writes to `binary`. On failure,
+/// Serializes the given SPIR-V `moduleOp` and writes to `binary`. On failure,
 /// reports errors to the error handler registered with the MLIR context for
-/// `module`.
-LogicalResult serialize(ModuleOp module, SmallVectorImpl<uint32_t> &binary,
+/// `moduleOp`.
+LogicalResult serialize(ModuleOp moduleOp, SmallVectorImpl<uint32_t> &binary,
                         const SerializationOptions &options = {});
 
 } // namespace spirv
