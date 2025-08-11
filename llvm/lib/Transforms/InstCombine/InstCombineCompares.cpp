@@ -1325,7 +1325,7 @@ Instruction *InstCombinerImpl::foldICmpWithZero(ICmpInst &Cmp) {
 //      icmp eq 0, (and num, val - 1)
 // For value being power of two
 Instruction *InstCombinerImpl::foldIsMultipleOfAPowerOfTwo(ICmpInst &Cmp) {
-  Value *Neg, *Num, *Mask, *Value;
+  Value *Neg, *Num, *Mask;
   CmpPredicate Pred;
   const APInt *NegConst, *MaskConst;
 
@@ -1338,30 +1338,14 @@ Instruction *InstCombinerImpl::foldIsMultipleOfAPowerOfTwo(ICmpInst &Cmp) {
   if (!ICmpInst::isEquality(Pred))
     return nullptr;
 
-  // Check the constant case
-  if (match(Neg, m_APInt(NegConst)) && match(Mask, m_LowBitMask(MaskConst))) {
-    // Neg = -(Mask + 1)
-    if (*NegConst != ~*MaskConst)
-      return nullptr;
-  } else {
-    // Match neg = sub 0, val
-    if (!match(Neg, m_Sub(m_Zero(), m_Value(Value))))
-      return nullptr;
+  // Check only constant case, since it's the only profitable.
+  // See https://github.com/dtcxzyw/llvm-opt-benchmark/pull/2657/
+  if (!match(Neg, m_APInt(NegConst)) || !match(Mask, m_LowBitMask(MaskConst)))
+    return nullptr;
 
-    // mask = add %val, -1. No commutative here, since it's canonical
-    // representation for sub %val, -1
-    if (!match(Mask, m_Add(m_Value(Value), m_AllOnes()))) {
-      if (match(Num, m_Add(m_Value(Value), m_AllOnes()))) {
-        std::swap(Mask, Num);
-      } else {
-        return nullptr;
-      }
-    }
-
-    // Value should be a known power-of-two.
-    if (!isKnownToBeAPowerOfTwo(Value, false, &Cmp))
-      return nullptr;
-  }
+  // Neg = -(Mask + 1)
+  if (*NegConst != ~*MaskConst)
+    return nullptr;
 
   // Create new icmp eq (num & (val - 1)), 0
   auto NewAnd = Builder.CreateAnd(Num, Mask);
