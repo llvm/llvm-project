@@ -38,7 +38,8 @@ MCSection *MCAsmInfoELF::getNonexecutableStackSection(MCContext &Ctx) const {
 MCSection *MCAsmInfoELF::getExecutableStackSection(MCContext &Ctx) const {
   MCSectionELF *section =
       static_cast<MCSectionELF *>(getNonexecutableStackSection(Ctx));
-  section->setFlags(section->getFlags() | ELF::SHF_EXECINSTR);
+  if (section)
+    section->setFlags(section->getFlags() | ELF::SHF_EXECINSTR);
   return section;
 }
 
