@@ -6496,20 +6496,20 @@ public:
   }
 };
 
-/// Cannonicalize transpose(broadcast(x)) into broadcast(transpose(x')),
-/// where x' is the normalized x, if the following conditions meet:
-/// (1) Normalize x to x' such that x' has the same shape as broadcast(x)
+/// Cannonicalize transpose(broadcast(x)) into broadcast(shape_cast(x)),
+/// with the following checks and steps:
+/// (1) Normalize x to x' = shape_cast(x) such that x' has the same shape as
+/// broadcast(x)
 ///
 /// (2) Check if transpose(x') is broadcastable to the original output type.
 ///
 /// (3) Check if the broadcasted dimensions in x -> broadcast(x) are the same as
 /// that in transpose(x') -> broadcast(transpose(x'))
 ///
-/// (4) If the above conditions meet, we can generate broadcast(transpose(x')),
-/// where x' = shape_cast(x). However, this won't be profitable if
-/// transpose(shape_cast(x)) cannot be folded into shape_cast(x), so check if
-/// such folding is possible by checking whether such transpose preserves the
-/// order.
+/// (4) If the above conditions meet, we can generate broadcast(transpose(x')).
+/// However, this won't be profitable if transpose(shape_cast(x)) cannot be
+/// folded into shape_cast(x), so check if such folding is possible by checking
+/// whether such transpose preserves the order.
 class FoldTransposeBroadcast : public OpRewritePattern<vector::TransposeOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
