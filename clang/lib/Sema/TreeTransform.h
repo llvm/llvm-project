@@ -30,20 +30,14 @@
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtSYCL.h"
-#include "clang/AST/TemplateBase.h"
-#include "clang/AST/Type.h"
-#include "clang/AST/TypeLoc.h"
 #include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/OpenMPKinds.h"
-#include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/UnsignedOrNone.h"
 #include "clang/Sema/Designator.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/ScopeInfo.h"
-#include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaDiagnostic.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
@@ -51,9 +45,7 @@
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaPseudoObject.h"
 #include "clang/Sema/SemaSYCL.h"
-#include "clang/Sema/Template.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
 #include <optional>
@@ -4533,7 +4525,8 @@ bool TreeTransform<Derived>::TransformExprs(Expr *const *Inputs,
       UnsignedOrNone NumExpansions = OrigNumExpansions;
       if (getDerived().TryExpandParameterPacks(
               Expansion->getEllipsisLoc(), Pattern->getSourceRange(),
-              Unexpanded, true, Expand, RetainExpansion, NumExpansions))
+              Unexpanded, /*FailOnPackProducingTemplates=*/true, Expand,
+              RetainExpansion, NumExpansions))
         return true;
 
       if (!Expand) {
@@ -5213,7 +5206,8 @@ bool TreeTransform<Derived>::PreparePackForExpansion(TemplateArgumentLoc In,
     Info.RetainExpansion = false;
     Info.NumExpansions = Info.OrigNumExpansions;
     return getDerived().TryExpandParameterPacks(
-        Info.Ellipsis, Pattern.getSourceRange(), Unexpanded, false, Info.Expand,
+        Info.Ellipsis, Pattern.getSourceRange(), Unexpanded,
+        /*FailOnPackProducingTemplates=*/false, Info.Expand,
         Info.RetainExpansion, Info.NumExpansions);
   };
 
@@ -6315,8 +6309,8 @@ bool TreeTransform<Derived>::TransformFunctionTypeParams(
           NumExpansions = OrigNumExpansions;
           if (getDerived().TryExpandParameterPacks(
                   ExpansionTL.getEllipsisLoc(), Pattern.getSourceRange(),
-                  Unexpanded, true, ShouldExpand, RetainExpansion,
-                  NumExpansions)) {
+                  Unexpanded, /*FailOnPackProducingTemplates=*/true,
+                  ShouldExpand, RetainExpansion, NumExpansions)) {
             return true;
           }
         } else {
@@ -6423,7 +6417,8 @@ bool TreeTransform<Derived>::TransformFunctionTypeParams(
       bool ShouldExpand = false;
       bool RetainExpansion = false;
       if (getDerived().TryExpandParameterPacks(
-              Loc, SourceRange(), Unexpanded, true, ShouldExpand,
+              Loc, SourceRange(), Unexpanded,
+              /*FailOnPackProducingTemplates=*/true, ShouldExpand,
               RetainExpansion, NumExpansions)) {
         return true;
       }
@@ -6720,9 +6715,10 @@ bool TreeTransform<Derived>::TransformExceptionSpec(
       UnsignedOrNone NumExpansions = PackExpansion->getNumExpansions();
       // FIXME: Track the location of the ellipsis (and track source location
       // information for the types in the exception specification in general).
-      if (getDerived().TryExpandParameterPacks(Loc, SourceRange(), Unexpanded,
-                                               true, Expand, RetainExpansion,
-                                               NumExpansions))
+      if (getDerived().TryExpandParameterPacks(
+              Loc, SourceRange(), Unexpanded,
+              /*FailOnPackProducingTemplates=*/true, Expand, RetainExpansion,
+              NumExpansions))
         return true;
 
       if (!Expand) {
@@ -6996,9 +6992,10 @@ TreeTransform<Derived>::TransformPackIndexingType(TypeLocBuilder &TLB,
     bool ShouldExpand = true;
     bool RetainExpansion = false;
     UnsignedOrNone NumExpansions = std::nullopt;
-    if (getDerived().TryExpandParameterPacks(TL.getEllipsisLoc(), SourceRange(),
-                                             Unexpanded, true, ShouldExpand,
-                                             RetainExpansion, NumExpansions))
+    if (getDerived().TryExpandParameterPacks(
+            TL.getEllipsisLoc(), SourceRange(), Unexpanded,
+            /*FailOnPackProducingTemplates=*/true, ShouldExpand,
+            RetainExpansion, NumExpansions))
       return QualType();
     if (!ShouldExpand) {
       Sema::ArgPackSubstIndexRAII SubstIndex(getSema(), std::nullopt);
@@ -8085,7 +8082,8 @@ TreeTransform<Derived>::TransformObjCObjectType(TypeLocBuilder &TLB,
       UnsignedOrNone NumExpansions = PackExpansion->getNumExpansions();
       if (getDerived().TryExpandParameterPacks(
               PackExpansionLoc.getEllipsisLoc(), PatternLoc.getSourceRange(),
-              Unexpanded, true, Expand, RetainExpansion, NumExpansions))
+              Unexpanded, /*FailOnPackProducingTemplates=*/true, Expand,
+              RetainExpansion, NumExpansions))
         return QualType();
 
       if (!Expand) {
@@ -15021,7 +15019,8 @@ TreeTransform<Derived>::TransformTypeTraitExpr(TypeTraitExpr *E) {
     UnsignedOrNone NumExpansions = OrigNumExpansions;
     if (getDerived().TryExpandParameterPacks(
             ExpansionTL.getEllipsisLoc(), PatternTL.getSourceRange(),
-            Unexpanded, true, Expand, RetainExpansion, NumExpansions))
+            Unexpanded, /*FailOnPackProducingTemplates=*/true, Expand,
+            RetainExpansion, NumExpansions))
       return ExprError();
 
     if (!Expand) {
@@ -15596,7 +15595,8 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
       UnsignedOrNone NumExpansions = OrigNumExpansions;
       if (getDerived().TryExpandParameterPacks(
               ExpansionTL.getEllipsisLoc(), OldVD->getInit()->getSourceRange(),
-              Unexpanded, true, Expand, RetainExpansion, NumExpansions))
+              Unexpanded, /*FailOnPackProducingTemplates=*/true, Expand,
+              RetainExpansion, NumExpansions))
         return ExprError();
       assert(!RetainExpansion && "Should not need to retain expansion after a "
                                  "capture since it cannot be extended");
@@ -15756,8 +15756,9 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
       bool RetainExpansion = false;
       UnsignedOrNone NumExpansions = std::nullopt;
       if (getDerived().TryExpandParameterPacks(
-              C->getEllipsisLoc(), C->getLocation(), Unexpanded, true,
-              ShouldExpand, RetainExpansion, NumExpansions)) {
+              C->getEllipsisLoc(), C->getLocation(), Unexpanded,
+              /*FailOnPackProducingTemplates=*/true, ShouldExpand,
+              RetainExpansion, NumExpansions)) {
         Invalid = true;
         continue;
       }
@@ -16279,8 +16280,9 @@ TreeTransform<Derived>::TransformSizeOfPackExpr(SizeOfPackExpr *E) {
     bool RetainExpansion = false;
     UnsignedOrNone NumExpansions = std::nullopt;
     if (getDerived().TryExpandParameterPacks(
-            E->getOperatorLoc(), E->getPackLoc(), Unexpanded, true,
-            ShouldExpand, RetainExpansion, NumExpansions))
+            E->getOperatorLoc(), E->getPackLoc(), Unexpanded,
+            /*FailOnPackProducingTemplates=*/true, ShouldExpand,
+            RetainExpansion, NumExpansions))
       return ExprError();
 
     // If we need to expand the pack, build a template argument from it and
@@ -16396,8 +16398,9 @@ TreeTransform<Derived>::TransformPackIndexingExpr(PackIndexingExpr *E) {
     UnsignedOrNone OrigNumExpansions = std::nullopt,
                    NumExpansions = std::nullopt;
     if (getDerived().TryExpandParameterPacks(
-            E->getEllipsisLoc(), Pattern->getSourceRange(), Unexpanded, true,
-            ShouldExpand, RetainExpansion, NumExpansions))
+            E->getEllipsisLoc(), Pattern->getSourceRange(), Unexpanded,
+            /*FailOnPackProducingTemplates=*/true, ShouldExpand,
+            RetainExpansion, NumExpansions))
       return true;
     if (!ShouldExpand) {
       Sema::ArgPackSubstIndexRAII SubstIndex(getSema(), std::nullopt);
@@ -16504,8 +16507,9 @@ TreeTransform<Derived>::TransformCXXFoldExpr(CXXFoldExpr *E) {
   UnsignedOrNone OrigNumExpansions = E->getNumExpansions(),
                  NumExpansions = OrigNumExpansions;
   if (getDerived().TryExpandParameterPacks(
-          E->getEllipsisLoc(), Pattern->getSourceRange(), Unexpanded, true,
-          Expand, RetainExpansion, NumExpansions))
+          E->getEllipsisLoc(), Pattern->getSourceRange(), Unexpanded,
+          /*FailOnPackProducingTemplates=*/true, Expand, RetainExpansion,
+          NumExpansions))
     return true;
 
   if (!Expand) {
@@ -16740,8 +16744,9 @@ TreeTransform<Derived>::TransformObjCDictionaryLiteral(
       SourceRange PatternRange(OrigElement.Key->getBeginLoc(),
                                OrigElement.Value->getEndLoc());
       if (getDerived().TryExpandParameterPacks(
-              OrigElement.EllipsisLoc, PatternRange, Unexpanded, true, Expand,
-              RetainExpansion, NumExpansions))
+              OrigElement.EllipsisLoc, PatternRange, Unexpanded,
+              /*FailOnPackProducingTemplates=*/true, Expand, RetainExpansion,
+              NumExpansions))
         return ExprError();
 
       if (!Expand) {

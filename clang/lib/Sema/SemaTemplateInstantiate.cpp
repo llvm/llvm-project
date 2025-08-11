@@ -2020,7 +2020,8 @@ bool TemplateInstantiator::maybeInstantiateFunctionParameterToScope(
       ExpansionTL.getTypePtr()->getNumExpansions();
   UnsignedOrNone NumExpansions = OrigNumExpansions;
   if (TryExpandParameterPacks(ExpansionTL.getEllipsisLoc(),
-                              Pattern.getSourceRange(), Unexpanded, true,
+                              Pattern.getSourceRange(), Unexpanded,
+                              /*FailOnPackProducingTemplates=*/true,
                               ShouldExpand, RetainExpansion, NumExpansions))
     return true;
 
