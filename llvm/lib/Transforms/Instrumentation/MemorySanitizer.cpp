@@ -2690,6 +2690,41 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     SC.Done(&I);
   }
 
+ // Perform a bitwise OR on the horizontal pairs (or other specified grouping)
+  // of elements. This is convenient for instrumenting horizontal add/sub.
+  Value *horizontalReduce(IntrinsicInst &I, unsigned ReductionFactor,
+                          Value *VectorA, Value* VectorB) {
+    IRBuilder<> IRB(&I);
+    assert(isa<FixedVectorType>(VectorA->getType()));
+    unsigned TotalNumElems = cast<FixedVectorType>(VectorA->getType())->getNumElements();
+
+    if (VectorB) {
+      assert(VectorA->getType() == VectorB->getType());
+      TotalNumElems = TotalNumElems * 2;
+    }
+
+    Value *Or = nullptr;
+
+    for (unsigned i = 0; i < ReductionFactor; i++) {
+      SmallVector<int, 16> Mask;
+      for (unsigned X = 0; X < TotalNumElems; X += ReductionFactor)
+        Mask.push_back(X + i);
+
+      Value *Masked;
+      if (VectorB)
+        Masked = IRB.CreateShuffleVector(VectorA, VectorB, Mask);
+      else
+        Masked = IRB.CreateShuffleVector(VectorA, Mask);
+
+      if (Or)
+        Or = IRB.CreateOr(Or, Masked);
+      else
+        Or = Masked;
+    }
+
+    return Or;
+  }
+
   /// Propagate shadow for 1- or 2-vector intrinsics that combine adjacent
   /// fields.
   ///
@@ -2711,31 +2746,16 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
            2 * ReturnType->getNumElements());
 
     IRBuilder<> IRB(&I);
-    unsigned Width = ParamType->getNumElements() * I.arg_size();
 
     // Horizontal OR of shadow
-    SmallVector<int, 8> EvenMask;
-    SmallVector<int, 8> OddMask;
-    for (unsigned X = 0; X < Width; X += 2) {
-      EvenMask.push_back(X);
-      OddMask.push_back(X + 1);
-    }
-
     Value *FirstArgShadow = getShadow(&I, 0);
-    Value *EvenShadow;
-    Value *OddShadow;
-    if (I.arg_size() == 2) {
-      Value *SecondArgShadow = getShadow(&I, 1);
-      EvenShadow =
-          IRB.CreateShuffleVector(FirstArgShadow, SecondArgShadow, EvenMask);
-      OddShadow =
-          IRB.CreateShuffleVector(FirstArgShadow, SecondArgShadow, OddMask);
-    } else {
-      EvenShadow = IRB.CreateShuffleVector(FirstArgShadow, EvenMask);
-      OddShadow = IRB.CreateShuffleVector(FirstArgShadow, OddMask);
-    }
+    Value *SecondArgShadow = nullptr;
+    if (I.arg_size() == 2)
+      SecondArgShadow = getShadow(&I, 1);
 
-    Value *OrShadow = IRB.CreateOr(EvenShadow, OddShadow);
+    Value *OrShadow = horizontalReduce(I, /*ReductionFactor=*/ 2,
+                                       FirstArgShadow, SecondArgShadow);
+
     OrShadow = CreateShadowCast(IRB, OrShadow, getShadowTy(&I));
 
     setShadow(&I, OrShadow);
@@ -2768,23 +2788,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     IRBuilder<> IRB(&I);
 
-    unsigned TotalNumElems = ParamType->getNumElements() * I.arg_size();
     FixedVectorType *ReinterpretShadowTy = nullptr;
     assert(isAligned(Align(ReinterpretElemWidth),
                      ParamType->getPrimitiveSizeInBits()));
     ReinterpretShadowTy = FixedVectorType::get(
         IRB.getIntNTy(ReinterpretElemWidth),
         ParamType->getPrimitiveSizeInBits() / ReinterpretElemWidth);
-    TotalNumElems = ReinterpretShadowTy->getNumElements() * I.arg_size();
 
     // Horizontal OR of shadow
-    SmallVector<int, 8> EvenMask;
-    SmallVector<int, 8> OddMask;
-    for (unsigned X = 0; X < TotalNumElems - 1; X += 2) {
-      EvenMask.push_back(X);
-      OddMask.push_back(X + 1);
-    }
-
     Value *FirstArgShadow = getShadow(&I, 0);
     FirstArgShadow = IRB.CreateBitCast(FirstArgShadow, ReinterpretShadowTy);
 
@@ -2796,22 +2807,16 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         Align(2),
         cast<FixedVectorType>(FirstArgShadow->getType())->getNumElements()));
 
-    Value *EvenShadow;
-    Value *OddShadow;
+    Value *SecondArgShadow = nullptr;
     if (I.arg_size() == 2) {
-      Value *SecondArgShadow = getShadow(&I, 1);
-      SecondArgShadow = IRB.CreateBitCast(SecondArgShadow, ReinterpretShadowTy);
-
-      EvenShadow =
-          IRB.CreateShuffleVector(FirstArgShadow, SecondArgShadow, EvenMask);
-      OddShadow =
-          IRB.CreateShuffleVector(FirstArgShadow, SecondArgShadow, OddMask);
-    } else {
-      EvenShadow = IRB.CreateShuffleVector(FirstArgShadow, EvenMask);
-      OddShadow = IRB.CreateShuffleVector(FirstArgShadow, OddMask);
+      SecondArgShadow = getShadow(&I, 1);
+      SecondArgShadow = IRB.CreateBitCast(SecondArgShadow,
+                                          ReinterpretShadowTy);
     }
 
-    Value *OrShadow = IRB.CreateOr(EvenShadow, OddShadow);
+    Value *OrShadow = horizontalReduce(I, /*ReductionFactor=*/ 2,
+                                       FirstArgShadow, SecondArgShadow);
+
     OrShadow = CreateShadowCast(IRB, OrShadow, getShadowTy(&I));
 
     setShadow(&I, OrShadow);
