@@ -237,7 +237,7 @@ MatchTableRecord MatchTable::NamedValue(unsigned NumBytes, StringRef Namespace,
 
 MatchTableRecord MatchTable::IntValue(unsigned NumBytes, int64_t IntValue) {
   assert(isUIntN(NumBytes * 8, IntValue) || isIntN(NumBytes * 8, IntValue));
-  auto Str = llvm::to_string(IntValue);
+  auto Str = IntValue == INT64_MIN ? "INT64_MIN" : llvm::to_string(IntValue);
   if (NumBytes == 1 && IntValue < 0)
     Str = "uint8_t(" + Str + ")";
   // TODO: Could optimize this directly to save the compiler some work when
