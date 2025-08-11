@@ -763,6 +763,8 @@ static MCSymbol *getMCSymbolForTOCPseudoMO(const MachineOperand &MO,
     return AP.GetJTISymbol(MO.getIndex());
   case MachineOperand::MO_BlockAddress:
     return AP.GetBlockAddressSymbol(MO.getBlockAddress());
+  case MachineOperand::MO_MCSymbol:
+    return MO.getMCSymbol();
   default:
     llvm_unreachable("Unexpected operand type to get symbol.");
   }
@@ -792,6 +794,8 @@ getTOCEntryTypeForMO(const MachineOperand &MO) {
     return PPCAsmPrinter::TOCType_JumpTable;
   case MachineOperand::MO_BlockAddress:
     return PPCAsmPrinter::TOCType_BlockAddress;
+  case MachineOperand::MO_MCSymbol:
+    return PPCAsmPrinter::TOCType_GlobalExternal; // TODO
   default:
     llvm_unreachable("Unexpected operand type to get TOC type.");
   }
@@ -1043,7 +1047,8 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     TmpInst.setOpcode(PPC::LWZ);
 
     const MachineOperand &MO = MI->getOperand(1);
-    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress()) &&
+    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress() ||
+            MO.isMCSymbol()) &&
            "Invalid operand for LWZtoc.");
 
     // Map the operand to its corresponding MCSymbol.
@@ -1127,7 +1132,8 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     TmpInst.setOpcode(PPC::LD);
 
     const MachineOperand &MO = MI->getOperand(1);
-    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress()) &&
+    assert((MO.isGlobal() || MO.isCPI() || MO.isJTI() || MO.isBlockAddress() ||
+            MO.isMCSymbol()) &&
            "Invalid operand!");
 
     // Map the operand to its corresponding MCSymbol.

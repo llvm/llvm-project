@@ -11167,6 +11167,33 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   SDLoc dl(Op);
 
   switch (IntrinsicID) {
+  case Intrinsic::ppc_get_function_descriptor:
+    return Op.getOperand(1);
+  case Intrinsic::ppc_get_function_entry: {
+    SDValue Op1 = Op.getOperand(1);
+    if (auto *G = dyn_cast<GlobalAddressSDNode>(Op1)) {
+      const GlobalValue *GV = G->getGlobal();
+      assert(isFunctionGlobalAddress(GV));
+      assert(Subtarget.isAIXABI());
+      assert(!isa<GlobalIFunc>(GV) && "IFunc is not supported on AIX.");
+      const TargetMachine &TM = Subtarget.getTargetMachine();
+      const TargetLoweringObjectFile *TLOF = TM.getObjFileLowering();
+      MCSymbolXCOFF *S = static_cast<MCSymbolXCOFF *>(
+          TLOF->getFunctionEntryPointSymbol(GV, TM));
+
+      MVT PtrVT = DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout());
+      SDValue EntryPointSym = DAG.getMCSymbol(S, PtrVT);
+      return getTOCEntry(DAG, dl, EntryPointSym);
+    }
+    assert(Op1.getOpcode() == ISD::CopyFromReg);
+    SDLoc dl(Op);
+    EVT PtrVT = getPointerTy(DAG.getDataLayout());
+    SDValue Result =
+        DAG.getLoad(PtrVT, dl, DAG.getEntryNode(), Op1, MachinePointerInfo(),
+                    DAG.getDataLayout().getPointerABIAlignment(0),
+                    MachineMemOperand::MODereferenceable);
+    return Result;
+  }
   case Intrinsic::thread_pointer:
     // Reads the thread pointer register, used for __builtin_thread_pointer.
     if (Subtarget.isPPC64())

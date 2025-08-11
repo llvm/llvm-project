@@ -2090,3 +2090,13 @@ let TargetPrefix = "ppc" in {
     Intrinsic<[], [llvm_i64_ty, llvm_i64_ty, llvm_ptr_ty],
               [IntrArgMemOnly, IntrWriteMem, NoCapture<ArgIndex<2>>]>;
 }
+
+
+//===----------------------------------------------------------------------===//
+// XCOFF Intrinsics
+let TargetPrefix = "ppc" in {
+  def int_ppc_get_function_entry :
+      DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_ptr_ty], [IntrNoMem]>;
+  def int_ppc_get_function_descriptor :
+      DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_ptr_ty], [IntrNoMem]>;
+}

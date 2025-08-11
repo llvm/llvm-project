@@ -6158,6 +6158,10 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
         replaceWith(PPC::ADDItoc8, N, MVT::i64);
         return;
       }
+      if (N->getOperand(0).getOpcode() == ISD::MCSymbol) {
+        replaceWith(PPC::LDtoc, N, MVT::i64);
+        return;
+      }
       // Break if it doesn't have toc data attribute. Proceed with common
       // SelectCode.
       break;
