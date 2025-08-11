@@ -1054,21 +1054,17 @@ static Value *canonicalizeSaturatedAdd(ICmpInst *Cmp, Value *TVal, Value *FVal,
                                          ConstantInt::get(Cmp0->getType(), *C));
   }
 
-  // Negative one does not work here because X u> -1 ? -1, X + -1 is not a
-  // saturated add.
   if (Pred == ICmpInst::ICMP_UGT &&
       match(FVal, m_Add(m_Specific(Cmp0), m_APIntAllowPoison(C))) &&
-      match(Cmp1, m_SpecificIntAllowPoison(~*C - 1)) && !C->isAllOnes()) {
+      match(Cmp1, m_SpecificIntAllowPoison(~*C - 1))) {
     // (X u> ~C - 1) ? -1 : (X + C) --> uadd.sat(X, C)
     return Builder.CreateBinaryIntrinsic(Intrinsic::uadd_sat, Cmp0,
                                          ConstantInt::get(Cmp0->getType(), *C));
   }
 
-  // Zero does not work here because X u>= 0 ? -1 : X -> is always -1, which is
-  // not a saturated add.
   if (Pred == ICmpInst::ICMP_UGE &&
       match(FVal, m_Add(m_Specific(Cmp0), m_APIntAllowPoison(C))) &&
-      match(Cmp1, m_SpecificIntAllowPoison(-*C)) && !C->isZero()) {
+      match(Cmp1, m_SpecificIntAllowPoison(-*C))) {
     // (X u >= -C) ? -1 : (X + C) --> uadd.sat(X, C)
     return Builder.CreateBinaryIntrinsic(Intrinsic::uadd_sat, Cmp0,
                                          ConstantInt::get(Cmp0->getType(), *C));
