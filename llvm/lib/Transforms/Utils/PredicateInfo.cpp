@@ -506,23 +506,10 @@ Value *PredicateInfoBuilder::materializeStack(unsigned int &Counter,
     ValInfo->RenamedOp = (RenameStack.end() - Start) == RenameStack.begin()
                              ? OrigOp
                              : (RenameStack.end() - Start - 1)->Def;
-    auto CreateSSACopy = [this](IRBuilderBase &B, Value *Op,
-                                const Twine &Name = "") {
-      auto It = PI.DeclarationCache.try_emplace(Op->getType());
-      if (It.second) {
-        // The number of named values is used to detect if a new declaration
-        // was added. If so, that declaration is tracked so that it can be
-        // removed when the analysis is done. The corner case were a new
-        // declaration results in a name clash and the old name being renamed
-        // is not considered as that represents an invalid module.
-        auto NumDecls = F.getParent()->getNumNamedValues();
-        Function *IF = Intrinsic::getOrInsertDeclaration(
-            F.getParent(), Intrinsic::ssa_copy, Op->getType());
-        if (NumDecls != F.getParent()->getNumNamedValues())
-          PI.CreatedDeclarations.insert(IF);
-        It.first->second = IF;
-      }
-      return B.CreateCall(It.first->second, Op, Name);
+    auto CreateSSACopy = [](Instruction *InsertPt, Value *Op,
+                            const Twine &Name = "") {
+      // Use a no-op bitcast to represent ssa copy.
+      return new BitCastInst(Op, Op->getType(), Name, InsertPt->getIterator());
     };
     // For edge predicates, we can just place the operand in the block before
     // the terminator. For assume, we have to place it right after the assume
@@ -530,9 +517,8 @@ Value *PredicateInfoBuilder::materializeStack(unsigned int &Counter,
     // right before the terminator or after the assume, so that we insert in
     // proper order in the case of multiple predicateinfo in the same block.
     if (isa<PredicateWithEdge>(ValInfo)) {
-      IRBuilder<> B(getBranchTerminator(ValInfo));
-      CallInst *PIC =
-          CreateSSACopy(B, Op, Op->getName() + "." + Twine(Counter++));
+      BitCastInst *PIC = CreateSSACopy(getBranchTerminator(ValInfo), Op,
+                                       Op->getName() + "." + Twine(Counter++));
       PI.PredicateMap.insert({PIC, ValInfo});
       Result.Def = PIC;
     } else {
@@ -541,8 +527,7 @@ Value *PredicateInfoBuilder::materializeStack(unsigned int &Counter,
              "Should not have gotten here without it being an assume");
       // Insert the predicate directly after the assume. While it also holds
       // directly before it, assume(i1 true) is not a useful fact.
-      IRBuilder<> B(PAssume->AssumeInst->getNextNode());
-      CallInst *PIC = CreateSSACopy(B, Op);
+      BitCastInst *PIC = CreateSSACopy(PAssume->AssumeInst->getNextNode(), Op);
       PI.PredicateMap.insert({PIC, ValInfo});
       Result.Def = PIC;
     }
@@ -710,23 +695,6 @@ PredicateInfo::PredicateInfo(Function &F, DominatorTree &DT,
   Builder.buildPredicateInfo();
 }
 
-// Remove all declarations we created . The PredicateInfo consumers are
-// responsible for remove the ssa_copy calls created.
-PredicateInfo::~PredicateInfo() {
-  // Collect function pointers in set first, as SmallSet uses a SmallVector
-  // internally and we have to remove the asserting value handles first.
-  SmallPtrSet<Function *, 20> FunctionPtrs;
-  for (const auto &F : CreatedDeclarations)
-    FunctionPtrs.insert(&*F);
-  CreatedDeclarations.clear();
-
-  for (Function *F : FunctionPtrs) {
-    assert(F->users().empty() &&
-           "PredicateInfo consumer did not remove all SSA copies.");
-    F->eraseFromParent();
-  }
-}
-
 std::optional<PredicateConstraint> PredicateBase::getConstraint() const {
   switch (Type) {
   case PT_Assume:
@@ -779,15 +747,16 @@ std::optional<PredicateConstraint> PredicateBase::getConstraint() const {
 
 void PredicateInfo::verifyPredicateInfo() const {}
 
-// Replace ssa_copy calls created by PredicateInfo with their operand.
+// Replace bitcasts created by PredicateInfo with their operand.
 static void replaceCreatedSSACopys(PredicateInfo &PredInfo, Function &F) {
   for (Instruction &Inst : llvm::make_early_inc_range(instructions(F))) {
     const auto *PI = PredInfo.getPredicateInfoFor(&Inst);
-    auto *II = dyn_cast<IntrinsicInst>(&Inst);
-    if (!PI || !II || II->getIntrinsicID() != Intrinsic::ssa_copy)
+    if (!PI)
       continue;
 
-    Inst.replaceAllUsesWith(II->getOperand(0));
+    assert(isa<BitCastInst>(Inst) &&
+           Inst.getType() == Inst.getOperand(0)->getType());
+    Inst.replaceAllUsesWith(Inst.getOperand(0));
     Inst.eraseFromParent();
   }
 }
