@@ -3338,13 +3338,13 @@ void VPlanTransforms::materializeVectorTripCount(VPlan &Plan,
 void VPlanTransforms::materializeVFAndVFxUF(VPlan &Plan, VPBasicBlock *VectorPH,
                                             ElementCount VFEC) {
   VPBuilder Builder(VectorPH, VectorPH->begin());
-  auto *TCTy = VPTypeAnalysis(Plan).inferScalarType(Plan.getTripCount());
+  Type *TCTy = VPTypeAnalysis(Plan).inferScalarType(Plan.getTripCount());
   VPValue &VF = Plan.getVF();
   VPValue &VFxUF = Plan.getVFxUF();
   if (VF.getNumUsers()) {
     VPValue *RuntimeVF = Builder.createElementCount(TCTy, VFEC);
     if (any_of(VF.users(), [&VF](VPUser *U) { return !U->usesScalars(&VF); })) {
-      auto *BC = Builder.createNaryOp(VPInstruction::Broadcast, {RuntimeVF});
+      auto *BC = Builder.createNaryOp(VPInstruction::Broadcast, RuntimeVF);
       VF.replaceUsesWithIf(
           BC, [&VF](VPUser &U, unsigned) { return !U.usesScalars(&VF); });
     }

@@ -284,8 +284,8 @@ public:
       VPValue *VScale = createNaryOp(VPInstruction::VScale, {}, Ty);
       RuntimeEC = EC.getKnownMinValue() == 1
                       ? VScale
-                      : createNaryOp(Instruction::Mul, {VScale, RuntimeEC},
-                                     VPIRFlags::WrapFlagsTy(true, false));
+                      : createOverflowingOp(Instruction::Mul,
+                                            {VScale, RuntimeEC}, {true, false});
     }
     return RuntimeEC;
   }
