@@ -6621,7 +6621,7 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
   unsigned SplitSize = 32;
   if (IID == Intrinsic::amdgcn_update_dpp && (ValSize % 64 == 0) &&
       ST->hasDPALU_DPP() &&
-      AMDGPU::isLegalDPALU_DPPControl(N->getConstantOperandVal(3)))
+      AMDGPU::isLegalDPALU_DPPControl(*ST, N->getConstantOperandVal(3)))
     SplitSize = 64;
 
   auto createLaneOp = [&DAG, &SL, N, IID](SDValue Src0, SDValue Src1,
@@ -16925,7 +16925,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
 
     if (RC) {
       if (NumRegs > 1) {
-        if (Idx >= RC->getNumRegs() || Idx + NumRegs - 1 > RC->getNumRegs())
+        if (Idx >= RC->getNumRegs() || Idx + NumRegs - 1 >= RC->getNumRegs())
           return std::pair(0U, nullptr);
 
         uint32_t Width = NumRegs * 32;
