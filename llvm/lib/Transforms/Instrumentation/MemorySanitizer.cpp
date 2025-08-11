@@ -2691,20 +2691,33 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   // Perform a bitwise OR on the horizontal pairs (or other specified grouping)
-  // of elements. This is convenient for instrumenting horizontal add/sub.
+  // of elements.
+  //
+  // For example, suppose we have:
+  //   VectorA: <a1, a2, a3, a4, a5, a6>
+  //   VectorB: <b1, b2, b3, b4, b5, b6>
+  //   ReductionFactor: 3.
+  // The output would be:
+  //   <a1|a2|a3, a4|a5|a6, b1|b2|b3, b4|b5|b6>
+  //
+  // This is convenient for instrumenting horizontal add/sub.
+  // For bitwise OR on "vertical" pairs, see maybeHandleSimpleNomemIntrinsic().
   Value *horizontalReduce(IntrinsicInst &I, unsigned ReductionFactor,
-                          Value *VectorA, Value* VectorB) {
-    IRBuilder<> IRB(&I);
+                          Value *VectorA, Value *VectorB) {
     assert(isa<FixedVectorType>(VectorA->getType()));
-    unsigned TotalNumElems = cast<FixedVectorType>(VectorA->getType())->getNumElements();
+    unsigned TotalNumElems =
+        cast<FixedVectorType>(VectorA->getType())->getNumElements();
 
     if (VectorB) {
       assert(VectorA->getType() == VectorB->getType());
       TotalNumElems = TotalNumElems * 2;
     }
 
+    assert(TotalNumElems % ReductionFactor == 0);
+
     Value *Or = nullptr;
 
+    IRBuilder<> IRB(&I);
     for (unsigned i = 0; i < ReductionFactor; i++) {
       SmallVector<int, 16> Mask;
       for (unsigned X = 0; X < TotalNumElems; X += ReductionFactor)
@@ -2753,8 +2766,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (I.arg_size() == 2)
       SecondArgShadow = getShadow(&I, 1);
 
-    Value *OrShadow = horizontalReduce(I, /*ReductionFactor=*/ 2,
-                                       FirstArgShadow, SecondArgShadow);
+    Value *OrShadow = horizontalReduce(I, /*ReductionFactor=*/2, FirstArgShadow,
+                                       SecondArgShadow);
 
     OrShadow = CreateShadowCast(IRB, OrShadow, getShadowTy(&I));
 
@@ -2810,12 +2823,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *SecondArgShadow = nullptr;
     if (I.arg_size() == 2) {
       SecondArgShadow = getShadow(&I, 1);
-      SecondArgShadow = IRB.CreateBitCast(SecondArgShadow,
-                                          ReinterpretShadowTy);
+      SecondArgShadow = IRB.CreateBitCast(SecondArgShadow, ReinterpretShadowTy);
     }
 
-    Value *OrShadow = horizontalReduce(I, /*ReductionFactor=*/ 2,
-                                       FirstArgShadow, SecondArgShadow);
+    Value *OrShadow = horizontalReduce(I, /*ReductionFactor=*/2, FirstArgShadow,
+                                       SecondArgShadow);
 
     OrShadow = CreateShadowCast(IRB, OrShadow, getShadowTy(&I));
 
@@ -3224,7 +3236,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// Caller guarantees that this intrinsic does not access memory.
   ///
   /// TODO: "horizontal"/"pairwise" intrinsics are often incorrectly matched by
-  ///       by this handler.
+  ///       by this handler. See horizontalReduce().
   [[maybe_unused]] bool
   maybeHandleSimpleNomemIntrinsic(IntrinsicInst &I,
                                   unsigned int trailingFlags) {
