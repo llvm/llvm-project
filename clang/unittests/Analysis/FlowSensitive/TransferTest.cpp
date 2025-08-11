@@ -9,16 +9,23 @@
 #include "TestingSupport.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
+#include "clang/AST/OperationKinds.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Analysis/FlowSensitive/DataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/NoopAnalysis.h"
+#include "clang/Analysis/FlowSensitive/NoopLattice.h"
 #include "clang/Analysis/FlowSensitive/RecordOps.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Basic/LangStandard.h"
 #include "clang/Testing/TestAST.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
@@ -3541,7 +3548,7 @@ TEST(TransferTest, ResultObjectLocationDontVisitUnevaluatedContexts) {
   testFunction(Code, "noexceptTarget");
 }
 
-TEST(TransferTest, StaticCast) {
+TEST(TransferTest, StaticCastNoOp) {
   std::string Code = R"(
     void target(int Foo) {
       int Bar = static_cast<int>(Foo);
@@ -3561,11 +3568,202 @@ TEST(TransferTest, StaticCast) {
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
 
+        const auto *Cast = ast_matchers::selectFirst<CXXStaticCastExpr>(
+            "cast",
+            ast_matchers::match(ast_matchers::cxxStaticCastExpr().bind("cast"),
+                                ASTCtx));
+        ASSERT_THAT(Cast, NotNull());
+        ASSERT_EQ(Cast->getCastKind(), CK_NoOp);
+
         const auto *FooVal = Env.getValue(*FooDecl);
         const auto *BarVal = Env.getValue(*BarDecl);
         EXPECT_TRUE(isa<IntegerValue>(FooVal));
         EXPECT_TRUE(isa<IntegerValue>(BarVal));
         EXPECT_EQ(FooVal, BarVal);
+      });
+}
+
+TEST(TransferTest, StaticCastBaseToDerived) {
+  std::string Code = R"cc(
+    struct Base {};
+    struct Derived : public Base {};
+    void target(Base* B) {
+      Derived* D = static_cast<Derived*>(B);
+      // [[p]]
+    }
+  )cc";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        const ValueDecl *BDecl = findValueDecl(ASTCtx, "B");
+        ASSERT_THAT(BDecl, NotNull());
+
+        const ValueDecl *DDecl = findValueDecl(ASTCtx, "D");
+        ASSERT_THAT(DDecl, NotNull());
+
+        const auto *Cast = ast_matchers::selectFirst<CXXStaticCastExpr>(
+            "cast",
+            ast_matchers::match(ast_matchers::cxxStaticCastExpr().bind("cast"),
+                                ASTCtx));
+        ASSERT_THAT(Cast, NotNull());
+        ASSERT_EQ(Cast->getCastKind(), CK_BaseToDerived);
+
+        EXPECT_EQ(Env.getValue(*BDecl), Env.getValue(*DDecl));
+      });
+}
+
+TEST(TransferTest, ExplicitDerivedToBaseCast) {
+  std::string Code = R"cc(
+    struct Base {};
+    struct Derived : public Base {};
+    void target(Derived D) {
+      (Base*)&D;
+      // [[p]]
+    }
+)cc";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        auto *Cast = ast_matchers::selectFirst<ImplicitCastExpr>(
+            "cast", ast_matchers::match(
+                        ast_matchers::implicitCastExpr().bind("cast"), ASTCtx));
+        ASSERT_THAT(Cast, NotNull());
+        ASSERT_EQ(Cast->getCastKind(), CK_DerivedToBase);
+
+        auto *AddressOf = ast_matchers::selectFirst<UnaryOperator>(
+            "addressof",
+            ast_matchers::match(ast_matchers::unaryOperator().bind("addressof"),
+                                ASTCtx));
+        ASSERT_THAT(AddressOf, NotNull());
+        ASSERT_EQ(AddressOf->getOpcode(), UO_AddrOf);
+
+        EXPECT_EQ(Env.getValue(*Cast), Env.getValue(*AddressOf));
+      });
+}
+
+TEST(TransferTest, ConstructorConversion) {
+  std::string Code = R"cc(
+    struct Base {};
+    struct Derived : public Base {};
+    void target(Derived D) {
+      Base B = (Base)D;
+      // [[p]]
+    }
+)cc";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        auto *Cast = ast_matchers::selectFirst<CStyleCastExpr>(
+            "cast", ast_matchers::match(
+                        ast_matchers::cStyleCastExpr().bind("cast"), ASTCtx));
+        ASSERT_THAT(Cast, NotNull());
+        ASSERT_EQ(Cast->getCastKind(), CK_ConstructorConversion);
+
+        auto &DLoc = getLocForDecl<StorageLocation>(ASTCtx, Env, "D");
+        auto &BLoc = getLocForDecl<StorageLocation>(ASTCtx, Env, "B");
+        EXPECT_NE(&BLoc, &DLoc);
+      });
+}
+
+TEST(TransferTest, UserDefinedConversion) {
+  std::string Code = R"cc(
+    struct To {};
+    struct From {
+        operator To();
+    };
+    void target(From F) {
+        To T = (To)F;
+        // [[p]]
+    }
+)cc";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        auto *Cast = ast_matchers::selectFirst<ImplicitCastExpr>(
+            "cast", ast_matchers::match(
+                        ast_matchers::implicitCastExpr().bind("cast"), ASTCtx));
+        ASSERT_THAT(Cast, NotNull());
+        ASSERT_EQ(Cast->getCastKind(), CK_UserDefinedConversion);
+
+        auto &FLoc = getLocForDecl<StorageLocation>(ASTCtx, Env, "F");
+        auto &TLoc = getLocForDecl<StorageLocation>(ASTCtx, Env, "T");
+        EXPECT_NE(&TLoc, &FLoc);
+      });
+}
+
+TEST(TransferTest, ImplicitUncheckedDerivedToBaseCast) {
+  std::string Code = R"cc(
+    struct Base {
+      void method();
+    };
+    struct Derived : public Base {};
+    void target(Derived D) {
+      D.method();
+      // [[p]]
+    }
+)cc";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        auto *Cast = ast_matchers::selectFirst<ImplicitCastExpr>(
+            "cast", ast_matchers::match(
+                        ast_matchers::implicitCastExpr().bind("cast"), ASTCtx));
+        ASSERT_THAT(Cast, NotNull());
+        ASSERT_EQ(Cast->getCastKind(), CK_UncheckedDerivedToBase);
+
+        auto &DLoc = getLocForDecl<StorageLocation>(ASTCtx, Env, "D");
+        EXPECT_EQ(Env.getStorageLocation(*Cast), &DLoc);
+      });
+}
+
+TEST(TransferTest, ImplicitDerivedToBaseCast) {
+  std::string Code = R"cc(
+    struct Base {};
+    struct Derived : public Base {};
+    void target() {
+      Base* B = new Derived();
+      // [[p]]
+    }
+)cc";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        auto *Cast = ast_matchers::selectFirst<ImplicitCastExpr>(
+            "cast", ast_matchers::match(
+                        ast_matchers::implicitCastExpr().bind("cast"), ASTCtx));
+        ASSERT_THAT(Cast, NotNull());
+        ASSERT_EQ(Cast->getCastKind(), CK_DerivedToBase);
+
+        auto *New = ast_matchers::selectFirst<CXXNewExpr>(
+            "new", ast_matchers::match(ast_matchers::cxxNewExpr().bind("new"),
+                                       ASTCtx));
+        ASSERT_THAT(New, NotNull());
+
+        EXPECT_EQ(Env.getValue(*Cast), Env.getValue(*New));
       });
 }
 
