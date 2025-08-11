@@ -1,17 +1,21 @@
 #include "AMDGPU.h"
+#include "AMDGPUSSARAUtils.h"
 #include "GCNSubtarget.h"
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachineSSAUpdater.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Support/GenericIteratedDominanceFrontier.h"
-#include "AMDGPUSSARAUtils.h"
 
+#include <algorithm>
 #include <stack>
 
 #include "VRegMaskPair.h"
@@ -28,6 +32,18 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
   const SIInstrInfo *TII;
   const SIRegisterInfo *TRI;
   MachineRegisterInfo *MRI;
+  MachineLoopInfo *MLI;
+
+  DenseMap<MachineOperand *, std::pair<MachineInstr *, LaneBitmask>>
+      RegSeqences;
+
+  void buildRealPHI(VNInfo *VNI, LiveInterval &LI,
+                    Register OldVR);
+  void splitNonPhiValue(VNInfo *VNI,
+                        LiveInterval &LI, Register OldVR);
+  void rewriteUses(MachineInstr *DefMI, Register OldVR,
+                   LaneBitmask MaskToRewrite, Register NewVR, LiveInterval &LI,
+                   VNInfo *VNI);
 
   typedef struct {
     Register CurName;
@@ -322,6 +338,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequiredTransitiveID(MachineDominatorsID);
     AU.addPreservedID(MachineDominatorsID);
+    AU.addRequired<MachineLoopInfoWrapperPass>();
     AU.addRequired<LiveIntervalsWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -362,12 +379,205 @@ void AMDGPURebuildSSALegacy::collectCrossBlockVRegs(MachineFunction &MF) {
   }
 }
 
+void AMDGPURebuildSSALegacy::buildRealPHI(VNInfo *VNI, LiveInterval &LI,
+                                          Register OldVR) {
+  MachineBasicBlock *DefMBB = LIS->getMBBFromIndex(VNI->def);
+  SmallVector<MachineOperand> Ops;
+  LaneBitmask CurrMask = LaneBitmask::getNone();
+  LaneBitmask PredMask = LaneBitmask::getNone();
+  LaneBitmask FullMask = MRI->getMaxLaneMaskForVReg(OldVR);
+  unsigned SubRegIdx = AMDGPU::NoRegister;
+  dbgs() << "\nBuild PHI for register: " << printReg(OldVR) << "\n";
+  for (auto Pred : DefMBB->predecessors()) {
+    dbgs() << "Pred: MBB_" << Pred->getNumber() << "\n";
+    SlotIndex LastPredIdx = LIS->getMBBEndIdx(Pred);
+
+    for (const LiveInterval::SubRange &SR : LI.subranges()) {
+      // Does this sub-range contain *any* segment that refers to V ?
+      if (auto V = SR.getVNInfoBefore(LastPredIdx)) {
+        PredMask |= SR.LaneMask; // this lane mask is live-out of Pred
+        dbgs() << "Mask : " << PrintLaneMask(SR.LaneMask) << " VNINfo: " << V
+               << " id: " << V->id << "Def: " << V->def << "\n";
+      }
+    }
+
+    if (!PredMask.none() && (FullMask & ~PredMask).any()) {
+      // Not all lanes are merged here
+      dbgs() << "Partial register merge\n";
+      dbgs() << "PredMask: " << PrintLaneMask(PredMask) << "\n";
+      SubRegIdx = getSubRegIndexForLaneMask(PredMask, TRI);
+    } else {
+      // Full register merge
+      dbgs() << "Full register merge\n";
+      if (PredMask.none()) {
+        dbgs() << "No sub-ranges\n";
+      } else {
+        dbgs() << "All sub-ranges are merging. PredMask: "
+               << PrintLaneMask(PredMask) << "\n";
+      }
+    }
+    assert(CurrMask.none() || (CurrMask == PredMask));
+    CurrMask = PredMask;
+
+    Ops.push_back(
+        MachineOperand::CreateReg(OldVR, 0, 0, 0, 0, 0, 0, SubRegIdx));
+    Ops.push_back(MachineOperand::CreateMBB(Pred));
+  }
+
+  const TargetRegisterClass *RC =
+      TRI->getRegClassForOperandReg(*MRI, Ops.front());
+  
+  Register DestReg =
+      MRI->createVirtualRegister(RC);
+  
+  auto PHINode = BuildMI(*DefMBB, DefMBB->begin(), DebugLoc(),
+                         TII->get(TargetOpcode::PHI), DestReg)
+                     .add(ArrayRef(Ops));
+
+  MachineInstr *PHI = PHINode.getInstr();
+  LIS->InsertMachineInstrInMaps(*PHI);
+
+  rewriteUses(PHI, OldVR, CurrMask.none() ? FullMask : CurrMask, DestReg, LI,
+              VNI);
+  LIS->createAndComputeVirtRegInterval(DestReg);
+}
+
+void AMDGPURebuildSSALegacy::splitNonPhiValue(VNInfo *VNI, LiveInterval &LI,
+                                              Register OldVR) {
+  MachineInstr *DefMI = LIS->getInstructionFromIndex(VNI->def);
+  int DefIdx = DefMI->findRegisterDefOperandIdx(OldVR, TRI, false, true);
+  MachineOperand &MO = DefMI->getOperand(DefIdx);
+  unsigned SubRegIdx = MO.getSubReg();
+  LaneBitmask Mask = SubRegIdx ? TRI->getSubRegIndexLaneMask(SubRegIdx)
+                               : MRI->getMaxLaneMaskForVReg(MO.getReg());
+  const TargetRegisterClass *RC = TRI->getRegClassForOperandReg(*MRI, MO);
+  Register NewVR = MRI->createVirtualRegister(RC);
+  MO.setReg(NewVR);
+  MO.setSubReg(AMDGPU::NoRegister);
+  MO.setIsUndef(false);
+  LIS->ReplaceMachineInstrInMaps(*DefMI, *DefMI);
+  rewriteUses(DefMI, OldVR, Mask, NewVR, LI, VNI);
+
+  LIS->createAndComputeVirtRegInterval(NewVR);
+}
+
+void AMDGPURebuildSSALegacy::rewriteUses(MachineInstr *DefMI, Register OldVR,
+                                         LaneBitmask MaskToRewrite, Register NewVR,
+                                         LiveInterval &LI, VNInfo *VNI) {
+  for (MachineOperand &MO :
+       llvm::make_early_inc_range(MRI->use_operands(OldVR))) {
+    MachineInstr *UseMI = MO.getParent();
+    if (DefMI == UseMI)
+      continue;
+    SlotIndex UseIdx = LIS->getInstructionIndex(*UseMI);
+
+    if (UseMI->getParent() == DefMI->getParent()) {
+      SlotIndex DefIdx = LIS->getInstructionIndex(*DefMI);
+
+      if (DefIdx >= UseIdx) {
+        if (MLI->isLoopHeader(UseMI->getParent()) && UseMI->isPHI()) {
+          unsigned OpIdx = UseMI->getOperandNo(&MO);
+          MachineBasicBlock *Pred = UseMI->getOperand(++OpIdx).getMBB();
+          SlotIndex PredEnd = LIS->getMBBEndIdx(Pred);
+          VNInfo *InV = LI.getVNInfoBefore(PredEnd);
+
+          if (InV != VNI)
+            continue;
+        } else
+          continue;
+      }
+    } else {
+      if (UseMI->isPHI()) {
+        unsigned OpIdx = UseMI->getOperandNo(&MO);
+        MachineBasicBlock *Pred = UseMI->getOperand(++OpIdx).getMBB();
+        SlotIndex PredEnd = LIS->getMBBEndIdx(Pred);
+        VNInfo *InV = LI.getVNInfoBefore(PredEnd);
+
+        if (InV != VNI)
+          continue;
+      } else if (!MDT->dominates(DefMI->getParent(), UseMI->getParent()))
+        continue;
+    }
+    const TargetRegisterClass *NewRC = TRI->getRegClassForReg(*MRI, NewVR);
+    const TargetRegisterClass *OpRC = TRI->getRegClassForOperandReg(*MRI, MO);
+    LaneBitmask OpMask = MRI->getMaxLaneMaskForVReg(MO.getReg());
+    if (MO.getSubReg()) {
+      OpMask = TRI->getSubRegIndexLaneMask(MO.getSubReg());
+    }
+    if ((OpMask & MaskToRewrite).none())
+      continue;
+    if (isOfRegClass(getRegSubRegPair(MO), *NewRC, *MRI) &&
+        OpMask == MaskToRewrite) {
+      MO.setReg(NewVR);
+      MO.setSubReg(AMDGPU::NoRegister);
+    } else {
+      if ((OpMask & ~MaskToRewrite).any()) {
+        // super-register use
+        LaneBitmask Mask = LaneBitmask::getNone();
+        // We need to explicitly inform LIS that the subreg is live up to the
+        // REG_SEQUENCE
+        LaneBitmask SubRangeToExtend = LaneBitmask::getNone();
+        Register DestReg = MRI->createVirtualRegister(OpRC);
+        MachineBasicBlock::iterator IP(UseMI);
+        if (UseMI->isPHI()) {
+          unsigned OpIdx = UseMI->getOperandNo(&MO);
+          MachineBasicBlock *Pred = UseMI->getOperand(++OpIdx).getMBB();
+          IP = Pred->getFirstTerminator();
+        }
+        auto RS = BuildMI(*IP->getParent(), IP, IP->getDebugLoc(),
+                          TII->get(TargetOpcode::REG_SEQUENCE), DestReg);
+        for (const LiveInterval::SubRange &SR : LI.subranges()) {
+          // Does this sub-range contain *any* segment that refers to V ?
+          if (SR.getVNInfoAt(UseIdx)) {
+            Mask = SR.LaneMask; // this lane mask is live-out of Pred
+            dbgs() << PrintLaneMask(Mask) << "\n";
+            unsigned SubRegIdx = getSubRegIndexForLaneMask(Mask, TRI);
+            if (Mask == MaskToRewrite)
+              RS.addReg(NewVR).addImm(SubRegIdx);
+            else {
+              RS.addReg(OldVR, 0, SubRegIdx).addImm(SubRegIdx);
+              // We only save the mask for those sub-regs which have not been
+              // rewriten. For the rewiritten we will call the
+              // createAndComputeLiveREgInterval afterwords.
+              SubRangeToExtend = SR.LaneMask;
+            }
+          }
+        }
+        auto RSIdx = LIS->InsertMachineInstrInMaps(*RS);
+        LIS->extendToIndices(LI, ArrayRef(RSIdx));
+        for (auto &SR : LI.subranges()) {
+          if (SR.LaneMask == SubRangeToExtend)
+            LIS->extendToIndices(SR, ArrayRef(RSIdx));
+          }
+          MO.setReg(RS->getOperand(0).getReg());
+        } else if ((OpMask & MaskToRewrite) == OpMask) {
+          // sub-register use
+          if (UseMI->isPHI()) {
+            unsigned OpIdx = UseMI->getOperandNo(&MO);
+            MachineBasicBlock *Pred = UseMI->getOperand(++OpIdx).getMBB();
+            SlotIndex PredEnd = LIS->getMBBEndIdx(Pred);
+            VNInfo *InV = LI.getVNInfoBefore(PredEnd);
+
+            if (InV != VNI)
+              continue;
+          }
+          unsigned SubRegIdx = MO.getSubReg();
+          assert(SubRegIdx != AMDGPU::NoRegister &&
+                 "Sub-register must not be zero");
+          MO.setReg(NewVR);
+          MO.setSubReg(SubRegIdx);
+        }
+    }
+  }
+}
+
 bool AMDGPURebuildSSALegacy::runOnMachineFunction(MachineFunction &MF) {
   LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   TII = MF.getSubtarget<GCNSubtarget>().getInstrInfo();
   MRI = &MF.getRegInfo();
   TRI = MF.getSubtarget<GCNSubtarget>().getRegisterInfo();
+  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
 
   if (MRI->isSSA())
     return false;
@@ -380,83 +590,159 @@ bool AMDGPURebuildSSALegacy::runOnMachineFunction(MachineFunction &MF) {
   Renamed.clear();
   Visited.clear();
 
-  // Collect all cross-block virtual registers.
-  // This includes registers that are live-in to the function, and registers
-  // that are defined in multiple blocks.
-  // We will insert PHI nodes for these registers.
-  collectCrossBlockVRegs(MF);
+  DenseSet<Register> Processed;
 
-  LLVM_DEBUG(dbgs() << "##### Virt regs live cross block ##################\n";
-             for (auto VMP : CrossBlockVRegs) { dbgs() << printVMP(VMP) << " "; });
+  for (auto &B : MF) {
+    for (auto &I : B) {
+      for (auto Def : I.defs()) {
+        if (Def.isReg() && Def.getReg().isVirtual()) {
+          Register VReg = Def.getReg();
+          if (!LIS->hasInterval(VReg) || !Processed.insert(VReg).second)
+            continue;
+          auto &LI = LIS->getInterval(VReg);
+          if (LI.getNumValNums() == 1)
+            continue;
+          
+          SmallVector<VNInfo *, 8> WorkList;
+          for (VNInfo *V : LI.vnis())
+          // for (const LiveInterval::SubRange &SR : LI.subranges())
+            // for (auto V : SR.vnis())
+              if (V && !V->isUnused())
+                WorkList.push_back(V);
 
-  for (auto VMP : CrossBlockVRegs) {
-    SmallVector<MachineBasicBlock *> PHIBlocks;
-    LiveInterval &LI = LIS->getInterval(VMP.getVReg());
-    if (LI.hasSubRanges()) {
-      for (const LiveInterval::SubRange &SR : LI.subranges()) {
-        LaneBitmask Mask = SR.LaneMask;
-        if ((Mask & VMP.getLaneMask()) == VMP.getLaneMask()) {
-          for (auto &MBB : MF) {
-            if (SR.liveAt(LIS->getMBBStartIdx(&MBB)))
-              LiveInBlocks[VMP].insert(&MBB);
+          auto DomKey = [&](VNInfo *V) {
+            MachineBasicBlock *BB = LIS->getMBBFromIndex(V->def);
+            // DomTree preorder index (DFS number) – cheaper than repeated
+            // dominates()
+            static DenseMap<MachineBasicBlock *, unsigned> Num;
+            if (Num.empty()) {
+              unsigned N = 0;
+              for (auto *Node : depth_first(MDT->getRootNode()))
+                Num[Node->getBlock()] = N++;
+            }
+            return std::pair{Num[BB], V->def}; // tie-break with SlotIndex
+          };
+
+          llvm::sort(WorkList, [&](VNInfo *A, VNInfo *B) {
+            return DomKey(A) < DomKey(B); // strict weak order
+          });
+
+          for (auto V : WorkList) {
+            dbgs() << "id: " << V->id << " Def: " << V->def
+                   << " isPHI: " << V->isPHIDef() << "\n";
           }
+         
+
+          // --- the root is now Work[0] ---
+          VNInfo *Root = WorkList.front(); // dominator of all others
+          // 2. stable-partition: PHIs (except root) to the front
+          auto IsPhi = [&](VNInfo *V) { return V != Root && V->isPHIDef(); };
+          auto Mid =
+              std::stable_partition(WorkList.begin(), WorkList.end(), IsPhi);
+
+          // 3. Phase A: build real PHIs, leave incoming defs unchanged
+          auto PHISlice =
+              llvm::ArrayRef(WorkList).take_front(Mid - WorkList.begin());
+          for (auto It = PHISlice.rbegin(); It != PHISlice.rend(); ++It) {
+            // Add PHIs in post-dominating order
+            buildRealPHI(*It, LI, VReg);
+          }
+
+          // 4. Phase B: split the remaining VNIs
+          for (VNInfo *VNI : llvm::ArrayRef(WorkList).slice(Mid - WorkList.begin())) {
+            if (VNI == Root)
+              continue;            // never touch the dominating root
+            splitNonPhiValue(VNI, LI, VReg);
+          }
+
+          // 5. single clean-up
+          // LIS->shrinkToUses(&LI);
+          LI.RenumberValues();
         }
-      }
-    } else {
-      for (auto &MBB : MF) {
-        if (LI.liveAt(LIS->getMBBStartIdx(&MBB)))
-          LiveInBlocks[VMP].insert(&MBB);
-      }
-    }
-
-    SmallPtrSet<MachineBasicBlock *, 8> Defs;
-    for(auto E : DefBlocks) {
-      auto V = E.first;
-      if (V.getVReg() == VMP.getVReg()) {
-        if ((V.getLaneMask() & VMP.getLaneMask()) == VMP.getLaneMask()) {
-          Defs.insert(E.second.begin(), E.second.end());
-        }
-      }
-    }
-
-    LLVM_DEBUG(
-        dbgs() << "findPHINodesPlacement input:\nVreg: "
-               << printVMP(VMP)
-               << "\n";
-        dbgs() << "Def Blocks: \n"; for (auto MBB
-                                         : Defs) {
-          dbgs() << "MBB_" << MBB->getNumber() << " ";
-        } dbgs() << "\nLiveIn Blocks: \n";
-        for (auto MBB
-             : LiveInBlocks[VMP]) {
-          dbgs() << "MBB_" << MBB->getNumber() << " ";
-        } dbgs()
-        << "\n");
-
-    findPHINodesPlacement(LiveInBlocks[VMP], Defs, PHIBlocks);
-    LLVM_DEBUG(dbgs() << "\nBlocks to insert PHI nodes:\n"; for (auto MBB
-                                                                 : PHIBlocks) {
-      dbgs() << "MBB_" << MBB->getNumber() << " ";
-    } dbgs() << "\n");
-    for (auto MBB : PHIBlocks) {
-      if (!PHINodes[MBB->getNumber()].contains(VMP)) {
-        // Insert PHI for VReg. Don't use new VReg here as we'll replace them
-        // in renaming phase.
-        printVMP(VMP);
-        auto PHINode =
-            BuildMI(*MBB, MBB->begin(), DebugLoc(), TII->get(TargetOpcode::PHI))
-                .addReg(VMP.getVReg(), RegState::Define, VMP.getSubReg(MRI, TRI));
-        PHINodes[MBB->getNumber()].insert(VMP);
-        PHIMap[PHINode] = VMP;
       }
     }
   }
 
-    // Rename virtual registers in the basic block.
-  DenseMap<unsigned, VRegDefStack> VregNames;
-  renameVRegs(MF.front(), VregNames);
+  Processed.clear();
+
+  // // Collect all cross-block virtual registers.
+  // // This includes registers that are live-in to the function, and registers
+  // // that are defined in multiple blocks.
+  // // We will insert PHI nodes for these registers.
+  // collectCrossBlockVRegs(MF);
+
+  // LLVM_DEBUG(dbgs() << "##### Virt regs live cross block ##################\n";
+  //            for (auto VMP : CrossBlockVRegs) { dbgs() << printVMP(VMP) << " "; });
+
+  // for (auto VMP : CrossBlockVRegs) {
+  //   SmallVector<MachineBasicBlock *> PHIBlocks;
+  //   LiveInterval &LI = LIS->getInterval(VMP.getVReg());
+  //   if (LI.hasSubRanges()) {
+  //     for (const LiveInterval::SubRange &SR : LI.subranges()) {
+  //       LaneBitmask Mask = SR.LaneMask;
+  //       if ((Mask & VMP.getLaneMask()) == VMP.getLaneMask()) {
+  //         for (auto &MBB : MF) {
+  //           if (SR.liveAt(LIS->getMBBStartIdx(&MBB)))
+  //             LiveInBlocks[VMP].insert(&MBB);
+  //         }
+  //       }
+  //     }
+  //   } else {
+  //     for (auto &MBB : MF) {
+  //       if (LI.liveAt(LIS->getMBBStartIdx(&MBB)))
+  //         LiveInBlocks[VMP].insert(&MBB);
+  //     }
+  //   }
+
+  //   SmallPtrSet<MachineBasicBlock *, 8> Defs;
+  //   for(auto E : DefBlocks) {
+  //     auto V = E.first;
+  //     if (V.getVReg() == VMP.getVReg()) {
+  //       if ((V.getLaneMask() & VMP.getLaneMask()) == VMP.getLaneMask()) {
+  //         Defs.insert(E.second.begin(), E.second.end());
+  //       }
+  //     }
+  //   }
+
+  //   LLVM_DEBUG(
+  //       dbgs() << "findPHINodesPlacement input:\nVreg: "
+  //              << printVMP(VMP)
+  //              << "\n";
+  //       dbgs() << "Def Blocks: \n"; for (auto MBB
+  //                                        : Defs) {
+  //         dbgs() << "MBB_" << MBB->getNumber() << " ";
+  //       } dbgs() << "\nLiveIn Blocks: \n";
+  //       for (auto MBB
+  //            : LiveInBlocks[VMP]) {
+  //         dbgs() << "MBB_" << MBB->getNumber() << " ";
+  //       } dbgs()
+  //       << "\n");
+
+  //   findPHINodesPlacement(LiveInBlocks[VMP], Defs, PHIBlocks);
+  //   LLVM_DEBUG(dbgs() << "\nBlocks to insert PHI nodes:\n"; for (auto MBB
+  //                                                                : PHIBlocks) {
+  //     dbgs() << "MBB_" << MBB->getNumber() << " ";
+  //   } dbgs() << "\n");
+  //   for (auto MBB : PHIBlocks) {
+  //     if (!PHINodes[MBB->getNumber()].contains(VMP)) {
+  //       // Insert PHI for VReg. Don't use new VReg here as we'll replace them
+  //       // in renaming phase.
+  //       printVMP(VMP);
+  //       auto PHINode =
+  //           BuildMI(*MBB, MBB->begin(), DebugLoc(), TII->get(TargetOpcode::PHI))
+  //               .addReg(VMP.getVReg(), RegState::Define, VMP.getSubReg(MRI, TRI));
+  //       PHINodes[MBB->getNumber()].insert(VMP);
+  //       PHIMap[PHINode] = VMP;
+  //     }
+  //   }
+  // }
+
+  //   // Rename virtual registers in the basic block.
+  // DenseMap<unsigned, VRegDefStack> VregNames;
+  // renameVRegs(MF.front(), VregNames);
   MF.getProperties().set(MachineFunctionProperties::Property::IsSSA);
   MF.getProperties().reset(MachineFunctionProperties::Property ::NoPHIs);
+  MF.verify();
   return MRI->isSSA();
 }
 
@@ -465,6 +751,7 @@ char AMDGPURebuildSSALegacy::ID = 0;
 INITIALIZE_PASS_BEGIN(AMDGPURebuildSSALegacy, DEBUG_TYPE, "AMDGPU Rebuild SSA",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_END(AMDGPURebuildSSALegacy, DEBUG_TYPE, "AMDGPU Rebuild SSA",
                     false, false)
