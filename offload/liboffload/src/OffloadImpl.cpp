@@ -43,6 +43,17 @@ using namespace error;
 // we add some additional data here for now to avoid churn in the plugin
 // interface.
 struct ol_device_impl_t {
+  // std::mutex doesn't have a move constructor, so we need to create a new one
+  // in the destination. Since devices don't get moved once the platform has
+  // been created, this is safe.
+  ol_device_impl_t(ol_device_impl_t &&Other)
+      : DeviceNum(Other.DeviceNum), Device(Other.Device),
+        Platform(Other.Platform), Info(std::move(Other.Info)),
+        OutstandingQueues(), OutstandingQueuesMutex() {
+    assert(Other.OutstandingQueuesMutex.try_lock());
+    assert(!Other.OutstandingQueues.size());
+  }
+
   ol_device_impl_t(int DeviceNum, GenericDeviceTy *Device,
                    ol_platform_handle_t Platform, InfoTreeNode &&DevInfo)
       : DeviceNum(DeviceNum), Device(Device), Platform(Platform),
@@ -51,6 +62,9 @@ struct ol_device_impl_t {
   GenericDeviceTy *Device;
   ol_platform_handle_t Platform;
   InfoTreeNode Info;
+
+  llvm::SmallVector<__tgt_async_info *> OutstandingQueues;
+  std::mutex OutstandingQueuesMutex;
 };
 
 struct ol_platform_impl_t {
@@ -566,14 +580,65 @@ Error olMemFree_impl(void *Address) {
 
 Error olCreateQueue_impl(ol_device_handle_t Device, ol_queue_handle_t *Queue) {
   auto CreatedQueue = std::make_unique<ol_queue_impl_t>(nullptr, Device);
-  if (auto Err = Device->Device->initAsyncInfo(&(CreatedQueue->AsyncInfo)))
+
+  // The device may have some outstanding queues created by olDestroyQueue,
+  // check if any of those are finished and can be reused.
+  // Not locking the `size()` access is fine here - In the worst case we either
+  // miss a queue that exists or loop through an empty array after taking the
+  // lock. Both are sub-optimal but not that bad.
+  __tgt_async_info *OutstandingQueue = nullptr;
+  if (Device->OutstandingQueues.size()) {
+    std::lock_guard<std::mutex> Lock(Device->OutstandingQueuesMutex);
+
+    // As queues are pulled and popped from this list, longer running queues
+    // naturally bubble to the start of the array. Hence looping backwards.
+    for (auto Q = Device->OutstandingQueues.rbegin();
+         Q != Device->OutstandingQueues.rend(); Q++) {
+      if (!Device->Device->hasPendingWork(*Q)) {
+        OutstandingQueue = *Q;
+        *Q = Device->OutstandingQueues.back();
+        Device->OutstandingQueues.pop_back();
+      }
+    }
+  }
+
+  if (OutstandingQueue) {
+    // The queue is empty, but we still need to sync it to release any temporary
+    // memory allocations or do other cleanup
+    if (auto Err =
+            Device->Device->synchronize(OutstandingQueue, /*Release=*/false))
+      return Err;
+    CreatedQueue->AsyncInfo = OutstandingQueue;
+  } else if (auto Err =
+                 Device->Device->initAsyncInfo(&(CreatedQueue->AsyncInfo))) {
     return Err;
+  }
 
   *Queue = CreatedQueue.release();
   return Error::success();
 }
 
-Error olDestroyQueue_impl(ol_queue_handle_t Queue) { return olDestroy(Queue); }
+Error olDestroyQueue_impl(ol_queue_handle_t Queue) {
+  // This is safe; as soon as olDestroyQueue is called it is not possible to add
+  // any more work to the queue, so if it's finished now it will remain finished
+  // forever.
+  auto Res = Queue->Device->Device->hasPendingWork(Queue->AsyncInfo);
+  if (!Res)
+    return Res.takeError();
+
+  if (!*Res) {
+    // The queue is complete, so sync it and throw it back into the pool
+    if (auto Err = Queue->Device->Device->synchronize(Queue->AsyncInfo,
+                                                      /*Release=*/true))
+      return Err;
+  } else {
+    // The queue still has outstanding work. Store it so we can check it later
+    std::lock_guard<std::mutex> Lock(Queue->Device->OutstandingQueuesMutex);
+    Queue->Device->OutstandingQueues.push_back(Queue->AsyncInfo);
+  }
+
+  return olDestroy(Queue);
+}
 
 Error olSyncQueue_impl(ol_queue_handle_t Queue) {
   // Host plugin doesn't have a queue set so it's not safe to call synchronize
