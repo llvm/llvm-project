@@ -61,7 +61,7 @@ define i1 @setcc_ne_const_i128(ptr %ptr) {
 ; CHECK-NEXT:    v128.load $push0=, 0($0)
 ; CHECK-NEXT:    v128.const $push1=, 16, 0
 ; CHECK-NEXT:    i8x16.ne $push2=, $pop0, $pop1
-; CHECK-NEXT:    i8x16.all_true $push3=, $pop2
+; CHECK-NEXT:    v128.any_true $push3=, $pop2
 ; CHECK-NEXT:    return $pop3
   %l = load i128, ptr %ptr
   %res = icmp ne i128 %l, 16

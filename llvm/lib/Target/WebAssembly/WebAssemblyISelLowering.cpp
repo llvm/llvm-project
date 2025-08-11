@@ -3393,10 +3393,6 @@ combineVectorSizedSetCCEquality(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   EVT VT = N->getValueType(0);
   EVT OpVT = X.getValueType();
 
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
-  if (!isIntEqualitySetCC(CC))
-    return SDValue();
-
   SelectionDAG &DAG = DCI.DAG;
   if (DCI.DAG.getMachineFunction().getFunction().hasFnAttribute(
           Attribute::NoImplicitFloat))
@@ -3404,6 +3400,10 @@ combineVectorSizedSetCCEquality(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   // We're looking for an oversized integer equality comparison.
   if (!OpVT.isScalarInteger() || !OpVT.isByteSized() || OpVT != MVT::i128 ||
       !Subtarget->hasSIMD128())
+    return SDValue();
+
+  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  if (!isIntEqualitySetCC(CC))
     return SDValue();
 
   // Don't perform this combine if constructing the vector will be expensive.
@@ -3415,17 +3415,18 @@ combineVectorSizedSetCCEquality(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   if (!IsVectorBitCastCheap(X) || !IsVectorBitCastCheap(Y))
     return SDValue();
 
-  EVT VecVT = MVT::v16i8;
+  SDValue VecX = DAG.getBitcast(MVT::v16i8, X);
+  SDValue VecY = DAG.getBitcast(MVT::v16i8, Y);
+  SDValue Cmp = DAG.getSetCC(DL, MVT::v16i8, VecX, VecY, CC);
 
-  SDValue VecX = DAG.getBitcast(VecVT, X);
-  SDValue VecY = DAG.getBitcast(VecVT, Y);
-  SDValue Cmp = DAG.getSetCC(DL, VecVT, VecX, VecY, CC);
+  SDValue Intr =
+      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
+                  {DAG.getConstant(CC == ISD::SETEQ ? Intrinsic::wasm_alltrue
+                                                    : Intrinsic::wasm_anytrue,
+                                   DL, MVT::i32),
+                   Cmp});
 
-  SDValue AllTrue = DAG.getNode(
-      ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
-      {DAG.getConstant(Intrinsic::wasm_alltrue, DL, MVT::i32), Cmp});
-
-  return DAG.getSetCC(DL, VT, AllTrue, DAG.getConstant(0, DL, MVT::i32), CC);
+  return DAG.getSetCC(DL, VT, Intr, DAG.getConstant(0, DL, MVT::i32), CC);
 }
 
 static SDValue performSETCCCombine(SDNode *N,
