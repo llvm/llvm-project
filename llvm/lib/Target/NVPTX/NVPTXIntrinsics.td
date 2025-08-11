@@ -4895,13 +4895,13 @@ defm INT_SET_MAXNREG_DEC : SET_MAXNREG<"dec", int_nvvm_setmaxnreg_dec_sync_align
 // WGMMA fence instructions
 //
 let isConvergent = true, Predicates = [hasSM90a, hasPTX<80>] in {
-def WGMMA_FENCE_SYNC_ALIGNED : NullaryInst<"wgmma.fence.sync.aligned", int_nvvm_wgmma_fence_sync_aligned>;
+  def WGMMA_FENCE_SYNC_ALIGNED : NullaryInst<"wgmma.fence.sync.aligned", int_nvvm_wgmma_fence_sync_aligned>;
 
-def WGMMA_COMMIT_GROUP_SYNC_ALIGNED : NullaryInst<"wgmma.commit_group.sync.aligned", int_nvvm_wgmma_commit_group_sync_aligned>;
+  def WGMMA_COMMIT_GROUP_SYNC_ALIGNED : NullaryInst<"wgmma.commit_group.sync.aligned", int_nvvm_wgmma_commit_group_sync_aligned>;
 
-def WGMMA_WAIT_GROUP_SYNC_ALIGNED : BasicNVPTXInst<(outs), (ins i64imm:$n), "wgmma.wait_group.sync.aligned",
-                             [(int_nvvm_wgmma_wait_group_sync_aligned timm:$n)]>;
-} // isConvergent = true
+  def WGMMA_WAIT_GROUP_SYNC_ALIGNED : BasicNVPTXInst<(outs), (ins i64imm:$n), "wgmma.wait_group.sync.aligned",
+                              [(int_nvvm_wgmma_wait_group_sync_aligned timm:$n)]>;
+}
 
 let Predicates = [hasSM<90>, hasPTX<78>] in {
   def GRIDDEPCONTROL_LAUNCH_DEPENDENTS :
