@@ -1051,10 +1051,10 @@ void CodeViewDebug::switchToDebugSectionForSymbol(const MCSymbol *GVSym) {
   // comdat key. A section may be comdat because of -ffunction-sections or
   // because it is comdat in the IR.
   MCSectionCOFF *GVSec =
-      GVSym ? dyn_cast<MCSectionCOFF>(&GVSym->getSection()) : nullptr;
+      GVSym ? static_cast<MCSectionCOFF *>(&GVSym->getSection()) : nullptr;
   const MCSymbol *KeySym = GVSec ? GVSec->getCOMDATSymbol() : nullptr;
 
-  MCSectionCOFF *DebugSec = cast<MCSectionCOFF>(
+  auto *DebugSec = static_cast<MCSectionCOFF *>(
       CompilerInfoAsm->getObjFileLowering().getCOFFDebugSymbolsSection());
   DebugSec = OS.getContext().getAssociativeCOFFSection(DebugSec, KeySym);
 
@@ -1318,8 +1318,10 @@ void CodeViewDebug::collectVariableInfoFromMFTable(
         TFI->getFrameIndexReference(*Asm->MF, VI.getStackSlot(), FrameReg);
     uint16_t CVReg = TRI->getCodeViewRegNum(FrameReg);
 
-    assert(!FrameOffset.getScalable() &&
-           "Frame offsets with a scalable component are not supported");
+    if (FrameOffset.getScalable()) {
+      // No encoding currently exists for scalable offsets; bail out.
+      continue;
+    }
 
     // Calculate the label ranges.
     LocalVarDef DefRange =
@@ -1409,6 +1411,11 @@ void CodeViewDebug::calculateRanges(
     if (Location->FragmentInfo)
       if (Location->FragmentInfo->OffsetInBits % 8)
         continue;
+
+    if (TRI->isIgnoredCVReg(Location->Register)) {
+      // No encoding currently exists for this register; bail out.
+      continue;
+    }
 
     LocalVarDef DR;
     DR.CVRegister = TRI->getCodeViewRegNum(Location->Register);
@@ -2085,8 +2092,8 @@ TypeIndex CodeViewDebug::lowerTypeFunction(const DISubroutineType *Ty) {
   ArrayRef<TypeIndex> ArgTypeIndices = {};
   if (!ReturnAndArgTypeIndices.empty()) {
     auto ReturnAndArgTypesRef = ArrayRef(ReturnAndArgTypeIndices);
-    ReturnTypeIndex = ReturnAndArgTypesRef.front();
-    ArgTypeIndices = ReturnAndArgTypesRef.drop_front();
+    ReturnTypeIndex = ReturnAndArgTypesRef.consume_front();
+    ArgTypeIndices = ReturnAndArgTypesRef;
   }
 
   ArgListRecord ArgListRec(TypeRecordKind::ArgList, ArgTypeIndices);
@@ -3566,15 +3573,35 @@ void CodeViewDebug::collectDebugInfoForJumpTables(const MachineFunction *MF,
           break;
         }
 
-        CurFn->JumpTables.push_back(
-            {EntrySize, Base, BaseOffset, Branch,
-             MF->getJTISymbol(JumpTableIndex, MMI->getContext()),
-             JTI.getJumpTables()[JumpTableIndex].MBBs.size()});
+        const MachineJumpTableEntry &JTE = JTI.getJumpTables()[JumpTableIndex];
+        JumpTableInfo CVJTI{EntrySize,
+                            Base,
+                            BaseOffset,
+                            Branch,
+                            MF->getJTISymbol(JumpTableIndex, MMI->getContext()),
+                            JTE.MBBs.size(),
+                            {}};
+        for (const auto &MBB : JTE.MBBs)
+          CVJTI.Cases.push_back(MBB->getSymbol());
+        CurFn->JumpTables.push_back(std::move(CVJTI));
       });
 }
 
 void CodeViewDebug::emitDebugInfoForJumpTables(const FunctionInfo &FI) {
-  for (auto JumpTable : FI.JumpTables) {
+  // Emit S_LABEL32 records for each jump target
+  for (const auto &JumpTable : FI.JumpTables) {
+    for (const auto &CaseSym : JumpTable.Cases) {
+      MCSymbol *LabelEnd = beginSymbolRecord(SymbolKind::S_LABEL32);
+      OS.AddComment("Offset and segment");
+      OS.emitCOFFSecRel32(CaseSym, 0);
+      OS.AddComment("Flags");
+      OS.emitInt8(0);
+      emitNullTerminatedSymbolName(OS, CaseSym->getName());
+      endSymbolRecord(LabelEnd);
+    }
+  }
+
+  for (const auto &JumpTable : FI.JumpTables) {
     MCSymbol *JumpTableEnd = beginSymbolRecord(SymbolKind::S_ARMSWITCHTABLE);
     if (JumpTable.Base) {
       OS.AddComment("Base offset");

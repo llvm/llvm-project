@@ -18,15 +18,15 @@ define void @func_6(i8 %uc_8, i64 %uli_10) nounwind {
 ; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB0_1: # %for.body612
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-NEXT:    testb %bl, %bl
+; X86-NEXT:    testb %dl, %dl
 ; X86-NEXT:    je .LBB0_2
 ; X86-NEXT:  # %bb.3: # %if.end1401
 ; X86-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; X86-NEXT:    addl %eax, %esi
 ; X86-NEXT:    movw %si, s_2
-; X86-NEXT:    movw %dx, s_0
+; X86-NEXT:    movw %bx, s_0
 ; X86-NEXT:    incl %ecx
-; X86-NEXT:    incl %edx
+; X86-NEXT:    incl %ebx
 ; X86-NEXT:    cmpw $73, %cx
 ; X86-NEXT:    jl .LBB0_1
 ; X86-NEXT:  # %bb.4: # %for.body1703

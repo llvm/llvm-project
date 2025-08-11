@@ -15,8 +15,8 @@ tlbi vmalle1os
 .INST 0x5e104020
 // CHECK: .inst 0x5e104020
 
-.RELOC 0, R_AARCH64_NONE, 8
-// CHECK: .reloc 0, R_AARCH64_NONE, 8
+.RELOC ., R_AARCH64_NONE, 8
+// CHECK: .reloc {{.*}}, R_AARCH64_NONE, 8
 
 .HWORD 0x1234
 // CHECK: .hword  4660

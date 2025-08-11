@@ -453,7 +453,7 @@ define half @atomicrmw_add_f16_generic(ptr %addr, half %val) {
 ; CHECK-NEXT:    or.b32 %r17, %r16, %r15;
 ; CHECK-NEXT:    membar.sys;
 ; CHECK-NEXT:    atom.cas.b32 %r5, [%rd1], %r19, %r17;
-; CHECK-NEXT:    setp.ne.s32 %p1, %r5, %r19;
+; CHECK-NEXT:    setp.ne.b32 %p1, %r5, %r19;
 ; CHECK-NEXT:    mov.b32 %r19, %r5;
 ; CHECK-NEXT:    @%p1 bra $L__BB24_1;
 ; CHECK-NEXT:  // %bb.2: // %atomicrmw.end

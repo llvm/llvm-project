@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FILE_FILE_H
 #define LLVM_LIBC_SRC___SUPPORT_FILE_FILE_H
 
+#include "hdr/stdint_proxy.h"
 #include "hdr/stdio_macros.h"
 #include "hdr/types/off_t.h"
 #include "src/__support/CPP/new.h"
@@ -18,7 +19,6 @@
 #include "src/__support/threads/mutex.h"
 
 #include <stddef.h>
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 

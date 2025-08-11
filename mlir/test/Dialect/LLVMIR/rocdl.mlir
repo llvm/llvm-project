@@ -923,6 +923,13 @@ llvm.func @rocdl.s.waitcnt() {
   llvm.return
 }
 
+llvm.func @rocdl.s.sleep() {
+  // CHECK-LABEL: rocdl.s.sleep
+  // CHECK: rocdl.s.sleep 0
+  rocdl.s.sleep 0
+  llvm.return
+}
+
 llvm.func @rocdl.s.barrier() {
   // CHECK-LABEL: rocdl.s.barrier
   // CHECK: rocdl.s.barrier
@@ -951,7 +958,35 @@ llvm.func @rocdl.s.wait.dscnt() {
   llvm.return
 }
 
+llvm.func @rocdl.s.wait.loadcnt() {
+  // CHECK-LABEL: rocdl.s.wait.loadcnt
+  // CHECK: rocdl.s.wait.loadcnt 0
+  rocdl.s.wait.loadcnt 0
+  llvm.return
+}
+
+llvm.func @rocdl.s.wait.storecnt() {
+  // CHECK-LABEL: rocdl.s.wait.storecnt
+  // CHECK: rocdl.s.wait.storecnt 0
+  rocdl.s.wait.storecnt 0
+  llvm.return
+}
+
+llvm.func @rocdl.s.wait.expcnt() {
+  // CHECK-LABEL: rocdl.s.wait.expcnt
+  // CHECK: rocdl.s.wait.expcnt 0
+  rocdl.s.wait.expcnt 0
+  llvm.return
+}
+
 // -----
+
+llvm.func @rocdl.readfirstlane(%src : f32) -> f32 {
+  // CHECK-LABEL: rocdl.readfirstlane
+  // CHECK: rocdl.readfirstlane %{{.*}} : f32
+  %ret = rocdl.readfirstlane %src : f32
+  llvm.return %ret : f32
+}
 
 llvm.func @rocdl.readlane(%src : f32) -> f32 {
   %cst0 = llvm.mlir.constant(0 : i32) : i32

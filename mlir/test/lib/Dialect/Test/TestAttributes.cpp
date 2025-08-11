@@ -214,6 +214,16 @@ static void printTrueFalse(AsmPrinter &p, std::optional<int> result) {
 }
 
 //===----------------------------------------------------------------------===//
+// TestCopyCountAttr Implementation
+//===----------------------------------------------------------------------===//
+
+LogicalResult TestCopyCountAttr::verify(
+    llvm::function_ref<::mlir::InFlightDiagnostic()> /*emitError*/,
+    CopyCount /*copy_count*/) {
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // CopyCountAttr Implementation
 //===----------------------------------------------------------------------===//
 
@@ -513,6 +523,18 @@ Attribute SlashAttr::parse(AsmParser &parser, Type type) {
 
 void SlashAttr::print(AsmPrinter &printer) const {
   printer << "<" << getLhs() << " / " << getRhs() << ">";
+}
+
+//===----------------------------------------------------------------------===//
+// TestCustomStorageCtorAttr
+//===----------------------------------------------------------------------===//
+
+test::detail::TestCustomStorageCtorAttrAttrStorage *
+test::detail::TestCustomStorageCtorAttrAttrStorage::construct(
+    mlir::StorageUniquer::StorageAllocator &, std::tuple<int> &&) {
+  // Note: this tests linker error ("undefined symbol"), the actual
+  // implementation is not important.
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//

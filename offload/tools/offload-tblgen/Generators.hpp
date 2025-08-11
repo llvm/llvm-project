@@ -11,6 +11,7 @@
 #include "llvm/TableGen/Record.h"
 
 void EmitOffloadAPI(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+void EmitOffloadDoc(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitOffloadFuncNames(const llvm::RecordKeeper &Records,
                           llvm::raw_ostream &OS);
 void EmitOffloadImplFuncDecls(const llvm::RecordKeeper &Records,
@@ -23,3 +24,4 @@ void EmitOffloadExports(const llvm::RecordKeeper &Records,
                         llvm::raw_ostream &OS);
 void EmitOffloadErrcodes(const llvm::RecordKeeper &Records,
                          llvm::raw_ostream &OS);
+void EmitOffloadInfo(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);

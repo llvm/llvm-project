@@ -423,7 +423,7 @@ void ModuloScheduleExpander::generateExistingPhis(
     // potentially define two values.
     unsigned MaxPhis = PrologStage + 2;
     if (!InKernel && (int)PrologStage <= LoopValStage)
-      MaxPhis = std::max((int)MaxPhis - (int)LoopValStage, 1);
+      MaxPhis = std::max((int)MaxPhis - LoopValStage, 1);
     unsigned NumPhis = std::min(NumStages, MaxPhis);
 
     Register NewReg;
