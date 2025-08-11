@@ -3834,9 +3834,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   //         <1 x i64> @llvm.x86.mmx.pmadd.wd(<1 x i64> %a, <1 x i64> %b)
   //
   //       Three operands:
-  //       <4 x i32> @llvm.x86.avx512.vpdpbusd.128(<4 x i32> %s, <4 x i32> %a,
-  //       <4 x i32> %b) (the result of multiply-add'ing %a and %b is
-  //       accumulated with %s)
+  //         <4 x i32> @llvm.x86.avx512.vpdpbusd.128
+  //                       (<4 x i32> %s, <4 x i32> %a, <4 x i32> %b)
+  //         (the result of multiply-add'ing %a and %b is accumulated with %s)
   void handleVectorPmaddIntrinsic(IntrinsicInst &I, unsigned ReductionFactor,
                                   unsigned EltSizeInBits = 0) {
     IRBuilder<> IRB(&I);
@@ -3886,6 +3886,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       S2 = IRB.CreateBitCast(S2, getShadowTy(ParamType));
     }
 
+    assert(ParamType->getNumElements() ==
+           ReturnType->getNumElements() * ReductionFactor);
+
     Value *S1S2 = IRB.CreateOr(S1, S2);
 
     // Multiplying an uninitialized / element by zero results in an initialized
@@ -3904,10 +3907,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     //                <16 x i8> into <4 x i8>  (reduction factor == 4)
     //
     // Handle it similarly to handlePairwiseShadowOrIntrinsic().
-
-    assert(ParamType->getNumElements() ==
-           ReturnType->getNumElements() * ReductionFactor);
-
     unsigned TotalNumElems = ParamType->getNumElements();
     Value *OrShadow = nullptr;
     for (unsigned i = 0; i < ReductionFactor; i++) {
