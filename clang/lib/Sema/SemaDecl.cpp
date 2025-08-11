@@ -5463,40 +5463,44 @@ InjectAnonymousStructOrUnionMembers(Sema &SemaRef, Scope *S, DeclContext *Owner,
         //   distinct from the names of any other entity in the
         //   scope in which the anonymous union is declared.
         Invalid = true;
-      } else {
-        // C++ [class.union]p2:
-        //   For the purpose of name lookup, after the anonymous union
-        //   definition, the members of the anonymous union are
-        //   considered to have been defined in the scope in which the
-        //   anonymous union is declared.
-        unsigned OldChainingSize = Chaining.size();
-        if (IndirectFieldDecl *IF = dyn_cast<IndirectFieldDecl>(VD))
-          Chaining.append(IF->chain_begin(), IF->chain_end());
-        else
-          Chaining.push_back(VD);
-
-        assert(Chaining.size() >= 2);
-        NamedDecl **NamedChain =
-          new (SemaRef.Context)NamedDecl*[Chaining.size()];
-        for (unsigned i = 0; i < Chaining.size(); i++)
-          NamedChain[i] = Chaining[i];
-
-        IndirectFieldDecl *IndirectField = IndirectFieldDecl::Create(
-            SemaRef.Context, Owner, VD->getLocation(), VD->getIdentifier(),
-            VD->getType(), {NamedChain, Chaining.size()});
-
-        for (const auto *Attr : VD->attrs())
-          IndirectField->addAttr(Attr->clone(SemaRef.Context));
-
-        IndirectField->setAccess(AS);
-        IndirectField->setImplicit();
-        SemaRef.PushOnScopeChains(IndirectField, S);
-
-        // That includes picking up the appropriate access specifier.
-        if (AS != AS_none) IndirectField->setAccess(AS);
-
-        Chaining.resize(OldChainingSize);
       }
+      // Inject the IndirectFieldDecl even if invalid, because later
+      // diagnostics may depend on it being present.
+
+      // C++ [class.union]p2:
+      //   For the purpose of name lookup, after the anonymous union
+      //   definition, the members of the anonymous union are
+      //   considered to have been defined in the scope in which the
+      //   anonymous union is declared.
+      unsigned OldChainingSize = Chaining.size();
+      if (IndirectFieldDecl *IF = dyn_cast<IndirectFieldDecl>(VD))
+        Chaining.append(IF->chain_begin(), IF->chain_end());
+      else
+        Chaining.push_back(VD);
+
+      assert(Chaining.size() >= 2);
+      NamedDecl **NamedChain =
+          new (SemaRef.Context) NamedDecl *[Chaining.size()];
+      for (unsigned i = 0; i < Chaining.size(); i++)
+        NamedChain[i] = Chaining[i];
+
+      IndirectFieldDecl *IndirectField = IndirectFieldDecl::Create(
+          SemaRef.Context, Owner, VD->getLocation(), VD->getIdentifier(),
+          VD->getType(), {NamedChain, Chaining.size()});
+
+      for (const auto *Attr : VD->attrs())
+        IndirectField->addAttr(Attr->clone(SemaRef.Context));
+
+      IndirectField->setAccess(AS);
+      IndirectField->setImplicit();
+      IndirectField->setInvalidDecl(Invalid);
+      SemaRef.PushOnScopeChains(IndirectField, S);
+
+      // That includes picking up the appropriate access specifier.
+      if (AS != AS_none)
+        IndirectField->setAccess(AS);
+
+      Chaining.resize(OldChainingSize);
     }
   }
 
