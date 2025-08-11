@@ -2131,17 +2131,6 @@ def Vector_GatherOp :
       return build($_builder, $_state, resultType, base, indices, index_vec, mask, passthrough,
                    alignment.has_value() ? $_builder.getI64IntegerAttr(alignment->value()) :
                                     nullptr);
-    }]>,
-    OpBuilder<(ins "TypeRange":$resultTypes,
-                   "Value":$base,
-                   "ValueRange":$indices,
-                   "Value":$index_vec,
-                   "Value":$mask,
-                   "Value":$passthrough,
-                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
-      return build($_builder, $_state, resultTypes, base, indices, index_vec, mask, passthrough,
-                   alignment.has_value() ? $_builder.getI64IntegerAttr(alignment->value()) :
-                                    nullptr);
     }]>
   ];
 }
