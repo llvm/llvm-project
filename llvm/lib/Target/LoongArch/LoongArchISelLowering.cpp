@@ -8403,15 +8403,6 @@ bool LoongArchTargetLowering::isLegalAddressingMode(const DataLayout &DL,
                                    Subtarget.hasUAL() && !isa<VectorType>(Ty)))
     return false;
 
-  // FIXME: Is it necessary and possible to perform fine-grained processing
-  // according to vector element types?
-  if (Subtarget.hasExtLSX() && isa<VectorType>(Ty) &&
-      !(isInt<8>(AM.BaseOffs) || isShiftedInt<8, 1>(AM.BaseOffs) ||
-        isShiftedInt<8, 2>(AM.BaseOffs) || isShiftedInt<8, 3>(AM.BaseOffs) ||
-        isShiftedInt<11, 1>(AM.BaseOffs) || isShiftedInt<10, 2>(AM.BaseOffs) ||
-        isShiftedInt<9, 3>(AM.BaseOffs)))
-    return false;
-
   switch (AM.Scale) {
   case 0:
     // "r+i" or just "i", depending on HasBaseReg.
