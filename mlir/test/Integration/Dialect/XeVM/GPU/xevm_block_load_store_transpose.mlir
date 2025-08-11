@@ -17,9 +17,13 @@ module @gemm attributes {gpu.container_module} {
       %base_pitch = arith.constant 32 : i32 // bytewidth of the base row
       %x = arith.constant 0 : i32
       %y = arith.constant 0 : i32
-      // Normally a work-item loads a vertical slice (↓), but with *transpose* a work-item loads a horizontal slice (→).
-      // The tile dimension we want to slice must be a multiple of the sub-group size: e.g., we want to slice rows (→), then we need SG_SIZE % tile_height == 0.
-      %loaded = xevm.blockload2d %src, %base_width, %base_height, %base_pitch, %x, %y <{elem_size_in_bits=32 : i32, tile_width=8 : i32, tile_height=16 : i32, v_blocks=1 : i32, transpose=true, pack_register=false}> : (!llvm.ptr<1>, i32, i32, i32, i32, i32) -> vector<8xi32>
+      // Normally a work-item loads a vertical slice (↓), but with *transpose* a work-item
+      // loads a horizontal slice (→).
+      // The tile dimension we want to slice must be a multiple of the sub-group size:
+      //  e.g., we want to slice rows (→), then we need SG_SIZE % tile_height == 0.
+      %loaded = xevm.blockload2d %src, %base_width, %base_height, %base_pitch, %x, %y
+          <{elem_size_in_bits=32 : i32, tile_width=8 : i32, tile_height=16 : i32, v_blocks=1 : i32,
+            transpose=true, pack_register=false}> : (!llvm.ptr<1>, i32, i32, i32, i32, i32) -> vector<8xi32>
       %loaded_f32 = vector.bitcast %loaded : vector<8xi32> to vector<8xf32>
 
       %c0 = arith.constant 0 : i32
@@ -34,7 +38,8 @@ module @gemm attributes {gpu.container_module} {
       %base_width_store = arith.constant 64 : i32 // bytewidth of the block
       %base_pitch_store = arith.constant 64 : i32 // bytewidth of the base row
       // "Transposed" stores are not available, meaning a work-item can store its vector as a vertical slice (↓).
-      xevm.blockstore2d %dst, %base_width_store, %base_height_store, %base_pitch_store, %x, %y, %loaded <{elem_size_in_bits=32 : i32, tile_width=16 : i32, tile_height=8 : i32}> : (!llvm.ptr<1>, i32, i32, i32, i32, i32, vector<8xi32>)
+      xevm.blockstore2d %dst, %base_width_store, %base_height_store, %base_pitch_store, %x, %y, %loaded
+          <{elem_size_in_bits=32 : i32, tile_width=16 : i32, tile_height=8 : i32}> : (!llvm.ptr<1>, i32, i32, i32, i32, i32, vector<8xi32>)
       gpu.return
     }
   }
@@ -56,7 +61,8 @@ module @gemm attributes {gpu.container_module} {
     %dst_ptr = llvm.inttoptr %dst_ptr_as_i64 : i64 to !llvm.ptr
     %dst_ptr_casted = llvm.addrspacecast %dst_ptr : !llvm.ptr to !llvm.ptr<1>
 
-    gpu.launch_func @kernel::@block_load_store blocks in (%c1, %c1, %c1) threads in (%c16, %c1, %c1) args(%src_ptr_casted : !llvm.ptr<1>, %dst_ptr_casted : !llvm.ptr<1>)
+    gpu.launch_func @kernel::@block_load_store blocks in (%c1, %c1, %c1) threads in (%c16, %c1, %c1)
+        args(%src_ptr_casted : !llvm.ptr<1>, %dst_ptr_casted : !llvm.ptr<1>)
     gpu.dealloc %memref_src : memref<16x8xf32>
     %dst = memref.alloc() : memref<8x16xf32>
     gpu.memcpy %dst, %memref_dst : memref<8x16xf32>, memref<8x16xf32>

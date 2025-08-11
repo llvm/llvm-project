@@ -30,7 +30,8 @@ module @gemm attributes {gpu.container_module} {
     %1 = arith.index_cast %0 : index to i64
     %2 = llvm.inttoptr %1 : i64 to !llvm.ptr
     %src_casted = llvm.addrspacecast %2 : !llvm.ptr to !llvm.ptr<1>
-    gpu.launch_func @kernel::@store_constant blocks in (%c1, %c1, %c1) threads in (%c16, %c1, %c1) args(%src_casted : !llvm.ptr<1>)
+    gpu.launch_func @kernel::@store_constant blocks in (%c1, %c1, %c1) threads in (%c16, %c1, %c1)
+        args(%src_casted : !llvm.ptr<1>)
     %dst = memref.alloc() : memref<8x16xf32>
     gpu.memcpy %dst, %memref_0 : memref<8x16xf32>, memref<8x16xf32>
     gpu.dealloc %memref_0 : memref<8x16xf32>
