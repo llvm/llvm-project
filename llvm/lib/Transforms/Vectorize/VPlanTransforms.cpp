@@ -2174,6 +2174,29 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
             Intrinsic::vp_merge, {&AllOneMask, LHS, RHS, &EVL},
             TypeInfo.inferScalarType(LHS), VPI->getDebugLoc());
       })
+      .Case<VPWidenIntrinsicRecipe>(
+          [&](VPWidenIntrinsicRecipe *VPI) -> VPRecipeBase * {
+            switch (VPI->getVectorIntrinsicID()) {
+            case Intrinsic::vp_udiv:
+            case Intrinsic::vp_sdiv:
+            case Intrinsic::vp_urem:
+            case Intrinsic::vp_srem:
+              break;
+            default:
+              return nullptr;
+            }
+            if (!match(VPI->getOperand(3), m_AllOnes()))
+              return nullptr;
+            VPValue *NewMask = GetNewMask(VPI->getOperand(2));
+            if (NewMask == HeaderMask)
+              return nullptr;
+            if (!NewMask)
+              NewMask = &AllOneMask;
+            return new VPWidenIntrinsicRecipe(
+                VPI->getVectorIntrinsicID(),
+                {VPI->getOperand(0), VPI->getOperand(1), NewMask, &EVL},
+                VPI->getResultType(), VPI->getDebugLoc());
+          })
       .Default([&](VPRecipeBase *R) { return nullptr; });
 }
 
