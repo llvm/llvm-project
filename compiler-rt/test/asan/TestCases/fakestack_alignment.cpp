@@ -46,9 +46,9 @@ void *Thread(void *unused) {
 int main(int argc, char **argv) {
   pthread_attr_t attr;
   pthread_attr_init(&attr);
-  #ifdef THREAD_STACK_SIZE
+#ifdef THREAD_STACK_SIZE
   pthread_attr_setstacksize(&attr, THREAD_STACK_SIZE);
-  #endif
+#endif
 
   pthread_t t[THREAD_COUNT];
   for (int i = 0; i < THREAD_COUNT; i++)
