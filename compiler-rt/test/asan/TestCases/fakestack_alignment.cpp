@@ -40,7 +40,7 @@ void *Thread(void *unused) {
   if (alignment != 0)
     misaligned = true;
 
-  return NULL;
+  return nullptr;
 }
 
 int main(int argc, char **argv) {
@@ -50,14 +50,14 @@ int main(int argc, char **argv) {
   pthread_attr_setstacksize(&attr, THREAD_STACK_SIZE);
 #endif
 
-  pthread_t t[THREAD_COUNT];
-  for (int i = 0; i < THREAD_COUNT; i++)
-    pthread_create(&t[i], &attr, Thread, 0);
+  pthread_t threads[THREAD_COUNT];
+  for (pthread_t& t : threads)
+    pthread_create(&t, &attr, Thread, 0);
 
   pthread_attr_destroy(&attr);
 
-  for (int i = 0; i < THREAD_COUNT; i++)
-    pthread_join(t[i], 0);
+  for (pthread_t& t : threads)
+    pthread_join(t, 0);
 
   if (misaligned) {
     printf("Test failed: not perfectly aligned\n");
