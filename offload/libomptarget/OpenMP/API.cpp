@@ -683,3 +683,20 @@ EXTERN void *omp_get_mapped_ptr(const void *Ptr, int DeviceNum) {
 
   return TPR.TargetPointer;
 }
+
+EXTERN void *omp_get_device_ptr_if_present(void *Ptr, int DeviceNum) {
+  if (!Ptr) {
+    return nullptr;
+  }
+  // Validate device number
+  if (DeviceNum < 0 || DeviceNum >= omp_get_num_devices()) {
+    return Ptr;
+  }
+  // If not present on the device, it should already be a device ptr
+  if (!omp_target_is_present(Ptr, DeviceNum)) {
+    return Ptr;
+  }
+  // Get the mapped device pointer
+  void *DevicePtr = omp_get_mapped_ptr(Ptr, DeviceNum);
+  ? return DevicePtr ? DevicePtr : Ptr;
+}
