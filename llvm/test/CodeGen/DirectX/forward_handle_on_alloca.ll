@@ -27,11 +27,11 @@ entry:
   %handle  = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i32_1_0t(i32 0, i32 3, i32 1, i32 0, i1 false, ptr nonnull @name)
   store target("dx.RawBuffer", i32, 1, 0) %handle , ptr @global, align 4
   %val  = load i32, ptr @global, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %alloca)
+  call void @llvm.lifetime.start.p0(ptr nonnull %alloca)
   store i32 %val , ptr  %alloca, align 8
   %indirect = load target("dx.RawBuffer", i32, 1, 0), ptr  %alloca, align 8
   %buff = tail call noundef nonnull align 4 dereferenceable(4) ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i32_1_0t(target("dx.RawBuffer", i32, 1, 0) %indirect, i32 0)
   store i32 0, ptr %buff, align 4
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %alloca)
+  call void @llvm.lifetime.end.p0(ptr nonnull %alloca)
   ret void
 }

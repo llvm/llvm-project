@@ -87,8 +87,8 @@ static bool forwardHandleAccesses(Function &F, DominatorTree &DT) {
         // store them so that we may delete the alloca matches
         case Intrinsic::lifetime_start:
         case Intrinsic::lifetime_end:
-          if (II->arg_size() >= 2) {
-            Value *Ptr = II->getArgOperand(1);
+          if (II->arg_size() >= 1) {
+            Value *Ptr = II->getArgOperand(0);
             if (auto *Alloca = dyn_cast<AllocaInst>(Ptr->stripPointerCasts()))
               LifeTimeIntrinsicMap[Alloca].push_back(II);
           }
