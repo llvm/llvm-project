@@ -131,19 +131,18 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   }
 }
 
-static void fixupLeb128(MCContext &Ctx, const MCFixup &Fixup,
-                        MutableArrayRef<char> Data, uint64_t Value) {
+static void fixupLeb128(MCContext &Ctx, const MCFixup &Fixup, uint8_t *Data,
+                        uint64_t Value) {
   unsigned I;
-  for (I = 0; I != Data.size() && Value; ++I, Value >>= 7)
+  for (I = 0; Value; ++I, Value >>= 7)
     Data[I] |= uint8_t(Value & 0x7f);
   if (Value)
     Ctx.reportError(Fixup.getLoc(), "Invalid uleb128 value!");
 }
 
 void LoongArchAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
-                                     const MCValue &Target,
-                                     MutableArrayRef<char> Data, uint64_t Value,
-                                     bool IsResolved) {
+                                     const MCValue &Target, uint8_t *Data,
+                                     uint64_t Value, bool IsResolved) {
   if (IsResolved && shouldForceRelocation(Fixup, Target))
     IsResolved = false;
   IsResolved = addReloc(F, Fixup, Target, Value, IsResolved);
@@ -166,14 +165,14 @@ void LoongArchAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   // Shift the value into position.
   Value <<= Info.TargetOffset;
 
-  unsigned Offset = Fixup.getOffset();
   unsigned NumBytes = alignTo(Info.TargetSize + Info.TargetOffset, 8) / 8;
 
-  assert(Offset + NumBytes <= F.getSize() && "Invalid fixup offset!");
+  assert(Fixup.getOffset() + NumBytes <= F.getSize() &&
+         "Invalid fixup offset!");
   // For each byte of the fragment that the fixup touches, mask in the
   // bits from the fixup value.
   for (unsigned I = 0; I != NumBytes; ++I) {
-    Data[Offset + I] |= uint8_t((Value >> (I * 8)) & 0xff);
+    Data[I] |= uint8_t((Value >> (I * 8)) & 0xff);
   }
 }
 
@@ -255,7 +254,8 @@ bool LoongArchAsmBackend::relaxAlign(MCFragment &F, unsigned &Size) {
       MCFixup::create(0, Expr, FirstLiteralRelocationKind + ELF::R_LARCH_ALIGN);
   F.setVarFixups({Fixup});
   F.setLinkerRelaxable();
-  F.getParent()->setLinkerRelaxable();
+  if (!F.getParent()->isLinkerRelaxable())
+    F.getParent()->setFirstLinkerRelaxable(F.getLayoutOrder());
   return true;
 }
 
@@ -274,15 +274,14 @@ bool LoongArchAsmBackend::relaxDwarfLineAddr(MCFragment &F,
 
   int64_t LineDelta = F.getDwarfLineDelta();
   const MCExpr &AddrDelta = F.getDwarfAddrDelta();
-  SmallVector<MCFixup, 1> Fixups;
   size_t OldSize = F.getVarSize();
 
   int64_t Value;
   if (AddrDelta.evaluateAsAbsolute(Value, *Asm))
     return false;
-  bool IsAbsolute = AddrDelta.evaluateKnownAbsolute(Value, *Asm);
-  assert(IsAbsolute && "CFA with invalid expression");
-  (void)IsAbsolute;
+  [[maybe_unused]] bool IsAbsolute =
+      AddrDelta.evaluateKnownAbsolute(Value, *Asm);
+  assert(IsAbsolute);
 
   SmallVector<char> Data;
   raw_svector_ostream OS(Data);
@@ -293,33 +292,23 @@ bool LoongArchAsmBackend::relaxDwarfLineAddr(MCFragment &F,
     encodeSLEB128(LineDelta, OS);
   }
 
-  unsigned Offset;
-  std::pair<MCFixupKind, MCFixupKind> FK;
-
   // According to the DWARF specification, the `DW_LNS_fixed_advance_pc` opcode
   // takes a single unsigned half (unencoded) operand. The maximum encodable
   // value is therefore 65535.  Set a conservative upper bound for relaxation.
+  unsigned PCBytes;
   if (Value > 60000) {
     unsigned PtrSize = C.getAsmInfo()->getCodePointerSize();
-
-    OS << uint8_t(dwarf::DW_LNS_extended_op);
-    encodeULEB128(PtrSize + 1, OS);
-
-    OS << uint8_t(dwarf::DW_LNE_set_address);
-    Offset = OS.tell();
     assert((PtrSize == 4 || PtrSize == 8) && "Unexpected pointer size");
-    FK = getRelocPairForSize(PtrSize == 4 ? 32 : 64);
+    PCBytes = PtrSize;
+    OS << uint8_t(dwarf::DW_LNS_extended_op) << uint8_t(PtrSize + 1)
+       << uint8_t(dwarf::DW_LNE_set_address);
     OS.write_zeros(PtrSize);
   } else {
+    PCBytes = 2;
     OS << uint8_t(dwarf::DW_LNS_fixed_advance_pc);
-    Offset = OS.tell();
-    FK = getRelocPairForSize(16);
     support::endian::write<uint16_t>(OS, 0, llvm::endianness::little);
   }
-
-  const MCBinaryExpr &MBE = cast<MCBinaryExpr>(AddrDelta);
-  Fixups.push_back(MCFixup::create(Offset, MBE.getLHS(), std::get<0>(FK)));
-  Fixups.push_back(MCFixup::create(Offset, MBE.getRHS(), std::get<1>(FK)));
+  auto Offset = OS.tell() - PCBytes;
 
   if (LineDelta == INT64_MAX) {
     OS << uint8_t(dwarf::DW_LNS_extended_op);
@@ -330,7 +319,8 @@ bool LoongArchAsmBackend::relaxDwarfLineAddr(MCFragment &F,
   }
 
   F.setVarContents(Data);
-  F.setVarFixups(Fixups);
+  F.setVarFixups({MCFixup::create(Offset, &AddrDelta,
+                                  MCFixup::getDataKindForSize(PCBytes))});
   WasRelaxed = OldSize != Data.size();
   return true;
 }

@@ -709,3 +709,44 @@ func.func @simple_std_for_loops_annotation(%arg0 : index, %arg1 : index, %arg2 :
   } {llvm.loop_annotation = #no_unroll}
   return
 }
+
+// -----
+
+// CHECK: #[[LOOP_UNROLL_DISABLE:.*]] = #llvm.loop_unroll<disable = true>
+// CHECK: #[[NO_UNROLL:.*]] = #llvm.loop_annotation<unroll = #[[LOOP_UNROLL_DISABLE]]>
+// CHECK: func @simple_while_loops_annotation
+//      CHECK: cf.br
+//      CHECK: cf.cond_br {{.*}} {llvm.loop_annotation = #[[NO_UNROLL]]}
+//      CHECK: return
+#no_unroll = #llvm.loop_annotation<unroll = <disable = true>>
+func.func @simple_while_loops_annotation(%arg0 : i1) {
+  scf.while : () -> () {
+    scf.condition(%arg0)
+  } do {
+    scf.yield
+  } attributes {llvm.loop_annotation = #no_unroll}
+  return
+}
+
+// -----
+
+// CHECK: #[[LOOP_UNROLL_DISABLE:.*]] = #llvm.loop_unroll<disable = true>
+// CHECK: #[[NO_UNROLL:.*]] = #llvm.loop_annotation<unroll = #[[LOOP_UNROLL_DISABLE]]>
+// CHECK: func @do_while_loops_annotation
+// CHECK: cf.br
+// CHECK: cf.cond_br
+// CHECK: cf.br {{.*}} {llvm.loop_annotation = #[[NO_UNROLL]]}
+// CHECK: return
+#no_unroll = #llvm.loop_annotation<unroll = <disable = true>>
+func.func @do_while_loops_annotation() {
+  %c0_i32 = arith.constant 0 : i32
+  scf.while (%arg2 = %c0_i32) : (i32) -> (i32) {
+    %0 = "test.make_condition"() : () -> i1
+    scf.condition(%0) %c0_i32 : i32
+  } do {
+ ^bb0(%arg2: i32):    
+    scf.yield %c0_i32: i32
+  } attributes {llvm.loop_annotation = #no_unroll}
+  return
+}
+

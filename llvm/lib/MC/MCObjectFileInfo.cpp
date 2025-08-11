@@ -1135,9 +1135,10 @@ MCObjectFileInfo::getCallGraphSection(const MCSection &TextSec) const {
     Flags |= ELF::SHF_GROUP;
   }
 
-  return Ctx->getELFSection(".callgraph", ELF::SHT_PROGBITS, Flags, 0,
-                            GroupName, true, ElfSec.getUniqueID(),
-                            cast<MCSymbolELF>(TextSec.getBeginSymbol()));
+  return Ctx->getELFSection(
+      ".callgraph", ELF::SHT_PROGBITS, Flags, 0, GroupName, true,
+      ElfSec.getUniqueID(),
+      static_cast<const MCSymbolELF *>(TextSec.getBeginSymbol()));
 }
 
 MCSection *
@@ -1154,9 +1155,10 @@ MCObjectFileInfo::getStackSizesSection(const MCSection &TextSec) const {
     Flags |= ELF::SHF_GROUP;
   }
 
-  return Ctx->getELFSection(".stack_sizes", ELF::SHT_PROGBITS, Flags, 0,
-                            GroupName, true, ElfSec.getUniqueID(),
-                            cast<MCSymbolELF>(TextSec.getBeginSymbol()));
+  return Ctx->getELFSection(
+      ".stack_sizes", ELF::SHT_PROGBITS, Flags, 0, GroupName, true,
+      ElfSec.getUniqueID(),
+      static_cast<const MCSymbolELF *>(TextSec.getBeginSymbol()));
 }
 
 MCSection *
@@ -1174,9 +1176,10 @@ MCObjectFileInfo::getBBAddrMapSection(const MCSection &TextSec) const {
 
   // Use the text section's begin symbol and unique ID to create a separate
   // .llvm_bb_addr_map section associated with every unique text section.
-  return Ctx->getELFSection(".llvm_bb_addr_map", ELF::SHT_LLVM_BB_ADDR_MAP,
-                            Flags, 0, GroupName, true, ElfSec.getUniqueID(),
-                            cast<MCSymbolELF>(TextSec.getBeginSymbol()));
+  return Ctx->getELFSection(
+      ".llvm_bb_addr_map", ELF::SHT_LLVM_BB_ADDR_MAP, Flags, 0, GroupName, true,
+      ElfSec.getUniqueID(),
+      static_cast<const MCSymbolELF *>(TextSec.getBeginSymbol()));
 }
 
 MCSection *
@@ -1192,10 +1195,10 @@ MCObjectFileInfo::getKCFITrapSection(const MCSection &TextSec) const {
     Flags |= ELF::SHF_GROUP;
   }
 
-  return Ctx->getELFSection(".kcfi_traps", ELF::SHT_PROGBITS, Flags, 0,
-                            GroupName,
-                            /*IsComdat=*/true, ElfSec.getUniqueID(),
-                            cast<MCSymbolELF>(TextSec.getBeginSymbol()));
+  return Ctx->getELFSection(
+      ".kcfi_traps", ELF::SHT_PROGBITS, Flags, 0, GroupName,
+      /*IsComdat=*/true, ElfSec.getUniqueID(),
+      static_cast<const MCSymbolELF *>(TextSec.getBeginSymbol()));
 }
 
 MCSection *
@@ -1211,9 +1214,10 @@ MCObjectFileInfo::getPseudoProbeSection(const MCSection &TextSec) const {
     Flags |= ELF::SHF_GROUP;
   }
 
-  return Ctx->getELFSection(PseudoProbeSection->getName(), ELF::SHT_PROGBITS,
-                            Flags, 0, GroupName, true, ElfSec.getUniqueID(),
-                            cast<MCSymbolELF>(TextSec.getBeginSymbol()));
+  return Ctx->getELFSection(
+      PseudoProbeSection->getName(), ELF::SHT_PROGBITS, Flags, 0, GroupName,
+      true, ElfSec.getUniqueID(),
+      static_cast<const MCSymbolELF *>(TextSec.getBeginSymbol()));
 }
 
 MCSection *
@@ -1261,7 +1265,7 @@ MCSection *MCObjectFileInfo::getPCSection(StringRef Name,
     GroupName = Group->getName();
     Flags |= ELF::SHF_GROUP;
   }
-  return Ctx->getELFSection(Name, ELF::SHT_PROGBITS, Flags, 0, GroupName, true,
-                            ElfSec.getUniqueID(),
-                            cast<MCSymbolELF>(TextSec->getBeginSymbol()));
+  return Ctx->getELFSection(
+      Name, ELF::SHT_PROGBITS, Flags, 0, GroupName, true, ElfSec.getUniqueID(),
+      static_cast<const MCSymbolELF *>(TextSec->getBeginSymbol()));
 }

@@ -2011,12 +2011,17 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN,
     NewPN->addIncoming(NewPhiValues[i], PN->getIncomingBlock(i));
 
   if (IdenticalUsers) {
-    for (User *U : make_early_inc_range(PN->users())) {
+    // Collect and deduplicate users up-front to avoid iterator invalidation.
+    SmallSetVector<Instruction *, 4> ToReplace;
+    for (User *U : PN->users()) {
       Instruction *User = cast<Instruction>(U);
       if (User == &I)
         continue;
-      replaceInstUsesWith(*User, NewPN);
-      eraseInstFromFunction(*User);
+      ToReplace.insert(User);
+    }
+    for (Instruction *I : ToReplace) {
+      replaceInstUsesWith(*I, NewPN);
+      eraseInstFromFunction(*I);
     }
     OneUse = true;
   }

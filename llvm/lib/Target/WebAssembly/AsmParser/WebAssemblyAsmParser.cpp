@@ -212,12 +212,12 @@ static wasm::WasmLimits defaultLimits() {
 static MCSymbolWasm *getOrCreateFunctionTableSymbol(MCContext &Ctx,
                                                     const StringRef &Name,
                                                     bool Is64) {
-  MCSymbolWasm *Sym = cast_or_null<MCSymbolWasm>(Ctx.lookupSymbol(Name));
+  auto *Sym = static_cast<MCSymbolWasm *>(Ctx.lookupSymbol(Name));
   if (Sym) {
     if (!Sym->isFunctionTable())
       Ctx.reportError(SMLoc(), "symbol is not a wasm funcref table");
   } else {
-    Sym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(Name));
+    Sym = static_cast<MCSymbolWasm *>(Ctx.getOrCreateSymbol(Name));
     Sym->setFunctionTable(Is64);
     // The default function table is synthesized by the linker.
     Sym->setUndefined();
@@ -703,7 +703,7 @@ public:
       ExpectBlockType = false;
       // The "true" here will cause this to be a nameless symbol.
       MCSymbol *Sym = Ctx.createTempSymbol("typeindex", true);
-      auto *WasmSym = cast<MCSymbolWasm>(Sym);
+      auto *WasmSym = static_cast<MCSymbolWasm *>(Sym);
       WasmSym->setSignature(Signature);
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
       const MCExpr *Expr =
@@ -949,7 +949,8 @@ public:
           return error("Unknown type in .globaltype modifier: ", TypeTok);
       }
       // Now set this symbol with the correct type.
-      auto *WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
+      auto *WasmSym =
+          static_cast<MCSymbolWasm *>(Ctx.getOrCreateSymbol(SymName));
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_GLOBAL);
       WasmSym->setGlobalType(wasm::WasmGlobalType{uint8_t(*Type), Mutable});
       // And emit the directive again.
@@ -980,7 +981,8 @@ public:
 
       // Now that we have the name and table type, we can actually create the
       // symbol
-      auto *WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
+      auto *WasmSym =
+          static_cast<MCSymbolWasm *>(Ctx.getOrCreateSymbol(SymName));
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_TABLE);
       if (Is64) {
         Limits.Flags |= wasm::WASM_LIMITS_FLAG_IS_64;
@@ -1000,7 +1002,8 @@ public:
       auto SymName = expectIdent();
       if (SymName.empty())
         return ParseStatus::Failure;
-      auto *WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
+      auto *WasmSym =
+          static_cast<MCSymbolWasm *>(Ctx.getOrCreateSymbol(SymName));
       if (WasmSym->isDefined()) {
         // We push 'Function' either when a label is parsed or a .functype
         // directive is parsed. The reason it is not easy to do this uniformly
@@ -1042,7 +1045,8 @@ public:
       auto ExportName = expectIdent();
       if (ExportName.empty())
         return ParseStatus::Failure;
-      auto *WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
+      auto *WasmSym =
+          static_cast<MCSymbolWasm *>(Ctx.getOrCreateSymbol(SymName));
       WasmSym->setExportName(Ctx.allocateString(ExportName));
       TOut.emitExportName(WasmSym, ExportName);
       return expect(AsmToken::EndOfStatement, "EOL");
@@ -1057,7 +1061,8 @@ public:
       auto ImportModule = expectIdent();
       if (ImportModule.empty())
         return ParseStatus::Failure;
-      auto *WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
+      auto *WasmSym =
+          static_cast<MCSymbolWasm *>(Ctx.getOrCreateSymbol(SymName));
       WasmSym->setImportModule(Ctx.allocateString(ImportModule));
       TOut.emitImportModule(WasmSym, ImportModule);
       return expect(AsmToken::EndOfStatement, "EOL");
@@ -1072,7 +1077,8 @@ public:
       auto ImportName = expectIdent();
       if (ImportName.empty())
         return ParseStatus::Failure;
-      auto *WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
+      auto *WasmSym =
+          static_cast<MCSymbolWasm *>(Ctx.getOrCreateSymbol(SymName));
       WasmSym->setImportName(Ctx.allocateString(ImportName));
       TOut.emitImportName(WasmSym, ImportName);
       return expect(AsmToken::EndOfStatement, "EOL");
@@ -1082,7 +1088,8 @@ public:
       auto SymName = expectIdent();
       if (SymName.empty())
         return ParseStatus::Failure;
-      auto *WasmSym = cast<MCSymbolWasm>(Ctx.getOrCreateSymbol(SymName));
+      auto *WasmSym =
+          static_cast<MCSymbolWasm *>(Ctx.getOrCreateSymbol(SymName));
       auto *Signature = Ctx.createWasmSignature();
       if (parseRegTypeList(Signature->Params))
         return ParseStatus::Failure;
@@ -1224,7 +1231,7 @@ public:
     if (!CWS->isText())
       return;
 
-    auto *WasmSym = cast<MCSymbolWasm>(Symbol);
+    auto *WasmSym = static_cast<MCSymbolWasm *>(Symbol);
     // Unlike other targets, we don't allow data in text sections (labels
     // declared with .type @object).
     if (WasmSym->getType() == wasm::WASM_SYMBOL_TYPE_DATA) {

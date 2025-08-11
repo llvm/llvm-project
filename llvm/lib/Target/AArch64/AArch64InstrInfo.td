@@ -448,8 +448,13 @@ def SDTBinaryArithWithFlagsInOut : SDTypeProfile<2, 3,
                                              SDTCisVT<1, FlagsVT>,
                                              SDTCisVT<4, FlagsVT>]>;
 
+// Value type used for condition codes.
+// Should be kept in sync with its C++ counterpart.
+defvar CondCodeVT = i32;
+
 def SDT_AArch64Brcond  : SDTypeProfile<0, 3,
-                                     [SDTCisVT<0, OtherVT>, SDTCisVT<1, i32>,
+                                     [SDTCisVT<0, OtherVT>,
+                                      SDTCisVT<1, CondCodeVT>,
                                       SDTCisVT<2, FlagsVT>]>;
 def SDT_AArch64cbz : SDTypeProfile<0, 2, [SDTCisInt<0>, SDTCisVT<1, OtherVT>]>;
 def SDT_AArch64tbz : SDTypeProfile<0, 3, [SDTCisInt<0>, SDTCisInt<1>,
@@ -458,22 +463,22 @@ def SDT_AArch64tbz : SDTypeProfile<0, 3, [SDTCisInt<0>, SDTCisInt<1>,
 def SDT_AArch64CSel  : SDTypeProfile<1, 4,
                                    [SDTCisSameAs<0, 1>,
                                     SDTCisSameAs<0, 2>,
-                                    SDTCisInt<3>,
+                                    SDTCisVT<3, CondCodeVT>,
                                     SDTCisVT<4, FlagsVT>]>;
 def SDT_AArch64CCMP : SDTypeProfile<1, 5,
                                     [SDTCisVT<0, FlagsVT>,
                                      SDTCisInt<1>,
                                      SDTCisSameAs<1, 2>,
                                      SDTCisInt<3>,
-                                     SDTCisInt<4>,
-                                     SDTCisVT<5, i32>]>;
+                                     SDTCisVT<4, CondCodeVT>,
+                                     SDTCisVT<5, FlagsVT>]>;
 def SDT_AArch64FCCMP : SDTypeProfile<1, 5,
                                      [SDTCisVT<0, FlagsVT>,
                                       SDTCisFP<1>,
                                       SDTCisSameAs<1, 2>,
                                       SDTCisInt<3>,
-                                      SDTCisInt<4>,
-                                      SDTCisVT<5, i32>]>;
+                                      SDTCisVT<4, CondCodeVT>,
+                                      SDTCisVT<5, FlagsVT>]>;
 def SDT_AArch64FCmp  : SDTypeProfile<1, 2, [SDTCisVT<0, FlagsVT>,
                                             SDTCisFP<1>,
                                             SDTCisSameAs<2, 1>]>;
@@ -546,7 +551,8 @@ def SDT_AArch64TBL : SDTypeProfile<1, 2, [
 ]>;
 
 def SDT_AArch64cb : SDTypeProfile<0, 4,
-                                  [SDTCisVT<0, i32>, SDTCisInt<1>, SDTCisInt<2>,
+                                  [SDTCisVT<0, CondCodeVT>,
+                                   SDTCisInt<1>, SDTCisInt<2>,
                                    SDTCisVT<3, OtherVT>]>;
 
 // non-extending masked load fragment.
@@ -6049,6 +6055,7 @@ defm MLA      : SIMDThreeSameVectorBHSTied<0, 0b10010, "mla", null_frag>;
 defm MLS      : SIMDThreeSameVectorBHSTied<1, 0b10010, "mls", null_frag>;
 
 defm MUL      : SIMDThreeSameVectorBHS<0, 0b10011, "mul", mul>;
+let isCommutable = 1 in
 defm PMUL     : SIMDThreeSameVectorB<1, 0b10011, "pmul", int_aarch64_neon_pmul>;
 defm SABA     : SIMDThreeSameVectorBHSTied<0, 0b01111, "saba",
       TriOpFrag<(add node:$LHS, (abds node:$MHS, node:$RHS))> >;
@@ -6800,6 +6807,7 @@ defm ADDHN  : SIMDNarrowThreeVectorBHS<0,0b0100,"addhn", int_aarch64_neon_addhn>
 defm SUBHN  : SIMDNarrowThreeVectorBHS<0,0b0110,"subhn", int_aarch64_neon_subhn>;
 defm RADDHN : SIMDNarrowThreeVectorBHS<1,0b0100,"raddhn",int_aarch64_neon_raddhn>;
 defm RSUBHN : SIMDNarrowThreeVectorBHS<1,0b0110,"rsubhn",int_aarch64_neon_rsubhn>;
+let isCommutable = 1 in
 defm PMULL  : SIMDDifferentThreeVectorBD<0,0b1110,"pmull", AArch64pmull>;
 defm SABAL  : SIMDLongThreeVectorTiedBHSabal<0,0b0101,"sabal", abds>;
 defm SABDL   : SIMDLongThreeVectorBHSabdl<0, 0b0111, "sabdl", abds>;
@@ -6816,6 +6824,7 @@ defm SQDMLAL : SIMDLongThreeVectorSQDMLXTiedHS<0, 0b1001, "sqdmlal", saddsat>;
 defm SQDMLSL : SIMDLongThreeVectorSQDMLXTiedHS<0, 0b1011, "sqdmlsl", ssubsat>;
 defm SQDMULL : SIMDLongThreeVectorHS<0, 0b1101, "sqdmull",
                                      int_aarch64_neon_sqdmull>;
+let isCommutable = 0 in
 defm SSUBL   : SIMDLongThreeVectorBHS<0, 0b0010, "ssubl",
                  BinOpFrag<(sub (sext node:$LHS), (sext node:$RHS))>>;
 defm SSUBW   : SIMDWideThreeVectorBHS<0, 0b0011, "ssubw",
@@ -6830,6 +6839,7 @@ defm UMLAL   : SIMDLongThreeVectorTiedBHS<1, 0b1000, "umlal",
 defm UMLSL   : SIMDLongThreeVectorTiedBHS<1, 0b1010, "umlsl",
     TriOpFrag<(sub node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
 defm UMULL   : SIMDLongThreeVectorBHS<1, 0b1100, "umull", AArch64umull>;
+let isCommutable = 0 in
 defm USUBL   : SIMDLongThreeVectorBHS<1, 0b0010, "usubl",
                  BinOpFrag<(sub (zanyext node:$LHS), (zanyext node:$RHS))>>;
 defm USUBW   : SIMDWideThreeVectorBHS<   1, 0b0011, "usubw",

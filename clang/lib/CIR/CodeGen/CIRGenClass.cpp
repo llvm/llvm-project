@@ -86,7 +86,7 @@ static void emitMemberInitializer(CIRGenFunction &cgf,
   QualType fieldType = field->getType();
 
   mlir::Value thisPtr = cgf.loadCXXThis();
-  QualType recordTy = cgf.getContext().getTypeDeclType(classDecl);
+  CanQualType recordTy = cgf.getContext().getCanonicalTagType(classDecl);
 
   // If a base constructor is being emitted, create an LValue that has the
   // non-virtual alignment.
@@ -121,7 +121,8 @@ static void emitMemberInitializer(CIRGenFunction &cgf,
 static bool isInitializerOfDynamicClass(const CXXCtorInitializer *baseInit) {
   const Type *baseType = baseInit->getBaseClass();
   const auto *baseClassDecl =
-      cast<CXXRecordDecl>(baseType->castAs<RecordType>()->getDecl());
+      cast<CXXRecordDecl>(baseType->castAs<RecordType>()->getOriginalDecl())
+          ->getDefinitionOrSelf();
   return baseClassDecl->isDynamicClass();
 }
 
@@ -161,7 +162,8 @@ void CIRGenFunction::emitBaseInitializer(mlir::Location loc,
 
   const Type *baseType = baseInit->getBaseClass();
   const auto *baseClassDecl =
-      cast<CXXRecordDecl>(baseType->castAs<RecordType>()->getDecl());
+      cast<CXXRecordDecl>(baseType->castAs<RecordType>()->getOriginalDecl())
+          ->getDefinitionOrSelf();
 
   bool isBaseVirtual = baseInit->isBaseVirtual();
 
@@ -349,12 +351,16 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
   // doesn't happen, but it's not clear that it's worth it.
 
   // Optimize for a constant count.
-  auto constantCount = dyn_cast<cir::ConstantOp>(numElements.getDefiningOp());
-  if (constantCount) {
-    auto constIntAttr = mlir::dyn_cast<cir::IntAttr>(constantCount.getValue());
-    // Just skip out if the constant count is zero.
-    if (constIntAttr && constIntAttr.getUInt() == 0)
-      return;
+  if (auto constantCount = numElements.getDefiningOp<cir::ConstantOp>()) {
+    if (auto constIntAttr = constantCount.getValueAttr<cir::IntAttr>()) {
+      // Just skip out if the constant count is zero.
+      if (constIntAttr.getUInt() == 0)
+        return;
+      // Otherwise, emit the check.
+    }
+
+    if (constantCount.use_empty())
+      constantCount.erase();
   } else {
     // Otherwise, emit the check.
     cgm.errorNYI(e->getSourceRange(), "dynamic-length array expression");
@@ -373,7 +379,7 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
   //
   // Note that these are complete objects and so we don't need to
   // use the non-virtual size or alignment.
-  QualType type = getContext().getTypeDeclType(ctor->getParent());
+  CanQualType type = getContext().getCanonicalTagType(ctor->getParent());
   CharUnits eltAlignment = arrayBase.getAlignment().alignmentOfArrayElement(
       getContext().getTypeSizeInChars(type));
 
@@ -417,9 +423,6 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
           builder.create<cir::YieldOp>(loc);
         });
   }
-
-  if (constantCount.use_empty())
-    constantCount.erase();
 }
 
 void CIRGenFunction::emitDelegateCXXConstructorCall(
@@ -483,7 +486,8 @@ void CIRGenFunction::emitImplicitAssignmentOperatorBody(FunctionArgList &args) {
 void CIRGenFunction::destroyCXXObject(CIRGenFunction &cgf, Address addr,
                                       QualType type) {
   const RecordType *rtype = type->castAs<RecordType>();
-  const CXXRecordDecl *record = cast<CXXRecordDecl>(rtype->getDecl());
+  const CXXRecordDecl *record =
+      cast<CXXRecordDecl>(rtype->getOriginalDecl())->getDefinitionOrSelf();
   const CXXDestructorDecl *dtor = record->getDestructor();
   // TODO(cir): Unlike traditional codegen, CIRGen should actually emit trivial
   // dtors which shall be removed on later CIR passes. However, only remove this
