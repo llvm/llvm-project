@@ -533,6 +533,9 @@ void CommandObjectDisassemble::DoExecute(Args &command,
   if (m_options.raw)
     options |= Disassembler::eOptionRawOuput;
 
+  if (m_options.enable_rich_annotations)
+    options |= Disassembler::eOptionRichAnnotations;
+
   llvm::Expected<std::vector<AddressRange>> ranges =
       GetRangesForSelectedMode(result);
   if (!ranges) {
@@ -555,8 +558,7 @@ void CommandObjectDisassemble::DoExecute(Args &command,
             cpu_string, features_string, m_exe_ctx, cur_range.GetBaseAddress(),
             limit, m_options.show_mixed,
             m_options.show_mixed ? m_options.num_lines_context : 0, options,
-            result.GetOutputStream(),
-            /*enable_rich_annotations=*/m_options.enable_rich_annotations)) {
+            result.GetOutputStream())) {
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
       if (m_options.symbol_containing_addr != LLDB_INVALID_ADDRESS) {

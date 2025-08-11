@@ -169,12 +169,14 @@ Disassembler::DisassembleBytes(const ArchSpec &arch, const char *plugin_name,
   return disasm_sp;
 }
 
-bool Disassembler::Disassemble(
-    Debugger &debugger, const ArchSpec &arch, const char *plugin_name,
-    const char *flavor, const char *cpu, const char *features,
-    const ExecutionContext &exe_ctx, const Address &address, Limit limit,
-    bool mixed_source_and_assembly, uint32_t num_mixed_context_lines,
-    uint32_t options, Stream &strm, bool enable_rich_annotations) {
+bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
+                               const char *plugin_name, const char *flavor,
+                               const char *cpu, const char *features,
+                               const ExecutionContext &exe_ctx,
+                               const Address &address, Limit limit,
+                               bool mixed_source_and_assembly,
+                               uint32_t num_mixed_context_lines,
+                               uint32_t options, Stream &strm) {
   if (!exe_ctx.GetTargetPtr())
     return false;
 
@@ -189,10 +191,9 @@ bool Disassembler::Disassemble(
   if (bytes_disassembled == 0)
     return false;
 
-  disasm_sp->PrintInstructions(
-      debugger, arch, exe_ctx, mixed_source_and_assembly,
-      num_mixed_context_lines, options, strm,
-      /*enable_rich_annotations=*/enable_rich_annotations);
+  disasm_sp->PrintInstructions(debugger, arch, exe_ctx,
+                               mixed_source_and_assembly,
+                               num_mixed_context_lines, options, strm);
   return true;
 }
 
@@ -287,8 +288,7 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
                                      const ExecutionContext &exe_ctx,
                                      bool mixed_source_and_assembly,
                                      uint32_t num_mixed_context_lines,
-                                     uint32_t options, Stream &strm,
-                                     bool enable_rich_annotations) {
+                                     uint32_t options, Stream &strm) {
   // We got some things disassembled...
   size_t num_instructions_found = GetInstructionList().GetSize();
 
@@ -688,7 +688,7 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
                  show_control_flow_kind, &exe_ctx, &sc, &prev_sc, nullptr,
                  address_text_size);
 
-      if (enable_rich_annotations) {
+      if (options & eOptionRichAnnotations) {
         std::vector<std::string> annotations = annotate_variables(*inst);
         if (!annotations.empty()) {
           const size_t annotation_column = 100;
@@ -708,8 +708,7 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
 }
 
 bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
-                               StackFrame &frame, Stream &strm,
-                               bool enable_rich_annotations) {
+                               StackFrame &frame, Stream &strm) {
   constexpr const char *plugin_name = nullptr;
   constexpr const char *flavor = nullptr;
   constexpr const char *cpu = nullptr;

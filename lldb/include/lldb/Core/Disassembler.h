@@ -398,6 +398,7 @@ public:
     eOptionMarkPCAddress =
         (1u << 3), // Mark the disassembly line the contains the PC
     eOptionShowControlFlowKind = (1u << 4),
+    eOptionRichAnnotations = (1u << 5),
   };
 
   enum HexImmediateStyle {
@@ -444,11 +445,10 @@ public:
                           const ExecutionContext &exe_ctx, const Address &start,
                           Limit limit, bool mixed_source_and_assembly,
                           uint32_t num_mixed_context_lines, uint32_t options,
-                          Stream &strm, bool enable_rich_annotations = false);
+                          Stream &strm);
 
   static bool Disassemble(Debugger &debugger, const ArchSpec &arch,
-                          StackFrame &frame, Stream &strm,
-                          bool enable_rich_annotations = false);
+                          StackFrame &frame, Stream &strm);
 
   // Constructors and Destructors
   Disassembler(const ArchSpec &arch, const char *flavor);
@@ -458,7 +458,7 @@ public:
                          const ExecutionContext &exe_ctx,
                          bool mixed_source_and_assembly,
                          uint32_t num_mixed_context_lines, uint32_t options,
-                         Stream &strm, bool enable_rich_annotations = false);
+                         Stream &strm);
 
   size_t ParseInstructions(Target &target, Address address, Limit limit,
                            Stream *error_strm_ptr,

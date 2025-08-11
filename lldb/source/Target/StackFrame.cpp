@@ -262,20 +262,16 @@ bool StackFrame::ChangePC(addr_t pc) {
   return true;
 }
 
-const char *StackFrame::Disassemble(bool enable_rich_annotations) {
+const char *StackFrame::Disassemble() {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-  // Keep the existing cache only for the plain (non-rich) path.
-  if (!enable_rich_annotations) {
-    if (!m_disassembly.Empty())
-      return m_disassembly.GetData();
-  }
+  if (!m_disassembly.Empty())
+    return m_disassembly.GetData();
 
   ExecutionContext exe_ctx(shared_from_this());
   if (Target *target = exe_ctx.GetTargetPtr()) {
-    Disassembler::Disassemble(
-        target->GetDebugger(), target->GetArchitecture(), *this, m_disassembly,
-        /*enable_rich_annotations=*/enable_rich_annotations);
+    Disassembler::Disassemble(target->GetDebugger(), target->GetArchitecture(),
+                              *this, m_disassembly);
   }
 
   return m_disassembly.Empty() ? nullptr : m_disassembly.GetData();
