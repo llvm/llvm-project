@@ -2694,7 +2694,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // of elements. This is convenient for instrumenting horizontal add/sub.
   Value *horizontalReduce(IntrinsicInst &I, unsigned ReductionFactor,
                           Value *VectorA, Value* VectorB) {
-    IRBuilder<> IRB(&I);
     assert(isa<FixedVectorType>(VectorA->getType()));
     unsigned TotalNumElems = cast<FixedVectorType>(VectorA->getType())->getNumElements();
 
@@ -2703,8 +2702,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       TotalNumElems = TotalNumElems * 2;
     }
 
+    assert(TotalNumElems % ReductionFactor == 0);
+
     Value *Or = nullptr;
 
+    IRBuilder<> IRB(&I);
     for (unsigned i = 0; i < ReductionFactor; i++) {
       SmallVector<int, 16> Mask;
       for (unsigned X = 0; X < TotalNumElems; X += ReductionFactor)
