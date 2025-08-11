@@ -589,14 +589,6 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setSchedulingPreference(Sched::RegPressure);
   setJumpIsExpensive(true);
 
-  // FIXME: This is only partially true. If we have to do vector compares, any
-  // SGPR pair can be a condition register. If we have a uniform condition, we
-  // are better off doing SALU operations, where there is only one SCC. For now,
-  // we don't have a way of knowing during instruction selection if a condition
-  // will be uniform and we always use vector compares. Assume we are using
-  // vector compares until that is fixed.
-  setHasMultipleConditionRegisters(true);
-
   setMinCmpXchgSizeInBits(32);
   setSupportsUnalignedAtomics(false);
 
@@ -2634,7 +2626,7 @@ bool AMDGPUTargetLowering::allowApproxFunc(const SelectionDAG &DAG,
   if (Flags.hasApproximateFuncs())
     return true;
   auto &Options = DAG.getTarget().Options;
-  return Options.UnsafeFPMath || Options.ApproxFuncFPMath;
+  return Options.ApproxFuncFPMath;
 }
 
 bool AMDGPUTargetLowering::needsDenormHandlingF32(const SelectionDAG &DAG,
@@ -2757,7 +2749,7 @@ SDValue AMDGPUTargetLowering::LowerFLOGCommon(SDValue Op,
 
   const auto &Options = getTargetMachine().Options;
   if (VT == MVT::f16 || Flags.hasApproximateFuncs() ||
-      Options.ApproxFuncFPMath || Options.UnsafeFPMath) {
+      Options.ApproxFuncFPMath) {
 
     if (VT == MVT::f16 && !Subtarget->has16BitInsts()) {
       // Log and multiply in f32 is good enough for f16.
@@ -3585,7 +3577,7 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_FP16(SDValue Op, SelectionDAG &DAG) con
   if (N0.getValueType() == MVT::f32)
     return DAG.getNode(AMDGPUISD::FP_TO_FP16, DL, Op.getValueType(), N0);
 
-  if (getTargetMachine().Options.UnsafeFPMath) {
+  if (Op->getFlags().hasApproximateFuncs()) {
     // There is a generic expand for FP_TO_FP16 with unsafe fast math.
     return SDValue();
   }

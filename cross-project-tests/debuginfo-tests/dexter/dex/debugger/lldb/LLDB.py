@@ -449,19 +449,16 @@ class LLDBDAP(DAP):
                     raise DebuggerException("failed to step")
 
     def _get_launch_params(self, cmdline):
-        if self.context.options.target_run_args:
-            cmdline += shlex.split(self.context.options.target_run_args)
         cwd = os.getcwd()
         return {
             "cwd": cwd,
             "args": cmdline,
             "program": self.context.options.executable,
-            "stopOnEntry": True,
         }
 
     @staticmethod
     def _evaluate_result_value(
-        expression: str, result_string: str, type_string: str | None
+        expression: str, result_string: str, type_string
     ) -> ValueIR:
         could_evaluate = not any(
             s in result_string
@@ -509,12 +506,10 @@ class LLDBDAP(DAP):
             is_irretrievable=is_irretrievable,
         )
 
-    def _update_requested_bp_list(
-        self, bp_list: list[DAP.BreakpointRequest]
-    ) -> list[DAP.BreakpointRequest]:
+    def _update_requested_bp_list(self, bp_list):
         """ "As lldb-dap cannot have multiple breakpoints at the same location with different conditions, we must
         manually merge conditions here."""
-        line_to_cond: dict[int, str | None] = {}
+        line_to_cond = {}
         for bp in bp_list:
             if bp.condition is None:
                 line_to_cond[bp.line] = None

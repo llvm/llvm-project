@@ -192,11 +192,11 @@ QualType ObjCIvarRegion::getValueType() const {
 }
 
 QualType CXXBaseObjectRegion::getValueType() const {
-  return QualType(getDecl()->getTypeForDecl(), 0);
+  return getContext().getCanonicalTagType(getDecl());
 }
 
 QualType CXXDerivedObjectRegion::getValueType() const {
-  return QualType(getDecl()->getTypeForDecl(), 0);
+  return getContext().getCanonicalTagType(getDecl());
 }
 
 QualType ParamVarRegion::getValueType() const {
@@ -1218,6 +1218,16 @@ MemRegionManager::getElementRegion(QualType elementType, NonLoc Idx,
                                    const SubRegion *superRegion,
                                    const ASTContext &Ctx) {
   QualType T = Ctx.getCanonicalType(elementType).getUnqualifiedType();
+
+  // The address space must be preserved because some target-specific address
+  // spaces influence the size of the pointer value which is represented by the
+  // element region.
+  LangAS AS = elementType.getAddressSpace();
+  if (AS != LangAS::Default) {
+    Qualifiers Quals;
+    Quals.setAddressSpace(AS);
+    T = Ctx.getQualifiedType(T, Quals);
+  }
 
   llvm::FoldingSetNodeID ID;
   ElementRegion::ProfileRegion(ID, T, Idx, superRegion);

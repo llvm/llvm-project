@@ -45,9 +45,7 @@ class DAPMessageLogger:
         self.dexter_logger = context.logger
         self.log_file: str = context.options.dap_message_log
         self.colorized: bool = context.options.colorize_dap_log
-        self.indent: int | None = (
-            2 if context.options.format_dap_log == "pretty" else None
-        )
+        self.indent = 2 if context.options.format_dap_log == "pretty" else None
         self.prefix_send: str = "->"
         self.prefix_recv: str = "<-"
         self.out_handle = None
@@ -118,7 +116,7 @@ class DAPDebuggerState:
         # The thread that we are debugging.
         # TODO: This is primitively handled right now, assuming that we only ever have one thread; if we want
         # support for debugging any multi-threaded program then we will need to track some more complex state.
-        self.thread: int | None = None
+        self.thread = None
         # True if the debuggee is currently executing.
         self.is_running: bool = False
         # True if the debuggee has finished executing.
@@ -128,21 +126,21 @@ class DAPDebuggerState:
         #
         # Either None if the debuggee is currently running, or a string specifying the reason why the
         # debuggee is currently stopped otherwise.
-        self.stopped_reason: str | None = None
+        self.stopped_reason = None
         # If we were stopped for the reason 'breakpoint', this will contain a list of the DAP breakpoint IDs
         # responsible for stopping us.
-        self.stopped_bps: list[int] = []
+        self.stopped_bps = []
         # For a currently stopped process, stores the mapping of frame indices (top of stack=0) to frameIds returned
         # from the debug adapter.
-        self.frame_map: list[int] = []
+        self.frame_map = []
 
         # We use responses[idx] to refer to the response for the request sent with seq=idx, where the value
         # is either the response payload, or None if the response hasn't arrived yet.
         # Since requests are indexed from 1, we insert a 'None' at the front to ensure that the first real
         # entry is indexed correctly.
-        self.responses: list[dict | None] = [None]
+        self.responses = [None]
         # Map of DAP breakpoint IDs to resolved instruction addresses.
-        self.bp_addr_map: dict[int, str] = {}
+        self.bp_addr_map = {}
 
     def set_response(self, req_id: int, response: dict):
         if len(self.responses) > req_id:
@@ -155,7 +153,7 @@ class DAPDebuggerState:
     # As the receiver thread does not know when a request has been sent, and only the receiver thread should write to the DebuggerState object,
     # the responses list may not have been populated with a None for a pending request at the time that the main thread expects it. Therefore,
     # we use this getter to account for requests that the receiver thread is unaware of.
-    def get_response(self, req_id: int) -> dict | None:
+    def get_response(self, req_id: int):
         if len(self.responses) <= req_id:
             return None
         return self.responses[req_id]
@@ -184,16 +182,16 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
         self.max_bp_id = 0
         # Mapping of active breakpoints per-file - intentionally excludes breakpoints that we have deleted.
         # { file -> [dex_breakpoint_id]}
-        self.file_to_bp: dict[str, list[int]] = defaultdict(list)
+        self.file_to_bp = defaultdict(list)
         # { dex_breakpoint_id -> (file, line, condition) }
-        self.bp_info: dict[int, (str, int, str)] = {}
+        self.bp_info = {}
         # We don't rely on IDs returned directly from the debug adapter. Instead, we use dexter breakpoint IDs, and
         # maintain a two-way-mapping of dex_bp_id<->dap_bp_id. This also allows us to defer the setting of breakpoints
         # in the debug adapter itself until necessary.
         # NB: The debug adapter may merge dexter-side breakpoints into a single debugger-side breakpoint; therefore, the
         # DAP->Dex mapping is one-to-many.
-        self.dex_id_to_dap_id: dict[int, int] = {}
-        self.dap_id_to_dex_ids: dict[int, list[int]] = {}
+        self.dex_id_to_dap_id = {}
+        self.dap_id_to_dex_ids = {}
         self.pending_breakpoints: bool = False
         # List of breakpoints, indexed by BP ID
         # Each entry has the source file (for use in referencing desired_bps), and the DA-assigned
@@ -213,11 +211,11 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
         pass
 
     @property
-    def _debug_adapter_launch_args(self) -> list[str]:
+    def _debug_adapter_launch_args(self) -> list:
         return []
 
     @staticmethod
-    def make_request(command: str, arguments: dict | None = None) -> dict:
+    def make_request(command: str, arguments=None) -> dict:
         request = {"type": "request", "command": command}
         if arguments is not None:
             request["arguments"] = arguments
@@ -240,7 +238,7 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
         )
 
     class BreakpointRequest:
-        def __init__(self, line: int, condition: str | None = None):
+        def __init__(self, line: int, condition=None):
             self.line = line
             self.condition = condition
 
@@ -251,7 +249,7 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
             return result
 
     @staticmethod
-    def make_set_breakpoint_request(source: str, bps: list[BreakpointRequest]) -> dict:
+    def make_set_breakpoint_request(source: str, bps) -> dict:
         return DAP.make_request(
             "setBreakpoints",
             {"source": {"path": source}, "breakpoints": [bp.toDict() for bp in bps]},
@@ -279,50 +277,47 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
         # pending messages in order.
         if message["type"] == "event":
             event_type = message["event"]
-            event_details: dict | None = message.get("body")
-            match event_type:
-                case "initialized":
-                    debugger_state.initialized = True
-                case "process":
-                    debugger_state.launched = True
-                    debugger_state.is_running = True
-                # The debugger has stopped for some reason.
-                case "stopped":
-                    stop_reason = event_details["reason"]
-                    debugger_state.is_running = False
-                    debugger_state.stopped_reason = stop_reason
-                    debugger_state.stopped_bps = event_details.get(
-                        "hitBreakpointIds", []
-                    )
+            event_details = message.get("body")
+            if event_type == "initialized":
+                debugger_state.initialized = True
+            elif event_type == "process":
+                debugger_state.launched = True
+                debugger_state.is_running = True
+            # The debugger has stopped for some reason.
+            elif event_type == "stopped":
+                stop_reason = event_details["reason"]
+                debugger_state.is_running = False
+                debugger_state.stopped_reason = stop_reason
+                debugger_state.stopped_bps = event_details.get("hitBreakpointIds", [])
+                debugger_state.thread = event_details["threadId"]
+            elif event_type == "breakpoint":
+                # We handle most BP information in the main DAP thread by reading responses to breakpoint requests;
+                # some information is only passed via event, however, which we store here.
+                breakpoint_details = event_details["breakpoint"]
+                if "instructionReference" in breakpoint_details:
+                    debugger_state.bp_addr_map[
+                        breakpoint_details["id"]
+                    ] = breakpoint_details["instructionReference"]
+            elif event_type == "exited" or event_type == "terminated":
+                debugger_state.stopped_reason = event_type
+                debugger_state.is_running = False
+                debugger_state.is_finished = True
+            # We may receive this event before or after the response to the corresponding "continue" request.
+            elif event_type == "continued":
+                debugger_state.is_running = True
+                # Reset all state that is invalidated upon program continue.
+                debugger_state.stopped_reason = None
+                debugger_state.stopped_bps = []
+                debugger_state.frame_map = []
+            elif event_type == "thread":
+                if (
+                    event_details["reason"] == "started"
+                    and debugger_state.thread is None
+                ):
                     debugger_state.thread = event_details["threadId"]
-                case "breakpoint":
-                    # We handle most BP information in the main DAP thread by reading responses to breakpoint requests;
-                    # some information is only passed via event, however, which we store here.
-                    breakpoint_details = event_details["breakpoint"]
-                    if "instructionReference" in breakpoint_details:
-                        debugger_state.bp_addr_map[
-                            breakpoint_details["id"]
-                        ] = breakpoint_details["instructionReference"]
-                case "exited" | "terminated":
-                    debugger_state.stopped_reason = event_type
-                    debugger_state.is_running = False
-                    debugger_state.is_finished = True
-                # We may receive this event before or after the response to the corresponding "continue" request.
-                case "continued":
-                    debugger_state.is_running = True
-                    # Reset all state that is invalidated upon program continue.
-                    debugger_state.stopped_reason = None
-                    debugger_state.stopped_bps = []
-                    debugger_state.frame_map = []
-                case "thread":
-                    if (
-                        event_details["reason"] == "started"
-                        and debugger_state.thread is None
-                    ):
-                        debugger_state.thread = event_details["threadId"]
-                # There are many events we do not care about, just skip processing them.
-                case _:
-                    pass
+            # There are many events we do not care about, just skip processing them.
+            else:
+                pass
         elif message["type"] == "response":
             request_seq = message["request_seq"]
             debugger_state.set_response(request_seq, message)
@@ -465,7 +460,7 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
     ## End of DAP communication methods
     ############################################################################
 
-    def _translate_stop_reason(self, reason: str | None):
+    def _translate_stop_reason(self, reason):
         if reason is None:
             return None
         if "breakpoint" in reason:
@@ -504,9 +499,7 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
             return self.file_to_bp[source]
         return []
 
-    def _update_requested_bp_list(
-        self, bp_list: list[BreakpointRequest]
-    ) -> list[BreakpointRequest]:
+    def _update_requested_bp_list(self, bp_list):
         """Can be overridden for any specific implementations that need further processing before sending breakpoints to
         the debug adapter, e.g. in LLDB we cannot store multiple breakpoints at a single location, and therefore must
         combine conditions for breakpoints at the same location."""
@@ -514,7 +507,7 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
 
     # For a source file, returns the list of BreakpointRequests for the breakpoints in that file, which can be sent to
     # the debug adapter.
-    def _get_desired_bps(self, file: str) -> list[BreakpointRequest]:
+    def _get_desired_bps(self, file: str):
         bp_list = [
             DAP.BreakpointRequest(line, cond)
             for (_, line, cond) in map(
@@ -592,7 +585,7 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
         return self._confirm_triggered_breakpoint_ids(breakpoint_ids)
 
     def delete_breakpoints(self, ids):
-        per_file_deletions: dict[str, list[int]] = defaultdict(list)
+        per_file_deletions = defaultdict(list)
         for dex_bp_id in ids:
             source, _, _ = self.bp_info[dex_bp_id]
             per_file_deletions[source].append(dex_bp_id)
@@ -680,8 +673,8 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
             raise DebuggerException("failed to get stack frames")
         stackframes = trace_response["body"]["stackFrames"]
 
-        frames: list[FrameIR] = []
-        state_frames: list[StackFrame] = []
+        frames = []
+        state_frames = []
 
         for idx, stackframe in enumerate(stackframes):
             # FIXME: No source, skip the frame! Currently I've only observed this for frames below main, so we break
@@ -782,6 +775,6 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
             result: str = eval_response["message"]
         else:
             result: str = eval_response["body"]["result"]
-        type_str: str | None = eval_response["body"].get("type")
+        type_str = eval_response["body"].get("type")
 
         return self._evaluate_result_value(expression, result, type_str)
