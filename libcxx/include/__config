@@ -1021,18 +1021,22 @@ typedef __char32_t char32_t;
 // the latter depends on internal GNU libc details that are not appropriate
 // to depend on here, so any declarations present when __cpp_char8_t is not
 // defined are ignored.
+//
+// picolibc 1.8.9 and newer declare the two functions unconditionally.
 #  if defined(_LIBCPP_GLIBC_PREREQ)
-#    if _LIBCPP_GLIBC_PREREQ(2, 36) && defined(__cpp_char8_t)
+#    if defined(__cpp_char8_t) && _LIBCPP_GLIBC_PREREQ(2, 36)
 #      define _LIBCPP_HAS_C8RTOMB_MBRTOC8 1
 #    else
 #      define _LIBCPP_HAS_C8RTOMB_MBRTOC8 0
 #    endif
 #  elif defined(_LIBCPP_PICOLIBC_PREREQ)
-#    if _LIBCPP_PICOLIBC_PREREQ(1, 8, 9) && defined(__cpp_char8_t)
+#    if _LIBCPP_PICOLIBC_PREREQ(1, 8, 9)
 #      define _LIBCPP_HAS_C8RTOMB_MBRTOC8 1
 #    else
 #      define _LIBCPP_HAS_C8RTOMB_MBRTOC8 0
 #    endif
+#  else
+#    define _LIBCPP_HAS_C8RTOMB_MBRTOC8 1
 #  endif
 
 // There are a handful of public standard library types that are intended to
