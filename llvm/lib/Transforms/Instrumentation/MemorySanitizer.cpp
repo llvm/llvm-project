@@ -2865,9 +2865,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   void visitMul(BinaryOperator &I) {
-    // TODO: this can only handle zero bits that are part of statically-known
-    //       constants. Consider under-approximating the multiplication as AND
-    //       (which ignores the carry), and using the visitAnd() logic.
     Constant *constOp0 = dyn_cast<Constant>(I.getOperand(0));
     Constant *constOp1 = dyn_cast<Constant>(I.getOperand(1));
     if (constOp0 && !constOp1)
@@ -3854,28 +3851,30 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
            ReturnType->getPrimitiveSizeInBits());
 
     // Step 1: multiplication of corresponding vector elements
-    // We want to take into account the fact that multiplying zero by an
-    // uninitialized bit results in an initialized value of zero.
-    // We under-approximate multiplication by treating it as bitwise AND; this
-    // has no false positives but substantial false negatives. We then
-    // compute the shadow using the same logic as visitAnd().
     Value *S1 = getShadow(&I, 0);
     Value *S2 = getShadow(&I, 1);
     Value *V1 = I.getOperand(0);
     Value *V2 = I.getOperand(1);
 
-    Value *S1S2 = IRB.CreateAnd(S1, S2);
-    Value *V1S2 = IRB.CreateAnd(V1, S2);
-    Value *S1V2 = IRB.CreateAnd(S1, V2);
+    Value *S1S2 = IRB.CreateOr(S1, S2);
 
-    // After multiplying e.g., <8 x i16> %a, <8 x i16> %b, we have
-    // <8 x i16> %ab.
-    Value *ShadowAB = IRB.CreateOr({S1S2, V1S2, S1V2});
+    // We allow the special case of multiplying where multiplying an uninitialized
+    // element by zero results in an initialized element.
+    Value *Zero = Constant::getNullValue(V1->getType());
+    Value *V1NotZero = IRB.CreateICmpNE(V1, Zero);
+    Value *V2NotZero = IRB.CreateICmpNE(V2, Zero);
+    Value *V1AndV2NotZero = IRB.CreateAnd(V1NotZero, V2NotZero);
+
+    // After multiplying e.g., <8 x i16> %a, <8 x i16> %b, we should have
+    // <8 x i32> %ab, but we cheated and ended up with <8 x i16>.
+    S1S2 = IRB.CreateAnd(S1S2, IRB.CreateSExt(V1AndV2NotZero, S1S2->getType()));
+
     // For MMX, %ab has a misleading type e.g., <1 x i64>.
     if (MMXEltSizeInBits)
-      ShadowAB = IRB.CreateBitCast(ShadowAB, getMMXVectorTy(MMXEltSizeInBits));
+      S1S2 = IRB.CreateBitCast(S1S2, getMMXVectorTy(MMXEltSizeInBits));
 
     // Step 2: pairwise/horizontal add
+    // Collapse <8 x i16> into <4 x i32>
     // Handle it similarly to handlePairwiseShadowOrIntrinsic().
     unsigned TotalNumElems =
         cast<FixedVectorType>(ReturnType)->getNumElements() * 2;
@@ -3885,8 +3884,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       EvenMask.push_back(X);
       OddMask.push_back(X + 1);
     }
-    Value *EvenShadow = IRB.CreateShuffleVector(ShadowAB, EvenMask);
-    Value *OddShadow = IRB.CreateShuffleVector(ShadowAB, OddMask);
+    Value *EvenShadow = IRB.CreateShuffleVector(S1S2, EvenMask);
+    Value *OddShadow = IRB.CreateShuffleVector(S1S2, OddMask);
 
     Value *OrShadow = IRB.CreateOr(EvenShadow, OddShadow);
     OrShadow = CreateShadowCast(IRB, OrShadow, getShadowTy(&I));

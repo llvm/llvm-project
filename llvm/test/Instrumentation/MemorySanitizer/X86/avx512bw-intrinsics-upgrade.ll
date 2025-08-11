@@ -4928,11 +4928,12 @@ define <32 x i16> @test_int_x86_avx512_pmaddubs_w_512(<64 x i8> %x0, <64 x i8> %
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <64 x i8>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <64 x i8>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP3:%.*]] = and <64 x i8> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = and <64 x i8> [[X0:%.*]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = and <64 x i8> [[TMP1]], [[X1:%.*]]
-; CHECK-NEXT:    [[TMP6:%.*]] = or <64 x i8> [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[TMP12:%.*]] = or <64 x i8> [[TMP6]], [[TMP5]]
+; CHECK-NEXT:    [[TMP3:%.*]] = or <64 x i8> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <64 x i8> [[X0:%.*]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <64 x i8> [[X1:%.*]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = and <64 x i1> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP13:%.*]] = sext <64 x i1> [[TMP6]] to <64 x i8>
+; CHECK-NEXT:    [[TMP12:%.*]] = and <64 x i8> [[TMP3]], [[TMP13]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <64 x i8> [[TMP12]], <64 x i8> poison, <32 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30, i32 32, i32 34, i32 36, i32 38, i32 40, i32 42, i32 44, i32 46, i32 48, i32 50, i32 52, i32 54, i32 56, i32 58, i32 60, i32 62>
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <64 x i8> [[TMP12]], <64 x i8> poison, <32 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31, i32 33, i32 35, i32 37, i32 39, i32 41, i32 43, i32 45, i32 47, i32 49, i32 51, i32 53, i32 55, i32 57, i32 59, i32 61, i32 63>
 ; CHECK-NEXT:    [[TMP10:%.*]] = or <32 x i8> [[TMP8]], [[TMP9]]
@@ -4952,11 +4953,12 @@ define <32 x i16> @test_int_x86_avx512_mask_pmaddubs_w_512(<64 x i8> %x0, <64 x 
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 192) to ptr), align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <32 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 128) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP5:%.*]] = and <64 x i8> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP6:%.*]] = and <64 x i8> [[X0:%.*]], [[TMP2]]
-; CHECK-NEXT:    [[TMP7:%.*]] = and <64 x i8> [[TMP1]], [[X1:%.*]]
-; CHECK-NEXT:    [[TMP8:%.*]] = or <64 x i8> [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    [[TMP17:%.*]] = or <64 x i8> [[TMP8]], [[TMP7]]
+; CHECK-NEXT:    [[TMP5:%.*]] = or <64 x i8> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne <64 x i8> [[X0:%.*]], zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne <64 x i8> [[X1:%.*]], zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = and <64 x i1> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP22:%.*]] = sext <64 x i1> [[TMP8]] to <64 x i8>
+; CHECK-NEXT:    [[TMP17:%.*]] = and <64 x i8> [[TMP5]], [[TMP22]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <64 x i8> [[TMP17]], <64 x i8> poison, <32 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30, i32 32, i32 34, i32 36, i32 38, i32 40, i32 42, i32 44, i32 46, i32 48, i32 50, i32 52, i32 54, i32 56, i32 58, i32 60, i32 62>
 ; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <64 x i8> [[TMP17]], <64 x i8> poison, <32 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31, i32 33, i32 35, i32 37, i32 39, i32 41, i32 43, i32 45, i32 47, i32 49, i32 51, i32 53, i32 55, i32 57, i32 59, i32 61, i32 63>
 ; CHECK-NEXT:    [[TMP20:%.*]] = or <32 x i8> [[TMP18]], [[TMP19]]
@@ -4984,11 +4986,12 @@ define <16 x i32> @test_int_x86_avx512_pmaddw_d_512(<32 x i16> %x0, <32 x i16> %
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <32 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <32 x i16>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 64) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP3:%.*]] = and <32 x i16> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = and <32 x i16> [[X0:%.*]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = and <32 x i16> [[TMP1]], [[X1:%.*]]
-; CHECK-NEXT:    [[TMP6:%.*]] = or <32 x i16> [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[TMP12:%.*]] = or <32 x i16> [[TMP6]], [[TMP5]]
+; CHECK-NEXT:    [[TMP3:%.*]] = or <32 x i16> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <32 x i16> [[X0:%.*]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <32 x i16> [[X1:%.*]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = and <32 x i1> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP13:%.*]] = sext <32 x i1> [[TMP6]] to <32 x i16>
+; CHECK-NEXT:    [[TMP12:%.*]] = and <32 x i16> [[TMP3]], [[TMP13]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <32 x i16> [[TMP12]], <32 x i16> poison, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <32 x i16> [[TMP12]], <32 x i16> poison, <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31>
 ; CHECK-NEXT:    [[TMP10:%.*]] = or <16 x i16> [[TMP8]], [[TMP9]]
@@ -5008,11 +5011,12 @@ define <16 x i32> @test_int_x86_avx512_mask_pmaddw_d_512(<32 x i16> %x0, <32 x i
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i16, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 192) to ptr), align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 128) to ptr), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP5:%.*]] = and <32 x i16> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP6:%.*]] = and <32 x i16> [[X0:%.*]], [[TMP2]]
-; CHECK-NEXT:    [[TMP7:%.*]] = and <32 x i16> [[TMP1]], [[X1:%.*]]
-; CHECK-NEXT:    [[TMP8:%.*]] = or <32 x i16> [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    [[TMP17:%.*]] = or <32 x i16> [[TMP8]], [[TMP7]]
+; CHECK-NEXT:    [[TMP5:%.*]] = or <32 x i16> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne <32 x i16> [[X0:%.*]], zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne <32 x i16> [[X1:%.*]], zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = and <32 x i1> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP22:%.*]] = sext <32 x i1> [[TMP8]] to <32 x i16>
+; CHECK-NEXT:    [[TMP17:%.*]] = and <32 x i16> [[TMP5]], [[TMP22]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <32 x i16> [[TMP17]], <32 x i16> poison, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
 ; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <32 x i16> [[TMP17]], <32 x i16> poison, <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31>
 ; CHECK-NEXT:    [[TMP20:%.*]] = or <16 x i16> [[TMP18]], [[TMP19]]
