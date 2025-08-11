@@ -246,8 +246,7 @@ VPTransformState::VPTransformState(const TargetTransformInfo *TTI,
                                    IRBuilderBase &Builder, VPlan *Plan,
                                    Loop *CurrentParentLoop, Type *CanonicalIVTy)
     : TTI(TTI), VF(VF), CFG(DT), LI(LI), AC(AC), Builder(Builder), Plan(Plan),
-      CurrentParentLoop(CurrentParentLoop), TypeAnalysis(CanonicalIVTy),
-      VPDT(*Plan) {}
+      CurrentParentLoop(CurrentParentLoop), TypeAnalysis(*Plan), VPDT(*Plan) {}
 
 Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
   if (Def->isLiveIn())
@@ -951,15 +950,9 @@ VPlan::~VPlan() {
     delete BackedgeTakenCount;
 }
 
-void VPlan::prepareToExecute(Value *VectorTripCountV, VPTransformState &State) {
-  if (!VectorTripCount.getUnderlyingValue())
-    VectorTripCount.setUnderlyingValue(VectorTripCountV);
-  else
-    assert(VectorTripCount.getUnderlyingValue() == VectorTripCountV &&
-           "VectorTripCount set earlier must much VectorTripCountV");
-
+void VPlan::prepareToExecute(VPTransformState &State) {
   IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
-  Type *TCTy = VectorTripCountV->getType();
+  Type *TCTy = VPTypeAnalysis(*this).inferScalarType(getTripCount());
   // FIXME: Model VF * UF computation completely in VPlan.
   unsigned UF = getUF();
   if (VF.getNumUsers()) {
@@ -1054,12 +1047,17 @@ void VPlan::execute(VPTransformState *State) {
 
 InstructionCost VPlan::cost(ElementCount VF, VPCostContext &Ctx) {
   // For now only return the cost of the vector loop region, ignoring any other
-  // blocks, like the preheader or middle blocks.
+  // blocks, like the preheader or middle blocks, expect for checking them for
+  // recipes with invalid costs.
   InstructionCost Cost = getVectorLoopRegion()->cost(VF, Ctx);
 
-  // If any instructions in the middle block are invalid return invalid.
-  // TODO: Remove once no VPlans with VF == vscale x 1 and first-order recurrences are created.
-  if (!getMiddleBlock()->cost(VF, Ctx).isValid())
+  // If the cost of the loop region is invalid or any recipe in the skeleton
+  // outside loop regions are invalid return an invalid cost.
+  if (!Cost.isValid() || any_of(VPBlockUtils::blocksOnly<VPBasicBlock>(
+                                    vp_depth_first_shallow(getEntry())),
+                                [&VF, &Ctx](VPBasicBlock *VPBB) {
+                                  return !VPBB->cost(VF, Ctx).isValid();
+                                }))
     return InstructionCost::getInvalid();
 
   return Cost;
