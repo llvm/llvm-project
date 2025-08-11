@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   build-windows-release:
-    runs-on: depot-windows-2022-16
+    runs-on: depot-windows-2022-64
     if: github.repository_owner == 'llvm'
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1A
