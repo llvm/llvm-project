@@ -12,75 +12,39 @@
 
 #include <cassert>
 #include "test_iterators.h"
-
-struct Range : std::ranges::view_base {
-  using Iterator = forward_iterator<int*>;
-  using Sentinel = sentinel_wrapper<Iterator>;
-  constexpr explicit Range(int* b, int* e) : begin_(b), end_(e) {}
-  constexpr Iterator begin() const { return Iterator(begin_); }
-  constexpr Sentinel end() const { return Sentinel(Iterator(end_)); }
-
-private:
-  int* begin_;
-  int* end_;
-};
-
-struct CommonRange : std::ranges::view_base {
-  using Iterator = forward_iterator<int*>;
-  constexpr explicit CommonRange(int* b, int* e) : begin_(b), end_(e) {}
-  constexpr Iterator begin() const { return Iterator(begin_); }
-  constexpr Iterator end() const { return Iterator(end_); }
-
-private:
-  int* begin_;
-  int* end_;
-};
-
-struct NotCommonRange : std::ranges::view_base {
-  constexpr explicit NotCommonRange() {}
-  char* begin();
-  bool end();
-};
+#include "types.h"
 
 constexpr bool test() {
-  int buff[] = {1, 2, 3, 4, 5, 6, 7, 8};
 
-  // Check the return type of `.end()`
+  int buffer1[5] = {1, 2, 3, 4, 5};
+  int buffer2[2] = {6, 7};
+
   {
-    Range range(buff, buff + 1);
-    std::ranges::concat_view view(range);
-    using ConcatSentinel = std::ranges::sentinel_t<decltype(view)>;
-    ASSERT_SAME_TYPE(ConcatSentinel, decltype(view.end()));
+    std::ranges::concat_view v(SimpleCommon{buffer1}, SimpleCommon{buffer2});
+    static_assert(std::is_same_v<decltype(v.end()), decltype(std::as_const(v).end())>);
+    static_assert(std::ranges::common_range<decltype(v)>);
+    assert(v.begin() + 7 == v.end());
+    static_assert(std::is_same_v<decltype(v.end()), decltype(std::as_const(v).end())>);
   }
 
-  // Check a not a common range
   {
-    Range range(buff, buff + 1);
-    std::ranges::concat_view view(range);
-    using ConcatSentinel = std::default_sentinel_t;
-    ASSERT_SAME_TYPE(ConcatSentinel, decltype(view.end()));
+    std::ranges::concat_view v(SimpleCommon{buffer1}, SimpleNonCommon{buffer2});
+    assert(v.begin() + 7 == v.end());
+    static_assert(std::is_same_v<decltype(v.end()), decltype(std::as_const(v).end())>);
+    static_assert(std::is_same_v<decltype(v.end()), std::default_sentinel_t>);
   }
 
-  // end() on an empty range
   {
-    Range range(buff, buff);
-    std::ranges::concat_view view(range);
-    auto begin = view.begin();
-    auto end   = view.end();
-    assert(begin == end);
+    std::ranges::concat_view v(SimpleCommon{buffer1}, NonSimpleCommon{buffer2});
+    assert(v.begin() + 7 == v.end());
+    static_assert(!std::is_same_v<decltype(v.end()), decltype(std::as_const(v).end())>);
   }
 
-  // end() on a common_range
   {
-    CommonRange range(buff, buff + 1);
-    CommonRange range_2(buff + 2, buff + 3);
-    std::ranges::concat_view view(range, range_2);
-    auto it = view.begin();
-    it++;
-    it++;
-    auto end = view.end();
-    assert(it == end);
-    static_assert(std::is_same_v<decltype(end), decltype(view.begin())>);
+    std::ranges::concat_view v(SimpleCommon{buffer1}, NonSimpleNonCommon{buffer2});
+    assert(v.begin() + 7 == v.end());
+    static_assert(std::is_same_v<decltype(v.end()), decltype(std::as_const(v).end())>);
+    static_assert(std::is_same_v<decltype(v.end()), std::default_sentinel_t>);
   }
 
   return true;
@@ -88,6 +52,6 @@ constexpr bool test() {
 
 int main(int, char**) {
   test();
-
+  static_assert(test());
   return 0;
 }

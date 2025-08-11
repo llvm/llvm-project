@@ -172,33 +172,7 @@ concept __concatable = requires {
   typename __concat_rvalue_reference_t<_Rs...>;
 } && __concat_indirectly_readable<_Rs...>;
 
-template <bool _Const, class... _Views>
-concept __all_random_access = (random_access_range<__maybe_const<_Const, _Views>> && ...);
 
-template <bool _Const, class... _Views>
-concept __all_bidirectional = (bidirectional_range<__maybe_const<_Const, _Views>> && ...);
-
-template <bool _Const, class... _Views>
-concept __all_forward = (forward_range<__maybe_const<_Const, _Views>> && ...);
-
-template <bool _Const, class _First, class... _Tail>
-struct __all_common_ignore_last {
-  static constexpr bool value =
-      common_range<__maybe_const<_Const, _First>> && __all_common_ignore_last<_Const, _Tail...>::value;
-};
-
-template <bool _Const, class _Tail>
-struct __all_common_ignore_last<_Const, _Tail> {
-  static constexpr bool value = true;
-};
-
-template <bool _Const, class... _Rs>
-concept __concat_is_random_access =
-    (__all_random_access<_Const, _Rs...>) && (__all_common_ignore_last<_Const, _Rs...>::value);
-
-template <bool _Const, class... _Rs>
-concept __concat_is_bidirectional =
-    (__all_bidirectional<_Const, _Rs...>) && (__all_common_ignore_last<_Const, _Rs...>::value);
 
 #  endif // _LIBCPP_STD_VER >= 23
 

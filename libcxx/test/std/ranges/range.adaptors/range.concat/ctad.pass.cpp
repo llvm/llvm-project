@@ -43,6 +43,14 @@ constexpr bool test() {
     static_assert(std::is_same_v<decltype(view), std::ranges::concat_view<std::ranges::ref_view<Range>>>);
   }
 
+  // Test a view which has a range and a view
+  {
+    Range r;
+    View v;
+    std::ranges::concat_view view(r, v);
+    static_assert(std::is_same_v<decltype(view), std::ranges::concat_view<std::ranges::ref_view<Range>, View>>);
+  }
+
   return true;
 }
 

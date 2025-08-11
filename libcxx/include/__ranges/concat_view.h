@@ -74,28 +74,41 @@ template <class... _Tp>
 using __extract_last _LIBCPP_NODEBUG = __extract_last_impl<_Tp...>::type;
 #  endif
 
-template <class _Tp, class... _Tail>
-constexpr bool __derived_from_pack =
-    __derived_from_pack<_Tp, __extract_last<_Tail...>> && __derived_from_pack<_Tail...>;
-
-template <class _Tp, class _IterCategory>
-constexpr bool __derived_from_pack<_Tp, _IterCategory> = derived_from<_Tp, _IterCategory>;
-
-template <class _View, class... _Views>
-struct __last_view : __last_view<_Views...> {};
-
-template <class _View>
-struct __last_view<_View> {
-  using type _LIBCPP_NODEBUG = _View;
-};
-
 template <bool _Const, class... _Tp>
-struct __apply_drop_first;
+struct __all_but_first_model_sized_range;
 
 template <bool _Const, class _Head, class... _Tail>
-struct __apply_drop_first<_Const, _Head, _Tail...> {
+struct __all_but_first_model_sized_range<_Const, _Head, _Tail...> {
   static constexpr bool value = (sized_range<__maybe_const<_Const, _Tail>> && ...);
 };
+
+template <bool _Const, class... _Views>
+concept __all_random_access = (random_access_range<__maybe_const<_Const, _Views>> && ...);
+
+template <bool _Const, class... _Views>
+concept __all_bidirectional = (bidirectional_range<__maybe_const<_Const, _Views>> && ...);
+
+template <bool _Const, class... _Views>
+concept __all_forward = (forward_range<__maybe_const<_Const, _Views>> && ...);
+
+template <bool _Const, class _First, class... _Tail>
+struct __all_common_ignore_last {
+  static constexpr bool value =
+      common_range<__maybe_const<_Const, _First>> && __all_common_ignore_last<_Const, _Tail...>::value;
+};
+
+template <bool _Const, class _Tail>
+struct __all_common_ignore_last<_Const, _Tail> {
+  static constexpr bool value = true;
+};
+
+template <bool _Const, class... _Rs>
+concept __concat_is_random_access =
+    (__all_random_access<_Const, _Rs...>) && (__all_common_ignore_last<_Const, _Rs...>::value);
+
+template <bool _Const, class... _Rs>
+concept __concat_is_bidirectional =
+    (__all_bidirectional<_Const, _Rs...>) && (__all_common_ignore_last<_Const, _Rs...>::value);
 
 template <input_range... _Views>
   requires(view<_Views> && ...) && (sizeof...(_Views) > 0) && __concatable<_Views...>
@@ -129,7 +142,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr auto end()
     requires(!(__simple_view<_Views> && ...))
   {
-    if constexpr (common_range<__maybe_const<false, typename __last_view<_Views...>::type>>) {
+    if constexpr (common_range<__maybe_const<false, __extract_last<_Views...>>>) {
       constexpr auto __n = sizeof...(_Views);
       return __iterator<false>(this, in_place_index<__n - 1>, ranges::end(std::get<__n - 1>(__views_)));
     } else {
@@ -140,7 +153,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
     requires(range<const _Views> && ...)
   {
-    if constexpr (common_range<__maybe_const<true, typename __last_view<_Views...>::type>>) {
+    if constexpr (common_range<__maybe_const<true, __extract_last<_Views...>>>) {
       constexpr auto __n = sizeof...(_Views);
       return __iterator<true>(this, in_place_index<__n - 1>, ranges::end(std::get<__n - 1>(__views_)));
     } else {
@@ -176,14 +189,14 @@ template <bool _Const, typename... _Views>
 struct __concat_view_iterator_category<_Const, _Views...> {
 private:
   constexpr static bool __derive_pack_random_iterator =
-      __derived_from_pack<typename iterator_traits<iterator_t<__maybe_const<_Const, _Views>>>::iterator_category...,
-                          random_access_iterator_tag>;
+      (derived_from<typename iterator_traits<iterator_t<__maybe_const<_Const, _Views>>>::iterator_category,
+                          random_access_iterator_tag> && ...);
   constexpr static bool __derive_pack_bidirectional_iterator =
-      __derived_from_pack<typename iterator_traits<iterator_t<__maybe_const<_Const, _Views>>>::iterator_category...,
-                          bidirectional_iterator_tag>;
+      (derived_from<typename iterator_traits<iterator_t<__maybe_const<_Const, _Views>>>::iterator_category,
+                          bidirectional_iterator_tag> && ...);
   constexpr static bool __derive_pack_forward_iterator =
-      __derived_from_pack<typename iterator_traits< iterator_t<__maybe_const<_Const, _Views>>>::iterator_category...,
-                          forward_iterator_tag>;
+      (derived_from<typename iterator_traits< iterator_t<__maybe_const<_Const, _Views>>>::iterator_category,
+                          forward_iterator_tag> && ...);
 
 public:
   using iterator_category =
@@ -573,7 +586,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type operator-(const __iterator& __x, default_sentinel_t)
     requires(sized_sentinel_for<sentinel_t<__maybe_const<_Const, _Views>>, iterator_t<__maybe_const<_Const, _Views>>> &&
              ...) &&
-            (__apply_drop_first<_Const, _Views...>::value)
+            (__all_but_first_model_sized_range<_Const, _Views...>::value)
   {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         !__x.__it_.valueless_by_exception(),
@@ -595,7 +608,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type operator-(default_sentinel_t, const __iterator& __x)
     requires(sized_sentinel_for<sentinel_t<__maybe_const<_Const, _Views>>, iterator_t<__maybe_const<_Const, _Views>>> &&
              ...) &&
-            (__apply_drop_first<_Const, _Views...>::value)
+            (__all_but_first_model_sized_range<_Const, _Views...>::value)
   {
     return -(__x - default_sentinel);
   }

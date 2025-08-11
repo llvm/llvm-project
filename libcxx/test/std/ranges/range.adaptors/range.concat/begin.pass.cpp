@@ -13,20 +13,81 @@
 
 #include <cassert>
 #include "test_iterators.h"
+#include "types.h"
 
-constexpr void general_tests() {
-  std::vector<int> v1 = {1, 2, 3, 4, 5, 6, 7, 8};
-  std::vector<int> v2 = {1, 2, 3, 4, 5, 6, 7, 8};
-  // Check the return type of `.begin()`
+template <class T>
+concept HasConstBegin = requires(const T& ct) { ct.begin(); };
+
+template <class T>
+concept HasBegin = requires(T& t) { t.begin(); };
+
+template <class T>
+concept HasConstAndNonConstBegin =
+    HasConstBegin<T> &&
+    requires(T& t, const T& ct) { requires !std::same_as<decltype(t.begin()), decltype(ct.begin())>; };
+
+template <class T>
+concept HasOnlyNonConstBegin = HasBegin<T> && !
+HasConstBegin<T>;
+
+template <class T>
+concept HasOnlyConstBegin = HasConstBegin<T> && !
+HasConstAndNonConstBegin<T>;
+
+constexpr void tests() {
+  
+  // check the case of simple view
   {
-    std::ranges::concat_view view(v1, v2);
-    using ConcatIterator = std::ranges::iterator_t<decltype(view)>;
-    ASSERT_SAME_TYPE(ConcatIterator, decltype(view.begin()));
+    int buffer[4] = {1, 2, 3, 4};
+    std::ranges::concat_view v(SimpleCommon{buffer}, SimpleCommon{buffer});
+    static_assert(std::is_same_v<decltype(v.begin()), decltype(std::as_const(v).begin())>);
+    assert(v.begin() == std::as_const(v).begin());
+
+    using View = decltype(v);
+    static_assert(HasOnlyConstBegin<View>);
+    static_assert(!HasOnlyNonConstBegin<View>);
+    static_assert(!HasConstAndNonConstBegin<View>);
   }
+
+  // not all underlying ranges model simple view
+  {
+    int buffer[4] = {1, 2, 3, 4};
+    std::ranges::concat_view v(SimpleCommon{buffer}, NonSimpleNonCommon{buffer});
+    static_assert(!std::is_same_v<decltype(v.begin()), decltype(std::as_const(v).begin())>);
+    assert(v.begin() == std::as_const(v).begin());
+
+    using View = decltype(v);
+    static_assert(!HasOnlyConstBegin<View>);
+    static_assert(!HasOnlyNonConstBegin<View>);
+    static_assert(HasConstAndNonConstBegin<View>);
+  }
+
+  // first view is empty
+  {
+    std::vector<int> v1;
+    std::vector<int> v2 = {1, 2, 3, 4};
+    std::ranges::concat_view view(v1, v2);
+    auto it = view.begin();
+    assert(*it == 1);
+    assert(it + 4 == view.end());
+  }
+
+  // first few views is empty
+  {
+    std::vector<int> v1;
+    std::vector<int> v2;
+    std::vector<int> v3 = {1, 2, 3, 4};
+    std::ranges::concat_view view(v1, v2, v3);
+    auto it = view.begin();
+    assert(*it == 1);
+    assert(it + 4 == view.end());
+  }
+
+
 }
 
 constexpr bool test() {
-  general_tests();
+  tests();
   return true;
 }
 

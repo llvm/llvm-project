@@ -24,19 +24,28 @@ private:
   int* end_;
 };
 
-struct TrackingRange : TrackInitialization, std::ranges::view_base {
-  using TrackInitialization::TrackInitialization;
-  int* begin() const;
-  int* end() const;
+struct MoveAwareView : std::ranges::view_base {
+  int moves = 0;
+  constexpr MoveAwareView() = default;
+  constexpr MoveAwareView(MoveAwareView&& other) : moves(other.moves + 1) { other.moves = 1; }
+  constexpr MoveAwareView& operator=(MoveAwareView&& other) {
+    moves = other.moves + 1;
+    other.moves = 0;
+    return *this;
+  }
+  constexpr const int* begin() const { return &moves; }
+  constexpr const int* end() const { return &moves + 1; }
 };
 
 constexpr bool test() {
-  int buff[] = {1, 2, 3, 4};
+  int buff[] = {1, 2};
+  int buff2[] = {3, 4};
 
-  // Test explicit syntax
+  // constructor from views
   {
-    Range range(buff, buff + 4);
-    std::ranges::concat_view<Range> view(range);
+    Range range(buff, buff + 2);
+    Range range2(buff2, buff2 + 2);
+    std::ranges::concat_view view(range, range2);
     auto it  = view.begin();
     auto end = view.end();
     assert(*it++ == 1);
@@ -48,11 +57,11 @@ constexpr bool test() {
 
   // Make sure we move the view
   {
-    bool moved = false, copied = false;
-    TrackingRange range(&moved, &copied);
-    [[maybe_unused]] std::ranges::concat_view<TrackingRange> view(std::move(range));
-    assert(moved);
-    assert(!copied);
+    MoveAwareView mv;
+    std::ranges::concat_view v{std::move(mv), MoveAwareView{}};
+    auto it = v.begin();
+    assert(*it++ == 2); // one move from the local variable to parameter, one move from parameter to member
+    assert(*it++ == 1);
   }
 
   return true;
