@@ -128,8 +128,7 @@ ObjectStore::storeFromOpenFileImpl(sys::fs::file_t FD,
   if (Buffer)
     return errorCodeToError(Buffer.getError());
 
-  return store(std::nullopt,
-               arrayRefFromStringRef<char>((*Buffer)->getBuffer()));
+  return store({}, arrayRefFromStringRef<char>((*Buffer)->getBuffer()));
 }
 
 Error ObjectStore::validateTree(ObjectRef Root) {
