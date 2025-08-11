@@ -1714,6 +1714,7 @@ def Vector_LoadOp : Vector_Op<"load", [
     load operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violations may lead to
     architecture-specific faults or performance penalties.
+    A value of 0 indicates no specific alignment requirement.
   }];
 
   let arguments = (ins Arg<AnyMemRef, "the reference to load from",
@@ -1829,6 +1830,7 @@ def Vector_StoreOp : Vector_Op<"store", [
     store operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violations may lead to
     architecture-specific faults or performance penalties.
+    A value of 0 indicates no specific alignment requirement.
   }];
 
   let arguments = (ins
@@ -1917,6 +1919,7 @@ def Vector_MaskedLoadOp :
     load operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violations may lead to
     architecture-specific faults or performance penalties.
+    A value of 0 indicates no specific alignment requirement.
   }];
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
@@ -2009,6 +2012,7 @@ def Vector_MaskedStoreOp :
     store operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violations may lead to
     architecture-specific faults or performance penalties.
+    A value of 0 indicates no specific alignment requirement.
   }];
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
@@ -2082,6 +2086,12 @@ def Vector_GatherOp :
     The gather operation can be used directly where applicable, or can be used
     during progressively lowering to bring other memory operations closer to
     hardware ISA support for a gather.
+
+    An optional `alignment` attribute allows to specify the byte alignment of the
+    scatter operation. It must be a positive power of 2. The operation must access
+    memory at an address aligned to this boundary. Violations may lead to
+    architecture-specific faults or performance penalties.
+    A value of 0 indicates no specific alignment requirement.
 
     Examples:
 
@@ -2182,6 +2192,7 @@ def Vector_ScatterOp :
     scatter operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violations may lead to
     architecture-specific faults or performance penalties.
+    A value of 0 indicates no specific alignment requirement.
 
     Examples:
 
@@ -2265,6 +2276,7 @@ def Vector_ExpandLoadOp :
     load operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violations may lead to
     architecture-specific faults or performance penalties.
+    A value of 0 indicates no specific alignment requirement.
 
     Note, at the moment this Op is only available for fixed-width vectors.
 
@@ -2353,6 +2365,7 @@ def Vector_CompressStoreOp :
     store operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violations may lead to
     architecture-specific faults or performance penalties.
+    A value of 0 indicates no specific alignment requirement.
 
     Note, at the moment this Op is only available for fixed-width vectors.
 
