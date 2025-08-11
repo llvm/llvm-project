@@ -1373,7 +1373,7 @@ Constant *llvm::FlushFPConstant(Constant *Operand, const Instruction *Inst,
   if (ConstantFP *CFP = dyn_cast<ConstantFP>(Operand))
     return flushDenormalConstantFP(CFP, Inst, IsOutput);
 
-  if (isa<ConstantAggregateZero, UndefValue, ConstantExpr>(Operand))
+  if (isa<ConstantAggregateZero, UndefValue>(Operand))
     return Operand;
 
   Type *Ty = Operand->getType();
@@ -1388,6 +1388,9 @@ Constant *llvm::FlushFPConstant(Constant *Operand, const Instruction *Inst,
 
     Ty = VecTy->getElementType();
   }
+
+  if (isa<ConstantExpr>(Operand))
+    return Operand;
 
   if (const auto *CV = dyn_cast<ConstantVector>(Operand)) {
     SmallVector<Constant *, 16> NewElts;
@@ -1482,6 +1485,9 @@ Constant *llvm::ConstantFoldCastOperand(unsigned Opcode, Constant *C,
   switch (Opcode) {
   default:
     llvm_unreachable("Missing case");
+  case Instruction::PtrToAddr:
+    // TODO: Add some of the ptrtoint folds here as well.
+    break;
   case Instruction::PtrToInt:
     if (auto *CE = dyn_cast<ConstantExpr>(C)) {
       Constant *FoldedValue = nullptr;
@@ -2628,14 +2634,14 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       case Intrinsic::nvvm_ceil_d:
         return ConstantFoldFP(
             ceil, APF, Ty,
-            nvvm::GetNVVMDenromMode(
+            nvvm::GetNVVMDenormMode(
                 nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID)));
 
       case Intrinsic::nvvm_fabs_ftz:
       case Intrinsic::nvvm_fabs:
         return ConstantFoldFP(
             fabs, APF, Ty,
-            nvvm::GetNVVMDenromMode(
+            nvvm::GetNVVMDenormMode(
                 nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID)));
 
       case Intrinsic::nvvm_floor_ftz_f:
@@ -2643,7 +2649,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       case Intrinsic::nvvm_floor_d:
         return ConstantFoldFP(
             floor, APF, Ty,
-            nvvm::GetNVVMDenromMode(
+            nvvm::GetNVVMDenormMode(
                 nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID)));
 
       case Intrinsic::nvvm_rcp_rm_ftz_f:
@@ -2676,11 +2682,12 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       case Intrinsic::nvvm_round_ftz_f:
       case Intrinsic::nvvm_round_f:
       case Intrinsic::nvvm_round_d: {
-        // Use APFloat implementation instead of native libm call, as some
-        // implementations (e.g. on PPC) do not preserve the sign of negative 0.
+        // nvvm_round is lowered to PTX cvt.rni, which will round to nearest
+        // integer, choosing even integer if source is equidistant between two
+        // integers, so the semantics are closer to "rint" rather than "round".
         bool IsFTZ = nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID);
         auto V = IsFTZ ? FTZPreserveSign(APF) : APF;
-        V.roundToIntegral(APFloat::rmNearestTiesToAway);
+        V.roundToIntegral(APFloat::rmNearestTiesToEven);
         return ConstantFP::get(Ty->getContext(), V);
       }
 
@@ -2705,7 +2712,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
           return nullptr;
         return ConstantFoldFP(
             sqrt, APF, Ty,
-            nvvm::GetNVVMDenromMode(
+            nvvm::GetNVVMDenormMode(
                 nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID)));
 
       // AMDGCN Intrinsics:

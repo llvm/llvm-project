@@ -21,6 +21,8 @@ endif()
 include(GNUInstallDirs)
 
 if (OPENMP_STANDALONE_BUILD)
+  set(LLVM_TREE_AVAILABLE False)
+
   # CMAKE_BUILD_TYPE was not set, default to Release.
   if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
@@ -48,6 +50,15 @@ if (OPENMP_STANDALONE_BUILD)
   set(CMAKE_CXX_STANDARD_REQUIRED NO)
   set(CMAKE_CXX_EXTENSIONS NO)
 else()
+  # Usually <llvm-project>/runtimes/CMakeLists.txt sets LLVM_TREE_AVAILABLE and
+  # we assume it is not available otherwise. The exception is that we are in an
+  # LLVM_ENABLE_PROJECTS=openmp build, the LLVM tree is actually available.
+  # Note that this build mode has been deprecated.
+  # See https://github.com/llvm/llvm-project/issues/124014
+  if (NOT LLVM_RUNTIMES_BUILD AND "openmp" IN_LIST LLVM_ENABLE_PROJECTS)
+    set(LLVM_TREE_AVAILABLE True)
+  endif ()
+
   set(OPENMP_ENABLE_WERROR ${LLVM_ENABLE_WERROR})
 
   # When building in tree we install the runtime according to the LLVM settings.

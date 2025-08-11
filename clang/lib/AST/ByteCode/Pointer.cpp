@@ -16,6 +16,7 @@
 #include "MemberPointer.h"
 #include "PrimType.h"
 #include "Record.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecordLayout.h"
 
@@ -41,7 +42,7 @@ Pointer::Pointer(Block *Pointee, unsigned Base, uint64_t Offset)
     : Offset(Offset), StorageKind(Storage::Block) {
   assert((Base == RootPtrMark || Base % alignof(void *) == 0) && "wrong base");
 
-  PointeeStorage.BS = {Pointee, Base};
+  PointeeStorage.BS = {Pointee, Base, nullptr, nullptr};
 
   if (Pointee)
     Pointee->addPointer(this);
@@ -66,14 +67,14 @@ Pointer::~Pointer() {
   }
 }
 
-void Pointer::operator=(const Pointer &P) {
+Pointer &Pointer::operator=(const Pointer &P) {
   // If the current storage type is Block, we need to remove
   // this pointer from the block.
   if (isBlockPointer()) {
     if (P.isBlockPointer() && this->block() == P.block()) {
       Offset = P.Offset;
       PointeeStorage.BS.Base = P.PointeeStorage.BS.Base;
-      return;
+      return *this;
     }
 
     if (Block *Pointee = PointeeStorage.BS.Pointee) {
@@ -88,7 +89,6 @@ void Pointer::operator=(const Pointer &P) {
 
   if (P.isBlockPointer()) {
     PointeeStorage.BS = P.PointeeStorage.BS;
-    PointeeStorage.BS.Pointee = P.PointeeStorage.BS.Pointee;
 
     if (PointeeStorage.BS.Pointee)
       PointeeStorage.BS.Pointee->addPointer(this);
@@ -101,16 +101,17 @@ void Pointer::operator=(const Pointer &P) {
   } else {
     assert(false && "Unhandled storage kind");
   }
+  return *this;
 }
 
-void Pointer::operator=(Pointer &&P) {
+Pointer &Pointer::operator=(Pointer &&P) {
   // If the current storage type is Block, we need to remove
   // this pointer from the block.
   if (isBlockPointer()) {
     if (P.isBlockPointer() && this->block() == P.block()) {
       Offset = P.Offset;
       PointeeStorage.BS.Base = P.PointeeStorage.BS.Base;
-      return;
+      return *this;
     }
 
     if (Block *Pointee = PointeeStorage.BS.Pointee) {
@@ -125,7 +126,6 @@ void Pointer::operator=(Pointer &&P) {
 
   if (P.isBlockPointer()) {
     PointeeStorage.BS = P.PointeeStorage.BS;
-    PointeeStorage.BS.Pointee = P.PointeeStorage.BS.Pointee;
 
     if (PointeeStorage.BS.Pointee)
       PointeeStorage.BS.Pointee->addPointer(this);
@@ -138,6 +138,7 @@ void Pointer::operator=(Pointer &&P) {
   } else {
     assert(false && "Unhandled storage kind");
   }
+  return *this;
 }
 
 APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
@@ -492,6 +493,19 @@ void Pointer::initialize() const {
   getInlineDesc()->IsInitialized = true;
 }
 
+void Pointer::initializeAllElements() const {
+  assert(getFieldDesc()->isPrimitiveArray());
+  assert(isArrayRoot());
+
+  InitMapPtr &IM = getInitMap();
+  if (!IM) {
+    IM = std::make_pair(true, nullptr);
+  } else {
+    IM->first = true;
+    IM->second.reset();
+  }
+}
+
 void Pointer::activate() const {
   // Field has its bit in an inline descriptor.
   assert(PointeeStorage.BS.Base != 0 &&
@@ -603,7 +617,7 @@ bool Pointer::pointsToStringLiteral() const {
     return false;
 
   const Expr *E = block()->getDescriptor()->asExpr();
-  return E && isa<StringLiteral>(E);
+  return isa_and_nonnull<StringLiteral>(E);
 }
 
 std::optional<std::pair<Pointer, Pointer>>
@@ -675,7 +689,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
       assert(Record && "Missing record descriptor");
 
       bool Ok = true;
-      if (RT->getDecl()->isUnion()) {
+      if (RT->getOriginalDecl()->isUnion()) {
         const FieldDecl *ActiveField = nullptr;
         APValue Value;
         for (const auto &F : Record->fields()) {
@@ -714,14 +728,15 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
 
         for (unsigned I = 0; I < NB; ++I) {
           const Record::Base *BD = Record->getBase(I);
-          QualType BaseTy = Ctx.getASTContext().getRecordType(BD->Decl);
+          QualType BaseTy = Ctx.getASTContext().getCanonicalTagType(BD->Decl);
           const Pointer &BP = Ptr.atField(BD->Offset);
           Ok &= Composite(BaseTy, BP, R.getStructBase(I));
         }
 
         for (unsigned I = 0; I < NV; ++I) {
           const Record::Base *VD = Record->getVirtualBase(I);
-          QualType VirtBaseTy = Ctx.getASTContext().getRecordType(VD->Decl);
+          QualType VirtBaseTy =
+              Ctx.getASTContext().getCanonicalTagType(VD->Decl);
           const Pointer &VP = Ptr.atField(VD->Offset);
           Ok &= Composite(VirtBaseTy, VP, R.getStructBase(NB + I));
         }
