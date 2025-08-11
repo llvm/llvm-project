@@ -376,11 +376,13 @@ namespace {
     const Stmt *S;
     ExprEngine &Eng;
     const ProgramPoint &PP;
+    bool AtDeclInit;
 
-    CheckBindContext(const CheckersTy &checkers,
-                     SVal loc, SVal val, const Stmt *s, ExprEngine &eng,
+    CheckBindContext(const CheckersTy &checkers, SVal loc, SVal val,
+                     const Stmt *s, bool AtDeclInit, ExprEngine &eng,
                      const ProgramPoint &pp)
-        : Checkers(checkers), Loc(loc), Val(val), S(s), Eng(eng), PP(pp) {}
+        : Checkers(checkers), Loc(loc), Val(val), S(s), Eng(eng), PP(pp),
+          AtDeclInit(AtDeclInit) {}
 
     CheckersTy::const_iterator checkers_begin() { return Checkers.begin(); }
     CheckersTy::const_iterator checkers_end() { return Checkers.end(); }
@@ -391,7 +393,7 @@ namespace {
       const ProgramPoint &L = PP.withTag(checkFn.Checker);
       CheckerContext C(Bldr, Eng, Pred, L);
 
-      checkFn(Loc, Val, S, C);
+      checkFn(Loc, Val, S, AtDeclInit, C);
     }
   };
 
@@ -408,10 +410,10 @@ namespace {
 /// Run checkers for binding of a value to a location.
 void CheckerManager::runCheckersForBind(ExplodedNodeSet &Dst,
                                         const ExplodedNodeSet &Src,
-                                        SVal location, SVal val,
-                                        const Stmt *S, ExprEngine &Eng,
+                                        SVal location, SVal val, const Stmt *S,
+                                        bool AtDeclInit, ExprEngine &Eng,
                                         const ProgramPoint &PP) {
-  CheckBindContext C(BindCheckers, location, val, S, Eng, PP);
+  CheckBindContext C(BindCheckers, location, val, S, AtDeclInit, Eng, PP);
   llvm::TimeTraceScope TimeScope{
       "CheckerManager::runCheckersForBind",
       [&val]() { return getTimeTraceBindMetadata(val); }};

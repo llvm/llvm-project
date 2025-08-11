@@ -60,9 +60,9 @@ entry:
   store ptr %pSrc, ptr %pSrc.addr, align 4
   store i32 %blockSize, ptr %blockSize.addr, align 4
   store ptr %pResult, ptr %pResult.addr, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr %blkCnt) #3
-  call void @llvm.lifetime.start.p0(i64 16, ptr %vecSrc) #3
-  call void @llvm.lifetime.start.p0(i64 4, ptr %sum) #3
+  call void @llvm.lifetime.start.p0(ptr %blkCnt) #3
+  call void @llvm.lifetime.start.p0(ptr %vecSrc) #3
+  call void @llvm.lifetime.start.p0(ptr %sum) #3
   store i32 0, ptr %sum, align 4
   %0 = load i32, ptr %blockSize.addr, align 4
   %shr = lshr i32 %0, 4
@@ -123,15 +123,15 @@ while.end5:                                       ; preds = %while.cond1
   %conv6 = trunc i32 %div to i8
   %18 = load ptr, ptr %pResult.addr, align 4
   store i8 %conv6, ptr %18, align 1
-  call void @llvm.lifetime.end.p0(i64 4, ptr %sum) #3
-  call void @llvm.lifetime.end.p0(i64 16, ptr %vecSrc) #3
-  call void @llvm.lifetime.end.p0(i64 4, ptr %blkCnt) #3
+  call void @llvm.lifetime.end.p0(ptr %sum) #3
+  call void @llvm.lifetime.end.p0(ptr %vecSrc) #3
+  call void @llvm.lifetime.end.p0(ptr %blkCnt) #3
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 declare i32 @llvm.arm.mve.addv.v16i8(<16 x i8>, i32) #2
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture) #1
 
 attributes #0 = { nounwind "approx-func-fp-math"="true" "frame-pointer"="all" "min-legal-vector-width"="0" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="cortex-m55" "target-features"="+armv8.1-m.main,+dsp,+fp-armv8d16,+fp-armv8d16sp,+fp16,+fp64,+fullfp16,+hwdiv,+lob,+mve,+mve.fp,+ras,+strict-align,+thumb-mode,+vfp2,+vfp2sp,+vfp3d16,+vfp3d16sp,+vfp4d16,+vfp4d16sp,-aes,-bf16,-cdecp0,-cdecp1,-cdecp2,-cdecp3,-cdecp4,-cdecp5,-cdecp6,-cdecp7,-crc,-crypto,-d32,-dotprod,-fp-armv8,-fp-armv8sp,-fp16fml,-hwdiv-arm,-i8mm,-neon,-pacbti,-sb,-sha2,-vfp3,-vfp3sp,-vfp4,-vfp4sp" "unsafe-fp-math"="true" }
 attributes #1 = { argmemonly nocallback nofree nosync nounwind willreturn }
