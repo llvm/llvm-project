@@ -2690,7 +2690,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     SC.Done(&I);
   }
 
- // Perform a bitwise OR on the horizontal pairs (or other specified grouping)
+  // Perform a bitwise OR on the horizontal pairs (or other specified grouping)
   // of elements.
   //
   // For example, suppose we have:
@@ -2766,8 +2766,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (I.arg_size() == 2)
       SecondArgShadow = getShadow(&I, 1);
 
-    Value *OrShadow = horizontalReduce(I, /*ReductionFactor=*/ 2,
-                                       FirstArgShadow, SecondArgShadow);
+    Value *OrShadow = horizontalReduce(I, /*ReductionFactor=*/ 2, FirstArgShadow,
+                                       SecondArgShadow);
 
     OrShadow = CreateShadowCast(IRB, OrShadow, getShadowTy(&I));
 
@@ -2827,8 +2827,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                                           ReinterpretShadowTy);
     }
 
-    Value *OrShadow = horizontalReduce(I, /*ReductionFactor=*/ 2,
-                                       FirstArgShadow, SecondArgShadow);
+    Value *OrShadow = horizontalReduce(I, /*ReductionFactor=*/ 2, FirstArgShadow,
+                                       SecondArgShadow);
 
     OrShadow = CreateShadowCast(IRB, OrShadow, getShadowTy(&I));
 
