@@ -233,7 +233,7 @@ define void @buildvector_v32i8(ptr %dst, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4,
 ; CHECK-NEXT:    fst.d $fs5, $sp, 32 # 8-byte Folded Spill
 ; CHECK-NEXT:    fst.d $fs6, $sp, 24 # 8-byte Folded Spill
 ; CHECK-NEXT:    fst.d $fs7, $sp, 16 # 8-byte Folded Spill
-; CHECK-NEXT:    xvreplgr2vr.b $xr0, $a1
+; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 0
 ; CHECK-NEXT:    xvreplgr2vr.b $xr1, $a2
 ; CHECK-NEXT:    xvreplgr2vr.b $xr2, $a3
 ; CHECK-NEXT:    xvreplgr2vr.b $xr3, $a4
@@ -290,8 +290,6 @@ define void @buildvector_v32i8(ptr %dst, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4,
 ; CHECK-NEXT:    xvreplgr2vr.b $xr29, $a3
 ; CHECK-NEXT:    xvreplgr2vr.b $xr30, $a1
 ; CHECK-NEXT:    xvreplgr2vr.b $xr31, $a4
-; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 18
-; CHECK-NEXT:    xvextrins.b $xr0, $xr0, 0
 ; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 18
 ; CHECK-NEXT:    xvextrins.b $xr0, $xr1, 17
 ; CHECK-NEXT:    xvpermi.q $xr2, $xr0, 18
@@ -413,9 +411,7 @@ define void @buildvector_v32i8_partial(ptr %dst, i8 %a0, i8 %a1, i8 %a2, i8 %a5,
 ; CHECK-NEXT:    ld.b $t5, $sp, 16
 ; CHECK-NEXT:    ld.b $t6, $sp, 8
 ; CHECK-NEXT:    ld.b $t7, $sp, 0
-; CHECK-NEXT:    xvreplgr2vr.b $xr0, $a1
-; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 18
-; CHECK-NEXT:    xvextrins.b $xr0, $xr0, 0
+; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 0
 ; CHECK-NEXT:    xvreplgr2vr.b $xr1, $a2
 ; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 18
 ; CHECK-NEXT:    xvextrins.b $xr0, $xr1, 17
@@ -605,9 +601,7 @@ define void @buildvector_v16i16(ptr %dst, i16 %a0, i16 %a1, i16 %a2, i16 %a3, i1
 ; CHECK-NEXT:    ld.h $t6, $sp, 16
 ; CHECK-NEXT:    ld.h $t7, $sp, 8
 ; CHECK-NEXT:    ld.h $t8, $sp, 0
-; CHECK-NEXT:    xvreplgr2vr.h $xr0, $a1
-; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 18
-; CHECK-NEXT:    xvextrins.h $xr0, $xr0, 0
+; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 0
 ; CHECK-NEXT:    xvreplgr2vr.h $xr1, $a2
 ; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 18
 ; CHECK-NEXT:    xvextrins.h $xr0, $xr1, 17
@@ -679,9 +673,7 @@ entry:
 define void @buildvector_v16i16_partial(ptr %dst, i16 %a0, i16 %a2, i16 %a5, i16 %a6, i16 %a7, i16 %a12, i16 %a13) nounwind {
 ; CHECK-LABEL: buildvector_v16i16_partial:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvreplgr2vr.h $xr0, $a1
-; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 18
-; CHECK-NEXT:    xvextrins.h $xr0, $xr0, 0
+; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 0
 ; CHECK-NEXT:    xvreplgr2vr.h $xr1, $a2
 ; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 18
 ; CHECK-NEXT:    xvextrins.h $xr0, $xr1, 34

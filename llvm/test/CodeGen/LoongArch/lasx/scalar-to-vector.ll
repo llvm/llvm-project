@@ -6,9 +6,7 @@
 define <32 x i8> @scalar_to_32xi8(i8 %val) {
 ; CHECK-LABEL: scalar_to_32xi8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvreplgr2vr.b $xr0, $a0
-; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 18
-; CHECK-NEXT:    xvextrins.b $xr0, $xr0, 0
+; CHECK-NEXT:    vinsgr2vr.b $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %ret = insertelement <32 x i8> poison, i8 %val, i32 0
   ret <32 x i8> %ret
@@ -17,9 +15,7 @@ define <32 x i8> @scalar_to_32xi8(i8 %val) {
 define <16 x i16> @scalar_to_16xi16(i16 %val) {
 ; CHECK-LABEL: scalar_to_16xi16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvreplgr2vr.h $xr0, $a0
-; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 18
-; CHECK-NEXT:    xvextrins.h $xr0, $xr0, 0
+; CHECK-NEXT:    vinsgr2vr.h $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %ret = insertelement <16 x i16> poison, i16 %val, i32 0
   ret <16 x i16> %ret
