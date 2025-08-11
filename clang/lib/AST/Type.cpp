@@ -4399,12 +4399,10 @@ SubstPackType::SubstPackType(TypeClass Derived, QualType Canon,
            TypeDependence::DependentInstantiation |
                TypeDependence::UnexpandedPack),
       Arguments(ArgPack.pack_begin()) {
-#ifndef NDEBUG
-  for (const auto &P : ArgPack.pack_elements()) {
-    assert(P.getKind() == TemplateArgument::Type &&
-           "non-type argument to SubstPackType?");
-  }
-#endif
+  assert(llvm::all_of(
+             ArgPack.pack_elements(),
+             [](auto &P) { return P.getKind() == TemplateArgument::Type; }) &&
+         "non-type argument to SubstPackType?");
   SubstPackTypeBits.NumArgs = ArgPack.pack_size();
 }
 
