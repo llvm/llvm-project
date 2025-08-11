@@ -2378,9 +2378,7 @@ define i8 @sadd_sat_ugt_int_max(i8 %x, i8 %y) {
 
 define i8 @sadd_sat_eq_int_max(i8 %x) {
 ; CHECK-LABEL: @sadd_sat_eq_int_max(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], 127
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], 1
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP]], i8 127, i8 [[ADD]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[X:%.*]], i8 1)
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %cmp = icmp eq i8 %x, 127
@@ -2391,8 +2389,7 @@ define i8 @sadd_sat_eq_int_max(i8 %x) {
 
 define i8 @sadd_sat_constant(i8 %x) {
 ; CHECK-LABEL: @sadd_sat_constant(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smin.i8(i8 [[X:%.*]], i8 117)
-; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[TMP1]], 10
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[X:%.*]], i8 10)
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %cmp = icmp sge i8 %x, 118
@@ -2611,10 +2608,7 @@ define i8 @sadd_sat_commuted_both(i8 %x, i8 %y) {
 
 define i8 @sadd_sat_int_max_minus_x_nsw_slt(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sadd_sat_int_max_minus_x_nsw_slt(
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i8 127, [[X:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[SUB]], [[Y:%.*]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP]], i8 127, i8 [[ADD]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %sub = sub nsw i8 127, %x
@@ -2626,10 +2620,7 @@ define i8 @sadd_sat_int_max_minus_x_nsw_slt(i8 %x, i8 %y) {
 
 define i8 @sadd_sat_int_max_minus_x_nsw_sge_commuted(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sadd_sat_int_max_minus_x_nsw_sge_commuted(
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i8 127, [[X:%.*]]
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp slt i8 [[Y:%.*]], [[SUB]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP_NOT]], i8 [[ADD]], i8 127
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %sub = sub nsw i8 127, %x
@@ -2652,4 +2643,31 @@ define i8 @sadd_sat_int_max_minus_x_no_nsw_neg(i8 %x, i8 %y) {
   %add = add i8 %x, %y
   %r = select i1 %cmp, i8 127, i8 %add
   ret i8 %r
+}
+
+define i8 @neg_no_nsw(i8 %x, i8 %y) {
+; CHECK-LABEL: @neg_no_nsw(
+; CHECK-NEXT:    [[ADD:%.*]] = sub i8 127, [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X:%.*]], [[ADD]]
+; CHECK-NEXT:    [[D:%.*]] = add i8 [[X]], [[Y]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], i8 127, i8 [[D]]
+; CHECK-NEXT:    ret i8 [[S]]
+;
+  %add = sub i8 127, %y
+  %cmp = icmp sgt i8 %x, %add
+  %d = add i8 %x, %y
+  %s = select i1 %cmp, i8 127, i8 %d
+  ret i8 %s
+}
+
+define i8 @neg_neg_constant(i8 %x, i8 %y) {
+; CHECK-LABEL: @neg_neg_constant(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smin.i8(i8 [[X:%.*]], i8 -1)
+; CHECK-NEXT:    [[S:%.*]] = and i8 [[TMP1]], 127
+; CHECK-NEXT:    ret i8 [[S]]
+;
+  %cmp = icmp sgt i8 %x, -2
+  %d = add i8 %x, -128
+  %s = select i1 %cmp, i8 127, i8 %d
+  ret i8 %s
 }
