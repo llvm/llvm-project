@@ -42,14 +42,14 @@ NumericLiteralInfo::NumericLiteralInfo(StringRef Text, char Separator) {
     }
   }
 
-  DotPos = Text.find('.', BaseLetterPos == 1 ? 2 : 0); // e.g. 0x.1 or .1
+  DotPos = Text.find('.', BaseLetterPos + 1); // e.g. 0x.1 or .1
 
   // e.g. 1.e2 or 0xFp2
   const auto Pos = DotPos != StringRef::npos ? DotPos + 1 : BaseLetterPos + 2;
 
   ExponentLetterPos =
       // Trim C++ user-defined suffix as in `1_Pa`.
-      (Separator == '\'' ? Text.substr(0, Text.find('_')) : Text)
+      (Separator == '\'' ? Text.take_front(Text.find('_')) : Text)
           .find_insensitive(IsHex ? 'p' : 'e', Pos);
 
   const bool HasExponent = ExponentLetterPos != StringRef::npos;
