@@ -3326,9 +3326,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_ctz:
   case Builtin::BI__builtin_ctzl:
   case Builtin::BI__builtin_ctzll:
-  case Builtin::BI__builtin_ctzg: {
-    bool HasFallback = BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_ctzg &&
-                       E->getNumArgs() > 1;
+  case Builtin::BI__builtin_ctzg:
+  case Builtin::BI__builtin_elementwise_cttz: {
+    bool HasFallback =
+        (BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_ctzg ||
+         BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_elementwise_cttz) &&
+        E->getNumArgs() > 1;
 
     Value *ArgValue =
         HasFallback ? EmitScalarExpr(E->getArg(0))
@@ -3338,8 +3341,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Function *F = CGM.getIntrinsic(Intrinsic::cttz, ArgType);
 
     llvm::Type *ResultType = ConvertType(E->getType());
-    Value *ZeroUndef =
-        Builder.getInt1(HasFallback || getTarget().isCLZForZeroUndef());
+    // The elementwise builtins always exhibit zero-is-undef behaviour
+    Value *ZeroUndef = Builder.getInt1(
+        HasFallback || getTarget().isCLZForZeroUndef() ||
+        BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_elementwise_cttz);
     Value *Result = Builder.CreateCall(F, {ArgValue, ZeroUndef});
     if (Result->getType() != ResultType)
       Result =
@@ -3358,9 +3363,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_clz:
   case Builtin::BI__builtin_clzl:
   case Builtin::BI__builtin_clzll:
-  case Builtin::BI__builtin_clzg: {
-    bool HasFallback = BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_clzg &&
-                       E->getNumArgs() > 1;
+  case Builtin::BI__builtin_clzg:
+  case Builtin::BI__builtin_elementwise_ctlz: {
+    bool HasFallback =
+        (BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_clzg ||
+         BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_elementwise_ctlz) &&
+        E->getNumArgs() > 1;
 
     Value *ArgValue =
         HasFallback ? EmitScalarExpr(E->getArg(0))
@@ -3370,8 +3378,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Function *F = CGM.getIntrinsic(Intrinsic::ctlz, ArgType);
 
     llvm::Type *ResultType = ConvertType(E->getType());
-    Value *ZeroUndef =
-        Builder.getInt1(HasFallback || getTarget().isCLZForZeroUndef());
+    // The elementwise builtins always exhibit zero-is-undef behaviour
+    Value *ZeroUndef = Builder.getInt1(
+        HasFallback || getTarget().isCLZForZeroUndef() ||
+        BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_elementwise_ctlz);
     Value *Result = Builder.CreateCall(F, {ArgValue, ZeroUndef});
     if (Result->getType() != ResultType)
       Result =
