@@ -1361,18 +1361,6 @@ public:
   /// Return true if \p Inst has Signed RA annotation.
   bool isRASigned(const MCInst &Inst) const;
 
-  /// Stores RA Signing annotation on \p Inst.
-  void setRASigning(MCInst &Inst) const;
-
-  /// Return true if \p Inst has Signing RA annotation.
-  bool isRASigning(const MCInst &Inst) const;
-
-  /// Stores Authenticating annotation on \p Inst.
-  void setAuthenticating(MCInst &Inst) const;
-
-  /// Return true if \p Inst has Authenticating annotation.
-  bool isAuthenticating(const MCInst &Inst) const;
-
   /// Stores RA Unsigned annotation on \p Inst.
   void setRAUnsigned(MCInst &Inst) const;
 

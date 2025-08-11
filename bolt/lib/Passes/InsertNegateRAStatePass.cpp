@@ -34,9 +34,6 @@ void InsertNegateRAState::runOnFunction(BinaryFunction &BF) {
     return;
   }
 
-  // Attach .cfi_negate_ra_state to the "trivial" cases first.
-  addNegateRAStateAfterPSignOrPAuth(BF);
-
   inferUnknownStates(BF);
 
   for (FunctionFragment &FF : BF.getLayout().fragments()) {
@@ -67,24 +64,6 @@ void InsertNegateRAState::runOnFunction(BinaryFunction &BF) {
   }
 }
 
-bool InsertNegateRAState::addNegateRAStateAfterPSignOrPAuth(
-    BinaryFunction &BF) {
-  BinaryContext &BC = BF.getBinaryContext();
-  bool FoundAny = false;
-  for (BinaryBasicBlock &BB : BF) {
-    for (auto Iter = BB.begin(); Iter != BB.end(); ++Iter) {
-      MCInst &Inst = *Iter;
-      if (BC.MIB->isPSignOnLR(Inst) ||
-          (BC.MIB->isPAuthOnLR(Inst) && !BC.MIB->isPAuthAndRet(Inst))) {
-        Iter = BF.addCFIInstruction(
-            &BB, Iter + 1, MCCFIInstruction::createNegateRAState(nullptr));
-        FoundAny = true;
-      }
-    }
-  }
-  return FoundAny;
-}
-
 void InsertNegateRAState::coverFunctionFragmentStart(BinaryFunction &BF,
                                                      FunctionFragment &FF) {
   BinaryContext &BC = BF.getBinaryContext();
@@ -102,8 +81,7 @@ void InsertNegateRAState::coverFunctionFragmentStart(BinaryFunction &BF,
       });
   // If a function is already split in the input, the first FF can also start
   // with Signed state. This covers that scenario as well.
-  if (BC.MIB->isRASigned(*((*FirstNonEmpty)->begin())) ||
-      BC.MIB->isAuthenticating(*((*FirstNonEmpty)->begin()))) {
+  if (BC.MIB->isRASigned(*((*FirstNonEmpty)->begin()))) {
     BF.addCFIInstruction(*FirstNonEmpty, (*FirstNonEmpty)->begin(),
                          MCCFIInstruction::createNegateRAState(nullptr));
   }
@@ -121,10 +99,10 @@ void InsertNegateRAState::inferUnknownStates(BinaryFunction &BF) {
         continue;
 
       if (!FirstIter && BC.MIB->isRAStateUnknown(Inst)) {
-        if (BC.MIB->isRASigned(PrevInst) || BC.MIB->isRASigning(PrevInst)) {
+        if (BC.MIB->isRASigned(PrevInst) || BC.MIB->isPSignOnLR(PrevInst)) {
           BC.MIB->setRASigned(Inst);
         } else if (BC.MIB->isRAUnsigned(PrevInst) ||
-                   BC.MIB->isAuthenticating(PrevInst)) {
+                   BC.MIB->isPAuthOnLR(PrevInst)) {
           BC.MIB->setRAUnsigned(Inst);
         }
       } else {
