@@ -1522,7 +1522,6 @@ bool ClauseProcessor::processEnter(
     llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &result) const {
   return findRepeatableClause<omp::clause::Enter>(
       [&](const omp::clause::Enter &clause, const parser::CharBlock &source) {
-        mlir::Location currentLocation = converter.genLocation(source);
         bool automap =
             std::get<std::optional<omp::clause::Enter::Modifier>>(clause.t)
                 .has_value();
