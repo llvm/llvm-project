@@ -1640,17 +1640,13 @@ defm : PairInsertExtractPatV8<v8f32, f32>;
 defm : PairInsertExtractPatV4<v4i64, GRLenVT>;
 defm : PairInsertExtractPatV4<v4f64, f64>;
 
-foreach imm = 0...7 in {
-  def : Pat<(vector_insert v8i32:$xd, (GRLenVT(vector_extract v8i32:$xj, 0)),
-                uimm3:$imm),
-            (XVINSVE0_W v8i32:$xd, v8i32:$xj, uimm3:$imm)>;
-}
+def : Pat<(vector_insert v8i32:$xd, (GRLenVT(vector_extract v8i32:$xj, 0)),
+              uimm3:$imm),
+          (XVINSVE0_W v8i32:$xd, v8i32:$xj, uimm3:$imm)>;
 
-foreach imm = 0...3 in {
-  def : Pat<(vector_insert v4i64:$xd, (GRLenVT(vector_extract v4i64:$xj, 0)),
-                uimm2:$imm),
-            (XVINSVE0_D v4i64:$xd, v4i64:$xj, uimm2:$imm)>;
-}
+def : Pat<(vector_insert v4i64:$xd, (GRLenVT(vector_extract v4i64:$xj, 0)),
+              uimm2:$imm),
+          (XVINSVE0_D v4i64:$xd, v4i64:$xj, uimm2:$imm)>;
 
 def : Pat<(vector_insert v8i32:$xd,
               (GRLenVT(vector_extract v8i32:$xj, uimm3:$imm1)), uimm3:$imm2),
