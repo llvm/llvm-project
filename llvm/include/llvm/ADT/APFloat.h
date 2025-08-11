@@ -787,17 +787,7 @@ private:
 };
 
 LLVM_ABI hash_code hash_value(const IEEEFloat &Arg);
-/// Returns the exponent of the internal representation of the APFloat.
-///
-/// Because the radix of APFloat is 2, this is equivalent to floor(log2(x)).
-/// For special APFloat values, this returns special error codes:
-///
-///   NaN -> \c IEK_NaN
-///   0   -> \c IEK_Zero
-///   Inf -> \c IEK_Inf
-///
 LLVM_ABI int ilogb(const IEEEFloat &Arg);
-/// Returns: X * 2^Exp for integral exponents.
 LLVM_ABI IEEEFloat scalbn(IEEEFloat X, int Exp, roundingMode);
 LLVM_ABI IEEEFloat frexp(const IEEEFloat &Val, int &Exp, roundingMode RM);
 
@@ -1529,13 +1519,7 @@ public:
   }
 
   LLVM_ABI friend hash_code hash_value(const APFloat &Arg);
-  friend int ilogb(const APFloat &Arg) {
-    if (APFloat::usesLayout<detail::IEEEFloat>(Arg.getSemantics()))
-      return ilogb(Arg.getIEEE());
-    if (APFloat::usesLayout<detail::DoubleAPFloat>(Arg.getSemantics()))
-      return ilogb(Arg.getIEEE());
-    llvm_unreachable("Unexpected semantics");
-  }
+  friend int ilogb(const APFloat &Arg);
   friend APFloat scalbn(APFloat X, int Exp, roundingMode RM);
   friend APFloat frexp(const APFloat &X, int &Exp, roundingMode RM);
   friend IEEEFloat;
@@ -1550,6 +1534,25 @@ static_assert(sizeof(APFloat) == sizeof(detail::IEEEFloat),
 /// These additional declarations are required in order to compile LLVM with IBM
 /// xlC compiler.
 LLVM_ABI hash_code hash_value(const APFloat &Arg);
+
+/// Returns the exponent of the internal representation of the APFloat.
+///
+/// Because the radix of APFloat is 2, this is equivalent to floor(log2(x)).
+/// For special APFloat values, this returns special error codes:
+///
+///   NaN -> \c IEK_NaN
+///   0   -> \c IEK_Zero
+///   Inf -> \c IEK_Inf
+///
+inline int ilogb(const APFloat &Arg) {
+  if (APFloat::usesLayout<detail::IEEEFloat>(Arg.getSemantics()))
+    return ilogb(Arg.U.IEEE);
+  if (APFloat::usesLayout<detail::DoubleAPFloat>(Arg.getSemantics()))
+    return ilogb(Arg.U.Double);
+  llvm_unreachable("Unexpected semantics");
+}
+
+/// Returns: X * 2^Exp for integral exponents.
 inline APFloat scalbn(APFloat X, int Exp, APFloat::roundingMode RM) {
   if (APFloat::usesLayout<detail::IEEEFloat>(X.getSemantics()))
     return APFloat(scalbn(X.U.IEEE, Exp, RM), X.getSemantics());
