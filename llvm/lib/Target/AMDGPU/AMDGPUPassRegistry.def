@@ -94,6 +94,13 @@ FUNCTION_PASS_WITH_PARAMS(
     parseAMDGPUAtomicOptimizerStrategy, "strategy=dpp|iterative|none")
 #undef FUNCTION_PASS_WITH_PARAMS
 
+#ifndef MACHINE_FUNCTION_ANALYSIS
+#define MACHINE_FUNCTION_ANALYSIS(NAME, CREATE_PASS)
+#endif
+
+MACHINE_FUNCTION_ANALYSIS("amdgpu-resource-usage", AMDGPUResourceUsageAnalysis(*static_cast<const GCNTargetMachine *>(this)))
+#undef MACHINE_FUNCTION_ANALYSIS
+
 #ifndef MACHINE_FUNCTION_PASS
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
@@ -107,7 +114,9 @@ MACHINE_FUNCTION_PASS("amdgpu-rewrite-partial-reg-uses", GCNRewritePartialRegUse
 MACHINE_FUNCTION_PASS("amdgpu-set-wave-priority", AMDGPUSetWavePriorityPass())
 MACHINE_FUNCTION_PASS("amdgpu-pre-ra-optimizations", GCNPreRAOptimizationsPass())
 MACHINE_FUNCTION_PASS("amdgpu-preload-kern-arg-prolog", AMDGPUPreloadKernArgPrologPass())
+MACHINE_FUNCTION_PASS("amdgpu-prepare-agpr-alloc", AMDGPUPrepareAGPRAllocPass())
 MACHINE_FUNCTION_PASS("amdgpu-nsa-reassign", GCNNSAReassignPass())
+MACHINE_FUNCTION_PASS("amdgpu-wait-sgpr-hazards", AMDGPUWaitSGPRHazardsPass())
 MACHINE_FUNCTION_PASS("gcn-create-vopd", GCNCreateVOPDPass())
 MACHINE_FUNCTION_PASS("gcn-dpp-combine", GCNDPPCombinePass())
 MACHINE_FUNCTION_PASS("si-fix-sgpr-copies", SIFixSGPRCopiesPass())

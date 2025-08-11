@@ -5,6 +5,9 @@
 using namespace clang;
 using namespace ento;
 
+// This barebones plugin is used by clang/test/Analysis/checker-plugins.c
+// to test option handling on checkers loaded from plugins.
+
 namespace {
 struct MyChecker : public Checker<check::BeginFunction> {
   void checkBeginFunction(CheckerContext &Ctx) const {}
@@ -25,13 +28,11 @@ bool shouldRegisterMyChecker(const CheckerManager &mgr) { return true; }
 } // end anonymous namespace
 
 // Register plugin!
-extern "C" void clang_registerCheckers(CheckerRegistry &registry) {
-  registry.addChecker(registerMyChecker, shouldRegisterMyChecker,
-                      "example.MyChecker", "Example Description",
-                      "example.mychecker.documentation.nonexistent.html",
-                      /*isHidden*/false);
+extern "C" void clang_registerCheckers(CheckerRegistry &Registry) {
+  Registry.addChecker(registerMyChecker, shouldRegisterMyChecker,
+                      "example.MyChecker", "Example Description");
 
-  registry.addCheckerOption(/*OptionType*/ "bool",
+  Registry.addCheckerOption(/*OptionType*/ "bool",
                             /*CheckerFullName*/ "example.MyChecker",
                             /*OptionName*/ "ExampleOption",
                             /*DefaultValStr*/ "false",

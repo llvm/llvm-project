@@ -93,10 +93,11 @@ struct CUFComputeSharedMemoryOffsetsAndSize
           mlir::Value dynSize =
               builder.createIntegerConstant(loc, idxTy, tySize);
           for (auto extent : sharedOp.getShape())
-            dynSize = builder.create<mlir::arith::MulIOp>(loc, dynSize, extent);
+            dynSize =
+                mlir::arith::MulIOp::create(builder, loc, dynSize, extent);
           if (crtDynOffset)
-            crtDynOffset =
-                builder.create<mlir::arith::AddIOp>(loc, crtDynOffset, dynSize);
+            crtDynOffset = mlir::arith::AddIOp::create(builder, loc,
+                                                       crtDynOffset, dynSize);
           else
             crtDynOffset = dynSize;
 
@@ -142,9 +143,9 @@ struct CUFComputeSharedMemoryOffsetsAndSize
           fir::GlobalOp::getDataAttrAttrName(globalOpName),
           cuf::DataAttributeAttr::get(gpuMod.getContext(),
                                       cuf::DataAttribute::Shared)));
-      auto sharedMem = builder.create<fir::GlobalOp>(
-          funcOp.getLoc(), sharedMemGlobalName, false, false, sharedMemType,
-          init, linkage, attrs);
+      auto sharedMem = fir::GlobalOp::create(
+          builder, funcOp.getLoc(), sharedMemGlobalName, false, false,
+          sharedMemType, init, linkage, attrs);
       sharedMem.setAlignment(alignment);
     }
   }

@@ -1256,10 +1256,24 @@ func.func @dc_invalid_reduction(%arg0: index, %arg1: index) {
   %sum = fir.alloca i32
   // expected-error@+2 {{'fir.do_concurrent.loop' op mismatch in number of reduction variables and reduction attributes}}
   fir.do_concurrent {
-    "fir.do_concurrent.loop"(%arg0, %arg1, %arg0, %sum) <{operandSegmentSizes = array<i32: 1, 1, 1, 1, 0>}> ({
-    ^bb0(%arg3: index):
+    "fir.do_concurrent.loop"(%arg0, %arg1, %arg0, %sum) <{operandSegmentSizes = array<i32: 1, 1, 1, 0, 1>}> ({
+    ^bb0(%arg3: index, %sum_arg: i32):
       %tmp = "fir.alloca"() <{in_type = i32, operandSegmentSizes = array<i32: 0, 0>}> : () -> !fir.ref<i32>
     }) : (index, index, index, !fir.ref<i32>) -> ()
+  }
+  return
+}
+
+// -----
+
+func.func @dc_reduce_no_attr() {
+  %3 = fir.alloca i32 {bindc_name = "s", uniq_name = "dc_reduce"}
+  %4:2 = hlfir.declare %3 {uniq_name = "dc_reduce"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %c1 = arith.constant 1 : index 
+  // expected-error@+2 {{expected attribute value}}
+  fir.do_concurrent {
+    fir.do_concurrent.loop (%arg0) = (%c1) to (%c1) step (%c1) reduce(@add_reduction_i32 %4#0 -> %arg1 : !fir.ref<i32>) {
+    }
   }
   return
 }
@@ -1409,15 +1423,6 @@ func.func @wrong_weights_number_in_if_then_else(%cond: i1) {
 // expected-error @below {{expects number of region weights to match number of regions: 3 vs 2}}
   fir.if %cond weights([50, 40, 10]) {
   } else {
-  }
-  return
-}
-
-// -----
-
-func.func @negative_weight_in_if_then(%cond: i1) {
-// expected-error @below {{weight #0 must be non-negative}}
-  fir.if %cond weights([-1, 101]) {
   }
   return
 }

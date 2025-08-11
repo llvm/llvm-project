@@ -383,7 +383,7 @@ define i64 @fshr64_minsize(i64 %a, i64 %b) minsize nounwind {
 ; RV64I-LABEL: fshr64_minsize:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srl a2, a0, a1
-; RV64I-NEXT:    negw a1, a1
+; RV64I-NEXT:    neg a1, a1
 ; RV64I-NEXT:    sll a0, a0, a1
 ; RV64I-NEXT:    or a0, a2, a0
 ; RV64I-NEXT:    ret

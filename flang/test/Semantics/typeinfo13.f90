@@ -22,5 +22,5 @@ module m
   end
 end
 
-!CHECK: .s.child, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(specialbinding) shape: 0_8:0_8 init:[specialbinding::specialbinding(which=2_1,isargdescriptorset=1_1,istypebound=2_1,isargcontiguousset=0_1,proc=override)]
+!CHECK: .s.child, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(specialbinding) shape: 0_8:0_8 init:[specialbinding::specialbinding(which=2_1,isargdescriptorset=1_1,istypebound=2_1,specialcaseflag=0_1,proc=override)]
 !CHECK: .v.child, SAVE, TARGET (CompilerCreated, ReadOnly): ObjectEntity type: TYPE(binding) shape: 0_8:1_8 init:[binding::binding(proc=baseassign,name=.n.baseassign),binding(proc=override,name=.n.override)]

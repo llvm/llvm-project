@@ -184,9 +184,11 @@ public:
     const s32 ReleaseToOsIntervalMs = getFlags()->release_to_os_interval_ms;
     Primary.init(ReleaseToOsIntervalMs);
     Secondary.init(&Stats, ReleaseToOsIntervalMs);
-    Quarantine.init(
-        static_cast<uptr>(getFlags()->quarantine_size_kb << 10),
-        static_cast<uptr>(getFlags()->thread_local_quarantine_size_kb << 10));
+    if (!AllocatorConfig::getQuarantineDisabled()) {
+      Quarantine.init(
+          static_cast<uptr>(getFlags()->quarantine_size_kb << 10),
+          static_cast<uptr>(getFlags()->thread_local_quarantine_size_kb << 10));
+    }
   }
 
   void enableRingBuffer() NO_THREAD_SAFETY_ANALYSIS {
@@ -276,16 +278,20 @@ public:
   //   the last two items).
   void commitBack(TSD<ThisT> *TSD) {
     TSD->assertLocked(/*BypassCheck=*/true);
-    Quarantine.drain(&TSD->getQuarantineCache(),
-                     QuarantineCallback(*this, TSD->getSizeClassAllocator()));
+    if (!AllocatorConfig::getQuarantineDisabled()) {
+      Quarantine.drain(&TSD->getQuarantineCache(),
+                       QuarantineCallback(*this, TSD->getSizeClassAllocator()));
+    }
     TSD->getSizeClassAllocator().destroy(&Stats);
   }
 
   void drainCache(TSD<ThisT> *TSD) {
     TSD->assertLocked(/*BypassCheck=*/true);
-    Quarantine.drainAndRecycle(
-        &TSD->getQuarantineCache(),
-        QuarantineCallback(*this, TSD->getSizeClassAllocator()));
+    if (!AllocatorConfig::getQuarantineDisabled()) {
+      Quarantine.drainAndRecycle(
+          &TSD->getQuarantineCache(),
+          QuarantineCallback(*this, TSD->getSizeClassAllocator()));
+    }
     TSD->getSizeClassAllocator().drain();
   }
   void drainCaches() { TSDRegistry.drainCaches(this); }
@@ -612,7 +618,8 @@ public:
 #endif
     TSDRegistry.disable();
     Stats.disable();
-    Quarantine.disable();
+    if (!AllocatorConfig::getQuarantineDisabled())
+      Quarantine.disable();
     Primary.disable();
     Secondary.disable();
     disableRingBuffer();
@@ -623,7 +630,8 @@ public:
     enableRingBuffer();
     Secondary.enable();
     Primary.enable();
-    Quarantine.enable();
+    if (!AllocatorConfig::getQuarantineDisabled())
+      Quarantine.enable();
     Stats.enable();
     TSDRegistry.enable();
 #ifdef GWP_ASAN_HOOKS
@@ -1252,7 +1260,8 @@ private:
     // If the quarantine is disabled, the actual size of a chunk is 0 or larger
     // than the maximum allowed, we return a chunk directly to the backend.
     // This purposefully underflows for Size == 0.
-    const bool BypassQuarantine = !Quarantine.getCacheSize() ||
+    const bool BypassQuarantine = AllocatorConfig::getQuarantineDisabled() ||
+                                  !Quarantine.getCacheSize() ||
                                   ((Size - 1) >= QuarantineMaxChunkSize) ||
                                   !Header->ClassId;
     if (BypassQuarantine)
@@ -1642,7 +1651,8 @@ private:
   uptr getStats(ScopedString *Str) {
     Primary.getStats(Str);
     Secondary.getStats(Str);
-    Quarantine.getStats(Str);
+    if (!AllocatorConfig::getQuarantineDisabled())
+      Quarantine.getStats(Str);
     TSDRegistry.getStats(Str);
     return Str->length();
   }
