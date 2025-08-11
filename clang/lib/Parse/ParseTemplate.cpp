@@ -1307,17 +1307,7 @@ ParsedTemplateArgument Parser::ParseTemplateTemplateArgument() {
     }
   }
 
-  // We do not allow to reference builtin templates that produce multiple
-  // values, they would not have a well-defined semantics outside template
-  // arguments.
-  if (auto *T = !Result.isInvalid()
-                    ? dyn_cast_or_null<BuiltinTemplateDecl>(
-                          Result.getAsTemplate().get().getAsTemplateDecl())
-                    : nullptr;
-      T && T->isPackProducingBuiltinTemplate()) {
-    Actions.diagnoseMissingTemplateArguments(Result.getAsTemplate().get(),
-                                             Result.getLocation());
-  }
+  Result = Actions.ActOnTemplateTemplateArgument(Result);
 
   // If this is a pack expansion, build it as such.
   if (EllipsisLoc.isValid() && !Result.isInvalid())

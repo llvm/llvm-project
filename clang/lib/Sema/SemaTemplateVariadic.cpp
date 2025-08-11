@@ -708,6 +708,23 @@ void Sema::collectUnexpandedParameterPacks(
 }
 
 ParsedTemplateArgument
+Sema::ActOnTemplateTemplateArgument(const ParsedTemplateArgument &Arg) {
+  if (Arg.isInvalid())
+    return Arg;
+
+  // We do not allow to reference builtin templates that produce multiple
+  // values, they would not have a well-defined semantics outside template
+  // arguments.
+  auto *T = dyn_cast_or_null<BuiltinTemplateDecl>(
+      Arg.getAsTemplate().get().getAsTemplateDecl());
+  if (T && T->isPackProducingBuiltinTemplate())
+    diagnoseMissingTemplateArguments(Arg.getAsTemplate().get(),
+                                     Arg.getLocation());
+
+  return Arg;
+}
+
+ParsedTemplateArgument
 Sema::ActOnPackExpansion(const ParsedTemplateArgument &Arg,
                          SourceLocation EllipsisLoc) {
   if (Arg.isInvalid())
