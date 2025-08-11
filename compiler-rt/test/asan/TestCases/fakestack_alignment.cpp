@@ -1,10 +1,20 @@
+// Regression test 1:
 // This deterministically fails: when the stack size is 1<<16, FakeStack's
 // GetFrame() is out of alignment, because SizeRequiredForFlags(16) == 2K.
-// RUN: %clangxx_asan -fsanitize-address-use-after-return=always -O0 -DALIGNMENT=4096 -DTHREAD_COUNT=1 -DTHREAD_STACK_SIZE=65536 %s -o %t && %run %t 2>&1
+// RUN: %clangxx_asan -fsanitize-address-use-after-return=always -O0 -DALIGNMENT=4096  -DTHREAD_COUNT=1 -DTHREAD_STACK_SIZE=65536 %s -o %t && %run %t 2>&1
 
+// Regression test 2:
 // The FakeStack frame is not guaranteed to be aligned, but alignment can
 // happen by chance, so try this on many threads.
-// RUN: %clangxx_asan -fsanitize-address-use-after-return=always -O0 -DALIGNMENT=8192 -DTHREAD_COUNT=32 -DTHREAD_STACK_SIZE=131072 %s -o %t && %run %t 2>&1
+// RUN: %clangxx_asan -fsanitize-address-use-after-return=always -O0 -DALIGNMENT=8192  -DTHREAD_COUNT=32 -DTHREAD_STACK_SIZE=131072 %s -o %t && %run %t 2>&1
+// RUN: %clangxx_asan -fsanitize-address-use-after-return=always -O0 -DALIGNMENT=16384 -DTHREAD_COUNT=32 -DTHREAD_STACK_SIZE=131072 %s -o %t && %run %t 2>&1
+
+// Extra tests:
+// RUN: %clangxx_asan -fsanitize-address-use-after-return=always -O0 -DALIGNMENT=4096  -DTHREAD_COUNT=32 -DTHREAD_STACK_SIZE=65536 %s -o %t && %run %t 2>&1
+// RUN: %clangxx_asan -fsanitize-address-use-after-return=always -O0 -DALIGNMENT=8192  -DTHREAD_COUNT=32 -DTHREAD_STACK_SIZE=65536 %s -o %t && %run %t 2>&1
+// RUN: %clangxx_asan -fsanitize-address-use-after-return=always -O0 -DALIGNMENT=16384 -DTHREAD_COUNT=32 -DTHREAD_STACK_SIZE=65536 %s -o %t && %run %t 2>&1
+// RUN: %clangxx_asan -fsanitize-address-use-after-return=always -O0 -DALIGNMENT=4096  -DTHREAD_COUNT=32 -DTHREAD_STACK_SIZE=131072 %s -o %t && %run %t 2>&1
+// RUN: %clangxx_asan -fsanitize-address-use-after-return=always -O0 -DALIGNMENT=8192  -DTHREAD_COUNT=32 -DTHREAD_STACK_SIZE=131072 %s -o %t && %run %t 2>&1
 // RUN: %clangxx_asan -fsanitize-address-use-after-return=always -O0 -DALIGNMENT=16384 -DTHREAD_COUNT=32 -DTHREAD_STACK_SIZE=131072 %s -o %t && %run %t 2>&1
 
 // XFAIL: *
@@ -26,10 +36,10 @@ bool misaligned = false;
 void *Thread(void *unused) {
   big_object x;
   uint alignment = (unsigned long)&x % alignof(big_object);
-  printf("Thread: address modulo alignment is %u\n", alignment);
-  if (alignment != 0)
+  if (alignment != 0) {
+    printf("Thread: address modulo alignment is %u\n", alignment);
     misaligned = true;
-
+  }
   return NULL;
 }
 
