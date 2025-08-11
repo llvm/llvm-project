@@ -1029,6 +1029,11 @@ public:
   >
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
   __sfinae_call_emplace_hint_unique(const_iterator __p, __get_node_value_type_t<_Tp>&& __value, false_type) {
+    // TODO:
+    // Using sfinae was thought to be needed, to avoid "instantiation" of a copy constructor 
+    // but that original idea fell through, so these __sfinae_* overloads could very likely be collpased into
+    // if constexpr {...} else {...} anyway.
+
       // __emplace_hint_unique(__p, std::move(__value.first), std::move(__value.second));
       // static_assert(false, "Can not emplace during constant evaluation if the key is `const MoveOnly` ");
       // TODO: somehow flag this code if it executes during compile time
