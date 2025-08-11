@@ -6,7 +6,7 @@ Through its IR exploration capabilities and the interactive query language, `mli
 ## Usage
 
 ### Query modes
-In order to prototype pattern matchers, explore, test, or debug the MLIR IR, the tool provides two main usage modes:
+In order to prototype matchers, explore, test, or debug the MLIR IR, the tool provides two main usage modes:
 
 * **Run queries directly from the CLI:**
     ```shell
@@ -22,16 +22,15 @@ In order to prototype pattern matchers, explore, test, or debug the MLIR IR, the
 
 ### Use with `mlir-opt`
 
-The tool can easily be used with the MLIR pass pipeline infrastructure by running a pass pipeline and passing the result as input to `mlir-query`.
+The tool can easily be used with the MLIR pass pipeline infrastructure by running a pass pipeline and passing the result as input to `mlir-query`. A command example is shown below:
 
 ```shell
-./mlir-opt input.mlir -canonicalize -o test.mlir | ./mlir-query test.mlir -c "<your_query_1>" -c "<your_query_2>" ... -c "<your_query_N>"
+./mlir-opt input.mlir -canonicalize | ./mlir-query - -c "<your_query_1>" -c "<your_query_2>" ... -c "<your_query_N>"
 ```
-*Command example*
 
 ## Register custom matchers
 
-To register a custom matcher with `mlir-query`, you need to define a new structure that implements one of the following signatures: `bool match(Operation* op)` or `bool match(Operation* op, SetVector<Operation*> &matchedOps)`. Next, link `MLIRQueryLib` and register the matcher.
+To register a custom matcher with `mlir-query`, define a structure that implements one of the following signatures: `bool match(Operation* op)` or `bool match(Operation* op, SetVector<Operation*> &matchedOps)` and then implement the desired matching logic. Next, link `MLIRQueryLib` and register the matcher.
 
 ```cpp
 #include "mlir/Tools/mlir-query/MlirQueryMain.h"
@@ -55,7 +54,7 @@ int main(int argc, char **argv) {
 ## Features
 ### Autocompletion
 
-To simplify usage, `mlir-query` provides autocompletion in the REPL interface, enabling users to ease query input by pressing the Tab key.
+To simplify usage, `mlir-query` provides autocompletion in the REPL interface, enabling users to ease query input by pressing the Tab key. When autocompletion is first triggered, a list of available commands is displayed (e.g., `match`, `help`). Triggering autocompletion for the `match` command then shows a list of available matchers.
 <div style="overflow-x:auto; margin:1em 0;">
   <img
     src="https://i.imgur.com/3QiJgrU.gif"
@@ -69,10 +68,7 @@ To simplify usage, `mlir-query` provides autocompletion in the REPL interface, e
     "
   />
 </div>
-
-
-*When autocompletion is first triggered, a list of available commands is displayed* (e.g., `match`, `help`). *Triggering autocompletion for the* `match` *command then shows a list of available matchers.*
-
+The following GIF illustrates an autocompletion use case for constructing queries.
 <div style="overflow-x:auto; margin:1em 0;">
   <img
     src="https://i.imgur.com/bpMS9mf.gif"
@@ -87,13 +83,13 @@ To simplify usage, `mlir-query` provides autocompletion in the REPL interface, e
   />
 </div>
 
-*Autocompletion use case for constructing queries.*
-
 ### Function extraction
 
 Results from a matcher can be isolated into a custom function using the `extract("functionName")` feature, facilitating further exploration or testing.
 
 #### Example
+
+The following is the initial function:
 
 ```mlir
 func.func @slicing_memref_store_trivial() {
@@ -112,13 +108,14 @@ func.func @slicing_memref_store_trivial() {
 }
 ```
 
-*Initial function.*
+The following command extracts the results of `getDefinitionsByPredicate` query:
 
 ```shell
 ./mlir-opt /home/user/llvm-project/mlir/test/mlir-query/slice-function-extraction.mlir "m getDefinitionsByPredicate(hasOpName(\"memref.store\"),hasOpName(\"memref.alloc\"),true,false,false).extract(\"backward_slice\")"
 ```
 
-*Command used to extract the results of* `getDefinitionsByPredicate` *query.*
+The resulting function from the previous query is:
+
 
 ```mlir
 func.func @backward_slice(%arg0: memref<10xf32>) -> (f32, index, index, f32, index, index, f32) {
@@ -135,9 +132,6 @@ func.func @backward_slice(%arg0: memref<10xf32>) -> (f32, index, index, f32, ind
   return %cst, %c0, %0, %cst_0, %1, %c0_1, %2 : f32, index, index, f32, index, index, f32
 }
 ```
-
-*The function containing only the relevant slice.*
-
 ## Matcher overview
 
 This section details the current matchers and their capabilities. It does not include examples of every matcher but rather aims to showcase and explain the types of matchers, along with useful examples that should be sufficient for comprehension. For a detailed explanation of each matcher's functionality and its parameters, please refer to the matchers reference section.
@@ -146,7 +140,8 @@ This section details the current matchers and their capabilities. It does not in
 
 The tool supports a variety of simple matchers, including `isConstantOp`, which finds all constant operations, `hasOpName`, which finds all operations with a given name and `hasOpAttrName`, which finds all operations with a certain attribute.
 
-#### Simple matcher example
+#### Example
+The following IR is used to demonstrate a simple matcher.
 ```mlir
 func.func @mixedOperations(%a: f32, %b: f32, %c: f32) -> f32 {
   %sum0 = arith.addf %a, %b : f32
@@ -161,10 +156,12 @@ func.func @mixedOperations(%a: f32, %b: f32, %c: f32) -> f32 {
 }
 ```
 
+##### hasOpName
+Matches all `arith.addf` operations.
 <div style="overflow-x:auto; margin:1em 0;">
   <img
     src="https://i.imgur.com/dbpn3Xo.gif"
-    alt="Autocompletion matcher"
+    alt="hasOpName matcher"
     style="
       display: block;
       margin: 0 auto;
@@ -175,8 +172,6 @@ func.func @mixedOperations(%a: f32, %b: f32, %c: f32) -> f32 {
   />
 </div>
 
-*Matches all* `arith.addf` *operations*
-
 ### Slice matchers
 
 `mlir-query` includes slicing matchers that compute forward and backward slices. These are abstractions over the methods from the `SliceAnalysis` library, enabling their use in a query context. In contrast to simple matchers, slicing matchers introduce the concept of `inner matchers`, which allow users to specify the `root operation` and the termination condition via other `matchers`. 
@@ -185,8 +180,8 @@ Two useful backward-slicing matchers are `getDefinitionsByPredicate` and `getDef
 
 Forward-slicing matchers are similar, but their termination condition is currently limited to using an inner matcher.
 
-#### Slice matchers examples
-
+#### Examples
+The following IR is used to demonstrate the slicing matchers.
 ```mlir
 #map = affine_map<(d0, d1) -> (d0, d1)>
 func.func @slice_use_from_above(%arg0: tensor<5x5xf32>, %arg1: tensor<5x5xf32>) {
@@ -206,6 +201,8 @@ func.func @slice_use_from_above(%arg0: tensor<5x5xf32>, %arg1: tensor<5x5xf32>) 
   return
 }
 ```
+##### getDefinitionsByPredicate
+Matches all defining operations using the `hasOpName("arith.addf")` for the root operation and the `hasOpName("linalg.generic")` as the termination condition.
 
 <div style="overflow-x:auto; margin:1em 0;">
   <img
@@ -221,7 +218,9 @@ func.func @slice_use_from_above(%arg0: tensor<5x5xf32>, %arg1: tensor<5x5xf32>) 
   />
 </div>
 
-*Matches all defining operations, using the* `hasOpName("arith.addf")` *inner matcher for the root operation and the* `hasOpName("linalg.generic")` *inner matcher for the termination condition.*
+##### getDefinitions
+
+Matches all defining operations using `hasOpName("arith.addf")` for the root operation, with the termination condition set to a depth of two levels.
 
 <div style="overflow-x:auto; margin:1em 0;">
   <img
@@ -237,18 +236,16 @@ func.func @slice_use_from_above(%arg0: tensor<5x5xf32>, %arg1: tensor<5x5xf32>) 
   />
 </div>
 
-*Matches all defining operations by using* `hasOpName("arith.addf")` *inner matcher for the root operation and limiting traversal to a depth of two levels.*
-
 ### Variadic matchers
 
 At this moment, the tool supports two variadic matchers: `anyOf` and `allOf`, which can be conceptualized as matcher combinators, as one can group multiple matchers together to facilitate the construction of complex matchers.
 
-Operator `anyOf` matches if any of the matchers in a given set match succeed (e.g `anyOf(m1, m2 ...)`). Using it brings several benefits, for example, one could construct a matcher that computes the union of two or more slices, initiating slice computation from one or multiple points of interest, or limiting slice computation by a set of inner matchers.
+Operator `anyOf` matches if any of the matchers in a given set succeed (e.g `anyOf(m1, m2 ...)`). Using it brings several benefits, for example, one could construct a matcher that computes the union of two or more slices, initiating slice computation from one or multiple points of interest, or limiting slice computation by a set of inner matchers.
 
-Operator `allOf`  matches only if all matchers in a set of matchers succeed (e.g `allOf(m1, m2 ...)`). For example, it enables finding all operations with a certain attribute, or initiating/limiting slice computation when an operation with a certain attribute is encountered.
+Operator `allOf`  matches only if all the matchers in a set succeed (e.g `allOf(m1, m2 ...)`). For example, it enables finding all operations with a certain attribute, or initiating/limiting slice computation when an operation with a certain attribute is encountered.
 
-#### Variadic matchers examples
-
+#### Examples
+The following IR is used to demonstrate `anyOf` matchers.
 ```mlir
 func.func @slice_depth1_loop_nest_with_offsets() {
   %0 = memref.alloc() : memref<100xf32>
@@ -264,6 +261,9 @@ func.func @slice_depth1_loop_nest_with_offsets() {
   return
 }
 ```
+
+##### anyOf
+- Matches the union of two backward slices.
 <div style="overflow-x:auto; margin:1em 0;">
   <img
     src="https://i.imgur.com/qQhfyX4.gif"
@@ -278,11 +278,12 @@ func.func @slice_depth1_loop_nest_with_offsets() {
   />
 </div>
 
-*Computes the union of two backward slices.*
+- Matches users with `anyOf(hasOpName("memref.alloc"),isConstant())` as the root operation and `anyOf(hasOpName("affine.load"),hasOpName("memref.dealloc"))` as the termination condition.
+
 <div style="overflow-x:auto; margin:1em 0;">
   <img
     src="https://i.imgur.com/b1EMdIv.gif"
-    alt="backward-slice-union-anyof matcher"
+    alt="anyOf matcher"
     style="
       display: block;
       margin: 0 auto;
@@ -293,8 +294,7 @@ func.func @slice_depth1_loop_nest_with_offsets() {
   />
 </div>
 
-*Computes the forward slice by specifying the root operation using* `anyOf(hasOpName("memref.alloc"),isConstant())` *inner matcher and termination condition via* `anyOf(hasOpName("affine.load"),hasOpName("memref.dealloc"))` *inner matcher.*
-
+The following IR is used to demonstrate a use case of `allOf` matcher.
 ```mlir
 func.func @no_hoisting_collapse_shape(%in_0: memref<1x20x1xi32>, %1: memref<9x1xi32>, %vec: vector<4xi32>) {
   %c0_i32 = arith.constant 0 : i32
@@ -312,11 +312,13 @@ func.func @no_hoisting_collapse_shape(%in_0: memref<1x20x1xi32>, %1: memref<9x1x
   return
 }
 ```
+##### allOf
+Matches users with `allOf(hasOpName("memref.alloca"),hasOpAttrName("alignment"))` as the root operation and `hasOpName("vector.transfer_read")` as the termination condition.
 
 <div style="overflow-x:auto; margin:1em 0;">
   <img
     src="https://i.imgur.com/MJnhvfD.gif"
-    alt="backward-slice-union-anyof matcher"
+    alt="allOf matcher"
     style="
       display: block;
       margin: 0 auto;
@@ -327,7 +329,6 @@ func.func @no_hoisting_collapse_shape(%in_0: memref<1x20x1xi32>, %1: memref<9x1x
   />
 </div>
 
-*Computes the forward slice by specifying the root operation using* `allOf(hasOpName("memref.alloca"),hasOpAttrName("alignment"))` *inner matcher and termination condition via* `hasOpName("vector.transfer_read")` *inner matcher.*
 
 ## Matcher Reference
 
