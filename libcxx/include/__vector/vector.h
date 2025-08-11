@@ -65,6 +65,7 @@
 #include <__utility/is_pointer_in_range.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
+#include <__utility/scope_guard.h>
 #include <__utility/swap.h>
 #include <initializer_list>
 #include <limits>
@@ -474,10 +475,11 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __emplace_back_assume_capacity(_Args&&... __args) {
     _LIBCPP_ASSERT_INTERNAL(
         size() < capacity(), "We assume that we have enough space to insert an element at the end of the vector");
-    _ConstructTransaction __tx(*this, 1);
+    __annotate_delete();
+    auto __guard = std::__make_scope_guard(__annotate_new_size(*this));
     __alloc_traits::construct(
-        this->__layout_.__alloc(), std::__to_address(__tx.__pos_), std::forward<_Args>(__args)...);
-    ++__tx.__pos_;
+        __layout_.__alloc(), std::__to_address(__layout_.__end_ptr()), std::forward<_Args>(__args)...);
+    __layout_.__set_bound_using_pointer(__layout_.__end_ptr() + 1);
   }
 
 #if _LIBCPP_STD_VER >= 23
@@ -486,7 +488,7 @@ public:
     if constexpr (ranges::forward_range<_Range> || ranges::sized_range<_Range>) {
       auto __len = ranges::distance(__range);
       if (__len <= static_cast<difference_type>(__layout_.__remaining_capacity())) {
-        __construct_at_end(ranges::begin(__range), ranges::end(__range), __len);
+        __construct_at_end(ranges::begin(__range), ranges::end(__range));
       } else {
         _SplitBuffer __buffer(__recommend(size() + __len), size(), __layout_.__alloc());
         __buffer.__construct_at_end_with_size(ranges::begin(__range), __len);
@@ -558,9 +560,9 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __first, const_iterator __last);
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void clear() _NOEXCEPT {
-    size_type __old_size = size();
-    __base_destruct_at_end(this->__layout_.__begin_ptr());
-    __annotate_shrink(__old_size);
+    __annotate_delete();
+    auto __guard = std::__make_scope_guard(__annotate_new_size(*this));
+    __base_destruct_at_end(__layout_.__begin_ptr());
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void resize(size_type __sz);
@@ -623,7 +625,7 @@ private:
 
     if (__n > 0) {
       __vallocate(__n);
-      __construct_at_end(std::move(__first), std::move(__last), __n);
+      __construct_at_end(std::move(__first), std::move(__last));
     }
 
     __guard.__complete();
@@ -678,8 +680,7 @@ private:
   __insert_with_size(const_iterator __position, _Iterator __first, _Sentinel __last, difference_type __n);
 
   template <class _InputIterator, class _Sentinel>
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
-  __construct_at_end(_InputIterator __first, _Sentinel __last, size_type __n);
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __construct_at_end(_InputIterator __first, _Sentinel __last);
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator __make_iter(pointer __p) _NOEXCEPT {
 #ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR
@@ -714,9 +715,9 @@ private:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __move_assign(vector& __c, false_type)
       _NOEXCEPT_(__alloc_traits::is_always_equal::value);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __destruct_at_end(pointer __new_last) _NOEXCEPT {
-    size_type __old_size = size();
+    __annotate_delete();
+    auto __guard = std::__make_scope_guard(__annotate_new_size(*this));
     __base_destruct_at_end(__new_last);
-    __annotate_shrink(__old_size);
   }
 
   template <class... _Args>
@@ -743,33 +744,11 @@ private:
     __annotate_contiguous_container(data() + size(), data() + capacity());
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __annotate_increase(size_type __n) const _NOEXCEPT {
-    __annotate_contiguous_container(data() + size(), data() + size() + __n);
-  }
+  struct __annotate_new_size {
+    vector& __vec_;
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __annotate_shrink(size_type __old_size) const _NOEXCEPT {
-    __annotate_contiguous_container(data() + __old_size, data() + size());
-  }
-
-  struct _ConstructTransaction {
-    _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI explicit _ConstructTransaction(vector& __v, size_type __n)
-        : __v_(__v), __pos_(__v.__layout_.__end_ptr()), __new_end_(__pos_ + __n) {
-      __v_.__annotate_increase(__n);
-    }
-
-    _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI ~_ConstructTransaction() {
-      __v_.__layout_.__set_bound_using_pointer(__pos_);
-      if (__pos_ != __new_end_) {
-        __v_.__annotate_shrink(__new_end_ - __v_.__layout_.__begin_ptr());
-      }
-    }
-
-    vector& __v_;
-    pointer __pos_;
-    const_pointer const __new_end_;
-
-    _ConstructTransaction(_ConstructTransaction const&)            = delete;
-    _ConstructTransaction& operator=(_ConstructTransaction const&) = delete;
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __annotate_new_size(vector& __vec) : __vec_(__vec) {}
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void operator()() { __vec_.__annotate_new(__vec_.size()); }
   };
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __base_destruct_at_end(pointer __new_last) _NOEXCEPT {
@@ -879,10 +858,12 @@ vector<_Tp, _Allocator>::__recommend(size_type __new_size) const {
 //  Postcondition:  size() == size() + __n
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::__construct_at_end(size_type __n) {
-  _ConstructTransaction __tx(*this, __n);
-  const_pointer __new_end = __tx.__new_end_;
-  for (pointer __pos = __tx.__pos_; __pos != __new_end; __tx.__pos_ = ++__pos) {
-    __alloc_traits::construct(this->__layout_.__alloc(), std::__to_address(__pos));
+  __annotate_delete();
+  auto __guard = std::__make_scope_guard(__annotate_new_size(*this));
+
+  for (size_t __i = 0; __i != __n; ++__i) {
+    __alloc_traits::construct(__layout_.__alloc(), std::__to_address(__layout_.__end_ptr()));
+    __layout_.__set_bound_using_pointer(__layout_.__end_ptr() + 1);
   }
 }
 
@@ -895,20 +876,23 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::__construct_at_end(s
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 inline void
 vector<_Tp, _Allocator>::__construct_at_end(size_type __n, const_reference __x) {
-  _ConstructTransaction __tx(*this, __n);
-  const_pointer __new_end = __tx.__new_end_;
-  for (pointer __pos = __tx.__pos_; __pos != __new_end; __tx.__pos_ = ++__pos) {
-    __alloc_traits::construct(this->__layout_.__alloc(), std::__to_address(__pos), __x);
+  __annotate_delete();
+  auto __guard = std::__make_scope_guard(__annotate_new_size(*this));
+
+  for (size_t __i = 0; __i != __n; ++__i) {
+    __alloc_traits::construct(__layout_.__alloc(), std::__to_address(__layout_.__end_ptr()), __x);
+    __layout_.__set_bound_using_pointer(__layout_.__end_ptr() + 1);
   }
 }
 
 template <class _Tp, class _Allocator>
 template <class _InputIterator, class _Sentinel>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void
-vector<_Tp, _Allocator>::__construct_at_end(_InputIterator __first, _Sentinel __last, size_type __n) {
-  _ConstructTransaction __tx(*this, __n);
-  __tx.__pos_ = std::__uninitialized_allocator_copy(
-      this->__layout_.__alloc(), std::move(__first), std::move(__last), __tx.__pos_);
+vector<_Tp, _Allocator>::__construct_at_end(_InputIterator __first, _Sentinel __last) {
+  __annotate_delete();
+  auto __guard = std::__make_scope_guard(__annotate_new_size(*this));
+  __layout_.__set_bound_using_pointer(std::__uninitialized_allocator_copy(
+      __layout_.__alloc(), std::move(__first), std::move(__last), __layout_.__end_ptr()));
 }
 
 template <class _Tp, class _Allocator>
@@ -985,8 +969,8 @@ vector<_Tp, _Allocator>::__assign_with_size(_Iterator __first, _Sentinel __last,
   if (__new_size <= capacity()) {
     auto const __size = size();
     if (__new_size > __size) {
-      auto __mid = std::__copy_n<_AlgPolicy>(std::move(__first), __size, this->__layout_.__begin_ptr()).__in_;
-      __construct_at_end(std::move(__mid), std::move(__last), __new_size - __size);
+      auto __mid = std::__copy_n<_AlgPolicy>(std::move(__first), __size, __layout_.__begin_ptr()).__in_;
+      __construct_at_end(std::move(__mid), std::move(__last));
     } else {
       pointer __m = std::__copy(std::move(__first), __last, this->__layout_.__begin_ptr()).__out_;
       this->__destruct_at_end(__m);
@@ -994,7 +978,7 @@ vector<_Tp, _Allocator>::__assign_with_size(_Iterator __first, _Sentinel __last,
   } else {
     __vdeallocate();
     __vallocate(__recommend(__new_size));
-    __construct_at_end(std::move(__first), std::move(__last), __new_size);
+    __construct_at_end(std::move(__first), std::move(__last));
   }
 }
 
@@ -1118,15 +1102,16 @@ vector<_Tp, _Allocator>::erase(const_iterator __first, const_iterator __last) {
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 vector<_Tp, _Allocator>::__move_range(pointer __from_s, pointer __from_e, pointer __to) {
+  __annotate_delete();
+  auto __guard        = std::__make_scope_guard(__annotate_new_size(*this));
   pointer __old_last  = __layout_.__end_ptr();
   difference_type __n = __old_last - __to;
-  {
-    pointer __i = __from_s + __n;
-    _ConstructTransaction __tx(*this, __from_e - __i);
-    for (pointer __pos = __tx.__pos_; __i < __from_e; ++__i, (void)++__pos, __tx.__pos_ = __pos) {
-      __alloc_traits::construct(this->__layout_.__alloc(), std::__to_address(__pos), std::move(*__i));
-    }
+
+  for (pointer __i = __from_s + __n; __i != __from_e; ++__i) {
+    __alloc_traits::construct(__layout_.__alloc(), std::__to_address(__layout_.__end_ptr()), std::move(*__i));
+    __layout_.__set_bound_using_pointer(__layout_.__end_ptr() + 1);
   }
+
   std::move_backward(__from_s, __from_s + __n, __old_last);
 }
 
@@ -1280,13 +1265,13 @@ vector<_Tp, _Allocator>::__insert_with_size(
       if (__n > __dx) {
 #if _LIBCPP_STD_VER >= 23
         if constexpr (!forward_iterator<_Iterator>) {
-          __construct_at_end(std::move(__first), std::move(__last), __n);
+          __construct_at_end(std::move(__first), std::move(__last));
           std::rotate(__p, __old_last, __end);
         } else
 #endif
         {
           _Iterator __m = std::next(__first, __dx);
-          __construct_at_end(__m, __last, __n - __dx);
+          __construct_at_end(__m, __last);
           if (__dx > 0) {
             __move_range(__p, __old_last, __p + __n);
             __insert_assign_n_unchecked<_AlgPolicy>(__first, __dx, __p);
