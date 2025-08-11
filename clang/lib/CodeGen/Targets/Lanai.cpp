@@ -102,7 +102,8 @@ ABIArgInfo LanaiABIInfo::classifyArgumentType(QualType Ty,
 
   if (isAggregateTypeForABI(Ty)) {
     // Structures with flexible arrays are always indirect.
-    if (RT && RT->getDecl()->hasFlexibleArrayMember())
+    if (RT &&
+        RT->getOriginalDecl()->getDefinitionOrSelf()->hasFlexibleArrayMember())
       return getIndirectResult(Ty, /*ByVal=*/true, State);
 
     // Ignore empty structs/unions.
@@ -125,7 +126,7 @@ ABIArgInfo LanaiABIInfo::classifyArgumentType(QualType Ty,
 
   // Treat an enum type as its underlying type.
   if (const auto *EnumTy = Ty->getAs<EnumType>())
-    Ty = EnumTy->getDecl()->getIntegerType();
+    Ty = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
 
   bool InReg = shouldUseInReg(Ty, State);
 

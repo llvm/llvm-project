@@ -129,6 +129,24 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return RValue::get(nullptr);
   }
 
+  case Builtin::BI__builtin_assume_aligned: {
+    const Expr *ptrExpr = e->getArg(0);
+    mlir::Value ptrValue = emitScalarExpr(ptrExpr);
+    mlir::Value offsetValue =
+        (e->getNumArgs() > 2) ? emitScalarExpr(e->getArg(2)) : nullptr;
+
+    std::optional<llvm::APSInt> alignment =
+        e->getArg(1)->getIntegerConstantExpr(getContext());
+    assert(alignment.has_value() &&
+           "the second argument to __builtin_assume_aligned must be an "
+           "integral constant expression");
+
+    mlir::Value result =
+        emitAlignmentAssumption(ptrValue, ptrExpr, ptrExpr->getExprLoc(),
+                                alignment->getSExtValue(), offsetValue);
+    return RValue::get(result);
+  }
+
   case Builtin::BI__builtin_complex: {
     mlir::Value real = emitScalarExpr(e->getArg(0));
     mlir::Value imag = emitScalarExpr(e->getArg(1));

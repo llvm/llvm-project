@@ -3106,6 +3106,15 @@ SDValue SITargetLowering::LowerFormalArguments(
   if (!IsKernel) {
     CCAssignFn *AssignFn = CCAssignFnForCall(CallConv, isVarArg);
     CCInfo.AnalyzeFormalArguments(Splits, AssignFn);
+
+    // This assumes the registers are allocated by CCInfo in ascending order
+    // with no gaps.
+    Info->setNumWaveDispatchSGPRs(
+        CCInfo.getFirstUnallocated(AMDGPU::SGPR_32RegClass.getRegisters()));
+    Info->setNumWaveDispatchVGPRs(
+        CCInfo.getFirstUnallocated(AMDGPU::VGPR_32RegClass.getRegisters()));
+  } else if (Info->getNumKernargPreloadedSGPRs()) {
+    Info->setNumWaveDispatchSGPRs(Info->getNumUserSGPRs());
   }
 
   SmallVector<SDValue, 16> Chains;
@@ -16916,7 +16925,7 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
 
     if (RC) {
       if (NumRegs > 1) {
-        if (Idx >= RC->getNumRegs() || Idx + NumRegs - 1 > RC->getNumRegs())
+        if (Idx >= RC->getNumRegs() || Idx + NumRegs - 1 >= RC->getNumRegs())
           return std::pair(0U, nullptr);
 
         uint32_t Width = NumRegs * 32;

@@ -1051,8 +1051,6 @@ define i64 @live_in_known_1_via_scev() {
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vector.reduce.mul.v4i64(<4 x i64> [[VEC_PHI]])
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[PH]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ 3, [[PH]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]

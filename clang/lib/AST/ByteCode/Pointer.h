@@ -282,7 +282,7 @@ public:
   bool isLive() const {
     if (!isBlockPointer())
       return true;
-    return asBlockPointer().Pointee && !asBlockPointer().Pointee->IsDead;
+    return asBlockPointer().Pointee && !asBlockPointer().Pointee->isDead();
   }
   /// Checks if the item is a field in an object.
   bool isField() const {
@@ -568,10 +568,9 @@ public:
     if (!isBlockPointer())
       return false;
 
-    if (!asBlockPointer().Pointee)
-      return false;
-
-    return getDeclDesc()->isDummy();
+    if (const Block *Pointee = asBlockPointer().Pointee)
+      return Pointee->isDummy();
+    return false;
   }
 
   /// Checks if an object or a subfield is mutable.

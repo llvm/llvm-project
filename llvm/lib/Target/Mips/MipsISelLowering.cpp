@@ -4408,7 +4408,7 @@ void MipsTargetLowering::LowerAsmOperandForConstraint(SDValue Op,
   case 'K': // unsigned 16 bit immediate
     if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op)) {
       EVT Type = Op.getValueType();
-      uint64_t Val = (uint64_t)C->getZExtValue();
+      uint64_t Val = C->getZExtValue();
       if (isUInt<16>(Val)) {
         Result = DAG.getTargetConstant(Val, DL, Type);
         break;

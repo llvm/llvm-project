@@ -33,7 +33,8 @@ function at-exit {
 
   if [[ "$GITHUB_STEP_SUMMARY" != "" ]]; then
     python "${MONOREPO_ROOT}"/.ci/generate_test_report_github.py \
-      $retcode "${BUILD_DIR}"/test-results.*.xml >> $GITHUB_STEP_SUMMARY
+      $retcode "${BUILD_DIR}"/test-results.*.xml "${BUILD_DIR}"/ninja*.log \
+      >> $GITHUB_STEP_SUMMARY
   fi
 }
 trap at-exit EXIT

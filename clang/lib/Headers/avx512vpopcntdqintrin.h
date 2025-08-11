@@ -60,5 +60,6 @@ _mm512_maskz_popcnt_epi32(__mmask16 __U, __m512i __A) {
 }
 
 #undef __DEFAULT_FN_ATTRS
+#undef __DEFAULT_FN_ATTRS_CONSTEXPR
 
 #endif

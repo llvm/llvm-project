@@ -2394,8 +2394,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_min_epu8(__m128i __a,
 ///    A 128-bit signed [8 x i16] vector.
 /// \returns A 128-bit signed [8 x i16] vector containing the upper 16 bits of
 ///    each of the eight 32-bit products.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_mulhi_epi16(__m128i __a,
-                                                             __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_mulhi_epi16(__m128i __a, __m128i __b) {
   return (__m128i)__builtin_ia32_pmulhw128((__v8hi)__a, (__v8hi)__b);
 }
 
@@ -2413,9 +2413,9 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_mulhi_epi16(__m128i __a,
 ///    A 128-bit unsigned [8 x i16] vector.
 /// \returns A 128-bit unsigned [8 x i16] vector containing the upper 16 bits
 ///    of each of the eight 32-bit products.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_mulhi_epu16(__m128i __a,
-                                                             __m128i __b) {
-  return (__m128i)__builtin_ia32_pmulhuw128((__v8hi)__a, (__v8hi)__b);
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_mulhi_epu16(__m128i __a, __m128i __b) {
+  return (__m128i)__builtin_ia32_pmulhuw128((__v8hu)__a, (__v8hu)__b);
 }
 
 /// Multiplies the corresponding elements of two signed [8 x i16]
@@ -2432,8 +2432,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_mulhi_epu16(__m128i __a,
 ///    A 128-bit signed [8 x i16] vector.
 /// \returns A 128-bit signed [8 x i16] vector containing the lower 16 bits of
 ///    each of the eight 32-bit products.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_mullo_epi16(__m128i __a,
-                                                             __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_mullo_epi16(__m128i __a, __m128i __b) {
   return (__m128i)((__v8hu)__a * (__v8hu)__b);
 }
 

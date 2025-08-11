@@ -2972,6 +2972,118 @@ add_fp_unittest(
     libc.src.__support.macros.properties.types
 )
 
+add_fp_unittest(
+  bf16add_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    bf16add_test.cpp
+  HDRS
+    AddTest.h
+  DEPENDS
+    libc.src.math.bf16add
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
+  bf16addf_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    bf16addf_test.cpp
+  HDRS
+    AddTest.h
+  DEPENDS
+    libc.src.math.bf16addf
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
+  bf16addl_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    bf16addl_test.cpp
+  HDRS
+    AddTest.h
+  DEPENDS
+    libc.src.math.bf16addl
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
+  bf16addf128_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    bf16addf128_test.cpp
+  HDRS
+    AddTest.h
+  DEPENDS
+    libc.src.math.bf16addf128
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
+  bf16sub_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    bf16sub_test.cpp
+  HDRS
+    SubTest.h
+  DEPENDS
+    libc.src.math.bf16sub
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
+  bf16subf_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    bf16subf_test.cpp
+  HDRS
+    SubTest.h
+  DEPENDS
+    libc.src.math.bf16subf
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
+  bf16subl_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    bf16subl_test.cpp
+  HDRS
+    SubTest.h
+  DEPENDS
+    libc.src.math.bf16subl
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
+  bf16subf128_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    bf16subf128_test.cpp
+  HDRS
+    SubTest.h
+  DEPENDS
+    libc.src.math.bf16subf128
+    libc.src.__support.FPUtil.bfloat16
+)
+
 add_subdirectory(generic)
 add_subdirectory(smoke)
 

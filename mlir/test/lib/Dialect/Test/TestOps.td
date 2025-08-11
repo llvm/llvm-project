@@ -1498,6 +1498,8 @@ def TestOpInPlaceSelfFold : TEST_Op<"op_in_place_self_fold"> {
   let results = (outs I32);
   let hasFolder = 1;
 }
+def : Pat<(TestOpInPlaceSelfFold:$op $_),
+          (TestOpConstant ConstantAttr<I32Attr, "97">)>;
 
 // Test op that simply returns success.
 def TestOpInPlaceFoldSuccess : TEST_Op<"op_in_place_fold_success"> {

@@ -548,9 +548,6 @@ public:
 protected:
   friend class LoopVectorizationPlanner;
 
-  /// Returns (and creates if needed) the trip count of the widened loop.
-  Value *getOrCreateVectorTripCount(BasicBlock *InsertBlock);
-
   // Create a check to see if the vector loop should be executed
   Value *createIterationCountCheck(ElementCount VF, unsigned UF) const;
 
@@ -2272,56 +2269,6 @@ static bool useMaskedInterleavedAccesses(const TargetTransformInfo &TTI) {
   return TTI.enableMaskedInterleavedAccessVectorization();
 }
 
-Value *
-InnerLoopVectorizer::getOrCreateVectorTripCount(BasicBlock *InsertBlock) {
-  if (VectorTripCount)
-    return VectorTripCount;
-
-  Value *TC = getTripCount();
-  IRBuilder<> Builder(InsertBlock->getTerminator());
-
-  Type *Ty = TC->getType();
-  // This is where we can make the step a runtime constant.
-  Value *Step = createStepForVF(Builder, Ty, VF, UF);
-
-  // If the tail is to be folded by masking, round the number of iterations N
-  // up to a multiple of Step instead of rounding down. This is done by first
-  // adding Step-1 and then rounding down. Note that it's ok if this addition
-  // overflows: the vector induction variable will eventually wrap to zero given
-  // that it starts at zero and its Step is a power of two; the loop will then
-  // exit, with the last early-exit vector comparison also producing all-true.
-  // For scalable vectors the VF is not guaranteed to be a power of 2, but this
-  // is accounted for in emitIterationCountCheck that adds an overflow check.
-  if (Cost->foldTailByMasking()) {
-    assert(isPowerOf2_32(VF.getKnownMinValue() * UF) &&
-           "VF*UF must be a power of 2 when folding tail by masking");
-    TC = Builder.CreateAdd(TC, Builder.CreateSub(Step, ConstantInt::get(Ty, 1)),
-                           "n.rnd.up");
-  }
-
-  // Now we need to generate the expression for the part of the loop that the
-  // vectorized body will execute. This is equal to N - (N % Step) if scalar
-  // iterations are not required for correctness, or N - Step, otherwise. Step
-  // is equal to the vectorization factor (number of SIMD elements) times the
-  // unroll factor (number of SIMD instructions).
-  Value *R = Builder.CreateURem(TC, Step, "n.mod.vf");
-
-  // There are cases where we *must* run at least one iteration in the remainder
-  // loop.  See the cost model for when this can happen.  If the step evenly
-  // divides the trip count, we set the remainder to be equal to the step. If
-  // the step does not evenly divide the trip count, no adjustment is necessary
-  // since there will already be scalar iterations. Note that the minimum
-  // iterations check ensures that N >= Step.
-  if (Cost->requiresScalarEpilogue(VF.isVector())) {
-    auto *IsZero = Builder.CreateICmpEQ(R, ConstantInt::get(R->getType(), 0));
-    R = Builder.CreateSelect(IsZero, Step, R);
-  }
-
-  VectorTripCount = Builder.CreateSub(TC, R, "n.vec");
-
-  return VectorTripCount;
-}
-
 void InnerLoopVectorizer::introduceCheckBlockInVPlan(BasicBlock *CheckIRBB) {
   // Note: The block with the minimum trip-count check is already connected
   // during earlier VPlan construction.
@@ -2439,11 +2386,13 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
 /// successors of VPBB, if any, are rewired to the new VPIRBasicBlock.
 static void replaceVPBBWithIRVPBB(VPBasicBlock *VPBB, BasicBlock *IRBB) {
   VPIRBasicBlock *IRVPBB = VPBB->getPlan()->createVPIRBasicBlock(IRBB);
-  for (auto &R : make_early_inc_range(*VPBB)) {
-    assert((IRVPBB->empty() || IRVPBB->back().isPhi() || !R.isPhi()) &&
-           "Tried to move phi recipe after a non-phi recipe");
+  auto IP = IRVPBB->begin();
+  for (auto &R : make_early_inc_range(VPBB->phis()))
+    R.moveBefore(*IRVPBB, IP);
+
+  for (auto &R :
+       make_early_inc_range(make_range(VPBB->getFirstNonPhi(), VPBB->end())))
     R.moveBefore(*IRVPBB, IRVPBB->end());
-  }
 
   VPBlockUtils::reassociateBlocks(VPBB, IRVPBB);
   // VPBB is now dead and will be cleaned up when the plan gets destroyed.
@@ -7354,6 +7303,9 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // Canonicalize EVL loops after regions are dissolved.
   VPlanTransforms::canonicalizeEVLLoops(BestVPlan);
   VPlanTransforms::materializeBackedgeTakenCount(BestVPlan, VectorPH);
+  VPlanTransforms::materializeVectorTripCount(
+      BestVPlan, VectorPH, CM.foldTailByMasking(),
+      CM.requiresScalarEpilogue(BestVF.isVector()));
 
   // Perform the actual loop transformation.
   VPTransformState State(&TTI, BestVF, LI, DT, ILV.AC, ILV.Builder, &BestVPlan,
@@ -7410,8 +7362,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   //===------------------------------------------------===//
 
   // 2. Copy and widen instructions from the old loop into the new loop.
-  BestVPlan.prepareToExecute(
-      ILV.getOrCreateVectorTripCount(ILV.LoopVectorPreHeader), State);
+  BestVPlan.prepareToExecute(State);
   replaceVPBBWithIRVPBB(VectorPH, State.CFG.PrevBB);
 
   // Move check blocks to their final position.
@@ -8435,8 +8386,13 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
     LVer.prepareNoAliasMetadata();
   }
 
+  // Create initial base VPlan0, to serve as common starting point for all
+  // candidates built later for specific VF ranges.
+  auto VPlan0 = VPlanTransforms::buildVPlan0(
+      OrigLoop, *LI, Legal->getWidestInductionType(),
+      getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), PSE);
+
   auto MaxVFTimes2 = MaxVF * 2;
-  auto VPlan0 = VPlanTransforms::buildPlainCFG(OrigLoop, *LI);
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
     VFRange SubRange = {VF, MaxVFTimes2};
     if (auto Plan = tryToBuildVPlanWithVPRecipes(
@@ -8675,23 +8631,17 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // visit each basic block after having visited its predecessor basic blocks.
   // ---------------------------------------------------------------------------
 
-  // Create initial VPlan skeleton, having a basic block for the pre-header
-  // which contains SCEV expansions that need to happen before the CFG is
-  // modified; a basic block for the vector pre-header, followed by a region for
-  // the vector loop, followed by the middle basic block. The skeleton vector
-  // loop region contains a header and latch basic blocks.
-
   bool RequiresScalarEpilogueCheck =
       LoopVectorizationPlanner::getDecisionAndClampRange(
           [this](ElementCount VF) {
             return !CM.requiresScalarEpilogue(VF.isVector());
           },
           Range);
-  VPlanTransforms::prepareForVectorization(
-      *Plan, Legal->getWidestInductionType(), PSE, RequiresScalarEpilogueCheck,
-      CM.foldTailByMasking(), OrigLoop,
-      getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()),
-      Legal->hasUncountableEarlyExit(), Range);
+  VPlanTransforms::handleEarlyExits(*Plan, Legal->hasUncountableEarlyExit(),
+                                    Range);
+  VPlanTransforms::addMiddleCheck(*Plan, RequiresScalarEpilogueCheck,
+                                  CM.foldTailByMasking());
+
   VPlanTransforms::createLoopRegions(*Plan);
   VPlanTransforms::createExtractsForLiveOuts(*Plan);
 
@@ -8977,11 +8927,14 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
   assert(!OrigLoop->isInnermost());
   assert(EnableVPlanNativePath && "VPlan-native path is not enabled.");
 
-  auto Plan = VPlanTransforms::buildPlainCFG(OrigLoop, *LI);
-  VPlanTransforms::prepareForVectorization(
-      *Plan, Legal->getWidestInductionType(), PSE, true, false, OrigLoop,
-      getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), false,
-      Range);
+  auto Plan = VPlanTransforms::buildVPlan0(
+      OrigLoop, *LI, Legal->getWidestInductionType(),
+      getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), PSE);
+  VPlanTransforms::handleEarlyExits(*Plan,
+                                    /*HasUncountableExit*/ false, Range);
+  VPlanTransforms::addMiddleCheck(*Plan, /*RequiresScalarEpilogue*/ true,
+                                  /*TailFolded*/ false);
+
   VPlanTransforms::createLoopRegions(*Plan);
 
   for (ElementCount VF : Range)
@@ -9407,13 +9360,6 @@ void VPDerivedIVRecipe::execute(VPTransformState &State) {
       State.Builder, Index, getStartValue()->getLiveInIRValue(), Step, Kind,
       cast_if_present<BinaryOperator>(FPBinOp));
   DerivedIV->setName(Name);
-  // If index is the vector trip count, the concrete value will only be set in
-  // prepareToExecute, leading to missed simplifications, e.g. if it is 0.
-  // TODO: Remove the special case for the vector trip count once it is computed
-  // in VPlan and can be used during VPlan simplification.
-  assert((DerivedIV != Index ||
-          getOperand(1) == &getParent()->getPlan()->getVectorTripCount()) &&
-         "IV didn't need transforming?");
   State.set(this, DerivedIV, VPLane(0));
 }
 
@@ -9798,6 +9744,9 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
     else if (&*MainScalarPH->begin() != ResumePhi)
       ResumePhi->moveBefore(*MainScalarPH, MainScalarPH->begin());
   }
+  // Add a user to to make sure the resume phi won't get removed.
+  VPBuilder(MainScalarPH)
+      .createNaryOp(VPInstruction::ResumeForEpilogue, ResumePhi);
 }
 
 /// Prepare \p Plan for vectorizing the epilogue loop. That is, re-use expanded

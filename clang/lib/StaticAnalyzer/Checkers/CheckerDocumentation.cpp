@@ -175,9 +175,12 @@ public:
   /// \param Loc The value of the location (pointer).
   /// \param Val The value which will be stored at the location Loc.
   /// \param S   The bind is performed while processing the statement S.
+  /// \param AtDeclInit Whether the bind is performed during declaration
+  ///                   initialization.
   ///
   /// check::Bind
-  void checkBind(SVal Loc, SVal Val, const Stmt *S, CheckerContext &) const {}
+  void checkBind(SVal Loc, SVal Val, const Stmt *S, bool AtDeclInit,
+                 CheckerContext &) const {}
 
   /// Called after a CFG edge is taken within a function.
   ///

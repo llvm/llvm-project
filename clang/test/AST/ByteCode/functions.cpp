@@ -708,3 +708,8 @@ namespace NoDiags {
     return true;
   }
 }
+
+namespace EnableIfWithTemporary {
+  struct A { ~A(); };
+  int &h() __attribute__((enable_if((A(), true), ""))); // both-warning {{clang extension}}
+}

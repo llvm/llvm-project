@@ -1729,18 +1729,18 @@ def Vector_LoadOp : Vector_Op<"load", [
                    "Value":$base,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"llvm::Align", "llvm::Align()">:$alignment), [{
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
       return build($_builder, $_state, resultType, base, indices, nontemporal,
-                   alignment != llvm::Align() ? $_builder.getI64IntegerAttr(alignment.value()) :
+                   alignment.has_value() ? $_builder.getI64IntegerAttr(alignment->value()) :
                                     nullptr);
     }]>,
     OpBuilder<(ins "TypeRange":$resultTypes,
                    "Value":$base,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"llvm::Align", "llvm::Align()">:$alignment), [{
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
       return build($_builder, $_state, resultTypes, base, indices, nontemporal,
-                   alignment != llvm::Align() ? $_builder.getI64IntegerAttr(alignment.value()) :
+                   alignment.has_value() ? $_builder.getI64IntegerAttr(alignment->value()) :
                                     nullptr);
     }]>
   ];
@@ -1847,9 +1847,9 @@ def Vector_StoreOp : Vector_Op<"store", [
                    "Value":$base,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"llvm::Align", "llvm::Align()">:$alignment), [{
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
       return build($_builder, $_state, valueToStore, base, indices, nontemporal,
-                   alignment != llvm::Align() ? $_builder.getI64IntegerAttr(alignment.value()) :
+                   alignment.has_value() ? $_builder.getI64IntegerAttr(alignment->value()) :
                                     nullptr);
     }]>
   ];
@@ -1876,7 +1876,9 @@ def Vector_MaskedLoadOp :
     Arguments<(ins Arg<AnyMemRef, "", [MemRead]>:$base,
                Variadic<Index>:$indices,
                VectorOfNonZeroRankOf<[I1]>:$mask,
-               AnyVectorOfNonZeroRank:$pass_thru)>,
+               AnyVectorOfNonZeroRank:$pass_thru,
+               ConfinedAttr<OptionalAttr<I64Attr>,
+                   [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment)>,
     Results<(outs AnyVectorOfNonZeroRank:$result)> {
 
   let summary = "loads elements from memory into a vector as defined by a mask vector";
@@ -1912,6 +1914,12 @@ def Vector_MaskedLoadOp :
     %1 = vector.maskedload %base[%i, %j], %mask, %pass_thru
        : memref<?x?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
     ```
+
+    An optional `alignment` attribute allows to specify the byte alignment of the
+    load operation. It must be a positive power of 2. The operation must access
+    memory at an address aligned to this boundary. Violations may lead to
+    architecture-specific faults or performance penalties.
+    A value of 0 indicates no specific alignment requirement.
   }];
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
@@ -1932,6 +1940,29 @@ def Vector_MaskedLoadOp :
   let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
+
+  let builders = [
+    OpBuilder<(ins "VectorType":$resultType,
+                   "Value":$base,
+                   "ValueRange":$indices,
+                   "Value":$mask,
+                   "Value":$passthrough,
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
+      return build($_builder, $_state, resultType, base, indices, mask, passthrough,
+                   alignment.has_value() ? $_builder.getI64IntegerAttr(alignment->value()) :
+                                    nullptr);
+    }]>,
+    OpBuilder<(ins "TypeRange":$resultTypes,
+                   "Value":$base,
+                   "ValueRange":$indices,
+                   "Value":$mask,
+                   "Value":$passthrough,
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
+      return build($_builder, $_state, resultTypes, base, indices, mask, passthrough,
+                   alignment.has_value() ? $_builder.getI64IntegerAttr(alignment->value()) :
+                                    nullptr);
+    }]>
+  ];
 }
 
 def Vector_MaskedStoreOp :
@@ -1939,7 +1970,9 @@ def Vector_MaskedStoreOp :
     Arguments<(ins Arg<AnyMemRef, "", [MemWrite]>:$base,
                Variadic<Index>:$indices,
                VectorOfNonZeroRankOf<[I1]>:$mask,
-               AnyVectorOfNonZeroRank:$valueToStore)> {
+               AnyVectorOfNonZeroRank:$valueToStore,
+               ConfinedAttr<OptionalAttr<I64Attr>,
+                   [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment)> {
 
   let summary = "stores elements from a vector into memory as defined by a mask vector";
 
@@ -1974,6 +2007,12 @@ def Vector_MaskedStoreOp :
     vector.maskedstore %base[%i, %j], %mask, %value
       : memref<?x?xf32>, vector<16xi1>, vector<16xf32>
     ```
+
+    An optional `alignment` attribute allows to specify the byte alignment of the
+    store operation. It must be a positive power of 2. The operation must access
+    memory at an address aligned to this boundary. Violations may lead to
+    architecture-specific faults or performance penalties.
+    A value of 0 indicates no specific alignment requirement.
   }];
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
@@ -1992,6 +2031,18 @@ def Vector_MaskedStoreOp :
   let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
+
+  let builders = [
+    OpBuilder<(ins "Value":$base,
+                   "ValueRange":$indices,
+                   "Value":$mask,
+                   "Value":$valueToStore,
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
+      return build($_builder, $_state, base, indices, mask, valueToStore,
+                   alignment.has_value() ? $_builder.getI64IntegerAttr(alignment->value()) :
+                                    nullptr);
+    }]>
+  ];
 }
 
 def Vector_GatherOp :

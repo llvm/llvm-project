@@ -1204,11 +1204,13 @@ cc_library(
     deps = [
         "//mlir:GPUDialect",
         "//mlir:IR",
+        "//mlir:IndexDialect",
         "//mlir:MemRefDialect",
         "//mlir:Pass",
         "//mlir:TransformUtils",
         "//mlir:VectorTransforms",
         "//mlir:XeGPUDialect",
         "//mlir:XeGPUTransforms",
+        "//mlir:XeGPUUtils",
     ],
 )

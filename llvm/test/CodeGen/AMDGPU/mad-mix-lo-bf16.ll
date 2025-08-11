@@ -76,9 +76,6 @@ define bfloat @v_mad_mixlo_bf16_bf16lo_bf16lo_f32_clamp_post_cvt(bfloat %src0, b
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_fma_mixlo_bf16 v0, v0, v1, v2 op_sel_hi:[1,1,0] clamp
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-
-
-
   %src0.ext = fpext bfloat %src0 to float
   %src1.ext = fpext bfloat %src1 to float
   %result = tail call float @llvm.fmuladd.f32(float %src0.ext, float %src1.ext, float %src2)
@@ -105,7 +102,6 @@ define bfloat @v_mad_mixlo_bf16_bf16lo_bf16lo_f32_clamp_pre_cvt(bfloat %src0, bf
   %cvt.result = fptrunc float %clamp to bfloat
   ret bfloat %cvt.result
 }
-
 
 define <2 x bfloat> @v_mad_mix_v2f32(<2 x bfloat> %src0, <2 x bfloat> %src1, <2 x bfloat> %src2) #0 {
 ; GFX1250-LABEL: v_mad_mix_v2f32:
@@ -179,7 +175,6 @@ define <4 x bfloat> @v_mad_mix_v4f32(<4 x bfloat> %src0, <4 x bfloat> %src1, <4 
   ret <4 x bfloat> %cvt.result
 }
 
-
 define <2 x bfloat> @v_mad_mix_v2f32_clamp_postcvt(<2 x bfloat> %src0, <2 x bfloat> %src1, <2 x bfloat> %src2) #0 {
 ; GFX1250-LABEL: v_mad_mix_v2f32_clamp_postcvt:
 ; GFX1250:       ; %bb.0:
@@ -194,9 +189,6 @@ define <2 x bfloat> @v_mad_mix_v2f32_clamp_postcvt(<2 x bfloat> %src0, <2 x bflo
 ; GFX1250-NEXT:    v_pk_fma_f32 v[0:1], v[4:5], v[6:7], v[0:1]
 ; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v1 clamp
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-
-
-
   %src0.ext = fpext <2 x bfloat> %src0 to <2 x float>
   %src1.ext = fpext <2 x bfloat> %src1 to <2 x float>
   %src2.ext = fpext <2 x bfloat> %src2 to <2 x float>
@@ -206,7 +198,6 @@ define <2 x bfloat> @v_mad_mix_v2f32_clamp_postcvt(<2 x bfloat> %src0, <2 x bflo
   %clamp = call <2 x bfloat> @llvm.minnum.v2bf16(<2 x bfloat> %max, <2 x bfloat> <bfloat 1.0, bfloat 1.0>)
   ret <2 x bfloat> %clamp
 }
-
 
 define <3 x bfloat> @v_mad_mix_v3f32_clamp_postcvt(<3 x bfloat> %src0, <3 x bfloat> %src1, <3 x bfloat> %src2) #0 {
 ; GFX1250-LABEL: v_mad_mix_v3f32_clamp_postcvt:
@@ -252,9 +243,6 @@ define <4 x bfloat> @v_mad_mix_v4f32_clamp_postcvt(<4 x bfloat> %src0, <4 x bflo
 ; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v0, v0, v1 clamp
 ; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v1, v2, v3 clamp
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-
-
-
   %src0.ext = fpext <4 x bfloat> %src0 to <4 x float>
   %src1.ext = fpext <4 x bfloat> %src1 to <4 x float>
   %src2.ext = fpext <4 x bfloat> %src2 to <4 x float>
@@ -325,7 +313,6 @@ define <2 x bfloat> @v_mad_mix_v2f32_clamp_postcvt_hi(<2 x bfloat> %src0, <2 x b
   ret <2 x bfloat> %insert
 }
 
-
 define <2 x bfloat> @v_mad_mix_v2f32_clamp_precvt(<2 x bfloat> %src0, <2 x bfloat> %src1, <2 x bfloat> %src2) #0 {
 ; GFX1250-LABEL: v_mad_mix_v2f32_clamp_precvt:
 ; GFX1250:       ; %bb.0:
@@ -352,7 +339,6 @@ define <2 x bfloat> @v_mad_mix_v2f32_clamp_precvt(<2 x bfloat> %src0, <2 x bfloa
   %cvt.result = fptrunc <2 x float> %clamp to <2 x bfloat>
   ret <2 x bfloat> %cvt.result
 }
-
 
 define <3 x bfloat> @v_mad_mix_v3f32_clamp_precvt(<3 x bfloat> %src0, <3 x bfloat> %src1, <3 x bfloat> %src2) #0 {
 ; GFX1250-LABEL: v_mad_mix_v3f32_clamp_precvt:

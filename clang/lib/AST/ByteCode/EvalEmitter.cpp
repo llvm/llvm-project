@@ -98,10 +98,7 @@ bool EvalEmitter::interpretCall(const FunctionDecl *FD, const Expr *E) {
     this->Params.insert({PD, {0, false}});
   }
 
-  if (!this->visit(E))
-    return false;
-  PrimType T = Ctx.classify(E).value_or(PT_Ptr);
-  return this->emitPop(T, E);
+  return this->visitExpr(E, /*DestroyToplevelScope=*/false);
 }
 
 void EvalEmitter::emitLabel(LabelTy Label) { CurrentLabel = Label; }

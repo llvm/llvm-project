@@ -191,7 +191,7 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
 
     case Intrinsic::lifetime_start:
     case Intrinsic::lifetime_end: {
-      assert(ArgIdx == 1 && "Invalid argument index");
+      assert(ArgIdx == 0 && "Invalid argument index");
       auto *AI = dyn_cast<AllocaInst>(Arg);
       if (!AI)
         // lifetime of poison value.

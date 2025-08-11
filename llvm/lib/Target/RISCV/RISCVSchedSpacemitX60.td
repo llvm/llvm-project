@@ -524,16 +524,33 @@ foreach mx = SchedMxListW in {
 foreach mx = SchedMxList in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
 
-  defm "" : LMULWriteResMX<"WriteVSALUV", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVSALUX", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVSALUI", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVAALUV", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVAALUX", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVSMulV", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVSMulX", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVSShiftV", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVSShiftX", [SMX60_VIEU], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVSShiftI", [SMX60_VIEU], mx, IsWorstCase>;
+  let Latency = Get4458Latency<mx>.c, ReleaseAtCycles = [ConstOneUntilM1ThenDouble<mx>.c] in {
+    defm "" : LMULWriteResMX<"WriteVSALUV", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSALUX", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSALUI", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVAALUV", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVAALUX", [SMX60_VIEU], mx, IsWorstCase>;
+  }
+
+  // Latency of vsmul: e8/e16 = 4/4/5/8, e32 = 5/5/5/8, e64 = 7/8/16/32
+  // We use the worst-case until we can split the SEW.
+  defvar VSMulLat = ConstValueUntilLMULThenDoubleBase<"M2", 7, 8, mx>.c;
+  // Latency of vsmul: e8/e16/e32 = 1/2/4/8, e64 = 4/8/16/32
+  // We use the worst-case until we can split the SEW.
+  defvar VSMulOcc = ConstValueUntilLMULThenDoubleBase<"M1", 1, 4, mx>.c;
+  // TODO: change WriteVSMulV/X to be defined with LMULSEWSchedWrites
+  let Latency = VSMulLat, ReleaseAtCycles = [VSMulOcc] in {
+    defm "" : LMULWriteResMX<"WriteVSMulV", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSMulX", [SMX60_VIEU], mx, IsWorstCase>;
+  }
+
+  defvar VSShiftLat = ConstValueUntilLMULThenDouble<"M2", 4, mx>.c;
+  defvar VSShiftOcc = ConstOneUntilMF2ThenDouble<mx>.c;
+  let Latency = VSShiftLat, ReleaseAtCycles = [VSShiftOcc] in {
+    defm "" : LMULWriteResMX<"WriteVSShiftV", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSShiftX", [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSShiftI", [SMX60_VIEU], mx, IsWorstCase>;
+  }
 }
 
 // 13. Vector Floating-Point Instructions

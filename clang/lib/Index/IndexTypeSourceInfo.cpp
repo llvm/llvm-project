@@ -59,7 +59,7 @@ public:
 
   bool VisitTypedefTypeLoc(TypedefTypeLoc TL) {
     SourceLocation Loc = TL.getNameLoc();
-    TypedefNameDecl *ND = TL.getTypedefNameDecl();
+    TypedefNameDecl *ND = TL.getDecl();
     if (ND->isTransparentTag()) {
       TagDecl *Underlying = ND->getUnderlyingType()->getAsTagDecl();
       return IndexCtx.handleReference(Underlying, Loc, Parent,
@@ -117,7 +117,7 @@ public:
   }
 
   bool VisitTagTypeLoc(TagTypeLoc TL) {
-    TagDecl *D = TL.getDecl();
+    TagDecl *D = TL.getOriginalDecl();
     if (!IndexCtx.shouldIndexFunctionLocalSymbols() &&
         D->getParentFunctionOrMethod())
       return true;
@@ -172,7 +172,8 @@ public:
     return true;
   }
 
-  bool TraverseTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc TL) {
+  bool TraverseTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc TL,
+                                             bool TraverseQualifier) {
     if (!WalkUpFromTemplateSpecializationTypeLoc(TL))
       return false;
     if (!TraverseTemplateName(TL.getTypePtr()->getTemplateName()))
@@ -200,11 +201,6 @@ public:
         T->getTemplateName(), TL.getTemplateNameLoc(), T->getAsCXXRecordDecl(),
         /*IsTypeAlias=*/false);
     return true;
-  }
-
-  bool VisitInjectedClassNameTypeLoc(InjectedClassNameTypeLoc TL) {
-    return IndexCtx.handleReference(TL.getDecl(), TL.getNameLoc(), Parent,
-                                    ParentDC, SymbolRoleSet(), Relations);
   }
 
   bool VisitDependentNameTypeLoc(DependentNameTypeLoc TL) {
@@ -248,32 +244,28 @@ void IndexingContext::indexTypeLoc(TypeLoc TL,
   TypeIndexer(*this, Parent, DC, isBase, isIBType).TraverseTypeLoc(TL);
 }
 
-void IndexingContext::indexNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS,
-                                                  const NamedDecl *Parent,
-                                                  const DeclContext *DC) {
-  if (!NNS)
-    return;
-
-  if (NestedNameSpecifierLoc Prefix = NNS.getPrefix())
-    indexNestedNameSpecifierLoc(Prefix, Parent, DC);
-
+void IndexingContext::indexNestedNameSpecifierLoc(
+    NestedNameSpecifierLoc QualifierLoc, const NamedDecl *Parent,
+    const DeclContext *DC) {
   if (!DC)
     DC = Parent->getLexicalDeclContext();
-  SourceLocation Loc = NNS.getLocalBeginLoc();
-
-  switch (NNS.getNestedNameSpecifier()->getKind()) {
-  case NestedNameSpecifier::Identifier:
-  case NestedNameSpecifier::Global:
-  case NestedNameSpecifier::Super:
+  switch (NestedNameSpecifier Qualifier = QualifierLoc.getNestedNameSpecifier();
+          Qualifier.getKind()) {
+  case NestedNameSpecifier::Kind::Null:
+  case NestedNameSpecifier::Kind::Global:
+  case NestedNameSpecifier::Kind::MicrosoftSuper:
     break;
 
-  case NestedNameSpecifier::Namespace:
-    handleReference(NNS.getNestedNameSpecifier()->getAsNamespace(),
-                    Loc, Parent, DC, SymbolRoleSet());
+  case NestedNameSpecifier::Kind::Namespace: {
+    auto [Namespace, Prefix] = QualifierLoc.castAsNamespaceAndPrefix();
+    indexNestedNameSpecifierLoc(Prefix, Parent, DC);
+    handleReference(Namespace, QualifierLoc.getLocalBeginLoc(), Parent, DC,
+                    SymbolRoleSet());
     break;
+  }
 
-  case NestedNameSpecifier::TypeSpec:
-    indexTypeLoc(NNS.getTypeLoc(), Parent, DC);
+  case NestedNameSpecifier::Kind::Type:
+    indexTypeLoc(QualifierLoc.castAsTypeLoc(), Parent, DC);
     break;
   }
 }

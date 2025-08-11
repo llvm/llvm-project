@@ -44,6 +44,16 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMAssumeAlignedOpLowering
+    : public mlir::OpConversionPattern<cir::AssumeAlignedOp> {
+public:
+  using mlir::OpConversionPattern<cir::AssumeAlignedOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::AssumeAlignedOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMAssumeSepStorageOpLowering
     : public mlir::OpConversionPattern<cir::AssumeSepStorageOp> {
 public:

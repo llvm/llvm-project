@@ -45,7 +45,21 @@ public:
                 uint64_t val) const override;
   void relocateAlloc(InputSectionBase &sec, uint8_t *buf) const override;
   bool relaxOnce(int pass) const override;
+  template <class ELFT, class RelTy>
+  bool synthesizeAlignForInput(uint64_t &dot, InputSection *sec,
+                               Relocs<RelTy> rels);
+  template <class ELFT, class RelTy>
+  void finalizeSynthesizeAligns(uint64_t &dot, InputSection *sec,
+                                Relocs<RelTy> rels);
+  template <class ELFT>
+  bool synthesizeAlignAux(uint64_t &dot, InputSection *sec);
+  bool synthesizeAlign(uint64_t &dot, InputSection *sec) override;
   void finalizeRelax(int passes) const override;
+
+  // The following two variables are used by synthesized ALIGN relocations.
+  InputSection *baseSec = nullptr;
+  // r_offset and r_addend pairs.
+  SmallVector<std::pair<uint64_t, uint64_t>, 0> synthesizedAligns;
 };
 
 } // end anonymous namespace
@@ -954,6 +968,116 @@ bool RISCV::relaxOnce(int pass) const {
       changed |= relax(ctx, pass, *sec);
   }
   return changed;
+}
+
+// If the section alignment is >= 4, advance `dot` to insert NOPs and synthesize
+// an ALIGN relocation. Otherwise, return false to use default handling.
+template <class ELFT, class RelTy>
+bool RISCV::synthesizeAlignForInput(uint64_t &dot, InputSection *sec,
+                                    Relocs<RelTy> rels) {
+  if (!baseSec) {
+    // Record the first input section with RELAX relocations. We will synthesize
+    // ALIGN relocations here.
+    for (auto rel : rels) {
+      if (rel.getType(false) == R_RISCV_RELAX) {
+        baseSec = sec;
+        break;
+      }
+    }
+  } else if (sec->addralign >= 4) {
+    // If the alignment is >= 4 and the section does not start with an ALIGN
+    // relocation, synthesize one.
+    bool hasAlignRel = llvm::any_of(rels, [](const RelTy &rel) {
+      return rel.r_offset == 0 && rel.getType(false) == R_RISCV_ALIGN;
+    });
+    if (!hasAlignRel) {
+      synthesizedAligns.emplace_back(dot - baseSec->getVA(),
+                                     sec->addralign - 2);
+      dot += sec->addralign - 2;
+      return true;
+    }
+  }
+  return false;
+}
+
+// Finalize the relocation section by appending synthesized ALIGN relocations
+// after processing all input sections.
+template <class ELFT, class RelTy>
+void RISCV::finalizeSynthesizeAligns(uint64_t &dot, InputSection *sec,
+                                     Relocs<RelTy> rels) {
+  auto *f = cast<ObjFile<ELFT>>(baseSec->file);
+  auto shdr = f->template getELFShdrs<ELFT>()[baseSec->relSecIdx];
+  // Create a copy of InputSection.
+  sec = make<InputSection>(*f, shdr, baseSec->name);
+  auto *baseRelSec = cast<InputSection>(f->getSections()[baseSec->relSecIdx]);
+  *sec = *baseRelSec;
+  baseSec = nullptr;
+
+  // Allocate buffer for original and synthesized relocations in RELA format.
+  // If CREL is used, OutputSection::finalizeNonAllocCrel will convert RELA to
+  // CREL.
+  auto newSize = rels.size() + synthesizedAligns.size();
+  auto *relas = makeThreadLocalN<typename ELFT::Rela>(newSize);
+  sec->size = newSize * sizeof(typename ELFT::Rela);
+  sec->content_ = reinterpret_cast<uint8_t *>(relas);
+  sec->type = SHT_RELA;
+  // Copy original relocations to the new buffer, potentially converting CREL to
+  // RELA.
+  for (auto [i, r] : llvm::enumerate(rels)) {
+    relas[i].r_offset = r.r_offset;
+    relas[i].setSymbolAndType(r.getSymbol(0), r.getType(0), false);
+    if constexpr (RelTy::HasAddend)
+      relas[i].r_addend = r.r_addend;
+  }
+  // Append synthesized ALIGN relocations to the buffer.
+  for (auto [i, r] : llvm::enumerate(synthesizedAligns)) {
+    auto &rela = relas[rels.size() + i];
+    rela.r_offset = r.first;
+    rela.setSymbolAndType(0, R_RISCV_ALIGN, false);
+    rela.r_addend = r.second;
+  }
+  // Replace the old relocation section with the new one in the output section.
+  // addOrphanSections ensures that the output relocation section is processed
+  // after osec.
+  for (SectionCommand *cmd : sec->getParent()->commands) {
+    auto *isd = dyn_cast<InputSectionDescription>(cmd);
+    if (!isd)
+      continue;
+    for (auto *&isec : isd->sections)
+      if (isec == baseRelSec)
+        isec = sec;
+  }
+}
+
+template <class ELFT>
+bool RISCV::synthesizeAlignAux(uint64_t &dot, InputSection *sec) {
+  bool ret = false;
+  if (sec) {
+    invokeOnRelocs(*sec, ret = synthesizeAlignForInput<ELFT>, dot, sec);
+  } else if (baseSec) {
+    invokeOnRelocs(*baseSec, finalizeSynthesizeAligns<ELFT>, dot, sec);
+  }
+  return ret;
+}
+
+// Without linker relaxation enabled for a particular relocatable file or
+// section, the assembler will not generate R_RISCV_ALIGN relocations for
+// alignment directives. This becomes problematic in a two-stage linking
+// process: ld -r a.o b.o -o ab.o; ld ab.o -o ab. This function synthesizes an
+// R_RISCV_ALIGN relocation at section start when needed.
+//
+// When called with an input section (`sec` is not null): If the section
+// alignment is >= 4, advance `dot` to insert NOPs and synthesize an ALIGN
+// relocation.
+//
+// When called after all input sections are processed (`sec` is null): The
+// output relocation section is updated with all the newly synthesized ALIGN
+// relocations.
+bool RISCV::synthesizeAlign(uint64_t &dot, InputSection *sec) {
+  assert(ctx.arg.relocatable);
+  if (ctx.arg.is64)
+    return synthesizeAlignAux<ELF64LE>(dot, sec);
+  return synthesizeAlignAux<ELF32LE>(dot, sec);
 }
 
 void RISCV::finalizeRelax(int passes) const {
