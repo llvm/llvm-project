@@ -5119,9 +5119,9 @@ bool TreeTransform<Derived>::TransformTemplateArguments(
 
       // The transform has determined that we should perform an elementwise
       // expansion of the pattern. Do so.
-      std::optional<ForgetSubstitutionRAII> ForgeSubst;
+      std::optional<ForgetSubstitutionRAII> ForgetSubst;
       if (Info.ExpandUnderForgetSubstitions)
-        ForgeSubst.emplace(getDerived());
+        ForgetSubst.emplace(getDerived());
       for (unsigned I = 0; I != *Info.NumExpansions; ++I) {
         Sema::ArgPackSubstIndexRAII SubstIndex(getSema(), I);
 
@@ -5238,8 +5238,36 @@ bool TreeTransform<Derived>::PreparePackForExpansion(TemplateArgumentLoc In,
   if (!OutPattern.getArgument().containsUnexpandedParameterPack())
     return false;
 
-  // Some packs will learn their length after substitution.
-  // We may need to request their expansion.
+  // Some packs will learn their length after substitution, e.g.
+  // __builtin_dedup_pack<T,int> has size 1 or 2, depending on the substitution
+  // value of `T`.
+  //
+  // We only expand after we know sizes of all packs, check if this is the case
+  // or not. However, we avoid a full template substitution and only do
+  // expanstions after this point.
+
+  // E.g. when substituting template arguments of tuple with {T -> int} in the
+  // following example:
+  //   template <class T>
+  //   struct TupleWithInt {
+  //     using type = std::tuple<__builtin_dedup_pack<T, int>...>;
+  //   };
+  //   TupleWithInt<int>::type y;
+  // At this point we will see the `__builtin_dedup_pack<int, int>` with a known
+  // lenght and run `ComputeInfo()` to provide the necessary information to our
+  // caller.
+  //
+  // Note that we may still have situations where builtin is not going to be
+  // expanded. For example:
+  //   template <class T>
+  //   struct Foo {
+  //     template <class U> using tuple_with_t =
+  //     std::tuple<__builtin_dedup_pack<T, U, int>...>; using type =
+  //     tuple_with_t<short>;
+  //   }
+  // Because the substitution into `type` happens in dependent context, `type`
+  // will be `tuple<builtin_dedup_pack<T, short, int>...>` after substitution
+  // and the caller will not be able to expand it.
   ForgetSubstitutionRAII ForgetSubst(getDerived());
   if (ComputeInfo(Out, true, Info, OutPattern))
     return true;
