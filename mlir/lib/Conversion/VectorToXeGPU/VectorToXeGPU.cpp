@@ -236,7 +236,7 @@ SmallVector<Value> computeStrides(VectorTransferOpInterface xferOp,
     }
     // Wrap static strides as MLIR values
     for (int64_t s : intStrides)
-      strides.push_back(rewriter.create<arith::ConstantIndexOp>(loc, s));
+      strides.push_back(arith::ConstantIndexOp::create(rewriter, loc, s));
   } else {
     // For dynamic shape memref, use memref.extract_strided_metadata to get
     // stride values
@@ -256,8 +256,8 @@ SmallVector<Value> computeStrides(VectorTransferOpInterface xferOp,
       resultTypes.push_back(indexType); // sizes
     }
 
-    auto meta = rewriter.create<memref::ExtractStridedMetadataOp>(
-        loc, resultTypes, baseMemref);
+    auto meta = memref::ExtractStridedMetadataOp::create(
+        rewriter, loc, resultTypes, baseMemref);
     strides.append(meta.getStrides().begin(), meta.getStrides().end());
   }
   // Adjust strides according to the permutation map (e.g., for transpose)
@@ -309,7 +309,7 @@ static Value computeOffsets(VectorTransferOpInterface xferOp,
   SmallVector<Value> stepVectors;
   for (int64_t dim : vectorShape) {
     auto stepType = VectorType::get({dim}, rewriter.getIndexType());
-    auto stepOp = rewriter.create<vector::StepOp>(loc, stepType);
+    auto stepOp = vector::StepOp::create(rewriter, loc, stepType);
     stepVectors.push_back(stepOp);
   }
 
@@ -321,9 +321,9 @@ static Value computeOffsets(VectorTransferOpInterface xferOp,
     size_t memrefDim = memrefRank - vectorRank + i;
     Value strideValue = strides[memrefDim];
     auto mulType = llvm::cast<VectorType>(stepVectors[i].getType());
-    auto mulOp = rewriter.create<arith::MulIOp>(
-        loc, stepVectors[i],
-        rewriter.create<vector::BroadcastOp>(loc, mulType, strideValue));
+    auto bcastOp =
+        vector::BroadcastOp::create(rewriter, loc, mulType, strideValue);
+    auto mulOp = arith::MulIOp::create(rewriter, loc, stepVectors[i], bcastOp);
     strideMultiplied.push_back(mulOp);
   }
 
@@ -333,8 +333,8 @@ static Value computeOffsets(VectorTransferOpInterface xferOp,
     SmallVector<int64_t> newShape(vectorRank, 1);
     newShape[i] = vectorShape[i];
     auto newType = VectorType::get(newShape, rewriter.getIndexType());
-    auto castOp =
-        rewriter.create<vector::ShapeCastOp>(loc, newType, strideMultiplied[i]);
+    auto castOp = vector::ShapeCastOp::create(rewriter, loc, newType,
+                                              strideMultiplied[i]);
     shapeCasted.push_back(castOp);
   }
 
@@ -343,8 +343,8 @@ static Value computeOffsets(VectorTransferOpInterface xferOp,
   auto fullIndexVectorType =
       VectorType::get(vectorShape, rewriter.getIndexType());
   for (Value shapeCastVal : shapeCasted) {
-    auto broadcastOp = rewriter.create<vector::BroadcastOp>(
-        loc, fullIndexVectorType, shapeCastVal);
+    auto broadcastOp = vector::BroadcastOp::create(
+        rewriter, loc, fullIndexVectorType, shapeCastVal);
     broadcasted.push_back(broadcastOp);
   }
 
@@ -352,24 +352,25 @@ static Value computeOffsets(VectorTransferOpInterface xferOp,
   Value localOffsets = broadcasted[0];
   for (size_t i = 1; i < broadcasted.size(); ++i) {
     localOffsets =
-        rewriter.create<arith::AddIOp>(loc, localOffsets, broadcasted[i]);
+        arith::AddIOp::create(rewriter, loc, localOffsets, broadcasted[i]);
   }
 
   // Step 6: Compute base offset from transfer read indices
   Value baseOffset = nullptr;
   if (!indices.empty()) {
-    baseOffset = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+    baseOffset = arith::ConstantIndexOp::create(rewriter, loc, 0);
     for (size_t i = 0; i < indices.size(); ++i) {
       Value strideVal = strides[i];
       Value offsetContrib =
-          rewriter.create<arith::MulIOp>(loc, indices[i], strideVal);
+          arith::MulIOp::create(rewriter, loc, indices[i], strideVal);
       baseOffset =
-          rewriter.create<arith::AddIOp>(loc, baseOffset, offsetContrib);
+          arith::AddIOp::create(rewriter, loc, baseOffset, offsetContrib);
     }
     // Broadcast base offset to match vector shape
-    Value bcastBase = rewriter.create<vector::BroadcastOp>(
-        loc, fullIndexVectorType, baseOffset);
-    localOffsets = rewriter.create<arith::AddIOp>(loc, bcastBase, localOffsets);
+    Value bcastBase = vector::BroadcastOp::create(
+        rewriter, loc, fullIndexVectorType, baseOffset);
+    localOffsets =
+        arith::AddIOp::create(rewriter, loc, bcastBase, localOffsets);
   }
   return localOffsets;
 }
@@ -408,8 +409,8 @@ static Value collapseMemrefTo1D(VectorTransferOpInterface xferOp,
   }
   reassociation.push_back(allDims);
 
-  auto collapseOp = rewriter.create<memref::CollapseShapeOp>(
-      loc, flatMemrefType, baseMemref, reassociation);
+  auto collapseOp = memref::CollapseShapeOp::create(
+      rewriter, loc, flatMemrefType, baseMemref, reassociation);
   return collapseOp;
 }
 
@@ -420,10 +421,11 @@ static LogicalResult createLoadGather(vector::TransferReadOp readOp,
   Location loc = readOp.getLoc();
   VectorType vectorType = readOp.getVectorType();
   ArrayRef<int64_t> vectorShape = vectorType.getShape();
-  Value mask = rewriter.create<vector::ConstantMaskOp>(
-      loc, VectorType::get(vectorShape, rewriter.getI1Type()), vectorShape);
-  auto gatherOp = rewriter.create<xegpu::LoadGatherOp>(
-      loc, vectorType, flatMemref, localOffsets, mask,
+  Value mask = vector::ConstantMaskOp::create(
+      rewriter, loc, VectorType::get(vectorShape, rewriter.getI1Type()),
+      vectorShape);
+  auto gatherOp = xegpu::LoadGatherOp::create(
+      rewriter, loc, vectorType, flatMemref, localOffsets, mask,
       /*chunk_size=*/IntegerAttr{},
       /*l1_hint=*/xegpu::CachePolicyAttr{},
       /*l2_hint=*/xegpu::CachePolicyAttr{},
@@ -439,14 +441,15 @@ static LogicalResult createStoreScatter(vector::TransferWriteOp writeOp,
   Location loc = writeOp.getLoc();
   VectorType vectorType = writeOp.getVectorType();
   ArrayRef<int64_t> vectorShape = vectorType.getShape();
-  Value mask = rewriter.create<vector::ConstantMaskOp>(
-      loc, VectorType::get(vectorShape, rewriter.getI1Type()), vectorShape);
-  rewriter.create<xegpu::StoreScatterOp>(loc, value, flatMemref, localOffsets,
-                                         mask,
-                                         /*chunk_size=*/IntegerAttr{},
-                                         /*l1_hint=*/xegpu::CachePolicyAttr{},
-                                         /*l2_hint=*/xegpu::CachePolicyAttr{},
-                                         /*l3_hint=*/xegpu::CachePolicyAttr{});
+  Value mask = vector::ConstantMaskOp::create(
+      rewriter, loc, VectorType::get(vectorShape, rewriter.getI1Type()),
+      vectorShape);
+  xegpu::StoreScatterOp::create(rewriter, loc, value, flatMemref, localOffsets,
+                                mask,
+                                /*chunk_size=*/IntegerAttr{},
+                                /*l1_hint=*/xegpu::CachePolicyAttr{},
+                                /*l2_hint=*/xegpu::CachePolicyAttr{},
+                                /*l3_hint=*/xegpu::CachePolicyAttr{});
   rewriter.eraseOp(writeOp);
   return success();
 }
