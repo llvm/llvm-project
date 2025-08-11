@@ -10,7 +10,7 @@ In order to prototype pattern matchers, explore, test, or debug the MLIR IR, the
 
 * **Run queries directly from the CLI:**
     ```shell
-    ./mlir-query input.mlir -c "<your_query_1>" -c "<your_query_2>" ... "<your_query_N>"
+    ./mlir-query input.mlir -c "<your_query_1>" -c "<your_query_2>" ... -c "<your_query_N>"
     ```
     The commands are executed and the program exits immediately.
 
@@ -25,13 +25,13 @@ In order to prototype pattern matchers, explore, test, or debug the MLIR IR, the
 The tool can easily be used with the MLIR pass pipeline infrastructure by running a pass pipeline and passing the result as input to `mlir-query`.
 
 ```shell
-./mlir-opt input.mlir -canonicalize -o test.mlir | ./mlir-query test.mlir -c "<your_query_1>" -c "<your_query_2>" ... "<your_query_N>"
+./mlir-opt input.mlir -canonicalize -o test.mlir | ./mlir-query test.mlir -c "<your_query_1>" -c "<your_query_2>" ... -c "<your_query_N>"
 ```
 *Command example*
 
-## Register a new matcher
+## Register custom matchers
 
-To register a new matcher with `mlir-query`, you need to define a new structure that implements one of the following signatures: `bool match(Operation* op)` or `bool match(Operation* op, SetVector<Operation*> &matchedOps)`. Next, link `MLIRQueryLib` and register the matcher.
+To register a custom matcher with `mlir-query`, you need to define a new structure that implements one of the following signatures: `bool match(Operation* op)` or `bool match(Operation* op, SetVector<Operation*> &matchedOps)`. Next, link `MLIRQueryLib` and register the matcher.
 
 ```cpp
 #include "mlir/Tools/mlir-query/MlirQueryMain.h"
@@ -179,11 +179,11 @@ func.func @mixedOperations(%a: f32, %b: f32, %c: f32) -> f32 {
 
 ### Slice matchers
 
-`mlir-query` includes slicing matchers that compute forward and backward slices. These are abstractions over the methods from the `SliceAnalysis` library, enabling their use in a query context. In contrast to simple matchers, slicing matchers introduce the concept of `inner matchers`, which allow users to specify the `root operation` and the exit condition via other `matchers`. 
+`mlir-query` includes slicing matchers that compute forward and backward slices. These are abstractions over the methods from the `SliceAnalysis` library, enabling their use in a query context. In contrast to simple matchers, slicing matchers introduce the concept of `inner matchers`, which allow users to specify the `root operation` and the termination condition via other `matchers`. 
 
-Two useful backward-slicing matchers are `getDefinitionsByPredicate` and `getDefinitions`. The former matches all definitions by specifying both the starting point of the slice computation and the exit condition using an inner matcher. The latter is similar, except it limits the exit condition to a depth level specified as a numeric literal argument. Both matchers accept three boolean arguments: `omitBlockArguments`, `omitUsesFromAbove`, and `inclusive`. The first two specify traversal configuration, while the last controls inclusion of the root operation in the slice. 
+Two useful backward-slicing matchers are `getDefinitionsByPredicate` and `getDefinitions`. The former matches all definitions by specifying both the starting point of the slice computation and the termination condition using an inner matcher. The latter is similar, except that the termination condition is specified as a numerical literal which represents the desired depth level. Both matchers accept three boolean arguments: `omitBlockArguments`, `omitUsesFromAbove`, and `inclusive`. The first two specify traversal configuration, while the last controls inclusion of the root operation in the slice. 
 
-Forward-slicing matchers are similar, but their exit condition is currently limited to specification via a nested matcher. 
+Forward-slicing matchers are similar, but their termination condition is currently limited to using an inner matcher.
 
 #### Slice matchers examples
 
@@ -221,7 +221,7 @@ func.func @slice_use_from_above(%arg0: tensor<5x5xf32>, %arg1: tensor<5x5xf32>) 
   />
 </div>
 
-*Matches all defining operations, using the* `hasOpName("arith.addf")` *inner matcher for the root operation and the* `hasOpName("linalg.generic")` *inner matcher for the exit condition.*
+*Matches all defining operations, using the* `hasOpName("arith.addf")` *inner matcher for the root operation and the* `hasOpName("linalg.generic")` *inner matcher for the termination condition.*
 
 <div style="overflow-x:auto; margin:1em 0;">
   <img
@@ -293,7 +293,7 @@ func.func @slice_depth1_loop_nest_with_offsets() {
   />
 </div>
 
-*Computes the forward slice by specifying the root operation using* `anyOf(hasOpName("memref.alloc"),isConstant())` *inner matcher and exit condition via* `anyOf(hasOpName("affine.load"),hasOpName("memref.dealloc"))` *inner matcher.*
+*Computes the forward slice by specifying the root operation using* `anyOf(hasOpName("memref.alloc"),isConstant())` *inner matcher and termination condition via* `anyOf(hasOpName("affine.load"),hasOpName("memref.dealloc"))` *inner matcher.*
 
 ```mlir
 func.func @no_hoisting_collapse_shape(%in_0: memref<1x20x1xi32>, %1: memref<9x1xi32>, %vec: vector<4xi32>) {
@@ -327,7 +327,7 @@ func.func @no_hoisting_collapse_shape(%in_0: memref<1x20x1xi32>, %1: memref<9x1x
   />
 </div>
 
-*Computes the forward slice by specifying the root operation using* `allOf(hasOpName("memref.alloca"),hasOpAttrName("alignment"))` *inner matcher and exit condition via* `hasOpName("vector.transfer_read")` *inner matcher.*
+*Computes the forward slice by specifying the root operation using* `allOf(hasOpName("memref.alloca"),hasOpAttrName("alignment"))` *inner matcher and termination condition via* `hasOpName("vector.transfer_read")` *inner matcher.*
 
 ## Matcher Reference
 
