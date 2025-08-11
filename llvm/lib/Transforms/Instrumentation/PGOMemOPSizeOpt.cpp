@@ -199,6 +199,9 @@ public:
     // Not perform on constant length calls.
     if (isa<ConstantInt>(Length))
       return;
+    if (isa<MemSetPatternInst>(MI))
+      return; // not supported
+
     WorkList.push_back(MemOp(&MI));
   }
 

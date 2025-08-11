@@ -321,7 +321,8 @@ bool SafeStack::IsSafeStackAlloca(const Value *AllocaPtr, uint64_t AllocaSize) {
         if (I->isLifetimeStartOrEnd())
           continue;
 
-        if (const MemIntrinsic *MI = dyn_cast<MemIntrinsic>(I)) {
+        if (const MemIntrinsic *MI = dyn_cast<MemIntrinsic>(I);
+            MI && !isa<MemSetPatternInst>(I)) {
           if (!IsMemIntrinsicSafe(MI, UI, AllocaPtr, AllocaSize)) {
             LLVM_DEBUG(dbgs()
                        << "[SafeStack] Unsafe alloca: " << *AllocaPtr

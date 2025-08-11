@@ -535,7 +535,7 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
       else if (isa<CallInst>(Inst) || isa<InvokeInst>(Inst)) {
         if (CallInst *CI = dyn_cast<CallInst>(&Inst))
           maybeMarkSanitizerLibraryCallNoBuiltin(CI, &TLI);
-        if (isa<MemIntrinsic>(Inst))
+        if (isa<MemIntrinsic>(Inst) && !isa<MemSetPatternInst>(Inst))
           MemIntrinCalls.push_back(&Inst);
         HasCalls = true;
         chooseInstructionsToInstrument(LocalLoadsAndStores, AllLoadsAndStores,

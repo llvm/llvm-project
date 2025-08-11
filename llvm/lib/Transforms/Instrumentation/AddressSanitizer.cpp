@@ -3061,7 +3061,8 @@ bool AddressSanitizer::instrumentFunction(Function &F,
                  ((ClInvalidPointerPairs || ClInvalidPointerSub) &&
                   isInterestingPointerSubtraction(&Inst))) {
         PointerComparisonsOrSubtracts.push_back(&Inst);
-      } else if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(&Inst)) {
+      } else if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(&Inst);
+                 MI && !isa<MemSetPatternInst>(MI)) {
         // ok, take it.
         IntrinToInstrument.push_back(MI);
         NumInsnsPerBB++;

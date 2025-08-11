@@ -1962,7 +1962,8 @@ void NumericalStabilitySanitizer::propagateShadowValues(
     maybeAddSuffixForNsanInterface(CB);
     if (CallInst *CI = dyn_cast<CallInst>(&Inst))
       maybeMarkSanitizerLibraryCallNoBuiltin(CI, &TLI);
-    if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(&Inst)) {
+    if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(&Inst);
+        MI && !isa<MemSetPatternInst>(MI)) {
       instrumentMemIntrinsic(MI);
       return;
     }

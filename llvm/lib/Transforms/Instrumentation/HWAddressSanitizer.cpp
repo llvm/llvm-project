@@ -1602,7 +1602,8 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
 
     getInterestingMemoryOperands(ORE, &Inst, TLI, OperandsToInstrument);
 
-    if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(&Inst))
+    if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(&Inst);
+        MI && !isa<MemSetPatternInst>(MI))
       if (!ignoreMemIntrinsic(ORE, MI))
         IntrinToInstrument.push_back(MI);
   }

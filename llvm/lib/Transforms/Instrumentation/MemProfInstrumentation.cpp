@@ -618,7 +618,8 @@ bool MemProfiler::instrumentFunction(Function &F) {
   // Fill the set of memory operations to instrument.
   for (auto &BB : F) {
     for (auto &Inst : BB) {
-      if (isInterestingMemoryAccess(&Inst) || isa<MemIntrinsic>(Inst))
+      if (isInterestingMemoryAccess(&Inst) ||
+          (isa<MemIntrinsic>(Inst) && !isa<MemSetPatternInst>(Inst)))
         ToInstrument.push_back(&Inst);
     }
   }

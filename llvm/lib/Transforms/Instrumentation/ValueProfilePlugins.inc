@@ -46,6 +46,9 @@ public:
     if (isa<ConstantInt>(Length))
       return;
 
+    if (isa<MemSetPatternInst>(MI))
+      return; // Not supported
+
     Instruction *InsertPt = &MI;
     Instruction *AnnotatedInst = &MI;
     Candidates->emplace_back(CandidateInfo{Length, InsertPt, AnnotatedInst});

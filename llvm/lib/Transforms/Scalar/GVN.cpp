@@ -1378,9 +1378,9 @@ GVNPass::AnalyzeLoadAvailability(LoadInst *Load, MemDepResult DepInfo,
     }
 
     // If the clobbering value is a memset/memcpy/memmove, see if we can
-    // forward a value on from it.
+    // forward a value on from it.  TODO: Support memset.pattern.
     if (MemIntrinsic *DepMI = dyn_cast<MemIntrinsic>(DepInst)) {
-      if (Address && !Load->isAtomic()) {
+      if (Address && !Load->isAtomic() && !isa<MemSetPatternInst>(DepInst)) {
         int Offset = analyzeLoadFromClobberingMemInst(Load->getType(), Address,
                                                       DepMI, DL);
         if (Offset != -1)

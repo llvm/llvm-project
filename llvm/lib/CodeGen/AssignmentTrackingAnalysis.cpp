@@ -2071,7 +2071,8 @@ getUntaggedStoreAssignmentInfo(const Instruction &I, const DataLayout &Layout) {
   // with it.
   if (const auto *SI = dyn_cast<StoreInst>(&I))
     return at::getAssignmentInfo(Layout, SI);
-  if (const auto *MI = dyn_cast<MemIntrinsic>(&I))
+  if (const auto *MI = dyn_cast<MemIntrinsic>(&I);
+      MI && !isa<MemSetPatternInst>(MI))
     return at::getAssignmentInfo(Layout, MI);
   // Alloca or non-store-like inst.
   return std::nullopt;

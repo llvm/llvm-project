@@ -3200,7 +3200,7 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
         }
 
         // Check the pointer(s) of a memory intrinsic explicitly.
-        if (isa<MemIntrinsic>(&I)) {
+        if (isa<MemIntrinsic>(&I) && !isa<MemSetPatternInst>(&I)) {
           if (!ED.EncounteredNonLocalSideEffect &&
               AA::isPotentiallyAffectedByBarrier(A, I, *this))
             ED.EncounteredNonLocalSideEffect = true;

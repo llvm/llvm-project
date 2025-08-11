@@ -1093,7 +1093,7 @@ public:
   }
 };
 
-/// This is the common base class for memset/memcpy/memmove.
+/// This is the common base class for memset(.pattern)/memcpy/memmove.
 class MemIntrinsic : public MemIntrinsicBase<MemIntrinsic> {
 private:
   enum { ARG_VOLATILE = 3 };
@@ -1125,6 +1125,7 @@ public:
     case Intrinsic::memset:
     case Intrinsic::memset_inline:
     case Intrinsic::memcpy_inline:
+    case Intrinsic::experimental_memset_pattern:
       return true;
     default:
       return false;
@@ -1157,18 +1158,7 @@ public:
 /// Note that despite the inheritance, this is not part of the
 /// MemIntrinsic hierachy in terms of isa/cast.
 class MemSetPatternInst : public MemSetBase<MemIntrinsic> {
-private:
-  enum { ARG_VOLATILE = 3 };
-
 public:
-  ConstantInt *getVolatileCst() const {
-    return cast<ConstantInt>(getArgOperand(ARG_VOLATILE));
-  }
-
-  bool isVolatile() const { return !getVolatileCst()->isZero(); }
-
-  void setVolatile(Constant *V) { setArgOperand(ARG_VOLATILE, V); }
-
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const IntrinsicInst *I) {
     return I->getIntrinsicID() == Intrinsic::experimental_memset_pattern;
