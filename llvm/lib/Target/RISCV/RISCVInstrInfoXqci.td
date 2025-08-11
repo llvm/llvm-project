@@ -14,6 +14,14 @@
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
+def SDT_SetMultiple : SDTypeProfile<0, 4, [SDTCisSameAs<0, 1>,
+                                           SDTCisSameAs<1, 3>,
+                                           SDTCisPtrTy<2>,
+                                           SDTCisVT<3, XLenVT>]>;
+
+def qc_setwmi : RVSDNode<"QC_SETWMI", SDT_SetMultiple,
+                         [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
 def uimm5nonzero : RISCVOp<XLenVT>,
                    ImmLeaf<XLenVT, [{return (Imm != 0) && isUInt<5>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<5, "NonZero">;
@@ -26,6 +34,8 @@ def uimm5nonzero : RISCVOp<XLenVT>,
     return (Imm != 0) && isUInt<5>(Imm);;
   }];
 }
+
+def tuimm5nonzero : TImmLeaf<XLenVT, [{return (Imm != 0) && isUInt<5>(Imm);}]>;
 
 def uimm5gt3 : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
   [{return (Imm > 3) && isUInt<5>(Imm);}]> {
@@ -91,6 +101,8 @@ def uimm5slist : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
             (Imm == 15) || (Imm == 31));
   }];
 }
+
+def tuimm7_lsb00 : TImmLeaf<XLenVT,[{return isShiftedUInt<5, 2>(Imm);}]>;
 
 def uimm10 : RISCVUImmLeafOp<10>;
 
@@ -457,6 +469,13 @@ class QCIRVInstRR<bits<5> funct5, DAGOperand InTyRs1, string opcodestr>
     : RVInstR<{0b00, funct5}, 0b011, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
               (ins InTyRs1:$rs1, GPRNoX0:$rs2), opcodestr, "$rd, $rs1, $rs2">;
 
+class QCIRVInstRRTied<bits<5> funct5, DAGOperand InTyRs1, string opcodestr>
+    : RVInstR<{0b00, funct5}, 0b011, OPC_CUSTOM_0, (outs GPRNoX0:$rd_wb),
+              (ins GPRNoX0:$rd, InTyRs1:$rs1, GPRNoX0:$rs2), opcodestr,
+              "$rd, $rs1, $rs2"> {
+  let Constraints = "$rd = $rd_wb";
+}
+
 class QCIBitManipRII<bits<3> funct3, bits<2> funct2,
                      DAGOperand InTyRs1, string opcodestr>
     : RVInstIBase<funct3, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
@@ -470,11 +489,26 @@ class QCIBitManipRII<bits<3> funct3, bits<2> funct2,
   let Inst{24-20} = shamt;
 }
 
+class QCIBitManipRIITied<bits<3> funct3, bits<2> funct2,
+                         DAGOperand InTyRs1, string opcodestr>
+    : RVInstIBase<funct3, OPC_CUSTOM_0, (outs GPRNoX0:$rd_wb), (ins GPRNoX0:$rd,
+                  InTyRs1:$rs1, uimm5_plus1:$width, uimm5:$shamt),
+                  opcodestr, "$rd, $rs1, $width, $shamt"> {
+  let Constraints = "$rd = $rd_wb";
+  bits<5> shamt;
+  bits<5> width;
+
+  let Inst{31-30} = funct2;
+  let Inst{29-25} = width;
+  let Inst{24-20} = shamt;
+}
+
 class QCIRVInstRI<bits<1> funct1, DAGOperand InTyImm11,
                              string opcodestr>
-    : RVInstIBase<0b000, OPC_CUSTOM_0, (outs GPRNoX0:$rd),
-                  (ins GPRNoX0:$rs1, InTyImm11:$imm11), opcodestr,
+    : RVInstIBase<0b000, OPC_CUSTOM_0, (outs GPRNoX0:$rd_wb),
+                  (ins GPRNoX0:$rd, GPRNoX0:$rs1, InTyImm11:$imm11), opcodestr,
                   "$rd, $rs1, $imm11"> {
+  let Constraints = "$rd = $rd_wb";
   bits<11> imm11;
 
   let Inst{31-31} = funct1;
@@ -858,12 +892,12 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
     let Inst{29-25} = width;
     let Inst{24-20} = shamt;
   }
-  def QC_INSB : QCIBitManipRII<0b001, 0b01, GPR, "qc.insb">;
-  def QC_INSBH : QCIBitManipRII<0b001, 0b10, GPR, "qc.insbh">;
-  def QC_INSBR : QCIRVInstRR<0b00000, GPR, "qc.insbr">;
-  def QC_INSBHR : QCIRVInstRR<0b00001, GPR, "qc.insbhr">;
-  def QC_INSBPR : QCIRVInstRR<0b00010, GPR, "qc.insbpr">;
-  def QC_INSBPRH : QCIRVInstRR<0b00011, GPR, "qc.insbprh">;
+  def QC_INSB : QCIBitManipRIITied<0b001, 0b01, GPR, "qc.insb">;
+  def QC_INSBH : QCIBitManipRIITied<0b001, 0b10, GPR, "qc.insbh">;
+  def QC_INSBR : QCIRVInstRRTied<0b00000, GPR, "qc.insbr">;
+  def QC_INSBHR : QCIRVInstRRTied<0b00001, GPR, "qc.insbhr">;
+  def QC_INSBPR : QCIRVInstRRTied<0b00010, GPR, "qc.insbpr">;
+  def QC_INSBPRH : QCIRVInstRRTied<0b00011, GPR, "qc.insbprh">;
   def QC_EXTU : QCIBitManipRII<0b010, 0b00, GPRNoX0, "qc.extu">;
   def QC_EXTDU : QCIBitManipRII<0b010, 0b10, GPRNoX31, "qc.extdu">;
   def QC_EXTDUR : QCIRVInstRR<0b00100, GPRNoX31, "qc.extdur">;
@@ -1565,6 +1599,11 @@ def : QCISELECTICCPatInv <SETNE,  QC_SELECTIEQ>;
 def : QCISELECTIICCPat <SETEQ,  QC_SELECTIIEQ>;
 def : QCISELECTIICCPat <SETNE,  QC_SELECTIINE>;
 } // Predicates = [HasVendorXqcics, IsRV32]
+
+let Predicates = [HasVendorXqcilsm, IsRV32] in {
+def : Pat<(qc_setwmi GPR:$rs3, GPR:$rs1, tuimm5nonzero:$uimm5, tuimm7_lsb00:$uimm7),
+          (QC_SETWMI GPR:$rs3, GPR:$rs1, tuimm5nonzero:$uimm5, tuimm7_lsb00:$uimm7)>;
+} // Predicates = [HasVendorXqcilsm, IsRV32]
 
 //===----------------------------------------------------------------------===/i
 // Compress Instruction tablegen backend.

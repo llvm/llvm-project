@@ -1012,6 +1012,7 @@ inferOffloadToolchains(Compilation &C, Action::OffloadKind Kind) {
     Arg *A = new Arg(Opt, C.getArgs().getArgString(Index), Index,
                      C.getArgs().MakeArgString(Triple.split("-").first),
                      C.getArgs().MakeArgString("--offload-arch=" + Arch));
+    A->claim();
     C.getArgs().append(A);
     C.getArgs().AddSynthesizedArg(A);
     Triples.insert(Triple);

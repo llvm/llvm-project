@@ -36,7 +36,7 @@ using namespace llvm;
 MCWasmStreamer::~MCWasmStreamer() = default; // anchor.
 
 void MCWasmStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {
-  auto *Symbol = cast<MCSymbolWasm>(S);
+  auto *Symbol = static_cast<MCSymbolWasm *>(S);
   MCObjectStreamer::emitLabel(Symbol, Loc);
 
   const MCSectionWasm &Section =
@@ -47,7 +47,7 @@ void MCWasmStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {
 
 void MCWasmStreamer::emitLabelAtPos(MCSymbol *S, SMLoc Loc, MCFragment &F,
                                     uint64_t Offset) {
-  auto *Symbol = cast<MCSymbolWasm>(S);
+  auto *Symbol = static_cast<MCSymbolWasm *>(S);
   MCObjectStreamer::emitLabelAtPos(Symbol, Loc, F, Offset);
 
   const MCSectionWasm &Section =
@@ -69,8 +69,7 @@ void MCWasmStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
 
 bool MCWasmStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
   assert(Attribute != MCSA_IndirectSymbol && "indirect symbols not supported");
-
-  auto *Symbol = cast<MCSymbolWasm>(S);
+  auto *Symbol = static_cast<MCSymbolWasm *>(S);
 
   // Adding a symbol attribute always introduces the symbol; note that an
   // important side effect of calling registerSymbol here is to register the
@@ -135,7 +134,7 @@ void MCWasmStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
 }
 
 void MCWasmStreamer::emitELFSize(MCSymbol *Symbol, const MCExpr *Value) {
-  cast<MCSymbolWasm>(Symbol)->setSize(Value);
+  static_cast<MCSymbolWasm *>(Symbol)->setSize(Value);
 }
 
 void MCWasmStreamer::emitLocalCommonSymbol(MCSymbol *S, uint64_t Size,

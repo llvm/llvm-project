@@ -1402,10 +1402,8 @@ using OperatorSet = common::EnumSet<Operator, 32>;
 
 std::string ToString(Operator op);
 
-template <typename... Ts, int Kind>
-Operator OperationCode(
-    const evaluate::Operation<evaluate::LogicalOperation<Kind>, Ts...> &op) {
-  switch (op.derived().logicalOperator) {
+template <int Kind> Operator OperationCode(const LogicalOperation<Kind> &op) {
+  switch (op.logicalOperator) {
   case common::LogicalOperator::And:
     return Operator::And;
   case common::LogicalOperator::Or:
@@ -1420,10 +1418,10 @@ Operator OperationCode(
   return Operator::Unknown;
 }
 
-template <typename T, typename... Ts>
-Operator OperationCode(
-    const evaluate::Operation<evaluate::Relational<T>, Ts...> &op) {
-  switch (op.derived().opr) {
+Operator OperationCode(const Relational<SomeType> &op);
+
+template <typename T> Operator OperationCode(const Relational<T> &op) {
+  switch (op.opr) {
   case common::RelationalOperator::LT:
     return Operator::Lt;
   case common::RelationalOperator::LE:
@@ -1440,44 +1438,32 @@ Operator OperationCode(
   return Operator::Unknown;
 }
 
-template <typename T, typename... Ts>
-Operator OperationCode(const evaluate::Operation<evaluate::Add<T>, Ts...> &op) {
+template <typename T> Operator OperationCode(const Add<T> &op) {
   return Operator::Add;
 }
 
-template <typename T, typename... Ts>
-Operator OperationCode(
-    const evaluate::Operation<evaluate::Subtract<T>, Ts...> &op) {
+template <typename T> Operator OperationCode(const Subtract<T> &op) {
   return Operator::Sub;
 }
 
-template <typename T, typename... Ts>
-Operator OperationCode(
-    const evaluate::Operation<evaluate::Multiply<T>, Ts...> &op) {
+template <typename T> Operator OperationCode(const Multiply<T> &op) {
   return Operator::Mul;
 }
 
-template <typename T, typename... Ts>
-Operator OperationCode(
-    const evaluate::Operation<evaluate::Divide<T>, Ts...> &op) {
+template <typename T> Operator OperationCode(const Divide<T> &op) {
   return Operator::Div;
 }
 
-template <typename T, typename... Ts>
-Operator OperationCode(
-    const evaluate::Operation<evaluate::Power<T>, Ts...> &op) {
+template <typename T> Operator OperationCode(const Power<T> &op) {
   return Operator::Pow;
 }
 
-template <typename T, typename... Ts>
-Operator OperationCode(
-    const evaluate::Operation<evaluate::RealToIntPower<T>, Ts...> &op) {
+template <typename T> Operator OperationCode(const RealToIntPower<T> &op) {
   return Operator::Pow;
 }
 
-template <typename T, common::TypeCategory C, typename... Ts>
-Operator OperationCode(
-    const evaluate::Operation<evaluate::Convert<T, C>, Ts...> &op) {
+template <typename T, common::TypeCategory C>
+Operator OperationCode(const Convert<T, C> &op) {
   if constexpr (C == T::category) {
     return Operator::Resize;
   } else {
@@ -1485,25 +1471,27 @@ Operator OperationCode(
   }
 }
 
-template <typename T, typename... Ts>
-Operator OperationCode(
-    const evaluate::Operation<evaluate::Extremum<T>, Ts...> &op) {
-  if (op.derived().ordering == evaluate::Ordering::Greater) {
+template <typename T> Operator OperationCode(const Extremum<T> &op) {
+  if (op.ordering == Ordering::Greater) {
     return Operator::Max;
   } else {
     return Operator::Min;
   }
 }
 
-template <typename T> Operator OperationCode(const evaluate::Constant<T> &x) {
+template <typename T> Operator OperationCode(const Constant<T> &x) {
   return Operator::Constant;
+}
+
+template <typename T> Operator OperationCode(const Designator<T> &x) {
+  return Operator::Identity;
 }
 
 template <typename T> Operator OperationCode(const T &) {
   return Operator::Unknown;
 }
 
-Operator OperationCode(const evaluate::ProcedureDesignator &proc);
+Operator OperationCode(const ProcedureDesignator &proc);
 
 } // namespace operation
 
