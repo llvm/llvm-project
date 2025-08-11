@@ -3624,9 +3624,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
-  // Get an MMX-sized vector type.
-  Type *getMMXVectorTy(unsigned EltSizeInBits) {
-    const unsigned X86_MMXSizeInBits = 64;
+  // Get an MMX-sized (64-bit) vector type, or optionally, other sized
+  // vectors.
+  Type *getMMXVectorTy(unsigned EltSizeInBits, unsigned X86_MMXSizeInBits = 64) {
     assert(EltSizeInBits != 0 && (X86_MMXSizeInBits % EltSizeInBits) == 0 &&
            "Illegal MMX vector element size");
     return FixedVectorType::get(IntegerType::get(*MS.C, EltSizeInBits),
@@ -3830,6 +3830,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   //
   // e.g., <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %a, <8 x i16> %b)
   //       <1 x i64> @llvm.x86.mmx.pmadd.wd(<1 x i64> %a, <1 x i64> %b)
+  //
+  // For the three-operand form:
+  //       <4 x i32> @llvm.x86.avx512.vpdpbusd.128(<4 x i32>, <4 x i32>, <4 x i32>)
+  // the horizontal addition is "quadwise" instead of pairwise (note the first
+  // two operands should actually be interpreted as vectors of bytes), and it
+  // is accumulated with the third operand.
   void handleVectorPmaddIntrinsic(IntrinsicInst &I,
                                   unsigned MMXEltSizeInBits = 0) {
     IRBuilder<> IRB(&I);
@@ -3837,10 +3843,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     FixedVectorType *ReturnType = cast<FixedVectorType>(I.getType());
     assert(isa<FixedVectorType>(ReturnType));
 
-    assert(I.arg_size() == 2);
+    assert(I.arg_size() == 2 || I.arg_size() == 3);
     FixedVectorType *ParamType =
         cast<FixedVectorType>(I.getArgOperand(0)->getType());
     assert(ParamType == I.getArgOperand(1)->getType());
+    if (I.arg_size() == 3)
+      assert(ParamType == I.getArgOperand(2)->getType());
 
     Value *V1 = I.getOperand(0);
     Value *V2 = I.getOperand(1);
@@ -3853,8 +3861,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *S2 = getShadow(&I, 1);
 
     if (MMXEltSizeInBits) {
-        ReturnType = cast<FixedVectorType>(getMMXVectorTy(MMXEltSizeInBits * 2));
-        ParamType = cast<FixedVectorType>(getMMXVectorTy(MMXEltSizeInBits));
+        if (I.arg_size() != 3)
+          ReturnType = cast<FixedVectorType>(getMMXVectorTy(MMXEltSizeInBits * 2, ReturnType->getPrimitiveSizeInBits()));
+
+        ParamType = cast<FixedVectorType>(getMMXVectorTy(MMXEltSizeInBits, ParamType->getPrimitiveSizeInBits()));
 
         V1 = IRB.CreateBitCast(V1, ParamType);
         V2 = IRB.CreateBitCast(V2, ParamType);
@@ -3863,8 +3873,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         S2 = IRB.CreateBitCast(S2, getShadowTy(ParamType));
     }
 
-    assert(ParamType->getNumElements() ==
-           2 * ReturnType->getNumElements());
+    if (I.arg_size() != 3)
+      assert(ParamType->getNumElements() ==
+             2 * ReturnType->getNumElements());
 
     Value *S1S2 = IRB.CreateOr(S1, S2);
 
@@ -3879,21 +3890,39 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // <8 x i32> %ab, but we cheated and ended up with <8 x i16>.
     S1S2 = IRB.CreateAnd(S1S2, IRB.CreateSExt(V1AndV2NotZero, S1S2->getType()));
 
-    // Step 2: pairwise/horizontal add
-    // Collapse <8 x i16> into <4 x i32>
+    // Step 2: horizontal add
     // Handle it similarly to handlePairwiseShadowOrIntrinsic().
-    unsigned TotalNumElems = ReturnType->getNumElements() * 2;
-    SmallVector<int, 8> EvenMask;
-    SmallVector<int, 8> OddMask;
-    for (unsigned X = 0; X < TotalNumElems - 1; X += 2) {
-      EvenMask.push_back(X);
-      OddMask.push_back(X + 1);
-    }
-    Value *EvenShadow = IRB.CreateShuffleVector(S1S2, EvenMask);
-    Value *OddShadow = IRB.CreateShuffleVector(S1S2, OddMask);
+    //
+    // If arg_size() == 2:
+    //   Collapse <8 x i16> into <4 x i16>
+    int ReductionFactor = 2;
 
-    Value *OrShadow = IRB.CreateOr(EvenShadow, OddShadow);
+    if (I.arg_size() == 3)
+      // Quadwise addition
+      // Collapse <16 x i8> into <4 x i8>
+      ReductionFactor = 4;
+
+    unsigned TotalNumElems = ReturnType->getNumElements() * ReductionFactor;
+    Value *OrShadow = nullptr;
+    for (int i = 0; i < ReductionFactor; i++) {
+      SmallVector<int, 8> Mask;
+      for (unsigned X = 0; X < TotalNumElems; X += ReductionFactor)
+        Mask.push_back(X + i);
+
+      Value *MaskedShadow = IRB.CreateShuffleVector(S1S2, Mask);
+
+      if (OrShadow)
+        OrShadow = IRB.CreateOr(OrShadow, MaskedShadow);
+      else
+        OrShadow = MaskedShadow;
+    }
+
+    // Extend to <4 x i32>
     OrShadow = CreateShadowCast(IRB, OrShadow, getShadowTy(&I));
+
+    // Accumulate
+    if (I.arg_size() == 3)
+      OrShadow = IRB.CreateOr(OrShadow, getShadow(&I, 2));
 
     setShadow(&I, OrShadow);
     setOriginForNaryOp(I);
@@ -5430,12 +5459,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       handleVectorSadIntrinsic(I);
       break;
 
-    // <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16>, <8 x i16>)
-    // <8 x i32> @llvm.x86.avx2.pmadd.wd(<16 x i16>, <16 x i16>)
-    // <8 x i16> @llvm.x86.ssse3.pmadd.ub.sw.128(<16 x i8>, <16 x i8>)
-    // <16 x i16> @llvm.x86.avx2.pmadd.ub.sw(<32 x i8>, <32 x i8>)
-    // <16 x i32> @llvm.x86.avx512.pmaddw.d.512(<32 x i16>, <32 x i16>)
-    // <32 x i16> @llvm.x86.avx512.pmaddubs.w.512(<64 x i8>, <64 x i8>)
+    // Multiply and Add Packed Words
+    //   <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16>, <8 x i16>)
+    //   <8 x i32> @llvm.x86.avx2.pmadd.wd(<16 x i16>, <16 x i16>)
+    //   <16 x i32> @llvm.x86.avx512.pmaddw.d.512(<32 x i16>, <32 x i16>)
+
+    // Multiply and Add Packed Signed and Unsigned Bytes
+    //   <8 x i16> @llvm.x86.ssse3.pmadd.ub.sw.128(<16 x i8>, <16 x i8>)
+    //   <16 x i16> @llvm.x86.avx2.pmadd.ub.sw(<32 x i8>, <32 x i8>)
+    //   <32 x i16> @llvm.x86.avx512.pmaddubs.w.512(<64 x i8>, <64 x i8>)
     //
     // These intrinsics are auto-upgraded into non-masked forms:
     //   <4 x i32> @llvm.x86.avx512.mask.pmaddw.d.128(<8 x i16>, <8 x i16>, <4 x i32>, i8)
@@ -5462,6 +5494,53 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_mmx_pmadd_wd:
       handleVectorPmaddIntrinsic(I, 16);
       break;
+
+    // Multiply and Add Packed Signed and Unsigned Bytes
+    //   <4 x i32> @llvm.x86.avx512.vpdpbusd.128(<4 x i32>, <4 x i32>, <4 x i32>)
+    //   <4 x i32> @llvm.x86.avx512.vpdpbusds.128(<4 x i32>, <4 x i32>, <4 x i32>)
+    //   <8 x i32> @llvm.x86.avx512.vpdpbusd.256(<8 x i32>, <8 x i32>, <8 x i32>)
+    //   <8 x i32> @llvm.x86.avx512.vpdpbusds.256(<8 x i32>, <8 x i32>, <8 x i32>)
+    //   <16 x i32> @llvm.x86.avx512.vpdpbusd.512(<16 x i32>, <16 x i32>, <16 x i32>)
+    //   <16 x i32> @llvm.x86.avx512.vpdpbusds.512(<16 x i32>, <16 x i32>, <16 x i32>)
+    //
+    //   <4 x i32> @llvm.x86.avx2.vpdpbssd.128(<4 x i32>, <4 x i32>, <4 x i32>)
+    //   <4 x i32> @llvm.x86.avx2.vpdpbssds.128(<4 x i32>, <4 x i32>, <4 x i32>)
+    //   <8 x i32> @llvm.x86.avx2.vpdpbssd.256(<8 x i32>, <8 x i32>, <8 x i32>)
+    //   <8 x i32> @llvm.x86.avx2.vpdpbssds.256(<8 x i32>, <8 x i32>, <8 x i32>)
+    //
+    //   <16 x i32> @llvm.x86.avx10.vpdpbssd.512(<16 x i32>, <16 x i32>, <16 x i32>)
+    //   <16 x i32> @llvm.x86.avx10.vpdpbssds.512(<16 x i32>, <16 x i32>, <16 x i32>)
+    case Intrinsic::x86_avx512_vpdpbusd_128:
+    case Intrinsic::x86_avx512_vpdpbusds_128:
+    case Intrinsic::x86_avx512_vpdpbusd_256:
+    case Intrinsic::x86_avx512_vpdpbusds_256:
+    case Intrinsic::x86_avx512_vpdpbusd_512:
+    case Intrinsic::x86_avx512_vpdpbusds_512:
+    case Intrinsic::x86_avx2_vpdpbssd_128:
+    case Intrinsic::x86_avx2_vpdpbssds_128:
+    case Intrinsic::x86_avx2_vpdpbssd_256:
+    case Intrinsic::x86_avx2_vpdpbssds_256:
+    case Intrinsic::x86_avx10_vpdpbssd_512:
+    case Intrinsic::x86_avx10_vpdpbssds_512:
+      handleVectorPmaddIntrinsic(I, 8);
+      break;
+
+    // Multiply and Add Signed Word Integers
+    //   <4 x i32> @llvm.x86.avx512.vpdpwssd.128(<4 x i32>, <4 x i32>, <4 x i32>)
+    //   <4 x i32> @llvm.x86.avx512.vpdpwssds.128(<4 x i32>, <4 x i32>, <4 x i32>)
+    //   <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32>, <8 x i32>, <8 x i32>)
+    //   <8 x i32> @llvm.x86.avx512.vpdpwssds.256(<8 x i32>, <8 x i32>, <8 x i32>)
+    //   <16 x i32> @llvm.x86.avx512.vpdpwssd.512(<16 x i32>, <16 x i32>, <16 x i32>)
+    //   <16 x i32> @llvm.x86.avx512.vpdpwssds.512(<16 x i32>, <16 x i32>, <16 x i32>)
+    case Intrinsic::x86_avx512_vpdpwssd_128:
+    case Intrinsic::x86_avx512_vpdpwssds_128:
+    case Intrinsic::x86_avx512_vpdpwssd_256:
+    case Intrinsic::x86_avx512_vpdpwssds_256:
+    case Intrinsic::x86_avx512_vpdpwssd_512:
+    case Intrinsic::x86_avx512_vpdpwssds_512:
+      handleVectorPmaddIntrinsic(I, 16);
+      break;
+
 
     case Intrinsic::x86_sse_cmp_ss:
     case Intrinsic::x86_sse2_cmp_sd:
