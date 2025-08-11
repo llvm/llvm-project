@@ -304,16 +304,17 @@ IncludeInserter::calculateIncludePath(const HeaderFile &InsertedHeader,
   // FIXME: should we allow (some limited number of) "../header.h"?
   if (llvm::sys::path::is_absolute(Suggested))
     return std::nullopt;
+  auto HeaderPath = llvm::sys::path::convert_to_slash(InsertedHeader.File);
   bool IsAngled = false;
   for (auto &Filter : AngledHeaders) {
-    if (Filter(Suggested)) {
+    if (Filter(HeaderPath)) {
       IsAngled = true;
       break;
     }
   }
   bool IsQuoted = false;
   for (auto &Filter : QuotedHeaders) {
-    if (Filter(Suggested)) {
+    if (Filter(HeaderPath)) {
       IsQuoted = true;
       break;
     }
@@ -324,7 +325,7 @@ IncludeInserter::calculateIncludePath(const HeaderFile &InsertedHeader,
     if (IsAngled && IsQuoted) {
       elog("Header '{0}' matches both quoted and angled regexes, default will "
            "be used.",
-           Suggested);
+           HeaderPath);
     }
     IsAngled = IsAngledByDefault;
   }

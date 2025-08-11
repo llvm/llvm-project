@@ -40,7 +40,7 @@ func.func @broadcast_scalar_with_bcast_scalable(%arg1: index, %arg2: index) -> v
 // CHECK:           %[[BCAST:.*]] = vector.broadcast %[[ADD]] : index to vector<1x4xindex>
 // CHECK:           return %[[BCAST]] : vector<1x4xindex>
 func.func @broadcast_scalar_with_bcast_and_splat(%arg1: index, %arg2: index) -> vector<1x4xindex> {
-  %0 = vector.splat %arg1 : vector<1x4xindex>
+  %0 = vector.broadcast %arg1 : index to vector<1x4xindex>
   %1 = vector.broadcast %arg2 : index to vector<1x4xindex>
   %2 = arith.addi %0, %1 : vector<1x4xindex>
   return %2 : vector<1x4xindex>
@@ -53,7 +53,7 @@ func.func @broadcast_scalar_with_bcast_and_splat(%arg1: index, %arg2: index) -> 
 // CHECK:           %[[BCAST:.*]] = vector.broadcast %[[ADD]] : index to vector<1x[4]xindex>
 // CHECK:           return %[[BCAST]] : vector<1x[4]xindex>
 func.func @broadcast_scalar_with_bcast_and_splat_scalable(%arg1: index, %arg2: index) -> vector<1x[4]xindex> {
-  %0 = vector.splat %arg1 : vector<1x[4]xindex>
+  %0 = vector.broadcast %arg1 : index to vector<1x[4]xindex>
   %1 = vector.broadcast %arg2 : index to vector<1x[4]xindex>
   %2 = arith.addi %0, %1 : vector<1x[4]xindex>
   return %2 : vector<1x[4]xindex>
@@ -94,12 +94,12 @@ func.func @broadcast_vector_scalable(%arg1: vector<[4]xf32>, %arg2: vector<[4]xf
 // CHECK-LABEL:   func.func @broadcast_scalar_and_vec(
 // CHECK-SAME:       %[[ARG1:.*]]: index,
 // CHECK-SAME:       %[[ARG2:.*]]: vector<4xindex>) -> vector<1x4xindex> {
-// CHECK:            %[[SPLAT:.*]] = vector.splat %[[ARG1]] : vector<1x4xindex>
+// CHECK:            %[[SPLAT:.*]] = vector.broadcast %[[ARG1]] : index to vector<1x4xindex>
 // CHECK:            %[[BCAST:.*]] = vector.broadcast %[[ARG2]] : vector<4xindex> to vector<1x4xindex>
 // CHECK:            %[[ADD:.*]] = arith.addi %[[SPLAT]], %[[BCAST]] : vector<1x4xindex>
 // CHECK:            return %[[ADD]] : vector<1x4xindex>
 func.func @broadcast_scalar_and_vec(%arg1: index, %arg2: vector<4xindex>) -> vector<1x4xindex> {
-  %0 = vector.splat %arg1 : vector<1x4xindex>
+  %0 = vector.broadcast %arg1 : index to vector<1x4xindex>
   %1 = vector.broadcast %arg2 : vector<4xindex> to vector<1x4xindex>
   %2 = arith.addi %0, %1 : vector<1x4xindex>
   return %2 : vector<1x4xindex>
@@ -108,12 +108,12 @@ func.func @broadcast_scalar_and_vec(%arg1: index, %arg2: vector<4xindex>) -> vec
 // CHECK-LABEL:   func.func @broadcast_scalar_and_vec_scalable(
 // CHECK-SAME:       %[[ARG1:.*]]: index,
 // CHECK-SAME:       %[[ARG2:.*]]: vector<[4]xindex>) -> vector<1x[4]xindex> {
-// CHECK:            %[[SPLAT:.*]] = vector.splat %[[ARG1]] : vector<1x[4]xindex>
+// CHECK:            %[[SPLAT:.*]] = vector.broadcast %[[ARG1]] : index to vector<1x[4]xindex>
 // CHECK:            %[[BCAST:.*]] = vector.broadcast %[[ARG2]] : vector<[4]xindex> to vector<1x[4]xindex>
 // CHECK:            %[[ADD:.*]] = arith.addi %[[SPLAT]], %[[BCAST]] : vector<1x[4]xindex>
 // CHECK:            return %[[ADD]] : vector<1x[4]xindex>
 func.func @broadcast_scalar_and_vec_scalable(%arg1: index, %arg2: vector<[4]xindex>) -> vector<1x[4]xindex> {
-  %0 = vector.splat %arg1 : vector<1x[4]xindex>
+  %0 = vector.broadcast %arg1 : index to vector<1x[4]xindex>
   %1 = vector.broadcast %arg2 : vector<[4]xindex> to vector<1x[4]xindex>
   %2 = arith.addi %0, %1 : vector<1x[4]xindex>
   return %2 : vector<1x[4]xindex>
@@ -787,7 +787,7 @@ func.func @negative_extract_load_scalable(%arg0: memref<?xf32>, %arg1: index) ->
 //  CHECK-SAME:   (%[[ARG0:.*]]: memref<?xf32>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: f32)
 func.func @store_splat(%arg0: memref<?xf32>, %arg1: index, %arg2: f32) {
 // CHECK:   memref.store %[[ARG2]], %[[ARG0]][%[[ARG1]]] : memref<?xf32>
-  %0 = vector.splat %arg2 : vector<1xf32>
+  %0 = vector.broadcast %arg2 : f32 to vector<1xf32>
   vector.store %0, %arg0[%arg1] : memref<?xf32>, vector<1xf32>
   return
 }
@@ -813,9 +813,9 @@ func.func @store_broadcast_1d_to_2d(%arg0: memref<?x?xf32>, %arg1: index, %arg2:
 // CHECK-LABEL: @negative_store_scalable
 //  CHECK-SAME:   (%[[ARG0:.*]]: memref<?xf32>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: f32)
 func.func @negative_store_scalable(%arg0: memref<?xf32>, %arg1: index, %arg2: f32) {
-// CHECK:   %[[RES:.*]] = vector.splat %[[ARG2]] : vector<[1]xf32>
+// CHECK:   %[[RES:.*]] = vector.broadcast %[[ARG2]] : f32 to vector<[1]xf32>
 // CHECK:   vector.store %[[RES]], %[[ARG0]][%[[ARG1]]] : memref<?xf32>, vector<[1]xf32>
-  %0 = vector.splat %arg2 : vector<[1]xf32>
+  %0 = vector.broadcast %arg2 : f32 to vector<[1]xf32>
   vector.store %0, %arg0[%arg1] : memref<?xf32>, vector<[1]xf32>
   return
 }
@@ -823,9 +823,9 @@ func.func @negative_store_scalable(%arg0: memref<?xf32>, %arg1: index, %arg2: f3
 // CHECK-LABEL: @negative_store_memref_of_vec
 //  CHECK-SAME:   (%[[ARG0:.*]]: memref<?xvector<1xf32>>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: f32)
 func.func @negative_store_memref_of_vec(%arg0: memref<?xvector<1xf32>>, %arg1: index, %arg2: f32) {
-// CHECK:   %[[RES:.*]] = vector.splat %[[ARG2]] : vector<1xf32>
+// CHECK:   %[[RES:.*]] = vector.broadcast %[[ARG2]] : f32 to vector<1xf32>
 // CHECK:   vector.store %[[RES]], %[[ARG0]][%[[ARG1]]] : memref<?xvector<1xf32>>, vector<1xf32>
-  %0 = vector.splat %arg2 : vector<1xf32>
+  %0 = vector.broadcast %arg2 : f32 to vector<1xf32>
   vector.store %0, %arg0[%arg1] : memref<?xvector<1xf32>>, vector<1xf32>
   return
 }
@@ -833,9 +833,9 @@ func.func @negative_store_memref_of_vec(%arg0: memref<?xvector<1xf32>>, %arg1: i
 // CHECK-LABEL: @negative_store_more_than_one_element
 //  CHECK-SAME:   (%[[ARG0:.*]]: memref<?xf32>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: f32)
 func.func @negative_store_more_than_one_element(%arg0: memref<?xf32>, %arg1: index, %arg2: f32) {
-// CHECK:   %[[RES:.*]] = vector.splat %[[ARG2]] : vector<4xf32>
+// CHECK:   %[[RES:.*]] = vector.broadcast %[[ARG2]] : f32 to vector<4xf32>
 // CHECK:   vector.store %[[RES]], %[[ARG0]][%[[ARG1]]] : memref<?xf32>, vector<4xf32>
-  %0 = vector.splat %arg2 : vector<4xf32>
+  %0 = vector.broadcast %arg2 : f32 to vector<4xf32>
   vector.store %0, %arg0[%arg1] : memref<?xf32>, vector<4xf32>
   return
 }
@@ -843,10 +843,10 @@ func.func @negative_store_more_than_one_element(%arg0: memref<?xf32>, %arg1: ind
 // CHECK-LABEL: @negative_store_no_single_use
 //  CHECK-SAME:   (%[[ARG0:.*]]: memref<?xf32>, %[[ARG1:.*]]: index, %[[ARG2:.*]]: f32)
 func.func @negative_store_no_single_use(%arg0: memref<?xf32>, %arg1: index, %arg2: f32) -> vector<1xf32> {
-// CHECK:   %[[RES:.*]] = vector.splat %[[ARG2]] : vector<1xf32>
+// CHECK:   %[[RES:.*]] = vector.broadcast %[[ARG2]] : f32 to vector<1xf32>
 // CHECK:   vector.store %[[RES]], %[[ARG0]][%[[ARG1]]] : memref<?xf32>, vector<1xf32>
 // CHECK:   return %[[RES:.*]] : vector<1xf32>
-  %0 = vector.splat %arg2 : vector<1xf32>
+  %0 = vector.broadcast %arg2 : f32 to vector<1xf32>
   vector.store %0, %arg0[%arg1] : memref<?xf32>, vector<1xf32>
   return %0 : vector<1xf32>
 }

@@ -777,10 +777,10 @@ public:
 
     for (BasicBlock &BB : F) {
       for (Instruction &Inst : llvm::make_early_inc_range(BB)) {
-        if (auto *II = dyn_cast<IntrinsicInst>(&Inst)) {
-          if (II->getIntrinsicID() == Intrinsic::ssa_copy) {
+        if (auto *BC = dyn_cast<BitCastInst>(&Inst)) {
+          if (BC->getType() == BC->getOperand(0)->getType()) {
             if (It->second->getPredicateInfoFor(&Inst)) {
-              Value *Op = II->getOperand(0);
+              Value *Op = BC->getOperand(0);
               Inst.replaceAllUsesWith(Op);
               Inst.eraseFromParent();
             }
@@ -1413,6 +1413,15 @@ void SCCPInstVisitor::visitCastInst(CastInst &I) {
   if (ValueState[&I].isOverdefined())
     return;
 
+  if (auto *BC = dyn_cast<BitCastInst>(&I)) {
+    if (BC->getType() == BC->getOperand(0)->getType()) {
+      if (const PredicateBase *PI = getPredicateInfoFor(&I)) {
+        handlePredicate(&I, I.getOperand(0), PI);
+        return;
+      }
+    }
+  }
+
   ValueLatticeElement OpSt = getValueState(I.getOperand(0));
   if (OpSt.isUnknownOrUndef())
     return;
@@ -2001,17 +2010,6 @@ void SCCPInstVisitor::handleCallResult(CallBase &CB) {
   Function *F = CB.getCalledFunction();
 
   if (auto *II = dyn_cast<IntrinsicInst>(&CB)) {
-    if (II->getIntrinsicID() == Intrinsic::ssa_copy) {
-      if (ValueState[&CB].isOverdefined())
-        return;
-
-      Value *CopyOf = CB.getOperand(0);
-      const PredicateBase *PI = getPredicateInfoFor(&CB);
-      assert(PI && "Missing predicate info for ssa.copy");
-      handlePredicate(&CB, CopyOf, PI);
-      return;
-    }
-
     if (II->getIntrinsicID() == Intrinsic::vscale) {
       unsigned BitWidth = CB.getType()->getScalarSizeInBits();
       const ConstantRange Result = getVScaleRange(II->getFunction(), BitWidth);
