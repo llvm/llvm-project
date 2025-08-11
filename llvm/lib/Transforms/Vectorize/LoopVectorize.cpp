@@ -687,10 +687,12 @@ public:
       const TargetTransformInfo *TTI, AssumptionCache *AC,
       OptimizationRemarkEmitter *ORE, EpilogueLoopVectorizationInfo &EPI,
       LoopVectorizationCostModel *CM, BlockFrequencyInfo *BFI,
-      ProfileSummaryInfo *PSI, GeneratedRTChecks &Checks, VPlan &Plan)
-      : InnerLoopVectorizer(OrigLoop, PSE, LI, DT, TLI, TTI, AC, ORE,
-                            EPI.MainLoopVF, EPI.MainLoopVF, EPI.MainLoopUF, CM,
-                            BFI, PSI, Checks, Plan),
+      ProfileSummaryInfo *PSI, GeneratedRTChecks &Checks, VPlan &Plan,
+      ElementCount VecWidth, ElementCount MinProfitableTripCount,
+      unsigned UnrollFactor)
+      : InnerLoopVectorizer(OrigLoop, PSE, LI, DT, TLI, TTI, AC, ORE, VecWidth,
+                            MinProfitableTripCount, UnrollFactor, CM, BFI, PSI,
+                            Checks, Plan),
         EPI(EPI) {}
 
   // Override this function to handle the more complex control flow around the
@@ -725,8 +727,9 @@ public:
       OptimizationRemarkEmitter *ORE, EpilogueLoopVectorizationInfo &EPI,
       LoopVectorizationCostModel *CM, BlockFrequencyInfo *BFI,
       ProfileSummaryInfo *PSI, GeneratedRTChecks &Check, VPlan &Plan)
-      : InnerLoopAndEpilogueVectorizer(OrigLoop, PSE, LI, DT, TLI, TTI, AC, ORE,
-                                       EPI, CM, BFI, PSI, Check, Plan) {}
+      : InnerLoopAndEpilogueVectorizer(
+            OrigLoop, PSE, LI, DT, TLI, TTI, AC, ORE, EPI, CM, BFI, PSI, Check,
+            Plan, EPI.MainLoopVF, EPI.MainLoopVF, EPI.MainLoopUF) {}
   /// Implements the interface for creating a vectorized skeleton using the
   /// *main loop* strategy (ie the first pass of vplan execution).
   BasicBlock *createEpilogueVectorizedLoopSkeleton() final;
@@ -752,8 +755,9 @@ public:
       OptimizationRemarkEmitter *ORE, EpilogueLoopVectorizationInfo &EPI,
       LoopVectorizationCostModel *CM, BlockFrequencyInfo *BFI,
       ProfileSummaryInfo *PSI, GeneratedRTChecks &Checks, VPlan &Plan)
-      : InnerLoopAndEpilogueVectorizer(OrigLoop, PSE, LI, DT, TLI, TTI, AC, ORE,
-                                       EPI, CM, BFI, PSI, Checks, Plan) {
+      : InnerLoopAndEpilogueVectorizer(
+            OrigLoop, PSE, LI, DT, TLI, TTI, AC, ORE, EPI, CM, BFI, PSI, Checks,
+            Plan, EPI.EpilogueVF, EPI.EpilogueVF, EPI.EpilogueUF) {
     TripCount = EPI.TripCount;
   }
   /// Implements the interface for creating a vectorized skeleton using the
@@ -7508,8 +7512,9 @@ EpilogueVectorizerMainLoop::emitIterationCountCheck(BasicBlock *Bypass,
   assert(Bypass && "Expected valid bypass basic block.");
   Value *Count = getTripCount();
   MinProfitableTripCount = ElementCount::getFixed(0);
-  Value *CheckMinIters = createIterationCountCheck(
-      ForEpilogue ? EPI.EpilogueVF : VF, ForEpilogue ? EPI.EpilogueUF : UF);
+  Value *CheckMinIters =
+      createIterationCountCheck(ForEpilogue ? EPI.EpilogueVF : EPI.MainLoopVF,
+                                ForEpilogue ? EPI.EpilogueUF : EPI.MainLoopUF);
 
   BasicBlock *const TCCheckBlock = LoopVectorPreHeader;
   if (!ForEpilogue)
@@ -7641,9 +7646,7 @@ EpilogueVectorizerEpilogueLoop::emitMinimumVectorEpilogueIterCountCheck(
   BranchInst &BI =
       *BranchInst::Create(Bypass, LoopVectorPreHeader, CheckMinIters);
   if (hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator())) {
-    // FIXME: See test Transforms/LoopVectorize/branch-weights.ll. I don't
-    // think the MainLoopStep is correct.
-    unsigned MainLoopStep = UF * VF.getKnownMinValue();
+    unsigned MainLoopStep = EPI.MainLoopUF * EPI.MainLoopVF.getKnownMinValue();
     unsigned EpilogueLoopStep =
         EPI.EpilogueUF * EPI.EpilogueVF.getKnownMinValue();
     // We assume the remaining `Count` is equally distributed in
@@ -10288,8 +10291,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
         // Second pass vectorizes the epilogue and adjusts the control flow
         // edges from the first pass.
-        EPI.MainLoopVF = EPI.EpilogueVF;
-        EPI.MainLoopUF = EPI.EpilogueUF;
         EpilogueVectorizerEpilogueLoop EpilogILV(L, PSE, LI, DT, TLI, TTI, AC,
                                                  ORE, EPI, &CM, BFI, PSI,
                                                  Checks, BestEpiPlan);
