@@ -3,6 +3,8 @@
 
 target triple = "aarch64"
 
+; The tile-slice addressing mode supports an immediate of 0-7.
+; This is testing an immediate of 0, 1, 7 (folded) and 8 (not folded).
 define void @sme_tileslice_addrmode_zero_base_plus_constant_offset(i32 %slice, <vscale x 8 x half> %0, <vscale x 8 x half> %1, <vscale x 8 x half> %2, <vscale x 8 x half> %3, <vscale x 8 x half> %4) "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: sme_tileslice_addrmode_zero_base_plus_constant_offset:
 ; CHECK:       // %bb.0:
@@ -20,6 +22,8 @@ define void @sme_tileslice_addrmode_zero_base_plus_constant_offset(i32 %slice, <
   ret void
 }
 
+; The tile-slice addressing mode supports an immediate of 0-7.
+; This is testing an immediate of 0, 1, 7 (folded) and 8 (not folded).
 define void @sme_tileslice_addrmode_base_plus_constant_offset(i32 %slice, <vscale x 8 x half> %0, <vscale x 8 x half> %1, <vscale x 8 x half> %2, <vscale x 8 x half> %3, <vscale x 8 x half> %4) "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: sme_tileslice_addrmode_base_plus_constant_offset:
 ; CHECK:       // %bb.0:
