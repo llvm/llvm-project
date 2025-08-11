@@ -12919,7 +12919,8 @@ def err_sycl_attribute_invalid_main : Error<
 def err_sycl_attribute_invalid_deleted_function : Error<
   "'clang::sycl_external' cannot be applied to an explicitly deleted function">;
 def warn_attribute_missing_on_first_decl : Warning<
-  "%0 attribute does not appear on the first declaration">;
+  "%0 attribute does not appear on the first declaration">,
+  InGroup<IgnoredAttributes>;
 
 // SYCL kernel entry point diagnostics
 def err_sycl_entry_point_invalid : Error<
