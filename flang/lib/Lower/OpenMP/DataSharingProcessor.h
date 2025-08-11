@@ -19,6 +19,7 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/symbol.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include <variant>
 
 namespace mlir {
 namespace omp {
@@ -58,7 +59,7 @@ private:
     }
 
     void Post(const parser::Name &name) {
-      const void *current = !constructs.empty() ? constructs.back() : nullptr;
+      auto current = !constructs.empty() ? constructs.back() : ConstructPtr();
       symDefMap.try_emplace(name.symbol, current);
     }
 
@@ -71,15 +72,17 @@ private:
       constructs.pop_back();
     }
 
-    llvm::SmallVector<const void *> constructs;
-    llvm::DenseMap<semantics::Symbol *, const void *> symDefMap;
-
     /// Given a \p symbol and an \p eval, returns true if eval is the OMP
     /// construct that defines symbol.
     bool isSymbolDefineBy(const semantics::Symbol *symbol,
                           lower::pft::Evaluation &eval) const;
 
   private:
+    using ConstructPtr = std::variant<const parser::OpenMPConstruct *,
+                                      const parser::DeclarationConstruct *>;
+    llvm::SmallVector<ConstructPtr> constructs;
+    llvm::DenseMap<semantics::Symbol *, ConstructPtr> symDefMap;
+
     unsigned version;
   };
 

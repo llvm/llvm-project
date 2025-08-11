@@ -36,12 +36,12 @@ namespace lower {
 namespace omp {
 bool DataSharingProcessor::OMPConstructSymbolVisitor::isSymbolDefineBy(
     const semantics::Symbol *symbol, lower::pft::Evaluation &eval) const {
-  return eval.visit(
-      common::visitors{[&](const parser::OpenMPConstruct &functionParserNode) {
-                         return symDefMap.count(symbol) &&
-                                symDefMap.at(symbol) == &functionParserNode;
-                       },
-                       [](const auto &functionParserNode) { return false; }});
+  return eval.visit(common::visitors{
+      [&](const parser::OpenMPConstruct &functionParserNode) {
+        return symDefMap.count(symbol) &&
+               symDefMap.at(symbol) == ConstructPtr(&functionParserNode);
+      },
+      [](const auto &functionParserNode) { return false; }});
 }
 
 static bool isConstructWithTopLevelTarget(lower::pft::Evaluation &eval) {
@@ -559,7 +559,7 @@ void DataSharingProcessor::collectSymbols(
       // evaluation then it is defined by a block nested within the OpenMP
       // construct. This, in turn, means that the private allocation for the
       // symbol will be emitted as part of the nested block and there is no need
-      // to prvatize it within the OpenMP construct.
+      // to privatize it within the OpenMP construct.
       return visitor.isSymbolDefineBy(sym, eval) &&
              sym->test(semantics::Symbol::Flag::OmpPreDetermined);
     }
