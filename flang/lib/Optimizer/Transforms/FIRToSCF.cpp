@@ -120,10 +120,6 @@ struct IterWhileConversion : public OpRewritePattern<fir::IterWhileOp> {
         &scfWhileOp.getBefore(), scfWhileOp.getBefore().end(), loopTypes,
         SmallVector<Location>(loopTypes.size(), loc));
 
-    auto &afterBlock = *rewriter.createBlock(
-        &scfWhileOp.getAfter(), scfWhileOp.getAfter().end(), loopTypes,
-        SmallVector<Location>(loopTypes.size(), loc));
-
     auto beforeArgs = scfWhileOp.getBefore().getArguments();
     auto beforeIv = beforeArgs[0];
     auto beforeOk = beforeArgs[1];
@@ -137,25 +133,18 @@ struct IterWhileConversion : public OpRewritePattern<fir::IterWhileOp> {
 
     mlir::scf::ConditionOp::create(rewriter, loc, cond, beforeArgs);
 
-    auto afterArgs = scfWhileOp.getAfter().getArguments();
+    rewriter.moveBlockBefore(iterWhileOp.getBody(), &scfWhileOp.getAfter(),
+                             scfWhileOp.getAfter().begin());
 
-    SmallVector<Value> argReplacements;
-    for (auto [_, newVal] :
-         llvm::zip(iterWhileOp.getBody()->getArguments(), afterArgs))
-      argReplacements.push_back(newVal);
+    auto afterBody = scfWhileOp.getAfterBody();
+    auto resultOp = cast<fir::ResultOp>(afterBody->getTerminator());
+    SmallVector<Value> results(resultOp->getOperands());
+    Value afterIv = scfWhileOp.getAfterArguments()[0];
 
-    auto resultOp = cast<fir::ResultOp>(iterWhileOp.getBody()->getTerminator());
-    SmallVector<Value> results(resultOp->getOperands().begin(),
-                               resultOp->getOperands().end());
-
-    rewriter.inlineBlockBefore(iterWhileOp.getBody(), &afterBlock,
-                               afterBlock.begin(), argReplacements);
-
-    Value afterIv = afterArgs[0];
-    rewriter.setInsertionPointToStart(&afterBlock);
+    rewriter.setInsertionPointToStart(afterBody);
     results[0] = mlir::arith::AddIOp::create(rewriter, loc, afterIv, step);
 
-    rewriter.setInsertionPointToEnd(&afterBlock);
+    rewriter.setInsertionPointToEnd(afterBody);
     rewriter.replaceOpWithNewOp<scf::YieldOp>(resultOp, results);
 
     scfWhileOp->setAttrs(iterWhileOp->getAttrs());
