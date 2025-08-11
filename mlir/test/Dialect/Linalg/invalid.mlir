@@ -1881,7 +1881,7 @@ func.func @unpack_static_inner_tile_size_and_dynamic_output_shape(
 func.func @pack_source_dest_type_mismatch_1(%source: tensor<128x256xf32>, %dest: memref<8x16x8x32xf32>) {
   // expected-error@+1 {{mixing tensor and buffer semantics is not allowed}}
   linalg.pack %source outer_dims_perm = [1, 0] inner_dims_pos = [0, 1] inner_tiles = [8, 32]
-      into %dest : tensor<128x256xf32> -> memref<8x16x8x32xf32>
+      into %dest : tensor<128x256xf32>
   return
 }
 
@@ -1899,7 +1899,7 @@ func.func @pack_source_dest_type_mismatch_2(%source: memref<128x256xf32>, %dest:
 func.func @unpack_source_dest_type_mismatch_3(%source: tensor<16x8x8x32xf32>, %dest: memref<128x256xf32>) {
   // expected-error@+1 {{mixing tensor and buffer semantics is not allowed}}
   linalg.unpack %source inner_dims_pos = [0, 1] inner_tiles = [8, 32]
-      into %dest : tensor<16x8x8x32xf32> -> memref<128x256xf32>
+      into %dest : tensor<16x8x8x32xf32>
   return
 }
 

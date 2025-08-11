@@ -569,7 +569,7 @@ FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
         packOps.push_back(rewriter.create<linalg::PackOp>(
             loc, operand, dest, innerPos, innerPackSizes, zero));
       }
-      inputsAndInits.push_back(packOps.back());
+      inputsAndInits.push_back(packOps.back().getResult());
     }
   }
 
@@ -596,7 +596,7 @@ FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
     unPackOps.push_back(rewriter.create<linalg::UnPackOp>(
         packedLinalgOp->getLoc(), result, maybePackedInit.getSource(),
         maybePackedInit.getInnerDimsPos(), maybePackedInit.getMixedTiles()));
-    results.push_back(unPackOps.back());
+    results.push_back(unPackOps.back().getResult());
   }
 
   // Step 5. Replace `linalgOp`.
@@ -685,7 +685,7 @@ linalg::packTranspose(RewriterBase &rewriter, linalg::PackOp packOp,
   linalg::PackOp transposedPackOp =
       packOp.createTransposedClone(rewriter, loc, innerPerm, outerPerm);
 
-  if (!packOp.getResult().hasOneUse())
+  if (packOp.getNumResults() == 0 || !packOp.getResult().hasOneUse())
     return rewriter.notifyMatchFailure(linalgOp, "expect single pack use");
 
   OpOperand &packUse = *packOp->getUses().begin();
@@ -746,7 +746,10 @@ linalg::packTranspose(RewriterBase &rewriter, linalg::PackOp packOp,
   }
 
   // Step 4. Finally, replace packOp now that we don't need it anymore.
-  rewriter.replaceOp(packOp, transposedPackOp->getResults());
+  if (packOp.getNumResults() != 0)
+    rewriter.replaceOp(packOp, transposedPackOp->getResults());
+  else
+    rewriter.eraseOp(packOp);
 
   return PackTransposeResult{transposedPackOp, transposedLinalgOp,
                              transposedUnPackOp};

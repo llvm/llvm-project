@@ -287,10 +287,10 @@ getOrCreatePackedViewOfOperand(OpBuilder &b, Location loc, PackInfo packInfo,
 
   auto empty = linalg::PackOp::createDestinationTensor(
       b, loc, opOperand->get(), innerTileSizes, innerDimsPos, outerDimsPerm);
-  auto packedOperand = b.create<linalg::PackOp>(
+  linalg::PackOp packedOperand = b.create<linalg::PackOp>(
       loc, opOperand->get(), empty, innerDimsPos, innerTileSizes,
       /*padding=*/std::nullopt, outerDimsPerm);
-  return std::make_tuple(packedOperand, indexingMap);
+  return std::make_tuple(packedOperand.getResult(), indexingMap);
 }
 
 /// This function is a helper subroutine to pack a genericOp and return it. It
@@ -568,7 +568,7 @@ public:
     auto empty = linalg::PackOp::createDestinationTensor(
         rewriter, loc, padOp.getSource(), mixedTiles, innerDimsPos,
         outerDimsPerm);
-    auto sourcePack = rewriter.create<linalg::PackOp>(
+    linalg::PackOp sourcePack = rewriter.create<linalg::PackOp>(
         loc, padOp.getSource(), empty, innerDimsPos, mixedTiles,
         /*padding=*/std::nullopt, outerDimsPerm);
 
@@ -586,17 +586,17 @@ public:
     highPad.append(pointLoopsSize, rewriter.getIndexAttr(0));
 
     auto newPadOp = rewriter.create<tensor::PadOp>(
-        loc, /*result=*/Type(), sourcePack, lowPad, highPad, paddingVal,
-        padOp.getNofold());
+        loc, /*result=*/Type(), sourcePack.getResult(), lowPad, highPad,
+        paddingVal, padOp.getNofold());
 
     // If the pad has more than one user, create an unpack on the new pad to
     // replace the other uses.
     if (!padOp->hasOneUse()) {
       auto unpackEmpty = linalg::UnPackOp::createDestinationTensor(
           rewriter, loc, newPadOp, mixedTiles, innerDimsPos, outerDimsPerm);
-      Value unpackedPad = rewriter.create<linalg::UnPackOp>(
+      linalg::UnPackOp unpackedPad = rewriter.create<linalg::UnPackOp>(
           loc, newPadOp, unpackEmpty, innerDimsPos, mixedTiles, outerDimsPerm);
-      rewriter.replaceAllUsesExcept(padOp, unpackedPad, sourcePack);
+      rewriter.replaceAllUsesExcept(padOp, unpackedPad.getResult(), sourcePack);
     }
 
     // Replace the pack with the new pad.
@@ -745,7 +745,8 @@ bubbleUpPackOpThroughCollapseShape(tensor::CollapseShapeOp collapseOp,
   }
 
   auto newCollapseOp = rewriter.create<tensor::CollapseShapeOp>(
-      collapseOp.getLoc(), packOp.getType(), newPackOp, newReassocIndices);
+      collapseOp.getLoc(), packOp.getResult().getType(), newPackOp.getResult(),
+      newReassocIndices);
   rewriter.replaceOp(packOp, newCollapseOp);
 
   return success();
@@ -865,13 +866,14 @@ bubbleUpPackOpThroughExpandShape(tensor::ExpandShapeOp expandOp,
   Value destTensor = linalg::PackOp::createDestinationTensor(
       rewriter, packOp.getLoc(), expandOp.getSrc(), packOp.getMixedTiles(),
       projectedInnerDimsPos, /*outerDimsPerm=*/SmallVector<int64_t>{});
-  Value packedVal = rewriter.create<linalg::PackOp>(
+  linalg::PackOp packedValOp = rewriter.create<linalg::PackOp>(
       packOp.getLoc(), expandOp.getSrc(), destTensor, projectedInnerDimsPos,
       packOp.getMixedTiles(), packOp.getPaddingValue(),
       /*outerDimsPerm=*/SmallVector<int64_t>{});
 
   Value newExpandOp = rewriter.create<tensor::ExpandShapeOp>(
-      packOp.getLoc(), packOp.getDestType(), packedVal, *reassocExpand);
+      packOp.getLoc(), packOp.getDestType(), packedValOp.getResult(),
+      *reassocExpand);
   rewriter.replaceOp(packOp, newExpandOp);
 
   return success();
@@ -1247,9 +1249,10 @@ struct PushDownUnPackThroughPadOp : public OpRewritePattern<tensor::PadOp> {
         loc, padOp.getResultType().getShape(),
         padOp.getResultType().getElementType());
 
-    Value replacement = rewriter.create<linalg::UnPackOp>(
+    linalg::UnPackOp replacementOp = rewriter.create<linalg::UnPackOp>(
         loc, newPadOp.getResult(), outputUnPack, innerDimsPos,
         unpackOp.getMixedTiles(), outerDimsPerm);
+    Value replacement = replacementOp.getResult();
     rewriter.replaceOp(padOp, replacement);
     return success();
   }

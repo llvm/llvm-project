@@ -36,7 +36,7 @@ class Linalg_RelayoutOp<string mnemonic, list<Trait> traits = []> :
         DestinationStyleOpInterface, LinalgRelayoutOpInterface,
         ConditionallySpeculatable, DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
         DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
-        TypesMatchWith<"result type matches type of dest",
+       OptionalTypesMatchWith<"result type matches type of dest",
                    "dest", "result",
                    "$_self">])> {
 
@@ -175,16 +175,9 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
                        DenseI64ArrayAttr:$inner_dims_pos,
                        Variadic<Index>:$inner_tiles,
                        DenseI64ArrayAttr:$static_inner_tiles);
-  let results = (outs AnyShaped:$result);
-  let assemblyFormat = [{
-    $source
-    (`padding_value` `(` $padding_value^ `:` type($padding_value) `)`)?
-    (`outer_dims_perm` `=` $outer_dims_perm^)?
-    `inner_dims_pos` `=` $inner_dims_pos
-    `inner_tiles` `=`
-    custom<DynamicIndexList>($inner_tiles, $static_inner_tiles)
-    `into` $dest attr-dict `:` type($source) `->` type($dest)
-  }];
+  let results = (outs Optional<AnyRankedTensor>:$result);
+
+  let hasCustomAssemblyFormat = 1;
 
   let builders = [
     OpBuilder<(ins "Value":$source, "Value":$dest,
@@ -335,15 +328,9 @@ def Linalg_UnPackOp : Linalg_RelayoutOp<"unpack"> {
                        DenseI64ArrayAttr:$inner_dims_pos,
                        Variadic<Index>:$inner_tiles,
                        DenseI64ArrayAttr:$static_inner_tiles);
-  let results = (outs AnyShaped:$result);
-  let assemblyFormat = [{
-    $source
-    (`outer_dims_perm` `=` $outer_dims_perm^)?
-    `inner_dims_pos` `=` $inner_dims_pos
-    `inner_tiles` `=`
-    custom<DynamicIndexList>($inner_tiles, $static_inner_tiles)
-    `into` $dest attr-dict `:` type($source) `->` type($dest)
-  }];
+  let results = (outs Optional<AnyRankedTensor>:$result);
+
+  let hasCustomAssemblyFormat = 1;
 
   let builders = [
     OpBuilder<(ins "Value":$source, "Value":$dest,

@@ -108,6 +108,8 @@ struct SimplifyPackToExpandShape : public OpRewritePattern<PackOp> {
 
   LogicalResult matchAndRewrite(PackOp packOp,
                                 PatternRewriter &rewriter) const override {
+    if (!packOp.hasPureTensorSemantics())
+      return failure();
     if (packOp.getPaddingValue())
       return rewriter.notifyMatchFailure(packOp, "expects no padding value");
 
@@ -205,6 +207,8 @@ public:
 
   LogicalResult matchAndRewrite(PackOp packOp,
                                 PatternRewriter &rewriter) const override {
+    if (!packOp.hasPureTensorSemantics())
+      return failure();
     auto padOp = packOp.getSource().getDefiningOp<tensor::PadOp>();
 
     if (!padOp || padOp.getNofold() || !padOp.hasZeroLowPad())

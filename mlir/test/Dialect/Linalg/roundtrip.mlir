@@ -717,7 +717,7 @@ func.func @pack_memref(%source: memref<128x256xf32>, %dest: memref<8x16x8x32xf32
 
 // CHECK-label: func @pack_memref(
 // CHECK:   %[[source:[a-zA-z0-9]*]]: memref<128x256xf32>, %[[dest:[a-zA-z0-9]*]]: memref<8x16x8x32xf32>) {
-// CHECK:     %pack = linalg.pack %arg0 outer_dims_perm = [1, 0] inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %arg1 : memref<128x256xf32> -> memref<8x16x8x32xf32>
+// CHECK:     linalg.pack %[[source]] outer_dims_perm = [1, 0] inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %[[dest]] : memref<128x256xf32> -> memref<8x16x8x32xf32>
 // CHECK:   return
 // CHECK: }
 // -----
@@ -730,5 +730,5 @@ func.func @unpack_memref(%source: memref<16x8x8x32xf32>, %dest: memref<128x256xf
 
 // CHECK-label: func @unpack_memref(
 // CHECK:   %[[source:[a-zA-z0-9]*]]: memref<16x8x8x32xf32>, %[[dest:[a-zA-z0-9]*]]: memref<128x256xf32>) {
-// CHECK:         %unpack = linalg.unpack %arg0 inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %arg1 : memref<16x8x8x32xf32> -> memref<128x256xf32>
+// CHECK:         linalg.unpack %[[source]] inner_dims_pos = [0, 1] inner_tiles = [8, 32] into %[[dest]] : memref<16x8x8x32xf32> -> memref<128x256xf32>
 // CHECK:   return
