@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -std=c++2c %s -triple x86_64-unknown-linux-gnu -verify=expected,cxx2c,post2b -fcxx-exceptions
 // RUN: not %clang_cc1 -std=c++17 %s -triple x86_64-unknown-linux-gnu -emit-llvm-only -fcxx-exceptions
 
-struct S { int a, b, c; };
+struct S { int a, b, c; }; // expected-note 2 {{'S::a' declared here}}
 
 // A simple-declaration can be a decompsition declaration.
 namespace SimpleDecl {
@@ -32,7 +32,7 @@ namespace ForRangeDecl {
 namespace OtherDecl {
   // A parameter-declaration is not a simple-declaration.
   // This parses as an array declaration.
-  void f(auto [a, b, c]); // cxx17-error {{'auto' not allowed in function prototype}} expected-error {{'a'}}
+  void f(auto [a, b, c]); // cxx17-error {{'auto' not allowed in function prototype}} expected-error 1+{{'a'}}
 
   void g() {
     // A condition is allowed as a Clang extension.
@@ -46,7 +46,7 @@ namespace OtherDecl {
 
     // An exception-declaration is not a simple-declaration.
     try {}
-    catch (auto [a, b, c]) {} // expected-error {{'auto' not allowed in exception declaration}} expected-error {{'a'}}
+    catch (auto [a, b, c]) {} // expected-error {{'auto' not allowed in exception declaration}} expected-error 1+{{'a'}}
   }
 
   // A member-declaration is not a simple-declaration.

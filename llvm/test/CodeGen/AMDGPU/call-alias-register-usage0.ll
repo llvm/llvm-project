@@ -18,7 +18,7 @@ bb:
 
 ; CHECK:      .set .Laliasee_default_vgpr64_sgpr102.num_vgpr, 53
 ; CHECK-NEXT: .set .Laliasee_default_vgpr64_sgpr102.num_agpr, 0
-; CHECK-NEXT: .set .Laliasee_default_vgpr64_sgpr102.numbered_sgpr, 0
+; CHECK-NEXT: .set .Laliasee_default_vgpr64_sgpr102.numbered_sgpr, 32
 define internal void @aliasee_default_vgpr64_sgpr102() #1 {
 bb:
   call void asm sideeffect "; clobber v52 ", "~{v52}"()

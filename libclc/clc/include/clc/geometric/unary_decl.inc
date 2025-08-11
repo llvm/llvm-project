@@ -16,6 +16,6 @@ _CLC_OVERLOAD _CLC_DECL
 #else
     __CLC_SCALAR_GENTYPE
 #endif
-    __CLC_FUNCTION(__CLC_GENTYPE a);
+    FUNCTION(__CLC_GENTYPE a);
 
 #endif

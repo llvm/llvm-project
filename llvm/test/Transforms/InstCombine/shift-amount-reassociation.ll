@@ -156,11 +156,10 @@ define i32 @t11_shl_nsw_flag_preservation(i32 %x, i32 %y) {
 
 ; Reduced from https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=15587
 @X = external global i32
-define i64 @constantexpr() {
-; CHECK-LABEL: @constantexpr(
+define i64 @constantexpr(ptr %A) {
+; CHECK-LABEL: @constantexpr(ptr %A) {
 ; CHECK-NEXT:    ret i64 0
 ;
-  %A = alloca i64
   %L = load i64, ptr %A
   %V = add i64 ptrtoint (ptr @X to i64), 0
   %B2 = shl i64 %V, 0

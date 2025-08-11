@@ -15,15 +15,14 @@ define void @d() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr @d, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[BROADCAST_SPLAT]], i32 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x float> zeroinitializer, <2 x float> splat (float 1.000000e+00)
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr float, ptr [[TMP1]], i32 0
-; CHECK-NEXT:    store <2 x float> [[TMP3]], ptr [[TMP4]], align 4
+; CHECK-NEXT:    store <2 x float> [[TMP3]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 128, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[I7:%.*]], [[LOOP]] ]

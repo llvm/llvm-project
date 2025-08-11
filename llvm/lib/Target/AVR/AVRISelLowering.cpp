@@ -669,7 +669,7 @@ SDValue AVRTargetLowering::getAVRCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
       default: {
         // Turn lhs < rhs with lhs constant into rhs >= lhs+1, this allows
         // us to  fold the constant into the cmp instruction.
-        RHS = DAG.getConstant(C->getSExtValue() + 1, DL, VT);
+        RHS = DAG.getSignedConstant(C->getSExtValue() + 1, DL, VT);
         CC = ISD::SETGE;
         break;
       }
@@ -713,7 +713,10 @@ SDValue AVRTargetLowering::getAVRCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
     // Turn lhs < rhs with lhs constant into rhs >= lhs+1, this allows us to
     // fold the constant into the cmp instruction.
     if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(RHS)) {
-      RHS = DAG.getConstant(C->getSExtValue() + 1, DL, VT);
+      // Doing a "icmp ugt i16 65535, %0" comparison should have been converted
+      // already to something else. Assert to make sure this assumption holds.
+      assert((!C->isAllOnes()) && "integer overflow in comparison transform");
+      RHS = DAG.getConstant(C->getZExtValue() + 1, DL, VT);
       CC = ISD::SETUGE;
       break;
     }
@@ -1071,14 +1074,17 @@ bool AVRTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
                                                    ISD::MemIndexedMode &AM,
                                                    SelectionDAG &DAG) const {
   EVT VT;
+  SDValue Ptr;
   SDLoc DL(N);
 
   if (const LoadSDNode *LD = dyn_cast<LoadSDNode>(N)) {
     VT = LD->getMemoryVT();
+    Ptr = LD->getBasePtr();
     if (LD->getExtensionType() != ISD::NON_EXTLOAD)
       return false;
   } else if (const StoreSDNode *ST = dyn_cast<StoreSDNode>(N)) {
     VT = ST->getMemoryVT();
+    Ptr = ST->getBasePtr();
     // We can not store to program memory.
     if (AVR::isProgramMemoryAccess(ST))
       return false;
@@ -1115,6 +1121,12 @@ bool AVRTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
         return false;
 
     Base = Op->getOperand(0);
+
+    // Post-indexing updates the base, so it's not a valid transform
+    // if that's not the same as the load's pointer.
+    if (Ptr != Base)
+      return false;
+
     Offset = DAG.getConstant(RHSC, DL, MVT::i8);
     AM = ISD::POST_INC;
 

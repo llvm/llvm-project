@@ -163,8 +163,9 @@ bool Sema::CheckSpecifiedExceptionType(QualType &T, SourceRange Range) {
     DiagID = diag::ext_incomplete_in_exception_spec;
     ReturnValueOnError = false;
   }
-  if (!(PointeeT->isRecordType() &&
-        PointeeT->castAs<RecordType>()->isBeingDefined()) &&
+  if (!(PointeeT->isRecordType() && PointeeT->castAs<RecordType>()
+                                        ->getOriginalDecl()
+                                        ->isEntityBeingDefined()) &&
       RequireCompleteType(Range.getBegin(), PointeeT, DiagID, Kind, Range))
     return ReturnValueOnError;
 
@@ -1368,7 +1369,6 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Expr::UnaryExprOrTypeTraitExprClass:
   case Expr::UnresolvedLookupExprClass:
   case Expr::UnresolvedMemberExprClass:
-  case Expr::TypoExprClass:
     // FIXME: Many of the above can throw.
     return CT_Cannot;
 

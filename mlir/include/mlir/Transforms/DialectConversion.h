@@ -221,12 +221,13 @@ public:
   ///
   /// The conversion functions take a non-null Type or subclass of Type and a
   /// non-null Attribute (or subclass of Attribute), and returns a
-  /// `AttributeConversionResult`. This result can either contan an `Attribute`,
-  /// which may be `nullptr`, representing the conversion's success,
-  /// `AttributeConversionResult::na()` (the default empty value), indicating
-  /// that the conversion function did not apply and that further conversion
-  /// functions should be checked, or `AttributeConversionResult::abort()`
-  /// indicating that the conversion process should be aborted.
+  /// `AttributeConversionResult`. This result can either contain an
+  /// `Attribute`, which may be `nullptr`, representing the conversion's
+  /// success, `AttributeConversionResult::na()` (the default empty value),
+  /// indicating that the conversion function did not apply and that further
+  /// conversion functions should be checked, or
+  /// `AttributeConversionResult::abort()` indicating that the conversion
+  /// process should be aborted.
   ///
   /// Registered conversion functions are callled in the reverse of the order in
   /// which they were registered.
@@ -727,6 +728,9 @@ class ConversionPatternRewriter final : public PatternRewriter {
 public:
   ~ConversionPatternRewriter() override;
 
+  /// Return the configuration of the current dialect conversion.
+  const ConversionConfig &getConfig() const;
+
   /// Apply a signature conversion to given block. This replaces the block with
   /// a new block containing the updated signature. The operations of the given
   /// block are inlined into the newly-created block, which is returned.
@@ -763,8 +767,9 @@ public:
       Region *region, const TypeConverter &converter,
       TypeConverter::SignatureConversion *entryConversion = nullptr);
 
-  /// Replace all the uses of the block argument `from` with value `to`.
-  void replaceUsesOfBlockArgument(BlockArgument from, Value to);
+  /// Replace all the uses of the block argument `from` with `to`. This
+  /// function supports both 1:1 and 1:N replacements.
+  void replaceUsesOfBlockArgument(BlockArgument from, ValueRange to);
 
   /// Return the converted value of 'key' with a type defined by the type
   /// converter of the currently executing pattern. Return nullptr in the case
@@ -826,7 +831,7 @@ public:
 
   /// PatternRewriter hook for inlining the ops of a block into another block.
   void inlineBlockBefore(Block *source, Block *dest, Block::iterator before,
-                         ValueRange argValues = std::nullopt) override;
+                         ValueRange argValues = {}) override;
   using PatternRewriter::inlineBlockBefore;
 
   /// PatternRewriter hook for updating the given operation in-place.
@@ -1156,6 +1161,16 @@ public:
 // ConversionConfig
 //===----------------------------------------------------------------------===//
 
+/// An enum to control folding behavior during dialect conversion.
+enum class DialectConversionFoldingMode {
+  /// Never attempt to fold.
+  Never,
+  /// Only attempt to fold not legal operations before applying patterns.
+  BeforePatterns,
+  /// Only attempt to fold not legal operations after applying patterns.
+  AfterPatterns,
+};
+
 /// Dialect conversion configuration.
 struct ConversionConfig {
   /// An optional callback used to notify about match failure diagnostics during
@@ -1238,6 +1253,10 @@ struct ConversionConfig {
   /// your patterns do not trigger any IR rollbacks. For details, see
   /// https://discourse.llvm.org/t/rfc-a-new-one-shot-dialect-conversion-driver/79083.
   bool allowPatternRollback = true;
+
+  /// The folding mode to use during conversion.
+  DialectConversionFoldingMode foldingMode =
+      DialectConversionFoldingMode::BeforePatterns;
 };
 
 //===----------------------------------------------------------------------===//

@@ -355,7 +355,7 @@ bool CallBase::isTailCall() const {
 }
 
 Intrinsic::ID CallBase::getIntrinsicID() const {
-  if (auto *F = getCalledFunction())
+  if (auto *F = dyn_cast_or_null<Function>(getCalledOperand()))
     return F->getIntrinsicID();
   return Intrinsic::not_intrinsic;
 }
@@ -642,6 +642,10 @@ MemoryEffects CallBase::getMemoryEffects() const {
         FnME |= MemoryEffects::readOnly();
       if (hasClobberingOperandBundles())
         FnME |= MemoryEffects::writeOnly();
+    }
+    if (isVolatile()) {
+      // Volatile operations also access inaccessible memory.
+      FnME |= MemoryEffects::inaccessibleMemOnly();
     }
     ME &= FnME;
   }
@@ -2578,7 +2582,7 @@ Type *ExtractValueInst::getIndexedType(Type *Agg,
       return nullptr;
     }
   }
-  return const_cast<Type*>(Agg);
+  return Agg;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2794,6 +2798,7 @@ bool CastInst::isNoopCast(Instruction::CastOps Opcode,
       return false;
     case Instruction::BitCast:
       return true;  // BitCast never modifies bits.
+    case Instruction::PtrToAddr:
     case Instruction::PtrToInt:
       return DL.getIntPtrType(SrcTy)->getScalarSizeInBits() ==
              DestTy->getScalarSizeInBits();
@@ -2868,7 +2873,7 @@ unsigned CastInst::isEliminableCastPair(
     { 99,99,99, 0, 0,99,99, 0, 0,99,99,99, 4, 0}, // FPTrunc        |
     { 99,99,99, 2, 2,99,99, 8, 2,99,99,99, 4, 0}, // FPExt          |
     {  1, 0, 0,99,99, 0, 0,99,99,99,99, 7, 3, 0}, // PtrToInt       |
-    {  1, 0, 0,99,99, 0, 0,99,99,99,99,99, 3, 0}, // PtrToAddr      |
+    {  1, 0, 0,99,99, 0, 0,99,99,99,99, 0, 3, 0}, // PtrToAddr      |
     { 99,99,99,99,99,99,99,99,99,11,99,99,15, 0}, // IntToPtr       |
     {  5, 5, 5, 0, 0, 5, 5, 0, 0,16,16, 5, 1,14}, // BitCast        |
     {  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,13,12}, // AddrSpaceCast -+
@@ -3495,7 +3500,7 @@ CmpInst::CmpInst(Type *ty, OtherOps op, Predicate predicate, Value *LHS,
     : Instruction(ty, op, AllocMarker, InsertBefore) {
   Op<0>() = LHS;
   Op<1>() = RHS;
-  setPredicate((Predicate)predicate);
+  setPredicate(predicate);
   setName(Name);
   if (FlagsSource)
     copyIRFlags(FlagsSource);
