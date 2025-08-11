@@ -10,9 +10,10 @@
 #include "stack.h"
 #include "flang-rt/runtime/descriptor.h"
 #include "flang-rt/runtime/terminator.h"
-#include "flang-rt/runtime/tools.h"
 #include "flang-rt/runtime/type-info.h"
 #include "flang/Runtime/allocatable.h"
+#include "flang/Runtime/freestanding-tools.h"
+
 #include <cstring>
 
 namespace Fortran::runtime {
