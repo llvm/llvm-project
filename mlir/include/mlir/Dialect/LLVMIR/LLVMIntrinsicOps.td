@@ -1072,7 +1072,22 @@ def LLVM_masked_scatter : LLVM_ZeroResultIntrOp<"masked.scatter"> {
 def LLVM_masked_expandload : LLVM_IntrOp<"masked.expandload", [0], [], [], 1> {
   let arguments = (ins LLVM_AnyPointer:$base,
                        LLVM_VectorOf<I1>:$mask,
-                       LLVM_AnyVector:$passthru);
+                       LLVM_AnyVector:$passthru,
+                       DefaultValuedAttr<I32Attr, "1">:$align);
+
+  let assemblyFormat = "`(` $base`,` $mask`,` $passthru `)` attr-dict `:` functional-type(operands, results)";
+
+  string llvmBuilder = [{
+    $res = builder.CreateMaskedExpandLoad(
+      $_resultType, $base, $align != 1 ? llvm::Align($align) : llvm::MaybeAlign(), $mask, $passthru);
+  }];
+  string mlirBuilder = [{
+    auto *intrinInst = dyn_cast<llvm::IntrinsicInst>(inst);
+    llvm::MaybeAlign alignment = intrinInst->getParamAlign(0);
+    IntegerAttr attr = $_builder.getI32IntegerAttr(alignment.has_value() ? alignment->value() : 1);
+    $res = LLVM::masked_expandload::create($_builder, $_location,
+      $_resultType, $base, $mask, $passthru, attr);
+  }];
 }
 
 /// Create a call to Masked Compress Store intrinsic.
