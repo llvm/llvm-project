@@ -1441,8 +1441,7 @@ define void @trunc_nuw_i1_dominating_icmp_ne_0(i8 %x) {
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i8 [[X:%.*]], 0
 ; CHECK-NEXT:    br i1 [[ICMP]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[C1:%.*]] = trunc nuw i8 [[X]] to i1
-; CHECK-NEXT:    call void @use(i1 [[C1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb2:
 ; CHECK-NEXT:    ret void
