@@ -28,6 +28,7 @@ public:
   SerializeGPUModuleBase(Operation &module, XeVMTargetAttr target,
                          const gpu::TargetOptions &targetOptions = {});
 
+  /// Returns the target attribute.
   XeVMTargetAttr getTarget() const;
 
   /// Loads the bitcode files in `librariesToLink`.
@@ -42,6 +43,7 @@ public:
                                                       StringRef inputFormat);
 
 protected:
+  /// XeVM Target attribute.
   XeVMTargetAttr xeTarget;
   /// List of LLVM bitcode to link into after translation to LLVM IR.
   /// The attributes can be StringAttr pointing to a file path, or
@@ -51,6 +53,7 @@ protected:
   /// Returns the path to the tool used for serialization.
   std::optional<std::string> findTool(StringRef tool);
 
+  /// GPU compilation target options.
   gpu::TargetOptions targetOptions;
 };
 } // namespace xevm

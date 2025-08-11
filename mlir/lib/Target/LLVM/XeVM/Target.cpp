@@ -79,7 +79,8 @@ SerializeGPUModuleBase::SerializeGPUModuleBase(
     Operation &module, XeVMTargetAttr xeTarget,
     const gpu::TargetOptions &targetOptions)
     : ModuleToObject(module, xeTarget.getTriple(), "", {}, xeTarget.getO()),
-      xeTarget(xeTarget), librariesToLink(targetOptions.getLibrariesToLink()) {
+      xeTarget(xeTarget), librariesToLink(targetOptions.getLibrariesToLink()),
+      targetOptions(targetOptions) {
   if (xeTarget.getLinkFiles())
     librariesToLink.append(xeTarget.getLinkFiles().begin(),
                            xeTarget.getLinkFiles().end());
