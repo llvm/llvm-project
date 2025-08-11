@@ -590,6 +590,12 @@ endif()
 
 list(APPEND TARGET_LIBM_ENTRYPOINTS
   # bfloat16 entrypoints
+  libc.src.math.bf16add
+  libc.src.math.bf16addf
+  libc.src.math.bf16addl
+  libc.src.math.bf16sub
+  libc.src.math.bf16subf
+  libc.src.math.bf16subl
   libc.src.math.ceilbf16
   libc.src.math.fabsbf16
   libc.src.math.floorbf16
@@ -597,6 +603,14 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.roundevenbf16
   libc.src.math.truncbf16
 )
+
+if(LIBC_TYPES_HAS_FLOAT128)
+  list(APPEND TARGET_LIBM_ENTRYPOINTS
+    # math.h C++23 mixed bfloat16 and _Float128 entrypoints
+    libc.src.math.bf16addf128
+    libc.src.math.bf16subf128
+  )
+endif()
 
 if(LIBC_COMPILER_HAS_FIXED_POINT)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
