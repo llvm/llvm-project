@@ -492,6 +492,7 @@ define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, 
 ; CHECK-COMMON-NEXT:    .cfi_restore w26
 ; CHECK-COMMON-NEXT:    .cfi_restore w27
 ; CHECK-COMMON-NEXT:    .cfi_restore w28
+; CHECK-COMMON-NEXT:    .cfi_restore vg
 ; CHECK-COMMON-NEXT:    .cfi_restore w30
 ; CHECK-COMMON-NEXT:    .cfi_restore w29
 ; CHECK-COMMON-NEXT:    ret
@@ -584,6 +585,7 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    .cfi_restore w19
 ; CHECK-NEXT:    .cfi_restore w20
+; CHECK-NEXT:    .cfi_restore vg
 ; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    .cfi_restore w29
 ; CHECK-NEXT:    .cfi_restore b8
@@ -656,6 +658,7 @@ define i32 @vastate(i32 %x) "aarch64_inout_za" "aarch64_pstate_sm_enabled" "targ
 ; CHECK-NEWLOWERING-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEWLOWERING-NEXT:    .cfi_restore w19
 ; CHECK-NEWLOWERING-NEXT:    .cfi_restore w20
+; CHECK-NEWLOWERING-NEXT:    .cfi_restore vg
 ; CHECK-NEWLOWERING-NEXT:    .cfi_restore w30
 ; CHECK-NEWLOWERING-NEXT:    .cfi_restore w29
 ; CHECK-NEWLOWERING-NEXT:    .cfi_restore b8

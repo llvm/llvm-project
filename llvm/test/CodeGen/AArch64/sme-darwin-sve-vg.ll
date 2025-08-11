@@ -35,6 +35,7 @@ define void @locally_streaming_fn() #0 {
 ; CHECK-NEXT:    ldp     d13, d12, [sp, #16]             ; 16-byte Folded Reload
 ; CHECK-NEXT:    ldp     d15, d14, [sp], #96             ; 16-byte Folded Reload
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    .cfi_restore vg
 ; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    .cfi_restore w29
 ; CHECK-NEXT:    .cfi_restore b8

@@ -793,9 +793,6 @@ static void emitCalleeSavedRestores(MachineBasicBlock &MBB,
         !static_cast<const AArch64RegisterInfo &>(TRI).regNeedsCFI(Reg, Reg))
       continue;
 
-    if (!Info.isRestored())
-      continue;
-
     CFIBuilder.buildRestore(Info.getReg());
   }
 }
@@ -4219,7 +4216,6 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
   // Insert VG into the list of CSRs, immediately before LR if saved.
   if (requiresSaveVG(MF)) {
     CalleeSavedInfo VGInfo(AArch64::VG);
-    VGInfo.setRestored(false);
 
     bool InsertedBeforeLR = false;
     for (unsigned I = 0; I < CSI.size(); I++)
