@@ -105,8 +105,8 @@ attributes #0 = { noinline nounwind "hlsl.shader"="compute" }
 ; CHECK: @Four = external constant %ByteAddressBuffer
 ; CHECK: @Five = external constant %"StructuredBuffer<int16_t>"
 ; CHECK: @Six = external constant %"Buffer<uint32_t>"
-; CHECK: @Array = external constant %"Buffer<float4>"
-; CHECK: @Array2 = external constant %"Buffer<double>"
+; CHECK: @Array = external constant [100 x %"Buffer<float4>"]
+; CHECK: @Array2 = external constant [0 x %"Buffer<double>"]
 ; CHECK: @Seven = external constant %"Buffer<uint32_t>"
 
 ; CHECK: !dx.resources = !{[[ResList:[!][0-9]+]]}

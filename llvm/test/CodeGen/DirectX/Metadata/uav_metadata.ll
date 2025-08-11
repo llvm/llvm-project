@@ -128,8 +128,8 @@ attributes #0 = { noinline nounwind "hlsl.shader"="compute" }
 ; CHECK: @Seven = external constant %"RasterizerOrderedStructuredBuffer<int32_t4>"
 ; CHECK: @Eight = external constant %RasterizerOrderedByteAddressBuffer
 ; CHECK: @Nine = external constant %"RWBuffer<uint32_t>"
-; CHECK: @Array = external constant %"RWBuffer<float4>"
-; CHECK: @Array2 = external constant %"RWBuffer<double>"
+; CHECK: @Array = external constant [100 x %"RWBuffer<float4>"]
+; CHECK: @Array2 = external constant [0 x %"RWBuffer<double>"]
 ; CHECK: @Ten = external constant %"RWBuffer<uint32_t>"
 
 ; CHECK: !dx.resources = !{[[ResList:[!][0-9]+]]}
