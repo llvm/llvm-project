@@ -31,8 +31,6 @@
 #include <type_traits>
 #include <utility>
 
-THIS WILL CAUSE A BUILD ERROR
-
 namespace llvm {
 
 template <typename T> class ArrayRef;
