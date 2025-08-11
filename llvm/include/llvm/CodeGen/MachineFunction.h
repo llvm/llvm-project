@@ -523,7 +523,7 @@ public:
     /// Extracts the numeric type id from the CallBase's callee_type Metadata,
     /// and sets CalleeTypeIds. This is used as type id for the indirect call in
     /// the call graph section.
-    CallSiteInfo(const CallBase &CB);
+    LLVM_ABI CallSiteInfo(const CallBase &CB);
   };
 
   struct CalledGlobalInfo {

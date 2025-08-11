@@ -454,28 +454,28 @@ protected:
     return NextPowerOf2(NumEntries * 4 / 3 + 1);
   }
 
-  void moveFromOldBuckets(BucketT *OldBucketsBegin, BucketT *OldBucketsEnd) {
+  void moveFromOldBuckets(iterator_range<BucketT *> OldBuckets) {
     initEmpty();
 
     // Insert all the old elements.
     const KeyT EmptyKey = getEmptyKey();
     const KeyT TombstoneKey = getTombstoneKey();
-    for (BucketT *B = OldBucketsBegin, *E = OldBucketsEnd; B != E; ++B) {
-      if (!KeyInfoT::isEqual(B->getFirst(), EmptyKey) &&
-          !KeyInfoT::isEqual(B->getFirst(), TombstoneKey)) {
+    for (BucketT &B : OldBuckets) {
+      if (!KeyInfoT::isEqual(B.getFirst(), EmptyKey) &&
+          !KeyInfoT::isEqual(B.getFirst(), TombstoneKey)) {
         // Insert the key/value into the new table.
         BucketT *DestBucket;
-        bool FoundVal = LookupBucketFor(B->getFirst(), DestBucket);
+        bool FoundVal = LookupBucketFor(B.getFirst(), DestBucket);
         (void)FoundVal; // silence warning.
         assert(!FoundVal && "Key already in new map?");
-        DestBucket->getFirst() = std::move(B->getFirst());
-        ::new (&DestBucket->getSecond()) ValueT(std::move(B->getSecond()));
+        DestBucket->getFirst() = std::move(B.getFirst());
+        ::new (&DestBucket->getSecond()) ValueT(std::move(B.getSecond()));
         incrementNumEntries();
 
         // Free the value.
-        B->getSecond().~ValueT();
+        B.getSecond().~ValueT();
       }
-      B->getFirst().~KeyT();
+      B.getFirst().~KeyT();
     }
   }
 
@@ -867,7 +867,8 @@ public:
       return;
     }
 
-    this->moveFromOldBuckets(OldBuckets, OldBuckets + OldNumBuckets);
+    this->moveFromOldBuckets(
+        llvm::make_range(OldBuckets, OldBuckets + OldNumBuckets));
 
     // Free the old table.
     deallocate_buffer(OldBuckets, sizeof(BucketT) * OldNumBuckets,
@@ -952,6 +953,9 @@ class SmallDenseMap
   struct LargeRep {
     BucketT *Buckets;
     unsigned NumBuckets;
+    iterator_range<BucketT *> buckets() {
+      return llvm::make_range(Buckets, Buckets + NumBuckets);
+    }
   };
 
   /// A "union" of an inline bucket array and the struct representing
@@ -1129,7 +1133,7 @@ public:
         Small = false;
         new (getLargeRep()) LargeRep(allocateBuckets(AtLeast));
       }
-      this->moveFromOldBuckets(TmpBegin, TmpEnd);
+      this->moveFromOldBuckets(llvm::make_range(TmpBegin, TmpEnd));
       return;
     }
 
@@ -1141,8 +1145,7 @@ public:
       new (getLargeRep()) LargeRep(allocateBuckets(AtLeast));
     }
 
-    this->moveFromOldBuckets(OldRep.Buckets,
-                             OldRep.Buckets + OldRep.NumBuckets);
+    this->moveFromOldBuckets(OldRep.buckets());
 
     // Free the old table.
     deallocate_buffer(OldRep.Buckets, sizeof(BucketT) * OldRep.NumBuckets,
