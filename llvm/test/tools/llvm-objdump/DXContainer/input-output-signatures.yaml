@@ -1,5 +1,11 @@
 # RUN: yaml2obj %s -o %t
-# RUN: llvm-objdump -p %t | FileCheck %s
+# RUN: llvm-objdump -p %t | FileCheck %s --match-full-lines --strict-whitespace
+
+# This test covers llvm-objdump printing private headers for the ISG1, OSG1, and
+# PSG1 "parts" of the DX container file format. The test uses a few absurdly
+# large values and long string names to ensure that the columns in the printed
+# table widen correctly.
+
 --- !dxcontainer
 Header:
   Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,

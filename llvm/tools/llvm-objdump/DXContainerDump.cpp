@@ -95,7 +95,7 @@ void DXContainerDumper::printSignature(const DirectX::Signature &S) {
         enumToStringRef(El.CompType, dxbc::getSigComponentTypes()).size());
   }
 
-  // Print Column headers
+  // Print Column headers.
   OS << "; ";
   OS << left_justify("Name", LongestName) << " ";
   OS << right_justify("Index", LongestIndex) << " ";
@@ -147,7 +147,6 @@ void DXContainerDumper::printPrivateHeaders() {
     OS << ";\n";
   }
 }
-
 } // namespace
 
 std::unique_ptr<objdump::Dumper> llvm::objdump::createDXContainerDumper(
