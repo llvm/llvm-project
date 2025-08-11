@@ -18,9 +18,10 @@
 // extension will be made available.
 //
 // FEATURE(...) should be used to advertise support for standard language
-// features, whereas EXTENSION(...) should be used for clang extensions. Note
-// that many of the identifiers in this file don't follow this rule for backward
-// compatibility reasons.
+// features or ABI-affecting clang extensions, whereas EXTENSION(...) should be
+// used for clang extensions which do not affect ABI. Note that many of the
+// identifiers in this file don't follow this rule for backward compatibility
+// reasons.
 //
 //===----------------------------------------------------------------------===//
 
