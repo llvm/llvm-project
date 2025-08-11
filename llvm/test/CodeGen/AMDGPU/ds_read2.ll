@@ -1384,8 +1384,8 @@ define amdgpu_kernel void @ds_read_call_read(ptr addrspace(1) %out, ptr addrspac
 ; GFX9-NEXT:    s_add_u32 s8, s4, 12
 ; GFX9-NEXT:    s_addc_u32 s9, s5, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_lshl_add_u32 v41, v0, 2, s6
-; GFX9-NEXT:    ds_read_b32 v42, v41
+; GFX9-NEXT:    v_lshl_add_u32 v40, v0, 2, s6
+; GFX9-NEXT:    ds_read_b32 v41, v40
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; GFX9-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; GFX9-NEXT:    s_mov_b64 s[6:7], s[2:3]
@@ -1395,12 +1395,12 @@ define amdgpu_kernel void @ds_read_call_read(ptr addrspace(1) %out, ptr addrspac
 ; GFX9-NEXT:    v_or3_b32 v31, v0, v1, v2
 ; GFX9-NEXT:    s_mov_b64 s[2:3], s[38:39]
 ; GFX9-NEXT:    s_mov_b32 s32, 0
-; GFX9-NEXT:    v_mov_b32_e32 v40, 0
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GFX9-NEXT:    ds_read_b32 v0, v41 offset:4
+; GFX9-NEXT:    ds_read_b32 v0, v40 offset:4
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_add_u32_e32 v0, v42, v0
-; GFX9-NEXT:    global_store_dword v40, v0, s[34:35]
+; GFX9-NEXT:    v_add_u32_e32 v0, v41, v0
+; GFX9-NEXT:    global_store_dword v1, v0, s[34:35]
 ; GFX9-NEXT:    s_endpgm
   %x = call i32 @llvm.amdgcn.workitem.id.x()
   %arrayidx0 = getelementptr i32, ptr addrspace(3) %arg, i32 %x

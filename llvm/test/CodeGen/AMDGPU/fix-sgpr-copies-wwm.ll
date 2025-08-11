@@ -5,15 +5,16 @@ define amdgpu_gs i32 @main() {
 ; CHECK-LABEL: main:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_bitcmp1_b32 0, 0
-; CHECK-NEXT:    s_mov_b32 s0, 0
-; CHECK-NEXT:    s_cselect_b32 s1, -1, 0
-; CHECK-NEXT:    s_or_saveexec_b32 s2, -1
-; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s1
+; CHECK-NEXT:    s_cselect_b32 s0, -1, 0
+; CHECK-NEXT:    s_or_saveexec_b32 s1, -1
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; CHECK-NEXT:    v_readfirstlane_b32 s1, v0
-; CHECK-NEXT:    s_mov_b32 exec_lo, s2
-; CHECK-NEXT:    s_or_b32 s0, s0, s1
-; CHECK-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_mov_b32 exec_lo, s1
+; CHECK-NEXT:    s_mov_b32 s1, 0
+; CHECK-NEXT:    s_wait_alu 0xfffe
+; CHECK-NEXT:    s_or_b32 s0, s1, s0
+; CHECK-NEXT:    s_wait_alu 0xfffe
 ; CHECK-NEXT:    s_bitcmp1_b32 s0, 0
 ; CHECK-NEXT:    s_cselect_b32 s0, -1, 0
 ; CHECK-NEXT:    s_wait_alu depctr_sa_sdst(0)
