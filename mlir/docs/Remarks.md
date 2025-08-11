@@ -2,38 +2,75 @@
 
 [TOC]
 
-Optimization remarks are structured, machine- and human-readable notes emitted by passes to explain what was optimized, what was missed, and why. MLIR integrates LLVM’s **remarks** infrastructure to make these insights easy to produce and consume.
+Remarks are structured, human- and machine-readable notes emitted by passes to
+explain what was optimized, what was missed, and why. The `RemarkEngine`
+collects finalized remarks during compilation and forwards them to a pluggable
+streamer. A default streamer integrates LLVM’s `llvm::remarks` so you can stream
+while a pass runs and serialize to disk (YAML or LLVM bitstream) for tooling.
 
 **Key points**
 
-- **Opt-in**: Disabled by default. No cost unless enabled.
+- **Opt-in**: Disabled by default; zero overhead unless enabled.
 - **Per-context**: Configured on `MLIRContext`.
-- **Formats**: YAML or LLVM remark bitstream.
-- **Kinds**: Pass, Missed, Failure, Analysis.
-- **API**: Lightweight stream interface (similar to diagnostics) with `<<`.
+- **Formats**: Custom streamers, or LLVM’s Remark engine (YAML / Bitstream).
+- **Kinds**: `Pass`, `Missed`, `Failure`, `Analysis`.
+- **API**: Lightweight streaming interface with `<<` (similar to diagnostics).
 
-## Enabling remarks
+## How it works
 
-Enable once per `MLIRContext` (e.g., in your tool, pass pipeline setup, or test):
+Remarks has two important classes:
+
+- **`RemarkEngine`** (owned by `MLIRContext`): receives finalized
+  `InFlightRemark`s, optionally mirrors them to the `DiagnosticEngine`, then
+  dispatches to the installed streamer.
+- **`MLIRRemarkStreamerBase`** (abstract): backend interface with a single hook
+  `streamOptimizationRemark(const RemarkBase &)`.
+
+**Default backend – `MLIRLLVMRemarkStreamer`** Adapts `mlir::RemarkBase` to
+`llvm::remarks::Remark` and writes YAML/bitstream via
+`llvm::remarks::RemarkStreamer` to a `ToolOutputFile`.
+
+**Ownership**: `MLIRContext` → `RemarkEngine` → `MLIRRemarkStreamerBase`.
+
+## Enable Remarks via mlir::emitRemarks (No Streamer)
+
+Enable once per `MLIRContext` (e.g., where you build your pass pipeline or in
+your tool). If `printAsEmitRemarks` is true, each remark is also mirrored to the
+context’s `DiagnosticEngine` under the provided category labels—handy for
+interactive tools and tests.
 
 ```c++
-#include "mlir/IR/MLIRContext.h"
+mlir::MLIRContext::RemarkCategories cats{/*passed=*/categoryLoopunroll,
+                                          /*missed=*/std::nullopt,
+                                          /*analysis=*/std::nullopt,
+                                          /*failed=*/categoryLoopunroll};
 
-// Writes remarks to /tmp/remarks.yaml in YAML format and mirrors them to
-// the DiagnosticEngine as 'remark' diagnostics with the given category labels.
-context.setupOptimizationRemarks(
-    /*outputPath=*/"/tmp/remarks.yaml",
-    /*outputFormat=*/yaml,              // or "bitstream"
-    /*printAsEmitRemarks=*/true,
-    /*categoryPassName=*/"opt.pass",      // optional category labels for mirroring
-    /*categoryMissName=*/"opt.missed",
-    /*categoryAnalysisName=*/"opt.analysis",
-    /*categoryFailedName=*/"opt.failed");
+context.enableOptimizationRemarks(/*streamer=*/nullptr,
+                                  cats,
+                                  /*printAsEmitRemarks=*/true);
 ```
 
-### Emitting remarks from a pass
+## Enable Remarks with LLVMRemarkStreamer (YAML/Bitstream)
 
-The functions `reportOptimization*` return an in-flight remark object (like MLIR diagnostics). One can append strings and key–value pairs with <<. 
+If you want to persist remarks to a file in YAML or bitstream format, use
+`mlir::remark::LLVMRemarkStreamer` (helper shown below):
+
+```c++
+#include "mlir/Remark/RemarkStreamer.h"
+
+mlir::MLIRContext::RemarkCategories cats{/*passed=*/categoryLoopunroll,
+                                         /*missed=*/std::nullopt,
+                                         /*analysis=*/std::nullopt,
+                                         /*failed=*/categoryLoopunroll};
+
+mlir::remark::enableOptimizationRemarksToFile(
+    context, yamlFile, llvm::remarks::Format::YAML, cats);
+```
+
+## Emitting remarks from a pass
+
+The `reportOptimization*` functions return an in-flight remark object (like MLIR
+diagnostics). Append strings and key–value pairs with `<<`.
 
 ```c++
 #include "mlir/IR/Remarks.h"
@@ -68,11 +105,11 @@ LogicalResult MyPass::runOnOperation() {
 }
 ```
 
-## Output formats
+### Output formats
 
 #### YAML
 
-A typical remark serialized to YAML looks like following. It is Readable, easy to diff and grep.
+Readable, easy to diff and grep.
 
 ```yaml
 --- !Passed
@@ -88,4 +125,26 @@ message:         "vectorized loop with tripCount=128"
 
 #### Bitstream
 
-Compact binary format supported by LLVM’s remark tooling. Prefer this for large production runs or where existing infrastructure already understands LLVM remarks.
+Compact binary format supported by LLVM’s remark tooling. Prefer this for large
+production runs or when existing infrastructure already consumes LLVM remarks.
+
+## Enable Remarks with a Custom Streamer
+
+`RemarkEngine` talks to `MLIRRemarkStreamerBase`. Implement your own streamer to
+consume remarks in any format you like:
+
+```c++
+class MyStreamer : public MLIRRemarkStreamerBase {
+public:
+  void streamOptimizationRemark(const RemarkBase &remark) override {
+    // Convert RemarkBase to your format and write it out.
+  }
+};
+
+// ...
+auto myStreamer = std::make_unique<MyStreamer>();
+context.setupOptimizationRemarks(path,
+                                 std::move(myStreamer),
+                                 /*printAsEmitRemarks=*/false,
+                                 /*categories=*/cat);
+```
