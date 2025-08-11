@@ -240,9 +240,8 @@ struct WgToSgCreateNdOpNoOffset
     SmallVector<Value> newCreateNdOps;
     for (int i = 0; i < count; ++i) {
       auto newOp = xegpu::CreateNdDescOp::create(
-          rewriter, loc, newTdescTy, op.getSource(), ValueRange(), ValueRange(),
-          ValueRange(), DenseI64ArrayAttr(), DenseI64ArrayAttr(),
-          DenseI64ArrayAttr());
+          rewriter, loc, newTdescTy, op.getSource(), op.getMixedSizes(),
+          op.getMixedStrides());
       newCreateNdOps.push_back(newOp);
     }
     rewriter.replaceOpWithMultiple(op, {newCreateNdOps});
