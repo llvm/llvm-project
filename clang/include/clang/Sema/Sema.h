@@ -11673,7 +11673,7 @@ public:
   ExprResult
   CheckConceptTemplateId(const CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
                          const DeclarationNameInfo &ConceptNameInfo,
-                         NamedDecl *FoundDecl, ConceptDecl *NamedConcept,
+                         NamedDecl *FoundDecl, TemplateDecl *NamedConcept,
                          const TemplateArgumentListInfo *TemplateArgs,
                          bool DoCheckConstraintSatisfaction = true);
 

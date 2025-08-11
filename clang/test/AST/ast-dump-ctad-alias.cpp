@@ -190,14 +190,13 @@ void foo() {
 // CHECK-NEXT: | | | | |   `-TemplateTypeParm {{.*}} 'U'
 // CHECK-NEXT: | | | | `-TemplateArgument pack '<Packs<Ts...>>'
 // CHECK-NEXT: | | | |   `-TemplateArgument type 'Packs<Ts...>'
-// CHECK-NEXT: | | | |     `-ElaboratedType {{.*}} 'Packs<Ts...>' sugar dependent
-// CHECK-NEXT: | | | |       `-TemplateSpecializationType {{.*}} 'Packs<Ts...>' dependent
-// CHECK-NEXT: | | | |         |-name: 'Packs':'GH124715::Packs' qualified
+// CHECK-NEXT: | | | |     `-TemplateSpecializationType {{.*}} 'Packs<Ts...>' dependent
+// CHECK-NEXT: | | | |       |-name: 'Packs':'GH124715::Packs' qualified
 // CHECK-NEXT: | | | |       | `-ClassTemplateDecl {{.*}} Packs
-// CHECK-NEXT: | | | |         `-TemplateArgument type 'Ts...'
-// CHECK-NEXT: | | | |           `-PackExpansionType {{.*}} 'Ts...' dependent
-// CHECK-NEXT: | | | |             `-TemplateTypeParmType {{.*}} 'Ts' dependent contains_unexpanded_pack depth 0 index 1 pack
-// CHECK-NEXT: | | | |               `-TemplateTypeParm {{.*}} 'Ts'
+// CHECK-NEXT: | | | |       `-TemplateArgument type 'Ts...'
+// CHECK-NEXT: | | | |         `-PackExpansionType {{.*}} 'Ts...' dependent
+// CHECK-NEXT: | | | |           `-TemplateTypeParmType {{.*}} 'Ts' dependent contains_unexpanded_pack depth 0 index 1 pack
+// CHECK-NEXT: | | | |             `-TemplateTypeParm {{.*}} 'Ts'
 // CHECK-NEXT: | | | |-TemplateArgument {{.*}} type 'U':'type-parameter-0-2'
 // CHECK-NEXT: | | | | `-TemplateTypeParmType {{.*}} 'U' dependent depth 0 index 2
 // CHECK-NEXT: | | | |   `-TemplateTypeParm {{.*}} 'U'

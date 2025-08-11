@@ -245,6 +245,16 @@ public:
     NewTL.setNameLoc(TL.getNameLoc());
     return Result;
   }
+
+  bool AlreadyTransformed(QualType T) {
+    if (T.isNull())
+      return true;
+
+    if (T->isInstantiationDependentType() || T->isVariablyModifiedType() ||
+        T->containsUnexpandedParameterPack())
+      return false;
+    return true;
+  }
 };
 } // namespace
 
@@ -576,8 +586,8 @@ static ExprResult calculateConstraintSatisfaction(
     Satisfaction.IsSatisfied = false;
     Satisfaction.ContainsErrors = false;
     ExprResult Expr = calculateConstraintSatisfaction(
-        S, FE.getNormalizedPattern(), Template, TemplateNameLoc,
-        MLTAL, Satisfaction, UnsignedOrNone(I));
+        S, FE.getNormalizedPattern(), Template, TemplateNameLoc, MLTAL,
+        Satisfaction, UnsignedOrNone(I));
     if (Expr.isUsable()) {
       if (Out.isUnset())
         Out = Expr;
@@ -697,17 +707,17 @@ static ExprResult calculateConstraintSatisfaction(
   if (Satisfaction.IsSatisfied)
     return E;
 
-    CXXScopeSpec SS;
-    SS.Adopt(Constraint.getConceptId()->getNestedNameSpecifierLoc());
+  CXXScopeSpec SS;
+  SS.Adopt(Constraint.getConceptId()->getNestedNameSpecifierLoc());
 
-    ExprResult SubstitutedConceptId = S.CheckConceptTemplateId(
-        SS, Constraint.getConceptId()->getTemplateKWLoc(),
-        Constraint.getConceptId()->getConceptNameInfo(),
-        Constraint.getConceptId()->getFoundDecl(),
-        Constraint.getConceptId()->getNamedConcept(), &OutArgs,
+  ExprResult SubstitutedConceptId = S.CheckConceptTemplateId(
+      SS, Constraint.getConceptId()->getTemplateKWLoc(),
+      Constraint.getConceptId()->getConceptNameInfo(),
+      Constraint.getConceptId()->getFoundDecl(),
+      Constraint.getConceptId()->getNamedConcept(), &OutArgs,
       /*DoCheckConstraintSatisfaction=*/false);
 
-    if (SubstitutedConceptId.isInvalid() || Trap.hasErrorOccurred())
+  if (SubstitutedConceptId.isInvalid() || Trap.hasErrorOccurred())
     return E;
 
   if (Size != Satisfaction.Details.size()) {

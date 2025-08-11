@@ -102,7 +102,7 @@ static_assert(__is_constructible(Movable, int));
 // expected-error@-1 {{no matching constructor for initialization of 'Movable'}} \
 // expected-note@-1 2{{}}
 // expected-error@#err-self-constraint-1{{satisfaction of constraint '__is_constructible(Movable, T)' depends on itself}}
-// expected-note@#err-self-constraint-1 4{{}}
+// expected-note@#err-self-constraint-1 3{{}}
 // expected-note@#Movable  {{'Movable' defined here}}
 
 template <typename T>

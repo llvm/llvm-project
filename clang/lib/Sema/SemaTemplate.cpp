@@ -9,6 +9,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TreeTransform.h"
+#include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
@@ -1181,10 +1182,9 @@ static ExprResult formImmediatelyDeclaredConstraint(
   if (auto *CD = dyn_cast<ConceptDecl>(NamedConcept)) {
     ImmediatelyDeclaredConstraint = S.CheckConceptTemplateId(
         SS, /*TemplateKWLoc=*/SourceLocation(), NameInfo,
-        /*FoundDecl=*/FoundDecl ? FoundDecl : NamedConcept, NamedConcept,
-      &ConstraintArgs,
-      /*DoCheckConstraintSatisfaction=*/
-      !S.inParameterMappingSubstitution());
+        /*FoundDecl=*/FoundDecl ? FoundDecl : CD, CD, &ConstraintArgs,
+        /*DoCheckConstraintSatisfaction=*/
+        !S.inParameterMappingSubstitution());
   }
   // We have a template template parameter
   else {
@@ -4802,7 +4802,7 @@ void Sema::diagnoseMissingTemplateArguments(const CXXScopeSpec &SS,
 ExprResult Sema::CheckConceptTemplateId(
     const CXXScopeSpec &SS, SourceLocation TemplateKWLoc,
     const DeclarationNameInfo &ConceptNameInfo, NamedDecl *FoundDecl,
-    ConceptDecl *NamedConcept, const TemplateArgumentListInfo *TemplateArgs,
+    TemplateDecl *NamedConcept, const TemplateArgumentListInfo *TemplateArgs,
     bool DoCheckConstraintSatisfaction) {
   assert(NamedConcept && "A concept template id without a template?");
 
@@ -4842,18 +4842,19 @@ ExprResult Sema::CheckConceptTemplateId(
       ASTTemplateArgumentListInfo::Create(Context, *TemplateArgs));
 
   bool Error = false;
-  if (!AreArgsDependent && DoCheckConstraintSatisfaction) {
+  if (const auto *Concept = dyn_cast<ConceptDecl>(NamedConcept);
+      Concept && Concept->getConstraintExpr() && !AreArgsDependent &&
+      DoCheckConstraintSatisfaction) {
 
-  LocalInstantiationScope Scope(*this);
+    LocalInstantiationScope Scope(*this);
 
-  EnterExpressionEvaluationContext EECtx{
-      *this, ExpressionEvaluationContext::Unevaluated, CSD};
+    EnterExpressionEvaluationContext EECtx{
+        *this, ExpressionEvaluationContext::Unevaluated, CSD};
 
     Error = CheckConstraintSatisfaction(
-          NamedConcept, AssociatedConstraint(NamedConcept->getConstraintExpr()),
-          MLTAL,
-          SourceRange(SS.isSet() ? SS.getBeginLoc() : ConceptNameInfo.getLoc(),
-                      TemplateArgs->getRAngleLoc()),
+        NamedConcept, AssociatedConstraint(Concept->getConstraintExpr()), MLTAL,
+        SourceRange(SS.isSet() ? SS.getBeginLoc() : ConceptNameInfo.getLoc(),
+                    TemplateArgs->getRAngleLoc()),
         Satisfaction, CL);
     Satisfaction.ContainsErrors = Error;
   }
