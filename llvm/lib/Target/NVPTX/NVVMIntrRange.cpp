@@ -130,6 +130,10 @@ static bool runNVVMIntrRange(Function &F) {
       if (OverallClusterRank)
         return addRangeAttr(1, FunctionClusterRank + 1, II);
       break;
+
+    // Lane ID
+    case Intrinsic::nvvm_read_ptx_sreg_laneid:
+      return addRangeAttr(0, 32, II);
     default:
       return false;
     }

@@ -135,6 +135,16 @@ define ptx_kernel i32 @test_cluster_dim() "nvvm.cluster_dim"="4,4,1" {
   ret i32 %11
 }
 
+define ptx_kernel i32 @test_laneid() "nvvm.cluster_dim"="4,4,1" {
+; CHECK-LABEL: define ptx_kernel i32 @test_laneid(
+; CHECK-SAME: ) #[[ATTR4]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i32 0, 32) i32 @llvm.nvvm.read.ptx.sreg.laneid()
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+  %1 = call i32 @llvm.nvvm.read.ptx.sreg.laneid()
+  ret i32 %1
+}
+
 
 ; DEFAULT-DAG: declare noundef range(i32 0, 1024) i32 @llvm.nvvm.read.ptx.sreg.tid.x()
 ; DEFAULT-DAG: declare noundef range(i32 0, 1024) i32 @llvm.nvvm.read.ptx.sreg.tid.y()
