@@ -131,8 +131,7 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
 
     // Ensure that the op has explicit offsets specified (either dynamic or
     // constant).
-    int64_t offsetSize = static_cast<int64_t>(op.getOffsets().size());
-    if ((offsetSize == 0) && (!op.getConstOffsetsAttr()))
+    if (op.getMixedOffsets().empty())
       return failure();
 
     Location loc = op.getLoc();
@@ -216,15 +215,15 @@ struct WgToSgCreateNdOpNoOffset
   matchAndRewrite(xegpu::CreateNdDescOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
 
-    int64_t offsetSize = static_cast<int64_t>(op.getOffsets().size());
-    if ((offsetSize != 0) || op.getConstOffsetsAttr())
+    // Check no offsets are specified.
+    if (!op.getMixedOffsets().empty())
       return failure();
 
     Location loc = op.getLoc();
     MLIRContext *ctx = op.getContext();
     xegpu::TensorDescType tdescTy = op.getType();
     auto layout = dyn_cast<xegpu::LayoutAttr>(tdescTy.getLayout());
-    if (!layout)
+    if (!layout || !layout.isWgLayout())
       return failure();
 
     Type elemTy = tdescTy.getElementType();
@@ -237,13 +236,13 @@ struct WgToSgCreateNdOpNoOffset
         xegpu::TensorDescType::get(ctx, sgShape, elemTy, tdescTy.getEncoding(),
                                    layout.dropSgLayoutAndData());
 
-    SmallVector<Value> newCreateNdOps;
-    for (int i = 0; i < count; ++i) {
-      auto newOp = xegpu::CreateNdDescOp::create(
-          rewriter, loc, newTdescTy, op.getSource(), op.getMixedSizes(),
-          op.getMixedStrides());
-      newCreateNdOps.push_back(newOp);
-    }
+    SmallVector<Value> newCreateNdOps(count);
+    std::generate(newCreateNdOps.begin(), newCreateNdOps.end(), [&]() {
+      return xegpu::CreateNdDescOp::create(rewriter, loc, newTdescTy,
+                                           op.getSource(), op.getMixedSizes(),
+                                           op.getMixedStrides());
+    });
+
     rewriter.replaceOpWithMultiple(op, {newCreateNdOps});
     return success();
   }
