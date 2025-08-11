@@ -80,6 +80,10 @@ static cl::opt<bool> PrintThinLTOIndexOnly(
     cl::desc("Only read thinlto index and print the index as LLVM assembly."),
     cl::init(false), cl::Hidden, cl::cat(DisCategory));
 
+static cl::opt<bool> OpaquePointers("opaque-pointers",
+                                    cl::desc("Use opaque pointers"),
+                                    cl::init(true), cl::cat(DisCategory));
+
 namespace {
 
 static void printDebugLoc(const DebugLoc &DL, formatted_raw_ostream &OS) {
@@ -168,6 +172,7 @@ int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv, "llvm .bc -> .ll disassembler\n");
 
   LLVMContext Context;
+  Context.setOpaquePointers(OpaquePointers);
   Context.setDiagnosticHandler(
       std::make_unique<LLVMDisDiagnosticHandler>(argv[0]));
 
