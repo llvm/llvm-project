@@ -13,6 +13,7 @@
 #include "llvm/Transforms/Utils/LowerIFunc.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
@@ -22,6 +23,10 @@ PreservedAnalyses LowerIFuncPass::run(Module &M, ModuleAnalysisManager &AM) {
   if (M.ifunc_empty())
     return PreservedAnalyses::all();
 
-  lowerGlobalIFuncUsersAsGlobalCtor(M, {});
+  Triple TargetTriple(M.getTargetTriple());
+  if (TargetTriple.isOSAIX())
+    lowerIFuncsOnAIX(M);
+  else
+    lowerGlobalIFuncUsersAsGlobalCtor(M, {});
   return PreservedAnalyses::none();
 }

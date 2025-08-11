@@ -11,11 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/ModuleUtils.h"
-#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsPowerPC.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Casting.h"
@@ -397,6 +399,100 @@ void llvm::embedBufferInModule(Module &M, MemoryBufferRef Buf,
   appendToCompilerUsed(M, GV);
 }
 
+void llvm::lowerIFuncsOnAIX(Module &M) {
+  for (GlobalIFunc &IFunc : make_early_inc_range(M.ifuncs())) {
+
+    // Let IFunc be:
+    //   @foo = ifunc rt-type (type1, type2), ptr @resolver
+    assert(isa<llvm::FunctionType>(IFunc.getValueType()));
+    FunctionType *FTy = cast<llvm::FunctionType>(IFunc.getValueType());
+
+    // Create the regular (non-ifunc) function:
+    //   define rt-type @foo(type1 %0, type2 %1)
+    Function *F = Function::Create(
+        FTy, IFunc.getLinkage(), IFunc.getAddressSpace(), IFunc.getName(), &M);
+    LLVMContext &Ctx = F->getContext();
+
+    // entry:
+    BasicBlock *CurBlock = BasicBlock::Create(Ctx, "entry", F);
+    IRBuilder<> Builder(CurBlock);
+
+    PointerType *PtrTy = Builder.getPtrTy();
+    //   %DescPtr = call ptr @ppc_get_function_descriptor(ptr noundef @foo)
+    auto *DescPtr = Builder.CreateIntrinsic(
+        /*RetTy*/ PtrTy, Intrinsic::ppc_get_function_descriptor, {F}, {},
+        "desc.ptr");
+
+    //   %DesctAddr = getelementptr inbounds %struct.Desc_t, ptr %DescPtr, i32
+    //   0, i32 0
+    StructType *DescriptorType = StructType::get(PtrTy, PtrTy, PtrTy);
+    auto *DesctAddr =
+        Builder.CreateStructGEP(DescriptorType, DescPtr, 0, "desc_t.addr");
+
+    //   %AddrInDesc = load ptr, ptr %DesctAddr, align 4
+    auto *AddrInDesc = Builder.CreateAlignedLoad(
+        PtrTy, DesctAddr, DesctAddr->getPointerAlignment(M.getDataLayout()),
+        "addr.in.desc");
+
+    //   %OriginalAddr = call ptr @ppc_get_function_entry(ptr noundef @foo) #3
+    auto *OriginalAddr = Builder.CreateIntrinsic(
+        /*RetTy*/ PtrTy, Intrinsic::ppc_get_function_entry, {F}, {},
+        "original.addr");
+
+    //   %cmp = icmp eq ptr %AddrInDesc, %OriginalAddr
+    auto *CMP = Builder.CreateICmpEQ(AddrInDesc, OriginalAddr);
+
+    //   br i1 %cmp, label %resolver, label %end
+    CurBlock = BasicBlock::Create(Ctx, "resolver", F);
+    BasicBlock *FinalBlock = BasicBlock::Create(Ctx, "end", F);
+    Builder.CreateCondBr(CMP, CurBlock, FinalBlock);
+
+    // Emit the 'then' (resolver) code:
+    Builder.SetInsertPoint(CurBlock);
+
+    // resolver:
+    //   %ResolvedFunc = call ptr @resolver()
+    //   %ResolvedAddr = call ptr @ppc_get_function_entry(ptr %ResolvedFunc)
+    //   %4 = ptrtoint ptr %ResolvedAddr to i32
+    //   store atomic i32 %4, ptr %desc_t.addr release, align 4
+    Function *ResolverFunc = IFunc.getResolverFunction();
+    auto *ResolvedFunc =
+        Builder.CreateCall(ResolverFunc, ArrayRef<Value *>(), "resolved.func");
+    auto *ResolvedAddr = Builder.CreateIntrinsic(
+        /*RetTy*/ PtrTy, Intrinsic::ppc_get_function_entry, {ResolvedFunc}, {},
+        "resolved.addr");
+    auto *PtrToInt = Builder.CreatePtrToInt(
+        ResolvedAddr, Builder.getIntPtrTy(M.getDataLayout()));
+    // TODO fix alignment
+    Builder.CreateAlignedStore(PtrToInt, DesctAddr, MaybeAlign())
+        ->setAtomic(AtomicOrdering::Release);
+
+    //   br label %if.end
+    Builder.CreateBr(FinalBlock);
+
+    // Emit the continuation block for code after the if.
+    Builder.SetInsertPoint(FinalBlock);
+
+    //   %res = musttail call i32 %DescPtr(i32 noundef %a) #3
+    SmallVector<Value *, 10> Args(make_pointer_range(F->args()));
+    CallInst *Result =
+        Builder.CreateCall(F->getFunctionType(), DescPtr, Args, "res");
+    // Result->setTailCallKind(CallInst::TCK_MustTail);
+
+    //   ret i32 %res
+    if (F->getReturnType()->isVoidTy())
+      Builder.CreateRetVoid();
+    else
+      Builder.CreateRet(Result);
+
+    // replace all uses of the ifunc with the newly created function
+    IFunc.replaceAllUsesWith(F);
+
+    std::string name = IFunc.getName().str();
+    IFunc.eraseFromParent();
+    F->setName(name);
+  }
+}
 bool llvm::lowerGlobalIFuncUsersAsGlobalCtor(
     Module &M, ArrayRef<GlobalIFunc *> FilteredIFuncsToLower) {
   SmallVector<GlobalIFunc *, 32> AllIFuncs;
