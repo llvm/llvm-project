@@ -1129,10 +1129,17 @@ public:
   static ProgramStateRef
   EscapeTrackedRegionsReachableFrom(ArrayRef<const MemRegion *> Roots,
                                     ProgramStateRef State) {
+    if (Roots.empty())
+      return State;
+
+    // scanReachableSymbols is expensive, so we use a single visitor for all
+    // roots
+    SmallVector<const MemRegion *, 10> Regions;
     EscapeTrackedCallback Visitor(State);
     for (const MemRegion *R : Roots) {
-      State->scanReachableSymbols(loc::MemRegionVal(R), Visitor);
+      Regions.push_back(R);
     }
+    State->scanReachableSymbols(Regions, Visitor);
     return Visitor.State;
   }
 
