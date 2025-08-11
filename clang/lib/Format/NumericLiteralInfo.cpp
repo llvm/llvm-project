@@ -35,7 +35,7 @@ NumericLiteralInfo::NumericLiteralInfo(StringRef Text, char Separator) {
       [[fallthrough]];
     case 'b':
     case 'B':
-    case 'o':
+    case 'o': // JavaScript octal.
     case 'O':
       BaseLetterPos = 1; // e.g. 0xF
       break;
