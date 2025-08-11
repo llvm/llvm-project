@@ -2067,24 +2067,22 @@ static VPSingleDefRecipe *findHeaderMask(VPlan &Plan) {
       WideCanonicalIVs.push_back(WidenOriginalIV);
   }
 
-  // Walk users of wide canonical IVs and collect to all compares of the form
+  // Walk users of wide canonical IVs and find the single compare of the form
   // (ICMP_ULE, WideCanonicalIV, backedge-taken-count).
-  SmallVector<VPSingleDefRecipe *> HeaderMasks;
+  VPSingleDefRecipe *HeaderMask = nullptr;
   for (auto *Wide : WideCanonicalIVs) {
     for (VPUser *U : SmallVector<VPUser *>(Wide->users())) {
-      auto *HeaderMask = dyn_cast<VPInstruction>(U);
-      if (!HeaderMask || !vputils::isHeaderMask(HeaderMask, Plan))
+      auto *VPI = dyn_cast<VPInstruction>(U);
+      if (!VPI || !vputils::isHeaderMask(VPI, Plan))
         continue;
 
-      assert(HeaderMask->getOperand(0) == Wide &&
+      assert(VPI->getOperand(0) == Wide &&
              "WidenCanonicalIV must be the first operand of the compare");
-      HeaderMasks.push_back(HeaderMask);
+      assert(!HeaderMask && "Multiple header masks found?");
+      HeaderMask = VPI;
     }
   }
-  assert(HeaderMasks.size() <= 1 && "Multiple header masks found?");
-  if (HeaderMasks.empty())
-    return nullptr;
-  return HeaderMasks[0];
+  return HeaderMask;
 }
 
 void VPlanTransforms::addActiveLaneMask(
