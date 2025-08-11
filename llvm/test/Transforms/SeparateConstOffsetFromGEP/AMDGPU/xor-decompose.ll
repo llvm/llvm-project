@@ -290,21 +290,26 @@ entry:
   ret void
 }
 
-; Verify that BinOp-XOR-GEP usage chains are properly optimized
+; Verify that BinOp-XOR-GEP usage chains are properly optimized.
+; In the below test, make sure we stop processing the chain at xor
+; and not fold the constant from add instruction in to gep. The
+; constant from add can be folded and the future work will cover
+; these cases.
 define amdgpu_kernel void @test6(i1 %0, ptr addrspace(3) %1) {
 ; CHECK-LABEL: define amdgpu_kernel void @test6(
 ; CHECK-SAME: i1 [[TMP0:%.*]], ptr addrspace(3) [[TMP1:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i32 0, i32 288
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], 32
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP2]], 4128
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP6]], i32 512
-; CHECK-NEXT:    [[TMP8:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP4]], align 16
-; CHECK-NEXT:    [[TMP9:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP7]], align 16
-; CHECK-NEXT:    [[TMP10:%.*]] = fadd <8 x half> [[TMP8]], [[TMP9]]
-; CHECK-NEXT:    store <8 x half> [[TMP10]], ptr addrspace(3) [[TMP1]], align 16
+; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP2]], 256
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = xor i32 [[TMP4]], 32
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP7]], i32 8192
+; CHECK-NEXT:    [[TMP9:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP5]], align 16
+; CHECK-NEXT:    [[TMP10:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP8]], align 16
+; CHECK-NEXT:    [[TMP11:%.*]] = fadd <8 x half> [[TMP9]], [[TMP10]]
+; CHECK-NEXT:    store <8 x half> [[TMP11]], ptr addrspace(3) [[TMP1]], align 16
 ; CHECK-NEXT:    ret void
 ;
 ; GVN-LABEL: define amdgpu_kernel void @test6(
@@ -312,14 +317,15 @@ define amdgpu_kernel void @test6(i1 %0, ptr addrspace(3) %1) {
 ; GVN-NEXT:  [[ENTRY:.*:]]
 ; GVN-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i32 0, i32 288
 ; GVN-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], 32
-; GVN-NEXT:    [[TMP4:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP3]]
-; GVN-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP2]], 4128
-; GVN-NEXT:    [[TMP6:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP5]]
-; GVN-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP6]], i32 512
-; GVN-NEXT:    [[TMP8:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP4]], align 16
-; GVN-NEXT:    [[TMP9:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP7]], align 16
-; GVN-NEXT:    [[TMP10:%.*]] = fadd <8 x half> [[TMP8]], [[TMP9]]
-; GVN-NEXT:    store <8 x half> [[TMP10]], ptr addrspace(3) [[TMP1]], align 16
+; GVN-NEXT:    [[TMP4:%.*]] = add i32 [[TMP2]], 256
+; GVN-NEXT:    [[TMP5:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP3]]
+; GVN-NEXT:    [[TMP6:%.*]] = xor i32 [[TMP4]], 32
+; GVN-NEXT:    [[TMP7:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP6]]
+; GVN-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP7]], i32 8192
+; GVN-NEXT:    [[TMP9:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP5]], align 16
+; GVN-NEXT:    [[TMP10:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP8]], align 16
+; GVN-NEXT:    [[TMP11:%.*]] = fadd <8 x half> [[TMP9]], [[TMP10]]
+; GVN-NEXT:    store <8 x half> [[TMP11]], ptr addrspace(3) [[TMP1]], align 16
 ; GVN-NEXT:    ret void
 ;
 entry:

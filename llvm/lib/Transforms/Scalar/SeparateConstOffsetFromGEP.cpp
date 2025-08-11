@@ -842,31 +842,18 @@ APInt ConstantOffsetExtractor::extractDisjointBitsFromXor(
   // Compute the remaining non-disjoint bits that stay in the XOR.
   const APInt NonDisjointBits = ConstantValue & ~DisjointBits;
 
-  // Add non-disjoint bits to user chain and return.
-  auto addToUserChainAndReturn = [&]() -> APInt {
-    UserChain.push_back(ConstantInt::get(XorInst->getType(), NonDisjointBits));
-    return DisjointBits;
-  };
+  // FIXME: Enhance XOR constant extraction to handle nested binary operations.
+  // Currently we only extract disjoint bits from the immediate XOR constant,
+  // but we could recursively process cases like:
+  //   xor (add %base, C1), C2  ->  add %base, (C1 ^ disjoint_bits(C2))
+  // This requires careful analysis to ensure the transformation preserves
+  // semantics, particularly around sign extension and overflow behavior.
 
-  // Handle recursive extraction for binary operators.
-  auto *BO = dyn_cast<BinaryOperator>(BaseOperand);
-  if (!BO)
-    return addToUserChainAndReturn();
-
-  APInt ConstantOffset = find(BO, /*SignExtended=*/false,
-                              /*ZeroExtended=*/false, /*NonNegative=*/false);
-
-  // Add to chain and return if no further constant extraction possible.
-  if (ConstantOffset.isZero())
-    return addToUserChainAndReturn();
-
-  // Check for conflicts between extracted offset and disjoint bits
-  // (A binop B xor C) is not always equivalent with (A xor C binop B)
-  // These cases might already be optimized out by instruction combine
-  if (!(ConstantOffset & DisjointBits).isZero())
-    return APInt::getZero(BitWidth);
-
-  return ConstantOffset;
+  // Add the non-disjoint constant to the user chain for later transformation
+  // This will replace the original constant in the XOR with the new
+  // constant.
+  UserChain.push_back(ConstantInt::get(XorInst->getType(), NonDisjointBits));
+  return DisjointBits;
 }
 
 /// A helper function to check if reassociating through an entry in the user
