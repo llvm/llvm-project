@@ -34,7 +34,17 @@ struct SerializationOptions {
   /// tool. This saved file is later used for validation.
   bool saveModuleForValidation = false;
   /// A prefix prepended to the file used when `saveModuleForValidation`
-  /// is set to `true`.
+  /// is set to `true`. This can either be a file prefix, or a relative or
+  /// or an absolute path followed by the prefix. For example:
+  ///
+  ///   * "foo" - Create files with a `foo` prefix in the current working
+  ///     directory. For example: `foo0`, `foo1` ... `fooN`.
+  ///
+  ///   * "my/dir/foo" - Create files in `my/dir` with a `foo` prefix. The
+  ///     `my/dir` need to exists. For example: `foo0`, `foo1` ... `fooN`
+  ///     will be created and stored in `/my/dir`.
+  ///
+  ///   * "/home/user/my/dir" - Same as above but using an absolute path.
   std::string validationFilePrefix = "";
 };
 

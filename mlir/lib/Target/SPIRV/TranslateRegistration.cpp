@@ -133,8 +133,7 @@ void registerToSPIRVTranslation() {
           "is used to generate separate binaries for validation, where "
           "`--split-input-file` normally combines all outputs into one. The "
           "one combined output (`-o`) is still written. Created files need to "
-          "be "
-          "removed manually once processed."),
+          "be removed manually once processed."),
       llvm::cl::init(""));
 
   TranslateFromMLIRRegistration toBinary(
