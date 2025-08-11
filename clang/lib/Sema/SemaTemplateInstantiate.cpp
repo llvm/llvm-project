@@ -3553,6 +3553,8 @@ PreparePackForExpansion(Sema &S, const CXXBaseSpecifier &Base,
       }
     }
 
+    // Determine whether the set of unexpanded parameter packs can and should be
+    // expanded.
     Info.Expand = false;
     Info.RetainExpansion = false;
     Info.NumExpansions = std::nullopt;
