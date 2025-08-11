@@ -22,13 +22,22 @@ using namespace object;
 
 struct Part {
   StringRef Name;
-  uint32_t Offset;
   ArrayRef<uint8_t> Data;
+
+  size_t size() const {
+    return sizeof(dxbc::PartHeader) // base header
+           + Data.size();           // contents size
+  }
 };
 
 struct Object {
   dxbc::Header Header;
   SmallVector<Part> Parts;
+
+  size_t headerSize() const {
+    return sizeof(dxbc::Header)               // base header
+           + sizeof(uint32_t) * Parts.size(); // part offset values
+  }
 };
 
 } // end namespace dxc

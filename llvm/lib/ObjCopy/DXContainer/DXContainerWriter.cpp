@@ -15,16 +15,13 @@ namespace dxc {
 using namespace object;
 
 size_t DXContainerWriter::finalize() {
-  size_t ObjectSize = sizeof(dxbc::Header);
-  ObjectSize += Obj.Parts.size() * sizeof(uint32_t);
   Offsets.reserve(Obj.Parts.size());
+  size_t Offset = Obj.headerSize();
   for (const Part &P : Obj.Parts) {
-    Offsets.push_back(ObjectSize);
-    assert(P.Name.size() == 4 &&
-           "Valid DXIL Part name consists of 4 characters");
-    ObjectSize += 4 + sizeof(uint32_t) + P.Data.size();
+    Offsets.push_back(Offset);
+    Offset += P.size();
   }
-  return ObjectSize;
+  return Obj.Header.FileSize;
 }
 
 Error DXContainerWriter::write() {
