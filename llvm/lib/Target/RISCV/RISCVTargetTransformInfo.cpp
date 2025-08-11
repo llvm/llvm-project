@@ -1629,6 +1629,7 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   // scalarized if the legalized Src and Dst are not equal sized.
   const DataLayout &DL = this->getDataLayout();
   if (!SrcLT.second.isVector() || !DstLT.second.isVector() ||
+      !SrcLT.first.isValid() || !DstLT.first.isValid() ||
       !TypeSize::isKnownLE(DL.getTypeSizeInBits(Src),
                            SrcLT.second.getSizeInBits()) ||
       !TypeSize::isKnownLE(DL.getTypeSizeInBits(Dst),
