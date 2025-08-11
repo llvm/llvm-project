@@ -356,12 +356,13 @@ void LanaiTargetLowering::LowerAsmOperandForConstraint(
 static unsigned NumFixedArgs;
 static bool CC_Lanai32_VarArg(unsigned ValNo, MVT ValVT, MVT LocVT,
                               CCValAssign::LocInfo LocInfo,
-                              ISD::ArgFlagsTy ArgFlags, CCState &State) {
+                              ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                              CCState &State) {
   // Handle fixed arguments with default CC.
   // Note: Both the default and fast CC handle VarArg the same and hence the
   // calling convention of the function is not considered here.
   if (ValNo < NumFixedArgs) {
-    return CC_Lanai32(ValNo, ValVT, LocVT, LocInfo, ArgFlags, State);
+    return CC_Lanai32(ValNo, ValVT, LocVT, LocInfo, ArgFlags, OrigTy, State);
   }
 
   // Promote i8/i16 args to i32
