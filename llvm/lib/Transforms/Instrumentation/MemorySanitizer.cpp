@@ -5569,6 +5569,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/ 2, /*EltSize=*/ 16);
       break;
 
+    // TODO: Dot Product of BF16 Pairs Accumulated Into Packed Single Precision
+    //   <4 x float> @llvm.x86.avx512bf16.dpbf16ps.128(<4 x float>, <8 x bfloat>, <8 x bfloat>)
+    //   <8 x float> @llvm.x86.avx512bf16.dpbf16ps.256(<8 x float>, <16 x bfloat>, <16 x bfloat>)
+    //   <16 x float> @llvm.x86.avx512bf16.dpbf16ps.512(<16 x float>, <32 x bfloat>, <32 x bfloat>)
+    // handleVectorPmaddIntrinsic() currently only handles integer types.
+
     case Intrinsic::x86_sse_cmp_ss:
     case Intrinsic::x86_sse2_cmp_sd:
     case Intrinsic::x86_sse_comieq_ss:
