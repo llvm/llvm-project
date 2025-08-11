@@ -71,8 +71,20 @@ void EHScopeStack::deallocate(size_t size) {
 
 void *EHScopeStack::pushCleanup(CleanupKind kind, size_t size) {
   char *buffer = allocate(EHCleanupScope::getSizeForCleanupSize(size));
+  bool isEHCleanup = kind & EHCleanup;
+  bool isLifetimeMarker = kind & LifetimeMarker;
+
+  assert(!cir::MissingFeatures::innermostEHScope());
 
   EHCleanupScope *scope = new (buffer) EHCleanupScope(size);
+
+  if (isLifetimeMarker)
+    cgf->cgm.errorNYI("push lifetime marker cleanup");
+
+  // With Windows -EHa, Invoke llvm.seh.scope.begin() for EHCleanup
+  if (cgf->getLangOpts().EHAsynch && isEHCleanup && !isLifetimeMarker &&
+      cgf->getTarget().getCXXABI().isMicrosoft())
+    cgf->cgm.errorNYI("push seh cleanup");
 
   return scope->getCleanupBuffer();
 }

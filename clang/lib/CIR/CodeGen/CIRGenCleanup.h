@@ -70,7 +70,8 @@ public:
 };
 
 /// A cleanup scope which generates the cleanup blocks lazily.
-class alignas(8) EHCleanupScope : public EHScope {
+class alignas(EHScopeStack::ScopeStackAlignment) EHCleanupScope
+    : public EHScope {
 public:
   /// Gets the size required for a lazy cleanup scope with the given
   /// cleanup-data requirements.
@@ -117,13 +118,6 @@ public:
 
   void markEmitted() {}
 };
-// NOTE: There can be additional data classes tacked on after an EHCleanupScope.
-// It is asserted (in EHScopeStack::pushCleanup*) that they don't require
-// greater alignment than ScopeStackAlignment. So, EHCleanupScope must have
-// alignment equal to that -- not more (would be misaligned by the stack
-// allocator), and not less (would break the appended classes).
-static_assert(alignof(EHCleanupScope) == EHScopeStack::ScopeStackAlignment,
-              "EHCleanupScope expected alignment");
 
 /// A non-stable pointer into the scope stack.
 class EHScopeStack::iterator {

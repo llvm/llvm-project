@@ -215,6 +215,7 @@ struct MissingFeatures {
   static bool hip() { return false; }
   static bool implicitConstructorArgs() { return false; }
   static bool incrementProfileCounter() { return false; }
+  static bool innermostEHScope() { return false; }
   static bool insertBuiltinUnpredictable() { return false; }
   static bool instrumentation() { return false; }
   static bool intrinsics() { return false; }
