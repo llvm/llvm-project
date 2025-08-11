@@ -721,9 +721,9 @@ define void @multiple_exit_conditions(ptr %src, ptr noalias %dst) #1 {
 ; PRED-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[TMP14]], ptr [[NEXT_GEP]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX]], i64 [[TMP10]])
-; PRED-NEXT:    [[TMP16:%.*]] = xor <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], splat (i1 true)
-; PRED-NEXT:    [[TMP17:%.*]] = extractelement <vscale x 2 x i1> [[TMP16]], i32 0
-; PRED-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; PRED-NEXT:    [[TMP15:%.*]] = extractelement <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
+; PRED-NEXT:    [[TMP16:%.*]] = xor i1 [[TMP15]], true
+; PRED-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; PRED:       [[MIDDLE_BLOCK]]:
 ; PRED-NEXT:    br label %[[EXIT:.*]]
 ; PRED:       [[SCALAR_PH]]:
@@ -1380,9 +1380,9 @@ define void @test_conditional_interleave_group (ptr noalias %src.1, ptr noalias 
 ; PRED:       [[PRED_STORE_CONTINUE27]]:
 ; PRED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 8
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 [[INDEX]], i64 [[TMP17]])
-; PRED-NEXT:    [[TMP84:%.*]] = xor <8 x i1> [[ACTIVE_LANE_MASK_NEXT]], splat (i1 true)
+; PRED-NEXT:    [[TMP84:%.*]] = extractelement <8 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
+; PRED-NEXT:    [[TMP85:%.*]] = xor i1 [[TMP84]], true
 ; PRED-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], splat (i64 8)
-; PRED-NEXT:    [[TMP85:%.*]] = extractelement <8 x i1> [[TMP84]], i32 0
 ; PRED-NEXT:    br i1 [[TMP85]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; PRED:       [[MIDDLE_BLOCK]]:
 ; PRED-NEXT:    br label %[[EXIT:.*]]
