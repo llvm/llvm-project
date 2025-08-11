@@ -122,7 +122,7 @@ struct VPlanTransforms {
   static void clearReductionWrapFlags(VPlan &Plan);
 
   /// Explicitly unroll \p Plan by \p UF.
-  static void unrollByUF(VPlan &Plan, unsigned UF, LLVMContext &Ctx);
+  static void unrollByUF(VPlan &Plan, unsigned UF);
 
   /// Replace each VPReplicateRecipe outside on any replicate region in \p Plan
   /// with \p VF single-scalar recipes.
