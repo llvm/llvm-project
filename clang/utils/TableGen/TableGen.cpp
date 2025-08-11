@@ -12,7 +12,6 @@
 
 #include "ASTTableGen.h"
 #include "TableGenBackends.h" // Declares all backends.
-#include "clang/Config/config.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -26,9 +25,6 @@ using namespace clang;
 enum ActionType {
   PrintRecords,
   DumpJSON,
-#if CLANG_ENABLE_CIR
-  GenCIRBuiltinsLowering,
-#endif // CLANG_ENABLE_CIR
   GenClangAttrClasses,
   GenClangAttrParserStringSwitches,
   GenClangAttrSubjectMatchRulesParserStringSwitches,
@@ -132,11 +128,6 @@ cl::opt<ActionType> Action(
                    "Print all records to stdout (default)"),
         clEnumValN(DumpJSON, "dump-json",
                    "Dump all records as machine-readable JSON"),
-#if CLANG_ENABLE_CIR
-        clEnumValN(GenCIRBuiltinsLowering, "gen-cir-builtins-lowering",
-                   "Generate lowering of ClangIR builtins to equivalent LLVM "
-                   "IR builtins"),
-#endif // CLANG_ENABLE_CIR
         clEnumValN(GenClangAttrClasses, "gen-clang-attr-classes",
                    "Generate clang attribute clases"),
         clEnumValN(GenClangAttrParserStringSwitches,
@@ -363,11 +354,6 @@ bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
   case DumpJSON:
     EmitJSON(Records, OS);
     break;
-#if CLANG_ENABLE_CIR
-  case GenCIRBuiltinsLowering:
-    EmitCIRBuiltinsLowering(Records, OS);
-    break;
-#endif // CLANG_ENABLE_CIR
   case GenClangAttrClasses:
     EmitClangAttrClass(Records, OS);
     break;

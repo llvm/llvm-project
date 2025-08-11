@@ -648,9 +648,14 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
-#define GET_BUILTIN_LOWERING_CLASSES_DECLARE
-#include "clang/CIR/Dialect/IR/CIRBuiltinsLowering.inc"
-#undef GET_BUILTIN_LOWERING_CLASSES_DECLARE
+class CIRToLLVMFAbsOpLowering : public mlir::OpConversionPattern<cir::FAbsOp> {
+public:
+  using mlir::OpConversionPattern<cir::FAbsOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::FAbsOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
 
 } // namespace direct
 } // namespace cir
