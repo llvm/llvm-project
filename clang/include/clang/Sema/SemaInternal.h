@@ -81,8 +81,8 @@ getDepthAndIndex(UnexpandedParameterPack UPP) {
     return std::make_pair(TTP->getDepth(), TTP->getIndex());
   if (isa<NamedDecl *>(UPP.first))
     return getDepthAndIndex(cast<NamedDecl *>(UPP.first));
-  assert(isa<const TemplateSpecializationType *>(UPP.first) ||
-         isa<const SubstBuiltinTemplatePackType *>(UPP.first));
+  assert((isa<const TemplateSpecializationType *,
+              const SubstBuiltinTemplatePackType *>(UPP.first)));
   return std::nullopt;
 }
 
