@@ -15,19 +15,18 @@ define void @fma_dup_f16(ptr noalias nocapture noundef readonly %A, half noundef
 ; CHECK-NEXT:    b .LBB0_6
 ; CHECK-NEXT:  .LBB0_3: // %vector.ph
 ; CHECK-NEXT:    and x9, x8, #0xfffffff0
-; CHECK-NEXT:    add x10, x1, #16
-; CHECK-NEXT:    add x11, x0, #16
+; CHECK-NEXT:    add x10, x0, #16
+; CHECK-NEXT:    mov x11, x1
 ; CHECK-NEXT:    mov x12, x9
 ; CHECK-NEXT:  .LBB0_4: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldp q1, q4, [x10, #-16]
+; CHECK-NEXT:    ldp q1, q4, [x11]
 ; CHECK-NEXT:    subs x12, x12, #16
-; CHECK-NEXT:    ldp q2, q3, [x11, #-16]
-; CHECK-NEXT:    add x11, x11, #32
+; CHECK-NEXT:    ldp q2, q3, [x10, #-16]
+; CHECK-NEXT:    add x10, x10, #32
 ; CHECK-NEXT:    fmla v1.8h, v2.8h, v0.h[0]
 ; CHECK-NEXT:    fmla v4.8h, v3.8h, v0.h[0]
-; CHECK-NEXT:    stp q1, q4, [x10, #-16]
-; CHECK-NEXT:    add x10, x10, #32
+; CHECK-NEXT:    stp q1, q4, [x11], #32
 ; CHECK-NEXT:    b.ne .LBB0_4
 ; CHECK-NEXT:  // %bb.5: // %middle.block
 ; CHECK-NEXT:    cmp x9, x8

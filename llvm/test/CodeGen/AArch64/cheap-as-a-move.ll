@@ -26,11 +26,11 @@ define void @f0(ptr %a, i64 %n) {
 ; CHECK-NEXT:    b.ge .LBB0_2
 ; CHECK-NEXT:  .LBB0_1: // %loop.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr w0, [x20, x22, lsl #2]
+; CHECK-NEXT:    ldr w0, [x20]
 ; CHECK-NEXT:    mov x1, x21
 ; CHECK-NEXT:    bl g
-; CHECK-NEXT:    str w0, [x20, x22, lsl #2]
 ; CHECK-NEXT:    add x22, x22, #1
+; CHECK-NEXT:    str w0, [x20], #4
 ; CHECK-NEXT:    cmp x22, x19
 ; CHECK-NEXT:    b.lt .LBB0_1
 ; CHECK-NEXT:  .LBB0_2: // %exit
@@ -76,12 +76,12 @@ define void @f1(ptr %a, i64 %n) {
 ; CHECK-NEXT:    b.ge .LBB1_2
 ; CHECK-NEXT:  .LBB1_1: // %loop.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr w0, [x20, x21, lsl #2]
+; CHECK-NEXT:    ldr w0, [x20]
 ; CHECK-NEXT:    mov x1, #1450704896 // =0x56780000
 ; CHECK-NEXT:    movk x1, #4660, lsl #48
 ; CHECK-NEXT:    bl g
-; CHECK-NEXT:    str w0, [x20, x21, lsl #2]
 ; CHECK-NEXT:    add x21, x21, #1
+; CHECK-NEXT:    str w0, [x20], #4
 ; CHECK-NEXT:    cmp x21, x19
 ; CHECK-NEXT:    b.lt .LBB1_1
 ; CHECK-NEXT:  .LBB1_2: // %exit

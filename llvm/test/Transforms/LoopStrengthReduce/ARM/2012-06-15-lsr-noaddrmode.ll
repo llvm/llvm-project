@@ -46,8 +46,8 @@ declare ptr @getstruct() nounwind
 ; Check that the loop preheader contains no address computation.
 ; CHECK: %while.cond.i.i
 ; CHECK-NOT: add{{.*}}lsl
-; CHECK: ldr{{.*}}lsl #2
-; CHECK: ldr{{.*}}lsl #2
+; CHECK: ldr{{.*}}
+; CHECK: ldr{{.*}}
 define i32 @main() nounwind ssp {
 entry:
   %v0 = load i32, ptr @ncol, align 4

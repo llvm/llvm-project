@@ -47,16 +47,15 @@ define void @trunc_v16i32_to_v16i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-NEXT:    adrp x8, lCPI0_0@PAGE
 ; CHECK-NEXT:  Lloh1:
 ; CHECK-NEXT:    ldr q0, [x8, lCPI0_0@PAGEOFF]
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w8, #1000 ; =0x3e8
 ; CHECK-NEXT:  LBB0_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add x9, x0, x8, lsl #6
-; CHECK-NEXT:    ldp q1, q2, [x9]
-; CHECK-NEXT:    ldp q3, q4, [x9, #32]
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    subs x8, x8, #1
+; CHECK-NEXT:    ldp q3, q4, [x0, #32]
+; CHECK-NEXT:    add x0, x0, #64
 ; CHECK-NEXT:    tbl.16b v1, { v1, v2, v3, v4 }, v0
-; CHECK-NEXT:    str q1, [x1, x8, lsl #4]
-; CHECK-NEXT:    add x8, x8, #1
-; CHECK-NEXT:    cmp x8, #1000
+; CHECK-NEXT:    str q1, [x1], #16
 ; CHECK-NEXT:    b.eq LBB0_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
@@ -67,46 +66,42 @@ define void @trunc_v16i32_to_v16i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-BE-NEXT:    adrp x8, .LCPI0_0
 ; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI0_0
 ; CHECK-BE-NEXT:    ld1 { v0.16b }, [x8]
-; CHECK-BE-NEXT:    mov x8, xzr
+; CHECK-BE-NEXT:    mov w8, #1000 // =0x3e8
 ; CHECK-BE-NEXT:  .LBB0_1: // %loop
 ; CHECK-BE-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-BE-NEXT:    add x9, x0, x8, lsl #6
-; CHECK-BE-NEXT:    add x10, x9, #16
-; CHECK-BE-NEXT:    ld1 { v1.16b }, [x9]
-; CHECK-BE-NEXT:    add x11, x9, #32
-; CHECK-BE-NEXT:    ld1 { v2.16b }, [x10]
-; CHECK-BE-NEXT:    add x9, x9, #48
-; CHECK-BE-NEXT:    ld1 { v3.16b }, [x11]
+; CHECK-BE-NEXT:    add x9, x0, #16
+; CHECK-BE-NEXT:    ld1 { v1.16b }, [x0]
+; CHECK-BE-NEXT:    add x10, x0, #32
+; CHECK-BE-NEXT:    ld1 { v2.16b }, [x9]
+; CHECK-BE-NEXT:    add x9, x0, #48
+; CHECK-BE-NEXT:    subs x8, x8, #1
+; CHECK-BE-NEXT:    ld1 { v3.16b }, [x10]
+; CHECK-BE-NEXT:    add x0, x0, #64
 ; CHECK-BE-NEXT:    ld1 { v4.16b }, [x9]
-; CHECK-BE-NEXT:    add x9, x1, x8, lsl #4
-; CHECK-BE-NEXT:    add x8, x8, #1
-; CHECK-BE-NEXT:    cmp x8, #1000
 ; CHECK-BE-NEXT:    tbl v1.16b, { v1.16b, v2.16b, v3.16b, v4.16b }, v0.16b
-; CHECK-BE-NEXT:    st1 { v1.16b }, [x9]
+; CHECK-BE-NEXT:    st1 { v1.16b }, [x1], #16
 ; CHECK-BE-NEXT:    b.eq .LBB0_1
 ; CHECK-BE-NEXT:  // %bb.2: // %exit
 ; CHECK-BE-NEXT:    ret
 ;
 ; CHECK-DISABLE-LABEL: trunc_v16i32_to_v16i8_in_loop:
 ; CHECK-DISABLE:       // %bb.0: // %entry
-; CHECK-DISABLE-NEXT:    mov x8, xzr
+; CHECK-DISABLE-NEXT:    mov w8, #1000 // =0x3e8
 ; CHECK-DISABLE-NEXT:  .LBB0_1: // %loop
 ; CHECK-DISABLE-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-DISABLE-NEXT:    add x9, x0, x8, lsl #6
-; CHECK-DISABLE-NEXT:    ld1 { v0.4s }, [x9]
-; CHECK-DISABLE-NEXT:    add x10, x9, #16
-; CHECK-DISABLE-NEXT:    add x11, x9, #48
-; CHECK-DISABLE-NEXT:    add x9, x9, #32
-; CHECK-DISABLE-NEXT:    ld1 { v1.4s }, [x10]
-; CHECK-DISABLE-NEXT:    ld1 { v2.4s }, [x11]
-; CHECK-DISABLE-NEXT:    ld1 { v3.4s }, [x9]
-; CHECK-DISABLE-NEXT:    add x9, x1, x8, lsl #4
-; CHECK-DISABLE-NEXT:    add x8, x8, #1
-; CHECK-DISABLE-NEXT:    cmp x8, #1000
+; CHECK-DISABLE-NEXT:    add x9, x0, #16
+; CHECK-DISABLE-NEXT:    add x10, x0, #48
+; CHECK-DISABLE-NEXT:    add x11, x0, #32
+; CHECK-DISABLE-NEXT:    ld1 { v0.4s }, [x0]
+; CHECK-DISABLE-NEXT:    ld1 { v1.4s }, [x9]
+; CHECK-DISABLE-NEXT:    ld1 { v2.4s }, [x10]
+; CHECK-DISABLE-NEXT:    ld1 { v3.4s }, [x11]
+; CHECK-DISABLE-NEXT:    subs x8, x8, #1
+; CHECK-DISABLE-NEXT:    add x0, x0, #64
 ; CHECK-DISABLE-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
 ; CHECK-DISABLE-NEXT:    uzp1 v2.8h, v3.8h, v2.8h
 ; CHECK-DISABLE-NEXT:    uzp1 v0.16b, v0.16b, v2.16b
-; CHECK-DISABLE-NEXT:    st1 { v0.16b }, [x9]
+; CHECK-DISABLE-NEXT:    st1 { v0.16b }, [x1], #16
 ; CHECK-DISABLE-NEXT:    b.eq .LBB0_1
 ; CHECK-DISABLE-NEXT:  // %bb.2: // %exit
 ; CHECK-DISABLE-NEXT:    ret
@@ -221,15 +216,13 @@ define void @trunc_v8i32_to_v8i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-NEXT:    adrp x8, lCPI2_0@PAGE
 ; CHECK-NEXT:  Lloh3:
 ; CHECK-NEXT:    ldr q0, [x8, lCPI2_0@PAGEOFF]
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w8, #1000 ; =0x3e8
 ; CHECK-NEXT:  LBB2_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add x9, x0, x8, lsl #5
-; CHECK-NEXT:    ldp q1, q2, [x9]
+; CHECK-NEXT:    ldp q1, q2, [x0], #32
+; CHECK-NEXT:    subs x8, x8, #1
 ; CHECK-NEXT:    tbl.16b v1, { v1, v2 }, v0
-; CHECK-NEXT:    str d1, [x1, x8, lsl #3]
-; CHECK-NEXT:    add x8, x8, #1
-; CHECK-NEXT:    cmp x8, #1000
+; CHECK-NEXT:    str d1, [x1], #8
 ; CHECK-NEXT:    b.eq LBB2_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
@@ -240,37 +233,33 @@ define void @trunc_v8i32_to_v8i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-BE-NEXT:    adrp x8, .LCPI2_0
 ; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI2_0
 ; CHECK-BE-NEXT:    ld1 { v0.16b }, [x8]
-; CHECK-BE-NEXT:    mov x8, xzr
+; CHECK-BE-NEXT:    mov w8, #1000 // =0x3e8
 ; CHECK-BE-NEXT:  .LBB2_1: // %loop
 ; CHECK-BE-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-BE-NEXT:    add x9, x0, x8, lsl #5
-; CHECK-BE-NEXT:    add x10, x9, #16
-; CHECK-BE-NEXT:    ld1 { v1.16b }, [x9]
-; CHECK-BE-NEXT:    add x9, x1, x8, lsl #3
-; CHECK-BE-NEXT:    ld1 { v2.16b }, [x10]
-; CHECK-BE-NEXT:    add x8, x8, #1
-; CHECK-BE-NEXT:    cmp x8, #1000
+; CHECK-BE-NEXT:    add x9, x0, #16
+; CHECK-BE-NEXT:    ld1 { v1.16b }, [x0]
+; CHECK-BE-NEXT:    subs x8, x8, #1
+; CHECK-BE-NEXT:    ld1 { v2.16b }, [x9]
+; CHECK-BE-NEXT:    add x0, x0, #32
 ; CHECK-BE-NEXT:    tbl v1.16b, { v1.16b, v2.16b }, v0.16b
-; CHECK-BE-NEXT:    st1 { v1.8b }, [x9]
+; CHECK-BE-NEXT:    st1 { v1.8b }, [x1], #8
 ; CHECK-BE-NEXT:    b.eq .LBB2_1
 ; CHECK-BE-NEXT:  // %bb.2: // %exit
 ; CHECK-BE-NEXT:    ret
 ;
 ; CHECK-DISABLE-LABEL: trunc_v8i32_to_v8i8_in_loop:
 ; CHECK-DISABLE:       // %bb.0: // %entry
-; CHECK-DISABLE-NEXT:    mov x8, xzr
+; CHECK-DISABLE-NEXT:    mov w8, #1000 // =0x3e8
 ; CHECK-DISABLE-NEXT:  .LBB2_1: // %loop
 ; CHECK-DISABLE-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-DISABLE-NEXT:    add x9, x0, x8, lsl #5
-; CHECK-DISABLE-NEXT:    add x10, x9, #16
-; CHECK-DISABLE-NEXT:    ld1 { v0.4s }, [x9]
-; CHECK-DISABLE-NEXT:    add x9, x1, x8, lsl #3
-; CHECK-DISABLE-NEXT:    ld1 { v1.4s }, [x10]
-; CHECK-DISABLE-NEXT:    add x8, x8, #1
-; CHECK-DISABLE-NEXT:    cmp x8, #1000
+; CHECK-DISABLE-NEXT:    add x9, x0, #16
+; CHECK-DISABLE-NEXT:    ld1 { v0.4s }, [x0]
+; CHECK-DISABLE-NEXT:    subs x8, x8, #1
+; CHECK-DISABLE-NEXT:    ld1 { v1.4s }, [x9]
+; CHECK-DISABLE-NEXT:    add x0, x0, #32
 ; CHECK-DISABLE-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
 ; CHECK-DISABLE-NEXT:    xtn v0.8b, v0.8h
-; CHECK-DISABLE-NEXT:    st1 { v0.8b }, [x9]
+; CHECK-DISABLE-NEXT:    st1 { v0.8b }, [x1], #8
 ; CHECK-DISABLE-NEXT:    b.eq .LBB2_1
 ; CHECK-DISABLE-NEXT:  // %bb.2: // %exit
 ; CHECK-DISABLE-NEXT:    ret
@@ -334,20 +323,19 @@ define void @trunc_v16i64_to_v16i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-NEXT:    adrp x8, lCPI3_0@PAGE
 ; CHECK-NEXT:  Lloh5:
 ; CHECK-NEXT:    ldr q0, [x8, lCPI3_0@PAGEOFF]
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w8, #1000 ; =0x3e8
 ; CHECK-NEXT:  LBB3_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add x9, x0, x8, lsl #7
-; CHECK-NEXT:    ldp q1, q2, [x9]
-; CHECK-NEXT:    ldp q16, q17, [x9, #64]
-; CHECK-NEXT:    ldp q3, q4, [x9, #32]
-; CHECK-NEXT:    ldp q18, q19, [x9, #96]
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    subs x8, x8, #1
+; CHECK-NEXT:    ldp q16, q17, [x0, #64]
+; CHECK-NEXT:    ldp q3, q4, [x0, #32]
+; CHECK-NEXT:    ldp q18, q19, [x0, #96]
+; CHECK-NEXT:    add x0, x0, #128
 ; CHECK-NEXT:    tbl.16b v1, { v1, v2, v3, v4 }, v0
 ; CHECK-NEXT:    tbl.16b v2, { v16, v17, v18, v19 }, v0
 ; CHECK-NEXT:    mov.d v1[1], v2[0]
-; CHECK-NEXT:    str q1, [x1, x8, lsl #4]
-; CHECK-NEXT:    add x8, x8, #1
-; CHECK-NEXT:    cmp x8, #1000
+; CHECK-NEXT:    str q1, [x1], #16
 ; CHECK-NEXT:    b.eq LBB3_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
@@ -358,68 +346,64 @@ define void @trunc_v16i64_to_v16i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-BE-NEXT:    adrp x8, .LCPI3_0
 ; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI3_0
 ; CHECK-BE-NEXT:    ld1 { v0.16b }, [x8]
-; CHECK-BE-NEXT:    mov x8, xzr
+; CHECK-BE-NEXT:    mov w8, #1000 // =0x3e8
 ; CHECK-BE-NEXT:  .LBB3_1: // %loop
 ; CHECK-BE-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-BE-NEXT:    add x9, x0, x8, lsl #7
-; CHECK-BE-NEXT:    add x13, x9, #64
-; CHECK-BE-NEXT:    add x12, x9, #80
-; CHECK-BE-NEXT:    add x14, x9, #16
-; CHECK-BE-NEXT:    ld1 { v1.16b }, [x9]
-; CHECK-BE-NEXT:    ld1 { v16.16b }, [x13]
-; CHECK-BE-NEXT:    add x11, x9, #96
-; CHECK-BE-NEXT:    add x13, x9, #32
-; CHECK-BE-NEXT:    ld1 { v2.16b }, [x14]
-; CHECK-BE-NEXT:    ld1 { v17.16b }, [x12]
-; CHECK-BE-NEXT:    add x10, x9, #112
-; CHECK-BE-NEXT:    add x9, x9, #48
-; CHECK-BE-NEXT:    ld1 { v3.16b }, [x13]
-; CHECK-BE-NEXT:    ld1 { v18.16b }, [x11]
-; CHECK-BE-NEXT:    ld1 { v4.16b }, [x9]
-; CHECK-BE-NEXT:    add x9, x1, x8, lsl #4
-; CHECK-BE-NEXT:    ld1 { v19.16b }, [x10]
-; CHECK-BE-NEXT:    add x8, x8, #1
-; CHECK-BE-NEXT:    cmp x8, #1000
+; CHECK-BE-NEXT:    add x12, x0, #64
+; CHECK-BE-NEXT:    add x11, x0, #80
+; CHECK-BE-NEXT:    add x13, x0, #16
+; CHECK-BE-NEXT:    ld1 { v1.16b }, [x0]
+; CHECK-BE-NEXT:    ld1 { v16.16b }, [x12]
+; CHECK-BE-NEXT:    add x10, x0, #96
+; CHECK-BE-NEXT:    add x12, x0, #32
+; CHECK-BE-NEXT:    ld1 { v2.16b }, [x13]
+; CHECK-BE-NEXT:    ld1 { v17.16b }, [x11]
+; CHECK-BE-NEXT:    add x9, x0, #112
+; CHECK-BE-NEXT:    add x11, x0, #48
+; CHECK-BE-NEXT:    ld1 { v3.16b }, [x12]
+; CHECK-BE-NEXT:    ld1 { v18.16b }, [x10]
+; CHECK-BE-NEXT:    ld1 { v4.16b }, [x11]
+; CHECK-BE-NEXT:    subs x8, x8, #1
+; CHECK-BE-NEXT:    ld1 { v19.16b }, [x9]
+; CHECK-BE-NEXT:    add x0, x0, #128
 ; CHECK-BE-NEXT:    tbl v1.16b, { v1.16b, v2.16b, v3.16b, v4.16b }, v0.16b
 ; CHECK-BE-NEXT:    tbl v2.16b, { v16.16b, v17.16b, v18.16b, v19.16b }, v0.16b
 ; CHECK-BE-NEXT:    mov v1.d[1], v2.d[0]
-; CHECK-BE-NEXT:    st1 { v1.16b }, [x9]
+; CHECK-BE-NEXT:    st1 { v1.16b }, [x1], #16
 ; CHECK-BE-NEXT:    b.eq .LBB3_1
 ; CHECK-BE-NEXT:  // %bb.2: // %exit
 ; CHECK-BE-NEXT:    ret
 ;
 ; CHECK-DISABLE-LABEL: trunc_v16i64_to_v16i8_in_loop:
 ; CHECK-DISABLE:       // %bb.0: // %entry
-; CHECK-DISABLE-NEXT:    mov x8, xzr
+; CHECK-DISABLE-NEXT:    mov w8, #1000 // =0x3e8
 ; CHECK-DISABLE-NEXT:  .LBB3_1: // %loop
 ; CHECK-DISABLE-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-DISABLE-NEXT:    add x9, x0, x8, lsl #7
-; CHECK-DISABLE-NEXT:    add x10, x9, #16
-; CHECK-DISABLE-NEXT:    add x11, x9, #48
+; CHECK-DISABLE-NEXT:    add x9, x0, #16
+; CHECK-DISABLE-NEXT:    add x10, x0, #48
+; CHECK-DISABLE-NEXT:    ld1 { v6.2d }, [x0]
 ; CHECK-DISABLE-NEXT:    ld1 { v0.2d }, [x9]
+; CHECK-DISABLE-NEXT:    add x9, x0, #32
 ; CHECK-DISABLE-NEXT:    ld1 { v1.2d }, [x10]
-; CHECK-DISABLE-NEXT:    add x10, x9, #112
-; CHECK-DISABLE-NEXT:    ld1 { v2.2d }, [x11]
+; CHECK-DISABLE-NEXT:    add x10, x0, #112
+; CHECK-DISABLE-NEXT:    ld1 { v2.2d }, [x9]
+; CHECK-DISABLE-NEXT:    add x9, x0, #96
 ; CHECK-DISABLE-NEXT:    ld1 { v3.2d }, [x10]
-; CHECK-DISABLE-NEXT:    add x10, x9, #96
-; CHECK-DISABLE-NEXT:    add x11, x9, #32
-; CHECK-DISABLE-NEXT:    ld1 { v4.2d }, [x10]
-; CHECK-DISABLE-NEXT:    add x10, x9, #80
-; CHECK-DISABLE-NEXT:    add x9, x9, #64
-; CHECK-DISABLE-NEXT:    ld1 { v5.2d }, [x11]
-; CHECK-DISABLE-NEXT:    ld1 { v6.2d }, [x10]
+; CHECK-DISABLE-NEXT:    add x10, x0, #80
+; CHECK-DISABLE-NEXT:    ld1 { v4.2d }, [x9]
+; CHECK-DISABLE-NEXT:    add x9, x0, #64
+; CHECK-DISABLE-NEXT:    ld1 { v5.2d }, [x10]
+; CHECK-DISABLE-NEXT:    uzp1 v0.4s, v6.4s, v0.4s
 ; CHECK-DISABLE-NEXT:    ld1 { v7.2d }, [x9]
-; CHECK-DISABLE-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
-; CHECK-DISABLE-NEXT:    add x9, x1, x8, lsl #4
-; CHECK-DISABLE-NEXT:    add x8, x8, #1
+; CHECK-DISABLE-NEXT:    uzp1 v1.4s, v2.4s, v1.4s
+; CHECK-DISABLE-NEXT:    subs x8, x8, #1
 ; CHECK-DISABLE-NEXT:    uzp1 v3.4s, v4.4s, v3.4s
-; CHECK-DISABLE-NEXT:    cmp x8, #1000
-; CHECK-DISABLE-NEXT:    uzp1 v4.4s, v7.4s, v6.4s
-; CHECK-DISABLE-NEXT:    uzp1 v2.4s, v5.4s, v2.4s
-; CHECK-DISABLE-NEXT:    uzp1 v1.8h, v4.8h, v3.8h
-; CHECK-DISABLE-NEXT:    uzp1 v0.8h, v0.8h, v2.8h
-; CHECK-DISABLE-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
-; CHECK-DISABLE-NEXT:    st1 { v0.16b }, [x9]
+; CHECK-DISABLE-NEXT:    add x0, x0, #128
+; CHECK-DISABLE-NEXT:    uzp1 v4.4s, v7.4s, v5.4s
+; CHECK-DISABLE-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
+; CHECK-DISABLE-NEXT:    uzp1 v2.8h, v4.8h, v3.8h
+; CHECK-DISABLE-NEXT:    uzp1 v0.16b, v0.16b, v2.16b
+; CHECK-DISABLE-NEXT:    st1 { v0.16b }, [x1], #16
 ; CHECK-DISABLE-NEXT:    b.eq .LBB3_1
 ; CHECK-DISABLE-NEXT:  // %bb.2: // %exit
 ; CHECK-DISABLE-NEXT:    ret
@@ -483,16 +467,15 @@ define void @trunc_v8i64_to_v8i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-NEXT:    adrp x8, lCPI4_0@PAGE
 ; CHECK-NEXT:  Lloh7:
 ; CHECK-NEXT:    ldr q0, [x8, lCPI4_0@PAGEOFF]
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w8, #1000 ; =0x3e8
 ; CHECK-NEXT:  LBB4_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add x9, x0, x8, lsl #6
-; CHECK-NEXT:    ldp q1, q2, [x9]
-; CHECK-NEXT:    ldp q3, q4, [x9, #32]
+; CHECK-NEXT:    ldp q1, q2, [x0]
+; CHECK-NEXT:    subs x8, x8, #1
+; CHECK-NEXT:    ldp q3, q4, [x0, #32]
+; CHECK-NEXT:    add x0, x0, #64
 ; CHECK-NEXT:    tbl.16b v1, { v1, v2, v3, v4 }, v0
-; CHECK-NEXT:    str d1, [x1, x8, lsl #3]
-; CHECK-NEXT:    add x8, x8, #1
-; CHECK-NEXT:    cmp x8, #1000
+; CHECK-NEXT:    str d1, [x1], #8
 ; CHECK-NEXT:    b.eq LBB4_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
@@ -503,47 +486,43 @@ define void @trunc_v8i64_to_v8i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-BE-NEXT:    adrp x8, .LCPI4_0
 ; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI4_0
 ; CHECK-BE-NEXT:    ld1 { v0.16b }, [x8]
-; CHECK-BE-NEXT:    mov x8, xzr
+; CHECK-BE-NEXT:    mov w8, #1000 // =0x3e8
 ; CHECK-BE-NEXT:  .LBB4_1: // %loop
 ; CHECK-BE-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-BE-NEXT:    add x9, x0, x8, lsl #6
-; CHECK-BE-NEXT:    add x10, x9, #16
-; CHECK-BE-NEXT:    ld1 { v1.16b }, [x9]
-; CHECK-BE-NEXT:    add x11, x9, #32
-; CHECK-BE-NEXT:    ld1 { v2.16b }, [x10]
-; CHECK-BE-NEXT:    add x9, x9, #48
-; CHECK-BE-NEXT:    ld1 { v3.16b }, [x11]
+; CHECK-BE-NEXT:    add x9, x0, #16
+; CHECK-BE-NEXT:    ld1 { v1.16b }, [x0]
+; CHECK-BE-NEXT:    add x10, x0, #32
+; CHECK-BE-NEXT:    ld1 { v2.16b }, [x9]
+; CHECK-BE-NEXT:    add x9, x0, #48
+; CHECK-BE-NEXT:    subs x8, x8, #1
+; CHECK-BE-NEXT:    ld1 { v3.16b }, [x10]
+; CHECK-BE-NEXT:    add x0, x0, #64
 ; CHECK-BE-NEXT:    ld1 { v4.16b }, [x9]
-; CHECK-BE-NEXT:    add x9, x1, x8, lsl #3
-; CHECK-BE-NEXT:    add x8, x8, #1
-; CHECK-BE-NEXT:    cmp x8, #1000
 ; CHECK-BE-NEXT:    tbl v1.16b, { v1.16b, v2.16b, v3.16b, v4.16b }, v0.16b
-; CHECK-BE-NEXT:    st1 { v1.8b }, [x9]
+; CHECK-BE-NEXT:    st1 { v1.8b }, [x1], #8
 ; CHECK-BE-NEXT:    b.eq .LBB4_1
 ; CHECK-BE-NEXT:  // %bb.2: // %exit
 ; CHECK-BE-NEXT:    ret
 ;
 ; CHECK-DISABLE-LABEL: trunc_v8i64_to_v8i8_in_loop:
 ; CHECK-DISABLE:       // %bb.0: // %entry
-; CHECK-DISABLE-NEXT:    mov x8, xzr
+; CHECK-DISABLE-NEXT:    mov w8, #1000 // =0x3e8
 ; CHECK-DISABLE-NEXT:  .LBB4_1: // %loop
 ; CHECK-DISABLE-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-DISABLE-NEXT:    add x9, x0, x8, lsl #6
-; CHECK-DISABLE-NEXT:    ld1 { v0.2d }, [x9]
-; CHECK-DISABLE-NEXT:    add x10, x9, #16
-; CHECK-DISABLE-NEXT:    add x11, x9, #48
-; CHECK-DISABLE-NEXT:    add x9, x9, #32
-; CHECK-DISABLE-NEXT:    ld1 { v1.2d }, [x10]
-; CHECK-DISABLE-NEXT:    ld1 { v2.2d }, [x11]
-; CHECK-DISABLE-NEXT:    ld1 { v3.2d }, [x9]
-; CHECK-DISABLE-NEXT:    add x9, x1, x8, lsl #3
-; CHECK-DISABLE-NEXT:    add x8, x8, #1
-; CHECK-DISABLE-NEXT:    cmp x8, #1000
+; CHECK-DISABLE-NEXT:    add x9, x0, #16
+; CHECK-DISABLE-NEXT:    add x10, x0, #48
+; CHECK-DISABLE-NEXT:    add x11, x0, #32
+; CHECK-DISABLE-NEXT:    ld1 { v0.2d }, [x0]
+; CHECK-DISABLE-NEXT:    ld1 { v1.2d }, [x9]
+; CHECK-DISABLE-NEXT:    ld1 { v2.2d }, [x10]
+; CHECK-DISABLE-NEXT:    ld1 { v3.2d }, [x11]
+; CHECK-DISABLE-NEXT:    subs x8, x8, #1
+; CHECK-DISABLE-NEXT:    add x0, x0, #64
 ; CHECK-DISABLE-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
 ; CHECK-DISABLE-NEXT:    uzp1 v2.4s, v3.4s, v2.4s
 ; CHECK-DISABLE-NEXT:    uzp1 v0.8h, v0.8h, v2.8h
 ; CHECK-DISABLE-NEXT:    xtn v0.8b, v0.8h
-; CHECK-DISABLE-NEXT:    st1 { v0.8b }, [x9]
+; CHECK-DISABLE-NEXT:    st1 { v0.8b }, [x1], #8
 ; CHECK-DISABLE-NEXT:    b.eq .LBB4_1
 ; CHECK-DISABLE-NEXT:  // %bb.2: // %exit
 ; CHECK-DISABLE-NEXT:    ret
@@ -568,10 +547,11 @@ exit:
 define void @trunc_v8i19_to_v8i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-LABEL: trunc_v8i19_to_v8i8_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w8, #1000 ; =0x3e8
 ; CHECK-NEXT:  LBB5_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldp x9, x10, [x0]
+; CHECK-NEXT:    subs x8, x8, #1
 ; CHECK-NEXT:    ldrb w14, [x0, #18]
 ; CHECK-NEXT:    ldrh w15, [x0, #16]
 ; CHECK-NEXT:    add x0, x0, #32
@@ -593,19 +573,18 @@ define void @trunc_v8i19_to_v8i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-NEXT:    mov.s v0[3], w10
 ; CHECK-NEXT:    uzp1.8h v0, v1, v0
 ; CHECK-NEXT:    xtn.8b v0, v0
-; CHECK-NEXT:    str d0, [x1, x8, lsl #3]
-; CHECK-NEXT:    add x8, x8, #1
-; CHECK-NEXT:    cmp x8, #1000
+; CHECK-NEXT:    str d0, [x1], #8
 ; CHECK-NEXT:    b.eq LBB5_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: trunc_v8i19_to_v8i8_in_loop:
 ; CHECK-BE:       // %bb.0: // %entry
-; CHECK-BE-NEXT:    mov x8, xzr
+; CHECK-BE-NEXT:    mov w8, #1000 // =0x3e8
 ; CHECK-BE-NEXT:  .LBB5_1: // %loop
 ; CHECK-BE-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-BE-NEXT:    ldp x10, x9, [x0]
+; CHECK-BE-NEXT:    subs x8, x8, #1
 ; CHECK-BE-NEXT:    ldrh w16, [x0, #16]
 ; CHECK-BE-NEXT:    ldrb w17, [x0, #18]
 ; CHECK-BE-NEXT:    add x0, x0, #32
@@ -630,23 +609,21 @@ define void @trunc_v8i19_to_v8i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-BE-NEXT:    mov v0.s[2], w13
 ; CHECK-BE-NEXT:    mov v1.s[2], w11
 ; CHECK-BE-NEXT:    mov v0.s[3], w9
-; CHECK-BE-NEXT:    add x9, x1, x8, lsl #3
-; CHECK-BE-NEXT:    add x8, x8, #1
-; CHECK-BE-NEXT:    cmp x8, #1000
 ; CHECK-BE-NEXT:    mov v1.s[3], w12
 ; CHECK-BE-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
 ; CHECK-BE-NEXT:    xtn v0.8b, v0.8h
-; CHECK-BE-NEXT:    st1 { v0.8b }, [x9]
+; CHECK-BE-NEXT:    st1 { v0.8b }, [x1], #8
 ; CHECK-BE-NEXT:    b.eq .LBB5_1
 ; CHECK-BE-NEXT:  // %bb.2: // %exit
 ; CHECK-BE-NEXT:    ret
 ;
 ; CHECK-DISABLE-LABEL: trunc_v8i19_to_v8i8_in_loop:
 ; CHECK-DISABLE:       // %bb.0: // %entry
-; CHECK-DISABLE-NEXT:    mov x8, xzr
+; CHECK-DISABLE-NEXT:    mov w8, #1000 // =0x3e8
 ; CHECK-DISABLE-NEXT:  .LBB5_1: // %loop
 ; CHECK-DISABLE-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-DISABLE-NEXT:    ldp x10, x9, [x0]
+; CHECK-DISABLE-NEXT:    subs x8, x8, #1
 ; CHECK-DISABLE-NEXT:    ldrh w16, [x0, #16]
 ; CHECK-DISABLE-NEXT:    ldrb w17, [x0, #18]
 ; CHECK-DISABLE-NEXT:    add x0, x0, #32
@@ -671,13 +648,10 @@ define void @trunc_v8i19_to_v8i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-DISABLE-NEXT:    mov v0.s[2], w13
 ; CHECK-DISABLE-NEXT:    mov v1.s[2], w11
 ; CHECK-DISABLE-NEXT:    mov v0.s[3], w9
-; CHECK-DISABLE-NEXT:    add x9, x1, x8, lsl #3
-; CHECK-DISABLE-NEXT:    add x8, x8, #1
-; CHECK-DISABLE-NEXT:    cmp x8, #1000
 ; CHECK-DISABLE-NEXT:    mov v1.s[3], w12
 ; CHECK-DISABLE-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
 ; CHECK-DISABLE-NEXT:    xtn v0.8b, v0.8h
-; CHECK-DISABLE-NEXT:    st1 { v0.8b }, [x9]
+; CHECK-DISABLE-NEXT:    st1 { v0.8b }, [x1], #8
 ; CHECK-DISABLE-NEXT:    b.eq .LBB5_1
 ; CHECK-DISABLE-NEXT:  // %bb.2: // %exit
 ; CHECK-DISABLE-NEXT:    ret
@@ -820,51 +794,45 @@ exit:
 define void @trunc_v16i16_to_v16i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-LABEL: trunc_v16i16_to_v16i8_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w8, #1000 ; =0x3e8
 ; CHECK-NEXT:  LBB7_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add x9, x0, x8, lsl #5
-; CHECK-NEXT:    ldp q1, q0, [x9]
+; CHECK-NEXT:    ldp q1, q0, [x0], #32
+; CHECK-NEXT:    subs x8, x8, #1
 ; CHECK-NEXT:    uzp1.16b v0, v1, v0
-; CHECK-NEXT:    str q0, [x1, x8, lsl #4]
-; CHECK-NEXT:    add x8, x8, #1
-; CHECK-NEXT:    cmp x8, #1000
+; CHECK-NEXT:    str q0, [x1], #16
 ; CHECK-NEXT:    b.eq LBB7_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: trunc_v16i16_to_v16i8_in_loop:
 ; CHECK-BE:       // %bb.0: // %entry
-; CHECK-BE-NEXT:    mov x8, xzr
+; CHECK-BE-NEXT:    mov w8, #1000 // =0x3e8
 ; CHECK-BE-NEXT:  .LBB7_1: // %loop
 ; CHECK-BE-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-BE-NEXT:    add x9, x0, x8, lsl #5
-; CHECK-BE-NEXT:    add x10, x9, #16
-; CHECK-BE-NEXT:    ld1 { v0.8h }, [x9]
-; CHECK-BE-NEXT:    add x9, x1, x8, lsl #4
-; CHECK-BE-NEXT:    ld1 { v1.8h }, [x10]
-; CHECK-BE-NEXT:    add x8, x8, #1
-; CHECK-BE-NEXT:    cmp x8, #1000
+; CHECK-BE-NEXT:    add x9, x0, #16
+; CHECK-BE-NEXT:    ld1 { v0.8h }, [x0]
+; CHECK-BE-NEXT:    subs x8, x8, #1
+; CHECK-BE-NEXT:    ld1 { v1.8h }, [x9]
+; CHECK-BE-NEXT:    add x0, x0, #32
 ; CHECK-BE-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
-; CHECK-BE-NEXT:    st1 { v0.16b }, [x9]
+; CHECK-BE-NEXT:    st1 { v0.16b }, [x1], #16
 ; CHECK-BE-NEXT:    b.eq .LBB7_1
 ; CHECK-BE-NEXT:  // %bb.2: // %exit
 ; CHECK-BE-NEXT:    ret
 ;
 ; CHECK-DISABLE-LABEL: trunc_v16i16_to_v16i8_in_loop:
 ; CHECK-DISABLE:       // %bb.0: // %entry
-; CHECK-DISABLE-NEXT:    mov x8, xzr
+; CHECK-DISABLE-NEXT:    mov w8, #1000 // =0x3e8
 ; CHECK-DISABLE-NEXT:  .LBB7_1: // %loop
 ; CHECK-DISABLE-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-DISABLE-NEXT:    add x9, x0, x8, lsl #5
-; CHECK-DISABLE-NEXT:    add x10, x9, #16
-; CHECK-DISABLE-NEXT:    ld1 { v0.8h }, [x9]
-; CHECK-DISABLE-NEXT:    add x9, x1, x8, lsl #4
-; CHECK-DISABLE-NEXT:    ld1 { v1.8h }, [x10]
-; CHECK-DISABLE-NEXT:    add x8, x8, #1
-; CHECK-DISABLE-NEXT:    cmp x8, #1000
+; CHECK-DISABLE-NEXT:    add x9, x0, #16
+; CHECK-DISABLE-NEXT:    ld1 { v0.8h }, [x0]
+; CHECK-DISABLE-NEXT:    subs x8, x8, #1
+; CHECK-DISABLE-NEXT:    ld1 { v1.8h }, [x9]
+; CHECK-DISABLE-NEXT:    add x0, x0, #32
 ; CHECK-DISABLE-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
-; CHECK-DISABLE-NEXT:    st1 { v0.16b }, [x9]
+; CHECK-DISABLE-NEXT:    st1 { v0.16b }, [x1], #16
 ; CHECK-DISABLE-NEXT:    b.eq .LBB7_1
 ; CHECK-DISABLE-NEXT:  // %bb.2: // %exit
 ; CHECK-DISABLE-NEXT:    ret
@@ -889,46 +857,39 @@ exit:
 define void @trunc_v8i16_to_v8i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-LABEL: trunc_v8i16_to_v8i8_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w8, #1000 ; =0x3e8
 ; CHECK-NEXT:  LBB8_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr q0, [x0, x8, lsl #4]
+; CHECK-NEXT:    ldr q0, [x0], #16
+; CHECK-NEXT:    subs x8, x8, #1
 ; CHECK-NEXT:    xtn.8b v0, v0
-; CHECK-NEXT:    str d0, [x1, x8, lsl #3]
-; CHECK-NEXT:    add x8, x8, #1
-; CHECK-NEXT:    cmp x8, #1000
+; CHECK-NEXT:    str d0, [x1], #8
 ; CHECK-NEXT:    b.eq LBB8_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: trunc_v8i16_to_v8i8_in_loop:
 ; CHECK-BE:       // %bb.0: // %entry
-; CHECK-BE-NEXT:    mov x8, xzr
+; CHECK-BE-NEXT:    mov w8, #1000 // =0x3e8
 ; CHECK-BE-NEXT:  .LBB8_1: // %loop
 ; CHECK-BE-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-BE-NEXT:    add x9, x0, x8, lsl #4
-; CHECK-BE-NEXT:    ld1 { v0.8h }, [x9]
-; CHECK-BE-NEXT:    add x9, x1, x8, lsl #3
-; CHECK-BE-NEXT:    add x8, x8, #1
-; CHECK-BE-NEXT:    cmp x8, #1000
+; CHECK-BE-NEXT:    ld1 { v0.8h }, [x0], #16
+; CHECK-BE-NEXT:    subs x8, x8, #1
 ; CHECK-BE-NEXT:    xtn v0.8b, v0.8h
-; CHECK-BE-NEXT:    st1 { v0.8b }, [x9]
+; CHECK-BE-NEXT:    st1 { v0.8b }, [x1], #8
 ; CHECK-BE-NEXT:    b.eq .LBB8_1
 ; CHECK-BE-NEXT:  // %bb.2: // %exit
 ; CHECK-BE-NEXT:    ret
 ;
 ; CHECK-DISABLE-LABEL: trunc_v8i16_to_v8i8_in_loop:
 ; CHECK-DISABLE:       // %bb.0: // %entry
-; CHECK-DISABLE-NEXT:    mov x8, xzr
+; CHECK-DISABLE-NEXT:    mov w8, #1000 // =0x3e8
 ; CHECK-DISABLE-NEXT:  .LBB8_1: // %loop
 ; CHECK-DISABLE-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-DISABLE-NEXT:    add x9, x0, x8, lsl #4
-; CHECK-DISABLE-NEXT:    ld1 { v0.8h }, [x9]
-; CHECK-DISABLE-NEXT:    add x9, x1, x8, lsl #3
-; CHECK-DISABLE-NEXT:    add x8, x8, #1
-; CHECK-DISABLE-NEXT:    cmp x8, #1000
+; CHECK-DISABLE-NEXT:    ld1 { v0.8h }, [x0], #16
+; CHECK-DISABLE-NEXT:    subs x8, x8, #1
 ; CHECK-DISABLE-NEXT:    xtn v0.8b, v0.8h
-; CHECK-DISABLE-NEXT:    st1 { v0.8b }, [x9]
+; CHECK-DISABLE-NEXT:    st1 { v0.8b }, [x1], #8
 ; CHECK-DISABLE-NEXT:    b.eq .LBB8_1
 ; CHECK-DISABLE-NEXT:  // %bb.2: // %exit
 ; CHECK-DISABLE-NEXT:    ret

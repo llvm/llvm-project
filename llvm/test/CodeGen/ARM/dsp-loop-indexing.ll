@@ -18,19 +18,19 @@
 ; CHECK-LABEL: test_qadd_2
 ; CHECK: @ %loop
 
-; CHECK-DEFAULT: ldr{{.*}}, #4]
-; CHECK-DEFAULT: ldr{{.*}}, #4]
-; CHECK-DEFAULT: str{{.*}}, #4]
-; CHECK-DEFAULT: ldr{{.*}}, #8]!
-; CHECK-DEAFULT: ldr{{.*}}, #8]!
-; CHECK-DEFAULT: str{{.*}}, #8]!
+; CHECK-DEFAULT: ldr{{.*}}, #-4]
+; CHECK-DEFAULT: ldr{{.*}}, #-4]
+; CHECK-DEFAULT: str{{.*}}, #-4]
+; CHECK-DEFAULT: ldr{{.*}}, #8
+; CHECK-DEAFULT: ldr{{.*}}, #8
+; CHECK-DEFAULT: str{{.*}}, #8
 
-; CHECK-COMPLEX: ldr{{.*}}, #8]!
-; CHECK-COMPLEX: ldr{{.*}}, #8]!
-; CHECK-COMPLEX: str{{.*}}, #8]!
-; CHECK-COMPLEX: ldr{{.*}}, #4]
-; CHECK-COMPLEX: ldr{{.*}}, #4]
-; CHECK-COMPLEX: str{{.*}}, #4]
+; CHECK-COMPLEX: ldr{{.*}}, #-4]
+; CHECK-COMPLEX: ldr{{.*}}, #-4]
+; CHECK-COMPLEX: str{{.*}}, #-4]
+; CHECK-COMPLEX: ldr{{.*}}, #8
+; CHECK-COMPLEX: ldr{{.*}}, #8
+; CHECK-COMPLEX: str{{.*}}, #8
 
 ; DISABLED-NOT: ldr{{.*}}]!
 ; DISABLED-NOT: str{{.*}}]!
@@ -74,9 +74,8 @@ exit:
 ; CHECK-DEFAULT: ldr{{.*}},
 ; CHECK-DEFAULT: ldr{{.*}},
 ; CHECK-DEFAULT: str{{.*}},
-; CHECK-DEFAULT: ldr{{.*}}, #-4]
-; CHECK-DEFAULT: ldr{{.*}}, #-4]
-; CHECK-DEFAULT: sub{{.*}}, #8
+; CHECK-DEFAULT: ldr{{.*}}, #-8
+; CHECK-DEFAULT: ldr{{.*}}, #-8
 ; CHECK-DEFAULT: str{{.*}}, #-4]
 ; CHECK-DEFAULT: sub{{.*}}, #8
 
@@ -124,22 +123,22 @@ exit:
 ; CHECK-LABEL: test_qadd_3
 ; CHECK: @ %loop
 
-; CHECK-DEFAULT: ldr{{.*}}, #8]
-; CHECK-DEFAULT: ldr{{.*}}, #8]
-; CHECK-DEFAULT: str{{.*}}, #8]
-; CHECK-DEFAULT: ldr{{.*}}, #12]!
-; CHECK-DEFAULT: ldr{{.*}}, #12]!
-; CHECK-DEFAULT: str{{.*}}, #12]!
+; CHECK-DEFAULT: ldr{{.*}}, #-4]
+; CHECK-DEFAULT: ldr{{.*}}, #-4]
+; CHECK-DEFAULT: str{{.*}}, #-4]
+; CHECK-DEFAULT: ldr{{.*}}, [r{{[0-9]+}}]
+; CHECK-DEFAULT: ldr{{.*}}, [r{{[0-9]+}}]
+; CHECK-DEFAULT: str{{.*}}, [r{{[0-9]+}}]
 
-; CHECK-COMPLEX: ldr{{.*}}, #12]!
-; CHECK-COMPLEX: ldr{{.*}}, #12]!
-; CHECK-COMPLEX: str{{.*}}, #12]!
-; CHECK-COMPLEX: ldr{{.*}}, #4]
-; CHECK-COMPLEX: ldr{{.*}}, #4]
-; CHECK-COMPLEX: str{{.*}}, #4]
-; CHECK-COMPLEX: ldr{{.*}}, #8]
-; CHECK-COMPLEX: ldr{{.*}}, #8]
-; CHECK-COMPLEX: str{{.*}}, #8]
+; CHECK-COMPLEX: ldr{{.*}}, #-8]
+; CHECK-COMPLEX: ldr{{.*}}, #-8]
+; CHECK-COMPLEX: str{{.*}}, #-8]
+; CHECK-COMPLEX: ldr{{.*}}, #-4]
+; CHECK-COMPLEX: ldr{{.*}}, #-4]
+; CHECK-COMPLEX: str{{.*}}, #-4]
+; CHECK-COMPLEX: ldr{{.*}}, #12
+; CHECK-COMPLEX: ldr{{.*}}, #12
+; CHECK-COMPLEX: str{{.*}}, #12
 
 ; DISABLED-NOT: ldr{{.*}}]!
 ; DISABLED-NOT: str{{.*}}]!
@@ -198,18 +197,18 @@ exit:
 ; CHECK-DEFAULT: ldr{{.*}}, #12]
 ; CHECK-DEFAULT: str{{.*}}, #12]
 
-; CHECK-COMPLEX: ldr{{.*}}, #16]!
-; CHECK-COMPLEX: ldr{{.*}}, #16]!
-; CHECK-COMPLEX: str{{.*}}, #16]!
-; CHECK-COMPLEX: ldr{{.*}}, #4]
-; CHECK-COMPLEX: ldr{{.*}}, #4]
-; CHECK-COMPLEX: str{{.*}}, #4]
-; CHECK-COMPLEX: ldr{{.*}}, #8]
-; CHECK-COMPLEX: ldr{{.*}}, #8]
-; CHECK-COMPLEX: str{{.*}}, #8]
-; CHECK-COMPLEX: ldr{{.*}}, #12]
-; CHECK-COMPLEX: ldr{{.*}}, #12]
-; CHECK-COMPLEX: str{{.*}}, #12]
+; CHECK-COMPLEX: ldr{{.*}}, #-12]
+; CHECK-COMPLEX: ldr{{.*}}, #-12]
+; CHECK-COMPLEX: str{{.*}}, #-12]
+; CHECK-COMPLEX: ldr{{.*}}, #-8]
+; CHECK-COMPLEX: ldr{{.*}}, #-8]
+; CHECK-COMPLEX: str{{.*}}, #-8]
+; CHECK-COMPLEX: ldr{{.*}}, #-4]
+; CHECK-COMPLEX: ldr{{.*}}, #-4]
+; CHECK-COMPLEX: str{{.*}}, #-4]
+; CHECK-COMPLEX: ldr{{.*}}, #16
+; CHECK-COMPLEX: ldr{{.*}}, #16
+; CHECK-COMPLEX: str{{.*}}, #16
 
 ; DISABLED-NOT: ldr{{.*}}]!
 ; DISABLED-NOT: str{{.*}}]!
@@ -265,19 +264,19 @@ exit:
 ; CHECK: @ %loop
 ; TODO: pre-inc store.
 
-; CHECK-DEFAULT: ldr{{.*}}, #4]
-; CHECK-DEFAULT: ldr{{.*}}, #4]
-; CHECK-DEFAULT: str{{.*}}, #8]
-; CHECK-DEFAULT: ldr{{.*}}, #8]!
-; CHECK-DEFAULT: ldr{{.*}}, #8]!
-; CHECK-DEFAULT: str{{.*}}, #16]!
+; CHECK-DEFAULT: ldr{{.*}}, #-4]
+; CHECK-DEFAULT: ldr{{.*}}, #-4]
+; CHECK-DEFAULT: str{{.*}}, #-8]
+; CHECK-DEFAULT: ldr{{.*}}, #8
+; CHECK-DEFAULT: ldr{{.*}}, #8
+; CHECK-DEFAULT: str{{.*}}, #16
 
-; CHECK-COMPLEX: ldr{{.*}}, #8]!
-; CHECK-COMPLEX: ldr{{.*}}, #8]!
-; CHECK-COMPLEX: str{{.*}}, #16]!
-; CHECK-COMPLEX: ldr{{.*}}, #4]
-; CHECK-COMPLEX: ldr{{.*}}, #4]
-; CHECK-COMPLEX: str{{.*}}, #8]
+; CHECK-COMPLEX: ldr{{.*}}, #-4]
+; CHECK-COMPLEX: ldr{{.*}}, #-4]
+; CHECK-COMPLEX: str{{.*}}, #-8]
+; CHECK-COMPLEX: ldr{{.*}}, #8
+; CHECK-COMPLEX: ldr{{.*}}, #8
+; CHECK-COMPLEX: str{{.*}}, #16
 
 ; DISABLED-NOT: ldr{{.*}}]!
 ; DISABLED-NOT: str{{.*}}]!

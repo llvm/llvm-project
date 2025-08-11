@@ -33,13 +33,13 @@ define hidden i32 @_Z1fiz(i32 %n, ...) local_unnamed_addr #0 {
 ; CHECK-NEXT:    ldr r1, [sp]
 ; CHECK-NEXT:    dls lr, r0
 ; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:    adds r1, #4
 ; CHECK-NEXT:  .LBB0_2: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    str r1, [sp]
-; CHECK-NEXT:    ldr r2, [r1, #-4]
-; CHECK-NEXT:    adds r1, #4
-; CHECK-NEXT:    add r0, r2
+; CHECK-NEXT:    adds r2, r1, #4
+; CHECK-NEXT:    str r2, [sp]
+; CHECK-NEXT:    ldr r1, [r1]
+; CHECK-NEXT:    add r0, r1
+; CHECK-NEXT:    mov r1, r2
 ; CHECK-NEXT:    le lr, .LBB0_2
 ; CHECK-NEXT:    b .LBB0_4
 ; CHECK-NEXT:  .LBB0_3:

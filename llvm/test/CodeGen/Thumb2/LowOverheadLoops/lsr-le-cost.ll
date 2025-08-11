@@ -7,54 +7,29 @@
 ; matter the preferred addressing mode.
 
 define void @test(ptr %dst, i32 %n) {
-; CHECK-NOMVE-LABEL: test:
-; CHECK-NOMVE:       @ %bb.0: @ %entry
-; CHECK-NOMVE-NEXT:    push {r7, lr}
-; CHECK-NOMVE-NEXT:    add.w r0, r0, r1, lsl #1
-; CHECK-NOMVE-NEXT:    movs r2, #0
-; CHECK-NOMVE-NEXT:    sub.w r12, r0, #2
-; CHECK-NOMVE-NEXT:    movs r3, #0
-; CHECK-NOMVE-NEXT:  .LBB0_1: @ %outer_loop
-; CHECK-NOMVE-NEXT:    @ =>This Loop Header: Depth=1
-; CHECK-NOMVE-NEXT:    @ Child Loop BB0_2 Depth 2
-; CHECK-NOMVE-NEXT:    dls lr, r1
-; CHECK-NOMVE-NEXT:    mov r0, r12
-; CHECK-NOMVE-NEXT:  .LBB0_2: @ %inner_loop
-; CHECK-NOMVE-NEXT:    @ Parent Loop BB0_1 Depth=1
-; CHECK-NOMVE-NEXT:    @ => This Inner Loop Header: Depth=2
-; CHECK-NOMVE-NEXT:    strh r2, [r0, #2]!
-; CHECK-NOMVE-NEXT:    le lr, .LBB0_2
-; CHECK-NOMVE-NEXT:  @ %bb.3: @ %outer_loop_end
-; CHECK-NOMVE-NEXT:    @ in Loop: Header=BB0_1 Depth=1
-; CHECK-NOMVE-NEXT:    adds r3, #1
-; CHECK-NOMVE-NEXT:    cmp r3, r1
-; CHECK-NOMVE-NEXT:    it eq
-; CHECK-NOMVE-NEXT:    popeq {r7, pc}
-; CHECK-NOMVE-NEXT:    b .LBB0_1
-;
-; CHECK-MVE-LABEL: test:
-; CHECK-MVE:       @ %bb.0: @ %entry
-; CHECK-MVE-NEXT:    push {r7, lr}
-; CHECK-MVE-NEXT:    add.w r12, r0, r1, lsl #1
-; CHECK-MVE-NEXT:    movs r2, #0
-; CHECK-MVE-NEXT:    movs r3, #0
-; CHECK-MVE-NEXT:  .LBB0_1: @ %outer_loop
-; CHECK-MVE-NEXT:    @ =>This Loop Header: Depth=1
-; CHECK-MVE-NEXT:    @ Child Loop BB0_2 Depth 2
-; CHECK-MVE-NEXT:    dls lr, r1
-; CHECK-MVE-NEXT:    mov r0, r12
-; CHECK-MVE-NEXT:  .LBB0_2: @ %inner_loop
-; CHECK-MVE-NEXT:    @ Parent Loop BB0_1 Depth=1
-; CHECK-MVE-NEXT:    @ => This Inner Loop Header: Depth=2
-; CHECK-MVE-NEXT:    strh r2, [r0], #2
-; CHECK-MVE-NEXT:    le lr, .LBB0_2
-; CHECK-MVE-NEXT:  @ %bb.3: @ %outer_loop_end
-; CHECK-MVE-NEXT:    @ in Loop: Header=BB0_1 Depth=1
-; CHECK-MVE-NEXT:    adds r3, #1
-; CHECK-MVE-NEXT:    cmp r3, r1
-; CHECK-MVE-NEXT:    it eq
-; CHECK-MVE-NEXT:    popeq {r7, pc}
-; CHECK-MVE-NEXT:    b .LBB0_1
+; CHECK-LABEL: test:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    push {r7, lr}
+; CHECK-NEXT:    add.w r12, r0, r1, lsl #1
+; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:  .LBB0_1: @ %outer_loop
+; CHECK-NEXT:    @ =>This Loop Header: Depth=1
+; CHECK-NEXT:    @ Child Loop BB0_2 Depth 2
+; CHECK-NEXT:    dls lr, r1
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:  .LBB0_2: @ %inner_loop
+; CHECK-NEXT:    @ Parent Loop BB0_1 Depth=1
+; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
+; CHECK-NEXT:    strh r2, [r0], #2
+; CHECK-NEXT:    le lr, .LBB0_2
+; CHECK-NEXT:  @ %bb.3: @ %outer_loop_end
+; CHECK-NEXT:    @ in Loop: Header=BB0_1 Depth=1
+; CHECK-NEXT:    adds r3, #1
+; CHECK-NEXT:    cmp r3, r1
+; CHECK-NEXT:    it eq
+; CHECK-NEXT:    popeq {r7, pc}
+; CHECK-NEXT:    b .LBB0_1
 entry:
   br label %outer_loop
 
@@ -136,61 +111,34 @@ exit:
 declare void @otherfn()
 
 define void @test_no_le(ptr %dst, i32 %n) {
-; CHECK-NOMVE-LABEL: test_no_le:
-; CHECK-NOMVE:       @ %bb.0: @ %entry
-; CHECK-NOMVE-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
-; CHECK-NOMVE-NEXT:    add.w r5, r0, r1, lsl #1
-; CHECK-NOMVE-NEXT:    mov r4, r1
-; CHECK-NOMVE-NEXT:    movs r6, #0
-; CHECK-NOMVE-NEXT:    mov.w r8, #0
-; CHECK-NOMVE-NEXT:  .LBB2_1: @ %outer_loop
-; CHECK-NOMVE-NEXT:    @ =>This Loop Header: Depth=1
-; CHECK-NOMVE-NEXT:    @ Child Loop BB2_2 Depth 2
-; CHECK-NOMVE-NEXT:    movs r7, #0
-; CHECK-NOMVE-NEXT:  .LBB2_2: @ %inner_loop
-; CHECK-NOMVE-NEXT:    @ Parent Loop BB2_1 Depth=1
-; CHECK-NOMVE-NEXT:    @ => This Inner Loop Header: Depth=2
-; CHECK-NOMVE-NEXT:    bl otherfn
-; CHECK-NOMVE-NEXT:    strh.w r6, [r5, r7, lsl #1]
-; CHECK-NOMVE-NEXT:    adds r7, #1
-; CHECK-NOMVE-NEXT:    cmp r4, r7
-; CHECK-NOMVE-NEXT:    bne .LBB2_2
-; CHECK-NOMVE-NEXT:  @ %bb.3: @ %outer_loop_end
-; CHECK-NOMVE-NEXT:    @ in Loop: Header=BB2_1 Depth=1
-; CHECK-NOMVE-NEXT:    add.w r8, r8, #1
-; CHECK-NOMVE-NEXT:    cmp r8, r4
-; CHECK-NOMVE-NEXT:    bne .LBB2_1
-; CHECK-NOMVE-NEXT:  @ %bb.4: @ %exit
-; CHECK-NOMVE-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
-;
-; CHECK-MVE-LABEL: test_no_le:
-; CHECK-MVE:       @ %bb.0: @ %entry
-; CHECK-MVE-NEXT:    push.w {r4, r5, r6, r7, r8, r9, lr}
-; CHECK-MVE-NEXT:    sub sp, #4
-; CHECK-MVE-NEXT:    add.w r8, r0, r1, lsl #1
-; CHECK-MVE-NEXT:    mov r9, r1
-; CHECK-MVE-NEXT:    movs r6, #0
-; CHECK-MVE-NEXT:    movs r7, #0
-; CHECK-MVE-NEXT:  .LBB2_1: @ %outer_loop
-; CHECK-MVE-NEXT:    @ =>This Loop Header: Depth=1
-; CHECK-MVE-NEXT:    @ Child Loop BB2_2 Depth 2
-; CHECK-MVE-NEXT:    mov r5, r8
-; CHECK-MVE-NEXT:    mov r4, r9
-; CHECK-MVE-NEXT:  .LBB2_2: @ %inner_loop
-; CHECK-MVE-NEXT:    @ Parent Loop BB2_1 Depth=1
-; CHECK-MVE-NEXT:    @ => This Inner Loop Header: Depth=2
-; CHECK-MVE-NEXT:    bl otherfn
-; CHECK-MVE-NEXT:    strh r6, [r5], #2
-; CHECK-MVE-NEXT:    subs r4, #1
-; CHECK-MVE-NEXT:    bne .LBB2_2
-; CHECK-MVE-NEXT:  @ %bb.3: @ %outer_loop_end
-; CHECK-MVE-NEXT:    @ in Loop: Header=BB2_1 Depth=1
-; CHECK-MVE-NEXT:    adds r7, #1
-; CHECK-MVE-NEXT:    cmp r7, r9
-; CHECK-MVE-NEXT:    bne .LBB2_1
-; CHECK-MVE-NEXT:  @ %bb.4: @ %exit
-; CHECK-MVE-NEXT:    add sp, #4
-; CHECK-MVE-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, pc}
+; CHECK-LABEL: test_no_le:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, lr}
+; CHECK-NEXT:    sub sp, #4
+; CHECK-NEXT:    add.w r8, r0, r1, lsl #1
+; CHECK-NEXT:    mov r9, r1
+; CHECK-NEXT:    movs r6, #0
+; CHECK-NEXT:    movs r7, #0
+; CHECK-NEXT:  .LBB2_1: @ %outer_loop
+; CHECK-NEXT:    @ =>This Loop Header: Depth=1
+; CHECK-NEXT:    @ Child Loop BB2_2 Depth 2
+; CHECK-NEXT:    mov r5, r8
+; CHECK-NEXT:    mov r4, r9
+; CHECK-NEXT:  .LBB2_2: @ %inner_loop
+; CHECK-NEXT:    @ Parent Loop BB2_1 Depth=1
+; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
+; CHECK-NEXT:    bl otherfn
+; CHECK-NEXT:    strh r6, [r5], #2
+; CHECK-NEXT:    subs r4, #1
+; CHECK-NEXT:    bne .LBB2_2
+; CHECK-NEXT:  @ %bb.3: @ %outer_loop_end
+; CHECK-NEXT:    @ in Loop: Header=BB2_1 Depth=1
+; CHECK-NEXT:    adds r7, #1
+; CHECK-NEXT:    cmp r7, r9
+; CHECK-NEXT:    bne .LBB2_1
+; CHECK-NEXT:  @ %bb.4: @ %exit
+; CHECK-NEXT:    add sp, #4
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, pc}
 entry:
   br label %outer_loop
 
@@ -218,61 +166,34 @@ exit:
 }
 
 define void @test_no_le_optsize(ptr %dst, i32 %n) optsize {
-; CHECK-NOMVE-LABEL: test_no_le_optsize:
-; CHECK-NOMVE:       @ %bb.0: @ %entry
-; CHECK-NOMVE-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
-; CHECK-NOMVE-NEXT:    add.w r5, r0, r1, lsl #1
-; CHECK-NOMVE-NEXT:    mov r4, r1
-; CHECK-NOMVE-NEXT:    movs r6, #0
-; CHECK-NOMVE-NEXT:    mov.w r8, #0
-; CHECK-NOMVE-NEXT:  .LBB3_1: @ %outer_loop
-; CHECK-NOMVE-NEXT:    @ =>This Loop Header: Depth=1
-; CHECK-NOMVE-NEXT:    @ Child Loop BB3_2 Depth 2
-; CHECK-NOMVE-NEXT:    movs r7, #0
-; CHECK-NOMVE-NEXT:  .LBB3_2: @ %inner_loop
-; CHECK-NOMVE-NEXT:    @ Parent Loop BB3_1 Depth=1
-; CHECK-NOMVE-NEXT:    @ => This Inner Loop Header: Depth=2
-; CHECK-NOMVE-NEXT:    bl otherfn
-; CHECK-NOMVE-NEXT:    strh.w r6, [r5, r7, lsl #1]
-; CHECK-NOMVE-NEXT:    adds r7, #1
-; CHECK-NOMVE-NEXT:    cmp r4, r7
-; CHECK-NOMVE-NEXT:    bne .LBB3_2
-; CHECK-NOMVE-NEXT:  @ %bb.3: @ %outer_loop_end
-; CHECK-NOMVE-NEXT:    @ in Loop: Header=BB3_1 Depth=1
-; CHECK-NOMVE-NEXT:    add.w r8, r8, #1
-; CHECK-NOMVE-NEXT:    cmp r8, r4
-; CHECK-NOMVE-NEXT:    bne .LBB3_1
-; CHECK-NOMVE-NEXT:  @ %bb.4: @ %exit
-; CHECK-NOMVE-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
-;
-; CHECK-MVE-LABEL: test_no_le_optsize:
-; CHECK-MVE:       @ %bb.0: @ %entry
-; CHECK-MVE-NEXT:    push.w {r4, r5, r6, r7, r8, r9, lr}
-; CHECK-MVE-NEXT:    sub sp, #4
-; CHECK-MVE-NEXT:    add.w r8, r0, r1, lsl #1
-; CHECK-MVE-NEXT:    mov r9, r1
-; CHECK-MVE-NEXT:    movs r6, #0
-; CHECK-MVE-NEXT:    movs r7, #0
-; CHECK-MVE-NEXT:  .LBB3_1: @ %outer_loop
-; CHECK-MVE-NEXT:    @ =>This Loop Header: Depth=1
-; CHECK-MVE-NEXT:    @ Child Loop BB3_2 Depth 2
-; CHECK-MVE-NEXT:    mov r5, r8
-; CHECK-MVE-NEXT:    mov r4, r9
-; CHECK-MVE-NEXT:  .LBB3_2: @ %inner_loop
-; CHECK-MVE-NEXT:    @ Parent Loop BB3_1 Depth=1
-; CHECK-MVE-NEXT:    @ => This Inner Loop Header: Depth=2
-; CHECK-MVE-NEXT:    bl otherfn
-; CHECK-MVE-NEXT:    strh r6, [r5], #2
-; CHECK-MVE-NEXT:    subs r4, #1
-; CHECK-MVE-NEXT:    bne .LBB3_2
-; CHECK-MVE-NEXT:  @ %bb.3: @ %outer_loop_end
-; CHECK-MVE-NEXT:    @ in Loop: Header=BB3_1 Depth=1
-; CHECK-MVE-NEXT:    adds r7, #1
-; CHECK-MVE-NEXT:    cmp r7, r9
-; CHECK-MVE-NEXT:    bne .LBB3_1
-; CHECK-MVE-NEXT:  @ %bb.4: @ %exit
-; CHECK-MVE-NEXT:    add sp, #4
-; CHECK-MVE-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, pc}
+; CHECK-LABEL: test_no_le_optsize:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, lr}
+; CHECK-NEXT:    sub sp, #4
+; CHECK-NEXT:    add.w r8, r0, r1, lsl #1
+; CHECK-NEXT:    mov r9, r1
+; CHECK-NEXT:    movs r6, #0
+; CHECK-NEXT:    movs r7, #0
+; CHECK-NEXT:  .LBB3_1: @ %outer_loop
+; CHECK-NEXT:    @ =>This Loop Header: Depth=1
+; CHECK-NEXT:    @ Child Loop BB3_2 Depth 2
+; CHECK-NEXT:    mov r5, r8
+; CHECK-NEXT:    mov r4, r9
+; CHECK-NEXT:  .LBB3_2: @ %inner_loop
+; CHECK-NEXT:    @ Parent Loop BB3_1 Depth=1
+; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
+; CHECK-NEXT:    bl otherfn
+; CHECK-NEXT:    strh r6, [r5], #2
+; CHECK-NEXT:    subs r4, #1
+; CHECK-NEXT:    bne .LBB3_2
+; CHECK-NEXT:  @ %bb.3: @ %outer_loop_end
+; CHECK-NEXT:    @ in Loop: Header=BB3_1 Depth=1
+; CHECK-NEXT:    adds r7, #1
+; CHECK-NEXT:    cmp r7, r9
+; CHECK-NEXT:    bne .LBB3_1
+; CHECK-NEXT:  @ %bb.4: @ %exit
+; CHECK-NEXT:    add sp, #4
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, pc}
 entry:
   br label %outer_loop
 
@@ -298,3 +219,6 @@ outer_loop_end:
 exit:
   ret void
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; CHECK-MVE: {{.*}}
+; CHECK-NOMVE: {{.*}}

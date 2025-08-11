@@ -36,10 +36,9 @@ define i32 @check_deinterleaving_has_deinterleave(ptr %a) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    movi v1.4s, #1
-; CHECK-NEXT:    add x8, x0, #16
+; CHECK-NEXT:    mov w8, #32 // =0x20
 ; CHECK-NEXT:    movi v3.2d, #0000000000000000
 ; CHECK-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-NEXT:    mov w9, #32 // =0x20
 ; CHECK-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-NEXT:    movi v5.2d, #0000000000000000
 ; CHECK-NEXT:    movi v7.2d, #0000000000000000
@@ -47,9 +46,8 @@ define i32 @check_deinterleaving_has_deinterleave(ptr %a) {
 ; CHECK-NEXT:    movi v16.2d, #0000000000000000
 ; CHECK-NEXT:  .LBB1_1: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldp q17, q18, [x8, #-16]
-; CHECK-NEXT:    subs x9, x9, #32
-; CHECK-NEXT:    add x8, x8, #32
+; CHECK-NEXT:    ldp q17, q18, [x0], #32
+; CHECK-NEXT:    subs x8, x8, #32
 ; CHECK-NEXT:    cmeq v17.16b, v17.16b, #0
 ; CHECK-NEXT:    cmeq v18.16b, v18.16b, #0
 ; CHECK-NEXT:    ushll2 v19.8h, v17.16b, #0

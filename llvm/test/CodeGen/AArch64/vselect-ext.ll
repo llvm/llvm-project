@@ -587,12 +587,11 @@ define void @extension_in_loop_v16i8_to_v16i32(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    ldr q2, [x10, lCPI24_2@PAGEOFF]
 ; CHECK-NEXT:  Lloh9:
 ; CHECK-NEXT:    ldr q3, [x8, lCPI24_3@PAGEOFF]
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w8, #128 ; =0x80
 ; CHECK-NEXT:  LBB24_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr q4, [x0, x8]
-; CHECK-NEXT:    add x8, x8, #16
-; CHECK-NEXT:    cmp x8, #128
+; CHECK-NEXT:    ldr q4, [x0], #16
+; CHECK-NEXT:    subs x8, x8, #16
 ; CHECK-NEXT:    cmge.16b v5, v4, #0
 ; CHECK-NEXT:    tbl.16b v7, { v4 }, v0
 ; CHECK-NEXT:    tbl.16b v16, { v4 }, v1
@@ -657,12 +656,11 @@ define void @extension_in_loop_as_shuffle_v16i8_to_v16i32(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    ldr q2, [x10, lCPI25_2@PAGEOFF]
 ; CHECK-NEXT:  Lloh17:
 ; CHECK-NEXT:    ldr q3, [x8, lCPI25_3@PAGEOFF]
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w8, #128 ; =0x80
 ; CHECK-NEXT:  LBB25_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr q4, [x0, x8]
-; CHECK-NEXT:    add x8, x8, #16
-; CHECK-NEXT:    cmp x8, #128
+; CHECK-NEXT:    ldr q4, [x0], #16
+; CHECK-NEXT:    subs x8, x8, #16
 ; CHECK-NEXT:    cmge.16b v5, v4, #0
 ; CHECK-NEXT:    tbl.16b v7, { v4 }, v0
 ; CHECK-NEXT:    tbl.16b v16, { v4 }, v1
@@ -728,12 +726,11 @@ define void @shuffle_in_loop_is_no_extend_v16i8_to_v16i32(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    ldr q2, [x10, lCPI26_2@PAGEOFF]
 ; CHECK-NEXT:  Lloh25:
 ; CHECK-NEXT:    ldr q3, [x8, lCPI26_3@PAGEOFF]
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w8, #128 ; =0x80
 ; CHECK-NEXT:  LBB26_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr q4, [x0, x8]
-; CHECK-NEXT:    add x8, x8, #16
-; CHECK-NEXT:    cmp x8, #128
+; CHECK-NEXT:    ldr q4, [x0], #16
+; CHECK-NEXT:    subs x8, x8, #16
 ; CHECK-NEXT:    cmge.16b v5, v4, #0
 ; CHECK-NEXT:    tbl.16b v7, { v4 }, v0
 ; CHECK-NEXT:    tbl.16b v16, { v4 }, v1

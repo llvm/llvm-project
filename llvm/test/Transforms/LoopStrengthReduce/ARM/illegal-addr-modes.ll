@@ -33,11 +33,12 @@ define ptr @negativeOneCase(ptr returned %a, ptr nocapture readonly %b, i32 %n) 
 ; CHECK-NEXT:    br label [[WHILE_COND2:%.*]]
 ; CHECK:       while.cond2:
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], [[WHILE_BODY5:%.*]] ], [ 0, [[WHILE_COND2_PREHEADER]] ]
-; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[B]], i32 [[LSR_IV]]
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = phi ptr [ [[INCDEC_PTR6:%.*]], [[WHILE_BODY5]] ], [ [[B]], [[WHILE_COND2_PREHEADER]] ]
 ; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[INCDEC_PTR]], i32 [[LSR_IV]]
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i32 [[N]], [[LSR_IV]]
 ; CHECK-NEXT:    br i1 [[CMP3]], label [[WHILE_END8:%.*]], label [[WHILE_BODY5]]
 ; CHECK:       while.body5:
+; CHECK-NEXT:    [[INCDEC_PTR6]] = getelementptr inbounds i8, ptr [[SCEVGEP1]], i32 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[SCEVGEP1]], align 1
 ; CHECK-NEXT:    store i8 [[TMP1]], ptr [[SCEVGEP2]], align 1
 ; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i32 [[LSR_IV]], 1

@@ -58,30 +58,29 @@ define i64 @IVIncHoist_not_all_user_in_header(i32 %c, ptr %a, ptr %b) {
 ; CHECK-NEXT:    cmp w0, #1
 ; CHECK-NEXT:    b.lt .LBB1_5
 ; CHECK-NEXT:  // %bb.1: // %for.body.preheader
-; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    mov w9, w0
-; CHECK-NEXT:    add x10, x1, #4
-; CHECK-NEXT:    add x11, x2, #8
-; CHECK-NEXT:    mov w0, #1 // =0x1
+; CHECK-NEXT:    mov w8, w0
+; CHECK-NEXT:    add x9, x1, #4
+; CHECK-NEXT:    add x10, x2, #8
+; CHECK-NEXT:    mov w0, #3 // =0x3
 ; CHECK-NEXT:  .LBB1_2: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr w12, [x10, x8, lsl #2]
-; CHECK-NEXT:    cbnz w12, .LBB1_7
+; CHECK-NEXT:    ldr w11, [x9], #4
+; CHECK-NEXT:    cbnz w11, .LBB1_7
 ; CHECK-NEXT:  // %bb.3: // %if.then
 ; CHECK-NEXT:    // in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    ldr w12, [x11, x8, lsl #2]
-; CHECK-NEXT:    cbnz w12, .LBB1_6
+; CHECK-NEXT:    ldr w11, [x10], #4
+; CHECK-NEXT:    cbnz w11, .LBB1_6
 ; CHECK-NEXT:  // %bb.4: // %for.cond
 ; CHECK-NEXT:    // in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    add x8, x8, #1
-; CHECK-NEXT:    cmp x9, x8
+; CHECK-NEXT:    subs x8, x8, #1
+; CHECK-NEXT:    add x0, x0, #1
 ; CHECK-NEXT:    b.ne .LBB1_2
 ; CHECK-NEXT:  .LBB1_5:
 ; CHECK-NEXT:    mov x0, xzr
+; CHECK-NEXT:  .LBB1_6: // %return
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB1_6: // %if.then.return.loopexit_crit_edge
-; CHECK-NEXT:    add x0, x8, #3
-; CHECK-NEXT:  .LBB1_7: // %return
+; CHECK-NEXT:  .LBB1_7:
+; CHECK-NEXT:    mov w0, #1 // =0x1
 ; CHECK-NEXT:    ret
 entry:
   %cmp13 = icmp sgt i32 %c, 0
