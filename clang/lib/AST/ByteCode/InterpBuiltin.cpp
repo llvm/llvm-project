@@ -141,16 +141,6 @@ static void diagnoseNonConstexprBuiltin(InterpState &S, CodePtr OpPC,
     S.CCEDiag(Loc, diag::note_invalid_subexpr_in_const_expr);
 }
 
-// Same implementation as Compiler::getRoundingMode.
-static llvm::RoundingMode getRoundingMode(const InterpState &S, const Expr *E) {
-  FPOptions FPO = E->getFPFeaturesInEffect(S.Ctx.getLangOpts());
-
-  if (FPO.getRoundingMode() == llvm::RoundingMode::Dynamic)
-    return llvm::RoundingMode::NearestTiesToEven;
-
-  return FPO.getRoundingMode();
-}
-
 static bool interp__builtin_is_constant_evaluated(InterpState &S, CodePtr OpPC,
                                                   const InterpFrame *Frame,
                                                   const CallExpr *Call) {
@@ -2334,7 +2324,8 @@ static bool interp__builtin_elementwise_fma(InterpState &S, CodePtr OpPC,
                                             const CallExpr *Call) {
   assert(Call->getNumArgs() == 3);
 
-  llvm::RoundingMode RM = getRoundingMode(S, Call);
+  FPOptions FPO = Call->getFPFeaturesInEffect(S.Ctx.getLangOpts());
+  llvm::RoundingMode RM = getRoundingMode(FPO);
   const QualType Arg1Type = Call->getArg(0)->getType();
   const QualType Arg2Type = Call->getArg(1)->getType();
   const QualType Arg3Type = Call->getArg(2)->getType();
