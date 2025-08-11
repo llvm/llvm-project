@@ -61,6 +61,7 @@ define amdgpu_cs void @_amdgpu_cs_main(float %0, i32 %1) {
 ; GFX12-NEXT:    s_mov_b32 s1, 0
 ; GFX12-NEXT:    ; implicit-def: $sgpr2
 ; GFX12-NEXT:    s_branch .LBB0_2
+; GFX12-NEXT:    .p2align 4
 ; GFX12-NEXT:  .LBB0_1: ; %Flow
 ; GFX12-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s3

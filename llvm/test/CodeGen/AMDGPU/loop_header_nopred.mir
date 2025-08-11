@@ -26,7 +26,7 @@ body:             |
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT:   S_CBRANCH_EXECZ %bb.1, implicit $exec
   ; GFX10-NEXT: {{  $}}
-  ; GFX10-NEXT: bb.5:
+  ; GFX10-NEXT: bb.5 (align 32):
   ; GFX10-NEXT:   successors: %bb.1(0x04000000), %bb.5(0x7c000000)
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT:   S_NOP 0
@@ -52,7 +52,7 @@ body:             |
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT:   S_BRANCH %bb.2
   ; GFX11-NEXT: {{  $}}
-  ; GFX11-NEXT: bb.1:
+  ; GFX11-NEXT: bb.1 (align 32):
   ; GFX11-NEXT:   successors: %bb.7(0x04000000), %bb.2(0x7c000000)
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT:   S_CBRANCH_VCCNZ %bb.7, implicit $vcc_lo
@@ -62,7 +62,7 @@ body:             |
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT:   S_CBRANCH_EXECZ %bb.1, implicit $exec
   ; GFX11-NEXT: {{  $}}
-  ; GFX11-NEXT: bb.5:
+  ; GFX11-NEXT: bb.5 (align 32):
   ; GFX11-NEXT:   successors: %bb.1(0x04000000), %bb.5(0x7c000000)
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT:   S_NOP 0

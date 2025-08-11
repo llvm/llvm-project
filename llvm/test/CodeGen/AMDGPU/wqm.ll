@@ -763,6 +763,7 @@ define amdgpu_ps float @test_wwm6_loop() {
 ; GFX9-W64-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GFX9-W64-NEXT:    v_mbcnt_hi_u32_b32 v3, -1, v0
 ; GFX9-W64-NEXT:    s_mov_b64 s[0:1], 0
+; GFX9-W64-NEXT:    .p2align 4
 ; GFX9-W64-NEXT:  .LBB17_1: ; %loop
 ; GFX9-W64-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-W64-NEXT:    s_or_saveexec_b64 s[2:3], -1
@@ -791,6 +792,7 @@ define amdgpu_ps float @test_wwm6_loop() {
 ; GFX10-W32-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GFX10-W32-NEXT:    s_mov_b32 s0, 0
 ; GFX10-W32-NEXT:    v_mbcnt_hi_u32_b32 v3, -1, v0
+; GFX10-W32-NEXT:    .p2align 5
 ; GFX10-W32-NEXT:  .LBB17_1: ; %loop
 ; GFX10-W32-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-W32-NEXT:    s_or_saveexec_b32 s1, -1
@@ -1229,6 +1231,7 @@ define amdgpu_ps float @test_strict_wqm6_loop() {
 ; GFX9-W64-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GFX9-W64-NEXT:    v_mbcnt_hi_u32_b32 v3, -1, v0
 ; GFX9-W64-NEXT:    s_mov_b64 s[0:1], 0
+; GFX9-W64-NEXT:    .p2align 4
 ; GFX9-W64-NEXT:  .LBB25_1: ; %loop
 ; GFX9-W64-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-W64-NEXT:    s_mov_b64 s[2:3], exec
@@ -1260,6 +1263,7 @@ define amdgpu_ps float @test_strict_wqm6_loop() {
 ; GFX10-W32-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GFX10-W32-NEXT:    s_mov_b32 s0, 0
 ; GFX10-W32-NEXT:    v_mbcnt_hi_u32_b32 v3, -1, v0
+; GFX10-W32-NEXT:    .p2align 5
 ; GFX10-W32-NEXT:  .LBB25_1: ; %loop
 ; GFX10-W32-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-W32-NEXT:    s_mov_b32 s1, exec_lo
@@ -1936,6 +1940,7 @@ define amdgpu_ps <4 x float> @test_loop_vcc(<4 x float> %in) nounwind {
 ; GFX9-W64-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX9-W64-NEXT:    s_mov_b32 s4, 0x40e00000
 ; GFX9-W64-NEXT:    s_branch .LBB35_2
+; GFX9-W64-NEXT:    .p2align 4
 ; GFX9-W64-NEXT:  .LBB35_1: ; %body
 ; GFX9-W64-NEXT:    ; in Loop: Header=BB35_2 Depth=1
 ; GFX9-W64-NEXT:    image_sample v[4:7], v0, s[0:7], s[0:3] dmask:0xf
@@ -2660,6 +2665,7 @@ define amdgpu_ps float @test_strict_wwm6_loop() {
 ; GFX9-W64-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GFX9-W64-NEXT:    v_mbcnt_hi_u32_b32 v3, -1, v0
 ; GFX9-W64-NEXT:    s_mov_b64 s[0:1], 0
+; GFX9-W64-NEXT:    .p2align 4
 ; GFX9-W64-NEXT:  .LBB47_1: ; %loop
 ; GFX9-W64-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-W64-NEXT:    s_or_saveexec_b64 s[2:3], -1
@@ -2688,6 +2694,7 @@ define amdgpu_ps float @test_strict_wwm6_loop() {
 ; GFX10-W32-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GFX10-W32-NEXT:    s_mov_b32 s0, 0
 ; GFX10-W32-NEXT:    v_mbcnt_hi_u32_b32 v3, -1, v0
+; GFX10-W32-NEXT:    .p2align 5
 ; GFX10-W32-NEXT:  .LBB47_1: ; %loop
 ; GFX10-W32-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-W32-NEXT:    s_or_saveexec_b32 s1, -1
