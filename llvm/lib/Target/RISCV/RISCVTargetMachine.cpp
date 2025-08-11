@@ -17,6 +17,9 @@
 #include "RISCVTargetObjectFile.h"
 #include "RISCVTargetTransformInfo.h"
 #include "TargetInfo/RISCVTargetInfo.h"
+#include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
@@ -31,6 +34,9 @@
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
@@ -40,6 +46,7 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Vectorize/EVLIndVarSimplify.h"
 #include "llvm/Transforms/Vectorize/LoopIdiomVectorize.h"
+#include <cassert>
 #include <optional>
 using namespace llvm;
 
@@ -236,9 +243,36 @@ RISCVTargetMachine::getSubtargetImpl(const Function &F) const {
   RVVBitsMax =
       llvm::bit_floor((RVVBitsMax < 64 || RVVBitsMax > 65536) ? 0 : RVVBitsMax);
 
+  using ZicfilpLabelSchemeKind = RISCVSubtarget::ZicfilpLabelSchemeKind;
+  ZicfilpLabelSchemeKind ZicfilpLabelScheme = ZicfilpLabelSchemeKind::Disabled;
+  if (const Module *const M = F.getParent()) {
+    if (const Metadata *const Flag = M->getModuleFlag("cf-protection-branch");
+        Flag && !mdconst::extract<ConstantInt>(Flag)->isZero()) {
+      StringRef CFBranchLabelScheme;
+      if (const Metadata *const MD = M->getModuleFlag("cf-branch-label-scheme"))
+        CFBranchLabelScheme = cast<MDString>(MD)->getString();
+      else
+        report_fatal_error("missing cf-branch-label-scheme module flag");
+
+      // See clang::getCFBranchLabelSchemeFlagVal() for possible
+      // CFBranchLabelScheme
+      ZicfilpLabelScheme =
+          StringSwitch<ZicfilpLabelSchemeKind>(CFBranchLabelScheme)
+              .Case("unlabeled", ZicfilpLabelSchemeKind::Unlabeled)
+              .Case("func-sig", ZicfilpLabelSchemeKind::FuncSig)
+              .Default(ZicfilpLabelSchemeKind::EnabledUnknown);
+      assert(ZicfilpLabelScheme != ZicfilpLabelSchemeKind::EnabledUnknown);
+    }
+  }
+
   SmallString<512> Key;
-  raw_svector_ostream(Key) << "RVVMin" << RVVBitsMin << "RVVMax" << RVVBitsMax
-                           << CPU << TuneCPU << FS;
+  {
+    raw_svector_ostream OS(Key);
+    OS << "RVVMin" << RVVBitsMin << "RVVMax" << RVVBitsMax;
+    if (ZicfilpLabelScheme != ZicfilpLabelSchemeKind::Disabled)
+      OS << "ZicfilpLabelSchemeKind" << to_underlying(ZicfilpLabelScheme);
+    OS << CPU << TuneCPU << FS;
+  }
   auto &I = SubtargetMap[Key];
   if (!I) {
     // This needs to be done before we create a new subtarget since any
@@ -255,8 +289,9 @@ RISCVTargetMachine::getSubtargetImpl(const Function &F) const {
       }
       ABIName = ModuleTargetABI->getString();
     }
-    I = std::make_unique<RISCVSubtarget>(
-        TargetTriple, CPU, TuneCPU, FS, ABIName, RVVBitsMin, RVVBitsMax, *this);
+    I = std::make_unique<RISCVSubtarget>(TargetTriple, CPU, TuneCPU, FS,
+                                         ABIName, RVVBitsMin, RVVBitsMax,
+                                         ZicfilpLabelScheme, *this);
   }
   return I.get();
 }

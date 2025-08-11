@@ -91,6 +91,14 @@ public:
     NLog2N,
   };
   // clang-format on
+
+  enum class ZicfilpLabelSchemeKind {
+    Disabled,
+    EnabledUnknown,
+    Unlabeled,
+    FuncSig,
+  };
+
 private:
   virtual void anchor();
 
@@ -107,6 +115,7 @@ private:
   unsigned RVVVectorBitsMax;
   uint8_t MaxInterleaveFactor = 2;
   RISCVABI::ABI TargetABI = RISCVABI::ABI_Unknown;
+  const ZicfilpLabelSchemeKind ZicfilpLabelScheme;
   std::bitset<RISCV::NUM_TARGET_REGS> UserReservedRegister;
   const RISCVTuneInfoTable::RISCVTuneInfo *TuneInfo;
 
@@ -127,7 +136,9 @@ public:
   // Initializes the data members to match that of the specified triple.
   RISCVSubtarget(const Triple &TT, StringRef CPU, StringRef TuneCPU,
                  StringRef FS, StringRef ABIName, unsigned RVVVectorBitsMin,
-                 unsigned RVVVectorLMULMax, const TargetMachine &TM);
+                 unsigned RVVVectorLMULMax,
+                 ZicfilpLabelSchemeKind ZicfilpLabelScheme,
+                 const TargetMachine &TM);
 
   ~RISCVSubtarget() override;
 
@@ -184,6 +195,13 @@ public:
   }
   bool hasHalfFPLoadStoreMove() const {
     return HasStdExtZfhmin || HasStdExtZfbfmin;
+  }
+
+  ZicfilpLabelSchemeKind getZicfilpLabelScheme() const {
+    return ZicfilpLabelScheme;
+  }
+  bool hasZicfilpCFI() const {
+    return getZicfilpLabelScheme() != ZicfilpLabelSchemeKind::Disabled;
   }
 
   bool hasConditionalMoveFusion() const {

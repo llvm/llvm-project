@@ -99,9 +99,11 @@ RISCVSubtarget::RISCVSubtarget(const Triple &TT, StringRef CPU,
                                StringRef TuneCPU, StringRef FS,
                                StringRef ABIName, unsigned RVVVectorBitsMin,
                                unsigned RVVVectorBitsMax,
+                               RISCVSubtarget::ZicfilpLabelSchemeKind Zicfilp,
                                const TargetMachine &TM)
     : RISCVGenSubtargetInfo(TT, CPU, TuneCPU, FS),
       RVVVectorBitsMin(RVVVectorBitsMin), RVVVectorBitsMax(RVVVectorBitsMax),
+      ZicfilpLabelScheme(Zicfilp),
       FrameLowering(
           initializeSubtargetDependencies(TT, CPU, TuneCPU, FS, ABIName)),
       InstrInfo(*this), RegInfo(getHwMode()), TLInfo(TM, *this) {

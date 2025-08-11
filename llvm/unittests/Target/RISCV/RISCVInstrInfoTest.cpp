@@ -61,7 +61,8 @@ protected:
     ST = std::make_unique<RISCVSubtarget>(
         TM->getTargetTriple(), TM->getTargetCPU(), TM->getTargetCPU(),
         TM->getTargetFeatureString(),
-        TM->getTargetTriple().isArch64Bit() ? "lp64" : "ilp32", 0, 0, *TM);
+        TM->getTargetTriple().isArch64Bit() ? "lp64" : "ilp32", 0, 0,
+        RISCVSubtarget::ZicfilpLabelSchemeKind::Disabled, *TM);
 
     MF = std::make_unique<MachineFunction>(*F, *TM, *ST, MMI->getContext(), 42);
   }

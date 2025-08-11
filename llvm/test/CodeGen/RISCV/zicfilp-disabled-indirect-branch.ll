@@ -6,7 +6,7 @@
 
 define void @brind(i32 noundef signext %0) {
   ; CHECK-LABEL: name: brind
-  ; CHECK:   PseudoBRINDNonX7 killed [[VAR:%.*]], 0
+  ; CHECK:   PseudoBRIND killed [[VAR:%.*]], 0
   %2 = sext i32 %0 to i64
   %3 = getelementptr inbounds [2 x ptr], ptr @brind.arr, i64 0, i64 %2
   %4 = load ptr, ptr %3, align 8
@@ -27,7 +27,7 @@ define void @brind(i32 noundef signext %0) {
 
 define i32 @indirect_call(ptr %0) {
   ; CHECK-LABEL: name: indirect_call
-  ; CHECK: PseudoCALLIndirectNonX7
+  ; CHECK: PseudoCALLIndirect
   call void %0()
   ret i32 0
 }
@@ -35,12 +35,7 @@ define i32 @indirect_call(ptr %0) {
 
 define void @indirect_tail(ptr %0) {
   ; CHECK-LABEL: name: indirect_tail
-  ; CHECK: PseudoTAILIndirectNonX7
+  ; CHECK: PseudoTAILIndirect
   tail call void %0()
   ret void
 }
-
-!llvm.module.flags = !{!0, !1}
-
-!0 = !{i32 8, !"cf-protection-branch", i32 1}
-!1 = !{i32 1, !"cf-branch-label-scheme", !"unlabeled"}
