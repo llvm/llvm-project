@@ -2187,7 +2187,10 @@ public:
     return CreateCast(Instruction::FPExt, V, DestTy, Name, FPMathTag,
                       FMFSource);
   }
-
+  Value *CreatePtrToAddr(Value *V, const Twine &Name = "") {
+    return CreateCast(Instruction::PtrToInt, V,
+                      BB->getDataLayout().getAddressType(V->getType()), Name);
+  }
   Value *CreatePtrToInt(Value *V, Type *DestTy,
                         const Twine &Name = "") {
     return CreateCast(Instruction::PtrToInt, V, DestTy, Name);
