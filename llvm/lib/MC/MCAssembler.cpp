@@ -8,7 +8,6 @@
 
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
@@ -60,7 +59,8 @@ STATISTIC(EmittedFillFragments,
           "Number of emitted assembler fragments - fill");
 STATISTIC(EmittedNopsFragments, "Number of emitted assembler fragments - nops");
 STATISTIC(EmittedOrgFragments, "Number of emitted assembler fragments - org");
-STATISTIC(evaluateFixup, "Number of evaluated fixups");
+STATISTIC(Fixups, "Number of fixups");
+STATISTIC(FixupEvalForRelax, "Number of fixup evaluations for relaxation");
 STATISTIC(ObjectBytes, "Number of emitted object file bytes");
 STATISTIC(RelaxationSteps, "Number of assembler layout and relaxation steps");
 STATISTIC(RelaxedInstructions, "Number of relaxed instructions");
@@ -107,7 +107,6 @@ void MCAssembler::reset() {
 bool MCAssembler::registerSection(MCSection &Section) {
   if (Section.isRegistered())
     return false;
-  assert(Section.curFragList()->Head && "allocInitialFragment not called");
   Sections.push_back(&Section);
   Section.setIsRegistered(true);
   return true;
@@ -142,9 +141,9 @@ bool MCAssembler::isThumbFunc(const MCSymbol *Symbol) const {
 
 bool MCAssembler::evaluateFixup(const MCFragment &F, MCFixup &Fixup,
                                 MCValue &Target, uint64_t &Value,
-                                bool RecordReloc,
-                                MutableArrayRef<char> Contents) const {
-  ++stats::evaluateFixup;
+                                bool RecordReloc, uint8_t *Data) const {
+  if (RecordReloc)
+    ++stats::Fixups;
 
   // FIXME: This code has some duplication with recordRelocation. We should
   // probably merge the two into a single callback that tries to evaluate a
@@ -187,7 +186,7 @@ bool MCAssembler::evaluateFixup(const MCFragment &F, MCFixup &Fixup,
 
   if (IsResolved && mc::isRelocRelocation(Fixup.getKind()))
     IsResolved = false;
-  getBackend().applyFixup(F, Fixup, Target, Contents, Value, IsResolved);
+  getBackend().applyFixup(F, Fixup, Target, Data, Value, IsResolved);
   return true;
 }
 
@@ -705,21 +704,25 @@ void MCAssembler::layout() {
       for (MCFixup &Fixup : F.getFixups()) {
         uint64_t FixedValue;
         MCValue Target;
+        assert(mc::isRelocRelocation(Fixup.getKind()) ||
+               Fixup.getOffset() <= F.getFixedSize());
+        auto *Data =
+            reinterpret_cast<uint8_t *>(Contents.data() + Fixup.getOffset());
         evaluateFixup(F, Fixup, Target, FixedValue,
-                      /*RecordReloc=*/true, Contents);
+                      /*RecordReloc=*/true, Data);
       }
-      if (F.getVarFixups().size()) {
-        // In the variable part, fixup offsets are relative to the fixed part's
-        // start. Extend the variable contents to the left to account for the
-        // fixed part size.
-        Contents = MutableArrayRef(F.getParent()->ContentStorage)
-                       .slice(F.VarContentStart - Contents.size(), F.getSize());
-        for (MCFixup &Fixup : F.getVarFixups()) {
-          uint64_t FixedValue;
-          MCValue Target;
-          evaluateFixup(F, Fixup, Target, FixedValue,
-                        /*RecordReloc=*/true, Contents);
-        }
+      // In the variable part, fixup offsets are relative to the fixed part's
+      // start.
+      for (MCFixup &Fixup : F.getVarFixups()) {
+        uint64_t FixedValue;
+        MCValue Target;
+        assert(mc::isRelocRelocation(Fixup.getKind()) ||
+               (Fixup.getOffset() >= F.getFixedSize() &&
+                Fixup.getOffset() <= F.getSize()));
+        auto *Data = reinterpret_cast<uint8_t *>(
+            F.getVarContents().data() + (Fixup.getOffset() - F.getFixedSize()));
+        evaluateFixup(F, Fixup, Target, FixedValue,
+                      /*RecordReloc=*/true, Data);
       }
     }
   }
@@ -737,7 +740,7 @@ void MCAssembler::Finish() {
 
 bool MCAssembler::fixupNeedsRelaxation(const MCFragment &F,
                                        const MCFixup &Fixup) const {
-  assert(getBackendPtr() && "Expected assembler backend");
+  ++stats::FixupEvalForRelax;
   MCValue Target;
   uint64_t Value;
   bool Resolved = evaluateFixup(F, const_cast<MCFixup &>(Fixup), Target, Value,
@@ -942,6 +945,14 @@ bool MCAssembler::relaxFill(MCFillFragment &F) {
   return true;
 }
 
+bool MCAssembler::relaxOrg(MCOrgFragment &F) {
+  uint64_t Size = computeFragmentSize(F);
+  if (F.getSize() == Size)
+    return false;
+  F.setSize(Size);
+  return true;
+}
+
 bool MCAssembler::relaxFragment(MCFragment &F) {
   switch(F.getKind()) {
   default:
@@ -963,6 +974,8 @@ bool MCAssembler::relaxFragment(MCFragment &F) {
     return relaxCVDefRange(cast<MCCVDefRangeFragment>(F));
   case MCFragment::FT_Fill:
     return relaxFill(cast<MCFillFragment>(F));
+  case MCFragment::FT_Org:
+    return relaxOrg(static_cast<MCOrgFragment &>(F));
   }
 }
 

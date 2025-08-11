@@ -1163,7 +1163,7 @@ int SlotTracker::processIndex() {
   std::vector<StringRef> ModulePaths;
   for (auto &[ModPath, _] : TheIndex->modulePaths())
     ModulePaths.push_back(ModPath);
-  llvm::sort(ModulePaths.begin(), ModulePaths.end());
+  llvm::sort(ModulePaths);
   for (auto &ModPath : ModulePaths)
     CreateModulePathSlot(ModPath);
 

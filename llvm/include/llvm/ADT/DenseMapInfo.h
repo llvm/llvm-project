@@ -51,10 +51,10 @@ inline unsigned combineHashValue(unsigned a, unsigned b) {
 /// just be `void`.
 template<typename T, typename Enable = void>
 struct DenseMapInfo {
-  //static inline T getEmptyKey();
-  //static inline T getTombstoneKey();
-  //static unsigned getHashValue(const T &Val);
-  //static bool isEqual(const T &LHS, const T &RHS);
+  // static constexpr T getEmptyKey();
+  // static constexpr T getTombstoneKey();
+  // static unsigned getHashValue(const T &Val);
+  // static bool isEqual(const T &LHS, const T &RHS);
 };
 
 // Provide DenseMapInfo for all pointers. Come up with sentinel pointer values
@@ -70,13 +70,13 @@ struct DenseMapInfo<T*> {
   //               "Log2MaxAlign bits of alignment");
   static constexpr uintptr_t Log2MaxAlign = 12;
 
-  static inline T* getEmptyKey() {
+  static constexpr T *getEmptyKey() {
     uintptr_t Val = static_cast<uintptr_t>(-1);
     Val <<= Log2MaxAlign;
     return reinterpret_cast<T*>(Val);
   }
 
-  static inline T* getTombstoneKey() {
+  static constexpr T *getTombstoneKey() {
     uintptr_t Val = static_cast<uintptr_t>(-2);
     Val <<= Log2MaxAlign;
     return reinterpret_cast<T*>(Val);
@@ -92,8 +92,8 @@ struct DenseMapInfo<T*> {
 
 // Provide DenseMapInfo for chars.
 template<> struct DenseMapInfo<char> {
-  static inline char getEmptyKey() { return ~0; }
-  static inline char getTombstoneKey() { return ~0 - 1; }
+  static constexpr char getEmptyKey() { return ~0; }
+  static constexpr char getTombstoneKey() { return ~0 - 1; }
   static unsigned getHashValue(const char& Val) { return Val * 37U; }
 
   static bool isEqual(const char &LHS, const char &RHS) {
@@ -103,8 +103,8 @@ template<> struct DenseMapInfo<char> {
 
 // Provide DenseMapInfo for unsigned chars.
 template <> struct DenseMapInfo<unsigned char> {
-  static inline unsigned char getEmptyKey() { return ~0; }
-  static inline unsigned char getTombstoneKey() { return ~0 - 1; }
+  static constexpr unsigned char getEmptyKey() { return ~0; }
+  static constexpr unsigned char getTombstoneKey() { return ~0 - 1; }
   static unsigned getHashValue(const unsigned char &Val) { return Val * 37U; }
 
   static bool isEqual(const unsigned char &LHS, const unsigned char &RHS) {
@@ -114,8 +114,8 @@ template <> struct DenseMapInfo<unsigned char> {
 
 // Provide DenseMapInfo for unsigned shorts.
 template <> struct DenseMapInfo<unsigned short> {
-  static inline unsigned short getEmptyKey() { return 0xFFFF; }
-  static inline unsigned short getTombstoneKey() { return 0xFFFF - 1; }
+  static constexpr unsigned short getEmptyKey() { return 0xFFFF; }
+  static constexpr unsigned short getTombstoneKey() { return 0xFFFF - 1; }
   static unsigned getHashValue(const unsigned short &Val) { return Val * 37U; }
 
   static bool isEqual(const unsigned short &LHS, const unsigned short &RHS) {
@@ -125,8 +125,8 @@ template <> struct DenseMapInfo<unsigned short> {
 
 // Provide DenseMapInfo for unsigned ints.
 template<> struct DenseMapInfo<unsigned> {
-  static inline unsigned getEmptyKey() { return ~0U; }
-  static inline unsigned getTombstoneKey() { return ~0U - 1; }
+  static constexpr unsigned getEmptyKey() { return ~0U; }
+  static constexpr unsigned getTombstoneKey() { return ~0U - 1; }
   static unsigned getHashValue(const unsigned& Val) { return Val * 37U; }
 
   static bool isEqual(const unsigned& LHS, const unsigned& RHS) {
@@ -136,8 +136,8 @@ template<> struct DenseMapInfo<unsigned> {
 
 // Provide DenseMapInfo for unsigned longs.
 template<> struct DenseMapInfo<unsigned long> {
-  static inline unsigned long getEmptyKey() { return ~0UL; }
-  static inline unsigned long getTombstoneKey() { return ~0UL - 1L; }
+  static constexpr unsigned long getEmptyKey() { return ~0UL; }
+  static constexpr unsigned long getTombstoneKey() { return ~0UL - 1L; }
 
   static unsigned getHashValue(const unsigned long& Val) {
     if constexpr (sizeof(Val) == 4)
@@ -153,8 +153,8 @@ template<> struct DenseMapInfo<unsigned long> {
 
 // Provide DenseMapInfo for unsigned long longs.
 template<> struct DenseMapInfo<unsigned long long> {
-  static inline unsigned long long getEmptyKey() { return ~0ULL; }
-  static inline unsigned long long getTombstoneKey() { return ~0ULL - 1ULL; }
+  static constexpr unsigned long long getEmptyKey() { return ~0ULL; }
+  static constexpr unsigned long long getTombstoneKey() { return ~0ULL - 1ULL; }
 
   static unsigned getHashValue(const unsigned long long& Val) {
     return densemap::detail::mix(Val);
@@ -168,16 +168,16 @@ template<> struct DenseMapInfo<unsigned long long> {
 
 // Provide DenseMapInfo for shorts.
 template <> struct DenseMapInfo<short> {
-  static inline short getEmptyKey() { return 0x7FFF; }
-  static inline short getTombstoneKey() { return -0x7FFF - 1; }
+  static constexpr short getEmptyKey() { return 0x7FFF; }
+  static constexpr short getTombstoneKey() { return -0x7FFF - 1; }
   static unsigned getHashValue(const short &Val) { return Val * 37U; }
   static bool isEqual(const short &LHS, const short &RHS) { return LHS == RHS; }
 };
 
 // Provide DenseMapInfo for ints.
 template<> struct DenseMapInfo<int> {
-  static inline int getEmptyKey() { return 0x7fffffff; }
-  static inline int getTombstoneKey() { return -0x7fffffff - 1; }
+  static constexpr int getEmptyKey() { return 0x7fffffff; }
+  static constexpr int getTombstoneKey() { return -0x7fffffff - 1; }
   static unsigned getHashValue(const int& Val) { return (unsigned)(Val * 37U); }
 
   static bool isEqual(const int& LHS, const int& RHS) {
@@ -187,11 +187,11 @@ template<> struct DenseMapInfo<int> {
 
 // Provide DenseMapInfo for longs.
 template<> struct DenseMapInfo<long> {
-  static inline long getEmptyKey() {
+  static constexpr long getEmptyKey() {
     return (1UL << (sizeof(long) * 8 - 1)) - 1UL;
   }
 
-  static inline long getTombstoneKey() { return getEmptyKey() - 1L; }
+  static constexpr long getTombstoneKey() { return getEmptyKey() - 1L; }
 
   static unsigned getHashValue(const long& Val) {
     return (unsigned)(Val * 37UL);
@@ -204,8 +204,10 @@ template<> struct DenseMapInfo<long> {
 
 // Provide DenseMapInfo for long longs.
 template<> struct DenseMapInfo<long long> {
-  static inline long long getEmptyKey() { return 0x7fffffffffffffffLL; }
-  static inline long long getTombstoneKey() { return -0x7fffffffffffffffLL-1; }
+  static constexpr long long getEmptyKey() { return 0x7fffffffffffffffLL; }
+  static constexpr long long getTombstoneKey() {
+    return -0x7fffffffffffffffLL - 1;
+  }
 
   static unsigned getHashValue(const long long& Val) {
     return (unsigned)(Val * 37ULL);
@@ -224,12 +226,12 @@ struct DenseMapInfo<std::pair<T, U>> {
   using FirstInfo = DenseMapInfo<T>;
   using SecondInfo = DenseMapInfo<U>;
 
-  static inline Pair getEmptyKey() {
+  static constexpr Pair getEmptyKey() {
     return std::make_pair(FirstInfo::getEmptyKey(),
                           SecondInfo::getEmptyKey());
   }
 
-  static inline Pair getTombstoneKey() {
+  static constexpr Pair getTombstoneKey() {
     return std::make_pair(FirstInfo::getTombstoneKey(),
                           SecondInfo::getTombstoneKey());
   }
@@ -257,11 +259,11 @@ struct DenseMapInfo<std::pair<T, U>> {
 template <typename... Ts> struct DenseMapInfo<std::tuple<Ts...>> {
   using Tuple = std::tuple<Ts...>;
 
-  static inline Tuple getEmptyKey() {
+  static constexpr Tuple getEmptyKey() {
     return Tuple(DenseMapInfo<Ts>::getEmptyKey()...);
   }
 
-  static inline Tuple getTombstoneKey() {
+  static constexpr Tuple getTombstoneKey() {
     return Tuple(DenseMapInfo<Ts>::getTombstoneKey()...);
   }
 
@@ -309,10 +311,22 @@ struct DenseMapInfo<Enum, std::enable_if_t<std::is_enum_v<Enum>>> {
   using UnderlyingType = std::underlying_type_t<Enum>;
   using Info = DenseMapInfo<UnderlyingType>;
 
-  static Enum getEmptyKey() { return static_cast<Enum>(Info::getEmptyKey()); }
+  // If an enum does not have a "fixed" underlying type, it may be UB to cast
+  // some values of the underlying type to the enum. We use an "extra" constexpr
+  // local to ensure that such UB would trigger "static assertion expression is
+  // not an integral constant expression", rather than runtime UB.
+  //
+  // If you hit this error, you can fix by switching to `enum class`, or adding
+  // an explicit underlying type (e.g. `enum X : int`) to the enum's definition.
 
-  static Enum getTombstoneKey() {
-    return static_cast<Enum>(Info::getTombstoneKey());
+  static constexpr Enum getEmptyKey() {
+    constexpr Enum V = static_cast<Enum>(Info::getEmptyKey());
+    return V;
+  }
+
+  static constexpr Enum getTombstoneKey() {
+    constexpr Enum V = static_cast<Enum>(Info::getTombstoneKey());
+    return V;
   }
 
   static unsigned getHashValue(const Enum &Val) {
@@ -326,9 +340,11 @@ template <typename T> struct DenseMapInfo<std::optional<T>> {
   using Optional = std::optional<T>;
   using Info = DenseMapInfo<T>;
 
-  static inline Optional getEmptyKey() { return {Info::getEmptyKey()}; }
+  static constexpr Optional getEmptyKey() { return {Info::getEmptyKey()}; }
 
-  static inline Optional getTombstoneKey() { return {Info::getTombstoneKey()}; }
+  static constexpr Optional getTombstoneKey() {
+    return {Info::getTombstoneKey()};
+  }
 
   static unsigned getHashValue(const Optional &OptionalVal) {
     return detail::combineHashValue(

@@ -68,6 +68,7 @@ add_llvm_component_library(LLVMTransformUtils
   MoveAutoInit.cpp
   NameAnonGlobals.cpp
   PredicateInfo.cpp
+  ProfileVerify.cpp
   PromoteMemoryToRegister.cpp
   RelLookupTableConverter.cpp
   ScalarEvolutionExpander.cpp
@@ -83,6 +84,7 @@ add_llvm_component_library(LLVMTransformUtils
   SimplifyLibCalls.cpp
   SizeOpts.cpp
   SplitModule.cpp
+  SplitModuleByCategory.cpp
   StripNonLineTableDebugInfo.cpp
   SymbolRewriter.cpp
   UnifyFunctionExitNodes.cpp

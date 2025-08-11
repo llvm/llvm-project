@@ -12,7 +12,7 @@
 #include "lldb/Utility/Endian.h"
 #include "lldb/lldb-enumerations.h"
 
-#include "llvm/Support/SwapByteOrder.h"
+#include "llvm/ADT/bit.h"
 
 #include <cassert>
 #include <cstdint>
