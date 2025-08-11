@@ -1210,7 +1210,7 @@ defm EXTMUL_LOW_U :
 defm EXTMUL_HIGH_U :
   SIMDExtBinary<I64x2, extmul_high_u, "extmul_high_i32x4_u", 0xdf>;
 
-// Pattern for dot
+// Pattern for i32x4.dot_i16x8_s
 def : Pat<
   (v4i32 (add
     (wasm_shuffle
