@@ -297,19 +297,18 @@ def non_imm32 : PatLeaf<(i32 GPR), [{ return !isa<ConstantSDNode>(N); }]>;
 //  Miscellaneous Instructions.
 //
 
-// FIXME: Marking these as hasSideEffects is necessary to prevent machine DCE
-// from removing one half of the matched pairs. That breaks PEI, which assumes
-// these will always be in pairs, and asserts if it finds otherwise. Better way?
-let Defs = [SP], Uses = [SP], hasSideEffects = 1 in {
+// We set Sched to empty list because we expect these instructions to simply get
+// removed in most cases.
+let Defs = [SP], Uses = [SP], hasSideEffects = 1, isCodeGenOnly = 1 in {
 def tADJCALLSTACKUP :
   PseudoInst<(outs), (ins i32imm:$amt1, i32imm:$amt2), NoItinerary,
              [(ARMcallseq_end imm:$amt1, imm:$amt2)]>,
-            Requires<[IsThumb, IsThumb1Only]>;
+            Requires<[IsThumb, IsThumb1Only]>, Sched<[]>;
 
 def tADJCALLSTACKDOWN :
   PseudoInst<(outs), (ins i32imm:$amt, i32imm:$amt2), NoItinerary,
              [(ARMcallseq_start imm:$amt, imm:$amt2)]>,
-            Requires<[IsThumb, IsThumb1Only]>;
+            Requires<[IsThumb, IsThumb1Only]>, Sched<[]>;
 }
 
 class T1SystemEncoding<bits<8> opc>
