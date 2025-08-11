@@ -3309,7 +3309,33 @@ bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc) {
   return false;
 }
 
-bool isDPALU_DPP(const MCInstrDesc &OpDesc) {
+bool isDPALU_DPP32BitOpc(unsigned Opc) {
+  switch (Opc) {
+  case AMDGPU::V_MUL_LO_U32_e64:
+  case AMDGPU::V_MUL_LO_U32_e64_dpp:
+  case AMDGPU::V_MUL_LO_U32_e64_dpp_gfx1250:
+  case AMDGPU::V_MUL_HI_U32_e64:
+  case AMDGPU::V_MUL_HI_U32_e64_dpp:
+  case AMDGPU::V_MUL_HI_U32_e64_dpp_gfx1250:
+  case AMDGPU::V_MUL_HI_I32_e64:
+  case AMDGPU::V_MUL_HI_I32_e64_dpp:
+  case AMDGPU::V_MUL_HI_I32_e64_dpp_gfx1250:
+  case AMDGPU::V_MAD_U32_e64:
+  case AMDGPU::V_MAD_U32_e64_dpp:
+  case AMDGPU::V_MAD_U32_e64_dpp_gfx1250:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool isDPALU_DPP(const MCInstrDesc &OpDesc, const MCSubtargetInfo &ST) {
+  if (!ST.hasFeature(AMDGPU::FeatureDPALU_DPP))
+    return false;
+
+  if (isDPALU_DPP32BitOpc(OpDesc.getOpcode()))
+    return ST.hasFeature(AMDGPU::FeatureGFX1250Insts);
+
   return hasAny64BitVGPROperands(OpDesc);
 }
 
