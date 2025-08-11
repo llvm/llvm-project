@@ -2693,10 +2693,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
  // Perform a bitwise OR on the horizontal pairs (or other specified grouping)
   // of elements. This is convenient for instrumenting horizontal add/sub.
   Value *horizontalReduce(IntrinsicInst &I, unsigned ReductionFactor,
-                          Value *VectorA, Value* VectorB) {
+                          Value *VectorA, Value *VectorB) {
     assert(isa<FixedVectorType>(VectorA->getType()));
-    unsigned TotalNumElems
-      = cast<FixedVectorType>(VectorA->getType())->getNumElements();
+    unsigned TotalNumElems =
+        cast<FixedVectorType>(VectorA->getType())->getNumElements();
 
     if (VectorB) {
       assert(VectorA->getType() == VectorB->getType());
