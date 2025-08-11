@@ -209,8 +209,8 @@ void Serializer::processDebugInfo() {
 
 LogicalResult Serializer::processExtension() {
   llvm::SmallVector<uint32_t, 16> extName;
-  llvm::SmallSet<Extension, 4> deducedExts;
-  deducedExts.insert_range(module.getVceTriple()->getExtensions());
+  llvm::SmallSet<Extension, 4> deducedExts(
+      llvm::from_range, module.getVceTriple()->getExtensions());
   auto nonSemanticInfoExt = spirv::Extension::SPV_KHR_non_semantic_info;
   if (options.emitDebugInfo && !deducedExts.contains(nonSemanticInfoExt)) {
     TargetEnvAttr targetEnvAttr = lookupTargetEnvOrDefault(module);
