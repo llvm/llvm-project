@@ -1639,15 +1639,19 @@ void DAGTypeLegalizer::SplitVecRes_LOOP_DEPENDENCE_MASK(SDNode *N, SDValue &Lo,
   SDValue PtrB = N->getOperand(1);
   Lo = DAG.getNode(N->getOpcode(), DL, LoVT, PtrA, PtrB, N->getOperand(2));
 
-  EVT StoreVT =
-      EVT::getVectorVT(*DAG.getContext(), EltVT, HiVT.getVectorMinNumElements(),
-                       HiVT.isScalableVT());
-  PtrA = DAG.getNode(
-      ISD::ADD, DL, MVT::i64, PtrA,
-      DAG.getConstant(StoreVT.getStoreSizeInBits() / 8, DL, MVT::i64));
-  PtrB = DAG.getNode(
-      ISD::ADD, DL, MVT::i64, PtrB,
-      DAG.getConstant(StoreVT.getStoreSizeInBits() / 8, DL, MVT::i64));
+  EVT StoreVT = EVT::getVectorVT(*DAG.getContext(), EltVT,
+                                 HiVT.getVectorMinNumElements(), false);
+  unsigned Offset = StoreVT.getStoreSizeInBits() / 8;
+  SDValue Addend;
+
+  if (HiVT.isScalableVT())
+    Addend = DAG.getVScale(DL, MVT::i64, APInt(64, Offset));
+  else
+    Addend = DAG.getConstant(Offset, DL, MVT::i64);
+
+  PtrA = DAG.getNode(ISD::ADD, DL, MVT::i64, PtrA, Addend);
+
+  PtrB = DAG.getNode(ISD::ADD, DL, MVT::i64, PtrB, Addend);
   Hi = DAG.getNode(N->getOpcode(), DL, HiVT, PtrA, PtrB, N->getOperand(2));
 }
 

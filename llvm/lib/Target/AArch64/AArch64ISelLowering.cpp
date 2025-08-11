@@ -1924,8 +1924,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::LOOP_DEPENDENCE_WAR_MASK, VT, Custom);
     }
     for (auto VT : {MVT::nxv2i1, MVT::nxv4i1, MVT::nxv8i1, MVT::nxv16i1}) {
-      setOperationAction(ISD::LOOP_DEPENDENCE_RAW_MASK, VT, Legal);
-      setOperationAction(ISD::LOOP_DEPENDENCE_WAR_MASK, VT, Legal);
+      setOperationAction(ISD::LOOP_DEPENDENCE_RAW_MASK, VT, Custom);
+      setOperationAction(ISD::LOOP_DEPENDENCE_WAR_MASK, VT, Custom);
     }
   }
 
@@ -5255,54 +5255,44 @@ AArch64TargetLowering::LowerLOOP_DEPENDENCE_MASK(SDValue Op,
   // Make sure that the promoted mask size and element size match
   switch (EltSize) {
   case 1:
-    assert((FullVT == MVT::v16i8 || FullVT == MVT::nxv16i1) &&
-           "Unexpected mask or element size");
     EltVT = MVT::i8;
     break;
   case 2:
-    if (FullVT == MVT::v16i8)
-      NumSplits = 1;
-    else
-      assert((FullVT == MVT::v8i8 || FullVT == MVT::nxv8i1) &&
-             "Unexpected mask or element size");
+    if (NumElements >= 16)
+      NumSplits = NumElements / 16;
     EltVT = MVT::i16;
     break;
   case 4:
     if (NumElements >= 8)
       NumSplits = NumElements / 8;
-    else
-      assert((FullVT == MVT::v4i16 || FullVT == MVT::nxv4i1) &&
-             "Unexpected mask or element size");
     EltVT = MVT::i32;
     break;
   case 8:
     if (NumElements >= 4)
       NumSplits = NumElements / 4;
-    else
-      assert((FullVT == MVT::v2i32 || FullVT == MVT::nxv2i1) &&
-             "Unexpected mask or element size");
     EltVT = MVT::i64;
     break;
   default:
-    llvm_unreachable("Unexpected element size for get.alias.lane.mask");
-    break;
+    // Other element sizes are incompatible with whilewr/rw, so expand instead
+    return SDValue();
   }
 
   auto LowerToWhile = [&](EVT VT, unsigned AddrScale) {
     SDValue PtrA = Op.getOperand(0);
     SDValue PtrB = Op.getOperand(1);
 
-    EVT StoreVT =
-        EVT::getVectorVT(*DAG.getContext(), EltVT, VT.getVectorMinNumElements(),
-                         VT.isScalableVT());
-    PtrA = DAG.getNode(
-        ISD::ADD, DL, MVT::i64, PtrA,
-        DAG.getConstant(StoreVT.getStoreSizeInBits() / 8 * AddrScale, DL,
-                        MVT::i64));
-    PtrB = DAG.getNode(
-        ISD::ADD, DL, MVT::i64, PtrB,
-        DAG.getConstant(StoreVT.getStoreSizeInBits() / 8 * AddrScale, DL,
-                        MVT::i64));
+    EVT StoreVT = EVT::getVectorVT(*DAG.getContext(), EltVT,
+                                   VT.getVectorMinNumElements(), false);
+    unsigned Offset = StoreVT.getStoreSizeInBits() / 8 * AddrScale;
+    SDValue Addend;
+
+    if (VT.isScalableVT())
+      Addend = DAG.getVScale(DL, MVT::i64, APInt(64, Offset));
+    else
+      Addend = DAG.getConstant(Offset, DL, MVT::i64);
+
+    PtrA = DAG.getNode(ISD::ADD, DL, MVT::i64, PtrA, Addend);
+    PtrB = DAG.getNode(ISD::ADD, DL, MVT::i64, PtrB, Addend);
 
     if (VT.isScalableVT())
       return DAG.getNode(Op.getOpcode(), DL, VT, PtrA, PtrB, Op.getOperand(2));
