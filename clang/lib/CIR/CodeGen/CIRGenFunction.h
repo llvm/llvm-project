@@ -1032,6 +1032,8 @@ public:
                                        const CXXMethodDecl *md,
                                        ReturnValueSlot returnValue);
 
+  RValue emitCXXPseudoDestructorExpr(const CXXPseudoDestructorExpr *expr);
+
   void emitCtorPrologue(const clang::CXXConstructorDecl *ctor,
                         clang::CXXCtorType ctorType, FunctionArgList &args);
 
