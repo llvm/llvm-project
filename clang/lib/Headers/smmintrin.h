@@ -2344,6 +2344,7 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cmpgt_epi64(__m128i __V1,
 }
 
 #undef __DEFAULT_FN_ATTRS
+#undef __DEFAULT_FN_ATTRS_CONSTEXPR
 
 #include <popcntintrin.h>
 
