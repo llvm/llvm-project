@@ -1,7 +1,7 @@
-! Fixes a bug when a block variable is marked as implicit private. In such
-! case, we can simply ignore privatizing that symbol within the context of the
-! currrent OpenMP construct since the "private" allocation for the symbol will
-! be emitted within the nested block anyway.
+! When a block variable is marked as implicit private, we can simply ignore
+! privatizing that symbol within the context of the currrent OpenMP construct
+! since the "private" allocation for the symbol will be emitted within the nested
+! block anyway.
 
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
 
