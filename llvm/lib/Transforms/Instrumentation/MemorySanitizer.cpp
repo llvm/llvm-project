@@ -3834,9 +3834,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // For the three-operand form:
   //       <4 x i32> @llvm.x86.avx512.vpdpbusd.128(<4 x i32>, <4 x i32>, <4 x i32>)
   // the horizontal addition is "quadwise" instead of pairwise (note the first
-  // two operands should actually be interpreted as vectors of bytes), and it
-  // is accumulated with the third operand.
-  void handleVectorPmaddIntrinsic(IntrinsicInst &I,
+  // two operands are typically interpreted as bytes or words), and it is
+  // accumulated with the third operand.
+  void handleVectorPmaddIntrinsic(IntrinsicInst &I, unsigned ReductionFactor,
                                   unsigned MMXEltSizeInBits = 0) {
     IRBuilder<> IRB(&I);
 
@@ -3891,20 +3891,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     S1S2 = IRB.CreateAnd(S1S2, IRB.CreateSExt(V1AndV2NotZero, S1S2->getType()));
 
     // Step 2: horizontal add
-    // Handle it similarly to handlePairwiseShadowOrIntrinsic().
+    // e.g., collapse <8 x i16> into <4 x i16> (reduction factor == 2)
+    //                <16 x i8> into <4 x i8>  (reduction factor == 4)
     //
-    // If arg_size() == 2:
-    //   Collapse <8 x i16> into <4 x i16>
-    int ReductionFactor = 2;
-
-    if (I.arg_size() == 3)
-      // Quadwise addition
-      // Collapse <16 x i8> into <4 x i8>
-      ReductionFactor = 4;
+    // Handle it similarly to handlePairwiseShadowOrIntrinsic().
 
     unsigned TotalNumElems = ReturnType->getNumElements() * ReductionFactor;
     Value *OrShadow = nullptr;
-    for (int i = 0; i < ReductionFactor; i++) {
+    for (unsigned i = 0; i < ReductionFactor; i++) {
       SmallVector<int, 8> Mask;
       for (unsigned X = 0; X < TotalNumElems; X += ReductionFactor)
         Mask.push_back(X + i);
@@ -5482,65 +5476,68 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx2_pmadd_ub_sw:
     case Intrinsic::x86_avx512_pmaddw_d_512:
     case Intrinsic::x86_avx512_pmaddubs_w_512:
-      handleVectorPmaddIntrinsic(I);
+      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/ 2);
       break;
 
     // <1 x i64> @llvm.x86.ssse3.pmadd.ub.sw(<1 x i64>, <1 x i64>)
     case Intrinsic::x86_ssse3_pmadd_ub_sw:
-      handleVectorPmaddIntrinsic(I, 8);
+      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/ 2, /*EltSize=*/ 8);
       break;
 
     // <1 x i64> @llvm.x86.mmx.pmadd.wd(<1 x i64>, <1 x i64>)
     case Intrinsic::x86_mmx_pmadd_wd:
-      handleVectorPmaddIntrinsic(I, 16);
+      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/ 2, /*EltSize=*/ 16);
       break;
 
     // Multiply and Add Packed Signed and Unsigned Bytes
     //   <4 x i32> @llvm.x86.avx512.vpdpbusd.128(<4 x i32>, <4 x i32>, <4 x i32>)
-    //   <4 x i32> @llvm.x86.avx512.vpdpbusds.128(<4 x i32>, <4 x i32>, <4 x i32>)
     //   <8 x i32> @llvm.x86.avx512.vpdpbusd.256(<8 x i32>, <8 x i32>, <8 x i32>)
-    //   <8 x i32> @llvm.x86.avx512.vpdpbusds.256(<8 x i32>, <8 x i32>, <8 x i32>)
     //   <16 x i32> @llvm.x86.avx512.vpdpbusd.512(<16 x i32>, <16 x i32>, <16 x i32>)
+    //
+    //   <4 x i32> @llvm.x86.avx512.vpdpbusds.128(<4 x i32>, <4 x i32>, <4 x i32>)
+    //   <8 x i32> @llvm.x86.avx512.vpdpbusds.256(<8 x i32>, <8 x i32>, <8 x i32>)
     //   <16 x i32> @llvm.x86.avx512.vpdpbusds.512(<16 x i32>, <16 x i32>, <16 x i32>)
     //
     //   <4 x i32> @llvm.x86.avx2.vpdpbssd.128(<4 x i32>, <4 x i32>, <4 x i32>)
     //   <4 x i32> @llvm.x86.avx2.vpdpbssds.128(<4 x i32>, <4 x i32>, <4 x i32>)
+    //
     //   <8 x i32> @llvm.x86.avx2.vpdpbssd.256(<8 x i32>, <8 x i32>, <8 x i32>)
     //   <8 x i32> @llvm.x86.avx2.vpdpbssds.256(<8 x i32>, <8 x i32>, <8 x i32>)
     //
     //   <16 x i32> @llvm.x86.avx10.vpdpbssd.512(<16 x i32>, <16 x i32>, <16 x i32>)
     //   <16 x i32> @llvm.x86.avx10.vpdpbssds.512(<16 x i32>, <16 x i32>, <16 x i32>)
     case Intrinsic::x86_avx512_vpdpbusd_128:
-    case Intrinsic::x86_avx512_vpdpbusds_128:
     case Intrinsic::x86_avx512_vpdpbusd_256:
-    case Intrinsic::x86_avx512_vpdpbusds_256:
     case Intrinsic::x86_avx512_vpdpbusd_512:
+    case Intrinsic::x86_avx512_vpdpbusds_128:
+    case Intrinsic::x86_avx512_vpdpbusds_256:
     case Intrinsic::x86_avx512_vpdpbusds_512:
     case Intrinsic::x86_avx2_vpdpbssd_128:
-    case Intrinsic::x86_avx2_vpdpbssds_128:
     case Intrinsic::x86_avx2_vpdpbssd_256:
+    case Intrinsic::x86_avx2_vpdpbssds_128:
     case Intrinsic::x86_avx2_vpdpbssds_256:
     case Intrinsic::x86_avx10_vpdpbssd_512:
     case Intrinsic::x86_avx10_vpdpbssds_512:
-      handleVectorPmaddIntrinsic(I, 8);
+      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/ 4, /*EltSize=*/ 8);
       break;
 
     // Multiply and Add Signed Word Integers
     //   <4 x i32> @llvm.x86.avx512.vpdpwssd.128(<4 x i32>, <4 x i32>, <4 x i32>)
-    //   <4 x i32> @llvm.x86.avx512.vpdpwssds.128(<4 x i32>, <4 x i32>, <4 x i32>)
     //   <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32>, <8 x i32>, <8 x i32>)
-    //   <8 x i32> @llvm.x86.avx512.vpdpwssds.256(<8 x i32>, <8 x i32>, <8 x i32>)
     //   <16 x i32> @llvm.x86.avx512.vpdpwssd.512(<16 x i32>, <16 x i32>, <16 x i32>)
+    //
+    // Multiply and Add Signed Word Integers With Saturation
+    //   <4 x i32> @llvm.x86.avx512.vpdpwssds.128(<4 x i32>, <4 x i32>, <4 x i32>)
+    //   <8 x i32> @llvm.x86.avx512.vpdpwssds.256(<8 x i32>, <8 x i32>, <8 x i32>)
     //   <16 x i32> @llvm.x86.avx512.vpdpwssds.512(<16 x i32>, <16 x i32>, <16 x i32>)
     case Intrinsic::x86_avx512_vpdpwssd_128:
-    case Intrinsic::x86_avx512_vpdpwssds_128:
     case Intrinsic::x86_avx512_vpdpwssd_256:
-    case Intrinsic::x86_avx512_vpdpwssds_256:
     case Intrinsic::x86_avx512_vpdpwssd_512:
+    case Intrinsic::x86_avx512_vpdpwssds_128:
+    case Intrinsic::x86_avx512_vpdpwssds_256:
     case Intrinsic::x86_avx512_vpdpwssds_512:
-      handleVectorPmaddIntrinsic(I, 16);
+      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/ 2, /*EltSize=*/ 16);
       break;
-
 
     case Intrinsic::x86_sse_cmp_ss:
     case Intrinsic::x86_sse2_cmp_sd:
