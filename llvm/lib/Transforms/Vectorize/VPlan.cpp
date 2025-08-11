@@ -246,8 +246,7 @@ VPTransformState::VPTransformState(const TargetTransformInfo *TTI,
                                    IRBuilderBase &Builder, VPlan *Plan,
                                    Loop *CurrentParentLoop, Type *CanonicalIVTy)
     : TTI(TTI), VF(VF), CFG(DT), LI(LI), AC(AC), Builder(Builder), Plan(Plan),
-      CurrentParentLoop(CurrentParentLoop), TypeAnalysis(CanonicalIVTy),
-      VPDT(*Plan) {}
+      CurrentParentLoop(CurrentParentLoop), TypeAnalysis(*Plan), VPDT(*Plan) {}
 
 Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
   if (Def->isLiveIn())
@@ -951,15 +950,9 @@ VPlan::~VPlan() {
     delete BackedgeTakenCount;
 }
 
-void VPlan::prepareToExecute(Value *VectorTripCountV, VPTransformState &State) {
-  if (!VectorTripCount.getUnderlyingValue())
-    VectorTripCount.setUnderlyingValue(VectorTripCountV);
-  else
-    assert(VectorTripCount.getUnderlyingValue() == VectorTripCountV &&
-           "VectorTripCount set earlier must much VectorTripCountV");
-
+void VPlan::prepareToExecute(VPTransformState &State) {
   IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
-  Type *TCTy = VectorTripCountV->getType();
+  Type *TCTy = VPTypeAnalysis(*this).inferScalarType(getTripCount());
   // FIXME: Model VF * UF computation completely in VPlan.
   unsigned UF = getUF();
   if (VF.getNumUsers()) {

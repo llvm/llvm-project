@@ -57,9 +57,8 @@ define void @commutable_sabdl(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr d0, [x0]
 ; CHECK-GI-NEXT:    ldr d1, [x1]
-; CHECK-GI-NEXT:    sabdl.8h v2, v0, v1
-; CHECK-GI-NEXT:    sabdl.8h v0, v1, v0
-; CHECK-GI-NEXT:    str q2, [x2]
+; CHECK-GI-NEXT:    sabdl.8h v0, v0, v1
+; CHECK-GI-NEXT:    str q0, [x2]
 ; CHECK-GI-NEXT:    str q0, [x2]
 ; CHECK-GI-NEXT:    ret
   %tmp1 = load <8 x i8>, ptr %A
@@ -198,9 +197,8 @@ define void @commutable_uabdl(ptr %A, ptr %B, ptr %C) nounwind {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    ldr d0, [x0]
 ; CHECK-GI-NEXT:    ldr d1, [x1]
-; CHECK-GI-NEXT:    uabdl.8h v2, v0, v1
-; CHECK-GI-NEXT:    uabdl.8h v0, v1, v0
-; CHECK-GI-NEXT:    str q2, [x2]
+; CHECK-GI-NEXT:    uabdl.8h v0, v0, v1
+; CHECK-GI-NEXT:    str q0, [x2]
 ; CHECK-GI-NEXT:    str q0, [x2]
 ; CHECK-GI-NEXT:    ret
   %tmp1 = load <8 x i8>, ptr %A
@@ -1890,10 +1888,10 @@ define <2 x i128> @uabd_i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-GI-NEXT:    subs x10, x11, x13
 ; CHECK-GI-NEXT:    sbc x11, x14, x15
 ; CHECK-GI-NEXT:    cmp x9, #0
-; CHECK-GI-NEXT:    cset w12, lt
+; CHECK-GI-NEXT:    cset w12, mi
 ; CHECK-GI-NEXT:    csel w12, wzr, w12, eq
 ; CHECK-GI-NEXT:    cmp x11, #0
-; CHECK-GI-NEXT:    cset w13, lt
+; CHECK-GI-NEXT:    cset w13, mi
 ; CHECK-GI-NEXT:    csel w13, wzr, w13, eq
 ; CHECK-GI-NEXT:    negs x14, x8
 ; CHECK-GI-NEXT:    ngc x15, x9

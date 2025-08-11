@@ -980,8 +980,8 @@ defm SVCLASTA_N : SVEPerm<"svclasta[_n_{d}]", "sPsd", "aarch64_sve_clasta_n">;
 defm SVCLASTB   : SVEPerm<"svclastb[_{d}]",   "dPdd", "aarch64_sve_clastb">;
 defm SVCLASTB_N : SVEPerm<"svclastb[_n_{d}]", "sPsd", "aarch64_sve_clastb_n">;
 
-let SVETargetGuard = "sve", SMETargetGuard = InvalidMode in {
-def SVCOMPACT : SInst<"svcompact[_{d}]",   "dPd",  "ilUiUlfd", MergeNone, "aarch64_sve_compact">;
+let SVETargetGuard = "sve", SMETargetGuard = "sme2p2" in {
+def SVCOMPACT    : SInst<"svcompact[_{d}]",   "dPd",  "ilUiUlfd", MergeNone, "aarch64_sve_compact", [VerifyRuntimeMode]>;
 }
 
 // Note: svdup_lane is implemented using the intrinsic for TBL to represent a

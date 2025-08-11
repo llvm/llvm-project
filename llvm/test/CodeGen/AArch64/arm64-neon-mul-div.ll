@@ -1611,9 +1611,8 @@ define <16 x i8> @poly_mulv16i8(<16 x i8> %lhs, <16 x i8> %rhs) {
 define <16 x i8> @commutable_poly_mul(<16 x i8> %lhs, <16 x i8> %rhs) {
 ; CHECK-LABEL: commutable_poly_mul:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    pmul v2.16b, v0.16b, v1.16b
-; CHECK-NEXT:    pmul v0.16b, v1.16b, v0.16b
-; CHECK-NEXT:    add v0.16b, v2.16b, v0.16b
+; CHECK-NEXT:    pmul v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    add v0.16b, v0.16b, v0.16b
 ; CHECK-NEXT:    ret
   %1 = call <16 x i8> @llvm.aarch64.neon.pmul.v16i8(<16 x i8> %lhs, <16 x i8> %rhs)
   %2 = call <16 x i8> @llvm.aarch64.neon.pmul.v16i8(<16 x i8> %rhs, <16 x i8> %lhs)

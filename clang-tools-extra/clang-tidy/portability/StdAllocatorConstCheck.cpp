@@ -15,10 +15,11 @@ namespace clang::tidy::portability {
 
 void StdAllocatorConstCheck::registerMatchers(MatchFinder *Finder) {
   // Match std::allocator<const T>.
-  auto AllocatorConst =
+  auto AllocatorConst = qualType(hasCanonicalType(
       recordType(hasDeclaration(classTemplateSpecializationDecl(
           hasName("::std::allocator"),
-          hasTemplateArgument(0, refersToType(qualType(isConstQualified()))))));
+          hasTemplateArgument(0,
+                              refersToType(qualType(isConstQualified()))))))));
 
   auto HasContainerName =
       hasAnyName("::std::vector", "::std::deque", "::std::list",
@@ -31,8 +32,10 @@ void StdAllocatorConstCheck::registerMatchers(MatchFinder *Finder) {
   // aren't caught.
   Finder->addMatcher(
       typeLoc(
-          templateSpecializationTypeLoc(),
-          loc(hasUnqualifiedDesugaredType(anyOf(
+          anyOf(templateSpecializationTypeLoc(),
+                qualifiedTypeLoc(
+                    hasUnqualifiedLoc(templateSpecializationTypeLoc()))),
+          loc(qualType(anyOf(
               recordType(hasDeclaration(classTemplateSpecializationDecl(
                   HasContainerName,
                   anyOf(
