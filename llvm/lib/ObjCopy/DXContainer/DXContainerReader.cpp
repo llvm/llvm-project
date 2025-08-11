@@ -10,7 +10,7 @@
 
 namespace llvm {
 namespace objcopy {
-namespace dxc {
+namespace dxbc {
 
 using namespace object;
 
@@ -34,6 +34,6 @@ Expected<std::unique_ptr<Object>> DXContainerReader::create() const {
   return std::move(Obj);
 }
 
-} // end namespace dxc
+} // end namespace dxbc
 } // end namespace objcopy
 } // end namespace llvm

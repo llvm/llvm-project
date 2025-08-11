@@ -15,7 +15,7 @@
 
 namespace llvm {
 namespace objcopy {
-namespace dxc {
+namespace dxbc {
 
 using namespace object;
 
@@ -42,6 +42,6 @@ Error executeObjcopyOnBinary(const CommonConfig &Config,
   return Error::success();
 }
 
-} // end namespace dxc
+} // end namespace dxbc
 } // end namespace objcopy
 } // end namespace llvm

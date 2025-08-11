@@ -87,7 +87,7 @@ Error objcopy::executeObjcopyOnBinary(const MultiFormatConfig &Config,
     if (!DXContainerConfig)
       return DXContainerConfig.takeError();
 
-    return dxc::executeObjcopyOnBinary(
+    return dxbc::executeObjcopyOnBinary(
         Config.getCommonConfig(), *DXContainerConfig, *DXContainerBinary, Out);
   }
   return createStringError(object_error::invalid_file_type,

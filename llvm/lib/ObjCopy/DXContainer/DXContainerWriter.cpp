@@ -10,7 +10,7 @@
 
 namespace llvm {
 namespace objcopy {
-namespace dxc {
+namespace dxbc {
 
 using namespace object;
 
@@ -28,7 +28,8 @@ Error DXContainerWriter::write() {
   size_t TotalSize = finalize();
   Out.reserveExtraSpace(TotalSize);
 
-  Out.write(reinterpret_cast<const char *>(&Obj.Header), sizeof(dxbc::Header));
+  Out.write(reinterpret_cast<const char *>(&Obj.Header),
+            sizeof(::llvm::dxbc::Header));
   Out.write(reinterpret_cast<const char *>(Offsets.data()),
             Offsets.size() * sizeof(uint32_t));
 
@@ -42,6 +43,6 @@ Error DXContainerWriter::write() {
   return Error::success();
 }
 
-} // end namespace dxc
+} // end namespace dxbc
 } // end namespace objcopy
 } // end namespace llvm

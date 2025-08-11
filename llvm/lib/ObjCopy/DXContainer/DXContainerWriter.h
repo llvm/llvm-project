@@ -13,7 +13,7 @@
 
 namespace llvm {
 namespace objcopy {
-namespace dxc {
+namespace dxbc {
 
 using namespace object;
 
@@ -32,7 +32,7 @@ private:
   size_t finalize();
 };
 
-} // end namespace dxc
+} // end namespace dxbc
 } // end namespace objcopy
 } // end namespace llvm
 

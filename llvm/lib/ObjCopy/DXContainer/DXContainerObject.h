@@ -16,7 +16,7 @@
 
 namespace llvm {
 namespace objcopy {
-namespace dxc {
+namespace dxbc {
 
 using namespace object;
 
@@ -25,22 +25,22 @@ struct Part {
   ArrayRef<uint8_t> Data;
 
   size_t size() const {
-    return sizeof(dxbc::PartHeader) // base header
-           + Data.size();           // contents size
+    return sizeof(::llvm::dxbc::PartHeader) // base header
+           + Data.size();                   // contents size
   }
 };
 
 struct Object {
-  dxbc::Header Header;
+  ::llvm::dxbc::Header Header;
   SmallVector<Part> Parts;
 
   size_t headerSize() const {
-    return sizeof(dxbc::Header)               // base header
+    return sizeof(::llvm::dxbc::Header)       // base header
            + sizeof(uint32_t) * Parts.size(); // part offset values
   }
 };
 
-} // end namespace dxc
+} // end namespace dxbc
 } // end namespace objcopy
 } // end namespace llvm
 

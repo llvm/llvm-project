@@ -21,7 +21,7 @@ namespace objcopy {
 struct CommonConfig;
 struct DXContainerConfig;
 
-namespace dxc {
+namespace dxbc {
 /// Apply the transformations described by \p Config and \p DXContainerConfig
 /// to \p In and writes the result into \p Out.
 /// \returns any Error encountered whilst performing the operation.
@@ -29,7 +29,7 @@ Error executeObjcopyOnBinary(const CommonConfig &Config,
                              const DXContainerConfig &,
                              object::DXContainerObjectFile &In,
                              raw_ostream &Out);
-} // end namespace dxc
+} // end namespace dxbc
 } // end namespace objcopy
 } // end namespace llvm
 

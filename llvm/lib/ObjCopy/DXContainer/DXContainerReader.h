@@ -13,7 +13,7 @@
 
 namespace llvm {
 namespace objcopy {
-namespace dxc {
+namespace dxbc {
 
 using namespace object;
 
@@ -27,7 +27,7 @@ private:
   const DXContainerObjectFile &DXContainerObj;
 };
 
-} // end namespace dxc
+} // end namespace dxbc
 } // end namespace objcopy
 } // end namespace llvm
 
