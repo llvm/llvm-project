@@ -5252,7 +5252,6 @@ AArch64TargetLowering::LowerLOOP_DEPENDENCE_MASK(SDValue Op,
   unsigned NumElements = FullVT.getVectorMinNumElements();
   unsigned NumSplits = 0;
   EVT EltVT;
-  // Make sure that the promoted mask size and element size match
   switch (EltSize) {
   case 1:
     EltVT = MVT::i8;
