@@ -116,7 +116,7 @@ targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
            TargetDataFuncPtrTy TargetDataFunction, const char *RegionTypeMsg,
            const char *RegionName) {
   assert(PM && "Runtime not initialized");
-  static_assert(std::is_convertible_v<TargetAsyncInfoTy, AsyncInfoTy>,
+  static_assert(std::is_convertible_v<TargetAsyncInfoTy &, AsyncInfoTy &>,
                 "TargetAsyncInfoTy must be convertible to AsyncInfoTy.");
 
   TIMESCOPE_WITH_DETAILS_AND_IDENT("Runtime: Data Copy",
@@ -311,7 +311,7 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
                                int32_t ThreadLimit, void *HostPtr,
                                KernelArgsTy *KernelArgs) {
   assert(PM && "Runtime not initialized");
-  static_assert(std::is_convertible_v<TargetAsyncInfoTy, AsyncInfoTy>,
+  static_assert(std::is_convertible_v<TargetAsyncInfoTy &, AsyncInfoTy &>,
                 "Target AsyncInfoTy must be convertible to AsyncInfoTy.");
   DP("Entering target region for device %" PRId64 " with entry point " DPxMOD
      "\n",

@@ -529,7 +529,7 @@ void MIRParserImpl::setupDebugValueTracking(
   unsigned MaxInstrNum = 0;
   for (auto &MBB : MF)
     for (auto &MI : MBB)
-      MaxInstrNum = std::max((unsigned)MI.peekDebugInstrNum(), MaxInstrNum);
+      MaxInstrNum = std::max(MI.peekDebugInstrNum(), MaxInstrNum);
   MF.setDebugInstrNumberingCount(MaxInstrNum);
 
   // Load any substitutions.
