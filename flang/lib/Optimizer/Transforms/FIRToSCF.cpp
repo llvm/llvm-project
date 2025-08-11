@@ -163,6 +163,7 @@ struct IterWhileConversion : public OpRewritePattern<fir::IterWhileOp> {
     mlir::scf::YieldOp::create(rewriter, loc, results);
     rewriter.eraseOp(movedTerminator);
 
+    scfWhileOp->setAttrs(iterWhileOp->getAttrs());
     rewriter.replaceOp(iterWhileOp, scfWhileOp);
     return success();
   }
