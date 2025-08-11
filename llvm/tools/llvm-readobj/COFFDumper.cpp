@@ -2005,7 +2005,7 @@ void COFFDumper::printCOFFPseudoReloc() {
   ListScope D(W, "PseudoReloc");
   W.flush();
 
-  // Pseudo-relocation is only meaningful for a PE image file.
+  // Pseudo-relocations are only meaningful with PE image files.
   if (!Obj->getDOSHeader())
     return;
 
@@ -2031,9 +2031,9 @@ void COFFDumper::printCOFFPseudoReloc() {
   COFFSymbolRef RelocBegin, RelocEnd;
   for (uint32_t i = 0; i < Count; ++i) {
     COFFSymbolRef Sym;
-    if (Expected<COFFSymbolRef> SymOrErr = Obj->getSymbol(i))
+    if (Expected<COFFSymbolRef> SymOrErr = Obj->getSymbol(i)) {
       Sym = *SymOrErr;
-    else {
+    } else {
       reportWarning(SymOrErr.takeError(), Obj->getFileName());
       continue;
     }
@@ -2044,9 +2044,9 @@ void COFFDumper::printCOFFPseudoReloc() {
       continue;
 
     StringRef Name;
-    if (Expected<StringRef> NameOrErr = Obj->getSymbolName(Sym))
+    if (Expected<StringRef> NameOrErr = Obj->getSymbolName(Sym)) {
       Name = *NameOrErr;
-    else {
+    } else {
       reportWarning(NameOrErr.takeError(), Obj->getFileName());
       continue;
     }
@@ -2058,9 +2058,9 @@ void COFFDumper::printCOFFPseudoReloc() {
 
     const coff_section *Sec = nullptr;
     if (Expected<const coff_section *> SecOrErr =
-            Obj->getSection(Sym.getSectionNumber()))
+            Obj->getSection(Sym.getSectionNumber())) {
       Sec = *SecOrErr;
-    else {
+    } else {
       reportWarning(SecOrErr.takeError(), Obj->getFileName());
       continue;
     }
@@ -2079,39 +2079,48 @@ void COFFDumper::printCOFFPseudoReloc() {
 
   const coff_section *Section = nullptr;
   if (Expected<const coff_section *> SecOrErr =
-          Obj->getSection(RelocBegin.getSectionNumber()))
+          Obj->getSection(RelocBegin.getSectionNumber())) {
     Section = *SecOrErr;
-  else
-    return reportWarning(SecOrErr.takeError(), Obj->getFileName());
+  } else {
+    reportWarning(SecOrErr.takeError(), Obj->getFileName());
+    return;
+  }
 
-  if (RelocBegin.getSectionNumber() != RelocEnd.getSectionNumber())
-    return reportWarning(
-        createStringError(
-            "the marker symbols for runtime pseudo-relocation must "
-            "point a same section"),
-        Obj->getFileName());
+  if (RelocBegin.getSectionNumber() != RelocEnd.getSectionNumber()) {
+    reportWarning(createStringError(
+                      "the marker symbols for runtime pseudo-relocation must "
+                      "point to the same section"),
+                  Obj->getFileName());
+    return;
+  }
 
   // Skip if the relocation list is empty.
   if (RelocBegin.getValue() == RelocEnd.getValue())
     return;
 
-  if (RelocEnd.getValue() < RelocBegin.getValue())
-    return reportWarning(
+  if (RelocEnd.getValue() < RelocBegin.getValue()) {
+    reportWarning(
         createStringError(
             "the begin marker symbol for runtime pseudo-relocation must point "
-            "lower address than where the end marker points"),
+            "to a lower address than where the end marker points"),
         Obj->getFileName());
+    return;
+  }
 
   ArrayRef<uint8_t> Data;
-  if (auto E = Obj->getSectionContents(Section, Data))
-    return reportWarning(std::move(E), Obj->getFileName());
+  if (auto E = Obj->getSectionContents(Section, Data)) {
+    reportWarning(std::move(E), Obj->getFileName());
+    return;
+  }
 
   if (Data.size() <= RelocBegin.getValue() ||
-      Data.size() <= RelocEnd.getValue())
-    return reportWarning(
+      Data.size() <= RelocEnd.getValue()) {
+    reportWarning(
         createStringError("the marker symbol of runtime pseudo-relocation "
-                          "points to out of the valid address space"),
+                          "points past the end of the section"),
         Obj->getFileName());
+    return;
+  }
 
   ArrayRef<uint8_t> RawRelocs =
       Data.take_front(RelocEnd.getValue()).drop_front(RelocBegin.getValue());
@@ -2124,10 +2133,12 @@ void COFFDumper::printCOFFPseudoReloc() {
   };
   const PseudoRelocationHeader HeaderV2(1);
   if (RawRelocs.size() < sizeof(HeaderV2) ||
-      (memcmp(RawRelocs.data(), &HeaderV2, sizeof(HeaderV2)) != 0))
-    return reportWarning(
+      (memcmp(RawRelocs.data(), &HeaderV2, sizeof(HeaderV2)) != 0)) {
+    reportWarning(
         createStringError("invalid runtime pseudo-relocation records"),
         Obj->getFileName());
+    return;
+  }
 
   struct alignas(4) PseudoRelocationRecord {
     support::ulittle32_t Symbol;
@@ -2207,22 +2218,20 @@ void COFFDumper::printCOFFPseudoReloc() {
     DenseMap<uint32_t, StringRef> ImportedSymbols;
   };
   CachingImportedSymbolLookup ImportedSymbols(Obj);
-  llvm::stable_sort(RVASymbolMap, [](const auto &x, const auto &y) {
-    return x.RVA < y.RVA;
-  });
-  RVASymbolMap.erase(llvm::unique(RVASymbolMap,
-                                  [](const auto &x, const auto &y) {
-                                    return x.RVA == y.RVA;
-                                  }),
-                     RVASymbolMap.end());
+  llvm::stable_sort(RVASymbolMap,
+                    [](const auto &x, const auto &y) { return x.RVA < y.RVA; });
+  RVASymbolMap.erase(
+      llvm::unique(RVASymbolMap,
+                   [](const auto &x, const auto &y) { return x.RVA == y.RVA; }),
+      RVASymbolMap.end());
 
   for (const auto &Reloc : RelocRecords) {
     DictScope Entry(W, "Entry");
 
     W.printHex("Symbol", Reloc.Symbol);
-    if (Expected<StringRef> SymOrErr = ImportedSymbols.find(Reloc.Symbol))
+    if (Expected<StringRef> SymOrErr = ImportedSymbols.find(Reloc.Symbol)) {
       W.printString("SymbolName", *SymOrErr);
-    else {
+    } else {
       reportWarning(SymOrErr.takeError(), Obj->getFileName());
       W.printString("SymbolName", "(missing)");
     }
@@ -2231,17 +2240,17 @@ void COFFDumper::printCOFFPseudoReloc() {
     if (auto Ite = llvm::upper_bound(
             RVASymbolMap, Reloc.Target.value(),
             [](uint32_t RVA, const auto &Sym) { return RVA < Sym.RVA; });
-        Ite == RVASymbolMap.begin())
+        Ite == RVASymbolMap.begin()) {
       W.printSymbolOffset("TargetSymbol", "(base)", Reloc.Target);
-    else if (const uint32_t Offset = Reloc.Target.value() - (--Ite)->RVA;
-             Offset == 0)
+    } else if (const uint32_t Offset = Reloc.Target.value() - (--Ite)->RVA;
+               Offset == 0) {
       W.printString("TargetSymbol", Ite->SymbolName);
-    else if (Offset < Ite->Section->VirtualSize)
+    } else if (Offset < Ite->Section->VirtualSize) {
       W.printSymbolOffset("TargetSymbol", Ite->SymbolName, Offset);
-    else if (++Ite == RVASymbolMap.end())
+    } else if (++Ite == RVASymbolMap.end()) {
       W.printSymbolOffset("TargetSymbol", "(base)", Reloc.Target);
-    else if (Expected<StringRef> NameOrErr =
-                 Obj->getSectionName(Ite->Section)) {
+    } else if (Expected<StringRef> NameOrErr =
+                   Obj->getSectionName(Ite->Section)) {
       W.printSymbolOffset("TargetSymbol", *NameOrErr,
                           Reloc.Target - Ite->Section->VirtualAddress);
     } else {

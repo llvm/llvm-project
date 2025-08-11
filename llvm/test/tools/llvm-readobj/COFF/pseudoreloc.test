@@ -157,14 +157,16 @@ EMPTY-NEXT: AddressSize: 32bit
 EMPTY-NEXT: PseudoReloc [
 WARN-MISSINGMARKER-NEXT: the marker symbols for runtime pseudo-relocation were not found
 WARN-INVALIDHEADER-NEXT: invalid runtime pseudo-relocation records
-WARN-LOWEREND-NEXT: the begin marker symbol for runtime pseudo-relocation must point lower address than where the end marker points
-WARN-OUTOFRANGE-NEXT: the marker symbol of runtime pseudo-relocation points to out of the valid address space
-WARN-SECTIONDIFFERS-NEXT: the marker symbols for runtime pseudo-relocation must point a same section
+WARN-LOWEREND-NEXT: the begin marker symbol for runtime pseudo-relocation must point to a lower address than where the end marker points
+WARN-OUTOFRANGE-NEXT: the marker symbol of runtime pseudo-relocation points past the end of the section
+WARN-SECTIONDIFFERS-NEXT: the marker symbols for runtime pseudo-relocation must point to the same section
 EMPTY-NEXT: ]
 
-To regenerate Inputs/pseudoreloc.*.yaml, run following one-liner and review actual address map:
-
-$ split-file pseudoreloc.test /tmp/pseudoreloc && bash /tmp/pseudoreloc/generate.sh && cp /tmp/pseudoreloc/*.yaml Inputs/
+;;
+;; To regenerate Inputs/pseudoreloc.*.yaml, run following one-liner and review actual address map:
+;;
+;; $ split-file pseudoreloc.test /tmp/pseudoreloc && bash /tmp/pseudoreloc/generate.sh && cp /tmp/pseudoreloc/*.yaml Inputs/
+;;
 
 #--- generate.sh
 cd "$(dirname $0)"
@@ -211,7 +213,7 @@ generate() {
 }
 EOT
 
-  # Ensure the binaries generated from parameterized yaml and original one are exact same.
+  # Ensure the binaries generated from the parameterized yaml and original one are exactly the same.
   diff <(yaml2obj pseudoreloc.$arch.yaml.orig -o -) <(yaml2obj pseudoreloc.$arch.yaml -o -)
 }
 
