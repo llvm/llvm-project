@@ -84,15 +84,15 @@ define double @hr_or_mul() {
 ;
 ; AVX-LABEL: @hr_or_mul(
 ; AVX-NEXT:    [[CVT0:%.*]] = uitofp i16 3 to double
-; AVX-NEXT:    [[MUL0:%.*]] = fmul fast double 7.000000e+00, [[CVT0]]
-; AVX-NEXT:    [[ADD0:%.*]] = fadd fast double [[MUL0]], [[CVT0]]
+; AVX-NEXT:    [[TMP4:%.*]] = fmul fast double 7.000000e+00, [[CVT0]]
+; AVX-NEXT:    [[ADD3:%.*]] = fadd fast double [[TMP4]], [[CVT0]]
 ; AVX-NEXT:    [[MUL1:%.*]] = fmul fast double -4.300000e+01, [[CVT0]]
-; AVX-NEXT:    [[ADD1:%.*]] = fadd fast double [[MUL1]], [[ADD0]]
+; AVX-NEXT:    [[ADD1:%.*]] = fadd fast double [[MUL1]], [[ADD3]]
 ; AVX-NEXT:    [[MUL2:%.*]] = fmul fast double 2.200000e-02, [[CVT0]]
 ; AVX-NEXT:    [[ADD2:%.*]] = fadd fast double [[MUL2]], [[ADD1]]
 ; AVX-NEXT:    [[MUL3:%.*]] = fmul fast double 9.500000e+00, [[CVT0]]
-; AVX-NEXT:    [[ADD3:%.*]] = fadd fast double [[MUL3]], [[ADD2]]
-; AVX-NEXT:    ret double [[ADD3]]
+; AVX-NEXT:    [[ADD4:%.*]] = fadd fast double [[MUL3]], [[ADD2]]
+; AVX-NEXT:    ret double [[ADD4]]
 ;
 ; AVX2-LABEL: @hr_or_mul(
 ; AVX2-NEXT:    [[CVT0:%.*]] = uitofp i16 3 to double

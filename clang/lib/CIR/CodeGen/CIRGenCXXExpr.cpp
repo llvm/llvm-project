@@ -75,7 +75,7 @@ static MemberCallInfo commonBuildCXXMemberOrOperatorCall(
 
 RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
     const CallExpr *ce, const CXXMethodDecl *md, ReturnValueSlot returnValue,
-    bool hasQualifier, NestedNameSpecifier *qualifier, bool isArrow,
+    bool hasQualifier, NestedNameSpecifier qualifier, bool isArrow,
     const Expr *base) {
   assert(isa<CXXMemberCallExpr>(ce) || isa<CXXOperatorCallExpr>(ce));
 
@@ -169,7 +169,7 @@ CIRGenFunction::emitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *e,
   assert(md->isInstance() &&
          "Trying to emit a member call expr on a static method!");
   return emitCXXMemberOrOperatorMemberCallExpr(
-      e, md, returnValue, /*HasQualifier=*/false, /*Qualifier=*/nullptr,
+      e, md, returnValue, /*HasQualifier=*/false, /*Qualifier=*/std::nullopt,
       /*IsArrow=*/false, e->getArg(0));
 }
 

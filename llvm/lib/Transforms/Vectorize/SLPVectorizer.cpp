@@ -11991,6 +11991,8 @@ void BoUpSLP::reorderGatherNode(TreeEntry &TE) {
   }
 }
 
+/// Check if we can convert fadd/fsub sequence to FMAD.
+/// \returns Cost of the FMAD, if conversion is possible, invalid cost otherwise.
 static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
                                        const InstructionsState &S,
                                        DominatorTree &DT, const DataLayout &DL,
@@ -12010,7 +12012,8 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
       auto *I = dyn_cast<Instruction>(V);
       if (!I)
         continue;
-      // TODO: support for copyable elements.
+      if (S.isCopyableElement(I))
+        continue;
       Instruction *MatchingI = S.getMatchingMainOpOrAltOp(I);
       if (S.getMainOp() != MatchingI && S.getAltOp() != MatchingI)
         continue;
@@ -12028,6 +12031,7 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
   InstructionsState OpS = getSameOpcode(Operands.front(), TLI);
   if (!OpS.valid())
     return InstructionCost::getInvalid();
+
   if (OpS.isAltShuffle() || OpS.getOpcode() != Instruction::FMul)
     return InstructionCost::getInvalid();
   if (!CheckForContractable(Operands.front()))
@@ -12042,14 +12046,17 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
     auto *I = dyn_cast<Instruction>(V);
     if (!I)
       continue;
-    if (auto *FPCI = dyn_cast<FPMathOperator>(I))
-      FMF &= FPCI->getFastMathFlags();
+    if (!S.isCopyableElement(I))
+      if (auto *FPCI = dyn_cast<FPMathOperator>(I))
+        FMF &= FPCI->getFastMathFlags();
     FMulPlusFAddCost += TTI.getInstructionCost(I, CostKind);
   }
   unsigned NumOps = 0;
   for (auto [V, Op] : zip(VL, Operands.front())) {
+    if (S.isCopyableElement(V))
+      continue;
     auto *I = dyn_cast<Instruction>(Op);
-    if (!I || !I->hasOneUse()) {
+    if (!I || !I->hasOneUse() || OpS.isCopyableElement(I)) {
       if (auto *OpI = dyn_cast<Instruction>(V))
         FMACost += TTI.getInstructionCost(OpI, CostKind);
       if (I)
