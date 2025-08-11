@@ -115,38 +115,37 @@ static Value *createLogicFromTable3Var(const std::bitset<8> &Table, Value *Op0,
 static std::tuple<Value *, Value *, Value *>
 extractThreeVariables(Value *Root) {
   SmallPtrSet<Value *, 3> Variables;
-  unsigned NodeCount = 0;
-  const unsigned MaxNodes = 50; // To prevent exponential blowup with loop
-                                // unrolling(see bitreverse-hang.ll)
-
+  SmallPtrSet<Value *, 32> Visited; // Prevent hanging during loop unrolling
+                                    // (see bitreverse-hang.ll)
   SmallVector<Value *> Worklist;
   Worklist.push_back(Root);
 
-  while (!Worklist.empty() && NodeCount <= MaxNodes) {
+  while (!Worklist.empty()) {
     Value *V = Worklist.pop_back_val();
-    ++NodeCount;
-
-    if (NodeCount > MaxNodes)
-      break;
 
     Value *NotV;
     if (match(V, m_Not(m_Value(NotV)))) {
-      Worklist.push_back(NotV);
+      Visited.insert(NotV);
+      if (V == Root ||
+          V->hasOneUse()) { // Due to lack of cost-based heuristic, only
+                            // traverse if it belongs to this expression tree
+        Worklist.push_back(NotV);
+      }
       continue;
     }
     if (auto *BO = dyn_cast<BinaryOperator>(V)) {
-      Worklist.push_back(BO->getOperand(0));
-      Worklist.push_back(BO->getOperand(1));
+      if (V == Root || V->hasOneUse()) {
+        Visited.insert(BO->getOperand(0));
+        Visited.insert(BO->getOperand(1));
+        Worklist.push_back(BO->getOperand(0));
+        Worklist.push_back(BO->getOperand(1));
+      }
     } else if (isa<Argument>(V) || isa<Instruction>(V)) {
       if (!isa<Constant>(V) && V != Root) {
         Variables.insert(V);
       }
     }
   }
-
-  // Bail if we hit the node limit
-  if (NodeCount > MaxNodes)
-    return {nullptr, nullptr, nullptr};
 
   if (Variables.size() == 3) {
     // Sort variables by pointer value to ensure deterministic ordering
