@@ -413,6 +413,8 @@ public:
   /// tracker before the first call to advance/recede.
   LLVM_ABI void addLiveRegs(ArrayRef<VRegMaskOrUnit> Regs);
 
+  bool isRegLive(Register Reg) const { return LiveRegs.contains(Reg).any(); }
+
   /// Get the MI position corresponding to this register pressure.
   MachineBasicBlock::const_iterator getPos() const { return CurrPos; }
 

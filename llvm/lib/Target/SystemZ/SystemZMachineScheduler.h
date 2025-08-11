@@ -44,6 +44,10 @@ class SystemZPreRASchedStrategy : public GenericScheduler {
             PrioRegClasses.count(MRI->getRegClass(Reg)->getID()));
   }
 
+  unsigned PrioPressureSet;
+  unsigned GPRPressureSet;
+  void initializePressureSets(const TargetRegisterInfo *TRI);
+
   // A TinyRegion has up to 10 instructions and is scheduled differently.
   bool TinyRegion;
 
@@ -52,18 +56,6 @@ class SystemZPreRASchedStrategy : public GenericScheduler {
 
   // True if latency scheduling is enabled.
   bool ShouldReduceLatency;
-
-  // Keep track of currently live registers.
-  class VRegSet {
-    std::set<Register> Regs;
-
-  public:
-    void clear() { Regs.clear(); }
-    void insert(Register Reg);
-    void erase(Register Reg);
-    bool count(Register Reg) const;
-    void dump() const;
-  } LiveRegs;
 
   // True if MI is also using the register it defines.
   std::vector<bool> IsRedefining;
@@ -91,7 +83,9 @@ protected:
 public:
   SystemZPreRASchedStrategy(const MachineSchedContext *C)
       : GenericScheduler(C) {
-    initializePrioRegClasses(C->MF->getRegInfo().getTargetRegisterInfo());
+    const TargetRegisterInfo *TRI = C->MF->getRegInfo().getTargetRegisterInfo();
+    initializePrioRegClasses(TRI);
+    initializePressureSets(TRI);
   }
 
   void initPolicy(MachineBasicBlock::iterator Begin,
