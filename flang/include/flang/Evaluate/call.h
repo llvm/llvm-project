@@ -161,15 +161,15 @@ public:
   }
 
   // This actual argument may need copy-in before the procedure call
-  bool mayNeedCopyIn() const { return attrs_.test(Attr::CopyIn); };
-  ActualArgument &set_mayNeedCopyIn() {
+  bool GetMayNeedCopyIn() const { return attrs_.test(Attr::CopyIn); };
+  ActualArgument &SetMayNeedCopyIn() {
     attrs_ = attrs_ + Attr::CopyIn;
     return *this;
   }
 
   // This actual argument may need copy-out after the procedure call
-  bool mayNeedCopyOut() const { return attrs_.test(Attr::CopyOut); };
-  ActualArgument &set_mayNeedCopyOut() {
+  bool GetMayNeedCopyOut() const { return attrs_.test(Attr::CopyOut); };
+  ActualArgument &SetMayNeedCopyOut() {
     attrs_ = attrs_ + Attr::CopyOut;
     return *this;
   }
