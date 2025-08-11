@@ -167,6 +167,8 @@ public:
 // Tablegen Type Declarations
 //===----------------------------------------------------------------------===//
 
+#include "mlir/IR/QuantizationInterface.h"
+
 #define GET_TYPEDEF_CLASSES
 #include "mlir/IR/BuiltinTypes.h.inc"
 
