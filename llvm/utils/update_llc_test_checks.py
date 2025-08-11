@@ -142,7 +142,7 @@ def update_test(ti: common.TestInfo):
             triple = common.get_triple_from_march(march_in_cmd)
 
         scrubber, function_re = output_type.get_run_handler(triple)
-        if not builder.process_run_line(
+        if 0 == builder.process_run_line(
             function_re, scrubber, raw_tool_output, prefixes
         ):
             common.warn(

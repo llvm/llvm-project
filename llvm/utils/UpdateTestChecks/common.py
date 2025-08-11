@@ -878,6 +878,9 @@ class FunctionTestBuilder:
         return False
 
     def process_run_line(self, function_re, scrubber, raw_tool_output, prefixes):
+        """
+        Returns the number of functions processed from the output by the regex.
+        """
         build_global_values_dictionary(
             self._global_var_dict, raw_tool_output, prefixes, self._ginfo
         )
