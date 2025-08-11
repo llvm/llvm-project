@@ -14,6 +14,7 @@ call relax
 jal zero, .LBB0+16
 # CHECK-INSTR: jal zero, 0x10
 # CHECK-RELOC:  R_RISCV_JAL
+# CHECK-RELOC-NEXT: R_RISCV_RELAX
 
 beq a0, a1, .LBB1+32
 # CHECK-INSTR: beq a0, a1, 0x20
@@ -31,4 +32,5 @@ c.beqz a0, .-2
 
 call relax
 # CHECK-RELOC-NEXT:  R_RISCV_CALL_PLT
+# CHECK-RELOC-NEXT:  R_RISCV_RELAX
 .LBB2:
