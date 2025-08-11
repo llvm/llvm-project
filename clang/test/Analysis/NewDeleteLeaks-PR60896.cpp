@@ -1,10 +1,44 @@
 // RUN: %clang_analyze_cc1 -verify -analyzer-output=text %s \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus \
-// RUN:   -analyzer-checker=unix
-// expected-no-diagnostics
+// RUN:   -analyzer-checker=unix \
+// RUN:   -analyzer-checker=unix.Malloc
 
 #include "Inputs/system-header-simulator-for-malloc.h"
+
+//===----------------------------------------------------------------------===//
+// Check that we report leaks for malloc when passing smart pointers
+//===----------------------------------------------------------------------===//
+namespace malloc_with_smart_ptr {
+
+// Custom unique_ptr implementation for testing
+template <typename T>
+struct unique_ptr {
+  T* ptr;
+  unique_ptr(T* p) : ptr(p) {}
+  ~unique_ptr() { delete ptr; }
+  unique_ptr(unique_ptr&& other) : ptr(other.ptr) { other.ptr = nullptr; }
+  T* get() const { return ptr; }
+};
+
+template <typename T, typename... Args>
+unique_ptr<T> make_unique(Args&&... args) {
+  return unique_ptr<T>(new T(args...));
+}
+
+void add(unique_ptr<int> ptr) {
+  // The unique_ptr destructor will be called when ptr goes out of scope
+}
+
+int bar(void) {
+  void *ptr = malloc(4); // expected-note {{Memory is allocated}}
+
+  add(make_unique<int>(1));
+  (void)ptr;
+  return 0; // expected-warning {{Potential leak of memory pointed to by 'ptr'}} expected-note {{Potential leak of memory pointed to by 'ptr'}}
+}
+
+} // namespace malloc_with_smart_ptr
 
 //===----------------------------------------------------------------------===//
 // Check that we don't report leaks for unique_ptr in temporary objects

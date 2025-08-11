@@ -3237,7 +3237,6 @@ void MallocChecker::checkPostCall(const CallEvent &Call,
 
   SmallVector<const MemRegion *, 8> SmartPtrFieldRoots;
   ProgramStateRef State = C.getState();
-  bool needsStateUpdate = false;
 
   for (unsigned I = 0, E = Call.getNumArgs(); I != E; ++I) {
     const Expr *AE = Call.getArgExpr(I);
@@ -3255,7 +3254,6 @@ void MallocChecker::checkPostCall(const CallEvent &Call,
       // Fallback: if we have a by-value record with smart pointer fields but no
       // region, mark all allocated symbols as escaped
       State = escapeAllAllocatedSymbols(State);
-      needsStateUpdate = true;
       continue;
     }
 
@@ -3264,42 +3262,15 @@ void MallocChecker::checkPostCall(const CallEvent &Call,
                                             SmartPtrFieldRoots);
   }
 
-  // Escape only from those field roots; do nothing if empty.
+  // Escape only from those field roots
   if (!SmartPtrFieldRoots.empty()) {
-    ProgramStateRef NewState =
-        EscapeTrackedCallback::EscapeTrackedRegionsReachableFrom(
-            SmartPtrFieldRoots, State);
-    if (NewState != State) {
-      State = NewState;
-      needsStateUpdate = true;
-    } else {
-      // Fallback: if we have by-value record arguments but no smart pointer
-      // fields detected, check if any of the arguments are by-value records
-      // with smart pointer fields
-      bool hasByValueRecordWithSmartPtr = false;
-      for (unsigned I = 0, E = Call.getNumArgs(); I != E; ++I) {
-        const Expr *AE = Call.getArgExpr(I);
-        if (!AE)
-          continue;
-        AE = AE->IgnoreParenImpCasts();
-
-        if (isRvalueByValueRecordWithSmartPtr(AE)) {
-          hasByValueRecordWithSmartPtr = true;
-          break;
-        }
-      }
-
-      if (hasByValueRecordWithSmartPtr) {
-        State = escapeAllAllocatedSymbols(State);
-        needsStateUpdate = true;
-      }
-    }
+    State = EscapeTrackedCallback::EscapeTrackedRegionsReachableFrom(
+        SmartPtrFieldRoots, State);
   }
 
-  // Apply all state changes in a single transition
-  if (needsStateUpdate) {
-    C.addTransition(State);
-  }
+  // Apply state changes - addTransition will check if State differs
+  // from current state
+  C.addTransition(State);
 }
 
 void MallocChecker::checkPreCall(const CallEvent &Call,
