@@ -138,6 +138,11 @@
   Dump function CFGs to graphviz format after each stage;enable '-print-loops'
   for color-coded blocks
 
+- `--dump-dot-func=<func1,func2,func3...>`
+
+  Dump function CFGs to graphviz format for specified functions only;
+  takes function name patterns (regex supported)
+
 - `--dump-linux-exceptions`
 
   Dump Linux kernel exception table
