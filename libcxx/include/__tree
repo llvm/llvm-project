@@ -33,10 +33,9 @@
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_same.h>
+#include <__type_traits/is_specialization.h>
 #include <__type_traits/is_swappable.h>
 #include <__type_traits/remove_const.h>
-#include <__type_traits/remove_const_ref.h>
-#include <__type_traits/remove_cvref.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
@@ -52,13 +51,6 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Tp, class _Compare, class _Allocator>
-class __tree;
-template <class _Tp, class _NodePtr, class _DiffType>
-class __tree_iterator;
-template <class _Tp, class _ConstNodePtr, class _DiffType>
-class __tree_const_iterator;
-
 template <class _Pointer>
 class __tree_end_node;
 template <class _VoidPtr>
@@ -68,13 +60,6 @@ class __tree_node;
 
 template <class _Key, class _Value>
 struct __value_type;
-
-template <class _Allocator>
-class __map_node_destructor;
-template <class _TreeIterator>
-class __map_iterator;
-template <class _TreeIterator>
-class __map_const_iterator;
 
 /*
 
@@ -494,16 +479,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __tree_remove(_NodePtr 
 // node traits
 
 template <class _Tp>
-struct __is_tree_value_type_imp : false_type {};
-
-template <class _Key, class _Value>
-struct __is_tree_value_type_imp<__value_type<_Key, _Value> > : true_type {};
-
-template <class... _Args>
-struct __is_tree_value_type : false_type {};
-
-template <class _One>
-struct __is_tree_value_type<_One> : __is_tree_value_type_imp<__remove_cvref_t<_One> > {};
+inline const bool __is_tree_value_type_v = __is_specialization_v<_Tp, __value_type>;
 
 template <class _Tp>
 struct __get_tree_key_type {
@@ -1025,7 +1001,7 @@ public:
 
   template<
   class _ValueT = _Tp,
-  __enable_if_t<__is_tree_value_type<_ValueT>::value, int> = 0
+  __enable_if_t<__is_tree_value_type_v<_ValueT>, int> = 0
   >
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
   __sfinae_call_emplace_hint_unique(const_iterator __p, __get_node_value_type_t<_Tp>&& __value, false_type) {
@@ -1044,7 +1020,7 @@ public:
 
   template<
   class _ValueT = _Tp,
-  __enable_if_t<__is_tree_value_type<_ValueT>::value, int> = 0
+  __enable_if_t<__is_tree_value_type_v<_ValueT>, int> = 0
   >
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
   __sfinae_call_emplace_hint_unique(const_iterator __p, __get_node_value_type_t<_Tp>&& __value, true_type) {
@@ -1052,7 +1028,7 @@ public:
   }
 
 
-  template <class _ValueT = _Tp, __enable_if_t<__is_tree_value_type<_ValueT>::value, int> = 0>
+  template <class _ValueT = _Tp, __enable_if_t<__is_tree_value_type_v<_ValueT>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
   __insert_unique_from_orphaned_node(const_iterator __p, __get_node_value_type_t<_Tp>&& __value) {
     // fails here for move_alloc.pass.cpp
@@ -1072,21 +1048,18 @@ public:
     }
   }
 
-  template <class _ValueT = _Tp, __enable_if_t<!__is_tree_value_type<_ValueT>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
-  __insert_unique_from_orphaned_node(const_iterator __p, _Tp&& __value) {
+  template <class _ValueT = _Tp, __enable_if_t<!__is_tree_value_type_v<_ValueT>, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __insert_unique_from_orphaned_node(const_iterator __p, _Tp&& __value) {
     __emplace_hint_unique(__p, std::move(__value));
   }
 
-  template <class _ValueT = _Tp, __enable_if_t<__is_tree_value_type<_ValueT>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
-  __insert_multi_from_orphaned_node(const_iterator __p, value_type&& __value) {
+  template <class _ValueT = _Tp, __enable_if_t<__is_tree_value_type_v<_ValueT>, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __insert_multi_from_orphaned_node(const_iterator __p, value_type&& __value) {
     __emplace_hint_multi(__p, const_cast<key_type&&>(__value.first), std::move(__value.second));
   }
 
-  template <class _ValueT = _Tp, __enable_if_t<!__is_tree_value_type<_ValueT>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
-  __insert_multi_from_orphaned_node(const_iterator __p, _Tp&& __value) {
+  template <class _ValueT = _Tp, __enable_if_t<!__is_tree_value_type_v<_ValueT>, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __insert_multi_from_orphaned_node(const_iterator __p, _Tp&& __value) {
     __emplace_hint_multi(__p, std::move(__value));
   }
 
@@ -1249,7 +1222,7 @@ private:
 // #ifdef FAKE_VINAY
 
   template <class _From, class _ValueT = _Tp, 
-  __enable_if_t<__is_tree_value_type<_ValueT>::value, int> = 0
+  __enable_if_t<__is_tree_value_type_v<_ValueT>, int> = 0
 
 // , typename = std::enable_if_t<
 //               !std::is_copy_constructible_v<
@@ -1270,7 +1243,7 @@ private:
   }
 
   template <class _From, class _ValueT = _Tp, 
-  __enable_if_t<__is_tree_value_type<_ValueT>::value, int> = 0
+  __enable_if_t<__is_tree_value_type_v<_ValueT>, int> = 0
 
   // Check if first type can be copy constructed
 
@@ -1309,9 +1282,8 @@ private:
 
 
 
-  template <class _From, class _ValueT = _Tp, __enable_if_t<__is_tree_value_type<_ValueT>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
-  __assign_value( __get_node_value_type_t<value_type>& __lhs, _From&& __rhs) {
+  template <class _From, class _ValueT = _Tp, __enable_if_t<__is_tree_value_type_v<_ValueT>, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __assign_value(__get_node_value_type_t<value_type>& __lhs, _From&& __rhs) {
     using __key_type = __remove_const_t<typename value_type::first_type>;
 
       
@@ -1340,8 +1312,8 @@ error: no matching constructor for initialization of '__get_node_value_type_t<va
     }
   }
 
-  template <class _To, class _From, class _ValueT = _Tp, __enable_if_t<!__is_tree_value_type<_ValueT>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI void __assign_value(_To& __lhs, _From&& __rhs) {
+  template <class _To, class _From, class _ValueT = _Tp, __enable_if_t<!__is_tree_value_type_v<_ValueT>, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI static void __assign_value(_To& __lhs, _From&& __rhs) {
     __lhs = std::forward<_From>(__rhs);
   }
 
