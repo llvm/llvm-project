@@ -417,6 +417,7 @@ for.end:                                 ; preds = %for.body, %entry
 
 ; Note: This test was added to ensure we always check the legality of reductions (end emit a warning if necessary) before checking for memory dependencies
 ; CHECK-REMARK: Scalable vectorization not supported for the reduction operations found in this loop.
+; CHECK-REMARK: Ignoring user-specified interleave count due to possibly unsafe dependencies in the loop.
 ; CHECK-REMARK: vectorized loop (vectorization width: 4, interleaved count: 1)
 define i32 @memory_dependence(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, i64 %n) {
 ; CHECK-LABEL: @memory_dependence
