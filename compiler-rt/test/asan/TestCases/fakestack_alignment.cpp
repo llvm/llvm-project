@@ -36,10 +36,10 @@ bool misaligned = false;
 void *Thread(void *unused) {
   big_object x;
   uint alignment = (unsigned long)&x % alignof(big_object);
-  if (alignment != 0) {
-    printf("Thread: address modulo alignment is %u\n", alignment);
+
+  if (alignment != 0)
     misaligned = true;
-  }
+
   return NULL;
 }
 
