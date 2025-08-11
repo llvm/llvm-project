@@ -12,7 +12,7 @@ def run(f):
     print("\nTEST:", f.__name__)
     f()
     gc.collect()
-    # assert Context._get_live_count() == 0
+    assert Context._get_live_count() == 0
 
 
 @contextmanager
