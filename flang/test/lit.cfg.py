@@ -174,10 +174,8 @@ else:
 
 llvm_config.use_clang(required=False)
 
-# Include path for C headers that define Flang's Fortran ABI.
-config.substitutions.append(
-    ("%include", os.path.join(config.flang_source_dir, "include"))
-)
+# Clang may need the include path for ISO_fortran_binding.h.
+config.substitutions.append(("%flang_include", config.flang_intrinsic_modules_dir))
 
 # Enable libpgmath testing
 result = lit_config.params.get("LIBPGMATH")
