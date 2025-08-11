@@ -202,10 +202,6 @@ add_libc_unittest(
     libc.src.errno.errno
 )
 
-if(LIBC_TARGET_OS_IS_BAREMETAL)
-  list(APPEND options "-DLIBC_TARGET_OS_IS_BAREMETAL")
-endif()
-
 add_libc_test(
   timespec_get_test
   SUITE
@@ -215,8 +211,6 @@ add_libc_test(
   DEPENDS
     libc.src.time.timespec_get
     libc.hdr.types.struct_timespec
-  COMPILE_OPTIONS
-    ${options}
 )
 
 add_libc_test(
