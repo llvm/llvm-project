@@ -2581,10 +2581,10 @@ void VPlanTransforms::createInterleaveGroups(
     auto *InsertPos =
         cast<VPWidenMemoryRecipe>(RecipeBuilder.getRecipe(IRInsertPos));
 
-    bool InBounds = false;
+    GEPNoWrapFlags NW = GEPNoWrapFlags::none();
     if (auto *Gep = dyn_cast<GetElementPtrInst>(
             getLoadStorePointerOperand(IRInsertPos)->stripPointerCasts()))
-      InBounds = Gep->isInBounds();
+      NW = Gep->getNoWrapFlags().withoutNoUnsignedWrap();
 
     // Get or create the start address for the interleave group.
     auto *Start =
@@ -2608,8 +2608,9 @@ void VPlanTransforms::createInterleaveGroups(
       VPValue *OffsetVPV =
           Plan.getOrAddLiveIn(ConstantInt::get(Plan.getContext(), -Offset));
       VPBuilder B(InsertPos);
-      Addr = InBounds ? B.createInBoundsPtrAdd(InsertPos->getAddr(), OffsetVPV)
-                      : B.createPtrAdd(InsertPos->getAddr(), OffsetVPV);
+      Addr = NW.isInBounds()
+                 ? B.createInBoundsPtrAdd(InsertPos->getAddr(), OffsetVPV)
+                 : B.createPtrAdd(InsertPos->getAddr(), OffsetVPV);
     }
     // If the group is reverse, adjust the index to refer to the last vector
     // lane instead of the first. We adjust the index from the first vector
@@ -2618,9 +2619,7 @@ void VPlanTransforms::createInterleaveGroups(
     if (IG->isReverse()) {
       auto *ReversePtr = new VPVectorEndPointerRecipe(
           Addr, &Plan.getVF(), getLoadStoreType(IRInsertPos),
-          -(int64_t)IG->getFactor(),
-          InBounds ? GEPNoWrapFlags::inBounds() : GEPNoWrapFlags::none(),
-          InsertPos->getDebugLoc());
+          -(int64_t)IG->getFactor(), NW, InsertPos->getDebugLoc());
       ReversePtr->insertBefore(InsertPos);
       Addr = ReversePtr;
     }
