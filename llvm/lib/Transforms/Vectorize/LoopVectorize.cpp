@@ -1368,8 +1368,7 @@ public:
       return;
     // Override EVL styles if needed.
     // FIXME: Investigate opportunity for fixed vector factor.
-    bool EVLIsLegal = UserIC <= 1 && IsScalableVF &&
-                      TTI.hasActiveVectorLength() && !EnableVPlanNativePath;
+    bool EVLIsLegal = UserIC <= 1 && IsScalableVF && !EnableVPlanNativePath;
     if (EVLIsLegal)
       return;
     // If for some reason EVL mode is unsupported, fallback to a scalar epilogue

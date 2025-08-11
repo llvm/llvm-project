@@ -1860,13 +1860,6 @@ public:
   /// \return true when scalable vectorization is preferred.
   LLVM_ABI bool enableScalableVectorization() const;
 
-  /// \name Vector Predication Information
-  /// @{
-  /// Whether the target supports the %evl parameter of VP intrinsic efficiently
-  /// in hardware. (see LLVM Language Reference - "Vector Predication
-  /// Intrinsics"). Use of %evl is discouraged when that is not the case.
-  LLVM_ABI bool hasActiveVectorLength() const;
-
   /// Return true if sinking I's operands to the same basic block as I is
   /// profitable, e.g. because the operands can be folded into a target
   /// instruction during instruction selection. After calling the function
@@ -1915,7 +1908,6 @@ public:
   /// transformed.
   LLVM_ABI VPLegalization
   getVPLegalizationStrategy(const VPIntrinsic &PI) const;
-  /// @}
 
   /// \returns Whether a 32-bit branch instruction is available in Arm or Thumb
   /// state.

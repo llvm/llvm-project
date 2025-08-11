@@ -21387,14 +21387,6 @@ A vector operation ``<opcode>`` on vectors ``A`` and ``B`` calculates:
        A <opcode> B =  {  A[i] <opcode> B[i]   M[i] = True, and
                        {  undef otherwise
 
-Optimization Hint
-^^^^^^^^^^^^^^^^^
-
-Some targets, such as AVX512, do not support the %evl parameter in hardware.
-The use of an effective %evl is discouraged for those targets.  The function
-``TargetTransformInfo::hasActiveVectorLength()`` returns true when the target
-has native support for %evl.
-
 .. _int_vp_select:
 
 '``llvm.vp.select.*``' Intrinsics
