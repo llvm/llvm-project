@@ -69,7 +69,7 @@ public:
   template <typename A>
   explicit constexpr RT_API_ATTRS BinaryFloatingPointNumber(A x) {
     static_assert(sizeof raw_ <= sizeof x);
-    Fortran::runtime::memcpy(reinterpret_cast<void *>(&raw_),
+    runtime::memcpy(reinterpret_cast<void *>(&raw_),
         reinterpret_cast<const void *>(&x), sizeof raw_);
   }
 

@@ -102,7 +102,7 @@ RT_API_ATTRS void CopyElement(const Descriptor &to, const SubscriptValue toAt[],
     char *toPtr{to.Element<char>(toAt)};
     char *fromPtr{from.Element<char>(fromAt)};
     RUNTIME_CHECK(terminator, to.ElementBytes() == from.ElementBytes());
-    Fortran::runtime::memcpy(toPtr, fromPtr, to.ElementBytes());
+    runtime::memcpy(toPtr, fromPtr, to.ElementBytes());
     return;
   }
 
@@ -149,7 +149,7 @@ RT_API_ATTRS void CopyElement(const Descriptor &to, const SubscriptValue toAt[],
     // Moreover, if we came here from an Component::Genre::Data component,
     // all the per-element copies are redundant, because the parent
     // has already been copied as a whole.
-    Fortran::runtime::memcpy(toPtr, fromPtr, curTo.ElementBytes());
+    runtime::memcpy(toPtr, fromPtr, curTo.ElementBytes());
     --elements;
     if (elements != 0) {
       currentCopy.IncrementSubscripts(terminator);

@@ -27,7 +27,7 @@ RT_OFFLOAD_API_GROUP_BEGIN
 RT_API_ATTRS Descriptor::Descriptor(const Descriptor &that) { *this = that; }
 
 RT_API_ATTRS Descriptor &Descriptor::operator=(const Descriptor &that) {
-  Fortran::runtime::memcpy(this, &that, that.SizeInBytes());
+  runtime::memcpy(this, &that, that.SizeInBytes());
   return *this;
 }
 

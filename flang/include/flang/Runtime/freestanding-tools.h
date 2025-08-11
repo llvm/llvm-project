@@ -23,16 +23,6 @@
 #define STD_FILL_N_UNSUPPORTED 1
 #endif
 
-#if !defined(STD_MEMSET_UNSUPPORTED) && \
-    (defined(__CUDACC__) || defined(__CUDA__)) && defined(__CUDA_ARCH__)
-#define STD_MEMSET_UNSUPPORTED 1
-#endif
-
-#if !defined(STD_MEMCPY_UNSUPPORTED) && \
-    (defined(__CUDACC__) || defined(__CUDA__)) && defined(__CUDA_ARCH__)
-#define STD_MEMCPY_UNSUPPORTED 1
-#endif
-
 #if !defined(STD_MEMMOVE_UNSUPPORTED) && \
     (defined(__CUDACC__) || defined(__CUDA__)) && defined(__CUDA_ARCH__)
 #define STD_MEMMOVE_UNSUPPORTED 1
@@ -73,7 +63,8 @@
 #define STD_TOUPPER_UNSUPPORTED 1
 #endif
 
-#if defined(OMP_OFFLOAD_BUILD) || defined(OMP_NOHOST_BUILD)
+#if defined(OMP_OFFLOAD_BUILD) && \
+    defined(OMP_NOHOST_BUILD) && defined(__clang__)
 #define STD_FILL_N_UNSUPPORTED 1
 #define STD_MEMSET_USE_BUILTIN 1
 #define STD_MEMSET_UNSUPPORTED 1

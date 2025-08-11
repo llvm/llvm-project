@@ -122,7 +122,7 @@ bool ExternalFileUnit::OpenUnit(Fortran::common::optional<OpenStatus> status,
   bool impliedClose{false};
   if (IsConnected()) {
     bool isSamePath{newPath.get() && path() && pathLength() == newPathLength &&
-        Fortran::runtime::memcmp(path(), newPath.get(), newPathLength) == 0};
+        runtime::memcmp(path(), newPath.get(), newPathLength) == 0};
     if (status && *status != OpenStatus::Old && isSamePath) {
       handler.SignalError("OPEN statement for connected unit may not have "
                           "explicit STATUS= other than 'OLD'");
@@ -203,7 +203,7 @@ bool ExternalFileUnit::OpenAnonymousUnit(
   auto path{SizedNew<char>{handler}(pathMaxLen)};
   std::snprintf(path.get(), pathMaxLen, "fort.%d", unitNumber_);
   OpenUnit(status, action, position, std::move(path),
-      Fortran::runtime::strlen(path.get()), convert, handler);
+      runtime::strlen(path.get()), convert, handler);
   return IsConnected();
 }
 

@@ -525,8 +525,8 @@ void RTNAME(Etime)(const Descriptor *values, const Descriptor *time,
     ULARGE_INTEGER userSystemTime;
     ULARGE_INTEGER kernelSystemTime;
 
-    Fortran::runtime::memcpy(&userSystemTime, &userTime, sizeof(FILETIME));
-    Fortran::runtime::memcpy(&kernelSystemTime, &kernelTime, sizeof(FILETIME));
+    runtime::memcpy(&userSystemTime, &userTime, sizeof(FILETIME));
+    runtime::memcpy(&kernelSystemTime, &kernelTime, sizeof(FILETIME));
 
     usrTime = ((double)(userSystemTime.QuadPart)) / 10000000.0;
     sysTime = ((double)(kernelSystemTime.QuadPart)) / 10000000.0;
