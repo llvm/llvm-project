@@ -7955,8 +7955,13 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
       return false;
 
     const auto *FnTy = unwrapped.get()->getAs<FunctionProtoType>();
-    if (!FnTy)
+    if (!FnTy) {
+      S.Diag(attr.getLoc(), diag::err_attribute_wrong_decl_type)
+          << attr << attr.isRegularKeywordAttribute()
+          << ExpectedFunctionWithProtoType;
+      attr.setInvalid();
       return true;
+    }
 
     FunctionProtoType::ExtProtoInfo EPI = FnTy->getExtProtoInfo();
     EPI.ExtraAttributeInfo.CFISalt = Argument;
