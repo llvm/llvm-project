@@ -6,12 +6,8 @@ define void @test(ptr %p, i64 %idx) {
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[IDX:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [4 x [4 x i32]], align 16
-<<<<<<< HEAD
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 64, ptr [[ALLOCA]])
-; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr nuw i8, ptr [[ALLOCA]], i64 48
-=======
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[ALLOCA]])
->>>>>>> upstream/main
+; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr nuw i8, ptr [[ALLOCA]], i64 48
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[IDX]], 6
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[TMP0]], 48
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP1]]
