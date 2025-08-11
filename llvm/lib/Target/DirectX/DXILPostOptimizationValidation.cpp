@@ -63,9 +63,7 @@ static void reportOverlappingError(Module &M, ResourceInfo R1,
 }
 
 static void reportOverlappingBinding(Module &M, DXILResourceMap &DRM) {
-  if (DRM.empty())
-    return;
-
+  bool ErrorFound = false;
   for (const auto &ResList :
        {DRM.srvs(), DRM.uavs(), DRM.cbuffers(), DRM.samplers()}) {
     if (ResList.empty())
@@ -77,11 +75,15 @@ static void reportOverlappingBinding(Module &M, DXILResourceMap &DRM) {
       while (RI != ResList.end() &&
              PrevRI->getBinding().overlapsWith(RI->getBinding())) {
         reportOverlappingError(M, *PrevRI, *RI);
+        ErrorFound = true;
         RI++;
       }
       PrevRI = CurrentRI;
     }
   }
+  assert(ErrorFound && "this function should be called only when if "
+                       "DXILResourceBindingInfo::hasOverlapingBinding() is "
+                       "true, yet no overlapping binding was found");
 }
 
 static void reportErrors(Module &M, DXILResourceMap &DRM,
