@@ -16,12 +16,11 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Remarks/Remark.h"
 #include "llvm/Support/Regex.h"
-#include "llvm/Support/ToolOutputFile.h"
 
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/MLIRContext.h"
 
-namespace mlir {
+namespace mlir::remark {
 
 /// Defines different remark kinds that can be used to categorize remarks.
 enum class RemarkKind {
@@ -35,12 +34,12 @@ enum class RemarkKind {
 //===----------------------------------------------------------------------===//
 // Remark Base Class
 //===----------------------------------------------------------------------===//
-class RemarkBase {
+class Remark {
 
 public:
-  RemarkBase(RemarkKind remarkKind, DiagnosticSeverity severity,
-             const char *passName, StringRef remarkName, Location loc,
-             std::optional<StringRef> functionName = std::nullopt)
+  Remark(RemarkKind remarkKind, DiagnosticSeverity severity,
+         const char *passName, StringRef remarkName, Location loc,
+         std::optional<StringRef> functionName = std::nullopt)
       : remarkKind(remarkKind), functionName(functionName), loc(loc),
         passName(passName), remarkName(remarkName) {}
 
@@ -142,16 +141,15 @@ private:
   }
 };
 
-inline RemarkBase &operator<<(RemarkBase &r, StringRef s) {
+inline Remark &operator<<(Remark &r, StringRef s) {
   r.insert(s);
   return r;
 }
-inline RemarkBase &&operator<<(RemarkBase &&r, StringRef s) {
+inline Remark &&operator<<(Remark &&r, StringRef s) {
   r.insert(s);
   return std::move(r);
 }
-inline RemarkBase &operator<<(RemarkBase &r,
-                              const RemarkBase::RemarkKeyValue &kv) {
+inline Remark &operator<<(Remark &r, const Remark::RemarkKeyValue &kv) {
   r.insert(kv);
   return r;
 }
@@ -161,11 +159,11 @@ inline RemarkBase &operator<<(RemarkBase &r,
 //===----------------------------------------------------------------------===//
 
 template <RemarkKind K, DiagnosticSeverity S>
-class OptRemarkBase final : public RemarkBase {
+class OptRemarkBase final : public Remark {
 public:
   explicit OptRemarkBase(Location loc, StringRef passName,
                          StringRef categoryName)
-      : RemarkBase(K, S, passName.data(), categoryName, loc) {}
+      : Remark(K, S, passName.data(), categoryName, loc) {}
 };
 
 using OptRemarkAnalysis = OptRemarkBase<RemarkKind::OptimizationRemarkAnalysis,
@@ -186,15 +184,15 @@ class RemarkEngine;
 // InFlightRemark
 //===----------------------------------------------------------------------===//
 
-/// InFlightRemark is a RAII class that holds a reference to a RemarkBase
+/// InFlightRemark is a RAII class that holds a reference to a Remark
 /// instance and allows to build the remark using the << operator. The remark
 /// is emitted when the InFlightRemark instance is destroyed, which happens
 /// when the scope ends or when the InFlightRemark instance is moved.
 /// Similar to InFlightDiagnostic, but for remarks.
 class InFlightRemark {
 public:
-  explicit InFlightRemark(RemarkBase *diag) : remark(diag) {}
-  InFlightRemark(RemarkEngine &eng, std::unique_ptr<RemarkBase> diag)
+  explicit InFlightRemark(Remark *diag) : remark(diag) {}
+  InFlightRemark(RemarkEngine &eng, std::unique_ptr<Remark> diag)
       : owner(&eng), remark(std::move(diag)) {}
 
   InFlightRemark() = default; // empty ctor
@@ -217,7 +215,7 @@ public:
 
 private:
   RemarkEngine *owner{nullptr};
-  std::unique_ptr<RemarkBase> remark;
+  std::unique_ptr<Remark> remark;
 };
 
 //===----------------------------------------------------------------------===//
@@ -236,7 +234,7 @@ public:
   ///
   /// It must be overridden by the derived classes to provide
   /// the actual streaming implementation.
-  virtual void streamOptimizationRemark(const RemarkBase &remark) = 0;
+  virtual void streamOptimizationRemark(const Remark &remark) = 0;
 
   virtual void finalize() {} // optional
 };
@@ -286,7 +284,7 @@ private:
   }
 
   /// Emit a remark using the given maker function, which should return
-  /// a RemarkBase instance. The remark will be emitted using the main
+  /// a Remark instance. The remark will be emitted using the main
   /// remark streamer.
   template <typename RemarkT, typename... Args>
   InFlightRemark makeRemark(Args &&...args);
@@ -315,7 +313,7 @@ public:
                            std::string *errMsg);
 
   /// Report a remark.
-  void report(const RemarkBase &&remark);
+  void report(const Remark &&remark);
 
   /// Report a successful remark, this will create an InFlightRemark
   /// that can be used to build the remark using the << operator.
@@ -340,7 +338,7 @@ public:
 // Emitters
 //===----------------------------------------------------------------------===//
 
-using Suggestion = RemarkBase::RemarkKeyValue;
+using Suggestion = Remark::RemarkKeyValue;
 inline Suggestion suggest(StringRef txt) { return {"Suggestion", txt}; }
 
 template <typename Fn, typename... Args>
@@ -385,6 +383,6 @@ inline InFlightRemark reportOptimizationAnalysis(Location loc, StringRef cat,
                     passName, cat);
 }
 
-} // namespace mlir
+} // namespace mlir::remark
 
 #endif // MLIR_IR_REMARKS_H

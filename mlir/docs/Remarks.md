@@ -24,9 +24,9 @@ Remarks has two important classes:
   `InFlightRemark`s, optionally mirrors them to the `DiagnosticEngine`, then
   dispatches to the installed streamer.
 - **`MLIRRemarkStreamerBase`** (abstract): backend interface with a single hook
-  `streamOptimizationRemark(const RemarkBase &)`.
+  `streamOptimizationRemark(const Remark &)`.
 
-**Default backend – `MLIRLLVMRemarkStreamer`** Adapts `mlir::RemarkBase` to
+**Default backend – `MLIRLLVMRemarkStreamer`** Adapts `mlir::Remark` to
 `llvm::remarks::Remark` and writes YAML/bitstream via
 `llvm::remarks::RemarkStreamer` to a `ToolOutputFile`.
 
@@ -85,12 +85,12 @@ LogicalResult MyPass::runOnOperation() {
 
   // PASS: something succeeded
   reportOptimizationPass(loc, /*category=*/"vectorizer", /*passName=*/"MyPass")
-      << "vectorized loop with tripCount="
-      << RemarkBase::RemarkKeyValue("tripCount", 128);
+      << "vectorized loop."
+      << Remark::RemarkKeyValue("tripCount", 128);
 
   // ANALYSIS: neutral insight
   reportOptimizationAnalysis(loc, "unroll", "MyPass")
-      << "estimated cost: " << RemarkBase::RemarkKeyValue("cost", 42);
+      << "estimated cost: " << Remark::RemarkKeyValue("cost", 42);
 
   // MISSED: explain why + suggest a fix
   reportOptimizationMiss(loc, "unroll", "MyPass",
@@ -138,8 +138,8 @@ consume remarks in any format you like:
 ```c++
 class MyStreamer : public MLIRRemarkStreamerBase {
 public:
-  void streamOptimizationRemark(const RemarkBase &remark) override {
-    // Convert RemarkBase to your format and write it out.
+  void streamOptimizationRemark(const Remark &remark) override {
+    // Convert Remark to your format and write it out.
   }
 };
 

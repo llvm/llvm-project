@@ -12,7 +12,6 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/Remarks/RemarkFormat.h"
 #include <functional>
 #include <memory>
 #include <vector>
@@ -33,10 +32,12 @@ class InFlightDiagnostic;
 class Location;
 class MLIRContextImpl;
 class RegisteredOperationName;
-class MLIRRemarkStreamerBase;
-class RemarkEngine;
 class StorageUniquer;
 class IRUnit;
+namespace remark {
+class MLIRRemarkStreamerBase;
+class RemarkEngine;
+} // namespace remark
 
 /// MLIRContext is the top-level object for a collection of MLIR operations. It
 /// holds immortal uniqued objects like types, and the tables used to unique
@@ -220,7 +221,7 @@ public:
   DiagnosticEngine &getDiagEngine();
 
   /// Returns the remark engine for this context.
-  RemarkEngine *getRemarkEngine();
+  remark::RemarkEngine *getRemarkEngine();
 
   /// Returns the storage uniquer used for creating affine constructs.
   StorageUniquer &getAffineUniquer();
@@ -263,10 +264,9 @@ public:
   /// emitted.
   /// If `printAsEmitRemarks` is true, the remarks will be printed as
   /// mlir::emitRemarks.
-  LogicalResult
-  enableOptimizationRemarks(std::unique_ptr<MLIRRemarkStreamerBase> streamer,
-                            const RemarkCategories &cats,
-                            bool printAsEmitRemarks = false);
+  LogicalResult enableOptimizationRemarks(
+      std::unique_ptr<remark::MLIRRemarkStreamerBase> streamer,
+      const RemarkCategories &cats, bool printAsEmitRemarks = false);
 
   //===--------------------------------------------------------------------===//
   // Action API
@@ -305,7 +305,7 @@ public:
 
 private:
   /// Set the remark engine for this context.
-  void setRemarkEngine(std::unique_ptr<RemarkEngine> engine);
+  void setRemarkEngine(std::unique_ptr<remark::RemarkEngine> engine);
 
   /// Return true if the given dialect is currently loading.
   bool isDialectLoading(StringRef dialectNamespace);

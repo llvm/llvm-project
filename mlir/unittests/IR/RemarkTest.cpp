@@ -165,7 +165,7 @@ class MyCustomStreamer : public MLIRRemarkStreamerBase {
 public:
   MyCustomStreamer() = default;
 
-  void streamOptimizationRemark(const RemarkBase &remark) override {
+  void streamOptimizationRemark(const Remark &remark) override {
     llvm::errs() << "Custom remark: ";
     remark.print(llvm::errs(), true);
     llvm::errs() << "\n";

@@ -14,58 +14,57 @@
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/FileSystem.h"
 
-using namespace mlir;
+using namespace mlir::remark;
 
 //------------------------------------------------------------------------------
-// RemarkBase
+// Remark
 //------------------------------------------------------------------------------
 
-RemarkBase::RemarkKeyValue::RemarkKeyValue(StringRef key, Value value)
+Remark::RemarkKeyValue::RemarkKeyValue(StringRef key, Value value)
     : key(std::string(key)) {
 
   llvm::raw_string_ostream rss(val);
   rss << value;
 }
 
-RemarkBase::RemarkKeyValue::RemarkKeyValue(StringRef key, Type type)
+Remark::RemarkKeyValue::RemarkKeyValue(StringRef key, Type type)
     : key(std::string(key)) {
   llvm::raw_string_ostream os(val);
   os << type;
 }
 
-RemarkBase::RemarkKeyValue::RemarkKeyValue(StringRef key, StringRef s)
+Remark::RemarkKeyValue::RemarkKeyValue(StringRef key, StringRef s)
     : key(std::string(key)), val(s.str()) {}
 
-RemarkBase::RemarkKeyValue::RemarkKeyValue(StringRef key, int n)
+Remark::RemarkKeyValue::RemarkKeyValue(StringRef key, int n)
     : key(std::string(key)), val(llvm::itostr(n)) {}
 
-RemarkBase::RemarkKeyValue::RemarkKeyValue(StringRef key, float n)
+Remark::RemarkKeyValue::RemarkKeyValue(StringRef key, float n)
     : key(std::string(key)), val(std::to_string(n)) {}
 
-RemarkBase::RemarkKeyValue::RemarkKeyValue(StringRef key, long n)
+Remark::RemarkKeyValue::RemarkKeyValue(StringRef key, long n)
     : key(std::string(key)), val(llvm::itostr(n)) {}
 
-RemarkBase::RemarkKeyValue::RemarkKeyValue(StringRef key, long long n)
+Remark::RemarkKeyValue::RemarkKeyValue(StringRef key, long long n)
     : key(std::string(key)), val(llvm::itostr(n)) {}
 
-RemarkBase::RemarkKeyValue::RemarkKeyValue(StringRef key, unsigned n)
+Remark::RemarkKeyValue::RemarkKeyValue(StringRef key, unsigned n)
     : key(std::string(key)), val(llvm::utostr(n)) {}
 
-RemarkBase::RemarkKeyValue::RemarkKeyValue(StringRef key, unsigned long n)
+Remark::RemarkKeyValue::RemarkKeyValue(StringRef key, unsigned long n)
     : key(std::string(key)), val(llvm::utostr(n)) {}
 
-RemarkBase::RemarkKeyValue::RemarkKeyValue(StringRef key, unsigned long long n)
+Remark::RemarkKeyValue::RemarkKeyValue(StringRef key, unsigned long long n)
     : key(std::string(key)), val(llvm::utostr(n)) {}
 
-void RemarkBase::insert(StringRef s) { args.emplace_back(s); }
+void Remark::insert(StringRef s) { args.emplace_back(s); }
 
-void RemarkBase::insert(RemarkKeyValue a) { args.push_back(std::move(a)); }
+void Remark::insert(RemarkKeyValue a) { args.push_back(std::move(a)); }
 
 // Simple helper to print key=val list.
 static void printArgs(llvm::raw_ostream &os,
-                      llvm::ArrayRef<RemarkBase::RemarkKeyValue> args) {
+                      llvm::ArrayRef<Remark::RemarkKeyValue> args) {
   if (args.empty())
     return;
   os << " {\n";
@@ -79,7 +78,7 @@ static void printArgs(llvm::raw_ostream &os,
   os << "\n}";
 }
 
-void RemarkBase::print(llvm::raw_ostream &os, bool printLocation) const {
+void Remark::print(llvm::raw_ostream &os, bool printLocation) const {
   os << getRemarkTypeString() << "\n";
   os << getPassName() << ":" << getRemarkName() << "\n";
 
@@ -96,7 +95,7 @@ void RemarkBase::print(llvm::raw_ostream &os, bool printLocation) const {
   printArgs(os, getArgs());
 }
 
-std::string RemarkBase::getMsg() const {
+std::string Remark::getMsg() const {
   std::string s;
   llvm::raw_string_ostream os(s);
   print(os);
@@ -104,7 +103,7 @@ std::string RemarkBase::getMsg() const {
   return s;
 }
 
-std::string RemarkBase::getRemarkTypeString() const {
+std::string Remark::getRemarkTypeString() const {
   switch (remarkKind) {
   case RemarkKind::OptimizationRemarkUnknown:
     return "Unknown";
@@ -120,7 +119,7 @@ std::string RemarkBase::getRemarkTypeString() const {
   llvm_unreachable("Unknown remark kind");
 }
 
-llvm::remarks::Type RemarkBase::getRemarkType() const {
+llvm::remarks::Type Remark::getRemarkType() const {
   switch (remarkKind) {
   case RemarkKind::OptimizationRemarkUnknown:
     return llvm::remarks::Type::Unknown;
@@ -136,7 +135,7 @@ llvm::remarks::Type RemarkBase::getRemarkType() const {
   llvm_unreachable("Unknown remark kind");
 }
 
-llvm::remarks::Remark RemarkBase::generateRemark() const {
+llvm::remarks::Remark Remark::generateRemark() const {
   auto locLambda = [&]() -> llvm::remarks::RemarkLocation {
     if (auto flc = dyn_cast<FileLineColLoc>(getLocation()))
       return {flc.getFilename(), flc.getLine(), flc.getColumn()};
@@ -149,7 +148,7 @@ llvm::remarks::Remark RemarkBase::generateRemark() const {
   r.RemarkName = getRemarkName();
   r.FunctionName = getFunction();
   r.Loc = locLambda();
-  for (const RemarkBase::RemarkKeyValue &arg : getArgs()) {
+  for (const Remark::RemarkKeyValue &arg : getArgs()) {
     r.Args.emplace_back();
     r.Args.back().Key = arg.key;
     r.Args.back().Val = arg.val;
@@ -173,8 +172,8 @@ InFlightRemark::~InFlightRemark() {
 
 template <typename RemarkT, typename... Args>
 InFlightRemark RemarkEngine::makeRemark(Args &&...args) {
-  static_assert(std::is_base_of_v<RemarkBase, RemarkT>,
-                "RemarkT must derive from RemarkBase");
+  static_assert(std::is_base_of_v<Remark, RemarkT>,
+                "RemarkT must derive from Remark");
   return InFlightRemark(*this,
                         std::make_unique<RemarkT>(std::forward<Args>(args)...));
 }
@@ -237,7 +236,7 @@ RemarkEngine::emitOptimizationRemarkAnalysis(Location loc, StringRef passName,
 // Remarkengine
 //===----------------------------------------------------------------------===//
 
-void RemarkEngine::report(const RemarkBase &&remark) {
+void RemarkEngine::report(const Remark &&remark) {
   // Stream the remark
   if (remarkStreamer)
     remarkStreamer->streamOptimizationRemark(remark);
@@ -252,7 +251,7 @@ RemarkEngine::~RemarkEngine() {
     remarkStreamer->finalize();
 }
 
-LogicalResult
+llvm::LogicalResult
 RemarkEngine::initialize(std::unique_ptr<MLIRRemarkStreamerBase> streamer,
                          std::string *errMsg) {
   // If you need to validate categories/filters, do so here and set errMsg.

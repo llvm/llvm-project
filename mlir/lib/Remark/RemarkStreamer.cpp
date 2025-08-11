@@ -33,10 +33,10 @@ LLVMRemarkStreamer::createToFile(llvm::StringRef path,
   auto impl = std::unique_ptr<LLVMRemarkStreamer>(new LLVMRemarkStreamer());
   impl->remarkStreamer = std::move(rs);
   impl->file = std::move(f);
-  return std::unique_ptr<MLIRRemarkStreamerBase>(std::move(impl));
+  return std::unique_ptr<mlir::remark::MLIRRemarkStreamerBase>(std::move(impl));
 }
 
-void LLVMRemarkStreamer::streamOptimizationRemark(const RemarkBase &remark) {
+void LLVMRemarkStreamer::streamOptimizationRemark(const Remark &remark) {
   if (!remarkStreamer->matchesFilter(remark.getPassName()))
     return;
 

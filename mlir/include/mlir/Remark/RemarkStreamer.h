@@ -1,5 +1,7 @@
 #include "mlir/IR/Remarks.h"
+
 #include "llvm/Remarks/RemarkStreamer.h"
+#include "llvm/Support/ToolOutputFile.h"
 
 using namespace llvm;
 namespace mlir::remark {
@@ -11,7 +13,7 @@ public:
   static FailureOr<std::unique_ptr<MLIRRemarkStreamerBase>>
   createToFile(llvm::StringRef path, llvm::remarks::Format fmt);
 
-  void streamOptimizationRemark(const RemarkBase &remark) override;
+  void streamOptimizationRemark(const Remark &remark) override;
   void finalize() override {}
   ~LLVMRemarkStreamer() override;
 
