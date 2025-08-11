@@ -173,12 +173,11 @@ BENCHMARK_CAPTURE(BM_LexicallyNormal, large_path, getRandomPaths, /*PathLen*/ 32
 
 template <class GenInput>
 void BM_LexicallyRelative(benchmark::State& st, GenInput gen, size_t PathLen) {
-  using fs::path;
   auto BasePath = gen(st.range(0), PathLen);
   auto TargetPath = gen(st.range(0), PathLen);
   benchmark::DoNotOptimize(&BasePath);
   benchmark::DoNotOptimize(&TargetPath);
-  while (st.KeepRunning()) {
+  for (auto _ : st) {
     benchmark::DoNotOptimize(TargetPath.lexically_relative(BasePath));
   }
   st.SetComplexityN(st.range(0));
