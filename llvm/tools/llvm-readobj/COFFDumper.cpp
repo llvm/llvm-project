@@ -2171,12 +2171,14 @@ void COFFDumper::printCOFFPseudoReloc() {
           ImportDirectories, EntryRVA,
           [](uint32_t RVA, const auto &D) { return RVA < D.StartRVA; });
       if (Ite == ImportDirectories.begin())
-        return createStringError("the reference of the symbol points out of the import table");
+        return createStringError(
+            "the reference of the symbol points out of the import table");
 
       --Ite;
       uint32_t RVA = Ite->StartRVA;
       if (Ite->EndRVA != 0 && Ite->EndRVA <= RVA)
-        return createStringError("the reference of the symbol points out of the import table");
+        return createStringError(
+            "the reference of the symbol points out of the import table");
       // Search with linear iteration to care if padding or garbage exist
       // between ImportDirectoryEntry
       for (auto S : Ite->EntryRef.imported_symbols()) {
@@ -2190,11 +2192,13 @@ void COFFDumper::printCOFFPseudoReloc() {
         }
         RVA += Obj->is64() ? 8 : 4;
         if (EntryRVA < RVA)
-          return createStringError("the reference of the symbol doesn't point imported symbol properly");
+          return createStringError("the reference of the symbol doesn't point "
+                                   "imported symbol properly");
       }
       Ite->EndRVA = RVA;
 
-      return createStringError("the reference of the symbol points out of the import table");
+      return createStringError(
+          "the reference of the symbol points out of the import table");
     }
 
   private:
