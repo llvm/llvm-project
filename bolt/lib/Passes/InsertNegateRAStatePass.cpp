@@ -102,7 +102,8 @@ void InsertNegateRAState::coverFunctionFragmentStart(BinaryFunction &BF,
       });
   // If a function is already split in the input, the first FF can also start
   // with Signed state. This covers that scenario as well.
-  if (BC.MIB->isRASigned(*((*FirstNonEmpty)->begin()))) {
+  if (BC.MIB->isRASigned(*((*FirstNonEmpty)->begin())) ||
+      BC.MIB->isAuthenticating(*((*FirstNonEmpty)->begin()))) {
     BF.addCFIInstruction(*FirstNonEmpty, (*FirstNonEmpty)->begin(),
                          MCCFIInstruction::createNegateRAState(nullptr));
   }
