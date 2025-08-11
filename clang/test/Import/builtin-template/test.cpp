@@ -26,6 +26,8 @@ void expr() {
 #ifdef DEDUP
   static_assert(__is_same(TypePackDedup<TypeList>, TypeList<>), "");
   static_assert(__is_same(TypePackDedup<TypeList, int, double, int>, TypeList<int, double>), "");
+  static_assert(!__is_same(TypePackDedup<TypeList, int, double, int>, TypeList<double, int>), "");
   static_assert(__is_same(TypePackDedup<TypeList, X<0>, X<1>, X<1>, X<2>, X<0>>, TypeList<X<0>, X<1>, X<2>>), "");
+  static_assert(__is_same(TypePackDedup<TypeList, X0, SameAsX<1>, X<1>, X<0>>, TypeList<X<0>,X<1>>), "");
 #endif
 }
