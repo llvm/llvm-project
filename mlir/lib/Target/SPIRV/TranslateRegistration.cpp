@@ -97,10 +97,9 @@ serializeModule(spirv::ModuleOp moduleOp, raw_ostream &output,
     if (dirSeparator != std::string::npos) {
       llvm::StringRef parentDir =
           llvm::sys::path::parent_path(options.validationFilePrefix);
-      if (!llvm::sys::fs::is_directory(parentDir)) {
-        moduleOp.emitError("validation prefix directory does not exist\n");
-        return failure();
-      }
+      if (!llvm::sys::fs::is_directory(parentDir))
+        return moduleOp.emitError(
+            "validation prefix directory does not exist\n");
     }
 
     SmallString<128> filename;
@@ -108,11 +107,9 @@ serializeModule(spirv::ModuleOp moduleOp, raw_ostream &output,
 
     std::error_code errorCode = llvm::sys::fs::createUniqueFile(
         options.validationFilePrefix + "%%%%%%", fd, filename);
-    if (errorCode) {
-      moduleOp.emitError("error creating validation output file: ")
-          << errorCode.message() << "\n";
-      return failure();
-    }
+    if (errorCode)
+      return moduleOp.emitError("error creating validation output file: ")
+             << errorCode.message() << "\n";
 
     llvm::raw_fd_ostream validationOutput(fd, /*shouldClose=*/true);
     validationOutput.write(reinterpret_cast<char *>(binary.data()),
