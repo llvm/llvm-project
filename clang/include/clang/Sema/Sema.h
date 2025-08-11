@@ -2652,9 +2652,9 @@ public:
   /// identifies the magic value.
   typedef std::pair<const IdentifierInfo *, uint64_t> TypeTagMagicValue;
 
-  /// Diagnoses the current set of gathered accesses. This typically
-  /// happens at full expression level. The set is cleared after emitting the
-  /// diagnostics.
+  /// Diagnoses the current set of gathered accesses. This happens at the end of
+  /// each expression evaluation context. Diagnostics are emitted only for
+  /// accesses gathered in the current evaluation context.
   void DiagnoseMisalignedMembers();
 
   /// This function checks if the expression is in the sef of potentially
