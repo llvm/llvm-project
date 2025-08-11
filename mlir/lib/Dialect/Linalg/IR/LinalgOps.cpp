@@ -5765,13 +5765,48 @@ ArrayRef<int64_t> UnPackOp::getAllOuterDims() {
   return getSourceType().getShape().take_front(destRank);
 }
 
+static SmallVector<int64_t>
+inversePerm(const llvm::SmallVector<int64_t> &perm) {
+  const size_t n = perm.size();
+  llvm::SmallVector<int64_t> invPerm(n);
+
+  for (size_t i = 0; i < n; ++i) {
+    assert(perm[i] >= 0 && static_cast<size_t>(perm[i]) < n &&
+           "Invalid permutation entry");
+    invPerm[perm[i]] = i;
+  }
+
+  return invPerm;
+}
+
+/// Compute the inverse of a permutation. Assumes `perm` is a valid permutation
+/// of 0...n-1.
+static SmallVector<int64_t> invertPermutation(SmallVector<int64_t> perm) {
+  const size_t permLen = perm.size();
+  llvm::SmallVector<int64_t> inv(permLen);
+  for (size_t i = 0; i < permLen; ++i) {
+    assert(perm[i] >= 0 && static_cast<size_t>(perm[i]) < permLen &&
+           "Invalid permutation entry");
+    inv[perm[i]] = i;
+  }
+  return inv;
+}
+
 SmallVector<int64_t> UnPackOp::getTiledOuterDims() {
   auto innerDimsPos = getInnerDimsPos();
-  auto packedShape = getSourceType().getShape();
+  SmallVector<int64_t> outerDims(getAllOuterDims());
   SmallVector<int64_t> res;
 
+  // Invert outer-dims-perm and use it to restore the original order
+  // of the outer dims.
+  SmallVector<int64_t> outerDimPermInv(getOuterDimsPerm());
+  inversePerm(outerDimPermInv);
+  if (!outerDimPermInv.empty())
+    applyPermutationToVector(outerDims, outerDimPermInv);
+
+  // Collect the outer dims corresponding to the tilled inner dims.
   for (auto index : innerDimsPos)
-    res.push_back(packedShape[index]);
+    res.push_back(outerDims[index]);
 
   return res;
 }
