@@ -11,6 +11,7 @@
 
 #include <mutex>
 
+#include "lldb/Host/ProcessRunLock.h"
 #include "lldb/Target/StackID.h"
 #include "lldb/lldb-private.h"
 
@@ -315,14 +316,6 @@ public:
   ExecutionContext(const ExecutionContextRef *exe_ctx_ref,
                    bool thread_and_frame_only_if_stopped = false);
 
-  // These two variants take in a locker, and grab the target, lock the API
-  // mutex into locker, then fill in the rest of the shared pointers.
-  ExecutionContext(const ExecutionContextRef &exe_ctx_ref,
-                   std::unique_lock<std::recursive_mutex> &locker)
-      : ExecutionContext(&exe_ctx_ref, locker) {}
-
-  ExecutionContext(const ExecutionContextRef *exe_ctx_ref,
-                   std::unique_lock<std::recursive_mutex> &locker);
   // Create execution contexts from execution context scopes
   ExecutionContext(ExecutionContextScope *exe_scope);
   ExecutionContext(ExecutionContextScope &exe_scope);
@@ -565,6 +558,53 @@ protected:
   lldb::ThreadSP m_thread_sp;    ///< The thread that owns the frame
   lldb::StackFrameSP m_frame_sp; ///< The stack frame in thread.
 };
+
+/// A wrapper class representing an execution context with non-null Target
+/// and Process pointers, a locked API mutex and a locked ProcessRunLock.
+/// The locks are private by design: to unlock them, destroy the
+/// StoppedExecutionContext.
+struct StoppedExecutionContext : ExecutionContext {
+  StoppedExecutionContext(lldb::TargetSP &target_sp,
+                          lldb::ProcessSP &process_sp,
+                          lldb::ThreadSP &thread_sp,
+                          lldb::StackFrameSP &frame_sp,
+                          std::unique_lock<std::recursive_mutex> api_lock,
+                          ProcessRunLock::ProcessRunLocker stop_locker)
+      : m_api_lock(std::move(api_lock)), m_stop_locker(std::move(stop_locker)) {
+    assert(target_sp);
+    assert(process_sp);
+    assert(m_api_lock.owns_lock());
+    assert(m_stop_locker.IsLocked());
+    SetTargetSP(target_sp);
+    SetProcessSP(process_sp);
+    SetThreadSP(thread_sp);
+    SetFrameSP(frame_sp);
+  }
+
+  /// Transfers ownership of the locks from `other` to `this`, making `other`
+  /// unusable.
+  StoppedExecutionContext(StoppedExecutionContext &&other)
+      : StoppedExecutionContext(other.m_target_sp, other.m_process_sp,
+                                other.m_thread_sp, other.m_frame_sp,
+                                std::move(other.m_api_lock),
+                                std::move(other.m_stop_locker)) {
+    other.Clear();
+  }
+
+  /// Clears this context, unlocking the ProcessRunLock and returning the
+  /// locked API lock. Like after a move operation, this object is no longer
+  /// usable.
+  [[nodiscard]] std::unique_lock<std::recursive_mutex> Destroy();
+
+private:
+  std::unique_lock<std::recursive_mutex> m_api_lock;
+  ProcessRunLock::ProcessRunLocker m_stop_locker;
+};
+
+llvm::Expected<StoppedExecutionContext>
+GetStoppedExecutionContext(const ExecutionContextRef *exe_ctx_ref_ptr);
+llvm::Expected<StoppedExecutionContext>
+GetStoppedExecutionContext(const lldb::ExecutionContextRefSP &exe_ctx_ref_ptr);
 
 } // namespace lldb_private
 
