@@ -67,7 +67,8 @@ define void @foo(i32 %n) {
 ; AVX-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; AVX-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; AVX:       [[VECTOR_BODY]]:
-; AVX-NEXT:    [[VEC_IND:%.*]] = phi <8 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_LATCH:.*]] ]
+; AVX-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_LATCH:.*]] ]
+; AVX-NEXT:    [[VEC_IND:%.*]] = phi <8 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_LATCH]] ]
 ; AVX-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [8 x i32], ptr @arr2, i64 0, <8 x i64> [[VEC_IND]]
 ; AVX-NEXT:    [[TMP1:%.*]] = trunc <8 x i64> [[VEC_IND]] to <8 x i32>
 ; AVX-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> [[TMP1]], <8 x ptr> [[TMP0]], i32 4, <8 x i1> splat (i1 true))
@@ -83,6 +84,7 @@ define void @foo(i32 %n) {
 ; AVX-NEXT:    [[TMP6:%.*]] = extractelement <8 x i1> [[TMP5]], i32 0
 ; AVX-NEXT:    br i1 [[TMP6]], label %[[VECTOR_LATCH]], label %[[FOR_BODY31]]
 ; AVX:       [[VECTOR_LATCH]]:
+; AVX-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; AVX-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], splat (i64 8)
 ; AVX-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; AVX:       [[MIDDLE_BLOCK]]:
