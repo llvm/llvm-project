@@ -2309,8 +2309,7 @@ chainToBasePointerCost(SmallVectorImpl<Instruction *> &Chain,
 
     } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Instr)) {
       // Cost of the address calculation
-      Type *ValTy = GEP->getSourceElementType();
-      Cost += TTI.getAddressComputationCost(ValTy);
+      Cost += TTI.getAddressComputationCost(GEP->getType());
 
       // And cost of the GEP itself
       // TODO: Use TTI->getGEPCost here (it exists, but appears to be not
