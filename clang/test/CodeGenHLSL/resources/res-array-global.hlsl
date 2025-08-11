@@ -50,9 +50,8 @@ void main() {
   // DXIL: call void @_ZN4hlsl8RWBufferIiEC1EjjijPKc(ptr {{.*}} %[[Tmp2]], i32 noundef 2, i32 noundef 0, i32 noundef 3, i32 noundef 1, ptr noundef @[[BufC]])
   // SPV: call void @_ZN4hlsl8RWBufferIiEC1EjjijPKc(ptr {{.*}} %[[Tmp2]], i32 noundef 2, i32 noundef 0, i32 noundef 3, i32 noundef 1, ptr noundef @[[BufC]])
 
-  // Make sure D[7] is translated to a RWBuffer<doublet> constructor call with range 10 and index 7
-  // and DXIL for implicit binding in space0, order id 1
-  // and SPIR-V explicit binding (binding 13, set 0), order id 0
+  // Make sure D[7] is translated to a RWBuffer<double> constructor call with implicit binding
+  // for both DXIL and SPIR-V
   // DXIL: call void @_ZN4hlsl8RWBufferIdEC1EjijjPKc(ptr {{.*}} %[[Tmp3]], i32 noundef 0, i32 noundef 10, i32 noundef 7, i32 noundef 1, ptr noundef @[[BufD]])
   // SPV: call void @_ZN4hlsl8RWBufferIdEC1EjijjPKc(ptr {{.*}} %[[Tmp3]], i32 noundef 0, i32 noundef 10, i32 noundef 7, i32 noundef 0, ptr noundef @[[BufD]])
   Out[0] = A[2][0] + (float)B[3][0] + (float)C[1][0] + (float)D[7][0];

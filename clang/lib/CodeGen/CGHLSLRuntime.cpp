@@ -113,7 +113,8 @@ static int getTotalArraySize(const clang::Type *Ty) {
   if (Ty->isIncompleteArrayType())
     return -1;
   int Size = 1;
-  while (const auto *CAT = dyn_cast<ConstantArrayType>(Ty)) {
+  while (const auto *CAT =
+             dyn_cast<ConstantArrayType>(Ty->getUnqualifiedDesugaredType())) {
     Size *= CAT->getSExtSize();
     Ty = CAT->getArrayElementTypeNoTypeQual();
   }
@@ -121,7 +122,7 @@ static int getTotalArraySize(const clang::Type *Ty) {
 }
 
 // Find constructor decl for a specific resource record type and binding
-// (implicit vs. explicit). The constructor has 6 parameters.
+// (implicit vs. explicit). The constructor has 5 parameters.
 // For explicit binding the signature is:
 //   void(unsigned, unsigned, int, unsigned, const char *).
 // For implicit binding the signature is:
@@ -171,7 +172,7 @@ static void createResourceCtorArgs(CodeGenModule &CGM, CXXConstructorDecl *CD,
   if (VkBinding) {
     RegisterSlot = VkBinding->getBinding();
     SpaceNo = VkBinding->getSet();
-  } else if (RBA) {
+  } else {
     if (RBA->hasRegisterSlot())
       RegisterSlot = RBA->getSlotNumber();
     SpaceNo = RBA->getSpaceNumber();
@@ -815,7 +816,7 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
          ArraySubsExpr->getType()->isHLSLResourceRecordArray() &&
              "expected resource array subscript expression");
 
-  // let clang codegen handle local resource array subscrips
+  // let clang codegen handle local resource array subscripts
   const VarDecl *ArrayDecl = dyn_cast<VarDecl>(getArrayDecl(ArraySubsExpr));
   if (!ArrayDecl || !ArrayDecl->hasGlobalStorage())
     return std::nullopt;
@@ -824,12 +825,10 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
   assert(!ArraySubsExpr->getType()->isArrayType() &&
          "indexing of array subsets it not supported yet");
 
-  // get total array size (= range size)
+  // get the resource array type
   const Type *ResArrayTy = ArrayDecl->getType().getTypePtr();
   assert(ResArrayTy->isHLSLResourceRecordArray() &&
          "expected array of resource classes");
-  llvm::Value *Range =
-      llvm::ConstantInt::get(CGM.IntTy, getTotalArraySize(ResArrayTy));
 
   // Iterate through all nested array subscript expressions to calculate
   // the index in the flattened resource array (if this is a multi-
@@ -885,6 +884,10 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
   Address ThisAddress = ValueSlot.getAddress();
   llvm::Value *ThisPtr = CGF.getAsNaturalPointerTo(
       ThisAddress, CD->getThisType()->getPointeeType());
+
+  // get total array size (= range size)
+  llvm::Value *Range =
+      llvm::ConstantInt::get(CGM.IntTy, getTotalArraySize(ResArrayTy));
 
   // assemble the constructor parameters
   CallArgList Args;
