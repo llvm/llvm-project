@@ -3826,15 +3826,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
-  // Instrument multiply-add intrinsic.
+  // Instrument multiply-add intrinsics.
   //
-  // e.g., <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %a, <8 x i16> %b)
-  //       <1 x i64> @llvm.x86.mmx.pmadd.wd(<1 x i64> %a, <1 x i64> %b)
+  // e.g., Two operands:
+  //         <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %a, <8 x i16> %b)
+  //         <1 x i64> @llvm.x86.mmx.pmadd.wd(<1 x i64> %a, <1 x i64> %b)
   //
-  // For the three-operand form:
-  //       <4 x i32> @llvm.x86.avx512.vpdpbusd.128(<4 x i32>, <4 x i32>, <4 x i32>)
-  // the result of multiply-add'ing the first two operands is accumulated with
-  // the third operand.
+  //       Three operands:
+  //       <4 x i32> @llvm.x86.avx512.vpdpbusd.128(<4 x i32> %s, <4 x i32> %a, <4 x i32> %b)
+  //       (the result of multiply-add'ing %a and %b is accumulated with %s)
   void handleVectorPmaddIntrinsic(IntrinsicInst &I, unsigned ReductionFactor,
                                   unsigned EltSizeInBits = 0) {
     IRBuilder<> IRB(&I);
@@ -3846,13 +3846,20 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     FixedVectorType *ParamType =
         cast<FixedVectorType>(I.getArgOperand(0)->getType());
     assert(ParamType == I.getArgOperand(1)->getType());
+
+    Value *V1;
+    Value *V2;
+
     if (I.arg_size() == 3) {
       assert(ParamType == ReturnType);
       assert(ParamType == I.getArgOperand(2)->getType());
-    }
 
-    Value *V1 = I.getOperand(0);
-    Value *V2 = I.getOperand(1);
+      V1 = I.getOperand(1);
+      V2 = I.getOperand(2);
+    } else {
+      V1 = I.getOperand(0);
+      V2 = I.getOperand(1);
+    }
 
     assert(ParamType->getPrimitiveSizeInBits() ==
            ReturnType->getPrimitiveSizeInBits());
@@ -3911,12 +3918,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         OrShadow = MaskedShadow;
     }
 
-    // Extend to <4 x i32>
-    OrShadow = IRB.CreateZExt(OrShadow, ReturnType);
+    // Extend to <4 x i32>.
+    // For MMX, cast it back to <1 x i64>.
+    OrShadow = CreateShadowCast(IRB, OrShadow, getShadowTy(&I));
 
     // Accumulate
     if (I.arg_size() == 3)
-      OrShadow = IRB.CreateOr(OrShadow, getShadow(&I, 2));
+      OrShadow = IRB.CreateOr(OrShadow, getShadow(&I, 0));
 
     setShadow(&I, OrShadow);
     setOriginForNaryOp(I);

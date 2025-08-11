@@ -58,11 +58,11 @@ define <1 x i64> @Test_ssse3_pmadd_ub_sw(<1 x i64> %a, <1 x i64> %b) sanitize_me
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <8 x i8> [[TMP7]], <8 x i8> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <8 x i8> [[TMP7]], <8 x i8> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
 ; CHECK-NEXT:    [[TMP10:%.*]] = or <4 x i8> [[TMP8]], [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <4 x i8> [[TMP10]] to i32
-; CHECK-NEXT:    [[TMP12:%.*]] = zext i32 [[TMP11]] to i64
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i64 [[TMP12]] to <1 x i64>
+; CHECK-NEXT:    [[TMP18:%.*]] = bitcast <4 x i8> [[TMP10]] to i32
+; CHECK-NEXT:    [[TMP19:%.*]] = zext i32 [[TMP18]] to i64
+; CHECK-NEXT:    [[TMP20:%.*]] = bitcast i64 [[TMP19]] to <1 x i64>
 ; CHECK-NEXT:    [[C:%.*]] = tail call <1 x i64> @llvm.x86.ssse3.pmadd.ub.sw(<1 x i64> [[A]], <1 x i64> [[B]]) #[[ATTR2]]
-; CHECK-NEXT:    store <1 x i64> [[TMP6]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <1 x i64> [[TMP20]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <1 x i64> [[C]]
 ;
 entry:
