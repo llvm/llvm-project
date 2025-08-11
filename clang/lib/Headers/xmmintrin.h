@@ -1689,7 +1689,7 @@ _mm_cvtsi64_ss(__m128 __a, long long __b) {
 /// \returns A 128-bit vector of [4 x float] whose lower 64 bits contain the
 ///    converted value of the second operand. The upper 64 bits are copied from
 ///    the upper 64 bits of the first operand.
-static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_cvtpi32_ps(__m128 __a, __m64 __b)
 {
   return (__m128)__builtin_shufflevector(
@@ -1715,7 +1715,7 @@ _mm_cvtpi32_ps(__m128 __a, __m64 __b)
 /// \returns A 128-bit vector of [4 x float] whose lower 64 bits contain the
 ///    converted value from the second operand. The upper 64 bits are copied
 ///    from the upper 64 bits of the first operand.
-static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_cvt_pi2ps(__m128 __a, __m64 __b)
 {
   return _mm_cvtpi32_ps(__a, __b);
@@ -2874,7 +2874,7 @@ _mm_movelh_ps(__m128 __a, __m128 __b) {
 ///    from the corresponding elements in this operand.
 /// \returns A 128-bit vector of [4 x float] containing the copied and converted
 ///    values from the operand.
-static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_cvtpi16_ps(__m64 __a)
 {
   return __builtin_convertvector((__v4hi)__a, __v4sf);
@@ -2892,7 +2892,7 @@ _mm_cvtpi16_ps(__m64 __a)
 ///    destination are copied from the corresponding elements in this operand.
 /// \returns A 128-bit vector of [4 x float] containing the copied and converted
 ///    values from the operand.
-static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_cvtpu16_ps(__m64 __a)
 {
   return __builtin_convertvector((__v4hu)__a, __v4sf);
@@ -2910,7 +2910,7 @@ _mm_cvtpu16_ps(__m64 __a)
 ///    from the corresponding lower 4 elements in this operand.
 /// \returns A 128-bit vector of [4 x float] containing the copied and converted
 ///    values from the operand.
-static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_cvtpi8_ps(__m64 __a)
 {
   return __builtin_convertvector(
@@ -2931,7 +2931,7 @@ _mm_cvtpi8_ps(__m64 __a)
 ///    operand.
 /// \returns A 128-bit vector of [4 x float] containing the copied and converted
 ///    values from the source operand.
-static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_cvtpu8_ps(__m64 __a)
 {
   return __builtin_convertvector(
@@ -2955,7 +2955,7 @@ _mm_cvtpu8_ps(__m64 __a)
 /// \returns A 128-bit vector of [4 x float] whose lower 64 bits contain the
 ///    copied and converted values from the first operand. The upper 64 bits
 ///    contain the copied and converted values from the second operand.
-static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m128 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_cvtpi32x2_ps(__m64 __a, __m64 __b)
 {
   return __builtin_convertvector(
