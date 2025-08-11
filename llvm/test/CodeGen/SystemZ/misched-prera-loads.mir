@@ -62,11 +62,10 @@ body:             |
 #
 # CHECK:      Queue BotQ.A: 5 7 3
 # CHECK:      Scheduling SU(7)
-# CHECK:      Live regs was: %2, %3, %5, %7
+# CHECK:      LiveReg: %1
 # CHECK:      Queue BotQ.A: 5 3
 # CHECK:      Pick Bot LIVE-REDUC
 # CHECK-NEXT: Scheduling SU(3) %3:vr64bit = nofpexcept WFMADB %2:fp64bit,
-# CHECK:      Live regs was: %1, %2, %3, %5
 #
 # CHECK:      *** Final schedule for %bb.0 ***
 # CHECK:      SU(3):   %3:vr64bit = nofpexcept WFMADB %2:fp64bit, %2:fp64bit, %1:fp64bit,
@@ -162,12 +161,12 @@ body:             |
 # which makes it wait until the first LG is scheduled.
 # CHECK:      ********** MI Scheduling **********
 # CHECK-NEXT: fun4:%bb.0
+# CHECK:      Live Out: %4 %3 %2
 # CHECK:      Region is not tiny.
-# CHECK:      Live out at bottom: %2, %3, %4
 #
 # CHECK:      Queue BotQ.A: 2 3 0
 # CHECK:      Scheduling SU(2) %2:vr64bit = VL64 %1:addr64bit, 0, $noreg ::
-# CHECK:      Live regs was: %0, %2, %3
+# CHECK:      LiveReg: %1
 #
 # CHECK:      *** Final schedule for %bb.0 ***
 # CHECK-NEXT: SU(0):   %0:addr64bit = COPY $r3d
