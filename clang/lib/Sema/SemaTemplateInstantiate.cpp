@@ -2939,25 +2939,17 @@ TemplateInstantiator::TransformNestedRequirement(
     return Req;
   }
 
-#if 0
-  if (Req->isDependent() || AlwaysRebuild()) {
-    Sema::InstantiatingTemplate ReqInst(
-        SemaRef, Constraint->getBeginLoc(), Req,
-      Sema::InstantiatingTemplate::ConstraintsCheck{},
-        Constraint->getSourceRange());
-
-    Sema::SFINAETrap Trap(SemaRef);
-
-    TransConstraint = TransformExpr(const_cast<Expr *>(Constraint));
-    if (!TransConstraint.isUsable() || Trap.hasErrorOccurred()) {
-      return NestedReqWithDiag(Constraint, std::move(Satisfaction));
-    }
-    Constraint = TransConstraint.get();
+  if (!getEvaluateConstraints()) {
+    ExprResult TransConstraint = TransformExpr(Req->getConstraintExpr());
+    if (TransConstraint.isInvalid() || !TransConstraint.get())
+      return nullptr;
+    if (TransConstraint.get()->isInstantiationDependent())
+      return new (SemaRef.Context)
+          concepts::NestedRequirement(TransConstraint.get());
+    ConstraintSatisfaction Satisfaction;
+    return new (SemaRef.Context) concepts::NestedRequirement(
+        SemaRef.Context, TransConstraint.get(), Satisfaction);
   }
-
-  if (Constraint->isInstantiationDependent())
-    return new (C) concepts::NestedRequirement(Constraint);
-#endif
 
   bool Success;
   Expr *NewConstraint;
@@ -2991,8 +2983,12 @@ TemplateInstantiator::TransformNestedRequirement(
 
   // FIXME: const correctness
   // MLTAL might be dependent.
-  if (!NewConstraint)
+  if (!NewConstraint) {
+    if (!Satisfaction.IsSatisfied)
+      return NestedReqWithDiag(Constraint, Satisfaction);
+
     NewConstraint = Constraint;
+  }
   return new (C) concepts::NestedRequirement(C, NewConstraint, Satisfaction);
 }
 

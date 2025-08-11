@@ -585,6 +585,7 @@ static ExprResult calculateConstraintSatisfaction(
     Sema::ArgPackSubstIndexRAII SubstIndex(S, I);
     Satisfaction.IsSatisfied = false;
     Satisfaction.ContainsErrors = false;
+    // FIXME: We can save a substitution if the next constraint is an atomic.
     ExprResult Expr = calculateConstraintSatisfaction(
         S, FE.getNormalizedPattern(), Template, TemplateNameLoc, MLTAL,
         Satisfaction, UnsignedOrNone(I));
