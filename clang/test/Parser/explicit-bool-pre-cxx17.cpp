@@ -1,5 +1,6 @@
 // Regression test for assertion failure when explicit(bool) is used in pre-C++20
 // Fixes GitHub issue #152729
+// RUN: %clang_cc1 -std=c++98 -verify %s
 // RUN: %clang_cc1 -std=c++03 -verify %s
 // RUN: %clang_cc1 -std=c++11 -verify %s
 // RUN: %clang_cc1 -std=c++14 -verify %s
