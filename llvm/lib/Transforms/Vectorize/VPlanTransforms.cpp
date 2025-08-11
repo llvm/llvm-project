@@ -3344,16 +3344,17 @@ void VPlanTransforms::materializeVFAndVFxUF(VPlan &Plan, VPBasicBlock *VectorPH,
   if (VF.getNumUsers()) {
     VPValue *RuntimeVF = Builder.createElementCount(TCTy, VFEC);
     if (any_of(VF.users(), [&VF](VPUser *U) { return !U->usesScalars(&VF); })) {
-      auto *BC = Builder.createNaryOp(VPInstruction::Broadcast, RuntimeVF);
+      VPValue *BC = Builder.createNaryOp(VPInstruction::Broadcast, RuntimeVF);
       VF.replaceUsesWithIf(
           BC, [&VF](VPUser &U, unsigned) { return !U.usesScalars(&VF); });
     }
     VF.replaceAllUsesWith(RuntimeVF);
 
     VPValue *UF = Plan.getOrAddLiveIn(ConstantInt::get(TCTy, Plan.getUF()));
-    auto *MulByUF = Plan.getUF() == 1 ? RuntimeVF
-                                      : Builder.createNaryOp(Instruction::Mul,
-                                                             {RuntimeVF, UF});
+    VPValue *MulByUF =
+        Plan.getUF() == 1
+            ? RuntimeVF
+            : Builder.createNaryOp(Instruction::Mul, {RuntimeVF, UF});
     VFxUF.replaceAllUsesWith(MulByUF);
     return;
   }
