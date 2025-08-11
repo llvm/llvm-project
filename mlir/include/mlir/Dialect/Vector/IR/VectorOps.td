@@ -1382,11 +1382,6 @@ def Vector_TransferReadOp :
     An additional `1` broadcast is required. On a GPU this broadcast could be
     implemented using a warp-shuffle if loop `j` were mapped to `threadIdx.x`.
 
-    An optional `alignment` attribute allows to specify the byte alignment of the
-    gather operation. It must be a positive power of 2. The operation must access
-    memory at an address aligned to this boundary. Violations may lead to
-    architecture-specific faults or performance penalties.
-
     Syntax
     ```
     operation ::= ssa-id `=` `vector.transfer_read` ssa-use-list
