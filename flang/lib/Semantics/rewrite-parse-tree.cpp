@@ -164,11 +164,8 @@ void RewriteMutator::OpenMPSimdOnly(parser::SpecificationPart &specPart) {
 // loop.
 void RewriteMutator::OpenMPSimdOnly(
     parser::Block &block, bool isNonSimdLoopBody = false) {
-  using ExecutionListIterator =
-      std::_List_iterator<parser::ExecutionPartConstruct>;
   auto replaceInlineBlock =
-      [&](std::list<parser::ExecutionPartConstruct> &block,
-          ExecutionListIterator it) -> ExecutionListIterator {
+      [&](std::list<parser::ExecutionPartConstruct> &block, auto it) -> auto {
     auto insertPos = std::next(it);
     block.splice(insertPos, block);
     block.erase(it);
@@ -410,9 +407,11 @@ bool RewriteMutator::Pre(parser::OpenMPLoopConstruct &ompLoop) {
     // call OpenMPSimdOnly on the nested loop block while indicating where
     // the block comes from.
     auto &nest = std::get<std::optional<parser::NestedConstruct>>(ompLoop.t);
-    if (nest.has_value()) {
-      auto &doConstruct = std::get<parser::DoConstruct>(nest.value());
-      auto &innerBlock = std::get<parser::Block>(doConstruct.t);
+    if (!nest.has_value()) {
+      return true;
+    }
+    if (auto *doConstruct = std::get_if<parser::DoConstruct>(&*nest)) {
+      auto &innerBlock = std::get<parser::Block>(doConstruct->t);
       OpenMPSimdOnly(innerBlock, /*isNonSimdLoopBody=*/true);
     }
   }
