@@ -71,7 +71,6 @@ define void @maxvf3() {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[J_NEXT:%.*]], [[FOR_BODY]] ]

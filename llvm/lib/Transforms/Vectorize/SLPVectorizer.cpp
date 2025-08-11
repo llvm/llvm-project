@@ -12596,6 +12596,8 @@ void BoUpSLP::reorderGatherNode(TreeEntry &TE) {
   }
 }
 
+/// Check if we can convert fadd/fsub sequence to FMAD.
+/// \returns Cost of the FMAD, if conversion is possible, invalid cost otherwise.
 static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
                                        const InstructionsState &S,
                                        DominatorTree &DT, const DataLayout &DL,
@@ -12615,7 +12617,8 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
       auto *I = dyn_cast<Instruction>(V);
       if (!I)
         continue;
-      // TODO: support for copyable elements.
+      if (S.isCopyableElement(I))
+        continue;
       Instruction *MatchingI = S.getMatchingMainOpOrAltOp(I);
       if (S.getMainOp() != MatchingI && S.getAltOp() != MatchingI)
         continue;
@@ -12633,6 +12636,7 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
   InstructionsState OpS = getSameOpcode(Operands.front(), TLI);
   if (!OpS.valid())
     return InstructionCost::getInvalid();
+
   if (OpS.isAltShuffle() || OpS.getOpcode() != Instruction::FMul)
     return InstructionCost::getInvalid();
   if (!CheckForContractable(Operands.front()))
@@ -12647,15 +12651,19 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
     auto *I = dyn_cast<Instruction>(V);
     if (!I)
       continue;
-    if (auto *FPCI = dyn_cast<FPMathOperator>(I))
-      FMF &= FPCI->getFastMathFlags();
+    if (!S.isCopyableElement(I))
+      if (auto *FPCI = dyn_cast<FPMathOperator>(I))
+        FMF &= FPCI->getFastMathFlags();
     FMulPlusFAddCost += TTI.getInstructionCost(I, CostKind);
   }
   unsigned NumOps = 0;
   for (auto [V, Op] : zip(VL, Operands.front())) {
+    if (S.isCopyableElement(V))
+      continue;
     auto *I = dyn_cast<Instruction>(Op);
-    if (!I || !I->hasOneUse()) {
-      FMACost += TTI.getInstructionCost(cast<Instruction>(V), CostKind);
+    if (!I || !I->hasOneUse() || OpS.isCopyableElement(I)) {
+      if (auto *OpI = dyn_cast<Instruction>(V))
+        FMACost += TTI.getInstructionCost(OpI, CostKind);
       if (I)
         FMACost += TTI.getInstructionCost(I, CostKind);
       continue;
@@ -23601,19 +23609,9 @@ public:
   /// Try to find a reduction tree.
   bool matchAssociativeReduction(BoUpSLP &R, Instruction *Root,
                                  ScalarEvolution &SE, const DataLayout &DL,
-                                 const TargetLibraryInfo &TLI,
-                                 DominatorTree &DT, TargetTransformInfo &TTI) {
+                                 const TargetLibraryInfo &TLI) {
     RdxKind = HorizontalReduction::getRdxKind(Root);
     if (!isVectorizable(RdxKind, Root))
-      return false;
-
-    // FMA reduction root - skip.
-    auto CheckForFMA = [&](Instruction *I) {
-      return RdxKind == RecurKind::FAdd &&
-             canConvertToFMA(I, getSameOpcode(I, TLI), DT, DL, TTI, TLI)
-                 .isValid();
-    };
-    if (CheckForFMA(Root))
       return false;
 
     // Analyze "regular" integer/FP types for reductions - no target-specific
@@ -23653,7 +23651,7 @@ public:
         // Also, do not try to reduce const values, if the operation is not
         // foldable.
         if (!EdgeInst || Level > RecursionMaxDepth ||
-            getRdxKind(EdgeInst) != RdxKind || CheckForFMA(EdgeInst) ||
+            getRdxKind(EdgeInst) != RdxKind ||
             IsCmpSelMinMax != isCmpSelMinMax(EdgeInst) ||
             !hasRequiredNumberOfUses(IsCmpSelMinMax, EdgeInst) ||
             !isVectorizable(RdxKind, EdgeInst) ||
@@ -25228,7 +25226,7 @@ bool SLPVectorizerPass::vectorizeHorReduction(
     if (!isReductionCandidate(Inst))
       return nullptr;
     HorizontalReduction HorRdx;
-    if (!HorRdx.matchAssociativeReduction(R, Inst, *SE, *DL, *TLI, *DT, *TTI))
+    if (!HorRdx.matchAssociativeReduction(R, Inst, *SE, *DL, *TLI))
       return nullptr;
     return HorRdx.tryToReduce(R, *DL, TTI, *TLI, AC);
   };
