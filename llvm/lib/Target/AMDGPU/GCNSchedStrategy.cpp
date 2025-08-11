@@ -1313,7 +1313,7 @@ bool PreRARematStage::initGCNSchedStage() {
   unsigned DynamicVGPRBlockSize = MFI.getDynamicVGPRBlockSize();
   AchievedOcc = MFI.getMaxWavesPerEU();
   for (unsigned I : RescheduleRegions.set_bits()) {
-    const GCNRegPressure &RP = RPTargets[I].getCurrentRP();;
+    const GCNRegPressure &RP = RPTargets[I].getCurrentRP();
     DAG.Pressure[I] = RP;
     unsigned NewRegionOcc = RP.getOccupancy(ST, DynamicVGPRBlockSize);
     AchievedOcc = std::min(AchievedOcc, NewRegionOcc);
