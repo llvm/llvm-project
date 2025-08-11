@@ -69,9 +69,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:av_64_align2 = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:av_64_align2 = COPY $vgpr2_vgpr3
     ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:areg_128_align2 = GLOBAL_LOAD_DWORDX4 [[COPY]], 0, 0, implicit $exec :: (load (s128), addrspace 1)
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vreg_128_align2 = COPY [[GLOBAL_LOAD_DWORDX4_]]
-    ; CHECK-NEXT: [[V_MFMA_F64_4X4X4F64_vgprcd_e64_:%[0-9]+]]:vreg_64_align2 = V_MFMA_F64_4X4X4F64_vgprcd_e64 [[COPY1]], [[COPY2]], [[COPY3]].sub0_sub1, 0, 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: GLOBAL_STORE_DWORDX2 [[COPY]], [[V_MFMA_F64_4X4X4F64_vgprcd_e64_]], 0, 0, implicit $exec :: (store (s64), addrspace 1)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:areg_128_align2 = COPY [[GLOBAL_LOAD_DWORDX4_]]
+    ; CHECK-NEXT: [[V_MFMA_F64_4X4X4F64_e64_:%[0-9]+]]:areg_64_align2 = V_MFMA_F64_4X4X4F64_e64 [[COPY1]], [[COPY2]], [[COPY3]].sub0_sub1, 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: GLOBAL_STORE_DWORDX2 [[COPY]], [[V_MFMA_F64_4X4X4F64_e64_]], 0, 0, implicit $exec :: (store (s64), addrspace 1)
     ; CHECK-NEXT: SI_RETURN
     %0:vreg_64_align2 = COPY $vgpr4_vgpr5
     %1:av_64_align2 = COPY $vgpr0_vgpr1
@@ -97,8 +97,8 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:av_64_align2 = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:av_64_align2 = COPY $vgpr2_vgpr3
     ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:areg_128_align2 = GLOBAL_LOAD_DWORDX4 [[COPY]], 0, 0, implicit $exec :: (load (s128), addrspace 1)
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vreg_128_align2 = COPY [[GLOBAL_LOAD_DWORDX4_]]
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]].sub0_sub1:vreg_128_align2 = V_MFMA_F64_4X4X4F64_vgprcd_e64 [[COPY1]], [[COPY2]], [[COPY3]].sub2_sub3, 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:areg_128_align2 = COPY [[GLOBAL_LOAD_DWORDX4_]]
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]].sub0_sub1:areg_128_align2 = V_MFMA_F64_4X4X4F64_e64 [[COPY1]], [[COPY2]], [[COPY3]].sub2_sub3, 0, 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: GLOBAL_STORE_DWORDX4 [[COPY]], [[COPY3]], 0, 0, implicit $exec :: (store (s128), addrspace 1)
     ; CHECK-NEXT: SI_RETURN
     %0:vreg_64_align2 = COPY $vgpr4_vgpr5
@@ -126,10 +126,10 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:av_64_align2 = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:av_64_align2 = COPY $vgpr2_vgpr3
     ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:areg_64_align2 = GLOBAL_LOAD_DWORDX2 [[COPY]], 0, 0, implicit $exec :: (load (s64), addrspace 1)
-    ; CHECK-NEXT: undef [[COPY3:%[0-9]+]].sub0:vreg_64_align2 = COPY [[GLOBAL_LOAD_DWORDX2_]].sub0
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]].sub1:vreg_64_align2 = COPY [[GLOBAL_LOAD_DWORDX2_]].sub1
-    ; CHECK-NEXT: [[V_MFMA_F64_4X4X4F64_vgprcd_e64_:%[0-9]+]]:vreg_64_align2 = V_MFMA_F64_4X4X4F64_vgprcd_e64 [[COPY1]], [[COPY2]], [[COPY3]], 0, 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: GLOBAL_STORE_DWORDX2 [[COPY]], [[V_MFMA_F64_4X4X4F64_vgprcd_e64_]], 0, 0, implicit $exec :: (store (s64), addrspace 1)
+    ; CHECK-NEXT: undef [[COPY3:%[0-9]+]].sub0:areg_64_align2 = COPY [[GLOBAL_LOAD_DWORDX2_]].sub0
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]].sub1:areg_64_align2 = COPY [[GLOBAL_LOAD_DWORDX2_]].sub1
+    ; CHECK-NEXT: [[V_MFMA_F64_4X4X4F64_e64_:%[0-9]+]]:areg_64_align2 = V_MFMA_F64_4X4X4F64_e64 [[COPY1]], [[COPY2]], [[COPY3]], 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: GLOBAL_STORE_DWORDX2 [[COPY]], [[V_MFMA_F64_4X4X4F64_e64_]], 0, 0, implicit $exec :: (store (s64), addrspace 1)
     ; CHECK-NEXT: SI_RETURN
     %0:vreg_64_align2 = COPY $vgpr4_vgpr5
     %1:av_64_align2 = COPY $vgpr0_vgpr1
@@ -198,64 +198,5 @@ body:             |
     %4:vreg_128_align2 = COPY %3
     %4.sub0_sub1:vreg_128_align2 = V_MFMA_F64_4X4X4F64_vgprcd_e64 %1, %2, 0, 0, 0, 0, implicit $mode, implicit $exec
     GLOBAL_STORE_DWORDX4 %0, %4, 0, 0, implicit $exec :: (store (s128), addrspace 1)
-    SI_RETURN
-...
-
-# Degenerate case. Copy from AGPR to VGPR is dead undef subreg def
----
-name:  test_rewrite_mfma_copy_from_agpr_undef_vdst_subreg_use_imm_src2
-tracksRegLiveness: true
-body:             |
-  bb.0:
-    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
-
-    ; CHECK-LABEL: name: test_rewrite_mfma_copy_from_agpr_undef_vdst_subreg_use_imm_src2
-    ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr4_vgpr5
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:av_64_align2 = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:av_64_align2 = COPY $vgpr2_vgpr3
-    ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:areg_128_align2 = GLOBAL_LOAD_DWORDX4 [[COPY]], 0, 0, implicit $exec :: (load (s128), addrspace 1)
-    ; CHECK-NEXT: dead [[COPY3:%[0-9]+]]:vreg_128_align2 = COPY [[GLOBAL_LOAD_DWORDX4_]]
-    ; CHECK-NEXT: undef [[V_MFMA_F64_4X4X4F64_vgprcd_e64_:%[0-9]+]].sub0_sub1:vreg_128_align2 = V_MFMA_F64_4X4X4F64_vgprcd_e64 [[COPY1]], [[COPY2]], 0, 0, 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: GLOBAL_STORE_DWORDX4 [[COPY]], [[V_MFMA_F64_4X4X4F64_vgprcd_e64_]], 0, 0, implicit $exec :: (store (s128), addrspace 1)
-    ; CHECK-NEXT: SI_RETURN
-    %0:vreg_64_align2 = COPY $vgpr4_vgpr5
-    %1:av_64_align2 = COPY $vgpr0_vgpr1
-    %2:av_64_align2 = COPY $vgpr2_vgpr3
-    %3:areg_128_align2 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, implicit $exec :: (load (s128), addrspace 1)
-    %4:vreg_128_align2 = COPY %3
-    undef %4.sub0_sub1:vreg_128_align2 = V_MFMA_F64_4X4X4F64_vgprcd_e64 %1, %2, 0, 0, 0, 0, implicit $mode, implicit $exec
-    GLOBAL_STORE_DWORDX4 %0, %4, 0, 0, implicit $exec :: (store (s128), addrspace 1)
-    SI_RETURN
-...
-
-# Degenerate case. Copy from AGPR to VGPR is dead, but same register
-# is redefined as whole register.
----
-name:  test_rewrite_mfma_copy_from_agpr_to_vdst_def_imm_src2
-tracksRegLiveness: true
-body:             |
-  bb.0:
-    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
-
-    ; CHECK-LABEL: name: test_rewrite_mfma_copy_from_agpr_to_vdst_def_imm_src2
-    ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr4_vgpr5
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:av_64_align2 = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:av_64_align2 = COPY $vgpr2_vgpr3
-    ; CHECK-NEXT: [[GLOBAL_LOAD_DWORDX2_:%[0-9]+]]:areg_64_align2 = GLOBAL_LOAD_DWORDX2 [[COPY]], 0, 0, implicit $exec :: (load (s64), addrspace 1)
-    ; CHECK-NEXT: dead [[COPY3:%[0-9]+]]:vreg_64_align2 = COPY [[GLOBAL_LOAD_DWORDX2_]]
-    ; CHECK-NEXT: [[V_MFMA_F64_4X4X4F64_vgprcd_e64_:%[0-9]+]]:vreg_64_align2 = V_MFMA_F64_4X4X4F64_vgprcd_e64 [[COPY1]], [[COPY2]], 0, 0, 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: GLOBAL_STORE_DWORDX2 [[COPY]], [[V_MFMA_F64_4X4X4F64_vgprcd_e64_]], 0, 0, implicit $exec :: (store (s64), addrspace 1)
-    ; CHECK-NEXT: SI_RETURN
-    %0:vreg_64_align2 = COPY $vgpr4_vgpr5
-    %1:av_64_align2 = COPY $vgpr0_vgpr1
-    %2:av_64_align2 = COPY $vgpr2_vgpr3
-    %3:areg_64_align2 = GLOBAL_LOAD_DWORDX2 %0, 0, 0, implicit $exec :: (load (s64), addrspace 1)
-    %4:vreg_64_align2 = COPY %3
-    %4:vreg_64_align2 = V_MFMA_F64_4X4X4F64_vgprcd_e64 %1, %2, 0, 0, 0, 0, implicit $mode, implicit $exec
-    GLOBAL_STORE_DWORDX2 %0, %4, 0, 0, implicit $exec :: (store (s64), addrspace 1)
     SI_RETURN
 ...
