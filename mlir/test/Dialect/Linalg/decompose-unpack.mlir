@@ -218,3 +218,5 @@ func.func @negative_non_unit_tiled_outer_dim(%src: tensor<1x126x1x1x8xf32>, %des
 
   return %unpack : tensor<1x1x1x1001xf32>
 }
+// CHECK-LABEL: @negative_non_unit_tiled_outer_dim(
+// CHECK: linalg.unpack
