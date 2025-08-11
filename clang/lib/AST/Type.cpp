@@ -4562,7 +4562,7 @@ QualType TemplateSpecializationType::getAliasedType() const {
 bool clang::TemplateSpecializationType::isSugared() const {
   return !isDependentType() || isCurrentInstantiation() || isTypeAlias() ||
          (isPackProducingBuiltinTemplateName(Template) &&
-          llvm::isa<SubstBuiltinTemplatePackType>(*getCanonicalTypeInternal()));
+          isa<SubstBuiltinTemplatePackType>(*getCanonicalTypeInternal()));
 }
 
 void TemplateSpecializationType::Profile(llvm::FoldingSetNodeID &ID,
