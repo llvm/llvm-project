@@ -571,8 +571,7 @@ createScalarIVSteps(VPlan &Plan, InductionDescriptor::InductionKind Kind,
       Kind, FPBinOp, StartV, CanonicalIV, Step, "offset.idx");
 
   // Truncate base induction if needed.
-  Type *CanonicalIVType = CanonicalIV->getScalarType();
-  VPTypeAnalysis TypeInfo(CanonicalIVType);
+  VPTypeAnalysis TypeInfo(Plan);
   Type *ResultTy = TypeInfo.inferScalarType(BaseIV);
   if (TruncI) {
     Type *TruncTy = TruncI->getType();
@@ -1221,7 +1220,7 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
 void VPlanTransforms::simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy) {
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getEntry());
-  VPTypeAnalysis TypeInfo(&CanonicalIVTy);
+  VPTypeAnalysis TypeInfo(Plan);
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       simplifyRecipe(R, TypeInfo);
@@ -2838,7 +2837,7 @@ void VPlanTransforms::dissolveLoopRegions(VPlan &Plan) {
 
 void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
                                                Type &CanonicalIVTy) {
-  VPTypeAnalysis TypeInfo(&CanonicalIVTy);
+  VPTypeAnalysis TypeInfo(Plan);
   SmallVector<VPRecipeBase *> ToRemove;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {

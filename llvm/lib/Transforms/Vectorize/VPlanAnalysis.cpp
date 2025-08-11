@@ -21,8 +21,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "vplan"
 
-VPTypeAnalysis::VPTypeAnalysis(const VPlan &Plan)
-    : Ctx(Plan.getScalarHeader()->getIRBasicBlock()->getContext()) {
+VPTypeAnalysis::VPTypeAnalysis(const VPlan &Plan) : Ctx(Plan.getContext()) {
   if (auto LoopRegion = Plan.getVectorLoopRegion()) {
     if (const auto *CanIV = dyn_cast<VPCanonicalIVPHIRecipe>(
             &LoopRegion->getEntryBasicBlock()->front())) {
