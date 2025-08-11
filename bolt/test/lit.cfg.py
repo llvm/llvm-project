@@ -100,7 +100,6 @@ config.substitutions.append(("%cflags", ""))
 config.substitutions.append(("%cxxflags", ""))
 
 link_fdata_cmd = os.path.join(config.test_source_root, "link_fdata.py")
-match_dwarf_cmd = os.path.join(config.test_source_root, "match_dwarf.py")
 
 tool_dirs = [config.llvm_tools_dir, config.test_source_root]
 
@@ -144,12 +143,6 @@ tools = [
     ToolSubst("llvm-readobj", unresolved="fatal"),
     ToolSubst("llvm-dwp", unresolved="fatal"),
     ToolSubst("split-file", unresolved="fatal"),
-    ToolSubst(
-        "match-dwarf",
-        command=sys.executable,
-        unresolved="fatal",
-        extra_args=[match_dwarf_cmd],
-    ),
 ]
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 
