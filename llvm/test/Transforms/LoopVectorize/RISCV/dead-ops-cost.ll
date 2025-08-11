@@ -8,7 +8,7 @@ target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 define void @dead_load(ptr %p, i16 %start) {
 ; CHECK-LABEL: define void @dead_load(
 ; CHECK-SAME: ptr [[P:%.*]], i16 [[START:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[START_EXT:%.*]] = sext i16 [[START]] to i64
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[START_EXT]], i64 111)
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[SMAX]], [[START_EXT]]
@@ -48,7 +48,6 @@ define void @dead_load(ptr %p, i16 %start) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[START_EXT]], %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[START_EXT]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -306,7 +305,7 @@ return:
 define void @test_phi_in_latch_redundant(ptr %dst, i32 %a) {
 ; CHECK-LABEL: define void @test_phi_in_latch_redundant(
 ; CHECK-SAME: ptr [[DST:%.*]], i32 [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
@@ -346,7 +345,6 @@ define void @test_phi_in_latch_redundant(ptr %dst, i32 %a) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
@@ -391,7 +389,7 @@ exit:
 define void @gather_interleave_group_with_dead_insert_pos(i64 %N, ptr noalias %src, ptr noalias %dst) #0 {
 ; CHECK-LABEL: define void @gather_interleave_group_with_dead_insert_pos(
 ; CHECK-SAME: i64 [[N:%.*]], ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 0)
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i64 [[SMAX]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 1
@@ -436,7 +434,6 @@ define void @gather_interleave_group_with_dead_insert_pos(i64 %N, ptr noalias %s
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[SCALAR_PH]] ]
