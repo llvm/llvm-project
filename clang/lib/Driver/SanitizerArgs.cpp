@@ -1157,9 +1157,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         !TC.getTriple().isAndroid() && !TC.getTriple().isOSFuchsia();
   }
 
-  LinkRuntimes =
-      Args.hasFlag(options::OPT_fsanitize_link_runtime,
-                   options::OPT_fno_sanitize_link_runtime, LinkRuntimes);
+  LinkRuntimes = Args.hasFlag(options::OPT_fsanitize_link_runtime,
+                              options::OPT_fno_sanitize_link_runtime,
+                              !Args.hasArg(options::OPT_r));
 
   // Parse -link-cxx-sanitizer flag.
   LinkCXXRuntimes = D.CCCIsCXX();
@@ -1381,6 +1381,12 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   if (!AnnotateDebugInfo.empty())
     CmdArgs.push_back(Args.MakeArgString("-fsanitize-annotate-debug-info=" +
                                          toString(AnnotateDebugInfo)));
+
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_fsanitize_debug_trap_reasons,
+                          options::OPT_fno_sanitize_debug_trap_reasons)) {
+    CmdArgs.push_back(Args.MakeArgString(A->getAsString(Args)));
+  }
 
   addSpecialCaseListOpt(Args, CmdArgs,
                         "-fsanitize-ignorelist=", UserIgnorelistFiles);

@@ -3682,40 +3682,23 @@ define amdgpu_ps i16 @s_copysign_out_bf16_mag_f32_sign_bf16(float inreg %mag, bf
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
-; GFX11TRUE16-LABEL: s_copysign_out_bf16_mag_f32_sign_bf16:
-; GFX11TRUE16:       ; %bb.0:
-; GFX11TRUE16-NEXT:    s_bfe_u32 s2, s0, 0x10010
-; GFX11TRUE16-NEXT:    v_cmp_u_f32_e64 s3, s0, s0
-; GFX11TRUE16-NEXT:    s_add_i32 s2, s2, s0
-; GFX11TRUE16-NEXT:    s_bitset1_b32 s0, 22
-; GFX11TRUE16-NEXT:    s_addk_i32 s2, 0x7fff
-; GFX11TRUE16-NEXT:    s_and_b32 s3, s3, exec_lo
-; GFX11TRUE16-NEXT:    s_cselect_b32 s0, s0, s2
-; GFX11TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX11TRUE16-NEXT:    s_lshr_b32 s0, s0, 16
-; GFX11TRUE16-NEXT:    v_mov_b32_e32 v0, s0
-; GFX11TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11TRUE16-NEXT:    v_bfi_b32 v0, 0x7fff, v0, s1
-; GFX11TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11TRUE16-NEXT:    ; return to shader part epilog
-;
-; GFX11FAKE16-LABEL: s_copysign_out_bf16_mag_f32_sign_bf16:
-; GFX11FAKE16:       ; %bb.0:
-; GFX11FAKE16-NEXT:    s_bfe_u32 s2, s0, 0x10010
-; GFX11FAKE16-NEXT:    v_cmp_u_f32_e64 s3, s0, s0
-; GFX11FAKE16-NEXT:    s_add_i32 s2, s2, s0
-; GFX11FAKE16-NEXT:    s_bitset1_b32 s0, 22
-; GFX11FAKE16-NEXT:    s_addk_i32 s2, 0x7fff
-; GFX11FAKE16-NEXT:    v_mov_b32_e32 v0, s1
-; GFX11FAKE16-NEXT:    s_and_b32 s3, s3, exec_lo
-; GFX11FAKE16-NEXT:    s_cselect_b32 s0, s0, s2
-; GFX11FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11FAKE16-NEXT:    s_lshr_b32 s0, s0, 16
-; GFX11FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
-; GFX11FAKE16-NEXT:    v_bfi_b32 v0, 0x7fff, s0, v0
-; GFX11FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11FAKE16-NEXT:    ; return to shader part epilog
+; GFX11-LABEL: s_copysign_out_bf16_mag_f32_sign_bf16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_bfe_u32 s2, s0, 0x10010
+; GFX11-NEXT:    v_cmp_u_f32_e64 s3, s0, s0
+; GFX11-NEXT:    s_add_i32 s2, s2, s0
+; GFX11-NEXT:    s_bitset1_b32 s0, 22
+; GFX11-NEXT:    s_addk_i32 s2, 0x7fff
+; GFX11-NEXT:    v_mov_b32_e32 v0, s1
+; GFX11-NEXT:    s_and_b32 s3, s3, exec_lo
+; GFX11-NEXT:    s_cselect_b32 s0, s0, s2
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_lshr_b32 s0, s0, 16
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    v_bfi_b32 v0, 0x7fff, s0, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-NEXT:    ; return to shader part epilog
   %mag.trunc = fptrunc float %mag to bfloat
   %out = call bfloat @llvm.copysign.bf16(bfloat %mag.trunc, bfloat %sign)
   %cast = bitcast bfloat %out to i16
@@ -5434,27 +5417,15 @@ define amdgpu_ps i32 @s_copysign_out_v2bf16_mag_v2bf16_sign_v2f64(<2 x bfloat> i
 ; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
-; GFX11TRUE16-LABEL: s_copysign_out_v2bf16_mag_v2bf16_sign_v2f64:
-; GFX11TRUE16:       ; %bb.0:
-; GFX11TRUE16-NEXT:    s_mov_b32 s1, s2
-; GFX11TRUE16-NEXT:    s_mov_b32 s2, s4
-; GFX11TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX11TRUE16-NEXT:    s_pack_ll_b32_b16 s1, s1, s2
-; GFX11TRUE16-NEXT:    v_mov_b32_e32 v0, s1
-; GFX11TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11TRUE16-NEXT:    v_bfi_b32 v0, 0x7fff7fff, s0, v0
-; GFX11TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11TRUE16-NEXT:    ; return to shader part epilog
-;
-; GFX11FAKE16-LABEL: s_copysign_out_v2bf16_mag_v2bf16_sign_v2f64:
-; GFX11FAKE16:       ; %bb.0:
-; GFX11FAKE16-NEXT:    s_pack_ll_b32_b16 s1, s2, s4
-; GFX11FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11FAKE16-NEXT:    v_mov_b32_e32 v0, s1
-; GFX11FAKE16-NEXT:    v_bfi_b32 v0, 0x7fff7fff, s0, v0
-; GFX11FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11FAKE16-NEXT:    ; return to shader part epilog
+; GFX11-LABEL: s_copysign_out_v2bf16_mag_v2bf16_sign_v2f64:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_pack_ll_b32_b16 s1, s2, s4
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_mov_b32_e32 v0, s1
+; GFX11-NEXT:    v_bfi_b32 v0, 0x7fff7fff, s0, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-NEXT:    ; return to shader part epilog
   %sign.trunc = fptrunc <2 x double> %sign to <2 x bfloat>
   %out = call <2 x bfloat> @llvm.copysign.v2bf16(<2 x bfloat> %mag, <2 x bfloat> %sign.trunc)
   %cast = bitcast <2 x bfloat> %out to i32

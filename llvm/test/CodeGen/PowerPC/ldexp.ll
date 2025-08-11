@@ -2,16 +2,14 @@
 ; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-unknown \
 ; RUN:   -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names < %s | FileCheck %s
 
-define float @ldexp_f32(i8 zeroext %x) {
+define float @ldexp_f32(i8 zeroext %x) nounwind {
 ; CHECK-LABEL: ldexp_f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -32(r1)
-; CHECK-NEXT:    std r0, 48(r1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    vspltisw v2, 1
 ; CHECK-NEXT:    mr r4, r3
+; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    xvcvsxwdp vs1, v2
 ; CHECK-NEXT:    bl ldexpf
 ; CHECK-NEXT:    nop
@@ -24,16 +22,14 @@ define float @ldexp_f32(i8 zeroext %x) {
   ret float %ldexp
 }
 
-define double @ldexp_f64(i8 zeroext %x) {
+define double @ldexp_f64(i8 zeroext %x) nounwind {
 ; CHECK-LABEL: ldexp_f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -32(r1)
-; CHECK-NEXT:    std r0, 48(r1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    vspltisw v2, 1
 ; CHECK-NEXT:    mr r4, r3
+; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    xvcvsxwdp vs1, v2
 ; CHECK-NEXT:    bl ldexp
 ; CHECK-NEXT:    nop
@@ -46,27 +42,22 @@ define double @ldexp_f64(i8 zeroext %x) {
   ret double %ldexp
 }
 
-define <2 x float> @ldexp_v2f32(<2 x float> %val, <2 x i32> %exp) {
+define <2 x float> @ldexp_v2f32(<2 x float> %val, <2 x i32> %exp) nounwind {
 ; CHECK-LABEL: ldexp_v2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -80(r1)
-; CHECK-NEXT:    std r0, 96(r1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    .cfi_offset v29, -48
-; CHECK-NEXT:    .cfi_offset v30, -32
-; CHECK-NEXT:    .cfi_offset v31, -16
 ; CHECK-NEXT:    li r3, 0
 ; CHECK-NEXT:    xxsldwi vs0, v2, v2, 3
-; CHECK-NEXT:    stxv v29, 32(r1) # 16-byte Folded Spill
+; CHECK-NEXT:    std r0, 96(r1)
 ; CHECK-NEXT:    xscvspdpn f1, vs0
 ; CHECK-NEXT:    vextuwrx r3, r3, v3
+; CHECK-NEXT:    stxv v29, 32(r1) # 16-byte Folded Spill
 ; CHECK-NEXT:    stxv v30, 48(r1) # 16-byte Folded Spill
 ; CHECK-NEXT:    stxv v31, 64(r1) # 16-byte Folded Spill
-; CHECK-NEXT:    extsw r4, r3
 ; CHECK-NEXT:    vmr v31, v3
 ; CHECK-NEXT:    vmr v30, v2
+; CHECK-NEXT:    extsw r4, r3
 ; CHECK-NEXT:    bl ldexpf
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    li r3, 4
@@ -90,23 +81,17 @@ define <2 x float> @ldexp_v2f32(<2 x float> %val, <2 x i32> %exp) {
   ret <2 x float> %1
 }
 
-define <4 x float> @ldexp_v4f32(<4 x float> %val, <4 x i32> %exp) {
+define <4 x float> @ldexp_v4f32(<4 x float> %val, <4 x i32> %exp) nounwind {
 ; CHECK-LABEL: ldexp_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -96(r1)
-; CHECK-NEXT:    std r0, 112(r1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    .cfi_offset v28, -64
-; CHECK-NEXT:    .cfi_offset v29, -48
-; CHECK-NEXT:    .cfi_offset v30, -32
-; CHECK-NEXT:    .cfi_offset v31, -16
 ; CHECK-NEXT:    li r3, 4
 ; CHECK-NEXT:    xxswapd vs0, v2
-; CHECK-NEXT:    stxv v28, 32(r1) # 16-byte Folded Spill
+; CHECK-NEXT:    std r0, 112(r1)
 ; CHECK-NEXT:    xscvspdpn f1, vs0
 ; CHECK-NEXT:    vextuwrx r3, r3, v3
+; CHECK-NEXT:    stxv v28, 32(r1) # 16-byte Folded Spill
 ; CHECK-NEXT:    stxv v29, 48(r1) # 16-byte Folded Spill
 ; CHECK-NEXT:    stxv v30, 64(r1) # 16-byte Folded Spill
 ; CHECK-NEXT:    stxv v31, 80(r1) # 16-byte Folded Spill
@@ -153,14 +138,12 @@ define <4 x float> @ldexp_v4f32(<4 x float> %val, <4 x i32> %exp) {
   ret <4 x float> %1
 }
 
-define half @ldexp_f16(half %arg0, i32 %arg1) {
+define half @ldexp_f16(half %arg0, i32 %arg1) nounwind {
 ; CHECK-LABEL: ldexp_f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -32(r1)
 ; CHECK-NEXT:    std r0, 48(r1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    xscvdphp f0, f1
 ; CHECK-NEXT:    extsw r4, r4
 ; CHECK-NEXT:    mffprwz r3, f0
@@ -177,15 +160,13 @@ define half @ldexp_f16(half %arg0, i32 %arg1) {
   ret half %ldexp
 }
 
-define ppc_fp128 @ldexp_fp128(ppc_fp128 %arg0, i32 %arg1) {
+define ppc_fp128 @ldexp_fp128(ppc_fp128 %arg0, i32 %arg1) nounwind {
 ; CHECK-LABEL: ldexp_fp128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mflr r0
 ; CHECK-NEXT:    stdu r1, -32(r1)
-; CHECK-NEXT:    std r0, 48(r1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    clrldi r5, r5, 32
+; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    bl ldexpl
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r1, r1, 32

@@ -68,7 +68,7 @@ bool ABIInfo::isHomogeneousAggregate(QualType Ty, const Type *&Base,
       return false;
     Members *= NElements;
   } else if (const RecordType *RT = Ty->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getDecl();
+    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
     if (RD->hasFlexibleArrayMember())
       return false;
 
@@ -218,8 +218,8 @@ void ABIInfo::appendAttributeMangling(StringRef AttrStr,
     // only have "+" prefixes here.
     assert(LHS.starts_with("+") && RHS.starts_with("+") &&
            "Features should always have a prefix.");
-    return TI.getFMVPriority({LHS.substr(1)}) >
-           TI.getFMVPriority({RHS.substr(1)});
+    return TI.getFMVPriority({LHS.substr(1)})
+        .ugt(TI.getFMVPriority({RHS.substr(1)}));
   });
 
   bool IsFirst = true;

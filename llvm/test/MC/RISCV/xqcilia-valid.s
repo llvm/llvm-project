@@ -10,9 +10,12 @@
 # RUN:     | llvm-objdump --mattr=+experimental-xqcilia --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 
+.option exact
+
 # CHECK-INST: qc.e.addai      s1, -1
 # CHECK-ENC: encoding: [0x9f,0x24,0xff,0xff,0xff,0xff]
 qc.e.addai x9, 4294967295
+
 
 # CHECK-INST: qc.e.addai      s1, -2147483648
 # CHECK-ENC: encoding: [0x9f,0x24,0x00,0x00,0x00,0x80]
@@ -31,6 +34,7 @@ qc.e.addi x10, x9, 33554431
 # CHECK-INST: qc.e.andai      s1, -1
 # CHECK-ENC: encoding: [0x9f,0xa4,0xff,0xff,0xff,0xff]
 qc.e.andai x9, 4294967295
+
 
 # CHECK-INST: qc.e.andai      s1, -2147483648
 # CHECK-ENC: encoding: [0x9f,0xa4,0x00,0x00,0x00,0x80]
@@ -83,6 +87,8 @@ qc.e.xori x10, x9, 33554431
 
 # Check that compress patterns work as expected
 
+.option noexact
+
 # CHECK-ALIAS: addi t0, t0, 20
 # CHECK-NOALIAS: c.addi t0, 20
 # CHECK-ENC: encoding: [0xd1,0x02]
@@ -102,3 +108,58 @@ qc.e.addi x5, x6, 0
 # CHECK-NOALIAS: c.addi16sp sp, 48
 # CHECK-ENC: encoding: [0x45,0x61]
 qc.e.addi x2, x2, 48
+
+# CHECK-ALIAS: addi s1, s1, -1
+# CHECK-NOALIAS: c.addi s1, -1
+# CHECK-ENC: encoding: [0xfd,0x14]
+qc.e.addai x9, 4294967295
+
+# CHECK-ALIAS: addi sp, sp, 48
+# CHECK-NOALIAS: c.addi16sp sp, 48
+# CHECK-ENC: encoding: [0x45,0x61]
+qc.e.addai x2, 48
+
+# CHECK-ALIAS: andi s1, s1, -1
+# CHECK-NOALIAS: c.andi s1, -1
+# CHECK-ENC: encoding: [0xfd,0x98]
+qc.e.andai x9, 4294967295
+
+# CHECK-ALIAS: addi t0, t2, 400
+# CHECK-NOALIAS: addi t0, t2, 400
+# CHECK-ENC: encoding: [0x93,0x82,0x03,0x19]
+qc.e.addi x5, x7, 400
+
+# CHECK-ALIAS: andi t0, t2, 750
+# CHECK-NOALIAS: andi t0, t2, 750
+# CHECK-ENC: encoding: [0x93,0xf2,0xe3,0x2e]
+qc.e.andi x5, x7, 750
+
+# CHECK-ALIAS: ori t0, t2, 854
+# CHECK-NOALIAS: ori t0, t2, 854
+# CHECK-ENC: encoding: [0x93,0xe2,0x63,0x35]
+qc.e.ori x5, x7, 854
+
+# CHECK-ALIAS: xori t0, t2, -200
+# CHECK-NOALIAS: xori t0, t2, -200
+# CHECK-ENC: encoding: [0x93,0xc2,0x83,0xf3]
+qc.e.xori x5, x7, -200
+
+# CHECK-ALIAS: addi t2, t2, 400
+# CHECK-NOALIAS: addi t2, t2, 400
+# CHECK-ENC: encoding: [0x93,0x83,0x03,0x19]
+qc.e.addai x7, 400
+
+# CHECK-ALIAS: andi t2, t2, 750
+# CHECK-NOALIAS: andi t2, t2, 750
+# CHECK-ENC: encoding: [0x93,0xf3,0xe3,0x2e]
+qc.e.andai x7, 750
+
+# CHECK-ALIAS: ori t2, t2, 854
+# CHECK-NOALIAS: ori t2, t2, 854
+# CHECK-ENC: encoding: [0x93,0xe3,0x63,0x35]
+qc.e.orai x7, 854
+
+# CHECK-ALIAS: xori t2, t2, -200
+# CHECK-NOALIAS: xori t2, t2, -200
+# CHECK-ENC: encoding: [0x93,0xc3,0x83,0xf3]
+qc.e.xorai x7, -200

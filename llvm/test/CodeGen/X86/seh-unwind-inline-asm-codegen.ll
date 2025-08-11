@@ -56,8 +56,8 @@ declare dso_local void @printf(ptr, ...)
 ; CHECK-NEXT:$ip2state$test:
 ; CHECK-NEXT:    .long    .Lfunc_begin0@IMGREL            # IP
 ; CHECK-NEXT:    .long    -1                              # ToState
-; CHECK-NEXT:    .long    .Ltmp0@IMGREL+1                 # IP
+; CHECK-NEXT:    .long    .Ltmp0@IMGREL                   # IP
 ; CHECK-NEXT:    .long    0                               # ToState
-; CHECK-NEXT:    .long    .Ltmp1@IMGREL+1                 # IP
+; CHECK-NEXT:    .long    .Ltmp1@IMGREL                   # IP
 ; CHECK-NEXT:    .long    -1                              # ToState
 

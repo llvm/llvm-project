@@ -448,9 +448,7 @@ bool HexagonOptAddrMode::usedInLoadStore(NodeAddr<StmtNode *> CurrentInstSN,
 
   getAllRealUses(CurrentInstSN, LoadStoreUseList);
   bool FoundLoadStoreUse = false;
-  for (auto I = LoadStoreUseList.begin(), E = LoadStoreUseList.end(); I != E;
-       ++I) {
-    NodeAddr<UseNode *> UN = *I;
+  for (NodeAddr<UseNode *> UN : LoadStoreUseList) {
     NodeAddr<StmtNode *> SN = UN.Addr->getOwner(*DFG);
     MachineInstr *LoadStoreMI = SN.Addr->getCode();
     const MCInstrDesc &MID = LoadStoreMI->getDesc();
@@ -579,8 +577,7 @@ bool HexagonOptAddrMode::processAddBases(NodeAddr<StmtNode *> AddSN,
   // Find all Addi instructions that share the same base register and add them
   // to the AddiList
   getAllRealUses(ReachingDefStmt, AddiUseList);
-  for (auto I = AddiUseList.begin(), E = AddiUseList.end(); I != E; ++I) {
-    NodeAddr<UseNode *> UN = *I;
+  for (NodeAddr<UseNode *> UN : AddiUseList) {
     NodeAddr<StmtNode *> SN = UN.Addr->getOwner(*DFG);
     MachineInstr *MI = SN.Addr->getCode();
 

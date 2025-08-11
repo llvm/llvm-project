@@ -1,26 +1,26 @@
-// RUN: llvm-tblgen -gen-global-isel -I %p/../../../include -I %p/../Common -optimize-match-table=false %s -o %T/non-optimized.cpp
-// RUN: llvm-tblgen -gen-global-isel -I %p/../../../include -I %p/../Common -optimize-match-table=true  %s -o %T/optimized.cpp
-// RUN: llvm-tblgen -gen-global-isel -I %p/../../../include -I %p/../Common %s -o %T/default.cpp
+// RUN: llvm-tblgen -gen-global-isel -I %p/../../../include -I %p/../Common -optimize-match-table=false %s -o %t.non-optimized.cpp
+// RUN: llvm-tblgen -gen-global-isel -I %p/../../../include -I %p/../Common -optimize-match-table=true  %s -o %t.optimized.cpp
+// RUN: llvm-tblgen -gen-global-isel -I %p/../../../include -I %p/../Common %s -o %t.default.cpp
 
-// RUN: FileCheck %s --check-prefixes=CHECK,R19C,R19N -input-file=%T/non-optimized.cpp
-// RUN: FileCheck %s --check-prefixes=CHECK,R19C,R19O -input-file=%T/optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R19C,R19N -input-file=%t.non-optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R19C,R19O -input-file=%t.optimized.cpp
 
-// RUN: FileCheck %s --check-prefixes=CHECK,R21C,R21N -input-file=%T/non-optimized.cpp
-// RUN: FileCheck %s --check-prefixes=CHECK,R21C,R21O -input-file=%T/optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R21C,R21N -input-file=%t.non-optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R21C,R21O -input-file=%t.optimized.cpp
 
-// RUN: FileCheck %s --check-prefixes=CHECK,R20C,R20N -input-file=%T/non-optimized.cpp
-// RUN: FileCheck %s --check-prefixes=CHECK,R20C,R20O -input-file=%T/optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R20C,R20N -input-file=%t.non-optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R20C,R20O -input-file=%t.optimized.cpp
 
-// RUN: FileCheck %s --check-prefixes=CHECK,R00C,R00N -input-file=%T/non-optimized.cpp
-// RUN: FileCheck %s --check-prefixes=CHECK,R00C,R00O -input-file=%T/optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R00C,R00N -input-file=%t.non-optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R00C,R00O -input-file=%t.optimized.cpp
 
-// RUN: FileCheck %s --check-prefixes=CHECK,R01C,R01N -input-file=%T/non-optimized.cpp
-// RUN: FileCheck %s --check-prefixes=CHECK,R01C,R01O -input-file=%T/optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R01C,R01N -input-file=%t.non-optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R01C,R01O -input-file=%t.optimized.cpp
 
-// RUN: FileCheck %s --check-prefixes=CHECK,R02C,R02N,NOOPT -input-file=%T/non-optimized.cpp
-// RUN: FileCheck %s --check-prefixes=CHECK,R02C,R02O       -input-file=%T/optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R02C,R02N,NOOPT -input-file=%t.non-optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R02C,R02O       -input-file=%t.optimized.cpp
 
-// RUN: diff %T/default.cpp %T/optimized.cpp
+// RUN: diff %t.default.cpp %t.optimized.cpp
 
 include "llvm/Target/Target.td"
 include "GlobalISelEmitterCommon.td"
@@ -156,6 +156,7 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-LABEL: // PatFrag predicates.
 // CHECK-NEXT:  enum {
 // CHECK-NEXT:   GICXXPred_MI_Predicate_frag = GICXXPred_Invalid + 1,
+// CHECK-NEXT:   GICXXPred_MI_Predicate_or_disjoint,
 // CHECK-NEXT:  };
 
 // CHECK-LABEL: // PatFrag predicates.
@@ -534,7 +535,7 @@ def : Pat<(frag GPR32:$src1, complex:$src2, complex:$src3),
 // R00O-NEXT:  GIM_Reject,
 // R00O:       // Label [[DEFAULT_NUM]]: @[[DEFAULT]]
 // R00O-NEXT:  GIM_Reject,
-// R00O-NEXT:  }; // Size: 1878 bytes
+// R00O-NEXT:  }; // Size: 1894 bytes
 
 def INSNBOB : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3, GPR32:$src4),
                  [(set GPR32:$dst,

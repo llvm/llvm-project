@@ -1,0 +1,76 @@
+//===- SFrameConstants.def --------------------------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#if !(defined(HANDLE_SFRAME_VERSION) || defined(HANDLE_SFRAME_FLAG) ||         \
+      defined(HANDLE_SFRAME_ABI) || defined(HANDLE_SFRAME_FRE_TYPE) ||         \
+      defined(HANDLE_SFRAME_FDE_TYPE) ||                                       \
+      defined(HANDLE_SFRAME_AARCH64_PAUTH_KEY) ||                              \
+      defined(HANDLE_SFRAME_FRE_OFFSET))
+#error "Missing HANDLE_SFRAME definition"
+#endif
+
+#ifndef HANDLE_SFRAME_VERSION
+#define HANDLE_SFRAME_VERSION(CODE, NAME)
+#endif
+
+#ifndef HANDLE_SFRAME_FLAG
+#define HANDLE_SFRAME_FLAG(CODE, NAME)
+#endif
+
+#ifndef HANDLE_SFRAME_ABI
+#define HANDLE_SFRAME_ABI(CODE, NAME)
+#endif
+
+#ifndef HANDLE_SFRAME_FRE_TYPE
+#define HANDLE_SFRAME_FRE_TYPE(CODE, NAME)
+#endif
+
+#ifndef HANDLE_SFRAME_FDE_TYPE
+#define HANDLE_SFRAME_FDE_TYPE(CODE, NAME)
+#endif
+
+#ifndef HANDLE_SFRAME_AARCH64_PAUTH_KEY
+#define HANDLE_SFRAME_AARCH64_PAUTH_KEY(CODE, NAME)
+#endif
+
+#ifndef HANDLE_SFRAME_FRE_OFFSET
+#define HANDLE_SFRAME_FRE_OFFSET(CODE, NAME)
+#endif
+
+HANDLE_SFRAME_VERSION(0x01, V1)
+HANDLE_SFRAME_VERSION(0x02, V2)
+
+HANDLE_SFRAME_FLAG(0x01, FDESorted)
+HANDLE_SFRAME_FLAG(0x02, FramePointer)
+HANDLE_SFRAME_FLAG(0x04, FDEFuncStartPCRel)
+
+HANDLE_SFRAME_ABI(0x01, AArch64EndianBig)
+HANDLE_SFRAME_ABI(0x02, AArch64EndianLittle)
+HANDLE_SFRAME_ABI(0x03, AMD64EndianLittle)
+
+HANDLE_SFRAME_FRE_TYPE(0x00, Addr1)
+HANDLE_SFRAME_FRE_TYPE(0x01, Addr2)
+HANDLE_SFRAME_FRE_TYPE(0x02, Addr4)
+
+HANDLE_SFRAME_FDE_TYPE(0, PCInc)
+HANDLE_SFRAME_FDE_TYPE(1, PCMask)
+
+HANDLE_SFRAME_AARCH64_PAUTH_KEY(0, A)
+HANDLE_SFRAME_AARCH64_PAUTH_KEY(1, B)
+
+HANDLE_SFRAME_FRE_OFFSET(0, B1)
+HANDLE_SFRAME_FRE_OFFSET(1, B2)
+HANDLE_SFRAME_FRE_OFFSET(2, B4)
+
+#undef HANDLE_SFRAME_VERSION
+#undef HANDLE_SFRAME_FLAG
+#undef HANDLE_SFRAME_ABI
+#undef HANDLE_SFRAME_FRE_TYPE
+#undef HANDLE_SFRAME_FDE_TYPE
+#undef HANDLE_SFRAME_AARCH64_PAUTH_KEY
+#undef HANDLE_SFRAME_FRE_OFFSET

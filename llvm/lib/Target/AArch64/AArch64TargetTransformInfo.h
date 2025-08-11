@@ -65,16 +65,14 @@ class AArch64TTIImpl final : public BasicTTIImplBase<AArch64TTIImpl> {
 
   // A helper function called by 'getVectorInstrCost'.
   //
-  // 'Val' and 'Index' are forwarded from 'getVectorInstrCost'; 'HasRealUse'
-  // indicates whether the vector instruction is available in the input IR or
-  // just imaginary in vectorizer passes.
-  /// \param ScalarUserAndIdx encodes the information about extracts from a
+  // 'Val' and 'Index' are forwarded from 'getVectorInstrCost';
+  // \param ScalarUserAndIdx encodes the information about extracts from a
   /// vector with 'Scalar' being the value being extracted,'User' being the user
   /// of the extract(nullptr if user is not known before vectorization) and
   /// 'Idx' being the extract lane.
   InstructionCost getVectorInstrCostHelper(
       unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
-      bool HasRealUse, const Instruction *I = nullptr, Value *Scalar = nullptr,
+      const Instruction *I = nullptr, Value *Scalar = nullptr,
       ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx = {}) const;
 
 public:
@@ -91,7 +89,7 @@ public:
   unsigned getInlineCallPenalty(const Function *F, const CallBase &Call,
                                 unsigned DefaultCallPenalty) const override;
 
-  uint64_t getFeatureMask(const Function &F) const override;
+  APInt getFeatureMask(const Function &F) const override;
 
   bool isMultiversionedFunction(const Function &F) const override;
 
@@ -240,7 +238,7 @@ public:
       ArrayRef<const Value *> Args = {},
       const Instruction *CxtI = nullptr) const override;
 
-  InstructionCost getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
+  InstructionCost getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
                                             const SCEV *Ptr) const override;
 
   InstructionCost getCmpSelInstrCost(
@@ -270,8 +268,9 @@ public:
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                              TTI::PeelingPreferences &PP) const override;
 
-  Value *getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
-                                           Type *ExpectedType) const override;
+  Value *
+  getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst, Type *ExpectedType,
+                                    bool CanCreate = true) const override;
 
   bool getTgtMemIntrinsic(IntrinsicInst *Inst,
                           MemIntrinsicInfo &Info) const override;
@@ -435,6 +434,14 @@ public:
                                    ElementCount VF) const override;
 
   bool preferPredicatedReductionSelect() const override { return ST->hasSVE(); }
+
+  /// FP16 and BF16 operations are lowered to fptrunc(op(fpext, fpext) if the
+  /// architecture features are not present.
+  std::optional<InstructionCost>
+  getFP16BF16PromoteCost(Type *Ty, TTI::TargetCostKind CostKind,
+                         TTI::OperandValueInfo Op1Info,
+                         TTI::OperandValueInfo Op2Info, bool IncludeTrunc,
+                         std::function<InstructionCost(Type *)> InstCost) const;
 
   InstructionCost
   getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,

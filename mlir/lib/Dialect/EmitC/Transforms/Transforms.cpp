@@ -10,7 +10,6 @@
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
-#include "llvm/Support/Debug.h"
 
 namespace mlir {
 namespace emitc {
@@ -25,7 +24,7 @@ ExpressionOp createExpression(Operation *op, OpBuilder &builder) {
   Location loc = op->getLoc();
 
   builder.setInsertionPointAfter(op);
-  auto expressionOp = builder.create<emitc::ExpressionOp>(loc, resultType);
+  auto expressionOp = emitc::ExpressionOp::create(builder, loc, resultType);
 
   // Replace all op's uses with the new expression's result.
   result.replaceAllUsesWith(expressionOp.getResult());
@@ -34,7 +33,7 @@ ExpressionOp createExpression(Operation *op, OpBuilder &builder) {
   Region &region = expressionOp.getRegion();
   Block &block = region.emplaceBlock();
   builder.setInsertionPointToEnd(&block);
-  auto yieldOp = builder.create<emitc::YieldOp>(loc, result);
+  auto yieldOp = emitc::YieldOp::create(builder, loc, result);
 
   // Move op into the new expression.
   op->moveBefore(yieldOp);
@@ -63,9 +62,7 @@ struct FoldExpressionOp : public OpRewritePattern<ExpressionOp> {
         continue;
 
       for (Value operand : op.getOperands()) {
-        auto usedExpression =
-            dyn_cast_if_present<ExpressionOp>(operand.getDefiningOp());
-
+        auto usedExpression = operand.getDefiningOp<ExpressionOp>();
         if (!usedExpression)
           continue;
 

@@ -10,10 +10,10 @@
 #define __CLC_MATH_CLC_ASIN_H__
 
 #define __CLC_BODY <clc/math/unary_decl.inc>
-#define __CLC_FUNCTION __clc_asin
+#define FUNCTION __clc_asin
 
 #include <clc/math/gentype.inc>
 
-#undef __CLC_FUNCTION
+#undef FUNCTION
 
 #endif // __CLC_MATH_CLC_ASIN_H__

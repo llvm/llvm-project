@@ -317,7 +317,7 @@ if (NOT ENABLE_LINKER_BUILD_ID)
   set(ENABLE_LINKER_BUILD_ID OFF CACHE BOOL "pass --build-id to ld")
 endif()
 
-set(FLANG_DEFAULT_LINKER "" CACHE STRING
+set(FLANG_DEFAULT_LINKER "${CLANG_DEFAULT_LINKER}" CACHE STRING
   "Default linker to use (linker name or absolute path, empty for platform default)")
 
 set(FLANG_DEFAULT_RTLIB "" CACHE STRING
@@ -504,9 +504,10 @@ add_subdirectory(include)
 add_subdirectory(lib)
 add_subdirectory(cmake/modules)
 
+option(FLANG_INCLUDE_TOOLS "Generate build targets for the Flang tools." ON)
 option(FLANG_BUILD_TOOLS
   "Build the Flang tools. If OFF, just generate build targets." ON)
-if (FLANG_BUILD_TOOLS)
+if (FLANG_INCLUDE_TOOLS)
   add_subdirectory(tools)
 endif()
 
