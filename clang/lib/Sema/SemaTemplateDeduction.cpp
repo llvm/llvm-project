@@ -938,11 +938,11 @@ private:
       S.collectUnexpandedParameterPacks(Pattern, Unexpanded);
       for (unsigned I = 0, N = Unexpanded.size(); I != N; ++I) {
         unsigned Depth, Index;
-        if (auto DI = getDepthAndIndex(Unexpanded[I])) {
+        if (auto DI = getDepthAndIndex(Unexpanded[I]))
           std::tie(Depth, Index) = *DI;
-        } else {
+        else
           continue;
-        }
+
         if (Depth == Info.getDeducedDepth())
           AddPack(Index);
       }
