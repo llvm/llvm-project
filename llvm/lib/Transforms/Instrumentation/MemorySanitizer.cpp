@@ -5494,17 +5494,18 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     //   < 8 x i32> @llvm.x86.avx512.vpdpbusd.256(< 8 x i32>, < 8 x i32>, < 8 x i32>)
     //   <16 x i32> @llvm.x86.avx512.vpdpbusd.512(<16 x i32>, <16 x i32>, <16 x i32>)
     //
+    // Multiply and Add Unsigned and Signed Bytes With Saturation
     //   < 4 x i32> @llvm.x86.avx512.vpdpbusds.128(< 4 x i32>, < 4 x i32>, < 4 x i32>)
     //   < 8 x i32> @llvm.x86.avx512.vpdpbusds.256(< 8 x i32>, < 8 x i32>, < 8 x i32>)
     //   <16 x i32> @llvm.x86.avx512.vpdpbusds.512(<16 x i32>, <16 x i32>, <16 x i32>)
     //
     //   < 4 x i32> @llvm.x86.avx2.vpdpbssd.128 (< 4 x i32>, < 4 x i32>, < 4 x i32>)
-    //   < 4 x i32> @llvm.x86.avx2.vpdpbssds.128(< 4 x i32>, < 4 x i32>, < 4 x i32>)
-    //
     //   < 8 x i32> @llvm.x86.avx2.vpdpbssd.256 (< 8 x i32>, < 8 x i32>, < 8 x i32>)
+    //
+    //   < 4 x i32> @llvm.x86.avx2.vpdpbssds.128(< 4 x i32>, < 4 x i32>, < 4 x i32>)
     //   < 8 x i32> @llvm.x86.avx2.vpdpbssds.256(< 8 x i32>, < 8 x i32>, < 8 x i32>)
     //
-    //   <16 x i32> @llvm.x86.avx10.vpdpbssd.512 (<16 x i32>, <16 x i32>, <16 x i32>)
+    //   <16 x i32> @llvm.x86.avx10.vpdpbssd.512(<16 x i32>, <16 x i32>, <16 x i32>)
     //   <16 x i32> @llvm.x86.avx10.vpdpbssds.512(<16 x i32>, <16 x i32>, <16 x i32>)
     //
     // These intrinsics are auto-upgraded into non-masked forms:
