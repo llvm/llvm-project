@@ -68,6 +68,9 @@ RISCVRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   auto &Subtarget = MF->getSubtarget<RISCVSubtarget>();
   if (MF->getFunction().getCallingConv() == CallingConv::GHC)
     return CSR_NoRegs_SaveList;
+  if (MF->getFunction().getCallingConv() == CallingConv::PreserveMost)
+    return Subtarget.hasStdExtE() ? CSR_RT_MostRegs_RVE_SaveList
+                                  : CSR_RT_MostRegs_SaveList;
   if (MF->getFunction().hasFnAttribute("interrupt")) {
     if (Subtarget.hasVInstructions()) {
       if (Subtarget.hasStdExtD())
@@ -573,6 +576,7 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     int64_t Val = Offset.getFixed();
     int64_t Lo12 = SignExtend64<12>(Val);
     unsigned Opc = MI.getOpcode();
+
     if (Opc == RISCV::ADDI && !isInt<12>(Val)) {
       // We chose to emit the canonical immediate sequence rather than folding
       // the offset into the using add under the theory that doing so doesn't
@@ -584,6 +588,9 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                 Opc == RISCV::PREFETCH_W) &&
                (Lo12 & 0b11111) != 0) {
       // Prefetch instructions require the offset to be 32 byte aligned.
+      MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
+    } else if (Opc == RISCV::MIPS_PREFETCH && !isUInt<9>(Val)) {
+      // MIPS Prefetch instructions require the offset to be 9 bits encoded.
       MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
     } else if ((Opc == RISCV::PseudoRV32ZdinxLD ||
                 Opc == RISCV::PseudoRV32ZdinxSD) &&
@@ -811,7 +818,13 @@ RISCVRegisterInfo::getCallPreservedMask(const MachineFunction & MF,
 
   if (CC == CallingConv::GHC)
     return CSR_NoRegs_RegMask;
-  switch (Subtarget.getTargetABI()) {
+  RISCVABI::ABI ABI = Subtarget.getTargetABI();
+  if (CC == CallingConv::PreserveMost) {
+    if (ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E)
+      return CSR_RT_MostRegs_RVE_RegMask;
+    return CSR_RT_MostRegs_RegMask;
+  }
+  switch (ABI) {
   default:
     llvm_unreachable("Unrecognized ABI");
   case RISCVABI::ABI_ILP32E:

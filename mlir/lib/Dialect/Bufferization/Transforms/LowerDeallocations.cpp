@@ -482,10 +482,10 @@ func::FuncOp mlir::bufferization::buildDeallocationLibraryFunction(
 
         // Build the first for loop that computes aliasing with retained
         // memrefs.
-        Value noRetainAlias =
-            builder
-                .create<scf::ForOp>(
-                    loc, c0, toRetainSize, c1, trueValue,
+        Value
+            noRetainAlias =
+                scf::ForOp::create(
+                    builder, loc, c0, toRetainSize, c1, trueValue,
                     [&](OpBuilder &builder, Location loc, Value i,
                         ValueRange iterArgs) {
                       Value retainValue = memref::LoadOp::create(
@@ -512,14 +512,14 @@ func::FuncOp mlir::bufferization::buildDeallocationLibraryFunction(
                           builder, loc, iterArgs[0], doesntAlias);
                       scf::YieldOp::create(builder, loc, yieldValue);
                     })
-                .getResult(0);
+                    .getResult(0);
 
         // Build the second for loop that adds aliasing with previously
         // deallocated memrefs.
-        Value noAlias =
-            builder
-                .create<scf::ForOp>(
-                    loc, c0, outerIter, c1, noRetainAlias,
+        Value
+            noAlias =
+                scf::ForOp::create(
+                    builder, loc, c0, outerIter, c1, noRetainAlias,
                     [&](OpBuilder &builder, Location loc, Value i,
                         ValueRange iterArgs) {
                       Value prevDeallocValue = memref::LoadOp::create(
@@ -531,7 +531,7 @@ func::FuncOp mlir::bufferization::buildDeallocationLibraryFunction(
                           builder, loc, iterArgs[0], doesntAlias);
                       scf::YieldOp::create(builder, loc, yieldValue);
                     })
-                .getResult(0);
+                    .getResult(0);
 
         Value shouldDealoc = arith::AndIOp::create(builder, loc, noAlias, cond);
         memref::StoreOp::create(builder, loc, shouldDealoc, deallocCondsMemref,

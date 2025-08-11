@@ -1127,7 +1127,7 @@ static void genPropertyVerifier(
     body << formatv(fetchProperty, varName, getterName,
                     prop.prop.getInterfaceType());
     auto uniquedFn = staticVerifierEmitter.getPropConstraintFn(prop.prop);
-    if (uniquedFn.has_value())
+    if (uniquedFn.has_value() && emitHelper.isEmittingForOp())
       body << formatv(verifyPropertyUniqued, *uniquedFn, varName, prop.name);
     else
       body << formatv(
@@ -4764,6 +4764,7 @@ void OpOperandAdaptorEmitter::addVerification() {
 
   FmtContext verifyCtx;
   populateSubstitutions(emitHelper, verifyCtx);
+  genPropertyVerifier(emitHelper, verifyCtx, body, staticVerifierEmitter);
   genAttributeVerifier(emitHelper, verifyCtx, body, staticVerifierEmitter,
                        useProperties);
 

@@ -11,13 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "check-omp-structure.h"
-#include "openmp-utils.h"
 
 #include "flang/Common/indirection.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/char-block.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
@@ -197,7 +197,8 @@ static std::pair<parser::CharBlock, parser::CharBlock> SplitAssignmentSource(
 }
 
 static bool IsCheckForAssociated(const SomeExpr &cond) {
-  return GetTopLevelOperation(cond).first == operation::Operator::Associated;
+  return GetTopLevelOperationIgnoreResizing(cond).first ==
+      operation::Operator::Associated;
 }
 
 static bool IsMaybeAtomicWrite(const evaluate::Assignment &assign) {
@@ -221,47 +222,77 @@ static void SetAssignment(parser::AssignmentStmt::TypedAssignment &assign,
   }
 }
 
-static parser::OpenMPAtomicConstruct::Analysis::Op MakeAtomicAnalysisOp(
-    int what,
-    const std::optional<evaluate::Assignment> &maybeAssign = std::nullopt) {
-  parser::OpenMPAtomicConstruct::Analysis::Op operation;
-  operation.what = what;
-  SetAssignment(operation.assign, maybeAssign);
-  return operation;
-}
+namespace {
+struct AtomicAnalysis {
+  AtomicAnalysis(const SomeExpr &atom, const MaybeExpr &cond = std::nullopt)
+      : atom_(atom), cond_(cond) {}
 
-static parser::OpenMPAtomicConstruct::Analysis MakeAtomicAnalysis(
-    const SomeExpr &atom, const MaybeExpr &cond,
-    parser::OpenMPAtomicConstruct::Analysis::Op &&op0,
-    parser::OpenMPAtomicConstruct::Analysis::Op &&op1) {
-  // Defined in flang/include/flang/Parser/parse-tree.h
-  //
-  // struct Analysis {
-  //   struct Kind {
-  //     static constexpr int None = 0;
-  //     static constexpr int Read = 1;
-  //     static constexpr int Write = 2;
-  //     static constexpr int Update = Read | Write;
-  //     static constexpr int Action = 3; // Bits containing N, R, W, U
-  //     static constexpr int IfTrue = 4;
-  //     static constexpr int IfFalse = 8;
-  //     static constexpr int Condition = 12; // Bits containing IfTrue, IfFalse
-  //   };
-  //   struct Op {
-  //     int what;
-  //     TypedAssignment assign;
-  //   };
-  //   TypedExpr atom, cond;
-  //   Op op0, op1;
-  // };
+  AtomicAnalysis &addOp0(int what,
+      const std::optional<evaluate::Assignment> &maybeAssign = std::nullopt) {
+    return addOp(op0_, what, maybeAssign);
+  }
+  AtomicAnalysis &addOp1(int what,
+      const std::optional<evaluate::Assignment> &maybeAssign = std::nullopt) {
+    return addOp(op1_, what, maybeAssign);
+  }
 
-  parser::OpenMPAtomicConstruct::Analysis an;
-  SetExpr(an.atom, atom);
-  SetExpr(an.cond, cond);
-  an.op0 = std::move(op0);
-  an.op1 = std::move(op1);
-  return an;
-}
+  operator parser::OpenMPAtomicConstruct::Analysis() const {
+    // Defined in flang/include/flang/Parser/parse-tree.h
+    //
+    // struct Analysis {
+    //   struct Kind {
+    //     static constexpr int None = 0;
+    //     static constexpr int Read = 1;
+    //     static constexpr int Write = 2;
+    //     static constexpr int Update = Read | Write;
+    //     static constexpr int Action = 3; // Bits containing None, Read,
+    //                                      // Write, Update
+    //     static constexpr int IfTrue = 4;
+    //     static constexpr int IfFalse = 8;
+    //     static constexpr int Condition = 12; // Bits containing IfTrue,
+    //                                          // IfFalse
+    //   };
+    //   struct Op {
+    //     int what;
+    //     TypedAssignment assign;
+    //   };
+    //   TypedExpr atom, cond;
+    //   Op op0, op1;
+    // };
+
+    parser::OpenMPAtomicConstruct::Analysis an;
+    SetExpr(an.atom, atom_);
+    SetExpr(an.cond, cond_);
+    an.op0 = std::move(op0_);
+    an.op1 = std::move(op1_);
+    return an;
+  }
+
+private:
+  struct Op {
+    operator parser::OpenMPAtomicConstruct::Analysis::Op() const {
+      parser::OpenMPAtomicConstruct::Analysis::Op op;
+      op.what = what;
+      SetAssignment(op.assign, assign);
+      return op;
+    }
+
+    int what;
+    std::optional<evaluate::Assignment> assign;
+  };
+
+  AtomicAnalysis &addOp(Op &op, int what,
+      const std::optional<evaluate::Assignment> &maybeAssign) {
+    op.what = what;
+    op.assign = maybeAssign;
+    return *this;
+  }
+
+  const SomeExpr &atom_;
+  const MaybeExpr &cond_;
+  Op op0_, op1_;
+};
+} // namespace
 
 /// Check if `expr` satisfies the following conditions for x and v:
 ///
@@ -399,8 +430,8 @@ OmpStructureChecker::CheckUpdateCapture(
   //    subexpression of the right-hand side.
   // 2. An assignment could be a capture (cbc) if the right-hand side is
   //    a variable (or a function ref), with potential type conversions.
-  bool cbu1{IsSubexpressionOf(as1.lhs, as1.rhs)}; // Can as1 be an update?
-  bool cbu2{IsSubexpressionOf(as2.lhs, as2.rhs)}; // Can as2 be an update?
+  bool cbu1{IsVarSubexpressionOf(as1.lhs, as1.rhs)}; // Can as1 be an update?
+  bool cbu2{IsVarSubexpressionOf(as2.lhs, as2.rhs)}; // Can as2 be an update?
   bool cbc1{IsVarOrFunctionRef(GetConvertInput(as1.rhs))}; // Can 1 be capture?
   bool cbc2{IsVarOrFunctionRef(GetConvertInput(as2.rhs))}; // Can 2 be capture?
 
@@ -447,7 +478,7 @@ OmpStructureChecker::CheckUpdateCapture(
     // If det != 0, then the checks unambiguously suggest a specific
     // categorization.
     // If det == 0, then this function should be called only if the
-    // checks haven't ruled out any possibility, i.e. when both assigments
+    // checks haven't ruled out any possibility, i.e. when both assignments
     // could still be either updates or captures.
     if (det > 0) {
       // as1 is update, as2 is capture
@@ -507,7 +538,7 @@ OmpStructureChecker::CheckUpdateCapture(
 
   // The remaining cases are that
   // - no candidate for update, or for capture,
-  // - one of the assigments cannot be anything.
+  // - one of the assignments cannot be anything.
 
   if (!cbu1 && !cbu2) {
     context_.Say(source,
@@ -607,7 +638,7 @@ void OmpStructureChecker::CheckAtomicUpdateAssignment(
   std::pair<operation::Operator, std::vector<SomeExpr>> top{
       operation::Operator::Unknown, {}};
   if (auto &&maybeInput{GetConvertInput(update.rhs)}) {
-    top = GetTopLevelOperation(*maybeInput);
+    top = GetTopLevelOperationIgnoreResizing(*maybeInput);
   }
   switch (top.first) {
   case operation::Operator::Add:
@@ -657,7 +688,7 @@ void OmpStructureChecker::CheckAtomicUpdateAssignment(
       if (IsSameOrConvertOf(arg, atom)) {
         ++count;
       } else {
-        if (!subExpr && IsSubexpressionOf(atom, arg)) {
+        if (!subExpr && evaluate::IsVarSubexpressionOf(atom, arg)) {
           subExpr = arg;
         }
         nonAtom.push_back(arg);
@@ -715,7 +746,7 @@ void OmpStructureChecker::CheckAtomicConditionalUpdateAssignment(
 
   CheckAtomicVariable(atom, alsrc);
 
-  auto top{GetTopLevelOperation(cond)};
+  auto top{GetTopLevelOperationIgnoreResizing(cond)};
   // Missing arguments to operations would have been diagnosed by now.
 
   switch (top.first) {
@@ -804,9 +835,9 @@ void OmpStructureChecker::CheckAtomicUpdateOnly(
       CheckAtomicUpdateAssignment(*maybeUpdate, action.source);
 
       using Analysis = parser::OpenMPAtomicConstruct::Analysis;
-      x.analysis = MakeAtomicAnalysis(atom, std::nullopt,
-          MakeAtomicAnalysisOp(Analysis::Update, maybeUpdate),
-          MakeAtomicAnalysisOp(Analysis::None));
+      x.analysis = AtomicAnalysis(atom)
+                       .addOp0(Analysis::Update, maybeUpdate)
+                       .addOp1(Analysis::None);
     } else if (!IsAssignment(action.stmt)) {
       context_.Say(
           source, "ATOMIC UPDATE operation should be an assignment"_err_en_US);
@@ -888,9 +919,11 @@ void OmpStructureChecker::CheckAtomicConditionalUpdate(
   }
 
   using Analysis = parser::OpenMPAtomicConstruct::Analysis;
-  x.analysis = MakeAtomicAnalysis(assign.lhs, update.cond,
-      MakeAtomicAnalysisOp(Analysis::Update | Analysis::IfTrue, assign),
-      MakeAtomicAnalysisOp(Analysis::None));
+  const SomeExpr &atom{assign.lhs};
+
+  x.analysis = AtomicAnalysis(atom, update.cond)
+                   .addOp0(Analysis::Update | Analysis::IfTrue, assign)
+                   .addOp1(Analysis::None);
 }
 
 void OmpStructureChecker::CheckAtomicUpdateCapture(
@@ -935,13 +968,13 @@ void OmpStructureChecker::CheckAtomicUpdateCapture(
   }
 
   if (GetActionStmt(&body.front()).stmt == uact.stmt) {
-    x.analysis = MakeAtomicAnalysis(atom, std::nullopt,
-        MakeAtomicAnalysisOp(action, update),
-        MakeAtomicAnalysisOp(Analysis::Read, capture));
+    x.analysis = AtomicAnalysis(atom)
+                     .addOp0(action, update)
+                     .addOp1(Analysis::Read, capture);
   } else {
-    x.analysis = MakeAtomicAnalysis(atom, std::nullopt,
-        MakeAtomicAnalysisOp(Analysis::Read, capture),
-        MakeAtomicAnalysisOp(action, update));
+    x.analysis = AtomicAnalysis(atom)
+                     .addOp0(Analysis::Read, capture)
+                     .addOp1(action, update);
   }
 }
 
@@ -1086,15 +1119,16 @@ void OmpStructureChecker::CheckAtomicConditionalUpdateCapture(
 
   evaluate::Assignment updAssign{*GetEvaluateAssignment(update.ift.stmt)};
   evaluate::Assignment capAssign{*GetEvaluateAssignment(capture.stmt)};
+  const SomeExpr &atom{updAssign.lhs};
 
   if (captureFirst) {
-    x.analysis = MakeAtomicAnalysis(updAssign.lhs, update.cond,
-        MakeAtomicAnalysisOp(Analysis::Read | captureWhen, capAssign),
-        MakeAtomicAnalysisOp(Analysis::Write | updateWhen, updAssign));
+    x.analysis = AtomicAnalysis(atom, update.cond)
+                     .addOp0(Analysis::Read | captureWhen, capAssign)
+                     .addOp1(Analysis::Write | updateWhen, updAssign);
   } else {
-    x.analysis = MakeAtomicAnalysis(updAssign.lhs, update.cond,
-        MakeAtomicAnalysisOp(Analysis::Write | updateWhen, updAssign),
-        MakeAtomicAnalysisOp(Analysis::Read | captureWhen, capAssign));
+    x.analysis = AtomicAnalysis(atom, update.cond)
+                     .addOp0(Analysis::Write | updateWhen, updAssign)
+                     .addOp1(Analysis::Read | captureWhen, capAssign);
   }
 }
 
@@ -1105,12 +1139,11 @@ void OmpStructureChecker::CheckAtomicRead(
   // of the following forms:
   //   v = x
   //   v => x
-  auto &dirSpec{std::get<parser::OmpDirectiveSpecification>(x.t)};
   auto &block{std::get<parser::Block>(x.t)};
 
   // Read cannot be conditional or have a capture statement.
   if (x.IsCompare() || x.IsCapture()) {
-    context_.Say(dirSpec.source,
+    context_.Say(x.BeginDir().source,
         "ATOMIC READ cannot have COMPARE or CAPTURE clauses"_err_en_US);
     return;
   }
@@ -1125,9 +1158,9 @@ void OmpStructureChecker::CheckAtomicRead(
       if (auto maybe{GetConvertInput(maybeRead->rhs)}) {
         const SomeExpr &atom{*maybe};
         using Analysis = parser::OpenMPAtomicConstruct::Analysis;
-        x.analysis = MakeAtomicAnalysis(atom, std::nullopt,
-            MakeAtomicAnalysisOp(Analysis::Read, maybeRead),
-            MakeAtomicAnalysisOp(Analysis::None));
+        x.analysis = AtomicAnalysis(atom)
+                         .addOp0(Analysis::Read, maybeRead)
+                         .addOp1(Analysis::None);
       }
     } else if (!IsAssignment(action.stmt)) {
       context_.Say(
@@ -1141,12 +1174,11 @@ void OmpStructureChecker::CheckAtomicRead(
 
 void OmpStructureChecker::CheckAtomicWrite(
     const parser::OpenMPAtomicConstruct &x) {
-  auto &dirSpec{std::get<parser::OmpDirectiveSpecification>(x.t)};
   auto &block{std::get<parser::Block>(x.t)};
 
   // Write cannot be conditional or have a capture statement.
   if (x.IsCompare() || x.IsCapture()) {
-    context_.Say(dirSpec.source,
+    context_.Say(x.BeginDir().source,
         "ATOMIC WRITE cannot have COMPARE or CAPTURE clauses"_err_en_US);
     return;
   }
@@ -1160,9 +1192,9 @@ void OmpStructureChecker::CheckAtomicWrite(
       CheckAtomicWriteAssignment(*maybeWrite, action.source);
 
       using Analysis = parser::OpenMPAtomicConstruct::Analysis;
-      x.analysis = MakeAtomicAnalysis(atom, std::nullopt,
-          MakeAtomicAnalysisOp(Analysis::Write, maybeWrite),
-          MakeAtomicAnalysisOp(Analysis::None));
+      x.analysis = AtomicAnalysis(atom)
+                       .addOp0(Analysis::Write, maybeWrite)
+                       .addOp1(Analysis::None);
     } else if (!IsAssignment(action.stmt)) {
       context_.Say(
           x.source, "ATOMIC WRITE operation should be an assignment"_err_en_US);
@@ -1234,7 +1266,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPAtomicConstruct &x) {
     }
   }};
 
-  auto &dirSpec{std::get<parser::OmpDirectiveSpecification>(x.t)};
+  const parser::OmpDirectiveSpecification &dirSpec{x.BeginDir()};
   auto &dir{std::get<parser::OmpDirectiveName>(dirSpec.t)};
   PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_atomic);
   llvm::omp::Clause kind{x.GetKind()};
