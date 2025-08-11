@@ -59,11 +59,8 @@ static Value *createLogicFromTable3Var(const std::bitset<8> &Table, Value *Op0,
                                        IRBuilderBase &Builder, bool HasOneUse) {
   uint8_t TruthValue = Table.to_ulong();
   auto FoldConstant = [&](bool Val) {
-    Constant *Res = Val ? Builder.getTrue() : Builder.getFalse();
-    if (Op0->getType()->isVectorTy())
-      Res = ConstantVector::getSplat(
-          cast<VectorType>(Op0->getType())->getElementCount(), Res);
-    return Res;
+    Type *Ty = Op0->getType();
+    return Val ? ConstantInt::getTrue(Ty) : ConstantInt::getFalse(Ty);
   };
 
   Value *Result = nullptr;
