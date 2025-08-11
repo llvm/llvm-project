@@ -2612,12 +2612,24 @@ void VPlanTransforms::createInterleaveGroups(
   VPDominatorTree VPDT;
   VPDT.recalculate(Plan);
   for (const auto *IG : InterleaveGroups) {
+    // Get or create the start address for the interleave group.
+    auto *Start =
+        cast<VPWidenMemoryRecipe>(RecipeBuilder.getRecipe(IG->getMember(0)));
+
+    VPIRMetadata InterleaveMD(*Start);
     SmallVector<VPValue *, 4> StoredValues;
-    for (unsigned i = 0; i < IG->getFactor(); ++i)
-      if (auto *SI = dyn_cast_or_null<StoreInst>(IG->getMember(i))) {
-        auto *StoreR = cast<VPWidenStoreRecipe>(RecipeBuilder.getRecipe(SI));
+    for (unsigned i = 0; i < IG->getFactor(); ++i) {
+      Instruction *MemI = IG->getMember(i);
+      if (!MemI)
+        continue;
+      VPWidenMemoryRecipe *MemR =
+          cast<VPWidenMemoryRecipe>(RecipeBuilder.getRecipe(MemI));
+      if (!MemR)
+        continue;
+      if (auto *StoreR = dyn_cast<VPWidenStoreRecipe>(MemR))
         StoredValues.push_back(StoreR->getStoredValue());
-      }
+      InterleaveMD.intersect(*MemR);
+    }
 
     bool NeedsMaskForGaps =
         (IG->requiresScalarEpilogue() && !ScalarEpilogueAllowed) ||
@@ -2632,9 +2644,6 @@ void VPlanTransforms::createInterleaveGroups(
             getLoadStorePointerOperand(IRInsertPos)->stripPointerCasts()))
       NW = Gep->getNoWrapFlags().withoutNoUnsignedWrap();
 
-    // Get or create the start address for the interleave group.
-    auto *Start =
-        cast<VPWidenMemoryRecipe>(RecipeBuilder.getRecipe(IG->getMember(0)));
     VPValue *Addr = Start->getAddr();
     VPRecipeBase *AddrDef = Addr->getDefiningRecipe();
     if (AddrDef && !VPDT.properlyDominates(AddrDef, InsertPos)) {
@@ -2667,8 +2676,10 @@ void VPlanTransforms::createInterleaveGroups(
       ReversePtr->insertBefore(InsertPos);
       Addr = ReversePtr;
     }
+
     auto *VPIG = new VPInterleaveRecipe(IG, Addr, StoredValues,
-                                        InsertPos->getMask(), NeedsMaskForGaps, InsertPos->getDebugLoc());
+                                        InsertPos->getMask(), NeedsMaskForGaps,
+                                        InterleaveMD, InsertPos->getDebugLoc());
     VPIG->insertBefore(InsertPos);
 
     unsigned J = 0;
