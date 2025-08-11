@@ -15,6 +15,7 @@
 #define LLVM_CLANG_SEMA_SEMAINTERNAL_H
 
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaDiagnostic.h"
@@ -208,7 +209,7 @@ private:
   class NamespaceSpecifierSet {
     struct SpecifierInfo {
       DeclContext* DeclCtx;
-      NestedNameSpecifier* NameSpecifier;
+      NestedNameSpecifier NameSpecifier;
       unsigned EditDistance;
     };
 
@@ -228,9 +229,9 @@ private:
     static DeclContextList buildContextChain(DeclContext *Start);
 
     unsigned buildNestedNameSpecifier(DeclContextList &DeclChain,
-                                      NestedNameSpecifier *&NNS);
+                                      NestedNameSpecifier &NNS);
 
-   public:
+  public:
     NamespaceSpecifierSet(ASTContext &Context, DeclContext *CurContext,
                           CXXScopeSpec *CurScopeSpec);
 
@@ -275,7 +276,7 @@ private:
   };
 
   void addName(StringRef Name, NamedDecl *ND,
-               NestedNameSpecifier *NNS = nullptr, bool isKeyword = false);
+               NestedNameSpecifier NNS = std::nullopt, bool isKeyword = false);
 
   /// Find any visible decls for the given typo correction candidate.
   /// If none are found, it to the set of candidates for which qualified lookups

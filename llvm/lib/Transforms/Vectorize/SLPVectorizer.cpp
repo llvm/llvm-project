@@ -991,6 +991,17 @@ class BinOpSameOpcodeHelper {
         return Candidate & OrBIT;
       case Instruction::Xor:
         return Candidate & XorBIT;
+      case Instruction::LShr:
+      case Instruction::FAdd:
+      case Instruction::FSub:
+      case Instruction::FMul:
+      case Instruction::SDiv:
+      case Instruction::UDiv:
+      case Instruction::FDiv:
+      case Instruction::SRem:
+      case Instruction::URem:
+      case Instruction::FRem:
+        return false;
       default:
         break;
       }
@@ -1238,6 +1249,12 @@ public:
     BinOpSameOpcodeHelper Converter(MainOp);
     if (!Converter.add(I) || !Converter.add(MainOp))
       return nullptr;
+    if (isAltShuffle() && !Converter.hasCandidateOpcode(MainOp->getOpcode())) {
+      BinOpSameOpcodeHelper AltConverter(AltOp);
+      if (AltConverter.add(I) && AltConverter.add(AltOp) &&
+          AltConverter.hasCandidateOpcode(AltOp->getOpcode()))
+        return AltOp;
+    }
     if (Converter.hasAltOp() && !isAltShuffle())
       return nullptr;
     return Converter.hasAltOp() ? AltOp : MainOp;
@@ -1329,7 +1346,7 @@ public:
                 // If the copyable instructions comes after MainOp
                 // (non-schedulable, but used in the block) - cannot vectorize
                 // it, will possibly generate use before def.
-                (isVectorLikeInstWithConstOps(I) || !MainOp->comesBefore(I)));
+                !MainOp->comesBefore(I));
       };
 
       return IsNonSchedulableCopyableElement(V);
@@ -15080,7 +15097,8 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
   for (ExternalUser &EU : ExternalUses) {
     LLVM_DEBUG(dbgs() << "SLP: Computing cost for external use of TreeEntry "
                       << EU.E.Idx << " in lane " << EU.Lane << "\n");
-    LLVM_DEBUG(dbgs() << "  User:" << *EU.User << "\n");
+    LLVM_DEBUG(if (EU.User) dbgs() << "  User:" << *EU.User << "\n";
+               else dbgs() << "  User: nullptr\n");
     LLVM_DEBUG(dbgs() << "  Use: " << EU.Scalar->getNameOrAsOperand() << "\n");
 
     // Uses by ephemeral values are free (because the ephemeral value will be
@@ -18887,8 +18905,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       if (!UseIntrinsic) {
         VFShape Shape =
             VFShape::get(CI->getFunctionType(),
-                         ElementCount::getFixed(
-                             static_cast<unsigned>(VecTy->getNumElements())),
+                         ElementCount::getFixed(VecTy->getNumElements()),
                          false /*HasGlobalPred*/);
         CF = VFDatabase(*CI).getVectorizedFunction(Shape);
       } else {

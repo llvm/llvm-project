@@ -460,6 +460,29 @@ mlir::LogicalResult CIRToLLVMAssumeOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMAssumeAlignedOpLowering::matchAndRewrite(
+    cir::AssumeAlignedOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  SmallVector<mlir::Value, 3> opBundleArgs{adaptor.getPointer()};
+
+  auto alignment = mlir::LLVM::ConstantOp::create(rewriter, op.getLoc(),
+                                                  adaptor.getAlignmentAttr());
+  opBundleArgs.push_back(alignment);
+
+  if (mlir::Value offset = adaptor.getOffset())
+    opBundleArgs.push_back(offset);
+
+  auto cond = mlir::LLVM::ConstantOp::create(rewriter, op.getLoc(),
+                                             rewriter.getI1Type(), 1);
+  mlir::LLVM::AssumeOp::create(rewriter, op.getLoc(), cond, "align",
+                               opBundleArgs);
+
+  // The llvm.assume operation does not have a result, so we need to replace
+  // all uses of this cir.assume_aligned operation with the input ptr itself.
+  rewriter.replaceOp(op, adaptor.getPointer());
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMAssumeSepStorageOpLowering::matchAndRewrite(
     cir::AssumeSepStorageOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -821,8 +844,7 @@ mlir::LogicalResult CIRToLLVMPtrStrideOpLowering::matchAndRewrite(
     // before it. To achieve that, look at unary minus, which already got
     // lowered to "sub 0, x".
     const auto sub = dyn_cast<mlir::LLVM::SubOp>(indexOp);
-    auto unary = dyn_cast_if_present<cir::UnaryOp>(
-        ptrStrideOp.getStride().getDefiningOp());
+    auto unary = ptrStrideOp.getStride().getDefiningOp<cir::UnaryOp>();
     bool rewriteSub =
         unary && unary.getKind() == cir::UnaryOpKind::Minus && sub;
     if (rewriteSub)
@@ -1935,12 +1957,11 @@ mlir::LogicalResult CIRToLLVMSelectOpLowering::matchAndRewrite(
     cir::SelectOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   auto getConstantBool = [](mlir::Value value) -> cir::BoolAttr {
-    auto definingOp =
-        mlir::dyn_cast_if_present<cir::ConstantOp>(value.getDefiningOp());
+    auto definingOp = value.getDefiningOp<cir::ConstantOp>();
     if (!definingOp)
       return {};
 
-    auto constValue = mlir::dyn_cast<cir::BoolAttr>(definingOp.getValue());
+    auto constValue = definingOp.getValueAttr<cir::BoolAttr>();
     if (!constValue)
       return {};
 
@@ -2145,6 +2166,11 @@ void ConvertCIRToLLVMPass::processCIRAttrs(mlir::ModuleOp module) {
           module->getAttr(cir::CIRDialect::getTripleAttrName()))
     module->setAttr(mlir::LLVM::LLVMDialect::getTargetTripleAttrName(),
                     tripleAttr);
+
+  if (mlir::Attribute asmAttr =
+          module->getAttr(cir::CIRDialect::getModuleLevelAsmAttrName()))
+    module->setAttr(mlir::LLVM::LLVMDialect::getModuleLevelAsmAttrName(),
+                    asmAttr);
 }
 
 void ConvertCIRToLLVMPass::runOnOperation() {
@@ -2170,6 +2196,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   patterns.add<
       // clang-format off
                CIRToLLVMAssumeOpLowering,
+               CIRToLLVMAssumeAlignedOpLowering,
                CIRToLLVMAssumeSepStorageOpLowering,
                CIRToLLVMBaseClassAddrOpLowering,
                CIRToLLVMBinOpLowering,
@@ -2214,7 +2241,8 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMVecShuffleDynamicOpLowering,
                CIRToLLVMVecShuffleOpLowering,
                CIRToLLVMVecSplatOpLowering,
-               CIRToLLVMVecTernaryOpLowering
+               CIRToLLVMVecTernaryOpLowering,
+               CIRToLLVMUnreachableOpLowering
       // clang-format on
       >(converter, patterns.getContext());
 
@@ -2268,6 +2296,13 @@ mlir::LogicalResult CIRToLLVMGetMemberOpLowering::matchAndRewrite(
                                                        adaptor.getAddr());
     return mlir::success();
   }
+}
+
+mlir::LogicalResult CIRToLLVMUnreachableOpLowering::matchAndRewrite(
+    cir::UnreachableOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  rewriter.replaceOpWithNewOp<mlir::LLVM::UnreachableOp>(op);
+  return mlir::success();
 }
 
 mlir::LogicalResult CIRToLLVMTrapOpLowering::matchAndRewrite(
@@ -2379,15 +2414,14 @@ mlir::LogicalResult CIRToLLVMVecSplatOpLowering::matchAndRewrite(
   mlir::Value poison = rewriter.create<mlir::LLVM::PoisonOp>(loc, llvmTy);
 
   mlir::Value elementValue = adaptor.getValue();
-  if (mlir::isa<mlir::LLVM::PoisonOp>(elementValue.getDefiningOp())) {
+  if (elementValue.getDefiningOp<mlir::LLVM::PoisonOp>()) {
     // If the splat value is poison, then we can just use poison value
     // for the entire vector.
     rewriter.replaceOp(op, poison);
     return mlir::success();
   }
 
-  if (auto constValue =
-          dyn_cast<mlir::LLVM::ConstantOp>(elementValue.getDefiningOp())) {
+  if (auto constValue = elementValue.getDefiningOp<mlir::LLVM::ConstantOp>()) {
     if (auto intAttr = dyn_cast<mlir::IntegerAttr>(constValue.getValue())) {
       mlir::DenseIntElementsAttr denseVec = mlir::DenseIntElementsAttr::get(
           mlir::cast<mlir::ShapedType>(llvmTy), intAttr.getValue());

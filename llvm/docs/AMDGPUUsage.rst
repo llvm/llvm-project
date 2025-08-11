@@ -1890,7 +1890,7 @@ The AMDGPU backend supports the following calling conventions:
 AMDGPU MCExpr
 -------------
 
-As part of the AMDGPU MC layer, AMDGPU provides the following target specific
+As part of the AMDGPU MC layer, AMDGPU provides the following target-specific
 ``MCExpr``\s.
 
   .. table:: AMDGPU MCExpr types:

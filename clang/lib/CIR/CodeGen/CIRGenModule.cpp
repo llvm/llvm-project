@@ -997,7 +997,7 @@ static bool isVarDeclStrongDefinition(const ASTContext &astContext,
       return true;
 
     if (const auto *rt = varType->getAs<RecordType>()) {
-      const RecordDecl *rd = rt->getDecl();
+      const RecordDecl *rd = rt->getOriginalDecl()->getDefinitionOrSelf();
       for (const FieldDecl *fd : rd->fields()) {
         if (fd->isBitField())
           continue;
@@ -1307,7 +1307,8 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
   }
 
   case Decl::Var:
-  case Decl::Decomposition: {
+  case Decl::Decomposition:
+  case Decl::VarTemplateSpecialization: {
     auto *vd = cast<VarDecl>(decl);
     if (isa<DecompositionDecl>(decl)) {
       errorNYI(decl->getSourceRange(), "global variable decompositions");
@@ -1342,6 +1343,8 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
   case Decl::StaticAssert:
   case Decl::TypeAliasTemplate:
   case Decl::UsingShadow:
+  case Decl::VarTemplate:
+  case Decl::VarTemplatePartialSpecialization:
     break;
 
   case Decl::CXXConstructor:
@@ -1361,6 +1364,21 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
   case Decl::CXXRecord:
     assert(!cir::MissingFeatures::generateDebugInfo());
     assert(!cir::MissingFeatures::cxxRecordStaticMembers());
+    break;
+
+  case Decl::FileScopeAsm:
+    // File-scope asm is ignored during device-side CUDA compilation.
+    if (langOpts.CUDA && langOpts.CUDAIsDevice)
+      break;
+    // File-scope asm is ignored during device-side OpenMP compilation.
+    if (langOpts.OpenMPIsTargetDevice)
+      break;
+    // File-scope asm is ignored during device-side SYCL compilation.
+    if (langOpts.SYCLIsDevice)
+      break;
+    auto *file_asm = cast<FileScopeAsmDecl>(decl);
+    std::string line = file_asm->getAsmString();
+    globalScopeAsm.push_back(builder.getStringAttr(line));
     break;
   }
 }
@@ -1975,6 +1993,9 @@ void CIRGenModule::release() {
   emitDeferred();
   applyReplacements();
 
+  theModule->setAttr(cir::CIRDialect::getModuleLevelAsmAttrName(),
+                     builder.getArrayAttr(globalScopeAsm));
+
   // There's a lot of code that is not implemented yet.
   assert(!cir::MissingFeatures::cgmRelease());
 }
@@ -2045,8 +2066,10 @@ CharUnits CIRGenModule::computeNonVirtualBaseClassOffset(
     // Get the layout.
     const ASTRecordLayout &layout = astContext.getASTRecordLayout(rd);
 
-    const auto *baseDecl = cast<CXXRecordDecl>(
-        base->getType()->castAs<clang::RecordType>()->getDecl());
+    const auto *baseDecl =
+        cast<CXXRecordDecl>(
+            base->getType()->castAs<clang::RecordType>()->getOriginalDecl())
+            ->getDefinitionOrSelf();
 
     // Add the offset.
     offset += layout.getBaseClassOffset(baseDecl);

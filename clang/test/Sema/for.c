@@ -26,6 +26,5 @@ void b11 (void) { for (static _Thread_local struct { int i; } s;s.i;); } /* c11-
 #endif
 
 void b12(void) {
-  for(_Static_assert(1, "");;) {} /* c11-warning {{non-variable declaration in 'for' loop is a C23 extension}}
-                                     c23-warning {{non-variable declaration in 'for' loop is incompatible with C standards before C23}} */
+  for(_Static_assert(1, "");;) {} /* okay, _Static_assert declares *no* identifiers */
 }

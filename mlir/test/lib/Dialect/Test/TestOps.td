@@ -1169,6 +1169,26 @@ def OpP : TEST_Op<"op_p"> {
   let results = (outs I32);
 }
 
+// Test constant-folding a pattern that maps `(F32) -> SI32`.
+def SignOp : TEST_Op<"sign", [SameOperandsAndResultShape]> {
+  let arguments = (ins RankedTensorOf<[F32]>:$operand);
+  let results = (outs RankedTensorOf<[SI32]>:$result);
+
+  let assemblyFormat = [{
+    $operand attr-dict `:` functional-type(operands, results)
+  }];
+}
+
+// Test constant-folding a pattern that maps `(F32, F32) -> I1`.
+def LessThanOp : TEST_Op<"less_than", [SameOperandsAndResultShape]> {
+  let arguments = (ins RankedTensorOf<[F32]>:$lhs, RankedTensorOf<[F32]>:$rhs);
+  let results = (outs RankedTensorOf<[I1]>:$result);
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs attr-dict `:` functional-type(operands, results)
+  }];
+}
+
 // Test same operand name enforces equality condition check.
 def TestEqualArgsPattern : Pat<(OpN $a, $a), (OpO $a)>;
 
@@ -1478,6 +1498,8 @@ def TestOpInPlaceSelfFold : TEST_Op<"op_in_place_self_fold"> {
   let results = (outs I32);
   let hasFolder = 1;
 }
+def : Pat<(TestOpInPlaceSelfFold:$op $_),
+          (TestOpConstant ConstantAttr<I32Attr, "97">)>;
 
 // Test op that simply returns success.
 def TestOpInPlaceFoldSuccess : TEST_Op<"op_in_place_fold_success"> {
@@ -2104,6 +2126,10 @@ def TestInvalidOp : TEST_Op<"invalid", [Terminator]>,
   Arguments<(ins Variadic<AnyType>)>;
 def TestTypeProducerOp : TEST_Op<"type_producer">,
   Results<(outs AnyType)>;
+def TestValidProducerOp : TEST_Op<"valid_producer">,
+  Results<(outs AnyType)>;
+def TestValidConsumerOp : TEST_Op<"valid_consumer">,
+  Arguments<(ins AnyType)>;
 def TestAnotherTypeProducerOp : TEST_Op<"another_type_producer">,
   Results<(outs AnyType)>;
 def TestTypeConsumerOp : TEST_Op<"type_consumer">,
