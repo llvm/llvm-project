@@ -553,8 +553,19 @@ void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
     // The recipes in the block are processed in reverse order, to catch chains
     // of dead recipes.
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
-      if (isDeadRecipe(R))
+      if (isDeadRecipe(R)) {
         R.eraseFromParent();
+        continue;
+      }
+
+      // Check if R is a dead VPPhi <-> update cycle and remove it.
+      auto *PhiR = dyn_cast<VPPhi>(&R);
+      if (!PhiR || PhiR->getNumOperands() != 2 || PhiR->getNumUsers() != 1 ||
+          *PhiR->user_begin() != PhiR->getOperand(1)->getDefiningRecipe() ||
+          PhiR->getOperand(1)->getNumUsers() != 1)
+        continue;
+      PhiR->replaceAllUsesWith(PhiR->getOperand(0));
+      PhiR->eraseFromParent();
     }
   }
 }
