@@ -400,12 +400,6 @@ Constant *InstCostVisitor::visitFreezeInst(FreezeInst &I) {
 Constant *InstCostVisitor::visitCallBase(CallBase &I) {
   assert(LastVisited != KnownConstants.end() && "Invalid iterator!");
 
-  // Look through calls to ssa_copy intrinsics.
-  if (auto *II = dyn_cast<IntrinsicInst>(&I);
-      II && II->getIntrinsicID() == Intrinsic::ssa_copy) {
-    return LastVisited->second;
-  }
-
   Function *F = I.getCalledFunction();
   if (!F || !canConstantFoldCallTo(&I, F))
     return nullptr;
@@ -611,17 +605,15 @@ void FunctionSpecializer::promoteConstantStackValues(Function *F) {
   }
 }
 
-// ssa_copy intrinsics are introduced by the SCCP solver. These intrinsics
-// interfere with the promoteConstantStackValues() optimization.
+// The SCCP solver inserts bitcasts for PredicateInfo. These interfere with the
+// promoteConstantStackValues() optimization.
 static void removeSSACopy(Function &F) {
   for (BasicBlock &BB : F) {
     for (Instruction &Inst : llvm::make_early_inc_range(BB)) {
-      auto *II = dyn_cast<IntrinsicInst>(&Inst);
-      if (!II)
+      auto *BC = dyn_cast<BitCastInst>(&Inst);
+      if (!BC || BC->getType() != BC->getOperand(0)->getType())
         continue;
-      if (II->getIntrinsicID() != Intrinsic::ssa_copy)
-        continue;
-      Inst.replaceAllUsesWith(II->getOperand(0));
+      Inst.replaceAllUsesWith(BC->getOperand(0));
       Inst.eraseFromParent();
     }
   }

@@ -651,7 +651,7 @@ class NewGVN {
   BitVector TouchedInstructions;
 
   DenseMap<const BasicBlock *, std::pair<unsigned, unsigned>> BlockInstRange;
-  mutable DenseMap<const IntrinsicInst *, const Value *> PredicateSwapChoice;
+  mutable DenseMap<const BitCastInst *, const Value *> PredicateSwapChoice;
 
 #ifndef NDEBUG
   // Debugging for how many times each block and instruction got processed.
@@ -819,7 +819,7 @@ private:
                                                  BasicBlock *PHIBlock) const;
   const Expression *performSymbolicAggrValueEvaluation(Instruction *) const;
   ExprResult performSymbolicCmpEvaluation(Instruction *) const;
-  ExprResult performSymbolicPredicateInfoEvaluation(IntrinsicInst *) const;
+  ExprResult performSymbolicPredicateInfoEvaluation(BitCastInst *) const;
 
   // Congruence finding.
   bool someEquivalentDominates(const Instruction *, const Instruction *) const;
@@ -841,7 +841,7 @@ private:
   unsigned int getRank(const Value *) const;
   bool shouldSwapOperands(const Value *, const Value *) const;
   bool shouldSwapOperandsForPredicate(const Value *, const Value *,
-                                      const IntrinsicInst *I) const;
+                                      const BitCastInst *I) const;
 
   // Reachability handling.
   void updateReachableEdge(BasicBlock *, BasicBlock *);
@@ -1013,9 +1013,9 @@ void NewGVN::deleteExpression(const Expression *E) const {
 
 // If V is a predicateinfo copy, get the thing it is a copy of.
 static Value *getCopyOf(const Value *V) {
-  if (auto *II = dyn_cast<IntrinsicInst>(V))
-    if (II->getIntrinsicID() == Intrinsic::ssa_copy)
-      return II->getOperand(0);
+  if (auto *BC = dyn_cast<BitCastInst>(V))
+    if (BC->getType() == BC->getOperand(0)->getType())
+      return BC->getOperand(0);
   return nullptr;
 }
 
@@ -1604,7 +1604,7 @@ const Expression *NewGVN::performSymbolicLoadEvaluation(Instruction *I) const {
 }
 
 NewGVN::ExprResult
-NewGVN::performSymbolicPredicateInfoEvaluation(IntrinsicInst *I) const {
+NewGVN::performSymbolicPredicateInfoEvaluation(BitCastInst *I) const {
   auto *PI = PredInfo->getPredicateInfoFor(I);
   if (!PI)
     return ExprResult::none();
@@ -1647,13 +1647,8 @@ NewGVN::performSymbolicPredicateInfoEvaluation(IntrinsicInst *I) const {
 NewGVN::ExprResult NewGVN::performSymbolicCallEvaluation(Instruction *I) const {
   auto *CI = cast<CallInst>(I);
   if (auto *II = dyn_cast<IntrinsicInst>(I)) {
-    // Intrinsics with the returned attribute are copies of arguments.
-    if (auto *ReturnedValue = II->getReturnedArgOperand()) {
-      if (II->getIntrinsicID() == Intrinsic::ssa_copy)
-        if (auto Res = performSymbolicPredicateInfoEvaluation(II))
-          return Res;
+    if (auto *ReturnedValue = II->getReturnedArgOperand())
       return ExprResult::some(createVariableOrConstant(ReturnedValue));
-    }
   }
 
   // FIXME: Currently the calls which may access the thread id may
@@ -2032,6 +2027,12 @@ NewGVN::performSymbolicEvaluation(Instruction *I,
     E = performSymbolicLoadEvaluation(I);
     break;
   case Instruction::BitCast:
+    // Intrinsics with the returned attribute are copies of arguments.
+    if (I->getType() == I->getOperand(0)->getType())
+      if (auto Res =
+              performSymbolicPredicateInfoEvaluation(cast<BitCastInst>(I)))
+        return Res;
+    [[fallthrough]];
   case Instruction::AddrSpaceCast:
   case Instruction::Freeze:
     return createExpression(I);
@@ -4075,8 +4076,7 @@ bool NewGVN::eliminateInstructions(Function &F) {
               if (DominatingLeader != Def) {
                 // Even if the instruction is removed, we still need to update
                 // flags/metadata due to downstreams users of the leader.
-                if (!match(DefI, m_Intrinsic<Intrinsic::ssa_copy>()))
-                  patchReplacementInstruction(DefI, DominatingLeader);
+                patchReplacementInstruction(DefI, DominatingLeader);
 
                 SmallVector<DbgVariableRecord *> DVRUsers;
                 findDbgUsers(DefI, DVRUsers);
@@ -4116,10 +4116,14 @@ bool NewGVN::eliminateInstructions(Function &F) {
 
           Value *DominatingLeader = EliminationStack.back();
 
-          auto *II = dyn_cast<IntrinsicInst>(DominatingLeader);
-          bool isSSACopy = II && II->getIntrinsicID() == Intrinsic::ssa_copy;
-          if (isSSACopy)
-            DominatingLeader = II->getOperand(0);
+          Instruction *SSACopy = nullptr;
+          if (auto *BC = dyn_cast<BitCastInst>(DominatingLeader)) {
+            if (BC->getType() == BC->getOperand(0)->getType() &&
+                PredInfo->getPredicateInfoFor(DominatingLeader)) {
+              SSACopy = BC;
+              DominatingLeader = BC->getOperand(0);
+            }
+          }
 
           // Don't replace our existing users with ourselves.
           if (U->get() == DominatingLeader)
@@ -4145,12 +4149,12 @@ bool NewGVN::eliminateInstructions(Function &F) {
             ProbablyDead.erase(cast<Instruction>(DominatingLeader));
           // For copy instructions, we use their operand as a leader,
           // which means we remove a user of the copy and it may become dead.
-          if (isSSACopy) {
-            auto It = UseCounts.find(II);
+          if (SSACopy) {
+            auto It = UseCounts.find(SSACopy);
             if (It != UseCounts.end()) {
               unsigned &IIUseCount = It->second;
               if (--IIUseCount == 0)
-                ProbablyDead.insert(II);
+                ProbablyDead.insert(SSACopy);
             }
           }
           ++LeaderUseCount;
@@ -4251,7 +4255,7 @@ bool NewGVN::shouldSwapOperands(const Value *A, const Value *B) const {
 }
 
 bool NewGVN::shouldSwapOperandsForPredicate(const Value *A, const Value *B,
-                                            const IntrinsicInst *I) const {
+                                            const BitCastInst *I) const {
   if (shouldSwapOperands(A, B)) {
     PredicateSwapChoice[I] = B;
     return true;
