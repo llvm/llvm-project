@@ -7347,7 +7347,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   BasicBlock *EntryBB =
       cast<VPIRBasicBlock>(BestVPlan.getEntry())->getIRBasicBlock();
   State.CFG.PrevBB = ILV.createVectorizedLoopSkeleton();
-  VPlanTransforms::removeDeadRecipes(BestVPlan);
+  if (VectorizingEpilogue)
+    VPlanTransforms::removeDeadRecipes(BestVPlan);
 
   assert(verifyVPlanIsValid(BestVPlan, true /*VerifyLate*/) &&
          "final VPlan is invalid");
