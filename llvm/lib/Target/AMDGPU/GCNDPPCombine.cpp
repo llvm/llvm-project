@@ -421,6 +421,11 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
           AMDGPU::hasNamedOperand(DPPOp, AMDGPU::OpName::byte_sel)) {
         DPPInst.addImm(ByteSelOpr->getImm());
       }
+      if (MachineOperand *BitOp3 =
+              TII->getNamedOperand(OrigMI, AMDGPU::OpName::bitop3)) {
+        assert(AMDGPU::hasNamedOperand(DPPOp, AMDGPU::OpName::bitop3));
+        DPPInst.add(*BitOp3);
+      }
     }
     DPPInst.add(*TII->getNamedOperand(MovMI, AMDGPU::OpName::dpp_ctrl));
     DPPInst.add(*TII->getNamedOperand(MovMI, AMDGPU::OpName::row_mask));
