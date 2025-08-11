@@ -1486,7 +1486,7 @@ bool AMDGPUPromoteAllocaImpl::hasSufficientLocalMem(const Function &F) {
 }
 
 size_t AMDGPUPromoteAllocaImpl::getSGPRPressureEstimate(AllocaInst &I) {
-  Function &F = *I.getParent()->getParent();
+  Function &F = *I.getFunction();
   size_t MaxLive = 0;
   for (BasicBlock *BB : post_order(&F)) {
     if (SGPRLiveIns.count(BB))
