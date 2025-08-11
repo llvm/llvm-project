@@ -33,6 +33,7 @@ class InFlightDiagnostic;
 class Location;
 class MLIRContextImpl;
 class RegisteredOperationName;
+class MLIRRemarkStreamerBase;
 class RemarkEngine;
 class StorageUniquer;
 class IRUnit;
@@ -62,6 +63,10 @@ class IRUnit;
 class MLIRContext {
 public:
   enum class Threading { DISABLED, ENABLED };
+  struct RemarkCategories {
+    std::optional<std::string> passed, missed, analysis, failed;
+  };
+
   /// Create a new Context.
   explicit MLIRContext(Threading multithreading = Threading::ENABLED);
   explicit MLIRContext(const DialectRegistry &registry,
@@ -251,13 +256,17 @@ public:
   llvm::hash_code getRegistryHash();
 
   /// Setup optimization remarks for the context.
-  void setupOptimizationRemarks(
-      StringRef outputPath, llvm::remarks::Format outputFormat,
-      bool printAsEmitRemarks,
-      const std::optional<std::string> &categoryPassedName = std::nullopt,
-      const std::optional<std::string> &categoryMissedName = std::nullopt,
-      const std::optional<std::string> &categoryAnalysisName = std::nullopt,
-      const std::optional<std::string> &categoryFailedName = std::nullopt);
+  /// This will enable the remark engine and set the streamer to be used for
+  /// optimization remarks.
+  /// The remark categories are used to filter the remarks that will be emitted
+  /// by the remark engine. If a category is not specified, it will not be
+  /// emitted.
+  /// If `printAsEmitRemarks` is true, the remarks will be printed as
+  /// mlir::emitRemarks.
+  LogicalResult
+  enableOptimizationRemarks(std::unique_ptr<MLIRRemarkStreamerBase> streamer,
+                            const RemarkCategories &cats,
+                            bool printAsEmitRemarks = false);
 
   //===--------------------------------------------------------------------===//
   // Action API

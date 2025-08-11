@@ -7,11 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Remarks.h"
+#include "mlir/Remark/RemarkStreamer.h"
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/YAMLParser.h"
 #include "gtest/gtest.h"
 #include <optional>
@@ -47,9 +51,14 @@ TEST(Remark, TestOutputOptimizationRemark) {
     context.printStackTraceOnDiagnostic(true);
 
     // Setup the remark engine
-    context.setupOptimizationRemarks(yamlFile, llvm::remarks::Format::YAML,
-                                     true, categoryLoopunroll, std::nullopt,
-                                     std::nullopt, categoryLoopunroll);
+    mlir::MLIRContext::RemarkCategories cats{/*passed=*/categoryLoopunroll,
+                                             /*missed=*/std::nullopt,
+                                             /*analysis=*/std::nullopt,
+                                             /*failed=*/categoryLoopunroll};
+
+    LogicalResult isEnabled = mlir::remark::enableOptimizationRemarksToFile(
+        context, yamlFile, llvm::remarks::Format::YAML, cats);
+    ASSERT_TRUE(succeeded(isEnabled)) << "Failed to enable remark engine";
 
     // Remark 1: pass, category LoopUnroll
     reportOptimizationPass(loc, categoryLoopunroll, myPassname1) << pass1Msg;
@@ -118,13 +127,10 @@ TEST(Remark, TestOutputOptimizationRemarkDiagnostic) {
   std::string categoryLoopunroll("LoopUnroll");
   std::string myPassname1("myPass1");
   std::string funcName("myFunc");
-  SmallString<64> tmpPathStorage;
-  sys::fs::createUniquePath("remarks-%%%%%%.yaml", tmpPathStorage,
-                            /*MakeAbsolute=*/true);
-  std::string yamlFile =
-      std::string(tmpPathStorage.data(), tmpPathStorage.size());
-  ASSERT_FALSE(yamlFile.empty());
-  std::string seenMsg;
+
+  std::string seenMsg = "";
+  std::string expectedMsg = "Passed\nLoopUnroll:myPass1\n func=<unknown "
+                            "function>\n {\nString=My message\n\n}";
   {
     MLIRContext context;
     Location loc = UnknownLoc::get(&context);
@@ -139,14 +145,83 @@ TEST(Remark, TestOutputOptimizationRemarkDiagnostic) {
     });
 
     // Setup the remark engine
-    context.setupOptimizationRemarks(yamlFile, llvm::remarks::Format::YAML,
-                                     true, categoryLoopunroll, std::nullopt,
-                                     std::nullopt, categoryLoopunroll);
+    mlir::MLIRContext::RemarkCategories cats{/*passed=*/categoryLoopunroll,
+                                             /*missed=*/std::nullopt,
+                                             /*analysis=*/std::nullopt,
+                                             /*failed=*/categoryLoopunroll};
+
+    LogicalResult isEnabled =
+        context.enableOptimizationRemarks(nullptr, cats, true);
+    ASSERT_TRUE(succeeded(isEnabled)) << "Failed to enable remark engine";
 
     // Remark 1: pass, category LoopUnroll
     reportOptimizationPass(loc, categoryLoopunroll, myPassname1) << pass1Msg;
   }
-  EXPECT_EQ(seenMsg, pass1Msg);
+  EXPECT_EQ(seenMsg, expectedMsg);
 }
 
+/// Custom remark streamer that prints remarks to stderr.
+class MyCustomStreamer : public MLIRRemarkStreamerBase {
+public:
+  MyCustomStreamer() = default;
+
+  void streamOptimizationRemark(const RemarkBase &remark) override {
+    llvm::errs() << "Custom remark: ";
+    remark.print(llvm::errs(), true);
+    llvm::errs() << "\n";
+  }
+};
+
+TEST(Remark, TestCustomOptimizationRemarkDiagnostic) {
+  testing::internal::CaptureStderr();
+  const auto *pass1Msg = "My message";
+  const auto *pass2Msg = "My another message";
+  const auto *pass3Msg = "Do not show this message";
+
+  std::string categoryLoopunroll("LoopUnroll");
+  std::string categoryInline("Inliner");
+  std::string myPassname1("myPass1");
+  std::string myPassname2("myPass2");
+  std::string funcName("myFunc");
+
+  std::string seenMsg = "";
+
+  {
+    MLIRContext context;
+    Location loc = UnknownLoc::get(&context);
+
+    // Setup the remark engine
+    mlir::MLIRContext::RemarkCategories cats{/*passed=*/categoryLoopunroll,
+                                             /*missed=*/std::nullopt,
+                                             /*analysis=*/std::nullopt,
+                                             /*failed=*/categoryLoopunroll};
+
+    LogicalResult isEnabled = context.enableOptimizationRemarks(
+        std::make_unique<MyCustomStreamer>(), cats, true);
+    ASSERT_TRUE(succeeded(isEnabled)) << "Failed to enable remark engine";
+
+    // Remark 1: pass, category LoopUnroll
+    reportOptimizationPass(loc, categoryLoopunroll, myPassname1) << pass1Msg;
+    // Remark 2: failure, category LoopUnroll
+    reportOptimizationFail(loc, categoryLoopunroll, myPassname2) << pass2Msg;
+    // Remark 3: pass, category Inline (should not be printed)
+    reportOptimizationPass(loc, categoryInline, myPassname1) << pass3Msg;
+  }
+
+  llvm::errs().flush();
+  std::string errOut = ::testing::internal::GetCapturedStderr();
+
+  // Expect exactly two "Custom remark:" lines.
+  auto first = errOut.find("Custom remark:");
+  EXPECT_NE(first, std::string::npos);
+  auto second = errOut.find("Custom remark:", first + 1);
+  EXPECT_NE(second, std::string::npos);
+  auto third = errOut.find("Custom remark:", second + 1);
+  EXPECT_EQ(third, std::string::npos);
+
+  // Containment checks for messages.
+  EXPECT_NE(errOut.find(pass1Msg), std::string::npos); // printed
+  EXPECT_NE(errOut.find(pass2Msg), std::string::npos); // printed
+  EXPECT_EQ(errOut.find(pass3Msg), std::string::npos); // filtered out
+}
 } // namespace

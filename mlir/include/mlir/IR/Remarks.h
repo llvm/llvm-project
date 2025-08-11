@@ -14,9 +14,8 @@
 #define MLIR_IR_REMARKS_H
 
 #include "llvm/IR/DiagnosticInfo.h"
-#include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/Remarks/Remark.h"
-#include "llvm/Remarks/RemarkStreamer.h"
+#include "llvm/Support/Regex.h"
 #include "llvm/Support/ToolOutputFile.h"
 
 #include "mlir/IR/Diagnostics.h"
@@ -36,20 +35,14 @@ enum class RemarkKind {
 //===----------------------------------------------------------------------===//
 // Remark Base Class
 //===----------------------------------------------------------------------===//
-class RemarkBase : public llvm::DiagnosticInfo {
+class RemarkBase {
 
 public:
   RemarkBase(RemarkKind remarkKind, DiagnosticSeverity severity,
              const char *passName, StringRef remarkName, Location loc,
              std::optional<StringRef> functionName = std::nullopt)
-      : llvm::DiagnosticInfo(makeLLVMKind(remarkKind),
-                             makeLLVMSeverity(severity)),
-        remarkKind(remarkKind), functionName(functionName), loc(loc),
+      : remarkKind(remarkKind), functionName(functionName), loc(loc),
         passName(passName), remarkName(remarkName) {}
-
-  struct SetIsVerbose {};
-
-  struct SetExtraArgs {};
 
   struct RemarkKeyValue {
     std::string key;
@@ -74,13 +67,9 @@ public:
 
   void insert(StringRef s);
   void insert(RemarkKeyValue a);
-  void insert(SetIsVerbose v);
-  void insert(SetExtraArgs ea);
 
-  void print(llvm::DiagnosticPrinter &dp) const override;
-  void print() const;
+  void print(llvm::raw_ostream &os, bool printLocation = false) const;
 
-  virtual bool isEnabled() const = 0;
   Location getLocation() const { return loc; }
   /// Diagnostic -> Remark
   llvm::remarks::Remark generateRemark() const;
@@ -94,11 +83,11 @@ public:
   StringRef getRemarkName() const { return remarkName; }
   std::string getMsg() const;
 
-  bool isVerbose() const { return isVerboseRemark; }
-
   ArrayRef<RemarkKeyValue> getArgs() const { return args; }
 
   llvm::remarks::Type getRemarkType() const;
+
+  std::string getRemarkTypeString() const;
 
 protected:
   /// Keeps the MLIR diagnostic kind, which is used to determine the
@@ -118,9 +107,6 @@ protected:
 
   /// RemarkKeyValues collected via the streaming interface.
   SmallVector<RemarkKeyValue, 4> args;
-
-  /// The remark is expected to be noisy.
-  bool isVerboseRemark = false;
 
 private:
   /// Convert the MLIR diagnostic severity to LLVM diagnostic severity.
@@ -180,8 +166,6 @@ public:
   explicit OptRemarkBase(Location loc, StringRef passName,
                          StringRef categoryName)
       : RemarkBase(K, S, passName.data(), categoryName, loc) {}
-
-  bool isEnabled() const override { return true; }
 };
 
 using OptRemarkAnalysis = OptRemarkBase<RemarkKind::OptimizationRemarkAnalysis,
@@ -240,14 +224,21 @@ private:
 // MLIR Remark Streamer
 //===----------------------------------------------------------------------===//
 
-class MLIRRemarkStreamer {
-  llvm::remarks::RemarkStreamer &remarkStreamer;
-
+/// Base class for MLIR remark streamers that is used to stream
+/// optimization remarks to the underlying remark streamer. The derived classes
+/// should implement the `streamOptimizationRemark` method to provide the
+/// actual streaming implementation.
+class MLIRRemarkStreamerBase {
 public:
-  explicit MLIRRemarkStreamer(llvm::remarks::RemarkStreamer &remarkStreamer)
-      : remarkStreamer(remarkStreamer) {}
+  virtual ~MLIRRemarkStreamerBase() = default;
+  /// Stream an optimization remark to the underlying remark streamer. It is
+  /// called by the RemarkEngine to stream the optimization remarks.
+  ///
+  /// It must be overridden by the derived classes to provide
+  /// the actual streaming implementation.
+  virtual void streamOptimizationRemark(const RemarkBase &remark) = 0;
 
-  void streamOptimizationRemark(const RemarkBase &remark);
+  virtual void finalize() {} // optional
 };
 
 //===----------------------------------------------------------------------===//
@@ -265,36 +256,10 @@ private:
   std::optional<llvm::Regex> analysisFilter;
   /// The category for failed optimization remarks.
   std::optional<llvm::Regex> failedFilter;
-  /// The output file for the remarks.
-  std::unique_ptr<llvm::ToolOutputFile> remarksFile;
   /// The MLIR remark streamer that will be used to emit the remarks.
-  std::unique_ptr<MLIRRemarkStreamer> remarkStreamer;
-  /// The LLVM remark streamer that will be used to emit the remarks.
-  std::unique_ptr<llvm::remarks::RemarkStreamer> llvmRemarkStreamer;
+  std::unique_ptr<MLIRRemarkStreamerBase> remarkStreamer;
   /// When is enabled, engine also prints remarks as mlir::emitRemarks.
   bool printAsEmitRemarks = false;
-
-  /// The main MLIR remark streamer that will be used to emit the remarks.
-  MLIRRemarkStreamer *getLLVMRemarkStreamer() { return remarkStreamer.get(); }
-  const MLIRRemarkStreamer *getLLVMRemarkStreamer() const {
-    return remarkStreamer.get();
-  }
-  void setRemarkStreamer(std::unique_ptr<MLIRRemarkStreamer> remarkStreamer) {
-    this->remarkStreamer = std::move(remarkStreamer);
-  }
-
-  /// Get the main MLIR remark streamer that will be used to emit the remarks.
-  llvm::remarks::RemarkStreamer *getMainRemarkStreamer() {
-    return llvmRemarkStreamer.get();
-  }
-  const llvm::remarks::RemarkStreamer *getMainRemarkStreamer() const {
-    return llvmRemarkStreamer.get();
-  }
-  /// Set the main remark streamer to be used by the engine.
-  void setMainRemarkStreamer(
-      std::unique_ptr<llvm::remarks::RemarkStreamer> mainRemarkStreamer) {
-    llvmRemarkStreamer = std::move(mainRemarkStreamer);
-  }
 
   /// Return true if missed optimization remarks are enabled, override
   /// to provide different implementation.
@@ -339,21 +304,18 @@ public:
   /// name is not provided, it is not enabled. The category names are used to
   /// filter the remarks that are emitted.
   RemarkEngine(bool printAsEmitRemarks,
-               std::optional<std::string> categoryPassName = std::nullopt,
-               std::optional<std::string> categoryMissName = std::nullopt,
-               std::optional<std::string> categoryAnalysisName = std::nullopt,
-               std::optional<std::string> categoryFailedName = std::nullopt);
+               const MLIRContext::RemarkCategories &cats);
 
   /// Destructor that will close the output file and reset the
   /// main remark streamer.
   ~RemarkEngine();
 
   /// Setup the remark engine with the given output path and format.
-  LogicalResult initialize(StringRef outputPath, llvm::remarks::Format fmt,
+  LogicalResult initialize(std::unique_ptr<MLIRRemarkStreamerBase> streamer,
                            std::string *errMsg);
 
-  /// Report a diagnostic remark.
-  void report(const RemarkBase &&diag);
+  /// Report a remark.
+  void report(const RemarkBase &&remark);
 
   /// Report a successful remark, this will create an InFlightRemark
   /// that can be used to build the remark using the << operator.

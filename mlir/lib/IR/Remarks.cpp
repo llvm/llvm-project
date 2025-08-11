@@ -8,15 +8,12 @@
 
 #include "mlir/IR/Remarks.h"
 
-#include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Value.h"
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/IR/LLVMRemarkStreamer.h"
-#include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Support/FileSystem.h"
 
 using namespace mlir;
@@ -62,29 +59,65 @@ RemarkBase::RemarkKeyValue::RemarkKeyValue(StringRef key, unsigned long n)
 RemarkBase::RemarkKeyValue::RemarkKeyValue(StringRef key, unsigned long long n)
     : key(std::string(key)), val(llvm::utostr(n)) {}
 
-void RemarkBase::print(llvm::DiagnosticPrinter &dp) const {
-  std::string str;
-  llvm::raw_string_ostream os(str);
-  getLocation()->print(os);
-  os.flush();
-  dp << str << ": " << getMsg();
-}
-
-void RemarkBase::print() const { emitError(getLocation(), getMsg()); }
-
 void RemarkBase::insert(StringRef s) { args.emplace_back(s); }
 
 void RemarkBase::insert(RemarkKeyValue a) { args.push_back(std::move(a)); }
 
-void RemarkBase::insert(SetIsVerbose v) { isVerboseRemark = true; }
+// Simple helper to print key=val list.
+static void printArgs(llvm::raw_ostream &os,
+                      llvm::ArrayRef<RemarkBase::RemarkKeyValue> args) {
+  if (args.empty())
+    return;
+  os << " {\n";
+  for (size_t i = 0; i < args.size(); ++i) {
+    const auto &a = args[i];
+    os << a.key << "=" << a.val;
+    if (i + 1 < args.size())
+      os << ", ";
+    os << "\n";
+  }
+  os << "\n}";
+}
+
+void RemarkBase::print(llvm::raw_ostream &os, bool printLocation) const {
+  os << getRemarkTypeString() << "\n";
+  os << getPassName() << ":" << getRemarkName() << "\n";
+
+  // Function (if any)
+  if (!getFunction().empty())
+    os << " func=" << getFunction() << "\n";
+
+  if (printLocation)
+    if (auto flc = mlir::dyn_cast<mlir::FileLineColLoc>(getLocation()))
+      os << " @" << flc.getFilename() << ":" << flc.getLine() << ":"
+         << flc.getColumn();
+
+  // Key/Value args
+  printArgs(os, getArgs());
+}
 
 std::string RemarkBase::getMsg() const {
-  std::string str;
-  llvm::raw_string_ostream rss(str);
-  for (const RemarkBase::RemarkKeyValue &arg :
-       llvm::make_range(args.begin(), args.end()))
-    rss << arg.val;
-  return rss.str();
+  std::string s;
+  llvm::raw_string_ostream os(s);
+  print(os);
+  os.flush();
+  return s;
+}
+
+std::string RemarkBase::getRemarkTypeString() const {
+  switch (remarkKind) {
+  case RemarkKind::OptimizationRemarkUnknown:
+    return "Unknown";
+  case RemarkKind::OptimizationRemarkPassed:
+    return "Passed";
+  case RemarkKind::OptimizationRemarkMissed:
+    return "Missed";
+  case RemarkKind::OptimizationRemarkFailure:
+    return "Failure";
+  case RemarkKind::OptimizationRemarkAnalysis:
+    return "Analysis";
+  }
+  llvm_unreachable("Unknown remark kind");
 }
 
 llvm::remarks::Type RemarkBase::getRemarkType() const {
@@ -201,91 +234,41 @@ RemarkEngine::emitOptimizationRemarkAnalysis(Location loc, StringRef passName,
 }
 
 //===----------------------------------------------------------------------===//
-// RemarkStreamer
-//===----------------------------------------------------------------------===//
-void MLIRRemarkStreamer::streamOptimizationRemark(const RemarkBase &remark) {
-  if (!remarkStreamer.matchesFilter(remark.getPassName()))
-    return;
-
-  // First, convert the diagnostic to a remark.
-  llvm::remarks::Remark r = remark.generateRemark();
-  // Then, emit the remark through the serializer.
-  remarkStreamer.getSerializer().emit(r);
-}
-//===----------------------------------------------------------------------===//
 // Remarkengine
 //===----------------------------------------------------------------------===//
 
-void RemarkEngine::report(const RemarkBase &&diag) {
+void RemarkEngine::report(const RemarkBase &&remark) {
   // Stream the remark
-  if (getLLVMRemarkStreamer() && remarksFile)
-    getLLVMRemarkStreamer()->streamOptimizationRemark(diag);
+  if (remarkStreamer)
+    remarkStreamer->streamOptimizationRemark(remark);
 
   // Print using MLIR's diagnostic
   if (printAsEmitRemarks)
-    emitRemark(diag.getLocation(), diag.getMsg());
+    emitRemark(remark.getLocation(), remark.getMsg());
 }
 
 RemarkEngine::~RemarkEngine() {
-  if (remarksFile) {
-    remarksFile->keep();
-    remarksFile.reset();
-  }
-  setMainRemarkStreamer(nullptr);
-  setRemarkStreamer(nullptr);
+  if (remarkStreamer)
+    remarkStreamer->finalize();
 }
 
-LogicalResult RemarkEngine::initialize(StringRef outputPath,
-                                       llvm::remarks::Format fmt,
-                                       std::string *errMsg) {
-  auto fail = [&](llvm::StringRef msg) {
-    if (errMsg)
-      *errMsg = msg.str();
-    return failure();
-  };
-
-  if (remarksFile)
-    return fail("RemarkEngine is already initialized with an output file.");
-
-  llvm::sys::fs::OpenFlags flags = (fmt == llvm::remarks::Format::YAML)
-                                       ? llvm::sys::fs::OF_Text
-                                       : llvm::sys::fs::OF_None;
-  std::error_code ec;
-  remarksFile = std::make_unique<llvm::ToolOutputFile>(outputPath, ec, flags);
-
-  if (ec) {
-    remarksFile.reset();
-    return fail(
-        ("Failed to open remarks file '" + outputPath + "': " + ec.message())
-            .str());
-  }
-
-  auto serializer = llvm::remarks::createRemarkSerializer(
-      fmt, llvm::remarks::SerializerMode::Separate, remarksFile->os());
-  if (!serializer) {
-    remarksFile.reset();
-    return fail(llvm::toString(serializer.takeError()));
-  }
-
-  setMainRemarkStreamer(std::make_unique<llvm::remarks::RemarkStreamer>(
-      std::move(*serializer), outputPath));
-  setRemarkStreamer(
-      std::make_unique<MLIRRemarkStreamer>(*getMainRemarkStreamer()));
+LogicalResult
+RemarkEngine::initialize(std::unique_ptr<MLIRRemarkStreamerBase> streamer,
+                         std::string *errMsg) {
+  // If you need to validate categories/filters, do so here and set errMsg.
+  remarkStreamer = std::move(streamer);
   return success();
 }
 
 RemarkEngine::RemarkEngine(bool printAsEmitRemarks,
-                           std::optional<std::string> categoryPassName,
-                           std::optional<std::string> categoryMissName,
-                           std::optional<std::string> categoryAnalysisName,
-                           std::optional<std::string> categoryFailedName)
+                           const MLIRContext::RemarkCategories &cats)
     : printAsEmitRemarks(printAsEmitRemarks) {
-  if (categoryPassName)
-    passFilter = llvm::Regex(categoryPassName.value());
-  if (categoryMissName)
-    missFilter = llvm::Regex(categoryMissName.value());
-  if (categoryAnalysisName)
-    analysisFilter = llvm::Regex(categoryAnalysisName.value());
-  if (categoryFailedName)
-    failedFilter = llvm::Regex(categoryFailedName.value());
+  if (cats.passed)
+    passFilter = llvm::Regex(cats.passed.value());
+  if (cats.missed)
+    missFilter = llvm::Regex(cats.missed.value());
+  if (cats.analysis)
+    analysisFilter = llvm::Regex(cats.analysis.value());
+  if (cats.failed)
+    failedFilter = llvm::Regex(cats.failed.value());
 }

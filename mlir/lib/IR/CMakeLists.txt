@@ -70,10 +70,5 @@ add_mlir_library(MLIRIR
 
   LINK_LIBS PUBLIC
   MLIRSupport
-  
-  LINK_COMPONENTS
-    Remarks
-    Core
-    BitstreamReader  
   )
 

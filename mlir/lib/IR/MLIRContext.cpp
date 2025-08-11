@@ -407,22 +407,18 @@ RemarkEngine *MLIRContext::getRemarkEngine() {
   return getImpl().remarkEngine.get();
 }
 
-void MLIRContext::setupOptimizationRemarks(
-    StringRef outputPath, llvm::remarks::Format outputFormat,
-    bool printAsEmitRemarks,
-    const std::optional<std::string> &categoryPassedName,
-    const std::optional<std::string> &categoryMissedName,
-    const std::optional<std::string> &categoryAnalysisName,
-    const std::optional<std::string> &categoryFailedName) {
-  auto engine = std::make_unique<RemarkEngine>(
-      printAsEmitRemarks, categoryPassedName, categoryMissedName,
-      categoryAnalysisName, categoryFailedName);
+LogicalResult MLIRContext::enableOptimizationRemarks(
+    std::unique_ptr<MLIRRemarkStreamerBase> streamer,
+    const RemarkCategories &cats, bool printAsEmitRemarks) {
+  auto engine = std::make_unique<RemarkEngine>(printAsEmitRemarks, cats);
+
   std::string errMsg;
-  if (failed(engine->initialize(outputPath, outputFormat, &errMsg))) {
+  if (failed(engine->initialize(std::move(streamer), &errMsg))) {
     llvm::report_fatal_error(
         llvm::Twine("Failed to initialize remark engine. Error: ") + errMsg);
   }
   setRemarkEngine(std::move(engine));
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
