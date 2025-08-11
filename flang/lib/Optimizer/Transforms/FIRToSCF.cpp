@@ -152,16 +152,11 @@ struct IterWhileConversion : public OpRewritePattern<fir::IterWhileOp> {
                                afterBlock.begin(), argReplacements);
 
     Value afterIv = afterArgs[0];
-
     rewriter.setInsertionPointToStart(&afterBlock);
-
     results[0] = mlir::arith::AddIOp::create(rewriter, loc, afterIv, step);
 
-    Operation *movedTerminator = afterBlock.getTerminator();
-    rewriter.setInsertionPoint(movedTerminator);
-
-    mlir::scf::YieldOp::create(rewriter, loc, results);
-    rewriter.eraseOp(movedTerminator);
+    rewriter.setInsertionPointToEnd(&afterBlock);
+    rewriter.replaceOpWithNewOp<scf::YieldOp>(resultOp, results);
 
     scfWhileOp->setAttrs(iterWhileOp->getAttrs());
     rewriter.replaceOp(iterWhileOp, scfWhileOp);
