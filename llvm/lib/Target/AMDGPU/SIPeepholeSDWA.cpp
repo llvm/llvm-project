@@ -423,6 +423,10 @@ uint64_t SDWASrcOperand::getSrcMods(const SIInstrInfo *TII,
 /// which is copied from \p Op, i.e. the operand following
 /// \p Op in the operands of \p RegSeq, or nullopt if the
 /// the \p Op is not an operand of \p RegSeq.
+///
+/// Example:
+/// For the instruction REG_SEQUENCE %1, %subreg.sub0, %2, %subreg.sub1,
+/// return %subreg.sub0 for \p Reg = %1 and %subreg.sub1 for \p Reg = %2.
 static std::optional<unsigned> regSequenceFindSubreg(const MachineInstr &RegSeq,
                                                      Register Reg) {
   if (!RegSeq.isRegSequence())
@@ -441,6 +445,18 @@ static std::optional<unsigned> regSequenceFindSubreg(const MachineInstr &RegSeq,
 /// Return the single user of \p RegSeq which accesses the subregister
 /// that copies from \p Reg. Returns nullptr if \p Reg is not used by
 /// exactly one operand of \p RegSeq.
+///
+/// Example:
+/// %0:vgpr_32 = IMPLICIT_DEF
+/// %1:vpgr_32 = IMPLICIT_DEF
+/// %2:vreg_64 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1
+/// %3:vgpr_32, %4:sreg_64_xexec = V_ADD_CO_U32_e64 %0.sub0, 2, 0, implicit
+////
+/// [...]
+///
+/// If \p RegSeq is the MI defining %2 and \p Reg = %0, the function
+/// returns %3, provided that %2 has no other uses.  For any other
+/// register, it returns nullptr.
 static MachineInstr *regSequenceFindSingleSubregUser(MachineInstr &RegSeq,
                                                      Register Reg,
                                                      MachineRegisterInfo *MRI) {
@@ -470,6 +486,10 @@ MachineInstr *SDWASrcOperand::potentialToConvert(const SIInstrInfo *TII,
     // Check that all instructions that use Reg can be converted
     SmallVector<MachineInstr *, 4> Uses;
     for (MachineInstr &UseMI : MRI->use_nodbg_instructions(Reg)) {
+      // Allow for indirect uses through REG_SEQUENCE instructions:
+      // consider the user (which is assumed to be unique) of the
+      // subregister defined by Reg in UseMI as the user of Reg
+      // instead of UseMi if UseMI is a REG_SEQUENCE.
       MachineInstr *SrcMI =
           UseMI.isRegSequence()
               ? regSequenceFindSingleSubregUser(UseMI, Reg, MRI)
