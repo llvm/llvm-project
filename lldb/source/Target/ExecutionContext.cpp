@@ -12,7 +12,9 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/State.h"
+#include <mutex>
 
 using namespace lldb_private;
 
@@ -125,19 +127,47 @@ ExecutionContext::ExecutionContext(const ExecutionContextRef *exe_ctx_ref_ptr,
   }
 }
 
-ExecutionContext::ExecutionContext(const ExecutionContextRef *exe_ctx_ref_ptr,
-                                   std::unique_lock<std::recursive_mutex> &lock)
-    : m_target_sp(), m_process_sp(), m_thread_sp(), m_frame_sp() {
-  if (exe_ctx_ref_ptr) {
-    m_target_sp = exe_ctx_ref_ptr->GetTargetSP();
-    if (m_target_sp) {
-      lock = std::unique_lock<std::recursive_mutex>(m_target_sp->GetAPIMutex());
+llvm::Expected<StoppedExecutionContext>
+lldb_private::GetStoppedExecutionContext(
+    const lldb::ExecutionContextRefSP &exe_ctx_ref_ptr) {
+  return GetStoppedExecutionContext(exe_ctx_ref_ptr.get());
+}
 
-      m_process_sp = exe_ctx_ref_ptr->GetProcessSP();
-      m_thread_sp = exe_ctx_ref_ptr->GetThreadSP();
-      m_frame_sp = exe_ctx_ref_ptr->GetFrameSP();
-    }
-  }
+llvm::Expected<StoppedExecutionContext>
+lldb_private::GetStoppedExecutionContext(
+    const ExecutionContextRef *exe_ctx_ref_ptr) {
+  if (!exe_ctx_ref_ptr)
+    return llvm::createStringError(
+        "ExecutionContext created with an empty ExecutionContextRef");
+
+  lldb::TargetSP target_sp = exe_ctx_ref_ptr->GetTargetSP();
+  if (!target_sp)
+    return llvm::createStringError(
+        "ExecutionContext created with a null target");
+
+  auto api_lock =
+      std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
+
+  auto process_sp = exe_ctx_ref_ptr->GetProcessSP();
+  if (!process_sp)
+    return llvm::createStringError(
+        "ExecutionContext created with a null process");
+
+  ProcessRunLock::ProcessRunLocker stop_locker;
+  if (!stop_locker.TryLock(&process_sp->GetRunLock()))
+    return llvm::createStringError(
+        "attempted to create an ExecutionContext with a running process");
+
+  auto thread_sp = exe_ctx_ref_ptr->GetThreadSP();
+  auto frame_sp = exe_ctx_ref_ptr->GetFrameSP();
+  return StoppedExecutionContext(target_sp, process_sp, thread_sp, frame_sp,
+                                 std::move(api_lock), std::move(stop_locker));
+}
+
+std::unique_lock<std::recursive_mutex> StoppedExecutionContext::Destroy() {
+  Clear();
+  m_stop_locker = ProcessRunLock::ProcessRunLocker();
+  return std::move(m_api_lock);
 }
 
 ExecutionContext::ExecutionContext(ExecutionContextScope *exe_scope_ptr)
