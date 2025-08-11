@@ -1,3 +1,4 @@
+# REQUIRES: aarch64
 # RUN: rm -rf %t && split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=aarch64 %t/use.s -o %t/use-le.o
 # RUN: llvm-mc -filetype=obj -triple=aarch64 %t/def.s -o %t/def-le.o
