@@ -4354,6 +4354,31 @@ AArch64TTIImpl::getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
   return 1;
 }
 
+/// Check whether Opcode1 has less throughput according to the scheduling
+/// model than Opcode2.
+bool AArch64TTIImpl::hasLessThroughputFromSchedulingModel(
+    unsigned Opcode1, unsigned Opcode2) const {
+  const MCSchedModel &Sched = ST->getSchedModel();
+  const TargetInstrInfo *TII = ST->getInstrInfo();
+
+  auto ResolveVariant = [&](unsigned Opcode) {
+    unsigned SCIdx = TII->get(Opcode).getSchedClass();
+    while (SCIdx && Sched.getSchedClassDesc(SCIdx)->isVariant())
+      SCIdx = ST->resolveVariantSchedClass(SCIdx, nullptr, TII,
+                                           Sched.getProcessorID());
+    assert(SCIdx);
+    const MCSchedClassDesc &SCDesc = Sched.SchedClassTable[SCIdx];
+    const MCWriteProcResEntry *B = ST->getWriteProcResBegin(&SCDesc);
+    const MCWriteProcResEntry *E = ST->getWriteProcResEnd(&SCDesc);
+    unsigned Min = Sched.IssueWidth;
+    for (const MCWriteProcResEntry *I = B; I != E; I++)
+      Min = std::min(Min, Sched.getProcResource(I->ProcResourceIdx)->NumUnits);
+    return Min;
+  };
+
+  return ResolveVariant(Opcode1) < ResolveVariant(Opcode2);
+}
+
 InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
     unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
     TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
@@ -4452,7 +4477,9 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
       Factor = 3; // fcmxx+fcmyy+or
 
     if (isa<ScalableVectorType>(ValTy) &&
-        CostKind == TTI::TCK_RecipThroughput && ST->hasHalfSVEFCmpThroughput())
+        CostKind == TTI::TCK_RecipThroughput &&
+        hasLessThroughputFromSchedulingModel(AArch64::FCMEQ_PPzZZ_S,
+                                             AArch64::FCMEQv4f32))
       Factor *= 2;
 
     return Factor * (CostKind == TTI::TCK_Latency ? 2 : LT.first);
