@@ -3626,7 +3626,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   // Get an MMX-sized (64-bit) vector type, or optionally, other sized
   // vectors.
-  Type *getMMXVectorTy(unsigned EltSizeInBits, unsigned X86_MMXSizeInBits = 64) {
+  Type *getMMXVectorTy(unsigned EltSizeInBits,
+                       unsigned X86_MMXSizeInBits = 64) {
     assert(EltSizeInBits != 0 && (X86_MMXSizeInBits % EltSizeInBits) == 0 &&
            "Illegal MMX vector element size");
     return FixedVectorType::get(IntegerType::get(*MS.C, EltSizeInBits),
@@ -3833,8 +3834,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   //         <1 x i64> @llvm.x86.mmx.pmadd.wd(<1 x i64> %a, <1 x i64> %b)
   //
   //       Three operands:
-  //       <4 x i32> @llvm.x86.avx512.vpdpbusd.128(<4 x i32> %s, <4 x i32> %a, <4 x i32> %b)
-  //       (the result of multiply-add'ing %a and %b is accumulated with %s)
+  //       <4 x i32> @llvm.x86.avx512.vpdpbusd.128(<4 x i32> %s, <4 x i32> %a,
+  //       <4 x i32> %b) (the result of multiply-add'ing %a and %b is
+  //       accumulated with %s)
   void handleVectorPmaddIntrinsic(IntrinsicInst &I, unsigned ReductionFactor,
                                   unsigned EltSizeInBits = 0) {
     IRBuilder<> IRB(&I);
@@ -3869,16 +3871,19 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *S2 = getShadow(&I, 1);
 
     if (EltSizeInBits) {
-        if (I.arg_size() != 3)
-          ReturnType = cast<FixedVectorType>(getMMXVectorTy(EltSizeInBits * ReductionFactor, ReturnType->getPrimitiveSizeInBits()));
+      if (I.arg_size() != 3)
+        ReturnType = cast<FixedVectorType>(
+            getMMXVectorTy(EltSizeInBits * ReductionFactor,
+                           ReturnType->getPrimitiveSizeInBits()));
 
-        ParamType = cast<FixedVectorType>(getMMXVectorTy(EltSizeInBits, ParamType->getPrimitiveSizeInBits()));
+      ParamType = cast<FixedVectorType>(
+          getMMXVectorTy(EltSizeInBits, ParamType->getPrimitiveSizeInBits()));
 
-        V1 = IRB.CreateBitCast(V1, ParamType);
-        V2 = IRB.CreateBitCast(V2, ParamType);
+      V1 = IRB.CreateBitCast(V1, ParamType);
+      V2 = IRB.CreateBitCast(V2, ParamType);
 
-        S1 = IRB.CreateBitCast(S1, getShadowTy(ParamType));
-        S2 = IRB.CreateBitCast(S2, getShadowTy(ParamType));
+      S1 = IRB.CreateBitCast(S1, getShadowTy(ParamType));
+      S2 = IRB.CreateBitCast(S2, getShadowTy(ParamType));
     }
 
     Value *S1S2 = IRB.CreateOr(S1, S2);
@@ -5472,64 +5477,78 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     //   <32 x i16> @llvm.x86.avx512.pmaddubs.w.512(<64 x i8>, <64 x i8>)
     //
     // These intrinsics are auto-upgraded into non-masked forms:
-    //   < 4 x i32> @llvm.x86.avx512.mask.pmaddw.d.128(<8 x i16>, <8 x i16>, <4 x i32>, i8)
-    //   < 8 x i32> @llvm.x86.avx512.mask.pmaddw.d.256(<16 x i16>, <16 x i16>, <8 x i32>, i8)
-    //   <16 x i32> @llvm.x86.avx512.mask.pmaddw.d.512(<32 x i16>, <32 x i16>, <16 x i32>, i16)
-    //   < 8 x i16> @llvm.x86.avx512.mask.pmaddubs.w.128(<16 x i8>, <16 x i8>, <8 x i16>, i8)
-    //   <16 x i16> @llvm.x86.avx512.mask.pmaddubs.w.256(<32 x i8>, <32 x i8>, <16 x i16>, i16)
-    //   <32 x i16> @llvm.x86.avx512.mask.pmaddubs.w.512(<64 x i8>, <64 x i8>, <32 x i16>, i32)
+    //   < 4 x i32> @llvm.x86.avx512.mask.pmaddw.d.128(<8 x i16>, <8 x i16>, <4
+    //   x i32>, i8) < 8 x i32> @llvm.x86.avx512.mask.pmaddw.d.256(<16 x i16>,
+    //   <16 x i16>, <8 x i32>, i8) <16 x i32>
+    //   @llvm.x86.avx512.mask.pmaddw.d.512(<32 x i16>, <32 x i16>, <16 x i32>,
+    //   i16) < 8 x i16> @llvm.x86.avx512.mask.pmaddubs.w.128(<16 x i8>, <16 x
+    //   i8>, <8 x i16>, i8) <16 x i16> @llvm.x86.avx512.mask.pmaddubs.w.256(<32
+    //   x i8>, <32 x i8>, <16 x i16>, i16) <32 x i16>
+    //   @llvm.x86.avx512.mask.pmaddubs.w.512(<64 x i8>, <64 x i8>, <32 x i16>,
+    //   i32)
     case Intrinsic::x86_sse2_pmadd_wd:
     case Intrinsic::x86_avx2_pmadd_wd:
     case Intrinsic::x86_ssse3_pmadd_ub_sw_128:
     case Intrinsic::x86_avx2_pmadd_ub_sw:
     case Intrinsic::x86_avx512_pmaddw_d_512:
     case Intrinsic::x86_avx512_pmaddubs_w_512:
-      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/ 2);
+      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2);
       break;
 
     // <1 x i64> @llvm.x86.ssse3.pmadd.ub.sw(<1 x i64>, <1 x i64>)
     case Intrinsic::x86_ssse3_pmadd_ub_sw:
-      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/ 2, /*EltSize=*/ 8);
+      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2, /*EltSize=*/8);
       break;
 
     // <1 x i64> @llvm.x86.mmx.pmadd.wd(<1 x i64>, <1 x i64>)
     case Intrinsic::x86_mmx_pmadd_wd:
-      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/ 2, /*EltSize=*/ 16);
+      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2, /*EltSize=*/16);
       break;
 
     // Multiply and Add Packed Signed and Unsigned Bytes
-    //   < 4 x i32> @llvm.x86.avx512.vpdpbusd.128(< 4 x i32>, < 4 x i32>, < 4 x i32>)
-    //   < 8 x i32> @llvm.x86.avx512.vpdpbusd.256(< 8 x i32>, < 8 x i32>, < 8 x i32>)
-    //   <16 x i32> @llvm.x86.avx512.vpdpbusd.512(<16 x i32>, <16 x i32>, <16 x i32>)
+    //   < 4 x i32> @llvm.x86.avx512.vpdpbusd.128(< 4 x i32>, < 4 x i32>, < 4 x
+    //   i32>) < 8 x i32> @llvm.x86.avx512.vpdpbusd.256(< 8 x i32>, < 8 x i32>,
+    //   < 8 x i32>) <16 x i32> @llvm.x86.avx512.vpdpbusd.512(<16 x i32>, <16 x
+    //   i32>, <16 x i32>)
     //
     // Multiply and Add Unsigned and Signed Bytes With Saturation
-    //   < 4 x i32> @llvm.x86.avx512.vpdpbusds.128(< 4 x i32>, < 4 x i32>, < 4 x i32>)
-    //   < 8 x i32> @llvm.x86.avx512.vpdpbusds.256(< 8 x i32>, < 8 x i32>, < 8 x i32>)
-    //   <16 x i32> @llvm.x86.avx512.vpdpbusds.512(<16 x i32>, <16 x i32>, <16 x i32>)
+    //   < 4 x i32> @llvm.x86.avx512.vpdpbusds.128(< 4 x i32>, < 4 x i32>, < 4 x
+    //   i32>) < 8 x i32> @llvm.x86.avx512.vpdpbusds.256(< 8 x i32>, < 8 x i32>,
+    //   < 8 x i32>) <16 x i32> @llvm.x86.avx512.vpdpbusds.512(<16 x i32>, <16 x
+    //   i32>, <16 x i32>)
     //
-    //   < 4 x i32> @llvm.x86.avx2.vpdpbssd.128 (< 4 x i32>, < 4 x i32>, < 4 x i32>)
-    //   < 8 x i32> @llvm.x86.avx2.vpdpbssd.256 (< 8 x i32>, < 8 x i32>, < 8 x i32>)
+    //   < 4 x i32> @llvm.x86.avx2.vpdpbssd.128 (< 4 x i32>, < 4 x i32>, < 4 x
+    //   i32>) < 8 x i32> @llvm.x86.avx2.vpdpbssd.256 (< 8 x i32>, < 8 x i32>, <
+    //   8 x i32>)
     //
-    //   < 4 x i32> @llvm.x86.avx2.vpdpbssds.128(< 4 x i32>, < 4 x i32>, < 4 x i32>)
-    //   < 8 x i32> @llvm.x86.avx2.vpdpbssds.256(< 8 x i32>, < 8 x i32>, < 8 x i32>)
+    //   < 4 x i32> @llvm.x86.avx2.vpdpbssds.128(< 4 x i32>, < 4 x i32>, < 4 x
+    //   i32>) < 8 x i32> @llvm.x86.avx2.vpdpbssds.256(< 8 x i32>, < 8 x i32>, <
+    //   8 x i32>)
     //
-    //   <16 x i32> @llvm.x86.avx10.vpdpbssd.512(<16 x i32>, <16 x i32>, <16 x i32>)
-    //   <16 x i32> @llvm.x86.avx10.vpdpbssds.512(<16 x i32>, <16 x i32>, <16 x i32>)
+    //   <16 x i32> @llvm.x86.avx10.vpdpbssd.512(<16 x i32>, <16 x i32>, <16 x
+    //   i32>) <16 x i32> @llvm.x86.avx10.vpdpbssds.512(<16 x i32>, <16 x i32>,
+    //   <16 x i32>)
     //
     // These intrinsics are auto-upgraded into non-masked forms:
-    //   <4 x i32> @llvm.x86.avx512.mask.vpdpbusd.128(<4 x i32>, <4 x i32>, <4 x i32>, i8)
-    //   <4 x i32> @llvm.x86.avx512.maskz.vpdpbusd.128(<4 x i32>, <4 x i32>, <4 x i32>, i8)
-    //   <8 x i32> @llvm.x86.avx512.mask.vpdpbusd.256(<8 x i32>, <8 x i32>, <8 x i32>, i8)
-    //   <8 x i32> @llvm.x86.avx512.maskz.vpdpbusd.256(<8 x i32>, <8 x i32>, <8 x i32>, i8)
-    //   <16 x i32> @llvm.x86.avx512.mask.vpdpbusd.512(<16 x i32>, <16 x i32>, <16 x i32>, i16)
-    //   <16 x i32> @llvm.x86.avx512.maskz.vpdpbusd.512(<16 x i32>, <16 x i32>, <16 x i32>, i16)
+    //   <4 x i32> @llvm.x86.avx512.mask.vpdpbusd.128(<4 x i32>, <4 x i32>, <4 x
+    //   i32>, i8) <4 x i32> @llvm.x86.avx512.maskz.vpdpbusd.128(<4 x i32>, <4 x
+    //   i32>, <4 x i32>, i8) <8 x i32> @llvm.x86.avx512.mask.vpdpbusd.256(<8 x
+    //   i32>, <8 x i32>, <8 x i32>, i8) <8 x i32>
+    //   @llvm.x86.avx512.maskz.vpdpbusd.256(<8 x i32>, <8 x i32>, <8 x i32>,
+    //   i8) <16 x i32> @llvm.x86.avx512.mask.vpdpbusd.512(<16 x i32>, <16 x
+    //   i32>, <16 x i32>, i16) <16 x i32>
+    //   @llvm.x86.avx512.maskz.vpdpbusd.512(<16 x i32>, <16 x i32>, <16 x i32>,
+    //   i16)
     //
-    //   <4 x i32> @llvm.x86.avx512.mask.vpdpbusds.128(<4 x i32>, <4 x i32>, <4 x i32>, i8)
-    //   <4 x i32> @llvm.x86.avx512.maskz.vpdpbusds.128(<4 x i32>, <4 x i32>, <4 x i32>, i8)
-    //   <8 x i32> @llvm.x86.avx512.mask.vpdpbusds.256(<8 x i32>, <8 x i32>, <8 x i32>, i8)
-    //   <8 x i32> @llvm.x86.avx512.maskz.vpdpbusds.256(<8 x i32>, <8 x i32>, <8 x i32>, i8)
-    //   <16 x i32> @llvm.x86.avx512.mask.vpdpbusds.512(<16 x i32>, <16 x i32>, <16 x i32>, i16)
-    //   <16 x i32> @llvm.x86.avx512.maskz.vpdpbusds.512(<16 x i32>, <16 x i32>, <16 x i32>, i16)
+    //   <4 x i32> @llvm.x86.avx512.mask.vpdpbusds.128(<4 x i32>, <4 x i32>, <4
+    //   x i32>, i8) <4 x i32> @llvm.x86.avx512.maskz.vpdpbusds.128(<4 x i32>,
+    //   <4 x i32>, <4 x i32>, i8) <8 x i32>
+    //   @llvm.x86.avx512.mask.vpdpbusds.256(<8 x i32>, <8 x i32>, <8 x i32>,
+    //   i8) <8 x i32> @llvm.x86.avx512.maskz.vpdpbusds.256(<8 x i32>, <8 x
+    //   i32>, <8 x i32>, i8) <16 x i32> @llvm.x86.avx512.mask.vpdpbusds.512(<16
+    //   x i32>, <16 x i32>, <16 x i32>, i16) <16 x i32>
+    //   @llvm.x86.avx512.maskz.vpdpbusds.512(<16 x i32>, <16 x i32>, <16 x
+    //   i32>, i16)
     case Intrinsic::x86_avx512_vpdpbusd_128:
     case Intrinsic::x86_avx512_vpdpbusd_256:
     case Intrinsic::x86_avx512_vpdpbusd_512:
@@ -5542,47 +5561,58 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx2_vpdpbssds_256:
     case Intrinsic::x86_avx10_vpdpbssd_512:
     case Intrinsic::x86_avx10_vpdpbssds_512:
-      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/ 4, /*EltSize=*/ 8);
+      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/4, /*EltSize=*/8);
       break;
 
     // Multiply and Add Signed Word Integers
-    //   < 4 x i32> @llvm.x86.avx512.vpdpwssd.128(< 4 x i32>, < 4 x i32>, < 4 x i32>)
-    //   < 8 x i32> @llvm.x86.avx512.vpdpwssd.256(< 8 x i32>, < 8 x i32>, < 8 x i32>)
-    //   <16 x i32> @llvm.x86.avx512.vpdpwssd.512(<16 x i32>, <16 x i32>, <16 x i32>)
+    //   < 4 x i32> @llvm.x86.avx512.vpdpwssd.128(< 4 x i32>, < 4 x i32>, < 4 x
+    //   i32>) < 8 x i32> @llvm.x86.avx512.vpdpwssd.256(< 8 x i32>, < 8 x i32>,
+    //   < 8 x i32>) <16 x i32> @llvm.x86.avx512.vpdpwssd.512(<16 x i32>, <16 x
+    //   i32>, <16 x i32>)
     //
     // Multiply and Add Signed Word Integers With Saturation
-    //   < 4 x i32> @llvm.x86.avx512.vpdpwssds.128(< 4 x i32>, < 4 x i32>, < 4 x i32>)
-    //   < 8 x i32> @llvm.x86.avx512.vpdpwssds.256(< 8 x i32>, < 8 x i32>, < 8 x i32>)
-    //   <16 x i32> @llvm.x86.avx512.vpdpwssds.512(<16 x i32>, <16 x i32>, <16 x i32>)
+    //   < 4 x i32> @llvm.x86.avx512.vpdpwssds.128(< 4 x i32>, < 4 x i32>, < 4 x
+    //   i32>) < 8 x i32> @llvm.x86.avx512.vpdpwssds.256(< 8 x i32>, < 8 x i32>,
+    //   < 8 x i32>) <16 x i32> @llvm.x86.avx512.vpdpwssds.512(<16 x i32>, <16 x
+    //   i32>, <16 x i32>)
     //
     // These intrinsics are auto-upgraded into non-masked forms:
-    //   <4 x i32> @llvm.x86.avx512.mask.vpdpwssd.128(<4 x i32>, <4 x i32>, <4 x i32>, i8)
-    //   <4 x i32> @llvm.x86.avx512.maskz.vpdpwssd.128(<4 x i32>, <4 x i32>, <4 x i32>, i8)
-    //   <8 x i32> @llvm.x86.avx512.mask.vpdpwssd.256(<8 x i32>, <8 x i32>, <8 x i32>, i8)
-    //   <8 x i32> @llvm.x86.avx512.maskz.vpdpwssd.256(<8 x i32>, <8 x i32>, <8 x i32>, i8)
-    //   <16 x i32> @llvm.x86.avx512.mask.vpdpwssd.512(<16 x i32>, <16 x i32>, <16 x i32>, i16)
-    //   <16 x i32> @llvm.x86.avx512.maskz.vpdpwssd.512(<16 x i32>, <16 x i32>, <16 x i32>, i16)
+    //   <4 x i32> @llvm.x86.avx512.mask.vpdpwssd.128(<4 x i32>, <4 x i32>, <4 x
+    //   i32>, i8) <4 x i32> @llvm.x86.avx512.maskz.vpdpwssd.128(<4 x i32>, <4 x
+    //   i32>, <4 x i32>, i8) <8 x i32> @llvm.x86.avx512.mask.vpdpwssd.256(<8 x
+    //   i32>, <8 x i32>, <8 x i32>, i8) <8 x i32>
+    //   @llvm.x86.avx512.maskz.vpdpwssd.256(<8 x i32>, <8 x i32>, <8 x i32>,
+    //   i8) <16 x i32> @llvm.x86.avx512.mask.vpdpwssd.512(<16 x i32>, <16 x
+    //   i32>, <16 x i32>, i16) <16 x i32>
+    //   @llvm.x86.avx512.maskz.vpdpwssd.512(<16 x i32>, <16 x i32>, <16 x i32>,
+    //   i16)
     //
-    //   <4 x i32> @llvm.x86.avx512.mask.vpdpwssds.128(<4 x i32>, <4 x i32>, <4 x i32>, i8)
-    //   <4 x i32> @llvm.x86.avx512.maskz.vpdpwssds.128(<4 x i32>, <4 x i32>, <4 x i32>, i8)
-    //   <8 x i32> @llvm.x86.avx512.mask.vpdpwssds.256(<8 x i32>, <8 x i32>, <8 x i32>, i8)
-    //   <8 x i32> @llvm.x86.avx512.maskz.vpdpwssds.256(<8 x i32>, <8 x i32>, <8 x i32>, i8)
-    //   <16 x i32> @llvm.x86.avx512.mask.vpdpwssds.512(<16 x i32>, <16 x i32>, <16 x i32>, i16)
-    //   <16 x i32> @llvm.x86.avx512.maskz.vpdpwssds.512(<16 x i32>, <16 x i32>, <16 x i32>, i16)
+    //   <4 x i32> @llvm.x86.avx512.mask.vpdpwssds.128(<4 x i32>, <4 x i32>, <4
+    //   x i32>, i8) <4 x i32> @llvm.x86.avx512.maskz.vpdpwssds.128(<4 x i32>,
+    //   <4 x i32>, <4 x i32>, i8) <8 x i32>
+    //   @llvm.x86.avx512.mask.vpdpwssds.256(<8 x i32>, <8 x i32>, <8 x i32>,
+    //   i8) <8 x i32> @llvm.x86.avx512.maskz.vpdpwssds.256(<8 x i32>, <8 x
+    //   i32>, <8 x i32>, i8) <16 x i32> @llvm.x86.avx512.mask.vpdpwssds.512(<16
+    //   x i32>, <16 x i32>, <16 x i32>, i16) <16 x i32>
+    //   @llvm.x86.avx512.maskz.vpdpwssds.512(<16 x i32>, <16 x i32>, <16 x
+    //   i32>, i16)
     case Intrinsic::x86_avx512_vpdpwssd_128:
     case Intrinsic::x86_avx512_vpdpwssd_256:
     case Intrinsic::x86_avx512_vpdpwssd_512:
     case Intrinsic::x86_avx512_vpdpwssds_128:
     case Intrinsic::x86_avx512_vpdpwssds_256:
     case Intrinsic::x86_avx512_vpdpwssds_512:
-      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/ 2, /*EltSize=*/ 16);
+      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2, /*EltSize=*/16);
       break;
 
-    // TODO: Dot Product of BF16 Pairs Accumulated Into Packed Single Precision
-    //   <4 x float> @llvm.x86.avx512bf16.dpbf16ps.128(<4 x float>, <8 x bfloat>, <8 x bfloat>)
-    //   <8 x float> @llvm.x86.avx512bf16.dpbf16ps.256(<8 x float>, <16 x bfloat>, <16 x bfloat>)
-    //   <16 x float> @llvm.x86.avx512bf16.dpbf16ps.512(<16 x float>, <32 x bfloat>, <32 x bfloat>)
-    // handleVectorPmaddIntrinsic() currently only handles integer types.
+      // TODO: Dot Product of BF16 Pairs Accumulated Into Packed Single
+      // Precision
+      //   <4 x float> @llvm.x86.avx512bf16.dpbf16ps.128(<4 x float>, <8 x
+      //   bfloat>, <8 x bfloat>) <8 x float>
+      //   @llvm.x86.avx512bf16.dpbf16ps.256(<8 x float>, <16 x bfloat>, <16 x
+      //   bfloat>) <16 x float> @llvm.x86.avx512bf16.dpbf16ps.512(<16 x float>,
+      //   <32 x bfloat>, <32 x bfloat>)
+      // handleVectorPmaddIntrinsic() currently only handles integer types.
 
     case Intrinsic::x86_sse_cmp_ss:
     case Intrinsic::x86_sse2_cmp_sd:
