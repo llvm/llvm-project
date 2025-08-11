@@ -1272,7 +1272,7 @@ private:
 
       // __get_node_value_type_t<value_type> __tmp(__rhs);
       using __node_value_type = __get_node_value_type_t<value_type>;
-      __get_node_value_type_t<value_type> __tmp(__rhs.first, __rhs.second);
+      __node_value_type __tmp(__rhs.first, __rhs.second);
       __node_traits::construct(__na, std::addressof(__lhs), std::move(__tmp));
 
 
