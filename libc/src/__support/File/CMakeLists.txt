@@ -29,11 +29,9 @@ add_header_library(
   DEPENDS
     .file
     libc.hdr.errno_macros
-    libc.hdr.stdio_macros
-    libc.hdr.types.FILE
     libc.hdr.types.cookie_io_functions_t
+    libc.hdr.types.off_t
     libc.src.__support.CPP.new
-    libc.src.__support.File.file
 )
 
 add_object_library(

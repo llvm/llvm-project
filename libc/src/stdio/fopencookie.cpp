@@ -10,8 +10,8 @@
 #include "hdr/stdio_macros.h"
 #include "hdr/types/FILE.h"
 #include "hdr/types/cookie_io_functions_t.h"
-#include "hdr/types/off_t.h"
 #include "src/__support/CPP/new.h"
+#include "src/__support/File/cookie_file.h"
 #include "src/__support/File/file.h"
 
 #include "src/__support/macros/config.h"
