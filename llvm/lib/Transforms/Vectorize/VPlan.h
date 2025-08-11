@@ -1021,10 +1021,9 @@ public:
     ExtractLane,
     /// Explicit user for the resume phi of the canonical induction in the main
     /// VPlan, used by the epilogue vector loop.
-    ResumeForEpilogue
-      /// Returns the value for vscale.
+    ResumeForEpilogue,
+    /// Returns the value for vscale.
     VScale,
-
   };
 
 private:

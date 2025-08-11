@@ -85,7 +85,8 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; NO-VP-DEF-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], [[TMP0]]
 ; NO-VP-DEF-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NO-VP-DEF:       vector.ph:
-; NO-VP-DEF-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 1
+; NO-VP-DEF-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; NO-VP-DEF-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; NO-VP-DEF-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; NO-VP-DEF-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; NO-VP-DEF:       vector.body:
@@ -97,7 +98,7 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; NO-VP-DEF-NEXT:    [[TMP8:%.*]] = add nsw <vscale x 1 x i32> [[WIDE_LOAD1]], [[WIDE_LOAD]]
 ; NO-VP-DEF-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
 ; NO-VP-DEF-NEXT:    store <vscale x 1 x i32> [[TMP8]], ptr [[TMP9]], align 4
-; NO-VP-DEF-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
+; NO-VP-DEF-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; NO-VP-DEF-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-DEF-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; NO-VP-DEF:       middle.block:

@@ -3347,13 +3347,7 @@ void VPlanTransforms::materializeVFAndVFxUF(VPlan &Plan, VPBasicBlock *VectorPH,
   VPValue &VF = Plan.getVF();
   VPValue &VFxUF = Plan.getVFxUF();
   if (VF.getNumUsers()) {
-    VPValue *RuntimeVF =
-        Plan.getOrAddLiveIn(ConstantInt::get(TCTy, VFEC.getKnownMinValue()));
-    if (VFEC.isScalable())
-      RuntimeVF = Builder.createNaryOp(
-          Instruction::Mul,
-          {Builder.createNaryOp(VPInstruction::VScale, {}, TCTy), RuntimeVF},
-          VPIRFlags::WrapFlagsTy(true, false));
+    VPValue *RuntimeVF = Builder.createElementCount(TCTy, VFEC);
     if (any_of(VF.users(), [&VF](VPUser *U) { return !U->usesScalars(&VF); })) {
       auto *BC = Builder.createNaryOp(VPInstruction::Broadcast, {RuntimeVF});
       VF.replaceUsesWithIf(
@@ -3369,18 +3363,7 @@ void VPlanTransforms::materializeVFAndVFxUF(VPlan &Plan, VPBasicBlock *VectorPH,
     return;
   }
 
-  unsigned VFMulUF = VFEC.getKnownMinValue() * Plan.getUF();
-  VPValue *RuntimeVFxUF = Plan.getOrAddLiveIn(ConstantInt::get(TCTy, VFMulUF));
-  if (VFEC.isScalable()) {
-    RuntimeVFxUF =
-        VFMulUF == 1
-            ? RuntimeVFxUF
-            : Builder.createNaryOp(
-                  Instruction::Mul,
-                  {Builder.createNaryOp(VPInstruction::VScale, {}, TCTy),
-                   RuntimeVFxUF},
-                  VPIRFlags::WrapFlagsTy(true, false));
-  }
+  VPValue *RuntimeVFxUF = Builder.createElementCount(TCTy, VFEC * Plan.getUF());
   VFxUF.replaceAllUsesWith(RuntimeVFxUF);
 }
 
