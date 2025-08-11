@@ -62,14 +62,14 @@ FakeStack *FakeStack::Create(uptr stack_size_log) {
                              : MmapOrDie(padded_size, "FakeStack"));
   // GetFrame() requires the property that
   // (res + kFlagsOffset + SizeRequiredForFlags(stack_size_log)) is aligned to
-  // (1 << kMaxStackFrameSizeLog).
+  // kMaxStackFrameSize.
   // We didn't use MmapAlignedOrDieOnFatalError, because it requires that the
   // *size* is a power of 2, which is an overly strong condition.
   static_assert(alignof(FakeStack) <= kMaxStackFrameSize);
   FakeStack *res = reinterpret_cast<FakeStack *>(
       RoundUpTo(
           (uptr)true_res + kFlagsOffset + SizeRequiredForFlags(stack_size_log),
-          1 << kMaxStackFrameSizeLog) -
+          kMaxStackFrameSize) -
       kFlagsOffset - SizeRequiredForFlags(stack_size_log));
   res->true_start = true_res;
   res->stack_size_log_ = stack_size_log;
