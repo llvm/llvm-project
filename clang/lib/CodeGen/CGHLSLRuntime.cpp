@@ -869,11 +869,9 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
   // create a temporary variable for the resource class instance (we need to
   // return an LValue)
   RawAddress TmpVar = CGF.CreateMemTemp(ResourceTy);
-  if (auto *Size = CGF.EmitLifetimeStart(
-          CGM.getDataLayout().getTypeAllocSize(TmpVar.getElementType()),
-          TmpVar.getPointer())) {
+  if (CGF.EmitLifetimeStart(TmpVar.getPointer())) {
     CGF.pushFullExprCleanup<CodeGenFunction::CallLifetimeEnd>(
-        NormalEHLifetimeMarker, TmpVar, Size);
+        NormalEHLifetimeMarker, TmpVar);
   }
   AggValueSlot ValueSlot = AggValueSlot::forAddr(
       TmpVar, Qualifiers(), AggValueSlot::IsDestructed_t(true),
