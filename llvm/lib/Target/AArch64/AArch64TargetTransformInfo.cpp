@@ -4808,8 +4808,8 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
   BasicBlock *Header = L->getHeader();
   if (Header == L->getLoopLatch()) {
     // Estimate the size of the loop.
-    unsigned Size;
-    if (!isLoopSizeWithinBudget(L, TTI, 9, &Size))
+    unsigned Size, Width=10;
+    if (!isLoopSizeWithinBudget(L, TTI, Width, &Size))
       return;
 
     SmallPtrSet<Value *, 8> LoadedValuesPlus;
