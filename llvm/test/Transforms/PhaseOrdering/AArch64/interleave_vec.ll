@@ -629,8 +629,8 @@ define void @same_op6(ptr noalias noundef %a, ptr noundef %b, ptr noundef %c) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = fadd fast <2 x float> [[TMP9]], [[TMP8]]
 ; CHECK-NEXT:    store <2 x float> [[TMP10]], ptr [[ARRAYIDX9_4]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 6
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[INDVARS_IV]], 1146
-; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_COND1_PREHEADER]], label %[[FOR_END13:.*]]
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp samesign eq i64 [[INDVARS_IV]], 1146
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[FOR_END13:.*]], label %[[FOR_COND1_PREHEADER]]
 ; CHECK:       [[FOR_END13]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -737,8 +737,8 @@ define void @same_op6_splat(ptr noalias noundef %a, ptr noundef %b, ptr noundef 
 ; CHECK-NEXT:    [[TMP13:%.*]] = fadd fast <2 x float> [[TMP12]], [[TMP11]]
 ; CHECK-NEXT:    store <2 x float> [[TMP13]], ptr [[ARRAYIDX7_4]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 6
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[INDVARS_IV]], 1146
-; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_COND1_PREHEADER]], label %[[FOR_END11:.*]]
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp samesign eq i64 [[INDVARS_IV]], 1146
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[FOR_END11:.*]], label %[[FOR_COND1_PREHEADER]]
 ; CHECK:       [[FOR_END11]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -840,8 +840,8 @@ define void @same_op8(ptr noalias noundef %a, ptr noundef %b, ptr noundef %c) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = fadd fast <4 x float> [[TMP9]], [[TMP8]]
 ; CHECK-NEXT:    store <4 x float> [[TMP10]], ptr [[ARRAYIDX9_4]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[INDVARS_IV]], 1144
-; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_COND1_PREHEADER]], label %[[FOR_END13:.*]]
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp samesign eq i64 [[INDVARS_IV]], 1144
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[FOR_END13:.*]], label %[[FOR_COND1_PREHEADER]]
 ; CHECK:       [[FOR_END13]]:
 ; CHECK-NEXT:    ret void
 ;
