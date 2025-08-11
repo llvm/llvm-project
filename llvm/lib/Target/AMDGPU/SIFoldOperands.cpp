@@ -2339,8 +2339,9 @@ bool SIFoldOperandsImpl::tryFoldOMod(MachineInstr &MI) {
 //  ->
 // %1:vreg_64_align2 = V_MOV_B64_PSEUDO 0, implicit $exec
 bool SIFoldOperandsImpl::tryFoldImmRegSequence(MachineInstr &MI) {
-  assert(MI.isRegSequence());
-  auto Reg = MI.getOperand(0).getReg();
+  assert(MI.isRegSequence() &&
+         "MachineInstr is not expected REG_SEQUENCE instruction");
+  Register Reg = MI.getOperand(0).getReg();
   const TargetRegisterClass *DefRC = MRI->getRegClass(Reg);
   const MCInstrDesc &MovDesc = TII->get(AMDGPU::V_MOV_B64_PSEUDO);
   const TargetRegisterClass *RC =
@@ -2356,7 +2357,7 @@ bool SIFoldOperandsImpl::tryFoldImmRegSequence(MachineInstr &MI) {
   if (!getRegSeqInit(Defs, Reg))
     return false;
 
-  // Only attempting to fold immediate materializations.
+  // Only attempt to fold immediate materializations.
   if (!Defs.empty() &&
       llvm::any_of(Defs, [](const std::pair<MachineOperand *, unsigned> &Op) {
         return !Op.first->isImm();
@@ -2385,7 +2386,7 @@ bool SIFoldOperandsImpl::tryFoldImmRegSequence(MachineInstr &MI) {
       ImmVal = 0;
       ImmSize = 0;
       RemainderSize -= 64;
-    } else if ((RemainderSize / 64) == 0 && (RemainderSize % 64)) {
+    } else if ((RemainderSize / 64 == 0) && (RemainderSize % 64 != 0)) {
       // There's some remainder to consider.
       Remainders.push_back({Op, SubRegSize});
     }
