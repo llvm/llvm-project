@@ -2146,7 +2146,8 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
     auto *EndPtr = dyn_cast<VPVectorEndPointerRecipe>(Addr);
     if (!EndPtr)
       return Addr;
-    assert(EndPtr->getOperand(1) == &EndPtr->getParent()->getPlan()->getVF());
+    assert(EndPtr->getOperand(1) == &EndPtr->getParent()->getPlan()->getVF() &&
+           "VPVectorEndPointerRecipe with non-VF VF operand?");
     VPVectorEndPointerRecipe *EVLAddr = EndPtr->clone();
     EVLAddr->insertBefore(&CurRecipe);
     EVLAddr->setOperand(1, &EVL);
