@@ -3722,7 +3722,8 @@ functions intended for different purposes have distinct CFI identities.
 
 **Notes:**
 
-* The salt string can contain any characters, including spaces and quotes
+* The salt string can contain non-NULL ASCII characters, including spaces and
+  quotes
 * This attribute only applies to function types; using it on non-function 
   types will generate a warning
 * All declarations and definitions of the same function must use identical 
