@@ -1403,10 +1403,10 @@ bool DwarfUnit::applySubprogramDefinitionAttributes(const DISubprogram *SP,
 
   // Add the linkage name if we have one and it isn't in the Decl.
   StringRef LinkageName = SP->getLinkageName();
-  assert(((LinkageName.empty() || DeclLinkageName.empty()) ||
-          LinkageName == DeclLinkageName) &&
-         "decl has a linkage name and it is different");
-  if (DeclLinkageName.empty() &&
+  // assert(((LinkageName.empty() || DeclLinkageName.empty()) ||
+  //         LinkageName == DeclLinkageName) &&
+  //        "decl has a linkage name and it is different");
+  if (/*DeclLinkageName.empty() &&*/
       // Always emit it for abstract subprograms.
       (DD->useAllLinkageNames() || DU->getAbstractScopeDIEs().lookup(SP)))
     addLinkageName(SPDie, LinkageName);

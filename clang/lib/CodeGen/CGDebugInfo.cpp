@@ -29,6 +29,7 @@
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/VTableBuilder.h"
+#include "clang/Basic/ABI.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Version.h"
@@ -2177,22 +2178,29 @@ static bool isFunctionLocalClass(const CXXRecordDecl *RD) {
 
 llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
     const CXXMethodDecl *Method, llvm::DIFile *Unit, llvm::DIType *RecordTy) {
-  bool IsCtorOrDtor =
-      isa<CXXConstructorDecl>(Method) || isa<CXXDestructorDecl>(Method);
-
   StringRef MethodName = getFunctionName(Method);
   llvm::DISubroutineType *MethodTy = getOrCreateMethodType(Method, Unit);
 
-  // Since a single ctor/dtor corresponds to multiple functions, it doesn't
-  // make sense to give a single ctor/dtor a linkage name.
+  const bool ShouldAddLinkageName =
+      (!isa<CXXConstructorDecl>(Method) && !isa<CXXDestructorDecl>(Method)) ||
+      CGM.getTarget().getCXXABI().isItaniumFamily();
+
   StringRef MethodLinkageName;
   // FIXME: 'isFunctionLocalClass' seems like an arbitrary/unintentional
   // property to use here. It may've been intended to model "is non-external
   // type" but misses cases of non-function-local but non-external classes such
   // as those in anonymous namespaces as well as the reverse - external types
   // that are function local, such as those in (non-local) inline functions.
-  if (!IsCtorOrDtor && !isFunctionLocalClass(Method->getParent()))
-    MethodLinkageName = CGM.getMangledName(Method);
+  if (ShouldAddLinkageName && !isFunctionLocalClass(Method->getParent())) {
+    if (auto *Ctor = dyn_cast<CXXConstructorDecl>(Method))
+      MethodLinkageName =
+          CGM.getMangledName(GlobalDecl(Ctor, CXXCtorType::Ctor_Unified));
+    else if (auto *Dtor = dyn_cast<CXXDestructorDecl>(Method))
+      MethodLinkageName =
+          CGM.getMangledName(GlobalDecl(Dtor, CXXDtorType::Dtor_Unified));
+    else
+      MethodLinkageName = CGM.getMangledName(Method);
+  }
 
   // Get the location for the method.
   llvm::DIFile *MethodDefUnit = nullptr;

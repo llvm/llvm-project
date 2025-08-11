@@ -37,6 +37,7 @@
 #include "clang/AST/Mangle.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/Basic/ABI.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/Diagnostic.h"
@@ -2150,7 +2151,8 @@ StringRef CodeGenModule::getMangledName(GlobalDecl GD) {
   if (const auto *CD = dyn_cast<CXXConstructorDecl>(CanonicalGD.getDecl())) {
     if (!getTarget().getCXXABI().hasConstructorVariants()) {
       CXXCtorType OrigCtorType = GD.getCtorType();
-      assert(OrigCtorType == Ctor_Base || OrigCtorType == Ctor_Complete);
+      assert(OrigCtorType == Ctor_Base || OrigCtorType == Ctor_Complete ||
+             OrigCtorType == Ctor_Unified);
       if (OrigCtorType == Ctor_Base)
         CanonicalGD = GlobalDecl(CD, Ctor_Complete);
     }
