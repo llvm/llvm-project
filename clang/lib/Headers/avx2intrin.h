@@ -1371,9 +1371,8 @@ _mm256_movemask_epi8(__m256i __a)
 ///    A 128-bit integer vector containing the source bytes.
 /// \returns A 256-bit vector of [16 x i16] containing the sign-extended
 ///    values.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_cvtepi8_epi16(__m128i __V)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_cvtepi8_epi16(__m128i __V) {
   /* This function always performs a signed extension, but __v16qi is a char
      which may be signed or unsigned, so use __v16qs. */
   return (__m256i)__builtin_convertvector((__v16qs)__V, __v16hi);
@@ -1399,9 +1398,8 @@ _mm256_cvtepi8_epi16(__m128i __V)
 ///    A 128-bit integer vector containing the source bytes.
 /// \returns A 256-bit vector of [8 x i32] containing the sign-extended
 ///    values.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_cvtepi8_epi32(__m128i __V)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_cvtepi8_epi32(__m128i __V) {
   /* This function always performs a signed extension, but __v16qi is a char
      which may be signed or unsigned, so use __v16qs. */
   return (__m256i)__builtin_convertvector(__builtin_shufflevector((__v16qs)__V, (__v16qs)__V, 0, 1, 2, 3, 4, 5, 6, 7), __v8si);
@@ -1426,9 +1424,8 @@ _mm256_cvtepi8_epi32(__m128i __V)
 ///    A 128-bit integer vector containing the source bytes.
 /// \returns A 256-bit vector of [4 x i64] containing the sign-extended
 ///    values.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_cvtepi8_epi64(__m128i __V)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_cvtepi8_epi64(__m128i __V) {
   /* This function always performs a signed extension, but __v16qi is a char
      which may be signed or unsigned, so use __v16qs. */
   return (__m256i)__builtin_convertvector(__builtin_shufflevector((__v16qs)__V, (__v16qs)__V, 0, 1, 2, 3), __v4di);
@@ -1454,9 +1451,8 @@ _mm256_cvtepi8_epi64(__m128i __V)
 ///    A 128-bit vector of [8 x i16] containing the source values.
 /// \returns A 256-bit vector of [8 x i32] containing the sign-extended
 ///    values.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_cvtepi16_epi32(__m128i __V)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_cvtepi16_epi32(__m128i __V) {
   return (__m256i)__builtin_convertvector((__v8hi)__V, __v8si);
 }
 
@@ -1479,9 +1475,8 @@ _mm256_cvtepi16_epi32(__m128i __V)
 ///    A 128-bit vector of [8 x i16] containing the source values.
 /// \returns A 256-bit vector of [4 x i64] containing the sign-extended
 ///    values.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_cvtepi16_epi64(__m128i __V)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_cvtepi16_epi64(__m128i __V) {
   return (__m256i)__builtin_convertvector(__builtin_shufflevector((__v8hi)__V, (__v8hi)__V, 0, 1, 2, 3), __v4di);
 }
 
@@ -1504,9 +1499,8 @@ _mm256_cvtepi16_epi64(__m128i __V)
 ///    A 128-bit vector of [4 x i32] containing the source values.
 /// \returns A 256-bit vector of [4 x i64] containing the sign-extended
 ///    values.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_cvtepi32_epi64(__m128i __V)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_cvtepi32_epi64(__m128i __V) {
   return (__m256i)__builtin_convertvector((__v4si)__V, __v4di);
 }
 
@@ -1530,9 +1524,8 @@ _mm256_cvtepi32_epi64(__m128i __V)
 ///    A 128-bit integer vector containing the source bytes.
 /// \returns A 256-bit vector of [16 x i16] containing the zero-extended
 ///    values.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_cvtepu8_epi16(__m128i __V)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_cvtepu8_epi16(__m128i __V) {
   return (__m256i)__builtin_convertvector((__v16qu)__V, __v16hi);
 }
 
@@ -1556,9 +1549,8 @@ _mm256_cvtepu8_epi16(__m128i __V)
 ///    A 128-bit integer vector containing the source bytes.
 /// \returns A 256-bit vector of [8 x i32] containing the zero-extended
 ///    values.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_cvtepu8_epi32(__m128i __V)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_cvtepu8_epi32(__m128i __V) {
   return (__m256i)__builtin_convertvector(__builtin_shufflevector((__v16qu)__V, (__v16qu)__V, 0, 1, 2, 3, 4, 5, 6, 7), __v8si);
 }
 
@@ -1581,9 +1573,8 @@ _mm256_cvtepu8_epi32(__m128i __V)
 ///    A 128-bit integer vector containing the source bytes.
 /// \returns A 256-bit vector of [4 x i64] containing the zero-extended
 ///    values.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_cvtepu8_epi64(__m128i __V)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_cvtepu8_epi64(__m128i __V) {
   return (__m256i)__builtin_convertvector(__builtin_shufflevector((__v16qu)__V, (__v16qu)__V, 0, 1, 2, 3), __v4di);
 }
 
@@ -1607,9 +1598,8 @@ _mm256_cvtepu8_epi64(__m128i __V)
 ///    A 128-bit vector of [8 x i16] containing the source values.
 /// \returns A 256-bit vector of [8 x i32] containing the zero-extended
 ///    values.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_cvtepu16_epi32(__m128i __V)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_cvtepu16_epi32(__m128i __V) {
   return (__m256i)__builtin_convertvector((__v8hu)__V, __v8si);
 }
 
@@ -1632,9 +1622,8 @@ _mm256_cvtepu16_epi32(__m128i __V)
 ///    A 128-bit vector of [8 x i16] containing the source values.
 /// \returns A 256-bit vector of [4 x i64] containing the zero-extended
 ///    values.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_cvtepu16_epi64(__m128i __V)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_cvtepu16_epi64(__m128i __V) {
   return (__m256i)__builtin_convertvector(__builtin_shufflevector((__v8hu)__V, (__v8hu)__V, 0, 1, 2, 3), __v4di);
 }
 
@@ -1657,9 +1646,8 @@ _mm256_cvtepu16_epi64(__m128i __V)
 ///    A 128-bit vector of [4 x i32] containing the source values.
 /// \returns A 256-bit vector of [4 x i64] containing the zero-extended
 ///    values.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_cvtepu32_epi64(__m128i __V)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_cvtepu32_epi64(__m128i __V) {
   return (__m256i)__builtin_convertvector((__v4su)__V, __v4di);
 }
 

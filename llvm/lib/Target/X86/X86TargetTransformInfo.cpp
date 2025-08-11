@@ -5493,7 +5493,7 @@ InstructionCost X86TTIImpl::getPointersChainCost(
   return BaseT::getPointersChainCost(Ptrs, Base, Info, AccessTy, CostKind);
 }
 
-InstructionCost X86TTIImpl::getAddressComputationCost(Type *Ty,
+InstructionCost X86TTIImpl::getAddressComputationCost(Type *PtrTy,
                                                       ScalarEvolution *SE,
                                                       const SCEV *Ptr) const {
   // Address computations in vectorized code with non-consecutive addresses will
@@ -5509,7 +5509,7 @@ InstructionCost X86TTIImpl::getAddressComputationCost(Type *Ty,
   // Even in the case of (loop invariant) stride whose value is not known at
   // compile time, the address computation will not incur more than one extra
   // ADD instruction.
-  if (Ty->isVectorTy() && SE && !ST->hasAVX2()) {
+  if (PtrTy->isVectorTy() && SE && !ST->hasAVX2()) {
     // TODO: AVX2 is the current cut-off because we don't have correct
     //       interleaving costs for prior ISA's.
     if (!BaseT::isStridedAccess(Ptr))
@@ -5518,7 +5518,7 @@ InstructionCost X86TTIImpl::getAddressComputationCost(Type *Ty,
       return 1;
   }
 
-  return BaseT::getAddressComputationCost(Ty, SE, Ptr);
+  return BaseT::getAddressComputationCost(PtrTy, SE, Ptr);
 }
 
 InstructionCost

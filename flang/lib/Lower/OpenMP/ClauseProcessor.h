@@ -118,7 +118,7 @@ public:
   bool processDepend(lower::SymMap &symMap, lower::StatementContext &stmtCtx,
                      mlir::omp::DependClauseOps &result) const;
   bool
-  processEnter(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
+  processEnter(llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &result) const;
   bool processIf(omp::clause::If::DirectiveNameModifier directiveName,
                  mlir::omp::IfClauseOps &result) const;
   bool processInReduction(
@@ -128,7 +128,7 @@ public:
       mlir::omp::IsDevicePtrClauseOps &result,
       llvm::SmallVectorImpl<const semantics::Symbol *> &isDeviceSyms) const;
   bool
-  processLink(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
+  processLink(llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &result) const;
 
   // This method is used to process a map clause.
   // The optional parameter mapSyms is used to store the original Fortran symbol
@@ -149,7 +149,7 @@ public:
   bool processTaskReduction(
       mlir::Location currentLocation, mlir::omp::TaskReductionClauseOps &result,
       llvm::SmallVectorImpl<const semantics::Symbol *> &outReductionSyms) const;
-  bool processTo(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
+  bool processTo(llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &result) const;
   bool processUseDeviceAddr(
       lower::StatementContext &stmtCtx,
       mlir::omp::UseDeviceAddrClauseOps &result,
