@@ -127,7 +127,7 @@ public:
   bool initializeSaveRestorePoints(
       PerFunctionMIParsingState &PFS,
       const yaml::SaveRestorePoints &YamlSRPoints,
-      SmallVector<MachineBasicBlock *, 4> &SaveRestorePoints);
+      SmallVectorImpl<MachineBasicBlock *> &SaveRestorePoints);
 
   bool initializeCallSiteInfo(PerFunctionMIParsingState &PFS,
                               const yaml::MachineFunction &YamlMF);
@@ -1097,7 +1097,7 @@ bool MIRParserImpl::initializeConstantPool(PerFunctionMIParsingState &PFS,
 // Return true if basic block was incorrectly specified in MIR
 bool MIRParserImpl::initializeSaveRestorePoints(
     PerFunctionMIParsingState &PFS, const yaml::SaveRestorePoints &YamlSRPoints,
-    SmallVector<MachineBasicBlock *, 4> &SaveRestorePoints) {
+    SmallVectorImpl<MachineBasicBlock *> &SaveRestorePoints) {
   MachineBasicBlock *MBB = nullptr;
   if (std::holds_alternative<std::vector<yaml::SaveRestorePointEntry>>(
           YamlSRPoints)) {

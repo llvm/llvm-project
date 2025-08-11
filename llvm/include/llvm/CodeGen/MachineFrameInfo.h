@@ -837,7 +837,7 @@ public:
   }
 
   static SmallVector<MachineBasicBlock *> constructSaveRestorePoints(
-      const ArrayRef<MachineBasicBlock *> SRPoints,
+      ArrayRef<MachineBasicBlock *> SRPoints,
       const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &BBMap) {
     SmallVector<MachineBasicBlock *, 4> Pts;
     for (auto &Src : SRPoints)

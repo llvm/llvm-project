@@ -93,13 +93,13 @@ static void cloneFrameInfo(
       SrcMFI.getCVBytesOfCalleeSavedRegisters());
 
   assert(SrcMFI.getSavePoints().size() < 2 &&
-         "MFI can't contain multiple save points!");
+         "Multiple restore points not yet supported!");
 
   DstMFI.setSavePoints(MachineFrameInfo::constructSaveRestorePoints(
       SrcMFI.getSavePoints(), Src2DstMBB));
 
   assert(SrcMFI.getRestorePoints().size() < 2 &&
-         "MFI can't contain multiple restore points!");
+         "Multiple restore points not yet supported!");
 
   DstMFI.setRestorePoints(MachineFrameInfo::constructSaveRestorePoints(
       SrcMFI.getRestorePoints(), Src2DstMBB));
