@@ -157,8 +157,8 @@ protected:
   }
 
   bool hasParameterMapping() const {
-    assert(getKind() != ConstraintKind::Compound);
-    return Atomic.Args != nullptr;
+    return getKind() != ConstraintKind::Compound
+                            && Atomic.Args != nullptr;
   }
 
   const OccurenceList &mappingOccurenceList() const {
