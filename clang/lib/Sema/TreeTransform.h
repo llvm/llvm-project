@@ -5177,6 +5177,7 @@ bool TreeTransform<Derived>::TransformTemplateArguments(
 
 }
 
+// FIXME: Find ways to reduce code duplication for pack expansions.
 template <typename Derived>
 bool TreeTransform<Derived>::PreparePackForExpansion(TemplateArgumentLoc In,
                                                      bool Uneval,
