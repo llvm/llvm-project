@@ -938,6 +938,10 @@ public:
   void addMetadata(unsigned Kind, MDNode *Node) {
     Metadata.emplace_back(Kind, Node);
   }
+
+  /// Intersect the this VPIRMetada objet with \p MD, keeping only metadata
+  /// nodes in both.
+  void intersect(const VPIRMetadata &MD);
 };
 
 /// This is a concrete Recipe that models a single VPlan-level instruction.
@@ -2421,7 +2425,8 @@ public:
 /// or stores into one wide load/store and shuffles. The first operand of a
 /// VPInterleave recipe is the address, followed by the stored values, followed
 /// by an optional mask.
-class LLVM_ABI_FOR_TEST VPInterleaveRecipe : public VPRecipeBase {
+class LLVM_ABI_FOR_TEST VPInterleaveRecipe : public VPRecipeBase,
+                                             public VPIRMetadata {
   const InterleaveGroup<Instruction> *IG;
 
   /// Indicates if the interleave group is in a conditional block and requires a
@@ -2435,10 +2440,8 @@ class LLVM_ABI_FOR_TEST VPInterleaveRecipe : public VPRecipeBase {
 public:
   VPInterleaveRecipe(const InterleaveGroup<Instruction> *IG, VPValue *Addr,
                      ArrayRef<VPValue *> StoredValues, VPValue *Mask,
-                     bool NeedsMaskForGaps, DebugLoc DL)
-      : VPRecipeBase(VPDef::VPInterleaveSC, {Addr},
-                     DL),
-
+                     bool NeedsMaskForGaps, const VPIRMetadata &MD, DebugLoc DL)
+      : VPRecipeBase(VPDef::VPInterleaveSC, {Addr}, DL), VPIRMetadata(MD),
         IG(IG), NeedsMaskForGaps(NeedsMaskForGaps) {
     // TODO: extend the masked interleaved-group support to reversed access.
     assert((!Mask || !IG->isReverse()) &&
@@ -2461,7 +2464,7 @@ public:
 
   VPInterleaveRecipe *clone() override {
     return new VPInterleaveRecipe(IG, getAddr(), getStoredValues(), getMask(),
-                                  NeedsMaskForGaps, getDebugLoc());
+                                  NeedsMaskForGaps, *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPInterleaveSC)
