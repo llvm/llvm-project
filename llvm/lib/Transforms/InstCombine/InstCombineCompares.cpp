@@ -1341,7 +1341,7 @@ Instruction *InstCombinerImpl::foldIsMultipleOfAPowerOfTwo(ICmpInst &Cmp) {
   // Check the constant case
   if (match(Neg, m_APInt(NegConst)) && match(Mask, m_LowBitMask(MaskConst))) {
     // Neg = -(Mask + 1)
-    if (*NegConst != -(*MaskConst + 1))
+    if (*NegConst != ~*MaskConst)
       return nullptr;
   } else {
     // Match neg = sub 0, val
