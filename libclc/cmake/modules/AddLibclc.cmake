@@ -199,6 +199,33 @@ function(get_libclc_device_info)
   endif()
 endfunction()
 
+# Install libclc artifacts.
+#
+# Arguments:
+#  * FILES <string> ...
+#      List of libclc artifact files to be installed.
+function(libclc_install)
+  cmake_parse_arguments(ARG "" "" "FILES" ${ARGN})
+
+  if( NOT ARG_FILES )
+    message( FATAL_ERROR "Must provide FILES" )
+  endif()
+
+  if( NOT CMAKE_CFG_INTDIR STREQUAL "." )
+    # Replace CMAKE_CFG_INTDIR with CMAKE_INSTALL_CONFIG_NAME for multiple-
+    # configuration generators.
+    string( REPLACE ${CMAKE_CFG_INTDIR} "\$\{CMAKE_INSTALL_CONFIG_NAME\}"
+            files ${ARG_FILES} )
+  else()
+    set( files ${ARG_FILES} )
+  endif()
+
+  install(
+    FILES ${files}
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/clc"
+  )
+endfunction()
+
 # Compiles a list of library source files (provided by LIB_FILES/GEN_FILES) and
 # compiles them to LLVM bytecode (or SPIR-V), links them together and optimizes
 # them.
@@ -425,10 +452,7 @@ function(add_libclc_builtin_set)
   # targets dependent on libclc.
   add_dependencies( ${ARG_PARENT_TARGET} prepare-${ARG_TRIPLE} )
 
-  install(
-    FILES ${libclc_builtins_lib}
-    DESTINATION "${CMAKE_INSTALL_DATADIR}/clc"
-  )
+  libclc_install(FILES ${libclc_builtins_lib})
 
   # SPIR-V targets can exit early here
   if( ARG_ARCH STREQUAL spirv OR ARG_ARCH STREQUAL spirv64 )
@@ -470,10 +494,7 @@ function(add_libclc_builtin_set)
     set_target_properties( alias-${alias_suffix}
       PROPERTIES FOLDER "libclc/Device IR/Aliases"
     )
-    install(
-      FILES ${LIBCLC_OUTPUT_LIBRARY_DIR}/${alias_suffix}
-      DESTINATION "${CMAKE_INSTALL_DATADIR}/clc"
-    )
+    libclc_install(FILES ${LIBCLC_OUTPUT_LIBRARY_DIR}/${alias_suffix})
   endforeach( a )
 endfunction(add_libclc_builtin_set)
 
