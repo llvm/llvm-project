@@ -7616,8 +7616,8 @@ void SIInstrInfo::moveToVALU(SIInstrWorklist &Worklist,
       Entry.first->eraseFromParent();
 }
 void SIInstrInfo::getReadFirstLaneFromCopyToM0(MachineRegisterInfo &MRI,
-                                           Register DstReg,
-                                           MachineInstr &Inst) const {
+                                               Register DstReg,
+                                               MachineInstr &Inst) const {
   // If it's a copy of a VGPR to a physical SGPR, insert a V_READFIRSTLANE and
   // hope for the best.
   if (MRI.constrainRegClass(DstReg, &AMDGPU::SReg_32_XM0RegClass)) {

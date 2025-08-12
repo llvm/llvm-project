@@ -1585,7 +1585,7 @@ public:
   const TargetSchedModel &getSchedModel() const { return SchedModel; }
 
   void getReadFirstLaneFromCopyToM0(MachineRegisterInfo &MRI, Register DstReg,
-                                MachineInstr &Inst) const;
+                                    MachineInstr &Inst) const;
 
   void handleCopyToPhyHelper(SIInstrWorklist &Worklist, Register DstReg,
                              MachineInstr &Inst,
