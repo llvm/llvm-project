@@ -2241,3 +2241,77 @@ entry:
   store ptr %4, ptr %1, align 8
   ret void
 }
+
+define i16 @select_neg_1(i16 %A, i8 %cond) {
+; RV32IM-LABEL: select_neg_1:
+; RV32IM:       # %bb.0: # %entry
+; RV32IM-NEXT:    slli a0, a1, 31
+; RV32IM-NEXT:    srai a0, a0, 31
+; RV32IM-NEXT:    ret
+;
+; RV64IM-LABEL: select_neg_1:
+; RV64IM:       # %bb.0: # %entry
+; RV64IM-NEXT:    slli a0, a1, 63
+; RV64IM-NEXT:    srai a0, a0, 63
+; RV64IM-NEXT:    ret
+;
+; RV64IMXVTCONDOPS-LABEL: select_neg_1:
+; RV64IMXVTCONDOPS:       # %bb.0: # %entry
+; RV64IMXVTCONDOPS-NEXT:    slli a0, a1, 63
+; RV64IMXVTCONDOPS-NEXT:    srai a0, a0, 63
+; RV64IMXVTCONDOPS-NEXT:    ret
+;
+; RV32IMZICOND-LABEL: select_neg_1:
+; RV32IMZICOND:       # %bb.0: # %entry
+; RV32IMZICOND-NEXT:    slli a0, a1, 31
+; RV32IMZICOND-NEXT:    srai a0, a0, 31
+; RV32IMZICOND-NEXT:    ret
+;
+; RV64IMZICOND-LABEL: select_neg_1:
+; RV64IMZICOND:       # %bb.0: # %entry
+; RV64IMZICOND-NEXT:    slli a0, a1, 63
+; RV64IMZICOND-NEXT:    srai a0, a0, 63
+; RV64IMZICOND-NEXT:    ret
+entry:
+ %and = and i8 %cond, 1
+ %cmp10 = icmp eq i8 %and, 0
+ %1 = select i1 %cmp10, i16 0, i16 -1
+ ret i16 %1
+}
+
+define i16 @select_neg_1(i16 %A, i8 %cond) {
+; RV32IM-LABEL: select_neg_1:
+; RV32IM:       # %bb.0: # %entry
+; RV32IM-NEXT:    slli a0, a1, 31
+; RV32IM-NEXT:    srai a0, a0, 31
+; RV32IM-NEXT:    ret
+;
+; RV64IM-LABEL: select_neg_1:
+; RV64IM:       # %bb.0: # %entry
+; RV64IM-NEXT:    slli a0, a1, 63
+; RV64IM-NEXT:    srai a0, a0, 63
+; RV64IM-NEXT:    ret
+;
+; RV64IMXVTCONDOPS-LABEL: select_neg_1:
+; RV64IMXVTCONDOPS:       # %bb.0: # %entry
+; RV64IMXVTCONDOPS-NEXT:    slli a0, a1, 63
+; RV64IMXVTCONDOPS-NEXT:    srai a0, a0, 63
+; RV64IMXVTCONDOPS-NEXT:    ret
+;
+; RV32IMZICOND-LABEL: select_neg_1:
+; RV32IMZICOND:       # %bb.0: # %entry
+; RV32IMZICOND-NEXT:    slli a0, a1, 31
+; RV32IMZICOND-NEXT:    srai a0, a0, 31
+; RV32IMZICOND-NEXT:    ret
+;
+; RV64IMZICOND-LABEL: select_neg_1:
+; RV64IMZICOND:       # %bb.0: # %entry
+; RV64IMZICOND-NEXT:    slli a0, a1, 63
+; RV64IMZICOND-NEXT:    srai a0, a0, 63
+; RV64IMZICOND-NEXT:    ret
+entry:
+ %and = and i8 %cond, 1
+ %cmp10 = icmp ne i8 %and, 1
+ %1 = select i1 %cmp10, i16 0, i16 -1
+ ret i16 %1
+}
