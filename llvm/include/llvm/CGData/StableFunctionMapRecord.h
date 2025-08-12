@@ -65,23 +65,20 @@ struct StableFunctionMapRecord {
   /// entry when passed in.
   LLVM_ABI static void deserializeEntry(const unsigned char *Ptr,
                                         stable_hash Hash,
-                                        StableFunctionMap *FunctionMap,
-                                        bool ReadStableFunctionMapNames = true);
+                                        StableFunctionMap *FunctionMap);
 
   /// Serialize the stable function map to a raw_ostream.
   LLVM_ABI void serialize(raw_ostream &OS,
                           std::vector<CGDataPatchItem> &PatchItems) const;
 
   /// Deserialize the stable function map from a raw_ostream.
-  LLVM_ABI void deserialize(const unsigned char *&Ptr,
-                            bool ReadStableFunctionMapNames = true);
+  LLVM_ABI void deserialize(const unsigned char *&Ptr);
 
   /// Lazily deserialize the stable function map from `Buffer` starting at
   /// `Offset`. The individial stable function entry would be read lazily from
   /// `Buffer` when the function map is accessed.
   LLVM_ABI void lazyDeserialize(std::shared_ptr<MemoryBuffer> Buffer,
-                                uint64_t Offset,
-                                bool ReadStableFunctionMapNames = true);
+                                uint64_t Offset);
 
   /// Serialize the stable function map to a YAML stream.
   LLVM_ABI void serializeYAML(yaml::Output &YOS) const;
@@ -106,9 +103,15 @@ struct StableFunctionMapRecord {
     serializeYAML(YOS);
   }
 
+  void setReadStableFunctionMapNames(bool Read) {
+    assert(
+        FunctionMap->empty() &&
+        "Cannot change ReadStableFunctionMapNames after the map is populated");
+    FunctionMap->ReadStableFunctionMapNames = Read;
+  }
+
 private:
-  void deserialize(const unsigned char *&Ptr, bool ReadStableFunctionMapNames,
-                   bool Lazy);
+  void deserialize(const unsigned char *&Ptr, bool Lazy);
 };
 
 } // namespace llvm

@@ -142,18 +142,17 @@ void StableFunctionMapRecord::serialize(
                           &IndexOperandHashesByteSize, 1);
 }
 
-void StableFunctionMapRecord::deserializeEntry(
-    const unsigned char *Ptr, stable_hash Hash, StableFunctionMap *FunctionMap,
-    bool ReadStableFunctionMapNames) {
-  assert(FunctionMap->ReadStableFunctionMapNames == ReadStableFunctionMapNames);
+void StableFunctionMapRecord::deserializeEntry(const unsigned char *Ptr,
+                                               stable_hash Hash,
+                                               StableFunctionMap *FunctionMap) {
   auto FunctionNameId =
       endian::readNext<uint32_t, endianness::little, unaligned>(Ptr);
-  if (ReadStableFunctionMapNames)
+  if (FunctionMap->ReadStableFunctionMapNames)
     assert(FunctionMap->getNameForId(FunctionNameId) &&
            "FunctionNameId out of range");
   auto ModuleNameId =
       endian::readNext<uint32_t, endianness::little, unaligned>(Ptr);
-  if (ReadStableFunctionMapNames)
+  if (FunctionMap->ReadStableFunctionMapNames)
     assert(FunctionMap->getNameForId(ModuleNameId) &&
            "ModuleNameId out of range");
   auto InstCount =
@@ -191,7 +190,6 @@ void StableFunctionMapRecord::deserializeEntry(
 }
 
 void StableFunctionMapRecord::deserialize(const unsigned char *&Ptr,
-                                          bool ReadStableFunctionMapNames,
                                           bool Lazy) {
   // Assert that Ptr is 4-byte aligned
   assert(((uintptr_t)Ptr % 4) == 0);
@@ -204,8 +202,7 @@ void StableFunctionMapRecord::deserialize(const unsigned char *&Ptr,
   const auto NamesByteSize =
       endian::readNext<uint64_t, endianness::little, unaligned>(Ptr);
   const auto NamesOffset = reinterpret_cast<uintptr_t>(Ptr);
-  FunctionMap->ReadStableFunctionMapNames = ReadStableFunctionMapNames;
-  if (ReadStableFunctionMapNames) {
+  if (FunctionMap->ReadStableFunctionMapNames) {
     for (unsigned I = 0; I < NumNames; ++I) {
       StringRef Name(reinterpret_cast<const char *>(Ptr));
       Ptr += Name.size() + 1;
@@ -243,7 +240,7 @@ void StableFunctionMapRecord::deserialize(const unsigned char *&Ptr,
     else
       deserializeEntry(
           reinterpret_cast<const unsigned char *>(FixedSizeFieldsOffset), Hash,
-          FunctionMap.get(), ReadStableFunctionMapNames);
+          FunctionMap.get());
     FixedSizeFieldsOffset += FixedSizeFieldsSizePerEntry;
   }
 
@@ -256,17 +253,15 @@ void StableFunctionMapRecord::deserialize(const unsigned char *&Ptr,
       reinterpret_cast<uintptr_t>(Ptr) + IndexOperandHashesByteSize);
 }
 
-void StableFunctionMapRecord::deserialize(const unsigned char *&Ptr,
-                                          bool ReadStableFunctionMapNames) {
-  deserialize(Ptr, ReadStableFunctionMapNames, /*Lazy=*/false);
+void StableFunctionMapRecord::deserialize(const unsigned char *&Ptr) {
+  deserialize(Ptr, /*Lazy=*/false);
 }
 
 void StableFunctionMapRecord::lazyDeserialize(
-    std::shared_ptr<MemoryBuffer> Buffer, uint64_t Offset,
-    bool ReadStableFunctionMapNames) {
+    std::shared_ptr<MemoryBuffer> Buffer, uint64_t Offset) {
   const auto *Ptr = reinterpret_cast<const unsigned char *>(
       reinterpret_cast<uintptr_t>(Buffer->getBufferStart()) + Offset);
-  deserialize(Ptr, ReadStableFunctionMapNames, /*Lazy=*/true);
+  deserialize(Ptr, /*Lazy=*/true);
   FunctionMap->Buffer = std::move(Buffer);
 }
 

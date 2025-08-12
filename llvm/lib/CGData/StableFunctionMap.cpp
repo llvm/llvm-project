@@ -150,8 +150,7 @@ void StableFunctionMap::deserializeLazyLoadingEntry(
   std::call_once(Storage.LazyLoadFlag, [this, HashArg = Hash, &StorageArg = Storage]() {
     for (auto Offset : StorageArg.Offsets)
       StableFunctionMapRecord::deserializeEntry(
-          reinterpret_cast<const unsigned char *>(Offset), HashArg, const_cast<StableFunctionMap *>(this),
-          ReadStableFunctionMapNames);
+          reinterpret_cast<const unsigned char *>(Offset), HashArg, const_cast<StableFunctionMap *>(this));
   });
 }
 
