@@ -52,8 +52,8 @@ This document serves four purposes:
   ways in which programmers can strengthen its protections (including
   recommendations for language implementors).
 
-- It documents the language ABIs currently used for C, C++, and Objective-C
-  on arm64e.
+- It documents the stable ABI of the C, C++, and Objective-C languages on arm64e
+  platforms.
 
 
 Basic concepts
@@ -274,13 +274,16 @@ There are three levels of the pointer authentication language feature:
   including return addresses, function pointers, and C++ virtual functions. The
   intent is for all pointers to code in program memory to be signed in some way
   and for all branches to code in program text to authenticate those
-  signatures.
+  signatures. In addition to the code pointers themselves, we also use pointer
+  authentication to protect data values that directly or indirectly influence
+  control flow or program integrity.
 
 - The language also provides extensions to override the default rules used by
   the language implementation.  For example, the ``__ptrauth`` type qualifier
-  can be used to change how pointers are signed when they are stored in
-  a particular variable or field; this provides much stronger protection than
-  is guaranteed by the default rules for C function and data pointers.
+  can be used to change how pointers or pointer sized integers are signed when
+  they are stored in a particular variable or field; this provides much stronger
+  protection than is guaranteed by the default rules for C function and data
+  pointers.
 
 - Finally, the language provides the ``<ptrauth.h>`` intrinsic interface for
   manually signing and authenticating pointers in code.  These can be used in
@@ -360,7 +363,7 @@ signed with address diversity.
 
 While this representation of nulls is the safest option for the general case,
 there are some situations in which a null pointer may have important semantic
-or security impact. For that purpose clang has the concept of a pointer
+or security impact. For that purpose Clang has the concept of a pointer
 authentication schema that signs and authenticates null values.
 
 Return addresses
@@ -397,17 +400,17 @@ Feature testing
 Whether the current target uses pointer authentication can be tested for with
 a number of different tests.
 
-- ``__has_extension(ptrauth_intrinsics)`` is true if ``<ptrauth.h>`` provides
-  its normal interface.  This may be true even on targets where pointer
+- ``__has_feature(ptrauth_intrinsics)`` is true if ``<ptrauth.h>`` provides its
+  normal interface.  This may be true even on targets where pointer
   authentication is not enabled by default.
 
-- ``__has_extension(ptrauth_returns)`` is true if the target uses pointer
+- ``__has_feature(ptrauth_returns)`` is true if the target uses pointer
   authentication to protect return addresses.
 
-- ``__has_extension(ptrauth_calls)`` is true if the target uses pointer
+- ``__has_feature(ptrauth_calls)`` is true if the target uses pointer
   authentication to protect indirect branches.  This implies
-  ``__has_extension(ptrauth_returns)`` and
-  ``__has_extension(ptrauth_intrinsics)``.
+  ``__has_feature(ptrauth_returns)`` and
+  ``__has_feature(ptrauth_intrinsics)``.
 
 Clang provides several other tests only for historical purposes; for current
 purposes they are all equivalent to ``ptrauth_calls``.
@@ -477,13 +480,14 @@ rules of C++:
 
 - A type may be **non-trivial to copy**.
 
-- A type may also be **illegal to copy**.  Types that are illegal to copy are
+- A type may also be **illegal to copy**. Types that are illegal to copy are
   always non-trivial to copy.
 
 - A type may also be **address-sensitive**.
 
-- A type qualified with a ``ptrauth`` qualifier that requires address diversity
-  is non-trivial to copy and address-sensitive.
+- A type qualified with a ``ptrauth`` qualifier or implicit authentication
+  schema that requires address diversity is non-trivial to copy and
+  address-sensitive.
 
 - An array type is illegal to copy, non-trivial to copy, or address-sensitive
   if its element type is illegal to copy, non-trivial to copy, or
@@ -829,15 +833,20 @@ the following example of a hand-rolled "v-table":
     void (*logStatus)(Object *);
   };
 
-This weakness can be mitigated by using a more specific signing schema for each
-purpose.  For example, in this example, the ``__ptrauth`` qualifier can be used
-with a different constant discriminator for each field.  Since there's no
-particular reason it's important for this v-table to be copyable with
-``memcpy``, the functions can also be signed with address diversity:
+The weakness in this design is that by lacking any context specific
+discriminator, means an attacker can substiture any of these fields with any
+other correctly signed function pointer. Similarly the lack of address diversity
+allows an attacker to replace the functions in one type's "v-table" with those
+of another. This can be mitigated by overriding the default authentication
+schema with a more specific signing schema for each purpose.  For instance, in
+this example, the ``__ptrauth`` qualifier can be used with a different constant
+discriminator for each field.  Since there's no particular reason it's important
+for this v-table to be copyable with ``memcpy``, the functions can also be
+signed with address diversity:
 
 .. code-block:: c
 
-  #if __has_extension(ptrauth_calls)
+  #if __has_feature(ptrauth_calls)
   #define objectOperation(discriminator) \
     __ptrauth(ptrauth_key_function_pointer, 1, discriminator)
   #else
