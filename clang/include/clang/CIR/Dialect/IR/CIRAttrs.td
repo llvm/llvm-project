@@ -371,6 +371,53 @@ def CIR_ConstPtrAttr : CIR_Attr<"ConstPtr", "ptr", [TypedAttrInterface]> {
 }
 
 //===----------------------------------------------------------------------===//
+// GlobalViewAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_GlobalViewAttr : CIR_Attr<"GlobalView", "global_view", [
+  TypedAttrInterface
+]> {
+  let summary = "Provides constant access to a global address";
+  let description = [{
+    Get constant address of global `symbol`. It provides a way to access globals
+    from other global and always produces a pointer.
+
+    The type of the input symbol can be different from `#cir.global_view`
+    output type, since a given view of the global might require a static
+    cast for initializing other globals.
+
+    The result type of this attribute may be an integer type. In such a case,
+    the pointer to the referenced global is casted to an integer and this
+    attribute represents the casted result.
+
+    Example:
+
+    ```
+      cir.global external @s = @".str2": !cir.ptr<i8>
+      cir.global external @x = #cir.global_view<@s> : !cir.ptr<i8>
+      cir.global external @s_addr = #cir.global_view<@s> : !s64i
+    ```
+  }];
+
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type,
+                        "mlir::FlatSymbolRefAttr":$symbol);
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "mlir::Type":$type,
+                                        "mlir::FlatSymbolRefAttr":$symbol), [{
+      return $_get(type.getContext(), type, symbol);
+    }]>
+  ];
+
+  // let genVerifyDecl = 1;
+  let assemblyFormat = [{
+    `<`
+      $symbol
+    `>`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // ConstComplexAttr
 //===----------------------------------------------------------------------===//
 
