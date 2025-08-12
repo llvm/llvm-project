@@ -588,8 +588,8 @@ entry:
   ret <vscale x 64 x i1> %0
 }
 
-define <vscale x 16 x i1> @whilewr_16_split(ptr %a, ptr %b) {
-; CHECK-SVE2-LABEL: whilewr_16_split:
+define <vscale x 16 x i1> @whilewr_16_expand(ptr %a, ptr %b) {
+; CHECK-SVE2-LABEL: whilewr_16_expand:
 ; CHECK-SVE2:       // %bb.0: // %entry
 ; CHECK-SVE2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SVE2-NEXT:    addvl sp, sp, #-1
@@ -645,7 +645,7 @@ define <vscale x 16 x i1> @whilewr_16_split(ptr %a, ptr %b) {
 ; CHECK-SVE2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE2-NEXT:    ret
 ;
-; CHECK-SVE-LABEL: whilewr_16_split:
+; CHECK-SVE-LABEL: whilewr_16_expand:
 ; CHECK-SVE:       // %bb.0: // %entry
 ; CHECK-SVE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SVE-NEXT:    addvl sp, sp, #-1
@@ -705,8 +705,8 @@ entry:
   ret <vscale x 16 x i1> %0
 }
 
-define <vscale x 32 x i1> @whilewr_16_split2(ptr %a, ptr %b) {
-; CHECK-SVE2-LABEL: whilewr_16_split2:
+define <vscale x 32 x i1> @whilewr_16_expand2(ptr %a, ptr %b) {
+; CHECK-SVE2-LABEL: whilewr_16_expand2:
 ; CHECK-SVE2:       // %bb.0: // %entry
 ; CHECK-SVE2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SVE2-NEXT:    addvl sp, sp, #-1
@@ -794,7 +794,7 @@ define <vscale x 32 x i1> @whilewr_16_split2(ptr %a, ptr %b) {
 ; CHECK-SVE2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE2-NEXT:    ret
 ;
-; CHECK-SVE-LABEL: whilewr_16_split2:
+; CHECK-SVE-LABEL: whilewr_16_expand2:
 ; CHECK-SVE:       // %bb.0: // %entry
 ; CHECK-SVE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SVE-NEXT:    addvl sp, sp, #-1
@@ -887,8 +887,8 @@ entry:
   ret <vscale x 32 x i1> %0
 }
 
-define <vscale x 8 x i1> @whilewr_32_split(ptr %a, ptr %b) {
-; CHECK-SVE2-LABEL: whilewr_32_split:
+define <vscale x 8 x i1> @whilewr_32_expand(ptr %a, ptr %b) {
+; CHECK-SVE2-LABEL: whilewr_32_expand:
 ; CHECK-SVE2:       // %bb.0: // %entry
 ; CHECK-SVE2-NEXT:    index z0.d, #0, #1
 ; CHECK-SVE2-NEXT:    sub x8, x1, x0
@@ -918,7 +918,7 @@ define <vscale x 8 x i1> @whilewr_32_split(ptr %a, ptr %b) {
 ; CHECK-SVE2-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-SVE2-NEXT:    ret
 ;
-; CHECK-SVE-LABEL: whilewr_32_split:
+; CHECK-SVE-LABEL: whilewr_32_expand:
 ; CHECK-SVE:       // %bb.0: // %entry
 ; CHECK-SVE-NEXT:    index z0.d, #0, #1
 ; CHECK-SVE-NEXT:    sub x8, x1, x0
@@ -952,8 +952,8 @@ entry:
   ret <vscale x 8 x i1> %0
 }
 
-define <vscale x 16 x i1> @whilewr_32_split2(ptr %a, ptr %b) {
-; CHECK-SVE2-LABEL: whilewr_32_split2:
+define <vscale x 16 x i1> @whilewr_32_expand2(ptr %a, ptr %b) {
+; CHECK-SVE2-LABEL: whilewr_32_expand2:
 ; CHECK-SVE2:       // %bb.0: // %entry
 ; CHECK-SVE2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SVE2-NEXT:    addvl sp, sp, #-1
@@ -1011,7 +1011,7 @@ define <vscale x 16 x i1> @whilewr_32_split2(ptr %a, ptr %b) {
 ; CHECK-SVE2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE2-NEXT:    ret
 ;
-; CHECK-SVE-LABEL: whilewr_32_split2:
+; CHECK-SVE-LABEL: whilewr_32_expand2:
 ; CHECK-SVE:       // %bb.0: // %entry
 ; CHECK-SVE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SVE-NEXT:    addvl sp, sp, #-1
@@ -1073,8 +1073,8 @@ entry:
   ret <vscale x 16 x i1> %0
 }
 
-define <vscale x 32 x i1> @whilewr_32_split3(ptr %a, ptr %b) {
-; CHECK-SVE2-LABEL: whilewr_32_split3:
+define <vscale x 32 x i1> @whilewr_32_expand3(ptr %a, ptr %b) {
+; CHECK-SVE2-LABEL: whilewr_32_expand3:
 ; CHECK-SVE2:       // %bb.0: // %entry
 ; CHECK-SVE2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SVE2-NEXT:    addvl sp, sp, #-1
@@ -1168,7 +1168,7 @@ define <vscale x 32 x i1> @whilewr_32_split3(ptr %a, ptr %b) {
 ; CHECK-SVE2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE2-NEXT:    ret
 ;
-; CHECK-SVE-LABEL: whilewr_32_split3:
+; CHECK-SVE-LABEL: whilewr_32_expand3:
 ; CHECK-SVE:       // %bb.0: // %entry
 ; CHECK-SVE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SVE-NEXT:    addvl sp, sp, #-1
@@ -1267,8 +1267,8 @@ entry:
   ret <vscale x 32 x i1> %0
 }
 
-define <vscale x 4 x i1> @whilewr_64_split(ptr %a, ptr %b) {
-; CHECK-SVE2-LABEL: whilewr_64_split:
+define <vscale x 4 x i1> @whilewr_64_expand(ptr %a, ptr %b) {
+; CHECK-SVE2-LABEL: whilewr_64_expand:
 ; CHECK-SVE2:       // %bb.0: // %entry
 ; CHECK-SVE2-NEXT:    index z0.d, #0, #1
 ; CHECK-SVE2-NEXT:    sub x8, x1, x0
@@ -1290,7 +1290,7 @@ define <vscale x 4 x i1> @whilewr_64_split(ptr %a, ptr %b) {
 ; CHECK-SVE2-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-SVE2-NEXT:    ret
 ;
-; CHECK-SVE-LABEL: whilewr_64_split:
+; CHECK-SVE-LABEL: whilewr_64_expand:
 ; CHECK-SVE:       // %bb.0: // %entry
 ; CHECK-SVE-NEXT:    index z0.d, #0, #1
 ; CHECK-SVE-NEXT:    sub x8, x1, x0
@@ -1316,8 +1316,8 @@ entry:
   ret <vscale x 4 x i1> %0
 }
 
-define <vscale x 8 x i1> @whilewr_64_split2(ptr %a, ptr %b) {
-; CHECK-SVE2-LABEL: whilewr_64_split2:
+define <vscale x 8 x i1> @whilewr_64_expand2(ptr %a, ptr %b) {
+; CHECK-SVE2-LABEL: whilewr_64_expand2:
 ; CHECK-SVE2:       // %bb.0: // %entry
 ; CHECK-SVE2-NEXT:    index z0.d, #0, #1
 ; CHECK-SVE2-NEXT:    sub x8, x1, x0
@@ -1347,7 +1347,7 @@ define <vscale x 8 x i1> @whilewr_64_split2(ptr %a, ptr %b) {
 ; CHECK-SVE2-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-SVE2-NEXT:    ret
 ;
-; CHECK-SVE-LABEL: whilewr_64_split2:
+; CHECK-SVE-LABEL: whilewr_64_expand2:
 ; CHECK-SVE:       // %bb.0: // %entry
 ; CHECK-SVE-NEXT:    index z0.d, #0, #1
 ; CHECK-SVE-NEXT:    sub x8, x1, x0
@@ -1381,8 +1381,8 @@ entry:
   ret <vscale x 8 x i1> %0
 }
 
-define <vscale x 16 x i1> @whilewr_64_split3(ptr %a, ptr %b) {
-; CHECK-SVE2-LABEL: whilewr_64_split3:
+define <vscale x 16 x i1> @whilewr_64_expand3(ptr %a, ptr %b) {
+; CHECK-SVE2-LABEL: whilewr_64_expand3:
 ; CHECK-SVE2:       // %bb.0: // %entry
 ; CHECK-SVE2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SVE2-NEXT:    addvl sp, sp, #-1
@@ -1440,7 +1440,7 @@ define <vscale x 16 x i1> @whilewr_64_split3(ptr %a, ptr %b) {
 ; CHECK-SVE2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE2-NEXT:    ret
 ;
-; CHECK-SVE-LABEL: whilewr_64_split3:
+; CHECK-SVE-LABEL: whilewr_64_expand3:
 ; CHECK-SVE:       // %bb.0: // %entry
 ; CHECK-SVE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SVE-NEXT:    addvl sp, sp, #-1
@@ -1502,8 +1502,8 @@ entry:
   ret <vscale x 16 x i1> %0
 }
 
-define <vscale x 32 x i1> @whilewr_64_split4(ptr %a, ptr %b) {
-; CHECK-SVE2-LABEL: whilewr_64_split4:
+define <vscale x 32 x i1> @whilewr_64_expand4(ptr %a, ptr %b) {
+; CHECK-SVE2-LABEL: whilewr_64_expand4:
 ; CHECK-SVE2:       // %bb.0: // %entry
 ; CHECK-SVE2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SVE2-NEXT:    addvl sp, sp, #-1
@@ -1597,7 +1597,7 @@ define <vscale x 32 x i1> @whilewr_64_split4(ptr %a, ptr %b) {
 ; CHECK-SVE2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE2-NEXT:    ret
 ;
-; CHECK-SVE-LABEL: whilewr_64_split4:
+; CHECK-SVE-LABEL: whilewr_64_expand4:
 ; CHECK-SVE:       // %bb.0: // %entry
 ; CHECK-SVE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SVE-NEXT:    addvl sp, sp, #-1
