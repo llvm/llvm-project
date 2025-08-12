@@ -211,6 +211,7 @@ tools.extend(
         "llvm-cvtres",
         "llvm-debuginfod-find",
         "llvm-debuginfo-analyzer",
+        "llvm-debuginfo-check",
         "llvm-diff",
         "llvm-dis",
         "llvm-dwarfdump",
