@@ -1168,3 +1168,247 @@ entry:
   %rem = udiv i128 %x, 13
   ret i128 %rem
 }
+
+; PR137514
+define i128 @udiv_magic_preshift_and_postshift(i128 %x) nounwind {
+; X86-64-LABEL: udiv_magic_preshift_and_postshift:
+; X86-64:       # %bb.0:
+; X86-64-NEXT:    pushq %rax
+; X86-64-NEXT:    movl $358, %edx # imm = 0x166
+; X86-64-NEXT:    xorl %ecx, %ecx
+; X86-64-NEXT:    callq __udivti3@PLT
+; X86-64-NEXT:    popq %rcx
+; X86-64-NEXT:    retq
+;
+; WIN64-LABEL: udiv_magic_preshift_and_postshift:
+; WIN64:       # %bb.0:
+; WIN64-NEXT:    subq $72, %rsp
+; WIN64-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    movq $358, {{[0-9]+}}(%rsp) # imm = 0x166
+; WIN64-NEXT:    movq $0, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; WIN64-NEXT:    callq __udivti3
+; WIN64-NEXT:    movq %xmm0, %rax
+; WIN64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; WIN64-NEXT:    movq %xmm0, %rdx
+; WIN64-NEXT:    addq $72, %rsp
+; WIN64-NEXT:    retq
+  %ret = udiv i128 %x, 358
+  ret i128 %ret
+}
+
+; PR137514
+define i128 @urem_magic_preshift_and_postshift(i128 %x) nounwind {
+; X86-64-LABEL: urem_magic_preshift_and_postshift:
+; X86-64:       # %bb.0:
+; X86-64-NEXT:    pushq %rax
+; X86-64-NEXT:    movl $358, %edx # imm = 0x166
+; X86-64-NEXT:    xorl %ecx, %ecx
+; X86-64-NEXT:    callq __umodti3@PLT
+; X86-64-NEXT:    popq %rcx
+; X86-64-NEXT:    retq
+;
+; WIN64-LABEL: urem_magic_preshift_and_postshift:
+; WIN64:       # %bb.0:
+; WIN64-NEXT:    subq $72, %rsp
+; WIN64-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    movq $358, {{[0-9]+}}(%rsp) # imm = 0x166
+; WIN64-NEXT:    movq $0, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; WIN64-NEXT:    callq __umodti3
+; WIN64-NEXT:    movq %xmm0, %rax
+; WIN64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; WIN64-NEXT:    movq %xmm0, %rdx
+; WIN64-NEXT:    addq $72, %rsp
+; WIN64-NEXT:    retq
+  %ret = urem i128 %x, 358
+  ret i128 %ret
+}
+
+; PR137514
+define i128 @udiv_magic_large_preshift(i128 %x) nounwind {
+; X86-64-LABEL: udiv_magic_large_preshift:
+; X86-64:       # %bb.0:
+; X86-64-NEXT:    pushq %rax
+; X86-64-NEXT:    movabsq $12300786335744, %rcx # imm = 0xB3000000000
+; X86-64-NEXT:    xorl %edx, %edx
+; X86-64-NEXT:    callq __udivti3@PLT
+; X86-64-NEXT:    popq %rcx
+; X86-64-NEXT:    retq
+;
+; WIN64-LABEL: udiv_magic_large_preshift:
+; WIN64:       # %bb.0:
+; WIN64-NEXT:    subq $72, %rsp
+; WIN64-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    movabsq $12300786335744, %rax # imm = 0xB3000000000
+; WIN64-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    movq $0, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; WIN64-NEXT:    callq __udivti3
+; WIN64-NEXT:    movq %xmm0, %rax
+; WIN64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; WIN64-NEXT:    movq %xmm0, %rdx
+; WIN64-NEXT:    addq $72, %rsp
+; WIN64-NEXT:    retq
+  %ret = udiv i128 %x, 226909457440853062867909873762304 ; = 179 * 2^100
+  ret i128 %ret
+}
+
+; PR137514
+define i128 @urem_magic_large_preshift(i128 %x) nounwind {
+; X86-64-LABEL: urem_magic_large_preshift:
+; X86-64:       # %bb.0:
+; X86-64-NEXT:    pushq %rax
+; X86-64-NEXT:    movabsq $12300786335744, %rcx # imm = 0xB3000000000
+; X86-64-NEXT:    xorl %edx, %edx
+; X86-64-NEXT:    callq __umodti3@PLT
+; X86-64-NEXT:    popq %rcx
+; X86-64-NEXT:    retq
+;
+; WIN64-LABEL: urem_magic_large_preshift:
+; WIN64:       # %bb.0:
+; WIN64-NEXT:    subq $72, %rsp
+; WIN64-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    movabsq $12300786335744, %rax # imm = 0xB3000000000
+; WIN64-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    movq $0, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; WIN64-NEXT:    callq __umodti3
+; WIN64-NEXT:    movq %xmm0, %rax
+; WIN64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; WIN64-NEXT:    movq %xmm0, %rdx
+; WIN64-NEXT:    addq $72, %rsp
+; WIN64-NEXT:    retq
+  %ret = urem i128 %x, 226909457440853062867909873762304 ; = 179 * 2^100
+  ret i128 %ret
+}
+
+; PR137514
+define i128 @udiv_magic_large_postshift(i128 %x) nounwind {
+; X86-64-LABEL: udiv_magic_large_postshift:
+; X86-64:       # %bb.0:
+; X86-64-NEXT:    pushq %rax
+; X86-64-NEXT:    movl $1, %edx
+; X86-64-NEXT:    movl $1, %ecx
+; X86-64-NEXT:    callq __udivti3@PLT
+; X86-64-NEXT:    popq %rcx
+; X86-64-NEXT:    retq
+;
+; WIN64-LABEL: udiv_magic_large_postshift:
+; WIN64:       # %bb.0:
+; WIN64-NEXT:    subq $72, %rsp
+; WIN64-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    movq $1, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    movq $1, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; WIN64-NEXT:    callq __udivti3
+; WIN64-NEXT:    movq %xmm0, %rax
+; WIN64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; WIN64-NEXT:    movq %xmm0, %rdx
+; WIN64-NEXT:    addq $72, %rsp
+; WIN64-NEXT:    retq
+  %ret = udiv i128 %x, 18446744073709551617 ; = 2^64 + 1
+  ret i128 %ret
+}
+
+; PR137514
+define i128 @urem_magic_large_postshift(i128 %x) nounwind {
+; X86-64-LABEL: urem_magic_large_postshift:
+; X86-64:       # %bb.0:
+; X86-64-NEXT:    pushq %rax
+; X86-64-NEXT:    movl $1, %edx
+; X86-64-NEXT:    movl $1, %ecx
+; X86-64-NEXT:    callq __umodti3@PLT
+; X86-64-NEXT:    popq %rcx
+; X86-64-NEXT:    retq
+;
+; WIN64-LABEL: urem_magic_large_postshift:
+; WIN64:       # %bb.0:
+; WIN64-NEXT:    subq $72, %rsp
+; WIN64-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    movq $1, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    movq $1, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; WIN64-NEXT:    callq __umodti3
+; WIN64-NEXT:    movq %xmm0, %rax
+; WIN64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; WIN64-NEXT:    movq %xmm0, %rdx
+; WIN64-NEXT:    addq $72, %rsp
+; WIN64-NEXT:    retq
+  %ret = urem i128 %x, 18446744073709551617 ; = 2^64 + 1
+  ret i128 %ret
+}
+
+; PR137514
+define i128 @udiv_magic_is_add(i128 %x) nounwind {
+; X86-64-LABEL: udiv_magic_is_add:
+; X86-64:       # %bb.0:
+; X86-64-NEXT:    pushq %rax
+; X86-64-NEXT:    movabsq $-9223372036854775808, %rcx # imm = 0x8000000000000000
+; X86-64-NEXT:    movl $1, %edx
+; X86-64-NEXT:    callq __udivti3@PLT
+; X86-64-NEXT:    popq %rcx
+; X86-64-NEXT:    retq
+;
+; WIN64-LABEL: udiv_magic_is_add:
+; WIN64:       # %bb.0:
+; WIN64-NEXT:    subq $72, %rsp
+; WIN64-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    movabsq $-9223372036854775808, %rax # imm = 0x8000000000000000
+; WIN64-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    movq $1, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; WIN64-NEXT:    callq __udivti3
+; WIN64-NEXT:    movq %xmm0, %rax
+; WIN64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; WIN64-NEXT:    movq %xmm0, %rdx
+; WIN64-NEXT:    addq $72, %rsp
+; WIN64-NEXT:    retq
+  %ret = udiv i128 %x, 170141183460469231731687303715884105729 ; = 2^127 + 1
+  ret i128 %ret
+}
+
+; PR137514
+define i128 @urem_magic_is_add(i128 %x) nounwind {
+; X86-64-LABEL: urem_magic_is_add:
+; X86-64:       # %bb.0:
+; X86-64-NEXT:    pushq %rax
+; X86-64-NEXT:    movabsq $-9223372036854775808, %rcx # imm = 0x8000000000000000
+; X86-64-NEXT:    movl $1, %edx
+; X86-64-NEXT:    callq __umodti3@PLT
+; X86-64-NEXT:    popq %rcx
+; X86-64-NEXT:    retq
+;
+; WIN64-LABEL: urem_magic_is_add:
+; WIN64:       # %bb.0:
+; WIN64-NEXT:    subq $72, %rsp
+; WIN64-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    movabsq $-9223372036854775808, %rax # imm = 0x8000000000000000
+; WIN64-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    movq $1, {{[0-9]+}}(%rsp)
+; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; WIN64-NEXT:    callq __umodti3
+; WIN64-NEXT:    movq %xmm0, %rax
+; WIN64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; WIN64-NEXT:    movq %xmm0, %rdx
+; WIN64-NEXT:    addq $72, %rsp
+; WIN64-NEXT:    retq
+  %ret = urem i128 %x, 170141183460469231731687303715884105729 ; = 2^127 + 1
+  ret i128 %ret
+}
