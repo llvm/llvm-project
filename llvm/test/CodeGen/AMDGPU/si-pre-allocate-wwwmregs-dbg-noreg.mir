@@ -50,36 +50,9 @@
 name:            _amdgpu_cs_main
 tracksRegLiveness: true
 machineFunctionInfo:
-  explicitKernArgSize: 0
-  maxKernArgAlign: 4
-  ldsSize:         0
-  gdsSize:         0
-  dynLDSAlign:     1
   isEntryFunction: true
-  isChainFunction: false
-  noSignedZerosFPMath: false
-  memoryBound:     false
-  waveLimiter:     false
   hasSpilledSGPRs: true
-  hasSpilledVGPRs: false
-  scratchRSrcReg:  '$private_rsrc_reg'
-  frameOffsetReg:  '$fp_reg'
   stackPtrOffsetReg: '$sgpr32'
-  bytesInStackArgArea: 0
-  returnsVoid:     true
-  argumentInfo:
-    privateSegmentWaveByteOffset: { reg: '$sgpr6' }
-  psInputAddr:     0
-  psInputEnable:   0
-  maxMemoryClusterDWords: 8
-  mode:
-    ieee:            false
-    dx10-clamp:      true
-    fp32-input-denormals: false
-    fp32-output-denormals: false
-    fp64-fp16-input-denormals: true
-    fp64-fp16-output-denormals: true
-  highBitsOf32BitAddress: 0
   occupancy:       16
   vgprForAGPRCopy: ''
   sgprForEXECCopy: '$sgpr12_sgpr13'
