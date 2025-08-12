@@ -281,8 +281,7 @@ static void DetermineCopyInOutArgument(
   if (actual.isAlternateReturn()) {
     return;
   }
-  const auto *dummyObj{
-      std::get_if<characteristics::DummyDataObject>(&dummy.u)};
+  const auto *dummyObj{std::get_if<characteristics::DummyDataObject>(&dummy.u)};
   if (!dummyObj) {
     // Only DummyDataObject has the information we need
     return;
@@ -310,14 +309,14 @@ static void DetermineCopyInOutArgument(
       characteristics::TypeAndShape::Attr::AssumedSize)};
   bool dummyNeedsContiguity{dummyIsArray &&
       (dummyIsExplicitShape || dummyIsAssumedSize ||
-      dummyObj->attrs.test(characteristics::DummyDataObject::Attr::Contiguous))};
+          dummyObj->attrs.test(
+              characteristics::DummyDataObject::Attr::Contiguous))};
   if (!actualTreatAsContiguous && dummyNeedsContiguity) {
     actual.SetMayNeedCopyIn();
     if (!actualHasVectorSubscript) {
       actual.SetMayNeedCopyOut();
     }
   }
-
 
   // TODO
 }
