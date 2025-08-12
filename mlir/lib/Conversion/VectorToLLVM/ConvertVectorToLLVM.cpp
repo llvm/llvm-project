@@ -1890,68 +1890,21 @@ struct VectorFromElementsLowering
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = fromElementsOp.getLoc();
     VectorType vectorType = fromElementsOp.getType();
+    // Only support 1-D vectors. Multi-dimensional vectors should have been
+    // transformed to 1-D vectors by the vector-to-vector transformations before
+    // this.
+    if (vectorType.getRank() > 1)
+      return rewriter.notifyMatchFailure(fromElementsOp,
+                                         "rank > 1 vectors are not supported");
     Type llvmType = typeConverter->convertType(vectorType);
     Type llvmIndexType = typeConverter->convertType(rewriter.getIndexType());
-
-    Value result;
-    // 0D vectors are converted to length-1 1D vectors by LLVMTypeConverter.
-    if (vectorType.getRank() == 0) {
-      result = LLVM::PoisonOp::create(rewriter, loc, llvmType);
-      auto index0 = LLVM::ConstantOp::create(rewriter, loc, llvmIndexType, 0);
-      result = LLVM::InsertElementOp::create(
-          rewriter, loc, result, adaptor.getElements().front(), index0);
-      rewriter.replaceOp(fromElementsOp, result);
-      return success();
+    Value result = LLVM::PoisonOp::create(rewriter, loc, llvmType);
+    for (auto [idx, val] : llvm::enumerate(adaptor.getElements())) {
+      auto constIdx =
+          LLVM::ConstantOp::create(rewriter, loc, llvmIndexType, idx);
+      result = LLVM::InsertElementOp::create(rewriter, loc, llvmType, result,
+                                             val, constIdx);
     }
-
-    // Build 1D vectors for the innermost dimension.
-    int64_t innerDimSize = vectorType.getShape().back();
-    assert(vectorType.getNumElements() % innerDimSize == 0 &&
-           "innerDimSize must divide vectorType.getNumElements()");
-    int64_t numInnerVectors = vectorType.getNumElements() / innerDimSize;
-
-    SmallVector<Value> innerVectors;
-    innerVectors.reserve(numInnerVectors);
-
-    auto innerVectorType =
-        VectorType::get(innerDimSize, vectorType.getElementType());
-    Type llvmInnerType = typeConverter->convertType(innerVectorType);
-
-    Value innerVector;
-    for (auto [elemIdx, val] : llvm::enumerate(adaptor.getElements())) {
-      int64_t elementInVectorIdx = elemIdx % innerDimSize;
-      if (elementInVectorIdx == 0)
-        innerVector = LLVM::PoisonOp::create(rewriter, loc, llvmInnerType);
-      auto position = LLVM::ConstantOp::create(rewriter, loc, llvmIndexType,
-                                               elementInVectorIdx);
-      innerVector = LLVM::InsertElementOp::create(rewriter, loc, llvmInnerType,
-                                                  innerVector, val, position);
-      if (elementInVectorIdx == innerDimSize - 1)
-        innerVectors.push_back(innerVector);
-    }
-
-    // For 1D vectors, we can just return the first innermost vector.
-    if (vectorType.getRank() == 1) {
-      assert(innerVectors.size() == 1 &&
-             "for 1D vectors, innerVectors should have exactly one element");
-      rewriter.replaceOp(fromElementsOp, innerVectors.front());
-      return success();
-    }
-
-    // Now build the nested aggregate structure from these 1D vectors.
-    result = LLVM::PoisonOp::create(rewriter, loc, llvmType);
-
-    // Iterate over each position of the first n-1 dimensions and insert the 1D
-    // vectors into the aggregate.
-    int64_t vectorIdx = 0;
-    if (failed(LLVM::detail::nDVectorIterate(
-            vectorType, *getTypeConverter(), rewriter,
-            [&](ArrayRef<int64_t> position) {
-              result = LLVM::InsertValueOp::create(
-                  rewriter, loc, result, innerVectors[vectorIdx++], position);
-            })))
-      return failure();
-
     rewriter.replaceOp(fromElementsOp, result);
     return success();
   }

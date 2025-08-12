@@ -2286,30 +2286,6 @@ func.func @from_elements_0d(%arg0: f32) -> vector<f32> {
 
 // -----
 
-// CHECK-LABEL: func.func @from_elements_3d(
-//  CHECK-SAME:     %[[ARG_0:.*]]: f32, %[[ARG_1:.*]]: f32, %[[ARG_2:.*]]: f32, %[[ARG_3:.*]]: f32)
-//       CHECK:   %[[UNDEF_VEC0:.*]] = llvm.mlir.poison : vector<2xf32>
-//       CHECK:   %[[C0_0:.*]] = llvm.mlir.constant(0 : i64) : i64
-//       CHECK:   %[[VEC0_0:.*]] = llvm.insertelement %[[ARG_0]], %[[UNDEF_VEC0]][%[[C0_0]] : i64] : vector<2xf32>
-//       CHECK:   %[[C1_0:.*]] = llvm.mlir.constant(1 : i64) : i64
-//       CHECK:   %[[VEC0_1:.*]] = llvm.insertelement %[[ARG_1]], %[[VEC0_0]][%[[C1_0]] : i64] : vector<2xf32>
-//       CHECK:   %[[UNDEF_VEC1:.*]] = llvm.mlir.poison : vector<2xf32>
-//       CHECK:   %[[C0_1:.*]] = llvm.mlir.constant(0 : i64) : i64
-//       CHECK:   %[[VEC1_0:.*]] = llvm.insertelement %[[ARG_2]], %[[UNDEF_VEC1]][%[[C0_1]] : i64] : vector<2xf32>
-//       CHECK:   %[[C1_1:.*]] = llvm.mlir.constant(1 : i64) : i64
-//       CHECK:   %[[VEC1_1:.*]] = llvm.insertelement %[[ARG_3]], %[[VEC1_0]][%[[C1_1]] : i64] : vector<2xf32>
-//       CHECK:   %[[UNDEF_RES:.*]] = llvm.mlir.poison : !llvm.array<2 x array<1 x vector<2xf32>>>
-//       CHECK:   %[[RES_0:.*]] = llvm.insertvalue %[[VEC0_1]], %[[UNDEF_RES]][0, 0] : !llvm.array<2 x array<1 x vector<2xf32>>>
-//       CHECK:   %[[RES_1:.*]] = llvm.insertvalue %[[VEC1_1]], %[[RES_0]][1, 0] : !llvm.array<2 x array<1 x vector<2xf32>>>
-//       CHECK:   %[[CAST:.*]] = builtin.unrealized_conversion_cast %[[RES_1]] : !llvm.array<2 x array<1 x vector<2xf32>>> to vector<2x1x2xf32>
-//       CHECK:   return %[[CAST]]
-func.func @from_elements_3d(%arg0: f32, %arg1: f32, %arg2: f32, %arg3: f32) -> vector<2x1x2xf32> {
-  %0 = vector.from_elements %arg0, %arg1, %arg2, %arg3 : vector<2x1x2xf32>
-  return %0 : vector<2x1x2xf32>
-}
-
-// -----
-
 //===----------------------------------------------------------------------===//
 // vector.to_elements
 //===----------------------------------------------------------------------===//

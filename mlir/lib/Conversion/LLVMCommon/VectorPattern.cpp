@@ -77,16 +77,6 @@ void LLVM::detail::nDVectorIterate(const LLVM::detail::NDVectorTypeInfo &info,
   }
 }
 
-LogicalResult LLVM::detail::nDVectorIterate(
-    VectorType vectorType, const LLVMTypeConverter &converter,
-    OpBuilder &builder, function_ref<void(ArrayRef<int64_t>)> fun) {
-  auto vectorTypeInfo = extractNDVectorTypeInfo(vectorType, converter);
-  if (!vectorTypeInfo.llvmNDVectorTy)
-    return failure();
-  nDVectorIterate(vectorTypeInfo, builder, fun);
-  return success();
-}
-
 LogicalResult LLVM::detail::handleMultidimensionalVectors(
     Operation *op, ValueRange operands, const LLVMTypeConverter &typeConverter,
     std::function<Value(Type, ValueRange)> createOperand,

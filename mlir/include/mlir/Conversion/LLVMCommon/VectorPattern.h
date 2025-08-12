@@ -49,13 +49,6 @@ SmallVector<int64_t, 4> getCoordinates(ArrayRef<int64_t> basis,
 void nDVectorIterate(const NDVectorTypeInfo &info, OpBuilder &builder,
                      function_ref<void(ArrayRef<int64_t>)> fun);
 
-// Overload that accepts VectorType directly and extracts type info internally.
-// Returns failure if the vector type info extraction fails.
-LogicalResult nDVectorIterate(VectorType vectorType,
-                              const LLVMTypeConverter &converter,
-                              OpBuilder &builder,
-                              function_ref<void(ArrayRef<int64_t>)> fun);
-
 LogicalResult handleMultidimensionalVectors(
     Operation *op, ValueRange operands, const LLVMTypeConverter &typeConverter,
     std::function<Value(Type, ValueRange)> createOperand,
