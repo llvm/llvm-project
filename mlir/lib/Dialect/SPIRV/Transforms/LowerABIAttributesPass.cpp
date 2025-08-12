@@ -85,10 +85,36 @@ createGlobalVarForEntryPointArgument(OpBuilder &builder, spirv::FuncOp funcOp,
                                          abiInfo.getBinding());
 }
 
+/// Creates a global variable for an argument or result based on the ABI info.
+static spirv::GlobalVariableOp
+createGlobalVarForGraphEntryPoint(OpBuilder &builder, spirv::GraphARMOp graphOp,
+                                  unsigned index, bool isArg,
+                                  spirv::InterfaceVarABIAttr abiInfo) {
+  auto spirvModule = graphOp->getParentOfType<spirv::ModuleOp>();
+  if (!spirvModule)
+    return nullptr;
+
+  OpBuilder::InsertionGuard moduleInsertionGuard(builder);
+  builder.setInsertionPoint(graphOp.getOperation());
+  std::string varName = graphOp.getName().str() + (isArg ? "_arg_" : "_res_") +
+                        std::to_string(index);
+
+  auto varType = isArg ? graphOp.getFunctionType().getInput(index)
+                       : graphOp.getFunctionType().getResult(index);
+
+  auto pointerType = spirv::PointerType::get(
+      varType,
+      abiInfo.getStorageClass().value_or(spirv::StorageClass::UniformConstant));
+
+  return builder.create<spirv::GlobalVariableOp>(
+      graphOp.getLoc(), pointerType, varName, abiInfo.getDescriptorSet(),
+      abiInfo.getBinding());
+}
+
 /// Gets the global variables that need to be specified as interface variable
 /// with an spirv.EntryPointOp. Traverses the body of a entry function to do so.
 static LogicalResult
-getInterfaceVariables(spirv::FuncOp funcOp,
+getInterfaceVariables(mlir::FunctionOpInterface funcOp,
                       SmallVectorImpl<Attribute> &interfaceVars) {
   auto module = funcOp->getParentOfType<spirv::ModuleOp>();
   if (!module) {
@@ -224,6 +250,21 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
+/// A pattern to convert graph signature according to interface variable ABI
+/// attributes.
+///
+/// Specifically, this pattern creates global variables according to interface
+/// variable ABI attributes attached to graph arguments and results.
+class ProcessGraphInterfaceVarABI final
+    : public OpConversionPattern<spirv::GraphARMOp> {
+public:
+  using OpConversionPattern<spirv::GraphARMOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(spirv::GraphARMOp graphOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
 /// Pass to implement the ABI information specified as attributes.
 class LowerABIAttributesPass final
     : public spirv::impl::SPIRVLowerABIAttributesPassBase<
@@ -297,6 +338,89 @@ LogicalResult ProcessInterfaceVarABI::matchAndRewrite(
   return success();
 }
 
+namespace {
+
+/// Lowers the graph entry point
+LogicalResult lowerGraphEntryPoint(OpBuilder &builder,
+                                   spirv::GraphARMOp graphOp,
+                                   ArrayRef<Attribute> interfaceVars) {
+  if (!graphOp.getEntryPoint().value_or(false)) {
+    return failure();
+  }
+
+  OpBuilder::InsertionGuard insertionGuard(builder);
+  builder.setInsertionPoint(graphOp);
+  builder.create<spirv::GraphEntryPointARMOp>(graphOp.getLoc(), graphOp,
+                                              interfaceVars);
+  return success();
+}
+} // namespace
+
+LogicalResult ProcessGraphInterfaceVarABI::matchAndRewrite(
+    spirv::GraphARMOp graphOp, OpAdaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
+  if (!graphOp.getEntryPoint().value_or(false)) {
+    // Non-entry point graphs are not handled.
+    return failure();
+  }
+  TypeConverter::SignatureConversion signatureConverter(
+      graphOp.getFunctionType().getNumInputs());
+
+  auto attrName = spirv::getInterfaceVarABIAttrName();
+
+  SmallVector<Attribute, 2> interfaceVars;
+
+  // Convert arguments
+  for (const auto &argType :
+       llvm::enumerate(graphOp.getFunctionType().getInputs())) {
+    auto abiInfo = graphOp.getArgAttrOfType<spirv::InterfaceVarABIAttr>(
+        argType.index(), attrName);
+    if (!abiInfo) {
+      // Non-entry point graphs are not handled in this ABI lowering and will
+      // produce an error.
+      return failure();
+    }
+    spirv::GlobalVariableOp var = createGlobalVarForGraphEntryPoint(
+        rewriter, graphOp, argType.index(), true, abiInfo);
+    if (!var)
+      return failure();
+    interfaceVars.push_back(
+        SymbolRefAttr::get(rewriter.getContext(), var.getSymName()));
+  }
+
+  for (const auto &resType :
+       llvm::enumerate(graphOp.getFunctionType().getResults())) {
+    auto abiInfo = graphOp.getResultAttrOfType<spirv::InterfaceVarABIAttr>(
+        resType.index(), attrName);
+    if (!abiInfo) {
+      // Non-entry point graphs are not handled in this ABI lowering and will
+      // produce an error.
+      return failure();
+    }
+    spirv::GlobalVariableOp var = createGlobalVarForGraphEntryPoint(
+        rewriter, graphOp, resType.index(), false, abiInfo);
+    if (!var)
+      return failure();
+    interfaceVars.push_back(
+        SymbolRefAttr::get(rewriter.getContext(), var.getSymName()));
+  }
+
+  // Creates a new function with the update signature.
+  rewriter.modifyOpInPlace(graphOp, [&] {
+    for (const auto &argType :
+         llvm::enumerate(graphOp.getFunctionType().getInputs())) {
+      graphOp.removeArgAttr(argType.index(), attrName);
+    }
+    for (const auto &resType :
+         llvm::enumerate(graphOp.getFunctionType().getResults())) {
+      graphOp.removeResultAttr(resType.index(),
+                               rewriter.getStringAttr(attrName));
+    }
+  });
+
+  return lowerGraphEntryPoint(rewriter, graphOp, interfaceVars);
+}
+
 void LowerABIAttributesPass::runOnOperation() {
   // Uses the signature conversion methodology of the dialect conversion
   // framework to implement the conversion.
@@ -323,6 +447,7 @@ void LowerABIAttributesPass::runOnOperation() {
 
   RewritePatternSet patterns(context);
   patterns.add<ProcessInterfaceVarABI>(typeConverter, context);
+  patterns.add<ProcessGraphInterfaceVarABI>(typeConverter, context);
 
   ConversionTarget target(*context);
   // "Legal" function ops should have no interface variable ABI attributes.
@@ -333,6 +458,17 @@ void LowerABIAttributesPass::runOnOperation() {
         return false;
     return true;
   });
+  target.addDynamicallyLegalOp<spirv::GraphARMOp>([&](spirv::GraphARMOp op) {
+    StringRef attrName = spirv::getInterfaceVarABIAttrName();
+    for (unsigned i = 0, e = op.getNumArguments(); i < e; ++i)
+      if (op.getArgAttr(i, attrName))
+        return false;
+    for (unsigned i = 0, e = op.getNumResults(); i < e; ++i)
+      if (op.getResultAttr(i, attrName))
+        return false;
+    return true;
+  });
+
   // All other SPIR-V ops are legal.
   target.markUnknownOpDynamicallyLegal([](Operation *op) {
     return op->getDialect()->getNamespace() ==
