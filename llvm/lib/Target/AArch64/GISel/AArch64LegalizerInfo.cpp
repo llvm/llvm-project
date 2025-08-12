@@ -1647,6 +1647,11 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   MachineIRBuilder &MIB = Helper.MIRBuilder;
   MachineRegisterInfo &MRI = *MIB.getMRI();
 
+  auto LowerUnaryOp = [&MI, &MIB](unsigned Opcode) {
+    MIB.buildInstr(Opcode, {MI.getOperand(0)}, {MI.getOperand(2)});
+    MI.eraseFromParent();
+    return true;
+  };
   auto LowerBinOp = [&MI, &MIB](unsigned Opcode) {
     MIB.buildInstr(Opcode, {MI.getOperand(0)},
                    {MI.getOperand(2), MI.getOperand(3)});
@@ -1842,13 +1847,13 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::aarch64_neon_sdot:
     return LowerTriOp(AArch64::G_SDOT);
   case Intrinsic::aarch64_neon_sqxtn: {
-    return LowerBinOp(TargetOpcode::G_TRUNC_SSAT_S);
+    return LowerUnaryOp(TargetOpcode::G_TRUNC_SSAT_S);
   }
   case Intrinsic::aarch64_neon_sqxtun: {
-    return LowerBinOp(TargetOpcode::G_TRUNC_SSAT_U);
+    return LowerUnaryOp(TargetOpcode::G_TRUNC_SSAT_U);
   }
   case Intrinsic::aarch64_neon_uqxtn: {
-    return LowerBinOp(TargetOpcode::G_TRUNC_USAT_U);
+    return LowerUnaryOp(TargetOpcode::G_TRUNC_USAT_U);
   }
 
   case Intrinsic::vector_reverse:
