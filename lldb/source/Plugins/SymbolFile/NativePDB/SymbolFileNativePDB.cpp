@@ -2557,10 +2557,6 @@ SymbolFileNativePDB::GetContextForType(TypeIndex ti) {
 }
 
 void SymbolFileNativePDB::CacheUdtDeclarations() {
-  if (m_has_cached_udt_declatations)
-    return;
-  m_has_cached_udt_declatations = true;
-
   for (CVType cvt : m_index->ipi().typeArray()) {
     if (cvt.kind() != LF_UDT_MOD_SRC_LINE)
       continue;
@@ -2576,8 +2572,8 @@ void SymbolFileNativePDB::CacheUdtDeclarations() {
   }
 }
 
-Declaration SymbolFileNativePDB::ResolveUdtDeclaration(PdbTypeSymId type_id) {
-  CacheUdtDeclarations();
+  std::call_once(m_cached_udt_declatations, [this] { CacheUdtDeclarations(); });
+
   auto it = m_udt_declarations.find(type_id.index);
   if (it == m_udt_declarations.end())
     return Declaration();

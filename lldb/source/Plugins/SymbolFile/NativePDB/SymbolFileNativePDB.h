@@ -291,7 +291,7 @@ private:
   /// The filename index is an index into the `/names` section (string table)
   llvm::DenseMap<llvm::codeview::TypeIndex, std::pair<uint32_t, uint32_t>>
       m_udt_declarations;
-  bool m_has_cached_udt_declatations = false;
+  std::once_flag m_cached_udt_declatations;
 
   lldb_private::UniqueCStringMap<uint32_t> m_type_base_names;
 
