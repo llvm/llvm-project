@@ -200,6 +200,8 @@ struct MissingFeatures {
   static bool deferredCXXGlobalInit() { return false; }
   static bool ehCleanupFlags() { return false; }
   static bool ehCleanupScope() { return false; }
+  static bool ehCleanupScopeRequiresEHCleanup() { return false; }
+  static bool ehCleanupBranchFixups() { return false; }
   static bool ehstackBranches() { return false; }
   static bool emitCheckedInBoundsGEP() { return false; }
   static bool emitCondLikelihoodViaExpectIntrinsic() { return false; }
@@ -213,6 +215,7 @@ struct MissingFeatures {
   static bool hip() { return false; }
   static bool implicitConstructorArgs() { return false; }
   static bool incrementProfileCounter() { return false; }
+  static bool innermostEHScope() { return false; }
   static bool insertBuiltinUnpredictable() { return false; }
   static bool instrumentation() { return false; }
   static bool intrinsics() { return false; }
