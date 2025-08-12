@@ -829,6 +829,18 @@ public:
   /// ----------------------
   /// CIR emit functions
   /// ----------------------
+public:
+  mlir::Value emitAlignmentAssumption(mlir::Value ptrValue, QualType ty,
+                                      SourceLocation loc,
+                                      SourceLocation assumptionLoc,
+                                      int64_t alignment,
+                                      mlir::Value offsetValue = nullptr);
+
+  mlir::Value emitAlignmentAssumption(mlir::Value ptrValue, const Expr *expr,
+                                      SourceLocation assumptionLoc,
+                                      int64_t alignment,
+                                      mlir::Value offsetValue = nullptr);
+
 private:
   void emitAndUpdateRetAlloca(clang::QualType type, mlir::Location loc,
                               clang::CharUnits alignment);
@@ -1011,7 +1023,7 @@ public:
   RValue emitCXXMemberOrOperatorMemberCallExpr(
       const clang::CallExpr *ce, const clang::CXXMethodDecl *md,
       ReturnValueSlot returnValue, bool hasQualifier,
-      clang::NestedNameSpecifier *qualifier, bool isArrow,
+      clang::NestedNameSpecifier qualifier, bool isArrow,
       const clang::Expr *base);
 
   mlir::Value emitCXXNewExpr(const CXXNewExpr *e);
@@ -1088,6 +1100,8 @@ public:
 
   LValue emitComplexAssignmentLValue(const BinaryOperator *e);
   LValue emitComplexCompoundAssignmentLValue(const CompoundAssignOperator *e);
+  LValue emitScalarCompoundAssignWithComplex(const CompoundAssignOperator *e,
+                                             mlir::Value &result);
 
   void emitCompoundStmt(const clang::CompoundStmt &s);
 
