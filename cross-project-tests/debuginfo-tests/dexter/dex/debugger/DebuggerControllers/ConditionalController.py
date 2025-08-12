@@ -197,7 +197,7 @@ class ConditionalController(DebuggerControllerBase):
                 self._bp_ranges.append(bpr)
         if "DexStepFunction" in commands:
             for c in commands["DexStepFunction"]:
-                bpr = BreakpointRange.step_function(c.expression, c.path, c.hit_count)
+                bpr = BreakpointRange.step_function(c.get_function(), c.path, c.hit_count)
                 self._bp_ranges.append(bpr)
 
     def _set_leading_bps(self):
