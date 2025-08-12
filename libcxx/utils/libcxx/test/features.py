@@ -135,14 +135,13 @@ DEFAULT_FEATURES = [
     Feature(name=lambda cfg: "msvc-{}.{}".format(*_msvcVersion(cfg)), when=_isMSVC),
 
     Feature(
-        name="thread-safety",
-        when=lambda cfg: hasCompileFlag(cfg, "-Werror=thread-safety"),
-        actions=[AddCompileFlag("-Werror=thread-safety")],
-    ),
-    Feature(
         name="diagnose-if-support",
         when=lambda cfg: hasCompileFlag(cfg, "-Wuser-defined-warnings"),
         actions=[AddCompileFlag("-Wuser-defined-warnings")],
+    ),
+    Feature(
+        name="character-conversion-warnings",
+        when=lambda cfg: hasCompileFlag(cfg, "-Wcharacter-conversion"),
     ),
     # Tests to validate whether the compiler has a way to set the maximum number
     # of steps during constant evaluation. Since the flag differs per compiler
@@ -159,14 +158,6 @@ DEFAULT_FEATURES = [
         when=lambda cfg: hasCompileFlag(cfg, "-fconstexpr-ops-limit=1"),
     ),
     Feature(name="has-fblocks", when=lambda cfg: hasCompileFlag(cfg, "-fblocks")),
-    Feature(
-        name="-fsized-deallocation",
-        when=lambda cfg: hasCompileFlag(cfg, "-fsized-deallocation"),
-    ),
-    Feature(
-        name="-faligned-allocation",
-        when=lambda cfg: hasCompileFlag(cfg, "-faligned-allocation"),
-    ),
     Feature(
         name="fdelayed-template-parsing",
         when=lambda cfg: hasCompileFlag(cfg, "-fdelayed-template-parsing"),
@@ -231,7 +222,8 @@ DEFAULT_FEATURES = [
     # https://developercommunity.visualstudio.com/t/utf-8-locales-break-ctype-functions-for-wchar-type/1653678
     Feature(
         name="win32-broken-utf8-wchar-ctype",
-        when=lambda cfg: not "_LIBCPP_HAS_NO_LOCALIZATION" in compilerMacros(cfg)
+        when=lambda cfg: not "_LIBCPP_HAS_LOCALIZATION" in compilerMacros(cfg)
+        or compilerMacros(cfg)["_LIBCPP_HAS_LOCALIZATION"] == "1"
         and "_WIN32" in compilerMacros(cfg)
         and not programSucceeds(
             cfg,
@@ -287,7 +279,8 @@ DEFAULT_FEATURES = [
     # mon_decimal_point == ".", which our tests don't handle.
     Feature(
         name="glibc-old-ru_RU-decimal-point",
-        when=lambda cfg: not "_LIBCPP_HAS_NO_LOCALIZATION" in compilerMacros(cfg)
+        when=lambda cfg: not "_LIBCPP_HAS_LOCALIZATION" in compilerMacros(cfg)
+        or compilerMacros(cfg)["_LIBCPP_HAS_LOCALIZATION"] == "1"
         and not programSucceeds(
             cfg,
             """
@@ -338,12 +331,22 @@ DEFAULT_FEATURES = [
         or platform.system().lower().startswith("aix")
         # Avoid building on platforms that don't support modules properly.
         or not hasCompileFlag(cfg, "-Wno-reserved-module-identifier")
-        or not sourceBuilds(
-            cfg,
-            """
+        # older versions don't support extern "C++", newer versions don't support main in named module.
+        or not (
+            sourceBuilds(
+                cfg,
+                """
+            export module test;
+            extern "C++" int main(int, char**) { return 0; }
+          """,
+            )
+            or sourceBuilds(
+                cfg,
+                """
             export module test;
             int main(int, char**) { return 0; }
           """,
+            )
         ),
     ),
     # The time zone validation tests compare the output of zdump against the
@@ -365,27 +368,16 @@ DEFAULT_FEATURES = [
 # Note that features that are more strongly tied to libc++ are named libcpp-foo,
 # while features that are more general in nature are not prefixed with 'libcpp-'.
 macros = {
-    "_LIBCPP_HAS_NO_MONOTONIC_CLOCK": "no-monotonic-clock",
-    "_LIBCPP_HAS_NO_THREADS": "no-threads",
-    "_LIBCPP_HAS_THREAD_API_EXTERNAL": "libcpp-has-thread-api-external",
-    "_LIBCPP_HAS_THREAD_API_PTHREAD": "libcpp-has-thread-api-pthread",
     "_LIBCPP_NO_VCRUNTIME": "libcpp-no-vcruntime",
     "_LIBCPP_ABI_VERSION": "libcpp-abi-version",
     "_LIBCPP_ABI_BOUNDED_ITERATORS": "libcpp-has-abi-bounded-iterators",
     "_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING": "libcpp-has-abi-bounded-iterators-in-string",
     "_LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR": "libcpp-has-abi-bounded-iterators-in-vector",
+    "_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STD_ARRAY": "libcpp-has-abi-bounded-iterators-in-std-array",
     "_LIBCPP_ABI_BOUNDED_UNIQUE_PTR": "libcpp-has-abi-bounded-unique_ptr",
     "_LIBCPP_ABI_FIX_UNORDERED_CONTAINER_SIZE_TYPE": "libcpp-has-abi-fix-unordered-container-size-type",
     "_LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR": "libcpp-deprecated-abi-disable-pair-trivial-copy-ctor",
     "_LIBCPP_ABI_NO_COMPRESSED_PAIR_PADDING": "libcpp-abi-no-compressed-pair-padding",
-    "_LIBCPP_HAS_NO_FILESYSTEM": "no-filesystem",
-    "_LIBCPP_HAS_NO_RANDOM_DEVICE": "no-random-device",
-    "_LIBCPP_HAS_NO_LOCALIZATION": "no-localization",
-    "_LIBCPP_HAS_NO_TERMINAL": "no-terminal",
-    "_LIBCPP_HAS_NO_WIDE_CHARACTERS": "no-wide-characters",
-    "_LIBCPP_HAS_NO_TIME_ZONE_DATABASE": "no-tzdb",
-    "_LIBCPP_HAS_NO_UNICODE": "libcpp-has-no-unicode",
-    "_LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS": "libcpp-has-no-availability-markup",
     "_LIBCPP_PSTL_BACKEND_LIBDISPATCH": "libcpp-pstl-backend-libdispatch",
 }
 for macro, feature in macros.items():
@@ -396,6 +388,39 @@ for macro, feature in macros.items():
         )
     )
 
+true_false_macros = {
+    "_LIBCPP_HAS_THREAD_API_EXTERNAL": "libcpp-has-thread-api-external",
+    "_LIBCPP_HAS_THREAD_API_PTHREAD": "libcpp-has-thread-api-pthread",
+}
+for macro, feature in true_false_macros.items():
+    DEFAULT_FEATURES.append(
+        Feature(
+            name=feature,
+            when=lambda cfg, m=macro: m in compilerMacros(cfg)
+            and compilerMacros(cfg)[m] == "1",
+        )
+    )
+
+inverted_macros = {
+    "_LIBCPP_HAS_TIME_ZONE_DATABASE": "no-tzdb",
+    "_LIBCPP_HAS_FILESYSTEM": "no-filesystem",
+    "_LIBCPP_HAS_LOCALIZATION": "no-localization",
+    "_LIBCPP_HAS_THREADS": "no-threads",
+    "_LIBCPP_HAS_MONOTONIC_CLOCK": "no-monotonic-clock",
+    "_LIBCPP_HAS_WIDE_CHARACTERS": "no-wide-characters",
+    "_LIBCPP_HAS_VENDOR_AVAILABILITY_ANNOTATIONS": "libcpp-has-no-availability-markup",
+    "_LIBCPP_HAS_RANDOM_DEVICE": "no-random-device",
+    "_LIBCPP_HAS_UNICODE": "libcpp-has-no-unicode",
+    "_LIBCPP_HAS_TERMINAL": "no-terminal",
+}
+for macro, feature in inverted_macros.items():
+    DEFAULT_FEATURES.append(
+        Feature(
+            name=feature,
+            when=lambda cfg, m=macro: m in compilerMacros(cfg)
+            and compilerMacros(cfg)[m] == "0",
+        )
+    )
 
 # Mapping from canonical locale names (used in the tests) to possible locale
 # names on various systems. Each locale is considered supported if any of the
@@ -409,6 +434,10 @@ locales = {
     "fr_CA.ISO8859-1": ["fr_CA.ISO8859-1", "French_Canada.1252"],
     "cs_CZ.ISO8859-2": ["cs_CZ.ISO8859-2", "Czech_Czech Republic.1250"],
 }
+provide_locale_conversions = {
+    "fr_FR.UTF-8": ["decimal_point", "mon_thousands_sep", "thousands_sep"],
+    "ru_RU.UTF-8": ["mon_thousands_sep"],
+}
 for locale, alts in locales.items():
     # Note: Using alts directly in the lambda body here will bind it to the value at the
     # end of the loop. Assigning it to a default argument works around this issue.
@@ -416,8 +445,94 @@ for locale, alts in locales.items():
         Feature(
             name="locale.{}".format(locale),
             when=lambda cfg, alts=alts: hasAnyLocale(cfg, alts),
-        )
+            actions=lambda cfg, locale=locale, alts=alts: _getLocaleFlagsAction(
+                cfg, locale, alts, provide_locale_conversions[locale]
+            )
+            if locale in provide_locale_conversions
+            and ("_LIBCPP_HAS_WIDE_CHARACTERS" not in compilerMacros(cfg) or
+                 compilerMacros(cfg)["_LIBCPP_HAS_WIDE_CHARACTERS"] == "1")
+            else [],
+        ),
     )
+
+
+# Provide environment locale conversions through substitutions to avoid platform specific
+# maintenance.
+def _getLocaleFlagsAction(cfg, locale, alts, members):
+    alts_list = ",".join([f'"{l}"' for l in alts])
+    get_member_list = ",".join([f"lc->{m}" for m in members])
+
+    localeconv_info = programOutput(
+        cfg,
+        r"""
+        #if defined(_WIN32) && !defined(_CRT_SECURE_NO_WARNINGS)
+        #define _CRT_SECURE_NO_WARNINGS
+        #endif
+        #include <stdio.h>
+        #include <locale.h>
+        #include <stdlib.h>
+        #include <wchar.h>
+
+        // Print each requested locale conversion member on separate lines.
+        int main() {
+          const char* locales[] = { %s };
+          for (int loc_i = 0; loc_i < %d; ++loc_i) {
+            if (!setlocale(LC_ALL, locales[loc_i])) {
+              continue; // Choose first locale name that is recognized.
+            }
+
+            lconv* lc = localeconv();
+            const char* members[] = { %s };
+            for (size_t m_i = 0; m_i < %d; ++m_i) {
+              if (!members[m_i]) {
+                printf("\n"); // member value is an empty string
+                continue;
+              }
+
+              size_t len = mbstowcs(nullptr, members[m_i], 0);
+              if (len == static_cast<size_t>(-1)) {
+                fprintf(stderr, "mbstowcs failed unexpectedly\n");
+                return 1;
+              }
+              // Include room for null terminator. Use malloc as these features
+              // are also used by lit configs that don't use -lc++ (libunwind tests).
+              wchar_t* dst = (wchar_t*)malloc((len + 1) * sizeof(wchar_t));
+              size_t ret = mbstowcs(dst, members[m_i], len + 1);
+              if (ret == static_cast<size_t>(-1)) {
+                fprintf(stderr, "mbstowcs failed unexpectedly\n");
+                free(dst);
+                return 1;
+              }
+
+              for (size_t i = 0; i < len; ++i) {
+                if (dst[i] > 0x7F) {
+                  printf("\\u%%04x", dst[i]);
+                } else {
+                  // c++03 does not allow basic ascii-range characters in UCNs
+                  printf("%%c", (char)dst[i]);
+                }
+              }
+              printf("\n");
+              free(dst);
+            }
+            return 0;
+          }
+
+          return 1;
+        }
+        """
+        % (alts_list, len(alts), get_member_list, len(members)),
+    )
+    valid_define_name = re.sub(r"[.-]", "_", locale).upper()
+    return [
+        # Provide locale conversion through a substitution.
+        # Example: %{LOCALE_CONV_FR_FR_UTF_8_THOUSANDS_SEP} = L"\u202f"
+        AddSubstitution(
+            f"%{{LOCALE_CONV_{valid_define_name}_{member.upper()}}}",
+            lambda cfg, value=value: f"'L\"{value}\"'",
+        )
+        for member, value in zip(members, localeconv_info.split("\n"))
+    ]
 
 
 # Add features representing the target platform name: darwin, linux, windows, etc...
@@ -495,6 +610,14 @@ DEFAULT_FEATURES += [
             int main(int, char**) { return 0; }
           """,
         ),
+    ),
+    Feature(
+        name="LIBCXX-AMDGPU-FIXME",
+        when=lambda cfg: "__AMDGPU__" in compilerMacros(cfg),
+    ),
+    Feature(
+        name="LIBCXX-NVPTX-FIXME",
+        when=lambda cfg: "__NVPTX__" in compilerMacros(cfg),
     ),
     Feature(
         name="can-create-symlinks",

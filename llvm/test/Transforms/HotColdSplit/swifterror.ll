@@ -9,8 +9,8 @@ declare void @sink() cold
 
 ; CHECK-LABEL: define {{.*}}@in_arg(
 ; CHECK: call void @in_arg.cold.1(ptr swifterror
-define void @in_arg(ptr swifterror %error_ptr_ref) {
-  br i1 undef, label %cold, label %exit
+define void @in_arg(ptr swifterror %error_ptr_ref, i1 %arg) {
+  br i1 %arg, label %cold, label %exit
 
 cold:
   store ptr undef, ptr %error_ptr_ref
@@ -23,9 +23,9 @@ exit:
 
 ; CHECK-LABEL: define {{.*}}@in_alloca(
 ; CHECK: call void @in_alloca.cold.1(ptr swifterror
-define void @in_alloca() {
+define void @in_alloca(i1 %arg) {
   %err = alloca swifterror ptr
-  br i1 undef, label %cold, label %exit
+  br i1 %arg, label %cold, label %exit
 
 cold:
   store ptr undef, ptr %err

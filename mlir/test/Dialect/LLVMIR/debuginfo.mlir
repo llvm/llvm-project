@@ -80,9 +80,17 @@
   flags = "TypePassByReference|NonTrivial"
 >
 
-// CHECK-DAG: #[[SPTYPE0:.*]] = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #[[NULL]], #[[INT0]], #[[PTR0]], #[[PTR1]], #[[PTR2]], #[[COMP0:.*]], #[[COMP1:.*]], #[[COMP2:.*]]>
+// CHECK-DAG: #[[COMP3:.+]] = #llvm.di_composite_type<{{.*}}, name = "expr_elements2"{{.*}}elements = #llvm.di_generic_subrange<count = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(16), DW_OP_deref]>, lowerBound = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(24), DW_OP_deref]>, stride = #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(32), DW_OP_deref]>>>
+#exp1 =  #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(16), DW_OP_deref]>
+#exp2 =  #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(24), DW_OP_deref]>
+#exp3 =  #llvm.di_expression<[DW_OP_push_object_address, DW_OP_plus_uconst(32), DW_OP_deref]>
+#comp3 = #llvm.di_composite_type<tag = DW_TAG_array_type,
+ name = "expr_elements2", baseType = #int0, elements =
+ #llvm.di_generic_subrange<count = #exp1, lowerBound = #exp2, stride = #exp3>>
+
+// CHECK-DAG: #[[SPTYPE0:.*]] = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #[[NULL]], #[[INT0]], #[[PTR0]], #[[PTR1]], #[[PTR2]], #[[COMP0:.*]], #[[COMP1:.*]], #[[COMP2:.*]], #[[COMP3:.*]]>
 #spType0 = #llvm.di_subroutine_type<
-  callingConvention = DW_CC_normal, types = #null, #int0, #ptr0, #ptr1, #ptr2, #comp0, #comp1, #comp2
+  callingConvention = DW_CC_normal, types = #null, #int0, #ptr0, #ptr1, #ptr2, #comp0, #comp1, #comp2, #comp3
 >
 
 // CHECK-DAG: #[[SPTYPE1:.*]] = #llvm.di_subroutine_type<types = #[[INT1]], #[[INT1]]>
@@ -123,6 +131,12 @@
   annotations = #llvm.di_annotation<name = "foo", value = "bar">
 >
 
+// CHECK-DAG: #[[SP3:.*]] = #llvm.di_subprogram<scope = #[[PTR2]], file = #[[FILE]], type = #[[SPTYPE1]]>
+#sp3 = #llvm.di_subprogram<
+  // Omit the optional parameters.
+  scope = #ptr2, file = #file, type = #spType1
+>
+
 // CHECK-DAG: #[[BLOCK0:.*]] = #llvm.di_lexical_block<scope = #[[SP0]], line = 1, column = 2>
 #block0 = #llvm.di_lexical_block<scope = #sp0, line = 1, column = 2>
 
@@ -131,6 +145,9 @@
 
 // CHECK-DAG: #[[BLOCK2:.*]] = #llvm.di_lexical_block<scope = #[[SP2]]>
 #block2 = #llvm.di_lexical_block<scope = #sp2>
+
+// CHECK-DAG: #[[BLOCK3:.*]] = #llvm.di_lexical_block<scope = #[[SP3]]>
+#block3 = #llvm.di_lexical_block<scope = #sp3>
 
 // CHECK-DAG: #[[VAR0:.*]] = #llvm.di_local_variable<scope = #[[BLOCK0]], name = "alloc", file = #[[FILE]], line = 6, arg = 1, alignInBits = 32, type = #[[INT0]]>
 #var0 = #llvm.di_local_variable<
@@ -148,6 +165,12 @@
 #var2 = #llvm.di_local_variable<
   // Omit the optional parameters.
   scope = #block2, name = "arg2"
+>
+
+// CHECK-DAG: #[[VAR3:.*]] = #llvm.di_local_variable<scope = #[[BLOCK3]], name = "arg3">
+#var3 = #llvm.di_local_variable<
+  // Omit the optional parameters.
+  scope = #block3, name = "arg3"
 >
 
 // CHECK-DAG: #[[LABEL1:.*]] =  #llvm.di_label<scope = #[[BLOCK1]], name = "label", file = #[[FILE]], line = 42>
@@ -186,12 +209,14 @@ llvm.func @addr(%arg: i64) {
   llvm.return
 }
 
-// CHECK: llvm.func @value(%[[ARG1:.*]]: i32, %[[ARG2:.*]]: i32)
-llvm.func @value(%arg1: i32, %arg2: i32) {
+// CHECK: llvm.func @value(%[[ARG1:.*]]: i32, %[[ARG2:.*]]: i32, %[[ARG3:.*]]: i32)
+llvm.func @value(%arg1: i32, %arg2: i32, %arg3 : i32) {
   // CHECK: llvm.intr.dbg.value #[[VAR1]] #llvm.di_expression<[DW_OP_LLVM_fragment(16, 8), DW_OP_plus_uconst(2), DW_OP_deref]> = %[[ARG1]]
   llvm.intr.dbg.value #var1 #llvm.di_expression<[DW_OP_LLVM_fragment(16, 8), DW_OP_plus_uconst(2), DW_OP_deref]> = %arg1 : i32
   // CHECK: llvm.intr.dbg.value #[[VAR2]] = %[[ARG2]]
   llvm.intr.dbg.value #var2 = %arg2 : i32
+  // CHECK: llvm.intr.dbg.value #[[VAR3]] = %[[ARG3]]
+  llvm.intr.dbg.value #var3 = %arg3 : i32
   // CHECK: llvm.intr.dbg.label #[[LABEL1]]
   llvm.intr.dbg.label #label1
   // CHECK: llvm.intr.dbg.label #[[LABEL2]]

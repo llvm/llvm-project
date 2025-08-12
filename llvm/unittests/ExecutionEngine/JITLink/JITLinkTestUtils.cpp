@@ -92,9 +92,10 @@ void defaultCtxSetup(MockJITLinkContext &) {}
 TEST(JITLinkMocks, SmokeTest) {
   // Check that the testing infrastructure defaults can "link" a graph
   // successfully.
-  auto G = std::make_unique<LinkGraph>("foo", Triple("x86_64-apple-darwin"), 8,
-                                       llvm::endianness::little,
-                                       getGenericEdgeKindName);
+  auto G = std::make_unique<LinkGraph>(
+      "foo", std::make_shared<orc::SymbolStringPool>(),
+      Triple("x86_64-apple-darwin"), SubtargetFeatures(),
+      getGenericEdgeKindName);
 
   ArrayRef<char> Content = "hello, world!";
   auto &Sec =

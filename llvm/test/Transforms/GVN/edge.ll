@@ -224,6 +224,34 @@ return:
   ret double %retval
 }
 
+; Denormals may be flushed to zero in some cases by the backend.
+; Hence, treat denormals as 0.
+define float @fcmp_oeq_denormal(float %x, float %y) {
+; CHECK-LABEL: define float @fcmp_oeq_denormal(
+; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[Y]], 0x3800000000000000
+; CHECK-NEXT:    br i1 [[CMP]], label %[[IF:.*]], label %[[RETURN:.*]]
+; CHECK:       [[IF]]:
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv float [[X]], [[Y]]
+; CHECK-NEXT:    br label %[[RETURN]]
+; CHECK:       [[RETURN]]:
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi float [ [[DIV]], %[[IF]] ], [ [[X]], %[[ENTRY]] ]
+; CHECK-NEXT:    ret float [[RETVAL]]
+;
+entry:
+  %cmp = fcmp oeq float %y, 0x3800000000000000
+  br i1 %cmp, label %if, label %return
+
+if:
+  %div = fdiv float %x, %y
+  br label %return
+
+return:
+  %retval = phi float [ %div, %if ], [ %x, %entry ]
+  ret float %retval
+}
+
 define double @fcmp_une_zero(double %x, double %y) {
 ; CHECK-LABEL: define double @fcmp_une_zero(
 ; CHECK-SAME: double [[X:%.*]], double [[Y:%.*]]) {
@@ -251,7 +279,7 @@ return:
 }
 
 ; We also cannot propagate a value if it's not a constant.
-; This is because the value could be 0.0 or -0.0.
+; This is because the value could be 0.0, -0.0, or a denormal.
 
 define double @fcmp_oeq_maybe_zero(double %x, double %y, double %z1, double %z2) {
 ; CHECK-LABEL: define double @fcmp_oeq_maybe_zero(

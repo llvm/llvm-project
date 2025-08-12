@@ -42,6 +42,10 @@ static const unsigned ZOSAddressMap[] = {
     1, // ptr32_uptr
     0, // ptr64
     0, // hlsl_groupshared
+    0, // hlsl_constant
+    0, // hlsl_private
+    0, // hlsl_device
+    0, // hlsl_input
     0  // wasm_funcref
 };
 
@@ -86,20 +90,33 @@ public:
       resetDataLayout("E-m:l-p1:32:32-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-"
                       "a:8:16-n32:64");
     } else {
+      // Support _Float16.
+      HasFloat16 = true;
       TLSSupported = true;
       resetDataLayout("E-m:e-i1:8:16-i8:8:16-i64:64-f128:64"
                       "-v128:64-a:8:16-n32:64");
     }
     MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 128;
+
+    // True if the backend supports operations on the half LLVM IR type.
+    // By setting this to false, conversions will happen for _Float16 around
+    // a statement by default, with operations done in float. However, if
+    // -ffloat16-excess-precision=none is given, no conversions will be made
+    // and instead the backend will promote each half operation to float
+    // individually.
+    HasLegalHalfType = false;
+
     HasStrictFP = true;
   }
 
   unsigned getMinGlobalAlign(uint64_t Size, bool HasNonWeakDef) const override;
 
+  bool useFP16ConversionIntrinsics() const override { return false; }
+
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   ArrayRef<const char *> getGCCRegNames() const override;
 
@@ -186,6 +203,10 @@ public:
       Features["vector-enhancements-2"] = true;
     if (ISARevision >= 14)
       Features["nnp-assist"] = true;
+    if (ISARevision >= 15) {
+      Features["miscellaneous-extensions-4"] = true;
+      Features["vector-enhancements-3"] = true;
+    }
     return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
   }
 
@@ -224,7 +245,7 @@ public:
     switch (CC) {
     case CC_C:
     case CC_Swift:
-    case CC_OpenCLKernel:
+    case CC_DeviceKernel:
       return CCCR_OK;
     case CC_SwiftAsync:
       return CCCR_Error;
@@ -246,6 +267,8 @@ public:
   int getEHDataRegisterNumber(unsigned RegNo) const override {
     return RegNo < 4 ? 6 + RegNo : -1;
   }
+
+  bool hasSjLjLowering() const override { return true; }
 
   std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
     return std::make_pair(256, 256);

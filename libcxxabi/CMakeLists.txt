@@ -34,6 +34,11 @@ MACRO_ENSURE_OUT_OF_SOURCE_BUILD(
  build directory and run 'cmake /path/to/${PROJECT_NAME} [options]' there."
  )
 
+if (MSVC)
+  message(FATAL_ERROR "Libc++abi can't be built for MSVC targets, and doing so is pointless anyway because such "
+                      "targets must use the MS C++ ABI, and libc++abi provides the Itanium C++ ABI.")
+endif()
+
 #===============================================================================
 # Setup CMake Options
 #===============================================================================
@@ -182,10 +187,13 @@ if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   if(LIBCXXABI_LIBDIR_SUBDIR)
     string(APPEND LIBCXXABI_TARGET_SUBDIR /${LIBCXXABI_LIBDIR_SUBDIR})
   endif()
+  cmake_path(NORMAL_PATH LIBCXXABI_TARGET_SUBDIR)
   set(LIBCXXABI_HEADER_DIR ${LLVM_BINARY_DIR})
   set(LIBCXXABI_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LIBCXXABI_TARGET_SUBDIR})
   set(LIBCXXABI_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LIBCXXABI_TARGET_SUBDIR} CACHE STRING
       "Path where built libc++abi libraries should be installed.")
+  set(LIBCXXABI_INSTALL_INCLUDE_TARGET_DIR "${CMAKE_INSTALL_INCLUDEDIR}/${LIBCXXABI_TARGET_SUBDIR}/c++/v1" CACHE STRING
+      "Path where target-specific libc++abi headers should be installed.")
   unset(LIBCXXABI_TARGET_SUBDIR)
 else()
   if(LLVM_LIBRARY_OUTPUT_INTDIR)
@@ -197,6 +205,8 @@ else()
   endif()
   set(LIBCXXABI_INSTALL_LIBRARY_DIR lib${LIBCXXABI_LIBDIR_SUFFIX} CACHE STRING
       "Path where built libc++abi libraries should be installed.")
+  set(LIBCXXABI_INSTALL_INCLUDE_TARGET_DIR "${LIBCXXABI_INSTALL_INCLUDE_DIR}" CACHE STRING
+      "Path where target-specific libc++abi headers should be installed.")
 endif()
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBCXXABI_LIBRARY_DIR})
@@ -243,6 +253,8 @@ add_library_flags("${LIBCXXABI_ADDITIONAL_LIBRARIES}")
 # Configure compiler. Must happen after setting the target flags.
 include(config-ix)
 
+include(HandleLibC) # Setup the C library flags
+
 if (CXX_SUPPORTS_NOSTDINCXX_FLAG)
   list(APPEND LIBCXXABI_COMPILE_FLAGS -nostdinc++)
   # cmake 3.14 and above remove system include paths that are explicitly
@@ -258,6 +270,49 @@ if (CXX_SUPPORTS_NOSTDINCXX_FLAG)
   string(REPLACE "-stdlib=libc++" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
   string(REPLACE "-stdlib=libstdc++" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 endif()
+
+function(get_sanitizer_flags OUT_VAR  USE_SANITIZER)
+  set(SANITIZER_FLAGS)
+  set(USE_SANITIZER "${USE_SANITIZER}")
+  # NOTE: LLVM_USE_SANITIZER checks for a UNIX like system instead of MSVC.
+  # But we don't have LLVM_ON_UNIX so checking for MSVC is the best we can do.
+  if (USE_SANITIZER AND NOT MSVC)
+    append_flags_if_supported(SANITIZER_FLAGS "-fno-omit-frame-pointer")
+    append_flags_if_supported(SANITIZER_FLAGS "-gline-tables-only")
+
+    if (NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG" AND
+            NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "RELWITHDEBINFO")
+      append_flags_if_supported(SANITIZER_FLAGS "-gline-tables-only")
+    endif()
+    if (USE_SANITIZER STREQUAL "Address")
+      append_flags(SANITIZER_FLAGS "-fsanitize=address")
+    elseif (USE_SANITIZER STREQUAL "HWAddress")
+      append_flags(SANITIZER_FLAGS "-fsanitize=hwaddress")
+    elseif (USE_SANITIZER MATCHES "Memory(WithOrigins)?")
+      append_flags(SANITIZER_FLAGS -fsanitize=memory)
+      if (USE_SANITIZER STREQUAL "MemoryWithOrigins")
+        append_flags(SANITIZER_FLAGS "-fsanitize-memory-track-origins")
+      endif()
+    elseif (USE_SANITIZER STREQUAL "Undefined")
+      append_flags(SANITIZER_FLAGS "-fsanitize=undefined" "-fno-sanitize=vptr,function" "-fno-sanitize-recover=all")
+    elseif (USE_SANITIZER STREQUAL "Address;Undefined" OR
+            USE_SANITIZER STREQUAL "Undefined;Address")
+      append_flags(SANITIZER_FLAGS "-fsanitize=address,undefined" "-fno-sanitize=vptr,function" "-fno-sanitize-recover=all")
+    elseif (USE_SANITIZER STREQUAL "Thread")
+      append_flags(SANITIZER_FLAGS -fsanitize=thread)
+    elseif (USE_SANITIZER STREQUAL "DataFlow")
+      append_flags(SANITIZER_FLAGS -fsanitize=dataflow)
+    else()
+      message(WARNING "Unsupported value of LLVM_USE_SANITIZER: ${USE_SANITIZER}")
+    endif()
+  elseif(USE_SANITIZER AND MSVC)
+    message(WARNING "LLVM_USE_SANITIZER is not supported on this platform.")
+  endif()
+  set(${OUT_VAR} "${SANITIZER_FLAGS}" PARENT_SCOPE)
+endfunction()
+
+get_sanitizer_flags(SANITIZER_FLAGS "${LLVM_USE_SANITIZER}")
+list(APPEND LIBCXXABI_COMPILE_FLAGS ${SANITIZER_FLAGS})
 
 # Let the library headers know they are currently being used to build the
 # library.

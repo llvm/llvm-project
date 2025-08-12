@@ -56,7 +56,7 @@ uint32_t AMDGPU::calcEFlagsV3() const {
   for (InputFile *f : ArrayRef(ctx.objectFiles).slice(1)) {
     if (ret == getEFlags(f))
       continue;
-    error("incompatible e_flags: " + toString(f));
+    ErrAlways(ctx) << "incompatible e_flags: " << f;
     return 0;
   }
   return ret;
@@ -73,7 +73,7 @@ uint32_t AMDGPU::calcEFlagsV4() const {
   // features in the same category are either ANY, ANY and ON, or ANY and OFF).
   for (InputFile *f : ArrayRef(ctx.objectFiles).slice(1)) {
     if (retMach != (getEFlags(f) & EF_AMDGPU_MACH)) {
-      error("incompatible mach: " + toString(f));
+      Err(ctx) << "incompatible mach: " << f;
       return 0;
     }
 
@@ -82,7 +82,7 @@ uint32_t AMDGPU::calcEFlagsV4() const {
             (getEFlags(f) & EF_AMDGPU_FEATURE_XNACK_V4)
                 != EF_AMDGPU_FEATURE_XNACK_ANY_V4)) {
       if (retXnack != (getEFlags(f) & EF_AMDGPU_FEATURE_XNACK_V4)) {
-        error("incompatible xnack: " + toString(f));
+        Err(ctx) << "incompatible xnack: " << f;
         return 0;
       }
     } else {
@@ -95,7 +95,7 @@ uint32_t AMDGPU::calcEFlagsV4() const {
             (getEFlags(f) & EF_AMDGPU_FEATURE_SRAMECC_V4) !=
                 EF_AMDGPU_FEATURE_SRAMECC_ANY_V4)) {
       if (retSramEcc != (getEFlags(f) & EF_AMDGPU_FEATURE_SRAMECC_V4)) {
-        error("incompatible sramecc: " + toString(f));
+        Err(ctx) << "incompatible sramecc: " << f;
         return 0;
       }
     } else {
@@ -116,7 +116,7 @@ uint32_t AMDGPU::calcEFlagsV6() const {
   // Verify that all input files have compatible generic version.
   for (InputFile *f : ArrayRef(ctx.objectFiles).slice(1)) {
     if (genericVersion != (getEFlags(f) & EF_AMDGPU_GENERIC_VERSION)) {
-      error("incompatible generic version: " + toString(f));
+      ErrAlways(ctx) << "incompatible generic version: " << f;
       return 0;
     }
   }
@@ -143,7 +143,7 @@ uint32_t AMDGPU::calcEFlags() const {
   case ELFABIVERSION_AMDGPU_HSA_V6:
     return calcEFlagsV6();
   default:
-    error("unknown abi version: " + Twine(abiVersion));
+    Err(ctx) << "unknown abi version: " << abiVersion;
     return 0;
   }
 }
@@ -193,8 +193,8 @@ RelExpr AMDGPU::getRelExpr(RelType type, const Symbol &s,
   case R_AMDGPU_GOTPCREL32_HI:
     return R_GOT_PC;
   default:
-    error(getErrorLoc(ctx, loc) + "unknown relocation (" + Twine(type) +
-          ") against symbol " + toString(s));
+    Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
+             << ") against symbol " << &s;
     return R_NONE;
   }
 }
@@ -213,8 +213,7 @@ int64_t AMDGPU::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_AMDGPU_RELATIVE64:
     return read64(ctx, buf);
   default:
-    internalLinkerError(getErrorLoc(ctx, buf),
-                        "cannot read addend for relocation " + toString(type));
+    InternalErr(ctx, buf) << "cannot read addend for relocation " << type;
     return 0;
   }
 }

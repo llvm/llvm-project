@@ -93,33 +93,33 @@ tzcnt       (%rax), %rcx
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 2.00   15.33  4.33   4.33    -     5.33   2.00    -      -      -     5.33   4.33    -
+# CHECK-NEXT: 2.00   15.33  4.33   4.33    -     5.33   2.00    -      -      -     4.33   5.33    -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
-# CHECK-NEXT:  -     0.33    -      -      -     0.33    -      -      -      -     0.33    -      -     andnl	%eax, %ebx, %ecx
+# CHECK-NEXT:  -     0.33    -      -      -     0.33    -      -      -      -      -     0.33    -     andnl	%eax, %ebx, %ecx
 # CHECK-NEXT:  -     0.33   0.33   0.33    -     0.33    -      -      -      -     0.33   0.33    -     andnl	(%rax), %ebx, %ecx
-# CHECK-NEXT:  -     0.33    -      -      -     0.33    -      -      -      -     0.33    -      -     andnq	%rax, %rbx, %rcx
+# CHECK-NEXT:  -     0.33    -      -      -     0.33    -      -      -      -      -     0.33    -     andnq	%rax, %rbx, %rcx
 # CHECK-NEXT:  -     0.33   0.33   0.33    -     0.33    -      -      -      -     0.33   0.33    -     andnq	(%rax), %rbx, %rcx
 # CHECK-NEXT: 0.50   1.00    -      -      -      -     0.50    -      -      -      -      -      -     bextrl	%eax, %ebx, %ecx
-# CHECK-NEXT: 0.50   1.00   0.33   0.33    -      -     0.50    -      -      -      -     0.33    -     bextrl	%eax, (%rbx), %ecx
+# CHECK-NEXT: 0.50   1.00   0.33   0.33    -      -     0.50    -      -      -     0.33    -      -     bextrl	%eax, (%rbx), %ecx
 # CHECK-NEXT: 0.50   1.00    -      -      -      -     0.50    -      -      -      -      -      -     bextrq	%rax, %rbx, %rcx
-# CHECK-NEXT: 0.50   1.00   0.33   0.33    -      -     0.50    -      -      -      -     0.33    -     bextrq	%rax, (%rbx), %rcx
-# CHECK-NEXT:  -     0.33    -      -      -     0.33    -      -      -      -     0.33    -      -     blsil	%eax, %ecx
+# CHECK-NEXT: 0.50   1.00   0.33   0.33    -      -     0.50    -      -      -     0.33    -      -     bextrq	%rax, (%rbx), %rcx
+# CHECK-NEXT:  -     0.33    -      -      -     0.33    -      -      -      -      -     0.33    -     blsil	%eax, %ecx
 # CHECK-NEXT:  -     0.33   0.33   0.33    -     0.33    -      -      -      -     0.33   0.33    -     blsil	(%rax), %ecx
-# CHECK-NEXT:  -     0.33    -      -      -     0.33    -      -      -      -     0.33    -      -     blsiq	%rax, %rcx
+# CHECK-NEXT:  -     0.33    -      -      -     0.33    -      -      -      -      -     0.33    -     blsiq	%rax, %rcx
 # CHECK-NEXT:  -     0.33   0.33   0.33    -     0.33    -      -      -      -     0.33   0.33    -     blsiq	(%rax), %rcx
-# CHECK-NEXT:  -     0.33    -      -      -     0.33    -      -      -      -     0.33    -      -     blsmskl	%eax, %ecx
+# CHECK-NEXT:  -     0.33    -      -      -     0.33    -      -      -      -      -     0.33    -     blsmskl	%eax, %ecx
 # CHECK-NEXT:  -     0.33   0.33   0.33    -     0.33    -      -      -      -     0.33   0.33    -     blsmskl	(%rax), %ecx
-# CHECK-NEXT:  -     0.33    -      -      -     0.33    -      -      -      -     0.33    -      -     blsmskq	%rax, %rcx
+# CHECK-NEXT:  -     0.33    -      -      -     0.33    -      -      -      -      -     0.33    -     blsmskq	%rax, %rcx
 # CHECK-NEXT:  -     0.33   0.33   0.33    -     0.33    -      -      -      -     0.33   0.33    -     blsmskq	(%rax), %rcx
-# CHECK-NEXT:  -     0.33    -      -      -     0.33    -      -      -      -     0.33    -      -     blsrl	%eax, %ecx
+# CHECK-NEXT:  -     0.33    -      -      -     0.33    -      -      -      -      -     0.33    -     blsrl	%eax, %ecx
 # CHECK-NEXT:  -     0.33   0.33   0.33    -     0.33    -      -      -      -     0.33   0.33    -     blsrl	(%rax), %ecx
-# CHECK-NEXT:  -     0.33    -      -      -     0.33    -      -      -      -     0.33    -      -     blsrq	%rax, %rcx
+# CHECK-NEXT:  -     0.33    -      -      -     0.33    -      -      -      -      -     0.33    -     blsrq	%rax, %rcx
 # CHECK-NEXT:  -     0.33   0.33   0.33    -     0.33    -      -      -      -     0.33   0.33    -     blsrq	(%rax), %rcx
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -     tzcntw	%ax, %cx
-# CHECK-NEXT:  -     1.00   0.33   0.33    -      -      -      -      -      -      -     0.33    -     tzcntw	(%rax), %cx
+# CHECK-NEXT:  -     1.00   0.33   0.33    -      -      -      -      -      -     0.33    -      -     tzcntw	(%rax), %cx
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -     tzcntl	%eax, %ecx
-# CHECK-NEXT:  -     1.00   0.33   0.33    -      -      -      -      -      -      -     0.33    -     tzcntl	(%rax), %ecx
+# CHECK-NEXT:  -     1.00   0.33   0.33    -      -      -      -      -      -     0.33    -      -     tzcntl	(%rax), %ecx
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -     tzcntq	%rax, %rcx
-# CHECK-NEXT:  -     1.00   0.33   0.33    -      -      -      -      -      -      -     0.33    -     tzcntq	(%rax), %rcx
+# CHECK-NEXT:  -     1.00   0.33   0.33    -      -      -      -      -      -     0.33    -      -     tzcntq	(%rax), %rcx

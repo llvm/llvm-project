@@ -103,7 +103,7 @@ define i32 @vec_store_load_overlap(ptr %p) {
 define i32 @load_i32_store_nxv4i32(ptr %a) {
 ; CHECK-LABEL: @load_i32_store_nxv4i32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), ptr [[A:%.*]], align 16
+; CHECK-NEXT:    store <vscale x 4 x i32> splat (i32 1), ptr [[A:%.*]], align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
@@ -116,7 +116,7 @@ entry:
 define i64 @load_i64_store_nxv8i8(ptr %a) {
 ; CHECK-LABEL: @load_i64_store_nxv8i8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store <vscale x 8 x i8> shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 1, i64 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer), ptr [[A:%.*]], align 16
+; CHECK-NEXT:    store <vscale x 8 x i8> splat (i8 1), ptr [[A:%.*]], align 16
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i64, ptr [[A]], align 8
 ; CHECK-NEXT:    ret i64 [[LOAD]]
 ;
@@ -129,7 +129,7 @@ entry:
 define i64 @load_i64_store_nxv4i32(ptr %a) {
 ; CHECK-LABEL: @load_i64_store_nxv4i32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), ptr [[A:%.*]], align 16
+; CHECK-NEXT:    store <vscale x 4 x i32> splat (i32 1), ptr [[A:%.*]], align 16
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i64, ptr [[A]], align 8
 ; CHECK-NEXT:    ret i64 [[LOAD]]
 ;
@@ -142,7 +142,7 @@ entry:
 define i8 @load_i8_store_nxv4i32(ptr %a) {
 ; CHECK-LABEL: @load_i8_store_nxv4i32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), ptr [[A:%.*]], align 16
+; CHECK-NEXT:    store <vscale x 4 x i32> splat (i32 1), ptr [[A:%.*]], align 16
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[A]], align 1
 ; CHECK-NEXT:    ret i8 [[LOAD]]
 ;
@@ -155,7 +155,7 @@ entry:
 define float @load_f32_store_nxv4f32(ptr %a) {
 ; CHECK-LABEL: @load_f32_store_nxv4f32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), ptr [[A:%.*]], align 16
+; CHECK-NEXT:    store <vscale x 4 x float> splat (float 1.000000e+00), ptr [[A:%.*]], align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[A]], align 4
 ; CHECK-NEXT:    ret float [[TMP0]]
 ;
@@ -168,7 +168,7 @@ entry:
 define i32 @load_i32_store_nxv4f32(ptr %a) {
 ; CHECK-LABEL: @load_i32_store_nxv4f32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), ptr [[A:%.*]], align 16
+; CHECK-NEXT:    store <vscale x 4 x float> splat (float 1.000000e+00), ptr [[A:%.*]], align 16
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    ret i32 [[LOAD]]
 ;
@@ -181,7 +181,7 @@ entry:
 define <4 x i32> @load_v4i32_store_nxv4i32(ptr %a) {
 ; CHECK-LABEL: @load_v4i32_store_nxv4i32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), ptr [[A:%.*]], align 16
+; CHECK-NEXT:    store <vscale x 4 x i32> splat (i32 1), ptr [[A:%.*]], align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A]], align 16
 ; CHECK-NEXT:    ret <4 x i32> [[TMP0]]
 ;
@@ -194,7 +194,7 @@ entry:
 define <4 x i16> @load_v4i16_store_nxv4i32(ptr %a) {
 ; CHECK-LABEL: @load_v4i16_store_nxv4i32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), ptr [[A:%.*]], align 16
+; CHECK-NEXT:    store <vscale x 4 x i32> splat (i32 1), ptr [[A:%.*]], align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[A]], align 16
 ; CHECK-NEXT:    ret <4 x i16> [[TMP0]]
 ;
@@ -208,7 +208,7 @@ entry:
 define i64 @load_i64_store_nxv4i8(ptr %a) {
 ; CHECK-LABEL: @load_i64_store_nxv4i8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store <vscale x 4 x i8> shufflevector (<vscale x 4 x i8> insertelement (<vscale x 4 x i8> poison, i8 1, i64 0), <vscale x 4 x i8> poison, <vscale x 4 x i32> zeroinitializer), ptr [[A:%.*]], align 16
+; CHECK-NEXT:    store <vscale x 4 x i8> splat (i8 1), ptr [[A:%.*]], align 16
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i64, ptr [[A]], align 8
 ; CHECK-NEXT:    ret i64 [[LOAD]]
 ;
@@ -223,7 +223,7 @@ entry:
 define <vscale x 4 x i8> @load_nxv4i8_store_nxv4i32(ptr %a) {
 ; CHECK-LABEL: @load_nxv4i8_store_nxv4i32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), ptr [[A:%.*]], align 16
+; CHECK-NEXT:    store <vscale x 4 x i32> splat (i32 1), ptr [[A:%.*]], align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 4 x i8>, ptr [[A]], align 16
 ; CHECK-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 ;
@@ -347,7 +347,7 @@ define i1 @load_after_memset_1_i1(ptr %a) {
 define <4 x i8> @load_after_memset_1_vec(ptr %a) {
 ; CHECK-LABEL: @load_after_memset_1_vec(
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 1, i64 16, i1 false)
-; CHECK-NEXT:    ret <4 x i8> <i8 1, i8 1, i8 1, i8 1>
+; CHECK-NEXT:    ret <4 x i8> splat (i8 1)
 ;
   call void @llvm.memset.p0.i64(ptr %a, i8 1, i64 16, i1 false)
   %v = load <4 x i8>, ptr %a
@@ -365,18 +365,50 @@ define i32 @load_after_memset_unknown(ptr %a, i8 %byte) {
   ret i32 %v
 }
 
-; TODO: Handle load at offset.
 define i32 @load_after_memset_0_offset(ptr %a) {
 ; CHECK-LABEL: @load_after_memset_0_offset(
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 0, i64 16, i1 false)
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 4
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[GEP]], align 4
-; CHECK-NEXT:    ret i32 [[V]]
+; CHECK-NEXT:    ret i32 0
 ;
   call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 16, i1 false)
   %gep = getelementptr i8, ptr %a, i64 4
   %v = load i32, ptr %gep
   ret i32 %v
+}
+
+define i32 @load_after_memset_1_offset(ptr %a) {
+; CHECK-LABEL: @load_after_memset_1_offset(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 1, i64 16, i1 false)
+; CHECK-NEXT:    ret i32 16843009
+;
+  call void @llvm.memset.p0.i64(ptr %a, i8 1, i64 16, i1 false)
+  %gep = getelementptr i8, ptr %a, i64 4
+  %v = load i32, ptr %gep
+  ret i32 %v
+}
+
+define i1 @load_after_memset_0_offset_i1(ptr %a) {
+; CHECK-LABEL: @load_after_memset_0_offset_i1(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    ret i1 false
+;
+  call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 16, i1 false)
+  %gep = getelementptr i1, ptr %a, i64 12
+  %v = load i1, ptr %gep
+  ret i1 %v
+}
+
+define i8 @neg_load_after_memset_0_neg_offset(ptr %a) {
+; CHECK-LABEL: @neg_load_after_memset_0_neg_offset(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 2
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[GEP]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[A]], align 1
+; CHECK-NEXT:    ret i8 [[V]]
+;
+  %gep = getelementptr i8, ptr %a, i64 2
+  call void @llvm.memset.p0.i64(ptr %gep, i8 0, i64 16, i1 false)
+  %v = load i8, ptr %a
+  ret i8 %v
 }
 
 define i32 @load_after_memset_0_offset_too_large(ptr %a) {

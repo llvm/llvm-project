@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 < %s | FileCheck %s
 ; Check the values of cfi offsets emitted.
 ; CHECK: .cfi_def_cfa r30, 8
 ; CHECK: .cfi_offset r31, -4

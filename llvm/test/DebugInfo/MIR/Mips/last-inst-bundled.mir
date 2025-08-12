@@ -1,4 +1,4 @@
-# RUN: llc -run-pass=livedebugvalues -march=mips -o - %s | FileCheck %s
+# RUN: llc -run-pass=livedebugvalues -mtriple=mips -o - %s | FileCheck %s
 #
 #"last-instr-bundled.c"
 #extern void set_cond(int, int*);

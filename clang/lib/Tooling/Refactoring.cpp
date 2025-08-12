@@ -18,8 +18,6 @@
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Rewrite/Core/Rewriter.h"
-#include "llvm/Support/Path.h"
-#include "llvm/Support/raw_os_ostream.h"
 
 namespace clang {
 namespace tooling {
@@ -39,11 +37,10 @@ int RefactoringTool::runAndSave(FrontendActionFactory *ActionFactory) {
   }
 
   LangOptions DefaultLangOptions;
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
-  TextDiagnosticPrinter DiagnosticPrinter(llvm::errs(), &*DiagOpts);
-  DiagnosticsEngine Diagnostics(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()),
-      &*DiagOpts, &DiagnosticPrinter, false);
+  DiagnosticOptions DiagOpts;
+  TextDiagnosticPrinter DiagnosticPrinter(llvm::errs(), DiagOpts);
+  DiagnosticsEngine Diagnostics(DiagnosticIDs::create(), DiagOpts,
+                                &DiagnosticPrinter, false);
   SourceManager Sources(Diagnostics, getFiles());
   Rewriter Rewrite(Sources, DefaultLangOptions);
 

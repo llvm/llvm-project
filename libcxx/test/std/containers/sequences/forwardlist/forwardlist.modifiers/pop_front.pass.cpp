@@ -8,7 +8,7 @@
 
 // <forward_list>
 
-// void pop_front();
+// void pop_front(); // constexpr since C++26
 
 #include <forward_list>
 #include <cassert>
@@ -17,59 +17,67 @@
 #include "MoveOnly.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
-    {
-        typedef int T;
-        typedef std::forward_list<T> C;
-        typedef std::forward_list<T> C;
-        C c;
-        c.push_front(1);
-        c.push_front(3);
-        c.pop_front();
-        assert(std::distance(c.begin(), c.end()) == 1);
-        assert(c.front() == 1);
-        c.pop_front();
-        assert(std::distance(c.begin(), c.end()) == 0);
-    }
+TEST_CONSTEXPR_CXX26 bool test() {
+  {
+    typedef int T;
+    typedef std::forward_list<T> C;
+    typedef std::forward_list<T> C;
+    C c;
+    c.push_front(1);
+    c.push_front(3);
+    c.pop_front();
+    assert(std::distance(c.begin(), c.end()) == 1);
+    assert(c.front() == 1);
+    c.pop_front();
+    assert(std::distance(c.begin(), c.end()) == 0);
+  }
 #if TEST_STD_VER >= 11
-    {
-        typedef MoveOnly T;
-        typedef std::forward_list<T> C;
-        C c;
-        c.push_front(1);
-        c.push_front(3);
-        c.pop_front();
-        assert(std::distance(c.begin(), c.end()) == 1);
-        assert(c.front() == 1);
-        c.pop_front();
-        assert(std::distance(c.begin(), c.end()) == 0);
-    }
-    {
-        typedef int T;
-        typedef std::forward_list<T, min_allocator<T>> C;
-        typedef std::forward_list<T, min_allocator<T>> C;
-        C c;
-        c.push_front(1);
-        c.push_front(3);
-        c.pop_front();
-        assert(std::distance(c.begin(), c.end()) == 1);
-        assert(c.front() == 1);
-        c.pop_front();
-        assert(std::distance(c.begin(), c.end()) == 0);
-    }
-    {
-        typedef MoveOnly T;
-        typedef std::forward_list<T, min_allocator<T>> C;
-        C c;
-        c.push_front(1);
-        c.push_front(3);
-        c.pop_front();
-        assert(std::distance(c.begin(), c.end()) == 1);
-        assert(c.front() == 1);
-        c.pop_front();
-        assert(std::distance(c.begin(), c.end()) == 0);
-    }
+  {
+    typedef MoveOnly T;
+    typedef std::forward_list<T> C;
+    C c;
+    c.push_front(1);
+    c.push_front(3);
+    c.pop_front();
+    assert(std::distance(c.begin(), c.end()) == 1);
+    assert(c.front() == 1);
+    c.pop_front();
+    assert(std::distance(c.begin(), c.end()) == 0);
+  }
+  {
+    typedef int T;
+    typedef std::forward_list<T, min_allocator<T>> C;
+    typedef std::forward_list<T, min_allocator<T>> C;
+    C c;
+    c.push_front(1);
+    c.push_front(3);
+    c.pop_front();
+    assert(std::distance(c.begin(), c.end()) == 1);
+    assert(c.front() == 1);
+    c.pop_front();
+    assert(std::distance(c.begin(), c.end()) == 0);
+  }
+  {
+    typedef MoveOnly T;
+    typedef std::forward_list<T, min_allocator<T>> C;
+    C c;
+    c.push_front(1);
+    c.push_front(3);
+    c.pop_front();
+    assert(std::distance(c.begin(), c.end()) == 1);
+    assert(c.front() == 1);
+    c.pop_front();
+    assert(std::distance(c.begin(), c.end()) == 0);
+  }
+#endif
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
 #endif
 
   return 0;

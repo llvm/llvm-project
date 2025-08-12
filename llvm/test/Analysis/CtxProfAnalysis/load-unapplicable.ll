@@ -5,7 +5,7 @@
 ;
 ; RUN: rm -rf %t
 ; RUN: split-file %s %t
-; RUN: llvm-ctxprof-util fromJSON --input=%t/profile.json --output=%t/profile.ctxprofdata
+; RUN: llvm-ctxprof-util fromYAML --input=%t/profile.yaml --output=%t/profile.ctxprofdata
 ; RUN: opt -passes='require<ctx-prof-analysis>,print<ctx-prof-analysis>' -ctx-profile-printer-level=everything \
 ; RUN:   %t/example.ll -S 2>&1 | FileCheck %s
 
@@ -15,38 +15,20 @@
 ; output it from opt. Note that the root GUIDs - 12341 and 34234 - are different from
 ; the GUID present in the module, which is otherwise present in the profile, but not
 ; as a root.
-;--- profile.json
-[
-  {
-    "Counters": [
-      9
-    ],
-    "Guid": 12341
-  },
-  {
-    "Counters": [
-      5
-    ],
-    "Guid": 1000
-  },
-  {
-    "Callsites": [
-      [
-        {
-          "Counters": [
-            6,
-            7
-          ],
-          "Guid": 1000
-        }
-      ]
-    ],
-    "Counters": [
-      1
-    ],
-    "Guid": 34234
-  }
-]
+;--- profile.yaml
+Contexts:
+  - Guid: 12341
+    TotalRootEntryCount: 24
+    Counters: [9]
+  - Guid: 1000
+    TotalRootEntryCount: 25
+    Counters: [5]
+  - Guid: 34234
+    TotalRootEntryCount: 2
+    Counters: [1]
+    Callsites:  -
+                  - Guid: 1000
+                    Counters: [6, 7]
 ;--- example.ll
 declare void @bar()
 

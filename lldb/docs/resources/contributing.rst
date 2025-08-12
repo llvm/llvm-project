@@ -39,7 +39,7 @@ in a few ways. The 2 main ones are:
 * `Use of asserts <https://llvm.org/docs/CodingStandards.html#assert-liberally>`_:
   See the :ref:`section below<Error Handling>`.
 
-For any other contradications, consider the
+For any other contradictions, consider the
 `golden rule <https://llvm.org/docs/CodingStandards.html#introduction>`_
 before choosing to update the style of existing code.
 
@@ -55,6 +55,56 @@ subset of LLDB tests (the API tests) use a different system. Refer to the
 `test documentation <test.html>`_ for more details and the
 `lldb/test <https://github.com/llvm/llvm-project/tree/main/lldb/test>`_ folder
 for examples.
+
+
+LLDB plugins and their dependencies
+-----------------------------------
+
+LLDB has a concept of *plugins*, which are used to provide abstraction
+boundaries over functionality that is specific to a certain architecture,
+operating system, programming language, etc. A plugin implements an abstract
+base class (rarely, a set of related base classes), which is a part of LLDB
+core. This setup allows the LLDB core to remain generic while making it possible
+to support for new architectures, languages, and so on. For this to work, all
+code needs to obey certain rules.
+
+The principal rule is that LLDB core (defined as: everything under lldb/source
+*minus* lldb/source/Plugins) must not depend on any specific plugin. The only
+way it can interact with them is through the abstract interface. Explicit
+dependencies such as casting the base class to the plugin type are not permitted
+and neither are more subtle dependencies like checking the name plugin or or
+other situations where some code in LLDB core is tightly coupled to the
+implementation details of a specific plugin.
+
+The rule for interaction between different plugins is more nuanced. We recognize
+that some cross-plugin dependencies are unavoidable or even desirable. For
+example, a plugin may want to extend a plugin of the same kind to
+add/override/refine some functionality (e.g., Android is a "kind of" Linux, but
+it handles some things differently). Alternatively, a plugin of one kind may
+want to build on the functionality offered by a specific plugin of another kind
+(ELFCore Process plugin uses ELF ObjectFile plugin to create a process out of an
+ELF core file).
+
+In cases such as these, direct dependencies are acceptable. However, to keep the
+dependency graph manageable, we still have some rules to govern these
+relationships:
+
+* All dependencies between plugins of the same kind must flow in the same
+  direction (if plugin `A1` depends on plugin `B1`, then `B2` must not depend on
+  `A2`)
+* Dependency graph of plugin kinds must not contain loops (dependencies like
+  `A1->B1`, `B2->C2` and `C3->A3` are forbidden because they induce a cycle in
+  the plugin kind graph even though the plugins themselves are acyclical)
+
+
+The first of these rules is checked via CMake scripts (using the
+`LLDB_ACCEPTABLE_PLUGIN_DEPENDENCIES` property). Dependencies in this category
+are expected and permitted (subject to other constraints such as that dependency
+making sense for the particular pair of plugins). Unfortunately, due to historic
+reasons, not all plugin dependencies follow this rule, which is why we have
+another category called `LLDB_TOLERATED_PLUGIN_DEPENDENCIES`. New dependencies
+are forbidden (even though they are accepted by CMake) and existing ones should
+be removed wherever possible.
 
 .. _Error handling:
 

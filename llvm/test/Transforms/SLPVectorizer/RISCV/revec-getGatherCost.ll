@@ -8,7 +8,7 @@
 ; YAML: Function:        test1
 ; YAML: Args:
 ; YAML:   - String:          'Stores SLP vectorized with cost '
-; YAML:   - Cost:            '4'
+; YAML:   - Cost:            '5'
 ; YAML:   - String:          ' and with tree size '
 ; YAML:   - TreeSize:        '5'
 
@@ -17,12 +17,13 @@ define void @test1(<4 x float> %load6, <4 x float> %load7, <4 x float> %load8, <
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VEXT165_I:%.*]] = shufflevector <4 x float> [[LOAD6:%.*]], <4 x float> [[LOAD7:%.*]], <4 x i32> <i32 2, i32 3, i32 4, i32 5>
 ; CHECK-NEXT:    [[VEXT309_I:%.*]] = shufflevector <4 x float> [[LOAD7]], <4 x float> [[LOAD8:%.*]], <4 x i32> <i32 2, i32 3, i32 4, i32 5>
-; CHECK-NEXT:    [[TMP0:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v4f32(<8 x float> poison, <4 x float> [[VEXT165_I]], i64 0)
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v4f32(<8 x float> [[TMP0]], <4 x float> [[VEXT309_I]], i64 4)
-; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v4f32(<8 x float> poison, <4 x float> [[LOAD17:%.*]], i64 0)
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x float> [[TMP3]], <8 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP5:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v4f32(<8 x float> poison, <4 x float> [[FMULADD7:%.*]], i64 0)
-; CHECK-NEXT:    [[TMP6:%.*]] = call <8 x float> @llvm.vector.insert.v8f32.v4f32(<8 x float> [[TMP5]], <4 x float> [[FMULADD16:%.*]], i64 4)
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x float> [[VEXT165_I]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[VEXT309_I]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x float> [[TMP0]], <8 x float> [[TMP2]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[LOAD17:%.*]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x float> [[FMULADD7:%.*]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[FMULADD16:%.*]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x float> [[TMP8]], <8 x float> [[TMP5]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> [[TMP1]], <8 x float> [[TMP4]], <8 x float> [[TMP6]])
 ; CHECK-NEXT:    store <8 x float> [[TMP7]], ptr [[OUT_PTR:%.*]], align 4
 ; CHECK-NEXT:    ret void
@@ -46,7 +47,7 @@ declare <4 x float> @llvm.fmuladd.v4f32(<4 x float>, <4 x float>, <4 x float>)
 ; YAML: Function:        test2
 ; YAML: Args:
 ; YAML:   - String:          'Stores SLP vectorized with cost '
-; YAML:   - Cost:            '12'
+; YAML:   - Cost:            '14'
 ; YAML:   - String:          ' and with tree size '
 ; YAML:   - TreeSize:        '5'
 
@@ -55,12 +56,13 @@ define void @test2(<8 x float> %load6, <8 x float> %load7, <8 x float> %load8, <
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[VEXT165_I:%.*]] = shufflevector <8 x float> [[LOAD6:%.*]], <8 x float> [[LOAD7:%.*]], <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
 ; CHECK-NEXT:    [[VEXT309_I:%.*]] = shufflevector <8 x float> [[LOAD7]], <8 x float> [[LOAD8:%.*]], <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
-; CHECK-NEXT:    [[TMP0:%.*]] = call <16 x float> @llvm.vector.insert.v16f32.v8f32(<16 x float> poison, <8 x float> [[VEXT165_I]], i64 0)
-; CHECK-NEXT:    [[TMP1:%.*]] = call <16 x float> @llvm.vector.insert.v16f32.v8f32(<16 x float> [[TMP0]], <8 x float> [[VEXT309_I]], i64 8)
-; CHECK-NEXT:    [[TMP3:%.*]] = call <16 x float> @llvm.vector.insert.v16f32.v8f32(<16 x float> poison, <8 x float> [[LOAD17:%.*]], i64 0)
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <16 x float> [[TMP3]], <16 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP5:%.*]] = call <16 x float> @llvm.vector.insert.v16f32.v8f32(<16 x float> poison, <8 x float> [[FMULADD7:%.*]], i64 0)
-; CHECK-NEXT:    [[TMP6:%.*]] = call <16 x float> @llvm.vector.insert.v16f32.v8f32(<16 x float> [[TMP5]], <8 x float> [[FMULADD16:%.*]], i64 8)
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <8 x float> [[VEXT165_I]], <8 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x float> [[VEXT309_I]], <8 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x float> [[TMP0]], <16 x float> [[TMP2]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x float> [[LOAD17:%.*]], <8 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <8 x float> [[FMULADD7:%.*]], <8 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x float> [[FMULADD16:%.*]], <8 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <16 x float> [[TMP8]], <16 x float> [[TMP5]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x float> @llvm.fmuladd.v16f32(<16 x float> [[TMP1]], <16 x float> [[TMP4]], <16 x float> [[TMP6]])
 ; CHECK-NEXT:    store <16 x float> [[TMP7]], ptr [[OUT_PTR:%.*]], align 4
 ; CHECK-NEXT:    ret void

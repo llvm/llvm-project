@@ -2,14 +2,12 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown | FileCheck %s
 ; RUN: llc < %s -mtriple=i386-pc-win32 | FileCheck %s -check-prefix=CHECK-WIN
 
-define float @call_ldexpf(float %a, i32 %b) {
+define float @call_ldexpf(float %a, i32 %b) nounwind {
 ; CHECK-LABEL: call_ldexpf:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq ldexpf@PLT
 ; CHECK-NEXT:    popq %rax
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
 ; CHECK-WIN-LABEL: call_ldexpf:
@@ -26,14 +24,12 @@ define float @call_ldexpf(float %a, i32 %b) {
   ret float %result
 }
 
-define double @call_ldexp(double %a, i32 %b) {
+define double @call_ldexp(double %a, i32 %b) nounwind {
 ; CHECK-LABEL: call_ldexp:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq ldexp@PLT
 ; CHECK-NEXT:    popq %rax
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
 ; CHECK-WIN-LABEL: call_ldexp:

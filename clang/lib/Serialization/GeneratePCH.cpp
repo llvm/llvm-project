@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ASTContext.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/Preprocessor.h"
@@ -23,15 +23,16 @@
 using namespace clang;
 
 PCHGenerator::PCHGenerator(
-    Preprocessor &PP, InMemoryModuleCache &ModuleCache, StringRef OutputFile,
+    Preprocessor &PP, ModuleCache &ModCache, StringRef OutputFile,
     StringRef isysroot, std::shared_ptr<PCHBuffer> Buffer,
+    const CodeGenOptions &CodeGenOpts,
     ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
     bool AllowASTWithErrors, bool IncludeTimestamps,
     bool BuildingImplicitModule, bool ShouldCacheASTInMemory,
     bool GeneratingReducedBMI)
-    : PP(PP), OutputFile(OutputFile), isysroot(isysroot.str()),
-      SemaPtr(nullptr), Buffer(std::move(Buffer)), Stream(this->Buffer->Data),
-      Writer(Stream, this->Buffer->Data, ModuleCache, Extensions,
+    : PP(PP), Subject(&PP), OutputFile(OutputFile), isysroot(isysroot.str()),
+      Buffer(std::move(Buffer)), Stream(this->Buffer->Data),
+      Writer(Stream, this->Buffer->Data, ModCache, CodeGenOpts, Extensions,
              IncludeTimestamps, BuildingImplicitModule, GeneratingReducedBMI),
       AllowASTWithErrors(AllowASTWithErrors),
       ShouldCacheASTInMemory(ShouldCacheASTInMemory) {
@@ -56,6 +57,17 @@ Module *PCHGenerator::getEmittingModule(ASTContext &) {
   return M;
 }
 
+DiagnosticsEngine &PCHGenerator::getDiagnostics() const {
+  return PP.getDiagnostics();
+}
+
+void PCHGenerator::InitializeSema(Sema &S) {
+  if (!PP.getHeaderSearchInfo()
+           .getHeaderSearchOpts()
+           .ModulesSerializeOnlyPreprocessor)
+    Subject = &S;
+}
+
 void PCHGenerator::HandleTranslationUnit(ASTContext &Ctx) {
   // Don't create a PCH if there were fatal failures during module loading.
   if (PP.getModuleLoader().HadFatalFailure)
@@ -72,9 +84,7 @@ void PCHGenerator::HandleTranslationUnit(ASTContext &Ctx) {
   if (AllowASTWithErrors)
     PP.getDiagnostics().getClient()->clear();
 
-  // Emit the PCH file to the Buffer.
-  assert(SemaPtr && "No Sema?");
-  Buffer->Signature = Writer.WriteAST(*SemaPtr, OutputFile, Module, isysroot,
+  Buffer->Signature = Writer.WriteAST(Subject, OutputFile, Module, isysroot,
                                       ShouldCacheASTInMemory);
 
   Buffer->IsComplete = true;
@@ -91,14 +101,16 @@ ASTDeserializationListener *PCHGenerator::GetASTDeserializationListener() {
 void PCHGenerator::anchor() {}
 
 CXX20ModulesGenerator::CXX20ModulesGenerator(Preprocessor &PP,
-                                             InMemoryModuleCache &ModuleCache,
+                                             ModuleCache &ModCache,
                                              StringRef OutputFile,
-                                             bool GeneratingReducedBMI)
+                                             const CodeGenOptions &CodeGenOpts,
+                                             bool GeneratingReducedBMI,
+                                             bool AllowASTWithErrors)
     : PCHGenerator(
-          PP, ModuleCache, OutputFile, llvm::StringRef(),
-          std::make_shared<PCHBuffer>(),
+          PP, ModCache, OutputFile, llvm::StringRef(),
+          std::make_shared<PCHBuffer>(), CodeGenOpts,
           /*Extensions=*/ArrayRef<std::shared_ptr<ModuleFileExtension>>(),
-          /*AllowASTWithErrors*/ false, /*IncludeTimestamps=*/false,
+          AllowASTWithErrors, /*IncludeTimestamps=*/false,
           /*BuildingImplicitModule=*/false, /*ShouldCacheASTInMemory=*/false,
           GeneratingReducedBMI) {}
 
@@ -110,13 +122,6 @@ Module *CXX20ModulesGenerator::getEmittingModule(ASTContext &Ctx) {
 }
 
 void CXX20ModulesGenerator::HandleTranslationUnit(ASTContext &Ctx) {
-  // FIMXE: We'd better to wrap such options to a new class ASTWriterOptions
-  // since this is not about searching header really.
-  HeaderSearchOptions &HSOpts =
-      getPreprocessor().getHeaderSearchInfo().getHeaderSearchOpts();
-  HSOpts.ModulesSkipDiagnosticOptions = true;
-  HSOpts.ModulesSkipHeaderSearchPaths = true;
-
   PCHGenerator::HandleTranslationUnit(Ctx);
 
   if (!isComplete())

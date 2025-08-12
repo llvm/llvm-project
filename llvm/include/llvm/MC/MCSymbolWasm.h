@@ -35,8 +35,7 @@ class MCSymbolWasm : public MCSymbol {
 
 public:
   MCSymbolWasm(const MCSymbolTableEntry *Name, bool isTemporary)
-      : MCSymbol(SymbolKindWasm, Name, isTemporary) {}
-  static bool classof(const MCSymbol *S) { return S->isWasm(); }
+      : MCSymbol(Name, isTemporary) {}
 
   const MCExpr *getSize() const { return SymbolSize; }
   void setSize(const MCExpr *SS) { SymbolSize = SS; }
@@ -147,7 +146,7 @@ public:
                     uint8_t flags = wasm::WASM_LIMITS_FLAG_NONE) {
     // Declare a table with element type VT and no limits (min size 0, no max
     // size).
-    wasm::WasmLimits Limits = {flags, 0, 0};
+    wasm::WasmLimits Limits = {flags, 0, 0, 0};
     setTableType({VT, Limits});
   }
 };

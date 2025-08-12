@@ -12,7 +12,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsARM.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include <optional>
 using namespace llvm;
@@ -96,20 +95,12 @@ MemoryLocation MemoryLocation::getForSource(const MemTransferInst *MTI) {
   return getForSource(cast<AnyMemTransferInst>(MTI));
 }
 
-MemoryLocation MemoryLocation::getForSource(const AtomicMemTransferInst *MTI) {
-  return getForSource(cast<AnyMemTransferInst>(MTI));
-}
-
 MemoryLocation MemoryLocation::getForSource(const AnyMemTransferInst *MTI) {
   assert(MTI->getRawSource() == MTI->getArgOperand(1));
   return getForArgument(MTI, 1, nullptr);
 }
 
 MemoryLocation MemoryLocation::getForDest(const MemIntrinsic *MI) {
-  return getForDest(cast<AnyMemIntrinsic>(MI));
-}
-
-MemoryLocation MemoryLocation::getForDest(const AtomicMemIntrinsic *MI) {
   return getForDest(cast<AnyMemIntrinsic>(MI));
 }
 
@@ -120,7 +111,9 @@ MemoryLocation MemoryLocation::getForDest(const AnyMemIntrinsic *MI) {
 
 std::optional<MemoryLocation>
 MemoryLocation::getForDest(const CallBase *CB, const TargetLibraryInfo &TLI) {
-  if (!CB->onlyAccessesArgMemory())
+  // Check that the only possible writes are to arguments.
+  MemoryEffects WriteME = CB->getMemoryEffects() & MemoryEffects::writeOnly();
+  if (!WriteME.onlyAccessesArgPointees())
     return std::nullopt;
 
   if (CB->hasOperandBundles())
@@ -184,8 +177,34 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
                               AATags);
       return MemoryLocation::getAfter(Arg, AATags);
 
+    case Intrinsic::experimental_memset_pattern:
+      assert((ArgIdx == 0 || ArgIdx == 1) &&
+             "Invalid argument index for memory intrinsic");
+      if (ConstantInt *LenCI = dyn_cast<ConstantInt>(II->getArgOperand(2)))
+        return MemoryLocation(
+            Arg,
+            LocationSize::precise(
+                LenCI->getZExtValue() *
+                DL.getTypeAllocSize(II->getArgOperand(1)->getType())),
+            AATags);
+      return MemoryLocation::getAfter(Arg, AATags);
+
     case Intrinsic::lifetime_start:
-    case Intrinsic::lifetime_end:
+    case Intrinsic::lifetime_end: {
+      assert(ArgIdx == 0 && "Invalid argument index");
+      auto *AI = dyn_cast<AllocaInst>(Arg);
+      if (!AI)
+        // lifetime of poison value.
+        return MemoryLocation::getBeforeOrAfter(Arg);
+
+      std::optional<TypeSize> AllocSize =
+          AI->getAllocationSize(II->getDataLayout());
+      return MemoryLocation(Arg,
+                            AllocSize ? LocationSize::precise(*AllocSize)
+                                      : LocationSize::afterPointer(),
+                            AATags);
+    }
+
     case Intrinsic::invariant_start:
       assert(ArgIdx == 1 && "Invalid argument index");
       return MemoryLocation(

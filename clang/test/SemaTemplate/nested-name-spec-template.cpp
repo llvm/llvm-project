@@ -2,28 +2,28 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
-namespace N { 
+namespace N {
   namespace M {
     template<typename T> struct Promote;
-    
+
     template<> struct Promote<short> {
       typedef int type;
     };
-    
+
     template<> struct Promote<int> {
       typedef int type;
     };
-    
+
     template<> struct Promote<float> {
       typedef double type;
     };
-    
+
     Promote<short>::type *ret_intptr(int* ip) { return ip; }
     Promote<int>::type *ret_intptr2(int* ip) { return ip; }
   }
 
   M::Promote<int>::type *ret_intptr3(int* ip) { return ip; }
-  M::template Promote<int>::type *ret_intptr4(int* ip) { return ip; } 
+  M::template Promote<int>::type *ret_intptr4(int* ip) { return ip; }
 #if __cplusplus <= 199711L
   // expected-warning@-2 {{'template' keyword outside of a template}}
 #endif
@@ -87,7 +87,7 @@ namespace PR7385 {
     template< typename > struct has_xxx0_introspect
     {
       template< typename > struct has_xxx0_substitute ;
-      template< typename V > 
+      template< typename V >
       int int00( has_xxx0_substitute < typename V::template xxx< > > = 0 );
     };
     static const int value = has_xxx0_introspect<int>::value; // expected-error{{no member named 'value'}}
@@ -130,7 +130,7 @@ namespace PR9226 {
 
   template<typename T, typename U>
   struct Y {
-    typedef typename T::template f<U> type; // expected-error{{template name refers to non-type template 'X::template f'}}
+    typedef typename T::template f<U> type; // expected-error{{template name refers to non-type template 'PR9226::X::template f'}}
   };
 
   Y<X, int> yxi; // expected-note{{in instantiation of template class 'PR9226::Y<PR9226::X, int>' requested here}}
@@ -154,3 +154,16 @@ namespace sugared_template_instantiation {
   struct B { typedef int type1; };
   typedef A<const B> type2;
 } // namespace sugated_template_instantiation
+
+namespace unresolved_using {
+  template <class> struct A {
+    struct B {
+      typedef int X;
+    };
+  };
+  template <class T> struct C : A<T> {
+    using typename A<T>::B;
+    typedef typename B::X Y;
+  };
+  template struct C<int>;
+} // namespace unresolved_using

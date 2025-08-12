@@ -4,24 +4,23 @@ target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n64-S128"
 target triple = "loongarch64-unknown-linux-gnu"
 
 ;; First, check allocation of the save area.
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 declare void @llvm.va_start(ptr) #2
 declare void @llvm.va_end(ptr) #2
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture) #1
 define i32 @foo(i32 %guard, ...) {
 ; CHECK-LABEL: @foo
 ; CHECK:    [[TMP1:%.*]] = load {{.*}} @__msan_va_arg_overflow_size_tls
-; CHECK:    [[TMP2:%.*]] = add i64 0, [[TMP1]]
-; CHECK:    [[TMP3:%.*]] = alloca {{.*}} [[TMP2]]
-; CHECK:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP3]], i8 0, i64 [[TMP2]], i1 false)
-; CHECK:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP2]], i64 800)
+; CHECK:    [[TMP3:%.*]] = alloca {{.*}} [[TMP1]]
+; CHECK:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP3]], i8 0, i64 [[TMP1]], i1 false)
+; CHECK:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP1]], i64 800)
 ; CHECK:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP3]], ptr align 8 @__msan_va_arg_tls, i64 [[TMP4]], i1 false)
 ;
   %vl = alloca ptr, align 8
-  call void @llvm.lifetime.start.p0(i64 32, ptr %vl)
+  call void @llvm.lifetime.start.p0(ptr %vl)
   call void @llvm.va_start(ptr %vl)
   call void @llvm.va_end(ptr %vl)
-  call void @llvm.lifetime.end.p0(i64 32, ptr %vl)
+  call void @llvm.lifetime.end.p0(ptr %vl)
   ret i32 0
 }
 

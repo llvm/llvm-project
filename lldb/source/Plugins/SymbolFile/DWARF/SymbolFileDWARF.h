@@ -54,7 +54,6 @@ class DWARFDebugAranges;
 class DWARFDebugInfo;
 class DWARFDebugInfoEntry;
 class DWARFDebugLine;
-class DWARFDebugRanges;
 class DWARFDeclContext;
 class DWARFFormValue;
 class DWARFTypeUnit;
@@ -212,8 +211,6 @@ public:
 
   DWARFDebugInfo &DebugInfo();
 
-  DWARFDebugRanges *GetDebugRanges();
-
   static bool SupportedVersion(uint16_t version);
 
   DWARFDIE
@@ -223,10 +220,9 @@ public:
 
   CompileUnit *GetCompUnitForDWARFCompUnit(DWARFCompileUnit &dwarf_cu);
 
-  virtual void GetObjCMethods(ConstString class_name,
-                              llvm::function_ref<bool(DWARFDIE die)> callback);
-
-  bool Supports_DW_AT_APPLE_objc_complete_type(DWARFUnit *cu);
+  virtual void
+  GetObjCMethods(ConstString class_name,
+                 llvm::function_ref<IterationAction(DWARFDIE die)> callback);
 
   DebugMacrosSP ParseDebugMacros(lldb::offset_t *offset);
 
@@ -281,11 +277,16 @@ public:
 
   void Dump(Stream &s) override;
 
-  void DumpClangAST(Stream &s) override;
+  void DumpClangAST(Stream &s, llvm::StringRef filter) override;
 
   /// List separate dwo files.
-  bool GetSeparateDebugInfo(StructuredData::Dictionary &d,
-                            bool errors_only) override;
+  bool GetSeparateDebugInfo(StructuredData::Dictionary &d, bool errors_only,
+                            bool load_all_debug_info = false) override;
+
+  // Gets a pair of loaded and total dwo file counts.
+  // For split-dwarf files, this reports the counts for successfully loaded DWO
+  // CUs and total DWO CUs. For non-split-dwarf files, this reports 0 for both.
+  std::pair<uint32_t, uint32_t> GetDwoFileCounts() override;
 
   DWARFContext &GetDWARFContext() { return m_context; }
 
@@ -318,6 +319,8 @@ public:
 
   StatsDuration &GetDebugInfoParseTimeRef() { return m_parse_time; }
 
+  void ResetStatistics() override;
+
   virtual lldb::offset_t
   GetVendorDWARFOpcodeSize(const DataExtractor &data,
                            const lldb::offset_t data_offset,
@@ -327,6 +330,8 @@ public:
 
   virtual bool ParseVendorDWARFOpcode(uint8_t op, const DataExtractor &opcodes,
                                       lldb::offset_t &offset,
+                                      RegisterContext *reg_ctx,
+                                      lldb::RegisterKind reg_kind,
                                       std::vector<Value> &stack) const {
     return false;
   }
@@ -338,9 +343,7 @@ public:
     m_file_index = file_index;
   }
 
-  typedef llvm::DenseMap<const DWARFDebugInfoEntry *, Type *> DIEToTypePtr;
-
-  virtual DIEToTypePtr &GetDIEToType() { return m_die_to_type; }
+  virtual llvm::DenseMap<const DWARFDebugInfoEntry *, Type *> &GetDIEToType();
 
   virtual llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef> &
   GetForwardDeclCompilerTypeToDIE();
@@ -370,6 +373,13 @@ public:
   /// Returns the DWARFIndex for this symbol, if it exists.
   DWARFIndex *getIndex() { return m_index.get(); }
 
+private:
+  /// Find the definition DIE for the specified \c label in this
+  /// SymbolFile.
+  ///
+  /// \returns A valid definition DIE on success.
+  DWARFDIE FindFunctionDefinition(const FunctionCallLabel &label);
+
 protected:
   SymbolFileDWARF(const SymbolFileDWARF &) = delete;
   const SymbolFileDWARF &operator=(const SymbolFileDWARF &) = delete;
@@ -396,8 +406,7 @@ protected:
   Function *ParseFunction(CompileUnit &comp_unit, const DWARFDIE &die);
 
   size_t ParseBlocksRecursive(CompileUnit &comp_unit, Block *parent_block,
-                              const DWARFDIE &die,
-                              lldb::addr_t subprogram_low_pc, uint32_t depth);
+                              DWARFDIE die, lldb::addr_t function_file_addr);
 
   size_t ParseTypes(const SymbolContext &sc, const DWARFDIE &die,
                     bool parse_siblings, bool parse_children);
@@ -434,6 +443,9 @@ protected:
 
   DIEArray MergeBlockAbstractParameters(const DWARFDIE &block_die,
                                         DIEArray &&variable_dies);
+
+  llvm::Expected<SymbolContext>
+  ResolveFunctionCallLabel(const FunctionCallLabel &label) override;
 
   // Given a die_offset, figure out the symbol context representing that die.
   bool ResolveFunction(const DWARFDIE &die, bool include_inlines,
@@ -526,16 +538,14 @@ protected:
   ExternalTypeModuleMap m_external_type_modules;
   std::unique_ptr<DWARFIndex> m_index;
   bool m_fetched_external_modules : 1;
-  LazyBool m_supports_DW_AT_APPLE_objc_complete_type;
 
   typedef std::set<DIERef> DIERefSet;
   typedef llvm::StringMap<DIERefSet> NameToOffsetMap;
   NameToOffsetMap m_function_scope_qualified_name_map;
-  std::unique_ptr<DWARFDebugRanges> m_ranges;
   UniqueDWARFASTTypeMap m_unique_ast_type_map;
   // A map from DIE to lldb_private::Type. For record type, the key might be
   // either declaration DIE or definition DIE.
-  DIEToTypePtr m_die_to_type;
+  llvm::DenseMap<const DWARFDebugInfoEntry *, Type *> m_die_to_type;
   DIEToVariableSP m_die_to_variable_sp;
   // A map from CompilerType to the struct/class/union/enum DIE (might be a
   // declaration or a definition) that is used to construct it.
@@ -559,6 +569,7 @@ protected:
   /// an index that identifies the .DWO or .o file.
   std::optional<uint64_t> m_file_index;
 };
+
 } // namespace dwarf
 } // namespace lldb_private::plugin
 
