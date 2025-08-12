@@ -129,10 +129,9 @@ public:
                       bool Decompress = false)
       : FileName(File), Decompressed(Decompress), NumberOfEntries(0),
         Entries(SmallVector<OffloadBundleEntry>()) {
-    if (Decompress) {
+    if (Decompress)
       DecompressedBuffer =
           MemoryBuffer::getMemBufferCopy(Source.getBuffer(), File);
-    }
   }
 };
 

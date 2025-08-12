@@ -25,7 +25,7 @@
 using namespace llvm;
 using namespace llvm::object;
 
-static llvm::TimerGroup
+static TimerGroup
     OffloadBundlerTimerGroup("Offload Bundler Timer Group",
                              "Timer group for offload bundler");
 
@@ -49,16 +49,15 @@ Error extractOffloadBundle(MemoryBufferRef Contents, uint64_t SectionOffset,
 
     if (identify_magic((*Buffer).getBuffer()) ==
         file_magic::offload_bundle_compressed) {
-      Magic = StringRef("CCOB");
-      // decompress this bundle first.
+      Magic = "CCOB";
+      // Decompress this bundle first.
       NextbundleStart = (*Buffer).getBuffer().find(Magic, Magic.size());
-      if (NextbundleStart == StringRef::npos) {
+      if (NextbundleStart == StringRef::npos)
         NextbundleStart = (*Buffer).getBuffer().size();
-      }
 
       ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
           MemoryBuffer::getMemBuffer((*Buffer).getBuffer().take_front(
-                                         NextbundleStart /*- Magic.size()*/),
+                                         NextbundleStart),
                                      FileName, false);
       if (std::error_code EC = CodeOrErr.getError())
         return createFileError(FileName, EC);
@@ -68,8 +67,8 @@ Error extractOffloadBundle(MemoryBufferRef Contents, uint64_t SectionOffset,
       if (!DecompressedBufferOrErr)
         return createStringError(
             inconvertibleErrorCode(),
-            "Failed to decompress input: " +
-                llvm::toString(DecompressedBufferOrErr.takeError()));
+            "failed to decompress input: " +
+                toString(DecompressedBufferOrErr.takeError()));
 
       auto FatBundleOrErr = OffloadBundleFatBin::create(
           **DecompressedBufferOrErr, Offset, FileName, true);
@@ -81,7 +80,7 @@ Error extractOffloadBundle(MemoryBufferRef Contents, uint64_t SectionOffset,
 
     } else if (identify_magic((*Buffer).getBuffer()) ==
                file_magic::offload_bundle) {
-      // Create the FatBinBindle object. This will also create the Bundle Entry
+      // Create the OffloadBundleFatBin object. This will also create the Bundle Entry
       // list info.
       auto FatBundleOrErr = OffloadBundleFatBin::create(
           *Buffer, SectionOffset + Offset, FileName);
@@ -91,7 +90,7 @@ Error extractOffloadBundle(MemoryBufferRef Contents, uint64_t SectionOffset,
       // Add current Bundle to list.
       Bundles.emplace_back(std::move(**FatBundleOrErr));
 
-      Magic = StringRef("__CLANG_OFFLOAD_BUNDLE__");
+      Magic = "__CLANG_OFFLOAD_BUNDLE__";
       NextbundleStart = (*Buffer).getBuffer().find(Magic, Magic.size());
     }
 
@@ -106,7 +105,7 @@ Error OffloadBundleFatBin::readEntries(StringRef Buffer,
                                        uint64_t SectionOffset) {
   uint64_t NumOfEntries = 0;
 
-  BinaryStreamReader Reader(Buffer, llvm::endianness::little);
+  BinaryStreamReader Reader(Buffer, endianness::little);
 
   // Read the Magic String first.
   StringRef Magic;
@@ -202,9 +201,9 @@ Error object::extractOffloadBundleFatBinary(
       return Buffer.takeError();
 
     // If it does not start with the reserved suffix, just skip this section.
-    if ((llvm::identify_magic(*Buffer) == llvm::file_magic::offload_bundle) ||
-        (llvm::identify_magic(*Buffer) ==
-         llvm::file_magic::offload_bundle_compressed)) {
+    if ((identify_magic(*Buffer) == file_magic::offload_bundle) ||
+        (identify_magic(*Buffer) ==
+         file_magic::offload_bundle_compressed)) {
 
       uint64_t SectionOffset = 0;
       if (Obj.isELF()) {
@@ -254,10 +253,8 @@ Error object::extractCodeObject(const MemoryBufferRef Buffer, int64_t Offset,
   std::unique_ptr<FileOutputBuffer> Buf = std::move(*BufferOrErr);
   std::copy(Buffer.getBufferStart() + Offset,
             Buffer.getBufferStart() + Offset + Size, Buf->getBufferStart());
-  if (Error E = Buf->commit())
-    return E;
 
-  return Error::success();
+  return Buf->commit();
 }
 
 // given a file name, offset, and size, extract data into a code object file,
@@ -298,20 +295,20 @@ static std::string formatWithCommas(unsigned long long Value) {
   return Num;
 }
 
-llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
-CompressedOffloadBundle::compress(llvm::compression::Params P,
-                                  const llvm::MemoryBuffer &Input,
+Expected<std::unique_ptr<MemoryBuffer>>
+CompressedOffloadBundle::compress(compression::Params P,
+                                  const MemoryBuffer &Input,
                                   uint16_t Version, bool Verbose) {
-  if (!llvm::compression::zstd::isAvailable() &&
-      !llvm::compression::zlib::isAvailable())
-    return createStringError(llvm::inconvertibleErrorCode(),
+  if (!compression::zstd::isAvailable() &&
+      !compression::zlib::isAvailable())
+    return createStringError(
                              "Compression not supported");
-  llvm::Timer HashTimer("Hash Calculation Timer", "Hash calculation time",
+  Timer HashTimer("Hash Calculation Timer", "Hash calculation time",
                         OffloadBundlerTimerGroup);
   if (Verbose)
     HashTimer.startTimer();
-  llvm::MD5 Hash;
-  llvm::MD5::MD5Result Result;
+  MD5 Hash;
+  MD5::MD5Result Result;
   Hash.update(Input.getBuffer());
   Hash.final(Result);
   uint64_t TruncatedHash = Result.low();
@@ -319,33 +316,33 @@ CompressedOffloadBundle::compress(llvm::compression::Params P,
     HashTimer.stopTimer();
 
   SmallVector<uint8_t, 0> CompressedBuffer;
-  auto BufferUint8 = llvm::ArrayRef<uint8_t>(
+  auto BufferUint8 = ArrayRef<uint8_t>(
       reinterpret_cast<const uint8_t *>(Input.getBuffer().data()),
       Input.getBuffer().size());
-  llvm::Timer CompressTimer("Compression Timer", "Compression time",
+  Timer CompressTimer("Compression Timer", "Compression time",
                             OffloadBundlerTimerGroup);
   if (Verbose)
     CompressTimer.startTimer();
-  llvm::compression::compress(P, BufferUint8, CompressedBuffer);
+  compression::compress(P, BufferUint8, CompressedBuffer);
   if (Verbose)
     CompressTimer.stopTimer();
 
   uint16_t CompressionMethod = static_cast<uint16_t>(P.format);
 
-  // Store sizes in 64-bit variables first
+  // Store sizes in 64-bit variables first.
   uint64_t UncompressedSize64 = Input.getBuffer().size();
   uint64_t TotalFileSize64;
 
-  // Calculate total file size based on version
+  // Calculate total file size based on version.
   if (Version == 2) {
-    // For V2, ensure the sizes don't exceed 32-bit limit
+    // For V2, ensure the sizes don't exceed 32-bit limit.
     if (UncompressedSize64 > std::numeric_limits<uint32_t>::max())
-      return createStringError(llvm::inconvertibleErrorCode(),
+      return createStringError(inconvertibleErrorCode(),
                                "Uncompressed size exceeds version 2 limit");
     if ((MagicNumber.size() + sizeof(uint32_t) + sizeof(Version) +
          sizeof(CompressionMethod) + sizeof(uint32_t) + sizeof(TruncatedHash) +
          CompressedBuffer.size()) > std::numeric_limits<uint32_t>::max())
-      return createStringError(llvm::inconvertibleErrorCode(),
+      return createStringError(inconvertibleErrorCode(),
                                "Total file size exceeds version 2 limit");
 
     TotalFileSize64 = MagicNumber.size() + sizeof(uint32_t) + sizeof(Version) +
@@ -358,7 +355,7 @@ CompressedOffloadBundle::compress(llvm::compression::Params P,
   }
 
   SmallVector<char, 0> FinalBuffer;
-  llvm::raw_svector_ostream OS(FinalBuffer);
+  raw_svector_ostream OS(FinalBuffer);
   OS << MagicNumber;
   OS.write(reinterpret_cast<const char *>(&Version), sizeof(Version));
   OS.write(reinterpret_cast<const char *>(&CompressionMethod),
@@ -386,13 +383,13 @@ CompressedOffloadBundle::compress(llvm::compression::Params P,
 
   if (Verbose) {
     auto MethodUsed =
-        P.format == llvm::compression::Format::Zstd ? "zstd" : "zlib";
+        P.format == compression::Format::Zstd ? "zstd" : "zlib";
     double CompressionRate =
         static_cast<double>(UncompressedSize64) / CompressedBuffer.size();
     double CompressionTimeSeconds = CompressTimer.getTotalTime().getWallTime();
     double CompressionSpeedMBs =
         (UncompressedSize64 / (1024.0 * 1024.0)) / CompressionTimeSeconds;
-    llvm::errs() << "Compressed bundle format version: " << Version << "\n"
+    errs() << "Compressed bundle format version: " << Version << "\n"
                  << "Total file size (including headers): "
                  << formatWithCommas(TotalFileSize64) << " bytes\n"
                  << "Compression method used: " << MethodUsed << "\n"
@@ -402,17 +399,17 @@ CompressedOffloadBundle::compress(llvm::compression::Params P,
                  << "Binary size after compression: "
                  << formatWithCommas(CompressedBuffer.size()) << " bytes\n"
                  << "Compression rate: "
-                 << llvm::format("%.2lf", CompressionRate) << "\n"
+                 << format("%.2lf", CompressionRate) << "\n"
                  << "Compression ratio: "
-                 << llvm::format("%.2lf%%", 100.0 / CompressionRate) << "\n"
+                 << format("%.2lf%%", 100.0 / CompressionRate) << "\n"
                  << "Compression speed: "
-                 << llvm::format("%.2lf MB/s", CompressionSpeedMBs) << "\n"
+                 << format("%.2lf MB/s", CompressionSpeedMBs) << "\n"
                  << "Truncated MD5 hash: "
-                 << llvm::format_hex(TruncatedHash, 16) << "\n";
+                 << format_hex(TruncatedHash, 16) << "\n";
   }
 
-  return llvm::MemoryBuffer::getMemBufferCopy(
-      llvm::StringRef(FinalBuffer.data(), FinalBuffer.size()));
+  return MemoryBuffer::getMemBufferCopy(
+      StringRef(FinalBuffer.data(), FinalBuffer.size()));
 }
 
 // Use packed structs to avoid padding, such that the structs map the serialized
@@ -452,7 +449,7 @@ union RawCompressedBundleHeader {
 };
 LLVM_PACKED_END
 
-// Helper method to get header size based on version
+// Helper method to get header size based on version.
 static size_t getHeaderSize(uint16_t Version) {
   switch (Version) {
   case 1:
@@ -469,11 +466,11 @@ static size_t getHeaderSize(uint16_t Version) {
 Expected<CompressedOffloadBundle::CompressedBundleHeader>
 CompressedOffloadBundle::CompressedBundleHeader::tryParse(StringRef Blob) {
   assert(Blob.size() >= sizeof(RawCompressedBundleHeader::CommonFields));
-  assert(llvm::identify_magic(Blob) ==
-         llvm::file_magic::offload_bundle_compressed);
+  assert(identify_magic(Blob) ==
+         file_magic::offload_bundle_compressed);
 
   RawCompressedBundleHeader Header;
-  memcpy(&Header, Blob.data(), std::min(Blob.size(), sizeof(Header)));
+  std::memcpy(&Header, Blob.data(), std::min(Blob.size(), sizeof(Header)));
 
   CompressedBundleHeader Normalized;
   Normalized.Version = Header.Common.Version;
@@ -519,20 +516,20 @@ CompressedOffloadBundle::CompressedBundleHeader::tryParse(StringRef Blob) {
   return Normalized;
 }
 
-llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
-CompressedOffloadBundle::decompress(const llvm::MemoryBuffer &Input,
+Expected<std::unique_ptr<MemoryBuffer>>
+CompressedOffloadBundle::decompress(const MemoryBuffer &Input,
                                     bool Verbose) {
   StringRef Blob = Input.getBuffer();
 
   // Check minimum header size (using V1 as it's the smallest)
   if (Blob.size() < sizeof(RawCompressedBundleHeader::CommonFields))
-    return llvm::MemoryBuffer::getMemBufferCopy(Blob);
+    return MemoryBuffer::getMemBufferCopy(Blob);
 
-  if (llvm::identify_magic(Blob) !=
-      llvm::file_magic::offload_bundle_compressed) {
+  if (identify_magic(Blob) !=
+      file_magic::offload_bundle_compressed) {
     if (Verbose)
-      llvm::errs() << "Uncompressed bundle.\n";
-    return llvm::MemoryBuffer::getMemBufferCopy(Blob);
+      errs() << "Uncompressed bundle.\n";
+    return MemoryBuffer::getMemBufferCopy(Blob);
   }
 
   Expected<CompressedBundleHeader> HeaderOrErr =
@@ -544,13 +541,13 @@ CompressedOffloadBundle::decompress(const llvm::MemoryBuffer &Input,
   unsigned ThisVersion = Normalized.Version;
   size_t HeaderSize = getHeaderSize(ThisVersion);
 
-  llvm::compression::Format CompressionFormat = Normalized.CompressionFormat;
+  compression::Format CompressionFormat = Normalized.CompressionFormat;
 
   size_t TotalFileSize = Normalized.FileSize.value_or(0);
   size_t UncompressedSize = Normalized.UncompressedFileSize;
   auto StoredHash = Normalized.Hash;
 
-  llvm::Timer DecompressTimer("Decompression Timer", "Decompression time",
+  Timer DecompressTimer("Decompression Timer", "Decompression time",
                               OffloadBundlerTimerGroup);
   if (Verbose)
     DecompressTimer.startTimer();
@@ -559,12 +556,12 @@ CompressedOffloadBundle::decompress(const llvm::MemoryBuffer &Input,
   StringRef CompressedData =
       Blob.substr(HeaderSize, TotalFileSize - HeaderSize);
 
-  if (llvm::Error DecompressionError = llvm::compression::decompress(
-          CompressionFormat, llvm::arrayRefFromStringRef(CompressedData),
+  if (Error DecompressionError = compression::decompress(
+          CompressionFormat, arrayRefFromStringRef(CompressedData),
           DecompressedData, UncompressedSize))
     return createStringError(inconvertibleErrorCode(),
                              "Could not decompress embedded file contents: " +
-                                 llvm::toString(std::move(DecompressionError)));
+                                 toString(std::move(DecompressionError)));
 
   if (Verbose) {
     DecompressTimer.stopTimer();
@@ -573,13 +570,13 @@ CompressedOffloadBundle::decompress(const llvm::MemoryBuffer &Input,
         DecompressTimer.getTotalTime().getWallTime();
 
     // Recalculate MD5 hash for integrity check
-    llvm::Timer HashRecalcTimer("Hash Recalculation Timer",
+    Timer HashRecalcTimer("Hash Recalculation Timer",
                                 "Hash recalculation time",
                                 OffloadBundlerTimerGroup);
     HashRecalcTimer.startTimer();
-    llvm::MD5 Hash;
-    llvm::MD5::MD5Result Result;
-    Hash.update(llvm::ArrayRef<uint8_t>(DecompressedData));
+    MD5 Hash;
+    MD5::MD5Result Result;
+    Hash.update(ArrayRef<uint8_t>(DecompressedData));
     Hash.final(Result);
     uint64_t RecalculatedHash = Result.low();
     HashRecalcTimer.stopTimer();
@@ -590,12 +587,12 @@ CompressedOffloadBundle::decompress(const llvm::MemoryBuffer &Input,
     double DecompressionSpeedMBs =
         (UncompressedSize / (1024.0 * 1024.0)) / DecompressionTimeSeconds;
 
-    llvm::errs() << "Compressed bundle format version: " << ThisVersion << "\n";
+    errs() << "Compressed bundle format version: " << ThisVersion << "\n";
     if (ThisVersion >= 2)
-      llvm::errs() << "Total file size (from header): "
+      errs() << "Total file size (from header): "
                    << formatWithCommas(TotalFileSize) << " bytes\n";
-    llvm::errs() << "Decompression method: "
-                 << (CompressionFormat == llvm::compression::Format::Zlib
+    errs() << "Decompression method: "
+                 << (CompressionFormat == compression::Format::Zlib
                          ? "zlib"
                          : "zstd")
                  << "\n"
@@ -604,17 +601,17 @@ CompressedOffloadBundle::decompress(const llvm::MemoryBuffer &Input,
                  << "Size after decompression: "
                  << formatWithCommas(UncompressedSize) << " bytes\n"
                  << "Compression rate: "
-                 << llvm::format("%.2lf", CompressionRate) << "\n"
+                 << format("%.2lf", CompressionRate) << "\n"
                  << "Compression ratio: "
-                 << llvm::format("%.2lf%%", 100.0 / CompressionRate) << "\n"
+                 << format("%.2lf%%", 100.0 / CompressionRate) << "\n"
                  << "Decompression speed: "
-                 << llvm::format("%.2lf MB/s", DecompressionSpeedMBs) << "\n"
-                 << "Stored hash: " << llvm::format_hex(StoredHash, 16) << "\n"
+                 << format("%.2lf MB/s", DecompressionSpeedMBs) << "\n"
+                 << "Stored hash: " << format_hex(StoredHash, 16) << "\n"
                  << "Recalculated hash: "
-                 << llvm::format_hex(RecalculatedHash, 16) << "\n"
+                 << format_hex(RecalculatedHash, 16) << "\n"
                  << "Hashes match: " << (HashMatch ? "Yes" : "No") << "\n";
   }
 
-  return llvm::MemoryBuffer::getMemBufferCopy(
-      llvm::toStringRef(DecompressedData));
+  return MemoryBuffer::getMemBufferCopy(
+      toStringRef(DecompressedData));
 }
