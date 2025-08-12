@@ -40,6 +40,7 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getCalleeAttrName() { return "callee"; }
     static llvm::StringRef getNoThrowAttrName() { return "nothrow"; }
     static llvm::StringRef getSideEffectAttrName() { return "side_effect"; }
+    static llvm::StringRef getModuleLevelAsmAttrName() { return "cir.module_asm"; }
 
     void registerAttributes();
     void registerTypes();

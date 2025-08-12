@@ -1994,6 +1994,8 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN,
       }
       Clone = InsertNewInstBefore(Clone, OpBB->getTerminator()->getIterator());
       Clones.insert({OpBB, Clone});
+      // We may have speculated the instruction.
+      Clone->dropUBImplyingAttrsAndMetadata();
     }
 
     NewPhiValues[OpIndex] = Clone;
@@ -2009,12 +2011,17 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN,
     NewPN->addIncoming(NewPhiValues[i], PN->getIncomingBlock(i));
 
   if (IdenticalUsers) {
-    for (User *U : make_early_inc_range(PN->users())) {
+    // Collect and deduplicate users up-front to avoid iterator invalidation.
+    SmallSetVector<Instruction *, 4> ToReplace;
+    for (User *U : PN->users()) {
       Instruction *User = cast<Instruction>(U);
       if (User == &I)
         continue;
-      replaceInstUsesWith(*User, NewPN);
-      eraseInstFromFunction(*User);
+      ToReplace.insert(User);
+    }
+    for (Instruction *I : ToReplace) {
+      replaceInstUsesWith(*I, NewPN);
+      eraseInstFromFunction(*I);
     }
     OneUse = true;
   }
@@ -2652,9 +2659,18 @@ static Instruction *canonicalizeGEPOfConstGEPI8(GetElementPtrInst &GEP,
   APInt NewOffset = TypeSize * *C2 + *C1;
   if (NewOffset.isZero() ||
       (Src->hasOneUse() && GEP.getOperand(1)->hasOneUse())) {
+    GEPNoWrapFlags Flags = GEPNoWrapFlags::none();
+    if (GEP.hasNoUnsignedWrap() &&
+        cast<GEPOperator>(Src)->hasNoUnsignedWrap() &&
+        match(GEP.getOperand(1), m_NUWAddLike(m_Value(), m_Value()))) {
+      Flags |= GEPNoWrapFlags::noUnsignedWrap();
+      if (GEP.isInBounds() && cast<GEPOperator>(Src)->isInBounds())
+        Flags |= GEPNoWrapFlags::inBounds();
+    }
+
     Value *GEPConst =
-        IC.Builder.CreatePtrAdd(Base, IC.Builder.getInt(NewOffset));
-    return GetElementPtrInst::Create(BaseType, GEPConst, VarIndex);
+        IC.Builder.CreatePtrAdd(Base, IC.Builder.getInt(NewOffset), "", Flags);
+    return GetElementPtrInst::Create(BaseType, GEPConst, VarIndex, Flags);
   }
 
   return nullptr;
@@ -3182,7 +3198,16 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       // If we are using a wider index than needed for this platform, shrink
       // it to what we need.  If narrower, sign-extend it to what we need.
       // This explicit cast can make subsequent optimizations more obvious.
-      *I = Builder.CreateIntCast(*I, NewIndexType, true);
+      if (IndexTy->getScalarSizeInBits() <
+          NewIndexType->getScalarSizeInBits()) {
+        if (GEP.hasNoUnsignedWrap() && GEP.hasNoUnsignedSignedWrap())
+          *I = Builder.CreateZExt(*I, NewIndexType, "", /*IsNonNeg=*/true);
+        else
+          *I = Builder.CreateSExt(*I, NewIndexType);
+      } else {
+        *I = Builder.CreateTrunc(*I, NewIndexType, "", GEP.hasNoUnsignedWrap(),
+                                 GEP.hasNoUnsignedSignedWrap());
+      }
       MadeChange = true;
     }
   }

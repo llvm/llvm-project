@@ -1079,6 +1079,22 @@ bool ChildFormattedIoStatementState<DIR, CHAR>::AdvanceRecord(int n) {
 }
 
 template <Direction DIR>
+ChildListIoStatementState<DIR>::ChildListIoStatementState(
+    ChildIo &child, const char *sourceFile, int sourceLine)
+    : ChildIoStatementState<DIR>{child, sourceFile, sourceLine} {
+#if !defined(RT_DEVICE_AVOID_RECURSION)
+  if constexpr (DIR == Direction::Input) {
+    if (auto *listInput{child.parent()
+                .get_if<ListDirectedStatementState<Direction::Input>>()}) {
+      this->inNamelistSequence_ = listInput->inNamelistSequence();
+    }
+  }
+#else
+  this->ReportUnsupportedChildIo();
+#endif
+}
+
+template <Direction DIR>
 bool ChildUnformattedIoStatementState<DIR>::Receive(
     char *data, std::size_t bytes, std::size_t elementBytes) {
 #if !defined(RT_DEVICE_AVOID_RECURSION)

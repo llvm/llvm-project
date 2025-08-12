@@ -189,6 +189,26 @@ LogicalResult BulkStoreOp::verify() {
   return success();
 }
 
+LogicalResult PMEventOp::verify() {
+  auto eventId = getEventId();
+  auto maskedEventId = getMaskedEventId();
+  if (!maskedEventId && !eventId) {
+    return emitOpError() << "either `id` or `mask` must be set";
+  }
+
+  if (maskedEventId && eventId) {
+    return emitOpError() << "`id` and `mask` cannot be set at the same time";
+  }
+
+  if (eventId) {
+    if (eventId < 0 || eventId > 15) {
+      return emitOpError() << "`id` must be between 0 and 15";
+    }
+  }
+
+  return llvm::success();
+}
+
 // Given the element type of an operand and whether or not it is an accumulator,
 // this function returns the PTX type (`NVVM::MMATypes`) that corresponds to the
 // operand's element type.
@@ -813,14 +833,25 @@ LogicalResult NVVM::LdMatrixOp::verify() {
 }
 
 LogicalResult NVVM::StMatrixOp::verify() {
-  unsigned addressSpace =
-      llvm::cast<LLVM::LLVMPointerType>(getPtr().getType()).getAddressSpace();
-  if (addressSpace != NVVM::kSharedMemorySpace)
-    return emitOpError("expected source pointer in memory space 3");
-
   int numMatrix = getSources().size();
   if (numMatrix != 1 && numMatrix != 2 && numMatrix != 4)
     return emitOpError("expected num attribute to be 1, 2 or 4");
+
+  int m = getShape().getM(), n = getShape().getN();
+  if (m == 8 && n == 8) {
+    if (getEltType() != NVVM::LdStMatrixEltType::B16) {
+      return emitOpError("expected element type to be B16 for 8x8 matrix");
+    }
+  } else if (m == 16 && n == 8) {
+    if (getEltType() != NVVM::LdStMatrixEltType::B8) {
+      return emitOpError("expected element type to be B8 for 16x8 matrix");
+    }
+    if (getLayout() != NVVM::MMALayout::col) {
+      return emitOpError("expected layout to be col for 16x8 matrix");
+    }
+  } else {
+    return emitOpError("expected shape to be 8x8 or 16x8");
+  }
 
   return success();
 }
