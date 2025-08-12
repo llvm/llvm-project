@@ -61,11 +61,11 @@ TEST(Remark, TestOutputOptimizationRemark) {
     ASSERT_TRUE(succeeded(isEnabled)) << "Failed to enable remark engine";
 
     // Remark 1: pass, category LoopUnroll
-    reportOptimizationPass(loc, categoryLoopunroll, myPassname1) << pass1Msg;
+    reportRemarkPassed(loc, categoryLoopunroll, myPassname1) << pass1Msg;
     // Remark 2: failure, category LoopUnroll
     reportOptimizationFail(loc, categoryLoopunroll, myPassname2) << pass2Msg;
     // Remark 3: pass, category Inline (should not be printed)
-    reportOptimizationPass(loc, categoryInline, myPassname1) << pass3Msg;
+    reportRemarkPassed(loc, categoryInline, myPassname1) << pass3Msg;
   }
 
   // Read the file
@@ -129,8 +129,7 @@ TEST(Remark, TestOutputOptimizationRemarkDiagnostic) {
   std::string funcName("myFunc");
 
   std::string seenMsg = "";
-  std::string expectedMsg = "Passed\nLoopUnroll:myPass1\n func=<unknown "
-                            "function>\n {\nString=My message\n\n}";
+  std::string expectedMsg = "[Passed] LoopUnroll:myPass1 {String=My message}";
   {
     MLIRContext context;
     Location loc = UnknownLoc::get(&context);
@@ -155,7 +154,7 @@ TEST(Remark, TestOutputOptimizationRemarkDiagnostic) {
     ASSERT_TRUE(succeeded(isEnabled)) << "Failed to enable remark engine";
 
     // Remark 1: pass, category LoopUnroll
-    reportOptimizationPass(loc, categoryLoopunroll, myPassname1) << pass1Msg;
+    reportRemarkPassed(loc, categoryLoopunroll, myPassname1) << pass1Msg;
   }
   EXPECT_EQ(seenMsg, expectedMsg);
 }
@@ -201,11 +200,11 @@ TEST(Remark, TestCustomOptimizationRemarkDiagnostic) {
     ASSERT_TRUE(succeeded(isEnabled)) << "Failed to enable remark engine";
 
     // Remark 1: pass, category LoopUnroll
-    reportOptimizationPass(loc, categoryLoopunroll, myPassname1) << pass1Msg;
+    reportRemarkPassed(loc, categoryLoopunroll, myPassname1) << pass1Msg;
     // Remark 2: failure, category LoopUnroll
     reportOptimizationFail(loc, categoryLoopunroll, myPassname2) << pass2Msg;
     // Remark 3: pass, category Inline (should not be printed)
-    reportOptimizationPass(loc, categoryInline, myPassname1) << pass3Msg;
+    reportRemarkPassed(loc, categoryInline, myPassname1) << pass3Msg;
   }
 
   llvm::errs().flush();

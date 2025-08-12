@@ -2,8 +2,8 @@
 
 [TOC]
 
-Remarks are structured, human- and machine-readable notes emitted by passes to
-explain what was optimized, what was missed, and why. The `RemarkEngine`
+Remarks are structured, human- and machine-readable notes emitted by compiler to
+explain what was transformed, what was missed, and why. The `RemarkEngine`
 collects finalized remarks during compilation and forwards them to a pluggable
 streamer. A default streamer integrates LLVM’s `llvm::remarks` so you can stream
 while a pass runs and serialize to disk (YAML or LLVM bitstream) for tooling.
@@ -13,7 +13,7 @@ while a pass runs and serialize to disk (YAML or LLVM bitstream) for tooling.
 - **Opt-in**: Disabled by default; zero overhead unless enabled.
 - **Per-context**: Configured on `MLIRContext`.
 - **Formats**: Custom streamers, or LLVM’s Remark engine (YAML / Bitstream).
-- **Kinds**: `Pass`, `Missed`, `Failure`, `Analysis`.
+- **Kinds**: `Passed`, `Missed`, `Failure`, `Analysis`.
 - **API**: Lightweight streaming interface with `<<` (similar to diagnostics).
 
 ## How it works
@@ -84,13 +84,13 @@ LogicalResult MyPass::runOnOperation() {
   Location loc = op->getLoc();
 
   // PASS: something succeeded
-  reportOptimizationPass(loc, /*category=*/"vectorizer", /*passName=*/"MyPass")
+  reportRemarkPassed(loc, /*category=*/"vectorizer", /*passName=*/"MyPass")
       << "vectorized loop."
       << Remark::RemarkKeyValue("tripCount", 128);
 
   // ANALYSIS: neutral insight
-  reportOptimizationAnalysis(loc, "unroll", "MyPass")
-      << "estimated cost: " << Remark::RemarkKeyValue("cost", 42);
+  reportOptimizationAnalysis(loc, "RegisterCount", "")
+      << "Kernel uses 168 registers"
 
   // MISSED: explain why + suggest a fix
   reportOptimizationMiss(loc, "unroll", "MyPass",

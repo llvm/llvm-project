@@ -25,10 +25,10 @@ namespace mlir::remark {
 /// Defines different remark kinds that can be used to categorize remarks.
 enum class RemarkKind {
   OptimizationRemarkUnknown = 0,
-  OptimizationRemarkPassed,
-  OptimizationRemarkMissed,
-  OptimizationRemarkFailure,
-  OptimizationRemarkAnalysis,
+  OptimizationRemarkPassed,   // Optimization remark that was passed.
+  OptimizationRemarkMissed,   // Optimization remark that was missed.
+  OptimizationRemarkFailure,  // Optimization failure remark.
+  OptimizationRemarkAnalysis, // Analysis remark that does not indicate a pass.
 };
 
 //===----------------------------------------------------------------------===//
@@ -334,15 +334,18 @@ public:
                                                 StringRef category);
 };
 
+using RemarkKV = remark::Remark::RemarkKeyValue;
+
+} // namespace mlir::remark
+
 //===----------------------------------------------------------------------===//
 // Emitters
 //===----------------------------------------------------------------------===//
-
-using Suggestion = Remark::RemarkKeyValue;
-inline Suggestion suggest(StringRef txt) { return {"Suggestion", txt}; }
+namespace mlir {
+using namespace mlir::remark;
 
 template <typename Fn, typename... Args>
-inline InFlightRemark withEngine(Fn fn, Location loc, Args &&...args) {
+inline remark::InFlightRemark withEngine(Fn fn, Location loc, Args &&...args) {
   MLIRContext *ctx = loc->getContext();
 
   RemarkEngine *enginePtr = ctx->getRemarkEngine();
@@ -354,10 +357,12 @@ inline InFlightRemark withEngine(Fn fn, Location loc, Args &&...args) {
 }
 
 /// Report an optimization remark that was passed.
-inline InFlightRemark reportOptimizationPass(Location loc, StringRef cat,
-                                             StringRef passName) {
+inline InFlightRemark reportRemarkPassed(Location loc, StringRef cat,
+                                         StringRef passName) {
   return withEngine(&RemarkEngine::emitOptimizationRemark, loc, passName, cat);
 }
+
+inline RemarkKV suggest(StringRef s) { return {"Suggestion", s}; }
 
 /// Report an optimization remark that was missed.
 inline InFlightRemark
@@ -383,6 +388,6 @@ inline InFlightRemark reportOptimizationAnalysis(Location loc, StringRef cat,
                     passName, cat);
 }
 
-} // namespace mlir::remark
+} // namespace mlir
 
 #endif // MLIR_IR_REMARKS_H

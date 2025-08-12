@@ -1,4 +1,4 @@
-//===- Remarks.cpp - MLIR Remarks ---------------------------------===//
+//===- Remarks.cpp - MLIR Remarks -----------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -67,24 +67,25 @@ static void printArgs(llvm::raw_ostream &os,
                       llvm::ArrayRef<Remark::RemarkKeyValue> args) {
   if (args.empty())
     return;
-  os << " {\n";
+  os << " {";
   for (size_t i = 0; i < args.size(); ++i) {
     const auto &a = args[i];
     os << a.key << "=" << a.val;
     if (i + 1 < args.size())
       os << ", ";
-    os << "\n";
   }
-  os << "\n}";
+  os << "}";
 }
 
+/// Print the remark to the given output stream.
+/// Example output:
+/// [Missed] LoopUnroll:UnrolledLoop func=myFunction @file.cpp:42:7
+/// {tripCount=128, reason=too_small}
 void Remark::print(llvm::raw_ostream &os, bool printLocation) const {
-  os << getRemarkTypeString() << "\n";
-  os << getPassName() << ":" << getRemarkName() << "\n";
-
-  // Function (if any)
-  if (!getFunction().empty())
-    os << " func=" << getFunction() << "\n";
+  os << '[' << getRemarkTypeString() << "] ";
+  os << getPassName() << ':' << getRemarkName();
+  if (functionName)
+    os << " func=" << getFunction() << " ";
 
   if (printLocation)
     if (auto flc = mlir::dyn_cast<mlir::FileLineColLoc>(getLocation()))
