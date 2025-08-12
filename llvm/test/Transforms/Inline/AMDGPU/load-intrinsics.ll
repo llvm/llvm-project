@@ -4,7 +4,6 @@
 ; This test tests if the load intrinsic gets correct memory(argmem: read) attribute and
 ; the call instruction is assigned correct !alias.scope metadata post inlining
 
-
 define void @caller(ptr addrspace(3) %addr_f, ptr addrspace(1) %use_f) {
 ; OPT-LABEL: define void @caller(
 ; OPT-SAME: ptr addrspace(3) [[ADDR_F:%.*]], ptr addrspace(1) [[USE_F:%.*]]) {
