@@ -119,7 +119,7 @@ public:
     __end_ = __begin_ + __new_size;
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_size_if_size_based(difference_type __d) {}
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_size_if_size_based(difference_type) {}
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_end_if_pointer_based() { __set_sentinel(end() + 1); }
 
@@ -295,7 +295,7 @@ template <class _Tp,
           class _Allocator                             = allocator<_Tp>,
           template <class, class, class> class _Layout = __split_buffer_pointer_layout>
 struct __split_buffer : _Layout<__split_buffer<_Tp, _Allocator, _Layout>, _Tp, _Allocator> {
-  using __base_type = _Layout<__split_buffer<_Tp, _Allocator, _Layout>, _Tp, _Allocator>;
+  using __base_type _LIBCPP_NODEBUG = _Layout<__split_buffer<_Tp, _Allocator, _Layout>, _Tp, _Allocator>;
   using __base_type::__back_spare;
   using __base_type::__front_spare;
   using __base_type::__reset;
