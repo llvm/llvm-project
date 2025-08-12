@@ -57,6 +57,33 @@ func.func @log_caller(%f: complex<f32>, %d: complex<f64>) -> (complex<f32>, comp
   return %lf, %ld : complex<f32>, complex<f64>
 }
 
+//CHECK-LABEL: @pow_caller
+//CHECK:          (%[[Z:.*]]: complex<f32>, %[[W:.*]]: complex<f32>)
+func.func @pow_caller(%z: complex<f32>, %w: complex<f32>) -> complex<f32> {
+  // CHECK: %[[LOG:.*]] = call @__ocml_clog_f32(%[[Z]])
+  // CHECK: %[[MUL:.*]] = complex.mul %[[W]], %[[LOG]]
+  // CHECK: %[[EXP:.*]] = call @__ocml_cexp_f32(%[[MUL]])
+  // CHECK: return %[[EXP]]
+  %r = complex.pow %z, %w : complex<f32>
+  return %r : complex<f32>
+}
+
+// CHECK-LABEL: @pow_int_caller
+func.func @pow_int_caller(%f : complex<f32>, %d : complex<f64>)
+    ->(complex<f32>, complex<f64>) {
+  // CHECK-NOT: call @__ocml
+  // CHECK: %[[M2:.*]] = complex.mul %{{.*}}, %{{.*}} : complex<f32>
+  %c2 = complex.constant [2.0 : f32, 0.0 : f32] : complex<f32>
+  %p2 = complex.pow %f, %c2 : complex<f32>
+  // CHECK-NOT: call @__ocml
+  // CHECK: %[[M3A:.*]] = complex.mul %{{.*}}, %{{.*}} : complex<f64>
+  // CHECK: %[[M3B:.*]] = complex.mul %[[M3A]], %{{.*}} : complex<f64>
+  %c3 = complex.constant [3.0 : f64, 0.0 : f64] : complex<f64>
+  %p3 = complex.pow %d, %c3 : complex<f64>
+  // CHECK: return %[[M2]], %[[M3B]]
+  return %p2, %p3 : complex<f32>, complex<f64>
+}
+
 //CHECK-LABEL: @sin_caller
 func.func @sin_caller(%f: complex<f32>, %d: complex<f64>) -> (complex<f32>, complex<f64>) {
   // CHECK: %[[SF:.*]] = call @__ocml_csin_f32(%{{.*}})
