@@ -8,10 +8,13 @@
 
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Analysis/StackSafetyAnalysis.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
+#include "llvm/Bitcode/BitcodeWriterPass.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Instructions.h"
@@ -531,7 +534,8 @@ bool hasTypeMetadata(Module &M) {
 bool writeThinLTOBitcode(raw_ostream &OS, raw_ostream *ThinLinkOS,
                          function_ref<AAResults &(Function &)> AARGetter,
                          Module &M, const ModuleSummaryIndex *Index,
-                         const bool ShouldPreserveUseListOrder) {
+                         const bool ShouldPreserveUseListOrder,
+                         const TargetMachine *TM = nullptr) {
   std::unique_ptr<ModuleSummaryIndex> NewIndex = nullptr;
   // See if this module has any type metadata. If so, we try to split it
   // or at least promote type ids to enable WPD.
@@ -555,7 +559,7 @@ bool writeThinLTOBitcode(raw_ostream &OS, raw_ostream *ThinLinkOS,
       // buildModuleSummaryIndex when Module(s) are ready.
       ProfileSummaryInfo PSI(M);
       NewIndex = std::make_unique<ModuleSummaryIndex>(
-          buildModuleSummaryIndex(M, nullptr, &PSI));
+          buildModuleSummaryIndex(M, nullptr, &PSI, TM));
       Index = NewIndex.get();
     }
   }
@@ -567,21 +571,21 @@ bool writeThinLTOBitcode(raw_ostream &OS, raw_ostream *ThinLinkOS,
   // produced for the full link.
   ModuleHash ModHash = {{0}};
   WriteBitcodeToFile(M, OS, ShouldPreserveUseListOrder, Index,
-                     /*GenerateHash=*/true, &ModHash);
+                     /*GenerateHash=*/true, &ModHash, TM);
   // If a minimized bitcode module was requested for the thin link, only
   // the information that is needed by thin link will be written in the
   // given OS.
   if (ThinLinkOS && Index)
-    writeThinLinkBitcodeToFile(M, *ThinLinkOS, *Index, ModHash);
+    writeThinLinkBitcodeToFile(M, *ThinLinkOS, *Index, ModHash, TM);
   return false;
 }
 
 } // anonymous namespace
 
 PreservedAnalyses
-llvm::ThinLTOBitcodeWriterPass::run(Module &M, ModuleAnalysisManager &AM) {
+llvm::ThinLTOBitcodeWriterPass::run(Module &M, ModuleSummaryIndexAnalysisManager &AM) {
   FunctionAnalysisManager &FAM =
-      AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+      AM.getResult<FunctionAnalysisManagerModuleProxy>(M, TM).getManager();
 
   M.removeDebugIntrinsicDeclarations();
 
@@ -590,8 +594,8 @@ llvm::ThinLTOBitcodeWriterPass::run(Module &M, ModuleAnalysisManager &AM) {
       [&FAM](Function &F) -> AAResults & {
         return FAM.getResult<AAManager>(F);
       },
-      M, &AM.getResult<ModuleSummaryIndexAnalysis>(M),
-      ShouldPreserveUseListOrder);
+      M, &AM.getResult<ModuleSummaryIndexAnalysis>(M, TM),
+      ShouldPreserveUseListOrder, TM);
 
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }
