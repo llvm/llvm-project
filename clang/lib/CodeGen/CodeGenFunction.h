@@ -725,7 +725,7 @@ public:
   };
 
   /// Header for data within LifetimeExtendedCleanupStack.
-  struct alignas(8) LifetimeExtendedCleanupHeader {
+  struct alignas(uint64_t) LifetimeExtendedCleanupHeader {
     /// The size of the following cleanup object.
     unsigned Size;
     /// The kind of cleanup to push.

@@ -143,7 +143,7 @@ public:
   ///
   /// Cleanup implementations should generally be declared in an
   /// anonymous namespace.
-  class alignas(8) Cleanup {
+  class alignas(uint64_t) Cleanup {
     // Anchor the construction vtable.
     virtual void anchor();
 
