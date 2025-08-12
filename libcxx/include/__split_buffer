@@ -119,9 +119,11 @@ public:
     __end_ = __begin_ + __new_size;
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_size_if_size_based(difference_type) {}
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_size_if_pointer_based(difference_type __d) {
+    __set_sentinel(size() + __d);
+  }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_end_if_pointer_based() { __set_sentinel(end() + 1); }
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_end_if_size_based() {}
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_capacity(size_type __new_capacity) _NOEXCEPT {
     __cap_ = __first_ + __new_capacity;
@@ -236,10 +238,9 @@ public:
     __size_ = __new_size;
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_size_if_size_based(difference_type __d) {
-    __set_sentinel(size() + __d);
-  }
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_end_if_pointer_based() {}
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_size_if_pointer_based(difference_type) {}
+
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_end_if_size_based() { __set_sentinel(end() + 1); }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_capacity(size_type __new_capacity) _NOEXCEPT {
     __cap_ = __new_capacity;
@@ -303,10 +304,10 @@ struct __split_buffer : _Layout<__split_buffer<_Tp, _Allocator, _Layout>, _Tp, _
   using __base_type::__reset;
   using __base_type::__set_begin;
   using __base_type::__set_capacity;
-  using __base_type::__set_end_if_pointer_based;
+  using __base_type::__set_end_if_size_based;
   using __base_type::__set_first;
   using __base_type::__set_sentinel;
-  using __base_type::__set_size_if_size_based;
+  using __base_type::__set_size_if_pointer_based;
   using __base_type::__swap_without_allocator;
 
   using typename __base_type::__alloc_rr;
@@ -667,7 +668,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator, _Layout>::emp
       // `begin()` was moved further into the buffer, so we need to update the pointer-based
       // layout's end with it. We don't need to do anything for the size-based layout here, because
       // the number of elements hasn't changed yet.
-      __set_size_if_size_based(__d);
+      __set_size_if_pointer_based(__d);
     } else {
       size_type __c = std::max<size_type>(2 * capacity(), 1);
       __split_buffer<value_type, __alloc_rr&> __t(__c, (__c + 3) / 4, this->__alloc_);
@@ -682,7 +683,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator, _Layout>::emp
   // Now that we've added an element to the front of the buffer, we need to update the size-based
   // layout's size. We don't need to do anything for the pointer-based layout here, because the end
   // pointer was never updated.
-  __set_end_if_pointer_based();
+  __set_end_if_size_based();
 }
 
 template <class _Tp, class _Allocator, template <class, class, class> class _Layout>
