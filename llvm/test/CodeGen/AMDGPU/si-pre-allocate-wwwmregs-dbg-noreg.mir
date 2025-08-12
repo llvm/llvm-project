@@ -9,7 +9,6 @@
   target triple = "amdgcn-amd-amdpal"
   %dx.types.ResRet.f32 = type { float, float, float, float, i32 }
   
-  ; Function Attrs: memory(readwrite)
   define dllexport amdgpu_cs void @_amdgpu_cs_main(i32 inreg noundef %globalTable, i32 inreg noundef %userdata4, <3 x i32> inreg noundef %WorkgroupId, i32 inreg noundef %MultiDispatchInfo, <3 x i32> noundef %LocalInvocationId) #0 !dbg !5 {
       #dbg_value(i32 poison, !19, !DIExpression(DW_OP_LLVM_fragment, 0, 32), !20)
       #dbg_value(%dx.types.ResRet.f32 poison, !21, !DIExpression(), !23)
