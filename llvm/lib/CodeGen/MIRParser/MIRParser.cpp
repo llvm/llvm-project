@@ -1099,23 +1099,8 @@ bool MIRParserImpl::initializeSaveRestorePoints(
     PerFunctionMIParsingState &PFS, const yaml::SaveRestorePoints &YamlSRPoints,
     SmallVectorImpl<MachineBasicBlock *> &SaveRestorePoints) {
   MachineBasicBlock *MBB = nullptr;
-  if (std::holds_alternative<std::vector<yaml::SaveRestorePointEntry>>(
-          YamlSRPoints)) {
-    const auto &VectorRepr =
-        std::get<std::vector<yaml::SaveRestorePointEntry>>(YamlSRPoints);
-    if (VectorRepr.empty())
-      return false;
-    for (const yaml::SaveRestorePointEntry &Entry : VectorRepr) {
-      const yaml::StringValue &MBBSource = Entry.Point;
-      if (parseMBBReference(PFS, MBB, MBBSource.Value))
-        return true;
-      SaveRestorePoints.push_back(MBB);
-    }
-  } else {
-    yaml::StringValue StringRepr = std::get<yaml::StringValue>(YamlSRPoints);
-    if (StringRepr.Value.empty())
-      return false;
-    if (parseMBBReference(PFS, MBB, StringRepr))
+  for (const yaml::SaveRestorePointEntry &Entry : YamlSRPoints) {
+    if (parseMBBReference(PFS, MBB, Entry.Point.Value))
       return true;
     SaveRestorePoints.push_back(MBB);
   }
