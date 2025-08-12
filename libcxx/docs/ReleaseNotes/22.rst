@@ -45,7 +45,7 @@ Improvements and New Features
 
 - The performance of ``map::map(const map&)`` has been improved up to 2.3x
 - The performance of ``map::operator=(const map&)`` has been improved by up to 11x
-- String reallocations avoided in `std::filesystem::path::lexically_relative`, resulting in a performance improvement of up to 1.7x.
+- Some reallocations are now avoided in `std::filesystem::path::lexically_relative`, resulting in a performance improvement of up to 1.7x.
 
 Deprecations and Removals
 -------------------------
