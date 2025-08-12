@@ -42,13 +42,14 @@
     BUILTIN_FENCE_ORDER(memory_order, "", ##__VA_ARGS__)                       \
   }
 
-_CLC_OVERLOAD _CLC_DEF void __clc_mem_fence(int memory_scope, int memory_order,
-                                            MemorySemantics memory_semantics) {
-  if (memory_semantics == MEMORY_LOCAL) {
+_CLC_OVERLOAD _CLC_DEF void
+__clc_mem_fence(int memory_scope, int memory_order,
+                __CLC_MemorySemantics memory_semantics) {
+  if (memory_semantics == __CLC_MEMORY_LOCAL) {
     BUILTIN_FENCE(memory_scope, memory_order, "local")
-  } else if (memory_semantics == MEMORY_GLOBAL) {
+  } else if (memory_semantics == __CLC_MEMORY_GLOBAL) {
     BUILTIN_FENCE(memory_scope, memory_order, "global")
-  } else if (memory_semantics == (MEMORY_LOCAL | MEMORY_GLOBAL)) {
+  } else if (memory_semantics == (__CLC_MEMORY_LOCAL | __CLC_MEMORY_GLOBAL)) {
     BUILTIN_FENCE(memory_scope, memory_order, "local", "global")
   } else {
     BUILTIN_FENCE(memory_scope, memory_order)
