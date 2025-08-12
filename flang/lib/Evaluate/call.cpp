@@ -286,13 +286,28 @@ static void DetermineCopyInOutArgument(
     // Only DummyDataObject has the information we need
     return;
   }
-
+  // Pass by value, always copy-in, never copy-out
   bool dummyIsValue{
       dummyObj->attrs.test(characteristics::DummyDataObject::Attr::Value)};
   if (dummyIsValue) {
     actual.SetMayNeedCopyIn();
     return;
   }
+  bool dummyIntentIn{dummyObj->intent == common::Intent::In};
+  bool dummyIntentOut{dummyObj->intent == common::Intent::Out};
+
+  auto setCopyIn = [&]() {
+    if (!dummyIntentOut) {
+      // INTENT(OUT) never need copy-in
+      actual.SetMayNeedCopyIn();
+    }
+  };
+  auto setCopyOut = [&]() {
+    if (!dummyIntentIn) {
+      // INTENT(IN) never need copy-out
+      actual.SetMayNeedCopyOut();
+    }
+  };
 
   // Check actual contiguity, unless dummy doesn't care
   bool actualTreatAsContiguous{
@@ -312,11 +327,14 @@ static void DetermineCopyInOutArgument(
           dummyObj->attrs.test(
               characteristics::DummyDataObject::Attr::Contiguous))};
   if (!actualTreatAsContiguous && dummyNeedsContiguity) {
-    actual.SetMayNeedCopyIn();
+    setCopyIn();
     if (!actualHasVectorSubscript) {
-      actual.SetMayNeedCopyOut();
+      setCopyOut();
     }
+    return;
   }
+
+  // TODO: passing polymorphic to non-polymorphic
 
   // TODO
 }
