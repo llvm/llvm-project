@@ -24,6 +24,12 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 
+// VC Runtime creates a macro for __security_check_cookie on Arm64EC, which
+// conflicts with the generated name in RuntimeLibcalls.inc.
+#if defined _M_ARM64EC
+#undef __security_check_cookie
+#endif
+
 /// TableGen will produce 2 enums, RTLIB::Libcall and
 /// RTLIB::LibcallImpl. RTLIB::Libcall describes abstract functionality the
 /// compiler may choose to access, RTLIB::LibcallImpl describes a particular ABI
