@@ -522,9 +522,9 @@ void MachineSMEABI::emitAllocateLazySaveBuffer(
   {
     // Note: This case just needs to do `SVL << 48`. It is not implemented as we
     // generally don't support big-endian SVE/SME.
-    assert(
-        Subtarget->isLittleEndian() &&
-        "TPIDR2 block initialization is not supported on big-endian targets");
+    if (!Subtarget->isLittleEndian())
+      reportFatalInternalError(
+          "TPIDR2 block initialization is not supported on big-endian targets");
 
     // Store buffer pointer and num_za_save_slices.
     // Bytes 10-15 are implicitly zeroed.
