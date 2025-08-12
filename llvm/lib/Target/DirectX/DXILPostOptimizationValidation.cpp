@@ -169,7 +169,7 @@ reportDescriptorTableMixingTypes(Module &M, uint32_t Location,
 }
 
 static void
-reportOverlowingRange(Module &M, const dxbc::RTS0::v2::DescriptorRange &Range) {
+reportOverflowingRange(Module &M, const dxbc::RTS0::v2::DescriptorRange &Range) {
   SmallString<128> Message;
   raw_svector_ostream OS(Message);
   OS << "Cannot append range with implicit lower "
@@ -288,19 +288,19 @@ static void validateDescriptorTables(Module &M,
         Offset = Range.OffsetInDescriptorsFromTableStart;
 
       if (Offset > ~0U)
-        reportOverlowingRange(M, Range);
+        reportOverflowingRange(M, Range);
       if (Range.NumDescriptors == ~0U) {
         AppendingOffset = (uint64_t)~0U + (uint64_t)1ULL;
       } else {
         uint64_t UpperBound = (uint64_t)Range.BaseShaderRegister +
                               (uint64_t)Range.NumDescriptors - (uint64_t)1U;
         if (UpperBound > ~0U)
-          reportOverlowingRange(M, Range);
+          reportOverflowingRange(M, Range);
 
         uint64_t AppendingUpperBound =
             (uint64_t)Offset + (uint64_t)Range.NumDescriptors - (uint64_t)1U;
         if (AppendingUpperBound > ~0U)
-          reportOverlowingRange(M, Range);
+          reportOverflowingRange(M, Range);
         AppendingOffset = Offset + Range.NumDescriptors;
       }
 
