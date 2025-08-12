@@ -6,6 +6,15 @@
 
 // RUN: mlir-opt %s -split-input-file -verify-diagnostics --tosa-validate="profile=pro_int,pro_fp extension=int16,int4,bf16,fp8e4m3,fp8e5m2,fft,variable,controlflow,doubleround,inexactround strict-op-spec-alignment"
 
+
+func.func @test_cast(%arg0: tensor<i1>) -> tensor<5xi32> {
+  // expected-error@+1{{'tosa.cast' op requires the same shape for all operands and results}}
+  %1 = "tosa.cast"(%arg0) : (tensor<i1>) -> tensor<5xi32>
+  return %1 : tensor<5xi32>
+}
+
+// -----
+
 func.func @test_const() -> tensor<1xf32> {
   // expected-error@+1{{'tosa.const' op expected same attr/result element types}}
   %0 = "tosa.const"() {values = dense<1> : tensor<1xi32>} : () -> tensor<1xf32>
