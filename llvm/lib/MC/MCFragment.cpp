@@ -68,6 +68,8 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
       OS << "\n  Fixup @" << F.getOffset() << " Value:";
       F.getValue()->print(OS, nullptr);
       OS << " Kind:" << F.getKind();
+      if (F.isLinkerRelaxable())
+        OS << " LinkerRelaxable";
     }
   };
 
