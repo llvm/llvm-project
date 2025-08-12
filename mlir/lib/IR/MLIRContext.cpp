@@ -410,7 +410,7 @@ remark::detail::RemarkEngine *MLIRContext::getRemarkEngine() {
 
 LogicalResult MLIRContext::enableOptimizationRemarks(
     std::unique_ptr<remark::detail::MLIRRemarkStreamerBase> streamer,
-    const RemarkCategories &cats, bool printAsEmitRemarks) {
+    const remark::RemarkCategories &cats, bool printAsEmitRemarks) {
   auto engine =
       std::make_unique<remark::detail::RemarkEngine>(printAsEmitRemarks, cats);
 

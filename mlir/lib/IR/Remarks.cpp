@@ -232,7 +232,7 @@ RemarkEngine::initialize(std::unique_ptr<MLIRRemarkStreamerBase> streamer,
 }
 
 RemarkEngine::RemarkEngine(bool printAsEmitRemarks,
-                           const MLIRContext::RemarkCategories &cats)
+                           const RemarkCategories &cats)
     : printAsEmitRemarks(printAsEmitRemarks) {
   if (cats.passed)
     passFilter = llvm::Regex(cats.passed.value());

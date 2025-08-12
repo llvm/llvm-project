@@ -45,10 +45,10 @@ TEST(Remark, TestOutputOptimizationRemark) {
     context.printStackTraceOnDiagnostic(true);
 
     // Setup the remark engine
-    mlir::MLIRContext::RemarkCategories cats{/*passed=*/categoryVectorizer,
-                                             /*missed=*/categoryUnroll,
-                                             /*analysis=*/categoryRegister,
-                                             /*failed=*/categoryUnroll};
+    mlir::remark::RemarkCategories cats{/*passed=*/categoryVectorizer,
+                                        /*missed=*/categoryUnroll,
+                                        /*analysis=*/categoryRegister,
+                                        /*failed=*/categoryUnroll};
 
     LogicalResult isEnabled = mlir::remark::enableOptimizationRemarksToFile(
         context, yamlFile, llvm::remarks::Format::YAML, cats);
@@ -128,10 +128,10 @@ TEST(Remark, TestOutputOptimizationRemarkDiagnostic) {
     });
 
     // Setup the remark engine
-    mlir::MLIRContext::RemarkCategories cats{/*passed=*/categoryVectorizer,
-                                             /*missed=*/categoryUnroll,
-                                             /*analysis=*/categoryRegister,
-                                             /*failed=*/categoryUnroll};
+    mlir::remark::RemarkCategories cats{/*passed=*/categoryVectorizer,
+                                        /*missed=*/categoryUnroll,
+                                        /*analysis=*/categoryRegister,
+                                        /*failed=*/categoryUnroll};
 
     LogicalResult isEnabled =
         context.enableOptimizationRemarks(nullptr, cats, true);
@@ -201,10 +201,10 @@ TEST(Remark, TestCustomOptimizationRemarkDiagnostic) {
     Location loc = UnknownLoc::get(&context);
 
     // Setup the remark engine
-    mlir::MLIRContext::RemarkCategories cats{/*passed=*/categoryLoopunroll,
-                                             /*missed=*/std::nullopt,
-                                             /*analysis=*/std::nullopt,
-                                             /*failed=*/categoryLoopunroll};
+    mlir::remark::RemarkCategories cats{/*passed=*/categoryLoopunroll,
+                                        /*missed=*/std::nullopt,
+                                        /*analysis=*/std::nullopt,
+                                        /*failed=*/categoryLoopunroll};
 
     LogicalResult isEnabled = context.enableOptimizationRemarks(
         std::make_unique<MyCustomStreamer>(), cats, true);

@@ -25,6 +25,9 @@
 #include "mlir/IR/Value.h"
 
 namespace mlir::remark {
+struct RemarkCategories {
+  std::optional<std::string> passed, missed, analysis, failed;
+};
 
 /// Defines different remark kinds that can be used to categorize remarks.
 enum class RemarkKind {
@@ -328,8 +331,7 @@ public:
   /// Constructs Remark engine with optional category names. If a category
   /// name is not provided, it is not enabled. The category names are used to
   /// filter the remarks that are emitted.
-  RemarkEngine(bool printAsEmitRemarks,
-               const MLIRContext::RemarkCategories &cats);
+  RemarkEngine(bool printAsEmitRemarks, const RemarkCategories &cats);
 
   /// Destructor that will close the output file and reset the
   /// main remark streamer.

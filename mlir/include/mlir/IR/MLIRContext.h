@@ -34,6 +34,9 @@ class MLIRContextImpl;
 class RegisteredOperationName;
 class StorageUniquer;
 class IRUnit;
+namespace remark {
+struct RemarkCategories;
+}
 namespace remark::detail {
 class MLIRRemarkStreamerBase;
 class RemarkEngine;
@@ -64,9 +67,6 @@ class RemarkEngine;
 class MLIRContext {
 public:
   enum class Threading { DISABLED, ENABLED };
-  struct RemarkCategories {
-    std::optional<std::string> passed, missed, analysis, failed;
-  };
 
   /// Create a new Context.
   explicit MLIRContext(Threading multithreading = Threading::ENABLED);
@@ -266,7 +266,7 @@ public:
   /// mlir::emitRemarks.
   LogicalResult enableOptimizationRemarks(
       std::unique_ptr<remark::detail::MLIRRemarkStreamerBase> streamer,
-      const RemarkCategories &cats, bool printAsEmitRemarks = false);
+      const remark::RemarkCategories &cats, bool printAsEmitRemarks = false);
 
   //===--------------------------------------------------------------------===//
   // Action API
