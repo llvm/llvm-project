@@ -114,24 +114,16 @@ ConfigManager::getDXContainerConfig() const {
   // other flags are not applicable and will be silently ignored for the
   // DXContainer object file
   if (!Common.AddGnuDebugLink.empty() || Common.ExtractPartition ||
-      !Common.SplitDWO.empty() || !Common.SymbolsPrefix.empty() ||
-      !Common.SymbolsPrefixRemove.empty() || !Common.SymbolsToSkip.empty() ||
-      !Common.AllocSectionsPrefix.empty() ||
+      !Common.SplitDWO.empty() || !Common.AllocSectionsPrefix.empty() ||
       Common.DiscardMode != DiscardType::None || !Common.AddSection.empty() ||
-      !Common.DumpSection.empty() || !Common.SymbolsToAdd.empty() ||
-      !Common.KeepSection.empty() || !Common.OnlySection.empty() ||
-      !Common.ToRemove.empty() || !Common.SymbolsToGlobalize.empty() ||
-      !Common.SymbolsToKeep.empty() || !Common.SymbolsToLocalize.empty() ||
-      !Common.SymbolsToRemove.empty() ||
-      !Common.UnneededSymbolsToRemove.empty() ||
-      !Common.SymbolsToWeaken.empty() || !Common.SymbolsToKeepGlobal.empty() ||
+      !Common.DumpSection.empty() || !Common.KeepSection.empty() ||
+      !Common.OnlySection.empty() || !Common.ToRemove.empty() ||
       !Common.SectionsToRename.empty() || !Common.SetSectionAlignment.empty() ||
       !Common.SetSectionFlags.empty() || !Common.SetSectionType.empty() ||
-      !Common.SymbolsToRename.empty() || Common.ExtractDWO ||
-      Common.ExtractMainPartition || Common.OnlyKeepDebug ||
-      Common.StripAllGNU || Common.StripDWO ||
+      Common.ExtractDWO || Common.ExtractMainPartition ||
+      Common.OnlyKeepDebug || Common.StripAllGNU || Common.StripDWO ||
       Common.StripDebug || Common.StripNonAlloc || Common.StripSections ||
-      Common.Weaken || Common.StripUnneeded || Common.DecompressDebugSections ||
+      Common.StripUnneeded || Common.DecompressDebugSections ||
       Common.GapFill != 0 || Common.PadTo != 0 ||
       Common.ChangeSectionLMAValAll != 0 ||
       !Common.ChangeSectionAddress.empty()) {
