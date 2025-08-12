@@ -3064,11 +3064,11 @@ const Init *Record::getValueInit(StringRef FieldName) const {
 }
 
 StringRef Record::getValueAsString(StringRef FieldName) const {
-  std::optional<StringRef> S = getValueAsOptionalString(FieldName);
-  if (!S)
-    PrintFatalError(getLoc(), "Record `" + getName() +
-      "' does not have a field named `" + FieldName + "'!\n");
-  return *S;
+  const Init *I = getValueInit(FieldName);
+  if (const auto *SI = dyn_cast<StringInit>(I))
+    return SI->getValue();
+  PrintFatalError(getLoc(), "Record `" + getName() + "', field `" + FieldName +
+                                "' exists but does not have a string value");
 }
 
 std::optional<StringRef>
