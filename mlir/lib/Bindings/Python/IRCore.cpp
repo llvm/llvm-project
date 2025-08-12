@@ -2840,11 +2840,14 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
 
   if (count == 0)
     return mlirLocationUnknownGet(ctx);
-  if (count == 1)
-    return frames[0];
 
   MlirLocation callee = frames[0];
+  assert(!mlirLocationIsNull(callee) && "expected non-null callee location");
+  if (count == 1)
+    return callee;
+
   MlirLocation caller = frames[count - 1];
+  assert(!mlirLocationIsNull(caller) && "expected non-null caller location");
   for (int i = count - 2; i >= 1; i--)
     caller = mlirLocationCallSiteGet(frames[i], caller);
 
@@ -3134,10 +3137,10 @@ void mlir::python::populateIRCore(nb::module_ &m) {
       .def("__eq__", [](PyLocation &self, nb::object other) { return false; })
       .def_prop_ro_static(
           "current",
-          [](nb::object & /*class*/) {
+          [](nb::object & /*class*/) -> std::optional<PyLocation *> {
             auto *loc = PyThreadContextEntry::getDefaultLocation();
             if (!loc)
-              throw nb::value_error("No current Location");
+              return std::nullopt;
             return loc;
           },
           "Gets the Location bound to the current thread or raises ValueError")

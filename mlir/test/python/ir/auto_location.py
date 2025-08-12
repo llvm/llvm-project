@@ -25,7 +25,7 @@ def with_infer_location():
 # CHECK-LABEL: TEST: testInferLocations
 @run
 def testInferLocations():
-    with Context() as ctx, Location.unknown(), with_infer_location():
+    with Context() as ctx, with_infer_location():
         ctx.allow_unregistered_dialects = True
 
         op = Operation.create("custom.op1")
