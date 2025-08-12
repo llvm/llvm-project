@@ -134,6 +134,8 @@ public:
 
     bool isUserTracebackFilename(llvm::StringRef file);
 
+    static constexpr size_t kMaxFrames = 512;
+
   private:
     nanobind::ft_mutex mutex;
     bool locTracebackEnabled_ = false;

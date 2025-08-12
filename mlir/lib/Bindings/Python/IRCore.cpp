@@ -2786,18 +2786,16 @@ private:
   PyOperationRef operation;
 };
 
-constexpr size_t kMaxFrames = 512;
-
 MlirLocation tracebackToLocation(MlirContext ctx) {
   size_t framesLimit =
       PyGlobals::get().getTracebackLoc().locTracebackFramesLimit();
   // Use a thread_local here to avoid requiring a large amount of space.
-  thread_local std::array<MlirLocation, kMaxFrames> frames;
+  thread_local std::array<MlirLocation, PyGlobals::TracebackLoc::kMaxFrames>
+      frames;
   size_t count = 0;
 
   nb::gil_scoped_acquire acquire;
   PyThreadState *tstate = PyThreadState_GET();
-
   PyFrameObject *next;
   PyFrameObject *pyFrame = PyThreadState_GetFrame(tstate);
   for (; pyFrame != nullptr && count < framesLimit;

@@ -215,7 +215,7 @@ size_t PyGlobals::TracebackLoc::locTracebackFramesLimit() {
 
 void PyGlobals::TracebackLoc::setLocTracebackFramesLimit(size_t value) {
   nanobind::ft_lock_guard lock(mutex);
-  locTracebackFramesLimit_ = value;
+  locTracebackFramesLimit_ = std::min(value, kMaxFrames);
 }
 
 void PyGlobals::TracebackLoc::registerTracebackFileInclusion(
