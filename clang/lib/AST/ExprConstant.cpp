@@ -401,7 +401,7 @@ namespace {
       assert(!Invalid && "invalid designator has no subobject type");
       return MostDerivedPathLength == Entries.size()
                  ? MostDerivedType
-                 : Ctx.getRecordType(getAsBaseClass(Entries.back()));
+                 : Ctx.getCanonicalTagType(getAsBaseClass(Entries.back()));
     }
 
     /// Update this designator to refer to the first element within this array.
@@ -2623,7 +2623,8 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
         Value.getUnionValue(), Kind, Value.getUnionField(), CheckedTemps);
   }
   if (Value.isStruct()) {
-    RecordDecl *RD = Type->castAs<RecordType>()->getDecl();
+    RecordDecl *RD =
+        Type->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf();
     if (const CXXRecordDecl *CD = dyn_cast<CXXRecordDecl>(RD)) {
       unsigned BaseIndex = 0;
       for (const CXXBaseSpecifier &BS : CD->bases()) {
@@ -4109,7 +4110,7 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
       }
 
       // Next subobject is a class, struct or union field.
-      RecordDecl *RD = ObjType->castAs<RecordType>()->getDecl();
+      RecordDecl *RD = ObjType->castAs<RecordType>()->getOriginalDecl();
       if (RD->isUnion()) {
         const FieldDecl *UnionField = O->getUnionField();
         if (!UnionField ||
@@ -4144,7 +4145,7 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
       const CXXRecordDecl *Base = getAsBaseClass(Sub.Entries[I]);
       O = &O->getStructBase(getBaseIndex(Derived, Base));
 
-      ObjType = getSubobjectType(ObjType, Info.Ctx.getRecordType(Base));
+      ObjType = getSubobjectType(ObjType, Info.Ctx.getCanonicalTagType(Base));
     }
   }
 }
@@ -6363,7 +6364,7 @@ static bool HandleDynamicCast(EvalInfo &Info, const ExplicitCastExpr *E,
 
   const CXXRecordDecl *C = E->getTypeAsWritten()->getPointeeCXXRecordDecl();
   assert(C && "dynamic_cast target is not void pointer nor class");
-  CanQualType CQT = Info.Ctx.getCanonicalType(Info.Ctx.getRecordType(C));
+  CanQualType CQT = Info.Ctx.getCanonicalTagType(C);
 
   auto RuntimeCheckFailed = [&] (CXXBasePaths *Paths) {
     // C++ [expr.dynamic.cast]p9:
@@ -6389,7 +6390,7 @@ static bool HandleDynamicCast(EvalInfo &Info, const ExplicitCastExpr *E,
     }
     Info.FFDiag(E, diag::note_constexpr_dynamic_cast_to_reference_failed)
         << DiagKind << Ptr.Designator.getType(Info.Ctx)
-        << Info.Ctx.getRecordType(DynType->Type)
+        << Info.Ctx.getCanonicalTagType(DynType->Type)
         << E->getType().getUnqualifiedType();
     return false;
   };
@@ -6886,8 +6887,8 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
             // FIXME: This immediately starts the lifetime of all members of
             // an anonymous struct. It would be preferable to strictly start
             // member lifetime in initialization order.
-            Success &=
-                handleDefaultInitValue(Info.Ctx.getRecordType(CD), *Value);
+            Success &= handleDefaultInitValue(Info.Ctx.getCanonicalTagType(CD),
+                                              *Value);
         }
         // Store Subobject as its parent before updating it for the last element
         // in the chain.
@@ -7794,7 +7795,8 @@ class BufferToAPValueConverter {
   }
 
   std::optional<APValue> visit(const EnumType *Ty, CharUnits Offset) {
-    QualType RepresentationType = Ty->getDecl()->getIntegerType();
+    QualType RepresentationType =
+        Ty->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
     assert(!RepresentationType.isNull() &&
            "enum forward decl should be caught by Sema");
     const auto *AsBuiltin =
@@ -8528,7 +8530,7 @@ public:
     if (auto *DD = dyn_cast<CXXDestructorDecl>(FD)) {
       assert(This && "no 'this' pointer for destructor call");
       return HandleDestruction(Info, E, *This,
-                               Info.Ctx.getRecordType(DD->getParent())) &&
+                               Info.Ctx.getCanonicalTagType(DD->getParent())) &&
              CallScope.destroy();
     }
 
@@ -8589,8 +8591,10 @@ public:
     const FieldDecl *FD = dyn_cast<FieldDecl>(E->getMemberDecl());
     if (!FD) return Error(E);
     assert(!FD->getType()->isReferenceType() && "prvalue reference?");
-    assert(BaseTy->castAs<RecordType>()->getDecl()->getCanonicalDecl() ==
-           FD->getParent()->getCanonicalDecl() && "record / field mismatch");
+    assert(
+        BaseTy->castAs<RecordType>()->getOriginalDecl()->getCanonicalDecl() ==
+            FD->getParent()->getCanonicalDecl() &&
+        "record / field mismatch");
 
     // Note: there is no lvalue base here. But this case should only ever
     // happen in C or in C++98, where we cannot be evaluating a constexpr
@@ -8817,8 +8821,10 @@ public:
 
     const ValueDecl *MD = E->getMemberDecl();
     if (const FieldDecl *FD = dyn_cast<FieldDecl>(E->getMemberDecl())) {
-      assert(BaseTy->castAs<RecordType>()->getDecl()->getCanonicalDecl() ==
-             FD->getParent()->getCanonicalDecl() && "record / field mismatch");
+      assert(
+          BaseTy->castAs<RecordType>()->getOriginalDecl()->getCanonicalDecl() ==
+              FD->getParent()->getCanonicalDecl() &&
+          "record / field mismatch");
       (void)BaseTy;
       if (!HandleLValueMember(this->Info, E, Result, FD))
         return false;
@@ -9257,8 +9263,8 @@ bool LValueExprEvaluator::VisitCXXTypeidExpr(const CXXTypeidExpr *E) {
     if (!DynType)
       return false;
 
-    TypeInfo =
-        TypeInfoLValue(Info.Ctx.getRecordType(DynType->Type).getTypePtr());
+    TypeInfo = TypeInfoLValue(
+        Info.Ctx.getCanonicalTagType(DynType->Type).getTypePtr());
   }
 
   return Success(APValue::LValueBase::getTypeInfo(TypeInfo, E->getType()));
@@ -10818,7 +10824,8 @@ static bool HandleClassZeroInitialization(EvalInfo &Info, const Expr *E,
 }
 
 bool RecordExprEvaluator::ZeroInitialization(const Expr *E, QualType T) {
-  const RecordDecl *RD = T->castAs<RecordType>()->getDecl();
+  const RecordDecl *RD =
+      T->castAs<RecordType>()->getOriginalDecl()->getDefinitionOrSelf();
   if (RD->isInvalidDecl()) return false;
   if (RD->isUnion()) {
     // C++11 [dcl.init]p5: If T is a (possibly cv-qualified) union type, the
@@ -10887,8 +10894,10 @@ bool RecordExprEvaluator::VisitInitListExpr(const InitListExpr *E) {
 
 bool RecordExprEvaluator::VisitCXXParenListOrInitListExpr(
     const Expr *ExprToVisit, ArrayRef<Expr *> Args) {
-  const RecordDecl *RD =
-      ExprToVisit->getType()->castAs<RecordType>()->getDecl();
+  const RecordDecl *RD = ExprToVisit->getType()
+                             ->castAs<RecordType>()
+                             ->getOriginalDecl()
+                             ->getDefinitionOrSelf();
   if (RD->isInvalidDecl()) return false;
   const ASTRecordLayout &Layout = Info.Ctx.getASTRecordLayout(RD);
   auto *CXXRD = dyn_cast<CXXRecordDecl>(RD);
@@ -11116,7 +11125,10 @@ bool RecordExprEvaluator::VisitCXXStdInitializerListExpr(
   Result = APValue(APValue::UninitStruct(), 0, 2);
   Array.moveInto(Result.getStructField(0));
 
-  RecordDecl *Record = E->getType()->castAs<RecordType>()->getDecl();
+  RecordDecl *Record = E->getType()
+                           ->castAs<RecordType>()
+                           ->getOriginalDecl()
+                           ->getDefinitionOrSelf();
   RecordDecl::field_iterator Field = Record->field_begin();
   assert(Field != Record->field_end() &&
          Info.Ctx.hasSameType(Field->getType()->getPointeeType(),
@@ -12907,7 +12919,10 @@ static bool convertUnsignedAPIntToCharUnits(const llvm::APInt &Int,
 static void addFlexibleArrayMemberInitSize(EvalInfo &Info, const QualType &T,
                                            const LValue &LV, CharUnits &Size) {
   if (!T.isNull() && T->isStructureType() &&
-      T->getAsStructureType()->getDecl()->hasFlexibleArrayMember())
+      T->getAsStructureType()
+          ->getOriginalDecl()
+          ->getDefinitionOrSelf()
+          ->hasFlexibleArrayMember())
     if (const auto *V = LV.getLValueBase().dyn_cast<const ValueDecl *>())
       if (const auto *VD = dyn_cast<VarDecl>(V))
         if (VD->hasInit())
@@ -15154,7 +15169,7 @@ bool IntExprEvaluator::VisitOffsetOfExpr(const OffsetOfExpr *OOE) {
       const RecordType *RT = CurrentType->getAs<RecordType>();
       if (!RT)
         return Error(OOE);
-      RecordDecl *RD = RT->getDecl();
+      RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
       if (RD->isInvalidDecl()) return false;
       const ASTRecordLayout &RL = Info.Ctx.getASTRecordLayout(RD);
       unsigned i = MemberDecl->getFieldIndex();
@@ -15176,7 +15191,7 @@ bool IntExprEvaluator::VisitOffsetOfExpr(const OffsetOfExpr *OOE) {
       const RecordType *RT = CurrentType->getAs<RecordType>();
       if (!RT)
         return Error(OOE);
-      RecordDecl *RD = RT->getDecl();
+      RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
       if (RD->isInvalidDecl()) return false;
       const ASTRecordLayout &RL = Info.Ctx.getASTRecordLayout(RD);
 
@@ -15187,7 +15202,8 @@ bool IntExprEvaluator::VisitOffsetOfExpr(const OffsetOfExpr *OOE) {
         return Error(OOE);
 
       // Add the offset to the base.
-      Result += RL.getBaseClassOffset(cast<CXXRecordDecl>(BaseRT->getDecl()));
+      Result += RL.getBaseClassOffset(cast<CXXRecordDecl>(
+          BaseRT->getOriginalDecl()->getDefinitionOrSelf()));
       break;
     }
     }
@@ -15366,7 +15382,7 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
 
     if (Info.Ctx.getLangOpts().CPlusPlus && DestType->isEnumeralType()) {
       const EnumType *ET = dyn_cast<EnumType>(DestType.getCanonicalType());
-      const EnumDecl *ED = ET->getDecl();
+      const EnumDecl *ED = ET->getOriginalDecl()->getDefinitionOrSelf();
       // Check that the value is within the range of the enumeration values.
       //
       // This corressponds to [expr.static.cast]p10 which says:
@@ -18028,7 +18044,8 @@ bool Expr::isPotentialConstantExpr(const FunctionDecl *FD,
   // Fabricate an arbitrary expression on the stack and pretend that it
   // is a temporary being used as the 'this' pointer.
   LValue This;
-  ImplicitValueInitExpr VIE(RD ? Info.Ctx.getRecordType(RD) : Info.Ctx.IntTy);
+  ImplicitValueInitExpr VIE(RD ? Info.Ctx.getCanonicalTagType(RD)
+                               : Info.Ctx.IntTy);
   This.set({&VIE, Info.CurrentCall->Index});
 
   ArrayRef<const Expr*> Args;

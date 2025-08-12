@@ -52,6 +52,8 @@ attributes(global) subroutine devsub()
   time = clock64()
   time = globalTimer()
 
+  res = __popc(ai)
+  res = __popc(al)
   res = __brev(ai)
   resl = __brev(al)
 end
@@ -94,6 +96,8 @@ end
 ! CHECK: %{{.*}} = nvvm.read.ptx.sreg.clock64 : i64
 ! CHECK: %{{.*}} = nvvm.read.ptx.sreg.globaltimer : i64
 
+! CHECK: %{{.*}} = fir.call @__nv_popc(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_popcll(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> i32
 ! CHECK: %{{.*}} = fir.call @__nv_brev(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> i32
 ! CHECK: %{{.*}} = fir.call @__nv_brevll(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> i64
 
