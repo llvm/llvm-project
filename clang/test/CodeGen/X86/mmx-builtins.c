@@ -62,7 +62,7 @@ __m64 test_mm_adds_pi8(__m64 a, __m64 b) {
   // CHECK: call <8 x i8> @llvm.sadd.sat.v8i8(
   return _mm_adds_pi8(a, b);
 }
-TEST_CONSTEXPR(match_v8qi(_mm_adds_pi8(_mm_setr_pi8(+100, +50, -100, +20, +80, -50, +120, -20), _mm_setr_pi8(+50, +80, -50, +110, +60, -30, +20, -10)), +127, +127, -128, +127, +127, -80, +127, -30));
+TEST_CONSTEXPR(match_v8qi(_mm_adds_pi8((__m64)(__v8qs){+100, +50, -100, +20, +80, -50, +120, -20}, (__m64)(__v8qs){+50, +80, -50, +110, +60, -30, +20, -10}), +127, +127, -128, +127, +127, -80, +127, -30));
 
 __m64 test_mm_adds_pi16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_adds_pi16
@@ -720,7 +720,7 @@ __m64 test_mm_subs_pi8(__m64 a, __m64 b) {
   // CHECK: call <8 x i8> @llvm.ssub.sat.v8i8(
   return _mm_subs_pi8(a, b);
 }
-TEST_CONSTEXPR(match_v8qi(_mm_subs_pi8(_mm_setr_pi8(+100, +50, -100, +20, +80, -50, +120, -20), _mm_setr_pi8(-50, -80, +50, -110, -60, +30, -20, +10)), +127, +127, -128, +127, +127, -80, +127, -30));
+TEST_CONSTEXPR(match_v8qi(_mm_subs_pi8((__m64)(__v8qs){+100, +50, -100, +20, +80, -50, +120, -20}, (__m64)(__v8qs){-50, -80, +50, -110, -60, +30, -20, +10}), +127, +127, -128, +127, +127, -80, +127, -30));
 
 __m64 test_mm_subs_pi16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_subs_pi16
