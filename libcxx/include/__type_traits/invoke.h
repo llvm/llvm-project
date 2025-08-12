@@ -67,19 +67,19 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if __has_builtin(__builtin_invoke)
 
-template <class... _Args>
-using __invoke_result_t _LIBCPP_NODEBUG = decltype(__builtin_invoke(std::declval<_Args>()...));
-
 template <class, class... _Args>
 struct __invoke_result_impl {};
 
 template <class... _Args>
-struct __invoke_result_impl<__void_t<__invoke_result_t<_Args...> >, _Args...> {
-  using type _LIBCPP_NODEBUG = __invoke_result_t<_Args...>;
+struct __invoke_result_impl<__void_t<decltype(__builtin_invoke(std::declval<_Args>()...))>, _Args...> {
+  using type _LIBCPP_NODEBUG = decltype(__builtin_invoke(std::declval<_Args>()...));
 };
 
 template <class... _Args>
 using __invoke_result _LIBCPP_NODEBUG = __invoke_result_impl<void, _Args...>;
+
+template <class... _Args>
+using __invoke_result_t _LIBCPP_NODEBUG = typename __invoke_result<_Args...>::type;
 
 template <class... _Args>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __invoke_result_t<_Args...> __invoke(_Args&&... __args)
