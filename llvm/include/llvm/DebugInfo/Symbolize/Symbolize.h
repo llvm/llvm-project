@@ -239,19 +239,18 @@ private:
     }
   };
 
-  /// Parsed object file for path/architecture pair, where "path" refers
-  /// to Mach-O universal binary.
-  std::map<ArchiveCacheKey, std::unique_ptr<ObjectFile>>
-      ObjectFileCache;
+  /// Parsed object file for path/object/architecture pair, where
+  /// "path" refers to Mach-O universal binary.
+  std::map<ArchiveCacheKey, std::unique_ptr<ObjectFile>> ObjectFileCache;
 
   /// Helper function to load binary.
   object::Binary *loadOrGetBinary(const std::string &Path);
 
   /// Helper function to find and get object
   Expected<ObjectFile *> findOrCacheObject(
-    const ArchiveCacheKey &Key,
-    llvm::function_ref<Expected<std::unique_ptr<ObjectFile>>()> Loader,
-    const std::string &PathForBinaryCache);
+      const ArchiveCacheKey &Key,
+      llvm::function_ref<Expected<std::unique_ptr<ObjectFile>>()> Loader,
+      const std::string &PathForBinaryCache);
 
   Options Opts;
 

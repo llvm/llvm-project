@@ -554,15 +554,7 @@ LLVMSymbolizer::getOrCreateObjectPair(const std::string &Path,
   else if (auto ELFObj = dyn_cast<const ELFObjectFileBase>(Obj))
     DbgObj = lookUpBuildIDObject(Path, ELFObj, ArchName);
   if (!DbgObj)
-  {
-    llvm::outs() << "Path: " << Path << "\n";
-    if (Obj)
-    llvm::outs() << "Obj pointer: " << Obj << "\n";
-  else
-    llvm::outs() << "Obj is null!\n";
-    llvm::outs() << "ArchName: " << ArchName << "\n";
     DbgObj = lookUpDebuglinkObject(Path, Obj, ArchName);
-  }
   if (!DbgObj)
     DbgObj = Obj;
   ObjectPair Res = std::make_pair(Obj, DbgObj);
@@ -618,9 +610,8 @@ Expected<ObjectFile *> LLVMSymbolizer::findOrCacheObject(
   auto NewEntry = ObjectFileCache.emplace(Key, std::move(*ObjOrErr));
   auto CacheIter = BinaryForPath.find(PathForBinaryCache);
   if (CacheIter != BinaryForPath.end())
-    CacheIter->second.pushEvictor([this, Iter = NewEntry.first]() { 
-    ObjectFileCache.erase(Iter); 
-    });
+    CacheIter->second.pushEvictor(
+        [this, Iter = NewEntry.first]() { ObjectFileCache.erase(Iter); });
   return Res;
 }
 
@@ -639,9 +630,9 @@ Expected<ObjectFile *> LLVMSymbolizer::getOrCreateObjectFromArchive(
                              ArchivePath.str().c_str());
 
   Error Err = Error::success();
-  // On AIX, archives can contain multiple members with the same name but different
-  // types. We need to check all matches and find one that matches both name and
-  // architecture.
+  // On AIX, archives can contain multiple members with the same name but
+  // different types. We need to check all matches and find one that matches
+  // both name and architecture.
   for (auto &Child : Archive->children(Err, /*SkipInternal=*/true)) {
     Expected<StringRef> NameOrErr = Child.getName();
     if (!NameOrErr)
@@ -663,12 +654,12 @@ Expected<ObjectFile *> LLVMSymbolizer::getOrCreateObjectFromArchive(
         ArchiveCacheKey CacheKey{ArchivePath.str(), MemberName.str(),
                                  ArchName.str()};
         Expected<ObjectFile *> Res = findOrCacheObject(
-          CacheKey,
-          [O = std::unique_ptr<ObjectFile>(Obj)]() 
-          mutable -> Expected<std::unique_ptr<ObjectFile>> {
-          return std::move(O);
-          },
-          ArchivePath.str());
+            CacheKey,
+            [O = std::unique_ptr<ObjectFile>(Obj)]() 
+            mutable -> Expected<std::unique_ptr<ObjectFile>> {
+            return std::move(O);
+            },
+            ArchivePath.str());
         Binary.release();
         return Res;
       }
