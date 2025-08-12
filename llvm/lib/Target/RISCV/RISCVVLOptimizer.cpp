@@ -491,20 +491,31 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   // vfirst find-first-set mask bit
   case RISCV::VCPOP_M:
   case RISCV::VFIRST_M:
-  // Vector Crypto
+  // Vector Bit-manipulation (Zvbb)
+  // Vector And-Not
   case RISCV::VANDN_VV:
   case RISCV::VANDN_VX:
+  // Vector Reverse Bits in Elements
   case RISCV::VBREV_V:
+  // Vector Count Leading Zeros
   case RISCV::VCLZ_V:
-  case RISCV::VCPOP_V:
+  // Vector Count Trailing Zeros
   case RISCV::VCTZ_V:
+  // Vector Population Count
+  case RISCV::VCPOP_V:
+  // Vector Rotate Left
   case RISCV::VROL_VV:
   case RISCV::VROL_VX:
+  // Vector Rotate Right
   case RISCV::VROR_VI:
   case RISCV::VROR_VV:
   case RISCV::VROR_VX:
     return MILog2SEW;
 
+  // Vector Widening Shift Left Logical
+  case RISCV::VWSLL_VI:
+  case RISCV::VWSLL_VX:
+  case RISCV::VWSLL_VV:
   // Vector Widening Integer Add/Subtract
   // Def uses EEW=2*SEW . Operands use EEW=SEW.
   case RISCV::VWADDU_VV:
@@ -515,9 +526,6 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VWADD_VX:
   case RISCV::VWSUB_VV:
   case RISCV::VWSUB_VX:
-  case RISCV::VWSLL_VI:
-  case RISCV::VWSLL_VX:
-  case RISCV::VWSLL_VV:
   // Vector Widening Integer Multiply Instructions
   // Destination EEW=2*SEW. Source EEW=SEW.
   case RISCV::VWMUL_VV:
@@ -1032,23 +1040,29 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VNCLIP_WV:
   case RISCV::VNCLIP_WX:
   case RISCV::VNCLIP_WI:
-
-  // Vector Crypto
-  case RISCV::VWSLL_VI:
-  case RISCV::VWSLL_VX:
-  case RISCV::VWSLL_VV:
+  // Vector Bit-manipulation (Zvbb)
+  // Vector And-Not
   case RISCV::VANDN_VV:
   case RISCV::VANDN_VX:
+  // Vector Reverse Bits in Elements
   case RISCV::VBREV_V:
+  // Vector Count Leading Zeros
   case RISCV::VCLZ_V:
-  case RISCV::VCPOP_V:
+  // Vector Count Trailing Zeros
   case RISCV::VCTZ_V:
+  // Vector Population Count
+  case RISCV::VCPOP_V:
+  // Vector Rotate Left
   case RISCV::VROL_VV:
   case RISCV::VROL_VX:
+  // Vector Rotate Right
   case RISCV::VROR_VI:
   case RISCV::VROR_VV:
   case RISCV::VROR_VX:
-
+  // Vector Widening Shift Left Logical
+  case RISCV::VWSLL_VI:
+  case RISCV::VWSLL_VX:
+  case RISCV::VWSLL_VV:
   // Vector Mask Instructions
   // Vector Mask-Register Logical Instructions
   // vmsbf.m set-before-first mask bit
