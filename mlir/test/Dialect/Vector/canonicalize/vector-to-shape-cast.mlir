@@ -3,9 +3,9 @@
 // This file contains tests where a vector.shape_cast is the result
 // of canonicalization.
 
-// +----------------------------------------
-//  Tests of BroadcastToShapeCast
-// +----------------------------------------
+// **--------------------------------------------------------** //
+//   Tests of BroadcastToShapeCast
+// **--------------------------------------------------------** //
 
 // CHECK-LABEL: @broadcast_to_shape_cast
 //  CHECK-SAME: %[[ARG0:.*]]: vector<4xi8>
@@ -67,9 +67,9 @@ func.func @canonicalize_broadcast_shapecast_both_possible(%arg0: vector<1xf32>) 
 
 // -----
 
-// +----------------------------------------
-//  Tests of TransposeToShapeCast
-// +----------------------------------------
+// **--------------------------------------------------------** //
+//   Tests of TransposeToShapeCast
+// **--------------------------------------------------------** //
 
 // In this test, the permutation maps the non-unit dimensions (0 and 2) are as follows:
 // 0 -> 0
@@ -165,9 +165,9 @@ func.func @negative_transpose_to_shape_cast(%arg0 : vector<2x1x2xf32>) -> vector
 
 // -----
 
-// +----------------------------------------
-//  Tests of ExtractToShapeCast
-// +----------------------------------------
+// **--------------------------------------------------------** //
+//   Tests of ExtractToShapeCast
+// **--------------------------------------------------------** //
 
 // CHECK-LABEL: @extract_to_shape_cast
 //  CHECK-SAME: %[[ARG0:.*]]: vector<1x4xf32>
@@ -229,9 +229,9 @@ func.func @extract_from_broadcast(%src: vector<1x1x1xf32>) -> vector<1xf32> {
 
 // -----
 
-///===----------------------------------------------===//
-///  Tests of `FromElementsToShapeCast`
-///===----------------------------------------------===//
+// **--------------------------------------------------------** //
+//   Tests of FromElementsToShapeCast
+// **--------------------------------------------------------** //
 
 // CHECK-LABEL: func @to_shape_cast_rank2_to_rank1(
 //  CHECK-SAME:       %[[A:.*]]: vector<1x2xi8>)
