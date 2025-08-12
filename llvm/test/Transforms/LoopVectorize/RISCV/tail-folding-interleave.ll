@@ -121,6 +121,17 @@ for.cond.cleanup:
   ret void
 }
 
+; Interleaved group with gap but without tail gap
+; E.g.
+; int (*a)[4];
+; int rdx = 0;
+; for (int i = 0; i < n; i++) {
+;   rdx += a[i][0];
+;   rdx += a[i][1];
+;   // No access a[i][2]
+;   rdx += a[i][3];
+; }
+;
 define i32 @load_factor_4_with_gap(i64 %n, ptr noalias %a) {
 ; IF-EVL-LABEL: @load_factor_4_with_gap(
 ; IF-EVL-NEXT:  entry:
@@ -266,6 +277,16 @@ exit:
   ret i32 %add2
 }
 
+; Interleaved group with gap but without tail gap
+; E.g.
+; int (*a)[4];
+; for (int i = 0; i < n; i++) {
+;   a[i][0] = i;
+;   a[i][1] = i;
+;   // No access a[i][2]
+;   a[i][3] = i;
+; }
+;
 define void @store_factor_4_with_gap(i32 %n, ptr noalias %a) {
 ; IF-EVL-LABEL: @store_factor_4_with_gap(
 ; IF-EVL-NEXT:  entry:
@@ -384,6 +405,17 @@ exit:
   ret void
 }
 
+; Interleaved group with tail gap
+; E.g.
+; int (*a)[4];
+; int rdx = 0;
+; for (int i = 0; i < n; i++) {
+;   rdx += a[i][0];
+;   rdx += a[i][1];
+;   rdx += a[i][2];
+;   // No access a[i][3]
+; }
+;
 define i32 @load_factor_4_with_tail_gap(i64 %n, ptr noalias %a) {
 ; IF-EVL-LABEL: @load_factor_4_with_tail_gap(
 ; IF-EVL-NEXT:  entry:
@@ -529,6 +561,17 @@ exit:
   ret i32 %add2
 }
 
+; Interleaved group with tail gap
+; E.g.
+; int (*a)[4];
+; int rdx = 0;
+; for (int i = 0; i < n; i++) {
+;   a[i][0] = i;
+;   a[i][1] = i;
+;   a[i][2] = i;
+;   // No access a[i][3]
+; }
+;
 define void @store_factor_4_with_tail_gap(i32 %n, ptr noalias %a) {
 ; IF-EVL-LABEL: @store_factor_4_with_tail_gap(
 ; IF-EVL-NEXT:  entry:
