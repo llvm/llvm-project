@@ -43,17 +43,6 @@ using namespace error;
 // we add some additional data here for now to avoid churn in the plugin
 // interface.
 struct ol_device_impl_t {
-  // std::mutex doesn't have a move constructor, so we need to create a new one
-  // in the destination. Since devices don't get moved once the platform has
-  // been created, this is safe.
-  ol_device_impl_t(ol_device_impl_t &&Other)
-      : DeviceNum(Other.DeviceNum), Device(Other.Device),
-        Platform(Other.Platform), Info(std::move(Other.Info)),
-        OutstandingQueues(), OutstandingQueuesMutex() {
-    assert(Other.OutstandingQueuesMutex.try_lock());
-    assert(!Other.OutstandingQueues.size());
-  }
-
   ol_device_impl_t(int DeviceNum, GenericDeviceTy *Device,
                    ol_platform_handle_t Platform, InfoTreeNode &&DevInfo)
       : DeviceNum(DeviceNum), Device(Device), Platform(Platform),
@@ -72,7 +61,7 @@ struct ol_platform_impl_t {
                      ol_platform_backend_t BackendType)
       : Plugin(std::move(Plugin)), BackendType(BackendType) {}
   std::unique_ptr<GenericPluginTy> Plugin;
-  std::vector<ol_device_impl_t> Devices;
+  llvm::SmallVector<std::unique_ptr<ol_device_impl_t>> Devices;
   ol_platform_backend_t BackendType;
 };
 
@@ -145,7 +134,7 @@ struct OffloadContext {
 
   ol_device_handle_t HostDevice() {
     // The host platform is always inserted last
-    return &Platforms.back().Devices[0];
+    return Platforms.back().Devices[0].get();
   }
 
   static OffloadContext &get() {
@@ -204,8 +193,8 @@ Error initPlugins(OffloadContext &Context) {
         auto Info = Device->obtainInfoImpl();
         if (auto Err = Info.takeError())
           return Err;
-        Platform.Devices.emplace_back(DevNum, Device, &Platform,
-                                      std::move(*Info));
+        Platform.Devices.emplace_back(std::make_unique<ol_device_impl_t>(
+            DevNum, Device, &Platform, std::move(*Info)));
       }
     }
   }
@@ -213,7 +202,8 @@ Error initPlugins(OffloadContext &Context) {
   // Add the special host device
   auto &HostPlatform = Context.Platforms.emplace_back(
       ol_platform_impl_t{nullptr, OL_PLATFORM_BACKEND_HOST});
-  HostPlatform.Devices.emplace_back(-1, nullptr, nullptr, InfoTreeNode{});
+  HostPlatform.Devices.emplace_back(
+      std::make_unique<ol_device_impl_t>(-1, nullptr, nullptr, InfoTreeNode{}));
   Context.HostDevice()->Platform = &HostPlatform;
 
   Context.TracingEnabled = std::getenv("OFFLOAD_TRACE");
@@ -519,7 +509,7 @@ Error olGetDeviceInfoSize_impl(ol_device_handle_t Device,
 Error olIterateDevices_impl(ol_device_iterate_cb_t Callback, void *UserData) {
   for (auto &Platform : OffloadContext::get().Platforms) {
     for (auto &Device : Platform.Devices) {
-      if (!Callback(&Device, UserData)) {
+      if (!Callback(Device.get(), UserData)) {
         break;
       }
     }
