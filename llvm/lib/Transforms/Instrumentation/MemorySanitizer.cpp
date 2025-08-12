@@ -2749,7 +2749,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     assert(I.getType()->isVectorTy());
     assert(I.getArgOperand(0)->getType()->isVectorTy());
 
-    FixedVectorType *ParamType =
+    [[maybe_unused]] FixedVectorType *ParamType =
         cast<FixedVectorType>(I.getArgOperand(0)->getType());
     assert((I.arg_size() != 2) ||
            (ParamType == cast<FixedVectorType>(I.getArgOperand(1)->getType())));
@@ -3858,81 +3858,87 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                                   unsigned EltSizeInBits = 0) {
     IRBuilder<> IRB(&I);
 
-    FixedVectorType *ReturnType = cast<FixedVectorType>(I.getType());
+    [[maybe_unused]] FixedVectorType *ReturnType
+        = cast<FixedVectorType>(I.getType());
     assert(isa<FixedVectorType>(ReturnType));
 
-    assert(I.arg_size() == 2 || I.arg_size() == 3);
+    // Vectors A and B, and shadows
+    Value *Va;
+    Value *Vb;
+    Value *Sa;
+    Value *Sb;
+
+    if (I.arg_size() == 2) {
+      Va = I.getOperand(0);
+      Vb = I.getOperand(1);
+
+      Sa = getShadow(&I, 0);
+      Sb = getShadow(&I, 1);
+    } else if (I.arg_size() == 3) {
+      // Operand 0 is the accumulator. We will deal with that below.
+      Va = I.getOperand(1);
+      Vb = I.getOperand(2);
+
+      Sa = getShadow(&I, 1);
+      Sb = getShadow(&I, 2);
+    } else {
+      assert(I.arg_size() == 2 || I.arg_size() == 3);
+    }
+
     FixedVectorType *ParamType =
         cast<FixedVectorType>(I.getArgOperand(0)->getType());
     assert(ParamType == I.getArgOperand(1)->getType());
 
-    Value *V1;
-    Value *V2;
+    assert(ParamType->getPrimitiveSizeInBits() ==
+           ReturnType->getPrimitiveSizeInBits());
 
     if (I.arg_size() == 3) {
       assert(ParamType == ReturnType);
       assert(ParamType == I.getArgOperand(2)->getType());
-
-      V1 = I.getOperand(1);
-      V2 = I.getOperand(2);
-    } else {
-      V1 = I.getOperand(0);
-      V2 = I.getOperand(1);
     }
 
-    assert(ParamType->getPrimitiveSizeInBits() ==
-           ReturnType->getPrimitiveSizeInBits());
-
     // Step 1: instrument multiplication of corresponding vector elements
-    Value *S1 = getShadow(&I, 0);
-    Value *S2 = getShadow(&I, 1);
-
     if (EltSizeInBits) {
-      if (I.arg_size() != 3)
-        ReturnType = cast<FixedVectorType>(
-            getMMXVectorTy(EltSizeInBits * ReductionFactor,
-                           ReturnType->getPrimitiveSizeInBits()));
-
       ParamType = cast<FixedVectorType>(
           getMMXVectorTy(EltSizeInBits, ParamType->getPrimitiveSizeInBits()));
 
-      V1 = IRB.CreateBitCast(V1, ParamType);
-      V2 = IRB.CreateBitCast(V2, ParamType);
+      Va = IRB.CreateBitCast(Va, ParamType);
+      Vb = IRB.CreateBitCast(Vb, ParamType);
 
-      S1 = IRB.CreateBitCast(S1, getShadowTy(ParamType));
-      S2 = IRB.CreateBitCast(S2, getShadowTy(ParamType));
+      Sa = IRB.CreateBitCast(Sa, getShadowTy(ParamType));
+      Sb = IRB.CreateBitCast(Sb, getShadowTy(ParamType));
+    } else {
+      assert(ParamType->getNumElements() ==
+             ReturnType->getNumElements() * ReductionFactor);
     }
 
-    assert(ParamType->getNumElements() ==
-           ReturnType->getNumElements() * ReductionFactor);
-
-    Value *S1S2 = IRB.CreateOr(S1, S2);
+    Value *Sab = IRB.CreateOr(Sa, Sb);
 
     // Multiplying an uninitialized / element by zero results in an initialized
     // element.
-    Value *Zero = Constant::getNullValue(V1->getType());
-    Value *V1NotZero = IRB.CreateICmpNE(V1, Zero);
-    Value *V2NotZero = IRB.CreateICmpNE(V2, Zero);
-    Value *V1AndV2NotZero = IRB.CreateAnd(V1NotZero, V2NotZero);
+    Value *Zero = Constant::getNullValue(Va->getType());
+    Value *VaNotZero = IRB.CreateICmpNE(Va, Zero);
+    Value *VbNotZero = IRB.CreateICmpNE(Vb, Zero);
+    Value *VaAndVbNotZero = IRB.CreateAnd(VaNotZero, VbNotZero);
 
     // After multiplying e.g., <8 x i16> %a, <8 x i16> %b, we should have
     // <8 x i32> %ab, but we cheated and ended up with <8 x i16>.
-    S1S2 = IRB.CreateAnd(S1S2, IRB.CreateSExt(V1AndV2NotZero, S1S2->getType()));
+    Sab = IRB.CreateAnd(Sab, IRB.CreateSExt(VaAndVbNotZero, Sab->getType()));
 
     // Step 2: instrument horizontal add
     // e.g., collapse <8 x i16> into <4 x i16> (reduction factor == 2)
     //                <16 x i8> into <4 x i8>  (reduction factor == 4)
-    Value *OrShadow = horizontalReduce(I, ReductionFactor, S1S2, nullptr);
+    Value *OutShadow = horizontalReduce(I, ReductionFactor, Sab, nullptr);
 
     // Extend to <4 x i32>.
     // For MMX, cast it back to <1 x i64>.
-    OrShadow = CreateShadowCast(IRB, OrShadow, getShadowTy(&I));
+    OutShadow = CreateShadowCast(IRB, OutShadow, getShadowTy(&I));
 
-    // Accumulate
+    // Step 3 (if applicable): Accumulate
     if (I.arg_size() == 3)
-      OrShadow = IRB.CreateOr(OrShadow, getShadow(&I, 0));
+      OutShadow = IRB.CreateOr(OutShadow, getShadow(&I, 0));
 
-    setShadow(&I, OrShadow);
+    setShadow(&I, OutShadow);
     setOriginForNaryOp(I);
   }
 
