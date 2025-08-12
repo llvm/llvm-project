@@ -859,7 +859,7 @@ vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, a
   std::swap(this->__begin_, __v.__begin_);
   std::swap(this->__end_, __v.__end_);
   std::swap(this->__cap_, __v.__cap_);
-  __v.__update_first(__v.begin());
+  __v.__set_first(__v.begin());
   __annotate_new(size());
 }
 
@@ -878,7 +878,7 @@ vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, a
   std::__uninitialized_allocator_relocate(
       this->__alloc_, std::__to_address(__p), std::__to_address(__end_), std::__to_address(__v.end()));
   auto __relocated_so_far = __end_ - __p;
-  __v.__update_sentinel(__v.end() + __relocated_so_far);
+  __v.__set_sentinel(__v.end() + __relocated_so_far);
   __end_           = __p; // The objects in [__p, __end_) have been destroyed by relocating them.
   auto __new_begin = __v.begin() - (__p - __begin_);
 
@@ -1139,7 +1139,7 @@ vector<_Tp, _Allocator>::__emplace_back_slow_path(_Args&&... __args) {
   //    __v.emplace_back(std::forward<_Args>(__args)...);
   pointer __end = __v.end();
   __alloc_traits::construct(this->__alloc_, std::__to_address(__end), std::forward<_Args>(__args)...);
-  __v.__update_sentinel(++__end);
+  __v.__set_sentinel(++__end);
   __swap_out_circular_buffer(__v);
   return this->__end_;
 }
@@ -1316,12 +1316,12 @@ vector<_Tp, _Allocator>::__insert_with_sentinel(const_iterator __position, _Inpu
     std::__uninitialized_allocator_relocate(
         __alloc_, std::__to_address(__old_last), std::__to_address(this->__end_), std::__to_address(__merged.end()));
     __guard.__complete(); // Release the guard once objects in [__old_last_, __end_) have been successfully relocated.
-    __merged.__update_sentinel(__merged.end() + (this->__end_ - __old_last));
+    __merged.__set_sentinel(__merged.end() + (this->__end_ - __old_last));
     this->__end_ = __old_last;
     std::__uninitialized_allocator_relocate(
         __alloc_, std::__to_address(__v.begin()), std::__to_address(__v.end()), std::__to_address(__merged.end()));
-    __merged.__update_sentinel(__merged.size() + __v.size());
-    __v.__update_sentinel(__v.begin());
+    __merged.__set_sentinel(__merged.size() + __v.size());
+    __v.__set_sentinel(__v.begin());
     __p        = __swap_out_circular_buffer(__merged, __p);
   }
   return __make_iter(__p);
