@@ -179,7 +179,7 @@ def OMPC_DynamicAllocators : Clause<[Spelling<"dynamic_allocators">]> {
   let clangClass = "OMPDynamicAllocatorsClause";
 }
 def OMPC_Enter : Clause<[Spelling<"enter">]> {
-  let flangClass = "OmpObjectList";
+  let flangClass = "OmpEnterClause";
 }
 def OMPC_Exclusive : Clause<[Spelling<"exclusive">]> {
   let clangClass = "OMPExclusiveClause";
@@ -1460,7 +1460,7 @@ def OMP_DoSimd : Directive<[Spelling<"do simd">]> {
   ];
   let allowedOnceClauses = [
     VersionedClause<OMPC_Collapse>,
-    VersionedClause<OMPC_If>,
+    VersionedClause<OMPC_If, 50>,
     VersionedClause<OMPC_NoWait>,
     VersionedClause<OMPC_Order, 50>,
     VersionedClause<OMPC_Ordered>,

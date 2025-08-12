@@ -227,14 +227,11 @@ static bool hasRecursiveCallInPath(const FunctionDecl *FD, CFGBlock &Block) {
 
     // Skip function calls which are qualified with a templated class.
     if (const DeclRefExpr *DRE =
-            dyn_cast<DeclRefExpr>(CE->getCallee()->IgnoreParenImpCasts())) {
-      if (NestedNameSpecifier *NNS = DRE->getQualifier()) {
-        if (NNS->getKind() == NestedNameSpecifier::TypeSpec &&
-            isa<TemplateSpecializationType>(NNS->getAsType())) {
+            dyn_cast<DeclRefExpr>(CE->getCallee()->IgnoreParenImpCasts()))
+      if (NestedNameSpecifier NNS = DRE->getQualifier();
+          NNS.getKind() == NestedNameSpecifier::Kind::Type)
+        if (isa_and_nonnull<TemplateSpecializationType>(NNS.getAsType()))
           continue;
-        }
-      }
-    }
 
     const CXXMemberCallExpr *MCE = dyn_cast<CXXMemberCallExpr>(CE);
     if (!MCE || isa<CXXThisExpr>(MCE->getImplicitObjectArgument()) ||
@@ -581,7 +578,7 @@ static ControlFlowKind CheckFallThrough(AnalysisDeclContext &AC) {
     // mark them as live.
     for (const auto *B : *cfg) {
       if (!live[B->getBlockID()]) {
-        if (B->pred_begin() == B->pred_end()) {
+        if (B->preds().empty()) {
           const Stmt *Term = B->getTerminatorStmt();
           if (isa_and_nonnull<CXXTryStmt>(Term))
             // When not adding EH edges from calls, catch clauses

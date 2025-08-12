@@ -3025,3 +3025,31 @@ join:
   %umax = call noundef i32 @llvm.umax(i32 noundef %phi, i32 1)
   ret i32 %umax
 }
+
+define i32 @multiple_intrinsics_with_multiple_phi_uses(i1 %c, i32 %arg) {
+; CHECK-LABEL: @multiple_intrinsics_with_multiple_phi_uses(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[IF_END:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[ARG:%.*]], -8
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.fshl.i32(i32 [[ADD]], i32 [[ADD]], i32 29)
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[TMP0]], 1
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[TMP1]], [[IF]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i32 [[PHI]]
+;
+entry:
+  br i1 %c, label %if, label %if.end
+
+if:
+  %add = add i32 %arg, -8
+  br label %if.end
+
+if.end:
+  %phi = phi i32 [ %add, %if ], [ 0, %entry ]
+  %fshl1 = call i32 @llvm.fshl.i32(i32 %phi, i32 %phi, i32 29)
+  %fshl2 = call i32 @llvm.fshl.i32(i32 %phi, i32 %phi, i32 29)
+  %add2 = add i32 %fshl1, %fshl2
+  ret i32 %add2
+}

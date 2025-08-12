@@ -297,6 +297,11 @@ def StackAddrAsyncEscapeChecker
           "Check that addresses to stack memory do not escape the function">,
       Documentation<HasDocumentation>;
 
+def StoreToImmutableChecker : Checker<"StoreToImmutable">,
+  HelpText<"Check for writes to immutable memory regions. "
+           "This implements part of SEI CERT Rule ENV30-C.">,
+  Documentation<HasDocumentation>;
+
 def PthreadLockBase : Checker<"PthreadLockBase">,
   HelpText<"Helper registering multiple checks.">,
   Documentation<NotDocumented>,
