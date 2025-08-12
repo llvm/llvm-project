@@ -3031,6 +3031,12 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
                                EltwiseBuiltinArgTyRestriction::IntegerTy))
       return ExprError();
     break;
+  case Builtin::BI__builtin_elementwise_fshl:
+  case Builtin::BI__builtin_elementwise_fshr:
+    if (BuiltinElementwiseTernaryMath(
+            TheCall, EltwiseBuiltinArgTyRestriction::IntegerTy))
+      return ExprError();
+    break;
   case Builtin::BI__builtin_elementwise_min:
   case Builtin::BI__builtin_elementwise_max:
     if (BuiltinElementwiseMath(TheCall))

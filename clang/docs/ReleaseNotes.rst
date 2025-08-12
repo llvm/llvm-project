@@ -107,6 +107,8 @@ C23 Feature Support
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
+- Added ``__builtin_elementwise_fshl`` and ``__builtin_elementwise_fshr``.
+
 - Added ``__builtin_elementwise_minnumnum`` and ``__builtin_elementwise_maxnumnum``.
 
 - Trapping UBSan (e.g. ``-fsanitize-trap=undefined``) now emits a string describing the reason for 
@@ -563,6 +565,7 @@ OpenMP Support
 - Added parsing and semantic analysis support for the ``need_device_addr``
   modifier in the ``adjust_args`` clause.
 - Allow array length to be omitted in array section subscript expression.
+- Fixed non-contiguous strided update in the ``omp target update`` directive with the ``from`` clause.
 
 Improvements
 ^^^^^^^^^^^^
