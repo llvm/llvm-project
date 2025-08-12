@@ -8758,8 +8758,9 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
 
   // Start the mapper function code generation.
   BasicBlock *EntryBB = BasicBlock::Create(M.getContext(), "entry", MapperFn);
-  auto SavedIP = Builder.saveIP();
+  IRBuilder<>::InsertPointGuard IPG(Builder);
   Builder.SetInsertPoint(EntryBB);
+  Builder.SetCurrentDebugLocation(llvm::DebugLoc());
 
   Value *MapperHandle = MapperFn->getArg(0);
   Value *BaseIn = MapperFn->getArg(1);
@@ -8945,7 +8946,6 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
   emitBlock(DoneBB, MapperFn, /*IsFinished=*/true);
 
   Builder.CreateRetVoid();
-  Builder.restoreIP(SavedIP);
   return MapperFn;
 }
 
