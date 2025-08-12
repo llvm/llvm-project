@@ -17,7 +17,6 @@
 #include "llvm/Remarks/RemarkStreamer.h"
 #include "llvm/Support/ToolOutputFile.h"
 
-using namespace llvm;
 namespace mlir::remark::detail {
 
 /// Concrete streamer that writes LLVM optimization remarks to a file

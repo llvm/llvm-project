@@ -205,7 +205,7 @@ RemarkEngine::emitOptimizationRemarkAnalysis(Location loc, StringRef passName,
 }
 
 //===----------------------------------------------------------------------===//
-// Remarkengine
+// RemarkEngine
 //===----------------------------------------------------------------------===//
 
 void RemarkEngine::report(const Remark &&remark) {

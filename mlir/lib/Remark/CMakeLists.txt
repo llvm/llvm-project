@@ -10,5 +10,5 @@ add_mlir_library(MLIRRemarkStreamer
   LINK_COMPONENTS
     Remarks
     Core
-    BitstreamReader  
+    BitstreamReader
   )

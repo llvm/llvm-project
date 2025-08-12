@@ -79,7 +79,7 @@ context’s `DiagnosticEngine` under the provided category labels—handy for
 interactive tools and tests.
 
 ```c++
-mlir::MLIRContext::RemarkCategories cats{/*passed=*/categoryLoopunroll,
+mlir::remark::RemarkCategories cats{/*passed=*/categoryLoopunroll,
                                           /*missed=*/std::nullopt,
                                           /*analysis=*/std::nullopt,
                                           /*failed=*/categoryLoopunroll};
@@ -100,7 +100,7 @@ You can read more information about
 ```c++
 #include "mlir/Remark/RemarkStreamer.h"
 
-mlir::MLIRContext::RemarkCategories cats{/*passed=*/categoryLoopunroll,
+mlir::remark::RemarkCategories cats{/*passed=*/categoryLoopunroll,
                                          /*missed=*/std::nullopt,
                                          /*analysis=*/std::nullopt,
                                          /*failed=*/categoryLoopunroll};
