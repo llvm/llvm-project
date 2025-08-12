@@ -14,6 +14,7 @@
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/Frontend/HLSL/RootSignatureMetadata.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
@@ -26,37 +27,6 @@
 
 using namespace llvm;
 using namespace llvm::dxil;
-
-static ResourceClass toResourceClass(dxbc::DescriptorRangeType RangeType) {
-  using namespace dxbc;
-  switch (RangeType) {
-  case DescriptorRangeType::SRV:
-    return ResourceClass::SRV;
-  case DescriptorRangeType::UAV:
-    return ResourceClass::UAV;
-  case DescriptorRangeType::CBV:
-    return ResourceClass::CBuffer;
-  case DescriptorRangeType::Sampler:
-    return ResourceClass::Sampler;
-  }
-}
-
-static ResourceClass toResourceClass(dxbc::RootParameterType Type) {
-  using namespace dxbc;
-  switch (Type) {
-  case RootParameterType::Constants32Bit:
-    return ResourceClass::CBuffer;
-  case RootParameterType::SRV:
-    return ResourceClass::SRV;
-  case RootParameterType::UAV:
-    return ResourceClass::UAV;
-  case RootParameterType::CBV:
-    return ResourceClass::CBuffer;
-  case dxbc::RootParameterType::DescriptorTable:
-    break;
-  }
-  llvm_unreachable("Unconvertible RootParameterType");
-}
 
 static void reportInvalidDirection(Module &M, DXILResourceMap &DRM) {
   for (const auto &UAV : DRM.uavs()) {
@@ -155,33 +125,6 @@ reportRegNotBound(Module &M, ResourceClass Class,
   M.getContext().diagnose(DiagnosticInfoGeneric(Message));
 }
 
-static void
-reportDescriptorTableMixingTypes(Module &M, uint32_t Location,
-                                 dxbc::DescriptorRangeType RangeType) {
-  SmallString<128> Message;
-  raw_svector_ostream OS(Message);
-  OS << "Samplers cannot be mixed with other "
-     << "resource types in a descriptor table, "
-     << getResourceClassName(toResourceClass(RangeType))
-     << "(location=" << Location << ")";
-
-  M.getContext().diagnose(DiagnosticInfoGeneric(Message));
-}
-
-static void
-reportOverflowingRange(Module &M,
-                       const dxbc::RTS0::v2::DescriptorRange &Range) {
-  SmallString<128> Message;
-  raw_svector_ostream OS(Message);
-  OS << "Cannot append range with implicit lower "
-     << "bound after an unbounded range "
-     << getResourceClassName(toResourceClass(
-            static_cast<dxbc::DescriptorRangeType>(Range.RangeType)))
-     << "(register=" << Range.BaseShaderRegister
-     << ", space=" << Range.RegisterSpace << ") exceeds maximum allowed value.";
-  M.getContext().diagnose(DiagnosticInfoGeneric(Message));
-}
-
 static void reportInvalidHandleTy(
     Module &M, const llvm::ArrayRef<dxil::ResourceInfo::ResourceBinding> &RDs,
     const iterator_range<SmallVectorImpl<dxil::ResourceInfo>::iterator>
@@ -263,66 +206,6 @@ getRootDescriptorsBindingInfo(const mcdxbc::RootSignatureDesc &RSD,
   return RDs;
 }
 
-static void validateDescriptorTables(Module &M,
-                                     const mcdxbc::RootSignatureDesc &RSD) {
-  for (const mcdxbc::RootParameterInfo &ParamInfo : RSD.ParametersContainer) {
-    if (static_cast<dxbc::RootParameterType>(ParamInfo.Header.ParameterType) !=
-        dxbc::RootParameterType::DescriptorTable)
-      continue;
-
-    mcdxbc::DescriptorTable Table =
-        RSD.ParametersContainer.getDescriptorTable(ParamInfo.Location);
-
-    bool HasSampler = false;
-    bool HasOtherRangeType = false;
-    dxbc::DescriptorRangeType OtherRangeType;
-    uint32_t OtherRangeTypeLocation = 0;
-
-    uint64_t AppendingOffset = 0;
-
-    for (const dxbc::RTS0::v2::DescriptorRange &Range : Table.Ranges) {
-      dxbc::DescriptorRangeType RangeType =
-          static_cast<dxbc::DescriptorRangeType>(Range.RangeType);
-
-      uint64_t Offset = AppendingOffset;
-      if (Range.OffsetInDescriptorsFromTableStart != ~0U)
-        Offset = Range.OffsetInDescriptorsFromTableStart;
-
-      if (Offset > ~0U)
-        reportOverflowingRange(M, Range);
-      if (Range.NumDescriptors == ~0U) {
-        AppendingOffset = (uint64_t)~0U + (uint64_t)1ULL;
-      } else {
-        uint64_t UpperBound = (uint64_t)Range.BaseShaderRegister +
-                              (uint64_t)Range.NumDescriptors - (uint64_t)1U;
-        if (UpperBound > ~0U)
-          reportOverflowingRange(M, Range);
-
-        uint64_t AppendingUpperBound =
-            (uint64_t)Offset + (uint64_t)Range.NumDescriptors - (uint64_t)1U;
-        if (AppendingUpperBound > ~0U)
-          reportOverflowingRange(M, Range);
-        AppendingOffset = Offset + Range.NumDescriptors;
-      }
-
-      if (RangeType == dxbc::DescriptorRangeType::Sampler) {
-        HasSampler = true;
-      } else {
-        HasOtherRangeType = true;
-        OtherRangeType = RangeType;
-        OtherRangeTypeLocation = ParamInfo.Location;
-      }
-    }
-
-    // Samplers cannot be mixed with other resources in a descriptor table.
-    if (HasSampler && HasOtherRangeType) {
-      reportDescriptorTableMixingTypes(M, OtherRangeTypeLocation,
-                                       OtherRangeType);
-      continue;
-    }
-  }
-}
-
 static void validateRootSignatureBindings(Module &M,
                                           const mcdxbc::RootSignatureDesc &RSD,
                                           dxil::ModuleMetadataInfo &MMI,
@@ -354,10 +237,11 @@ static void validateRootSignatureBindings(Module &M,
     case dxbc::RootParameterType::CBV: {
       dxbc::RTS0::v2::RootDescriptor Desc =
           RSD.ParametersContainer.getRootDescriptor(ParamInfo.Location);
-      Builder.trackBinding(toResourceClass(static_cast<dxbc::RootParameterType>(
-                               ParamInfo.Header.ParameterType)),
-                           Desc.RegisterSpace, Desc.ShaderRegister,
-                           Desc.ShaderRegister, &IDs.emplace_back());
+      Builder.trackBinding(
+          hlsl::rootsig::toResourceClass(static_cast<dxbc::RootParameterType>(
+              ParamInfo.Header.ParameterType)),
+          Desc.RegisterSpace, Desc.ShaderRegister, Desc.ShaderRegister,
+          &IDs.emplace_back());
 
       break;
     }
@@ -371,7 +255,7 @@ static void validateRootSignatureBindings(Module &M,
                 ? Range.BaseShaderRegister
                 : Range.BaseShaderRegister + Range.NumDescriptors - 1;
         Builder.trackBinding(
-            toResourceClass(
+            hlsl::rootsig::toResourceClass(
                 static_cast<dxbc::DescriptorRangeType>(Range.RangeType)),
             Range.RegisterSpace, Range.BaseShaderRegister, UpperBound,
             &IDs.emplace_back());
@@ -439,7 +323,6 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
 
   if (mcdxbc::RootSignatureDesc *RSD = getRootSignature(RSBI, MMI)) {
     validateRootSignatureBindings(M, *RSD, MMI, DRM);
-    validateDescriptorTables(M, *RSD);
   }
 }
 

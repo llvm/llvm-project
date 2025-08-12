@@ -15,7 +15,9 @@
 #include "llvm/Frontend/HLSL/RootSignatureValidations.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include <cstdint>
 
 using namespace llvm;
 
@@ -26,6 +28,8 @@ namespace rootsig {
 char GenericRSMetadataError::ID;
 char InvalidRSMetadataFormat::ID;
 char InvalidRSMetadataValue::ID;
+char TableSamplerMixinError::ID;
+char TableRegisterOverflowError::ID;
 template <typename T> char RootSignatureValidationError<T>::ID;
 
 static std::optional<uint32_t> extractMdIntValue(MDNode *Node,
@@ -525,6 +529,83 @@ Error MetadataParser::parseRootSignatureElement(mcdxbc::RootSignatureDesc &RSD,
   llvm_unreachable("Unhandled RootSignatureElementKind enum.");
 }
 
+Error validateDescriptorTableSamplerMixin(mcdxbc::DescriptorTable Table,
+                                          uint32_t Location) {
+  bool HasSampler = false;
+  bool HasOtherRangeType = false;
+  dxbc::DescriptorRangeType OtherRangeType;
+
+  for (const dxbc::RTS0::v2::DescriptorRange &Range : Table.Ranges) {
+    dxbc::DescriptorRangeType RangeType =
+        static_cast<dxbc::DescriptorRangeType>(Range.RangeType);
+
+    if (RangeType == dxbc::DescriptorRangeType::Sampler) {
+      HasSampler = true;
+    } else {
+      HasOtherRangeType = true;
+      OtherRangeType = RangeType;
+    }
+  }
+
+  // Samplers cannot be mixed with other resources in a descriptor table.
+  if (HasSampler && HasOtherRangeType)
+    return make_error<TableSamplerMixinError>(OtherRangeType, Location);
+  return Error::success();
+}
+
+/** This validation logic was extracted from the DXC codebase
+ *   https://github.com/microsoft/DirectXShaderCompiler/blob/7a1b1df9b50a8350a63756720e85196e0285e664/lib/DxilRootSignature/DxilRootSignatureValidator.cpp#L205
+ *
+ *   It checks if the registers in a descriptor table are overflowing, meaning,
+ *   they are trying to bind a register larger than MAX_UINT.
+ *   This will usually happen when the descriptor table defined a range after an
+ *   unbounded range, which would lead to an overflow in the register;
+ *   Or if trying append a bunch or really large ranges.
+ **/
+Error validateDescriptorTableRegisterOverflow(mcdxbc::DescriptorTable Table,
+                                              uint32_t Location) {
+  uint64_t AppendingRegister = 0;
+
+  for (const dxbc::RTS0::v2::DescriptorRange &Range : Table.Ranges) {
+
+    dxbc::DescriptorRangeType RangeType =
+        static_cast<dxbc::DescriptorRangeType>(Range.RangeType);
+
+    uint64_t Register = AppendingRegister;
+
+    // Checks if the current register should be appended to the previous range.
+    if (Range.OffsetInDescriptorsFromTableStart != ~0U)
+      Register = Range.OffsetInDescriptorsFromTableStart;
+
+    // Check for overflow in the register value.
+    if (Register > ~0U)
+      return make_error<TableRegisterOverflowError>(
+          RangeType, Range.BaseShaderRegister, Range.RegisterSpace);
+    // Is the current range unbounded?
+    if (Range.NumDescriptors == ~0U) {
+      // No ranges should be appended to an unbounded range.
+      AppendingRegister = (uint64_t)~0U + (uint64_t)1ULL;
+    } else {
+      // Is the defined range, overflowing?
+      uint64_t UpperBound = (uint64_t)Range.BaseShaderRegister +
+                            (uint64_t)Range.NumDescriptors - (uint64_t)1U;
+      if (UpperBound > ~0U)
+        return make_error<TableRegisterOverflowError>(
+            RangeType, Range.BaseShaderRegister, Range.RegisterSpace);
+
+      // If we append this range, will it overflow?
+      uint64_t AppendingUpperBound =
+          (uint64_t)Register + (uint64_t)Range.NumDescriptors - (uint64_t)1U;
+      if (AppendingUpperBound > ~0U)
+        return make_error<TableRegisterOverflowError>(
+            RangeType, Range.BaseShaderRegister, Range.RegisterSpace);
+      AppendingRegister = Register + Range.NumDescriptors;
+    }
+  }
+
+  return Error::success();
+}
+
 Error MetadataParser::validateRootSignature(
     const mcdxbc::RootSignatureDesc &RSD) {
   Error DeferredErrs = Error::success();
@@ -609,6 +690,16 @@ Error MetadataParser::validateRootSignature(
               joinErrors(std::move(DeferredErrs),
                          make_error<RootSignatureValidationError<uint32_t>>(
                              "DescriptorFlag", Range.Flags));
+
+        if (Error Err =
+                validateDescriptorTableSamplerMixin(Table, Info.Location)) {
+          DeferredErrs = joinErrors(std::move(DeferredErrs), std::move(Err));
+        }
+
+        if (Error Err =
+                validateDescriptorTableRegisterOverflow(Table, Info.Location)) {
+          DeferredErrs = joinErrors(std::move(DeferredErrs), std::move(Err));
+        }
       }
       break;
     }

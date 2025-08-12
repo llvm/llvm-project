@@ -15,9 +15,11 @@
 #define LLVM_FRONTEND_HLSL_ROOTSIGNATUREMETADATA_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Frontend/HLSL/HLSLRootSignature.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/MC/DXContainerRootSignature.h"
+#include <cstdint>
 
 namespace llvm {
 class LLVMContext;
@@ -26,6 +28,38 @@ class Metadata;
 
 namespace hlsl {
 namespace rootsig {
+
+inline dxil::ResourceClass
+toResourceClass(dxbc::DescriptorRangeType RangeType) {
+  using namespace dxbc;
+  switch (RangeType) {
+  case DescriptorRangeType::SRV:
+    return dxil::ResourceClass::SRV;
+  case DescriptorRangeType::UAV:
+    return dxil::ResourceClass::UAV;
+  case DescriptorRangeType::CBV:
+    return dxil::ResourceClass::CBuffer;
+  case DescriptorRangeType::Sampler:
+    return dxil::ResourceClass::Sampler;
+  }
+}
+
+inline dxil::ResourceClass toResourceClass(dxbc::RootParameterType Type) {
+  using namespace dxbc;
+  switch (Type) {
+  case RootParameterType::Constants32Bit:
+    return dxil::ResourceClass::CBuffer;
+  case RootParameterType::SRV:
+    return dxil::ResourceClass::SRV;
+  case RootParameterType::UAV:
+    return dxil::ResourceClass::UAV;
+  case RootParameterType::CBV:
+    return dxil::ResourceClass::CBuffer;
+  case dxbc::RootParameterType::DescriptorTable:
+    break;
+  }
+  llvm_unreachable("Unconvertible RootParameterType");
+}
 
 template <typename T>
 class RootSignatureValidationError
@@ -40,6 +74,51 @@ public:
 
   void log(raw_ostream &OS) const override {
     OS << "Invalid value for " << ParamName << ": " << Value;
+  }
+
+  std::error_code convertToErrorCode() const override {
+    return llvm::inconvertibleErrorCode();
+  }
+};
+
+class TableRegisterOverflowError
+    : public ErrorInfo<TableRegisterOverflowError> {
+public:
+  static char ID;
+  dxbc::DescriptorRangeType Type;
+  uint32_t Register;
+  uint32_t Space;
+
+  TableRegisterOverflowError(dxbc::DescriptorRangeType Type, uint32_t Register,
+                             uint32_t Space)
+      : Type(Type), Register(Register), Space(Space) {}
+
+  void log(raw_ostream &OS) const override {
+    OS << "Cannot bind resource of type "
+       << getResourceClassName(toResourceClass(Type))
+       << "(register=" << Register << ", space=" << Space
+       << "), it exceeds the maximum allowed register value.";
+  }
+
+  std::error_code convertToErrorCode() const override {
+    return llvm::inconvertibleErrorCode();
+  }
+};
+
+class TableSamplerMixinError : public ErrorInfo<TableSamplerMixinError> {
+public:
+  static char ID;
+  dxbc::DescriptorRangeType Type;
+  uint32_t Location;
+
+  TableSamplerMixinError(dxbc::DescriptorRangeType Type, uint32_t Location)
+      : Type(Type), Location(Location) {}
+
+  void log(raw_ostream &OS) const override {
+    OS << "Samplers cannot be mixed with other "
+       << "resource types in a descriptor table, "
+       << getResourceClassName(toResourceClass(Type))
+       << "(location=" << Location << ")";
   }
 
   std::error_code convertToErrorCode() const override {
