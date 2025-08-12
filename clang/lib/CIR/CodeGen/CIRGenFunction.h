@@ -1100,6 +1100,8 @@ public:
 
   LValue emitComplexAssignmentLValue(const BinaryOperator *e);
   LValue emitComplexCompoundAssignmentLValue(const CompoundAssignOperator *e);
+  LValue emitScalarCompoundAssignWithComplex(const CompoundAssignOperator *e,
+                                             mlir::Value &result);
 
   void emitCompoundStmt(const clang::CompoundStmt &s);
 
