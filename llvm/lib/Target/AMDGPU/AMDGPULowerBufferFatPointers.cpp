@@ -599,8 +599,8 @@ bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::visitStoreInst(StoreInst &SI) {
 
   IRB.SetInsertPoint(&SI);
   Value *IntV = fatPtrsToInts(V, Ty, IntTy, V->getName());
-  for (auto *Dbg : at::getAssignmentMarkers(&SI))
-    Dbg->setValue(IntV);
+  for (auto *Dbg : at::getDVRAssignmentMarkers(&SI))
+    Dbg->setRawLocation(ValueAsMetadata::get(IntV));
 
   SI.setOperand(0, IntV);
   return true;
@@ -1361,6 +1361,7 @@ public:
   PtrParts visitAtomicCmpXchgInst(AtomicCmpXchgInst &AI);
   PtrParts visitGetElementPtrInst(GetElementPtrInst &GEP);
 
+  PtrParts visitPtrToAddrInst(PtrToAddrInst &PA);
   PtrParts visitPtrToIntInst(PtrToIntInst &PI);
   PtrParts visitIntToPtrInst(IntToPtrInst &IP);
   PtrParts visitAddrSpaceCastInst(AddrSpaceCastInst &I);
@@ -1951,6 +1952,21 @@ PtrParts SplitPtrStructs::visitPtrToIntInst(PtrToIntInst &PI) {
   Res->takeName(&PI);
   SplitUsers.insert(&PI);
   PI.replaceAllUsesWith(Res);
+  return {nullptr, nullptr};
+}
+
+PtrParts SplitPtrStructs::visitPtrToAddrInst(PtrToAddrInst &PA) {
+  Value *Ptr = PA.getPointerOperand();
+  if (!isSplitFatPtr(Ptr->getType()))
+    return {nullptr, nullptr};
+  IRB.SetInsertPoint(&PA);
+
+  auto [Rsrc, Off] = getPtrParts(Ptr);
+  Value *Res = IRB.CreateIntCast(Off, PA.getType(), /*isSigned=*/false);
+  copyMetadata(Res, &PA);
+  Res->takeName(&PA);
+  SplitUsers.insert(&PA);
+  PA.replaceAllUsesWith(Res);
   return {nullptr, nullptr};
 }
 

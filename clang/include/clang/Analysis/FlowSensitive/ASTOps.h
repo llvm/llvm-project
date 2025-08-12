@@ -112,8 +112,14 @@ public:
   // fields that are only used in these.
   // Note: The operand of the `noexcept` operator is an unevaluated operand, but
   // nevertheless it appears in the Clang CFG, so we don't exclude it here.
-  bool TraverseDecltypeTypeLoc(DecltypeTypeLoc) override { return true; }
-  bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc) override { return true; }
+  bool TraverseDecltypeTypeLoc(DecltypeTypeLoc,
+                               bool TraverseQualifier) override {
+    return true;
+  }
+  bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc,
+                                 bool TraverseQualifier) override {
+    return true;
+  }
   bool TraverseCXXTypeidExpr(CXXTypeidExpr *TIE) override {
     if (TIE->isPotentiallyEvaluated())
       return DynamicRecursiveASTVisitor::TraverseCXXTypeidExpr(TIE);

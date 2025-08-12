@@ -27,12 +27,14 @@ template void f<B{nullptr}>();
 // CHECK: define weak_odr void @_Z1fIXtl1BLPKi32EEEEvv(
 // MSABI: define {{.*}} @"??$f@$2UB@@PEBH0CA@H0A@@@@YAXXZ"
 template void f<B{fold((int*)32)}>();
-#ifndef _WIN32
-// FIXME: On MS ABI, we mangle this the same as nullptr, despite considering a
-// null pointer and zero bitcast to a pointer to be distinct pointer values.
-// CHECK: define weak_odr void @_Z1fIXtl1BrcPKiLi0EEEEvv(
-template void f<B{fold(reinterpret_cast<int*>(0))}>();
-#endif
+
+// CHECK: define weak_odr void @_Z1fIXtl1BLPKi0ELi2EEEEvv(
+// MSABI: define {{.*}} @"??$f@$2UB@@PEBH0A@H01@@@YAXXZ"(
+template void f<B{fold(reinterpret_cast<int*>(0)), 2}>();
+
+// CHECK: define weak_odr void @_Z1fIXtl1BLPKi12EEEEvv(
+// MSABI: define {{.*}} @"??$f@$2UB@@PEBH0M@H0A@@@@YAXXZ"(
+template void f<B{fold(reinterpret_cast<int*>(12))}>();
 
 // Pointers to subobjects.
 struct Nested { union { int k; int arr[2]; }; } nested[2];

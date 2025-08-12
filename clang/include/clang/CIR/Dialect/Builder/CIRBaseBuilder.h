@@ -212,6 +212,13 @@ public:
     return create<cir::AllocaOp>(loc, addrType, type, name, alignment);
   }
 
+  /// Get constant address of a global variable as an MLIR attribute.
+  cir::GlobalViewAttr getGlobalViewAttr(cir::PointerType type,
+                                        cir::GlobalOp globalOp) {
+    auto symbol = mlir::FlatSymbolRefAttr::get(globalOp.getSymNameAttr());
+    return cir::GlobalViewAttr::get(type, symbol);
+  }
+
   mlir::Value createGetGlobal(mlir::Location loc, cir::GlobalOp global) {
     assert(!cir::MissingFeatures::addressSpace());
     return create<cir::GetGlobalOp>(loc, getPointerTo(global.getSymType()),
@@ -445,6 +452,10 @@ public:
   cir::CmpOp createCompare(mlir::Location loc, cir::CmpOpKind kind,
                            mlir::Value lhs, mlir::Value rhs) {
     return create<cir::CmpOp>(loc, getBoolTy(), kind, lhs, rhs);
+  }
+
+  mlir::Value createIsNaN(mlir::Location loc, mlir::Value operand) {
+    return createCompare(loc, cir::CmpOpKind::ne, operand, operand);
   }
 
   mlir::Value createShift(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,

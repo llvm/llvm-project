@@ -181,6 +181,8 @@ public:
                                                MachineBasicBlock *BB) const;
   MachineBasicBlock *EmitGetSMESaveSize(MachineInstr &MI,
                                         MachineBasicBlock *BB) const;
+  MachineBasicBlock *EmitEntryPStateSM(MachineInstr &MI,
+                                       MachineBasicBlock *BB) const;
 
   /// Replace (0, vreg) discriminator components with the operands of blend
   /// or with (immediate, NoRegister) when possible.
@@ -523,8 +525,8 @@ public:
   /// node. \p Condition should be one of the enum values from
   /// AArch64SME::ToggleCondition.
   SDValue changeStreamingMode(SelectionDAG &DAG, SDLoc DL, bool Enable,
-                              SDValue Chain, SDValue InGlue, unsigned Condition,
-                              SDValue PStateSM = SDValue()) const;
+                              SDValue Chain, SDValue InGlue,
+                              unsigned Condition) const;
 
   bool isVScaleKnownToBeAPowerOfTwo() const override { return true; }
 
@@ -886,6 +888,10 @@ private:
 
   bool shouldScalarizeBinop(SDValue VecOp) const override {
     return VecOp.getOpcode() == ISD::SETCC;
+  }
+
+  bool hasMultipleConditionRegisters(EVT VT) const override {
+    return VT.isScalableVector();
   }
 };
 

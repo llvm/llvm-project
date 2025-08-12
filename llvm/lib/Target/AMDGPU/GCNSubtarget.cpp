@@ -340,6 +340,43 @@ void GCNSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
     Policy.ShouldTrackLaneMasks = true;
 }
 
+void GCNSubtarget::overridePostRASchedPolicy(MachineSchedPolicy &Policy,
+                                             const SchedRegion &Region) const {
+  const Function &F = Region.RegionBegin->getMF()->getFunction();
+  Attribute PostRADirectionAttr = F.getFnAttribute("amdgpu-post-ra-direction");
+  if (!PostRADirectionAttr.isValid())
+    return;
+
+  StringRef PostRADirectionStr = PostRADirectionAttr.getValueAsString();
+  if (PostRADirectionStr == "topdown") {
+    Policy.OnlyTopDown = true;
+    Policy.OnlyBottomUp = false;
+  } else if (PostRADirectionStr == "bottomup") {
+    Policy.OnlyTopDown = false;
+    Policy.OnlyBottomUp = true;
+  } else if (PostRADirectionStr == "bidirectional") {
+    Policy.OnlyTopDown = false;
+    Policy.OnlyBottomUp = false;
+  } else {
+    DiagnosticInfoOptimizationFailure Diag(
+        F, F.getSubprogram(), "invalid value for postRA direction attribute");
+    F.getContext().diagnose(Diag);
+  }
+
+  LLVM_DEBUG({
+    const char *DirStr = "default";
+    if (Policy.OnlyTopDown && !Policy.OnlyBottomUp)
+      DirStr = "topdown";
+    else if (!Policy.OnlyTopDown && Policy.OnlyBottomUp)
+      DirStr = "bottomup";
+    else if (!Policy.OnlyTopDown && !Policy.OnlyBottomUp)
+      DirStr = "bidirectional";
+
+    dbgs() << "Post-MI-sched direction (" << F.getName() << "): " << DirStr
+           << '\n';
+  });
+}
+
 void GCNSubtarget::mirFileLoaded(MachineFunction &MF) const {
   if (isWave32()) {
     // Fix implicit $vcc operands after MIParser has verified that they match
