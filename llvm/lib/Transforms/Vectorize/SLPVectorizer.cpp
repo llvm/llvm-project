@@ -13254,12 +13254,10 @@ void BoUpSLP::transformNodes() {
         if (StridedCost < OriginalVecCost) {
           // Strided load is more profitable than consecutive load + reverse -
           // transform the node to strided load.
-          // TODO: StrideTy =
-          // DL->getIndexType(E.scalars.front()->getPointerOperand()->getType());
+          Type *StrideTy = DL->getIndexType(cast<LoadInst>(E.Scalars.front())
+                                                ->getPointerOperand()
+                                                ->getType());
           StridedPtrInfo SPtrInfo;
-          Type *StrideTy = Type::getIntNTy(
-              SE->getContext(),
-              DL->getTypeStoreSizeInBits(E.Scalars.front()->getType()));
           SPtrInfo.StrideVal = ConstantInt::get(StrideTy, 1);
           SPtrInfo.Ty = VecTy;
           TreeEntryToStridedPtrInfoMap[&E] = SPtrInfo;
