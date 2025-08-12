@@ -1,4 +1,4 @@
-; Test failure to generate of _dvgpr$ symbol for an amdgpu_cs_chain function with dynamic vgprs.
+; Test failure to generate the _dvgpr$ symbol for an amdgpu_cs_chain function with dynamic vgprs.
 
 ; RUN: not llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 < %s 2>&1 | FileCheck -check-prefixes=ERR %s
 

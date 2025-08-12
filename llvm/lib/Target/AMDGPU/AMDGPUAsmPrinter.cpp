@@ -897,8 +897,8 @@ void AMDGPUAsmPrinter::emitDVgprSymbol(MachineFunction &MF) {
     // Calculate number of VGPR blocks.
     // Treat 0 VGPRs as 1 VGPR to avoid underflowing.
     unsigned NumBlocks =
-        (std::max(unsigned(NumVGPRs.getConstant()), 1U) + BlockSize - 1) /
-        BlockSize;
+        divideCeil(std::max(unsigned(NumVGPRs.getConstant()), 1U), BlockSize);
+
     if (NumBlocks > 8) {
       OutContext.reportError({},
                              "too many DVGPR blocks for _dvgpr$ symbol for '" +
