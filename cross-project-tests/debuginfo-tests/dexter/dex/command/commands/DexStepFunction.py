@@ -17,7 +17,7 @@ class DexStepFunction(CommandBase):
     def __init__(self, *args, **kwargs):
         if len(args) < 1:
             raise TypeError("expected 1 positional argument")
-        self.expression = str(args[0]) # Function name.
+        self.function = str(args[0]) # Function name.
         self.hit_count = kwargs.pop("hit_count", None)
         if kwargs:
             raise TypeError(f"unexpected named args: {', '.join(kwargs)}")
@@ -27,7 +27,7 @@ class DexStepFunction(CommandBase):
         raise NotImplementedError("DexStepFunction commands cannot be evaled.")
 
     def get_function(self):
-        return self.expression
+        return self.function
 
     @staticmethod
     def get_name():
