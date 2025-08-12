@@ -339,7 +339,8 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
   }
 
   if (mlir::isa<cir::ConstArrayAttr, cir::ConstVectorAttr,
-                cir::ConstComplexAttr, cir::PoisonAttr>(attrType))
+                cir::ConstComplexAttr, cir::GlobalViewAttr, cir::PoisonAttr>(
+          attrType))
     return success();
 
   assert(isa<TypedAttr>(attrType) && "What else could we be looking at here?");
@@ -1440,6 +1441,27 @@ cir::GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
            << resultType.getPointee() << "' does not match type " << symTy
            << " of the global @" << getName();
 
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// VTableAddrPointOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+cir::VTableAddrPointOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  StringRef name = getName();
+
+  // Verify that the result type underlying pointer type matches the type of
+  // the referenced cir.global or cir.func op.
+  auto op = symbolTable.lookupNearestSymbolFrom<GlobalOp>(*this, getNameAttr());
+  if (!op)
+    return emitOpError("'")
+           << name << "' does not reference a valid cir.global";
+  std::optional<mlir::Attribute> init = op.getInitialValue();
+  if (!init)
+    return success();
+  assert(!cir::MissingFeatures::vtableInitializer());
   return success();
 }
 

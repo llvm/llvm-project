@@ -1483,9 +1483,9 @@ Decl *TemplateDeclInstantiator::InstantiateTypedefNameDecl(TypedefNameDecl *D,
   // If the old typedef was the name for linkage purposes of an anonymous
   // tag decl, re-establish that relationship for the new typedef.
   if (const TagType *oldTagType = D->getUnderlyingType()->getAs<TagType>()) {
-    TagDecl *oldTag = oldTagType->getDecl();
+    TagDecl *oldTag = oldTagType->getOriginalDecl();
     if (oldTag->getTypedefNameForAnonDecl() == D && !Invalid) {
-      TagDecl *newTag = DI->getType()->castAs<TagType>()->getDecl();
+      TagDecl *newTag = DI->getType()->castAs<TagType>()->getOriginalDecl();
       assert(!newTag->hasNameForLinkage());
       newTag->setTypedefNameForAnonDecl(Typedef);
     }
@@ -2250,8 +2250,7 @@ Decl *TemplateDeclInstantiator::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 
   CXXRecordDecl *RecordInst = CXXRecordDecl::Create(
       SemaRef.Context, Pattern->getTagKind(), DC, Pattern->getBeginLoc(),
-      Pattern->getLocation(), Pattern->getIdentifier(), PrevDecl,
-      /*DelayTypeCreation=*/true);
+      Pattern->getLocation(), Pattern->getIdentifier(), PrevDecl);
   if (QualifierLoc)
     RecordInst->setQualifierInfo(QualifierLoc);
 
@@ -2271,8 +2270,6 @@ Decl *TemplateDeclInstantiator::VisitClassTemplateDecl(ClassTemplateDecl *D) {
 
     if (PrevClassTemplate) {
       Inst->setCommonPtr(PrevClassTemplate->getCommonPtr());
-      RecordInst->setTypeForDecl(
-          PrevClassTemplate->getTemplatedDecl()->getTypeForDecl());
       const ClassTemplateDecl *MostRecentPrevCT =
           PrevClassTemplate->getMostRecentDecl();
       TemplateParameterList *PrevParams =
@@ -2305,10 +2302,6 @@ Decl *TemplateDeclInstantiator::VisitClassTemplateDecl(ClassTemplateDecl *D) {
   }
 
   Inst->setPreviousDecl(PrevClassTemplate);
-
-  // Trigger creation of the type for the instantiation.
-  SemaRef.Context.getInjectedClassNameType(
-      RecordInst, Inst->getInjectedClassNameSpecialization());
 
   // Finish handling of friends.
   if (isFriend) {
@@ -2515,11 +2508,9 @@ Decl *TemplateDeclInstantiator::VisitCXXRecordDecl(CXXRecordDecl *D) {
   else
     Record = CXXRecordDecl::Create(SemaRef.Context, D->getTagKind(), Owner,
                                    D->getBeginLoc(), D->getLocation(),
-                                   D->getIdentifier(), PrevDecl,
-                                   /*DelayTypeCreation=*/IsInjectedClassName);
-  // Link the type of the injected-class-name to that of the outer class.
-  if (IsInjectedClassName)
-    (void)SemaRef.Context.getTypeDeclType(Record, cast<CXXRecordDecl>(Owner));
+                                   D->getIdentifier(), PrevDecl);
+
+  Record->setImplicit(D->isImplicit());
 
   // Substitute the nested name specifier, if any.
   if (SubstQualifier(D, Record))
@@ -2528,7 +2519,6 @@ Decl *TemplateDeclInstantiator::VisitCXXRecordDecl(CXXRecordDecl *D) {
   SemaRef.InstantiateAttrsForDecl(TemplateArgs, D, Record, LateAttrs,
                                                               StartingScope);
 
-  Record->setImplicit(D->isImplicit());
   // FIXME: Check against AS_none is an ugly hack to work around the issue that
   // the tag decls introduced by friend class declarations don't have an access
   // specifier. Remove once this area of the code gets sorted out.
@@ -3164,8 +3154,8 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
     Method->setIneligibleOrNotSelected(true);
     Method->setRangeEnd(Destructor->getEndLoc());
     Method->setDeclName(SemaRef.Context.DeclarationNames.getCXXDestructorName(
-        SemaRef.Context.getCanonicalType(
-            SemaRef.Context.getTypeDeclType(Record))));
+
+        SemaRef.Context.getCanonicalTagType(Record)));
   } else if (CXXConversionDecl *Conversion = dyn_cast<CXXConversionDecl>(D)) {
     Method = CXXConversionDecl::Create(
         SemaRef.Context, Record, StartLoc, NameInfo, T, TInfo,
@@ -3793,19 +3783,18 @@ TemplateDeclInstantiator::VisitTemplateTemplateParmDecl(
         D->getPosition(), D->isParameterPack(), D->getIdentifier(),
         D->templateParameterKind(), D->wasDeclaredWithTypename(), InstParams);
   if (D->hasDefaultArgument() && !D->defaultArgumentWasInherited()) {
-    NestedNameSpecifierLoc QualifierLoc =
-        D->getDefaultArgument().getTemplateQualifierLoc();
-    QualifierLoc =
-        SemaRef.SubstNestedNameSpecifierLoc(QualifierLoc, TemplateArgs);
+    const TemplateArgumentLoc &A = D->getDefaultArgument();
+    NestedNameSpecifierLoc QualifierLoc = A.getTemplateQualifierLoc();
+    // FIXME: Pass in the template keyword location.
     TemplateName TName = SemaRef.SubstTemplateName(
-        QualifierLoc, D->getDefaultArgument().getArgument().getAsTemplate(),
-        D->getDefaultArgument().getTemplateNameLoc(), TemplateArgs);
+        A.getTemplateKWLoc(), QualifierLoc, A.getArgument().getAsTemplate(),
+        A.getTemplateNameLoc(), TemplateArgs);
     if (!TName.isNull())
       Param->setDefaultArgument(
           SemaRef.Context,
           TemplateArgumentLoc(SemaRef.Context, TemplateArgument(TName),
-                              D->getDefaultArgument().getTemplateQualifierLoc(),
-                              D->getDefaultArgument().getTemplateNameLoc()));
+                              A.getTemplateKWLoc(), QualifierLoc,
+                              A.getTemplateNameLoc()));
   }
   Param->setAccess(AS_public);
   Param->setImplicit(D->isImplicit());
@@ -3907,7 +3896,7 @@ Decl *TemplateDeclInstantiator::VisitUsingDecl(UsingDecl *D) {
   if (NameInfo.getName().getNameKind() == DeclarationName::CXXConstructorName)
     if (auto *RD = dyn_cast<CXXRecordDecl>(SemaRef.CurContext))
       NameInfo.setName(SemaRef.Context.DeclarationNames.getCXXConstructorName(
-          SemaRef.Context.getCanonicalType(SemaRef.Context.getRecordType(RD))));
+          SemaRef.Context.getCanonicalTagType(RD)));
 
   // We only need to do redeclaration lookups if we're in a class scope (in
   // fact, it's not really even possible in non-class scopes).
@@ -4819,18 +4808,13 @@ TemplateDeclInstantiator::InstantiateClassTemplatePartialSpecialization(
       ClassTemplate->findPartialSpecialization(CTAI.CanonicalConverted,
                                                InstParams, InsertPos);
 
-  // Build the type that describes the converted template arguments of the class
-  // template partial specialization.
-  TypeSourceInfo *WrittenTy = SemaRef.Context.getTemplateSpecializationTypeInfo(
-      TemplateName(ClassTemplate), TemplArgInfo->getLAngleLoc(),
-      InstTemplateArgs, CTAI.CanonicalConverted);
-
   // Create the class template partial specialization declaration.
   ClassTemplatePartialSpecializationDecl *InstPartialSpec =
       ClassTemplatePartialSpecializationDecl::Create(
           SemaRef.Context, PartialSpec->getTagKind(), Owner,
           PartialSpec->getBeginLoc(), PartialSpec->getLocation(), InstParams,
-          ClassTemplate, CTAI.CanonicalConverted, WrittenTy->getType(),
+          ClassTemplate, CTAI.CanonicalConverted,
+          /*CanonInjectedTST=*/CanQualType(),
           /*PrevDecl=*/nullptr);
 
   InstPartialSpec->setTemplateArgsAsWritten(InstTemplateArgs);
@@ -4861,7 +4845,7 @@ TemplateDeclInstantiator::InstantiateClassTemplatePartialSpecialization(
                  diag::err_partial_spec_redeclared)
         << InstPartialSpec;
     SemaRef.Diag(PrevDecl->getLocation(), diag::note_prev_partial_spec_here)
-      << SemaRef.Context.getTypeDeclType(PrevDecl);
+        << SemaRef.Context.getCanonicalTagType(PrevDecl);
     return nullptr;
   }
 
@@ -5750,15 +5734,19 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
       QualType TransformRecordType(TypeLocBuilder &TLB, RecordTypeLoc TL) {
         const RecordType *T = TL.getTypePtr();
         RecordDecl *Record = cast_or_null<RecordDecl>(
-            getDerived().TransformDecl(TL.getNameLoc(), T->getDecl()));
+            getDerived().TransformDecl(TL.getNameLoc(), T->getOriginalDecl()));
         if (Record != OldDecl)
           return Base::TransformRecordType(TLB, TL);
 
-        QualType Result = getDerived().RebuildRecordType(NewDecl);
+        // FIXME: transform the rest of the record type.
+        QualType Result = getDerived().RebuildTagType(
+            ElaboratedTypeKeyword::None, /*Qualifier=*/std::nullopt, NewDecl);
         if (Result.isNull())
           return QualType();
 
-        RecordTypeLoc NewTL = TLB.push<RecordTypeLoc>(Result);
+        TagTypeLoc NewTL = TLB.push<RecordTypeLoc>(Result);
+        NewTL.setElaboratedKeywordLoc(SourceLocation());
+        NewTL.setQualifierLoc(NestedNameSpecifierLoc());
         NewTL.setNameLoc(TL.getNameLoc());
         return Result;
       }
@@ -6922,7 +6910,8 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
               Args.addArgument(
                   getTrivialTemplateArgumentLoc(UnpackedArg, QualType(), Loc));
           }
-          QualType T = CheckTemplateIdType(TemplateName(TD), Loc, Args);
+          QualType T = CheckTemplateIdType(ElaboratedTypeKeyword::None,
+                                           TemplateName(TD), Loc, Args);
           // We may get a non-null type with errors, in which case
           // `getAsCXXRecordDecl` will return `nullptr`. For instance, this
           // happens when one of the template arguments is an invalid
@@ -6988,16 +6977,17 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
     bool IsBeingInstantiated = false;
     if (CXXRecordDecl *Spec = dyn_cast<CXXRecordDecl>(ParentDC)) {
       if (!Spec->isDependentContext()) {
-        QualType T = Context.getTypeDeclType(Spec);
+        CanQualType T = Context.getCanonicalTagType(Spec);
         const RecordType *Tag = T->getAs<RecordType>();
         assert(Tag && "type of non-dependent record is not a RecordType");
-        if (Tag->isBeingDefined())
+        auto *TagDecl =
+            cast<CXXRecordDecl>(Tag->getOriginalDecl())->getDefinitionOrSelf();
+        if (TagDecl->isBeingDefined())
           IsBeingInstantiated = true;
-        if (!Tag->isBeingDefined() &&
-            RequireCompleteType(Loc, T, diag::err_incomplete_type))
+        else if (RequireCompleteType(Loc, T, diag::err_incomplete_type))
           return nullptr;
 
-        ParentDC = Tag->getDecl();
+        ParentDC = TagDecl;
       }
     }
 
@@ -7043,8 +7033,8 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
         // of member classes, and introduces ordering dependencies via
         // template instantiation.
         Diag(Loc, diag::err_member_not_yet_instantiated)
-          << D->getDeclName()
-          << Context.getTypeDeclType(cast<CXXRecordDecl>(ParentDC));
+            << D->getDeclName()
+            << Context.getCanonicalTagType(cast<CXXRecordDecl>(ParentDC));
         Diag(D->getLocation(), diag::note_non_instantiated_member_here);
       } else if (EnumConstantDecl *ED = dyn_cast<EnumConstantDecl>(D)) {
         // This enumeration constant was found when the template was defined,
@@ -7059,7 +7049,7 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
           << D->getDeclName()
           << Context.getTypeDeclType(cast<TypeDecl>(Spec->getDeclContext()));
         Diag(Spec->getLocation(), diag::note_enum_specialized_here)
-          << Context.getTypeDeclType(Spec);
+            << Context.getCanonicalTagType(Spec);
       } else {
         // We should have found something, but didn't.
         llvm_unreachable("Unable to find instantiation of declaration!");

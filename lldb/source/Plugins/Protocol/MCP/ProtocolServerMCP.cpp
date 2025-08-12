@@ -27,25 +27,12 @@ using namespace llvm;
 LLDB_PLUGIN_DEFINE(ProtocolServerMCP)
 
 static constexpr size_t kChunkSize = 1024;
+static constexpr llvm::StringLiteral kName = "lldb-mcp";
+static constexpr llvm::StringLiteral kVersion = "0.1.0";
 
-ProtocolServerMCP::ProtocolServerMCP() : ProtocolServer() {
-  AddRequestHandler("initialize",
-                    std::bind(&ProtocolServerMCP::InitializeHandler, this,
-                              std::placeholders::_1));
-
-  AddRequestHandler("tools/list",
-                    std::bind(&ProtocolServerMCP::ToolsListHandler, this,
-                              std::placeholders::_1));
-  AddRequestHandler("tools/call",
-                    std::bind(&ProtocolServerMCP::ToolsCallHandler, this,
-                              std::placeholders::_1));
-
-  AddRequestHandler("resources/list",
-                    std::bind(&ProtocolServerMCP::ResourcesListHandler, this,
-                              std::placeholders::_1));
-  AddRequestHandler("resources/read",
-                    std::bind(&ProtocolServerMCP::ResourcesReadHandler, this,
-                              std::placeholders::_1));
+ProtocolServerMCP::ProtocolServerMCP()
+    : ProtocolServer(),
+      lldb_protocol::mcp::Server(std::string(kName), std::string(kVersion)) {
   AddNotificationHandler("notifications/initialized",
                          [](const lldb_protocol::mcp::Notification &) {
                            LLDB_LOG(GetLog(LLDBLog::Host),
@@ -75,32 +62,6 @@ lldb::ProtocolServerUP ProtocolServerMCP::CreateInstance() {
 
 llvm::StringRef ProtocolServerMCP::GetPluginDescriptionStatic() {
   return "MCP Server.";
-}
-
-llvm::Expected<lldb_protocol::mcp::Response>
-ProtocolServerMCP::Handle(lldb_protocol::mcp::Request request) {
-  auto it = m_request_handlers.find(request.method);
-  if (it != m_request_handlers.end()) {
-    llvm::Expected<lldb_protocol::mcp::Response> response = it->second(request);
-    if (!response)
-      return response;
-    response->id = request.id;
-    return *response;
-  }
-
-  return make_error<MCPError>(
-      llvm::formatv("no handler for request: {0}", request.method).str());
-}
-
-void ProtocolServerMCP::Handle(lldb_protocol::mcp::Notification notification) {
-  auto it = m_notification_handlers.find(notification.method);
-  if (it != m_notification_handlers.end()) {
-    it->second(notification);
-    return;
-  }
-
-  LLDB_LOG(GetLog(LLDBLog::Host), "MPC notification: {0} ({1})",
-           notification.method, notification.params);
 }
 
 void ProtocolServerMCP::AcceptCallback(std::unique_ptr<Socket> socket) {
@@ -157,7 +118,7 @@ llvm::Error ProtocolServerMCP::ReadCallback(Client &client) {
 }
 
 llvm::Error ProtocolServerMCP::Start(ProtocolServer::Connection connection) {
-  std::lock_guard<std::mutex> guard(m_server_mutex);
+  std::lock_guard<std::mutex> guard(m_mutex);
 
   if (m_running)
     return llvm::createStringError("the MCP server is already running");
@@ -189,7 +150,7 @@ llvm::Error ProtocolServerMCP::Start(ProtocolServer::Connection connection) {
 
 llvm::Error ProtocolServerMCP::Stop() {
   {
-    std::lock_guard<std::mutex> guard(m_server_mutex);
+    std::lock_guard<std::mutex> guard(m_mutex);
     if (!m_running)
       return createStringError("the MCP sever is not running");
     m_running = false;
@@ -204,55 +165,13 @@ llvm::Error ProtocolServerMCP::Stop() {
     m_loop_thread.join();
 
   {
-    std::lock_guard<std::mutex> guard(m_server_mutex);
+    std::lock_guard<std::mutex> guard(m_mutex);
     m_listener.reset();
     m_listen_handlers.clear();
     m_clients.clear();
   }
 
   return llvm::Error::success();
-}
-
-llvm::Expected<std::optional<lldb_protocol::mcp::Message>>
-ProtocolServerMCP::HandleData(llvm::StringRef data) {
-  auto message = llvm::json::parse<lldb_protocol::mcp::Message>(/*JSON=*/data);
-  if (!message)
-    return message.takeError();
-
-  if (const lldb_protocol::mcp::Request *request =
-          std::get_if<lldb_protocol::mcp::Request>(&(*message))) {
-    llvm::Expected<lldb_protocol::mcp::Response> response = Handle(*request);
-
-    // Handle failures by converting them into an Error message.
-    if (!response) {
-      lldb_protocol::mcp::Error protocol_error;
-      llvm::handleAllErrors(
-          response.takeError(),
-          [&](const MCPError &err) { protocol_error = err.toProtcolError(); },
-          [&](const llvm::ErrorInfoBase &err) {
-            protocol_error.error.code = MCPError::kInternalError;
-            protocol_error.error.message = err.message();
-          });
-      protocol_error.id = request->id;
-      return protocol_error;
-    }
-
-    return *response;
-  }
-
-  if (const lldb_protocol::mcp::Notification *notification =
-          std::get_if<lldb_protocol::mcp::Notification>(&(*message))) {
-    Handle(*notification);
-    return std::nullopt;
-  }
-
-  if (std::get_if<lldb_protocol::mcp::Error>(&(*message)))
-    return llvm::createStringError("unexpected MCP message: error");
-
-  if (std::get_if<lldb_protocol::mcp::Response>(&(*message)))
-    return llvm::createStringError("unexpected MCP message: response");
-
-  llvm_unreachable("all message types handled");
 }
 
 lldb_protocol::mcp::Capabilities ProtocolServerMCP::GetCapabilities() {
@@ -262,159 +181,4 @@ lldb_protocol::mcp::Capabilities ProtocolServerMCP::GetCapabilities() {
   // added/removed.
   capabilities.resources.listChanged = false;
   return capabilities;
-}
-
-void ProtocolServerMCP::AddTool(std::unique_ptr<Tool> tool) {
-  std::lock_guard<std::mutex> guard(m_server_mutex);
-
-  if (!tool)
-    return;
-  m_tools[tool->GetName()] = std::move(tool);
-}
-
-void ProtocolServerMCP::AddResourceProvider(
-    std::unique_ptr<ResourceProvider> resource_provider) {
-  std::lock_guard<std::mutex> guard(m_server_mutex);
-
-  if (!resource_provider)
-    return;
-  m_resource_providers.push_back(std::move(resource_provider));
-}
-
-void ProtocolServerMCP::AddRequestHandler(llvm::StringRef method,
-                                          RequestHandler handler) {
-  std::lock_guard<std::mutex> guard(m_server_mutex);
-  m_request_handlers[method] = std::move(handler);
-}
-
-void ProtocolServerMCP::AddNotificationHandler(llvm::StringRef method,
-                                               NotificationHandler handler) {
-  std::lock_guard<std::mutex> guard(m_server_mutex);
-  m_notification_handlers[method] = std::move(handler);
-}
-
-llvm::Expected<lldb_protocol::mcp::Response>
-ProtocolServerMCP::InitializeHandler(
-    const lldb_protocol::mcp::Request &request) {
-  lldb_protocol::mcp::Response response;
-  response.result.emplace(llvm::json::Object{
-      {"protocolVersion", lldb_protocol::mcp::kVersion},
-      {"capabilities", GetCapabilities()},
-      {"serverInfo",
-       llvm::json::Object{{"name", kName}, {"version", kVersion}}}});
-  return response;
-}
-
-llvm::Expected<lldb_protocol::mcp::Response>
-ProtocolServerMCP::ToolsListHandler(
-    const lldb_protocol::mcp::Request &request) {
-  lldb_protocol::mcp::Response response;
-
-  llvm::json::Array tools;
-  for (const auto &tool : m_tools)
-    tools.emplace_back(toJSON(tool.second->GetDefinition()));
-
-  response.result.emplace(llvm::json::Object{{"tools", std::move(tools)}});
-
-  return response;
-}
-
-llvm::Expected<lldb_protocol::mcp::Response>
-ProtocolServerMCP::ToolsCallHandler(
-    const lldb_protocol::mcp::Request &request) {
-  lldb_protocol::mcp::Response response;
-
-  if (!request.params)
-    return llvm::createStringError("no tool parameters");
-
-  const json::Object *param_obj = request.params->getAsObject();
-  if (!param_obj)
-    return llvm::createStringError("no tool parameters");
-
-  const json::Value *name = param_obj->get("name");
-  if (!name)
-    return llvm::createStringError("no tool name");
-
-  llvm::StringRef tool_name = name->getAsString().value_or("");
-  if (tool_name.empty())
-    return llvm::createStringError("no tool name");
-
-  auto it = m_tools.find(tool_name);
-  if (it == m_tools.end())
-    return llvm::createStringError(llvm::formatv("no tool \"{0}\"", tool_name));
-
-  lldb_protocol::mcp::ToolArguments tool_args;
-  if (const json::Value *args = param_obj->get("arguments"))
-    tool_args = *args;
-
-  llvm::Expected<lldb_protocol::mcp::TextResult> text_result =
-      it->second->Call(tool_args);
-  if (!text_result)
-    return text_result.takeError();
-
-  response.result.emplace(toJSON(*text_result));
-
-  return response;
-}
-
-llvm::Expected<lldb_protocol::mcp::Response>
-ProtocolServerMCP::ResourcesListHandler(
-    const lldb_protocol::mcp::Request &request) {
-  lldb_protocol::mcp::Response response;
-
-  llvm::json::Array resources;
-
-  std::lock_guard<std::mutex> guard(m_server_mutex);
-  for (std::unique_ptr<ResourceProvider> &resource_provider_up :
-       m_resource_providers) {
-    for (const lldb_protocol::mcp::Resource &resource :
-         resource_provider_up->GetResources())
-      resources.push_back(resource);
-  }
-  response.result.emplace(
-      llvm::json::Object{{"resources", std::move(resources)}});
-
-  return response;
-}
-
-llvm::Expected<lldb_protocol::mcp::Response>
-ProtocolServerMCP::ResourcesReadHandler(
-    const lldb_protocol::mcp::Request &request) {
-  lldb_protocol::mcp::Response response;
-
-  if (!request.params)
-    return llvm::createStringError("no resource parameters");
-
-  const json::Object *param_obj = request.params->getAsObject();
-  if (!param_obj)
-    return llvm::createStringError("no resource parameters");
-
-  const json::Value *uri = param_obj->get("uri");
-  if (!uri)
-    return llvm::createStringError("no resource uri");
-
-  llvm::StringRef uri_str = uri->getAsString().value_or("");
-  if (uri_str.empty())
-    return llvm::createStringError("no resource uri");
-
-  std::lock_guard<std::mutex> guard(m_server_mutex);
-  for (std::unique_ptr<ResourceProvider> &resource_provider_up :
-       m_resource_providers) {
-    llvm::Expected<lldb_protocol::mcp::ResourceResult> result =
-        resource_provider_up->ReadResource(uri_str);
-    if (result.errorIsA<UnsupportedURI>()) {
-      llvm::consumeError(result.takeError());
-      continue;
-    }
-    if (!result)
-      return result.takeError();
-
-    lldb_protocol::mcp::Response response;
-    response.result.emplace(std::move(*result));
-    return response;
-  }
-
-  return make_error<MCPError>(
-      llvm::formatv("no resource handler for uri: {0}", uri_str).str(),
-      MCPError::kResourceNotFound);
 }

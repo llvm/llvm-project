@@ -35,6 +35,8 @@ enum class RecurKind {
   // clang-format off
   None,     ///< Not a recurrence.
   Add,      ///< Sum of integers.
+  Sub,      ///< Subtraction of integers
+  AddChainWithSubs, ///< A chain of adds and subs
   Mul,      ///< Product of integers.
   Or,       ///< Bitwise or logical OR of integers.
   And,      ///< Bitwise or logical AND of integers.
