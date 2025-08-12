@@ -2032,10 +2032,10 @@ def NVVM_StMatrixOp: NVVM_Op<"stmatrix">,
 
 def NVVM_LdMatrixOp: NVVM_Op<"ldmatrix">,
   Results<(outs AnyType:$res)>,
-  Arguments<(ins LLVM_PointerShared: $ptr, I32Attr: $num,
-                 MMALayoutAttr: $layout,
-                 LdStMatrixShapeAttr: $shape,
-                 LdStMatrixEltTypeAttr: $eltType)> {
+  Arguments<(ins LLVM_PointerShared:$ptr, I32Attr:$num,
+                 MMALayoutAttr:$layout,
+                 LdStMatrixShapeAttr:$shape,
+                 LdStMatrixEltTypeAttr:$eltType)> {
 
   let summary = "cooperative matrix load";
 
