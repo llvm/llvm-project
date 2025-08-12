@@ -73,11 +73,9 @@ consteval auto __applicability_traits_of() {
   if constexpr (__tuple_like<_Tuple>)
     return []<size_t... _Is>(index_sequence<_Is...>) {
       if constexpr (__tuple_applicable_impl<_Fn, _Tuple, _Is...>) {
-        return __applicability_traits<
-            true,
-            __tuple_nothrow_applicable_impl<_Fn, _Tuple, _Is...>,
-            // FIXME: Use __invoke_result_y after merging  https://github.com/llvm/llvm-project/pull/151028.
-            typename __invoke_result<_Fn, decltype(std::get<_Is>(std::declval<_Tuple>()))...>::type>{};
+        return __applicability_traits<true,
+                                      __tuple_nothrow_applicable_impl<_Fn, _Tuple, _Is...>,
+                                      __invoke_result_t<_Fn, decltype(std::get<_Is>(std::declval<_Tuple>()))...>>{};
       } else
         return __applicability_traits<false, false, void>{};
     }(make_index_sequence<tuple_size_v<remove_reference_t<_Tuple>>>{});
