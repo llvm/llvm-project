@@ -311,12 +311,16 @@ __m256i test_mm256_cvtepi8_epi16(__m128i a) {
   return _mm256_cvtepi8_epi16(a);
 }
 
+TEST_CONSTEXPR(match_v16hi(_mm256_cvtepi8_epi16(_mm_setr_epi8(-3, 2, -1, 0, 1, -2, 3, -4, 5, -6, 7, -8, 9, -10, 11, -12)), -3, 2, -1, 0, 1, -2, 3, -4, 5, -6, 7, -8, 9, -10, 11, -12));
+
 __m256i test_mm256_cvtepi8_epi32(__m128i a) {
   // CHECK-LABEL: test_mm256_cvtepi8_epi32
   // CHECK: shufflevector <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   // CHECK: sext <8 x i8> %{{.*}} to <8 x i32>
   return _mm256_cvtepi8_epi32(a);
 }
+
+TEST_CONSTEXPR(match_v8si(_mm256_cvtepi8_epi32(_mm_setr_epi8(-3, 2, -1, 0, 1, -2, 3, -4, 5, -6, 7, -8, 9, -10, 11, -12)), -3, 2, -1, 0, 1, -2, 3, -4));
 
 __m256i test_mm256_cvtepi8_epi64(__m128i a) {
   // CHECK-LABEL: test_mm256_cvtepi8_epi64
@@ -325,11 +329,15 @@ __m256i test_mm256_cvtepi8_epi64(__m128i a) {
   return _mm256_cvtepi8_epi64(a);
 }
 
+TEST_CONSTEXPR(match_v4di(_mm256_cvtepi8_epi64(_mm_setr_epi8(-3, 2, -1, 0, 1, -2, 3, -4, 5, -6, 7, -8, 9, -10, 11, -12)), -3, 2, -1, 0));
+
 __m256i test_mm256_cvtepi16_epi32(__m128i a) {
   // CHECK-LABEL: test_mm256_cvtepi16_epi32
   // CHECK: sext <8 x i16> %{{.*}} to <8 x i32>
   return _mm256_cvtepi16_epi32(a);
 }
+
+TEST_CONSTEXPR(match_v8si(_mm256_cvtepi16_epi32(_mm_setr_epi16(-300, 2, -1, 0, 1, -2, 3, -4)), -300, 2, -1, 0, 1, -2, 3, -4));
 
 __m256i test_mm256_cvtepi16_epi64(__m128i a) {
   // CHECK-LABEL: test_mm256_cvtepi16_epi64
@@ -338,17 +346,23 @@ __m256i test_mm256_cvtepi16_epi64(__m128i a) {
   return _mm256_cvtepi16_epi64(a);
 }
 
+TEST_CONSTEXPR(match_v4di(_mm256_cvtepi16_epi64(_mm_setr_epi16(-300, 2, -1, 0, 1, -2, 3, -4)), -300, 2, -1, 0));
+
 __m256i test_mm256_cvtepi32_epi64(__m128i a) {
   // CHECK-LABEL: test_mm256_cvtepi32_epi64
   // CHECK: sext <4 x i32> %{{.*}} to <4 x i64>
   return _mm256_cvtepi32_epi64(a);
 }
 
+TEST_CONSTEXPR(match_v4di(_mm256_cvtepi32_epi64(_mm_setr_epi32(-70000, 2, -1, 0)), -70000, 2, -1, 0));
+
 __m256i test_mm256_cvtepu8_epi16(__m128i a) {
   // CHECK-LABEL: test_mm256_cvtepu8_epi16
   // CHECK: zext <16 x i8> %{{.*}} to <16 x i16>
   return _mm256_cvtepu8_epi16(a);
 }
+
+TEST_CONSTEXPR(match_v16hi(_mm256_cvtepu8_epi16(_mm_setr_epi8(-3, 2, -1, 0, 1, -2, 3, -4, 5, -6, 7, -8, 9, -10, 11, -12)), 253, 2, 255, 0, 1, 254, 3, 252, 5, 250, 7, 248, 9, 246, 11, 244));
 
 __m256i test_mm256_cvtepu8_epi32(__m128i a) {
   // CHECK-LABEL: test_mm256_cvtepu8_epi32
@@ -357,6 +371,8 @@ __m256i test_mm256_cvtepu8_epi32(__m128i a) {
   return _mm256_cvtepu8_epi32(a);
 }
 
+TEST_CONSTEXPR(match_v8si(_mm256_cvtepu8_epi32(_mm_setr_epi8(-3, 2, -1, 0, 1, -2, 3, -4, 5, -6, 7, -8, 9, -10, 11, -12)), 253, 2, 255, 0, 1, 254, 3, 252));
+
 __m256i test_mm256_cvtepu8_epi64(__m128i a) {
   // CHECK-LABEL: test_mm256_cvtepu8_epi64
   // CHECK: shufflevector <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -364,11 +380,15 @@ __m256i test_mm256_cvtepu8_epi64(__m128i a) {
   return _mm256_cvtepu8_epi64(a);
 }
 
+TEST_CONSTEXPR(match_v4di(_mm256_cvtepu8_epi64(_mm_setr_epi8(-3, 2, -1, 0, 1, -2, 3, -4, 5, -6, 7, -8, 9, -10, 11, -12)), 253, 2, 255, 0));
+
 __m256i test_mm256_cvtepu16_epi32(__m128i a) {
   // CHECK-LABEL: test_mm256_cvtepu16_epi32
   // CHECK: zext <8 x i16> {{.*}} to <8 x i32>
   return _mm256_cvtepu16_epi32(a);
 }
+
+TEST_CONSTEXPR(match_v8si(_mm256_cvtepu16_epi32(_mm_setr_epi16(-300, 2, -1, 0, 1, -2, 3, -4)), 65236, 2, 65535, 0, 1, 65534, 3, 65532));
 
 __m256i test_mm256_cvtepu16_epi64(__m128i a) {
   // CHECK-LABEL: test_mm256_cvtepu16_epi64
@@ -377,11 +397,15 @@ __m256i test_mm256_cvtepu16_epi64(__m128i a) {
   return _mm256_cvtepu16_epi64(a);
 }
 
+TEST_CONSTEXPR(match_v4di(_mm256_cvtepu16_epi64(_mm_setr_epi16(-300, 2, -1, 0, 1, -2, 3, -4)), 65236, 2, 65535, 0));
+
 __m256i test_mm256_cvtepu32_epi64(__m128i a) {
   // CHECK-LABEL: test_mm256_cvtepu32_epi64
   // CHECK: zext <4 x i32> %{{.*}} to <4 x i64>
   return _mm256_cvtepu32_epi64(a);
 }
+
+TEST_CONSTEXPR(match_v4di(_mm256_cvtepu32_epi64(_mm_setr_epi32(-70000, 2, -1, 0)), 4294897296, 2, 4294967295, 0));
 
 __m128i test0_mm256_extracti128_si256_0(__m256i a) {
   // CHECK-LABEL: test0_mm256_extracti128_si256
