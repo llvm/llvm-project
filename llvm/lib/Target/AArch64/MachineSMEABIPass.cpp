@@ -520,21 +520,17 @@ void MachineSMEABI::emitAllocateLazySaveBuffer(
 
   // 2. Setup the TPIDR2 block.
   {
-    Register TPIDInitSaveSlicesReg = SVL;
-    if (!Subtarget->isLittleEndian()) {
-      Register TmpReg = MRI->createVirtualRegister(&AArch64::GPR64RegClass);
-      // For big-endian targets move "num_za_save_slices" to the top two bytes.
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::UBFMXri), TmpReg)
-          .addReg(TPIDInitSaveSlicesReg)
-          .addImm(16)
-          .addImm(15);
-      TPIDInitSaveSlicesReg = TmpReg;
-    }
+    // Note: This case just needs to do `SVL << 48`. It is not implemented as we
+    // generally don't support big-endian SVE/SME.
+    assert(
+        Subtarget->isLittleEndian() &&
+        "TPIDR2 block initialization is not supported on big-endian targets");
+
     // Store buffer pointer and num_za_save_slices.
     // Bytes 10-15 are implicitly zeroed.
     BuildMI(MBB, MBBI, DL, TII->get(AArch64::STPXi))
         .addReg(Buffer)
-        .addReg(TPIDInitSaveSlicesReg)
+        .addReg(SVL)
         .addFrameIndex(getTPIDR2Block().FrameIndex)
         .addImm(0);
   }
