@@ -82,9 +82,6 @@ static bool forwardHandleAccesses(Function &F, DominatorTree &DT) {
         case Intrinsic::dx_resource_handlefromimplicitbinding:
           processHandle(II, HandleMap);
           break;
-        // Note: Lifetime intrinsics do not show up as users of an Alloca.
-        // As a result we walk the whole function to find the lifetimes and
-        // store them so that we may delete the alloca matches
         case Intrinsic::lifetime_start:
         case Intrinsic::lifetime_end:
           if (II->arg_size() >= 1) {
