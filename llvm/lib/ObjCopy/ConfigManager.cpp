@@ -113,19 +113,18 @@ ConfigManager::getDXContainerConfig() const {
   // If a flag is listed below, then it may be implemented in the future. All
   // other flags are not applicable and will be silently ignored for the
   // DXContainer object file
-  if (!Common.AddGnuDebugLink.empty() || Common.ExtractPartition ||
-      !Common.SplitDWO.empty() || !Common.AllocSectionsPrefix.empty() ||
+  if (!Common.AddGnuDebugLink.empty() || !Common.SplitDWO.empty() ||
+      !Common.AllocSectionsPrefix.empty() ||
       Common.DiscardMode != DiscardType::None || !Common.AddSection.empty() ||
       !Common.DumpSection.empty() || !Common.KeepSection.empty() ||
       !Common.OnlySection.empty() || !Common.ToRemove.empty() ||
       !Common.SectionsToRename.empty() || !Common.SetSectionAlignment.empty() ||
       !Common.SetSectionFlags.empty() || !Common.SetSectionType.empty() ||
-      Common.ExtractDWO || Common.ExtractMainPartition ||
-      Common.OnlyKeepDebug || Common.StripAllGNU || Common.StripDWO ||
-      Common.StripDebug || Common.StripNonAlloc || Common.StripSections ||
-      Common.StripUnneeded || Common.DecompressDebugSections ||
-      Common.GapFill != 0 || Common.PadTo != 0 ||
-      Common.ChangeSectionLMAValAll != 0 ||
+      Common.ExtractDWO || Common.OnlyKeepDebug || Common.StripAllGNU ||
+      Common.StripDWO || Common.StripDebug || Common.StripNonAlloc ||
+      Common.StripSections || Common.StripUnneeded ||
+      Common.DecompressDebugSections || Common.GapFill != 0 ||
+      Common.PadTo != 0 || Common.ChangeSectionLMAValAll != 0 ||
       !Common.ChangeSectionAddress.empty()) {
     return createStringError(
         llvm::errc::invalid_argument,
