@@ -2634,7 +2634,5 @@ SymbolFileNativePDB::ResolveUdtDeclaration(PdbTypeSymId type_id) {
   if (file_name == "\\<unknown>")
     return Declaration();
 
-  FileSpec::Style style = file_name.starts_with("/") ? FileSpec::Style::posix
-                                                     : FileSpec::Style::windows;
-  return Declaration(FileSpec(file_name, style), it->second.Line);
+  return Declaration(FileSpec(file_name), it->second.Line);
 }
