@@ -28,17 +28,6 @@
 #           | 5 |
 #           +---+
 
---- |
-  define void @favor_always_benef() {
-    ret void
-  }
-  define void @favor_live_through_in_high_freq_region() {
-    ret void
-  }
-  define void @use_only_region_possible() {
-    ret void
-  }
----
 # Rematerializing %32 is always beneficial because the defining and using
 # regions have the same frequency. It should be rematerialized first.
 name:            favor_always_benef
@@ -51,12 +40,12 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   %mem_addr:sgpr_64(p4) = COPY $sgpr0_sgpr1
-  ; CHECK-NEXT:   %loop_if_bound:vgpr_32(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   %mem_data:sreg_64_xexec = S_LOAD_DWORDX2_IMM %mem_addr(p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
+  ; CHECK-NEXT:   %mem_addr:sgpr_64 = COPY $sgpr0_sgpr1
+  ; CHECK-NEXT:   %loop_if_bound:vgpr_32 = COPY $vgpr0
+  ; CHECK-NEXT:   %mem_data:sreg_64_xexec = S_LOAD_DWORDX2_IMM %mem_addr, 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode
   ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_1:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode
-  ; CHECK-NEXT:   %exec_loop_mask:sreg_64 = V_CMP_GT_U32_e64 %mem_data.sub0, %loop_if_bound(s32), implicit $exec
+  ; CHECK-NEXT:   %exec_loop_mask:sreg_64 = V_CMP_GT_U32_e64 %mem_data.sub0, %loop_if_bound, implicit $exec
   ; CHECK-NEXT:   %loop_counter:sreg_32 = COPY %mem_data.sub1
   ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_2:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode
   ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_3:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 3, implicit $exec, implicit $mode
@@ -126,10 +115,10 @@ body:             |
   bb.0:
     liveins: $vgpr0, $sgpr0_sgpr1
 
-    %mem_addr:sgpr_64(p4) = COPY $sgpr0_sgpr1
-    %loop_if_bound:vgpr_32(s32) = COPY $vgpr0
-    %mem_data:sreg_64_xexec = S_LOAD_DWORDX2_IMM %mem_addr(p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
-    %exec_loop_mask:sreg_64 = V_CMP_GT_U32_e64 %mem_data.sub0, killed %loop_if_bound(s32), implicit $exec
+    %mem_addr:sgpr_64 = COPY $sgpr0_sgpr1
+    %loop_if_bound:vgpr_32 = COPY $vgpr0
+    %mem_data:sreg_64_xexec = S_LOAD_DWORDX2_IMM %mem_addr, 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
+    %exec_loop_mask:sreg_64 = V_CMP_GT_U32_e64 %mem_data.sub0, killed %loop_if_bound, implicit $exec
     %loop_counter:sreg_32 = COPY %mem_data.sub1
 
     %0:vgpr_32 = nofpexcept V_CVT_I32_F64_e32   0, implicit $exec, implicit $mode
@@ -217,12 +206,12 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   %mem_addr:sgpr_64(p4) = COPY $sgpr0_sgpr1
-  ; CHECK-NEXT:   %loop_if_bound:vgpr_32(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   %mem_data:sreg_64_xexec = S_LOAD_DWORDX2_IMM %mem_addr(p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
+  ; CHECK-NEXT:   %mem_addr:sgpr_64 = COPY $sgpr0_sgpr1
+  ; CHECK-NEXT:   %loop_if_bound:vgpr_32 = COPY $vgpr0
+  ; CHECK-NEXT:   %mem_data:sreg_64_xexec = S_LOAD_DWORDX2_IMM %mem_addr, 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode
   ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_1:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode
-  ; CHECK-NEXT:   %exec_loop_mask:sreg_64 = V_CMP_GT_U32_e64 %mem_data.sub0, %loop_if_bound(s32), implicit $exec
+  ; CHECK-NEXT:   %exec_loop_mask:sreg_64 = V_CMP_GT_U32_e64 %mem_data.sub0, %loop_if_bound, implicit $exec
   ; CHECK-NEXT:   %loop_counter:sreg_32 = COPY %mem_data.sub1
   ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_2:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode
   ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_3:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 3, implicit $exec, implicit $mode
@@ -292,10 +281,10 @@ body:             |
   bb.0:
     liveins: $vgpr0, $sgpr0_sgpr1
 
-    %mem_addr:sgpr_64(p4) = COPY $sgpr0_sgpr1
-    %loop_if_bound:vgpr_32(s32) = COPY $vgpr0
-    %mem_data:sreg_64_xexec = S_LOAD_DWORDX2_IMM %mem_addr(p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
-    %exec_loop_mask:sreg_64 = V_CMP_GT_U32_e64 %mem_data.sub0, killed %loop_if_bound(s32), implicit $exec
+    %mem_addr:sgpr_64 = COPY $sgpr0_sgpr1
+    %loop_if_bound:vgpr_32 = COPY $vgpr0
+    %mem_data:sreg_64_xexec = S_LOAD_DWORDX2_IMM %mem_addr, 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
+    %exec_loop_mask:sreg_64 = V_CMP_GT_U32_e64 %mem_data.sub0, killed %loop_if_bound, implicit $exec
     %loop_counter:sreg_32 = COPY %mem_data.sub1
 
     %0:vgpr_32 = nofpexcept V_CVT_I32_F64_e32   0, implicit $exec, implicit $mode
@@ -381,9 +370,9 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   %mem_addr:sgpr_64(p4) = COPY $sgpr0_sgpr1
-  ; CHECK-NEXT:   %loop_if_bound:vgpr_32(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   %mem_data:sreg_64_xexec = S_LOAD_DWORDX2_IMM %mem_addr(p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
+  ; CHECK-NEXT:   %mem_addr:sgpr_64 = COPY $sgpr0_sgpr1
+  ; CHECK-NEXT:   %loop_if_bound:vgpr_32 = COPY $vgpr0
+  ; CHECK-NEXT:   %mem_data:sreg_64_xexec = S_LOAD_DWORDX2_IMM %mem_addr, 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
   ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode
   ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_1:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode
   ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_2:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode
@@ -408,7 +397,7 @@ body:             |
   ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_21:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 30, implicit $exec, implicit $mode, implicit-def $m0
   ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_22:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 31, implicit $exec, implicit $mode, implicit-def $m0
   ; CHECK-NEXT:   [[V_CVT_I32_F64_e32_23:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 32, implicit $exec, implicit $mode, implicit-def $m0
-  ; CHECK-NEXT:   %exec_loop_mask:sreg_64 = V_CMP_GT_U32_e64 %mem_data.sub0, %loop_if_bound(s32), implicit $exec
+  ; CHECK-NEXT:   %exec_loop_mask:sreg_64 = V_CMP_GT_U32_e64 %mem_data.sub0, %loop_if_bound, implicit $exec
   ; CHECK-NEXT:   %loop_counter:sreg_32 = COPY %mem_data.sub1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -456,10 +445,10 @@ body:             |
   bb.0:
     liveins: $vgpr0, $sgpr0_sgpr1
 
-    %mem_addr:sgpr_64(p4) = COPY $sgpr0_sgpr1
-    %loop_if_bound:vgpr_32(s32) = COPY $vgpr0
-    %mem_data:sreg_64_xexec = S_LOAD_DWORDX2_IMM %mem_addr(p4), 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
-    %exec_loop_mask:sreg_64 = V_CMP_GT_U32_e64 %mem_data.sub0, killed %loop_if_bound(s32), implicit $exec
+    %mem_addr:sgpr_64 = COPY $sgpr0_sgpr1
+    %loop_if_bound:vgpr_32 = COPY $vgpr0
+    %mem_data:sreg_64_xexec = S_LOAD_DWORDX2_IMM %mem_addr, 52, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
+    %exec_loop_mask:sreg_64 = V_CMP_GT_U32_e64 %mem_data.sub0, killed %loop_if_bound, implicit $exec
     %loop_counter:sreg_32 = COPY %mem_data.sub1
 
     %0:vgpr_32 = nofpexcept V_CVT_I32_F64_e32   0, implicit $exec, implicit $mode

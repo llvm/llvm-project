@@ -40,8 +40,6 @@
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
-#include <deque>
 #include <limits>
 #include <string>
 
@@ -1303,16 +1301,16 @@ void PreRARematStage::printTargetRegions(bool PrintAll) const {
 
 void PreRARematStage::RematReg::print(
     const DenseMap<MachineInstr *, unsigned> &MIRegion) const {
-  REMAT_DEBUG(dbgs() << "  [" << MIRegion.at(DefMI) << "] " << *DefMI);
-  REMAT_DEBUG(dbgs() << "    -> used in [" << UseRegion << "] " << *UseMI);
+  dbgs() << REMAT_PREFIX << "  [" << MIRegion.at(DefMI) << "] " << *DefMI;
+  dbgs() << REMAT_PREFIX << "    -> used in [" << UseRegion << "] " << *UseMI;
   const unsigned NumRegions = Live.size();
-  REMAT_DEBUG(dbgs() << "    Guaranteed RP reduction in:");
+  dbgs() << REMAT_PREFIX << "    Guaranteed RP reduction in:";
   for (unsigned I = 0; I < NumRegions; ++I) {
     if (isBeneficialRegion(I))
       dbgs() << " [" << I << "]";
   }
   dbgs() << '\n';
-  REMAT_DEBUG(dbgs() << "    Possible RP reduction in:");
+  dbgs() << REMAT_PREFIX << "    Possible RP reduction in:";
   for (unsigned I = 0; I < NumRegions; ++I) {
     if (isMaybeBeneficialRegion(I))
       dbgs() << " [" << I << "]";
@@ -2086,6 +2084,9 @@ bool PreRARematStage::collectRematRegs(ArrayRef<uint64_t> RegionFreq) {
   // Set of registers already marked for potential remterialization; used for
   // remat chains checks.
   DenseSet<Register> RematRegSet;
+  auto IsMORematable = [&RematRegSet](const MachineOperand &MO) -> bool {
+    return MO.isReg() && RematRegSet.contains(MO.getReg());
+  };
 
   // Identify rematerializable instructions in the function.
   for (unsigned I = 0, E = DAG.Regions.size(); I != E; ++I) {
@@ -2120,11 +2121,8 @@ bool PreRARematStage::collectRematRegs(ArrayRef<uint64_t> RegionFreq) {
       // either rematerializing the candidates in careful ordering, or
       // deferring the MBB RP walk until the entire chain has been
       // rematerialized.
-      MachineOperand &UseFirstMO = UseMI->getOperand(0);
-      if ((UseFirstMO.isReg() && RematRegSet.contains(UseFirstMO.getReg())) ||
-          llvm::any_of(DefMI.operands(), [&RematRegSet](MachineOperand &MO) {
-            return MO.isReg() && RematRegSet.contains(MO.getReg());
-          }))
+      const MachineOperand &UseMO = UseMI->getOperand(0);
+      if (IsMORematable(UseMO) || llvm::any_of(DefMI.operands(), IsMORematable))
         continue;
 
       // Do not rematerialize an instruction it it uses registers that aren't
@@ -2168,9 +2166,7 @@ PreRARematStage::RematReg::RematReg(
   Live |= LiveOut;
 
   // Store the register's lane bitmask.
-  unsigned SubReg = DefMI->getOperand(0).getSubReg();
-  Mask = SubReg ? DAG.TRI->getSubRegIndexLaneMask(SubReg)
-                : DAG.MRI.getMaxLaneMaskForVReg(Reg);
+  Mask = DAG.TRI->getSubRegIndexLaneMask(DefMI->getOperand(0).getSubReg());
 }
 
 MachineInstr *
@@ -2257,8 +2253,7 @@ MachineInstr *PreRARematStage::rematerialize(const RematReg &Remat,
   const SIInstrInfo *TII = MF.getSubtarget<GCNSubtarget>().getInstrInfo();
   MachineInstr &DefMI = *Remat.DefMI;
   Register Reg = DefMI.getOperand(0).getReg();
-  const TargetRegisterClass *RC = DAG.MRI.getRegClass(Reg);
-  Register NewReg = DAG.MRI.createVirtualRegister(RC);
+  Register NewReg = DAG.MRI.cloneVirtualRegister(Reg);
 
   // Rematerialize the register in the region where it is used.
   MachineBasicBlock::iterator InsertPos = Remat.UseMI;
@@ -2324,15 +2319,14 @@ void PreRARematStage::rollback(const RollbackReg &Rollback) const {
   unsigned DefRegion = MIRegion.at(Remat->DefMI);
   MachineBasicBlock *MBB = RegionBB[DefRegion];
   Register Reg = RematMI->getOperand(0).getReg();
-  const TargetRegisterClass *RC = DAG.MRI.getRegClass(Reg);
-  Register NewReg = DAG.MRI.createVirtualRegister(RC);
+  Register NewReg = DAG.MRI.cloneVirtualRegister(Reg);
 
   // Re-rematerialize MI in its original region. Note that it may not be
   // rematerialized exactly in the same position as originally within the
   // region, but it should not matter much.
   MachineBasicBlock::iterator InsertPos(DAG.Regions[DefRegion].second);
   TII->reMaterialize(*MBB, InsertPos, NewReg, 0, *RematMI, *DAG.TRI);
-  REMAT_DEBUG(dbgs() << "[" << DefRegion << "] Re-rematerialized as "
+  REMAT_DEBUG(dbgs() << '[' << DefRegion << "] Re-rematerialized as "
                      << *std::prev(InsertPos));
   Remat->UseMI->substituteRegister(Reg, NewReg, 0, *DAG.TRI);
   DAG.deleteMI(Remat->UseRegion, RematMI);
