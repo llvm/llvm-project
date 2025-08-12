@@ -304,7 +304,7 @@ set_source_files_properties(
   ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_sin.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_sqrt.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_tan.cl
-  PROPERTIES COMPILE_OPTIONS -fapprox-func
+  PROPERTIES COMPILE_OPTIONS "-fapprox-func;-ffp-contract=fast"
 )
 
 enable_testing()
