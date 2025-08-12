@@ -14469,9 +14469,9 @@ bool SITargetLowering::shouldExpandVectorDynExt(SDNode *N) const {
 
 static unsigned getMappedVectorIndex(unsigned Idx, EVT From, EVT To) {
   assert(From.isVector() && To.isVector() &&
-         "From and To types have to be vector types");
+         "Expected From and To types have to be vector types.");
   assert(From.getSizeInBits() == To.getSizeInBits() &&
-         "From and To vector types require the same size");
+         "Expected From and To vector types require to have the same size.");
 
   unsigned FromNumElts = From.getVectorNumElements();
   unsigned ToNumElts = To.getVectorNumElements();
@@ -14558,7 +14558,7 @@ SITargetLowering::performExtractVectorEltCombine(SDNode *N,
           getMappedVectorIndex(IndexVal, VecVT, PeekThroughVecVT);
       SDValue PeekThroughElt = PeekThroughVec.getOperand(MappedIndexVal);
       if (PeekThroughElt.isUndef())
-        return DAG.getUNDEF(VecEltVT);
+        return DAG.getNode(PeekThroughElt.getOpcode(), SDLoc(), VecEltVT);
     }
   }
 
@@ -16148,7 +16148,8 @@ SDValue SITargetLowering::performSelectCombine(SDNode *N,
 SDValue
 SITargetLowering::performBuildVectorCombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
-  // TODO: legalize for all targets instead of just v_mov_b64 enabled ones.
+  // TODO: legalize for all targets instead of just v_mov_b64 enabled ones,
+  // legalizing could still enable s_mov_b64 which is supported on all targets.
   const GCNSubtarget *ST = getSubtarget();
   if (DCI.Level < AfterLegalizeDAG || !ST->hasMovB64())
     return SDValue();
@@ -16198,9 +16199,10 @@ SITargetLowering::performBuildVectorCombine(SDNode *N,
         return SDValue();
 
       Val = RawBits[0].getZExtValue();
-    } else
+    } else {
       Val = C ? C->getZExtValue()
               : FPC->getValueAPF().bitcastToAPInt().getZExtValue();
+    }
     ImmVal |= Val << ImmSize;
     ImmSize += EltSize;
     if (ImmSize == 64) {

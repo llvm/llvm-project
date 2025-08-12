@@ -477,8 +477,8 @@ void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
     }
   }
 
-  assert(NumVectorElts <= 32 && "Vectors with more than 32 elements not "
-                                  "supported yet");
+  assert(NumVectorElts <= 32 &&
+         "Vectors with more than 32 elements are not supported yet");
   assert((IsGCN || (!IsGCN && NumRegs == 1)) &&
          "R600 does not support 64-bit reg_seq elements");
   // 32 = Max Num Vector Elements
@@ -678,7 +678,8 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
     }
 
     EVT VET = VT.getVectorElementType();
-    assert(VET.bitsEq(MVT::i32) || VET.bitsEq(MVT::i64));
+    assert((VET.bitsEq(MVT::i32) || VET.bitsEq(MVT::i64)) &&
+           "Only 32-bit and 64-bit vector elements supported");
     unsigned EltSize = VET.getSizeInBits();
     unsigned RegClassID =
         SIRegisterInfo::getSGPRClassForBitWidth(NumVectorElts * EltSize)
