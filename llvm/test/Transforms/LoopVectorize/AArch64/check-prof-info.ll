@@ -247,7 +247,7 @@ for.cond.cleanup:
 ; CHECK-V1-IC1: [[LOOP6]] = distinct !{[[LOOP6]], [[META3]], [[META2]]}
 ; CHECK-V1-IC1: [[PROF7]] = !{!"branch_weights", i32 1, i32 31}
 ; CHECK-V1-IC1: [[LOOP8]] = distinct !{[[LOOP8]], [[META2]], [[META3]]}
-; CHECK-V1-IC1: [[PROF9]] = !{!"branch_weights", i32 8, i32 8}
+; CHECK-V1-IC1: [[PROF9]] = !{!"branch_weights", i32 16, i32 16}
 ; CHECK-V1-IC1: [[LOOP10]] = distinct !{[[LOOP10]], [[META2]], [[META3]]}
 ; CHECK-V1-IC1: [[PROF11]] = !{!"branch_weights", i32 1, i32 15}
 ; CHECK-V1-IC1: [[LOOP12]] = distinct !{[[LOOP12]], [[META3]], [[META2]]}
