@@ -1300,13 +1300,13 @@ def ElementwiseBitreverse : Builtin {
 
 def ElementwiseMax : Builtin {
   let Spellings = ["__builtin_elementwise_max"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def ElementwiseMin : Builtin {
   let Spellings = ["__builtin_elementwise_min"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
