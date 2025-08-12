@@ -21,8 +21,11 @@
 #include "mlir/Target/SPIRV/Serialization.h"
 #include "mlir/Tools/mlir-translate/Translation.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/ToolOutputFile.h"
 
 using namespace mlir;
 
@@ -76,24 +79,66 @@ void registerFromSPIRVTranslation() {
 // Serialization registration
 //===----------------------------------------------------------------------===//
 
-static LogicalResult serializeModule(spirv::ModuleOp module,
-                                     raw_ostream &output) {
+static LogicalResult
+serializeModule(spirv::ModuleOp moduleOp, raw_ostream &output,
+                const spirv::SerializationOptions &options) {
   SmallVector<uint32_t, 0> binary;
-  if (failed(spirv::serialize(module, binary)))
+  if (failed(spirv::serialize(moduleOp, binary)))
     return failure();
 
-  output.write(reinterpret_cast<char *>(binary.data()),
-               binary.size() * sizeof(uint32_t));
+  size_t sizeInBytes = binary.size() * sizeof(uint32_t);
+
+  output.write(reinterpret_cast<char *>(binary.data()), sizeInBytes);
+
+  if (options.saveModuleForValidation) {
+    size_t dirSeparator =
+        options.validationFilePrefix.find(llvm::sys::path::get_separator());
+    // If file prefix includes directory check if that directory exists.
+    if (dirSeparator != std::string::npos) {
+      llvm::StringRef parentDir =
+          llvm::sys::path::parent_path(options.validationFilePrefix);
+      if (!llvm::sys::fs::is_directory(parentDir))
+        return moduleOp.emitError(
+            "validation prefix directory does not exist\n");
+    }
+
+    SmallString<128> filename;
+    int fd = 0;
+
+    std::error_code errorCode = llvm::sys::fs::createUniqueFile(
+        options.validationFilePrefix + "%%%%%%", fd, filename);
+    if (errorCode)
+      return moduleOp.emitError("error creating validation output file: ")
+             << errorCode.message() << "\n";
+
+    llvm::raw_fd_ostream validationOutput(fd, /*shouldClose=*/true);
+    validationOutput.write(reinterpret_cast<char *>(binary.data()),
+                           sizeInBytes);
+    validationOutput.flush();
+  }
 
   return mlir::success();
 }
 
 namespace mlir {
 void registerToSPIRVTranslation() {
+  static llvm::cl::opt<std::string> validationFilesPrefix(
+      "spirv-save-validation-files-with-prefix",
+      llvm::cl::desc(
+          "When non-empty string is passed each serialized SPIR-V module is "
+          "saved to an additional file that starts with the given prefix. This "
+          "is used to generate separate binaries for validation, where "
+          "`--split-input-file` normally combines all outputs into one. The "
+          "one combined output (`-o`) is still written. Created files need to "
+          "be removed manually once processed."),
+      llvm::cl::init(""));
+
   TranslateFromMLIRRegistration toBinary(
       "serialize-spirv", "serialize SPIR-V dialect",
-      [](spirv::ModuleOp module, raw_ostream &output) {
-        return serializeModule(module, output);
+      [](spirv::ModuleOp moduleOp, raw_ostream &output) {
+        return serializeModule(moduleOp, output,
+                               {true, false, !validationFilesPrefix.empty(),
+                                validationFilesPrefix});
       },
       [](DialectRegistry &registry) {
         registry.insert<spirv::SPIRVDialect>();
