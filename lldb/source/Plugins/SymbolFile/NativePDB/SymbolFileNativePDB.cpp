@@ -644,7 +644,14 @@ SymbolFileNativePDB::CreateClassStructUnion(PdbTypeSymId type_id,
 
   std::string uname = GetUnqualifiedTypeName(record);
 
-  Declaration decl = ResolveUdtDeclaration(type_id);
+  llvm::Expected maybeDecl = ResolveUdtDeclaration(type_id);
+  Declaration decl;
+  if (maybeDecl)
+    decl = std::move(*maybeDecl);
+  else
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), maybeDecl.takeError(),
+                   "Failed to resolve declaration for '{1}': {0}", uname);
+
   return MakeType(toOpaqueUid(type_id), ConstString(uname), size, nullptr,
                   LLDB_INVALID_UID, Type::eEncodingIsUID, decl, ct,
                   Type::ResolveState::Forward);
@@ -667,7 +674,14 @@ lldb::TypeSP SymbolFileNativePDB::CreateTagType(PdbTypeSymId type_id,
                                                 CompilerType ct) {
   std::string uname = GetUnqualifiedTypeName(er);
 
-  Declaration decl = ResolveUdtDeclaration(type_id);
+  llvm::Expected maybeDecl = ResolveUdtDeclaration(type_id);
+  Declaration decl;
+  if (maybeDecl)
+    decl = std::move(*maybeDecl);
+  else
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), maybeDecl.takeError(),
+                   "Failed to resolve declaration for '{1}': {0}", uname);
+
   TypeSP underlying_type = GetOrCreateType(er.UnderlyingType);
 
   return MakeType(
@@ -2572,27 +2586,23 @@ void SymbolFileNativePDB::CacheUdtDeclarations() {
   }
 }
 
+llvm::Expected<Declaration>
+SymbolFileNativePDB::ResolveUdtDeclaration(PdbTypeSymId type_id) {
   std::call_once(m_cached_udt_declatations, [this] { CacheUdtDeclarations(); });
 
   auto it = m_udt_declarations.find(type_id.index);
   if (it == m_udt_declarations.end())
-    return Declaration();
+    return llvm::createStringError("No UDT declaration found");
 
   auto [file_index, line] = it->second;
   auto string_table = m_index->pdb().getStringTable();
-  if (!string_table) {
-    LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), string_table.takeError(),
-                   "Failed to get string table: {0}");
-    return Declaration();
-  }
+  if (!string_table)
+    return string_table.takeError();
 
   llvm::Expected<llvm::StringRef> file_name =
       string_table->getStringTable().getString(file_index);
-  if (!file_name) {
-    LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), file_name.takeError(),
-                   "Failed to get string with id {1}: {0}", file_index);
-    return Declaration();
-  }
+  if (!file_name)
+    return file_name.takeError();
 
   // rustc sets the filename to "<unknown>" for some files
   if (*file_name == "\\<unknown>")

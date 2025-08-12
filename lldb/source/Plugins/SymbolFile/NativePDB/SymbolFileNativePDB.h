@@ -263,7 +263,7 @@ private:
   void CacheFunctionNames();
 
   void CacheUdtDeclarations();
-  Declaration ResolveUdtDeclaration(PdbTypeSymId type_id);
+  llvm::Expected<Declaration> ResolveUdtDeclaration(PdbTypeSymId type_id);
 
   llvm::BumpPtrAllocator m_allocator;
 
