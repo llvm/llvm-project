@@ -553,8 +553,22 @@ void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
     // The recipes in the block are processed in reverse order, to catch chains
     // of dead recipes.
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
-      if (isDeadRecipe(R))
+      if (isDeadRecipe(R)) {
         R.eraseFromParent();
+        continue;
+      }
+
+      // Check if R is a dead VPPhi <-> update cycle and remove it.
+      auto *PhiR = dyn_cast<VPPhi>(&R);
+      if (!PhiR || PhiR->getNumOperands() != 2 || PhiR->getNumUsers() != 1)
+        continue;
+      VPValue *Incoming = PhiR->getOperand(1);
+      if (*PhiR->user_begin() != Incoming->getDefiningRecipe() ||
+          Incoming->getNumUsers() != 1)
+        continue;
+      PhiR->replaceAllUsesWith(PhiR->getOperand(0));
+      PhiR->eraseFromParent();
+      Incoming->getDefiningRecipe()->eraseFromParent();
     }
   }
 }
@@ -3334,6 +3348,42 @@ void VPlanTransforms::materializeVectorTripCount(VPlan &Plan,
   VPValue *Res = Builder.createNaryOp(
       Instruction::Sub, {TC, R}, DebugLoc::getCompilerGenerated(), "n.vec");
   VectorTC.replaceAllUsesWith(Res);
+}
+
+void VPlanTransforms::materializeVFAndVFxUF(VPlan &Plan, VPBasicBlock *VectorPH,
+                                            ElementCount VFEC) {
+  VPBuilder Builder(VectorPH, VectorPH->begin());
+  Type *TCTy = VPTypeAnalysis(Plan).inferScalarType(Plan.getTripCount());
+  VPValue &VF = Plan.getVF();
+  VPValue &VFxUF = Plan.getVFxUF();
+  // Note that after the transform, Plan.getVF and Plan.getVFxUF should not be
+  // used.
+  // TODO: Assert that they aren't used.
+
+  // If there are no users of the runtime VF, compute VFxUF by constant folding
+  // the multiplication of VF and UF.
+  if (VF.getNumUsers() == 0) {
+    VPValue *RuntimeVFxUF =
+        Builder.createElementCount(TCTy, VFEC * Plan.getUF());
+    VFxUF.replaceAllUsesWith(RuntimeVFxUF);
+    return;
+  }
+
+  // For users of the runtime VF, compute it as VF * vscale, and VFxUF as (VF *
+  // vscale) * UF.
+  VPValue *RuntimeVF = Builder.createElementCount(TCTy, VFEC);
+  if (any_of(VF.users(), [&VF](VPUser *U) { return !U->usesScalars(&VF); })) {
+    VPValue *BC = Builder.createNaryOp(VPInstruction::Broadcast, RuntimeVF);
+    VF.replaceUsesWithIf(
+        BC, [&VF](VPUser &U, unsigned) { return !U.usesScalars(&VF); });
+  }
+  VF.replaceAllUsesWith(RuntimeVF);
+
+  VPValue *UF = Plan.getOrAddLiveIn(ConstantInt::get(TCTy, Plan.getUF()));
+  VPValue *MulByUF = Plan.getUF() == 1 ? RuntimeVF
+                                       : Builder.createNaryOp(Instruction::Mul,
+                                                              {RuntimeVF, UF});
+  VFxUF.replaceAllUsesWith(MulByUF);
 }
 
 /// Returns true if \p V is VPWidenLoadRecipe or VPInterleaveRecipe that can be
