@@ -16,12 +16,12 @@
 using namespace lldb;
 using namespace lldb_private;
 
-static void DumpValue(Stream &strm, const std::string &str, bool escape,
-                      bool raw) {
+static void DumpString(Stream &strm, const std::string &str, bool escape,
+                       bool raw) {
   if (escape) {
     std::string escaped_str;
     Args::ExpandEscapedCharacters(str.data(), escaped_str);
-    ::DumpValue(strm, escaped_str, false, raw);
+    DumpString(strm, escaped_str, false, raw);
     return;
   }
 
@@ -41,12 +41,12 @@ void OptionValueString::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
     const bool escape = m_options.Test(eOptionEncodeCharacterEscapeSequences);
     const bool raw = dump_mask & eDumpOptionRaw;
     if (!m_current_value.empty() || m_value_was_set)
-      ::DumpValue(strm, m_current_value, escape, raw);
+      DumpString(strm, m_current_value, escape, raw);
 
     if (dump_mask & eDumpOptionDefaultValue &&
         m_current_value != m_default_value && !m_default_value.empty()) {
       DefaultValueFormat label(strm);
-      ::DumpValue(strm, m_default_value, escape, raw);
+      DumpString(strm, m_default_value, escape, raw);
     }
   }
 }
