@@ -158,17 +158,18 @@ class CollectUnexpandedParameterPacksVisitor
       return DynamicRecursiveASTVisitor::TraverseTemplateName(Template);
     }
 
-    bool TraverseTemplateSpecializationTypeLoc(
-        TemplateSpecializationTypeLoc T) override {
+    bool
+    TraverseTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc T,
+                                          bool TraverseQualifier) override {
       if (TryTraverseSpecializationProducingPacks(T.getTypePtr(),
                                                   T.getBeginLoc()))
         return true;
       return DynamicRecursiveASTVisitor::TraverseTemplateSpecializationTypeLoc(
-          T);
+          T, TraverseQualifier);
     }
 
-    bool
-    TraverseTemplateSpecializationType(TemplateSpecializationType *T) override {
+    bool TraverseTemplateSpecializationType(TemplateSpecializationType *T,
+                                            bool TraverseQualfier) override {
       if (TryTraverseSpecializationProducingPacks(T, SourceLocation()))
         return true;
       return DynamicRecursiveASTVisitor::TraverseTemplateSpecializationType(T);
@@ -376,8 +377,8 @@ class CollectUnexpandedParameterPacksVisitor
       return DynamicRecursiveASTVisitor::TraverseUnresolvedLookupExpr(E);
     }
 
-    bool TraverseSubstBuiltinTemplatePackType(
-        SubstBuiltinTemplatePackType *T) override {
+    bool TraverseSubstBuiltinTemplatePackType(SubstBuiltinTemplatePackType *T,
+                                              bool TraverseQualifier) override {
       addUnexpanded(T);
       // Do not call into base implementation to supress traversal of the
       // substituted types.
@@ -716,7 +717,7 @@ Sema::ActOnTemplateTemplateArgument(const ParsedTemplateArgument &Arg) {
       Arg.getAsTemplate().get().getAsTemplateDecl());
   if (T && T->isPackProducingBuiltinTemplate())
     diagnoseMissingTemplateArguments(Arg.getAsTemplate().get(),
-                                     Arg.getLocation());
+                                     Arg.getNameLoc());
 
   return Arg;
 }
