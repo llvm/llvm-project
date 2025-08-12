@@ -291,7 +291,7 @@ jobs:
     - name: Check Disk
       if: always()
       run: |
-        Get-WmiObject -Class Win32_LogicalDisk -ComputerName <Server_Name> | ? {$_. DriveType -eq 3} | select DeviceID, {$_.Size /1GB}, {$_.FreeSpace /1GB}
+        Get-WmiObject -Class Win32_LogicalDisk -ComputerName LOCALHOST | ? {$_. DriveType -eq 3} | select DeviceID, {$_.Size /1GB}, {$_.FreeSpace /1GB}
 
   upload-release-binaries:
     name: "Upload Release Binaries"
