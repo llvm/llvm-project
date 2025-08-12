@@ -636,7 +636,7 @@ TEST(CallHierarchy, HierarchyOnVar) {
 TEST(CallHierarchy, HierarchyOnEnumConstant) {
   // Tests that the call hierarchy works on enum constants.
   Annotations Source(R"cpp(
-    enum class Coin { heads$Heads^ , tai$Tails^ls };
+    enum class Coin { heads$Heads^, tai$Tails^ls };
     void caller() {
       Coin::$CallerH[[heads]];
       Coin::$CallerT[[tails]];

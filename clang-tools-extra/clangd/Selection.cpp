@@ -1039,14 +1039,20 @@ pointBounds(unsigned Offset, const syntax::TokenBuffer &Tokens) {
   const auto &SM = Tokens.sourceManager();
   SourceLocation Loc = SM.getComposedLoc(SM.getMainFileID(), Offset);
   llvm::SmallVector<std::pair<unsigned, unsigned>, 2> Result;
-  // Prefer right token over left.
+  llvm::SmallVector<std::pair<unsigned, unsigned>, 2> ResultLowPrio;
+  // Prefer right token over left, also non comma over comma.
   for (const syntax::Token &Tok :
        llvm::reverse(spelledTokensTouching(Loc, Tokens))) {
     if (shouldIgnore(Tok))
       continue;
     unsigned Offset = Tokens.sourceManager().getFileOffset(Tok.location());
-    Result.emplace_back(Offset, Offset + Tok.length());
+    if (Tok.kind() == tok::comma){
+      ResultLowPrio.emplace_back(Offset, Offset + Tok.length());
+    } else {
+      Result.emplace_back(Offset, Offset + Tok.length());
+    }
   }
+  Result.append(ResultLowPrio);
   if (Result.empty())
     Result.emplace_back(Offset, Offset);
   return Result;
