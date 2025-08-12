@@ -612,7 +612,12 @@ void ResourceTypeInfo::print(raw_ostream &OS, const DataLayout &DL) const {
 
 GlobalVariable *ResourceInfo::createSymbol(Module &M, StructType *Ty) {
   assert(!Symbol && "Symbol has already been created");
-  Symbol = new GlobalVariable(M, Ty, /*isConstant=*/true,
+  Type *ResTy = Ty;
+  int64_t Size = Binding.Size;
+  if (Size != 1)
+    // unbounded arrays are represented as zero-sized arrays in LLVM IR
+    ResTy = ArrayType::get(Ty, Size == ~0u ? 0 : Size);
+  Symbol = new GlobalVariable(M, ResTy, /*isConstant=*/true,
                               GlobalValue::ExternalLinkage,
                               /*Initializer=*/nullptr, Name);
   return Symbol;
