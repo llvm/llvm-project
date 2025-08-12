@@ -29,27 +29,38 @@ private:
   int* end_;
 };
 
+struct ThrowingMove {
+  ThrowingMove() = default;
+  ThrowingMove(ThrowingMove&&) {}
+};
+
 template <class Iterator, bool HasNoexceptIterMove>
 constexpr bool test() {
   using Sentinel       = sentinel_wrapper<Iterator>;
   using View           = minimal_view<Iterator, Sentinel>;
-  using ConcatView     = std::ranges::concat_view<View>;
-  using ConcatIterator = std::ranges::iterator_t<ConcatView>;
 
-  auto make_concat_view = [](auto begin, auto end) {
-    View view{Iterator(begin), Sentinel(Iterator(end))};
-    return ConcatView(std::move(view));
-  };
-
-  // noexcept in case of a forward iterator
   {
-    int buff[]        = {0, 1, 2, 3};
-    ConcatView view   = make_concat_view(buff, buff + 4);
-    ConcatIterator it = view.begin();
-    int&& result      = iter_move(it);
+    std::array<int, 5> array1{0, 1, 2, 3, 4};
+    std::array<int, 5> array2{5, 6, 7, 8, 9};
+
+    View v1{Iterator(array1.data()), Sentinel(Iterator(array1.data() + array1.size()))};
+    View v2{Iterator(array2.data()), Sentinel(Iterator(array2.data() + array2.size()))};
+    std::ranges::concat_view view(std::move(v1), std::move(v2));
+
+    auto it = view.begin();
+    assert(std::ranges::iter_move(view.begin()) == 0);
     static_assert(noexcept(iter_move(it)) == HasNoexceptIterMove);
-    assert(&result == buff);
   }
+
+  {
+    // iter_move may throw
+    auto throwingMoveRange =
+        std::views::iota(0, 2) | std::views::transform([](auto) noexcept { return ThrowingMove{}; });
+    std::ranges::concat_view v(throwingMoveRange);
+    auto it = v.begin();
+    static_assert(!noexcept(std::ranges::iter_move(it)));
+  }
+
 
   return true;
 }
