@@ -3643,7 +3643,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   // Get an MMX-sized (64-bit) vector type, or optionally, other sized
   // vectors.
-  Type *getMMXVectorTy(unsigned EltSizeInBits, unsigned X86_MMXSizeInBits = 64) {
+  Type *getMMXVectorTy(unsigned EltSizeInBits,
+                       unsigned X86_MMXSizeInBits = 64) {
     assert(EltSizeInBits != 0 && (X86_MMXSizeInBits % EltSizeInBits) == 0 &&
            "Illegal MMX vector element size");
     return FixedVectorType::get(IntegerType::get(*MS.C, EltSizeInBits),
@@ -5477,29 +5478,35 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     //   <32 x i16> @llvm.x86.avx512.pmaddubs.w.512(<64 x i8>, <64 x i8>)
     //
     // These intrinsics are auto-upgraded into non-masked forms:
-    //   < 4 x i32> @llvm.x86.avx512.mask.pmaddw.d.128(<8 x i16>, <8 x i16>, <4 x i32>, i8)
-    //   < 8 x i32> @llvm.x86.avx512.mask.pmaddw.d.256(<16 x i16>, <16 x i16>, <8 x i32>, i8)
-    //   <16 x i32> @llvm.x86.avx512.mask.pmaddw.d.512(<32 x i16>, <32 x i16>, <16 x i32>, i16)
-    //   < 8 x i16> @llvm.x86.avx512.mask.pmaddubs.w.128(<16 x i8>, <16 x i8>, <8 x i16>, i8)
-    //   <16 x i16> @llvm.x86.avx512.mask.pmaddubs.w.256(<32 x i8>, <32 x i8>, <16 x i16>, i16)
-    //   <32 x i16> @llvm.x86.avx512.mask.pmaddubs.w.512(<64 x i8>, <64 x i8>, <32 x i16>, i32)
+    //   < 4 x i32> @llvm.x86.avx512.mask.pmaddw.d.128
+    //                  (<8 x i16>, <8 x i16>, <4 x i32>, i8)
+    //   < 8 x i32> @llvm.x86.avx512.mask.pmaddw.d.256
+    //                  (<16 x i16>, <16 x i16>, <8 x i32>, i8)
+    //   <16 x i32> @llvm.x86.avx512.mask.pmaddw.d.512
+    //                  (<32 x i16>, <32 x i16>, <16 x i32>, i16)
+    //   < 8 x i16> @llvm.x86.avx512.mask.pmaddubs.w.128
+    //                  (<16 x i8>, <16 x i8>, <8 x i16>, i8)
+    //   <16 x i16> @llvm.x86.avx512.mask.pmaddubs.w.256
+    //                  (<32 x i8>, <32 x i8>, <16 x i16>, i16)
+    //   <32 x i16> @llvm.x86.avx512.mask.pmaddubs.w.512
+    //                  (<64 x i8>, <64 x i8>, <32 x i16>, i32)
     case Intrinsic::x86_sse2_pmadd_wd:
     case Intrinsic::x86_avx2_pmadd_wd:
     case Intrinsic::x86_ssse3_pmadd_ub_sw_128:
     case Intrinsic::x86_avx2_pmadd_ub_sw:
     case Intrinsic::x86_avx512_pmaddw_d_512:
     case Intrinsic::x86_avx512_pmaddubs_w_512:
-      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/ 2);
+      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2);
       break;
 
     // <1 x i64> @llvm.x86.ssse3.pmadd.ub.sw(<1 x i64>, <1 x i64>)
     case Intrinsic::x86_ssse3_pmadd_ub_sw:
-      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/ 2, /*EltSize=*/ 8);
+      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2, /*EltSize=*/8);
       break;
 
     // <1 x i64> @llvm.x86.mmx.pmadd.wd(<1 x i64>, <1 x i64>)
     case Intrinsic::x86_mmx_pmadd_wd:
-      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/ 2, /*EltSize=*/ 16);
+      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2, /*EltSize=*/16);
       break;
 
     case Intrinsic::x86_sse_cmp_ss:
