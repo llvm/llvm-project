@@ -24,6 +24,26 @@
 
 namespace llvm {
 
+/// The structure of the serialized stable function map is as follows:
+/// - Number of unique function/module names
+/// - Total size of unique function/module names for opt-in skipping
+/// - Unique function/module names
+/// - Padding to align to 4 bytes
+/// - Number of StableFunctionEntries
+/// - Hashes of each StableFunctionEntry
+/// - Fixed-size fields for each StableFunctionEntry (the order is consistent
+///   with the hashes above):
+///   - FunctionNameId
+///   - ModuleNameId
+///   - InstCount
+///   - Relative offset to the beginning of IndexOperandHashes for this entry
+/// - Total size of variable-sized IndexOperandHashes for lazy-loading support
+/// - Variable-sized IndexOperandHashes for each StableFunctionEntry:
+///   - Number of IndexOperandHashes
+///   - Contents of each IndexOperandHashes
+///     - InstIndex
+///     - OpndIndex
+///     - OpndHash
 struct StableFunctionMapRecord {
   std::unique_ptr<StableFunctionMap> FunctionMap;
 

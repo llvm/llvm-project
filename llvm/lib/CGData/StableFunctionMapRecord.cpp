@@ -104,18 +104,7 @@ void StableFunctionMapRecord::serialize(
       Writer.OS.tell() - NamesByteSizeOffset - sizeof(NamesByteSizeOffset);
   PatchItems.emplace_back(NamesByteSizeOffset, &NamesByteSize, 1);
 
-  // Write StableFunctionEntries. The structure is:
-  // - Number of StableFunctionEntries
-  // - Hashes of StableFunctionEntries
-  // - Fixed-size fields for each StableFunctionEntry
-  //   - FunctionNameId
-  //   - ModuleNameId
-  //   - InstCount
-  //   - Relative offset to IndexOperandHashes
-  // - Total size of variable-sized IndexOperandHashes for lazy-loading support
-  // - Variable-sized IndexOperandHashes for each StableFunctionEntry
-  //   - Number of IndexOperandHashes
-  //   - Contents of each IndexOperandHashes
+  // Write StableFunctionEntries whose pointers are sorted.
   auto FuncEntries = getStableFunctionEntries(*FunctionMap);
   Writer.write<uint32_t>(FuncEntries.size());
   for (const auto *FuncRef : FuncEntries)
