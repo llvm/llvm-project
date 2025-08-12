@@ -1046,7 +1046,7 @@ pointBounds(unsigned Offset, const syntax::TokenBuffer &Tokens) {
     if (shouldIgnore(Tok))
       continue;
     unsigned Offset = Tokens.sourceManager().getFileOffset(Tok.location());
-    if (Tok.kind() == tok::comma){
+    if (Tok.kind() == tok::comma) {
       ResultLowPrio.emplace_back(Offset, Offset + Tok.length());
     } else {
       Result.emplace_back(Offset, Offset + Tok.length());
