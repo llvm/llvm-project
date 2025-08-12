@@ -358,7 +358,7 @@ static Value *emitCallMaybeConstrainedFPBuiltin(CodeGenFunction &CGF,
 
 static llvm::FixedVectorType *GetNeonType(CodeGenFunction *CGF,
                                           NeonTypeFlags TypeFlags,
-                                          bool HasLegalHalfType = true,
+                                          bool HasFastHalfType = true,
                                           bool V1Ty = false,
                                           bool AllowBFloatArgsAndRet = true) {
   int IsQuad = TypeFlags.isQuad();
@@ -376,7 +376,7 @@ static llvm::FixedVectorType *GetNeonType(CodeGenFunction *CGF,
     else
       return llvm::FixedVectorType::get(CGF->Int16Ty, V1Ty ? 1 : (4 << IsQuad));
   case NeonTypeFlags::Float16:
-    if (HasLegalHalfType)
+    if (HasFastHalfType)
       return llvm::FixedVectorType::get(CGF->HalfTy, V1Ty ? 1 : (4 << IsQuad));
     else
       return llvm::FixedVectorType::get(CGF->Int16Ty, V1Ty ? 1 : (4 << IsQuad));
@@ -1754,12 +1754,12 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
   const bool Usgn = Type.isUnsigned();
   const bool Quad = Type.isQuad();
   const bool Floating = Type.isFloatingPoint();
-  const bool HasLegalHalfType = getTarget().hasLegalHalfType();
+  const bool HasFastHalfType = getTarget().hasFastHalfType();
   const bool AllowBFloatArgsAndRet =
       getTargetHooks().getABIInfo().allowBFloatArgsAndRet();
 
   llvm::FixedVectorType *VTy =
-      GetNeonType(this, Type, HasLegalHalfType, false, AllowBFloatArgsAndRet);
+      GetNeonType(this, Type, HasFastHalfType, false, AllowBFloatArgsAndRet);
   llvm::Type *Ty = VTy;
   if (!Ty)
     return nullptr;
@@ -1886,7 +1886,7 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
   case NEON::BI__builtin_neon_vcvtq_f32_v:
     Ops[0] = Builder.CreateBitCast(Ops[0], Ty);
     Ty = GetNeonType(this, NeonTypeFlags(NeonTypeFlags::Float32, false, Quad),
-                     HasLegalHalfType);
+                     HasFastHalfType);
     return Usgn ? Builder.CreateUIToFP(Ops[0], Ty, "vcvt")
                 : Builder.CreateSIToFP(Ops[0], Ty, "vcvt");
   case NEON::BI__builtin_neon_vcvt_f16_s16:
@@ -1895,7 +1895,7 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
   case NEON::BI__builtin_neon_vcvtq_f16_u16:
     Ops[0] = Builder.CreateBitCast(Ops[0], Ty);
     Ty = GetNeonType(this, NeonTypeFlags(NeonTypeFlags::Float16, false, Quad),
-                     HasLegalHalfType);
+                     HasFastHalfType);
     return Usgn ? Builder.CreateUIToFP(Ops[0], Ty, "vcvt")
                 : Builder.CreateSIToFP(Ops[0], Ty, "vcvt");
   case NEON::BI__builtin_neon_vcvt_n_f16_s16:
@@ -3211,7 +3211,7 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
   bool rightShift = false;
 
   llvm::FixedVectorType *VTy =
-      GetNeonType(this, Type, getTarget().hasLegalHalfType(), false,
+      GetNeonType(this, Type, getTarget().hasFastHalfType(), false,
                   getTarget().hasBFloat16Type());
   llvm::Type *Ty = VTy;
   if (!Ty)
