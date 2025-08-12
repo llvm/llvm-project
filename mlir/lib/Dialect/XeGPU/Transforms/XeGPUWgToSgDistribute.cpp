@@ -120,9 +120,10 @@ struct SgOffsetInfo {
 template <typename OpTy>
 std::optional<SgOffsetInfo>
 extractSgOffsetInfo(OpTy op, ConversionPatternRewriter &rewriter) {
+
   int64_t offsetSize = static_cast<int64_t>(op.getOffsets().size());
-  if (offsetSize == 0)
-    return std::nullopt;
+  if (offsetSize == 0 && (!op.getConstOffsetsAttr()))
+      return std::nullopt;
 
   Location loc = op.getLoc();
   Value tdesc = op.getTensorDesc();
@@ -832,8 +833,9 @@ namespace xegpu {
 void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns) {
   patterns
       .add<WgToSgCreateNdOp, WgToSgCreateNdOpNoOffset, WgToSgLoadNdOp,
-           WgToSgStoreNdOp, WgToSgUpdateNdOffsetOp, WgToSgDpasOp,
-           WgToSgPrefetchNdOp, UnrealizedConversionCastOpPattern,
+           WgToSgLoadNdOpWithOffset, WgToSgStoreNdOp, WgToSgStoreNdOpWithOffset,
+           WgToSgUpdateNdOffsetOp, WgToSgDpasOp, WgToSgPrefetchNdOp,
+           WgToSgPrefetchNdOpWithOffset, UnrealizedConversionCastOpPattern,
            WgToSgElementwiseOp, WgToSgVectorBroadcastOp, WgToSgConvertLayoutOp>(
           patterns.getContext());
 }
