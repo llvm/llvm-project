@@ -1181,8 +1181,8 @@ static PyObject *call_ompd_get_icv_from_scope(PyObject *self, PyObject *args) {
   if (retVal != ompd_rc_ok) {
     if (retVal != ompd_rc_incomplete) {
       _printf(
-          "An error occurred when calling ompd_get_icv_from_scope(%i, %" PRIu64 
-          "): Error code: %d", 
+          "An error occurred when calling ompd_get_icv_from_scope(%i, %" PRIu64
+          "): Error code: %d",
           scope, icvId, retVal);
     }
     return Py_None;
