@@ -91,16 +91,35 @@ struct ReassocRewriter : public evaluate::rewrite::Identity {
 
   ReassocRewriter(const SomeExpr &atom) : atom_(atom) {}
 
+  // Try to find cases where the input expression is of the form
+  // (1) (a . b) . c, or
+  // (2) a . (b . c),
+  // where . denotes an associative operation (currently + or *), and a, b, c
+  // are some subexpresions.
+  // If one of the operands in the nested operation is the atomic variable
+  // (with some possible type conversions applied to it), bring it to the
+  // top-level operation, and move the top-level operand into the nested
+  // operation.
+  // For example, assuming x is the atomic variable:
+  //   (a + x) + b  ->  (a + b) + x,  i.e. (conceptually) swap x and b.
   template <typename T, typename U,
       typename = std::enable_if_t<is_integral_v<T>>>
   evaluate::Expr<T> operator()(evaluate::Expr<T> &&x, const U &u) {
+    // As per the above comment, there are 3 subexpressions involved in this
+    // transformation. A match::Expr<T> will match evaluate::Expr<U> when T is
+    // same as U, plus it will store a pointer (ref) to the matched expression.
+    // When the match is successful, the sub[i].ref will point to a, b, x (in
+    // some order) from the example above.
     evaluate::match::Expr<T> sub[3];
     auto inner{reassocOp<T>(sub[0], sub[1])};
-    auto outer1{reassocOp<T>(inner, sub[2])};
-    auto outer2{reassocOp<T>(sub[2], inner)};
+    auto outer1{reassocOp<T>(inner, sub[2])}; // inner + something
+    auto outer2{reassocOp<T>(sub[2], inner)}; // something + inner
+    // There is no way to ensure that the outer operation is the same as
+    // the inner one. They are matched independently, so we need to compare
+    // the index in the member variant that represents the matched type.
     if ((match(outer1, x) && outer1.ref.index() == inner.ref.index()) ||
         (match(outer2, x) && outer2.ref.index() == inner.ref.index())) {
-      size_t atomIdx{[&]() {
+      size_t atomIdx{[&]() { // sub[atomIdx] will be the atom.
         size_t idx;
         for (idx = 0; idx != 3; ++idx) {
           if (IsAtom(*sub[idx].ref)) {
@@ -117,6 +136,10 @@ struct ReassocRewriter : public evaluate::rewrite::Identity {
           [&](auto &&s) {
             using Expr = evaluate::Expr<T>;
             using TypeS = llvm::remove_cvref_t<decltype(s)>;
+            // This visitor has to work for all possible types of s.
+            // Limit the construction to the operation types that we tried
+            // to match (otherwise TypeS(op1, op2) would fail for non-binary
+            // operations).
             if constexpr (common::HasMember<TypeS,
                               typename decltype(outer1)::MatchTypes>) {
               Expr atom{*sub[atomIdx].ref};
