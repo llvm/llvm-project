@@ -30,7 +30,7 @@ void OptionValueLanguage::DumpValue(const ExecutionContext *exe_ctx,
     if (dump_mask & eDumpOptionDefaultValue &&
         m_current_value != m_default_value &&
         m_default_value != eLanguageTypeUnknown) {
-      DefaultValueFormat label{strm};
+      DefaultValueFormat label(strm);
       strm.PutCString(Language::GetNameForLanguageType(m_default_value));
     }
   }

@@ -29,7 +29,7 @@ void OptionValueSInt64::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
     strm.Printf("%" PRIi64, m_current_value);
     if (dump_mask & eDumpOptionDefaultValue &&
         m_current_value != m_default_value) {
-      DefaultValueFormat label{strm};
+      DefaultValueFormat label(strm);
       strm.Printf("%" PRIi64, m_default_value);
     }
   }

@@ -28,7 +28,7 @@ void OptionValueRegex::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
     if (dump_mask & eDumpOptionDefaultValue &&
         m_regex.GetText() != m_default_regex_str &&
         !m_default_regex_str.empty()) {
-      DefaultValueFormat label{strm};
+      DefaultValueFormat label(strm);
       strm.PutCString(m_default_regex_str);
     }
   }

@@ -35,7 +35,7 @@ void OptionValueChar::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
     DumpChar(strm, m_current_value);
     if (dump_mask & eDumpOptionDefaultValue &&
         m_current_value != m_default_value) {
-      DefaultValueFormat label{strm};
+      DefaultValueFormat label(strm);
       DumpChar(strm, m_default_value);
     }
   }

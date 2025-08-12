@@ -41,7 +41,7 @@ void OptionValueEnumeration::DumpValue(const ExecutionContext *exe_ctx,
     DumpEnum(strm, m_current_value);
     if (dump_mask & eDumpOptionDefaultValue &&
         m_current_value != m_default_value) {
-      DefaultValueFormat label{strm};
+      DefaultValueFormat label(strm);
       DumpEnum(strm, m_default_value);
     }
   }

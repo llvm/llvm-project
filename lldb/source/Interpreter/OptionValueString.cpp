@@ -45,7 +45,7 @@ void OptionValueString::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
 
     if (dump_mask & eDumpOptionDefaultValue &&
         m_current_value != m_default_value && !m_default_value.empty()) {
-      DefaultValueFormat label{strm};
+      DefaultValueFormat label(strm);
       ::DumpValue(strm, m_default_value, escape, raw);
     }
   }

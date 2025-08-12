@@ -57,7 +57,7 @@ void OptionValueFormatEntity::DumpValue(const ExecutionContext *exe_ctx,
     strm.QuotedCString(EscapeBackticks(m_current_format).data());
     if (dump_mask & eDumpOptionDefaultValue &&
         m_current_format != m_default_format) {
-      DefaultValueFormat label{strm};
+      DefaultValueFormat label(strm);
       strm.QuotedCString(EscapeBackticks(m_default_format).data());
     }
   }

@@ -34,7 +34,7 @@ void OptionValueArch::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
 
     if (dump_mask & eDumpOptionDefaultValue &&
         m_current_value != m_default_value && m_default_value.IsValid()) {
-      DefaultValueFormat label{strm};
+      DefaultValueFormat label(strm);
       strm.PutCString(m_default_value.GetArchitectureName());
     }
   }
