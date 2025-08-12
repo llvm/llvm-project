@@ -684,13 +684,13 @@ Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName,
   return Error::success();
 }
 
-uint64_t InstrProfSymtab::getVTableHashFromAddress(uint64_t Address) {
+uint64_t InstrProfSymtab::getVTableHashFromAddress(uint64_t Address) const {
   // Given a runtime address, look up the hash value in the interval map, and
   // fallback to value 0 if a hash value is not found.
   return VTableAddrMap.lookup(Address, 0);
 }
 
-uint64_t InstrProfSymtab::getFunctionHashFromAddress(uint64_t Address) {
+uint64_t InstrProfSymtab::getFunctionHashFromAddress(uint64_t Address) const {
   finalizeSymtab();
   auto It = partition_point(AddrToMD5Map, [=](std::pair<uint64_t, uint64_t> A) {
     return A.first < Address;
