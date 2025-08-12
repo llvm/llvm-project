@@ -113,7 +113,6 @@ TEST(FakeStack, Allocate) {
       uptr bytes_in_class = FakeStack::BytesInSizeClass(cid);
       for (uptr j = 0; j < n; j++) {
         FakeFrame *ff = fs->Allocate(stack_size_log, cid, 0);
-        EXPECT_EQ(reinterpret_cast<uptr>(ff) % bytes_in_class, 0U);
         uptr x = reinterpret_cast<uptr>(ff);
         EXPECT_TRUE(s.insert(std::make_pair(ff, cid)).second);
         EXPECT_EQ(x, fs->AddrIsInFakeStack(x));

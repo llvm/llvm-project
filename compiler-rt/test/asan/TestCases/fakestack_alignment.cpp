@@ -1,11 +1,11 @@
 // Regression test 1:
-// When the stack size is 1<<16, SizeRequiredForFlags(16) == 2KB. This forces
-// FakeStack's GetFrame() out of alignment if the FakeStack isn't padded.
+// This deterministically fails: when the stack size is 1<<16, FakeStack's
+// GetFrame() is out of alignment, because SizeRequiredForFlags(16) == 2K.
 // RUN: %clangxx_asan -fsanitize-address-use-after-return=always -O0 -DALIGNMENT=4096  -DTHREAD_COUNT=1 -DTHREAD_STACK_SIZE=65536 %s -o %t && %run %t 2>&1
 
 // Regression test 2:
-// Check that the FakeStack frame is aligned, beyond the typical 4KB page
-// alignment. Alignment can happen by chance, so try this on many threads.
+// The FakeStack frame is not guaranteed to be aligned, but alignment can
+// happen by chance, so try this on many threads.
 // RUN: %clangxx_asan -fsanitize-address-use-after-return=always -O0 -DALIGNMENT=8192  -DTHREAD_COUNT=32 -DTHREAD_STACK_SIZE=131072 %s -o %t && %run %t 2>&1
 // RUN: %clangxx_asan -fsanitize-address-use-after-return=always -O0 -DALIGNMENT=16384 -DTHREAD_COUNT=32 -DTHREAD_STACK_SIZE=131072 %s -o %t && %run %t 2>&1
 
@@ -16,6 +16,8 @@
 // RUN: %clangxx_asan -fsanitize-address-use-after-return=always -O0 -DALIGNMENT=4096  -DTHREAD_COUNT=32 -DTHREAD_STACK_SIZE=131072 %s -o %t && %run %t 2>&1
 // RUN: %clangxx_asan -fsanitize-address-use-after-return=always -O0 -DALIGNMENT=8192  -DTHREAD_COUNT=32 -DTHREAD_STACK_SIZE=131072 %s -o %t && %run %t 2>&1
 // RUN: %clangxx_asan -fsanitize-address-use-after-return=always -O0 -DALIGNMENT=16384 -DTHREAD_COUNT=32 -DTHREAD_STACK_SIZE=131072 %s -o %t && %run %t 2>&1
+
+// XFAIL: *
 
 #include <assert.h>
 #include <pthread.h>
