@@ -140,7 +140,6 @@ TEST_CONSTEXPR_CXX26 bool test() {
   return true;
 }
 
-
 int main(int, char**) {
   assert(test());
 #if TEST_STD_VER >= 26

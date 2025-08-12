@@ -85,20 +85,17 @@ TEST_CONSTEXPR_CXX26 bool test_alloc(const Alloc& new_alloc) {
 }
 
 TEST_CONSTEXPR_CXX26 bool test() {
-
-
 #if TEST_STD_VER >= 26
 
   static_assert(test_alloc(std::allocator<std::pair<const int, int> >()));
-  static_assert(test_alloc(test_allocator<std::pair<const int, int> >(25))); // Make sure that the new allocator is actually used
-  static_assert(test_alloc(min_allocator<std::pair<const int, int> >()));    // Make sure that fancy pointers work
+  static_assert(
+      test_alloc(test_allocator<std::pair<const int, int> >(25))); // Make sure that the new allocator is actually used
+  static_assert(test_alloc(min_allocator<std::pair<const int, int> >())); // Make sure that fancy pointers work
 #endif
 
   test_alloc(std::allocator<std::pair<const int, int> >());
   test_alloc(test_allocator<std::pair<const int, int> >(25)); // Make sure that the new allocator is actually used
   test_alloc(min_allocator<std::pair<const int, int> >());    // Make sure that fancy pointers work
-
-
 
   { // Ensure that the comparator is copied
     using V   = std::pair<const int, int>;
@@ -117,7 +114,6 @@ TEST_CONSTEXPR_CXX26 bool test() {
 
   return true;
 }
-
 
 int main(int, char**) {
   assert(test());

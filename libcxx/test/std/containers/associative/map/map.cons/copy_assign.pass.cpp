@@ -67,9 +67,10 @@ struct NoOp {
 };
 
 template <class Alloc, class AllocatorInvariant = NoOp>
-TEST_CONSTEXPR_CXX26 bool test_alloc(const Alloc& lhs_alloc                   = Alloc(),
-                const Alloc& rhs_alloc                   = Alloc(),
-                AllocatorInvariant check_alloc_invariant = NoOp()) {
+TEST_CONSTEXPR_CXX26 bool
+test_alloc(const Alloc& lhs_alloc                   = Alloc(),
+           const Alloc& rhs_alloc                   = Alloc(),
+           AllocatorInvariant check_alloc_invariant = NoOp()) {
   {   // Test empty/non-empy map combinations
     { // assign from a non-empty container into an empty one
       using V   = std::pair<const int, int>;
@@ -307,7 +308,6 @@ TEST_CONSTEXPR_CXX26 bool test() {
   }
   return true;
 }
-
 
 int main(int, char**) {
   assert(test());
