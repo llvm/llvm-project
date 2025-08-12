@@ -169,7 +169,8 @@ reportDescriptorTableMixingTypes(Module &M, uint32_t Location,
 }
 
 static void
-reportOverflowingRange(Module &M, const dxbc::RTS0::v2::DescriptorRange &Range) {
+reportOverflowingRange(Module &M,
+                       const dxbc::RTS0::v2::DescriptorRange &Range) {
   SmallString<128> Message;
   raw_svector_ostream OS(Message);
   OS << "Cannot append range with implicit lower "
