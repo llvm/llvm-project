@@ -2192,7 +2192,7 @@ ComplexDeinterleavingGraph::identifySplat(ComplexValues &Vals) {
   // The splats must meet the following requirements:
   //   1. Must either be all instructions or all values.
   //   2. Non-constant splats must live in the same block.
-  if (auto FirstValAsInstruction = dyn_cast<Instruction>(Vals[0].Real)) {
+  if (auto *FirstValAsInstruction = dyn_cast<Instruction>(Vals[0].Real)) {
     BasicBlock *FirstBB = FirstValAsInstruction->getParent();
     for (auto &V : Vals) {
       if (!IsSplat(V.Real) || !IsSplat(V.Imag))
