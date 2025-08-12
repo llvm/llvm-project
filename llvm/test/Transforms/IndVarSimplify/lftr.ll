@@ -415,7 +415,7 @@ define void @wide_trip_count_test1(ptr %autoc,
 ; CHECK-NEXT:    [[ADD3:%.*]] = fadd float [[TEMP2]], [[MUL]]
 ; CHECK-NEXT:    store float [[ADD3]], ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc nuw nsw i64 [[INDVARS_IV_NEXT]] to i32
+; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[LFTR_WIDEIV]], [[SUB]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]]
 ; CHECK:       for.end.loopexit:

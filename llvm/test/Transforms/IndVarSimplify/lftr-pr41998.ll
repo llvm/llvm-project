@@ -13,7 +13,7 @@ define void @test_int(i32 %start, ptr %p) {
 ; CHECK-NEXT:    [[I2:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I2_INC:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I2_INC]] = add nuw nsw i32 [[I2]], 1
 ; CHECK-NEXT:    store volatile i32 [[I2_INC]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc nuw nsw i32 [[I2_INC]] to i3
+; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i32 [[I2_INC]] to i3
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i3 [[LFTR_WIDEIV]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[END:%.*]], label [[LOOP]]
 ; CHECK:       end:
