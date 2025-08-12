@@ -257,14 +257,14 @@ for.cond.cleanup:
 ; CHECK-V1-IC1-FORCE-EPI4: [[META2]] = !{!"llvm.loop.isvectorized", i32 1}
 ; CHECK-V1-IC1-FORCE-EPI4: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK-V1-IC1-FORCE-EPI4: [[PROF4]] = !{!"branch_weights", i32 1, i32 7}
-; CHECK-V1-IC1-FORCE-EPI4: [[PROF5]] = !{!"branch_weights", i32 4, i32 0}
+; CHECK-V1-IC1-FORCE-EPI4: [[PROF5]] = !{!"branch_weights", i32 4, i32 4}
 ; CHECK-V1-IC1-FORCE-EPI4: [[LOOP6]] = distinct !{[[LOOP6]], [[META2]], [[META3]]}
 ; CHECK-V1-IC1-FORCE-EPI4: [[PROF7]] = !{!"branch_weights", i32 1, i32 3}
 ; CHECK-V1-IC1-FORCE-EPI4: [[PROF8]] = !{!"branch_weights", i32 0, i32 0}
 ; CHECK-V1-IC1-FORCE-EPI4: [[LOOP9]] = distinct !{[[LOOP9]], [[META3]], [[META2]]}
 ; CHECK-V1-IC1-FORCE-EPI4: [[PROF10]] = !{!"branch_weights", i32 1, i32 31}
 ; CHECK-V1-IC1-FORCE-EPI4: [[LOOP11]] = distinct !{[[LOOP11]], [[META2]], [[META3]]}
-; CHECK-V1-IC1-FORCE-EPI4: [[PROF12]] = !{!"branch_weights", i32 4, i32 12}
+; CHECK-V1-IC1-FORCE-EPI4: [[PROF12]] = !{!"branch_weights", i32 4, i32 28}
 ; CHECK-V1-IC1-FORCE-EPI4: [[LOOP13]] = distinct !{[[LOOP13]], [[META2]], [[META3]]}
 ; CHECK-V1-IC1-FORCE-EPI4: [[LOOP14]] = distinct !{[[LOOP14]], [[META3]], [[META2]]}
 ;.
