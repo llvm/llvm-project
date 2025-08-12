@@ -1,4 +1,4 @@
-REQUIRES: aarch64-registered-target
+REQUIRES: aarch64-registered-target, asserts
 
 RUN: llvm-exegesis -mcpu=neoverse-v2 --benchmark-phase=measure --min-instructions=100 --mode=latency --debug-only=preview-gen-assembly --opcode-name=ADDVv4i16v 2>&1 | FileCheck %s -check-prefix=PREVIEW
 
