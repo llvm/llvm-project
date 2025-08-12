@@ -4,4 +4,4 @@
 (module (memory 0 0))
 */
 
-// CHECK-LABEL:   "wasmssa.memory"() <{limits = !wasmssa<limit[0: 0]>, sym_name = "mem_0", sym_visibility = "nested"}> : () -> ()
+// CHECK-LABEL:   wasmssa.memory @mem_0 nested !wasmssa<limit[0: 0]>
