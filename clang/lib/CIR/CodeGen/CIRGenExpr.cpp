@@ -1013,7 +1013,9 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
   case CK_DerivedToBase: {
     const auto *derivedClassTy =
         e->getSubExpr()->getType()->castAs<clang::RecordType>();
-    auto *derivedClassDecl = cast<CXXRecordDecl>(derivedClassTy->getDecl());
+    auto *derivedClassDecl =
+        cast<CXXRecordDecl>(derivedClassTy->getOriginalDecl())
+            ->getDefinitionOrSelf();
 
     LValue lv = emitLValue(e->getSubExpr());
     Address thisAddr = lv.getAddress();
@@ -1167,9 +1169,11 @@ static void pushTemporaryCleanup(CIRGenFunction &cgf,
                                         ->getBaseElementTypeUnsafe()
                                         ->getAs<clang::RecordType>()) {
     // Get the destructor for the reference temporary.
-    auto *classDecl = cast<CXXRecordDecl>(rt->getDecl());
+    auto *classDecl =
+        cast<CXXRecordDecl>(rt->getOriginalDecl()->getDefinitionOrSelf());
     if (!classDecl->hasTrivialDestructor())
-      referenceTemporaryDtor = classDecl->getDestructor();
+      referenceTemporaryDtor =
+          classDecl->getDefinitionOrSelf()->getDestructor();
   }
 
   if (!referenceTemporaryDtor)
@@ -1831,7 +1835,7 @@ RValue CIRGenFunction::emitCXXMemberCallExpr(const CXXMemberCallExpr *ce,
   }
 
   bool hasQualifier = me->hasQualifier();
-  NestedNameSpecifier *qualifier = hasQualifier ? me->getQualifier() : nullptr;
+  NestedNameSpecifier qualifier = me->getQualifier();
   bool isArrow = me->isArrow();
   const Expr *base = me->getBase();
 
@@ -1937,6 +1941,20 @@ LValue CIRGenFunction::emitLoadOfReferenceLValue(Address refAddr,
   Address pointeeAddr = emitLoadOfReference(refLVal, loc, &pointeeBaseInfo);
   return makeAddrLValue(pointeeAddr, refLVal.getType()->getPointeeType(),
                         pointeeBaseInfo);
+}
+
+void CIRGenFunction::emitTrap(mlir::Location loc, bool createNewBlock) {
+  cir::TrapOp::create(builder, loc);
+  if (createNewBlock)
+    builder.createBlock(builder.getBlock()->getParent());
+}
+
+void CIRGenFunction::emitUnreachable(clang::SourceLocation loc,
+                                     bool createNewBlock) {
+  assert(!cir::MissingFeatures::sanitizers());
+  cir::UnreachableOp::create(builder, getLoc(loc));
+  if (createNewBlock)
+    builder.createBlock(builder.getBlock()->getParent());
 }
 
 mlir::Value CIRGenFunction::createDummyValue(mlir::Location loc,
