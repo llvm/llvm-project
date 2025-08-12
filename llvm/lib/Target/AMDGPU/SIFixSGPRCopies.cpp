@@ -919,8 +919,7 @@ bool SIFixSGPRCopies::lowerSpecialCase(MachineInstr &MI,
       return true;
     }
 
-    if (!SrcReg.isVirtual() || TRI->getRegSizeInBits(SrcReg, *MRI) !=
-                                   TRI->getRegSizeInBits(DstReg, *MRI))
+    if (!SrcReg.isVirtual())
       return true;
   }
   if (!SrcReg.isVirtual() || TRI->isAGPR(*MRI, SrcReg)) {
@@ -947,9 +946,7 @@ void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
   if (PHISources.contains(MI))
     return;
   Register DstReg = MI->getOperand(0).getReg();
-  const TargetRegisterClass *DstRC = DstReg.isVirtual()
-                                         ? MRI->getRegClass(DstReg)
-                                         : TRI->getPhysRegBaseClass(DstReg);
+  const TargetRegisterClass *DstRC = TRI->getRegClassForReg(*MRI, DstReg);
 
   V2SCopyInfo Info(getNextVGPRToSGPRCopyId(), MI,
                    TRI->getRegSizeInBits(*DstRC));

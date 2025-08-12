@@ -7564,33 +7564,23 @@ void SIInstrInfo::legalizeOperandsVALUt16(MachineInstr &MI,
 void SIInstrInfo::createWaterFall(MachineInstr *MI, MachineDominatorTree *MDT,
                                   ArrayRef<MachineOperand *> ScalarOps,
                                   ArrayRef<Register> PhySGPRs) const {
-
-  MachineBasicBlock *MBB = MI->getParent();
-  if (!MBB)
-    return;
-  MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
-  const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
-
   if (MI->getOpcode() == AMDGPU::SI_CALL_ISEL) {
     // Move everything between ADJCALLSTACKUP and ADJCALLSTACKDOWN and
     // following copies, we also need to move copies from and to physical
     // registers into the loop block.
-    unsigned FrameSetupOpcode = this->getCallFrameSetupOpcode();
-    unsigned FrameDestroyOpcode = this->getCallFrameDestroyOpcode();
-
     // Also move the copies to physical registers into the loop block
     MachineBasicBlock &MBB = *MI->getParent();
     MachineBasicBlock::iterator Start(MI);
-    while (Start->getOpcode() != FrameSetupOpcode)
+    while (Start->getOpcode() != AMDGPU::ADJCALLSTACKUP)
       --Start;
     MachineBasicBlock::iterator End(MI);
-    while (End->getOpcode() != FrameDestroyOpcode)
+    while (End->getOpcode() != AMDGPU::ADJCALLSTACKDOWN)
       ++End;
 
     // Also include following copies of the return value
     ++End;
     while (End != MBB.end() && End->isCopy() && End->getOperand(1).isReg() &&
-           MI->definesRegister(End->getOperand(1).getReg(), TRI))
+           MI->definesRegister(End->getOperand(1).getReg(), &RI))
       ++End;
 
     loadMBUFScalarOperandsFromVGPR(*this, *MI, ScalarOps, MDT, Start, End,
@@ -7621,27 +7611,92 @@ void SIInstrInfo::moveToVALU(SIInstrWorklist &Worklist,
   for (std::pair<MachineInstr *, V2PhysSCopyInfo> &Entry : Worklist.WaterFalls)
     createWaterFall(Entry.first, MDT, Entry.second.MOs, Entry.second.SGPRs);
 
-  for (std::pair<MachineInstr *, bool> &Entry : Worklist.V2PhySCopiesToErase)
-    if (Entry.second == true)
+  for (std::pair<MachineInstr *, bool> Entry : Worklist.V2PhySCopiesToErase)
+    if (Entry.second)
       Entry.first->eraseFromParent();
 }
-void SIInstrInfo::getReadFirstLaneFromCopy(MachineRegisterInfo &MRI,
+void SIInstrInfo::getReadFirstLaneFromCopyToM0(MachineRegisterInfo &MRI,
                                            Register DstReg,
                                            MachineInstr &Inst) const {
+  // If it's a copy of a VGPR to a physical SGPR, insert a V_READFIRSTLANE and
+  // hope for the best.
   if (MRI.constrainRegClass(DstReg, &AMDGPU::SReg_32_XM0RegClass)) {
     BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(),
             get(AMDGPU::V_READFIRSTLANE_B32), DstReg)
         .add(Inst.getOperand(1));
   } else {
-    Register NewDst = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
-    BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(),
-            get(AMDGPU::V_READFIRSTLANE_B32), NewDst)
-        .add(Inst.getOperand(1));
-    BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(), get(AMDGPU::COPY),
-            DstReg)
-        .addReg(NewDst);
+    unsigned RegSize = RI.getRegSizeInBits(DstReg, MRI);
+    unsigned NumSubRegs = RegSize / 32;
+    if (NumSubRegs == 1) {
+      Register NewDst = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+      BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(),
+              get(AMDGPU::V_READFIRSTLANE_B32), NewDst)
+          .add(Inst.getOperand(1));
+      BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(), get(AMDGPU::COPY),
+              DstReg)
+          .addReg(NewDst);
+    } else {
+      SmallVector<Register, 8> DstRegs;
+      for (unsigned i = 0; i < NumSubRegs; ++i) {
+        Register NewDst =
+            MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+        BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(),
+                get(AMDGPU::V_READFIRSTLANE_B32), NewDst)
+            .addReg(Inst.getOperand(1).getReg(), 0, RI.getSubRegFromChannel(i));
+        DstRegs.push_back(NewDst);
+      }
+      MachineInstrBuilder MIB =
+          BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(),
+                  get(AMDGPU::REG_SEQUENCE), DstReg);
+      for (unsigned i = 0; i < NumSubRegs; ++i) {
+        MIB.addReg(DstRegs[i]);
+        MIB.addImm(RI.getSubRegFromChannel(i));
+      }
+    }
   }
 }
+
+void SIInstrInfo::handleCopyToPhyHelper(SIInstrWorklist &Worklist,
+                                        Register DstReg, MachineInstr &Inst,
+                                        MachineRegisterInfo &MRI) const {
+  if (DstReg == AMDGPU::M0) {
+    getReadFirstLaneFromCopyToM0(MRI, DstReg, Inst);
+    Worklist.V2PhySCopiesToErase.try_emplace(&Inst, true);
+    return;
+  }
+  Register SrcReg = Inst.getOperand(1).getReg();
+  MachineBasicBlock::iterator I = Inst.getIterator();
+  MachineBasicBlock::iterator E = Inst.getParent()->end();
+  // Only search current block since phyreg's def & use cannot cross
+  // blocks when MF.NoPhi = false.
+  while (++I != E) {
+    // Currently, we only support waterfall on SI_CALL_ISEL.
+    if (I->getOpcode() == AMDGPU::SI_CALL_ISEL) {
+      MachineInstr *UseMI = &*I;
+      for (unsigned i = 0; i < UseMI->getNumOperands(); ++i) {
+        if (UseMI->getOperand(i).isReg() &&
+            UseMI->getOperand(i).getReg() == DstReg) {
+          MachineOperand *MO = &UseMI->getOperand(i);
+          MO->setReg(SrcReg);
+          V2PhysSCopyInfo &V2SCopyInfo = Worklist.WaterFalls[UseMI];
+          V2SCopyInfo.MOs.push_back(MO);
+          V2SCopyInfo.SGPRs.push_back(DstReg);
+          Worklist.V2PhySCopiesToErase.try_emplace(&Inst, true);
+        }
+      }
+    } else if (I->getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG &&
+               I->getOperand(0).isReg() &&
+               I->getOperand(0).getReg() == DstReg) {
+      getReadFirstLaneFromCopyToM0(MRI, DstReg, Inst);
+      Worklist.V2PhySCopiesToErase.try_emplace(&Inst, true);
+    } else if (I->readsRegister(DstReg, &RI))
+      // COPY cannot be erased if other type of inst uses it.
+      Worklist.V2PhySCopiesToErase[&Inst] = false;
+    if (I->findRegisterDefOperand(DstReg, &RI))
+      break;
+  }
+}
+
 void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
                                  MachineDominatorTree *MDT,
                                  MachineInstr &Inst) const {
@@ -8120,46 +8175,7 @@ void SIInstrInfo::moveToVALUImpl(SIInstrWorklist &Worklist,
 
     if (Inst.isCopy() && DstReg.isPhysical() &&
         RI.isVGPR(MRI, Inst.getOperand(1).getReg())) {
-      if (DstReg == AMDGPU::M0) {
-        getReadFirstLaneFromCopy(MRI, DstReg, Inst);
-        Worklist.V2PhySCopiesToErase.try_emplace(&Inst, true);
-        return;
-      }
-      const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
-      Register SrcReg = Inst.getOperand(1).getReg();
-      MachineBasicBlock::iterator I = Inst.getIterator();
-      MachineBasicBlock::iterator E = Inst.getParent()->end();
-      // Only search current block since phyreg's def & use cannot cross
-      // blocks when MF.NoPhi = false.
-      while (++I != E) {
-        // Currently, we only support waterfall on SI_CALL_ISEL.
-        if (I->getOpcode() == AMDGPU::SI_CALL_ISEL) {
-          MachineInstr *UseMI = &*I;
-          for (unsigned i = 0; i < UseMI->getNumOperands(); ++i) {
-            if (UseMI->getOperand(i).isReg() &&
-                UseMI->getOperand(i).getReg() == DstReg) {
-              MachineOperand *MO = &UseMI->getOperand(i);
-              MO->setReg(SrcReg);
-              V2PhysSCopyInfo &V2SCopyInfo = Worklist.WaterFalls[UseMI];
-              V2SCopyInfo.MOs.push_back(MO);
-              V2SCopyInfo.SGPRs.push_back(DstReg);
-              Worklist.V2PhySCopiesToErase.try_emplace(&Inst, true);
-            }
-          }
-        } else if (I->getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG &&
-                   I->getOperand(0).isReg() &&
-                   I->getOperand(0).getReg() == DstReg) {
-          // If it's a copy of a VGPR to a physical SGPR, insert a
-          // V_READFIRSTLANE and hope for the best.
-          // TODO: Only works for 32 bit registers.
-          getReadFirstLaneFromCopy(MRI, DstReg, Inst);
-          Worklist.V2PhySCopiesToErase.try_emplace(&Inst, true);
-        } else if (I->readsRegister(DstReg, TRI))
-          // COPY cannot be erased if other type of inst uses it.
-          Worklist.V2PhySCopiesToErase[&Inst] = false;
-        if (I->findRegisterDefOperand(DstReg, TRI))
-          break;
-      }
+      handleCopyToPhyHelper(Worklist, DstReg, Inst, MRI);
       return;
     }
 

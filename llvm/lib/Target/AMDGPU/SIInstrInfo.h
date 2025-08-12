@@ -1584,8 +1584,12 @@ public:
 
   const TargetSchedModel &getSchedModel() const { return SchedModel; }
 
-  void getReadFirstLaneFromCopy(MachineRegisterInfo &MRI, Register DstReg,
+  void getReadFirstLaneFromCopyToM0(MachineRegisterInfo &MRI, Register DstReg,
                                 MachineInstr &Inst) const;
+
+  void handleCopyToPhyHelper(SIInstrWorklist &Worklist, Register DstReg,
+                             MachineInstr &Inst,
+                             MachineRegisterInfo &MRI) const;
 
   // Enforce operand's \p OpName even alignment if required by target.
   // This is used if an operand is a 32 bit register but needs to be aligned
