@@ -5,29 +5,19 @@
 ;
 ; Handled strictly:
 ; - llvm.x86.avx10.vdpphps.512
-; - llvm.x86.avx10.vdpphps.512
-; - llvm.x86.avx10.vdpphps.512
-; - llvm.x86.avx10.vmpsadbw.512
-; - llvm.x86.avx10.vmpsadbw.512
 ; - llvm.x86.avx10.vmpsadbw.512
 ;
 ; Handled heuristically:
 ; - llvm.x86.avx10.vpdpbssd.512
-; - llvm.x86.avx10.vpdpbssd.512
 ; - llvm.x86.avx10.vpdpbssds.512
-; - llvm.x86.avx10.vpdpbsud.512
 ; - llvm.x86.avx10.vpdpbsud.512
 ; - llvm.x86.avx10.vpdpbsuds.512
 ; - llvm.x86.avx10.vpdpbuud.512
-; - llvm.x86.avx10.vpdpbuud.512
 ; - llvm.x86.avx10.vpdpbuuds.512
-; - llvm.x86.avx10.vpdpwsud.512
 ; - llvm.x86.avx10.vpdpwsud.512
 ; - llvm.x86.avx10.vpdpwsuds.512
 ; - llvm.x86.avx10.vpdpwusd.512
-; - llvm.x86.avx10.vpdpwusd.512
 ; - llvm.x86.avx10.vpdpwusds.512
-; - llvm.x86.avx10.vpdpwuud.512
 ; - llvm.x86.avx10.vpdpwuud.512
 ; - llvm.x86.avx10.vpdpwuuds.512
 

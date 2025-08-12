@@ -6,15 +6,8 @@
 ; Handled strictly:
 ; - llvm.x86.avx10.vdpphps.128
 ; - llvm.x86.avx10.vdpphps.128
-; - llvm.x86.avx10.vdpphps.128
-; - llvm.x86.avx10.vdpphps.256
-; - llvm.x86.avx10.vdpphps.256
 ; - llvm.x86.avx10.vdpphps.256
 ; - llvm.x86.avx2.mpsadbw
-; - llvm.x86.avx2.mpsadbw
-; - llvm.x86.avx2.mpsadbw
-; - llvm.x86.sse41.mpsadbw
-; - llvm.x86.sse41.mpsadbw
 ; - llvm.x86.sse41.mpsadbw
 ;
 ; Handled heuristically:

@@ -7,28 +7,16 @@
 ;
 ; Handled heuristically:
 ; - llvm.x86.avx2.vpdpbssd.128
-; - llvm.x86.avx2.vpdpbssd.128
-; - llvm.x86.avx2.vpdpbssd.256
 ; - llvm.x86.avx2.vpdpbssd.256
 ; - llvm.x86.avx2.vpdpbssds.128
-; - llvm.x86.avx2.vpdpbssds.128
-; - llvm.x86.avx2.vpdpbssds.256
 ; - llvm.x86.avx2.vpdpbssds.256
 ; - llvm.x86.avx2.vpdpbsud.128
-; - llvm.x86.avx2.vpdpbsud.128
-; - llvm.x86.avx2.vpdpbsud.256
 ; - llvm.x86.avx2.vpdpbsud.256
 ; - llvm.x86.avx2.vpdpbsuds.128
-; - llvm.x86.avx2.vpdpbsuds.128
-; - llvm.x86.avx2.vpdpbsuds.256
 ; - llvm.x86.avx2.vpdpbsuds.256
 ; - llvm.x86.avx2.vpdpbuud.128
-; - llvm.x86.avx2.vpdpbuud.128
-; - llvm.x86.avx2.vpdpbuud.256
 ; - llvm.x86.avx2.vpdpbuud.256
 ; - llvm.x86.avx2.vpdpbuuds.128
-; - llvm.x86.avx2.vpdpbuuds.128
-; - llvm.x86.avx2.vpdpbuuds.256
 ; - llvm.x86.avx2.vpdpbuuds.256
 
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
