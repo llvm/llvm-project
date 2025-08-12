@@ -117,14 +117,14 @@ size_t StableFunctionMap::size(SizeType Type) const {
   case UniqueHashCount:
     return HashToFuncs.size();
   case TotalFunctionCount: {
-    const_cast<StableFunctionMap *>(this)->deserializeLazyLoadingEntries();
+    deserializeLazyLoadingEntries();
     size_t Count = 0;
     for (auto &Funcs : HashToFuncs)
       Count += Funcs.second.Entries.size();
     return Count;
   }
   case MergeableFunctionCount: {
-    const_cast<StableFunctionMap *>(this)->deserializeLazyLoadingEntries();
+    deserializeLazyLoadingEntries();
     size_t Count = 0;
     for (auto &[Hash, Funcs] : HashToFuncs)
       if (Funcs.Entries.size() >= 2)
@@ -144,18 +144,18 @@ StableFunctionMap::at(HashFuncsMapType::key_type FunctionHash) const {
 }
 
 void StableFunctionMap::deserializeLazyLoadingEntry(
-    HashFuncsMapType::iterator It) {
+    HashFuncsMapType::iterator It) const {
   assert(isLazilyLoaded() && "Cannot deserialize non-lazily-loaded map");
   auto& [Hash, Storage] = *It;
   std::call_once(Storage.LazyLoadFlag, [this, HashArg = Hash, &StorageArg = Storage]() {
     for (auto Offset : StorageArg.Offsets)
       StableFunctionMapRecord::deserializeEntry(
-          reinterpret_cast<const unsigned char *>(Offset), HashArg, this,
+          reinterpret_cast<const unsigned char *>(Offset), HashArg, const_cast<StableFunctionMap *>(this),
           ReadStableFunctionMapNames);
   });
 }
 
-void ::StableFunctionMap::deserializeLazyLoadingEntries() {
+void StableFunctionMap::deserializeLazyLoadingEntries() const {
   if (!isLazilyLoaded())
     return;
   for (auto It = HashToFuncs.begin(); It != HashToFuncs.end(); ++It)
@@ -166,7 +166,7 @@ const StableFunctionMap::HashFuncsMapType &
 StableFunctionMap::getFunctionMap() const {
   // Ensure all entries are deserialized before returning the raw map.
   if (isLazilyLoaded())
-    const_cast<StableFunctionMap *>(this)->deserializeLazyLoadingEntries();
+    deserializeLazyLoadingEntries();
   return HashToFuncs;
 }
 

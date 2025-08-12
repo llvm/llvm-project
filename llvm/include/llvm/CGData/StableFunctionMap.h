@@ -163,10 +163,10 @@ private:
     HashToFuncs[FuncEntry->Hash].Entries.emplace_back(std::move(FuncEntry));
   }
 
-  void deserializeLazyLoadingEntry(HashFuncsMapType::iterator It);
+  void deserializeLazyLoadingEntry(HashFuncsMapType::iterator It) const;
 
   /// Eagerly deserialize all the unloaded entries in the lazy loading map.
-  void deserializeLazyLoadingEntries();
+  void deserializeLazyLoadingEntries() const;
 
   bool isLazilyLoaded() const { return (bool)Buffer; }
 
