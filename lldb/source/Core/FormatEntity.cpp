@@ -108,6 +108,7 @@ constexpr Definition g_frame_child_entries[] = {
     Entry::DefinitionWithChildren("reg", EntryType::FrameRegisterByName,
                                   g_string_entry),
     Definition("is-artificial", EntryType::FrameIsArtificial),
+    Definition("is-synthetic", EntryType::FrameIsSynthetic),
 };
 
 constexpr Definition g_function_child_entries[] = {
@@ -380,6 +381,7 @@ const char *FormatEntity::Entry::TypeToCString(Type t) {
     ENUM_TO_CSTR(FrameRegisterFlags);
     ENUM_TO_CSTR(FrameRegisterByName);
     ENUM_TO_CSTR(FrameIsArtificial);
+    ENUM_TO_CSTR(FrameIsSynthetic);
     ENUM_TO_CSTR(ScriptFrame);
     ENUM_TO_CSTR(FunctionID);
     ENUM_TO_CSTR(FunctionDidChange);
@@ -1744,6 +1746,13 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     if (exe_ctx)
       if (StackFrame *frame = exe_ctx->GetFramePtr())
         return frame->IsArtificial();
+    return false;
+  }
+
+  case Entry::Type::FrameIsSynthetic: {
+    if (exe_ctx)
+      if (StackFrame *frame = exe_ctx->GetFramePtr())
+        return frame->IsSynthetic();
     return false;
   }
 

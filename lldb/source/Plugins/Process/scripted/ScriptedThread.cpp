@@ -200,13 +200,15 @@ bool ScriptedThread::LoadArtificialStackFrames() {
 
     lldb::addr_t cfa = LLDB_INVALID_ADDRESS;
     bool cfa_is_valid = false;
+    const bool artificial = false;
     const bool behaves_like_zeroth_frame = false;
     SymbolContext sc;
     symbol_addr.CalculateSymbolContext(&sc);
 
     StackFrameSP synth_frame_sp = std::make_shared<StackFrame>(
         this->shared_from_this(), idx, idx, cfa, cfa_is_valid, pc,
-        StackFrame::Kind::Artificial, behaves_like_zeroth_frame, &sc);
+        StackFrame::Kind::Synthetic, artificial, behaves_like_zeroth_frame,
+        &sc);
 
     if (!frames->SetFrameAtIndex(static_cast<uint32_t>(idx), synth_frame_sp))
       return ScriptedInterface::ErrorWithMessage<bool>(
