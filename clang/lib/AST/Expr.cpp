@@ -2808,7 +2808,8 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
     const auto *CE = cast<CXXConstructExpr>(this);
     const CXXRecordDecl *Type = getType()->getAsCXXRecordDecl();
 
-    if ((Type && Type->hasAttr<WarnUnusedAttr>()) || CE->hasUnusedResultAttr(Ctx)) {
+    if ((Type && Type->hasAttr<WarnUnusedAttr>()) ||
+        CE->hasUnusedResultAttr(Ctx)) {
       WarnE = this;
       Loc = getBeginLoc();
       R1 = getSourceRange();
