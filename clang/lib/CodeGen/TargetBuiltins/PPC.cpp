@@ -1157,10 +1157,8 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
       Address Addr = EmitPointerWithAlignment(E->getArg(1));
       Ops[1] = Builder.CreateLoad(Addr);
     }
-    if (BuiltinID == PPC::BI__builtin_mma_disassemble_dmr) {
-      dbgs() << "&&& No disassemble!!!\n";
+    if (BuiltinID == PPC::BI__builtin_mma_disassemble_dmr)
       return Builder.CreateAlignedStore(Ops[1], Ops[0], MaybeAlign());
-    }
     for (unsigned i=1; i<Ops.size(); i++)
       CallOps.push_back(Ops[i]);
     llvm::Function *F = CGM.getIntrinsic(ID);
