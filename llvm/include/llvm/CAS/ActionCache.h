@@ -1,13 +1,19 @@
-//===- llvm/CAS/ActionCache.h -----------------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declaration of the ActionCache class, which is the
+/// base class for ActionCache implementations.
+///
+//===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CAS_CASACTIONCACHE_H
-#define LLVM_CAS_CASACTIONCACHE_H
+#ifndef LLVM_CAS_ACTIONCACHE_H
+#define LLVM_CAS_ACTIONCACHE_H
 
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -29,10 +35,6 @@ class CacheKey {
 public:
   StringRef getKey() const { return Key; }
 
-  // TODO: Support CacheKey other than a CASID but rather any array of bytes.
-  // To do that, ActionCache need to be able to rehash the key into the index,
-  // which then `getOrCompute` method can be used to avoid multiple calls to
-  // has function.
   CacheKey(const CASID &ID);
   CacheKey(const ObjectProxy &Proxy);
   CacheKey(const ObjectStore &CAS, const ObjectRef &Ref);
@@ -54,63 +56,67 @@ private:
   Error Value;
 };
 
-/// A cache from a key describing an action to the result of doing it.
+/// A cache from a key (that describes an action) to the result of performing
+/// that action.
 ///
-/// Actions are expected to be pure (collision is an error).
+/// Actions are expected to be pure. Storing mappings from one action to
+/// multiple results will result in error (cache poisoning).
 class ActionCache {
   virtual void anchor();
 
 public:
   /// Get a previously computed result for \p ActionKey.
   ///
-  /// \param Globally if true it is a hint to the underlying implementation that
-  /// the lookup is profitable to be done on a distributed caching level, not
-  /// just locally. The implementation is free to ignore this flag.
+  /// \param CanBeDistributed is a hint to the underlying implementation that if
+  /// it is true, the lookup is profitable to be done on a distributed caching
+  /// level, not just locally. The implementation is free to ignore this flag.
   Expected<std::optional<CASID>> get(const CacheKey &ActionKey,
-                                     bool Globally = false) const {
-    return getImpl(arrayRefFromStringRef(ActionKey.getKey()), Globally);
+                                     bool CanBeDistributed = false) const {
+    return getImpl(arrayRefFromStringRef(ActionKey.getKey()), CanBeDistributed);
   }
 
   /// Asynchronous version of \c get.
   std::future<AsyncCASIDValue> getFuture(const CacheKey &ActionKey,
-                                         bool Globally = false) const;
+                                         bool CanBeDistributed = false) const;
 
   /// Asynchronous version of \c get.
-  void getAsync(const CacheKey &ActionKey, bool Globally,
+  void getAsync(const CacheKey &ActionKey, bool CanBeDistributed,
                 unique_function<void(Expected<std::optional<CASID>>)> Callback,
                 std::unique_ptr<Cancellable> *CancelObj = nullptr) const {
-    return getImplAsync(arrayRefFromStringRef(ActionKey.getKey()), Globally,
+    return getImplAsync(arrayRefFromStringRef(ActionKey.getKey()), CanBeDistributed,
                         std::move(Callback), CancelObj);
   }
 
   /// Cache \p Result for the \p ActionKey computation.
   ///
-  /// \param Globally if true it is a hint to the underlying implementation that
-  /// the association is profitable to be done on a distributed caching level,
-  /// not just locally. The implementation is free to ignore this flag.
+  /// \param CanBeDistributed is a hint to the underlying implementation that if
+  /// it is true, the association is profitable to be done on a distributed
+  /// caching level, not just locally. The implementation is free to ignore this
+  /// flag.
   Error put(const CacheKey &ActionKey, const CASID &Result,
-            bool Globally = false) {
+            bool CanBeDistributed = false) {
     assert(Result.getContext().getHashSchemaIdentifier() ==
                getContext().getHashSchemaIdentifier() &&
            "Hash schema mismatch");
-    return putImpl(arrayRefFromStringRef(ActionKey.getKey()), Result, Globally);
+    return putImpl(arrayRefFromStringRef(ActionKey.getKey()), Result,
+                   CanBeDistributed);
   }
 
   /// Asynchronous version of \c put.
   std::future<AsyncErrorValue> putFuture(const CacheKey &ActionKey,
                                          const CASID &Result,
-                                         bool Globally = false);
+                                         bool CanBeDistributed = false);
 
   /// Asynchronous version of \c put.
   /// \param[out] CancelObj Optional pointer to receive a cancellation object.
-  void putAsync(const CacheKey &ActionKey, const CASID &Result, bool Globally,
+  void putAsync(const CacheKey &ActionKey, const CASID &Result, bool CanBeDistributed,
                 unique_function<void(Error)> Callback,
                 std::unique_ptr<Cancellable> *CancelObj = nullptr) {
     assert(Result.getContext().getHashSchemaIdentifier() ==
                getContext().getHashSchemaIdentifier() &&
            "Hash schema mismatch");
     return putImplAsync(arrayRefFromStringRef(ActionKey.getKey()), Result,
-                        Globally, std::move(Callback), CancelObj);
+                        CanBeDistributed, std::move(Callback), CancelObj);
   }
 
   /// Validate the ActionCache contents.
@@ -119,17 +125,21 @@ public:
   virtual ~ActionCache() = default;
 
 protected:
-  virtual Expected<std::optional<CASID>> getImpl(ArrayRef<uint8_t> ResolvedKey,
-                                                 bool Globally) const = 0;
+  // Implementation detail for \p get method.
+  virtual Expected<std::optional<CASID>>
+  getImpl(ArrayRef<uint8_t> ResolvedKey, bool CanBeDistributed) const = 0;
+
   virtual void
-  getImplAsync(ArrayRef<uint8_t> ResolvedKey, bool Globally,
+  getImplAsync(ArrayRef<uint8_t> ResolvedKey, bool CanBeDistributed,
                unique_function<void(Expected<std::optional<CASID>>)> Callback,
                std::unique_ptr<Cancellable> *CancelObj) const;
 
+  // Implementation detail for \p put method.
   virtual Error putImpl(ArrayRef<uint8_t> ResolvedKey, const CASID &Result,
-                        bool Globally) = 0;
+                        bool CanBeDistributed) = 0;
+
   virtual void putImplAsync(ArrayRef<uint8_t> ResolvedKey, const CASID &Result,
-                            bool Globally,
+                            bool CanBeDistributed,
                             unique_function<void(Error)> Callback,
                             std::unique_ptr<Cancellable> *CancelObj);
 
@@ -150,6 +160,7 @@ std::string getDefaultOnDiskActionCachePath();
 
 /// Create an action cache on disk.
 Expected<std::unique_ptr<ActionCache>> createOnDiskActionCache(StringRef Path);
+
 } // end namespace llvm::cas
 
-#endif // LLVM_CAS_CASACTIONCACHE_H
+#endif // LLVM_CAS_ACTIONCACHE_H

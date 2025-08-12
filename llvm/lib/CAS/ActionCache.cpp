@@ -1,4 +1,4 @@
-//===- ActionCache.cpp ------------------------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -22,10 +22,10 @@ CacheKey::CacheKey(const ObjectStore &CAS, const ObjectRef &Ref)
     : Key(toStringRef(CAS.getID(Ref).getHash())) {}
 
 std::future<AsyncCASIDValue> ActionCache::getFuture(const CacheKey &ActionKey,
-                                                    bool Globally) const {
+                                                    bool CanBeDistributed) const {
   std::promise<AsyncCASIDValue> Promise;
   auto Future = Promise.get_future();
-  getAsync(ActionKey, Globally,
+  getAsync(ActionKey, CanBeDistributed,
            [Promise =
                 std::move(Promise)](Expected<std::optional<CASID>> ID) mutable {
              Promise.set_value(std::move(ID));
@@ -35,10 +35,10 @@ std::future<AsyncCASIDValue> ActionCache::getFuture(const CacheKey &ActionKey,
 
 std::future<AsyncErrorValue> ActionCache::putFuture(const CacheKey &ActionKey,
                                                     const CASID &Result,
-                                                    bool Globally) {
+                                                    bool CanBeDistributed) {
   std::promise<AsyncErrorValue> Promise;
   auto Future = Promise.get_future();
-  putAsync(ActionKey, Result, Globally,
+  putAsync(ActionKey, Result, CanBeDistributed,
            [Promise = std::move(Promise)](Error E) mutable {
              Promise.set_value(std::move(E));
            });
@@ -46,17 +46,17 @@ std::future<AsyncErrorValue> ActionCache::putFuture(const CacheKey &ActionKey,
 }
 
 void ActionCache::getImplAsync(
-    ArrayRef<uint8_t> ResolvedKey, bool Globally,
+    ArrayRef<uint8_t> ResolvedKey, bool CanBeDistributed,
     unique_function<void(Expected<std::optional<CASID>>)> Callback,
     std::unique_ptr<Cancellable> *) const {
   // The default implementation is synchronous.
-  return Callback(getImpl(ResolvedKey, Globally));
+  return Callback(getImpl(ResolvedKey, CanBeDistributed));
 }
 
 void ActionCache::putImplAsync(ArrayRef<uint8_t> ResolvedKey,
-                               const CASID &Result, bool Globally,
+                               const CASID &Result, bool CanBeDistributed,
                                unique_function<void(Error)> Callback,
                                std::unique_ptr<Cancellable> *) {
   // The default implementation is synchronous.
-  return Callback(putImpl(ResolvedKey, Result, Globally));
+  return Callback(putImpl(ResolvedKey, Result, CanBeDistributed));
 }

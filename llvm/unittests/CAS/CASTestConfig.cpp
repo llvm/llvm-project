@@ -22,10 +22,9 @@ void MockEnv::anchor() {}
 MockEnv::~MockEnv() {}
 } // namespace llvm::unittest::cas
 
-CASTestingEnv createInMemory(int I) {
-  std::unique_ptr<ObjectStore> CAS = createInMemoryCAS();
-  std::unique_ptr<ActionCache> Cache = createInMemoryActionCache();
-  return CASTestingEnv{std::move(CAS), std::move(Cache), nullptr, std::nullopt};
+static CASTestingEnv createInMemory(int I) {
+  return CASTestingEnv{createInMemoryCAS(), createInMemoryActionCache(),
+                       nullptr, std::nullopt};
 }
 
 INSTANTIATE_TEST_SUITE_P(InMemoryCAS, CASTest,
