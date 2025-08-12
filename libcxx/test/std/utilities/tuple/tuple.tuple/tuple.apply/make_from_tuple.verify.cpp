@@ -8,9 +8,6 @@
 
 // REQUIRES: std-at-least-c++23
 
-// No diagnostic gets emitted when we build with modules.
-// XFAIL: clang-modules-build
-
 // <tuple>
 
 // template <class T, class Tuple> constexpr T make_from_tuple(Tuple&&);
