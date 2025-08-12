@@ -110,6 +110,9 @@ Expected<const XCOFFConfig &> ConfigManager::getXCOFFConfig() const {
 
 Expected<const DXContainerConfig &>
 ConfigManager::getDXContainerConfig() const {
+  // If a flag is listed below, then it may be implemented in the future. All
+  // other flags are not applicable and will be silently ignored for the
+  // DXContainer object file
   if (!Common.AddGnuDebugLink.empty() || Common.ExtractPartition ||
       !Common.SplitDWO.empty() || !Common.SymbolsPrefix.empty() ||
       !Common.SymbolsPrefixRemove.empty() || !Common.SymbolsToSkip.empty() ||
@@ -126,7 +129,7 @@ ConfigManager::getDXContainerConfig() const {
       !Common.SetSectionFlags.empty() || !Common.SetSectionType.empty() ||
       !Common.SymbolsToRename.empty() || Common.ExtractDWO ||
       Common.ExtractMainPartition || Common.OnlyKeepDebug ||
-      Common.PreserveDates || Common.StripAllGNU || Common.StripDWO ||
+      Common.StripAllGNU || Common.StripDWO ||
       Common.StripDebug || Common.StripNonAlloc || Common.StripSections ||
       Common.Weaken || Common.StripUnneeded || Common.DecompressDebugSections ||
       Common.GapFill != 0 || Common.PadTo != 0 ||
@@ -137,5 +140,7 @@ ConfigManager::getDXContainerConfig() const {
         "no flags are supported yet, only basic copying is allowed");
   }
 
+  // If a flag is listed here, then it has support for DXContainer:
+  // Common.PreserveDates
   return DXContainer;
 }
