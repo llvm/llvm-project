@@ -2841,8 +2841,6 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     return getCmpIntrinsicCall(Intrinsic::x86_sse2_cmp_sd, 7);
 
   // f16c half2float intrinsics
-  case X86::BI__builtin_ia32_vcvtph2ps:
-  case X86::BI__builtin_ia32_vcvtph2ps256:
   case X86::BI__builtin_ia32_vcvtph2ps_mask:
   case X86::BI__builtin_ia32_vcvtph2ps256_mask:
   case X86::BI__builtin_ia32_vcvtph2ps512_mask: {
