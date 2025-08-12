@@ -836,15 +836,6 @@ public:
     RestorePoints = SmallVector<MachineBasicBlock *>(NewRestorePoints);
   }
 
-  static SmallVector<MachineBasicBlock *> constructSaveRestorePoints(
-      ArrayRef<MachineBasicBlock *> SRPoints,
-      const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &BBMap) {
-    SmallVector<MachineBasicBlock *> Pts;
-    for (auto &Src : SRPoints)
-      Pts.push_back(BBMap.find(Src)->second);
-    return Pts;
-  }
-
   uint64_t getUnsafeStackSize() const { return UnsafeStackSize; }
   void setUnsafeStackSize(uint64_t Size) { UnsafeStackSize = Size; }
 
