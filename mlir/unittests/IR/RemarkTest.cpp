@@ -63,8 +63,8 @@ TEST(Remark, TestOutputOptimizationRemark) {
 
     // MISSED: explain why + suggest a fix
     remark::missed(loc, categoryUnroll, "MyPass")
-        << remark::reason("not profitable at this size"),
-        remark::suggest("increase unroll factor to >=4");
+        << remark::reason("not profitable at this size")
+        << remark::suggest("increase unroll factor to >=4");
 
     // FAILURE: action attempted but failed
     remark::failed(loc, categoryUnroll, "MyPass")
