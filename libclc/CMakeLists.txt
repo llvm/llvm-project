@@ -304,7 +304,7 @@ set_source_files_properties(
   ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_sin.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_sqrt.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/opencl/lib/generic/math/native_tan.cl
-  PROPERTIES COMPILE_OPTIONS "-fapprox-func;-ffp-contract=fast"
+  PROPERTIES COMPILE_OPTIONS -fapprox-func
 )
 
 enable_testing()
@@ -429,6 +429,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       # Error on undefined macros
       -Werror=undef
       -fdiscard-value-names
+      -ffp-contract=fast-honor-pragmas
     )
 
     if( NOT "${cpu}" STREQUAL "" )
