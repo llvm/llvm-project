@@ -9390,8 +9390,7 @@ SDValue DAGCombiner::mergeTruncStores(StoreSDNode *N) {
   LLVMContext &Context = *DAG.getContext();
   unsigned NumStores = Stores.size();
   unsigned WideNumBits = NumStores * NarrowNumBits;
-  EVT WideVT = EVT::getIntegerVT(Context, WideNumBits);
-  if (WideVT != MVT::i16 && WideVT != MVT::i32 && WideVT != MVT::i64)
+  if (WideNumBits != 16 && WideNumBits != 32 && WideNumBits != 64)
     return SDValue();
 
   // Check if all bytes of the source value that we are looking at are stored
@@ -9445,7 +9444,7 @@ SDValue DAGCombiner::mergeTruncStores(StoreSDNode *N) {
         SourceValue = WideVal;
 
       // Give up if the source value type is smaller than the store size.
-      if (SourceValue.getScalarValueSizeInBits() < WideVT.getScalarSizeInBits())
+      if (SourceValue.getScalarValueSizeInBits() < WideNumBits)
         return SDValue();
     }
 
@@ -9468,6 +9467,8 @@ SDValue DAGCombiner::mergeTruncStores(StoreSDNode *N) {
       return SDValue();
     OffsetMap[Offset] = ByteOffsetFromBase;
   }
+
+  EVT WideVT = EVT::getIntegerVT(Context, WideNumBits);
 
   assert(FirstOffset != INT64_MAX && "First byte offset must be set");
   assert(FirstStore && "First store must be set");
@@ -12842,22 +12843,21 @@ SDValue DAGCombiner::visitMHISTOGRAM(SDNode *N) {
   SDLoc DL(HG);
 
   EVT MemVT = HG->getMemoryVT();
+  EVT DataVT = Index.getValueType();
   MachineMemOperand *MMO = HG->getMemOperand();
   ISD::MemIndexType IndexType = HG->getIndexType();
 
   if (ISD::isConstantSplatVectorAllZeros(Mask.getNode()))
     return Chain;
 
-  SDValue Ops[] = {Chain,          Inc,           Mask, BasePtr, Index,
-                   HG->getScale(), HG->getIntID()};
-  if (refineUniformBase(BasePtr, Index, HG->isIndexScaled(), DAG, DL))
+  if (refineUniformBase(BasePtr, Index, HG->isIndexScaled(), DAG, DL) ||
+      refineIndexType(Index, IndexType, DataVT, DAG)) {
+    SDValue Ops[] = {Chain,          Inc,           Mask, BasePtr, Index,
+                     HG->getScale(), HG->getIntID()};
     return DAG.getMaskedHistogram(DAG.getVTList(MVT::Other), MemVT, DL, Ops,
                                   MMO, IndexType);
+  }
 
-  EVT DataVT = Index.getValueType();
-  if (refineIndexType(Index, IndexType, DataVT, DAG))
-    return DAG.getMaskedHistogram(DAG.getVTList(MVT::Other), MemVT, DL, Ops,
-                                  MMO, IndexType);
   return SDValue();
 }
 
@@ -16342,6 +16342,38 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
                                  DAG, DL);
     }
     break;
+  case ISD::ABDU:
+  case ISD::ABDS:
+    // (trunc (abdu/abds a, b)) → (abdu/abds (trunc a), (trunc b))
+    if (!LegalOperations || N0.hasOneUse()) {
+      EVT SrcVT = N0.getValueType();
+      EVT TruncVT = VT;
+      unsigned SrcBits = SrcVT.getScalarSizeInBits();
+      unsigned TruncBits = TruncVT.getScalarSizeInBits();
+      unsigned NeededBits = SrcBits - TruncBits;
+
+      SDValue A = N0.getOperand(0);
+      SDValue B = N0.getOperand(1);
+      bool CanFold = false;
+
+      if (N0.getOpcode() == ISD::ABDU) {
+        KnownBits KnownA = DAG.computeKnownBits(A);
+        KnownBits KnownB = DAG.computeKnownBits(B);
+        CanFold = KnownA.countMinLeadingZeros() >= NeededBits &&
+                  KnownB.countMinLeadingZeros() >= NeededBits;
+      } else {
+        unsigned SignBitsA = DAG.ComputeNumSignBits(A);
+        unsigned SignBitsB = DAG.ComputeNumSignBits(B);
+        CanFold = SignBitsA > NeededBits && SignBitsB > NeededBits;
+      }
+
+      if (CanFold && TLI.isOperationLegal(N0.getOpcode(), VT)) {
+        SDValue NewA = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, A);
+        SDValue NewB = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, B);
+        return DAG.getNode(N0.getOpcode(), DL, TruncVT, NewA, NewB);
+      }
+    }
+    break;
   }
 
   return SDValue();
@@ -16813,8 +16845,7 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
   SmallSet<SDValue, 8> MaybePoisonOperands;
   SmallVector<unsigned, 8> MaybePoisonOperandNumbers;
   for (auto [OpNo, Op] : enumerate(N0->ops())) {
-    if (DAG.isGuaranteedNotToBeUndefOrPoison(Op, /*PoisonOnly*/ false,
-                                             /*Depth*/ 1))
+    if (DAG.isGuaranteedNotToBeUndefOrPoison(Op, /*PoisonOnly=*/false))
       continue;
     bool HadMaybePoisonOperands = !MaybePoisonOperands.empty();
     bool IsNewMaybePoisonOperand = MaybePoisonOperands.insert(Op).second;
