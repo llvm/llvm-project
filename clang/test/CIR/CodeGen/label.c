@@ -12,6 +12,9 @@ labelA:
 // CIR:    cir.label "labelA"
 // CIR:    cir.return
 
+// Note: We are not lowering to LLVM IR via CIR at this stage because that
+// process depends on the GotoSolver.
+
 // OGCG: define dso_local void @label
 // OGCG:   br label %labelA
 // OGCG: labelA:
@@ -62,4 +65,39 @@ labelD:
 // OGCG:   store i32 [[INC]], ptr [[COND]], align 4
 // OGCG:   br label %if.end
 // OGCG: if.end:
+// OGCG:   ret void
+
+void after_return() {
+  return;
+  label:
+}
+
+// CIR:  cir.func no_proto dso_local @after_return
+// CIR:    cir.br ^bb1
+// CIR:  ^bb1:  // 2 preds: ^bb0, ^bb2
+// CIR:    cir.return
+// CIR:  ^bb2:  // no predecessors
+// CIR:    cir.label "label"
+// CIR:    cir.br ^bb1
+
+// OGCG: define dso_local void @after_return
+// OGCG:   br label %label
+// OGCG: label:
+// OGCG:   ret void
+
+
+void after_unreachable() {
+  __builtin_unreachable();
+  label:
+}
+
+// CIR:  cir.func no_proto dso_local @after_unreachable
+// CIR:    cir.unreachable
+// CIR:  ^bb1:
+// CIR:    cir.label "label"
+// CIR:    cir.return
+
+// OGCG: define dso_local void @after_unreachable
+// OGCG:   unreachable
+// OGCG: label:
 // OGCG:   ret void

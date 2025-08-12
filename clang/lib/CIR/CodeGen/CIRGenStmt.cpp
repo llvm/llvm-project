@@ -277,11 +277,11 @@ mlir::LogicalResult CIRGenFunction::emitSimpleStmt(const Stmt *s,
 
 mlir::LogicalResult CIRGenFunction::emitLabelStmt(const clang::LabelStmt &s) {
 
-  if (emitLabel(s.getDecl()).failed())
+  if (emitLabel(*s.getDecl()).failed())
     return mlir::failure();
 
-  // IsEHa: not implemented.
-  assert(!(getContext().getLangOpts().EHAsynch && s.isSideEntry()));
+if (getContext().getLangOpts().EHAsynch && s.isSideEntry())
+    getCIRGenModule().errorNYI(s.getSourceRange(), "IsEHa: not implemented.");
 
   return emitStmt(s.getSubStmt(), /*useCurrentScope*/ true);
 }
@@ -443,7 +443,7 @@ CIRGenFunction::emitContinueStmt(const clang::ContinueStmt &s) {
   return mlir::success();
 }
 
-mlir::LogicalResult CIRGenFunction::emitLabel(const clang::LabelDecl *d) {
+mlir::LogicalResult CIRGenFunction::emitLabel(const clang::LabelDecl &d) {
   // Create a new block to tag with a label and add a branch from
   // the current one to it. If the block is empty just call attach it
   // to this label.
@@ -455,11 +455,11 @@ mlir::LogicalResult CIRGenFunction::emitLabel(const clang::LabelDecl *d) {
       mlir::OpBuilder::InsertionGuard guard(builder);
       labelBlock = builder.createBlock(builder.getBlock()->getParent());
     }
-    builder.create<cir::BrOp>(getLoc(d->getSourceRange()), labelBlock);
+    builder.create<cir::BrOp>(getLoc(d.getSourceRange()), labelBlock);
   }
 
   builder.setInsertionPointToEnd(labelBlock);
-  builder.create<cir::LabelOp>(getLoc(d->getSourceRange()), d->getName());
+  builder.create<cir::LabelOp>(getLoc(d.getSourceRange()), d.getName());
   builder.setInsertionPointToEnd(labelBlock);
 
   //  FIXME: emit debug info for labels, incrementProfileCounter
