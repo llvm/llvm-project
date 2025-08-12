@@ -16,6 +16,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
+#include "llvm/Support/raw_ostream.h"
 #include <string>
 
 #define ASSERT_NO_ERROR(x)                                                     \
@@ -61,12 +62,12 @@ private:
 };
 
 template <typename T> static llvm::Expected<T> roundtripJSON(const T &input) {
-  llvm::json::Value value = toJSON(input);
+  std::string encoded;
+  llvm::raw_string_ostream OS(encoded);
+  OS << toJSON(input);
+  llvm::errs() << "Here: " << encoded << "\n";
   llvm::json::Path::Root root;
-  T output;
-  if (!fromJSON(value, output, root))
-    return root.getError();
-  return output;
+  return llvm::json::parse<T>(encoded);
 }
 } // namespace lldb_private
 
