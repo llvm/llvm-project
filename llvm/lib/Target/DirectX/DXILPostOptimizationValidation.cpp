@@ -263,9 +263,7 @@ getRootDescriptorsBindingInfo(const mcdxbc::RootSignatureDesc &RSD,
 }
 
 static void validateDescriptorTables(Module &M,
-                                     const mcdxbc::RootSignatureDesc &RSD,
-                                     dxil::ModuleMetadataInfo &MMI,
-                                     DXILResourceMap &DRM) {
+                                     const mcdxbc::RootSignatureDesc &RSD) {
   for (const mcdxbc::RootParameterInfo &ParamInfo : RSD.ParametersContainer) {
     if (static_cast<dxbc::RootParameterType>(ParamInfo.Header.ParameterType) !=
         dxbc::RootParameterType::DescriptorTable)
@@ -440,7 +438,7 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
 
   if (mcdxbc::RootSignatureDesc *RSD = getRootSignature(RSBI, MMI)) {
     validateRootSignatureBindings(M, *RSD, MMI, DRM);
-    validateDescriptorTables(M, *RSD, MMI, DRM);
+    validateDescriptorTables(M, *RSD);
   }
 }
 
