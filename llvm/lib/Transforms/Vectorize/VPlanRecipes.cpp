@@ -3112,8 +3112,8 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
     const Value *Ptr = getLoadStorePointerOperand(&Ingredient);
     Type *PtrTy = Ptr->getType();
 
-    // If the address value is uniform across all lane, then the address can be
-    // calculated with scalar type and broacast.
+    // If the address value is uniform across all lanes, then the address can be
+    // calculated with scalar type and broadcast.
     if (!vputils::isSingleScalar(getAddr()))
       PtrTy = toVectorTy(PtrTy, VF);
 
