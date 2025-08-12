@@ -36,3 +36,18 @@ entry:
   %1 = select <4 x i1> %0, <4 x float> %x, <4 x float> %y
   ret <4 x float>  %1
 }
+
+define spir_func <4 x float> @opselect_scalar_bool_float4_vec_test(float %a, float %b, <4 x float>  %x, <4 x float>  %y) {
+entry:
+  ; CHECK: %[[#]] = OpFunction %[[#vec4_float_32]] None %[[#]]
+  ; CHECK: %[[#arg0:]] = OpFunctionParameter %[[#float_32]]
+  ; CHECK: %[[#arg1:]] = OpFunctionParameter %[[#float_32]]
+  ; CHECK: %[[#arg2:]] = OpFunctionParameter %[[#vec4_float_32]]
+  ; CHECK: %[[#arg3:]] = OpFunctionParameter %[[#vec4_float_32]]
+  ; CHECK: %[[#fcmp:]] = OpFOrdGreaterThan  %[[#bool]]  %[[#arg0]] %[[#arg1]]
+  ; CHECK: %[[#fselect:]] = OpSelect %[[#vec4_float_32]] %[[#fcmp]] %[[#arg2]] %[[#arg3]]
+  ; CHECK: OpReturnValue %[[#fselect]]
+  %0 = fcmp ogt float %a, %b
+  %1 = select i1 %0, <4 x float> %x, <4 x float> %y
+  ret <4 x float>  %1
+}
