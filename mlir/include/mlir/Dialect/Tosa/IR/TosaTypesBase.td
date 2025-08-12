@@ -13,12 +13,10 @@
 #ifndef TOSA_TYPES_BASE
 #define TOSA_TYPES_BASE
 
-
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/OpBase.td"
 
 include "mlir/Dialect/Tosa/IR/TosaOpBase.td"
-
 
 //===----------------------------------------------------------------------===//
 // Tosa Type Definitions.

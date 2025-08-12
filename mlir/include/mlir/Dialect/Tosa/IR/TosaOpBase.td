@@ -207,7 +207,7 @@ def Tosa_VariableOpBuilder : OpBuilder<
   }]>;
 
 
- // Wrapper over base I32EnumAttr to set common fields.
+// Wrapper over base I32EnumAttr to set common fields.
 class Tosa_I32Enum<string name, string description, list<I32EnumAttrCase> cases>
      : I32EnumAttr<name, description, cases> {
    let genSpecializedAttr = 0;
@@ -275,7 +275,6 @@ def Tosa_ProfileAttr
 
 def Tosa_ProfileArrayAttr
     : TypedArrayAttrBase<Tosa_ProfileAttr, "TOSA profile array attribute">;
-
 
 // The base class for defining op availability dimensions.
 class Availability {
@@ -387,12 +386,12 @@ class Extension<list<I32EnumAttrCase> extensions> : Availability {
 //===----------------------------------------------------------------------===//
 // Defined in `section 3. Enumerations` of the TOSA specification.
 
-def Tosa_RESIZE_BILINEAR          : I32EnumAttrCase<"BILINEAR", 1>;
-def Tosa_RESIZE_NEAREST_NEIGHBOR  : I32EnumAttrCase<"NEAREST_NEIGHBOR", 2>;
+def Tosa_RESIZE_BILINEAR          : I32EnumAttrCase<"NEAREST_NEIGHBOR", 1>;
+def Tosa_RESIZE_NEAREST_NEIGHBOR  : I32EnumAttrCase<"BILINEAR", 2>;
 
 def Tosa_ResizeTypeAttr
     : Tosa_I32EnumAttr<"ResizeType", "Supported resize/upsampling strategies", "resize_type",
-                    [Tosa_RESIZE_BILINEAR, Tosa_RESIZE_NEAREST_NEIGHBOR]>;       
+                    [Tosa_RESIZE_NEAREST_NEIGHBOR, Tosa_RESIZE_BILINEAR]>;       
 
 def Tosa_NANPROPAGATION_PROPAGATE : I32EnumAttrCase<"PROPAGATE", 1>;
 def Tosa_NANPROPAGATION_IGNORE    : I32EnumAttrCase<"IGNORE", 2>;
