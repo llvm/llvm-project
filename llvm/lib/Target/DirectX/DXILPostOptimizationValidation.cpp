@@ -345,7 +345,7 @@ static void validateDescriptorTables(Module &M,
                               (uint64_t)Range.NumDescriptors - (uint64_t)1U;
         if (UpperBound > ~0U)
           reportOverflowingRange(M, Range);
-        
+
         uint64_t AppendingUpperBound =
             (uint64_t)Offset + (uint64_t)Range.NumDescriptors - (uint64_t)1U;
         if (AppendingUpperBound > ~0U)
