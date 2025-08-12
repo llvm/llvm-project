@@ -69,7 +69,7 @@ define half @from_bits(i16 %bits) nounwind {
 }
 
 define i16 @to_bits(half %f) nounwind {
-; ALL-LABEL: to_bits{{"}}:
+; ALL-LABEL: to_bits{{"?}}:
 ; CHECK-NOT: __extend
 ; CHECK-NOT: __trunc
 ; CHECK-NOT: __gnu
@@ -82,7 +82,7 @@ define i16 @to_bits(half %f) nounwind {
 ; https://github.com/llvm/llvm-project/issues/117337 and similar issues.
 
 define half @check_freeze(half %f) nounwind {
-; ALL-LABEL: check_freeze{{"}}:
+; ALL-LABEL: check_freeze{{"?}}:
   %t0 = freeze half %f
   ret half %t0
 }
