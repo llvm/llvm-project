@@ -762,26 +762,23 @@ SBFrame::WasInterrupted SBFrame::FetchVariablesUnlessInterrupted(
   return WasInterrupted::No;
 }
 
-void SBFrame::FetchRecognizedArguments(const SBVariablesOptions &options,
-                                       StackFrame &frame, SBTarget target,
-                                       SBValueList &value_list) {
+/// Populates `value_list` with recognized arguments of `frame` according to
+/// `options`.
+static llvm::SmallVector<ValueObjectSP>
+FetchRecognizedArguments(const SBVariablesOptions &options, StackFrame &frame,
+                         SBTarget target) {
   if (!options.GetIncludeRecognizedArguments(target))
-    return;
+    return {};
   RecognizedStackFrameSP recognized_frame = frame.GetRecognizedFrame();
   if (!recognized_frame)
-    return;
+    return {};
 
   ValueObjectListSP recognized_arg_list =
       recognized_frame->GetRecognizedArguments();
   if (!recognized_arg_list)
-    return;
+    return {};
 
-  const lldb::DynamicValueType use_dynamic = options.GetUseDynamic();
-  for (auto &rec_value_sp : recognized_arg_list->GetObjects()) {
-    SBValue value_sb;
-    value_sb.SetSP(rec_value_sp, use_dynamic);
-    value_list.Append(value_sb);
-  }
+  return llvm::to_vector(recognized_arg_list->GetObjects());
 }
 
 SBValueList SBFrame::GetVariables(const lldb::SBVariablesOptions &options) {
@@ -804,8 +801,14 @@ SBValueList SBFrame::GetVariables(const lldb::SBVariablesOptions &options) {
                                       exe_ctx->GetTargetPtr()->GetDebugger()))
     return value_list;
 
-  FetchRecognizedArguments(options, *frame, SBTarget(exe_ctx->GetTargetSP()),
-                           value_list);
+  const lldb::DynamicValueType use_dynamic = options.GetUseDynamic();
+  llvm::SmallVector<ValueObjectSP> args = FetchRecognizedArguments(
+      options, *frame, SBTarget(exe_ctx->GetTargetSP()));
+  for (ValueObjectSP arg : args) {
+    SBValue value_sb;
+    value_sb.SetSP(arg, use_dynamic);
+    value_list.Append(value_sb);
+  }
   return value_list;
 }
 
