@@ -655,9 +655,9 @@ Expected<ObjectFile *> LLVMSymbolizer::getOrCreateObjectFromArchive(
                                  ArchName.str()};
         Expected<ObjectFile *> Res = findOrCacheObject(
             CacheKey,
-            [O = std::unique_ptr<ObjectFile>(Obj)]() 
-            mutable -> Expected<std::unique_ptr<ObjectFile>> {
-            return std::move(O);
+            [O = std::unique_ptr<ObjectFile>(
+                 Obj)]() mutable -> Expected<std::unique_ptr<ObjectFile>> {
+              return std::move(O);
             },
             ArchivePath.str());
         Binary.release();
