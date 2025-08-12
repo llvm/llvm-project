@@ -517,6 +517,7 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
   case VPInstruction::PtrAdd:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::AnyOf:
+  case VPInstruction::Not:
     return true;
   default:
     return false;
@@ -569,7 +570,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
 
   switch (getOpcode()) {
   case VPInstruction::Not: {
-    Value *A = State.get(getOperand(0));
+    bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
+    Value *A = State.get(getOperand(0), OnlyFirstLaneUsed);
     return Builder.CreateNot(A, Name);
   }
   case Instruction::ExtractElement: {
@@ -810,10 +812,18 @@ Value *VPInstruction::generate(VPTransformState &State) {
         Value *RdxPart = RdxParts[Part];
         if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RK))
           ReducedPartRdx = createMinMaxOp(Builder, RK, ReducedPartRdx, RdxPart);
-        else
-          ReducedPartRdx = Builder.CreateBinOp(
-              (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(RK),
-              RdxPart, ReducedPartRdx, "bin.rdx");
+        else {
+          Instruction::BinaryOps Opcode;
+          // For sub-recurrences, each UF's reduction variable is already
+          // negative, we need to do: reduce.add(-acc_uf0 + -acc_uf1)
+          if (RK == RecurKind::Sub)
+            Opcode = Instruction::Add;
+          else
+            Opcode =
+                (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(RK);
+          ReducedPartRdx =
+              Builder.CreateBinOp(Opcode, RdxPart, ReducedPartRdx, "bin.rdx");
+        }
       }
     }
 
@@ -1120,6 +1130,7 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   case Instruction::Select:
   case Instruction::Or:
   case Instruction::Freeze:
+  case VPInstruction::Not:
     // TODO: Cover additional opcodes.
     return vputils::onlyFirstLaneUsed(this);
   case VPInstruction::ActiveLaneMask:
@@ -3104,9 +3115,10 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
     // Currently, ARM will use the underlying IR to calculate gather/scatter
     // instruction cost.
     const Value *Ptr = getLoadStorePointerOperand(&Ingredient);
+    Type *PtrTy = toVectorTy(Ptr->getType(), VF);
     assert(!Reverse &&
            "Inconsecutive memory access should not have the order.");
-    return Ctx.TTI.getAddressComputationCost(Ty) +
+    return Ctx.TTI.getAddressComputationCost(PtrTy) +
            Ctx.TTI.getGatherScatterOpCost(Opcode, Ty, Ptr, IsMasked, Alignment,
                                           Ctx.CostKind, &Ingredient);
   }
