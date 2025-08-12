@@ -129,7 +129,7 @@ public:
     // We must Grow -- find the size where we'd be 75% full, then round up to
     // the next power of two.
     size_type NewSize = NumEntries + (NumEntries / 3);
-    NewSize = 1 << Log2_32_Ceil(NewSize);
+    NewSize = llvm::bit_ceil(NewSize);
     // Like insert_imp_big, always allocate at least 128 elements.
     NewSize = std::max(128u, NewSize);
     Grow(NewSize);
