@@ -17,12 +17,13 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/YAMLParser.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <optional>
 
 using namespace llvm;
 using namespace mlir;
-
+using namespace testing;
 namespace {
 
 TEST(Remark, TestOutputOptimizationRemark) {
@@ -75,6 +76,45 @@ TEST(Remark, TestOutputOptimizationRemark) {
   auto bufferOrErr = MemoryBuffer::getFile(yamlFile);
   ASSERT_TRUE(static_cast<bool>(bufferOrErr)) << "Failed to open remarks file";
   std::string content = bufferOrErr.get()->getBuffer().str();
+
+  EXPECT_THAT(content, HasSubstr("--- !Passed"));
+  EXPECT_THAT(content, HasSubstr("Pass:            Vectorizer"));
+  EXPECT_THAT(content, HasSubstr("Name:            myPass1"));
+  EXPECT_THAT(content, HasSubstr("Remark:          vectorized loop"));
+  EXPECT_THAT(content, HasSubstr("tripCount:       '128'"));
+
+  EXPECT_THAT(content, HasSubstr("--- !Analysis"));
+  EXPECT_THAT(content, HasSubstr("Pass:            Register"));
+  EXPECT_THAT(content, HasSubstr("Remark:          Kernel uses 168 registers"));
+
+  EXPECT_THAT(content, HasSubstr("--- !Missed"));
+  EXPECT_THAT(content, HasSubstr("Pass:            Unroll"));
+  EXPECT_THAT(content, HasSubstr("Name:            MyPass"));
+  EXPECT_THAT(content,
+              HasSubstr("Reason:          not profitable at this size"));
+  EXPECT_THAT(content,
+              HasSubstr("Suggestion:      'increase unroll factor to >=4'"));
+
+  EXPECT_THAT(content, HasSubstr("--- !Failure"));
+  EXPECT_THAT(content, HasSubstr("Pass:            Unroll"));
+  EXPECT_THAT(content, HasSubstr("Name:            MyPass"));
+  EXPECT_THAT(content,
+              HasSubstr("Reason:          failed due to unsupported pattern"));
+
+  // Also verify document order to avoid false positives.
+  size_t iPassed = content.find("--- !Passed");
+  size_t iAnalysis = content.find("--- !Analysis");
+  size_t iMissed = content.find("--- !Missed");
+  size_t iFailure = content.find("--- !Failure");
+
+  ASSERT_NE(iPassed, std::string::npos);
+  ASSERT_NE(iAnalysis, std::string::npos);
+  ASSERT_NE(iMissed, std::string::npos);
+  ASSERT_NE(iFailure, std::string::npos);
+
+  EXPECT_LT(iPassed, iAnalysis);
+  EXPECT_LT(iAnalysis, iMissed);
+  EXPECT_LT(iMissed, iFailure);
 }
 
 TEST(Remark, TestNoOutputOptimizationRemark) {
