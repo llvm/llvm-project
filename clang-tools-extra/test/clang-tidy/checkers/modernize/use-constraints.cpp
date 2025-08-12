@@ -783,7 +783,21 @@ nonstd::enable_if_t<some_type_trait<T>::value, void> nonstd_enable_if_t() {}
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use C++20 requires constraints instead of enable_if [modernize-use-constraints]
 // CHECK-FIXES: {{^}}void nonstd_enable_if_t() requires some_type_trait<T>::value {}{{$}}
 
-// But only if the non-standard enable_if has the same signature as the standard one.
+template <>
+nonstd::enable_if_t<some_type_trait<int>::value, void> nonstd_enable_if_t<int>() {}
+// FIXME - Support non-dependent enable_ifs.
+
+template <typename T>
+typename nonstd::enable_if<some_type_trait<T>::value>::type nonstd_enable_if_one_param() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use C++20 requires constraints instead of enable_if [modernize-use-constraints]
+// CHECK-FIXES: {{^}}void nonstd_enable_if_one_param() requires some_type_trait<T>::value {}{{$}}
+
+template <typename T>
+nonstd::enable_if_t<some_type_trait<T>::value> nonstd_enable_if_t_one_param() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use C++20 requires constraints instead of enable_if [modernize-use-constraints]
+// CHECK-FIXES: {{^}}void nonstd_enable_if_t_one_param() requires some_type_trait<T>::value {}{{$}}
+
+// No fix-its are offered for an enable_if with a different signature from the standard one.
 namespace boost {
 
 template <typename Condition, typename T = void>
@@ -799,3 +813,12 @@ typename boost::enable_if<some_type_trait<T>, void>::type boost_enable_if() {}
 
 template <typename T>
 boost::enable_if_t<some_type_trait<T>, void> boost_enable_if_t() {}
+
+template <>
+boost::enable_if_t<some_type_trait<int>, void> boost_enable_if_t<int>() {}
+
+template <typename T>
+typename boost::enable_if<some_type_trait<T>>::type boost_enable_if_one_param() {}
+
+template <typename T>
+boost::enable_if_t<some_type_trait<T>> boost_enable_if_t_one_param() {}
