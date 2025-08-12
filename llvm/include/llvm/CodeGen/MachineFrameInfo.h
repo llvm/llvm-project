@@ -827,13 +827,13 @@ public:
 
   ArrayRef<MachineBasicBlock *> getSavePoints() const { return SavePoints; }
   void setSavePoints(ArrayRef<MachineBasicBlock *> NewSavePoints) {
-    SavePoints = SmallVector<MachineBasicBlock *>(NewSavePoints);
+    SavePoints.assign(NewSavePoints.begin(), NewSavePoints.end());
   }
   ArrayRef<MachineBasicBlock *> getRestorePoints() const {
     return RestorePoints;
   }
   void setRestorePoints(ArrayRef<MachineBasicBlock *> NewRestorePoints) {
-    RestorePoints = SmallVector<MachineBasicBlock *>(NewRestorePoints);
+    RestorePoints.assign(NewRestorePoints.begin(), NewRestorePoints.end());
   }
 
   static SmallVector<MachineBasicBlock *> constructSaveRestorePoints(
