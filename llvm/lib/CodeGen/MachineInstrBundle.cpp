@@ -95,7 +95,7 @@ static DebugLoc getDebugLoc(MachineBasicBlock::instr_iterator FirstMI,
 }
 
 static bool containReg(SmallSetVector<Register, 32> LocalDefsV,
-                       BitVector LocalDefsP, Register Reg,
+                       const BitVector &LocalDefsP, Register Reg,
                        const TargetRegisterInfo *TRI) {
   if (Reg.isPhysical()) {
     for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
