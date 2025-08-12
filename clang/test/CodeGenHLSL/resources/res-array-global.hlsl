@@ -32,6 +32,14 @@ void main() {
   // CHECK: %[[Tmp2:.*]] = alloca %"class.hlsl::RWBuffer
   // CHECK: %[[Tmp3:.*]] = alloca %"class.hlsl::RWBuffer
 
+  // NOTE:
+  // Constructor call for explicit binding has "jjij" in the mangled name and the arguments are (register, space, range_size, index, name).
+  // For implicit binding the constructor has "jijj" in the mangled name and the arguments are (space, range_size, index, order_id, name).
+  // The range_size can be -1 for unbounded arrays, and that is the only signed int in the signature.
+  // The order_id argument is a sequential number that is assigned to resources with implicit binding and corresponds to the order in which 
+  // the resources were declared. It is needed because implicit bindings are assigned later on in an LLVM pass that needs to know the order
+  // of the resource declarations.
+
   // Make sure A[2] is translated to a RWBuffer<float> constructor call with range 4 and index 2
   // and DXIL explicit binding (u10, space1)
   // and SPIR-V explicit binding (binding 12, set 2) 

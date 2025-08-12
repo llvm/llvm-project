@@ -8,6 +8,9 @@ RWStructuredBuffer<float> Out;
 
 // Make sure A[GI.x][GI.y] is translated to a RWBuffer<float> constructor call with range 12 and dynamically calculated index
 
+// NOTE:
+// Constructor call for explicit binding has "jjij" in the mangled name and the arguments are (register, space, range_size, index, name).
+
 // CHECK: define internal void @_Z4mainDv3_j(<3 x i32> noundef %GI)
 // CHECK: %[[GI_alloca:.*]] = alloca <3 x i32>, align 16
 // CHECK: %[[Tmp0:.*]] = alloca %"class.hlsl::RWBuffer
