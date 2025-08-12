@@ -139,10 +139,10 @@ int main(int argc, char **argv) {
 
 // FIND-OVERLOAD-FULL-NOT: "Class::overloaded_method"
 // FIND-OVERLOAD-FULL-NOT: "overloaded_method"
-// FIND-OVERLOAD-FULL: Function: id = {{.*}}, name = "{{.*}}Struct::overloaded_method{{.*}}"
-// FIND-OVERLOAD-FULL: FuncType: id = {{.*}}, compiler_type = "int (void)"
-// FIND-OVERLOAD-FULL: FuncType: id = {{.*}}, compiler_type = "int (char)"
-// FIND-OVERLOAD-FULL: FuncType: id = {{.*}}, compiler_type = "int (char, int, ...)"
+// FIND-OVERLOAD-FULL-DAG: Function: id = {{.*}}, name = "{{.*}}Struct::overloaded_method{{.*}}"
+// FIND-OVERLOAD-FULL-DAG: FuncType: id = {{.*}}, compiler_type = "int (void)"
+// FIND-OVERLOAD-FULL-DAG: FuncType: id = {{.*}}, compiler_type = "int (char)"
+// FIND-OVERLOAD-FULL-DAG: FuncType: id = {{.*}}, compiler_type = "int (char, int, ...)"
 
 // FIND-OVERLOAD-BASE-DAG: Function: id = {{.*}}, name = "{{.*}}Struct::overloaded_method{{.*}}"
 // FIND-OVERLOAD-BASE-DAG: FuncType: id = {{.*}}, compiler_type = "int (void)"
