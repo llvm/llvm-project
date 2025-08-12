@@ -644,38 +644,7 @@ struct SaveRestorePointEntry {
   }
 };
 
-using SaveRestorePoints =
-    std::variant<std::vector<SaveRestorePointEntry>, StringValue>;
-
-template <> struct PolymorphicTraits<SaveRestorePoints> {
-
-  static NodeKind getKind(const SaveRestorePoints &SRPoints) {
-    if (std::holds_alternative<std::vector<SaveRestorePointEntry>>(SRPoints))
-      return NodeKind::Sequence;
-    if (std::holds_alternative<StringValue>(SRPoints))
-      return NodeKind::Scalar;
-    llvm_unreachable("Unsupported NodeKind of SaveRestorePoints");
-  }
-
-  static SaveRestorePointEntry &getAsMap(SaveRestorePoints &SRPoints) {
-    llvm_unreachable("SaveRestorePoints can't be represented as Map");
-  }
-
-  static std::vector<SaveRestorePointEntry> &
-  getAsSequence(SaveRestorePoints &SRPoints) {
-    if (!std::holds_alternative<std::vector<SaveRestorePointEntry>>(SRPoints))
-      SRPoints = std::vector<SaveRestorePointEntry>();
-
-    return std::get<std::vector<SaveRestorePointEntry>>(SRPoints);
-  }
-
-  static StringValue &getAsScalar(SaveRestorePoints &SRPoints) {
-    if (!std::holds_alternative<StringValue>(SRPoints))
-      SRPoints = StringValue();
-
-    return std::get<StringValue>(SRPoints);
-  }
-};
+using SaveRestorePoints = std::vector<SaveRestorePointEntry>;
 
 template <> struct MappingTraits<SaveRestorePointEntry> {
   static void mapping(IO &YamlIO, SaveRestorePointEntry &Entry) {
@@ -781,14 +750,8 @@ template <> struct MappingTraits<MachineFrameInfo> {
     YamlIO.mapOptional("isCalleeSavedInfoValid", MFI.IsCalleeSavedInfoValid,
                        false);
     YamlIO.mapOptional("localFrameSize", MFI.LocalFrameSize, (unsigned)0);
-    YamlIO.mapOptional(
-        "savePoint", MFI.SavePoints,
-        SaveRestorePoints(
-            StringValue())); // Don't print it out when it's empty.
-    YamlIO.mapOptional(
-        "restorePoint", MFI.RestorePoints,
-        SaveRestorePoints(
-            StringValue())); // Don't print it out when it's empty.
+    YamlIO.mapOptional("savePoint", MFI.SavePoints);
+    YamlIO.mapOptional("restorePoint", MFI.RestorePoints);
   }
 };
 
