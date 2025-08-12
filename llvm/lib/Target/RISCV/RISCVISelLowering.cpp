@@ -2508,7 +2508,7 @@ static void translateSetCCForBranch(const SDLoc &DL, SDValue &LHS, SDValue &RHS,
           C != INT64_MAX && isInt<5>(C + 1)) {
         // We have a conditional move instruction for SETGE but not SETGT.
         // Convert X > C to X >= C + 1, if (C + 1) is a 5-bit signed immediate.
-        RHS = DAG.getSignedConstant(C+1, DL, RHS.getValueType());
+        RHS = DAG.getSignedConstant(C + 1, DL, RHS.getValueType());
         CC = ISD::SETGE;
         return;
       }
