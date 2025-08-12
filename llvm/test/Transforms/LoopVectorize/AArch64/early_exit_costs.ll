@@ -92,11 +92,11 @@ loop.end:
 
 define i64 @vectorization_not_profitable_due_to_trunc(ptr dereferenceable(800) %src) {
 ; CHECK-LABEL: LV: Checking a loop in 'vectorization_not_profitable_due_to_trunc'
-; CHECK: Calculating cost of work in exit block vector.early.exit:
-; CHECK-NEXT: Cost of 6 for VF 2: EMIT vp<{{.*}}> = first-active-lane ir<{{.*}}>
-; CHECK-NEXT: Cost of 2 for VF 2: EMIT vp<{{.*}}> = extract-lane vp<{{.*}}>, ir<{{.*}}>
-; CHECK: LV: Minimum required TC for runtime checks to be profitable:28
-; CHECK: LV: Found a vectorizable loop (2)
+; CHECK: LV: Selecting VF: 1.
+; CHECK-NEXT: Calculating cost of work in exit block vector.early.exit:
+; CHECK-NEXT: Cost of 1 for VF 1: EMIT vp<%first.active.lane> = first-active-lane ir<%t>
+; CHECK-NEXT: Cost of 0 for VF 1: EMIT vp<%early.exit.value> = extract-lane vp<%first.active.lane>, ir<%l>
+; CHECK-NEXT: LV: Vectorization is possible but not beneficial.
 entry:
   br label %loop.header
 
