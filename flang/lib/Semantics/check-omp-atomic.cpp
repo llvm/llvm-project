@@ -145,7 +145,8 @@ struct ReassocRewriter : public evaluate::rewrite::Identity {
               Expr atom{*sub[atomIdx].ref};
               Expr op1{*sub[(atomIdx + 1) % 3].ref};
               Expr op2{*sub[(atomIdx + 2) % 3].ref};
-              return Expr(TypeS(atom, parenthesize(Expr(TypeS(op1, op2)))));
+              return Expr(
+                  TypeS(atom, Expr(TypeS(std::move(op1), std::move(op2)))));
             } else {
               return Expr(TypeS(s));
             }
@@ -163,11 +164,6 @@ struct ReassocRewriter : public evaluate::rewrite::Identity {
   }
 
 private:
-  template <typename T>
-  evaluate::Expr<T> parenthesize(const evaluate::Expr<T> &x) const {
-    return evaluate::Expr<T>(evaluate::Parentheses<T>(x));
-  }
-
   template <typename T> bool IsAtom(const evaluate::Expr<T> &x) const {
     return IsSameOrConvertOf(evaluate::AsGenericExpr(AsRvalue(x)), atom_);
   }
