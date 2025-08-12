@@ -144,6 +144,9 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
                              const MachineFunction &MF, const VirtRegMap *VRM,
                              const LiveRegMatrix *Matrix) const override;
 
+  Register findVRegWithEncoding(const TargetRegisterClass &RegClass,
+                                uint16_t Encoding) const;
+
   static bool isVRRegClass(const TargetRegisterClass *RC) {
     return RISCVRI::isVRegClass(RC->TSFlags) &&
            RISCVRI::getNF(RC->TSFlags) == 1;
