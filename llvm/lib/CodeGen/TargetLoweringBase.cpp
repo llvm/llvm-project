@@ -1772,7 +1772,7 @@ void llvm::GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
       Flags.setZExt();
 
     for (unsigned i = 0; i < NumParts; ++i)
-      Outs.push_back(ISD::OutputArg(Flags, PartVT, VT, 0, 0));
+      Outs.push_back(ISD::OutputArg(Flags, PartVT, VT, ReturnType, 0, 0));
   }
 }
 
@@ -1924,6 +1924,8 @@ int TargetLoweringBase::IntrinsicIDToISD(Intrinsic::ID ID) const {
     return ISD::FEXP;
   case Intrinsic::exp2:
     return ISD::FEXP2;
+  case Intrinsic::log:
+    return ISD::FLOG;
   default:
     return ISD::DELETED_NODE;
   }

@@ -124,6 +124,9 @@ Non-comprehensive list of changes in this release
   This feature is enabled by default but can be disabled by compiling with
   ``-fno-sanitize-annotate-debug-info-traps``.
 
+- ``__builtin_elementwise_max`` and ``__builtin_elementwise_min`` functions for integer types can
+  now be used in constant expressions.
+
 New Compiler Flags
 ------------------
 - New option ``-fno-sanitize-annotate-debug-info-traps`` added to disable emitting trap reasons into the debug info when compiling with trapping UBSan (e.g. ``-fsanitize-trap=undefined``).
@@ -188,6 +191,7 @@ Bug Fixes to C++ Support
   (``[[assume(expr)]]``) creates temporary objects.
 - Fix the dynamic_cast to final class optimization to correctly handle
   casts that are guaranteed to fail (#GH137518).
+- Fix bug rejecting partial specialization of variable templates with auto NTTPs (#GH118190).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -294,6 +298,7 @@ Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^
 - Fixed a crash in the static analyzer that when the expression in an
   ``[[assume(expr)]]`` attribute was enclosed in parentheses.  (#GH151529)
+- Fixed a crash when parsing ``#embed`` parameters with unmatched closing brackets. (#GH152829)
 
 Improvements
 ^^^^^^^^^^^^
@@ -308,6 +313,7 @@ Sanitizers
 
 Python Binding Changes
 ----------------------
+- Exposed `clang_getCursorLanguage` via `Cursor.language`.
 
 OpenMP Support
 --------------
