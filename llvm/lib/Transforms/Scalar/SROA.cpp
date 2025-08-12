@@ -348,10 +348,9 @@ static void migrateDebugInfo(AllocaInst *OldAlloca, bool IsSplit,
                              uint64_t SliceSizeInBits, Instruction *OldInst,
                              Instruction *Inst, Value *Dest, Value *Value,
                              const DataLayout &DL) {
-  auto MarkerRange = at::getAssignmentMarkers(OldInst);
   auto DVRAssignMarkerRange = at::getDVRAssignmentMarkers(OldInst);
   // Nothing to do if OldInst has no linked dbg.assign intrinsics.
-  if (MarkerRange.empty() && DVRAssignMarkerRange.empty())
+  if (DVRAssignMarkerRange.empty())
     return;
 
   LLVM_DEBUG(dbgs() << "  migrateDebugInfo\n");
@@ -3232,8 +3231,7 @@ private:
       // In theory we should call migrateDebugInfo here. However, we do not
       // emit dbg.assign intrinsics for mem intrinsics storing through non-
       // constant geps, or storing a variable number of bytes.
-      assert(at::getAssignmentMarkers(&II).empty() &&
-             at::getDVRAssignmentMarkers(&II).empty() &&
+      assert(at::getDVRAssignmentMarkers(&II).empty() &&
              "AT: Unexpected link to non-const GEP");
       deleteIfTriviallyDead(OldPtr);
       return false;
@@ -3382,13 +3380,11 @@ private:
       Value *AdjustedPtr = getNewAllocaSlicePtr(IRB, OldPtr->getType());
       if (IsDest) {
         // Update the address component of linked dbg.assigns.
-        auto UpdateAssignAddress = [&](auto *DbgAssign) {
+        for (DbgVariableRecord *DbgAssign : at::getDVRAssignmentMarkers(&II)) {
           if (llvm::is_contained(DbgAssign->location_ops(), II.getDest()) ||
               DbgAssign->getAddress() == II.getDest())
             DbgAssign->replaceVariableLocationOp(II.getDest(), AdjustedPtr);
-        };
-        for_each(at::getAssignmentMarkers(&II), UpdateAssignAddress);
-        for_each(at::getDVRAssignmentMarkers(&II), UpdateAssignAddress);
+        }
         II.setDest(AdjustedPtr);
         II.setDestAlignment(SliceAlign);
       } else {
@@ -3986,8 +3982,7 @@ private:
                          Store->getPointerOperand(), Store->getValueOperand(),
                          DL);
       } else {
-        assert(at::getAssignmentMarkers(Store).empty() &&
-               at::getDVRAssignmentMarkers(Store).empty() &&
+        assert(at::getDVRAssignmentMarkers(Store).empty() &&
                "AT: unexpected debug.assign linked to store through "
                "unbounded GEP");
       }
