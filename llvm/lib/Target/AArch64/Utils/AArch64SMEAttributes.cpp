@@ -93,7 +93,7 @@ void SMEAttrs::addKnownFunctionAttrs(StringRef FuncName,
   case RTLIB::SMEABI_SME_STATE_SIZE:
   case RTLIB::SMEABI_SME_SAVE:
   case RTLIB::SMEABI_SME_RESTORE:
-    KnownAttrs |= (SMEAttrs::SM_Compatible | SMEAttrs::SME_ABI_Routine);
+    KnownAttrs |= SMEAttrs::SM_Compatible | SMEAttrs::SME_ABI_Routine;
     break;
   case RTLIB::SMEABI_ZA_DISABLE:
   case RTLIB::SMEABI_TPIDR2_RESTORE:
