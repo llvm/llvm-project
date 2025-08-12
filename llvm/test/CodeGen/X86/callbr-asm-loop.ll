@@ -4,12 +4,10 @@
 
 ; Test that causes multiple defs of %eax.
 ; FIXME: The testcase hangs with -O1/2/3 enabled.
-define i32 @loop1() {
+define i32 @loop1() nounwind {
 ; CHECK-LABEL: loop1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:    .cfi_offset %esi, -8
 ; CHECK-NEXT:    jmp .LBB0_1
 ; CHECK-NEXT:  .LBB0_1: # %tailrecurse
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -32,7 +30,6 @@ define i32 @loop1() {
 ; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:    movl %edx, %eax
 ; CHECK-NEXT:    popl %esi
-; CHECK-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-NEXT:    retl
 entry:
   br label %tailrecurse
