@@ -25,12 +25,12 @@
 #if defined(LIBC_COPT_STRING_UNSAFE_WIDE_READ)
 #if defined(LIBC_TARGET_ARCH_IS_X86)
 #include "src/string/memory_utils/x86_64/inline_strlen.h"
-#define LIBC_SRC_STRING_MEMORY_UTILS_STRLEN_WIDE_READ string_length_x86_64
-#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
+namespace wide_read_impl = x86;
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64) && defined(__ARM_NEON)
 #include "src/string/memory_utils/aarch64/inline_strlen.h"
-#define LIBC_SRC_STRING_MEMORY_UTILS_STRLEN_WIDE_READ string_length_aarch64
+namespace wide_read_impl = aarch64;
 #else
-#define LIBC_SRC_STRING_MEMORY_UTILS_STRLEN_WIDE_READ string_length_wide_read
+namespace wide_read_impl = default_wide_read;
 #endif
 #endif
 
@@ -65,13 +65,14 @@ template <typename Word> LIBC_INLINE constexpr Word repeat_byte(Word byte) {
 // high bit set will no longer have it set, narrowing the list of bytes which
 // result in non-zero values to just the zero byte.
 template <typename Word> LIBC_INLINE constexpr bool has_zeroes(Word block) {
-  constexpr Word LOW_BITS = repeat_byte<Word>(0x01);
+  constexpr unsigned int LOW_BITS = repeat_byte<Word>(0x01);
   constexpr Word HIGH_BITS = repeat_byte<Word>(0x80);
   Word subtracted = block - LOW_BITS;
   Word inverted = ~block;
   return (subtracted & inverted & HIGH_BITS) != 0;
 }
 
+namespace default_wide_read {
 template <typename Word>
 LIBC_INLINE size_t string_length_wide_read(const char *src) {
   const char *char_ptr = src;
@@ -92,6 +93,7 @@ LIBC_INLINE size_t string_length_wide_read(const char *src) {
   }
   return static_cast<size_t>(char_ptr - src);
 }
+} // namespace default_wide_read
 
 // Returns the length of a string, denoted by the first occurrence
 // of a null terminator.
@@ -102,7 +104,7 @@ template <typename T> LIBC_INLINE size_t string_length(const T *src) {
   // be aligned to a word boundary, so it's the size we use for reading the
   // string a block at a time.
   if constexpr (cpp::is_same_v<T, char>)
-    return LIBC_SRC_STRING_MEMORY_UTILS_STRLEN_WIDE_READ<unsigned int>(src);
+    return wide_read_impl::string_length(src);
 #endif
   size_t length;
   for (length = 0; *src; ++src, ++length)
