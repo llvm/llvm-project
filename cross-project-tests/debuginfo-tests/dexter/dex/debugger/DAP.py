@@ -647,7 +647,9 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
         )
         response = self._await_response(step_req_id)
         if not response["success"]:
-            raise DebuggerException(f"failed to perform debugger action: '{step_request_string}'")
+            raise DebuggerException(
+                f"failed to perform debugger action: '{step_request_string}'"
+            )
         # If we've "stepped" to a breakpoint, then continue to hit the breakpoint properly.
         # NB: This is an issue that only seems relevant to LLDB, but is also harmless outside of LLDB; if it turns out
         #     to cause issues for other debuggers, we can move it to a post-step hook.
