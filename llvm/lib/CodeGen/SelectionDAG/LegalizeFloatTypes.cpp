@@ -1971,8 +1971,6 @@ void DAGTypeLegalizer::ExpandFloatRes_AssertNoFPClass(SDNode *N, SDValue &Lo,
                                                       SDValue &Hi) {
   SDLoc dl(N);
   GetExpandedFloat(N->getOperand(0), Lo, Hi);
-  Lo = DAG.getNode(ISD::AssertNoFPClass, dl, Lo.getValueType(), Lo);
-  Hi = DAG.getNode(ISD::AssertNoFPClass, dl, Hi.getValueType(), Hi);
 }
 
 void DAGTypeLegalizer::ExpandFloatRes_FP_EXTEND(SDNode *N, SDValue &Lo,
