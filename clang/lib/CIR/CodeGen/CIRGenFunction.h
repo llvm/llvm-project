@@ -337,6 +337,15 @@ public:
 
   const clang::LangOptions &getLangOpts() const { return cgm.getLangOpts(); }
 
+  /// True if an insertion point is defined. If not, this indicates that the
+  /// current code being emitted is unreachable.
+  /// FIXME(cir): we need to inspect this and perhaps use a cleaner mechanism
+  /// since we don't yet force null insertion point to designate behavior (like
+  /// LLVM's codegen does) and we probably shouldn't.
+  bool haveInsertPoint() const {
+    return builder.getInsertionBlock() != nullptr;
+  }
+
   // Wrapper for function prototype sources. Wraps either a FunctionProtoType or
   // an ObjCMethodDecl.
   struct PrototypeWrapper {
