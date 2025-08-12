@@ -116,17 +116,16 @@ static void reportOverlappingBinding(Module &M, DXILResourceMap &DRM) {
 }
 
 static void reportOverlappingRegisters(
-    Module &M, const llvm::hlsl::BindingInfoBuilder::Binding &Reported,
-    const llvm::hlsl::BindingInfoBuilder::Binding &Overlaping) {
+    Module &M, const llvm::hlsl::BindingInfoBuilder::Binding &R1,
+    const llvm::hlsl::BindingInfoBuilder::Binding &R2) {
   SmallString<128> Message;
-  raw_svector_ostream OS(Message);
-  OS << "register " << getResourceClassName(Reported.RC)
-     << " (space=" << Reported.Space << ", register=" << Reported.LowerBound
-     << ")" << " is overlapping with" << " register "
-     << getResourceClassName(Overlaping.RC) << " (space=" << Overlaping.Space
-     << ", register=" << Overlaping.LowerBound << ")"
-     << ", verify your root signature definition.";
 
+  raw_svector_ostream OS(Message);
+  OS << "resource " << getResourceClassName(R1.RC) << " (space="<< R1.Space
+     << ", registers=[" << R1.LowerBound << ", "
+     << R1.UpperBound << "]) overlaps with resource " << getResourceClassName(R2.RC)
+     << " (space="<< R2.Space << ", registers=[" 
+     << R2.LowerBound << ", " << R2.UpperBound << "])";
   M.getContext().diagnose(DiagnosticInfoGeneric(Message));
 }
 
