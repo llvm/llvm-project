@@ -1603,7 +1603,6 @@ public:
       return rewriter.notifyMatchFailure(
           op, "tosa.resize is not a pure 1x1->1x1 image operation");
 
-    // TODO(suderman): These string values should be declared the TOSA dialect.
     if (op.getMode() != ResizeType::NEAREST_NEIGHBOR &&
         op.getMode() != ResizeType::BILINEAR)
       return rewriter.notifyMatchFailure(
