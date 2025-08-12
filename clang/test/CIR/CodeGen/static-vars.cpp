@@ -3,6 +3,33 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t1.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t1.ll %s
 
+template<typename T>
+struct implicitly_instantiated {
+  static T member;
+};
+
+template<typename T>
+T implicitly_instantiated<T>::member = 12345;
+
+int use_implicitly_instantiated() {
+  return implicitly_instantiated<int>::member;
+}
+
+// CHECK-DAG: cir.global linkonce_odr comdat @_ZN23implicitly_instantiatedIiE6memberE = #cir.int<12345> : !s32i
+// LLVM-DAG: @_ZN23implicitly_instantiatedIiE6memberE = linkonce_odr global i32 12345, comdat
+
+template<typename T>
+struct explicitly_instantiated {
+    static T member;
+};
+
+template<typename T>
+T explicitly_instantiated<T>::member = 54321;
+
+template int explicitly_instantiated<int>::member;
+// CHECK-DAG: cir.global weak_odr comdat @_ZN23explicitly_instantiatedIiE6memberE = #cir.int<54321> : !s32i
+// LLVM-DAG: @_ZN23explicitly_instantiatedIiE6memberE = weak_odr global i32 54321, comdat
+
 void func1(void) {
   // Should lower default-initialized static vars.
   static int i;
