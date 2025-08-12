@@ -12,6 +12,7 @@
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
+#include "flang/Semantics/openmp-directive-sets.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
@@ -118,19 +119,7 @@ static bool ReturnsDataPointer(const Symbol &symbol) {
 static bool LoopConstructIsSIMD(parser::OpenMPLoopConstruct *ompLoop) {
   auto &begin = std::get<parser::OmpBeginLoopDirective>(ompLoop->t);
   auto directive = std::get<parser::OmpLoopDirective>(begin.t).v;
-  if (directive == llvm::omp::OMPD_simd ||
-      directive == llvm::omp::OMPD_do_simd ||
-      directive == llvm::omp::OMPD_target_simd ||
-      directive == llvm::omp::OMPD_taskloop_simd ||
-      directive == llvm::omp::OMPD_distribute_simd ||
-      directive == llvm::omp::OMPD_teams_distribute_simd ||
-      directive == llvm::omp::OMPD_teams_distribute_parallel_do_simd ||
-      directive == llvm::omp::OMPD_target_teams_distribute_simd ||
-      directive == llvm::omp::OMPD_target_teams_distribute_parallel_do_simd ||
-      directive == llvm::omp::OMPD_parallel_do_simd) {
-    return true;
-  }
-  return false;
+  return llvm::omp::allSimdSet.test(directive);
 }
 
 // Remove non-SIMD OpenMPConstructs once they are parsed.
@@ -191,17 +180,8 @@ void RewriteMutator::OpenMPSimdOnly(
                   &ompStandalone->u)}) {
             auto directive = constr->v.DirId();
             // Scan should only be removed from non-simd loops
-            if (isNonSimdLoopBody && directive == llvm::omp::OMPD_scan) {
-              it = block.erase(it);
-              continue;
-            }
-            if (directive == llvm::omp::OMPD_taskyield ||
-                directive == llvm::omp::OMPD_barrier ||
-                directive == llvm::omp::OMPD_ordered ||
-                directive == llvm::omp::OMPD_target_enter_data ||
-                directive == llvm::omp::OMPD_target_exit_data ||
-                directive == llvm::omp::OMPD_target_update ||
-                directive == llvm::omp::OMPD_taskwait) {
+            if (llvm::omp::simpleStandaloneNonSimdOnlySet.test(directive) ||
+                (isNonSimdLoopBody && directive == llvm::omp::OMPD_scan)) {
               it = block.erase(it);
               continue;
             }
@@ -225,8 +205,9 @@ void RewriteMutator::OpenMPSimdOnly(
             // We can only remove some constructs from a loop when it's _not_ a
             // OpenMP simd loop
             OpenMPSimdOnly(loopBody, /*isNonSimdLoopBody=*/true);
+            auto newDoConstruct = std::move(*doConstruct);
             auto newLoop = parser::ExecutionPartConstruct{
-                parser::ExecutableConstruct{std::move(*doConstruct)}};
+                parser::ExecutableConstruct{std::move(newDoConstruct)}};
             it = block.erase(it);
             block.insert(it, std::move(newLoop));
             continue;
