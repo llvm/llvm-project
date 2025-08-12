@@ -919,6 +919,20 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return true;
   }
 
+  Expected<bool> isEventCompleteImpl(void *EventPtr,
+                                     AsyncInfoWrapperTy &) override {
+    CUevent Event = reinterpret_cast<CUevent>(EventPtr);
+
+    CUresult Ret = cuEventQuery(Event);
+    if (Ret == CUDA_SUCCESS)
+      return true;
+
+    if (Ret == CUDA_ERROR_NOT_READY)
+      return false;
+
+    return Plugin::check(Ret, "error in cuEventQuery: %s");
+  }
+
   /// Synchronize the current thread with the event.
   Error syncEventImpl(void *EventPtr) override {
     CUevent Event = reinterpret_cast<CUevent>(EventPtr);
