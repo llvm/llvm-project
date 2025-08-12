@@ -321,6 +321,8 @@ TEST_F(VPVerifierTest, NonHeaderPHIInHeader) {
                ::testing::internal::GetCapturedStderr().c_str());
 #endif
 #endif
+
+  delete PHINode;
 }
 
 class VPIRVerifierTest : public VPlanTestIRBase {};

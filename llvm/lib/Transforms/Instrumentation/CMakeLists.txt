@@ -16,7 +16,6 @@ add_llvm_component_library(LLVMInstrumentation
   LowerAllowCheckPass.cpp
   PGOCtxProfFlattening.cpp
   PGOCtxProfLowering.cpp
-  PGOEstimateTripCounts.cpp
   PGOForceFunctionAttrs.cpp
   PGOInstrumentation.cpp
   PGOMemOPSizeOpt.cpp

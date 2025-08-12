@@ -1683,7 +1683,9 @@ const EnumEntry<unsigned> ElfHeaderNVPTXFlags[] = {
     ENUM_ENT(EF_CUDA_SM75, "sm_75"),   ENUM_ENT(EF_CUDA_SM80, "sm_80"),
     ENUM_ENT(EF_CUDA_SM86, "sm_86"),   ENUM_ENT(EF_CUDA_SM87, "sm_87"),
     ENUM_ENT(EF_CUDA_SM89, "sm_89"),   ENUM_ENT(EF_CUDA_SM90, "sm_90"),
-    ENUM_ENT(EF_CUDA_SM100, "sm_100"), ENUM_ENT(EF_CUDA_SM120, "sm_120"),
+    ENUM_ENT(EF_CUDA_SM100, "sm_100"), ENUM_ENT(EF_CUDA_SM101, "sm_101"),
+    ENUM_ENT(EF_CUDA_SM103, "sm_103"), ENUM_ENT(EF_CUDA_SM120, "sm_120"),
+    ENUM_ENT(EF_CUDA_SM121, "sm_121"),
 };
 
 const EnumEntry<unsigned> ElfHeaderRISCVFlags[] = {
@@ -2213,7 +2215,7 @@ template <typename ELFT> void ELFDumper<ELFT>::parseDynamicTable() {
     const uint64_t FileSize = Obj.getBufSize();
     const uint64_t DerivedSize =
         (uint64_t)HashTable->nchain * DynSymRegion->EntSize;
-    const uint64_t Offset = (const uint8_t *)DynSymRegion->Addr - Obj.base();
+    const uint64_t Offset = DynSymRegion->Addr - Obj.base();
     if (DerivedSize > FileSize - Offset)
       reportUniqueWarning(
           "the size (0x" + Twine::utohexstr(DerivedSize) +
@@ -3659,8 +3661,10 @@ template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
     ElfFlags = printFlags(e.e_flags, ArrayRef(ElfHeaderXtensaFlags),
                           unsigned(ELF::EF_XTENSA_MACH));
   else if (e.e_machine == EM_CUDA) {
-    ElfFlags = printFlags(e.e_flags, ArrayRef(ElfHeaderNVPTXFlags),
-                          unsigned(ELF::EF_CUDA_SM));
+    unsigned Mask = e.e_ident[ELF::EI_ABIVERSION] == ELF::ELFABIVERSION_CUDA_V1
+                        ? ELF::EF_CUDA_SM
+                        : ELF::EF_CUDA_SM_MASK;
+    ElfFlags = printFlags(e.e_flags, ArrayRef(ElfHeaderNVPTXFlags), Mask);
     if (e.e_ident[ELF::EI_ABIVERSION] == ELF::ELFABIVERSION_CUDA_V1 &&
         (e.e_flags & ELF::EF_CUDA_ACCELERATORS_V1))
       ElfFlags += "a";
@@ -6493,7 +6497,8 @@ void ELFDumper<ELFT>::printSFrameFDEs(
         W,
         formatv("FuncDescEntry [{0}]", std::distance(FDEs.begin(), It)).str());
 
-    W.printHex("PC", Parser.getAbsoluteStartAddress(It));
+    uint64_t FDEStartAddress = Parser.getAbsoluteStartAddress(It);
+    W.printHex("PC", FDEStartAddress);
     W.printHex("Size", It->Size);
     W.printHex("Start FRE Offset", It->StartFREOff);
     W.printNumber("Num FREs", It->NumFREs);
@@ -6523,6 +6528,32 @@ void ELFDumper<ELFT>::printSFrameFDEs(
         It->RepSize);
 
     W.printHex("Padding2", It->Padding2);
+
+    ListScope FREListScope(W, "FREs");
+    Error Err = Error::success();
+    for (const typename SFrameParser<ELFT::Endianness>::FrameRowEntry &FRE :
+         Parser.fres(*It, Err)) {
+      DictScope FREScope(W, "Frame Row Entry");
+      W.printHex(
+          "Start Address",
+          (It->getFDEType() == sframe::FDEType::PCInc ? FDEStartAddress : 0) +
+              FRE.StartAddress);
+      W.printBoolean("Return Address Signed", FRE.Info.isReturnAddressSigned());
+      W.printEnum("Offset Size", FRE.Info.getOffsetSize(),
+                  sframe::getFREOffsets());
+      W.printEnum("Base Register", FRE.Info.getBaseRegister(),
+                  sframe::getBaseRegisters());
+      if (std::optional<int32_t> Off = Parser.getCFAOffset(FRE))
+        W.printNumber("CFA Offset", *Off);
+      if (std::optional<int32_t> Off = Parser.getRAOffset(FRE))
+        W.printNumber("RA Offset", *Off);
+      if (std::optional<int32_t> Off = Parser.getFPOffset(FRE))
+        W.printNumber("FP Offset", *Off);
+      if (ArrayRef<int32_t> Offs = Parser.getExtraOffsets(FRE); !Offs.empty())
+        W.printList("Extra Offsets", Offs);
+    }
+    if (Err)
+      reportWarning(std::move(Err), FileName);
   }
 }
 

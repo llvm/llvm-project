@@ -202,17 +202,62 @@ struct MyConversionPattern : public ConversionPattern {
 
 #### Type Safety
 
-The types of the remapped operands provided to a conversion pattern must be of a
-type expected by the pattern. The expected types of a pattern are determined by
-a provided [TypeConverter](#type-converter). If no type converter is provided,
-the types of the remapped operands are expected to match the types of the
-original operands. If a type converter is provided, the types of the remapped
-operands are expected to be legal as determined by the converter. If the
-remapped operand types are not of an expected type, and a materialization to the
-expected type could not be performed, the pattern fails application before the
-`matchAndRewrite` hook is invoked. This ensures that patterns do not have to
-explicitly ensure type safety, or sanitize the types of the incoming remapped
-operands. More information on type conversion is detailed in the
+The types of the remapped operands provided to a conversion pattern (through
+the adaptor or `ArrayRef` of operands) depend on type conversion rules.
+
+If the pattern was initialized with a [type converter](#type-converter), the
+conversion driver passes values whose types match the legalized types of the
+operands of the matched operation as per the type converter. To that end, the
+conversion driver may insert target materializations to convert the most
+recently mapped values to the expected legalized types. The driver tries to
+reuse existing materializations on a best-effort basis, but this is not
+guaranteed by the infrastructure. If the operand types of the matched op could
+not be legalized, the pattern fails to apply before the `matchAndRewrite` hook
+is invoked.
+
+Example:
+```c++
+// Type converter that converts all FloatTypes to IntegerTypes.
+TypeConverter converter;
+converter.addConversion([](FloatType t) {
+    return IntegerType::get(t.getContext(), t.getWidth());
+});
+
+// Assuming that `MyConversionPattern` was initialized with `converter`.
+struct MyConversionPattern : public ConversionPattern {
+  virtual LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands, /* ... */) const {
+//                                               ^^^^^^^^
+//      If `op` has a FloatType operand, the respective value in `operands`
+//      is guaranteed to have the legalized IntegerType. If another pattern
+//      previously replaced the operand SSA value with an SSA value of the
+//      legalized type (via "replaceOp" or "applySignatureConversion"), you
+//      will get that SSA value directly (unless the replacement value was
+//      also replaced). Otherwise, you will get a materialization to the
+//      legalized type.
+```
+
+If the pattern was initialized without a type converter, the conversion driver
+passes the most recently mapped values to the pattern, excluding any
+materializations. If a value with the same type as the original operand is
+desired, users can directly take the respective operand from the matched
+operation.
+
+Example: When initializing the pattern from the above example without a type
+converter, `operands` contains the most recent replacement values, regardless
+of their types.
+
+Note: When running without a type converter, materializations are intentionally
+excluded from the lookup process because their presence may depend on other
+patterns. Passing materializations would make the conversion infrastructure
+fragile and unpredictable. Moreover, there could be multiple materializations
+to different types. (This can be the case when multiple patterns are running
+with different type converters.) In such a case, it would be unclear which
+materialization to pass.
+
+The above rules ensure that patterns do not have to explicitly ensure type
+safety, or sanitize the types of the incoming remapped operands. More
+information on type conversion is detailed in the
 [dedicated section](#type-conversion) below.
 
 ## Type Conversion

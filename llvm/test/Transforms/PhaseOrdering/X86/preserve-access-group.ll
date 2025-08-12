@@ -63,7 +63,7 @@ define void @test(i32 noundef %nface, i32 noundef %ncell, ptr noalias noundef %f
 ; CHECK-NEXT:    store double [[TMP26]], ptr [[ARRAYIDX4_3]], align 8, !tbaa [[TBAA5]], !llvm.access.group [[ACC_GRP4]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV_NEXT_2]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[TMP0]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ;
 entry:
   %nface.addr = alloca i32, align 4
@@ -79,9 +79,9 @@ entry:
   store ptr %face_cell, ptr %face_cell.addr, align 8, !tbaa !10
   store ptr %x, ptr %x.addr, align 8, !tbaa !10
   store ptr %y, ptr %y.addr, align 8, !tbaa !10
-  call void @llvm.lifetime.start.p0(i64 4, ptr %il) #3
-  call void @llvm.lifetime.start.p0(i64 4, ptr %ir) #3
-  call void @llvm.lifetime.start.p0(i64 4, ptr %iface) #3
+  call void @llvm.lifetime.start.p0(ptr %il) #3
+  call void @llvm.lifetime.start.p0(ptr %ir) #3
+  call void @llvm.lifetime.start.p0(ptr %iface) #3
   store i32 0, ptr %iface, align 4, !tbaa !6
   br label %for.cond
 
@@ -92,7 +92,7 @@ for.cond:
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 
 for.cond.cleanup:
-  call void @llvm.lifetime.end.p0(i64 4, ptr %iface) #3, !llvm.access.group !12
+  call void @llvm.lifetime.end.p0(ptr %iface) #3, !llvm.access.group !12
   br label %for.end
 
 for.body:
@@ -134,12 +134,12 @@ for.inc:
   br label %for.cond, !llvm.loop !15
 
 for.end:
-  call void @llvm.lifetime.end.p0(i64 4, ptr %ir) #3
-  call void @llvm.lifetime.end.p0(i64 4, ptr %il) #3
+  call void @llvm.lifetime.end.p0(ptr %ir) #3
+  call void @llvm.lifetime.end.p0(ptr %il) #3
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 
 define linkonce_odr noundef nonnull align 8 dereferenceable(8) ptr @max(ptr noundef nonnull align 8 dereferenceable(8) %__a, ptr noundef nonnull align 8 dereferenceable(8) %__b) #2 {
 entry:
@@ -170,7 +170,7 @@ return:
   ret ptr %6
 }
 
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture) #1
 
 attributes #0 = { mustprogress "target-cpu" = "skylake-avx512" }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
@@ -197,11 +197,10 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 ; CHECK: [[ACC_GRP4]] = distinct !{}
 ; CHECK: [[TBAA5]] = !{[[META6:![0-9]+]], [[META6]], i64 0}
 ; CHECK: [[META6]] = !{!"double", [[META2]], i64 0}
-; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META8:![0-9]+]], [[META9:![0-9]+]], [[META10:![0-9]+]], [[META11:![0-9]+]], [[META12:![0-9]+]]}
+; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META8:![0-9]+]], [[META9:![0-9]+]], [[META10:![0-9]+]], [[META11:![0-9]+]]}
 ; CHECK: [[META8]] = !{!"llvm.loop.mustprogress"}
 ; CHECK: [[META9]] = !{!"llvm.loop.parallel_accesses", [[ACC_GRP4]]}
-; CHECK: [[META10]] = !{!"llvm.loop.estimated_trip_count"}
-; CHECK: [[META11]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META12]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META8]], [[META9]], [[META10]], [[META12]], [[META11]]}
+; CHECK: [[META10]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK: [[META11]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META8]], [[META9]], [[META11]], [[META10]]}
 ;.

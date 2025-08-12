@@ -26,7 +26,7 @@ readable assembly language representation. This allows LLVM to provide a
 powerful intermediate representation for efficient compiler
 transformations and analysis, while providing a natural means to debug
 and visualize the transformations. The three different forms of LLVM are
-all equivalent. This document describes the human readable
+all equivalent. This document describes the human-readable
 representation and notation.
 
 The LLVM representation aims to be light-weight and low-level while
@@ -5175,6 +5175,8 @@ The following is the syntax for constant expressions:
     Perform the :ref:`trunc operation <i_trunc>` on constants.
 ``ptrtoint (CST to TYPE)``
     Perform the :ref:`ptrtoint operation <i_ptrtoint>` on constants.
+``ptrtoaddr (CST to TYPE)``
+    Perform the :ref:`ptrtoaddr operation <i_ptrtoaddr>` on constants.
 ``inttoptr (CST to TYPE)``
     Perform the :ref:`inttoptr operation <i_inttoptr>` on constants.
     This one is *really* dangerous!
@@ -5580,9 +5582,13 @@ AArch64:
 AMDGPU:
 
 - ``r``: A 32 or 64-bit integer register.
-- ``[0-9]v``: The 32-bit VGPR register, number 0-9.
-- ``[0-9]s``: The 32-bit SGPR register, number 0-9.
-- ``[0-9]a``: The 32-bit AGPR register, number 0-9.
+- ``s``: SGPR register or tuple
+- ``v``: VGPR register or tuple
+- ``a``: AGPR register or tuple. Only valid on gfx908+.
+- ``VA``: VGPR or AGPR register or tuple. Only valid on gfx90a+.
+- ``v[0-9]``: The 32-bit VGPR register, number 0-9.
+- ``s[0-9]``: The 32-bit SGPR register, number 0-9.
+- ``a[0-9]``: The 32-bit AGPR register, number 0-9.
 - ``I``: An integer inline constant in the range from -16 to 64.
 - ``J``: A 16-bit signed integer constant.
 - ``A``: An integer or a floating-point inline constant.
@@ -7959,67 +7965,6 @@ the non-distributed fallback version will have. See
 The attributes in this metadata is added to all followup loops of the
 loop distribution pass. See
 :ref:`Transformation Metadata <transformation-metadata>` for details.
-
-'``llvm.loop.estimated_trip_count``' Metadata
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This metadata records an estimated trip count for the loop.  The first operand
-is the string ``llvm.loop.estimated_trip_count``.  The second operand is an
-integer constant of type ``i32`` or smaller specifying the count, which might be
-omitted for the reasons described below.  For example:
-
-.. code-block:: llvm
-
-   !0 = !{!"llvm.loop.estimated_trip_count", i32 8}
-   !1 = !{!"llvm.loop.estimated_trip_count"}
-
-Purpose
-"""""""
-
-A loop's estimated trip count is an estimate of the average number of loop
-iterations (specifically, the number of times the loop's header executes) each
-time execution reaches the loop.  It is usually only an estimate based on, for
-example, profile data.  The actual number of iterations might vary widely.
-
-The estimated trip count serves as a parameter for various loop transformations
-and typically helps estimate transformation cost.  For example, it can help
-determine how many iterations to peel or how aggressively to unroll.
-
-Initialization and Maintenance
-""""""""""""""""""""""""""""""
-
-The ``pgo-estimate-trip-counts`` pass typically runs immediately after profile
-ingestion to add this metadata to all loops.  It estimates each loop's trip
-count from the loop's ``branch_weights`` metadata.  This way of initially
-estimating trip counts appears to be useful for the passes that consume them.
-
-As passes transform existing loops and create new loops, they must be free to
-update and create ``branch_weights`` metadata to maintain accurate block
-frequencies.  Trip counts estimated from this new ``branch_weights`` metadata
-are not necessarily useful to the passes that consume them.  In general, when
-passes transform and create loops, they should separately estimate new trip
-counts from previously estimated trip counts, and they should record them by
-creating or updating this metadata.  For this or any other work involving
-estimated trip counts, passes should always call
-``llvm::getLoopEstimatedTripCount`` and ``llvm::setLoopEstimatedTripCount``.
-
-Missing Metadata and Values
-"""""""""""""""""""""""""""
-
-If the current implementation of ``pgo-estimate-trip-counts`` cannot estimate a
-trip count from the loop's ``branch_weights`` metadata due to the loop's form or
-due to missing profile data, it creates this metadata for the loop but omits the
-value.  This situation is currently common (e.g., the LLVM IR loop that Clang
-emits for a simple C ``for`` loop).  A later pass (e.g., ``loop-rotate``) might
-modify the loop's form in a way that enables estimating its trip count even if
-those modifications provably never impact the actual number of loop iterations.
-That later pass should then add an appropriate value to the metadata.
-
-However, not all such passes currently do so.  Thus, if this metadata has no
-value, ``llvm::getLoopEstimatedTripCount`` will disregard it and estimate the
-trip count from the loop's ``branch_weights`` metadata.  It does the same when
-the metadata is missing altogether, perhaps because ``pgo-estimate-trip-counts``
-was not specified in a minimal pass list to a tool like ``opt``.
 
 '``llvm.licm.disable``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -12583,6 +12528,59 @@ Example:
       %X = ptrtoint ptr %P to i8                         ; yields truncation on 32-bit architecture
       %Y = ptrtoint ptr %P to i64                        ; yields zero extension on 32-bit architecture
       %Z = ptrtoint <4 x ptr> %P to <4 x i64>; yields vector zero extension for a vector of addresses on 32-bit architecture
+
+.. _i_ptrtoaddr:
+
+'``ptrtoaddr .. to``' Instruction
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      <result> = ptrtoaddr <ty> <value> to <ty2>             ; yields ty2
+
+Overview:
+"""""""""
+
+The '``ptrtoaddr``' instruction converts the pointer or a vector of
+pointers ``value`` to the underlying integer address (or vector of addresses) of
+type ``ty2``. This is different from :ref:`ptrtoint <i_ptrtoint>` in that it
+only operates on the index bits of the pointer and ignores all other bits, and
+does not capture the provenance of the pointer.
+
+Arguments:
+""""""""""
+
+The '``ptrtoaddr``' instruction takes a ``value`` to cast, which must be
+a value of type :ref:`pointer <t_pointer>` or a vector of pointers, and a
+type to cast it to ``ty2``, which must be must be the :ref:`integer <t_integer>`
+type (or vector of integers) matching the pointer index width of the address
+space of ``ty``.
+
+Semantics:
+""""""""""
+
+The '``ptrtoaddr``' instruction converts ``value`` to integer type ``ty2`` by
+interpreting the lowest index-width pointer representation bits as an integer.
+If the address size and the pointer representation size are the same and
+``value`` and ``ty2`` are the same size, then nothing is done (*no-op cast*)
+other than a type change.
+
+The ``ptrtoaddr`` instruction always :ref:`captures the address but not the provenance <pointercapture>`
+of the pointer argument.
+
+Example:
+""""""""
+This example assumes pointers in address space 1 are 64 bits in size with an
+address width of 32 bits (``p1:64:64:64:32`` :ref:`datalayout string<langref_datalayout>`)
+
+.. code-block:: llvm
+
+      %X = ptrtoaddr ptr addrspace(1) %P to i32              ; extracts low 32 bits of pointer
+      %Y = ptrtoaddr <4 x ptr addrspace(1)> %P to <4 x i32>  ; yields vector of low 32 bits for each pointer
+
 
 .. _i_inttoptr:
 
@@ -21350,7 +21348,7 @@ Semantics:
 On some architectures the address of the code to be executed needs to be
 different than the address where the trampoline is actually stored. This
 intrinsic returns the executable address corresponding to ``tramp``
-after performing the required machine specific adjustments. The pointer
+after performing the required machine-specific adjustments. The pointer
 returned can then be :ref:`bitcast and executed <int_trampoline>`.
 
 
@@ -24304,6 +24302,92 @@ Examples:
      %also.r = call <8 x i8> @llvm.masked.load.v8i8.p0(ptr %ptr, i32 2, <8 x i1> %mask, <8 x i8> poison)
 
 
+.. _int_vp_load_ff:
+
+'``llvm.vp.load_ff``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+    declare {<4 x float>, i32} @llvm.vp.load.ff.v4f32.p0(ptr %ptr, <4 x i1> %mask, i32 %evl)
+    declare {<vscale x 2 x i16>, i32} @llvm.vp.load.ff.nxv2i16.p0(ptr %ptr, <vscale x 2 x i1> %mask, i32 %evl)
+    declare {<8 x float>, i32} @llvm.vp.load.ff.v8f32.p1(ptr addrspace(1) %ptr, <8 x i1> %mask, i32 %evl)
+    declare {<vscale x 1 x i64>, i32} @llvm.vp.load.ff.nxv1i64.p6(ptr addrspace(6) %ptr, <vscale x 1 x i1> %mask, i32 %evl)
+
+Overview:
+"""""""""
+
+The '``llvm.vp.load.ff.*``' intrinsic is similar to
+'``llvm.vp.load.*``', but will not trap if there are not ``evl`` readable
+lanes at the pointer. '``ff``' stands for fault-first or fault-only-first.
+
+Arguments:
+""""""""""
+
+The first argument is the base pointer for the load. The second argument is a
+vector of boolean values with the same number of elements as the first return
+type.  The third is the explicit vector length of the operation. The first
+return type and underlying type of the base pointer are the same vector types.
+
+The :ref:`align <attr_align>` parameter attribute can be provided for the first
+argument.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.load.ff``' is designed for reading vector lanes in a single
+IR operation where the number of lanes that can be read is not known and can
+only be determined by looking at the data. This is useful for vectorizing
+strcmp or strlen like loops where the data contains a null terminator. Some
+targets have a fault-only-first load instruction that this intrinsic can be
+lowered to. Other targets may support this intrinsic differently, for example by
+lowering to a single scalar load guarded by ``evl!=0`` and ``mask[0]==1`` and
+indicating only 1 lane could be read.
+
+Like '``llvm.vp.load``', this intrinsic reads memory based on a ``mask`` and an
+``evl``. If ``evl`` is non-zero and the first lane is masked-on, then the
+first lane of the vector needs to be inbounds of an allocation. The remaining
+masked-on lanes with index less than ``evl`` do not need to be inbounds of
+an the same allocation or any allocation.
+
+The second return value from the intrinsic indicates the index of the first
+lane that could not be read for some reason or ``evl`` if all lanes could be
+be read. Lanes at this index or higher in the first return value are
+:ref:`poison value <poisonvalues>`. If ``evl`` is non-zero, the result in the
+second return value must be at least 1, even if the first lane is masked-off.
+
+The second result is usually less than ``evl`` when an exception would occur
+for reading that lane, but it can be reduced for any reason. This facilitates
+emulating this intrinsic when the hardware only supports narrower vector
+types natively or when when hardware does not support fault-only-first loads.
+
+Masked-on lanes that are not inbounds of the allocation that contains the first
+lane are :ref:`poison value <poisonvalues>`. There should be a marker in the
+allocation that indicates where valid data stops such as a null terminator. The
+terminator should be checked for after calling this intrinsic to prevent using
+any lanes past the terminator. Even if second return value is less than
+``evl``, the terminator value may not have been read.
+
+This intrinsic will typically be called in a loop until a terminator is
+found. The second result should be used to indicates how many elements are
+valid to look for the null terminator. If the terminator is not found, the
+pointer should be advanced by the number of elements in the second result and
+the intrinsic called again.
+
+The default alignment is taken as the ABI alignment of the first return
+type as specified by the :ref:`datalayout string<langref_datalayout>`.
+
+Examples:
+"""""""""
+
+.. code-block:: text
+
+     %r = call {<8 x i8>, i32} @llvm.vp.load.ff.v8i8.p0(ptr align 2 %ptr, <8 x i1> %mask, i32 %evl)
+
 .. _int_vp_store:
 
 '``llvm.vp.store``' Intrinsic
@@ -26705,7 +26789,7 @@ Syntax:
 
 ::
 
-      declare void @llvm.lifetime.start(i64 <size>, ptr captures(none) <ptr>)
+      declare void @llvm.lifetime.start(ptr captures(none) <ptr>)
 
 Overview:
 """""""""
@@ -26716,17 +26800,17 @@ object's lifetime.
 Arguments:
 """"""""""
 
-The first argument is a constant integer, which is ignored and will be removed
-in the future.
-
-The second argument is a pointer to an ``alloca`` instruction.
+The argument is either a pointer to an ``alloca`` instruction or a ``poison``
+value.
 
 Semantics:
 """"""""""
 
-The stack-allocated object that ``ptr`` points to is initially marked as dead.
-After '``llvm.lifetime.start``', the stack object is marked as alive and has an
-uninitialized value.
+If ``ptr`` is a ``poison`` value, the intrinsic has no effect.
+
+Otherwise, the stack-allocated object that ``ptr`` points to is initially
+marked as dead. After '``llvm.lifetime.start``', the stack object is marked as
+alive and has an uninitialized value.
 The stack object is marked as dead when either
 :ref:`llvm.lifetime.end <int_lifeend>` to the alloca is executed or the
 function returns.
@@ -26746,7 +26830,7 @@ Syntax:
 
 ::
 
-      declare void @llvm.lifetime.end(i64 <size>, ptr captures(none) <ptr>)
+      declare void @llvm.lifetime.end(ptr captures(none) <ptr>)
 
 Overview:
 """""""""
@@ -26757,16 +26841,16 @@ The '``llvm.lifetime.end``' intrinsic specifies the end of a
 Arguments:
 """"""""""
 
-The first argument is a constant integer, which is ignored and will be removed
-in the future.
-
-The second argument is a pointer to an ``alloca`` instruction.
+The argument is either a pointer to an ``alloca`` instruction or a ``poison``
+value.
 
 Semantics:
 """"""""""
 
-The stack-allocated object that ``ptr`` points to becomes dead after the call
-to this intrinsic.
+If ``ptr`` is a ``poison`` value, the intrinsic has no effect.
+
+Otherwise, the stack-allocated object that ``ptr`` points to becomes dead after
+the call to this intrinsic.
 
 Calling ``llvm.lifetime.end`` on an already dead alloca is no-op.
 
@@ -29443,7 +29527,7 @@ None.
 Semantics:
 """"""""""
 
-This intrinsic is lowered to the target dependent trap instruction. If
+This intrinsic is lowered to the target-dependent trap instruction. If
 the target does not have a trap instruction, this intrinsic will be
 lowered to a call of the ``abort()`` function.
 
