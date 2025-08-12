@@ -7644,9 +7644,11 @@ EpilogueVectorizerEpilogueLoop::emitMinimumVectorEpilogueIterCountCheck(
   BranchInst &BI =
       *BranchInst::Create(Bypass, LoopVectorPreHeader, CheckMinIters);
   if (hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator())) {
-    unsigned MainLoopStep = EPI.MainLoopUF * EPI.MainLoopVF.getKnownMinValue();
+    auto VScale = Cost->getVScaleForTuning();
+    unsigned MainLoopStep =
+        estimateElementCount(EPI.MainLoopVF * EPI.MainLoopUF, VScale);
     unsigned EpilogueLoopStep =
-        EPI.EpilogueUF * EPI.EpilogueVF.getKnownMinValue();
+        estimateElementCount(EPI.EpilogueVF * EPI.EpilogueUF, VScale);
     // We assume the remaining `Count` is equally distributed in
     // [0, MainLoopStep)
     // So the probability for `Count < EpilogueLoopStep` should be
