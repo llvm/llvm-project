@@ -569,7 +569,7 @@ LLVMSymbolizer::getOrCreateObjectPair(const std::string &Path,
   return Res;
 }
 
-object::Binary *LLVMSymbolizer::loadOrGetBinary(const std::string &Path) {
+Expected<object::Binary*> LLVMSymbolizer::loadOrGetBinary(const std::string &Path) {
   auto Pair = BinaryForPath.emplace(Path, OwningBinary<Binary>());
   if (!Pair.second) {
     recordAccess(Pair.first->second);
@@ -579,8 +579,7 @@ object::Binary *LLVMSymbolizer::loadOrGetBinary(const std::string &Path) {
   Expected<OwningBinary<Binary>> BinOrErr = createBinary(Path);
   if (!BinOrErr) {
     BinaryForPath.erase(Pair.first);
-    consumeError(BinOrErr.takeError());
-    return nullptr;
+    return BinOrErr.takeError();
   }
 
   CachedBinary &CachedBin = Pair.first->second;
@@ -617,11 +616,10 @@ Expected<ObjectFile *> LLVMSymbolizer::findOrCacheObject(
 
 Expected<ObjectFile *> LLVMSymbolizer::getOrCreateObjectFromArchive(
     StringRef ArchivePath, StringRef MemberName, StringRef ArchName) {
-  Binary *Bin = loadOrGetBinary(ArchivePath.str());
-  if (!Bin)
-    return createStringError(std::errc::invalid_argument,
-                             "Failed to load archive '%s'",
-                             ArchivePath.str().c_str());
+  Expected<object::Binary*> BinOrErr = loadOrGetBinary(ArchivePath.str());
+  if (!BinOrErr)
+    return BinOrErr.takeError();
+  object::Binary *Bin = *BinOrErr;
 
   object::Archive *Archive = dyn_cast_if_present<object::Archive>(Bin);
   if (!Archive)
@@ -689,10 +687,10 @@ LLVMSymbolizer::getOrCreateObject(const std::string &Path,
     }
   }
 
-  Binary *Bin = loadOrGetBinary(Path);
-  if (!Bin)
-    return createStringError(std::errc::invalid_argument,
-                             "Failed to load object '%s'", Path.c_str());
+  Expected<object::Binary*> BinOrErr = loadOrGetBinary(Path);
+  if (!BinOrErr)
+    return BinOrErr.takeError();
+  object::Binary *Bin = *BinOrErr;
 
   if (MachOUniversalBinary *UB = dyn_cast_or_null<MachOUniversalBinary>(Bin)) {
     ArchiveCacheKey CacheKey{Path, "", ArchName};
