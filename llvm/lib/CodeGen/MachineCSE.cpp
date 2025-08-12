@@ -186,20 +186,48 @@ bool MachineCSEImpl::PerformTrivialCopyPropagation(MachineInstr *MI,
     Register SrcReg = DefMI->getOperand(1).getReg();
     if (!SrcReg.isVirtual())
       continue;
-    // FIXME: We should trivially coalesce subregister copies to expose CSE
-    // opportunities on instructions with truncated operands (see
-    // cse-add-with-overflow.ll). This can be done here as follows:
-    // if (SrcSubReg)
-    //  RC = TRI->getMatchingSuperRegClass(MRI->getRegClass(SrcReg), RC,
-    //                                     SrcSubReg);
-    // MO.substVirtReg(SrcReg, SrcSubReg, *TRI);
-    //
-    // The 2-addr pass has been updated to handle coalesced subregs. However,
-    // some machine-specific code still can't handle it.
-    // To handle it properly we also need a way find a constrained subregister
-    // class given a super-reg class and subreg index.
-    if (DefMI->getOperand(1).getSubReg())
+    unsigned SrcSubReg = DefMI->getOperand(1).getSubReg();
+    if (SrcSubReg) {
+      const TargetRegisterClass *UseRC = MRI->getRegClassOrNull(Reg);
+      const TargetRegisterClass *SrcRC = MRI->getRegClassOrNull(SrcReg);
+      if (!UseRC || !SrcRC)
+        continue;
+
+      const TargetRegisterClass *NewSuperRC =
+          TRI->getMatchingSuperRegClass(SrcRC, UseRC, SrcSubReg);
+      if (!NewSuperRC)
+        continue;
+
+      if (!MRI->constrainRegClass(SrcReg, NewSuperRC))
+        continue;
+
+      // Note: We don't call constrainRegAttrs(SrcReg, Reg) here because
+      // we're replacing uses of Reg with SrcReg:SrcSubReg, not merging
+      // their constraints. The substVirtReg call will handle the substitution.
+
+      LLVM_DEBUG(dbgs() << "Coalescing (subreg): " << *DefMI);
+      LLVM_DEBUG(dbgs() << "***              to: " << *MI);
+
+      // Propagate SrcReg:SrcSubReg of copies to MI.
+      MO.substVirtReg(SrcReg, SrcSubReg, *TRI);
+      MRI->clearKillFlags(SrcReg);
+
+      if (OnlyOneUse) {
+        SmallVector<MachineOperand *, 4> DbgUses;
+        for (auto &U : MRI->use_operands(Reg)) {
+          MachineInstr *UDI = U.getParent();
+          if (UDI->isDebugValue())
+            DbgUses.push_back(&U);
+        }
+        for (MachineOperand *U : DbgUses)
+          U->substVirtReg(SrcReg, SrcSubReg, *TRI);
+
+        DefMI->eraseFromParent();
+        ++NumCoalesces;
+      }
+      Changed = true;
       continue;
+    }
     if (!MRI->constrainRegAttrs(SrcReg, Reg))
       continue;
     LLVM_DEBUG(dbgs() << "Coalescing: " << *DefMI);

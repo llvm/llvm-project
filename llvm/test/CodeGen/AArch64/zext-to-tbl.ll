@@ -1247,12 +1247,12 @@ define void @zext_v16i4_to_v16i32_in_loop(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    cmp x8, #128
 ; CHECK-NEXT:    ubfx x12, x9, #48, #4
 ; CHECK-NEXT:    lsr x10, x9, #52
-; CHECK-NEXT:    ubfx x13, x9, #32, #4
+; CHECK-NEXT:    ubfx x14, x9, #32, #4
 ; CHECK-NEXT:    ubfx w15, w9, #16, #4
 ; CHECK-NEXT:    lsr x11, x9, #36
-; CHECK-NEXT:    lsr w14, w9, #20
+; CHECK-NEXT:    lsr w13, w9, #20
 ; CHECK-NEXT:    fmov s1, w12
-; CHECK-NEXT:    fmov s2, w13
+; CHECK-NEXT:    fmov s2, w14
 ; CHECK-NEXT:    lsr w12, w9, #4
 ; CHECK-NEXT:    fmov s3, w15
 ; CHECK-NEXT:    mov.h v1[1], w10
@@ -1260,7 +1260,7 @@ define void @zext_v16i4_to_v16i32_in_loop(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    mov.h v2[1], w11
 ; CHECK-NEXT:    fmov s4, w10
 ; CHECK-NEXT:    lsr x11, x9, #56
-; CHECK-NEXT:    mov.h v3[1], w14
+; CHECK-NEXT:    mov.h v3[1], w13
 ; CHECK-NEXT:    lsr x10, x9, #40
 ; CHECK-NEXT:    mov.h v4[1], w12
 ; CHECK-NEXT:    lsr w12, w9, #24
@@ -1301,14 +1301,14 @@ define void @zext_v16i4_to_v16i32_in_loop(ptr %src, ptr %dst) {
 ; CHECK-BE-NEXT:    add x8, x8, #16
 ; CHECK-BE-NEXT:    cmp x8, #128
 ; CHECK-BE-NEXT:    ubfx w11, w9, #12, #4
-; CHECK-BE-NEXT:    lsr w14, w9, #28
+; CHECK-BE-NEXT:    lsr w13, w9, #28
 ; CHECK-BE-NEXT:    lsr w10, w9, #8
 ; CHECK-BE-NEXT:    ubfx x15, x9, #44, #4
 ; CHECK-BE-NEXT:    lsr w12, w9, #24
-; CHECK-BE-NEXT:    lsr x13, x9, #40
+; CHECK-BE-NEXT:    lsr x14, x9, #40
 ; CHECK-BE-NEXT:    fmov s1, w11
 ; CHECK-BE-NEXT:    lsr x11, x9, #60
-; CHECK-BE-NEXT:    fmov s2, w14
+; CHECK-BE-NEXT:    fmov s2, w13
 ; CHECK-BE-NEXT:    fmov s3, w15
 ; CHECK-BE-NEXT:    fmov s4, w11
 ; CHECK-BE-NEXT:    lsr w11, w9, #20
@@ -1316,7 +1316,7 @@ define void @zext_v16i4_to_v16i32_in_loop(ptr %src, ptr %dst) {
 ; CHECK-BE-NEXT:    lsr x10, x9, #56
 ; CHECK-BE-NEXT:    mov v2.h[1], w12
 ; CHECK-BE-NEXT:    lsr w12, w9, #4
-; CHECK-BE-NEXT:    mov v3.h[1], w13
+; CHECK-BE-NEXT:    mov v3.h[1], w14
 ; CHECK-BE-NEXT:    mov v4.h[1], w10
 ; CHECK-BE-NEXT:    lsr x10, x9, #36
 ; CHECK-BE-NEXT:    mov v1.h[2], w12
