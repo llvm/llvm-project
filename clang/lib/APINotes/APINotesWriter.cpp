@@ -536,7 +536,8 @@ unsigned getCommonEntityInfoSize(const CommonEntityInfo &CEI) {
 // in on-disk hash tables.
 unsigned getCommonTypeInfoSize(const CommonTypeInfo &CTI) {
   return 2 + (CTI.getSwiftBridge() ? CTI.getSwiftBridge()->size() : 0) + 2 +
-         (CTI.getNSErrorDomain() ? CTI.getNSErrorDomain()->size() : 0) +
+         (CTI.getNSErrorDomain() ? CTI.getNSErrorDomain()->size() : 0) + 2 +
+         (CTI.getSwiftConformance() ? CTI.getSwiftConformance()->size() : 0) +
          getCommonEntityInfoSize(CTI);
 }
 
@@ -554,6 +555,12 @@ void emitCommonTypeInfo(raw_ostream &OS, const CommonTypeInfo &CTI) {
   if (auto nsErrorDomain = CTI.getNSErrorDomain()) {
     writer.write<uint16_t>(nsErrorDomain->size() + 1);
     OS.write(nsErrorDomain->c_str(), CTI.getNSErrorDomain()->size());
+  } else {
+    writer.write<uint16_t>(0);
+  }
+  if (auto conformance = CTI.getSwiftConformance()) {
+    writer.write<uint16_t>(conformance->size() + 1);
+    OS.write(conformance->c_str(), conformance->size());
   } else {
     writer.write<uint16_t>(0);
   }
@@ -1274,7 +1281,6 @@ public:
            2 + (TI.SwiftRetainOp ? TI.SwiftRetainOp->size() : 0) +
            2 + (TI.SwiftReleaseOp ? TI.SwiftReleaseOp->size() : 0) +
            2 + (TI.SwiftDefaultOwnership ? TI.SwiftDefaultOwnership->size() : 0) +
-           2 + (TI.SwiftConformance ? TI.SwiftConformance->size() : 0) +
            3 + getCommonTypeInfoSize(TI);
     // clang-format on
   }
@@ -1325,12 +1331,6 @@ public:
     if (auto DefaultOwnership = TI.SwiftDefaultOwnership) {
       writer.write<uint16_t>(DefaultOwnership->size() + 1);
       OS.write(DefaultOwnership->c_str(), DefaultOwnership->size());
-    } else {
-      writer.write<uint16_t>(0);
-    }
-    if (auto Conformance = TI.SwiftConformance) {
-      writer.write<uint16_t>(Conformance->size() + 1);
-      OS.write(Conformance->c_str(), Conformance->size());
     } else {
       writer.write<uint16_t>(0);
     }
