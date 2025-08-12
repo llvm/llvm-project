@@ -142,9 +142,10 @@ VPBasicBlock *vputils::getFirstLoopHeader(VPlan &Plan, VPDominatorTree &VPDT) {
   return I == DepthFirst.end() ? nullptr : cast<VPBasicBlock>(*I);
 }
 
-std::optional<VPValue *> vputils::getRecipesForUncountedExit(
-    VPlan &Plan, SmallVectorImpl<VPRecipeBase *> &Recipes,
-    SmallVectorImpl<VPReplicateRecipe *> &GEPs) {
+std::optional<VPValue *>
+vputils::getRecipesForUncountedExit(VPlan &Plan,
+                                    SmallVectorImpl<VPRecipeBase *> &Recipes,
+                                    SmallVectorImpl<VPRecipeBase *> &GEPs) {
   using namespace llvm::VPlanPatternMatch;
   // Given a vplan like the following (just including the recipes contributing
   // to loop control exiting here, not the actual work), we're looking to match
@@ -196,16 +197,22 @@ std::optional<VPValue *> vputils::getRecipesForUncountedExit(
     return std::nullopt;
 
   SmallVector<VPValue *, 4> Worklist;
-  bool LoadFound = false;
+  SmallVector<VPWidenLoadRecipe *, 1> Loads;
   Worklist.push_back(UncountedCondition);
   while (!Worklist.empty()) {
     VPValue *V = Worklist.pop_back_val();
 
+    // Any value defined outside the loop does not need to be copied.
     if (V->isDefinedOutsideLoopRegions())
       continue;
+
+    // FIXME: Remove the single user restriction; it's here because we're
+    //        starting with the simplest set of loops we can, and multiple
+    //        users means needing to add PHI nodes in the transform.
     if (V->getNumUsers() > 1)
       return std::nullopt;
 
+    // Walk back through recipes until we find at least one load from memory.
     if (auto *Cmp = dyn_cast<VPWidenRecipe>(V)) {
       if (Cmp->getOpcode() != Instruction::ICmp)
         return std::nullopt;
@@ -213,31 +220,31 @@ std::optional<VPValue *> vputils::getRecipesForUncountedExit(
       Worklist.push_back(Cmp->getOperand(1));
       Recipes.push_back(Cmp);
     } else if (auto *Load = dyn_cast<VPWidenLoadRecipe>(V)) {
-      if (!Load->isConsecutive() || Load->isMasked())
+      // Reject masked loads for the time being; they make the exit condition
+      // more complex.
+      if (Load->isMasked())
         return std::nullopt;
-      Worklist.push_back(Load->getAddr());
-      Recipes.push_back(Load);
-      LoadFound = true;
-    } else if (auto *VecPtr = dyn_cast<VPVectorPointerRecipe>(V)) {
-      Worklist.push_back(VecPtr->getOperand(0));
-      Recipes.push_back(VecPtr);
-    } else if (auto *GEP = dyn_cast<VPReplicateRecipe>(V)) {
-      if (GEP->getNumOperands() != 2)
-        return std::nullopt;
-      if (!match(GEP, m_GetElementPtr(
-                          m_LoopInvVPValue(),
-                          m_ScalarIVSteps(m_Specific(Plan.getCanonicalIV()),
-                                          m_SpecificInt(1),
-                                          m_Specific(&Plan.getVF())))))
-        return std::nullopt;
-      GEPs.push_back(GEP);
-      Recipes.push_back(GEP);
+      Loads.push_back(Load);
     } else
       return std::nullopt;
   }
 
-  if (GEPs.empty() || !LoadFound)
-    return std::nullopt;
+  // Check the loads for exact patterns; for now we only support a contiguous
+  // load based directly on the canonical IV with a step of 1.
+  for (VPWidenLoadRecipe *Load : Loads) {
+    Recipes.push_back(Load);
+    VPValue *GEP = Load->getAddr();
+
+    if (!match(GEP, m_GetElementPtr(
+                        m_LoopInvVPValue(),
+                        m_ScalarIVSteps(m_Specific(Plan.getCanonicalIV()),
+                                        m_SpecificInt(1),
+                                        m_Specific(&Plan.getVF())))))
+      return std::nullopt;
+
+    Recipes.push_back(GEP->getDefiningRecipe());
+    GEPs.push_back(GEP->getDefiningRecipe());
+  }
 
   return UncountedCondition;
 }

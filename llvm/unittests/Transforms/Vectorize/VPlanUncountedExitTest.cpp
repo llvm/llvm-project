@@ -81,7 +81,7 @@ TEST_F(VPUncountedExitTest, FindUncountedExitRecipes) {
   Builder.createNaryOp(VPInstruction::BranchOnCond, {Combined});
 
   SmallVector<VPRecipeBase *, 8> Recipes;
-  SmallVector<VPReplicateRecipe *, 2> GEPs;
+  SmallVector<VPRecipeBase *, 2> GEPs;
 
   std::optional<VPValue *> UncountedCondition =
       vputils::getRecipesForUncountedExit(Plan, Recipes, GEPs);
