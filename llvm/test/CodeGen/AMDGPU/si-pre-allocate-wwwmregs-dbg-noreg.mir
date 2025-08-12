@@ -54,12 +54,7 @@ machineFunctionInfo:
   hasSpilledSGPRs: true
   stackPtrOffsetReg: '$sgpr32'
   occupancy:       16
-  vgprForAGPRCopy: ''
   sgprForEXECCopy: '$sgpr12_sgpr13'
-  longBranchReservedReg: ''
-  hasInitWholeWave: false
-  dynamicVGPRBlockSize: 0
-  scratchReservedForDynamicVGPRs: 0
 body:             |
   bb.0 (%ir-block.0):
     liveins: $sgpr1, $sgpr2, $sgpr3, $sgpr4, $vgpr0, $vgpr1, $vgpr2
