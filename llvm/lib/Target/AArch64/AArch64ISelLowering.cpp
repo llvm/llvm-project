@@ -5282,16 +5282,18 @@ AArch64TargetLowering::LowerLOOP_DEPENDENCE_MASK(SDValue Op,
 
     EVT StoreVT = EVT::getVectorVT(*DAG.getContext(), EltVT,
                                    VT.getVectorMinNumElements(), false);
-    unsigned Offset = StoreVT.getStoreSizeInBits() / 8 * AddrScale;
-    SDValue Addend;
+    if (AddrScale > 0) {
+      unsigned Offset = StoreVT.getStoreSizeInBits() / 8 * AddrScale;
+      SDValue Addend;
 
-    if (VT.isScalableVT())
-      Addend = DAG.getVScale(DL, MVT::i64, APInt(64, Offset));
-    else
-      Addend = DAG.getConstant(Offset, DL, MVT::i64);
+      if (VT.isScalableVT())
+        Addend = DAG.getVScale(DL, MVT::i64, APInt(64, Offset));
+      else
+        Addend = DAG.getConstant(Offset, DL, MVT::i64);
 
-    PtrA = DAG.getNode(ISD::ADD, DL, MVT::i64, PtrA, Addend);
-    PtrB = DAG.getNode(ISD::ADD, DL, MVT::i64, PtrB, Addend);
+      PtrA = DAG.getNode(ISD::ADD, DL, MVT::i64, PtrA, Addend);
+      PtrB = DAG.getNode(ISD::ADD, DL, MVT::i64, PtrB, Addend);
+    }
 
     if (VT.isScalableVT())
       return DAG.getNode(Op.getOpcode(), DL, VT, PtrA, PtrB, Op.getOperand(2));
@@ -5313,16 +5315,16 @@ AArch64TargetLowering::LowerLOOP_DEPENDENCE_MASK(SDValue Op,
   };
 
   if (NumSplits == 0)
-    return LowerToWhile(FullVT, false);
+    return LowerToWhile(FullVT, 0);
 
   SDValue FullVec = DAG.getUNDEF(FullVT);
 
   unsigned NumElementsPerSplit = NumElements / (2 * NumSplits);
+  EVT PartVT =
+      EVT::getVectorVT(*DAG.getContext(), FullVT.getVectorElementType(),
+                       NumElementsPerSplit, FullVT.isScalableVT());
   for (unsigned Split = 0, InsertIdx = 0; Split < NumSplits;
        Split++, InsertIdx += 2) {
-    EVT PartVT =
-        EVT::getVectorVT(*DAG.getContext(), FullVT.getVectorElementType(),
-                         NumElementsPerSplit, FullVT.isScalableVT());
     SDValue Low = LowerToWhile(PartVT, InsertIdx);
     SDValue High = LowerToWhile(PartVT, InsertIdx + 1);
     unsigned InsertIdxLow = InsertIdx * NumElementsPerSplit;

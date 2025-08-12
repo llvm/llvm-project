@@ -1617,21 +1617,9 @@ void DAGTypeLegalizer::SplitVecRes_BITCAST(SDNode *N, SDValue &Lo,
 
 void DAGTypeLegalizer::SplitVecRes_LOOP_DEPENDENCE_MASK(SDNode *N, SDValue &Lo,
                                                         SDValue &Hi) {
-  EVT EltVT;
-  switch (N->getConstantOperandVal(2)) {
-  case 1:
-    EltVT = MVT::i8;
-    break;
-  case 2:
-    EltVT = MVT::i16;
-    break;
-  case 4:
-    EltVT = MVT::i32;
-    break;
-  case 8:
-    EltVT = MVT::i64;
-    break;
-  }
+  unsigned EltSize = N->getConstantOperandVal(2);
+  EVT EltVT = EVT::getIntegerVT(*DAG.getContext(), EltSize * 8);
+
   SDLoc DL(N);
   EVT LoVT, HiVT;
   std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(N->getValueType(0));
@@ -1643,14 +1631,12 @@ void DAGTypeLegalizer::SplitVecRes_LOOP_DEPENDENCE_MASK(SDNode *N, SDValue &Lo,
                                  HiVT.getVectorMinNumElements(), false);
   unsigned Offset = StoreVT.getStoreSizeInBits() / 8;
   SDValue Addend;
-
   if (HiVT.isScalableVT())
     Addend = DAG.getVScale(DL, MVT::i64, APInt(64, Offset));
   else
     Addend = DAG.getConstant(Offset, DL, MVT::i64);
 
   PtrA = DAG.getNode(ISD::ADD, DL, MVT::i64, PtrA, Addend);
-
   PtrB = DAG.getNode(ISD::ADD, DL, MVT::i64, PtrB, Addend);
   Hi = DAG.getNode(N->getOpcode(), DL, HiVT, PtrA, PtrB, N->getOperand(2));
 }
