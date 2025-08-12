@@ -755,6 +755,230 @@ size_t ModuleList::GetIndexForModule(const Module *module) const {
 }
 
 namespace {
+/// A wrapper around ModuleList for shared modules. Provides fast lookups for
+/// file-based ModuleSpec queries.
+class SharedModuleList {
+public:
+  /// Finds all the modules matching the module_spec, and adds them to \p
+  /// matching_module_list.
+  void FindModules(const ModuleSpec &module_spec,
+                   ModuleList &matching_module_list) const {
+    std::lock_guard<std::recursive_mutex> guard(GetMutex());
+    // Try map first for performance - if found, skip expensive full list
+    // search.
+    FindModulesInMap(module_spec, matching_module_list);
+    if (!matching_module_list.IsEmpty())
+      return;
+    m_list.FindModules(module_spec, matching_module_list);
+    // Assert that modules were found in the list but not the map, it's
+    // because the module_spec has no filename or the found module has a
+    // different filename. For example, when searching by UUID and finding a
+    // module with an alias.
+    assert((matching_module_list.IsEmpty() ||
+            module_spec.GetFileSpec().GetFilename().IsEmpty() ||
+            module_spec.GetFileSpec().GetFilename() !=
+                matching_module_list.GetModuleAtIndex(0)
+                    ->GetFileSpec()
+                    .GetFilename()) &&
+           "Search by name not found in SharedModuleList's map");
+  }
+
+  ModuleSP FindModule(const Module &module) {
+
+    std::lock_guard<std::recursive_mutex> guard(GetMutex());
+    if (ModuleSP result = FindModuleInMap(module))
+      return result;
+    return m_list.FindModule(&module);
+  }
+
+  // UUID searches bypass map since UUIDs aren't indexed by filename.
+  ModuleSP FindModule(const UUID &uuid) const {
+    return m_list.FindModule(uuid);
+  }
+
+  void Append(const ModuleSP &module_sp, bool use_notifier) {
+    if (!module_sp)
+      return;
+    std::lock_guard<std::recursive_mutex> guard(GetMutex());
+    m_list.Append(module_sp, use_notifier);
+    AddToMap(module_sp);
+  }
+
+  size_t RemoveOrphans(bool mandatory) {
+    std::unique_lock<std::recursive_mutex> lock(GetMutex(), std::defer_lock);
+    if (mandatory) {
+      lock.lock();
+    } else {
+      if (!lock.try_lock())
+        return 0;
+    }
+    size_t total_count = 0;
+    size_t run_count;
+    do {
+      // Remove indexed orphans first, then remove non-indexed orphans. This
+      // order is important because the shared count will be different if a
+      // module is indexed or not.
+      run_count = RemoveOrphansFromMapAndList();
+      run_count += m_list.RemoveOrphans(mandatory);
+      total_count += run_count;
+      // Because removing orphans might make new orphans, remove from both
+      // containers until a fixed-point is reached.
+    } while (run_count != 0);
+
+    return total_count;
+  }
+
+  bool Remove(const ModuleSP &module_sp, bool use_notifier = true) {
+    if (!module_sp)
+      return false;
+    std::lock_guard<std::recursive_mutex> guard(GetMutex());
+    RemoveFromMap(*module_sp.get());
+    return m_list.Remove(module_sp, use_notifier);
+  }
+
+  void ReplaceEquivalent(const ModuleSP &module_sp,
+                         llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules) {
+    std::lock_guard<std::recursive_mutex> guard(GetMutex());
+    m_list.ReplaceEquivalent(module_sp, old_modules);
+    ReplaceEquivalentInMap(module_sp);
+  }
+
+  bool RemoveIfOrphaned(const Module *module_ptr) {
+    std::lock_guard<std::recursive_mutex> guard(GetMutex());
+    RemoveFromMap(*module_ptr, /*if_orphaned=*/true);
+    return m_list.RemoveIfOrphaned(module_ptr);
+  }
+
+  std::recursive_mutex &GetMutex() const { return m_list.GetMutex(); }
+
+private:
+  ModuleSP FindModuleInMap(const Module &module) const {
+    if (!module.GetFileSpec().GetFilename())
+      return ModuleSP();
+    ConstString name = module.GetFileSpec().GetFilename();
+    auto it = m_name_to_modules.find(name);
+    if (it == m_name_to_modules.end())
+      return ModuleSP();
+    const llvm::SmallVectorImpl<ModuleSP> &vector = it->second;
+    for (const ModuleSP &module_sp : vector) {
+      if (module_sp.get() == &module)
+        return module_sp;
+    }
+    return ModuleSP();
+  }
+
+  void FindModulesInMap(const ModuleSpec &module_spec,
+                        ModuleList &matching_module_list) const {
+    auto it = m_name_to_modules.find(module_spec.GetFileSpec().GetFilename());
+    if (it == m_name_to_modules.end())
+      return;
+    const llvm::SmallVectorImpl<ModuleSP> &vector = it->second;
+    for (const ModuleSP &module_sp : vector) {
+      if (module_sp->MatchesModuleSpec(module_spec))
+        matching_module_list.Append(module_sp);
+    }
+  }
+
+  void AddToMap(const ModuleSP &module_sp) {
+    ConstString name = module_sp->GetFileSpec().GetFilename();
+    if (name.IsEmpty())
+      return;
+    m_name_to_modules[name].push_back(module_sp);
+  }
+
+  void RemoveFromMap(const Module &module, bool if_orphaned = false) {
+    ConstString name = module.GetFileSpec().GetFilename();
+    if (!m_name_to_modules.contains(name))
+      return;
+    llvm::SmallVectorImpl<ModuleSP> &vec = m_name_to_modules[name];
+    for (auto *it = vec.begin(); it != vec.end(); ++it) {
+      if (it->get() == &module) {
+        if (!if_orphaned || it->use_count() == kUseCountOrphaned) {
+          vec.erase(it);
+          break;
+        }
+      }
+    }
+  }
+
+  void ReplaceEquivalentInMap(const ModuleSP &module_sp) {
+    RemoveEquivalentModulesFromMap(module_sp);
+    AddToMap(module_sp);
+  }
+
+  void RemoveEquivalentModulesFromMap(const ModuleSP &module_sp) {
+    ConstString name = module_sp->GetFileSpec().GetFilename();
+    if (name.IsEmpty())
+      return;
+
+    auto it = m_name_to_modules.find(name);
+    if (it == m_name_to_modules.end())
+      return;
+
+    // First remove any equivalent modules. Equivalent modules are modules
+    // whose path, platform path and architecture match.
+    ModuleSpec equivalent_module_spec(module_sp->GetFileSpec(),
+                                      module_sp->GetArchitecture());
+    equivalent_module_spec.GetPlatformFileSpec() =
+        module_sp->GetPlatformFileSpec();
+
+    llvm::SmallVectorImpl<ModuleSP> &vec = it->second;
+    llvm::erase_if(vec, [&equivalent_module_spec](ModuleSP &element) {
+      return element->MatchesModuleSpec(equivalent_module_spec);
+    });
+  }
+
+  /// Remove orphans from the vector and return the removed modules.
+  ModuleList RemoveOrphansFromVector(llvm::SmallVectorImpl<ModuleSP> &vec) {
+    // remove_if moves the elements that match the condition to the end of the
+    // container, and returns an iterator to the first element that was moved.
+    auto *to_remove_start = llvm::remove_if(vec, [](const ModuleSP &module) {
+      return module.use_count() == kUseCountOrphaned;
+    });
+
+    ModuleList to_remove;
+    for (ModuleSP *it = to_remove_start; it != vec.end(); ++it)
+      to_remove.Append(*it);
+
+    vec.erase(to_remove_start, vec.end());
+    return to_remove;
+  }
+
+  /// Remove orphans that exist in both the map and list. This does not remove
+  /// any orphans that exist exclusively on the list.
+  ///
+  /// The mutex must be locked by the caller.
+  int RemoveOrphansFromMapAndList() {
+    // Modules might hold shared pointers to other modules, so removing one
+    // module might orphan other modules. Keep removing modules until
+    // there are no further modules that can be removed.
+    int remove_count = 0;
+    int previous_remove_count;
+    do {
+      previous_remove_count = remove_count;
+      for (auto &[name, vec] : m_name_to_modules) {
+        if (vec.empty())
+          continue;
+        ModuleList to_remove = RemoveOrphansFromVector(vec);
+        remove_count += to_remove.GetSize();
+        m_list.Remove(to_remove);
+      }
+      // Break when fixed-point is reached.
+    } while (previous_remove_count != remove_count);
+
+    return remove_count;
+  }
+
+  ModuleList m_list;
+
+  /// A hash map from a module's filename to all the modules that share that
+  /// filename, for fast module lookups by name.
+  llvm::DenseMap<ConstString, llvm::SmallVector<ModuleSP, 1>> m_name_to_modules;
+
+  /// The use count of a module held only by m_list and m_name_to_modules.
+  static constexpr long kUseCountOrphaned = 2;
+};
+
 struct SharedModuleListInfo {
   ModuleList module_list;
   ModuleListProperties module_list_properties;
