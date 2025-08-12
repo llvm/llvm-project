@@ -340,9 +340,7 @@ static bool requiresSaveVG(const MachineFunction &MF);
 // object offsets have been determined.
 static bool isLikelyToHaveSVEStack(const MachineFunction &MF) {
   auto *AFI = MF.getInfo<AArch64FunctionInfo>();
-  if (MF.getFunction().getCallingConv() ==
-          CallingConv::AArch64_SVE_VectorCall ||
-      AFI->isSVECC())
+  if (AFI->isSVECC())
     return true;
 
   if (AFI->hasCalculatedStackSizeSVE())
