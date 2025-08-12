@@ -186,12 +186,12 @@ bool MachineCSEImpl::PerformTrivialCopyPropagation(MachineInstr *MI,
     Register SrcReg = DefMI->getOperand(1).getReg();
     if (!SrcReg.isVirtual())
       continue;
-    unsigned SrcSubReg = DefMI->getOperand(1).getSubReg();
+    Register SrcSubReg = DefMI->getOperand(1).getSubReg();
+
     if (SrcSubReg) {
-      const TargetRegisterClass *UseRC = MRI->getRegClassOrNull(Reg);
-      const TargetRegisterClass *SrcRC = MRI->getRegClassOrNull(SrcReg);
-      if (!UseRC || !SrcRC)
-        continue;
+      // Handle subregister case
+      const TargetRegisterClass *UseRC = MRI->getRegClass(Reg);
+      const TargetRegisterClass *SrcRC = MRI->getRegClass(SrcReg);
 
       const TargetRegisterClass *NewSuperRC =
           TRI->getMatchingSuperRegClass(SrcRC, UseRC, SrcSubReg);
@@ -201,18 +201,28 @@ bool MachineCSEImpl::PerformTrivialCopyPropagation(MachineInstr *MI,
       if (!MRI->constrainRegClass(SrcReg, NewSuperRC))
         continue;
 
-      // Note: We don't call constrainRegAttrs(SrcReg, Reg) here because
-      // we're replacing uses of Reg with SrcReg:SrcSubReg, not merging
-      // their constraints. The substVirtReg call will handle the substitution.
-
       LLVM_DEBUG(dbgs() << "Coalescing (subreg): " << *DefMI);
       LLVM_DEBUG(dbgs() << "***              to: " << *MI);
 
       // Propagate SrcReg:SrcSubReg of copies to MI.
       MO.substVirtReg(SrcReg, SrcSubReg, *TRI);
-      MRI->clearKillFlags(SrcReg);
+    } else {
+      // Handle normal case
+      if (!MRI->constrainRegAttrs(SrcReg, Reg))
+        continue;
 
-      if (OnlyOneUse) {
+      LLVM_DEBUG(dbgs() << "Coalescing: " << *DefMI);
+      LLVM_DEBUG(dbgs() << "***     to: " << *MI);
+
+      // Propagate SrcReg of copies to MI.
+      MO.setReg(SrcReg);
+    }
+
+    MRI->clearKillFlags(SrcReg);
+
+    if (OnlyOneUse) {
+      if (SrcSubReg) {
+        // For subregister case, update debug uses with substVirtReg
         SmallVector<MachineOperand *, 4> DbgUses;
         for (auto &U : MRI->use_operands(Reg)) {
           MachineInstr *UDI = U.getParent();
@@ -221,27 +231,10 @@ bool MachineCSEImpl::PerformTrivialCopyPropagation(MachineInstr *MI,
         }
         for (MachineOperand *U : DbgUses)
           U->substVirtReg(SrcReg, SrcSubReg, *TRI);
-
-        DefMI->eraseFromParent();
-        ++NumCoalesces;
+      } else {
+        // For normal case, use changeDebugValuesDefReg
+        DefMI->changeDebugValuesDefReg(SrcReg);
       }
-      Changed = true;
-      continue;
-    }
-    if (!MRI->constrainRegAttrs(SrcReg, Reg))
-      continue;
-    LLVM_DEBUG(dbgs() << "Coalescing: " << *DefMI);
-    LLVM_DEBUG(dbgs() << "***     to: " << *MI);
-
-    // Propagate SrcReg of copies to MI.
-    MO.setReg(SrcReg);
-    MRI->clearKillFlags(SrcReg);
-    // Coalesce single use copies.
-    if (OnlyOneUse) {
-      // If (and only if) we've eliminated all uses of the copy, also
-      // copy-propagate to any debug-users of MI, or they'll be left using
-      // an undefined value.
-      DefMI->changeDebugValuesDefReg(SrcReg);
 
       DefMI->eraseFromParent();
       ++NumCoalesces;
