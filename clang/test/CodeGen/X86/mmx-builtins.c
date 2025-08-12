@@ -34,7 +34,7 @@ __m64 test_mm_add_pi8(__m64 a, __m64 b) {
   // CHECK: add <8 x i8> {{%.*}}, {{%.*}}
   return _mm_add_pi8(a, b);
 }
-TEST_CONSTEXPR(match_v8qi(_mm_add_pi8(_mm_setr_pi8(-3, +2, -1, 0, +1, -2, +3, -4), _mm_setr_pi8(-18, +16, -14, +12, -10, +8, +6, -4)), -21, +18, -15, +12, -9, +6, +9, -8));
+TEST_CONSTEXPR(match_v8qi(_mm_add_pi8((__m64)(__v8qs){-3, +2, -1, 0, +1, -2, +3, -4}, (__m64)(__v8qs){-18, +16, -14, +12, -10, +8, +6, -4}), -21, +18, -15, +12, -9, +6, +9, -8));
 
 __m64 test_mm_add_pi16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_add_pi16
@@ -120,7 +120,7 @@ __m64 test_mm_cmpeq_pi8(__m64 a, __m64 b) {
   // CHECK-NEXT: {{%.*}} = sext <8 x i1> [[CMP]] to <8 x i8>
   return _mm_cmpeq_pi8(a, b);
 }
-TEST_CONSTEXPR(match_v8qi(_mm_cmpeq_pi8(_mm_setr_pi8(-3, +2, -1, 0, +1, -2, +3, -4), _mm_setr_pi8(-3, -2, +1, 0, -1, -2, -3, -4)), -1, 0, 0, -1, 0, -1, 0, -1));
+TEST_CONSTEXPR(match_v8qi(_mm_cmpeq_pi8((__m64)(__v8qs){-3, +2, -1, 0, +1, -2, +3, -4}, (__m64)(__v8qs){-3, -2, +1, 0, -1, -2, -3, -4}), -1, 0, 0, -1, 0, -1, 0, -1));
 
 __m64 test_mm_cmpeq_pi16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_cmpeq_pi16
@@ -144,7 +144,7 @@ __m64 test_mm_cmpgt_pi8(__m64 a, __m64 b) {
   // CHECK-NEXT: {{%.*}} = sext <8 x i1> [[CMP]] to <8 x i8>
   return _mm_cmpgt_pi8(a, b);
 }
-TEST_CONSTEXPR(match_v8qi(_mm_cmpgt_pi8(_mm_setr_pi8(-3, +2, -1, 0, +1, -2, +3, -4), _mm_setr_pi8(-3, -2, +1, 0, -1, -2, -3, -4)), 0, -1, 0, 0, -1, 0, -1, 0));
+TEST_CONSTEXPR(match_v8qi(_mm_cmpgt_pi8((__m64)(__v8qs){-3, +2, -1, 0, +1, -2, +3, -4}, (__m64)(__v8qs){-3, -2, +1, 0, -1, -2, -3, -4}), 0, -1, 0, 0, -1, 0, -1, 0));
 
 __m64 test_mm_cmpgt_pi16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_cmpgt_pi16
@@ -690,7 +690,7 @@ __m64 test_mm_sub_pi8(__m64 a, __m64 b) {
   // CHECK: sub <8 x i8> {{%.*}}, {{%.*}}
   return _mm_sub_pi8(a, b);
 }
-TEST_CONSTEXPR(match_v8qi(_mm_sub_pi8(_mm_setr_pi8(-3, +2, -1, 0, +1, -2, +3, -4), _mm_setr_pi8(-18, +16, -14, +12, -10, +8, +6, -4)), +15, -14, +13, -12, +11, -10, -3, 0));
+TEST_CONSTEXPR(match_v8qi(_mm_sub_pi8((__m64)(__v8qs){-3, +2, -1, 0, +1, -2, +3, -4}, (__m64)(__v8qs){-18, +16, -14, +12, -10, +8, +6, -4}), +15, -14, +13, -12, +11, -10, -3, 0));
 
 __m64 test_mm_sub_pi16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_sub_pi16
