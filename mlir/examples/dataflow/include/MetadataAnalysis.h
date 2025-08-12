@@ -10,6 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef MLIR_TUTORIAL_METADATA_ANALYSIS_H_
+#define MLIR_TUTORIAL_METADATA_ANALYSIS_H_
+
 #include "mlir/Analysis/DataFlow/SparseAnalysis.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -72,3 +75,5 @@ public:
 
 } // namespace dataflow
 } // namespace mlir
+
+#endif // MLIR_TUTORIAL_METADATA_ANALYSIS_H_

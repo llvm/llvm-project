@@ -7,5 +7,7 @@ target_link_libraries(dataflow-opt
   PRIVATE
   MLIRIR
   MLIRMlirOptMain
+  MLIRStringDialect
+  MLIRTestStringConstantPropagation
   MLIRTestMetadataAnalysisPass
 )
