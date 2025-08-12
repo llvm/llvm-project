@@ -45,6 +45,7 @@ Improvements and New Features
 
 - The performance of ``map::map(const map&)`` has been improved up to 2.3x
 - The performance of ``map::operator=(const map&)`` has been improved by up to 11x
+- P3372R3: ``constexpr map``(`Github <https://github.com/llvm/llvm-project/issues/128660>`__) (The paper is partially implemented. ``constexpr map`` is implemented in this release)
 
 Deprecations and Removals
 -------------------------
