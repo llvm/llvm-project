@@ -196,14 +196,14 @@ private:
   Expected<ObjectPair> getOrCreateObjectPair(const std::string &Path,
                                              const std::string &ArchName);
 
-  /// Return a pointer to object file at specified path, for a specified
+  /// Return a pointer to the object file at specified path, for a specified
   /// architecture (e.g. if path refers to a Mach-O universal binary, only one
   /// object file from it will be returned).
   Expected<ObjectFile *> getOrCreateObject(const std::string &InputPath,
                                            const std::string &DefaultArchName);
 
-  /// Return a pointer to object file at specified path, for a specified
-  /// architecture that is present inside an archive file
+  /// Return a pointer to the object file at specified path, for a specified
+  /// architecture that is present inside an archive file.
   Expected<ObjectFile *> getOrCreateObjectFromArchive(StringRef ArchivePath,
                                                       StringRef MemberName,
                                                       StringRef ArchName);
@@ -227,25 +227,31 @@ private:
   /// Sum of the sizes of the cached binaries.
   size_t CacheSize = 0;
 
-  /// Parsed object file for path/architecture pair, where "path" refers
-  /// to Mach-O universal binary.
-  std::map<std::pair<std::string, std::string>, std::unique_ptr<ObjectFile>>
-      ObjectForUBPathAndArch;
-
   struct ArchiveCacheKey {
-    std::string ArchivePath; // Storage for StringRef
-    std::string MemberName;  // Storage for StringRef
-    std::string ArchName;    // Storage for StringRef
+    std::string ArchivePath;
+    std::string MemberName;
+    std::string ArchName;
 
-    // Required for map comparison
+    // Required for map comparison.
     bool operator<(const ArchiveCacheKey &Other) const {
       return std::tie(ArchivePath, MemberName, ArchName) <
              std::tie(Other.ArchivePath, Other.MemberName, Other.ArchName);
     }
   };
 
+  /// Parsed object file for path/architecture pair, where "path" refers
+  /// to Mach-O universal binary.
   std::map<ArchiveCacheKey, std::unique_ptr<ObjectFile>>
-      ObjectForArchivePathAndArch;
+      ObjectFileCache;
+
+  /// Helper function to load binary.
+  object::Binary *loadOrGetBinary(const std::string &Path);
+
+  /// Helper function to find and get object
+  Expected<ObjectFile *> findOrCacheObject(
+    const ArchiveCacheKey &Key,
+    llvm::function_ref<Expected<std::unique_ptr<ObjectFile>>()> Loader,
+    const std::string &PathForBinaryCache);
 
   Options Opts;
 

@@ -539,7 +539,7 @@ MACH-O SPECIFIC OPTIONS
   symbolize the object file for a given architecture. You can also specify
   the architecture by writing ``binary_name:arch_name`` in the input (see
   example below). For AIX archives, the format ``archive.a(member.o):arch``
-  is also supported. If the architecture is not specified in either way,
+  is also supported. If the architecture is not specified,
   the address will not be symbolized. Defaults to empty string.
 
   .. code-block:: console

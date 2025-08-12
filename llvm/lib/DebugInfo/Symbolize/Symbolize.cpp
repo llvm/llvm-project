@@ -286,8 +286,7 @@ LLVMSymbolizer::findSymbol(ArrayRef<uint8_t> BuildID, StringRef Symbol,
 }
 
 void LLVMSymbolizer::flush() {
-  ObjectForUBPathAndArch.clear();
-  ObjectForArchivePathAndArch.clear();
+  ObjectFileCache.clear();
   LRUBinaries.clear();
   CacheSize = 0;
   BinaryForPath.clear();
@@ -438,13 +437,13 @@ bool LLVMSymbolizer::findDebugBinary(const std::string &OrigPath,
   SmallString<16> OrigDir(OrigPath);
   llvm::sys::path::remove_filename(OrigDir);
   SmallString<16> DebugPath = OrigDir;
-  // Try relative/path/to/original_binary/debuglink_name
+  // Try relative/path/to/original_binary/debuglink_name.
   llvm::sys::path::append(DebugPath, DebuglinkName);
   if (checkFileCRC(DebugPath, CRCHash)) {
     Result = std::string(DebugPath);
     return true;
   }
-  // Try relative/path/to/original_binary/.debug/debuglink_name
+  // Try relative/path/to/original_binary/.debug/debuglink_name.
   DebugPath = OrigDir;
   llvm::sys::path::append(DebugPath, ".debug", DebuglinkName);
   if (checkFileCRC(DebugPath, CRCHash)) {
@@ -453,17 +452,17 @@ bool LLVMSymbolizer::findDebugBinary(const std::string &OrigPath,
   }
   // Make the path absolute so that lookups will go to
   // "/usr/lib/debug/full/path/to/debug", not
-  // "/usr/lib/debug/to/debug"
+  // "/usr/lib/debug/to/debug".
   llvm::sys::fs::make_absolute(OrigDir);
   if (!Opts.FallbackDebugPath.empty()) {
-    // Try <FallbackDebugPath>/absolute/path/to/original_binary/debuglink_name
+    // Try <FallbackDebugPath>/absolute/path/to/original_binary/debuglink_name.
     DebugPath = Opts.FallbackDebugPath;
   } else {
 #if defined(__NetBSD__)
-    // Try /usr/libdata/debug/absolute/path/to/original_binary/debuglink_name
+    // Try /usr/libdata/debug/absolute/path/to/original_binary/debuglink_name.
     DebugPath = "/usr/libdata/debug";
 #else
-    // Try /usr/lib/debug/absolute/path/to/original_binary/debuglink_name
+    // Try /usr/lib/debug/absolute/path/to/original_binary/debuglink_name.
     DebugPath = "/usr/lib/debug";
 #endif
   }
@@ -512,11 +511,11 @@ std::string LLVMSymbolizer::lookUpGsymFile(const std::string &Path) {
     return !EC && !llvm::sys::fs::is_directory(Status);
   };
 
-  // First, look beside the binary file
+  // First, look beside the binary file.
   if (const auto GsymPath = Path + ".gsym"; CheckGsymFile(GsymPath))
     return GsymPath;
 
-  // Then, look in the directories specified by GsymFileDirectory
+  // Then, look in the directories specified by GsymFileDirectory.
 
   for (const auto &Directory : Opts.GsymFileDirectory) {
     SmallString<16> GsymPath = llvm::StringRef{Directory};
@@ -555,7 +554,15 @@ LLVMSymbolizer::getOrCreateObjectPair(const std::string &Path,
   else if (auto ELFObj = dyn_cast<const ELFObjectFileBase>(Obj))
     DbgObj = lookUpBuildIDObject(Path, ELFObj, ArchName);
   if (!DbgObj)
+  {
+    llvm::outs() << "Path: " << Path << "\n";
+    if (Obj)
+    llvm::outs() << "Obj pointer: " << Obj << "\n";
+  else
+    llvm::outs() << "Obj is null!\n";
+    llvm::outs() << "ArchName: " << ArchName << "\n";
     DbgObj = lookUpDebuglinkObject(Path, Obj, ArchName);
+  }
   if (!DbgObj)
     DbgObj = Obj;
   ObjectPair Res = std::make_pair(Obj, DbgObj);
@@ -570,33 +577,69 @@ LLVMSymbolizer::getOrCreateObjectPair(const std::string &Path,
   return Res;
 }
 
+object::Binary *LLVMSymbolizer::loadOrGetBinary(const std::string &Path) {
+  auto Pair = BinaryForPath.emplace(Path, OwningBinary<Binary>());
+  if (!Pair.second) {
+    recordAccess(Pair.first->second);
+    return Pair.first->second->getBinary();
+  }
+
+  Expected<OwningBinary<Binary>> BinOrErr = createBinary(Path);
+  if (!BinOrErr) {
+    BinaryForPath.erase(Pair.first);
+    consumeError(BinOrErr.takeError());
+    return nullptr;
+  }
+
+  CachedBinary &CachedBin = Pair.first->second;
+  CachedBin = std::move(*BinOrErr);
+  CachedBin.pushEvictor([this, I = Pair.first]() { BinaryForPath.erase(I); });
+  LRUBinaries.push_back(CachedBin);
+  CacheSize += CachedBin.size();
+  return CachedBin->getBinary();
+}
+
+Expected<ObjectFile *> LLVMSymbolizer::findOrCacheObject(
+    const ArchiveCacheKey &Key,
+    llvm::function_ref<Expected<std::unique_ptr<ObjectFile>>()> Loader,
+    const std::string &PathForBinaryCache) {
+
+  auto It = ObjectFileCache.find(Key);
+  if (It != ObjectFileCache.end())
+    return It->second.get();
+
+  Expected<std::unique_ptr<ObjectFile>> ObjOrErr = Loader();
+  if (!ObjOrErr) {
+    ObjectFileCache.emplace(Key, std::unique_ptr<ObjectFile>());
+    return ObjOrErr.takeError();
+  }
+
+  ObjectFile *Res = ObjOrErr->get();
+  auto NewEntry = ObjectFileCache.emplace(Key, std::move(*ObjOrErr));
+  auto CacheIter = BinaryForPath.find(PathForBinaryCache);
+  if (CacheIter != BinaryForPath.end())
+    CacheIter->second.pushEvictor([this, Iter = NewEntry.first]() { 
+    ObjectFileCache.erase(Iter); 
+    });
+  return Res;
+}
+
 Expected<ObjectFile *> LLVMSymbolizer::getOrCreateObjectFromArchive(
     StringRef ArchivePath, StringRef MemberName, StringRef ArchName) {
-  Binary *Bin = nullptr;
-  auto Pair = BinaryForPath.emplace(ArchivePath.str(), OwningBinary<Binary>());
-  if (!Pair.second) {
-    Bin = Pair.first->second->getBinary();
-    recordAccess(Pair.first->second);
-  } else {
-    Expected<OwningBinary<Binary>> ArchiveOrErr = createBinary(ArchivePath);
-    if (!ArchiveOrErr)
-      return ArchiveOrErr.takeError();
-
-    CachedBinary &CachedBin = Pair.first->second;
-    CachedBin = std::move(ArchiveOrErr.get());
-    CachedBin.pushEvictor([this, I = Pair.first]() { BinaryForPath.erase(I); });
-    LRUBinaries.push_back(CachedBin);
-    CacheSize += CachedBin.size();
-    Bin = CachedBin->getBinary();
-  }
+  Binary *Bin = loadOrGetBinary(ArchivePath.str());
+  if (!Bin)
+    return createStringError(std::errc::invalid_argument,
+                             "Failed to load archive '%s'",
+                             ArchivePath.str().c_str());
 
   object::Archive *Archive = dyn_cast_if_present<object::Archive>(Bin);
   if (!Archive)
-    return errorCodeToError(object_error::invalid_file_type);
+    return createStringError(std::errc::invalid_argument,
+                             "'%s' is not a valid archive",
+                             ArchivePath.str().c_str());
 
   Error Err = Error::success();
-
-  // On AIX, archives can contain multiple members with same name but different
+  // On AIX, archives can contain multiple members with the same name but different
   // types. We need to check all matches and find one that matches both name and
   // architecture.
   for (auto &Child : Archive->children(Err, /*SkipInternal=*/true)) {
@@ -616,27 +659,27 @@ Expected<ObjectFile *> LLVMSymbolizer::getOrCreateObjectFromArchive(
         RequestedTriple.setArch(Triple::getArchTypeForLLVMName(ArchName));
         if (ObjArch != RequestedTriple.getArch())
           continue;
+
         ArchiveCacheKey CacheKey{ArchivePath.str(), MemberName.str(),
                                  ArchName.str()};
-        auto I = ObjectForArchivePathAndArch.find(CacheKey);
-        if (I != ObjectForArchivePathAndArch.end())
-          return I->second.get();
-
-        auto CachedObj = std::unique_ptr<ObjectFile>(Obj);
-        auto NewEntry =
-            ObjectForArchivePathAndArch.emplace(CacheKey, std::move(CachedObj));
+        Expected<ObjectFile *> Res = findOrCacheObject(
+          CacheKey,
+          [O = std::unique_ptr<ObjectFile>(Obj)]() 
+          mutable -> Expected<std::unique_ptr<ObjectFile>> {
+          return std::move(O);
+          },
+          ArchivePath.str());
         Binary.release();
-        BinaryForPath.find(ArchivePath.str())
-            ->second.pushEvictor([this, Iter = NewEntry.first]() {
-              ObjectForArchivePathAndArch.erase(Iter);
-            });
-        return NewEntry.first->second.get();
+        return Res;
       }
     }
   }
   if (Err)
     return std::move(Err);
-  return errorCodeToError(object_error::arch_not_found);
+  return createStringError(std::errc::invalid_argument,
+                           "No matching member '%s' with arch '%s' in '%s'",
+                           MemberName.str().c_str(), ArchName.str().c_str(),
+                           ArchivePath.str().c_str());
 }
 
 Expected<ObjectFile *>
@@ -655,45 +698,19 @@ LLVMSymbolizer::getOrCreateObject(const std::string &Path,
     }
   }
 
-  Binary *Bin = nullptr;
-  auto Pair = BinaryForPath.emplace(Path, OwningBinary<Binary>());
-  if (!Pair.second) {
-    Bin = Pair.first->second->getBinary();
-    recordAccess(Pair.first->second);
-  } else {
-    Expected<OwningBinary<Binary>> BinOrErr = createBinary(Path);
-    if (!BinOrErr)
-      return BinOrErr.takeError();
-
-    CachedBinary &CachedBin = Pair.first->second;
-    CachedBin = std::move(BinOrErr.get());
-    CachedBin.pushEvictor([this, I = Pair.first]() { BinaryForPath.erase(I); });
-    LRUBinaries.push_back(CachedBin);
-    CacheSize += CachedBin.size();
-    Bin = CachedBin->getBinary();
-  }
-
+  Binary *Bin = loadOrGetBinary(Path);
   if (!Bin)
-    return static_cast<ObjectFile *>(nullptr);
+    return createStringError(std::errc::invalid_argument,
+                             "Failed to load object '%s'", Path.c_str());
 
   if (MachOUniversalBinary *UB = dyn_cast_or_null<MachOUniversalBinary>(Bin)) {
-    auto I = ObjectForUBPathAndArch.find(std::make_pair(Path, ArchName));
-    if (I != ObjectForUBPathAndArch.end())
-      return I->second.get();
-
-    Expected<std::unique_ptr<ObjectFile>> ObjOrErr =
-        UB->getMachOObjectForArch(ArchName);
-    if (!ObjOrErr) {
-      ObjectForUBPathAndArch.emplace(std::make_pair(Path, ArchName),
-                                     std::unique_ptr<ObjectFile>());
-      return ObjOrErr.takeError();
-    }
-    ObjectFile *Res = ObjOrErr->get();
-    auto Pair = ObjectForUBPathAndArch.emplace(std::make_pair(Path, ArchName),
-                                               std::move(ObjOrErr.get()));
-    BinaryForPath.find(Path)->second.pushEvictor(
-        [this, Iter = Pair.first]() { ObjectForUBPathAndArch.erase(Iter); });
-    return Res;
+    ArchiveCacheKey CacheKey{Path, "", ArchName};
+    return findOrCacheObject(
+        CacheKey,
+        [UB, ArchName]() -> Expected<std::unique_ptr<ObjectFile>> {
+          return UB->getMachOObjectForArch(ArchName);
+        },
+        Path);
   }
   if (Bin->isObject()) {
     return cast<ObjectFile>(Bin);
@@ -789,7 +806,7 @@ LLVMSymbolizer::getOrCreateModuleInfo(StringRef ModuleName) {
         if (auto Err = loadDataForEXE(ReaderType, Objects.first->getFileName(),
                                       Session)) {
           Modules.emplace(ModuleName, std::unique_ptr<SymbolizableModule>());
-          // Return along the PDB filename to provide more context
+          // Return along the PDB filename to provide more context.
           return createFileError(PDBFileName, std::move(Err));
         }
         Context.reset(new PDBContext(*CoffObject, std::move(Session)));
@@ -830,7 +847,7 @@ LLVMSymbolizer::getOrCreateModuleInfo(const ObjectFile &Obj) {
     Context = BTFContext::create(Obj);
   else
     Context = DWARFContext::create(Obj);
-  // FIXME: handle COFF object with PDB info to use PDBContext
+  // FIXME: handle COFF object with PDB info to use PDBContext.
   return createModuleInfo(&Obj, std::move(Context), ObjName);
 }
 
