@@ -8,7 +8,7 @@ entry:
   %2 = call token (i32, i32, ptr, ptr, ptr, ptr, ...) @llvm.coro.id.retcon.once(i32 32, i32 8, ptr %0, ptr @prototype, ptr @swift_coroFrameAlloc, ptr @free, i64 123)
   %3 = call ptr @llvm.coro.begin(token %2, ptr null)
   call swiftcc void @marker(i32 1000)
-  call void @llvm.lifetime.start.p0(i64 40, ptr %call.aggresult)
+  call void @llvm.lifetime.start.p0(ptr %call.aggresult)
   call swiftcc void @val(ptr noalias nocapture sret(<{ i64, i64, i64, i64, i64 }>) %call.aggresult)
   %call.aggresult.elt = getelementptr inbounds <{ i64, i64, i64, i64, i64 }>, ptr %call.aggresult, i32 0, i32 0
   %4 = load i64, ptr %call.aggresult.elt, align 8
@@ -20,7 +20,7 @@ entry:
   %7 = load i64, ptr %call.aggresult.elt3, align 8
   %call.aggresult.elt4 = getelementptr inbounds <{ i64, i64, i64, i64, i64 }>, ptr %call.aggresult, i32 0, i32 4
   %8 = load i64, ptr %call.aggresult.elt4, align 8
-  call void @llvm.lifetime.end.p0(i64 40, ptr %call.aggresult)
+  call void @llvm.lifetime.end.p0(ptr %call.aggresult)
   %9 = call i1 (...) @llvm.coro.suspend.retcon.i1()
   br i1 %9, label %11, label %10
 

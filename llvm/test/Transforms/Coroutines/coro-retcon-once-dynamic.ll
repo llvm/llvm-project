@@ -139,7 +139,7 @@ define swiftcorocc { ptr, ptr } @big_types(ptr noalias %frame, ptr swiftcoro %al
     ptr nonnull @deallocate
   )
   %handle = tail call ptr @llvm.coro.begin(token %id, ptr null)
-  call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %element_addr)
+  call void @llvm.lifetime.start.p0(ptr nonnull %element_addr)
   %vec_original = load <32 x i8>, ptr %vec_addr, align 32
   %vec_stk = alloca <32 x i8>, align 32
   store <32 x i8> %vec_original, ptr %vec_stk, align 32
@@ -152,7 +152,7 @@ define swiftcorocc { ptr, ptr } @big_types(ptr noalias %frame, ptr swiftcoro %al
   %vec_original_3 = load <32 x i8>, ptr %vec_stk, align 32
   %vec_modified = insertelement <32 x i8> %vec_original_3, i8 %element_modified, i32 %index32
   store <32 x i8> %vec_modified, ptr %vec_addr, align 32
-  call void @llvm.lifetime.end.p0(i64 1, ptr nonnull %element_addr)
+  call void @llvm.lifetime.end.p0(ptr nonnull %element_addr)
   call i1 @llvm.coro.end(ptr %handle, i1 false, token none)
   unreachable
 }
