@@ -168,15 +168,16 @@ reportDescriptorTableMixingTypes(Module &M, uint32_t Location,
   M.getContext().diagnose(DiagnosticInfoGeneric(Message));
 }
 
-static void reportOverlowingRange(Module &M, const dxbc::RTS0::v2::DescriptorRange &Range) {
+static void
+reportOverlowingRange(Module &M, const dxbc::RTS0::v2::DescriptorRange &Range) {
   SmallString<128> Message;
   raw_svector_ostream OS(Message);
-  OS << "Cannot append range with implicit lower " 
-      << "bound after an unbounded range "
-      << getResourceClassName(toResourceClass(static_cast<dxbc::DescriptorRangeType>(Range.RangeType)))
-      << "(register=" << Range.BaseShaderRegister << ", space=" << 
-      Range.RegisterSpace
-      << ") exceeds maximum allowed value.";
+  OS << "Cannot append range with implicit lower "
+     << "bound after an unbounded range "
+     << getResourceClassName(toResourceClass(
+            static_cast<dxbc::DescriptorRangeType>(Range.RangeType)))
+     << "(register=" << Range.BaseShaderRegister
+     << ", space=" << Range.RegisterSpace << ") exceeds maximum allowed value.";
   M.getContext().diagnose(DiagnosticInfoGeneric(Message));
 }
 
@@ -261,8 +262,6 @@ getRootDescriptorsBindingInfo(const mcdxbc::RootSignatureDesc &RSD,
   return RDs;
 }
 
-
-
 static void validateDescriptorTables(Module &M,
                                      const mcdxbc::RootSignatureDesc &RSD,
                                      dxil::ModuleMetadataInfo &MMI,
@@ -282,30 +281,31 @@ static void validateDescriptorTables(Module &M,
 
     uint64_t AppendingOffset = 0;
 
-
     for (const dxbc::RTS0::v2::DescriptorRange &Range : Table.Ranges) {
       dxbc::DescriptorRangeType RangeType =
           static_cast<dxbc::DescriptorRangeType>(Range.RangeType);
-      
+
       uint64_t Offset = AppendingOffset;
-      if(Range.OffsetInDescriptorsFromTableStart != ~0U)
+      if (Range.OffsetInDescriptorsFromTableStart != ~0U)
         Offset = Range.OffsetInDescriptorsFromTableStart;
-      
-      if(Offset > ~0U)
+
+      if (Offset > ~0U)
         reportOverlowingRange(M, Range);
-      if(Range.NumDescriptors == ~0U) {
+      if (Range.NumDescriptors == ~0U) {
         AppendingOffset = (uint64_t)~0U + (uint64_t)1ULL;
-      } else { 
-        uint64_t UpperBound = (uint64_t)Range.BaseShaderRegister + (uint64_t)Range.NumDescriptors - (uint64_t)1U;
-        if(UpperBound > ~0U)
+      } else {
+        uint64_t UpperBound = (uint64_t)Range.BaseShaderRegister +
+                              (uint64_t)Range.NumDescriptors - (uint64_t)1U;
+        if (UpperBound > ~0U)
           reportOverlowingRange(M, Range);
 
-        uint64_t AppendingUpperBound = (uint64_t)Offset + (uint64_t)Range.NumDescriptors - (uint64_t)1U;
-        if(AppendingUpperBound > ~0U)
+        uint64_t AppendingUpperBound =
+            (uint64_t)Offset + (uint64_t)Range.NumDescriptors - (uint64_t)1U;
+        if (AppendingUpperBound > ~0U)
           reportOverlowingRange(M, Range);
         AppendingOffset = Offset + Range.NumDescriptors;
       }
-      
+
       if (RangeType == dxbc::DescriptorRangeType::Sampler) {
         HasSampler = true;
       } else {
