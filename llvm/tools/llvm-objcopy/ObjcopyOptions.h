@@ -54,7 +54,7 @@ parseStripOptions(ArrayRef<const char *> ArgsArr,
 
 // parseDumpOffloadBundle reads a URI as a string and extracts the raw memory into a
 // code object file named from the URI string given.
-static Expected<StringRef> parseDumpOffloadBundle(StringRef URI);
+Expected<StringRef> parseDumpOffloadBundle(StringRef URI);
 
 } // namespace objcopy
 } // namespace llvm

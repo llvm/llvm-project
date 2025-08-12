@@ -286,13 +286,11 @@ static Expected<uint8_t> parseVisibilityType(StringRef VisType) {
   return type;
 }
 
-//static void llvm::objcopy::parseDumpOffloadBundle(StringRef URI) {
-static Expected<StringRef> llvm::objcopy::parseDumpOffloadBundle(StringRef URI) {
+Expected<StringRef> llvm::objcopy::parseDumpOffloadBundle(StringRef URI) {
   if (Error Err = object::extractOffloadBundleByURI(URI))
-    //errs() << "Failed to extract from URI.";
-    return createStringError(errc::invalid_argument,"Failed to extract from URI");
-
-   return URI;
+    return createStringError(errc::invalid_argument,
+                             "failed to extract from URI");
+  return URI;
 }
 
 namespace {
@@ -1584,11 +1582,10 @@ objcopy::parseStripOptions(ArrayRef<const char *> RawArgsArr,
     return createStringError(errc::invalid_argument,
                              "no input file specified");
 
-  if (Positional.size() > 1 && InputArgs.hasArg(STRIP_output)) {
+  if (Positional.size() > 1 && InputArgs.hasArg(STRIP_output))
     return createStringError(
         errc::invalid_argument,
         "multiple input files cannot be used in combination with -o");
-  }
 
   if (InputArgs.hasArg(STRIP_regex) && InputArgs.hasArg(STRIP_wildcard))
     return createStringError(errc::invalid_argument,
