@@ -141,8 +141,9 @@ static CXXConstructorDecl *findResourceConstructorDecl(ASTContext &AST,
 
 static Value *buildNameForResource(llvm::StringRef BaseName,
                                    CodeGenModule &CGM) {
-  llvm::SmallString<64> GlobalName = { BaseName, ".str" };
-  return CGM.GetAddrOfConstantCString(BaseName.str(), GlobalName.c_str()).getPointer();
+  llvm::SmallString<64> GlobalName = {BaseName, ".str"};
+  return CGM.GetAddrOfConstantCString(BaseName.str(), GlobalName.c_str())
+      .getPointer();
 }
 
 static void createResourceCtorArgs(CodeGenModule &CGM, CXXConstructorDecl *CD,
@@ -848,9 +849,8 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
   // lookup the resource class constructor based on the resource type and
   // binding
   ASTContext &AST = ArrayDecl->getASTContext();
-  CXXConstructorDecl *CD =
-      findResourceConstructorDecl(AST, ResourceTy,
-                                  VkBinding || RBA->hasRegisterSlot());
+  CXXConstructorDecl *CD = findResourceConstructorDecl(
+      AST, ResourceTy, VkBinding || RBA->hasRegisterSlot());
 
   // create a temporary variable for the resource class instance (we need to
   // return an LValue)

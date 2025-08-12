@@ -3697,12 +3697,10 @@ static bool initVarDeclWithCtor(Sema &S, VarDecl *VD,
   return true;
 }
 
-void SemaHLSL::createResourceRecordCtorArgs(const Type *ResourceTy,
-                                            StringRef VarName,
-                                            HLSLResourceBindingAttr *RBA,
-                                            HLSLVkBindingAttr *VkBinding,
-                                            uint32_t ArrayIndex,
-                                            llvm::SmallVectorImpl<Expr *> &Args) {
+void SemaHLSL::createResourceRecordCtorArgs(
+    const Type *ResourceTy, StringRef VarName, HLSLResourceBindingAttr *RBA,
+    HLSLVkBindingAttr *VkBinding, uint32_t ArrayIndex,
+    llvm::SmallVectorImpl<Expr *> &Args) {
   std::optional<uint32_t> RegisterSlot;
   uint32_t SpaceNo = 0;
   if (VkBinding) {
