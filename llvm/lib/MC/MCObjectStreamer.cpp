@@ -189,7 +189,7 @@ void MCObjectStreamer::emitFrames(MCAsmBackend *MAB) {
 
   if (EmitSFrame || (getContext().getTargetOptions() &&
                      getContext().getTargetOptions()->EmitSFrameUnwind))
-    MCSFrameEmitter::Emit(*this);
+    MCSFrameEmitter::emit(*this);
 }
 
 void MCObjectStreamer::visitUsedSymbol(const MCSymbol &Sym) {

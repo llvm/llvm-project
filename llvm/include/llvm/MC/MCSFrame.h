@@ -28,7 +28,7 @@ public:
   // Emit the sframe section.
   //
   // \param Streamer - Emit into this stream.
-  static void Emit(MCObjectStreamer &Streamer);
+  static void emit(MCObjectStreamer &Streamer);
 };
 
 } // end namespace llvm

@@ -42,14 +42,14 @@ public:
     FRESubSectionEnd = Streamer.getContext().createTempSymbol();
   }
 
-  void EmitPreamble() {
+  void emitPreamble() {
     Streamer.emitInt16(Magic);
     Streamer.emitInt8(static_cast<uint8_t>(Version::V2));
     Streamer.emitInt8(0);
   }
 
-  void EmitHeader() {
-    EmitPreamble();
+  void emitHeader() {
+    emitPreamble();
     // sfh_abi_arch
     Streamer.emitInt8(static_cast<uint8_t>(SFrameABI));
     // sfh_cfa_fixed_fp_offset
@@ -72,9 +72,9 @@ public:
                                     sizeof(uint32_t));
   }
 
-  void EmitFDEs() { Streamer.emitLabel(FDESubSectionStart); }
+  void emitFDEs() { Streamer.emitLabel(FDESubSectionStart); }
 
-  void EmitFREs() {
+  void emitFREs() {
     Streamer.emitLabel(FRESubSectionStart);
     Streamer.emitLabel(FRESubSectionEnd);
   }
@@ -82,7 +82,7 @@ public:
 
 } // end anonymous namespace
 
-void MCSFrameEmitter::Emit(MCObjectStreamer &Streamer) {
+void MCSFrameEmitter::emit(MCObjectStreamer &Streamer) {
   MCContext &Context = Streamer.getContext();
   SFrameEmitterImpl Emitter(Streamer);
 
@@ -92,7 +92,7 @@ void MCSFrameEmitter::Emit(MCObjectStreamer &Streamer) {
   Streamer.switchSection(Section);
   MCSymbol *SectionStart = Context.createTempSymbol();
   Streamer.emitLabel(SectionStart);
-  Emitter.EmitHeader();
-  Emitter.EmitFDEs();
-  Emitter.EmitFREs();
+  Emitter.emitHeader();
+  Emitter.emitFDEs();
+  Emitter.emitFREs();
 }
