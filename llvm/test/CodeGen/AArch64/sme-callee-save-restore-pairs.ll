@@ -44,7 +44,7 @@ define void @fbyte(<vscale x 16 x i8> %v) #0{
 ; NOPAIR-NEXT:    addvl sp, sp, #-1
 ; NOPAIR-NEXT:    str z0, [sp] // 16-byte Folded Spill
 ; NOPAIR-NEXT:    bl __arm_sme_state
-; NOPAIR-NEXT:    and x19, x0, #0x1
+; NOPAIR-NEXT:    mov x19, x0
 ; NOPAIR-NEXT:    tbz w19, #0, .LBB0_2
 ; NOPAIR-NEXT:  // %bb.1:
 ; NOPAIR-NEXT:    smstop sm
@@ -126,7 +126,7 @@ define void @fbyte(<vscale x 16 x i8> %v) #0{
 ; PAIR-NEXT:    addvl sp, sp, #-1
 ; PAIR-NEXT:    str z0, [sp] // 16-byte Folded Spill
 ; PAIR-NEXT:    bl __arm_sme_state
-; PAIR-NEXT:    and x19, x0, #0x1
+; PAIR-NEXT:    mov x19, x0
 ; PAIR-NEXT:    tbz w19, #0, .LBB0_2
 ; PAIR-NEXT:  // %bb.1:
 ; PAIR-NEXT:    smstop sm
