@@ -110,7 +110,7 @@ _mm_cvtph_ps(__m128i __a)
   typedef __fp16 __v4fp16 __attribute__((__vector_size__(8)));
 
   __v4hi __v = __builtin_shufflevector((__v8hi)__a, (__v8hi)__a, 0, 1, 2, 3);
-  return (__m128)__builtin_convertvector((__v4fp16)__v, __v4sf);
+  return (__m128) __builtin_convertvector((__v4fp16)__v, __v4sf);
 }
 
 /// Converts a 256-bit vector of [8 x float] into a 128-bit vector
@@ -156,7 +156,7 @@ _mm256_cvtph_ps(__m128i __a)
 {
   typedef __fp16 __v8fp16 __attribute__((__vector_size__(16), __aligned__(16)));
 
-  return (__m256)__builtin_convertvector((__v8fp16)__a, __v8sf);
+  return (__m256) __builtin_convertvector((__v8fp16)__a, __v8sf);
 }
 
 #undef __DEFAULT_FN_ATTRS128
