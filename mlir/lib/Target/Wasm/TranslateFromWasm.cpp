@@ -106,7 +106,7 @@ template <std::byte Byte>
 struct UniqueByte : ByteSequence<Byte> {};
 
 template <typename T, T... Values>
-constexpr ByteSequence<std::byte{Values}...>
+constexpr ByteSequence<std::byte(Values)...>
 byteSeqFromIntSeq(std::integer_sequence<T, Values...>) {
   return {};
 }
