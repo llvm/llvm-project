@@ -204,7 +204,6 @@ TEST(ProtocolMCPTest, MessageWithErrorResponse) {
   const Response &deserialized_error =
       std::get<Response>(*deserialized_message);
 
-  llvm::errs() << "here: " << toJSON(deserialized_error) << "\n";
   EXPECT_EQ(error_response, deserialized_error);
 }
 
