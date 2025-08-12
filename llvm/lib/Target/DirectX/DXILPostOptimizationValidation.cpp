@@ -21,6 +21,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/Support/DXILABI.h"
+#include <cstdint>
 
 #define DEBUG_TYPE "dxil-post-optimization-validation"
 
@@ -155,6 +156,19 @@ reportRegNotBound(Module &M, ResourceClass Class,
   M.getContext().diagnose(DiagnosticInfoGeneric(Message));
 }
 
+static void
+reportDescriptorTableMixingTypes(Module &M, uint32_t Location,
+                                 dxbc::DescriptorRangeType RangeType) {
+  SmallString<128> Message;
+  raw_svector_ostream OS(Message);
+  OS << "Samplers cannot be mixed with other "
+     << "resource types in a descriptor table, "
+     << getResourceClassName(toResourceClass(RangeType))
+     << "(location=" << Location << ")";
+
+  M.getContext().diagnose(DiagnosticInfoGeneric(Message));
+}
+
 static void reportInvalidHandleTy(
     Module &M, const llvm::ArrayRef<dxil::ResourceInfo::ResourceBinding> &RDs,
     const iterator_range<SmallVectorImpl<dxil::ResourceInfo>::iterator>
@@ -236,10 +250,47 @@ getRootDescriptorsBindingInfo(const mcdxbc::RootSignatureDesc &RSD,
   return RDs;
 }
 
-static void validateRootSignature(Module &M,
-                                  const mcdxbc::RootSignatureDesc &RSD,
-                                  dxil::ModuleMetadataInfo &MMI,
-                                  DXILResourceMap &DRM) {
+static void validateDescriptorTables(Module &M,
+                                     const mcdxbc::RootSignatureDesc &RSD,
+                                     dxil::ModuleMetadataInfo &MMI,
+                                     DXILResourceMap &DRM) {
+  for (const mcdxbc::RootParameterInfo &ParamInfo : RSD.ParametersContainer) {
+    if (static_cast<dxbc::RootParameterType>(ParamInfo.Header.ParameterType) !=
+        dxbc::RootParameterType::DescriptorTable)
+      continue;
+
+    mcdxbc::DescriptorTable Table =
+        RSD.ParametersContainer.getDescriptorTable(ParamInfo.Location);
+
+    // Samplers cannot be mixed with other resources in a descriptor table.
+    bool HasSampler = false;
+    bool HasOtherRangeType = false;
+    dxbc::DescriptorRangeType OtherRangeType;
+    uint32_t OtherRangeTypeLocation = 0;
+
+    for (const dxbc::RTS0::v2::DescriptorRange &Range : Table.Ranges) {
+      dxbc::DescriptorRangeType RangeType =
+          static_cast<dxbc::DescriptorRangeType>(Range.RangeType);
+      if (RangeType == dxbc::DescriptorRangeType::Sampler) {
+        HasSampler = true;
+      } else {
+        HasOtherRangeType = true;
+        OtherRangeType = RangeType;
+        OtherRangeTypeLocation = ParamInfo.Location;
+      }
+    }
+    if (HasSampler && HasOtherRangeType) {
+      reportDescriptorTableMixingTypes(M, OtherRangeTypeLocation,
+                                       OtherRangeType);
+      continue;
+    }
+  }
+}
+
+static void validateRootSignatureBindings(Module &M,
+                                          const mcdxbc::RootSignatureDesc &RSD,
+                                          dxil::ModuleMetadataInfo &MMI,
+                                          DXILResourceMap &DRM) {
 
   hlsl::BindingInfoBuilder Builder;
   dxbc::ShaderVisibility Visibility = tripleToVisibility(MMI.ShaderProfile);
@@ -309,7 +360,6 @@ static void validateRootSignature(Module &M,
         reportOverlappingRegisters(M, ReportedBinding, Overlaping);
       });
   // Next checks require that the root signature definition is valid.
-  // Next checks require that the root signature definition is valid.
   if (!HasOverlap) {
     SmallVector<ResourceInfo::ResourceBinding> RDs =
         getRootDescriptorsBindingInfo(RSD, Visibility);
@@ -351,8 +401,10 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
   assert(!DRBI.hasImplicitBinding() && "implicit bindings should be handled in "
                                        "DXILResourceImplicitBinding pass");
 
-  if (mcdxbc::RootSignatureDesc *RSD = getRootSignature(RSBI, MMI))
-    validateRootSignature(M, *RSD, MMI, DRM);
+  if (mcdxbc::RootSignatureDesc *RSD = getRootSignature(RSBI, MMI)) {
+    validateRootSignatureBindings(M, *RSD, MMI, DRM);
+    validateDescriptorTables(M, *RSD, MMI, DRM);
+  }
 }
 
 PreservedAnalyses
