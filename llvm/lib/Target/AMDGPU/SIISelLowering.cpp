@@ -16906,12 +16906,25 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
       }
       break;
     }
-    // We actually support i128, i16 and f16 as inline parameters
-    // even if they are not reported as legal
-    if (RC && (isTypeLegal(VT) || VT.SimpleTy == MVT::i128 ||
-               VT.SimpleTy == MVT::i16 || VT.SimpleTy == MVT::f16))
-      return std::pair(0U, RC);
+  } else if (Constraint == "VA" && Subtarget->hasGFX90AInsts()) {
+    const unsigned BitWidth = VT.getSizeInBits();
+    switch (BitWidth) {
+    case 16:
+      RC = &AMDGPU::AV_32RegClass;
+      break;
+    default:
+      RC = TRI->getVectorSuperClassForBitWidth(BitWidth);
+      if (!RC)
+        return std::pair(0U, nullptr);
+      break;
+    }
   }
+
+  // We actually support i128, i16 and f16 as inline parameters
+  // even if they are not reported as legal
+  if (RC && (isTypeLegal(VT) || VT.SimpleTy == MVT::i128 ||
+             VT.SimpleTy == MVT::i16 || VT.SimpleTy == MVT::f16))
+    return std::pair(0U, RC);
 
   auto [Kind, Idx, NumRegs] = AMDGPU::parseAsmConstraintPhysReg(Constraint);
   if (Kind != '\0') {
@@ -16997,6 +17010,9 @@ SITargetLowering::getConstraintType(StringRef Constraint) const {
     case 'a':
       return C_RegisterClass;
     }
+  } else if (Constraint.size() == 2) {
+    if (Constraint == "VA")
+      return C_RegisterClass;
   }
   if (isImmConstraint(Constraint)) {
     return C_Other;
