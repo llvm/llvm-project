@@ -9009,24 +9009,10 @@ private:
         //   map(ps->a) use_device_addr(ps->b) // match
         //   map(p) use_device_addr(p[0])      // no match
         //   map(pp) use_device_addr(pp[0][0]) // no match
-        const Expr *UDAFullExpr = Components.front().getAssociatedExpression();
-        llvm::errs() << "DEBUG: [use_device_addr] Full expression: ";
-        UDAFullExpr->dump();
-        llvm::errs() << "DEBUG: [use_device_addr] Components size: " << Components.size() << "\n";
-        for (size_t i = 0; i < Components.size(); ++i) {
-          llvm::errs() << "DEBUG: [use_device_addr] Component " << i << ": ";
-          Components[i].getAssociatedExpression()->dump();
-        }
         // FIXME: getAttachPtrExpr does not work on use_device_addr, since
         // the component-list only contains one component. We need to move
         // attach-ptr calculation to the Sema phase.
         const Expr *UDAAttachPtrExpr = getAttachPtrExpr(Components);
-        llvm::errs() << "DEBUG: [use_device_addr] Attach-ptr from getAttachPtrExpr: ";
-        if (UDAAttachPtrExpr) {
-          UDAAttachPtrExpr->dump();
-        } else {
-          llvm::errs() << "nullptr\n";
-        }
         if (IsMapInfoExist(CGF, VD, IE,
                            /*DesiredAttachPtrExpr=*/UDAAttachPtrExpr,
                            /*IsDevAddr=*/true))
