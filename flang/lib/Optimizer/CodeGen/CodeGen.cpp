@@ -3573,7 +3573,15 @@ protected:
     llvm::SmallVector<mlir::ValueRange> destinationsOperands;
     mlir::Block *defaultDestination;
     mlir::ValueRange defaultOperands;
-    llvm::SmallVector<int32_t> caseValues;
+    // LLVM::SwitchOp selector type and the case values types
+    // must have the same bit width, so cast the selector to i64,
+    // and use i64 for the case values. It is hard to imagine
+    // a computed GO TO with the number of labels in the label-list
+    // bigger than INT_MAX, but let's use i64 to be on the safe side.
+    // Moreover, fir.select operation is more relaxed than
+    // a Fortran computed GO TO, so it may specify such a case value
+    // even if there is just a single label/case.
+    llvm::SmallVector<int64_t> caseValues;
 
     for (unsigned t = 0; t != conds; ++t) {
       mlir::Block *dest = select.getSuccessor(t);
@@ -3600,16 +3608,14 @@ protected:
       defaultDestination = *convertedBlock;
     }
 
-    // LLVM::SwitchOp takes a i32 type for the selector.
-    if (select.getSelector().getType() != rewriter.getI32Type())
-      selector =
-          this->integerCast(loc, rewriter, rewriter.getI32Type(), selector);
+    selector =
+        this->integerCast(loc, rewriter, rewriter.getI64Type(), selector);
 
     rewriter.replaceOpWithNewOp<mlir::LLVM::SwitchOp>(
         select, selector,
         /*defaultDestination=*/defaultDestination,
         /*defaultOperands=*/defaultOperands,
-        /*caseValues=*/caseValues,
+        /*caseValues=*/rewriter.getI64VectorAttr(caseValues),
         /*caseDestinations=*/destinations,
         /*caseOperands=*/destinationsOperands,
         /*branchWeights=*/llvm::ArrayRef<std::int32_t>());
