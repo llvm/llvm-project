@@ -309,7 +309,7 @@ bool TemplateDecl::isTypeAlias() const {
   case TemplateDecl::TypeAliasTemplate:
     return true;
   case TemplateDecl::BuiltinTemplate:
-    return cast<BuiltinTemplateDecl>(this)->isPackProducingBuiltinTemplate();
+    return !cast<BuiltinTemplateDecl>(this)->isPackProducingBuiltinTemplate();
   default:
     return false;
   };
