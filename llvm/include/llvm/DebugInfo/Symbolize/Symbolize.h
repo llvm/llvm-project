@@ -244,7 +244,7 @@ private:
   std::map<ArchiveCacheKey, std::unique_ptr<ObjectFile>> ObjectFileCache;
 
   /// Helper function to load binary.
-  Expected<object::Binary*> loadOrGetBinary(const std::string &Path);
+  Expected<object::Binary *> loadOrGetBinary(const std::string &Path);
 
   /// Helper function to find and get object
   Expected<ObjectFile *> findOrCacheObject(

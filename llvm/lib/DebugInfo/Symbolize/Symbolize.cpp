@@ -569,7 +569,8 @@ LLVMSymbolizer::getOrCreateObjectPair(const std::string &Path,
   return Res;
 }
 
-Expected<object::Binary*> LLVMSymbolizer::loadOrGetBinary(const std::string &Path) {
+Expected<object::Binary *>
+LLVMSymbolizer::loadOrGetBinary(const std::string &Path) {
   auto Pair = BinaryForPath.emplace(Path, OwningBinary<Binary>());
   if (!Pair.second) {
     recordAccess(Pair.first->second);
@@ -616,7 +617,7 @@ Expected<ObjectFile *> LLVMSymbolizer::findOrCacheObject(
 
 Expected<ObjectFile *> LLVMSymbolizer::getOrCreateObjectFromArchive(
     StringRef ArchivePath, StringRef MemberName, StringRef ArchName) {
-  Expected<object::Binary*> BinOrErr = loadOrGetBinary(ArchivePath.str());
+  Expected<object::Binary *> BinOrErr = loadOrGetBinary(ArchivePath.str());
   if (!BinOrErr)
     return BinOrErr.takeError();
   object::Binary *Bin = *BinOrErr;
@@ -687,7 +688,7 @@ LLVMSymbolizer::getOrCreateObject(const std::string &Path,
     }
   }
 
-  Expected<object::Binary*> BinOrErr = loadOrGetBinary(Path);
+  Expected<object::Binary *> BinOrErr = loadOrGetBinary(Path);
   if (!BinOrErr)
     return BinOrErr.takeError();
   object::Binary *Bin = *BinOrErr;
