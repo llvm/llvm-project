@@ -284,7 +284,8 @@ void CIRGenFunction::initializeVTablePointer(mlir::Location loc,
   } else {
     // We can just use the base offset in the complete class.
     nonVirtualOffset = vptr.base.getBaseOffset();
-    baseValueTy = convertType(getContext().getTagDeclType(vptr.base.getBase()));
+    baseValueTy =
+        convertType(getContext().getCanonicalTagType(vptr.base.getBase()));
   }
 
   // Apply the offsets.
