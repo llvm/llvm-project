@@ -375,13 +375,14 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::tryFoldCopiesFromAGPR(
     Register CopyDstReg = UseMI.getOperand(0).getReg();
     if (!CopyDstReg.isVirtual())
       continue;
+    for (MachineOperand &CopyUseMO : MRI.reg_nodbg_operands(CopyDstReg)) {
+      if (!CopyUseMO.readsReg())
+        continue;
 
-    for (MachineInstr &CopyUseMI : MRI.use_instructions(CopyDstReg)) {
+      MachineInstr &CopyUseMI = *CopyUseMO.getParent();
       if (isRewriteCandidate(CopyUseMI)) {
-        const MachineOperand *Op =
-            CopyUseMI.findRegisterUseOperand(CopyDstReg, /*TRI=*/nullptr);
-        if (tryReassigningMFMAChain(CopyUseMI, Op->getOperandNo(),
-                                    VRM.getPhys(Op->getReg())))
+        if (tryReassigningMFMAChain(CopyUseMI, CopyUseMO.getOperandNo(),
+                                    VRM.getPhys(CopyUseMO.getReg())))
           MadeChange = true;
       }
     }
