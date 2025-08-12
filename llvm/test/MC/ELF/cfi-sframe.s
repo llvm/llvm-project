@@ -10,17 +10,23 @@ f1:
 	nop
         .cfi_endproc
 
+f2:
+	.cfi_startproc
+	nop
+	nop
+        .cfi_endproc
+
 // CHECK: SFrame section '.sframe' {
 // CHECK-NEXT:  Header {
 // CHECK-NEXT:    Magic: 0xDEE2
 // CHECK-NEXT:    Version: V2 (0x2)
-// CHECK-NEXT:    Flags [ (0x0)
+// CHECK-NEXT:    Flags [ (0x4)
 // CHECK:    ABI: AMD64EndianLittle (0x3)
 // CHECK-NEXT:    CFA fixed FP offset (unused): 0
 // CHECK-NEXT:    CFA fixed RA offset: 0
 // CHECK-NEXT:    Auxiliary header length: 0
-// CHECK-NEXT:    Num FDEs: 0
+// CHECK-NEXT:    Num FDEs: 2
 // CHECK-NEXT:    Num FREs: 0
 // CHECK-NEXT:    FRE subsection length: 0
 // CHECK-NEXT:    FDE subsection offset: 0
-// CHECK-NEXT:    FRE subsection offset: 0
+// CHECK-NEXT:    FRE subsection offset: 40
