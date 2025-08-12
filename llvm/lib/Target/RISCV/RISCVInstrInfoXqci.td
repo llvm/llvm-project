@@ -1529,9 +1529,13 @@ def : QCIMVCCPat<SETEQ,  QC_MVEQ>;
 def : QCIMVCCPat<SETNE,  QC_MVNE>;
 def : QCIMVCCPat<SETLT,  QC_MVLT>;
 def : QCIMVCCPat<SETULT, QC_MVLTU>;
+def : QCIMVCCPat<SETGE,  QC_MVGE>;
+def : QCIMVCCPat<SETUGE, QC_MVGEU>;
 
 def : QCIMVCCIPat<SETLT,  QC_MVLTI,  simm5>;
 def : QCIMVCCIPat<SETULT, QC_MVLTUI, uimm5>;
+def : QCIMVCCIPat<SETGE,  QC_MVGEI,  simm5>;
+def : QCIMVCCIPat<SETUGE, QC_MVGEUI, uimm5>;
 }
 
 // Prioritize Xqcics over these patterns.

@@ -299,11 +299,8 @@ define signext i32 @select_i32_uge(i32 signext %a, i32 signext %b, i32 signext %
 ;
 ; RV32-XQCICM-LABEL: select_i32_uge:
 ; RV32-XQCICM:       # %bb.0:
-; RV32-XQCICM-NEXT:    bgeu a0, a1, .LBB5_2
-; RV32-XQCICM-NEXT:  # %bb.1:
-; RV32-XQCICM-NEXT:    mv a2, a3
-; RV32-XQCICM-NEXT:  .LBB5_2:
-; RV32-XQCICM-NEXT:    mv a0, a2
+; RV32-XQCICM-NEXT:    qc.mvgeu a3, a0, a1, a2
+; RV32-XQCICM-NEXT:    mv a0, a3
 ; RV32-XQCICM-NEXT:    ret
 ;
 ; RV32-XQCICS-LABEL: select_i32_uge:
@@ -404,11 +401,8 @@ define signext i32 @select_i32_ule(i32 signext %a, i32 signext %b, i32 signext %
 ;
 ; RV32-XQCICM-LABEL: select_i32_ule:
 ; RV32-XQCICM:       # %bb.0:
-; RV32-XQCICM-NEXT:    bgeu a1, a0, .LBB7_2
-; RV32-XQCICM-NEXT:  # %bb.1:
-; RV32-XQCICM-NEXT:    mv a2, a3
-; RV32-XQCICM-NEXT:  .LBB7_2:
-; RV32-XQCICM-NEXT:    mv a0, a2
+; RV32-XQCICM-NEXT:    qc.mvgeu a3, a1, a0, a2
+; RV32-XQCICM-NEXT:    mv a0, a3
 ; RV32-XQCICM-NEXT:    ret
 ;
 ; RV32-XQCICS-LABEL: select_i32_ule:
@@ -509,11 +503,8 @@ define signext i32 @select_i32_sge(i32 signext %a, i32 signext %b, i32 signext %
 ;
 ; RV32-XQCICM-LABEL: select_i32_sge:
 ; RV32-XQCICM:       # %bb.0:
-; RV32-XQCICM-NEXT:    bge a0, a1, .LBB9_2
-; RV32-XQCICM-NEXT:  # %bb.1:
-; RV32-XQCICM-NEXT:    mv a2, a3
-; RV32-XQCICM-NEXT:  .LBB9_2:
-; RV32-XQCICM-NEXT:    mv a0, a2
+; RV32-XQCICM-NEXT:    qc.mvge a3, a0, a1, a2
+; RV32-XQCICM-NEXT:    mv a0, a3
 ; RV32-XQCICM-NEXT:    ret
 ;
 ; RV32-XQCICS-LABEL: select_i32_sge:
@@ -614,11 +605,8 @@ define signext i32 @select_i32_sle(i32 signext %a, i32 signext %b, i32 signext %
 ;
 ; RV32-XQCICM-LABEL: select_i32_sle:
 ; RV32-XQCICM:       # %bb.0:
-; RV32-XQCICM-NEXT:    bge a1, a0, .LBB11_2
-; RV32-XQCICM-NEXT:  # %bb.1:
-; RV32-XQCICM-NEXT:    mv a2, a3
-; RV32-XQCICM-NEXT:  .LBB11_2:
-; RV32-XQCICM-NEXT:    mv a0, a2
+; RV32-XQCICM-NEXT:    qc.mvge a3, a1, a0, a2
+; RV32-XQCICM-NEXT:    mv a0, a3
 ; RV32-XQCICM-NEXT:    ret
 ;
 ; RV32-XQCICS-LABEL: select_i32_sle:
