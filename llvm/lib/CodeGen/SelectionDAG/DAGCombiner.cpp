@@ -28999,9 +28999,12 @@ SDValue DAGCombiner::SimplifySelectCC(const SDLoc &DL, SDValue N0, SDValue N1,
     return V;
 
   // fold select_cc seteq (and x, 1), 0, 0, -1 -> neg(and(x, 1))
-  if (CC == ISD::SETEQ && N0->getOpcode() == ISD::AND &&
-      N0->getValueType(0) == VT && isNullConstant(N1) && isNullConstant(N2) &&
-      isAllOnesConstant(N3) && isOneConstant(N0->getOperand(1))) {
+  // and also: select_cc setne (and x, 1), 1, 0, -1 -> neg(and(x, 1))
+  if (N0->getOpcode() == ISD::AND && N0->getValueType(0) == VT &&
+      isNullConstant(N2) && isAllOnesConstant(N3) &&
+      isOneConstant(N0->getOperand(1)) &&
+      ((CC == ISD::SETEQ && isNullConstant(N1)) ||
+       (CC == ISD::SETNE && isOneConstant(N1)))) {
     SDValue AndLHS = N0->getOperand(0);
     SDValue Neg =
         DAG.getNode(ISD::AND, DL, VT, AndLHS, DAG.getConstant(1, DL, VT));
