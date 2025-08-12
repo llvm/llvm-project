@@ -413,11 +413,12 @@ static void TestPTrace() {
   // internal_fork() on SPARC actually calls __fork(). We can't safely fork,
   // because it's possible seccomp has been configured to disallow fork() but
   // allow clone().
-  Report("WARNING: skipping TestPTrace() because this is SPARC\n");
-  Report(
-      "If seccomp blocks ptrace, LeakSanitizer may hang without further "
-      "notice\n");
-  Report(
+  VReport(1, "WARNING: skipping TestPTrace() because this is SPARC\n");
+  VReport(1,
+          "If seccomp blocks ptrace, LeakSanitizer may hang without further "
+          "notice\n");
+  VReport(
+      1,
       "If seccomp does not block ptrace, you can safely ignore this warning\n");
 #  else
   // Heuristic: only check the first time this is called. This is not always
@@ -438,7 +439,7 @@ static void TestPTrace() {
   if (pid < 0) {
     int rverrno;
     if (internal_iserror(pid, &rverrno))
-      Report("WARNING: TestPTrace() failed to fork (errno %d)\n", rverrno);
+      VReport(0, "WARNING: TestPTrace() failed to fork (errno %d)\n", rverrno);
 
     // We don't abort the sanitizer - it's still worth letting the sanitizer
     // try.
