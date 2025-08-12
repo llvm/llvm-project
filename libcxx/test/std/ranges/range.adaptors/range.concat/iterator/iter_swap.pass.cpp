@@ -21,32 +21,45 @@
 template <class It>
 concept has_iter_swap = requires(It it) { std::ranges::iter_swap(it, it); };
 
+struct ThrowingMove {
+  ThrowingMove() = default;
+  ThrowingMove(ThrowingMove&&) {}
+  ThrowingMove& operator=(ThrowingMove&&){return *this;}
+};
+
 template <class Iterator, bool IsNoexcept>
 constexpr void test() {
   using Sentinel   = sentinel_wrapper<Iterator>;
   using View       = minimal_view<Iterator, Sentinel>;
   using ConcatView = std::ranges::concat_view<View>;
 
-  auto make_concat_view = [](auto begin, auto end) {
-    View view{Iterator(begin), Sentinel(Iterator(end))};
-    return ConcatView(std::move(view));
-  };
-
   {
-    std::array<int, 5> array{0, 1, 2, 3, 4};
-    ConcatView view = make_concat_view(array.data(), array.data() + array.size());
-    std::array<int, 5> another_array{5, 6, 7, 8, 9};
-    ConcatView another_view = make_concat_view(another_array.data(), another_array.data() + another_array.size());
+    std::array<int, 5> array1{0, 1, 2, 3, 4};
+    std::array<int, 5> array2{5, 6, 7, 8, 9};
+
+    View v1{Iterator(array1.data()), Sentinel(Iterator(array1.data() + array1.size()))};
+    View v2{Iterator(array2.data()), Sentinel(Iterator(array2.data() + array2.size()))};
+    std::ranges::concat_view view(std::move(v1), std::move(v2));
+
     auto it1                = view.begin();
-    auto it2                = another_view.begin();
+    auto it2                = ++view.begin();
 
     static_assert(std::is_same_v<decltype(iter_swap(it1, it2)), void>);
     static_assert(noexcept(iter_swap(it1, it2)) == IsNoexcept);
 
-    assert(*it1 == 0 && *it2 == 5); // test the test
+    assert(*it1 == 0 && *it2 == 1);
     iter_swap(it1, it2);
-    assert(*it1 == 5);
+    assert(*it1 == 1);
     assert(*it2 == 0);
+  }
+
+  {
+    // iter swap may throw
+    std::array<ThrowingMove, 2> iterSwapMayThrow{};
+    std::ranges::concat_view v(iterSwapMayThrow);
+    auto iter1 = v.begin();
+    auto iter2 = ++v.begin();
+    static_assert(!noexcept(std::ranges::iter_swap(iter1, iter2)));
   }
 }
 
