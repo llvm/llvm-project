@@ -18,12 +18,9 @@ define i32 @select_example(i32 %cond, i32 %x, i32 %y) {
 ;
 ; RV32IXQCICM-LABEL: select_example:
 ; RV32IXQCICM:       # %bb.0: # %entry
-; RV32IXQCICM-NEXT:    andi a3, a0, 1
-; RV32IXQCICM-NEXT:    mv a0, a1
-; RV32IXQCICM-NEXT:    bnez a3, .LBB0_2
-; RV32IXQCICM-NEXT:  # %bb.1: # %entry
+; RV32IXQCICM-NEXT:    andi a0, a0, 1
+; RV32IXQCICM-NEXT:    qc.mvnei a2, a0, 0, a1
 ; RV32IXQCICM-NEXT:    mv a0, a2
-; RV32IXQCICM-NEXT:  .LBB0_2: # %entry
 ; RV32IXQCICM-NEXT:    ret
 entry:
   %cond_trunc = trunc i32 %cond to i1

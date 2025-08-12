@@ -1540,6 +1540,11 @@ def : QCIMVCCIPat<SETUGE, QC_MVGEUI, uimm5>;
 
 // Prioritize Xqcics over these patterns.
 let Predicates = [HasVendorXqcicm, NoVendorXqcics, IsRV32] in {
+// (SELECT X, Y, Z) is canonicalised to `riscv_selectcc x, 0, NE, y, z)`.
+// This exists to prioritise over the `Select_GPR_Using_CC_GPR` pattern.
+def : Pat<(i32 (riscv_selectcc (i32 GPRNoX0:$rs1), (i32 0), SETNE, (i32 GPRNoX0:$rs3), (i32 GPRNoX0:$rd))),
+          (QC_MVNEI GPRNoX0:$rd, GPRNoX0:$rs1, 0, GPRNoX0:$rs3)>;
+
 def : QCIMVCCIPat<SETEQ,  QC_MVEQI, simm5>;
 def : QCIMVCCIPat<SETNE,  QC_MVNEI, simm5>;
 }
