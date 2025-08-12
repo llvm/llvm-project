@@ -2612,12 +2612,8 @@ void VPlanTransforms::createInterleaveGroups(
   VPDominatorTree VPDT;
   VPDT.recalculate(Plan);
   for (const auto *IG : InterleaveGroups) {
-    // Get or create the start address for the interleave group.
-    auto *Start =
-        cast<VPWidenMemoryRecipe>(RecipeBuilder.getRecipe(IG->getMember(0)));
-
-    VPIRMetadata InterleaveMD(*Start);
     SmallVector<VPValue *, 4> StoredValues;
+    VPIRMetadata InterleaveMD;
     for (unsigned i = 0; i < IG->getFactor(); ++i) {
       Instruction *MemI = IG->getMember(i);
       if (!MemI)
@@ -2628,7 +2624,11 @@ void VPlanTransforms::createInterleaveGroups(
         continue;
       if (auto *StoreR = dyn_cast<VPWidenStoreRecipe>(MemR))
         StoredValues.push_back(StoreR->getStoredValue());
-      InterleaveMD.intersect(*MemR);
+
+      if (i == 0)
+        InterleaveMD = VPIRMetadata(*MemR);
+      else
+        InterleaveMD.intersect(*MemR);
     }
 
     bool NeedsMaskForGaps =
@@ -2644,6 +2644,9 @@ void VPlanTransforms::createInterleaveGroups(
             getLoadStorePointerOperand(IRInsertPos)->stripPointerCasts()))
       NW = Gep->getNoWrapFlags().withoutNoUnsignedWrap();
 
+    // Get or create the start address for the interleave group.
+    auto *Start =
+        cast<VPWidenMemoryRecipe>(RecipeBuilder.getRecipe(IG->getMember(0)));
     VPValue *Addr = Start->getAddr();
     VPRecipeBase *AddrDef = Addr->getDefiningRecipe();
     if (AddrDef && !VPDT.properlyDominates(AddrDef, InsertPos)) {

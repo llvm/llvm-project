@@ -936,6 +936,11 @@ public:
   /// Copy constructor for cloning.
   VPIRMetadata(const VPIRMetadata &Other) : Metadata(Other.Metadata) {}
 
+  VPIRMetadata &operator=(const VPIRMetadata &Other) {
+    Metadata = Other.Metadata;
+    return *this;
+  }
+
   /// Add all metadata to \p I.
   void applyMetadata(Instruction &I) const;
 
@@ -944,7 +949,7 @@ public:
     Metadata.emplace_back(Kind, Node);
   }
 
-  /// Intersect the this VPIRMetada objet with \p MD, keeping only metadata
+  /// Intersect this VPIRMetada object with \p MD, keeping only metadata
   /// nodes in both.
   void intersect(const VPIRMetadata &MD);
 };
