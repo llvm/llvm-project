@@ -2110,9 +2110,9 @@ void VPlanTransforms::addActiveLaneMask(
                               "active.lane.mask");
   }
 
-  // Walk users of WideCanonicalIV and replace all compares of the form
-  // (ICMP_ULE, WideCanonicalIV, backedge-taken-count) with an
-  // active-lane-mask.
+  // Walk users of WideCanonicalIV and replace the header mask of the form
+  // (ICMP_ULE, WideCanonicalIV, backedge-taken-count) with an active-lane-mask,
+  // removing the old one to ensure there is always only a single header mask.
   HeaderMask->replaceAllUsesWith(LaneMask);
   HeaderMask->eraseFromParent();
 }
