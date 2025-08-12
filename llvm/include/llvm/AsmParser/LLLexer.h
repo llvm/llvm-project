@@ -93,7 +93,7 @@ namespace llvm {
   private:
     lltok::Kind LexToken();
 
-    // Return closes pointer after `Ptr` that is an end of a label.
+    // Return closest pointer after `Ptr` that is an end of a label.
     // Returns nullptr if `Ptr` doesn't point into a label.
     const char *getLabelTail(const char *Ptr);
     int getNextChar();
