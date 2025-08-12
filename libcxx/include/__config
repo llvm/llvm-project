@@ -789,6 +789,12 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_CONSTEXPR_SINCE_CXX17
 #  endif
 
+#  if _LIBCPP_STD_VER >= 17
+#    define _LIBCPP_NODISCARD_SINCE_CXX17 [[nodiscard]]
+#  else
+#    define _LIBCPP_NODISCARD_SINCE_CXX17
+#  endif
+
 #  if _LIBCPP_STD_VER >= 20
 #    define _LIBCPP_CONSTEXPR_SINCE_CXX20 constexpr
 #  else
