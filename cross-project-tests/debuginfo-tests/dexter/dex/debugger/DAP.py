@@ -623,7 +623,7 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
                 raise DebuggerException(
                     f"could not set function breakpoints: '{desired_bps}'"
                 )
-            # Is this right? Are we guarenteed the order of the outgoing/incoming lists?
+            # We expect the breakpoint order to match in request and response.
             dex_bp_ids = list(self.function_bp_info.keys())
             self._update_breakpoint_ids_after_request(dex_bp_ids, result)
 
@@ -639,7 +639,7 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
                 raise DebuggerException(
                     f"could not set instruction breakpoints: '{desired_bps}'"
                 )
-            # Is this right? Are we guarenteed the order of the outgoing/incoming lists?
+            # We expect the breakpoint order to match in request and response.
             dex_bp_ids = list(self.instruction_bp_info.keys())
             self._update_breakpoint_ids_after_request(dex_bp_ids, result)
 
