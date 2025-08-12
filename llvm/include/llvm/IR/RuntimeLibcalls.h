@@ -77,17 +77,15 @@ struct RuntimeLibcallsInfo {
 
   /// Get the libcall routine name for the specified libcall.
   // FIXME: This should be removed. Only LibcallImpl should have a name.
-  const char *getLibcallName(RTLIB::Libcall Call) const {
+  StringRef getLibcallName(RTLIB::Libcall Call) const {
     return getLibcallImplName(LibcallImpls[Call]);
   }
 
   /// Get the libcall routine name for the specified libcall implementation.
-  // FIXME: Change to return StringRef
-  static const char *getLibcallImplName(RTLIB::LibcallImpl CallImpl) {
+  static StringRef getLibcallImplName(RTLIB::LibcallImpl CallImpl) {
     if (CallImpl == RTLIB::Unsupported)
-      return nullptr;
-    return RuntimeLibcallImplNameTable[RuntimeLibcallNameOffsetTable[CallImpl]]
-        .data();
+      return StringRef();
+    return RuntimeLibcallImplNameTable[RuntimeLibcallNameOffsetTable[CallImpl]];
   }
 
   /// Return the lowering's selection of implementation call for \p Call
@@ -119,9 +117,10 @@ struct RuntimeLibcallsInfo {
 
   /// Return a function name compatible with RTLIB::MEMCPY, or nullptr if fully
   /// unsupported.
-  const char *getMemcpyName() const {
-    if (const char *Memcpy = getLibcallName(RTLIB::MEMCPY))
-      return Memcpy;
+  StringRef getMemcpyName() const {
+    RTLIB::LibcallImpl Memcpy = getLibcallImpl(RTLIB::MEMCPY);
+    if (Memcpy != RTLIB::Unsupported)
+      return getLibcallImplName(Memcpy);
 
     // Fallback to memmove if memcpy isn't available.
     return getLibcallName(RTLIB::MEMMOVE);

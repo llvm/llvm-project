@@ -22,10 +22,8 @@ static constexpr unsigned MaxFuncNameSize = 53;
 static std::vector<StringRef> getLibcallNameStringRefs() {
   std::vector<StringRef> Names(RTLIB::NumLibcallImpls);
   // Keep the strlens on the StringRef construction out of the benchmark loop.
-  for (RTLIB::LibcallImpl LC : RTLIB::libcall_impls()) {
-    const char *Name = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LC);
-    Names[LC] = StringRef(Name);
-  }
+  for (RTLIB::LibcallImpl LC : RTLIB::libcall_impls())
+    Names[LC] = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LC);
 
   return Names;
 }
