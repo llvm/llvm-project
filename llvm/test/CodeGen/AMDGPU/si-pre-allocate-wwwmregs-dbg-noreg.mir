@@ -49,12 +49,6 @@
 ...
 ---
 name:            _amdgpu_cs_main
-alignment:       1
-exposesReturnsTwice: false
-legalized:       false
-regBankSelected: false
-selected:        false
-failedISel:      false
 tracksRegLiveness: true
 hasWinCFI:       false
 noPhis:          true
