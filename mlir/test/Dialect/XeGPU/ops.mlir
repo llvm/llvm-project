@@ -751,4 +751,22 @@ gpu.func @fence() {
   gpu.return
 }
 
+// CHECK-LABEL: gpu.func @create_matrix_desc({{.*}}) {
+gpu.func @create_matrix_desc() {
+  //CHECK: [[alloc:%.+]] = memref.alloca() {alignment = 1024 : i64} : memref<2048xi8, 3>
+  //CHECK: [[mdesc:%.+]] = xegpu.create_matrix_desc [[alloc]] : memref<2048xi8, 3> -> !xegpu.matrix_desc<16x64xf16>
+  %m = memref.alloca() {alignment = 1024} : memref<2048xi8, 3>
+  %matrix_desc = xegpu.create_matrix_desc %m : memref<2048xi8, 3> -> !xegpu.matrix_desc<16x64xf16>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @create_matrix_desc_with_stride({{.*}}) {
+gpu.func @create_matrix_desc_with_stride() {
+  //CHECK: [[alloc:%.+]] = memref.alloca() {alignment = 1024 : i64} : memref<2048xi8, 3>
+  //CHECK: [[mdesc:%.+]] = xegpu.create_matrix_desc [[alloc]] : memref<2048xi8, 3> -> !xegpu.matrix_desc<16x64xf16, strided<[1, 16]>>
+  %m = memref.alloca() {alignment = 1024} : memref<2048xi8, 3>
+  %matrix_desc = xegpu.create_matrix_desc %m : memref<2048xi8, 3> -> !xegpu.matrix_desc<16x64xf16, strided<[1, 16]>>
+  gpu.return
+}
+
 }

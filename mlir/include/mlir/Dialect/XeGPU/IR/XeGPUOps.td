@@ -1101,21 +1101,31 @@ def XeGPU_ConvertLayoutOp: XeGPU_Op<"convert_layout", [Pure, AllTypesMatch<["sou
     let hasCanonicalizer = 1;
 }
 
-def XeGPU_CreateMatrixDescOp: XeGPU_Op<"create_matrix_desc", [Pure]>  {
+def isSharedPred : CPred<"isSharedMemory(llvm::cast<mlir::MemRefType>($_self))">;
+class StaticShared1DMemRefOf<list<Type> allowedTypes> :
+  ConfinedType<MemRefRankOf<allowedTypes, [1]>, [HasStaticShapePred, isSharedPred],
+     "statically shaped " # MemRefOf<allowedTypes>.summary # " for shared memory",
+     "mlir::MemRefType">;
+
+class SizeInBits<string name> :
+  StrFunc<"llvm::cast<mlir::ShapedType>($" # name # ".getType()).getNumElements()"
+          "*llvm::cast<mlir::ShapedType>($" # name # ".getType()).getElementTypeBitWidth()">;
+class AllMemSizesMatch<list<string> names> :
+    AllMatchSameOperatorTrait<names, SizeInBits<"_self">.result,
+                              "size in bits">;
+
+def XeGPU_CreateMatrixDescOp: XeGPU_Op<"create_matrix_desc", [Pure,
+      AllMemSizesMatch<["source", "matrix_desc"]>]>  {
   let summary = "Create a matrix descriptor.";
   let description = [{
-    Matrices are treated as 2D units.
-    In case the ROI rank is >2, the two fastest changing dimensions
-    represent a 2D unit and other dimensions specify the multiple
-    of these units that are stacked vertically.
     Arguments:
      - `source` : a base address of SLM allocation.
     Results:
      - `matrix_desc` : a descriptor for SLM allocation.
   }];
-  let arguments = (ins XeGPU_BaseAddrType:$source);
+  let arguments = (ins StaticShared1DMemRefOf<[I8]>:$source);
   let results = (outs XeGPU_MatrixDesc:$matrix_desc);
-  let assemblyFormat = "$source prop-dict attr-dict `:` type($source) `->` type($matrix_desc)";
+  let assemblyFormat = "$source prop-dict attr-dict `` `:` type($source) `->` qualified(type($matrix_desc))";
 }
 
 def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>]>  {

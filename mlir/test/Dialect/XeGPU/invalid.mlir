@@ -762,3 +762,19 @@ func.func @slice_attr_repeat_dim() {
   return
 }
 
+// -----
+func.func @create_matrix_desc_non_slm() {
+  %m = memref.alloca() {alignment = 1024} : memref<2048xi8, 1>
+  // expected-error@+1 {{operand #0 must be statically shaped memref of 8-bit signless integer values for shared memory}}
+  %matrix_desc = xegpu.create_matrix_desc %m : memref<2048xi8, 1> -> !xegpu.matrix_desc<16x64xf16>
+  return
+}
+
+// -----
+func.func @create_matrix_desc_mismatch_sizes() {
+  %m = memref.alloca() {alignment = 1024} : memref<2048xi8, 3>
+  // expected-error@+1 {{failed to verify that all of {source, matrix_desc} have same size in bits}}
+  %matrix_desc = xegpu.create_matrix_desc %m : memref<2048xi8, 3> -> !xegpu.matrix_desc<16x32xf16>
+  return
+}
+

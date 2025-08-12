@@ -17,6 +17,7 @@ add_mlir_dialect_library(MLIRXeGPUDialect
   MLIRAffineUtils
   MLIRArithUtils
   MLIRDialectUtils
+  MLIRGPUDialect
   MLIRIR
   MLIRViewLikeInterface
   MLIRVectorDialect
