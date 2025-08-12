@@ -607,13 +607,11 @@ private:
   /// This means we must ensure that it is safe to move the load for 'c[i]'
   /// before other memory operations (or any other observable side effects) in
   /// the loop.
+  ///
+  /// Currently, c[i] should only have one user (the comparison used for the
+  /// uncounted exit) since we would otherwise need to introduce a PHI node
+  /// for it.
   bool canUncountedExitConditionLoadBeMoved(BasicBlock *ExitingBlock);
-
-  /// Clears any current early exit data gathered if a check failed.
-  void clearEarlyExitData() {
-    UncountableExitingBB = nullptr;
-    UncountedExitWithSideEffects = false;
-  }
 
   /// Return true if all of the instructions in the block can be speculatively
   /// executed, and record the loads/stores that require masking.

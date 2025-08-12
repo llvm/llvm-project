@@ -4,7 +4,7 @@
 
 define i64 @loop_contains_store(ptr %dest) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store'
-; CHECK:       LV: Not vectorizing: Early exit loop with store but no condition load.
+; CHECK:       LV: Not vectorizing: Early exit loop with store but no supported condition load.
 entry:
   %p1 = alloca [1024 x i8]
   call void @init_mem(ptr %p1, i64 1024)
@@ -57,7 +57,7 @@ exit:
 
 define void @loop_contains_store_ee_condition_is_invariant(ptr dereferenceable(40) noalias %array, i16 %ee.val) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_ee_condition_is_invariant'
-; CHECK:       LV: Not vectorizing: Early exit loop with store but no condition load.
+; CHECK:       LV: Not vectorizing: Early exit loop with store but no supported condition load.
 entry:
   br label %for.body
 
@@ -81,7 +81,7 @@ exit:
 
 define void @loop_contains_store_fcmp_condition(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_fcmp_condition'
-; CHECK:       LV: Not vectorizing: Early exit loop with store but no condition load.
+; CHECK:       LV: Not vectorizing: Early exit loop with store but no supported condition load.
 entry:
   br label %for.body
 
@@ -451,6 +451,37 @@ for.body:
   %ee.addr = getelementptr inbounds nuw i16, ptr %pred, i64 %iv
   %ee.val = load i16, ptr %ee.addr, align 2
   switch i16 %ee.val, label %for.inc [ i16 500, label %exit ]
+
+for.inc:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cond = icmp eq i64 %iv.next, 20
+  br i1 %counted.cond, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+define void @loop_contains_store_uncounted_exit_is_not_guaranteed_to_execute(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
+; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_uncounted_exit_is_not_guaranteed_to_execute'
+; CHECK:       LV: Not vectorizing: Early exit is not the latch predecessor.
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %st.addr = getelementptr inbounds nuw i16, ptr %array, i64 %iv
+  %data = load i16, ptr %st.addr, align 2
+  %inc = add nsw i16 %data, 1
+  store i16 %inc, ptr %st.addr, align 2
+  %rem = urem i64 %iv, 5
+  %skip.ee.cmp = icmp eq i64 %rem, 0
+  br i1 %skip.ee.cmp, label %for.inc, label %ee.block
+
+ee.block:
+  %ee.addr = getelementptr inbounds nuw i16, ptr %pred, i64 %iv
+  %ee.val = load i16, ptr %ee.addr, align 2
+  %ee.cond = icmp sgt i16 %ee.val, 500
+  br i1 %ee.cond, label %exit, label %for.inc
 
 for.inc:
   %iv.next = add nuw nsw i64 %iv, 1

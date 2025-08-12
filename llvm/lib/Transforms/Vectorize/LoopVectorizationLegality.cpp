@@ -1764,11 +1764,12 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
     }
   };
 
+  bool HasSideEffects = false;
   for (auto *BB : TheLoop->blocks())
     for (auto &I : *BB) {
       if (I.mayWriteToMemory()) {
         if (isa<StoreInst>(&I) && cast<StoreInst>(&I)->isSimple()) {
-          UncountedExitWithSideEffects = true;
+          HasSideEffects = true;
           continue;
         }
 
@@ -1795,7 +1796,7 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
 
   SmallVector<LoadInst *, 4> NonDerefLoads;
   // TODO: Handle loops that may fault.
-  if (!UncountedExitWithSideEffects) {
+  if (!HasSideEffects) {
     // Read-only loop.
     Predicates.clear();
     if (!isReadOnlyLoop(TheLoop, PSE.getSE(), DT, AC, NonDerefLoads,
@@ -1838,6 +1839,7 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
                        "backedge taken count: "
                     << *SymbolicMaxBTC << '\n');
   UncountableExitingBB = SingleUncountableExitingBlock;
+  UncountedExitWithSideEffects = HasSideEffects;
   return true;
 }
 
@@ -1853,53 +1855,53 @@ bool LoopVectorizationLegality::canUncountedExitConditionLoadBeMoved(
   // FIXME: We're insisting on a single use for now, because otherwise we will
   // need to make PHI nodes for other users. That can be done once the initial
   // transform code lands.
-  if (BranchInst *Br = dyn_cast<BranchInst>(ExitingBlock->getTerminator())) {
-    // FIXME: Don't rely on operand ordering for the comparison.
-    ICmpInst *Cmp = dyn_cast<ICmpInst>(Br->getCondition());
-    if (Cmp && Cmp->hasOneUse() &&
-        TheLoop->isLoopInvariant(Cmp->getOperand(1))) {
-      LoadInst *Load = dyn_cast<LoadInst>(Cmp->getOperand(0));
-      if (Load && Load->hasOneUse() && !TheLoop->isLoopInvariant(Load)) {
-        // The following call also checks that the load address is either
-        // invariant or is an affine SCEVAddRecExpr with a constant step.
-        // In either case, we're not relying on another load.
-        // FIXME: Support gathers after first-faulting support lands.
-        if (isDereferenceableAndAlignedInLoop(Load, TheLoop, *PSE.getSE(), *DT,
-                                              AC, &Predicates)) {
-          ICFLoopSafetyInfo SafetyInfo;
-          SafetyInfo.computeLoopSafetyInfo(TheLoop);
-          // We need to know that load will be executed before we can hoist a
-          // copy out to run just before the first iteration.
-          if (SafetyInfo.isGuaranteedToExecute(*Load, DT, TheLoop))
-            CriticalUncountedExitConditionLoad = Load;
-          else
-            reportVectorizationFailure(
-                "Early exit condition load not guaranteed to execute",
-                "Cannot vectorize early exit loop when condition load is not "
-                "guaranteed to execute",
-                "EarlyExitLoadNotGuaranteed", ORE, TheLoop);
-        } else {
+  auto *Br = cast<BranchInst>(ExitingBlock->getTerminator());
+
+  // FIXME: Don't rely on operand ordering for the comparison.
+  ICmpInst *Cmp = dyn_cast<ICmpInst>(Br->getCondition());
+  if (Cmp && Cmp->hasOneUse() && TheLoop->isLoopInvariant(Cmp->getOperand(1))) {
+    LoadInst *Load = dyn_cast<LoadInst>(Cmp->getOperand(0));
+    if (Load && Load->hasOneUse()) {
+      // Make sure that the load address is not loop invariant; we want an
+      // address calculation that we can rotate to the next vector iteration.
+      const SCEV *PtrScev = PSE.getSE()->getSCEV(Load->getPointerOperand());
+      if (PSE.getSE()->isLoopInvariant(PtrScev, TheLoop)) {
+        reportVectorizationFailure(
+            "Uncounted exit condition depends on load from invariant address",
+            "EarlyExitLoadInvariantAddress", ORE, TheLoop);
+        return false;
+      }
+
+      // The following call also checks that the load address is either
+      // invariant (which we've just ruled out) or is an affine SCEVAddRecExpr
+      // with a constant step. In either case, we're not relying on another
+      // load within the loop.
+      // FIXME: Support gathers after first-faulting load support lands.
+      if (isDereferenceableAndAlignedInLoop(Load, TheLoop, *PSE.getSE(), *DT,
+                                            AC, &Predicates)) {
+        ICFLoopSafetyInfo SafetyInfo;
+        SafetyInfo.computeLoopSafetyInfo(TheLoop);
+        // We need to know that load will be executed before we can hoist a
+        // copy out to run just before the first iteration.
+        if (SafetyInfo.isGuaranteedToExecute(*Load, DT, TheLoop))
+          CriticalUncountedExitConditionLoad = Load;
+        else
           reportVectorizationFailure(
-              "Loop may fault",
-              "Cannot vectorize potentially faulting early exit loop",
-              "PotentiallyFaultingEarlyExitLoop", ORE, TheLoop);
-          return false;
-        }
+              "Early exit condition load not guaranteed to execute",
+              "EarlyExitLoadNotGuaranteed", ORE, TheLoop);
+      } else {
+        reportVectorizationFailure(
+            "Loop may fault",
+            "Cannot vectorize potentially faulting early exit loop",
+            "PotentiallyFaultingEarlyExitLoop", ORE, TheLoop);
+        return false;
       }
     }
-  } else {
-    reportVectorizationFailure(
-        "Unsupported control flow in early exit loop with side effects",
-        "Cannot find branch instruction for uncounted exit in early exit loop "
-        "with side effects",
-        "UnsupportedUncountedExitTerminator", ORE, TheLoop);
-    return false;
   }
 
   if (!CriticalUncountedExitConditionLoad) {
     reportVectorizationFailure(
-        "Early exit loop with store but no condition load",
-        "Cannot vectorize early exit loop with store but no condition load",
+        "Early exit loop with store but no supported condition load",
         "NoConditionLoadForEarlyExitLoop", ORE, TheLoop);
     return false;
   }
@@ -1936,8 +1938,6 @@ bool LoopVectorizationLegality::canUncountedExitConditionLoadBeMoved(
     reportVectorizationFailure(
         "No dependencies allowed for critical early exit condition load "
         "in a loop with side effects",
-        "Critical Early exit condition loads in a loop with side effects "
-        "may not have a dependence with another memory operation.",
         "CantVectorizeUnsafeDependencyForEELoopWithSideEffects", ORE, TheLoop);
     return false;
   }
@@ -2014,8 +2014,8 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
     } else {
       if (!isVectorizableEarlyExitLoop()) {
         assert(!hasUncountableEarlyExit() &&
+               !hasUncountedExitWithSideEffects() &&
                "Must be false without vectorizable early-exit loop");
-        clearEarlyExitData();
         if (DoExtraAnalysis)
           Result = false;
         else
