@@ -120,9 +120,6 @@ struct HoverInfo {
   // alphabetical order.
   std::vector<std::string> UsedSymbolNames;
 
-  /// True if this symbol is a include directive.
-  bool IsIncludeDirective = false;
-
   /// Produce a user-readable information based on the specified markup kind.
   std::string present(MarkupKind Kind) const;
 

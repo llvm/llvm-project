@@ -3913,7 +3913,7 @@ Passed by const reference as arg_a (converted to int))",
           [](HoverInfo &HI) {
             HI.Name = "stdio.h";
             HI.Definition = "/usr/include/stdio.h";
-            HI.IsIncludeDirective = true;
+            HI.Kind = index::SymbolKind::IncludeDirective;
           },
           R"(stdio.h
 
@@ -3926,7 +3926,7 @@ Passed by const reference as arg_a (converted to int))",
           [](HoverInfo &HI) {
             HI.Name = "foo.h";
             HI.UsedSymbolNames = {"Foo", "Bar", "Bar"};
-            HI.IsIncludeDirective = true;
+            HI.Kind = index::SymbolKind::IncludeDirective;
           },
           R"(foo.h
 
@@ -3939,7 +3939,7 @@ provides `Foo`, `Bar`, `Bar`)",
       {[](HoverInfo &HI) {
          HI.Name = "foo.h";
          HI.UsedSymbolNames = {"Foo", "Bar", "Baz", "Foobar", "Qux", "Quux"};
-         HI.IsIncludeDirective = true;
+         HI.Kind = index::SymbolKind::IncludeDirective;
        },
        R"(foo.h
 

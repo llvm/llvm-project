@@ -1272,11 +1272,10 @@ std::optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
     HoverCountMetric.record(1, "include");
     HoverInfo HI;
     HI.Name = std::string(llvm::sys::path::filename(Inc.Resolved));
-    // FIXME: We don't have a fitting value for Kind.
     HI.Definition =
         URIForFile::canonicalize(Inc.Resolved, AST.tuPath()).file().str();
     HI.DefinitionLanguage = "";
-    HI.IsIncludeDirective = true;
+    HI.Kind = index::SymbolKind::IncludeDirective;
     maybeAddUsedSymbols(AST, HI, Inc);
     return HI;
   }
@@ -1482,10 +1481,6 @@ void HoverInfo::sizeToMarkupParagraph(markup::Paragraph &P) const {
 }
 
 markup::Document HoverInfo::presentDoxygen() const {
-  // NOTE: this function is currently almost identical to presentDefault().
-  // This is to have a minimal change when introducing the doxygen parser.
-  // This function will be changed when rearranging the output for doxygen
-  // parsed documentation.
 
   markup::Document Output;
   // Header contains a text of the form:
@@ -1501,11 +1496,12 @@ markup::Document HoverInfo::presentDoxygen() const {
   // level 1 and 2 headers in a huge font, see
   // https://github.com/microsoft/vscode/issues/88417 for details.
   markup::Paragraph &Header = Output.addHeading(3);
-  if (Kind != index::SymbolKind::Unknown)
+  if (Kind != index::SymbolKind::Unknown &&
+      Kind != index::SymbolKind::IncludeDirective)
     Header.appendText(index::getSymbolKindString(Kind)).appendSpace();
   assert(!Name.empty() && "hover triggered on a nameless symbol");
 
-  if (IsIncludeDirective) {
+  if (Kind == index::SymbolKind::IncludeDirective) {
     Header.appendCode(Name);
 
     if (!Definition.empty())
@@ -1645,7 +1641,8 @@ markup::Document HoverInfo::presentDefault() const {
   // level 1 and 2 headers in a huge font, see
   // https://github.com/microsoft/vscode/issues/88417 for details.
   markup::Paragraph &Header = Output.addHeading(3);
-  if (Kind != index::SymbolKind::Unknown)
+  if (Kind != index::SymbolKind::Unknown &&
+      Kind != index::SymbolKind::IncludeDirective)
     Header.appendText(index::getSymbolKindString(Kind)).appendSpace();
   assert(!Name.empty() && "hover triggered on a nameless symbol");
   Header.appendCode(Name);
