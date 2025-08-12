@@ -1727,6 +1727,11 @@ namespace {
         return TreeTransform::TransformTemplateSpecializationType(TLB, TL);
       // Look through sugar to get to the SubstBuiltinTemplatePackType that we
       // need to substitute into.
+
+      // `TransformType` code below will handle picking the element from a pack
+      // with the index `ArgPackSubstIndex`.
+      // FIXME: add ability to represent sugarred type for N-th element of a
+      // builtin pack and produce the sugar here.
       QualType R = TransformType(T->desugar());
       TLB.pushTrivial(getSema().getASTContext(), R, TL.getBeginLoc());
       return R;
