@@ -296,9 +296,6 @@ struct WgToSgStoreNdOp : public OpConversionPattern<xegpu::StoreNdOp> {
   }
 };
 
-// This pattern transforms the LoadNdOp with explicit offsets to load subgroup
-// data.
-// Use a template parameter for the adaptor type
 template <typename OpTy, typename AdaptorTy, typename CreateFn>
 LogicalResult distributeNdOpWithOffset(OpTy op, AdaptorTy adaptor,
                                        ConversionPatternRewriter &rewriter,
@@ -359,12 +356,12 @@ LogicalResult distributeNdOpWithOffset(OpTy op, AdaptorTy adaptor,
   for (auto v : op.getOffsets())
     oldOffsets.push_back(v);
 
-  // Delegate to the operation-specific creation function
   return createOp(loc, sgShape, *maybeTdescOffsets, oldOffsets, adaptor,
                   rewriter, op);
 }
 
-// Usage for LoadNdOp
+// This pattern transforms the LoadNdOp with explicit offsets to load
+// subgroup data.
 struct WgToSgLoadNdOpWithOffset : public OpConversionPattern<xegpu::LoadNdOp> {
   using OpConversionPattern<xegpu::LoadNdOp>::OpConversionPattern;
   LogicalResult matchAndRewrite(
