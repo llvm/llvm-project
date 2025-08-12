@@ -2504,7 +2504,8 @@ static void translateSetCCForBranch(const SDLoc &DL, SDValue &LHS, SDValue &RHS,
         CC = ISD::SETGE;
         return;
       }
-      if (Subtarget.hasVendorXqcicm() && C != INT64_MAX && isInt<5>(C+1)) {
+      if ((Subtarget.hasVendorXqcicm() || Subtarget.hasVendorXqcili()) &&
+          C != INT64_MAX && isInt<5>(C + 1)) {
         // We have a conditional move instruction for SETGE but not SETGT.
         // Convert X > C to X >= C + 1, if (C + 1) is a 5-bit signed immediate.
         RHS = DAG.getSignedConstant(C+1, DL, RHS.getValueType());
@@ -2529,7 +2530,8 @@ static void translateSetCCForBranch(const SDLoc &DL, SDValue &LHS, SDValue &RHS,
       }
       break;
     case ISD::SETUGT:
-      if (Subtarget.hasVendorXqcicm() && C != INT64_MAX && isUInt<5>(C + 1)) {
+      if ((Subtarget.hasVendorXqcicm() || Subtarget.hasVendorXqcili()) &&
+          C != INT64_MAX && isUInt<5>(C + 1)) {
         // We have a conditional move instruction for SETUGE but not SETUGT.
         // Convert X > C to X >= C + 1, if (C + 1) is a 5-bit signed immediate.
         RHS = DAG.getConstant(C + 1, DL, RHS.getValueType());
