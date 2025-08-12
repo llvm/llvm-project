@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/bf16divf.h"
-
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/__support/FPUtil/generic/div.h"
 #include "src/__support/common.h"
