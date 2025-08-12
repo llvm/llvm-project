@@ -146,10 +146,11 @@ StableFunctionMap::at(HashFuncsMapType::key_type FunctionHash) const {
 void StableFunctionMap::deserializeLazyLoadingEntry(
     HashFuncsMapType::iterator It) {
   assert(isLazilyLoaded() && "Cannot deserialize non-lazily-loaded map");
-  std::call_once(It->second.LazyLoadFlag, [this, It]() {
-    for (auto Offset : It->second.Offsets)
+  auto& [Hash, Storage] = *It;
+  std::call_once(Storage.LazyLoadFlag, [this, HashArg = Hash, &StorageArg = Storage]() {
+    for (auto Offset : StorageArg.Offsets)
       StableFunctionMapRecord::deserializeEntry(
-          reinterpret_cast<const unsigned char *>(Offset), It->first, this,
+          reinterpret_cast<const unsigned char *>(Offset), HashArg, this,
           ReadStableFunctionMapNames);
   });
 }
