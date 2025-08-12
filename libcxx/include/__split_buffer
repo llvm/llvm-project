@@ -62,6 +62,7 @@ protected:
   using const_pointer                  = typename __alloc_traits::const_pointer;
   using iterator                       = pointer;
   using const_iterator                 = const_pointer;
+
 public: // TODO: make private after vector becomes size-based
   pointer __first_ = nullptr;
   pointer __begin_ = nullptr;
@@ -118,12 +119,9 @@ public:
     __end_ = __begin_ + __new_size;
   }
 
-
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_size_if_size_based(difference_type __d) {}
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_end_if_pointer_based() {
-    __set_sentinel(end() + 1);
-  }
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_end_if_pointer_based() { __set_sentinel(end() + 1); }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_capacity(size_type __new_capacity) _NOEXCEPT {
     __cap_ = __first_ + __new_capacity;
@@ -293,33 +291,35 @@ public:
 // It has uninitialized memory in the ranges  [__first_, __begin_) and [__end_, __cap_). That allows
 // it to grow both in the front and back without having to move the data.
 
-template <class _Tp, class _Allocator = allocator<_Tp>, template <class, class, class> class _Layout = __split_buffer_pointer_layout>
+template <class _Tp,
+          class _Allocator                             = allocator<_Tp>,
+          template <class, class, class> class _Layout = __split_buffer_pointer_layout>
 struct __split_buffer : _Layout<__split_buffer<_Tp, _Allocator, _Layout>, _Tp, _Allocator> {
   using __base_type = _Layout<__split_buffer<_Tp, _Allocator, _Layout>, _Tp, _Allocator>;
-  using __base_type::first;
-  using __base_type::__set_first;
+  using __base_type::__back_spare;
+  using __base_type::__front_spare;
+  using __base_type::__reset;
   using __base_type::__set_begin;
   using __base_type::__set_capacity;
+  using __base_type::__set_end_if_pointer_based;
+  using __base_type::__set_first;
   using __base_type::__set_sentinel;
   using __base_type::__set_size_if_size_based;
-  using __base_type::__set_end_if_pointer_based;
-  using __base_type::__front_spare;
-  using __base_type::__back_spare;
-  using __base_type::__reset;
   using __base_type::__swap_without_allocator;
+  using __base_type::first;
 
-  using typename __base_type::value_type;
-  using typename __base_type::allocator_type;
   using typename __base_type::__alloc_rr;
   using typename __base_type::__alloc_traits;
-  using typename __base_type::reference;
-  using typename __base_type::const_reference;
-  using typename __base_type::size_type;
-  using typename __base_type::difference_type;
-  using typename __base_type::pointer;
-  using typename __base_type::const_pointer;
-  using typename __base_type::iterator;
+  using typename __base_type::allocator_type;
   using typename __base_type::const_iterator;
+  using typename __base_type::const_pointer;
+  using typename __base_type::const_reference;
+  using typename __base_type::difference_type;
+  using typename __base_type::iterator;
+  using typename __base_type::pointer;
+  using typename __base_type::reference;
+  using typename __base_type::size_type;
+  using typename __base_type::value_type;
 
   // A __split_buffer contains the following members which may be trivially relocatable:
   // - pointer: may be trivially relocatable, so it's checked
@@ -362,12 +362,12 @@ struct __split_buffer : _Layout<__split_buffer<_Tp, _Allocator, _Layout>, _Tp, _
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI ~__split_buffer();
 
+  using __base_type::back;
   using __base_type::begin;
+  using __base_type::capacity;
+  using __base_type::empty;
   using __base_type::end;
   using __base_type::size;
-  using __base_type::empty;
-  using __base_type::capacity;
-  using __base_type::back;
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void clear() _NOEXCEPT { __destruct_at_end(begin()); }
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI reference front() { return *begin(); }
@@ -456,9 +456,7 @@ private:
           __end_(__p + __n),
           __parent_(__parent) {}
 
-    _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI ~_ConstructTransaction() {
-      __parent_->__set_sentinel(__pos_);
-    }
+    _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI ~_ConstructTransaction() { __parent_->__set_sentinel(__pos_); }
 
     pointer __pos_;
     const pointer __end_;
