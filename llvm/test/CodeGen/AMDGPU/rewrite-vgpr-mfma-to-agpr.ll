@@ -235,47 +235,11 @@ bb:
   ret void
 }
 
-; TODO: Handle rewriting this case
 define void @test_rewrite_mfma_imm_src2(float %arg0, float %arg1) #0 {
 ; CHECK-LABEL: test_rewrite_mfma_imm_src2:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_mfma_f32_32x32x1_2b_f32 v[0:31], v0, v1, 2.0
-; CHECK-NEXT:    s_nop 7
-; CHECK-NEXT:    s_nop 7
-; CHECK-NEXT:    s_nop 1
-; CHECK-NEXT:    v_accvgpr_write_b32 a0, v0
-; CHECK-NEXT:    v_accvgpr_write_b32 a1, v1
-; CHECK-NEXT:    v_accvgpr_write_b32 a2, v2
-; CHECK-NEXT:    v_accvgpr_write_b32 a3, v3
-; CHECK-NEXT:    v_accvgpr_write_b32 a4, v4
-; CHECK-NEXT:    v_accvgpr_write_b32 a5, v5
-; CHECK-NEXT:    v_accvgpr_write_b32 a6, v6
-; CHECK-NEXT:    v_accvgpr_write_b32 a7, v7
-; CHECK-NEXT:    v_accvgpr_write_b32 a8, v8
-; CHECK-NEXT:    v_accvgpr_write_b32 a9, v9
-; CHECK-NEXT:    v_accvgpr_write_b32 a10, v10
-; CHECK-NEXT:    v_accvgpr_write_b32 a11, v11
-; CHECK-NEXT:    v_accvgpr_write_b32 a12, v12
-; CHECK-NEXT:    v_accvgpr_write_b32 a13, v13
-; CHECK-NEXT:    v_accvgpr_write_b32 a14, v14
-; CHECK-NEXT:    v_accvgpr_write_b32 a15, v15
-; CHECK-NEXT:    v_accvgpr_write_b32 a16, v16
-; CHECK-NEXT:    v_accvgpr_write_b32 a17, v17
-; CHECK-NEXT:    v_accvgpr_write_b32 a18, v18
-; CHECK-NEXT:    v_accvgpr_write_b32 a19, v19
-; CHECK-NEXT:    v_accvgpr_write_b32 a20, v20
-; CHECK-NEXT:    v_accvgpr_write_b32 a21, v21
-; CHECK-NEXT:    v_accvgpr_write_b32 a22, v22
-; CHECK-NEXT:    v_accvgpr_write_b32 a23, v23
-; CHECK-NEXT:    v_accvgpr_write_b32 a24, v24
-; CHECK-NEXT:    v_accvgpr_write_b32 a25, v25
-; CHECK-NEXT:    v_accvgpr_write_b32 a26, v26
-; CHECK-NEXT:    v_accvgpr_write_b32 a27, v27
-; CHECK-NEXT:    v_accvgpr_write_b32 a28, v28
-; CHECK-NEXT:    v_accvgpr_write_b32 a29, v29
-; CHECK-NEXT:    v_accvgpr_write_b32 a30, v30
-; CHECK-NEXT:    v_accvgpr_write_b32 a31, v31
+; CHECK-NEXT:    v_mfma_f32_32x32x1_2b_f32 a[0:31], v0, v1, 2.0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use a[0:31]
 ; CHECK-NEXT:    ;;#ASMEND
