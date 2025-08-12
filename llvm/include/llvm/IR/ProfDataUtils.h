@@ -127,6 +127,12 @@ LLVM_ABI bool extractBranchWeights(const Instruction &I, uint64_t &TrueVal,
 LLVM_ABI bool extractProfTotalWeight(const MDNode *ProfileData,
                                      uint64_t &TotalWeights);
 
+/// visit each element of the value profile, calling a function where the first
+/// argument will be the key and the next on the value.
+LLVM_ABI void visitValueProfile(
+    const MDNode &ProfData,
+    llvm::function_ref<bool(const MDOperand &, const MDOperand &)> Visitor);
+
 /// Retrieve the total of all weights from an instruction.
 ///
 /// \param I The instruction to extract the total weight from
