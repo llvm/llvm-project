@@ -2975,6 +2975,22 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
                Op2Info, Operands, UI, &Ctx.TLI) *
            (isSingleScalar() ? 1 : VF.getFixedValue());
   }
+  case Instruction::Load:
+  case Instruction::Store: {
+    if (isSingleScalar()) {
+      Type *ValTy = getLoadStoreType(UI);
+      Type *ScalarPtrTy = getLoadStorePointerOperand(UI)->getType();
+      const Align Alignment = getLoadStoreAlignment(UI);
+      unsigned AS = getLoadStoreAddressSpace(UI);
+      TTI::OperandValueInfo OpInfo = TTI::getOperandInfo(UI->getOperand(0));
+      InstructionCost ScalarMemOpCost = Ctx.TTI.getMemoryOpCost(
+          UI->getOpcode(), ValTy, Alignment, AS, CostKind, OpInfo, UI);
+      return ScalarMemOpCost + Ctx.TTI.getAddressComputationCost(ScalarPtrTy);
+    }
+    // TODO: See getMemInstScalarizationCost for how to handle vector and
+    // predicated cases.
+    break;
+  }
   }
 
   return Ctx.getLegacyCost(UI, VF);
