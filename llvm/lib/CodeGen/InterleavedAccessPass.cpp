@@ -271,16 +271,13 @@ static Value *getMaskOperand(IntrinsicInst *II) {
 // Return a pair of
 //  (1) The corresponded deinterleaved mask, or nullptr if there is no valid
 //  mask.
-//  (2) Some mask effectively skips a certain field, this element contains
-//  the factor after taking such contraction into consideration. Note that
-//  currently we only support skipping trailing fields. So if the "nominal"
-//  factor was 5, you cannot only skip field 1 and 2, but you can skip field 3
-//  and 4.
-static std::pair<Value *, unsigned> getMask(Value *WideMask, unsigned Factor,
-                                            ElementCount LeafValueEC);
+//  (2) Some mask effectively skips a certain field, and this element is a mask
+//  in which inactive lanes represent fields that are skipped (i.e. "gaps").
+static std::pair<Value *, APInt> getMask(Value *WideMask, unsigned Factor,
+                                         ElementCount LeafValueEC);
 
-static std::pair<Value *, unsigned> getMask(Value *WideMask, unsigned Factor,
-                                            VectorType *LeafValueTy) {
+static std::pair<Value *, APInt> getMask(Value *WideMask, unsigned Factor,
+                                         VectorType *LeafValueTy) {
   return getMask(WideMask, Factor, LeafValueTy->getElementCount());
 }
 
@@ -385,25 +382,26 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
       replaceBinOpShuffles(BinOpShuffles.getArrayRef(), Shuffles, Load);
 
   Value *Mask = nullptr;
-  unsigned GapMaskFactor = Factor;
+  APInt GapMask(Factor, 0);
   if (LI) {
+    GapMask.setAllBits();
     LLVM_DEBUG(dbgs() << "IA: Found an interleaved load: " << *Load << "\n");
   } else {
     // Check mask operand. Handle both all-true/false and interleaved mask.
-    std::tie(Mask, GapMaskFactor) = getMask(getMaskOperand(II), Factor, VecTy);
+    std::tie(Mask, GapMask) = getMask(getMaskOperand(II), Factor, VecTy);
     if (!Mask)
       return false;
 
     LLVM_DEBUG(dbgs() << "IA: Found an interleaved vp.load or masked.load: "
                       << *Load << "\n");
     LLVM_DEBUG(dbgs() << "IA: With nominal factor " << Factor
-                      << " and mask factor " << GapMaskFactor << "\n");
+                      << " and actual factor " << GapMask.popcount() << "\n");
   }
 
   // Try to create target specific intrinsics to replace the load and
   // shuffles.
   if (!TLI->lowerInterleavedLoad(cast<Instruction>(Load), Mask, Shuffles,
-                                 Indices, Factor, GapMaskFactor))
+                                 Indices, Factor, GapMask))
     // If Extracts is not empty, tryReplaceExtracts made changes earlier.
     return !Extracts.empty() || BinOpShuffleChanged;
 
@@ -540,19 +538,19 @@ bool InterleavedAccessImpl::lowerInterleavedStore(
          "number of stored element should be a multiple of Factor");
 
   Value *Mask = nullptr;
-  unsigned GapMaskFactor = Factor;
   if (SI) {
     LLVM_DEBUG(dbgs() << "IA: Found an interleaved store: " << *Store << "\n");
   } else {
     // Check mask operand. Handle both all-true/false and interleaved mask.
     unsigned LaneMaskLen = NumStoredElements / Factor;
-    std::tie(Mask, GapMaskFactor) = getMask(
-        getMaskOperand(II), Factor, ElementCount::getFixed(LaneMaskLen));
+    APInt GapMask(Factor, 0);
+    std::tie(Mask, GapMask) = getMask(getMaskOperand(II), Factor,
+                                      ElementCount::getFixed(LaneMaskLen));
     if (!Mask)
       return false;
-    // We shouldn't transform stores even it has a gap mask. And since we might
-    // already change the IR, we're returning true here.
-    if (GapMaskFactor != Factor)
+    // We haven't supported gap mask for stores. Yet it is possible that we
+    // already changed the IR, hence returning true here.
+    if (GapMask.popcount() != Factor)
       return true;
 
     LLVM_DEBUG(dbgs() << "IA: Found an interleaved vp.store or masked.store: "
@@ -575,10 +573,9 @@ bool InterleavedAccessImpl::lowerInterleavedStore(
 // which case LeafMaskLen is 4). Such (wide) mask is also known as gap mask.
 // This helper function tries to detect this pattern and return the actual
 // factor we're accessing, which is 2 in this example.
-static unsigned getGapMaskFactor(const Constant &MaskConst, unsigned Factor,
-                                 unsigned LeafMaskLen) {
-  APInt FactorMask(Factor, 0);
-  FactorMask.setAllBits();
+static void getGapMask(const Constant &MaskConst, unsigned Factor,
+                       unsigned LeafMaskLen, APInt &GapMask) {
+  assert(GapMask.getBitWidth() == Factor);
   for (unsigned F = 0U; F < Factor; ++F) {
     bool AllZero = true;
     for (unsigned Idx = 0U; Idx < LeafMaskLen; ++Idx) {
@@ -590,26 +587,21 @@ static unsigned getGapMaskFactor(const Constant &MaskConst, unsigned Factor,
     }
     // All mask bits on this field are zero, skipping it.
     if (AllZero)
-      FactorMask.clearBit(F);
+      GapMask.clearBit(F);
   }
-  // We currently only allow gaps in the "trailing" factors / fields. So
-  // given the original factor being 4, we can skip fields 2 and 3, but we
-  // cannot only skip fields 1 and 2. If FactorMask does not match such
-  // pattern, reset it.
-  if (!FactorMask.isMask())
-    FactorMask.setAllBits();
-
-  return FactorMask.popcount();
 }
 
-static std::pair<Value *, unsigned> getMask(Value *WideMask, unsigned Factor,
-                                            ElementCount LeafValueEC) {
+static std::pair<Value *, APInt> getMask(Value *WideMask, unsigned Factor,
+                                         ElementCount LeafValueEC) {
   using namespace PatternMatch;
+
+  APInt GapMask(Factor, 0);
+  GapMask.setAllBits();
 
   if (auto *IMI = dyn_cast<IntrinsicInst>(WideMask)) {
     if (unsigned F = getInterleaveIntrinsicFactor(IMI->getIntrinsicID());
         F && F == Factor && llvm::all_equal(IMI->args())) {
-      return {IMI->getArgOperand(0), Factor};
+      return {IMI->getArgOperand(0), GapMask};
     }
   }
 
@@ -621,36 +613,34 @@ static std::pair<Value *, unsigned> getMask(Value *WideMask, unsigned Factor,
       LeafValueEC.isFixed()) {
     assert(!isa<Constant>(AndMaskLHS) &&
            "expect constants to be folded already");
-    return {getMask(AndMaskLHS, Factor, LeafValueEC).first,
-            getGapMaskFactor(*AndMaskRHS, Factor, LeafValueEC.getFixedValue())};
+    getGapMask(*AndMaskRHS, Factor, LeafValueEC.getFixedValue(), GapMask);
+    return {getMask(AndMaskLHS, Factor, LeafValueEC).first, GapMask};
   }
 
   if (auto *ConstMask = dyn_cast<Constant>(WideMask)) {
     if (auto *Splat = ConstMask->getSplatValue())
       // All-ones or all-zeros mask.
-      return {ConstantVector::getSplat(LeafValueEC, Splat), Factor};
+      return {ConstantVector::getSplat(LeafValueEC, Splat), GapMask};
 
     if (LeafValueEC.isFixed()) {
       unsigned LeafMaskLen = LeafValueEC.getFixedValue();
       // First, check if we use a gap mask to skip some of the factors / fields.
-      const unsigned GapMaskFactor =
-          getGapMaskFactor(*ConstMask, Factor, LeafMaskLen);
-      assert(GapMaskFactor <= Factor);
+      getGapMask(*ConstMask, Factor, LeafMaskLen, GapMask);
 
       SmallVector<Constant *, 8> LeafMask(LeafMaskLen, nullptr);
       // If this is a fixed-length constant mask, each lane / leaf has to
       // use the same mask. This is done by checking if every group with Factor
       // number of elements in the interleaved mask has homogeneous values.
       for (unsigned Idx = 0U; Idx < LeafMaskLen * Factor; ++Idx) {
-        if (Idx % Factor >= GapMaskFactor)
+        if (!GapMask[Idx % Factor])
           continue;
         Constant *C = ConstMask->getAggregateElement(Idx);
         if (LeafMask[Idx / Factor] && LeafMask[Idx / Factor] != C)
-          return {nullptr, Factor};
+          return {nullptr, GapMask};
         LeafMask[Idx / Factor] = C;
       }
 
-      return {ConstantVector::get(LeafMask), GapMaskFactor};
+      return {ConstantVector::get(LeafMask), GapMask};
     }
   }
 
@@ -672,11 +662,11 @@ static std::pair<Value *, unsigned> getMask(Value *WideMask, unsigned Factor,
       IRBuilder<> Builder(SVI);
       return {Builder.CreateExtractVector(LeafMaskTy, SVI->getOperand(0),
                                           uint64_t(0)),
-              Factor};
+              GapMask};
     }
   }
 
-  return {nullptr, Factor};
+  return {nullptr, GapMask};
 }
 
 bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
@@ -707,12 +697,16 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
       return false;
 
     // Check mask operand. Handle both all-true/false and interleaved mask.
-    unsigned GapMaskFactor;
-    std::tie(Mask, GapMaskFactor) =
+    APInt GapMask(Factor, 0);
+    std::tie(Mask, GapMask) =
         getMask(getMaskOperand(II), Factor, getDeinterleavedVectorType(DI));
     if (!Mask)
       return false;
-    assert(GapMaskFactor == Factor);
+    // We haven't supported gap mask if it's deinterleaving using intrinsics.
+    // Yet it is possible that we already changed the IR, hence returning true
+    // here.
+    if (GapMask.popcount() != Factor)
+      return true;
 
     LLVM_DEBUG(dbgs() << "IA: Found a vp.load or masked.load with deinterleave"
                       << " intrinsic " << *DI << " and factor = "
@@ -751,13 +745,16 @@ bool InterleavedAccessImpl::lowerInterleaveIntrinsic(
         II->getIntrinsicID() != Intrinsic::vp_store)
       return false;
     // Check mask operand. Handle both all-true/false and interleaved mask.
-    unsigned GapMaskFactor;
-    std::tie(Mask, GapMaskFactor) =
+    APInt GapMask(Factor, 0);
+    std::tie(Mask, GapMask) =
         getMask(getMaskOperand(II), Factor,
                 cast<VectorType>(InterleaveValues[0]->getType()));
     if (!Mask)
       return false;
-    assert(GapMaskFactor == Factor);
+    // We haven't supported gap mask if it's interleaving using intrinsics. Yet
+    // it is possible that we already changed the IR, hence returning true here.
+    if (GapMask.popcount() != Factor)
+      return true;
 
     LLVM_DEBUG(dbgs() << "IA: Found a vp.store or masked.store with interleave"
                       << " intrinsic " << *IntII << " and factor = "

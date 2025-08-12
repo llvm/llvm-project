@@ -21599,7 +21599,7 @@ unsigned ARMTargetLowering::getMaxSupportedInterleaveFactor() const {
 ///        %vec1 = extractelement { <4 x i32>, <4 x i32> } %vld2, i32 1
 bool ARMTargetLowering::lowerInterleavedLoad(
     Instruction *Load, Value *Mask, ArrayRef<ShuffleVectorInst *> Shuffles,
-    ArrayRef<unsigned> Indices, unsigned Factor, unsigned MaskFactor) const {
+    ArrayRef<unsigned> Indices, unsigned Factor, const APInt &GapMask) const {
   assert(Factor >= 2 && Factor <= getMaxSupportedInterleaveFactor() &&
          "Invalid interleave factor");
   assert(!Shuffles.empty() && "Empty shufflevector input");
@@ -21610,9 +21610,7 @@ bool ARMTargetLowering::lowerInterleavedLoad(
   if (!LI)
     return false;
   assert(!Mask && "Unexpected mask on a load");
-
-  if (Factor != MaskFactor)
-    return false;
+  assert(GapMask.popcount() == Factor && "Unexpected factor reduction");
 
   auto *VecTy = cast<FixedVectorType>(Shuffles[0]->getType());
   Type *EltTy = VecTy->getElementType();

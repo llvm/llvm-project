@@ -203,12 +203,14 @@ static bool getMemOperands(unsigned Factor, VectorType *VTy, Type *XLenTy,
 /// %vec1 = extractelement { <4 x i32>, <4 x i32> } %ld2, i32 1
 bool RISCVTargetLowering::lowerInterleavedLoad(
     Instruction *Load, Value *Mask, ArrayRef<ShuffleVectorInst *> Shuffles,
-    ArrayRef<unsigned> Indices, unsigned Factor, unsigned MaskFactor) const {
+    ArrayRef<unsigned> Indices, unsigned Factor, const APInt &GapMask) const {
   assert(Indices.size() == Shuffles.size());
-  assert(MaskFactor <= Factor);
+  assert(GapMask.getBitWidth() == Factor);
 
-  // TODO: Lower to strided load when MaskFactor = 1.
-  if (MaskFactor < 2)
+  // We only support cases where the skipped fields are the trailing ones.
+  // TODO: Lower to strided load if there is only a single active field.
+  unsigned MaskFactor = GapMask.popcount();
+  if (MaskFactor < 2 || !GapMask.isMask())
     return false;
   IRBuilder<> Builder(Load);
 

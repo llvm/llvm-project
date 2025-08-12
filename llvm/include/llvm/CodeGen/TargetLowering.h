@@ -3209,12 +3209,12 @@ public:
   /// \p Shuffles is the shufflevector list to DE-interleave the loaded vector.
   /// \p Indices is the corresponding indices for each shufflevector.
   /// \p Factor is the interleave factor.
-  /// \p MaskFactor is the interleave factor that considers mask, which can
-  /// reduce the original factor.
+  /// \p GapMask is a mask in which inactive lanes represent components / fields
+  /// that are always skipped.
   virtual bool lowerInterleavedLoad(Instruction *Load, Value *Mask,
                                     ArrayRef<ShuffleVectorInst *> Shuffles,
                                     ArrayRef<unsigned> Indices, unsigned Factor,
-                                    unsigned MaskFactor) const {
+                                    const APInt &GapMask) const {
     return false;
   }
 

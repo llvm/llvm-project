@@ -802,7 +802,7 @@ bool X86InterleavedAccessGroup::lowerIntoOptimizedSequence() {
 // Currently, lowering is supported for 4x64 bits with Factor = 4 on AVX.
 bool X86TargetLowering::lowerInterleavedLoad(
     Instruction *Load, Value *Mask, ArrayRef<ShuffleVectorInst *> Shuffles,
-    ArrayRef<unsigned> Indices, unsigned Factor, unsigned MaskFactor) const {
+    ArrayRef<unsigned> Indices, unsigned Factor, const APInt &GapMask) const {
   assert(Factor >= 2 && Factor <= getMaxSupportedInterleaveFactor() &&
          "Invalid interleave factor");
   assert(!Shuffles.empty() && "Empty shufflevector input");
@@ -813,9 +813,7 @@ bool X86TargetLowering::lowerInterleavedLoad(
   if (!LI)
     return false;
   assert(!Mask && "Unexpected mask on a load");
-
-  if (Factor != MaskFactor)
-    return false;
+  assert(GapMask.popcount() == Factor && "Unexpected factor reduction");
 
   // Create an interleaved access group.
   IRBuilder<> Builder(LI);
