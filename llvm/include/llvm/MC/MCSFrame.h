@@ -16,9 +16,6 @@
 #ifndef LLVM_MC_MCSFRAME_H
 #define LLVM_MC_MCSFRAME_H
 
-#include "llvm/ADT/SmallVector.h"
-#include <cstdint>
-
 namespace llvm {
 
 class MCObjectStreamer;
