@@ -398,13 +398,13 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
   // enhances source-level debugging.
 
   struct VarState {
-    std::string name;     // display name
-    std::string last_loc; // last printed location (empty means <undef>)
+    std::string name;     //< Display name.
+    std::string last_loc; //< Last printed location (empty means <undef>).
     bool seen_this_inst = false;
   };
 
-  // Track live variables across instructions (keyed by stable LLDB user_id_t)
-  llvm::SmallDenseMap<lldb::user_id_t, VarState, 8> live_vars; // 8 is a good small-buffer guess
+  // Track live variables across instructions (keyed by stable LLDB user_id_t. 8 is a good small-buffer guess
+  llvm::SmallDenseMap<lldb::user_id_t, VarState, 8> live_vars;
 
   // Stateful annotator: updates live_vars and returns only what should be
   // printed for THIS instruction.
@@ -417,7 +417,7 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
     if (!frame || !target_sp || !process_sp)
       return events;
 
-    // Reset "seen" flags for this instruction
+    // Reset "seen" flags for this instruction.
     for (auto &kv : live_vars)
       kv.second.seen_this_inst = false;
 
@@ -426,13 +426,13 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
         frame->GetFrameCodeAddress().GetLoadAddress(target_sp.get());
 
     // We temporarily move the frame PC so variable locations resolve at this
-    // inst
+    // instruction.
     if (!frame->ChangePC(current_pc))
       return events;
 
     VariableListSP var_list_sp = frame->GetInScopeVariableList(true);
     if (!var_list_sp) {
-      // No variables in scope: everything previously live becomes <undef>
+      // No variables in scope: everything previously live becomes <undef>.
       for (auto I = live_vars.begin(), E = live_vars.end(); I != E; ) {
         auto Cur = I++;
         events.push_back(llvm::formatv("{0} = <undef>", Cur->second.name).str());
@@ -447,12 +447,13 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
         sc.function ? sc.function->GetAddress().GetLoadAddress(target_sp.get())
                     : LLDB_INVALID_ADDRESS;
 
-    // Walk all in-scope variables and try to resolve a location
+    // Walk all in-scope variables and try to resolve a location.
     for (const VariableSP &var_sp : *var_list_sp) {
       if (!var_sp)
         continue;
 
-      const auto var_id = var_sp->GetID(); // lldb::user_id_t – stable key
+      // The var_id is a lldb::user_id_t – stable key.
+      const auto var_id = var_sp->GetID();
       const char *name_cstr = var_sp->GetName().AsCString();
       llvm::StringRef name = name_cstr ? name_cstr : "<anon>";
 
@@ -460,7 +461,6 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
       if (!expr_list.IsValid())
         continue;
 
-      // Try to get the expression entry for this PC
       auto entry_or_err =
           expr_list.GetExpressionEntryAtAddress(func_load_addr, current_pc);
       if (!entry_or_err)
@@ -468,13 +468,13 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
 
       auto entry = *entry_or_err;
 
-      // Check range if present
+      // Check range if present.
       if (entry.file_range &&
           !entry.file_range->ContainsFileAddress(
               (current_pc - func_load_addr) + expr_list.GetFuncFileAddress()))
         continue;
 
-      // Render a compact location string
+      // Render a compact location string.
       ABI *abi = process_sp->GetABI().get();
       llvm::DIDumpOptions opts;
       opts.ShowAddresses = false;
@@ -491,10 +491,10 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
                                              loc_clean.str(),
                                              /*seen_this_inst*/ true}});
       if (insert_res.second) {
-        // Newly inserted → print
+        // Newly inserted → print.
         events.push_back(llvm::formatv("{0} = {1}", name, loc_clean).str());
       } else {
-        // Already present
+        // Already present.
         VarState &vs = insert_res.first->second;
         vs.seen_this_inst = true;
         if (vs.last_loc != loc_clean) {
@@ -505,7 +505,7 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
     }
 
     // Anything previously live that we didn't see a location for at this inst
-    // is now <undef>
+    // is now <undef>.
     for (auto I = live_vars.begin(), E = live_vars.end(); I != E; ) {
       auto Cur = I++;
       if (!Cur->second.seen_this_inst) {
@@ -514,7 +514,7 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
       }
     }
 
-    // Restore PC
+    // Restore PC.
     frame->ChangePC(original_pc);
     return events;
   };
