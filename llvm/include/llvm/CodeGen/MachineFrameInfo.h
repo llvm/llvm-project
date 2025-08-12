@@ -839,7 +839,7 @@ public:
   static SmallVector<MachineBasicBlock *> constructSaveRestorePoints(
       ArrayRef<MachineBasicBlock *> SRPoints,
       const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &BBMap) {
-    SmallVector<MachineBasicBlock *, 4> Pts;
+    SmallVector<MachineBasicBlock *> Pts;
     for (auto &Src : SRPoints)
       Pts.push_back(BBMap.find(Src)->second);
     return Pts;
