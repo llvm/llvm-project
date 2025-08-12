@@ -2241,17 +2241,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   }
 
   VPValue *HeaderMask = findHeaderMask(Plan);
-  if (!HeaderMask) {
-    // TODO: Remove this once we move transformRecipesToEVLRecipes into
-    // tryToBuildVPlanWithVPRecipes.
-    for (VPRecipeBase *R : reverse(ToErase)) {
-      SmallVector<VPValue *> PossiblyDead(R->operands());
-      R->eraseFromParent();
-      for (VPValue *Op : PossiblyDead)
-        recursivelyDeleteDeadRecipes(Op);
-    }
+  if (!HeaderMask)
     return;
-  }
 
   // Replace header masks with a mask equivalent to predicating by EVL:
   //
