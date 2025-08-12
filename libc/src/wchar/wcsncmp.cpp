@@ -30,8 +30,7 @@ LLVM_LIBC_FUNCTION(int, wcsncmp,
     if (!comp(lc, '\0') || comp(lc, *right))
       break;
   }
-  return comp(*left,
-              *right);
+  return comp(*left, *right);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
