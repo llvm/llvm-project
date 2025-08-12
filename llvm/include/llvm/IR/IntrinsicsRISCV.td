@@ -1717,7 +1717,7 @@ let TargetPrefix = "riscv" in {
                                    llvm_anyint_ty],
                                   [NoCapture<ArgIndex<0>>, IntrReadMem]>;
 
-    // Input: (pointer, offset, mask, vl)
+    // Input: (pointer, stride, mask, vl)
     def int_riscv_sseg # nf # _load_mask
           : DefaultAttrsIntrinsic<!listconcat([llvm_anyvector_ty],
                                               !listsplat(LLVMMatchType<0>,
