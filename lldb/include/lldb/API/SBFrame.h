@@ -13,6 +13,8 @@
 #include "lldb/API/SBValueList.h"
 
 namespace lldb_private {
+class StackFrame;
+class Debugger;
 namespace python {
 class SWIGBridge;
 }
@@ -240,6 +242,23 @@ protected:
   /// Return an SBValue containing an error message that warns the process is
   /// not currently stopped.
   static SBValue CreateProcessIsRunningExprEvalError();
+
+  enum WasInterrupted { Yes, No };
+
+  /// Populates `value_list` with the variables from `frame` according to
+  /// `options`. This method checks whether the Debugger received an interrupt
+  /// before processing every variable, returning `WasInterrupted::yes` in that
+  /// case.
+  static WasInterrupted FetchVariablesUnlessInterrupted(
+      const lldb::SBVariablesOptions &options, lldb_private::StackFrame &frame,
+      SBValueList &value_list, lldb_private::Debugger &dbg);
+
+  /// Populates `value_list` with recognized arguments of `frame` according to
+  /// `options`.
+  static void FetchRecognizedArguments(const SBVariablesOptions &options,
+                                       lldb_private::StackFrame &frame,
+                                       SBTarget target,
+                                       SBValueList &value_list);
 
   lldb::ExecutionContextRefSP m_opaque_sp;
 };
