@@ -94,9 +94,12 @@ static DebugLoc getDebugLoc(MachineBasicBlock::instr_iterator FirstMI,
   return DebugLoc();
 }
 
-static bool containReg(SmallSetVector<Register, 32> LocalDefsV,
-                       const BitVector &LocalDefsP, Register Reg,
-                       const TargetRegisterInfo *TRI) {
+/// Check if target reg is contained in given lists, which are:
+/// LocalDefsV as given list for virtual regs
+/// LocalDefsP as given list for physical regs, in BitVector[RegUnit] form
+static bool containsReg(SmallSetVector<Register, 32> LocalDefsV,
+                        const BitVector &LocalDefsP, Register Reg,
+                        const TargetRegisterInfo *TRI) {
   if (Reg.isPhysical()) {
     for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
       if (!LocalDefsP[Unit])
@@ -144,7 +147,7 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
       if (!Reg)
         continue;
 
-      if (containReg(LocalDefs, LocalDefsP, Reg, TRI)) {
+      if (containsReg(LocalDefs, LocalDefsP, Reg, TRI)) {
         MO.setIsInternalRead();
         if (MO.isKill()) {
           // Internal def is now killed.
