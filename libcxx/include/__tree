@@ -1037,12 +1037,7 @@ public:
     if constexpr (
         integral_constant<bool, is_copy_constructible<decltype(__value.first)>::value >()
     ) {
-      // static_assert(std::same_as_v<decltype(__value.first), double>);
-      // __emplace_hint_unique(__p, std::move(__value.first), std::move(__value.second));
-
-      __sfinae_call_emplace_hint_unique(__p, std::move(__value),
-        integral_constant<bool, is_copy_constructible<decltype(__value.first)>::value >()
-      );
+      __emplace_hint_unique(__p, std::move(__value.first), std::move(__value.second));
     } else 
     #endif
     {
@@ -1274,12 +1269,10 @@ private:
 error: no matching constructor for initialization of '__get_node_value_type_t<value_type>' (aka 'std::pair<const MoveOnly, MoveOnly>')
 # |  1225 |       __get_node_value_type_t<value_type> __tmp(__rhs.first, __rhs.second);
      */
-    if constexpr (integral_constant<bool, is_copy_constructible_v<_From> >()) {
-      // __move_from_value_type(__lhs, __rhs
-      // , integral_constant<bool, is_copy_constructible_v<_From> >()
-      // );
 
-      // TODO: narrow it to "_From.first"
+    if constexpr (
+              integral_constant<bool, is_copy_constructible<decltype(__rhs.first)>::value >()
+    ){
       // if constexpr (integral_constant<bool, is_copy_constructible_v<_From> >()) {
         // we use copy, and not "move" as the constraint
         // because we can NOT move from `const key_type`, which is how `value_type` is defined
@@ -1293,7 +1286,6 @@ error: no matching constructor for initialization of '__get_node_value_type_t<va
 
       // note: this does not work for `const MoveOnly` keys at constexpr time
 
-
       __node_allocator& __na = __node_alloc();
       __node_traits::destroy(__na, std::addressof(__lhs));
 
@@ -1301,19 +1293,6 @@ error: no matching constructor for initialization of '__get_node_value_type_t<va
       using __node_value_type = __get_node_value_type_t<value_type>;
       __node_value_type __tmp(__rhs.first, __rhs.second);
       __node_traits::construct(__na, std::addressof(__lhs), std::move(__tmp));
-
-
-      // } else {
-
-      // (void)__lhs;
-      // (void)__rhs;
-      // static_assert(false, "Can not move from a pair<const T, U>");
-      // TODO: how do I flag this code to NOT run at compile time?
-      // Using static_assert means this can't compile _at all_, regardless of whether this code is actually going to execute at compile time or not
-
-      // }
-
-
 
 
     } else 
