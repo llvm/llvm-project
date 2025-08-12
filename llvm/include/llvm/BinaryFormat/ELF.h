@@ -362,6 +362,7 @@ enum {
   ELFOSABI_FENIXOS = 16,       // FenixOS
   ELFOSABI_CLOUDABI = 17,      // Nuxi CloudABI
   ELFOSABI_CUDA = 51,          // NVIDIA CUDA architecture.
+  ELFOSABI_CUDA_V2 = 41,       // NVIDIA CUDA architecture.
   ELFOSABI_FIRST_ARCH = 64,    // First architecture-specific OS ABI
   ELFOSABI_AMDGPU_HSA = 64,    // AMD HSA runtime
   ELFOSABI_AMDGPU_PAL = 65,    // AMD PAL runtime
@@ -383,6 +384,12 @@ enum {
   ELFABIVERSION_AMDGPU_HSA_V4 = 2,
   ELFABIVERSION_AMDGPU_HSA_V5 = 3,
   ELFABIVERSION_AMDGPU_HSA_V6 = 4,
+};
+
+// CUDA OS ABI Version identification.
+enum {
+  ELFABIVERSION_CUDA_V1 = 7,
+  ELFABIVERSION_CUDA_V2 = 8,
 };
 
 #define ELF_RELOC(name, value) name = value,
@@ -921,7 +928,7 @@ enum {
 
 // NVPTX specific e_flags.
 enum : unsigned {
-  // Processor selection mask for EF_CUDA_SM* values.
+  // Processor selection mask for EF_CUDA_SM* values prior to blackwell.
   EF_CUDA_SM = 0xff,
 
   // SM based processor values.
@@ -954,12 +961,25 @@ enum : unsigned {
   // The target is using 64-bit addressing.
   EF_CUDA_64BIT_ADDRESS = 0x400,
   // Set when using the sm_90a processor.
-  EF_CUDA_ACCELERATORS = 0x800,
+  EF_CUDA_ACCELERATORS_V1 = 0x800,
   // Undocumented software feature.
   EF_CUDA_SW_FLAG_V2 = 0x1000,
 
   // Virtual processor selection mask for EF_CUDA_VIRTUAL_SM* values.
   EF_CUDA_VIRTUAL_SM = 0xff0000,
+
+  // Processor selection mask for EF_CUDA_SM* values following blackwell.
+  EF_CUDA_SM_MASK = 0xff00,
+
+  // SM based processor values.
+  EF_CUDA_SM100 = 0x6400,
+  EF_CUDA_SM101 = 0x6500,
+  EF_CUDA_SM103 = 0x6700,
+  EF_CUDA_SM120 = 0x7800,
+  EF_CUDA_SM121 = 0x7900,
+
+  // Set when using an accelerator variant like sm_100a.
+  EF_CUDA_ACCELERATORS = 0x8,
 };
 
 // ELF Relocation types for BPF
@@ -1159,9 +1179,11 @@ enum : unsigned {
   SHT_LLVM_OFFLOADING = 0x6fff4c0b,         // LLVM device offloading data.
   SHT_LLVM_LTO = 0x6fff4c0c,                // .llvm.lto for fat LTO.
   SHT_LLVM_JT_SIZES = 0x6fff4c0d,           // LLVM jump tables sizes.
+  SHT_LLVM_CFI_JUMP_TABLE = 0x6fff4c0e,     // LLVM CFI jump table.
   // Android's experimental support for SHT_RELR sections.
   // https://android.googlesource.com/platform/bionic/+/b7feec74547f84559a1467aca02708ff61346d2a/libc/include/elf.h#512
   SHT_ANDROID_RELR = 0x6fffff00,   // Relocation entries; only offsets.
+  SHT_GNU_SFRAME = 0x6ffffff4,     // GNU SFrame stack trace format.
   SHT_GNU_ATTRIBUTES = 0x6ffffff5, // Object attributes.
   SHT_GNU_HASH = 0x6ffffff6,       // GNU-style hash table.
   SHT_GNU_verdef = 0x6ffffffd,     // GNU version definitions.
@@ -1546,6 +1568,7 @@ enum {
   PT_GNU_STACK = 0x6474e551,    // Indicates stack executability.
   PT_GNU_RELRO = 0x6474e552,    // Read-only after relocation.
   PT_GNU_PROPERTY = 0x6474e553, // .note.gnu.property notes sections.
+  PT_GNU_SFRAME = 0x6474e554,   // GNU SFrame stack trace format.
 
   PT_OPENBSD_MUTABLE = 0x65a3dbe5,   // Like bss, but not immutable.
   PT_OPENBSD_RANDOMIZE = 0x65a3dbe6, // Fill with random data.
@@ -1968,7 +1991,6 @@ enum {
   GNU_ABI_TAG_FREEBSD = 3,
   GNU_ABI_TAG_NETBSD = 4,
   GNU_ABI_TAG_SYLLABLE = 5,
-  GNU_ABI_TAG_NACL = 6,
 };
 
 constexpr const char *ELF_NOTE_GNU = "GNU";

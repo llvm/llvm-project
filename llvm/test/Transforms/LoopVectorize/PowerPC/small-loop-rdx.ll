@@ -34,7 +34,6 @@ define void @test(ptr %arr, i32 %len) {
 ; CHECK-NEXT:    [[VEC_PHI7:%.*]] = phi <2 x double> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP18:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI8:%.*]] = phi <2 x double> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP19:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds double, ptr [[ARR]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i32 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i32 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i32 6
@@ -42,7 +41,7 @@ define void @test(ptr %arr, i32 %len) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i32 10
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i32 12
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds double, ptr [[TMP3]], i32 14
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP4]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <2 x double>, ptr [[TMP5]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <2 x double>, ptr [[TMP6]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD11:%.*]] = load <2 x double>, ptr [[TMP7]], align 8
@@ -87,8 +86,7 @@ define void @test(ptr %arr, i32 %len) {
 ; CHECK-NEXT:    [[TMP23:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT27:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI25:%.*]] = phi <2 x double> [ [[TMP22]], %[[VEC_EPILOG_PH]] ], [ [[TMP26:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds double, ptr [[ARR]], i64 [[TMP23]]
-; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds double, ptr [[TMP24]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD26:%.*]] = load <2 x double>, ptr [[TMP25]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD26:%.*]] = load <2 x double>, ptr [[TMP24]], align 8
 ; CHECK-NEXT:    [[TMP26]] = fadd fast <2 x double> [[WIDE_LOAD26]], [[VEC_PHI25]]
 ; CHECK-NEXT:    [[INDEX_NEXT27]] = add nuw i64 [[TMP23]], 2
 ; CHECK-NEXT:    [[TMP27:%.*]] = icmp eq i64 [[INDEX_NEXT27]], [[N_VEC23]]

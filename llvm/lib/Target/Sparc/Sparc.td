@@ -64,6 +64,10 @@ def FeatureOSA2011
   : SubtargetFeature<"osa2011", "IsOSA2011", "true",
                      "Enable Oracle SPARC Architecture 2011 extensions",
                      [FeatureV9, FeatureVIS, FeatureVIS2, FeatureVIS3]>;
+def FeatureCrypto
+  : SubtargetFeature<"crypto", "IsCrypto", "true",
+                     "Enable cryptographic extensions",
+                     [FeatureOSA2011]>;
 def FeatureLeon
   : SubtargetFeature<"leon", "IsLeon", "true",
                      "Enable LEON extensions">;
@@ -175,7 +179,8 @@ def : Proc<"niagara3",        [FeatureV9, FeatureV8Deprecated, UsePopc,
                                FeatureUA2005, FeatureUA2007]>;
 def : Proc<"niagara4",        [FeatureV9, FeatureV8Deprecated, UsePopc,
                                FeatureVIS, FeatureVIS2, FeatureVIS3,
-                               FeatureUA2005, FeatureUA2007, FeatureOSA2011]>;
+                               FeatureUA2005, FeatureUA2007, FeatureOSA2011,
+                               FeatureCrypto]>;
 
 // LEON 2 FT generic
 def : Processor<"leon2", LEON2Itineraries,

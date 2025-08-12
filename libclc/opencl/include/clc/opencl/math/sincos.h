@@ -6,7 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef __CLC_OPENCL_MATH_SINCOS_H__
+#define __CLC_OPENCL_MATH_SINCOS_H__
+
 #define __CLC_BODY <clc/math/unary_decl_with_ptr.inc>
 #define FUNCTION sincos
 #include <clc/math/gentype.inc>
 #undef FUNCTION
+
+#endif // __CLC_OPENCL_MATH_SINCOS_H__

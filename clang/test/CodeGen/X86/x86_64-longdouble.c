@@ -4,9 +4,6 @@
 // RUN:    | FileCheck %s --check-prefix=GNU --check-prefix=CHECK
 // RUN: %clang_cc1 -triple x86_64 -emit-llvm -O -o - %s \
 // RUN:    | FileCheck %s --check-prefix=GNU --check-prefix=CHECK
-// NaCl is an example of a target for which long double is the same as double.
-// RUN: %clang_cc1 -triple x86_64-nacl -emit-llvm -O -o - %s \
-// RUN:    | FileCheck %s --check-prefix=NACL --check-prefix=CHECK
 
 // Android uses fp128 for long double but other x86_64 targets use x86_fp80.
 
@@ -22,14 +19,12 @@ long double TestLD(long double x) {
   return x * x;
 // ANDROID: define{{.*}} fp128 @TestLD(fp128 noundef %x)
 // GNU: define{{.*}} x86_fp80 @TestLD(x86_fp80 noundef %x)
-// NACL: define{{.*}} double @TestLD(double noundef %x)
 }
 
 long double _Complex TestLDC(long double _Complex x) {
   return x * x;
 // ANDROID: define{{.*}} void @TestLDC(ptr {{.*}}, ptr {{.*}} %x)
 // GNU: define{{.*}} { x86_fp80, x86_fp80 } @TestLDC(ptr {{.*}} %x)
-// NACL: define{{.*}} { double, double } @TestLDC(double noundef %x{{.*}}, double noundef %x{{.*}})
 }
 
 typedef __builtin_va_list va_list;
@@ -60,14 +55,11 @@ long double TestGetVarLD(va_list ap) {
 // memory.
 // ANDROID: define{{.*}} fp128 @TestGetVarLD(
 // GNU:     define{{.*}} x86_fp80 @TestGetVarLD(
-// NACL:     define{{.*}} double @TestGetVarLD(
 // ANDROID: br label
 // ANDROID: br label
-// NACL: br
 // ANDROID: = phi
 // GNU-NOT: br
 // GNU-NOT: = phi
-// NACL: = phi
 // ANDROID: ret fp128
 // GNU:     ret x86_fp80
 }
@@ -78,16 +70,12 @@ long double _Complex TestGetVarLDC(va_list ap) {
 // ANDROID:   define{{.*}} void @TestGetVarLDC(ptr {{.*}}, ptr
 // GNU:       define{{.*}} { x86_fp80, x86_fp80 } @TestGetVarLDC(
 // Pair of double can go in SSE registers or memory
-// NACL:       define{{.*}} { double, double } @TestGetVarLDC(
 // ANDROID-NOT: br
 // GNU-NOT: br
-// NACL: br
 // ANDROID-NOT: phi
 // GNU-NOT: phi
-// NACL: phi
 // ANDROID:   ret void
 // GNU:       ret { x86_fp80, x86_fp80 }
-// NACL:       ret { double, double }
 }
 
 void TestVarArg(const char *s, ...);
@@ -116,8 +104,6 @@ void TestPassVarLD(long double x) {
 // ANDROID: call {{.*}} @TestVarArg(ptr {{.*}}, fp128 noundef %x
 // GNU: define{{.*}} void @TestPassVarLD(x86_fp80 noundef %x)
 // GNU: call {{.*}} @TestVarArg(ptr {{.*}}, x86_fp80 noundef %x
-// NACL: define{{.*}} void @TestPassVarLD(double noundef %x)
-// NACL: call {{.*}} @TestVarArg(ptr {{.*}}, double noundef %x
 }
 
 void TestPassVarLDC(long double _Complex x) {
@@ -130,6 +116,4 @@ void TestPassVarLDC(long double _Complex x) {
 // GNU:          store x86_fp80 %{{.*}}, ptr %
 // GNU-NEXT:     store x86_fp80 %{{.*}}, ptr %
 // GNU-NEXT:   call {{.*}} @TestVarArg(ptr {{.*}}, ptr {{.*}} %
-// NACL:      define{{.*}} void @TestPassVarLDC(double noundef %x{{.*}}, double noundef %x{{.*}})
-// NACL: call {{.*}} @TestVarArg(ptr {{.*}}, double noundef %x{{.*}}, double noundef %x{{.*}})
 }

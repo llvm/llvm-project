@@ -12,7 +12,7 @@
 #define FUNCTION __clc_signbit
 #define __CLC_BODY <clc/relational/unary_decl.inc>
 
-#include <clc/relational/floatn.inc>
+#include <clc/math/gentype.inc>
 
 #undef FUNCTION
 

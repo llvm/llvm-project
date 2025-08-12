@@ -875,6 +875,34 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_toascii);
   }
 
+  if (T.isOSFreeBSD()) {
+    TLI.setAvailable(LibFunc_dunder_strtok_r);
+    TLI.setAvailable(LibFunc_memalign);
+    TLI.setAvailable(LibFunc_fputc_unlocked);
+    TLI.setAvailable(LibFunc_fputs_unlocked);
+    TLI.setAvailable(LibFunc_fread_unlocked);
+    TLI.setAvailable(LibFunc_fwrite_unlocked);
+    TLI.setAvailable(LibFunc_getc_unlocked);
+    TLI.setAvailable(LibFunc_getchar_unlocked);
+    TLI.setAvailable(LibFunc_putc_unlocked);
+    TLI.setAvailable(LibFunc_putchar_unlocked);
+
+    TLI.setUnavailable(LibFunc___kmpc_alloc_shared);
+    TLI.setUnavailable(LibFunc___kmpc_free_shared);
+    TLI.setUnavailable(LibFunc_dunder_strndup);
+    TLI.setUnavailable(LibFunc_memccpy_chk);
+    TLI.setUnavailable(LibFunc_strlen_chk);
+    TLI.setUnavailable(LibFunc_fmaximum_num);
+    TLI.setUnavailable(LibFunc_fmaximum_numf);
+    TLI.setUnavailable(LibFunc_fmaximum_numl);
+    TLI.setUnavailable(LibFunc_fminimum_num);
+    TLI.setUnavailable(LibFunc_fminimum_numf);
+    TLI.setUnavailable(LibFunc_fminimum_numl);
+    TLI.setUnavailable(LibFunc_roundeven);
+    TLI.setUnavailable(LibFunc_roundevenf);
+    TLI.setUnavailable(LibFunc_roundevenl);
+  }
+
   // As currently implemented in clang, NVPTX code has no standard library to
   // speak of.  Headers provide a standard-ish library implementation, but many
   // of the signatures are wrong -- for example, many libm functions are not
@@ -1122,7 +1150,7 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
   case LibFunc_cabsf:
   case LibFunc_cabsl: {
     Type *RetTy = FTy.getReturnType();
-    if (!RetTy->isFloatingPointTy())
+    if (!RetTy->isFloatingPointTy() || NumParams == 0)
       return false;
 
     Type *ParamTy = FTy.getParamType(0);

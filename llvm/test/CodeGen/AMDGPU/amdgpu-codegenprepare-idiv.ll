@@ -7791,7 +7791,7 @@ define amdgpu_kernel void @sdiv_i64_pow2_shl_denom(ptr addrspace(1) %out, i64 %x
 ;
 ; GFX6-LABEL: sdiv_i64_pow2_shl_denom:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_load_dword s0, s[4:5], 0xd
+; GFX6-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xd
 ; GFX6-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX6-NEXT:    s_mov_b32 s6, -1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
@@ -7927,7 +7927,7 @@ define amdgpu_kernel void @sdiv_i64_pow2_shl_denom(ptr addrspace(1) %out, i64 %x
 ;
 ; GFX9-LABEL: sdiv_i64_pow2_shl_denom:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dword s0, s[4:5], 0x34
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x34
 ; GFX9-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_lshl_b64 s[0:1], 0x1000, s0
@@ -8982,7 +8982,7 @@ define amdgpu_kernel void @srem_i64_pow2_shl_denom(ptr addrspace(1) %out, i64 %x
 ;
 ; GFX6-LABEL: srem_i64_pow2_shl_denom:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_load_dword s0, s[4:5], 0xd
+; GFX6-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xd
 ; GFX6-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX6-NEXT:    s_mov_b32 s6, -1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
@@ -9116,7 +9116,7 @@ define amdgpu_kernel void @srem_i64_pow2_shl_denom(ptr addrspace(1) %out, i64 %x
 ;
 ; GFX9-LABEL: srem_i64_pow2_shl_denom:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dword s0, s[4:5], 0x34
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x34
 ; GFX9-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x24
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_lshl_b64 s[0:1], 0x1000, s0
@@ -10096,9 +10096,15 @@ define i64 @udiv_i64_9divbits(i8 %size) {
 }
 
 define <2 x i64> @srem_zero_zero() {
-; GCN-LABEL: kernel:
-; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_endpgm
+; GFX6-LABEL: srem_zero_zero:
+; GFX6:       ; %bb.0: ; %entry
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: srem_zero_zero:
+; GFX9:       ; %bb.0: ; %entry
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %B = srem <2 x i64> zeroinitializer, zeroinitializer
   ret <2 x i64> %B

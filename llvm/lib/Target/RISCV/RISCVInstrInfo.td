@@ -75,6 +75,8 @@ def riscv_sret_glue : RVSDNode<"SRET_GLUE", SDTNone,
                                [SDNPHasChain, SDNPOptInGlue]>;
 def riscv_mret_glue : RVSDNode<"MRET_GLUE", SDTNone,
                                [SDNPHasChain, SDNPOptInGlue]>;
+def riscv_mnret_glue : RVSDNode<"MNRET_GLUE", SDTNone,
+                                [SDNPHasChain, SDNPOptInGlue]>;
 def riscv_mileaveret_glue : RVSDNode<"QC_C_MILEAVERET_GLUE", SDTNone,
                                      [SDNPHasChain, SDNPOptInGlue]>;
 
@@ -118,6 +120,20 @@ def riscv_swap_csr  : RVSDNode<"SWAP_CSR",
                                SDTypeProfile<1, 2, [SDTCisInt<0>,
                                                     SDTCisInt<1>,
                                                     SDTCisInt<2>]>,
+                               [SDNPHasChain]>;
+
+// Clear bits of CSR. The first operand is the address of the required CSR,
+// the second is the bitmask of cleared bits.
+def riscv_clear_csr  : RVSDNode<"CLEAR_CSR",
+                               SDTypeProfile<0, 2, [SDTCisInt<0>,
+                                                    SDTCisInt<1>]>,
+                               [SDNPHasChain]>;
+
+// Set bits of CSR. The first operand is the address of the required CSR,
+// the second is the bitmask of bits to set.
+def riscv_set_csr  : RVSDNode<"SET_CSR",
+                               SDTypeProfile<0, 2, [SDTCisInt<0>,
+                                                    SDTCisInt<1>]>,
                                [SDNPHasChain]>;
 
 // A read of the 64-bit counter CSR on a 32-bit target (returns (Lo, Hi)).
@@ -921,7 +937,6 @@ def MRET : Priv<"mret", 0b0011000>, Sched<[]> {
   let rs1 = 0;
   let rs2 = 0b00010;
 }
-} // isBarrier = 1, isReturn = 1, isTerminator = 1
 
 let Predicates = [HasStdExtSmrnmi] in {
 def MNRET : Priv<"mnret", 0b0111000>, Sched<[]> {
@@ -930,6 +945,8 @@ def MNRET : Priv<"mnret", 0b0111000>, Sched<[]> {
   let rs2 = 0b00010;
 }
 }// Predicates = [HasStdExtSmrnmi]
+} // isBarrier = 1, isReturn = 1, isTerminator = 1
+
 
 def WFI : Priv<"wfi", 0b0001000>, Sched<[]> {
   let rd = 0;
@@ -1450,14 +1467,18 @@ def : PatGprUimmLog2XLen<sra, SRAI>;
 
 // Select 'or' as ADDI if the immediate bits are known to be 0 in $rs1. This
 // can improve compressibility.
-def or_is_add : PatFrag<(ops node:$lhs, node:$rhs), (or node:$lhs, node:$rhs),[{
-  return orIsAdd(N);
+def riscv_or_disjoint : PatFrag<(ops node:$lhs, node:$rhs), (or node:$lhs, node:$rhs),[{
+  return orDisjoint(N);
 }]>;
-def : PatGprSimm12<or_is_add, ADDI>;
+def : PatGprSimm12<riscv_or_disjoint, ADDI>;
 
 def add_like : PatFrags<(ops node:$lhs, node:$rhs),
-                        [(or_is_add node:$lhs, node:$rhs),
+                        [(riscv_or_disjoint node:$lhs, node:$rhs),
                          (add  node:$lhs, node:$rhs)]>;
+
+def riscv_xor_like : PatFrags<(ops node:$lhs, node:$rhs),
+                              [(riscv_or_disjoint node:$lhs, node:$rhs),
+                               (xor  node:$lhs, node:$rhs)]>;
 
 // negate of low bit can be done via two (compressible) shifts.  The negate
 // is never compressible since rs1 and rd can't be the same register.
@@ -1783,6 +1804,8 @@ def : Pat<(riscv_call texternalsym:$func), (PseudoCALL texternalsym:$func)>;
 
 def : Pat<(riscv_sret_glue), (SRET)>;
 def : Pat<(riscv_mret_glue), (MRET)>;
+let Predicates = [HasStdExtSmrnmi] in
+def : Pat<(riscv_mnret_glue), (MNRET)>;
 
 let isCall = 1, Defs = [X1] in {
 let Predicates = [NoStdExtZicfilp] in
@@ -2034,6 +2057,42 @@ class SwapSysRegImm<SysReg SR, list<Register> Regs>
   let Defs = Regs;
 }
 
+class ClearSysReg<SysReg SR, list<Register> Regs>
+  : Pseudo<(outs), (ins GPR:$val),
+           [(riscv_clear_csr (XLenVT SR.Encoding), (XLenVT GPR:$val))]>,
+    PseudoInstExpansion<(CSRRC X0, SR.Encoding, GPR:$val)> {
+  let hasSideEffects = 0;
+  let Uses = Regs;
+  let Defs = Regs;
+}
+
+class ClearSysRegImm<SysReg SR, list<Register> Regs>
+  : Pseudo<(outs), (ins uimm5:$val),
+           [(riscv_clear_csr (XLenVT SR.Encoding), uimm5:$val)]>,
+    PseudoInstExpansion<(CSRRCI X0, SR.Encoding, uimm5:$val)> {
+  let hasSideEffects = 0;
+  let Uses = Regs;
+  let Defs = Regs;
+}
+
+class SetSysReg<SysReg SR, list<Register> Regs>
+  : Pseudo<(outs), (ins GPR:$val),
+           [(riscv_set_csr (XLenVT SR.Encoding), (XLenVT GPR:$val))]>,
+    PseudoInstExpansion<(CSRRS X0, SR.Encoding, GPR:$val)> {
+  let hasSideEffects = 0;
+  let Uses = Regs;
+  let Defs = Regs;
+}
+
+class SetSysRegImm<SysReg SR, list<Register> Regs>
+  : Pseudo<(outs), (ins uimm5:$val),
+           [(riscv_set_csr (XLenVT SR.Encoding), uimm5:$val)]>,
+    PseudoInstExpansion<(CSRRSI X0, SR.Encoding, uimm5:$val)> {
+  let hasSideEffects = 0;
+  let Uses = Regs;
+  let Defs = Regs;
+}
+
 def ReadFRM : ReadSysReg<SysRegFRM, [FRM]>;
 let hasPostISelHook = 1 in {
 def WriteFRM : WriteSysReg<SysRegFRM, [FRM]>;
@@ -2052,6 +2111,10 @@ let hasPostISelHook = 1 in {
 def ReadFCSR : ReadSysReg<SysRegFCSR, [FRM, FFLAGS]>;
 def WriteFCSR : WriteSysReg<SysRegFCSR, [FRM, FFLAGS]>;
 def WriteFCSRImm : WriteSysRegImm<SysRegFCSR, [FRM, FFLAGS]>;
+def ClearFCSR : ClearSysReg<SysRegFCSR, [FRM, FFLAGS]>;
+def ClearFCSRImm : ClearSysRegImm<SysRegFCSR, [FRM, FFLAGS]>;
+def SetFCSR : SetSysReg<SysRegFCSR, [FRM, FFLAGS]>;
+def SetFCSRImm : SetSysRegImm<SysRegFCSR, [FRM, FFLAGS]>;
 }
 
 /// Other pseudo-instructions
@@ -2160,7 +2223,7 @@ def : PatGprImm<binop_allwusers<xor>, XORI, u32simm12>;
 // Select 'or' as ADDIW if the immediate bits are known to be 0 in $rs1 and
 // $rs1 is sign extended. This can improve compressibility. Using ADDIW gives
 // more power to RISCVOptWInstrs.
-def : Pat<(or_is_add 33signbits_node:$rs1, simm12:$imm),
+def : Pat<(riscv_or_disjoint 33signbits_node:$rs1, simm12:$imm),
           (ADDIW $rs1, simm12:$imm)>;
 
 /// Loads

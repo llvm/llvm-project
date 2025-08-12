@@ -20,7 +20,6 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
@@ -116,8 +115,7 @@ public:
 
     bufferization::BufferizationState bufferizationState;
 
-    if (failed(bufferization::bufferizeModuleOp(cast<ModuleOp>(getOperation()),
-                                                updatedOptions,
+    if (failed(bufferization::bufferizeModuleOp(getOperation(), updatedOptions,
                                                 bufferizationState)))
       return failure();
 

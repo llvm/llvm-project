@@ -468,6 +468,7 @@ bool SIFoldOperandsImpl::canUseImmWithOpSel(const MachineInstr *MI,
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
   case AMDGPU::OPERAND_REG_IMM_V2BF16:
   case AMDGPU::OPERAND_REG_IMM_V2INT16:
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
@@ -1062,9 +1063,13 @@ bool SIFoldOperandsImpl::tryFoldRegSeqSplat(
     switch (OpTy) {
     case AMDGPU::OPERAND_REG_INLINE_AC_INT32:
     case AMDGPU::OPERAND_REG_INLINE_AC_FP32:
+    case AMDGPU::OPERAND_REG_INLINE_C_INT32:
+    case AMDGPU::OPERAND_REG_INLINE_C_FP32:
       OpRC = TRI->getSubRegisterClass(OpRC, AMDGPU::sub0);
       break;
     case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
+    case AMDGPU::OPERAND_REG_INLINE_C_FP64:
+    case AMDGPU::OPERAND_REG_INLINE_C_INT64:
       OpRC = TRI->getSubRegisterClass(OpRC, AMDGPU::sub0_sub1);
       break;
     default:
@@ -1164,11 +1169,18 @@ void SIFoldOperandsImpl::foldOperand(
     // Grab the use operands first
     SmallVector<MachineOperand *, 4> UsesToProcess(
         llvm::make_pointer_range(MRI->use_nodbg_operands(RegSeqDstReg)));
-    for (auto *RSUse : UsesToProcess) {
+    for (unsigned I = 0; I != UsesToProcess.size(); ++I) {
+      MachineOperand *RSUse = UsesToProcess[I];
       MachineInstr *RSUseMI = RSUse->getParent();
       unsigned OpNo = RSUseMI->getOperandNo(RSUse);
 
       if (SplatRC) {
+        if (RSUseMI->isCopy()) {
+          Register DstReg = RSUseMI->getOperand(0).getReg();
+          append_range(UsesToProcess,
+                       make_pointer_range(MRI->use_nodbg_operands(DstReg)));
+          continue;
+        }
         if (tryFoldRegSeqSplat(RSUseMI, OpNo, SplatVal, SplatRC)) {
           FoldableDef SplatDef(SplatVal, SplatRC);
           appendFoldCandidate(FoldList, RSUseMI, OpNo, SplatDef);
@@ -1209,17 +1221,23 @@ void SIFoldOperandsImpl::foldOperand(
         return;
     }
 
-    // A frame index will resolve to a positive constant, so it should always be
-    // safe to fold the addressing mode, even pre-GFX9.
-    UseMI->getOperand(UseOpIdx).ChangeToFrameIndex(OpToFold.getFI());
-
     const unsigned Opc = UseMI->getOpcode();
     if (TII->isFLATScratch(*UseMI) &&
         AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::vaddr) &&
         !AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::saddr)) {
       unsigned NewOpc = AMDGPU::getFlatScratchInstSSfromSV(Opc);
+      unsigned CPol =
+          TII->getNamedOperand(*UseMI, AMDGPU::OpName::cpol)->getImm();
+      if ((CPol & AMDGPU::CPol::SCAL) &&
+          !AMDGPU::supportsScaleOffset(*TII, NewOpc))
+        return;
+
       UseMI->setDesc(TII->get(NewOpc));
     }
+
+    // A frame index will resolve to a positive constant, so it should always be
+    // safe to fold the addressing mode, even pre-GFX9.
+    UseMI->getOperand(UseOpIdx).ChangeToFrameIndex(OpToFold.getFI());
 
     return;
   }
@@ -1761,6 +1779,7 @@ bool SIFoldOperandsImpl::foldInstOperand(MachineInstr &MI,
   for (MachineInstr *Copy : CopiesToReplace)
     Copy->addImplicitDefUseOperands(*MF);
 
+  SetVector<MachineInstr *> ConstantFoldCandidates;
   for (FoldCandidate &Fold : FoldList) {
     assert(!Fold.isReg() || Fold.Def.OpToFold);
     if (Fold.isReg() && Fold.getReg().isVirtual()) {
@@ -1783,14 +1802,19 @@ bool SIFoldOperandsImpl::foldInstOperand(MachineInstr &MI,
                         << static_cast<int>(Fold.UseOpNo) << " of "
                         << *Fold.UseMI);
 
-      if (Fold.isImm() && tryConstantFoldOp(Fold.UseMI)) {
-        LLVM_DEBUG(dbgs() << "Constant folded " << *Fold.UseMI);
-        Changed = true;
-      }
+      if (Fold.isImm())
+        ConstantFoldCandidates.insert(Fold.UseMI);
 
     } else if (Fold.Commuted) {
       // Restoring instruction's original operand order if fold has failed.
       TII->commuteInstruction(*Fold.UseMI, false);
+    }
+  }
+
+  for (MachineInstr *MI : ConstantFoldCandidates) {
+    if (tryConstantFoldOp(MI)) {
+      LLVM_DEBUG(dbgs() << "Constant folded " << *MI);
+      Changed = true;
     }
   }
   return true;
@@ -2057,7 +2081,9 @@ SIFoldOperandsImpl::isClamp(const MachineInstr &MI) const {
   case AMDGPU::V_MAX_F16_fake16_e64:
   case AMDGPU::V_MAX_F64_e64:
   case AMDGPU::V_MAX_NUM_F64_e64:
-  case AMDGPU::V_PK_MAX_F16: {
+  case AMDGPU::V_PK_MAX_F16:
+  case AMDGPU::V_MAX_BF16_PSEUDO_e64:
+  case AMDGPU::V_PK_MAX_NUM_BF16: {
     if (MI.mayRaiseFPException())
       return nullptr;
 
@@ -2084,8 +2110,10 @@ SIFoldOperandsImpl::isClamp(const MachineInstr &MI) const {
 
     // Having a 0 op_sel_hi would require swizzling the output in the source
     // instruction, which we can't do.
-    unsigned UnsetMods = (Op == AMDGPU::V_PK_MAX_F16) ? SISrcMods::OP_SEL_1
-                                                      : 0u;
+    unsigned UnsetMods =
+        (Op == AMDGPU::V_PK_MAX_F16 || Op == AMDGPU::V_PK_MAX_NUM_BF16)
+            ? SISrcMods::OP_SEL_1
+            : 0u;
     if (Src0Mods != UnsetMods && Src1Mods != UnsetMods)
       return nullptr;
     return Src0;

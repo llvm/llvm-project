@@ -18,6 +18,7 @@
 #include "llvm/ADT/ADL.h"
 #include "llvm/ADT/EpochTracker.h"
 #include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ReverseIteration.h"
@@ -46,7 +47,7 @@ namespace llvm {
 /// sets are often small.  In this case, no memory allocation is used, and only
 /// light-weight and cache-efficient scanning is used.
 ///
-/// Large sets use a classic exponentially-probed hash table.  Empty buckets are
+/// Large sets use a classic quadratically-probed hash table.  Empty buckets are
 /// represented with an illegal pointer value (-1) to allow null pointers to be
 /// inserted.  Tombstones are represented with another illegal pointer value
 /// (-2), to allow deletion.  The hash table is resized when the table is 3/4 or
@@ -128,7 +129,7 @@ public:
     // We must Grow -- find the size where we'd be 75% full, then round up to
     // the next power of two.
     size_type NewSize = NumEntries + (NumEntries / 3);
-    NewSize = 1 << (Log2_32_Ceil(NewSize) + 1);
+    NewSize = 1 << Log2_32_Ceil(NewSize);
     // Like insert_imp_big, always allocate at least 128 elements.
     NewSize = std::max(128u, NewSize);
     Grow(NewSize);
@@ -147,17 +148,27 @@ protected:
     return isSmall() ? CurArray + NumNonEmpty : CurArray + CurArraySize;
   }
 
+  iterator_range<const void **> small_buckets() {
+    return make_range(CurArray, CurArray + NumNonEmpty);
+  }
+
+  iterator_range<const void *const *> small_buckets() const {
+    return {CurArray, CurArray + NumNonEmpty};
+  }
+
+  iterator_range<const void **> buckets() {
+    return make_range(CurArray, EndPointer());
+  }
+
   /// insert_imp - This returns true if the pointer was new to the set, false if
   /// it was already in the set.  This is hidden from the client so that the
   /// derived class can check that the right type of pointer is passed in.
   std::pair<const void *const *, bool> insert_imp(const void *Ptr) {
     if (isSmall()) {
       // Check to see if it is already in the set.
-      for (const void **APtr = CurArray, **E = CurArray + NumNonEmpty;
-           APtr != E; ++APtr) {
-        const void *Value = *APtr;
-        if (Value == Ptr)
-          return std::make_pair(APtr, false);
+      for (const void *&Bucket : small_buckets()) {
+        if (Bucket == Ptr)
+          return std::make_pair(&Bucket, false);
       }
 
       // Nope, there isn't.  If we stay small, just 'pushback' now.
@@ -177,10 +188,9 @@ protected:
   /// in.
   bool erase_imp(const void * Ptr) {
     if (isSmall()) {
-      for (const void **APtr = CurArray, **E = CurArray + NumNonEmpty;
-           APtr != E; ++APtr) {
-        if (*APtr == Ptr) {
-          *APtr = CurArray[--NumNonEmpty];
+      for (const void *&Bucket : small_buckets()) {
+        if (Bucket == Ptr) {
+          Bucket = CurArray[--NumNonEmpty];
           incrementEpoch();
           return true;
         }
@@ -206,11 +216,9 @@ protected:
   const void *const * find_imp(const void * Ptr) const {
     if (isSmall()) {
       // Linear search for the item.
-      for (const void *const *APtr = CurArray, *const *E =
-                                                   CurArray + NumNonEmpty;
-           APtr != E; ++APtr)
-        if (*APtr == Ptr)
-          return APtr;
+      for (const void *const &Bucket : small_buckets())
+        if (Bucket == Ptr)
+          return &Bucket;
       return EndPointer();
     }
 
@@ -223,10 +231,8 @@ protected:
   bool contains_imp(const void *Ptr) const {
     if (isSmall()) {
       // Linear search for the item.
-      const void *const *APtr = CurArray;
-      const void *const *E = CurArray + NumNonEmpty;
-      for (; APtr != E; ++APtr)
-        if (*APtr == Ptr)
+      for (const void *const &Bucket : small_buckets())
+        if (Bucket == Ptr)
           return true;
       return false;
     }
@@ -439,13 +445,12 @@ public:
       return Removed;
     }
 
-    for (const void **APtr = CurArray, **E = EndPointer(); APtr != E; ++APtr) {
-      const void *Value = *APtr;
-      if (Value == getTombstoneMarker() || Value == getEmptyMarker())
+    for (const void *&Bucket : buckets()) {
+      if (Bucket == getTombstoneMarker() || Bucket == getEmptyMarker())
         continue;
-      PtrType Ptr = PtrTraits::getFromVoidPointer(const_cast<void *>(Value));
+      PtrType Ptr = PtrTraits::getFromVoidPointer(const_cast<void *>(Bucket));
       if (P(Ptr)) {
-        *APtr = getTombstoneMarker();
+        Bucket = getTombstoneMarker();
         ++NumTombstones;
         incrementEpoch();
         Removed = true;
