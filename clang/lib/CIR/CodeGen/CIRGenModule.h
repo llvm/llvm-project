@@ -90,6 +90,8 @@ private:
   /// for FunctionDecls's.
   CIRGenFunction *curCGF = nullptr;
 
+  llvm::SmallVector<mlir::Attribute> globalScopeAsm;
+
 public:
   mlir::ModuleOp getModule() const { return theModule; }
   CIRGenBuilderTy &getBuilder() { return builder; }
@@ -312,6 +314,9 @@ public:
   void maybeSetTrivialComdat(const clang::Decl &d, mlir::Operation *op);
 
   static void setInitializer(cir::GlobalOp &op, mlir::Attribute value);
+
+  void replaceUsesOfNonProtoTypeWithRealFunction(mlir::Operation *old,
+                                                 cir::FuncOp newFn);
 
   cir::FuncOp
   getOrCreateCIRFunction(llvm::StringRef mangledName, mlir::Type funcType,

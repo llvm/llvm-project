@@ -408,7 +408,7 @@ inline APFloat::roundingMode GetRCPRoundingMode(Intrinsic::ID IntrinsicID) {
   llvm_unreachable("Checking rounding mode for invalid rcp intrinsic");
 }
 
-inline DenormalMode GetNVVMDenromMode(bool ShouldFTZ) {
+inline DenormalMode GetNVVMDenormMode(bool ShouldFTZ) {
   if (ShouldFTZ)
     return DenormalMode::getPreserveSign();
   return DenormalMode::getIEEE();

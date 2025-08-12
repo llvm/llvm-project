@@ -2260,7 +2260,7 @@ public:
           continue;
       }
 
-      if (Section.relocation_begin() == Section.relocation_end())
+      if (Section.relocations().empty())
         continue;
 
       // Symbol to [address, section index] cache mapping.

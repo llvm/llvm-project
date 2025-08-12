@@ -68,36 +68,30 @@ void RISCVTargetStreamer::emitNoteGnuPropertySection(
 
   const Triple &Triple = Ctx.getTargetTriple();
   Align NoteAlign;
+  uint64_t DescSize;
   if (Triple.isArch64Bit()) {
     NoteAlign = Align(8);
+    DescSize = 16;
   } else {
     assert(Triple.isArch32Bit());
     NoteAlign = Align(4);
+    DescSize = 12;
   }
 
   assert(Ctx.getObjectFileType() == MCContext::Environment::IsELF);
   MCSection *const NoteSection =
       Ctx.getELFSection(".note.gnu.property", ELF::SHT_NOTE, ELF::SHF_ALLOC);
-  NoteSection->setAlignment(NoteAlign);
   OutStreamer.pushSection();
   OutStreamer.switchSection(NoteSection);
 
   // Emit the note header
-  OutStreamer.emitIntValue(4, 4); // n_namsz
-
-  MCSymbol *const NDescBeginSym = Ctx.createTempSymbol();
-  MCSymbol *const NDescEndSym = Ctx.createTempSymbol();
-  const MCExpr *const NDescSzExpr =
-      MCBinaryExpr::createSub(MCSymbolRefExpr::create(NDescEndSym, Ctx),
-                              MCSymbolRefExpr::create(NDescBeginSym, Ctx), Ctx);
-
-  OutStreamer.emitValue(NDescSzExpr, 4);                    // n_descsz
+  OutStreamer.emitValueToAlignment(NoteAlign);
+  OutStreamer.emitIntValue(4, 4);                           // n_namsz
+  OutStreamer.emitIntValue(DescSize, 4);                    // n_descsz
   OutStreamer.emitIntValue(ELF::NT_GNU_PROPERTY_TYPE_0, 4); // n_type
   OutStreamer.emitBytes(StringRef("GNU", 4));               // n_name
 
   // Emit n_desc field
-  OutStreamer.emitLabel(NDescBeginSym);
-  OutStreamer.emitValueToAlignment(NoteAlign);
 
   // Emit the feature_1_and property
   OutStreamer.emitIntValue(ELF::GNU_PROPERTY_RISCV_FEATURE_1_AND, 4); // pr_type
@@ -105,7 +99,6 @@ void RISCVTargetStreamer::emitNoteGnuPropertySection(
   OutStreamer.emitIntValue(Feature1And, 4);    // pr_data
   OutStreamer.emitValueToAlignment(NoteAlign); // pr_padding
 
-  OutStreamer.emitLabel(NDescEndSym);
   OutStreamer.popSection();
 }
 

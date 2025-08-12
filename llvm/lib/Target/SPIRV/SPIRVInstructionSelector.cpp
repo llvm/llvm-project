@@ -362,6 +362,7 @@ SPIRVInstructionSelector::SPIRVInstructionSelector(const SPIRVTargetMachine &TM,
                                                    const RegisterBankInfo &RBI)
     : InstructionSelector(), STI(ST), TII(*ST.getInstrInfo()),
       TRI(*ST.getRegisterInfo()), RBI(RBI), GR(*ST.getSPIRVGlobalRegistry()),
+      MRI(nullptr),
 #define GET_GLOBALISEL_PREDICATES_INIT
 #include "SPIRVGenGlobalISel.inc"
 #undef GET_GLOBALISEL_PREDICATES_INIT
@@ -663,6 +664,11 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   case TargetOpcode::G_FPTOSI:
     return selectUnOp(ResVReg, ResType, I, SPIRV::OpConvertFToS);
   case TargetOpcode::G_FPTOUI:
+    return selectUnOp(ResVReg, ResType, I, SPIRV::OpConvertFToU);
+
+  case TargetOpcode::G_FPTOSI_SAT:
+    return selectUnOp(ResVReg, ResType, I, SPIRV::OpConvertFToS);
+  case TargetOpcode::G_FPTOUI_SAT:
     return selectUnOp(ResVReg, ResType, I, SPIRV::OpConvertFToU);
 
   case TargetOpcode::G_SITOFP:
@@ -3569,7 +3575,7 @@ bool SPIRVInstructionSelector::selectFirstBitSet64Overflow(
 
   // Join all the resulting registers back into the return type in order
   // (ie i32x2, i32x2, i32x1 -> i32x5)
-  return selectOpWithSrcs(ResVReg, ResType, I, PartialRegs,
+  return selectOpWithSrcs(ResVReg, ResType, I, std::move(PartialRegs),
                           SPIRV::OpCompositeConstruct);
 }
 
