@@ -10,9 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CodeGenFunction.h"
 #include "CGBuiltin.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "clang/Frontend/FrontendDiagnostic.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"

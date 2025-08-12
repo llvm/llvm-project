@@ -13,6 +13,7 @@
 #include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
@@ -210,84 +211,6 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     return ((SemaRef.BuiltinConstantArg(TheCall, 1, Result)) ||
          (SemaRef.BuiltinConstantArg(TheCall, ArgCount, Result)) ||
          (SemaRef.BuiltinConstantArg(TheCall, (ArgCount - 1), Result)));
-  }
-  case AMDGPU::BI__builtin_amdgcn_image_load_1d_v4f32_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_load_1darray_v4f32_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_load_1d_v4f16_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_load_1darray_v4f16_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_load_2d_f32_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_load_2d_v4f32_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_load_2d_v4f16_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_load_2darray_f32_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_load_2darray_v4f32_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_load_2darray_v4f16_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_load_3d_v4f32_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_load_3d_v4f16_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_load_cube_v4f32_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_load_cube_v4f16_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_load_mip_1d_v4f32_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_load_mip_1d_v4f16_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_load_mip_1darray_v4f32_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_load_mip_1darray_v4f16_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_load_mip_2d_f32_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_load_mip_2d_v4f32_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_load_mip_2d_v4f16_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_load_mip_2darray_f32_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_load_mip_2darray_v4f32_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_load_mip_2darray_v4f16_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_load_mip_3d_v4f32_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_load_mip_3d_v4f16_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_load_mip_cube_v4f32_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_load_mip_cube_v4f16_i32: {
-    unsigned ArgCount = TheCall->getNumArgs() - 1;
-    llvm::APSInt Result;
-    bool isImmArg =
-        (!(SemaRef.BuiltinConstantArg(TheCall, 0, Result)) &&
-         !(SemaRef.BuiltinConstantArg(TheCall, ArgCount, Result)) &&
-         !(SemaRef.BuiltinConstantArg(TheCall, (ArgCount - 1), Result)))
-            ? false
-            : true;
-
-    return isImmArg;
-  }
-  case AMDGPU::BI__builtin_amdgcn_image_store_1d_v4f32_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_store_1darray_v4f32_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_store_1d_v4f16_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_store_1darray_v4f16_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_store_2d_f32_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_store_2d_v4f32_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_store_2d_v4f16_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_store_2darray_f32_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_store_2darray_v4f32_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_store_2darray_v4f16_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_store_3d_v4f32_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_store_3d_v4f16_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_store_cube_v4f32_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_store_cube_v4f16_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_store_mip_1d_v4f32_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_store_mip_1d_v4f16_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_store_mip_1darray_v4f32_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_store_mip_1darray_v4f16_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_store_mip_2d_f32_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_store_mip_2d_v4f32_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_store_mip_2d_v4f16_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_store_mip_2darray_f32_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_store_mip_2darray_v4f32_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_store_mip_2darray_v4f16_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_store_mip_3d_v4f32_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_store_mip_3d_v4f16_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_store_mip_cube_v4f32_i32:
-  case AMDGPU::BI__builtin_amdgcn_image_store_mip_cube_v4f16_i32: {
-    unsigned ArgCount = TheCall->getNumArgs() - 1;
-    llvm::APSInt Result;
-    bool isImmArg =
-        (!(SemaRef.BuiltinConstantArg(TheCall, 1, Result)) &&
-         !(SemaRef.BuiltinConstantArg(TheCall, ArgCount, Result)) &&
-         !(SemaRef.BuiltinConstantArg(TheCall, (ArgCount - 1), Result)))
-            ? false
-            : true;
-
-    return isImmArg;
   }
   default:
     return false;
