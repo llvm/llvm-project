@@ -1323,33 +1323,28 @@ Instruction *InstCombinerImpl::foldICmpWithZero(ICmpInst &Cmp) {
 // Fold icmp eq (num + (val - 1)) & -val, num
 //      to
 //      icmp eq 0, (and num, val - 1)
-// For value being power of two
+// For val being power of two
 Instruction *InstCombinerImpl::foldIsMultipleOfAPowerOfTwo(ICmpInst &Cmp) {
-  Value *Neg, *Num, *Mask;
+  Value *Num;
   CmpPredicate Pred;
-  const APInt *NegConst, *MaskConst;
+  const APInt *Mask, *Neg;
 
-  if (!match(&Cmp, m_c_ICmp(Pred, m_Value(Num),
-                            m_OneUse(m_c_And(m_OneUse(m_c_Add(m_Deferred(Num),
-                                                              m_Value(Mask))),
-                                             m_Value(Neg))))))
+  if (!match(&Cmp,
+             m_c_ICmp(Pred, m_Value(Num),
+                      m_OneUse(m_c_And(m_OneUse(m_c_Add(m_Deferred(Num),
+                                                        m_LowBitMask(Mask))),
+                                       m_APInt(Neg))))))
+    return nullptr;
+
+  if (*Neg != ~*Mask)
     return nullptr;
 
   if (!ICmpInst::isEquality(Pred))
     return nullptr;
 
-  // Check only constant case, since it's the only profitable.
-  // See https://github.com/dtcxzyw/llvm-opt-benchmark/pull/2657/
-  if (!match(Neg, m_APInt(NegConst)) || !match(Mask, m_LowBitMask(MaskConst)))
-    return nullptr;
-
-  // Neg = -(Mask + 1)
-  if (*NegConst != ~*MaskConst)
-    return nullptr;
-
   // Create new icmp eq (num & (val - 1)), 0
-  auto NewAnd = Builder.CreateAnd(Num, Mask);
-  auto Zero = llvm::Constant::getNullValue(Num->getType());
+  auto NewAnd = Builder.CreateAnd(Num, *Mask);
+  auto Zero = Constant::getNullValue(Num->getType());
 
   return new ICmpInst(Pred, NewAnd, Zero);
 }
