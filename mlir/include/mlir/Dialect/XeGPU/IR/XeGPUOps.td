@@ -1118,10 +1118,14 @@ def XeGPU_CreateMatrixDescOp: XeGPU_Op<"create_matrix_desc", [Pure,
       AllMemSizesMatch<["source", "matrix_desc"]>]>  {
   let summary = "Create a matrix descriptor.";
   let description = [{
+    Creates a matrix descriptor from a shared local memory (SLM) buffer.
+    The resulting matrix descriptor has to have the same size as the underlying
+    shared local memory.
+
     Arguments:
-     - `source` : a base address of SLM allocation.
+     - `source` : a 1D statically shaped memref with element type i8, representing the raw SLM buffer.
     Results:
-     - `matrix_desc` : a descriptor for SLM allocation.
+     - `matrix_desc` : the matrix descriptor.
   }];
   let arguments = (ins StaticShared1DMemRefOf<[I8]>:$source);
   let results = (outs XeGPU_MatrixDesc:$matrix_desc);
@@ -1141,22 +1145,16 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
     $matrix_desc `` custom<DynamicIndexList>($offsets, $const_offsets)
     prop-dict attr-dict `` `:` type(operands) `->` type(results)
   }];
-  let summary = "Load matrix from SLM.";
-  let description = [{
-    This operation loads a matrix from the SLM using the matrix descriptor.
-    There are additional parameters and attributes that support loading, but they must only
-    be specified for a work-item level operation.
 
-    General rules:
-    1. Non-WI-level code must not specify optional attributes.
-    2. If the load uses `vector` semantics, all of the vector attributes must be specified.
-    3. If the load uses `array` semantics, all of the array attributes must be specified.
+  let description = [{
+    This operation reads a block of data from shared local memory (SLM)
+    using the provided matrix descriptor.
 
     Arguments:
-     - `matrix_desc` : a matrix descriptor (SLM allocation + matrix type).
-     - `offsets`     : Coordinates of the matrix to load.
+     - `matrix_desc`: the matrix descriptor identifying the SLM region.
+     - `offsets`: the coordinates within the matrix to read from.
     Results:
-      - `res` : loaded matrix elements.
+     - `res`: the matrix elements loaded from SLM.
   }];
 
   let builders = [
@@ -1186,20 +1184,14 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
     $matrix_desc `` custom<DynamicIndexList>($offsets, $const_offsets) `,` $data
     prop-dict attr-dict `:` type(operands)
   }];
-  let summary = "Store matrix from SLM.";
   let description = [{
-    This operation stores workitem's `data` fragment of the matrix to the SLM (`matrix_desc`).
-    There are additional parameters and attributes that support loading, but they must only
-    be specified for a work-item level operation.
-
-    General rules:
-    1. Non-WI-level code must not specify optional attributes.
-    2. If the store uses `vector` semantics, all of the vector attributes must be specified.
+    This operation writes the `data` fragment into the shared local memory region
+    identified by `matrix_desc`.
 
     Arguments:
-     - `matrix_desc` : a matrix descriptor.
-     - `data`        : data to be stored to the matrix.
-     - `offsets`     : Coordinates of the matrix where the data will be stored.
+     - `matrix_desc`: the matrix descriptor specifying the SLM region.
+     - `offsets`: the coordinates within the matrix where the data will be written.
+     - `data`: the values to be stored in the matrix.
   }];
   let builders = [
     OpBuilder<(ins "TypedValue<MatrixDescType>": $matrix_desc, "llvm::ArrayRef<OpFoldResult>": $offsets,

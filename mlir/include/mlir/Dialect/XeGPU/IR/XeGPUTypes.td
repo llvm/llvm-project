@@ -204,8 +204,9 @@ def XeGPU_Nbarrier: XeGPUTypeDef<"Nbarrier", "nbarrier", [], "mlir::Type"> {
 def XeGPU_MatrixDesc: XeGPUTypeDef<"MatrixDesc", "matrix_desc", [ShapedTypeInterface], "mlir::Type"> {
   let summary = "MatrixDesc describing the data in SLM";
   let description = [{
-    MatrixDesc describes a SLM region. Unleass specified via the optional layout attribute,
-    the data is stored contiguously in the region in row-major order by default.
+    MatrixDesc represents a block of data stored in shared local memory.
+    By default, unless a layout attribute is provided, the data is stored
+    contiguously in row-major order within the region.
   }];
   let parameters = (ins ArrayRefParameter<"int64_t">: $shape,
                         "mlir::Type": $elementType,
