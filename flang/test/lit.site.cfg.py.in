@@ -14,6 +14,7 @@ config.errc_messages = "@LLVM_LIT_ERRC_MESSAGES@"
 config.flang_obj_root = "@FLANG_BINARY_DIR@"
 config.flang_tools_dir = lit_config.substitute("@FLANG_TOOLS_DIR@")
 config.flang_intrinsic_modules_dir = "@FLANG_INTRINSIC_MODULES_DIR@"
+config.flang_headers_dir = "@HEADER_BINARY_DIR@"
 config.flang_llvm_tools_dir = "@CMAKE_BINARY_DIR@/bin"
 config.flang_test_triple = "@FLANG_TEST_TARGET_TRIPLE@"
 config.flang_examples = @LLVM_BUILD_EXAMPLES@

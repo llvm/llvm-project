@@ -175,7 +175,7 @@ else:
 llvm_config.use_clang(required=False)
 
 # Clang may need the include path for ISO_fortran_binding.h.
-config.substitutions.append(("%flang_include", config.flang_intrinsic_modules_dir))
+config.substitutions.append(("%flang_include", config.flang_headers_dir))
 
 # Enable libpgmath testing
 result = lit_config.params.get("LIBPGMATH")
