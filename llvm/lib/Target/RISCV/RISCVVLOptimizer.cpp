@@ -491,7 +491,7 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   // vfirst find-first-set mask bit
   case RISCV::VCPOP_M:
   case RISCV::VFIRST_M:
-  // Vector Bit-manipulation (Zvbb)
+  // Vector Bit-manipulation Instructions (Zvbb)
   // Vector And-Not
   case RISCV::VANDN_VV:
   case RISCV::VANDN_VX:
@@ -512,7 +512,7 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VROR_VX:
     return MILog2SEW;
 
-  // Vector Widening Shift Left Logical
+  // Vector Widening Shift Left Logical (Zvbb)
   case RISCV::VWSLL_VI:
   case RISCV::VWSLL_VX:
   case RISCV::VWSLL_VV:
@@ -1040,7 +1040,7 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VNCLIP_WV:
   case RISCV::VNCLIP_WX:
   case RISCV::VNCLIP_WI:
-  // Vector Bit-manipulation (Zvbb)
+  // Vector Bit-manipulation Instructions (Zvbb)
   // Vector And-Not
   case RISCV::VANDN_VV:
   case RISCV::VANDN_VX:
