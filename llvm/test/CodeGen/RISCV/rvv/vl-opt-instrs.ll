@@ -3402,9 +3402,8 @@ define <vscale x 4 x double> @vfrec7(<vscale x 4 x float> %a) {
 define <vscale x 4 x i32> @vandn_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl) {
 ; CHECK-LABEL: vandn_vv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vandn.vv v10, v8, v10
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; CHECK-NEXT:    vandn.vv v10, v8, v10
 ; CHECK-NEXT:    vadd.vv v8, v10, v8
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vandn.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen -1)
@@ -3415,9 +3414,8 @@ define <vscale x 4 x i32> @vandn_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b
 define <vscale x 4 x i32> @vandn_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) {
 ; CHECK-LABEL: vandn_vx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vandn.vx v10, v8, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; CHECK-NEXT:    vandn.vx v10, v8, a0
 ; CHECK-NEXT:    vadd.vv v8, v10, v8
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vandn.nxv4i32.i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, i32 %b, iXLen -1)
@@ -3428,9 +3426,8 @@ define <vscale x 4 x i32> @vandn_vx(<vscale x 4 x i32> %a, i32 %b, iXLen %vl) {
 define <vscale x 4 x i32> @vbrev_v(<vscale x 4 x i32> %a, iXLen %vl) {
 ; CHECK-LABEL: vbrev_v:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vbrev.v v10, v8
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; CHECK-NEXT:    vbrev.v v10, v8
 ; CHECK-NEXT:    vadd.vv v8, v10, v8
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vbrev.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, iXLen -1)
@@ -3441,9 +3438,8 @@ define <vscale x 4 x i32> @vbrev_v(<vscale x 4 x i32> %a, iXLen %vl) {
 define <vscale x 4 x i32> @vclz_v(<vscale x 4 x i32> %a, iXLen %vl) {
 ; CHECK-LABEL: vclz_v:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vclz.v v10, v8
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; CHECK-NEXT:    vclz.v v10, v8
 ; CHECK-NEXT:    vadd.vv v8, v10, v8
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vclz.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, iXLen -1)
@@ -3454,9 +3450,8 @@ define <vscale x 4 x i32> @vclz_v(<vscale x 4 x i32> %a, iXLen %vl) {
 define <vscale x 4 x i32> @vcpop_v(<vscale x 4 x i32> %a, iXLen %vl) {
 ; CHECK-LABEL: vcpop_v:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vcpop.v v10, v8
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; CHECK-NEXT:    vcpop.v v10, v8
 ; CHECK-NEXT:    vadd.vv v8, v10, v8
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vcpopv.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, iXLen -1)
@@ -3467,9 +3462,8 @@ define <vscale x 4 x i32> @vcpop_v(<vscale x 4 x i32> %a, iXLen %vl) {
 define <vscale x 4 x i32> @vctz_v(<vscale x 4 x i32> %a, iXLen %vl) {
 ; CHECK-LABEL: vctz_v:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vctz.v v10, v8
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; CHECK-NEXT:    vctz.v v10, v8
 ; CHECK-NEXT:    vadd.vv v8, v10, v8
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vctz.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, iXLen -1)
@@ -3480,9 +3474,8 @@ define <vscale x 4 x i32> @vctz_v(<vscale x 4 x i32> %a, iXLen %vl) {
 define <vscale x 4 x i32> @vror_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl) {
 ; CHECK-LABEL: vror_vv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vror.vv v10, v8, v10
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; CHECK-NEXT:    vror.vv v10, v8, v10
 ; CHECK-NEXT:    vadd.vv v8, v10, v8
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vror.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen -1)
@@ -3493,9 +3486,8 @@ define <vscale x 4 x i32> @vror_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b,
 define <vscale x 4 x i32> @vror_vx(<vscale x 4 x i32> %a, iXLen %b, iXLen %vl) {
 ; CHECK-LABEL: vror_vx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vror.vx v10, v8, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; CHECK-NEXT:    vror.vx v10, v8, a0
 ; CHECK-NEXT:    vadd.vv v8, v10, v8
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vror.nxv4i32.iXLen(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, iXLen %b, iXLen -1)
@@ -3506,9 +3498,8 @@ define <vscale x 4 x i32> @vror_vx(<vscale x 4 x i32> %a, iXLen %b, iXLen %vl) {
 define <vscale x 4 x i32> @vror_vi(<vscale x 4 x i32> %a, iXLen %vl) {
 ; CHECK-LABEL: vror_vi:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vror.vi v10, v8, 5
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; CHECK-NEXT:    vror.vi v10, v8, 5
 ; CHECK-NEXT:    vadd.vv v8, v10, v8
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vror.nxv4i32.iXLen(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, iXLen 5, iXLen -1)
@@ -3519,9 +3510,8 @@ define <vscale x 4 x i32> @vror_vi(<vscale x 4 x i32> %a, iXLen %vl) {
 define <vscale x 4 x i32> @vrol_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl) {
 ; CHECK-LABEL: vrol_vv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vrol.vv v10, v8, v10
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; CHECK-NEXT:    vrol.vv v10, v8, v10
 ; CHECK-NEXT:    vadd.vv v8, v10, v8
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vrol.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen -1)
@@ -3532,9 +3522,8 @@ define <vscale x 4 x i32> @vrol_vv(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b,
 define <vscale x 4 x i32> @vrol_vx(<vscale x 4 x i32> %a, iXLen %b, iXLen %vl) {
 ; CHECK-LABEL: vrol_vx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vrol.vx v10, v8, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; CHECK-NEXT:    vrol.vx v10, v8, a0
 ; CHECK-NEXT:    vadd.vv v8, v10, v8
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vrol.nxv4i32.iXLen(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, iXLen %b, iXLen -1)
