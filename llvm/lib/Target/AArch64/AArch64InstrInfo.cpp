@@ -6002,12 +6002,13 @@ llvm::createCFAOffset(const TargetRegisterInfo &TRI, unsigned Reg,
   assert(NumVGScaledBytes && "Expected scalable offset");
   SmallString<64> OffsetExpr;
   // + VG * NumVGScaledBytes
-  StringRef VGRegScale("* VG");
+  StringRef VGRegScale;
   if (IncomingVGOffsetFromDefCFA) {
     appendLoadRegExpr(OffsetExpr, *IncomingVGOffsetFromDefCFA);
     VGRegScale = "* IncomingVG";
   } else {
     appendReadRegExpr(OffsetExpr, TRI.getDwarfRegNum(AArch64::VG, true));
+    VGRegScale = "* VG";
   }
   appendConstantExpr(OffsetExpr, NumVGScaledBytes, dwarf::DW_OP_mul);
   appendOffsetComment(NumVGScaledBytes, Comment, VGRegScale);
