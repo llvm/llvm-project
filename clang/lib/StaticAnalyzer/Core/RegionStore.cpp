@@ -2654,14 +2654,19 @@ RegionStoreManager::bindArray(LimitedRegionBindingsConstRef B,
     SVal V = getBinding(B.asStore(), *MRV, R->getValueType());
     return bindAggregate(B, R, V);
   }
+  if (auto const *Value = Init.getAsInteger()) {
+    auto SafeValue = StateMgr.getBasicVals().getValue(*Value);
+    return bindAggregate(B, R, nonloc::ConcreteInt(SafeValue));
+  }
 
-  // Handle lazy compound values.
+  // Handle lazy compound values and symbolic values.
   if (std::optional LCV = Init.getAs<nonloc::LazyCompoundVal>()) {
     if (std::optional NewB = tryBindSmallArray(B, R, AT, *LCV))
       return *NewB;
-
     return bindAggregate(B, R, Init);
   }
+  if (isa<nonloc::SymbolVal>(Init))
+    return bindAggregate(B, R, Init);
 
   if (Init.isUnknown())
     return bindAggregate(B, R, UnknownVal());
