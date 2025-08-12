@@ -11,12 +11,36 @@
 #include "DXContainerWriter.h"
 #include "llvm/ObjCopy/CommonConfig.h"
 #include "llvm/ObjCopy/DXContainer/DXContainerConfig.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 namespace objcopy {
 namespace dxbc {
 
 using namespace object;
+
+static Error splitPartAsObject(StringRef PartName, StringRef OutFilename,
+                               StringRef InputFilename, const Object &Obj) {
+  for (const Part &P : Obj.Parts)
+    if (P.Name == PartName) {
+      auto PartObj = std::make_unique<Object>();
+      PartObj->Header = Obj.Header;
+      PartObj->Parts.push_back({P.Name, P.Data});
+      PartObj->recomputeHeader();
+
+      auto Write = [&OutFilename, &PartObj](raw_ostream &Out) -> Error {
+        DXContainerWriter Writer(*PartObj, Out);
+        if (Error E = Writer.write())
+          return createFileError(OutFilename, std::move(E));
+        return Error::success();
+      };
+
+      return writeToOutput(OutFilename, Write);
+    }
+
+  return createFileError(InputFilename, object_error::parse_failed,
+                         "part '%s' not found", PartName.str().c_str());
+}
 
 static Error handleArgs(const CommonConfig &Config, Object &Obj) {
   std::function<bool(const Part &)> RemovePred = [](const Part &) {
@@ -30,6 +54,15 @@ static Error handleArgs(const CommonConfig &Config, Object &Obj) {
 
   if (auto E = Obj.removeParts(RemovePred))
     return E;
+
+  for (StringRef Flag : Config.SplitSection) {
+    StringRef SectionName;
+    StringRef FileName;
+    std::tie(SectionName, FileName) = Flag.split('=');
+    if (Error E =
+            splitPartAsObject(SectionName, FileName, Config.InputFilename, Obj))
+      return E;
+  }
 
   return Error::success();
 }

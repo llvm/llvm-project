@@ -125,12 +125,12 @@ ConfigManager::getDXContainerConfig() const {
       Common.StripUnneeded || Common.DecompressDebugSections ||
       Common.GapFill != 0 || Common.PadTo != 0 ||
       Common.ChangeSectionLMAValAll != 0 ||
-      !Common.ChangeSectionAddress.empty() || !Common.SplitSection.empty()) {
+      !Common.ChangeSectionAddress.empty()) {
     return createStringError(llvm::errc::invalid_argument,
                              "option is not supported for directx");
   }
 
   // If a flag is listed here, then it has support for DXContainer:
-  // Common.PreserveDates, Common.ToRemove
+  // Common.PreserveDates, Common.ToRemove, Common.SplitSection
   return DXContainer;
 }
