@@ -2984,23 +2984,18 @@ AArch64TargetLowering::EmitInitTPIDR2Object(MachineInstr &MI,
   AArch64FunctionInfo *FuncInfo = MF->getInfo<AArch64FunctionInfo>();
   TPIDR2Object &TPIDR2 = FuncInfo->getTPIDR2Obj();
   if (TPIDR2.Uses > 0) {
+    // Note: This case just needs to do `SVL << 48`. It is not implemented as we
+    // generally don't support big-endian SVE/SME.
+    assert(
+        Subtarget->isLittleEndian() &&
+        "TPIDR2 block initialization is not supported on big-endian targets");
+
     const TargetInstrInfo *TII = Subtarget->getInstrInfo();
-    unsigned TPIDInitSaveSlicesReg = MI.getOperand(1).getReg();
-    if (!Subtarget->isLittleEndian()) {
-      unsigned TmpReg =
-          MF->getRegInfo().createVirtualRegister(&AArch64::GPR64RegClass);
-      // For big-endian targets move "num_za_save_slices" to the top two bytes.
-      BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::UBFMXri), TmpReg)
-          .addReg(TPIDInitSaveSlicesReg)
-          .addImm(16)
-          .addImm(15);
-      TPIDInitSaveSlicesReg = TmpReg;
-    }
     // Store buffer pointer and num_za_save_slices.
     // Bytes 10-15 are implicitly zeroed.
     BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::STPXi))
         .addReg(MI.getOperand(0).getReg())
-        .addReg(TPIDInitSaveSlicesReg)
+        .addReg(MI.getOperand(1).getReg())
         .addFrameIndex(TPIDR2.FrameIndex)
         .addImm(0);
   } else
