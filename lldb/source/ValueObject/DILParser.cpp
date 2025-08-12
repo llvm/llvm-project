@@ -409,15 +409,16 @@ ASTNodeUP DILParser::ParseIntegerLiteral() {
     is_longlong = true;
   if (spelling_ref.consume_back_insensitive("l"))
     is_long = true;
+  // Suffix 'u' can be only specified only once, before or after 'l'
   if (!is_unsigned && spelling_ref.consume_back_insensitive("u"))
     is_unsigned = true;
 
   llvm::APInt raw_value;
   if (!spelling_ref.getAsInteger(radix, raw_value)) {
     Scalar scalar_value(raw_value);
-    return std::make_unique<ScalarLiteralNode>(token.GetLocation(),
-                                               scalar_value, radix, is_unsigned,
-                                               is_long, is_longlong);
+    return std::make_unique<IntegerLiteralNode>(token.GetLocation(), raw_value,
+                                                radix, is_unsigned, is_long,
+                                                is_longlong);
   }
   return std::make_unique<ErrorNode>();
 }
@@ -437,9 +438,8 @@ ASTNodeUP DILParser::ParseFloatingPointLiteral() {
   auto StatusOrErr = raw_float.convertFromString(
       spelling_ref, llvm::APFloat::rmNearestTiesToEven);
   if (!errorToBool(StatusOrErr.takeError())) {
-    Scalar scalar_value(raw_float);
-    return std::make_unique<ScalarLiteralNode>(token.GetLocation(),
-                                               scalar_value, is_float);
+    return std::make_unique<FloatLiteralNode>(token.GetLocation(), raw_float,
+                                              is_float);
   }
   return std::make_unique<ErrorNode>();
 }

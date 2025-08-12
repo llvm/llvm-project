@@ -55,12 +55,14 @@ private:
   llvm::Expected<lldb::ValueObjectSP>
   Visit(const BitFieldExtractionNode *node) override;
   llvm::Expected<lldb::ValueObjectSP>
-  Visit(const ScalarLiteralNode *node) override;
+  Visit(const IntegerLiteralNode *node) override;
+  llvm::Expected<lldb::ValueObjectSP>
+  Visit(const FloatLiteralNode *node) override;
 
   llvm::Expected<CompilerType>
-  PickLiteralType(lldb::TypeSystemSP type_system,
+  PickIntegerType(lldb::TypeSystemSP type_system,
                   std::shared_ptr<ExecutionContextScope> ctx,
-                  const ScalarLiteralNode *literal);
+                  const IntegerLiteralNode *literal);
 
   // Used by the interpreter to create objects, perform casts, etc.
   lldb::TargetSP m_target;

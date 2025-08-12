@@ -179,25 +179,43 @@ private:
   int64_t m_last_index;
 };
 
-class ScalarLiteralNode : public ASTNode {
+class IntegerLiteralNode : public ASTNode {
 public:
-  ScalarLiteralNode(uint32_t location, Scalar value, uint32_t radix,
-                    bool is_unsigned, bool is_long, bool is_longlong)
+  IntegerLiteralNode(uint32_t location, llvm::APInt value, uint32_t radix,
+                     bool is_unsigned, bool is_long, bool is_longlong)
       : ASTNode(location, NodeKind::eScalarLiteralNode), m_value(value),
         m_radix(radix), m_is_unsigned(is_unsigned), m_is_long(is_long),
         m_is_longlong(is_longlong) {}
 
-  ScalarLiteralNode(uint32_t location, Scalar value, bool is_float)
+  llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
+
+  llvm::APInt GetValue() const { return m_value; }
+  uint32_t GetRadix() const { return m_radix; }
+  bool IsUnsigned() const { return m_is_unsigned; }
+  bool IsLong() const { return m_is_long; }
+  bool IsLongLong() const { return m_is_longlong; }
+
+  static bool classof(const ASTNode *node) {
+    return node->GetKind() == NodeKind::eScalarLiteralNode;
+  }
+
+private:
+  llvm::APInt m_value;
+  uint32_t m_radix;
+  bool m_is_unsigned;
+  bool m_is_long;
+  bool m_is_longlong;
+};
+
+class FloatLiteralNode : public ASTNode {
+public:
+  FloatLiteralNode(uint32_t location, llvm::APFloat value, bool is_float)
       : ASTNode(location, NodeKind::eScalarLiteralNode), m_value(value),
         m_is_float(is_float) {}
 
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
-  Scalar GetValue() const { return m_value; }
-  uint32_t GetRadix() const { return m_radix; }
-  bool IsUnsigned() const { return m_is_unsigned; }
-  bool IsLong() const { return m_is_long; }
-  bool IsLongLong() const { return m_is_longlong; }
+  llvm::APFloat GetValue() const { return m_value; }
   bool IsFloat() const { return m_is_float; }
 
   static bool classof(const ASTNode *node) {
@@ -205,11 +223,7 @@ public:
   }
 
 private:
-  Scalar m_value;
-  uint32_t m_radix;
-  bool m_is_unsigned;
-  bool m_is_long;
-  bool m_is_longlong;
+  llvm::APFloat m_value;
   bool m_is_float;
 };
 
@@ -231,7 +245,9 @@ public:
   virtual llvm::Expected<lldb::ValueObjectSP>
   Visit(const BitFieldExtractionNode *node) = 0;
   virtual llvm::Expected<lldb::ValueObjectSP>
-  Visit(const ScalarLiteralNode *node) = 0;
+  Visit(const IntegerLiteralNode *node) = 0;
+  virtual llvm::Expected<lldb::ValueObjectSP>
+  Visit(const FloatLiteralNode *node) = 0;
 };
 
 } // namespace lldb_private::dil

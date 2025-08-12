@@ -38,7 +38,11 @@ BitFieldExtractionNode::Accept(Visitor *v) const {
 }
 
 llvm::Expected<lldb::ValueObjectSP>
-ScalarLiteralNode::Accept(Visitor *v) const {
+IntegerLiteralNode::Accept(Visitor *v) const {
+  return v->Visit(this);
+}
+
+llvm::Expected<lldb::ValueObjectSP> FloatLiteralNode::Accept(Visitor *v) const {
   return v->Visit(this);
 }
 
