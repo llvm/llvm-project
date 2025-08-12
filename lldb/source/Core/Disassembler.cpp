@@ -48,7 +48,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 
-
 #include <cstdint>
 #include <cstring>
 #include <utility>
@@ -403,7 +402,8 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
     bool seen_this_inst = false;
   };
 
-  // Track live variables across instructions (keyed by stable LLDB user_id_t. 8 is a good small-buffer guess
+  // Track live variables across instructions (keyed by stable LLDB user_id_t. 8
+  // is a good small-buffer guess.
   llvm::SmallDenseMap<lldb::user_id_t, VarState, 8> live_vars;
 
   // Stateful annotator: updates live_vars and returns only what should be
@@ -433,9 +433,10 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
     VariableListSP var_list_sp = frame->GetInScopeVariableList(true);
     if (!var_list_sp) {
       // No variables in scope: everything previously live becomes <undef>.
-      for (auto I = live_vars.begin(), E = live_vars.end(); I != E; ) {
+      for (auto I = live_vars.begin(), E = live_vars.end(); I != E;) {
         auto Cur = I++;
-        events.push_back(llvm::formatv("{0} = <undef>", Cur->second.name).str());
+        events.push_back(
+            llvm::formatv("{0} = <undef>", Cur->second.name).str());
         live_vars.erase(Cur);
       }
       frame->ChangePC(original_pc);
@@ -486,9 +487,8 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
       if (loc_clean.empty())
         continue;
 
-      auto insert_res = live_vars.insert({var_id,
-                                    VarState{std::string(name),
-                                             loc_clean.str(),
+      auto insert_res =
+          live_vars.insert({var_id, VarState{std::string(name), loc_clean.str(),
                                              /*seen_this_inst*/ true}});
       if (insert_res.second) {
         // Newly inserted → print.
@@ -499,17 +499,19 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
         vs.seen_this_inst = true;
         if (vs.last_loc != loc_clean) {
           vs.last_loc = loc_clean.str();
-          events.push_back(llvm::formatv("{0} = {1}", vs.name, loc_clean).str());
+          events.push_back(
+              llvm::formatv("{0} = {1}", vs.name, loc_clean).str());
         }
       }
     }
 
     // Anything previously live that we didn't see a location for at this inst
     // is now <undef>.
-    for (auto I = live_vars.begin(), E = live_vars.end(); I != E; ) {
+    for (auto I = live_vars.begin(), E = live_vars.end(); I != E;) {
       auto Cur = I++;
       if (!Cur->second.seen_this_inst) {
-        events.push_back(llvm::formatv("{0} = <undef>", Cur->second.name).str());
+        events.push_back(
+            llvm::formatv("{0} = <undef>", Cur->second.name).str());
         live_vars.erase(Cur);
       }
     }
