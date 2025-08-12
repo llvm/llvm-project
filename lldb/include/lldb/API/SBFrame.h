@@ -253,13 +253,6 @@ protected:
       const lldb::SBVariablesOptions &options, lldb_private::StackFrame &frame,
       SBValueList &value_list, lldb_private::Debugger &dbg);
 
-  /// Populates `value_list` with recognized arguments of `frame` according to
-  /// `options`.
-  static void FetchRecognizedArguments(const SBVariablesOptions &options,
-                                       lldb_private::StackFrame &frame,
-                                       SBTarget target,
-                                       SBValueList &value_list);
-
   lldb::ExecutionContextRefSP m_opaque_sp;
 };
 
