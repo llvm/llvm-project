@@ -45,6 +45,7 @@ set(LIBCXX_SOURCES
   stacktrace/images.cpp
   stacktrace/impl_generic.cpp
   stacktrace/impl_windows.cpp
+  stacktrace/libbacktrace.h
   stacktrace/tools/apple_atos.cpp
   stacktrace/tools/gnu_addr2line.cpp
   stacktrace/tools/llvm_symbolizer.cpp
