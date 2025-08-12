@@ -2572,17 +2572,30 @@ SymbolFileNativePDB::GetContextForType(TypeIndex ti) {
 
 void SymbolFileNativePDB::CacheUdtDeclarations() {
   for (CVType cvt : m_index->ipi().typeArray()) {
-    if (cvt.kind() != LF_UDT_MOD_SRC_LINE)
-      continue;
-
-    UdtModSourceLineRecord udt_mod_src;
-    llvm::cantFail(TypeDeserializer::deserializeAs(cvt, udt_mod_src));
-    // Some types might be contributed by multiple modules. We assume that they
-    // all point to the same file and line because we can only provide one
-    // location.
-    m_udt_declarations.try_emplace(udt_mod_src.UDT,
-                                   udt_mod_src.SourceFile.getIndex(),
-                                   udt_mod_src.LineNumber);
+    switch (cvt.kind()) {
+    case LF_UDT_SRC_LINE: {
+      UdtSourceLineRecord udt_src;
+      llvm::cantFail(TypeDeserializer::deserializeAs(cvt, udt_src));
+      m_udt_declarations.try_emplace(
+          udt_src.UDT, UdtDeclaration{/*FileNameIndex=*/udt_src.SourceFile,
+                                      /*IsIpiIndex=*/true,
+                                      /*Line=*/udt_src.LineNumber});
+    } break;
+    case LF_UDT_MOD_SRC_LINE: {
+      UdtModSourceLineRecord udt_mod_src;
+      llvm::cantFail(TypeDeserializer::deserializeAs(cvt, udt_mod_src));
+      // Some types might be contributed by multiple modules. We assume that
+      // they all point to the same file and line because we can only provide
+      // one location.
+      m_udt_declarations.try_emplace(
+          udt_mod_src.UDT,
+          UdtDeclaration{/*FileNameIndex=*/udt_mod_src.SourceFile,
+                         /*IsIpiIndex=*/false,
+                         /*Line=*/udt_mod_src.LineNumber});
+    } break;
+    default:
+      break;
+    }
   }
 }
 
@@ -2594,22 +2607,34 @@ SymbolFileNativePDB::ResolveUdtDeclaration(PdbTypeSymId type_id) {
   if (it == m_udt_declarations.end())
     return llvm::createStringError("No UDT declaration found");
 
-  auto [file_index, line] = it->second;
-  auto string_table = m_index->pdb().getStringTable();
-  if (!string_table)
-    return string_table.takeError();
+  llvm::StringRef file_name;
+  if (it->second.IsIpiIndex) {
+    CVType cvt = m_index->ipi().getType(it->second.FileNameIndex);
+    if (cvt.kind() != LF_STRING_ID)
+      return llvm::createStringError("File name was not a LF_STRING_ID");
 
-  llvm::Expected<llvm::StringRef> file_name =
-      string_table->getStringTable().getString(file_index);
-  if (!file_name)
-    return file_name.takeError();
+    StringIdRecord sid;
+    llvm::cantFail(TypeDeserializer::deserializeAs(cvt, sid));
+    file_name = sid.String;
+  } else {
+    // The file name index is an index into the string table
+    auto string_table = m_index->pdb().getStringTable();
+    if (!string_table)
+      return string_table.takeError();
+
+    llvm::Expected<llvm::StringRef> string =
+        string_table->getStringTable().getString(
+            it->second.FileNameIndex.getIndex());
+    if (!string)
+      return string.takeError();
+    file_name = *string;
+  }
 
   // rustc sets the filename to "<unknown>" for some files
-  if (*file_name == "\\<unknown>")
+  if (file_name == "\\<unknown>")
     return Declaration();
 
-  FileSpec::Style style = file_name->starts_with("/")
-                              ? FileSpec::Style::posix
-                              : FileSpec::Style::windows;
-  return Declaration(FileSpec(*file_name, style), line);
+  FileSpec::Style style = file_name.starts_with("/") ? FileSpec::Style::posix
+                                                     : FileSpec::Style::windows;
+  return Declaration(FileSpec(file_name, style), it->second.Line);
 }

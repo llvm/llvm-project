@@ -286,11 +286,16 @@ private:
   llvm::DenseMap<llvm::codeview::TypeIndex, llvm::codeview::TypeIndex>
       m_parent_types;
 
-  /// type index -> (filename index, line)
-  ///
-  /// The filename index is an index into the `/names` section (string table)
-  llvm::DenseMap<llvm::codeview::TypeIndex, std::pair<uint32_t, uint32_t>>
-      m_udt_declarations;
+  struct UdtDeclaration {
+    /// This could either be an index into the `/names` section (string table,
+    /// LF_UDT_MOD_SRC_LINE) or, this could be an index into the IPI stream to a
+    /// LF_STRING_ID record (LF_UDT_SRC_LINE).
+    llvm::codeview::TypeIndex FileNameIndex;
+    bool IsIpiIndex;
+
+    uint32_t Line;
+  };
+  llvm::DenseMap<llvm::codeview::TypeIndex, UdtDeclaration> m_udt_declarations;
   std::once_flag m_cached_udt_declatations;
 
   lldb_private::UniqueCStringMap<uint32_t> m_type_base_names;
