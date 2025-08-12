@@ -53,14 +53,14 @@ using namespace llvm::SDPatternMatch;
 
 STATISTIC(NumTailCalls, "Number of tail calls");
 
-static cl::opt<bool> DisableLoopAlignment("amdgpu-disable-loop-alignment",
-                                          cl::desc("Do not align loops"),
-                                          cl::init(false));
+static cl::opt<bool>
+    DisableAllLoopAlignment("amdgpu-disable-all-loop-alignment",
+                            cl::desc("Do not align loops"), cl::init(false));
 
 static cl::opt<bool>
-    DisableLoopAlignmentPrefetch("amdgpu-disable-loop-alignment-prefetch",
-                                 cl::desc("Do not align and prefetch loops"),
-                                 cl::init(false));
+    DisableLoopAlignment("amdgpu-disable-loop-alignment",
+                         cl::desc("Do not align loops for prefetch"),
+                         cl::init(false));
 
 static cl::opt<bool> UseDivergentRegisterIndexing(
     "amdgpu-use-divergent-register-indexing", cl::Hidden,
@@ -17440,7 +17440,7 @@ Align SITargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
   const Align CacheLineAlign = Align(64);
   const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
   const MachineBasicBlock *Header = ML->getHeader();
-  if (DisableLoopAlignment || Header->getAlignment() > PrefAlign)
+  if (DisableAllLoopAlignment || Header->getAlignment() > PrefAlign)
     return Header->getAlignment(); // Already processed.
 
   unsigned LoopSize = 0;
@@ -17459,8 +17459,7 @@ Align SITargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
 
   // Pre-GFX10 targets did not benefit from loop alignment driven by prefetch
   // considerations
-  if (!ML || DisableLoopAlignmentPrefetch ||
-      !getSubtarget()->hasInstPrefetch() ||
+  if (!ML || DisableLoopAlignment || !getSubtarget()->hasInstPrefetch() ||
       getSubtarget()->hasInstFwdPrefetchBug()) {
     // Align loops < 32 bytes agrressively
     if (LoopSize <= 32)

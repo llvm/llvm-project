@@ -2,8 +2,8 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck %s -check-prefixes=GFX6789,GFX678,GFX689,GFX67,GFX6
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx700 < %s | FileCheck %s -check-prefixes=GFX6789,GFX678,GFX67,GFX7
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx801 < %s | FileCheck %s -check-prefixes=GFX6789,GFX678,GFX689,GFX89
-; RUN: llc -amdgpu-disable-loop-alignment=true -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck %s -check-prefixes=GFX6789,GFX689,GFX89,GFX9
-; RUN: llc -amdgpu-disable-loop-alignment=true -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck %s -check-prefixes=GFX12
+; RUN: llc -amdgpu-disable-all-loop-alignment=true -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck %s -check-prefixes=GFX6789,GFX689,GFX89,GFX9
+; RUN: llc -amdgpu-disable-all-loop-alignment=true -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck %s -check-prefixes=GFX12
 
 define amdgpu_cs void @test_sink_smem_offset_400(ptr addrspace(4) inreg %ptr, i32 inreg %val) {
 ; GFX67-LABEL: test_sink_smem_offset_400:
