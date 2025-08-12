@@ -2089,7 +2089,7 @@ def Vector_GatherOp :
     result[i,j] := if mask[i,j] then base[i0, i1, i2 + index_vec[i,j]]
                    else pass_thru[i,j]
     ```
-    The index into `base` only varies in the innermost dimension, k-1.
+    The index into `base` only varies in the innermost ((k-1)-th) dimension.
 
     If a mask bit is set and the corresponding index is out-of-bounds for the
     given base, the behavior is undefined. If a mask bit is not set, the value
