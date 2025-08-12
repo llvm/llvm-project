@@ -13,6 +13,6 @@
 _CLC_DEF _CLC_OVERLOAD void barrier(cl_mem_fence_flags flags) {
   int memory_scope = getCLCMemoryScope(flags);
   int memory_order = __ATOMIC_SEQ_CST;
-  MemorySemantic memory_semantic = getCLCMemorySemantic(flags);
-  __clc_work_group_barrier(memory_scope, memory_order, memory_semantic);
+  MemorySemantics memory_semantics = getCLCMemorySemantics(flags);
+  __clc_work_group_barrier(memory_scope, memory_order, memory_semantics);
 }

@@ -22,7 +22,7 @@ _CLC_INLINE int getCLCMemoryScope(cl_mem_fence_flags flag) {
   return memory_scope;
 }
 
-_CLC_INLINE MemorySemantic getCLCMemorySemantic(cl_mem_fence_flags flag) {
+_CLC_INLINE MemorySemantics getCLCMemorySemantics(cl_mem_fence_flags flag) {
   if ((flag & CLK_LOCAL_MEM_FENCE) && (flag & CLK_GLOBAL_MEM_FENCE))
     return MEMORY_LOCAL | MEMORY_GLOBAL;
   if (flag & CLK_LOCAL_MEM_FENCE)

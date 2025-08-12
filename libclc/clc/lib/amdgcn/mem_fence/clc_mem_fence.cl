@@ -43,12 +43,12 @@
   }
 
 _CLC_OVERLOAD _CLC_DEF void __clc_mem_fence(int memory_scope, int memory_order,
-                                            MemorySemantic memory_semantic) {
-  if (memory_semantic == MEMORY_LOCAL) {
+                                            MemorySemantics memory_semantics) {
+  if (memory_semantics == MEMORY_LOCAL) {
     BUILTIN_FENCE(memory_scope, memory_order, "local")
-  } else if (memory_semantic == MEMORY_GLOBAL) {
+  } else if (memory_semantics == MEMORY_GLOBAL) {
     BUILTIN_FENCE(memory_scope, memory_order, "global")
-  } else if (memory_semantic == (MEMORY_LOCAL | MEMORY_GLOBAL)) {
+  } else if (memory_semantics == (MEMORY_LOCAL | MEMORY_GLOBAL)) {
     BUILTIN_FENCE(memory_scope, memory_order, "local", "global")
   } else {
     BUILTIN_FENCE(memory_scope, memory_order)

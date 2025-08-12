@@ -10,6 +10,6 @@
 
 _CLC_OVERLOAD _CLC_DEF void
 __clc_work_group_barrier(int memory_scope, int memory_order,
-                         MemorySemantic memory_semantic) {
+                         MemorySemantics memory_semantics) {
   __syncthreads();
 }
