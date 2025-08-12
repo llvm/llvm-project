@@ -127,10 +127,16 @@ struct StableFunctionMap {
   /// \returns true if there is no stable function entry.
   bool empty() const { return size() == 0; }
 
+  /// \returns true if there is an entry for the given function hash.
+  /// This does not trigger lazy loading.
   bool contains(HashFuncsMapType::key_type FunctionHash) const {
     return HashToFuncs.count(FunctionHash) > 0;
   }
 
+  /// \returns the stable function entries for the given function hash. If the
+  /// map is lazily loaded, it will deserialize the entries if it is not already
+  /// done, other requests to the same hash at the same time will be blocked
+  /// until the entries are deserialized.
   const StableFunctionEntries &
   at(HashFuncsMapType::key_type FunctionHash) const;
 
