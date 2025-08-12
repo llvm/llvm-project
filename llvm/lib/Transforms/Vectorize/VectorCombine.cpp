@@ -3937,6 +3937,7 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
 
       using UseEntry = std::pair<ShuffleVectorInst *, std::vector<int>>;
       SmallVector<UseEntry, 4u> NewUses;
+      unsigned const MaxIndex = NewNumElements * 2u;
 
       for (llvm::Use &Use : I.uses()) {
         auto *Shuffle = cast<ShuffleVectorInst>(Use.getUser());
@@ -3944,6 +3945,12 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
 
         // Create entry for new use.
         NewUses.push_back({Shuffle, OldMask});
+
+        // Validate mask indices.
+        for (int Index : OldMask) {
+          if (Index >= static_cast<int>(MaxIndex))
+            return false;
+        }
 
         // Update costs.
         OldCost +=
