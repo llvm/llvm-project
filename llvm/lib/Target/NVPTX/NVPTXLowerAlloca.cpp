@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// For all alloca instructions, and add a pair of cast to local address for
-// each of them. For example,
+// Change the Module's DataLayout to have the local address space for alloca's.
+// Change the address space of each alloca to local and add an addrspacecast to
+// generic address space. For example,
 //
 //   %A = alloca i32
 //   store i32 0, i32* %A ; emits st.u32
 //
 // will be transformed to
 //
-//   %A = alloca i32
-//   %Local = addrspacecast i32* %A to i32 addrspace(5)*
+//   %A = alloca i32, addrspace(5)
 //   %Generic = addrspacecast i32 addrspace(5)* %A to i32*
 //   store i32 0, i32 addrspace(5)* %Generic ; emits st.local.u32
 //
@@ -24,18 +24,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/NVPTXBaseInfo.h"
+#include "llvm/Support/NVPTXAddrSpace.h"
 #include "NVPTX.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Pass.h"
 
 using namespace llvm;
+using namespace NVPTXAS;
 
 namespace {
 class NVPTXLowerAlloca : public FunctionPass {
   bool runOnFunction(Function &F) override;
+  bool doInitialization(Module &M) override;
 
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -58,77 +64,55 @@ bool NVPTXLowerAlloca::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
 
-  bool Changed = false;
+  SmallVector<AllocaInst *, 16> Allocas;
   for (auto &BB : F)
-    for (auto &I : BB) {
-      if (auto allocaInst = dyn_cast<AllocaInst>(&I)) {
-        Changed = true;
+    for (auto &I : BB)
+      if (auto *Alloca = dyn_cast<AllocaInst>(&I))
+        if (Alloca->getAddressSpace() != ADDRESS_SPACE_LOCAL)
+          Allocas.push_back(Alloca);
 
-        PointerType *AllocInstPtrTy =
-            cast<PointerType>(allocaInst->getType()->getScalarType());
-        unsigned AllocAddrSpace = AllocInstPtrTy->getAddressSpace();
-        assert((AllocAddrSpace == ADDRESS_SPACE_GENERIC ||
-                AllocAddrSpace == ADDRESS_SPACE_LOCAL) &&
-               "AllocaInst can only be in Generic or Local address space for "
-               "NVPTX.");
+  if (Allocas.empty())
+    return false;
 
-        Instruction *AllocaInLocalAS = allocaInst;
-        auto ETy = allocaInst->getAllocatedType();
+  for (AllocaInst *Alloca : Allocas) {
+    auto *NewAlloca = new AllocaInst(
+        Alloca->getAllocatedType(), ADDRESS_SPACE_LOCAL, Alloca->getArraySize(),
+        Alloca->getAlign(), Alloca->getName());
+    auto *Cast = new AddrSpaceCastInst(
+        NewAlloca,
+        PointerType::get(Alloca->getAllocatedType()->getContext(),
+                         ADDRESS_SPACE_GENERIC),
+        "");
+    Cast->insertBefore(Alloca->getIterator());
+    NewAlloca->insertBefore(Cast->getIterator());
+    for (auto &U : llvm::make_early_inc_range(Alloca->uses())) {
+      auto *II = dyn_cast<IntrinsicInst>(U.getUser());
+      if (!II || (II->getIntrinsicID() != Intrinsic::lifetime_start &&
+                  II->getIntrinsicID() != Intrinsic::lifetime_end))
+        continue;
 
-        // We need to make sure that LLVM has info that alloca needs to go to
-        // ADDRESS_SPACE_LOCAL for InferAddressSpace pass.
-        //
-        // For allocas in ADDRESS_SPACE_LOCAL, we add addrspacecast to
-        // ADDRESS_SPACE_LOCAL and back to ADDRESS_SPACE_GENERIC, so that
-        // the alloca's users still use a generic pointer to operate on.
-        //
-        // For allocas already in ADDRESS_SPACE_LOCAL, we just need
-        // addrspacecast to ADDRESS_SPACE_GENERIC.
-        if (AllocAddrSpace == ADDRESS_SPACE_GENERIC) {
-          auto ASCastToLocalAS = new AddrSpaceCastInst(
-              allocaInst,
-              PointerType::get(ETy->getContext(), ADDRESS_SPACE_LOCAL), "");
-          ASCastToLocalAS->insertAfter(allocaInst->getIterator());
-          AllocaInLocalAS = ASCastToLocalAS;
-        }
-
-        auto AllocaInGenericAS = new AddrSpaceCastInst(
-            AllocaInLocalAS,
-            PointerType::get(ETy->getContext(), ADDRESS_SPACE_GENERIC), "");
-        AllocaInGenericAS->insertAfter(AllocaInLocalAS->getIterator());
-
-        for (Use &AllocaUse : llvm::make_early_inc_range(allocaInst->uses())) {
-          // Check Load, Store, GEP, and BitCast Uses on alloca and make them
-          // use the converted generic address, in order to expose non-generic
-          // addrspacecast to NVPTXInferAddressSpaces. For other types
-          // of instructions this is unnecessary and may introduce redundant
-          // address cast.
-          auto LI = dyn_cast<LoadInst>(AllocaUse.getUser());
-          if (LI && LI->getPointerOperand() == allocaInst &&
-              !LI->isVolatile()) {
-            LI->setOperand(LI->getPointerOperandIndex(), AllocaInGenericAS);
-            continue;
-          }
-          auto SI = dyn_cast<StoreInst>(AllocaUse.getUser());
-          if (SI && SI->getPointerOperand() == allocaInst &&
-              !SI->isVolatile()) {
-            SI->setOperand(SI->getPointerOperandIndex(), AllocaInGenericAS);
-            continue;
-          }
-          auto GI = dyn_cast<GetElementPtrInst>(AllocaUse.getUser());
-          if (GI && GI->getPointerOperand() == allocaInst) {
-            GI->setOperand(GI->getPointerOperandIndex(), AllocaInGenericAS);
-            continue;
-          }
-          auto BI = dyn_cast<BitCastInst>(AllocaUse.getUser());
-          if (BI && BI->getOperand(0) == allocaInst) {
-            BI->setOperand(0, AllocaInGenericAS);
-            continue;
-          }
-        }
-      }
+      IRBuilder<> Builder(II);
+      Builder.CreateIntrinsic(II->getIntrinsicID(), {NewAlloca->getType()},
+                              {NewAlloca});
+      II->eraseFromParent();
     }
-  return Changed;
+
+    Alloca->replaceAllUsesWith(Cast);
+    Alloca->eraseFromParent();
+  }
+  return true;
+}
+
+bool NVPTXLowerAlloca::doInitialization(Module &M) {
+  const auto &DL = M.getDataLayout();
+  if (DL.getAllocaAddrSpace() == ADDRESS_SPACE_LOCAL)
+    return false;
+  auto DLStr = DL.getStringRepresentation();
+
+  auto AddrSpaceStr = "A" + std::to_string(ADDRESS_SPACE_LOCAL);
+  assert(!StringRef(DLStr).contains("A") && "DataLayout should not contain A");
+  M.setDataLayout(DLStr.empty() ? AddrSpaceStr : DLStr + "-" + AddrSpaceStr);
+  return true;
 }
 
 FunctionPass *llvm::createNVPTXLowerAllocaPass() {

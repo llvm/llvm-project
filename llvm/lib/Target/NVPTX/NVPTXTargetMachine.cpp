@@ -371,6 +371,8 @@ void NVPTXPassConfig::addIRPasses() {
   if (getOptLevel() != CodeGenOptLevel::None) {
     addAddressSpaceInferencePasses();
     addStraightLineScalarOptimizationPasses();
+  } else {
+    addPass(createNVPTXLowerAllocaPass());
   }
 
   addPass(createAtomicExpandLegacyPass());
@@ -501,4 +503,26 @@ void NVPTXPassConfig::addMachineSSAOptimization() {
 
   addPass(&PeepholeOptimizerLegacyID);
   printAndVerify("After codegen peephole optimization pass");
+}
+
+bool NVPTXTargetMachine::isCompatibleDataLayout(
+    const DataLayout &Candidate) const {
+  //XXX: Should we enforce that the Candidate DataLayout has the same address space for allocas?
+  if (DL == Candidate)
+    return true;
+
+  auto DLStr = DL.getStringRepresentation();
+  if (!StringRef(DLStr).contains("A"))
+    DLStr = DLStr.empty() ? "A" + std::to_string(ADDRESS_SPACE_LOCAL)
+                          : DLStr + "-A" + std::to_string(ADDRESS_SPACE_LOCAL);
+  auto NewDL = DataLayout(DLStr);
+
+  return NewDL == Candidate;
+}
+
+unsigned NVPTXTargetMachine::getAddressSpaceForPseudoSourceKind(unsigned Kind) const {
+  if (Kind == PseudoSourceValue::FixedStack) {
+    return ADDRESS_SPACE_LOCAL;
+  }
+  return CodeGenTargetMachineImpl::getAddressSpaceForPseudoSourceKind(Kind);
 }

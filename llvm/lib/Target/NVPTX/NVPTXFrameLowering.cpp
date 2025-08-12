@@ -48,8 +48,8 @@ void NVPTXFrameLowering::emitPrologue(MachineFunction &MF,
     //   mov %SPL, %depot;
     //   cvta.local %SP, %SPL;
     // for local address accesses in MF.
-    bool Is64Bit =
-        static_cast<const NVPTXTargetMachine &>(MF.getTarget()).is64Bit();
+    bool Is64Bit = static_cast<const NVPTXTargetMachine &>(MF.getTarget())
+                       .getPointerSize(NVPTXAS::ADDRESS_SPACE_LOCAL) == 8;
     unsigned CvtaLocalOpcode =
         (Is64Bit ? NVPTX::cvta_local_64 : NVPTX::cvta_local);
     unsigned MovDepotOpcode =

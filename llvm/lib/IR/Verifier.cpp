@@ -114,6 +114,7 @@
 #include "llvm/Pass.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
+#include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -4496,6 +4497,13 @@ void Verifier::visitAllocaInst(AllocaInst &AI) {
   if (TT.isAMDGPU()) {
     Check(AI.getAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS,
           "alloca on amdgpu must be in addrspace(5)", &AI);
+  }
+
+  if (TT.isNVPTX()) {
+    Check(AI.getAddressSpace() == NVPTXAS::ADDRESS_SPACE_LOCAL ||
+              AI.getAddressSpace() == NVPTXAS::ADDRESS_SPACE_GENERIC,
+          "AllocaInst can only be in Generic or Local address space for NVPTX.",
+          &AI);
   }
 
   visitInstruction(AI);

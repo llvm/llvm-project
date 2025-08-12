@@ -1484,7 +1484,8 @@ void NVPTXAsmPrinter::setAndEmitFunctionVirtualRegisters(
   if (NumBytes) {
     O << "\t.local .align " << MFI.getMaxAlign().value() << " .b8 \t"
       << DEPOTNAME << getFunctionNumber() << "[" << NumBytes << "];\n";
-    if (static_cast<const NVPTXTargetMachine &>(MF.getTarget()).is64Bit()) {
+    if (static_cast<const NVPTXTargetMachine &>(MF.getTarget())
+            .getPointerSize(ADDRESS_SPACE_LOCAL) == 8) {
       O << "\t.reg .b64 \t%SP;\n"
         << "\t.reg .b64 \t%SPL;\n";
     } else {

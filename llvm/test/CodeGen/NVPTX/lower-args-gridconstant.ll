@@ -156,22 +156,21 @@ define ptx_kernel void @multiple_grid_const_escape(ptr byval(%struct.s) align 4 
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
 ; PTX-NEXT:    mov.b64 %SPL, __local_depot4;
-; PTX-NEXT:    cvta.local.u64 %SP, %SPL;
 ; PTX-NEXT:    mov.b64 %rd1, multiple_grid_const_escape_param_0;
 ; PTX-NEXT:    ld.param.b32 %r1, [multiple_grid_const_escape_param_1];
 ; PTX-NEXT:    mov.b64 %rd2, multiple_grid_const_escape_param_2;
 ; PTX-NEXT:    cvta.param.u64 %rd3, %rd2;
 ; PTX-NEXT:    cvta.param.u64 %rd4, %rd1;
-; PTX-NEXT:    add.u64 %rd5, %SP, 0;
-; PTX-NEXT:    add.u64 %rd6, %SPL, 0;
-; PTX-NEXT:    st.local.b32 [%rd6], %r1;
+; PTX-NEXT:    add.u64 %rd5, %SPL, 0;
+; PTX-NEXT:    cvta.local.u64 %rd6, %rd5;
+; PTX-NEXT:    st.local.b32 [%SPL], %r1;
 ; PTX-NEXT:    { // callseq 1, 0
 ; PTX-NEXT:    .param .b64 param0;
 ; PTX-NEXT:    .param .b64 param1;
 ; PTX-NEXT:    .param .b64 param2;
 ; PTX-NEXT:    .param .b32 retval0;
 ; PTX-NEXT:    st.param.b64 [param2], %rd3;
-; PTX-NEXT:    st.param.b64 [param1], %rd5;
+; PTX-NEXT:    st.param.b64 [param1], %rd6;
 ; PTX-NEXT:    st.param.b64 [param0], %rd4;
 ; PTX-NEXT:    prototype_1 : .callprototype (.param .b32 _) _ (.param .b64 _, .param .b64 _, .param .b64 _);
 ; PTX-NEXT:    mov.b64 %rd7, escape3;
