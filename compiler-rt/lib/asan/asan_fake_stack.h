@@ -32,12 +32,12 @@ struct FakeFrame {
 // is not popped but remains there for quite some time until gets used again.
 // So, we poison the objects on the fake stack when function returns.
 // It helps us find use-after-return bugs.
+//
 // The FakeStack objects is allocated by a single mmap call and has no other
 // pointers. The size of the fake stack depends on the actual thread stack size
 // and thus can not be a constant.
 // stack_size is a power of two greater or equal to the thread's stack size;
 // we store it as its logarithm (stack_size_log).
-// FakeStack is padded such that GetFrame() is aligned to BytesInSizeClass().
 // FakeStack has kNumberOfSizeClasses (11) size classes, each size class
 // is a power of two, starting from 64 bytes. Each size class occupies
 // stack_size bytes and thus can allocate
@@ -56,9 +56,6 @@ struct FakeFrame {
 class FakeStack {
   static const uptr kMinStackFrameSizeLog = 6;  // Min frame is 64B.
   static const uptr kMaxStackFrameSizeLog = 16;  // Max stack frame is 64K.
-  static_assert(kMaxStackFrameSizeLog >= kMinStackFrameSizeLog);
-
-  static const u64 kMaxStackFrameSize = 1 << kMaxStackFrameSizeLog;
 
  public:
   static const uptr kNumberOfSizeClasses =
@@ -69,7 +66,7 @@ class FakeStack {
 
   void Destroy(int tid);
 
-  // min_uar_stack_size_log is 16 (stack_size >= 64KB)
+  // stack_size_log is at least 15 (stack_size >= 32K).
   static uptr SizeRequiredForFlags(uptr stack_size_log) {
     return ((uptr)1) << (stack_size_log + 1 - kMinStackFrameSizeLog);
   }
@@ -113,28 +110,6 @@ class FakeStack {
   }
 
   // Get frame by class_id and pos.
-  // Return values are guaranteed to be aligned to BytesInSizeClass(class_id),
-  // which is useful in combination with
-  // ASanStackFrameLayout::ComputeASanStackFrameLayout().
-  //
-  // Note that alignment to 1<<kMaxStackFrameSizeLog (aka
-  // BytesInSizeClass(max_class_id)) implies alignment to BytesInSizeClass()
-  // for any class_id, since the class sizes are increasing powers of 2.
-  //
-  // 1) (this + kFlagsOffset + SizeRequiredForFlags())) is aligned to
-  //    1<<kMaxStackFrameSizeLog (see FakeStack::Create)
-  //
-  //    Note that SizeRequiredForFlags(16) == 2048. If FakeStack::Create() had
-  //    merely returned an address from mmap (4K-aligned), the addition would
-  //    not be 4K-aligned.
-  // 2) We know that stack_size_log >= kMaxStackFrameSizeLog (otherwise you
-  //    couldn't store a single frame of that size in the entire stack)
-  //    hence (1<<stack_size_log) is aligned to 1<<kMaxStackFrameSizeLog
-  //    and   ((1<<stack_size_log) * class_id) is aligned to
-  //          1<<kMaxStackFrameSizeLog
-  // 3) BytesInSizeClass(class_id) * pos is aligned to
-  //    BytesInSizeClass(class_id)
-  // The sum of these is aligned to BytesInSizeClass(class_id).
   u8 *GetFrame(uptr stack_size_log, uptr class_id, uptr pos) {
     return reinterpret_cast<u8 *>(this) + kFlagsOffset +
            SizeRequiredForFlags(stack_size_log) +
@@ -181,18 +156,15 @@ class FakeStack {
 
  private:
   FakeStack() { }
-  static const uptr kFlagsOffset = 4096;  // This is where the flags begin.
+  static const uptr kFlagsOffset = 4096;  // This is were the flags begin.
   // Must match the number of uses of DEFINE_STACK_MALLOC_FREE_WITH_CLASS_ID
   COMPILER_CHECK(kNumberOfSizeClasses == 11);
   static const uptr kMaxStackMallocSize = ((uptr)1) << kMaxStackFrameSizeLog;
 
   uptr hint_position_[kNumberOfSizeClasses];
   uptr stack_size_log_;
+  // a bit is set if something was allocated from the corresponding size class.
   bool needs_gc_;
-  // We allocated more memory than needed to ensure the FakeStack (and, by
-  // extension, each of the fake stack frames) is aligned. We keep track of the
-  // true start so that we can unmap it.
-  void *true_start;
 };
 
 FakeStack *GetTLSFakeStack();
