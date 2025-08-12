@@ -1,7 +1,11 @@
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +xop -emit-llvm -o - -Wall -Werror | FileCheck %s
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +xop -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +xop -emit-llvm -o - -Wall -Werror | FileCheck %s
-// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +xop -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +xop -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +xop -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +xop -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -x c -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +xop -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +xop -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +xop -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +xop -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +xop -fno-signed-char -emit-llvm -o - -Wall -Werror | FileCheck %s
 
 
 #include <x86intrin.h>
@@ -46,25 +50,25 @@ __m128i test_mm_macc_epi32(__m128i a, __m128i b, __m128i c) {
 
 __m128i test_mm_maccslo_epi32(__m128i a, __m128i b, __m128i c) {
   // CHECK-LABEL: test_mm_maccslo_epi32
-  // CHECK: call <2 x i64> @llvm.x86.xop.vpmacssdql(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <2 x i64> %{{.*}})
+  // CHECK: call {{.*}}<2 x i64> @llvm.x86.xop.vpmacssdql(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <2 x i64> %{{.*}})
   return _mm_maccslo_epi32(a, b, c);
 }
 
 __m128i test_mm_macclo_epi32(__m128i a, __m128i b, __m128i c) {
   // CHECK-LABEL: test_mm_macclo_epi32
-  // CHECK: call <2 x i64> @llvm.x86.xop.vpmacsdql(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <2 x i64> %{{.*}})
+  // CHECK: call {{.*}}<2 x i64> @llvm.x86.xop.vpmacsdql(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <2 x i64> %{{.*}})
   return _mm_macclo_epi32(a, b, c);
 }
 
 __m128i test_mm_maccshi_epi32(__m128i a, __m128i b, __m128i c) {
   // CHECK-LABEL: test_mm_maccshi_epi32
-  // CHECK: call <2 x i64> @llvm.x86.xop.vpmacssdqh(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <2 x i64> %{{.*}})
+  // CHECK: call {{.*}}<2 x i64> @llvm.x86.xop.vpmacssdqh(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <2 x i64> %{{.*}})
   return _mm_maccshi_epi32(a, b, c);
 }
 
 __m128i test_mm_macchi_epi32(__m128i a, __m128i b, __m128i c) {
   // CHECK-LABEL: test_mm_macchi_epi32
-  // CHECK: call <2 x i64> @llvm.x86.xop.vpmacsdqh(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <2 x i64> %{{.*}})
+  // CHECK: call {{.*}}<2 x i64> @llvm.x86.xop.vpmacsdqh(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <2 x i64> %{{.*}})
   return _mm_macchi_epi32(a, b, c);
 }
 
@@ -94,7 +98,7 @@ __m128i test_mm_haddd_epi8(__m128i a) {
 
 __m128i test_mm_haddq_epi8(__m128i a) {
   // CHECK-LABEL: test_mm_haddq_epi8
-  // CHECK: call <2 x i64> @llvm.x86.xop.vphaddbq(<16 x i8> %{{.*}})
+  // CHECK: call {{.*}}<2 x i64> @llvm.x86.xop.vphaddbq(<16 x i8> %{{.*}})
   return _mm_haddq_epi8(a);
 }
 
@@ -106,13 +110,13 @@ __m128i test_mm_haddd_epi16(__m128i a) {
 
 __m128i test_mm_haddq_epi16(__m128i a) {
   // CHECK-LABEL: test_mm_haddq_epi16
-  // CHECK: call <2 x i64> @llvm.x86.xop.vphaddwq(<8 x i16> %{{.*}})
+  // CHECK: call {{.*}}<2 x i64> @llvm.x86.xop.vphaddwq(<8 x i16> %{{.*}})
   return _mm_haddq_epi16(a);
 }
 
 __m128i test_mm_haddq_epi32(__m128i a) {
   // CHECK-LABEL: test_mm_haddq_epi32
-  // CHECK: call <2 x i64> @llvm.x86.xop.vphadddq(<4 x i32> %{{.*}})
+  // CHECK: call {{.*}}<2 x i64> @llvm.x86.xop.vphadddq(<4 x i32> %{{.*}})
   return _mm_haddq_epi32(a);
 }
 
@@ -130,7 +134,7 @@ __m128i test_mm_haddd_epu8(__m128i a) {
 
 __m128i test_mm_haddq_epu8(__m128i a) {
   // CHECK-LABEL: test_mm_haddq_epu8
-  // CHECK: call <2 x i64> @llvm.x86.xop.vphaddubq(<16 x i8> %{{.*}})
+  // CHECK: call {{.*}}<2 x i64> @llvm.x86.xop.vphaddubq(<16 x i8> %{{.*}})
   return _mm_haddq_epu8(a);
 }
 
@@ -142,13 +146,13 @@ __m128i test_mm_haddd_epu16(__m128i a) {
 
 __m128i test_mm_haddq_epu16(__m128i a) {
   // CHECK-LABEL: test_mm_haddq_epu16
-  // CHECK: call <2 x i64> @llvm.x86.xop.vphadduwq(<8 x i16> %{{.*}})
+  // CHECK: call {{.*}}<2 x i64> @llvm.x86.xop.vphadduwq(<8 x i16> %{{.*}})
   return _mm_haddq_epu16(a);
 }
 
 __m128i test_mm_haddq_epu32(__m128i a) {
   // CHECK-LABEL: test_mm_haddq_epu32
-  // CHECK: call <2 x i64> @llvm.x86.xop.vphaddudq(<4 x i32> %{{.*}})
+  // CHECK: call {{.*}}<2 x i64> @llvm.x86.xop.vphaddudq(<4 x i32> %{{.*}})
   return _mm_haddq_epu32(a);
 }
 
@@ -166,7 +170,7 @@ __m128i test_mm_hsubd_epi16(__m128i a) {
 
 __m128i test_mm_hsubq_epi32(__m128i a) {
   // CHECK-LABEL: test_mm_hsubq_epi32
-  // CHECK: call <2 x i64> @llvm.x86.xop.vphsubdq(<4 x i32> %{{.*}})
+  // CHECK: call {{.*}}<2 x i64> @llvm.x86.xop.vphsubdq(<4 x i32> %{{.*}})
   return _mm_hsubq_epi32(a);
 }
 
@@ -214,7 +218,7 @@ __m128i test_mm_rot_epi32(__m128i a, __m128i b) {
 
 __m128i test_mm_rot_epi64(__m128i a, __m128i b) {
   // CHECK-LABEL: test_mm_rot_epi64
-  // CHECK: call <2 x i64> @llvm.fshl.v2i64(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}})
+  // CHECK: call {{.*}}<2 x i64> @llvm.fshl.v2i64(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   return _mm_rot_epi64(a, b);
 }
 
@@ -238,7 +242,7 @@ __m128i test_mm_roti_epi32(__m128i a) {
 
 __m128i test_mm_roti_epi64(__m128i a) {
   // CHECK-LABEL: test_mm_roti_epi64
-  // CHECK: call <2 x i64> @llvm.fshl.v2i64(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> splat (i64 100))
+  // CHECK: call {{.*}}<2 x i64> @llvm.fshl.v2i64(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> splat (i64 100))
   return _mm_roti_epi64(a, 100);
 }
 
@@ -262,7 +266,7 @@ __m128i test_mm_shl_epi32(__m128i a, __m128i b) {
 
 __m128i test_mm_shl_epi64(__m128i a, __m128i b) {
   // CHECK-LABEL: test_mm_shl_epi64
-  // CHECK: call <2 x i64> @llvm.x86.xop.vpshlq(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
+  // CHECK: call {{.*}}<2 x i64> @llvm.x86.xop.vpshlq(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   return _mm_shl_epi64(a, b);
 }
 
@@ -286,7 +290,7 @@ __m128i test_mm_sha_epi32(__m128i a, __m128i b) {
 
 __m128i test_mm_sha_epi64(__m128i a, __m128i b) {
   // CHECK-LABEL: test_mm_sha_epi64
-  // CHECK: call <2 x i64> @llvm.x86.xop.vpshaq(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
+  // CHECK: call {{.*}}<2 x i64> @llvm.x86.xop.vpshaq(<2 x i64> %{{.*}}, <2 x i64> %{{.*}})
   return _mm_sha_epi64(a, b);
 }
 
@@ -372,36 +376,36 @@ __m256 test_mm256_permute2_ps(__m256 a, __m256 b, __m256i c) {
 
 __m128 test_mm_frcz_ss(__m128 a) {
   // CHECK-LABEL: test_mm_frcz_ss
-  // CHECK: call <4 x float> @llvm.x86.xop.vfrcz.ss(<4 x float> %{{.*}})
+  // CHECK: call {{.*}}<4 x float> @llvm.x86.xop.vfrcz.ss(<4 x float> %{{.*}})
   return _mm_frcz_ss(a);
 }
 
 __m128d test_mm_frcz_sd(__m128d a) {
   // CHECK-LABEL: test_mm_frcz_sd
-  // CHECK: call <2 x double> @llvm.x86.xop.vfrcz.sd(<2 x double> %{{.*}})
+  // CHECK: call {{.*}}<2 x double> @llvm.x86.xop.vfrcz.sd(<2 x double> %{{.*}})
   return _mm_frcz_sd(a);
 }
 
 __m128 test_mm_frcz_ps(__m128 a) {
   // CHECK-LABEL: test_mm_frcz_ps
-  // CHECK: call <4 x float> @llvm.x86.xop.vfrcz.ps(<4 x float> %{{.*}})
+  // CHECK: call {{.*}}<4 x float> @llvm.x86.xop.vfrcz.ps(<4 x float> %{{.*}})
   return _mm_frcz_ps(a);
 }
 
 __m128d test_mm_frcz_pd(__m128d a) {
   // CHECK-LABEL: test_mm_frcz_pd
-  // CHECK: call <2 x double> @llvm.x86.xop.vfrcz.pd(<2 x double> %{{.*}})
+  // CHECK: call {{.*}}<2 x double> @llvm.x86.xop.vfrcz.pd(<2 x double> %{{.*}})
   return _mm_frcz_pd(a);
 }
 
 __m256 test_mm256_frcz_ps(__m256 a) {
   // CHECK-LABEL: test_mm256_frcz_ps
-  // CHECK: call <8 x float> @llvm.x86.xop.vfrcz.ps.256(<8 x float> %{{.*}})
+  // CHECK: call {{.*}}<8 x float> @llvm.x86.xop.vfrcz.ps.256(<8 x float> %{{.*}})
   return _mm256_frcz_ps(a);
 }
 
 __m256d test_mm256_frcz_pd(__m256d a) {
   // CHECK-LABEL: test_mm256_frcz_pd
-  // CHECK: call <4 x double> @llvm.x86.xop.vfrcz.pd.256(<4 x double> %{{.*}})
+  // CHECK: call {{.*}}<4 x double> @llvm.x86.xop.vfrcz.pd.256(<4 x double> %{{.*}})
   return _mm256_frcz_pd(a);
 }
