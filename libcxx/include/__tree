@@ -1601,14 +1601,7 @@ __tree<_Tp, _Compare, _Allocator>::operator=(__tree&& __t)
 template <class _Tp, class _Compare, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree<_Tp, _Compare, _Allocator>::~__tree() {
   static_assert(is_copy_constructible<value_compare>::value, "Comparator must be copy-constructible.");
-  // TODO: get this verified
-  // without this check, constexpr evaluation goes into infinite recursion, for
-  // insert_range.pass.cpp:EmptyContainer_EmptyRange
-
-  // not sure if this is UB ?, if not, we need to add is_constant_evaluated()
-  if (size() > 0) {
-    destroy(__root());
-  }
+  destroy(__root());
 }
 
 template <class _Tp, class _Compare, class _Allocator>
