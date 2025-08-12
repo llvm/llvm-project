@@ -124,6 +124,9 @@ Non-comprehensive list of changes in this release
   This feature is enabled by default but can be disabled by compiling with
   ``-fno-sanitize-annotate-debug-info-traps``.
 
+- ``__builtin_elementwise_max`` and ``__builtin_elementwise_min`` functions for integer types can
+  now be used in constant expressions.
+
 New Compiler Flags
 ------------------
 - New option ``-fno-sanitize-annotate-debug-info-traps`` added to disable emitting trap reasons into the debug info when compiling with trapping UBSan (e.g. ``-fsanitize-trap=undefined``).
