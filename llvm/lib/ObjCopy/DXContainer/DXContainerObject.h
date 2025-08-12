@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_OBJCOPY_DXContainer_DXContainerOBJECT_H
-#define LLVM_LIB_OBJCOPY_DXContainer_DXContainerOBJECT_H
+#ifndef LLVM_LIB_OBJCOPY_DXCONTAINER_DXCONTAINEROBJECT_H
+#define LLVM_LIB_OBJCOPY_DXCONTAINER_DXCONTAINEROBJECT_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
@@ -44,4 +44,4 @@ struct Object {
 } // end namespace objcopy
 } // end namespace llvm
 
-#endif // LLVM_LIB_OBJCOPY_DXContainer_DXContainerOBJECT_H
+#endif // LLVM_LIB_OBJCOPY_DXCONTAINER_DXCONTAINEROBJECT_H

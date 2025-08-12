@@ -21,14 +21,13 @@ Expected<std::unique_ptr<Object>> DXContainerReader::create() const {
     DataRefImpl PartDRI = Part.getRawDataRefImpl();
     Expected<StringRef> Name = DXContainerObj.getSectionName(PartDRI);
     if (auto E = Name.takeError())
-      return createStringError(inconvertibleErrorCode(), "Missing Part Name");
+      return E;
     assert(Name->size() == 4 &&
            "Valid DXIL Part name consists of 4 characters");
     Expected<ArrayRef<uint8_t>> Data =
         DXContainerObj.getSectionContents(PartDRI);
     if (auto E = Data.takeError())
-      return createStringError(inconvertibleErrorCode(),
-                               "Missing Part Contents");
+      return E;
     Obj->Parts.push_back({*Name, *Data});
   }
   return std::move(Obj);

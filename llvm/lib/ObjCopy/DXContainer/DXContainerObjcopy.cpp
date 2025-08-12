@@ -7,11 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ObjCopy/DXContainer/DXContainerObjcopy.h"
-#include "llvm/ObjCopy/CommonConfig.h"
-#include "llvm/ObjCopy/DXContainer/DXContainerConfig.h"
-
 #include "DXContainerReader.h"
 #include "DXContainerWriter.h"
+#include "llvm/ObjCopy/CommonConfig.h"
+#include "llvm/ObjCopy/DXContainer/DXContainerConfig.h"
 
 namespace llvm {
 namespace objcopy {

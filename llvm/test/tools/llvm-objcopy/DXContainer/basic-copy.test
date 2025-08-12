@@ -1,17 +1,19 @@
+## Tests that the copied DXContainer is identical to the original
+
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy %t %t.out
 # RUN: cmp %t %t.out
 
-# The following DXContainer to copied was generated with:
+## The DXContainer described below was generated with:
 
-# `clang-dxc -T cs_6_7 test.hlsl /Fo temp.dxo`
-# `obj2yaml temp.dxo`
+## `clang-dxc -T cs_6_7 test.hlsl /Fo temp.dxo`
+## `obj2yaml temp.dxo`
 
-# ``` test.hlsl
-# [RootSignature("")]
-# [numthreads(1,1,1)]
-# void main() {}
-# ```
+## ``` test.hlsl
+## [RootSignature("")]
+## [numthreads(1,1,1)]
+## void main() {}
+## ```
 
 --- !dxcontainer
 Header:
