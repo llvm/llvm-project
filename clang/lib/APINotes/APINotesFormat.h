@@ -24,7 +24,7 @@ const uint16_t VERSION_MAJOR = 0;
 /// API notes file minor version number.
 ///
 /// When the format changes IN ANY WAY, this number should be incremented.
-const uint16_t VERSION_MINOR = 35; // SwiftDefaultOwnership
+const uint16_t VERSION_MINOR = 36; // Typedef SwiftConformsTo
 
 const uint8_t kSwiftConforms = 1;
 const uint8_t kSwiftDoesNotConform = 2;
