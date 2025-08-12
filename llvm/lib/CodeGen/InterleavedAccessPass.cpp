@@ -382,9 +382,8 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
       replaceBinOpShuffles(BinOpShuffles.getArrayRef(), Shuffles, Load);
 
   Value *Mask = nullptr;
-  APInt GapMask(Factor, 0);
+  auto GapMask = APInt::getAllOnes(Factor);
   if (LI) {
-    GapMask.setAllBits();
     LLVM_DEBUG(dbgs() << "IA: Found an interleaved load: " << *Load << "\n");
   } else {
     // Check mask operand. Handle both all-true/false and interleaved mask.
@@ -593,8 +592,7 @@ static void getGapMask(const Constant &MaskConst, unsigned Factor,
 
 static std::pair<Value *, APInt> getMask(Value *WideMask, unsigned Factor,
                                          ElementCount LeafValueEC) {
-  APInt GapMask(Factor, 0);
-  GapMask.setAllBits();
+  auto GapMask = APInt::getAllOnes(Factor);
 
   if (auto *IMI = dyn_cast<IntrinsicInst>(WideMask)) {
     if (unsigned F = getInterleaveIntrinsicFactor(IMI->getIntrinsicID());

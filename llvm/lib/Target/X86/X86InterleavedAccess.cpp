@@ -812,8 +812,7 @@ bool X86TargetLowering::lowerInterleavedLoad(
   auto *LI = dyn_cast<LoadInst>(Load);
   if (!LI)
     return false;
-  assert(!Mask && "Unexpected mask on a load");
-  assert(GapMask.popcount() == Factor && "Unexpected factor reduction");
+  assert(!Mask && GapMask.popcount() == Factor && "Unexpected mask on a load");
 
   // Create an interleaved access group.
   IRBuilder<> Builder(LI);
