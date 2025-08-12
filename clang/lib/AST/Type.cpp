@@ -4492,8 +4492,8 @@ bool TemplateSpecializationType::anyInstantiationDependentTemplateArguments(
   return false;
 }
 
-static TypeDependence GetTemplateSpecializationTypeDep(QualType Underlying,
-                                                       TemplateName T) {
+static TypeDependence
+getTemplateSpecializationTypeDependence(QualType Underlying, TemplateName T) {
   TypeDependence D = Underlying.isNull()
                          ? TypeDependence::DependentInstantiation
                          : toSemanticDependence(Underlying->getDependence());
@@ -4513,7 +4513,7 @@ TemplateSpecializationType::TemplateSpecializationType(
     : Type(TemplateSpecialization,
            Underlying.isNull() ? QualType(this, 0)
                                : Underlying.getCanonicalType(),
-           GetTemplateSpecializationTypeDep(Underlying, T)),
+           getTemplateSpecializationTypeDependence(Underlying, T)),
       Template(T) {
   TemplateSpecializationTypeBits.NumArgs = Args.size();
   TemplateSpecializationTypeBits.TypeAlias = IsAlias;
