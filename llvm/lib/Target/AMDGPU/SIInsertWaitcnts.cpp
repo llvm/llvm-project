@@ -2341,6 +2341,7 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
     case AMDGPU::S_MEMREALTIME:
     case AMDGPU::S_BARRIER_SIGNAL_ISFIRST_M0:
     case AMDGPU::S_BARRIER_SIGNAL_ISFIRST_IMM:
+    case AMDGPU::S_BARRIER_LEAVE:
     case AMDGPU::S_GET_BARRIER_STATE_M0:
     case AMDGPU::S_GET_BARRIER_STATE_IMM:
       ScoreBrackets->updateByEvent(TII, TRI, MRI, SMEM_ACCESS, Inst);
