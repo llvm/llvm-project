@@ -860,7 +860,7 @@ def int_amdgcn_cvt_scalef32_sr_fp8_f16: AMDGPUCvtScaleBF16F16F32SRToFP4BF8F8Tied
 def int_amdgcn_cvt_scalef32_sr_fp8_f32: AMDGPUCvtScaleBF16F16F32SRToFP4BF8F8TiedInputIntrinsic<llvm_float_ty, "cvt_scalef32_sr_fp8_f32">;
 
 def int_amdgcn_prng_b32 : DefaultAttrsIntrinsic<
-  [llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]
+  [llvm_i32_ty], [llvm_i32_ty], [IntrNoMem, IntrSpeculatable]
 >, ClangBuiltin<"__builtin_amdgcn_prng_b32">;
 
 def int_amdgcn_bitop3 :
