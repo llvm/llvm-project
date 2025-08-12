@@ -150,9 +150,10 @@ static void convertMJTI(ModuleSlotTracker &MST, yaml::MachineJumpTable &YamlJTI,
                         const MachineJumpTableInfo &JTI);
 static void convertMFI(ModuleSlotTracker &MST, yaml::MachineFrameInfo &YamlMFI,
                        const MachineFrameInfo &MFI);
-static void convertSRPoints(ModuleSlotTracker &MST,
-                            yaml::SaveRestorePoints &YamlSRPoints,
-                            ArrayRef<MachineBasicBlock *> SaveRestorePoints);
+static void
+convertSRPoints(ModuleSlotTracker &MST,
+                std::vector<yaml::SaveRestorePointEntry> &YamlSRPoints,
+                ArrayRef<MachineBasicBlock *> SaveRestorePoints);
 static void convertStackObjects(yaml::MachineFunction &YMF,
                                 const MachineFunction &MF,
                                 ModuleSlotTracker &MST, MFPrintState &State);
@@ -615,9 +616,10 @@ static void convertMCP(yaml::MachineFunction &MF,
   }
 }
 
-static void convertSRPoints(ModuleSlotTracker &MST,
-                            yaml::SaveRestorePoints &YamlSRPoints,
-                            ArrayRef<MachineBasicBlock *> SRPoints) {
+static void
+convertSRPoints(ModuleSlotTracker &MST,
+                std::vector<yaml::SaveRestorePointEntry> &YamlSRPoints,
+                ArrayRef<MachineBasicBlock *> SRPoints) {
   for (const auto &MBB : SRPoints) {
     SmallString<16> Str;
     yaml::SaveRestorePointEntry Entry;

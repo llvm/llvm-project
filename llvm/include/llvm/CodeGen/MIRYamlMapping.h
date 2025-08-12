@@ -644,8 +644,6 @@ struct SaveRestorePointEntry {
   }
 };
 
-using SaveRestorePoints = std::vector<SaveRestorePointEntry>;
-
 template <> struct MappingTraits<SaveRestorePointEntry> {
   static void mapping(IO &YamlIO, SaveRestorePointEntry &Entry) {
     YamlIO.mapRequired("point", Entry.Point);
@@ -695,8 +693,8 @@ struct MachineFrameInfo {
   bool HasTailCall = false;
   bool IsCalleeSavedInfoValid = false;
   unsigned LocalFrameSize = 0;
-  SaveRestorePoints SavePoints;
-  SaveRestorePoints RestorePoints;
+  std::vector<SaveRestorePointEntry> SavePoints;
+  std::vector<SaveRestorePointEntry> RestorePoints;
 
   bool operator==(const MachineFrameInfo &Other) const {
     return IsFrameAddressTaken == Other.IsFrameAddressTaken &&
