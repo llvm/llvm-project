@@ -3101,6 +3101,31 @@ AArch64TargetLowering::EmitGetSMESaveSize(MachineInstr &MI,
   return BB;
 }
 
+MachineBasicBlock *
+AArch64TargetLowering::EmitEntryPStateSM(MachineInstr &MI,
+                                         MachineBasicBlock *BB) const {
+  MachineFunction *MF = BB->getParent();
+  AArch64FunctionInfo *FuncInfo = MF->getInfo<AArch64FunctionInfo>();
+  const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+  Register ResultReg = MI.getOperand(0).getReg();
+  if (FuncInfo->isPStateSMRegUsed()) {
+    const AArch64RegisterInfo *TRI = Subtarget->getRegisterInfo();
+    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(AArch64::BL))
+        .addExternalSymbol("__arm_sme_state")
+        .addReg(AArch64::X0, RegState::ImplicitDefine)
+        .addRegMask(TRI->getCallPreservedMask(
+            *MF, CallingConv::
+                     AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2));
+    BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY), ResultReg)
+        .addReg(AArch64::X0);
+  } else {
+    assert(MI.getMF()->getRegInfo().use_empty(ResultReg) &&
+           "Expected no users of the entry pstate.sm!");
+  }
+  MI.eraseFromParent();
+  return BB;
+}
+
 // Helper function to find the instruction that defined a virtual register.
 // If unable to find such instruction, returns nullptr.
 static const MachineInstr *stripVRegCopies(const MachineRegisterInfo &MRI,
@@ -3216,6 +3241,8 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
     return EmitAllocateSMESaveBuffer(MI, BB);
   case AArch64::GetSMESaveSize:
     return EmitGetSMESaveSize(MI, BB);
+  case AArch64::EntryPStateSM:
+    return EmitEntryPStateSM(MI, BB);
   case AArch64::F128CSEL:
     return EmitF128CSEL(MI, BB);
   case TargetOpcode::STATEPOINT:
@@ -8133,19 +8160,26 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   }
   assert((ArgLocs.size() + ExtraArgLocs) == Ins.size());
 
+  if (Attrs.hasStreamingCompatibleInterface()) {
+    SDValue EntryPStateSM =
+        DAG.getNode(AArch64ISD::ENTRY_PSTATE_SM, DL,
+                    DAG.getVTList(MVT::i64, MVT::Other), {Chain});
+
+    // Copy the value to a virtual register, and save that in FuncInfo.
+    Register EntryPStateSMReg =
+        MF.getRegInfo().createVirtualRegister(&AArch64::GPR64RegClass);
+    Chain = DAG.getCopyToReg(EntryPStateSM.getValue(1), DL, EntryPStateSMReg,
+                             EntryPStateSM);
+    FuncInfo->setPStateSMReg(EntryPStateSMReg);
+  }
+
   // Insert the SMSTART if this is a locally streaming function and
   // make sure it is Glued to the last CopyFromReg value.
   if (IsLocallyStreaming) {
-    SDValue PStateSM;
-    if (Attrs.hasStreamingCompatibleInterface()) {
-      PStateSM = getRuntimePStateSM(DAG, Chain, DL, MVT::i64);
-      Register Reg = MF.getRegInfo().createVirtualRegister(
-          getRegClassFor(PStateSM.getValueType().getSimpleVT()));
-      FuncInfo->setPStateSMReg(Reg);
-      Chain = DAG.getCopyToReg(Chain, DL, Reg, PStateSM);
+    if (Attrs.hasStreamingCompatibleInterface())
       Chain = changeStreamingMode(DAG, DL, /*Enable*/ true, Chain, Glue,
-                                  AArch64SME::IfCallerIsNonStreaming, PStateSM);
-    } else
+                                  AArch64SME::IfCallerIsNonStreaming);
+    else
       Chain = changeStreamingMode(DAG, DL, /*Enable*/ true, Chain, Glue,
                                   AArch64SME::Always);
 
@@ -8836,8 +8870,7 @@ void AArch64TargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
 SDValue AArch64TargetLowering::changeStreamingMode(SelectionDAG &DAG, SDLoc DL,
                                                    bool Enable, SDValue Chain,
                                                    SDValue InGlue,
-                                                   unsigned Condition,
-                                                   SDValue PStateSM) const {
+                                                   unsigned Condition) const {
   MachineFunction &MF = DAG.getMachineFunction();
   AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
   FuncInfo->setHasStreamingModeChanges(true);
@@ -8849,9 +8882,16 @@ SDValue AArch64TargetLowering::changeStreamingMode(SelectionDAG &DAG, SDLoc DL,
   SmallVector<SDValue> Ops = {Chain, MSROp};
   unsigned Opcode;
   if (Condition != AArch64SME::Always) {
+    FuncInfo->setPStateSMRegUsed(true);
+    Register PStateReg = FuncInfo->getPStateSMReg();
+    assert(PStateReg.isValid() && "PStateSM Register is invalid");
+    SDValue PStateSM =
+        DAG.getCopyFromReg(Chain, DL, PStateReg, MVT::i64, InGlue);
+    // Use chain and glue from the CopyFromReg.
+    Ops[0] = PStateSM.getValue(1);
+    InGlue = PStateSM.getValue(2);
     SDValue ConditionOp = DAG.getTargetConstant(Condition, DL, MVT::i64);
     Opcode = Enable ? AArch64ISD::COND_SMSTART : AArch64ISD::COND_SMSTOP;
-    assert(PStateSM && "PStateSM should be defined");
     Ops.push_back(ConditionOp);
     Ops.push_back(PStateSM);
   } else {
@@ -9126,15 +9166,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
                                     /*IsSave=*/true);
   }
 
-  SDValue PStateSM;
   bool RequiresSMChange = CallAttrs.requiresSMChange();
   if (RequiresSMChange) {
-    if (CallAttrs.caller().hasStreamingInterfaceOrBody())
-      PStateSM = DAG.getConstant(1, DL, MVT::i64);
-    else if (CallAttrs.caller().hasNonStreamingInterface())
-      PStateSM = DAG.getConstant(0, DL, MVT::i64);
-    else
-      PStateSM = getRuntimePStateSM(DAG, Chain, DL, MVT::i64);
     OptimizationRemarkEmitter ORE(&MF.getFunction());
     ORE.emit([&]() {
       auto R = CLI.CB ? OptimizationRemarkAnalysis("sme", "SMETransition",
@@ -9449,9 +9482,9 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       InGlue = Chain.getValue(1);
     }
 
-    SDValue NewChain = changeStreamingMode(
-        DAG, DL, CallAttrs.callee().hasStreamingInterface(), Chain, InGlue,
-        getSMToggleCondition(CallAttrs), PStateSM);
+    SDValue NewChain =
+        changeStreamingMode(DAG, DL, CallAttrs.callee().hasStreamingInterface(),
+                            Chain, InGlue, getSMToggleCondition(CallAttrs));
     Chain = NewChain.getValue(0);
     InGlue = NewChain.getValue(1);
   }
@@ -9635,10 +9668,9 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     InGlue = Result.getValue(Result->getNumValues() - 1);
 
   if (RequiresSMChange) {
-    assert(PStateSM && "Expected a PStateSM to be set");
     Result = changeStreamingMode(
         DAG, DL, !CallAttrs.callee().hasStreamingInterface(), Result, InGlue,
-        getSMToggleCondition(CallAttrs), PStateSM);
+        getSMToggleCondition(CallAttrs));
 
     if (!Subtarget->isTargetDarwin() || Subtarget->hasSVE()) {
       InGlue = Result.getValue(1);
@@ -9804,14 +9836,11 @@ AArch64TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   // Emit SMSTOP before returning from a locally streaming function
   SMEAttrs FuncAttrs = FuncInfo->getSMEFnAttrs();
   if (FuncAttrs.hasStreamingBody() && !FuncAttrs.hasStreamingInterface()) {
-    if (FuncAttrs.hasStreamingCompatibleInterface()) {
-      Register Reg = FuncInfo->getPStateSMReg();
-      assert(Reg.isValid() && "PStateSM Register is invalid");
-      SDValue PStateSM = DAG.getCopyFromReg(Chain, DL, Reg, MVT::i64);
+    if (FuncAttrs.hasStreamingCompatibleInterface())
       Chain = changeStreamingMode(DAG, DL, /*Enable*/ false, Chain,
                                   /*Glue*/ SDValue(),
-                                  AArch64SME::IfCallerIsNonStreaming, PStateSM);
-    } else
+                                  AArch64SME::IfCallerIsNonStreaming);
+    else
       Chain = changeStreamingMode(DAG, DL, /*Enable*/ false, Chain,
                                   /*Glue*/ SDValue(), AArch64SME::Always);
     Glue = Chain.getValue(1);
@@ -28196,6 +28225,7 @@ void AArch64TargetLowering::ReplaceNodeResults(
     case Intrinsic::aarch64_sme_in_streaming_mode: {
       SDLoc DL(N);
       SDValue Chain = DAG.getEntryNode();
+
       SDValue RuntimePStateSM =
           getRuntimePStateSM(DAG, Chain, DL, N->getValueType(0));
       Results.push_back(
