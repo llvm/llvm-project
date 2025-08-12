@@ -2798,6 +2798,11 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
   PyThreadState *tstate = PyThreadState_GET();
   PyFrameObject *next;
   PyFrameObject *pyFrame = PyThreadState_GetFrame(tstate);
+  // In the increment expression:
+  // 1. get the next prev frame;
+  // 2. decrement the ref count on the current frame (in order that it can get
+  //    gc'd, along with any objects in its closure and etc);
+  // 3. set current = next.
   for (; pyFrame != nullptr && count < framesLimit;
        next = PyFrame_GetBack(pyFrame), Py_XDECREF(pyFrame), pyFrame = next) {
     PyCodeObject *code = PyFrame_GetCode(pyFrame);
@@ -2832,6 +2837,8 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
     frames[count] = mlirLocationNameGet(ctx, wrap(funcName), loc);
     ++count;
   }
+  // When the loop breaks (after the last iter), current frame (if non-null)
+  // is leaked without this.
   Py_XDECREF(pyFrame);
 
   if (count == 0)
