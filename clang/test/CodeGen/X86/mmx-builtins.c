@@ -34,7 +34,7 @@ __m64 test_mm_add_pi8(__m64 a, __m64 b) {
   // CHECK: add <8 x i8> {{%.*}}, {{%.*}}
   return _mm_add_pi8(a, b);
 }
-TEST_CONSTEXPR(match_v8qi(_mm_add_pi8(_mm_setr_pi8(-3, +2, -1, 0, +1, -2, +3, -4), _mm_setr_pi8(-18, +16, -14, +12, -10, +8, +6, -4)), -21, +18, -15, +12, -9, +6, +9, -8));
+TEST_CONSTEXPR(match_v8qi(_mm_add_pi8((__m64)(__v8qs){-3, +2, -1, 0, +1, -2, +3, -4}, (__m64)(__v8qs){-18, +16, -14, +12, -10, +8, +6, -4}), -21, +18, -15, +12, -9, +6, +9, -8));
 
 __m64 test_mm_add_pi16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_add_pi16
@@ -120,7 +120,7 @@ __m64 test_mm_cmpeq_pi8(__m64 a, __m64 b) {
   // CHECK-NEXT: {{%.*}} = sext <8 x i1> [[CMP]] to <8 x i8>
   return _mm_cmpeq_pi8(a, b);
 }
-TEST_CONSTEXPR(match_v8qi(_mm_cmpeq_pi8(_mm_setr_pi8(-3, +2, -1, 0, +1, -2, +3, -4), _mm_setr_pi8(-3, -2, +1, 0, -1, -2, -3, -4)), -1, 0, 0, -1, 0, -1, 0, -1));
+TEST_CONSTEXPR(match_v8qi(_mm_cmpeq_pi8((__m64)(__v8qs){-3, +2, -1, 0, +1, -2, +3, -4}, (__m64)(__v8qs){-3, -2, +1, 0, -1, -2, -3, -4}), -1, 0, 0, -1, 0, -1, 0, -1));
 
 __m64 test_mm_cmpeq_pi16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_cmpeq_pi16
@@ -144,7 +144,7 @@ __m64 test_mm_cmpgt_pi8(__m64 a, __m64 b) {
   // CHECK-NEXT: {{%.*}} = sext <8 x i1> [[CMP]] to <8 x i8>
   return _mm_cmpgt_pi8(a, b);
 }
-TEST_CONSTEXPR(match_v8qi(_mm_cmpgt_pi8(_mm_setr_pi8(-3, +2, -1, 0, +1, -2, +3, -4), _mm_setr_pi8(-3, -2, +1, 0, -1, -2, -3, -4)), 0, -1, 0, 0, -1, 0, -1, 0));
+TEST_CONSTEXPR(match_v8qi(_mm_cmpgt_pi8((__m64)(__v8qs){-3, +2, -1, 0, +1, -2, +3, -4}, (__m64)(__v8qs){-3, -2, +1, 0, -1, -2, -3, -4}), 0, -1, 0, 0, -1, 0, -1, 0));
 
 __m64 test_mm_cmpgt_pi16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_cmpgt_pi16
@@ -167,6 +167,7 @@ __m128 test_mm_cvt_pi2ps(__m128 a, __m64 b) {
   // CHECK: sitofp <4 x i32> {{%.*}} to <4 x float>
   return _mm_cvt_pi2ps(a, b);
 }
+TEST_CONSTEXPR(match_m128(_mm_cvt_pi2ps((__m128){-5.0f, +7.0f, -9.0f, +11.0f}, (__m64)(__v2si){-2,+4}), -2.0f, +4.0f, -9.0f, +11.0f));
 
 __m64 test_mm_cvt_ps2pi(__m128 a) {
   // CHECK-LABEL: test_mm_cvt_ps2pi
@@ -180,29 +181,40 @@ __m64 test_mm_cvtpd_pi32(__m128d a) {
   return _mm_cvtpd_pi32(a);
 }
 
+__m128 test_mm_cvtpi8_ps(__m64 a) {
+  // CHECK-LABEL: test_mm_cvtpi8_ps
+  // CHECK: sitofp <4 x i8> {{%.*}} to <4 x float>
+  return _mm_cvtpi8_ps(a);
+}
+TEST_CONSTEXPR(match_m128(_mm_cvtpi8_ps((__m64)(__v8qi){1, 2, 3, 4, 5, 6, 7, 8}), +1.0f, +2.0f, +3.0f, +4.0f));
+
 __m128 test_mm_cvtpi16_ps(__m64 a) {
   // CHECK-LABEL: test_mm_cvtpi16_ps
   // CHECK: sitofp <4 x i16> {{%.*}} to <4 x float>
   return _mm_cvtpi16_ps(a);
 }
+TEST_CONSTEXPR(match_m128(_mm_cvtpi16_ps((__m64)(__v4hi){-3, +9, -8, +256}), -3.0f, +9.0f, -8.0f, +256.0f));
 
 __m128d test_mm_cvtpi32_pd(__m64 a) {
   // CHECK-LABEL: test_mm_cvtpi32_pd
   // CHECK: sitofp <2 x i32> {{%.*}} to <2 x double>
   return _mm_cvtpi32_pd(a);
 }
+TEST_CONSTEXPR(match_m128d(_mm_cvtpi32_pd((__m64)(__v2si){-10,+17}), -10.0, +17.0));
 
 __m128 test_mm_cvtpi32_ps(__m128 a, __m64 b) {
   // CHECK-LABEL: test_mm_cvtpi32_ps
   // CHECK: sitofp <4 x i32> {{%.*}} to <4 x float>
   return _mm_cvtpi32_ps(a, b);
 }
+TEST_CONSTEXPR(match_m128(_mm_cvtpi32_ps((__m128){+1.0f, -2.0f, +3.0f, +5.0f}, (__m64)(__v2si){+100,-200}), +100.0f, -200.0f, +3.0f, +5.0f));
 
 __m128 test_mm_cvtpi32x2_ps(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_cvtpi32x2_ps
   // CHECK: sitofp <4 x i32> {{%.*}} to <4 x float>
   return _mm_cvtpi32x2_ps(a, b);
 }
+TEST_CONSTEXPR(match_m128(_mm_cvtpi32x2_ps((__m64)(__v2si){-8,+7}, (__m64)(__v2si){+100,-200}), -8.0f, +7.0f, +100.0f, -200.0f));
 
 __m64 test_mm_cvtps_pi16(__m128 a) {
   // CHECK-LABEL: test_mm_cvtps_pi16
@@ -216,6 +228,20 @@ __m64 test_mm_cvtps_pi32(__m128 a) {
   // CHECK: call <4 x i32> @llvm.x86.sse2.cvtps2dq(
   return _mm_cvtps_pi32(a);
 }
+
+__m128 test_mm_cvtpu8_ps(__m64 a) {
+  // CHECK-LABEL: test_mm_cvtpu8_ps
+  // CHECK: uitofp <4 x i8> {{%.*}} to <4 x float>
+  return _mm_cvtpu8_ps(a);
+}
+TEST_CONSTEXPR(match_m128(_mm_cvtpu8_ps((__m64)(__v8qi){8, 7, 6, 5, 4, 3, 2, 1}), 8.0f, 7.0f, 6.0f, 5.0f));
+
+__m128 test_mm_cvtpu16_ps(__m64 a) {
+  // CHECK-LABEL: test_mm_cvtpu16_ps
+  // CHECK: uitofp <4 x i16> {{%.*}} to <4 x float>
+  return _mm_cvtpu16_ps(a);
+}
+TEST_CONSTEXPR(match_m128(_mm_cvtpu16_ps((__m64)(__v4hi){-3, +9, -8, +256}), 65533.0f, 9.0f, 65528.0f, 256.0f));
 
 __m64 test_mm_cvtsi32_si64(int a) {
   // CHECK-LABEL: test_mm_cvtsi32_si64
@@ -664,7 +690,7 @@ __m64 test_mm_sub_pi8(__m64 a, __m64 b) {
   // CHECK: sub <8 x i8> {{%.*}}, {{%.*}}
   return _mm_sub_pi8(a, b);
 }
-TEST_CONSTEXPR(match_v8qi(_mm_sub_pi8(_mm_setr_pi8(-3, +2, -1, 0, +1, -2, +3, -4), _mm_setr_pi8(-18, +16, -14, +12, -10, +8, +6, -4)), +15, -14, +13, -12, +11, -10, -3, 0));
+TEST_CONSTEXPR(match_v8qi(_mm_sub_pi8((__m64)(__v8qs){-3, +2, -1, 0, +1, -2, +3, -4}, (__m64)(__v8qs){-18, +16, -14, +12, -10, +8, +6, -4}), +15, -14, +13, -12, +11, -10, -3, 0));
 
 __m64 test_mm_sub_pi16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_sub_pi16

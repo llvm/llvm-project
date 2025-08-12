@@ -101,7 +101,7 @@ private:
           return Expr<T>(Mutate(std::move(s)));
         },
         std::move(x.u))};
-    // Return the rewritten expression. The second visit it to make sure
+    // Return the rewritten expression. The second visit is to make sure
     // that the second argument in the call to the rewriter is a part of
     // the Expr<T> passed to it.
     return common::visit(
