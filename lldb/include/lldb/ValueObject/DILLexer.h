@@ -35,6 +35,7 @@ public:
     l_square,
     minus,
     period,
+    plus,
     r_paren,
     r_square,
     star,

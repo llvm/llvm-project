@@ -42,6 +42,9 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "minus";
   case Kind::period:
     return "period";
+    return "l_square";
+  case Kind::plus:
+    return "plus";
   case Kind::r_paren:
     return "r_paren";
   case Kind::r_square:
@@ -72,42 +75,33 @@ static std::optional<llvm::StringRef> IsWord(llvm::StringRef expr,
   return candidate;
 }
 
-static bool IsNumberBodyChar(char ch) { return IsDigit(ch) || IsLetter(ch); }
+static bool IsNumberBodyChar(char ch) {
+  return IsDigit(ch) || IsLetter(ch) || ch == '.';
+}
 
 static std::optional<llvm::StringRef> IsNumber(llvm::StringRef &remainder,
                                                bool &isFloat) {
-  llvm::StringRef::iterator cur_pos = remainder.begin();
-  if (*cur_pos == '.') {
-    auto next_pos = cur_pos + 1;
-    if (next_pos == remainder.end() || !IsDigit(*next_pos))
-      return std::nullopt;
-  }
-  if (IsDigit(*cur_pos) || *cur_pos == '.') {
-    while (IsNumberBodyChar(*cur_pos))
-      cur_pos++;
-
-    if (*cur_pos == '.') {
-      isFloat = true;
-      cur_pos++;
-      while (IsNumberBodyChar(*cur_pos))
-        cur_pos++;
-
-      // Check if there's an exponent
-      char prev_ch = *(cur_pos - 1);
-      if (prev_ch == 'e' || prev_ch == 'E' || prev_ch == 'p' ||
-          prev_ch == 'P') {
-        if (*cur_pos == '+' || *cur_pos == '-') {
-          cur_pos++;
-          while (IsNumberBodyChar(*cur_pos))
-            cur_pos++;
-        }
+  llvm::StringRef tail = remainder;
+  llvm::StringRef body = tail.take_while(IsNumberBodyChar);
+  if (body.empty())
+    return std::nullopt;
+  size_t dots = body.count('.');
+  if (dots > 1 || dots == body.size())
+    return std::nullopt;
+  if (IsDigit(body.front()) || (body[0] == '.' && IsDigit(body[1]))) {
+    isFloat = dots == 1;
+    char last = body.back();
+    tail = tail.drop_front(body.size());
+    if (last == 'e' || last == 'E' || last == 'p' || last == 'P') {
+      if (!tail.empty() && (tail.front() == '+' || tail.front() == '-')) {
+        tail = tail.drop_front();
+        tail = tail.drop_while(IsNumberBodyChar);
       }
     }
-    if (cur_pos > remainder.end())
-      cur_pos = remainder.end();
-    llvm::StringRef number = remainder.substr(0, cur_pos - remainder.begin());
-    if (remainder.consume_front(number))
-      return number;
+    size_t number_length = remainder.size() - tail.size();
+    llvm::StringRef number = remainder.take_front(number_length);
+    remainder = remainder.drop_front(number_length);
+    return number;
   }
   return std::nullopt;
 }
@@ -147,10 +141,10 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
     return Token(Token::identifier, maybe_word->str(), position);
 
   constexpr std::pair<Token::Kind, const char *> operators[] = {
-      {Token::amp, "&"},     {Token::arrow, "->"},   {Token::coloncolon, "::"},
-      {Token::l_paren, "("}, {Token::l_square, "["}, {Token::minus, "-"},
-      {Token::period, "."},  {Token::r_paren, ")"},  {Token::r_square, "]"},
-      {Token::star, "*"},
+      {Token::amp, "&"},      {Token::arrow, "->"},   {Token::coloncolon, "::"},
+      {Token::l_paren, "("},  {Token::l_square, "["}, {Token::minus, "-"},
+      {Token::period, "."},   {Token::plus, "+"},     {Token::r_paren, ")"},
+      {Token::r_square, "]"}, {Token::star, "*"},
   };
   for (auto [kind, str] : operators) {
     if (remainder.consume_front(str))

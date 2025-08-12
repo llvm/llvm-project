@@ -187,4 +187,24 @@ TEST(DILLexerTests, NumbersTest) {
     EXPECT_TRUE(token.IsNot(Token::integer_constant));
     EXPECT_TRUE(token.IsOneOf({Token::eof, Token::identifier}));
   }
+
+  // Verify that '-' and '+' are not lexed if they're not part of a number
+  std::vector<std::string> expressions = {"1+e",     "0x1+p",      "1.1+e",
+                                          "1.1e1+e", "0x1.1p-1-p", "1e-1+e",
+                                          "1e1+e",   "0x1p-1-p"};
+  for (auto &str : expressions) {
+    SCOPED_TRACE(str);
+    llvm::Expected<DILLexer> maybe_lexer = DILLexer::Create(str);
+    EXPECT_THAT_EXPECTED(maybe_lexer, llvm::Succeeded());
+    DILLexer lexer(*maybe_lexer);
+    Token token = lexer.GetCurrentToken();
+    EXPECT_TRUE(
+        token.IsOneOf({Token::integer_constant, Token::floating_constant}));
+    lexer.Advance();
+    token = lexer.GetCurrentToken();
+    EXPECT_TRUE(token.IsOneOf({Token::plus, Token::minus}));
+    lexer.Advance();
+    token = lexer.GetCurrentToken();
+    EXPECT_TRUE(token.Is(Token::identifier));
+  }
 }
