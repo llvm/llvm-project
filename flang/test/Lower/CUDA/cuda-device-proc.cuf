@@ -10,6 +10,9 @@ attributes(global) subroutine devsub()
   integer(4) :: ai
   integer(8) :: al
   integer(8) :: time
+  integer :: smalltime
+  integer(4) :: res
+  integer(8) :: resl
 
   call syncthreads()
   call syncwarp(1)
@@ -45,11 +48,20 @@ attributes(global) subroutine devsub()
   ai = atomicinc(ai, 1_4)
   ai = atomicdec(ai, 1_4)
 
+  smalltime = clock()
   time = clock64()
+  time = globalTimer()
+
+  res = __popc(ai)
+  res = __popc(al)
+  res = __ffs(ai)
+  res = __ffs(al)
+  res = __brev(ai)
+  resl = __brev(al)
 end
 
 ! CHECK-LABEL: func.func @_QPdevsub() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
-! CHECK: fir.call @llvm.nvvm.barrier0() fastmath<contract> : () -> ()
+! CHECK: nvvm.barrier0
 ! CHECK: fir.call @llvm.nvvm.bar.warp.sync(%c1{{.*}}) fastmath<contract> : (i32) -> ()
 ! CHECK: fir.call @llvm.nvvm.membar.gl() fastmath<contract> : () -> ()
 ! CHECK: fir.call @llvm.nvvm.membar.cta() fastmath<contract> : () -> ()
@@ -82,7 +94,16 @@ end
 ! CHECK: %{{.*}} = llvm.atomicrmw uinc_wrap  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
 ! CHECK: %{{.*}} = llvm.atomicrmw udec_wrap  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
 
-! CHECK: fir.call @llvm.nvvm.read.ptx.sreg.clock64()
+! CHECK: %{{.*}} = nvvm.read.ptx.sreg.clock : i32
+! CHECK: %{{.*}} = nvvm.read.ptx.sreg.clock64 : i64
+! CHECK: %{{.*}} = nvvm.read.ptx.sreg.globaltimer : i64
+
+! CHECK: %{{.*}} = fir.call @__nv_popc(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_popcll(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_ffs(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_ffsll(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_brev(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_brevll(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> i64
 
 subroutine host1()
   integer, device :: a(32)
@@ -106,7 +127,7 @@ end
 
 ! CHECK-LABEL: func.func @_QPhost1()
 ! CHECK: cuf.kernel
-! CHECK: fir.call @llvm.nvvm.barrier0() fastmath<contract> : () -> ()
+! CHECK: nvvm.barrier0
 ! CHECK: fir.call @llvm.nvvm.bar.warp.sync(%c1{{.*}}) fastmath<contract> : (i32) -> ()
 ! CHECK: fir.call @llvm.nvvm.barrier0.and(%c1{{.*}}) fastmath<contract> : (i32) -> i32
 ! CHECK: fir.call @llvm.nvvm.barrier0.popc(%c1{{.*}}) fastmath<contract> : (i32) -> i32

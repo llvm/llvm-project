@@ -17,7 +17,6 @@
 #include "Symbols.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/COFF.h"
@@ -28,14 +27,11 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
-#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/WindowsManifest/WindowsManifestMerger.h"
-#include <limits>
 #include <memory>
 #include <optional>
 
@@ -330,6 +326,22 @@ void LinkerDriver::parseSwaprun(StringRef arg) {
       Err(ctx) << "/swaprun: missing argument";
     arg = newArg;
   } while (!arg.empty());
+}
+
+void LinkerDriver::parseSameAddress(StringRef arg) {
+  auto mangledName = getArm64ECMangledFunctionName(arg);
+  Symbol *sym = ctx.symtab.addUndefined(mangledName ? *mangledName : arg);
+
+  // MSVC appears to generate thunks even for non-hybrid ARM64EC images.
+  // As a side effect, the native symbol is pulled in. Since this is used
+  // in the CRT for thread-local constructors, it results in the image
+  // containing unnecessary native code. As these thunks don't appear to
+  // be useful, we limit this behavior to actual hybrid targets. This may
+  // change if compatibility becomes necessary.
+  if (ctx.config.machine != ARM64X)
+    return;
+  Symbol *nativeSym = ctx.hybridSymtab->addUndefined(arg);
+  ctx.config.sameAddresses.emplace_back(sym, nativeSym);
 }
 
 // An RAII temporary file class that automatically removes a temporary file.

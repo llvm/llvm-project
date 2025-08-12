@@ -230,10 +230,11 @@ void Parsing::EmitPreprocessedSource(
         column = 7; // start of fixed form source field
         ++sourceLine;
         inContinuation = true;
-      } else if (!inDirective && ch != ' ' && (ch < '0' || ch > '9')) {
+      } else if (!inDirective && !ompConditionalLine && ch != ' ' &&
+          (ch < '0' || ch > '9')) {
         // Put anything other than a label or directive into the
         // Fortran fixed form source field (columns [7:72]).
-        for (; column < 7; ++column) {
+        for (int toCol{ch == '&' ? 6 : 7}; column < toCol; ++column) {
           out << ' ';
         }
       }
@@ -241,7 +242,7 @@ void Parsing::EmitPreprocessedSource(
         if (ompConditionalLine) {
           // Only digits can stay in the label field
           if (!(ch >= '0' && ch <= '9')) {
-            for (; column < 7; ++column) {
+            for (int toCol{ch == '&' ? 6 : 7}; column < toCol; ++column) {
               out << ' ';
             }
           }
@@ -284,6 +285,8 @@ void Parsing::Parse(llvm::raw_ostream &out) {
       .set_log(&log_);
   ParseState parseState{cooked()};
   parseState.set_inFixedForm(options_.isFixedForm).set_userState(&userState);
+  // Don't bother managing message buffers when parsing module files.
+  parseState.set_deferMessages(options_.isModuleFile);
   parseTree_ = program.Parse(parseState);
   CHECK(
       !parseState.anyErrorRecovery() || parseState.messages().AnyFatalError());

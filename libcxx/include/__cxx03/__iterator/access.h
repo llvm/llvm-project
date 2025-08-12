@@ -20,12 +20,12 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, size_t _Np>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Tp* begin(_Tp (&__array)[_Np]) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI _Tp* begin(_Tp (&__array)[_Np]) _NOEXCEPT {
   return __array;
 }
 
 template <class _Tp, size_t _Np>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Tp* end(_Tp (&__array)[_Np]) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI _Tp* end(_Tp (&__array)[_Np]) _NOEXCEPT {
   return __array + _Np;
 }
 

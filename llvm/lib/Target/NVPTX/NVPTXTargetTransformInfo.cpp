@@ -564,7 +564,8 @@ bool NVPTXTTIImpl::collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
   case Intrinsic::nvvm_isspacep_global:
   case Intrinsic::nvvm_isspacep_local:
   case Intrinsic::nvvm_isspacep_shared:
-  case Intrinsic::nvvm_isspacep_shared_cluster: {
+  case Intrinsic::nvvm_isspacep_shared_cluster:
+  case Intrinsic::nvvm_prefetch_tensormap: {
     OpIndexes.push_back(0);
     return true;
   }
@@ -587,8 +588,20 @@ Value *NVPTXTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
       return ConstantInt::get(II->getType(), *R);
     return nullptr;
   }
+  case Intrinsic::nvvm_prefetch_tensormap: {
+    IRBuilder<> Builder(II);
+    return Builder.CreateUnaryIntrinsic(Intrinsic::nvvm_prefetch_tensormap,
+                                        NewV);
+  }
   }
   return nullptr;
+}
+
+unsigned NVPTXTTIImpl::getLoadStoreVecRegBitWidth(unsigned AddrSpace) const {
+  // 256 bit loads/stores are currently only supported for global address space
+  if (ST->has256BitVectorLoadStore(AddrSpace))
+    return 256;
+  return 128;
 }
 
 unsigned NVPTXTTIImpl::getAssumedAddrSpace(const Value *V) const {

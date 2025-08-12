@@ -20,10 +20,10 @@ body:             |
     ; CHECK-LABEL: name: foo1
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: INLINEASM &"", 0 /* attdialect */, 1835018 /* regdef:VS_32 */, def undef %2.sub0, 1835019 /* regdef-ec:VS_32 */, def undef early-clobber %2.sub1
+    ; CHECK-NEXT: INLINEASM &"", 0 /* attdialect */, 2228234 /* regdef:VGPR_32 */, def undef %2.sub0, 2228235 /* regdef-ec:VGPR_32 */, def undef early-clobber %2.sub1
     ; CHECK-NEXT: FLAT_STORE_DWORDX2 $vgpr0_vgpr1, %2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
     ; CHECK-NEXT: S_ENDPGM 0
-    INLINEASM &"", 0 /* attdialect */, 1835018 /* regdef:VGPR_32 */, def %0:vgpr_32, 1835019 /* regdef-ec:VGPR_32 */, def early-clobber %1:vgpr_32
+    INLINEASM &"", 0 /* attdialect */, 2228234 /* regdef:VGPR_32 */, def %0:vgpr_32, 2228235 /* regdef-ec:VGPR_32 */, def early-clobber %1:vgpr_32
     undef %2.sub0:vreg_64 = COPY killed %0
     %2.sub1:vreg_64 = COPY killed %1
     FLAT_STORE_DWORDX2 killed $vgpr0_vgpr1, killed %2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
@@ -41,10 +41,10 @@ body:             |
     ; CHECK-LABEL: name: foo2
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: INLINEASM &"", 0 /* attdialect */, 1835019 /* regdef-ec:VS_32 */, def undef early-clobber %2.sub1, 1835018 /* regdef:VS_32 */, def undef %2.sub0
+    ; CHECK-NEXT: INLINEASM &"", 0 /* attdialect */, 2228235 /* regdef-ec:VGPR_32 */, def undef early-clobber %2.sub1, 2228234 /* regdef:VGPR_32 */, def undef %2.sub0
     ; CHECK-NEXT: FLAT_STORE_DWORDX2 $vgpr0_vgpr1, %2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
     ; CHECK-NEXT: S_ENDPGM 0
-    INLINEASM &"", 0 /* attdialect */, 1835019 /* regdef-ec:VGPR_32 */, def early-clobber %1:vgpr_32, 1835018 /* regdef:VGPR_32 */, def %0:vgpr_32
+    INLINEASM &"", 0 /* attdialect */, 2228235 /* regdef-ec:VGPR_32 */, def early-clobber %1:vgpr_32, 2228234 /* regdef:VGPR_32 */, def %0:vgpr_32
     undef %2.sub0:vreg_64 = COPY killed %0
     %2.sub1:vreg_64 = COPY killed %1
     FLAT_STORE_DWORDX2 killed $vgpr0_vgpr1, killed %2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
@@ -62,10 +62,10 @@ body:             |
     ; CHECK-LABEL: name: foo3
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: INLINEASM &"", 0 /* attdialect */, 1835018 /* regdef:VS_32 */, def undef %2.sub0, 1835019 /* regdef-ec:VS_32 */, def undef early-clobber %2.sub1
+    ; CHECK-NEXT: INLINEASM &"", 0 /* attdialect */, 2228234 /* regdef:VGPR_32 */, def undef %2.sub0, 2228235 /* regdef-ec:VGPR_32 */, def undef early-clobber %2.sub1
     ; CHECK-NEXT: FLAT_STORE_DWORDX2 $vgpr0_vgpr1, %2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
     ; CHECK-NEXT: S_ENDPGM 0
-    INLINEASM &"", 0 /* attdialect */, 1835018 /* regdef:VGPR_32 */, def %1:vgpr_32, 1835019 /* regdef-ec:VGPR_32 */, def early-clobber %0:vgpr_32
+    INLINEASM &"", 0 /* attdialect */, 2228234 /* regdef:VGPR_32 */, def %1:vgpr_32, 2228235 /* regdef-ec:VGPR_32 */, def early-clobber %0:vgpr_32
     undef %2.sub0:vreg_64 = COPY killed %1
     %2.sub1:vreg_64 = COPY killed %0
     FLAT_STORE_DWORDX2 killed $vgpr0_vgpr1, killed %2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
@@ -83,10 +83,10 @@ body:             |
     ; CHECK-LABEL: name: foo4
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: INLINEASM &"", 0 /* attdialect */, 1835019 /* regdef-ec:VS_32 */, def undef early-clobber %2.sub1, 1835018 /* regdef:VS_32 */, def undef %2.sub0
+    ; CHECK-NEXT: INLINEASM &"", 0 /* attdialect */, 2228235 /* regdef-ec:VGPR_32 */, def undef early-clobber %2.sub1, 2228234 /* regdef:VGPR_32 */, def undef %2.sub0
     ; CHECK-NEXT: FLAT_STORE_DWORDX2 $vgpr0_vgpr1, %2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
     ; CHECK-NEXT: S_ENDPGM 0
-    INLINEASM &"", 0 /* attdialect */, 1835019 /* regdef-ec:VGPR_32 */, def early-clobber %0:vgpr_32, 1835018 /* regdef:VGPR_32 */, def %1:vgpr_32
+    INLINEASM &"", 0 /* attdialect */, 2228235 /* regdef-ec:VGPR_32 */, def early-clobber %0:vgpr_32, 2228234 /* regdef:VGPR_32 */, def %1:vgpr_32
     undef %2.sub0:vreg_64 = COPY killed %1
     %2.sub1:vreg_64 = COPY killed %0
     FLAT_STORE_DWORDX2 killed $vgpr0_vgpr1, killed %2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))

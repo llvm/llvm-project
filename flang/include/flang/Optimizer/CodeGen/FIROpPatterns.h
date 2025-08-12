@@ -144,7 +144,7 @@ protected:
     llvm::SmallVector<mlir::LLVM::GEPArg> cv = {args...};
     auto llvmPtrTy =
         mlir::LLVM::LLVMPointerType::get(ty.getContext(), /*addressSpace=*/0);
-    return rewriter.create<mlir::LLVM::GEPOp>(loc, llvmPtrTy, ty, base, cv);
+    return mlir::LLVM::GEPOp::create(rewriter, loc, llvmPtrTy, ty, base, cv);
   }
 
   // Find the Block in which the alloca should be inserted.
@@ -173,6 +173,10 @@ protected:
         this->getTypeConverter());
   }
 
+  const mlir::DataLayout &getDataLayout() const {
+    return lowerTy().getDataLayout();
+  }
+
   void attachTBAATag(mlir::LLVM::AliasAnalysisOpInterface op,
                      mlir::Type baseFIRType, mlir::Type accessFIRType,
                      mlir::LLVM::GEPOp gep) const {
@@ -184,6 +188,9 @@ protected:
 
   unsigned
   getProgramAddressSpace(mlir::ConversionPatternRewriter &rewriter) const;
+
+  unsigned
+  getGlobalAddressSpace(mlir::ConversionPatternRewriter &rewriter) const;
 
   const fir::FIRToLLVMPassOptions &options;
 

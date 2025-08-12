@@ -1507,7 +1507,9 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
 
   if (V->isNullValue())
     return ConstantAggregateZero::get(VTy);
-  else if (isa<UndefValue>(V))
+  if (isa<PoisonValue>(V))
+    return PoisonValue::get(VTy);
+  if (isa<UndefValue>(V))
     return UndefValue::get(VTy);
 
   Type *IdxTy = Type::getInt64Ty(VTy->getContext());
@@ -1565,6 +1567,7 @@ Constant *ConstantExpr::getWithOperands(ArrayRef<Constant *> Ops, Type *Ty,
   case Instruction::SIToFP:
   case Instruction::FPToUI:
   case Instruction::FPToSI:
+  case Instruction::PtrToAddr:
   case Instruction::PtrToInt:
   case Instruction::IntToPtr:
   case Instruction::BitCast:
@@ -1709,6 +1712,8 @@ void ConstantVector::destroyConstantImpl() {
 
 Constant *Constant::getSplatValue(bool AllowPoison) const {
   assert(this->getType()->isVectorTy() && "Only valid for vectors!");
+  if (isa<PoisonValue>(this))
+    return PoisonValue::get(cast<VectorType>(getType())->getElementType());
   if (isa<ConstantAggregateZero>(this))
     return getNullValue(cast<VectorType>(getType())->getElementType());
   if (auto *CI = dyn_cast<ConstantInt>(this))
@@ -2219,6 +2224,8 @@ Constant *ConstantExpr::getCast(unsigned oc, Constant *C, Type *Ty,
     llvm_unreachable("Invalid cast opcode");
   case Instruction::Trunc:
     return getTrunc(C, Ty, OnlyIfReduced);
+  case Instruction::PtrToAddr:
+    return getPtrToAddr(C, Ty, OnlyIfReduced);
   case Instruction::PtrToInt:
     return getPtrToInt(C, Ty, OnlyIfReduced);
   case Instruction::IntToPtr:
@@ -2274,6 +2281,20 @@ Constant *ConstantExpr::getTrunc(Constant *C, Type *Ty, bool OnlyIfReduced) {
          "SrcTy must be larger than DestTy for Trunc!");
 
   return getFoldedCast(Instruction::Trunc, C, Ty, OnlyIfReduced);
+}
+
+Constant *ConstantExpr::getPtrToAddr(Constant *C, Type *DstTy,
+                                     bool OnlyIfReduced) {
+  assert(C->getType()->isPtrOrPtrVectorTy() &&
+         "PtrToAddr source must be pointer or pointer vector");
+  assert(DstTy->isIntOrIntVectorTy() &&
+         "PtrToAddr destination must be integer or integer vector");
+  assert(isa<VectorType>(C->getType()) == isa<VectorType>(DstTy));
+  if (isa<VectorType>(C->getType()))
+    assert(cast<VectorType>(C->getType())->getElementCount() ==
+               cast<VectorType>(DstTy)->getElementCount() &&
+           "Invalid cast between a different number of vector elements");
+  return getFoldedCast(Instruction::PtrToAddr, C, DstTy, OnlyIfReduced);
 }
 
 Constant *ConstantExpr::getPtrToInt(Constant *C, Type *DstTy,
@@ -2431,6 +2452,7 @@ bool ConstantExpr::isDesirableCastOp(unsigned Opcode) {
   case Instruction::FPToSI:
     return false;
   case Instruction::Trunc:
+  case Instruction::PtrToAddr:
   case Instruction::PtrToInt:
   case Instruction::IntToPtr:
   case Instruction::BitCast:
@@ -2453,6 +2475,7 @@ bool ConstantExpr::isSupportedCastOp(unsigned Opcode) {
   case Instruction::FPToSI:
     return false;
   case Instruction::Trunc:
+  case Instruction::PtrToAddr:
   case Instruction::PtrToInt:
   case Instruction::IntToPtr:
   case Instruction::BitCast:
@@ -2876,9 +2899,7 @@ Constant *ConstantDataSequential::getImpl(StringRef Elements, Type *Ty) {
 
   // Do a lookup to see if we have already formed one of these.
   auto &Slot =
-      *Ty->getContext()
-           .pImpl->CDSConstants.insert(std::make_pair(Elements, nullptr))
-           .first;
+      *Ty->getContext().pImpl->CDSConstants.try_emplace(Elements).first;
 
   // The bucket can point to a linked list of different CDS's that have the same
   // body but different types.  For example, 0,0,0,1 could be a 4 element array
@@ -3399,6 +3420,7 @@ Instruction *ConstantExpr::getAsInstruction() const {
 
   switch (getOpcode()) {
   case Instruction::Trunc:
+  case Instruction::PtrToAddr:
   case Instruction::PtrToInt:
   case Instruction::IntToPtr:
   case Instruction::BitCast:

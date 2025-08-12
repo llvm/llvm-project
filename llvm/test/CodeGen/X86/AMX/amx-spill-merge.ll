@@ -125,7 +125,7 @@ define dso_local void @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; EGPR-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; EGPR-NEXT:    testb %al, %al # encoding: [0x84,0xc0]
 ; EGPR-NEXT:    jne .LBB0_2 # encoding: [0x75,A]
-; EGPR-NEXT:    # fixup A - offset: 1, value: .LBB0_2-1, kind: FK_PCRel_1
+; EGPR-NEXT:    # fixup A - offset: 1, value: .LBB0_2, kind: FK_PCRel_1
 ; EGPR-NEXT:  # %bb.1: # %if.true
 ; EGPR-NEXT:    movl $buf, %eax # encoding: [0xb8,A,A,A,A]
 ; EGPR-NEXT:    # fixup A - offset: 1, value: buf, kind: FK_Data_4
@@ -143,13 +143,13 @@ define dso_local void @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; EGPR-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; EGPR-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; EGPR-NEXT:    callq foo # encoding: [0xe8,A,A,A,A]
-; EGPR-NEXT:    # fixup A - offset: 1, value: foo-4, kind: reloc_branch_4byte_pcrel
+; EGPR-NEXT:    # fixup A - offset: 1, value: foo, kind: reloc_branch_4byte_pcrel
 ; EGPR-NEXT:    ldtilecfg (%rsp) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x78,0x49,0x04,0x24]
 ; EGPR-NEXT:    movabsq $64, %rax # encoding: [0x48,0xb8,0x40,0x00,0x00,0x00,0x00,0x00,0x00,0x00]
 ; EGPR-NEXT:    tileloadd 64(%rsp,%rax), %tmm6 # 1024-byte Folded Reload
 ; EGPR-NEXT:    # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7b,0x4b,0x74,0x04,0x40]
 ; EGPR-NEXT:    jmp .LBB0_3 # encoding: [0xeb,A]
-; EGPR-NEXT:    # fixup A - offset: 1, value: .LBB0_3-1, kind: FK_PCRel_1
+; EGPR-NEXT:    # fixup A - offset: 1, value: .LBB0_3, kind: FK_PCRel_1
 ; EGPR-NEXT:  .LBB0_2: # %if.false
 ; EGPR-NEXT:    movl $buf, %eax # encoding: [0xb8,A,A,A,A]
 ; EGPR-NEXT:    # fixup A - offset: 1, value: buf, kind: FK_Data_4
@@ -167,7 +167,7 @@ define dso_local void @test_api(i16 signext %0, i16 signext %1) nounwind {
 ; EGPR-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; EGPR-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; EGPR-NEXT:    callq foo # encoding: [0xe8,A,A,A,A]
-; EGPR-NEXT:    # fixup A - offset: 1, value: foo-4, kind: reloc_branch_4byte_pcrel
+; EGPR-NEXT:    # fixup A - offset: 1, value: foo, kind: reloc_branch_4byte_pcrel
 ; EGPR-NEXT:    ldtilecfg (%rsp) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x78,0x49,0x04,0x24]
 ; EGPR-NEXT:    movabsq $64, %rax # encoding: [0x48,0xb8,0x40,0x00,0x00,0x00,0x00,0x00,0x00,0x00]
 ; EGPR-NEXT:    tileloadd 64(%rsp,%rax), %tmm6 # 1024-byte Folded Reload
@@ -294,7 +294,7 @@ define dso_local void @test3(ptr%buf) nounwind {
 ; EGPR-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; EGPR-NEXT:    testb %al, %al # encoding: [0x84,0xc0]
 ; EGPR-NEXT:    jne .LBB1_3 # encoding: [0x75,A]
-; EGPR-NEXT:    # fixup A - offset: 1, value: .LBB1_3-1, kind: FK_PCRel_1
+; EGPR-NEXT:    # fixup A - offset: 1, value: .LBB1_3, kind: FK_PCRel_1
 ; EGPR-NEXT:  # %bb.1: # %loop.header.preheader
 ; EGPR-NEXT:    movq %rdi, %rbx # encoding: [0x48,0x89,0xfb]
 ; EGPR-NEXT:    movl $32, %r14d # encoding: [0x41,0xbe,0x20,0x00,0x00,0x00]
@@ -307,7 +307,7 @@ define dso_local void @test3(ptr%buf) nounwind {
 ; EGPR-NEXT:    tilezero %tmm0 # encoding: [0xc4,0xe2,0x7b,0x49,0xc0]
 ; EGPR-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
 ; EGPR-NEXT:    callq foo # encoding: [0xe8,A,A,A,A]
-; EGPR-NEXT:    # fixup A - offset: 1, value: foo-4, kind: reloc_branch_4byte_pcrel
+; EGPR-NEXT:    # fixup A - offset: 1, value: foo, kind: reloc_branch_4byte_pcrel
 ; EGPR-NEXT:    ldtilecfg {{[0-9]+}}(%rsp) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x78,0x49,0x44,0x24,0x08]
 ; EGPR-NEXT:    tilezero %tmm0 # encoding: [0xc4,0xe2,0x7b,0x49,0xc0]
 ; EGPR-NEXT:    tileloadd (%rbx,%r14), %tmm1 # EVEX TO VEX Compression encoding: [0xc4,0xa2,0x7b,0x4b,0x0c,0x33]
@@ -318,7 +318,7 @@ define dso_local void @test3(ptr%buf) nounwind {
 ; EGPR-NEXT:    incl %r15d # encoding: [0x41,0xff,0xc7]
 ; EGPR-NEXT:    cmpw $100, %r15w # encoding: [0x66,0x41,0x83,0xff,0x64]
 ; EGPR-NEXT:    jl .LBB1_2 # encoding: [0x7c,A]
-; EGPR-NEXT:    # fixup A - offset: 1, value: .LBB1_2-1, kind: FK_PCRel_1
+; EGPR-NEXT:    # fixup A - offset: 1, value: .LBB1_2, kind: FK_PCRel_1
 ; EGPR-NEXT:  .LBB1_3: # %exit
 ; EGPR-NEXT:    addq $72, %rsp # encoding: [0x48,0x83,0xc4,0x48]
 ; EGPR-NEXT:    popq %rbx # encoding: [0x5b]

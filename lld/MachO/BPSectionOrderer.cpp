@@ -84,7 +84,7 @@ struct BPOrdererMachO : lld::BPOrderer<BPOrdererMachO> {
 
 private:
   static uint64_t
-  getRelocHash(const Reloc &reloc,
+  getRelocHash(const macho::Reloc &reloc,
                const llvm::DenseMap<const void *, uint64_t> &sectionToIdx) {
     auto *isec = reloc.getReferentInputSection();
     std::optional<uint64_t> sectionIdx;
@@ -124,7 +124,7 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
         size_t idx = sections.size();
         sections.emplace_back(isec);
         for (auto *sym : BPOrdererMachO::getSymbols(*isec)) {
-          auto rootName = getRootSymbol(sym->getName());
+          auto rootName = lld::utils::getRootSymbol(sym->getName());
           rootSymbolToSectionIdxs[CachedHashStringRef(rootName)].insert(idx);
           if (auto linkageName =
                   BPOrdererMachO::getResolvedLinkageName(rootName))

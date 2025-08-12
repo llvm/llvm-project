@@ -1554,9 +1554,9 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-      #define A                                                                      \
-        int aaaa;                                                                    \
-        int b;                                                                       \
+      #define A                                                            \
+        int aaaa;                                                          \
+        int b;                                                             \
         int dddddddddd;
 
 
@@ -1702,9 +1702,9 @@ the configuration (without a prefix: ``Auto``).
 .. _AllowAllArgumentsOnNextLine:
 
 **AllowAllArgumentsOnNextLine** (``Boolean``) :versionbadge:`clang-format 9` :ref:`¶ <AllowAllArgumentsOnNextLine>`
-  If a function call or braced initializer list doesn't fit on a
-  line, allow putting all arguments onto the next line, even if
-  ``BinPackArguments`` is ``false``.
+  If a function call or braced initializer list doesn't fit on a line, allow
+  putting all arguments onto the next line, even if ``BinPackArguments`` is
+  ``false``.
 
   .. code-block:: c++
 
@@ -1912,7 +1912,7 @@ the configuration (without a prefix: ``Auto``).
 
   * ``SFS_InlineOnly`` (in configuration: ``InlineOnly``)
     Only merge functions defined inside a class. Same as ``inline``,
-    except it does not implies ``empty``: i.e. top level empty functions
+    except it does not imply ``empty``: i.e. top level empty functions
     are not merged either.
 
     .. code-block:: c++
@@ -4201,8 +4201,8 @@ the configuration (without a prefix: ``Auto``).
   * ``""`` means "arbitrary suffix"
   * ``"$"`` means "no suffix"
 
-  For example, if configured to ``"(_test)?$"``, then a header a.h would be seen
-  as the "main" include in both a.cc and a_test.cc.
+  For example, if configured to ``"(_test)?$"``, then a header a.h would be
+  seen as the "main" include in both a.cc and a_test.cc.
 
 .. _IncludeIsMainSourceRegex:
 
@@ -4975,6 +4975,12 @@ the configuration (without a prefix: ``Auto``).
      A(z); -> z;
      A(a, b); // will not be expanded.
 
+.. _MacrosSkippedByRemoveParentheses:
+
+**MacrosSkippedByRemoveParentheses** (``List of Strings``) :versionbadge:`clang-format 21` :ref:`¶ <MacrosSkippedByRemoveParentheses>`
+  A vector of function-like macros whose invocations should be skipped by
+  ``RemoveParentheses``.
+
 .. _MainIncludeChar:
 
 **MainIncludeChar** (``MainIncludeCharDiscriminator``) :versionbadge:`clang-format 19` :ref:`¶ <MainIncludeChar>`
@@ -5528,8 +5534,7 @@ the configuration (without a prefix: ``Auto``).
 .. _ReferenceAlignment:
 
 **ReferenceAlignment** (``ReferenceAlignmentStyle``) :versionbadge:`clang-format 13` :ref:`¶ <ReferenceAlignment>`
-  Reference alignment style (overrides ``PointerAlignment`` for
-  references).
+  Reference alignment style (overrides ``PointerAlignment`` for references).
 
   Possible values:
 
@@ -5990,41 +5995,35 @@ the configuration (without a prefix: ``Auto``).
 **SortIncludes** (``SortIncludesOptions``) :versionbadge:`clang-format 3.8` :ref:`¶ <SortIncludes>`
   Controls if and how clang-format will sort ``#includes``.
 
-  Possible values:
+  Nested configuration flags:
 
-  * ``SI_Never`` (in configuration: ``Never``)
-    Includes are never sorted.
+  Includes sorting options.
 
-    .. code-block:: c++
+  * ``bool Enabled`` If ``true``, includes are sorted based on the other suboptions below.
+    (``Never`` is deprecated by ``Enabled: false``.)
 
-       #include "B/A.h"
-       #include "A/B.h"
-       #include "a/b.h"
-       #include "A/b.h"
-       #include "B/a.h"
-
-  * ``SI_CaseSensitive`` (in configuration: ``CaseSensitive``)
-    Includes are sorted in an ASCIIbetical or case sensitive fashion.
+  * ``bool IgnoreCase`` Whether or not includes are sorted in a case-insensitive fashion.
+    (``CaseSensitive`` and ``CaseInsensitive`` are deprecated by
+    ``IgnoreCase: false`` and ``IgnoreCase: true``, respectively.)
 
     .. code-block:: c++
 
-       #include "A/B.h"
-       #include "A/b.h"
-       #include "B/A.h"
-       #include "B/a.h"
-       #include "a/b.h"
+       true:                      false:
+       #include "A/B.h"    vs.    #include "A/B.h"
+       #include "A/b.h"           #include "A/b.h"
+       #include "a/b.h"           #include "B/A.h"
+       #include "B/A.h"           #include "B/a.h"
+       #include "B/a.h"           #include "a/b.h"
 
-  * ``SI_CaseInsensitive`` (in configuration: ``CaseInsensitive``)
-    Includes are sorted in an alphabetical or case insensitive fashion.
+  * ``bool IgnoreExtension`` When sorting includes in each block, only take file extensions into
+    account if two includes compare equal otherwise.
 
     .. code-block:: c++
 
-       #include "A/B.h"
-       #include "A/b.h"
-       #include "a/b.h"
-       #include "B/A.h"
-       #include "B/a.h"
-
+       true:                          false:
+       # include "A.h"         vs.    # include "A-util.h"
+       # include "A.inc"              # include "A.h"
+       # include "A-util.h"           # include "A.inc"
 
 
 .. _SortJavaStaticImport:
@@ -6400,6 +6399,14 @@ the configuration (without a prefix: ``Auto``).
        true:                                  false:
        IF (...)                        vs.    IF(...)
          <conditional-body>                     <conditional-body>
+
+  * ``bool AfterNot`` If ``true``, put a space between alternative operator ``not`` and the
+    opening parenthesis.
+
+    .. code-block:: c++
+
+       true:                                  false:
+       return not (a || b);            vs.    return not(a || b);
 
   * ``bool AfterOverloadedOperator`` If ``true``, put a space between operator overloading and opening
     parentheses.
@@ -6901,8 +6908,8 @@ the configuration (without a prefix: ``Auto``).
 .. _TypenameMacros:
 
 **TypenameMacros** (``List of Strings``) :versionbadge:`clang-format 9` :ref:`¶ <TypenameMacros>`
-  A vector of macros that should be interpreted as type declarations
-  instead of as function calls.
+  A vector of macros that should be interpreted as type declarations instead
+  of as function calls.
 
   These are expected to be macros of the form:
 
@@ -7008,7 +7015,7 @@ the configuration (without a prefix: ``Auto``).
     .. code-block:: c++
 
       namespace N1 {
-      namespace N2
+      namespace N2 {
       function();
       }
       }

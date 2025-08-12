@@ -482,6 +482,8 @@ struct CallSiteInfo {
 
   MachineInstrLoc CallLocation;
   std::vector<ArgRegPair> ArgForwardingRegs;
+  /// Numeric callee type identifiers for the callgraph section.
+  std::vector<uint64_t> CalleeTypeIds;
 
   bool operator==(const CallSiteInfo &Other) const {
     return CallLocation.BlockNum == Other.CallLocation.BlockNum &&
@@ -511,6 +513,7 @@ template <> struct MappingTraits<CallSiteInfo> {
     YamlIO.mapRequired("offset", CSInfo.CallLocation.Offset);
     YamlIO.mapOptional("fwdArgRegs", CSInfo.ArgForwardingRegs,
                        std::vector<CallSiteInfo::ArgRegPair>());
+    YamlIO.mapOptional("calleeTypeIds", CSInfo.CalleeTypeIds);
   }
 
   static const bool flow = true;
@@ -631,6 +634,24 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::CalledGlobal)
 namespace llvm {
 namespace yaml {
 
+// Struct representing one save/restore point in the 'savePoint'/'restorePoint'
+// list
+struct SaveRestorePointEntry {
+  StringValue Point;
+
+  bool operator==(const SaveRestorePointEntry &Other) const {
+    return Point == Other.Point;
+  }
+};
+
+using SaveRestorePoints = std::vector<SaveRestorePointEntry>;
+
+template <> struct MappingTraits<SaveRestorePointEntry> {
+  static void mapping(IO &YamlIO, SaveRestorePointEntry &Entry) {
+    YamlIO.mapRequired("point", Entry.Point);
+  }
+};
+
 template <> struct MappingTraits<MachineJumpTable> {
   static void mapping(IO &YamlIO, MachineJumpTable &JT) {
     YamlIO.mapRequired("kind", JT.Kind);
@@ -638,6 +659,14 @@ template <> struct MappingTraits<MachineJumpTable> {
                        std::vector<MachineJumpTable::Entry>());
   }
 };
+
+} // namespace yaml
+} // namespace llvm
+
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::SaveRestorePointEntry)
+
+namespace llvm {
+namespace yaml {
 
 /// Serializable representation of MachineFrameInfo.
 ///
@@ -666,8 +695,8 @@ struct MachineFrameInfo {
   bool HasTailCall = false;
   bool IsCalleeSavedInfoValid = false;
   unsigned LocalFrameSize = 0;
-  StringValue SavePoint;
-  StringValue RestorePoint;
+  SaveRestorePoints SavePoints;
+  SaveRestorePoints RestorePoints;
 
   bool operator==(const MachineFrameInfo &Other) const {
     return IsFrameAddressTaken == Other.IsFrameAddressTaken &&
@@ -688,7 +717,8 @@ struct MachineFrameInfo {
            HasMustTailInVarArgFunc == Other.HasMustTailInVarArgFunc &&
            HasTailCall == Other.HasTailCall &&
            LocalFrameSize == Other.LocalFrameSize &&
-           SavePoint == Other.SavePoint && RestorePoint == Other.RestorePoint &&
+           SavePoints == Other.SavePoints &&
+           RestorePoints == Other.RestorePoints &&
            IsCalleeSavedInfoValid == Other.IsCalleeSavedInfoValid;
   }
 };
@@ -720,10 +750,8 @@ template <> struct MappingTraits<MachineFrameInfo> {
     YamlIO.mapOptional("isCalleeSavedInfoValid", MFI.IsCalleeSavedInfoValid,
                        false);
     YamlIO.mapOptional("localFrameSize", MFI.LocalFrameSize, (unsigned)0);
-    YamlIO.mapOptional("savePoint", MFI.SavePoint,
-                       StringValue()); // Don't print it out when it's empty.
-    YamlIO.mapOptional("restorePoint", MFI.RestorePoint,
-                       StringValue()); // Don't print it out when it's empty.
+    YamlIO.mapOptional("savePoint", MFI.SavePoints);
+    YamlIO.mapOptional("restorePoint", MFI.RestorePoints);
   }
 };
 

@@ -33,6 +33,8 @@ Error failUnsupported(const Twine &Reason) {
 std::string getEnumNameForPredicate(const TreePredicateFn &Predicate) {
   if (Predicate.hasGISelPredicateCode())
     return "GICXXPred_MI_" + Predicate.getFnName();
+  if (Predicate.hasGISelLeafPredicateCode())
+    return "GICXXPred_MO_" + Predicate.getFnName();
   return "GICXXPred_" + Predicate.getImmTypeIdentifier().str() + "_" +
          Predicate.getFnName();
 }
@@ -1326,6 +1328,19 @@ void OperandImmPredicateMatcher::emitPredicateOpcodes(MatchTable &Table,
         << MatchTable::LineBreak;
 }
 
+//===- OperandLeafPredicateMatcher
+//-----------------------------------------===//
+
+void OperandLeafPredicateMatcher::emitPredicateOpcodes(
+    MatchTable &Table, RuleMatcher &Rule) const {
+  Table << MatchTable::Opcode("GIM_CheckLeafOperandPredicate")
+        << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID)
+        << MatchTable::Comment("MO") << MatchTable::ULEB128Value(OpIdx)
+        << MatchTable::Comment("Predicate")
+        << MatchTable::NamedValue(2, getEnumNameForPredicate(Predicate))
+        << MatchTable::LineBreak;
+}
+
 //===- OperandMatcher -----------------------------------------------------===//
 
 std::string OperandMatcher::getOperandExpr(unsigned InsnVarID) const {
@@ -1433,7 +1448,7 @@ void InstructionOpcodeMatcher::initOpcodeValuesMap(
     const CodeGenTarget &Target) {
   OpcodeValues.clear();
 
-  for (const CodeGenInstruction *I : Target.getInstructionsByEnumValue())
+  for (const CodeGenInstruction *I : Target.getInstructions())
     OpcodeValues[I] = Target.getInstrIntValue(I->TheDef);
 }
 
@@ -2015,9 +2030,10 @@ void TempRegRenderer::emitRenderOpcodes(MatchTable &Table,
   if (SubRegIdx) {
     assert(!IsDef);
     Table << MatchTable::Opcode("GIR_AddTempSubRegister");
-  } else
+  } else {
     Table << MatchTable::Opcode(NeedsFlags ? "GIR_AddTempRegister"
                                            : "GIR_AddSimpleTempRegister");
+  }
 
   Table << MatchTable::Comment("InsnID") << MatchTable::ULEB128Value(InsnID)
         << MatchTable::Comment("TempRegID")
@@ -2035,8 +2051,9 @@ void TempRegRenderer::emitRenderOpcodes(MatchTable &Table,
     if (IsDead)
       RegFlags += "|RegState::Dead";
     Table << MatchTable::NamedValue(2, RegFlags);
-  } else
+  } else {
     Table << MatchTable::IntValue(2, 0);
+  }
 
   if (SubRegIdx)
     Table << MatchTable::NamedValue(2, SubRegIdx->getQualifiedName());
@@ -2064,8 +2081,9 @@ void ImmRenderer::emitRenderOpcodes(MatchTable &Table,
           << MatchTable::ULEB128Value(InsnID) << MatchTable::Comment("Type")
           << *CImmLLT << MatchTable::Comment("Imm")
           << MatchTable::IntValue(8, Imm) << MatchTable::LineBreak;
-  } else
+  } else {
     emitAddImm(Table, Rule, InsnID, Imm);
+  }
 }
 
 //===- SubRegIndexRenderer ------------------------------------------------===//
@@ -2156,8 +2174,9 @@ bool BuildMIAction::canMutate(RuleMatcher &Rule,
       if (Insn != &OM.getInstructionMatcher() ||
           OM.getOpIdx() != Renderer.index())
         return false;
-    } else
+    } else {
       return false;
+    }
   }
 
   return true;

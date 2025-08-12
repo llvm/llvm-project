@@ -91,8 +91,8 @@ void GenRuntimeCallsForTestPass::runOnOperation() {
     // Generate the wrapper function body that consists of a call and return.
     builder.setInsertionPointToStart(callerFunc.addEntryBlock());
     mlir::Block::BlockArgListType args = callerFunc.front().getArguments();
-    auto callOp = builder.create<fir::CallOp>(loc, funcOp, args);
-    builder.create<mlir::func::ReturnOp>(loc, callOp.getResults());
+    auto callOp = fir::CallOp::create(builder, loc, funcOp, args);
+    mlir::func::ReturnOp::create(builder, loc, callOp.getResults());
 
     newFuncs.push_back(callerFunc.getOperation());
     builder.restoreInsertionPoint(insertPt);

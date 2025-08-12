@@ -6,10 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This test fails because Clang no longer enables -fdelayed-template-parsing
-// by default on Windows with C++20 (#69431).
-// XFAIL: msvc && (clang-18 || clang-19 || clang-20 || clang-21)
-
 // <math.h>
 
 // GCC warns about signbit comparing `bool_v < 0`, which we're testing

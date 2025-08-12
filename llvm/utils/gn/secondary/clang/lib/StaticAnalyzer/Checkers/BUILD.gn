@@ -115,6 +115,7 @@ static_library("Checkers") {
     "StackAddrEscapeChecker.cpp",
     "StdLibraryFunctionsChecker.cpp",
     "StdVariantChecker.cpp",
+    "StoreToImmutableChecker.cpp",
     "StreamChecker.cpp",
     "StringChecker.cpp",
     "Taint.cpp",

@@ -17,13 +17,7 @@
 #include "SPIRV.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
-#include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/Analysis/OptimizationRemarkEmitter.h"
-#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/IR/Attributes.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DebugInfoMetadata.h"
-#include "llvm/IR/IntrinsicsSPIRV.h"
 #include <stack>
 
 #define DEBUG_TYPE "spirv-postlegalizer"
@@ -153,7 +147,7 @@ void visit(MachineFunction &MF, MachineBasicBlock &Start,
 // Do a preorder traversal of the CFG starting from the given function's entry
 // point. Calls |op| on each basic block encountered during the traversal.
 void visit(MachineFunction &MF, std::function<void(MachineBasicBlock *)> op) {
-  visit(MF, *MF.begin(), op);
+  visit(MF, *MF.begin(), std::move(op));
 }
 
 bool SPIRVPostLegalizer::runOnMachineFunction(MachineFunction &MF) {

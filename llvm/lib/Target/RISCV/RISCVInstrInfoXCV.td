@@ -789,30 +789,19 @@ let Predicates = [HasVendorXCValu, IsRV32], AddedComplexity = 1 in {
 // Patterns for immediate branching operations
 //===----------------------------------------------------------------------===//
 
-def IntCCtoRISCVCCCV : SDNodeXForm<riscv_selectcc, [{
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
-  assert(CC == ISD::SETEQ || CC == ISD::SETNE);
-  RISCVCC::CondCode BrCC = CC == ISD::SETEQ ? RISCVCC::COND_CV_BEQIMM : RISCVCC::COND_CV_BNEIMM;
-  return CurDAG->getTargetConstant(BrCC, SDLoc(N), Subtarget->getXLenVT());
-}]>;
-
 let Predicates = [HasVendorXCVbi, IsRV32], AddedComplexity = 2 in {
   def : Pat<(riscv_brcc GPR:$rs1, simm5:$imm5, SETEQ, bb:$imm12),
-            (CV_BEQIMM GPR:$rs1, simm5:$imm5, bare_simm13_lsb0:$imm12)>;
+            (CV_BEQIMM GPR:$rs1, simm5:$imm5, bare_simm13_lsb0_bb:$imm12)>;
   def : Pat<(riscv_brcc GPR:$rs1, simm5:$imm5, SETNE, bb:$imm12),
-            (CV_BNEIMM GPR:$rs1, simm5:$imm5, bare_simm13_lsb0:$imm12)>;
+            (CV_BNEIMM GPR:$rs1, simm5:$imm5, bare_simm13_lsb0_bb:$imm12)>;
 
-  let usesCustomInserter = 1 in
-  def Select_GPR_Using_CC_Imm : Pseudo<(outs GPR:$dst),
-                             (ins GPR:$lhs, simm5:$imm5, cond_code:$cc,
-                              GPR:$truev, GPR:$falsev), []>;
-
+  defm CC_SImm5_CV : SelectCC_GPR_riirr<GPR, simm5>;
 
   class Selectbi<CondCode Cond>
       : Pat<(riscv_selectcc_frag:$cc (i32 GPR:$lhs), simm5:$Constant, Cond,
                                      (i32 GPR:$truev), GPR:$falsev),
-            (Select_GPR_Using_CC_Imm GPR:$lhs, simm5:$Constant,
-             (IntCCtoRISCVCCCV $cc), GPR:$truev, GPR:$falsev)>;
+            (Select_GPR_Using_CC_SImm5_CV GPR:$lhs, simm5:$Constant,
+             (IntCCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
 
   def : Selectbi<SETEQ>;
   def : Selectbi<SETNE>;

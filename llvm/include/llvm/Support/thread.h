@@ -17,6 +17,7 @@
 #define LLVM_SUPPORT_THREAD_H
 
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 #include <tuple>
 #include <utility>
@@ -69,7 +70,7 @@ public:
   }
 #endif
 
-  static const std::optional<unsigned> DefaultStackSize;
+  LLVM_ABI static const std::optional<unsigned> DefaultStackSize;
 
   thread() : Thread(native_handle_type()) {}
   thread(thread &&Other) noexcept
@@ -115,13 +116,13 @@ private:
   native_handle_type Thread;
 };
 
-thread::native_handle_type
+LLVM_ABI thread::native_handle_type
 llvm_execute_on_thread_impl(thread::start_routine_type ThreadFunc, void *Arg,
                             std::optional<unsigned> StackSizeInBytes);
-void llvm_thread_join_impl(thread::native_handle_type Thread);
-void llvm_thread_detach_impl(thread::native_handle_type Thread);
-thread::id llvm_thread_get_id_impl(thread::native_handle_type Thread);
-thread::id llvm_thread_get_current_id_impl();
+LLVM_ABI void llvm_thread_join_impl(thread::native_handle_type Thread);
+LLVM_ABI void llvm_thread_detach_impl(thread::native_handle_type Thread);
+LLVM_ABI thread::id llvm_thread_get_id_impl(thread::native_handle_type Thread);
+LLVM_ABI thread::id llvm_thread_get_current_id_impl();
 
 template <class Function, class... Args>
 thread::thread(std::optional<unsigned> StackSizeInBytes, Function &&f,

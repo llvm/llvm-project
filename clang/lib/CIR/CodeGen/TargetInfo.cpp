@@ -1,14 +1,43 @@
 #include "TargetInfo.h"
 #include "ABIInfo.h"
-#include "CIRGenFunctionInfo.h"
-#include "clang/CIR/MissingFeatures.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
 
-static bool testIfIsVoidTy(QualType ty) {
-  const auto *builtinTy = ty->getAs<BuiltinType>();
-  return builtinTy && builtinTy->getKind() == BuiltinType::Void;
+bool clang::CIRGen::isEmptyRecordForLayout(const ASTContext &context,
+                                           QualType t) {
+  const RecordType *rt = t->getAs<RecordType>();
+  if (!rt)
+    return false;
+
+  const RecordDecl *rd = rt->getOriginalDecl()->getDefinitionOrSelf();
+
+  // If this is a C++ record, check the bases first.
+  if (const CXXRecordDecl *cxxrd = dyn_cast<CXXRecordDecl>(rd)) {
+    if (cxxrd->isDynamicClass())
+      return false;
+
+    for (const auto &i : cxxrd->bases())
+      if (!isEmptyRecordForLayout(context, i.getType()))
+        return false;
+  }
+
+  for (const auto *i : rd->fields())
+    if (!isEmptyFieldForLayout(context, i))
+      return false;
+
+  return true;
+}
+
+bool clang::CIRGen::isEmptyFieldForLayout(const ASTContext &context,
+                                          const FieldDecl *fd) {
+  if (fd->isZeroLengthBitField())
+    return true;
+
+  if (fd->isUnnamedBitField())
+    return false;
+
+  return isEmptyRecordForLayout(context, fd->getType());
 }
 
 namespace {

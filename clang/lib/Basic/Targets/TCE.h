@@ -54,6 +54,7 @@ static const unsigned TCEOpenCLAddrSpaceMap[] = {
     0, // hlsl_constant
     0, // hlsl_private
     0, // hlsl_device
+    0, // hlsl_input
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref

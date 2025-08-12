@@ -74,6 +74,7 @@ public:
   static_assert(std::is_unsigned_v<BigPart>);
   static_assert(CHAR_BIT * sizeof(BigPart) >= 2 * partBits);
   static constexpr bool littleEndian{IS_LITTLE_ENDIAN};
+  static constexpr int alignment{ALIGNMENT};
 
 private:
   static constexpr int maxPartBits{CHAR_BIT * sizeof(Part)};

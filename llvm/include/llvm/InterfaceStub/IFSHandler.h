@@ -16,6 +16,7 @@
 #define LLVM_INTERFACESTUB_IFSHANDLER_H
 
 #include "IFSStub.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VersionTuple.h"
 #include <memory>
@@ -36,29 +37,30 @@ struct IFSStub;
 const VersionTuple IFSVersionCurrent(3, 0);
 
 /// Attempts to read an IFS interface file from a StringRef buffer.
-Expected<std::unique_ptr<IFSStub>> readIFSFromBuffer(StringRef Buf);
+LLVM_ABI Expected<std::unique_ptr<IFSStub>> readIFSFromBuffer(StringRef Buf);
 
 /// Attempts to write an IFS interface file to a raw_ostream.
-Error writeIFSToOutputStream(raw_ostream &OS, const IFSStub &Stub);
+LLVM_ABI Error writeIFSToOutputStream(raw_ostream &OS, const IFSStub &Stub);
 
 /// Override the target platform inforation in the text stub.
-Error overrideIFSTarget(IFSStub &Stub, std::optional<IFSArch> OverrideArch,
-                        std::optional<IFSEndiannessType> OverrideEndianness,
-                        std::optional<IFSBitWidthType> OverrideBitWidth,
-                        std::optional<std::string> OverrideTriple);
+LLVM_ABI Error
+overrideIFSTarget(IFSStub &Stub, std::optional<IFSArch> OverrideArch,
+                  std::optional<IFSEndiannessType> OverrideEndianness,
+                  std::optional<IFSBitWidthType> OverrideBitWidth,
+                  std::optional<std::string> OverrideTriple);
 
 /// Validate the target platform inforation in the text stub.
-Error validateIFSTarget(IFSStub &Stub, bool ParseTriple);
+LLVM_ABI Error validateIFSTarget(IFSStub &Stub, bool ParseTriple);
 
 /// Strips target platform information from the text stub.
-void stripIFSTarget(IFSStub &Stub, bool StripTriple, bool StripArch,
-                    bool StripEndianness, bool StripBitWidth);
+LLVM_ABI void stripIFSTarget(IFSStub &Stub, bool StripTriple, bool StripArch,
+                             bool StripEndianness, bool StripBitWidth);
 
-Error filterIFSSyms(IFSStub &Stub, bool StripUndefined,
-                    const std::vector<std::string> &Exclude = {});
+LLVM_ABI Error filterIFSSyms(IFSStub &Stub, bool StripUndefined,
+                             const std::vector<std::string> &Exclude = {});
 
 /// Parse llvm triple string into a IFSTarget struct.
-IFSTarget parseTriple(StringRef TripleStr);
+LLVM_ABI IFSTarget parseTriple(StringRef TripleStr);
 
 } // end namespace ifs
 } // end namespace llvm

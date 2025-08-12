@@ -142,23 +142,39 @@ class AllocLikeOp<string mnemonic,
 // AssumeAlignmentOp
 //===----------------------------------------------------------------------===//
 
-def AssumeAlignmentOp : MemRef_Op<"assume_alignment"> {
+def AssumeAlignmentOp : MemRef_Op<"assume_alignment", [
+      DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+      Pure,
+      ViewLikeOpInterface,
+      SameOperandsAndResultType
+    ]> {
   let summary =
-      "assertion that gives alignment information to the input memref";
+      "assumption that gives alignment information to the input memref";
   let description = [{
-    The `assume_alignment` operation takes a memref and an integer of alignment
-    value, and internally annotates the buffer with the given alignment. If
-    the buffer isn't aligned to the given alignment, the behavior is undefined.
+      The `assume_alignment` operation takes a memref and an integer alignment
+      value. It returns a new SSA value of the same memref type, but associated
+      with the assumption that the underlying buffer is aligned to the given
+      alignment. 
 
-    This operation doesn't affect the semantics of a correct program. It's for
-    optimization only, and the optimization is best-effort.
+      If the buffer isn't aligned to the given alignment, its result is poison.
+      This operation doesn't affect the semantics of a program where the
+      alignment assumption holds true. It is intended for optimization purposes,
+      allowing the compiler to generate more efficient code based on the
+      alignment assumption. The optimization is best-effort.
   }];
   let arguments = (ins AnyMemRef:$memref,
                        ConfinedAttr<I32Attr, [IntPositive]>:$alignment);
-  let results = (outs);
+  let results = (outs AnyMemRef:$result);
 
   let assemblyFormat = "$memref `,` $alignment attr-dict `:` type($memref)";
+  let extraClassDeclaration = [{
+    MemRefType getType() { return ::llvm::cast<MemRefType>(getResult().getType()); }
+    
+    Value getViewSource() { return getMemref(); }
+  }];
+
   let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -323,7 +339,7 @@ def MemRef_AllocaOp : AllocLikeOp<"alloca", AutomaticAllocationScopeResource,[
     The `alloca` operation allocates memory on the stack, to be automatically
     released when control transfers back from the region of its closest
     surrounding operation with an
-    [`AutomaticAllocationScope`](../Traits.md/#automaticallocationscope) trait.
+    [`AutomaticAllocationScope`](../Traits/#automaticallocationscope) trait.
     The amount of memory allocated is specified by its memref and additional
     operands. For example:
 
@@ -1062,8 +1078,7 @@ def GenericAtomicRMWOp : MemRef_Op<"generic_atomic_rmw", [
 
 def AtomicYieldOp : MemRef_Op<"atomic_yield", [
       HasParent<"GenericAtomicRMWOp">,
-      Pure,
-      Terminator
+      Pure, Terminator, ReturnLike
     ]> {
   let summary = "yield operation for GenericAtomicRMWOp";
   let description = [{
@@ -1187,7 +1202,12 @@ def LoadOp : MemRef_Op<"load",
     The `load` op reads an element from a memref at the specified indices.
 
     The number of indices must match the rank of the memref. The indices must
-    be in-bounds: `0 <= idx < dim_size`
+    be in-bounds: `0 <= idx < dim_size`.
+
+    Lowerings of `memref.load` may emit attributes, e.g. `inbouds` + `nuw`
+    when converting to LLVM's `llvm.getelementptr`, that would cause undefined
+    behavior if indices are out of bounds or if computing the offset in the
+    memref would cause signed overflow of the `index` type.
 
     The single result of `memref.load` is a value with the same type as the
     element type of the memref.
@@ -1196,6 +1216,11 @@ def LoadOp : MemRef_Op<"load",
     be reused in the cache. For details, refer to the
     [https://llvm.org/docs/LangRef.html#load-instruction](LLVM load instruction).
 
+    An optional `alignment` attribute allows to specify the byte alignment of the
+    load operation. It must be a positive power of 2. The operation must access
+    memory at an address aligned to this boundary. Violations may lead to
+    architecture-specific faults or performance penalties.
+    A value of 0 indicates no specific alignment requirement.
     Example:
 
     ```mlir
@@ -1206,7 +1231,39 @@ def LoadOp : MemRef_Op<"load",
   let arguments = (ins Arg<AnyMemRef, "the reference to load from",
                            [MemRead]>:$memref,
                        Variadic<Index>:$indices,
-                       DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal);
+                       DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal,
+                       ConfinedAttr<OptionalAttr<I64Attr>,
+                                    [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment);
+
+  let builders = [
+    OpBuilder<(ins "Value":$memref,
+                   "ValueRange":$indices,
+                   CArg<"bool", "false">:$nontemporal,
+                   CArg<"uint64_t", "0">:$alignment), [{
+      return build($_builder, $_state, memref, indices, nontemporal,
+                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
+                                    nullptr);
+    }]>,
+    OpBuilder<(ins "Type":$resultType,
+                   "Value":$memref,
+                   "ValueRange":$indices,
+                   CArg<"bool", "false">:$nontemporal,
+                   CArg<"uint64_t", "0">:$alignment), [{
+      return build($_builder, $_state, resultType, memref, indices, nontemporal,
+                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
+                                    nullptr);
+    }]>,
+    OpBuilder<(ins "TypeRange":$resultTypes,
+                   "Value":$memref,
+                   "ValueRange":$indices,
+                   CArg<"bool", "false">:$nontemporal,
+                   CArg<"uint64_t", "0">:$alignment), [{
+      return build($_builder, $_state, resultTypes, memref, indices, nontemporal,
+                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
+                                    nullptr);
+    }]>
+  ];
+
   let results = (outs AnyType:$result);
 
   let extraClassDeclaration = [{
@@ -1342,14 +1399,14 @@ def MemRef_ReinterpretCastOp
     according to specified offsets, sizes, and strides.
 
     ```mlir
-    %result1 = memref.reinterpret_cast %arg0 to 
+    %result1 = memref.reinterpret_cast %arg0 to
       offset: [9],
       sizes: [4, 4],
       strides: [16, 2]
     : memref<8x8xf32, strided<[8, 1], offset: 0>> to
       memref<4x4xf32, strided<[16, 2], offset: 9>>
 
-    %result2 = memref.reinterpret_cast %result1 to 
+    %result2 = memref.reinterpret_cast %result1 to
       offset: [0],
       sizes: [2, 2],
       strides: [4, 2]
@@ -1755,6 +1812,12 @@ def MemRef_ExpandShapeOp : MemRef_ReassociativeReshapeOp<"expand_shape", [
         OpBuilder &b, Location loc, MemRefType expandedType,
         ArrayRef<ReassociationIndices> reassociation,
         ArrayRef<OpFoldResult> inputShape);
+
+    // Return a vector with all the static and dynamic values in the output shape.
+    SmallVector<OpFoldResult> getMixedOutputShape() {
+      OpBuilder builder(getContext());
+      return ::mlir::getMixedValues(getStaticOutputShape(), getOutputShape(), builder);
+    }
   }];
 
   let hasVerifier = 1;
@@ -1873,14 +1936,24 @@ def MemRef_StoreOp : MemRef_Op<"store",
   let summary = "store operation";
   let description = [{
     The `store` op stores an element into a memref at the specified indices.
-    
+
     The number of indices must match the rank of the memref. The indices must
-    be in-bounds: `0 <= idx < dim_size`
+    be in-bounds: `0 <= idx < dim_size`.
+
+    Lowerings of `memref.store` may emit attributes, e.g. `inbouds` + `nuw`
+    when converting to LLVM's `llvm.getelementptr`, that would cause undefined
+    behavior if indices are out of bounds or if computing the offset in the
+    memref would cause signed overflow of the `index` type.
 
     A set `nontemporal` attribute indicates that this store is not expected to
     be reused in the cache. For details, refer to the
     [https://llvm.org/docs/LangRef.html#store-instruction](LLVM store instruction).
 
+    An optional `alignment` attribute allows to specify the byte alignment of the
+    store operation. It must be a positive power of 2. The operation must access
+    memory at an address aligned to this boundary. Violations may lead to
+    architecture-specific faults or performance penalties.
+    A value of 0 indicates no specific alignment requirement.
     Example:
 
     ```mlir
@@ -1892,13 +1965,25 @@ def MemRef_StoreOp : MemRef_Op<"store",
                        Arg<AnyMemRef, "the reference to store to",
                            [MemWrite]>:$memref,
                        Variadic<Index>:$indices,
-                       DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal);
+                       DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal,
+                       ConfinedAttr<OptionalAttr<I64Attr>,
+                                    [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment);
 
   let builders = [
+    OpBuilder<(ins "Value":$valueToStore,
+                   "Value":$memref,
+                   "ValueRange":$indices,
+                   CArg<"bool", "false">:$nontemporal,
+                   CArg<"uint64_t", "0">:$alignment), [{
+      return build($_builder, $_state, valueToStore, memref, indices, nontemporal,
+                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
+                                    nullptr);
+    }]>,
     OpBuilder<(ins "Value":$valueToStore, "Value":$memref), [{
       $_state.addOperands(valueToStore);
       $_state.addOperands(memref);
-    }]>];
+    }]>
+  ];
 
   let extraClassDeclaration = [{
       Value getValueToStore() { return getOperand(0); }
@@ -2025,7 +2110,7 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
     Unlike the `reinterpret_cast`, the values are relative to the strided
     memref of the input (`%result1` in this case) and not its
     underlying memory.
-    
+
     Example 2:
 
     ```mlir
@@ -2302,6 +2387,7 @@ def MemRef_ViewOp : MemRef_Op<"view", [
 
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
