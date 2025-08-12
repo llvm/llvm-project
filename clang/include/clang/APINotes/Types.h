@@ -838,6 +838,7 @@ public:
   std::optional<std::string> SwiftRetainOp;
   std::optional<std::string> SwiftReleaseOp;
   std::optional<std::string> SwiftDefaultOwnership;
+  std::optional<std::string> SwiftDestroyOp;
 
   std::optional<EnumExtensibilityKind> EnumExtensibility;
 
@@ -886,6 +887,8 @@ public:
       SwiftReleaseOp = RHS.SwiftReleaseOp;
     if (!SwiftDefaultOwnership)
       SwiftDefaultOwnership = RHS.SwiftDefaultOwnership;
+    if (!SwiftDestroyOp)
+      SwiftDestroyOp = RHS.SwiftDestroyOp;
 
     if (!HasFlagEnum)
       setFlagEnum(RHS.isFlagEnum());
@@ -913,6 +916,7 @@ inline bool operator==(const TagInfo &LHS, const TagInfo &RHS) {
          LHS.SwiftRetainOp == RHS.SwiftRetainOp &&
          LHS.SwiftReleaseOp == RHS.SwiftReleaseOp &&
          LHS.SwiftDefaultOwnership == RHS.SwiftDefaultOwnership &&
+         LHS.SwiftDestroyOp == RHS.SwiftDestroyOp &&
          LHS.isFlagEnum() == RHS.isFlagEnum() &&
          LHS.isSwiftCopyable() == RHS.isSwiftCopyable() &&
          LHS.isSwiftEscapable() == RHS.isSwiftEscapable() &&
