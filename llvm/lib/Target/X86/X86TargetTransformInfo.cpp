@@ -3310,11 +3310,6 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
                             TTI::CastContextHint::None, CostKind);
   }
 
-  if (ISD == ISD::FP_ROUND && LTDest.second.getScalarType() == MVT::f16) {
-    // Conversion requires a libcall.
-    return InstructionCost::getInvalid();
-  }
-
   // TODO: Allow non-throughput costs that aren't binary.
   auto AdjustCost = [&CostKind](InstructionCost Cost,
                                 InstructionCost N = 1) -> InstructionCost {
