@@ -66,6 +66,62 @@ clang::CIRGen::CIRGenBuilderTy::getConstFP(mlir::Location loc, mlir::Type t,
   return create<cir::ConstantOp>(loc, cir::FPAttr::get(t, fpVal));
 }
 
+void CIRGenBuilderTy::computeGlobalViewIndicesFromFlatOffset(
+    int64_t offset, mlir::Type ty, cir::CIRDataLayout layout,
+    llvm::SmallVectorImpl<int64_t> &indices) {
+  if (!offset)
+    return;
+
+  mlir::Type subType;
+
+  auto getIndexAndNewOffset =
+      [](int64_t offset, int64_t eltSize) -> std::pair<int64_t, int64_t> {
+    int64_t divRet = offset / eltSize;
+    if (divRet < 0)
+      divRet -= 1; // make sure offset is positive
+    int64_t modRet = offset - (divRet * eltSize);
+    return {divRet, modRet};
+  };
+
+  if (auto arrayTy = mlir::dyn_cast<cir::ArrayType>(ty)) {
+    int64_t eltSize = layout.getTypeAllocSize(arrayTy.getElementType());
+    subType = arrayTy.getElementType();
+    const auto [index, newOffset] = getIndexAndNewOffset(offset, eltSize);
+    indices.push_back(index);
+    offset = newOffset;
+  } else if (auto recordTy = mlir::dyn_cast<cir::RecordType>(ty)) {
+    auto elts = recordTy.getMembers();
+    int64_t Pos = 0;
+    for (size_t i = 0; i < elts.size(); ++i) {
+      int64_t eltSize =
+          (int64_t)layout.getTypeAllocSize(elts[i]).getFixedValue();
+      unsigned alignMask = layout.getABITypeAlign(elts[i]).value() - 1;
+      if (recordTy.getPacked())
+        alignMask = 0;
+      // Union's fields have the same offset, so no need to change Pos here,
+      // we just need to find EltSize that is greater then the required offset.
+      // The same is true for the similar union type check below
+      if (!recordTy.isUnion())
+        Pos = (Pos + alignMask) & ~alignMask;
+      assert(offset >= 0);
+      if (offset < Pos + eltSize) {
+        indices.push_back(i);
+        subType = elts[i];
+        offset -= Pos;
+        break;
+      }
+      // No need to update Pos here, see the comment above.
+      if (!recordTy.isUnion())
+        Pos += eltSize;
+    }
+  } else {
+    llvm_unreachable("unexpected type");
+  }
+
+  assert(subType);
+  computeGlobalViewIndicesFromFlatOffset(offset, subType, layout, indices);
+}
+
 // This can't be defined in Address.h because that file is included by
 // CIRGenBuilder.h
 Address Address::withElementType(CIRGenBuilderTy &builder,

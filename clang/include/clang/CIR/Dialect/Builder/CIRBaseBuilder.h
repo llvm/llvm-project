@@ -214,9 +214,10 @@ public:
 
   /// Get constant address of a global variable as an MLIR attribute.
   cir::GlobalViewAttr getGlobalViewAttr(cir::PointerType type,
-                                        cir::GlobalOp globalOp) {
+                                        cir::GlobalOp globalOp,
+                                        mlir::ArrayAttr indices = {}) {
     auto symbol = mlir::FlatSymbolRefAttr::get(globalOp.getSymNameAttr());
-    return cir::GlobalViewAttr::get(type, symbol);
+    return cir::GlobalViewAttr::get(type, symbol, indices);
   }
 
   mlir::Value createGetGlobal(mlir::Location loc, cir::GlobalOp global) {
