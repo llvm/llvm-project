@@ -71,3 +71,6 @@
 // RUN: %clang_cl -m32 -arch:IA32 --target=i386-pc-win32 /Tc%s -fuse-ld=lld -### -fsanitize=address 2>&1 | FileCheck --check-prefix=INFER-LLD %s
 // INFER-LLD: lld-link
 // INFER-LLD-NOT: INFERASANLIBS
+
+// RUN: %clang_cl --target=x86_64-unknown-windows-msvc /Tc%s -flto -fuse-ld=lld -### -fprofile-sample-use=%S/Inputs/file.prof 2>&1 | FileCheck -check-prefix=CHECK-SAMPLE-PROFILE %s
+// CHECK-SAMPLE-PROFILE: "-lto-sample-profile:{{.*}}/file.prof"

@@ -140,6 +140,24 @@ define half @fround_h_5(half %a) nounwind {
 
 declare half @llvm.nearbyint.f16(half) nounwind readnone
 
+define half @fround_h_6(half %a) nounwind {
+; CHECK-LABEL: fround_h_6:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fround.h fa0, fa0, rne
+; CHECK-NEXT:    ret
+;
+; ZFHMIN-LABEL: fround_h_6:
+; ZFHMIN:       # %bb.0:
+; ZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; ZFHMIN-NEXT:    fround.s fa5, fa5, rne
+; ZFHMIN-NEXT:    fcvt.h.s fa0, fa5
+; ZFHMIN-NEXT:    ret
+  %call = tail call half @llvm.roundeven.f16(half %a) nounwind readnone
+  ret half %call
+}
+
+declare half @llvm.roundeven.f16(half) nounwind readnone
+
 
 define half @froundnx_h(half %a) nounwind {
 ; CHECK-LABEL: froundnx_h:
@@ -321,10 +339,10 @@ define half @select_loadfpimm(half %x) nounwind {
 ; CHECK-NEXT:    fmv.h.x fa5, zero
 ; CHECK-NEXT:    fle.h a0, fa5, fa0
 ; CHECK-NEXT:    fli.h fa0, 0.5
-; CHECK-NEXT:    bnez a0, .LBB16_2
+; CHECK-NEXT:    bnez a0, .LBB17_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    fneg.h fa0, fa0
-; CHECK-NEXT:  .LBB16_2: # %entry
+; CHECK-NEXT:  .LBB17_2: # %entry
 ; CHECK-NEXT:    ret
 ;
 ; ZFHMIN-LABEL: select_loadfpimm:
@@ -334,8 +352,8 @@ define half @select_loadfpimm(half %x) nounwind {
 ; ZFHMIN-NEXT:    fle.s a0, fa4, fa5
 ; ZFHMIN-NEXT:    xori a0, a0, 1
 ; ZFHMIN-NEXT:    slli a0, a0, 1
-; ZFHMIN-NEXT:    lui a1, %hi(.LCPI16_0)
-; ZFHMIN-NEXT:    addi a1, a1, %lo(.LCPI16_0)
+; ZFHMIN-NEXT:    lui a1, %hi(.LCPI17_0)
+; ZFHMIN-NEXT:    addi a1, a1, %lo(.LCPI17_0)
 ; ZFHMIN-NEXT:    add a0, a1, a0
 ; ZFHMIN-NEXT:    flh fa0, 0(a0)
 ; ZFHMIN-NEXT:    ret

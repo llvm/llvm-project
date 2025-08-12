@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/SetVector.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class Module;
@@ -97,38 +98,24 @@ class FunctionImportGlobalProcessing {
   /// linkage for a required promotion of a local to global scope.
   GlobalValue::LinkageTypes getLinkage(const GlobalValue *SGV, bool DoPromote);
 
+  /// The symbols with these names are moved to a different module and should be
+  /// promoted to external linkage where they are defined.
+  DenseSet<GlobalValue::GUID> SymbolsToMove;
+
 public:
+  LLVM_ABI
   FunctionImportGlobalProcessing(Module &M, const ModuleSummaryIndex &Index,
                                  SetVector<GlobalValue *> *GlobalsToImport,
-                                 bool ClearDSOLocalOnDeclarations)
-      : M(M), ImportIndex(Index), GlobalsToImport(GlobalsToImport),
-        ClearDSOLocalOnDeclarations(ClearDSOLocalOnDeclarations) {
-    // If we have a ModuleSummaryIndex but no function to import,
-    // then this is the primary module being compiled in a ThinLTO
-    // backend compilation, and we need to see if it has functions that
-    // may be exported to another backend compilation.
-    if (!GlobalsToImport)
-      HasExportedFunctions = ImportIndex.hasExportedFunctions(M);
-
-#ifndef NDEBUG
-    SmallVector<GlobalValue *, 4> Vec;
-    // First collect those in the llvm.used set.
-    collectUsedGlobalVariables(M, Vec, /*CompilerUsed=*/false);
-    // Next collect those in the llvm.compiler.used set.
-    collectUsedGlobalVariables(M, Vec, /*CompilerUsed=*/true);
-    Used = {Vec.begin(), Vec.end()};
-#endif
-  }
-
-  bool run();
+                                 bool ClearDSOLocalOnDeclarations);
+  LLVM_ABI void run();
 };
 
 /// Perform in-place global value handling on the given Module for
 /// exported local functions renamed and promoted for ThinLTO.
-bool renameModuleForThinLTO(
-    Module &M, const ModuleSummaryIndex &Index,
-    bool ClearDSOLocalOnDeclarations,
-    SetVector<GlobalValue *> *GlobalsToImport = nullptr);
+LLVM_ABI void
+renameModuleForThinLTO(Module &M, const ModuleSummaryIndex &Index,
+                       bool ClearDSOLocalOnDeclarations,
+                       SetVector<GlobalValue *> *GlobalsToImport = nullptr);
 
 } // End llvm namespace
 

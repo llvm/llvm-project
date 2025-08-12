@@ -105,7 +105,7 @@ define void @f17(ptr align 4 %0)
 }
 
 define void @f18(ptr nocapture %0)
-; CHECK: define void @f18(ptr nocapture %0)
+; CHECK: define void @f18(ptr captures(none) %0)
 {
         ret void;
 }
@@ -559,6 +559,16 @@ define void @wide_range_attribute(i128 range(i128 618970019642690137449562111, 6
 
 ; CHECK: define void @initializes(ptr initializes((-4, 0), (4, 8)) %a)
 define void @initializes(ptr initializes((-4, 0), (4, 8)) %a) {
+  ret void
+}
+
+; CHECK: define void @captures(ptr captures(address) %p)
+define void @captures(ptr captures(address) %p) {
+  ret void
+}
+
+; CHECK: define void @dead_on_return(ptr dead_on_return %p)
+define void @dead_on_return(ptr dead_on_return %p) {
   ret void
 }
 

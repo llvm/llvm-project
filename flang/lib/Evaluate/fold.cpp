@@ -73,7 +73,7 @@ Expr<SomeDerived> FoldOperation(
   for (auto &&[symbol, value] : std::move(structure)) {
     auto expr{Fold(context, std::move(value.value()))};
     if (IsPointer(symbol)) {
-      if (IsNullPointer(expr)) {
+      if (IsNullPointer(&expr)) {
         // Handle x%c when x designates a named constant of derived
         // type and %c is NULL() in that constant.
         expr = Expr<SomeType>{NullPointer{}};
@@ -86,9 +86,10 @@ Expr<SomeDerived> FoldOperation(
       // F2023: 10.1.12 (3)(a)
       // If comp-spec is not null() for the allocatable component the
       // structure constructor is not a constant expression.
-      isConstant &= IsNullPointer(expr);
+      isConstant &= IsNullAllocatable(&expr) || IsBareNullPointer(&expr);
     } else {
-      isConstant &= IsActuallyConstant(expr) || IsNullPointer(expr);
+      isConstant &=
+          IsActuallyConstant(expr) || IsNullPointerOrAllocatable(&expr);
       if (auto valueShape{GetConstantExtents(context, expr)}) {
         if (auto componentShape{GetConstantExtents(context, symbol)}) {
           if (GetRank(*componentShape) > 0 && GetRank(*valueShape) == 0) {
@@ -161,22 +162,17 @@ ArrayRef FoldOperation(FoldingContext &context, ArrayRef &&arrayRef) {
 }
 
 CoarrayRef FoldOperation(FoldingContext &context, CoarrayRef &&coarrayRef) {
-  std::vector<Subscript> subscript;
-  for (Subscript x : coarrayRef.subscript()) {
-    subscript.emplace_back(FoldOperation(context, std::move(x)));
-  }
+  DataRef base{FoldOperation(context, std::move(coarrayRef.base()))};
   std::vector<Expr<SubscriptInteger>> cosubscript;
   for (Expr<SubscriptInteger> x : coarrayRef.cosubscript()) {
     cosubscript.emplace_back(Fold(context, std::move(x)));
   }
-  CoarrayRef folded{std::move(coarrayRef.base()), std::move(subscript),
-      std::move(cosubscript)};
+  CoarrayRef folded{std::move(base), std::move(cosubscript)};
   if (std::optional<Expr<SomeInteger>> stat{coarrayRef.stat()}) {
     folded.set_stat(Fold(context, std::move(*stat)));
   }
-  if (std::optional<Expr<SomeInteger>> team{coarrayRef.team()}) {
-    folded.set_team(
-        Fold(context, std::move(*team)), coarrayRef.teamIsTeamNumber());
+  if (std::optional<Expr<SomeType>> team{coarrayRef.team()}) {
+    folded.set_team(Fold(context, std::move(*team)));
   }
   return folded;
 }
@@ -290,6 +286,16 @@ std::optional<Expr<SomeType>> FoldTransfer(
         // a warning will also have been produced.
         CHECK(status == InitialImage::NotAConstant);
       }
+    }
+  } else if (source && moldType) {
+    if (const auto *boz{std::get_if<BOZLiteralConstant>(&source->u)}) {
+      // TRANSFER(BOZ, MOLD=integer or real) extension
+      if (context.languageFeatures().ShouldWarn(
+              common::LanguageFeature::TransferBOZ)) {
+        context.messages().Say(common::LanguageFeature::TransferBOZ,
+            "TRANSFER(BOZ literal) is not standard"_port_en_US);
+      }
+      return Fold(context, ConvertToType(*moldType, Expr<SomeType>{*boz}));
     }
   }
   return std::nullopt;

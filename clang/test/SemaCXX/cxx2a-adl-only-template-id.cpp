@@ -27,7 +27,7 @@ int e = h<0>(q); // ok, found by unqualified lookup
 void fn() {
   f<0>(q);
   int f;
-  f<0>(q); // expected-error {{invalid operands to binary expression}} // expected-warning {{comparisons like 'X<=Y<=Z' don't have their mathematical meaning}}
+  f<0>(q); // expected-error {{invalid operands to binary expression}} // expected-error {{chained comparison 'X < Y > Z' does not behave the same as a mathematical expression}}
 }
 
 void disambig() {
@@ -61,7 +61,7 @@ struct A : X<int> { // expected-error {{no template named 'X'}}
 // Similarly for treating overload sets of functions as template names.
 struct g<int> {}; // expected-error {{'g' refers to a function template}}
 g<int>::Y xy; // expected-error {{no template named 'g'}} FIXME lies
-void xf(g<int> x); // expected-error {{variable has incomplete type 'void'}} expected-error 1+{{}} expected-note {{}}
+void xf(g<int> x); // expected-error {{variable has incomplete type 'void'}} expected-error 1+{{}}
 struct B : g<int> { // expected-error {{expected class name}}
   B() : g<int>() {} // expected-error {{expected class member or base class name}}
 };

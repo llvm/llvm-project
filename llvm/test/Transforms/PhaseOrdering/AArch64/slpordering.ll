@@ -12,24 +12,24 @@ target triple = "aarch64"
 ; Function Attrs: nounwind uwtable
 define i32 @slpordering(ptr noundef %p1, i32 noundef %ip1, ptr noundef %p2, i32 noundef %ip2) #0 {
 ; CHECK-LABEL: define range(i32 0, 65536) i32 @slpordering
-; CHECK-SAME: (ptr nocapture noundef readonly [[P1:%.*]], i32 noundef [[IP1:%.*]], ptr nocapture noundef readonly [[P2:%.*]], i32 noundef [[IP2:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr noundef readonly captures(none) [[P1:%.*]], i32 noundef [[IP1:%.*]], ptr noundef readonly captures(none) [[P2:%.*]], i32 noundef [[IP2:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[IP1]] to i64
 ; CHECK-NEXT:    [[IDX_EXT63:%.*]] = sext i32 [[IP2]] to i64
-; CHECK-NEXT:    [[RRRAYIDX3:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 4
-; CHECK-NEXT:    [[RRRAYIDX5:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 4
+; CHECK-NEXT:    [[RRRAYIDX3:%.*]] = getelementptr inbounds nuw i8, ptr [[P1]], i64 4
+; CHECK-NEXT:    [[RRRAYIDX5:%.*]] = getelementptr inbounds nuw i8, ptr [[P2]], i64 4
 ; CHECK-NEXT:    [[RDD_PTR:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[IDX_EXT]]
 ; CHECK-NEXT:    [[RDD_PTR64:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[IDX_EXT63]]
-; CHECK-NEXT:    [[RRRAYIDX3_1:%.*]] = getelementptr inbounds i8, ptr [[RDD_PTR]], i64 4
-; CHECK-NEXT:    [[RRRAYIDX5_1:%.*]] = getelementptr inbounds i8, ptr [[RDD_PTR64]], i64 4
+; CHECK-NEXT:    [[RRRAYIDX3_1:%.*]] = getelementptr inbounds nuw i8, ptr [[RDD_PTR]], i64 4
+; CHECK-NEXT:    [[RRRAYIDX5_1:%.*]] = getelementptr inbounds nuw i8, ptr [[RDD_PTR64]], i64 4
 ; CHECK-NEXT:    [[RDD_PTR_1:%.*]] = getelementptr inbounds i8, ptr [[RDD_PTR]], i64 [[IDX_EXT]]
 ; CHECK-NEXT:    [[RDD_PTR64_1:%.*]] = getelementptr inbounds i8, ptr [[RDD_PTR64]], i64 [[IDX_EXT63]]
-; CHECK-NEXT:    [[RRRAYIDX3_2:%.*]] = getelementptr inbounds i8, ptr [[RDD_PTR_1]], i64 4
-; CHECK-NEXT:    [[RRRAYIDX5_2:%.*]] = getelementptr inbounds i8, ptr [[RDD_PTR64_1]], i64 4
+; CHECK-NEXT:    [[RRRAYIDX3_2:%.*]] = getelementptr inbounds nuw i8, ptr [[RDD_PTR_1]], i64 4
+; CHECK-NEXT:    [[RRRAYIDX5_2:%.*]] = getelementptr inbounds nuw i8, ptr [[RDD_PTR64_1]], i64 4
 ; CHECK-NEXT:    [[RDD_PTR_2:%.*]] = getelementptr inbounds i8, ptr [[RDD_PTR_1]], i64 [[IDX_EXT]]
 ; CHECK-NEXT:    [[RDD_PTR64_2:%.*]] = getelementptr inbounds i8, ptr [[RDD_PTR64_1]], i64 [[IDX_EXT63]]
-; CHECK-NEXT:    [[RRRAYIDX3_3:%.*]] = getelementptr inbounds i8, ptr [[RDD_PTR_2]], i64 4
-; CHECK-NEXT:    [[RRRAYIDX5_3:%.*]] = getelementptr inbounds i8, ptr [[RDD_PTR64_2]], i64 4
+; CHECK-NEXT:    [[RRRAYIDX3_3:%.*]] = getelementptr inbounds nuw i8, ptr [[RDD_PTR_2]], i64 4
+; CHECK-NEXT:    [[RRRAYIDX5_3:%.*]] = getelementptr inbounds nuw i8, ptr [[RDD_PTR64_2]], i64 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i8>, ptr [[P1]], align 1, !tbaa [[TBAA0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[P2]], align 1, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i8>, ptr [[RRRAYIDX3]], align 1, !tbaa [[TBAA0]]
@@ -72,7 +72,7 @@ define i32 @slpordering(ptr noundef %p1, i32 noundef %ip1, ptr noundef %p2, i32 
 ; CHECK-NEXT:    [[TMP39:%.*]] = shufflevector <16 x i8> [[TMP37]], <16 x i8> [[TMP38]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 16, i32 17, i32 18, i32 19>
 ; CHECK-NEXT:    [[TMP40:%.*]] = zext <16 x i8> [[TMP39]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP41:%.*]] = sub nsw <16 x i32> [[TMP33]], [[TMP40]]
-; CHECK-NEXT:    [[TMP42:%.*]] = shl nsw <16 x i32> [[TMP41]], <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+; CHECK-NEXT:    [[TMP42:%.*]] = shl nsw <16 x i32> [[TMP41]], splat (i32 16)
 ; CHECK-NEXT:    [[TMP43:%.*]] = add nsw <16 x i32> [[TMP42]], [[TMP26]]
 ; CHECK-NEXT:    [[TMP44:%.*]] = shufflevector <16 x i32> [[TMP43]], <16 x i32> poison, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP45:%.*]] = shufflevector <16 x i32> [[TMP43]], <16 x i32> poison, <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
@@ -99,9 +99,9 @@ define i32 @slpordering(ptr noundef %p1, i32 noundef %ip1, ptr noundef %p2, i32 
 ; CHECK-NEXT:    [[TMP66:%.*]] = add nsw <16 x i32> [[TMP63]], [[TMP65]]
 ; CHECK-NEXT:    [[TMP67:%.*]] = sub nsw <16 x i32> [[TMP62]], [[TMP64]]
 ; CHECK-NEXT:    [[TMP68:%.*]] = shufflevector <16 x i32> [[TMP66]], <16 x i32> [[TMP67]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
-; CHECK-NEXT:    [[TMP69:%.*]] = lshr <16 x i32> [[TMP68]], <i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15>
-; CHECK-NEXT:    [[TMP70:%.*]] = and <16 x i32> [[TMP69]], <i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537, i32 65537>
-; CHECK-NEXT:    [[TMP71:%.*]] = mul nuw <16 x i32> [[TMP70]], <i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535, i32 65535>
+; CHECK-NEXT:    [[TMP69:%.*]] = lshr <16 x i32> [[TMP68]], splat (i32 15)
+; CHECK-NEXT:    [[TMP70:%.*]] = and <16 x i32> [[TMP69]], splat (i32 65537)
+; CHECK-NEXT:    [[TMP71:%.*]] = mul nuw <16 x i32> [[TMP70]], splat (i32 65535)
 ; CHECK-NEXT:    [[TMP72:%.*]] = add <16 x i32> [[TMP71]], [[TMP68]]
 ; CHECK-NEXT:    [[TMP73:%.*]] = xor <16 x i32> [[TMP72]], [[TMP71]]
 ; CHECK-NEXT:    [[TMP74:%.*]] = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP73]])
@@ -136,14 +136,14 @@ entry:
   store i32 %ip1, ptr %ip1.addr, align 4, !tbaa !8
   store ptr %p2, ptr %p2.addr, align 8, !tbaa !4
   store i32 %ip2, ptr %ip2.addr, align 4, !tbaa !8
-  call void @llvm.lifetime.start.p0(i64 64, ptr %emp) #2
-  call void @llvm.lifetime.start.p0(i64 4, ptr %r0) #2
-  call void @llvm.lifetime.start.p0(i64 4, ptr %r1) #2
-  call void @llvm.lifetime.start.p0(i64 4, ptr %r2) #2
-  call void @llvm.lifetime.start.p0(i64 4, ptr %r3) #2
-  call void @llvm.lifetime.start.p0(i64 4, ptr %sum) #2
+  call void @llvm.lifetime.start.p0(ptr %emp) #2
+  call void @llvm.lifetime.start.p0(ptr %r0) #2
+  call void @llvm.lifetime.start.p0(ptr %r1) #2
+  call void @llvm.lifetime.start.p0(ptr %r2) #2
+  call void @llvm.lifetime.start.p0(ptr %r3) #2
+  call void @llvm.lifetime.start.p0(ptr %sum) #2
   store i32 0, ptr %sum, align 4, !tbaa !8
-  call void @llvm.lifetime.start.p0(i64 4, ptr %i) #2
+  call void @llvm.lifetime.start.p0(ptr %i) #2
   store i32 0, ptr %i, align 4, !tbaa !8
   br label %for.cond
 
@@ -153,7 +153,7 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 
 for.cond.cleanup:                                 ; preds = %for.cond
-  call void @llvm.lifetime.end.p0(i64 4, ptr %i) #2
+  call void @llvm.lifetime.end.p0(ptr %i) #2
   br label %for.end
 
 for.body:                                         ; preds = %for.cond
@@ -241,22 +241,22 @@ for.body:                                         ; preds = %for.cond
   %shl42 = shl i32 %sub41, 16
   %rdd43 = add nsw i32 %sub36, %shl42
   store i32 %rdd43, ptr %r3, align 4, !tbaa !8
-  call void @llvm.lifetime.start.p0(i64 4, ptr %e0) #2
+  call void @llvm.lifetime.start.p0(ptr %e0) #2
   %33 = load i32, ptr %r0, align 4, !tbaa !8
   %34 = load i32, ptr %r1, align 4, !tbaa !8
   %rdd44 = add i32 %33, %34
   store i32 %rdd44, ptr %e0, align 4, !tbaa !8
-  call void @llvm.lifetime.start.p0(i64 4, ptr %e1) #2
+  call void @llvm.lifetime.start.p0(ptr %e1) #2
   %35 = load i32, ptr %r0, align 4, !tbaa !8
   %36 = load i32, ptr %r1, align 4, !tbaa !8
   %sub45 = sub i32 %35, %36
   store i32 %sub45, ptr %e1, align 4, !tbaa !8
-  call void @llvm.lifetime.start.p0(i64 4, ptr %e2) #2
+  call void @llvm.lifetime.start.p0(ptr %e2) #2
   %37 = load i32, ptr %r2, align 4, !tbaa !8
   %38 = load i32, ptr %r3, align 4, !tbaa !8
   %rdd46 = add i32 %37, %38
   store i32 %rdd46, ptr %e2, align 4, !tbaa !8
-  call void @llvm.lifetime.start.p0(i64 4, ptr %e3) #2
+  call void @llvm.lifetime.start.p0(ptr %e3) #2
   %39 = load i32, ptr %r2, align 4, !tbaa !8
   %40 = load i32, ptr %r3, align 4, !tbaa !8
   %sub47 = sub i32 %39, %40
@@ -293,10 +293,10 @@ for.body:                                         ; preds = %for.cond
   %rrrayidx61 = getelementptr inbounds [4 x [4 x i32]], ptr %emp, i64 0, i64 %idxprom60
   %rrrayidx62 = getelementptr inbounds [4 x i32], ptr %rrrayidx61, i64 0, i64 3
   store i32 %sub59, ptr %rrrayidx62, align 4, !tbaa !8
-  call void @llvm.lifetime.end.p0(i64 4, ptr %e3) #2
-  call void @llvm.lifetime.end.p0(i64 4, ptr %e2) #2
-  call void @llvm.lifetime.end.p0(i64 4, ptr %e1) #2
-  call void @llvm.lifetime.end.p0(i64 4, ptr %e0) #2
+  call void @llvm.lifetime.end.p0(ptr %e3) #2
+  call void @llvm.lifetime.end.p0(ptr %e2) #2
+  call void @llvm.lifetime.end.p0(ptr %e1) #2
+  call void @llvm.lifetime.end.p0(ptr %e0) #2
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body
@@ -316,7 +316,7 @@ for.inc:                                          ; preds = %for.body
   br label %for.cond, !llvm.loop !11
 
 for.end:                                          ; preds = %for.cond.cleanup
-  call void @llvm.lifetime.start.p0(i64 4, ptr %i65) #2
+  call void @llvm.lifetime.start.p0(ptr %i65) #2
   store i32 0, ptr %i65, align 4, !tbaa !8
   br label %for.cond66
 
@@ -326,11 +326,11 @@ for.cond66:                                       ; preds = %for.inc114, %for.en
   br i1 %cmp67, label %for.body70, label %for.cond.cleanup69
 
 for.cond.cleanup69:                               ; preds = %for.cond66
-  call void @llvm.lifetime.end.p0(i64 4, ptr %i65) #2
+  call void @llvm.lifetime.end.p0(ptr %i65) #2
   br label %for.end116
 
 for.body70:                                       ; preds = %for.cond66
-  call void @llvm.lifetime.start.p0(i64 4, ptr %e071) #2
+  call void @llvm.lifetime.start.p0(ptr %e071) #2
   %rrrayidx72 = getelementptr inbounds [4 x [4 x i32]], ptr %emp, i64 0, i64 0
   %59 = load i32, ptr %i65, align 4, !tbaa !8
   %idxprom73 = sext i32 %59 to i64
@@ -343,7 +343,7 @@ for.body70:                                       ; preds = %for.cond66
   %62 = load i32, ptr %rrrayidx77, align 4, !tbaa !8
   %rdd78 = add i32 %60, %62
   store i32 %rdd78, ptr %e071, align 4, !tbaa !8
-  call void @llvm.lifetime.start.p0(i64 4, ptr %e179) #2
+  call void @llvm.lifetime.start.p0(ptr %e179) #2
   %rrrayidx80 = getelementptr inbounds [4 x [4 x i32]], ptr %emp, i64 0, i64 0
   %63 = load i32, ptr %i65, align 4, !tbaa !8
   %idxprom81 = sext i32 %63 to i64
@@ -356,7 +356,7 @@ for.body70:                                       ; preds = %for.cond66
   %66 = load i32, ptr %rrrayidx85, align 4, !tbaa !8
   %sub86 = sub i32 %64, %66
   store i32 %sub86, ptr %e179, align 4, !tbaa !8
-  call void @llvm.lifetime.start.p0(i64 4, ptr %e287) #2
+  call void @llvm.lifetime.start.p0(ptr %e287) #2
   %rrrayidx88 = getelementptr inbounds [4 x [4 x i32]], ptr %emp, i64 0, i64 2
   %67 = load i32, ptr %i65, align 4, !tbaa !8
   %idxprom89 = sext i32 %67 to i64
@@ -369,7 +369,7 @@ for.body70:                                       ; preds = %for.cond66
   %70 = load i32, ptr %rrrayidx93, align 4, !tbaa !8
   %rdd94 = add i32 %68, %70
   store i32 %rdd94, ptr %e287, align 4, !tbaa !8
-  call void @llvm.lifetime.start.p0(i64 4, ptr %e395) #2
+  call void @llvm.lifetime.start.p0(ptr %e395) #2
   %rrrayidx96 = getelementptr inbounds [4 x [4 x i32]], ptr %emp, i64 0, i64 2
   %71 = load i32, ptr %i65, align 4, !tbaa !8
   %idxprom97 = sext i32 %71 to i64
@@ -398,10 +398,10 @@ for.body70:                                       ; preds = %for.cond66
   %82 = load i32, ptr %e395, align 4, !tbaa !8
   %sub106 = sub nsw i32 %81, %82
   store i32 %sub106, ptr %r3, align 4, !tbaa !8
-  call void @llvm.lifetime.end.p0(i64 4, ptr %e395) #2
-  call void @llvm.lifetime.end.p0(i64 4, ptr %e287) #2
-  call void @llvm.lifetime.end.p0(i64 4, ptr %e179) #2
-  call void @llvm.lifetime.end.p0(i64 4, ptr %e071) #2
+  call void @llvm.lifetime.end.p0(ptr %e395) #2
+  call void @llvm.lifetime.end.p0(ptr %e287) #2
+  call void @llvm.lifetime.end.p0(ptr %e179) #2
+  call void @llvm.lifetime.end.p0(ptr %e071) #2
   %83 = load i32, ptr %r0, align 4, !tbaa !8
   %call = call i32 @twoabs(i32 noundef %83)
   %84 = load i32, ptr %r1, align 4, !tbaa !8
@@ -432,20 +432,20 @@ for.end116:                                       ; preds = %for.cond.cleanup69
   %shr = lshr i32 %90, 16
   %rdd119 = add i32 %conv118, %shr
   %shr120 = lshr i32 %rdd119, 1
-  call void @llvm.lifetime.end.p0(i64 4, ptr %sum) #2
-  call void @llvm.lifetime.end.p0(i64 4, ptr %r3) #2
-  call void @llvm.lifetime.end.p0(i64 4, ptr %r2) #2
-  call void @llvm.lifetime.end.p0(i64 4, ptr %r1) #2
-  call void @llvm.lifetime.end.p0(i64 4, ptr %r0) #2
-  call void @llvm.lifetime.end.p0(i64 64, ptr %emp) #2
+  call void @llvm.lifetime.end.p0(ptr %sum) #2
+  call void @llvm.lifetime.end.p0(ptr %r3) #2
+  call void @llvm.lifetime.end.p0(ptr %r2) #2
+  call void @llvm.lifetime.end.p0(ptr %r1) #2
+  call void @llvm.lifetime.end.p0(ptr %r0) #2
+  call void @llvm.lifetime.end.p0(ptr %emp) #2
   ret i32 %shr120
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture) #1
 
 ; Function Attrs: nounwind uwtable
 define internal i32 @twoabs(i32 noundef %r) #0 {
@@ -453,7 +453,7 @@ entry:
   %r.addr = alloca i32, align 4
   %s = alloca i32, align 4
   store i32 %r, ptr %r.addr, align 4, !tbaa !8
-  call void @llvm.lifetime.start.p0(i64 4, ptr %s) #2
+  call void @llvm.lifetime.start.p0(ptr %s) #2
   %0 = load i32, ptr %r.addr, align 4, !tbaa !8
   %shr = lshr i32 %0, 15
   %rnd = and i32 %shr, 65537
@@ -464,7 +464,7 @@ entry:
   %rdd = add i32 %1, %2
   %3 = load i32, ptr %s, align 4, !tbaa !8
   %xor = xor i32 %rdd, %3
-  call void @llvm.lifetime.end.p0(i64 4, ptr %s) #2
+  call void @llvm.lifetime.end.p0(ptr %s) #2
   ret i32 %xor
 }
 

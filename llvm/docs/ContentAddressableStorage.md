@@ -2,12 +2,12 @@
 
 ## Introduction to CAS
 
-Content Addressable Storage, or `CAS`, is a storage system where it assigns
+Content Addressable Storage, or `CAS`, is a storage system that assigns
 unique addresses to the data stored. It is very useful for data deduplicaton
 and creating unique identifiers.
 
-Unlikely other kind of storage system like file system, CAS is immutable. It
-is more reliable to model a computation when representing the inputs and outputs
+Unlike other kinds of storage systems, like file systems, CAS is immutable. It
+is more reliable to model a computation by representing the inputs and outputs
 of the computation using objects stored in CAS.
 
 The basic unit of the CAS library is a CASObject, where it contains:
@@ -24,11 +24,10 @@ struct CASObject {
 }
 ```
 
-Such abstraction can allow simple composition of CASObjects into a DAG to
-represent complicated data structure while still allowing data deduplication.
-Note you can compare two DAGs by just comparing the CASObject hash of two
-root nodes.
-
+With this abstraction, it is possible to compose `CASObject`s into a DAG that is
+capable of representing complicated data structures, while still allowing data
+deduplication. Note you can compare two DAGs by just comparing the CASObject
+hash of two root nodes.
 
 
 ## LLVM CAS Library User Guide
@@ -47,11 +46,11 @@ along. It has following properties:
 `ObjectRef` created by different `ObjectStore` cannot be cross-referenced or
 compared.
 * `ObjectRef` doesn't guarantee the existence of the CASObject it points to. An
-explicitly load is required before accessing the data stored in CASObject.
-This load can also fail, for reasons like but not limited to: object does
+explicit load is required before accessing the data stored in CASObject.
+This load can also fail, for reasons like (but not limited to): object does
 not exist, corrupted CAS storage, operation timeout, etc.
-* If two `ObjectRef` are equal, it is guarantee that the object they point to
-(if exists) are identical. If they are not equal, the underlying objects are
+* If two `ObjectRef` are equal, it is guaranteed that the object they point to
+are identical (if they exist). If they are not equal, the underlying objects are
 guaranteed to be not the same.
 
 ### ObjectProxy
@@ -88,33 +87,35 @@ It also provides APIs to convert between `ObjectRef`, `ObjectProxy` and
 
 ## CAS Library Implementation Guide
 
-The LLVM ObjectStore APIs are designed so that it is easy to add
-customized CAS implementation that are interchangeable with builtin
-CAS implementations.
+The LLVM ObjectStore API was designed so that it is easy to add
+customized CAS implementations that are interchangeable with the builtin
+ones.
 
 To add your own implementation, you just need to add a subclass to
 `llvm::cas::ObjectStore` and implement all its pure virtual methods.
 To be interchangeable with LLVM ObjectStore, the new CAS implementation
 needs to conform to following contracts:
 
-* Different CASObject stored in the ObjectStore needs to have a different hash
-and result in a different `ObjectRef`. Vice versa, same CASObject should have
-same hash and same `ObjectRef`. Note two different CASObjects with identical
-data but different references are considered different objects.
-* `ObjectRef`s are comparable within the same `ObjectStore` instance, and can
-be used to determine the equality of the underlying CASObjects.
-* The loaded objects from the ObjectStore need to have the lifetime to be at
-least as long as the ObjectStore itself.
+* Different CASObjects stored in the ObjectStore need to have a different hash
+and result in a different `ObjectRef`. Similarly, the same CASObject should have
+the same hash and the same `ObjectRef`. Note: two different CASObjects with
+identical data but different references are considered different objects.
+* `ObjectRef`s are only comparable within the same `ObjectStore` instance, and
+can be used to determine the equality of the underlying CASObjects.
+* The loaded objects from the ObjectStore need to have a lifetime at least as
+long as the ObjectStore itself so it is always legal to access the loaded data
+without holding on the `ObjectProxy` until the `ObjectStore` is destroyed.
+
 
 If not specified, the behavior can be implementation defined. For example,
 `ObjectRef` can be used to point to a loaded CASObject so
 `ObjectStore` never fails to load. It is also legal to use a stricter model
-than required. For example, an `ObjectRef` that can be used to compare
-objects between different `ObjectStore` instances is legal but user
-of the ObjectStore should not depend on this behavior.
+than required. For example, the underlying value inside `ObjectRef` can be
+the unique indentities of the objects across multiple `ObjectStore` instances,
+but comparing such `ObjectRef` from different `ObjectStore` is still illegal.
 
-For CAS library implementer, there is also a `ObjectHandle` class that
+For CAS library implementers, there is also an `ObjectHandle` class that
 is an internal representation of a loaded CASObject reference.
-`ObjectProxy` is just a pair of `ObjectHandle` and `ObjectStore`, because
+`ObjectProxy` is just a pair of `ObjectHandle` and `ObjectStore`, and
 just like `ObjectRef`, `ObjectHandle` is only useful when paired with
-the ObjectStore that knows about the loaded CASObject.
+the `ObjectStore` that knows about the loaded CASObject.

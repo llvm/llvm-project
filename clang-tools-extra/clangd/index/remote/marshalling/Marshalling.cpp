@@ -126,6 +126,20 @@ Marshaller::fromProtobuf(const RefsRequest *Message) {
   return Req;
 }
 
+llvm::Expected<clangd::ContainedRefsRequest>
+Marshaller::fromProtobuf(const ContainedRefsRequest *Message) {
+  clangd::ContainedRefsRequest Req;
+  if (!Message->has_id())
+    return error("ContainedRefsRequest requires an id.");
+  auto ID = SymbolID::fromStr(Message->id());
+  if (!ID)
+    return ID.takeError();
+  Req.ID = *ID;
+  if (Message->has_limit())
+    Req.Limit = Message->limit();
+  return Req;
+}
+
 llvm::Expected<clangd::RelationsRequest>
 Marshaller::fromProtobuf(const RelationsRequest *Message) {
   clangd::RelationsRequest Req;
@@ -189,6 +203,30 @@ llvm::Expected<clangd::Ref> Marshaller::fromProtobuf(const Ref &Message) {
     return Location.takeError();
   Result.Location = *Location;
   Result.Kind = static_cast<RefKind>(Message.kind());
+  auto ContainerID = SymbolID::fromStr(Message.container());
+  if (ContainerID)
+    Result.Container = *ContainerID;
+  return Result;
+}
+
+llvm::Expected<clangd::ContainedRefsResult>
+Marshaller::fromProtobuf(const ContainedRef &Message) {
+  clangd::ContainedRefsResult Result;
+  if (!Message.has_location())
+    return error("ContainedRef must have a location.");
+  if (!Message.has_kind())
+    return error("ContainedRef must have a kind.");
+  if (!Message.has_symbol())
+    return error("ContainedRef must have a symbol.");
+  auto Location = fromProtobuf(Message.location());
+  if (!Location)
+    return Location.takeError();
+  Result.Location = *Location;
+  Result.Kind = static_cast<RefKind>(Message.kind());
+  auto Symbol = SymbolID::fromStr(Message.symbol());
+  if (!Symbol)
+    return Symbol.takeError();
+  Result.Symbol = *Symbol;
   return Result;
 }
 
@@ -244,6 +282,15 @@ RefsRequest Marshaller::toProtobuf(const clangd::RefsRequest &From) {
   return RPCRequest;
 }
 
+ContainedRefsRequest
+Marshaller::toProtobuf(const clangd::ContainedRefsRequest &From) {
+  ContainedRefsRequest RPCRequest;
+  RPCRequest.set_id(From.ID.str());
+  if (From.Limit)
+    RPCRequest.set_limit(*From.Limit);
+  return RPCRequest;
+}
+
 RelationsRequest Marshaller::toProtobuf(const clangd::RelationsRequest &From) {
   RelationsRequest RPCRequest;
   for (const auto &ID : From.Subjects)
@@ -296,6 +343,19 @@ llvm::Expected<Ref> Marshaller::toProtobuf(const clangd::Ref &From) {
   if (!Location)
     return Location.takeError();
   *Result.mutable_location() = *Location;
+  Result.set_container(From.Container.str());
+  return Result;
+}
+
+llvm::Expected<ContainedRef>
+Marshaller::toProtobuf(const clangd::ContainedRefsResult &From) {
+  ContainedRef Result;
+  auto Location = toProtobuf(From.Location);
+  if (!Location)
+    return Location.takeError();
+  *Result.mutable_location() = *Location;
+  Result.set_kind(static_cast<uint32_t>(From.Kind));
+  *Result.mutable_symbol() = From.Symbol.str();
   return Result;
 }
 

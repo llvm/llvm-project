@@ -63,11 +63,13 @@ export int aa = 43;
   std::string BMIPath = llvm::Twine(TestDir + "/a.pcm").str();
 
   {
-    IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-        CompilerInstance::createDiagnostics(new DiagnosticOptions());
     CreateInvocationOptions CIOpts;
-    CIOpts.Diags = Diags;
     CIOpts.VFS = llvm::vfs::createPhysicalFileSystem();
+
+    DiagnosticOptions DiagOpts;
+    IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
+        CompilerInstance::createDiagnostics(*CIOpts.VFS, DiagOpts);
+    CIOpts.Diags = Diags;
 
     const char *Args[] = {"clang++",       "-std=c++20",
                           "--precompile",  "-working-directory",
@@ -84,9 +86,8 @@ export int aa = 43;
 
     Buf->release();
 
-    CompilerInstance Instance;
-    Instance.setDiagnostics(Diags.get());
-    Instance.setInvocation(Invocation);
+    CompilerInstance Instance(std::move(Invocation));
+    Instance.setDiagnostics(Diags);
 
     Instance.getFrontendOpts().OutputFile = BMIPath;
 
@@ -103,11 +104,12 @@ export int aa = 43;
   }
 
   {
-    IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-        CompilerInstance::createDiagnostics(new DiagnosticOptions());
     CreateInvocationOptions CIOpts;
-    CIOpts.Diags = Diags;
     CIOpts.VFS = llvm::vfs::createPhysicalFileSystem();
+    DiagnosticOptions DiagOpts;
+    IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
+        CompilerInstance::createDiagnostics(*CIOpts.VFS, DiagOpts);
+    CIOpts.Diags = Diags;
 
     std::string BMIPath = llvm::Twine(TestDir + "/a.pcm").str();
     const char *Args[] = {
@@ -118,10 +120,9 @@ export int aa = 43;
     EXPECT_TRUE(Invocation);
     Invocation->getFrontendOpts().DisableFree = false;
 
-    CompilerInstance Clang;
+    CompilerInstance Clang(std::move(Invocation));
 
-    Clang.setInvocation(Invocation);
-    Clang.setDiagnostics(Diags.get());
+    Clang.setDiagnostics(Diags);
     FileManager *FM = Clang.createFileManager(CIOpts.VFS);
     Clang.createSourceManager(*FM);
 

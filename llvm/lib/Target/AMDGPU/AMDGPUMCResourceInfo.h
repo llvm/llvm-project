@@ -58,6 +58,12 @@ private:
   // Assigns expression for Max S/V/A-GPRs to the referenced symbols.
   void assignMaxRegs(MCContext &OutContext);
 
+  // Take flattened max of cyclic function calls' knowns. For example, for
+  // a cycle A->B->C->D->A, take max(A, B, C, D) for A and have B, C, D have the
+  // propgated value from A.
+  const MCExpr *flattenedCycleMax(MCSymbol *RecSym, ResourceInfoKind RIK,
+                                  MCContext &OutContext);
+
 public:
   MCResourceInfo() = default;
   void addMaxVGPRCandidate(int32_t candidate) {
@@ -71,9 +77,9 @@ public:
   }
 
   MCSymbol *getSymbol(StringRef FuncName, ResourceInfoKind RIK,
-                      MCContext &OutContext);
+                      MCContext &OutContext, bool IsLocal);
   const MCExpr *getSymRefExpr(StringRef FuncName, ResourceInfoKind RIK,
-                              MCContext &Ctx);
+                              MCContext &Ctx, bool IsLocal);
 
   void reset();
 
@@ -92,7 +98,7 @@ public:
   /// functions with indirect calls should be assigned the module level maximum.
   void gatherResourceInfo(
       const MachineFunction &MF,
-      const AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo &FRI,
+      const AMDGPUResourceUsageAnalysisWrapperPass::FunctionResourceInfo &FRI,
       MCContext &OutContext);
 
   const MCExpr *createTotalNumVGPRs(const MachineFunction &MF, MCContext &Ctx);

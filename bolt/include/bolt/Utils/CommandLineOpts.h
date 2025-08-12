@@ -17,7 +17,23 @@
 
 namespace opts {
 
-extern bool HeatmapMode;
+enum HeatmapModeKind {
+  HM_None = 0,
+  HM_Exclusive, // llvm-bolt-heatmap
+  HM_Optional   // perf2bolt --heatmap
+};
+
+using HeatmapBlockSizes = std::vector<unsigned>;
+struct HeatmapBlockSpecParser : public llvm::cl::parser<HeatmapBlockSizes> {
+  explicit HeatmapBlockSpecParser(llvm::cl::Option &O)
+      : llvm::cl::parser<HeatmapBlockSizes>(O) {}
+  // Return true on error.
+  bool parse(llvm::cl::Option &O, llvm::StringRef ArgName, llvm::StringRef Arg,
+             HeatmapBlockSizes &Val);
+};
+
+extern HeatmapModeKind HeatmapMode;
+extern bool BinaryAnalysisMode;
 
 extern llvm::cl::OptionCategory BoltCategory;
 extern llvm::cl::OptionCategory BoltDiffCategory;
@@ -27,20 +43,26 @@ extern llvm::cl::OptionCategory BoltOutputCategory;
 extern llvm::cl::OptionCategory AggregatorCategory;
 extern llvm::cl::OptionCategory BoltInstrCategory;
 extern llvm::cl::OptionCategory HeatmapCategory;
+extern llvm::cl::OptionCategory BinaryAnalysisCategory;
 
 extern llvm::cl::opt<unsigned> AlignText;
 extern llvm::cl::opt<unsigned> AlignFunctions;
 extern llvm::cl::opt<bool> AggregateOnly;
+extern llvm::cl::opt<bool> ArmSPE;
 extern llvm::cl::opt<unsigned> BucketsPerLine;
+extern llvm::cl::opt<bool> CompactCodeModel;
 extern llvm::cl::opt<bool> DiffOnly;
 extern llvm::cl::opt<bool> EnableBAT;
 extern llvm::cl::opt<bool> EqualizeBBCounts;
+extern llvm::cl::opt<bool> ForcePatch;
 extern llvm::cl::opt<bool> RemoveSymtab;
 extern llvm::cl::opt<unsigned> ExecutionCountThreshold;
-extern llvm::cl::opt<unsigned> HeatmapBlock;
+extern llvm::cl::opt<HeatmapBlockSizes, false, HeatmapBlockSpecParser>
+    HeatmapBlock;
 extern llvm::cl::opt<unsigned long long> HeatmapMaxAddress;
 extern llvm::cl::opt<unsigned long long> HeatmapMinAddress;
 extern llvm::cl::opt<bool> HeatmapPrintMappings;
+extern llvm::cl::opt<std::string> HeatmapOutput;
 extern llvm::cl::opt<bool> HotData;
 extern llvm::cl::opt<bool> HotFunctionsAtEnd;
 extern llvm::cl::opt<bool> HotText;
@@ -77,6 +99,10 @@ extern llvm::cl::opt<unsigned> Verbosity;
 
 /// Return true if we should process all functions in the binary.
 bool processAllFunctions();
+
+enum GadgetScannerKind { GS_PACRET, GS_PAUTH, GS_ALL };
+
+extern llvm::cl::bits<GadgetScannerKind> GadgetScannersToRun;
 
 } // namespace opts
 

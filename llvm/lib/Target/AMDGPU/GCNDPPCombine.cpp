@@ -70,9 +70,7 @@ class GCNDPPCombine {
                               RegSubRegPair CombOldVGPR, bool CombBCZ,
                               bool IsShrinkable) const;
 
-  bool hasNoImmOrEqual(MachineInstr &MI,
-                       unsigned OpndName,
-                       int64_t Value,
+  bool hasNoImmOrEqual(MachineInstr &MI, AMDGPU::OpName OpndName, int64_t Value,
                        int64_t Mask = -1) const;
 
   bool combineDPPMov(MachineInstr &MI) const;
@@ -100,8 +98,7 @@ public:
   }
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties()
-      .set(MachineFunctionProperties::Property::IsSSA);
+    return MachineFunctionProperties().setIsSSA();
   }
 };
 
@@ -217,6 +214,11 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
 
   bool HasVOP3DPP = ST->hasVOP3DPP();
   auto OrigOp = OrigMI.getOpcode();
+  if (ST->useRealTrue16Insts() && AMDGPU::isTrue16Inst(OrigOp)) {
+    LLVM_DEBUG(
+        dbgs() << "  failed: Did not expect any 16-bit uses of dpp values\n");
+    return nullptr;
+  }
   auto DPPOp = getDPPOp(OrigOp, IsShrinkable);
   if (DPPOp == -1) {
     LLVM_DEBUG(dbgs() << "  failed: no DPP opcode\n");
@@ -419,6 +421,11 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
           AMDGPU::hasNamedOperand(DPPOp, AMDGPU::OpName::byte_sel)) {
         DPPInst.addImm(ByteSelOpr->getImm());
       }
+      if (MachineOperand *BitOp3 =
+              TII->getNamedOperand(OrigMI, AMDGPU::OpName::bitop3)) {
+        assert(AMDGPU::hasNamedOperand(DPPOp, AMDGPU::OpName::bitop3));
+        DPPInst.add(*BitOp3);
+      }
     }
     DPPInst.add(*TII->getNamedOperand(MovMI, AMDGPU::OpName::dpp_ctrl));
     DPPInst.add(*TII->getNamedOperand(MovMI, AMDGPU::OpName::row_mask));
@@ -513,7 +520,7 @@ MachineInstr *GCNDPPCombine::createDPPInst(
 
 // returns true if MI doesn't have OpndName immediate operand or the
 // operand has Value
-bool GCNDPPCombine::hasNoImmOrEqual(MachineInstr &MI, unsigned OpndName,
+bool GCNDPPCombine::hasNoImmOrEqual(MachineInstr &MI, AMDGPU::OpName OpndName,
                                     int64_t Value, int64_t Mask) const {
   auto *Imm = TII->getNamedOperand(MI, OpndName);
   if (!Imm)
@@ -542,11 +549,17 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
     return false;
   }
 
-  if (MovMI.getOpcode() == AMDGPU::V_MOV_B64_DPP_PSEUDO ||
-      MovMI.getOpcode() == AMDGPU::V_MOV_B64_dpp) {
-    auto *DppCtrl = TII->getNamedOperand(MovMI, AMDGPU::OpName::dpp_ctrl);
-    assert(DppCtrl && DppCtrl->isImm());
-    if (!AMDGPU::isLegalDPALU_DPPControl(DppCtrl->getImm())) {
+  auto *DppCtrl = TII->getNamedOperand(MovMI, AMDGPU::OpName::dpp_ctrl);
+  assert(DppCtrl && DppCtrl->isImm());
+  unsigned DppCtrlVal = DppCtrl->getImm();
+  if ((MovMI.getOpcode() == AMDGPU::V_MOV_B64_DPP_PSEUDO ||
+       MovMI.getOpcode() == AMDGPU::V_MOV_B64_dpp)) {
+    if (!ST->hasFeature(AMDGPU::FeatureDPALU_DPP)) {
+      LLVM_DEBUG(dbgs() << "  failed: 64 bit dpp move is unsupported\n");
+      // Split it.
+      return false;
+    }
+    if (!AMDGPU::isLegalDPALU_DPPControl(*ST, DppCtrlVal)) {
       LLVM_DEBUG(dbgs() << "  failed: 64 bit dpp move uses unsupported"
                            " control value\n");
       // Let it split, then control may become legal.
@@ -626,11 +639,8 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
 
   OrigMIs.push_back(&MovMI);
   bool Rollback = true;
-  SmallVector<MachineOperand*, 16> Uses;
-
-  for (auto &Use : MRI->use_nodbg_operands(DPPMovReg)) {
-    Uses.push_back(&Use);
-  }
+  SmallVector<MachineOperand *, 16> Uses(
+      llvm::make_pointer_range(MRI->use_nodbg_operands(DPPMovReg)));
 
   while (!Uses.empty()) {
     MachineOperand *Use = Uses.pop_back_val();
@@ -702,6 +712,20 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
           dbgs()
           << "  " << OrigMI
           << "  failed: DPP register is used more than once per instruction\n");
+      break;
+    }
+
+    if (!ST->hasFeature(AMDGPU::FeatureDPALU_DPP) &&
+        AMDGPU::isDPALU_DPP32BitOpc(OrigOp)) {
+      LLVM_DEBUG(dbgs() << "  " << OrigMI
+                        << "  failed: DPP ALU DPP is not supported\n");
+      break;
+    }
+
+    if (!AMDGPU::isLegalDPALU_DPPControl(*ST, DppCtrlVal) &&
+        AMDGPU::isDPALU_DPP(TII->get(OrigOp), *ST)) {
+      LLVM_DEBUG(dbgs() << "  " << OrigMI
+                        << "  failed: not valid 64-bit DPP control value\n");
       break;
     }
 

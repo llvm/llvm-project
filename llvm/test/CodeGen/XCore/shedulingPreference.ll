@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=xcore
+; RUN: llc < %s -mtriple=xcore
 
 define void @f( ) {
 entry:

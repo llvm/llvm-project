@@ -18,16 +18,11 @@
 #include "llvm/IR/PrintPasses.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
-
-cl::opt<bool> WriteNewDbgInfoFormat(
-    "write-experimental-debuginfo",
-    cl::desc("Write debug info in the new non-intrinsic format. Has no effect "
-             "if --preserve-input-debuginfo-format=true."),
-    cl::init(true));
 
 namespace {
 
@@ -45,14 +40,9 @@ public:
         ShouldPreserveUseListOrder(ShouldPreserveUseListOrder) {}
 
   bool runOnModule(Module &M) override {
-    // RemoveDIs: Regardless of the format we've processed this module in, use
-    // `WriteNewDbgInfoFormat` to determine which format we use to write it.
-    ScopedDbgInfoFormatSetter FormatSetter(M, WriteNewDbgInfoFormat);
     // Remove intrinsic declarations when printing in the new format.
-    // TODO: Move this into Module::setIsNewDbgInfoFormat when we're ready to
-    // update test output.
-    if (WriteNewDbgInfoFormat)
-      M.removeDebugIntrinsicDeclarations();
+    // TODO: consider removing this as debug-intrinsics are gone.
+    M.removeDebugIntrinsicDeclarations();
 
     if (llvm::isFunctionInPrintList("*")) {
       if (!Banner.empty())
@@ -93,10 +83,6 @@ public:
 
   // This pass just prints a banner followed by the function as it's processed.
   bool runOnFunction(Function &F) override {
-    // RemoveDIs: Regardless of the format we've processed this function in, use
-    // `WriteNewDbgInfoFormat` to determine which format we use to write it.
-    ScopedDbgInfoFormatSetter FormatSetter(F, WriteNewDbgInfoFormat);
-
     if (isFunctionInPrintList(F.getName())) {
       if (forcePrintModuleIR())
         OS << Banner << " (function: " << F.getName() << ")\n"

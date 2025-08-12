@@ -1,6 +1,4 @@
 add_llvm_component_library(LLVMCAS
-  ActionCache.cpp
-  ActionCaches.cpp
   BuiltinCAS.cpp
   InMemoryCAS.cpp
   ObjectStore.cpp

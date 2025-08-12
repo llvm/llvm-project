@@ -1,16 +1,16 @@
-; RUN: llc -O0 < %s -march=nvptx -mcpu=sm_20 | FileCheck %s -check-prefixes=ALL,CLS32,G32
-; RUN: llc -O0 < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s -check-prefixes=ALL,NOPTRCONV,CLS64,G64
-; RUN: llc -O0 < %s -march=nvptx64 -mcpu=sm_20 --nvptx-short-ptr| FileCheck %s -check-prefixes=ALL,PTRCONV,CLS64,G64
-; RUN: %if ptxas && !ptxas-12.0 %{ llc -O0 < %s -march=nvptx -mcpu=sm_20 | %ptxas-verify %}
-; RUN: %if ptxas %{ llc -O0 < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
-; RUN: %if ptxas %{ llc -O0 < %s -march=nvptx64 -mcpu=sm_20 --nvptx-short-ptr | %ptxas-verify %}
+; RUN: llc -O0 < %s -mtriple=nvptx -mcpu=sm_20 | FileCheck %s -check-prefixes=ALL,CLS32
+; RUN: llc -O0 < %s -mtriple=nvptx64 -mcpu=sm_20 | FileCheck %s -check-prefixes=ALL,NOPTRCONV,CLS64
+; RUN: llc -O0 < %s -mtriple=nvptx64 -mcpu=sm_20 --nvptx-short-ptr | FileCheck %s -check-prefixes=ALL,PTRCONV,CLS64
+; RUN: %if ptxas && !ptxas-12.0 %{ llc -O0 < %s -mtriple=nvptx -mcpu=sm_20 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc -O0 < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
+; RUN: %if ptxas %{ llc -O0 < %s -mtriple=nvptx64 -mcpu=sm_20 --nvptx-short-ptr | %ptxas-verify %}
 
 ; ALL-LABEL: conv1
 define i32 @conv1(ptr addrspace(1) %ptr) {
-; G32: cvta.global.u32
+; CLS32: cvta.global.u32
 ; ALL-NOT: cvt.u64.u32
-; G64: cvta.global.u64
-; ALL: ld.u32
+; CLS64: cvta.global.u64
+; ALL: ld.b32
   %genptr = addrspacecast ptr addrspace(1) %ptr to ptr
   %val = load i32, ptr %genptr
   ret i32 %val
@@ -22,7 +22,7 @@ define i32 @conv2(ptr addrspace(3) %ptr) {
 ; PTRCONV: cvt.u64.u32
 ; NOPTRCONV-NOT: cvt.u64.u32
 ; CLS64: cvta.shared.u64
-; ALL: ld.u32
+; ALL: ld.b32
   %genptr = addrspacecast ptr addrspace(3) %ptr to ptr
   %val = load i32, ptr %genptr
   ret i32 %val
@@ -34,7 +34,7 @@ define i32 @conv3(ptr addrspace(4) %ptr) {
 ; PTRCONV: cvt.u64.u32
 ; NOPTRCONV-NOT: cvt.u64.u32
 ; CLS64: cvta.const.u64
-; ALL: ld.u32
+; ALL: ld.b32
   %genptr = addrspacecast ptr addrspace(4) %ptr to ptr
   %val = load i32, ptr %genptr
   ret i32 %val
@@ -46,7 +46,7 @@ define i32 @conv4(ptr addrspace(5) %ptr) {
 ; PTRCONV: cvt.u64.u32
 ; NOPTRCONV-NOT: cvt.u64.u32
 ; CLS64: cvta.local.u64
-; ALL: ld.u32
+; ALL: ld.b32
   %genptr = addrspacecast ptr addrspace(5) %ptr to ptr
   %val = load i32, ptr %genptr
   ret i32 %val
@@ -57,7 +57,7 @@ define i32 @conv5(ptr %ptr) {
 ; CLS32: cvta.to.global.u32
 ; ALL-NOT: cvt.u64.u32
 ; CLS64: cvta.to.global.u64
-; ALL: ld.global.u32
+; ALL: ld.global.b32
   %specptr = addrspacecast ptr %ptr to ptr addrspace(1)
   %val = load i32, ptr addrspace(1) %specptr
   ret i32 %val
@@ -69,7 +69,7 @@ define i32 @conv6(ptr %ptr) {
 ; CLS64: cvta.to.shared.u64
 ; PTRCONV: cvt.u32.u64
 ; NOPTRCONV-NOT: cvt.u32.u64
-; ALL: ld.shared.u32
+; ALL: ld.shared.b32
   %specptr = addrspacecast ptr %ptr to ptr addrspace(3)
   %val = load i32, ptr addrspace(3) %specptr
   ret i32 %val
@@ -81,7 +81,7 @@ define i32 @conv7(ptr %ptr) {
 ; CLS64: cvta.to.const.u64
 ; PTRCONV: cvt.u32.u64
 ; NOPTRCONV-NOT: cvt.u32.u64
-; ALL: ld.const.u32
+; ALL: ld.const.b32
   %specptr = addrspacecast ptr %ptr to ptr addrspace(4)
   %val = load i32, ptr addrspace(4) %specptr
   ret i32 %val
@@ -93,9 +93,20 @@ define i32 @conv8(ptr %ptr) {
 ; CLS64: cvta.to.local.u64
 ; PTRCONV: cvt.u32.u64
 ; NOPTRCONV-NOT: cvt.u32.u64
-; ALL: ld.local.u32
+; ALL: ld.local.b32
   %specptr = addrspacecast ptr %ptr to ptr addrspace(5)
   %val = load i32, ptr addrspace(5) %specptr
+  ret i32 %val
+}
+
+; ALL-LABEL: conv9
+define i32 @conv9(ptr addrspace(1) %ptr) {
+; CLS32:     // implicit-def: %[[ADDR:r[0-9]+]]
+; PTRCONV:   // implicit-def: %[[ADDR:r[0-9]+]]
+; NOPTRCONV: // implicit-def: %[[ADDR:rd[0-9]+]]
+; ALL: ld.shared.b32 %r{{[0-9]+}}, [%[[ADDR]]]
+  %specptr = addrspacecast ptr addrspace(1) %ptr to ptr addrspace(3)
+  %val = load i32, ptr addrspace(3) %specptr
   ret i32 %val
 }
 
@@ -109,8 +120,8 @@ define void @split1To0(ptr nocapture noundef readonly %xs) {
 ; CLS32: cvta.global.u32
 ; CLS64: cvta.global.u64
 ; CLS64: cvta.global.u64
-; ALL: st.u32
-; ALL: st.u32
+; ALL: st.b32
+; ALL: st.b32
   %vec_addr = load <2 x ptr addrspace(1)>, ptr %xs, align 16
   %addrspacecast = addrspacecast <2 x ptr addrspace(1)> %vec_addr to <2 x ptr>
   %extractelement0 = extractelement <2 x ptr> %addrspacecast, i64 0
@@ -128,8 +139,8 @@ define void @split0To1(ptr nocapture noundef readonly %xs) {
 ; CLS32: cvta.to.global.u32
 ; CLS64: cvta.to.global.u64
 ; CLS64: cvta.to.global.u64
-; ALL: st.global.u32
-; ALL: st.global.u32
+; ALL: st.global.b32
+; ALL: st.global.b32
   %vec_addr = load <2 x ptr>, ptr %xs, align 16
   %addrspacecast = addrspacecast <2 x ptr> %vec_addr to <2 x ptr addrspace(1)>
   %extractelement0 = extractelement <2 x ptr addrspace(1)> %addrspacecast, i64 0
@@ -151,9 +162,9 @@ define void @widen1To0(ptr nocapture noundef readonly %xs) {
 ; CLS64: cvta.global.u64
 ; CLS64: cvta.global.u64
 
-; ALL: st.u32
-; ALL: st.u32
-; ALL: st.u32
+; ALL: st.b32
+; ALL: st.b32
+; ALL: st.b32
   %vec_addr = load <3 x ptr addrspace(1)>, ptr %xs, align 16
   %addrspacecast = addrspacecast <3 x ptr addrspace(1)> %vec_addr to <3 x ptr>
   %extractelement0 = extractelement <3 x ptr> %addrspacecast, i64 0
@@ -177,9 +188,9 @@ define void @widen0To1(ptr nocapture noundef readonly %xs) {
 ; CLS64: cvta.to.global.u64
 ; CLS64: cvta.to.global.u64
 
-; ALL: st.global.u32
-; ALL: st.global.u32
-; ALL: st.global.u32
+; ALL: st.global.b32
+; ALL: st.global.b32
+; ALL: st.global.b32
   %vec_addr = load <3 x ptr>, ptr %xs, align 16
   %addrspacecast = addrspacecast <3 x ptr> %vec_addr to <3 x ptr addrspace(1)>
   %extractelement0 = extractelement <3 x ptr addrspace(1)> %addrspacecast, i64 0

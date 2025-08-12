@@ -1,0 +1,89 @@
+## This test checks how llvm-readobj prints skipped BB entries (-basic-block-address-map-skip-emit-bb-entries).
+
+## Check 64-bit:
+# RUN: yaml2obj %s -DBITS=64 -o %t1.x64.o
+# RUN: llvm-readobj %t1.x64.o --bb-addr-map 2>&1 | FileCheck --match-full-lines %s  -DFILE=%t1.x64.o
+
+## Check 32-bit:
+# RUN: yaml2obj %s -DBITS=32 -o %t1.x32.o
+# RUN: llvm-readobj %t1.x32.o --bb-addr-map 2>&1 | FileCheck --match-full-lines  %s -DFILE=%t1.x32.o
+
+# CHECK:     BBAddrMap [
+# CHECK-NEXT:  Function {
+# CHECK-NEXT:    At: 0x11111
+# CHECK-NEXT:    Name: foo
+# CHECK-NEXT:    BB Ranges [
+# CHECK-NEXT:      {
+# CHECK-NEXT:        Base Address: 0x11111
+# CHECK-NEXT:        BB Entries [
+# CHECK-NEXT:        ]
+# CHECK-NEXT:      }
+# CHECK-NEXT:    ]
+# CHECK-NEXT:    PGO analyses {
+# CHECK-NEXT:      FuncEntryCount: 100
+# CHECK-NEXT:      PGO BB entries [
+# CHECK-NEXT:      ]
+# CHECK-NEXT:    }
+# CHECK-NEXT:  }
+# CHECK-NEXT:]
+# CHECK-NEXT:BBAddrMap [
+# CHECK-NEXT:  Function {
+# CHECK-NEXT:    At: 0x33333
+# CHECK-NEXT:    Name: bar
+# CHECK-NEXT:    BB Ranges [
+# CHECK-NEXT:      {
+# CHECK-NEXT:        Base Address: 0x33333
+# CHECK-NEXT:        BB Entries [
+# CHECK-NEXT:        ]
+# CHECK-NEXT:      }
+# CHECK-NEXT:    ]
+# CHECK-NEXT:    PGO analyses {
+# CHECK-NEXT:      FuncEntryCount: 89
+# CHECK-NEXT:      PGO BB entries [
+# CHECK-NEXT:      ]
+# CHECK-NEXT:    }
+# CHECK-NEXT:  }
+# CHECK-NEXT:]
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS[[BITS]]
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:   .text
+    Type:   SHT_PROGBITS
+    Flags:  [SHF_ALLOC]
+  - Name:   .text.bar
+    Type:   SHT_PROGBITS
+    Flags:  [SHF_ALLOC]
+  - Name:   .llvm_bb_addr_map
+    Type:   SHT_LLVM_BB_ADDR_MAP
+    ShSize: [[SIZE=<none>]]
+    Link:   .text
+    Entries:
+      - Version: 2
+        Feature: 0x17
+        BBRanges:
+          - BaseAddress: 0x11111
+    PGOAnalyses:
+      - FuncEntryCount: 100
+  - Name: '.llvm_bb_addr_map2'
+    Type: SHT_LLVM_BB_ADDR_MAP
+    Link: .text.bar
+    Entries:
+      - Version: 2
+        Feature: 0x17
+        BBRanges:
+          - BaseAddress: 0x33333
+    PGOAnalyses:
+      - FuncEntryCount: 89
+Symbols:
+  - Name:    foo
+    Section: .text
+    Type:    STT_FUNC
+    Value:   0x11111
+  - Name:    bar
+    Section: .text.bar
+    Type:    STT_FUNC
+    Value:   0x33333

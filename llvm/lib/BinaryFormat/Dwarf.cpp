@@ -390,6 +390,25 @@ unsigned llvm::dwarf::getVirtuality(StringRef VirtualityString) {
       .Default(DW_VIRTUALITY_invalid);
 }
 
+StringRef llvm::dwarf::EnumKindString(unsigned EnumKind) {
+  switch (EnumKind) {
+  default:
+    return StringRef();
+#define HANDLE_DW_APPLE_ENUM_KIND(ID, NAME)                                    \
+  case DW_APPLE_ENUM_KIND_##NAME:                                              \
+    return "DW_APPLE_ENUM_KIND_" #NAME;
+#include "llvm/BinaryFormat/Dwarf.def"
+  }
+}
+
+unsigned llvm::dwarf::getEnumKind(StringRef EnumKindString) {
+  return StringSwitch<unsigned>(EnumKindString)
+#define HANDLE_DW_APPLE_ENUM_KIND(ID, NAME)                                    \
+  .Case("DW_APPLE_ENUM_KIND_" #NAME, DW_APPLE_ENUM_KIND_##NAME)
+#include "llvm/BinaryFormat/Dwarf.def"
+      .Default(DW_APPLE_ENUM_KIND_invalid);
+}
+
 StringRef llvm::dwarf::LanguageString(unsigned Language) {
   switch (Language) {
   default:
@@ -741,6 +760,8 @@ StringRef llvm::dwarf::AttributeValueString(uint16_t Attr, unsigned Val) {
     return LanguageString(Val);
   case DW_AT_defaulted:
     return DefaultedMemberString(Val);
+  case DW_AT_APPLE_enum_kind:
+    return EnumKindString(Val);
   }
 
   return StringRef();
@@ -889,6 +910,18 @@ StringRef llvm::dwarf::RLEString(unsigned RLE) {
 #include "llvm/BinaryFormat/Dwarf.def"
   }
 }
+
+StringRef (*const llvm::dwarf::EnumTraits<Tag>::StringFn)(unsigned) = TagString;
+StringRef (*const llvm::dwarf::EnumTraits<Attribute>::StringFn)(unsigned) =
+    AttributeString;
+StringRef (*const llvm::dwarf::EnumTraits<Form>::StringFn)(unsigned) =
+    FormEncodingString;
+StringRef (*const llvm::dwarf::EnumTraits<LocationAtom>::StringFn)(unsigned) =
+    OperationEncodingString;
+StringRef (*const llvm::dwarf::EnumTraits<LineNumberOps>::StringFn)(unsigned) =
+    LNStandardString;
+StringRef (*const llvm::dwarf::EnumTraits<Index>::StringFn)(unsigned) =
+    IndexString;
 
 constexpr char llvm::dwarf::EnumTraits<Attribute>::Type[];
 constexpr char llvm::dwarf::EnumTraits<Form>::Type[];

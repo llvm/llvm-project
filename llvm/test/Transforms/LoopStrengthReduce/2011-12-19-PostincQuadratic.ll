@@ -39,7 +39,7 @@ for.body7:
   %bf.072 = phi i32 [ %t1, %for.body7 ], [ 0, %for.cond.preheader ]
   %t1 = add i32 %bf.072, %indvars.iv77
   %indvars.iv.next78 = add i32 %indvars.iv77, 1
-  br i1 undef, label %for.body43, label %for.body7
+  br i1 true, label %for.body43, label %for.body7
 
 for.body43:
   %bf.459 = phi i32 [ %inc44, %for.body43 ], [ %t1, %for.body7 ]

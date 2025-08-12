@@ -1,0 +1,16 @@
+# RUN: %python %S/../../../../examples/python/formatter_bytecode.py --test
+# RUN: %python %S/../../../../examples/python/formatter_bytecode.py --compile "1u dup" | FileCheck %s --check-prefix=COMPILE
+# RUN: %python %S/../../../../examples/python/formatter_bytecode.py --disassemble "200101" | FileCheck %s --check-prefix=DISASSEMBLE
+# COMPILE: 200101
+# DISASSEMBLE: 1u dup
+
+# RUN: %clang_host -std=c++17 -g %S/Inputs/FormatterBytecode/MyOptional.cpp -o %t.exe
+# RUN: %lldb %t.exe -o "command script import %S/../../../../examples/python/formatter_bytecode.py" -o "command script import %S/Inputs/FormatterBytecode/formatter.py" -o "b -p here" -o "r" -o "v x" -o "v y" -o q | FileCheck %s --check-prefix=OPTIONAL
+# OPTIONAL: (lldb) v x
+# OPTIONAL: (MyOptional<int>) x = {
+# OPTIONAL: hasVal = false
+# OPTIONAL: }
+# OPTIONAL: (lldb) v y
+# OPTIONAL: (MyOptional<int>) y = {
+# OPTIONAL:   Storage = (value = 42, hasVal = true)
+# OPTIONAL: }

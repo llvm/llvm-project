@@ -40,7 +40,9 @@ private:
   VFInfo Info;
   /// Reset the data needed for the test.
   void reset(const StringRef ScalarFTyStr) {
-    M = parseAssemblyString("declare void @dummy()", Err, Ctx);
+    M = parseAssemblyString("%dummy_named_struct = type { double, double }\n"
+                            "declare void @dummy()",
+                            Err, Ctx);
     EXPECT_NE(M.get(), nullptr)
         << "Loading an invalid module.\n " << Err.getMessage() << "\n";
     Type *Ty = parseType(ScalarFTyStr, Err, *(M));
@@ -751,6 +753,87 @@ TEST_F(VFABIParserTest, ParseVoidReturnTypeSVE) {
   EXPECT_EQ(VF, ElementCount::getScalable(8));
   EXPECT_EQ(ScalarName, "foo");
   EXPECT_EQ(VectorName, "vector_foo");
+}
+
+TEST_F(VFABIParserTest, ParseWideStructReturnTypeSVE) {
+  EXPECT_TRUE(
+      invokeParser("_ZGVsMxv_foo(vector_foo)", "{double, double}(float)"));
+  EXPECT_EQ(ISA, VFISAKind::SVE);
+  EXPECT_TRUE(isMasked());
+  ElementCount NXV2 = ElementCount::getScalable(2);
+  FunctionType *FTy = FunctionType::get(
+      StructType::get(VectorType::get(Type::getDoubleTy(Ctx), NXV2),
+                      VectorType::get(Type::getDoubleTy(Ctx), NXV2)),
+      {
+          VectorType::get(Type::getFloatTy(Ctx), NXV2),
+          VectorType::get(Type::getInt1Ty(Ctx), NXV2),
+      },
+      false);
+  EXPECT_EQ(getFunctionType(), FTy);
+  EXPECT_EQ(Parameters.size(), 2U);
+  EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
+  EXPECT_EQ(Parameters[1], VFParameter({1, VFParamKind::GlobalPredicate}));
+  EXPECT_EQ(VF, NXV2);
+  EXPECT_EQ(ScalarName, "foo");
+  EXPECT_EQ(VectorName, "vector_foo");
+}
+
+TEST_F(VFABIParserTest, ParseWideStructMixedReturnTypeSVE) {
+  EXPECT_TRUE(invokeParser("_ZGVsMxv_foo(vector_foo)", "{float, i64}(float)"));
+  EXPECT_EQ(ISA, VFISAKind::SVE);
+  EXPECT_TRUE(isMasked());
+  ElementCount NXV2 = ElementCount::getScalable(2);
+  FunctionType *FTy = FunctionType::get(
+      StructType::get(VectorType::get(Type::getFloatTy(Ctx), NXV2),
+                      VectorType::get(Type::getInt64Ty(Ctx), NXV2)),
+      {
+          VectorType::get(Type::getFloatTy(Ctx), NXV2),
+          VectorType::get(Type::getInt1Ty(Ctx), NXV2),
+      },
+      false);
+  EXPECT_EQ(getFunctionType(), FTy);
+  EXPECT_EQ(Parameters.size(), 2U);
+  EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
+  EXPECT_EQ(Parameters[1], VFParameter({1, VFParamKind::GlobalPredicate}));
+  EXPECT_EQ(VF, NXV2);
+  EXPECT_EQ(ScalarName, "foo");
+  EXPECT_EQ(VectorName, "vector_foo");
+}
+
+TEST_F(VFABIParserTest, ParseWideStructReturnTypeNEON) {
+  EXPECT_TRUE(
+      invokeParser("_ZGVnN4v_foo(vector_foo)", "{float, float}(float)"));
+  EXPECT_EQ(ISA, VFISAKind::AdvancedSIMD);
+  EXPECT_FALSE(isMasked());
+  ElementCount V4 = ElementCount::getFixed(4);
+  FunctionType *FTy = FunctionType::get(
+      StructType::get(VectorType::get(Type::getFloatTy(Ctx), V4),
+                      VectorType::get(Type::getFloatTy(Ctx), V4)),
+      {
+          VectorType::get(Type::getFloatTy(Ctx), V4),
+      },
+      false);
+  EXPECT_EQ(getFunctionType(), FTy);
+  EXPECT_EQ(Parameters.size(), 1U);
+  EXPECT_EQ(Parameters[0], VFParameter({0, VFParamKind::Vector}));
+  EXPECT_EQ(VF, V4);
+  EXPECT_EQ(ScalarName, "foo");
+  EXPECT_EQ(VectorName, "vector_foo");
+}
+
+TEST_F(VFABIParserTest, ParseUnsupportedStructReturnTypesSVE) {
+  // Struct with array element type.
+  EXPECT_FALSE(
+      invokeParser("_ZGVsMxv_foo(vector_foo)", "{double, [4 x float]}(float)"));
+  // Nested struct type.
+  EXPECT_FALSE(
+      invokeParser("_ZGVsMxv_foo(vector_foo)", "{{float, float}}(float)"));
+  // Packed struct type.
+  EXPECT_FALSE(
+      invokeParser("_ZGVsMxv_foo(vector_foo)", "<{double, float}>(float)"));
+  // Named struct type.
+  EXPECT_FALSE(
+      invokeParser("_ZGVsMxv_foo(vector_foo)", "%dummy_named_struct(float)"));
 }
 
 // Make sure we reject unsupported parameter types.

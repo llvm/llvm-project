@@ -577,7 +577,7 @@ approximateImplicitConversion(const TheCheck &Check, QualType LType,
                               ImplicitConversionModellingMode ImplicitMode);
 
 static inline bool isUselessSugar(const Type *T) {
-  return isa<AttributedType, DecayedType, ElaboratedType, ParenType>(T);
+  return isa<AttributedType, DecayedType, ParenType>(T);
 }
 
 namespace {
@@ -1040,7 +1040,9 @@ approximateStandardConversionSequence(const TheCheck &Check, QualType From,
   const auto *ToRecord = To->getAsCXXRecordDecl();
   if (isDerivedToBase(FromRecord, ToRecord)) {
     LLVM_DEBUG(llvm::dbgs() << "--- approximateStdConv. Derived To Base.\n");
-    WorkType = QualType{ToRecord->getTypeForDecl(), FastQualifiersToApply};
+    WorkType = QualType{
+        ToRecord->getASTContext().getCanonicalTagType(ToRecord)->getTypePtr(),
+        FastQualifiersToApply};
   }
 
   if (Ctx.getLangOpts().CPlusPlus17 && FromPtr && ToPtr) {
@@ -1072,9 +1074,9 @@ approximateStandardConversionSequence(const TheCheck &Check, QualType From,
     WorkType = To;
   }
 
-  if (WorkType == To) {
+  if (Ctx.hasSameType(WorkType, To)) {
     LLVM_DEBUG(llvm::dbgs() << "<<< approximateStdConv. Reached 'To' type.\n");
-    return {WorkType};
+    return {Ctx.getCommonSugaredType(WorkType, To)};
   }
 
   LLVM_DEBUG(llvm::dbgs() << "<<< approximateStdConv. Did not reach 'To'.\n");
@@ -1219,7 +1221,7 @@ tryConversionOperators(const TheCheck &Check, const CXXRecordDecl *RD,
 
   if (std::optional<UserDefinedConversionSelector::PreparedConversion>
           SelectedConversion = ConversionSet()) {
-    QualType RecordType{RD->getTypeForDecl(), 0};
+    CanQualType RecordType = RD->getASTContext().getCanonicalTagType(RD);
 
     ConversionSequence Result{RecordType, ToType};
     // The conversion from the operator call's return type to ToType was
@@ -1270,7 +1272,7 @@ tryConvertingConstructors(const TheCheck &Check, QualType FromType,
 
   if (std::optional<UserDefinedConversionSelector::PreparedConversion>
           SelectedConversion = ConversionSet()) {
-    QualType RecordType{RD->getTypeForDecl(), 0};
+    CanQualType RecordType = RD->getASTContext().getCanonicalTagType(RD);
 
     ConversionSequence Result{FromType, RecordType};
     Result.AfterFirstStandard = SelectedConversion->Seq.AfterFirstStandard;
@@ -1497,11 +1499,13 @@ static MixableParameterRange modelMixingRange(
 
 } // namespace model
 
+namespace {
 /// Matches DeclRefExprs and their ignorable wrappers to ParmVarDecls.
 AST_MATCHER_FUNCTION(ast_matchers::internal::Matcher<Stmt>, paramRefExpr) {
   return expr(ignoringParenImpCasts(ignoringElidableConstructorCall(
       declRefExpr(to(parmVarDecl().bind("param"))))));
 }
+} // namespace
 
 namespace filter {
 
@@ -1574,8 +1578,8 @@ using ParamToSmallSetMap =
 /// Returns whether the sets mapped to the two elements in the map have at
 /// least one element in common.
 template <typename MapTy, typename ElemTy>
-bool lazyMapOfSetsIntersectionExists(const MapTy &Map, const ElemTy &E1,
-                                     const ElemTy &E2) {
+static bool lazyMapOfSetsIntersectionExists(const MapTy &Map, const ElemTy &E1,
+                                            const ElemTy &E2) {
   auto E1Iterator = Map.find(E1);
   auto E2Iterator = Map.find(E2);
   if (E1Iterator == Map.end() || E2Iterator == Map.end())
@@ -1882,6 +1886,8 @@ static bool prefixSuffixCoverUnderThreshold(std::size_t Threshold,
 
 } // namespace filter
 
+namespace {
+
 /// Matches functions that have at least the specified amount of parameters.
 AST_MATCHER_P(FunctionDecl, parameterCountGE, unsigned, N) {
   return Node.getNumParams() >= N;
@@ -1903,6 +1909,8 @@ AST_MATCHER(FunctionDecl, isOverloadedUnaryOrBinaryOperator) {
     return Node.getNumParams() <= 2;
   }
 }
+
+} // namespace
 
 /// Returns the DefaultMinimumLength if the Value of requested minimum length
 /// is less than 2. Minimum lengths of 0 or 1 are not accepted.

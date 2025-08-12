@@ -13,7 +13,6 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/Transforms/Transforms.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -60,12 +59,12 @@ static void replaceUsesAndPropagateType(RewriterBase &rewriter,
     // `subview(old_op)` is replaced by a new `subview(val)`.
     OpBuilder::InsertionGuard g(rewriter);
     rewriter.setInsertionPoint(subviewUse);
-    Type newType = memref::SubViewOp::inferRankReducedResultType(
+    MemRefType newType = memref::SubViewOp::inferRankReducedResultType(
         subviewUse.getType().getShape(), cast<MemRefType>(val.getType()),
         subviewUse.getStaticOffsets(), subviewUse.getStaticSizes(),
         subviewUse.getStaticStrides());
-    Value newSubview = rewriter.create<memref::SubViewOp>(
-        subviewUse->getLoc(), cast<MemRefType>(newType), val,
+    Value newSubview = memref::SubViewOp::create(
+        rewriter, subviewUse->getLoc(), newType, val,
         subviewUse.getMixedOffsets(), subviewUse.getMixedSizes(),
         subviewUse.getMixedStrides());
 
@@ -179,8 +178,8 @@ mlir::memref::multiBuffer(RewriterBase &rewriter, memref::AllocOp allocOp,
   Location loc = allocOp->getLoc();
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(allocOp);
-  auto mbAlloc = rewriter.create<memref::AllocOp>(
-      loc, mbMemRefType, ValueRange{}, allocOp->getAttrs());
+  auto mbAlloc = memref::AllocOp::create(rewriter, loc, mbMemRefType,
+                                         ValueRange{}, allocOp->getAttrs());
   LLVM_DEBUG(DBGS() << "--multi-buffered alloc: " << mbAlloc << "\n");
 
   // 3. Within the loop, build the modular leading index (i.e. each loop
@@ -211,11 +210,10 @@ mlir::memref::multiBuffer(RewriterBase &rewriter, memref::AllocOp allocOp,
   for (int64_t i = 0, e = originalShape.size(); i != e; ++i)
     sizes[1 + i] = rewriter.getIndexAttr(originalShape[i]);
   // Strides is [1, 1 ... 1 ].
-  auto dstMemref =
-      cast<MemRefType>(memref::SubViewOp::inferRankReducedResultType(
-          originalShape, mbMemRefType, offsets, sizes, strides));
-  Value subview = rewriter.create<memref::SubViewOp>(loc, dstMemref, mbAlloc,
-                                                     offsets, sizes, strides);
+  MemRefType dstMemref = memref::SubViewOp::inferRankReducedResultType(
+      originalShape, mbMemRefType, offsets, sizes, strides);
+  Value subview = memref::SubViewOp::create(rewriter, loc, dstMemref, mbAlloc,
+                                            offsets, sizes, strides);
   LLVM_DEBUG(DBGS() << "--multi-buffered slice: " << subview << "\n");
 
   // 5. Due to the recursive nature of replaceUsesAndPropagateType , we need to
@@ -227,7 +225,7 @@ mlir::memref::multiBuffer(RewriterBase &rewriter, memref::AllocOp allocOp,
     OpBuilder::InsertionGuard g(rewriter);
     rewriter.setInsertionPoint(deallocOp);
     auto newDeallocOp =
-        rewriter.create<memref::DeallocOp>(deallocOp->getLoc(), mbAlloc);
+        memref::DeallocOp::create(rewriter, deallocOp->getLoc(), mbAlloc);
     (void)newDeallocOp;
     LLVM_DEBUG(DBGS() << "----Created dealloc: " << newDeallocOp << "\n");
     rewriter.eraseOp(deallocOp);

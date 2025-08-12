@@ -28,13 +28,11 @@
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
-#include <cstdint>
 #include <string>
 
 using namespace clang;
@@ -117,12 +115,12 @@ static void printCXXConstructorDestructorName(QualType ClassType,
   Policy.adjustForCPlusPlus();
 
   if (const RecordType *ClassRec = ClassType->getAs<RecordType>()) {
-    ClassRec->getDecl()->printName(OS, Policy);
+    ClassRec->getOriginalDecl()->printName(OS, Policy);
     return;
   }
   if (Policy.SuppressTemplateArgsInCXXConstructors) {
     if (auto *InjTy = ClassType->getAs<InjectedClassNameType>()) {
-      InjTy->getDecl()->printName(OS, Policy);
+      InjTy->getOriginalDecl()->printName(OS, Policy);
       return;
     }
   }
@@ -186,7 +184,7 @@ void DeclarationName::print(raw_ostream &OS,
     OS << "operator ";
     QualType Type = getCXXNameType();
     if (const RecordType *Rec = Type->getAs<RecordType>()) {
-      OS << *Rec->getDecl();
+      OS << *Rec->getOriginalDecl();
       return;
     }
     // We know we're printing C++ here, ensure we print 'bool' properly.

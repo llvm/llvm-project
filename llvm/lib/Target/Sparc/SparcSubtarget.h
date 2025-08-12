@@ -17,7 +17,6 @@
 #include "SparcFrameLowering.h"
 #include "SparcISelLowering.h"
 #include "SparcInstrInfo.h"
-#include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -46,12 +45,14 @@ class SparcSubtarget : public SparcGenSubtargetInfo {
 
   SparcInstrInfo InstrInfo;
   SparcTargetLowering TLInfo;
-  SelectionDAGTargetInfo TSInfo;
+  std::unique_ptr<const SelectionDAGTargetInfo> TSInfo;
   SparcFrameLowering FrameLowering;
 
 public:
   SparcSubtarget(const StringRef &CPU, const StringRef &TuneCPU,
                  const StringRef &FS, const TargetMachine &TM, bool is64bit);
+
+  ~SparcSubtarget() override;
 
   const SparcInstrInfo *getInstrInfo() const override { return &InstrInfo; }
   const TargetFrameLowering *getFrameLowering() const override {
@@ -63,9 +64,8 @@ public:
   const SparcTargetLowering *getTargetLowering() const override {
     return &TLInfo;
   }
-  const SelectionDAGTargetInfo *getSelectionDAGInfo() const override {
-    return &TSInfo;
-  }
+
+  const SelectionDAGTargetInfo *getSelectionDAGInfo() const override;
 
   bool enableMachineScheduler() const override;
 

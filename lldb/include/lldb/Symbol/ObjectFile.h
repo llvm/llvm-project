@@ -18,6 +18,7 @@
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/FileSpecList.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/UUID.h"
 #include "lldb/lldb-private.h"
 #include "llvm/Support/Threading.h"
@@ -81,9 +82,14 @@ public:
   enum BinaryType {
     eBinaryTypeInvalid = 0,
     eBinaryTypeUnknown,
-    eBinaryTypeKernel,    /// kernel binary
-    eBinaryTypeUser,      /// user process binary
-    eBinaryTypeStandalone /// standalone binary / firmware
+    /// kernel binary
+    eBinaryTypeKernel,
+    /// user process binary, dyld addr
+    eBinaryTypeUser,
+    /// user process binary, dyld_all_image_infos addr
+    eBinaryTypeUserAllImageInfos,
+    /// standalone binary / firmware
+    eBinaryTypeStandalone
   };
 
   struct LoadableData {
@@ -314,7 +320,7 @@ public:
   ///
   /// \return
   ///     The symbol table for this object file.
-  Symtab *GetSymtab();
+  Symtab *GetSymtab(bool can_create = true);
 
   /// Parse the symbol table into the provides symbol table object.
   ///
@@ -539,9 +545,9 @@ public:
     return false;
   }
 
-  /// Get metadata about threads from the corefile.
+  /// Get metadata about thread ids from the corefile.
   ///
-  /// The corefile may have metadata (e.g. a Mach-O "thread extrainfo"
+  /// The corefile may have metadata (e.g. a Mach-O "process metadata"
   /// LC_NOTE) which for the threads in the process; this method tries
   /// to retrieve them.
   ///
@@ -562,6 +568,18 @@ public:
   virtual bool GetCorefileThreadExtraInfos(std::vector<lldb::tid_t> &tids) {
     return false;
   }
+
+  /// Get process metadata from the corefile in a StructuredData dictionary.
+  ///
+  /// The corefile may have notes (e.g. a Mach-O "process metadata" LC_NOTE)
+  /// which provide metadata about the process and threads in a JSON or
+  /// similar format.
+  ///
+  /// \return
+  ///     A StructuredData object with the metadata in the note, if there is
+  ///     one.  An empty shared pointer is returned if not metadata is found,
+  ///     or a problem parsing it.
+  virtual StructuredData::ObjectSP GetCorefileProcessMetadata() { return {}; }
 
   virtual lldb::RegisterContextSP
   GetThreadContextAtIndex(uint32_t idx, lldb_private::Thread &thread) {
@@ -704,6 +722,13 @@ public:
       llvm::StringRef name,
       lldb::SymbolType symbol_type_hint = lldb::eSymbolTypeUndefined);
 
+  /// Parses the section type from a section name for DWARF sections.
+  ///
+  /// The \a name must be stripped of the default prefix (e.g. ".debug_" or
+  /// "__debug_"). If there's no matching section type, \a eSectionTypeOther
+  /// will be returned.
+  static lldb::SectionType GetDWARFSectionTypeFromName(llvm::StringRef name);
+
   /// Loads this objfile to memory.
   ///
   /// Loads the bits needed to create an executable image to the memory. It is
@@ -743,6 +768,7 @@ public:
 
   static lldb::DataBufferSP MapFileData(const FileSpec &file, uint64_t Size,
                                         uint64_t Offset);
+  std::string GetObjectName() const;
 
 protected:
   // Member variables.

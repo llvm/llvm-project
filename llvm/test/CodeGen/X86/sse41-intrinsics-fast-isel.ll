@@ -33,7 +33,7 @@ define <2 x double> @test_mm_blend_pd(<2 x double> %a0, <2 x double> %a1) {
 ;
 ; AVX-LABEL: test_mm_blend_pd:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; AVX-NEXT:    ret{{[l|q]}}
   %res = shufflevector <2 x double> %a0, <2 x double> %a1, <2 x i32> <i32 0, i32 3>
   ret <2 x double> %res

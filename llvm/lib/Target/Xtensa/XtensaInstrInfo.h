@@ -35,8 +35,10 @@ class XtensaInstrInfo : public XtensaGenInstrInfo {
 public:
   XtensaInstrInfo(const XtensaSubtarget &STI);
 
-  void adjustStackPtr(unsigned SP, int64_t Amount, MachineBasicBlock &MBB,
+  void adjustStackPtr(MCRegister SP, int64_t Amount, MachineBasicBlock &MBB,
                       MachineBasicBlock::iterator I) const;
+
+  unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
   // Return the XtensaRegisterInfo, which this class owns.
   const XtensaRegisterInfo &getRegisterInfo() const { return RI; }
@@ -48,22 +50,21 @@ public:
                               int &FrameIndex) const override;
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                   const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
+                   const DebugLoc &DL, Register DestReg, Register SrcReg,
                    bool KillSrc, bool RenamableDest = false,
                    bool RenamableSrc = false) const override;
 
-  void storeRegToStackSlot(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MBBI, Register SrcReg,
-                           bool isKill, int FrameIndex,
-                           const TargetRegisterClass *RC,
-                           const TargetRegisterInfo *TRI,
-                           Register VReg) const override;
+  void storeRegToStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
+      bool isKill, int FrameIndex, const TargetRegisterClass *RC,
+      const TargetRegisterInfo *TRI, Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
-  void loadRegFromStackSlot(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MBBI, Register DestReg,
-                            int FrameIdx, const TargetRegisterClass *RC,
-                            const TargetRegisterInfo *TRI,
-                            Register VReg) const override;
+  void loadRegFromStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+      Register DestReg, int FrameIdx, const TargetRegisterClass *RC,
+      const TargetRegisterInfo *TRI, Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   // Get the load and store opcodes for a given register class and offset.
   void getLoadStoreOpcodes(const TargetRegisterClass *RC, unsigned &LoadOpcode,
@@ -72,10 +73,15 @@ public:
   // Emit code before MBBI in MI to move immediate value Value into
   // physical register Reg.
   void loadImmediate(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                     unsigned *Reg, int64_t Value) const;
+                     MCRegister *Reg, int64_t Value) const;
 
   bool
   reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
+
+  MachineBasicBlock *getBranchDestBlock(const MachineInstr &MI) const override;
+
+  bool isBranchOffsetInRange(unsigned BranchOpc,
+                             int64_t BrOffset) const override;
 
   bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                      MachineBasicBlock *&FBB,
@@ -90,11 +96,21 @@ public:
                         const DebugLoc &DL,
                         int *BytesAdded = nullptr) const override;
 
+  void insertIndirectBranch(MachineBasicBlock &MBB, MachineBasicBlock &DestBB,
+                            MachineBasicBlock &RestoreBB, const DebugLoc &DL,
+                            int64_t BrOffset = 0,
+                            RegScavenger *RS = nullptr) const override;
+
   unsigned insertBranchAtInst(MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator I,
                               MachineBasicBlock *TBB,
                               ArrayRef<MachineOperand> Cond, const DebugLoc &DL,
                               int *BytesAdded) const;
+
+  unsigned insertConstBranchAtInst(MachineBasicBlock &MBB, MachineInstr *I,
+                                   int64_t offset,
+                                   ArrayRef<MachineOperand> Cond, DebugLoc DL,
+                                   int *BytesAdded) const;
 
   // Return true if MI is a conditional or unconditional branch.
   // When returning true, set Cond to the mask of condition-code

@@ -26,6 +26,7 @@ __guard_dispatch_icall_fptr:
         .xword 0
 __os_arm64x_dispatch_call_no_redirect:
         .xword 0
+        .globl __os_arm64x_dispatch_ret
 __os_arm64x_dispatch_ret:
         .xword 0
 __os_arm64x_check_call:

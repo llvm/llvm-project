@@ -10,7 +10,7 @@
 ;
 define internal i32 @test_cannot_promote_1(ptr %p, ptr nocapture readonly %test_c) {
 ; CHECK-LABEL: define {{[^@]+}}@test_cannot_promote_1
-; CHECK-SAME: (ptr [[P:%.*]], ptr nocapture readonly [[TEST_C:%.*]]) {
+; CHECK-SAME: (ptr [[P:%.*]], ptr readonly captures(none) [[TEST_C:%.*]]) {
 ; CHECK-NEXT:    [[TEST_C_VAL:%.*]] = load i32, ptr [[TEST_C]], align 4
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @callee(ptr [[P]], i32 [[TEST_C_VAL]])
 ; CHECK-NEXT:    [[LTEST_C:%.*]] = load i32, ptr [[TEST_C]], align 4
@@ -31,7 +31,7 @@ define internal i32 @test_cannot_promote_1(ptr %p, ptr nocapture readonly %test_
 ;
 define internal i32 @test_cannot_promote_2(ptr %p, ptr nocapture readonly %test_c) {
 ; CHECK-LABEL: define {{[^@]+}}@test_cannot_promote_2
-; CHECK-SAME: (ptr [[P:%.*]], ptr nocapture readonly [[TEST_C:%.*]]) {
+; CHECK-SAME: (ptr [[P:%.*]], ptr readonly captures(none) [[TEST_C:%.*]]) {
 ; CHECK-NEXT:    [[TEST_C_VAL:%.*]] = load i32, ptr [[TEST_C]], align 4
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @callee(ptr [[P]], i32 [[TEST_C_VAL]])
 ; CHECK-NEXT:    [[LTEST_C:%.*]] = load i32, ptr [[TEST_C]], align 4
@@ -52,7 +52,7 @@ define internal i32 @test_cannot_promote_2(ptr %p, ptr nocapture readonly %test_
 ;
 define internal i32 @test_cannot_promote_3(ptr %p, ptr nocapture readonly %test_c) {
 ; CHECK-LABEL: define {{[^@]+}}@test_cannot_promote_3
-; CHECK-SAME: (ptr [[P:%.*]], ptr nocapture readonly [[TEST_C:%.*]]) {
+; CHECK-SAME: (ptr [[P:%.*]], ptr readonly captures(none) [[TEST_C:%.*]]) {
 ; CHECK-NEXT:    [[TEST_C_VAL:%.*]] = load i32, ptr [[TEST_C]], align 4
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @callee(ptr [[P]], i32 [[TEST_C_VAL]])
 ; CHECK-NEXT:    [[LTEST_C:%.*]] = load i32, ptr [[TEST_C]], align 4

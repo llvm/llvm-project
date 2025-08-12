@@ -106,7 +106,7 @@ void DWARFDebugInfo::ParseUnitsFor(DIERef::Section section) {
     // table lookups can cause the DWO files to be accessed before the skeleton
     // compile unit is parsed, so we keep a map to allow us to match up the DWO
     // file to the back to the skeleton compile units.
-    if (unit_sp->GetUnitType() == lldb_private::dwarf::DW_UT_skeleton) {
+    if (unit_sp->GetUnitType() == llvm::dwarf::DW_UT_skeleton) {
       if (std::optional<uint64_t> unit_dwo_id = unit_sp->GetHeaderDWOId())
         m_dwarf5_dwo_id_to_skeleton_unit[*unit_dwo_id] = unit_sp.get();
     }

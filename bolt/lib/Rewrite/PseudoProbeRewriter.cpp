@@ -51,6 +51,7 @@ static cl::opt<PrintPseudoProbesOptions> PrintPseudoProbes(
     cl::Hidden, cl::cat(BoltCategory));
 
 extern cl::opt<bool> ProfileWritePseudoProbes;
+extern cl::opt<bool> StaleMatchingWithPseudoProbes;
 } // namespace opts
 
 namespace {
@@ -92,14 +93,14 @@ public:
 };
 
 Error PseudoProbeRewriter::preCFGInitializer() {
-  if (opts::ProfileWritePseudoProbes)
-    parsePseudoProbe(true);
+  if (opts::ProfileWritePseudoProbes || opts::StaleMatchingWithPseudoProbes)
+    parsePseudoProbe(opts::ProfileWritePseudoProbes);
 
   return Error::success();
 }
 
 Error PseudoProbeRewriter::postEmitFinalizer() {
-  if (!opts::ProfileWritePseudoProbes)
+  if (!opts::StaleMatchingWithPseudoProbes)
     parsePseudoProbe();
   updatePseudoProbes();
 
@@ -127,8 +128,8 @@ void PseudoProbeRewriter::parsePseudoProbe(bool ProfiledOnly) {
 
   StringRef Contents = PseudoProbeDescSection->getContents();
   if (!ProbeDecoder.buildGUID2FuncDescMap(
-          reinterpret_cast<const uint8_t *>(Contents.data()),
-          Contents.size())) {
+          reinterpret_cast<const uint8_t *>(Contents.data()), Contents.size(),
+          /*IsMMapped*/ true)) {
     errs() << "BOLT-WARNING: fail in building GUID2FuncDescMap\n";
     return;
   }
@@ -146,7 +147,7 @@ void PseudoProbeRewriter::parsePseudoProbe(bool ProfiledOnly) {
         if (!Name)
           continue;
         SymName = *Name;
-        uint64_t GUID = Function::getGUID(SymName);
+        uint64_t GUID = Function::getGUIDAssumingExternalLinkage(SymName);
         FuncStartAddrs[GUID] = F->getAddress();
         if (ProfiledOnly && HasProfile)
           GuidFilter.insert(GUID);
@@ -172,7 +173,7 @@ void PseudoProbeRewriter::parsePseudoProbe(bool ProfiledOnly) {
   const GUIDProbeFunctionMap &GUID2Func = ProbeDecoder.getGUID2FuncDescMap();
   // Checks GUID in GUID2Func and returns it if it's present or null otherwise.
   auto checkGUID = [&](StringRef SymName) -> uint64_t {
-    uint64_t GUID = Function::getGUID(SymName);
+    uint64_t GUID = Function::getGUIDAssumingExternalLinkage(SymName);
     if (GUID2Func.find(GUID) == GUID2Func.end())
       return 0;
     return GUID;
@@ -434,7 +435,7 @@ void PseudoProbeRewriter::encodePseudoProbes() {
     for (const BinaryFunction *F : BC.getAllBinaryFunctions()) {
       const uint64_t Addr =
           F->isEmitted() ? F->getOutputAddress() : F->getAddress();
-      FuncStartAddrs[Function::getGUID(
+      FuncStartAddrs[Function::getGUIDAssumingExternalLinkage(
           NameResolver::restore(F->getOneName()))] = Addr;
     }
     DummyDecoder.buildAddress2ProbeMap(

@@ -267,6 +267,135 @@ template <class It>
 random_access_iterator(It) -> random_access_iterator<It>;
 #endif
 
+// Since C++20, a container iterator type that is random access is also required to support three-way comparison.
+// See C++20 [tab:container.req], C++23 [container.reqmts]/39 - /41.
+template <class It>
+class three_way_random_access_iterator {
+  It it_;
+  support::double_move_tracker tracker_;
+
+  template <class U>
+  friend class three_way_random_access_iterator;
+
+public:
+  typedef std::random_access_iterator_tag iterator_category;
+  typedef typename std::iterator_traits<It>::value_type value_type;
+  typedef typename std::iterator_traits<It>::difference_type difference_type;
+  typedef It pointer;
+  typedef typename std::iterator_traits<It>::reference reference;
+
+  TEST_CONSTEXPR three_way_random_access_iterator() : it_() {}
+  TEST_CONSTEXPR explicit three_way_random_access_iterator(It it) : it_(it) {}
+
+  template <class U>
+  TEST_CONSTEXPR three_way_random_access_iterator(const three_way_random_access_iterator<U>& u)
+      : it_(u.it_), tracker_(u.tracker_) {}
+
+  template <class U, class = typename std::enable_if<std::is_default_constructible<U>::value>::type>
+  TEST_CONSTEXPR_CXX14 three_way_random_access_iterator(three_way_random_access_iterator<U>&& u)
+      : it_(std::move(u.it_)), tracker_(std::move(u.tracker_)) {
+    u.it_ = U();
+  }
+
+  TEST_CONSTEXPR_CXX14 reference operator*() const { return *it_; }
+  TEST_CONSTEXPR_CXX14 reference operator[](difference_type n) const { return it_[n]; }
+
+  TEST_CONSTEXPR_CXX14 three_way_random_access_iterator& operator++() {
+    ++it_;
+    return *this;
+  }
+  TEST_CONSTEXPR_CXX14 three_way_random_access_iterator& operator--() {
+    --it_;
+    return *this;
+  }
+  TEST_CONSTEXPR_CXX14 three_way_random_access_iterator operator++(int) {
+    return three_way_random_access_iterator(it_++);
+  }
+  TEST_CONSTEXPR_CXX14 three_way_random_access_iterator operator--(int) {
+    return three_way_random_access_iterator(it_--);
+  }
+
+  TEST_CONSTEXPR_CXX14 three_way_random_access_iterator& operator+=(difference_type n) {
+    it_ += n;
+    return *this;
+  }
+  TEST_CONSTEXPR_CXX14 three_way_random_access_iterator& operator-=(difference_type n) {
+    it_ -= n;
+    return *this;
+  }
+  friend TEST_CONSTEXPR_CXX14 three_way_random_access_iterator
+  operator+(three_way_random_access_iterator x, difference_type n) {
+    x += n;
+    return x;
+  }
+  friend TEST_CONSTEXPR_CXX14 three_way_random_access_iterator
+  operator+(difference_type n, three_way_random_access_iterator x) {
+    x += n;
+    return x;
+  }
+  friend TEST_CONSTEXPR_CXX14 three_way_random_access_iterator
+  operator-(three_way_random_access_iterator x, difference_type n) {
+    x -= n;
+    return x;
+  }
+  friend TEST_CONSTEXPR difference_type
+  operator-(three_way_random_access_iterator x, three_way_random_access_iterator y) {
+    return x.it_ - y.it_;
+  }
+
+  friend TEST_CONSTEXPR bool
+  operator==(const three_way_random_access_iterator& x, const three_way_random_access_iterator& y) {
+    return x.it_ == y.it_;
+  }
+#if TEST_STD_VER < 20
+  friend TEST_CONSTEXPR bool
+  operator!=(const three_way_random_access_iterator& x, const three_way_random_access_iterator& y) {
+    return x.it_ != y.it_;
+  }
+#endif
+  friend TEST_CONSTEXPR bool
+  operator<(const three_way_random_access_iterator& x, const three_way_random_access_iterator& y) {
+    return x.it_ < y.it_;
+  }
+  friend TEST_CONSTEXPR bool
+  operator<=(const three_way_random_access_iterator& x, const three_way_random_access_iterator& y) {
+    return x.it_ <= y.it_;
+  }
+  friend TEST_CONSTEXPR bool
+  operator>(const three_way_random_access_iterator& x, const three_way_random_access_iterator& y) {
+    return x.it_ > y.it_;
+  }
+  friend TEST_CONSTEXPR bool
+  operator>=(const three_way_random_access_iterator& x, const three_way_random_access_iterator& y) {
+    return x.it_ >= y.it_;
+  }
+#if TEST_STD_VER >= 20
+  friend constexpr std::strong_ordering
+  operator<=>(const three_way_random_access_iterator& x, const three_way_random_access_iterator& y) {
+    if constexpr (std::three_way_comparable<It>) {
+      return x.it_ <=> y.it_;
+    } else {
+      if (x.it_ < y.it_) {
+        return std::strong_ordering::less;
+      } else if (y.it_ < x.it_) {
+        return std::strong_ordering::greater;
+      } else {
+        return std::strong_ordering::equal;
+      }
+    }
+  }
+#endif
+
+  friend TEST_CONSTEXPR It base(const three_way_random_access_iterator& i) { return i.it_; }
+
+  template <class T>
+  void operator,(T const&) = delete;
+};
+#if TEST_STD_VER > 14
+template <class It>
+three_way_random_access_iterator(It) -> three_way_random_access_iterator<It>;
+#endif
+
 #if TEST_STD_VER > 17
 
 template <std::random_access_iterator It>
@@ -1177,6 +1306,23 @@ rvalue_iterator(T*) -> rvalue_iterator<T>;
 
 static_assert(std::random_access_iterator<rvalue_iterator<int*>>);
 
+// The ProxyDiffTBase allows us to conditionally specify Proxy<T>::difference_type
+// which we need in certain situations. For example when we want
+// std::weakly_incrementable<Proxy<T>> to be true.
+template <class T>
+struct ProxyDiffTBase {
+  // Add default `operator<=>` so that the derived type, Proxy, can also use the default `operator<=>`
+  friend constexpr auto operator<=>(const ProxyDiffTBase&, const ProxyDiffTBase&) = default;
+};
+
+template <class T>
+  requires requires { std::iter_difference_t<T>{}; }
+struct ProxyDiffTBase<T> {
+  using difference_type = std::iter_difference_t<T>;
+  // Add default `operator<=>` so that the derived type, Proxy, can also use the default `operator<=>`
+  friend constexpr auto operator<=>(const ProxyDiffTBase&, const ProxyDiffTBase&) = default;
+};
+
 // Proxy
 // ======================================================================
 // Proxy that can wrap a value or a reference. It simulates C++23's tuple
@@ -1187,6 +1333,7 @@ static_assert(std::random_access_iterator<rvalue_iterator<int*>>);
 // This class is useful for testing that if algorithms support proxy iterator
 // properly, i.e. calling ranges::iter_swap and ranges::iter_move instead of
 // plain swap and std::move.
+
 template <class T>
 struct Proxy;
 
@@ -1197,7 +1344,7 @@ template <class T>
 inline constexpr bool IsProxy<Proxy<T>> = true;
 
 template <class T>
-struct Proxy {
+struct Proxy : ProxyDiffTBase<T> {
   T data;
 
   constexpr T& getData() & { return data; }
@@ -1207,6 +1354,10 @@ struct Proxy {
   constexpr T&& getData() && { return static_cast<T&&>(data); }
 
   constexpr const T&& getData() const&& { return static_cast<const T&&>(data); }
+
+  // Explicitly declare the copy constructor as defaulted to avoid deprecation of the implicitly declared one
+  // because of the user-provided copy assignment operator.
+  Proxy(const Proxy&) = default;
 
   template <class U>
     requires std::constructible_from<T, U&&>
@@ -1244,7 +1395,7 @@ struct Proxy {
 
   // Compare operators are defined for the convenience of the tests
   friend constexpr bool operator==(const Proxy&, const Proxy&)
-    requires (std::equality_comparable<T> && !std::is_reference_v<T>)
+    requires(std::equality_comparable<T> && !std::is_reference_v<T>)
   = default;
 
   // Helps compare e.g. `Proxy<int>` and `Proxy<int&>`. Note that the default equality comparison operator is deleted
@@ -1256,7 +1407,7 @@ struct Proxy {
   }
 
   friend constexpr auto operator<=>(const Proxy&, const Proxy&)
-    requires (std::three_way_comparable<T> && !std::is_reference_v<T>)
+    requires(std::three_way_comparable<T> && !std::is_reference_v<T>)
   = default;
 
   // Helps compare e.g. `Proxy<int>` and `Proxy<int&>`. Note that the default 3-way comparison operator is deleted when
@@ -1265,6 +1416,22 @@ struct Proxy {
   friend constexpr auto operator<=>(const Proxy& lhs, const Proxy<U>& rhs)
     requires std::three_way_comparable_with<std::decay_t<T>, std::decay_t<U>> {
     return lhs.data <=> rhs.data;
+  }
+
+  // Needed to allow certain types to be weakly_incrementable
+  constexpr Proxy& operator++()
+    requires(std::weakly_incrementable<std::remove_reference_t<T>>)
+  {
+    ++data;
+    return *this;
+  }
+
+  constexpr Proxy operator++(int)
+    requires(std::incrementable<std::remove_reference_t<T>>)
+  {
+    Proxy tmp = *this;
+    operator++();
+    return tmp;
   }
 };
 

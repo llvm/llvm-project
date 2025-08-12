@@ -11,6 +11,7 @@
 
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/SandboxIR/Value.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm::sandboxir {
 
@@ -32,20 +33,20 @@ private:
   llvm::BasicBlock *BB;
   llvm::BasicBlock::iterator It;
   Context *Ctx;
-  pointer getInstr(llvm::BasicBlock::iterator It) const;
+  LLVM_ABI pointer getInstr(llvm::BasicBlock::iterator It) const;
 
 public:
   BBIterator() : BB(nullptr), Ctx(nullptr) {}
   BBIterator(llvm::BasicBlock *BB, llvm::BasicBlock::iterator It, Context *Ctx)
       : BB(BB), It(It), Ctx(Ctx) {}
   reference operator*() const { return *getInstr(It); }
-  BBIterator &operator++();
+  LLVM_ABI BBIterator &operator++();
   BBIterator operator++(int) {
     auto Copy = *this;
     ++*this;
     return Copy;
   }
-  BBIterator &operator--();
+  LLVM_ABI BBIterator &operator--();
   BBIterator operator--(int) {
     auto Copy = *this;
     --*this;
@@ -60,14 +61,14 @@ public:
   /// the instruction is not found in the IR-to-SandboxIR tables.
   pointer get() const { return getInstr(It); }
   /// \Returns the parent BB.
-  BasicBlock *getNodeParent() const;
+  LLVM_ABI BasicBlock *getNodeParent() const;
 };
 
 /// Contains a list of sandboxir::Instruction's.
 class BasicBlock : public Value {
   /// Builds a graph that contains all values in \p BB in their original form
   /// i.e., no vectorization is taking place here.
-  void buildBasicBlockFromLLVMIR(llvm::BasicBlock *LLVMBB);
+  LLVM_ABI void buildBasicBlockFromLLVMIR(llvm::BasicBlock *LLVMBB);
   friend class Context;     // For `buildBasicBlockFromIR`
   friend class Instruction; // For LLVM Val.
 
@@ -82,9 +83,9 @@ public:
   static bool classof(const Value *From) {
     return From->getSubclassID() == Value::ClassID::Block;
   }
-  Function *getParent() const;
+  LLVM_ABI Function *getParent() const;
   using iterator = BBIterator;
-  iterator begin() const;
+  LLVM_ABI iterator begin() const;
   iterator end() const {
     auto *BB = cast<llvm::BasicBlock>(Val);
     return iterator(BB, BB->end(), &Ctx);
@@ -96,10 +97,10 @@ public:
     return std::make_reverse_iterator(begin());
   }
   Context &getContext() const { return Ctx; }
-  Instruction *getTerminator() const;
+  LLVM_ABI Instruction *getTerminator() const;
   bool empty() const { return begin() == end(); }
-  Instruction &front() const;
-  Instruction &back() const;
+  LLVM_ABI Instruction &front() const;
+  LLVM_ABI Instruction &back() const;
 
 #ifndef NDEBUG
   void verify() const final;

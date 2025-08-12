@@ -22,10 +22,12 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DroppedVariableStatsIR.h"
 #include "llvm/IR/OptBisect.h"
 #include "llvm/IR/PassTimingInfo.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Transforms/IPO/SampleProfileProbe.h"
 
@@ -45,21 +47,23 @@ class PassInstrumentationCallbacks;
 /// (typically Loop or SCC).
 class PrintIRInstrumentation {
 public:
-  ~PrintIRInstrumentation();
+  LLVM_ABI ~PrintIRInstrumentation();
 
-  void registerCallbacks(PassInstrumentationCallbacks &PIC);
+  LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC);
 
 private:
   struct PassRunDescriptor {
     const Module *M;
-    const std::string DumpIRFilename;
+    const unsigned PassNumber;
+    const std::string IRFileDisplayName;
     const std::string IRName;
     const StringRef PassID;
 
-    PassRunDescriptor(const Module *M, std::string DumpIRFilename,
-                      std::string IRName, const StringRef PassID)
-        : M{M}, DumpIRFilename{DumpIRFilename}, IRName{IRName}, PassID(PassID) {
-    }
+    PassRunDescriptor(const Module *M, unsigned PassNumber,
+                      std::string &&IRFileDisplayName, std::string &&IRName,
+                      const StringRef PassID)
+        : M{M}, PassNumber{PassNumber}, IRFileDisplayName(IRFileDisplayName),
+          IRName{IRName}, PassID(PassID) {}
   };
 
   void printBeforePass(StringRef PassID, Any IR);
@@ -74,10 +78,20 @@ private:
   bool shouldPrintBeforeSomePassNumber();
   bool shouldPrintAfterSomePassNumber();
 
-  void pushPassRunDescriptor(StringRef PassID, Any IR,
-                             std::string &DumpIRFilename);
+  void pushPassRunDescriptor(StringRef PassID, Any IR, unsigned PassNumber);
   PassRunDescriptor popPassRunDescriptor(StringRef PassID);
-  std::string fetchDumpFilename(StringRef PassId, Any IR);
+
+  enum class IRDumpFileSuffixType {
+    Before,
+    After,
+    Invalidated,
+  };
+
+  static StringRef
+  getFileSuffix(PrintIRInstrumentation::IRDumpFileSuffixType Type);
+  std::string fetchDumpFilename(StringRef PassId, StringRef IRFileDisplayName,
+                                unsigned PassNumber,
+                                IRDumpFileSuffixType SuffixType);
 
   PassInstrumentationCallbacks *PIC;
   /// Stack of Pass Run descriptions, enough to print the IR unit after a given
@@ -91,7 +105,7 @@ private:
 class OptNoneInstrumentation {
 public:
   OptNoneInstrumentation(bool DebugLogging) : DebugLogging(DebugLogging) {}
-  void registerCallbacks(PassInstrumentationCallbacks &PIC);
+  LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC);
 
 private:
   bool DebugLogging;
@@ -103,8 +117,8 @@ class OptPassGateInstrumentation {
   bool HasWrittenIR = false;
 public:
   OptPassGateInstrumentation(LLVMContext &Context) : Context(Context) {}
-  bool shouldRun(StringRef PassName, Any IR);
-  void registerCallbacks(PassInstrumentationCallbacks &PIC);
+  LLVM_ABI bool shouldRun(StringRef PassName, Any IR);
+  LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC);
 };
 
 struct PrintPassOptions {
@@ -123,7 +137,7 @@ class PrintPassInstrumentation {
 public:
   PrintPassInstrumentation(bool Enabled, PrintPassOptions Opts)
       : Enabled(Enabled), Opts(Opts) {}
-  void registerCallbacks(PassInstrumentationCallbacks &PIC);
+  LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC);
 
 private:
   bool Enabled;
@@ -154,7 +168,7 @@ public:
     std::optional<DenseMap<intptr_t, BBGuard>> BBGuards;
     DenseMap<const BasicBlock *, DenseMap<const BasicBlock *, unsigned>> Graph;
 
-    CFG(const Function *F, bool TrackBBLifetime);
+    LLVM_ABI CFG(const Function *F, bool TrackBBLifetime);
 
     bool operator==(const CFG &G) const {
       return !isPoisoned() && !G.isPoisoned() && Graph == G.Graph;
@@ -166,18 +180,18 @@ public:
              });
     }
 
-    static void printDiff(raw_ostream &out, const CFG &Before,
-                          const CFG &After);
-    bool invalidate(Function &F, const PreservedAnalyses &PA,
-                    FunctionAnalysisManager::Invalidator &);
+    LLVM_ABI static void printDiff(raw_ostream &out, const CFG &Before,
+                                   const CFG &After);
+    LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
+                             FunctionAnalysisManager::Invalidator &);
   };
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   SmallVector<StringRef, 8> PassStack;
 #endif
 
-  void registerCallbacks(PassInstrumentationCallbacks &PIC,
-                         ModuleAnalysisManager &MAM);
+  LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC,
+                                  ModuleAnalysisManager &MAM);
 };
 
 // Base class for classes that report changes to the IR.
@@ -195,7 +209,7 @@ public:
 // 6.  When a pass is run on an IR that is not interesting (based on options).
 // 7.  When a pass is ignored (pass manager or adapter pass).
 // 8.  To compare two IR representations (of type \p T).
-template <typename IRUnitT> class ChangeReporter {
+template <typename IRUnitT> class LLVM_ABI ChangeReporter {
 protected:
   ChangeReporter(bool RunInVerboseMode) : VerboseMode(RunInVerboseMode) {}
 
@@ -244,7 +258,7 @@ protected:
 // An abstract template base class that handles printing banners and
 // reporting when things have not changed or are filtered out.
 template <typename IRUnitT>
-class TextChangeReporter : public ChangeReporter<IRUnitT> {
+class LLVM_ABI TextChangeReporter : public ChangeReporter<IRUnitT> {
 protected:
   TextChangeReporter(bool Verbose);
 
@@ -268,7 +282,7 @@ protected:
 // by unwrapAndPrint.  The string representation is stored in a std::string
 // to preserve it as the IR changes in each pass.  Note that the banner is
 // included in this representation but it is massaged before reporting.
-class IRChangedPrinter : public TextChangeReporter<std::string> {
+class LLVM_ABI IRChangedPrinter : public TextChangeReporter<std::string> {
 public:
   IRChangedPrinter(bool VerboseMode)
       : TextChangeReporter<std::string>(VerboseMode) {}
@@ -285,7 +299,7 @@ protected:
                    Any) override;
 };
 
-class IRChangedTester : public IRChangedPrinter {
+class LLVM_ABI IRChangedTester : public IRChangedPrinter {
 public:
   IRChangedTester() : IRChangedPrinter(true) {}
   ~IRChangedTester() override;
@@ -431,7 +445,8 @@ protected:
 // and added, respectively.  Changes to the IR that do not affect basic
 // blocks are not reported as having changed the IR.  The option
 // -print-module-scope does not affect this change reporter.
-class InLineChangePrinter : public TextChangeReporter<IRDataT<EmptyData>> {
+class LLVM_ABI InLineChangePrinter
+    : public TextChangeReporter<IRDataT<EmptyData>> {
 public:
   InLineChangePrinter(bool VerboseMode, bool ColourMode)
       : TextChangeReporter<IRDataT<EmptyData>>(VerboseMode),
@@ -462,8 +477,8 @@ class VerifyInstrumentation {
 
 public:
   VerifyInstrumentation(bool DebugLogging) : DebugLogging(DebugLogging) {}
-  void registerCallbacks(PassInstrumentationCallbacks &PIC,
-                         ModuleAnalysisManager *MAM);
+  LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC,
+                                  ModuleAnalysisManager *MAM);
 };
 
 /// This class implements --time-trace functionality for new pass manager.
@@ -471,12 +486,12 @@ public:
 /// execution time. They collect time tracing info by TimeProfiler.
 class TimeProfilingPassesHandler {
 public:
-  TimeProfilingPassesHandler();
+  LLVM_ABI TimeProfilingPassesHandler();
   // We intend this to be unique per-compilation, thus no copies.
   TimeProfilingPassesHandler(const TimeProfilingPassesHandler &) = delete;
   void operator=(const TimeProfilingPassesHandler &) = delete;
 
-  void registerCallbacks(PassInstrumentationCallbacks &PIC);
+  LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC);
 
 private:
   // Implementation of pass instrumentation callbacks.
@@ -489,8 +504,8 @@ private:
 class DCData {
 public:
   // Fill the map with the transitions from basic block \p B.
-  DCData(const BasicBlock &B);
-  DCData(const MachineBasicBlock &B);
+  LLVM_ABI DCData(const BasicBlock &B);
+  LLVM_ABI DCData(const MachineBasicBlock &B);
 
   // Return an iterator to the names of the successor blocks.
   StringMap<std::string>::const_iterator begin() const {
@@ -518,7 +533,7 @@ protected:
 
 // A change reporter that builds a website with links to pdf files showing
 // dot control flow graphs with changed instructions shown in colour.
-class DotCfgChangeReporter : public ChangeReporter<IRDataT<DCData>> {
+class LLVM_ABI DotCfgChangeReporter : public ChangeReporter<IRDataT<DCData>> {
 public:
   DotCfgChangeReporter(bool Verbose);
   ~DotCfgChangeReporter() override;
@@ -565,9 +580,9 @@ class PrintCrashIRInstrumentation {
 public:
   PrintCrashIRInstrumentation()
       : SavedIR("*** Dump of IR Before Last Pass Unknown ***") {}
-  ~PrintCrashIRInstrumentation();
-  void registerCallbacks(PassInstrumentationCallbacks &PIC);
-  void reportCrashIR();
+  LLVM_ABI ~PrintCrashIRInstrumentation();
+  LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC);
+  LLVM_ABI void reportCrashIR();
 
 protected:
   std::string SavedIR;
@@ -577,83 +592,6 @@ private:
   static PrintCrashIRInstrumentation *CrashReporter;
   // Crash handler registered when print-on-crash is specified.
   static void SignalHandler(void *);
-};
-
-/// A class to collect and print dropped debug information variable statistics.
-/// After every LLVM IR pass is run, it will print how many #dbg_values were
-/// dropped due to that pass.
-class DroppedVariableStats {
-public:
-  DroppedVariableStats(bool DroppedVarStatsEnabled) {
-    if (DroppedVarStatsEnabled)
-      llvm::outs()
-          << "Pass Level, Pass Name, Num of Dropped Variables, Func or "
-             "Module Name\n";
-  };
-  // We intend this to be unique per-compilation, thus no copies.
-  DroppedVariableStats(const DroppedVariableStats &) = delete;
-  void operator=(const DroppedVariableStats &) = delete;
-
-  void registerCallbacks(PassInstrumentationCallbacks &PIC);
-  void runBeforePass(StringRef PassID, Any IR);
-  void runAfterPass(StringRef PassID, Any IR, const PreservedAnalyses &PA);
-  void runAfterPassInvalidated(StringRef PassID, const PreservedAnalyses &PA);
-  bool getPassDroppedVariables() { return PassDroppedVariables; }
-
-private:
-  bool PassDroppedVariables = false;
-  /// A unique key that represents a #dbg_value.
-  using VarID =
-      std::tuple<const DIScope *, const DIScope *, const DILocalVariable *>;
-
-  struct DebugVariables {
-    /// DenseSet of VarIDs before an optimization pass has run.
-    DenseSet<VarID> DebugVariablesBefore;
-    /// DenseSet of VarIDs after an optimization pass has run.
-    DenseSet<VarID> DebugVariablesAfter;
-  };
-
-  /// A stack of a DenseMap, that maps DebugVariables for every pass to an
-  /// llvm::Function. A stack is used because an optimization pass can call
-  /// other passes.
-  SmallVector<DenseMap<const Function *, DebugVariables>> DebugVariablesStack;
-
-  /// A DenseSet tracking whether a scope was visited before.
-  DenseSet<const DIScope *> VisitedScope;
-  /// A stack of DenseMaps, which map the name of an llvm::Function to a
-  /// DenseMap of VarIDs and their inlinedAt locations before an optimization
-  /// pass has run.
-  SmallVector<DenseMap<StringRef, DenseMap<VarID, DILocation *>>> InlinedAts;
-
-  /// Iterate over all Functions in a Module and report any dropped debug
-  /// information. Will call calculateDroppedVarStatsOnFunction on every
-  /// Function.
-  void calculateDroppedVarStatsOnModule(const Module *M, StringRef PassID,
-                                        std::string FuncOrModName,
-                                        std::string PassLevel);
-  /// Iterate over all Instructions in a Function and report any dropped debug
-  /// information.
-  void calculateDroppedVarStatsOnFunction(const Function *F, StringRef PassID,
-                                          std::string FuncOrModName,
-                                          std::string PassLevel);
-  /// Populate DebugVariablesBefore, DebugVariablesAfter, InlinedAts before or
-  /// after a pass has run to facilitate dropped variable calculation for an
-  /// llvm::Function.
-  void runOnFunction(const Function *F, bool Before);
-  /// Populate DebugVariablesBefore, DebugVariablesAfter, InlinedAts before or
-  /// after a pass has run to facilitate dropped variable calculation for an
-  /// llvm::Module. Calls runOnFunction on every Function in the Module.
-  void runOnModule(const Module *M, bool Before);
-  /// Remove a dropped #dbg_value VarID from all Sets in the
-  /// DroppedVariablesBefore stack.
-  void removeVarFromAllSets(VarID Var, const Function *F);
-  /// Return true if \p Scope is the same as \p DbgValScope or a child scope of
-  /// \p DbgValScope, return false otherwise.
-  bool isScopeChildOfOrEqualTo(DIScope *Scope, const DIScope *DbgValScope);
-  /// Return true if \p InlinedAt is the same as \p DbgValInlinedAt or part of
-  /// the InlinedAt chain, return false otherwise.
-  bool isInlinedAtChildOfOrEqualTo(const DILocation *InlinedAt,
-                                   const DILocation *DbgValInlinedAt);
 };
 
 /// This class provides an interface to register all the standard pass
@@ -673,31 +611,27 @@ class StandardInstrumentations {
   PrintCrashIRInstrumentation PrintCrashIR;
   IRChangedTester ChangeTester;
   VerifyInstrumentation Verify;
-  DroppedVariableStats DroppedStats;
+  DroppedVariableStatsIR DroppedStatsIR;
 
   bool VerifyEach;
 
 public:
+  LLVM_ABI
   StandardInstrumentations(LLVMContext &Context, bool DebugLogging,
                            bool VerifyEach = false,
                            PrintPassOptions PrintPassOpts = PrintPassOptions());
 
   // Register all the standard instrumentation callbacks. If \p FAM is nullptr
   // then PreservedCFGChecker is not enabled.
-  void registerCallbacks(PassInstrumentationCallbacks &PIC,
-                         ModuleAnalysisManager *MAM = nullptr);
+  LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC,
+                                  ModuleAnalysisManager *MAM = nullptr);
 
   TimePassesHandler &getTimePasses() { return TimePasses; }
 };
 
-extern template class ChangeReporter<std::string>;
-extern template class TextChangeReporter<std::string>;
-
 extern template class BlockDataT<EmptyData>;
 extern template class FuncDataT<EmptyData>;
 extern template class IRDataT<EmptyData>;
-extern template class ChangeReporter<IRDataT<EmptyData>>;
-extern template class TextChangeReporter<IRDataT<EmptyData>>;
 extern template class IRComparer<EmptyData>;
 
 } // namespace llvm
