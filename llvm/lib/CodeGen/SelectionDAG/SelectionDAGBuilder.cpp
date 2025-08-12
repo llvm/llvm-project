@@ -11069,23 +11069,20 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
       unsigned NumRegs = getNumRegistersForCallingConv(CLI.RetTy->getContext(),
                                                        CLI.CallConv, VT);
       for (unsigned i = 0; i != NumRegs; ++i) {
-        ISD::InputArg MyFlags;
-        MyFlags.Flags = Flags;
-        MyFlags.VT = RegisterVT;
-        MyFlags.ArgVT = VT;
-        MyFlags.Used = CLI.IsReturnValueUsed;
+        ISD::InputArg Ret(Flags, RegisterVT, VT, CLI.RetTy,
+                          CLI.IsReturnValueUsed, ISD::InputArg::NoArgIndex, 0);
         if (CLI.RetTy->isPointerTy()) {
-          MyFlags.Flags.setPointer();
-          MyFlags.Flags.setPointerAddrSpace(
+          Ret.Flags.setPointer();
+          Ret.Flags.setPointerAddrSpace(
               cast<PointerType>(CLI.RetTy)->getAddressSpace());
         }
         if (CLI.RetSExt)
-          MyFlags.Flags.setSExt();
+          Ret.Flags.setSExt();
         if (CLI.RetZExt)
-          MyFlags.Flags.setZExt();
+          Ret.Flags.setZExt();
         if (CLI.IsInReg)
-          MyFlags.Flags.setInReg();
-        CLI.Ins.push_back(MyFlags);
+          Ret.Flags.setInReg();
+        CLI.Ins.push_back(Ret);
       }
     }
   }
@@ -11095,11 +11092,12 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
   if (supportSwiftError()) {
     for (const ArgListEntry &Arg : Args) {
       if (Arg.IsSwiftError) {
-        ISD::InputArg MyFlags;
-        MyFlags.VT = getPointerTy(DL);
-        MyFlags.ArgVT = EVT(getPointerTy(DL));
-        MyFlags.Flags.setSwiftError();
-        CLI.Ins.push_back(MyFlags);
+        ISD::ArgFlagsTy Flags;
+        Flags.setSwiftError();
+        ISD::InputArg Ret(Flags, getPointerTy(DL), EVT(getPointerTy(DL)),
+                          PointerType::getUnqual(CLI.RetTy->getContext()),
+                          /*Used=*/true, ISD::InputArg::NoArgIndex, 0);
+        CLI.Ins.push_back(Ret);
       }
     }
   }

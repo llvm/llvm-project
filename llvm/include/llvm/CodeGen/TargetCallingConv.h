@@ -205,8 +205,8 @@ namespace ISD {
     ArgFlagsTy Flags;
     MVT VT = MVT::Other;
     EVT ArgVT;
-    Type *OrigTy = nullptr;
-    bool Used = false;
+    Type *OrigTy;
+    bool Used;
 
     /// Index original Function's argument.
     unsigned OrigArgIndex;
@@ -218,7 +218,6 @@ namespace ISD {
     /// registers, we got 4 InputArgs with PartOffsets 0, 4, 8 and 12.
     unsigned PartOffset;
 
-    InputArg() = default;
     InputArg(ArgFlagsTy flags, EVT vt, EVT argvt, Type *OrigTy, bool used,
              unsigned origIdx, unsigned partOffs)
         : Flags(flags), OrigTy(OrigTy), Used(used), OrigArgIndex(origIdx),
@@ -245,7 +244,7 @@ namespace ISD {
     ArgFlagsTy Flags;
     MVT VT;
     EVT ArgVT;
-    Type *OrigTy = nullptr;
+    Type *OrigTy;
 
     /// Index original Function's argument.
     unsigned OrigArgIndex;
@@ -255,7 +254,6 @@ namespace ISD {
     /// registers, we got 4 OutputArgs with PartOffsets 0, 4, 8 and 12.
     unsigned PartOffset;
 
-    OutputArg() = default;
     OutputArg(ArgFlagsTy flags, MVT vt, EVT argvt, Type *OrigTy,
               unsigned origIdx, unsigned partOffs)
         : Flags(flags), OrigTy(OrigTy), OrigArgIndex(origIdx),
