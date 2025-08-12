@@ -1257,15 +1257,17 @@ def trunc_ssatu : GICombineRule<
 
 def trunc_usatu : GICombineRule<
   (defs root:$root, register_matchinfo:$matchinfo),
-  (match (G_TRUNC $dst, $src):$root,
-    [{ return Helper.matchTruncUSatU(*${root}, ${matchinfo}); }]),
-  (apply [{ Helper.applyTruncUSatU(*${root}, ${matchinfo}); }])>;
+  (match (G_UMIN $min, $x, $y):$Min, 
+         (G_TRUNC $dst, $min):$root,
+    [{ return Helper.matchTruncUSatU(*${root}, *${Min}); }]),
+  (apply [{ Helper.applyTruncUSatU(*${root}, *${Min}); }])>;
 
 def truncusatu_to_fptouisat : GICombineRule<
   (defs root:$root, register_matchinfo:$matchinfo),
-  (match (G_TRUNC_USAT_U $dst, $src):$root,
-    [{ return Helper.matchTruncUSatUToFPTOUISat(*${root}, ${matchinfo}); }]),
-  (apply [{ Helper.applyTruncUSatUToFPTOUISat(*${root}, ${matchinfo}); }])>;
+  (match (G_FPTOUI $src, $x):$Src,
+         (G_TRUNC_USAT_U $dst, $src):$root,
+    [{ return Helper.matchTruncUSatUToFPTOUISat(*${root}, *${Src}); }]),
+  (apply [{ Helper.applyTruncUSatUToFPTOUISat(*${root}, *${Src}); }])>;
 
 def truncsat_combines : GICombineGroup<[trunc_ssats, trunc_ssatu, trunc_usatu, truncusatu_to_fptouisat]>;
 

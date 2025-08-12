@@ -716,15 +716,15 @@ entry:
 }
 
 define <8 x i16> @stest_f16i16(<8 x half> %x) {
-; CHECK-CVT-SD-LABEL: stest_f16i16:
-; CHECK-CVT-SD:       // %bb.0: // %entry
-; CHECK-CVT-SD-NEXT:    fcvtl v1.4s, v0.4h
-; CHECK-CVT-SD-NEXT:    fcvtl2 v0.4s, v0.8h
-; CHECK-CVT-SD-NEXT:    fcvtzs v1.4s, v1.4s
-; CHECK-CVT-SD-NEXT:    fcvtzs v2.4s, v0.4s
-; CHECK-CVT-SD-NEXT:    sqxtn v0.4h, v1.4s
-; CHECK-CVT-SD-NEXT:    sqxtn2 v0.8h, v2.4s
-; CHECK-CVT-SD-NEXT:    ret
+; CHECK-CVT-LABEL: stest_f16i16:
+; CHECK-CVT:       // %bb.0: // %entry
+; CHECK-CVT-NEXT:    fcvtl v1.4s, v0.4h
+; CHECK-CVT-NEXT:    fcvtl2 v0.4s, v0.8h
+; CHECK-CVT-NEXT:    fcvtzs v1.4s, v1.4s
+; CHECK-CVT-NEXT:    fcvtzs v2.4s, v0.4s
+; CHECK-CVT-NEXT:    sqxtn v0.4h, v1.4s
+; CHECK-CVT-NEXT:    sqxtn2 v0.8h, v2.4s
+; CHECK-CVT-NEXT:    ret
 ;
 ; CHECK-FP16-SD-LABEL: stest_f16i16:
 ; CHECK-FP16-SD:       // %bb.0: // %entry
@@ -771,15 +771,15 @@ entry:
 }
 
 define <8 x i16> @utesth_f16i16(<8 x half> %x) {
-; CHECK-CVT-SD-LABEL: utesth_f16i16:
-; CHECK-CVT-SD:       // %bb.0: // %entry
-; CHECK-CVT-SD-NEXT:    fcvtl v1.4s, v0.4h
-; CHECK-CVT-SD-NEXT:    fcvtl2 v0.4s, v0.8h
-; CHECK-CVT-SD-NEXT:    fcvtzu v1.4s, v1.4s
-; CHECK-CVT-SD-NEXT:    fcvtzu v2.4s, v0.4s
-; CHECK-CVT-SD-NEXT:    uqxtn v0.4h, v1.4s
-; CHECK-CVT-SD-NEXT:    uqxtn2 v0.8h, v2.4s
-; CHECK-CVT-SD-NEXT:    ret
+; CHECK-CVT-LABEL: utesth_f16i16:
+; CHECK-CVT:       // %bb.0: // %entry
+; CHECK-CVT-NEXT:    fcvtl v1.4s, v0.4h
+; CHECK-CVT-NEXT:    fcvtl2 v0.4s, v0.8h
+; CHECK-CVT-NEXT:    fcvtzu v1.4s, v1.4s
+; CHECK-CVT-NEXT:    fcvtzu v2.4s, v0.4s
+; CHECK-CVT-NEXT:    uqxtn v0.4h, v1.4s
+; CHECK-CVT-NEXT:    uqxtn2 v0.8h, v2.4s
+; CHECK-CVT-NEXT:    ret
 ;
 ; CHECK-FP16-SD-LABEL: utesth_f16i16:
 ; CHECK-FP16-SD:       // %bb.0: // %entry
@@ -818,15 +818,15 @@ entry:
 }
 
 define <8 x i16> @ustest_f16i16(<8 x half> %x) {
-; CHECK-CVT-SD-LABEL: ustest_f16i16:
-; CHECK-CVT-SD:       // %bb.0: // %entry
-; CHECK-CVT-SD-NEXT:    fcvtl v1.4s, v0.4h
-; CHECK-CVT-SD-NEXT:    fcvtl2 v0.4s, v0.8h
-; CHECK-CVT-SD-NEXT:    fcvtzs v1.4s, v1.4s
-; CHECK-CVT-SD-NEXT:    fcvtzs v2.4s, v0.4s
-; CHECK-CVT-SD-NEXT:    sqxtun v0.4h, v1.4s
-; CHECK-CVT-SD-NEXT:    sqxtun2 v0.8h, v2.4s
-; CHECK-CVT-SD-NEXT:    ret
+; CHECK-CVT-LABEL: ustest_f16i16:
+; CHECK-CVT:       // %bb.0: // %entry
+; CHECK-CVT-NEXT:    fcvtl v1.4s, v0.4h
+; CHECK-CVT-NEXT:    fcvtl2 v0.4s, v0.8h
+; CHECK-CVT-NEXT:    fcvtzs v1.4s, v1.4s
+; CHECK-CVT-NEXT:    fcvtzs v2.4s, v0.4s
+; CHECK-CVT-NEXT:    sqxtun v0.4h, v1.4s
+; CHECK-CVT-NEXT:    sqxtun2 v0.8h, v2.4s
+; CHECK-CVT-NEXT:    ret
 ;
 ; CHECK-FP16-SD-LABEL: ustest_f16i16:
 ; CHECK-FP16-SD:       // %bb.0: // %entry
@@ -2879,15 +2879,15 @@ entry:
 }
 
 define <8 x i16> @stest_f16i16_mm(<8 x half> %x) {
-; CHECK-CVT-SD-LABEL: stest_f16i16_mm:
-; CHECK-CVT-SD:       // %bb.0: // %entry
-; CHECK-CVT-SD-NEXT:    fcvtl v1.4s, v0.4h
-; CHECK-CVT-SD-NEXT:    fcvtl2 v0.4s, v0.8h
-; CHECK-CVT-SD-NEXT:    fcvtzs v1.4s, v1.4s
-; CHECK-CVT-SD-NEXT:    fcvtzs v2.4s, v0.4s
-; CHECK-CVT-SD-NEXT:    sqxtn v0.4h, v1.4s
-; CHECK-CVT-SD-NEXT:    sqxtn2 v0.8h, v2.4s
-; CHECK-CVT-SD-NEXT:    ret
+; CHECK-CVT-LABEL: stest_f16i16_mm:
+; CHECK-CVT:       // %bb.0: // %entry
+; CHECK-CVT-NEXT:    fcvtl v1.4s, v0.4h
+; CHECK-CVT-NEXT:    fcvtl2 v0.4s, v0.8h
+; CHECK-CVT-NEXT:    fcvtzs v1.4s, v1.4s
+; CHECK-CVT-NEXT:    fcvtzs v2.4s, v0.4s
+; CHECK-CVT-NEXT:    sqxtn v0.4h, v1.4s
+; CHECK-CVT-NEXT:    sqxtn2 v0.8h, v2.4s
+; CHECK-CVT-NEXT:    ret
 ;
 ; CHECK-FP16-SD-LABEL: stest_f16i16_mm:
 ; CHECK-FP16-SD:       // %bb.0: // %entry
@@ -2932,15 +2932,15 @@ entry:
 }
 
 define <8 x i16> @utesth_f16i16_mm(<8 x half> %x) {
-; CHECK-CVT-SD-LABEL: utesth_f16i16_mm:
-; CHECK-CVT-SD:       // %bb.0: // %entry
-; CHECK-CVT-SD-NEXT:    fcvtl v1.4s, v0.4h
-; CHECK-CVT-SD-NEXT:    fcvtl2 v0.4s, v0.8h
-; CHECK-CVT-SD-NEXT:    fcvtzu v1.4s, v1.4s
-; CHECK-CVT-SD-NEXT:    fcvtzu v2.4s, v0.4s
-; CHECK-CVT-SD-NEXT:    uqxtn v0.4h, v1.4s
-; CHECK-CVT-SD-NEXT:    uqxtn2 v0.8h, v2.4s
-; CHECK-CVT-SD-NEXT:    ret
+; CHECK-CVT-LABEL: utesth_f16i16_mm:
+; CHECK-CVT:       // %bb.0: // %entry
+; CHECK-CVT-NEXT:    fcvtl v1.4s, v0.4h
+; CHECK-CVT-NEXT:    fcvtl2 v0.4s, v0.8h
+; CHECK-CVT-NEXT:    fcvtzu v1.4s, v1.4s
+; CHECK-CVT-NEXT:    fcvtzu v2.4s, v0.4s
+; CHECK-CVT-NEXT:    uqxtn v0.4h, v1.4s
+; CHECK-CVT-NEXT:    uqxtn2 v0.8h, v2.4s
+; CHECK-CVT-NEXT:    ret
 ;
 ; CHECK-FP16-SD-LABEL: utesth_f16i16_mm:
 ; CHECK-FP16-SD:       // %bb.0: // %entry
@@ -2978,15 +2978,15 @@ entry:
 }
 
 define <8 x i16> @ustest_f16i16_mm(<8 x half> %x) {
-; CHECK-CVT-SD-LABEL: ustest_f16i16_mm:
-; CHECK-CVT-SD:       // %bb.0: // %entry
-; CHECK-CVT-SD-NEXT:    fcvtl v1.4s, v0.4h
-; CHECK-CVT-SD-NEXT:    fcvtl2 v0.4s, v0.8h
-; CHECK-CVT-SD-NEXT:    fcvtzs v1.4s, v1.4s
-; CHECK-CVT-SD-NEXT:    fcvtzs v2.4s, v0.4s
-; CHECK-CVT-SD-NEXT:    sqxtun v0.4h, v1.4s
-; CHECK-CVT-SD-NEXT:    sqxtun2 v0.8h, v2.4s
-; CHECK-CVT-SD-NEXT:    ret
+; CHECK-CVT-LABEL: ustest_f16i16_mm:
+; CHECK-CVT:       // %bb.0: // %entry
+; CHECK-CVT-NEXT:    fcvtl v1.4s, v0.4h
+; CHECK-CVT-NEXT:    fcvtl2 v0.4s, v0.8h
+; CHECK-CVT-NEXT:    fcvtzs v1.4s, v1.4s
+; CHECK-CVT-NEXT:    fcvtzs v2.4s, v0.4s
+; CHECK-CVT-NEXT:    sqxtun v0.4h, v1.4s
+; CHECK-CVT-NEXT:    sqxtun2 v0.8h, v2.4s
+; CHECK-CVT-NEXT:    ret
 ;
 ; CHECK-FP16-SD-LABEL: ustest_f16i16_mm:
 ; CHECK-FP16-SD:       // %bb.0: // %entry
