@@ -281,17 +281,43 @@ static void DetermineCopyInOutArgument(
   if (actual.isAlternateReturn()) {
     return;
   }
-  const auto *dummyObj =
-      std::get_if<characteristics::DummyDataObject>(&dummy.u);
+  const auto *dummyObj{
+      std::get_if<characteristics::DummyDataObject>(&dummy.u)};
   if (!dummyObj) {
     // Only DummyDataObject has the information we need
     return;
   }
+
+  bool dummyIsValue{
+      dummyObj->attrs.test(characteristics::DummyDataObject::Attr::Value)};
+  if (dummyIsValue) {
+    actual.SetMayNeedCopyIn();
+    return;
+  }
+
   // Check actual contiguity, unless dummy doesn't care
-  bool actualContiguous =
+  bool actualTreatAsContiguous{
       dummyObj->ignoreTKR.test(common::IgnoreTKR::Contiguous) ||
-      IsSimplyContiguous(actual, sc.foldingContext());
-  bool actualVectorSubscript = HasVectorSubscript(actual);
+      IsSimplyContiguous(actual, sc.foldingContext())};
+
+  bool actualHasVectorSubscript{HasVectorSubscript(actual)};
+  bool actualIsArray{actual.Rank() > 0};
+
+  bool dummyIsArray{dummyObj->type.Rank() > 0};
+  bool dummyIsExplicitShape{
+      dummyIsArray ? IsExplicitShape(*dummyObj->type.shape()) : false};
+  bool dummyIsAssumedSize{dummyObj->type.attrs().test(
+      characteristics::TypeAndShape::Attr::AssumedSize)};
+  bool dummyNeedsContiguity{dummyIsArray &&
+      (dummyIsExplicitShape || dummyIsAssumedSize ||
+      dummyObj->attrs.test(characteristics::DummyDataObject::Attr::Contiguous))};
+  if (!actualTreatAsContiguous && dummyNeedsContiguity) {
+    actual.SetMayNeedCopyIn();
+    if (!actualHasVectorSubscript) {
+      actual.SetMayNeedCopyOut();
+    }
+  }
+
 
   // TODO
 }

@@ -35,6 +35,7 @@ using Shape = std::vector<MaybeExtentExpr>;
 
 bool IsImpliedShape(const Symbol &);
 bool IsExplicitShape(const Symbol &);
+bool IsExplicitShape(const Shape &);
 
 // Conversions between various representations of shapes.
 std::optional<ExtentExpr> AsExtentArrayExpr(const Shape &);
