@@ -4,9 +4,9 @@
 
 // CHECK-DAG: ![[DWARF_MEMORY_SPACE_GLOBAL:[0-9]+]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !{{[0-9]+}}, size: {{[0-9]+}}, memorySpace: DW_MSPACE_LLVM_global)
 // CHECK-DAG: ![[DWARF_MEMORY_SPACE_CONSTANT:[0-9]+]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !{{[0-9]+}}, size: {{[0-9]+}}, memorySpace: DW_MSPACE_LLVM_constant)
-// CHECK-DAG: ![[DWARF_MEMORY_SPACE_LOCAL:[0-9]+]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !{{[0-9]+}}, size: {{[0-9]+}}, addressSpace: 2, memorySpace: DW_MSPACE_LLVM_group)
-// CHECK-DAG: ![[DWARF_MEMORY_SPACE_PRIVATE:[0-9]+]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !{{[0-9]+}}, size: {{[0-9]+}}, addressSpace: 1, memorySpace: DW_MSPACE_LLVM_private)
-// CHECK-DAG: ![[DWARF_MEMORY_SPACE_NONE:[0-9]+]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !{{[0-9]+}}, size: {{[0-9]+}})
+// CHECK-DAG: ![[DWARF_MEMORY_SPACE_LOCAL:[0-9]+]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !{{[0-9]+}}, size: {{[0-9]+}}, addressSpace: 3, memorySpace: DW_MSPACE_LLVM_group)
+// CHECK-DAG: ![[DWARF_MEMORY_SPACE_PRIVATE:[0-9]+]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !{{[0-9]+}}, size: {{[0-9]+}}, addressSpace: 5, memorySpace: DW_MSPACE_LLVM_private)
+// CHECK-DAG: ![[DWARF_MEMORY_SPACE_NONE:[0-9]+]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !{{[0-9]+}}, size: {{[0-9]+}}, addressSpace: 1)
 
 // CHECK-DAG: distinct !DIGlobalVariable(name: "FileVar0", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: ![[DWARF_MEMORY_SPACE_GLOBAL]], isLocal: false, isDefinition: true, memorySpace: DW_MSPACE_LLVM_global)
 global int *FileVar0;
