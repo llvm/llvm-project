@@ -22,6 +22,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/BinaryFormat/Wasm.h"
+#include "llvm/Support/CheckedArithmetic.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Format.h"
 #include <optional>
@@ -50,7 +51,8 @@ static bool ValidateModuleHeader(const DataBufferSP &data_sp) {
   return version == llvm::wasm::WasmVersion;
 }
 
-static std::optional<ConstString>
+// FIXME: Use lldb::DataExtractor instead of llvm::DataExtractor.
+static std::optional<std::string>
 GetWasmString(llvm::DataExtractor &data, llvm::DataExtractor::Cursor &c) {
   // A Wasm string is encoded as a vector of UTF-8 codes.
   // Vectors are encoded with their u32 length followed by the element
@@ -72,8 +74,7 @@ GetWasmString(llvm::DataExtractor &data, llvm::DataExtractor::Cursor &c) {
     return std::nullopt;
   }
 
-  llvm::StringRef str = toStringRef(llvm::ArrayRef(str_storage));
-  return ConstString(str);
+  return std::string(toStringRef(llvm::ArrayRef(str_storage)));
 }
 
 char ObjectFileWasm::ID;
@@ -182,7 +183,7 @@ bool ObjectFileWasm::DecodeNextSection(lldb::offset_t *offset_ptr) {
     // identifying the custom section, followed by an uninterpreted sequence
     // of bytes.
     lldb::offset_t prev_offset = c.tell();
-    std::optional<ConstString> sect_name = GetWasmString(data, c);
+    std::optional<std::string> sect_name = GetWasmString(data, c);
     if (!sect_name)
       return false;
 
@@ -191,7 +192,7 @@ bool ObjectFileWasm::DecodeNextSection(lldb::offset_t *offset_ptr) {
 
     uint32_t section_length = payload_len - (c.tell() - prev_offset);
     m_sect_infos.push_back(section_info{*offset_ptr + c.tell(), section_length,
-                                        section_id, *sect_name});
+                                        section_id, ConstString(*sect_name)});
     *offset_ptr += (c.tell() + section_length);
   } else if (section_id <= llvm::wasm::WASM_SEC_LAST_KNOWN) {
     m_sect_infos.push_back(section_info{*offset_ptr + c.tell(),
@@ -248,12 +249,136 @@ bool ObjectFileWasm::ParseHeader() {
   return true;
 }
 
-void ObjectFileWasm::ParseSymtab(Symtab &symtab) {}
+static llvm::Expected<std::vector<AddressRange>>
+ParseFunctions(SectionSP code_section_sp) {
+  DataExtractor code_section_data;
+  code_section_sp->GetSectionData(code_section_data);
+  lldb::offset_t offset = 0;
+
+  const uint64_t function_count = code_section_data.GetULEB128(&offset);
+  if (function_count >= std::numeric_limits<uint32_t>::max())
+    return llvm::createStringError("function count overflows uint32_t");
+
+  std::vector<AddressRange> functions;
+  functions.reserve(function_count);
+
+  for (uint32_t i = 0; i < function_count; ++i) {
+    const uint64_t function_size = code_section_data.GetULEB128(&offset);
+    if (function_size >= std::numeric_limits<uint32_t>::max())
+      return llvm::createStringError("function size overflows uint32_t");
+    // llvm-objdump considers the ULEB with the function size to be part of the
+    // function. We can't do that here because that would break symbolic
+    // breakpoints, as that address is never executed.
+    functions.emplace_back(code_section_sp, offset, function_size);
+
+    std::optional<lldb::offset_t> next_offset =
+        llvm::checkedAddUnsigned(offset, function_size);
+    if (!next_offset)
+      return llvm::createStringError("function offset overflows uint64_t");
+    offset = *next_offset;
+  }
+
+  return functions;
+}
+
+static llvm::Expected<std::vector<Symbol>>
+ParseNames(SectionSP name_section_sp,
+           const std::vector<AddressRange> &functions) {
+  DataExtractor name_section_data;
+  name_section_sp->GetSectionData(name_section_data);
+
+  llvm::DataExtractor data = name_section_data.GetAsLLVM();
+  llvm::DataExtractor::Cursor c(0);
+  std::vector<Symbol> symbols;
+  while (c && c.tell() < data.size()) {
+    const uint8_t type = data.getU8(c);
+    const uint64_t size = data.getULEB128(c);
+    if (size >= std::numeric_limits<uint32_t>::max())
+      return llvm::createStringError("size overflows uint32_t");
+
+    switch (type) {
+    case llvm::wasm::WASM_NAMES_FUNCTION: {
+      const uint64_t count = data.getULEB128(c);
+      if (count >= std::numeric_limits<uint32_t>::max())
+        return llvm::createStringError("function count overflows uint32_t");
+
+      for (uint64_t i = 0; c && i < count; ++i) {
+        const uint64_t idx = data.getULEB128(c);
+        const std::optional<std::string> name = GetWasmString(data, c);
+        if (!name || idx >= functions.size())
+          continue;
+        symbols.emplace_back(
+            symbols.size(), Mangled(*name), lldb::eSymbolTypeCode,
+            /*external=*/false, /*is_debug=*/false, /*is_trampoline=*/false,
+            /*is_artificial=*/false, functions[idx],
+            /*size_is_valid=*/true, /*contains_linker_annotations=*/false,
+            /*flags=*/0);
+      }
+    } break;
+    case llvm::wasm::WASM_NAMES_DATA_SEGMENT:
+    case llvm::wasm::WASM_NAMES_GLOBAL:
+    case llvm::wasm::WASM_NAMES_LOCAL:
+    default:
+      std::optional<uint64_t> offset = llvm::checkedAddUnsigned(c.tell(), size);
+      if (!offset)
+        return llvm::createStringError("offset overflows uint64_t");
+      c.seek(*offset);
+    }
+  }
+
+  if (!c)
+    return c.takeError();
+
+  return symbols;
+}
+
+void ObjectFileWasm::ParseSymtab(Symtab &symtab) {
+  assert(m_sections_up && "sections must be parsed");
+  Log *log = GetLog(LLDBLog::Object);
+
+  // The name section contains names and indexes. First parse the functions from
+  // the code section so we can access them by their index.
+  SectionSP code_section_sp =
+      m_sections_up->FindSectionByType(lldb::eSectionTypeCode, false);
+  if (!code_section_sp) {
+    LLDB_LOG(log, "Failed to parse Wasm symbol table: no functions section");
+    return;
+  }
+
+  llvm::Expected<std::vector<AddressRange>> functions =
+      ParseFunctions(code_section_sp);
+  if (!functions) {
+    LLDB_LOG_ERROR(log, functions.takeError(),
+                   "Failed to parse Wasm functions: {0}");
+    return;
+  }
+
+  // Parse the name section.
+  SectionSP name_section_sp =
+      m_sections_up->FindSectionByType(lldb::eSectionTypeWasmName, false);
+  if (!name_section_sp) {
+    LLDB_LOG(log, "Failed to parse Wasm symbol table: no names section");
+    return;
+  }
+
+  llvm::Expected<std::vector<Symbol>> symbols =
+      ParseNames(name_section_sp, *functions);
+  if (!symbols) {
+    LLDB_LOG_ERROR(log, symbols.takeError(), "Failed to parse Wasm names: {0}");
+    return;
+  }
+
+  for (const Symbol &symbol : *symbols)
+    symtab.AddSymbol(symbol);
+
+  symtab.Finalize();
+}
 
 static SectionType GetSectionTypeFromName(llvm::StringRef Name) {
-  if (Name.consume_front(".debug_") || Name.consume_front(".zdebug_")) {
+  if (Name == "name")
+    return lldb::eSectionTypeWasmName;
+  if (Name.consume_front(".debug_") || Name.consume_front(".zdebug_"))
     return ObjectFile::GetDWARFSectionTypeFromName(Name);
-  }
   return eSectionTypeOther;
 }
 
@@ -397,9 +522,9 @@ std::optional<FileSpec> ObjectFileWasm::GetExternalDebugInfoFileSpec() {
           ReadImageData(sect_info.offset, kBufferSize);
       llvm::DataExtractor data = section_header_data.GetAsLLVM();
       llvm::DataExtractor::Cursor c(0);
-      std::optional<ConstString> symbols_url = GetWasmString(data, c);
+      std::optional<std::string> symbols_url = GetWasmString(data, c);
       if (symbols_url)
-        return FileSpec(symbols_url->GetStringRef());
+        return FileSpec(*symbols_url);
     }
   }
   return std::nullopt;

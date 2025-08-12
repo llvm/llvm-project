@@ -1,0 +1,7 @@
+# RUN: yaml2obj %S/Inputs/simple.wasm.yaml -o %t.wasm
+# RUN: %lldb %t.wasm -o 'image dump symtab'
+
+# CHECK: Code 0x0000000000000002 {{.*}} __wasm_call_ctors
+# CHECK: Code 0x0000000000000005 {{.*}} add
+# CHECK: Code 0x000000000000002f {{.*}} __original_main
+# CHECK: Code 0x000000000000007c {{.*}} main
