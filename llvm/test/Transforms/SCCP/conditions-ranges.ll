@@ -1444,3 +1444,65 @@ define i1 @ptr_icmp_data_layout() {
   %cmp = icmp eq ptr %a.end, @A
   ret i1 %cmp
 }
+
+define void @trunc_nuw_1_dominating_icmp_ne_0(i8 %x) {
+; CHECK-LABEL: @trunc_nuw_1_dominating_icmp_ne_0(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    br i1 [[TRUNC]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    ret void
+; CHECK:       bb2:
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    ret void
+;
+  %trunc = trunc nuw i8 %x to i1
+  br i1 %trunc, label %bb1, label %bb2
+bb1:
+  %c1 = icmp ne i8 %x , 0
+  call void @use(i1 %c1)
+  %c2 = icmp ne i8 0, %x
+  call void @use(i1 %c2)
+  ret void
+bb2:
+  %c3 = icmp ne i8 %x , 0
+  call void @use(i1 %c3)
+  %c4 = icmp ne i8 0, %x
+  call void @use(i1 %c4)
+  ret void
+}
+
+define void @neg_trunc_1_dominating_icmp_ne_0(i8 %x) {
+; CHECK-LABEL: @neg_trunc_1_dominating_icmp_ne_0(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    br i1 [[TRUNC]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[C1:%.*]] = icmp ne i8 [[X]], 0
+; CHECK-NEXT:    call void @use(i1 [[C1]])
+; CHECK-NEXT:    [[C2:%.*]] = icmp ne i8 0, [[X]]
+; CHECK-NEXT:    call void @use(i1 [[C2]])
+; CHECK-NEXT:    ret void
+; CHECK:       bb2:
+; CHECK-NEXT:    [[C3:%.*]] = icmp ne i8 [[X]], 0
+; CHECK-NEXT:    call void @use(i1 [[C3]])
+; CHECK-NEXT:    [[C4:%.*]] = icmp ne i8 0, [[X]]
+; CHECK-NEXT:    call void @use(i1 [[C4]])
+; CHECK-NEXT:    ret void
+;
+  %trunc = trunc i8 %x to i1
+  br i1 %trunc, label %bb1, label %bb2
+bb1:
+  %c1 = icmp ne i8 %x , 0
+  call void @use(i1 %c1)
+  %c2 = icmp ne i8 0, %x
+  call void @use(i1 %c2)
+  ret void
+bb2:
+  %c3 = icmp ne i8 %x , 0
+  call void @use(i1 %c3)
+  %c4 = icmp ne i8 0, %x
+  call void @use(i1 %c4)
+  ret void
+}

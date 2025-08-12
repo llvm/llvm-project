@@ -246,8 +246,7 @@ VPTransformState::VPTransformState(const TargetTransformInfo *TTI,
                                    IRBuilderBase &Builder, VPlan *Plan,
                                    Loop *CurrentParentLoop, Type *CanonicalIVTy)
     : TTI(TTI), VF(VF), CFG(DT), LI(LI), AC(AC), Builder(Builder), Plan(Plan),
-      CurrentParentLoop(CurrentParentLoop), TypeAnalysis(CanonicalIVTy),
-      VPDT(*Plan) {}
+      CurrentParentLoop(CurrentParentLoop), TypeAnalysis(*Plan), VPDT(*Plan) {}
 
 Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
   if (Def->isLiveIn())

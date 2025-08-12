@@ -194,6 +194,13 @@ class _OperationBase:
         """
         Detaches the operation from its parent block.
         """
+
+    @property
+    def attached(self) -> bool:
+        """
+        Reports if the operation is attached to its parent block.
+        """
+
     def erase(self) -> None: ...
 
     @overload

@@ -529,10 +529,10 @@ define void @sve_tail_predicate_without_minsize(ptr %p, i8 %a, i8 %b, i8 %c, i32
 ; DEFAULT-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[TMP21]], ptr [[TMP22]], i32 1, <vscale x 16 x i1> [[ACTIVE_LANE_MASK]])
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; DEFAULT-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX]], i64 [[TMP9]])
-; DEFAULT-NEXT:    [[TMP24:%.*]] = xor <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], splat (i1 true)
+; DEFAULT-NEXT:    [[TMP24:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
+; DEFAULT-NEXT:    [[TMP23:%.*]] = xor i1 [[TMP24]], true
 ; DEFAULT-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 16 x i8> [[VEC_IND]], [[DOTSPLAT]]
-; DEFAULT-NEXT:    [[TMP25:%.*]] = extractelement <vscale x 16 x i1> [[TMP24]], i32 0
-; DEFAULT-NEXT:    br i1 [[TMP25]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; DEFAULT-NEXT:    br i1 [[TMP23]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
 ; DEFAULT-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; DEFAULT:       [[SCALAR_PH]]:
@@ -597,10 +597,10 @@ define void @sve_tail_predicate_without_minsize(ptr %p, i8 %a, i8 %b, i8 %c, i32
 ; OPTSIZE-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[TMP21]], ptr [[TMP22]], i32 1, <vscale x 16 x i1> [[ACTIVE_LANE_MASK]])
 ; OPTSIZE-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; OPTSIZE-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX]], i64 [[TMP9]])
-; OPTSIZE-NEXT:    [[TMP24:%.*]] = xor <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], splat (i1 true)
+; OPTSIZE-NEXT:    [[TMP24:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
+; OPTSIZE-NEXT:    [[TMP23:%.*]] = xor i1 [[TMP24]], true
 ; OPTSIZE-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 16 x i8> [[VEC_IND]], [[DOTSPLAT]]
-; OPTSIZE-NEXT:    [[TMP25:%.*]] = extractelement <vscale x 16 x i1> [[TMP24]], i32 0
-; OPTSIZE-NEXT:    br i1 [[TMP25]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; OPTSIZE-NEXT:    br i1 [[TMP23]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; OPTSIZE:       [[MIDDLE_BLOCK]]:
 ; OPTSIZE-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; OPTSIZE:       [[SCALAR_PH]]:
@@ -665,10 +665,10 @@ define void @sve_tail_predicate_without_minsize(ptr %p, i8 %a, i8 %b, i8 %c, i32
 ; MINSIZE-NEXT:    call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[TMP21]], ptr [[TMP22]], i32 1, <vscale x 16 x i1> [[ACTIVE_LANE_MASK]])
 ; MINSIZE-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; MINSIZE-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX]], i64 [[TMP9]])
-; MINSIZE-NEXT:    [[TMP24:%.*]] = xor <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], splat (i1 true)
+; MINSIZE-NEXT:    [[TMP24:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
+; MINSIZE-NEXT:    [[TMP23:%.*]] = xor i1 [[TMP24]], true
 ; MINSIZE-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 16 x i8> [[VEC_IND]], [[DOTSPLAT]]
-; MINSIZE-NEXT:    [[TMP25:%.*]] = extractelement <vscale x 16 x i1> [[TMP24]], i32 0
-; MINSIZE-NEXT:    br i1 [[TMP25]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; MINSIZE-NEXT:    br i1 [[TMP23]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; MINSIZE:       [[MIDDLE_BLOCK]]:
 ; MINSIZE-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; MINSIZE:       [[SCALAR_PH]]:

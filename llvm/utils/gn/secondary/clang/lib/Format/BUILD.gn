@@ -21,6 +21,7 @@ static_library("Format") {
     "MacroExpander.cpp",
     "MatchFilePath.cpp",
     "NamespaceEndCommentsFixer.cpp",
+    "NumericLiteralInfo.cpp",
     "ObjCPropertyAttributeOrderFixer.cpp",
     "QualifierAlignmentFixer.cpp",
     "SortJavaScriptImports.cpp",

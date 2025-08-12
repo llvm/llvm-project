@@ -1790,7 +1790,8 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
     ScalarizedCost +=
         TTI.getMemoryOpCost(Instruction::Load, VecTy->getElementType(),
                             Align(1), LI->getPointerAddressSpace(), CostKind);
-    ScalarizedCost += TTI.getAddressComputationCost(VecTy->getElementType());
+    ScalarizedCost +=
+        TTI.getAddressComputationCost(LI->getPointerOperandType());
   }
 
   LLVM_DEBUG(dbgs() << "Found all extractions of a vector load: " << I
@@ -2910,7 +2911,7 @@ bool VectorCombine::foldShuffleToIdentity(Instruction &I) {
       if (!IL.first)
         return true;
       Value *V = IL.first->get();
-      if (auto *I = dyn_cast<Instruction>(V); I && !I->hasOneUse())
+      if (auto *I = dyn_cast<Instruction>(V); I && !I->hasOneUser())
         return false;
       if (V->getValueID() != FrontV->getValueID())
         return false;

@@ -353,7 +353,8 @@ static const MCPhysReg IntRegs[] = {Xtensa::A2, Xtensa::A3, Xtensa::A4,
 
 static bool CC_Xtensa_Custom(unsigned ValNo, MVT ValVT, MVT LocVT,
                              CCValAssign::LocInfo LocInfo,
-                             ISD::ArgFlagsTy ArgFlags, CCState &State) {
+                             ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                             CCState &State) {
   if (ArgFlags.isByVal()) {
     Align ByValAlign = ArgFlags.getNonZeroByValAlign();
     unsigned ByValSize = ArgFlags.getByValSize();

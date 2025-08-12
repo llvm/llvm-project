@@ -3442,6 +3442,14 @@ void mlir::python::populateIRCore(nb::module_ &m) {
             return operation.createOpView();
           },
           "Detaches the operation from its parent block.")
+      .def_prop_ro(
+          "attached",
+          [](PyOperationBase &self) {
+            PyOperation &operation = self.getOperation();
+            operation.checkValid();
+            return operation.isAttached();
+          },
+          "Reports if the operation is attached to its parent block.")
       .def("erase", [](PyOperationBase &self) { self.getOperation().erase(); })
       .def("walk", &PyOperationBase::walk, nb::arg("callback"),
            nb::arg("walk_order") = MlirWalkPostOrder);

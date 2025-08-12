@@ -589,7 +589,7 @@ define fp128 @test_v2f128(<2 x fp128> %a) nounwind {
 ; CHECK-NEXT:    bl __lttf2
 ; CHECK-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    b.ge .LBB18_2
+; CHECK-NEXT:    b.pl .LBB18_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:  .LBB18_2:

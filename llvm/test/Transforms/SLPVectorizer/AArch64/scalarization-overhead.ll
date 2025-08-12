@@ -15,28 +15,28 @@ define fastcc i64 @zot(float %arg, float %arg1, float %arg2, float %arg3, float 
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <4 x float> <float 0.000000e+00, float 0.000000e+00, float 1.000000e+00, float 1.000000e+00>, [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> <float poison, float 0.000000e+00>, float [[ARG3]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd fast <2 x float> [[TMP4]], <float 1.000000e+00, float 0.000000e+00>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> [[TMP9]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP7:%.*]] = fadd fast <4 x float> [[TMP6]], <float 2.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> [[TMP6]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd fast <4 x float> [[TMP7]], <float 2.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
 ; CHECK-NEXT:    br i1 [[ARG6:%.*]], label [[BB18:%.*]], label [[BB57:%.*]]
 ; CHECK:       bb18:
-; CHECK-NEXT:    [[TMP8:%.*]] = phi <4 x float> [ [[TMP7]], [[BB:%.*]] ]
-; CHECK-NEXT:    [[VAL16:%.*]] = extractelement <4 x float> [[TMP7]], i32 2
+; CHECK-NEXT:    [[TMP9:%.*]] = phi <4 x float> [ [[TMP8]], [[BB:%.*]] ]
+; CHECK-NEXT:    [[VAL16:%.*]] = extractelement <4 x float> [[TMP8]], i32 2
 ; CHECK-NEXT:    [[VAL23:%.*]] = fmul fast float [[VAL16]], 2.000000e+00
-; CHECK-NEXT:    [[VAL17:%.*]] = extractelement <4 x float> [[TMP7]], i32 3
+; CHECK-NEXT:    [[VAL17:%.*]] = extractelement <4 x float> [[TMP8]], i32 3
 ; CHECK-NEXT:    [[VAL24:%.*]] = fmul fast float [[VAL17]], 3.000000e+00
 ; CHECK-NEXT:    br i1 [[ARG7:%.*]], label [[BB25:%.*]], label [[BB57]]
 ; CHECK:       bb25:
-; CHECK-NEXT:    [[TMP11:%.*]] = phi <4 x float> [ [[TMP8]], [[BB18]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = phi <4 x float> [ [[TMP9]], [[BB18]] ]
 ; CHECK-NEXT:    br label [[BB30:%.*]]
 ; CHECK:       bb30:
 ; CHECK-NEXT:    [[VAL31:%.*]] = phi float [ [[VAL55:%.*]], [[BB30]] ], [ 0.000000e+00, [[BB25]] ]
 ; CHECK-NEXT:    [[VAL32:%.*]] = phi float [ [[VAL9]], [[BB30]] ], [ 0.000000e+00, [[BB25]] ]
-; CHECK-NEXT:    [[TMP12:%.*]] = load <4 x i8>, ptr [[ARG5:%.*]], align 1
-; CHECK-NEXT:    [[TMP13:%.*]] = uitofp <4 x i8> [[TMP12]] to <4 x float>
-; CHECK-NEXT:    [[TMP14:%.*]] = fsub fast <4 x float> [[TMP13]], [[TMP3]]
-; CHECK-NEXT:    [[TMP15:%.*]] = fmul fast <4 x float> [[TMP14]], [[TMP11]]
-; CHECK-NEXT:    [[VAL54:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP15]])
+; CHECK-NEXT:    [[TMP13:%.*]] = load <4 x i8>, ptr [[ARG5:%.*]], align 1
+; CHECK-NEXT:    [[TMP14:%.*]] = uitofp <4 x i8> [[TMP13]] to <4 x float>
+; CHECK-NEXT:    [[TMP15:%.*]] = fsub fast <4 x float> [[TMP14]], [[TMP3]]
+; CHECK-NEXT:    [[TMP16:%.*]] = fmul fast <4 x float> [[TMP15]], [[TMP12]]
+; CHECK-NEXT:    [[VAL54:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP16]])
 ; CHECK-NEXT:    [[VAL55]] = tail call fast float @llvm.minnum.f32(float [[VAL31]], float [[ARG1:%.*]])
 ; CHECK-NEXT:    [[VAL56:%.*]] = tail call fast float @llvm.maxnum.f32(float [[ARG2:%.*]], float [[VAL54]])
 ; CHECK-NEXT:    call void @ham(float [[VAL55]], float [[VAL56]])

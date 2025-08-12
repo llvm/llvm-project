@@ -49,4 +49,7 @@ LIBC_CONFIGURE_OPTIONS = [
 
     # Documentation in libc/docs/configure.rst
     "LIBC_THREAD_MODE=LIBC_THREAD_MODE_PLATFORM",
+
+    # Documentation in libc/src/__support/libc_errno.h
+    "LIBC_ERRNO_MODE=LIBC_ERRNO_MODE_SYSTEM_INLINE",
 ]
