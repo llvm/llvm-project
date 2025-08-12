@@ -13,14 +13,17 @@
 #include "llvm/Transforms/Utils/LowerIFunc.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
 
+static cl::opt<bool> Enable("lower-ifuncs", cl::init(true), cl::Hidden);
+
 /// Replace all call users of ifuncs in the module.
 PreservedAnalyses LowerIFuncPass::run(Module &M, ModuleAnalysisManager &AM) {
-  if (M.ifunc_empty())
+  if (M.ifunc_empty() || !Enable)
     return PreservedAnalyses::all();
 
   Triple TargetTriple(M.getTargetTriple());

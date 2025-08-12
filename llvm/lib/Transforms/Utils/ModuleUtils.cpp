@@ -476,7 +476,7 @@ void llvm::lowerIFuncsOnAIX(Module &M) {
     //   %res = musttail call i32 %DescPtr(i32 noundef %a) #3
     SmallVector<Value *, 10> Args(make_pointer_range(F->args()));
     CallInst *Result =
-        Builder.CreateCall(F->getFunctionType(), DescPtr, Args, "res");
+        Builder.CreateCall(F->getFunctionType(), DescPtr, Args);
     // Result->setTailCallKind(CallInst::TCK_MustTail);
 
     //   ret i32 %res
