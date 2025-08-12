@@ -1315,7 +1315,7 @@ if (someThings[i][j][k].Contains(myThing)) {
 TEST_F(FormatTestCSharp, CSharpGenericTypeConstraints) {
   FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
 
-  EXPECT_TRUE(Style.BraceWrapping.SplitEmptyRecord);
+  EXPECT_EQ(Style.BraceWrapping.WrapEmptyRecord, FormatStyle::BWER_Default);
 
   verifyFormat("class ItemFactory<T>\n"
                "    where T : new() {\n"

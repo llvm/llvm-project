@@ -2555,7 +2555,8 @@ the configuration (without a prefix: ``Auto``).
       {}              {
                       }
 
-  * ``bool SplitEmptyRecord`` If ``false``, empty record (e.g. class, struct or union) body
+  * ``bool SplitEmptyRecord`` This option is **deprecated**. See `WrapEmptyRecord`.
+    If ``false``, empty record (e.g. class, struct or union) body
     can be put on a single line. This option is used only if the opening
     brace of the record has already been wrapped, i.e. the ``AfterClass``
     (for classes) brace wrapping mode is set.
@@ -2585,28 +2586,27 @@ the configuration (without a prefix: ``Auto``).
     Possible values:
 
     * ``BWER_Default`` (in configuration: ``Default``)
-      Use default wrapping rules for records
+      Use default wrapping rules for empty records
       (``AfterClass``,``AfterStruct``,``AfterUnion``).
 
       .. code-block:: c++
 
         class foo
         {
-          int foo;
         };
+
+    * ``BWER_BeforeBrace`` (in configuration: ``BeforeBrace``)
+      Only wrap before brace (equivalent to ``SplitEmptyRecord=false``).
+
+      .. code-block:: c++
 
         class foo
         {};
 
     * ``BWER_Never`` (in configuration: ``Never``)
-      Override wrapping for empty records.
+      Wrap neither before or after the brace.
 
       .. code-block:: c++
-
-        class foo
-        {
-          int foo;
-        };
 
         class foo {};
 

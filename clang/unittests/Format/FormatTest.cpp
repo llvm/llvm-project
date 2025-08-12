@@ -1491,7 +1491,7 @@ TEST_F(FormatTest, FormatShortBracedStatements) {
   AllowSimpleBracedStatements.AllowShortLoopsOnASingleLine = true;
   AllowSimpleBracedStatements.BreakBeforeBraces = FormatStyle::BS_Custom;
   AllowSimpleBracedStatements.BraceWrapping.AfterFunction = true;
-  AllowSimpleBracedStatements.BraceWrapping.SplitEmptyRecord = false;
+  AllowSimpleBracedStatements.BraceWrapping.WrapEmptyRecord = FormatStyle::BWER_BeforeBrace;
 
   verifyFormat("if (true) {}", AllowSimpleBracedStatements);
   verifyFormat("if constexpr (true) {}", AllowSimpleBracedStatements);
@@ -4678,7 +4678,7 @@ TEST_F(FormatTest, FormatsExternC) {
                Style);
 
   Style.BraceWrapping.AfterExternBlock = true;
-  Style.BraceWrapping.SplitEmptyRecord = false;
+  Style.BraceWrapping.WrapEmptyRecord = FormatStyle::BWER_BeforeBrace;
   verifyFormat("extern \"C\"\n"
                "{}",
                Style);
@@ -15322,7 +15322,7 @@ TEST_F(FormatTest, SplitEmptyFunctionButNotRecord) {
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.AfterFunction = true;
   Style.BraceWrapping.SplitEmptyFunction = true;
-  Style.BraceWrapping.SplitEmptyRecord = false;
+  Style.BraceWrapping.WrapEmptyRecord = FormatStyle::BWER_BeforeBrace;
 
   verifyFormat("class C {};", Style);
   verifyFormat("struct C {};", Style);
@@ -15361,7 +15361,7 @@ TEST_F(FormatTest, SplitEmptyClass) {
   FormatStyle Style = getLLVMStyle();
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.AfterClass = true;
-  Style.BraceWrapping.SplitEmptyRecord = false;
+  Style.BraceWrapping.WrapEmptyRecord = FormatStyle::BWER_BeforeBrace;
 
   verifyFormat("class Foo\n"
                "{};",
@@ -15382,7 +15382,7 @@ TEST_F(FormatTest, SplitEmptyClass) {
                "} Foo_t;",
                Style);
 
-  Style.BraceWrapping.SplitEmptyRecord = true;
+  Style.BraceWrapping.WrapEmptyRecord = FormatStyle::BWER_Default;
   Style.BraceWrapping.AfterStruct = true;
   verifyFormat("class rep\n"
                "{\n"
@@ -15467,7 +15467,7 @@ TEST_F(FormatTest, SplitEmptyStruct) {
   FormatStyle Style = getLLVMStyle();
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.AfterStruct = true;
-  Style.BraceWrapping.SplitEmptyRecord = false;
+  Style.BraceWrapping.WrapEmptyRecord = FormatStyle::BWER_BeforeBrace;
 
   verifyFormat("struct Foo\n"
                "{};",
@@ -15494,7 +15494,7 @@ TEST_F(FormatTest, SplitEmptyUnion) {
   FormatStyle Style = getLLVMStyle();
   Style.BreakBeforeBraces = FormatStyle::BS_Custom;
   Style.BraceWrapping.AfterUnion = true;
-  Style.BraceWrapping.SplitEmptyRecord = false;
+  Style.BraceWrapping.WrapEmptyRecord = FormatStyle::BWER_BeforeBrace;
 
   verifyFormat("union Foo\n"
                "{};",
@@ -15622,7 +15622,7 @@ TEST_F(FormatTest, WrapEmptyRecords) {
   Style.BraceWrapping.AfterStruct = true;
   Style.BraceWrapping.AfterClass = true;
   Style.BraceWrapping.AfterUnion = true;
-  Style.BraceWrapping.SplitEmptyRecord = false;
+  Style.BraceWrapping.WrapEmptyRecord = FormatStyle::BWER_BeforeBrace;
 
   verifyFormat("class foo\n{\n"
                "  void bar();\n"

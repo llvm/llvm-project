@@ -1357,25 +1357,22 @@ struct FormatStyle {
 
   /// Override wrapping of empty records.
   enum BraceWrapEmptyRecordStyle : int8_t {
-    /// Use default wrapping rules for records
+    /// Use default wrapping rules for empty records
     /// (``AfterClass``,``AfterStruct``,``AfterUnion``).
     /// \code
     ///   class foo
     ///   {
-    ///     int foo;
     ///   };
-    ///
+    /// \endcode
+    BWER_Default,
+    /// Only wrap before brace (equivalent to ``SplitEmptyRecord=false``).
+    /// \code
     ///   class foo
     ///   {};
     /// \endcode
-    BWER_Default,
-    /// Override wrapping for empty records.
+    BWER_BeforeBrace,
+    /// Wrap neither before or after the brace.
     /// \code
-    ///   class foo
-    ///   {
-    ///     int foo;
-    ///   };
-    ///
     ///   class foo {};
     /// \endcode
     BWER_Never
@@ -1587,6 +1584,7 @@ struct FormatStyle {
     /// \endcode
     ///
     bool SplitEmptyFunction;
+    /// This option is **deprecated**. See `WrapEmptyRecord`.
     /// If ``false``, empty record (e.g. class, struct or union) body
     /// can be put on a single line. This option is used only if the opening
     /// brace of the record has already been wrapped, i.e. the ``AfterClass``
@@ -1597,8 +1595,8 @@ struct FormatStyle {
     ///   {}               {
     ///                    }
     /// \endcode
-    ///
-    bool SplitEmptyRecord;
+    // bool SplitEmptyRecord;
+    
     /// If ``false``, empty namespace body can be put on a single line.
     /// This option is used only if the opening brace of the namespace has
     /// already been wrapped, i.e. the ``AfterNamespace`` brace wrapping mode is

@@ -384,7 +384,7 @@ class OptionsReader:
                 else:
                     state = State.InNestedStruct
                     field_type, field_name = re.match(
-                        r"([<>:\w(,\s)]+)\s+(\w+);", line
+                        r"(?:// )?([<>:\w(,\s)]+)\s+(\w+);", line
                     ).groups()
                     # if not version:
                     #    self.__warning(f"missing version for {field_name}", line)

@@ -277,13 +277,13 @@ private:
         Tok = Tok->getNextNonComment();
       if (Tok && Tok->isOneOf(tok::kw_class, tok::kw_struct, tok::kw_union,
                               tok::kw_extern, Keywords.kw_interface)) {
-        return !Style.BraceWrapping.SplitEmptyRecord && EmptyBlock
+        return Style.BraceWrapping.WrapEmptyRecord != FormatStyle::BWER_Default && EmptyBlock
                    ? tryMergeSimpleBlock(I, E, Limit)
                    : 0;
       }
 
       if (Tok && Tok->is(tok::kw_template) &&
-          Style.BraceWrapping.SplitEmptyRecord && EmptyBlock) {
+          Style.BraceWrapping.WrapEmptyRecord == FormatStyle::BWER_Default && EmptyBlock) {
         return 0;
       }
     }
@@ -453,9 +453,9 @@ private:
       }
     }
 
-    // Don't merge an empty template class or struct if SplitEmptyRecords
-    // is defined.
-    if (PreviousLine && Style.BraceWrapping.SplitEmptyRecord &&
+    // Merge an empty class or struct only if WrapEmptyRecord
+    // is not set to Default
+    if (PreviousLine && Style.BraceWrapping.WrapEmptyRecord == FormatStyle::BWER_Default &&
         TheLine->Last->is(tok::l_brace) && PreviousLine->Last) {
       const FormatToken *Previous = PreviousLine->Last;
       if (Previous) {
@@ -495,7 +495,7 @@ private:
         // elsewhere.
         ShouldMerge = !Style.BraceWrapping.AfterClass ||
                       (NextLine.First->is(tok::r_brace) &&
-                       !Style.BraceWrapping.SplitEmptyRecord);
+                       Style.BraceWrapping.WrapEmptyRecord != FormatStyle::BWER_Default);
       } else if (TheLine->InPPDirective ||
                  !TheLine->First->isOneOf(tok::kw_class, tok::kw_enum,
                                           tok::kw_struct)) {
