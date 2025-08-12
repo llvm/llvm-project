@@ -14,7 +14,6 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/CAS/CASReference.h"
-#include "llvm/CAS/HashMappedTrie.h"
 #include "llvm/CAS/ThreadSafeAllocator.h"
 #include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Allocator.h"

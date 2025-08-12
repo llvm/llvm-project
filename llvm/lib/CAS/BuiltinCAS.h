@@ -14,14 +14,14 @@
 #include "llvm/CAS/ObjectStore.h"
 #include <cstddef>
 
-namespace llvm {
-namespace cas {
+namespace llvm::cas {
 class ActionCache;
 namespace ondisk {
 class UnifiedOnDiskCache;
 }
 namespace builtin {
 
+/// Common base class for builtin CAS implementations using the same CASContext.
 class BuiltinCAS : public ObjectStore {
 public:
   BuiltinCAS() : ObjectStore(BuiltinCASContext::getDefaultContext()) {}
@@ -91,7 +91,6 @@ constexpr StringLiteral DefaultDirProxy = "/^llvm::cas::builtin::default";
 constexpr StringLiteral DefaultDir = "llvm.cas.builtin.default";
 
 } // end namespace builtin
-} // end namespace cas
-} // end namespace llvm
+} // end namespace llvm::cas
 
 #endif // LLVM_LIB_CAS_BUILTINCAS_H

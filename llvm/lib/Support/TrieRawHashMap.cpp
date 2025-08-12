@@ -62,14 +62,21 @@ class TrieSubtrie final
 public:
   using Slot = LazyAtomicPointer<TrieNode>;
 
+  const Slot &get(size_t I) const { return getTrailingObjects()[I]; }
   Slot &get(size_t I) { return getTrailingObjects()[I]; }
   TrieNode *load(size_t I) { return get(I).load(); }
+  const TrieNode *load(size_t I) const { return get(I).load(); }
 
   unsigned size() const { return Size; }
 
   TrieSubtrie *
   sink(size_t I, TrieContent &Content, size_t NumSubtrieBits, size_t NewI,
        function_ref<TrieSubtrie *(std::unique_ptr<TrieSubtrie>)> Saver);
+
+  void printHash(raw_ostream &OS, ArrayRef<uint8_t> Bytes) const;
+  void print(raw_ostream &OS) const { print(OS, std::nullopt); }
+  void print(raw_ostream &OS, std::optional<std::string> Prefix) const;
+  void dump() const { print(dbgs()); }
 
   static std::unique_ptr<TrieSubtrie> create(size_t StartBit, size_t NumBits);
 
@@ -326,6 +333,126 @@ ThreadSafeTrieRawHashMapBase::PointerBase ThreadSafeTrieRawHashMapBase::insert(
     }
   }
   llvm_unreachable("failed to insert the node after consuming all hash bytes");
+}
+
+static void printHexDigit(raw_ostream &OS, uint8_t Digit) {
+  if (Digit < 10)
+    OS << char(Digit + '0');
+  else
+    OS << char(Digit - 10 + 'a');
+}
+
+static void printHexDigits(raw_ostream &OS, ArrayRef<uint8_t> Bytes,
+                           size_t StartBit, size_t NumBits) {
+  assert(StartBit % 4 == 0);
+  assert(NumBits % 4 == 0);
+  for (size_t I = StartBit, E = StartBit + NumBits; I != E; I += 4) {
+    uint8_t HexPair = Bytes[I / 8];
+    uint8_t HexDigit = I % 8 == 0 ? HexPair >> 4 : HexPair & 0xf;
+    printHexDigit(OS, HexDigit);
+  }
+}
+
+static void printBits(raw_ostream &OS, ArrayRef<uint8_t> Bytes, size_t StartBit,
+                      size_t NumBits) {
+  assert(StartBit + NumBits <= Bytes.size() * 8u);
+  for (size_t I = StartBit, E = StartBit + NumBits; I != E; ++I) {
+    uint8_t Byte = Bytes[I / 8];
+    size_t ByteOffset = I % 8;
+    if (size_t ByteShift = 8 - ByteOffset - 1)
+      Byte >>= ByteShift;
+    OS << (Byte & 0x1 ? '1' : '0');
+  }
+}
+
+void TrieSubtrie::printHash(raw_ostream &OS, ArrayRef<uint8_t> Bytes) const {
+  // afb[1c:00*01110*0]def
+  size_t EndBit = StartBit + NumBits;
+  size_t HashEndBit = Bytes.size() * 8u;
+
+  size_t FirstBinaryBit = StartBit & ~0x3u;
+  printHexDigits(OS, Bytes, 0, FirstBinaryBit);
+
+  size_t LastBinaryBit = (EndBit + 3u) & ~0x3u;
+  OS << "[";
+  printBits(OS, Bytes, FirstBinaryBit, LastBinaryBit - FirstBinaryBit);
+  OS << "]";
+
+  printHexDigits(OS, Bytes, LastBinaryBit, HashEndBit - LastBinaryBit);
+}
+
+static void appendIndexBits(std::string &Prefix, size_t Index,
+                            size_t NumSlots) {
+  std::string Bits;
+  for (size_t NumBits = 1u; NumBits < NumSlots; NumBits <<= 1) {
+    Bits.push_back('0' + (Index & 0x1));
+    Index >>= 1;
+  }
+  for (char Ch : llvm::reverse(Bits))
+    Prefix += Ch;
+}
+
+static void printPrefix(raw_ostream &OS, StringRef Prefix) {
+  while (Prefix.size() >= 4) {
+    uint8_t Digit;
+    bool ErrorParsingBinary = Prefix.take_front(4).getAsInteger(2, Digit);
+    assert(!ErrorParsingBinary);
+    (void)ErrorParsingBinary;
+    printHexDigit(OS, Digit);
+    Prefix = Prefix.drop_front(4);
+  }
+  if (!Prefix.empty())
+    OS << "[" << Prefix << "]";
+}
+
+void TrieSubtrie::print(raw_ostream &OS,
+                        std::optional<std::string> Prefix) const {
+  if (!Prefix) {
+    OS << "root";
+    Prefix.emplace();
+  } else {
+    OS << "subtrie=";
+    printPrefix(OS, *Prefix);
+  }
+
+  OS << " num-slots=" << Size << "\n";
+  SmallVector<const TrieSubtrie *> Subs;
+  SmallVector<std::string> Prefixes;
+  for (size_t I = 0, E = Size; I != E; ++I) {
+    const TrieNode *N = load(I);
+    if (!N)
+      continue;
+    OS << "- index=" << I << " ";
+    if (const auto *S = dyn_cast<TrieSubtrie>(N)) {
+      std::string SubtriePrefix = *Prefix;
+      appendIndexBits(SubtriePrefix, I, Size);
+      OS << "subtrie=";
+      printPrefix(OS, SubtriePrefix);
+      OS << "\n";
+      Subs.push_back(S);
+      Prefixes.push_back(SubtriePrefix);
+      continue;
+    }
+    auto *Content = cast<TrieContent>(N);
+    OS << "content=";
+    printHash(OS, Content->getHash());
+    OS << "\n";
+  }
+  for (size_t I = 0, E = Subs.size(); I != E; ++I)
+    Subs[I]->print(OS, Prefixes[I]);
+}
+
+void ThreadSafeTrieRawHashMapBase::print(raw_ostream &OS) const {
+  OS << "root-bits=" << NumRootBits << " subtrie-bits=" << NumSubtrieBits
+     << "\n";
+  if (ImplType *Impl = ImplPtr.load())
+    Impl->getRoot()->print(OS);
+  else
+    OS << "[no-root]\n";
+}
+
+LLVM_DUMP_METHOD void ThreadSafeTrieRawHashMapBase::dump() const {
+  print(dbgs());
 }
 
 ThreadSafeTrieRawHashMapBase::ThreadSafeTrieRawHashMapBase(

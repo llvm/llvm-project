@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "BuiltinCAS.h"
+#include "llvm/ADT/TrieRawHashMap.h"
 #include "llvm/CAS/ActionCache.h"
-#include "llvm/CAS/HashMappedTrie.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/CAS/OnDiskCASLogger.h"
 #include "llvm/CAS/OnDiskGraphDB.h"
@@ -58,7 +58,7 @@ public:
 
 private:
   using DataT = CacheEntry<sizeof(HashType)>;
-  using InMemoryCacheT = ThreadSafeHashMappedTrie<DataT, sizeof(HashType)>;
+  using InMemoryCacheT = ThreadSafeTrieRawHashMap<DataT, sizeof(HashType)>;
 
   InMemoryCacheT Cache;
 };

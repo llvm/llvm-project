@@ -9,13 +9,9 @@
 #include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/StringMap.h"
-#include "llvm/CAS/HashMappedTrie.h"
 #include "llvm/CAS/HierarchicalTreeBuilder.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/Config/config.h"
-#include "llvm/Support/AlignOf.h"
-#include "llvm/Support/Allocator.h"
 #include "llvm/Support/FileSystem.h"
 #include <mutex>
 

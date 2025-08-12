@@ -7,15 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CAS/FileSystemCache.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/StringMap.h"
-#include "llvm/CAS/HashMappedTrie.h"
-#include "llvm/CAS/ObjectStore.h"
-#include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Path.h"
-#include <mutex>
 
 using namespace llvm;
 using namespace llvm::cas;

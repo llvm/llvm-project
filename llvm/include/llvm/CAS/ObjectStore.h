@@ -12,9 +12,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CAS/CASID.h"
 #include "llvm/CAS/CASReference.h"
-#include "llvm/CAS/TreeEntry.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/FileSystem.h" // FIXME: Split out sys::fs::file_status.
+#include "llvm/Support/FileSystem.h"
 #include <cstddef>
 #include <future>
 
@@ -73,6 +72,9 @@ using AsyncProxyValue = AsyncValue<ObjectProxy>;
 ///   wraps access APIs to avoid having to pass extra parameters. It is the
 ///   object used for accessing underlying data and refs by CAS users.
 ///
+/// Both ObjectRef and ObjectHandle are lightweight, wrapping a `uint64_t` and
+/// are only valid with the associated ObjectStore instance.
+///
 /// There are a few options for accessing content of objects, with different
 /// lifetime tradeoffs:
 ///
@@ -83,50 +85,6 @@ using AsyncProxyValue = AsyncValue<ObjectProxy>;
 ///   long as \a ObjectStore.
 /// - \a readRef() and \a forEachRef() iterate through the references in an
 ///   object. There is no lifetime assumption.
-///
-/// Both ObjectRef and ObjectHandle are lightweight, wrapping a `uint64_t`.
-/// Doing anything with them requires a ObjectStore. As a convenience:
-///
-///
-/// TODO: Remove CASID.
-///
-/// Here's how to remove CASID:
-///
-/// - Add APIs for bypassing CASID when parsing:
-///     - Validate an ID without doing anything else (current check done by
-///       `parseID()`).
-///     - Get the hash for an object or StringRef-based ID.
-///     - Get an ObjectRef or load an ObjectHandle from a StringRef-based ID.
-/// - Update existing code using CASID to use the new ObjectRef,
-///   ObjectHandle, and StringRef APIs.
-/// - Remove CASID, changing `getObjectID()` to return `std::string`.
-///
-/// TODO: Consider optimizing small and/or string-like leaf objects:
-///
-/// - \a NodeBuilder and \a NodeReader interfaces can bring some of the same
-///   gains without adding complexity to \a ObjectStore. E.g., \a NodeBuilder
-///   could have an API to add a named field to a node under construction; if
-///   the name is small enough, it's stored locally in the node's own data, but
-///   if it's bigger then it's outlined to a separate CAS object. \a NodeReader
-///   could handle the complications of reading.
-/// - Implementations can do fast lookups of small objects by adding a
-///   content-based index for them (prefix tree / suffix tree of content),
-///   amortizing overhead of hash computation in \a storeNode().
-/// - Implementations could remove small leaf objects from the main index,
-///   indexing them separately with a partial hash (e.g., 4B prefix), to
-///   optimize storage overhead (32B hash is big for small objects!). Lookups
-///   by UID that miss the main index would get more expensive, requiring a
-///   hash computation for each small object with a matching partial hash, but
-///   maybe this would be rare. To mitigate this cost, small leaf objects could
-///   get added to the main index lazily on first lookup-by-UID, lazily adding
-///   the full overhead of the hash storage only when used by clients.
-/// - NOTE: we tried adding an API to store "raw data" that can be optimized,
-///   but it was very complicated to reason about.
-///     - Introduced many opportunities for implementation bugs.
-///     - Introduced many complications in the API.
-///
-/// FIXME: Split out ActionCache as a separate concept, and rename this
-/// ObjectStore.
 class ObjectStore {
   friend class ObjectProxy;
   void anchor();
@@ -181,7 +139,8 @@ protected:
   /// Get the size of some data.
   virtual uint64_t getDataSize(ObjectHandle Node) const = 0;
 
-  /// Methods for handling objects.
+  /// Methods for handling objects. CAS implementations need to override to
+  /// provide functions to access stored CAS objects and references.
   virtual Error forEachRef(ObjectHandle Node,
                            function_ref<Error(ObjectRef)> Callback) const = 0;
   virtual ObjectRef readRef(ObjectHandle Node, size_t I) const = 0;
@@ -344,7 +303,6 @@ public:
   size_t getNumReferences() const { return CAS->getNumRefs(H); }
   ObjectRef getReference(size_t I) const { return CAS->readRef(H, I); }
 
-  // FIXME: Remove this.
   operator CASID() const { return getID(); }
   CASID getReferenceID(size_t I) const {
     std::optional<CASID> ID = getCAS().getID(getReference(I));

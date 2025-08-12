@@ -24,7 +24,6 @@ add_llvm_unittest(CASTests
   CASOutputBackendTest.cpp
   CASProvidingFileSystemTest.cpp
   CachingOnDiskFileSystemTest.cpp
-  HashMappedTrieTest.cpp
   HierarchicalTreeBuilderTest.cpp
   MockGRPCServer.cpp
   ObjectStoreTest.cpp

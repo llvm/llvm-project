@@ -10,9 +10,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CAS/BuiltinObjectHasher.h"
 #include "llvm/CAS/UnifiedOnDiskCache.h"
-#include "llvm/Support/Alignment.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Process.h"
 
 using namespace llvm;
 using namespace llvm::cas;

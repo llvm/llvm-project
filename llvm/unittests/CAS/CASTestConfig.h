@@ -26,7 +26,7 @@ public:
 };
 } // namespace llvm::unittest::cas
 
-struct TestingAndDir {
+struct CASTestingEnv {
   std::shared_ptr<llvm::cas::ObjectStore> CAS;
   std::unique_ptr<llvm::cas::ActionCache> Cache;
   std::unique_ptr<llvm::unittest::cas::MockEnv> Env;
@@ -36,7 +36,7 @@ struct TestingAndDir {
 void setMaxOnDiskCASMappingSize();
 
 class CASTest
-    : public testing::TestWithParam<std::function<TestingAndDir(int)>> {
+    : public testing::TestWithParam<std::function<CASTestingEnv(int)>> {
 protected:
   std::optional<int> NextCASIndex;
 

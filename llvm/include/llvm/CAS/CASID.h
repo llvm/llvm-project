@@ -55,18 +55,21 @@ protected:
 /// compared directly. If they are, then \a
 /// CASIDContext::getHashSchemaIdentifier() is compared to see if they can be
 /// compared by hash, in which case the result of \a getHash() is compared.
-///
-/// FIXME: Rename to ObjectID (and rename file to CASObjectID.h?).
 class CASID {
 public:
   void dump() const;
-  void print(raw_ostream &OS) const {
-    return getContext().printIDImpl(OS, *this);
-  }
+
   friend raw_ostream &operator<<(raw_ostream &OS, const CASID &ID) {
     ID.print(OS);
     return OS;
   }
+
+  /// Print CASID.
+  void print(raw_ostream &OS) const {
+    return getContext().printIDImpl(OS, *this);
+  }
+
+  /// Return a printable string for CASID.
   std::string toString() const;
 
   ArrayRef<uint8_t> getHash() const {
@@ -110,6 +113,7 @@ public:
 
   CASID() = delete;
 
+  /// Create CASID from CASContext and raw hash bytes.
   static CASID create(const CASContext *Context, StringRef Hash) {
     return CASID(Context, Hash);
   }

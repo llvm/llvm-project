@@ -9,11 +9,11 @@
 #include "BuiltinCAS.h"
 #include "llvm/ADT/LazyAtomicPointer.h"
 #include "llvm/ADT/PointerIntPair.h"
-#include "llvm/ADT/PointerUnion.h"
-#include "llvm/CAS/BuiltinObjectHasher.h"
-#include "llvm/CAS/HashMappedTrie.h"
-#include "llvm/CAS/ThreadSafeAllocator.h"
+#include "llvm/ADT/TrieRawHashMap.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/ThreadSafeAllocator.h"
+#include "llvm/Support/TrailingObjects.h"
 
 using namespace llvm;
 using namespace llvm::cas;
@@ -26,14 +26,14 @@ class InMemoryObject;
 /// Index of referenced IDs (map: Hash -> InMemoryObject*). Uses
 /// LazyAtomicPointer to coordinate creation of objects.
 using InMemoryIndexT =
-    ThreadSafeHashMappedTrie<LazyAtomicPointer<const InMemoryObject>,
+    ThreadSafeTrieRawHashMap<LazyAtomicPointer<const InMemoryObject>,
                              sizeof(HashType)>;
 
 /// Values in \a InMemoryIndexT. \a InMemoryObject's point at this to access
 /// their hash.
 using InMemoryIndexValueT = InMemoryIndexT::value_type;
 
-
+/// Builtin InMemory CAS that stores CAS object in the memory.
 class InMemoryObject {
 public:
   enum class Kind {
@@ -71,12 +71,12 @@ private:
   static_assert(((int)Kind::Max >> NumKindBits) == 0, "Kind will be truncated");
 
 public:
-  inline ArrayRef<char> getData() const;
+  ArrayRef<char> getData() const;
 
-  inline ArrayRef<const InMemoryObject *> getRefs() const;
+  ArrayRef<const InMemoryObject *> getRefs() const;
 };
 
-class InMemoryRefObject : public InMemoryObject {
+class InMemoryRefObject final : public InMemoryObject {
 public:
   static constexpr Kind KindValue = Kind::RefNode;
   static bool classof(const InMemoryObject *O) {
@@ -109,7 +109,10 @@ private:
   ArrayRef<char> Data;
 };
 
-class InMemoryInlineObject : public InMemoryObject {
+class InMemoryInlineObject final
+    : public InMemoryObject,
+      public TrailingObjects<InMemoryInlineObject, const InMemoryObject *,
+                             char> {
 public:
   static constexpr Kind KindValue = Kind::InlineNode;
   static bool classof(const InMemoryObject *O) {
@@ -118,15 +121,12 @@ public:
 
   ArrayRef<const InMemoryObject *> getRefs() const { return getRefsImpl(); }
   ArrayRef<const InMemoryObject *> getRefsImpl() const {
-    return ArrayRef(
-        reinterpret_cast<const InMemoryObject *const *>(this + 1), NumRefs);
+    return ArrayRef(getTrailingObjects<const InMemoryObject *>(), NumRefs);
   }
 
   ArrayRef<char> getData() const { return getDataImpl(); }
   ArrayRef<char> getDataImpl() const {
-    ArrayRef<const InMemoryObject *> Refs = getRefs();
-    return ArrayRef(
-        reinterpret_cast<const char *>(Refs.data() + Refs.size()), DataSize);
+    return ArrayRef(getTrailingObjects<char>(), DataSize);
   }
 
   static InMemoryInlineObject &
@@ -136,6 +136,10 @@ public:
     void *Mem = Allocate(sizeof(InMemoryInlineObject) +
                          sizeof(uintptr_t) * Refs.size() + Data.size() + 1);
     return *new (Mem) InMemoryInlineObject(I, Refs, Data);
+  }
+
+  size_t numTrailingObjects(OverloadToken<const InMemoryObject *>) const {
+    return NumRefs;
   }
 
 private:
@@ -295,7 +299,7 @@ InMemoryCAS::storeFromNullTerminatedRegion(ArrayRef<uint8_t> ComputedHash,
   // Save Map if the winning node uses it.
   if (auto *RefNode = dyn_cast<InMemoryRefObject>(&Node))
     if (RefNode->getData().data() == Map.data())
-      new (MemoryMaps.Allocate()) sys::fs::mapped_file_region(std::move(Map));
+      new (MemoryMaps.Allocate(1)) sys::fs::mapped_file_region(std::move(Map));
 
   return toReference(Node);
 }

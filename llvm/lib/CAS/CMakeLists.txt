@@ -14,7 +14,6 @@ add_llvm_component_library(LLVMCAS
   CASProvidingFileSystem.cpp
   CachingOnDiskFileSystem.cpp
   FileSystemCache.cpp
-  HashMappedTrie.cpp
   HierarchicalTreeBuilder.cpp
   InMemoryCAS.cpp
   MappedFileRegionBumpPtr.cpp
@@ -34,6 +33,5 @@ add_llvm_component_library(LLVMCAS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/CAS
 
   LINK_COMPONENTS
-  BinaryFormat
   Support
 )

@@ -9,9 +9,9 @@
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Testing/Support/Error.h"
-#include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
 
 #include "CASTestConfig.h"
@@ -281,13 +281,8 @@ static void testBlobsParallel(ObjectStore &Read1, ObjectStore &Read2,
   Blobs.reserve(BlobCount);
   for (unsigned I = 0; I < BlobCount; ++I) {
     std::string Blob;
-    Blob.reserve(BlobSize);
-    while (Blob.size() < BlobSize) {
-      auto R = sys::Process::GetRandomNumber();
-      Blob.append((char *)&R, sizeof(R));
-    }
-    assert(Blob.size() >= BlobSize);
     Blob.resize(BlobSize);
+    getRandomBytes(Blob.data(), BlobSize);
     Blobs.push_back(std::move(Blob));
   }
 
