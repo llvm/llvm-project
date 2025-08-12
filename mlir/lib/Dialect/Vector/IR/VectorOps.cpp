@@ -2267,27 +2267,6 @@ public:
   }
 };
 
-// Folds extract(shape_cast(..)) into shape_cast when the total element count
-// does not change.
-LogicalResult foldExtractFromShapeCastToShapeCast(ExtractOp extractOp,
-                                                  PatternRewriter &rewriter) {
-  auto castOp = extractOp.getVector().getDefiningOp<ShapeCastOp>();
-  if (!castOp)
-    return failure();
-
-  VectorType sourceType = castOp.getSourceVectorType();
-  auto targetType = dyn_cast<VectorType>(extractOp.getResult().getType());
-  if (!targetType)
-    return failure();
-
-  if (sourceType.getNumElements() != targetType.getNumElements())
-    return failure();
-
-  rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(extractOp, targetType,
-                                                   castOp.getSource());
-  return success();
-}
-
 /// Try to canonicalize the extraction of a subvector from a vector defined by
 /// vector.from_elements. E.g.:
 ///
@@ -2335,14 +2314,14 @@ LogicalResult foldExtractFromFromElements(ExtractOp extractOp,
   return success();
 }
 
-/// The canonical form of vector operations that just reshape vectors is
-/// vector.shape_cast. This pattern canonicalizes vector.extract ops of this
-/// kind.
+/// Replace `vector.extract` with `vector.shape_cast`.
 ///
 /// BEFORE:
 /// %0 = vector.extract %arg0[0] : vector<4xf32> from vector<1x4xf32>
 /// AFTER:
 /// %0 = vector.shape_cast %arg0 : vector<1x4xf32> to vector<4xf32>
+///
+/// The canonical form of vector operations that reshape vectors is shape_cast.
 struct ExtractToShapeCast final : public OpRewritePattern<vector::ExtractOp> {
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(vector::ExtractOp extractOp,
@@ -2376,7 +2355,6 @@ void ExtractOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results
       .add<ExtractOpFromBroadcast, ExtractOpFromCreateMask, ExtractToShapeCast>(
           context);
-  results.add(foldExtractFromShapeCastToShapeCast);
   results.add(foldExtractFromFromElements);
 }
 
@@ -2966,14 +2944,14 @@ struct BroadcastFolder : public OpRewritePattern<BroadcastOp> {
   }
 };
 
-/// The canonical form of vector operations that just reshape vectors is
-/// vector.shape_cast. This pattern canonicalizes vector.broadcast ops of this
-/// kind.
+/// Replace `vector.broadcast` with `vector.shape_cast`.
 ///
 /// BEFORE:
 /// %0 = vector.broadcast %arg0 : vector<4xi8> to vector<1x1x4xi8>
 /// AFTER:
 /// %0 = vector.shape_cast %arg0 : vector<4xi8> to vector<1x1x4xi8>
+///
+/// The canonical form of vector operations that reshape vectors is shape_cast.
 struct BroadcastToShapeCast final
     : public OpRewritePattern<vector::BroadcastOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -6615,9 +6593,7 @@ public:
   }
 };
 
-/// The canonical form of operations that just reshape a vector is
-/// vector.shape_cast. This pattern canonicalizes vector.transpose operations of
-/// this kind.
+/// Replace `vector.transpose` with `vector.shape_cast`.
 ///
 /// BEFORE:
 /// %0 = vector.transpose %arg0, [0, 2, 1] :
@@ -6625,6 +6601,8 @@ public:
 /// AFTER:
 /// %0 = vector.shape_cast %arg0 :
 ///                   vector<2x1x2xf32> to vector<2x2x1xf32>
+///
+/// The canonical form of vector operations that reshape vectors is shape_cast.
 struct TransposeToShapeCast final
     : public OpRewritePattern<vector::TransposeOp> {
   using OpRewritePattern::OpRewritePattern;
