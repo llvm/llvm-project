@@ -48,105 +48,106 @@ declare i37 @llvm.fshl.i37(i37, i37, i37)
 define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK-BE-LABEL: fshl_i37:
 ; CHECK-BE:       # %bb.0:
-; CHECK-BE-NEXT:    addiu $sp, $sp, -40
-; CHECK-BE-NEXT:    .cfi_def_cfa_offset 40
-; CHECK-BE-NEXT:    sw $ra, 36($sp) # 4-byte Folded Spill
-; CHECK-BE-NEXT:    sw $19, 32($sp) # 4-byte Folded Spill
-; CHECK-BE-NEXT:    sw $18, 28($sp) # 4-byte Folded Spill
-; CHECK-BE-NEXT:    sw $17, 24($sp) # 4-byte Folded Spill
-; CHECK-BE-NEXT:    sw $16, 20($sp) # 4-byte Folded Spill
-; CHECK-BE-NEXT:    .cfi_offset 31, -4
-; CHECK-BE-NEXT:    .cfi_offset 19, -8
-; CHECK-BE-NEXT:    .cfi_offset 18, -12
-; CHECK-BE-NEXT:    .cfi_offset 17, -16
-; CHECK-BE-NEXT:    .cfi_offset 16, -20
-; CHECK-BE-NEXT:    move $16, $7
-; CHECK-BE-NEXT:    move $17, $6
-; CHECK-BE-NEXT:    move $18, $5
-; CHECK-BE-NEXT:    move $19, $4
-; CHECK-BE-NEXT:    lw $1, 56($sp)
-; CHECK-BE-NEXT:    andi $4, $1, 31
-; CHECK-BE-NEXT:    lw $5, 60($sp)
-; CHECK-BE-NEXT:    addiu $6, $zero, 0
-; CHECK-BE-NEXT:    jal __umoddi3
-; CHECK-BE-NEXT:    addiu $7, $zero, 37
-; CHECK-BE-NEXT:    srl $1, $3, 5
-; CHECK-BE-NEXT:    andi $1, $1, 1
-; CHECK-BE-NEXT:    movn $19, $18, $1
-; CHECK-BE-NEXT:    sllv $2, $19, $3
-; CHECK-BE-NEXT:    not $4, $3
-; CHECK-BE-NEXT:    srl $5, $16, 5
-; CHECK-BE-NEXT:    sll $6, $17, 27
-; CHECK-BE-NEXT:    or $5, $6, $5
-; CHECK-BE-NEXT:    movn $18, $5, $1
-; CHECK-BE-NEXT:    srl $6, $18, 1
-; CHECK-BE-NEXT:    srlv $6, $6, $4
-; CHECK-BE-NEXT:    or $2, $2, $6
-; CHECK-BE-NEXT:    sllv $3, $18, $3
-; CHECK-BE-NEXT:    sll $6, $16, 27
-; CHECK-BE-NEXT:    movn $5, $6, $1
-; CHECK-BE-NEXT:    srl $1, $5, 1
-; CHECK-BE-NEXT:    srlv $1, $1, $4
-; CHECK-BE-NEXT:    or $3, $3, $1
-; CHECK-BE-NEXT:    lw $16, 20($sp) # 4-byte Folded Reload
-; CHECK-BE-NEXT:    lw $17, 24($sp) # 4-byte Folded Reload
-; CHECK-BE-NEXT:    lw $18, 28($sp) # 4-byte Folded Reload
-; CHECK-BE-NEXT:    lw $19, 32($sp) # 4-byte Folded Reload
-; CHECK-BE-NEXT:    lw $ra, 36($sp) # 4-byte Folded Reload
+; CHECK-BE-NEXT:    lui $1, 1771
+; CHECK-BE-NEXT:    ori $1, $1, 15941
+; CHECK-BE-NEXT:    lw $2, 20($sp)
+; CHECK-BE-NEXT:    multu $2, $1
+; CHECK-BE-NEXT:    mfhi $3
+; CHECK-BE-NEXT:    mflo $8
+; CHECK-BE-NEXT:    lui $9, 12398
+; CHECK-BE-NEXT:    ori $9, $9, 46053
+; CHECK-BE-NEXT:    multu $2, $9
+; CHECK-BE-NEXT:    mfhi $10
+; CHECK-BE-NEXT:    lw $11, 16($sp)
+; CHECK-BE-NEXT:    andi $11, $11, 31
+; CHECK-BE-NEXT:    multu $11, $9
+; CHECK-BE-NEXT:    mflo $9
+; CHECK-BE-NEXT:    mfhi $12
+; CHECK-BE-NEXT:    addu $8, $10, $8
+; CHECK-BE-NEXT:    sltu $10, $8, $10
+; CHECK-BE-NEXT:    addu $9, $8, $9
+; CHECK-BE-NEXT:    sltu $8, $9, $8
+; CHECK-BE-NEXT:    addu $3, $3, $10
+; CHECK-BE-NEXT:    srl $9, $7, 5
+; CHECK-BE-NEXT:    sll $6, $6, 27
+; CHECK-BE-NEXT:    or $6, $6, $9
+; CHECK-BE-NEXT:    addu $3, $3, $12
+; CHECK-BE-NEXT:    sll $7, $7, 27
+; CHECK-BE-NEXT:    addu $3, $3, $8
+; CHECK-BE-NEXT:    mul $1, $11, $1
+; CHECK-BE-NEXT:    addu $1, $3, $1
+; CHECK-BE-NEXT:    sll $3, $1, 2
+; CHECK-BE-NEXT:    addu $3, $3, $1
+; CHECK-BE-NEXT:    sll $1, $1, 5
+; CHECK-BE-NEXT:    addu $1, $1, $3
+; CHECK-BE-NEXT:    subu $1, $2, $1
+; CHECK-BE-NEXT:    andi $2, $1, 32
+; CHECK-BE-NEXT:    srl $3, $2, 5
+; CHECK-BE-NEXT:    movn $4, $5, $3
+; CHECK-BE-NEXT:    sllv $2, $4, $1
+; CHECK-BE-NEXT:    not $4, $1
+; CHECK-BE-NEXT:    movn $5, $6, $3
+; CHECK-BE-NEXT:    srl $8, $5, 1
+; CHECK-BE-NEXT:    srlv $8, $8, $4
+; CHECK-BE-NEXT:    or $2, $2, $8
+; CHECK-BE-NEXT:    sllv $1, $5, $1
+; CHECK-BE-NEXT:    movn $6, $7, $3
+; CHECK-BE-NEXT:    srl $3, $6, 1
+; CHECK-BE-NEXT:    srlv $3, $3, $4
 ; CHECK-BE-NEXT:    jr $ra
-; CHECK-BE-NEXT:    addiu $sp, $sp, 40
+; CHECK-BE-NEXT:    or $3, $1, $3
 ;
 ; CHECK-LE-LABEL: fshl_i37:
 ; CHECK-LE:       # %bb.0:
-; CHECK-LE-NEXT:    addiu $sp, $sp, -40
-; CHECK-LE-NEXT:    .cfi_def_cfa_offset 40
-; CHECK-LE-NEXT:    sw $ra, 36($sp) # 4-byte Folded Spill
-; CHECK-LE-NEXT:    sw $19, 32($sp) # 4-byte Folded Spill
-; CHECK-LE-NEXT:    sw $18, 28($sp) # 4-byte Folded Spill
-; CHECK-LE-NEXT:    sw $17, 24($sp) # 4-byte Folded Spill
-; CHECK-LE-NEXT:    sw $16, 20($sp) # 4-byte Folded Spill
-; CHECK-LE-NEXT:    .cfi_offset 31, -4
-; CHECK-LE-NEXT:    .cfi_offset 19, -8
-; CHECK-LE-NEXT:    .cfi_offset 18, -12
-; CHECK-LE-NEXT:    .cfi_offset 17, -16
-; CHECK-LE-NEXT:    .cfi_offset 16, -20
-; CHECK-LE-NEXT:    move $16, $7
-; CHECK-LE-NEXT:    move $17, $6
-; CHECK-LE-NEXT:    move $18, $5
-; CHECK-LE-NEXT:    move $19, $4
-; CHECK-LE-NEXT:    lw $1, 60($sp)
-; CHECK-LE-NEXT:    andi $5, $1, 31
-; CHECK-LE-NEXT:    lw $4, 56($sp)
-; CHECK-LE-NEXT:    addiu $6, $zero, 37
-; CHECK-LE-NEXT:    jal __umoddi3
-; CHECK-LE-NEXT:    addiu $7, $zero, 0
-; CHECK-LE-NEXT:    srl $1, $2, 5
-; CHECK-LE-NEXT:    andi $3, $1, 1
-; CHECK-LE-NEXT:    srl $1, $17, 5
-; CHECK-LE-NEXT:    sll $4, $16, 27
-; CHECK-LE-NEXT:    or $1, $4, $1
-; CHECK-LE-NEXT:    move $4, $19
-; CHECK-LE-NEXT:    movn $4, $1, $3
-; CHECK-LE-NEXT:    sllv $5, $4, $2
-; CHECK-LE-NEXT:    not $6, $2
-; CHECK-LE-NEXT:    sll $7, $17, 27
-; CHECK-LE-NEXT:    movn $1, $7, $3
-; CHECK-LE-NEXT:    srl $1, $1, 1
-; CHECK-LE-NEXT:    srlv $1, $1, $6
-; CHECK-LE-NEXT:    or $1, $5, $1
-; CHECK-LE-NEXT:    movn $18, $19, $3
-; CHECK-LE-NEXT:    sllv $2, $18, $2
-; CHECK-LE-NEXT:    srl $3, $4, 1
-; CHECK-LE-NEXT:    srlv $3, $3, $6
-; CHECK-LE-NEXT:    or $3, $2, $3
-; CHECK-LE-NEXT:    move $2, $1
-; CHECK-LE-NEXT:    lw $16, 20($sp) # 4-byte Folded Reload
-; CHECK-LE-NEXT:    lw $17, 24($sp) # 4-byte Folded Reload
-; CHECK-LE-NEXT:    lw $18, 28($sp) # 4-byte Folded Reload
-; CHECK-LE-NEXT:    lw $19, 32($sp) # 4-byte Folded Reload
-; CHECK-LE-NEXT:    lw $ra, 36($sp) # 4-byte Folded Reload
+; CHECK-LE-NEXT:    lui $1, 1771
+; CHECK-LE-NEXT:    ori $1, $1, 15941
+; CHECK-LE-NEXT:    lw $2, 16($sp)
+; CHECK-LE-NEXT:    multu $2, $1
+; CHECK-LE-NEXT:    mfhi $3
+; CHECK-LE-NEXT:    mflo $8
+; CHECK-LE-NEXT:    lui $9, 12398
+; CHECK-LE-NEXT:    ori $9, $9, 46053
+; CHECK-LE-NEXT:    multu $2, $9
+; CHECK-LE-NEXT:    mfhi $10
+; CHECK-LE-NEXT:    lw $11, 20($sp)
+; CHECK-LE-NEXT:    andi $11, $11, 31
+; CHECK-LE-NEXT:    multu $11, $9
+; CHECK-LE-NEXT:    mflo $9
+; CHECK-LE-NEXT:    mfhi $12
+; CHECK-LE-NEXT:    addu $8, $10, $8
+; CHECK-LE-NEXT:    sltu $10, $8, $10
+; CHECK-LE-NEXT:    addu $9, $8, $9
+; CHECK-LE-NEXT:    sltu $8, $9, $8
+; CHECK-LE-NEXT:    addu $3, $3, $10
+; CHECK-LE-NEXT:    srl $9, $6, 5
+; CHECK-LE-NEXT:    sll $7, $7, 27
+; CHECK-LE-NEXT:    or $7, $7, $9
+; CHECK-LE-NEXT:    sll $6, $6, 27
+; CHECK-LE-NEXT:    addu $3, $3, $12
+; CHECK-LE-NEXT:    addu $3, $3, $8
+; CHECK-LE-NEXT:    mul $1, $11, $1
+; CHECK-LE-NEXT:    addu $1, $3, $1
+; CHECK-LE-NEXT:    sll $3, $1, 2
+; CHECK-LE-NEXT:    addu $3, $3, $1
+; CHECK-LE-NEXT:    sll $1, $1, 5
+; CHECK-LE-NEXT:    addu $1, $1, $3
+; CHECK-LE-NEXT:    subu $1, $2, $1
+; CHECK-LE-NEXT:    andi $2, $1, 32
+; CHECK-LE-NEXT:    srl $3, $2, 5
+; CHECK-LE-NEXT:    move $8, $4
+; CHECK-LE-NEXT:    movn $8, $7, $3
+; CHECK-LE-NEXT:    sllv $2, $8, $1
+; CHECK-LE-NEXT:    not $9, $1
+; CHECK-LE-NEXT:    movn $7, $6, $3
+; CHECK-LE-NEXT:    srl $6, $7, 1
+; CHECK-LE-NEXT:    srlv $6, $6, $9
+; CHECK-LE-NEXT:    or $2, $2, $6
+; CHECK-LE-NEXT:    movn $5, $4, $3
+; CHECK-LE-NEXT:    sllv $1, $5, $1
+; CHECK-LE-NEXT:    srl $3, $8, 1
+; CHECK-LE-NEXT:    srlv $3, $3, $9
 ; CHECK-LE-NEXT:    jr $ra
-; CHECK-LE-NEXT:    addiu $sp, $sp, 40
+; CHECK-LE-NEXT:    or $3, $1, $3
   %f = call i37 @llvm.fshl.i37(i37 %x, i37 %y, i37 %z)
   ret i37 %f
 }
@@ -288,104 +289,106 @@ declare i37 @llvm.fshr.i37(i37, i37, i37)
 define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK-BE-LABEL: fshr_i37:
 ; CHECK-BE:       # %bb.0:
-; CHECK-BE-NEXT:    addiu $sp, $sp, -40
-; CHECK-BE-NEXT:    .cfi_def_cfa_offset 40
-; CHECK-BE-NEXT:    sw $ra, 36($sp) # 4-byte Folded Spill
-; CHECK-BE-NEXT:    sw $19, 32($sp) # 4-byte Folded Spill
-; CHECK-BE-NEXT:    sw $18, 28($sp) # 4-byte Folded Spill
-; CHECK-BE-NEXT:    sw $17, 24($sp) # 4-byte Folded Spill
-; CHECK-BE-NEXT:    sw $16, 20($sp) # 4-byte Folded Spill
-; CHECK-BE-NEXT:    .cfi_offset 31, -4
-; CHECK-BE-NEXT:    .cfi_offset 19, -8
-; CHECK-BE-NEXT:    .cfi_offset 18, -12
-; CHECK-BE-NEXT:    .cfi_offset 17, -16
-; CHECK-BE-NEXT:    .cfi_offset 16, -20
-; CHECK-BE-NEXT:    move $16, $7
-; CHECK-BE-NEXT:    move $17, $6
-; CHECK-BE-NEXT:    move $18, $5
-; CHECK-BE-NEXT:    move $19, $4
-; CHECK-BE-NEXT:    lw $1, 56($sp)
-; CHECK-BE-NEXT:    andi $4, $1, 31
-; CHECK-BE-NEXT:    lw $5, 60($sp)
-; CHECK-BE-NEXT:    addiu $6, $zero, 0
-; CHECK-BE-NEXT:    jal __umoddi3
-; CHECK-BE-NEXT:    addiu $7, $zero, 37
-; CHECK-BE-NEXT:    addiu $1, $3, 27
+; CHECK-BE-NEXT:    lui $1, 1771
+; CHECK-BE-NEXT:    ori $1, $1, 15941
+; CHECK-BE-NEXT:    lw $2, 20($sp)
+; CHECK-BE-NEXT:    multu $2, $1
+; CHECK-BE-NEXT:    mfhi $3
+; CHECK-BE-NEXT:    mflo $8
+; CHECK-BE-NEXT:    lui $9, 12398
+; CHECK-BE-NEXT:    ori $9, $9, 46053
+; CHECK-BE-NEXT:    multu $2, $9
+; CHECK-BE-NEXT:    mfhi $10
+; CHECK-BE-NEXT:    lw $11, 16($sp)
+; CHECK-BE-NEXT:    andi $11, $11, 31
+; CHECK-BE-NEXT:    multu $11, $9
+; CHECK-BE-NEXT:    mflo $9
+; CHECK-BE-NEXT:    mfhi $12
+; CHECK-BE-NEXT:    addu $8, $10, $8
+; CHECK-BE-NEXT:    sltu $10, $8, $10
+; CHECK-BE-NEXT:    addu $9, $8, $9
+; CHECK-BE-NEXT:    sltu $8, $9, $8
+; CHECK-BE-NEXT:    addu $3, $3, $10
+; CHECK-BE-NEXT:    srl $9, $7, 5
+; CHECK-BE-NEXT:    sll $6, $6, 27
+; CHECK-BE-NEXT:    or $6, $6, $9
+; CHECK-BE-NEXT:    sll $7, $7, 27
+; CHECK-BE-NEXT:    addu $3, $3, $12
+; CHECK-BE-NEXT:    addu $3, $3, $8
+; CHECK-BE-NEXT:    mul $1, $11, $1
+; CHECK-BE-NEXT:    addu $1, $3, $1
+; CHECK-BE-NEXT:    sll $3, $1, 2
+; CHECK-BE-NEXT:    addu $3, $3, $1
+; CHECK-BE-NEXT:    sll $1, $1, 5
+; CHECK-BE-NEXT:    addu $1, $1, $3
+; CHECK-BE-NEXT:    subu $1, $2, $1
+; CHECK-BE-NEXT:    addiu $1, $1, 27
 ; CHECK-BE-NEXT:    andi $3, $1, 32
-; CHECK-BE-NEXT:    srl $2, $16, 5
-; CHECK-BE-NEXT:    sll $4, $17, 27
-; CHECK-BE-NEXT:    or $4, $4, $2
-; CHECK-BE-NEXT:    movz $19, $18, $3
-; CHECK-BE-NEXT:    movz $18, $4, $3
-; CHECK-BE-NEXT:    srlv $2, $18, $1
-; CHECK-BE-NEXT:    not $5, $1
-; CHECK-BE-NEXT:    sll $6, $19, 1
-; CHECK-BE-NEXT:    sllv $6, $6, $5
-; CHECK-BE-NEXT:    sll $7, $16, 27
-; CHECK-BE-NEXT:    or $2, $6, $2
-; CHECK-BE-NEXT:    movz $4, $7, $3
-; CHECK-BE-NEXT:    srlv $1, $4, $1
-; CHECK-BE-NEXT:    sll $3, $18, 1
-; CHECK-BE-NEXT:    sllv $3, $3, $5
-; CHECK-BE-NEXT:    or $3, $3, $1
-; CHECK-BE-NEXT:    lw $16, 20($sp) # 4-byte Folded Reload
-; CHECK-BE-NEXT:    lw $17, 24($sp) # 4-byte Folded Reload
-; CHECK-BE-NEXT:    lw $18, 28($sp) # 4-byte Folded Reload
-; CHECK-BE-NEXT:    lw $19, 32($sp) # 4-byte Folded Reload
-; CHECK-BE-NEXT:    lw $ra, 36($sp) # 4-byte Folded Reload
+; CHECK-BE-NEXT:    movz $4, $5, $3
+; CHECK-BE-NEXT:    movz $5, $6, $3
+; CHECK-BE-NEXT:    srlv $2, $5, $1
+; CHECK-BE-NEXT:    not $8, $1
+; CHECK-BE-NEXT:    sll $4, $4, 1
+; CHECK-BE-NEXT:    sllv $4, $4, $8
+; CHECK-BE-NEXT:    or $2, $4, $2
+; CHECK-BE-NEXT:    movz $6, $7, $3
+; CHECK-BE-NEXT:    srlv $1, $6, $1
+; CHECK-BE-NEXT:    sll $3, $5, 1
+; CHECK-BE-NEXT:    sllv $3, $3, $8
 ; CHECK-BE-NEXT:    jr $ra
-; CHECK-BE-NEXT:    addiu $sp, $sp, 40
+; CHECK-BE-NEXT:    or $3, $3, $1
 ;
 ; CHECK-LE-LABEL: fshr_i37:
 ; CHECK-LE:       # %bb.0:
-; CHECK-LE-NEXT:    addiu $sp, $sp, -40
-; CHECK-LE-NEXT:    .cfi_def_cfa_offset 40
-; CHECK-LE-NEXT:    sw $ra, 36($sp) # 4-byte Folded Spill
-; CHECK-LE-NEXT:    sw $19, 32($sp) # 4-byte Folded Spill
-; CHECK-LE-NEXT:    sw $18, 28($sp) # 4-byte Folded Spill
-; CHECK-LE-NEXT:    sw $17, 24($sp) # 4-byte Folded Spill
-; CHECK-LE-NEXT:    sw $16, 20($sp) # 4-byte Folded Spill
-; CHECK-LE-NEXT:    .cfi_offset 31, -4
-; CHECK-LE-NEXT:    .cfi_offset 19, -8
-; CHECK-LE-NEXT:    .cfi_offset 18, -12
-; CHECK-LE-NEXT:    .cfi_offset 17, -16
-; CHECK-LE-NEXT:    .cfi_offset 16, -20
-; CHECK-LE-NEXT:    move $16, $7
-; CHECK-LE-NEXT:    move $17, $6
-; CHECK-LE-NEXT:    move $18, $5
-; CHECK-LE-NEXT:    move $19, $4
-; CHECK-LE-NEXT:    lw $1, 60($sp)
-; CHECK-LE-NEXT:    andi $5, $1, 31
-; CHECK-LE-NEXT:    lw $4, 56($sp)
-; CHECK-LE-NEXT:    addiu $6, $zero, 37
-; CHECK-LE-NEXT:    jal __umoddi3
-; CHECK-LE-NEXT:    addiu $7, $zero, 0
-; CHECK-LE-NEXT:    addiu $1, $2, 27
+; CHECK-LE-NEXT:    lui $1, 1771
+; CHECK-LE-NEXT:    ori $1, $1, 15941
+; CHECK-LE-NEXT:    lw $2, 16($sp)
+; CHECK-LE-NEXT:    multu $2, $1
+; CHECK-LE-NEXT:    mfhi $3
+; CHECK-LE-NEXT:    mflo $8
+; CHECK-LE-NEXT:    lui $9, 12398
+; CHECK-LE-NEXT:    ori $9, $9, 46053
+; CHECK-LE-NEXT:    multu $2, $9
+; CHECK-LE-NEXT:    mfhi $10
+; CHECK-LE-NEXT:    lw $11, 20($sp)
+; CHECK-LE-NEXT:    andi $11, $11, 31
+; CHECK-LE-NEXT:    multu $11, $9
+; CHECK-LE-NEXT:    mflo $9
+; CHECK-LE-NEXT:    mfhi $12
+; CHECK-LE-NEXT:    addu $8, $10, $8
+; CHECK-LE-NEXT:    sltu $10, $8, $10
+; CHECK-LE-NEXT:    addu $9, $8, $9
+; CHECK-LE-NEXT:    sltu $8, $9, $8
+; CHECK-LE-NEXT:    addu $3, $3, $10
+; CHECK-LE-NEXT:    srl $9, $6, 5
+; CHECK-LE-NEXT:    sll $7, $7, 27
+; CHECK-LE-NEXT:    or $7, $7, $9
+; CHECK-LE-NEXT:    sll $6, $6, 27
+; CHECK-LE-NEXT:    addu $3, $3, $12
+; CHECK-LE-NEXT:    addu $3, $3, $8
+; CHECK-LE-NEXT:    mul $1, $11, $1
+; CHECK-LE-NEXT:    addu $1, $3, $1
+; CHECK-LE-NEXT:    sll $3, $1, 2
+; CHECK-LE-NEXT:    addu $3, $3, $1
+; CHECK-LE-NEXT:    sll $1, $1, 5
+; CHECK-LE-NEXT:    addu $1, $1, $3
+; CHECK-LE-NEXT:    subu $1, $2, $1
+; CHECK-LE-NEXT:    addiu $1, $1, 27
 ; CHECK-LE-NEXT:    andi $3, $1, 32
-; CHECK-LE-NEXT:    srl $2, $17, 5
-; CHECK-LE-NEXT:    sll $4, $16, 27
-; CHECK-LE-NEXT:    or $2, $4, $2
-; CHECK-LE-NEXT:    sll $4, $17, 27
-; CHECK-LE-NEXT:    move $5, $19
-; CHECK-LE-NEXT:    movz $5, $2, $3
-; CHECK-LE-NEXT:    movz $2, $4, $3
-; CHECK-LE-NEXT:    srlv $2, $2, $1
-; CHECK-LE-NEXT:    not $4, $1
-; CHECK-LE-NEXT:    sll $6, $5, 1
-; CHECK-LE-NEXT:    sllv $6, $6, $4
-; CHECK-LE-NEXT:    or $2, $6, $2
-; CHECK-LE-NEXT:    srlv $1, $5, $1
-; CHECK-LE-NEXT:    movz $18, $19, $3
-; CHECK-LE-NEXT:    sll $3, $18, 1
-; CHECK-LE-NEXT:    sllv $3, $3, $4
-; CHECK-LE-NEXT:    or $3, $3, $1
-; CHECK-LE-NEXT:    lw $16, 20($sp) # 4-byte Folded Reload
-; CHECK-LE-NEXT:    lw $17, 24($sp) # 4-byte Folded Reload
-; CHECK-LE-NEXT:    lw $18, 28($sp) # 4-byte Folded Reload
-; CHECK-LE-NEXT:    lw $19, 32($sp) # 4-byte Folded Reload
-; CHECK-LE-NEXT:    lw $ra, 36($sp) # 4-byte Folded Reload
+; CHECK-LE-NEXT:    move $8, $4
+; CHECK-LE-NEXT:    movz $8, $7, $3
+; CHECK-LE-NEXT:    movz $7, $6, $3
+; CHECK-LE-NEXT:    srlv $2, $7, $1
+; CHECK-LE-NEXT:    not $6, $1
+; CHECK-LE-NEXT:    sll $7, $8, 1
+; CHECK-LE-NEXT:    sllv $7, $7, $6
+; CHECK-LE-NEXT:    or $2, $7, $2
+; CHECK-LE-NEXT:    srlv $1, $8, $1
+; CHECK-LE-NEXT:    movz $5, $4, $3
+; CHECK-LE-NEXT:    sll $3, $5, 1
+; CHECK-LE-NEXT:    sllv $3, $3, $6
 ; CHECK-LE-NEXT:    jr $ra
-; CHECK-LE-NEXT:    addiu $sp, $sp, 40
+; CHECK-LE-NEXT:    or $3, $3, $1
   %f = call i37 @llvm.fshr.i37(i37 %x, i37 %y, i37 %z)
   ret i37 %f
 }
