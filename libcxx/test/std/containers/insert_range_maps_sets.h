@@ -264,7 +264,6 @@ TEST_CONSTEXPR_CXX26 bool test_map_insert_range_move_only() {
   Value input[5];
   std::ranges::subrange in(std::move_iterator{input}, std::move_iterator{input + 5});
 
-// TODO: this causes failures presumably due to the same issues as move_alloc and move_assign
   Container<int, MoveOnly> c;
   c.insert_range(in);
   return true;
