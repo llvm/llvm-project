@@ -2068,33 +2068,42 @@ def Vector_GatherOp :
     on the values of an n-D mask vector.
 
     If a mask bit is set, the corresponding result element is taken from `base`
-    at an index defined by k `indices` and n-D `index_vec`. Otherwise, the element
-    is taken from the pass-through vector. As an example, suppose that base is
-    3-D and the result is 2-D. The indexing semantics are then,
+    at an index defined by k indices and n-D `index_vec`. Otherwise, the element
+    is taken from the pass-through vector. As an example, suppose that `base` is
+    3-D and the result is 2-D:
+
+    ```mlir
+    func.func @gather_3D_to_2D(
+        %base: memref<?x10x?xf32>, %i0: index, %i1: index, %i2: index,
+        %index_vec: vector<2x3xi32>, %mask: vector<2x3xi1>,
+        %fall_thru: vector<2x3xf32>) -> vector<2x3xf32> {
+           %result = vector.gather %base[%i0, %i1, %i2]
+                                   [%index_vec], %mask, %fall_thru : [...]
+       return %result : vector<2x3xf32>
+    }
+    ```
+
+    The indexing semantics are then,
 
     ```
-    result[i,j] := if mask[i,j] then
-                      base[indices[0], indices[1], indices[2] + index_vec[i,j]]
-                   else
-                      pass_thru[i,j]
+    result[i,j] := if mask[i,j] then base[i0, i1, i2 + index_vec[i,j]]
+                   else pass_thru[i,j]
     ```
-    The index into `base` only varies in the dimension k-1.
+    The index into `base` only varies in the innermost dimension, k-1.
 
     If a mask bit is set and the corresponding index is out-of-bounds for the
     given base, the behavior is undefined. If a mask bit is not set, the value
     comes from the pass-through vector regardless of the index, and the index is
     allowed to be out-of-bounds.
 
-    The gather operation can be used directly where applicable, or can be used
-    during progressive lowering to bring other memory operations closer to hardware
-    ISA support for a gather.
-
     Examples:
 
     ```mlir
+    // 1-D memref gathered to 2-D vector.
     %0 = vector.gather %base[%c0][%v], %mask, %pass_thru
        : memref<?xf32>, vector<2x16xi32>, vector<2x16xi1>, vector<2x16xf32> into vector<2x16xf32>
 
+    // 2-D memref gathered to 1-D vector.
     %1 = vector.gather %base[%i, %j][%v], %mask, %pass_thru
        : memref<16x16xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
     ```
