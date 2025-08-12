@@ -102,7 +102,7 @@ class RVInstSMTVDotSlide<SMTVEncoding2 funct2, SMTVEncoding2 sign, string opcode
 
 let DecoderNamespace = "XSMT" in {
 
-let Predicates = [HasVendorXSMTVDot], ElementsDependOn = EltDepsVLMask in {
+let Predicates = [HasVendorXSMTVDot], ElementsDependOn = EltDepsVL in {
 // Base vector dot product (no slide) instructions
 // NOTE: Destination registers (vd) MUST be even-numbered (v0, v2, ..., v30)
 //       due to hardware alignment constraints. Using odd registers may cause undefined behavior.
