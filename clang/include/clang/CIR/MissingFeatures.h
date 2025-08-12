@@ -192,6 +192,7 @@ struct MissingFeatures {
   static bool constantFoldSwitchStatement() { return false; }
   static bool constructABIArgDirectExtend() { return false; }
   static bool coverageMapping() { return false; }
+  static bool createInvariantGroup() { return false; }
   static bool createProfileWeightsForLoop() { return false; }
   static bool ctorMemcpyizer() { return false; }
   static bool cudaSupport() { return false; }
@@ -263,6 +264,7 @@ struct MissingFeatures {
   static bool appleKext() { return false; }
   static bool dtorCleanups() { return false; }
   static bool vtableInitialization() { return false; }
+  static bool vtableRelativeLayout() { return false; }
   static bool msvcBuiltins() { return false; }
   static bool vlas() { return false; }
 
