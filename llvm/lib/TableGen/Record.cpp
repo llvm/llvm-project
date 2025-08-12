@@ -1547,12 +1547,7 @@ const Init *BinOpInit::Fold(const Record *CurRec) const {
       int64_t LHSv = LHSi->getValue(), RHSv = RHSi->getValue();
       int64_t Result;
 
-      unsigned Opc = getOpcode();
-      if ((Opc == SHL || Opc == SRA || Opc == SRL) && (RHSv < 0 || RHSv >= 64))
-        PrintFatalError(CurRec->getLoc(),
-                        "Illegal operation: out of bounds shift");
-
-      switch (Opc) {
+      switch (getOpcode()) {
       default: llvm_unreachable("Bad opcode!");
       case ADD: Result = LHSv + RHSv; break;
       case SUB: Result = LHSv - RHSv; break;
@@ -1570,9 +1565,24 @@ const Init *BinOpInit::Fold(const Record *CurRec) const {
       case AND: Result = LHSv & RHSv; break;
       case OR:  Result = LHSv | RHSv; break;
       case XOR: Result = LHSv ^ RHSv; break;
-      case SHL: Result = (uint64_t)LHSv << (uint64_t)RHSv; break;
-      case SRA: Result = LHSv >> (uint64_t)RHSv; break;
-      case SRL: Result = (uint64_t)LHSv >> (uint64_t)RHSv; break;
+      case SHL:
+        if (RHSv < 0 || RHSv >= 64)
+          PrintFatalError(CurRec->getLoc(),
+                          "Illegal operation: out of bounds shift");
+        Result = (uint64_t)LHSv << (uint64_t)RHSv;
+        break;
+      case SRA:
+        if (RHSv < 0 || RHSv >= 64)
+          PrintFatalError(CurRec->getLoc(),
+                          "Illegal operation: out of bounds shift");
+        Result = LHSv >> (uint64_t)RHSv;
+        break;
+      case SRL:
+        if (RHSv < 0 || RHSv >= 64)
+          PrintFatalError(CurRec->getLoc(),
+                          "Illegal operation: out of bounds shift");
+        Result = (uint64_t)LHSv >> (uint64_t)RHSv;
+        break;
       }
       return IntInit::get(getRecordKeeper(), Result);
     }
