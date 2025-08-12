@@ -465,3 +465,5 @@ References
 * `The CORE-MATH Project <https://core-math.gitlabpages.inria.fr/>`_.
 * `The GNU C Library (glibc) <https://www.gnu.org/software/libc/>`_.
 * `The GNU MPFR Library <https://www.mpfr.org/>`_.
+* `C++23 Standard <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/n4950.pdf>`_.
+* `BFloat16 <https://en.wikipedia.org/wiki/Bfloat16_floating-point_format>`_.
