@@ -108,9 +108,7 @@ public:
 
   static char ID;
 
-  AArch64PromoteConstant() : ModulePass(ID) {
-    initializeAArch64PromoteConstantPass(*PassRegistry::getPassRegistry());
-  }
+  AArch64PromoteConstant() : ModulePass(ID) {}
 
   StringRef getPassName() const override { return "AArch64 Promote Constant"; }
 
@@ -345,6 +343,10 @@ static bool shouldConvertImpl(const Constant *Cst) {
   // Ideally, we could promote this into a global and rematerialize the constant
   // when it was a bad idea.
   if (Cst->isZeroValue())
+    return false;
+
+  // Globals cannot be or contain scalable vectors.
+  if (Cst->getType()->isScalableTy())
     return false;
 
   if (Stress)

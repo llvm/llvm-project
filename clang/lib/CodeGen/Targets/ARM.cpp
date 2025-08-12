@@ -134,14 +134,13 @@ public:
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &CGM) const override {
-    if (GV->isDeclaration())
+    auto *Fn = dyn_cast<llvm::Function>(GV);
+    if (!Fn)
       return;
-    const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
-    if (!FD)
-      return;
-    auto *Fn = cast<llvm::Function>(GV);
+    const auto *FD = dyn_cast_or_null<FunctionDecl>(D);
 
-    if (const auto *TA = FD->getAttr<TargetAttr>()) {
+    if (FD && FD->hasAttr<TargetAttr>()) {
+      const auto *TA = FD->getAttr<TargetAttr>();
       ParsedTargetAttr Attr =
           CGM.getTarget().parseTargetAttr(TA->getFeaturesStr());
       if (!Attr.BranchProtection.empty()) {
@@ -174,10 +173,10 @@ public:
       setBranchProtectionFnAttributes(BPI, (*Fn));
     }
 
-    const ARMInterruptAttr *Attr = FD->getAttr<ARMInterruptAttr>();
-    if (!Attr)
+    if (!FD || !FD->hasAttr<ARMInterruptAttr>())
       return;
 
+    const ARMInterruptAttr *Attr = FD->getAttr<ARMInterruptAttr>();
     const char *Kind;
     switch (Attr->getInterrupt()) {
     case ARMInterruptAttr::Generic: Kind = ""; break;
@@ -189,6 +188,12 @@ public:
     }
 
     Fn->addFnAttr("interrupt", Kind);
+
+    // Note: the ARMSaveFPAttr can only exist if we also have an interrupt
+    // attribute
+    const ARMSaveFPAttr *SaveFPAttr = FD->getAttr<ARMSaveFPAttr>();
+    if (SaveFPAttr)
+      Fn->addFnAttr("save-fp");
 
     ARMABIKind ABI = getABIInfo<ARMABIInfo>().getABIKind();
     if (ABI == ARMABIKind::APCS)
@@ -378,7 +383,7 @@ ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty, bool isVariadic,
   if (!isAggregateTypeForABI(Ty)) {
     // Treat an enum type as its underlying type.
     if (const EnumType *EnumTy = Ty->getAs<EnumType>()) {
-      Ty = EnumTy->getDecl()->getIntegerType();
+      Ty = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
     }
 
     if (const auto *EIT = Ty->getAs<BitIntType>())
@@ -511,7 +516,7 @@ static bool isIntegerLikeType(QualType Ty, ASTContext &Context,
   if (!RT) return false;
 
   // Ignore records with flexible arrays.
-  const RecordDecl *RD = RT->getDecl();
+  const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
   if (RD->hasFlexibleArrayMember())
     return false;
 
@@ -588,7 +593,8 @@ ABIArgInfo ARMABIInfo::classifyReturnType(QualType RetTy, bool isVariadic,
   if (!isAggregateTypeForABI(RetTy)) {
     // Treat an enum type as its underlying type.
     if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
-      RetTy = EnumTy->getDecl()->getIntegerType();
+      RetTy =
+          EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
 
     if (const auto *EIT = RetTy->getAs<BitIntType>())
       if (EIT->getNumBits() > 64)
@@ -713,7 +719,7 @@ bool ARMABIInfo::containsAnyFP16Vectors(QualType Ty) const {
       return false;
     return containsAnyFP16Vectors(AT->getElementType());
   } else if (const RecordType *RT = Ty->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getDecl();
+    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
 
     // If this is a C++ record, check the bases first.
     if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD))

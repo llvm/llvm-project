@@ -1,56 +1,56 @@
 ! RUN: %python %S/test_symbols.py %s %flang_fc1
-!DEF: /main MainProgram
-program main
- !DEF: /main/t1 DerivedType
+!DEF: /MAIN MainProgram
+program MAIN
+ !DEF: /MAIN/t1 DerivedType
  type :: t1
-  !DEF: /main/t1/a1 ObjectEntity INTEGER(4)
+  !DEF: /MAIN/t1/a1 ObjectEntity INTEGER(4)
   integer :: a1
  end type
- !REF: /main/t1
- !DEF: /main/t2 DerivedType
+ !REF: /MAIN/t1
+ !DEF: /MAIN/t2 DerivedType
  type, extends(t1) :: t2
-  !DEF: /main/t2/a2 ObjectEntity INTEGER(4)
+  !DEF: /MAIN/t2/a2 ObjectEntity INTEGER(4)
   integer :: a2
  end type
- !REF: /main/t2
- !DEF: /main/t3 DerivedType
+ !REF: /MAIN/t2
+ !DEF: /MAIN/t3 DerivedType
  type, extends(t2) :: t3
-  !DEF: /main/t3/a3 ObjectEntity INTEGER(4)
+  !DEF: /MAIN/t3/a3 ObjectEntity INTEGER(4)
   integer :: a3
  end type
- !REF: /main/t3
- !DEF: /main/x3 ObjectEntity TYPE(t3)
+ !REF: /MAIN/t3
+ !DEF: /MAIN/x3 ObjectEntity TYPE(t3)
  type(t3) :: x3
- !DEF: /main/i ObjectEntity INTEGER(4)
+ !DEF: /MAIN/i ObjectEntity INTEGER(4)
  integer i
- !REF: /main/i
- !REF: /main/x3
- !REF: /main/t2/a2
+ !REF: /MAIN/i
+ !REF: /MAIN/x3
+ !REF: /MAIN/t2/a2
  i = x3%a2
- !REF: /main/i
- !REF: /main/x3
- !REF: /main/t1/a1
+ !REF: /MAIN/i
+ !REF: /MAIN/x3
+ !REF: /MAIN/t1/a1
  i = x3%a1
- !REF: /main/i
- !REF: /main/x3
- !DEF: /main/t3/t2 (ParentComp) ObjectEntity TYPE(t2)
- !REF: /main/t2/a2
+ !REF: /MAIN/i
+ !REF: /MAIN/x3
+ !DEF: /MAIN/t3/t2 (ParentComp) ObjectEntity TYPE(t2)
+ !REF: /MAIN/t2/a2
  i = x3%t2%a2
- !REF: /main/i
- !REF: /main/x3
- !REF: /main/t3/t2
- !REF: /main/t1/a1
+ !REF: /MAIN/i
+ !REF: /MAIN/x3
+ !REF: /MAIN/t3/t2
+ !REF: /MAIN/t1/a1
  i = x3%t2%a1
- !REF: /main/i
- !REF: /main/x3
- !DEF: /main/t2/t1 (ParentComp) ObjectEntity TYPE(t1)
- !REF: /main/t1/a1
+ !REF: /MAIN/i
+ !REF: /MAIN/x3
+ !DEF: /MAIN/t2/t1 (ParentComp) ObjectEntity TYPE(t1)
+ !REF: /MAIN/t1/a1
  i = x3%t1%a1
- !REF: /main/i
- !REF: /main/x3
- !REF: /main/t3/t2
- !REF: /main/t2/t1
- !REF: /main/t1/a1
+ !REF: /MAIN/i
+ !REF: /MAIN/x3
+ !REF: /MAIN/t3/t2
+ !REF: /MAIN/t2/t1
+ !REF: /MAIN/t1/a1
  i = x3%t2%t1%a1
 end program
 

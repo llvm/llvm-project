@@ -19,7 +19,7 @@ config.name = "cross-project-tests"
 config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
 
 # suffixes: A list of file extensions to treat as test files.
-config.suffixes = [".c", ".cl", ".cpp", ".m"]
+config.suffixes = [".c", ".cl", ".cpp", ".m", ".test"]
 
 # excludes: A list of directories to exclude from the testsuite. The 'Inputs'
 # subdirectories contain auxiliary inputs for various tests in their parent
@@ -107,6 +107,8 @@ lldb_path = llvm_config.use_llvm_tool("lldb", search_env="LLDB")
 if lldb_path is not None:
     config.available_features.add("lldb")
 
+if llvm_config.use_llvm_tool("llvm-ar"):
+    config.available_features.add("llvm-ar")
 
 def configure_dexter_substitutions():
     """Configure substitutions for host platform and return list of dependencies"""
@@ -131,18 +133,31 @@ def configure_dexter_substitutions():
     if platform.system() == "Windows":
         # The Windows builder script uses lld.
         dependencies = ["clang", "lld-link"]
-        dexter_regression_test_builder = "clang-cl"
+        dexter_regression_test_c_builder = "clang-cl"
+        dexter_regression_test_cxx_builder = "clang-cl"
         dexter_regression_test_debugger = "dbgeng"
-        dexter_regression_test_flags = "/Zi /Od"
+        dexter_regression_test_c_flags = "/Zi /Od"
+        dexter_regression_test_cxx_flags = "/Zi /Od"
+        dexter_regression_test_additional_flags = ""
     else:
         # Use lldb as the debugger on non-Windows platforms.
         dependencies = ["clang", "lldb"]
-        dexter_regression_test_builder = "clang++"
+        dexter_regression_test_c_builder = "clang"
+        dexter_regression_test_cxx_builder = "clang++"
         dexter_regression_test_debugger = "lldb"
-        dexter_regression_test_flags = "-O0 -glldb -std=gnu++11"
+        dexter_regression_test_c_flags = "-O0 -glldb -std=gnu11"
+        dexter_regression_test_cxx_flags = "-O0 -glldb -std=gnu++11"
+        dexter_regression_test_additional_flags = '--lldb-executable "{}"'.format(
+            lldb_path
+        )
 
     tools.append(
-        ToolSubst("%dexter_regression_test_builder", dexter_regression_test_builder)
+        ToolSubst("%dexter_regression_test_c_builder", dexter_regression_test_c_builder)
+    )
+    tools.append(
+        ToolSubst(
+            "%dexter_regression_test_cxx_builder", dexter_regression_test_cxx_builder
+        )
     )
     tools.append(
         ToolSubst("%dexter_regression_test_debugger", dexter_regression_test_debugger)
@@ -151,7 +166,10 @@ def configure_dexter_substitutions():
     # regression tests we use clang to drive the linker, and so all flags will be
     # passed in a single command.
     tools.append(
-        ToolSubst("%dexter_regression_test_flags", dexter_regression_test_flags)
+        ToolSubst("%dexter_regression_test_c_flags", dexter_regression_test_c_flags)
+    )
+    tools.append(
+        ToolSubst("%dexter_regression_test_cxx_flags", dexter_regression_test_cxx_flags)
     )
 
     # Typical command would take the form:
@@ -165,18 +183,30 @@ def configure_dexter_substitutions():
             "--fail-lt 1.0 -w",
             "--debugger",
             dexter_regression_test_debugger,
+            dexter_regression_test_additional_flags,
         ]
     )
     tools.append(ToolSubst("%dexter_regression_test_run", dexter_regression_test_run))
 
     # Include build flags for %dexter_regression_test.
-    dexter_regression_test_build = " ".join(
+    dexter_regression_test_c_build = " ".join(
         [
-            dexter_regression_test_builder,
-            dexter_regression_test_flags,
+            dexter_regression_test_c_builder,
+            dexter_regression_test_c_flags,
         ]
     )
-    tools.append(ToolSubst("%dexter_regression_test_build", dexter_regression_test_build))
+    dexter_regression_test_cxx_build = " ".join(
+        [
+            dexter_regression_test_cxx_builder,
+            dexter_regression_test_cxx_flags,
+        ]
+    )
+    tools.append(
+        ToolSubst("%dexter_regression_test_c_build", dexter_regression_test_c_build)
+    )
+    tools.append(
+        ToolSubst("%dexter_regression_test_cxx_build", dexter_regression_test_cxx_build)
+    )
     return dependencies
 
 
@@ -209,15 +239,6 @@ if can_target_host():
     dependencies = configure_dexter_substitutions()
     if all(d in config.available_features for d in dependencies):
         config.available_features.add("dexter")
-        llvm_config.with_environment(
-            "PATHTOCLANG", add_host_triple(llvm_config.config.clang)
-        )
-        llvm_config.with_environment(
-            "PATHTOCLANGPP", add_host_triple(llvm_config.use_llvm_tool("clang++"))
-        )
-        llvm_config.with_environment(
-            "PATHTOCLANGCL", add_host_triple(llvm_config.use_llvm_tool("clang-cl"))
-        )
 else:
     print(
         "Host triple {} not supported. Skipping dexter tests in the "

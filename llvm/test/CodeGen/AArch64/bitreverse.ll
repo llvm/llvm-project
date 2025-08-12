@@ -17,52 +17,10 @@ define <2 x i16> @f(<2 x i16> %a) {
 ; GISEL-LABEL: f:
 ; GISEL:       // %bb.0:
 ; GISEL-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
-; GISEL-NEXT:    mov w8, #61680 // =0xf0f0
-; GISEL-NEXT:    dup v1.2s, w8
-; GISEL-NEXT:    mov w8, #4 // =0x4
-; GISEL-NEXT:    fmov s3, w8
 ; GISEL-NEXT:    rev16 v0.8b, v0.8b
-; GISEL-NEXT:    mov v3.h[1], w8
-; GISEL-NEXT:    mov w8, #52428 // =0xcccc
-; GISEL-NEXT:    ushll v2.4s, v0.4h, #0
-; GISEL-NEXT:    neg v4.4h, v3.4h
-; GISEL-NEXT:    and v2.8b, v2.8b, v1.8b
-; GISEL-NEXT:    uzp1 v2.4h, v2.4h, v0.4h
-; GISEL-NEXT:    ushl v0.4h, v0.4h, v3.4h
+; GISEL-NEXT:    rbit v0.8b, v0.8b
 ; GISEL-NEXT:    ushll v0.4s, v0.4h, #0
-; GISEL-NEXT:    ushl v2.4h, v2.4h, v4.4h
-; GISEL-NEXT:    and v0.8b, v0.8b, v1.8b
-; GISEL-NEXT:    ushll v1.4s, v2.4h, #0
-; GISEL-NEXT:    dup v2.2s, w8
-; GISEL-NEXT:    mov w8, #2 // =0x2
-; GISEL-NEXT:    orr v0.8b, v1.8b, v0.8b
-; GISEL-NEXT:    fmov s1, w8
-; GISEL-NEXT:    and v3.8b, v0.8b, v2.8b
-; GISEL-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
-; GISEL-NEXT:    mov v1.h[1], w8
-; GISEL-NEXT:    mov w8, #43690 // =0xaaaa
-; GISEL-NEXT:    uzp1 v3.4h, v3.4h, v0.4h
-; GISEL-NEXT:    neg v4.4h, v1.4h
-; GISEL-NEXT:    ushl v0.4h, v0.4h, v1.4h
-; GISEL-NEXT:    ushll v0.4s, v0.4h, #0
-; GISEL-NEXT:    ushl v1.4h, v3.4h, v4.4h
-; GISEL-NEXT:    and v0.8b, v0.8b, v2.8b
-; GISEL-NEXT:    dup v2.2s, w8
-; GISEL-NEXT:    mov w8, #1 // =0x1
-; GISEL-NEXT:    ushll v1.4s, v1.4h, #0
-; GISEL-NEXT:    orr v0.8b, v1.8b, v0.8b
-; GISEL-NEXT:    fmov s1, w8
-; GISEL-NEXT:    and v3.8b, v0.8b, v2.8b
-; GISEL-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
-; GISEL-NEXT:    mov v1.h[1], w8
-; GISEL-NEXT:    uzp1 v3.4h, v3.4h, v0.4h
-; GISEL-NEXT:    neg v4.4h, v1.4h
-; GISEL-NEXT:    ushl v0.4h, v0.4h, v1.4h
-; GISEL-NEXT:    ushll v0.4s, v0.4h, #0
-; GISEL-NEXT:    ushl v1.4h, v3.4h, v4.4h
-; GISEL-NEXT:    and v0.8b, v0.8b, v2.8b
-; GISEL-NEXT:    ushll v1.4s, v1.4h, #0
-; GISEL-NEXT:    orr v0.8b, v1.8b, v0.8b
+; GISEL-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; GISEL-NEXT:    ret
   %b = call <2 x i16> @llvm.bitreverse.v2i16(<2 x i16> %a)
   ret <2 x i16> %b
@@ -114,6 +72,43 @@ define i64 @g_64(i64 %a) {
   ret i64 %b
 }
 
+declare i128 @llvm.bitreverse.i128(i128) readnone
+
+define i128 @g_128(i128 %a) {
+; CHECK-LABEL: g_128:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rbit x8, x1
+; CHECK-NEXT:    rbit x1, x0
+; CHECK-NEXT:    mov x0, x8
+; CHECK-NEXT:    ret
+  %b = call i128 @llvm.bitreverse.i128(i128 %a)
+  ret i128 %b
+}
+
+declare <16 x i3> @llvm.bitreverse.v16i3(<16 x i3>) readnone
+
+define <16 x i3> @g_vec_16x3(<16 x i3> %a) {
+; CHECK-LABEL: g_vec_16x3:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rbit v0.16b, v0.16b
+; CHECK-NEXT:    ushr v0.16b, v0.16b, #5
+; CHECK-NEXT:    ret
+  %b = call <16 x i3> @llvm.bitreverse.v16i3(<16 x i3> %a)
+  ret <16 x i3> %b
+}
+
+declare <16 x i4> @llvm.bitreverse.v16i4(<16 x i4>) readnone
+
+define <16 x i4> @g_vec_16x4(<16 x i4> %a) {
+; CHECK-LABEL: g_vec_16x4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rbit v0.16b, v0.16b
+; CHECK-NEXT:    ushr v0.16b, v0.16b, #4
+; CHECK-NEXT:    ret
+  %b = call <16 x i4> @llvm.bitreverse.v16i4(<16 x i4> %a)
+  ret <16 x i4> %b
+}
+
 declare <8 x i8> @llvm.bitreverse.v8i8(<8 x i8>) readnone
 
 define <8 x i8> @g_vec(<8 x i8> %a) {
@@ -136,37 +131,58 @@ define <16 x i8> @g_vec_16x8(<16 x i8> %a) {
   ret <16 x i8> %b
 }
 
-declare <4 x i16> @llvm.bitreverse.v4i16(<4 x i16>) readnone
+declare <32 x i8> @llvm.bitreverse.v32i8(<32 x i8>) readnone
 
-define <4 x i16> @g_vec_4x16(<4 x i16> %a) {
-; SDAG-LABEL: g_vec_4x16:
+define <32 x i8> @g_vec_32x8(<32 x i8> %a) {
+; CHECK-LABEL: g_vec_32x8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rbit v0.16b, v0.16b
+; CHECK-NEXT:    rbit v1.16b, v1.16b
+; CHECK-NEXT:    ret
+  %b = call <32 x i8> @llvm.bitreverse.v32i8(<32 x i8> %a)
+  ret <32 x i8> %b
+}
+
+declare <4 x i8> @llvm.bitreverse.v4i8(<4 x i8>) readnone
+
+define <4 x i8> @g_vec_4x8(<4 x i8> %a) {
+; SDAG-LABEL: g_vec_4x8:
 ; SDAG:       // %bb.0:
 ; SDAG-NEXT:    rev16 v0.8b, v0.8b
 ; SDAG-NEXT:    rbit v0.8b, v0.8b
+; SDAG-NEXT:    ushr v0.4h, v0.4h, #8
 ; SDAG-NEXT:    ret
 ;
-; GISEL-LABEL: g_vec_4x16:
+; GISEL-LABEL: g_vec_4x8:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    movi v1.8b, #240
-; GISEL-NEXT:    rev16 v0.8b, v0.8b
-; GISEL-NEXT:    and v2.8b, v0.8b, v1.8b
-; GISEL-NEXT:    shl v0.4h, v0.4h, #4
-; GISEL-NEXT:    ushr v2.4h, v2.4h, #4
-; GISEL-NEXT:    and v0.8b, v0.8b, v1.8b
-; GISEL-NEXT:    movi v1.8b, #204
-; GISEL-NEXT:    orr v0.8b, v2.8b, v0.8b
-; GISEL-NEXT:    and v2.8b, v0.8b, v1.8b
-; GISEL-NEXT:    shl v0.4h, v0.4h, #2
-; GISEL-NEXT:    ushr v2.4h, v2.4h, #2
-; GISEL-NEXT:    and v0.8b, v0.8b, v1.8b
-; GISEL-NEXT:    movi v1.8b, #170
-; GISEL-NEXT:    orr v0.8b, v2.8b, v0.8b
-; GISEL-NEXT:    and v2.8b, v0.8b, v1.8b
-; GISEL-NEXT:    shl v0.4h, v0.4h, #1
-; GISEL-NEXT:    ushr v2.4h, v2.4h, #1
-; GISEL-NEXT:    and v0.8b, v0.8b, v1.8b
-; GISEL-NEXT:    orr v0.8b, v2.8b, v0.8b
+; GISEL-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
+; GISEL-NEXT:    rbit v0.8b, v0.8b
+; GISEL-NEXT:    ushll v0.8h, v0.8b, #0
+; GISEL-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; GISEL-NEXT:    ret
+  %b = call <4 x i8> @llvm.bitreverse.v4i8(<4 x i8> %a)
+  ret <4 x i8> %b
+}
+
+declare <9 x i8> @llvm.bitreverse.v9i8(<9 x i8>) readnone
+
+define <9 x i8> @g_vec_9x8(<9 x i8> %a) {
+; CHECK-LABEL: g_vec_9x8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rbit v0.16b, v0.16b
+; CHECK-NEXT:    ret
+  %b = call <9 x i8> @llvm.bitreverse.v9i8(<9 x i8> %a)
+  ret <9 x i8> %b
+}
+
+declare <4 x i16> @llvm.bitreverse.v4i16(<4 x i16>) readnone
+
+define <4 x i16> @g_vec_4x16(<4 x i16> %a) {
+; CHECK-LABEL: g_vec_4x16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rev16 v0.8b, v0.8b
+; CHECK-NEXT:    rbit v0.8b, v0.8b
+; CHECK-NEXT:    ret
   %b = call <4 x i16> @llvm.bitreverse.v4i16(<4 x i16> %a)
   ret <4 x i16> %b
 }
@@ -174,69 +190,37 @@ define <4 x i16> @g_vec_4x16(<4 x i16> %a) {
 declare <8 x i16> @llvm.bitreverse.v8i16(<8 x i16>) readnone
 
 define <8 x i16> @g_vec_8x16(<8 x i16> %a) {
-; SDAG-LABEL: g_vec_8x16:
-; SDAG:       // %bb.0:
-; SDAG-NEXT:    rev16 v0.16b, v0.16b
-; SDAG-NEXT:    rbit v0.16b, v0.16b
-; SDAG-NEXT:    ret
-;
-; GISEL-LABEL: g_vec_8x16:
-; GISEL:       // %bb.0:
-; GISEL-NEXT:    movi v1.16b, #240
-; GISEL-NEXT:    rev16 v0.16b, v0.16b
-; GISEL-NEXT:    and v2.16b, v0.16b, v1.16b
-; GISEL-NEXT:    shl v0.8h, v0.8h, #4
-; GISEL-NEXT:    ushr v2.8h, v2.8h, #4
-; GISEL-NEXT:    and v0.16b, v0.16b, v1.16b
-; GISEL-NEXT:    movi v1.16b, #204
-; GISEL-NEXT:    orr v0.16b, v2.16b, v0.16b
-; GISEL-NEXT:    and v2.16b, v0.16b, v1.16b
-; GISEL-NEXT:    shl v0.8h, v0.8h, #2
-; GISEL-NEXT:    ushr v2.8h, v2.8h, #2
-; GISEL-NEXT:    and v0.16b, v0.16b, v1.16b
-; GISEL-NEXT:    movi v1.16b, #170
-; GISEL-NEXT:    orr v0.16b, v2.16b, v0.16b
-; GISEL-NEXT:    and v2.16b, v0.16b, v1.16b
-; GISEL-NEXT:    shl v0.8h, v0.8h, #1
-; GISEL-NEXT:    ushr v2.8h, v2.8h, #1
-; GISEL-NEXT:    and v0.16b, v0.16b, v1.16b
-; GISEL-NEXT:    orr v0.16b, v2.16b, v0.16b
-; GISEL-NEXT:    ret
+; CHECK-LABEL: g_vec_8x16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rev16 v0.16b, v0.16b
+; CHECK-NEXT:    rbit v0.16b, v0.16b
+; CHECK-NEXT:    ret
   %b = call <8 x i16> @llvm.bitreverse.v8i16(<8 x i16> %a)
   ret <8 x i16> %b
+}
+
+declare <16 x i16> @llvm.bitreverse.v16i16(<16 x i16>) readnone
+
+define <16 x i16> @g_vec_16x16(<16 x i16> %a) {
+; CHECK-LABEL: g_vec_16x16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rev16 v0.16b, v0.16b
+; CHECK-NEXT:    rev16 v1.16b, v1.16b
+; CHECK-NEXT:    rbit v0.16b, v0.16b
+; CHECK-NEXT:    rbit v1.16b, v1.16b
+; CHECK-NEXT:    ret
+  %b = call <16 x i16> @llvm.bitreverse.v16i16(<16 x i16> %a)
+  ret <16 x i16> %b
 }
 
 declare <2 x i32> @llvm.bitreverse.v2i32(<2 x i32>) readnone
 
 define <2 x i32> @g_vec_2x32(<2 x i32> %a) {
-; SDAG-LABEL: g_vec_2x32:
-; SDAG:       // %bb.0:
-; SDAG-NEXT:    rev32 v0.8b, v0.8b
-; SDAG-NEXT:    rbit v0.8b, v0.8b
-; SDAG-NEXT:    ret
-;
-; GISEL-LABEL: g_vec_2x32:
-; GISEL:       // %bb.0:
-; GISEL-NEXT:    movi v1.8b, #240
-; GISEL-NEXT:    rev32 v0.8b, v0.8b
-; GISEL-NEXT:    and v2.8b, v0.8b, v1.8b
-; GISEL-NEXT:    shl v0.2s, v0.2s, #4
-; GISEL-NEXT:    ushr v2.2s, v2.2s, #4
-; GISEL-NEXT:    and v0.8b, v0.8b, v1.8b
-; GISEL-NEXT:    movi v1.8b, #204
-; GISEL-NEXT:    orr v0.8b, v2.8b, v0.8b
-; GISEL-NEXT:    and v2.8b, v0.8b, v1.8b
-; GISEL-NEXT:    shl v0.2s, v0.2s, #2
-; GISEL-NEXT:    ushr v2.2s, v2.2s, #2
-; GISEL-NEXT:    and v0.8b, v0.8b, v1.8b
-; GISEL-NEXT:    movi v1.8b, #170
-; GISEL-NEXT:    orr v0.8b, v2.8b, v0.8b
-; GISEL-NEXT:    and v2.8b, v0.8b, v1.8b
-; GISEL-NEXT:    shl v0.2s, v0.2s, #1
-; GISEL-NEXT:    ushr v2.2s, v2.2s, #1
-; GISEL-NEXT:    and v0.8b, v0.8b, v1.8b
-; GISEL-NEXT:    orr v0.8b, v2.8b, v0.8b
-; GISEL-NEXT:    ret
+; CHECK-LABEL: g_vec_2x32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rev32 v0.8b, v0.8b
+; CHECK-NEXT:    rbit v0.8b, v0.8b
+; CHECK-NEXT:    ret
   %b = call <2 x i32> @llvm.bitreverse.v2i32(<2 x i32> %a)
   ret <2 x i32> %b
 }
@@ -244,36 +228,27 @@ define <2 x i32> @g_vec_2x32(<2 x i32> %a) {
 declare <4 x i32> @llvm.bitreverse.v4i32(<4 x i32>) readnone
 
 define <4 x i32> @g_vec_4x32(<4 x i32> %a) {
-; SDAG-LABEL: g_vec_4x32:
-; SDAG:       // %bb.0:
-; SDAG-NEXT:    rev32 v0.16b, v0.16b
-; SDAG-NEXT:    rbit v0.16b, v0.16b
-; SDAG-NEXT:    ret
-;
-; GISEL-LABEL: g_vec_4x32:
-; GISEL:       // %bb.0:
-; GISEL-NEXT:    movi v1.16b, #240
-; GISEL-NEXT:    rev32 v0.16b, v0.16b
-; GISEL-NEXT:    and v2.16b, v0.16b, v1.16b
-; GISEL-NEXT:    shl v0.4s, v0.4s, #4
-; GISEL-NEXT:    ushr v2.4s, v2.4s, #4
-; GISEL-NEXT:    and v0.16b, v0.16b, v1.16b
-; GISEL-NEXT:    movi v1.16b, #204
-; GISEL-NEXT:    orr v0.16b, v2.16b, v0.16b
-; GISEL-NEXT:    and v2.16b, v0.16b, v1.16b
-; GISEL-NEXT:    shl v0.4s, v0.4s, #2
-; GISEL-NEXT:    ushr v2.4s, v2.4s, #2
-; GISEL-NEXT:    and v0.16b, v0.16b, v1.16b
-; GISEL-NEXT:    movi v1.16b, #170
-; GISEL-NEXT:    orr v0.16b, v2.16b, v0.16b
-; GISEL-NEXT:    and v2.16b, v0.16b, v1.16b
-; GISEL-NEXT:    shl v0.4s, v0.4s, #1
-; GISEL-NEXT:    ushr v2.4s, v2.4s, #1
-; GISEL-NEXT:    and v0.16b, v0.16b, v1.16b
-; GISEL-NEXT:    orr v0.16b, v2.16b, v0.16b
-; GISEL-NEXT:    ret
+; CHECK-LABEL: g_vec_4x32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rev32 v0.16b, v0.16b
+; CHECK-NEXT:    rbit v0.16b, v0.16b
+; CHECK-NEXT:    ret
   %b = call <4 x i32> @llvm.bitreverse.v4i32(<4 x i32> %a)
   ret <4 x i32> %b
+}
+
+declare <8 x i32> @llvm.bitreverse.v8i32(<8 x i32>) readnone
+
+define <8 x i32> @g_vec_8x32(<8 x i32> %a) {
+; CHECK-LABEL: g_vec_8x32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rev32 v0.16b, v0.16b
+; CHECK-NEXT:    rev32 v1.16b, v1.16b
+; CHECK-NEXT:    rbit v0.16b, v0.16b
+; CHECK-NEXT:    rbit v1.16b, v1.16b
+; CHECK-NEXT:    ret
+  %b = call <8 x i32> @llvm.bitreverse.v8i32(<8 x i32> %a)
+  ret <8 x i32> %b
 }
 
 declare <1 x i64> @llvm.bitreverse.v1i64(<1 x i64>) readnone
@@ -298,34 +273,41 @@ define <1 x i64> @g_vec_1x64(<1 x i64> %a) {
 declare <2 x i64> @llvm.bitreverse.v2i64(<2 x i64>) readnone
 
 define <2 x i64> @g_vec_2x64(<2 x i64> %a) {
-; SDAG-LABEL: g_vec_2x64:
-; SDAG:       // %bb.0:
-; SDAG-NEXT:    rev64 v0.16b, v0.16b
-; SDAG-NEXT:    rbit v0.16b, v0.16b
-; SDAG-NEXT:    ret
-;
-; GISEL-LABEL: g_vec_2x64:
-; GISEL:       // %bb.0:
-; GISEL-NEXT:    movi v1.16b, #240
-; GISEL-NEXT:    rev64 v0.16b, v0.16b
-; GISEL-NEXT:    and v2.16b, v0.16b, v1.16b
-; GISEL-NEXT:    shl v0.2d, v0.2d, #4
-; GISEL-NEXT:    ushr v2.2d, v2.2d, #4
-; GISEL-NEXT:    and v0.16b, v0.16b, v1.16b
-; GISEL-NEXT:    movi v1.16b, #204
-; GISEL-NEXT:    orr v0.16b, v2.16b, v0.16b
-; GISEL-NEXT:    and v2.16b, v0.16b, v1.16b
-; GISEL-NEXT:    shl v0.2d, v0.2d, #2
-; GISEL-NEXT:    ushr v2.2d, v2.2d, #2
-; GISEL-NEXT:    and v0.16b, v0.16b, v1.16b
-; GISEL-NEXT:    movi v1.16b, #170
-; GISEL-NEXT:    orr v0.16b, v2.16b, v0.16b
-; GISEL-NEXT:    and v2.16b, v0.16b, v1.16b
-; GISEL-NEXT:    shl v0.2d, v0.2d, #1
-; GISEL-NEXT:    ushr v2.2d, v2.2d, #1
-; GISEL-NEXT:    and v0.16b, v0.16b, v1.16b
-; GISEL-NEXT:    orr v0.16b, v2.16b, v0.16b
-; GISEL-NEXT:    ret
+; CHECK-LABEL: g_vec_2x64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rev64 v0.16b, v0.16b
+; CHECK-NEXT:    rbit v0.16b, v0.16b
+; CHECK-NEXT:    ret
   %b = call <2 x i64> @llvm.bitreverse.v2i64(<2 x i64> %a)
   ret <2 x i64> %b
+}
+
+declare <4 x i64> @llvm.bitreverse.v4i64(<4 x i64>) readnone
+
+define <4 x i64> @g_vec_4x64(<4 x i64> %a) {
+; CHECK-LABEL: g_vec_4x64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rev64 v0.16b, v0.16b
+; CHECK-NEXT:    rev64 v1.16b, v1.16b
+; CHECK-NEXT:    rbit v0.16b, v0.16b
+; CHECK-NEXT:    rbit v1.16b, v1.16b
+; CHECK-NEXT:    ret
+  %b = call <4 x i64> @llvm.bitreverse.v4i64(<4 x i64> %a)
+  ret <4 x i64> %b
+}
+
+declare <2 x i128> @llvm.bitreverse.v2i128(<2 x i128>) readnone
+
+define <2 x i128> @g_vec_2x128(<2 x i128> %a) {
+; CHECK-LABEL: g_vec_2x128:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rbit x8, x1
+; CHECK-NEXT:    rbit x9, x3
+; CHECK-NEXT:    rbit x1, x0
+; CHECK-NEXT:    rbit x3, x2
+; CHECK-NEXT:    mov x0, x8
+; CHECK-NEXT:    mov x2, x9
+; CHECK-NEXT:    ret
+  %b = call <2 x i128> @llvm.bitreverse.v2i128(<2 x i128> %a)
+  ret <2 x i128> %b
 }

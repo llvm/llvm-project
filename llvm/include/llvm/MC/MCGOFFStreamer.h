@@ -13,8 +13,10 @@
 #include "llvm/MC/MCObjectWriter.h"
 
 namespace llvm {
+class GOFFObjectWriter;
 
 class MCGOFFStreamer : public MCObjectStreamer {
+
 public:
   MCGOFFStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> MAB,
                  std::unique_ptr<MCObjectWriter> OW,
@@ -24,15 +26,15 @@ public:
 
   ~MCGOFFStreamer() override;
 
+  void changeSection(MCSection *Section, uint32_t Subsection = 0) override;
+
+  GOFFObjectWriter &getWriter();
+
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override {
     return false;
   }
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                         Align ByteAlignment) override {}
-  void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &) override {}
-  void emitZerofill(MCSection *Section, MCSymbol *Symbol = nullptr,
-                    uint64_t Size = 0, Align ByteAlignment = Align(1),
-                    SMLoc Loc = SMLoc()) override {}
 };
 
 } // end namespace llvm

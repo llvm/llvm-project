@@ -923,7 +923,7 @@ define i64 @explode_16xi64(<16 x i64> %v) {
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    vredxor.vs v7, v8, v7
 ; RV32-NEXT:    addi s8, sp, 16
-; RV32-NEXT:    vs1r.v v7, (s8) # Unknown-size Folded Spill
+; RV32-NEXT:    vs1r.v v7, (s8) # vscale x 8-byte Folded Spill
 ; RV32-NEXT:    vsetivli zero, 1, e64, m8, ta, ma
 ; RV32-NEXT:    vslidedown.vi v8, v8, 15
 ; RV32-NEXT:    vmv.x.s s8, v16
@@ -931,7 +931,7 @@ define i64 @explode_16xi64(<16 x i64> %v) {
 ; RV32-NEXT:    vmv.x.s s9, v16
 ; RV32-NEXT:    vsrl.vx v0, v24, a0
 ; RV32-NEXT:    addi s10, sp, 16
-; RV32-NEXT:    vl1r.v v17, (s10) # Unknown-size Folded Reload
+; RV32-NEXT:    vl1r.v v17, (s10) # vscale x 8-byte Folded Reload
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV32-NEXT:    vsrl.vx v16, v17, a0
 ; RV32-NEXT:    vmv.x.s s10, v17

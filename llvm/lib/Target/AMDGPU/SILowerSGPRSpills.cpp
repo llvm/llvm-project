@@ -81,9 +81,7 @@ public:
 
   MachineFunctionProperties getClearedProperties() const override {
     // SILowerSGPRSpills introduces new Virtual VGPRs for spilling SGPRs.
-    return MachineFunctionProperties()
-        .set(MachineFunctionProperties::Property::IsSSA)
-        .set(MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setIsSSA().setNoVRegs();
   }
 };
 
@@ -149,6 +147,14 @@ static void insertCSRSaves(MachineBasicBlock &SaveBlock,
       if (LIS)
         LIS->removeAllRegUnitsForPhysReg(Reg);
     }
+  } else {
+    // TFI doesn't update Indexes and LIS, so we have to do it separately.
+    if (Indexes)
+      Indexes->repairIndexesInRange(&SaveBlock, SaveBlock.begin(), I);
+
+    if (LIS)
+      for (const CalleeSavedInfo &CS : CSI)
+        LIS->removeAllRegUnitsForPhysReg(CS.getReg());
   }
 }
 
@@ -160,25 +166,18 @@ static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  const SIRegisterInfo *RI = ST.getRegisterInfo();
   // Restore all registers immediately before the return and any
   // terminators that precede it.
   MachineBasicBlock::iterator I = RestoreBlock.getFirstTerminator();
+  const MachineBasicBlock::iterator BeforeRestoresI =
+      I == RestoreBlock.begin() ? I : std::prev(I);
 
   // FIXME: Just emit the readlane/writelane directly
   if (!TFI->restoreCalleeSavedRegisters(RestoreBlock, I, CSI, TRI)) {
     for (const CalleeSavedInfo &CI : reverse(CSI)) {
-      Register Reg = CI.getReg();
-      const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(
-          Reg, Reg == RI->getReturnAddressReg(MF) ? MVT::i64 : MVT::i32);
-
-      TII.loadRegFromStackSlot(RestoreBlock, I, Reg, CI.getFrameIdx(), RC, TRI,
-                               Register());
-      assert(I != RestoreBlock.begin() &&
-             "loadRegFromStackSlot didn't insert any code!");
       // Insert in reverse order.  loadRegFromStackSlot can insert
       // multiple instructions.
+      TFI->restoreCalleeSavedRegister(RestoreBlock, I, CI, &TII, TRI);
 
       if (Indexes) {
         MachineInstr &Inst = *std::prev(I);
@@ -186,8 +185,17 @@ static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
       }
 
       if (LIS)
-        LIS->removeAllRegUnitsForPhysReg(Reg);
+        LIS->removeAllRegUnitsForPhysReg(CI.getReg());
     }
+  } else {
+    // TFI doesn't update Indexes and LIS, so we have to do it separately.
+    if (Indexes)
+      Indexes->repairIndexesInRange(&RestoreBlock, BeforeRestoresI,
+                                    RestoreBlock.getFirstTerminator());
+
+    if (LIS)
+      for (const CalleeSavedInfo &CS : CSI)
+        LIS->removeAllRegUnitsForPhysReg(CS.getReg());
   }
 }
 
@@ -201,10 +209,13 @@ void SILowerSGPRSpills::calculateSaveRestoreBlocks(MachineFunction &MF) {
   // So set the save points for those.
 
   // Use the points found by shrink-wrapping, if any.
-  if (MFI.getSavePoint()) {
-    SaveBlocks.push_back(MFI.getSavePoint());
-    assert(MFI.getRestorePoint() && "Both restore and save must be set");
-    MachineBasicBlock *RestoreBlock = MFI.getRestorePoint();
+  if (!MFI.getSavePoints().empty()) {
+    assert(MFI.getSavePoints().size() == 1 &&
+           "Multiple save points not yet supported!");
+    SaveBlocks.push_back(MFI.getSavePoints().front());
+    assert(MFI.getRestorePoints().size() == 1 &&
+           "Multiple restore points not yet supported!");
+    MachineBasicBlock *RestoreBlock = MFI.getRestorePoints().front();
     // If RestoreBlock does not have any successor and is not a return block
     // then the end point is unreachable and we do not need to insert any
     // epilogue.
@@ -343,6 +354,7 @@ void SILowerSGPRSpills::determineRegsForWWMAllocation(MachineFunction &MF,
   MachineRegisterInfo &MRI = MF.getRegInfo();
   BitVector ReservedRegs = TRI->getReservedRegs(MF);
   BitVector NonWwmAllocMask(TRI->getNumRegs());
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
   // FIXME: MaxNumVGPRsForWwmAllocation might need to be adjusted in the future
   // to have a balanced allocation between WWM values and per-thread vector
@@ -351,7 +363,7 @@ void SILowerSGPRSpills::determineRegsForWWMAllocation(MachineFunction &MF,
   NumRegs =
       std::min(static_cast<unsigned>(MFI->getSGPRSpillVGPRs().size()), NumRegs);
 
-  auto [MaxNumVGPRs, MaxNumAGPRs] = TRI->getMaxNumVectorRegs(MF);
+  auto [MaxNumVGPRs, MaxNumAGPRs] = ST.getMaxNumVectorRegs(MF.getFunction());
   // Try to use the highest available registers for now. Later after
   // vgpr-regalloc, they can be shifted to the lowest range.
   unsigned I = 0;
@@ -368,7 +380,7 @@ void SILowerSGPRSpills::determineRegsForWWMAllocation(MachineFunction &MF,
     // Reserve an arbitrary register and report the error.
     TRI->markSuperRegs(RegMask, AMDGPU::VGPR0);
     MF.getFunction().getContext().emitError(
-        "can't find enough VGPRs for wwm-regalloc");
+        "cannot find enough VGPRs for wwm-regalloc");
   }
 }
 

@@ -39,7 +39,7 @@ LANGOPT(AssociativeMath, 1, false)
 /// Allow division operations to be reassociated
 LANGOPT(ReciprocalMath, 1, false)
 /// Specify version of OpenMP standard
-LANGOPT(OpenMPVersion, 32, 0)
+LANGOPT(OpenMPVersion, 31, 0)
 /// Generate code only for OpenMP target device
 LANGOPT(OpenMPIsTargetDevice, 1, false)
 /// Generate OpenMP target code only for GPUs

@@ -15,6 +15,7 @@
 #define LLVM_ADT_SMALLSET_H
 
 #include "llvm/ADT/ADL.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
@@ -156,10 +157,9 @@ public:
     insert(Begin, End);
   }
 
-  template <typename RangeT>
-  explicit SmallSet(const iterator_range<RangeT> &R) {
-    insert(R.begin(), R.end());
-  }
+  template <typename Range>
+  SmallSet(llvm::from_range_t, Range &&R)
+      : SmallSet(adl_begin(R), adl_end(R)) {}
 
   SmallSet(std::initializer_list<T> L) { insert(L.begin(), L.end()); }
 

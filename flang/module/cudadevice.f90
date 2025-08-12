@@ -17,9 +17,8 @@ implicit none
 
   ! Synchronization Functions
 
-  interface
-    attributes(device) subroutine syncthreads()
-    end subroutine
+  interface syncthreads
+    procedure :: syncthreads
   end interface
 
   interface
@@ -744,33 +743,33 @@ implicit none
   end interface
 
   interface __ffs
-    attributes(device) integer function __ffs(i) bind(c)
+    attributes(device) integer function __ffs(i) bind(c, name='__nv_ffs')
       !dir$ ignore_tkr (d) i
       integer, value :: i
     end function
-    attributes(device) integer function __ffsll(i) bind(c)
+    attributes(device) integer function __ffsll(i) bind(c, name='__nv_ffsll')
       !dir$ ignore_tkr (d) i
       integer(8), value :: i
     end function
   end interface
 
   interface __popc
-    attributes(device) integer function __popc(i) bind(c)
+    attributes(device) integer function __popc(i) bind(c, name='__nv_popc')
       !dir$ ignore_tkr (d) i
       integer, value :: i
     end function
-    attributes(device) integer function __popcll(i) bind(c)
+    attributes(device) integer function __popcll(i) bind(c, name='__nv_popcll')
       !dir$ ignore_tkr (d) i
       integer(8), value :: i
     end function
   end interface
 
   interface __brev
-    attributes(device) integer function __brev(i) bind(c)
+    attributes(device) integer function __brev(i) bind(c, name='__nv_brev')
       !dir$ ignore_tkr (d) i
       integer, value :: i
     end function
-    attributes(device) integer(8) function __brevll(i) bind(c)
+    attributes(device) integer(8) function __brevll(i) bind(c, name ='__nv_brevll')
       !dir$ ignore_tkr (d) i
       integer(8), value :: i
     end function
@@ -959,7 +958,17 @@ implicit none
   ! Time function
 
   interface
+    attributes(device) integer function clock()
+    end function
+  end interface
+
+  interface
     attributes(device) integer(8) function clock64()
+    end function
+  end interface
+
+  interface
+    attributes(device) integer(8) function globalTimer()
     end function
   end interface
 
@@ -1012,6 +1021,27 @@ implicit none
   !dir$ ignore_tkr(d) mask, (d) val
     integer(4), value :: mask
     real(8), value    :: val
+    end function
+  end interface
+
+  interface all_sync
+    attributes(device) integer function all_sync(mask, pred)
+      !dir$ ignore_tkr(d) mask, (td) pred
+      integer, value :: mask, pred
+    end function
+  end interface
+
+  interface any_sync
+    attributes(device) integer function any_sync(mask, pred)
+      !dir$ ignore_tkr(d) mask, (td) pred
+      integer, value :: mask, pred
+    end function
+  end interface
+
+  interface ballot_sync
+    attributes(device) integer function ballot_sync(mask, pred)
+      !dir$ ignore_tkr(d) mask, (td) pred
+      integer, value :: mask, pred
     end function
   end interface
 
@@ -1587,5 +1617,15 @@ implicit none
       real(8), dimension(2), device, intent(in) :: y, x
     end subroutine
   end interface
+
+  interface
+    attributes(device,host) logical function on_device() bind(c)
+    end function
+  end interface
+
+contains
+
+  attributes(device) subroutine syncthreads()
+  end subroutine
 
 end module

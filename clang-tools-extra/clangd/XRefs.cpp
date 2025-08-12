@@ -859,17 +859,47 @@ std::vector<DocumentLink> getDocumentLinks(ParsedAST &AST) {
   for (auto &Inc : AST.getIncludeStructure().MainFileIncludes) {
     if (Inc.Resolved.empty())
       continue;
+
+    // Get the location of the # symbole of the "#include ..." statement
     auto HashLoc = SM.getComposedLoc(SM.getMainFileID(), Inc.HashOffset);
+
+    // get the # Token itself, std::next to get the "include" token and the
+    // first token after (aka "File Token")
     const auto *HashTok = AST.getTokens().spelledTokenContaining(HashLoc);
     assert(HashTok && "got inclusion at wrong offset");
     const auto *IncludeTok = std::next(HashTok);
     const auto *FileTok = std::next(IncludeTok);
-    // FileTok->range is not sufficient here, as raw lexing wouldn't yield
-    // correct tokens for angled filenames. Hence we explicitly use
-    // Inc.Written's length.
-    auto FileRange =
-        syntax::FileRange(SM, FileTok->location(), Inc.Written.length())
-            .toCharRange(SM);
+
+    // The File Token can either be of kind :
+    // "less" if using the "#include <h-char-sequence> new-line" syntax
+    // "string_literal" if using the "#include "q-char-sequence" new-line"
+    // syntax something else (most likely "identifier") if using the "#include
+    // pp-tokens new-line" syntax (#include with macro argument)
+
+    CharSourceRange FileRange;
+
+    if (FileTok->kind() == tok::TokenKind::less) {
+      // FileTok->range would only include the '<' char. Hence we explicitly use
+      // Inc.Written's length.
+      FileRange =
+          syntax::FileRange(SM, FileTok->location(), Inc.Written.length())
+              .toCharRange(SM);
+    } else if (FileTok->kind() == tok::TokenKind::string_literal) {
+      // FileTok->range includes the quotes for string literals so just return
+      // it.
+      FileRange = FileTok->range(SM).toCharRange(SM);
+    } else {
+      // FileTok is the first Token of a macro spelling
+
+      // Report the range of the first token (as it should be the macro
+      // identifier)
+      // We could use the AST to find the last spelled token of the macro and
+      // report a range spanning the full macro expression, but it would require
+      // using token-buffers that are deemed too unstable and crash-prone
+      // due to optimizations in cland
+
+      FileRange = FileTok->range(SM).toCharRange(SM);
+    }
 
     Result.push_back(
         DocumentLink({halfOpenToRange(SM, FileRange),
@@ -909,13 +939,13 @@ public:
       return std::tie(LTok, L.Role) < std::tie(RTok, R.Role);
     });
     // We sometimes see duplicates when parts of the AST get traversed twice.
-    References.erase(std::unique(References.begin(), References.end(),
-                                 [](const Reference &L, const Reference &R) {
-                                   auto LTok = L.SpelledTok.location();
-                                   auto RTok = R.SpelledTok.location();
-                                   return std::tie(LTok, L.Role) ==
-                                          std::tie(RTok, R.Role);
-                                 }),
+    References.erase(llvm::unique(References,
+                                  [](const Reference &L, const Reference &R) {
+                                    auto LTok = L.SpelledTok.location();
+                                    auto RTok = R.SpelledTok.location();
+                                    return std::tie(LTok, L.Role) ==
+                                           std::tie(RTok, R.Role);
+                                  }),
                      References.end());
     return std::move(References);
   }
@@ -1502,12 +1532,12 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
     // We may get multiple refs with the same location and different Roles, as
     // cross-reference is only interested in locations, we deduplicate them
     // by the location to avoid emitting duplicated locations.
-    MainFileRefs.erase(std::unique(MainFileRefs.begin(), MainFileRefs.end(),
-                                   [](const ReferenceFinder::Reference &L,
-                                      const ReferenceFinder::Reference &R) {
-                                     return L.SpelledTok.location() ==
-                                            R.SpelledTok.location();
-                                   }),
+    MainFileRefs.erase(llvm::unique(MainFileRefs,
+                                    [](const ReferenceFinder::Reference &L,
+                                       const ReferenceFinder::Reference &R) {
+                                      return L.SpelledTok.location() ==
+                                             R.SpelledTok.location();
+                                    }),
                        MainFileRefs.end());
     for (const auto &Ref : MainFileRefs) {
       ReferencesResult::Reference Result;
@@ -1935,7 +1965,8 @@ std::vector<const CXXRecordDecl *> findRecordTypeAt(ParsedAST &AST,
 
 // Return the type most associated with an AST node.
 // This isn't precisely defined: we want "go to type" to do something useful.
-static QualType typeForNode(const SelectionTree::Node *N) {
+static QualType typeForNode(const ASTContext &Ctx,
+                            const SelectionTree::Node *N) {
   // If we're looking at a namespace qualifier, walk up to what it's qualifying.
   // (If we're pointing at a *class* inside a NNS, N will be a TypeLoc).
   while (N && N->ASTNode.get<NestedNameSpecifierLoc>())
@@ -1969,10 +2000,13 @@ static QualType typeForNode(const SelectionTree::Node *N) {
 
   if (const Decl *D = N->ASTNode.get<Decl>()) {
     struct Visitor : ConstDeclVisitor<Visitor, QualType> {
+      const ASTContext &Ctx;
+      Visitor(const ASTContext &Ctx) : Ctx(Ctx) {}
+
       QualType VisitValueDecl(const ValueDecl *D) { return D->getType(); }
       // Declaration of a type => that type.
       QualType VisitTypeDecl(const TypeDecl *D) {
-        return QualType(D->getTypeForDecl(), 0);
+        return Ctx.getTypeDeclType(D);
       }
       // Exception: alias declaration => the underlying type, not the alias.
       QualType VisitTypedefNameDecl(const TypedefNameDecl *D) {
@@ -1982,7 +2016,7 @@ static QualType typeForNode(const SelectionTree::Node *N) {
       QualType VisitTemplateDecl(const TemplateDecl *D) {
         return Visit(D->getTemplatedDecl());
       }
-    } V;
+    } V(Ctx);
     return V.Visit(D);
   }
 
@@ -2126,7 +2160,8 @@ std::vector<LocatedSymbol> findType(ParsedAST &AST, Position Pos,
     // unique_ptr<unique_ptr<T>>. Let's *not* remove them, because it gives you some
     // information about the type you may have not known before
     // (since unique_ptr<unique_ptr<T>> != unique_ptr<T>).
-    for (const QualType& Type : unwrapFindType(typeForNode(N), AST.getHeuristicResolver()))
+    for (const QualType &Type : unwrapFindType(
+             typeForNode(AST.getASTContext(), N), AST.getHeuristicResolver()))
       llvm::copy(locateSymbolForType(AST, Type, Index),
                  std::back_inserter(LocatedSymbols));
 
@@ -2287,7 +2322,8 @@ prepareCallHierarchy(ParsedAST &AST, Position Pos, PathRef TUPath) {
         Decl->getKind() != Decl::Kind::FunctionTemplate &&
         !(Decl->getKind() == Decl::Kind::Var &&
           !cast<VarDecl>(Decl)->isLocalVarDecl()) &&
-        Decl->getKind() != Decl::Kind::Field)
+        Decl->getKind() != Decl::Kind::Field &&
+        Decl->getKind() != Decl::Kind::EnumConstant)
       continue;
     if (auto CHI = declToCallHierarchyItem(*Decl, AST.tuPath()))
       Result.emplace_back(std::move(*CHI));
@@ -2380,7 +2416,7 @@ outgoingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
   // Initially store the ranges in a map keyed by SymbolID of the callee.
   // This allows us to group different calls to the same function
   // into the same CallHierarchyOutgoingCall.
-  llvm::DenseMap<SymbolID, std::vector<Range>> CallsOut;
+  llvm::DenseMap<SymbolID, std::vector<Location>> CallsOut;
   // We can populate the ranges based on a refs request only. As we do so, we
   // also accumulate the callee IDs into a lookup request.
   LookupRequest CallsOutLookup;
@@ -2390,8 +2426,8 @@ outgoingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
       elog("outgoingCalls failed to convert location: {0}", Loc.takeError());
       return;
     }
-    auto It = CallsOut.try_emplace(R.Symbol, std::vector<Range>{}).first;
-    It->second.push_back(Loc->range);
+    auto It = CallsOut.try_emplace(R.Symbol, std::vector<Location>{}).first;
+    It->second.push_back(*Loc);
 
     CallsOutLookup.IDs.insert(R.Symbol);
   });
@@ -2411,9 +2447,22 @@ outgoingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index) {
 
     auto It = CallsOut.find(Callee.ID);
     assert(It != CallsOut.end());
-    if (auto CHI = symbolToCallHierarchyItem(Callee, Item.uri.file()))
+    if (auto CHI = symbolToCallHierarchyItem(Callee, Item.uri.file())) {
+      std::vector<Range> FromRanges;
+      for (const Location &L : It->second) {
+        if (L.uri != Item.uri) {
+          // Call location not in same file as the item that outgoingCalls was
+          // requested for. This can happen when Item is a declaration separate
+          // from the implementation. There's not much we can do, since the
+          // protocol only allows returning ranges interpreted as being in
+          // Item's file.
+          continue;
+        }
+        FromRanges.push_back(L.range);
+      }
       Results.push_back(
-          CallHierarchyOutgoingCall{std::move(*CHI), std::move(It->second)});
+          CallHierarchyOutgoingCall{std::move(*CHI), std::move(FromRanges)});
+    }
   });
   // Sort results by name of the callee.
   llvm::sort(Results, [](const CallHierarchyOutgoingCall &A,

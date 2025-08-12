@@ -36,12 +36,11 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Regex.h"
@@ -442,6 +441,7 @@ public:
   /// Print the given attribute without considering an alias.
   void printAttributeImpl(Attribute attr,
                           AttrTypeElision typeElision = AttrTypeElision::Never);
+  void printNamedAttribute(NamedAttribute attr);
 
   /// Print the alias for the given attribute, return failure if no alias could
   /// be printed.
@@ -481,7 +481,6 @@ protected:
   void printOptionalAttrDict(ArrayRef<NamedAttribute> attrs,
                              ArrayRef<StringRef> elidedAttrs = {},
                              bool withKeyword = false);
-  void printNamedAttribute(NamedAttribute attr);
   void printTrailingLocation(Location loc, bool allowAlias = true);
   void printLocationInternal(LocationAttr loc, bool pretty = false,
                              bool isTopLevel = false);
@@ -801,6 +800,10 @@ private:
   void printAttributeWithoutType(Attribute attr) override {
     printAttribute(attr);
   }
+  void printNamedAttribute(NamedAttribute attr) override {
+    printAttribute(attr.getValue());
+  }
+
   LogicalResult printAlias(Attribute attr) override {
     initializer.visit(attr);
     return success();
@@ -975,6 +978,10 @@ private:
     recordAliasResult(
         initializer.visit(attr, canBeDeferred, /*elideType=*/true));
   }
+  void printNamedAttribute(NamedAttribute attr) override {
+    printAttribute(attr.getValue());
+  }
+
   LogicalResult printAlias(Attribute attr) override {
     printAttribute(attr);
     return success();
@@ -1110,9 +1117,7 @@ void AliasInitializer::initializeAliases(
     llvm::MapVector<const void *, SymbolAlias> &symbolToAlias) {
   SmallVector<std::pair<const void *, InProgressAliasInfo>, 0>
       unprocessedAliases = visitedSymbols.takeVector();
-  llvm::stable_sort(unprocessedAliases, [](const auto &lhs, const auto &rhs) {
-    return lhs.second < rhs.second;
-  });
+  llvm::stable_sort(unprocessedAliases, llvm::less_second());
 
   // This keeps track of all of the non-numeric names that are in flight,
   // allowing us to check for duplicates.
@@ -1148,8 +1153,7 @@ template <typename T, typename... PrintArgs>
 std::pair<size_t, size_t> AliasInitializer::visitImpl(
     T value, llvm::MapVector<const void *, InProgressAliasInfo> &aliases,
     bool canBeDeferred, PrintArgs &&...printArgs) {
-  auto [it, inserted] =
-      aliases.insert({value.getAsOpaquePointer(), InProgressAliasInfo()});
+  auto [it, inserted] = aliases.try_emplace(value.getAsOpaquePointer());
   size_t aliasIndex = std::distance(aliases.begin(), it);
   if (!inserted) {
     // Make sure that the alias isn't deferred if we don't permit it.
@@ -2066,9 +2070,8 @@ static OpPrintingFlags verifyOpAndAdjustFlags(Operation *op,
     return failure();
   });
   if (failed(verify(op))) {
-    LLVM_DEBUG(llvm::dbgs()
-               << DEBUG_TYPE << ": '" << op->getName()
-               << "' failed to verify and will be printed in generic form\n");
+    LDBG() << op->getName()
+           << "' failed to verify and will be printed in generic form";
     printerFlags.printGenericOpForm();
   }
 
@@ -2384,7 +2387,6 @@ void AsmPrinter::Impl::printAttribute(Attribute attr,
     return;
   return printAttributeImpl(attr, typeElision);
 }
-
 void AsmPrinter::Impl::printAttributeImpl(Attribute attr,
                                           AttrTypeElision typeElision) {
   if (!isa<BuiltinDialect>(attr.getDialect())) {
@@ -2976,6 +2978,11 @@ void AsmPrinter::printAttributeWithoutType(Attribute attr) {
   impl->printAttribute(attr, Impl::AttrTypeElision::Must);
 }
 
+void AsmPrinter::printNamedAttribute(NamedAttribute attr) {
+  assert(impl && "expected AsmPrinter::printNamedAttribute to be overriden");
+  impl->printNamedAttribute(attr);
+}
+
 void AsmPrinter::printKeywordOrString(StringRef keyword) {
   assert(impl && "expected AsmPrinter::printKeywordOrString to be overriden");
   ::printKeywordOrString(keyword, impl->getStream());
@@ -3463,6 +3470,10 @@ void OperationPrinter::printResourceFileMetadata(
       std::optional<uint64_t> charLimit =
           printerFlags.getLargeResourceStringLimit();
       if (charLimit.has_value()) {
+        // Don't compute resourceStr when charLimit is 0.
+        if (charLimit.value() == 0)
+          return;
+
         llvm::raw_string_ostream ss(resourceStr);
         valueFn(ss);
 

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/ConvertType.h"
+#include "flang/Common/type-kinds.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/CallInterface.h"
 #include "flang/Lower/ConvertVariable.h"
@@ -32,7 +33,7 @@ using Fortran::common::VectorElementCategory;
 //===--------------------------------------------------------------------===//
 
 static mlir::Type genRealType(mlir::MLIRContext *context, int kind) {
-  if (Fortran::evaluate::IsValidKindOfIntrinsicType(
+  if (Fortran::common::IsValidKindOfIntrinsicType(
           Fortran::common::TypeCategory::Real, kind)) {
     switch (kind) {
     case 2:
@@ -59,7 +60,7 @@ int getIntegerBits() {
 }
 static mlir::Type genIntegerType(mlir::MLIRContext *context, int kind,
                                  bool isUnsigned = false) {
-  if (Fortran::evaluate::IsValidKindOfIntrinsicType(
+  if (Fortran::common::IsValidKindOfIntrinsicType(
           Fortran::common::TypeCategory::Integer, kind)) {
     mlir::IntegerType::SignednessSemantics signedness =
         (isUnsigned ? mlir::IntegerType::SignednessSemantics::Unsigned
@@ -82,7 +83,7 @@ static mlir::Type genIntegerType(mlir::MLIRContext *context, int kind,
 }
 
 static mlir::Type genLogicalType(mlir::MLIRContext *context, int KIND) {
-  if (Fortran::evaluate::IsValidKindOfIntrinsicType(
+  if (Fortran::common::IsValidKindOfIntrinsicType(
           Fortran::common::TypeCategory::Logical, KIND))
     return fir::LogicalType::get(context, KIND);
   return {};
@@ -91,7 +92,7 @@ static mlir::Type genLogicalType(mlir::MLIRContext *context, int KIND) {
 static mlir::Type genCharacterType(
     mlir::MLIRContext *context, int KIND,
     Fortran::lower::LenParameterTy len = fir::CharacterType::unknownLen()) {
-  if (Fortran::evaluate::IsValidKindOfIntrinsicType(
+  if (Fortran::common::IsValidKindOfIntrinsicType(
           Fortran::common::TypeCategory::Character, KIND))
     return fir::CharacterType::get(context, KIND, len);
   return {};
@@ -275,19 +276,23 @@ struct TypeBuilderImpl {
     } else {
       fir::emitFatalError(loc, "symbol must have a type");
     }
+
+    auto shapeExpr =
+        Fortran::evaluate::GetShape(converter.getFoldingContext(), ultimate);
+
+    if (shapeExpr && !shapeExpr->empty()) {
+      // Statically ranked array.
+      fir::SequenceType::Shape shape;
+      translateShape(shape, std::move(*shapeExpr));
+      ty = fir::SequenceType::get(shape, ty);
+    } else if (!shapeExpr) {
+      // Assumed-rank.
+      ty = fir::SequenceType::get(fir::SequenceType::Shape{}, ty);
+    }
+
     bool isPolymorphic = (Fortran::semantics::IsPolymorphic(symbol) ||
                           Fortran::semantics::IsUnlimitedPolymorphic(symbol)) &&
                          !Fortran::semantics::IsAssumedType(symbol);
-    if (ultimate.IsObjectArray()) {
-      auto shapeExpr =
-          Fortran::evaluate::GetShape(converter.getFoldingContext(), ultimate);
-      fir::SequenceType::Shape shape;
-      // If there is no shapExpr, this is an assumed-rank, and the empty shape
-      // will build the desired fir.array<*:T> type.
-      if (shapeExpr)
-        translateShape(shape, std::move(*shapeExpr));
-      ty = fir::SequenceType::get(shape, ty);
-    }
     if (Fortran::semantics::IsPointer(symbol))
       return fir::wrapInClassOrBoxType(fir::PointerType::get(ty),
                                        isPolymorphic);
@@ -662,6 +667,18 @@ Fortran::lower::ComponentReverseIterator::advanceToParentType() {
   assert(parentComp != scope->cend() && "failed to get parent component");
   setCurrentType(parentComp->second->GetType()->derivedTypeSpec());
   return *currentParentType;
+}
+
+const Fortran::semantics::Symbol *
+Fortran::lower::ComponentReverseIterator::getParentComponent() const {
+  if (!currentTypeDetails->GetParentComponentName())
+    return nullptr;
+  const Fortran::semantics::Scope *scope = currentParentType->GetScope();
+  auto parentComp =
+      DEREF(scope).find(currentTypeDetails->GetParentComponentName().value());
+  if (parentComp == scope->cend())
+    return nullptr;
+  return &*parentComp->second;
 }
 
 void Fortran::lower::ComponentReverseIterator::setCurrentType(

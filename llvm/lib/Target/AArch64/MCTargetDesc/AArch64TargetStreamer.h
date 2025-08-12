@@ -9,7 +9,7 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64TARGETSTREAMER_H
 #define LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64TARGETSTREAMER_H
 
-#include "AArch64MCExpr.h"
+#include "AArch64MCAsmInfo.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/MC/MCELFStreamer.h"
@@ -55,6 +55,9 @@ public:
   /// Callback used to implement the .variant_pcs directive.
   virtual void emitDirectiveVariantPCS(MCSymbol *Symbol) {};
 
+  virtual void emitDirectiveArch(StringRef Name) {};
+  virtual void emitDirectiveArchExtension(StringRef Name) {};
+
   virtual void emitARM64WinCFIAllocStack(unsigned Size) {}
   virtual void emitARM64WinCFISaveR19R20X(int Offset) {}
   virtual void emitARM64WinCFISaveFPLR(int Offset) {}
@@ -93,19 +96,22 @@ public:
   virtual void emitARM64WinCFISaveAnyRegDPX(unsigned Reg, int Offset) {}
   virtual void emitARM64WinCFISaveAnyRegQX(unsigned Reg, int Offset) {}
   virtual void emitARM64WinCFISaveAnyRegQPX(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFIAllocZ(int Offset) {}
+  virtual void emitARM64WinCFISaveZReg(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISavePReg(unsigned Reg, int Offset) {}
 
   /// Build attributes implementation
   virtual void
-  emitAtributesSubsection(StringRef VendorName,
+  emitAttributesSubsection(StringRef VendorName,
                           AArch64BuildAttributes::SubsectionOptional IsOptional,
                           AArch64BuildAttributes::SubsectionType ParameterType);
   virtual void emitAttribute(StringRef VendorName, unsigned Tag, unsigned Value,
                              std::string String);
-  void activateAtributesSubsection(StringRef VendorName);
+  void activateAttributesSubsection(StringRef VendorName);
   std::unique_ptr<MCELFStreamer::AttributeSubSection>
-  getActiveAtributesSubsection();
+  getActiveAttributesSubsection();
   std::unique_ptr<MCELFStreamer::AttributeSubSection>
-  getAtributesSubsectionByName(StringRef Name);
+  getAttributesSubsectionByName(StringRef Name);
   void
   insertAttributeInPlace(const MCELFStreamer::AttributeItem &Attr,
                          MCELFStreamer::AttributeSubSection &AttSubSection);
@@ -123,7 +129,7 @@ private:
   MCSection *AttributeSection = nullptr;
 
   /// Build attributes implementation
-  void emitAtributesSubsection(
+  void emitAttributesSubsection(
       StringRef VendorName,
       AArch64BuildAttributes::SubsectionOptional IsOptional,
       AArch64BuildAttributes::SubsectionType ParameterType) override;
@@ -182,6 +188,9 @@ public:
   void emitARM64WinCFISaveAnyRegDPX(unsigned Reg, int Offset) override;
   void emitARM64WinCFISaveAnyRegQX(unsigned Reg, int Offset) override;
   void emitARM64WinCFISaveAnyRegQPX(unsigned Reg, int Offset) override;
+  void emitARM64WinCFIAllocZ(int Offset) override;
+  void emitARM64WinCFISaveZReg(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISavePReg(unsigned Reg, int Offset) override;
 
 private:
   void emitARM64WinUnwindCode(unsigned UnwindCode, int Reg, int Offset);

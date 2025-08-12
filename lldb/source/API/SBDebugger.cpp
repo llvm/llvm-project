@@ -179,48 +179,9 @@ void SBDebugger::Initialize() {
 lldb::SBError SBDebugger::InitializeWithErrorHandling() {
   LLDB_INSTRUMENT();
 
-  auto LoadPlugin = [](const lldb::DebuggerSP &debugger_sp,
-                       const FileSpec &spec,
-                       Status &error) -> llvm::sys::DynamicLibrary {
-    llvm::sys::DynamicLibrary dynlib =
-        llvm::sys::DynamicLibrary::getPermanentLibrary(spec.GetPath().c_str());
-    if (dynlib.isValid()) {
-      typedef bool (*LLDBCommandPluginInit)(lldb::SBDebugger debugger);
-
-      lldb::SBDebugger debugger_sb(debugger_sp);
-      // This calls the bool lldb::PluginInitialize(lldb::SBDebugger debugger)
-      // function.
-      // TODO: mangle this differently for your system - on OSX, the first
-      // underscore needs to be removed and the second one stays
-      LLDBCommandPluginInit init_func =
-          (LLDBCommandPluginInit)(uintptr_t)dynlib.getAddressOfSymbol(
-              "_ZN4lldb16PluginInitializeENS_10SBDebuggerE");
-      if (init_func) {
-        if (init_func(debugger_sb))
-          return dynlib;
-        else
-          error = Status::FromErrorString(
-              "plug-in refused to load "
-              "(lldb::PluginInitialize(lldb::SBDebugger) "
-              "returned false)");
-      } else {
-        error = Status::FromErrorString(
-            "plug-in is missing the required initialization: "
-            "lldb::PluginInitialize(lldb::SBDebugger)");
-      }
-    } else {
-      if (FileSystem::Instance().Exists(spec))
-        error = Status::FromErrorString(
-            "this file does not represent a loadable dylib");
-      else
-        error = Status::FromErrorString("no such file");
-    }
-    return llvm::sys::DynamicLibrary();
-  };
-
   SBError error;
   if (auto e = g_debugger_lifetime->Initialize(
-          std::make_unique<SystemInitializerFull>(), LoadPlugin)) {
+          std::make_unique<SystemInitializerFull>())) {
     error.SetError(Status::FromError(std::move(e)));
   }
   return error;
@@ -963,6 +924,17 @@ SBTarget SBDebugger::GetDummyTarget() {
             static_cast<void *>(m_opaque_sp.get()),
             static_cast<void *>(sb_target.GetSP().get()));
   return sb_target;
+}
+
+void SBDebugger::DispatchClientTelemetry(const lldb::SBStructuredData &entry) {
+  LLDB_INSTRUMENT_VA(this);
+  if (m_opaque_sp) {
+    m_opaque_sp->DispatchClientTelemetry(*entry.m_impl_up);
+  } else {
+    Log *log = GetLog(LLDBLog::API);
+    LLDB_LOGF(log,
+              "Could not send telemetry from SBDebugger - debugger was null.");
+  }
 }
 
 bool SBDebugger::DeleteTarget(lldb::SBTarget &target) {

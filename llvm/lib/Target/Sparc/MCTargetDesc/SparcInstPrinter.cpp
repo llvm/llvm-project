@@ -12,6 +12,7 @@
 
 #include "SparcInstPrinter.h"
 #include "Sparc.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -126,7 +127,7 @@ void SparcInstPrinter::printOperand(const MCInst *MI, int opNum,
   if (MO.isImm()) {
     switch (MI->getOpcode()) {
       default:
-        O << (int)MO.getImm();
+        markup(O, Markup::Immediate) << formatImm(int32_t(MO.getImm()));
         return;
 
       case SP::TICCri: // Fall through
@@ -142,7 +143,7 @@ void SparcInstPrinter::printOperand(const MCInst *MI, int opNum,
   }
 
   assert(MO.isExpr() && "Unknown operand kind in printOperand");
-  MO.getExpr()->print(O, &MAI);
+  MAI.printExpr(O, *MO.getExpr());
 }
 
 void SparcInstPrinter::printMemOperand(const MCInst *MI, int opNum,
@@ -192,8 +193,8 @@ void SparcInstPrinter::printCCOperand(const MCInst *MI, int opNum,
     // Make sure CC is a fp conditional flag.
     CC = (CC < SPCC::FCC_BEGIN) ? (CC + SPCC::FCC_BEGIN) : CC;
     break;
-  case SP::CBCOND:
-  case SP::CBCONDA:
+  case SP::CPBCOND:
+  case SP::CPBCONDA:
     // Make sure CC is a cp conditional flag.
     CC = (CC < SPCC::CPCC_BEGIN) ? (CC + SPCC::CPCC_BEGIN) : CC;
     break;
@@ -262,4 +263,31 @@ void SparcInstPrinter::printPrefetchTag(const MCInst *MI, int opNum,
     O << '#' << PrefetchTag->Name;
   else
     O << Imm;
+}
+
+void SparcInstPrinter::printCTILabel(const MCInst *MI, uint64_t Address,
+                                     unsigned OpNum, const MCSubtargetInfo &STI,
+                                     raw_ostream &O) {
+  const MCOperand &Op = MI->getOperand(OpNum);
+
+  // If the label has already been resolved to an immediate offset (say, when
+  // we're running the disassembler), just print the immediate.
+  if (Op.isImm()) {
+    int64_t Offset = Op.getImm();
+    if (PrintBranchImmAsAddress) {
+      uint64_t Target = Address + Offset;
+      if (STI.getTargetTriple().isSPARC32())
+        Target &= 0xffffffff;
+      O << formatHex(Target);
+    } else {
+      O << ".";
+      if (Offset >= 0)
+        O << "+";
+      O << Offset;
+    }
+    return;
+  }
+
+  // Otherwise, just print the expression.
+  MAI.printExpr(O, *Op.getExpr());
 }

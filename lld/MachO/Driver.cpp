@@ -25,7 +25,6 @@
 
 #include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
-#include "lld/Common/Driver.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Memory.h"
@@ -43,7 +42,6 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TarWriter.h"
@@ -52,8 +50,6 @@
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TextAPI/Architecture.h"
 #include "llvm/TextAPI/PackedVersion.h"
-
-#include <algorithm>
 
 using namespace llvm;
 using namespace llvm::MachO;
@@ -314,8 +310,6 @@ static InputFile *addFile(StringRef path, LoadType loadType,
       std::unique_ptr<object::Archive> archive = CHECK(
           object::Archive::create(mbref), path + ": failed to parse archive");
 
-      if (!archive->isEmpty() && !archive->hasSymbolTable())
-        error(path + ": archive has no index; run ranlib to add one");
       file = make<ArchiveFile>(std::move(archive), isForceHidden);
 
       if (tar && file->getArchive().isThin())
@@ -362,9 +356,11 @@ static InputFile *addFile(StringRef path, LoadType loadType,
                 ": Archive::children failed: " + toString(std::move(e)));
       }
     } else if (isCommandLineLoad && config->forceLoadObjC) {
-      for (const object::Archive::Symbol &sym : file->getArchive().symbols())
-        if (sym.getName().starts_with(objc::symbol_names::klass))
-          file->fetch(sym);
+      if (file->getArchive().hasSymbolTable()) {
+        for (const object::Archive::Symbol &sym : file->getArchive().symbols())
+          if (sym.getName().starts_with(objc::symbol_names::klass))
+            file->fetch(sym);
+      }
 
       // TODO: no need to look for ObjC sections for a given archive member if
       // we already found that it contains an ObjC symbol.
@@ -394,7 +390,6 @@ static InputFile *addFile(StringRef path, LoadType loadType,
                 ": Archive::children failed: " + toString(std::move(e)));
       }
     }
-
     file->addLazySymbols();
     loadedArchives[path] = ArchiveFileInfo{file, isCommandLineLoad};
     newFile = file;
@@ -616,8 +611,7 @@ static bool compileBitcodeFiles() {
         lto->add(*bitcodeFile);
 
   std::vector<ObjFile *> compiled = lto->compile();
-  for (ObjFile *file : compiled)
-    inputFiles.insert(file);
+  inputFiles.insert_range(compiled);
 
   return !compiled.empty();
 }
@@ -1641,27 +1635,21 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   config->osoPrefix = args.getLastArgValue(OPT_oso_prefix);
   if (!config->osoPrefix.empty()) {
-    // Expand special characters, such as ".", "..", or  "~", if present.
-    // Note: LD64 only expands "." and not other special characters.
-    // That seems silly to imitate so we will not try to follow it, but rather
-    // just use real_path() to do it.
-
     // The max path length is 4096, in theory. However that seems quite long
     // and seems unlikely that any one would want to strip everything from the
     // path. Hence we've picked a reasonably large number here.
     SmallString<1024> expanded;
-    if (!fs::real_path(config->osoPrefix, expanded,
-                       /*expand_tilde=*/true)) {
-      // Note: LD64 expands "." to be `<current_dir>/`
-      // (ie., it has a slash suffix) whereas real_path() doesn't.
-      // So we have to append '/' to be consistent.
-      StringRef sep = sys::path::get_separator();
-      // real_path removes trailing slashes as part of the normalization, but
-      // these are meaningful for our text based stripping
-      if (config->osoPrefix == "." || config->osoPrefix.ends_with(sep))
-        expanded += sep;
-      config->osoPrefix = saver().save(expanded.str());
+    // Expand "." into the current working directory.
+    if (config->osoPrefix == "." && !fs::current_path(expanded)) {
+      // Note: LD64 expands "." to be `<current_dir>/
+      // (ie., it has a slash suffix) whereas current_path() doesn't.
+      // So we have to append '/' to be consistent because this is
+      // meaningful for our text based stripping.
+      expanded += sys::path::get_separator();
+    } else {
+      expanded = config->osoPrefix;
     }
+    config->osoPrefix = saver().save(expanded.str());
   }
 
   bool pie = args.hasFlag(OPT_pie, OPT_no_pie, true);
@@ -1676,6 +1664,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   // Must be set before any InputSections and Symbols are created.
   config->deadStrip = args.hasArg(OPT_dead_strip);
+  config->interposable = args.hasArg(OPT_interposable);
 
   config->systemLibraryRoots = getSystemLibraryRoots(args);
   if (const char *path = getReproduceOption(args)) {

@@ -681,7 +681,6 @@ TEST(DominatorTree, IDFDeterminismTest) {
         IDF.setDefiningBlocks(DefBlocks);
 
         SmallVector<BasicBlock *, 32> IDFBlocks;
-        SmallPtrSet<BasicBlock *, 32> LiveInBlocks;
         IDF.resetLiveInBlocks();
         IDF.calculate(IDFBlocks);
 

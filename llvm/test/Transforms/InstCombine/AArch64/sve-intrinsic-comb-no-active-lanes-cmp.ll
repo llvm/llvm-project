@@ -179,11 +179,21 @@ entry:
 }
 
 define <vscale x 8 x i1> @test_facge(<vscale x 8 x half> %a, <vscale x 8 x half> %b){ry:
+; CHECK-LABEL: define <vscale x 8 x i1> @test_facge(
+; CHECK-SAME: <vscale x 8 x half> [[A:%.*]], <vscale x 8 x half> [[B:%.*]]) {
+; CHECK-NEXT:  [[RY:.*:]]
+; CHECK-NEXT:    ret <vscale x 8 x i1> zeroinitializer
+;
   %0 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.facge.nxv8f16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %a, <vscale x 8 x half> %b)
   ret <vscale x 8 x i1> %0
 }
 
 define <vscale x 8 x i1> @test_facgt(<vscale x 8 x half> %a, <vscale x 8 x half> %b){ry:
+; CHECK-LABEL: define <vscale x 8 x i1> @test_facgt(
+; CHECK-SAME: <vscale x 8 x half> [[A:%.*]], <vscale x 8 x half> [[B:%.*]]) {
+; CHECK-NEXT:  [[RY:.*:]]
+; CHECK-NEXT:    ret <vscale x 8 x i1> zeroinitializer
+;
   %0 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.facgt.nxv8f16(<vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %a, <vscale x 8 x half> %b)
   ret <vscale x 8 x i1> %0
 }

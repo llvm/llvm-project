@@ -165,7 +165,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void flip() _NOEXCEPT { *__seg_ ^= __mask_; }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bit_iterator<_Cp, false> operator&() const _NOEXCEPT {
-    return __bit_iterator<_Cp, false>(__seg_, static_cast<unsigned>(std::__libcpp_ctz(__mask_)));
+    return __bit_iterator<_Cp, false>(__seg_, static_cast<unsigned>(std::__countr_zero(__mask_)));
   }
 
 private:
@@ -234,7 +234,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bit_iterator<_Cp, true> operator&() const _NOEXCEPT {
-    return __bit_iterator<_Cp, true>(__seg_, static_cast<unsigned>(std::__libcpp_ctz(__mask_)));
+    return __bit_iterator<_Cp, true>(__seg_, static_cast<unsigned>(std::__countr_zero(__mask_)));
   }
 
 private:
@@ -329,6 +329,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference operator*() const _NOEXCEPT {
+    _LIBCPP_ASSERT_INTERNAL(__ctz_ < __bits_per_word, "Dereferencing an invalid __bit_iterator.");
     return __conditional_t<_IsConst, __bit_const_reference<_Cp>, __bit_reference<_Cp> >(
         __seg_, __storage_type(1) << __ctz_);
   }
@@ -453,7 +454,10 @@ private:
   _LIBCPP_HIDE_FROM_ABI
   _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit __bit_iterator(__storage_pointer __s, unsigned __ctz) _NOEXCEPT
       : __seg_(__s),
-        __ctz_(__ctz) {}
+        __ctz_(__ctz) {
+    _LIBCPP_ASSERT_INTERNAL(
+        __ctz_ < __bits_per_word, "__bit_iterator initialized with an invalid number of trailing zeros.");
+  }
 
   friend typename _Cp::__self;
 

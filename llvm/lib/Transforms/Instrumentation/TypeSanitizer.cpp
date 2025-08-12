@@ -13,7 +13,6 @@
 
 #include "llvm/Transforms/Instrumentation/TypeSanitizer.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
@@ -33,11 +32,8 @@
 #include "llvm/IR/Type.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/MD5.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Regex.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -793,6 +789,13 @@ bool TypeSanitizer::instrumentMemInst(Value *V, Instruction *ShadowBase,
   bool NeedsMemMove = false;
   IRBuilder<> IRB(BB, IP);
 
+  auto GetAllocaSize = [&](AllocaInst *AI) {
+    return IRB.CreateMul(
+        IRB.CreateZExtOrTrunc(AI->getArraySize(), IntptrTy),
+        ConstantInt::get(IntptrTy,
+                         DL.getTypeAllocSize(AI->getAllocatedType())));
+  };
+
   if (auto *A = dyn_cast<Argument>(V)) {
     assert(A->hasByValAttr() && "Type reset for non-byval argument?");
 
@@ -815,8 +818,12 @@ bool TypeSanitizer::instrumentMemInst(Value *V, Instruction *ShadowBase,
         }
       }
     } else if (auto *II = dyn_cast<LifetimeIntrinsic>(I)) {
-      Size = II->getArgOperand(0);
-      Dest = II->getArgOperand(1);
+      auto *AI = dyn_cast<AllocaInst>(II->getArgOperand(0));
+      if (!AI)
+        return false;
+
+      Size = GetAllocaSize(AI);
+      Dest = II->getArgOperand(0);
     } else if (auto *AI = dyn_cast<AllocaInst>(I)) {
       // We need to clear the types for new stack allocations (or else we might
       // read stale type information from a previous function execution).
@@ -824,10 +831,7 @@ bool TypeSanitizer::instrumentMemInst(Value *V, Instruction *ShadowBase,
       IRB.SetInsertPoint(&*std::next(BasicBlock::iterator(I)));
       IRB.SetInstDebugLocation(I);
 
-      Size = IRB.CreateMul(
-          IRB.CreateZExtOrTrunc(AI->getArraySize(), IntptrTy),
-          ConstantInt::get(IntptrTy,
-                           DL.getTypeAllocSize(AI->getAllocatedType())));
+      Size = GetAllocaSize(AI);
       Dest = I;
     } else {
       return false;

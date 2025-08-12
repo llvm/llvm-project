@@ -12,6 +12,10 @@ declare void  @llvm.nvvm.prefetch.local.L2(ptr addrspace(5) %local_ptr)
 declare void  @llvm.nvvm.prefetch.L1(ptr %ptr)
 declare void  @llvm.nvvm.prefetch.L2(ptr %ptr)
 
+declare void  @llvm.nvvm.prefetch.tensormap.p0(ptr %ptr)
+declare void  @llvm.nvvm.prefetch.tensormap.p4(ptr addrspace(4) %const_ptr)
+declare void  @llvm.nvvm.prefetch.tensormap.p101(ptr addrspace(101) %param_ptr)
+
 declare void  @llvm.nvvm.prefetch.global.L2.evict.normal(ptr addrspace(1) %global_ptr)
 declare void  @llvm.nvvm.prefetch.global.L2.evict.last(ptr addrspace(1) %global_ptr)
 
@@ -23,7 +27,7 @@ define void @prefetch_local(ptr addrspace(5) %local_ptr) {
 ; CHECK-PTX64-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-PTX64-EMPTY:
 ; CHECK-PTX64-NEXT:  // %bb.0:
-; CHECK-PTX64-NEXT:    ld.param.u64 %rd1, [prefetch_local_param_0];
+; CHECK-PTX64-NEXT:    ld.param.b64 %rd1, [prefetch_local_param_0];
 ; CHECK-PTX64-NEXT:    prefetch.local.L1 [%rd1];
 ; CHECK-PTX64-NEXT:    prefetch.local.L2 [%rd1];
 ; CHECK-PTX64-NEXT:    ret;
@@ -38,7 +42,7 @@ define void @prefetch_global(ptr addrspace(1) %global_ptr) {
 ; CHECK-PTX64-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-PTX64-EMPTY:
 ; CHECK-PTX64-NEXT:  // %bb.0:
-; CHECK-PTX64-NEXT:    ld.param.u64 %rd1, [prefetch_global_param_0];
+; CHECK-PTX64-NEXT:    ld.param.b64 %rd1, [prefetch_global_param_0];
 ; CHECK-PTX64-NEXT:    prefetch.global.L1 [%rd1];
 ; CHECK-PTX64-NEXT:    prefetch.global.L2 [%rd1];
 ; CHECK-PTX64-NEXT:    prefetch.global.L2::evict_normal [%rd1];
@@ -58,7 +62,7 @@ define void @prefetch_(ptr %ptr) {
 ; CHECK-PTX64-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-PTX64-EMPTY:
 ; CHECK-PTX64-NEXT:  // %bb.0:
-; CHECK-PTX64-NEXT:    ld.param.u64 %rd1, [prefetch__param_0];
+; CHECK-PTX64-NEXT:    ld.param.b64 %rd1, [prefetch__param_0];
 ; CHECK-PTX64-NEXT:    prefetch.L1 [%rd1];
 ; CHECK-PTX64-NEXT:    prefetch.L2 [%rd1];
 ; CHECK-PTX64-NEXT:    ret;
@@ -73,9 +77,48 @@ define void @prefetchu_l1(ptr %ptr) {
 ; CHECK-PTX64-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-PTX64-EMPTY:
 ; CHECK-PTX64-NEXT:  // %bb.0:
-; CHECK-PTX64-NEXT:    ld.param.u64 %rd1, [prefetchu_l1_param_0];
+; CHECK-PTX64-NEXT:    ld.param.b64 %rd1, [prefetchu_l1_param_0];
 ; CHECK-PTX64-NEXT:    prefetchu.L1 [%rd1];
 ; CHECK-PTX64-NEXT:    ret;
   tail call void @llvm.nvvm.prefetchu.L1(ptr %ptr)
+  ret void
+}
+
+define void @prefetch_tensormap(ptr %ptr) {
+; CHECK-PTX64-LABEL: prefetch_tensormap(
+; CHECK-PTX64:       {
+; CHECK-PTX64-NEXT:    .reg .b64 %rd<2>;
+; CHECK-PTX64-EMPTY:
+; CHECK-PTX64-NEXT:  // %bb.0:
+; CHECK-PTX64-NEXT:    ld.param.b64 %rd1, [prefetch_tensormap_param_0];
+; CHECK-PTX64-NEXT:    prefetch.tensormap [%rd1];
+; CHECK-PTX64-NEXT:    ret;
+  tail call void @llvm.nvvm.prefetch.tensormap.p0(ptr %ptr)
+  ret void
+}
+
+define void @prefetch_const_tensormap(ptr addrspace(4) %const_ptr) {
+; CHECK-PTX64-LABEL: prefetch_const_tensormap(
+; CHECK-PTX64:       {
+; CHECK-PTX64-NEXT:    .reg .b64 %rd<2>;
+; CHECK-PTX64-EMPTY:
+; CHECK-PTX64-NEXT:  // %bb.0:
+; CHECK-PTX64-NEXT:    ld.param.b64 %rd1, [prefetch_const_tensormap_param_0];
+; CHECK-PTX64-NEXT:    prefetch.const.tensormap [%rd1];
+; CHECK-PTX64-NEXT:    ret;
+  tail call void @llvm.nvvm.prefetch.tensormap.p4(ptr addrspace(4) %const_ptr)
+  ret void
+}
+
+define void @prefetch_param_tensormap(ptr addrspace(101) %param_ptr) {
+; CHECK-PTX64-LABEL: prefetch_param_tensormap(
+; CHECK-PTX64:       {
+; CHECK-PTX64-NEXT:    .reg .b64 %rd<2>;
+; CHECK-PTX64-EMPTY:
+; CHECK-PTX64-NEXT:  // %bb.0:
+; CHECK-PTX64-NEXT:    ld.param.b64 %rd1, [prefetch_param_tensormap_param_0];
+; CHECK-PTX64-NEXT:    prefetch.param.tensormap [%rd1];
+; CHECK-PTX64-NEXT:    ret;
+  tail call void @llvm.nvvm.prefetch.tensormap.p101(ptr addrspace(101) %param_ptr)
   ret void
 }

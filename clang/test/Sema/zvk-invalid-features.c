@@ -3,48 +3,48 @@
 
 #include <riscv_vector.h>
 
-void test_zvk_features() {
+void test_zvk_features(vuint32m4_t vd, vuint32m4_t vs2, vuint32m4_t vs1, vuint64m1_t vs2_64, vuint64m1_t vs1_64, size_t vl) {
   // zvbb
-  __riscv_vbrev(); // expected-error {{call to undeclared function '__riscv_vbrev'; ISO C99 and later do not support implicit function declarations}}
-  __riscv_vclz(); // expected-error {{call to undeclared function '__riscv_vclz'; ISO C99 and later do not support implicit function declarations}}
-  __riscv_vctz(); // expected-error {{call to undeclared function '__riscv_vctz'; ISO C99 and later do not support implicit function declarations}}
-  __riscv_vcpopv(); // expected-error {{call to undeclared function '__riscv_vcpopv'; ISO C99 and later do not support implicit function declarations}}
-  __riscv_vwsll(); // expected-error {{call to undeclared function '__riscv_vwsll'; ISO C99 and later do not support implicit function declarations}}
+  __riscv_vbrev(vs2, vl); // expected-error {{builtin requires at least one of the following extensions: zvbb}}
+  __riscv_vclz(vs2, vl); // expected-error {{builtin requires at least one of the following extensions: zvbb}}
+  __riscv_vctz(vs2, vl); // expected-error {{builtin requires at least one of the following extensions: zvbb}}
+  __riscv_vcpop(vs2, vl); // expected-error {{builtin requires at least one of the following extensions: zvbb}}
+  __riscv_vwsll(vs2, vs1, vl); // expected-error {{builtin requires at least one of the following extensions: zvbb}}
 
   // zvbc
-  __riscv_vclmul(); // expected-error {{call to undeclared function '__riscv_vclmul'; ISO C99 and later do not support implicit function declarations}}
-  __riscv_vclmulh(); // expected-error {{call to undeclared function '__riscv_vclmulh'; ISO C99 and later do not support implicit function declarations}}
+  __riscv_vclmul(vs2_64, vs1_64, vl); // expected-error {{builtin requires at least one of the following extensions: zvbc}}
+  __riscv_vclmulh(vs2_64, vs1_64, vl); // expected-error {{builtin requires at least one of the following extensions: zvbc}}
 
   // zvkb
-  __riscv_vandn(); // expected-error {{call to undeclared function '__riscv_vandn'; ISO C99 and later do not support implicit function declarations}}
-  __riscv_vbrev8(); // expected-error {{call to undeclared function '__riscv_vbrev8'; ISO C99 and later do not support implicit function declarations}}
-  __riscv_vrev8(); // expected-error {{call to undeclared function '__riscv_vrev8'; ISO C99 and later do not support implicit function declarations}}
-  __riscv_vrol(); // expected-error {{call to undeclared function '__riscv_vrol'; ISO C99 and later do not support implicit function declarations}}
-  __riscv_vror(); // expected-error {{call to undeclared function '__riscv_vror'; ISO C99 and later do not support implicit function declarations}}
+  __riscv_vandn(vs2, vs1, vl); // expected-error {{builtin requires at least one of the following extensions: zvkb}}
+  __riscv_vbrev8(vs2, vl); // expected-error {{builtin requires at least one of the following extensions: zvkb}}
+  __riscv_vrev8(vs2, vl); // expected-error {{builtin requires at least one of the following extensions: zvkb}}
+  __riscv_vrol(vs2, vs1, vl); // expected-error {{builtin requires at least one of the following extensions: zvkb}}
+  __riscv_vror(vs2, vs1, vl); // expected-error {{builtin requires at least one of the following extensions: zvkb}}
 
   // zvkg
-  __riscv_vghsh(); // expected-error {{call to undeclared function '__riscv_vghsh'; ISO C99 and later do not support implicit function declarations}}
-  __riscv_vgmul(); // expected-error {{call to undeclared function '__riscv_vgmul'; ISO C99 and later do not support implicit function declarations}}
+  __riscv_vghsh(vd, vs2, vs1, vl); // expected-error {{builtin requires at least one of the following extensions: zvkg}}
+  __riscv_vgmul(vs2, vs1, vl); // expected-error {{builtin requires at least one of the following extensions: zvkg}}
 
   // zvkned
-  __riscv_vaesdf(); // expected-error {{call to undeclared function '__riscv_vaesdf'; ISO C99 and later do not support implicit function declarations}}
-  __riscv_vaesdm(); // expected-error {{call to undeclared function '__riscv_vaesdm'; ISO C99 and later do not support implicit function declarations}}
-  __riscv_vaesef(); // expected-error {{call to undeclared function '__riscv_vaesef'; ISO C99 and later do not support implicit function declarations}}
-  __riscv_vaesem(); // expected-error {{call to undeclared function '__riscv_vaesem'; ISO C99 and later do not support implicit function declarations}}
-  __riscv_vaeskf1(); // expected-error {{call to undeclared function '__riscv_vaeskf1'; ISO C99 and later do not support implicit function declarations}}
-  __riscv_vaeskf2(); // expected-error {{call to undeclared function '__riscv_vaeskf2'; ISO C99 and later do not support implicit function declarations}}
-  __riscv_vaesz(); // expected-error {{call to undeclared function '__riscv_vaesz'; ISO C99 and later do not support implicit function declarations}}
+  __riscv_vaesdf_vv(vd, vs2, vl); // expected-error {{builtin requires at least one of the following extensions: zvkned}}
+  __riscv_vaesdm_vv(vd, vs2, vl); // expected-error {{builtin requires at least one of the following extensions: zvkned}}
+  __riscv_vaesef_vv(vd, vs2, vl); // expected-error {{builtin requires at least one of the following extensions: zvkned}}
+  __riscv_vaesem_vv(vd, vs2, vl); // expected-error {{builtin requires at least one of the following extensions: zvkned}}
+  __riscv_vaeskf1(vs2, 0, vl); // expected-error {{builtin requires at least one of the following extensions: zvkned}}
+  __riscv_vaeskf2(vd, vs2, 0, vl); // expected-error {{builtin requires at least one of the following extensions: zvkned}}
+  __riscv_vaesz(vd, vs2, vl); // expected-error {{builtin requires at least one of the following extensions: zvkned}}
 
   // zvknha or zvknhb
-  __riscv_vsha2ch(); // expected-error {{call to undeclared function '__riscv_vsha2ch'; ISO C99 and later do not support implicit function declarations}}
-  __riscv_vsha2cl(); // expected-error {{call to undeclared function '__riscv_vsha2cl'; ISO C99 and later do not support implicit function declarations}}
-  __riscv_vsha2ms(); // expected-error {{call to undeclared function '__riscv_vsha2ms'; ISO C99 and later do not support implicit function declarations}}
+  __riscv_vsha2ch(vd, vs2, vs1, vl); // expected-error {{builtin requires at least one of the following extensions: zvknha or zvknhb}}
+  __riscv_vsha2cl(vd, vs2, vs1, vl); // expected-error {{builtin requires at least one of the following extensions: zvknha or zvknhb}}
+  __riscv_vsha2ms(vd, vs2, vs1, vl); // expected-error {{builtin requires at least one of the following extensions: zvknha or zvknhb}}
 
   //zvksed
-  __riscv_vsm4k(); // expected-error {{call to undeclared function '__riscv_vsm4k'; ISO C99 and later do not support implicit function declarations}}
-  __riscv_vsm4r(); // expected-error {{call to undeclared function '__riscv_vsm4r'; ISO C99 and later do not support implicit function declarations}}
+  __riscv_vsm4k(vs2, 0, vl); // expected-error {{builtin requires at least one of the following extensions: zvksed}}
+  __riscv_vsm4r_vv(vs2, vs1, vl); // expected-error {{builtin requires at least one of the following extensions: zvksed}}
 
   // zvksh
-  __riscv_vsm3c(); // expected-error {{call to undeclared function '__riscv_vsm3c'; ISO C99 and later do not support implicit function declarations}}
-  __riscv_vsm3me(); // expected-error {{call to undeclared function '__riscv_vsm3me'; ISO C99 and later do not support implicit function declarations}}
+  __riscv_vsm3c(vd, vs2, 0, vl); // expected-error {{builtin requires at least one of the following extensions: zvksh}}
+  __riscv_vsm3me(vs2, vs1, vl); // expected-error {{builtin requires at least one of the following extensions: zvksh}}
 }

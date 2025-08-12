@@ -15,7 +15,6 @@
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/ADT/Any.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/CodeGen/MIRPrinter.h"
@@ -24,8 +23,6 @@
 #include "llvm/CodeGen/MachineVerifier.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/InstIterator.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassManager.h"
@@ -33,12 +30,10 @@
 #include "llvm/IR/StructuralHash.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/GraphWriter.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Regex.h"
@@ -1079,13 +1074,17 @@ bool OptPassGateInstrumentation::shouldRun(StringRef PassName, Any IR) {
 
 void OptPassGateInstrumentation::registerCallbacks(
     PassInstrumentationCallbacks &PIC) {
-  OptPassGate &PassGate = Context.getOptPassGate();
+  const OptPassGate &PassGate = Context.getOptPassGate();
   if (!PassGate.isEnabled())
     return;
 
-  PIC.registerShouldRunOptionalPassCallback([this](StringRef PassName, Any IR) {
-    return this->shouldRun(PassName, IR);
-  });
+  PIC.registerShouldRunOptionalPassCallback(
+      [this, &PIC](StringRef ClassName, Any IR) {
+        StringRef PassName = PIC.getPassNameForClassName(ClassName);
+        if (PassName.empty())
+          return this->shouldRun(ClassName, IR);
+        return this->shouldRun(PassName, IR);
+      });
 }
 
 raw_ostream &PrintPassInstrumentation::print() {
@@ -2001,14 +2000,12 @@ DotCfgDiff::DotCfgDiff(StringRef Title, const FuncDataT<DCData> &Before,
   for (auto &A : After.getData()) {
     StringRef Label = A.getKey();
     const BlockDataT<DCData> &BD = A.getValue();
-    unsigned C = NodePosition.count(Label);
-    if (C == 0)
+    auto It = NodePosition.find(Label);
+    if (It == NodePosition.end())
       // This only exists in the after IR.  Create the node.
       createNode(Label, BD, AfterColour);
-    else {
-      assert(C == 1 && "Unexpected multiple nodes.");
-      Nodes[NodePosition[Label]].setCommon(BD);
-    }
+    else
+      Nodes[It->second].setCommon(BD);
     // Add in the edges between the nodes (as common or only in after).
     for (StringMap<std::string>::const_iterator Sink = BD.getData().begin(),
                                                 E = BD.getData().end();

@@ -15,12 +15,10 @@
 #include "Arch/RISCV.h"
 #include "Arch/Sparc.h"
 #include "Arch/SystemZ.h"
-#include "CommonArgs.h"
-#include "Linux.h"
 #include "clang/Config/config.h" // for GCC_INSTALL_PREFIX
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/MultilibBuilder.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/Tool.h"
@@ -221,88 +219,6 @@ void tools::gcc::Linker::RenderExtraToolArgs(const JobAction &JA,
   // The types are (hopefully) good enough.
 }
 
-static const char *getLDMOption(const llvm::Triple &T, const ArgList &Args) {
-  switch (T.getArch()) {
-  case llvm::Triple::x86:
-    if (T.isOSIAMCU())
-      return "elf_iamcu";
-    return "elf_i386";
-  case llvm::Triple::aarch64:
-    return "aarch64linux";
-  case llvm::Triple::aarch64_be:
-    return "aarch64linuxb";
-  case llvm::Triple::arm:
-  case llvm::Triple::thumb:
-  case llvm::Triple::armeb:
-  case llvm::Triple::thumbeb:
-    return tools::arm::isARMBigEndian(T, Args) ? "armelfb_linux_eabi"
-                                               : "armelf_linux_eabi";
-  case llvm::Triple::m68k:
-    return "m68kelf";
-  case llvm::Triple::ppc:
-    if (T.isOSLinux())
-      return "elf32ppclinux";
-    return "elf32ppc";
-  case llvm::Triple::ppcle:
-    if (T.isOSLinux())
-      return "elf32lppclinux";
-    return "elf32lppc";
-  case llvm::Triple::ppc64:
-    return "elf64ppc";
-  case llvm::Triple::ppc64le:
-    return "elf64lppc";
-  case llvm::Triple::riscv32:
-    return "elf32lriscv";
-  case llvm::Triple::riscv64:
-    return "elf64lriscv";
-  case llvm::Triple::sparc:
-  case llvm::Triple::sparcel:
-    return "elf32_sparc";
-  case llvm::Triple::sparcv9:
-    return "elf64_sparc";
-  case llvm::Triple::loongarch32:
-    return "elf32loongarch";
-  case llvm::Triple::loongarch64:
-    return "elf64loongarch";
-  case llvm::Triple::mips:
-    return "elf32btsmip";
-  case llvm::Triple::mipsel:
-    return "elf32ltsmip";
-  case llvm::Triple::mips64:
-    if (tools::mips::hasMipsAbiArg(Args, "n32") || T.isABIN32())
-      return "elf32btsmipn32";
-    return "elf64btsmip";
-  case llvm::Triple::mips64el:
-    if (tools::mips::hasMipsAbiArg(Args, "n32") || T.isABIN32())
-      return "elf32ltsmipn32";
-    return "elf64ltsmip";
-  case llvm::Triple::systemz:
-    return "elf64_s390";
-  case llvm::Triple::x86_64:
-    if (T.isX32())
-      return "elf32_x86_64";
-    return "elf_x86_64";
-  case llvm::Triple::ve:
-    return "elf64ve";
-  case llvm::Triple::csky:
-    return "cskyelf_linux";
-  default:
-    return nullptr;
-  }
-}
-
-static bool getStaticPIE(const ArgList &Args, const ToolChain &TC) {
-  bool HasStaticPIE = Args.hasArg(options::OPT_static_pie);
-  if (HasStaticPIE && Args.hasArg(options::OPT_no_pie)) {
-    const Driver &D = TC.getDriver();
-    const llvm::opt::OptTable &Opts = D.getOpts();
-    StringRef StaticPIEName = Opts.getOptionName(options::OPT_static_pie);
-    StringRef NoPIEName = Opts.getOptionName(options::OPT_nopie);
-    D.Diag(diag::err_drv_cannot_mix_options) << StaticPIEName << NoPIEName;
-  }
-  return HasStaticPIE;
-}
-
 static bool getStatic(const ArgList &Args) {
   return Args.hasArg(options::OPT_static) &&
       !Args.hasArg(options::OPT_static_pie);
@@ -404,7 +320,9 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Most Android ARM64 targets should enable the linker fix for erratum
   // 843419. Only non-Cortex-A53 devices are allowed to skip this flag.
-  if (Arch == llvm::Triple::aarch64 && (isAndroid || isOHOSFamily)) {
+  if (Arch == llvm::Triple::aarch64 && (isAndroid || isOHOSFamily) &&
+      Args.hasFlag(options::OPT_mfix_cortex_a53_843419,
+                   options::OPT_mno_fix_cortex_a53_843419, true)) {
     std::string CPU = getCPUName(D, Args, Triple);
     if (CPU.empty() || CPU == "generic" || CPU == "cortex-a53")
       CmdArgs.push_back("--fix-cortex-a53-843419");
@@ -521,19 +439,9 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
-  if (D.isUsingLTO()) {
-    assert(!Inputs.empty() && "Must have at least one input.");
-    // Find the first filename InputInfo object.
-    auto Input = llvm::find_if(
-        Inputs, [](const InputInfo &II) -> bool { return II.isFilename(); });
-    if (Input == Inputs.end())
-      // For a very rare case, all of the inputs to the linker are
-      // InputArg. If that happens, just use the first InputInfo.
-      Input = Inputs.begin();
-
-    addLTOOptions(ToolChain, Args, CmdArgs, Output, *Input,
+  if (D.isUsingLTO())
+    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs,
                   D.getLTOMode() == LTOK_Thin);
-  }
 
   if (Args.hasArg(options::OPT_Z_Xlinker__no_demangle))
     CmdArgs.push_back("--no-demangle");
@@ -572,8 +480,8 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // AddRunTimeLibs).
   if (D.IsFlangMode() &&
       !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
-    addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
-    addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
+    ToolChain.addFortranRuntimeLibraryPath(Args, CmdArgs);
+    ToolChain.addFortranRuntimeLibs(Args, CmdArgs);
     CmdArgs.push_back("-lm");
   }
 
@@ -2624,6 +2532,22 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
     case llvm::Triple::x86:
       LibDirs.append(begin(X86LibDirs), end(X86LibDirs));
       TripleAliases.push_back("i686-gnu");
+      break;
+    default:
+      break;
+    }
+
+    return;
+  }
+
+  if (TargetTriple.isWindowsCygwinEnvironment()) {
+    LibDirs.push_back("/lib");
+    switch (TargetTriple.getArch()) {
+    case llvm::Triple::x86_64:
+      TripleAliases.append({"x86_64-pc-cygwin", "x86_64-pc-msys"});
+      break;
+    case llvm::Triple::x86:
+      TripleAliases.append({"i686-pc-cygwin", "i686-pc-msys"});
       break;
     default:
       break;

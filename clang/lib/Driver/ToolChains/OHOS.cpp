@@ -8,11 +8,10 @@
 
 #include "OHOS.h"
 #include "Arch/ARM.h"
-#include "CommonArgs.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "llvm/Option/ArgList.h"
@@ -20,7 +19,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
-#include "llvm/Support/ScopedPrinter.h"
 
 using namespace clang::driver;
 using namespace clang::driver::toolchains;
@@ -303,7 +301,6 @@ ToolChain::path_list OHOS::getRuntimePaths() const {
 
   // Third try the effective triple.
   P.assign(D.ResourceDir);
-  std::string SysRoot = computeSysRoot();
   llvm::sys::path::append(P, "lib", getMultiarchTriple(Triple),
                           SelectedMultilib.gccSuffix());
   Paths.push_back(P.c_str());
@@ -341,7 +338,7 @@ std::string OHOS::getDynamicLinker(const ArgList &Args) const {
 }
 
 std::string OHOS::getCompilerRT(const ArgList &Args, StringRef Component,
-                                FileType Type) const {
+                                FileType Type, bool IsFortran) const {
   SmallString<128> Path(getDriver().ResourceDir);
   llvm::sys::path::append(Path, "lib", getMultiarchTriple(getTriple()),
                           SelectedMultilib.gccSuffix());

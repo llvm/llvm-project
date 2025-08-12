@@ -331,12 +331,12 @@ define <vscale x 4 x double> @scvtf_d_nxv4i32(<vscale x 4 x i32> %a) {
 define <vscale x 4 x double> @scvtf_d_nxv4i1(<vscale x 4 x i1> %a) {
 ; CHECK-LABEL: scvtf_d_nxv4i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.d, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    punpklo p1.h, p0.b
 ; CHECK-NEXT:    punpkhi p0.h, p0.b
-; CHECK-NEXT:    mov z0.d, z1.d
-; CHECK-NEXT:    fmov z1.d, p0/m, #-1.00000000
 ; CHECK-NEXT:    fmov z0.d, p1/m, #-1.00000000
+; CHECK-NEXT:    fmov z1.d, p0/m, #-1.00000000
 ; CHECK-NEXT:    ret
   %res = sitofp <vscale x 4 x i1> %a to <vscale x 4 x double>
   ret <vscale x 4 x double> %res
@@ -392,12 +392,12 @@ define <vscale x 4 x double> @ucvtf_d_nxv4i32(<vscale x 4 x i32> %a) {
 define <vscale x 4 x double> @ucvtf_d_nxv4i1(<vscale x 4 x i1> %a) {
 ; CHECK-LABEL: ucvtf_d_nxv4i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.d, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    punpklo p1.h, p0.b
 ; CHECK-NEXT:    punpkhi p0.h, p0.b
-; CHECK-NEXT:    mov z0.d, z1.d
-; CHECK-NEXT:    fmov z1.d, p0/m, #1.00000000
 ; CHECK-NEXT:    fmov z0.d, p1/m, #1.00000000
+; CHECK-NEXT:    fmov z1.d, p0/m, #1.00000000
 ; CHECK-NEXT:    ret
   %res = uitofp <vscale x 4 x i1> %a to <vscale x 4 x double>
   ret <vscale x 4 x double> %res

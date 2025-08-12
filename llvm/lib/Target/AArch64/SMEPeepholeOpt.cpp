@@ -28,9 +28,7 @@ namespace {
 struct SMEPeepholeOpt : public MachineFunctionPass {
   static char ID;
 
-  SMEPeepholeOpt() : MachineFunctionPass(ID) {
-    initializeSMEPeepholeOptPass(*PassRegistry::getPassRegistry());
-  }
+  SMEPeepholeOpt() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -82,16 +80,10 @@ static bool isMatchingStartStopPair(const MachineInstr *MI1,
   if (MI1->getOperand(4).getRegMask() != MI2->getOperand(4).getRegMask())
     return false;
 
-  // This optimisation is unlikely to happen in practice for conditional
-  // smstart/smstop pairs as the virtual registers for pstate.sm will always
-  // be different.
-  // TODO: For this optimisation to apply to conditional smstart/smstop,
-  // this pass will need to do more work to remove redundant calls to
-  // __arm_sme_state.
-
   // Only consider conditional start/stop pairs which read the same register
-  // holding the original value of pstate.sm, as some conditional start/stops
-  // require the state on entry to the function.
+  // holding the original value of pstate.sm. This is somewhat over conservative
+  // as all conditional streaming mode changes only look at the state on entry
+  // to the function.
   if (MI1->getOperand(3).isReg() && MI2->getOperand(3).isReg()) {
     Register Reg1 = MI1->getOperand(3).getReg();
     Register Reg2 = MI2->getOperand(3).getReg();
@@ -227,7 +219,7 @@ bool SMEPeepholeOpt::optimizeStartStopPairs(
 }
 
 // Using the FORM_TRANSPOSED_REG_TUPLE pseudo can improve register allocation
-// of multi-vector intrinsics. However, the psuedo should only be emitted if
+// of multi-vector intrinsics. However, the pseudo should only be emitted if
 // the input registers of the REG_SEQUENCE are copy nodes where the source
 // register is in a StridedOrContiguous class. For example:
 //

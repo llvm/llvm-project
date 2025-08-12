@@ -33,29 +33,23 @@
 // RUN:     readability-identifier-naming.LocalConstantPointerPrefix: 'lc_', \
 // RUN:   }}'
 
-// FIXME: make this test case pass.
-// Currently not working because the CXXRecordDecl for the global anonymous
-// union is *not* collected as a top-level declaration.
-// https://github.com/llvm/llvm-project/issues/130618
-#if 0
 static union {
   int global;
-// FIXME-CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for global variable 'global'
-// FIXME-CHECK-FIXES: {{^}}  int g_global;{{$}}
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for global variable 'global'
+// CHECK-FIXES: {{^}}  int g_global;{{$}}
 
   const int global_const;
-// FIXME-CHECK-MESSAGES: :[[@LINE-1]]:13: warning: invalid case style for global constant 'global_const'
-// FIXME-CHECK-FIXES: {{^}}  const int GLOBAL_CONST;{{$}}
+// CHECK-MESSAGES: :[[@LINE-1]]:13: warning: invalid case style for global constant 'global_const'
+// CHECK-FIXES: {{^}}  const int GLOBAL_CONST;{{$}}
 
   int *global_ptr;
-// FIXME-CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for global pointer 'global_ptr'
-// FIXME-CHECK-FIXES: {{^}}  int *GlobalPtr_Ptr;{{$}}
+// CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for global pointer 'global_ptr'
+// CHECK-FIXES: {{^}}  int *GlobalPtr_Ptr;{{$}}
 
   int *const global_const_ptr;
-// FIXME-CHECK-MESSAGES: :[[@LINE-1]]:14: warning: invalid case style for global constant pointer 'global_const_ptr'
-// FIXME-CHECK-FIXES: {{^}}  int *const GLOBAL_CONST_PTR_Ptr;{{$}}
+// CHECK-MESSAGES: :[[@LINE-1]]:14: warning: invalid case style for global constant pointer 'global_const_ptr'
+// CHECK-FIXES: {{^}}  int *const GLOBAL_CONST_PTR_Ptr;{{$}}
 };
-#endif
 
 namespace ns {
 

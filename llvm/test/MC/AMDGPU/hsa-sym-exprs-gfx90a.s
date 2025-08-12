@@ -80,33 +80,33 @@ expr_defined:
 // ASM-NEXT: .amdhsa_user_sgpr_kernarg_preload_length 0
 // ASM-NEXT: .amdhsa_user_sgpr_kernarg_preload_offset 0
 // ASM-NEXT: .amdhsa_user_sgpr_private_segment_size 0
-// ASM-NEXT: .amdhsa_system_sgpr_private_segment_wavefront_offset ((128|defined_boolean)&(~62))&1
+// ASM-NEXT: .amdhsa_system_sgpr_private_segment_wavefront_offset ((128|defined_boolean)&~62)&1
 // ASM-NEXT: .amdhsa_system_sgpr_workgroup_id_x 1
-// ASM-NEXT: .amdhsa_system_sgpr_workgroup_id_y (((128|defined_boolean)&(~62))&256)>>8
-// ASM-NEXT: .amdhsa_system_sgpr_workgroup_id_z (((128|defined_boolean)&(~62))&512)>>9
-// ASM-NEXT: .amdhsa_system_sgpr_workgroup_info (((128|defined_boolean)&(~62))&1024)>>10
-// ASM-NEXT: .amdhsa_system_vgpr_workitem_id (((128|defined_boolean)&(~62))&6144)>>11
+// ASM-NEXT: .amdhsa_system_sgpr_workgroup_id_y (((128|defined_boolean)&~62)&256)>>8
+// ASM-NEXT: .amdhsa_system_sgpr_workgroup_id_z (((128|defined_boolean)&~62)&512)>>9
+// ASM-NEXT: .amdhsa_system_sgpr_workgroup_info (((128|defined_boolean)&~62)&1024)>>10
+// ASM-NEXT: .amdhsa_system_vgpr_workitem_id (((128|defined_boolean)&~62)&6144)>>11
 // ASM-NEXT: .amdhsa_next_free_vgpr defined_boolean+1
 // ASM-NEXT: .amdhsa_next_free_sgpr defined_boolean+2
 // ASM-NEXT: .amdhsa_accum_offset 4
 // ASM-NEXT: .amdhsa_reserve_vcc defined_boolean
 // ASM-NEXT: .amdhsa_reserve_flat_scratch defined_boolean
 // ASM-NEXT: .amdhsa_reserve_xnack_mask 1
-// ASM-NEXT: .amdhsa_float_round_mode_32 ((((((((((9175040|(defined_boolean<<21))&(~8388608))|(defined_boolean<<23))&(~67108864))|(defined_boolean<<26))&(~63))|(((alignto(max(defined_boolean+1, 1), 8))/8)-1))&(~960))|((((alignto(max((defined_boolean+2)+(extrasgprs(defined_boolean, defined_boolean, 1)), 1), 8))/8)-1)<<6))&12288)>>12
-// ASM-NEXT: .amdhsa_float_round_mode_16_64 ((((((((((9175040|(defined_boolean<<21))&(~8388608))|(defined_boolean<<23))&(~67108864))|(defined_boolean<<26))&(~63))|(((alignto(max(defined_boolean+1, 1), 8))/8)-1))&(~960))|((((alignto(max((defined_boolean+2)+(extrasgprs(defined_boolean, defined_boolean, 1)), 1), 8))/8)-1)<<6))&49152)>>14
-// ASM-NEXT: .amdhsa_float_denorm_mode_32 ((((((((((9175040|(defined_boolean<<21))&(~8388608))|(defined_boolean<<23))&(~67108864))|(defined_boolean<<26))&(~63))|(((alignto(max(defined_boolean+1, 1), 8))/8)-1))&(~960))|((((alignto(max((defined_boolean+2)+(extrasgprs(defined_boolean, defined_boolean, 1)), 1), 8))/8)-1)<<6))&196608)>>16
+// ASM-NEXT: .amdhsa_float_round_mode_32 ((((((((((9175040|(defined_boolean<<21))&~8388608)|(defined_boolean<<23))&~67108864)|(defined_boolean<<26))&~63)|((alignto(max(defined_boolean+1, 1), 8)/8)-1))&~960)|(((alignto(max(defined_boolean+2+extrasgprs(defined_boolean, defined_boolean, 1), 1), 8)/8)-1)<<6))&12288)>>12
+// ASM-NEXT: .amdhsa_float_round_mode_16_64 ((((((((((9175040|(defined_boolean<<21))&~8388608)|(defined_boolean<<23))&~67108864)|(defined_boolean<<26))&~63)|((alignto(max(defined_boolean+1, 1), 8)/8)-1))&~960)|(((alignto(max(defined_boolean+2+extrasgprs(defined_boolean, defined_boolean, 1), 1), 8)/8)-1)<<6))&49152)>>14
+// ASM-NEXT: .amdhsa_float_denorm_mode_32 ((((((((((9175040|(defined_boolean<<21))&~8388608)|(defined_boolean<<23))&~67108864)|(defined_boolean<<26))&~63)|((alignto(max(defined_boolean+1, 1), 8)/8)-1))&~960)|(((alignto(max(defined_boolean+2+extrasgprs(defined_boolean, defined_boolean, 1), 1), 8)/8)-1)<<6))&196608)>>16
 // ASM-NEXT: .amdhsa_float_denorm_mode_16_64 3
-// ASM-NEXT: .amdhsa_dx10_clamp ((((((((((9175040|(defined_boolean<<21))&(~8388608))|(defined_boolean<<23))&(~67108864))|(defined_boolean<<26))&(~63))|(((alignto(max(defined_boolean+1, 1), 8))/8)-1))&(~960))|((((alignto(max((defined_boolean+2)+(extrasgprs(defined_boolean, defined_boolean, 1)), 1), 8))/8)-1)<<6))&2097152)>>21
-// ASM-NEXT: .amdhsa_ieee_mode ((((((((((9175040|(defined_boolean<<21))&(~8388608))|(defined_boolean<<23))&(~67108864))|(defined_boolean<<26))&(~63))|(((alignto(max(defined_boolean+1, 1), 8))/8)-1))&(~960))|((((alignto(max((defined_boolean+2)+(extrasgprs(defined_boolean, defined_boolean, 1)), 1), 8))/8)-1)<<6))&8388608)>>23
-// ASM-NEXT: .amdhsa_fp16_overflow ((((((((((9175040|(defined_boolean<<21))&(~8388608))|(defined_boolean<<23))&(~67108864))|(defined_boolean<<26))&(~63))|(((alignto(max(defined_boolean+1, 1), 8))/8)-1))&(~960))|((((alignto(max((defined_boolean+2)+(extrasgprs(defined_boolean, defined_boolean, 1)), 1), 8))/8)-1)<<6))&67108864)>>26
-// ASM-NEXT: .amdhsa_tg_split (((defined_boolean<<16)&(~63))&65536)>>16
-// ASM-NEXT: .amdhsa_exception_fp_ieee_invalid_op (((128|defined_boolean)&(~62))&16777216)>>24
-// ASM-NEXT: .amdhsa_exception_fp_denorm_src (((128|defined_boolean)&(~62))&33554432)>>25
-// ASM-NEXT: .amdhsa_exception_fp_ieee_div_zero (((128|defined_boolean)&(~62))&67108864)>>26
-// ASM-NEXT: .amdhsa_exception_fp_ieee_overflow (((128|defined_boolean)&(~62))&134217728)>>27
-// ASM-NEXT: .amdhsa_exception_fp_ieee_underflow (((128|defined_boolean)&(~62))&268435456)>>28
-// ASM-NEXT: .amdhsa_exception_fp_ieee_inexact (((128|defined_boolean)&(~62))&536870912)>>29
-// ASM-NEXT: .amdhsa_exception_int_div_zero (((128|defined_boolean)&(~62))&1073741824)>>30
+// ASM-NEXT: .amdhsa_dx10_clamp ((((((((((9175040|(defined_boolean<<21))&~8388608)|(defined_boolean<<23))&~67108864)|(defined_boolean<<26))&~63)|((alignto(max(defined_boolean+1, 1), 8)/8)-1))&~960)|(((alignto(max(defined_boolean+2+extrasgprs(defined_boolean, defined_boolean, 1), 1), 8)/8)-1)<<6))&2097152)>>21
+// ASM-NEXT: .amdhsa_ieee_mode ((((((((((9175040|(defined_boolean<<21))&~8388608)|(defined_boolean<<23))&~67108864)|(defined_boolean<<26))&~63)|((alignto(max(defined_boolean+1, 1), 8)/8)-1))&~960)|(((alignto(max(defined_boolean+2+extrasgprs(defined_boolean, defined_boolean, 1), 1), 8)/8)-1)<<6))&8388608)>>23
+// ASM-NEXT: .amdhsa_fp16_overflow ((((((((((9175040|(defined_boolean<<21))&~8388608)|(defined_boolean<<23))&~67108864)|(defined_boolean<<26))&~63)|((alignto(max(defined_boolean+1, 1), 8)/8)-1))&~960)|(((alignto(max(defined_boolean+2+extrasgprs(defined_boolean, defined_boolean, 1), 1), 8)/8)-1)<<6))&67108864)>>26
+// ASM-NEXT: .amdhsa_tg_split (((defined_boolean<<16)&~63)&65536)>>16
+// ASM-NEXT: .amdhsa_exception_fp_ieee_invalid_op (((128|defined_boolean)&~62)&16777216)>>24
+// ASM-NEXT: .amdhsa_exception_fp_denorm_src (((128|defined_boolean)&~62)&33554432)>>25
+// ASM-NEXT: .amdhsa_exception_fp_ieee_div_zero (((128|defined_boolean)&~62)&67108864)>>26
+// ASM-NEXT: .amdhsa_exception_fp_ieee_overflow (((128|defined_boolean)&~62)&134217728)>>27
+// ASM-NEXT: .amdhsa_exception_fp_ieee_underflow (((128|defined_boolean)&~62)&268435456)>>28
+// ASM-NEXT: .amdhsa_exception_fp_ieee_inexact (((128|defined_boolean)&~62)&536870912)>>29
+// ASM-NEXT: .amdhsa_exception_int_div_zero (((128|defined_boolean)&~62)&1073741824)>>30
 // ASM-NEXT: .end_amdhsa_kernel
 
 // ASM:       .set defined_boolean, 1

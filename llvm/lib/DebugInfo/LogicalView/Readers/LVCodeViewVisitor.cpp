@@ -949,6 +949,9 @@ Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record,
     Scope->setName(CurrentObjectName);
     if (options().getAttributeProducer())
       Scope->setProducer(Compile2.Version);
+    if (options().getAttributeLanguage())
+      Scope->setSourceLanguage(LVSourceLanguage{
+          static_cast<llvm::codeview::SourceLanguage>(Compile2.getLanguage())});
     getReader().isSystemEntry(Scope, CurrentObjectName);
 
     // The line records in CodeView are recorded per Module ID. Update
@@ -994,6 +997,9 @@ Error LVSymbolVisitor::visitKnownRecord(CVSymbol &Record,
     Scope->setName(CurrentObjectName);
     if (options().getAttributeProducer())
       Scope->setProducer(Compile3.Version);
+    if (options().getAttributeLanguage())
+      Scope->setSourceLanguage(LVSourceLanguage{
+          static_cast<llvm::codeview::SourceLanguage>(Compile3.getLanguage())});
     getReader().isSystemEntry(Scope, CurrentObjectName);
 
     // The line records in CodeView are recorded per Module ID. Update
@@ -1987,6 +1993,7 @@ Error LVLogicalVisitor::visitKnownRecord(CVType &Record, ClassRecord &Class,
   Scope->setName(Class.getName());
   if (Class.hasUniqueName())
     Scope->setLinkageName(Class.getUniqueName());
+  Scope->setBitSize(Class.getSize() * DWARF_CHAR_BIT);
 
   if (Class.isNested()) {
     Scope->setIsNested();
@@ -2455,6 +2462,7 @@ Error LVLogicalVisitor::visitKnownRecord(CVType &Record, UnionRecord &Union,
   Scope->setName(Union.getName());
   if (Union.hasUniqueName())
     Scope->setLinkageName(Union.getUniqueName());
+  Scope->setBitSize(Union.getSize() * DWARF_CHAR_BIT);
 
   if (Union.isNested()) {
     Scope->setIsNested();
@@ -3208,6 +3216,7 @@ LVType *LVLogicalVisitor::createBaseType(TypeIndex TI, StringRef TypeName) {
 
   if (createElement(TIR, SimpleKind)) {
     CurrentType->setName(TypeName);
+    CurrentType->setBitSize(getSizeInBytesForTypeIndex(TIR) * DWARF_CHAR_BIT);
     Reader->getCompileUnit()->addElement(CurrentType);
   }
   return CurrentType;

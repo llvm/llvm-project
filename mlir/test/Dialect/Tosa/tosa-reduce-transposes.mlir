@@ -136,7 +136,6 @@ func.func @test_mulop_conversion(%arg0: tensor<1x2x3x4xi32>, %arg1: tensor<1x2x3
 // CHECK: tosa.transpose %[[RESHAPED]] {perms = array<i32: 0, 2, 1>} : (tensor<1x3x2xi32>) -> tensor<1x2x3xi32>
 func.func @test_basic_non_broadcasting_reshape(%arg0: tensor<2x3xi32>) -> tensor<1x2x3xi32> {
   %shape = tosa.const_shape {values = dense<[1, 3, 2]> : tensor<3xindex>} : () -> !tosa.shape<3>
-  %perms = "tosa.const"() {values = dense<[0, 2, 1]> : tensor<3xi32>} : () -> tensor<3xi32>
   %1 = tosa.reshape %arg0, %shape : (tensor<2x3xi32>, !tosa.shape<3>) -> tensor<1x3x2xi32>
   %2 = tosa.transpose %1 {perms = array<i32: 0, 2, 1>}: (tensor<1x3x2xi32>) -> tensor<1x2x3xi32>
   return %2 : tensor<1x2x3xi32>
@@ -150,7 +149,6 @@ func.func @test_basic_non_broadcasting_reshape(%arg0: tensor<2x3xi32>) -> tensor
 // CHECK: return %[[RES]]
 func.func @test_dynamic_broadcasting_reshape(%arg0: tensor<?xi32>) -> tensor<1x1x?xi32> {
   %shape = tosa.const_shape {values = dense<[1, -1, 1]> : tensor<3xindex>} : () -> !tosa.shape<3>
-  %perms = "tosa.const"() {values = dense<[0, 2, 1]> : tensor<3xi32>} : () -> tensor<3xi32>
   %1 = tosa.reshape %arg0, %shape : (tensor<?xi32>, !tosa.shape<3>) -> tensor<1x?x1xi32>
   %2 = tosa.transpose %1 {perms = array<i32: 0, 2, 1>}: (tensor<1x?x1xi32>) -> tensor<1x1x?xi32>
   return %2 : tensor<1x1x?xi32>

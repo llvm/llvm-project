@@ -63,24 +63,9 @@ bool applyDebugifyMetadataToMachineFunction(MachineModuleInfo &MMI,
   // which cover a wide range of lines can help stress the debug info passes:
   // if we can't do that, fall back to using the local variable which precedes
   // all the others.
-  Function *DbgValF = M.getFunction("llvm.dbg.value");
-  DbgValueInst *EarliestDVI = nullptr;
   DbgVariableRecord *EarliestDVR = nullptr;
   DenseMap<unsigned, DILocalVariable *> Line2Var;
   DIExpression *Expr = nullptr;
-  if (DbgValF) {
-    for (const Use &U : DbgValF->uses()) {
-      auto *DVI = dyn_cast<DbgValueInst>(U.getUser());
-      if (!DVI || DVI->getFunction() != &F)
-        continue;
-      unsigned Line = DVI->getDebugLoc().getLine();
-      assert(Line != 0 && "debugify should not insert line 0 locations");
-      Line2Var[Line] = DVI->getVariable();
-      if (!EarliestDVI || Line < EarliestDVI->getDebugLoc().getLine())
-        EarliestDVI = DVI;
-      Expr = DVI->getExpression();
-    }
-  }
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
       for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
@@ -125,8 +110,7 @@ bool applyDebugifyMetadataToMachineFunction(MachineModuleInfo &MMI,
       unsigned Line = MI.getDebugLoc().getLine();
       auto It = Line2Var.find(Line);
       if (It == Line2Var.end()) {
-        Line = EarliestDVI ? EarliestDVI->getDebugLoc().getLine()
-                           : EarliestDVR->getDebugLoc().getLine();
+        Line = EarliestDVR->getDebugLoc().getLine();
         It = Line2Var.find(Line);
         assert(It != Line2Var.end());
       }

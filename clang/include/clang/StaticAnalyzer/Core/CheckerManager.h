@@ -39,7 +39,8 @@ class AnalysisManager;
 class CXXAllocatorCall;
 class BugReporter;
 class CallEvent;
-class CheckerBase;
+class CheckerFrontend;
+class CheckerBackend;
 class CheckerContext;
 class CheckerRegistry;
 struct CheckerRegistryData;
@@ -64,9 +65,9 @@ class CheckerFn<RET(Ps...)> {
   Func Fn;
 
 public:
-  CheckerBase *Checker;
+  CheckerBackend *Checker;
 
-  CheckerFn(CheckerBase *checker, Func fn) : Fn(fn), Checker(checker) {}
+  CheckerFn(CheckerBackend *checker, Func fn) : Fn(fn), Checker(checker) {}
 
   RET operator()(Ps... ps) const {
     return Fn(Checker, ps...);
@@ -115,19 +116,6 @@ public:
 
   operator StringRef() const { return Name; }
 };
-
-/// A single checker class (and its singleton instance) can act as the
-/// implementation of several (user-facing or modeling) checker parts that
-/// have shared state and logic, but have their own names and can be enabled or
-/// disabled separately.
-/// Each checker class that implement multiple parts introduces its own enum
-/// type to assign small numerical indices (0, 1, 2 ...) to their parts. The
-/// type alias 'CheckerPartIdx' is conceptually the union of these enum types.
-using CheckerPartIdx = unsigned;
-
-/// If a checker doesn't have multiple parts, then its single part is
-/// represented by this index.
-constexpr inline CheckerPartIdx DefaultPart = 0;
 
 enum class ObjCMessageVisitKind {
   Pre,
@@ -193,14 +181,7 @@ public:
 
   /// Emits an error through a DiagnosticsEngine about an invalid user supplied
   /// checker option value.
-  void reportInvalidCheckerOptionValue(const CheckerBase *C,
-                                       StringRef OptionName,
-                                       StringRef ExpectedValueDesc) const {
-    reportInvalidCheckerOptionValue(C, DefaultPart, OptionName,
-                                    ExpectedValueDesc);
-  }
-
-  void reportInvalidCheckerOptionValue(const CheckerBase *C, CheckerPartIdx Idx,
+  void reportInvalidCheckerOptionValue(const CheckerFrontend *Checker,
                                        StringRef OptionName,
                                        StringRef ExpectedValueDesc) const;
 
@@ -210,28 +191,15 @@ public:
   // Checker registration.
   //===--------------------------------------------------------------------===//
 
-  /// Construct the singleton instance of a checker, register it for the
-  /// supported callbacks and record its name with `registerCheckerPart()`.
-  /// Arguments passed to this function are forwarded to the constructor of the
-  /// checker.
-  ///
-  /// If `CHECKER` has multiple parts, then the constructor call and the
-  /// callback registration only happen within the first `registerChecker()`
-  /// call; while the subsequent calls only enable additional parts of the
-  /// existing checker object (while registering their names).
-  ///
-  /// \returns a pointer to the checker object.
-  template <typename CHECKER, CheckerPartIdx Idx = DefaultPart, typename... AT>
-  CHECKER *registerChecker(AT &&...Args) {
-    // This assert could be removed but then we need to make sure that calls
-    // registering different parts of the same checker pass the same arguments.
-    static_assert(
-        Idx == DefaultPart || !sizeof...(AT),
-        "Argument forwarding isn't supported with multi-part checkers!");
-
+  /// If the the singleton instance of a checker class is not yet constructed,
+  /// then construct it (with the supplied arguments), register it for the
+  /// callbacks that are supported by it, and return it. Otherwise, just return
+  /// a pointer to the existing instance.
+  template <typename CHECKER, typename... AT>
+  CHECKER *getChecker(AT &&...Args) {
     CheckerTag Tag = getTag<CHECKER>();
 
-    std::unique_ptr<CheckerBase> &Ref = CheckerTags[Tag];
+    std::unique_ptr<CheckerBackend> &Ref = CheckerTags[Tag];
     if (!Ref) {
       std::unique_ptr<CHECKER> Checker =
           std::make_unique<CHECKER>(std::forward<AT>(Args)...);
@@ -239,18 +207,18 @@ public:
       Ref = std::move(Checker);
     }
 
-    CHECKER *Result = static_cast<CHECKER *>(Ref.get());
-    Result->registerCheckerPart(Idx, CurrentCheckerName);
-    return Result;
+    return static_cast<CHECKER *>(Ref.get());
   }
 
-  template <typename CHECKER>
-  CHECKER *getChecker() {
-    CheckerTag Tag = getTag<CHECKER>();
-    std::unique_ptr<CheckerBase> &Ref = CheckerTags[Tag];
-    assert(Ref && "Requested checker is not registered! Maybe you should add it"
-                  " as a dependency in Checkers.td?");
-    return static_cast<CHECKER *>(Ref.get());
+  /// Register a single-part checker (derived from `Checker`): construct its
+  /// singleton instance, register it for the supported callbacks and record
+  /// its name (with `CheckerFrontend::enable`). Calling this multiple times
+  /// triggers an assertion failure.
+  template <typename CHECKER, typename... AT>
+  CHECKER *registerChecker(AT &&...Args) {
+    CHECKER *Chk = getChecker<CHECKER>(std::forward<AT>(Args)...);
+    Chk->enable(*this);
+    return Chk;
   }
 
   template <typename CHECKER> bool isRegisteredChecker() {
@@ -370,11 +338,16 @@ public:
                               ExprEngine &Eng);
 
   /// Run checkers for binding of a value to a location.
-  void runCheckersForBind(ExplodedNodeSet &Dst,
-                          const ExplodedNodeSet &Src,
-                          SVal location, SVal val,
-                          const Stmt *S, ExprEngine &Eng,
+  void runCheckersForBind(ExplodedNodeSet &Dst, const ExplodedNodeSet &Src,
+                          SVal location, SVal val, const Stmt *S,
+                          bool AtDeclInit, ExprEngine &Eng,
                           const ProgramPoint &PP);
+
+  /// Run checkers after taking a control flow edge.
+  void runCheckersForBlockEntrance(ExplodedNodeSet &Dst,
+                                   const ExplodedNodeSet &Src,
+                                   const BlockEntrance &Entrance,
+                                   ExprEngine &Eng) const;
 
   /// Run checkers for end of analysis.
   void runCheckersForEndAnalysis(ExplodedGraph &G, BugReporter &BR,
@@ -482,7 +455,7 @@ public:
   /// Run checkers for debug-printing a ProgramState.
   ///
   /// Unlike most other callbacks, any checker can simply implement the virtual
-  /// method CheckerBase::printState if it has custom data to print.
+  /// method CheckerBackend::printState if it has custom data to print.
   ///
   /// \param Out   The output stream
   /// \param State The state being printed
@@ -525,8 +498,11 @@ public:
   using CheckLocationFunc = CheckerFn<void(SVal location, bool isLoad,
                                            const Stmt *S, CheckerContext &)>;
 
-  using CheckBindFunc =
-      CheckerFn<void(SVal location, SVal val, const Stmt *S, CheckerContext &)>;
+  using CheckBindFunc = CheckerFn<void(SVal location, SVal val, const Stmt *S,
+                                       bool AtDeclInit, CheckerContext &)>;
+
+  using CheckBlockEntranceFunc =
+      CheckerFn<void(const BlockEntrance &, CheckerContext &)>;
 
   using CheckEndAnalysisFunc =
       CheckerFn<void (ExplodedGraph &, BugReporter &, ExprEngine &)>;
@@ -588,6 +564,8 @@ public:
   void _registerForLocation(CheckLocationFunc checkfn);
 
   void _registerForBind(CheckBindFunc checkfn);
+
+  void _registerForBlockEntrance(CheckBlockEntranceFunc checkfn);
 
   void _registerForEndAnalysis(CheckEndAnalysisFunc checkfn);
 
@@ -651,7 +629,7 @@ private:
   template <typename T>
   static void *getTag() { static int tag; return &tag; }
 
-  llvm::DenseMap<CheckerTag, std::unique_ptr<CheckerBase>> CheckerTags;
+  llvm::DenseMap<CheckerTag, std::unique_ptr<CheckerBackend>> CheckerTags;
 
   struct DeclCheckerInfo {
     CheckDeclFunc CheckFn;
@@ -694,6 +672,8 @@ private:
   std::vector<CheckLocationFunc> LocationCheckers;
 
   std::vector<CheckBindFunc> BindCheckers;
+
+  std::vector<CheckBlockEntranceFunc> BlockEntranceCheckers;
 
   std::vector<CheckEndAnalysisFunc> EndAnalysisCheckers;
 

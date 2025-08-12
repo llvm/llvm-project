@@ -19,6 +19,7 @@
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/RegionIterator.h"
 #include "llvm/Analysis/RegionPass.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -128,8 +129,7 @@ struct PredInfo {
 using BBPredicates = DenseMap<BasicBlock *, PredInfo>;
 using PredMap = DenseMap<BasicBlock *, BBPredicates>;
 using BB2BBMap = DenseMap<BasicBlock *, BasicBlock *>;
-
-using BranchDebugLocMap = DenseMap<BasicBlock *, DebugLoc>;
+using Val2BBMap = DenseMap<Value *, BasicBlock *>;
 
 // A traits type that is intended to be used in graph algorithms. The graph
 // traits starts at an entry node, and traverses the RegionNodes that are in
@@ -281,7 +281,7 @@ class StructurizeCFG {
   ConstantInt *BoolTrue;
   ConstantInt *BoolFalse;
   Value *BoolPoison;
-
+  const TargetTransformInfo *TTI;
   Function *Func;
   Region *ParentRegion;
 
@@ -303,9 +303,11 @@ class StructurizeCFG {
   PredMap LoopPreds;
   BranchVector LoopConds;
 
-  BranchDebugLocMap TermDL;
+  Val2BBMap HoistedValues;
 
   RegionNode *PrevNode;
+
+  void hoistZeroCostElseBlockPhiValues(BasicBlock *ElseBB, BasicBlock *ThenBB);
 
   void orderNodes();
 
@@ -336,14 +338,16 @@ class StructurizeCFG {
 
   void simplifyAffectedPhis();
 
-  void killTerminator(BasicBlock *BB);
+  void simplifyHoistedPhis();
+
+  DebugLoc killTerminator(BasicBlock *BB);
 
   void changeExit(RegionNode *Node, BasicBlock *NewExit,
                   bool IncludeDominator);
 
   BasicBlock *getNextFlow(BasicBlock *Dominator);
 
-  BasicBlock *needPrefix(bool NeedEmpty);
+  std::pair<BasicBlock *, DebugLoc> needPrefix(bool NeedEmpty);
 
   BasicBlock *needPostfix(BasicBlock *Flow, bool ExitUseAllowed);
 
@@ -361,11 +365,9 @@ class StructurizeCFG {
 
   void rebuildSSA();
 
-  void setDebugLoc(BranchInst *Br, BasicBlock *BB);
-
 public:
   void init(Region *R);
-  bool run(Region *R, DominatorTree *DT);
+  bool run(Region *R, DominatorTree *DT, const TargetTransformInfo *TTI);
   bool makeUniformRegion(Region *R, UniformityInfo &UA);
 };
 
@@ -391,8 +393,11 @@ public:
       if (SCFG.makeUniformRegion(R, UA))
         return false;
     }
+    Function *F = R->getEntry()->getParent();
+    const TargetTransformInfo *TTI =
+        &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(*F);
     DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    return SCFG.run(R, DT);
+    return SCFG.run(R, DT, TTI);
   }
 
   StringRef getPassName() const override { return "Structurize control flow"; }
@@ -400,7 +405,9 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     if (SkipUniformRegions)
       AU.addRequired<UniformityInfoWrapperPass>();
+    AU.addRequired<TargetTransformInfoWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addRequired<TargetTransformInfoWrapperPass>();
 
     AU.addPreserved<DominatorTreeWrapperPass>();
     RegionPass::getAnalysisUsage(AU);
@@ -408,6 +415,34 @@ public:
 };
 
 } // end anonymous namespace
+
+/// Checks whether an instruction is zero cost instruction and checks if the
+/// operands are from different BB. If so, this instruction can be coalesced
+/// if its hoisted to predecessor block. So, this returns true.
+static bool isHoistableInstruction(Instruction *I, BasicBlock *BB,
+                                   const TargetTransformInfo *TTI) {
+  if (I->getParent() != BB || isa<PHINode>(I))
+    return false;
+
+  // If the instruction is not a zero cost instruction, return false.
+  auto Cost = TTI->getInstructionCost(I, TargetTransformInfo::TCK_Latency);
+  InstructionCost::CostType CostVal =
+      Cost.isValid()
+          ? Cost.getValue()
+          : (InstructionCost::CostType)TargetTransformInfo::TCC_Expensive;
+  if (CostVal != 0)
+    return false;
+
+  // Check if any operands are instructions defined in the same block.
+  for (auto &Op : I->operands()) {
+    if (auto *OpI = dyn_cast<Instruction>(Op)) {
+      if (OpI->getParent() == BB)
+        return false;
+    }
+  }
+
+  return true;
+}
 
 char StructurizeCFGLegacyPass::ID = 0;
 
@@ -418,6 +453,39 @@ INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(RegionInfoPass)
 INITIALIZE_PASS_END(StructurizeCFGLegacyPass, "structurizecfg",
                     "Structurize the CFG", false, false)
+
+/// Structurization can introduce unnecessary VGPR copies due to register
+/// coalescing interference. For example, if the Else block has a zero-cost
+/// instruction and the Then block modifies the VGPR value, only one value is
+/// live at a time in merge block before structurization. After structurization,
+/// the coalescer may incorrectly treat the Then value as live in the Else block
+/// (via the path Then → Flow → Else), leading to unnecessary VGPR copies.
+///
+/// This function examines phi nodes whose incoming values are zero-cost
+/// instructions in the Else block. It identifies such values that can be safely
+/// hoisted and moves them to the nearest common dominator of Then and Else
+/// blocks. A follow-up function after setting PhiNodes assigns the hoisted
+/// value to poison phi nodes along the if→flow edge, aiding register coalescing
+/// and minimizing unnecessary live ranges.
+void StructurizeCFG::hoistZeroCostElseBlockPhiValues(BasicBlock *ElseBB,
+                                                     BasicBlock *ThenBB) {
+
+  BasicBlock *ElseSucc = ElseBB->getSingleSuccessor();
+  BasicBlock *CommonDominator = DT->findNearestCommonDominator(ElseBB, ThenBB);
+
+  if (!ElseSucc || !CommonDominator)
+    return;
+  Instruction *Term = CommonDominator->getTerminator();
+  for (PHINode &Phi : ElseSucc->phis()) {
+    Value *ElseVal = Phi.getIncomingValueForBlock(ElseBB);
+    auto *Inst = dyn_cast<Instruction>(ElseVal);
+    if (!Inst || !isHoistableInstruction(Inst, ElseBB, TTI))
+      continue;
+    Inst->removeFromParent();
+    Inst->insertInto(CommonDominator, Term->getIterator());
+    HoistedValues[Inst] = CommonDominator;
+  }
+}
 
 /// Build up the general order of nodes, by performing a topological sort of the
 /// parent region's nodes, while ensuring that there is no outer cycle node
@@ -541,7 +609,7 @@ void StructurizeCFG::gatherPredicates(RegionNode *N) {
             BasicBlock *Other = Term->getSuccessor(!i);
             if (Visited.count(Other) && !Loops.count(Other) &&
                 !Pred.count(Other) && !Pred.count(P)) {
-
+              hoistZeroCostElseBlockPhiValues(Succ, Other);
               Pred[Other] = {BoolFalse, std::nullopt};
               Pred[P] = {BoolTrue, std::nullopt};
               continue;
@@ -612,25 +680,28 @@ void StructurizeCFG::insertConditions(bool Loops) {
     BasicBlock *SuccTrue = Term->getSuccessor(0);
     BasicBlock *SuccFalse = Term->getSuccessor(1);
 
+    PhiInserter.Initialize(Boolean, "");
+    PhiInserter.AddAvailableValue(Loops ? SuccFalse : Parent, Default);
+
     BBPredicates &Preds = Loops ? LoopPreds[SuccFalse] : Predicates[SuccTrue];
 
-    if (Preds.size() == 1 && Preds.begin()->first == Parent) {
-      auto &PI = Preds.begin()->second;
-      Term->setCondition(PI.Pred);
-      CondBranchWeights::setMetadata(*Term, PI.Weights);
-    } else {
-      PhiInserter.Initialize(Boolean, "");
-      PhiInserter.AddAvailableValue(Loops ? SuccFalse : Parent, Default);
+    NearestCommonDominator Dominator(DT);
+    Dominator.addBlock(Parent);
 
-      NearestCommonDominator Dominator(DT);
-      Dominator.addBlock(Parent);
-
-      for (auto [BB, PI] : Preds) {
-        assert(BB != Parent);
-        PhiInserter.AddAvailableValue(BB, PI.Pred);
-        Dominator.addAndRememberBlock(BB);
+    PredInfo ParentInfo{nullptr, std::nullopt};
+    for (auto [BB, PI] : Preds) {
+      if (BB == Parent) {
+        ParentInfo = PI;
+        break;
       }
+      PhiInserter.AddAvailableValue(BB, PI.Pred);
+      Dominator.addAndRememberBlock(BB);
+    }
 
+    if (ParentInfo.Pred) {
+      Term->setCondition(ParentInfo.Pred);
+      CondBranchWeights::setMetadata(*Term, ParentInfo.Weights);
+    } else {
       if (!Dominator.resultIsRememberedBlock())
         PhiInserter.AddAvailableValue(Dominator.result(), Default);
 
@@ -737,12 +808,10 @@ void StructurizeCFG::findUndefBlocks(
     if (!VisitedBlock.insert(Current).second)
       continue;
 
-    if (FlowSet.contains(Current)) {
-      for (auto P : predecessors(Current))
-        Stack.push_back(P);
-    } else if (!Incomings.contains(Current)) {
+    if (FlowSet.contains(Current))
+      llvm::append_range(Stack, predecessors(Current));
+    else if (!Incomings.contains(Current))
       UndefBlks.push_back(Current);
-    }
   }
 }
 
@@ -819,8 +888,7 @@ void StructurizeCFG::setPhiValues() {
 
     // Get the undefined blocks shared by all the phi nodes.
     if (!BlkPhis.empty()) {
-      for (const auto &VI : BlkPhis.front().second)
-        Incomings.insert(VI.first);
+      Incomings.insert_range(llvm::make_first_range(BlkPhis.front().second));
       findUndefBlocks(To, Incomings, UndefBlks);
     }
 
@@ -897,6 +965,44 @@ void StructurizeCFG::setPhiValues() {
   AffectedPhis.append(InsertedPhis.begin(), InsertedPhis.end());
 }
 
+/// Updates PHI nodes after hoisted zero cost instructions by replacing poison
+/// entries on Flow nodes with the appropriate hoisted values
+void StructurizeCFG::simplifyHoistedPhis() {
+  for (WeakVH VH : AffectedPhis) {
+    PHINode *Phi = dyn_cast_or_null<PHINode>(VH);
+    if (!Phi || Phi->getNumIncomingValues() != 2)
+      continue;
+
+    for (int i = 0; i < 2; i++) {
+      Value *V = Phi->getIncomingValue(i);
+      auto BBIt = HoistedValues.find(V);
+
+      if (BBIt == HoistedValues.end())
+        continue;
+
+      Value *OtherV = Phi->getIncomingValue(!i);
+      PHINode *OtherPhi = dyn_cast<PHINode>(OtherV);
+      if (!OtherPhi)
+        continue;
+
+      int PoisonValBBIdx = -1;
+      for (size_t i = 0; i < OtherPhi->getNumIncomingValues(); i++) {
+        if (!isa<PoisonValue>(OtherPhi->getIncomingValue(i)))
+          continue;
+        PoisonValBBIdx = i;
+        break;
+      }
+      if (PoisonValBBIdx == -1 ||
+          !DT->dominates(BBIt->second,
+                         OtherPhi->getIncomingBlock(PoisonValBBIdx)))
+        continue;
+
+      OtherPhi->setIncomingValue(PoisonValBBIdx, V);
+      Phi->setIncomingValue(i, OtherV);
+    }
+  }
+}
+
 void StructurizeCFG::simplifyAffectedPhis() {
   bool Changed;
   do {
@@ -918,28 +1024,18 @@ void StructurizeCFG::simplifyAffectedPhis() {
   } while (Changed);
 }
 
-void StructurizeCFG::setDebugLoc(BranchInst *Br, BasicBlock *BB) {
-  auto I = TermDL.find(BB);
-  if (I == TermDL.end())
-    return;
-
-  Br->setDebugLoc(I->second);
-  TermDL.erase(I);
-}
-
 /// Remove phi values from all successors and then remove the terminator.
-void StructurizeCFG::killTerminator(BasicBlock *BB) {
+DebugLoc StructurizeCFG::killTerminator(BasicBlock *BB) {
   Instruction *Term = BB->getTerminator();
   if (!Term)
-    return;
-
-  if (const DebugLoc &DL = Term->getDebugLoc())
-    TermDL[BB] = DL;
+    return DebugLoc();
 
   for (BasicBlock *Succ : successors(BB))
     delPhiValues(BB, Succ);
 
+  DebugLoc DL = Term->getDebugLoc();
   Term->eraseFromParent();
+  return DL;
 }
 
 /// Let node exit(s) point to NewExit
@@ -978,9 +1074,9 @@ void StructurizeCFG::changeExit(RegionNode *Node, BasicBlock *NewExit,
     SubRegion->replaceExit(NewExit);
   } else {
     BasicBlock *BB = Node->getNodeAs<BasicBlock>();
-    killTerminator(BB);
+    DebugLoc DL = killTerminator(BB);
     BranchInst *Br = BranchInst::Create(NewExit, BB);
-    setDebugLoc(Br, BB);
+    Br->setDebugLoc(DL);
     addPhiValues(BB, NewExit);
     if (IncludeDominator)
       DT->changeImmediateDominator(NewExit, BB);
@@ -995,29 +1091,20 @@ BasicBlock *StructurizeCFG::getNextFlow(BasicBlock *Dominator) {
   BasicBlock *Flow = BasicBlock::Create(Context, FlowBlockName,
                                         Func, Insert);
   FlowSet.insert(Flow);
-
-  if (auto *Term = Dominator->getTerminator()) {
-    if (const DebugLoc &DL = Term->getDebugLoc())
-      TermDL[Flow] = DL;
-  } else if (DebugLoc DLTemp = TermDL.lookup(Dominator)) {
-    // Use a temporary copy to avoid a use-after-free if the map's storage
-    // is reallocated.
-    TermDL[Flow] = DLTemp;
-  }
-
   DT->addNewBlock(Flow, Dominator);
   ParentRegion->getRegionInfo()->setRegionFor(Flow, ParentRegion);
   return Flow;
 }
 
-/// Create a new or reuse the previous node as flow node
-BasicBlock *StructurizeCFG::needPrefix(bool NeedEmpty) {
+/// Create a new or reuse the previous node as flow node. Returns a block and a
+/// debug location to be used for new instructions in that block.
+std::pair<BasicBlock *, DebugLoc> StructurizeCFG::needPrefix(bool NeedEmpty) {
   BasicBlock *Entry = PrevNode->getEntry();
 
   if (!PrevNode->isSubRegion()) {
-    killTerminator(Entry);
+    DebugLoc DL = killTerminator(Entry);
     if (!NeedEmpty || Entry->getFirstInsertionPt() == Entry->end())
-      return Entry;
+      return {Entry, DL};
   }
 
   // create a new flow node
@@ -1026,7 +1113,7 @@ BasicBlock *StructurizeCFG::needPrefix(bool NeedEmpty) {
   // and wire it up
   changeExit(PrevNode, Flow, true);
   PrevNode = ParentRegion->getBBNode(Flow);
-  return Flow;
+  return {Flow, DebugLoc()};
 }
 
 /// Returns the region exit if possible, otherwise just a new flow node
@@ -1090,7 +1177,7 @@ void StructurizeCFG::wireFlow(bool ExitUseAllowed,
     PrevNode = Node;
   } else {
     // Insert extra prefix node (or reuse last one)
-    BasicBlock *Flow = needPrefix(false);
+    auto [Flow, DL] = needPrefix(false);
 
     // Insert extra postfix node (or use exit instead)
     BasicBlock *Entry = Node->getEntry();
@@ -1098,7 +1185,7 @@ void StructurizeCFG::wireFlow(bool ExitUseAllowed,
 
     // let it point to entry and next block
     BranchInst *Br = BranchInst::Create(Entry, Next, BoolPoison, Flow);
-    setDebugLoc(Br, Flow);
+    Br->setDebugLoc(DL);
     Conditions.push_back(Br);
     addPhiValues(Flow, Entry);
     DT->changeImmediateDominator(Entry, Flow);
@@ -1125,7 +1212,7 @@ void StructurizeCFG::handleLoops(bool ExitUseAllowed,
   }
 
   if (!isPredictableTrue(Node))
-    LoopStart = needPrefix(true);
+    LoopStart = needPrefix(true).first;
 
   LoopEnd = Loops[Node->getEntry()];
   wireFlow(false, LoopEnd);
@@ -1136,10 +1223,11 @@ void StructurizeCFG::handleLoops(bool ExitUseAllowed,
   assert(LoopStart != &LoopStart->getParent()->getEntryBlock());
 
   // Create an extra loop end node
-  LoopEnd = needPrefix(false);
+  DebugLoc DL;
+  std::tie(LoopEnd, DL) = needPrefix(false);
   BasicBlock *Next = needPostfix(LoopEnd, ExitUseAllowed);
   BranchInst *Br = BranchInst::Create(Next, LoopStart, BoolPoison, LoopEnd);
-  setDebugLoc(Br, LoopEnd);
+  Br->setDebugLoc(DL);
   LoopConds.push_back(Br);
   addPhiValues(LoopEnd, LoopStart);
   setPrevNode(Next);
@@ -1307,12 +1395,13 @@ bool StructurizeCFG::makeUniformRegion(Region *R, UniformityInfo &UA) {
 }
 
 /// Run the transformation for each region found
-bool StructurizeCFG::run(Region *R, DominatorTree *DT) {
+bool StructurizeCFG::run(Region *R, DominatorTree *DT,
+                         const TargetTransformInfo *TTI) {
   if (R->isTopLevelRegion())
     return false;
 
   this->DT = DT;
-
+  this->TTI = TTI;
   Func = R->getEntry()->getParent();
   assert(hasOnlySimpleTerminator(*Func) && "Unsupported block terminator.");
 
@@ -1324,6 +1413,7 @@ bool StructurizeCFG::run(Region *R, DominatorTree *DT) {
   insertConditions(false);
   insertConditions(true);
   setPhiValues();
+  simplifyHoistedPhis();
   simplifyConditions();
   simplifyAffectedPhis();
   rebuildSSA();
@@ -1339,7 +1429,6 @@ bool StructurizeCFG::run(Region *R, DominatorTree *DT) {
   LoopPreds.clear();
   LoopConds.clear();
   FlowSet.clear();
-  TermDL.clear();
 
   return true;
 }
@@ -1374,7 +1463,7 @@ PreservedAnalyses StructurizeCFGPass::run(Function &F,
   bool Changed = false;
   DominatorTree *DT = &AM.getResult<DominatorTreeAnalysis>(F);
   auto &RI = AM.getResult<RegionInfoAnalysis>(F);
-
+  TargetTransformInfo *TTI = &AM.getResult<TargetIRAnalysis>(F);
   UniformityInfo *UI = nullptr;
   if (SkipUniformRegions)
     UI = &AM.getResult<UniformityInfoAnalysis>(F);
@@ -1393,7 +1482,7 @@ PreservedAnalyses StructurizeCFGPass::run(Function &F,
       continue;
     }
 
-    Changed |= SCFG.run(R, DT);
+    Changed |= SCFG.run(R, DT, TTI);
   }
   if (!Changed)
     return PreservedAnalyses::all();
