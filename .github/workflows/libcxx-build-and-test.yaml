@@ -43,7 +43,6 @@ jobs:
       matrix:
         config: [
           'frozen-cxx03-headers',
-          'generic-cxx03',
           'generic-cxx26',
           'generic-modules'
         ]
