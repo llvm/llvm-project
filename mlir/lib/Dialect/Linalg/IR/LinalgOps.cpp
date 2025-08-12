@@ -1570,36 +1570,70 @@ ParseResult MapOp::parse(OpAsmParser &parser, OperationState &result) {
   return success();
 }
 
-// Retrieve the operation from the body, if it is the only one (except
-// yield) and if it gets the same amount of arguments as the body does.
-// If initFirst flag is enabled, we check that init takes the first position in
-// operands of payload.
-static Operation *findPayloadOp(Block *body, bool initFirst = false) {
+// Check if a block contains a single payload operation that can be printed in
+// short form. The block must contain exactly 2 operations: the payload op and a
+// yield.
+static bool canUseShortForm(Block *body) {
   if (body->getOperations().size() != 2)
-    return nullptr;
+    return false;
+
   Operation &payload = body->getOperations().front();
   assert(isa<YieldOp>(body->getOperations().back()));
 
-  if (payload.getNumOperands() == 0 ||
-      payload.getNumOperands() != body->getNumArguments())
+  // Check that the yield has exactly one operand that comes from the payload
+  auto yieldOp = cast<YieldOp>(body->getOperations().back());
+  if (yieldOp.getNumOperands() != 1)
+    return false;
+
+  Value yieldOperand = yieldOp.getOperand(0);
+  if (!yieldOperand.getDefiningOp() || yieldOperand.getDefiningOp() != &payload)
+    return false;
+
+  return true;
+}
+
+// Find a payload operation that can be printed in short form.
+// For MapOp (initFirst=false): operands must match block arguments in order.
+// For ReduceOp (initFirst=true): init operand must be first, then operands must
+// match block arguments.
+static Operation *findPayloadOp(Block *body, bool initFirst = false) {
+  if (!canUseShortForm(body))
     return nullptr;
+
+  Operation &payload = body->getOperations().front();
+
   if (initFirst) {
-    // check init
-    if (payload.getOperands().back() != body->getArgument(0))
+    // For ReduceOp: check that operand count matches block argument count + 1
+    // (for init)
+    if (payload.getNumOperands() == 0 ||
+        payload.getNumOperands() != body->getNumArguments() + 1)
       return nullptr;
-    // check rest
+
+    // Check that init operand is first
+    if (payload.getOperands().front() != body->getArgument(0))
+      return nullptr;
+
+    // Check that remaining operands match block arguments in order
     for (const auto &[operand, bbArg] :
-         llvm::zip(payload.getOperands(), body->getArguments().drop_front())) {
+         llvm::zip(payload.getOperands().drop_front(),
+                   body->getArguments().drop_front())) {
       if (bbArg != operand)
         return nullptr;
     }
   } else {
+    // For MapOp: check that operand count matches block argument count
+    if (payload.getNumOperands() == 0 ||
+        payload.getNumOperands() != body->getNumArguments())
+      return nullptr;
+
+    // Check that operands match block arguments in order
     for (const auto &[operand, bbArg] :
          llvm::zip(payload.getOperands(), body->getArguments())) {
       if (bbArg != operand)
         return nullptr;
     }
   }
+
   return &payload;
 }
 
