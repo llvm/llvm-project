@@ -31,7 +31,7 @@ static inline void TestStartFailImpl(int *__ended_by(*out_end) *out_start,
 // CHECK-LABEL: @TestStartFail(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[ARR_I:%.*]] = alloca [10 x i32], align 16
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 40, ptr nonnull [[ARR_I]]) #[[ATTR5:[0-9]+]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARR_I]]) #[[ATTR5:[0-9]+]]
 // CHECK-NEXT:    [[UPPER_I:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR_I]], i64 40
 // CHECK-NEXT:    [[BOUND_PTR_ARITH_I:%.*]] = getelementptr i8, ptr [[ARR_I]], i64 -4
 // CHECK-NEXT:    [[CMP24_NOT_I:%.*]] = icmp ugt ptr [[BOUND_PTR_ARITH_I]], [[UPPER_I]], {{!annotation ![0-9]+}}
@@ -42,7 +42,7 @@ static inline void TestStartFailImpl(int *__ended_by(*out_end) *out_start,
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR6:[0-9]+]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       TestStartFailImpl.exit:
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 40, ptr nonnull [[ARR_I]]) #[[ATTR5]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ARR_I]]) #[[ATTR5]]
 // CHECK-NEXT:    ret void
 //
 void TestStartFail() {
@@ -61,7 +61,7 @@ static inline void TestEndFailImpl(int *__ended_by(*out_end) *out_start,
 // CHECK-LABEL: @TestEndFail(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[ARR_I:%.*]] = alloca [10 x i32], align 16
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 40, ptr nonnull [[ARR_I]]) #[[ATTR5]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARR_I]]) #[[ATTR5]]
 // CHECK-NEXT:    [[UPPER_I:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR_I]], i64 40
 // CHECK-NEXT:    [[BOUND_PTR_ARITH_I:%.*]] = getelementptr i8, ptr [[ARR_I]], i64 44
 // CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp ugt ptr [[BOUND_PTR_ARITH_I]], [[UPPER_I]], {{!annotation ![0-9]+}}
@@ -72,7 +72,7 @@ static inline void TestEndFailImpl(int *__ended_by(*out_end) *out_start,
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR6]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       TestEndFailImpl.exit:
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 40, ptr nonnull [[ARR_I]]) #[[ATTR5]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ARR_I]]) #[[ATTR5]]
 // CHECK-NEXT:    ret void
 //
 void TestEndFail() {

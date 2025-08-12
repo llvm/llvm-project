@@ -60,10 +60,10 @@ void caller_4() {
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[I:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[I]]) #[[ATTR5]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[I]]) #[[ATTR5]]
 // CHECK-NEXT:    store i32 0, ptr [[I]], align 4, !tbaa [[TBAA4:![0-9]+]]
 // CHECK-NEXT:    call void @foo(ptr noundef nonnull [[I]], i32 noundef 2) #[[ATTR5]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[I]]) #[[ATTR5]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[I]]) #[[ATTR5]]
 // CHECK-NEXT:    ret void
 //
 void caller_5() {
@@ -158,9 +158,9 @@ void caller_9(int *__sized_by(*len) *out, int *len){
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[COUNT:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[P:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[COUNT]]) #[[ATTR5]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[COUNT]]) #[[ATTR5]]
 // CHECK-NEXT:    store i32 0, ptr [[COUNT]], align 4, !annotation [[META15:![0-9]+]]
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr nonnull [[P]]) #[[ATTR5]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[P]]) #[[ATTR5]]
 // CHECK-NEXT:    store ptr null, ptr [[P]], align 8, !annotation [[META15]]
 // CHECK-NEXT:    call void @bar(ptr noundef nonnull [[P]], ptr noundef nonnull [[COUNT]]) #[[ATTR5]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P]], align 8, !tbaa [[TBAA8]]
@@ -180,8 +180,8 @@ void caller_9(int *__sized_by(*len) *out, int *len){
 // CHECK-NEXT:    [[SPEC_SELECT:%.*]] = and i1 [[CMP66]], [[CMP63]]
 // CHECK-NEXT:    br i1 [[SPEC_SELECT]], label [[CONT146]], label [[TRAP]], !prof [[PROF13]], !annotation [[META3]]
 // CHECK:       cont146:
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr nonnull [[P]]) #[[ATTR5]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[COUNT]]) #[[ATTR5]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[P]]) #[[ATTR5]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[COUNT]]) #[[ATTR5]]
 // CHECK-NEXT:    ret ptr [[TMP0]]
 //
 int *__sized_by_or_null(len) caller_10(int len) {

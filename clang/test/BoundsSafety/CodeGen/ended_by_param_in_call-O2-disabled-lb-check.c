@@ -12,10 +12,10 @@ void ended_by(const char *__ended_by(end) start, const char *end);
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[LOCAL:%.*]] = alloca [10 x i8], align 1
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 10, ptr nonnull [[LOCAL]]) #[[ATTR4:[0-9]+]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[LOCAL]]) #[[ATTR4:[0-9]+]]
 // CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr inbounds nuw i8, ptr [[LOCAL]], i64 10
 // CHECK-NEXT:    call void @ended_by(ptr noundef nonnull [[LOCAL]], ptr noundef nonnull [[BOUND_PTR_ARITH]]) #[[ATTR4]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 10, ptr nonnull [[LOCAL]]) #[[ATTR4]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[LOCAL]]) #[[ATTR4]]
 // CHECK-NEXT:    ret void
 //
 void pass_const_size_arr_in_bounds(void) {
@@ -27,7 +27,7 @@ void pass_const_size_arr_in_bounds(void) {
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[LOCAL:%.*]] = alloca [10 x i8], align 1
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 10, ptr nonnull [[LOCAL]]) #[[ATTR4]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[LOCAL]]) #[[ATTR4]]
 // CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds nuw i8, ptr [[LOCAL]], i64 10
 // CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr i8, ptr [[LOCAL]], i64 -2
 // CHECK-NEXT:    [[CMP30_NOT:%.*]] = icmp ugt ptr [[BOUND_PTR_ARITH]], [[UPPER]], !annotation {{![0-9]+}}
@@ -37,7 +37,7 @@ void pass_const_size_arr_in_bounds(void) {
 // CHECK-NEXT:    unreachable, !annotation {{![0-9]+}}
 // CHECK:       [[CONT]]:
 // CHECK-NEXT:    call void @ended_by(ptr noundef [[BOUND_PTR_ARITH]], ptr noundef nonnull [[UPPER]]) #[[ATTR4]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 10, ptr nonnull [[LOCAL]]) #[[ATTR4]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[LOCAL]]) #[[ATTR4]]
 // CHECK-NEXT:    ret void
 //
 void pass_const_size_arr_start_oob(void) {
@@ -49,7 +49,7 @@ void pass_const_size_arr_start_oob(void) {
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[LOCAL:%.*]] = alloca [10 x i8], align 1
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 10, ptr nonnull [[LOCAL]]) #[[ATTR4]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[LOCAL]]) #[[ATTR4]]
 // CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds nuw i8, ptr [[LOCAL]], i64 10
 // CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr i8, ptr [[LOCAL]], i64 11
 // CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ugt ptr [[BOUND_PTR_ARITH]], [[UPPER]], !annotation {{![0-9]+}}
@@ -61,7 +61,7 @@ void pass_const_size_arr_start_oob(void) {
 // CHECK-NEXT:    unreachable, !annotation {{![0-9]+}}
 // CHECK:       [[CONT]]:
 // CHECK-NEXT:    call void @ended_by(ptr noundef nonnull [[LOCAL]], ptr noundef [[BOUND_PTR_ARITH]]) #[[ATTR4]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 10, ptr nonnull [[LOCAL]]) #[[ATTR4]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[LOCAL]]) #[[ATTR4]]
 // CHECK-NEXT:    ret void
 //
 void pass_const_size_arr_end_oob(void) {
@@ -73,10 +73,10 @@ void pass_const_size_arr_end_oob(void) {
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[LOCAL:%.*]] = alloca [10 x i8], align 1
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 10, ptr nonnull [[LOCAL]]) #[[ATTR4]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[LOCAL]]) #[[ATTR4]]
 // CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds nuw i8, ptr [[LOCAL]], i64 10
 // CHECK-NEXT:    call void @ended_by(ptr noundef nonnull [[LOCAL]], ptr noundef nonnull [[UPPER]]) #[[ATTR4]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 10, ptr nonnull [[LOCAL]]) #[[ATTR4]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[LOCAL]]) #[[ATTR4]]
 // CHECK-NEXT:    ret void
 //
 void pass_explicit_indexable(void) {
@@ -89,10 +89,10 @@ void pass_explicit_indexable(void) {
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[LOCAL:%.*]] = alloca [10 x i8], align 1
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 10, ptr nonnull [[LOCAL]]) #[[ATTR4]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[LOCAL]]) #[[ATTR4]]
 // CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds nuw i8, ptr [[LOCAL]], i64 10
 // CHECK-NEXT:    call void @ended_by(ptr noundef nonnull [[LOCAL]], ptr noundef nonnull [[UPPER]]) #[[ATTR4]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 10, ptr nonnull [[LOCAL]]) #[[ATTR4]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[LOCAL]]) #[[ATTR4]]
 // CHECK-NEXT:    ret void
 //
 void pass_explict_bidi_indexable(void) {

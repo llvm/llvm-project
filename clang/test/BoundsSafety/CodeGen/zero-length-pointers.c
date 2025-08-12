@@ -180,13 +180,13 @@ void counted_by(int *__counted_by(len) p, size_t len);
 // CHECK-O2-NEXT:  [[ENTRY:.*:]]
 // CHECK-O2-NEXT:    [[ZERO:%.*]] = alloca [0 x i32], align 4
 // CHECK-O2-NEXT:    [[ONE:%.*]] = alloca i32, align 4
-// CHECK-O2-NEXT:    call void @llvm.lifetime.start.p0(i64 0, ptr nonnull [[ZERO]]) #[[ATTR4:[0-9]+]]
-// CHECK-O2-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[ONE]]) #[[ATTR4]]
+// CHECK-O2-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ZERO]]) #[[ATTR4:[0-9]+]]
+// CHECK-O2-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ONE]]) #[[ATTR4]]
 // CHECK-O2-NEXT:    call void @counted_by(ptr noundef nonnull [[ZERO]], i64 noundef 0) #[[ATTR4]]
 // CHECK-O2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[ONE]], i64 4
 // CHECK-O2-NEXT:    call void @counted_by(ptr noundef nonnull [[TMP0]], i64 noundef 0) #[[ATTR4]]
-// CHECK-O2-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[ONE]]) #[[ATTR4]]
-// CHECK-O2-NEXT:    call void @llvm.lifetime.end.p0(i64 0, ptr nonnull [[ZERO]]) #[[ATTR4]]
+// CHECK-O2-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ONE]]) #[[ATTR4]]
+// CHECK-O2-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ZERO]]) #[[ATTR4]]
 // CHECK-O2-NEXT:    ret void
 //
 void test_counted_by(void) {
@@ -443,13 +443,13 @@ void sized_by(void *__sized_by(len) p, size_t len);
 // CHECK-O2-NEXT:  [[ENTRY:.*:]]
 // CHECK-O2-NEXT:    [[ZERO:%.*]] = alloca [0 x i32], align 4
 // CHECK-O2-NEXT:    [[ONE:%.*]] = alloca i32, align 4
-// CHECK-O2-NEXT:    call void @llvm.lifetime.start.p0(i64 0, ptr nonnull [[ZERO]]) #[[ATTR4]]
-// CHECK-O2-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[ONE]]) #[[ATTR4]]
+// CHECK-O2-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ZERO]]) #[[ATTR4]]
+// CHECK-O2-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ONE]]) #[[ATTR4]]
 // CHECK-O2-NEXT:    call void @sized_by(ptr noundef nonnull [[ZERO]], i64 noundef 0) #[[ATTR4]]
 // CHECK-O2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[ONE]], i64 4
 // CHECK-O2-NEXT:    call void @sized_by(ptr noundef nonnull [[TMP0]], i64 noundef 0) #[[ATTR4]]
-// CHECK-O2-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[ONE]]) #[[ATTR4]]
-// CHECK-O2-NEXT:    call void @llvm.lifetime.end.p0(i64 0, ptr nonnull [[ZERO]]) #[[ATTR4]]
+// CHECK-O2-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ONE]]) #[[ATTR4]]
+// CHECK-O2-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ZERO]]) #[[ATTR4]]
 // CHECK-O2-NEXT:    ret void
 //
 void test_sized_by(void) {
@@ -698,13 +698,13 @@ void ended_by(void *__ended_by(end) start, void *end);
 // CHECK-O2-NEXT:  [[ENTRY:.*:]]
 // CHECK-O2-NEXT:    [[ZERO:%.*]] = alloca [0 x i32], align 4
 // CHECK-O2-NEXT:    [[ONE:%.*]] = alloca i32, align 4
-// CHECK-O2-NEXT:    call void @llvm.lifetime.start.p0(i64 0, ptr nonnull [[ZERO]]) #[[ATTR4]]
-// CHECK-O2-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[ONE]]) #[[ATTR4]]
+// CHECK-O2-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ZERO]]) #[[ATTR4]]
+// CHECK-O2-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ONE]]) #[[ATTR4]]
 // CHECK-O2-NEXT:    call void @ended_by(ptr noundef nonnull [[ZERO]], ptr noundef nonnull [[ZERO]]) #[[ATTR4]]
 // CHECK-O2-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr inbounds nuw i8, ptr [[ONE]], i64 4
 // CHECK-O2-NEXT:    call void @ended_by(ptr noundef nonnull [[BOUND_PTR_ARITH]], ptr noundef nonnull [[BOUND_PTR_ARITH]]) #[[ATTR4]]
-// CHECK-O2-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[ONE]]) #[[ATTR4]]
-// CHECK-O2-NEXT:    call void @llvm.lifetime.end.p0(i64 0, ptr nonnull [[ZERO]]) #[[ATTR4]]
+// CHECK-O2-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ONE]]) #[[ATTR4]]
+// CHECK-O2-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ZERO]]) #[[ATTR4]]
 // CHECK-O2-NEXT:    ret void
 //
 void test_ended_by(void) {
@@ -880,13 +880,13 @@ void ended_by_itself(void *__ended_by(end) end);
 // CHECK-O2-NEXT:  [[ENTRY:.*:]]
 // CHECK-O2-NEXT:    [[ZERO:%.*]] = alloca [0 x i32], align 4
 // CHECK-O2-NEXT:    [[ONE:%.*]] = alloca i32, align 4
-// CHECK-O2-NEXT:    call void @llvm.lifetime.start.p0(i64 0, ptr nonnull [[ZERO]]) #[[ATTR4]]
-// CHECK-O2-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[ONE]]) #[[ATTR4]]
+// CHECK-O2-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ZERO]]) #[[ATTR4]]
+// CHECK-O2-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ONE]]) #[[ATTR4]]
 // CHECK-O2-NEXT:    call void @ended_by_itself(ptr noundef nonnull [[ZERO]]) #[[ATTR4]]
 // CHECK-O2-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr inbounds nuw i8, ptr [[ONE]], i64 4
 // CHECK-O2-NEXT:    call void @ended_by_itself(ptr noundef nonnull [[BOUND_PTR_ARITH]]) #[[ATTR4]]
-// CHECK-O2-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[ONE]]) #[[ATTR4]]
-// CHECK-O2-NEXT:    call void @llvm.lifetime.end.p0(i64 0, ptr nonnull [[ZERO]]) #[[ATTR4]]
+// CHECK-O2-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ONE]]) #[[ATTR4]]
+// CHECK-O2-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ZERO]]) #[[ATTR4]]
 // CHECK-O2-NEXT:    ret void
 //
 void test_ended_by_itself(void) {
