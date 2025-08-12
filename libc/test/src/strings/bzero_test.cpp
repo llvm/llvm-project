@@ -14,8 +14,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 // Adapt CheckMemset signature to bzero.
-static inline void Adaptor(cpp::span<char> p1, [[maybe_unused]] uint8_t value,
-                           size_t size) {
+static inline void Adaptor(cpp::span<char> p1, uint8_t value, size_t size) {
   LIBC_NAMESPACE::bzero(p1.begin(), size);
 }
 

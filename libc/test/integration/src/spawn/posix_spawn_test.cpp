@@ -45,8 +45,7 @@ void spawn_and_wait_for_normal_exit(char **envp) {
   ASSERT_EQ(exit_status, 0);
 }
 
-TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
-          char **envp) {
+TEST_MAIN(int argc, char **argv, char **envp) {
   spawn_and_wait_for_normal_exit(envp);
   return 0;
 }

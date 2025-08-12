@@ -17,8 +17,7 @@
 
 using LIBC_NAMESPACE::cpp::string_view;
 
-TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
-          [[maybe_unused]] char **envp) {
+TEST_MAIN(int argc, char **argv, char **envp) {
   char buffer[1024];
   ASSERT_TRUE(string_view(LIBC_NAMESPACE::getenv("PWD")) ==
               LIBC_NAMESPACE::getcwd(buffer, 1024));
