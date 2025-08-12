@@ -290,8 +290,26 @@ def int_amdgcn_s_barrier_signal_isfirst : ClangBuiltin<"__builtin_amdgcn_s_barri
   Intrinsic<[llvm_i1_ty], [llvm_i32_ty], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrConvergent,
                                 IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
+// void @llvm.amdgcn.s.barrier.init(ptr addrspace(3) %barrier, i32 %memberCnt)
+// The %barrier and %memberCnt argument must be uniform, otherwise behavior is undefined.
+def int_amdgcn_s_barrier_init : ClangBuiltin<"__builtin_amdgcn_s_barrier_init">,
+  Intrinsic<[], [local_ptr_ty, llvm_i32_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent,
+                                IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+
+// void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) %barrier)
+// The %barrier argument must be uniform, otherwise behavior is undefined.
+def int_amdgcn_s_barrier_join : ClangBuiltin<"__builtin_amdgcn_s_barrier_join">,
+  Intrinsic<[], [local_ptr_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn,
+                                IntrNoCallback, IntrNoFree]>;
+
 // void @llvm.amdgcn.s.barrier.wait(i16 %barrierType)
 def int_amdgcn_s_barrier_wait : ClangBuiltin<"__builtin_amdgcn_s_barrier_wait">,
+  Intrinsic<[], [llvm_i16_ty], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrConvergent,
+                                IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+
+
+// void @llvm.amdgcn.s.barrier.leave(i16 %barrierType)
+def int_amdgcn_s_barrier_leave : ClangBuiltin<"__builtin_amdgcn_s_barrier_leave">,
   Intrinsic<[], [llvm_i16_ty], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrConvergent,
                                 IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
