@@ -110,7 +110,7 @@ size_t mlir::moveLoopInvariantCode(LoopLikeOpInterface loopLike) {
         return loopLike.isDefinedOutsideOfLoop(value);
       },
       [&](Operation *op, Region *) {
-        return isMemoryEffectFree(op) && isSpeculatable(op);
+        return isMemoryEffectMovable(op) && isSpeculatable(op);
       },
       [&](Operation *op, Region *) { loopLike.moveOutOfLoop(op); });
 }

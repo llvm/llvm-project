@@ -10,6 +10,7 @@
 
 #include "mlir/IR/SymbolTable.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include <unordered_set>
 #include <utility>
 
 using namespace mlir;
@@ -26,7 +27,7 @@ using namespace mlir;
 //===----------------------------------------------------------------------===//
 
 bool MemoryEffects::Effect::classof(const SideEffects::Effect *effect) {
-  return isa<Allocate, Free, Read, Write>(effect);
+  return isa<Allocate, Free, Read, Write, Init>(effect);
 }
 
 //===----------------------------------------------------------------------===//
@@ -131,6 +132,7 @@ template bool mlir::hasSingleEffect<MemoryEffects::Allocate>(Operation *);
 template bool mlir::hasSingleEffect<MemoryEffects::Free>(Operation *);
 template bool mlir::hasSingleEffect<MemoryEffects::Read>(Operation *);
 template bool mlir::hasSingleEffect<MemoryEffects::Write>(Operation *);
+template bool mlir::hasSingleEffect<MemoryEffects::Init>(Operation *);
 
 template <typename EffectTy>
 bool mlir::hasSingleEffect(Operation *op, Value value) {
@@ -160,6 +162,8 @@ template bool mlir::hasSingleEffect<MemoryEffects::Read>(Operation *,
                                                          Value value);
 template bool mlir::hasSingleEffect<MemoryEffects::Write>(Operation *,
                                                           Value value);
+template bool mlir::hasSingleEffect<MemoryEffects::Init>(Operation *,
+                                                         Value value);
 
 template <typename ValueTy, typename EffectTy>
 bool mlir::hasSingleEffect(Operation *op, ValueTy value) {
@@ -194,6 +198,9 @@ template bool
 mlir::hasSingleEffect<OpOperand *, MemoryEffects::Write>(Operation *,
                                                          OpOperand *);
 template bool
+mlir::hasSingleEffect<OpOperand *, MemoryEffects::Init>(Operation *,
+                                                        OpOperand *);
+template bool
 mlir::hasSingleEffect<OpResult, MemoryEffects::Allocate>(Operation *, OpResult);
 template bool mlir::hasSingleEffect<OpResult, MemoryEffects::Free>(Operation *,
                                                                    OpResult);
@@ -201,6 +208,8 @@ template bool mlir::hasSingleEffect<OpResult, MemoryEffects::Read>(Operation *,
                                                                    OpResult);
 template bool mlir::hasSingleEffect<OpResult, MemoryEffects::Write>(Operation *,
                                                                     OpResult);
+template bool mlir::hasSingleEffect<OpResult, MemoryEffects::Init>(Operation *,
+                                                                   OpResult);
 template bool
 mlir::hasSingleEffect<BlockArgument, MemoryEffects::Allocate>(Operation *,
                                                               BlockArgument);
@@ -213,6 +222,9 @@ mlir::hasSingleEffect<BlockArgument, MemoryEffects::Read>(Operation *,
 template bool
 mlir::hasSingleEffect<BlockArgument, MemoryEffects::Write>(Operation *,
                                                            BlockArgument);
+template bool
+mlir::hasSingleEffect<BlockArgument, MemoryEffects::Init>(Operation *,
+                                                          BlockArgument);
 
 template <typename... EffectTys>
 bool mlir::hasEffect(Operation *op) {
@@ -229,6 +241,7 @@ template bool mlir::hasEffect<MemoryEffects::Allocate>(Operation *);
 template bool mlir::hasEffect<MemoryEffects::Free>(Operation *);
 template bool mlir::hasEffect<MemoryEffects::Read>(Operation *);
 template bool mlir::hasEffect<MemoryEffects::Write>(Operation *);
+template bool mlir::hasEffect<MemoryEffects::Init>(Operation *);
 template bool
 mlir::hasEffect<MemoryEffects::Write, MemoryEffects::Free>(Operation *);
 
@@ -250,6 +263,7 @@ template bool mlir::hasEffect<MemoryEffects::Allocate>(Operation *,
 template bool mlir::hasEffect<MemoryEffects::Free>(Operation *, Value value);
 template bool mlir::hasEffect<MemoryEffects::Read>(Operation *, Value value);
 template bool mlir::hasEffect<MemoryEffects::Write>(Operation *, Value value);
+template bool mlir::hasEffect<MemoryEffects::Init>(Operation *, Value value);
 template bool
 mlir::hasEffect<MemoryEffects::Write, MemoryEffects::Free>(Operation *,
                                                            Value value);
@@ -275,6 +289,8 @@ template bool mlir::hasEffect<OpOperand *, MemoryEffects::Read>(Operation *,
                                                                 OpOperand *);
 template bool mlir::hasEffect<OpOperand *, MemoryEffects::Write>(Operation *,
                                                                  OpOperand *);
+template bool mlir::hasEffect<OpOperand *, MemoryEffects::Init>(Operation *,
+                                                                OpOperand *);
 template bool
 mlir::hasEffect<OpOperand *, MemoryEffects::Write, MemoryEffects::Free>(
     Operation *, OpOperand *);
@@ -287,6 +303,8 @@ template bool mlir::hasEffect<OpResult, MemoryEffects::Read>(Operation *,
                                                              OpResult);
 template bool mlir::hasEffect<OpResult, MemoryEffects::Write>(Operation *,
                                                               OpResult);
+template bool mlir::hasEffect<OpResult, MemoryEffects::Init>(Operation *,
+                                                             OpResult);
 template bool
 mlir::hasEffect<OpResult, MemoryEffects::Write, MemoryEffects::Free>(
     Operation *, OpResult);
@@ -302,6 +320,8 @@ template bool
 mlir::hasEffect<BlockArgument, MemoryEffects::Write>(Operation *,
                                                      BlockArgument);
 template bool
+mlir::hasEffect<BlockArgument, MemoryEffects::Init>(Operation *, BlockArgument);
+template bool
 mlir::hasEffect<BlockArgument, MemoryEffects::Write, MemoryEffects::Free>(
     Operation *, BlockArgument);
 
@@ -313,14 +333,20 @@ bool mlir::wouldOpBeTriviallyDead(Operation *op) {
   return wouldOpBeTriviallyDeadImpl(op);
 }
 
+bool mlir::isMemoryEffectMovable(Operation *op) {
+  return (isMemoryEffectFree(op) || isMemoryInitMovable(op));
+}
+
 bool mlir::isMemoryEffectFree(Operation *op) {
   if (auto memInterface = dyn_cast<MemoryEffectOpInterface>(op)) {
-    if (!memInterface.hasNoEffect())
+    if (!memInterface.hasNoEffect()) {
       return false;
+    }
     // If the op does not have recursive side effects, then it is memory effect
     // free.
-    if (!op->hasTrait<OpTrait::HasRecursiveMemoryEffects>())
+    if (!op->hasTrait<OpTrait::HasRecursiveMemoryEffects>()) {
       return true;
+    }
   } else if (!op->hasTrait<OpTrait::HasRecursiveMemoryEffects>()) {
     // Otherwise, if the op does not implement the memory effect interface and
     // it does not have recursive side effects, then it cannot be known that the
@@ -330,11 +356,97 @@ bool mlir::isMemoryEffectFree(Operation *op) {
 
   // Recurse into the regions and ensure that all nested ops are memory effect
   // free.
-  for (Region &region : op->getRegions())
-    for (Operation &op : region.getOps())
-      if (!isMemoryEffectFree(&op))
+  for (Region &region : op->getRegions()) {
+    for (Operation &op : region.getOps()) {
+      if (!isMemoryEffectFree(&op)) {
         return false;
+      }
+    }
+  }
   return true;
+}
+
+bool mlir::isMemoryInitMovable(Operation *op) {
+  if (auto memInterface = dyn_cast<MemoryEffectOpInterface>(op)) {
+    // gather all effects on op
+    llvm::SmallVector<MemoryEffects::EffectInstance> effects;
+    memInterface.getEffects(effects);
+
+    // op has interface but no effects, be conservative
+    if (effects.empty()) {
+      return false;
+    }
+
+    std::unordered_map<std::string, int> resources;
+
+    // ensure op only has Init effects and gather unique
+    // resource names
+    for (const MemoryEffects::EffectInstance &effect : effects) {
+      if (!isa<MemoryEffects::Init>(effect.getEffect())) {
+        return false;
+      }
+
+      std::string name = effect.getResource()->getName().str();
+      resources.try_emplace(name, 0);
+    }
+
+    // op itself is good, need to check rest of its parent region
+    Operation *parent = op->getParentOp();
+
+    for (Region &region : parent->getRegions()) {
+      for (Operation &op_i : region.getOps()) {
+        if (hasMemoryEffectInitConflict(&op_i, resources)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  // op does not implement the memory effect op interface
+  // meaning it doesn't have any memory init effects and
+  // shouldn't be flagged as movable to be conservative
+  return false;
+}
+
+bool mlir::hasMemoryEffectInitConflict(
+    Operation *op, std::unordered_map<std::string, int> &resources) {
+  if (auto memInterface = dyn_cast<MemoryEffectOpInterface>(op)) {
+    if (!memInterface.hasNoEffect()) {
+      llvm::SmallVector<MemoryEffects::EffectInstance> effects;
+      memInterface.getEffects(effects);
+
+      // ensure op only has Init effects and gather unique
+      // resource names
+      for (const MemoryEffects::EffectInstance &effect : effects) {
+        if (!isa<MemoryEffects::Init>(effect.getEffect())) {
+          return true;
+        }
+
+        // only care about resources of the op that called
+        // this recursive function for the first time
+        std::string name = effect.getResource()->getName().str();
+
+        if (resources.find(name) != resources.end()) {
+          if (++resources[name] > 1) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+  }
+
+  // Recurse into the regions and ensure that nested ops don't
+  // conflict with each others MemInits
+  for (Region &region : op->getRegions()) {
+    for (Operation &op : region.getOps()) {
+      if (hasMemoryEffectInitConflict(&op, resources)) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 // the returned vector may contain duplicate effects
