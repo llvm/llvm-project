@@ -21,6 +21,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/Support/DXILABI.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cstdint>
 
 #define DEBUG_TYPE "dxil-post-optimization-validation"
@@ -169,15 +170,16 @@ reportDescriptorTableMixingTypes(Module &M, uint32_t Location,
   M.getContext().diagnose(DiagnosticInfoGeneric(Message));
 }
 
-static void reportOverlowingRange(Module &M, const dxbc::RTS0::v2::DescriptorRange &Range) {
+static void
+reportOverlowingRange(Module &M, const dxbc::RTS0::v2::DescriptorRange &Range) {
   SmallString<128> Message;
   raw_svector_ostream OS(Message);
-  OS << "Cannot append range with implicit lower " 
-      << "bound after an unbounded range "
-      << getResourceClassName(toResourceClass(static_cast<dxbc::DescriptorRangeType>(Range.RangeType)))
-      << "(register=" << Range.BaseShaderRegister << ", space=" << 
-      Range.RegisterSpace
-      << ") exceeds maximum allowed value.";
+  OS << "Cannot append range with implicit lower "
+     << "bound after an unbounded range "
+     << getResourceClassName(toResourceClass(
+            static_cast<dxbc::DescriptorRangeType>(Range.RangeType)))
+     << "(register=" << Range.BaseShaderRegister
+     << ", space=" << Range.RegisterSpace << ") exceeds maximum allowed value.";
   M.getContext().diagnose(DiagnosticInfoGeneric(Message));
 }
 
@@ -262,12 +264,57 @@ getRootDescriptorsBindingInfo(const mcdxbc::RootSignatureDesc &RSD,
   return RDs;
 }
 
+static void reportIfDeniedShaderStageAccess(Module &M, dxbc::RootFlags Flags,
+                                            dxbc::RootFlags Mask) {
+  if ((Flags & Mask) == Mask) {
+    SmallString<128> Message;
+    raw_svector_ostream OS(Message);
+    OS << "Shader has root bindings but root signature uses a DENY flag to "
+          "disallow root binding access to the shader stage.";
+    M.getContext().diagnose(DiagnosticInfoGeneric(Message));
+  }
+}
 
+static void validateRootFlags(Module &M, const mcdxbc::RootSignatureDesc &RSD,
+                              const dxil::ModuleMetadataInfo &MMI) {
+  dxbc::RootFlags Flags = dxbc::RootFlags(RSD.Flags);
+
+  switch (MMI.ShaderProfile) {
+  case Triple::Pixel:
+    reportIfDeniedShaderStageAccess(M, Flags,
+                                    dxbc::RootFlags::DenyPixelShaderRootAccess);
+    break;
+  case Triple::Vertex:
+    reportIfDeniedShaderStageAccess(
+        M, Flags, dxbc::RootFlags::DenyVertexShaderRootAccess);
+    break;
+  case Triple::Geometry:
+    reportIfDeniedShaderStageAccess(
+        M, Flags, dxbc::RootFlags::DenyGeometryShaderRootAccess);
+    break;
+  case Triple::Hull:
+    reportIfDeniedShaderStageAccess(M, Flags,
+                                    dxbc::RootFlags::DenyHullShaderRootAccess);
+    break;
+  case Triple::Domain:
+    reportIfDeniedShaderStageAccess(
+        M, Flags, dxbc::RootFlags::DenyDomainShaderRootAccess);
+    break;
+  case Triple::Mesh:
+    reportIfDeniedShaderStageAccess(M, Flags,
+                                    dxbc::RootFlags::DenyMeshShaderRootAccess);
+    break;
+  case Triple::Amplification:
+    reportIfDeniedShaderStageAccess(
+        M, Flags, dxbc::RootFlags::DenyAmplificationShaderRootAccess);
+    break;
+  default:
+    break;
+  }
+}
 
 static void validateDescriptorTables(Module &M,
-                                     const mcdxbc::RootSignatureDesc &RSD,
-                                     dxil::ModuleMetadataInfo &MMI,
-                                     DXILResourceMap &DRM) {
+                                     const mcdxbc::RootSignatureDesc &RSD) {
   for (const mcdxbc::RootParameterInfo &ParamInfo : RSD.ParametersContainer) {
     if (static_cast<dxbc::RootParameterType>(ParamInfo.Header.ParameterType) !=
         dxbc::RootParameterType::DescriptorTable)
@@ -283,30 +330,31 @@ static void validateDescriptorTables(Module &M,
 
     uint64_t AppendingOffset = 0;
 
-
     for (const dxbc::RTS0::v2::DescriptorRange &Range : Table.Ranges) {
       dxbc::DescriptorRangeType RangeType =
           static_cast<dxbc::DescriptorRangeType>(Range.RangeType);
-      
+
       uint64_t Offset = AppendingOffset;
-      if(Range.OffsetInDescriptorsFromTableStart != ~0U)
+      if (Range.OffsetInDescriptorsFromTableStart != ~0U)
         Offset = Range.OffsetInDescriptorsFromTableStart;
-      
-      if(Offset > ~0U)
+
+      if (Offset > ~0U)
         reportOverlowingRange(M, Range);
-      if(Range.NumDescriptors == ~0U) {
+      if (Range.NumDescriptors == ~0U) {
         AppendingOffset = (uint64_t)~0U + (uint64_t)1ULL;
-      } else { 
-        uint64_t UpperBound = (uint64_t)Range.BaseShaderRegister + (uint64_t)Range.NumDescriptors - (uint64_t)1U;
-        if(UpperBound > ~0U)
+      } else {
+        uint64_t UpperBound = (uint64_t)Range.BaseShaderRegister +
+                              (uint64_t)Range.NumDescriptors - (uint64_t)1U;
+        if (UpperBound > ~0U)
           reportOverlowingRange(M, Range);
 
-        uint64_t AppendingUpperBound = (uint64_t)Offset + (uint64_t)Range.NumDescriptors - (uint64_t)1U;
-        if(AppendingUpperBound > ~0U)
+        uint64_t AppendingUpperBound =
+            (uint64_t)Offset + (uint64_t)Range.NumDescriptors - (uint64_t)1U;
+        if (AppendingUpperBound > ~0U)
           reportOverlowingRange(M, Range);
         AppendingOffset = Offset + Range.NumDescriptors;
       }
-      
+
       if (RangeType == dxbc::DescriptorRangeType::Sampler) {
         HasSampler = true;
       } else {
@@ -441,7 +489,8 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
 
   if (mcdxbc::RootSignatureDesc *RSD = getRootSignature(RSBI, MMI)) {
     validateRootSignatureBindings(M, *RSD, MMI, DRM);
-    validateDescriptorTables(M, *RSD, MMI, DRM);
+    validateDescriptorTables(M, *RSD);
+    validateRootFlags(M, *RSD, MMI);
   }
 }
 
