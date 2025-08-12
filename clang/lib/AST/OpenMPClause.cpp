@@ -1911,6 +1911,8 @@ void OMPClausePrinter::VisitOMPDefaultClause(OMPDefaultClause *Node) {
   OS << "default("
      << getOpenMPSimpleClauseTypeName(OMPC_default,
                                       unsigned(Node->getDefaultKind()))
+     << ":"
+     << getOpenMPDefaultVariableCategoryName(unsigned(Node->getDefaultVC()))
      << ")";
 }
 

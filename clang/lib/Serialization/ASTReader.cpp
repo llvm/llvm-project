@@ -11641,6 +11641,9 @@ void OMPClauseReader::VisitOMPDefaultClause(OMPDefaultClause *C) {
   C->setDefaultKind(static_cast<llvm::omp::DefaultKind>(Record.readInt()));
   C->setLParenLoc(Record.readSourceLocation());
   C->setDefaultKindKwLoc(Record.readSourceLocation());
+  C->setDefaultVariableCategory(
+      static_cast<OpenMPDefaultClauseVariableCategory>(Record.readInt()));
+  C->setDefaultVariableCategoryLocation(Record.readSourceLocation());
 }
 
 void OMPClauseReader::VisitOMPProcBindClause(OMPProcBindClause *C) {

@@ -1804,8 +1804,8 @@ public:
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
   OMPClause *RebuildOMPDefaultClause(DefaultKind Kind, SourceLocation KindKwLoc,
-		                     OpenMPDefaultClauseVariableCategory VCKind,
-				     SourceLocation VCLoc,
+                                     OpenMPDefaultClauseVariableCategory VCKind,
+                                     SourceLocation VCLoc,
                                      SourceLocation StartLoc,
                                      SourceLocation LParenLoc,
                                      SourceLocation EndLoc) {
@@ -10589,9 +10589,9 @@ template <typename Derived>
 OMPClause *
 TreeTransform<Derived>::TransformOMPDefaultClause(OMPDefaultClause *C) {
   return getDerived().RebuildOMPDefaultClause(
-      C->getDefaultKind(), C->getDefaultKindKwLoc(), C->getDefaultVC(), C->getDefaultVCLoc(),
-      C->getBeginLoc(),
-      C->getLParenLoc(), C->getEndLoc());
+      C->getDefaultKind(), C->getDefaultKindKwLoc(), C->getDefaultVC(),
+      C->getDefaultVCLoc(), C->getBeginLoc(), C->getLParenLoc(),
+      C->getEndLoc());
 }
 
 template <typename Derived>

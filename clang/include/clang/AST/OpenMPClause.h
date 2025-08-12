@@ -1286,9 +1286,13 @@ class OMPDefaultClause : public OMPClause {
   void setDefaultKindKwLoc(SourceLocation KLoc) { KindKwLoc = KLoc; }
 
   /// Set Variable Category used with the Kind Clause (Default Modifier)
-  void setDefaultVariableCategory(OpenMPDefaultClauseVariableCategory VC) { this->VC = VC; }
+  void setDefaultVariableCategory(OpenMPDefaultClauseVariableCategory VC) {
+    this->VC = VC;
+  }
 
-  void setDefaultVariableCategoryLocation(SourceLocation VCLoc) { this->VCLoc = VCLoc; }
+  void setDefaultVariableCategoryLocation(SourceLocation VCLoc) {
+    this->VCLoc = VCLoc;
+  }
 
 public:
   /// Build 'default' clause with argument \a A ('none' or 'shared').
@@ -1299,7 +1303,7 @@ public:
   /// \param LParenLoc Location of '('.
   /// \param EndLoc Ending location of the clause.
   OMPDefaultClause(llvm::omp::DefaultKind A, SourceLocation ALoc,
-		   OpenMPDefaultClauseVariableCategory VC, SourceLocation VCLoc,
+                   OpenMPDefaultClauseVariableCategory VC, SourceLocation VCLoc,
                    SourceLocation StartLoc, SourceLocation LParenLoc,
                    SourceLocation EndLoc)
       : OMPClause(llvm::omp::OMPC_default, StartLoc, EndLoc),

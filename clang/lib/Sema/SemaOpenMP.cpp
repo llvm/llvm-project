@@ -16375,7 +16375,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPDefaultClause(
   }
 
   if (VCKind < 0 || VCKind >= OMPC_DEFAULT_VC_unknown) {
-     Diag(VCKindLoc, diag::err_omp_default_vc) << getOpenMPSimpleClauseTypeName(OMPC_default, unsigned(M));
+    Diag(VCKindLoc, diag::err_omp_default_vc)
+        << getOpenMPSimpleClauseTypeName(OMPC_default, unsigned(M));
   }
 
   return new (getASTContext())
@@ -16690,9 +16691,9 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprWithArgClause(
     Res = ActOnOpenMPDefaultClause(
         static_cast<llvm::omp::DefaultKind>(Argument[DefaultModifier]),
         ArgumentLoc[DefaultModifier],
-        static_cast<OpenMPDefaultClauseVariableCategory>(Argument[DefaultVarCategory]),
-        ArgumentLoc[DefaultVarCategory],
-        StartLoc, LParenLoc, EndLoc);
+        static_cast<OpenMPDefaultClauseVariableCategory>(
+            Argument[DefaultVarCategory]),
+        ArgumentLoc[DefaultVarCategory], StartLoc, LParenLoc, EndLoc);
     break;
   case OMPC_defaultmap:
     enum { Modifier, DefaultmapKind };
