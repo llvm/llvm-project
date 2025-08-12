@@ -3550,6 +3550,46 @@ class TypePromotionTransaction {
       LLVM_DEBUG(dbgs() << "Do: MutateType: " << *Inst << " with " << *NewTy
                         << "\n");
       Inst->mutateType(NewTy);
+      // Handle debug Info
+      mutateDgbInfo(Inst, NewTy);
+    }
+
+    void mutateDgbInfo(Instruction *I, Type *Ty) {
+      SmallVector<DbgVariableRecord *> Dbgs;
+      findDbgUsers(I, Dbgs);
+      for (DbgVariableRecord *Dbg : Dbgs) {
+        uint32_t Idx = 0;
+        if (Dbg->hasArgList()) {
+          for (auto *VMD : Dbg->location_ops()) {
+            if (VMD == I) {
+              break;
+            }
+            Idx++;
+          }
+        }
+        if (DIExpression *Expr = Dbg->getExpression()) {
+          if (auto Elems = Expr->getNewElementsRef()) {
+            DIExprBuilder Builder(Expr->getContext());
+            int i = 0;
+            int ArgI = 0;
+            for (DIOp::Variant Op : *Elems) {
+              DIOp::Arg *AsArg = std::get_if<DIOp::Arg>(&Op);
+              DIOp::Convert *CvtArg = std::get_if<DIOp::Convert>(&Op);
+              if (AsArg && AsArg->getIndex() == Idx) {
+                ArgI = i;
+                Builder.append<DIOp::Arg>(AsArg->getIndex(), Ty);
+                if (Ty != OrigTy)
+                  Builder.append<DIOp::Convert>(OrigTy);
+              } else if (!(CvtArg && i == ArgI + 1 &&
+                           CvtArg->getResultType() == Ty)) {
+                Builder.append(Op);
+              }
+              i++;
+            }
+            Dbg->setExpression(Builder.intoExpression());
+          }
+        }
+      }
     }
 
     /// Mutate the instruction back to its original type.
@@ -3557,6 +3597,8 @@ class TypePromotionTransaction {
       LLVM_DEBUG(dbgs() << "Undo: MutateType: " << *Inst << " with " << *OrigTy
                         << "\n");
       Inst->mutateType(OrigTy);
+      // Handle debug Info
+      mutateDgbInfo(Inst, OrigTy);
     }
   };
 
