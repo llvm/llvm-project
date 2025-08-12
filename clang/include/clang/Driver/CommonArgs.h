@@ -218,7 +218,8 @@ void addOpenMPDeviceRTL(const Driver &D, const llvm::opt::ArgList &DriverArgs,
                         const ToolChain &HostTC);
 
 void addOpenCLBuiltinsLib(const Driver &D, const llvm::opt::ArgList &DriverArgs,
-                          llvm::opt::ArgStringList &CC1Args);
+                          llvm::opt::ArgStringList &CC1Args,
+                          const StringRef InferredLibclcLibName = "");
 
 void addOutlineAtomicsArgs(const Driver &D, const ToolChain &TC,
                            const llvm::opt::ArgList &Args,
