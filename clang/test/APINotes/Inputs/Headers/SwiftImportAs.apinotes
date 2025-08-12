@@ -39,3 +39,7 @@ Functions:
     SwiftReturnOwnership: unretained
   - Name: functionReturningFrt_returns_retained
     SwiftReturnOwnership: retained
+Typedefs:
+  - Name: WrappedOptions
+    SwiftWrapper: struct
+    SwiftConformsTo: Swift.OptionSet
