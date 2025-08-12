@@ -1164,6 +1164,43 @@ SDValue SelectionDAGBuilder::getMemoryRoot() {
   return updateRoot(PendingLoads);
 }
 
+SDValue SelectionDAGBuilder::getFPOperationRoot(fp::ExceptionBehavior EB) {
+  // If the new exception behavior differs from that of the pending
+  // ones, chain up them and update the root.
+  switch (EB) {
+  case fp::ExceptionBehavior::ebMayTrap:
+  case fp::ExceptionBehavior::ebIgnore:
+    // Floating-point exceptions produced by such operations are not intended
+    // to be observed, so the sequence of these operations does not need to be
+    // preserved.
+    //
+    // They however must not be mixed with the instructions that have strict
+    // exception behavior. Placing an operation with 'ebIgnore' behavior between
+    // 'ebStrict' operations could distort the observed exception behavior.
+    if (!PendingConstrainedFPStrict.empty()) {
+      assert(PendingConstrainedFP.empty());
+      updateRoot(PendingConstrainedFPStrict);
+    }
+    break;
+  case fp::ExceptionBehavior::ebStrict:
+    // Floating-point exception produced by these operations may be observed, so
+    // they must be correctly chained. If trapping on FP exceptions is
+    // disabled, the exceptions can be observed only by functions that read
+    // exception flags, like 'llvm.get_fpenv' or 'fetestexcept'. It means that
+    // the order of operations is not significant between barriers.
+    //
+    // If trapping is enabled, each operation becomes an implicit observation
+    // point, so the operations must be sequenced according their original
+    // source order.
+    if (!PendingConstrainedFP.empty()) {
+      assert(PendingConstrainedFPStrict.empty());
+      updateRoot(PendingConstrainedFP);
+    }
+    // TODO: Add support for trapping-enabled scenarios.
+  }
+  return DAG.getRoot();
+}
+
 SDValue SelectionDAGBuilder::getRoot() {
   // Chain up all pending constrained intrinsics together with all
   // pending loads, by simply appending them to PendingLoads and
@@ -8296,35 +8333,11 @@ void SelectionDAGBuilder::pushFPOpOutChain(SDValue Result,
   switch (EB) {
   case fp::ExceptionBehavior::ebMayTrap:
   case fp::ExceptionBehavior::ebIgnore:
-    // Floating-point exceptions produced by such operations are not intended
-    // to be observed, so the sequence of these operations does not need to be
-    // preserved.
-    //
-    // They however must not be mixed with the instructions that have strict
-    // exception behavior. Placing an operation with 'ebIgnore' behavior between
-    // 'ebStrict' operations could distort the observed exception behavior.
-    if (!PendingConstrainedFPStrict.empty()) {
-      assert(PendingConstrainedFP.empty());
-      updateRoot(PendingConstrainedFPStrict);
-    }
     PendingConstrainedFP.push_back(OutChain);
     break;
   case fp::ExceptionBehavior::ebStrict:
-    // Floating-point exception produced by these operations may be observed, so
-    // they must be correctly chained. If trapping on FP exceptions is
-    // disabled, the exceptions can be observed only by functions that read
-    // exception flags, like 'llvm.get_fpenv' or 'fetestexcept'. It means that
-    // the order of operations is not significant between barriers.
-    //
-    // If trapping is enabled, each operation becomes an implicit observation
-    // point, so the operations must be sequenced according their original
-    // source order.
-    if (!PendingConstrainedFP.empty()) {
-      assert(PendingConstrainedFPStrict.empty());
-      updateRoot(PendingConstrainedFP);
-    }
     PendingConstrainedFPStrict.push_back(OutChain);
-    // TODO: Add support for trapping-enabled scenarios.
+    break;
   }
 }
 
@@ -8335,7 +8348,8 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
   // We do not need to serialize constrained FP intrinsics against
   // each other or against (nonvolatile) loads, so they can be
   // chained like loads.
-  SDValue Chain = DAG.getRoot();
+  fp::ExceptionBehavior EB = *FPI.getExceptionBehavior();
+  SDValue Chain = getFPOperationRoot(EB);
   SmallVector<SDValue, 4> Opers;
   Opers.push_back(Chain);
   for (unsigned I = 0, E = FPI.getNonMetadataArgCount(); I != E; ++I)
@@ -8344,7 +8358,6 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   EVT VT = TLI.getValueType(DAG.getDataLayout(), FPI.getType());
   SDVTList VTs = DAG.getVTList(VT, MVT::Other);
-  fp::ExceptionBehavior EB = *FPI.getExceptionBehavior();
 
   SDNodeFlags Flags;
   if (EB == fp::ExceptionBehavior::ebIgnore)

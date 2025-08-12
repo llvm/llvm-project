@@ -305,6 +305,13 @@ public:
   /// memory node that may need to be ordered after any prior load instructions.
   SDValue getMemoryRoot();
 
+  /// Return the current virtual root of the Selection DAG, flushing
+  /// PendingConstrainedFP or PendingConstrainedFPStrict items if the new
+  /// exception behavior (specified by \p EB) differs from that of the pending
+  /// instructions. This must be done before emitting constrained FP operation
+  /// call.
+  SDValue getFPOperationRoot(fp::ExceptionBehavior EB);
+
   /// Similar to getMemoryRoot, but also flushes PendingConstrainedFP(Strict)
   /// items. This must be done before emitting any call other any other node
   /// that may need to be ordered after FP instructions due to other side

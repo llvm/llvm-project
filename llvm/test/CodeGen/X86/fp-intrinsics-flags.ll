@@ -100,43 +100,6 @@ entry:
   ret i32 %result
 }
 
-; These 2 divs only differ in their exception behavior and will be CSEd. Make
-; sure the nofpexcept flag is not set on the combined node.
-define void @binop_cse(double %a, double %b, ptr %x, ptr %y) #0 {
-entry:
-; CHECK-LABEL: name: binop_cse
-; CHECK: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.0)
-; CHECK: [[MOV32rm1:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.1, align 16)
-; CHECK: [[MOVSDrm_alt:%[0-9]+]]:fr64 = MOVSDrm_alt %fixed-stack.3, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.3, align 16)
-; CHECK: %3:fr64 = DIVSDrm [[MOVSDrm_alt]], %fixed-stack.2, 1, $noreg, 0, $noreg, implicit $mxcsr :: (load (s64) from %fixed-stack.2)
-; CHECK: MOVSDmr killed [[MOV32rm1]], 1, $noreg, 0, $noreg, %3 :: (store (s64) into %ir.x, align 4)
-; CHECK: MOVSDmr killed [[MOV32rm]], 1, $noreg, 0, $noreg, %3 :: (store (s64) into %ir.y, align 4)
-; CHECK: RET 0
-  %div = call double @llvm.experimental.constrained.fdiv.f64(double %a, double %b, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
-  %div2 = call double @llvm.experimental.constrained.fdiv.f64(double %a, double %b, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
-  store double %div, ptr %x
-  store double %div2, ptr %y
-  ret void
-}
-
-; These 2 sitofps only differ in their exception behavior and will be CSEd. Make
-; sure the nofpexcept flag is not set on the combined node.
-define void @sitofp_cse(i32 %a, ptr %x, ptr %y) #0 {
-entry:
-; CHECK-LABEL: name: sitofp_cse
-; CHECK: [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.0, align 8)
-; CHECK: [[MOV32rm1:%[0-9]+]]:gr32 = MOV32rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.1)
-; CHECK: %2:fr64 = CVTSI2SDrm %fixed-stack.2, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.2, align 16)
-; CHECK: MOVSDmr killed [[MOV32rm1]], 1, $noreg, 0, $noreg, %2 :: (store (s64) into %ir.x, align 4)
-; CHECK: MOVSDmr killed [[MOV32rm]], 1, $noreg, 0, $noreg, %2 :: (store (s64) into %ir.y, align 4)
-; CHECK: RET 0
-  %result = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
-  %result2 = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
-  store double %result, ptr %x
-  store double %result2, ptr %y
-  ret void
-}
-
 attributes #0 = { strictfp }
 
 declare double @llvm.experimental.constrained.sitofp.f64.i8(i8, metadata, metadata)
