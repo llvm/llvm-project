@@ -56,6 +56,11 @@ let Command = "settings clear" in {
     Desc<"Clear all settings.">;
 }
 
+let Command = "settings show" in {
+  def setshow_verbose : Option<"verbose", "v">,
+    Desc<"Enable verbose output.">;
+}
+
 let Command = "breakpoint list" in {
   // FIXME: We need to add an "internal" command, and then add this sort of
   // thing to it. But I need to see it for now, and don't want to wait.
