@@ -1431,6 +1431,14 @@ def FeatureDisable : SubtargetFeature<"",
   "Dummy feature to disable assembler instructions"
 >;
 
+// GFX-9 & higher targets have a 16-dword Instruction Buffer and per-SQ
+// instruction store which can supply 4 dwords to each of the 2 waves per
+// cycle. Change default alignment to 4 dwords or 16 bytes.
+def FeaturePrefLoopAlign32B : SubtargetFeature<"loop-align",
+  "PrefLoopAlignmentLog2",
+  "5",
+  "Prefer 32-byte alignment for loops">;
+
 //===----------------------------------------------------------------------===//
 
 class GCNSubtargetFeatureGeneration <string Value,
@@ -1495,7 +1503,8 @@ def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
    FeatureA16, FeatureSMemTimeInst, FeatureFastDenormalF32, FeatureSupportsXNACK,
    FeatureUnalignedBufferAccess, FeatureUnalignedScratchAccess,
    FeatureUnalignedDSAccess, FeatureNegativeScratchOffsetBug, FeatureGWS,
-   FeatureDefaultComponentZero,FeatureVmemWriteVgprInOrder, FeatureMemToLDSLoad
+   FeatureDefaultComponentZero,FeatureVmemWriteVgprInOrder, FeatureMemToLDSLoad,
+   FeaturePrefLoopAlign32B
   ]
 >;
 
@@ -1519,7 +1528,7 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureDefaultComponentZero, FeatureMaxHardClauseLength63,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF64GlobalInsts,
    FeatureAtomicFMinFMaxF32FlatInsts, FeatureAtomicFMinFMaxF64FlatInsts,
-   FeatureVmemWriteVgprInOrder, FeatureMemToLDSLoad
+   FeatureVmemWriteVgprInOrder, FeatureMemToLDSLoad, FeaturePrefLoopAlign32B
   ]
 >;
 
@@ -1542,7 +1551,7 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
    FeatureUnalignedDSAccess, FeatureGDS, FeatureGWS,
    FeatureDefaultComponentZero, FeatureMaxHardClauseLength32,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
-   FeatureVmemWriteVgprInOrder
+   FeatureVmemWriteVgprInOrder, FeaturePrefLoopAlign32B
   ]
 >;
 
@@ -1566,7 +1575,8 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureDefaultComponentBroadcast, FeatureMaxHardClauseLength32,
    FeatureAtomicFMinFMaxF32GlobalInsts, FeatureAtomicFMinFMaxF32FlatInsts,
    FeatureIEEEMinimumMaximumInsts, FeatureMinimum3Maximum3F32,
-   FeatureMinimum3Maximum3F16, FeatureAgentScopeFineGrainedRemoteMemoryAtomics
+   FeatureMinimum3Maximum3F16, FeatureAgentScopeFineGrainedRemoteMemoryAtomics,
+   FeaturePrefLoopAlign32B
   ]
 >;
 

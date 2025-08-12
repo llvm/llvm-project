@@ -80,6 +80,7 @@ protected:
   unsigned LocalMemorySize = 0;
   unsigned AddressableLocalMemorySize = 0;
   char WavefrontSizeLog2 = 0;
+  unsigned PrefLoopAlignmentLog2 = 0;
 
 public:
   AMDGPUSubtarget(Triple TT);
@@ -376,6 +377,8 @@ public:
   unsigned getImplicitArgNumBytes(const Function &F) const;
   uint64_t getExplicitKernArgSize(const Function &F, Align &MaxAlign) const;
   unsigned getKernArgSegmentSize(const Function &F, Align &MaxAlign) const;
+
+  unsigned getPrefLoopAlignment() const { return PrefLoopAlignmentLog2; }
 
   /// \returns Corresponding DWARF register number mapping flavour for the
   /// \p WavefrontSize.

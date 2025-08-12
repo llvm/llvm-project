@@ -172,6 +172,7 @@ define amdgpu_kernel void @f2(i32 %arg, i32 %arg1, i32 %arg2, i1 %arg3, i32 %arg
 ; GFX11-NEXT:    s_cbranch_vccz .LBB2_12
 ; GFX11-NEXT:  ; %bb.9:
 ; GFX11-NEXT:    s_xor_b32 s0, s8, -1
+; GFX11-NEXT:    .p2align 5
 ; GFX11-NEXT:  .LBB2_10: ; %bb17
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)

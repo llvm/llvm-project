@@ -14,6 +14,7 @@ define amdgpu_kernel void @test_insert_extract(i32 %p, i32 %q) {
 ; GFX90A-NEXT:    s_mov_b32 s4, 0
 ; GFX90A-NEXT:    s_mov_b32 s5, 0
 ; GFX90A-NEXT:    s_mov_b32 s6, 0
+; GFX90A-NEXT:    .p2align 4
 ; GFX90A-NEXT:  .LBB0_1: ; %for.body
 ; GFX90A-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
@@ -62,6 +63,7 @@ define amdgpu_kernel void @test_insert_extract(i32 %p, i32 %q) {
 ; GFX942-NEXT:    s_mov_b32 s4, 0
 ; GFX942-NEXT:    s_mov_b32 s5, 0
 ; GFX942-NEXT:    s_mov_b32 s6, 0
+; GFX942-NEXT:    .p2align 4
 ; GFX942-NEXT:  .LBB0_1: ; %for.body
 ; GFX942-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)

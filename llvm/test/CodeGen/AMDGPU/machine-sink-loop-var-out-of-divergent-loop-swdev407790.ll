@@ -72,6 +72,7 @@ define void @machinesink_loop_variable_out_of_divergent_loop(i32 %arg, i1 %cmp49
 ; CHECK-NEXT:    s_inst_prefetch 0x2
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; CHECK-NEXT:    s_mov_b32 vcc_lo, exec_lo
+; CHECK-NEXT:    .p2align 5
 ; CHECK-NEXT:  .LBB0_9: ; %for.body159
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB0_9
