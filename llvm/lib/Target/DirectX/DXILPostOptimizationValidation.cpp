@@ -237,20 +237,18 @@ static void validateRootSignature(Module &M,
         reportOverlappingRegisters(M, ReportedBinding, Overlaping);
       });
   // Next checks require that the root signature definition is valid.
-  if (!HasOverlap) {
-    for (const auto &ResList :
-         {std::make_pair(ResourceClass::SRV, DRM.srvs()),
-          std::make_pair(ResourceClass::UAV, DRM.uavs()),
-          std::make_pair(ResourceClass::CBuffer, DRM.cbuffers()),
-          std::make_pair(ResourceClass::Sampler, DRM.samplers())}) {
-      for (auto Res : ResList.second) {
-        llvm::dxil::ResourceInfo::ResourceBinding ResBinding = Res.getBinding();
-        llvm::hlsl::BindingInfo::BindingRange ResRange(
-            ResBinding.LowerBound, ResBinding.LowerBound + ResBinding.Size);
+  for (const auto &ResList :
+       {std::make_pair(ResourceClass::SRV, DRM.srvs()),
+        std::make_pair(ResourceClass::UAV, DRM.uavs()),
+        std::make_pair(ResourceClass::CBuffer, DRM.cbuffers()),
+        std::make_pair(ResourceClass::Sampler, DRM.samplers())}) {
+    for (auto Res : ResList.second) {
+      llvm::dxil::ResourceInfo::ResourceBinding ResBinding = Res.getBinding();
+      llvm::hlsl::BindingInfo::BindingRange ResRange(
+          ResBinding.LowerBound, ResBinding.LowerBound + ResBinding.Size);
 
-        if (!Info.isBound(ResList.first, ResBinding.Space, ResRange))
-          reportRegNotBound(M, ResList.first, ResBinding);
-      }
+      if (!Info.isBound(ResList.first, ResBinding.Space, ResRange))
+        reportRegNotBound(M, ResList.first, ResBinding);
     }
   }
 }
