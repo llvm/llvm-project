@@ -280,7 +280,7 @@ mlir::LogicalResult CIRGenFunction::emitLabelStmt(const clang::LabelStmt &s) {
   if (emitLabel(*s.getDecl()).failed())
     return mlir::failure();
 
-if (getContext().getLangOpts().EHAsynch && s.isSideEntry())
+  if (getContext().getLangOpts().EHAsynch && s.isSideEntry())
     getCIRGenModule().errorNYI(s.getSourceRange(), "IsEHa: not implemented.");
 
   return emitStmt(s.getSubStmt(), /*useCurrentScope*/ true);
