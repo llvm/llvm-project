@@ -78,6 +78,7 @@ __m128i test_mm_adds_epu8(__m128i A, __m128i B) {
   // CHECK: call <16 x i8> @llvm.uadd.sat.v16i8(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   return _mm_adds_epu8(A, B);
 }
+TEST_CONSTEXPR(match_v16qu(_mm_adds_epu8((__m128i)(__v16qu){0, 0, 0, 0, +127, +127, +127, +127, +128, +128, +128, +128, +255, +255, +255, +255}, (__m128i)(__v16qu){0, +127, +128, +255, 0, +127, +128, +255, 0, +127, +128, +255, 0, +127, +128, +255}), 0, +127, +128, +255, +127, +254, +255, +255, +128, +255, +255, +255, +255, +255, +255, +255));
 
 __m128i test_mm_adds_epu16(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_adds_epu16
@@ -85,6 +86,7 @@ __m128i test_mm_adds_epu16(__m128i A, __m128i B) {
   // CHECK: call <8 x i16> @llvm.uadd.sat.v8i16(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   return _mm_adds_epu16(A, B);
 }
+TEST_CONSTEXPR(match_v8hu(_mm_adds_epu16((__m128i)(__v8hu){0, 0, 0, +32767, +32767, +32767, +65535, +65535}, (__m128i)(__v8hu){0, +32767, +65535, 0, +32767, +65535, 0, +32767}), 0, +32767, +65535, +32767, +65534, +65535, +65535, +65535));
 
 __m128d test_mm_and_pd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_and_pd
@@ -1712,6 +1714,7 @@ __m128i test_mm_subs_epu8(__m128i A, __m128i B) {
   // CHECK: call <16 x i8> @llvm.usub.sat.v16i8(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   return _mm_subs_epu8(A, B);
 }
+TEST_CONSTEXPR(match_v16qu(_mm_subs_epu8((__m128i)(__v16qu){0, 0, 0, 0, +127, +127, +127, +127, +128, +128, +128, +128, +255, +255, +255, +255}, (__m128i)(__v16qu){0, +127, +128, +255, 0, +127, +128, +255, 0, +127, +128, +255, 0, +127, +128, +255}), 0, 0, 0, 0, +127, 0, 0, 0, +128, +1, 0, 0, +255, +128, +127, 0));
 
 __m128i test_mm_subs_epu16(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_subs_epu16
@@ -1719,6 +1722,7 @@ __m128i test_mm_subs_epu16(__m128i A, __m128i B) {
   // CHECK: call <8 x i16> @llvm.usub.sat.v8i16(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   return _mm_subs_epu16(A, B);
 }
+TEST_CONSTEXPR(match_v8hu(_mm_subs_epu16((__m128i)(__v8hu){0, 0, 0, +32767, +32767, +32767, +65535, +65535}, (__m128i)(__v8hu){0, +32767, +65535, 0, +32767, +65535, 0, +32767}), 0, 0, 0, +32767, 0, 0, +65535, +32768));
 
 int test_mm_ucomieq_sd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_ucomieq_sd

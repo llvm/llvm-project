@@ -402,9 +402,8 @@ _mm256_adds_epi16(__m256i __a, __m256i __b) {
 /// \param __b
 ///    A 256-bit integer vector containing one of the source operands.
 /// \returns A 256-bit integer vector containing the sums.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_adds_epu8(__m256i __a, __m256i __b)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_adds_epu8(__m256i __a, __m256i __b) {
   return (__m256i)__builtin_elementwise_add_sat((__v32qu)__a, (__v32qu)__b);
 }
 
@@ -420,9 +419,8 @@ _mm256_adds_epu8(__m256i __a, __m256i __b)
 /// \param __b
 ///    A 256-bit vector of [16 x i16] containing one of the source operands.
 /// \returns A 256-bit vector of [16 x i16] containing the sums.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_adds_epu16(__m256i __a, __m256i __b)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_adds_epu16(__m256i __a, __m256i __b) {
   return (__m256i)__builtin_elementwise_add_sat((__v16hu)__a, (__v16hu)__b);
 }
 
@@ -2656,9 +2654,8 @@ _mm256_subs_epi16(__m256i __a, __m256i __b) {
 /// \param __b
 ///    A 256-bit integer vector containing the subtrahends.
 /// \returns A 256-bit integer vector containing the differences.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_subs_epu8(__m256i __a, __m256i __b)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_subs_epu8(__m256i __a, __m256i __b) {
   return (__m256i)__builtin_elementwise_sub_sat((__v32qu)__a, (__v32qu)__b);
 }
 
@@ -2682,9 +2679,8 @@ _mm256_subs_epu8(__m256i __a, __m256i __b)
 /// \param __b
 ///    A 256-bit vector of [16 x i16] containing the subtrahends.
 /// \returns A 256-bit vector of [16 x i16] containing the differences.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_subs_epu16(__m256i __a, __m256i __b)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_subs_epu16(__m256i __a, __m256i __b) {
   return (__m256i)__builtin_elementwise_sub_sat((__v16hu)__a, (__v16hu)__b);
 }
 

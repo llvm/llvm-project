@@ -493,10 +493,9 @@ _mm_adds_pi16(__m64 __m1, __m64 __m2) {
 ///    A 64-bit integer vector of [8 x i8].
 /// \returns A 64-bit integer vector of [8 x i8] containing the saturated
 ///    unsigned sums of both parameters.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_adds_pu8(__m64 __m1, __m64 __m2)
-{
-    return (__m64)__builtin_elementwise_add_sat((__v8qu)__m1, (__v8qu)__m2);
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_adds_pu8(__m64 __m1, __m64 __m2) {
+  return (__m64)__builtin_elementwise_add_sat((__v8qu)__m1, (__v8qu)__m2);
 }
 
 /// Adds, with saturation, each 16-bit unsigned integer element of the first
@@ -516,10 +515,9 @@ _mm_adds_pu8(__m64 __m1, __m64 __m2)
 ///    A 64-bit integer vector of [4 x i16].
 /// \returns A 64-bit integer vector of [4 x i16] containing the saturated
 ///    unsigned sums of both parameters.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_adds_pu16(__m64 __m1, __m64 __m2)
-{
-    return (__m64)__builtin_elementwise_add_sat((__v4hu)__m1, (__v4hu)__m2);
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_adds_pu16(__m64 __m1, __m64 __m2) {
+  return (__m64)__builtin_elementwise_add_sat((__v4hu)__m1, (__v4hu)__m2);
 }
 
 /// Subtracts each 8-bit integer element of the second 64-bit integer
@@ -649,10 +647,9 @@ _mm_subs_pi16(__m64 __m1, __m64 __m2) {
 ///    A 64-bit integer vector of [8 x i8] containing the subtrahends.
 /// \returns A 64-bit integer vector of [8 x i8] containing the saturated
 ///    differences of both parameters.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_subs_pu8(__m64 __m1, __m64 __m2)
-{
-    return (__m64)__builtin_elementwise_sub_sat((__v8qu)__m1, (__v8qu)__m2);
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_subs_pu8(__m64 __m1, __m64 __m2) {
+  return (__m64)__builtin_elementwise_sub_sat((__v8qu)__m1, (__v8qu)__m2);
 }
 
 /// Subtracts each 16-bit unsigned integer element of the second 64-bit
@@ -673,10 +670,9 @@ _mm_subs_pu8(__m64 __m1, __m64 __m2)
 ///    A 64-bit integer vector of [4 x i16] containing the subtrahends.
 /// \returns A 64-bit integer vector of [4 x i16] containing the saturated
 ///    differences of both parameters.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
-_mm_subs_pu16(__m64 __m1, __m64 __m2)
-{
-    return (__m64)__builtin_elementwise_sub_sat((__v4hu)__m1, (__v4hu)__m2);
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
+_mm_subs_pu16(__m64 __m1, __m64 __m2) {
+  return (__m64)__builtin_elementwise_sub_sat((__v4hu)__m1, (__v4hu)__m2);
 }
 
 /// Multiplies each 16-bit signed integer element of the first 64-bit
