@@ -16,8 +16,7 @@ define float @debug_stash_pointer(ptr addrspace(8) %buf, i32 %idx, ptr addrspace
 ; CHECK-NEXT:    [[BUF_PTR_INT_RSRC:%.*]] = ptrtoint ptr addrspace(8) [[BUF]] to i160, !dbg [[DBG24:![0-9]+]]
 ; CHECK-NEXT:    [[BUF_PTR_INT:%.*]] = shl nuw i160 [[BUF_PTR_INT_RSRC]], 32, !dbg [[DBG24]]
 ; CHECK-NEXT:    store i160 [[BUF_PTR_INT]], ptr addrspace(5) [[BUF_PTR_VAR]], align 32, !dbg [[DBG24]], !DIAssignID [[DIASSIGNID25:![0-9]+]]
-; CHECK-NEXT:      #dbg_assign(i32 0, [[META13]], !DIExpression(DW_OP_LLVM_fragment, 128, 32), [[DIASSIGNID25]], ptr addrspace(5) [[BUF_PTR_VAR]], !DIExpression(), [[DBG21]])
-; CHECK-NEXT:      #dbg_assign(ptr addrspace(8) [[BUF]], [[META13]], !DIExpression(DW_OP_LLVM_fragment, 0, 128), [[DIASSIGNID25]], ptr addrspace(5) [[BUF_PTR_VAR]], !DIExpression(), [[DBG21]])
+; CHECK-NEXT:      #dbg_assign(i160 [[BUF_PTR_INT]], [[META13]], !DIExpression(), [[DIASSIGNID25]], ptr addrspace(5) [[BUF_PTR_VAR]], !DIExpression(), [[DBG21]])
 ; CHECK-NEXT:      #dbg_value(i32 0, [[META15:![0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 128, 32), [[META26:![0-9]+]])
 ; CHECK-NEXT:      #dbg_value(ptr addrspace(8) [[AUX]], [[META15]], !DIExpression(DW_OP_LLVM_fragment, 0, 128), [[META26]])
 ; CHECK-NEXT:    [[AUX_PTR_INT_RSRC:%.*]] = ptrtoint ptr addrspace(8) [[AUX]] to i160, !dbg [[DBG27:![0-9]+]]
