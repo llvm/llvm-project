@@ -214,7 +214,7 @@ static void validateRootSignature(Module &M,
                          S.ShaderRegister, S.ShaderRegister,
                          &IDs.emplace_back());
 
-  hlsl::BindingInfo Info = Builder.calculateBindingInfo(
+  Builder.calculateBindingInfo(
       [&M](const llvm::hlsl::BindingInfoBuilder &Builder,
            const llvm::hlsl::BindingInfoBuilder::Binding &ReportedBinding) {
         const llvm::hlsl::BindingInfoBuilder::Binding &Overlaping =
