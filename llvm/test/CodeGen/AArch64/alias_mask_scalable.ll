@@ -588,64 +588,17 @@ entry:
   ret <vscale x 64 x i1> %0
 }
 
-define <vscale x 16 x i1> @whilewr_16_expand(ptr %a, ptr %b) {
-; CHECK-SVE2-LABEL: whilewr_16_expand:
+define <vscale x 16 x i1> @whilewr_16_split(ptr %a, ptr %b) {
+; CHECK-SVE2-LABEL: whilewr_16_split:
 ; CHECK-SVE2:       // %bb.0: // %entry
-; CHECK-SVE2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-SVE2-NEXT:    addvl sp, sp, #-1
-; CHECK-SVE2-NEXT:    str p7, [sp, #4, mul vl] // 2-byte Folded Spill
-; CHECK-SVE2-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
-; CHECK-SVE2-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
-; CHECK-SVE2-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-SVE2-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-SVE2-NEXT:    .cfi_offset w29, -16
-; CHECK-SVE2-NEXT:    index z0.d, #0, #1
-; CHECK-SVE2-NEXT:    sub x8, x1, x0
-; CHECK-SVE2-NEXT:    ptrue p0.d
-; CHECK-SVE2-NEXT:    add x8, x8, x8, lsr #63
-; CHECK-SVE2-NEXT:    asr x8, x8, #1
-; CHECK-SVE2-NEXT:    mov z1.d, z0.d
-; CHECK-SVE2-NEXT:    mov z4.d, z0.d
-; CHECK-SVE2-NEXT:    mov z5.d, z0.d
-; CHECK-SVE2-NEXT:    mov z2.d, x8
-; CHECK-SVE2-NEXT:    incd z1.d
-; CHECK-SVE2-NEXT:    incd z4.d, all, mul #2
-; CHECK-SVE2-NEXT:    incd z5.d, all, mul #4
-; CHECK-SVE2-NEXT:    cmphi p2.d, p0/z, z2.d, z0.d
-; CHECK-SVE2-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-NEXT:    cmphi p1.d, p0/z, z2.d, z1.d
-; CHECK-SVE2-NEXT:    incd z1.d, all, mul #4
-; CHECK-SVE2-NEXT:    cmphi p3.d, p0/z, z2.d, z4.d
-; CHECK-SVE2-NEXT:    incd z4.d, all, mul #4
-; CHECK-SVE2-NEXT:    cmphi p4.d, p0/z, z2.d, z5.d
-; CHECK-SVE2-NEXT:    incd z3.d, all, mul #2
-; CHECK-SVE2-NEXT:    cmphi p5.d, p0/z, z2.d, z1.d
-; CHECK-SVE2-NEXT:    cmphi p7.d, p0/z, z2.d, z4.d
-; CHECK-SVE2-NEXT:    uzp1 p1.s, p2.s, p1.s
-; CHECK-SVE2-NEXT:    mov z0.d, z3.d
-; CHECK-SVE2-NEXT:    cmphi p6.d, p0/z, z2.d, z3.d
-; CHECK-SVE2-NEXT:    uzp1 p2.s, p4.s, p5.s
-; CHECK-SVE2-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
-; CHECK-SVE2-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
-; CHECK-SVE2-NEXT:    incd z0.d, all, mul #4
-; CHECK-SVE2-NEXT:    uzp1 p3.s, p3.s, p6.s
-; CHECK-SVE2-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Folded Reload
-; CHECK-SVE2-NEXT:    cmphi p0.d, p0/z, z2.d, z0.d
-; CHECK-SVE2-NEXT:    uzp1 p1.h, p1.h, p3.h
-; CHECK-SVE2-NEXT:    cmp x8, #1
-; CHECK-SVE2-NEXT:    cset w8, lt
-; CHECK-SVE2-NEXT:    sbfx x8, x8, #0, #1
-; CHECK-SVE2-NEXT:    uzp1 p0.s, p7.s, p0.s
-; CHECK-SVE2-NEXT:    ldr p7, [sp, #4, mul vl] // 2-byte Folded Reload
-; CHECK-SVE2-NEXT:    uzp1 p0.h, p2.h, p0.h
-; CHECK-SVE2-NEXT:    uzp1 p0.b, p1.b, p0.b
-; CHECK-SVE2-NEXT:    whilelo p1.b, xzr, x8
-; CHECK-SVE2-NEXT:    sel p0.b, p0, p0.b, p1.b
-; CHECK-SVE2-NEXT:    addvl sp, sp, #1
-; CHECK-SVE2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-SVE2-NEXT:    whilewr p0.h, x0, x1
+; CHECK-SVE2-NEXT:    incb x1
+; CHECK-SVE2-NEXT:    incb x0
+; CHECK-SVE2-NEXT:    whilewr p1.h, x0, x1
+; CHECK-SVE2-NEXT:    uzp1 p0.b, p0.b, p1.b
 ; CHECK-SVE2-NEXT:    ret
 ;
-; CHECK-SVE-LABEL: whilewr_16_expand:
+; CHECK-SVE-LABEL: whilewr_16_split:
 ; CHECK-SVE:       // %bb.0: // %entry
 ; CHECK-SVE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SVE-NEXT:    addvl sp, sp, #-1
@@ -705,96 +658,26 @@ entry:
   ret <vscale x 16 x i1> %0
 }
 
-define <vscale x 32 x i1> @whilewr_16_expand2(ptr %a, ptr %b) {
-; CHECK-SVE2-LABEL: whilewr_16_expand2:
+define <vscale x 32 x i1> @whilewr_16_split2(ptr %a, ptr %b) {
+; CHECK-SVE2-LABEL: whilewr_16_split2:
 ; CHECK-SVE2:       // %bb.0: // %entry
-; CHECK-SVE2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-SVE2-NEXT:    addvl sp, sp, #-1
-; CHECK-SVE2-NEXT:    str p9, [sp, #2, mul vl] // 2-byte Folded Spill
-; CHECK-SVE2-NEXT:    str p8, [sp, #3, mul vl] // 2-byte Folded Spill
-; CHECK-SVE2-NEXT:    str p7, [sp, #4, mul vl] // 2-byte Folded Spill
-; CHECK-SVE2-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
-; CHECK-SVE2-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
-; CHECK-SVE2-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-SVE2-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-SVE2-NEXT:    .cfi_offset w29, -16
-; CHECK-SVE2-NEXT:    index z0.d, #0, #1
-; CHECK-SVE2-NEXT:    sub x8, x1, x0
-; CHECK-SVE2-NEXT:    incb x0, all, mul #2
-; CHECK-SVE2-NEXT:    add x8, x8, x8, lsr #63
+; CHECK-SVE2-NEXT:    mov x8, x1
+; CHECK-SVE2-NEXT:    mov x9, x0
+; CHECK-SVE2-NEXT:    whilewr p0.h, x0, x1
+; CHECK-SVE2-NEXT:    addvl x10, x1, #3
+; CHECK-SVE2-NEXT:    incb x8
+; CHECK-SVE2-NEXT:    incb x9
+; CHECK-SVE2-NEXT:    addvl x11, x0, #3
 ; CHECK-SVE2-NEXT:    incb x1, all, mul #2
-; CHECK-SVE2-NEXT:    ptrue p0.d
-; CHECK-SVE2-NEXT:    asr x8, x8, #1
-; CHECK-SVE2-NEXT:    mov z1.d, z0.d
-; CHECK-SVE2-NEXT:    mov z2.d, z0.d
-; CHECK-SVE2-NEXT:    mov z3.d, z0.d
-; CHECK-SVE2-NEXT:    sub x9, x1, x0
-; CHECK-SVE2-NEXT:    mov z5.d, x8
-; CHECK-SVE2-NEXT:    add x9, x9, x9, lsr #63
-; CHECK-SVE2-NEXT:    incd z1.d
-; CHECK-SVE2-NEXT:    incd z2.d, all, mul #2
-; CHECK-SVE2-NEXT:    incd z3.d, all, mul #4
-; CHECK-SVE2-NEXT:    cmphi p2.d, p0/z, z5.d, z0.d
-; CHECK-SVE2-NEXT:    asr x9, x9, #1
-; CHECK-SVE2-NEXT:    mov z4.d, z1.d
-; CHECK-SVE2-NEXT:    mov z6.d, z1.d
-; CHECK-SVE2-NEXT:    mov z7.d, z2.d
-; CHECK-SVE2-NEXT:    cmphi p1.d, p0/z, z5.d, z1.d
-; CHECK-SVE2-NEXT:    cmphi p3.d, p0/z, z5.d, z3.d
-; CHECK-SVE2-NEXT:    cmphi p5.d, p0/z, z5.d, z2.d
-; CHECK-SVE2-NEXT:    incd z4.d, all, mul #2
-; CHECK-SVE2-NEXT:    incd z6.d, all, mul #4
-; CHECK-SVE2-NEXT:    incd z7.d, all, mul #4
-; CHECK-SVE2-NEXT:    uzp1 p1.s, p2.s, p1.s
-; CHECK-SVE2-NEXT:    mov z24.d, z4.d
-; CHECK-SVE2-NEXT:    cmphi p4.d, p0/z, z5.d, z6.d
-; CHECK-SVE2-NEXT:    cmphi p6.d, p0/z, z5.d, z4.d
-; CHECK-SVE2-NEXT:    cmphi p7.d, p0/z, z5.d, z7.d
-; CHECK-SVE2-NEXT:    incd z24.d, all, mul #4
-; CHECK-SVE2-NEXT:    uzp1 p2.s, p3.s, p4.s
-; CHECK-SVE2-NEXT:    uzp1 p3.s, p5.s, p6.s
-; CHECK-SVE2-NEXT:    cmphi p8.d, p0/z, z5.d, z24.d
-; CHECK-SVE2-NEXT:    mov z5.d, x9
-; CHECK-SVE2-NEXT:    cmp x8, #1
-; CHECK-SVE2-NEXT:    uzp1 p1.h, p1.h, p3.h
-; CHECK-SVE2-NEXT:    cset w8, lt
-; CHECK-SVE2-NEXT:    cmphi p4.d, p0/z, z5.d, z24.d
-; CHECK-SVE2-NEXT:    cmphi p5.d, p0/z, z5.d, z7.d
-; CHECK-SVE2-NEXT:    cmphi p6.d, p0/z, z5.d, z6.d
-; CHECK-SVE2-NEXT:    uzp1 p7.s, p7.s, p8.s
-; CHECK-SVE2-NEXT:    cmphi p9.d, p0/z, z5.d, z3.d
-; CHECK-SVE2-NEXT:    cmphi p3.d, p0/z, z5.d, z4.d
-; CHECK-SVE2-NEXT:    cmphi p8.d, p0/z, z5.d, z2.d
-; CHECK-SVE2-NEXT:    sbfx x8, x8, #0, #1
-; CHECK-SVE2-NEXT:    uzp1 p2.h, p2.h, p7.h
-; CHECK-SVE2-NEXT:    cmphi p7.d, p0/z, z5.d, z1.d
-; CHECK-SVE2-NEXT:    cmphi p0.d, p0/z, z5.d, z0.d
-; CHECK-SVE2-NEXT:    uzp1 p4.s, p5.s, p4.s
-; CHECK-SVE2-NEXT:    uzp1 p5.s, p9.s, p6.s
-; CHECK-SVE2-NEXT:    ldr p9, [sp, #2, mul vl] // 2-byte Folded Reload
-; CHECK-SVE2-NEXT:    whilelo p6.b, xzr, x8
-; CHECK-SVE2-NEXT:    uzp1 p3.s, p8.s, p3.s
-; CHECK-SVE2-NEXT:    cmp x9, #1
-; CHECK-SVE2-NEXT:    ldr p8, [sp, #3, mul vl] // 2-byte Folded Reload
-; CHECK-SVE2-NEXT:    uzp1 p0.s, p0.s, p7.s
-; CHECK-SVE2-NEXT:    cset w8, lt
-; CHECK-SVE2-NEXT:    ldr p7, [sp, #4, mul vl] // 2-byte Folded Reload
-; CHECK-SVE2-NEXT:    uzp1 p4.h, p5.h, p4.h
-; CHECK-SVE2-NEXT:    sbfx x8, x8, #0, #1
-; CHECK-SVE2-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
-; CHECK-SVE2-NEXT:    uzp1 p0.h, p0.h, p3.h
-; CHECK-SVE2-NEXT:    uzp1 p1.b, p1.b, p2.b
-; CHECK-SVE2-NEXT:    uzp1 p2.b, p0.b, p4.b
-; CHECK-SVE2-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
-; CHECK-SVE2-NEXT:    whilelo p3.b, xzr, x8
-; CHECK-SVE2-NEXT:    sel p0.b, p1, p1.b, p6.b
-; CHECK-SVE2-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Folded Reload
-; CHECK-SVE2-NEXT:    sel p1.b, p2, p2.b, p3.b
-; CHECK-SVE2-NEXT:    addvl sp, sp, #1
-; CHECK-SVE2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-SVE2-NEXT:    incb x0, all, mul #2
+; CHECK-SVE2-NEXT:    whilewr p1.h, x11, x10
+; CHECK-SVE2-NEXT:    whilewr p2.h, x9, x8
+; CHECK-SVE2-NEXT:    whilewr p3.h, x0, x1
+; CHECK-SVE2-NEXT:    uzp1 p0.b, p0.b, p2.b
+; CHECK-SVE2-NEXT:    uzp1 p1.b, p3.b, p1.b
 ; CHECK-SVE2-NEXT:    ret
 ;
-; CHECK-SVE-LABEL: whilewr_16_expand2:
+; CHECK-SVE-LABEL: whilewr_16_split2:
 ; CHECK-SVE:       // %bb.0: // %entry
 ; CHECK-SVE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SVE-NEXT:    addvl sp, sp, #-1
@@ -887,38 +770,17 @@ entry:
   ret <vscale x 32 x i1> %0
 }
 
-define <vscale x 8 x i1> @whilewr_32_expand(ptr %a, ptr %b) {
-; CHECK-SVE2-LABEL: whilewr_32_expand:
+define <vscale x 8 x i1> @whilewr_32_split(ptr %a, ptr %b) {
+; CHECK-SVE2-LABEL: whilewr_32_split:
 ; CHECK-SVE2:       // %bb.0: // %entry
-; CHECK-SVE2-NEXT:    index z0.d, #0, #1
-; CHECK-SVE2-NEXT:    sub x8, x1, x0
-; CHECK-SVE2-NEXT:    ptrue p0.d
-; CHECK-SVE2-NEXT:    add x9, x8, #3
-; CHECK-SVE2-NEXT:    cmp x8, #0
-; CHECK-SVE2-NEXT:    csel x8, x9, x8, lt
-; CHECK-SVE2-NEXT:    asr x8, x8, #2
-; CHECK-SVE2-NEXT:    mov z1.d, z0.d
-; CHECK-SVE2-NEXT:    mov z2.d, z0.d
-; CHECK-SVE2-NEXT:    mov z3.d, x8
-; CHECK-SVE2-NEXT:    incd z1.d
-; CHECK-SVE2-NEXT:    incd z2.d, all, mul #2
-; CHECK-SVE2-NEXT:    cmphi p1.d, p0/z, z3.d, z0.d
-; CHECK-SVE2-NEXT:    mov z4.d, z1.d
-; CHECK-SVE2-NEXT:    cmphi p2.d, p0/z, z3.d, z1.d
-; CHECK-SVE2-NEXT:    cmphi p3.d, p0/z, z3.d, z2.d
-; CHECK-SVE2-NEXT:    incd z4.d, all, mul #2
-; CHECK-SVE2-NEXT:    uzp1 p1.s, p1.s, p2.s
-; CHECK-SVE2-NEXT:    cmphi p0.d, p0/z, z3.d, z4.d
-; CHECK-SVE2-NEXT:    cmp x8, #1
-; CHECK-SVE2-NEXT:    cset w8, lt
-; CHECK-SVE2-NEXT:    sbfx x8, x8, #0, #1
-; CHECK-SVE2-NEXT:    uzp1 p0.s, p3.s, p0.s
-; CHECK-SVE2-NEXT:    uzp1 p0.h, p1.h, p0.h
-; CHECK-SVE2-NEXT:    whilelo p1.h, xzr, x8
-; CHECK-SVE2-NEXT:    sel p0.b, p0, p0.b, p1.b
+; CHECK-SVE2-NEXT:    whilewr p0.s, x0, x1
+; CHECK-SVE2-NEXT:    incb x1
+; CHECK-SVE2-NEXT:    incb x0
+; CHECK-SVE2-NEXT:    whilewr p1.s, x0, x1
+; CHECK-SVE2-NEXT:    uzp1 p0.h, p0.h, p1.h
 ; CHECK-SVE2-NEXT:    ret
 ;
-; CHECK-SVE-LABEL: whilewr_32_expand:
+; CHECK-SVE-LABEL: whilewr_32_split:
 ; CHECK-SVE:       // %bb.0: // %entry
 ; CHECK-SVE-NEXT:    index z0.d, #0, #1
 ; CHECK-SVE-NEXT:    sub x8, x1, x0
@@ -952,66 +814,31 @@ entry:
   ret <vscale x 8 x i1> %0
 }
 
-define <vscale x 16 x i1> @whilewr_32_expand2(ptr %a, ptr %b) {
-; CHECK-SVE2-LABEL: whilewr_32_expand2:
+define <vscale x 16 x i1> @whilewr_32_split2(ptr %a, ptr %b) {
+; CHECK-SVE2-LABEL: whilewr_32_split2:
 ; CHECK-SVE2:       // %bb.0: // %entry
-; CHECK-SVE2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-SVE2-NEXT:    addvl sp, sp, #-1
-; CHECK-SVE2-NEXT:    str p7, [sp, #4, mul vl] // 2-byte Folded Spill
-; CHECK-SVE2-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
-; CHECK-SVE2-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
-; CHECK-SVE2-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-SVE2-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-SVE2-NEXT:    .cfi_offset w29, -16
-; CHECK-SVE2-NEXT:    index z0.d, #0, #1
-; CHECK-SVE2-NEXT:    sub x8, x1, x0
-; CHECK-SVE2-NEXT:    ptrue p0.d
-; CHECK-SVE2-NEXT:    add x9, x8, #3
-; CHECK-SVE2-NEXT:    cmp x8, #0
-; CHECK-SVE2-NEXT:    csel x8, x9, x8, lt
-; CHECK-SVE2-NEXT:    asr x8, x8, #2
-; CHECK-SVE2-NEXT:    mov z1.d, z0.d
-; CHECK-SVE2-NEXT:    mov z4.d, z0.d
-; CHECK-SVE2-NEXT:    mov z5.d, z0.d
-; CHECK-SVE2-NEXT:    mov z2.d, x8
-; CHECK-SVE2-NEXT:    incd z1.d
-; CHECK-SVE2-NEXT:    incd z4.d, all, mul #2
-; CHECK-SVE2-NEXT:    incd z5.d, all, mul #4
-; CHECK-SVE2-NEXT:    cmphi p2.d, p0/z, z2.d, z0.d
-; CHECK-SVE2-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-NEXT:    cmphi p1.d, p0/z, z2.d, z1.d
-; CHECK-SVE2-NEXT:    incd z1.d, all, mul #4
-; CHECK-SVE2-NEXT:    cmphi p3.d, p0/z, z2.d, z4.d
-; CHECK-SVE2-NEXT:    incd z4.d, all, mul #4
-; CHECK-SVE2-NEXT:    cmphi p4.d, p0/z, z2.d, z5.d
-; CHECK-SVE2-NEXT:    incd z3.d, all, mul #2
-; CHECK-SVE2-NEXT:    cmphi p5.d, p0/z, z2.d, z1.d
-; CHECK-SVE2-NEXT:    cmphi p7.d, p0/z, z2.d, z4.d
-; CHECK-SVE2-NEXT:    uzp1 p1.s, p2.s, p1.s
-; CHECK-SVE2-NEXT:    mov z0.d, z3.d
-; CHECK-SVE2-NEXT:    cmphi p6.d, p0/z, z2.d, z3.d
-; CHECK-SVE2-NEXT:    uzp1 p2.s, p4.s, p5.s
-; CHECK-SVE2-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
-; CHECK-SVE2-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
-; CHECK-SVE2-NEXT:    incd z0.d, all, mul #4
-; CHECK-SVE2-NEXT:    uzp1 p3.s, p3.s, p6.s
-; CHECK-SVE2-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Folded Reload
-; CHECK-SVE2-NEXT:    cmphi p0.d, p0/z, z2.d, z0.d
-; CHECK-SVE2-NEXT:    uzp1 p1.h, p1.h, p3.h
-; CHECK-SVE2-NEXT:    cmp x8, #1
-; CHECK-SVE2-NEXT:    cset w8, lt
-; CHECK-SVE2-NEXT:    sbfx x8, x8, #0, #1
-; CHECK-SVE2-NEXT:    uzp1 p0.s, p7.s, p0.s
-; CHECK-SVE2-NEXT:    ldr p7, [sp, #4, mul vl] // 2-byte Folded Reload
-; CHECK-SVE2-NEXT:    uzp1 p0.h, p2.h, p0.h
-; CHECK-SVE2-NEXT:    uzp1 p0.b, p1.b, p0.b
-; CHECK-SVE2-NEXT:    whilelo p1.b, xzr, x8
-; CHECK-SVE2-NEXT:    sel p0.b, p0, p0.b, p1.b
-; CHECK-SVE2-NEXT:    addvl sp, sp, #1
-; CHECK-SVE2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-SVE2-NEXT:    whilewr p0.s, x0, x1
+; CHECK-SVE2-NEXT:    mov x10, x1
+; CHECK-SVE2-NEXT:    mov x11, x0
+; CHECK-SVE2-NEXT:    addvl x8, x1, #3
+; CHECK-SVE2-NEXT:    addvl x9, x0, #3
+; CHECK-SVE2-NEXT:    incb x10, all, mul #2
+; CHECK-SVE2-NEXT:    uzp1 p0.h, p0.h, p0.h
+; CHECK-SVE2-NEXT:    incb x11, all, mul #2
+; CHECK-SVE2-NEXT:    incb x1
+; CHECK-SVE2-NEXT:    incb x0
+; CHECK-SVE2-NEXT:    whilewr p1.s, x9, x8
+; CHECK-SVE2-NEXT:    uzp1 p0.b, p0.b, p0.b
+; CHECK-SVE2-NEXT:    whilewr p2.s, x11, x10
+; CHECK-SVE2-NEXT:    punpklo p0.h, p0.b
+; CHECK-SVE2-NEXT:    whilewr p3.s, x0, x1
+; CHECK-SVE2-NEXT:    punpklo p0.h, p0.b
+; CHECK-SVE2-NEXT:    uzp1 p1.h, p2.h, p1.h
+; CHECK-SVE2-NEXT:    uzp1 p0.h, p0.h, p3.h
+; CHECK-SVE2-NEXT:    uzp1 p0.b, p0.b, p1.b
 ; CHECK-SVE2-NEXT:    ret
 ;
-; CHECK-SVE-LABEL: whilewr_32_expand2:
+; CHECK-SVE-LABEL: whilewr_32_split2:
 ; CHECK-SVE:       // %bb.0: // %entry
 ; CHECK-SVE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SVE-NEXT:    addvl sp, sp, #-1
@@ -1073,102 +900,62 @@ entry:
   ret <vscale x 16 x i1> %0
 }
 
-define <vscale x 32 x i1> @whilewr_32_expand3(ptr %a, ptr %b) {
-; CHECK-SVE2-LABEL: whilewr_32_expand3:
+define <vscale x 32 x i1> @whilewr_32_split3(ptr %a, ptr %b) {
+; CHECK-SVE2-LABEL: whilewr_32_split3:
 ; CHECK-SVE2:       // %bb.0: // %entry
 ; CHECK-SVE2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SVE2-NEXT:    addvl sp, sp, #-1
-; CHECK-SVE2-NEXT:    str p10, [sp, #1, mul vl] // 2-byte Folded Spill
-; CHECK-SVE2-NEXT:    str p9, [sp, #2, mul vl] // 2-byte Folded Spill
-; CHECK-SVE2-NEXT:    str p8, [sp, #3, mul vl] // 2-byte Folded Spill
-; CHECK-SVE2-NEXT:    str p7, [sp, #4, mul vl] // 2-byte Folded Spill
-; CHECK-SVE2-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE2-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE2-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE2-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-SVE2-NEXT:    .cfi_offset w29, -16
-; CHECK-SVE2-NEXT:    index z0.d, #0, #1
-; CHECK-SVE2-NEXT:    sub x8, x1, x0
-; CHECK-SVE2-NEXT:    ptrue p0.d
-; CHECK-SVE2-NEXT:    add x9, x8, #3
-; CHECK-SVE2-NEXT:    cmp x8, #0
-; CHECK-SVE2-NEXT:    incb x0, all, mul #4
-; CHECK-SVE2-NEXT:    csel x8, x9, x8, lt
+; CHECK-SVE2-NEXT:    whilewr p0.s, x0, x1
+; CHECK-SVE2-NEXT:    mov x10, x1
+; CHECK-SVE2-NEXT:    mov x11, x0
+; CHECK-SVE2-NEXT:    mov x12, x1
+; CHECK-SVE2-NEXT:    mov x13, x0
+; CHECK-SVE2-NEXT:    incb x10, all, mul #2
+; CHECK-SVE2-NEXT:    incb x11, all, mul #2
+; CHECK-SVE2-NEXT:    incb x12
+; CHECK-SVE2-NEXT:    incb x13
+; CHECK-SVE2-NEXT:    uzp1 p0.h, p0.h, p0.h
+; CHECK-SVE2-NEXT:    addvl x8, x1, #3
+; CHECK-SVE2-NEXT:    addvl x9, x0, #3
+; CHECK-SVE2-NEXT:    whilewr p1.s, x9, x8
+; CHECK-SVE2-NEXT:    addvl x8, x1, #7
+; CHECK-SVE2-NEXT:    addvl x9, x0, #7
+; CHECK-SVE2-NEXT:    uzp1 p0.b, p0.b, p0.b
+; CHECK-SVE2-NEXT:    whilewr p2.s, x11, x10
+; CHECK-SVE2-NEXT:    addvl x10, x1, #6
+; CHECK-SVE2-NEXT:    addvl x11, x0, #6
+; CHECK-SVE2-NEXT:    whilewr p3.s, x13, x12
+; CHECK-SVE2-NEXT:    addvl x12, x1, #5
+; CHECK-SVE2-NEXT:    addvl x13, x0, #5
 ; CHECK-SVE2-NEXT:    incb x1, all, mul #4
-; CHECK-SVE2-NEXT:    asr x8, x8, #2
-; CHECK-SVE2-NEXT:    mov z1.d, z0.d
-; CHECK-SVE2-NEXT:    mov z2.d, z0.d
-; CHECK-SVE2-NEXT:    mov z4.d, z0.d
-; CHECK-SVE2-NEXT:    mov z5.d, x8
-; CHECK-SVE2-NEXT:    sub x9, x1, x0
-; CHECK-SVE2-NEXT:    incd z1.d
-; CHECK-SVE2-NEXT:    incd z2.d, all, mul #2
-; CHECK-SVE2-NEXT:    incd z4.d, all, mul #4
-; CHECK-SVE2-NEXT:    cmphi p5.d, p0/z, z5.d, z0.d
-; CHECK-SVE2-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-NEXT:    mov z6.d, z2.d
-; CHECK-SVE2-NEXT:    mov z7.d, z1.d
-; CHECK-SVE2-NEXT:    cmphi p2.d, p0/z, z5.d, z4.d
-; CHECK-SVE2-NEXT:    cmphi p3.d, p0/z, z5.d, z2.d
-; CHECK-SVE2-NEXT:    cmphi p4.d, p0/z, z5.d, z1.d
-; CHECK-SVE2-NEXT:    incd z3.d, all, mul #2
-; CHECK-SVE2-NEXT:    incd z6.d, all, mul #4
-; CHECK-SVE2-NEXT:    incd z7.d, all, mul #4
-; CHECK-SVE2-NEXT:    uzp1 p4.s, p5.s, p4.s
-; CHECK-SVE2-NEXT:    mov z24.d, z3.d
-; CHECK-SVE2-NEXT:    cmphi p6.d, p0/z, z5.d, z6.d
-; CHECK-SVE2-NEXT:    cmphi p7.d, p0/z, z5.d, z7.d
-; CHECK-SVE2-NEXT:    cmphi p8.d, p0/z, z5.d, z3.d
-; CHECK-SVE2-NEXT:    incd z24.d, all, mul #4
-; CHECK-SVE2-NEXT:    uzp1 p2.s, p2.s, p7.s
-; CHECK-SVE2-NEXT:    uzp1 p3.s, p3.s, p8.s
-; CHECK-SVE2-NEXT:    cmphi p9.d, p0/z, z5.d, z24.d
-; CHECK-SVE2-NEXT:    cmp x8, #1
-; CHECK-SVE2-NEXT:    uzp1 p3.h, p4.h, p3.h
-; CHECK-SVE2-NEXT:    cset w8, lt
-; CHECK-SVE2-NEXT:    sbfx x8, x8, #0, #1
-; CHECK-SVE2-NEXT:    uzp1 p6.s, p6.s, p9.s
-; CHECK-SVE2-NEXT:    whilelo p1.b, xzr, x8
-; CHECK-SVE2-NEXT:    add x8, x9, #3
-; CHECK-SVE2-NEXT:    cmp x9, #0
-; CHECK-SVE2-NEXT:    uzp1 p2.h, p2.h, p6.h
-; CHECK-SVE2-NEXT:    csel x8, x8, x9, lt
-; CHECK-SVE2-NEXT:    asr x8, x8, #2
-; CHECK-SVE2-NEXT:    uzp1 p2.b, p3.b, p2.b
-; CHECK-SVE2-NEXT:    mov z5.d, x8
-; CHECK-SVE2-NEXT:    cmphi p5.d, p0/z, z5.d, z24.d
-; CHECK-SVE2-NEXT:    cmphi p7.d, p0/z, z5.d, z6.d
-; CHECK-SVE2-NEXT:    cmphi p8.d, p0/z, z5.d, z7.d
-; CHECK-SVE2-NEXT:    cmphi p9.d, p0/z, z5.d, z4.d
-; CHECK-SVE2-NEXT:    cmphi p4.d, p0/z, z5.d, z3.d
-; CHECK-SVE2-NEXT:    cmphi p10.d, p0/z, z5.d, z2.d
-; CHECK-SVE2-NEXT:    cmphi p6.d, p0/z, z5.d, z1.d
-; CHECK-SVE2-NEXT:    cmphi p0.d, p0/z, z5.d, z0.d
-; CHECK-SVE2-NEXT:    cmp x8, #1
-; CHECK-SVE2-NEXT:    uzp1 p5.s, p7.s, p5.s
-; CHECK-SVE2-NEXT:    cset w8, lt
-; CHECK-SVE2-NEXT:    uzp1 p7.s, p9.s, p8.s
-; CHECK-SVE2-NEXT:    sbfx x8, x8, #0, #1
-; CHECK-SVE2-NEXT:    ldr p9, [sp, #2, mul vl] // 2-byte Folded Reload
-; CHECK-SVE2-NEXT:    uzp1 p4.s, p10.s, p4.s
-; CHECK-SVE2-NEXT:    ldr p10, [sp, #1, mul vl] // 2-byte Folded Reload
-; CHECK-SVE2-NEXT:    uzp1 p0.s, p0.s, p6.s
-; CHECK-SVE2-NEXT:    ldr p8, [sp, #3, mul vl] // 2-byte Folded Reload
-; CHECK-SVE2-NEXT:    uzp1 p5.h, p7.h, p5.h
-; CHECK-SVE2-NEXT:    ldr p7, [sp, #4, mul vl] // 2-byte Folded Reload
-; CHECK-SVE2-NEXT:    uzp1 p0.h, p0.h, p4.h
-; CHECK-SVE2-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Folded Reload
-; CHECK-SVE2-NEXT:    whilelo p4.b, xzr, x8
-; CHECK-SVE2-NEXT:    uzp1 p3.b, p0.b, p5.b
-; CHECK-SVE2-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
-; CHECK-SVE2-NEXT:    sel p0.b, p2, p2.b, p1.b
-; CHECK-SVE2-NEXT:    sel p1.b, p3, p3.b, p4.b
+; CHECK-SVE2-NEXT:    incb x0, all, mul #4
+; CHECK-SVE2-NEXT:    punpklo p0.h, p0.b
+; CHECK-SVE2-NEXT:    uzp1 p1.h, p2.h, p1.h
+; CHECK-SVE2-NEXT:    punpklo p0.h, p0.b
+; CHECK-SVE2-NEXT:    whilewr p5.s, x0, x1
+; CHECK-SVE2-NEXT:    whilewr p4.s, x9, x8
+; CHECK-SVE2-NEXT:    uzp1 p2.h, p5.h, p0.h
+; CHECK-SVE2-NEXT:    uzp1 p0.h, p0.h, p3.h
+; CHECK-SVE2-NEXT:    whilewr p3.s, x11, x10
+; CHECK-SVE2-NEXT:    uzp1 p2.b, p2.b, p0.b
+; CHECK-SVE2-NEXT:    whilewr p5.s, x13, x12
+; CHECK-SVE2-NEXT:    punpklo p2.h, p2.b
+; CHECK-SVE2-NEXT:    uzp1 p3.h, p3.h, p4.h
 ; CHECK-SVE2-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-SVE2-NEXT:    punpklo p2.h, p2.b
+; CHECK-SVE2-NEXT:    uzp1 p0.b, p0.b, p1.b
+; CHECK-SVE2-NEXT:    uzp1 p2.h, p2.h, p5.h
+; CHECK-SVE2-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-SVE2-NEXT:    uzp1 p1.b, p2.b, p3.b
 ; CHECK-SVE2-NEXT:    addvl sp, sp, #1
 ; CHECK-SVE2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE2-NEXT:    ret
 ;
-; CHECK-SVE-LABEL: whilewr_32_expand3:
+; CHECK-SVE-LABEL: whilewr_32_split3:
 ; CHECK-SVE:       // %bb.0: // %entry
 ; CHECK-SVE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SVE-NEXT:    addvl sp, sp, #-1
@@ -1267,30 +1054,17 @@ entry:
   ret <vscale x 32 x i1> %0
 }
 
-define <vscale x 4 x i1> @whilewr_64_expand(ptr %a, ptr %b) {
-; CHECK-SVE2-LABEL: whilewr_64_expand:
+define <vscale x 4 x i1> @whilewr_64_split(ptr %a, ptr %b) {
+; CHECK-SVE2-LABEL: whilewr_64_split:
 ; CHECK-SVE2:       // %bb.0: // %entry
-; CHECK-SVE2-NEXT:    index z0.d, #0, #1
-; CHECK-SVE2-NEXT:    sub x8, x1, x0
-; CHECK-SVE2-NEXT:    ptrue p0.d
-; CHECK-SVE2-NEXT:    add x9, x8, #7
-; CHECK-SVE2-NEXT:    cmp x8, #0
-; CHECK-SVE2-NEXT:    csel x8, x9, x8, lt
-; CHECK-SVE2-NEXT:    asr x8, x8, #3
-; CHECK-SVE2-NEXT:    mov z1.d, z0.d
-; CHECK-SVE2-NEXT:    mov z2.d, x8
-; CHECK-SVE2-NEXT:    incd z1.d
-; CHECK-SVE2-NEXT:    cmphi p1.d, p0/z, z2.d, z0.d
-; CHECK-SVE2-NEXT:    cmphi p0.d, p0/z, z2.d, z1.d
-; CHECK-SVE2-NEXT:    cmp x8, #1
-; CHECK-SVE2-NEXT:    cset w8, lt
-; CHECK-SVE2-NEXT:    sbfx x8, x8, #0, #1
-; CHECK-SVE2-NEXT:    uzp1 p0.s, p1.s, p0.s
-; CHECK-SVE2-NEXT:    whilelo p1.s, xzr, x8
-; CHECK-SVE2-NEXT:    sel p0.b, p0, p0.b, p1.b
+; CHECK-SVE2-NEXT:    whilewr p0.d, x0, x1
+; CHECK-SVE2-NEXT:    incb x1
+; CHECK-SVE2-NEXT:    incb x0
+; CHECK-SVE2-NEXT:    whilewr p1.d, x0, x1
+; CHECK-SVE2-NEXT:    uzp1 p0.s, p0.s, p1.s
 ; CHECK-SVE2-NEXT:    ret
 ;
-; CHECK-SVE-LABEL: whilewr_64_expand:
+; CHECK-SVE-LABEL: whilewr_64_split:
 ; CHECK-SVE:       // %bb.0: // %entry
 ; CHECK-SVE-NEXT:    index z0.d, #0, #1
 ; CHECK-SVE-NEXT:    sub x8, x1, x0
@@ -1316,38 +1090,31 @@ entry:
   ret <vscale x 4 x i1> %0
 }
 
-define <vscale x 8 x i1> @whilewr_64_expand2(ptr %a, ptr %b) {
-; CHECK-SVE2-LABEL: whilewr_64_expand2:
+define <vscale x 8 x i1> @whilewr_64_split2(ptr %a, ptr %b) {
+; CHECK-SVE2-LABEL: whilewr_64_split2:
 ; CHECK-SVE2:       // %bb.0: // %entry
-; CHECK-SVE2-NEXT:    index z0.d, #0, #1
-; CHECK-SVE2-NEXT:    sub x8, x1, x0
-; CHECK-SVE2-NEXT:    ptrue p0.d
-; CHECK-SVE2-NEXT:    add x9, x8, #7
-; CHECK-SVE2-NEXT:    cmp x8, #0
-; CHECK-SVE2-NEXT:    csel x8, x9, x8, lt
-; CHECK-SVE2-NEXT:    asr x8, x8, #3
-; CHECK-SVE2-NEXT:    mov z1.d, z0.d
-; CHECK-SVE2-NEXT:    mov z2.d, z0.d
-; CHECK-SVE2-NEXT:    mov z3.d, x8
-; CHECK-SVE2-NEXT:    incd z1.d
-; CHECK-SVE2-NEXT:    incd z2.d, all, mul #2
-; CHECK-SVE2-NEXT:    cmphi p1.d, p0/z, z3.d, z0.d
-; CHECK-SVE2-NEXT:    mov z4.d, z1.d
-; CHECK-SVE2-NEXT:    cmphi p2.d, p0/z, z3.d, z1.d
-; CHECK-SVE2-NEXT:    cmphi p3.d, p0/z, z3.d, z2.d
-; CHECK-SVE2-NEXT:    incd z4.d, all, mul #2
-; CHECK-SVE2-NEXT:    uzp1 p1.s, p1.s, p2.s
-; CHECK-SVE2-NEXT:    cmphi p0.d, p0/z, z3.d, z4.d
-; CHECK-SVE2-NEXT:    cmp x8, #1
-; CHECK-SVE2-NEXT:    cset w8, lt
-; CHECK-SVE2-NEXT:    sbfx x8, x8, #0, #1
-; CHECK-SVE2-NEXT:    uzp1 p0.s, p3.s, p0.s
-; CHECK-SVE2-NEXT:    uzp1 p0.h, p1.h, p0.h
-; CHECK-SVE2-NEXT:    whilelo p1.h, xzr, x8
-; CHECK-SVE2-NEXT:    sel p0.b, p0, p0.b, p1.b
+; CHECK-SVE2-NEXT:    whilewr p0.d, x0, x1
+; CHECK-SVE2-NEXT:    mov x10, x1
+; CHECK-SVE2-NEXT:    mov x11, x0
+; CHECK-SVE2-NEXT:    addvl x8, x1, #3
+; CHECK-SVE2-NEXT:    addvl x9, x0, #3
+; CHECK-SVE2-NEXT:    incb x10, all, mul #2
+; CHECK-SVE2-NEXT:    uzp1 p0.s, p0.s, p0.s
+; CHECK-SVE2-NEXT:    incb x11, all, mul #2
+; CHECK-SVE2-NEXT:    incb x1
+; CHECK-SVE2-NEXT:    incb x0
+; CHECK-SVE2-NEXT:    whilewr p1.d, x9, x8
+; CHECK-SVE2-NEXT:    uzp1 p0.h, p0.h, p0.h
+; CHECK-SVE2-NEXT:    whilewr p2.d, x11, x10
+; CHECK-SVE2-NEXT:    punpklo p0.h, p0.b
+; CHECK-SVE2-NEXT:    whilewr p3.d, x0, x1
+; CHECK-SVE2-NEXT:    punpklo p0.h, p0.b
+; CHECK-SVE2-NEXT:    uzp1 p1.s, p2.s, p1.s
+; CHECK-SVE2-NEXT:    uzp1 p0.s, p0.s, p3.s
+; CHECK-SVE2-NEXT:    uzp1 p0.h, p0.h, p1.h
 ; CHECK-SVE2-NEXT:    ret
 ;
-; CHECK-SVE-LABEL: whilewr_64_expand2:
+; CHECK-SVE-LABEL: whilewr_64_split2:
 ; CHECK-SVE:       // %bb.0: // %entry
 ; CHECK-SVE-NEXT:    index z0.d, #0, #1
 ; CHECK-SVE-NEXT:    sub x8, x1, x0
@@ -1381,66 +1148,63 @@ entry:
   ret <vscale x 8 x i1> %0
 }
 
-define <vscale x 16 x i1> @whilewr_64_expand3(ptr %a, ptr %b) {
-; CHECK-SVE2-LABEL: whilewr_64_expand3:
+define <vscale x 16 x i1> @whilewr_64_split3(ptr %a, ptr %b) {
+; CHECK-SVE2-LABEL: whilewr_64_split3:
 ; CHECK-SVE2:       // %bb.0: // %entry
 ; CHECK-SVE2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SVE2-NEXT:    addvl sp, sp, #-1
-; CHECK-SVE2-NEXT:    str p7, [sp, #4, mul vl] // 2-byte Folded Spill
-; CHECK-SVE2-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE2-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE2-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE2-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-SVE2-NEXT:    .cfi_offset w29, -16
-; CHECK-SVE2-NEXT:    index z0.d, #0, #1
-; CHECK-SVE2-NEXT:    sub x8, x1, x0
-; CHECK-SVE2-NEXT:    ptrue p0.d
-; CHECK-SVE2-NEXT:    add x9, x8, #7
-; CHECK-SVE2-NEXT:    cmp x8, #0
-; CHECK-SVE2-NEXT:    csel x8, x9, x8, lt
-; CHECK-SVE2-NEXT:    asr x8, x8, #3
-; CHECK-SVE2-NEXT:    mov z1.d, z0.d
-; CHECK-SVE2-NEXT:    mov z4.d, z0.d
-; CHECK-SVE2-NEXT:    mov z5.d, z0.d
-; CHECK-SVE2-NEXT:    mov z2.d, x8
-; CHECK-SVE2-NEXT:    incd z1.d
-; CHECK-SVE2-NEXT:    incd z4.d, all, mul #2
-; CHECK-SVE2-NEXT:    incd z5.d, all, mul #4
-; CHECK-SVE2-NEXT:    cmphi p2.d, p0/z, z2.d, z0.d
-; CHECK-SVE2-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-NEXT:    cmphi p1.d, p0/z, z2.d, z1.d
-; CHECK-SVE2-NEXT:    incd z1.d, all, mul #4
-; CHECK-SVE2-NEXT:    cmphi p3.d, p0/z, z2.d, z4.d
-; CHECK-SVE2-NEXT:    incd z4.d, all, mul #4
-; CHECK-SVE2-NEXT:    cmphi p4.d, p0/z, z2.d, z5.d
-; CHECK-SVE2-NEXT:    incd z3.d, all, mul #2
-; CHECK-SVE2-NEXT:    cmphi p5.d, p0/z, z2.d, z1.d
-; CHECK-SVE2-NEXT:    cmphi p7.d, p0/z, z2.d, z4.d
+; CHECK-SVE2-NEXT:    whilewr p0.d, x0, x1
+; CHECK-SVE2-NEXT:    mov x10, x1
+; CHECK-SVE2-NEXT:    mov x11, x0
+; CHECK-SVE2-NEXT:    mov x12, x1
+; CHECK-SVE2-NEXT:    mov x13, x0
+; CHECK-SVE2-NEXT:    incb x10, all, mul #2
+; CHECK-SVE2-NEXT:    incb x11, all, mul #2
+; CHECK-SVE2-NEXT:    incb x12
+; CHECK-SVE2-NEXT:    incb x13
+; CHECK-SVE2-NEXT:    uzp1 p0.s, p0.s, p0.s
+; CHECK-SVE2-NEXT:    addvl x8, x1, #3
+; CHECK-SVE2-NEXT:    addvl x9, x0, #3
+; CHECK-SVE2-NEXT:    whilewr p1.d, x9, x8
+; CHECK-SVE2-NEXT:    addvl x8, x1, #7
+; CHECK-SVE2-NEXT:    addvl x9, x0, #7
+; CHECK-SVE2-NEXT:    uzp1 p0.h, p0.h, p0.h
+; CHECK-SVE2-NEXT:    whilewr p2.d, x11, x10
+; CHECK-SVE2-NEXT:    addvl x10, x1, #6
+; CHECK-SVE2-NEXT:    addvl x11, x0, #6
+; CHECK-SVE2-NEXT:    whilewr p3.d, x13, x12
+; CHECK-SVE2-NEXT:    addvl x12, x1, #5
+; CHECK-SVE2-NEXT:    addvl x13, x0, #5
+; CHECK-SVE2-NEXT:    incb x1, all, mul #4
+; CHECK-SVE2-NEXT:    incb x0, all, mul #4
+; CHECK-SVE2-NEXT:    punpklo p0.h, p0.b
 ; CHECK-SVE2-NEXT:    uzp1 p1.s, p2.s, p1.s
-; CHECK-SVE2-NEXT:    mov z0.d, z3.d
-; CHECK-SVE2-NEXT:    cmphi p6.d, p0/z, z2.d, z3.d
-; CHECK-SVE2-NEXT:    uzp1 p2.s, p4.s, p5.s
-; CHECK-SVE2-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-SVE2-NEXT:    punpklo p0.h, p0.b
+; CHECK-SVE2-NEXT:    whilewr p5.d, x0, x1
+; CHECK-SVE2-NEXT:    whilewr p4.d, x9, x8
+; CHECK-SVE2-NEXT:    uzp1 p2.s, p5.s, p0.s
+; CHECK-SVE2-NEXT:    uzp1 p0.s, p0.s, p3.s
+; CHECK-SVE2-NEXT:    whilewr p3.d, x11, x10
+; CHECK-SVE2-NEXT:    uzp1 p2.h, p2.h, p0.h
+; CHECK-SVE2-NEXT:    whilewr p5.d, x13, x12
+; CHECK-SVE2-NEXT:    punpklo p2.h, p2.b
+; CHECK-SVE2-NEXT:    uzp1 p3.s, p3.s, p4.s
 ; CHECK-SVE2-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
-; CHECK-SVE2-NEXT:    incd z0.d, all, mul #4
-; CHECK-SVE2-NEXT:    uzp1 p3.s, p3.s, p6.s
-; CHECK-SVE2-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Folded Reload
-; CHECK-SVE2-NEXT:    cmphi p0.d, p0/z, z2.d, z0.d
-; CHECK-SVE2-NEXT:    uzp1 p1.h, p1.h, p3.h
-; CHECK-SVE2-NEXT:    cmp x8, #1
-; CHECK-SVE2-NEXT:    cset w8, lt
-; CHECK-SVE2-NEXT:    sbfx x8, x8, #0, #1
-; CHECK-SVE2-NEXT:    uzp1 p0.s, p7.s, p0.s
-; CHECK-SVE2-NEXT:    ldr p7, [sp, #4, mul vl] // 2-byte Folded Reload
-; CHECK-SVE2-NEXT:    uzp1 p0.h, p2.h, p0.h
-; CHECK-SVE2-NEXT:    uzp1 p0.b, p1.b, p0.b
-; CHECK-SVE2-NEXT:    whilelo p1.b, xzr, x8
-; CHECK-SVE2-NEXT:    sel p0.b, p0, p0.b, p1.b
+; CHECK-SVE2-NEXT:    punpklo p2.h, p2.b
+; CHECK-SVE2-NEXT:    uzp1 p0.h, p0.h, p1.h
+; CHECK-SVE2-NEXT:    uzp1 p2.s, p2.s, p5.s
+; CHECK-SVE2-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-SVE2-NEXT:    uzp1 p1.h, p2.h, p3.h
+; CHECK-SVE2-NEXT:    uzp1 p0.b, p0.b, p1.b
 ; CHECK-SVE2-NEXT:    addvl sp, sp, #1
 ; CHECK-SVE2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE2-NEXT:    ret
 ;
-; CHECK-SVE-LABEL: whilewr_64_expand3:
+; CHECK-SVE-LABEL: whilewr_64_split3:
 ; CHECK-SVE:       // %bb.0: // %entry
 ; CHECK-SVE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SVE-NEXT:    addvl sp, sp, #-1
@@ -1502,102 +1266,108 @@ entry:
   ret <vscale x 16 x i1> %0
 }
 
-define <vscale x 32 x i1> @whilewr_64_expand4(ptr %a, ptr %b) {
-; CHECK-SVE2-LABEL: whilewr_64_expand4:
+define <vscale x 32 x i1> @whilewr_64_split4(ptr %a, ptr %b) {
+; CHECK-SVE2-LABEL: whilewr_64_split4:
 ; CHECK-SVE2:       // %bb.0: // %entry
 ; CHECK-SVE2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SVE2-NEXT:    addvl sp, sp, #-1
-; CHECK-SVE2-NEXT:    str p10, [sp, #1, mul vl] // 2-byte Folded Spill
-; CHECK-SVE2-NEXT:    str p9, [sp, #2, mul vl] // 2-byte Folded Spill
-; CHECK-SVE2-NEXT:    str p8, [sp, #3, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE2-NEXT:    str p7, [sp, #4, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE2-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE2-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE2-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE2-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-SVE2-NEXT:    .cfi_offset w29, -16
-; CHECK-SVE2-NEXT:    index z0.d, #0, #1
-; CHECK-SVE2-NEXT:    sub x8, x1, x0
-; CHECK-SVE2-NEXT:    ptrue p0.d
-; CHECK-SVE2-NEXT:    add x9, x8, #7
-; CHECK-SVE2-NEXT:    cmp x8, #0
-; CHECK-SVE2-NEXT:    addvl x10, x1, #8
-; CHECK-SVE2-NEXT:    csel x8, x9, x8, lt
+; CHECK-SVE2-NEXT:    whilewr p0.d, x0, x1
+; CHECK-SVE2-NEXT:    mov x11, x1
+; CHECK-SVE2-NEXT:    mov x12, x0
+; CHECK-SVE2-NEXT:    incb x11, all, mul #2
+; CHECK-SVE2-NEXT:    incb x12, all, mul #2
+; CHECK-SVE2-NEXT:    mov x10, x1
+; CHECK-SVE2-NEXT:    uzp1 p0.s, p0.s, p0.s
+; CHECK-SVE2-NEXT:    mov x13, x0
+; CHECK-SVE2-NEXT:    incb x10
+; CHECK-SVE2-NEXT:    incb x13
+; CHECK-SVE2-NEXT:    addvl x8, x1, #3
+; CHECK-SVE2-NEXT:    addvl x9, x0, #3
+; CHECK-SVE2-NEXT:    uzp1 p0.h, p0.h, p0.h
+; CHECK-SVE2-NEXT:    whilewr p2.d, x12, x11
+; CHECK-SVE2-NEXT:    mov x11, x1
+; CHECK-SVE2-NEXT:    mov x12, x0
+; CHECK-SVE2-NEXT:    punpklo p0.h, p0.b
+; CHECK-SVE2-NEXT:    incb x11, all, mul #4
+; CHECK-SVE2-NEXT:    incb x12, all, mul #4
+; CHECK-SVE2-NEXT:    whilewr p1.d, x9, x8
+; CHECK-SVE2-NEXT:    addvl x8, x1, #7
+; CHECK-SVE2-NEXT:    addvl x9, x0, #7
+; CHECK-SVE2-NEXT:    whilewr p3.d, x13, x10
+; CHECK-SVE2-NEXT:    punpklo p0.h, p0.b
+; CHECK-SVE2-NEXT:    whilewr p5.d, x12, x11
+; CHECK-SVE2-NEXT:    uzp1 p1.s, p2.s, p1.s
+; CHECK-SVE2-NEXT:    uzp1 p0.s, p0.s, p3.s
+; CHECK-SVE2-NEXT:    whilewr p4.d, x9, x8
+; CHECK-SVE2-NEXT:    addvl x8, x1, #6
+; CHECK-SVE2-NEXT:    addvl x9, x0, #6
+; CHECK-SVE2-NEXT:    uzp1 p2.s, p5.s, p0.s
+; CHECK-SVE2-NEXT:    uzp1 p0.h, p0.h, p1.h
+; CHECK-SVE2-NEXT:    uzp1 p1.h, p2.h, p0.h
+; CHECK-SVE2-NEXT:    whilewr p2.d, x9, x8
+; CHECK-SVE2-NEXT:    addvl x8, x1, #5
+; CHECK-SVE2-NEXT:    addvl x9, x0, #5
+; CHECK-SVE2-NEXT:    punpklo p1.h, p1.b
+; CHECK-SVE2-NEXT:    whilewr p3.d, x9, x8
+; CHECK-SVE2-NEXT:    addvl x8, x1, #12
+; CHECK-SVE2-NEXT:    addvl x9, x0, #12
+; CHECK-SVE2-NEXT:    punpklo p1.h, p1.b
+; CHECK-SVE2-NEXT:    uzp1 p2.s, p2.s, p4.s
+; CHECK-SVE2-NEXT:    uzp1 p1.s, p1.s, p3.s
+; CHECK-SVE2-NEXT:    whilewr p3.d, x9, x8
+; CHECK-SVE2-NEXT:    addvl x8, x1, #15
+; CHECK-SVE2-NEXT:    addvl x9, x0, #15
+; CHECK-SVE2-NEXT:    uzp1 p1.h, p1.h, p2.h
+; CHECK-SVE2-NEXT:    uzp1 p3.s, p3.s, p0.s
+; CHECK-SVE2-NEXT:    whilewr p2.d, x9, x8
+; CHECK-SVE2-NEXT:    addvl x8, x1, #14
+; CHECK-SVE2-NEXT:    addvl x9, x0, #14
+; CHECK-SVE2-NEXT:    uzp1 p3.h, p3.h, p0.h
+; CHECK-SVE2-NEXT:    whilewr p4.d, x9, x8
+; CHECK-SVE2-NEXT:    addvl x8, x1, #13
+; CHECK-SVE2-NEXT:    addvl x9, x0, #13
+; CHECK-SVE2-NEXT:    punpklo p3.h, p3.b
+; CHECK-SVE2-NEXT:    uzp1 p2.s, p4.s, p2.s
+; CHECK-SVE2-NEXT:    whilewr p4.d, x9, x8
+; CHECK-SVE2-NEXT:    addvl x8, x1, #8
 ; CHECK-SVE2-NEXT:    addvl x9, x0, #8
-; CHECK-SVE2-NEXT:    asr x8, x8, #3
-; CHECK-SVE2-NEXT:    sub x9, x10, x9
-; CHECK-SVE2-NEXT:    mov z1.d, z0.d
-; CHECK-SVE2-NEXT:    mov z2.d, z0.d
-; CHECK-SVE2-NEXT:    mov z4.d, z0.d
-; CHECK-SVE2-NEXT:    mov z5.d, x8
-; CHECK-SVE2-NEXT:    incd z1.d
-; CHECK-SVE2-NEXT:    incd z2.d, all, mul #2
-; CHECK-SVE2-NEXT:    incd z4.d, all, mul #4
-; CHECK-SVE2-NEXT:    cmphi p5.d, p0/z, z5.d, z0.d
-; CHECK-SVE2-NEXT:    mov z3.d, z1.d
-; CHECK-SVE2-NEXT:    mov z6.d, z2.d
-; CHECK-SVE2-NEXT:    mov z7.d, z1.d
-; CHECK-SVE2-NEXT:    cmphi p2.d, p0/z, z5.d, z4.d
-; CHECK-SVE2-NEXT:    cmphi p3.d, p0/z, z5.d, z2.d
-; CHECK-SVE2-NEXT:    cmphi p4.d, p0/z, z5.d, z1.d
-; CHECK-SVE2-NEXT:    incd z3.d, all, mul #2
-; CHECK-SVE2-NEXT:    incd z6.d, all, mul #4
-; CHECK-SVE2-NEXT:    incd z7.d, all, mul #4
-; CHECK-SVE2-NEXT:    uzp1 p4.s, p5.s, p4.s
-; CHECK-SVE2-NEXT:    mov z24.d, z3.d
-; CHECK-SVE2-NEXT:    cmphi p6.d, p0/z, z5.d, z6.d
-; CHECK-SVE2-NEXT:    cmphi p7.d, p0/z, z5.d, z7.d
-; CHECK-SVE2-NEXT:    cmphi p8.d, p0/z, z5.d, z3.d
-; CHECK-SVE2-NEXT:    incd z24.d, all, mul #4
-; CHECK-SVE2-NEXT:    uzp1 p2.s, p2.s, p7.s
-; CHECK-SVE2-NEXT:    uzp1 p3.s, p3.s, p8.s
-; CHECK-SVE2-NEXT:    cmphi p9.d, p0/z, z5.d, z24.d
-; CHECK-SVE2-NEXT:    cmp x8, #1
-; CHECK-SVE2-NEXT:    uzp1 p3.h, p4.h, p3.h
-; CHECK-SVE2-NEXT:    cset w8, lt
-; CHECK-SVE2-NEXT:    sbfx x8, x8, #0, #1
-; CHECK-SVE2-NEXT:    uzp1 p6.s, p6.s, p9.s
-; CHECK-SVE2-NEXT:    whilelo p1.b, xzr, x8
-; CHECK-SVE2-NEXT:    add x8, x9, #7
-; CHECK-SVE2-NEXT:    cmp x9, #0
-; CHECK-SVE2-NEXT:    uzp1 p2.h, p2.h, p6.h
-; CHECK-SVE2-NEXT:    csel x8, x8, x9, lt
-; CHECK-SVE2-NEXT:    asr x8, x8, #3
-; CHECK-SVE2-NEXT:    uzp1 p2.b, p3.b, p2.b
-; CHECK-SVE2-NEXT:    mov z5.d, x8
-; CHECK-SVE2-NEXT:    cmphi p5.d, p0/z, z5.d, z24.d
-; CHECK-SVE2-NEXT:    cmphi p7.d, p0/z, z5.d, z6.d
-; CHECK-SVE2-NEXT:    cmphi p8.d, p0/z, z5.d, z7.d
-; CHECK-SVE2-NEXT:    cmphi p9.d, p0/z, z5.d, z4.d
-; CHECK-SVE2-NEXT:    cmphi p4.d, p0/z, z5.d, z3.d
-; CHECK-SVE2-NEXT:    cmphi p10.d, p0/z, z5.d, z2.d
-; CHECK-SVE2-NEXT:    cmphi p6.d, p0/z, z5.d, z1.d
-; CHECK-SVE2-NEXT:    cmphi p0.d, p0/z, z5.d, z0.d
-; CHECK-SVE2-NEXT:    cmp x8, #1
-; CHECK-SVE2-NEXT:    uzp1 p5.s, p7.s, p5.s
-; CHECK-SVE2-NEXT:    cset w8, lt
-; CHECK-SVE2-NEXT:    uzp1 p7.s, p9.s, p8.s
-; CHECK-SVE2-NEXT:    sbfx x8, x8, #0, #1
-; CHECK-SVE2-NEXT:    ldr p9, [sp, #2, mul vl] // 2-byte Folded Reload
-; CHECK-SVE2-NEXT:    uzp1 p4.s, p10.s, p4.s
-; CHECK-SVE2-NEXT:    ldr p10, [sp, #1, mul vl] // 2-byte Folded Reload
-; CHECK-SVE2-NEXT:    uzp1 p0.s, p0.s, p6.s
-; CHECK-SVE2-NEXT:    ldr p8, [sp, #3, mul vl] // 2-byte Folded Reload
-; CHECK-SVE2-NEXT:    uzp1 p5.h, p7.h, p5.h
-; CHECK-SVE2-NEXT:    ldr p7, [sp, #4, mul vl] // 2-byte Folded Reload
-; CHECK-SVE2-NEXT:    uzp1 p0.h, p0.h, p4.h
+; CHECK-SVE2-NEXT:    punpklo p3.h, p3.b
+; CHECK-SVE2-NEXT:    whilewr p5.d, x9, x8
+; CHECK-SVE2-NEXT:    addvl x8, x1, #11
+; CHECK-SVE2-NEXT:    addvl x9, x0, #11
+; CHECK-SVE2-NEXT:    uzp1 p3.s, p3.s, p4.s
+; CHECK-SVE2-NEXT:    uzp1 p4.s, p5.s, p0.s
+; CHECK-SVE2-NEXT:    whilewr p5.d, x9, x8
+; CHECK-SVE2-NEXT:    addvl x8, x1, #10
+; CHECK-SVE2-NEXT:    addvl x9, x0, #10
+; CHECK-SVE2-NEXT:    uzp1 p4.h, p4.h, p0.h
+; CHECK-SVE2-NEXT:    whilewr p6.d, x9, x8
+; CHECK-SVE2-NEXT:    addvl x8, x1, #9
+; CHECK-SVE2-NEXT:    addvl x9, x0, #9
+; CHECK-SVE2-NEXT:    punpklo p4.h, p4.b
+; CHECK-SVE2-NEXT:    whilewr p7.d, x9, x8
+; CHECK-SVE2-NEXT:    punpklo p4.h, p4.b
+; CHECK-SVE2-NEXT:    uzp1 p5.s, p6.s, p5.s
 ; CHECK-SVE2-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Folded Reload
-; CHECK-SVE2-NEXT:    whilelo p4.b, xzr, x8
-; CHECK-SVE2-NEXT:    uzp1 p3.b, p0.b, p5.b
+; CHECK-SVE2-NEXT:    uzp1 p4.s, p4.s, p7.s
+; CHECK-SVE2-NEXT:    ldr p7, [sp, #4, mul vl] // 2-byte Folded Reload
+; CHECK-SVE2-NEXT:    uzp1 p2.h, p3.h, p2.h
+; CHECK-SVE2-NEXT:    uzp1 p3.h, p4.h, p5.h
 ; CHECK-SVE2-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
-; CHECK-SVE2-NEXT:    sel p0.b, p2, p2.b, p1.b
-; CHECK-SVE2-NEXT:    sel p1.b, p3, p3.b, p4.b
 ; CHECK-SVE2-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-SVE2-NEXT:    uzp1 p0.b, p0.b, p1.b
+; CHECK-SVE2-NEXT:    uzp1 p1.b, p3.b, p2.b
 ; CHECK-SVE2-NEXT:    addvl sp, sp, #1
 ; CHECK-SVE2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE2-NEXT:    ret
 ;
-; CHECK-SVE-LABEL: whilewr_64_expand4:
+; CHECK-SVE-LABEL: whilewr_64_split4:
 ; CHECK-SVE:       // %bb.0: // %entry
 ; CHECK-SVE-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SVE-NEXT:    addvl sp, sp, #-1
