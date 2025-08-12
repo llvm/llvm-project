@@ -10396,7 +10396,6 @@ SDValue AArch64TargetLowering::LowerGlobalTLSAddress(SDValue Op,
   llvm_unreachable("Unexpected platform trying to use TLS");
 }
 
-
 //===----------------------------------------------------------------------===//
 //                      PtrAuthGlobalAddress lowering
 //
