@@ -46,6 +46,8 @@ void main() {
 // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %[[Ptr3]], ptr align 4 @_ZL1C, i32 4, i1 false)
   Second[2] = C;
 
+  // NOTE: _ZN4hlsl8RWBufferIfEixEj is the subscript operator for RWBuffer<float>
+
 // get First[1][0] value
 // CHECK: %[[First_1_Ptr:.*]] = getelementptr inbounds [3 x %"class.hlsl::RWBuffer"], ptr %First, i32 0, i32 1
 // CHECK: %[[BufPtr1:.*]] = call {{.*}} ptr @_ZN4hlsl8RWBufferIfEixEj(ptr {{.*}} %[[First_1_Ptr]], i32 noundef 0)

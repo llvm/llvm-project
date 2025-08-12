@@ -8,6 +8,9 @@
 RWBuffer<float> A[3] : register(u0);
 RWStructuredBuffer<float> Out : register(u0);
 
+// NOTE: _ZN4hlsl8RWBufferIfEixEj is the subscript operator for RWBuffer<float> and
+//       _ZN4hlsl18RWStructuredBufferIfEixEj is the subscript operator for RWStructuredBuffer<float>
+
 // CHECK: define {{.*}} float @_Z3fooA3_N4hlsl8RWBufferIfEE(ptr noundef byval([3 x %"class.hlsl::RWBuffer"]) align 4 %LocalA)
 // CHECK-NEXT: entry:
 float foo(RWBuffer<float> LocalA[3]) {

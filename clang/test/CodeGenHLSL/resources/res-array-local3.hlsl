@@ -23,6 +23,8 @@ void SomeFn(RWBuffer<int> B[2], uint Idx, int Val0) {
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %[[B_0_Ptr]], ptr align 4 @_ZL1Y, i32 4, i1 false)
   B[0] = Y;
 
+// NOTE: _ZN4hlsl8RWBufferIiEixEj is the subscript operator for RWBuffer<int>
+
 // CHECK-NEXT: %[[Val0:.*]] = load i32, ptr %[[Val0_addr]], align 4
 // CHECK-NEXT: %[[B_0_Ptr:.*]] = getelementptr inbounds [2 x %"class.hlsl::RWBuffer"], ptr %B, i32 0, i32 0
 // CHECK-NEXT: %[[Idx:.*]] = load i32, ptr %[[Idx_addr]], align 4
