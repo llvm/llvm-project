@@ -6978,8 +6978,8 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
       = cast<SubstTemplateTypeParmPackType>(T);
     if (Subst->getReplacedParameter()->getDepth() == Depth)
       Used[Subst->getIndex()] = true;
-    MarkUsedTemplateParameters(Ctx, Subst->getArgumentPack(),
-                               OnlyDeduced, Depth, Used);
+    MarkUsedTemplateParameters(Ctx, Subst->getArgumentPack(), OnlyDeduced,
+                               Depth, Used);
     break;
   }
   case Type::SubstBuiltinTemplatePack: {
