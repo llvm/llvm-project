@@ -8,7 +8,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ToolOutputFile.h"
 
-namespace mlir::remark {
+namespace mlir::remark::detail {
 
 FailureOr<std::unique_ptr<MLIRRemarkStreamerBase>>
 LLVMRemarkStreamer::createToFile(llvm::StringRef path,
@@ -33,7 +33,7 @@ LLVMRemarkStreamer::createToFile(llvm::StringRef path,
   auto impl = std::unique_ptr<LLVMRemarkStreamer>(new LLVMRemarkStreamer());
   impl->remarkStreamer = std::move(rs);
   impl->file = std::move(f);
-  return std::unique_ptr<mlir::remark::MLIRRemarkStreamerBase>(std::move(impl));
+  return std::unique_ptr<MLIRRemarkStreamerBase>(std::move(impl));
 }
 
 void LLVMRemarkStreamer::streamOptimizationRemark(const Remark &remark) {
@@ -50,13 +50,15 @@ LLVMRemarkStreamer::~LLVMRemarkStreamer() {
   if (file && remarkStreamer)
     file->keep();
 }
+} // namespace mlir::remark::detail
 
+namespace mlir::remark {
 LogicalResult enableOptimizationRemarksToFile(
     MLIRContext &ctx, StringRef path, llvm::remarks::Format fmt,
     const MLIRContext::RemarkCategories &cat, bool printAsEmitRemarks) {
 
-  FailureOr<std::unique_ptr<MLIRRemarkStreamerBase>> sOr =
-      LLVMRemarkStreamer::createToFile(path, fmt);
+  FailureOr<std::unique_ptr<detail::MLIRRemarkStreamerBase>> sOr =
+      detail::LLVMRemarkStreamer::createToFile(path, fmt);
   if (failed(sOr))
     return failure();
   return ctx.enableOptimizationRemarks(std::move(*sOr), cat,

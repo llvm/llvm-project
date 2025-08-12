@@ -13,12 +13,16 @@
 #ifndef MLIR_IR_REMARKS_H
 #define MLIR_IR_REMARKS_H
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Remarks/Remark.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Regex.h"
+#include <optional>
 
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/Value.h"
 
 namespace mlir::remark {
 
@@ -30,7 +34,9 @@ enum class RemarkKind {
   OptimizationRemarkFailure,  // Optimization failure remark.
   OptimizationRemarkAnalysis, // Analysis remark that does not indicate a pass.
 };
+} // namespace mlir::remark
 
+namespace mlir::remark::detail {
 //===----------------------------------------------------------------------===//
 // Remark Base Class
 //===----------------------------------------------------------------------===//
@@ -43,29 +49,36 @@ public:
       : remarkKind(remarkKind), functionName(functionName), loc(loc),
         passName(passName), remarkName(remarkName) {}
 
-  struct RemarkKeyValue {
+  // Remark argument that is a key-value pair that can be printed as machine
+  // parsable args.
+  struct Arg {
     std::string key;
     std::string val;
+    Arg(llvm::StringRef m) : key("Remark"), val(m) {}
+    Arg(llvm::StringRef k, llvm::StringRef v) : key(k), val(v) {}
+    Arg(llvm::StringRef k, std::string v) : key(k), val(std::move(v)) {}
+    Arg(llvm::StringRef k, const char *v) : Arg(k, llvm::StringRef(v)) {}
+    Arg(llvm::StringRef k, Value v);
+    Arg(llvm::StringRef k, Type t);
+    Arg(llvm::StringRef k, bool b) : key(k), val(b ? "true" : "false") {}
 
-    explicit RemarkKeyValue(StringRef str = "") : key("String"), val(str) {}
-    RemarkKeyValue(StringRef key, Value value);
-    RemarkKeyValue(StringRef key, Type type);
-    RemarkKeyValue(StringRef key, StringRef s);
-    RemarkKeyValue(StringRef key, const char *s)
-        : RemarkKeyValue(key, StringRef(s)) {};
-    RemarkKeyValue(StringRef key, int n);
-    RemarkKeyValue(StringRef key, float n);
-    RemarkKeyValue(StringRef key, long n);
-    RemarkKeyValue(StringRef key, long long n);
-    RemarkKeyValue(StringRef key, unsigned n);
-    RemarkKeyValue(StringRef key, unsigned long n);
-    RemarkKeyValue(StringRef key, unsigned long long n);
-    RemarkKeyValue(StringRef key, bool b)
-        : key(key), val(b ? "true" : "false") {}
+    // One constructor for all arithmetic types except bool.
+    template <typename T, typename = std::enable_if_t<std::is_arithmetic_v<T> &&
+                                                      !std::is_same_v<T, bool>>>
+    Arg(llvm::StringRef k, T v) : key(k) {
+      if constexpr (std::is_floating_point_v<T>) {
+        llvm::raw_string_ostream os(val);
+        os << v;
+      } else if constexpr (std::is_signed_v<T>) {
+        val = llvm::itostr(static_cast<long long>(v));
+      } else {
+        val = llvm::utostr(static_cast<unsigned long long>(v));
+      }
+    }
   };
 
-  void insert(StringRef s);
-  void insert(RemarkKeyValue a);
+  void insert(llvm::StringRef s);
+  void insert(Arg a);
 
   void print(llvm::raw_ostream &os, bool printLocation = false) const;
 
@@ -82,7 +95,7 @@ public:
   StringRef getRemarkName() const { return remarkName; }
   std::string getMsg() const;
 
-  ArrayRef<RemarkKeyValue> getArgs() const { return args; }
+  ArrayRef<Arg> getArgs() const { return args; }
 
   llvm::remarks::Type getRemarkType() const;
 
@@ -104,8 +117,8 @@ protected:
   /// identify the remark.
   StringRef remarkName;
 
-  /// RemarkKeyValues collected via the streaming interface.
-  SmallVector<RemarkKeyValue, 4> args;
+  /// Args collected via the streaming interface.
+  SmallVector<Arg, 4> args;
 
 private:
   /// Convert the MLIR diagnostic severity to LLVM diagnostic severity.
@@ -149,7 +162,7 @@ inline Remark &&operator<<(Remark &&r, StringRef s) {
   r.insert(s);
   return std::move(r);
 }
-inline Remark &operator<<(Remark &r, const Remark::RemarkKeyValue &kv) {
+inline Remark &operator<<(Remark &r, const Remark::Arg &kv) {
   r.insert(kv);
   return r;
 }
@@ -184,6 +197,12 @@ class RemarkEngine;
 // InFlightRemark
 //===----------------------------------------------------------------------===//
 
+/// Lazy text building for zero cost  string formatting.
+struct LazyTextBuild {
+  llvm::StringRef key;
+  std::function<std::string()> thunk;
+};
+
 /// InFlightRemark is a RAII class that holds a reference to a Remark
 /// instance and allows to build the remark using the << operator. The remark
 /// is emitted when the InFlightRemark instance is destroyed, which happens
@@ -197,7 +216,15 @@ public:
 
   InFlightRemark() = default; // empty ctor
 
-  template <typename T>
+  InFlightRemark &operator<<(const LazyTextBuild &l) {
+    if (remark)
+      *remark << Remark::Arg(l.key, l.thunk());
+    return *this;
+  }
+
+  // Generic path, but *not* for Lazy
+  template <typename T, typename = std::enable_if_t<
+                            !std::is_same_v<std::decay_t<T>, LazyTextBuild>>>
   InFlightRemark &operator<<(T &&arg) {
     if (remark)
       *remark << std::forward<T>(arg);
@@ -334,18 +361,8 @@ public:
                                                 StringRef category);
 };
 
-using RemarkKV = remark::Remark::RemarkKeyValue;
-
-} // namespace mlir::remark
-
-//===----------------------------------------------------------------------===//
-// Emitters
-//===----------------------------------------------------------------------===//
-namespace mlir {
-using namespace mlir::remark;
-
 template <typename Fn, typename... Args>
-inline remark::InFlightRemark withEngine(Fn fn, Location loc, Args &&...args) {
+inline InFlightRemark withEngine(Fn fn, Location loc, Args &&...args) {
   MLIRContext *ctx = loc->getContext();
 
   RemarkEngine *enginePtr = ctx->getRemarkEngine();
@@ -356,38 +373,60 @@ inline remark::InFlightRemark withEngine(Fn fn, Location loc, Args &&...args) {
   return {};
 }
 
+} // namespace mlir::remark::detail
+
+namespace mlir::remark {
+
+template <class... Ts>
+inline detail::LazyTextBuild reason(const char *fmt, Ts &&...ts) {
+  return {"Reason", [=] { return llvm::formatv(fmt, ts...).str(); }};
+}
+
+template <class... Ts>
+inline detail::LazyTextBuild suggest(const char *fmt, Ts &&...ts) {
+  return {"Suggestion", [=] { return llvm::formatv(fmt, ts...).str(); }};
+}
+
+template <class V>
+inline detail::LazyTextBuild metric(StringRef key, V &&v) {
+  using DV = std::decay_t<V>;
+  return {key, [key, vv = DV(std::forward<V>(v))]() mutable {
+            // Reuse Arg's formatting logic and return just the value string.
+            return detail::Remark::Arg(key, std::move(vv)).val;
+          }};
+}
+//===----------------------------------------------------------------------===//
+// Emitters
+//===----------------------------------------------------------------------===//
+
 /// Report an optimization remark that was passed.
-inline InFlightRemark reportRemarkPassed(Location loc, StringRef cat,
-                                         StringRef passName) {
-  return withEngine(&RemarkEngine::emitOptimizationRemark, loc, passName, cat);
-}
-
-inline RemarkKV suggest(StringRef s) { return {"Suggestion", s}; }
-
-/// Report an optimization remark that was missed.
-inline InFlightRemark
-reportOptimizationMiss(Location loc, StringRef cat, StringRef passName,
-                       llvm::function_ref<std::string()> makeSuggestion) {
-  auto r =
-      withEngine(&RemarkEngine::emitOptimizationRemarkMiss, loc, passName, cat);
-  if (r)
-    r << suggest(makeSuggestion());
-  return r;
-}
-/// Report an optimization failure remark.
-inline InFlightRemark reportOptimizationFail(Location loc, StringRef cat,
-                                             StringRef passName) {
-  return withEngine(&RemarkEngine::emitOptimizationRemarkFailure, loc, passName,
-                    cat);
-}
-
-/// Report an optimization analysis remark.
-inline InFlightRemark reportOptimizationAnalysis(Location loc, StringRef cat,
-                                                 StringRef passName) {
-  return withEngine(&RemarkEngine::emitOptimizationRemarkAnalysis, loc,
+inline detail::InFlightRemark passed(Location loc, StringRef cat,
+                                     StringRef passName = {}) {
+  return withEngine(&detail::RemarkEngine::emitOptimizationRemark, loc,
                     passName, cat);
 }
 
-} // namespace mlir
+/// Report an optimization remark that was missed.
+inline detail::InFlightRemark missed(Location loc, llvm::StringRef cat,
+                                     llvm::StringRef passName = {}) {
+  return withEngine(&detail::RemarkEngine::emitOptimizationRemarkMiss, loc,
+                    passName, cat);
+}
+
+/// Report an optimization remark that failed.
+inline detail::InFlightRemark failed(Location loc, llvm::StringRef cat,
+                                     llvm::StringRef passName = {}) {
+  return withEngine(&detail::RemarkEngine::emitOptimizationRemarkFailure, loc,
+                    passName, cat);
+}
+
+/// Report an optimization analysis remark.
+inline detail::InFlightRemark analysis(Location loc, StringRef cat,
+                                       StringRef passName = {}) {
+  return withEngine(&detail::RemarkEngine::emitOptimizationRemarkAnalysis, loc,
+                    passName, cat);
+}
+
+} // namespace mlir::remark
 
 #endif // MLIR_IR_REMARKS_H

@@ -15,56 +15,27 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 
-using namespace mlir::remark;
+using namespace mlir::remark::detail;
 
 //------------------------------------------------------------------------------
 // Remark
 //------------------------------------------------------------------------------
 
-Remark::RemarkKeyValue::RemarkKeyValue(StringRef key, Value value)
-    : key(std::string(key)) {
-
-  llvm::raw_string_ostream rss(val);
-  rss << value;
-}
-
-Remark::RemarkKeyValue::RemarkKeyValue(StringRef key, Type type)
-    : key(std::string(key)) {
+Remark::Arg::Arg(llvm::StringRef k, Value v) : key(k) {
   llvm::raw_string_ostream os(val);
-  os << type;
+  os << v;
 }
 
-Remark::RemarkKeyValue::RemarkKeyValue(StringRef key, StringRef s)
-    : key(std::string(key)), val(s.str()) {}
+Remark::Arg::Arg(llvm::StringRef k, Type t) : key(k) {
+  llvm::raw_string_ostream os(val);
+  os << t;
+}
 
-Remark::RemarkKeyValue::RemarkKeyValue(StringRef key, int n)
-    : key(std::string(key)), val(llvm::itostr(n)) {}
-
-Remark::RemarkKeyValue::RemarkKeyValue(StringRef key, float n)
-    : key(std::string(key)), val(std::to_string(n)) {}
-
-Remark::RemarkKeyValue::RemarkKeyValue(StringRef key, long n)
-    : key(std::string(key)), val(llvm::itostr(n)) {}
-
-Remark::RemarkKeyValue::RemarkKeyValue(StringRef key, long long n)
-    : key(std::string(key)), val(llvm::itostr(n)) {}
-
-Remark::RemarkKeyValue::RemarkKeyValue(StringRef key, unsigned n)
-    : key(std::string(key)), val(llvm::utostr(n)) {}
-
-Remark::RemarkKeyValue::RemarkKeyValue(StringRef key, unsigned long n)
-    : key(std::string(key)), val(llvm::utostr(n)) {}
-
-Remark::RemarkKeyValue::RemarkKeyValue(StringRef key, unsigned long long n)
-    : key(std::string(key)), val(llvm::utostr(n)) {}
-
-void Remark::insert(StringRef s) { args.emplace_back(s); }
-
-void Remark::insert(RemarkKeyValue a) { args.push_back(std::move(a)); }
+void Remark::insert(llvm::StringRef s) { args.emplace_back(s); }
+void Remark::insert(Arg a) { args.push_back(std::move(a)); }
 
 // Simple helper to print key=val list.
-static void printArgs(llvm::raw_ostream &os,
-                      llvm::ArrayRef<Remark::RemarkKeyValue> args) {
+static void printArgs(llvm::raw_ostream &os, llvm::ArrayRef<Remark::Arg> args) {
   if (args.empty())
     return;
   os << " {";
@@ -149,7 +120,7 @@ llvm::remarks::Remark Remark::generateRemark() const {
   r.RemarkName = getRemarkName();
   r.FunctionName = getFunction();
   r.Loc = locLambda();
-  for (const Remark::RemarkKeyValue &arg : getArgs()) {
+  for (const Remark::Arg &arg : getArgs()) {
     r.Args.emplace_back();
     r.Args.back().Key = arg.key;
     r.Args.back().Val = arg.val;

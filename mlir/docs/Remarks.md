@@ -12,7 +12,7 @@ while a pass runs and serialize to disk (YAML or LLVM bitstream) for tooling.
 
 - **Opt-in**: Disabled by default; zero overhead unless enabled.
 - **Per-context**: Configured on `MLIRContext`.
-- **Formats**: Custom streamers, or LLVM’s Remark engine (YAML / Bitstream).
+- **Formats**: LLVM’s Remark engine (YAML / Bitstream), or pluggable custom streamers.
 - **Kinds**: `Passed`, `Missed`, `Failure`, `Analysis`.
 - **API**: Lightweight streaming interface with `<<` (similar to diagnostics).
 
@@ -27,10 +27,49 @@ Remarks has two important classes:
   `streamOptimizationRemark(const Remark &)`.
 
 **Default backend – `MLIRLLVMRemarkStreamer`** Adapts `mlir::Remark` to
-`llvm::remarks::Remark` and writes YAML/bitstream via
-`llvm::remarks::RemarkStreamer` to a `ToolOutputFile`.
+`llvm::remarks::detail::Remark` and writes YAML/bitstream via
+`llvm::remarks::detail::RemarkStreamer` to a `ToolOutputFile`.
 
 **Ownership**: `MLIRContext` → `RemarkEngine` → `MLIRRemarkStreamerBase`.
+
+## Categories
+
+There are four built-in categories; you can extend these if needed.
+
+### Passed
+
+A diagnostic indicating the optimization/transformation succeeded.
+
+```c++
+[Passed] Vectorizer:myPass1 {Remark=vectorized loop, tripCount=128}
+```
+
+### Missed
+
+A diagnostic indicating the optimization/transformation did not apply, ideally
+with actionable feedback.
+
+```c++
+[Missed] Unroll: {Reason=tripCount=4 < threshold=256, Suggestion=increase unroll to 128}
+```
+
+### Failure
+
+A diagnostic indicating the optimization/transformation attempted but failed (or
+could not run).
+
+```c++
+[Failure] Unroll: {Reason=failed due to unsupported pattern}
+```
+
+### Analysis
+
+A diagnostic reporting analysis results.
+
+```c++
+[Analysis] Register: {Remark=Kernel uses 168 registers}
+[Analysis] Register: {Remark=Kernel uses 10kB local memory}
+```
 
 ## Enable Remarks via mlir::emitRemarks (No Streamer)
 
@@ -55,7 +94,8 @@ context.enableOptimizationRemarks(/*streamer=*/nullptr,
 If you want to persist remarks to a file in YAML or bitstream format, use
 `mlir::remark::LLVMRemarkStreamer` (helper shown below):
 
-You can read more information about [LLVM's Remark from here](https://llvm.org/docs/Remarks.html).
+You can read more information about
+[LLVM's Remark from here](https://llvm.org/docs/Remarks.html).
 
 ```c++
 #include "mlir/Remark/RemarkStreamer.h"
@@ -84,25 +124,27 @@ LogicalResult MyPass::runOnOperation() {
   Location loc = op->getLoc();
 
   // PASS: something succeeded
-  reportRemarkPassed(loc, /*category=*/"vectorizer", /*passName=*/"MyPass")
-      << "vectorized loop."
-      << Remark::RemarkKeyValue("tripCount", 128);
+   remark::passed(loc, categoryVectorizer, myPassname1)
+        << "vectorized loop" << remark::metric("tripCount", 128);
 
   // ANALYSIS: neutral insight
-  reportOptimizationAnalysis(loc, "RegisterCount", "")
-      << "Kernel uses 168 registers"
+  remark::analysis(loc, categoryRegister, "") << "Kernel uses 168 registers";
 
   // MISSED: explain why + suggest a fix
-  reportOptimizationMiss(loc, "unroll", "MyPass",
-                         /*suggestion=*/[&](){ return "increase unroll factor to >=4"; })
-      << "not profitable at this size";
+  int target = 128;
+  int tripBad = 4;
+  int threshold = 256;
+  remark::missed(loc, categoryUnroll)
+      << remark::reason("tripCount={0} < threshold={1}", tripBad, threshold);
+
+  remark::missed(loc, categoryUnroll)
+      << remark::reason("tripCount={0} < threshold={1}", tripBad, threshold)
+      << remark::suggest("increase unroll to {0}", target);
 
   // FAILURE: action attempted but failed
-  if (failed(doThing(op))) {
-    reportOptimizationFail(loc, "pipeline", "MyPass")
-        << "failed due to unsupported pattern";
-    return failure();
-  }
+  remark::failed(loc, categoryUnroll)
+      << remark::reason("failed due to unsupported pattern");
+
   return success();
 }
 ```

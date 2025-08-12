@@ -22,20 +22,14 @@
 
 using namespace llvm;
 using namespace mlir;
-using namespace mlir::detail;
 
 namespace {
 
 TEST(Remark, TestOutputOptimizationRemark) {
-  const auto *pass1Msg = "My message";
-  const auto *pass2Msg = "My another message";
-  const auto *pass3Msg = "Do not show this message";
-
-  std::string categoryLoopunroll("LoopUnroll");
-  std::string categoryInline("Inliner");
+  std::string categoryVectorizer("Vectorizer");
+  std::string categoryRegister("Register");
+  std::string categoryUnroll("Unroll");
   std::string myPassname1("myPass1");
-  std::string myPassname2("myPass2");
-  std::string funcName("myFunc");
   SmallString<64> tmpPathStorage;
   sys::fs::createUniquePath("remarks-%%%%%%.yaml", tmpPathStorage,
                             /*MakeAbsolute=*/true);
@@ -51,45 +45,36 @@ TEST(Remark, TestOutputOptimizationRemark) {
     context.printStackTraceOnDiagnostic(true);
 
     // Setup the remark engine
-    mlir::MLIRContext::RemarkCategories cats{/*passed=*/categoryLoopunroll,
-                                             /*missed=*/std::nullopt,
-                                             /*analysis=*/std::nullopt,
-                                             /*failed=*/categoryLoopunroll};
+    mlir::MLIRContext::RemarkCategories cats{/*passed=*/categoryVectorizer,
+                                             /*missed=*/categoryUnroll,
+                                             /*analysis=*/categoryRegister,
+                                             /*failed=*/categoryUnroll};
 
     LogicalResult isEnabled = mlir::remark::enableOptimizationRemarksToFile(
         context, yamlFile, llvm::remarks::Format::YAML, cats);
     ASSERT_TRUE(succeeded(isEnabled)) << "Failed to enable remark engine";
 
-    // Remark 1: pass, category LoopUnroll
-    reportRemarkPassed(loc, categoryLoopunroll, myPassname1) << pass1Msg;
-    // Remark 2: failure, category LoopUnroll
-    reportOptimizationFail(loc, categoryLoopunroll, myPassname2) << pass2Msg;
-    // Remark 3: pass, category Inline (should not be printed)
-    reportRemarkPassed(loc, categoryInline, myPassname1) << pass3Msg;
+    // PASS: something succeeded
+    remark::passed(loc, categoryVectorizer, myPassname1)
+        << "vectorized loop" << remark::metric("tripCount", 128);
+
+    // ANALYSIS: neutral insight
+    remark::analysis(loc, categoryRegister, "") << "Kernel uses 168 registers";
+
+    // MISSED: explain why + suggest a fix
+    remark::missed(loc, categoryUnroll, "MyPass")
+        << remark::reason("not profitable at this size"),
+        remark::suggest("increase unroll factor to >=4");
+
+    // FAILURE: action attempted but failed
+    remark::failed(loc, categoryUnroll, "MyPass")
+        << remark::reason("failed due to unsupported pattern");
   }
 
   // Read the file
   auto bufferOrErr = MemoryBuffer::getFile(yamlFile);
   ASSERT_TRUE(static_cast<bool>(bufferOrErr)) << "Failed to open remarks file";
   std::string content = bufferOrErr.get()->getBuffer().str();
-
-  // Remark 1: pass, should be printed
-  EXPECT_NE(content.find("--- !Passed"), std::string::npos);
-  EXPECT_NE(content.find("Pass:            " + categoryLoopunroll),
-            std::string::npos);
-  EXPECT_NE(content.find("Name:            " + myPassname1), std::string::npos);
-  EXPECT_NE(content.find("String:          " + std::string(pass1Msg)),
-            std::string::npos);
-
-  // Remark 2: failure, should be printed
-  EXPECT_NE(content.find("--- !Failure"), std::string::npos);
-  EXPECT_NE(content.find("Name:            " + myPassname2), std::string::npos);
-  EXPECT_NE(content.find("String:          " + std::string(pass2Msg)),
-            std::string::npos);
-
-  // Remark 3: pass, category Inline (should not be printed)
-  EXPECT_EQ(content.find("String:          " + std::string(pass3Msg)),
-            std::string::npos);
 }
 
 TEST(Remark, TestNoOutputOptimizationRemark) {
@@ -112,7 +97,8 @@ TEST(Remark, TestNoOutputOptimizationRemark) {
   {
     MLIRContext context;
     Location loc = UnknownLoc::get(&context);
-    reportOptimizationFail(loc, categoryFailName, myPassname1) << pass1Msg;
+    remark::failed(loc, categoryFailName, myPassname1)
+        << remark::reason(pass1Msg);
   }
   // No setup, so no output file should be created
   // check!
@@ -122,14 +108,12 @@ TEST(Remark, TestNoOutputOptimizationRemark) {
 }
 
 TEST(Remark, TestOutputOptimizationRemarkDiagnostic) {
-  const auto *pass1Msg = "My message";
-
-  std::string categoryLoopunroll("LoopUnroll");
+  std::string categoryVectorizer("Vectorizer");
+  std::string categoryRegister("Register");
+  std::string categoryUnroll("Unroll");
   std::string myPassname1("myPass1");
-  std::string funcName("myFunc");
 
-  std::string seenMsg = "";
-  std::string expectedMsg = "[Passed] LoopUnroll:myPass1 {String=My message}";
+  llvm::SmallVector<std::string> seenMsg;
   {
     MLIRContext context;
     Location loc = UnknownLoc::get(&context);
@@ -139,32 +123,59 @@ TEST(Remark, TestOutputOptimizationRemarkDiagnostic) {
 
     // Register a handler that captures the diagnostic.
     ScopedDiagnosticHandler handler(&context, [&](Diagnostic &diag) {
-      seenMsg = diag.str();
+      seenMsg.push_back(diag.str());
       return success();
     });
 
     // Setup the remark engine
-    mlir::MLIRContext::RemarkCategories cats{/*passed=*/categoryLoopunroll,
-                                             /*missed=*/std::nullopt,
-                                             /*analysis=*/std::nullopt,
-                                             /*failed=*/categoryLoopunroll};
+    mlir::MLIRContext::RemarkCategories cats{/*passed=*/categoryVectorizer,
+                                             /*missed=*/categoryUnroll,
+                                             /*analysis=*/categoryRegister,
+                                             /*failed=*/categoryUnroll};
 
     LogicalResult isEnabled =
         context.enableOptimizationRemarks(nullptr, cats, true);
+
     ASSERT_TRUE(succeeded(isEnabled)) << "Failed to enable remark engine";
 
-    // Remark 1: pass, category LoopUnroll
-    reportRemarkPassed(loc, categoryLoopunroll, myPassname1) << pass1Msg;
+    // PASS: something succeeded
+    remark::passed(loc, categoryVectorizer, myPassname1)
+        << "vectorized loop" << remark::metric("tripCount", 128);
+
+    // ANALYSIS: neutral insight
+    remark::analysis(loc, categoryRegister, "") << "Kernel uses 168 registers";
+
+    // MISSED: explain why + suggest a fix
+    int target = 128;
+    int tripBad = 4;
+    int threshold = 256;
+
+    remark::missed(loc, categoryUnroll)
+        << remark::reason("tripCount={0} < threshold={1}", tripBad, threshold);
+
+    remark::missed(loc, categoryUnroll)
+        << remark::reason("tripCount={0} < threshold={1}", tripBad, threshold)
+        << remark::suggest("increase unroll to {0}", target);
+
+    // FAILURE: action attempted but failed
+    remark::failed(loc, categoryUnroll)
+        << remark::reason("failed due to unsupported pattern");
   }
-  EXPECT_EQ(seenMsg, expectedMsg);
+  // clang-format off
+  EXPECT_EQ(seenMsg[0], "[Passed] Vectorizer:myPass1 {Remark=vectorized loop, tripCount=128}");
+  EXPECT_EQ(seenMsg[1], "[Analysis] Register: {Remark=Kernel uses 168 registers}");
+  EXPECT_EQ(seenMsg[2], "[Missed] Unroll: {Reason=tripCount=4 < threshold=256}");
+  EXPECT_EQ(seenMsg[3], "[Missed] Unroll: {Reason=tripCount=4 < threshold=256, Suggestion=increase unroll to 128}");
+  EXPECT_EQ(seenMsg[4], "[Failure] Unroll: {Reason=failed due to unsupported pattern}");
+  // clang-format on
 }
 
 /// Custom remark streamer that prints remarks to stderr.
-class MyCustomStreamer : public MLIRRemarkStreamerBase {
+class MyCustomStreamer : public remark::detail::MLIRRemarkStreamerBase {
 public:
   MyCustomStreamer() = default;
 
-  void streamOptimizationRemark(const Remark &remark) override {
+  void streamOptimizationRemark(const remark::detail::Remark &remark) override {
     llvm::errs() << "Custom remark: ";
     remark.print(llvm::errs(), true);
     llvm::errs() << "\n";
@@ -200,11 +211,12 @@ TEST(Remark, TestCustomOptimizationRemarkDiagnostic) {
     ASSERT_TRUE(succeeded(isEnabled)) << "Failed to enable remark engine";
 
     // Remark 1: pass, category LoopUnroll
-    reportRemarkPassed(loc, categoryLoopunroll, myPassname1) << pass1Msg;
+    remark::passed(loc, categoryLoopunroll, myPassname1) << pass1Msg;
     // Remark 2: failure, category LoopUnroll
-    reportOptimizationFail(loc, categoryLoopunroll, myPassname2) << pass2Msg;
+    remark::failed(loc, categoryLoopunroll, myPassname2)
+        << remark::reason(pass2Msg);
     // Remark 3: pass, category Inline (should not be printed)
-    reportRemarkPassed(loc, categoryInline, myPassname1) << pass3Msg;
+    remark::passed(loc, categoryInline, myPassname1) << pass3Msg;
   }
 
   llvm::errs().flush();

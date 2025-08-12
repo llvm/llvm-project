@@ -34,10 +34,10 @@ class MLIRContextImpl;
 class RegisteredOperationName;
 class StorageUniquer;
 class IRUnit;
-namespace remark {
+namespace remark::detail {
 class MLIRRemarkStreamerBase;
 class RemarkEngine;
-} // namespace remark
+} // namespace remark::detail
 
 /// MLIRContext is the top-level object for a collection of MLIR operations. It
 /// holds immortal uniqued objects like types, and the tables used to unique
@@ -221,7 +221,7 @@ public:
   DiagnosticEngine &getDiagEngine();
 
   /// Returns the remark engine for this context.
-  remark::RemarkEngine *getRemarkEngine();
+  remark::detail::RemarkEngine *getRemarkEngine();
 
   /// Returns the storage uniquer used for creating affine constructs.
   StorageUniquer &getAffineUniquer();
@@ -265,7 +265,7 @@ public:
   /// If `printAsEmitRemarks` is true, the remarks will be printed as
   /// mlir::emitRemarks.
   LogicalResult enableOptimizationRemarks(
-      std::unique_ptr<remark::MLIRRemarkStreamerBase> streamer,
+      std::unique_ptr<remark::detail::MLIRRemarkStreamerBase> streamer,
       const RemarkCategories &cats, bool printAsEmitRemarks = false);
 
   //===--------------------------------------------------------------------===//
@@ -305,7 +305,7 @@ public:
 
 private:
   /// Set the remark engine for this context.
-  void setRemarkEngine(std::unique_ptr<remark::RemarkEngine> engine);
+  void setRemarkEngine(std::unique_ptr<remark::detail::RemarkEngine> engine);
 
   /// Return true if the given dialect is currently loading.
   bool isDialectLoading(StringRef dialectNamespace);

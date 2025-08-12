@@ -138,7 +138,7 @@ public:
   //===--------------------------------------------------------------------===//
   // Remark
   //===--------------------------------------------------------------------===//
-  std::unique_ptr<remark::RemarkEngine> remarkEngine;
+  std::unique_ptr<remark::detail::RemarkEngine> remarkEngine;
 
   //===--------------------------------------------------------------------===//
   // Options
@@ -400,19 +400,19 @@ DiagnosticEngine &MLIRContext::getDiagEngine() { return getImpl().diagEngine; }
 
 /// Returns the remark engine for this context.
 void MLIRContext::setRemarkEngine(
-    std::unique_ptr<remark::RemarkEngine> engine) {
+    std::unique_ptr<remark::detail::RemarkEngine> engine) {
   getImpl().remarkEngine = std::move(engine);
 }
 
-remark::RemarkEngine *MLIRContext::getRemarkEngine() {
+remark::detail::RemarkEngine *MLIRContext::getRemarkEngine() {
   return getImpl().remarkEngine.get();
 }
 
 LogicalResult MLIRContext::enableOptimizationRemarks(
-    std::unique_ptr<remark::MLIRRemarkStreamerBase> streamer,
+    std::unique_ptr<remark::detail::MLIRRemarkStreamerBase> streamer,
     const RemarkCategories &cats, bool printAsEmitRemarks) {
   auto engine =
-      std::make_unique<remark::RemarkEngine>(printAsEmitRemarks, cats);
+      std::make_unique<remark::detail::RemarkEngine>(printAsEmitRemarks, cats);
 
   std::string errMsg;
   if (failed(engine->initialize(std::move(streamer), &errMsg))) {
