@@ -639,7 +639,7 @@ bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
 
   return false;
 }
-} // namespace
+}
 
 int main(int argc, char **argv) {
   sys::PrintStackTraceOnErrorSignal(argv[0]);
