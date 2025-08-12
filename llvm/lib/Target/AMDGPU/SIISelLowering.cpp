@@ -14469,7 +14469,7 @@ bool SITargetLowering::shouldExpandVectorDynExt(SDNode *N) const {
 
 static unsigned getMappedVectorIndex(unsigned Idx, EVT From, EVT To) {
   assert(From.isVector() && To.isVector() &&
-         "Expected From and To types have to be vector types.");
+         "Expected From and To types to be vector types.");
   assert(From.getSizeInBits() == To.getSizeInBits() &&
          "Expected From and To vector types require to have the same size.");
 
