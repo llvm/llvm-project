@@ -161,6 +161,10 @@ protected:
                                         const clang::DeclaratorDecl *Decl,
                                         SemanticInfo &ActiveSemantic);
 
+  llvm::Value *handleStructSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+                                        const clang::DeclaratorDecl *Decl,
+                                        SemanticInfo &ActiveSemantic);
+
   llvm::Value *handleSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
                                   const clang::DeclaratorDecl *Decl,
                                   SemanticInfo &ActiveSemantic);
