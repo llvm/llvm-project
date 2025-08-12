@@ -2476,10 +2476,7 @@ void DAGTypeLegalizer::SplitVecRes_Gather(MemSDNode *N, SDValue &Lo,
   else
     std::tie(IndexLo, IndexHi) = DAG.SplitVector(Ops.Index, dl);
 
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  MachineMemOperand::Flags MMOFlags = MachineMemOperand::MOLoad |
-                                      TLI.getTargetMMOFlags(*N) |
-                                      SelectionDAG::getNonTemporalMemFlag(*N);
+  MachineMemOperand::Flags MMOFlags = N->getMemOperand()->getFlags();
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       N->getPointerInfo(), MMOFlags, LocationSize::beforeOrAfterPointer(),
       Alignment, N->getAAInfo(), N->getRanges());
@@ -4251,10 +4248,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_Scatter(MemSDNode *N, unsigned OpNo) {
     std::tie(IndexLo, IndexHi) = DAG.SplitVector(Ops.Index, DL);
 
   SDValue Lo;
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  MachineMemOperand::Flags MMOFlags = MachineMemOperand::MOStore |
-                                      TLI.getTargetMMOFlags(*N) |
-                                      SelectionDAG::getNonTemporalMemFlag(*N);
+  MachineMemOperand::Flags MMOFlags = N->getMemOperand()->getFlags();
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       N->getPointerInfo(), MMOFlags, LocationSize::beforeOrAfterPointer(),
       Alignment, N->getAAInfo(), N->getRanges());

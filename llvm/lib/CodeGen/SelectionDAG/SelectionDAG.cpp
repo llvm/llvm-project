@@ -14063,12 +14063,6 @@ SelectionDAG::getNonTemporalMemFlag(const VPIntrinsic &VPIntrin) {
              : MachineMemOperand::MONone;
 }
 
-MachineMemOperand::Flags
-SelectionDAG::getNonTemporalMemFlag(const MemSDNode &N) {
-  return N.isNonTemporal() ? MachineMemOperand::MONonTemporal
-                           : MachineMemOperand::MONone;
-}
-
 #ifndef NDEBUG
 static void checkForCyclesHelper(const SDNode *N,
                                  SmallPtrSetImpl<const SDNode*> &Visited,
