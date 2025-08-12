@@ -16,7 +16,7 @@ define <vscale x 16 x i1> @whilewr_8(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-SVE-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-SVE-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-SVE-NEXT:    .cfi_offset w29, -16
 ; CHECK-SVE-NEXT:    index z0.d, #0, #1
 ; CHECK-SVE-NEXT:    sub x8, x1, x0
@@ -111,11 +111,10 @@ define <vscale x 4 x i1> @whilewr_32(ptr %a, ptr %b) {
 ; CHECK-SVE-LABEL: whilewr_32:
 ; CHECK-SVE:       // %bb.0: // %entry
 ; CHECK-SVE-NEXT:    index z0.d, #0, #1
-; CHECK-SVE-NEXT:    sub x8, x1, x0
+; CHECK-SVE-NEXT:    subs x8, x1, x0
 ; CHECK-SVE-NEXT:    ptrue p0.d
 ; CHECK-SVE-NEXT:    add x9, x8, #3
-; CHECK-SVE-NEXT:    cmp x8, #0
-; CHECK-SVE-NEXT:    csel x8, x9, x8, lt
+; CHECK-SVE-NEXT:    csel x8, x9, x8, mi
 ; CHECK-SVE-NEXT:    asr x8, x8, #2
 ; CHECK-SVE-NEXT:    mov z1.d, z0.d
 ; CHECK-SVE-NEXT:    mov z2.d, x8
@@ -142,12 +141,11 @@ define <vscale x 2 x i1> @whilewr_64(ptr %a, ptr %b) {
 ;
 ; CHECK-SVE-LABEL: whilewr_64:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    sub x8, x1, x0
+; CHECK-SVE-NEXT:    subs x8, x1, x0
 ; CHECK-SVE-NEXT:    index z0.d, #0, #1
 ; CHECK-SVE-NEXT:    ptrue p0.d
 ; CHECK-SVE-NEXT:    add x9, x8, #7
-; CHECK-SVE-NEXT:    cmp x8, #0
-; CHECK-SVE-NEXT:    csel x8, x9, x8, lt
+; CHECK-SVE-NEXT:    csel x8, x9, x8, mi
 ; CHECK-SVE-NEXT:    asr x8, x8, #3
 ; CHECK-SVE-NEXT:    mov z1.d, x8
 ; CHECK-SVE-NEXT:    cmphi p0.d, p0/z, z1.d, z0.d
@@ -176,7 +174,7 @@ define <vscale x 16 x i1> @whilerw_8(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-SVE-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-SVE-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-SVE-NEXT:    .cfi_offset w29, -16
 ; CHECK-SVE-NEXT:    index z0.d, #0, #1
 ; CHECK-SVE-NEXT:    subs x8, x1, x0
@@ -280,7 +278,7 @@ define <vscale x 4 x i1> @whilerw_32(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    cneg x8, x8, mi
 ; CHECK-SVE-NEXT:    add x9, x8, #3
 ; CHECK-SVE-NEXT:    cmp x8, #0
-; CHECK-SVE-NEXT:    csel x8, x9, x8, lt
+; CHECK-SVE-NEXT:    csel x8, x9, x8, mi
 ; CHECK-SVE-NEXT:    mov z1.d, z0.d
 ; CHECK-SVE-NEXT:    asr x8, x8, #2
 ; CHECK-SVE-NEXT:    mov z2.d, x8
@@ -313,7 +311,7 @@ define <vscale x 2 x i1> @whilerw_64(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    cneg x8, x8, mi
 ; CHECK-SVE-NEXT:    add x9, x8, #7
 ; CHECK-SVE-NEXT:    cmp x8, #0
-; CHECK-SVE-NEXT:    csel x8, x9, x8, lt
+; CHECK-SVE-NEXT:    csel x8, x9, x8, mi
 ; CHECK-SVE-NEXT:    asr x8, x8, #3
 ; CHECK-SVE-NEXT:    mov z1.d, x8
 ; CHECK-SVE-NEXT:    cmphi p0.d, p0/z, z1.d, z0.d
@@ -347,7 +345,7 @@ define <vscale x 32 x i1> @whilewr_8_split(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-SVE-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-SVE-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-SVE-NEXT:    .cfi_offset w29, -16
 ; CHECK-SVE-NEXT:    index z0.d, #0, #1
 ; CHECK-SVE-NEXT:    rdvl x8, #1
@@ -456,7 +454,7 @@ define <vscale x 64 x i1> @whilewr_8_split2(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Folded Spill
-; CHECK-SVE-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 16 * VG
+; CHECK-SVE-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 16 + 16 * VG
 ; CHECK-SVE-NEXT:    .cfi_offset w29, -16
 ; CHECK-SVE-NEXT:    index z0.d, #0, #1
 ; CHECK-SVE-NEXT:    rdvl x8, #1
@@ -597,7 +595,7 @@ define <vscale x 16 x i1> @whilewr_16_expand(ptr %a, ptr %b) {
 ; CHECK-SVE2-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE2-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE2-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-SVE2-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-SVE2-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-SVE2-NEXT:    .cfi_offset w29, -16
 ; CHECK-SVE2-NEXT:    index z0.d, #0, #1
 ; CHECK-SVE2-NEXT:    sub x8, x1, x0
@@ -653,7 +651,7 @@ define <vscale x 16 x i1> @whilewr_16_expand(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-SVE-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-SVE-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-SVE-NEXT:    .cfi_offset w29, -16
 ; CHECK-SVE-NEXT:    index z0.d, #0, #1
 ; CHECK-SVE-NEXT:    sub x8, x1, x0
@@ -716,7 +714,7 @@ define <vscale x 32 x i1> @whilewr_16_expand2(ptr %a, ptr %b) {
 ; CHECK-SVE2-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE2-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE2-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-SVE2-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-SVE2-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-SVE2-NEXT:    .cfi_offset w29, -16
 ; CHECK-SVE2-NEXT:    index z0.d, #0, #1
 ; CHECK-SVE2-NEXT:    sub x8, x1, x0
@@ -804,7 +802,7 @@ define <vscale x 32 x i1> @whilewr_16_expand2(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-SVE-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-SVE-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-SVE-NEXT:    .cfi_offset w29, -16
 ; CHECK-SVE-NEXT:    index z0.d, #0, #1
 ; CHECK-SVE-NEXT:    rdvl x8, #2
@@ -891,11 +889,10 @@ define <vscale x 8 x i1> @whilewr_32_expand(ptr %a, ptr %b) {
 ; CHECK-SVE2-LABEL: whilewr_32_expand:
 ; CHECK-SVE2:       // %bb.0: // %entry
 ; CHECK-SVE2-NEXT:    index z0.d, #0, #1
-; CHECK-SVE2-NEXT:    sub x8, x1, x0
+; CHECK-SVE2-NEXT:    subs x8, x1, x0
 ; CHECK-SVE2-NEXT:    ptrue p0.d
 ; CHECK-SVE2-NEXT:    add x9, x8, #3
-; CHECK-SVE2-NEXT:    cmp x8, #0
-; CHECK-SVE2-NEXT:    csel x8, x9, x8, lt
+; CHECK-SVE2-NEXT:    csel x8, x9, x8, mi
 ; CHECK-SVE2-NEXT:    asr x8, x8, #2
 ; CHECK-SVE2-NEXT:    mov z1.d, z0.d
 ; CHECK-SVE2-NEXT:    mov z2.d, z0.d
@@ -921,11 +918,10 @@ define <vscale x 8 x i1> @whilewr_32_expand(ptr %a, ptr %b) {
 ; CHECK-SVE-LABEL: whilewr_32_expand:
 ; CHECK-SVE:       // %bb.0: // %entry
 ; CHECK-SVE-NEXT:    index z0.d, #0, #1
-; CHECK-SVE-NEXT:    sub x8, x1, x0
+; CHECK-SVE-NEXT:    subs x8, x1, x0
 ; CHECK-SVE-NEXT:    ptrue p0.d
 ; CHECK-SVE-NEXT:    add x9, x8, #3
-; CHECK-SVE-NEXT:    cmp x8, #0
-; CHECK-SVE-NEXT:    csel x8, x9, x8, lt
+; CHECK-SVE-NEXT:    csel x8, x9, x8, mi
 ; CHECK-SVE-NEXT:    asr x8, x8, #2
 ; CHECK-SVE-NEXT:    mov z1.d, z0.d
 ; CHECK-SVE-NEXT:    mov z2.d, z0.d
@@ -961,14 +957,13 @@ define <vscale x 16 x i1> @whilewr_32_expand2(ptr %a, ptr %b) {
 ; CHECK-SVE2-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE2-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE2-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-SVE2-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-SVE2-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-SVE2-NEXT:    .cfi_offset w29, -16
 ; CHECK-SVE2-NEXT:    index z0.d, #0, #1
-; CHECK-SVE2-NEXT:    sub x8, x1, x0
+; CHECK-SVE2-NEXT:    subs x8, x1, x0
 ; CHECK-SVE2-NEXT:    ptrue p0.d
 ; CHECK-SVE2-NEXT:    add x9, x8, #3
-; CHECK-SVE2-NEXT:    cmp x8, #0
-; CHECK-SVE2-NEXT:    csel x8, x9, x8, lt
+; CHECK-SVE2-NEXT:    csel x8, x9, x8, mi
 ; CHECK-SVE2-NEXT:    asr x8, x8, #2
 ; CHECK-SVE2-NEXT:    mov z1.d, z0.d
 ; CHECK-SVE2-NEXT:    mov z4.d, z0.d
@@ -1019,14 +1014,13 @@ define <vscale x 16 x i1> @whilewr_32_expand2(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-SVE-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-SVE-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-SVE-NEXT:    .cfi_offset w29, -16
 ; CHECK-SVE-NEXT:    index z0.d, #0, #1
-; CHECK-SVE-NEXT:    sub x8, x1, x0
+; CHECK-SVE-NEXT:    subs x8, x1, x0
 ; CHECK-SVE-NEXT:    ptrue p0.d
 ; CHECK-SVE-NEXT:    add x9, x8, #3
-; CHECK-SVE-NEXT:    cmp x8, #0
-; CHECK-SVE-NEXT:    csel x8, x9, x8, lt
+; CHECK-SVE-NEXT:    csel x8, x9, x8, mi
 ; CHECK-SVE-NEXT:    asr x8, x8, #2
 ; CHECK-SVE-NEXT:    mov z1.d, z0.d
 ; CHECK-SVE-NEXT:    mov z4.d, z0.d
@@ -1085,22 +1079,20 @@ define <vscale x 32 x i1> @whilewr_32_expand3(ptr %a, ptr %b) {
 ; CHECK-SVE2-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE2-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE2-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-SVE2-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-SVE2-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-SVE2-NEXT:    .cfi_offset w29, -16
 ; CHECK-SVE2-NEXT:    index z0.d, #0, #1
-; CHECK-SVE2-NEXT:    sub x8, x1, x0
+; CHECK-SVE2-NEXT:    subs x8, x1, x0
 ; CHECK-SVE2-NEXT:    ptrue p0.d
 ; CHECK-SVE2-NEXT:    add x9, x8, #3
-; CHECK-SVE2-NEXT:    cmp x8, #0
 ; CHECK-SVE2-NEXT:    incb x0, all, mul #4
-; CHECK-SVE2-NEXT:    csel x8, x9, x8, lt
 ; CHECK-SVE2-NEXT:    incb x1, all, mul #4
+; CHECK-SVE2-NEXT:    csel x8, x9, x8, mi
 ; CHECK-SVE2-NEXT:    asr x8, x8, #2
 ; CHECK-SVE2-NEXT:    mov z1.d, z0.d
 ; CHECK-SVE2-NEXT:    mov z2.d, z0.d
 ; CHECK-SVE2-NEXT:    mov z4.d, z0.d
 ; CHECK-SVE2-NEXT:    mov z5.d, x8
-; CHECK-SVE2-NEXT:    sub x9, x1, x0
 ; CHECK-SVE2-NEXT:    incd z1.d
 ; CHECK-SVE2-NEXT:    incd z2.d, all, mul #2
 ; CHECK-SVE2-NEXT:    incd z4.d, all, mul #4
@@ -1129,12 +1121,12 @@ define <vscale x 32 x i1> @whilewr_32_expand3(ptr %a, ptr %b) {
 ; CHECK-SVE2-NEXT:    sbfx x8, x8, #0, #1
 ; CHECK-SVE2-NEXT:    uzp1 p6.s, p6.s, p9.s
 ; CHECK-SVE2-NEXT:    whilelo p1.b, xzr, x8
-; CHECK-SVE2-NEXT:    add x8, x9, #3
-; CHECK-SVE2-NEXT:    cmp x9, #0
+; CHECK-SVE2-NEXT:    subs x8, x1, x0
 ; CHECK-SVE2-NEXT:    uzp1 p2.h, p2.h, p6.h
-; CHECK-SVE2-NEXT:    csel x8, x8, x9, lt
-; CHECK-SVE2-NEXT:    asr x8, x8, #2
+; CHECK-SVE2-NEXT:    add x9, x8, #3
+; CHECK-SVE2-NEXT:    csel x8, x9, x8, mi
 ; CHECK-SVE2-NEXT:    uzp1 p2.b, p3.b, p2.b
+; CHECK-SVE2-NEXT:    asr x8, x8, #2
 ; CHECK-SVE2-NEXT:    mov z5.d, x8
 ; CHECK-SVE2-NEXT:    cmphi p5.d, p0/z, z5.d, z24.d
 ; CHECK-SVE2-NEXT:    cmphi p7.d, p0/z, z5.d, z6.d
@@ -1179,22 +1171,20 @@ define <vscale x 32 x i1> @whilewr_32_expand3(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-SVE-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-SVE-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-SVE-NEXT:    .cfi_offset w29, -16
 ; CHECK-SVE-NEXT:    index z0.d, #0, #1
 ; CHECK-SVE-NEXT:    rdvl x8, #4
 ; CHECK-SVE-NEXT:    ptrue p0.d
 ; CHECK-SVE-NEXT:    add x9, x0, x8
 ; CHECK-SVE-NEXT:    add x8, x1, x8
-; CHECK-SVE-NEXT:    sub x8, x8, x9
+; CHECK-SVE-NEXT:    subs x8, x8, x9
 ; CHECK-SVE-NEXT:    add x9, x8, #3
-; CHECK-SVE-NEXT:    cmp x8, #0
 ; CHECK-SVE-NEXT:    mov z1.d, z0.d
 ; CHECK-SVE-NEXT:    mov z2.d, z0.d
-; CHECK-SVE-NEXT:    csel x8, x9, x8, lt
+; CHECK-SVE-NEXT:    csel x8, x9, x8, mi
 ; CHECK-SVE-NEXT:    mov z4.d, z0.d
 ; CHECK-SVE-NEXT:    asr x8, x8, #2
-; CHECK-SVE-NEXT:    sub x9, x1, x0
 ; CHECK-SVE-NEXT:    incd z1.d
 ; CHECK-SVE-NEXT:    incd z2.d, all, mul #2
 ; CHECK-SVE-NEXT:    mov z5.d, x8
@@ -1224,14 +1214,14 @@ define <vscale x 32 x i1> @whilewr_32_expand3(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    sbfx x8, x8, #0, #1
 ; CHECK-SVE-NEXT:    uzp1 p6.s, p6.s, p9.s
 ; CHECK-SVE-NEXT:    whilelo p1.b, xzr, x8
-; CHECK-SVE-NEXT:    add x8, x9, #3
-; CHECK-SVE-NEXT:    cmp x9, #0
+; CHECK-SVE-NEXT:    subs x8, x1, x0
 ; CHECK-SVE-NEXT:    uzp1 p2.h, p2.h, p6.h
-; CHECK-SVE-NEXT:    csel x8, x8, x9, lt
-; CHECK-SVE-NEXT:    asr x8, x8, #2
+; CHECK-SVE-NEXT:    add x9, x8, #3
+; CHECK-SVE-NEXT:    csel x8, x9, x8, mi
 ; CHECK-SVE-NEXT:    uzp1 p2.b, p3.b, p2.b
-; CHECK-SVE-NEXT:    mov z5.d, x8
+; CHECK-SVE-NEXT:    asr x8, x8, #2
 ; CHECK-SVE-NEXT:    mov p1.b, p2/m, p2.b
+; CHECK-SVE-NEXT:    mov z5.d, x8
 ; CHECK-SVE-NEXT:    cmphi p5.d, p0/z, z5.d, z24.d
 ; CHECK-SVE-NEXT:    cmphi p7.d, p0/z, z5.d, z6.d
 ; CHECK-SVE-NEXT:    cmphi p8.d, p0/z, z5.d, z7.d
@@ -1271,11 +1261,10 @@ define <vscale x 4 x i1> @whilewr_64_expand(ptr %a, ptr %b) {
 ; CHECK-SVE2-LABEL: whilewr_64_expand:
 ; CHECK-SVE2:       // %bb.0: // %entry
 ; CHECK-SVE2-NEXT:    index z0.d, #0, #1
-; CHECK-SVE2-NEXT:    sub x8, x1, x0
+; CHECK-SVE2-NEXT:    subs x8, x1, x0
 ; CHECK-SVE2-NEXT:    ptrue p0.d
 ; CHECK-SVE2-NEXT:    add x9, x8, #7
-; CHECK-SVE2-NEXT:    cmp x8, #0
-; CHECK-SVE2-NEXT:    csel x8, x9, x8, lt
+; CHECK-SVE2-NEXT:    csel x8, x9, x8, mi
 ; CHECK-SVE2-NEXT:    asr x8, x8, #3
 ; CHECK-SVE2-NEXT:    mov z1.d, z0.d
 ; CHECK-SVE2-NEXT:    mov z2.d, x8
@@ -1293,11 +1282,10 @@ define <vscale x 4 x i1> @whilewr_64_expand(ptr %a, ptr %b) {
 ; CHECK-SVE-LABEL: whilewr_64_expand:
 ; CHECK-SVE:       // %bb.0: // %entry
 ; CHECK-SVE-NEXT:    index z0.d, #0, #1
-; CHECK-SVE-NEXT:    sub x8, x1, x0
+; CHECK-SVE-NEXT:    subs x8, x1, x0
 ; CHECK-SVE-NEXT:    ptrue p0.d
 ; CHECK-SVE-NEXT:    add x9, x8, #7
-; CHECK-SVE-NEXT:    cmp x8, #0
-; CHECK-SVE-NEXT:    csel x8, x9, x8, lt
+; CHECK-SVE-NEXT:    csel x8, x9, x8, mi
 ; CHECK-SVE-NEXT:    asr x8, x8, #3
 ; CHECK-SVE-NEXT:    mov z1.d, z0.d
 ; CHECK-SVE-NEXT:    mov z2.d, x8
@@ -1320,11 +1308,10 @@ define <vscale x 8 x i1> @whilewr_64_expand2(ptr %a, ptr %b) {
 ; CHECK-SVE2-LABEL: whilewr_64_expand2:
 ; CHECK-SVE2:       // %bb.0: // %entry
 ; CHECK-SVE2-NEXT:    index z0.d, #0, #1
-; CHECK-SVE2-NEXT:    sub x8, x1, x0
+; CHECK-SVE2-NEXT:    subs x8, x1, x0
 ; CHECK-SVE2-NEXT:    ptrue p0.d
 ; CHECK-SVE2-NEXT:    add x9, x8, #7
-; CHECK-SVE2-NEXT:    cmp x8, #0
-; CHECK-SVE2-NEXT:    csel x8, x9, x8, lt
+; CHECK-SVE2-NEXT:    csel x8, x9, x8, mi
 ; CHECK-SVE2-NEXT:    asr x8, x8, #3
 ; CHECK-SVE2-NEXT:    mov z1.d, z0.d
 ; CHECK-SVE2-NEXT:    mov z2.d, z0.d
@@ -1350,11 +1337,10 @@ define <vscale x 8 x i1> @whilewr_64_expand2(ptr %a, ptr %b) {
 ; CHECK-SVE-LABEL: whilewr_64_expand2:
 ; CHECK-SVE:       // %bb.0: // %entry
 ; CHECK-SVE-NEXT:    index z0.d, #0, #1
-; CHECK-SVE-NEXT:    sub x8, x1, x0
+; CHECK-SVE-NEXT:    subs x8, x1, x0
 ; CHECK-SVE-NEXT:    ptrue p0.d
 ; CHECK-SVE-NEXT:    add x9, x8, #7
-; CHECK-SVE-NEXT:    cmp x8, #0
-; CHECK-SVE-NEXT:    csel x8, x9, x8, lt
+; CHECK-SVE-NEXT:    csel x8, x9, x8, mi
 ; CHECK-SVE-NEXT:    asr x8, x8, #3
 ; CHECK-SVE-NEXT:    mov z1.d, z0.d
 ; CHECK-SVE-NEXT:    mov z2.d, z0.d
@@ -1390,14 +1376,13 @@ define <vscale x 16 x i1> @whilewr_64_expand3(ptr %a, ptr %b) {
 ; CHECK-SVE2-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE2-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE2-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-SVE2-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-SVE2-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-SVE2-NEXT:    .cfi_offset w29, -16
 ; CHECK-SVE2-NEXT:    index z0.d, #0, #1
-; CHECK-SVE2-NEXT:    sub x8, x1, x0
+; CHECK-SVE2-NEXT:    subs x8, x1, x0
 ; CHECK-SVE2-NEXT:    ptrue p0.d
 ; CHECK-SVE2-NEXT:    add x9, x8, #7
-; CHECK-SVE2-NEXT:    cmp x8, #0
-; CHECK-SVE2-NEXT:    csel x8, x9, x8, lt
+; CHECK-SVE2-NEXT:    csel x8, x9, x8, mi
 ; CHECK-SVE2-NEXT:    asr x8, x8, #3
 ; CHECK-SVE2-NEXT:    mov z1.d, z0.d
 ; CHECK-SVE2-NEXT:    mov z4.d, z0.d
@@ -1448,14 +1433,13 @@ define <vscale x 16 x i1> @whilewr_64_expand3(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-SVE-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-SVE-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-SVE-NEXT:    .cfi_offset w29, -16
 ; CHECK-SVE-NEXT:    index z0.d, #0, #1
-; CHECK-SVE-NEXT:    sub x8, x1, x0
+; CHECK-SVE-NEXT:    subs x8, x1, x0
 ; CHECK-SVE-NEXT:    ptrue p0.d
 ; CHECK-SVE-NEXT:    add x9, x8, #7
-; CHECK-SVE-NEXT:    cmp x8, #0
-; CHECK-SVE-NEXT:    csel x8, x9, x8, lt
+; CHECK-SVE-NEXT:    csel x8, x9, x8, mi
 ; CHECK-SVE-NEXT:    asr x8, x8, #3
 ; CHECK-SVE-NEXT:    mov z1.d, z0.d
 ; CHECK-SVE-NEXT:    mov z4.d, z0.d
@@ -1514,18 +1498,16 @@ define <vscale x 32 x i1> @whilewr_64_expand4(ptr %a, ptr %b) {
 ; CHECK-SVE2-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE2-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE2-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-SVE2-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-SVE2-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-SVE2-NEXT:    .cfi_offset w29, -16
 ; CHECK-SVE2-NEXT:    index z0.d, #0, #1
-; CHECK-SVE2-NEXT:    sub x8, x1, x0
+; CHECK-SVE2-NEXT:    subs x8, x1, x0
 ; CHECK-SVE2-NEXT:    ptrue p0.d
 ; CHECK-SVE2-NEXT:    add x9, x8, #7
-; CHECK-SVE2-NEXT:    cmp x8, #0
 ; CHECK-SVE2-NEXT:    addvl x10, x1, #8
-; CHECK-SVE2-NEXT:    csel x8, x9, x8, lt
+; CHECK-SVE2-NEXT:    csel x8, x9, x8, mi
 ; CHECK-SVE2-NEXT:    addvl x9, x0, #8
 ; CHECK-SVE2-NEXT:    asr x8, x8, #3
-; CHECK-SVE2-NEXT:    sub x9, x10, x9
 ; CHECK-SVE2-NEXT:    mov z1.d, z0.d
 ; CHECK-SVE2-NEXT:    mov z2.d, z0.d
 ; CHECK-SVE2-NEXT:    mov z4.d, z0.d
@@ -1558,12 +1540,12 @@ define <vscale x 32 x i1> @whilewr_64_expand4(ptr %a, ptr %b) {
 ; CHECK-SVE2-NEXT:    sbfx x8, x8, #0, #1
 ; CHECK-SVE2-NEXT:    uzp1 p6.s, p6.s, p9.s
 ; CHECK-SVE2-NEXT:    whilelo p1.b, xzr, x8
-; CHECK-SVE2-NEXT:    add x8, x9, #7
-; CHECK-SVE2-NEXT:    cmp x9, #0
+; CHECK-SVE2-NEXT:    subs x8, x10, x9
 ; CHECK-SVE2-NEXT:    uzp1 p2.h, p2.h, p6.h
-; CHECK-SVE2-NEXT:    csel x8, x8, x9, lt
-; CHECK-SVE2-NEXT:    asr x8, x8, #3
+; CHECK-SVE2-NEXT:    add x9, x8, #7
+; CHECK-SVE2-NEXT:    csel x8, x9, x8, mi
 ; CHECK-SVE2-NEXT:    uzp1 p2.b, p3.b, p2.b
+; CHECK-SVE2-NEXT:    asr x8, x8, #3
 ; CHECK-SVE2-NEXT:    mov z5.d, x8
 ; CHECK-SVE2-NEXT:    cmphi p5.d, p0/z, z5.d, z24.d
 ; CHECK-SVE2-NEXT:    cmphi p7.d, p0/z, z5.d, z6.d
@@ -1608,22 +1590,20 @@ define <vscale x 32 x i1> @whilewr_64_expand4(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-SVE-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-SVE-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-SVE-NEXT:    .cfi_offset w29, -16
 ; CHECK-SVE-NEXT:    index z0.d, #0, #1
 ; CHECK-SVE-NEXT:    rdvl x8, #8
 ; CHECK-SVE-NEXT:    ptrue p0.d
 ; CHECK-SVE-NEXT:    add x9, x0, x8
 ; CHECK-SVE-NEXT:    add x8, x1, x8
-; CHECK-SVE-NEXT:    sub x8, x8, x9
+; CHECK-SVE-NEXT:    subs x8, x8, x9
 ; CHECK-SVE-NEXT:    add x9, x8, #7
-; CHECK-SVE-NEXT:    cmp x8, #0
 ; CHECK-SVE-NEXT:    mov z1.d, z0.d
 ; CHECK-SVE-NEXT:    mov z2.d, z0.d
-; CHECK-SVE-NEXT:    csel x8, x9, x8, lt
+; CHECK-SVE-NEXT:    csel x8, x9, x8, mi
 ; CHECK-SVE-NEXT:    mov z4.d, z0.d
 ; CHECK-SVE-NEXT:    asr x8, x8, #3
-; CHECK-SVE-NEXT:    sub x9, x1, x0
 ; CHECK-SVE-NEXT:    incd z1.d
 ; CHECK-SVE-NEXT:    incd z2.d, all, mul #2
 ; CHECK-SVE-NEXT:    mov z5.d, x8
@@ -1653,14 +1633,14 @@ define <vscale x 32 x i1> @whilewr_64_expand4(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    sbfx x8, x8, #0, #1
 ; CHECK-SVE-NEXT:    uzp1 p6.s, p6.s, p9.s
 ; CHECK-SVE-NEXT:    whilelo p1.b, xzr, x8
-; CHECK-SVE-NEXT:    add x8, x9, #7
-; CHECK-SVE-NEXT:    cmp x9, #0
+; CHECK-SVE-NEXT:    subs x8, x1, x0
 ; CHECK-SVE-NEXT:    uzp1 p2.h, p2.h, p6.h
-; CHECK-SVE-NEXT:    csel x8, x8, x9, lt
-; CHECK-SVE-NEXT:    asr x8, x8, #3
+; CHECK-SVE-NEXT:    add x9, x8, #7
+; CHECK-SVE-NEXT:    csel x8, x9, x8, mi
 ; CHECK-SVE-NEXT:    uzp1 p2.b, p3.b, p2.b
-; CHECK-SVE-NEXT:    mov z5.d, x8
+; CHECK-SVE-NEXT:    asr x8, x8, #3
 ; CHECK-SVE-NEXT:    mov p1.b, p2/m, p2.b
+; CHECK-SVE-NEXT:    mov z5.d, x8
 ; CHECK-SVE-NEXT:    cmphi p5.d, p0/z, z5.d, z24.d
 ; CHECK-SVE-NEXT:    cmphi p7.d, p0/z, z5.d, z6.d
 ; CHECK-SVE-NEXT:    cmphi p8.d, p0/z, z5.d, z7.d
@@ -1710,7 +1690,7 @@ define <vscale x 9 x i1> @whilewr_8_widen(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-SVE-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-SVE-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-SVE-NEXT:    .cfi_offset w29, -16
 ; CHECK-SVE-NEXT:    index z0.d, #0, #1
 ; CHECK-SVE-NEXT:    sub x8, x1, x0
@@ -1805,11 +1785,10 @@ define <vscale x 3 x i1> @whilewr_32_widen(ptr %a, ptr %b) {
 ; CHECK-SVE-LABEL: whilewr_32_widen:
 ; CHECK-SVE:       // %bb.0: // %entry
 ; CHECK-SVE-NEXT:    index z0.d, #0, #1
-; CHECK-SVE-NEXT:    sub x8, x1, x0
+; CHECK-SVE-NEXT:    subs x8, x1, x0
 ; CHECK-SVE-NEXT:    ptrue p0.d
 ; CHECK-SVE-NEXT:    add x9, x8, #3
-; CHECK-SVE-NEXT:    cmp x8, #0
-; CHECK-SVE-NEXT:    csel x8, x9, x8, lt
+; CHECK-SVE-NEXT:    csel x8, x9, x8, mi
 ; CHECK-SVE-NEXT:    asr x8, x8, #2
 ; CHECK-SVE-NEXT:    mov z1.d, z0.d
 ; CHECK-SVE-NEXT:    mov z2.d, x8
@@ -1837,7 +1816,7 @@ define <vscale x 16 x i1> @whilewr_badimm(ptr %a, ptr %b) {
 ; CHECK-SVE2-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE2-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE2-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-SVE2-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-SVE2-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-SVE2-NEXT:    .cfi_offset w29, -16
 ; CHECK-SVE2-NEXT:    index z0.d, #0, #1
 ; CHECK-SVE2-NEXT:    mov x8, #6148914691236517205 // =0x5555555555555555
@@ -1895,7 +1874,7 @@ define <vscale x 16 x i1> @whilewr_badimm(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
-; CHECK-SVE-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-SVE-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-SVE-NEXT:    .cfi_offset w29, -16
 ; CHECK-SVE-NEXT:    index z0.d, #0, #1
 ; CHECK-SVE-NEXT:    mov x8, #6148914691236517205 // =0x5555555555555555
