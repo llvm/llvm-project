@@ -119,29 +119,30 @@ struct IterWhileConversion : public OpRewritePattern<fir::IterWhileOp> {
         &scfWhileOp.getBefore(), scfWhileOp.getBefore().end(), loopTypes,
         SmallVector<Location>(loopTypes.size(), loc));
 
-    auto beforeArgs = scfWhileOp.getBefore().getArguments();
-    auto beforeIv = beforeArgs[0];
-    auto beforeOk = beforeArgs[1];
+    Region::BlockArgListType argsInBefore =
+        scfWhileOp.getBefore().getArguments();
+    auto ivInBefore = argsInBefore[0];
+    auto earlyExitInBefore = argsInBefore[1];
 
     rewriter.setInsertionPointToStart(&beforeBlock);
 
     Value inductionCmp = mlir::arith::CmpIOp::create(
-        rewriter, loc, mlir::arith::CmpIPredicate::sle, beforeIv, upperBound);
-    Value cond =
-        mlir::arith::AndIOp::create(rewriter, loc, inductionCmp, beforeOk);
+        rewriter, loc, mlir::arith::CmpIPredicate::sle, ivInBefore, upperBound);
+    Value cond = mlir::arith::AndIOp::create(rewriter, loc, inductionCmp,
+                                             earlyExitInBefore);
 
-    mlir::scf::ConditionOp::create(rewriter, loc, cond, beforeArgs);
+    mlir::scf::ConditionOp::create(rewriter, loc, cond, argsInBefore);
 
     rewriter.moveBlockBefore(iterWhileOp.getBody(), &scfWhileOp.getAfter(),
                              scfWhileOp.getAfter().begin());
 
-    auto afterBody = scfWhileOp.getAfterBody();
+    auto *afterBody = scfWhileOp.getAfterBody();
     auto resultOp = cast<fir::ResultOp>(afterBody->getTerminator());
     SmallVector<Value> results(resultOp->getOperands());
-    Value afterIv = scfWhileOp.getAfterArguments()[0];
+    Value ivInAfter = scfWhileOp.getAfterArguments()[0];
 
     rewriter.setInsertionPointToStart(afterBody);
-    results[0] = mlir::arith::AddIOp::create(rewriter, loc, afterIv, step);
+    results[0] = mlir::arith::AddIOp::create(rewriter, loc, ivInAfter, step);
 
     rewriter.setInsertionPointToEnd(afterBody);
     rewriter.replaceOpWithNewOp<scf::YieldOp>(resultOp, results);
