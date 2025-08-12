@@ -1888,10 +1888,10 @@ define <2 x i128> @uabd_i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-GI-NEXT:    subs x10, x11, x13
 ; CHECK-GI-NEXT:    sbc x11, x14, x15
 ; CHECK-GI-NEXT:    cmp x9, #0
-; CHECK-GI-NEXT:    cset w12, lt
+; CHECK-GI-NEXT:    cset w12, mi
 ; CHECK-GI-NEXT:    csel w12, wzr, w12, eq
 ; CHECK-GI-NEXT:    cmp x11, #0
-; CHECK-GI-NEXT:    cset w13, lt
+; CHECK-GI-NEXT:    cset w13, mi
 ; CHECK-GI-NEXT:    csel w13, wzr, w13, eq
 ; CHECK-GI-NEXT:    negs x14, x8
 ; CHECK-GI-NEXT:    ngc x15, x9
