@@ -456,6 +456,10 @@ OMPUnrollDirective::Create(const ASTContext &C, SourceLocation StartLoc,
   auto *Dir = createDirective<OMPUnrollDirective>(
       C, Clauses, AssociatedStmt, TransformedStmtOffset + 1, StartLoc, EndLoc);
   Dir->setNumGeneratedLoops(NumGeneratedLoops);
+  // The number of generated loops and loop nests during unroll matches
+  // given that unroll only generates top level canonical loop nests
+  // so each generated loop is a top level canonical loop nest
+  Dir->setNumGeneratedLoopNests(NumGeneratedLoops);
   Dir->setTransformedStmt(TransformedStmt);
   Dir->setPreInits(PreInits);
   return Dir;
@@ -506,6 +510,43 @@ OMPInterchangeDirective::CreateEmpty(const ASTContext &C, unsigned NumClauses,
   return createEmptyDirective<OMPInterchangeDirective>(
       C, NumClauses, /*HasAssociatedStmt=*/true, TransformedStmtOffset + 1,
       SourceLocation(), SourceLocation(), NumLoops);
+}
+
+OMPFuseDirective *OMPFuseDirective::Create(
+    const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+    ArrayRef<OMPClause *> Clauses, unsigned NumLoops, unsigned NumLoopNests,
+    Stmt *AssociatedStmt, Stmt *TransformedStmt, Stmt *PreInits) {
+
+  OMPFuseDirective *Dir = createDirective<OMPFuseDirective>(
+      C, Clauses, AssociatedStmt, TransformedStmtOffset + 1, StartLoc, EndLoc,
+      NumLoops);
+  Dir->setTransformedStmt(TransformedStmt);
+  Dir->setPreInits(PreInits);
+  // The number of top level canonical nests could
+  // not match the total number of generated loops
+  // Example:
+  // Before fusion:
+  //   for (int i = 0; i < N; ++i)
+  //     for (int j = 0; j < M; ++j)
+  //       A[i][j] = i + j;
+  //
+  //   for (int k = 0; k < P; ++k)
+  //     B[k] = k * 2;
+  // Here, NumLoopNests = 2, but NumLoops = 3.
+  Dir->setNumGeneratedLoopNests(NumLoopNests);
+  Dir->setNumGeneratedLoops(NumLoops);
+  return Dir;
+}
+
+OMPFuseDirective *OMPFuseDirective::CreateEmpty(const ASTContext &C,
+                                                unsigned NumClauses,
+                                                unsigned NumLoops,
+                                                unsigned NumLoopNests) {
+  OMPFuseDirective *Dir = createEmptyDirective<OMPFuseDirective>(
+      C, NumClauses, /*HasAssociatedStmt=*/true, TransformedStmtOffset + 1,
+      SourceLocation(), SourceLocation(), NumLoops);
+  Dir->setNumGeneratedLoopNests(NumLoopNests);
+  return Dir;
 }
 
 OMPForSimdDirective *
