@@ -24125,9 +24125,9 @@ This is an overloaded intrinsic.
 Overview:
 """""""""
 
-Given a scalar load from %ptrA, followed by a scalar store to %ptrB, this
-instruction generates a mask where an active lane indicates that there is no
-write-after-read hazard for this lane.
+Given a vector load from %ptrA, followed by a vector store to %ptrB, this
+intrinsic generates a mask where a true lane indicates that the accesses don't
+overlap for that lane.
 
 A write-after-read hazard occurs when a write-after-read sequence for a given
 lane in a vector ends up being executed as a read-after-write sequence due to
