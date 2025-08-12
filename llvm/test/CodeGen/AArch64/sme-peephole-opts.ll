@@ -57,7 +57,6 @@ define void @test1() nounwind "aarch64_pstate_sm_enabled" {
 }
 
 ; streaming-compatible caller -> normal callees
-; these conditional smstart/smstop are not yet optimized away.
 define void @test2() nounwind "aarch64_pstate_sm_compatible" {
 ; CHECK-LABEL: test2:
 ; CHECK:       // %bb.0:
@@ -69,27 +68,17 @@ define void @test2() nounwind "aarch64_pstate_sm_compatible" {
 ; CHECK-NEXT:    stp x30, x9, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NEXT:    str x19, [sp, #80] // 8-byte Folded Spill
 ; CHECK-NEXT:    bl __arm_sme_state
-; CHECK-NEXT:    and x19, x0, #0x1
+; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    tbz w19, #0, .LBB2_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:  .LBB2_2:
 ; CHECK-NEXT:    bl callee
+; CHECK-NEXT:    bl callee
 ; CHECK-NEXT:    tbz w19, #0, .LBB2_4
 ; CHECK-NEXT:  // %bb.3:
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:  .LBB2_4:
-; CHECK-NEXT:    bl __arm_sme_state
-; CHECK-NEXT:    and x19, x0, #0x1
-; CHECK-NEXT:    tbz w19, #0, .LBB2_6
-; CHECK-NEXT:  // %bb.5:
-; CHECK-NEXT:    smstop sm
-; CHECK-NEXT:  .LBB2_6:
-; CHECK-NEXT:    bl callee
-; CHECK-NEXT:    tbz w19, #0, .LBB2_8
-; CHECK-NEXT:  // %bb.7:
-; CHECK-NEXT:    smstart sm
-; CHECK-NEXT:  .LBB2_8:
 ; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr x19, [sp, #80] // 8-byte Folded Reload
 ; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
@@ -114,7 +103,7 @@ define void @test3() nounwind "aarch64_pstate_sm_compatible" {
 ; CHECK-NEXT:    stp x30, x9, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NEXT:    str x19, [sp, #80] // 8-byte Folded Spill
 ; CHECK-NEXT:    bl __arm_sme_state
-; CHECK-NEXT:    and x19, x0, #0x1
+; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    tbnz w19, #0, .LBB3_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstart sm
@@ -124,8 +113,6 @@ define void @test3() nounwind "aarch64_pstate_sm_compatible" {
 ; CHECK-NEXT:  // %bb.3:
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:  .LBB3_4:
-; CHECK-NEXT:    bl __arm_sme_state
-; CHECK-NEXT:    and x19, x0, #0x1
 ; CHECK-NEXT:    tbz w19, #0, .LBB3_6
 ; CHECK-NEXT:  // %bb.5:
 ; CHECK-NEXT:    smstop sm
@@ -135,8 +122,6 @@ define void @test3() nounwind "aarch64_pstate_sm_compatible" {
 ; CHECK-NEXT:  // %bb.7:
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:  .LBB3_8:
-; CHECK-NEXT:    bl __arm_sme_state
-; CHECK-NEXT:    and x19, x0, #0x1
 ; CHECK-NEXT:    tbnz w19, #0, .LBB3_10
 ; CHECK-NEXT:  // %bb.9:
 ; CHECK-NEXT:    smstart sm

@@ -7644,9 +7644,11 @@ EpilogueVectorizerEpilogueLoop::emitMinimumVectorEpilogueIterCountCheck(
   BranchInst &BI =
       *BranchInst::Create(Bypass, LoopVectorPreHeader, CheckMinIters);
   if (hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator())) {
-    unsigned MainLoopStep = EPI.MainLoopUF * EPI.MainLoopVF.getKnownMinValue();
+    auto VScale = Cost->getVScaleForTuning();
+    unsigned MainLoopStep =
+        estimateElementCount(EPI.MainLoopVF * EPI.MainLoopUF, VScale);
     unsigned EpilogueLoopStep =
-        EPI.EpilogueUF * EPI.EpilogueVF.getKnownMinValue();
+        estimateElementCount(EPI.EpilogueVF * EPI.EpilogueUF, VScale);
     // We assume the remaining `Count` is equally distributed in
     // [0, MainLoopStep)
     // So the probability for `Count < EpilogueLoopStep` should be
@@ -9067,6 +9069,16 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
             CurrentLinkI->getFastMathFlags());
         LinkVPBB->insert(FMulRecipe, CurrentLink->getIterator());
         VecOp = FMulRecipe;
+      } else if (PhiR->isInLoop() && Kind == RecurKind::AddChainWithSubs &&
+                 CurrentLinkI->getOpcode() == Instruction::Sub) {
+        Type *PhiTy = PhiR->getUnderlyingValue()->getType();
+        auto *Zero = Plan->getOrAddLiveIn(ConstantInt::get(PhiTy, 0));
+        VPWidenRecipe *Sub = new VPWidenRecipe(
+            Instruction::Sub, {Zero, CurrentLink->getOperand(1)}, {},
+            VPIRMetadata(), CurrentLinkI->getDebugLoc());
+        Sub->setUnderlyingValue(CurrentLinkI);
+        LinkVPBB->insert(Sub, CurrentLink->getIterator());
+        VecOp = Sub;
       } else {
         if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind)) {
           if (isa<VPWidenRecipe>(CurrentLink)) {

@@ -11,7 +11,7 @@
 
 #include <clc/opencl/opencl-base.h>
 
-#define _CLC_ALL_DECL(TYPE) _CLC_OVERLOAD _CLC_DECL int all(TYPE v);
+#define _CLC_ALL_DECL(TYPE) _CLC_OVERLOAD _CLC_CONST _CLC_DECL int all(TYPE v);
 
 #define _CLC_VECTOR_ALL_DECL(TYPE)                                             \
   _CLC_ALL_DECL(TYPE)                                                          \

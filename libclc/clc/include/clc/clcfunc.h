@@ -12,6 +12,7 @@
 #define _CLC_OVERLOAD __attribute__((overloadable))
 #define _CLC_DECL
 #define _CLC_INLINE __attribute__((always_inline)) inline
+#define _CLC_CONST __attribute__((const))
 
 // avoid inlines for SPIR-V related targets since we'll optimise later in the
 // chain

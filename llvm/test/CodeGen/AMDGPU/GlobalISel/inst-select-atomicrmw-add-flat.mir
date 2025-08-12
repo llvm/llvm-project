@@ -101,7 +101,7 @@ body:             |
     %0:vgpr(p0) = COPY $vgpr0_vgpr1
     %1:vgpr(s32) = COPY $vgpr2
     %2:vgpr(s64) = G_CONSTANT i64 2047
-    %3:vgpr(p0) = G_PTR_ADD %0, %2
+    %3:vgpr(p0) = inbounds G_PTR_ADD %0, %2
     %4:vgpr(s32) = G_ATOMICRMW_ADD %3, %1 :: (load store seq_cst (s32), addrspace 0)
     $vgpr0 = COPY %4
 
@@ -155,7 +155,7 @@ body:             |
     %0:vgpr(p0) = COPY $vgpr0_vgpr1
     %1:vgpr(s32) = COPY $vgpr2
     %2:vgpr(s64) = G_CONSTANT i64 2047
-    %3:vgpr(p0) = G_PTR_ADD %0, %2
+    %3:vgpr(p0) = inbounds G_PTR_ADD %0, %2
     %4:vgpr(s32) = G_ATOMICRMW_ADD %3, %1 :: (load store seq_cst (s32), addrspace 0)
 
 ...
@@ -211,7 +211,7 @@ body:             |
     %0:vgpr(p0) = COPY $vgpr0_vgpr1
     %1:vgpr(s32) = COPY $vgpr2
     %2:vgpr(s64) = G_CONSTANT i64 2048
-    %3:vgpr(p0) = G_PTR_ADD %0, %2
+    %3:vgpr(p0) = inbounds G_PTR_ADD %0, %2
     %4:vgpr(s32) = G_ATOMICRMW_ADD %3, %1 :: (load store seq_cst (s32), addrspace 0)
     $vgpr0 = COPY %4
 
@@ -265,7 +265,7 @@ body:             |
     %0:vgpr(p0) = COPY $vgpr0_vgpr1
     %1:vgpr(s32) = COPY $vgpr2
     %2:vgpr(s64) = G_CONSTANT i64 2048
-    %3:vgpr(p0) = G_PTR_ADD %0, %2
+    %3:vgpr(p0) = inbounds G_PTR_ADD %0, %2
     %4:vgpr(s32) = G_ATOMICRMW_ADD %3, %1 :: (load store seq_cst (s32), addrspace 0)
 
 ...
@@ -321,7 +321,7 @@ body:             |
     %0:vgpr(p0) = COPY $vgpr0_vgpr1
     %1:vgpr(s32) = COPY $vgpr2
     %2:vgpr(s64) = G_CONSTANT i64 4095
-    %3:vgpr(p0) = G_PTR_ADD %0, %2
+    %3:vgpr(p0) = inbounds G_PTR_ADD %0, %2
     %4:vgpr(s32) = G_ATOMICRMW_ADD %3, %1 :: (load store seq_cst (s32), addrspace 0)
     $vgpr0 = COPY %4
 
@@ -375,7 +375,7 @@ body:             |
     %0:vgpr(p0) = COPY $vgpr0_vgpr1
     %1:vgpr(s32) = COPY $vgpr2
     %2:vgpr(s64) = G_CONSTANT i64 4095
-    %3:vgpr(p0) = G_PTR_ADD %0, %2
+    %3:vgpr(p0) = inbounds G_PTR_ADD %0, %2
     %4:vgpr(s32) = G_ATOMICRMW_ADD %3, %1 :: (load store seq_cst (s32), addrspace 0)
 
 ...
@@ -463,7 +463,7 @@ body:             |
     %0:vgpr(p0) = COPY $vgpr0_vgpr1
     %1:vgpr(s32) = COPY $vgpr2
     %2:vgpr(s64) = G_CONSTANT i64 4097
-    %3:vgpr(p0) = G_PTR_ADD %0, %2
+    %3:vgpr(p0) = inbounds G_PTR_ADD %0, %2
     %4:vgpr(s32) = G_ATOMICRMW_ADD %3, %1 :: (load store seq_cst (s32), addrspace 0)
     $vgpr0 = COPY %4
 
@@ -547,7 +547,7 @@ body:             |
     %0:vgpr(p0) = COPY $vgpr0_vgpr1
     %1:vgpr(s32) = COPY $vgpr2
     %2:vgpr(s64) = G_CONSTANT i64 4097
-    %3:vgpr(p0) = G_PTR_ADD %0, %2
+    %3:vgpr(p0) = inbounds G_PTR_ADD %0, %2
     %4:vgpr(s32) = G_ATOMICRMW_ADD %3, %1 :: (load store seq_cst (s32), addrspace 0)
 
 ...
@@ -647,7 +647,7 @@ body:             |
     %0:vgpr(p0) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = COPY $vgpr2_vgpr3
     %2:vgpr(s64) = G_CONSTANT i64 4095
-    %3:vgpr(p0) = G_PTR_ADD %0, %2
+    %3:vgpr(p0) = inbounds G_PTR_ADD %0, %2
     %4:vgpr(s64) = G_ATOMICRMW_ADD %3, %1 :: (load store seq_cst (s64), addrspace 0)
     $vgpr0_vgpr1 = COPY %4
 
@@ -701,7 +701,7 @@ body:             |
     %0:vgpr(p0) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = COPY $vgpr2_vgpr3
     %2:vgpr(s64) = G_CONSTANT i64 4095
-    %3:vgpr(p0) = G_PTR_ADD %0, %2
+    %3:vgpr(p0) = inbounds G_PTR_ADD %0, %2
     %4:vgpr(s64) = G_ATOMICRMW_ADD %3, %1 :: (load store seq_cst (s64), addrspace 0)
 
 ...

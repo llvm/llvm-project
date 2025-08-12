@@ -1598,7 +1598,7 @@ define i32 @f128_libcall(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, i32 %a, i32
 ; CHECK0-NEXT:    stp q0, q1, [sp] // 32-byte Folded Spill
 ; CHECK0-NEXT:    stp q2, q3, [sp, #32] // 32-byte Folded Spill
 ; CHECK0-NEXT:    bl __arm_sme_state
-; CHECK0-NEXT:    and x21, x0, #0x1
+; CHECK0-NEXT:    mov x21, x0
 ; CHECK0-NEXT:    .cfi_offset vg, -40
 ; CHECK0-NEXT:    tbz w21, #0, .LBB27_2
 ; CHECK0-NEXT:  // %bb.1:
@@ -1612,23 +1612,21 @@ define i32 @f128_libcall(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, i32 %a, i32
 ; CHECK0-NEXT:  .LBB27_4:
 ; CHECK0-NEXT:    cmp w0, #0
 ; CHECK0-NEXT:    .cfi_restore vg
-; CHECK0-NEXT:    cset w21, mi
-; CHECK0-NEXT:    bl __arm_sme_state
-; CHECK0-NEXT:    and x22, x0, #0x1
+; CHECK0-NEXT:    cset w22, mi
 ; CHECK0-NEXT:    .cfi_offset vg, -40
-; CHECK0-NEXT:    tbz w22, #0, .LBB27_6
+; CHECK0-NEXT:    tbz w21, #0, .LBB27_6
 ; CHECK0-NEXT:  // %bb.5:
 ; CHECK0-NEXT:    smstop sm
 ; CHECK0-NEXT:  .LBB27_6:
 ; CHECK0-NEXT:    ldp q0, q1, [sp, #32] // 32-byte Folded Reload
 ; CHECK0-NEXT:    bl __getf2
-; CHECK0-NEXT:    tbz w22, #0, .LBB27_8
+; CHECK0-NEXT:    tbz w21, #0, .LBB27_8
 ; CHECK0-NEXT:  // %bb.7:
 ; CHECK0-NEXT:    smstart sm
 ; CHECK0-NEXT:  .LBB27_8:
 ; CHECK0-NEXT:    cmp w0, #0
 ; CHECK0-NEXT:    cset w8, pl
-; CHECK0-NEXT:    tst w8, w21
+; CHECK0-NEXT:    tst w8, w22
 ; CHECK0-NEXT:    csel w0, w20, w19, ne
 ; CHECK0-NEXT:    .cfi_restore vg
 ; CHECK0-NEXT:    ldp x20, x19, [sp, #160] // 16-byte Folded Reload
@@ -1687,7 +1685,7 @@ define i32 @f128_libcall(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, i32 %a, i32
 ; CHECK64-NEXT:    stp q0, q1, [sp, #64] // 32-byte Folded Spill
 ; CHECK64-NEXT:    stp q2, q3, [sp, #96] // 32-byte Folded Spill
 ; CHECK64-NEXT:    bl __arm_sme_state
-; CHECK64-NEXT:    and x21, x0, #0x1
+; CHECK64-NEXT:    mov x21, x0
 ; CHECK64-NEXT:    .cfi_offset vg, -48
 ; CHECK64-NEXT:    tbz w21, #0, .LBB27_2
 ; CHECK64-NEXT:  // %bb.1:
@@ -1701,23 +1699,21 @@ define i32 @f128_libcall(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, i32 %a, i32
 ; CHECK64-NEXT:  .LBB27_4:
 ; CHECK64-NEXT:    cmp w0, #0
 ; CHECK64-NEXT:    .cfi_restore vg
-; CHECK64-NEXT:    cset w21, mi
-; CHECK64-NEXT:    bl __arm_sme_state
-; CHECK64-NEXT:    and x22, x0, #0x1
+; CHECK64-NEXT:    cset w22, mi
 ; CHECK64-NEXT:    .cfi_offset vg, -48
-; CHECK64-NEXT:    tbz w22, #0, .LBB27_6
+; CHECK64-NEXT:    tbz w21, #0, .LBB27_6
 ; CHECK64-NEXT:  // %bb.5:
 ; CHECK64-NEXT:    smstop sm
 ; CHECK64-NEXT:  .LBB27_6:
 ; CHECK64-NEXT:    ldp q0, q1, [sp, #96] // 32-byte Folded Reload
 ; CHECK64-NEXT:    bl __getf2
-; CHECK64-NEXT:    tbz w22, #0, .LBB27_8
+; CHECK64-NEXT:    tbz w21, #0, .LBB27_8
 ; CHECK64-NEXT:  // %bb.7:
 ; CHECK64-NEXT:    smstart sm
 ; CHECK64-NEXT:  .LBB27_8:
 ; CHECK64-NEXT:    cmp w0, #0
 ; CHECK64-NEXT:    cset w8, pl
-; CHECK64-NEXT:    tst w8, w21
+; CHECK64-NEXT:    tst w8, w22
 ; CHECK64-NEXT:    csel w0, w20, w19, ne
 ; CHECK64-NEXT:    .cfi_restore vg
 ; CHECK64-NEXT:    ldp x20, x19, [sp, #296] // 16-byte Folded Reload
@@ -1784,7 +1780,7 @@ define i32 @f128_libcall(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, i32 %a, i32
 ; CHECK1024-NEXT:    str q1, [sp, #1040] // 16-byte Folded Spill
 ; CHECK1024-NEXT:    str q0, [sp, #1024] // 16-byte Folded Spill
 ; CHECK1024-NEXT:    bl __arm_sme_state
-; CHECK1024-NEXT:    and x21, x0, #0x1
+; CHECK1024-NEXT:    mov x21, x0
 ; CHECK1024-NEXT:    .cfi_offset vg, -48
 ; CHECK1024-NEXT:    tbz w21, #0, .LBB27_2
 ; CHECK1024-NEXT:  // %bb.1:
@@ -1799,24 +1795,22 @@ define i32 @f128_libcall(fp128 %v0, fp128 %v1, fp128 %v2, fp128 %v3, i32 %a, i32
 ; CHECK1024-NEXT:  .LBB27_4:
 ; CHECK1024-NEXT:    cmp w0, #0
 ; CHECK1024-NEXT:    .cfi_restore vg
-; CHECK1024-NEXT:    cset w21, mi
-; CHECK1024-NEXT:    bl __arm_sme_state
-; CHECK1024-NEXT:    and x22, x0, #0x1
+; CHECK1024-NEXT:    cset w22, mi
 ; CHECK1024-NEXT:    .cfi_offset vg, -48
-; CHECK1024-NEXT:    tbz w22, #0, .LBB27_6
+; CHECK1024-NEXT:    tbz w21, #0, .LBB27_6
 ; CHECK1024-NEXT:  // %bb.5:
 ; CHECK1024-NEXT:    smstop sm
 ; CHECK1024-NEXT:  .LBB27_6:
 ; CHECK1024-NEXT:    ldr q0, [sp, #1056] // 16-byte Folded Reload
 ; CHECK1024-NEXT:    ldr q1, [sp, #1072] // 16-byte Folded Reload
 ; CHECK1024-NEXT:    bl __getf2
-; CHECK1024-NEXT:    tbz w22, #0, .LBB27_8
+; CHECK1024-NEXT:    tbz w21, #0, .LBB27_8
 ; CHECK1024-NEXT:  // %bb.7:
 ; CHECK1024-NEXT:    smstart sm
 ; CHECK1024-NEXT:  .LBB27_8:
 ; CHECK1024-NEXT:    cmp w0, #0
 ; CHECK1024-NEXT:    cset w8, pl
-; CHECK1024-NEXT:    tst w8, w21
+; CHECK1024-NEXT:    tst w8, w22
 ; CHECK1024-NEXT:    csel w0, w20, w19, ne
 ; CHECK1024-NEXT:    .cfi_restore vg
 ; CHECK1024-NEXT:    add sp, sp, #1088
@@ -1907,10 +1901,10 @@ define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, 
 ; CHECK0-NEXT:    .cfi_escape 0x10, 0x4e, 0x0a, 0x92, 0x2e, 0x00, 0x11, 0x48, 0x1e, 0x22, 0x11, 0x50, 0x22 // $d14 @ cfa - 56 * VG - 48
 ; CHECK0-NEXT:    .cfi_escape 0x10, 0x4f, 0x0a, 0x92, 0x2e, 0x00, 0x11, 0x40, 0x1e, 0x22, 0x11, 0x50, 0x22 // $d15 @ cfa - 64 * VG - 48
 ; CHECK0-NEXT:    mov x8, x0
+; CHECK0-NEXT:    bl __arm_sme_state
+; CHECK0-NEXT:    mov x19, x0
 ; CHECK0-NEXT:    //APP
 ; CHECK0-NEXT:    //NO_APP
-; CHECK0-NEXT:    bl __arm_sme_state
-; CHECK0-NEXT:    and x19, x0, #0x1
 ; CHECK0-NEXT:    .cfi_offset vg, -32
 ; CHECK0-NEXT:    tbz w19, #0, .LBB28_2
 ; CHECK0-NEXT:  // %bb.1: // %entry
@@ -2030,10 +2024,10 @@ define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, 
 ; CHECK64-NEXT:    sub sp, sp, #64
 ; CHECK64-NEXT:    .cfi_escape 0x0f, 0x0b, 0x8f, 0xb0, 0x01, 0x92, 0x2e, 0x00, 0x11, 0x90, 0x01, 0x1e, 0x22 // sp + 176 + 144 * VG
 ; CHECK64-NEXT:    mov x8, x0
+; CHECK64-NEXT:    bl __arm_sme_state
+; CHECK64-NEXT:    mov x19, x0
 ; CHECK64-NEXT:    //APP
 ; CHECK64-NEXT:    //NO_APP
-; CHECK64-NEXT:    bl __arm_sme_state
-; CHECK64-NEXT:    and x19, x0, #0x1
 ; CHECK64-NEXT:    .cfi_offset vg, -32
 ; CHECK64-NEXT:    tbz w19, #0, .LBB28_2
 ; CHECK64-NEXT:  // %bb.1: // %entry
@@ -2159,10 +2153,10 @@ define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, 
 ; CHECK1024-NEXT:    sub sp, sp, #1024
 ; CHECK1024-NEXT:    .cfi_escape 0x0f, 0x0b, 0x8f, 0xb0, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x90, 0x01, 0x1e, 0x22 // sp + 2096 + 144 * VG
 ; CHECK1024-NEXT:    mov x8, x0
+; CHECK1024-NEXT:    bl __arm_sme_state
+; CHECK1024-NEXT:    mov x19, x0
 ; CHECK1024-NEXT:    //APP
 ; CHECK1024-NEXT:    //NO_APP
-; CHECK1024-NEXT:    bl __arm_sme_state
-; CHECK1024-NEXT:    and x19, x0, #0x1
 ; CHECK1024-NEXT:    .cfi_offset vg, -32
 ; CHECK1024-NEXT:    tbz w19, #0, .LBB28_2
 ; CHECK1024-NEXT:  // %bb.1: // %entry
@@ -2291,10 +2285,10 @@ define i32 @svecc_alloca_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8
 ; CHECK0-NEXT:    .cfi_escape 0x10, 0x4f, 0x0a, 0x92, 0x2e, 0x00, 0x11, 0x40, 0x1e, 0x22, 0x11, 0x50, 0x22 // $d15 @ cfa - 64 * VG - 48
 ; CHECK0-NEXT:    sub sp, sp, #48
 ; CHECK0-NEXT:    .cfi_escape 0x0f, 0x0b, 0x8f, 0xe0, 0x00, 0x92, 0x2e, 0x00, 0x11, 0x90, 0x01, 0x1e, 0x22 // sp + 96 + 144 * VG
+; CHECK0-NEXT:    bl __arm_sme_state
+; CHECK0-NEXT:    mov x19, x0
 ; CHECK0-NEXT:    //APP
 ; CHECK0-NEXT:    //NO_APP
-; CHECK0-NEXT:    bl __arm_sme_state
-; CHECK0-NEXT:    and x19, x0, #0x1
 ; CHECK0-NEXT:    .cfi_offset vg, -32
 ; CHECK0-NEXT:    tbz w19, #0, .LBB29_2
 ; CHECK0-NEXT:  // %bb.1: // %entry
@@ -2415,10 +2409,10 @@ define i32 @svecc_alloca_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8
 ; CHECK64-NEXT:    .cfi_escape 0x10, 0x4f, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x40, 0x1e, 0x22, 0x11, 0x90, 0x7f, 0x22 // $d15 @ cfa - 64 * VG - 112
 ; CHECK64-NEXT:    sub sp, sp, #112
 ; CHECK64-NEXT:    .cfi_escape 0x0f, 0x0b, 0x8f, 0xe0, 0x01, 0x92, 0x2e, 0x00, 0x11, 0x90, 0x01, 0x1e, 0x22 // sp + 224 + 144 * VG
+; CHECK64-NEXT:    bl __arm_sme_state
+; CHECK64-NEXT:    mov x19, x0
 ; CHECK64-NEXT:    //APP
 ; CHECK64-NEXT:    //NO_APP
-; CHECK64-NEXT:    bl __arm_sme_state
-; CHECK64-NEXT:    and x19, x0, #0x1
 ; CHECK64-NEXT:    .cfi_offset vg, -32
 ; CHECK64-NEXT:    tbz w19, #0, .LBB29_2
 ; CHECK64-NEXT:  // %bb.1: // %entry
@@ -2543,10 +2537,10 @@ define i32 @svecc_alloca_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8
 ; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4f, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x40, 0x1e, 0x22, 0x11, 0xd0, 0x77, 0x22 // $d15 @ cfa - 64 * VG - 1072
 ; CHECK1024-NEXT:    sub sp, sp, #1072
 ; CHECK1024-NEXT:    .cfi_escape 0x0f, 0x0b, 0x8f, 0xe0, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x90, 0x01, 0x1e, 0x22 // sp + 2144 + 144 * VG
+; CHECK1024-NEXT:    bl __arm_sme_state
+; CHECK1024-NEXT:    mov x19, x0
 ; CHECK1024-NEXT:    //APP
 ; CHECK1024-NEXT:    //NO_APP
-; CHECK1024-NEXT:    bl __arm_sme_state
-; CHECK1024-NEXT:    and x19, x0, #0x1
 ; CHECK1024-NEXT:    .cfi_offset vg, -32
 ; CHECK1024-NEXT:    tbz w19, #0, .LBB29_2
 ; CHECK1024-NEXT:  // %bb.1: // %entry
@@ -2616,6 +2610,7 @@ define i32 @svecc_alloca_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8
 ; CHECK1024-NEXT:    .cfi_restore w30
 ; CHECK1024-NEXT:    .cfi_restore w29
 ; CHECK1024-NEXT:    ret
+
 entry:
   tail call void asm sideeffect "", "~{x0},~{x28},~{x27},~{x3}"() #2
   %0 = alloca [37 x i8], align 16
@@ -3200,18 +3195,19 @@ define i32 @svecc_call_dynamic_alloca(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x
 ; CHECK0-NEXT:    .cfi_escape 0x10, 0x4d, 0x0a, 0x92, 0x2e, 0x00, 0x11, 0x50, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d13 @ cfa - 48 * VG - 64
 ; CHECK0-NEXT:    .cfi_escape 0x10, 0x4e, 0x0a, 0x92, 0x2e, 0x00, 0x11, 0x48, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d14 @ cfa - 56 * VG - 64
 ; CHECK0-NEXT:    .cfi_escape 0x10, 0x4f, 0x0a, 0x92, 0x2e, 0x00, 0x11, 0x40, 0x1e, 0x22, 0x11, 0x40, 0x22 // $d15 @ cfa - 64 * VG - 64
-; CHECK0-NEXT:    mov w9, w0
-; CHECK0-NEXT:    mov x8, sp
-; CHECK0-NEXT:    mov w2, w1
-; CHECK0-NEXT:    add x9, x9, #15
 ; CHECK0-NEXT:    mov x19, sp
-; CHECK0-NEXT:    and x9, x9, #0x1fffffff0
-; CHECK0-NEXT:    sub x8, x8, x9
+; CHECK0-NEXT:    mov w2, w1
+; CHECK0-NEXT:    mov w8, w0
+; CHECK0-NEXT:    bl __arm_sme_state
+; CHECK0-NEXT:    mov w8, w8
+; CHECK0-NEXT:    mov x9, sp
+; CHECK0-NEXT:    mov x20, x0
+; CHECK0-NEXT:    add x8, x8, #15
+; CHECK0-NEXT:    and x8, x8, #0x1fffffff0
+; CHECK0-NEXT:    sub x8, x9, x8
 ; CHECK0-NEXT:    mov sp, x8
 ; CHECK0-NEXT:    //APP
 ; CHECK0-NEXT:    //NO_APP
-; CHECK0-NEXT:    bl __arm_sme_state
-; CHECK0-NEXT:    and x20, x0, #0x1
 ; CHECK0-NEXT:    .cfi_offset vg, -48
 ; CHECK0-NEXT:    tbz w20, #0, .LBB35_2
 ; CHECK0-NEXT:  // %bb.1: // %entry
@@ -3336,18 +3332,19 @@ define i32 @svecc_call_dynamic_alloca(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x
 ; CHECK64-NEXT:    .cfi_escape 0x10, 0x4e, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x48, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d14 @ cfa - 56 * VG - 128
 ; CHECK64-NEXT:    .cfi_escape 0x10, 0x4f, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x40, 0x1e, 0x22, 0x11, 0x80, 0x7f, 0x22 // $d15 @ cfa - 64 * VG - 128
 ; CHECK64-NEXT:    sub sp, sp, #64
-; CHECK64-NEXT:    mov w9, w0
-; CHECK64-NEXT:    mov x8, sp
-; CHECK64-NEXT:    mov w2, w1
-; CHECK64-NEXT:    add x9, x9, #15
 ; CHECK64-NEXT:    mov x19, sp
-; CHECK64-NEXT:    and x9, x9, #0x1fffffff0
-; CHECK64-NEXT:    sub x8, x8, x9
+; CHECK64-NEXT:    mov w2, w1
+; CHECK64-NEXT:    mov w8, w0
+; CHECK64-NEXT:    bl __arm_sme_state
+; CHECK64-NEXT:    mov w8, w8
+; CHECK64-NEXT:    mov x9, sp
+; CHECK64-NEXT:    mov x20, x0
+; CHECK64-NEXT:    add x8, x8, #15
+; CHECK64-NEXT:    and x8, x8, #0x1fffffff0
+; CHECK64-NEXT:    sub x8, x9, x8
 ; CHECK64-NEXT:    mov sp, x8
 ; CHECK64-NEXT:    //APP
 ; CHECK64-NEXT:    //NO_APP
-; CHECK64-NEXT:    bl __arm_sme_state
-; CHECK64-NEXT:    and x20, x0, #0x1
 ; CHECK64-NEXT:    .cfi_offset vg, -48
 ; CHECK64-NEXT:    tbz w20, #0, .LBB35_2
 ; CHECK64-NEXT:  // %bb.1: // %entry
@@ -3478,18 +3475,19 @@ define i32 @svecc_call_dynamic_alloca(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x
 ; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4e, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x48, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d14 @ cfa - 56 * VG - 1088
 ; CHECK1024-NEXT:    .cfi_escape 0x10, 0x4f, 0x0b, 0x92, 0x2e, 0x00, 0x11, 0x40, 0x1e, 0x22, 0x11, 0xc0, 0x77, 0x22 // $d15 @ cfa - 64 * VG - 1088
 ; CHECK1024-NEXT:    sub sp, sp, #1024
-; CHECK1024-NEXT:    mov w9, w0
-; CHECK1024-NEXT:    mov x8, sp
-; CHECK1024-NEXT:    mov w2, w1
-; CHECK1024-NEXT:    add x9, x9, #15
 ; CHECK1024-NEXT:    mov x19, sp
-; CHECK1024-NEXT:    and x9, x9, #0x1fffffff0
-; CHECK1024-NEXT:    sub x8, x8, x9
+; CHECK1024-NEXT:    mov w2, w1
+; CHECK1024-NEXT:    mov w8, w0
+; CHECK1024-NEXT:    bl __arm_sme_state
+; CHECK1024-NEXT:    mov w8, w8
+; CHECK1024-NEXT:    mov x9, sp
+; CHECK1024-NEXT:    mov x20, x0
+; CHECK1024-NEXT:    add x8, x8, #15
+; CHECK1024-NEXT:    and x8, x8, #0x1fffffff0
+; CHECK1024-NEXT:    sub x8, x9, x8
 ; CHECK1024-NEXT:    mov sp, x8
 ; CHECK1024-NEXT:    //APP
 ; CHECK1024-NEXT:    //NO_APP
-; CHECK1024-NEXT:    bl __arm_sme_state
-; CHECK1024-NEXT:    and x20, x0, #0x1
 ; CHECK1024-NEXT:    .cfi_offset vg, -48
 ; CHECK1024-NEXT:    tbz w20, #0, .LBB35_2
 ; CHECK1024-NEXT:  // %bb.1: // %entry
@@ -3627,10 +3625,10 @@ define i32 @svecc_call_realign(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x 16 x i
 ; CHECK0-NEXT:    sub x9, sp, #1024
 ; CHECK0-NEXT:    and sp, x9, #0xffffffffffffffe0
 ; CHECK0-NEXT:    mov w2, w1
+; CHECK0-NEXT:    bl __arm_sme_state
+; CHECK0-NEXT:    mov x19, x0
 ; CHECK0-NEXT:    //APP
 ; CHECK0-NEXT:    //NO_APP
-; CHECK0-NEXT:    bl __arm_sme_state
-; CHECK0-NEXT:    and x19, x0, #0x1
 ; CHECK0-NEXT:    .cfi_offset vg, -48
 ; CHECK0-NEXT:    tbz w19, #0, .LBB36_2
 ; CHECK0-NEXT:  // %bb.1: // %entry
@@ -3754,10 +3752,10 @@ define i32 @svecc_call_realign(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x 16 x i
 ; CHECK64-NEXT:    sub x9, sp, #1088
 ; CHECK64-NEXT:    and sp, x9, #0xffffffffffffffe0
 ; CHECK64-NEXT:    mov w2, w1
+; CHECK64-NEXT:    bl __arm_sme_state
+; CHECK64-NEXT:    mov x19, x0
 ; CHECK64-NEXT:    //APP
 ; CHECK64-NEXT:    //NO_APP
-; CHECK64-NEXT:    bl __arm_sme_state
-; CHECK64-NEXT:    and x19, x0, #0x1
 ; CHECK64-NEXT:    .cfi_offset vg, -48
 ; CHECK64-NEXT:    tbz w19, #0, .LBB36_2
 ; CHECK64-NEXT:  // %bb.1: // %entry
@@ -3886,10 +3884,10 @@ define i32 @svecc_call_realign(<4 x i16> %P0, i32 %P1, i32 %P2, <vscale x 16 x i
 ; CHECK1024-NEXT:    sub x9, sp, #2048
 ; CHECK1024-NEXT:    and sp, x9, #0xffffffffffffffe0
 ; CHECK1024-NEXT:    mov w2, w1
+; CHECK1024-NEXT:    bl __arm_sme_state
+; CHECK1024-NEXT:    mov x19, x0
 ; CHECK1024-NEXT:    //APP
 ; CHECK1024-NEXT:    //NO_APP
-; CHECK1024-NEXT:    bl __arm_sme_state
-; CHECK1024-NEXT:    and x19, x0, #0x1
 ; CHECK1024-NEXT:    .cfi_offset vg, -48
 ; CHECK1024-NEXT:    tbz w19, #0, .LBB36_2
 ; CHECK1024-NEXT:  // %bb.1: // %entry

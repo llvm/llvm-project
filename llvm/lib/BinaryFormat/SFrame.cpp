@@ -68,3 +68,11 @@ ArrayRef<EnumEntry<sframe::FREOffset>> sframe::getFREOffsets() {
   };
   return ArrayRef(FREOffsets);
 }
+
+ArrayRef<EnumEntry<sframe::BaseReg>> sframe::getBaseRegisters() {
+  static constexpr EnumEntry<sframe::BaseReg> BaseRegs[] = {
+      {"FP", sframe::BaseReg::FP},
+      {"SP", sframe::BaseReg::SP},
+  };
+  return ArrayRef(BaseRegs);
+}
