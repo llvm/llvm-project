@@ -170,7 +170,7 @@ static Status EnterSyncMode(Connection &conn) {
 
 static Status SelectTargetDevice(Connection &conn, llvm::StringRef device_id) {
   Log *log = GetLog(LLDBLog::Platform);
-  LLDB_LOGF(log, "Selecting device: %s", device_id.str().c_str());
+  LLDB_LOG(log, "Selecting device: {0}", device_id);
 
   std::ostringstream msg;
   msg << "host:transport:" << device_id.str();
