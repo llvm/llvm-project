@@ -309,7 +309,7 @@ void use() {
 
   S<double>(2);     // no warning
   S<int>(2);        // expected-warning {{ignoring temporary of type 'S<int>' declared with 'nodiscard'}}
-  S<const char>(2); // no warning (warn_unused_result does not diagnose constructor temporaries)
+  S<const char>(2); // expected-warning {{ignoring temporary of type 'S<const char>' declared with 'clang::warn_unused_result' attribute}}
 
   // function should take precedence over type
   obtain2(1.0);             // expected-warning {{ignoring return value of function declared with 'nodiscard'}}
@@ -336,7 +336,7 @@ struct [[nodiscard]] G {
 void use2() {
   H{2};       // no warning
   H(2.0);     // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard'}}
-  H("Hello"); // no warning (warn_unused_result does not diagnose constructor temporaries)
+  H("Hello"); // expected-warning {{ignoring temporary created by a constructor declared with 'warn_unused_result' attribute}}
 
   // no warning for explicit cast to void
   (void)H(2);
