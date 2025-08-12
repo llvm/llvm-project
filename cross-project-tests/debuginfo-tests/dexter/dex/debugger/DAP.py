@@ -262,7 +262,7 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
         )
 
     @staticmethod
-    def make_set_function_breakpoint_request(function_names: list[str]) -> dict:
+    def make_set_function_breakpoint_request(function_names: list) -> dict:
         # Function breakpoints may specify conditions and hit counts, though we
         # don't use those here (though perhaps we should use native hit count,
         # rather than emulating it ConditionalController, now that we have a
@@ -273,7 +273,7 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
         )
 
     @staticmethod
-    def make_set_instruction_breakpoint_request(addrs: list[str]) -> dict:
+    def make_set_instruction_breakpoint_request(addrs: list) -> dict:
         # Instruction breakpoints have additional fields we're ignoring for the
         # moment.
         return DAP.make_request(
@@ -574,7 +574,7 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
         return new_id
 
     def _update_breakpoint_ids_after_request(
-        self, dex_bp_ids: list[int], response: dict
+        self, dex_bp_ids: list, response: dict
     ):
         dap_bp_ids = [bp["id"] for bp in response["body"]["breakpoints"]]
         if len(dex_bp_ids) != len(dap_bp_ids):
