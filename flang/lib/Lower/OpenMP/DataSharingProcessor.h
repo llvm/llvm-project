@@ -77,6 +77,11 @@ private:
     bool isSymbolDefineBy(const semantics::Symbol *symbol,
                           lower::pft::Evaluation &eval) const;
 
+    // Given a \p symbol, returns true if it is defined by a nested
+    // `DeclarationConstruct`.
+    bool
+    isSymbolDefineByNestedDeclaration(const semantics::Symbol *symbol) const;
+
   private:
     using ConstructPtr = std::variant<const parser::OpenMPConstruct *,
                                       const parser::DeclarationConstruct *>;
