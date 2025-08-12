@@ -309,7 +309,6 @@ static void validateRootSignature(Module &M,
         reportOverlappingRegisters(M, ReportedBinding, Overlaping);
       });
   // Next checks require that the root signature definition is valid.
-  // Next checks require that the root signature definition is valid.
   if (!HasOverlap) {
     SmallVector<ResourceInfo::ResourceBinding> RDs =
         getRootDescriptorsBindingInfo(RSD, Visibility);
