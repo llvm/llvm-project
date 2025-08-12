@@ -40,7 +40,7 @@ function(_get_common_test_compile_options output_var c_test flags)
     endif()
 
     # list(APPEND compile_options "-Wall")
-    list(APPEND compile_options "-Wextra")
+    # list(APPEND compile_options "-Wextra")
     # -DLIBC_WNO_ERROR=ON if you can't build cleanly with -Werror.
     if(NOT LIBC_WNO_ERROR)
       # list(APPEND compile_options "-Werror")

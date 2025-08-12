@@ -57,7 +57,7 @@ using LIBC_NAMESPACE::cpp::span;
     RunTest(*freelist_heap, freelist_heap->region().size());                   \
   }                                                                            \
   void LlvmLibcFreeListHeapTest##TestCase::RunTest(FreeListHeap &allocator,    \
-                                                   [[maybe_unused]] size_t N)
+                                                   size_t N)
 
 TEST_FOR_EACH_ALLOCATOR(CanAllocate, 2048) {
   constexpr size_t ALLOC_SIZE = 512;
