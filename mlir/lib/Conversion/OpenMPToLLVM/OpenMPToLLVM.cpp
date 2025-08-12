@@ -95,8 +95,8 @@ struct OpenMPOpConversion : public ConvertOpToLLVMPattern<T> {
     }
 
     // Create new operation.
-    auto newOp = rewriter.create<T>(op.getLoc(), resTypes, convertedOperands,
-                                    convertedAttrs);
+    auto newOp = T::create(rewriter, op.getLoc(), resTypes, convertedOperands,
+                           convertedAttrs);
 
     // Translate regions.
     for (auto [originalRegion, convertedRegion] :

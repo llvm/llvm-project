@@ -214,6 +214,16 @@ static void printTrueFalse(AsmPrinter &p, std::optional<int> result) {
 }
 
 //===----------------------------------------------------------------------===//
+// TestCopyCountAttr Implementation
+//===----------------------------------------------------------------------===//
+
+LogicalResult TestCopyCountAttr::verify(
+    llvm::function_ref<::mlir::InFlightDiagnostic()> /*emitError*/,
+    CopyCount /*copy_count*/) {
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // CopyCountAttr Implementation
 //===----------------------------------------------------------------------===//
 

@@ -9,14 +9,14 @@
 #ifndef LLVM_LIBC_UTILS_GPU_TIMING_AMDGPU
 #define LLVM_LIBC_UTILS_GPU_TIMING_AMDGPU
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/array.h"
+#include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/GPU/utils.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
-
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -24,7 +24,7 @@ namespace LIBC_NAMESPACE_DECL {
 // allows us to substract the constant-time overhead from the latency to
 // obtain a true result. This can vary with system load.
 [[gnu::noinline]] static LIBC_INLINE uint64_t overhead() {
-  gpu::memory_fence();
+  cpp::atomic_thread_fence(cpp::MemoryOrder::ACQ_REL);
   uint64_t start = gpu::processor_clock();
   uint32_t result = 0.0;
   asm("v_or_b32 %[v_reg], 0, %[v_reg]\n" ::[v_reg] "v"(result));
@@ -44,13 +44,13 @@ template <typename F, typename T>
   T arg = storage;
 
   // The AMDGPU architecture needs to wait on pending results.
-  gpu::memory_fence();
+  cpp::atomic_thread_fence(cpp::MemoryOrder::ACQ_REL);
   // Get the current timestamp from the clock.
   uint64_t start = gpu::processor_clock();
 
   // This forces the compiler to load the input argument and run the clock
   // cycle counter before the profiling region.
-  asm("" ::"s"(start));
+  asm("" : "+v"(arg) : "s"(start));
 
   // Run the function under test and return its value.
   auto result = f(arg);
@@ -71,7 +71,7 @@ template <typename F, typename T>
   // ordering.
   uint64_t stop = gpu::processor_clock();
   asm("" ::"s"(stop));
-  gpu::memory_fence();
+  cpp::atomic_thread_fence(cpp::MemoryOrder::ACQ_REL);
 
   // Return the time elapsed.
   return stop - start;
@@ -84,7 +84,7 @@ template <typename F, typename T1, typename T2>
   T1 arg1 = storage1;
   T2 arg2 = storage2;
 
-  gpu::memory_fence();
+  cpp::atomic_thread_fence(cpp::MemoryOrder::ACQ_REL);
   uint64_t start = gpu::processor_clock();
 
   asm("" ::"s"(start));
@@ -100,7 +100,7 @@ template <typename F, typename T1, typename T2>
 
   uint64_t stop = gpu::processor_clock();
   asm("" ::"s"(stop));
-  gpu::memory_fence();
+  cpp::atomic_thread_fence(cpp::MemoryOrder::ACQ_REL);
 
   return stop - start;
 }
@@ -111,7 +111,7 @@ template <typename F, typename T, size_t N>
 throughput(F f, const cpp::array<T, N> &inputs) {
   asm("" ::"v"(&inputs));
 
-  gpu::memory_fence();
+  cpp::atomic_thread_fence(cpp::MemoryOrder::ACQ_REL);
   uint64_t start = gpu::processor_clock();
 
   asm("" ::"s"(start));
@@ -124,7 +124,7 @@ throughput(F f, const cpp::array<T, N> &inputs) {
 
   uint64_t stop = gpu::processor_clock();
   asm("" ::"s"(stop));
-  gpu::memory_fence();
+  cpp::atomic_thread_fence(cpp::MemoryOrder::ACQ_REL);
 
   // Return the time elapsed.
   return stop - start;
@@ -136,7 +136,7 @@ template <typename F, typename T, size_t N>
     F f, const cpp::array<T, N> &inputs1, const cpp::array<T, N> &inputs2) {
   asm("" ::"v"(&inputs1), "v"(&inputs2));
 
-  gpu::memory_fence();
+  cpp::atomic_thread_fence(cpp::MemoryOrder::ACQ_REL);
   uint64_t start = gpu::processor_clock();
 
   asm("" ::"s"(start));
@@ -149,7 +149,7 @@ template <typename F, typename T, size_t N>
 
   uint64_t stop = gpu::processor_clock();
   asm("" ::"s"(stop));
-  gpu::memory_fence();
+  cpp::atomic_thread_fence(cpp::MemoryOrder::ACQ_REL);
 
   // Return the time elapsed.
   return stop - start;

@@ -1,55 +1,36 @@
 ; RUN: opt -S -passes='dxil-op-lower' -mtriple=dxil-pc-shadermodel6.3-library %s | FileCheck %s --check-prefixes=CHECK,CHECK-SM63
 ; RUN: opt -S -passes='dxil-op-lower' -mtriple=dxil-pc-shadermodel6.6-library %s | FileCheck %s --check-prefixes=CHECK,CHECK-SM66
-; RUN: opt -S -dxil-op-lower -dxil-prepare -mtriple=dxil-pc-shadermodel6.6-library %s | FileCheck %s --check-prefixes=CHECK,CHECK-PREPARE
+; RUN: opt -S -dxil-prepare -dxil-embed -mtriple=dxil-pc-shadermodel6.6-library %s | FileCheck %s --check-prefixes=CHECK,CHECK-EMBED
+
+; Lifetime intrinsics are not valid prior to shader model 6.6 and are instead
+; replaced with undef stores, provided the validator version is 1.6 or greater
+
+; The dxil-embed pass will remove lifetime intrinsics because they transformed
+; in a way that is illegal in modern LLVM IR before serializing to DXIL bitcode.
+; So we check that no bitcast or lifetime intrinsics remain after dxil-embed
 
 ; CHECK-LABEL: define void @test_legal_lifetime() {
-; 
-; CHECK-SM63-NEXT:    [[ACCUM_I_FLAT:%.*]] = alloca [1 x i32], align 4
-; CHECK-SM63-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[ACCUM_I_FLAT]], i32 0
-; CHECK-SM63-NEXT:    store [1 x i32] undef, ptr [[ACCUM_I_FLAT]], align 4
-; CHECK-SM63-NEXT:    store i32 0, ptr [[GEP]], align 4
-; CHECK-SM63-NEXT:    store [1 x i32] undef, ptr [[ACCUM_I_FLAT]], align 4
-; 
-; CHECK-SM66-NEXT:    [[ACCUM_I_FLAT:%.*]] = alloca [1 x i32], align 4
-; CHECK-SM66-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[ACCUM_I_FLAT]], i32 0
-; CHECK-SM66-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[ACCUM_I_FLAT]])
-; CHECK-SM66-NEXT:    store i32 0, ptr [[GEP]], align 4
-; CHECK-SM66-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[ACCUM_I_FLAT]])
-; 
-; CHECK-PREPARE-NEXT:    [[ACCUM_I_FLAT:%.*]] = alloca [1 x i32], align 4
-; CHECK-PREPARE-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[ACCUM_I_FLAT]], i32 0
-; CHECK-PREPARE-NEXT:    [[BITCAST:%.*]] = bitcast ptr [[ACCUM_I_FLAT]] to ptr
-; CHECK-PREPARE-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[BITCAST]])
-; CHECK-PREPARE-NEXT:    store i32 0, ptr [[GEP]], align 4
-; CHECK-PREPARE-NEXT:    [[BITCAST:%.*]] = bitcast ptr [[ACCUM_I_FLAT]] to ptr
-; CHECK-PREPARE-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[BITCAST]])
-; 
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:       [[ACCUM_I_FLAT:%.*]] = alloca [1 x i32], align 4
+; CHECK-NEXT:       [[GEP:%.*]] = getelementptr i32, ptr [[ACCUM_I_FLAT]], i32 0
+; CHECK-SM63-NEXT:  store [1 x i32] undef, ptr [[ACCUM_I_FLAT]], align 4
+; CHECK-SM66-NEXT:  call void @llvm.lifetime.start.p0(ptr nonnull [[ACCUM_I_FLAT]])
+; CHECK-EMBED-NOT:  bitcast
+; CHECK-EMBED-NOT:  lifetime
+; CHECK-NEXT:       store i32 0, ptr [[GEP]], align 4
+; CHECK-SM63-NEXT:  store [1 x i32] undef, ptr [[ACCUM_I_FLAT]], align 4
+; CHECK-SM66-NEXT:  call void @llvm.lifetime.end.p0(ptr nonnull [[ACCUM_I_FLAT]])
+; CHECK-EMBED-NOT:  bitcast
+; CHECK-EMBED-NOT:  lifetime
+; CHECK-NEXT:       ret void
 ;
 define void @test_legal_lifetime()  {
   %accum.i.flat = alloca [1 x i32], align 4
   %gep = getelementptr i32, ptr %accum.i.flat, i32 0
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %accum.i.flat)
+  call void @llvm.lifetime.start.p0(ptr nonnull %accum.i.flat)
   store i32 0, ptr %gep, align 4
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %accum.i.flat)
+  call void @llvm.lifetime.end.p0(ptr nonnull %accum.i.flat)
   ret void
 }
-
-; CHECK-PREPARE-DAG: attributes [[LIFETIME_ATTRS:#.*]] = { nounwind }
-
-; CHECK-PREPARE-DAG: ; Function Attrs: nounwind
-; CHECK-PREPARE-DAG: declare void @llvm.lifetime.start.p0(i64, ptr) [[LIFETIME_ATTRS]]
-
-; CHECK-PREPARE-DAG: ; Function Attrs: nounwind
-; CHECK-PREPARE-DAG: declare void @llvm.lifetime.end.p0(i64, ptr) [[LIFETIME_ATTRS]]
-
-; Function Attrs: nounwind memory(argmem: readwrite)
-declare void @llvm.lifetime.end.p0(i64, ptr) #0
-
-; Function Attrs: nounwind memory(argmem: readwrite)
-declare void @llvm.lifetime.start.p0(i64, ptr) #0
-
-attributes #0 = { nounwind memory(argmem: readwrite) }
 
 ; Set the validator version to 1.6
 !dx.valver = !{!0}

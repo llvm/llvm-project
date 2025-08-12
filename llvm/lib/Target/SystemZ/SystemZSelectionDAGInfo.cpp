@@ -181,8 +181,7 @@ static SDValue addIPMSequence(const SDLoc &DL, SDValue CCReg,
 
 std::pair<SDValue, SDValue> SystemZSelectionDAGInfo::EmitTargetCodeForMemcmp(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Src1,
-    SDValue Src2, SDValue Size, MachinePointerInfo Op1PtrInfo,
-    MachinePointerInfo Op2PtrInfo) const {
+    SDValue Src2, SDValue Size, const CallInst *CI) const {
   SDValue CCReg;
   // Swap operands to invert CC == 1 vs. CC == 2 cases.
   if (auto *CSize = dyn_cast<ConstantSDNode>(Size)) {

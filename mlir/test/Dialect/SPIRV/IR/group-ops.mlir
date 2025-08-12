@@ -49,7 +49,7 @@ func.func @group_broadcast_negative_scope(%value: f32, %localid: vector<3xi32> )
 // -----
 
 func.func @group_broadcast_negative_locid_dtype(%value: f32, %localid: vector<3xf32> ) -> f32 {
-  // expected-error @+1 {{operand #1 must be 8/16/32/64-bit integer or vector of 8/16/32/64-bit integer values}}
+  // expected-error @+1 {{op operand #1 must be 8/16/32/64-bit integer or fixed-length vector of 8/16/32/64-bit integer values}}
   %0 = spirv.GroupBroadcast <Subgroup> %value, %localid : f32, vector<3xf32>
   return %0: f32
 }

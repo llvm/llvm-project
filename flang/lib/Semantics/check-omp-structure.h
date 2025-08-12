@@ -90,9 +90,9 @@ public:
   void Leave(const parser::OpenMPDeclarativeAssumes &);
   void Enter(const parser::OpenMPBlockConstruct &);
   void Leave(const parser::OpenMPBlockConstruct &);
-  void Leave(const parser::OmpBeginBlockDirective &);
-  void Enter(const parser::OmpEndBlockDirective &);
-  void Leave(const parser::OmpEndBlockDirective &);
+  void Leave(const parser::OmpBeginDirective &);
+  void Enter(const parser::OmpEndDirective &);
+  void Leave(const parser::OmpEndDirective &);
 
   void Enter(const parser::OpenMPSectionsConstruct &);
   void Leave(const parser::OpenMPSectionsConstruct &);
@@ -179,8 +179,8 @@ private:
   void HasInvalidDistributeNesting(const parser::OpenMPLoopConstruct &x);
   void HasInvalidLoopBinding(const parser::OpenMPLoopConstruct &x);
   // specific clause related
-  void CheckAllowedMapTypes(const parser::OmpMapType::Value &,
-      const std::list<parser::OmpMapType::Value> &);
+  void CheckAllowedMapTypes(
+      parser::OmpMapType::Value, llvm::ArrayRef<parser::OmpMapType::Value>);
 
   const std::list<parser::OmpTraitProperty> &GetTraitPropertyList(
       const parser::OmpTraitSelector &);

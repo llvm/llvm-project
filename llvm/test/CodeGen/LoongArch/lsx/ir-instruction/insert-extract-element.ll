@@ -4,8 +4,7 @@
 define <16 x i8> @insert_extract_v16i8(<16 x i8> %a) nounwind {
 ; CHECK-LABEL: insert_extract_v16i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 15
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a0, 1
+; CHECK-NEXT:    vextrins.b $vr0, $vr0, 31
 ; CHECK-NEXT:    ret
 entry:
   %b = extractelement <16 x i8> %a, i32 15
@@ -16,8 +15,7 @@ entry:
 define <8 x i16> @insert_extract_v8i16(<8 x i16> %a) nounwind {
 ; CHECK-LABEL: insert_extract_v8i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 7
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a0, 1
+; CHECK-NEXT:    vextrins.h $vr0, $vr0, 23
 ; CHECK-NEXT:    ret
 entry:
   %b = extractelement <8 x i16> %a, i32 7
@@ -28,8 +26,7 @@ entry:
 define <4 x i32> @insert_extract_v4i32(<4 x i32> %a) nounwind {
 ; CHECK-LABEL: insert_extract_v4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 3
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 1
+; CHECK-NEXT:    vextrins.w $vr0, $vr0, 19
 ; CHECK-NEXT:    ret
 entry:
   %b = extractelement <4 x i32> %a, i32 3
@@ -40,9 +37,7 @@ entry:
 define <4 x float> @insert_extract_v4f32(<4 x float> %a) nounwind {
 ; CHECK-LABEL: insert_extract_v4f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vreplvei.w $vr1, $vr0, 3
-; CHECK-NEXT:    movfr2gr.s $a0, $fa1
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
+; CHECK-NEXT:    vextrins.w $vr0, $vr0, 3
 ; CHECK-NEXT:    ret
 entry:
   %b = extractelement <4 x float> %a, i32 3
@@ -53,8 +48,7 @@ entry:
 define <2 x i64> @insert_extract_v2i64(<2 x i64> %a) nounwind {
 ; CHECK-LABEL: insert_extract_v2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpickve2gr.d $a0, $vr0, 1
-; CHECK-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; CHECK-NEXT:    vextrins.d $vr0, $vr0, 1
 ; CHECK-NEXT:    ret
 entry:
   %b = extractelement <2 x i64> %a, i32 1
@@ -65,9 +59,7 @@ entry:
 define <2 x double> @insert_extract_v2f64(<2 x double> %a) nounwind {
 ; CHECK-LABEL: insert_extract_v2f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vreplvei.d $vr1, $vr0, 1
-; CHECK-NEXT:    movfr2gr.d $a0, $fa1
-; CHECK-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; CHECK-NEXT:    vextrins.d $vr0, $vr0, 1
 ; CHECK-NEXT:    ret
 entry:
   %b = extractelement <2 x double> %a, i32 1

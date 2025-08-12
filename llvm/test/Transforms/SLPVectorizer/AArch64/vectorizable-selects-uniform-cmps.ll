@@ -249,7 +249,7 @@ define void @select_uniform_ugt_16xi8(ptr %ptr, i8 %x) {
 ; CHECK-NEXT:    [[L_11:%.*]] = load i8, ptr [[GEP_11]], align 1
 ; CHECK-NEXT:    [[GEP_12:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i8 12
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[PTR]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <8 x i8> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[PTR]], align 1
 ; CHECK-NEXT:    [[S_8:%.*]] = select i1 [[CMP_8]], i8 [[TMP1]], i8 [[X:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i8>, ptr [[GEP_9]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i8>, ptr [[GEP_12]], align 1

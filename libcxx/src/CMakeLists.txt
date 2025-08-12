@@ -31,7 +31,6 @@ set(LIBCXX_SOURCES
   include/to_chars_floating_point.h
   include/from_chars_floating_point.h
   memory.cpp
-  log_hardening_failure.cpp
   memory_resource.cpp
   new_handler.cpp
   new_helpers.cpp
@@ -310,6 +309,7 @@ add_custom_target(cxx DEPENDS ${LIBCXX_BUILD_TARGETS})
 # Build the experimental static library
 set(LIBCXX_EXPERIMENTAL_SOURCES
   experimental/keep.cpp
+  experimental/log_hardening_failure.cpp
   )
 
 if (LIBCXX_PSTL_BACKEND STREQUAL "libdispatch")

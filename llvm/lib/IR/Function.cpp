@@ -1232,6 +1232,7 @@ bool llvm::CallingConv::supportsNonVoidReturnType(CallingConv::ID CC) {
   case CallingConv::AArch64_SVE_VectorCall:
   case CallingConv::WASM_EmscriptenInvoke:
   case CallingConv::AMDGPU_Gfx:
+  case CallingConv::AMDGPU_Gfx_WholeWave:
   case CallingConv::M68k_INTR:
   case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0:
   case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2:

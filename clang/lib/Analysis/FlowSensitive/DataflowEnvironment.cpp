@@ -532,9 +532,11 @@ void Environment::initialize() {
           } else if (auto *FieldBeingInitialized =
                          dyn_cast<FieldDecl>(Parent->getLambdaContextDecl())) {
             // This is in a field initializer, rather than a method.
+            const RecordDecl *RD = FieldBeingInitialized->getParent();
+            const ASTContext &Ctx = RD->getASTContext();
+            CanQualType T = Ctx.getCanonicalTagType(RD);
             setThisPointeeStorageLocation(
-                cast<RecordStorageLocation>(createObject(QualType(
-                    FieldBeingInitialized->getParent()->getTypeForDecl(), 0))));
+                cast<RecordStorageLocation>(createObject(T)));
           } else {
             assert(false && "Unexpected this-capturing lambda context.");
           }

@@ -591,9 +591,15 @@ set(aarch64_SOURCES
   ${GENERIC_TF_SOURCES}
   ${GENERIC_SOURCES}
   cpu_model/aarch64.c
-  aarch64/emupac.cpp
   aarch64/fp_mode.c
 )
+
+# Append sources specific to AArch64 targets that aren't supported by cl.exe
+if(CLANG_CL OR NOT MSVC)
+  list(APPEND aarch64_SOURCES
+    aarch64/emupac.cpp
+  )
+endif()
 
 set(COMPILER_RT_AARCH64_FMV_USES_GLOBAL_CONSTRUCTOR NOT(FUCHSIA OR APPLE))
 

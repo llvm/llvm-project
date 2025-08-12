@@ -1821,10 +1821,29 @@ bool CombinerHelper::matchPtrAddImmedChain(MachineInstr &MI,
       return false;
   }
 
+  // Reassociating nuw additions preserves nuw. If both original G_PTR_ADDs are
+  // inbounds, reaching the same result in one G_PTR_ADD is also inbounds.
+  // The nusw constraints are satisfied because imm1+imm2 cannot exceed the
+  // largest signed integer that fits into the index type, which is the maximum
+  // size of allocated objects according to the IR Language Reference.
+  unsigned PtrAddFlags = MI.getFlags();
+  unsigned LHSPtrAddFlags = Add2Def->getFlags();
+  bool IsNoUWrap = PtrAddFlags & LHSPtrAddFlags & MachineInstr::MIFlag::NoUWrap;
+  bool IsInBounds =
+      PtrAddFlags & LHSPtrAddFlags & MachineInstr::MIFlag::InBounds;
+  unsigned Flags = 0;
+  if (IsNoUWrap)
+    Flags |= MachineInstr::MIFlag::NoUWrap;
+  if (IsInBounds) {
+    Flags |= MachineInstr::MIFlag::InBounds;
+    Flags |= MachineInstr::MIFlag::NoUSWrap;
+  }
+
   // Pass the combined immediate to the apply function.
   MatchInfo.Imm = AMNew.BaseOffs;
   MatchInfo.Base = Base;
   MatchInfo.Bank = getRegBank(Imm2);
+  MatchInfo.Flags = Flags;
   return true;
 }
 
@@ -1838,6 +1857,7 @@ void CombinerHelper::applyPtrAddImmedChain(MachineInstr &MI,
   Observer.changingInstr(MI);
   MI.getOperand(1).setReg(MatchInfo.Base);
   MI.getOperand(2).setReg(NewOffset.getReg(0));
+  MI.setFlags(MatchInfo.Flags);
   Observer.changedInstr(MI);
 }
 
@@ -4871,14 +4891,34 @@ bool CombinerHelper::matchReassocConstantInnerRHS(GPtrAdd &MI,
   if (!C2)
     return false;
 
+  // If both additions are nuw, the reassociated additions are also nuw.
+  // If the original G_PTR_ADD is additionally nusw, X and C are both not
+  // negative, so BASE+X is between BASE and BASE+(X+C). The new G_PTR_ADDs are
+  // therefore also nusw.
+  // If the original G_PTR_ADD is additionally inbounds (which implies nusw),
+  // the new G_PTR_ADDs are then also inbounds.
+  unsigned PtrAddFlags = MI.getFlags();
+  unsigned AddFlags = RHS->getFlags();
+  bool IsNoUWrap = PtrAddFlags & AddFlags & MachineInstr::MIFlag::NoUWrap;
+  bool IsNoUSWrap = IsNoUWrap && (PtrAddFlags & MachineInstr::MIFlag::NoUSWrap);
+  bool IsInBounds = IsNoUWrap && (PtrAddFlags & MachineInstr::MIFlag::InBounds);
+  unsigned Flags = 0;
+  if (IsNoUWrap)
+    Flags |= MachineInstr::MIFlag::NoUWrap;
+  if (IsNoUSWrap)
+    Flags |= MachineInstr::MIFlag::NoUSWrap;
+  if (IsInBounds)
+    Flags |= MachineInstr::MIFlag::InBounds;
+
   MatchInfo = [=, &MI](MachineIRBuilder &B) {
     LLT PtrTy = MRI.getType(MI.getOperand(0).getReg());
 
     auto NewBase =
-        Builder.buildPtrAdd(PtrTy, Src1Reg, RHS->getOperand(1).getReg());
+        Builder.buildPtrAdd(PtrTy, Src1Reg, RHS->getOperand(1).getReg(), Flags);
     Observer.changingInstr(MI);
     MI.getOperand(1).setReg(NewBase.getReg(0));
     MI.getOperand(2).setReg(RHS->getOperand(2).getReg());
+    MI.setFlags(Flags);
     Observer.changedInstr(MI);
   };
   return !reassociationCanBreakAddressingModePattern(MI);
@@ -4897,6 +4937,25 @@ bool CombinerHelper::matchReassocConstantInnerLHS(GPtrAdd &MI,
     return false;
 
   auto *LHSPtrAdd = cast<GPtrAdd>(LHS);
+
+  // Reassociating nuw additions preserves nuw. If both original G_PTR_ADDs are
+  // nuw and inbounds (which implies nusw), the offsets are both non-negative,
+  // so the new G_PTR_ADDs are also inbounds.
+  unsigned PtrAddFlags = MI.getFlags();
+  unsigned LHSPtrAddFlags = LHSPtrAdd->getFlags();
+  bool IsNoUWrap = PtrAddFlags & LHSPtrAddFlags & MachineInstr::MIFlag::NoUWrap;
+  bool IsNoUSWrap = IsNoUWrap && (PtrAddFlags & LHSPtrAddFlags &
+                                  MachineInstr::MIFlag::NoUSWrap);
+  bool IsInBounds = IsNoUWrap && (PtrAddFlags & LHSPtrAddFlags &
+                                  MachineInstr::MIFlag::InBounds);
+  unsigned Flags = 0;
+  if (IsNoUWrap)
+    Flags |= MachineInstr::MIFlag::NoUWrap;
+  if (IsNoUSWrap)
+    Flags |= MachineInstr::MIFlag::NoUSWrap;
+  if (IsInBounds)
+    Flags |= MachineInstr::MIFlag::InBounds;
+
   MatchInfo = [=, &MI](MachineIRBuilder &B) {
     // When we change LHSPtrAdd's offset register we might cause it to use a reg
     // before its def. Sink the instruction so the outer PTR_ADD to ensure this
@@ -4907,9 +4966,11 @@ bool CombinerHelper::matchReassocConstantInnerLHS(GPtrAdd &MI,
     auto NewCst = B.buildConstant(MRI.getType(RHSReg), LHSCstOff->Value);
     Observer.changingInstr(MI);
     MI.getOperand(2).setReg(NewCst.getReg(0));
+    MI.setFlags(Flags);
     Observer.changedInstr(MI);
     Observer.changingInstr(*LHSPtrAdd);
     LHSPtrAdd->getOperand(2).setReg(RHSReg);
+    LHSPtrAdd->setFlags(Flags);
     Observer.changedInstr(*LHSPtrAdd);
   };
   return !reassociationCanBreakAddressingModePattern(MI);
@@ -4933,11 +4994,30 @@ bool CombinerHelper::matchReassocFoldConstantsInSubTree(
   if (!C2)
     return false;
 
+  // Reassociating nuw additions preserves nuw. If both original G_PTR_ADDs are
+  // inbounds, reaching the same result in one G_PTR_ADD is also inbounds.
+  // The nusw constraints are satisfied because imm1+imm2 cannot exceed the
+  // largest signed integer that fits into the index type, which is the maximum
+  // size of allocated objects according to the IR Language Reference.
+  unsigned PtrAddFlags = MI.getFlags();
+  unsigned LHSPtrAddFlags = LHSPtrAdd->getFlags();
+  bool IsNoUWrap = PtrAddFlags & LHSPtrAddFlags & MachineInstr::MIFlag::NoUWrap;
+  bool IsInBounds =
+      PtrAddFlags & LHSPtrAddFlags & MachineInstr::MIFlag::InBounds;
+  unsigned Flags = 0;
+  if (IsNoUWrap)
+    Flags |= MachineInstr::MIFlag::NoUWrap;
+  if (IsInBounds) {
+    Flags |= MachineInstr::MIFlag::InBounds;
+    Flags |= MachineInstr::MIFlag::NoUSWrap;
+  }
+
   MatchInfo = [=, &MI](MachineIRBuilder &B) {
     auto NewCst = B.buildConstant(MRI.getType(Src2Reg), *C1 + *C2);
     Observer.changingInstr(MI);
     MI.getOperand(1).setReg(LHSSrc1);
     MI.getOperand(2).setReg(NewCst.getReg(0));
+    MI.setFlags(Flags);
     Observer.changedInstr(MI);
   };
   return !reassociationCanBreakAddressingModePattern(MI);
@@ -5300,7 +5380,7 @@ bool CombinerHelper::matchSubAddSameReg(MachineInstr &MI,
   return false;
 }
 
-MachineInstr *CombinerHelper::buildUDivorURemUsingMul(MachineInstr &MI) const {
+MachineInstr *CombinerHelper::buildUDivOrURemUsingMul(MachineInstr &MI) const {
   unsigned Opcode = MI.getOpcode();
   assert(Opcode == TargetOpcode::G_UDIV || Opcode == TargetOpcode::G_UREM);
   auto &UDivorRem = cast<GenericMachineInstr>(MI);
@@ -5468,7 +5548,7 @@ MachineInstr *CombinerHelper::buildUDivorURemUsingMul(MachineInstr &MI) const {
   return ret;
 }
 
-bool CombinerHelper::matchUDivorURemByConst(MachineInstr &MI) const {
+bool CombinerHelper::matchUDivOrURemByConst(MachineInstr &MI) const {
   unsigned Opcode = MI.getOpcode();
   assert(Opcode == TargetOpcode::G_UDIV || Opcode == TargetOpcode::G_UREM);
   Register Dst = MI.getOperand(0).getReg();
@@ -5517,13 +5597,14 @@ bool CombinerHelper::matchUDivorURemByConst(MachineInstr &MI) const {
       MRI, RHS, [](const Constant *C) { return C && !C->isNullValue(); });
 }
 
-void CombinerHelper::applyUDivorURemByConst(MachineInstr &MI) const {
-  auto *NewMI = buildUDivorURemUsingMul(MI);
+void CombinerHelper::applyUDivOrURemByConst(MachineInstr &MI) const {
+  auto *NewMI = buildUDivOrURemUsingMul(MI);
   replaceSingleDefInstWithReg(MI, NewMI->getOperand(0).getReg());
 }
 
-bool CombinerHelper::matchSDivByConst(MachineInstr &MI) const {
-  assert(MI.getOpcode() == TargetOpcode::G_SDIV && "Expected SDIV");
+bool CombinerHelper::matchSDivOrSRemByConst(MachineInstr &MI) const {
+  unsigned Opcode = MI.getOpcode();
+  assert(Opcode == TargetOpcode::G_SDIV || Opcode == TargetOpcode::G_SREM);
   Register Dst = MI.getOperand(0).getReg();
   Register RHS = MI.getOperand(2).getReg();
   LLT DstTy = MRI.getType(Dst);
@@ -5543,7 +5624,8 @@ bool CombinerHelper::matchSDivByConst(MachineInstr &MI) const {
     return false;
 
   // If the sdiv has an 'exact' flag we can use a simpler lowering.
-  if (MI.getFlag(MachineInstr::MIFlag::IsExact)) {
+  if (Opcode == TargetOpcode::G_SDIV &&
+      MI.getFlag(MachineInstr::MIFlag::IsExact)) {
     return matchUnaryPredicate(
         MRI, RHS, [](const Constant *C) { return C && !C->isNullValue(); });
   }
@@ -5559,23 +5641,28 @@ bool CombinerHelper::matchSDivByConst(MachineInstr &MI) const {
     if (!isLegal({TargetOpcode::G_SMULH, {DstTy}}) &&
         !isLegalOrHasWidenScalar({TargetOpcode::G_MUL, {WideTy, WideTy}}))
       return false;
+    if (Opcode == TargetOpcode::G_SREM &&
+        !isLegalOrBeforeLegalizer({TargetOpcode::G_SUB, {DstTy, DstTy}}))
+      return false;
   }
 
   return matchUnaryPredicate(
       MRI, RHS, [](const Constant *C) { return C && !C->isNullValue(); });
 }
 
-void CombinerHelper::applySDivByConst(MachineInstr &MI) const {
-  auto *NewMI = buildSDivUsingMul(MI);
+void CombinerHelper::applySDivOrSRemByConst(MachineInstr &MI) const {
+  auto *NewMI = buildSDivOrSRemUsingMul(MI);
   replaceSingleDefInstWithReg(MI, NewMI->getOperand(0).getReg());
 }
 
-MachineInstr *CombinerHelper::buildSDivUsingMul(MachineInstr &MI) const {
-  assert(MI.getOpcode() == TargetOpcode::G_SDIV && "Expected SDIV");
-  auto &SDiv = cast<GenericMachineInstr>(MI);
-  Register Dst = SDiv.getReg(0);
-  Register LHS = SDiv.getReg(1);
-  Register RHS = SDiv.getReg(2);
+MachineInstr *CombinerHelper::buildSDivOrSRemUsingMul(MachineInstr &MI) const {
+  unsigned Opcode = MI.getOpcode();
+  assert(MI.getOpcode() == TargetOpcode::G_SDIV ||
+         Opcode == TargetOpcode::G_SREM);
+  auto &SDivorRem = cast<GenericMachineInstr>(MI);
+  Register Dst = SDivorRem.getReg(0);
+  Register LHS = SDivorRem.getReg(1);
+  Register RHS = SDivorRem.getReg(2);
   LLT Ty = MRI.getType(Dst);
   LLT ScalarTy = Ty.getScalarType();
   const unsigned EltBits = ScalarTy.getScalarSizeInBits();
@@ -5705,7 +5792,13 @@ MachineInstr *CombinerHelper::buildSDivUsingMul(MachineInstr &MI) const {
   auto SignShift = MIB.buildConstant(ShiftAmtTy, EltBits - 1);
   auto T = MIB.buildLShr(Ty, Q, SignShift);
   T = MIB.buildAnd(Ty, T, ShiftMask);
-  return MIB.buildAdd(Ty, Q, T);
+  auto ret = MIB.buildAdd(Ty, Q, T);
+
+  if (Opcode == TargetOpcode::G_SREM) {
+    auto Prod = MIB.buildMul(Ty, ret, RHS);
+    return MIB.buildSub(Ty, LHS, Prod);
+  }
+  return ret;
 }
 
 bool CombinerHelper::matchDivByPow2(MachineInstr &MI, bool IsSigned) const {
@@ -5936,8 +6029,7 @@ bool CombinerHelper::canCombineFMadOrFMA(MachineInstr &MI,
   const TargetOptions &Options = MF->getTarget().Options;
   LLT DstType = MRI.getType(MI.getOperand(0).getReg());
 
-  if (CanReassociate &&
-      !(Options.UnsafeFPMath || MI.getFlag(MachineInstr::MIFlag::FmReassoc)))
+  if (CanReassociate && !MI.getFlag(MachineInstr::MIFlag::FmReassoc))
     return false;
 
   // Floating-point multiply-add with intermediate rounding.
@@ -5949,8 +6041,7 @@ bool CombinerHelper::canCombineFMadOrFMA(MachineInstr &MI,
   if (!HasFMAD && !HasFMA)
     return false;
 
-  AllowFusionGlobally = Options.AllowFPOpFusion == FPOpFusion::Fast ||
-                        Options.UnsafeFPMath || HasFMAD;
+  AllowFusionGlobally = Options.AllowFPOpFusion == FPOpFusion::Fast || HasFMAD;
   // If the addition is not contractable, do not combine.
   if (!AllowFusionGlobally && !MI.getFlag(MachineInstr::MIFlag::FmContract))
     return false;

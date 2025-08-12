@@ -63,7 +63,7 @@ void RTDEF(CUFDescriptorCheckSection)(
 }
 
 void RTDEF(CUFSetAllocatorIndex)(
-    Descriptor *, int index, const char *sourceFile, int sourceLine) {
+    Descriptor *desc, int index, const char *sourceFile, int sourceLine) {
   if (!desc) {
     Terminator terminator{sourceFile, sourceLine};
     terminator.Crash("descriptor is null");

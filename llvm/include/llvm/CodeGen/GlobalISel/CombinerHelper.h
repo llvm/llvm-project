@@ -66,6 +66,7 @@ struct PtrAddChain {
   int64_t Imm;
   Register Base;
   const RegisterBank *Bank;
+  unsigned Flags;
 };
 
 struct RegisterImmPair {
@@ -700,18 +701,19 @@ public:
   /// Given an G_UDIV \p MI or G_UREM \p MI expressing a divide by constant,
   /// return an expression that implements it by multiplying by a magic number.
   /// Ref: "Hacker's Delight" or "The PowerPC Compiler Writer's Guide".
-  MachineInstr *buildUDivorURemUsingMul(MachineInstr &MI) const;
+  MachineInstr *buildUDivOrURemUsingMul(MachineInstr &MI) const;
   /// Combine G_UDIV or G_UREM by constant into a multiply by magic constant.
-  bool matchUDivorURemByConst(MachineInstr &MI) const;
-  void applyUDivorURemByConst(MachineInstr &MI) const;
+  bool matchUDivOrURemByConst(MachineInstr &MI) const;
+  void applyUDivOrURemByConst(MachineInstr &MI) const;
 
-  /// Given an G_SDIV \p MI expressing a signed divide by constant, return an
-  /// expression that implements it by multiplying by a magic number.
-  /// Ref: "Hacker's Delight" or "The PowerPC Compiler Writer's Guide".
-  MachineInstr *buildSDivUsingMul(MachineInstr &MI) const;
-  /// Combine G_SDIV by constant into a multiply by magic constant.
-  bool matchSDivByConst(MachineInstr &MI) const;
-  void applySDivByConst(MachineInstr &MI) const;
+  /// Given an G_SDIV \p MI or G_SREM \p MI expressing a signed divide by
+  /// constant, return an expression that implements it by multiplying by a
+  /// magic number. Ref: "Hacker's Delight" or "The PowerPC Compiler Writer's
+  /// Guide".
+  MachineInstr *buildSDivOrSRemUsingMul(MachineInstr &MI) const;
+  /// Combine G_SDIV or G_SREM by constant into a multiply by magic constant.
+  bool matchSDivOrSRemByConst(MachineInstr &MI) const;
+  void applySDivOrSRemByConst(MachineInstr &MI) const;
 
   /// Given an G_SDIV \p MI expressing a signed divided by a pow2 constant,
   /// return expressions that implements it by shifting.
