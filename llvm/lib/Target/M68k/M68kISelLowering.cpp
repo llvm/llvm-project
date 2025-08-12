@@ -51,6 +51,8 @@ M68kTargetLowering::M68kTargetLowering(const M68kTargetMachine &TM,
 
   MVT PtrVT = MVT::i32;
 
+  // This is based on M68k SetCC (scc) setting the destination byte to all 1s.
+  // See also getSetCCResultType().
   setBooleanContents(ZeroOrNegativeOneBooleanContent);
 
   auto *RegInfo = Subtarget.getRegisterInfo();
