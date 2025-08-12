@@ -593,8 +593,6 @@ static void getGapMask(const Constant &MaskConst, unsigned Factor,
 
 static std::pair<Value *, APInt> getMask(Value *WideMask, unsigned Factor,
                                          ElementCount LeafValueEC) {
-  using namespace PatternMatch;
-
   APInt GapMask(Factor, 0);
   GapMask.setAllBits();
 
@@ -603,18 +601,6 @@ static std::pair<Value *, APInt> getMask(Value *WideMask, unsigned Factor,
         F && F == Factor && llvm::all_equal(IMI->args())) {
       return {IMI->getArgOperand(0), GapMask};
     }
-  }
-
-  // Try to match `and <interleaved mask>, <gap mask>`. The WideMask here is
-  // expected to be a fixed vector and gap mask should be a constant mask.
-  Value *AndMaskLHS;
-  Constant *AndMaskRHS;
-  if (match(WideMask, m_c_And(m_Value(AndMaskLHS), m_Constant(AndMaskRHS))) &&
-      LeafValueEC.isFixed()) {
-    assert(!isa<Constant>(AndMaskLHS) &&
-           "expect constants to be folded already");
-    getGapMask(*AndMaskRHS, Factor, LeafValueEC.getFixedValue(), GapMask);
-    return {getMask(AndMaskLHS, Factor, LeafValueEC).first, GapMask};
   }
 
   if (auto *ConstMask = dyn_cast<Constant>(WideMask)) {
