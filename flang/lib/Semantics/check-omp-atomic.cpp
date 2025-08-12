@@ -14,6 +14,7 @@
 
 #include "flang/Common/indirection.h"
 #include "flang/Evaluate/expression.h"
+#include "flang/Evaluate/rewrite.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/char-block.h"
 #include "flang/Parser/parse-tree.h"
@@ -41,6 +42,8 @@ namespace Fortran::semantics {
 using namespace Fortran::semantics::omp;
 
 namespace operation = Fortran::evaluate::operation;
+
+static MaybeExpr PostSemaRewrite(const SomeExpr &atom, const SomeExpr &expr);
 
 template <typename T, typename U>
 static bool operator!=(const evaluate::Expr<T> &e, const evaluate::Expr<U> &f) {
@@ -284,7 +287,15 @@ private:
   AtomicAnalysis &addOp(Op &op, int what,
       const std::optional<evaluate::Assignment> &maybeAssign) {
     op.what = what;
-    op.assign = maybeAssign;
+    if (maybeAssign) {
+      if (MaybeExpr rewritten{PostSemaRewrite(atom_, maybeAssign->rhs)}) {
+        op.assign = evaluate::Assignment(
+            AsRvalue(maybeAssign->lhs), std::move(*rewritten));
+        op.assign->u = std::move(maybeAssign->u);
+      } else {
+        op.assign = *maybeAssign;
+      }
+    }
     return *this;
   }
 
@@ -1291,6 +1302,120 @@ void OmpStructureChecker::Enter(const parser::OpenMPAtomicConstruct &x) {
 
 void OmpStructureChecker::Leave(const parser::OpenMPAtomicConstruct &) {
   dirContext_.pop_back();
+}
+
+// Rewrite min/max:
+// Min and max intrinsics in Fortran take an arbitrary number of arguments
+// (two or more). The first two are mandatory, the rest is optional. That
+// means that arguments beyond the first two may be optional dummy argument
+// from the caller. In that case, a reference to such an argument will
+// cause presence test to be emitted, which cannot go inside of the atomic
+// operation. Since the atom operand must be present, rewrite the min/max
+// operation in a way that avoid the presence tests in the atomic code.
+// For example, in
+//   subroutine f(atom, x, y, z)
+//     integer :: atom, x
+//     integer, optional :: y, z
+//     !$omp atomic update
+//     atom = min(atom, x, y, z)
+//   end
+// the min operation will become
+//   atom = min(atom, min(x, y, z))
+// and in the final code
+//   // Presence check is fine here.
+//   tmp = min(x, y, z)
+//   atomic update {
+//     // Both operands are mandatory, no presence check needed.
+//     atom = min(atom, tmp)
+//   }
+struct MinMaxRewriter : public evaluate::rewrite::Identity {
+  using Id = evaluate::rewrite::Identity;
+  using Id::operator();
+
+  MinMaxRewriter(const SomeExpr &atom) : atom_(atom) {}
+
+  static bool IsMinMax(const evaluate::ProcedureDesignator &p) {
+    if (auto *intrin{p.GetSpecificIntrinsic()}) {
+      return intrin->name == "min" || intrin->name == "max";
+    }
+    return false;
+  }
+
+  // Take a list of arguments to a min/max operation, e.g. [a0, a1, ...]
+  // One of the a_i's, say a_t, must be the atom.
+  // Generate
+  //   min/max(a_t, min/max(a0, a1, ... [except a_t]))
+  template <typename T>
+  evaluate::Expr<T> operator()(
+      evaluate::Expr<T> &&x, const evaluate::FunctionRef<T> &f) {
+    const evaluate::ProcedureDesignator &proc = f.proc();
+    if (!IsMinMax(proc) || f.arguments().size() <= 2) {
+      return Id::operator()(std::move(x), f);
+    }
+
+    // Collect arguments as SomeExpr's and find out which argument
+    // corresponds to atom.
+    const SomeExpr *atomArg{nullptr};
+    std::vector<const SomeExpr *> args;
+    for (const std::optional<evaluate::ActualArgument> &a : f.arguments()) {
+      if (!a) {
+        continue;
+      }
+      if (const SomeExpr *e{a->UnwrapExpr()}) {
+        if (evaluate::IsSameOrConvertOf(*e, atom_)) {
+          atomArg = e;
+        }
+        args.push_back(e);
+      }
+    }
+    if (!atomArg) {
+      return Id::operator()(std::move(x), f);
+    }
+
+    evaluate::ActualArguments nonAtoms;
+
+    auto AsActual = [](const SomeExpr &z) {
+      SomeExpr copy = z;
+      return evaluate::ActualArgument(std::move(copy));
+    };
+    // Semantic checks guarantee that the "atom" shows exactly once in the
+    // argument list (with potential conversions around it).
+    // For the first two (non-optional) arguments, if "atom" is among them,
+    // replace it with another occurrence of the other non-optional argument.
+    if (atomArg == args[0]) {
+      // (atom, x, y...) -> (x, x, y...)
+      nonAtoms.push_back(AsActual(*args[1]));
+      nonAtoms.push_back(AsActual(*args[1]));
+    } else if (atomArg == args[1]) {
+      // (x, atom, y...) -> (x, x, y...)
+      nonAtoms.push_back(AsActual(*args[0]));
+      nonAtoms.push_back(AsActual(*args[0]));
+    } else {
+      // (x, y, z...) -> unchanged
+      nonAtoms.push_back(AsActual(*args[0]));
+      nonAtoms.push_back(AsActual(*args[1]));
+    }
+
+    // The rest of arguments are optional, so we can just skip "atom".
+    for (size_t i = 2, e = args.size(); i != e; ++i) {
+      if (atomArg != args[i])
+        nonAtoms.push_back(AsActual(*args[i]));
+    }
+
+    SomeExpr tmp = evaluate::AsGenericExpr(
+        evaluate::FunctionRef<T>(AsRvalue(proc), AsRvalue(nonAtoms)));
+
+    return evaluate::Expr<T>(evaluate::FunctionRef<T>(
+        AsRvalue(proc), {AsActual(*atomArg), AsActual(tmp)}));
+  }
+
+private:
+  const SomeExpr &atom_;
+};
+
+static MaybeExpr PostSemaRewrite(const SomeExpr &atom, const SomeExpr &expr) {
+  MinMaxRewriter rewriter(atom);
+  return evaluate::rewrite::Mutator(rewriter)(expr);
 }
 
 } // namespace Fortran::semantics
