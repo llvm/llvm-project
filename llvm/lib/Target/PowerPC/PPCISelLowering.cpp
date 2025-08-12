@@ -1433,7 +1433,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   // With 32 condition bits, we don't need to sink (and duplicate) compares
   // aggressively in CodeGenPrep.
   if (Subtarget.useCRBits()) {
-    setHasMultipleConditionRegisters();
     setJumpIsExpensive();
   }
 
@@ -3926,9 +3925,6 @@ SDValue PPCTargetLowering::LowerVACOPY(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue PPCTargetLowering::LowerADJUST_TRAMPOLINE(SDValue Op,
                                                   SelectionDAG &DAG) const {
-  if (Subtarget.isAIXABI())
-    report_fatal_error("ADJUST_TRAMPOLINE operation is not supported on AIX.");
-
   return Op.getOperand(0);
 }
 
@@ -3985,9 +3981,6 @@ SDValue PPCTargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue PPCTargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
                                                 SelectionDAG &DAG) const {
-  if (Subtarget.isAIXABI())
-    report_fatal_error("INIT_TRAMPOLINE operation is not supported on AIX.");
-
   SDValue Chain = Op.getOperand(0);
   SDValue Trmp = Op.getOperand(1); // trampoline
   SDValue FPtr = Op.getOperand(2); // nested function
@@ -3995,6 +3988,65 @@ SDValue PPCTargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
   SDLoc dl(Op);
 
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
+
+  if (Subtarget.isAIXABI()) {
+    // On AIX we create a trampoline descriptor by combining the
+    // entry point and TOC from the global descriptor (FPtr) with the
+    // nest argument as the environment pointer.
+    uint64_t PointerSize = Subtarget.isPPC64() ? 8 : 4;
+    MaybeAlign PointerAlign(PointerSize);
+    auto MMOFlags = Subtarget.hasInvariantFunctionDescriptors()
+                        ? (MachineMemOperand::MODereferenceable |
+                           MachineMemOperand::MOInvariant)
+                        : MachineMemOperand::MONone;
+
+    uint64_t TOCPointerOffset = 1 * PointerSize;
+    uint64_t EnvPointerOffset = 2 * PointerSize;
+    SDValue SDTOCPtrOffset = DAG.getConstant(TOCPointerOffset, dl, PtrVT);
+    SDValue SDEnvPtrOffset = DAG.getConstant(EnvPointerOffset, dl, PtrVT);
+
+    const Value *TrampolineAddr =
+        cast<SrcValueSDNode>(Op.getOperand(4))->getValue();
+    const Function *Func =
+        cast<Function>(cast<SrcValueSDNode>(Op.getOperand(5))->getValue());
+
+    SDValue OutChains[3];
+
+    // Copy the entry point address from the global descriptor to the
+    // trampoline buffer.
+    SDValue LoadEntryPoint =
+        DAG.getLoad(PtrVT, dl, Chain, FPtr, MachinePointerInfo(Func, 0),
+                    PointerAlign, MMOFlags);
+    SDValue EPLoadChain = LoadEntryPoint.getValue(1);
+    OutChains[0] = DAG.getStore(EPLoadChain, dl, LoadEntryPoint, Trmp,
+                                MachinePointerInfo(TrampolineAddr, 0));
+
+    // Copy the TOC pointer from the global descriptor to the trampoline
+    // buffer.
+    SDValue TOCFromDescriptorPtr =
+        DAG.getNode(ISD::ADD, dl, PtrVT, FPtr, SDTOCPtrOffset);
+    SDValue TOCReg = DAG.getLoad(PtrVT, dl, Chain, TOCFromDescriptorPtr,
+                                 MachinePointerInfo(Func, TOCPointerOffset),
+                                 PointerAlign, MMOFlags);
+    SDValue TrampolineTOCPointer =
+        DAG.getNode(ISD::ADD, dl, PtrVT, Trmp, SDTOCPtrOffset);
+    SDValue TOCLoadChain = TOCReg.getValue(1);
+    OutChains[1] =
+        DAG.getStore(TOCLoadChain, dl, TOCReg, TrampolineTOCPointer,
+                     MachinePointerInfo(TrampolineAddr, TOCPointerOffset));
+
+    // Store the nest argument into the environment pointer in the trampoline
+    // buffer.
+    SDValue EnvPointer = DAG.getNode(ISD::ADD, dl, PtrVT, Trmp, SDEnvPtrOffset);
+    OutChains[2] =
+        DAG.getStore(Chain, dl, Nest, EnvPointer,
+                     MachinePointerInfo(TrampolineAddr, EnvPointerOffset));
+
+    SDValue TokenFactor =
+        DAG.getNode(ISD::TokenFactor, dl, MVT::Other, OutChains);
+    return TokenFactor;
+  }
+
   bool isPPC64 = (PtrVT == MVT::i64);
   Type *IntPtrTy = DAG.getDataLayout().getIntPtrType(*DAG.getContext());
 
@@ -6037,12 +6089,12 @@ SDValue PPCTargetLowering::LowerCall_32SVR4(
       ISD::ArgFlagsTy ArgFlags = Outs[i].Flags;
       bool Result;
 
-      if (Outs[i].IsFixed) {
+      if (!ArgFlags.isVarArg()) {
         Result = CC_PPC32_SVR4(i, ArgVT, ArgVT, CCValAssign::Full, ArgFlags,
-                               CCInfo);
+                               Outs[i].OrigTy, CCInfo);
       } else {
         Result = CC_PPC32_SVR4_VarArg(i, ArgVT, ArgVT, CCValAssign::Full,
-                                      ArgFlags, CCInfo);
+                                      ArgFlags, Outs[i].OrigTy, CCInfo);
       }
 
       if (Result) {
@@ -6853,8 +6905,7 @@ static bool isGPRShadowAligned(MCPhysReg Reg, Align RequiredAlign) {
 
 static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
                    CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-                   CCState &S) {
-  AIXCCState &State = static_cast<AIXCCState &>(S);
+                   Type *OrigTy, CCState &State) {
   const PPCSubtarget &Subtarget = static_cast<const PPCSubtarget &>(
       State.getMachineFunction().getSubtarget());
   const bool IsPPC64 = Subtarget.isPPC64();
@@ -6865,9 +6916,6 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
 
   if (ValVT == MVT::f128)
     report_fatal_error("f128 is unimplemented on AIX.");
-
-  if (ArgFlags.isNest())
-    report_fatal_error("Nest arguments are unimplemented.");
 
   static const MCPhysReg GPR_32[] = {// 32-bit registers.
                                      PPC::R3, PPC::R4, PPC::R5, PPC::R6,
@@ -6882,6 +6930,14 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
                                  PPC::V10, PPC::V11, PPC::V12, PPC::V13};
 
   const ArrayRef<MCPhysReg> GPRs = IsPPC64 ? GPR_64 : GPR_32;
+
+  if (ArgFlags.isNest()) {
+    MCRegister EnvReg = State.AllocateReg(IsPPC64 ? PPC::X11 : PPC::R11);
+    if (!EnvReg)
+      report_fatal_error("More then one nest argument.");
+    State.addLoc(CCValAssign::getReg(ValNo, ValVT, EnvReg, RegVT, LocInfo));
+    return false;
+  }
 
   if (ArgFlags.isByVal()) {
     const Align ByValAlign(ArgFlags.getNonZeroByValAlign());
@@ -7033,7 +7089,7 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
     // They are passed in VRs if any are available (unlike arguments passed
     // through ellipses) and shadow GPRs (unlike arguments to non-vaarg
     // functions)
-    if (State.isFixed(ValNo)) {
+    if (!ArgFlags.isVarArg()) {
       if (MCRegister VReg = State.AllocateReg(VR)) {
         State.addLoc(CCValAssign::getReg(ValNo, ValVT, VReg, LocVT, LocInfo));
         // Shadow allocate GPRs and stack space even though we pass in a VR.
@@ -7221,7 +7277,7 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   PPCFunctionInfo *FuncInfo = MF.getInfo<PPCFunctionInfo>();
-  AIXCCState CCInfo(CallConv, isVarArg, MF, ArgLocs, *DAG.getContext());
+  CCState CCInfo(CallConv, isVarArg, MF, ArgLocs, *DAG.getContext());
 
   const EVT PtrVT = getPointerTy(MF.getDataLayout());
   // Reserve space for the linkage area on the stack.
@@ -7568,8 +7624,8 @@ SDValue PPCTargetLowering::LowerCall_AIX(
 
   MachineFunction &MF = DAG.getMachineFunction();
   SmallVector<CCValAssign, 16> ArgLocs;
-  AIXCCState CCInfo(CFlags.CallConv, CFlags.IsVarArg, MF, ArgLocs,
-                    *DAG.getContext());
+  CCState CCInfo(CFlags.CallConv, CFlags.IsVarArg, MF, ArgLocs,
+                 *DAG.getContext());
 
   // Reserve space for the linkage save area (LSA) on the stack.
   // In both PPC32 and PPC64 there are 6 reserved slots in the LSA:
@@ -9594,12 +9650,14 @@ static bool isValidSplatLoad(const PPCSubtarget &Subtarget, const SDValue &Op,
   return false;
 }
 
-bool isValidMtVsrBmi(APInt &BitMask, BuildVectorSDNode &BVN) {
+bool isValidMtVsrBmi(APInt &BitMask, BuildVectorSDNode &BVN,
+                     bool IsLittleEndian) {
   assert(BVN.getNumOperands() > 0 && "Unexpected 0-size build vector");
 
   BitMask.clearAllBits();
   EVT VT = BVN.getValueType(0);
-  APInt ConstValue(VT.getSizeInBits(), 0);
+  unsigned VTSize = VT.getSizeInBits();
+  APInt ConstValue(VTSize, 0);
 
   unsigned EltWidth = VT.getScalarSizeInBits();
 
@@ -9609,8 +9667,10 @@ bool isValidMtVsrBmi(APInt &BitMask, BuildVectorSDNode &BVN) {
 
     if (!CN)
       return false;
-
-    ConstValue.insertBits(CN->getAPIntValue().zextOrTrunc(EltWidth), BitPos);
+    // The elements in a vector register are ordered in reverse byte order
+    // between little-endian and big-endian modes.
+    ConstValue.insertBits(CN->getAPIntValue().zextOrTrunc(EltWidth),
+                          IsLittleEndian ? BitPos : VTSize - EltWidth - BitPos);
     BitPos += EltWidth;
   }
 
@@ -9641,7 +9701,8 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
     // we do not convert it to MTVSRBMI.
     // The xxleqv instruction sets a vector with all ones.
     // The xxlxor instruction sets a vector with all zeros.
-    if (isValidMtVsrBmi(BitMask, *BVN) && BitMask != 0 && BitMask != 0xffff) {
+    if (isValidMtVsrBmi(BitMask, *BVN, Subtarget.isLittleEndian()) &&
+        BitMask != 0 && BitMask != 0xffff) {
       SDValue SDConstant = DAG.getTargetConstant(BitMask, dl, MVT::i32);
       MachineSDNode *MSDNode =
           DAG.getMachineNode(PPC::MTVSRBMI, dl, MVT::v16i8, SDConstant);
@@ -19855,4 +19916,8 @@ Value *PPCTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
   Hi = Builder.CreateZExt(Hi, ValTy, "hi64");
   return Builder.CreateOr(
       Lo, Builder.CreateShl(Hi, ConstantInt::get(ValTy, 64)), "val64");
+}
+
+bool PPCTargetLowering::hasMultipleConditionRegisters(EVT VT) const {
+  return Subtarget.useCRBits();
 }

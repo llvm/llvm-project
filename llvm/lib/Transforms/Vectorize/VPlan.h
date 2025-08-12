@@ -991,6 +991,9 @@ public:
     // operand). Only generates scalar values (either for the first lane only or
     // for all lanes, depending on its uses).
     PtrAdd,
+    // Add a vector offset in bytes (second operand) to a scalar base pointer
+    // (first operand).
+    WidePtrAdd,
     // Returns a scalar boolean value, which is true if any lane of its
     // (boolean) vector operands is true. It produces the reduced value across
     // all unrolled iterations. Unrolling will add all copies of its original
@@ -1016,6 +1019,9 @@ public:
     /// The lane specifies an index into a vector formed by combining all vector
     /// operands (all operands after the first one).
     ExtractLane,
+    /// Explicit user for the resume phi of the canonical induction in the main
+    /// VPlan, used by the epilogue vector loop.
+    ResumeForEpilogue
 
   };
 
@@ -1239,12 +1245,24 @@ struct LLVM_ABI_FOR_TEST VPPhi : public VPInstruction, public VPPhiAccessors {
       : VPInstruction(Instruction::PHI, Operands, DL, Name) {}
 
   static inline bool classof(const VPUser *U) {
-    auto *R = dyn_cast<VPInstruction>(U);
-    return R && R->getOpcode() == Instruction::PHI;
+    auto *VPI = dyn_cast<VPInstruction>(U);
+    return VPI && VPI->getOpcode() == Instruction::PHI;
+  }
+
+  static inline bool classof(const VPValue *V) {
+    auto *VPI = dyn_cast<VPInstruction>(V);
+    return VPI && VPI->getOpcode() == Instruction::PHI;
+  }
+
+  static inline bool classof(const VPSingleDefRecipe *SDR) {
+    auto *VPI = dyn_cast<VPInstruction>(SDR);
+    return VPI && VPI->getOpcode() == Instruction::PHI;
   }
 
   VPPhi *clone() override {
-    return new VPPhi(operands(), getDebugLoc(), getName());
+    auto *PhiR = new VPPhi(operands(), getDebugLoc(), getName());
+    PhiR->setUnderlyingValue(getUnderlyingValue());
+    return PhiR;
   }
 
   void execute(VPTransformState &State) override;
@@ -1276,7 +1294,7 @@ public:
 
   /// Create a new VPIRPhi for \p \I, if it is a PHINode, otherwise create a
   /// VPIRInstruction.
-  static VPIRInstruction *create(Instruction &I);
+  LLVM_ABI_FOR_TEST static VPIRInstruction *create(Instruction &I);
 
   VP_CLASSOF_IMPL(VPDef::VPIRInstructionSC)
 
@@ -1290,8 +1308,8 @@ public:
   void execute(VPTransformState &State) override;
 
   /// Return the cost of this VPIRInstruction.
-  InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override;
+  LLVM_ABI_FOR_TEST InstructionCost
+  computeCost(ElementCount VF, VPCostContext &Ctx) const override;
 
   Instruction &getInstruction() const { return I; }
 
@@ -1329,7 +1347,8 @@ public:
 /// cast/dyn_cast/isa and execute() implementation. A single VPValue operand is
 /// allowed, and it is used to add a new incoming value for the single
 /// predecessor VPBB.
-struct VPIRPhi : public VPIRInstruction, public VPPhiAccessors {
+struct LLVM_ABI_FOR_TEST VPIRPhi : public VPIRInstruction,
+                                   public VPPhiAccessors {
   VPIRPhi(PHINode &PN) : VPIRInstruction(PN) {}
 
   static inline bool classof(const VPRecipeBase *U) {
@@ -1979,6 +1998,9 @@ public:
   /// Update the step value of the recipe.
   void setStepValue(VPValue *V) { setOperand(1, V); }
 
+  VPValue *getVFValue() { return getOperand(2); }
+  const VPValue *getVFValue() const { return getOperand(2); }
+
   /// Returns the number of incoming values, also number of incoming blocks.
   /// Note that at the moment, VPWidenPointerInductionRecipe only has a single
   /// incoming value, its start value.
@@ -2068,9 +2090,6 @@ public:
              VPSlotTracker &SlotTracker) const override;
 #endif
 
-  VPValue *getVFValue() { return getOperand(2); }
-  const VPValue *getVFValue() const { return getOperand(2); }
-
   VPValue *getSplatVFValue() {
     // If the recipe has been unrolled return the VPValue for the induction
     // increment.
@@ -2106,8 +2125,7 @@ public:
   }
 };
 
-class VPWidenPointerInductionRecipe : public VPWidenInductionRecipe,
-                                      public VPUnrollPartAccessor<4> {
+class VPWidenPointerInductionRecipe : public VPWidenInductionRecipe {
   bool IsScalarAfterVectorization;
 
 public:
@@ -2136,17 +2154,13 @@ public:
   VP_CLASSOF_IMPL(VPDef::VPWidenPointerInductionSC)
 
   /// Generate vector values for the pointer induction.
-  void execute(VPTransformState &State) override;
+  void execute(VPTransformState &State) override {
+    llvm_unreachable("cannot execute this recipe, should be expanded via "
+                     "expandVPWidenPointerInduction");
+  };
 
   /// Returns true if only scalar values will be generated.
   bool onlyScalarsGenerated(bool IsScalable);
-
-  /// Returns the VPValue representing the value of this induction at
-  /// the first unrolled part, if it exists. Returns itself if unrolling did not
-  /// take place.
-  VPValue *getFirstUnrolledPartOperand() {
-    return getUnrollPart(*this) == 0 ? this : getOperand(3);
-  }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -2397,11 +2411,11 @@ public:
     // TODO: extend the masked interleaved-group support to reversed access.
     assert((!Mask || !IG->isReverse()) &&
            "Reversed masked interleave-group not supported.");
-    for (unsigned i = 0; i < IG->getFactor(); ++i)
-      if (Instruction *I = IG->getMember(i)) {
-        if (I->getType()->isVoidTy())
+    for (unsigned I = 0; I < IG->getFactor(); ++I)
+      if (Instruction *Inst = IG->getMember(I)) {
+        if (Inst->getType()->isVoidTy())
           continue;
-        new VPValue(I, this);
+        new VPValue(Inst, this);
       }
 
     for (auto *SV : StoredValues)
@@ -3958,7 +3972,7 @@ public:
   }
 
   /// Prepare the plan for execution, setting up the required live-in values.
-  void prepareToExecute(Value *VectorTripCount, VPTransformState &State);
+  void prepareToExecute(VPTransformState &State);
 
   /// Generate the IR code for this VPlan.
   void execute(VPTransformState *State);
