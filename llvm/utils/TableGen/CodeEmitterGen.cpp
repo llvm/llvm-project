@@ -290,55 +290,52 @@ CodeEmitterGen::getInstructionCases(const Record *R,
     BitOffsetCase += S;
   };
 
-  if (const RecordVal *RV = R->getValue("EncodingInfos")) {
-    if (const auto *DI = dyn_cast_or_null<DefInit>(RV->getValue())) {
-      const CodeGenHwModes &HWM = Target.getHwModes();
-      EncodingInfoByHwMode EBM(DI->getDef(), HWM);
+  if (const Record *RV = R->getValueAsOptionalDef("EncodingInfos")) {
+    const CodeGenHwModes &HWM = Target.getHwModes();
+    EncodingInfoByHwMode EBM(RV, HWM);
 
-      // Invoke the interface to obtain the HwMode ID controlling the
-      // EncodingInfo for the current subtarget. This interface will
-      // mask off irrelevant HwMode IDs.
-      Append("      unsigned HwMode = "
-             "STI.getHwMode(MCSubtargetInfo::HwMode_EncodingInfo);\n");
-      Case += "      switch (HwMode) {\n";
-      Case += "      default: llvm_unreachable(\"Unknown hardware mode!\"); "
-              "break;\n";
-      for (auto &[ModeId, Encoding] : EBM) {
-        if (ModeId == DefaultMode) {
-          Case +=
-              "      case " + itostr(DefaultMode) + ": InstBitsByHw = InstBits";
-        } else {
-          Case += "      case " + itostr(ModeId) +
-                  ": InstBitsByHw = InstBits_" + HWM.getMode(ModeId).Name.str();
-        }
-        Case += "; break;\n";
-      }
-      Case += "      };\n";
-
-      // We need to remodify the 'Inst' value from the table we found above.
-      if (UseAPInt) {
-        int NumWords = APInt::getNumWords(BitWidth);
-        Case += "      Inst = APInt(" + itostr(BitWidth);
-        Case += ", ArrayRef(InstBitsByHw + opcode * " + itostr(NumWords) +
-                ", " + itostr(NumWords);
-        Case += "));\n";
-        Case += "      Value = Inst;\n";
+    // Invoke the interface to obtain the HwMode ID controlling the
+    // EncodingInfo for the current subtarget. This interface will
+    // mask off irrelevant HwMode IDs.
+    Append("      unsigned HwMode = "
+           "STI.getHwMode(MCSubtargetInfo::HwMode_EncodingInfo);\n");
+    Case += "      switch (HwMode) {\n";
+    Case += "      default: llvm_unreachable(\"Unknown hardware mode!\"); "
+            "break;\n";
+    for (auto &[ModeId, Encoding] : EBM) {
+      if (ModeId == DefaultMode) {
+        Case +=
+            "      case " + itostr(DefaultMode) + ": InstBitsByHw = InstBits";
       } else {
-        Case += "      Value = InstBitsByHw[opcode];\n";
+        Case += "      case " + itostr(ModeId) + ": InstBitsByHw = InstBits_" +
+                HWM.getMode(ModeId).Name.str();
       }
-
-      Append("      switch (HwMode) {\n");
-      Append("      default: llvm_unreachable(\"Unhandled HwMode\");\n");
-      for (auto &[ModeId, Encoding] : EBM) {
-        Append("      case " + itostr(ModeId) + ": {\n");
-        addInstructionCasesForEncoding(R, Encoding, Target, Case,
-                                       BitOffsetCase);
-        Append("      break;\n");
-        Append("      }\n");
-      }
-      Append("      }\n");
-      return {std::move(Case), std::move(BitOffsetCase)};
+      Case += "; break;\n";
     }
+    Case += "      };\n";
+
+    // We need to remodify the 'Inst' value from the table we found above.
+    if (UseAPInt) {
+      int NumWords = APInt::getNumWords(BitWidth);
+      Case += "      Inst = APInt(" + itostr(BitWidth);
+      Case += ", ArrayRef(InstBitsByHw + opcode * " + itostr(NumWords) + ", " +
+              itostr(NumWords);
+      Case += "));\n";
+      Case += "      Value = Inst;\n";
+    } else {
+      Case += "      Value = InstBitsByHw[opcode];\n";
+    }
+
+    Append("      switch (HwMode) {\n");
+    Append("      default: llvm_unreachable(\"Unhandled HwMode\");\n");
+    for (auto &[ModeId, Encoding] : EBM) {
+      Append("      case " + itostr(ModeId) + ": {\n");
+      addInstructionCasesForEncoding(R, Encoding, Target, Case, BitOffsetCase);
+      Append("      break;\n");
+      Append("      }\n");
+    }
+    Append("      }\n");
+    return {std::move(Case), std::move(BitOffsetCase)};
   }
   addInstructionCasesForEncoding(R, R, Target, Case, BitOffsetCase);
   return {std::move(Case), std::move(BitOffsetCase)};
@@ -417,20 +414,18 @@ void CodeEmitterGen::emitInstructionBaseValues(
     }
 
     const Record *EncodingDef = R;
-    if (const RecordVal *RV = R->getValue("EncodingInfos")) {
-      if (auto *DI = dyn_cast_or_null<DefInit>(RV->getValue())) {
-        EncodingInfoByHwMode EBM(DI->getDef(), HWM);
-        if (EBM.hasMode(HwMode)) {
-          EncodingDef = EBM.get(HwMode);
-        } else {
-          // If the HwMode does not match, then Encoding '0'
-          // should be generated.
-          APInt Value(BitWidth, 0);
-          O << "    ";
-          emitInstBits(O, Value);
-          O << "," << '\t' << "// " << R->getName() << "\n";
-          continue;
-        }
+    if (const Record *RV = R->getValueAsOptionalDef("EncodingInfos")) {
+      EncodingInfoByHwMode EBM(RV, HWM);
+      if (EBM.hasMode(HwMode)) {
+        EncodingDef = EBM.get(HwMode);
+      } else {
+        // If the HwMode does not match, then Encoding '0'
+        // should be generated.
+        APInt Value(BitWidth, 0);
+        O << "    ";
+        emitInstBits(O, Value);
+        O << "," << '\t' << "// " << R->getName() << "\n";
+        continue;
       }
     }
     const BitsInit *BI = EncodingDef->getValueAsBitsInit("Inst");
@@ -490,16 +485,14 @@ void CodeEmitterGen::run(raw_ostream &O) {
           R->getValueAsBit("isPseudo"))
         continue;
 
-      if (const RecordVal *RV = R->getValue("EncodingInfos")) {
-        if (const DefInit *DI = dyn_cast_or_null<DefInit>(RV->getValue())) {
-          EncodingInfoByHwMode EBM(DI->getDef(), HWM);
-          for (const auto &[Key, Value] : EBM) {
-            const BitsInit *BI = Value->getValueAsBitsInit("Inst");
-            BitWidth = std::max(BitWidth, BI->getNumBits());
-            HwModes.insert(Key);
-          }
-          continue;
+      if (const Record *RV = R->getValueAsOptionalDef("EncodingInfos")) {
+        EncodingInfoByHwMode EBM(RV, HWM);
+        for (const auto &[Key, Value] : EBM) {
+          const BitsInit *BI = Value->getValueAsBitsInit("Inst");
+          BitWidth = std::max(BitWidth, BI->getNumBits());
+          HwModes.insert(Key);
         }
+        continue;
       }
       const BitsInit *BI = R->getValueAsBitsInit("Inst");
       BitWidth = std::max(BitWidth, BI->getNumBits());

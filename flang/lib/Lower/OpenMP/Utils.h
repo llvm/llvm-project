@@ -42,8 +42,15 @@ class AbstractConverter;
 
 namespace omp {
 
-using DeclareTargetCapturePair =
-    std::pair<mlir::omp::DeclareTargetCaptureClause, const semantics::Symbol &>;
+struct DeclareTargetCaptureInfo {
+  mlir::omp::DeclareTargetCaptureClause clause;
+  bool automap = false;
+  const semantics::Symbol &symbol;
+
+  DeclareTargetCaptureInfo(mlir::omp::DeclareTargetCaptureClause c,
+                           const semantics::Symbol &s, bool a = false)
+      : clause(c), automap(a), symbol(s) {}
+};
 
 // A small helper structure for keeping track of a component members MapInfoOp
 // and index data when lowering OpenMP map clauses. Keeps track of the
@@ -150,7 +157,8 @@ getIterationVariableSymbol(const lower::pft::Evaluation &eval);
 
 void gatherFuncAndVarSyms(
     const ObjectList &objects, mlir::omp::DeclareTargetCaptureClause clause,
-    llvm::SmallVectorImpl<DeclareTargetCapturePair> &symbolAndClause);
+    llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &symbolAndClause,
+    bool automap = false);
 
 int64_t getCollapseValue(const List<Clause> &clauses);
 
