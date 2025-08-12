@@ -1,3 +1,4 @@
+// UNSUPPORTED: system-windows
 // RUN: mlir-reduce %s -reduction-tree='traversal-mode=0 test=%S/failure-test.sh replace-operands=true' | FileCheck %s
 
 // CHECK-LABEL: func.func @main
