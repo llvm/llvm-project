@@ -564,15 +564,8 @@ static APInt getEvaluableShiftedShiftMask(bool IsOuterShl,
   // shl (lshr X, C), C --> and X, C'
   ShMask.setBit(InnerShAmt);
 
-  // If the inner shift is bigger than the outer, we can fold:
-  // lshr (shl X, C1), C2 -->  and (shl X, C1 - C2), C3
-  // shl (lshr X, C1), C2 --> and (lshr X, C1 - C2), C3
-  // but it isn't profitable unless we know the masked out bits are already
-  // zero.
   KnownBits Known = IC.computeKnownBits(InnerShift->getOperand(0), CxtI);
-  // Isolate the bits that are annihilated by the inner shift.
-  APInt InnerShMask = IsInnerShl ? Known.Zero.lshr(TypeWidth - InnerShAmt)
-                                 : Known.Zero.trunc(InnerShAmt);
+
   // Isolate the upper (resp. lower) InnerShAmt bits of the base operand of the
   // inner shl (resp. lshr).
   // Then:
