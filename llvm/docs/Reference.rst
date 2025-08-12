@@ -17,6 +17,7 @@ LLVM and API reference documentation.
    CalleeTypeMetadata
    CIBestPractices
    CommandGuide/index
+   ContentAddressableStorage
    ConvergenceAndUniformity
    ConvergentOperations
    Coroutines
@@ -244,3 +245,6 @@ Additional Topics
 :doc:`MLGO`
    Facilities for ML-Guided Optimization, such as collecting IR corpora from a
    build, interfacing with ML models, an exposing features for training.
+
+:doc:`ContentAddressableStorage`
+   A reference guide for using LLVM's CAS library.
