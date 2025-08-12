@@ -546,12 +546,25 @@ bool AArch64FrameLowering::hasFPImpl(const MachineFunction &MF) const {
       MFI.hasStackMap() || MFI.hasPatchPoint() ||
       RegInfo->hasStackRealignment(MF))
     return true;
-  // If we have streaming mode changes and SVE registers on the stack we need a
-  // FP. This is as the stack size may depend on the VG at entry to the
-  // function, which is saved before the SVE area (so unrecoverable without a
-  // FP). Similar for locally streaming functions, but it is because we use
-  // ADDSVL to setup the SVE stack (which might not match VG, even without
-  // streaming-mode changes).
+
+  // If we:
+  //
+  //   1. Have streaming mode changes
+  //     OR:
+  //   2. Have a streaming body with SVE stack objects
+  //
+  // Then the value of VG restored when unwinding to this function may not match
+  // the value of VG used to set up the stack.
+  //
+  // This is a problem as the CFA can be described with an expression of the
+  // form: CFA = SP + NumBytes + VG * NumScalableBytes.
+  //
+  // If the value of VG used in that expression does not match the value used to
+  // set up the stack, an incorrect address for the CFA will be computed, and
+  // unwinding will fail.
+  //
+  // We work around this issue by ensuring the frame-pointer can describe the
+  // CFA in either of these cases.
   if (AFI.needsDwarfUnwindInfo(MF) &&
       ((requiresSaveVG(MF) || AFI.getSMEFnAttrs().hasStreamingBody()) &&
        (!AFI.hasCalculatedStackSizeSVE() || AFI.getStackSizeSVE() > 0)))
@@ -1480,26 +1493,25 @@ static bool requiresSaveVG(const MachineFunction &MF) {
   return true;
 }
 
-bool isVGInstruction(MachineBasicBlock::iterator MBBI) {
+static bool matchLibcall(const TargetLowering &TLI, const MachineOperand &MO,
+                         RTLIB::Libcall LC) {
+  return MO.isSymbol() && TLI.getSupportedLibcallImpl(MO.getSymbolName()) ==
+                              TLI.getLibcallImpl(LC);
+}
+
+bool isVGInstruction(MachineBasicBlock::iterator MBBI,
+                     const TargetLowering &TLI) {
   unsigned Opc = MBBI->getOpcode();
   if (Opc == AArch64::CNTD_XPiI)
     return true;
 
-  if (requiresGetVGCall(*MBBI->getMF())) {
-    if (Opc == AArch64::ORRXrr)
-      return true;
+  if (!requiresGetVGCall(*MBBI->getMF()))
+    return false;
 
-    if (Opc == AArch64::BL) {
-      auto Op1 = MBBI->getOperand(0);
-      auto &TLI =
-          *MBBI->getMF()->getSubtarget<AArch64Subtarget>().getTargetLowering();
-      char const *GetCurrentVG =
-          TLI.getLibcallName(RTLIB::SMEABI_GET_CURRENT_VG);
-      return Op1.isSymbol() && StringRef(Op1.getSymbolName()) == GetCurrentVG;
-    }
-  }
+  if (Opc == AArch64::BL)
+    return matchLibcall(TLI, MBBI->getOperand(0), RTLIB::SMEABI_GET_CURRENT_VG);
 
-  return false;
+  return Opc == TargetOpcode::COPY;
 }
 
 // Convert callee-save register save/restore instruction to do stack pointer
@@ -1517,9 +1529,11 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
   // to calculate the value of VG before spilling. Move past these instructions
   // if necessary.
   MachineFunction &MF = *MBB.getParent();
-  if (requiresSaveVG(MF))
-    while (isVGInstruction(MBBI))
+  if (requiresSaveVG(MF)) {
+    auto &TLI = *MF.getSubtarget().getTargetLowering();
+    while (isVGInstruction(MBBI, TLI))
       ++MBBI;
+  }
 
   switch (MBBI->getOpcode()) {
   default:
@@ -2103,11 +2117,12 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   // Move past the saves of the callee-saved registers, fixing up the offsets
   // and pre-inc if we decided to combine the callee-save and local stack
   // pointer bump above.
+  auto &TLI = *MF.getSubtarget().getTargetLowering();
   while (MBBI != End && MBBI->getFlag(MachineInstr::FrameSetup) &&
          !IsSVECalleeSave(MBBI)) {
     if (CombineSPBump &&
         // Only fix-up frame-setup load/store instructions.
-        (!requiresSaveVG(MF) || !isVGInstruction(MBBI)))
+        (!requiresSaveVG(MF) || !isVGInstruction(MBBI, TLI)))
       fixupCalleeSaveRestoreStackOffset(*MBBI, AFI->getLocalStackSize(),
                                         NeedsWinCFI, &HasWinCFI);
     ++MBBI;
@@ -3546,10 +3561,8 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
     unsigned X0Scratch = AArch64::NoRegister;
     auto RestoreX0 = make_scope_exit([&] {
       if (X0Scratch != AArch64::NoRegister)
-        BuildMI(MBB, MI, DL, TII.get(AArch64::ORRXrr), AArch64::X0)
-            .addReg(AArch64::XZR)
-            .addReg(X0Scratch, RegState::Undef)
-            .addReg(X0Scratch, RegState::Implicit)
+        BuildMI(MBB, MI, DL, TII.get(TargetOpcode::COPY), AArch64::X0)
+            .addReg(X0Scratch)
             .setMIFlag(MachineInstr::FrameSetup);
     });
 
@@ -3568,15 +3581,12 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
                    [&STI](const MachineBasicBlock::RegisterMaskPair &LiveIn) {
                      return STI.getRegisterInfo()->isSuperOrSubRegisterEq(
                          AArch64::X0, LiveIn.PhysReg);
-                   }))
+                   })) {
           X0Scratch = Reg1;
-
-        if (X0Scratch != AArch64::NoRegister)
-          BuildMI(MBB, MI, DL, TII.get(AArch64::ORRXrr), Reg1)
-              .addReg(AArch64::XZR)
-              .addReg(AArch64::X0, RegState::Undef)
-              .addReg(AArch64::X0, RegState::Implicit)
+          BuildMI(MBB, MI, DL, TII.get(TargetOpcode::COPY), X0Scratch)
+              .addReg(AArch64::X0)
               .setMIFlag(MachineInstr::FrameSetup);
+        }
 
         RTLIB::Libcall LC = RTLIB::SMEABI_GET_CURRENT_VG;
         const uint32_t *RegMask =
@@ -4212,16 +4222,11 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
   // Insert VG into the list of CSRs, immediately before LR if saved.
   if (requiresSaveVG(MF)) {
     CalleeSavedInfo VGInfo(AArch64::VG);
-
-    bool InsertedBeforeLR = false;
-    for (unsigned I = 0; I < CSI.size(); I++)
-      if (CSI[I].getReg() == AArch64::LR) {
-        InsertedBeforeLR = true;
-        CSI.insert(CSI.begin() + I, VGInfo);
-        break;
-      }
-
-    if (!InsertedBeforeLR)
+    auto It =
+        find_if(CSI, [](auto &Info) { return Info.getReg() == AArch64::LR; });
+    if (It != CSI.end())
+      CSI.insert(It, VGInfo);
+    else
       CSI.push_back(VGInfo);
   }
 
