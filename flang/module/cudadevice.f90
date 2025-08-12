@@ -743,11 +743,11 @@ implicit none
   end interface
 
   interface __ffs
-    attributes(device) integer function __ffs(i) bind(c)
+    attributes(device) integer function __ffs(i) bind(c, name='__nv_ffs')
       !dir$ ignore_tkr (d) i
       integer, value :: i
     end function
-    attributes(device) integer function __ffsll(i) bind(c)
+    attributes(device) integer function __ffsll(i) bind(c, name='__nv_ffsll')
       !dir$ ignore_tkr (d) i
       integer(8), value :: i
     end function
