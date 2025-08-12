@@ -836,6 +836,9 @@ bool Value::canBeFreed() const {
       return false;
   }
 
+  if (isa<IntToPtrInst>(this) && getMetadata(LLVMContext::MD_nofree))
+    return false;
+
   const Function *F = nullptr;
   if (auto *I = dyn_cast<Instruction>(this))
     F = I->getFunction();
