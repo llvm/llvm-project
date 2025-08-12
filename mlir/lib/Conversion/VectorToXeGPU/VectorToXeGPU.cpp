@@ -152,37 +152,33 @@ createNdDescriptor(PatternRewriter &rewriter, Location loc,
   return ndDesc;
 }
 
-static LogicalResult
-extraCheckForScatteredLoadStore(VectorTransferOpInterface xferOp,
-                                PatternRewriter &rewriter) {
-  // 1. it must be inbound access by checking in_bounds attributes, like
-  // {in_bounds = [false, true]}
-  if (xferOp.hasOutOfBoundsDim())
-    return rewriter.notifyMatchFailure(xferOp,
-                                       "Out-of-bounds access is not supported "
-                                       "for scatter load/store lowering");
-  // 2. if the memref has static shape, its lower rank must exactly match with
-  // vector shape.
-  if (auto memrefType = dyn_cast<MemRefType>(xferOp.getShapedType())) {
-    if (memrefType.hasStaticShape()) {
-      ArrayRef<int64_t> memrefShape = memrefType.getShape();
-      ArrayRef<int64_t> vectorShape = xferOp.getVectorType().getShape();
-      size_t memrefRank = memrefShape.size();
-      size_t vectorRank = vectorShape.size();
-      if (vectorRank > memrefRank)
-        return rewriter.notifyMatchFailure(
-            xferOp, "Vector rank cannot exceed memref rank");
-      // Compare the last vectorRank dimensions of memref with vector shape
-      for (size_t i = 0; i < vectorRank; ++i) {
-        if (vectorShape[i] > memrefShape[memrefRank - vectorRank + i])
-          return rewriter.notifyMatchFailure(
-              xferOp, "Memref lower dimensions must match vector shape");
-      }
-    }
-  }
-  return success();
-}
-
+/// Adjusts the strides of a memref according to a given permutation map for
+/// vector operations.
+///
+/// This function updates the last `vecRank` elements of the `strides` array to
+/// reflect the permutation specified by `permMap`. The permutation is applied
+/// to the innermost dimensions of the memref, corresponding to the vector
+/// shape. This is typically used when lowering vector transfer operations with
+/// permutation maps to memory accesses, ensuring that the memory strides match
+/// the logical permutation of vector dimensions.
+///
+/// Example:
+///   Suppose we have a memref of rank 4 with strides `[s0, s1, s2, s3]` and a
+///   vector of rank 2. If the permutation map swaps the last two dimensions
+///   (e.g., [0, 1] -> [1, 0]), then after calling this function, the last two
+///   strides will be swapped:
+///     Original strides: [s0, s1, s2, s3]
+///     After permutation: [s0, s1, s3, s2]
+///
+/// \param op The operation being rewritten.
+/// \param rewriter The pattern rewriter for IR modifications.
+/// \param memrefType The type of the memref being accessed.
+/// \param permMap The affine permutation map to apply to the vector dimensions.
+/// \param vecType The type of the vector being accessed.
+/// \param strides The array of strides to be adjusted (in-place).
+/// \returns success if the permutation is applied successfully, failure
+/// otherwise.
+///
 static LogicalResult adjustStridesForPermutation(
     Operation *op, PatternRewriter &rewriter, MemRefType memrefType,
     AffineMap permMap, VectorType vecType, SmallVectorImpl<Value> &strides) {
@@ -200,13 +196,11 @@ static LogicalResult adjustStridesForPermutation(
   for (unsigned outIdx = 0; outIdx < vecRank; ++outIdx) {
     AffineExpr expr = permMap.getResult(outIdx);
     auto dimExpr = dyn_cast<AffineDimExpr>(expr);
-    if (!dimExpr) {
-      return rewriter.notifyMatchFailure(op, "Unsupported permutation expr");
-    }
+    assert(dimExpr && "The permutation expr must be affine expression");
     unsigned pos = dimExpr.getPosition();
     // Map permutation to the relevant strides (innermost dims)
-    if (pos < memrefRank - vecRank)
-      return rewriter.notifyMatchFailure(op, "Permutation out of bounds");
+    assert((pos >= (memrefRank - vecRank)) &&
+           "Permuted index must be in the inner dimensions");
 
     // The stride for output dimension outIdx is the stride of input dimension
     // pos
@@ -476,10 +470,10 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
 
     // lower to regular load Op if the target HW is not PVC
     // TODO:This check needs to be replaced with proper uArch capability check
-    auto chip = xegpu::getXeGPUChipStr(readOp);
+    auto chip = xegpu::getChipStr(readOp);
     if (chip != "pvc" && chip != "bmg") {
-      // perform additional checks -
-      if (failed(extraCheckForScatteredLoadStore(readOp, rewriter)))
+      // TODO: add support for OutOfBound access
+      if (readOp.hasOutOfBoundsDim())
         return failure();
       // calling another function that lower TransferReadOp to regular Loadop
       return lowerToRegularLoadOp(readOp, rewriter);
@@ -547,10 +541,10 @@ struct TransferWriteLowering
 
     // lower to regular write Op if the target HW is not PVC
     // TODO:This check needs to be replaced with proper uArch capability check
-    auto chip = xegpu::getXeGPUChipStr(writeOp);
+    auto chip = xegpu::getChipStr(writeOp);
     if (chip != "pvc" && chip != "bmg") {
-      // perform additional checks -
-      if (failed(extraCheckForScatteredLoadStore(writeOp, rewriter)))
+      // TODO: add support for OutOfBound access
+      if (writeOp.hasOutOfBoundsDim())
         return failure();
       // calling another function that lower TransferWriteOp to regular StoreOp
       return lowerToRegularStoreOp(writeOp, rewriter);

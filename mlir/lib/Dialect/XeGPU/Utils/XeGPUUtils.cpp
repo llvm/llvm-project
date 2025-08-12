@@ -407,7 +407,7 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(
   }
 }
 
-std::optional<std::string> xegpu::getXeGPUChipStr(Operation *op) {
+std::optional<std::string> xegpu::getChipStr(Operation *op) {
   auto gpuModuleOp = op->getParentOfType<gpu::GPUModuleOp>();
 
   if (!gpuModuleOp)

@@ -123,7 +123,7 @@ Value createVectorWithShapeFromValues(OpBuilder &builder, Location loc,
 void doSCFStructuralTypeConversionWithTensorType(Operation *op,
                                                  TypeConverter converter);
 
-std::optional<std::string> getXeGPUChipStr(Operation *op);
+std::optional<std::string> getChipStr(Operation *op);
 
 } // namespace xegpu
 
