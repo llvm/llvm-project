@@ -1033,8 +1033,12 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     // TODO: It may be possible to improve this by analyzing where the
     // condition operand comes from.
     CmpInst::Predicate Pred = CmpInst::BAD_ICMP_PREDICATE;
-    auto *CondTy = toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF);
-    auto *VecTy = toVectorTy(Ctx.Types.inferScalarType(getOperand(1)), VF);
+    auto *CondTy = Ctx.Types.inferScalarType(getOperand(0));
+    auto *VecTy = Ctx.Types.inferScalarType(getOperand(1));
+    if (!vputils::onlyFirstLaneUsed(this)) {
+      CondTy = toVectorTy(CondTy, VF);
+      VecTy = toVectorTy(VecTy, VF);
+    }
     return Ctx.TTI.getCmpSelInstrCost(Instruction::Select, VecTy, CondTy, Pred,
                                       Ctx.CostKind);
   }
