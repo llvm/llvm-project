@@ -1058,11 +1058,6 @@ multiclass VOP1Only_Real_gfx11_gfx12<bits<9> op> :
 multiclass VOP1_Real_FULL_gfx11_gfx12<bits<9> op> :
   VOP1_Real_FULL<GFX11Gen, op>, VOP1_Real_FULL<GFX12Gen, op>;
 
-multiclass VOP1_Real_NO_DPP_OP_SEL_with_name<GFXGen Gen, bits<9> op,
-                                             string opName, string asmName> :
-  VOP1_Real_e32_with_name<Gen, op, opName, asmName>,
-  VOP3_Real_with_name<Gen, {0, 1, 1, op{6-0}}, opName, asmName>;
-
 multiclass VOP1_Real_FULL_t16_and_fake16_gfx1250<
     bits<9> op, string asmName = !tolower(NAME), string opName = NAME> {
   defm opName#"_t16" :
