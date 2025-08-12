@@ -79,6 +79,8 @@ matchEnableIfSpecializationImplTypename(TypeLoc TheType) {
     if (!TD || TD->getName() != "enable_if")
       return std::nullopt;
 
+    assert(!TD->getTemplateParameters()->empty() &&
+           "found template with no template parameters?");
     const auto *FirstParam = dyn_cast<NonTypeTemplateParmDecl>(
         TD->getTemplateParameters()->getParam(0));
     if (!FirstParam || !FirstParam->getType()->isBooleanType())
@@ -114,6 +116,8 @@ matchEnableIfSpecializationImplTrait(TypeLoc TheType) {
     if (!Specialization->isTypeAlias())
       return std::nullopt;
 
+    assert(!TD->getTemplateParameters()->empty() &&
+           "found template with no template parameters?");
     const auto *FirstParam = dyn_cast<NonTypeTemplateParmDecl>(
         TD->getTemplateParameters()->getParam(0));
     if (!FirstParam || !FirstParam->getType()->isBooleanType())
