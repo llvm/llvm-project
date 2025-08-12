@@ -237,6 +237,8 @@ void printIR(raw_ostream &OS, const MachineFunction *MF) {
   MF->print(OS);
 }
 
+static std::vector<ExtendedIRType *> ExtendedIRTypes;
+
 std::string getIRName(Any IR) {
   if (unwrapIR<Module>(IR))
     return "[module]";
@@ -253,6 +255,11 @@ std::string getIRName(Any IR) {
 
   if (const auto *MF = unwrapIR<MachineFunction>(IR))
     return MF->getName().str();
+
+  for (auto *ExtendedIRType : ExtendedIRTypes) {
+    if (auto IRName = ExtendedIRType->getIRName(IR))
+      return *IRName;
+  }
 
   llvm_unreachable("Unknown wrapped IR type");
 }
@@ -405,6 +412,16 @@ void ChangeReporter<T>::saveIRBeforePass(Any IR, StringRef PassID,
   // Save the IR representation on the stack.
   T &Data = BeforeStack.back();
   generateIRRepresentation(IR, PassID, Data);
+}
+
+ExtendedIRType::ExtendedIRType() {
+  std::lock_guard<std::mutex> Lock(ExtendedIRTypesAccess);
+  ExtendedIRTypes.push_back(this);
+}
+
+ExtendedIRType::~ExtendedIRType(){
+  std::lock_guard<std::mutex> Lock(ExtendedIRTypesAccess);
+  llvm::erase(ExtendedIRTypes, this);
 }
 
 template <typename T>

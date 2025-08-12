@@ -629,6 +629,22 @@ public:
   TimePassesHandler &getTimePasses() { return TimePasses; }
 };
 
+class ExtendedIRType {
+public:
+  ExtendedIRType();
+
+  ExtendedIRType(const ExtendedIRType&) = delete;
+  ExtendedIRType& operator=(const ExtendedIRType&) = delete;
+
+  ExtendedIRType(ExtendedIRType&&) = delete;
+  ExtendedIRType& operator=(ExtendedIRType&&) = delete;
+
+  virtual ~ExtendedIRType();
+  virtual std::optional<std::string> getIRName(Any IR) = 0;
+
+  std::mutex ExtendedIRTypesAccess;
+};
+
 extern template class BlockDataT<EmptyData>;
 extern template class FuncDataT<EmptyData>;
 extern template class IRDataT<EmptyData>;
