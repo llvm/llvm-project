@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// This file implements the WebAssembly importer.
+//
+//===----------------------------------------------------------------------===//
+
 #include "mlir/Dialect/WasmSSA/IR/WasmSSA.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -19,6 +24,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/LEB128.h"
 
+#include <climits>
 #include <cstdint>
 #include <variant>
 
@@ -648,7 +654,7 @@ void ValueStack::dump() const {
   // end of the vector. Iterate in reverse so that the first thing we print
   // is the top of the stack.
   size_t stackSize = size();
-  for (size_t idx = 0; idx < stackSize;) {
+  for (size_t idx = 0; idx < stackSize; idx++) {
     size_t actualIdx = stackSize - 1 - idx;
     llvm::dbgs() << "  ";
     values[actualIdx].dump();
