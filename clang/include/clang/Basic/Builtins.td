@@ -1514,6 +1514,18 @@ def ElementwiseSubSat : Builtin {
   let Prototype = "void(...)";
 }
 
+def ElementwiseFshl : Builtin {
+  let Spellings = ["__builtin_elementwise_fshl"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseFshr : Builtin {
+  let Spellings = ["__builtin_elementwise_fshr"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def ReduceMax : Builtin {
   let Spellings = ["__builtin_reduce_max"];
   let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
