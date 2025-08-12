@@ -1161,6 +1161,170 @@ entry:
   ret i64 %rem
 }
 
+; PR137514
+define i64 @udiv_i64_magic_large_postshift(i64 %x) nounwind {
+; X86-LABEL: udiv_i64_magic_large_postshift:
+; X86:       # %bb.0:
+; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    pushl $-1073741824 # imm = 0xC0000000
+; X86-NEXT:    pushl $0
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    calll __udivdi3
+; X86-NEXT:    addl $28, %esp
+; X86-NEXT:    retl
+;
+; X64-LABEL: udiv_i64_magic_large_postshift:
+; X64:       # %bb.0:
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    movabsq $-6148914691236517205, %rcx # imm = 0xAAAAAAAAAAAAAAAB
+; X64-NEXT:    mulq %rcx
+; X64-NEXT:    movq %rdx, %rax
+; X64-NEXT:    shrq $63, %rax
+; X64-NEXT:    retq
+  %ret = udiv i64 %x, 13835058055282163712 ; = 3 * 2^62
+  ret i64 %ret
+}
+
+; PR137514
+define i64 @urem_i64_magic_large_postshift(i64 %x) nounwind {
+; X86-LABEL: urem_i64_magic_large_postshift:
+; X86:       # %bb.0:
+; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    pushl $-1073741824 # imm = 0xC0000000
+; X86-NEXT:    pushl $0
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    calll __umoddi3
+; X86-NEXT:    addl $28, %esp
+; X86-NEXT:    retl
+;
+; X64-LABEL: urem_i64_magic_large_postshift:
+; X64:       # %bb.0:
+; X64-NEXT:    movabsq $-6148914691236517205, %rcx # imm = 0xAAAAAAAAAAAAAAAB
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    mulq %rcx
+; X64-NEXT:    shrq %rdx
+; X64-NEXT:    movabsq $4611686018427387904, %rax # imm = 0x4000000000000000
+; X64-NEXT:    andq %rdx, %rax
+; X64-NEXT:    addq %rdi, %rax
+; X64-NEXT:    retq
+  %ret = urem i64 %x, 13835058055282163712 ; = 3 * 2^62
+  ret i64 %ret
+}
+
+; PR137514
+define i64 @udiv_i64_magic_large_preshift(i64 %x) nounwind {
+; X86-LABEL: udiv_i64_magic_large_preshift:
+; X86:       # %bb.0:
+; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    pushl $14
+; X86-NEXT:    pushl $0
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    calll __udivdi3
+; X86-NEXT:    addl $28, %esp
+; X86-NEXT:    retl
+;
+; X64-LABEL: udiv_i64_magic_large_preshift:
+; X64:       # %bb.0:
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    shrq $33, %rax
+; X64-NEXT:    movabsq $2635249153387078803, %rcx # imm = 0x2492492492492493
+; X64-NEXT:    mulq %rcx
+; X64-NEXT:    movq %rdx, %rax
+; X64-NEXT:    retq
+  %ret = udiv i64 %x, 60129542144 ; = 14 * 2^32
+  ret i64 %ret
+}
+
+; PR137514
+define i64 @urem_i64_magic_large_preshift(i64 %x) nounwind {
+; X86-LABEL: urem_i64_magic_large_preshift:
+; X86:       # %bb.0:
+; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    pushl $14
+; X86-NEXT:    pushl $0
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    calll __umoddi3
+; X86-NEXT:    addl $28, %esp
+; X86-NEXT:    retl
+;
+; X64-LABEL: urem_i64_magic_large_preshift:
+; X64:       # %bb.0:
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    shrq $33, %rax
+; X64-NEXT:    movabsq $2635249153387078803, %rcx # imm = 0x2492492492492493
+; X64-NEXT:    mulq %rcx
+; X64-NEXT:    movabsq $60129542144, %rax # imm = 0xE00000000
+; X64-NEXT:    imulq %rdx, %rax
+; X64-NEXT:    subq %rax, %rdi
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    retq
+  %ret = urem i64 %x, 60129542144 ; = 14 * 2^32
+  ret i64 %ret
+}
+
+; PR137514
+define i64 @udiv_i64_magic_is_add(i64 %x) nounwind {
+; X86-LABEL: udiv_i64_magic_is_add:
+; X86:       # %bb.0:
+; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    pushl $196608 # imm = 0x30000
+; X86-NEXT:    pushl $-1
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    calll __udivdi3
+; X86-NEXT:    addl $28, %esp
+; X86-NEXT:    retl
+;
+; X64-LABEL: udiv_i64_magic_is_add:
+; X64:       # %bb.0:
+; X64-NEXT:    movabsq $6148789591883185367, %rcx # imm = 0x5554E38E5ED0FCD7
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    mulq %rcx
+; X64-NEXT:    subq %rdx, %rdi
+; X64-NEXT:    shrq %rdi
+; X64-NEXT:    leaq (%rdi,%rdx), %rax
+; X64-NEXT:    shrq $49, %rax
+; X64-NEXT:    retq
+  %ret = udiv i64 %x, 844429225099263 ; = 3 * 2^48 + 2^32 - 1
+  ret i64 %ret
+}
+
+; PR137514
+define i64 @urem_i64_magic_is_add(i64 %x) nounwind {
+; X86-LABEL: urem_i64_magic_is_add:
+; X86:       # %bb.0:
+; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    pushl $196608 # imm = 0x30000
+; X86-NEXT:    pushl $-1
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    calll __umoddi3
+; X86-NEXT:    addl $28, %esp
+; X86-NEXT:    retl
+;
+; X64-LABEL: urem_i64_magic_is_add:
+; X64:       # %bb.0:
+; X64-NEXT:    movabsq $6148789591883185367, %rcx # imm = 0x5554E38E5ED0FCD7
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    mulq %rcx
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    subq %rdx, %rax
+; X64-NEXT:    shrq %rax
+; X64-NEXT:    addq %rdx, %rax
+; X64-NEXT:    shrq $49, %rax
+; X64-NEXT:    movabsq $844429225099263, %rcx # imm = 0x30000FFFFFFFF
+; X64-NEXT:    imulq %rax, %rcx
+; X64-NEXT:    subq %rcx, %rdi
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    retq
+  %ret = urem i64 %x, 844429225099263 ; = 3 * 2^48 + 2^32 - 1
+  ret i64 %ret
+}
+
 ; Make sure we don't inline expand for optsize.
 define i64 @urem_i64_3_optsize(i64 %x) nounwind optsize {
 ; X86-LABEL: urem_i64_3_optsize:
