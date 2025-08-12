@@ -47,6 +47,12 @@ struct ol_device_impl_t {
                    ol_platform_handle_t Platform, InfoTreeNode &&DevInfo)
       : DeviceNum(DeviceNum), Device(Device), Platform(Platform),
         Info(std::forward<InfoTreeNode>(DevInfo)) {}
+
+  ~ol_device_impl_t() {
+    assert(!OutstandingQueues.size() &&
+           "Device object dropped with outstanding queues");
+  }
+
   int DeviceNum;
   GenericDeviceTy *Device;
   ol_platform_handle_t Platform;
@@ -54,6 +60,46 @@ struct ol_device_impl_t {
 
   llvm::SmallVector<__tgt_async_info *> OutstandingQueues;
   std::mutex OutstandingQueuesMutex;
+
+  /// If the device has any outstanding queues that are now complete, remove it
+  /// from the list and return it.
+  ///
+  /// Queues may be added to the outstanding queue list by olDestroyQueue if
+  /// they are destroyed but not completed.
+  std::optional<__tgt_async_info *> GetOutstandingQueue() {
+    // Not locking the `size()` access is fine here - In the worst case we
+    // either miss a queue that exists or loop through an empty array after
+    // taking the lock. Both are sub-optimal but not that bad.
+    if (OutstandingQueues.size()) {
+      std::lock_guard<std::mutex> Lock(OutstandingQueuesMutex);
+
+      // As queues are pulled and popped from this list, longer running queues
+      // naturally bubble to the start of the array. Hence looping backwards.
+      for (auto Q = OutstandingQueues.rbegin(); Q != OutstandingQueues.rend();
+           Q++) {
+        if (!Device->hasPendingWork(*Q)) {
+          auto OutstandingQueue = *Q;
+          *Q = OutstandingQueues.back();
+          OutstandingQueues.pop_back();
+          return OutstandingQueue;
+        }
+      }
+    }
+    return std::nullopt;
+  }
+
+  /// Complete all pending work for this device and perform any needed cleanup.
+  ///
+  /// After calling this function, no liboffload functions should be called with
+  /// this device handle.
+  llvm::Error Destroy() {
+    llvm::Error Result = Plugin::success();
+    for (auto Q : OutstandingQueues)
+      if (auto Err = Device->synchronize(Q, /*Release=*/true))
+        Result = llvm::joinErrors(std::move(Result), std::move(Err));
+    OutstandingQueues.clear();
+    return Result;
+  }
 };
 
 struct ol_platform_impl_t {
@@ -63,6 +109,23 @@ struct ol_platform_impl_t {
   std::unique_ptr<GenericPluginTy> Plugin;
   llvm::SmallVector<std::unique_ptr<ol_device_impl_t>> Devices;
   ol_platform_backend_t BackendType;
+
+  /// Complete all pending work for this platform and perform any needed
+  /// cleanup.
+  ///
+  /// After calling this function, no liboffload functions should be called with
+  /// this platform handle.
+  llvm::Error Destroy() {
+    llvm::Error Result = Plugin::success();
+    for (auto &D : Devices)
+      if (auto Err = D->Destroy())
+        Result = llvm::joinErrors(std::move(Result), std::move(Err));
+
+    if (auto Res = Plugin->deinit())
+      Result = llvm::joinErrors(std::move(Result), std::move(Res));
+
+    return Result;
+  }
 };
 
 struct ol_queue_impl_t {
@@ -244,7 +307,7 @@ Error olShutDown_impl() {
     if (!P.Plugin || !P.Plugin->is_initialized())
       continue;
 
-    if (auto Res = P.Plugin->deinit())
+    if (auto Res = P.Destroy())
       Result = llvm::joinErrors(std::move(Result), std::move(Res));
   }
 
@@ -571,34 +634,14 @@ Error olMemFree_impl(void *Address) {
 Error olCreateQueue_impl(ol_device_handle_t Device, ol_queue_handle_t *Queue) {
   auto CreatedQueue = std::make_unique<ol_queue_impl_t>(nullptr, Device);
 
-  // The device may have some outstanding queues created by olDestroyQueue,
-  // check if any of those are finished and can be reused.
-  // Not locking the `size()` access is fine here - In the worst case we either
-  // miss a queue that exists or loop through an empty array after taking the
-  // lock. Both are sub-optimal but not that bad.
-  __tgt_async_info *OutstandingQueue = nullptr;
-  if (Device->OutstandingQueues.size()) {
-    std::lock_guard<std::mutex> Lock(Device->OutstandingQueuesMutex);
-
-    // As queues are pulled and popped from this list, longer running queues
-    // naturally bubble to the start of the array. Hence looping backwards.
-    for (auto Q = Device->OutstandingQueues.rbegin();
-         Q != Device->OutstandingQueues.rend(); Q++) {
-      if (!Device->Device->hasPendingWork(*Q)) {
-        OutstandingQueue = *Q;
-        *Q = Device->OutstandingQueues.back();
-        Device->OutstandingQueues.pop_back();
-      }
-    }
-  }
-
+  auto OutstandingQueue = Device->GetOutstandingQueue();
   if (OutstandingQueue) {
     // The queue is empty, but we still need to sync it to release any temporary
-    // memory allocations or do other cleanup
+    // memory allocations or do other cleanup.
     if (auto Err =
-            Device->Device->synchronize(OutstandingQueue, /*Release=*/false))
+            Device->Device->synchronize(*OutstandingQueue, /*Release=*/false))
       return Err;
-    CreatedQueue->AsyncInfo = OutstandingQueue;
+    CreatedQueue->AsyncInfo = *OutstandingQueue;
   } else if (auto Err =
                  Device->Device->initAsyncInfo(&(CreatedQueue->AsyncInfo))) {
     return Err;
@@ -617,12 +660,12 @@ Error olDestroyQueue_impl(ol_queue_handle_t Queue) {
     return Res.takeError();
 
   if (!*Res) {
-    // The queue is complete, so sync it and throw it back into the pool
+    // The queue is complete, so sync it and throw it back into the pool.
     if (auto Err = Queue->Device->Device->synchronize(Queue->AsyncInfo,
                                                       /*Release=*/true))
       return Err;
   } else {
-    // The queue still has outstanding work. Store it so we can check it later
+    // The queue still has outstanding work. Store it so we can check it later.
     std::lock_guard<std::mutex> Lock(Queue->Device->OutstandingQueuesMutex);
     Queue->Device->OutstandingQueues.push_back(Queue->AsyncInfo);
   }
