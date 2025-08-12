@@ -128,8 +128,8 @@ protected:
   /// SmallVectorStorage is properly-aligned even for small-size of 0.
   void *getFirstEl() const {
     return const_cast<void *>(reinterpret_cast<const void *>(
-        reinterpret_cast<const char *>(this) +
-        offsetof(SmallVectorAlignmentAndSize<T>, FirstEl)));
+        reinterpret_cast<const SmallVectorAlignmentAndSize<T> *>(this)
+            ->FirstEl));
   }
   // Space after 'FirstEl' is clobbered, do not add any instance vars after it.
 
@@ -518,7 +518,7 @@ protected:
     // use memcpy here. Note that I and E are iterators and thus might be
     // invalid for memcpy if they are equal.
     if (I != E)
-      memcpy(reinterpret_cast<void *>(Dest), I, (E - I) * sizeof(T));
+      std::memcpy(reinterpret_cast<void *>(Dest), I, (E - I) * sizeof(T));
   }
 
   /// Double the size of the allocated memory, guaranteeing space for at
@@ -561,7 +561,7 @@ protected:
 public:
   void push_back(ValueParamT Elt) {
     const T *EltPtr = reserveForParamAndGetAddress(Elt);
-    memcpy(reinterpret_cast<void *>(this->end()), EltPtr, sizeof(T));
+    std::memcpy(reinterpret_cast<void *>(this->end()), EltPtr, sizeof(T));
     this->set_size(this->size() + 1);
   }
 

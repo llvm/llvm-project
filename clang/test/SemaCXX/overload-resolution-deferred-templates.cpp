@@ -283,3 +283,31 @@ void f() {
 }
 
 #endif
+
+namespace GH147374 {
+
+struct String {};
+template <typename T> void operator+(T, String &&) = delete;
+
+struct Bar {
+    void operator+(String) const; // expected-note {{candidate function}}
+    friend void operator+(Bar, String) {};  // expected-note {{candidate function}}
+};
+
+struct Baz {
+    void operator+(String); // expected-note {{candidate function}}
+    friend void operator+(Baz, String) {}; // expected-note {{candidate function}}
+};
+
+void test() {
+    Bar a;
+    String b;
+    a + b;
+    //expected-error@-1 {{use of overloaded operator '+' is ambiguous (with operand types 'Bar' and 'String')}}
+
+    Baz z;
+    z + b;
+    //expected-error@-1 {{use of overloaded operator '+' is ambiguous (with operand types 'Baz' and 'String')}}
+}
+
+}

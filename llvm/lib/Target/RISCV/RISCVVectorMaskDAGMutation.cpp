@@ -44,9 +44,8 @@
 namespace llvm {
 
 static bool isCopyToV0(const MachineInstr &MI) {
-  return MI.isCopy() && MI.getOperand(0).getReg() == RISCV::V0 &&
-         MI.getOperand(1).getReg().isVirtual() &&
-         MI.getOperand(1).getSubReg() == RISCV::NoSubRegister;
+  return MI.isFullCopy() && MI.getOperand(0).getReg() == RISCV::V0 &&
+         MI.getOperand(1).getReg().isVirtual();
 }
 
 static bool isSoleUseCopyToV0(SUnit &SU) {
@@ -75,17 +74,19 @@ public:
     SmallVector<SUnit *, 2> DefMask;
     for (SUnit &SU : DAG->SUnits) {
       const MachineInstr *MI = SU.getInstr();
-      if (isSoleUseCopyToV0(SU))
+      bool UseV0 = MI->findRegisterUseOperand(RISCV::V0, TRI);
+      if (isSoleUseCopyToV0(SU) && !UseV0)
         DefMask.push_back(&SU);
 
-      if (MI->findRegisterUseOperand(RISCV::V0, TRI)) {
+      if (UseV0) {
         NearestUseV0SU = &SU;
 
         // Copy may not be a real use, so skip it here.
-        if (DefMask.size() > 1 && !MI->isCopy())
+        if (DefMask.size() > 1 && !MI->isCopy()) {
           for (SUnit *Def : DefMask)
             if (DAG->canAddEdge(Def, &SU))
               DAG->addEdge(Def, SDep(&SU, SDep::Artificial));
+        }
 
         if (!DefMask.empty())
           DefMask.erase(DefMask.begin());

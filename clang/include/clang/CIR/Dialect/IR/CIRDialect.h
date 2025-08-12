@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_CIR_DIALECT_IR_CIRDIALECT_H
-#define LLVM_CLANG_CIR_DIALECT_IR_CIRDIALECT_H
+#ifndef CLANG_CIR_DIALECT_IR_CIRDIALECT_H
+#define CLANG_CIR_DIALECT_IR_CIRDIALECT_H
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -49,4 +49,4 @@ void buildTerminatedBody(mlir::OpBuilder &builder, mlir::Location loc);
 #define GET_OP_CLASSES
 #include "clang/CIR/Dialect/IR/CIROps.h.inc"
 
-#endif // LLVM_CLANG_CIR_DIALECT_IR_CIRDIALECT_H
+#endif // CLANG_CIR_DIALECT_IR_CIRDIALECT_H

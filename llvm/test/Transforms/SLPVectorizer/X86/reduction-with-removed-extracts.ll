@@ -9,19 +9,16 @@ define i32 @test(i32 %arg) {
 ; CHECK-NEXT:    br label %[[BB1:.*]]
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, %[[BB]] ], [ [[OP_RDX:%.*]], %[[BB1]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i64> @llvm.vector.insert.v4i64.v2i64(<4 x i64> <i64 0, i64 0, i64 poison, i64 poison>, <2 x i64> zeroinitializer, i64 2)
-; CHECK-NEXT:    [[TMP2:%.*]] = mul <4 x i64> zeroinitializer, [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc <4 x i64> [[TMP2]] to <4 x i32>
-; CHECK-NEXT:    [[TMP4:%.*]] = or <4 x i32> zeroinitializer, [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = or <4 x i32> [[TMP0]], [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = or <4 x i32> [[TMP0]], zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = or <4 x i32> [[TMP5]], zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> poison, <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3>
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> poison, <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul <2 x i32> zeroinitializer, [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i32> [[TMP9]], <2 x i32> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP11:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v8i32(<8 x i32> [[TMP7]], i64 0)
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <8 x i32> [[TMP7]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[RDX_OP:%.*]] = mul <4 x i32> [[TMP11]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v4i32(<8 x i32> [[TMP7]], <4 x i32> [[RDX_OP]], i64 0)
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x i32> [[RDX_OP]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <8 x i32> [[TMP7]], <8 x i32> [[TMP14]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vector.reduce.mul.v8i32(<8 x i32> [[TMP12]])
 ; CHECK-NEXT:    [[OP_RDX]] = mul i32 0, [[TMP13]]
 ; CHECK-NEXT:    br label %[[BB1]]

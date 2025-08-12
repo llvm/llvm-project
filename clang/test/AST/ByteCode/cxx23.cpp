@@ -309,15 +309,14 @@ namespace NonLiteralDtorInParam {
     ~NonLiteral() {} // all23-note {{declared here}}
   };
   constexpr int F2(NonLiteral N) { // all20-error {{constexpr function's 1st parameter type 'NonLiteral' is not a literal type}} \
-                                   // ref23-note {{non-constexpr function '~NonLiteral' cannot be used in a constant expression}}
+                                   // all23-note {{non-constexpr function '~NonLiteral' cannot be used in a constant expression}}
     return 8;
   }
 
 
   void test() {
     NonLiteral L;
-    constexpr auto D = F2(L); // all23-error {{must be initialized by a constant expression}} \
-                              // expected23-note {{non-constexpr function '~NonLiteral' cannot be used in a constant expression}}
+    constexpr auto D = F2(L); // all23-error {{must be initialized by a constant expression}}
   }
 }
 
@@ -369,7 +368,26 @@ namespace NestedUnions {
     return true;
   }
   static_assert(test_nested());
-
-
 }
+
+namespace UnionMemberCallDiags {
+  struct A { int n; };
+  struct B { A a; };
+  constexpr A a = (A() = B().a);
+
+  union C {
+    int n;
+    A a;
+  };
+
+  constexpr bool g() {
+    C c = {.n = 1};
+    c.a.operator=(B{2}.a); // all-note {{member call on member 'a' of union with active member 'n' is not allowed in a constant expression}}
+    return c.a.n == 2;
+  }
+  static_assert(g()); // all-error {{not an integral constant expression}} \
+                      // all-note {{in call to}}
+}
+
+
 #endif

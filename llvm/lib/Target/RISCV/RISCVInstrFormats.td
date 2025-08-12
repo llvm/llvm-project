@@ -174,6 +174,7 @@ class EltDeps<bit vl, bit mask> {
 
 def EltDepsNone      : EltDeps<vl=0, mask=0>;
 def EltDepsVL        : EltDeps<vl=1, mask=0>;
+def EltDepsMask      : EltDeps<vl=0, mask=1>;
 def EltDepsVLMask    : EltDeps<vl=1, mask=1>;
 
 class EEW <bits<2> val> {
@@ -193,7 +194,9 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   let AsmString = opcodestr # !if(!empty(argstr), "", "\t" # argstr);
   let Pattern = pattern;
 
-  let TSFlags{4-0} = format.Value;
+  InstFormat Format = format;
+
+  let TSFlags{4-0} = Format.Value;
 
   // Defaults
   RISCVVConstraint RVVConstraint = NoConstraint;

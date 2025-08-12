@@ -581,6 +581,26 @@ This section stores pairs of (jump table address, number of entries).
 This information is useful for tools that need to statically reconstruct
 the control flow of executables.
 
+``SHT_LLVM_CFI_JUMP_TABLE`` Section (CFI jump table)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+This section contains the instructions that make up a `CFI jump table`_.
+It is expected to be ``SHF_ALLOC`` and may be laid out like a normal
+section. The ``SHT_LLVM_CFI_JUMP_TABLE`` section type gives the linker
+permission to modify the section in ways that would not normally be
+permitted, in order to optimize calls via the jump table.
+
+Each ``sh_entsize`` sized slice of a section of this type containing
+exactly one relocation may be considered to be a jump table entry
+that branches to the target of the relocation. This allows the linker
+to replace the jump table entry with the function body if it is small
+enough, or if the function is the last function in the jump table.
+
+A section of this type does not have to be placed according to its
+name. The linker may place the section in whichever output section it
+sees fit (generally the section that would provide the best locality).
+
+.. _CFI jump table: https://clang.llvm.org/docs/ControlFlowIntegrityDesign.html#forward-edge-cfi-for-indirect-function-calls
+
 CodeView-Dependent
 ------------------
 

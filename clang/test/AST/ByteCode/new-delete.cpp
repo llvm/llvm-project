@@ -546,14 +546,13 @@ namespace FaultyDtorCalledByDelete {
       a = new int(13);
       IF.mem = new int(100);
     }
-    constexpr ~Foo() { delete a; } // expected-note {{in call to}}
+    constexpr ~Foo() { delete a; }
   };
 
   constexpr int abc() {
     Foo *F = new Foo();
     int n = *F->a;
-    delete F; // both-note {{in call to}} \
-              // ref-note {{in call to}}
+    delete F; // both-note 2{{in call to}}
 
     return n;
   }

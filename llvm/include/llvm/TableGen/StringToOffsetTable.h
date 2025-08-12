@@ -23,10 +23,15 @@ namespace llvm {
 class StringToOffsetTable {
   StringMap<unsigned> StringOffset;
   std::string AggregateString;
+
+  /// If this is to be a static class member, the prefix to use (i.e. class name
+  /// plus ::)
+  const StringRef ClassPrefix;
   const bool AppendZero;
 
 public:
-  StringToOffsetTable(bool AppendZero = true) : AppendZero(AppendZero) {
+  StringToOffsetTable(bool AppendZero = true, StringRef ClassPrefix = "")
+      : ClassPrefix(ClassPrefix), AppendZero(AppendZero) {
     // Ensure we always put the empty string at offset zero. That lets empty
     // initialization also be zero initialization for offsets into the table.
     GetOrAddStringOffset("");

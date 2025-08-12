@@ -22,8 +22,7 @@ namespace lldb_dap {
 llvm::Expected<protocol::WriteMemoryResponseBody>
 WriteMemoryRequestHandler::Run(
     const protocol::WriteMemoryArguments &args) const {
-  const lldb::addr_t address = args.memoryReference + args.offset.value_or(0);
-  ;
+  const lldb::addr_t address = args.memoryReference + args.offset;
 
   lldb::SBProcess process = dap.target.GetProcess();
   if (!lldb::SBDebugger::StateIsStoppedState(process.GetState()))
@@ -54,7 +53,7 @@ WriteMemoryRequestHandler::Run(
     // If 'allowPartial' is false or missing, a debug adapter should attempt to
     // verify the region is writable before writing, and fail the response if it
     // is not.
-    if (!args.allowPartial.value_or(false)) {
+    if (!args.allowPartial) {
       // Start checking from the initial write address.
       lldb::addr_t start_address = address;
       // Compute the end of the write range.
@@ -74,7 +73,7 @@ WriteMemoryRequestHandler::Run(
               "Memory 0x" + llvm::utohexstr(args.memoryReference) +
               " region is not writable");
         }
-        // If the current region covers the full requested range, stop futher
+        // If the current region covers the full requested range, stop further
         // iterations.
         if (end_address <= region_info.GetRegionEnd()) {
           break;
