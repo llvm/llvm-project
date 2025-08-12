@@ -274,7 +274,7 @@ ParseFunctions(SectionSP code_section_sp) {
     std::optional<lldb::offset_t> next_offset =
         llvm::checkedAddUnsigned(offset, function_size);
     if (!next_offset)
-      return llvm::createStringError("offset overflows uint64_t");
+      return llvm::createStringError("function offset overflows uint64_t");
     offset = *next_offset;
   }
 
