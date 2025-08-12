@@ -36,6 +36,7 @@ void OptionValueFormatEntity::Clear() {
 
 static std::string EscapeBackticks(llvm::StringRef str) {
   std::string dst;
+  dst.reserve(str.size());
   for (size_t i = 0, e = str.size(); i != e; ++i) {
     char c = str[i];
     if (c == '`') {
