@@ -3,6 +3,40 @@
 
 target triple = "amdgcn-amd-amdhsa"
 
+define amdgpu_kernel void @respect_optnone(double %arg0, double %arg1, ptr addrspace(1) %ptr) #4 {
+; CHECK-LABEL: respect_optnone:
+; CHECK:       ; %bb.0: ; %bb
+; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; CHECK-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x8
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x10
+; CHECK-NEXT:    s_mov_b32 s6, 0x3ff
+; CHECK-NEXT:    v_and_b32_e64 v0, v0, s6
+; CHECK-NEXT:    s_mov_b32 s6, 3
+; CHECK-NEXT:    v_lshlrev_b32_e64 v0, s6, v0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx2 v[0:1], v0, s[4:5]
+; CHECK-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
+; CHECK-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    v_mfma_f64_4x4x4_4b_f64 v[0:1], v[2:3], v[4:5], v[0:1]
+; CHECK-NEXT:    s_nop 5
+; CHECK-NEXT:    v_accvgpr_write_b32 a0, v0
+; CHECK-NEXT:    v_accvgpr_write_b32 a1, v1
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use a[0:1]
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_endpgm
+bb:
+  %id = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep = getelementptr double, ptr addrspace(1) %ptr, i32 %id
+  %src2 = load double, ptr addrspace(1) %gep
+  %mai = call double @llvm.amdgcn.mfma.f64.4x4x4f64(double %arg0, double %arg1, double %src2, i32 0, i32 0, i32 0)
+  call void asm sideeffect "; use $0", "a"(double %mai)
+  ret void
+}
+
 define amdgpu_kernel void @test_mfma_f32_32x32x1f32_rewrite_vgpr_mfma(ptr addrspace(1) %arg) #0 {
 ; CHECK-LABEL: test_mfma_f32_32x32x1f32_rewrite_vgpr_mfma:
 ; CHECK:       ; %bb.0: ; %bb
@@ -859,3 +893,4 @@ attributes #0 = { nounwind "amdgpu-flat-work-group-size"="1,256" "amdgpu-waves-p
 attributes #1 = { mustprogress nofree norecurse nounwind willreturn "amdgpu-waves-per-eu"="8,8" }
 attributes #2 = { convergent nocallback nofree nosync nounwind willreturn memory(none) }
 attributes #3 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+attributes #4 = { nounwind noinline optnone }
