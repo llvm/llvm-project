@@ -21,8 +21,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/Support/DXILABI.h"
-#include "llvm/TargetParser/Triple.h"
-#include <cstdint>
 
 #define DEBUG_TYPE "dxil-post-optimization-validation"
 
