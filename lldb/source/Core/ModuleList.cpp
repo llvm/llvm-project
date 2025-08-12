@@ -783,14 +783,12 @@ public:
            "Search by name not found in SharedModuleList's map");
   }
 
-  ModuleSP FindModule(const Module *module_ptr) {
-    if (!module_ptr)
-      return ModuleSP();
+  ModuleSP FindModule(const Module &module) {
 
     std::lock_guard<std::recursive_mutex> guard(GetMutex());
-    if (ModuleSP result = FindModuleInMap(module_ptr))
+    if (ModuleSP result = FindModuleInMap(module))
       return result;
-    return m_list.FindModule(module_ptr);
+    return m_list.FindModule(&module);
   }
 
   // UUID searches bypass map since UUIDs aren't indexed by filename.
@@ -834,7 +832,7 @@ public:
     if (!module_sp)
       return false;
     std::lock_guard<std::recursive_mutex> guard(GetMutex());
-    RemoveFromMap(module_sp.get());
+    RemoveFromMap(*module_sp.get());
     return m_list.Remove(module_sp, use_notifier);
   }
 
@@ -847,23 +845,23 @@ public:
 
   bool RemoveIfOrphaned(const Module *module_ptr) {
     std::lock_guard<std::recursive_mutex> guard(GetMutex());
-    RemoveFromMap(module_ptr, /*if_orphaned=*/true);
+    RemoveFromMap(*module_ptr, /*if_orphaned=*/true);
     return m_list.RemoveIfOrphaned(module_ptr);
   }
 
   std::recursive_mutex &GetMutex() const { return m_list.GetMutex(); }
 
 private:
-  ModuleSP FindModuleInMap(const Module *module_ptr) const {
-    if (!module_ptr->GetFileSpec().GetFilename())
+  ModuleSP FindModuleInMap(const Module &module) const {
+    if (!module.GetFileSpec().GetFilename())
       return ModuleSP();
-    ConstString name = module_ptr->GetFileSpec().GetFilename();
+    ConstString name = module.GetFileSpec().GetFilename();
     auto it = m_name_to_modules.find(name);
     if (it == m_name_to_modules.end())
       return ModuleSP();
     const llvm::SmallVectorImpl<ModuleSP> &vector = it->second;
     for (const ModuleSP &module_sp : vector) {
-      if (module_sp.get() == module_ptr)
+      if (module_sp.get() == &module)
         return module_sp;
     }
     return ModuleSP();
@@ -888,15 +886,13 @@ private:
     m_name_to_modules[name].push_back(module_sp);
   }
 
-  void RemoveFromMap(const Module *module_ptr, bool if_orphaned = false) {
-    if (!module_ptr)
-      return;
-    ConstString name = module_ptr->GetFileSpec().GetFilename();
+  void RemoveFromMap(const Module &module, bool if_orphaned = false) {
+    ConstString name = module.GetFileSpec().GetFilename();
     if (!m_name_to_modules.contains(name))
       return;
     llvm::SmallVectorImpl<ModuleSP> &vec = m_name_to_modules[name];
     for (auto *it = vec.begin(); it != vec.end(); ++it) {
-      if (it->get() == module_ptr) {
+      if (it->get() == &module) {
         if (!if_orphaned || it->use_count() == kUseCountOrphaned) {
           vec.erase(it);
           break;
