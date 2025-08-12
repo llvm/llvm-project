@@ -3381,7 +3381,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cvttps_epi32(__m128 __a) {
 /// \param __a
 ///    A 32-bit signed integer operand.
 /// \returns A 128-bit vector of [4 x i32].
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cvtsi32_si128(int __a) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cvtsi32_si128(int __a) {
   return __extension__(__m128i)(__v4si){__a, 0, 0, 0};
 }
 
@@ -3396,7 +3397,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cvtsi32_si128(int __a) {
 /// \param __a
 ///    A 64-bit signed integer operand containing the value to be converted.
 /// \returns A 128-bit vector of [2 x i64] containing the converted value.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cvtsi64_si128(long long __a) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cvtsi64_si128(long long __a) {
   return __extension__(__m128i)(__v2di){__a, 0};
 }
 
@@ -3411,7 +3413,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_cvtsi64_si128(long long __a) {
 ///    A vector of [4 x i32]. The least significant 32 bits are moved to the
 ///    destination.
 /// \returns A 32-bit signed integer containing the moved value.
-static __inline__ int __DEFAULT_FN_ATTRS _mm_cvtsi128_si32(__m128i __a) {
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cvtsi128_si32(__m128i __a) {
   __v4si __b = (__v4si)__a;
   return __b[0];
 }
@@ -3427,7 +3430,8 @@ static __inline__ int __DEFAULT_FN_ATTRS _mm_cvtsi128_si32(__m128i __a) {
 ///    A vector of [2 x i64]. The least significant 64 bits are moved to the
 ///    destination.
 /// \returns A 64-bit signed integer containing the moved value.
-static __inline__ long long __DEFAULT_FN_ATTRS _mm_cvtsi128_si64(__m128i __a) {
+static __inline__ long long __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_cvtsi128_si64(__m128i __a) {
   return __a[0];
 }
 
