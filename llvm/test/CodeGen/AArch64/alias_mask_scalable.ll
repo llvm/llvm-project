@@ -59,46 +59,6 @@ define <vscale x 16 x i1> @whilewr_8(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    addvl sp, sp, #1
 ; CHECK-SVE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE-NEXT:    ret
-; CHECK-NOSVE-LABEL: whilewr_8:
-; CHECK-NOSVE:       // %bb.0: // %entry
-; CHECK-NOSVE-NEXT:    adrp x8, .LCPI0_0
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI0_1
-; CHECK-NOSVE-NEXT:    sub x9, x1, x0
-; CHECK-NOSVE-NEXT:    ldr q0, [x8, :lo12:.LCPI0_0]
-; CHECK-NOSVE-NEXT:    adrp x8, .LCPI0_2
-; CHECK-NOSVE-NEXT:    ldr q1, [x10, :lo12:.LCPI0_1]
-; CHECK-NOSVE-NEXT:    ldr q3, [x8, :lo12:.LCPI0_2]
-; CHECK-NOSVE-NEXT:    adrp x8, .LCPI0_4
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI0_3
-; CHECK-NOSVE-NEXT:    ldr q5, [x8, :lo12:.LCPI0_4]
-; CHECK-NOSVE-NEXT:    adrp x8, .LCPI0_5
-; CHECK-NOSVE-NEXT:    dup v2.2d, x9
-; CHECK-NOSVE-NEXT:    ldr q4, [x10, :lo12:.LCPI0_3]
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI0_6
-; CHECK-NOSVE-NEXT:    ldr q6, [x8, :lo12:.LCPI0_5]
-; CHECK-NOSVE-NEXT:    adrp x8, .LCPI0_7
-; CHECK-NOSVE-NEXT:    ldr q7, [x10, :lo12:.LCPI0_6]
-; CHECK-NOSVE-NEXT:    cmp x9, #1
-; CHECK-NOSVE-NEXT:    ldr q16, [x8, :lo12:.LCPI0_7]
-; CHECK-NOSVE-NEXT:    cmhi v0.2d, v2.2d, v0.2d
-; CHECK-NOSVE-NEXT:    cmhi v1.2d, v2.2d, v1.2d
-; CHECK-NOSVE-NEXT:    cmhi v3.2d, v2.2d, v3.2d
-; CHECK-NOSVE-NEXT:    cmhi v4.2d, v2.2d, v4.2d
-; CHECK-NOSVE-NEXT:    cmhi v5.2d, v2.2d, v5.2d
-; CHECK-NOSVE-NEXT:    cmhi v6.2d, v2.2d, v6.2d
-; CHECK-NOSVE-NEXT:    cmhi v7.2d, v2.2d, v7.2d
-; CHECK-NOSVE-NEXT:    cmhi v2.2d, v2.2d, v16.2d
-; CHECK-NOSVE-NEXT:    uzp1 v0.4s, v1.4s, v0.4s
-; CHECK-NOSVE-NEXT:    cset w8, lt
-; CHECK-NOSVE-NEXT:    uzp1 v1.4s, v4.4s, v3.4s
-; CHECK-NOSVE-NEXT:    uzp1 v3.4s, v6.4s, v5.4s
-; CHECK-NOSVE-NEXT:    uzp1 v2.4s, v2.4s, v7.4s
-; CHECK-NOSVE-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
-; CHECK-NOSVE-NEXT:    uzp1 v1.8h, v2.8h, v3.8h
-; CHECK-NOSVE-NEXT:    uzp1 v0.16b, v1.16b, v0.16b
-; CHECK-NOSVE-NEXT:    dup v1.16b, w8
-; CHECK-NOSVE-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-NOSVE-NEXT:    ret
 entry:
   %0 = call <vscale x 16 x i1> @llvm.loop.dependence.war.mask.nxv16i1(ptr %a, ptr %b, i64 1)
   ret <vscale x 16 x i1> %0
@@ -137,33 +97,6 @@ define <vscale x 8 x i1> @whilewr_16(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    whilelo p1.h, xzr, x8
 ; CHECK-SVE-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-SVE-NEXT:    ret
-; CHECK-NOSVE-LABEL: whilewr_16:
-; CHECK-NOSVE:       // %bb.0: // %entry
-; CHECK-NOSVE-NEXT:    sub x8, x1, x0
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI1_0
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI1_1
-; CHECK-NOSVE-NEXT:    add x8, x8, x8, lsr #63
-; CHECK-NOSVE-NEXT:    adrp x11, .LCPI1_2
-; CHECK-NOSVE-NEXT:    ldr q1, [x9, :lo12:.LCPI1_0]
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI1_3
-; CHECK-NOSVE-NEXT:    ldr q2, [x10, :lo12:.LCPI1_1]
-; CHECK-NOSVE-NEXT:    ldr q3, [x11, :lo12:.LCPI1_2]
-; CHECK-NOSVE-NEXT:    asr x8, x8, #1
-; CHECK-NOSVE-NEXT:    ldr q4, [x9, :lo12:.LCPI1_3]
-; CHECK-NOSVE-NEXT:    dup v0.2d, x8
-; CHECK-NOSVE-NEXT:    cmp x8, #1
-; CHECK-NOSVE-NEXT:    cset w8, lt
-; CHECK-NOSVE-NEXT:    cmhi v1.2d, v0.2d, v1.2d
-; CHECK-NOSVE-NEXT:    cmhi v2.2d, v0.2d, v2.2d
-; CHECK-NOSVE-NEXT:    cmhi v3.2d, v0.2d, v3.2d
-; CHECK-NOSVE-NEXT:    cmhi v0.2d, v0.2d, v4.2d
-; CHECK-NOSVE-NEXT:    uzp1 v1.4s, v2.4s, v1.4s
-; CHECK-NOSVE-NEXT:    uzp1 v0.4s, v0.4s, v3.4s
-; CHECK-NOSVE-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-NOSVE-NEXT:    dup v1.8b, w8
-; CHECK-NOSVE-NEXT:    xtn v0.8b, v0.8h
-; CHECK-NOSVE-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NOSVE-NEXT:    ret
 entry:
   %0 = call <vscale x 8 x i1> @llvm.loop.dependence.war.mask.nxv8i1(ptr %a, ptr %b, i64 2)
   ret <vscale x 8 x i1> %0
@@ -196,27 +129,6 @@ define <vscale x 4 x i1> @whilewr_32(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    whilelo p1.s, xzr, x8
 ; CHECK-SVE-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-SVE-NEXT:    ret
-; CHECK-NOSVE-LABEL: whilewr_32:
-; CHECK-NOSVE:       // %bb.0: // %entry
-; CHECK-NOSVE-NEXT:    sub x9, x1, x0
-; CHECK-NOSVE-NEXT:    adrp x8, .LCPI2_0
-; CHECK-NOSVE-NEXT:    add x10, x9, #3
-; CHECK-NOSVE-NEXT:    cmp x9, #0
-; CHECK-NOSVE-NEXT:    ldr q1, [x8, :lo12:.LCPI2_0]
-; CHECK-NOSVE-NEXT:    csel x9, x10, x9, lt
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI2_1
-; CHECK-NOSVE-NEXT:    asr x9, x9, #2
-; CHECK-NOSVE-NEXT:    ldr q2, [x10, :lo12:.LCPI2_1]
-; CHECK-NOSVE-NEXT:    dup v0.2d, x9
-; CHECK-NOSVE-NEXT:    cmp x9, #1
-; CHECK-NOSVE-NEXT:    cset w8, lt
-; CHECK-NOSVE-NEXT:    cmhi v1.2d, v0.2d, v1.2d
-; CHECK-NOSVE-NEXT:    cmhi v0.2d, v0.2d, v2.2d
-; CHECK-NOSVE-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
-; CHECK-NOSVE-NEXT:    dup v1.4h, w8
-; CHECK-NOSVE-NEXT:    xtn v0.4h, v0.4s
-; CHECK-NOSVE-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NOSVE-NEXT:    ret
 entry:
   %0 = call <vscale x 4 x i1> @llvm.loop.dependence.war.mask.nxv4i1(ptr %a, ptr %b, i64 4)
   ret <vscale x 4 x i1> %0
@@ -245,23 +157,6 @@ define <vscale x 2 x i1> @whilewr_64(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    whilelo p1.d, xzr, x8
 ; CHECK-SVE-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-SVE-NEXT:    ret
-; CHECK-NOSVE-LABEL: whilewr_64:
-; CHECK-NOSVE:       // %bb.0: // %entry
-; CHECK-NOSVE-NEXT:    sub x9, x1, x0
-; CHECK-NOSVE-NEXT:    adrp x8, .LCPI3_0
-; CHECK-NOSVE-NEXT:    add x10, x9, #7
-; CHECK-NOSVE-NEXT:    cmp x9, #0
-; CHECK-NOSVE-NEXT:    ldr q1, [x8, :lo12:.LCPI3_0]
-; CHECK-NOSVE-NEXT:    csel x9, x10, x9, lt
-; CHECK-NOSVE-NEXT:    asr x9, x9, #3
-; CHECK-NOSVE-NEXT:    dup v0.2d, x9
-; CHECK-NOSVE-NEXT:    cmp x9, #1
-; CHECK-NOSVE-NEXT:    cset w8, lt
-; CHECK-NOSVE-NEXT:    cmhi v0.2d, v0.2d, v1.2d
-; CHECK-NOSVE-NEXT:    dup v1.2s, w8
-; CHECK-NOSVE-NEXT:    xtn v0.2s, v0.2d
-; CHECK-NOSVE-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NOSVE-NEXT:    ret
 entry:
   %0 = call <vscale x 2 x i1> @llvm.loop.dependence.war.mask.nxv2i1(ptr %a, ptr %b, i64 8)
   ret <vscale x 2 x i1> %0
@@ -327,47 +222,6 @@ define <vscale x 16 x i1> @whilerw_8(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    addvl sp, sp, #1
 ; CHECK-SVE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE-NEXT:    ret
-; CHECK-NOSVE-LABEL: whilerw_8:
-; CHECK-NOSVE:       // %bb.0: // %entry
-; CHECK-NOSVE-NEXT:    adrp x8, .LCPI4_0
-; CHECK-NOSVE-NEXT:    subs x9, x1, x0
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI4_1
-; CHECK-NOSVE-NEXT:    ldr q0, [x8, :lo12:.LCPI4_0]
-; CHECK-NOSVE-NEXT:    adrp x8, .LCPI4_2
-; CHECK-NOSVE-NEXT:    cneg x9, x9, mi
-; CHECK-NOSVE-NEXT:    ldr q2, [x8, :lo12:.LCPI4_2]
-; CHECK-NOSVE-NEXT:    adrp x8, .LCPI4_3
-; CHECK-NOSVE-NEXT:    ldr q1, [x10, :lo12:.LCPI4_1]
-; CHECK-NOSVE-NEXT:    ldr q4, [x8, :lo12:.LCPI4_3]
-; CHECK-NOSVE-NEXT:    adrp x8, .LCPI4_4
-; CHECK-NOSVE-NEXT:    dup v3.2d, x9
-; CHECK-NOSVE-NEXT:    ldr q5, [x8, :lo12:.LCPI4_4]
-; CHECK-NOSVE-NEXT:    adrp x8, .LCPI4_5
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI4_6
-; CHECK-NOSVE-NEXT:    ldr q6, [x8, :lo12:.LCPI4_5]
-; CHECK-NOSVE-NEXT:    adrp x8, .LCPI4_7
-; CHECK-NOSVE-NEXT:    ldr q7, [x10, :lo12:.LCPI4_6]
-; CHECK-NOSVE-NEXT:    ldr q16, [x8, :lo12:.LCPI4_7]
-; CHECK-NOSVE-NEXT:    cmhi v0.2d, v3.2d, v0.2d
-; CHECK-NOSVE-NEXT:    cmhi v1.2d, v3.2d, v1.2d
-; CHECK-NOSVE-NEXT:    cmhi v2.2d, v3.2d, v2.2d
-; CHECK-NOSVE-NEXT:    cmhi v4.2d, v3.2d, v4.2d
-; CHECK-NOSVE-NEXT:    cmhi v5.2d, v3.2d, v5.2d
-; CHECK-NOSVE-NEXT:    cmhi v6.2d, v3.2d, v6.2d
-; CHECK-NOSVE-NEXT:    cmhi v7.2d, v3.2d, v7.2d
-; CHECK-NOSVE-NEXT:    cmhi v3.2d, v3.2d, v16.2d
-; CHECK-NOSVE-NEXT:    uzp1 v0.4s, v1.4s, v0.4s
-; CHECK-NOSVE-NEXT:    cmp x9, #0
-; CHECK-NOSVE-NEXT:    uzp1 v1.4s, v4.4s, v2.4s
-; CHECK-NOSVE-NEXT:    cset w8, eq
-; CHECK-NOSVE-NEXT:    uzp1 v2.4s, v6.4s, v5.4s
-; CHECK-NOSVE-NEXT:    uzp1 v3.4s, v3.4s, v7.4s
-; CHECK-NOSVE-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
-; CHECK-NOSVE-NEXT:    uzp1 v1.8h, v3.8h, v2.8h
-; CHECK-NOSVE-NEXT:    uzp1 v0.16b, v1.16b, v0.16b
-; CHECK-NOSVE-NEXT:    dup v1.16b, w8
-; CHECK-NOSVE-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-NOSVE-NEXT:    ret
 entry:
   %0 = call <vscale x 16 x i1> @llvm.loop.dependence.raw.mask.nxv16i1(ptr %a, ptr %b, i64 1)
   ret <vscale x 16 x i1> %0
@@ -407,34 +261,6 @@ define <vscale x 8 x i1> @whilerw_16(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    whilelo p1.h, xzr, x8
 ; CHECK-SVE-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-SVE-NEXT:    ret
-; CHECK-NOSVE-LABEL: whilerw_16:
-; CHECK-NOSVE:       // %bb.0: // %entry
-; CHECK-NOSVE-NEXT:    subs x8, x1, x0
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI5_0
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI5_1
-; CHECK-NOSVE-NEXT:    cneg x8, x8, mi
-; CHECK-NOSVE-NEXT:    adrp x11, .LCPI5_2
-; CHECK-NOSVE-NEXT:    ldr q1, [x9, :lo12:.LCPI5_0]
-; CHECK-NOSVE-NEXT:    add x8, x8, x8, lsr #63
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI5_3
-; CHECK-NOSVE-NEXT:    ldr q2, [x10, :lo12:.LCPI5_1]
-; CHECK-NOSVE-NEXT:    ldr q3, [x11, :lo12:.LCPI5_2]
-; CHECK-NOSVE-NEXT:    ldr q4, [x9, :lo12:.LCPI5_3]
-; CHECK-NOSVE-NEXT:    asr x8, x8, #1
-; CHECK-NOSVE-NEXT:    dup v0.2d, x8
-; CHECK-NOSVE-NEXT:    cmp x8, #0
-; CHECK-NOSVE-NEXT:    cset w8, eq
-; CHECK-NOSVE-NEXT:    cmhi v1.2d, v0.2d, v1.2d
-; CHECK-NOSVE-NEXT:    cmhi v2.2d, v0.2d, v2.2d
-; CHECK-NOSVE-NEXT:    cmhi v3.2d, v0.2d, v3.2d
-; CHECK-NOSVE-NEXT:    cmhi v0.2d, v0.2d, v4.2d
-; CHECK-NOSVE-NEXT:    uzp1 v1.4s, v2.4s, v1.4s
-; CHECK-NOSVE-NEXT:    uzp1 v0.4s, v0.4s, v3.4s
-; CHECK-NOSVE-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-NOSVE-NEXT:    dup v1.8b, w8
-; CHECK-NOSVE-NEXT:    xtn v0.8b, v0.8h
-; CHECK-NOSVE-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NOSVE-NEXT:    ret
 entry:
   %0 = call <vscale x 8 x i1> @llvm.loop.dependence.raw.mask.nxv8i1(ptr %a, ptr %b, i64 2)
   ret <vscale x 8 x i1> %0
@@ -468,28 +294,6 @@ define <vscale x 4 x i1> @whilerw_32(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    whilelo p1.s, xzr, x8
 ; CHECK-SVE-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-SVE-NEXT:    ret
-; CHECK-NOSVE-LABEL: whilerw_32:
-; CHECK-NOSVE:       // %bb.0: // %entry
-; CHECK-NOSVE-NEXT:    subs x9, x1, x0
-; CHECK-NOSVE-NEXT:    adrp x8, .LCPI6_0
-; CHECK-NOSVE-NEXT:    cneg x9, x9, mi
-; CHECK-NOSVE-NEXT:    ldr q1, [x8, :lo12:.LCPI6_0]
-; CHECK-NOSVE-NEXT:    add x10, x9, #3
-; CHECK-NOSVE-NEXT:    cmp x9, #0
-; CHECK-NOSVE-NEXT:    csel x9, x10, x9, lt
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI6_1
-; CHECK-NOSVE-NEXT:    asr x9, x9, #2
-; CHECK-NOSVE-NEXT:    ldr q2, [x10, :lo12:.LCPI6_1]
-; CHECK-NOSVE-NEXT:    dup v0.2d, x9
-; CHECK-NOSVE-NEXT:    cmp x9, #0
-; CHECK-NOSVE-NEXT:    cset w8, eq
-; CHECK-NOSVE-NEXT:    cmhi v1.2d, v0.2d, v1.2d
-; CHECK-NOSVE-NEXT:    cmhi v0.2d, v0.2d, v2.2d
-; CHECK-NOSVE-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
-; CHECK-NOSVE-NEXT:    dup v1.4h, w8
-; CHECK-NOSVE-NEXT:    xtn v0.4h, v0.4s
-; CHECK-NOSVE-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NOSVE-NEXT:    ret
 entry:
   %0 = call <vscale x 4 x i1> @llvm.loop.dependence.raw.mask.nxv4i1(ptr %a, ptr %b, i64 4)
   ret <vscale x 4 x i1> %0
@@ -519,24 +323,6 @@ define <vscale x 2 x i1> @whilerw_64(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    whilelo p1.d, xzr, x8
 ; CHECK-SVE-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-SVE-NEXT:    ret
-; CHECK-NOSVE-LABEL: whilerw_64:
-; CHECK-NOSVE:       // %bb.0: // %entry
-; CHECK-NOSVE-NEXT:    subs x9, x1, x0
-; CHECK-NOSVE-NEXT:    adrp x8, .LCPI7_0
-; CHECK-NOSVE-NEXT:    cneg x9, x9, mi
-; CHECK-NOSVE-NEXT:    ldr q1, [x8, :lo12:.LCPI7_0]
-; CHECK-NOSVE-NEXT:    add x10, x9, #7
-; CHECK-NOSVE-NEXT:    cmp x9, #0
-; CHECK-NOSVE-NEXT:    csel x9, x10, x9, lt
-; CHECK-NOSVE-NEXT:    asr x9, x9, #3
-; CHECK-NOSVE-NEXT:    dup v0.2d, x9
-; CHECK-NOSVE-NEXT:    cmp x9, #0
-; CHECK-NOSVE-NEXT:    cset w8, eq
-; CHECK-NOSVE-NEXT:    cmhi v0.2d, v0.2d, v1.2d
-; CHECK-NOSVE-NEXT:    dup v1.2s, w8
-; CHECK-NOSVE-NEXT:    xtn v0.2s, v0.2d
-; CHECK-NOSVE-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NOSVE-NEXT:    ret
 entry:
   %0 = call <vscale x 2 x i1> @llvm.loop.dependence.raw.mask.nxv2i1(ptr %a, ptr %b, i64 8)
   ret <vscale x 2 x i1> %0
@@ -635,56 +421,6 @@ define <vscale x 32 x i1> @whilewr_8_split(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    addvl sp, sp, #1
 ; CHECK-SVE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE-NEXT:    ret
-; CHECK-NOSVE-LABEL: whilewr_8_split:
-; CHECK-NOSVE:       // %bb.0: // %entry
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI8_0
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI8_1
-; CHECK-NOSVE-NEXT:    sub x11, x1, x0
-; CHECK-NOSVE-NEXT:    ldr q0, [x9, :lo12:.LCPI8_0]
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI8_2
-; CHECK-NOSVE-NEXT:    ldr q1, [x10, :lo12:.LCPI8_1]
-; CHECK-NOSVE-NEXT:    ldr q3, [x9, :lo12:.LCPI8_2]
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI8_4
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI8_3
-; CHECK-NOSVE-NEXT:    ldr q5, [x9, :lo12:.LCPI8_4]
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI8_5
-; CHECK-NOSVE-NEXT:    dup v2.2d, x11
-; CHECK-NOSVE-NEXT:    ldr q4, [x10, :lo12:.LCPI8_3]
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI8_6
-; CHECK-NOSVE-NEXT:    ldr q6, [x9, :lo12:.LCPI8_5]
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI8_7
-; CHECK-NOSVE-NEXT:    ldr q7, [x10, :lo12:.LCPI8_6]
-; CHECK-NOSVE-NEXT:    cmp x11, #1
-; CHECK-NOSVE-NEXT:    ldr q16, [x9, :lo12:.LCPI8_7]
-; CHECK-NOSVE-NEXT:    cmhi v0.2d, v2.2d, v0.2d
-; CHECK-NOSVE-NEXT:    cmhi v1.2d, v2.2d, v1.2d
-; CHECK-NOSVE-NEXT:    cmhi v3.2d, v2.2d, v3.2d
-; CHECK-NOSVE-NEXT:    cmhi v4.2d, v2.2d, v4.2d
-; CHECK-NOSVE-NEXT:    cmhi v5.2d, v2.2d, v5.2d
-; CHECK-NOSVE-NEXT:    cmhi v6.2d, v2.2d, v6.2d
-; CHECK-NOSVE-NEXT:    cmhi v7.2d, v2.2d, v7.2d
-; CHECK-NOSVE-NEXT:    cmhi v2.2d, v2.2d, v16.2d
-; CHECK-NOSVE-NEXT:    uzp1 v0.4s, v1.4s, v0.4s
-; CHECK-NOSVE-NEXT:    cset w9, lt
-; CHECK-NOSVE-NEXT:    uzp1 v1.4s, v4.4s, v3.4s
-; CHECK-NOSVE-NEXT:    uzp1 v3.4s, v6.4s, v5.4s
-; CHECK-NOSVE-NEXT:    uzp1 v2.4s, v2.4s, v7.4s
-; CHECK-NOSVE-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
-; CHECK-NOSVE-NEXT:    uzp1 v1.8h, v2.8h, v3.8h
-; CHECK-NOSVE-NEXT:    uzp1 v0.16b, v1.16b, v0.16b
-; CHECK-NOSVE-NEXT:    dup v1.16b, w9
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI8_8
-; CHECK-NOSVE-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-NOSVE-NEXT:    ldr q1, [x9, :lo12:.LCPI8_8]
-; CHECK-NOSVE-NEXT:    shl v0.16b, v0.16b, #7
-; CHECK-NOSVE-NEXT:    cmlt v0.16b, v0.16b, #0
-; CHECK-NOSVE-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NOSVE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NOSVE-NEXT:    zip1 v0.16b, v0.16b, v1.16b
-; CHECK-NOSVE-NEXT:    addv h0, v0.8h
-; CHECK-NOSVE-NEXT:    str h0, [x8, #2]
-; CHECK-NOSVE-NEXT:    str h0, [x8]
-; CHECK-NOSVE-NEXT:    ret
 entry:
   %0 = call <vscale x 32 x i1> @llvm.loop.dependence.war.mask.nxv32i1(ptr %a, ptr %b, i64 1)
   ret <vscale x 32 x i1> %0
@@ -847,58 +583,6 @@ define <vscale x 64 x i1> @whilewr_8_split2(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    addvl sp, sp, #2
 ; CHECK-SVE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE-NEXT:    ret
-; CHECK-NOSVE-LABEL: whilewr_8_split2:
-; CHECK-NOSVE:       // %bb.0: // %entry
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI9_0
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI9_1
-; CHECK-NOSVE-NEXT:    sub x11, x1, x0
-; CHECK-NOSVE-NEXT:    ldr q0, [x9, :lo12:.LCPI9_0]
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI9_2
-; CHECK-NOSVE-NEXT:    ldr q1, [x10, :lo12:.LCPI9_1]
-; CHECK-NOSVE-NEXT:    ldr q3, [x9, :lo12:.LCPI9_2]
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI9_4
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI9_3
-; CHECK-NOSVE-NEXT:    ldr q5, [x9, :lo12:.LCPI9_4]
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI9_5
-; CHECK-NOSVE-NEXT:    dup v2.2d, x11
-; CHECK-NOSVE-NEXT:    ldr q4, [x10, :lo12:.LCPI9_3]
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI9_6
-; CHECK-NOSVE-NEXT:    ldr q6, [x9, :lo12:.LCPI9_5]
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI9_7
-; CHECK-NOSVE-NEXT:    ldr q7, [x10, :lo12:.LCPI9_6]
-; CHECK-NOSVE-NEXT:    cmp x11, #1
-; CHECK-NOSVE-NEXT:    ldr q16, [x9, :lo12:.LCPI9_7]
-; CHECK-NOSVE-NEXT:    cmhi v0.2d, v2.2d, v0.2d
-; CHECK-NOSVE-NEXT:    cmhi v1.2d, v2.2d, v1.2d
-; CHECK-NOSVE-NEXT:    cmhi v3.2d, v2.2d, v3.2d
-; CHECK-NOSVE-NEXT:    cmhi v4.2d, v2.2d, v4.2d
-; CHECK-NOSVE-NEXT:    cmhi v5.2d, v2.2d, v5.2d
-; CHECK-NOSVE-NEXT:    cmhi v6.2d, v2.2d, v6.2d
-; CHECK-NOSVE-NEXT:    cmhi v7.2d, v2.2d, v7.2d
-; CHECK-NOSVE-NEXT:    cmhi v2.2d, v2.2d, v16.2d
-; CHECK-NOSVE-NEXT:    uzp1 v0.4s, v1.4s, v0.4s
-; CHECK-NOSVE-NEXT:    cset w9, lt
-; CHECK-NOSVE-NEXT:    uzp1 v1.4s, v4.4s, v3.4s
-; CHECK-NOSVE-NEXT:    uzp1 v3.4s, v6.4s, v5.4s
-; CHECK-NOSVE-NEXT:    uzp1 v2.4s, v2.4s, v7.4s
-; CHECK-NOSVE-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
-; CHECK-NOSVE-NEXT:    uzp1 v1.8h, v2.8h, v3.8h
-; CHECK-NOSVE-NEXT:    uzp1 v0.16b, v1.16b, v0.16b
-; CHECK-NOSVE-NEXT:    dup v1.16b, w9
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI9_8
-; CHECK-NOSVE-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-NOSVE-NEXT:    ldr q1, [x9, :lo12:.LCPI9_8]
-; CHECK-NOSVE-NEXT:    shl v0.16b, v0.16b, #7
-; CHECK-NOSVE-NEXT:    cmlt v0.16b, v0.16b, #0
-; CHECK-NOSVE-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NOSVE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NOSVE-NEXT:    zip1 v0.16b, v0.16b, v1.16b
-; CHECK-NOSVE-NEXT:    addv h0, v0.8h
-; CHECK-NOSVE-NEXT:    str h0, [x8, #6]
-; CHECK-NOSVE-NEXT:    str h0, [x8, #4]
-; CHECK-NOSVE-NEXT:    str h0, [x8, #2]
-; CHECK-NOSVE-NEXT:    str h0, [x8]
-; CHECK-NOSVE-NEXT:    ret
 entry:
   %0 = call <vscale x 64 x i1> @llvm.loop.dependence.war.mask.nxv64i1(ptr %a, ptr %b, i64 1)
   ret <vscale x 64 x i1> %0
@@ -907,11 +591,58 @@ entry:
 define <vscale x 16 x i1> @whilewr_16_split(ptr %a, ptr %b) {
 ; CHECK-SVE2-LABEL: whilewr_16_split:
 ; CHECK-SVE2:       // %bb.0: // %entry
-; CHECK-SVE2-NEXT:    whilewr p0.h, x0, x1
-; CHECK-SVE2-NEXT:    incb x1
-; CHECK-SVE2-NEXT:    incb x0
-; CHECK-SVE2-NEXT:    whilewr p1.h, x0, x1
-; CHECK-SVE2-NEXT:    uzp1 p0.b, p0.b, p1.b
+; CHECK-SVE2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-SVE2-NEXT:    addvl sp, sp, #-1
+; CHECK-SVE2-NEXT:    str p7, [sp, #4, mul vl] // 2-byte Folded Spill
+; CHECK-SVE2-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
+; CHECK-SVE2-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
+; CHECK-SVE2-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-SVE2-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-SVE2-NEXT:    .cfi_offset w29, -16
+; CHECK-SVE2-NEXT:    index z0.d, #0, #1
+; CHECK-SVE2-NEXT:    sub x8, x1, x0
+; CHECK-SVE2-NEXT:    ptrue p0.d
+; CHECK-SVE2-NEXT:    add x8, x8, x8, lsr #63
+; CHECK-SVE2-NEXT:    asr x8, x8, #1
+; CHECK-SVE2-NEXT:    mov z1.d, z0.d
+; CHECK-SVE2-NEXT:    mov z4.d, z0.d
+; CHECK-SVE2-NEXT:    mov z5.d, z0.d
+; CHECK-SVE2-NEXT:    mov z2.d, x8
+; CHECK-SVE2-NEXT:    incd z1.d
+; CHECK-SVE2-NEXT:    incd z4.d, all, mul #2
+; CHECK-SVE2-NEXT:    incd z5.d, all, mul #4
+; CHECK-SVE2-NEXT:    cmphi p2.d, p0/z, z2.d, z0.d
+; CHECK-SVE2-NEXT:    mov z3.d, z1.d
+; CHECK-SVE2-NEXT:    cmphi p1.d, p0/z, z2.d, z1.d
+; CHECK-SVE2-NEXT:    incd z1.d, all, mul #4
+; CHECK-SVE2-NEXT:    cmphi p3.d, p0/z, z2.d, z4.d
+; CHECK-SVE2-NEXT:    incd z4.d, all, mul #4
+; CHECK-SVE2-NEXT:    cmphi p4.d, p0/z, z2.d, z5.d
+; CHECK-SVE2-NEXT:    incd z3.d, all, mul #2
+; CHECK-SVE2-NEXT:    cmphi p5.d, p0/z, z2.d, z1.d
+; CHECK-SVE2-NEXT:    cmphi p7.d, p0/z, z2.d, z4.d
+; CHECK-SVE2-NEXT:    uzp1 p1.s, p2.s, p1.s
+; CHECK-SVE2-NEXT:    mov z0.d, z3.d
+; CHECK-SVE2-NEXT:    cmphi p6.d, p0/z, z2.d, z3.d
+; CHECK-SVE2-NEXT:    uzp1 p2.s, p4.s, p5.s
+; CHECK-SVE2-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-SVE2-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-SVE2-NEXT:    incd z0.d, all, mul #4
+; CHECK-SVE2-NEXT:    uzp1 p3.s, p3.s, p6.s
+; CHECK-SVE2-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-SVE2-NEXT:    cmphi p0.d, p0/z, z2.d, z0.d
+; CHECK-SVE2-NEXT:    uzp1 p1.h, p1.h, p3.h
+; CHECK-SVE2-NEXT:    cmp x8, #1
+; CHECK-SVE2-NEXT:    cset w8, lt
+; CHECK-SVE2-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-SVE2-NEXT:    uzp1 p0.s, p7.s, p0.s
+; CHECK-SVE2-NEXT:    ldr p7, [sp, #4, mul vl] // 2-byte Folded Reload
+; CHECK-SVE2-NEXT:    uzp1 p0.h, p2.h, p0.h
+; CHECK-SVE2-NEXT:    uzp1 p0.b, p1.b, p0.b
+; CHECK-SVE2-NEXT:    whilelo p1.b, xzr, x8
+; CHECK-SVE2-NEXT:    sel p0.b, p0, p0.b, p1.b
+; CHECK-SVE2-NEXT:    addvl sp, sp, #1
+; CHECK-SVE2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE2-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: whilewr_16_split:
@@ -969,48 +700,6 @@ define <vscale x 16 x i1> @whilewr_16_split(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    addvl sp, sp, #1
 ; CHECK-SVE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE-NEXT:    ret
-; CHECK-NOSVE-LABEL: whilewr_16_split:
-; CHECK-NOSVE:       // %bb.0: // %entry
-; CHECK-NOSVE-NEXT:    sub x8, x1, x0
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI10_0
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI10_1
-; CHECK-NOSVE-NEXT:    add x8, x8, x8, lsr #63
-; CHECK-NOSVE-NEXT:    ldr q0, [x9, :lo12:.LCPI10_0]
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI10_2
-; CHECK-NOSVE-NEXT:    ldr q2, [x9, :lo12:.LCPI10_2]
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI10_4
-; CHECK-NOSVE-NEXT:    ldr q1, [x10, :lo12:.LCPI10_1]
-; CHECK-NOSVE-NEXT:    asr x8, x8, #1
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI10_3
-; CHECK-NOSVE-NEXT:    ldr q5, [x9, :lo12:.LCPI10_4]
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI10_6
-; CHECK-NOSVE-NEXT:    ldr q3, [x10, :lo12:.LCPI10_3]
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI10_5
-; CHECK-NOSVE-NEXT:    dup v4.2d, x8
-; CHECK-NOSVE-NEXT:    ldr q7, [x9, :lo12:.LCPI10_6]
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI10_7
-; CHECK-NOSVE-NEXT:    ldr q6, [x10, :lo12:.LCPI10_5]
-; CHECK-NOSVE-NEXT:    ldr q16, [x9, :lo12:.LCPI10_7]
-; CHECK-NOSVE-NEXT:    cmp x8, #1
-; CHECK-NOSVE-NEXT:    cset w8, lt
-; CHECK-NOSVE-NEXT:    cmhi v0.2d, v4.2d, v0.2d
-; CHECK-NOSVE-NEXT:    cmhi v1.2d, v4.2d, v1.2d
-; CHECK-NOSVE-NEXT:    cmhi v2.2d, v4.2d, v2.2d
-; CHECK-NOSVE-NEXT:    cmhi v3.2d, v4.2d, v3.2d
-; CHECK-NOSVE-NEXT:    cmhi v5.2d, v4.2d, v5.2d
-; CHECK-NOSVE-NEXT:    cmhi v6.2d, v4.2d, v6.2d
-; CHECK-NOSVE-NEXT:    cmhi v7.2d, v4.2d, v7.2d
-; CHECK-NOSVE-NEXT:    cmhi v4.2d, v4.2d, v16.2d
-; CHECK-NOSVE-NEXT:    uzp1 v0.4s, v1.4s, v0.4s
-; CHECK-NOSVE-NEXT:    uzp1 v1.4s, v3.4s, v2.4s
-; CHECK-NOSVE-NEXT:    uzp1 v2.4s, v6.4s, v5.4s
-; CHECK-NOSVE-NEXT:    uzp1 v3.4s, v4.4s, v7.4s
-; CHECK-NOSVE-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
-; CHECK-NOSVE-NEXT:    uzp1 v1.8h, v3.8h, v2.8h
-; CHECK-NOSVE-NEXT:    uzp1 v0.16b, v1.16b, v0.16b
-; CHECK-NOSVE-NEXT:    dup v1.16b, w8
-; CHECK-NOSVE-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-NOSVE-NEXT:    ret
 entry:
   %0 = call <vscale x 16 x i1> @llvm.loop.dependence.war.mask.nxv16i1(ptr %a, ptr %b, i64 2)
   ret <vscale x 16 x i1> %0
@@ -1019,20 +708,90 @@ entry:
 define <vscale x 32 x i1> @whilewr_16_split2(ptr %a, ptr %b) {
 ; CHECK-SVE2-LABEL: whilewr_16_split2:
 ; CHECK-SVE2:       // %bb.0: // %entry
-; CHECK-SVE2-NEXT:    mov x8, x1
-; CHECK-SVE2-NEXT:    mov x9, x0
-; CHECK-SVE2-NEXT:    whilewr p0.h, x0, x1
-; CHECK-SVE2-NEXT:    addvl x10, x1, #3
-; CHECK-SVE2-NEXT:    incb x8
-; CHECK-SVE2-NEXT:    incb x9
-; CHECK-SVE2-NEXT:    addvl x11, x0, #3
-; CHECK-SVE2-NEXT:    incb x1, all, mul #2
+; CHECK-SVE2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-SVE2-NEXT:    addvl sp, sp, #-1
+; CHECK-SVE2-NEXT:    str p9, [sp, #2, mul vl] // 2-byte Folded Spill
+; CHECK-SVE2-NEXT:    str p8, [sp, #3, mul vl] // 2-byte Folded Spill
+; CHECK-SVE2-NEXT:    str p7, [sp, #4, mul vl] // 2-byte Folded Spill
+; CHECK-SVE2-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
+; CHECK-SVE2-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
+; CHECK-SVE2-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-SVE2-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-SVE2-NEXT:    .cfi_offset w29, -16
+; CHECK-SVE2-NEXT:    index z0.d, #0, #1
+; CHECK-SVE2-NEXT:    sub x8, x1, x0
 ; CHECK-SVE2-NEXT:    incb x0, all, mul #2
-; CHECK-SVE2-NEXT:    whilewr p1.h, x11, x10
-; CHECK-SVE2-NEXT:    whilewr p2.h, x9, x8
-; CHECK-SVE2-NEXT:    whilewr p3.h, x0, x1
-; CHECK-SVE2-NEXT:    uzp1 p0.b, p0.b, p2.b
-; CHECK-SVE2-NEXT:    uzp1 p1.b, p3.b, p1.b
+; CHECK-SVE2-NEXT:    add x8, x8, x8, lsr #63
+; CHECK-SVE2-NEXT:    incb x1, all, mul #2
+; CHECK-SVE2-NEXT:    ptrue p0.d
+; CHECK-SVE2-NEXT:    asr x8, x8, #1
+; CHECK-SVE2-NEXT:    mov z1.d, z0.d
+; CHECK-SVE2-NEXT:    mov z2.d, z0.d
+; CHECK-SVE2-NEXT:    mov z3.d, z0.d
+; CHECK-SVE2-NEXT:    sub x9, x1, x0
+; CHECK-SVE2-NEXT:    mov z5.d, x8
+; CHECK-SVE2-NEXT:    add x9, x9, x9, lsr #63
+; CHECK-SVE2-NEXT:    incd z1.d
+; CHECK-SVE2-NEXT:    incd z2.d, all, mul #2
+; CHECK-SVE2-NEXT:    incd z3.d, all, mul #4
+; CHECK-SVE2-NEXT:    cmphi p2.d, p0/z, z5.d, z0.d
+; CHECK-SVE2-NEXT:    asr x9, x9, #1
+; CHECK-SVE2-NEXT:    mov z4.d, z1.d
+; CHECK-SVE2-NEXT:    mov z6.d, z1.d
+; CHECK-SVE2-NEXT:    mov z7.d, z2.d
+; CHECK-SVE2-NEXT:    cmphi p1.d, p0/z, z5.d, z1.d
+; CHECK-SVE2-NEXT:    cmphi p3.d, p0/z, z5.d, z3.d
+; CHECK-SVE2-NEXT:    cmphi p5.d, p0/z, z5.d, z2.d
+; CHECK-SVE2-NEXT:    incd z4.d, all, mul #2
+; CHECK-SVE2-NEXT:    incd z6.d, all, mul #4
+; CHECK-SVE2-NEXT:    incd z7.d, all, mul #4
+; CHECK-SVE2-NEXT:    uzp1 p1.s, p2.s, p1.s
+; CHECK-SVE2-NEXT:    mov z24.d, z4.d
+; CHECK-SVE2-NEXT:    cmphi p4.d, p0/z, z5.d, z6.d
+; CHECK-SVE2-NEXT:    cmphi p6.d, p0/z, z5.d, z4.d
+; CHECK-SVE2-NEXT:    cmphi p7.d, p0/z, z5.d, z7.d
+; CHECK-SVE2-NEXT:    incd z24.d, all, mul #4
+; CHECK-SVE2-NEXT:    uzp1 p2.s, p3.s, p4.s
+; CHECK-SVE2-NEXT:    uzp1 p3.s, p5.s, p6.s
+; CHECK-SVE2-NEXT:    cmphi p8.d, p0/z, z5.d, z24.d
+; CHECK-SVE2-NEXT:    mov z5.d, x9
+; CHECK-SVE2-NEXT:    cmp x8, #1
+; CHECK-SVE2-NEXT:    uzp1 p1.h, p1.h, p3.h
+; CHECK-SVE2-NEXT:    cset w8, lt
+; CHECK-SVE2-NEXT:    cmphi p4.d, p0/z, z5.d, z24.d
+; CHECK-SVE2-NEXT:    cmphi p5.d, p0/z, z5.d, z7.d
+; CHECK-SVE2-NEXT:    cmphi p6.d, p0/z, z5.d, z6.d
+; CHECK-SVE2-NEXT:    uzp1 p7.s, p7.s, p8.s
+; CHECK-SVE2-NEXT:    cmphi p9.d, p0/z, z5.d, z3.d
+; CHECK-SVE2-NEXT:    cmphi p3.d, p0/z, z5.d, z4.d
+; CHECK-SVE2-NEXT:    cmphi p8.d, p0/z, z5.d, z2.d
+; CHECK-SVE2-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-SVE2-NEXT:    uzp1 p2.h, p2.h, p7.h
+; CHECK-SVE2-NEXT:    cmphi p7.d, p0/z, z5.d, z1.d
+; CHECK-SVE2-NEXT:    cmphi p0.d, p0/z, z5.d, z0.d
+; CHECK-SVE2-NEXT:    uzp1 p4.s, p5.s, p4.s
+; CHECK-SVE2-NEXT:    uzp1 p5.s, p9.s, p6.s
+; CHECK-SVE2-NEXT:    ldr p9, [sp, #2, mul vl] // 2-byte Folded Reload
+; CHECK-SVE2-NEXT:    whilelo p6.b, xzr, x8
+; CHECK-SVE2-NEXT:    uzp1 p3.s, p8.s, p3.s
+; CHECK-SVE2-NEXT:    cmp x9, #1
+; CHECK-SVE2-NEXT:    ldr p8, [sp, #3, mul vl] // 2-byte Folded Reload
+; CHECK-SVE2-NEXT:    uzp1 p0.s, p0.s, p7.s
+; CHECK-SVE2-NEXT:    cset w8, lt
+; CHECK-SVE2-NEXT:    ldr p7, [sp, #4, mul vl] // 2-byte Folded Reload
+; CHECK-SVE2-NEXT:    uzp1 p4.h, p5.h, p4.h
+; CHECK-SVE2-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-SVE2-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-SVE2-NEXT:    uzp1 p0.h, p0.h, p3.h
+; CHECK-SVE2-NEXT:    uzp1 p1.b, p1.b, p2.b
+; CHECK-SVE2-NEXT:    uzp1 p2.b, p0.b, p4.b
+; CHECK-SVE2-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-SVE2-NEXT:    whilelo p3.b, xzr, x8
+; CHECK-SVE2-NEXT:    sel p0.b, p1, p1.b, p6.b
+; CHECK-SVE2-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-SVE2-NEXT:    sel p1.b, p2, p2.b, p3.b
+; CHECK-SVE2-NEXT:    addvl sp, sp, #1
+; CHECK-SVE2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE2-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: whilewr_16_split2:
@@ -1123,58 +882,6 @@ define <vscale x 32 x i1> @whilewr_16_split2(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    addvl sp, sp, #1
 ; CHECK-SVE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE-NEXT:    ret
-; CHECK-NOSVE-LABEL: whilewr_16_split2:
-; CHECK-NOSVE:       // %bb.0: // %entry
-; CHECK-NOSVE-NEXT:    sub x9, x1, x0
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI11_0
-; CHECK-NOSVE-NEXT:    adrp x11, .LCPI11_1
-; CHECK-NOSVE-NEXT:    add x9, x9, x9, lsr #63
-; CHECK-NOSVE-NEXT:    ldr q0, [x10, :lo12:.LCPI11_0]
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI11_2
-; CHECK-NOSVE-NEXT:    ldr q2, [x10, :lo12:.LCPI11_2]
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI11_4
-; CHECK-NOSVE-NEXT:    ldr q1, [x11, :lo12:.LCPI11_1]
-; CHECK-NOSVE-NEXT:    asr x9, x9, #1
-; CHECK-NOSVE-NEXT:    adrp x11, .LCPI11_3
-; CHECK-NOSVE-NEXT:    ldr q5, [x10, :lo12:.LCPI11_4]
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI11_6
-; CHECK-NOSVE-NEXT:    ldr q3, [x11, :lo12:.LCPI11_3]
-; CHECK-NOSVE-NEXT:    adrp x11, .LCPI11_5
-; CHECK-NOSVE-NEXT:    dup v4.2d, x9
-; CHECK-NOSVE-NEXT:    ldr q7, [x10, :lo12:.LCPI11_6]
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI11_7
-; CHECK-NOSVE-NEXT:    ldr q6, [x11, :lo12:.LCPI11_5]
-; CHECK-NOSVE-NEXT:    ldr q16, [x10, :lo12:.LCPI11_7]
-; CHECK-NOSVE-NEXT:    cmp x9, #1
-; CHECK-NOSVE-NEXT:    cset w9, lt
-; CHECK-NOSVE-NEXT:    cmhi v0.2d, v4.2d, v0.2d
-; CHECK-NOSVE-NEXT:    cmhi v1.2d, v4.2d, v1.2d
-; CHECK-NOSVE-NEXT:    cmhi v2.2d, v4.2d, v2.2d
-; CHECK-NOSVE-NEXT:    cmhi v3.2d, v4.2d, v3.2d
-; CHECK-NOSVE-NEXT:    cmhi v5.2d, v4.2d, v5.2d
-; CHECK-NOSVE-NEXT:    cmhi v6.2d, v4.2d, v6.2d
-; CHECK-NOSVE-NEXT:    cmhi v7.2d, v4.2d, v7.2d
-; CHECK-NOSVE-NEXT:    cmhi v4.2d, v4.2d, v16.2d
-; CHECK-NOSVE-NEXT:    uzp1 v0.4s, v1.4s, v0.4s
-; CHECK-NOSVE-NEXT:    uzp1 v1.4s, v3.4s, v2.4s
-; CHECK-NOSVE-NEXT:    uzp1 v2.4s, v6.4s, v5.4s
-; CHECK-NOSVE-NEXT:    uzp1 v3.4s, v4.4s, v7.4s
-; CHECK-NOSVE-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
-; CHECK-NOSVE-NEXT:    uzp1 v1.8h, v3.8h, v2.8h
-; CHECK-NOSVE-NEXT:    uzp1 v0.16b, v1.16b, v0.16b
-; CHECK-NOSVE-NEXT:    dup v1.16b, w9
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI11_8
-; CHECK-NOSVE-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-NOSVE-NEXT:    ldr q1, [x9, :lo12:.LCPI11_8]
-; CHECK-NOSVE-NEXT:    shl v0.16b, v0.16b, #7
-; CHECK-NOSVE-NEXT:    cmlt v0.16b, v0.16b, #0
-; CHECK-NOSVE-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NOSVE-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NOSVE-NEXT:    zip1 v0.16b, v0.16b, v1.16b
-; CHECK-NOSVE-NEXT:    addv h0, v0.8h
-; CHECK-NOSVE-NEXT:    str h0, [x8, #2]
-; CHECK-NOSVE-NEXT:    str h0, [x8]
-; CHECK-NOSVE-NEXT:    ret
 entry:
   %0 = call <vscale x 32 x i1> @llvm.loop.dependence.war.mask.nxv32i1(ptr %a, ptr %b, i64 2)
   ret <vscale x 32 x i1> %0
@@ -1183,11 +890,32 @@ entry:
 define <vscale x 8 x i1> @whilewr_32_split(ptr %a, ptr %b) {
 ; CHECK-SVE2-LABEL: whilewr_32_split:
 ; CHECK-SVE2:       // %bb.0: // %entry
-; CHECK-SVE2-NEXT:    whilewr p0.s, x0, x1
-; CHECK-SVE2-NEXT:    incb x1
-; CHECK-SVE2-NEXT:    incb x0
-; CHECK-SVE2-NEXT:    whilewr p1.s, x0, x1
-; CHECK-SVE2-NEXT:    uzp1 p0.h, p0.h, p1.h
+; CHECK-SVE2-NEXT:    index z0.d, #0, #1
+; CHECK-SVE2-NEXT:    sub x8, x1, x0
+; CHECK-SVE2-NEXT:    ptrue p0.d
+; CHECK-SVE2-NEXT:    add x9, x8, #3
+; CHECK-SVE2-NEXT:    cmp x8, #0
+; CHECK-SVE2-NEXT:    csel x8, x9, x8, lt
+; CHECK-SVE2-NEXT:    asr x8, x8, #2
+; CHECK-SVE2-NEXT:    mov z1.d, z0.d
+; CHECK-SVE2-NEXT:    mov z2.d, z0.d
+; CHECK-SVE2-NEXT:    mov z3.d, x8
+; CHECK-SVE2-NEXT:    incd z1.d
+; CHECK-SVE2-NEXT:    incd z2.d, all, mul #2
+; CHECK-SVE2-NEXT:    cmphi p1.d, p0/z, z3.d, z0.d
+; CHECK-SVE2-NEXT:    mov z4.d, z1.d
+; CHECK-SVE2-NEXT:    cmphi p2.d, p0/z, z3.d, z1.d
+; CHECK-SVE2-NEXT:    cmphi p3.d, p0/z, z3.d, z2.d
+; CHECK-SVE2-NEXT:    incd z4.d, all, mul #2
+; CHECK-SVE2-NEXT:    uzp1 p1.s, p1.s, p2.s
+; CHECK-SVE2-NEXT:    cmphi p0.d, p0/z, z3.d, z4.d
+; CHECK-SVE2-NEXT:    cmp x8, #1
+; CHECK-SVE2-NEXT:    cset w8, lt
+; CHECK-SVE2-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-SVE2-NEXT:    uzp1 p0.s, p3.s, p0.s
+; CHECK-SVE2-NEXT:    uzp1 p0.h, p1.h, p0.h
+; CHECK-SVE2-NEXT:    whilelo p1.h, xzr, x8
+; CHECK-SVE2-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-SVE2-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: whilewr_32_split:
@@ -1219,35 +947,6 @@ define <vscale x 8 x i1> @whilewr_32_split(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    whilelo p1.h, xzr, x8
 ; CHECK-SVE-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-SVE-NEXT:    ret
-; CHECK-NOSVE-LABEL: whilewr_32_split:
-; CHECK-NOSVE:       // %bb.0: // %entry
-; CHECK-NOSVE-NEXT:    sub x8, x1, x0
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI12_1
-; CHECK-NOSVE-NEXT:    adrp x11, .LCPI12_2
-; CHECK-NOSVE-NEXT:    add x9, x8, #3
-; CHECK-NOSVE-NEXT:    cmp x8, #0
-; CHECK-NOSVE-NEXT:    ldr q2, [x10, :lo12:.LCPI12_1]
-; CHECK-NOSVE-NEXT:    csel x8, x9, x8, lt
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI12_0
-; CHECK-NOSVE-NEXT:    ldr q3, [x11, :lo12:.LCPI12_2]
-; CHECK-NOSVE-NEXT:    asr x8, x8, #2
-; CHECK-NOSVE-NEXT:    ldr q1, [x9, :lo12:.LCPI12_0]
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI12_3
-; CHECK-NOSVE-NEXT:    ldr q4, [x9, :lo12:.LCPI12_3]
-; CHECK-NOSVE-NEXT:    dup v0.2d, x8
-; CHECK-NOSVE-NEXT:    cmp x8, #1
-; CHECK-NOSVE-NEXT:    cset w8, lt
-; CHECK-NOSVE-NEXT:    cmhi v1.2d, v0.2d, v1.2d
-; CHECK-NOSVE-NEXT:    cmhi v2.2d, v0.2d, v2.2d
-; CHECK-NOSVE-NEXT:    cmhi v3.2d, v0.2d, v3.2d
-; CHECK-NOSVE-NEXT:    cmhi v0.2d, v0.2d, v4.2d
-; CHECK-NOSVE-NEXT:    uzp1 v1.4s, v2.4s, v1.4s
-; CHECK-NOSVE-NEXT:    uzp1 v0.4s, v0.4s, v3.4s
-; CHECK-NOSVE-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-NOSVE-NEXT:    dup v1.8b, w8
-; CHECK-NOSVE-NEXT:    xtn v0.8b, v0.8h
-; CHECK-NOSVE-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NOSVE-NEXT:    ret
 entry:
   %0 = call <vscale x 8 x i1> @llvm.loop.dependence.war.mask.nxv8i1(ptr %a, ptr %b, i64 4)
   ret <vscale x 8 x i1> %0
@@ -1256,25 +955,60 @@ entry:
 define <vscale x 16 x i1> @whilewr_32_split2(ptr %a, ptr %b) {
 ; CHECK-SVE2-LABEL: whilewr_32_split2:
 ; CHECK-SVE2:       // %bb.0: // %entry
-; CHECK-SVE2-NEXT:    whilewr p0.s, x0, x1
-; CHECK-SVE2-NEXT:    mov x10, x1
-; CHECK-SVE2-NEXT:    mov x11, x0
-; CHECK-SVE2-NEXT:    addvl x8, x1, #3
-; CHECK-SVE2-NEXT:    addvl x9, x0, #3
-; CHECK-SVE2-NEXT:    incb x10, all, mul #2
-; CHECK-SVE2-NEXT:    uzp1 p0.h, p0.h, p0.h
-; CHECK-SVE2-NEXT:    incb x11, all, mul #2
-; CHECK-SVE2-NEXT:    incb x1
-; CHECK-SVE2-NEXT:    incb x0
-; CHECK-SVE2-NEXT:    whilewr p1.s, x9, x8
-; CHECK-SVE2-NEXT:    uzp1 p0.b, p0.b, p0.b
-; CHECK-SVE2-NEXT:    whilewr p2.s, x11, x10
-; CHECK-SVE2-NEXT:    punpklo p0.h, p0.b
-; CHECK-SVE2-NEXT:    whilewr p3.s, x0, x1
-; CHECK-SVE2-NEXT:    punpklo p0.h, p0.b
-; CHECK-SVE2-NEXT:    uzp1 p1.h, p2.h, p1.h
-; CHECK-SVE2-NEXT:    uzp1 p0.h, p0.h, p3.h
-; CHECK-SVE2-NEXT:    uzp1 p0.b, p0.b, p1.b
+; CHECK-SVE2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-SVE2-NEXT:    addvl sp, sp, #-1
+; CHECK-SVE2-NEXT:    str p7, [sp, #4, mul vl] // 2-byte Folded Spill
+; CHECK-SVE2-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
+; CHECK-SVE2-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
+; CHECK-SVE2-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-SVE2-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-SVE2-NEXT:    .cfi_offset w29, -16
+; CHECK-SVE2-NEXT:    index z0.d, #0, #1
+; CHECK-SVE2-NEXT:    sub x8, x1, x0
+; CHECK-SVE2-NEXT:    ptrue p0.d
+; CHECK-SVE2-NEXT:    add x9, x8, #3
+; CHECK-SVE2-NEXT:    cmp x8, #0
+; CHECK-SVE2-NEXT:    csel x8, x9, x8, lt
+; CHECK-SVE2-NEXT:    asr x8, x8, #2
+; CHECK-SVE2-NEXT:    mov z1.d, z0.d
+; CHECK-SVE2-NEXT:    mov z4.d, z0.d
+; CHECK-SVE2-NEXT:    mov z5.d, z0.d
+; CHECK-SVE2-NEXT:    mov z2.d, x8
+; CHECK-SVE2-NEXT:    incd z1.d
+; CHECK-SVE2-NEXT:    incd z4.d, all, mul #2
+; CHECK-SVE2-NEXT:    incd z5.d, all, mul #4
+; CHECK-SVE2-NEXT:    cmphi p2.d, p0/z, z2.d, z0.d
+; CHECK-SVE2-NEXT:    mov z3.d, z1.d
+; CHECK-SVE2-NEXT:    cmphi p1.d, p0/z, z2.d, z1.d
+; CHECK-SVE2-NEXT:    incd z1.d, all, mul #4
+; CHECK-SVE2-NEXT:    cmphi p3.d, p0/z, z2.d, z4.d
+; CHECK-SVE2-NEXT:    incd z4.d, all, mul #4
+; CHECK-SVE2-NEXT:    cmphi p4.d, p0/z, z2.d, z5.d
+; CHECK-SVE2-NEXT:    incd z3.d, all, mul #2
+; CHECK-SVE2-NEXT:    cmphi p5.d, p0/z, z2.d, z1.d
+; CHECK-SVE2-NEXT:    cmphi p7.d, p0/z, z2.d, z4.d
+; CHECK-SVE2-NEXT:    uzp1 p1.s, p2.s, p1.s
+; CHECK-SVE2-NEXT:    mov z0.d, z3.d
+; CHECK-SVE2-NEXT:    cmphi p6.d, p0/z, z2.d, z3.d
+; CHECK-SVE2-NEXT:    uzp1 p2.s, p4.s, p5.s
+; CHECK-SVE2-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-SVE2-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-SVE2-NEXT:    incd z0.d, all, mul #4
+; CHECK-SVE2-NEXT:    uzp1 p3.s, p3.s, p6.s
+; CHECK-SVE2-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-SVE2-NEXT:    cmphi p0.d, p0/z, z2.d, z0.d
+; CHECK-SVE2-NEXT:    uzp1 p1.h, p1.h, p3.h
+; CHECK-SVE2-NEXT:    cmp x8, #1
+; CHECK-SVE2-NEXT:    cset w8, lt
+; CHECK-SVE2-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-SVE2-NEXT:    uzp1 p0.s, p7.s, p0.s
+; CHECK-SVE2-NEXT:    ldr p7, [sp, #4, mul vl] // 2-byte Folded Reload
+; CHECK-SVE2-NEXT:    uzp1 p0.h, p2.h, p0.h
+; CHECK-SVE2-NEXT:    uzp1 p0.b, p1.b, p0.b
+; CHECK-SVE2-NEXT:    whilelo p1.b, xzr, x8
+; CHECK-SVE2-NEXT:    sel p0.b, p0, p0.b, p1.b
+; CHECK-SVE2-NEXT:    addvl sp, sp, #1
+; CHECK-SVE2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE2-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: whilewr_32_split2:
@@ -1334,50 +1068,6 @@ define <vscale x 16 x i1> @whilewr_32_split2(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    addvl sp, sp, #1
 ; CHECK-SVE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE-NEXT:    ret
-; CHECK-NOSVE-LABEL: whilewr_32_split2:
-; CHECK-NOSVE:       // %bb.0: // %entry
-; CHECK-NOSVE-NEXT:    sub x9, x1, x0
-; CHECK-NOSVE-NEXT:    adrp x8, .LCPI13_0
-; CHECK-NOSVE-NEXT:    add x10, x9, #3
-; CHECK-NOSVE-NEXT:    cmp x9, #0
-; CHECK-NOSVE-NEXT:    ldr q0, [x8, :lo12:.LCPI13_0]
-; CHECK-NOSVE-NEXT:    csel x9, x10, x9, lt
-; CHECK-NOSVE-NEXT:    adrp x8, .LCPI13_2
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI13_1
-; CHECK-NOSVE-NEXT:    asr x9, x9, #2
-; CHECK-NOSVE-NEXT:    ldr q2, [x8, :lo12:.LCPI13_2]
-; CHECK-NOSVE-NEXT:    adrp x8, .LCPI13_4
-; CHECK-NOSVE-NEXT:    ldr q1, [x10, :lo12:.LCPI13_1]
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI13_3
-; CHECK-NOSVE-NEXT:    ldr q5, [x8, :lo12:.LCPI13_4]
-; CHECK-NOSVE-NEXT:    adrp x8, .LCPI13_6
-; CHECK-NOSVE-NEXT:    ldr q3, [x10, :lo12:.LCPI13_3]
-; CHECK-NOSVE-NEXT:    dup v4.2d, x9
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI13_5
-; CHECK-NOSVE-NEXT:    ldr q7, [x8, :lo12:.LCPI13_6]
-; CHECK-NOSVE-NEXT:    adrp x8, .LCPI13_7
-; CHECK-NOSVE-NEXT:    ldr q6, [x10, :lo12:.LCPI13_5]
-; CHECK-NOSVE-NEXT:    ldr q16, [x8, :lo12:.LCPI13_7]
-; CHECK-NOSVE-NEXT:    cmp x9, #1
-; CHECK-NOSVE-NEXT:    cmhi v0.2d, v4.2d, v0.2d
-; CHECK-NOSVE-NEXT:    cmhi v1.2d, v4.2d, v1.2d
-; CHECK-NOSVE-NEXT:    cmhi v2.2d, v4.2d, v2.2d
-; CHECK-NOSVE-NEXT:    cmhi v3.2d, v4.2d, v3.2d
-; CHECK-NOSVE-NEXT:    cmhi v5.2d, v4.2d, v5.2d
-; CHECK-NOSVE-NEXT:    cmhi v6.2d, v4.2d, v6.2d
-; CHECK-NOSVE-NEXT:    cmhi v7.2d, v4.2d, v7.2d
-; CHECK-NOSVE-NEXT:    cmhi v4.2d, v4.2d, v16.2d
-; CHECK-NOSVE-NEXT:    cset w8, lt
-; CHECK-NOSVE-NEXT:    uzp1 v0.4s, v1.4s, v0.4s
-; CHECK-NOSVE-NEXT:    uzp1 v1.4s, v3.4s, v2.4s
-; CHECK-NOSVE-NEXT:    uzp1 v2.4s, v6.4s, v5.4s
-; CHECK-NOSVE-NEXT:    uzp1 v3.4s, v4.4s, v7.4s
-; CHECK-NOSVE-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
-; CHECK-NOSVE-NEXT:    uzp1 v1.8h, v3.8h, v2.8h
-; CHECK-NOSVE-NEXT:    uzp1 v0.16b, v1.16b, v0.16b
-; CHECK-NOSVE-NEXT:    dup v1.16b, w8
-; CHECK-NOSVE-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-NOSVE-NEXT:    ret
 entry:
   %0 = call <vscale x 16 x i1> @llvm.loop.dependence.war.mask.nxv16i1(ptr %a, ptr %b, i64 4)
   ret <vscale x 16 x i1> %0
@@ -1388,52 +1078,92 @@ define <vscale x 32 x i1> @whilewr_32_split3(ptr %a, ptr %b) {
 ; CHECK-SVE2:       // %bb.0: // %entry
 ; CHECK-SVE2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SVE2-NEXT:    addvl sp, sp, #-1
+; CHECK-SVE2-NEXT:    str p10, [sp, #1, mul vl] // 2-byte Folded Spill
+; CHECK-SVE2-NEXT:    str p9, [sp, #2, mul vl] // 2-byte Folded Spill
+; CHECK-SVE2-NEXT:    str p8, [sp, #3, mul vl] // 2-byte Folded Spill
+; CHECK-SVE2-NEXT:    str p7, [sp, #4, mul vl] // 2-byte Folded Spill
+; CHECK-SVE2-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE2-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE2-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE2-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-SVE2-NEXT:    .cfi_offset w29, -16
-; CHECK-SVE2-NEXT:    whilewr p0.s, x0, x1
-; CHECK-SVE2-NEXT:    mov x10, x1
-; CHECK-SVE2-NEXT:    mov x11, x0
-; CHECK-SVE2-NEXT:    mov x12, x1
-; CHECK-SVE2-NEXT:    mov x13, x0
-; CHECK-SVE2-NEXT:    incb x10, all, mul #2
-; CHECK-SVE2-NEXT:    incb x11, all, mul #2
-; CHECK-SVE2-NEXT:    incb x12
-; CHECK-SVE2-NEXT:    incb x13
-; CHECK-SVE2-NEXT:    uzp1 p0.h, p0.h, p0.h
-; CHECK-SVE2-NEXT:    addvl x8, x1, #3
-; CHECK-SVE2-NEXT:    addvl x9, x0, #3
-; CHECK-SVE2-NEXT:    whilewr p1.s, x9, x8
-; CHECK-SVE2-NEXT:    addvl x8, x1, #7
-; CHECK-SVE2-NEXT:    addvl x9, x0, #7
-; CHECK-SVE2-NEXT:    uzp1 p0.b, p0.b, p0.b
-; CHECK-SVE2-NEXT:    whilewr p2.s, x11, x10
-; CHECK-SVE2-NEXT:    addvl x10, x1, #6
-; CHECK-SVE2-NEXT:    addvl x11, x0, #6
-; CHECK-SVE2-NEXT:    whilewr p3.s, x13, x12
-; CHECK-SVE2-NEXT:    addvl x12, x1, #5
-; CHECK-SVE2-NEXT:    addvl x13, x0, #5
-; CHECK-SVE2-NEXT:    incb x1, all, mul #4
+; CHECK-SVE2-NEXT:    index z0.d, #0, #1
+; CHECK-SVE2-NEXT:    sub x8, x1, x0
+; CHECK-SVE2-NEXT:    ptrue p0.d
+; CHECK-SVE2-NEXT:    add x9, x8, #3
+; CHECK-SVE2-NEXT:    cmp x8, #0
 ; CHECK-SVE2-NEXT:    incb x0, all, mul #4
-; CHECK-SVE2-NEXT:    punpklo p0.h, p0.b
-; CHECK-SVE2-NEXT:    uzp1 p1.h, p2.h, p1.h
-; CHECK-SVE2-NEXT:    punpklo p0.h, p0.b
-; CHECK-SVE2-NEXT:    whilewr p5.s, x0, x1
-; CHECK-SVE2-NEXT:    whilewr p4.s, x9, x8
-; CHECK-SVE2-NEXT:    uzp1 p2.h, p5.h, p0.h
-; CHECK-SVE2-NEXT:    uzp1 p0.h, p0.h, p3.h
-; CHECK-SVE2-NEXT:    whilewr p3.s, x11, x10
-; CHECK-SVE2-NEXT:    uzp1 p2.b, p2.b, p0.b
-; CHECK-SVE2-NEXT:    whilewr p5.s, x13, x12
-; CHECK-SVE2-NEXT:    punpklo p2.h, p2.b
-; CHECK-SVE2-NEXT:    uzp1 p3.h, p3.h, p4.h
-; CHECK-SVE2-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
-; CHECK-SVE2-NEXT:    punpklo p2.h, p2.b
-; CHECK-SVE2-NEXT:    uzp1 p0.b, p0.b, p1.b
-; CHECK-SVE2-NEXT:    uzp1 p2.h, p2.h, p5.h
+; CHECK-SVE2-NEXT:    csel x8, x9, x8, lt
+; CHECK-SVE2-NEXT:    incb x1, all, mul #4
+; CHECK-SVE2-NEXT:    asr x8, x8, #2
+; CHECK-SVE2-NEXT:    mov z1.d, z0.d
+; CHECK-SVE2-NEXT:    mov z2.d, z0.d
+; CHECK-SVE2-NEXT:    mov z4.d, z0.d
+; CHECK-SVE2-NEXT:    mov z5.d, x8
+; CHECK-SVE2-NEXT:    sub x9, x1, x0
+; CHECK-SVE2-NEXT:    incd z1.d
+; CHECK-SVE2-NEXT:    incd z2.d, all, mul #2
+; CHECK-SVE2-NEXT:    incd z4.d, all, mul #4
+; CHECK-SVE2-NEXT:    cmphi p5.d, p0/z, z5.d, z0.d
+; CHECK-SVE2-NEXT:    mov z3.d, z1.d
+; CHECK-SVE2-NEXT:    mov z6.d, z2.d
+; CHECK-SVE2-NEXT:    mov z7.d, z1.d
+; CHECK-SVE2-NEXT:    cmphi p2.d, p0/z, z5.d, z4.d
+; CHECK-SVE2-NEXT:    cmphi p3.d, p0/z, z5.d, z2.d
+; CHECK-SVE2-NEXT:    cmphi p4.d, p0/z, z5.d, z1.d
+; CHECK-SVE2-NEXT:    incd z3.d, all, mul #2
+; CHECK-SVE2-NEXT:    incd z6.d, all, mul #4
+; CHECK-SVE2-NEXT:    incd z7.d, all, mul #4
+; CHECK-SVE2-NEXT:    uzp1 p4.s, p5.s, p4.s
+; CHECK-SVE2-NEXT:    mov z24.d, z3.d
+; CHECK-SVE2-NEXT:    cmphi p6.d, p0/z, z5.d, z6.d
+; CHECK-SVE2-NEXT:    cmphi p7.d, p0/z, z5.d, z7.d
+; CHECK-SVE2-NEXT:    cmphi p8.d, p0/z, z5.d, z3.d
+; CHECK-SVE2-NEXT:    incd z24.d, all, mul #4
+; CHECK-SVE2-NEXT:    uzp1 p2.s, p2.s, p7.s
+; CHECK-SVE2-NEXT:    uzp1 p3.s, p3.s, p8.s
+; CHECK-SVE2-NEXT:    cmphi p9.d, p0/z, z5.d, z24.d
+; CHECK-SVE2-NEXT:    cmp x8, #1
+; CHECK-SVE2-NEXT:    uzp1 p3.h, p4.h, p3.h
+; CHECK-SVE2-NEXT:    cset w8, lt
+; CHECK-SVE2-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-SVE2-NEXT:    uzp1 p6.s, p6.s, p9.s
+; CHECK-SVE2-NEXT:    whilelo p1.b, xzr, x8
+; CHECK-SVE2-NEXT:    add x8, x9, #3
+; CHECK-SVE2-NEXT:    cmp x9, #0
+; CHECK-SVE2-NEXT:    uzp1 p2.h, p2.h, p6.h
+; CHECK-SVE2-NEXT:    csel x8, x8, x9, lt
+; CHECK-SVE2-NEXT:    asr x8, x8, #2
+; CHECK-SVE2-NEXT:    uzp1 p2.b, p3.b, p2.b
+; CHECK-SVE2-NEXT:    mov z5.d, x8
+; CHECK-SVE2-NEXT:    cmphi p5.d, p0/z, z5.d, z24.d
+; CHECK-SVE2-NEXT:    cmphi p7.d, p0/z, z5.d, z6.d
+; CHECK-SVE2-NEXT:    cmphi p8.d, p0/z, z5.d, z7.d
+; CHECK-SVE2-NEXT:    cmphi p9.d, p0/z, z5.d, z4.d
+; CHECK-SVE2-NEXT:    cmphi p4.d, p0/z, z5.d, z3.d
+; CHECK-SVE2-NEXT:    cmphi p10.d, p0/z, z5.d, z2.d
+; CHECK-SVE2-NEXT:    cmphi p6.d, p0/z, z5.d, z1.d
+; CHECK-SVE2-NEXT:    cmphi p0.d, p0/z, z5.d, z0.d
+; CHECK-SVE2-NEXT:    cmp x8, #1
+; CHECK-SVE2-NEXT:    uzp1 p5.s, p7.s, p5.s
+; CHECK-SVE2-NEXT:    cset w8, lt
+; CHECK-SVE2-NEXT:    uzp1 p7.s, p9.s, p8.s
+; CHECK-SVE2-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-SVE2-NEXT:    ldr p9, [sp, #2, mul vl] // 2-byte Folded Reload
+; CHECK-SVE2-NEXT:    uzp1 p4.s, p10.s, p4.s
+; CHECK-SVE2-NEXT:    ldr p10, [sp, #1, mul vl] // 2-byte Folded Reload
+; CHECK-SVE2-NEXT:    uzp1 p0.s, p0.s, p6.s
+; CHECK-SVE2-NEXT:    ldr p8, [sp, #3, mul vl] // 2-byte Folded Reload
+; CHECK-SVE2-NEXT:    uzp1 p5.h, p7.h, p5.h
+; CHECK-SVE2-NEXT:    ldr p7, [sp, #4, mul vl] // 2-byte Folded Reload
+; CHECK-SVE2-NEXT:    uzp1 p0.h, p0.h, p4.h
+; CHECK-SVE2-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-SVE2-NEXT:    whilelo p4.b, xzr, x8
+; CHECK-SVE2-NEXT:    uzp1 p3.b, p0.b, p5.b
 ; CHECK-SVE2-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
-; CHECK-SVE2-NEXT:    uzp1 p1.b, p2.b, p3.b
+; CHECK-SVE2-NEXT:    sel p0.b, p2, p2.b, p1.b
+; CHECK-SVE2-NEXT:    sel p1.b, p3, p3.b, p4.b
+; CHECK-SVE2-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-SVE2-NEXT:    addvl sp, sp, #1
 ; CHECK-SVE2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE2-NEXT:    ret
@@ -1532,50 +1262,6 @@ define <vscale x 32 x i1> @whilewr_32_split3(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    addvl sp, sp, #1
 ; CHECK-SVE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE-NEXT:    ret
-; CHECK-NOSVE-LABEL: whilewr_32_split2:
-; CHECK-NOSVE:       // %bb.0: // %entry
-; CHECK-NOSVE-NEXT:    sub x9, x1, x0
-; CHECK-NOSVE-NEXT:    adrp x8, .LCPI13_0
-; CHECK-NOSVE-NEXT:    add x10, x9, #3
-; CHECK-NOSVE-NEXT:    cmp x9, #0
-; CHECK-NOSVE-NEXT:    ldr q0, [x8, :lo12:.LCPI13_0]
-; CHECK-NOSVE-NEXT:    csel x9, x10, x9, lt
-; CHECK-NOSVE-NEXT:    adrp x8, .LCPI13_2
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI13_1
-; CHECK-NOSVE-NEXT:    asr x9, x9, #2
-; CHECK-NOSVE-NEXT:    ldr q2, [x8, :lo12:.LCPI13_2]
-; CHECK-NOSVE-NEXT:    adrp x8, .LCPI13_4
-; CHECK-NOSVE-NEXT:    ldr q1, [x10, :lo12:.LCPI13_1]
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI13_3
-; CHECK-NOSVE-NEXT:    ldr q5, [x8, :lo12:.LCPI13_4]
-; CHECK-NOSVE-NEXT:    adrp x8, .LCPI13_6
-; CHECK-NOSVE-NEXT:    ldr q3, [x10, :lo12:.LCPI13_3]
-; CHECK-NOSVE-NEXT:    dup v4.2d, x9
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI13_5
-; CHECK-NOSVE-NEXT:    ldr q7, [x8, :lo12:.LCPI13_6]
-; CHECK-NOSVE-NEXT:    adrp x8, .LCPI13_7
-; CHECK-NOSVE-NEXT:    ldr q6, [x10, :lo12:.LCPI13_5]
-; CHECK-NOSVE-NEXT:    ldr q16, [x8, :lo12:.LCPI13_7]
-; CHECK-NOSVE-NEXT:    cmp x9, #1
-; CHECK-NOSVE-NEXT:    cmhi v0.2d, v4.2d, v0.2d
-; CHECK-NOSVE-NEXT:    cmhi v1.2d, v4.2d, v1.2d
-; CHECK-NOSVE-NEXT:    cmhi v2.2d, v4.2d, v2.2d
-; CHECK-NOSVE-NEXT:    cmhi v3.2d, v4.2d, v3.2d
-; CHECK-NOSVE-NEXT:    cmhi v5.2d, v4.2d, v5.2d
-; CHECK-NOSVE-NEXT:    cmhi v6.2d, v4.2d, v6.2d
-; CHECK-NOSVE-NEXT:    cmhi v7.2d, v4.2d, v7.2d
-; CHECK-NOSVE-NEXT:    cmhi v4.2d, v4.2d, v16.2d
-; CHECK-NOSVE-NEXT:    cset w8, lt
-; CHECK-NOSVE-NEXT:    uzp1 v0.4s, v1.4s, v0.4s
-; CHECK-NOSVE-NEXT:    uzp1 v1.4s, v3.4s, v2.4s
-; CHECK-NOSVE-NEXT:    uzp1 v2.4s, v6.4s, v5.4s
-; CHECK-NOSVE-NEXT:    uzp1 v3.4s, v4.4s, v7.4s
-; CHECK-NOSVE-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
-; CHECK-NOSVE-NEXT:    uzp1 v1.8h, v3.8h, v2.8h
-; CHECK-NOSVE-NEXT:    uzp1 v0.16b, v1.16b, v0.16b
-; CHECK-NOSVE-NEXT:    dup v1.16b, w8
-; CHECK-NOSVE-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-NOSVE-NEXT:    ret
 entry:
   %0 = call <vscale x 32 x i1> @llvm.loop.dependence.war.mask.nxv32i1(ptr %a, ptr %b, i64 4)
   ret <vscale x 32 x i1> %0
@@ -1584,11 +1270,24 @@ entry:
 define <vscale x 4 x i1> @whilewr_64_split(ptr %a, ptr %b) {
 ; CHECK-SVE2-LABEL: whilewr_64_split:
 ; CHECK-SVE2:       // %bb.0: // %entry
-; CHECK-SVE2-NEXT:    whilewr p0.d, x0, x1
-; CHECK-SVE2-NEXT:    incb x1
-; CHECK-SVE2-NEXT:    incb x0
-; CHECK-SVE2-NEXT:    whilewr p1.d, x0, x1
-; CHECK-SVE2-NEXT:    uzp1 p0.s, p0.s, p1.s
+; CHECK-SVE2-NEXT:    index z0.d, #0, #1
+; CHECK-SVE2-NEXT:    sub x8, x1, x0
+; CHECK-SVE2-NEXT:    ptrue p0.d
+; CHECK-SVE2-NEXT:    add x9, x8, #7
+; CHECK-SVE2-NEXT:    cmp x8, #0
+; CHECK-SVE2-NEXT:    csel x8, x9, x8, lt
+; CHECK-SVE2-NEXT:    asr x8, x8, #3
+; CHECK-SVE2-NEXT:    mov z1.d, z0.d
+; CHECK-SVE2-NEXT:    mov z2.d, x8
+; CHECK-SVE2-NEXT:    incd z1.d
+; CHECK-SVE2-NEXT:    cmphi p1.d, p0/z, z2.d, z0.d
+; CHECK-SVE2-NEXT:    cmphi p0.d, p0/z, z2.d, z1.d
+; CHECK-SVE2-NEXT:    cmp x8, #1
+; CHECK-SVE2-NEXT:    cset w8, lt
+; CHECK-SVE2-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-SVE2-NEXT:    uzp1 p0.s, p1.s, p0.s
+; CHECK-SVE2-NEXT:    whilelo p1.s, xzr, x8
+; CHECK-SVE2-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-SVE2-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: whilewr_64_split:
@@ -1612,27 +1311,6 @@ define <vscale x 4 x i1> @whilewr_64_split(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    whilelo p1.s, xzr, x8
 ; CHECK-SVE-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-SVE-NEXT:    ret
-; CHECK-NOSVE-LABEL: whilewr_64_split:
-; CHECK-NOSVE:       // %bb.0: // %entry
-; CHECK-NOSVE-NEXT:    sub x9, x1, x0
-; CHECK-NOSVE-NEXT:    adrp x8, .LCPI14_0
-; CHECK-NOSVE-NEXT:    add x10, x9, #7
-; CHECK-NOSVE-NEXT:    cmp x9, #0
-; CHECK-NOSVE-NEXT:    ldr q1, [x8, :lo12:.LCPI14_0]
-; CHECK-NOSVE-NEXT:    csel x9, x10, x9, lt
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI14_1
-; CHECK-NOSVE-NEXT:    asr x9, x9, #3
-; CHECK-NOSVE-NEXT:    ldr q2, [x10, :lo12:.LCPI14_1]
-; CHECK-NOSVE-NEXT:    dup v0.2d, x9
-; CHECK-NOSVE-NEXT:    cmp x9, #1
-; CHECK-NOSVE-NEXT:    cset w8, lt
-; CHECK-NOSVE-NEXT:    cmhi v1.2d, v0.2d, v1.2d
-; CHECK-NOSVE-NEXT:    cmhi v0.2d, v0.2d, v2.2d
-; CHECK-NOSVE-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
-; CHECK-NOSVE-NEXT:    dup v1.4h, w8
-; CHECK-NOSVE-NEXT:    xtn v0.4h, v0.4s
-; CHECK-NOSVE-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NOSVE-NEXT:    ret
 entry:
   %0 = call <vscale x 4 x i1> @llvm.loop.dependence.war.mask.nxv4i1(ptr %a, ptr %b, i64 8)
   ret <vscale x 4 x i1> %0
@@ -1641,25 +1319,32 @@ entry:
 define <vscale x 8 x i1> @whilewr_64_split2(ptr %a, ptr %b) {
 ; CHECK-SVE2-LABEL: whilewr_64_split2:
 ; CHECK-SVE2:       // %bb.0: // %entry
-; CHECK-SVE2-NEXT:    whilewr p0.d, x0, x1
-; CHECK-SVE2-NEXT:    mov x10, x1
-; CHECK-SVE2-NEXT:    mov x11, x0
-; CHECK-SVE2-NEXT:    addvl x8, x1, #3
-; CHECK-SVE2-NEXT:    addvl x9, x0, #3
-; CHECK-SVE2-NEXT:    incb x10, all, mul #2
-; CHECK-SVE2-NEXT:    uzp1 p0.s, p0.s, p0.s
-; CHECK-SVE2-NEXT:    incb x11, all, mul #2
-; CHECK-SVE2-NEXT:    incb x1
-; CHECK-SVE2-NEXT:    incb x0
-; CHECK-SVE2-NEXT:    whilewr p1.d, x9, x8
-; CHECK-SVE2-NEXT:    uzp1 p0.h, p0.h, p0.h
-; CHECK-SVE2-NEXT:    whilewr p2.d, x11, x10
-; CHECK-SVE2-NEXT:    punpklo p0.h, p0.b
-; CHECK-SVE2-NEXT:    whilewr p3.d, x0, x1
-; CHECK-SVE2-NEXT:    punpklo p0.h, p0.b
-; CHECK-SVE2-NEXT:    uzp1 p1.s, p2.s, p1.s
-; CHECK-SVE2-NEXT:    uzp1 p0.s, p0.s, p3.s
-; CHECK-SVE2-NEXT:    uzp1 p0.h, p0.h, p1.h
+; CHECK-SVE2-NEXT:    index z0.d, #0, #1
+; CHECK-SVE2-NEXT:    sub x8, x1, x0
+; CHECK-SVE2-NEXT:    ptrue p0.d
+; CHECK-SVE2-NEXT:    add x9, x8, #7
+; CHECK-SVE2-NEXT:    cmp x8, #0
+; CHECK-SVE2-NEXT:    csel x8, x9, x8, lt
+; CHECK-SVE2-NEXT:    asr x8, x8, #3
+; CHECK-SVE2-NEXT:    mov z1.d, z0.d
+; CHECK-SVE2-NEXT:    mov z2.d, z0.d
+; CHECK-SVE2-NEXT:    mov z3.d, x8
+; CHECK-SVE2-NEXT:    incd z1.d
+; CHECK-SVE2-NEXT:    incd z2.d, all, mul #2
+; CHECK-SVE2-NEXT:    cmphi p1.d, p0/z, z3.d, z0.d
+; CHECK-SVE2-NEXT:    mov z4.d, z1.d
+; CHECK-SVE2-NEXT:    cmphi p2.d, p0/z, z3.d, z1.d
+; CHECK-SVE2-NEXT:    cmphi p3.d, p0/z, z3.d, z2.d
+; CHECK-SVE2-NEXT:    incd z4.d, all, mul #2
+; CHECK-SVE2-NEXT:    uzp1 p1.s, p1.s, p2.s
+; CHECK-SVE2-NEXT:    cmphi p0.d, p0/z, z3.d, z4.d
+; CHECK-SVE2-NEXT:    cmp x8, #1
+; CHECK-SVE2-NEXT:    cset w8, lt
+; CHECK-SVE2-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-SVE2-NEXT:    uzp1 p0.s, p3.s, p0.s
+; CHECK-SVE2-NEXT:    uzp1 p0.h, p1.h, p0.h
+; CHECK-SVE2-NEXT:    whilelo p1.h, xzr, x8
+; CHECK-SVE2-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-SVE2-NEXT:    ret
 ;
 ; CHECK-SVE-LABEL: whilewr_64_split2:
@@ -1691,35 +1376,6 @@ define <vscale x 8 x i1> @whilewr_64_split2(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    whilelo p1.h, xzr, x8
 ; CHECK-SVE-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-SVE-NEXT:    ret
-; CHECK-NOSVE-LABEL: whilewr_64_split2:
-; CHECK-NOSVE:       // %bb.0: // %entry
-; CHECK-NOSVE-NEXT:    sub x8, x1, x0
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI15_1
-; CHECK-NOSVE-NEXT:    adrp x11, .LCPI15_2
-; CHECK-NOSVE-NEXT:    add x9, x8, #7
-; CHECK-NOSVE-NEXT:    cmp x8, #0
-; CHECK-NOSVE-NEXT:    ldr q2, [x10, :lo12:.LCPI15_1]
-; CHECK-NOSVE-NEXT:    csel x8, x9, x8, lt
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI15_0
-; CHECK-NOSVE-NEXT:    ldr q3, [x11, :lo12:.LCPI15_2]
-; CHECK-NOSVE-NEXT:    asr x8, x8, #3
-; CHECK-NOSVE-NEXT:    ldr q1, [x9, :lo12:.LCPI15_0]
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI15_3
-; CHECK-NOSVE-NEXT:    ldr q4, [x9, :lo12:.LCPI15_3]
-; CHECK-NOSVE-NEXT:    dup v0.2d, x8
-; CHECK-NOSVE-NEXT:    cmp x8, #1
-; CHECK-NOSVE-NEXT:    cset w8, lt
-; CHECK-NOSVE-NEXT:    cmhi v1.2d, v0.2d, v1.2d
-; CHECK-NOSVE-NEXT:    cmhi v2.2d, v0.2d, v2.2d
-; CHECK-NOSVE-NEXT:    cmhi v3.2d, v0.2d, v3.2d
-; CHECK-NOSVE-NEXT:    cmhi v0.2d, v0.2d, v4.2d
-; CHECK-NOSVE-NEXT:    uzp1 v1.4s, v2.4s, v1.4s
-; CHECK-NOSVE-NEXT:    uzp1 v0.4s, v0.4s, v3.4s
-; CHECK-NOSVE-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-NOSVE-NEXT:    dup v1.8b, w8
-; CHECK-NOSVE-NEXT:    xtn v0.8b, v0.8h
-; CHECK-NOSVE-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NOSVE-NEXT:    ret
 entry:
   %0 = call <vscale x 8 x i1> @llvm.loop.dependence.war.mask.nxv8i1(ptr %a, ptr %b, i64 8)
   ret <vscale x 8 x i1> %0
@@ -1730,53 +1386,56 @@ define <vscale x 16 x i1> @whilewr_64_split3(ptr %a, ptr %b) {
 ; CHECK-SVE2:       // %bb.0: // %entry
 ; CHECK-SVE2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SVE2-NEXT:    addvl sp, sp, #-1
+; CHECK-SVE2-NEXT:    str p7, [sp, #4, mul vl] // 2-byte Folded Spill
+; CHECK-SVE2-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE2-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE2-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE2-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-SVE2-NEXT:    .cfi_offset w29, -16
-; CHECK-SVE2-NEXT:    whilewr p0.d, x0, x1
-; CHECK-SVE2-NEXT:    mov x10, x1
-; CHECK-SVE2-NEXT:    mov x11, x0
-; CHECK-SVE2-NEXT:    mov x12, x1
-; CHECK-SVE2-NEXT:    mov x13, x0
-; CHECK-SVE2-NEXT:    incb x10, all, mul #2
-; CHECK-SVE2-NEXT:    incb x11, all, mul #2
-; CHECK-SVE2-NEXT:    incb x12
-; CHECK-SVE2-NEXT:    incb x13
-; CHECK-SVE2-NEXT:    uzp1 p0.s, p0.s, p0.s
-; CHECK-SVE2-NEXT:    addvl x8, x1, #3
-; CHECK-SVE2-NEXT:    addvl x9, x0, #3
-; CHECK-SVE2-NEXT:    whilewr p1.d, x9, x8
-; CHECK-SVE2-NEXT:    addvl x8, x1, #7
-; CHECK-SVE2-NEXT:    addvl x9, x0, #7
-; CHECK-SVE2-NEXT:    uzp1 p0.h, p0.h, p0.h
-; CHECK-SVE2-NEXT:    whilewr p2.d, x11, x10
-; CHECK-SVE2-NEXT:    addvl x10, x1, #6
-; CHECK-SVE2-NEXT:    addvl x11, x0, #6
-; CHECK-SVE2-NEXT:    whilewr p3.d, x13, x12
-; CHECK-SVE2-NEXT:    addvl x12, x1, #5
-; CHECK-SVE2-NEXT:    addvl x13, x0, #5
-; CHECK-SVE2-NEXT:    incb x1, all, mul #4
-; CHECK-SVE2-NEXT:    incb x0, all, mul #4
-; CHECK-SVE2-NEXT:    punpklo p0.h, p0.b
+; CHECK-SVE2-NEXT:    index z0.d, #0, #1
+; CHECK-SVE2-NEXT:    sub x8, x1, x0
+; CHECK-SVE2-NEXT:    ptrue p0.d
+; CHECK-SVE2-NEXT:    add x9, x8, #7
+; CHECK-SVE2-NEXT:    cmp x8, #0
+; CHECK-SVE2-NEXT:    csel x8, x9, x8, lt
+; CHECK-SVE2-NEXT:    asr x8, x8, #3
+; CHECK-SVE2-NEXT:    mov z1.d, z0.d
+; CHECK-SVE2-NEXT:    mov z4.d, z0.d
+; CHECK-SVE2-NEXT:    mov z5.d, z0.d
+; CHECK-SVE2-NEXT:    mov z2.d, x8
+; CHECK-SVE2-NEXT:    incd z1.d
+; CHECK-SVE2-NEXT:    incd z4.d, all, mul #2
+; CHECK-SVE2-NEXT:    incd z5.d, all, mul #4
+; CHECK-SVE2-NEXT:    cmphi p2.d, p0/z, z2.d, z0.d
+; CHECK-SVE2-NEXT:    mov z3.d, z1.d
+; CHECK-SVE2-NEXT:    cmphi p1.d, p0/z, z2.d, z1.d
+; CHECK-SVE2-NEXT:    incd z1.d, all, mul #4
+; CHECK-SVE2-NEXT:    cmphi p3.d, p0/z, z2.d, z4.d
+; CHECK-SVE2-NEXT:    incd z4.d, all, mul #4
+; CHECK-SVE2-NEXT:    cmphi p4.d, p0/z, z2.d, z5.d
+; CHECK-SVE2-NEXT:    incd z3.d, all, mul #2
+; CHECK-SVE2-NEXT:    cmphi p5.d, p0/z, z2.d, z1.d
+; CHECK-SVE2-NEXT:    cmphi p7.d, p0/z, z2.d, z4.d
 ; CHECK-SVE2-NEXT:    uzp1 p1.s, p2.s, p1.s
-; CHECK-SVE2-NEXT:    punpklo p0.h, p0.b
-; CHECK-SVE2-NEXT:    whilewr p5.d, x0, x1
-; CHECK-SVE2-NEXT:    whilewr p4.d, x9, x8
-; CHECK-SVE2-NEXT:    uzp1 p2.s, p5.s, p0.s
-; CHECK-SVE2-NEXT:    uzp1 p0.s, p0.s, p3.s
-; CHECK-SVE2-NEXT:    whilewr p3.d, x11, x10
-; CHECK-SVE2-NEXT:    uzp1 p2.h, p2.h, p0.h
-; CHECK-SVE2-NEXT:    whilewr p5.d, x13, x12
-; CHECK-SVE2-NEXT:    punpklo p2.h, p2.b
-; CHECK-SVE2-NEXT:    uzp1 p3.s, p3.s, p4.s
-; CHECK-SVE2-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
-; CHECK-SVE2-NEXT:    punpklo p2.h, p2.b
-; CHECK-SVE2-NEXT:    uzp1 p0.h, p0.h, p1.h
-; CHECK-SVE2-NEXT:    uzp1 p2.s, p2.s, p5.s
+; CHECK-SVE2-NEXT:    mov z0.d, z3.d
+; CHECK-SVE2-NEXT:    cmphi p6.d, p0/z, z2.d, z3.d
+; CHECK-SVE2-NEXT:    uzp1 p2.s, p4.s, p5.s
 ; CHECK-SVE2-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
-; CHECK-SVE2-NEXT:    uzp1 p1.h, p2.h, p3.h
-; CHECK-SVE2-NEXT:    uzp1 p0.b, p0.b, p1.b
+; CHECK-SVE2-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-SVE2-NEXT:    incd z0.d, all, mul #4
+; CHECK-SVE2-NEXT:    uzp1 p3.s, p3.s, p6.s
+; CHECK-SVE2-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-SVE2-NEXT:    cmphi p0.d, p0/z, z2.d, z0.d
+; CHECK-SVE2-NEXT:    uzp1 p1.h, p1.h, p3.h
+; CHECK-SVE2-NEXT:    cmp x8, #1
+; CHECK-SVE2-NEXT:    cset w8, lt
+; CHECK-SVE2-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-SVE2-NEXT:    uzp1 p0.s, p7.s, p0.s
+; CHECK-SVE2-NEXT:    ldr p7, [sp, #4, mul vl] // 2-byte Folded Reload
+; CHECK-SVE2-NEXT:    uzp1 p0.h, p2.h, p0.h
+; CHECK-SVE2-NEXT:    uzp1 p0.b, p1.b, p0.b
+; CHECK-SVE2-NEXT:    whilelo p1.b, xzr, x8
+; CHECK-SVE2-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-SVE2-NEXT:    addvl sp, sp, #1
 ; CHECK-SVE2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE2-NEXT:    ret
@@ -1838,35 +1497,6 @@ define <vscale x 16 x i1> @whilewr_64_split3(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    addvl sp, sp, #1
 ; CHECK-SVE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE-NEXT:    ret
-; CHECK-NOSVE-LABEL: whilewr_64_split2:
-; CHECK-NOSVE:       // %bb.0: // %entry
-; CHECK-NOSVE-NEXT:    sub x8, x1, x0
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI15_1
-; CHECK-NOSVE-NEXT:    adrp x11, .LCPI15_2
-; CHECK-NOSVE-NEXT:    add x9, x8, #7
-; CHECK-NOSVE-NEXT:    cmp x8, #0
-; CHECK-NOSVE-NEXT:    ldr q2, [x10, :lo12:.LCPI15_1]
-; CHECK-NOSVE-NEXT:    csel x8, x9, x8, lt
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI15_0
-; CHECK-NOSVE-NEXT:    ldr q3, [x11, :lo12:.LCPI15_2]
-; CHECK-NOSVE-NEXT:    asr x8, x8, #3
-; CHECK-NOSVE-NEXT:    ldr q1, [x9, :lo12:.LCPI15_0]
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI15_3
-; CHECK-NOSVE-NEXT:    ldr q4, [x9, :lo12:.LCPI15_3]
-; CHECK-NOSVE-NEXT:    dup v0.2d, x8
-; CHECK-NOSVE-NEXT:    cmp x8, #1
-; CHECK-NOSVE-NEXT:    cset w8, lt
-; CHECK-NOSVE-NEXT:    cmhi v1.2d, v0.2d, v1.2d
-; CHECK-NOSVE-NEXT:    cmhi v2.2d, v0.2d, v2.2d
-; CHECK-NOSVE-NEXT:    cmhi v3.2d, v0.2d, v3.2d
-; CHECK-NOSVE-NEXT:    cmhi v0.2d, v0.2d, v4.2d
-; CHECK-NOSVE-NEXT:    uzp1 v1.4s, v2.4s, v1.4s
-; CHECK-NOSVE-NEXT:    uzp1 v0.4s, v0.4s, v3.4s
-; CHECK-NOSVE-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-NOSVE-NEXT:    dup v1.8b, w8
-; CHECK-NOSVE-NEXT:    xtn v0.8b, v0.8h
-; CHECK-NOSVE-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NOSVE-NEXT:    ret
 entry:
   %0 = call <vscale x 16 x i1> @llvm.loop.dependence.war.mask.nxv16i1(ptr %a, ptr %b, i64 8)
   ret <vscale x 16 x i1> %0
@@ -1877,98 +1507,92 @@ define <vscale x 32 x i1> @whilewr_64_split4(ptr %a, ptr %b) {
 ; CHECK-SVE2:       // %bb.0: // %entry
 ; CHECK-SVE2-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-SVE2-NEXT:    addvl sp, sp, #-1
+; CHECK-SVE2-NEXT:    str p10, [sp, #1, mul vl] // 2-byte Folded Spill
+; CHECK-SVE2-NEXT:    str p9, [sp, #2, mul vl] // 2-byte Folded Spill
+; CHECK-SVE2-NEXT:    str p8, [sp, #3, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE2-NEXT:    str p7, [sp, #4, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE2-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE2-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE2-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
 ; CHECK-SVE2-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-SVE2-NEXT:    .cfi_offset w29, -16
-; CHECK-SVE2-NEXT:    whilewr p0.d, x0, x1
-; CHECK-SVE2-NEXT:    mov x11, x1
-; CHECK-SVE2-NEXT:    mov x12, x0
-; CHECK-SVE2-NEXT:    incb x11, all, mul #2
-; CHECK-SVE2-NEXT:    incb x12, all, mul #2
-; CHECK-SVE2-NEXT:    mov x10, x1
-; CHECK-SVE2-NEXT:    uzp1 p0.s, p0.s, p0.s
-; CHECK-SVE2-NEXT:    mov x13, x0
-; CHECK-SVE2-NEXT:    incb x10
-; CHECK-SVE2-NEXT:    incb x13
-; CHECK-SVE2-NEXT:    addvl x8, x1, #3
-; CHECK-SVE2-NEXT:    addvl x9, x0, #3
-; CHECK-SVE2-NEXT:    uzp1 p0.h, p0.h, p0.h
-; CHECK-SVE2-NEXT:    whilewr p2.d, x12, x11
-; CHECK-SVE2-NEXT:    mov x11, x1
-; CHECK-SVE2-NEXT:    mov x12, x0
-; CHECK-SVE2-NEXT:    punpklo p0.h, p0.b
-; CHECK-SVE2-NEXT:    incb x11, all, mul #4
-; CHECK-SVE2-NEXT:    incb x12, all, mul #4
-; CHECK-SVE2-NEXT:    whilewr p1.d, x9, x8
-; CHECK-SVE2-NEXT:    addvl x8, x1, #7
-; CHECK-SVE2-NEXT:    addvl x9, x0, #7
-; CHECK-SVE2-NEXT:    whilewr p3.d, x13, x10
-; CHECK-SVE2-NEXT:    punpklo p0.h, p0.b
-; CHECK-SVE2-NEXT:    whilewr p5.d, x12, x11
-; CHECK-SVE2-NEXT:    uzp1 p1.s, p2.s, p1.s
-; CHECK-SVE2-NEXT:    uzp1 p0.s, p0.s, p3.s
-; CHECK-SVE2-NEXT:    whilewr p4.d, x9, x8
-; CHECK-SVE2-NEXT:    addvl x8, x1, #6
-; CHECK-SVE2-NEXT:    addvl x9, x0, #6
-; CHECK-SVE2-NEXT:    uzp1 p2.s, p5.s, p0.s
-; CHECK-SVE2-NEXT:    uzp1 p0.h, p0.h, p1.h
-; CHECK-SVE2-NEXT:    uzp1 p1.h, p2.h, p0.h
-; CHECK-SVE2-NEXT:    whilewr p2.d, x9, x8
-; CHECK-SVE2-NEXT:    addvl x8, x1, #5
-; CHECK-SVE2-NEXT:    addvl x9, x0, #5
-; CHECK-SVE2-NEXT:    punpklo p1.h, p1.b
-; CHECK-SVE2-NEXT:    whilewr p3.d, x9, x8
-; CHECK-SVE2-NEXT:    addvl x8, x1, #12
-; CHECK-SVE2-NEXT:    addvl x9, x0, #12
-; CHECK-SVE2-NEXT:    punpklo p1.h, p1.b
-; CHECK-SVE2-NEXT:    uzp1 p2.s, p2.s, p4.s
-; CHECK-SVE2-NEXT:    uzp1 p1.s, p1.s, p3.s
-; CHECK-SVE2-NEXT:    whilewr p3.d, x9, x8
-; CHECK-SVE2-NEXT:    addvl x8, x1, #15
-; CHECK-SVE2-NEXT:    addvl x9, x0, #15
-; CHECK-SVE2-NEXT:    uzp1 p1.h, p1.h, p2.h
-; CHECK-SVE2-NEXT:    uzp1 p3.s, p3.s, p0.s
-; CHECK-SVE2-NEXT:    whilewr p2.d, x9, x8
-; CHECK-SVE2-NEXT:    addvl x8, x1, #14
-; CHECK-SVE2-NEXT:    addvl x9, x0, #14
-; CHECK-SVE2-NEXT:    uzp1 p3.h, p3.h, p0.h
-; CHECK-SVE2-NEXT:    whilewr p4.d, x9, x8
-; CHECK-SVE2-NEXT:    addvl x8, x1, #13
-; CHECK-SVE2-NEXT:    addvl x9, x0, #13
-; CHECK-SVE2-NEXT:    punpklo p3.h, p3.b
-; CHECK-SVE2-NEXT:    uzp1 p2.s, p4.s, p2.s
-; CHECK-SVE2-NEXT:    whilewr p4.d, x9, x8
-; CHECK-SVE2-NEXT:    addvl x8, x1, #8
+; CHECK-SVE2-NEXT:    index z0.d, #0, #1
+; CHECK-SVE2-NEXT:    sub x8, x1, x0
+; CHECK-SVE2-NEXT:    ptrue p0.d
+; CHECK-SVE2-NEXT:    add x9, x8, #7
+; CHECK-SVE2-NEXT:    cmp x8, #0
+; CHECK-SVE2-NEXT:    addvl x10, x1, #8
+; CHECK-SVE2-NEXT:    csel x8, x9, x8, lt
 ; CHECK-SVE2-NEXT:    addvl x9, x0, #8
-; CHECK-SVE2-NEXT:    punpklo p3.h, p3.b
-; CHECK-SVE2-NEXT:    whilewr p5.d, x9, x8
-; CHECK-SVE2-NEXT:    addvl x8, x1, #11
-; CHECK-SVE2-NEXT:    addvl x9, x0, #11
-; CHECK-SVE2-NEXT:    uzp1 p3.s, p3.s, p4.s
-; CHECK-SVE2-NEXT:    uzp1 p4.s, p5.s, p0.s
-; CHECK-SVE2-NEXT:    whilewr p5.d, x9, x8
-; CHECK-SVE2-NEXT:    addvl x8, x1, #10
-; CHECK-SVE2-NEXT:    addvl x9, x0, #10
-; CHECK-SVE2-NEXT:    uzp1 p4.h, p4.h, p0.h
-; CHECK-SVE2-NEXT:    whilewr p6.d, x9, x8
-; CHECK-SVE2-NEXT:    addvl x8, x1, #9
-; CHECK-SVE2-NEXT:    addvl x9, x0, #9
-; CHECK-SVE2-NEXT:    punpklo p4.h, p4.b
-; CHECK-SVE2-NEXT:    whilewr p7.d, x9, x8
-; CHECK-SVE2-NEXT:    punpklo p4.h, p4.b
-; CHECK-SVE2-NEXT:    uzp1 p5.s, p6.s, p5.s
-; CHECK-SVE2-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Folded Reload
-; CHECK-SVE2-NEXT:    uzp1 p4.s, p4.s, p7.s
+; CHECK-SVE2-NEXT:    asr x8, x8, #3
+; CHECK-SVE2-NEXT:    sub x9, x10, x9
+; CHECK-SVE2-NEXT:    mov z1.d, z0.d
+; CHECK-SVE2-NEXT:    mov z2.d, z0.d
+; CHECK-SVE2-NEXT:    mov z4.d, z0.d
+; CHECK-SVE2-NEXT:    mov z5.d, x8
+; CHECK-SVE2-NEXT:    incd z1.d
+; CHECK-SVE2-NEXT:    incd z2.d, all, mul #2
+; CHECK-SVE2-NEXT:    incd z4.d, all, mul #4
+; CHECK-SVE2-NEXT:    cmphi p5.d, p0/z, z5.d, z0.d
+; CHECK-SVE2-NEXT:    mov z3.d, z1.d
+; CHECK-SVE2-NEXT:    mov z6.d, z2.d
+; CHECK-SVE2-NEXT:    mov z7.d, z1.d
+; CHECK-SVE2-NEXT:    cmphi p2.d, p0/z, z5.d, z4.d
+; CHECK-SVE2-NEXT:    cmphi p3.d, p0/z, z5.d, z2.d
+; CHECK-SVE2-NEXT:    cmphi p4.d, p0/z, z5.d, z1.d
+; CHECK-SVE2-NEXT:    incd z3.d, all, mul #2
+; CHECK-SVE2-NEXT:    incd z6.d, all, mul #4
+; CHECK-SVE2-NEXT:    incd z7.d, all, mul #4
+; CHECK-SVE2-NEXT:    uzp1 p4.s, p5.s, p4.s
+; CHECK-SVE2-NEXT:    mov z24.d, z3.d
+; CHECK-SVE2-NEXT:    cmphi p6.d, p0/z, z5.d, z6.d
+; CHECK-SVE2-NEXT:    cmphi p7.d, p0/z, z5.d, z7.d
+; CHECK-SVE2-NEXT:    cmphi p8.d, p0/z, z5.d, z3.d
+; CHECK-SVE2-NEXT:    incd z24.d, all, mul #4
+; CHECK-SVE2-NEXT:    uzp1 p2.s, p2.s, p7.s
+; CHECK-SVE2-NEXT:    uzp1 p3.s, p3.s, p8.s
+; CHECK-SVE2-NEXT:    cmphi p9.d, p0/z, z5.d, z24.d
+; CHECK-SVE2-NEXT:    cmp x8, #1
+; CHECK-SVE2-NEXT:    uzp1 p3.h, p4.h, p3.h
+; CHECK-SVE2-NEXT:    cset w8, lt
+; CHECK-SVE2-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-SVE2-NEXT:    uzp1 p6.s, p6.s, p9.s
+; CHECK-SVE2-NEXT:    whilelo p1.b, xzr, x8
+; CHECK-SVE2-NEXT:    add x8, x9, #7
+; CHECK-SVE2-NEXT:    cmp x9, #0
+; CHECK-SVE2-NEXT:    uzp1 p2.h, p2.h, p6.h
+; CHECK-SVE2-NEXT:    csel x8, x8, x9, lt
+; CHECK-SVE2-NEXT:    asr x8, x8, #3
+; CHECK-SVE2-NEXT:    uzp1 p2.b, p3.b, p2.b
+; CHECK-SVE2-NEXT:    mov z5.d, x8
+; CHECK-SVE2-NEXT:    cmphi p5.d, p0/z, z5.d, z24.d
+; CHECK-SVE2-NEXT:    cmphi p7.d, p0/z, z5.d, z6.d
+; CHECK-SVE2-NEXT:    cmphi p8.d, p0/z, z5.d, z7.d
+; CHECK-SVE2-NEXT:    cmphi p9.d, p0/z, z5.d, z4.d
+; CHECK-SVE2-NEXT:    cmphi p4.d, p0/z, z5.d, z3.d
+; CHECK-SVE2-NEXT:    cmphi p10.d, p0/z, z5.d, z2.d
+; CHECK-SVE2-NEXT:    cmphi p6.d, p0/z, z5.d, z1.d
+; CHECK-SVE2-NEXT:    cmphi p0.d, p0/z, z5.d, z0.d
+; CHECK-SVE2-NEXT:    cmp x8, #1
+; CHECK-SVE2-NEXT:    uzp1 p5.s, p7.s, p5.s
+; CHECK-SVE2-NEXT:    cset w8, lt
+; CHECK-SVE2-NEXT:    uzp1 p7.s, p9.s, p8.s
+; CHECK-SVE2-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-SVE2-NEXT:    ldr p9, [sp, #2, mul vl] // 2-byte Folded Reload
+; CHECK-SVE2-NEXT:    uzp1 p4.s, p10.s, p4.s
+; CHECK-SVE2-NEXT:    ldr p10, [sp, #1, mul vl] // 2-byte Folded Reload
+; CHECK-SVE2-NEXT:    uzp1 p0.s, p0.s, p6.s
+; CHECK-SVE2-NEXT:    ldr p8, [sp, #3, mul vl] // 2-byte Folded Reload
+; CHECK-SVE2-NEXT:    uzp1 p5.h, p7.h, p5.h
 ; CHECK-SVE2-NEXT:    ldr p7, [sp, #4, mul vl] // 2-byte Folded Reload
-; CHECK-SVE2-NEXT:    uzp1 p2.h, p3.h, p2.h
-; CHECK-SVE2-NEXT:    uzp1 p3.h, p4.h, p5.h
+; CHECK-SVE2-NEXT:    uzp1 p0.h, p0.h, p4.h
+; CHECK-SVE2-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-SVE2-NEXT:    whilelo p4.b, xzr, x8
+; CHECK-SVE2-NEXT:    uzp1 p3.b, p0.b, p5.b
 ; CHECK-SVE2-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-SVE2-NEXT:    sel p0.b, p2, p2.b, p1.b
+; CHECK-SVE2-NEXT:    sel p1.b, p3, p3.b, p4.b
 ; CHECK-SVE2-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
-; CHECK-SVE2-NEXT:    uzp1 p0.b, p0.b, p1.b
-; CHECK-SVE2-NEXT:    uzp1 p1.b, p3.b, p2.b
 ; CHECK-SVE2-NEXT:    addvl sp, sp, #1
 ; CHECK-SVE2-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE2-NEXT:    ret
@@ -2067,35 +1691,6 @@ define <vscale x 32 x i1> @whilewr_64_split4(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    addvl sp, sp, #1
 ; CHECK-SVE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE-NEXT:    ret
-; CHECK-NOSVE-LABEL: whilewr_64_split2:
-; CHECK-NOSVE:       // %bb.0: // %entry
-; CHECK-NOSVE-NEXT:    sub x8, x1, x0
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI15_1
-; CHECK-NOSVE-NEXT:    adrp x11, .LCPI15_2
-; CHECK-NOSVE-NEXT:    add x9, x8, #7
-; CHECK-NOSVE-NEXT:    cmp x8, #0
-; CHECK-NOSVE-NEXT:    ldr q2, [x10, :lo12:.LCPI15_1]
-; CHECK-NOSVE-NEXT:    csel x8, x9, x8, lt
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI15_0
-; CHECK-NOSVE-NEXT:    ldr q3, [x11, :lo12:.LCPI15_2]
-; CHECK-NOSVE-NEXT:    asr x8, x8, #3
-; CHECK-NOSVE-NEXT:    ldr q1, [x9, :lo12:.LCPI15_0]
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI15_3
-; CHECK-NOSVE-NEXT:    ldr q4, [x9, :lo12:.LCPI15_3]
-; CHECK-NOSVE-NEXT:    dup v0.2d, x8
-; CHECK-NOSVE-NEXT:    cmp x8, #1
-; CHECK-NOSVE-NEXT:    cset w8, lt
-; CHECK-NOSVE-NEXT:    cmhi v1.2d, v0.2d, v1.2d
-; CHECK-NOSVE-NEXT:    cmhi v2.2d, v0.2d, v2.2d
-; CHECK-NOSVE-NEXT:    cmhi v3.2d, v0.2d, v3.2d
-; CHECK-NOSVE-NEXT:    cmhi v0.2d, v0.2d, v4.2d
-; CHECK-NOSVE-NEXT:    uzp1 v1.4s, v2.4s, v1.4s
-; CHECK-NOSVE-NEXT:    uzp1 v0.4s, v0.4s, v3.4s
-; CHECK-NOSVE-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-NOSVE-NEXT:    dup v1.8b, w8
-; CHECK-NOSVE-NEXT:    xtn v0.8b, v0.8h
-; CHECK-NOSVE-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NOSVE-NEXT:    ret
 entry:
   %0 = call <vscale x 32 x i1> @llvm.loop.dependence.war.mask.nxv32i1(ptr %a, ptr %b, i64 8)
   ret <vscale x 32 x i1> %0
@@ -2158,57 +1753,6 @@ define <vscale x 9 x i1> @whilewr_8_widen(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    addvl sp, sp, #1
 ; CHECK-SVE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE-NEXT:    ret
-; CHECK-NOSVE-LABEL: whilewr_8_widen:
-; CHECK-NOSVE:       // %bb.0: // %entry
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI16_0
-; CHECK-NOSVE-NEXT:    sub x11, x1, x0
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI16_1
-; CHECK-NOSVE-NEXT:    adrp x12, .LCPI16_2
-; CHECK-NOSVE-NEXT:    ldr q0, [x9, :lo12:.LCPI16_0]
-; CHECK-NOSVE-NEXT:    dup v1.2d, x11
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI16_3
-; CHECK-NOSVE-NEXT:    ldr q2, [x10, :lo12:.LCPI16_1]
-; CHECK-NOSVE-NEXT:    ldr q3, [x12, :lo12:.LCPI16_2]
-; CHECK-NOSVE-NEXT:    ldr q4, [x9, :lo12:.LCPI16_3]
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI16_4
-; CHECK-NOSVE-NEXT:    cmp x11, #1
-; CHECK-NOSVE-NEXT:    cmhi v0.2d, v1.2d, v0.2d
-; CHECK-NOSVE-NEXT:    cmhi v2.2d, v1.2d, v2.2d
-; CHECK-NOSVE-NEXT:    cmhi v3.2d, v1.2d, v3.2d
-; CHECK-NOSVE-NEXT:    cmhi v4.2d, v1.2d, v4.2d
-; CHECK-NOSVE-NEXT:    ldr q5, [x10, :lo12:.LCPI16_4]
-; CHECK-NOSVE-NEXT:    cset w9, lt
-; CHECK-NOSVE-NEXT:    uzp1 v0.4s, v2.4s, v0.4s
-; CHECK-NOSVE-NEXT:    cmhi v1.2d, v1.2d, v5.2d
-; CHECK-NOSVE-NEXT:    uzp1 v2.4s, v4.4s, v3.4s
-; CHECK-NOSVE-NEXT:    xtn v1.2s, v1.2d
-; CHECK-NOSVE-NEXT:    uzp1 v0.8h, v2.8h, v0.8h
-; CHECK-NOSVE-NEXT:    uzp1 v1.4h, v1.4h, v0.4h
-; CHECK-NOSVE-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
-; CHECK-NOSVE-NEXT:    dup v1.16b, w9
-; CHECK-NOSVE-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-NOSVE-NEXT:    umov w9, v0.b[0]
-; CHECK-NOSVE-NEXT:    umov w10, v0.b[1]
-; CHECK-NOSVE-NEXT:    umov w11, v0.b[2]
-; CHECK-NOSVE-NEXT:    umov w12, v0.b[7]
-; CHECK-NOSVE-NEXT:    and w9, w9, #0x1
-; CHECK-NOSVE-NEXT:    bfi w9, w10, #1, #1
-; CHECK-NOSVE-NEXT:    umov w10, v0.b[3]
-; CHECK-NOSVE-NEXT:    bfi w9, w11, #2, #1
-; CHECK-NOSVE-NEXT:    umov w11, v0.b[4]
-; CHECK-NOSVE-NEXT:    bfi w9, w10, #3, #1
-; CHECK-NOSVE-NEXT:    umov w10, v0.b[5]
-; CHECK-NOSVE-NEXT:    bfi w9, w11, #4, #1
-; CHECK-NOSVE-NEXT:    umov w11, v0.b[6]
-; CHECK-NOSVE-NEXT:    bfi w9, w10, #5, #1
-; CHECK-NOSVE-NEXT:    umov w10, v0.b[8]
-; CHECK-NOSVE-NEXT:    bfi w9, w11, #6, #1
-; CHECK-NOSVE-NEXT:    ubfiz w11, w12, #7, #1
-; CHECK-NOSVE-NEXT:    orr w9, w9, w11
-; CHECK-NOSVE-NEXT:    orr w9, w9, w10, lsl #8
-; CHECK-NOSVE-NEXT:    and w9, w9, #0x1ff
-; CHECK-NOSVE-NEXT:    strh w9, [x8]
-; CHECK-NOSVE-NEXT:    ret
 entry:
   %0 = call <vscale x 9 x i1> @llvm.loop.dependence.war.mask.nxv9i1(ptr %a, ptr %b, i64 1)
   ret <vscale x 9 x i1> %0
@@ -2247,40 +1791,6 @@ define <vscale x 7 x i1> @whilewr_16_widen(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    whilelo p1.h, xzr, x8
 ; CHECK-SVE-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-SVE-NEXT:    ret
-; CHECK-NOSVE-LABEL: whilewr_16_widen:
-; CHECK-NOSVE:       // %bb.0: // %entry
-; CHECK-NOSVE-NEXT:    sub x8, x1, x0
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI17_0
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI17_1
-; CHECK-NOSVE-NEXT:    add x8, x8, x8, lsr #63
-; CHECK-NOSVE-NEXT:    adrp x11, .LCPI17_2
-; CHECK-NOSVE-NEXT:    adrp x12, .LCPI17_3
-; CHECK-NOSVE-NEXT:    ldr q1, [x9, :lo12:.LCPI17_0]
-; CHECK-NOSVE-NEXT:    ldr q2, [x10, :lo12:.LCPI17_1]
-; CHECK-NOSVE-NEXT:    ldr q3, [x11, :lo12:.LCPI17_2]
-; CHECK-NOSVE-NEXT:    asr x8, x8, #1
-; CHECK-NOSVE-NEXT:    ldr q4, [x12, :lo12:.LCPI17_3]
-; CHECK-NOSVE-NEXT:    dup v0.2d, x8
-; CHECK-NOSVE-NEXT:    cmp x8, #1
-; CHECK-NOSVE-NEXT:    cset w8, lt
-; CHECK-NOSVE-NEXT:    cmhi v1.2d, v0.2d, v1.2d
-; CHECK-NOSVE-NEXT:    cmhi v2.2d, v0.2d, v2.2d
-; CHECK-NOSVE-NEXT:    cmhi v3.2d, v0.2d, v3.2d
-; CHECK-NOSVE-NEXT:    cmhi v0.2d, v0.2d, v4.2d
-; CHECK-NOSVE-NEXT:    uzp1 v1.4s, v2.4s, v1.4s
-; CHECK-NOSVE-NEXT:    uzp1 v0.4s, v0.4s, v3.4s
-; CHECK-NOSVE-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
-; CHECK-NOSVE-NEXT:    dup v1.8b, w8
-; CHECK-NOSVE-NEXT:    xtn v0.8b, v0.8h
-; CHECK-NOSVE-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NOSVE-NEXT:    umov w0, v0.b[0]
-; CHECK-NOSVE-NEXT:    umov w1, v0.b[1]
-; CHECK-NOSVE-NEXT:    umov w2, v0.b[2]
-; CHECK-NOSVE-NEXT:    umov w3, v0.b[3]
-; CHECK-NOSVE-NEXT:    umov w4, v0.b[4]
-; CHECK-NOSVE-NEXT:    umov w5, v0.b[5]
-; CHECK-NOSVE-NEXT:    umov w6, v0.b[6]
-; CHECK-NOSVE-NEXT:    ret
 entry:
   %0 = call <vscale x 7 x i1> @llvm.loop.dependence.war.mask.nxv7i1(ptr %a, ptr %b, i64 2)
   ret <vscale x 7 x i1> %0
@@ -2313,30 +1823,6 @@ define <vscale x 3 x i1> @whilewr_32_widen(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    whilelo p1.s, xzr, x8
 ; CHECK-SVE-NEXT:    sel p0.b, p0, p0.b, p1.b
 ; CHECK-SVE-NEXT:    ret
-; CHECK-NOSVE-LABEL: whilewr_32_widen:
-; CHECK-NOSVE:       // %bb.0: // %entry
-; CHECK-NOSVE-NEXT:    sub x9, x1, x0
-; CHECK-NOSVE-NEXT:    adrp x8, .LCPI18_0
-; CHECK-NOSVE-NEXT:    add x10, x9, #3
-; CHECK-NOSVE-NEXT:    cmp x9, #0
-; CHECK-NOSVE-NEXT:    ldr q1, [x8, :lo12:.LCPI18_0]
-; CHECK-NOSVE-NEXT:    csel x9, x10, x9, lt
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI18_1
-; CHECK-NOSVE-NEXT:    asr x9, x9, #2
-; CHECK-NOSVE-NEXT:    ldr q2, [x10, :lo12:.LCPI18_1]
-; CHECK-NOSVE-NEXT:    dup v0.2d, x9
-; CHECK-NOSVE-NEXT:    cmp x9, #1
-; CHECK-NOSVE-NEXT:    cset w8, lt
-; CHECK-NOSVE-NEXT:    cmhi v1.2d, v0.2d, v1.2d
-; CHECK-NOSVE-NEXT:    cmhi v0.2d, v0.2d, v2.2d
-; CHECK-NOSVE-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
-; CHECK-NOSVE-NEXT:    dup v1.4h, w8
-; CHECK-NOSVE-NEXT:    xtn v0.4h, v0.4s
-; CHECK-NOSVE-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-NOSVE-NEXT:    umov w0, v0.h[0]
-; CHECK-NOSVE-NEXT:    umov w1, v0.h[1]
-; CHECK-NOSVE-NEXT:    umov w2, v0.h[2]
-; CHECK-NOSVE-NEXT:    ret
 entry:
   %0 = call <vscale x 3 x i1> @llvm.loop.dependence.war.mask.nxv3i1(ptr %a, ptr %b, i64 4)
   ret <vscale x 3 x i1> %0
@@ -2458,50 +1944,6 @@ define <vscale x 16 x i1> @whilewr_badimm(ptr %a, ptr %b) {
 ; CHECK-SVE-NEXT:    addvl sp, sp, #1
 ; CHECK-SVE-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-SVE-NEXT:    ret
-; CHECK-NOSVE-LABEL: whilewr_badimm:
-; CHECK-NOSVE:       // %bb.0: // %entry
-; CHECK-NOSVE-NEXT:    mov x8, #6148914691236517205 // =0x5555555555555555
-; CHECK-NOSVE-NEXT:    sub x9, x1, x0
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI22_1
-; CHECK-NOSVE-NEXT:    movk x8, #21846
-; CHECK-NOSVE-NEXT:    ldr q1, [x10, :lo12:.LCPI22_1]
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI22_3
-; CHECK-NOSVE-NEXT:    smulh x8, x9, x8
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI22_0
-; CHECK-NOSVE-NEXT:    ldr q3, [x10, :lo12:.LCPI22_3]
-; CHECK-NOSVE-NEXT:    ldr q0, [x9, :lo12:.LCPI22_0]
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI22_2
-; CHECK-NOSVE-NEXT:    adrp x10, .LCPI22_5
-; CHECK-NOSVE-NEXT:    ldr q2, [x9, :lo12:.LCPI22_2]
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI22_4
-; CHECK-NOSVE-NEXT:    ldr q6, [x10, :lo12:.LCPI22_5]
-; CHECK-NOSVE-NEXT:    ldr q5, [x9, :lo12:.LCPI22_4]
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI22_6
-; CHECK-NOSVE-NEXT:    ldr q7, [x9, :lo12:.LCPI22_6]
-; CHECK-NOSVE-NEXT:    adrp x9, .LCPI22_7
-; CHECK-NOSVE-NEXT:    add x8, x8, x8, lsr #63
-; CHECK-NOSVE-NEXT:    ldr q16, [x9, :lo12:.LCPI22_7]
-; CHECK-NOSVE-NEXT:    dup v4.2d, x8
-; CHECK-NOSVE-NEXT:    cmp x8, #1
-; CHECK-NOSVE-NEXT:    cset w8, lt
-; CHECK-NOSVE-NEXT:    cmhi v0.2d, v4.2d, v0.2d
-; CHECK-NOSVE-NEXT:    cmhi v1.2d, v4.2d, v1.2d
-; CHECK-NOSVE-NEXT:    cmhi v2.2d, v4.2d, v2.2d
-; CHECK-NOSVE-NEXT:    cmhi v3.2d, v4.2d, v3.2d
-; CHECK-NOSVE-NEXT:    cmhi v5.2d, v4.2d, v5.2d
-; CHECK-NOSVE-NEXT:    cmhi v6.2d, v4.2d, v6.2d
-; CHECK-NOSVE-NEXT:    cmhi v7.2d, v4.2d, v7.2d
-; CHECK-NOSVE-NEXT:    cmhi v4.2d, v4.2d, v16.2d
-; CHECK-NOSVE-NEXT:    uzp1 v0.4s, v1.4s, v0.4s
-; CHECK-NOSVE-NEXT:    uzp1 v1.4s, v3.4s, v2.4s
-; CHECK-NOSVE-NEXT:    uzp1 v2.4s, v6.4s, v5.4s
-; CHECK-NOSVE-NEXT:    uzp1 v3.4s, v4.4s, v7.4s
-; CHECK-NOSVE-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
-; CHECK-NOSVE-NEXT:    uzp1 v1.8h, v3.8h, v2.8h
-; CHECK-NOSVE-NEXT:    uzp1 v0.16b, v1.16b, v0.16b
-; CHECK-NOSVE-NEXT:    dup v1.16b, w8
-; CHECK-NOSVE-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-NOSVE-NEXT:    ret
 entry:
   %0 = call <vscale x 16 x i1> @llvm.loop.dependence.war.mask.nxv16i1(ptr %a, ptr %b, i64 3)
   ret <vscale x 16 x i1> %0
