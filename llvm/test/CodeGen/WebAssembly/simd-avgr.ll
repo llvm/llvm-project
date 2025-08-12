@@ -15,7 +15,7 @@ define void @f(ptr %x, ptr %y, i32 %n) {
 ; CHECK-NEXT:    i32.lt_s $push1=, $2, $pop0
 ; CHECK-NEXT:    br_if 0, $pop1 # 0: down to label0
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
-; CHECK-NEXT:    i32.const $5=, 0
+; CHECK-NEXT:    i32.const $3=, 0
 ; CHECK-NEXT:    block
 ; CHECK-NEXT:    i32.const $push2=, 16
 ; CHECK-NEXT:    i32.lt_u $push3=, $2, $pop2
@@ -31,99 +31,93 @@ define void @f(ptr %x, ptr %y, i32 %n) {
 ; CHECK-NEXT:    br_if 1, $pop7 # 1: down to label1
 ; CHECK-NEXT:  .LBB0_4: # %vector.ph
 ; CHECK-NEXT:    end_block # label2:
-; CHECK-NEXT:    local.copy $6=, $0
-; CHECK-NEXT:    local.copy $7=, $1
+; CHECK-NEXT:    local.copy $4=, $0
+; CHECK-NEXT:    local.copy $5=, $1
 ; CHECK-NEXT:    i32.const $push8=, 2147483632
-; CHECK-NEXT:    i32.and $push34=, $2, $pop8
-; CHECK-NEXT:    local.tee $push33=, $5=, $pop34
-; CHECK-NEXT:    local.copy $8=, $pop33
+; CHECK-NEXT:    i32.and $push33=, $2, $pop8
+; CHECK-NEXT:    local.tee $push32=, $3=, $pop33
+; CHECK-NEXT:    local.copy $6=, $pop32
 ; CHECK-NEXT:  .LBB0_5: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    loop # label3:
-; CHECK-NEXT:    v128.load $push44=, 0($6):p2align=0
-; CHECK-NEXT:    local.tee $push43=, $4=, $pop44
-; CHECK-NEXT:    v128.load $push42=, 0($7):p2align=0
-; CHECK-NEXT:    local.tee $push41=, $3=, $pop42
-; CHECK-NEXT:    v128.or $push9=, $pop43, $pop41
-; CHECK-NEXT:    v128.xor $push10=, $4, $3
-; CHECK-NEXT:    i32.const $push40=, 1
-; CHECK-NEXT:    i8x16.shr_u $push11=, $pop10, $pop40
-; CHECK-NEXT:    i8x16.sub $push12=, $pop9, $pop11
-; CHECK-NEXT:    v128.store 0($6):p2align=0, $pop12
-; CHECK-NEXT:    i32.const $push39=, 16
-; CHECK-NEXT:    i32.add $6=, $6, $pop39
+; CHECK-NEXT:    v128.load $push10=, 0($4):p2align=0
+; CHECK-NEXT:    v128.load $push9=, 0($5):p2align=0
+; CHECK-NEXT:    i8x16.avgr_u $push11=, $pop10, $pop9
+; CHECK-NEXT:    v128.store 0($4):p2align=0, $pop11
 ; CHECK-NEXT:    i32.const $push38=, 16
-; CHECK-NEXT:    i32.add $7=, $7, $pop38
-; CHECK-NEXT:    i32.const $push37=, -16
-; CHECK-NEXT:    i32.add $push36=, $8, $pop37
-; CHECK-NEXT:    local.tee $push35=, $8=, $pop36
-; CHECK-NEXT:    br_if 0, $pop35 # 0: up to label3
+; CHECK-NEXT:    i32.add $4=, $4, $pop38
+; CHECK-NEXT:    i32.const $push37=, 16
+; CHECK-NEXT:    i32.add $5=, $5, $pop37
+; CHECK-NEXT:    i32.const $push36=, -16
+; CHECK-NEXT:    i32.add $push35=, $6, $pop36
+; CHECK-NEXT:    local.tee $push34=, $6=, $pop35
+; CHECK-NEXT:    br_if 0, $pop34 # 0: up to label3
 ; CHECK-NEXT:  # %bb.6: # %middle.block
 ; CHECK-NEXT:    end_loop
-; CHECK-NEXT:    i32.eq $push13=, $2, $5
-; CHECK-NEXT:    br_if 1, $pop13 # 1: down to label0
+; CHECK-NEXT:    i32.eq $push12=, $2, $3
+; CHECK-NEXT:    br_if 1, $pop12 # 1: down to label0
 ; CHECK-NEXT:  .LBB0_7: # %for.body.preheader16
 ; CHECK-NEXT:    end_block # label1:
-; CHECK-NEXT:    i32.const $push46=, 1
-; CHECK-NEXT:    i32.or $6=, $5, $pop46
+; CHECK-NEXT:    i32.const $push40=, 1
+; CHECK-NEXT:    i32.or $4=, $3, $pop40
 ; CHECK-NEXT:    block
-; CHECK-NEXT:    i32.const $push45=, 1
-; CHECK-NEXT:    i32.and $push14=, $2, $pop45
-; CHECK-NEXT:    i32.eqz $push64=, $pop14
-; CHECK-NEXT:    br_if 0, $pop64 # 0: down to label4
+; CHECK-NEXT:    i32.const $push39=, 1
+; CHECK-NEXT:    i32.and $push13=, $2, $pop39
+; CHECK-NEXT:    i32.eqz $push58=, $pop13
+; CHECK-NEXT:    br_if 0, $pop58 # 0: down to label4
 ; CHECK-NEXT:  # %bb.8: # %for.body.prol
-; CHECK-NEXT:    i32.add $push50=, $0, $5
-; CHECK-NEXT:    local.tee $push49=, $7=, $pop50
-; CHECK-NEXT:    i32.load8_u $push17=, 0($7)
-; CHECK-NEXT:    i32.add $push15=, $1, $5
-; CHECK-NEXT:    i32.load8_u $push16=, 0($pop15)
-; CHECK-NEXT:    i32.add $push18=, $pop17, $pop16
-; CHECK-NEXT:    i32.const $push48=, 1
-; CHECK-NEXT:    i32.add $push19=, $pop18, $pop48
-; CHECK-NEXT:    i32.const $push47=, 1
-; CHECK-NEXT:    i32.shr_u $push20=, $pop19, $pop47
-; CHECK-NEXT:    i32.store8 0($pop49), $pop20
-; CHECK-NEXT:    local.copy $5=, $6
+; CHECK-NEXT:    i32.add $push44=, $0, $3
+; CHECK-NEXT:    local.tee $push43=, $5=, $pop44
+; CHECK-NEXT:    i32.load8_u $push16=, 0($5)
+; CHECK-NEXT:    i32.add $push14=, $1, $3
+; CHECK-NEXT:    i32.load8_u $push15=, 0($pop14)
+; CHECK-NEXT:    i32.add $push17=, $pop16, $pop15
+; CHECK-NEXT:    i32.const $push42=, 1
+; CHECK-NEXT:    i32.add $push18=, $pop17, $pop42
+; CHECK-NEXT:    i32.const $push41=, 1
+; CHECK-NEXT:    i32.shr_u $push19=, $pop18, $pop41
+; CHECK-NEXT:    i32.store8 0($pop43), $pop19
+; CHECK-NEXT:    local.copy $3=, $4
 ; CHECK-NEXT:  .LBB0_9: # %for.body.prol.loopexit
 ; CHECK-NEXT:    end_block # label4:
-; CHECK-NEXT:    i32.eq $push21=, $2, $6
-; CHECK-NEXT:    br_if 0, $pop21 # 0: down to label0
+; CHECK-NEXT:    i32.eq $push20=, $2, $4
+; CHECK-NEXT:    br_if 0, $pop20 # 0: down to label0
 ; CHECK-NEXT:  # %bb.10: # %for.body.preheader1
-; CHECK-NEXT:    i32.add $6=, $0, $5
-; CHECK-NEXT:    i32.add $7=, $1, $5
-; CHECK-NEXT:    i32.sub $8=, $2, $5
+; CHECK-NEXT:    i32.add $4=, $0, $3
+; CHECK-NEXT:    i32.add $5=, $1, $3
+; CHECK-NEXT:    i32.sub $6=, $2, $3
 ; CHECK-NEXT:  .LBB0_11: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    loop # label5:
-; CHECK-NEXT:    i32.load8_u $push23=, 0($6)
-; CHECK-NEXT:    i32.load8_u $push22=, 0($7)
-; CHECK-NEXT:    i32.add $push24=, $pop23, $pop22
-; CHECK-NEXT:    i32.const $push63=, 1
-; CHECK-NEXT:    i32.add $push25=, $pop24, $pop63
-; CHECK-NEXT:    i32.const $push62=, 1
-; CHECK-NEXT:    i32.shr_u $push26=, $pop25, $pop62
-; CHECK-NEXT:    i32.store8 0($6), $pop26
-; CHECK-NEXT:    i32.const $push61=, 1
-; CHECK-NEXT:    i32.add $push60=, $6, $pop61
-; CHECK-NEXT:    local.tee $push59=, $2=, $pop60
-; CHECK-NEXT:    i32.load8_u $push27=, 0($2)
-; CHECK-NEXT:    i32.const $push58=, 1
-; CHECK-NEXT:    i32.add $push28=, $7, $pop58
-; CHECK-NEXT:    i32.load8_u $push29=, 0($pop28)
-; CHECK-NEXT:    i32.add $push30=, $pop27, $pop29
+; CHECK-NEXT:    i32.load8_u $push22=, 0($4)
+; CHECK-NEXT:    i32.load8_u $push21=, 0($5)
+; CHECK-NEXT:    i32.add $push23=, $pop22, $pop21
 ; CHECK-NEXT:    i32.const $push57=, 1
-; CHECK-NEXT:    i32.add $push31=, $pop30, $pop57
+; CHECK-NEXT:    i32.add $push24=, $pop23, $pop57
 ; CHECK-NEXT:    i32.const $push56=, 1
-; CHECK-NEXT:    i32.shr_u $push32=, $pop31, $pop56
-; CHECK-NEXT:    i32.store8 0($pop59), $pop32
-; CHECK-NEXT:    i32.const $push55=, 2
-; CHECK-NEXT:    i32.add $6=, $6, $pop55
-; CHECK-NEXT:    i32.const $push54=, 2
-; CHECK-NEXT:    i32.add $7=, $7, $pop54
-; CHECK-NEXT:    i32.const $push53=, -2
-; CHECK-NEXT:    i32.add $push52=, $8, $pop53
-; CHECK-NEXT:    local.tee $push51=, $8=, $pop52
-; CHECK-NEXT:    br_if 0, $pop51 # 0: up to label5
+; CHECK-NEXT:    i32.shr_u $push25=, $pop24, $pop56
+; CHECK-NEXT:    i32.store8 0($4), $pop25
+; CHECK-NEXT:    i32.const $push55=, 1
+; CHECK-NEXT:    i32.add $push54=, $4, $pop55
+; CHECK-NEXT:    local.tee $push53=, $2=, $pop54
+; CHECK-NEXT:    i32.load8_u $push26=, 0($2)
+; CHECK-NEXT:    i32.const $push52=, 1
+; CHECK-NEXT:    i32.add $push27=, $5, $pop52
+; CHECK-NEXT:    i32.load8_u $push28=, 0($pop27)
+; CHECK-NEXT:    i32.add $push29=, $pop26, $pop28
+; CHECK-NEXT:    i32.const $push51=, 1
+; CHECK-NEXT:    i32.add $push30=, $pop29, $pop51
+; CHECK-NEXT:    i32.const $push50=, 1
+; CHECK-NEXT:    i32.shr_u $push31=, $pop30, $pop50
+; CHECK-NEXT:    i32.store8 0($pop53), $pop31
+; CHECK-NEXT:    i32.const $push49=, 2
+; CHECK-NEXT:    i32.add $4=, $4, $pop49
+; CHECK-NEXT:    i32.const $push48=, 2
+; CHECK-NEXT:    i32.add $5=, $5, $pop48
+; CHECK-NEXT:    i32.const $push47=, -2
+; CHECK-NEXT:    i32.add $push46=, $6, $pop47
+; CHECK-NEXT:    local.tee $push45=, $6=, $pop46
+; CHECK-NEXT:    br_if 0, $pop45 # 0: up to label5
 ; CHECK-NEXT:  .LBB0_12: # %for.cond.cleanup
 ; CHECK-NEXT:    end_loop
 ; CHECK-NEXT:    end_block # label0:
