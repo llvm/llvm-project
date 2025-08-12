@@ -569,7 +569,6 @@ public:
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree_node(_Args&&... __args)
       : __value_(std::forward<_Args>(__args)...) {}
-  // _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree_node()                             = default;
   ~__tree_node()                             = delete;
   __tree_node(__tree_node const&)            = delete;
   __tree_node& operator=(__tree_node const&) = delete;
