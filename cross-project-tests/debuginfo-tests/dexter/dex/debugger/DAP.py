@@ -129,6 +129,7 @@ class DAPDebuggerCapabilities:
             else:
                 logger.warning(f"DAP: Unknown support flag: {k}")
 
+
 # As DAP does not give us a trivially query-able process, we are responsible for maintaining our own state information,
 # including what breakpoints are currently set, and whether the debugger is running or stopped.
 # This class holds all state that is set based on events sent by the debug adapter; most responses are forwarded through
