@@ -234,10 +234,11 @@ void StableFunctionMapRecord::deserialize(const unsigned char *&Ptr,
   for (unsigned I = 0; I < NumFuncs; ++I) {
     auto Hash =
         endian::readNext<stable_hash, endianness::little, unaligned>(Ptr);
-    if (Lazy)
-      FunctionMap->HashToFuncs.try_emplace(Hash)
-          .first->second.Offsets.push_back(FixedSizeFieldsOffset);
-    else
+    if (Lazy) {
+      auto It = FunctionMap->HashToFuncs.try_emplace(Hash).first;
+      StableFunctionMap::EntryStorage &Storage = It->second;
+      Storage.Offsets.push_back(FixedSizeFieldsOffset);
+    } else
       deserializeEntry(
           reinterpret_cast<const unsigned char *>(FixedSizeFieldsOffset), Hash,
           FunctionMap.get());
