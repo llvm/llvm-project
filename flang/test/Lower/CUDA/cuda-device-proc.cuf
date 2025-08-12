@@ -58,6 +58,9 @@ attributes(global) subroutine devsub()
   res = __ffs(al)
   res = __brev(ai)
   resl = __brev(al)
+
+  ad = __dsqrt_rd(ad)
+  ad = __dsqrt_ru(ad)
 end
 
 ! CHECK-LABEL: func.func @_QPdevsub() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
@@ -104,6 +107,9 @@ end
 ! CHECK: %{{.*}} = fir.call @__nv_ffsll(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> i32
 ! CHECK: %{{.*}} = fir.call @__nv_brev(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> i32
 ! CHECK: %{{.*}} = fir.call @__nv_brevll(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> i64
+
+! CHECK: %{{.*}} = fir.call @__nv_dsqrt_rd(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
+! CHECK: %{{.*}} = fir.call @__nv_dsqrt_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
 
 subroutine host1()
   integer, device :: a(32)
