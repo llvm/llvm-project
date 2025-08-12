@@ -25,8 +25,8 @@ static llvm::StringLiteral kProtocolVersion = "2024-11-05";
 
 /// A Request or Response 'id'.
 ///
-/// NOTE: This differs from the JSONRPC-2.0 spec. The MCP spec says this must be
-/// a string or number, excluding a json 'null' as a valid id.
+/// NOTE: This differs from the JSON-RPC 2.0 spec. The MCP spec says this must
+/// be a string or number, excluding a json 'null' as a valid id.
 using Id = std::variant<int64_t, std::string>;
 
 /// A request that expects a response.
