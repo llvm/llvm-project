@@ -5561,6 +5561,67 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  bf16mul_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    bf16mul_test.cpp
+  HDRS
+    AddTest.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.math.bf16mul
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
+  bf16mulf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    bf16mulf_test.cpp
+  HDRS
+    MulTest.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.math.bf16mulf
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
+  bf16mull_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    bf16mull_test.cpp
+  HDRS
+    MulTest.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.math.bf16mull
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
+  bf16mulf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    bf16mulf128_test.cpp
+  HDRS
+    MulTest.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.math.bf16mulf128
+    libc.src.__support.FPUtil.bfloat16
+)
+
+
+add_fp_unittest(
   bf16sub_test
   SUITE
     libc-math-smoke-tests
