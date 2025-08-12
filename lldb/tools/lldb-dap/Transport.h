@@ -29,7 +29,7 @@ public:
             lldb::IOObjectSP input, lldb::IOObjectSP output);
   virtual ~Transport() = default;
 
-  virtual void Log(llvm::StringRef message) override;
+  void Log(llvm::StringRef message) override;
 
   /// Returns the name of this transport client, for example `stdin/stdout` or
   /// `client_1`.
