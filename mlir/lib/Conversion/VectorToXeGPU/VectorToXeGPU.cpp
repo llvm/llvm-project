@@ -174,7 +174,7 @@ extraCheckForScatteredLoadStore(VectorTransferOpInterface xferOp,
             xferOp, "Vector rank cannot exceed memref rank");
       // Compare the last vectorRank dimensions of memref with vector shape
       for (size_t i = 0; i < vectorRank; ++i) {
-        if (memrefShape[memrefRank - vectorRank + i] <= vectorShape[i])
+        if (vectorShape[i] > memrefShape[memrefRank - vectorRank + i])
           return rewriter.notifyMatchFailure(
               xferOp, "Memref lower dimensions must match vector shape");
       }
@@ -225,15 +225,14 @@ SmallVector<Value> computeStrides(VectorTransferOpInterface xferOp,
   Value baseMemref = xferOp.getBase();
   AffineMap permMap = xferOp.getPermutationMap();
   VectorType vectorType = xferOp.getVectorType();
-  MemRefType memrefType = llvm::cast<MemRefType>(baseMemref.getType());
+  MemRefType memrefType = dyn_cast<MemRefType>(baseMemref.getType());
 
   Location loc = xferOp.getLoc();
   if (memrefType.hasStaticShape()) {
     int64_t offset;
     SmallVector<int64_t> intStrides;
-    if (failed(memrefType.getStridesAndOffset(intStrides, offset))) {
+    if (failed(memrefType.getStridesAndOffset(intStrides, offset)))
       return {};
-    }
     // Wrap static strides as MLIR values
     for (int64_t s : intStrides)
       strides.push_back(arith::ConstantIndexOp::create(rewriter, loc, s));
@@ -320,7 +319,7 @@ static Value computeOffsets(VectorTransferOpInterface xferOp,
   for (size_t i = 0; i < vectorRank; ++i) {
     size_t memrefDim = memrefRank - vectorRank + i;
     Value strideValue = strides[memrefDim];
-    auto mulType = llvm::cast<VectorType>(stepVectors[i].getType());
+    auto mulType = dyn_cast<VectorType>(stepVectors[i].getType());
     auto bcastOp =
         vector::BroadcastOp::create(rewriter, loc, mulType, strideValue);
     auto mulOp = arith::MulIOp::create(rewriter, loc, stepVectors[i], bcastOp);
@@ -381,32 +380,21 @@ static Value collapseMemrefTo1D(VectorTransferOpInterface xferOp,
   Location loc = xferOp.getLoc();
 
   Value baseMemref = xferOp.getBase();
-  MemRefType memrefType = llvm::cast<MemRefType>(baseMemref.getType());
+  MemRefType memrefType = dyn_cast<MemRefType>(baseMemref.getType());
   Type elementType = memrefType.getElementType();
 
   // Compute the total number of elements in the memref
-  int64_t totalElements = 1;
-  bool hasDynamicDim = false;
-  for (int64_t dim : memrefType.getShape()) {
-    if (dim == ShapedType::kDynamic) {
-      hasDynamicDim = true;
-      break;
-    }
-    totalElements *= dim;
-  }
-
   MemRefType flatMemrefType;
-  if (hasDynamicDim) {
-    flatMemrefType = MemRefType::get({ShapedType::kDynamic}, elementType);
-  } else {
+  if (memrefType.hasStaticShape()) {
+    auto totalElements = memrefType.getNumElements();
     flatMemrefType = MemRefType::get({totalElements}, elementType);
+  } else {
+    flatMemrefType = MemRefType::get({ShapedType::kDynamic}, elementType);
   }
 
   SmallVector<ReassociationIndices> reassociation;
-  ReassociationIndices allDims;
-  for (int i = 0; i < memrefType.getRank(); ++i) {
-    allDims.push_back(i);
-  }
+  ReassociationIndices allDims =
+      llvm::to_vector(llvm::seq<int64_t>(0, memrefType.getRank()));
   reassociation.push_back(allDims);
 
   auto collapseOp = memref::CollapseShapeOp::create(
@@ -414,49 +402,12 @@ static Value collapseMemrefTo1D(VectorTransferOpInterface xferOp,
   return collapseOp;
 }
 
-// Create XeGPU gather load operation
-static LogicalResult createLoadGather(vector::TransferReadOp readOp,
-                                      PatternRewriter &rewriter,
-                                      Value flatMemref, Value localOffsets) {
+LogicalResult lowerToRegularLoadOp(vector::TransferReadOp readOp,
+                                   PatternRewriter &rewriter) {
+
   Location loc = readOp.getLoc();
   VectorType vectorType = readOp.getVectorType();
   ArrayRef<int64_t> vectorShape = vectorType.getShape();
-  Value mask = vector::ConstantMaskOp::create(
-      rewriter, loc, VectorType::get(vectorShape, rewriter.getI1Type()),
-      vectorShape);
-  auto gatherOp = xegpu::LoadGatherOp::create(
-      rewriter, loc, vectorType, flatMemref, localOffsets, mask,
-      /*chunk_size=*/IntegerAttr{},
-      /*l1_hint=*/xegpu::CachePolicyAttr{},
-      /*l2_hint=*/xegpu::CachePolicyAttr{},
-      /*l3_hint=*/xegpu::CachePolicyAttr{});
-  rewriter.replaceOp(readOp, gatherOp.getResult());
-  return success();
-}
-
-// Create XeGPU store scatter operation
-static LogicalResult createStoreScatter(vector::TransferWriteOp writeOp,
-                                        PatternRewriter &rewriter, Value value,
-                                        Value flatMemref, Value localOffsets) {
-  Location loc = writeOp.getLoc();
-  VectorType vectorType = writeOp.getVectorType();
-  ArrayRef<int64_t> vectorShape = vectorType.getShape();
-  Value mask = vector::ConstantMaskOp::create(
-      rewriter, loc, VectorType::get(vectorShape, rewriter.getI1Type()),
-      vectorShape);
-  xegpu::StoreScatterOp::create(rewriter, loc, value, flatMemref, localOffsets,
-                                mask,
-                                /*chunk_size=*/IntegerAttr{},
-                                /*l1_hint=*/xegpu::CachePolicyAttr{},
-                                /*l2_hint=*/xegpu::CachePolicyAttr{},
-                                /*l3_hint=*/xegpu::CachePolicyAttr{});
-  rewriter.eraseOp(writeOp);
-  return success();
-}
-
-LogicalResult lowerTransferReadToLoadOp(vector::TransferReadOp readOp,
-                                        PatternRewriter &rewriter) {
-
   auto memrefType = dyn_cast<MemRefType>(readOp.getShapedType());
   if (!memrefType)
     return rewriter.notifyMatchFailure(readOp, "Expected memref source");
@@ -469,11 +420,26 @@ LogicalResult lowerTransferReadToLoadOp(vector::TransferReadOp readOp,
 
   Value flatMemref = collapseMemrefTo1D(readOp, rewriter);
 
-  return createLoadGather(readOp, rewriter, flatMemref, localOffsets);
+  Value mask = vector::ConstantMaskOp::create(
+      rewriter, loc, VectorType::get(vectorShape, rewriter.getI1Type()),
+      vectorShape);
+  auto gatherOp = xegpu::LoadGatherOp::create(
+      rewriter, loc, vectorType, flatMemref, localOffsets, mask,
+      /*chunk_size=*/IntegerAttr{},
+      /*l1_hint=*/xegpu::CachePolicyAttr{},
+      /*l2_hint=*/xegpu::CachePolicyAttr{},
+      /*l3_hint=*/xegpu::CachePolicyAttr{});
+
+  rewriter.replaceOp(readOp, gatherOp.getResult());
+  return success();
 }
 
-LogicalResult lowerTransferWriteToStoreOp(vector::TransferWriteOp writeOp,
-                                          PatternRewriter &rewriter) {
+LogicalResult lowerToRegularStoreOp(vector::TransferWriteOp writeOp,
+                                    PatternRewriter &rewriter) {
+
+  Location loc = writeOp.getLoc();
+  VectorType vectorType = writeOp.getVectorType();
+  ArrayRef<int64_t> vectorShape = vectorType.getShape();
 
   auto memrefType = dyn_cast<MemRefType>(writeOp.getShapedType());
   if (!memrefType)
@@ -485,8 +451,17 @@ LogicalResult lowerTransferWriteToStoreOp(vector::TransferWriteOp writeOp,
 
   Value flatMemref = collapseMemrefTo1D(writeOp, rewriter);
 
-  return createStoreScatter(writeOp, rewriter, writeOp.getVector(), flatMemref,
-                            localOffsets);
+  Value mask = vector::ConstantMaskOp::create(
+      rewriter, loc, VectorType::get(vectorShape, rewriter.getI1Type()),
+      vectorShape);
+  xegpu::StoreScatterOp::create(rewriter, loc, writeOp.getVector(), flatMemref,
+                                localOffsets, mask,
+                                /*chunk_size=*/IntegerAttr{},
+                                /*l1_hint=*/xegpu::CachePolicyAttr{},
+                                /*l2_hint=*/xegpu::CachePolicyAttr{},
+                                /*l3_hint=*/xegpu::CachePolicyAttr{});
+  rewriter.eraseOp(writeOp);
+  return success();
 }
 
 struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
@@ -499,14 +474,15 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
     if (failed(transferPreconditions(rewriter, readOp)))
       return failure();
 
-    auto chip = xegpu::getXeGPUChipStr(readOp);
+    // lower to regular load Op if the target HW is not PVC
     // TODO:This check needs to be replaced with proper uArch capability check
-    if ( chip != "pvc" && chip != "bmg") {
+    auto chip = xegpu::getXeGPUChipStr(readOp);
+    if (chip != "pvc" && chip != "bmg") {
       // perform additional checks -
       if (failed(extraCheckForScatteredLoadStore(readOp, rewriter)))
         return failure();
       // calling another function that lower TransferReadOp to regular Loadop
-      return lowerTransferReadToLoadOp(readOp, rewriter);
+      return lowerToRegularLoadOp(readOp, rewriter);
     }
 
     // Perform common data transfer checks.
@@ -569,14 +545,15 @@ struct TransferWriteLowering
     if (failed(transferPreconditions(rewriter, writeOp)))
       return failure();
 
-    auto chip = xegpu::getXeGPUChipStr(writeOp);
+    // lower to regular write Op if the target HW is not PVC
     // TODO:This check needs to be replaced with proper uArch capability check
+    auto chip = xegpu::getXeGPUChipStr(writeOp);
     if (chip != "pvc" && chip != "bmg") {
       // perform additional checks -
       if (failed(extraCheckForScatteredLoadStore(writeOp, rewriter)))
         return failure();
       // calling another function that lower TransferWriteOp to regular StoreOp
-      return lowerTransferWriteToStoreOp(writeOp, rewriter);
+      return lowerToRegularStoreOp(writeOp, rewriter);
     }
 
     // Perform common data transfer checks.
