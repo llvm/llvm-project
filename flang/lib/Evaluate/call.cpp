@@ -281,14 +281,16 @@ static void DetermineCopyInOutArgument(
   if (actual.isAlternateReturn()) {
     return;
   }
-  const auto *dummyObj = std::get_if<characteristics::DummyDataObject>(&dummy.u);
+  const auto *dummyObj =
+      std::get_if<characteristics::DummyDataObject>(&dummy.u);
   if (!dummyObj) {
     // Only DummyDataObject has the information we need
     return;
   }
   // Check actual contiguity, unless dummy doesn't care
-  bool actualContiguous = dummyObj->ignoreTKR.test(common::IgnoreTKR::Contiguous)
-      || IsSimplyContiguous(actual, sc.foldingContext());
+  bool actualContiguous =
+      dummyObj->ignoreTKR.test(common::IgnoreTKR::Contiguous) ||
+      IsSimplyContiguous(actual, sc.foldingContext());
   bool actualVectorSubscript = HasVectorSubscript(actual);
 
   // TODO
