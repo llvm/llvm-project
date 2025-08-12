@@ -377,8 +377,7 @@ struct __fn {
   template <class _Start>
     requires(requires(_Start __s) { ranges::iota_view<decay_t<_Start>>(std::forward<_Start>(__s)); })
   _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Start&& __start) const
-      noexcept(noexcept(ranges::iota_view<decay_t<_Start>>(std::forward<_Start>(__start))))
-          -> decltype(ranges::iota_view(std::forward<_Start>(__start))) {
+      noexcept(noexcept(ranges::iota_view<decay_t<_Start>>(std::forward<_Start>(__start)))) {
     return ranges::iota_view<decay_t<_Start>>(std::forward<_Start>(__start));
   }
 

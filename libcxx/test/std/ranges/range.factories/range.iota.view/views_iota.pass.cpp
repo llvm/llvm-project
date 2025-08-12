@@ -75,7 +75,10 @@ constexpr bool test() {
     static_assert(!CanDoubleWrap<int>);
     static_assert(!CanDoubleWrap<SomeInt>);
 
+    static_assert(!std::is_invocable_v<decltype(std::views::iota), decltype(std::views::iota(0))>);
     static_assert(!std::is_invocable_v<decltype(std::views::iota), decltype(std::views::iota(82))>);
+    static_assert(!std::is_invocable_v<decltype(std::views::iota), decltype(std::views::iota(SomeInt(0)))>);
+    static_assert(!std::is_invocable_v<decltype(std::views::iota), decltype(std::views::iota(SomeInt(94)))>);
   }
 
   return true;
