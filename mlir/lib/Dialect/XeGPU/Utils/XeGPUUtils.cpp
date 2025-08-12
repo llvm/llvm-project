@@ -408,16 +408,19 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(
 }
 
 std::optional<std::string> xegpu::getXeGPUChipStr(Operation *op) {
-  auto gpuModuleOp = op->getParentOfType<mlir::gpu::GPUModuleOp>();
-  if (gpuModuleOp) {
-    auto targetAttrs = gpuModuleOp.getTargets();
-    if (targetAttrs) {
-      for (auto &attr : *targetAttrs) {
-        auto xevmAttr = llvm::dyn_cast<mlir::xevm::XeVMTargetAttr>(attr);
-        if (xevmAttr)
-          return xevmAttr.getChip().str();
-      }
+  auto gpuModuleOp = op->getParentOfType<gpu::GPUModuleOp>();
+
+  if (!gpuModuleOp)
+    return std::nullopt;
+
+  auto targetAttrs = gpuModuleOp.getTargets();
+  if (targetAttrs) {
+    for (auto &attr : *targetAttrs) {
+      auto xevmAttr = llvm::dyn_cast<xevm::XeVMTargetAttr>(attr);
+      if (xevmAttr)
+        return xevmAttr.getChip().str();
     }
   }
+
   return std::nullopt;
 }

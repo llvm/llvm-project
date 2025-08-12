@@ -161,6 +161,37 @@ gpu.func @no_store_transposed(%vec: vector<8x16xf32>,
 
 // -----
 gpu.module @xevm_module {
+gpu.func @store_high_dim_vector(%vec: vector<8x16x32xf32>,
+    %source: memref<16x32x64xf32>, %offset: index) {
+  vector.transfer_write %vec, %source[%offset, %offset, %offset]
+    {in_bounds = [true, true, true]}
+    : vector<8x16x32xf32>, memref<16x32x64xf32>
+  gpu.return
+}
+
+// STORE-ND-LABEL: @store_high_dim_vector(
+// STORE-ND:       vector.transfer_write
+
+// STORE-SCATTER-LABEL:  @store_high_dim_vector(
+// STORE-SCATTER-SAME:   %[[VEC:.+]]: vector<8x16x32xf32>,
+// STORE-SCATTER-SAME:   %[[SRC:.+]]: memref<16x32x64xf32>
+// STORE-SCATTER:        %[[CST:.+]] = arith.constant dense<true> : vector<8x16x32xi1>
+// STORE-SCATTER:        %[[CST_0:.+]] = arith.constant dense<64> : vector<16xindex>
+// STORE-SCATTER:        %[[CST_1:.+]] = arith.constant dense<2048> : vector<8xindex>
+// STORE-SCATTER:        %[[C2048:.+]] = arith.constant 2048 : index
+// STORE-SCATTER:        %[[C64:.+]] = arith.constant 64 : index
+// STORE-SCATTER-COUNT3: vector.step
+// STORE-SCATTER-COUNT3: vector.shape_cast
+// STORE-SCATTER-COUNT3: vector.broadcast {{.*}} : vector<8x16x32xindex>
+// STORE-SCATTER-COUNT2: arith.addi {{.*}} : vector<8x16x32xindex>
+// STORE-SCATTER:        %[[BCASTOFF:.+]] = vector.broadcast {{.*}} : index to vector<8x16x32xindex>
+// STORE-SCATTER:        %[[IDX:.+]] = arith.addi %[[BCASTOFF]], {{.*}} : vector<8x16x32xindex>
+// STORE-SCATTER:        %[[COLLAPSE:.+]] = memref.collapse_shape %[[SRC]] {{\[}}[0, 1, 2]{{\]}} : memref<16x32x64xf32> into memref<32768xf32>
+// STORE-SCATTER:        xegpu.store %[[VEC]], %[[COLLAPSE]][%[[IDX]]], %[[CST]] : vector<8x16x32xf32>, memref<32768xf32>, vector<8x16x32xindex>, vector<8x16x32xi1> 
+}
+
+// -----
+gpu.module @xevm_module {
 gpu.func @no_store_masked(%vec: vector<4xf32>,
     %source: memref<4xf32>, %offset: index) {
   %mask = arith.constant dense<[0, 1, 0, 1]> : vector<4xi1>
@@ -192,37 +223,6 @@ gpu.func @no_store_tensor(%vec: vector<8x16xf32>,
 
 // STORE-SCATTER-LABEL:  @no_store_tensor(
 // STORE-SCATTER:        vector.transfer_write
-}
-
-// -----
-gpu.module @xevm_module {
-gpu.func @no_store_high_dim_vector(%vec: vector<8x16x32xf32>,
-    %source: memref<16x32x64xf32>, %offset: index) {
-  vector.transfer_write %vec, %source[%offset, %offset, %offset]
-    {in_bounds = [true, true, true]}
-    : vector<8x16x32xf32>, memref<16x32x64xf32>
-  gpu.return
-}
-
-// STORE-ND-LABEL: @no_store_high_dim_vector(
-// STORE-ND:       vector.transfer_write
-
-// STORE-SCATTER-LABEL:  @no_store_high_dim_vector(
-// STORE-SCATTER-SAME:   %[[VEC:.+]]: vector<8x16x32xf32>,
-// STORE-SCATTER-SAME:   %[[SRC:.+]]: memref<16x32x64xf32>
-// STORE-SCATTER:        %[[CST:.+]] = arith.constant dense<true> : vector<8x16x32xi1>
-// STORE-SCATTER:        %[[CST_0:.+]] = arith.constant dense<64> : vector<16xindex>
-// STORE-SCATTER:        %[[CST_1:.+]] = arith.constant dense<2048> : vector<8xindex>
-// STORE-SCATTER:        %[[C2048:.+]] = arith.constant 2048 : index
-// STORE-SCATTER:        %[[C64:.+]] = arith.constant 64 : index
-// STORE-SCATTER-COUNT3: vector.step
-// STORE-SCATTER-COUNT3: vector.shape_cast
-// STORE-SCATTER-COUNT3: vector.broadcast {{.*}} : vector<8x16x32xindex>
-// STORE-SCATTER-COUNT2: arith.addi {{.*}} : vector<8x16x32xindex>
-// STORE-SCATTER:        %[[BCASTOFF:.+]] = vector.broadcast {{.*}} : index to vector<8x16x32xindex>
-// STORE-SCATTER:        %[[IDX:.+]] = arith.addi %[[BCASTOFF]], {{.*}} : vector<8x16x32xindex>
-// STORE-SCATTER:        %[[COLLAPSE:.+]] = memref.collapse_shape %[[SRC]] {{\[}}[0, 1, 2]{{\]}} : memref<16x32x64xf32> into memref<32768xf32>
-// STORE-SCATTER:        xegpu.store %[[VEC]], %[[COLLAPSE]][%[[IDX]]], %[[CST]] : vector<8x16x32xf32>, memref<32768xf32>, vector<8x16x32xindex>, vector<8x16x32xi1> 
 }
 
 // -----

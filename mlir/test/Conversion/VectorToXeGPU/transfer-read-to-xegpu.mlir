@@ -231,6 +231,64 @@ gpu.func @load_dynamic_source3(%source: memref<?x?x?x?x?xf32>,
 
 // -----
 gpu.module @xevm_module {
+gpu.func @load_high_dim_vector(%source: memref<16x32x64xf32>,
+    %offset: index, %arg2: index) -> vector<8x16x32xf32> {
+  %c0 = arith.constant 0.0 : f32
+  %0 = vector.transfer_read %source[%offset, %arg2, %offset], %c0
+    {in_bounds = [true, true, true]} : memref<16x32x64xf32>, vector<8x16x32xf32>
+  gpu.return %0 : vector<8x16x32xf32>
+}
+
+// LOAD-ND-LABEL:  @load_high_dim_vector(
+// LOAD-ND:        vector.transfer_read
+
+// LOAD-GATHER-LABEL:  @load_high_dim_vector(
+// LOAD-GATHER:        %[[CST:.+]] = arith.constant dense<true> : vector<8x16x32xi1>
+// LOAD-GATHER:        %[[CST_0:.+]] = arith.constant dense<64> : vector<16xindex>
+// LOAD-GATHER:        %[[CST_1:.+]] = arith.constant dense<2048> : vector<8xindex>
+// LOAD-GATHER:        %[[C2048:.+]] = arith.constant 2048 : index
+// LOAD-GATHER:        %[[C64:.+]] = arith.constant 64 : index
+// LOAD-GATHER-COUNT3: vector.step
+// LOAD-GATHER-COUNT3: vector.shape_cast
+// LOAD-GATHER-COUNT3: vector.broadcast {{.*}} : vector<8x16x32xindex>
+// LOAD-GATHER-COUNT2: arith.addi {{.*}} : vector<8x16x32xindex>
+// LOAD-GATHER:        %[[BCASTOFF:.+]] = vector.broadcast {{.*}} : index to vector<8x16x32xindex>
+// LOAD-GATHER:        %[[IDX:.+]] = arith.addi %[[BCASTOFF]], {{.*}} : vector<8x16x32xindex>
+// LOAD-GATHER:        %[[COLLAPSE:.+]] = memref.collapse_shape %arg0 {{\[}}[0, 1, 2]{{\]}} : memref<16x32x64xf32> into memref<32768xf32>
+// LOAD-GATHER:        %[[VEC:.+]] = xegpu.load %[[COLLAPSE]][%[[IDX]]], %[[CST]] : memref<32768xf32>, vector<8x16x32xindex>, vector<8x16x32xi1> -> vector<8x16x32xf32>
+
+}
+
+// -----
+gpu.module @xevm_module {
+gpu.func @load_transpose_f16(%source: memref<32x64xf16>,
+    %offset: index) -> vector<8x16xf16> {
+  %c0 = arith.constant 0.0 : f16
+  %0 = vector.transfer_read %source[%offset, %offset], %c0
+    {permutation_map = affine_map<(d0, d1) -> (d1, d0)>,
+    in_bounds = [true, true]} : memref<32x64xf16>, vector<8x16xf16>
+  gpu.return %0 : vector<8x16xf16>
+}
+
+// LOAD-ND-LABEL:  @load_transpose_f16(
+// LOAD-ND:        vector.transfer_read
+
+// LOAD-GATHER-LABEL:  @load_transpose_f16(
+// LOAD-GATHER-SAME:    %[[SRC:.+]]: memref<32x64xf16>,
+// LOAD-GATHER:         %[[CST:.+]] = arith.constant dense<true> : vector<8x16xi1>
+// LOAD-GATHER-COUNT2:  vector.step
+// LOAD-GATHER-COUNT2:  vector.shape_cast
+// LOAD-GATHER-COUNT2: vector.broadcast
+// LOAD-GATHER-COUNT2: arith.muli {{.*}} : index
+// LOAD-GATHER-COUNT2: arith.addi {{.*}} : index
+// LOAD-GATHER:        %[[BCAST2:.+]] = vector.broadcast {{.*}} : index to vector<8x16xindex>
+// LOAD-GATHER:        %[[IDX:.+]] = arith.addi %[[BCAST2]], {{.*}}: vector<8x16xindex>
+// LOAD-GATHER:        %[[COLLAPSE:.*]] = memref.collapse_shape %arg0 {{\[\[}}0, 1{{\]\]}} : memref<32x64xf16> into memref<2048xf16>
+// LOAD-GATHER:        %[[LOAD:.*]] = xegpu.load %[[COLLAPSE]][%[[IDX]]], %[[CST]] : memref<2048xf16>, vector<8x16xindex>, vector<8x16xi1> -> vector<8x16xf16>
+}
+
+// -----
+gpu.module @xevm_module {
 gpu.func @no_load_out_of_bounds_non_zero_pad(%source: memref<32x64xf32>,
     %offset: index, %arg2: index, %pad: f32) -> (vector<8x16xf32>, vector<8x16xf32>) {
   %c1 = arith.constant 1.0 : f32
@@ -300,35 +358,6 @@ gpu.func @no_load_tensor(%source: tensor<32x64xf32>,
 // LOAD-GATHER:        vector.transfer_read
 }
 
-// -----
-gpu.module @xevm_module {
-gpu.func @no_load_high_dim_vector(%source: memref<16x32x64xf32>,
-    %offset: index, %arg2: index) -> vector<8x16x32xf32> {
-  %c0 = arith.constant 0.0 : f32
-  %0 = vector.transfer_read %source[%offset, %arg2, %offset], %c0
-    {in_bounds = [true, true, true]} : memref<16x32x64xf32>, vector<8x16x32xf32>
-  gpu.return %0 : vector<8x16x32xf32>
-}
-
-// LOAD-ND-LABEL:  @no_load_high_dim_vector(
-// LOAD-ND:        vector.transfer_read
-
-// LOAD-GATHER-LABEL:  @no_load_high_dim_vector(
-// LOAD-GATHER:        %[[CST:.+]] = arith.constant dense<true> : vector<8x16x32xi1>
-// LOAD-GATHER:        %[[CST_0:.+]] = arith.constant dense<64> : vector<16xindex>
-// LOAD-GATHER:        %[[CST_1:.+]] = arith.constant dense<2048> : vector<8xindex>
-// LOAD-GATHER:        %[[C2048:.+]] = arith.constant 2048 : index
-// LOAD-GATHER:        %[[C64:.+]] = arith.constant 64 : index
-// LOAD-GATHER-COUNT3: vector.step
-// LOAD-GATHER-COUNT3: vector.shape_cast
-// LOAD-GATHER-COUNT3: vector.broadcast {{.*}} : vector<8x16x32xindex>
-// LOAD-GATHER-COUNT2: arith.addi {{.*}} : vector<8x16x32xindex>
-// LOAD-GATHER:        %[[BCASTOFF:.+]] = vector.broadcast {{.*}} : index to vector<8x16x32xindex>
-// LOAD-GATHER:        %[[IDX:.+]] = arith.addi %[[BCASTOFF]], {{.*}} : vector<8x16x32xindex>
-// LOAD-GATHER:        %[[COLLAPSE:.+]] = memref.collapse_shape %arg0 {{\[}}[0, 1, 2]{{\]}} : memref<16x32x64xf32> into memref<32768xf32>
-// LOAD-GATHER:        %[[VEC:.+]] = xegpu.load %[[COLLAPSE]][%[[IDX]]], %[[CST]] : memref<32768xf32>, vector<8x16x32xindex>, vector<8x16x32xi1> -> vector<8x16x32xf32>
-
-}
 
 // -----
 gpu.module @xevm_module {
@@ -367,30 +396,3 @@ gpu.func @no_load_unsupported_map(%source: memref<16x32x64xf32>,
 // LOAD-GATHER:        vector.transfer_read
 }
 
-// -----
-gpu.module @xevm_module {
-gpu.func @no_load_transpose_unsupported_data_type(%source: memref<32x64xf16>,
-    %offset: index) -> vector<8x16xf16> {
-  %c0 = arith.constant 0.0 : f16
-  %0 = vector.transfer_read %source[%offset, %offset], %c0
-    {permutation_map = affine_map<(d0, d1) -> (d1, d0)>,
-    in_bounds = [true, true]} : memref<32x64xf16>, vector<8x16xf16>
-  gpu.return %0 : vector<8x16xf16>
-}
-
-// LOAD-ND-LABEL:  @no_load_transpose_unsupported_data_type(
-// LOAD-ND:        vector.transfer_read
-
-// LOAD-GATHER-LABEL:  @no_load_transpose_unsupported_data_type(
-// LOAD-GATHER-SAME:    %[[SRC:.+]]: memref<32x64xf16>,
-// LOAD-GATHER:         %[[CST:.+]] = arith.constant dense<true> : vector<8x16xi1>
-// LOAD-GATHER-COUNT2:  vector.step
-// LOAD-GATHER-COUNT2:  vector.shape_cast
-// LOAD-GATHER-COUNT2: vector.broadcast
-// LOAD-GATHER-COUNT2: arith.muli {{.*}} : index
-// LOAD-GATHER-COUNT2: arith.addi {{.*}} : index
-// LOAD-GATHER:        %[[BCAST2:.+]] = vector.broadcast {{.*}} : index to vector<8x16xindex>
-// LOAD-GATHER:        %[[IDX:.+]] = arith.addi %[[BCAST2]], {{.*}}: vector<8x16xindex>
-// LOAD-GATHER:        %[[COLLAPSE:.*]] = memref.collapse_shape %arg0 {{\[\[}}0, 1{{\]\]}} : memref<32x64xf16> into memref<2048xf16>
-// LOAD-GATHER:        %[[LOAD:.*]] = xegpu.load %[[COLLAPSE]][%[[IDX]]], %[[CST]] : memref<2048xf16>, vector<8x16xindex>, vector<8x16xi1> -> vector<8x16xf16>
-}

@@ -205,9 +205,9 @@ static LogicalResult adjustStridesForPermutation(
     }
     unsigned pos = dimExpr.getPosition();
     // Map permutation to the relevant strides (innermost dims)
-    if (pos < memrefRank - vecRank) {
+    if (pos < memrefRank - vecRank)
       return rewriter.notifyMatchFailure(op, "Permutation out of bounds");
-    }
+
     // The stride for output dimension outIdx is the stride of input dimension
     // pos
     adjustedStrides[outIdx] = relevantStrides[pos - (memrefRank - vecRank)];
@@ -305,7 +305,7 @@ static Value computeOffsets(VectorTransferOpInterface xferOp,
                              xferOp.getIndices().end());
   ArrayRef<int64_t> vectorShape = vectorType.getShape();
 
-  // Step 1: Create vector.step operations for each dimension
+  // Create vector.step operations for each dimension
   SmallVector<Value> stepVectors;
   for (int64_t dim : vectorShape) {
     auto stepType = VectorType::get({dim}, rewriter.getIndexType());
@@ -313,7 +313,7 @@ static Value computeOffsets(VectorTransferOpInterface xferOp,
     stepVectors.push_back(stepOp);
   }
 
-  // Step 2: Multiply step vectors by corresponding strides
+  // Multiply step vectors by corresponding strides
   size_t memrefRank = strides.size();
   size_t vectorRank = vectorShape.size();
   SmallVector<Value> strideMultiplied;
@@ -327,7 +327,7 @@ static Value computeOffsets(VectorTransferOpInterface xferOp,
     strideMultiplied.push_back(mulOp);
   }
 
-  // Step 3: Shape cast each multiplied vector to add singleton dimensions
+  // Shape cast each multiplied vector to add singleton dimensions
   SmallVector<Value> shapeCasted;
   for (size_t i = 0; i < vectorRank; ++i) {
     SmallVector<int64_t> newShape(vectorRank, 1);
@@ -338,7 +338,7 @@ static Value computeOffsets(VectorTransferOpInterface xferOp,
     shapeCasted.push_back(castOp);
   }
 
-  // Step 4: Broadcast each shape-casted vector to full vector shape
+  // Broadcast each shape-casted vector to full vector shape
   SmallVector<Value> broadcasted;
   auto fullIndexVectorType =
       VectorType::get(vectorShape, rewriter.getIndexType());
@@ -348,14 +348,14 @@ static Value computeOffsets(VectorTransferOpInterface xferOp,
     broadcasted.push_back(broadcastOp);
   }
 
-  // Step 5: Add all broadcasted vectors together to compute local offsets
+  // Add all broadcasted vectors together to compute local offsets
   Value localOffsets = broadcasted[0];
   for (size_t i = 1; i < broadcasted.size(); ++i) {
     localOffsets =
         arith::AddIOp::create(rewriter, loc, localOffsets, broadcasted[i]);
   }
 
-  // Step 6: Compute base offset from transfer read indices
+  // Compute base offset from transfer read indices
   Value baseOffset = nullptr;
   if (!indices.empty()) {
     baseOffset = arith::ConstantIndexOp::create(rewriter, loc, 0);
@@ -500,6 +500,7 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
       return failure();
 
     auto chip = xegpu::getXeGPUChipStr(readOp);
+    // TODO:This check needs to be replaced with proper uArch capability check
     if ( chip != "pvc" && chip != "bmg") {
       // perform additional checks -
       if (failed(extraCheckForScatteredLoadStore(readOp, rewriter)))
@@ -569,6 +570,7 @@ struct TransferWriteLowering
       return failure();
 
     auto chip = xegpu::getXeGPUChipStr(writeOp);
+    // TODO:This check needs to be replaced with proper uArch capability check
     if (chip != "pvc" && chip != "bmg") {
       // perform additional checks -
       if (failed(extraCheckForScatteredLoadStore(writeOp, rewriter)))
