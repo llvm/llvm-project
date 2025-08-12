@@ -25457,7 +25457,7 @@ bool SLPVectorizerPass::vectorizeInsertElementInst(InsertElementInst *IEI,
 template <typename T>
 static bool tryToVectorizeSequence(
     SmallVectorImpl<T *> &Incoming, function_ref<bool(T *, T *)> Comparator,
-    function_ref<bool(T *, T *)> AreCompatible,
+    function_ref<bool(ArrayRef<T *>, T *)> AreCompatible,
     function_ref<bool(ArrayRef<T *>, bool)> TryToVectorizeHelper,
     bool MaxVFOnly, BoUpSLP &R) {
   bool Changed = false;
@@ -25479,10 +25479,10 @@ static bool tryToVectorizeSequence(
     auto *SameTypeIt = IncIt;
     while (SameTypeIt != E && (!isa<Instruction>(*SameTypeIt) ||
                                R.isDeleted(cast<Instruction>(*SameTypeIt)) ||
-                               AreCompatible(*SameTypeIt, *IncIt))) {
+                               AreCompatible(VL, *SameTypeIt))) {
       auto *I = dyn_cast<Instruction>(*SameTypeIt);
       ++SameTypeIt;
-      if (I && !R.isDeleted(I))
+      if (!I || !R.isDeleted(I))
         VL.push_back(cast<T>(I));
     }
 
@@ -25677,10 +25677,10 @@ bool SLPVectorizerPass::vectorizeCmpInsts(iterator_range<ItT> CmpInsts,
     return compareCmp<false>(V, V2, *TLI, *DT);
   };
 
-  auto AreCompatibleCompares = [&](Value *V1, Value *V2) {
-    if (V1 == V2)
+  auto AreCompatibleCompares = [&](ArrayRef<Value *> VL, Value *V1) {
+    if (VL.empty() || VL.back() == V1)
       return true;
-    return compareCmp<true>(V1, V2, *TLI, *DT);
+    return compareCmp<true>(V1, VL.back(), *TLI, *DT);
   };
 
   SmallVector<Value *> Vals;
@@ -25886,9 +25886,11 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
     }
     return false;
   };
-  auto AreCompatiblePHIs = [&PHIToOpcodes, this, &R](Value *V1, Value *V2) {
-    if (V1 == V2)
+  auto AreCompatiblePHIs = [&PHIToOpcodes, this, &R](ArrayRef<Value *> VL,
+                                                     Value *V1) {
+    if (VL.empty() || V1 == VL.back())
       return true;
+    Value *V2 = VL.back();
     if (V1->getType() != V2->getType())
       return false;
     ArrayRef<Value *> Opcodes1 = PHIToOpcodes[V1];
@@ -26259,7 +26261,11 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
            V2->getValueOperand()->getValueID();
   };
 
-  auto &&AreCompatibleStores = [this](StoreInst *V1, StoreInst *V2) {
+  auto AreCompatibleStores = [this, &R](ArrayRef<StoreInst *> VL,
+                                        StoreInst *V1) {
+    if (VL.empty())
+      return true;
+    StoreInst *V2 = VL.back();
     if (V1 == V2)
       return true;
     if (V1->getValueOperand()->getType() != V2->getValueOperand()->getType())
@@ -26270,15 +26276,24 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
     if (isa<UndefValue>(V1->getValueOperand()) ||
         isa<UndefValue>(V2->getValueOperand()))
       return true;
-    if (auto *I1 = dyn_cast<Instruction>(V1->getValueOperand()))
-      if (auto *I2 = dyn_cast<Instruction>(V2->getValueOperand())) {
-        if (I1->getParent() != I2->getParent())
-          return false;
-        return getSameOpcode({I1, I2}, *TLI).valid();
-      }
     if (isa<Constant>(V1->getValueOperand()) &&
         isa<Constant>(V2->getValueOperand()))
       return true;
+    auto *I1 = dyn_cast<Instruction>(V1->getValueOperand());
+    auto *I2 = dyn_cast<Instruction>(V2->getValueOperand());
+    if (I1 || I2) {
+      if (I1 && I2 && I1->getParent() != I2->getParent())
+        return false;
+      SmallVector<Value *> NewVL(VL.size() + 1);
+      for (auto [SI, V] : zip(VL, NewVL))
+        V = SI->getValueOperand();
+      NewVL.back() = V1->getValueOperand();
+      InstructionsCompatibilityAnalysis Analysis(*DT, *DL, *TTI, *TLI);
+      InstructionsState S =
+          Analysis.buildInstructionsState(NewVL, R, VectorizeCopyableElements);
+      if (S)
+        return true;
+    }
     return V1->getValueOperand()->getValueID() ==
            V2->getValueOperand()->getValueID();
   };
