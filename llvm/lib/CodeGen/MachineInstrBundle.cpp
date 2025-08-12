@@ -95,11 +95,11 @@ static DebugLoc getDebugLoc(MachineBasicBlock::instr_iterator FirstMI,
 }
 
 static bool containReg(SmallSetVector<Register, 32> LocalDefsV,
-                       SmallSetVector<MCRegUnit, 32> LocalDefsP, Register Reg,
+                       BitVector LocalDefsP, Register Reg,
                        const TargetRegisterInfo *TRI) {
   if (Reg.isPhysical()) {
-    for (MCRegUnit Unit : TRI->regunits(MCRegister::from(Reg.id())))
-      if (!LocalDefsP.contains(Unit))
+    for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
+      if (!LocalDefsP[Unit])
         return false;
 
     return true;
@@ -128,7 +128,7 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
   Bundle.prepend(MIB);
 
   SmallSetVector<Register, 32> LocalDefs;
-  SmallSetVector<MCRegUnit, 32> LocalDefsP;
+  BitVector LocalDefsP(TRI->getNumRegUnits());
   SmallSet<Register, 8> DeadDefSet;
   SmallSet<Register, 16> KilledDefSet;
   SmallSetVector<Register, 8> ExternUses;
@@ -180,8 +180,8 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
       }
 
       if (!MO.isDead() && Reg.isPhysical()) {
-        for (MCRegUnit Unit : TRI->regunits(MCRegister::from(Reg.id())))
-          LocalDefsP.insert(Unit);
+        for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
+          LocalDefsP.set(Unit);
       }
     }
 
