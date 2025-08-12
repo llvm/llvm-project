@@ -1890,7 +1890,7 @@ __tree<_Tp, _Compare, _Allocator>::__construct_node(_Args&&... __args) {
   } else 
   #endif
   {
-  __node_traits::construct(__na, std::addressof(__h->__value_), std::forward<_Args>(__args)...);
+    std::__construct_at(std::addressof(__h->__value_),  std::forward<_Args>(__args)...);
   }
   #if _LIBCPP_STD_VER >= 26
   
