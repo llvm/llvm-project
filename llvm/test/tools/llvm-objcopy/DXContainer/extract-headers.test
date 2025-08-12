@@ -1,0 +1,56 @@
+## Tests that a separate DXContainer is created with only the specified section
+## for each --extract-section specified
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy %t --extract-section=FKE1=%t.fke1.out --extract-section=FKE4=%t.fke4.out
+# RUN: obj2yaml %t.fke1.out | FileCheck %s --check-prefixes=CHECK,FKE1
+# RUN: obj2yaml %t.fke4.out | FileCheck %s --check-prefixes=CHECK,FKE4
+
+--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+## FKE1: FileSize:       52
+## FKE4: FileSize:       1732
+  FileSize:        1996
+# CHECK: PartCount:     1
+# CHECK-NEXT: PartOffsets:   [ 36 ]
+  PartCount:       7
+  PartOffsets:     [ 60, 76, 92, 108, 236, 1932, 1960 ]
+# CHECK-NEXT: Parts:
+Parts:
+# CHECK-NOT: FKE0
+# FKE1: Name:            FKE1
+# FKE4-NOT: FKE1
+# CHECK-NOT: FKE2
+# CHECK-NOT: FKE3
+# FKE1-NOT: FKE4
+# FKE4: Name:            FKE4
+# CHECK-NOT: FKE5
+  - Name:            FKE0
+    Size:            8
+  - Name:            FKE1
+    Size:            8
+  - Name:            FKE2
+    Size:            8
+  - Name:            FKE3
+    Size:            120
+  - Name:            FKE4
+    Size:            1688
+  - Name:            FKE5
+    Size:            20
+  - Name:            DXIL
+    Size:            28
+    Program:
+      MajorVersion:    6
+      MinorVersion:    5
+      ShaderKind:      5
+      Size:            8
+      DXILMajorVersion: 1
+      DXILMinorVersion: 5
+      DXILSize:        4
+      DXIL:            [ 0x42, 0x43, 0xC0, 0xDE, ]
+...
