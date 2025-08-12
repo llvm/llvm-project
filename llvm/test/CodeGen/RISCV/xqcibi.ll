@@ -341,9 +341,7 @@ define i32 @bgeuimm16(i32 %a) {
 ;
 ; RV32IXQCIBI-LABEL: bgeuimm16:
 ; RV32IXQCIBI:       # %bb.0:
-; RV32IXQCIBI-NEXT:    lui a1, 16
-; RV32IXQCIBI-NEXT:    addi a1, a1, -2
-; RV32IXQCIBI-NEXT:    bltu a1, a0, .LBB11_2
+; RV32IXQCIBI-NEXT:    qc.e.bgeui a0, 65535, .LBB11_2
 ; RV32IXQCIBI-NEXT:  # %bb.1: # %f
 ; RV32IXQCIBI-NEXT:    li a0, 0
 ; RV32IXQCIBI-NEXT:    ret
