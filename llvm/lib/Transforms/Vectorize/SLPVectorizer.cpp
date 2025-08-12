@@ -25482,7 +25482,7 @@ static bool tryToVectorizeSequence(
                                AreCompatible(VL, *SameTypeIt))) {
       auto *I = dyn_cast<Instruction>(*SameTypeIt);
       ++SameTypeIt;
-      if (!I || !R.isDeleted(I))
+      if (I && !R.isDeleted(I))
         VL.push_back(cast<T>(I));
     }
 
