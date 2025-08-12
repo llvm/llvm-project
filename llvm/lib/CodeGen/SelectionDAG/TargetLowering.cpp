@@ -8137,6 +8137,113 @@ bool TargetLowering::expandUDIVREMByConstantViaUREMDecomposition(
   return true;
 }
 
+bool TargetLowering::expandUDIVREMByConstantViaUMulHiMagic(
+    SDNode *N, const APInt &Divisor, SmallVectorImpl<SDValue> &Result,
+    EVT HiLoVT, SelectionDAG &DAG, SDValue LL, SDValue LH) const {
+
+  SDValue N0 = N->getOperand(0);
+  EVT VT = N0->getValueType(0);
+  SDLoc DL{N};
+
+  assert(!Divisor.isOne() && "Magic algorithm does not work for division by 1");
+
+  // This helper creates a MUL_LOHI of the pair (LL, LH) by a constant.
+  auto MakeMUL_LOHIByConst = [&](unsigned Opc, SDValue LL, SDValue LH,
+                                 const APInt &Const,
+                                 SmallVectorImpl<SDValue> &Result) {
+    SDValue LHS = DAG.getNode(ISD::BUILD_PAIR, DL, VT, LL, LH);
+    SDValue RHS = DAG.getConstant(Const, DL, VT);
+    auto [RL, RH] = DAG.SplitScalar(RHS, DL, HiLoVT, HiLoVT);
+    return expandMUL_LOHI(Opc, VT, DL, LHS, RHS, Result, HiLoVT, DAG,
+                          TargetLowering::MulExpansionKind::OnlyLegalOrCustom,
+                          LL, LH, RL, RH);
+  };
+
+  // This helper creates an ADD/SUB of the pairs (LL, LH) and (RL, RH).
+  auto MakeAddSubLong = [&](unsigned Opc, SDValue LL, SDValue LH, SDValue RL,
+                            SDValue RH) {
+    SDValue AddSubNode =
+        DAG.getNode(Opc == ISD::ADD ? ISD::UADDO : ISD::USUBO, DL,
+                    DAG.getVTList(HiLoVT, MVT::i1), LL, RL);
+    SDValue OutL, OutH, Overflow;
+    expandUADDSUBO(AddSubNode.getNode(), OutL, Overflow, DAG);
+    SDValue WithOverflow = DAG.getNode(
+        Opc, DL, HiLoVT, LH, DAG.getZExtOrTrunc(Overflow, DL, HiLoVT));
+    OutH = DAG.getNode(Opc, DL, HiLoVT, WithOverflow, RH);
+    return std::make_pair(OutL, OutH);
+  };
+
+  // This helper creates a SRL of the pair (LL, LH) by Shift.
+  auto MakeSRLLong = [&](SDValue LL, SDValue LH, unsigned Shift) {
+    unsigned HBitWidth = HiLoVT.getScalarSizeInBits();
+    if (Shift < HBitWidth) {
+      SDValue ShAmt = DAG.getShiftAmountConstant(Shift, HiLoVT, DL);
+      SDValue ResL = DAG.getNode(ISD::FSHR, DL, HiLoVT, LH, LL, ShAmt);
+      SDValue ResH = DAG.getNode(ISD::SRL, DL, HiLoVT, LH, ShAmt);
+      return std::make_pair(ResL, ResH);
+    }
+    SDValue Zero = DAG.getConstant(0, DL, HiLoVT);
+    if (Shift == HBitWidth)
+      return std::make_pair(LH, Zero);
+    assert(Shift - HBitWidth < HBitWidth &&
+           "We shouldn't generate an undefined shift");
+    SDValue ShAmt = DAG.getShiftAmountConstant(Shift - HBitWidth, HiLoVT, DL);
+    return std::make_pair(DAG.getNode(ISD::SRL, DL, HiLoVT, LH, ShAmt), Zero);
+  };
+
+  // Knowledge of leading zeros may help to reduce the multiplier.
+  unsigned KnownLeadingZeros = DAG.computeKnownBits(N0).countMinLeadingZeros();
+
+  UnsignedDivisionByConstantInfo Magics = UnsignedDivisionByConstantInfo::get(
+      Divisor, std::min(KnownLeadingZeros, Divisor.countl_zero()));
+
+  assert(!LL == !LH && "Expected both input halves or no input halves!");
+  if (!LL)
+    std::tie(LL, LH) = DAG.SplitScalar(N0, DL, HiLoVT, HiLoVT);
+  SDValue QL = LL;
+  SDValue QH = LH;
+  if (Magics.PreShift != 0)
+    std::tie(QL, QH) = MakeSRLLong(QL, QH, Magics.PreShift);
+
+  SmallVector<SDValue, 2> UMulResult;
+  if (!MakeMUL_LOHIByConst(ISD::UMUL_LOHI, QL, QH, Magics.Magic, UMulResult))
+    return false;
+
+  QL = UMulResult[2];
+  QH = UMulResult[3];
+
+  if (Magics.IsAdd) {
+    auto [NPQL, NPQH] = MakeAddSubLong(ISD::SUB, LL, LH, QL, QH);
+    std::tie(NPQL, NPQH) = MakeSRLLong(NPQL, NPQH, 1);
+    std::tie(QL, QH) = MakeAddSubLong(ISD::ADD, NPQL, NPQH, QL, QH);
+  }
+
+  if (Magics.PostShift != 0)
+    std::tie(QL, QH) = MakeSRLLong(QL, QH, Magics.PostShift);
+
+  unsigned Opcode = N->getOpcode();
+  if (Opcode != ISD::UREM) {
+    Result.push_back(QL);
+    Result.push_back(QH);
+  }
+
+  if (Opcode != ISD::UDIV) {
+    SmallVector<SDValue, 2> MulResult;
+    if (!MakeMUL_LOHIByConst(ISD::MUL, QL, QH, Divisor, MulResult))
+      return false;
+
+    assert(MulResult.size() == 2);
+
+    auto [RemL, RemH] =
+        MakeAddSubLong(ISD::SUB, LL, LH, MulResult[0], MulResult[1]);
+
+    Result.push_back(RemL);
+    Result.push_back(RemH);
+  }
+
+  return true;
+}
+
 bool TargetLowering::expandDIVREMByConstant(SDNode *N,
                                             SmallVectorImpl<SDValue> &Result,
                                             EVT HiLoVT, SelectionDAG &DAG,
@@ -8172,6 +8279,10 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
 
   if (expandUDIVREMByConstantViaUREMDecomposition(N, Divisor, Result, HiLoVT,
                                                   DAG, LL, LH))
+    return true;
+
+  if (expandUDIVREMByConstantViaUMulHiMagic(N, Divisor, Result, HiLoVT, DAG, LL,
+                                            LH))
     return true;
 
   return false;
