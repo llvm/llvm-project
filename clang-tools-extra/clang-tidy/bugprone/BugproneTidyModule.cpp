@@ -55,6 +55,7 @@
 #include "NonZeroEnumToBoolConversionCheck.h"
 #include "NondeterministicPointerIterationOrderCheck.h"
 #include "NotNullTerminatedResultCheck.h"
+#include "NullCheckAfterDereferenceCheck.h"
 #include "OptionalValueConversionCheck.h"
 #include "ParentVirtualCallCheck.h"
 #include "PointerArithmeticOnPolymorphicObjectCheck.h"
@@ -210,6 +211,8 @@ public:
     CheckFactories.registerCheck<PosixReturnCheck>("bugprone-posix-return");
     CheckFactories.registerCheck<ReservedIdentifierCheck>(
         "bugprone-reserved-identifier");
+    CheckFactories.registerCheck<NullCheckAfterDereferenceCheck>(
+        "bugprone-null-check-after-dereference");
     CheckFactories.registerCheck<SharedPtrArrayMismatchCheck>(
         "bugprone-shared-ptr-array-mismatch");
     CheckFactories.registerCheck<SignalHandlerCheck>("bugprone-signal-handler");
