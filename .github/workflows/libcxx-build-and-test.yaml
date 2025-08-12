@@ -93,11 +93,11 @@ jobs:
             cc: 'gcc-15'
             cxx: 'g++-15'
           - config: 'generic-cxx26'
+            cc: 'clang-21'
+            cxx: 'clang++-21'
+          - config: 'generic-cxx26'
             cc: 'clang-20'
             cxx: 'clang++-20'
-          - config: 'generic-cxx26'
-            cc: 'clang-19'
-            cxx: 'clang++-19'
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: ${{ matrix.config }}
