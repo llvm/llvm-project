@@ -1885,21 +1885,8 @@ __tree<_Tp, _Compare, _Allocator>::__construct_node(_Args&&... __args) {
 
   #if _LIBCPP_STD_VER >= 26
   if(__libcpp_is_constant_evaluated()) {
-
-  // fails-> insert_and_emplace_allocator_requirements.pass.cpp
-  // __node_traits::construct(__na, std::addressof(*__h), std::forward<_Args>(__args)...);
-  // std::__construct_at(std::addressof(*__h), __na, std::forward<_Args>(__args)...);
-  
-  // TODO: check if this is correct, or we need to allocate more
-  std::__construct_at(std::addressof(*__h),  std::forward<_Args>(__args)...);
-
   // note: construction of subobject of object outside its lifetime is not allowed in a constant expression
-
-  // we do need to 
-  // avoid instantiating anything other than allocator::construct(Args...)
-  // for container_test_types.h
-  // but I don't know how to placement new to avoid instantiation
-
+  std::__construct_at(std::addressof(*__h),  std::forward<_Args>(__args)...);
   } else 
   #endif
   {
