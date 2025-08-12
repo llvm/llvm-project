@@ -1110,6 +1110,54 @@ void ScopedAliasMetadataDeepCloner::remap(Function::iterator FStart,
   }
 }
 
+// Try to retrieve underlying objects from given ptr Value
+static void getUnderlyingObjectsFromPtr(const Value *V,
+                              SmallVectorImpl<const Value *> &Objects,
+                              unsigned int LookupSize = 50) {
+  SmallPtrSet<const Value *, 4> Visited;
+  SmallVector<const Value *, 4> Worklist;
+
+  assert(V->getType()->isPointerTy() && "Must be Ptr type");
+  Worklist.push_back(V);
+  while (!Worklist.empty()) {
+    if (Visited.size() > LookupSize)
+      return;
+
+    const Value *P = Worklist.pop_back_val();
+
+    if (!Visited.insert(P).second) {
+      continue;
+    }
+
+    if (auto *SI = dyn_cast<SelectInst>(P)) {
+      Worklist.push_back(SI->getTrueValue());
+      Worklist.push_back(SI->getFalseValue());
+      continue;
+    }
+
+    if (auto *PN = dyn_cast<PHINode>(P)) {
+      append_range(Worklist, PN->incoming_values());
+      continue;
+    }
+
+    // Handle ptrtoint+arithmetic+inttoptr sequences
+    if (const Instruction *U = dyn_cast<Instruction>(P)) {
+      if (U->getOpcode() == Instruction::IntToPtr ||
+          U->getOpcode() == Instruction::PtrToInt ||
+          U->getOpcode() == Instruction::Add ||
+          U->getOpcode() == Instruction::Mul ||
+          U->getOpcode() == Instruction::Sub ||
+          U->getOpcode() == Instruction::GetElementPtr ||
+          U->isCast()) {
+        append_range(Worklist, U->operands());
+      }
+    } else {
+      // Add leaf nodes
+      Objects.push_back(P);
+    }
+  }
+}
+
 /// If the inlined function has noalias arguments,
 /// then add new alias scopes for each noalias argument, tag the mapped noalias
 /// parameters with noalias metadata specifying the new scope, and tag all
@@ -1247,7 +1295,7 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
 
       for (const Value *V : PtrArgs) {
         SmallVector<const Value *, 4> Objects;
-        getUnderlyingObjects(V, Objects, /* LI = */ nullptr);
+        getUnderlyingObjectsFromPtr(V, Objects);
 
         ObjSet.insert_range(Objects);
       }
