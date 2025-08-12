@@ -4012,6 +4012,10 @@ SDValue DAGTypeLegalizer::SplitVecOp_EXTRACT_SUBVECTOR(SDNode *N) {
     report_fatal_error("Don't know how to extract fixed-width predicate "
                        "subvector from a scalable predicate vector");
 
+  // Don't create a stack temporary if the result is unused.
+  if (!N->hasAnyUseOfValue(0))
+    return DAG.getPOISON(SubVT);
+
   // Spill the vector to the stack. We should use the alignment for
   // the smallest part.
   SDValue Vec = N->getOperand(0);
