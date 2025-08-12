@@ -81,9 +81,17 @@ struct StableFunctionMap {
   /// the offsets of corresponding serialized stable function entries, and a
   /// once flag for safe lazy loading in a multithreaded environment.
   struct EntryStorage {
+    /// The actual storage of deserialized stable function entries. If the map
+    /// is lazily loaded, this will be empty until the first access by the
+    /// corresponding function hash.
     StableFunctionEntries Entries;
 
   private:
+    /// This is used to deserialize the entry lazily. Each element is the
+    /// corresponding serialized stable function entry's offset in the memory
+    /// buffer (StableFunctionMap::Buffer).
+    /// The offsets are only populated when loading the map lazily, otherwise
+    /// it is empty.
     SmallVector<uint64_t> Offsets;
     std::once_flag LazyLoadFlag;
     friend struct StableFunctionMap;
