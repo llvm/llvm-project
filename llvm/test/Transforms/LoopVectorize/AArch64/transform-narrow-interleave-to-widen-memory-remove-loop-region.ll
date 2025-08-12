@@ -43,7 +43,7 @@ define void @load_store_interleave_group_tc_2(ptr noalias %data) {
 ;
 ; VF4-LABEL: define void @load_store_interleave_group_tc_2(
 ; VF4-SAME: ptr noalias [[DATA:%.*]]) {
-; VF4-NEXT:  [[ENTRY:.*]]:
+; VF4-NEXT:  [[ENTRY:.*:]]
 ; VF4-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF4:       [[VECTOR_PH]]:
 ; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -113,7 +113,6 @@ define void @load_store_interleave_group_tc_2(ptr noalias %data) {
 ; VF4:       [[MIDDLE_BLOCK]]:
 ; VF4-NEXT:    br label %[[EXIT:.*]]
 ; VF4:       [[SCALAR_PH]]:
-; VF4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; VF4-NEXT:    br label %[[LOOP:.*]]
 ; VF4:       [[LOOP]]:
 ; VF4-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
