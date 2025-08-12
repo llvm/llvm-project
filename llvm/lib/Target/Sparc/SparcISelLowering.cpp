@@ -1799,12 +1799,14 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::FCOS , MVT::f64, Expand);
   setOperationAction(ISD::FSINCOS, MVT::f64, Expand);
   setOperationAction(ISD::FREM , MVT::f64, Expand);
-  setOperationAction(ISD::FMA  , MVT::f64, Expand);
+  setOperationAction(ISD::FMA, MVT::f64,
+                     Subtarget->isUA2007() ? Legal : Expand);
   setOperationAction(ISD::FSIN , MVT::f32, Expand);
   setOperationAction(ISD::FCOS , MVT::f32, Expand);
   setOperationAction(ISD::FSINCOS, MVT::f32, Expand);
   setOperationAction(ISD::FREM , MVT::f32, Expand);
-  setOperationAction(ISD::FMA, MVT::f32, Expand);
+  setOperationAction(ISD::FMA, MVT::f32,
+                     Subtarget->isUA2007() ? Legal : Expand);
   setOperationAction(ISD::ROTL , MVT::i32, Expand);
   setOperationAction(ISD::ROTR , MVT::i32, Expand);
   setOperationAction(ISD::BSWAP, MVT::i32, Expand);
@@ -3548,6 +3550,11 @@ bool SparcTargetLowering::isCheapToSpeculateCttz(Type *Ty) const {
     return true;
   // Otherwise, implementing cttz in terms of ctlz is still cheap.
   return isCheapToSpeculateCtlz(Ty);
+}
+
+bool SparcTargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
+                                                     EVT VT) const {
+  return Subtarget->isUA2007() && !Subtarget->useSoftFloat();
 }
 
 // Override to disable global variable loading on Linux.
