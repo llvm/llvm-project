@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++17
+// REQUIRES: std-at-least-c++23
 
 // No diagnostic gets emitted when we build with modules.
-// XFAIL: (c++17 && clang-modules-build)
+// XFAIL: clang-modules-build
 
 // <tuple>
 
