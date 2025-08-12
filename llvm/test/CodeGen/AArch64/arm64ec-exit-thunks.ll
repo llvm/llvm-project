@@ -95,8 +95,8 @@ declare i64 @simple_integers(i8, i16, i32, i64) nounwind;
 
 ; NOTE: Only half, float, and double are supported.
 declare double @simple_floats(half, float, double) nounwind;
-; CHECK-LABEL:    .def    $iexit_thunk$cdecl$d$hfd;
-; CHECK:          .section        .wowthk$aa,"xr",discard,$iexit_thunk$cdecl$d$hfd
+; CHECK-LABEL:    .def    $iexit_thunk$cdecl$d$__llvm_h__fd;
+; CHECK:          .section        .wowthk$aa,"xr",discard,$iexit_thunk$cdecl$d$__llvm_h__fd
 ; CHECK:          // %bb.0:
 ; CHECK-NEXT:     sub     sp, sp, #48
 ; CHECK-NEXT:     .seh_stackalloc 48
@@ -129,8 +129,8 @@ declare double @simple_floats(half, float, double) nounwind;
 ; CHECK-NEXT:     adrp    x11, simple_floats
 ; CHECK-NEXT:     add     x11, x11, :lo12:simple_floats
 ; CHECK-NEXT:     ldr     x8, [x8, :lo12:__os_arm64x_check_icall]
-; CHECK-NEXT:     adrp    x10, $iexit_thunk$cdecl$d$hfd
-; CHECK-NEXT:     add     x10, x10, :lo12:$iexit_thunk$cdecl$d$hfd
+; CHECK-NEXT:     adrp    x10, $iexit_thunk$cdecl$d$__llvm_h__fd
+; CHECK-NEXT:     add     x10, x10, :lo12:$iexit_thunk$cdecl$d$__llvm_h__fd
 ; CHECK-NEXT:     blr     x8
 ; CHECK-NEXT:     .seh_startepilogue
 ; CHECK-NEXT:     ldr     x30, [sp], #16                  // 8-byte Folded Reload
@@ -283,8 +283,8 @@ declare void @has_aligned_sret(ptr align 32 sret(%TSRet)) nounwind;
 ; CHECK:          .seh_endproc
 
 declare [2 x i8] @small_array([2 x i8], [2 x half], [2 x float]) nounwind;
-; CHECK-LABEL:    .def    $iexit_thunk$cdecl$m2$m2H4F8;
-; CHECK:          .section        .wowthk$aa,"xr",discard,$iexit_thunk$cdecl$m2$m2H4F8
+; CHECK-LABEL:    .def    $iexit_thunk$cdecl$m2$m2__llvm_H__4F8;
+; CHECK:          .section        .wowthk$aa,"xr",discard,$iexit_thunk$cdecl$m2$m2__llvm_H__4F8
 ; CHECK:          // %bb.0:
 ; CHECK-NEXT:     sub     sp, sp, #80
 ; CHECK-NEXT:     .seh_stackalloc 80
@@ -328,8 +328,8 @@ declare [2 x i8] @small_array([2 x i8], [2 x half], [2 x float]) nounwind;
 ; CHECK-NEXT:     adrp    x11, small_array
 ; CHECK-NEXT:     add     x11, x11, :lo12:small_array
 ; CHECK-NEXT:     ldr     x8, [x8, :lo12:__os_arm64x_check_icall]
-; CHECK-NEXT:     adrp    x10, $iexit_thunk$cdecl$m2$m2H4F8
-; CHECK-NEXT:     add     x10, x10, :lo12:$iexit_thunk$cdecl$m2$m2H4F8
+; CHECK-NEXT:     adrp    x10, $iexit_thunk$cdecl$m2$m2__llvm_H__4F8
+; CHECK-NEXT:     add     x10, x10, :lo12:$iexit_thunk$cdecl$m2$m2__llvm_H__4F8
 ; CHECK-NEXT:     blr     x8
 ; CHECK-NEXT:     .seh_startepilogue
 ; CHECK-NEXT:     ldr     x30, [sp], #16                  // 8-byte Folded Reload
@@ -580,7 +580,7 @@ declare <8 x i16> @large_vector(<8 x i16> %0) nounwind;
 ; CHECK-NEXT:     .symidx simple_integers
 ; CHECK-NEXT:     .word   0
 ; CHECK-NEXT:     .symidx simple_floats
-; CHECK-NEXT:     .symidx $iexit_thunk$cdecl$d$hfd
+; CHECK-NEXT:     .symidx $iexit_thunk$cdecl$d$__llvm_h__fd
 ; CHECK-NEXT:     .word   4
 ; CHECK-NEXT:     .symidx "#simple_floats$exit_thunk"
 ; CHECK-NEXT:     .symidx simple_floats
@@ -604,7 +604,7 @@ declare <8 x i16> @large_vector(<8 x i16> %0) nounwind;
 ; CHECK-NEXT:     .symidx has_aligned_sret
 ; CHECK-NEXT:     .word   0
 ; CHECK-NEXT:     .symidx small_array
-; CHECK-NEXT:     .symidx $iexit_thunk$cdecl$m2$m2H4F8
+; CHECK-NEXT:     .symidx $iexit_thunk$cdecl$m2$m2__llvm_H__4F8
 ; CHECK-NEXT:     .word   4
 ; CHECK-NEXT:     .symidx "#small_array$exit_thunk"
 ; CHECK-NEXT:     .symidx small_array
