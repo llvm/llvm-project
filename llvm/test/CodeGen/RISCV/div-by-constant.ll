@@ -117,13 +117,48 @@ define i64 @udiv64_constant_no_add(i64 %a) nounwind {
 define i64 @udiv64_constant_add(i64 %a) nounwind {
 ; RV32-LABEL: udiv64_constant_add:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    li a2, 7
-; RV32-NEXT:    li a3, 0
-; RV32-NEXT:    call __udivdi3
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    lui a2, 149797
+; RV32-NEXT:    lui a3, 599186
+; RV32-NEXT:    addi a2, a2, -1756
+; RV32-NEXT:    addi a3, a3, 1171
+; RV32-NEXT:    mul a4, a0, a2
+; RV32-NEXT:    mulhu a5, a0, a3
+; RV32-NEXT:    mul a6, a1, a3
+; RV32-NEXT:    mulhu a7, a0, a2
+; RV32-NEXT:    mulhu a3, a1, a3
+; RV32-NEXT:    add a4, a5, a4
+; RV32-NEXT:    add a6, a4, a6
+; RV32-NEXT:    sltu a5, a4, a5
+; RV32-NEXT:    sltu a4, a6, a4
+; RV32-NEXT:    mul a6, a1, a2
+; RV32-NEXT:    mulhu a2, a1, a2
+; RV32-NEXT:    add a5, a7, a5
+; RV32-NEXT:    add a3, a5, a3
+; RV32-NEXT:    add a7, a3, a4
+; RV32-NEXT:    sltu a3, a3, a5
+; RV32-NEXT:    seqz a5, a7
+; RV32-NEXT:    add a6, a7, a6
+; RV32-NEXT:    and a4, a5, a4
+; RV32-NEXT:    sltu a5, a6, a7
+; RV32-NEXT:    sub a7, a0, a6
+; RV32-NEXT:    or a3, a3, a4
+; RV32-NEXT:    add a2, a5, a2
+; RV32-NEXT:    sltu a0, a0, a7
+; RV32-NEXT:    srli a4, a7, 1
+; RV32-NEXT:    add a2, a2, a3
+; RV32-NEXT:    sub a1, a1, a0
+; RV32-NEXT:    sub a1, a1, a2
+; RV32-NEXT:    slli a0, a1, 31
+; RV32-NEXT:    srli a1, a1, 1
+; RV32-NEXT:    or a0, a0, a4
+; RV32-NEXT:    add a1, a1, a2
+; RV32-NEXT:    add a6, a0, a6
+; RV32-NEXT:    sltu a0, a6, a0
+; RV32-NEXT:    srli a2, a6, 2
+; RV32-NEXT:    add a1, a1, a0
+; RV32-NEXT:    slli a0, a1, 30
+; RV32-NEXT:    or a0, a0, a2
+; RV32-NEXT:    srli a1, a1, 2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: udiv64_constant_add:
