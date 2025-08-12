@@ -10,6 +10,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/BinaryFormat/SFrame.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -380,6 +381,19 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
   unsigned EHSectionType = T.getArch() == Triple::x86_64
                                ? ELF::SHT_X86_64_UNWIND
                                : ELF::SHT_PROGBITS;
+  switch (T.getArch()) {
+  case Triple::x86_64:
+    SFrameABIArch = sframe::ABI::AMD64EndianLittle;
+    break;
+  case Triple::aarch64:
+    SFrameABIArch = sframe::ABI::AArch64EndianLittle;
+    break;
+  case Triple::aarch64_be:
+    SFrameABIArch = sframe::ABI::AArch64EndianBig;
+    break;
+  default:
+    break;
+  }
 
   // Solaris requires different flags for .eh_frame to seemingly every other
   // platform.
@@ -536,6 +550,9 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
 
   EHFrameSection =
       Ctx->getELFSection(".eh_frame", EHSectionType, EHSectionFlags);
+
+  SFrameSection =
+      Ctx->getELFSection(".sframe", ELF::SHT_GNU_SFRAME, ELF::SHF_ALLOC);
 
   CallGraphSection = Ctx->getELFSection(".callgraph", ELF::SHT_PROGBITS, 0);
 
@@ -1064,6 +1081,7 @@ void MCObjectFileInfo::initMCObjectFileInfo(MCContext &MCCtx, bool PIC,
   CompactUnwindDwarfEHFrameOnly = 0;
 
   EHFrameSection = nullptr;             // Created on demand.
+  SFrameSection = nullptr;              // Created on demand.
   CompactUnwindSection = nullptr;       // Used only by selected targets.
   DwarfAccelNamesSection = nullptr;     // Used only by selected targets.
   DwarfAccelObjCSection = nullptr;      // Used only by selected targets.
