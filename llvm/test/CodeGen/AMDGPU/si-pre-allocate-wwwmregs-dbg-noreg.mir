@@ -49,27 +49,6 @@
 ---
 name:            _amdgpu_cs_main
 tracksRegLiveness: true
-hasWinCFI:       false
-noPhis:          true
-isSSA:           false
-noVRegs:         false
-hasFakeUses:     false
-callsEHReturn:   false
-callsUnwindInit: false
-hasEHContTarget: false
-hasEHScopes:     false
-hasEHFunclets:   false
-isOutlined:      false
-debugInstrRef:   false
-failsVerification: false
-tracksDebugUserValues: false
-liveins:         []
-fixedStack:      []
-stack:           []
-entry_values:    []
-callSites:       []
-debugValueSubstitutions: []
-constants:       []
 machineFunctionInfo:
   explicitKernArgSize: 0
   maxKernArgAlign: 4
