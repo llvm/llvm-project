@@ -3325,13 +3325,13 @@ bool AMDGPUDAGToDAGISel::SelectVOP3ModsImpl(SDValue In, SDValue &Src,
     return true;
 
   auto ReplaceSrc = [&]() -> SDValue {
-    if (Src->getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
-      SDValue LHS = PeekSrc->getOperand(0);
-      SDValue Index = Src->getOperand(1);
-      return CurDAG->getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(Src),
-                             Src.getValueType(), LHS, Index);
-    }
-    return PeekSrc.getOperand(0);
+    if (Src->getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+      return PeekSrc.getOperand(0);
+
+    SDValue LHS = PeekSrc->getOperand(0);
+    SDValue Index = Src->getOperand(1);
+    return CurDAG->getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(Src),
+                           Src.getValueType(), LHS, Index);
   };
 
   // Recognise (xor a, 0x80000000) as NEG SrcMod.
