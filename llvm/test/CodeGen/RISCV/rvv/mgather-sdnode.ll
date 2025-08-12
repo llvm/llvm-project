@@ -1220,9 +1220,9 @@ define void @mgather_nxv16i64(<vscale x 8 x ptr> %ptrs0, <vscale x 8 x ptr> %ptr
 ; RV32-LABEL: mgather_nxv16i64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vl8re64.v v24, (a0)
-; RV32-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
-; RV32-NEXT:    vluxei32.v v16, (zero), v8, v0.t
 ; RV32-NEXT:    csrr a0, vlenb
+; RV32-NEXT:    vsetvli a2, zero, e64, m8, ta, mu
+; RV32-NEXT:    vluxei32.v v16, (zero), v8, v0.t
 ; RV32-NEXT:    srli a2, a0, 3
 ; RV32-NEXT:    vsetvli a3, zero, e8, mf4, ta, ma
 ; RV32-NEXT:    vslidedown.vx v0, v0, a2
