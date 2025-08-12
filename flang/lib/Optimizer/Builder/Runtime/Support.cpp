@@ -54,3 +54,24 @@ mlir::Value fir::runtime::genIsAssumedSize(fir::FirOpBuilder &builder,
   auto args = fir::runtime::createArguments(builder, loc, fTy, box);
   return fir::CallOp::create(builder, loc, func, args).getResult(0);
 }
+
+mlir::Value fir::runtime::genDescriptorGetBaseAddress(
+    fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value desc,
+    mlir::Value sourceFile, mlir::Value sourceLine) {
+  mlir::func::FuncOp baseAddrFunc =
+      fir::runtime::getRuntimeFunc<mkRTKey(DescriptorGetBaseAddress)>(loc,
+                                                                      builder);
+  llvm::SmallVector<mlir::Value> args{desc, sourceFile, sourceLine};
+  return fir::CallOp::create(builder, loc, baseAddrFunc, args).getResult(0);
+}
+
+mlir::Value fir::runtime::genDescriptorGetDataSizeInBytes(
+    fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value desc,
+    mlir::Value sourceFile, mlir::Value sourceLine) {
+  mlir::func::FuncOp getDataSizeInBytesFunc =
+      fir::runtime::getRuntimeFunc<mkRTKey(DescriptorGetDataSizeInBytes)>(
+          loc, builder);
+  llvm::SmallVector<mlir::Value> args{desc, sourceFile, sourceLine};
+  return fir::CallOp::create(builder, loc, getDataSizeInBytesFunc, args)
+      .getResult(0);
+}

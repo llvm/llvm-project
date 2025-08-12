@@ -31,5 +31,18 @@ void genCopyAndUpdateDescriptor(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value genIsAssumedSize(fir::FirOpBuilder &builder, mlir::Location loc,
                              mlir::Value box);
 
+/// Generate call to `DescriptorGetBaseAddress` runtime routine.
+mlir::Value genDescriptorGetBaseAddress(fir::FirOpBuilder &builder,
+                                        mlir::Location loc, mlir::Value desc,
+                                        mlir::Value sourceFile,
+                                        mlir::Value sourceLine);
+
+/// Generate call to `DescriptorGetDataSizeInBytes` runtime routine.
+mlir::Value genDescriptorGetDataSizeInBytes(fir::FirOpBuilder &builder,
+                                            mlir::Location loc,
+                                            mlir::Value desc,
+                                            mlir::Value sourceFile,
+                                            mlir::Value sourceLine);
+
 } // namespace fir::runtime
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_SUPPORT_H
