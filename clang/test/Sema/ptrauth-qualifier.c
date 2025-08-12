@@ -1,7 +1,8 @@
 // RUN: %clang_cc1 -triple arm64-apple-ios -std=c23 -fsyntax-only -verify -fptrauth-intrinsics %s
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -std=c23 -fsyntax-only -verify -fptrauth-intrinsics %s
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -std=c23 -fsyntax-only -verify -fptrauth-intrinsics -pedantic-errors -DPEDANTIC_ERRORS %s
 
-#if !__has_extension(ptrauth_qualifier)
+#if !__has_feature(ptrauth_qualifier)
 // This error means that the __ptrauth qualifier availability test says  that it
 // is not available. This error is not expected in the output, if it is seen
 // there is a feature detection regression.
@@ -66,6 +67,7 @@ intp redeclaration3 = 0;                       // expected-error{{redefinition o
 void illegal0(intp __ptrauth(VALID_DATA_KEY)); // expected-error {{parameter type may not be qualified with '__ptrauth'; type is '__ptrauth(2,0,0) intp' (aka 'int *__ptrauth(2,0,0)')}}
 intp __ptrauth(VALID_DATA_KEY) illegal1(void); // expected-error {{return type may not be qualified with '__ptrauth'; type is '__ptrauth(2,0,0) intp' (aka 'int *__ptrauth(2,0,0)')}}
 
+#ifndef PEDANTIC_ERRORS
 static_assert(_Generic(typeof(valid0), int * __ptrauth(VALID_DATA_KEY) : 1, int * : 0, default : 0));
 static_assert(_Generic(typeof(valid0), int * __ptrauth(VALID_CODE_KEY) : 0, default : 1));
 static_assert(_Generic(typeof_unqual(valid0), int * __ptrauth(VALID_DATA_KEY) : 0, int * : 1, default : 0));
@@ -73,6 +75,7 @@ static_assert(_Generic(valid0, int * __ptrauth(VALID_DATA_KEY) : 0, int * : 1, d
 
 static_assert(_Generic(array0, int * __ptrauth(VALID_DATA_KEY) * : 1, default : 0));
 static_assert(_Generic(*array1, int * : 1, default : 0));
+#endif
 
 void test_code(intp p) {
   p = (intp __ptrauth(VALID_DATA_KEY)) 0; // expected-error {{cannot cast to '__ptrauth'-qualified type '__ptrauth(2,0,0) intp' (aka 'int *__ptrauth(2,0,0)')}}
@@ -99,8 +102,10 @@ void test_array(void) {
 __attribute__((overloadable)) int overload_func(int **);
 __attribute__((overloadable)) float overload_func(int * __ptrauth(VALID_DATA_KEY) *);
 
+#ifndef PEDANTIC_ERRORS
 static_assert(_Generic(typeof(overload_func(&ptr0)), int : 1, default : 0));
 static_assert(_Generic(typeof(overload_func(&valid0)), float : 1, default : 0));
+#endif
 
 void func(int array[__ptrauth(VALID_DATA_KEY) 10]); // expected-error {{'__ptrauth' qualifier only applies to pointer or pointer sized integer types; 'int[10]' is invalid}}
 
