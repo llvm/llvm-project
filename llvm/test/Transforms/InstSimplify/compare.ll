@@ -1895,7 +1895,9 @@ define <2 x i1> @icmp_shl_1_ule_signmask_poison(<2 x i8> %V) {
 
 define <2 x i1> @icmp_shl_1_ule_signmask_poison2(<2 x i8> %V) {
 ; CHECK-LABEL: @icmp_shl_1_ule_signmask_poison2(
-; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
+; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i8> <i8 1, i8 poison>, [[V:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule <2 x i8> [[SHL]], <i8 poison, i8 -128>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %shl = shl <2 x i8> <i8 1, i8 poison>, %V
   %cmp = icmp ule <2 x i8> %shl, <i8 poison, i8 128>
