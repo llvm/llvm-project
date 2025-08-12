@@ -728,6 +728,9 @@ class ConversionPatternRewriter final : public PatternRewriter {
 public:
   ~ConversionPatternRewriter() override;
 
+  /// Return the configuration of the current dialect conversion.
+  const ConversionConfig &getConfig() const;
+
   /// Apply a signature conversion to given block. This replaces the block with
   /// a new block containing the updated signature. The operations of the given
   /// block are inlined into the newly-created block, which is returned.
@@ -1158,6 +1161,16 @@ public:
 // ConversionConfig
 //===----------------------------------------------------------------------===//
 
+/// An enum to control folding behavior during dialect conversion.
+enum class DialectConversionFoldingMode {
+  /// Never attempt to fold.
+  Never,
+  /// Only attempt to fold not legal operations before applying patterns.
+  BeforePatterns,
+  /// Only attempt to fold not legal operations after applying patterns.
+  AfterPatterns,
+};
+
 /// Dialect conversion configuration.
 struct ConversionConfig {
   /// An optional callback used to notify about match failure diagnostics during
@@ -1240,6 +1253,10 @@ struct ConversionConfig {
   /// your patterns do not trigger any IR rollbacks. For details, see
   /// https://discourse.llvm.org/t/rfc-a-new-one-shot-dialect-conversion-driver/79083.
   bool allowPatternRollback = true;
+
+  /// The folding mode to use during conversion.
+  DialectConversionFoldingMode foldingMode =
+      DialectConversionFoldingMode::BeforePatterns;
 };
 
 //===----------------------------------------------------------------------===//

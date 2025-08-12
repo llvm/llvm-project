@@ -75,8 +75,7 @@ define float @fmaxnum(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[TMP11]], <4 x float> [[TMP12]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[RDX_MINMAX_SELECT]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; CHECK-NEXT:    [[TMP15:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i1> [[TMP15]], i32 0
+; CHECK-NEXT:    [[TMP16:%.*]] = xor i1 [[TMP6]], true
 ; CHECK-NEXT:    [[TMP17:%.*]] = and i1 [[CMP_N]], [[TMP16]]
 ; CHECK-NEXT:    br i1 [[TMP17]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:

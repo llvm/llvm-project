@@ -295,7 +295,7 @@ private:
   InstructionSelector::ComplexRendererFns
   selectDSReadWrite2(MachineOperand &Root, unsigned size) const;
 
-  std::pair<Register, int64_t>
+  std::tuple<Register, int64_t, bool>
   getPtrBaseWithConstantOffset(Register Root,
                                const MachineRegisterInfo &MRI) const;
 
