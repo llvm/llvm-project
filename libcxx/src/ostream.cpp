@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <__config>
-#ifndef _LIBCPP_HAS_NO_FILESYSTEM
+#if _LIBCPP_HAS_FILESYSTEM
 #  include <fstream>
 #endif
 #include <ostream>
@@ -26,7 +26,7 @@ _LIBCPP_EXPORTED_FROM_ABI FILE* __get_ostream_file(ostream& __os) {
   // importance on Windows.
 #if _LIBCPP_HAS_RTTI
   auto* __rdbuf = __os.rdbuf();
-#  ifndef _LIBCPP_HAS_NO_FILESYSTEM
+#  if _LIBCPP_HAS_FILESYSTEM
   if (auto* __buffer = dynamic_cast<filebuf*>(__rdbuf))
     return __buffer->__file_;
 #  endif

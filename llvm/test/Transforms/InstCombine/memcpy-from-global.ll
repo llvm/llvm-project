@@ -178,14 +178,14 @@ define void @test4() {
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64, ptr)
+declare void @llvm.lifetime.start.p0(ptr)
 define void @test5() {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    call void @baz(ptr nonnull byval(i8) @G)
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %T
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %A)
+  call void @llvm.lifetime.start.p0(ptr %A)
   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %A, ptr align 4 @G, i64 124, i1 false)
   call void @baz(ptr byval(i8) %A)
   ret void
@@ -220,7 +220,7 @@ define void @test7() {
 define void @test8() {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:    [[AL:%.*]] = alloca [[U:%.*]], align 16
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(20) [[AL]], ptr noundef nonnull align 4 dereferenceable(20) getelementptr inbounds (i8, ptr @H, i64 20), i64 20, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(20) [[AL]], ptr noundef nonnull align 4 dereferenceable(20) getelementptr inbounds nuw (i8, ptr @H, i64 20), i64 20, i1 false)
 ; CHECK-NEXT:    call void @bar(ptr nonnull [[AL]]) #[[ATTR3]]
 ; CHECK-NEXT:    ret void
 ;
@@ -234,7 +234,7 @@ define void @test8() {
 define void @test8_addrspacecast() {
 ; CHECK-LABEL: @test8_addrspacecast(
 ; CHECK-NEXT:    [[AL:%.*]] = alloca [[U:%.*]], align 16
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p1.i64(ptr noundef nonnull align 16 dereferenceable(20) [[AL]], ptr addrspace(1) noundef align 4 dereferenceable(20) addrspacecast (ptr getelementptr inbounds (i8, ptr @H, i64 20) to ptr addrspace(1)), i64 20, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p1.i64(ptr noundef nonnull align 16 dereferenceable(20) [[AL]], ptr addrspace(1) noundef align 4 dereferenceable(20) addrspacecast (ptr getelementptr inbounds nuw (i8, ptr @H, i64 20) to ptr addrspace(1)), i64 20, i1 false)
 ; CHECK-NEXT:    call void @bar(ptr nonnull [[AL]]) #[[ATTR3]]
 ; CHECK-NEXT:    ret void
 ;
@@ -246,7 +246,7 @@ define void @test8_addrspacecast() {
 
 define void @test9() {
 ; CHECK-LABEL: @test9(
-; CHECK-NEXT:    call void @bar(ptr nonnull getelementptr inbounds (i8, ptr @H, i64 20)) #[[ATTR3]]
+; CHECK-NEXT:    call void @bar(ptr nonnull getelementptr inbounds nuw (i8, ptr @H, i64 20)) #[[ATTR3]]
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %U, align 4
@@ -257,7 +257,7 @@ define void @test9() {
 
 define void @test9_addrspacecast() {
 ; CHECK-LABEL: @test9_addrspacecast(
-; CHECK-NEXT:    call void @bar(ptr nonnull getelementptr inbounds (i8, ptr @H, i64 20)) #[[ATTR3]]
+; CHECK-NEXT:    call void @bar(ptr nonnull getelementptr inbounds nuw (i8, ptr @H, i64 20)) #[[ATTR3]]
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %U, align 4
@@ -308,7 +308,7 @@ define float @test11(i64 %i) {
 
 entry:
   %a = alloca [4 x float], align 4
-  call void @llvm.lifetime.start.p0(i64 16, ptr %a)
+  call void @llvm.lifetime.start.p0(ptr %a)
   call void @llvm.memcpy.p0.p1.i64(ptr align 4 %a, ptr addrspace(1) align 4 @I, i64 16, i1 false)
   %g = getelementptr inbounds [4 x float], ptr %a, i64 0, i64 %i
   %r = load float, ptr %g, align 4
@@ -320,7 +320,7 @@ define float @test11_volatile(i64 %i) {
 ; CHECK-LABEL: @test11_volatile(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca [4 x float], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr nonnull [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[A]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p1.i64(ptr align 4 [[A]], ptr addrspace(1) align 4 @I, i64 16, i1 true)
 ; CHECK-NEXT:    [[G:%.*]] = getelementptr inbounds [4 x float], ptr [[A]], i64 0, i64 [[I:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = load float, ptr [[G]], align 4
@@ -329,7 +329,7 @@ define float @test11_volatile(i64 %i) {
 
 entry:
   %a = alloca [4 x float], align 4
-  call void @llvm.lifetime.start.p0(i64 16, ptr %a)
+  call void @llvm.lifetime.start.p0(ptr %a)
   call void @llvm.memcpy.p0.p1.i64(ptr align 4 %a, ptr addrspace(1) align 4 @I, i64 16, i1 true)
   %g = getelementptr inbounds [4 x float], ptr %a, i64 0, i64 %i
   %r = load float, ptr %g, align 4
@@ -380,7 +380,7 @@ define void @volatile_memcpy() {
 ; and then forwarding it by readonly nocapture reference.
 define void @memcpy_to_nocapture_readonly() {
 ; CHECK-LABEL: @memcpy_to_nocapture_readonly(
-; CHECK-NEXT:    call void @bar(ptr nocapture nonnull readonly @H)
+; CHECK-NEXT:    call void @bar(ptr nonnull readonly captures(none) @H)
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %U, align 16
@@ -411,7 +411,7 @@ define void @memcpy_to_aliased_nocapture_readonly() {
 ; CHECK-LABEL: @memcpy_to_aliased_nocapture_readonly(
 ; CHECK-NEXT:    [[A:%.*]] = alloca [[U:%.*]], align 16
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(20) [[A]], ptr noundef nonnull align 16 dereferenceable(20) @H, i64 20, i1 false)
-; CHECK-NEXT:    call void @two_params(ptr nocapture nonnull readonly [[A]], ptr nocapture nonnull [[A]])
+; CHECK-NEXT:    call void @two_params(ptr nonnull readonly captures(none) [[A]], ptr nonnull captures(none) [[A]])
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %U, align 16

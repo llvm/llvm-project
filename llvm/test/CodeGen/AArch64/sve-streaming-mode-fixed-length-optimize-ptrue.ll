@@ -769,8 +769,7 @@ define void @fadd_v2f16(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ldr s0, [x0]
 ; CHECK-NEXT:    ldr s1, [x1]
 ; CHECK-NEXT:    fadd z0.h, p0/m, z0.h, z1.h
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    str w8, [x0]
+; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fadd_v2f16:

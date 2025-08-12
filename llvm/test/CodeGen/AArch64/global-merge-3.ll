@@ -40,14 +40,14 @@ define dso_local void @f1(i32 %a1, i32 %a2, i32 %a3) {
 
 ;CHECK-APPLE-IOS: .globl  __MergedGlobals_x
 ;CHECK-APPLE-IOS: .zerofill __DATA,__common,__MergedGlobals_x,800,2
-;CHECK-APPLE-IOS: .set _x, __MergedGlobals_x
-;CHECK-APPLE-IOS: .set _y, __MergedGlobals_x+400
+;CHECK-APPLE-IOS: _x = __MergedGlobals_x
+;CHECK-APPLE-IOS: _y = __MergedGlobals_x+400
 
 ;CHECK: .type   .L_MergedGlobals,@object // @_MergedGlobals
 ;CHECK: .local  .L_MergedGlobals
 ;CHECK: .comm   .L_MergedGlobals,800,4
 ;CHECK: globl  x
-;CHECK: .set x, .L_MergedGlobals
+;CHECK: x = .L_MergedGlobals
 ;CHECK: globl  y
-;CHECK: .set y, .L_MergedGlobals+400
-;CHECK-NOT: .set z, .L_MergedGlobals
+;CHECK: y = .L_MergedGlobals+400
+;CHECK-NOT: z = .L_MergedGlobals

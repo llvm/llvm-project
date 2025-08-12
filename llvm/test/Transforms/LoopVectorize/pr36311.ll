@@ -13,16 +13,16 @@ $test = comdat any
 declare i32 @__gxx_personality_v0(...)
 
 ; Function Attrs: uwtable
-define dso_local void @test() local_unnamed_addr #0 comdat align 2 personality ptr @__gxx_personality_v0 {
+define dso_local void @test(i1 %arg) local_unnamed_addr #0 comdat align 2 personality ptr @__gxx_personality_v0 {
 entry:
   br label %for.body51
 
 for.body51:                                       ; preds = %for.body51, %entry
-  br i1 undef, label %for.body51, label %for.body89.lr.ph
+  br i1 %arg, label %for.body51, label %for.body89.lr.ph
 
 for.cond80.loopexit:                              ; preds = %for.body89
   %inc94.lcssa = phi i32 [ %inc94, %for.body89 ]
-  br i1 undef, label %for.body89.lr.ph, label %nrvo.skipdtor.loopexit
+  br i1 %arg, label %for.body89.lr.ph, label %nrvo.skipdtor.loopexit
 
 for.body89.lr.ph:                                 ; preds = %for.cond80.loopexit, %for.body51
   %i79.0179 = phi i32 [ %add90, %for.cond80.loopexit ], [ 0, %for.body51 ]

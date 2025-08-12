@@ -27,13 +27,57 @@
 #define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE) BUILTIN(ID, TYPE, ATTRS)
 #endif
 
+// Built-ins requiring custom code generation.
+// Because these built-ins rely on target-dependent types and to avoid pervasive
+// change, they are type checked manually in Sema using custom type descriptors.
+// The first argument of the CUSTOM_BUILTIN macro is the name of the built-in
+// with its prefix, the second argument is the name of the intrinsic this
+// built-in generates, the third argument specifies the type of the function
+// (result value, then each argument) as follows:
+//  i -> Unsigned integer followed by the greatest possible value for that
+//       argument or 0 if no constraint on the value.
+//       (e.g. i15 for a 4-bits value)
+//  V -> Vector type used with MMA built-ins (vector unsigned char)
+//  W -> PPC Vector type followed by the size of the vector type.
+//       (e.g. W512 for __vector_quad)
+//  any other descriptor -> Fall back to generic type descriptor decoding.
+// The 'C' suffix can be used as a suffix to specify the const type.
+// The '*' suffix can be used as a suffix to specify a pointer to a type.
+// The fourth argument is set to true if the built-in accumulates its result
+// into its given accumulator.
+
 #ifndef CUSTOM_BUILTIN
 #define CUSTOM_BUILTIN(ID, INTR, TYPES, ACCUMULATE, FEATURE)                   \
   TARGET_BUILTIN(__builtin_##ID, "i.", "t", FEATURE)
 #endif
 
+// UNALIASED_CUSTOM_BUILTIN macro is used for built-ins that have
+// the same name as that of the intrinsic they generate, i.e. the
+// ID and INTR are the same.
+// This avoids repeating the ID and INTR in the macro expression.
 #define UNALIASED_CUSTOM_BUILTIN(ID, TYPES, ACCUMULATE, FEATURE)               \
   CUSTOM_BUILTIN(ID, ID, TYPES, ACCUMULATE, FEATURE)
+
+// UNALIASED_CUSTOM_MMA_BUILTIN macro is used for MMA built-ins and its
+// corresponding 4 positive/negative multiply and positive/negative accumulate
+// built-in with the same ID concated with posfix [nn|np|pn|pp].
+// This avoids repeating the TYPES and FEATURE in the macro expression.
+// eg.
+//   UNALIASED_CUSTOM_MMA_BUILTIN(mma_xvf16ger2, "vW512*VV",
+//                                "mma,paired-vector-memops")
+// Will generate built-ins:
+//    * __builtin_mma_xvf16ger2()
+//    * __builtin_mma_xvf16ger2nn()
+//    * __builtin_mma_xvf16ger2np()
+//    * __builtin_mma_xvf16ger2pn()
+//    * __builtin_mma_xvf16ger2nn()
+// All with the same TYPES and FEATURE.
+#define UNALIASED_CUSTOM_MMA_BUILTIN(ID, TYPES, FEATURE)                       \
+  UNALIASED_CUSTOM_BUILTIN(ID, TYPES, false, FEATURE)                          \
+  UNALIASED_CUSTOM_BUILTIN(ID##nn, TYPES, true, FEATURE)                       \
+  UNALIASED_CUSTOM_BUILTIN(ID##np, TYPES, true, FEATURE)                       \
+  UNALIASED_CUSTOM_BUILTIN(ID##pn, TYPES, true, FEATURE)                       \
+  UNALIASED_CUSTOM_BUILTIN(ID##pp, TYPES, true, FEATURE)
 
 // GCC predefined macros to rename builtins, undef them to keep original names.
 #if defined(__GNUC__) && !defined(__clang__)
@@ -535,6 +579,12 @@ TARGET_BUILTIN(__builtin_ppc_bcdadd_p, "iiV16UcV16Uc", "",
 TARGET_BUILTIN(__builtin_ppc_bcdsub_p, "iiV16UcV16Uc", "",
                "isa-v207-instructions")
 
+// P9 Binary-coded decimal (BCD) builtins.                                                
+TARGET_BUILTIN(__builtin_ppc_national2packed, "V16UcV16UcUc", "t", "power9-vector")
+TARGET_BUILTIN(__builtin_ppc_packed2national, "V16UcV16Uc", "", "power9-vector")
+TARGET_BUILTIN(__builtin_ppc_packed2zoned, "V16UcV16UcUc", "t", "power9-vector")
+TARGET_BUILTIN(__builtin_ppc_zoned2packed, "V16UcV16UcUc", "t", "power9-vector")
+
 TARGET_BUILTIN(__builtin_altivec_vclzlsbb, "SiV16Uc", "", "power9-vector")
 TARGET_BUILTIN(__builtin_altivec_vctzlsbb, "SiV16Uc", "", "power9-vector")
 TARGET_BUILTIN(__builtin_altivec_vprtybw, "V4UiV4Ui", "", "power9-vector")
@@ -961,25 +1011,6 @@ BUILTIN(__builtin_setflm, "dd", "")
 // Cache built-ins
 BUILTIN(__builtin_dcbf, "vvC*", "")
 
-// Built-ins requiring custom code generation.
-// Because these built-ins rely on target-dependent types and to avoid pervasive
-// change, they are type checked manually in Sema using custom type descriptors.
-// The first argument of the CUSTOM_BUILTIN macro is the name of the built-in
-// with its prefix, the second argument is the name of the intrinsic this
-// built-in generates, the third argument specifies the type of the function
-// (result value, then each argument) as follows:
-//  i -> Unsigned integer followed by the greatest possible value for that
-//       argument or 0 if no constraint on the value.
-//       (e.g. i15 for a 4-bits value)
-//  V -> Vector type used with MMA built-ins (vector unsigned char)
-//  W -> PPC Vector type followed by the size of the vector type.
-//       (e.g. W512 for __vector_quad)
-//  any other descriptor -> Fall back to generic type descriptor decoding.
-// The 'C' suffix can be used as a suffix to specify the const type.
-// The '*' suffix can be used as a suffix to specify a pointer to a type.
-// The fourth argument is set to true if the built-in accumulates its result into
-// its given accumulator.
-
 // Provided builtins with _mma_ prefix for compatibility.
 CUSTOM_BUILTIN(mma_lxvp, vsx_lxvp, "W256SLiW256C*", false,
                "paired-vector-memops")
@@ -992,11 +1023,6 @@ CUSTOM_BUILTIN(mma_disassemble_pair, vsx_disassemble_pair, "vv*W256*", false,
 CUSTOM_BUILTIN(vsx_build_pair, vsx_assemble_pair, "vW256*VV", false,
                "paired-vector-memops")
 CUSTOM_BUILTIN(mma_build_acc, mma_assemble_acc, "vW512*VVVV", false, "mma")
-
-// UNALIASED_CUSTOM_BUILTIN macro is used for built-ins that have
-// the same name as that of the intrinsic they generate, i.e. the
-// ID and INTR are the same.
-// This avoids repeating the ID and INTR in the macro expression.
 
 UNALIASED_CUSTOM_BUILTIN(vsx_lxvp, "W256SLiW256C*", false,
                          "paired-vector-memops")
@@ -1026,12 +1052,6 @@ UNALIASED_CUSTOM_BUILTIN(mma_xvi16ger2, "vW512*VV", false,
                          "mma,paired-vector-memops")
 UNALIASED_CUSTOM_BUILTIN(mma_xvi16ger2s, "vW512*VV", false,
                          "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvf16ger2, "vW512*VV", false,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvf32ger, "vW512*VV", false,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvf64ger, "vW512*W256V", false,
-                         "mma,paired-vector-memops")
 UNALIASED_CUSTOM_BUILTIN(mma_pmxvi4ger8, "vW512*VVi15i15i255", false,
                          "mma,paired-vector-memops")
 UNALIASED_CUSTOM_BUILTIN(mma_pmxvi8ger4, "vW512*VVi15i15i15", false,
@@ -1039,12 +1059,6 @@ UNALIASED_CUSTOM_BUILTIN(mma_pmxvi8ger4, "vW512*VVi15i15i15", false,
 UNALIASED_CUSTOM_BUILTIN(mma_pmxvi16ger2, "vW512*VVi15i15i3", false,
                          "mma,paired-vector-memops")
 UNALIASED_CUSTOM_BUILTIN(mma_pmxvi16ger2s, "vW512*VVi15i15i3", false,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvf16ger2, "vW512*VVi15i15i3", false,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvf32ger, "vW512*VVi15i15", false,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvf64ger, "vW512*W256Vi15i3", false,
                          "mma,paired-vector-memops")
 UNALIASED_CUSTOM_BUILTIN(mma_xvi4ger8pp, "vW512*VV", true,
                          "mma,paired-vector-memops")
@@ -1066,77 +1080,47 @@ UNALIASED_CUSTOM_BUILTIN(mma_pmxvi16ger2pp, "vW512*VVi15i15i3", true,
                          "mma,paired-vector-memops")
 UNALIASED_CUSTOM_BUILTIN(mma_pmxvi16ger2spp, "vW512*VVi15i15i3", true,
                          "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvf16ger2pp, "vW512*VV", true,
+UNALIASED_CUSTOM_BUILTIN(mma_dmxvi8gerx4, "vW1024*W256V", false,
                          "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvf16ger2pn, "vW512*VV", true,
+UNALIASED_CUSTOM_BUILTIN(mma_pmdmxvi8gerx4, "vW1024*W256Vi255i15i15", false,
                          "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvf16ger2np, "vW512*VV", true,
+UNALIASED_CUSTOM_BUILTIN(mma_dmxvi8gerx4pp, "vW1024*W256V", true,
                          "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvf16ger2nn, "vW512*VV", true,
+UNALIASED_CUSTOM_BUILTIN(mma_pmdmxvi8gerx4pp, "vW1024*W256Vi255i15i15", true,
                          "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvf16ger2pp, "vW512*VVi15i15i3", true,
+UNALIASED_CUSTOM_BUILTIN(mma_dmxvi8gerx4spp, "vW1024*W256V", true,
                          "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvf16ger2pn, "vW512*VVi15i15i3", true,
+UNALIASED_CUSTOM_BUILTIN(mma_pmdmxvi8gerx4spp, "vW1024*W256Vi255i15i15", true,
                          "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvf16ger2np, "vW512*VVi15i15i3", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvf16ger2nn, "vW512*VVi15i15i3", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvf32gerpp, "vW512*VV", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvf32gerpn, "vW512*VV", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvf32gernp, "vW512*VV", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvf32gernn, "vW512*VV", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvf32gerpp, "vW512*VVi15i15", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvf32gerpn, "vW512*VVi15i15", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvf32gernp, "vW512*VVi15i15", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvf32gernn, "vW512*VVi15i15", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvf64gerpp, "vW512*W256V", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvf64gerpn, "vW512*W256V", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvf64gernp, "vW512*W256V", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvf64gernn, "vW512*W256V", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvf64gerpp, "vW512*W256Vi15i3", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvf64gerpn, "vW512*W256Vi15i3", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvf64gernp, "vW512*W256Vi15i3", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvf64gernn, "vW512*W256Vi15i3", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvbf16ger2, "vW512*VV", false,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvbf16ger2, "vW512*VVi15i15i3", false,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvbf16ger2pp, "vW512*VV", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvbf16ger2pn, "vW512*VV", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvbf16ger2np, "vW512*VV", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvbf16ger2nn, "vW512*VV", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvbf16ger2pp, "vW512*VVi15i15i3", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvbf16ger2pn, "vW512*VVi15i15i3", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvbf16ger2np, "vW512*VVi15i15i3", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvbf16ger2nn, "vW512*VVi15i15i3", true,
-                         "mma,paired-vector-memops")
+UNALIASED_CUSTOM_BUILTIN(mma_dmsetdmrz, "vW1024*", false,
+                         "mma,isa-future-instructions")
+UNALIASED_CUSTOM_BUILTIN(mma_dmmr, "vW1024*W1024*", false,
+                         "mma,isa-future-instructions")
+UNALIASED_CUSTOM_BUILTIN(mma_dmxor, "vW1024*W1024*", true,
+                         "mma,isa-future-instructions")
+
+// MMA builtins with positive/negative multiply/accumulate.
+UNALIASED_CUSTOM_MMA_BUILTIN(mma_xvf16ger2, "vW512*VV",
+                             "mma,paired-vector-memops")
+UNALIASED_CUSTOM_MMA_BUILTIN(mma_xvf32ger, "vW512*VV",
+                             "mma,paired-vector-memops")
+UNALIASED_CUSTOM_MMA_BUILTIN(mma_xvf64ger, "vW512*W256V",
+                             "mma,paired-vector-memops")
+UNALIASED_CUSTOM_MMA_BUILTIN(mma_pmxvf16ger2, "vW512*VVi15i15i3",
+                             "mma,paired-vector-memops")
+UNALIASED_CUSTOM_MMA_BUILTIN(mma_pmxvf32ger, "vW512*VVi15i15",
+                             "mma,paired-vector-memops")
+UNALIASED_CUSTOM_MMA_BUILTIN(mma_pmxvf64ger, "vW512*W256Vi15i3",
+                             "mma,paired-vector-memops")
+UNALIASED_CUSTOM_MMA_BUILTIN(mma_xvbf16ger2, "vW512*VV",
+                             "mma,paired-vector-memops")
+UNALIASED_CUSTOM_MMA_BUILTIN(mma_pmxvbf16ger2, "vW512*VVi15i15i3",
+                             "mma,paired-vector-memops")
 
 // FIXME: Obviously incomplete.
 
 #undef BUILTIN
+#undef TARGET_BUILTIN
 #undef CUSTOM_BUILTIN
 #undef UNALIASED_CUSTOM_BUILTIN
+#undef UNALIASED_CUSTOM_MMA_BUILTIN

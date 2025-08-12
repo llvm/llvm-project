@@ -3,7 +3,7 @@
 
 define <4 x i1> @vec_reverse_known_bits(<4 x i8> %xx) {
 ; CHECK-LABEL: @vec_reverse_known_bits(
-; CHECK-NEXT:    ret <4 x i1> <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    ret <4 x i1> splat (i1 true)
 ;
   %x = or <4 x i8> %xx, <i8 128, i8 128, i8 128, i8 128>
   %rev = call <4 x i8> @llvm.vector.reverse(<4 x i8> %x)

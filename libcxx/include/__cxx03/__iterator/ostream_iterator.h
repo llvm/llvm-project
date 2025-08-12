@@ -7,16 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_OSTREAM_ITERATOR_H
-#define _LIBCPP___ITERATOR_OSTREAM_ITERATOR_H
+#ifndef _LIBCPP___CXX03___ITERATOR_OSTREAM_ITERATOR_H
+#define _LIBCPP___CXX03___ITERATOR_OSTREAM_ITERATOR_H
 
-#include <__config>
-#include <__fwd/ostream.h>
-#include <__fwd/string.h>
-#include <__iterator/iterator.h>
-#include <__iterator/iterator_traits.h>
-#include <__memory/addressof.h>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/__fwd/ostream.h>
+#include <__cxx03/__fwd/string.h>
+#include <__cxx03/__iterator/iterator.h>
+#include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__memory/addressof.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -26,21 +26,13 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _Tp, class _CharT = char, class _Traits = char_traits<_CharT> >
-class _LIBCPP_TEMPLATE_VIS ostream_iterator
-#if _LIBCPP_STD_VER <= 14 || !defined(_LIBCPP_ABI_NO_ITERATOR_BASES)
-    : public iterator<output_iterator_tag, void, void, void, void>
-#endif
-{
+class _LIBCPP_TEMPLATE_VIS ostream_iterator : public iterator<output_iterator_tag, void, void, void, void> {
   _LIBCPP_SUPPRESS_DEPRECATED_POP
 
 public:
   typedef output_iterator_tag iterator_category;
   typedef void value_type;
-#if _LIBCPP_STD_VER >= 20
-  typedef ptrdiff_t difference_type;
-#else
   typedef void difference_type;
-#endif
   typedef void pointer;
   typedef void reference;
   typedef _CharT char_type;
@@ -72,4 +64,4 @@ public:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ITERATOR_OSTREAM_ITERATOR_H
+#endif // _LIBCPP___CXX03___ITERATOR_OSTREAM_ITERATOR_H

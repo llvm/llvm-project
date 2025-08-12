@@ -11,14 +11,12 @@ on:
     paths:
       - 'llvm/**'
       - '.github/workflows/llvm-tests.yml'
-      - '.github/workflows/llvm-project-tests.yml'
   pull_request:
     branches:
       - 'release/**'
     paths:
       - 'llvm/**'
       - '.github/workflows/llvm-tests.yml'
-      - '.github/workflows/llvm-project-tests.yml'
 
 concurrency:
   # Skip intermediate builds: always.
@@ -27,17 +25,9 @@ concurrency:
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 
 jobs:
-  check-all:
-    if: github.repository_owner == 'llvm'
-    name: Build and Test
-    uses: ./.github/workflows/llvm-project-tests.yml
-    with:
-      build_target: check-all
-      projects: clang;lld;libclc;lldb
-
   abi-dump-setup:
     if: github.repository_owner == 'llvm'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       BASELINE_REF: ${{ steps.vars.outputs.BASELINE_REF }}
       ABI_HEADERS: ${{ steps.vars.outputs.ABI_HEADERS }}
@@ -48,7 +38,7 @@ jobs:
       LLVM_VERSION_PATCH: ${{ steps.version.outputs.patch }}
     steps:
       - name: Checkout source
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 250
 
@@ -81,7 +71,7 @@ jobs:
   abi-dump:
     if: github.repository_owner == 'llvm'
     needs: abi-dump-setup
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         name:
@@ -101,7 +91,8 @@ jobs:
         uses: llvm/actions/install-ninja@main
       - name: Install abi-compliance-checker
         run: |
-          sudo apt-get install abi-dumper autoconf pkg-config
+          sudo apt-get update
+          sudo apt-get -y install abi-dumper autoconf pkg-config
       - name: Install universal-ctags
         run: |
           git clone https://github.com/universal-ctags/ctags.git
@@ -137,43 +128,45 @@ jobs:
           # Remove symbol versioning from dumps, so we can compare across major versions.
           sed -i 's/LLVM_${{ matrix.llvm_version_major }}/LLVM_NOVERSION/' ${{ matrix.ref }}.abi
       - name: Upload ABI file
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # 4.6.0
         with:
           name: ${{ matrix.name }}
           path: ${{ matrix.ref }}.abi
 
       - name: Upload symbol list file
         if: matrix.name == 'build-baseline'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # 4.6.0
         with:
           name: symbol-list
           path: llvm.symbols
 
   abi-compare:
     if: github.repository_owner == 'llvm'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs:
       - abi-dump-setup
       - abi-dump
     steps:
       - name: Download baseline
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # 4.1.8
         with:
           name: build-baseline
           path: build-baseline
       - name: Download latest
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # 4.1.8
         with:
           name: build-latest
           path: build-latest
       - name: Download symbol list
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # 4.1.8
         with:
           name: symbol-list
           path: symbol-list
 
       - name: Install abi-compliance-checker
-        run: sudo apt-get install abi-compliance-checker
+        run: |
+          sudo apt-get update
+          sudo apt-get -y install abi-compliance-checker
       - name: Compare ABI
         run: |
           if [ -s symbol-list/llvm.symbols ]; then
@@ -186,7 +179,7 @@ jobs:
           abi-compliance-checker $EXTRA_ARGS -l libLLVM.so -old build-baseline/*.abi -new build-latest/*.abi || test "${{ needs.abi-dump-setup.outputs.ABI_HEADERS }}" = "llvm-c"
       - name: Upload ABI Comparison
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # 4.6.0
         with:
           name: compat-report-${{ github.sha }}
           path: compat_reports/

@@ -2,7 +2,9 @@
 
 #include "clang-c/BuildSystem.h"
 #include "clang-c/CXCompilationDatabase.h"
+#include "clang-c/CXDiagnostic.h"
 #include "clang-c/CXErrorCode.h"
+#include "clang-c/CXFile.h"
 #include "clang-c/CXSourceLocation.h"
 #include "clang-c/CXString.h"
 #include "clang-c/Documentation.h"
@@ -374,7 +376,7 @@ static int parse_remapped_files_with_try(int try_idx,
   if (ret)
     return ret;
 
-  sprintf(opt_name, "-remap-file-%d=", try_idx);
+  snprintf(opt_name, sizeof(opt_name), "-remap-file-%d=", try_idx);
   ret = parse_remapped_files_with_opt(opt_name, argc, argv, start_arg,
       &unsaved_files_try_idx, &num_unsaved_files_try_idx);
   if (ret)
@@ -1182,8 +1184,9 @@ static void PrintCursor(CXCursor Cursor, const char *CommentSchemaFile) {
       CXString Spelling = clang_getCursorSpelling(Cursor);
       const char *CName = clang_getCString(Name);
       const char *CSpelling = clang_getCString(Spelling);
-      char *DefaultSetter = malloc(strlen(CSpelling) + 5);
-      sprintf(DefaultSetter, "set%s:", CSpelling);
+      size_t Len = strlen(CSpelling) + 5;
+      char *DefaultSetter = malloc(Len);
+      snprintf(DefaultSetter, Len, "set%s:", CSpelling);
       DefaultSetter[3] &= ~(1 << 5); /* Make uppercase */
       if (CName && strcmp(CName, DefaultSetter)) {
         printf(" (setter=%s)", CName);
@@ -1211,28 +1214,36 @@ static void PrintCursor(CXCursor Cursor, const char *CommentSchemaFile) {
   }
 }
 
-static const char* GetCursorSource(CXCursor Cursor) {
+static CXString createCXString(const char *CS) {
+  CXString Str;
+  Str.data = (const void *)CS;
+  Str.private_flags = 0;
+  return Str;
+}
+
+static CXString duplicateCXString(const char *CS) {
+  CXString Str;
+  Str.data = strdup(CS);
+  Str.private_flags = 1; /* CXS_Malloc */
+  return Str;
+}
+
+static CXString GetCursorSource(CXCursor Cursor) {
   CXSourceLocation Loc = clang_getCursorLocation(Cursor);
   CXString source;
   CXFile file;
+  const char *b;
+  CXString result;
   clang_getExpansionLocation(Loc, &file, 0, 0, 0);
   source = clang_getFileName(file);
   if (!clang_getCString(source)) {
     clang_disposeString(source);
-    return "<invalid loc>";
+    return createCXString("<invalid loc>");
   }
-  else {
-    const char *b = basename(clang_getCString(source));
-    clang_disposeString(source);
-    return b;
-  }
-}
-
-static CXString createCXString(const char *CS) {
-  CXString Str;
-  Str.data = (const void *) CS;
-  Str.private_flags = 0;
-  return Str;
+  b = basename(clang_getCString(source));
+  result = duplicateCXString(b);
+  clang_disposeString(source);
+  return result;
 }
 
 /******************************************************************************/
@@ -1355,9 +1366,12 @@ enum CXChildVisitResult FilteredPrintingVisitor(CXCursor Cursor,
   if (!Data->Filter || (Cursor.kind == *(enum CXCursorKind *)Data->Filter)) {
     CXSourceLocation Loc = clang_getCursorLocation(Cursor);
     unsigned line, column;
+    CXString source;
     clang_getFileLocation(Loc, 0, &line, &column, 0);
-    printf("// %s: %s:%d:%d: ", FileCheckPrefix,
-           GetCursorSource(Cursor), line, column);
+    source = GetCursorSource(Cursor);
+    printf("// %s: %s:%d:%d: ", FileCheckPrefix, clang_getCString(source), line,
+           column);
+    clang_disposeString(source);
     PrintCursor(Cursor, Data->CommentSchemaFile);
     PrintCursorExtent(Cursor);
     if (clang_isDeclaration(Cursor.kind)) {
@@ -1426,8 +1440,10 @@ static enum CXChildVisitResult FunctionScanVisitor(CXCursor Cursor,
       if (Ref.kind == CXCursor_NoDeclFound) {
         /* Nothing found here; that's fine. */
       } else if (Ref.kind != CXCursor_FunctionDecl) {
-        printf("// %s: %s:%d:%d: ", FileCheckPrefix, GetCursorSource(Ref),
-               curLine, curColumn);
+        CXString CursorSource = GetCursorSource(Ref);
+        printf("// %s: %s:%d:%d: ", FileCheckPrefix,
+               clang_getCString(CursorSource), curLine, curColumn);
+        clang_disposeString(CursorSource);
         PrintCursor(Ref, Data->CommentSchemaFile);
         printf("\n");
       }
@@ -1449,11 +1465,15 @@ enum CXChildVisitResult USRVisitor(CXCursor C, CXCursor parent,
   if (!Data->Filter || (C.kind == *(enum CXCursorKind *)Data->Filter)) {
     CXString USR = clang_getCursorUSR(C);
     const char *cstr = clang_getCString(USR);
+    CXString CursorSource;
     if (!cstr || cstr[0] == '\0') {
       clang_disposeString(USR);
       return CXChildVisit_Recurse;
     }
-    printf("// %s: %s %s", FileCheckPrefix, GetCursorSource(C), cstr);
+    CursorSource = GetCursorSource(C);
+    printf("// %s: %s %s", FileCheckPrefix, clang_getCString(CursorSource),
+           cstr);
+    clang_disposeString(CursorSource);
 
     PrintCursorExtent(C);
     printf("\n");
@@ -1843,14 +1863,14 @@ static enum CXChildVisitResult PrintTypeSize(CXCursor cursor, CXCursor p,
 static enum CXChildVisitResult PrintBinOps(CXCursor C, CXCursor p,
                                            CXClientData d) {
   enum CXCursorKind ck = clang_getCursorKind(C);
-  enum CX_BinaryOperatorKind bok;
+  enum CXBinaryOperatorKind bok;
   CXString opstr;
   if (ck != CXCursor_BinaryOperator && ck != CXCursor_CompoundAssignOperator)
     return CXChildVisit_Recurse;
 
   PrintCursor(C, NULL);
-  bok = clang_Cursor_getBinaryOpcode(C);
-  opstr = clang_Cursor_getBinaryOpcodeStr(bok);
+  bok = clang_getCursorBinaryOperatorKind(C);
+  opstr = clang_getBinaryOperatorKindSpelling(bok);
   printf(" BinOp=%s %d\n", clang_getCString(opstr), bok);
   clang_disposeString(opstr);
   return CXChildVisit_Recurse;
@@ -1966,6 +1986,51 @@ static enum CXChildVisitResult PrintDeclAttributes(CXCursor cursor, CXCursor p,
     PrintCursor(cursor, NULL);
   }
   return CXChildVisit_Continue;
+}
+
+/******************************************************************************/
+/* Inline assembly cursor testing                                             */
+/******************************************************************************/
+
+static enum CXChildVisitResult
+PrintGCCInlineAssembly(CXCursor cursor, CXCursor p, CXClientData d) {
+  CXString Constraint, Template, Clobber;
+  CXCursor Expr;
+  unsigned hasGoto, i, e;
+  if (clang_getCursorKind(cursor) != CXCursor_AsmStmt)
+    return CXChildVisit_Recurse;
+
+  hasGoto = clang_Cursor_isGCCAssemblyHasGoto(cursor);
+  printf("===ASM TEMPLATE%s===\n", hasGoto ? " (WITH GOTO)" : "");
+  Template = clang_Cursor_getGCCAssemblyTemplate(cursor);
+  printf("%s", clang_getCString(Template));
+  clang_disposeString(Template);
+  printf("\n===ASM TEMPLATE END===\n");
+
+  printf("volatile: %s\n",
+         clang_Cursor_isGCCAssemblyVolatile(cursor) ? "true" : "false");
+
+  for (i = 0, e = clang_Cursor_getGCCAssemblyNumOutputs(cursor); i < e; ++i) {
+    clang_Cursor_getGCCAssemblyOutput(cursor, i, &Constraint, &Expr);
+    printf("Output #%d Constraint (%s): ", i, clang_getCString(Constraint));
+    PrintCursor(Expr, NULL);
+    printf("\n");
+    clang_disposeString(Constraint);
+  }
+  for (i = 0, e = clang_Cursor_getGCCAssemblyNumInputs(cursor); i < e; ++i) {
+    clang_Cursor_getGCCAssemblyInput(cursor, i, &Constraint, &Expr);
+    printf("Input #%d Constraint (%s): ", i, clang_getCString(Constraint));
+    PrintCursor(Expr, NULL);
+    printf("\n");
+    clang_disposeString(Constraint);
+  }
+  for (i = 0, e = clang_Cursor_getGCCAssemblyNumClobbers(cursor); i < e; ++i) {
+    Clobber = clang_Cursor_getGCCAssemblyClobber(cursor, i);
+    printf("Clobber #%d: %s\n", i, clang_getCString(Clobber));
+    clang_disposeString(Clobber);
+  }
+  printf("===ASM END===\n");
+  return CXChildVisit_Recurse;
 }
 
 /******************************************************************************/
@@ -3526,19 +3591,19 @@ static CXIdxClientContainer makeClientContainer(CXClientData *client_data,
   char *newStr;
   CXIdxClientFile file;
   unsigned line, column;
-  
+  size_t datalen;
+
   name = info->name;
   if (!name)
     name = "<anon-tag>";
 
   clang_indexLoc_getFileLocation(loc, &file, 0, &line, &column, 0);
 
-  node =
-      (IndexDataStringList *)malloc(sizeof(IndexDataStringList) + strlen(name) +
-                                    digitCount(line) + digitCount(column) + 2);
+  datalen = strlen(name) + digitCount(line) + digitCount(column) + 3;
+  node = (IndexDataStringList *)malloc(datalen + sizeof(IndexDataStringList));
   assert(node);
   newStr = node->data;
-  sprintf(newStr, "%s:%d:%d", name, line, column);
+  snprintf(newStr, datalen, "%s:%d:%d", name, line, column);
 
   /* Remember string so it can be freed later. */
   index_data = (IndexData *)client_data;
@@ -4990,6 +5055,7 @@ static void print_usage(void) {
     "       c-index-test -test-annotate-tokens=<range> {<args>}*\n"
     "       c-index-test -test-inclusion-stack-source {<args>}*\n"
     "       c-index-test -test-inclusion-stack-tu <AST file>\n");
+  fprintf(stderr, "       c-index-test -test-inline-assembly <AST file>\n");
   fprintf(stderr,
     "       c-index-test -test-print-linkage-source {<args>}*\n"
     "       c-index-test -test-print-visibility {<args>}*\n"
@@ -5146,6 +5212,10 @@ int cindextest_main(int argc, const char **argv) {
         argc, argv, "-single-symbol-sgf-at=", inspect_single_symbol_sgf_cursor);
   else if (argc > 2 && strstr(argv[1], "-single-symbol-sgf-for=") == argv[1])
     return perform_test_single_symbol_sgf(argv[1], argc - 2, argv + 2);
+
+  if (argc > 2 && strstr(argv[1], "-test-inline-assembly") == argv[1])
+    return perform_test_load_source(argc - 2, argv + 2, "all",
+                                    PrintGCCInlineAssembly, NULL);
 
   print_usage();
   return 1;

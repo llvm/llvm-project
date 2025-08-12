@@ -87,19 +87,19 @@ R600TargetMachine::getSubtargetImpl(const Function &F) const {
 
 TargetTransformInfo
 R600TargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(R600TTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<R600TTIImpl>(this, F));
+}
+
+ScheduleDAGInstrs *
+R600TargetMachine::createMachineScheduler(MachineSchedContext *C) const {
+  return createR600MachineScheduler(C);
 }
 
 namespace {
 class R600PassConfig final : public AMDGPUPassConfig {
 public:
-  R600PassConfig(LLVMTargetMachine &TM, PassManagerBase &PM)
+  R600PassConfig(TargetMachine &TM, PassManagerBase &PM)
       : AMDGPUPassConfig(TM, PM) {}
-
-  ScheduleDAGInstrs *
-  createMachineScheduler(MachineSchedContext *C) const override {
-    return createR600MachineScheduler(C);
-  }
 
   bool addPreISel() override;
   bool addInstSelector() override;
@@ -138,7 +138,6 @@ void R600PassConfig::addPreSched2() {
 void R600PassConfig::addPreEmitPass() {
   addPass(createR600MachineCFGStructurizerPass());
   addPass(createR600ExpandSpecialInstrsPass());
-  addPass(&FinalizeMachineBundlesID);
   addPass(createR600Packetizer());
   addPass(createR600ControlFlowFinalizer());
 }

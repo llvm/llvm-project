@@ -8,9 +8,7 @@
 
 #include "RedundantExpressionCheck.h"
 #include "../utils/Matchers.h"
-#include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/ExprConcepts.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
@@ -20,14 +18,12 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/SmallBitVector.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <optional>
 #include <string>
-#include <vector>
 
 using namespace clang::ast_matchers;
 using namespace clang::tidy::matchers;
@@ -47,14 +43,6 @@ static bool incrementWithoutOverflow(const APSInt &Value, APSInt &Result) {
   Result = Value;
   ++Result;
   return Value < Result;
-}
-
-static bool areEquivalentNameSpecifier(const NestedNameSpecifier *Left,
-                                       const NestedNameSpecifier *Right) {
-  llvm::FoldingSetNodeID LeftID, RightID;
-  Left->Profile(LeftID);
-  Right->Profile(RightID);
-  return LeftID == RightID;
 }
 
 static bool areEquivalentExpr(const Expr *Left, const Expr *Right) {
@@ -108,9 +96,8 @@ static bool areEquivalentExpr(const Expr *Left, const Expr *Right) {
     if (cast<DependentScopeDeclRefExpr>(Left)->getDeclName() !=
         cast<DependentScopeDeclRefExpr>(Right)->getDeclName())
       return false;
-    return areEquivalentNameSpecifier(
-        cast<DependentScopeDeclRefExpr>(Left)->getQualifier(),
-        cast<DependentScopeDeclRefExpr>(Right)->getQualifier());
+    return cast<DependentScopeDeclRefExpr>(Left)->getQualifier() ==
+           cast<DependentScopeDeclRefExpr>(Right)->getQualifier();
   case Stmt::DeclRefExprClass:
     return cast<DeclRefExpr>(Left)->getDecl() ==
            cast<DeclRefExpr>(Right)->getDecl();
@@ -139,10 +126,8 @@ static bool areEquivalentExpr(const Expr *Left, const Expr *Right) {
     return cast<BinaryOperator>(Left)->getOpcode() ==
            cast<BinaryOperator>(Right)->getOpcode();
   case Stmt::UnaryExprOrTypeTraitExprClass:
-    const auto *LeftUnaryExpr =
-        cast<UnaryExprOrTypeTraitExpr>(Left);
-    const auto *RightUnaryExpr =
-        cast<UnaryExprOrTypeTraitExpr>(Right);
+    const auto *LeftUnaryExpr = cast<UnaryExprOrTypeTraitExpr>(Left);
+    const auto *RightUnaryExpr = cast<UnaryExprOrTypeTraitExpr>(Right);
     if (LeftUnaryExpr->isArgumentType() && RightUnaryExpr->isArgumentType())
       return LeftUnaryExpr->getKind() == RightUnaryExpr->getKind() &&
              LeftUnaryExpr->getArgumentType() ==
@@ -699,7 +684,8 @@ static bool retrieveRelationalIntegerConstantExpr(
 
     Symbol = OverloadedOperatorExpr->getArg(IntegerConstantIsFirstArg ? 1 : 0);
     OperandExpr = OverloadedOperatorExpr;
-    Opcode = BinaryOperator::getOverloadedOpcode(OverloadedOperatorExpr->getOperator());
+    Opcode = BinaryOperator::getOverloadedOpcode(
+        OverloadedOperatorExpr->getOperator());
 
     if (!retrieveIntegerConstantExpr(Result, Id, Value, ConstExpr))
       return false;
@@ -728,7 +714,8 @@ static bool retrieveRelationalIntegerConstantExpr(
 }
 
 // Checks for expressions like (X == 4) && (Y != 9)
-static bool areSidesBinaryConstExpressions(const BinaryOperator *&BinOp, const ASTContext *AstCtx) {
+static bool areSidesBinaryConstExpressions(const BinaryOperator *&BinOp,
+                                           const ASTContext *AstCtx) {
   const auto *LhsBinOp = dyn_cast<BinaryOperator>(BinOp->getLHS());
   const auto *RhsBinOp = dyn_cast<BinaryOperator>(BinOp->getRHS());
 
@@ -745,6 +732,28 @@ static bool areSidesBinaryConstExpressions(const BinaryOperator *&BinOp, const A
        IsIntegerConstantExpr(RhsBinOp->getRHS())))
     return true;
   return false;
+}
+
+static bool areSidesBinaryConstExpressionsOrDefinesOrIntegerConstant(
+    const BinaryOperator *&BinOp, const ASTContext *AstCtx) {
+  if (areSidesBinaryConstExpressions(BinOp, AstCtx))
+    return true;
+
+  const Expr *Lhs = BinOp->getLHS();
+  const Expr *Rhs = BinOp->getRHS();
+
+  if (!Lhs || !Rhs)
+    return false;
+
+  auto IsDefineExpr = [AstCtx](const Expr *E) {
+    const SourceRange Lsr = E->getSourceRange();
+    if (!Lsr.getBegin().isMacroID() || E->isValueDependent() ||
+        !E->isIntegerConstantExpr(*AstCtx))
+      return false;
+    return true;
+  };
+
+  return IsDefineExpr(Lhs) || IsDefineExpr(Rhs);
 }
 
 // Retrieves integer constant subexpressions from binary operator expressions
@@ -785,7 +794,7 @@ static bool retrieveConstExprFromBothSides(const BinaryOperator *&BinOp,
 }
 
 static bool isSameRawIdentifierToken(const Token &T1, const Token &T2,
-                        const SourceManager &SM) {
+                                     const SourceManager &SM) {
   if (T1.getKind() != T2.getKind())
     return false;
   if (T1.isNot(tok::raw_identifier))
@@ -808,8 +817,8 @@ static bool areExprsFromDifferentMacros(const Expr *LhsExpr,
                                         const ASTContext *AstCtx) {
   if (!LhsExpr || !RhsExpr)
     return false;
-  SourceRange Lsr = LhsExpr->getSourceRange();
-  SourceRange Rsr = RhsExpr->getSourceRange();
+  const SourceRange Lsr = LhsExpr->getSourceRange();
+  const SourceRange Rsr = RhsExpr->getSourceRange();
   if (!Lsr.getBegin().isMacroID() || !Rsr.getBegin().isMacroID())
     return false;
 
@@ -847,17 +856,74 @@ static bool areExprsMacroAndNonMacro(const Expr *&LhsExpr,
   if (!LhsExpr || !RhsExpr)
     return false;
 
-  SourceLocation LhsLoc = LhsExpr->getExprLoc();
-  SourceLocation RhsLoc = RhsExpr->getExprLoc();
+  const SourceLocation LhsLoc = LhsExpr->getExprLoc();
+  const SourceLocation RhsLoc = RhsExpr->getExprLoc();
 
   return LhsLoc.isMacroID() != RhsLoc.isMacroID();
+}
+
+static bool areStringsSameIgnoreSpaces(const llvm::StringRef Left,
+                                       const llvm::StringRef Right) {
+  if (Left == Right)
+    return true;
+
+  // Do running comparison ignoring spaces
+  llvm::StringRef L = Left.trim();
+  llvm::StringRef R = Right.trim();
+  while (!L.empty() && !R.empty()) {
+    L = L.ltrim();
+    R = R.ltrim();
+    if (L.empty() && R.empty())
+      return true;
+    // If symbol compared are different ==> strings are not the same
+    if (L.front() != R.front())
+      return false;
+    L = L.drop_front();
+    R = R.drop_front();
+  }
+  return L.empty() && R.empty();
+}
+
+static bool areExprsSameMacroOrLiteral(const BinaryOperator *BinOp,
+                                       const ASTContext *Context) {
+
+  if (!BinOp)
+    return false;
+
+  const Expr *Lhs = BinOp->getLHS();
+  const Expr *Rhs = BinOp->getRHS();
+  const SourceManager &SM = Context->getSourceManager();
+
+  const SourceRange Lsr = Lhs->getSourceRange();
+  const SourceRange Rsr = Rhs->getSourceRange();
+  if (Lsr.getBegin().isMacroID()) {
+    // Left is macro so right macro too
+    if (Rsr.getBegin().isMacroID()) {
+      // Both sides are macros so they are same macro or literal
+      const llvm::StringRef L = Lexer::getSourceText(
+          CharSourceRange::getTokenRange(Lsr), SM, Context->getLangOpts());
+      const llvm::StringRef R = Lexer::getSourceText(
+          CharSourceRange::getTokenRange(Rsr), SM, Context->getLangOpts());
+      return areStringsSameIgnoreSpaces(L, R);
+    }
+    // Left is macro but right is not so they are not same macro or literal
+    return false;
+  }
+  const auto *Lil = dyn_cast<IntegerLiteral>(Lhs);
+  const auto *Ril = dyn_cast<IntegerLiteral>(Rhs);
+  if (Lil && Ril)
+    return Lil->getValue() == Ril->getValue();
+
+  const auto *Lbl = dyn_cast<CXXBoolLiteralExpr>(Lhs);
+  const auto *Rbl = dyn_cast<CXXBoolLiteralExpr>(Rhs);
+  if (Lbl && Rbl)
+    return Lbl->getValue() == Rbl->getValue();
+
+  return false;
 }
 } // namespace
 
 void RedundantExpressionCheck::registerMatchers(MatchFinder *Finder) {
-  const auto AnyLiteralExpr = ignoringParenImpCasts(
-      anyOf(cxxBoolLiteral(), characterLiteral(), integerLiteral()));
-
   const auto BannedIntegerLiteral =
       integerLiteral(expandedByMacro(KnownBannedMacroNames));
   const auto IsInUnevaluatedContext = expr(anyOf(
@@ -866,19 +932,16 @@ void RedundantExpressionCheck::registerMatchers(MatchFinder *Finder) {
   // Binary with equivalent operands, like (X != 2 && X != 2).
   Finder->addMatcher(
       traverse(TK_AsIs,
-               binaryOperator(
-                   anyOf(isComparisonOperator(),
-                         hasAnyOperatorName("-", "/", "%", "|", "&", "^", "&&",
-                                            "||", "=")),
-                   operandsAreEquivalent(),
-                   // Filter noisy false positives.
-                   unless(isInTemplateInstantiation()),
-                   unless(binaryOperatorIsInMacro()),
-                   unless(hasType(realFloatingPointType())),
-                   unless(hasEitherOperand(hasType(realFloatingPointType()))),
-                   unless(hasLHS(AnyLiteralExpr)),
-                   unless(hasDescendant(BannedIntegerLiteral)),
-                   unless(IsInUnevaluatedContext))
+               binaryOperator(anyOf(isComparisonOperator(),
+                                    hasAnyOperatorName("-", "/", "%", "|", "&",
+                                                       "^", "&&", "||", "=")),
+                              operandsAreEquivalent(),
+                              // Filter noisy false positives.
+                              unless(isInTemplateInstantiation()),
+                              unless(binaryOperatorIsInMacro()),
+                              unless(hasAncestor(arraySubscriptExpr())),
+                              unless(hasDescendant(BannedIntegerLiteral)),
+                              unless(IsInUnevaluatedContext))
                    .bind("binary")),
       this);
 
@@ -1095,7 +1158,6 @@ static bool exprEvaluatesToSymbolic(BinaryOperatorKind Opcode, APSInt Value) {
          ((Opcode == BO_And || Opcode == BO_AndAssign) && ~Value == 0);
 }
 
-
 void RedundantExpressionCheck::checkBitwiseExpr(
     const MatchFinder::MatchResult &Result) {
   if (const auto *ComparisonOperator = Result.Nodes.getNodeAs<BinaryOperator>(
@@ -1140,8 +1202,8 @@ void RedundantExpressionCheck::checkBitwiseExpr(
                                      ConstExpr))
       return;
 
-    if((Value != 0 && ~Value != 0) || Sym->getExprLoc().isMacroID())
-        return;
+    if ((Value != 0 && ~Value != 0) || Sym->getExprLoc().isMacroID())
+      return;
 
     SourceLocation Loc = IneffectiveOperator->getOperatorLoc();
 
@@ -1238,19 +1300,67 @@ void RedundantExpressionCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *BinOp = Result.Nodes.getNodeAs<BinaryOperator>("binary")) {
     // If the expression's constants are macros, check whether they are
     // intentional.
-    if (areSidesBinaryConstExpressions(BinOp, Result.Context)) {
-      const Expr *LhsConst = nullptr, *RhsConst = nullptr;
-      BinaryOperatorKind MainOpcode{}, SideOpcode{};
 
-      if (!retrieveConstExprFromBothSides(BinOp, MainOpcode, SideOpcode,
-                                          LhsConst, RhsConst, Result.Context))
-        return;
+    //
+    // Special case for floating-point representation.
+    //
+    // If expressions on both sides of comparison operator are of type float,
+    // then for some comparison operators no warning shall be
+    // reported even if the expressions are identical from a symbolic point of
+    // view. Comparison between expressions, declared variables and literals
+    // are treated differently.
+    //
+    // != and == between float literals that have the same value should NOT
+    // warn. < > between float literals that have the same value SHOULD warn.
+    //
+    // != and == between the same float declaration should NOT warn.
+    // < > between the same float declaration SHOULD warn.
+    //
+    // != and == between eq. expressions that evaluates into float
+    //           should NOT warn.
+    // < >       between eq. expressions that evaluates into float
+    //           should NOT warn.
+    //
+    const Expr *LHS = BinOp->getLHS()->IgnoreParenImpCasts();
+    const Expr *RHS = BinOp->getRHS()->IgnoreParenImpCasts();
+    const BinaryOperator::Opcode Op = BinOp->getOpcode();
+    const bool OpEqualEQorNE = ((Op == BO_EQ) || (Op == BO_NE));
 
-      if (areExprsFromDifferentMacros(LhsConst, RhsConst, Result.Context) ||
-          areExprsMacroAndNonMacro(LhsConst, RhsConst))
-        return;
+    const auto *DeclRef1 = dyn_cast<DeclRefExpr>(LHS);
+    const auto *DeclRef2 = dyn_cast<DeclRefExpr>(RHS);
+    const auto *FloatLit1 = dyn_cast<FloatingLiteral>(LHS);
+    const auto *FloatLit2 = dyn_cast<FloatingLiteral>(RHS);
+
+    if (DeclRef1 && DeclRef2 &&
+        DeclRef1->getType()->hasFloatingRepresentation() &&
+        DeclRef2->getType()->hasFloatingRepresentation() &&
+        (DeclRef1->getDecl() == DeclRef2->getDecl()) && OpEqualEQorNE) {
+      return;
     }
 
+    if (FloatLit1 && FloatLit2 &&
+        FloatLit1->getValue().bitwiseIsEqual(FloatLit2->getValue()) &&
+        OpEqualEQorNE) {
+      return;
+    }
+
+    if (areSidesBinaryConstExpressionsOrDefinesOrIntegerConstant(
+            BinOp, Result.Context)) {
+      const Expr *LhsConst = nullptr, *RhsConst = nullptr;
+      BinaryOperatorKind MainOpcode{}, SideOpcode{};
+      if (areSidesBinaryConstExpressions(BinOp, Result.Context)) {
+        if (!retrieveConstExprFromBothSides(BinOp, MainOpcode, SideOpcode,
+                                            LhsConst, RhsConst, Result.Context))
+          return;
+
+        if (areExprsFromDifferentMacros(LhsConst, RhsConst, Result.Context) ||
+            areExprsMacroAndNonMacro(LhsConst, RhsConst))
+          return;
+      } else {
+        if (!areExprsSameMacroOrLiteral(BinOp, Result.Context))
+          return;
+      }
+    }
     diag(BinOp->getOperatorLoc(), "both sides of operator are equivalent");
   }
 

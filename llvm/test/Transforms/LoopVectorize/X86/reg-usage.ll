@@ -1,5 +1,5 @@
-; RUN: opt < %s -debug-only=loop-vectorize -passes=loop-vectorize -vectorizer-maximize-bandwidth -mtriple=x86_64-unknown-linux -S 2>&1 | FileCheck %s
-; RUN: opt < %s -debug-only=loop-vectorize -passes=loop-vectorize -vectorizer-maximize-bandwidth -mtriple=x86_64-unknown-linux -mattr=+avx512f -S 2>&1 | FileCheck %s --check-prefix=AVX512F
+; RUN: opt < %s -debug-only=loop-vectorize,vplan -passes=loop-vectorize -vectorizer-maximize-bandwidth -mtriple=x86_64-unknown-linux -S 2>&1 | FileCheck %s
+; RUN: opt < %s -debug-only=loop-vectorize,vplan -passes=loop-vectorize -vectorizer-maximize-bandwidth -mtriple=x86_64-unknown-linux -mattr=+avx512f -S 2>&1 | FileCheck %s --check-prefix=AVX512F
 ; REQUIRES: asserts
 
 @a = global [1024 x i8] zeroinitializer, align 16
@@ -12,14 +12,14 @@ define i32 @foo() {
 ; CHECK-LABEL: foo
 ; CHECK:      LV(REG): VF = 8
 ; CHECK-NEXT: LV(REG): Found max usage: 2 item
-; CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 2 registers
+; CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 3 registers
 ; CHECK-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 7 registers
-; CHECK-NEXT: LV(REG): Found invariant usage: 0 item
+; CHECK-NEXT: LV(REG): Found invariant usage: 1 item
 ; CHECK:      LV(REG): VF = 16
 ; CHECK-NEXT: LV(REG): Found max usage: 2 item
-; CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 2 registers
+; CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 3 registers
 ; CHECK-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 13 registers
-; CHECK-NEXT: LV(REG): Found invariant usage: 0 item
+; CHECK-NEXT: LV(REG): Found invariant usage: 1 item
 
 entry:
   br label %for.body
@@ -54,14 +54,26 @@ define i32 @goo() {
 ; CHECK-LABEL: goo
 ; CHECK:      LV(REG): VF = 8
 ; CHECK-NEXT: LV(REG): Found max usage: 2 item
-; CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 2 registers
+; CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 3 registers
 ; CHECK-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 7 registers
-; CHECK-NEXT: LV(REG): Found invariant usage: 0 item
+; CHECK-NEXT: LV(REG): Found invariant usage: 1 item
 ; CHECK:      LV(REG): VF = 16
 ; CHECK-NEXT: LV(REG): Found max usage: 2 item
-; CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 2 registers
+; CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 3 registers
 ; CHECK-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 13 registers
-; CHECK-NEXT: LV(REG): Found invariant usage: 0 item
+; CHECK-NEXT: LV(REG): Found invariant usage: 1 item
+;
+; AVX512F-LABEL: goo
+; AVX512F:      LV(REG): VF = 8
+; AVX512F-NEXT: LV(REG): Found max usage: 2 item
+; AVX512F-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 3 registers
+; AVX512F-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 4 registers
+; AVX512F-NEXT: LV(REG): Found invariant usage: 1 item
+; AVX512F:      LV(REG): VF = 16
+; AVX512F-NEXT: LV(REG): Found max usage: 2 item
+; AVX512F-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 3 registers
+; AVX512F-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 4 registers
+; AVX512F-NEXT: LV(REG): Found invariant usage: 1 item
 entry:
   br label %for.body
 
@@ -94,9 +106,11 @@ define i64 @bar(ptr nocapture %a) {
 ; CHECK-LABEL: bar
 ; CHECK:       LV(REG): VF = 2
 ; CHECK-NEXT: LV(REG): Found max usage: 2 item
+; CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 2 registers
 ; CHECK-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 3 registers
+; CHECK-NEXT: LV(REG): Found invariant usage: 1 item
 ; CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 1 registers
-; CHECK-NEXT: LV(REG): Found invariant usage: 0 item
+
 
 entry:
   br label %for.body

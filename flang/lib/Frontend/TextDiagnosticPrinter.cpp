@@ -27,7 +27,7 @@
 using namespace Fortran::frontend;
 
 TextDiagnosticPrinter::TextDiagnosticPrinter(raw_ostream &diagOs,
-                                             clang::DiagnosticOptions *diags)
+                                             clang::DiagnosticOptions &diags)
     : os(diagOs), diagOpts(diags) {}
 
 TextDiagnosticPrinter::~TextDiagnosticPrinter() {}
@@ -39,7 +39,8 @@ static void printRemarkOption(llvm::raw_ostream &os,
                               clang::DiagnosticsEngine::Level level,
                               const clang::Diagnostic &info) {
   llvm::StringRef opt =
-      clang::DiagnosticIDs::getWarningOptionForDiag(info.getID());
+      info.getDiags()->getDiagnosticIDs()->getWarningOptionForDiag(
+          info.getID());
   if (!opt.empty()) {
     // We still need to check if the level is a Remark since, an unknown option
     // warning could be printed i.e. [-Wunknown-warning-option]
@@ -80,7 +81,7 @@ void TextDiagnosticPrinter::printLocForRemarks(
     llvm::sys::path::make_preferred(absPath);
 
     // Used for changing only the bold attribute
-    if (diagOpts->ShowColors)
+    if (diagOpts.ShowColors)
       os.changeColor(llvm::raw_ostream::SAVEDCOLOR, true);
 
     // Print path, file name, line and column
@@ -112,11 +113,11 @@ void TextDiagnosticPrinter::HandleDiagnostic(
   printLocForRemarks(diagMessageStream, diagMsg);
 
   Fortran::frontend::TextDiagnostic::printDiagnosticLevel(os, level,
-                                                          diagOpts->ShowColors);
+                                                          diagOpts.ShowColors);
   Fortran::frontend::TextDiagnostic::printDiagnosticMessage(
       os,
       /*IsSupplemental=*/level == clang::DiagnosticsEngine::Note, diagMsg,
-      diagOpts->ShowColors);
+      diagOpts.ShowColors);
 
   os.flush();
 }

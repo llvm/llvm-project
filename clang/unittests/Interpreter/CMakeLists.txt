@@ -1,4 +1,35 @@
-set(LLVM_LINK_COMPONENTS
+set(CLANG_REPL_TEST_SOURCES
+  IncrementalCompilerBuilderTest.cpp
+  IncrementalProcessingTest.cpp
+  InterpreterTest.cpp
+  InterpreterExtensionsTest.cpp
+  CodeCompletionTest.cpp
+)
+
+if(TARGET compiler-rt)
+  list(APPEND CLANG_REPL_TEST_SOURCES
+    OutOfProcessInterpreterTests.cpp
+  )
+  message(STATUS "Compiler-RT found, enabling out of process JIT tests")
+endif()
+
+add_distinct_clang_unittest(ClangReplInterpreterTests
+  ${CLANG_REPL_TEST_SOURCES}
+
+  PARTIAL_SOURCES_INTENDED
+  EXPORT_SYMBOLS
+
+  CLANG_LIBS
+  clangAST
+  clangBasic
+  clangInterpreter
+  clangFrontend
+  clangSema
+
+  LINK_LIBS
+  LLVMTestingSupport
+
+  LLVM_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   Core
   MC
@@ -7,25 +38,13 @@ set(LLVM_LINK_COMPONENTS
   TargetParser
   )
 
-add_clang_unittest(ClangReplInterpreterTests
-  IncrementalCompilerBuilderTest.cpp
-  IncrementalProcessingTest.cpp
-  InterpreterTest.cpp
-  InterpreterExtensionsTest.cpp
-  CodeCompletionTest.cpp
-
-  EXPORT_SYMBOLS
+if(TARGET compiler-rt)
+  add_dependencies(ClangReplInterpreterTests 
+    llvm-jitlink-executor 
+    compiler-rt
   )
-  
-target_link_libraries(ClangReplInterpreterTests PUBLIC LLVMTestingSupport)
-
-clang_target_link_libraries(ClangReplInterpreterTests PRIVATE
-  clangAST
-  clangBasic
-  clangInterpreter
-  clangFrontend
-  clangSema
-  )
+  message(STATUS "Adding dependency on compiler-rt for out of process JIT tests")
+endif()
 
 # Exceptions on Windows are not yet supported.
 if(NOT WIN32)

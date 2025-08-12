@@ -426,7 +426,8 @@ SDValue CSKYTargetLowering::LowerFormalArguments(
 
 bool CSKYTargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &MF, bool IsVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
+    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
+    const Type *RetTy) const {
   SmallVector<CCValAssign, 16> CSKYLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, CSKYLocs, Context);
   return CCInfo.CheckReturn(Outs, CCAssignFnForReturn(CallConv, IsVarArg));
@@ -1116,33 +1117,6 @@ SDValue CSKYTargetLowering::getTargetNode(ConstantPoolSDNode *N, SDLoc DL,
                                    N->getOffset(), Flags);
 }
 
-const char *CSKYTargetLowering::getTargetNodeName(unsigned Opcode) const {
-  switch (Opcode) {
-  default:
-    llvm_unreachable("unknown CSKYISD node");
-  case CSKYISD::NIE:
-    return "CSKYISD::NIE";
-  case CSKYISD::NIR:
-    return "CSKYISD::NIR";
-  case CSKYISD::RET:
-    return "CSKYISD::RET";
-  case CSKYISD::CALL:
-    return "CSKYISD::CALL";
-  case CSKYISD::CALLReg:
-    return "CSKYISD::CALLReg";
-  case CSKYISD::TAIL:
-    return "CSKYISD::TAIL";
-  case CSKYISD::TAILReg:
-    return "CSKYISD::TAILReg";
-  case CSKYISD::LOAD_ADDR:
-    return "CSKYISD::LOAD_ADDR";
-  case CSKYISD::BITCAST_TO_LOHI:
-    return "CSKYISD::BITCAST_TO_LOHI";
-  case CSKYISD::BITCAST_FROM_LOHI:
-    return "CSKYISD::BITCAST_FROM_LOHI";
-  }
-}
-
 SDValue CSKYTargetLowering::LowerGlobalAddress(SDValue Op,
                                                SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -1232,9 +1206,6 @@ SDValue CSKYTargetLowering::LowerRETURNADDR(SDValue Op,
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MFI.setReturnAddressIsTaken(true);
-
-  if (verifyReturnAddressArgumentIsConstant(Op, DAG))
-    return SDValue();
 
   EVT VT = Op.getValueType();
   SDLoc dl(Op);

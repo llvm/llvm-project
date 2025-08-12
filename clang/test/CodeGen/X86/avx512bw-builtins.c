@@ -3,18 +3,19 @@
 
 
 #include <immintrin.h>
+#include "builtin_test_helpers.h"
 
 __mmask32 test_knot_mask32(__mmask32 a) {
   // CHECK-LABEL: @test_knot_mask32
   // CHECK: [[IN:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
-  // CHECK: [[NOT:%.*]] = xor <32 x i1> [[IN]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+  // CHECK: [[NOT:%.*]] = xor <32 x i1> [[IN]], splat (i1 true)
   return _knot_mask32(a);
 }
 
 __mmask64 test_knot_mask64(__mmask64 a) {
   // CHECK-LABEL: @test_knot_mask64
   // CHECK: [[IN:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
-  // CHECK: [[NOT:%.*]] = xor <64 x i1> [[IN]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+  // CHECK: [[NOT:%.*]] = xor <64 x i1> [[IN]], splat (i1 true)
   return _knot_mask64(a);
 }
 
@@ -42,7 +43,7 @@ __mmask32 test_kandn_mask32(__m512i __A, __m512i __B, __m512i __C, __m512i __D, 
   // CHECK-LABEL: @test_kandn_mask32
   // CHECK: [[LHS:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
   // CHECK: [[RHS:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
-  // CHECK: [[NOT:%.*]] = xor <32 x i1> [[LHS]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+  // CHECK: [[NOT:%.*]] = xor <32 x i1> [[LHS]], splat (i1 true)
   // CHECK: [[RES:%.*]] = and <32 x i1> [[NOT]], [[RHS]]
   return _mm512_mask_cmpneq_epu16_mask(_kandn_mask32(_mm512_cmpneq_epu16_mask(__A, __B),
                                                      _mm512_cmpneq_epu16_mask(__C, __D)),
@@ -53,7 +54,7 @@ __mmask64 test_kandn_mask64(__m512i __A, __m512i __B, __m512i __C, __m512i __D, 
   // CHECK-LABEL: @test_kandn_mask64
   // CHECK: [[LHS:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
   // CHECK: [[RHS:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
-  // CHECK: [[NOT:%.*]] = xor <64 x i1> [[LHS]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+  // CHECK: [[NOT:%.*]] = xor <64 x i1> [[LHS]], splat (i1 true)
   // CHECK: [[RES:%.*]] = and <64 x i1> [[NOT]], [[RHS]]
   return _mm512_mask_cmpneq_epu8_mask(_kandn_mask64(_mm512_cmpneq_epu8_mask(__A, __B),
                                                     _mm512_cmpneq_epu8_mask(__C, __D)),
@@ -84,7 +85,7 @@ __mmask32 test_kxnor_mask32(__m512i __A, __m512i __B, __m512i __C, __m512i __D, 
   // CHECK-LABEL: @test_kxnor_mask32
   // CHECK: [[LHS:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
   // CHECK: [[RHS:%.*]] = bitcast i32 %{{.*}} to <32 x i1>
-  // CHECK: [[NOT:%.*]] = xor <32 x i1> [[LHS]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+  // CHECK: [[NOT:%.*]] = xor <32 x i1> [[LHS]], splat (i1 true)
   // CHECK: [[RES:%.*]] = xor <32 x i1> [[NOT]], [[RHS]]
   return _mm512_mask_cmpneq_epu16_mask(_kxnor_mask32(_mm512_cmpneq_epu16_mask(__A, __B),
                                                      _mm512_cmpneq_epu16_mask(__C, __D)),
@@ -95,7 +96,7 @@ __mmask64 test_kxnor_mask64(__m512i __A, __m512i __B, __m512i __C, __m512i __D, 
   // CHECK-LABEL: @test_kxnor_mask64
   // CHECK: [[LHS:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
   // CHECK: [[RHS:%.*]] = bitcast i64 %{{.*}} to <64 x i1>
-  // CHECK: [[NOT:%.*]] = xor <64 x i1> [[LHS]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+  // CHECK: [[NOT:%.*]] = xor <64 x i1> [[LHS]], splat (i1 true)
   // CHECK: [[RES:%.*]] = xor <64 x i1> [[NOT]], [[RHS]]
   return _mm512_mask_cmpneq_epu8_mask(_kxnor_mask64(_mm512_cmpneq_epu8_mask(__A, __B),
                                                     _mm512_cmpneq_epu8_mask(__C, __D)),
@@ -823,6 +824,7 @@ __m512i test_mm512_mullo_epi16 (__m512i __A, __m512i __B) {
   //CHECK: mul <32 x i16>
   return _mm512_mullo_epi16(__A, __B);
 }
+TEST_CONSTEXPR(match_v32hi(_mm512_mullo_epi16((__m512i)(__v32hi){+1, -2, +3, -4, +5, -6, +7, -8, +9, -10, +11, -12, +13, -14, +15, -16, +17, -18, +19, -20, +21, -22, +23, -24, +25, -26, +27, -28, +29, -30, +31, -32}, (__m512i)(__v32hi){-64, -62, +60, +58, -56, -54, +52, +50, -48, -46, +44, +42, -40, -38, +36, +34, -32, -30, +28, +26, -24, -22, +20, +18, -16, -14, +12, +10, -8, +6, -4, +2}), -64, 124, 180, -232, -280, 324, 364, -400, -432, 460, 484, -504, -520, 532, 540, -544, -544, 540, 532, -520, -504, 484, 460, -432, -400, 364, 324, -280, -232, -180, -124, -64));
 
 __m512i test_mm512_mask_mullo_epi16 (__m512i __W, __mmask32 __U, __m512i __A, __m512i __B) {
   //CHECK-LABEL: @test_mm512_mask_mullo_epi16
@@ -1331,29 +1333,36 @@ __m512i test_mm512_mulhi_epi16(__m512i __A, __m512i __B) {
   // CHECK: @llvm.x86.avx512.pmulh.w.512
   return _mm512_mulhi_epi16(__A,__B); 
 }
+TEST_CONSTEXPR(match_v32hi(_mm512_mulhi_epi16((__m512i)(__v32hi){+1, -2, +3, -4, +5, -6, +7, -8, +9, -10, +11, -12, +13, -14, +15, -16, +17, -18, +19, -20, +21, -22, +23, -24, +25, -26, +27, -28, +29, -30, +31, -32}, (__m512i)(__v32hi){-64, -62, +60, +58, -56, -54, +52, +50, -48, -46, +44, +42, -40, -38, +36, +34, -32, -30, +28, +26, -24, -22, +20, +18, -16, -14, +12, +10, -8, +6, -4, +2}), -1, 0, 0, -1, -1, 0, 0, -1, -1, 0, 0, -1, -1, 0, 0, -1, -1, 0, 0, -1, -1, 0, 0, -1, -1, 0, 0, -1, -1, -1, -1, -1));
+
 __m512i test_mm512_mask_mulhi_epi16(__m512i __W, __mmask32 __U, __m512i __A,       __m512i __B) {
   // CHECK-LABEL: @test_mm512_mask_mulhi_epi16
   // CHECK: @llvm.x86.avx512.pmulh.w.512
   // CHECK: select <32 x i1> %{{.*}}, <32 x i16> %{{.*}}, <32 x i16> %{{.*}}
   return _mm512_mask_mulhi_epi16(__W,__U,__A,__B); 
 }
+
 __m512i test_mm512_maskz_mulhi_epi16(__mmask32 __U, __m512i __A, __m512i __B) {
   // CHECK-LABEL: @test_mm512_maskz_mulhi_epi16
   // CHECK: @llvm.x86.avx512.pmulh.w.512
   // CHECK: select <32 x i1> %{{.*}}, <32 x i16> %{{.*}}, <32 x i16> %{{.*}}
   return _mm512_maskz_mulhi_epi16(__U,__A,__B); 
 }
+
 __m512i test_mm512_mulhi_epu16(__m512i __A, __m512i __B) {
   // CHECK-LABEL: @test_mm512_mulhi_epu16
   // CHECK: @llvm.x86.avx512.pmulhu.w.512
   return _mm512_mulhi_epu16(__A,__B); 
 }
+TEST_CONSTEXPR(match_v32hi(_mm512_mulhi_epu16((__m512i)(__v32hi){+1, -2, +3, -4, +5, -6, +7, -8, +9, -10, +11, -12, +13, -14, +15, -16, +17, -18, +19, -20, +21, -22, +23, -24, +25, -26, +27, -28, +29, -30, +31, -32}, (__m512i)(__v32hi){-64, -62, +60, +58, -56, -54, +52, +50, -48, -46, +44, +42, -40, -38, +36, +34, -32, -30, +28, +26, -24, -22, +20, +18, -16, -14, +12, +10, -8, +6, -4, +2}), 0, -64, 0, 57, 4, -60, 0, 49, 8, -56, 0, 41, 12, -52, 0, 33, 16, -48, 0, 25, 20, -44, 0, 17, 24, -40, 0, 9, 28, 5, 30, 1));
+
 __m512i test_mm512_mask_mulhi_epu16(__m512i __W, __mmask32 __U, __m512i __A,       __m512i __B) {
   // CHECK-LABEL: @test_mm512_mask_mulhi_epu16
   // CHECK: @llvm.x86.avx512.pmulhu.w.512
   // CHECK: select <32 x i1> %{{.*}}, <32 x i16> %{{.*}}, <32 x i16> %{{.*}}
   return _mm512_mask_mulhi_epu16(__W,__U,__A,__B); 
 }
+
 __m512i test_mm512_maskz_mulhi_epu16(__mmask32 __U, __m512i __A, __m512i __B) {
   // CHECK-LABEL: @test_mm512_maskz_mulhi_epu16
   // CHECK: @llvm.x86.avx512.pmulhu.w.512
@@ -1538,6 +1547,8 @@ __m512i test_mm512_cvtepi8_epi16(__m256i __A) {
   return _mm512_cvtepi8_epi16(__A); 
 }
 
+TEST_CONSTEXPR(match_v32hi(_mm512_cvtepi8_epi16(_mm256_setr_epi8(-3, 2, -1, 0, 1, -2, 3, -4, 5, -6, 7, -8, 9, -10, 11, -12, 13, -14, 15, -16, 17, -18, 19, -20, 21, -22, 23, -24, 25, -26, 27, -28)), -3, 2, -1, 0, 1, -2, 3, -4, 5, -6, 7, -8, 9, -10, 11, -12, 13, -14, 15, -16, 17, -18, 19, -20, 21, -22, 23, -24, 25, -26, 27, -28));
+
 __m512i test_mm512_mask_cvtepi8_epi16(__m512i __W, __mmask32 __U, __m256i __A) {
   // CHECK-LABEL: @test_mm512_mask_cvtepi8_epi16
   // CHECK: sext <32 x i8> %{{.*}} to <32 x i16>
@@ -1557,6 +1568,8 @@ __m512i test_mm512_cvtepu8_epi16(__m256i __A) {
   // CHECK: zext <32 x i8> %{{.*}} to <32 x i16>
   return _mm512_cvtepu8_epi16(__A); 
 }
+
+TEST_CONSTEXPR(match_v32hi(_mm512_cvtepu8_epi16(_mm256_setr_epi8(-3, 2, -1, 0, 1, -2, 3, -4, 5, -6, 7, -8, 9, -10, 11, -12, 13, -14, 15, -16, 17, -18, 19, -20, 21, -22, 23, -24, 25, -26, 27, -28)), 253, 2, 255, 0, 1, 254, 3, 252, 5, 250, 7, 248, 9, 246, 11, 244, 13, 242, 15, 240, 17, 238, 19, 236, 21, 234, 23, 232, 25, 230, 27, 228));
 
 __m512i test_mm512_mask_cvtepu8_epi16(__m512i __W, __mmask32 __U, __m256i __A) {
   // CHECK-LABEL: @test_mm512_mask_cvtepu8_epi16

@@ -128,8 +128,8 @@ NativeRegisterContextWindows::CreateHostNativeRegisterContextWindows(
 
 NativeRegisterContextWindows_arm::NativeRegisterContextWindows_arm(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
-    : NativeRegisterContextWindows(native_thread,
-                                   CreateRegisterInfoInterface(target_arch)) {}
+    : NativeRegisterContextRegisterInfo(
+          native_thread, CreateRegisterInfoInterface(target_arch)) {}
 
 bool NativeRegisterContextWindows_arm::IsGPR(uint32_t reg_index) const {
   return (reg_index >= k_first_gpr_arm && reg_index <= k_last_gpr_arm);

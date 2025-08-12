@@ -26,6 +26,9 @@ module iso_fortran_env
     selectedInt8, selectedInt16, selectedInt32, selectedInt64, selectedInt128, &
     safeInt8, safeInt16, safeInt32, safeInt64, safeInt128, &
     int8, int16, int32, int64, int128, &
+    selectedUInt8, selectedUInt16, selectedUInt32, selectedUInt64, selectedUInt128, &
+    safeUInt8, safeUInt16, safeUInt32, safeUInt64, safeUInt128, &
+    uint8, uint16, uint32, uint64, uint128, &
     logical8, logical16, logical32, logical64, &
     selectedReal16, selectedBfloat16, selectedReal32, &
     selectedReal64, selectedReal80, selectedReal64x2, &
@@ -58,6 +61,10 @@ module iso_fortran_env
   public :: selectedInt8, selectedInt16, selectedInt32, selectedInt64, selectedInt128, &
     safeInt8, safeInt16, safeInt32, safeInt64, safeInt128, &
     int8, int16, int32, int64, int128
+
+  public :: selectedUInt8, selectedUInt16, selectedUInt32, selectedUInt64, selectedUInt128, &
+    safeUInt8, safeUInt16, safeUInt32, safeUInt64, safeUInt128, &
+    uint8, uint16, uint32, uint64, uint128
 
   public :: logical8, logical16, logical32, logical64
 

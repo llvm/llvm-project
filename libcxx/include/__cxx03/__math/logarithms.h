@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MATH_LOGARITHMS_H
-#define _LIBCPP___MATH_LOGARITHMS_H
+#ifndef _LIBCPP___CXX03___MATH_LOGARITHMS_H
+#define _LIBCPP___CXX03___MATH_LOGARITHMS_H
 
-#include <__config>
-#include <__type_traits/enable_if.h>
-#include <__type_traits/is_integral.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/enable_if.h>
+#include <__cxx03/__type_traits/is_integral.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -58,7 +58,7 @@ inline _LIBCPP_HIDE_FROM_ABI double log10(_A1 __x) _NOEXCEPT {
 inline _LIBCPP_HIDE_FROM_ABI int ilogb(float __x) _NOEXCEPT { return __builtin_ilogbf(__x); }
 
 template <class = int>
-_LIBCPP_HIDE_FROM_ABI double ilogb(double __x) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI int ilogb(double __x) _NOEXCEPT {
   return __builtin_ilogb(__x);
 }
 
@@ -121,4 +121,4 @@ inline _LIBCPP_HIDE_FROM_ABI double logb(_A1 __x) _NOEXCEPT {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MATH_LOGARITHMS_H
+#endif // _LIBCPP___CXX03___MATH_LOGARITHMS_H

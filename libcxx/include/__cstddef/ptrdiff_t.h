@@ -10,7 +10,6 @@
 #define _LIBCPP___CSTDDEF_PTRDIFF_T_H
 
 #include <__config>
-#include <stddef.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -18,7 +17,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-using ::ptrdiff_t _LIBCPP_USING_IF_EXISTS;
+using ptrdiff_t = decltype(static_cast<int*>(nullptr) - static_cast<int*>(nullptr));
 
 _LIBCPP_END_NAMESPACE_STD
 

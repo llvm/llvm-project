@@ -29,7 +29,7 @@
 
 void test_duplicates() {
   std::array input = {1, 2, 3, 3, 3, 4, 2, 1, 2};
-  auto c = std::unordered_multiset<int>(std::from_range, input);
+  auto c           = std::unordered_multiset<int>(std::from_range, input);
   assert(std::ranges::is_permutation(input, c));
 }
 

@@ -2,7 +2,6 @@
 Test lldb-dap stackTrace request
 """
 
-
 import os
 
 import lldbdap_testcase
@@ -57,7 +56,6 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
             "frame #%i line %i == %i" % (frame_idx, frame_line, expected_line),
         )
 
-    @skipIfWindows
     def test_stackTrace(self):
         """
         Tests the 'stackTrace' packet and all its variants.
@@ -217,3 +215,63 @@ class TestDAP_stackTrace(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_next_stop()
         frame = self.get_stackFrames()[0]
         self.assertEqual(frame["name"], "recurse(x=1)")
+
+    @skipIfWindows
+    def test_StackFrameFormat(self):
+        """
+        Test the StackFrameFormat.
+        """
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program)
+        source = "main.c"
+
+        self.set_source_breakpoints(source, [line_number(source, "recurse end")])
+
+        self.continue_to_next_stop()
+        frame = self.get_stackFrames(format={"parameters": True})[0]
+        self.assertEqual(frame["name"], "recurse(x=1)")
+
+        frame = self.get_stackFrames(format={"parameterNames": True})[0]
+        self.assertEqual(frame["name"], "recurse(x=1)")
+
+        frame = self.get_stackFrames(format={"parameterValues": True})[0]
+        self.assertEqual(frame["name"], "recurse(x=1)")
+
+        frame = self.get_stackFrames(format={"parameters": False, "line": True})[0]
+        self.assertEqual(frame["name"], "main.c:5:5 recurse")
+
+        frame = self.get_stackFrames(format={"parameters": False, "module": True})[0]
+        self.assertEqual(frame["name"], "a.out recurse")
+
+    @skipIfWindows
+    def test_stack_frame_module_id(self):
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program)
+        source = "main.c"
+        lines = [line_number(source, "recurse end")]
+        breakpoint_ids = self.set_source_breakpoints(source, lines)
+        self.assertEqual(
+            len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
+        )
+
+        self.continue_to_breakpoints(breakpoint_ids)
+
+        modules = self.dap_server.get_modules()
+        name_to_id = {
+            name: info["id"] for name, info in modules.items() if "id" in info
+        }
+
+        stack_frames = self.get_stackFrames()
+        for frame in stack_frames:
+            module_id = frame.get("moduleId")
+            source_name = frame.get("source", {}).get("name")
+            if module_id is None or source_name is None:
+                continue
+
+            if source_name in name_to_id:
+                expected_id = name_to_id[source_name]
+                self.assertEqual(
+                    module_id,
+                    expected_id,
+                    f"Expected moduleId '{expected_id}' for {source_name}, got: {module_id}",
+                )

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O0 < %s
+; RUN: llc -mtriple=hexagon -O0 < %s
 
 ; This is a regression test which makes sure that the offset check
 ; is available for STRiw_indexed instruction. This is required

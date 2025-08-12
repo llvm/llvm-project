@@ -53,7 +53,7 @@ static bool evenFlexibleArraySize(ASTContext &Ctx, CharUnits RegionSize,
   if (!RT)
     return false;
 
-  const RecordDecl *RD = RT->getDecl();
+  const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
   RecordDecl::field_iterator Iter(RD->field_begin());
   RecordDecl::field_iterator End(RD->field_end());
   const FieldDecl *Last = nullptr;
@@ -62,6 +62,8 @@ static bool evenFlexibleArraySize(ASTContext &Ctx, CharUnits RegionSize,
   assert(Last && "empty structs should already be handled");
 
   const Type *ElemType = Last->getType()->getArrayElementTypeNoTypeQual();
+  if (!ElemType)
+    return false;
   CharUnits FlexSize;
   if (const ConstantArrayType *ArrayTy =
         Ctx.getAsConstantArrayType(Last->getType())) {

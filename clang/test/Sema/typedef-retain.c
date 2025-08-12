@@ -16,7 +16,8 @@ void test2(float4 a, int4p result, int i) {
 typedef int a[5];
 void test3(void) {
   typedef const a b;
-  b r;       // expected-note {{variable 'r' declared const here}}
+  b r;       // expected-note {{variable 'r' declared const here}} \
+                expected-warning {{default initialization of an object of type 'b' (aka 'const int[5]') leaves the object uninitialized}}
   r[0] = 10; // expected-error {{cannot assign to variable 'r' with const-qualified type 'b' (aka 'const int[5]')}}
 }
 

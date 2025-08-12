@@ -287,13 +287,11 @@ void LocalStackSlotImpl::calculateFrameObjectOffsets(MachineFunction &Fn) {
   MFI.setLocalFrameMaxAlign(MaxAlign);
 }
 
-static inline bool
-lookupCandidateBaseReg(unsigned BaseReg,
-                       int64_t BaseOffset,
-                       int64_t FrameSizeAdjust,
-                       int64_t LocalFrameOffset,
-                       const MachineInstr &MI,
-                       const TargetRegisterInfo *TRI) {
+static inline bool lookupCandidateBaseReg(Register BaseReg, int64_t BaseOffset,
+                                          int64_t FrameSizeAdjust,
+                                          int64_t LocalFrameOffset,
+                                          const MachineInstr &MI,
+                                          const TargetRegisterInfo *TRI) {
   // Check if the relative offset from the where the base register references
   // to the target address is in range for the instruction.
   int64_t Offset = FrameSizeAdjust + LocalFrameOffset - BaseOffset;

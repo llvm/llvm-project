@@ -43,6 +43,6 @@ static ClangTidyModuleRegistry::Add<altera::AlteraModule>
 
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the AlteraModule.
-volatile int AlteraModuleAnchorSource = 0;
+volatile int AlteraModuleAnchorSource = 0; // NOLINT(misc-use-internal-linkage)
 
 } // namespace clang::tidy

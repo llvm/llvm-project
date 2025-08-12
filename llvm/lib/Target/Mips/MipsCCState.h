@@ -36,7 +36,7 @@ public:
   static bool originalEVTTypeIsVectorFloat(EVT Ty);
   static bool originalTypeIsVectorFloat(const Type *Ty);
 
-  void PreAnalyzeCallOperand(const Type *ArgTy, bool IsFixed, const char *Func);
+  void PreAnalyzeCallOperand(const Type *ArgTy, const char *Func);
 
   void PreAnalyzeFormalArgument(const Type *ArgTy, ISD::ArgFlagsTy Flags);
   void PreAnalyzeReturnValue(EVT ArgVT);
@@ -49,7 +49,7 @@ private:
 
   /// Identify lowered values that originated from f128 arguments and record
   /// this for use by RetCC_MipsN.
-  void PreAnalyzeReturnForF128(const SmallVectorImpl<ISD::OutputArg> &Outs);
+  void PreAnalyzeCallReturnForF128(const SmallVectorImpl<ISD::OutputArg> &Outs, const Type *RetTy);
 
   /// Identify lowered values that originated from f128 arguments and record
   /// this.
@@ -86,10 +86,6 @@ private:
   /// vector.
   SmallVector<bool, 4> OriginalRetWasFloatVector;
 
-  /// Records whether the value was a fixed argument.
-  /// See ISD::OutputArg::IsFixed,
-  SmallVector<bool, 4> CallOperandIsFixed;
-
   // Used to handle MIPS16-specific calling convention tweaks.
   // FIXME: This should probably be a fully fledged calling convention.
   SpecialCallingConvType SpecialCallingConv;
@@ -106,7 +102,6 @@ public:
     OriginalArgWasF128.clear();
     OriginalArgWasFloat.clear();
     OriginalArgWasFloatVector.clear();
-    CallOperandIsFixed.clear();
     PreAnalyzeCallOperands(Outs, FuncArgs, Func);
   }
 
@@ -167,10 +162,11 @@ public:
 
   void PreAnalyzeReturn(const SmallVectorImpl<ISD::OutputArg> &Outs,
                         CCAssignFn Fn) {
+    const MachineFunction &MF = getMachineFunction();
     OriginalArgWasFloat.clear();
     OriginalArgWasF128.clear();
     OriginalArgWasFloatVector.clear();
-    PreAnalyzeReturnForF128(Outs);
+    PreAnalyzeCallReturnForF128(Outs, MF.getFunction().getReturnType());
     PreAnalyzeReturnForVectorFloat(Outs);
   }
 
@@ -182,7 +178,8 @@ public:
 
   bool CheckReturn(const SmallVectorImpl<ISD::OutputArg> &ArgsFlags,
                    CCAssignFn Fn) {
-    PreAnalyzeReturnForF128(ArgsFlags);
+    const MachineFunction &MF = getMachineFunction();
+    PreAnalyzeCallReturnForF128(ArgsFlags, MF.getFunction().getReturnType());
     PreAnalyzeReturnForVectorFloat(ArgsFlags);
     bool Return = CCState::CheckReturn(ArgsFlags, Fn);
     OriginalArgWasFloat.clear();
@@ -191,6 +188,16 @@ public:
     return Return;
   }
 
+  bool CheckCallReturn(const SmallVectorImpl<ISD::OutputArg> &ArgsFlags,
+                   CCAssignFn Fn, const Type *RetTy) {
+    PreAnalyzeCallReturnForF128(ArgsFlags, RetTy);
+    PreAnalyzeReturnForVectorFloat(ArgsFlags);
+    bool Return = CCState::CheckReturn(ArgsFlags, Fn);
+    OriginalArgWasFloat.clear();
+    OriginalArgWasF128.clear();
+    OriginalArgWasFloatVector.clear();
+    return Return;
+  }
   bool WasOriginalArgF128(unsigned ValNo) { return OriginalArgWasF128[ValNo]; }
   bool WasOriginalArgFloat(unsigned ValNo) {
       return OriginalArgWasFloat[ValNo];
@@ -201,7 +208,6 @@ public:
   bool WasOriginalRetVectorFloat(unsigned ValNo) const {
     return OriginalRetWasFloatVector[ValNo];
   }
-  bool IsCallOperandFixed(unsigned ValNo) { return CallOperandIsFixed[ValNo]; }
   SpecialCallingConvType getSpecialCallingConv() { return SpecialCallingConv; }
 };
 }

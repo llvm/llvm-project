@@ -2,9 +2,9 @@
 // RUN: %clang_cc1 -std=c++11 -pedantic-errors %s -verify=expected,cxx98-14
 // RUN: %clang_cc1 -std=c++14 -pedantic-errors %s -verify=expected,cxx98-14
 // RUN: %clang_cc1 -std=c++17 -pedantic-errors %s -verify=expected,since-cxx17
-// RUN: %clang_cc1 -std=c++20 -pedantic-errors %s -verify=expected,since-cxx17
-// RUN: %clang_cc1 -std=c++23 -pedantic-errors %s -verify=expected,since-cxx17
-// RUN: %clang_cc1 -std=c++2c -pedantic-errors %s -verify=expected,since-cxx17
+// RUN: %clang_cc1 -std=c++20 -pedantic-errors %s -verify=expected,since-cxx20,since-cxx17
+// RUN: %clang_cc1 -std=c++23 -pedantic-errors %s -verify=expected,since-cxx20,since-cxx17
+// RUN: %clang_cc1 -std=c++2c -pedantic-errors %s -verify=expected,since-cxx20,since-cxx17
 
 namespace cwg2406 { // cwg2406: 5
 #if __cplusplus >= 201703L
@@ -39,7 +39,7 @@ void fallthrough(int n) {
   }
 }
 #endif
-}
+} // namespace cwg2406
 
 namespace cwg2428 { // cwg2428: 19
 #if __cplusplus >= 202002L
@@ -48,45 +48,45 @@ concept C [[deprecated]] = true; // #cwg2428-C
 
 template <typename>
 [[deprecated]] concept C2 = true;
-// expected-error@-1 {{expected unqualified-id}}
+// since-cxx20-error@-1 {{expected unqualified-id}}
 
 template <typename T>
 concept C3 = C<T>;
-// expected-warning@-1 {{'C' is deprecated}}
-//   expected-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
+// since-cxx20-warning@-1 {{'C' is deprecated}}
+//   since-cxx20-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
 
 template <typename T, C U>
-// expected-warning@-1 {{'C' is deprecated}}
-//   expected-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
+// since-cxx20-warning@-1 {{'C' is deprecated}}
+//   since-cxx20-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
 requires C<T>
-// expected-warning@-1 {{'C' is deprecated}}
-//   expected-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
+// since-cxx20-warning@-1 {{'C' is deprecated}}
+//   since-cxx20-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
 void f() {
   bool b = C<int>;
-  // expected-warning@-1 {{'C' is deprecated}}
-  //   expected-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
+  // since-cxx20-warning@-1 {{'C' is deprecated}}
+  //   since-cxx20-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
 };
 
 void g(C auto a) {};
-// expected-warning@-1 {{'C' is deprecated}}
-//   expected-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
+// since-cxx20-warning@-1 {{'C' is deprecated}}
+//   since-cxx20-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
 
 template <typename T>
 auto h() -> C auto {
-// expected-warning@-1 {{'C' is deprecated}}
-//   expected-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
+// since-cxx20-warning@-1 {{'C' is deprecated}}
+//   since-cxx20-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
   C auto foo = T();
-  // expected-warning@-1 {{'C' is deprecated}}
-  //   expected-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
+  // since-cxx20-warning@-1 {{'C' is deprecated}}
+  //   since-cxx20-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
   C auto *bar = T();
-  // expected-warning@-1 {{'C' is deprecated}}
-  //   expected-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
+  // since-cxx20-warning@-1 {{'C' is deprecated}}
+  //   since-cxx20-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
   C auto &baz = T();
-  // expected-warning@-1 {{'C' is deprecated}}
-  //   expected-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
+  // since-cxx20-warning@-1 {{'C' is deprecated}}
+  //   since-cxx20-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
   C auto &&quux = T();
-  // expected-warning@-1 {{'C' is deprecated}}
-  //   expected-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
+  // since-cxx20-warning@-1 {{'C' is deprecated}}
+  //   since-cxx20-note@#cwg2428-C {{'C' has been explicitly marked deprecated here}}
   return foo;
 }
 #endif
@@ -110,7 +110,7 @@ f<{.a= 0}>();
 }
 
 #endif
-}
+} // namespace cwg2450
 
 namespace cwg2459 { // cwg2459: 18
 #if __cplusplus >= 202302L
@@ -120,7 +120,7 @@ struct A {
 template<A> struct X {};
 X<1> x;
 #endif
-}
+} // namespace cwg2459
 
 namespace cwg2445 { // cwg2445: 19
 #if __cplusplus >= 202002L
@@ -181,7 +181,7 @@ namespace cwg2445 { // cwg2445: 19
     return d + 1;
   }
 #endif
-}
+} // namespace cwg2445
 
 namespace cwg2486 { // cwg2486: 4 c++17
 struct C {
@@ -215,3 +215,34 @@ void (*q)() throw() = S();
 // since-cxx17-error@-1 {{no viable conversion from 'S' to 'void (*)() throw()'}}
 //   since-cxx17-note@#cwg2486-conv {{candidate function}}
 } // namespace cwg2486
+
+
+namespace cwg2496 { // cwg2496: 21
+#if __cplusplus >= 201102L
+struct S {
+    virtual void f(); // #cwg2496-f
+    virtual void g() &; // #cwg2496-g
+    virtual void h(); // #cwg2496-h
+    virtual void i();
+    virtual void j() &;
+    virtual void k() &&;
+    virtual void l() &;
+};
+
+struct T : S {
+    virtual void f() &;
+    // expected-error@-1 {{cannot overload a member function with ref-qualifier '&' with a member function without a ref-qualifier}}
+    // expected-note@#cwg2496-f {{previous declaration is here}}
+    virtual void g();
+    // expected-error@-1 {{cannot overload a member function without a ref-qualifier with a member function with ref-qualifier '&'}}
+    // expected-note@#cwg2496-g {{previous declaration is here}}
+    virtual void h() &&;
+    // expected-error@-1 {{cannot overload a member function with ref-qualifier '&&' with a member function without a ref-qualifier}}
+    // expected-note@#cwg2496-h {{previous declaration is here}}
+    virtual void i();
+    virtual void j() &;
+    virtual void k() &;
+    virtual void l() &&;
+};
+#endif
+}
