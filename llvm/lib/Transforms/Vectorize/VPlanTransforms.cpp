@@ -3342,26 +3342,34 @@ void VPlanTransforms::materializeVFAndVFxUF(VPlan &Plan, VPBasicBlock *VectorPH,
   Type *TCTy = VPTypeAnalysis(Plan).inferScalarType(Plan.getTripCount());
   VPValue &VF = Plan.getVF();
   VPValue &VFxUF = Plan.getVFxUF();
-  if (VF.getNumUsers()) {
-    VPValue *RuntimeVF = Builder.createElementCount(TCTy, VFEC);
-    if (any_of(VF.users(), [&VF](VPUser *U) { return !U->usesScalars(&VF); })) {
-      VPValue *BC = Builder.createNaryOp(VPInstruction::Broadcast, RuntimeVF);
-      VF.replaceUsesWithIf(
-          BC, [&VF](VPUser &U, unsigned) { return !U.usesScalars(&VF); });
-    }
-    VF.replaceAllUsesWith(RuntimeVF);
+  // Note that after the transform, Plan.getVF and Plan.getVFxUF should not be
+  // used.
+  // TODO: Assert that they aren't used.
 
-    VPValue *UF = Plan.getOrAddLiveIn(ConstantInt::get(TCTy, Plan.getUF()));
-    VPValue *MulByUF =
-        Plan.getUF() == 1
-            ? RuntimeVF
-            : Builder.createNaryOp(Instruction::Mul, {RuntimeVF, UF});
-    VFxUF.replaceAllUsesWith(MulByUF);
+  // If there are no users of the runtime VF, compute VFxUF by constant folding
+  // the multiplication of VF and UF.
+  if (VF.getNumUsers() == 0) {
+    VPValue *RuntimeVFxUF =
+        Builder.createElementCount(TCTy, VFEC * Plan.getUF());
+    VFxUF.replaceAllUsesWith(RuntimeVFxUF);
     return;
   }
 
-  VPValue *RuntimeVFxUF = Builder.createElementCount(TCTy, VFEC * Plan.getUF());
-  VFxUF.replaceAllUsesWith(RuntimeVFxUF);
+  // For users of the runtime VF, compute it as VF * vscale, and VFxUF as (VF *
+  // vscale) * UF.
+  VPValue *RuntimeVF = Builder.createElementCount(TCTy, VFEC);
+  if (any_of(VF.users(), [&VF](VPUser *U) { return !U->usesScalars(&VF); })) {
+    VPValue *BC = Builder.createNaryOp(VPInstruction::Broadcast, RuntimeVF);
+    VF.replaceUsesWithIf(
+        BC, [&VF](VPUser &U, unsigned) { return !U.usesScalars(&VF); });
+  }
+  VF.replaceAllUsesWith(RuntimeVF);
+
+  VPValue *UF = Plan.getOrAddLiveIn(ConstantInt::get(TCTy, Plan.getUF()));
+  VPValue *MulByUF = Plan.getUF() == 1 ? RuntimeVF
+                                       : Builder.createNaryOp(Instruction::Mul,
+                                                              {RuntimeVF, UF});
+  VFxUF.replaceAllUsesWith(MulByUF);
 }
 
 /// Returns true if \p V is VPWidenLoadRecipe or VPInterleaveRecipe that can be
