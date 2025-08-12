@@ -3525,114 +3525,123 @@ struct SelectCaseOpConversion : public fir::FIROpConversion<fir::SelectCaseOp> {
   }
 };
 
-/// Helper function for converting select ops. This function converts the
-/// signature of the given block. If the new block signature is different from
-/// `expectedTypes`, returns "failure".
-static llvm::FailureOr<mlir::Block *>
-getConvertedBlock(mlir::ConversionPatternRewriter &rewriter,
-                  const mlir::TypeConverter *converter,
-                  mlir::Operation *branchOp, mlir::Block *block,
-                  mlir::TypeRange expectedTypes) {
-  assert(converter && "expected non-null type converter");
-  assert(!block->isEntryBlock() && "entry blocks have no predecessors");
-
-  // There is nothing to do if the types already match.
-  if (block->getArgumentTypes() == expectedTypes)
-    return block;
-
-  // Compute the new block argument types and convert the block.
-  std::optional<mlir::TypeConverter::SignatureConversion> conversion =
-      converter->convertBlockSignature(block);
-  if (!conversion)
-    return rewriter.notifyMatchFailure(branchOp,
-                                       "could not compute block signature");
-  if (expectedTypes != conversion->getConvertedTypes())
-    return rewriter.notifyMatchFailure(
-        branchOp,
-        "mismatch between adaptor operand types and computed block signature");
-  return rewriter.applySignatureConversion(block, *conversion, converter);
-}
-
+/// Base class for SelectOpConversion and SelectRankOpConversion.
 template <typename OP>
-static llvm::LogicalResult
-selectMatchAndRewrite(const fir::LLVMTypeConverter &lowering, OP select,
-                      typename OP::Adaptor adaptor,
-                      mlir::ConversionPatternRewriter &rewriter,
-                      const mlir::TypeConverter *converter) {
-  unsigned conds = select.getNumConditions();
-  auto cases = select.getCases().getValue();
-  mlir::Value selector = adaptor.getSelector();
-  auto loc = select.getLoc();
-  assert(conds > 0 && "select must have cases");
+struct SelectOpConversionBase : public fir::FIROpConversion<OP> {
+  using fir::FIROpConversion<OP>::FIROpConversion;
 
-  llvm::SmallVector<mlir::Block *> destinations;
-  llvm::SmallVector<mlir::ValueRange> destinationsOperands;
-  mlir::Block *defaultDestination;
-  mlir::ValueRange defaultOperands;
-  llvm::SmallVector<int32_t> caseValues;
+private:
+  /// Helper function for converting select ops. This function converts the
+  /// signature of the given block. If the new block signature is different from
+  /// `expectedTypes`, returns "failure".
+  llvm::FailureOr<mlir::Block *>
+  getConvertedBlock(mlir::ConversionPatternRewriter &rewriter,
+                    mlir::Operation *branchOp, mlir::Block *block,
+                    mlir::TypeRange expectedTypes) const {
+    const mlir::TypeConverter *converter = this->getTypeConverter();
+    assert(converter && "expected non-null type converter");
+    assert(!block->isEntryBlock() && "entry blocks have no predecessors");
 
-  for (unsigned t = 0; t != conds; ++t) {
-    mlir::Block *dest = select.getSuccessor(t);
-    auto destOps = select.getSuccessorOperands(adaptor.getOperands(), t);
-    const mlir::Attribute &attr = cases[t];
-    if (auto intAttr = mlir::dyn_cast<mlir::IntegerAttr>(attr)) {
-      destinationsOperands.push_back(destOps ? *destOps : mlir::ValueRange{});
-      auto convertedBlock =
-          getConvertedBlock(rewriter, converter, select, dest,
-                            mlir::TypeRange(destinationsOperands.back()));
-      if (mlir::failed(convertedBlock))
-        return mlir::failure();
-      destinations.push_back(*convertedBlock);
-      caseValues.push_back(intAttr.getInt());
-      continue;
-    }
-    assert(mlir::dyn_cast_or_null<mlir::UnitAttr>(attr));
-    assert((t + 1 == conds) && "unit must be last");
-    defaultOperands = destOps ? *destOps : mlir::ValueRange{};
-    auto convertedBlock = getConvertedBlock(rewriter, converter, select, dest,
-                                            mlir::TypeRange(defaultOperands));
-    if (mlir::failed(convertedBlock))
-      return mlir::failure();
-    defaultDestination = *convertedBlock;
+    // There is nothing to do if the types already match.
+    if (block->getArgumentTypes() == expectedTypes)
+      return block;
+
+    // Compute the new block argument types and convert the block.
+    std::optional<mlir::TypeConverter::SignatureConversion> conversion =
+        converter->convertBlockSignature(block);
+    if (!conversion)
+      return rewriter.notifyMatchFailure(branchOp,
+                                         "could not compute block signature");
+    if (expectedTypes != conversion->getConvertedTypes())
+      return rewriter.notifyMatchFailure(branchOp,
+                                         "mismatch between adaptor operand "
+                                         "types and computed block signature");
+    return rewriter.applySignatureConversion(block, *conversion, converter);
   }
 
-  // LLVM::SwitchOp takes a i32 type for the selector.
-  if (select.getSelector().getType() != rewriter.getI32Type())
-    selector = mlir::LLVM::TruncOp::create(rewriter, loc, rewriter.getI32Type(),
-                                           selector);
+protected:
+  llvm::LogicalResult
+  selectMatchAndRewrite(OP select, typename OP::Adaptor adaptor,
+                        mlir::ConversionPatternRewriter &rewriter) const {
+    unsigned conds = select.getNumConditions();
+    auto cases = select.getCases().getValue();
+    mlir::Value selector = adaptor.getSelector();
+    auto loc = select.getLoc();
+    assert(conds > 0 && "select must have cases");
 
-  rewriter.replaceOpWithNewOp<mlir::LLVM::SwitchOp>(
-      select, selector,
-      /*defaultDestination=*/defaultDestination,
-      /*defaultOperands=*/defaultOperands,
-      /*caseValues=*/caseValues,
-      /*caseDestinations=*/destinations,
-      /*caseOperands=*/destinationsOperands,
-      /*branchWeights=*/llvm::ArrayRef<std::int32_t>());
-  return mlir::success();
-}
+    llvm::SmallVector<mlir::Block *> destinations;
+    llvm::SmallVector<mlir::ValueRange> destinationsOperands;
+    mlir::Block *defaultDestination;
+    mlir::ValueRange defaultOperands;
+    // LLVM::SwitchOp selector type and the case values types
+    // must have the same bit width, so cast the selector to i64,
+    // and use i64 for the case values. It is hard to imagine
+    // a computed GO TO with the number of labels in the label-list
+    // bigger than INT_MAX, but let's use i64 to be on the safe side.
+    // Moreover, fir.select operation is more relaxed than
+    // a Fortran computed GO TO, so it may specify such a case value
+    // even if there is just a single label/case.
+    llvm::SmallVector<int64_t> caseValues;
 
+    for (unsigned t = 0; t != conds; ++t) {
+      mlir::Block *dest = select.getSuccessor(t);
+      auto destOps = select.getSuccessorOperands(adaptor.getOperands(), t);
+      const mlir::Attribute &attr = cases[t];
+      if (auto intAttr = mlir::dyn_cast<mlir::IntegerAttr>(attr)) {
+        destinationsOperands.push_back(destOps ? *destOps : mlir::ValueRange{});
+        auto convertedBlock =
+            getConvertedBlock(rewriter, select, dest,
+                              mlir::TypeRange(destinationsOperands.back()));
+        if (mlir::failed(convertedBlock))
+          return mlir::failure();
+        destinations.push_back(*convertedBlock);
+        caseValues.push_back(intAttr.getInt());
+        continue;
+      }
+      assert(mlir::dyn_cast_or_null<mlir::UnitAttr>(attr));
+      assert((t + 1 == conds) && "unit must be last");
+      defaultOperands = destOps ? *destOps : mlir::ValueRange{};
+      auto convertedBlock = getConvertedBlock(rewriter, select, dest,
+                                              mlir::TypeRange(defaultOperands));
+      if (mlir::failed(convertedBlock))
+        return mlir::failure();
+      defaultDestination = *convertedBlock;
+    }
+
+    selector =
+        this->integerCast(loc, rewriter, rewriter.getI64Type(), selector);
+
+    rewriter.replaceOpWithNewOp<mlir::LLVM::SwitchOp>(
+        select, selector,
+        /*defaultDestination=*/defaultDestination,
+        /*defaultOperands=*/defaultOperands,
+        /*caseValues=*/rewriter.getI64VectorAttr(caseValues),
+        /*caseDestinations=*/destinations,
+        /*caseOperands=*/destinationsOperands,
+        /*branchWeights=*/llvm::ArrayRef<std::int32_t>());
+    return mlir::success();
+  }
+};
 /// conversion of fir::SelectOp to an if-then-else ladder
-struct SelectOpConversion : public fir::FIROpConversion<fir::SelectOp> {
-  using FIROpConversion::FIROpConversion;
+struct SelectOpConversion : public SelectOpConversionBase<fir::SelectOp> {
+  using SelectOpConversionBase::SelectOpConversionBase;
 
   llvm::LogicalResult
   matchAndRewrite(fir::SelectOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    return selectMatchAndRewrite<fir::SelectOp>(lowerTy(), op, adaptor,
-                                                rewriter, getTypeConverter());
+    return this->selectMatchAndRewrite(op, adaptor, rewriter);
   }
 };
 
 /// conversion of fir::SelectRankOp to an if-then-else ladder
-struct SelectRankOpConversion : public fir::FIROpConversion<fir::SelectRankOp> {
-  using FIROpConversion::FIROpConversion;
+struct SelectRankOpConversion
+    : public SelectOpConversionBase<fir::SelectRankOp> {
+  using SelectOpConversionBase::SelectOpConversionBase;
 
   llvm::LogicalResult
   matchAndRewrite(fir::SelectRankOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    return selectMatchAndRewrite<fir::SelectRankOp>(
-        lowerTy(), op, adaptor, rewriter, getTypeConverter());
+    return this->selectMatchAndRewrite(op, adaptor, rewriter);
   }
 };
 
