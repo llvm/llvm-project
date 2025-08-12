@@ -2209,7 +2209,7 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     unsigned Op = ID == Intrinsic::lifetime_start ? TargetOpcode::LIFETIME_START
                                                   : TargetOpcode::LIFETIME_END;
 
-    const AllocaInst *AI = dyn_cast<AllocaInst>(CI.getArgOperand(1));
+    const AllocaInst *AI = dyn_cast<AllocaInst>(CI.getArgOperand(0));
     if (!AI || !AI->isStaticAlloca())
       return true;
 
@@ -2556,7 +2556,6 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                          getOrCreateVReg(*ConstantInt::getTrue(CI.getType())));
     return true;
   case Intrinsic::amdgcn_cs_chain:
-  case Intrinsic::amdgcn_call_whole_wave:
     return translateCallBase(CI, MIRBuilder);
   case Intrinsic::fptrunc_round: {
     uint32_t Flags = MachineInstr::copyFlagsFromInstruction(CI);

@@ -332,10 +332,10 @@ private:
   /// stack objects like arguments so we can't treat them as immutable.
   bool HasTailCall = false;
 
-  /// Not null, if shrink-wrapping found a better place for the prologue.
-  MachineBasicBlock *Save = nullptr;
-  /// Not null, if shrink-wrapping found a better place for the epilogue.
-  MachineBasicBlock *Restore = nullptr;
+  /// Not empty, if shrink-wrapping found a better place for the prologue.
+  SmallVector<MachineBasicBlock *, 4> SavePoints;
+  /// Not empty, if shrink-wrapping found a better place for the epilogue.
+  SmallVector<MachineBasicBlock *, 4> RestorePoints;
 
   /// Size of the UnsafeStack Frame
   uint64_t UnsafeStackSize = 0;
@@ -825,10 +825,25 @@ public:
 
   void setCalleeSavedInfoValid(bool v) { CSIValid = v; }
 
-  MachineBasicBlock *getSavePoint() const { return Save; }
-  void setSavePoint(MachineBasicBlock *NewSave) { Save = NewSave; }
-  MachineBasicBlock *getRestorePoint() const { return Restore; }
-  void setRestorePoint(MachineBasicBlock *NewRestore) { Restore = NewRestore; }
+  ArrayRef<MachineBasicBlock *> getSavePoints() const { return SavePoints; }
+  void setSavePoints(ArrayRef<MachineBasicBlock *> NewSavePoints) {
+    SavePoints = SmallVector<MachineBasicBlock *>(NewSavePoints);
+  }
+  ArrayRef<MachineBasicBlock *> getRestorePoints() const {
+    return RestorePoints;
+  }
+  void setRestorePoints(ArrayRef<MachineBasicBlock *> NewRestorePoints) {
+    RestorePoints = SmallVector<MachineBasicBlock *>(NewRestorePoints);
+  }
+
+  static SmallVector<MachineBasicBlock *> constructSaveRestorePoints(
+      ArrayRef<MachineBasicBlock *> SRPoints,
+      const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &BBMap) {
+    SmallVector<MachineBasicBlock *, 4> Pts;
+    for (auto &Src : SRPoints)
+      Pts.push_back(BBMap.find(Src)->second);
+    return Pts;
+  }
 
   uint64_t getUnsafeStackSize() const { return UnsafeStackSize; }
   void setUnsafeStackSize(uint64_t Size) { UnsafeStackSize = Size; }

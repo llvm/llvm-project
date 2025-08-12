@@ -3042,7 +3042,7 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
     Value *V = LHS;
     unsigned MaskElems = Mask.size();
     auto *SrcTy = cast<FixedVectorType>(V->getType());
-    unsigned VecBitWidth = SrcTy->getPrimitiveSizeInBits().getFixedValue();
+    unsigned VecBitWidth = DL.getTypeSizeInBits(SrcTy);
     unsigned SrcElemBitWidth = DL.getTypeSizeInBits(SrcTy->getElementType());
     assert(SrcElemBitWidth && "vector elements must have a bitwidth");
     unsigned SrcNumElems = SrcTy->getNumElements();

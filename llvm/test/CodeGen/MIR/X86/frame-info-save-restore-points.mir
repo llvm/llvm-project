@@ -30,8 +30,10 @@ liveins:
   - { reg: '$edi' }
   - { reg: '$esi' }
 # CHECK: frameInfo:
-# CHECK:      savePoint: '%bb.2'
-# CHECK-NEXT: restorePoint: '%bb.2'
+# CHECK:      savePoint:
+# CHECK-NEXT:   - point:           '%bb.2'
+# CHECK:      restorePoint:
+# CHECK-NEXT:   - point:           '%bb.2'
 # CHECK: stack
 frameInfo:
   maxAlignment:  4

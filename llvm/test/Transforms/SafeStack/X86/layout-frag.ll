@@ -13,16 +13,16 @@ entry:
   %x2 = alloca i64, align 8
 
 
-  call void @llvm.lifetime.start.p0(i64 8, ptr %x0)
+  call void @llvm.lifetime.start.p0(ptr %x0)
   call void @capture64(ptr %x0)
-  call void @llvm.lifetime.end.p0(i64 8, ptr %x0)
+  call void @llvm.lifetime.end.p0(ptr %x0)
 
-  call void @llvm.lifetime.start.p0(i64 1, ptr %x1)
-  call void @llvm.lifetime.start.p0(i64 8, ptr %x2)
+  call void @llvm.lifetime.start.p0(ptr %x1)
+  call void @llvm.lifetime.start.p0(ptr %x2)
   call void @capture8(ptr %x1)
   call void @capture64(ptr %x2)
-  call void @llvm.lifetime.end.p0(i64 1, ptr %x1)
-  call void @llvm.lifetime.end.p0(i64 8, ptr %x2)
+  call void @llvm.lifetime.end.p0(ptr %x1)
+  call void @llvm.lifetime.end.p0(ptr %x2)
 
 ; Test that i64 allocas share space.
 ; CHECK: getelementptr i8, ptr %unsafe_stack_ptr, i32 -8
@@ -32,7 +32,7 @@ entry:
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 declare void @capture8(ptr)
 declare void @capture64(ptr)

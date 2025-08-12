@@ -101,29 +101,3 @@ define amdgpu_gfx_whole_wave i64 @ret_64(i1 %active, i64 %a, i64 %b) {
   %ret = call i64 @llvm.amdgcn.update.dpp.i64(i64 %x, i64 %y, i32 1, i32 1, i32 1, i1 false)
   ret i64 %ret
 }
-
-declare amdgpu_gfx_whole_wave i32 @callee(i1 %active, i32 %x)
-
-; Make sure we don't pass the first argument (i1).
-define amdgpu_cs void @call(i32 %x, ptr %p) {
-  ; CHECK-LABEL: name: call
-  ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
-  ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @callee
-  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
-  ; CHECK-NEXT:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @callee
-  ; CHECK-NEXT:   $vgpr0 = COPY [[COPY]](s32)
-  ; CHECK-NEXT:   $sgpr30_sgpr31 = G_SI_CALL [[GV1]](p0), @callee, csr_amdgpu_si_gfx, implicit $vgpr0, implicit-def $vgpr0
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
-  ; CHECK-NEXT:   G_STORE [[COPY3]](s32), [[MV]](p0) :: (store (s32) into %ir.p)
-  ; CHECK-NEXT:   S_ENDPGM 0
-  %ret = call i32(ptr, ...) @llvm.amdgcn.call.whole.wave(ptr @callee, i32 %x) convergent
-  store i32 %ret, ptr %p
-  ret void
-}

@@ -6497,7 +6497,8 @@ void ELFDumper<ELFT>::printSFrameFDEs(
         W,
         formatv("FuncDescEntry [{0}]", std::distance(FDEs.begin(), It)).str());
 
-    W.printHex("PC", Parser.getAbsoluteStartAddress(It));
+    uint64_t FDEStartAddress = Parser.getAbsoluteStartAddress(It);
+    W.printHex("PC", FDEStartAddress);
     W.printHex("Size", It->Size);
     W.printHex("Start FRE Offset", It->StartFREOff);
     W.printNumber("Num FREs", It->NumFREs);
@@ -6527,6 +6528,32 @@ void ELFDumper<ELFT>::printSFrameFDEs(
         It->RepSize);
 
     W.printHex("Padding2", It->Padding2);
+
+    ListScope FREListScope(W, "FREs");
+    Error Err = Error::success();
+    for (const typename SFrameParser<ELFT::Endianness>::FrameRowEntry &FRE :
+         Parser.fres(*It, Err)) {
+      DictScope FREScope(W, "Frame Row Entry");
+      W.printHex(
+          "Start Address",
+          (It->getFDEType() == sframe::FDEType::PCInc ? FDEStartAddress : 0) +
+              FRE.StartAddress);
+      W.printBoolean("Return Address Signed", FRE.Info.isReturnAddressSigned());
+      W.printEnum("Offset Size", FRE.Info.getOffsetSize(),
+                  sframe::getFREOffsets());
+      W.printEnum("Base Register", FRE.Info.getBaseRegister(),
+                  sframe::getBaseRegisters());
+      if (std::optional<int32_t> Off = Parser.getCFAOffset(FRE))
+        W.printNumber("CFA Offset", *Off);
+      if (std::optional<int32_t> Off = Parser.getRAOffset(FRE))
+        W.printNumber("RA Offset", *Off);
+      if (std::optional<int32_t> Off = Parser.getFPOffset(FRE))
+        W.printNumber("FP Offset", *Off);
+      if (ArrayRef<int32_t> Offs = Parser.getExtraOffsets(FRE); !Offs.empty())
+        W.printList("Extra Offsets", Offs);
+    }
+    if (Err)
+      reportWarning(std::move(Err), FileName);
   }
 }
 
