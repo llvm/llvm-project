@@ -76,9 +76,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI explicit __split_buffer_pointer_layout(const allocator_type& __alloc)
       : __alloc_(__alloc) {}
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer first() _NOEXCEPT { return __first_; }
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __first() _NOEXCEPT { return __first_; }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_pointer first() const _NOEXCEPT { return __first_; }
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_pointer __first() const _NOEXCEPT { return __first_; }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer begin() _NOEXCEPT { return __begin_; }
 
@@ -194,9 +194,9 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI explicit __split_buffer_size_layout(const allocator_type& __alloc)
       : __alloc_(__alloc) {}
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer first() _NOEXCEPT { return __first_; }
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __first() _NOEXCEPT { return __first_; }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_pointer first() const _NOEXCEPT { return __first_; }
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_pointer __first() const _NOEXCEPT { return __first_; }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer begin() _NOEXCEPT { return __begin_; }
 
@@ -297,6 +297,8 @@ template <class _Tp,
 struct __split_buffer : _Layout<__split_buffer<_Tp, _Allocator, _Layout>, _Tp, _Allocator> {
   using __base_type _LIBCPP_NODEBUG = _Layout<__split_buffer<_Tp, _Allocator, _Layout>, _Tp, _Allocator>;
   using __base_type::__back_spare;
+  using __base_type::__copy_without_alloc;
+  using __base_type::__first;
   using __base_type::__front_spare;
   using __base_type::__reset;
   using __base_type::__set_begin;
@@ -306,7 +308,6 @@ struct __split_buffer : _Layout<__split_buffer<_Tp, _Allocator, _Layout>, _Tp, _
   using __base_type::__set_sentinel;
   using __base_type::__set_size_if_size_based;
   using __base_type::__swap_without_allocator;
-  using __base_type::first;
 
   using typename __base_type::__alloc_rr;
   using typename __base_type::__alloc_traits;
@@ -416,7 +417,7 @@ struct __split_buffer : _Layout<__split_buffer<_Tp, _Allocator, _Layout>, _Tp, _
       _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<__alloc_rr>);
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool __invariants() const {
-    if (first() == nullptr) {
+    if (__first() == nullptr) {
       if (begin() != nullptr)
         return false;
 
@@ -428,7 +429,7 @@ struct __split_buffer : _Layout<__split_buffer<_Tp, _Allocator, _Layout>, _Tp, _
 
       return true;
     } else {
-      if (begin() < first())
+      if (begin() < __first())
         return false;
 
       if (capacity() < size())
@@ -572,7 +573,7 @@ __split_buffer<_Tp, _Allocator, _Layout>::__split_buffer(size_type __cap, size_t
     __cap = __allocation.count;
   }
 
-  __set_begin(first() + __start);
+  __set_begin(__first() + __start);
   __set_sentinel(begin());
   __set_capacity(__cap);
 }
@@ -580,8 +581,8 @@ __split_buffer<_Tp, _Allocator, _Layout>::__split_buffer(size_type __cap, size_t
 template <class _Tp, class _Allocator, template <class, class, class> class _Layout>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 __split_buffer<_Tp, _Allocator, _Layout>::~__split_buffer() {
   clear();
-  if (first())
-    __alloc_traits::deallocate(this->__alloc_, first(), capacity());
+  if (__first())
+    __alloc_traits::deallocate(this->__alloc_, __first(), capacity());
 }
 
 template <class _Tp, class _Allocator, template <class, class, class> class _Layout>
@@ -596,7 +597,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20
 __split_buffer<_Tp, _Allocator, _Layout>::__split_buffer(__split_buffer&& __c, const __alloc_rr& __a)
     : __base_type(__a) {
   if (__a == __c.__alloc_) {
-    __set_first(first());
+    __set_first(__first());
     __set_begin(begin());
     __set_sentinel(end());
     __set_capacity(capacity());
@@ -604,8 +605,8 @@ __split_buffer<_Tp, _Allocator, _Layout>::__split_buffer(__split_buffer&& __c, c
   } else {
     auto __allocation = std::__allocate_at_least(this->__alloc_, __c.size());
     __set_first(__allocation.ptr);
-    __set_begin(first());
-    __set_sentinel(this->first());
+    __set_begin(__first());
+    __set_sentinel(__first());
     __set_capacity(__allocation.count);
     typedef move_iterator<iterator> _Ip;
     __construct_at_end(_Ip(__c.begin()), _Ip(__c.end()));
