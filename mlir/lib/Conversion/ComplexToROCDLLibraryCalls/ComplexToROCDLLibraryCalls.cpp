@@ -56,10 +56,43 @@ struct ComplexOpToROCDLLibraryCalls : public OpRewritePattern<Op> {
 private:
   std::string funcName;
 };
+
+// Rewrite complex.pow(z, w) -> complex.exp(w * complex.log(z))
+struct PowOpToROCDLLibraryCalls : public OpRewritePattern<complex::PowOp> {
+  using OpRewritePattern<complex::PowOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(complex::PowOp op,
+                                PatternRewriter &rewriter) const final {
+    auto loc = op.getLoc();
+    if (auto constOp = op.getRhs().getDefiningOp<complex::ConstantOp>()) {
+      ArrayAttr value = constOp.getValue();
+      if (value.size() == 2) {
+        auto real = dyn_cast<FloatAttr>(value[0]);
+        auto imag = dyn_cast<FloatAttr>(value[1]);
+        if (real && imag && imag.getValue().isZero())
+          for (int i = 2; i <= 8; ++i)
+            if (real.getValue().isExactlyValue(i)) {
+              Value base = op.getLhs();
+              Value result = base;
+              for (int j = 1; j < i; ++j)
+                result = rewriter.create<complex::MulOp>(loc, result, base);
+              rewriter.replaceOp(op, result);
+              return success();
+            }
+      }
+    }
+    Value logBase = rewriter.create<complex::LogOp>(loc, op.getLhs());
+    Value mul = rewriter.create<complex::MulOp>(loc, op.getRhs(), logBase);
+    Value exp = rewriter.create<complex::ExpOp>(loc, mul);
+    rewriter.replaceOp(op, exp);
+    return success();
+  }
+};
 } // namespace
 
 void mlir::populateComplexToROCDLLibraryCallsConversionPatterns(
     RewritePatternSet &patterns) {
+  patterns.add<PowOpToROCDLLibraryCalls>(patterns.getContext());
   patterns.add<ComplexOpToROCDLLibraryCalls<complex::AbsOp, Float32Type>>(
       patterns.getContext(), "__ocml_cabs_f32");
   patterns.add<ComplexOpToROCDLLibraryCalls<complex::AbsOp, Float64Type>>(
@@ -110,9 +143,10 @@ void ConvertComplexToROCDLLibraryCallsPass::runOnOperation() {
 
   ConversionTarget target(getContext());
   target.addLegalDialect<func::FuncDialect>();
+  target.addLegalOp<complex::MulOp>();
   target.addIllegalOp<complex::AbsOp, complex::CosOp, complex::ExpOp,
-                      complex::LogOp, complex::SinOp, complex::SqrtOp,
-                      complex::TanOp, complex::TanhOp>();
+                      complex::LogOp, complex::PowOp, complex::SinOp,
+                      complex::SqrtOp, complex::TanOp, complex::TanhOp>();
   if (failed(applyPartialConversion(op, target, std::move(patterns))))
     signalPassFailure();
 }
