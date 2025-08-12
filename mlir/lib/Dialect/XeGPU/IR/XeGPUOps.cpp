@@ -121,20 +121,23 @@ isValidGatherScatterBufferParams(Type maskTy, VectorType valueTy,
   auto maskShape = getShapeOf(maskTy);
   auto valueShape = getShapeOf(valueTy);
 
-  // a valid shape for SIMT case
   if (valueTy.getRank() == 1) {
     auto maskVecTy = dyn_cast<VectorType>(maskTy);
     if (!maskVecTy)
       return emitError() << "Expecting a vector type mask.";
-    int64_t maskElements = maskVecTy.getNumElements();
+    int64_t maskSize = maskVecTy.getNumElements();
 
     auto valueSize = valueTy.getNumElements();
-    if ((valueSize % chunkSize) != 0)
-      return emitError() << "value elements must be multiple of chunk size "
-                         << chunkSize;
-    if ((valueSize / chunkSize) != maskElements)
-      return emitError()
-             << "Mask should match value except the chunk size dim.";
+    if (chunkSize == 1) {
+      if (maskSize != valueSize)
+        return emitError()
+               << "Mask should match value except the chunk size dim.";
+    } else {
+      if (chunkSize != valueSize)
+        return emitError() << "value elements must match chunk size "
+                           << chunkSize;
+    }
+
     return success();
   }
 

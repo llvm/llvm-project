@@ -152,41 +152,33 @@ createNdDescriptor(PatternRewriter &rewriter, Location loc,
   return ndDesc;
 }
 
-/// Adjusts the strides of a memref according to a given permutation map for
-/// vector operations.
-///
-/// This function updates the last `vecRank` elements of the `strides` array to
-/// reflect the permutation specified by `permMap`. The permutation is applied
-/// to the innermost dimensions of the memref, corresponding to the vector
-/// shape. This is typically used when lowering vector transfer operations with
-/// permutation maps to memory accesses, ensuring that the memory strides match
-/// the logical permutation of vector dimensions.
-///
-/// Example:
-///   Suppose we have a memref of rank 4 with strides `[s0, s1, s2, s3]` and a
-///   vector of rank 2. If the permutation map swaps the last two dimensions
-///   (e.g., [0, 1] -> [1, 0]), then after calling this function, the last two
-///   strides will be swapped:
-///     Original strides: [s0, s1, s2, s3]
-///     After permutation: [s0, s1, s3, s2]
-///
-/// \param op The operation being rewritten.
-/// \param rewriter The pattern rewriter for IR modifications.
-/// \param memrefType The type of the memref being accessed.
-/// \param permMap The affine permutation map to apply to the vector dimensions.
-/// \param vecType The type of the vector being accessed.
-/// \param strides The array of strides to be adjusted (in-place).
-/// \returns success if the permutation is applied successfully, failure
-/// otherwise.
-///
-static LogicalResult adjustStridesForPermutation(
-    Operation *op, PatternRewriter &rewriter, MemRefType memrefType,
-    AffineMap permMap, VectorType vecType, SmallVectorImpl<Value> &strides) {
+// Adjusts the strides of a memref according to a given permutation map for
+// vector operations.
+//
+// This function updates the last `vecRank` elements of the `strides` array to
+// reflect the permutation specified by `permMap`. The permutation is applied
+// to the innermost dimensions of the memref, corresponding to the vector
+// shape. This is typically used when lowering vector transfer operations with
+// permutation maps to memory accesses, ensuring that the memory strides match
+// the logical permutation of vector dimensions.
+//
+// Example:
+//   Suppose we have a memref of rank 4 with strides `[s0, s1, s2, s3]` and a
+//   vector of rank 2. If the permutation map swaps the last two dimensions
+//   (e.g., [0, 1] -> [1, 0]), then after calling this function, the last two
+//   strides will be swapped:
+//     Original strides: [s0, s1, s2, s3]
+//     After permutation: [s0, s1, s3, s2]
+//
+void adjustStridesForPermutation(Operation *op, PatternRewriter &rewriter,
+                                 MemRefType memrefType, AffineMap permMap,
+                                 VectorType vecType,
+                                 SmallVectorImpl<Value> &strides) {
   unsigned vecRank;
   unsigned memrefRank = memrefType.getRank();
 
   if (permMap.isMinorIdentity())
-    return success();
+    return;
   vecRank = vecType.getRank();
   // Only adjust the last vecRank strides according to the permutation
   ArrayRef<Value> relevantStrides = ArrayRef<Value>(strides).take_back(vecRank);
@@ -209,8 +201,6 @@ static LogicalResult adjustStridesForPermutation(
   // Replace the last vecRank strides with the adjusted ones
   for (unsigned i = 0; i < vecRank; ++i)
     strides[memrefRank - vecRank + i] = adjustedStrides[i];
-
-  return success();
 }
 
 SmallVector<Value> computeStrides(VectorTransferOpInterface xferOp,
@@ -254,10 +244,8 @@ SmallVector<Value> computeStrides(VectorTransferOpInterface xferOp,
     strides.append(meta.getStrides().begin(), meta.getStrides().end());
   }
   // Adjust strides according to the permutation map (e.g., for transpose)
-  if (failed(adjustStridesForPermutation(xferOp, rewriter, memrefType, permMap,
-                                         vectorType, strides))) {
-    return {};
-  }
+  adjustStridesForPermutation(xferOp, rewriter, memrefType, permMap, vectorType,
+                              strides);
   return strides;
 }
 
