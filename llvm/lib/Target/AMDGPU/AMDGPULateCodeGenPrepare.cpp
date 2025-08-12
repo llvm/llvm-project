@@ -546,7 +546,7 @@ public:
     AU.addRequired<TargetPassConfig>();
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<UniformityInfoWrapperPass>();
-    // Invalidates UniformityInfo 
+    // Invalidates UniformityInfo
     AU.setPreservesCFG();
   }
 
