@@ -390,7 +390,7 @@ line this command is found on.
                          triggers.
 
 ### Description
-NOTE: Only supported for DAP based debuggers.
+NOTE: Only supported for DAP-based debuggers.
 
 This command controls stepping behaviour: Tell dexter to set a function
 breakpoint and step through the function after hitting it. Composes well with
@@ -407,7 +407,7 @@ itself (you can may a callstack with multiple targets to step through) and
                          triggers.
 
 ### Description
-NOTE: Only supported for DAP based debuggers.
+NOTE: Only supported for DAP-based debuggers.
 
 This command controls stepping behaviour: Tell dexter to set a breakpoint on
 `from_line`. When it is hit and optionally '(expr) == (values[n])' is true,

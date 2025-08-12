@@ -7,7 +7,7 @@
 """A Command that tells dexter to set a function breakpoint and step through
 the function after hitting it.
 
-NOTE: Only supported for DAP based debuggers.
+NOTE: Only supported for DAP-based debuggers.
 """
 
 from dex.command.CommandBase import CommandBase
