@@ -404,6 +404,8 @@ def err_hlsl_semantic_missing : Error<"semantic annotations must be present "
                                       "for all input and outputs of an entry "
                                       "function or patch constant function">;
 
+def note_hlsl_semantic_used_here : Note<"%0 used here">;
+
 // ClangIR frontend errors
 def err_cir_to_cir_transform_failed : Error<
     "CIR-to-CIR transformation failed">, DefaultFatal;

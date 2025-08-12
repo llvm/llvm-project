@@ -620,10 +620,50 @@ CGHLSLRuntime::handleScalarSemanticLoad(IRBuilder<> &B, llvm::Type *Type,
 }
 
 llvm::Value *
+CGHLSLRuntime::handleStructSemanticLoad(IRBuilder<> &B, llvm::Type *Type,
+                                        const clang::DeclaratorDecl *Decl,
+                                        SemanticInfo &ActiveSemantic) {
+  const llvm::StructType *ST = cast<StructType>(Type);
+  const clang::RecordDecl *RD = Decl->getType()->getAsRecordDecl();
+
+  assert(std::distance(RD->field_begin(), RD->field_end()) ==
+         ST->getNumElements());
+
+  if (!ActiveSemantic.Semantic) {
+    ActiveSemantic.Semantic = Decl->getAttr<HLSLSemanticAttr>();
+    ActiveSemantic.Index = ActiveSemantic.Semantic
+                               ? ActiveSemantic.Semantic->getSemanticIndex()
+                               : 0;
+  }
+
+  llvm::Value *Aggregate = llvm::PoisonValue::get(Type);
+  auto FieldDecl = RD->field_begin();
+  for (unsigned I = 0; I < ST->getNumElements(); ++I) {
+    SemanticInfo Info = ActiveSemantic;
+    llvm::Value *ChildValue =
+        handleSemanticLoad(B, ST->getElementType(I), *FieldDecl, Info);
+    if (!ChildValue) {
+      CGM.getDiags().Report(Decl->getInnerLocStart(),
+                            diag::note_hlsl_semantic_used_here)
+          << Decl;
+      return nullptr;
+    }
+    if (ActiveSemantic.Semantic)
+      ActiveSemantic = Info;
+
+    Aggregate = B.CreateInsertValue(Aggregate, ChildValue, I);
+    ++FieldDecl;
+  }
+
+  return Aggregate;
+}
+
+llvm::Value *
 CGHLSLRuntime::handleSemanticLoad(IRBuilder<> &B, llvm::Type *Type,
                                   const clang::DeclaratorDecl *Decl,
                                   SemanticInfo &ActiveSemantic) {
-  assert(!Type->isStructTy());
+  if (Type->isStructTy())
+    return handleStructSemanticLoad(B, Type, Decl, ActiveSemantic);
   return handleScalarSemanticLoad(B, Type, Decl, ActiveSemantic);
 }
 
@@ -671,8 +711,25 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
     }
 
     const ParmVarDecl *PD = FD->getParamDecl(Param.getArgNo() - SRetOffset);
-    SemanticInfo ActiveSemantic = {nullptr, 0};
-    Args.push_back(handleSemanticLoad(B, Param.getType(), PD, ActiveSemantic));
+    llvm::Value *SemanticValue = nullptr;
+    if (HLSLParamModifierAttr *MA = PD->getAttr<HLSLParamModifierAttr>()) {
+      llvm_unreachable("Not handled yet");
+    } else {
+      llvm::Type *ParamType =
+          Param.hasByValAttr() ? Param.getParamByValType() : Param.getType();
+      SemanticInfo ActiveSemantic = {nullptr, 0};
+      SemanticValue = handleSemanticLoad(B, ParamType, PD, ActiveSemantic);
+      if (!SemanticValue)
+        return;
+      if (Param.hasByValAttr()) {
+        llvm::Value *Var = B.CreateAlloca(Param.getParamByValType());
+        B.CreateStore(SemanticValue, Var);
+        SemanticValue = Var;
+      }
+    }
+
+    assert(SemanticValue);
+    Args.push_back(SemanticValue);
   }
 
   CallInst *CI = B.CreateCall(FunctionCallee(Fn), Args, OB);
