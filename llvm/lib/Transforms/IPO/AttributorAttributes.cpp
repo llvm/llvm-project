@@ -5197,23 +5197,10 @@ Align getKnownAlignForIntrinsic(Attributor &A, AAAlign &QueryingAA,
         QueryingAA, IRPosition::value(*(II->getOperand(1))), DepClassTy::NONE);
     const auto *AlignAA = A.getAAFor<AAAlign>(
         QueryingAA, IRPosition::value(*(II)), DepClassTy::NONE);
-    if (ConstVals && ConstVals->isValidState()) {
-      if (ConstVals->isAtFixpoint()) {
-        const DataLayout &DL = A.getDataLayout();
-        unsigned Size =
-            DL.getPointerTypeSizeInBits(II->getOperand(0)->getType());
-        uint64_t TrailingZeros = Size - 1;
-        for (const APInt &It : ConstVals->getAssumedSet())
-          if (It.countTrailingZeros() < TrailingZeros)
-            TrailingZeros = It.countTrailingZeros();
-
-        APInt Mask = APInt(Size, 1).shl(TrailingZeros);
-        APInt PtrAlign = APInt(Size, 1).shl(Log2(AlignAA->getKnownAlign()));
-        if (Mask.uge(PtrAlign))
-          return Align(1);
-
-        return AlignAA->getKnownAlign();
-      }
+    if (ConstVals && ConstVals->isValidState() && ConstVals->isAtFixpoint()) {
+      if (ConstVals->getMinAlignment() >= AlignAA->getKnownAlign())
+        return Align(1);
+      return AlignAA->getKnownAlign();
     } else if (AlignAA) {
       return AlignAA->getKnownAlign();
     }
@@ -5238,13 +5225,7 @@ Align getAssumedAlignForIntrinsic(Attributor &A, AAAlign &QueryingAA,
                             DepClassTy::REQUIRED);
     bool NeedRet = false;
     if (ConstVals && ConstVals->isValidState()) {
-      const DataLayout &DL = A.getDataLayout();
-      unsigned Size = DL.getPointerTypeSizeInBits(II->getOperand(0)->getType());
-      unsigned TrailingZeros = Size - 1;
-      for (const APInt &It : ConstVals->getAssumedSet())
-        if (It.countTrailingZeros() < TrailingZeros)
-          TrailingZeros = It.countTrailingZeros();
-      Alignment = Align(1 << TrailingZeros);
+      Alignment = ConstVals->getMinAlignment();
       NeedRet = true;
     }
     if (AlignAA && AlignAA->isValidState()) {
