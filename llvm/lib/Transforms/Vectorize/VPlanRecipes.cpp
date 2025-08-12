@@ -1039,6 +1039,20 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     return Ctx.TTI.getArithmeticInstrCost(Instruction::Xor, RetTy,
                                           Ctx.CostKind);
   }
+  case Instruction::ICmp:
+  case Instruction::FCmp: {
+    Instruction *CtxI = dyn_cast_or_null<Instruction>(getUnderlyingValue());
+    Type *SrcTy = Ctx.Types.inferScalarType(getOperand(0));
+    Type *RetTy = Ctx.Types.inferScalarType(this);
+    if (!vputils::onlyFirstLaneUsed(this)) {
+      SrcTy = toVectorTy(SrcTy, VF);
+      RetTy = toVectorTy(RetTy, VF);
+    }
+    return Ctx.TTI.getCmpSelInstrCost(Opcode, SrcTy, RetTy, getPredicate(),
+                                      Ctx.CostKind,
+                                      {TTI::OK_AnyValue, TTI::OP_None},
+                                      {TTI::OK_AnyValue, TTI::OP_None}, CtxI);
+  }
   case VPInstruction::ExtractPenultimateElement:
     if (VF == ElementCount::getScalable(1))
       return InstructionCost::getInvalid();
