@@ -740,7 +740,7 @@ _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> allocate_shared(const _Alloc& __a, _Args&&
 }
 
 template <class _Tp, class... _Args, __enable_if_t<!is_array<_Tp>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> make_shared(_Args&&... __args) {
+_LIBCPP_NODISCARD_SINCE_CXX17 _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> make_shared(_Args&&... __args) {
   return std::allocate_shared<_Tp>(allocator<__remove_cv_t<_Tp> >(), std::forward<_Args>(__args)...);
 }
 
@@ -754,7 +754,7 @@ _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> allocate_shared_for_overwrite(const _Alloc
 }
 
 template <class _Tp, __enable_if_t<!is_array<_Tp>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> make_shared_for_overwrite() {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> make_shared_for_overwrite() {
   return std::allocate_shared_for_overwrite<_Tp>(allocator<__remove_cv_t<_Tp>>());
 }
 
@@ -963,17 +963,17 @@ _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> allocate_shared_for_overwrite(const _Alloc
 }
 
 template <class _Tp, __enable_if_t<is_bounded_array<_Tp>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> make_shared() {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> make_shared() {
   return std::__allocate_shared_bounded_array<_Tp>(allocator<_Tp>());
 }
 
 template <class _Tp, __enable_if_t<is_bounded_array<_Tp>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> make_shared(const remove_extent_t<_Tp>& __u) {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> make_shared(const remove_extent_t<_Tp>& __u) {
   return std::__allocate_shared_bounded_array<_Tp>(allocator<_Tp>(), __u);
 }
 
 template <class _Tp, __enable_if_t<is_bounded_array<_Tp>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> make_shared_for_overwrite() {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> make_shared_for_overwrite() {
   return std::__allocate_shared_bounded_array<_Tp>(allocator<__for_overwrite_tag>());
 }
 
@@ -996,17 +996,17 @@ _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> allocate_shared_for_overwrite(const _Alloc
 }
 
 template <class _Tp, __enable_if_t<is_unbounded_array<_Tp>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> make_shared(size_t __n) {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> make_shared(size_t __n) {
   return std::__allocate_shared_unbounded_array<_Tp>(allocator<_Tp>(), __n);
 }
 
 template <class _Tp, __enable_if_t<is_unbounded_array<_Tp>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> make_shared(size_t __n, const remove_extent_t<_Tp>& __u) {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> make_shared(size_t __n, const remove_extent_t<_Tp>& __u) {
   return std::__allocate_shared_unbounded_array<_Tp>(allocator<_Tp>(), __n, __u);
 }
 
 template <class _Tp, __enable_if_t<is_unbounded_array<_Tp>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> make_shared_for_overwrite(size_t __n) {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> make_shared_for_overwrite(size_t __n) {
   return std::__allocate_shared_unbounded_array<_Tp>(allocator<__for_overwrite_tag>(), __n);
 }
 
