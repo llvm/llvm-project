@@ -372,6 +372,46 @@ Example invocations:
   # Run with parallel execution (uses all CPU cores by default)
   $ run-clang-tidy.py -j 4
 
+Running Clang-Tidy on Diff
+---------------------------
+
+The :program:`clang-tidy-diff.py` script allows you to run :program:`clang-tidy`
+only on the lines that have been modified in your working directory or in a
+specific diff. This is particularly useful for code reviews and continuous
+integration, as it focuses analysis on the changed code rather than the entire
+codebase.
+
+The script can work with various diff sources:
+
+* Git working directory changes
+* Output from ``git diff``
+* Output from ``svn diff``
+* Patch files
+
+Example invocations:
+
+.. code-block:: console
+
+  # Run clang-tidy on all changes in the working directory
+  $ git diff -U0 --no-color HEAD^ | clang-tidy-diff.py -p1
+
+  # Run with specific checks and apply fixes
+  $ git diff -U0 --no-color HEAD^ | clang-tidy-diff.py -p1 -fix -checks=-*,readability-*
+
+  # Run on staged changes
+  $ git diff -U0 --no-color --cached | clang-tidy-diff.py -p1
+
+  # Run on changes between two commits
+  $ git diff -U0 --no-color HEAD~2 HEAD | clang-tidy-diff.py -p1
+
+  # Run on a patch file
+  $ clang-tidy-diff.py -p1 < changes.patch
+
+The ``-p1`` option tells the script to strip one level of path prefix from the
+diff, which is typically needed for Git diffs. The script supports most of the
+same options as :program:`clang-tidy` itself, including ``-checks=``, ``-fix``,
+``-header-filter=``, and configuration options.
+
 .. _clang-tidy-nolint:
 
 Suppressing Undesired Diagnostics
