@@ -1033,7 +1033,7 @@ define { <8 x i16>, <8 x i16>, <8 x i16> } @test_mask_mpsadbw_128(<16 x i8> %x0,
 ; CHECK-NEXT:    [[TMP25:%.*]] = or <8 x i16> [[TMP24]], zeroinitializer
 ; CHECK-NEXT:    [[_MSPROP_SELECT1:%.*]] = select <8 x i1> [[TMP5]], <8 x i16> [[TMP25]], <8 x i16> [[TMP22]]
 ; CHECK-NEXT:    [[RS3:%.*]] = select <8 x i1> [[MSK]], <8 x i16> [[AD3]], <8 x i16> zeroinitializer
-; CHECK-NEXT:    [[RS4:%.*]] = insertvalue { <8 x i16>, <8 x i16>, <8 x i16> } undef, <8 x i16> [[RS1]], 0
+; CHECK-NEXT:    [[RS4:%.*]] = insertvalue { <8 x i16>, <8 x i16>, <8 x i16> } poison, <8 x i16> [[RS1]], 0
 ; CHECK-NEXT:    [[TMP26:%.*]] = insertvalue { <8 x i16>, <8 x i16>, <8 x i16> } { <8 x i16> zeroinitializer, <8 x i16> splat (i16 -1), <8 x i16> splat (i16 -1) }, <8 x i16> [[_MSPROP_SELECT]], 1
 ; CHECK-NEXT:    [[RS5:%.*]] = insertvalue { <8 x i16>, <8 x i16>, <8 x i16> } [[RS4]], <8 x i16> [[RS2]], 1
 ; CHECK-NEXT:    [[TMP27:%.*]] = insertvalue { <8 x i16>, <8 x i16>, <8 x i16> } [[TMP26]], <8 x i16> [[_MSPROP_SELECT1]], 2
@@ -1047,7 +1047,7 @@ define { <8 x i16>, <8 x i16>, <8 x i16> } @test_mask_mpsadbw_128(<16 x i8> %x0,
   %rs2 = select <8 x i1> %msk, <8 x i16> %ad2, <8 x i16> %x3
   %ad3 = call <8 x i16> @llvm.x86.sse41.mpsadbw(<16 x i8> %x0, <16 x i8> %x1, i8 4)
   %rs3 = select <8 x i1> %msk, <8 x i16> %ad3, <8 x i16> zeroinitializer
-  %rs4 = insertvalue { <8 x i16>, <8 x i16>, <8 x i16> } undef, <8 x i16> %rs1, 0
+  %rs4 = insertvalue { <8 x i16>, <8 x i16>, <8 x i16> } poison, <8 x i16> %rs1, 0
   %rs5 = insertvalue { <8 x i16>, <8 x i16>, <8 x i16> } %rs4, <8 x i16> %rs2, 1
   %rs6 = insertvalue { <8 x i16>, <8 x i16>, <8 x i16> } %rs5, <8 x i16> %rs3, 2
   ret { <8 x i16>, <8 x i16>, <8 x i16> } %rs6
@@ -1108,7 +1108,7 @@ define { <16 x i16>, <16 x i16>, <16 x i16> } @test_mask_mpsadbw_256(<32 x i8> %
 ; CHECK-NEXT:    [[TMP25:%.*]] = or <16 x i16> [[TMP24]], zeroinitializer
 ; CHECK-NEXT:    [[_MSPROP_SELECT1:%.*]] = select <16 x i1> [[TMP5]], <16 x i16> [[TMP25]], <16 x i16> [[TMP22]]
 ; CHECK-NEXT:    [[RS3:%.*]] = select <16 x i1> [[MSK]], <16 x i16> [[AD3]], <16 x i16> zeroinitializer
-; CHECK-NEXT:    [[RS4:%.*]] = insertvalue { <16 x i16>, <16 x i16>, <16 x i16> } undef, <16 x i16> [[RS1]], 0
+; CHECK-NEXT:    [[RS4:%.*]] = insertvalue { <16 x i16>, <16 x i16>, <16 x i16> } poison, <16 x i16> [[RS1]], 0
 ; CHECK-NEXT:    [[TMP26:%.*]] = insertvalue { <16 x i16>, <16 x i16>, <16 x i16> } { <16 x i16> zeroinitializer, <16 x i16> splat (i16 -1), <16 x i16> splat (i16 -1) }, <16 x i16> [[_MSPROP_SELECT]], 1
 ; CHECK-NEXT:    [[RS5:%.*]] = insertvalue { <16 x i16>, <16 x i16>, <16 x i16> } [[RS4]], <16 x i16> [[RS2]], 1
 ; CHECK-NEXT:    [[TMP27:%.*]] = insertvalue { <16 x i16>, <16 x i16>, <16 x i16> } [[TMP26]], <16 x i16> [[_MSPROP_SELECT1]], 2
@@ -1122,7 +1122,7 @@ define { <16 x i16>, <16 x i16>, <16 x i16> } @test_mask_mpsadbw_256(<32 x i8> %
   %rs2 = select <16 x i1> %msk, <16 x i16> %ad2, <16 x i16> %x3
   %ad3 = call <16 x i16> @llvm.x86.avx2.mpsadbw(<32 x i8> %x0, <32 x i8> %x1, i8 4)
   %rs3 = select <16 x i1> %msk, <16 x i16> %ad3, <16 x i16> zeroinitializer
-  %rs4 = insertvalue { <16 x i16>, <16 x i16>, <16 x i16> } undef, <16 x i16> %rs1, 0
+  %rs4 = insertvalue { <16 x i16>, <16 x i16>, <16 x i16> } poison, <16 x i16> %rs1, 0
   %rs5 = insertvalue { <16 x i16>, <16 x i16>, <16 x i16> } %rs4, <16 x i16> %rs2, 1
   %rs6 = insertvalue { <16 x i16>, <16 x i16>, <16 x i16> } %rs5, <16 x i16> %rs3, 2
   ret { <16 x i16>, <16 x i16>, <16 x i16> } %rs6
