@@ -166,8 +166,6 @@ public:
   const bool IsVolatile = false;
   /// Flag indicating if the block is an array.
   const bool IsArray = false;
-  /// Flag indicating if this is a dummy descriptor.
-  bool IsDummy = false;
   bool IsConstexprUnknown = false;
 
   /// Storage management methods.
@@ -202,9 +200,6 @@ public:
 
   /// Allocates a dummy descriptor.
   Descriptor(const DeclTy &D, MetadataSize MD = std::nullopt);
-
-  /// Make this descriptor a dummy descriptor.
-  void makeDummy() { IsDummy = true; }
 
   QualType getType() const;
   QualType getElemQualType() const;
@@ -273,8 +268,6 @@ public:
   bool isRecord() const { return !IsArray && ElemRecord; }
   /// Checks if the descriptor is of a union.
   bool isUnion() const;
-  /// Checks if this is a dummy descriptor.
-  bool isDummy() const { return IsDummy; }
 
   /// Whether variables of this descriptor need their destructor called or not.
   bool hasTrivialDtor() const;

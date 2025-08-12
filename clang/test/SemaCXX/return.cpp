@@ -115,9 +115,9 @@ namespace ctor_returns_void {
   };
 
   template <typename T> struct ST {
-    ST() { return f(); } // expected-error {{constructor 'ST<T>' must not return void expression}}
+    ST() { return f(); } // expected-error {{constructor 'ctor_returns_void::ST<T>' must not return void expression}}
                          // expected-error@-1 {{constructor 'ST' must not return void expression}}
-    ~ST() { return f(); } // expected-error {{destructor '~ST<T>' must not return void expression}}
+    ~ST() { return f(); } // expected-error {{destructor '~ctor_returns_void::ST<T>' must not return void expression}}
                           // expected-error@-1 {{destructor '~ST' must not return void expression}}
   };
 
