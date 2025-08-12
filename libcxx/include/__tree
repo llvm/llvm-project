@@ -13,9 +13,7 @@
 #include <__algorithm/min.h>
 #include <__assert>
 #include <__config>
-#include <__fwd/map.h>
 #include <__fwd/pair.h>
-#include <__fwd/set.h>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/next.h>
@@ -29,15 +27,13 @@
 #include <__type_traits/copy_cvref.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
-#include <__type_traits/is_const.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_same.h>
+#include <__type_traits/is_specialization.h>
 #include <__type_traits/is_swappable.h>
 #include <__type_traits/remove_const.h>
-#include <__type_traits/remove_const_ref.h>
-#include <__type_traits/remove_cvref.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
@@ -53,13 +49,6 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Tp, class _Compare, class _Allocator>
-class __tree;
-template <class _Tp, class _NodePtr, class _DiffType>
-class __tree_iterator;
-template <class _Tp, class _ConstNodePtr, class _DiffType>
-class __tree_const_iterator;
-
 template <class _Pointer>
 class __tree_end_node;
 template <class _VoidPtr>
@@ -69,13 +58,6 @@ class __tree_node;
 
 template <class _Key, class _Value>
 struct __value_type;
-
-template <class _Allocator>
-class __map_node_destructor;
-template <class _TreeIterator>
-class __map_iterator;
-template <class _TreeIterator>
-class __map_const_iterator;
 
 /*
 
@@ -494,16 +476,7 @@ _LIBCPP_HIDE_FROM_ABI void __tree_remove(_NodePtr __root, _NodePtr __z) _NOEXCEP
 // node traits
 
 template <class _Tp>
-struct __is_tree_value_type_imp : false_type {};
-
-template <class _Key, class _Value>
-struct __is_tree_value_type_imp<__value_type<_Key, _Value> > : true_type {};
-
-template <class... _Args>
-struct __is_tree_value_type : false_type {};
-
-template <class _One>
-struct __is_tree_value_type<_One> : __is_tree_value_type_imp<__remove_cvref_t<_One> > {};
+inline const bool __is_tree_value_type_v = __is_specialization_v<_Tp, __value_type>;
 
 template <class _Tp>
 struct __get_tree_key_type {
@@ -686,16 +659,6 @@ private:
   friend class __tree;
   template <class, class, class>
   friend class __tree_const_iterator;
-  template <class>
-  friend class __map_iterator;
-  template <class, class, class, class>
-  friend class map;
-  template <class, class, class, class>
-  friend class multimap;
-  template <class, class, class>
-  friend class set;
-  template <class, class, class>
-  friend class multiset;
 };
 
 template <class _Tp, class _NodePtr, class _DiffType>
@@ -709,18 +672,15 @@ class __tree_const_iterator {
   __end_node_pointer __ptr_;
 
 public:
-  using iterator_category = bidirectional_iterator_tag;
-  using value_type        = __get_node_value_type_t<_Tp>;
-  using difference_type   = _DiffType;
-  using reference         = const value_type&;
-  using pointer           = __rebind_pointer_t<_NodePtr, const value_type>;
+  using iterator_category                    = bidirectional_iterator_tag;
+  using value_type                           = __get_node_value_type_t<_Tp>;
+  using difference_type                      = _DiffType;
+  using reference                            = const value_type&;
+  using pointer                              = __rebind_pointer_t<_NodePtr, const value_type>;
+  using __non_const_iterator _LIBCPP_NODEBUG = __tree_iterator<_Tp, __node_pointer, difference_type>;
 
   _LIBCPP_HIDE_FROM_ABI __tree_const_iterator() _NOEXCEPT : __ptr_(nullptr) {}
 
-private:
-  typedef __tree_iterator<_Tp, __node_pointer, difference_type> __non_const_iterator;
-
-public:
   _LIBCPP_HIDE_FROM_ABI __tree_const_iterator(__non_const_iterator __p) _NOEXCEPT : __ptr_(__p.__ptr_) {}
 
   _LIBCPP_HIDE_FROM_ABI reference operator*() const { return __get_np()->__value_; }
@@ -762,16 +722,6 @@ private:
 
   template <class, class, class>
   friend class __tree;
-  template <class, class, class, class>
-  friend class map;
-  template <class, class, class, class>
-  friend class multimap;
-  template <class, class, class>
-  friend class set;
-  template <class, class, class>
-  friend class multiset;
-  template <class>
-  friend class __map_const_iterator;
 };
 
 template <class _Tp, class _Compare>
@@ -999,23 +949,23 @@ public:
     return __emplace_hint_unique_key_args(__p, __x.first, std::forward<_Pp>(__x)).first;
   }
 
-  template <class _ValueT = _Tp, __enable_if_t<__is_tree_value_type<_ValueT>::value, int> = 0>
+  template <class _ValueT = _Tp, __enable_if_t<__is_tree_value_type_v<_ValueT>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI void
   __insert_unique_from_orphaned_node(const_iterator __p, __get_node_value_type_t<_Tp>&& __value) {
     __emplace_hint_unique(__p, const_cast<key_type&&>(__value.first), std::move(__value.second));
   }
 
-  template <class _ValueT = _Tp, __enable_if_t<!__is_tree_value_type<_ValueT>::value, int> = 0>
+  template <class _ValueT = _Tp, __enable_if_t<!__is_tree_value_type_v<_ValueT>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI void __insert_unique_from_orphaned_node(const_iterator __p, _Tp&& __value) {
     __emplace_hint_unique(__p, std::move(__value));
   }
 
-  template <class _ValueT = _Tp, __enable_if_t<__is_tree_value_type<_ValueT>::value, int> = 0>
+  template <class _ValueT = _Tp, __enable_if_t<__is_tree_value_type_v<_ValueT>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI void __insert_multi_from_orphaned_node(const_iterator __p, value_type&& __value) {
     __emplace_hint_multi(__p, const_cast<key_type&&>(__value.first), std::move(__value.second));
   }
 
-  template <class _ValueT = _Tp, __enable_if_t<!__is_tree_value_type<_ValueT>::value, int> = 0>
+  template <class _ValueT = _Tp, __enable_if_t<!__is_tree_value_type_v<_ValueT>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI void __insert_multi_from_orphaned_node(const_iterator __p, _Tp&& __value) {
     __emplace_hint_multi(__p, std::move(__value));
   }
@@ -1162,7 +1112,7 @@ private:
   }
   _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(__tree&, false_type) _NOEXCEPT {}
 
-  template <class _From, class _ValueT = _Tp, __enable_if_t<__is_tree_value_type<_ValueT>::value, int> = 0>
+  template <class _From, class _ValueT = _Tp, __enable_if_t<__is_tree_value_type_v<_ValueT>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI static void __assign_value(__get_node_value_type_t<value_type>& __lhs, _From&& __rhs) {
     using __key_type = __remove_const_t<typename value_type::first_type>;
 
@@ -1172,7 +1122,7 @@ private:
     __lhs.second                         = std::forward<_From>(__rhs).second;
   }
 
-  template <class _To, class _From, class _ValueT = _Tp, __enable_if_t<!__is_tree_value_type<_ValueT>::value, int> = 0>
+  template <class _To, class _From, class _ValueT = _Tp, __enable_if_t<!__is_tree_value_type_v<_ValueT>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI static void __assign_value(_To& __lhs, _From&& __rhs) {
     __lhs = std::forward<_From>(__rhs);
   }
@@ -1388,8 +1338,9 @@ __tree<_Tp, _Compare, _Allocator>& __tree<_Tp, _Compare, _Allocator>::operator=(
     if (__root())
       __root()->__parent_ = __end_node();
   }
-  __begin_node_ = static_cast<__end_node_pointer>(std::__tree_min(static_cast<__node_base_pointer>(__end_node())));
-  __size_       = __t.size();
+  __begin_node_ =
+      __end_node()->__left_ ? static_cast<__end_node_pointer>(std::__tree_min(__end_node()->__left_)) : __end_node();
+  __size_ = __t.size();
 
   return *this;
 }
