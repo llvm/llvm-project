@@ -1,11 +1,10 @@
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx90a -S -verify=expected -o - %s
+// RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx1100 -S -verify=expected -o - %s
+// RUN: %clang_cc1 -triple amdgcn-- -target-cpu tahiti -S -verify=expected -o - %s
 // REQUIRES: amdgpu-registered-target
 
 typedef int int8 __attribute__((ext_vector_type(8)));
 typedef float float4 __attribute__((ext_vector_type(4)));
-//typedef _Float16 half;
 typedef half half4 __attribute__((ext_vector_type(4)));
-
 
 float test_builtin_image_load_2d(float f32, int i32, int8 vec8i32) {
 

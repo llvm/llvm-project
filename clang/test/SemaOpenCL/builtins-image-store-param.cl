@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx90a -S -verify=expected -o - %s
+// RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx701 -S -verify=GFX7 -o - %s
 // REQUIRES: amdgpu-registered-target
 
 typedef int int8 __attribute__((ext_vector_type(8)));
 typedef float float4 __attribute__((ext_vector_type(4)));
-//typedef _Float16 half;
 typedef half half4 __attribute__((ext_vector_type(4)));
 
 
