@@ -1061,6 +1061,17 @@ VersionTuple AMDGPUPALMetadata::getPALVersion() {
   return VersionTuple(getPALVersion(0), getPALVersion(1));
 }
 
+// Set the field in a given .hardware_stages entry to a maximum value
+void AMDGPUPALMetadata::updateHwStageMaximum(unsigned CC, StringRef field,
+                                             unsigned Val) {
+  auto HwStageFieldMapNode = getHwStage(CC);
+  auto It = HwStageFieldMapNode.find(field);
+  if (It == HwStageFieldMapNode.end())
+    HwStageFieldMapNode[field] = Val;
+  else
+    It->second = std::max<unsigned>(It->second.getUInt(), Val);
+}
+
 // Set the field in a given .hardware_stages entry
 void AMDGPUPALMetadata::setHwStage(unsigned CC, StringRef field, unsigned Val) {
   getHwStage(CC)[field] = Val;
