@@ -24864,6 +24864,10 @@ static SDValue LowerSELECTWithCmpZero(SDValue CmpVal, SDValue LHS, SDValue RHS,
       return DAG.getNegative(Neg, DL, SplatVT); // -(and (x, 0x1))
     };
 
+    // SELECT (AND(X,1) == 0), 0, -1 -> NEG(AND(X,1))
+    if (isNullConstant(LHS) && isAllOnesConstant(RHS))
+      return SplatLSB(VT);
+
     // SELECT (AND(X,1) == 0), C1, C2 -> XOR(C1,AND(NEG(AND(X,1)),XOR(C1,C2))
     if (!Subtarget.canUseCMOV() && isa<ConstantSDNode>(LHS) &&
         isa<ConstantSDNode>(RHS)) {
