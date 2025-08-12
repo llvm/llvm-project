@@ -3648,10 +3648,13 @@ def CFISaltDocs : Documentation {
   let Heading = "cfi_salt";
   let Label = "langext-cfi_salt";
   let Content = [{
-The ``cfi_salt`` attribute allows you to add a salt value to Control Flow 
-Integrity (CFI) type hashes to help distinguish between functions with the 
-same type signature. This attribute can be applied to function declarations, 
+The ``cfi_salt`` attribute specifies a string literal that is used as a salt
+for Control-Flow Integrity (CFI) checks to distinguish between functions with
+the same type signature. This attribute can be applied to function declarations,
 function definitions, and function pointer typedefs.
+
+The attribute prevents function pointers from being replaced with pointers to
+functions that have a compatible type, which can be a CFI bypass vector.
 
 **Syntax:**
 
