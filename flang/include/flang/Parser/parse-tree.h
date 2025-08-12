@@ -4986,9 +4986,9 @@ struct OmpEndCriticalDirective {
   CharBlock source;
   std::tuple<Verbatim, std::optional<Name>> t;
 };
-struct OpenMPCriticalConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPCriticalConstruct);
-  std::tuple<OmpCriticalDirective, Block, OmpEndCriticalDirective> t;
+
+struct OpenMPCriticalConstruct : public OmpBlockConstruct {
+  INHERITED_TUPLE_CLASS_BOILERPLATE(OpenMPCriticalConstruct, OmpBlockConstruct);
 };
 
 // 2.11.3 allocate -> ALLOCATE [(variable-name-list)] [clause]

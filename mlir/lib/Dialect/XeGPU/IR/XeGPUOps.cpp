@@ -156,17 +156,18 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
 }
 
 void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
-                           Type tdesc, TypedValue<MemRefType> source,
+                           Type tdesc, Value source,
                            llvm::ArrayRef<OpFoldResult> shape,
                            llvm::ArrayRef<OpFoldResult> strides) {
-  assert(shape.size() && strides.size() && shape.size() == strides.size() &&
-         "Shape and strides must be present and of equal size for ui64 "
-         "initialization.");
+  Type srcTy = source.getType();
+  assert((isa<IntegerType, MemRefType>(srcTy)) &&
+         "Source has to be either int or memref.");
+
+  llvm::SmallVector<Value> dynamicShape;
+  llvm::SmallVector<Value> dynamicStrides;
 
   llvm::SmallVector<int64_t> staticShape;
   llvm::SmallVector<int64_t> staticStrides;
-  llvm::SmallVector<Value> dynamicShape;
-  llvm::SmallVector<Value> dynamicStrides;
 
   dispatchIndexOpFoldResults(shape, dynamicShape, staticShape);
   dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides);
@@ -174,29 +175,17 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
   auto staticShapeAttr = builder.getDenseI64ArrayAttr(staticShape);
   auto staticStridesAttr = builder.getDenseI64ArrayAttr(staticStrides);
 
-  build(builder, state, tdesc, source, ValueRange({}), dynamicShape,
-        dynamicStrides, builder.getDenseI64ArrayAttr({}), staticShapeAttr,
-        staticStridesAttr);
-}
+  if (auto memrefTy = dyn_cast<MemRefType>(srcTy)) {
+    auto memrefShape = memrefTy.getShape();
+    auto [memrefStrides, _] = memrefTy.getStridesAndOffset();
 
-void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
-                           Type tdesc, TypedValue<IntegerType> source,
-                           llvm::ArrayRef<OpFoldResult> shape,
-                           llvm::ArrayRef<OpFoldResult> strides) {
-  assert(shape.size() && strides.size() && shape.size() == strides.size() &&
-         "Shape and strides must be present and of equal size for ui64 "
-         "initialization.");
-
-  llvm::SmallVector<int64_t> staticShape;
-  llvm::SmallVector<int64_t> staticStrides;
-  llvm::SmallVector<Value> dynamicShape;
-  llvm::SmallVector<Value> dynamicStrides;
-
-  dispatchIndexOpFoldResults(shape, dynamicShape, staticShape);
-  dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides);
-
-  auto staticShapeAttr = builder.getDenseI64ArrayAttr(staticShape);
-  auto staticStridesAttr = builder.getDenseI64ArrayAttr(staticStrides);
+    // if shape and strides are from Memref, we don't need attributes for them
+    // to keep the IR print clean.
+    if (staticShape == memrefShape && staticStrides == memrefStrides) {
+      staticShapeAttr = DenseI64ArrayAttr();
+      staticStridesAttr = DenseI64ArrayAttr();
+    }
+  }
 
   build(builder, state, tdesc, source, ValueRange({}), dynamicShape,
         dynamicStrides, builder.getDenseI64ArrayAttr({}), staticShapeAttr,
@@ -265,8 +254,8 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
 }
 
 LogicalResult CreateNdDescOp::verify() {
-  auto rank = (int64_t)getMixedOffsets().size();
-  bool invalidRank = false;
+  size_t rank = getMixedSizes().size();
+  bool invalidRank = rank != getMixedStrides().size();
   bool invalidElemTy = false;
 
   // Memory space of created TensorDesc should match with the source.
@@ -280,31 +269,28 @@ LogicalResult CreateNdDescOp::verify() {
            << " Source: " << srcMemorySpace
            << ", TensorDesc: " << tdescMemorySpace;
 
+  if (size_t offsetRank = getMixedOffsets().size())
+    invalidRank |= (offsetRank != rank);
+
   // check source type matches the rank if it is a memref.
   // It also should have the same ElementType as TensorDesc.
-  auto memrefTy = dyn_cast<MemRefType>(getSourceType());
-  if (memrefTy) {
-    invalidRank |= (memrefTy.getRank() != rank);
+  if (auto memrefTy = dyn_cast<MemRefType>(getSourceType()))
     invalidElemTy |= memrefTy.getElementType() != getElementType();
-  }
 
   if (llvm::isa<IntegerType>(getSourceType())) {
     // strides and shape must present for integer source.
     if (getMixedStrides().empty() || getMixedSizes().empty())
-      return emitOpError("Expecting strides and shape to be present for "
+      return emitOpError("expecting strides and shape to be present for "
                          "integer source.");
   }
 
-  // mismatches among shape, strides, and offsets are
-  // already handeled by OffsetSizeAndStrideOpInterface.
-  // So they are not check here.
   if (invalidRank)
     return emitOpError(
         "Expecting the rank of shape, strides, offsets, and source (if source "
         "is a memref) should match with each other.");
 
   // check result TensorDesc rank
-  if (getType().getRank() > rank)
+  if (getType().getRank() > (int64_t)rank)
     return emitOpError(
         "Expecting the TensorDesc rank is not greater than the "
         "ranks of shape, strides, offsets or the memref source.");
@@ -360,13 +346,10 @@ ParseResult parseOptionalDynamicIndexList(
 void printOptionalDynamicIndexList(OpAsmPrinter &printer, Operation *op,
                                    OperandRange values,
                                    DenseI64ArrayAttr integers) {
-
-  if (!integers)
+  if (!integers || integers.empty())
     return;
-
-  return printDynamicIndexList(printer, op, values, integers,
-                               /*scalableFlags=*/{}, {},
-                               AsmParser::Delimiter::Square);
+  printDynamicIndexList(printer, op, values, integers,
+                        /*scalableFlags=*/{}, {}, AsmParser::Delimiter::Square);
 }
 //===----------------------------------------------------------------------===//
 // XeGPU_PrefetchNdOp
@@ -931,6 +914,9 @@ void ConvertLayoutOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 } // namespace xegpu
 } // namespace mlir
 
+namespace mlir {
+#include <mlir/Dialect/XeGPU/IR/XeGPUAttrInterface.cpp.inc>
+} // namespace mlir
 #include <mlir/Dialect/XeGPU/IR/XeGPUEnums.cpp.inc>
 #define GET_OP_CLASSES
 #include <mlir/Dialect/XeGPU/IR/XeGPU.cpp.inc>

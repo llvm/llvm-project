@@ -9,10 +9,8 @@
 #include "DAP.h"
 #include "Protocol/ProtocolBase.h"
 #include "TestBase.h"
-#include "Transport.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
-#include <chrono>
 #include <memory>
 #include <optional>
 
@@ -32,8 +30,9 @@ TEST_F(DAPTest, SendProtocolMessages) {
       /*transport=*/*to_dap,
   };
   dap.Send(Event{/*event=*/"my-event", /*body=*/std::nullopt});
-  ASSERT_THAT_EXPECTED(
-      from_dap->Read<protocol::Message>(std::chrono::milliseconds(1)),
-      HasValue(testing::VariantWith<Event>(testing::FieldsAre(
-          /*event=*/"my-event", /*body=*/std::nullopt))));
+  RunOnce<protocol::Message>([&](llvm::Expected<protocol::Message> message) {
+    ASSERT_THAT_EXPECTED(
+        message, HasValue(testing::VariantWith<Event>(testing::FieldsAre(
+                     /*event=*/"my-event", /*body=*/std::nullopt))));
+  });
 }
