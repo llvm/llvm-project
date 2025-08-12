@@ -452,6 +452,7 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
 
   switch (Opcode) {
   case VPInstruction::StepVector:
+  case VPInstruction::VScale:
     return 0;
   case Instruction::Alloca:
   case Instruction::ExtractValue:
@@ -1040,6 +1041,7 @@ bool VPInstruction::isSingleScalar() const {
   case Instruction::PHI:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::ResumeForEpilogue:
+  case VPInstruction::VScale:
     return true;
   default:
     return isScalarCast();
@@ -1107,6 +1109,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::WidePtrAdd:
   case VPInstruction::StepVector:
   case VPInstruction::ReductionStartVector:
+  case VPInstruction::VScale:
     return false;
   default:
     return true;
@@ -1299,6 +1302,12 @@ void VPInstructionWithType::execute(VPTransformState &State) {
     State.set(this, StepVector);
     break;
   }
+  case VPInstruction::VScale: {
+    Value *VScale = State.Builder.CreateVScale(ResultTy);
+    State.set(this, VScale, true);
+    break;
+  }
+
   default:
     llvm_unreachable("opcode not implemented yet");
   }
@@ -1318,6 +1327,9 @@ void VPInstructionWithType::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::StepVector:
     O << "step-vector " << *ResultTy;
+    break;
+  case VPInstruction::VScale:
+    O << "vscale " << *ResultTy;
     break;
   default:
     assert(Instruction::isCast(getOpcode()) && "unhandled opcode");

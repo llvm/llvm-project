@@ -46,8 +46,8 @@ tracksRegLiveness: true
 # CHECK-NEXT: hasTailCall: false
 # CHECK-NEXT: isCalleeSavedInfoValid: false
 # CHECK-NEXT: localFrameSize: 0
-# CHECK-NEXT: savePoint:       ''
-# CHECK-NEXT: restorePoint:    ''
+# CHECK-NEXT: savePoint:       []
+# CHECK-NEXT: restorePoint:    []
 # CHECK: body
 frameInfo:
   maxAlignment:    4

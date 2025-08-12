@@ -64,14 +64,6 @@ void mlir::populateComplexToROCDLLibraryCallsConversionPatterns(
       patterns.getContext(), "__ocml_cabs_f32");
   patterns.add<ComplexOpToROCDLLibraryCalls<complex::AbsOp, Float64Type>>(
       patterns.getContext(), "__ocml_cabs_f64");
-  patterns.add<ComplexOpToROCDLLibraryCalls<complex::AngleOp, Float32Type>>(
-      patterns.getContext(), "__ocml_carg_f32");
-  patterns.add<ComplexOpToROCDLLibraryCalls<complex::AngleOp, Float64Type>>(
-      patterns.getContext(), "__ocml_carg_f64");
-  patterns.add<ComplexOpToROCDLLibraryCalls<complex::ConjOp, Float32Type>>(
-      patterns.getContext(), "__ocml_conj_f32");
-  patterns.add<ComplexOpToROCDLLibraryCalls<complex::ConjOp, Float64Type>>(
-      patterns.getContext(), "__ocml_conj_f64");
   patterns.add<ComplexOpToROCDLLibraryCalls<complex::CosOp, Float32Type>>(
       patterns.getContext(), "__ocml_ccos_f32");
   patterns.add<ComplexOpToROCDLLibraryCalls<complex::CosOp, Float64Type>>(
@@ -84,10 +76,6 @@ void mlir::populateComplexToROCDLLibraryCallsConversionPatterns(
       patterns.getContext(), "__ocml_clog_f32");
   patterns.add<ComplexOpToROCDLLibraryCalls<complex::LogOp, Float64Type>>(
       patterns.getContext(), "__ocml_clog_f64");
-  patterns.add<ComplexOpToROCDLLibraryCalls<complex::PowOp, Float32Type>>(
-      patterns.getContext(), "__ocml_cpow_f32");
-  patterns.add<ComplexOpToROCDLLibraryCalls<complex::PowOp, Float64Type>>(
-      patterns.getContext(), "__ocml_cpow_f64");
   patterns.add<ComplexOpToROCDLLibraryCalls<complex::SinOp, Float32Type>>(
       patterns.getContext(), "__ocml_csin_f32");
   patterns.add<ComplexOpToROCDLLibraryCalls<complex::SinOp, Float64Type>>(
@@ -122,9 +110,8 @@ void ConvertComplexToROCDLLibraryCallsPass::runOnOperation() {
 
   ConversionTarget target(getContext());
   target.addLegalDialect<func::FuncDialect>();
-  target.addIllegalOp<complex::AbsOp, complex::AngleOp, complex::ConjOp,
-                      complex::CosOp, complex::ExpOp, complex::LogOp,
-                      complex::PowOp, complex::SinOp, complex::SqrtOp,
+  target.addIllegalOp<complex::AbsOp, complex::CosOp, complex::ExpOp,
+                      complex::LogOp, complex::SinOp, complex::SqrtOp,
                       complex::TanOp, complex::TanhOp>();
   if (failed(applyPartialConversion(op, target, std::move(patterns))))
     signalPassFailure();
