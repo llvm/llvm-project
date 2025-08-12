@@ -425,6 +425,10 @@ public:
   /// alignment is legal.
   bool isLegalStridedLoadStore(EVT DataType, Align Alignment) const;
 
+  /// Return true if a speculative load of the given result type and
+  /// alignment is legal.
+  bool isLegalSpeculativeLoad(EVT DataType, Align Alignment) const;
+
   unsigned getMaxSupportedInterleaveFactor() const override { return 8; }
 
   bool fallBackToDAGISel(const Instruction &Inst) const override;

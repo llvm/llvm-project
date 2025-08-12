@@ -531,6 +531,11 @@ bool TargetTransformInfo::isLegalStridedLoadStore(Type *DataType,
   return TTIImpl->isLegalStridedLoadStore(DataType, Alignment);
 }
 
+bool TargetTransformInfo::isLegalSpeculativeLoad(Type *DataType,
+                                                 Align Alignment) const {
+  return TTIImpl->isLegalSpeculativeLoad(DataType, Alignment);
+}
+
 bool TargetTransformInfo::isLegalInterleavedAccessType(
     VectorType *VTy, unsigned Factor, Align Alignment,
     unsigned AddrSpace) const {
@@ -1455,10 +1460,6 @@ unsigned TargetTransformInfo::getMinTripCountTailFoldingThreshold() const {
 
 bool TargetTransformInfo::supportsScalableVectors() const {
   return TTIImpl->supportsScalableVectors();
-}
-
-bool TargetTransformInfo::supportsSpeculativeLoads() const {
-  return TTIImpl->supportsSpeculativeLoads();
 }
 
 bool TargetTransformInfo::enableScalableVectorization() const {

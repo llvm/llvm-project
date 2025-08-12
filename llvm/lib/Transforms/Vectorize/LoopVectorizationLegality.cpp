@@ -1762,39 +1762,36 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
 
   Predicates.clear();
   SmallVector<LoadInst *, 4> NonDerefLoads;
-  bool HasSafeAccess =
-      TTI->supportsSpeculativeLoads()
-          ? isReadOnlyLoopWithSafeOrSpeculativeLoads(
-                TheLoop, PSE.getSE(), DT, AC, &NonDerefLoads, &Predicates)
-          : isDereferenceableReadOnlyLoop(TheLoop, PSE.getSE(), DT, AC,
-                                          &Predicates);
-  if (!HasSafeAccess) {
+  if (!isReadOnlyLoopWithSafeOrSpeculativeLoads(TheLoop, PSE.getSE(), DT, AC,
+                                                &NonDerefLoads, &Predicates)) {
     reportVectorizationFailure(
         "Loop may fault",
         "Cannot vectorize potentially faulting early exit loop",
         "PotentiallyFaultingEarlyExitLoop", ORE, TheLoop);
     return false;
   }
-  // Speculative loads need to be unit-stride.
+  // Check non-dereferenceable loads if any.
   for (LoadInst *LI : NonDerefLoads) {
+    // Only support unit-stride access for now.
     int Stride = isConsecutivePtr(LI->getType(), LI->getPointerOperand());
     if (Stride != 1) {
       reportVectorizationFailure("Loop contains strided unbound access",
                                  "Cannot vectorize early exit loop with "
-                                 "speculative non-unit-stride load",
+                                 "speculative strided load",
                                  "SpeculativeNonUnitStrideLoadEarlyExitLoop",
                                  ORE, TheLoop);
       return false;
     }
+    if (!TTI->isLegalSpeculativeLoad(LI->getType(), LI->getAlign())) {
+      reportVectorizationFailure("Loop may fault",
+                                 "Cannot vectorize early exit loop with "
+                                 "illegal speculative load",
+                                 "IllegalSpeculativeLoadEarlyExitLoop", ORE,
+                                 TheLoop);
+      return false;
+    }
     SpeculativeLoads.insert(LI);
     LLVM_DEBUG(dbgs() << "LV: Found speculative load: " << *LI << "\n");
-  }
-  // Support single speculative load for now.
-  if (NonDerefLoads.size() > 1) {
-    reportVectorizationFailure("Loop contains more than one unbound access",
-                               "TooManySpeculativeLoadInEarlyExitLoop", ORE,
-                               TheLoop);
-    return false;
   }
 
   [[maybe_unused]] const SCEV *SymbolicMaxBTC =

@@ -86,12 +86,6 @@ LLVM_ABI bool isDereferenceableAndAlignedInLoop(
     SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr);
 
 /// Return true if the loop \p L cannot fault on any iteration and only
-/// contains read-only memory accesses.
-LLVM_ABI bool isDereferenceableReadOnlyLoop(
-    Loop *L, ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
-    SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr);
-
-/// Return true if the loop \p L cannot fault on any iteration and only
 /// contains read-only memory accesses. Also collect loads that are not
 /// guaranteed to be dereferenceable.
 LLVM_ABI bool isReadOnlyLoopWithSafeOrSpeculativeLoads(

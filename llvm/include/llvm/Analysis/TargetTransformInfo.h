@@ -843,6 +843,9 @@ public:
   /// Return true if the target supports strided load.
   LLVM_ABI bool isLegalStridedLoadStore(Type *DataType, Align Alignment) const;
 
+  /// Return true if the target supports speculative load.
+  LLVM_ABI bool isLegalSpeculativeLoad(Type *DataType, Align Alignment) const;
+
   /// Return true is the target supports interleaved access for the given vector
   /// type \p VTy, interleave factor \p Factor, alignment \p Alignment and
   /// address space \p AddrSpace.
@@ -1856,10 +1859,6 @@ public:
 
   /// \returns True if the target supports scalable vectors.
   LLVM_ABI bool supportsScalableVectors() const;
-
-  /// \returns True if the target supports speculative load intrinsics (e.g.,
-  /// vp.load.ff).
-  LLVM_ABI bool supportsSpeculativeLoads() const;
 
   /// \return true when scalable vectorization is preferred.
   LLVM_ABI bool enableScalableVectorization() const;

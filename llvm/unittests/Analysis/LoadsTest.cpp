@@ -195,7 +195,10 @@ loop.end:
     assert(Header->getName() == "loop");
     Loop *L = LI.getLoopFor(Header);
 
-    return isDereferenceableReadOnlyLoop(L, &SE, &DT, &AC);
+    SmallVector<LoadInst *, 4> NonDerefLoads;
+    return isReadOnlyLoopWithSafeOrSpeculativeLoads(L, &SE, &DT, &AC,
+                                                    &NonDerefLoads) &&
+           NonDerefLoads.empty();
   };
 
   ASSERT_TRUE(IsDerefReadOnlyLoop(F1));

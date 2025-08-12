@@ -374,6 +374,10 @@ public:
     return false;
   }
 
+  virtual bool isLegalSpeculativeLoad(Type *DataType, Align Alignment) const {
+    return false;
+  }
+
   virtual bool isLegalInterleavedAccessType(VectorType *VTy, unsigned Factor,
                                             Align Alignment,
                                             unsigned AddrSpace) const {
@@ -1105,8 +1109,6 @@ public:
   virtual unsigned getMinTripCountTailFoldingThreshold() const { return 0; }
 
   virtual bool supportsScalableVectors() const { return false; }
-
-  virtual bool supportsSpeculativeLoads() const { return false; }
 
   virtual bool enableScalableVectorization() const { return false; }
 

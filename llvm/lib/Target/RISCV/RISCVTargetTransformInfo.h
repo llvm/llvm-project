@@ -110,9 +110,6 @@ public:
   bool supportsScalableVectors() const override {
     return ST->hasVInstructions();
   }
-  bool supportsSpeculativeLoads() const override {
-    return ST->hasVInstructions();
-  }
   bool enableOrderedReductions() const override { return true; }
   bool enableScalableVectorization() const override {
     return ST->hasVInstructions();
@@ -325,6 +322,11 @@ public:
   bool isLegalStridedLoadStore(Type *DataType, Align Alignment) const override {
     EVT DataTypeVT = TLI->getValueType(DL, DataType);
     return TLI->isLegalStridedLoadStore(DataTypeVT, Alignment);
+  }
+
+  bool isLegalSpeculativeLoad(Type *DataType, Align Alignment) const override {
+    EVT DataTypeVT = TLI->getValueType(DL, DataType);
+    return TLI->isLegalSpeculativeLoad(DataTypeVT, Alignment);
   }
 
   bool isLegalInterleavedAccessType(VectorType *VTy, unsigned Factor,
