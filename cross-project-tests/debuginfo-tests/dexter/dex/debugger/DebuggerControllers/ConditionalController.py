@@ -197,7 +197,9 @@ class ConditionalController(DebuggerControllerBase):
                 self._bp_ranges.append(bpr)
         if "DexStepFunction" in commands:
             for c in commands["DexStepFunction"]:
-                bpr = BreakpointRange.step_function(c.get_function(), c.path, c.hit_count)
+                bpr = BreakpointRange.step_function(
+                    c.get_function(), c.path, c.hit_count
+                )
                 self._bp_ranges.append(bpr)
 
     def _set_leading_bps(self):
@@ -336,14 +338,10 @@ class ConditionalController(DebuggerControllerBase):
 
             debugger_next = False
             debugger_out = False
-            if (
-                not debugger_continue
-                and step_info.current_frame
-                and step_info.frames
-            ):
+            if not debugger_continue and step_info.current_frame and step_info.frames:
                 while len(step_function_backtraces) > 0:
-                    match_subtrace = False # Backtrace contains a target trace.
-                    match_trace = False # Backtrace matches top of target stack.
+                    match_subtrace = False  # Backtrace contains a target trace.
+                    match_trace = False  # Backtrace matches top of target stack.
                     if len(backtrace) >= len(step_function_backtraces[-1]):
                         match_subtrace = True
                         match_trace = len(backtrace) == len(
@@ -371,7 +369,6 @@ class ConditionalController(DebuggerControllerBase):
                         # backtrace; the functions we wanted to step through
                         # there are no longer reachable.
                         step_function_backtraces.pop()
-
 
             if log_step and step_info.current_frame:
                 # Record the step.
