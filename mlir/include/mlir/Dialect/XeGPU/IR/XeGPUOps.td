@@ -1128,16 +1128,18 @@ def XeGPU_CreateMatrixDescOp: XeGPU_Op<"create_matrix_desc", [Pure,
   let assemblyFormat = "$source prop-dict attr-dict `` `:` type($source) `->` qualified(type($matrix_desc))";
 }
 
-def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>]>  {
+def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,
+                              AllElementTypesMatch<["matrix_desc", "res"]>,
+                              AllRanksMatch<["matrix_desc", "res"]>]>  {
   let arguments = (ins XeGPU_MatrixDesc:$matrix_desc,
     Variadic<Index>: $offsets,
     DenseI64ArrayAttr: $const_offsets,
-    OptionalAttr<XeGPU_LayoutAttr>:$layout
+    OptionalAttr<LayoutTrait>:$layout
   );
   let results = (outs XeGPU_ValueType:$res);
   let assemblyFormat = [{
     $matrix_desc `` custom<DynamicIndexList>($offsets, $const_offsets)
-    prop-dict attr-dict `:` functional-type(operands, results)
+    prop-dict attr-dict `` `:` type(operands) `->` type(results)
   }];
   let summary = "Load matrix from SLM.";
   let description = [{
@@ -1158,23 +1160,27 @@ def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>]>  {
   }];
 
   let builders = [
-    // OpBuilder<(ins "Type":$res, "TypedValue<MatrixDescType>": $matrix_desc, "llvm::ArrayRef<OpFoldResult>": $offsets, "LayoutAttr": $layout)>,
+    OpBuilder<(ins "Type":$res, "TypedValue<MatrixDescType>": $matrix_desc,
+                    "llvm::ArrayRef<OpFoldResult>": $offsets, "LayoutTrait": $layout)>,
   ];
   let extraClassDeclaration = [{
     SmallVector<OpFoldResult> getMixedOffsets() {
       return getMixedValues(getConstOffsets(), getOffsets(), getContext());
     }
   }];
-  // let hasVerifier = 1;
+
+  let hasVerifier = 1;
 }
 
-def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix"> {
+def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
+                              AllElementTypesMatch<["matrix_desc", "data"]>,
+                              AllRanksMatch<["matrix_desc", "data"]>]> {
   let arguments = (ins
     XeGPU_MatrixDesc:$matrix_desc,
-    XeGPU_ValueType:$data,
     Variadic<Index>: $offsets,
     DenseI64ArrayAttr: $const_offsets,
-    OptionalAttr<XeGPU_LayoutAttr>:$layout
+    XeGPU_ValueType:$data,
+    OptionalAttr<LayoutTrait>:$layout
   );
   let assemblyFormat = [{
     $matrix_desc `` custom<DynamicIndexList>($offsets, $const_offsets) `,` $data
@@ -1196,15 +1202,16 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix"> {
      - `offsets`     : Coordinates of the matrix where the data will be stored.
   }];
   let builders = [
-    // OpBuilder<(ins "TypedValue<MatrixDescType>": $matrix_desc,  "Value" : $data, "llvm::ArrayRef<OpFoldResult>": $offsets, "LayoutAttr": $layout)>,
+    OpBuilder<(ins "TypedValue<MatrixDescType>": $matrix_desc, "llvm::ArrayRef<OpFoldResult>": $offsets,
+                   "Value" : $data, "LayoutTrait": $layout)>,
   ];
   let extraClassDeclaration = [{
     SmallVector<OpFoldResult> getMixedOffsets() {
-      Builder b(getContext());
-      return getMixedValues(getConstOffsets(), getOffsets(), b);
+      return getMixedValues(getConstOffsets(), getOffsets(), getContext());
     }
   }];
-  // let hasVerifier = 1;
+
+  let hasVerifier = 1;
 }
 
 

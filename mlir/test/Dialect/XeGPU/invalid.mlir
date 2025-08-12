@@ -778,3 +778,31 @@ func.func @create_matrix_desc_mismatch_sizes() {
   return
 }
 
+// -----
+func.func @load_matrix_desc_mismatch_element_type(%arg0: !xegpu.matrix_desc<16x64xf16>) {
+  // expected-error@+1 {{failed to verify that all of {matrix_desc, res} have same element type}}
+  %data = xegpu.load_matrix %arg0[8, 8]: !xegpu.matrix_desc<16x64xf16> -> vector<8x16xf32>
+  return
+}
+
+// -----
+func.func @load_matrix_desc_invalid_result_size(%arg0: !xegpu.matrix_desc<16x64xf16>) {
+  // expected-error@+1 {{result shape must not exceed matrix desc shape}}
+  %data = xegpu.load_matrix %arg0[8, 8]: !xegpu.matrix_desc<16x64xf16> -> vector<32x16xf16>
+  return
+}
+
+// -----
+func.func @store_matrix_desc_mismatch_element_type(%arg0: !xegpu.matrix_desc<16x64xf16>, %arg1: vector<16x16xf32>) {
+  // expected-error@+1 {{failed to verify that all of {matrix_desc, data} have same element type}}
+  xegpu.store_matrix %arg0[8, 8], %arg1: !xegpu.matrix_desc<16x64xf16>, vector<16x16xf32>
+  return
+}
+
+// -----
+func.func @store_matrix_desc_invalid_data_size(%arg0: !xegpu.matrix_desc<16x64xf16>, %arg1: vector<32x32xf16>) {
+  // expected-error@+1 {{data shape must not exceed matrix desc shape}}
+  xegpu.store_matrix %arg0[8, 8], %arg1: !xegpu.matrix_desc<16x64xf16>, vector<32x32xf16>
+  return
+}
+

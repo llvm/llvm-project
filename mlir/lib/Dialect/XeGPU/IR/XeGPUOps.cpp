@@ -935,6 +935,59 @@ void ConvertLayoutOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
   patterns.add<FoldConvertLayoutOp>(context);
 }
 
+//===----------------------------------------------------------------------===//
+// XeGPU_LoadMatrixOp
+//===----------------------------------------------------------------------===//
+void LoadMatrixOp::build(OpBuilder &builder, OperationState &state, Type res,
+                         TypedValue<MatrixDescType> matrixDesc,
+                         llvm::ArrayRef<OpFoldResult> offsets,
+                         LayoutTrait layout) {
+  llvm::SmallVector<Value> dynamicOffsets;
+  llvm::SmallVector<int64_t> staticOffsets;
+
+  dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
+  auto staticOffsetsAttr = builder.getDenseI64ArrayAttr(staticOffsets);
+
+  build(builder, state, res, matrixDesc, dynamicOffsets, staticOffsetsAttr,
+        layout);
+}
+
+LogicalResult LoadMatrixOp::verify() {
+  ArrayRef<int64_t> valueShape = getRes().getType().getShape();
+  ArrayRef<int64_t> mdescShape = getMatrixDesc().getType().getShape();
+  if (llvm::any_of(llvm::zip_equal(valueShape, mdescShape),
+                   [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
+    return emitOpError("result shape must not exceed matrix desc shape.");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// XeGPU_StoreMatrixOp
+//===----------------------------------------------------------------------===//
+void StoreMatrixOp::build(OpBuilder &builder, OperationState &state,
+                          TypedValue<MatrixDescType> matrixDesc,
+                          llvm::ArrayRef<OpFoldResult> offsets, Value data,
+                          LayoutTrait layout) {
+  llvm::SmallVector<Value> dynamicOffsets;
+  llvm::SmallVector<int64_t> staticOffsets;
+
+  dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
+  auto staticOffsetsAttr = builder.getDenseI64ArrayAttr(staticOffsets);
+
+  build(builder, state, matrixDesc, dynamicOffsets, staticOffsetsAttr, data,
+        layout);
+}
+
+LogicalResult StoreMatrixOp::verify() {
+  ArrayRef<int64_t> dataShape = getData().getType().getShape();
+  ArrayRef<int64_t> mdescShape = getMatrixDesc().getType().getShape();
+  if (llvm::any_of(llvm::zip_equal(dataShape, mdescShape),
+                   [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
+    return emitOpError("data shape must not exceed matrix desc shape.");
+
+  return success();
+}
+
 } // namespace xegpu
 } // namespace mlir
 
