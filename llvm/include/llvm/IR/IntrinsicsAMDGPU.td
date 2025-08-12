@@ -2783,7 +2783,8 @@ class AMDGPUGlobalLoadLDS :
      llvm_i32_ty,                       // imm offset (applied to both global and LDS address)
      llvm_i32_ty],                      // auxiliary data (imm, cachepolicy (bit 0 = sc0,
                                         //                                   bit 1 = sc1,
-                                        //                                   bit 4 = scc))
+                                        //                                   bit 4 = scc,
+                                        //                                   bit 31 = volatile (compiler implemented)))
     [IntrWillReturn, NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
      ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>, IntrNoCallback, IntrNoFree],
      "", [SDNPMemOperand]>;

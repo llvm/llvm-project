@@ -3481,10 +3481,14 @@ bool AMDGPUInstructionSelector::selectBufferLoadLds(MachineInstr &MI) const {
           : 0); // swz
 
   MachineMemOperand *LoadMMO = *MI.memoperands_begin();
+  // Don't set the offset value here because the pointer points to the base of
+  // the buffer.
   MachinePointerInfo LoadPtrI = LoadMMO->getPointerInfo();
-  LoadPtrI.Offset = MI.getOperand(6 + OpOffset).getImm();
+
   MachinePointerInfo StorePtrI = LoadPtrI;
-  StorePtrI.V = nullptr;
+  LoadPtrI.V = PoisonValue::get(PointerType::get(MF->getFunction().getContext(),
+                                                 AMDGPUAS::BUFFER_RESOURCE));
+  LoadPtrI.AddrSpace = AMDGPUAS::BUFFER_RESOURCE;
   StorePtrI.AddrSpace = AMDGPUAS::LOCAL_ADDRESS;
 
   auto F = LoadMMO->getFlags() &
@@ -3662,13 +3666,19 @@ bool AMDGPUInstructionSelector::selectGlobalLoadLds(MachineInstr &MI) const{
   if (isSGPR(Addr))
     MIB.addReg(VOffset);
 
-  MIB.add(MI.getOperand(4))  // offset
-     .add(MI.getOperand(5)); // cpol
+  MIB.add(MI.getOperand(4)); // offset
+
+  bool IsGFX12Plus = AMDGPU::isGFX12Plus(*Subtarget);
+  unsigned Aux = MI.getOperand(5).getImm();
+  MIB.addImm(Aux & (IsGFX12Plus ? AMDGPU::CPol::ALL
+                                : AMDGPU::CPol::ALL_pregfx12)); // cpol
 
   MachineMemOperand *LoadMMO = *MI.memoperands_begin();
   MachinePointerInfo LoadPtrI = LoadMMO->getPointerInfo();
   LoadPtrI.Offset = MI.getOperand(4).getImm();
   MachinePointerInfo StorePtrI = LoadPtrI;
+  LoadPtrI.V = PoisonValue::get(PointerType::get(MF->getFunction().getContext(),
+                                                 AMDGPUAS::GLOBAL_ADDRESS));
   LoadPtrI.AddrSpace = AMDGPUAS::GLOBAL_ADDRESS;
   StorePtrI.AddrSpace = AMDGPUAS::LOCAL_ADDRESS;
   auto F = LoadMMO->getFlags() &
