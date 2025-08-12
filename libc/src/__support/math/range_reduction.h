@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_MATH_GENERIC_RANGE_REDUCTION_H
-#define LLVM_LIBC_SRC_MATH_GENERIC_RANGE_REDUCTION_H
+#ifndef LIBC_SRC___SUPPORT_MATH_RANGE_REDUCTION_H
+#define LIBC_SRC___SUPPORT_MATH_RANGE_REDUCTION_H
 
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/multiply_add.h"
@@ -87,4 +87,4 @@ LIBC_INLINE int64_t large_range_reduction(double x, int x_exp, double &y) {
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_MATH_GENERIC_RANGE_REDUCTION_H
+#endif // LIBC_SRC___SUPPORT_MATH_RANGE_REDUCTION_H

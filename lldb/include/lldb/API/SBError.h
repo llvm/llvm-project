@@ -87,6 +87,7 @@ protected:
   friend class SBDebugger;
   friend class SBFile;
   friend class SBFormat;
+  friend class SBFrame;
   friend class SBHostOS;
   friend class SBPlatform;
   friend class SBProcess;

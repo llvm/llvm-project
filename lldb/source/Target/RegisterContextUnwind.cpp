@@ -2026,7 +2026,6 @@ bool RegisterContextUnwind::ReadFrameAddress(
             "Got an invalid CFA register value - reg %s (%d), value 0x%" PRIx64,
             cfa_reg.GetName(), cfa_reg.GetAsKind(eRegisterKindLLDB),
             cfa_reg_contents);
-        cfa_reg_contents = LLDB_INVALID_ADDRESS;
         return false;
       }
       address = cfa_reg_contents + fa.GetOffset();

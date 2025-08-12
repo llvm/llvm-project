@@ -173,6 +173,11 @@ void test_vector_bool() {
   assert(std::get<0>(v) == true);
 }
 
+struct ConvertibleFromAny {
+  template <class V>
+  ConvertibleFromAny(V) {}
+};
+
 int main(int, char**) {
   test_T_ctor_basic();
   test_T_ctor_noexcept();
@@ -180,5 +185,16 @@ int main(int, char**) {
   test_no_narrowing_check_for_class_types();
   test_construction_with_repeated_types();
   test_vector_bool();
+
+  { // Check that the constraints are evaluated lazily (see https://github.com/llvm/llvm-project/issues/151328)
+    struct Matcher {
+      Matcher() {}
+      Matcher(std::variant<ConvertibleFromAny>) {}
+    };
+
+    Matcher vec;
+    [[maybe_unused]] Matcher m = std::move(vec);
+  }
+
   return 0;
 }

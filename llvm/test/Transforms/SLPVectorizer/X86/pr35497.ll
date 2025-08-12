@@ -87,29 +87,29 @@ define void @pr35497(ptr %p, i64 %c) {
 ; AVX-LABEL: @pr35497(
 ; AVX-NEXT:  entry:
 ; AVX-NEXT:    [[TMP0:%.*]] = load i64, ptr [[P:%.*]], align 1
-; AVX-NEXT:    [[TMP5:%.*]] = insertelement <2 x i64> poison, i64 [[C:%.*]], i32 0
-; AVX-NEXT:    [[TMP11:%.*]] = shufflevector <2 x i64> [[TMP5]], <2 x i64> poison, <2 x i32> zeroinitializer
-; AVX-NEXT:    [[TMP13:%.*]] = lshr <2 x i64> [[TMP11]], splat (i64 6)
+; AVX-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> poison, i64 [[C:%.*]], i32 0
+; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> poison, <2 x i32> zeroinitializer
+; AVX-NEXT:    [[TMP3:%.*]] = lshr <2 x i64> [[TMP2]], splat (i64 6)
 ; AVX-NEXT:    [[ARRAYIDX2_2:%.*]] = getelementptr inbounds [0 x i64], ptr [[P]], i64 0, i64 4
 ; AVX-NEXT:    [[ARRAYIDX2_5:%.*]] = getelementptr inbounds [0 x i64], ptr [[P]], i64 0, i64 1
-; AVX-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> [[TMP11]], i64 [[TMP0]], i32 1
-; AVX-NEXT:    [[TMP2:%.*]] = shl <2 x i64> [[TMP1]], splat (i64 2)
-; AVX-NEXT:    [[TMP3:%.*]] = and <2 x i64> [[TMP2]], splat (i64 20)
-; AVX-NEXT:    [[TMP14:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> [[TMP1]], <2 x i32> <i32 1, i32 2>
-; AVX-NEXT:    [[TMP16:%.*]] = shufflevector <2 x i64> [[TMP13]], <2 x i64> [[TMP14]], <2 x i32> <i32 1, i32 3>
-; AVX-NEXT:    [[TMP6:%.*]] = add <2 x i64> [[TMP14]], [[TMP16]]
-; AVX-NEXT:    [[TMP17:%.*]] = extractelement <2 x i64> [[TMP6]], i32 1
-; AVX-NEXT:    store i64 [[TMP17]], ptr [[P]], align 1
-; AVX-NEXT:    [[TMP4:%.*]] = add nuw nsw <2 x i64> [[TMP3]], [[TMP13]]
-; AVX-NEXT:    [[TMP12:%.*]] = extractelement <2 x i64> [[TMP6]], i32 0
+; AVX-NEXT:    [[TMP4:%.*]] = insertelement <2 x i64> [[TMP2]], i64 [[TMP0]], i32 1
+; AVX-NEXT:    [[TMP5:%.*]] = shl <2 x i64> [[TMP4]], splat (i64 2)
+; AVX-NEXT:    [[TMP6:%.*]] = and <2 x i64> [[TMP5]], splat (i64 20)
+; AVX-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i64> [[TMP6]], <2 x i64> [[TMP4]], <2 x i32> <i32 1, i32 2>
+; AVX-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> [[TMP7]], <2 x i32> <i32 1, i32 3>
+; AVX-NEXT:    [[TMP9:%.*]] = add <2 x i64> [[TMP7]], [[TMP8]]
+; AVX-NEXT:    [[TMP10:%.*]] = extractelement <2 x i64> [[TMP9]], i32 1
+; AVX-NEXT:    store i64 [[TMP10]], ptr [[P]], align 1
+; AVX-NEXT:    [[TMP11:%.*]] = add nuw nsw <2 x i64> [[TMP6]], [[TMP3]]
+; AVX-NEXT:    [[TMP12:%.*]] = extractelement <2 x i64> [[TMP9]], i32 0
 ; AVX-NEXT:    store i64 [[TMP12]], ptr [[ARRAYIDX2_5]], align 1
-; AVX-NEXT:    [[TMP7:%.*]] = shl <2 x i64> [[TMP6]], splat (i64 2)
-; AVX-NEXT:    [[TMP8:%.*]] = and <2 x i64> [[TMP7]], splat (i64 20)
-; AVX-NEXT:    [[TMP15:%.*]] = extractelement <2 x i64> [[TMP4]], i32 0
+; AVX-NEXT:    [[TMP13:%.*]] = shl <2 x i64> [[TMP9]], splat (i64 2)
+; AVX-NEXT:    [[TMP14:%.*]] = and <2 x i64> [[TMP13]], splat (i64 20)
+; AVX-NEXT:    [[TMP15:%.*]] = extractelement <2 x i64> [[TMP11]], i32 0
 ; AVX-NEXT:    store i64 [[TMP15]], ptr [[P]], align 1
-; AVX-NEXT:    [[TMP9:%.*]] = lshr <2 x i64> [[TMP4]], splat (i64 6)
-; AVX-NEXT:    [[TMP10:%.*]] = add nuw nsw <2 x i64> [[TMP8]], [[TMP9]]
-; AVX-NEXT:    store <2 x i64> [[TMP10]], ptr [[ARRAYIDX2_2]], align 1
+; AVX-NEXT:    [[TMP16:%.*]] = lshr <2 x i64> [[TMP11]], splat (i64 6)
+; AVX-NEXT:    [[TMP17:%.*]] = add nuw nsw <2 x i64> [[TMP14]], [[TMP16]]
+; AVX-NEXT:    store <2 x i64> [[TMP17]], ptr [[ARRAYIDX2_2]], align 1
 ; AVX-NEXT:    ret void
 ;
 entry:

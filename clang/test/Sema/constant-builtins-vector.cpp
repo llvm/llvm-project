@@ -860,3 +860,19 @@ static_assert(__builtin_elementwise_sub_sat(0U, 1U) == 0U);
 static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_sub_sat((vector4char){5, 4, 3, 2}, (vector4char){1, 1, 1, 1})) == (LITTLE_END ? 0x01020304 : 0x04030201));
 static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_sub_sat((vector4uchar){5, 4, 3, 2}, (vector4uchar){1, 1, 1, 1})) == (LITTLE_END ? 0x01020304U : 0x04030201U));
 static_assert(__builtin_bit_cast(unsigned long long, __builtin_elementwise_sub_sat((vector4short){(short)0x8000, (short)0x8001, (short)0x8002, (short)0x8003}, (vector4short){7, 8, 9, 10}) == (LITTLE_END ? 0x8000800080008000 : 0x8000800080008000)));
+
+static_assert(__builtin_elementwise_max(1, 2) == 2);
+static_assert(__builtin_elementwise_max(-1, 1) == 1);
+static_assert(__builtin_elementwise_max(1U, 2U) == 2U);
+static_assert(__builtin_elementwise_max(~0U, 0U) == ~0U);
+static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_max((vector4char){1, -2, 3, -4}, (vector4char){4, -3, 2, -1})) == (LITTLE_END ? 0xFF03FE04 : 0x04FE03FF ));
+static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_max((vector4uchar){1, 2, 3, 4}, (vector4uchar){4, 3, 2, 1})) == 0x04030304U);
+static_assert(__builtin_bit_cast(unsigned long long, __builtin_elementwise_max((vector4short){1, -2, 3, -4}, (vector4short){4, -3, 2, -1})) == (LITTLE_END ? 0xFFFF0003FFFE0004 : 0x0004FFFE0003FFFF));
+
+static_assert(__builtin_elementwise_min(1, 2) == 1);
+static_assert(__builtin_elementwise_min(-1, 1) == -1);
+static_assert(__builtin_elementwise_min(1U, 2U) == 1U);
+static_assert(__builtin_elementwise_min(~0U, 0U) == 0U);
+static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_min((vector4char){1, -2, 3, -4}, (vector4char){4, -3, 2, -1})) == (LITTLE_END ? 0xFC02FD01 : 0x01FD02FC));
+static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_min((vector4uchar){1, 2, 3, 4}, (vector4uchar){4, 3, 2, 1})) == 0x01020201U);
+static_assert(__builtin_bit_cast(unsigned long long, __builtin_elementwise_min((vector4short){1, -2, 3, -4}, (vector4short){4, -3, 2, -1})) == (LITTLE_END ? 0xFFFC0002FFFD0001 : 0x0001FFFD0002FFFC));

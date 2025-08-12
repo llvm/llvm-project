@@ -79,13 +79,24 @@ define float @test_extract_1(<2 x float> %a) #0 {
   ret float %e
 }
 
-; NOTE: disabled as -O3 miscompiles this into pointer arithmetic on
-; test_extract_i_param_0 where the symbol's address is not taken first (that
-; is, moved to a temporary)
-; define float @test_extract_i(<2 x float> %a, i64 %idx) #0 {
-;   %e = extractelement <2 x float> %a, i64 %idx
-;   ret float %e
-; }
+define float @test_extract_i(<2 x float> %a, i64 %idx) #0 {
+; CHECK-LABEL: test_extract_i(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<2>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
+; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd2, [test_extract_i_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd1, [test_extract_i_param_0];
+; CHECK-NEXT:    setp.eq.b64 %p1, %rd2, 0;
+; CHECK-NEXT:    mov.b64 {%r1, %r2}, %rd1;
+; CHECK-NEXT:    selp.f32 %r3, %r1, %r2, %p1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
+; CHECK-NEXT:    ret;
+  %e = extractelement <2 x float> %a, i64 %idx
+  ret float %e
+}
 
 define <2 x float> @test_fadd(<2 x float> %a, <2 x float> %b) #0 {
 ; CHECK-NOF32X2-LABEL: test_fadd(

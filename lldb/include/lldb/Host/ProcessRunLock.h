@@ -41,8 +41,21 @@ public:
   class ProcessRunLocker {
   public:
     ProcessRunLocker() = default;
+    ProcessRunLocker(ProcessRunLocker &&other) : m_lock(other.m_lock) {
+      other.m_lock = nullptr;
+    }
+    ProcessRunLocker &operator=(ProcessRunLocker &&other) {
+      if (this != &other) {
+        Unlock();
+        m_lock = other.m_lock;
+        other.m_lock = nullptr;
+      }
+      return *this;
+    }
 
     ~ProcessRunLocker() { Unlock(); }
+
+    bool IsLocked() const { return m_lock; }
 
     // Try to lock the read lock, but only do so if there are no writers.
     bool TryLock(ProcessRunLock *lock) {

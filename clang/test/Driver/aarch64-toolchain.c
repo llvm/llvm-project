@@ -157,3 +157,15 @@
 // AARCH64-BAREMETAL-UNWINDLIB: "{{.*}}clang_rt.crtbegin.o"
 // AARCH64-BAREMETAL-UNWINDLIB: "--start-group" "{{.*}}libclang_rt.builtins{{.*}}.a" "--as-needed" "-lunwind" "--no-as-needed" "-lc" "-lgloss" "--end-group"
 // AARCH64-BAREMETAL-UNWINDLIB: "{{.*}}clang_rt.crtend.o"
+
+// RUN: %clang -static-pie -### %s -fuse-ld= \
+// RUN:   --target=aarch64-none-elf --rtlib=libgcc --unwindlib=platform \
+// RUN:   --gcc-toolchain=%S/Inputs/basic_aarch64_gcc_tree \
+// RUN:   --sysroot=%S/Inputs/basic_arm_gcc_tree/aarch64-none-elf 2>&1 \
+// RUN:   | FileCheck -check-prefix=C-ARM-STATIC-PIE %s
+
+// C-ARM-STATIC-PIE: "-Bstatic" "-pie" "--no-dynamic-linker" "-z" "text" "-m" "aarch64elf" "-EL"
+// C-ARM-STATIC-PIE: "{{.*}}rcrt1.o"
+// C-ARM-STATIC-PIE: "{{.*}}crtbeginS.o"
+// C-ARM-STATIC-PIE: "--start-group" "-lgcc" "-lgcc_eh" "-lc" "-lgloss" "--end-group"
+// C-ARM-STATIC-PIE: "{{.*}}crtendS.o"
