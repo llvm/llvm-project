@@ -9704,7 +9704,7 @@ This instruction requires several arguments:
    indicates the function accepts a variable number of arguments, the
    extra arguments can be specified.
 #. '``fallthrough label``': the label reached when the inline assembly's
-   execution exits the bottom / the intrinsic call terminates.
+   execution exits the bottom / the intrinsic call returns.
 #. '``indirect labels``': the labels reached when a callee transfers control
    to a location other than the '``fallthrough label``'. Label constraints
    refer to these destinations.
