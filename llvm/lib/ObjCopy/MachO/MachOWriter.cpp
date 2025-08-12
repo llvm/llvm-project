@@ -301,7 +301,7 @@ void MachOWriter::writeSymbolTable() {
       O.LoadCommands[*O.SymTabCommandIndex]
           .MachOLoadCommand.symtab_command_data;
 
-  char *SymTable = (char *)Buf->getBufferStart() + SymTabCommand.symoff;
+  char *SymTable = Buf->getBufferStart() + SymTabCommand.symoff;
   for (auto &Symbol : O.SymTable.Symbols) {
     SymbolEntry *Sym = Symbol.get();
     uint32_t Nstrx = LayoutBuilder.getStringTableBuilder().getOffset(Sym->Name);
@@ -319,7 +319,7 @@ void MachOWriter::writeRebaseInfo() {
   const MachO::dyld_info_command &DyLdInfoCommand =
       O.LoadCommands[*O.DyLdInfoCommandIndex]
           .MachOLoadCommand.dyld_info_command_data;
-  char *Out = (char *)Buf->getBufferStart() + DyLdInfoCommand.rebase_off;
+  char *Out = Buf->getBufferStart() + DyLdInfoCommand.rebase_off;
   assert((DyLdInfoCommand.rebase_size == O.Rebases.Opcodes.size()) &&
          "Incorrect rebase opcodes size");
   memcpy(Out, O.Rebases.Opcodes.data(), O.Rebases.Opcodes.size());
@@ -331,7 +331,7 @@ void MachOWriter::writeBindInfo() {
   const MachO::dyld_info_command &DyLdInfoCommand =
       O.LoadCommands[*O.DyLdInfoCommandIndex]
           .MachOLoadCommand.dyld_info_command_data;
-  char *Out = (char *)Buf->getBufferStart() + DyLdInfoCommand.bind_off;
+  char *Out = Buf->getBufferStart() + DyLdInfoCommand.bind_off;
   assert((DyLdInfoCommand.bind_size == O.Binds.Opcodes.size()) &&
          "Incorrect bind opcodes size");
   memcpy(Out, O.Binds.Opcodes.data(), O.Binds.Opcodes.size());
@@ -343,7 +343,7 @@ void MachOWriter::writeWeakBindInfo() {
   const MachO::dyld_info_command &DyLdInfoCommand =
       O.LoadCommands[*O.DyLdInfoCommandIndex]
           .MachOLoadCommand.dyld_info_command_data;
-  char *Out = (char *)Buf->getBufferStart() + DyLdInfoCommand.weak_bind_off;
+  char *Out = Buf->getBufferStart() + DyLdInfoCommand.weak_bind_off;
   assert((DyLdInfoCommand.weak_bind_size == O.WeakBinds.Opcodes.size()) &&
          "Incorrect weak bind opcodes size");
   memcpy(Out, O.WeakBinds.Opcodes.data(), O.WeakBinds.Opcodes.size());
@@ -355,7 +355,7 @@ void MachOWriter::writeLazyBindInfo() {
   const MachO::dyld_info_command &DyLdInfoCommand =
       O.LoadCommands[*O.DyLdInfoCommandIndex]
           .MachOLoadCommand.dyld_info_command_data;
-  char *Out = (char *)Buf->getBufferStart() + DyLdInfoCommand.lazy_bind_off;
+  char *Out = Buf->getBufferStart() + DyLdInfoCommand.lazy_bind_off;
   assert((DyLdInfoCommand.lazy_bind_size == O.LazyBinds.Opcodes.size()) &&
          "Incorrect lazy bind opcodes size");
   memcpy(Out, O.LazyBinds.Opcodes.data(), O.LazyBinds.Opcodes.size());
@@ -367,7 +367,7 @@ void MachOWriter::writeExportInfo() {
   const MachO::dyld_info_command &DyLdInfoCommand =
       O.LoadCommands[*O.DyLdInfoCommandIndex]
           .MachOLoadCommand.dyld_info_command_data;
-  char *Out = (char *)Buf->getBufferStart() + DyLdInfoCommand.export_off;
+  char *Out = Buf->getBufferStart() + DyLdInfoCommand.export_off;
   assert((DyLdInfoCommand.export_size == O.Exports.Trie.size()) &&
          "Incorrect export trie size");
   memcpy(Out, O.Exports.Trie.data(), O.Exports.Trie.size());
@@ -397,7 +397,7 @@ void MachOWriter::writeLinkData(std::optional<size_t> LCIndex,
     return;
   const MachO::linkedit_data_command &LinkEditDataCommand =
       O.LoadCommands[*LCIndex].MachOLoadCommand.linkedit_data_command_data;
-  char *Out = (char *)Buf->getBufferStart() + LinkEditDataCommand.dataoff;
+  char *Out = Buf->getBufferStart() + LinkEditDataCommand.dataoff;
   assert((LinkEditDataCommand.datasize == LD.Data.size()) &&
          "Incorrect data size");
   memcpy(Out, LD.Data.data(), LD.Data.size());
@@ -574,7 +574,7 @@ void MachOWriter::writeExportsTrieData() {
   const MachO::linkedit_data_command &ExportsTrieCmd =
       O.LoadCommands[*O.ExportsTrieCommandIndex]
           .MachOLoadCommand.linkedit_data_command_data;
-  char *Out = (char *)Buf->getBufferStart() + ExportsTrieCmd.dataoff;
+  char *Out = Buf->getBufferStart() + ExportsTrieCmd.dataoff;
   assert((ExportsTrieCmd.datasize == O.Exports.Trie.size()) &&
          "Incorrect export trie size");
   memcpy(Out, O.Exports.Trie.data(), O.Exports.Trie.size());

@@ -567,3 +567,75 @@ add_fp_unittest(
   LINK_LIBRARIES
     -lpthread
 )
+
+add_fp_unittest(
+  bfloat16_add_test
+  NO_RUN_POSTBUILD
+  NEED_MPFR
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    bfloat16_add_test.cpp
+  COMPILE_OPTIONS
+    ${libc_opt_high_flag}
+  DEPENDS
+    .exhaustive_test
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fp_bits
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  bfloat16_div_test
+  NO_RUN_POSTBUILD
+  NEED_MPFR
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    bfloat16_div_test.cpp
+  COMPILE_OPTIONS
+    ${libc_opt_high_flag}
+  DEPENDS
+    .exhaustive_test
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fp_bits
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  bfloat16_mul_test
+  NO_RUN_POSTBUILD
+  NEED_MPFR
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    bfloat16_mul_test.cpp
+  COMPILE_OPTIONS
+    ${libc_opt_high_flag}
+  DEPENDS
+    .exhaustive_test
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fp_bits
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  bfloat16_sub_test
+  NO_RUN_POSTBUILD
+  NEED_MPFR
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    bfloat16_sub_test.cpp
+  COMPILE_OPTIONS
+    ${libc_opt_high_flag}
+  DEPENDS
+    .exhaustive_test
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fp_bits
+  LINK_LIBRARIES
+    -lpthread
+)

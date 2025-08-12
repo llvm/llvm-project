@@ -95,6 +95,13 @@ static LogicalResult checkAndUpdateCapabilityRequirements(
   return success();
 }
 
+static void addAllImpliedCapabilities(SetVector<spirv::Capability> &caps) {
+  SetVector<spirv::Capability> tmp;
+  for (spirv::Capability cap : caps)
+    tmp.insert_range(getRecursiveImpliedCapabilities(cap));
+  caps.insert_range(std::move(tmp));
+}
+
 void UpdateVCEPass::runOnOperation() {
   spirv::ModuleOp module = getOperation();
 
@@ -173,6 +180,8 @@ void UpdateVCEPass::runOnOperation() {
 
   if (walkResult.wasInterrupted())
     return signalPassFailure();
+
+  addAllImpliedCapabilities(deducedCapabilities);
 
   // Update min version requirement for capabilities after deducing them.
   for (spirv::Capability cap : deducedCapabilities) {
