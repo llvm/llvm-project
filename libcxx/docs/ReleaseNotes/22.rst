@@ -43,6 +43,8 @@ Implemented Papers
 Improvements and New Features
 -----------------------------
 
+- String reallocations avoided in `std::filesystem::path::lexically_relative`, resulting in a performance improvement of up to 1.7x.
+
 Deprecations and Removals
 -------------------------
 
