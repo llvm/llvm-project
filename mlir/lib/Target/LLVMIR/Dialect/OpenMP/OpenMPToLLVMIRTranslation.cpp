@@ -2601,11 +2601,8 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
     // for every omp.wsloop nested inside a no-loop SPMD target region, even if
     // that loop is not the top-level SPMD one.
     if (loopOp == targetCapturedOp) {
-      omp::TargetRegionFlags kernelFlags =
-          targetOp.getKernelExecFlags(targetCapturedOp);
-      if (omp::bitEnumContainsAll(kernelFlags,
-                                  omp::TargetRegionFlags::spmd |
-                                      omp::TargetRegionFlags::no_loop))
+      if (targetOp.getKernelExecFlags(targetCapturedOp) ==
+          omp::TargetExecMode::no_loop)
         noLoopMode = true;
     }
   }
@@ -5435,14 +5432,21 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
   }
 
   // Update kernel bounds structure for the `OpenMPIRBuilder` to use.
-  omp::TargetRegionFlags kernelFlags = targetOp.getKernelExecFlags(capturedOp);
-  attrs.ExecFlags =
-      omp::bitEnumContainsAny(kernelFlags, omp::TargetRegionFlags::spmd)
-          ? omp::bitEnumContainsAny(kernelFlags, omp::TargetRegionFlags::no_loop)
-                ? llvm::omp::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP
-                : llvm::omp::OMP_TGT_EXEC_MODE_SPMD
-          : llvm::omp::OMP_TGT_EXEC_MODE_GENERIC;
-
+  omp::TargetExecMode execMode = targetOp.getKernelExecFlags(capturedOp);
+  switch (execMode) {
+  case omp::TargetExecMode::bare:
+    attrs.ExecFlags = llvm::omp::OMP_TGT_EXEC_MODE_BARE;
+    break;
+  case omp::TargetExecMode::generic:
+    attrs.ExecFlags = llvm::omp::OMP_TGT_EXEC_MODE_GENERIC;
+    break;
+  case omp::TargetExecMode::spmd:
+    attrs.ExecFlags = llvm::omp::OMP_TGT_EXEC_MODE_SPMD;
+    break;
+  case omp::TargetExecMode::no_loop:
+    attrs.ExecFlags = llvm::omp::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
+    break;
+  }
   attrs.MinTeams = minTeamsVal;
   attrs.MaxTeams.front() = maxTeamsVal;
   attrs.MinThreads = 1;
@@ -5492,8 +5496,9 @@ initTargetRuntimeAttrs(llvm::IRBuilderBase &builder,
   if (numThreads)
     attrs.MaxThreads = moduleTranslation.lookupValue(numThreads);
 
-  if (omp::bitEnumContainsAny(targetOp.getKernelExecFlags(capturedOp),
-                              omp::TargetRegionFlags::trip_count)) {
+  bool hostEvalTripCount;
+  targetOp.getKernelExecFlags(capturedOp, &hostEvalTripCount);
+  if (hostEvalTripCount) {
     llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
     attrs.LoopTripCount = nullptr;
 

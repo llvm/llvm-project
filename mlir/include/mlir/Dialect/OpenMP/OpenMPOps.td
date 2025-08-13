@@ -1522,13 +1522,17 @@ def TargetOp : OpenMP_Op<"target", traits = [
     /// operations, the top level one will be the one captured.
     Operation *getInnermostCapturedOmpOp();
 
-    /// Infers the kernel type (Generic, SPMD or Generic-SPMD) based on the
-    /// contents of the target region.
+    /// Infers the kernel type (Bare, Generic or SPMD) based on the contents of
+    /// the target region.
     ///
     /// \param capturedOp result of a still valid (no modifications made to any
     /// nested operations) previous call to `getInnermostCapturedOmpOp()`.
-    static ::mlir::omp::TargetRegionFlags
-    getKernelExecFlags(Operation *capturedOp);
+    /// \param hostEvalTripCount output argument to store whether this kernel
+    /// wraps a loop whose bounds must be evaluated on the host prior to
+    /// launching it.
+    static ::mlir::omp::TargetExecMode
+    getKernelExecFlags(Operation *capturedOp,
+                       bool *hostEvalTripCount = nullptr);
   }] # clausesExtraClassDeclaration;
 
   let assemblyFormat = clausesAssemblyFormat # [{
