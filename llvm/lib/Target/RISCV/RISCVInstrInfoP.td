@@ -211,15 +211,13 @@ let Predicates = [HasStdExtP] in {
 
   def PSATI_H    : RVPShiftH_ri<0b110, 0b100, "psati.h">;
 } // Predicates = [HasStdExtP]
-
 let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
   def USATI_RV32 : RVPShiftW_ri<0b010, 0b100, "usati">;
 
   def SRARI_RV32 : RVPShiftW_ri<0b101, 0b100, "srari">;
 
   def SATI_RV32  : RVPShiftW_ri<0b110, 0b100, "sati">;
-} // Predicates = [HasStdExtP, IsRV64]
-
+} // Predicates = [HasStdExtP, IsRV32]
 let Predicates = [HasStdExtP, IsRV64] in {
   def PSRLI_W    : RVPShiftW_ri<0b000, 0b100, "psrli.w">;
   def PSRAI_W    : RVPShiftW_ri<0b100, 0b100, "psrai.w">;
