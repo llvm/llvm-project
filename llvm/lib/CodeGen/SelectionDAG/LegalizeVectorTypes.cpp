@@ -1618,7 +1618,6 @@ void DAGTypeLegalizer::SplitVecRes_BITCAST(SDNode *N, SDValue &Lo,
 void DAGTypeLegalizer::SplitVecRes_LOOP_DEPENDENCE_MASK(SDNode *N, SDValue &Lo,
                                                         SDValue &Hi) {
   unsigned EltSize = N->getConstantOperandVal(2);
-  EVT EltVT = EVT::getIntegerVT(*DAG.getContext(), EltSize * 8);
 
   SDLoc DL(N);
   EVT LoVT, HiVT;
@@ -1627,9 +1626,7 @@ void DAGTypeLegalizer::SplitVecRes_LOOP_DEPENDENCE_MASK(SDNode *N, SDValue &Lo,
   SDValue PtrB = N->getOperand(1);
   Lo = DAG.getNode(N->getOpcode(), DL, LoVT, PtrA, PtrB, N->getOperand(2));
 
-  EVT StoreVT = EVT::getVectorVT(*DAG.getContext(), EltVT,
-                                 HiVT.getVectorMinNumElements(), false);
-  unsigned Offset = StoreVT.getStoreSizeInBits() / 8;
+  unsigned Offset = EltSize * HiVT.getVectorMinNumElements();
   SDValue Addend;
   if (HiVT.isScalableVT())
     Addend = DAG.getVScale(DL, MVT::i64, APInt(64, Offset));
