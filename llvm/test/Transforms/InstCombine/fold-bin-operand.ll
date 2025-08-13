@@ -32,10 +32,8 @@ define i32 @g(i32 %x) {
 
 define i1 @inttoptr_add_ptrtoint_used_by_single_icmp(ptr %src, ptr %p2) {
 ; CHECK-LABEL: @inttoptr_add_ptrtoint_used_by_single_icmp(
-; CHECK-NEXT:    [[I:%.*]] = ptrtoint ptr [[SRC:%.*]] to i64
-; CHECK-NEXT:    [[A:%.*]] = add i64 [[I]], 10
-; CHECK-NEXT:    [[P:%.*]] = inttoptr i64 [[A]] to ptr
-; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P2:%.*]], [[P]]
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[SRC:%.*]], i64 10
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P2]], [[P:%.*]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %i = ptrtoint ptr %src to i64
@@ -181,10 +179,8 @@ define i1 @inttoptr_add_ptrtoint_used_by_single_icmp_in_different_bb(i1 %bc, ptr
 ; CHECK-LABEL: @inttoptr_add_ptrtoint_used_by_single_icmp_in_different_bb(
 ; CHECK-NEXT:    br i1 [[BC:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[I:%.*]] = ptrtoint ptr [[SRC:%.*]] to i64
-; CHECK-NEXT:    [[A:%.*]] = add i64 [[I]], 10
-; CHECK-NEXT:    [[P:%.*]] = inttoptr i64 [[A]] to ptr
-; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P2:%.*]], [[P]]
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[SRC:%.*]], i64 10
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P2]], [[P:%.*]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 false
@@ -204,11 +200,9 @@ else:
 
 define i1 @inttoptr_add_ptrtoint_used_by_multiple_icmps(ptr %src, ptr %p2, ptr %p3) {
 ; CHECK-LABEL: @inttoptr_add_ptrtoint_used_by_multiple_icmps(
-; CHECK-NEXT:    [[I:%.*]] = ptrtoint ptr [[SRC:%.*]] to i64
-; CHECK-NEXT:    [[A:%.*]] = add i64 [[I]], 10
-; CHECK-NEXT:    [[P:%.*]] = inttoptr i64 [[A]] to ptr
-; CHECK-NEXT:    [[C_1:%.*]] = icmp eq ptr [[P2:%.*]], [[P]]
-; CHECK-NEXT:    [[C_2:%.*]] = icmp eq ptr [[P3:%.*]], [[P]]
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[SRC:%.*]], i64 10
+; CHECK-NEXT:    [[C_1:%.*]] = icmp eq ptr [[P2]], [[P:%.*]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp eq ptr [[P2]], [[P3:%.*]]
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i1 [[C_1]], [[C_2]]
 ; CHECK-NEXT:    ret i1 [[XOR]]
 ;
