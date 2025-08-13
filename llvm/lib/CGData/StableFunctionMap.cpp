@@ -139,7 +139,7 @@ const StableFunctionMap::StableFunctionEntries &
 StableFunctionMap::at(HashFuncsMapType::key_type FunctionHash) const {
   auto It = HashToFuncs.find(FunctionHash);
   if (isLazilyLoaded())
-    const_cast<StableFunctionMap *>(this)->deserializeLazyLoadingEntry(It);
+    deserializeLazyLoadingEntry(It);
   return It->second.Entries;
 }
 
