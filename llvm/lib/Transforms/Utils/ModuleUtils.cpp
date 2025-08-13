@@ -431,7 +431,7 @@ void llvm::lowerIFuncsOnAIX(Module &M) {
 
     //   %AddrInDesc = load ptr, ptr %DesctAddr, align 4
     auto *AddrInDesc = Builder.CreateAlignedLoad(
-        PtrTy, DesctAddr, DesctAddr->getPointerAlignment(M.getDataLayout()),
+        PtrTy, DesctAddr, MaybeAlign(),
         "addr.in.desc");
 
     //   %OriginalAddr = call ptr @ppc_get_function_entry(ptr noundef @foo) #3
