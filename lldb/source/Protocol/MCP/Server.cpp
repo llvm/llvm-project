@@ -66,13 +66,15 @@ Server::HandleData(llvm::StringRef data) {
       Error protocol_error;
       llvm::handleAllErrors(
           response.takeError(),
-          [&](const MCPError &err) { protocol_error = err.toProtcolError(); },
+          [&](const MCPError &err) { protocol_error = err.toProtocolError(); },
           [&](const llvm::ErrorInfoBase &err) {
-            protocol_error.error.code = MCPError::kInternalError;
-            protocol_error.error.message = err.message();
+            protocol_error.code = MCPError::kInternalError;
+            protocol_error.message = err.message();
           });
-      protocol_error.id = request->id;
-      return protocol_error;
+      Response error_response;
+      error_response.id = request->id;
+      error_response.result = std::move(protocol_error);
+      return error_response;
     }
 
     return *response;
@@ -83,9 +85,6 @@ Server::HandleData(llvm::StringRef data) {
     Handle(*notification);
     return std::nullopt;
   }
-
-  if (std::get_if<Error>(&(*message)))
-    return llvm::createStringError("unexpected MCP message: error");
 
   if (std::get_if<Response>(&(*message)))
     return llvm::createStringError("unexpected MCP message: response");
@@ -123,11 +122,11 @@ void Server::AddNotificationHandler(llvm::StringRef method,
 
 llvm::Expected<Response> Server::InitializeHandler(const Request &request) {
   Response response;
-  response.result.emplace(llvm::json::Object{
+  response.result = llvm::json::Object{
       {"protocolVersion", mcp::kProtocolVersion},
       {"capabilities", GetCapabilities()},
       {"serverInfo",
-       llvm::json::Object{{"name", m_name}, {"version", m_version}}}});
+       llvm::json::Object{{"name", m_name}, {"version", m_version}}}};
   return response;
 }
 
@@ -138,7 +137,7 @@ llvm::Expected<Response> Server::ToolsListHandler(const Request &request) {
   for (const auto &tool : m_tools)
     tools.emplace_back(toJSON(tool.second->GetDefinition()));
 
-  response.result.emplace(llvm::json::Object{{"tools", std::move(tools)}});
+  response.result = llvm::json::Object{{"tools", std::move(tools)}};
 
   return response;
 }
@@ -173,7 +172,7 @@ llvm::Expected<Response> Server::ToolsCallHandler(const Request &request) {
   if (!text_result)
     return text_result.takeError();
 
-  response.result.emplace(toJSON(*text_result));
+  response.result = toJSON(*text_result);
 
   return response;
 }
@@ -189,8 +188,7 @@ llvm::Expected<Response> Server::ResourcesListHandler(const Request &request) {
     for (const Resource &resource : resource_provider_up->GetResources())
       resources.push_back(resource);
   }
-  response.result.emplace(
-      llvm::json::Object{{"resources", std::move(resources)}});
+  response.result = llvm::json::Object{{"resources", std::move(resources)}};
 
   return response;
 }
@@ -226,7 +224,7 @@ llvm::Expected<Response> Server::ResourcesReadHandler(const Request &request) {
       return result.takeError();
 
     Response response;
-    response.result.emplace(std::move(*result));
+    response.result = std::move(*result);
     return response;
   }
 

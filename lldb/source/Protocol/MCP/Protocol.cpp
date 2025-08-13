@@ -26,8 +26,45 @@ static bool mapRaw(const json::Value &Params, StringLiteral Prop,
   return true;
 }
 
+static llvm::json::Value toJSON(const Id &Id) {
+  if (const int64_t *I = std::get_if<int64_t>(&Id))
+    return json::Value(*I);
+  if (const std::string *S = std::get_if<std::string>(&Id))
+    return json::Value(*S);
+  llvm_unreachable("unexpected type in protocol::Id");
+}
+
+static bool mapId(const llvm::json::Value &V, StringLiteral Prop, Id &Id,
+                  llvm::json::Path P) {
+  const auto *O = V.getAsObject();
+  if (!O) {
+    P.report("expected object");
+    return false;
+  }
+
+  const auto *E = O->get(Prop);
+  if (!E) {
+    P.field(Prop).report("not found");
+    return false;
+  }
+
+  if (auto S = E->getAsString()) {
+    Id = S->str();
+    return true;
+  }
+
+  if (auto I = E->getAsInteger()) {
+    Id = *I;
+    return true;
+  }
+
+  P.report("expected string or number");
+  return false;
+}
+
 llvm::json::Value toJSON(const Request &R) {
-  json::Object Result{{"jsonrpc", "2.0"}, {"id", R.id}, {"method", R.method}};
+  json::Object Result{
+      {"jsonrpc", "2.0"}, {"id", toJSON(R.id)}, {"method", R.method}};
   if (R.params)
     Result.insert({"params", R.params});
   return Result;
@@ -35,47 +72,75 @@ llvm::json::Value toJSON(const Request &R) {
 
 bool fromJSON(const llvm::json::Value &V, Request &R, llvm::json::Path P) {
   llvm::json::ObjectMapper O(V, P);
-  if (!O || !O.map("id", R.id) || !O.map("method", R.method))
-    return false;
-  return mapRaw(V, "params", R.params, P);
+  return O && mapId(V, "id", R.id, P) && O.map("method", R.method) &&
+         mapRaw(V, "params", R.params, P);
 }
 
-llvm::json::Value toJSON(const ErrorInfo &EI) {
-  llvm::json::Object Result{{"code", EI.code}, {"message", EI.message}};
-  if (!EI.data.empty())
-    Result.insert({"data", EI.data});
-  return Result;
-}
-
-bool fromJSON(const llvm::json::Value &V, ErrorInfo &EI, llvm::json::Path P) {
-  llvm::json::ObjectMapper O(V, P);
-  return O && O.map("code", EI.code) && O.map("message", EI.message) &&
-         O.mapOptional("data", EI.data);
+bool operator==(const Request &a, const Request &b) {
+  return a.id == b.id && a.method == b.method && a.params == b.params;
 }
 
 llvm::json::Value toJSON(const Error &E) {
-  return json::Object{{"jsonrpc", "2.0"}, {"id", E.id}, {"error", E.error}};
+  llvm::json::Object Result{{"code", E.code}, {"message", E.message}};
+  if (E.data)
+    Result.insert({"data", *E.data});
+  return Result;
 }
 
 bool fromJSON(const llvm::json::Value &V, Error &E, llvm::json::Path P) {
   llvm::json::ObjectMapper O(V, P);
-  return O && O.map("id", E.id) && O.map("error", E.error);
+  return O && O.map("code", E.code) && O.map("message", E.message) &&
+         mapRaw(V, "data", E.data, P);
+}
+
+bool operator==(const Error &a, const Error &b) {
+  return a.code == b.code && a.message == b.message && a.data == b.data;
 }
 
 llvm::json::Value toJSON(const Response &R) {
-  llvm::json::Object Result{{"jsonrpc", "2.0"}, {"id", R.id}};
-  if (R.result)
-    Result.insert({"result", R.result});
-  if (R.error)
-    Result.insert({"error", R.error});
+  llvm::json::Object Result{{"jsonrpc", "2.0"}, {"id", toJSON(R.id)}};
+
+  if (const Error *error = std::get_if<Error>(&R.result))
+    Result.insert({"error", *error});
+  if (const json::Value *result = std::get_if<json::Value>(&R.result))
+    Result.insert({"result", *result});
   return Result;
 }
 
 bool fromJSON(const llvm::json::Value &V, Response &R, llvm::json::Path P) {
-  llvm::json::ObjectMapper O(V, P);
-  if (!O || !O.map("id", R.id) || !O.map("error", R.error))
+  const json::Object *E = V.getAsObject();
+  if (!E) {
+    P.report("expected object");
     return false;
-  return mapRaw(V, "result", R.result, P);
+  }
+
+  const json::Value *result = E->get("result");
+  const json::Value *raw_error = E->get("error");
+
+  if (result && raw_error) {
+    P.report("'result' and 'error' fields are mutually exclusive");
+    return false;
+  }
+
+  if (!result && !raw_error) {
+    P.report("'result' or 'error' fields are required'");
+    return false;
+  }
+
+  if (result) {
+    R.result = std::move(*result);
+  } else {
+    Error error;
+    if (!fromJSON(*raw_error, error, P))
+      return false;
+    R.result = std::move(error);
+  }
+
+  return mapId(V, "id", R.id, P);
+}
+
+bool operator==(const Response &a, const Response &b) {
+  return a.id == b.id && a.result == b.result;
 }
 
 llvm::json::Value toJSON(const Notification &N) {
@@ -95,6 +160,10 @@ bool fromJSON(const llvm::json::Value &V, Notification &N, llvm::json::Path P) {
   if (auto *Params = Obj->get("params"))
     N.params = *Params;
   return true;
+}
+
+bool operator==(const Notification &a, const Notification &b) {
+  return a.method == b.method && a.params == b.params;
 }
 
 llvm::json::Value toJSON(const ToolCapability &TC) {
@@ -235,24 +304,16 @@ bool fromJSON(const llvm::json::Value &V, Message &M, llvm::json::Path P) {
     return true;
   }
 
-  if (O->get("error")) {
-    Error E;
-    if (!fromJSON(V, E, P))
-      return false;
-    M = std::move(E);
-    return true;
-  }
-
-  if (O->get("result")) {
-    Response R;
+  if (O->get("method")) {
+    Request R;
     if (!fromJSON(V, R, P))
       return false;
     M = std::move(R);
     return true;
   }
 
-  if (O->get("method")) {
-    Request R;
+  if (O->get("result") || O->get("error")) {
+    Response R;
     if (!fromJSON(V, R, P))
       return false;
     M = std::move(R);
