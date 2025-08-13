@@ -23,17 +23,13 @@
 
 void f() {
 
-    struct S {
-        S() = default;
-    };
+    std::make_unique<int>(1); // expected-warning {{ignoring return value of function}}
+    std::make_shared<int>(1); // expected-warning {{ignoring return value of function}}
 
-    std::make_unique<S>(S{}); // expected-warning {{ignoring return value of function}}
-    std::make_shared<S>(S{}); // expected-warning {{ignoring return value of function}}
+    std::make_unique<int[]>(5); // expected-warning {{ignoring return value of function}}
+    std::make_shared<int[]>(5); // expected-warning {{ignoring return value of function}}
 
-    std::make_unique<S[]>(5); // expected-warning {{ignoring return value of function}}
-    std::make_shared<S[]>(5); // expected-warning {{ignoring return value of function}}
-
-    std::make_unique_for_overwrite<S>(); // expected-warning {{ignoring return value of function}}
-    std::make_shared_for_overwrite<S>(); // expected-warning {{ignoring return value of function}}
+    std::make_unique_for_overwrite<int>(); // expected-warning {{ignoring return value of function}}
+    std::make_shared_for_overwrite<int>(); // expected-warning {{ignoring return value of function}}
 
 }
