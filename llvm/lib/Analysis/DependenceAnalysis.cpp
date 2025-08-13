@@ -1542,13 +1542,28 @@ static APInt ceilingOfQuotient(const APInt &A, const APInt &B) {
 ///   k >= -B / A
 ///
 /// Since k is an integer, it means k is greater than or equal to the
-/// ceil(-B / A). Similar logic applies when A is negative, or the upper bound
-/// of the affine expression is passed via \p UB.
+/// ceil(-B / A).
+///
+/// If the upper bound of the affine expression \p UB is passed, the following
+/// inequality can be derived as well:
+///
+///   A*k + B <= UB
+///
+/// which leads to:
+///
+///   k <= (UB - B) / A
+///
+/// Again, as k is an integer, it means k is less than or equal to the
+/// floor((UB - B) / A).
+///
+/// The similar logic applies when A is negative, but the inequalities sign flip
+/// while working with them.
 ///
 /// Preconditions: \p A is non-zero, and we know A*k + B is non-negative.
 static std::pair<std::optional<APInt>, std::optional<APInt>>
 inferDomainOfAffine(const APInt &A, const APInt &B,
                     const std::optional<APInt> &UB) {
+  assert(A != 0 && "A must be non-zero");
   std::optional<APInt> TL, TU;
   if (A.sgt(0)) {
     TL = ceilingOfQuotient(-B, A);
