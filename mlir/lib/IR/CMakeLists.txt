@@ -63,11 +63,11 @@ add_mlir_library(MLIRIR
   MLIRCastInterfacesIncGen
   MLIRDataLayoutInterfacesIncGen
   MLIROpAsmInterfaceIncGen
+  MLIRQuantizationInterfaceIncGen
   MLIRRegionKindInterfaceIncGen
   MLIRSideEffectInterfacesIncGen
   MLIRSymbolInterfacesIncGen
   MLIRTensorEncodingIncGen
-  MLIRQuantizationInterfaceIncGen
   
   LINK_LIBS PUBLIC
   MLIRSupport
