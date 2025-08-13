@@ -47,14 +47,21 @@ TEST_F(NumericLiteralInfoTest, IntegerLiteral) {
   // Hexadecimal.
   EXPECT_TRUE(verifyInfo(NumericLiteralInfo("0xF"), 1));
   EXPECT_TRUE(verifyInfo(NumericLiteralInfo("0XfZ"), 1, npos, npos, 3));
+
+  // C++ suffixes.
+  EXPECT_TRUE(verifyInfo(NumericLiteralInfo("1if"), npos, npos, npos, 1));
+  EXPECT_TRUE(verifyInfo(NumericLiteralInfo("123_felt_pen"), npos, npos, npos, 3));
 }
 
 TEST_F(NumericLiteralInfoTest, FloatingPointLiteral) {
   // Decimal.
   EXPECT_TRUE(verifyInfo(NumericLiteralInfo(".9"), npos, 0));
   EXPECT_TRUE(verifyInfo(NumericLiteralInfo("9."), npos, 1));
+  EXPECT_TRUE(verifyInfo(NumericLiteralInfo("0."), npos, 1));
+  EXPECT_TRUE(verifyInfo(NumericLiteralInfo("0.f"), npos, 1, npos, 2));
   EXPECT_TRUE(verifyInfo(NumericLiteralInfo("9.F"), npos, 1, npos, 2));
   EXPECT_TRUE(verifyInfo(NumericLiteralInfo("9e9"), npos, npos, 1));
+  EXPECT_TRUE(verifyInfo(NumericLiteralInfo("0.e9f"), npos, 1, 2, 4));
   EXPECT_TRUE(verifyInfo(NumericLiteralInfo("9E-9f"), npos, npos, 1, 4));
   EXPECT_TRUE(verifyInfo(NumericLiteralInfo("9.9e+9bf16"), npos, 1, 3, 6));
 
