@@ -3641,10 +3641,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
-  // Get an MMX-sized (64-bit) vector type, or optionally, other sized
-  // vectors.
-  Type *getMMXVectorTy(unsigned EltSizeInBits,
-                       unsigned X86_MMXSizeInBits = 64) {
+  // Get an MMX-sized vector type.
+  Type *getMMXVectorTy(unsigned EltSizeInBits) {
+    const unsigned X86_MMXSizeInBits = 64;
     assert(EltSizeInBits != 0 && (X86_MMXSizeInBits % EltSizeInBits) == 0 &&
            "Illegal MMX vector element size");
     return FixedVectorType::get(IntegerType::get(*MS.C, EltSizeInBits),
@@ -3844,78 +3843,20 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
-  // Instrument multiply-add intrinsics.
-  //
-  // e.g., Two operands:
-  //         <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %a, <8 x i16> %b)
-  //         <1 x i64> @llvm.x86.mmx.pmadd.wd(<1 x i64> %a, <1 x i64> %b)
-  //
-  //       Three operands are not implemented yet:
-  //         <4 x i32> @llvm.x86.avx512.vpdpbusd.128
-  //                       (<4 x i32> %s, <4 x i32> %a, <4 x i32> %b)
-  //         (the result of multiply-add'ing %a and %b is accumulated with %s)
-  void handleVectorPmaddIntrinsic(IntrinsicInst &I, unsigned ReductionFactor,
-                                  unsigned EltSizeInBits = 0) {
+  // Instrument multiply-add intrinsic.
+  void handleVectorPmaddIntrinsic(IntrinsicInst &I,
+                                  unsigned MMXEltSizeInBits = 0) {
+    Type *ResTy =
+        MMXEltSizeInBits ? getMMXVectorTy(MMXEltSizeInBits * 2) : I.getType();
     IRBuilder<> IRB(&I);
-
-    [[maybe_unused]] FixedVectorType *ReturnType =
-        cast<FixedVectorType>(I.getType());
-    assert(isa<FixedVectorType>(ReturnType));
-
-    assert(I.arg_size() == 2);
-
-    // Vectors A and B, and shadows
-    Value *Va = I.getOperand(0);
-    Value *Vb = I.getOperand(1);
-
-    Value *Sa = getShadow(&I, 0);
-    Value *Sb = getShadow(&I, 1);
-
-    FixedVectorType *ParamType =
-        cast<FixedVectorType>(I.getArgOperand(0)->getType());
-    assert(ParamType == I.getArgOperand(1)->getType());
-
-    assert(ParamType->getPrimitiveSizeInBits() ==
-           ReturnType->getPrimitiveSizeInBits());
-
-    // Step 1: instrument multiplication of corresponding vector elements
-    if (EltSizeInBits) {
-      ParamType = cast<FixedVectorType>(
-          getMMXVectorTy(EltSizeInBits, ParamType->getPrimitiveSizeInBits()));
-
-      Va = IRB.CreateBitCast(Va, ParamType);
-      Vb = IRB.CreateBitCast(Vb, ParamType);
-
-      Sa = IRB.CreateBitCast(Sa, getShadowTy(ParamType));
-      Sb = IRB.CreateBitCast(Sb, getShadowTy(ParamType));
-    } else {
-      assert(ParamType->getNumElements() ==
-             ReturnType->getNumElements() * ReductionFactor);
-    }
-
-    Value *Sab = IRB.CreateOr(Sa, Sb);
-
-    // Multiplying an uninitialized / element by zero results in an initialized
-    // element.
-    Value *Zero = Constant::getNullValue(Va->getType());
-    Value *VaNotZero = IRB.CreateICmpNE(Va, Zero);
-    Value *VbNotZero = IRB.CreateICmpNE(Vb, Zero);
-    Value *VaAndVbNotZero = IRB.CreateAnd(VaNotZero, VbNotZero);
-
-    // After multiplying e.g., <8 x i16> %a, <8 x i16> %b, we should have
-    // <8 x i32> %ab, but we cheated and ended up with <8 x i16>.
-    Sab = IRB.CreateAnd(Sab, IRB.CreateSExt(VaAndVbNotZero, Sab->getType()));
-
-    // Step 2: instrument horizontal add
-    // e.g., collapse <8 x i16> into <4 x i16> (reduction factor == 2)
-    //                <16 x i8> into <4 x i8>  (reduction factor == 4)
-    Value *OutShadow = horizontalReduce(I, ReductionFactor, Sab, nullptr);
-
-    // Extend to <4 x i32>.
-    // For MMX, cast it back to <1 x i64>.
-    OutShadow = CreateShadowCast(IRB, OutShadow, getShadowTy(&I));
-
-    setShadow(&I, OutShadow);
+    auto *Shadow0 = getShadow(&I, 0);
+    auto *Shadow1 = getShadow(&I, 1);
+    Value *S = IRB.CreateOr(Shadow0, Shadow1);
+    S = IRB.CreateBitCast(S, ResTy);
+    S = IRB.CreateSExt(IRB.CreateICmpNE(S, Constant::getNullValue(ResTy)),
+                       ResTy);
+    S = IRB.CreateBitCast(S, getShadowTy(&I));
+    setShadow(&I, S);
     setOriginForNaryOp(I);
   }
 
@@ -5450,28 +5391,19 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       handleVectorSadIntrinsic(I);
       break;
 
-    // Multiply and Add Packed Words
-    //   < 4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16>, <8 x i16>)
-    //   < 8 x i32> @llvm.x86.avx2.pmadd.wd(<16 x i16>, <16 x i16>)
-
-    // Multiply and Add Packed Signed and Unsigned Bytes
-    //   < 8 x i16> @llvm.x86.ssse3.pmadd.ub.sw.128(<16 x i8>, <16 x i8>)
-    //   <16 x i16> @llvm.x86.avx2.pmadd.ub.sw(<32 x i8>, <32 x i8>)
     case Intrinsic::x86_sse2_pmadd_wd:
     case Intrinsic::x86_avx2_pmadd_wd:
     case Intrinsic::x86_ssse3_pmadd_ub_sw_128:
     case Intrinsic::x86_avx2_pmadd_ub_sw:
-      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2);
+      handleVectorPmaddIntrinsic(I);
       break;
 
-    // <1 x i64> @llvm.x86.ssse3.pmadd.ub.sw(<1 x i64>, <1 x i64>)
     case Intrinsic::x86_ssse3_pmadd_ub_sw:
-      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2, /*EltSize=*/8);
+      handleVectorPmaddIntrinsic(I, 8);
       break;
 
-    // <1 x i64> @llvm.x86.mmx.pmadd.wd(<1 x i64>, <1 x i64>)
     case Intrinsic::x86_mmx_pmadd_wd:
-      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2, /*EltSize=*/16);
+      handleVectorPmaddIntrinsic(I, 16);
       break;
 
     case Intrinsic::x86_sse_cmp_ss:
