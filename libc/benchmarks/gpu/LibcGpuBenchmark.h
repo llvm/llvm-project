@@ -11,6 +11,7 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/sqrt.h"
 #include "src/__support/macros/config.h"
 #include "src/time/clock.h"
 
@@ -30,40 +31,82 @@ struct BenchmarkOptions {
   double scaling_factor = 1.4;
 };
 
-struct Measurement {
+class RefinableRuntimeEstimator {
   uint32_t iterations = 0;
-  uint64_t elapsed_cycles = 0;
-};
-
-class RefinableRuntimeEstimation {
-  uint64_t total_cycles = 0;
-  uint32_t total_iterations = 0;
+  uint64_t sum_of_cycles = 0;
+  uint64_t sum_of_squared_cycles = 0;
 
 public:
-  uint64_t update(const Measurement &M) {
-    total_cycles += M.elapsed_cycles;
-    total_iterations += M.iterations;
-    return total_cycles / total_iterations;
+  void update(uint64_t cycles) noexcept {
+    iterations += 1;
+    sum_of_cycles += cycles;
+    sum_of_squared_cycles += cycles * cycles;
   }
+
+  double get_mean() const noexcept {
+    if (iterations == 0)
+      return 0.0;
+
+    return static_cast<double>(sum_of_cycles) / iterations;
+  }
+
+  void update(const RefinableRuntimeEstimator &other) noexcept {
+    iterations += other.iterations;
+    sum_of_cycles += other.sum_of_cycles;
+    sum_of_squared_cycles += other.sum_of_squared_cycles;
+  }
+
+  double get_variance() const noexcept {
+    if (iterations == 0)
+      return 0.0;
+
+    const double num = static_cast<double>(iterations);
+    const double sum_x = static_cast<double>(sum_of_cycles);
+    const double sum_x2 = static_cast<double>(sum_of_squared_cycles);
+
+    const double mean_of_squares = sum_x2 / num;
+    const double mean = sum_x / num;
+    const double mean_squared = mean * mean;
+    const double variance = mean_of_squares - mean_squared;
+
+    return variance < 0.0 ? 0.0 : variance;
+  }
+
+  double get_stddev() const noexcept {
+    return fputil::sqrt<double>(get_variance());
+  }
+
+  uint32_t get_iterations() const noexcept { return iterations; }
 };
 
 // Tracks the progression of the runtime estimation
 class RuntimeEstimationProgression {
-  RefinableRuntimeEstimation rre;
+  RefinableRuntimeEstimator estimator;
+  double current_mean = 0.0;
 
 public:
-  uint64_t current_estimation = 0;
+  const RefinableRuntimeEstimator &get_estimator() const noexcept {
+    return estimator;
+  }
 
-  double compute_improvement(const Measurement &M) {
-    const uint64_t new_estimation = rre.update(M);
-    double ratio =
-        (static_cast<double>(current_estimation) / new_estimation) - 1.0;
+  double
+  compute_improvement(const RefinableRuntimeEstimator &sample_estimator) {
+    if (sample_estimator.get_iterations() == 0)
+      return 1.0;
 
-    // Get absolute value
+    estimator.update(sample_estimator);
+
+    const double new_mean = estimator.get_mean();
+    if (current_mean == 0.0 || new_mean == 0.0) {
+      current_mean = new_mean;
+      return 1.0;
+    }
+
+    double ratio = (current_mean / new_mean) - 1.0;
     if (ratio < 0)
-      ratio *= -1;
+      ratio = -ratio;
 
-    current_estimation = new_estimation;
+    current_mean = new_mean;
     return ratio;
   }
 };
