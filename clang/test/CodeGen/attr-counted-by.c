@@ -2481,3 +2481,20 @@ size_t test36() {
 size_t test37(struct annotated *ptr) {
   return __builtin_dynamic_object_size((1, 2, (4, 5, (7, 8, 9, (10, ptr->array)))), 1);
 }
+
+// Don't abort when a structure isn't forward declared. This was fixed in
+// 160fb11.
+// See https://github.com/clangbuiltlinux/linux/issues/2114
+
+struct baz;
+
+struct foo {
+  unsigned short width;
+  struct bar *no_forward_decl;
+  struct baz *array[] __attribute__((__counted_by__(width)));
+};
+
+struct baz *test38(struct foo *q)
+{
+  return q->array[0];
+}
