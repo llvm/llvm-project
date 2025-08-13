@@ -240,7 +240,7 @@ MatchTableRecord MatchTable::IntValue(unsigned NumBytes, int64_t IntValue) {
   uint64_t UIntValue = IntValue;
   if (NumBytes < 8)
     UIntValue &= (UINT64_C(1) << NumBytes * 8) - 1;
-  auto Str = llvm::to_string(UIntValue);
+  std::string Str = llvm::to_string(UIntValue);
   // TODO: Could optimize this directly to save the compiler some work when
   // building the file
   return MatchTableRecord(std::nullopt, Str, NumBytes,
