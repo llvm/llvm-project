@@ -674,17 +674,13 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
     // TODO: support more complex cases, e.g., vector with multiple values.
     Attribute singleVal = vecAttr.getSplatValue<Attribute>();
 
-    SmallVector<Value> newConsts;
     auto newType = VectorType::get(sgShape, vecType.getElementType());
-    auto newLayout = layout.dropSgLayoutAndData();
-    for (int i = 0; i < count; ++i) {
-      auto sgAttr = DenseElementsAttr::get(newType, singleVal);
-      auto cstOp =
-          rewriter.create<arith::ConstantOp>(op.getLoc(), newType, sgAttr);
-      if (newLayout)
-        xegpu::setLayoutAttr(cstOp->getResult(0), newLayout);
-      newConsts.push_back(cstOp);
-    }
+    auto sgAttr = DenseElementsAttr::get(newType, singleVal);
+    auto cstOp =
+        rewriter.create<arith::ConstantOp>(op.getLoc(), newType, sgAttr);
+    if (auto newLayout = layout.dropSgLayoutAndData())
+      xegpu::setLayoutAttr(cstOp->getResult(0), newLayout);
+    SmallVector<Value> newConsts(count, cstOp);
 
     rewriter.replaceOpWithMultiple(op, {newConsts});
     return success();

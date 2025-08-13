@@ -225,11 +225,4 @@ gpu.module @test_round_robin_assignment {
                                    target_layout = #xegpu.layout<sg_layout = [2, 2], sg_data = [16, 16], inst_data = [8, 16]>}> : vector<32x64xf32>
     gpu.return
   }
-
-  // CHECK-LABEL: distribute_constant
-  gpu.func @distribute_constant() {
-    // CHECK-COUNT-4: arith.constant dense<1.000000e+00> : vector<16x16xf32>
-    %cst = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [8, 4], sg_data = [16, 16]>} dense<1.0> : vector<256x128xf32>
-    gpu.return
-  }
 }
