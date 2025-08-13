@@ -317,7 +317,7 @@ TEST(NativeMemRefJit, MAYBE_JITCallback) {
 }
 
 static int initCnt = 0;
-// A helper function that will be called during the JIT's initialization
+// A helper function that will be called during the JIT's initialization.
 static void initCallback() { initCnt += 1; }
 
 TEST(GlobalCtorJit, MAYBE_JITCallback) {
@@ -339,7 +339,7 @@ TEST(GlobalCtorJit, MAYBE_JITCallback) {
   ASSERT_TRUE(!!module);
   ASSERT_TRUE(succeeded(lowerToLLVMDialect(*module)));
   ExecutionEngineOptions jitOptions;
-  // defer the initialization to register symbols used in ctors
+  // Defer the initialization to register symbols used in ctors.
   jitOptions.shouldInitialize = false;
   auto jitOrError = ExecutionEngine::create(*module, jitOptions);
   ASSERT_TRUE(!!jitOrError);
