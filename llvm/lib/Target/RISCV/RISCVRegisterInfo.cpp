@@ -465,7 +465,7 @@ void RISCVRegisterInfo::lowerSegmentSpillReload(MachineBasicBlock::iterator II,
 
       BuildMI(MBB, II, DL, TII->get(RISCV::ADD), NewBase)
           .addReg(Base, getKillRegState(I != 0 || IsBaseKill))
-          .addReg(Step, getKillRegState(true));
+          .addReg(Step, getKillRegState(I + RegNumHandled == NumRegs));
       Base = NewBase;
     }
 
