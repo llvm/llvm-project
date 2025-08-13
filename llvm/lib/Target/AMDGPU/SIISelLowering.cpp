@@ -5334,12 +5334,9 @@ static uint32_t getIdentityValueFor32BitWaveReduction(unsigned Opc) {
   case AMDGPU::S_ADD_I32:
   case AMDGPU::S_SUB_I32:
   case AMDGPU::S_OR_B32:
-  case AMDGPU::S_OR_B64:
   case AMDGPU::S_XOR_B32:
-  case AMDGPU::S_XOR_B64:
     return std::numeric_limits<uint32_t>::min();
   case AMDGPU::S_AND_B32:
-  case AMDGPU::S_AND_B64:
     return std::numeric_limits<uint32_t>::max();
   default:
     llvm_unreachable(
