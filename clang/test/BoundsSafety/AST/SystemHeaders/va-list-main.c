@@ -47,14 +47,12 @@ void func(char *dst_str, char *src_str, int len) {
 // CHECK: |     `-FunctionProtoType
 // CHECK: |       |-PointerType
 // CHECK: |       | `-BuiltinType
-// CHECK: |       `-ElaboratedType
+// CHECK: |       `-TypedefType
+// CHECK: |         |-Typedef
 // CHECK: |         `-TypedefType
 // CHECK: |           |-Typedef
-// CHECK: |           `-ElaboratedType
-// CHECK: |             `-TypedefType
-// CHECK: |               |-Typedef
-// CHECK: |               `-PointerType
-// CHECK: |                 `-BuiltinType
+// CHECK: |           `-PointerType
+// CHECK: |             `-BuiltinType
 // CHECK: |-VarDecl [[var_func_ptr2:0x[^ ]+]]
 // CHECK: `-FunctionDecl [[func_func:0x[^ ]+]] {{.+}} func
 // CHECK:   |-ParmVarDecl [[var_dst_str:0x[^ ]+]]

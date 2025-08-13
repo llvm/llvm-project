@@ -282,7 +282,7 @@ void method_call(int o) {
 // ATTR-ONLY: | | |       |-MemberExpr {{.*}} 'T' lvalue ->size
 // ATTR-ONLY: | | |       | `-CXXThisExpr {{.*}} 'Outer::Inner *'
 // ATTR-ONLY: | | |       `-DeclRefExpr {{.*}} 'q' 'int'
-// ATTR-ONLY: | | |-FieldDecl {{.*}} inner 'struct Inner':'Outer::Inner'
+// ATTR-ONLY: | | |-FieldDecl {{.*}} inner 'struct Inner'
 // ATTR-ONLY: | | `-CXXMethodDecl {{.*}} foo_m 'void (int)'
 // ATTR-ONLY: | |   `-CompoundStmt {{.*}}
 // ATTR-ONLY: | |     | `-VarDecl {{.*}} l 'T'
@@ -293,7 +293,7 @@ void method_call(int o) {
 // ATTR-ONLY: | |     | |-DeclRefExpr {{.*}} 'p1' 'T *'
 // ATTR-ONLY: | |     | `-CallExpr {{.*}} '<dependent type>'
 // ATTR-ONLY: | |     |   |-CXXDependentScopeMemberExpr {{.*}} .mymalloc_m
-// ATTR-ONLY: | |     |   | `-MemberExpr {{.*}} 'struct Inner':'Outer::Inner' lvalue ->inner
+// ATTR-ONLY: | |     |   | `-MemberExpr {{.*}} 'struct Inner' lvalue ->inner
 // ATTR-ONLY: | |     |   | `-CXXThisExpr {{.*}} 'Outer<T> *'
 // ATTR-ONLY: | |     |   `-DeclRefExpr {{.*}} 'm' 'int'
 // ATTR-ONLY: | |     `-BinaryOperator {{.*}} '='
@@ -336,7 +336,7 @@ void method_call(int o) {
 // BOUNDS-CHECK: | | |       |-MemberExpr {{.*}} 'T' lvalue ->size
 // BOUNDS-CHECK: | | |       | `-CXXThisExpr {{.*}} 'Outer::Inner *'
 // BOUNDS-CHECK: | | |       `-DeclRefExpr {{.*}} 'q'
-// BOUNDS-CHECK: | | |-FieldDecl {{.*}} inner 'struct Inner':'Outer::Inner'
+// BOUNDS-CHECK: | | |-FieldDecl {{.*}} inner 'struct Inner'
 // BOUNDS-CHECK: | | `-CXXMethodDecl {{.*}} foo_m 'void (int)'
 // BOUNDS-CHECK: | |   `-CompoundStmt
 // BOUNDS-CHECK: | |     | `-VarDecl {{.*}} l 'T'
@@ -347,7 +347,7 @@ void method_call(int o) {
 // BOUNDS-CHECK: | |     | |-DeclRefExpr {{.*}} 'p1' 'T *__bidi_indexable'
 // BOUNDS-CHECK: | |     | `-CallExpr {{.*}} '<dependent type>'
 // BOUNDS-CHECK: | |     |   |-CXXDependentScopeMemberExpr {{.*}} .mymalloc_m
-// BOUNDS-CHECK: | |     |   | `-MemberExpr {{.*}} 'struct Inner':'Outer::Inner' lvalue ->inner
+// BOUNDS-CHECK: | |     |   | `-MemberExpr {{.*}} 'struct Inner' lvalue ->inner
 // BOUNDS-CHECK: | |     |   | `-CXXThisExpr {{.*}} 'Outer<T> *'
 // BOUNDS-CHECK: | |     |   `-DeclRefExpr {{.*}} 'm' 'int'
 // BOUNDS-CHECK: | |     `-BinaryOperator {{.*}} '='
@@ -438,9 +438,9 @@ void method_call(int o) {
 // BOUNDS-CHECK: |   | |     | `-OpaqueValueExpr {{.*}} 'int'
 // BOUNDS-CHECK: |   | |     |   `-DeclRefExpr {{.*}} 'q' 'int'
 
-// ATTR-ONLY: |   |-FieldDecl {{.*}} 'struct Inner':'Outer<int>::Inner'
+// ATTR-ONLY: |   |-FieldDecl {{.*}} 'struct Inner'
 
-// BOUNDS-CHECK: |   |-FieldDecl {{.*}} inner 'struct Inner':'Outer<int>::Inner'
+// BOUNDS-CHECK: |   |-FieldDecl {{.*}} inner 'struct Inner'
 
 // ATTR-ONLY: |   |-CXXMethodDecl {{.*}} foo_m 'void (int)'
 // ATTR-ONLY: |   | `-CompoundStmt {{.*}}
