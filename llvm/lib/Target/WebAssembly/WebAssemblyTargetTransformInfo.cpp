@@ -147,8 +147,7 @@ WebAssemblyTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
 
   Options.AllowOverlappingLoads = true;
 
-  if (ST->hasSIMD128())
-    Options.LoadSizes.push_back(16);
+  // TODO: Teach WebAssembly backend about load v128.
 
   Options.LoadSizes.append({8, 4, 2, 1});
   Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
