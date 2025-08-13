@@ -238,10 +238,11 @@ void StableFunctionMapRecord::deserialize(const unsigned char *&Ptr,
       auto It = FunctionMap->HashToFuncs.try_emplace(Hash).first;
       StableFunctionMap::EntryStorage &Storage = It->second;
       Storage.Offsets.push_back(FixedSizeFieldsOffset);
-    } else
+    } else {
       deserializeEntry(
           reinterpret_cast<const unsigned char *>(FixedSizeFieldsOffset), Hash,
           FunctionMap.get());
+    }
     FixedSizeFieldsOffset += FixedSizeFieldsSizePerEntry;
   }
 
