@@ -253,7 +253,7 @@ public:
   DylibResolver(DylibPathValidator &validator) : validator(validator) {}
 
   void configure(StringRef loaderPath, ArrayRef<StringRef> rpaths,
-                 ArrayRef<StringRef> runpaths) {
+                 ArrayRef<StringRef> runpaths, ArrayRef<StringRef> extra = {}) {
     DylibSubstitutor substitutor;
     substitutor.configure(loaderPath);
 
@@ -261,7 +261,9 @@ public:
     if (!rpaths.empty())
       resolvers.emplace_back(rpaths, "@rpath");
     if (!runpaths.empty())
-      resolvers.emplace_back(runpaths, "@rpath"); // still usually @rpath
+      resolvers.emplace_back(runpaths, "@rpath");
+    if (!extra.empty())
+      resolvers.emplace_back(extra, "@rpath");
 
     impl_ = std::make_unique<DylibResolverImpl>(
         std::move(substitutor), validator, std::move(resolvers));
@@ -276,9 +278,6 @@ public:
 
   static std::string resolvelinkerFlag(StringRef libStem,
                                        StringRef loaderPath) {
-    // StringRef rpath("@rpath");
-    // if (libStem.starts_with(rpath))
-    //   return libStem.drop_front(rpath.size()).str();
     DylibSubstitutor substitutor;
     substitutor.configure(loaderPath);
     return substitutor.substitute(libStem);
@@ -353,8 +352,8 @@ private:
   std::shared_ptr<PathResolver> m_resolver;
 
   StringMap<std::shared_ptr<LibraryUnit>> m_units; // key: canonical path
-  std::deque<std::string> m_unscannedUsr;
-  std::deque<std::string> m_unscannedSys;
+  std::deque<StringRef> m_unscannedUsr;
+  std::deque<StringRef> m_unscannedSys;
 };
 
 class ObjectFileLoader {

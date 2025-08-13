@@ -60,7 +60,8 @@ bool ObjectFileLoader::isArchitectureCompatible(const object::ObjectFile &Obj) {
            << ", Object triple: " << ObjTriple.str() << "\n";
   });
 
-  if (HostTriple.getArch() != ObjTriple.getArch())
+  if (ObjTriple.getArch() != Triple::UnknownArch &&
+      HostTriple.getArch() != ObjTriple.getArch())
     return false;
 
   if (ObjTriple.getOS() != Triple::UnknownOS &&
@@ -363,7 +364,7 @@ DylibResolverImpl::tryWithExtensions(StringRef libStem) const {
     LLVM_DEBUG(dbgs() << "  Trying candidate: " << name << "\n";);
 
     for (const auto &resolver : resolvers) {
-      if (auto result = resolver.resolve(libStem, substitutor, validator))
+      if (auto result = resolver.resolve(name, substitutor, validator))
         return result;
     }
   }
@@ -670,11 +671,11 @@ void LibraryScanHelper::addBasePath(const std::string &path, PathType kind) {
   if (kind == PathType::User) {
     LLVM_DEBUG(dbgs() << "LibraryScanHelper::addBasePath: Added User path: "
                       << canon << "\n";);
-    m_unscannedUsr.push_back(canon);
+    m_unscannedUsr.push_back(StringRef(unit->basePath));
   } else {
     LLVM_DEBUG(dbgs() << "LibraryScanHelper::addBasePath: Added System path: "
                       << canon << "\n";);
-    m_unscannedSys.push_back(canon);
+    m_unscannedSys.push_back(StringRef(unit->basePath));
   }
 }
 
@@ -686,7 +687,7 @@ LibraryScanHelper::getNextBatch(PathType kind, size_t batchSize) {
   std::unique_lock<std::shared_mutex> lock(m_mutex);
 
   while (!queue.empty() && result.size() < batchSize) {
-    const std::string &base = queue.front(); // no copy
+    StringRef base = queue.front();
     auto it = m_units.find(base);
     if (it != m_units.end()) {
       auto &unit = it->second;
