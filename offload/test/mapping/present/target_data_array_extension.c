@@ -70,10 +70,10 @@ int main() {
   // CHECK: arr is present
   fprintf(stderr, "arr is present\n");
 
-  // CHECK: omptarget message: explicit extension not allowed: host address specified is 0x{{0*}}[[#LARGE_ADDR]] ([[#LARGE_BYTES]] bytes), but device allocation maps to host at 0x{{0*}}[[#SMALL_ADDR]] ([[#SMALL_BYTES]] bytes)
-  // CHECK: omptarget message: device mapping required by 'present' map type modifier does not exist for host address 0x{{0*}}[[#LARGE_ADDR]] ([[#LARGE_BYTES]] bytes)
-  // CHECK: omptarget error: Call to getTargetPointer returned null pointer ('present' map type modifier).
-  // CHECK: omptarget fatal error 1: failure of target construct while offloading is mandatory
+  // CHECK: message: explicit extension not allowed: host address specified is 0x{{0*}}[[#LARGE_ADDR]] ([[#LARGE_BYTES]] bytes), but device allocation maps to host at 0x{{0*}}[[#SMALL_ADDR]] ([[#SMALL_BYTES]] bytes)
+  // CHECK: message: device mapping required by 'present' map type modifier does not exist for host address 0x{{0*}}[[#LARGE_ADDR]] ([[#LARGE_BYTES]] bytes)
+  // CHECK: error: Call to getTargetPointer returned null pointer ('present' map type modifier).
+  // CHECK: fatal error 1: failure of target construct while offloading is mandatory
 #pragma omp target data map(alloc : arr[SMALL])
   {
 #pragma omp target data map(present, tofrom : arr[LARGE])

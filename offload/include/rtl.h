@@ -53,4 +53,8 @@ struct TableMap {
 };
 typedef std::map<void *, TableMap> HostPtrToTableMapTy;
 
+namespace llvm::offload {
+TableMap *getTableMap(void *HostPtr);
+}
+
 #endif

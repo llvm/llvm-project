@@ -15,6 +15,7 @@
 #include "Shared/Debug.h"
 #include "Shared/Profile.h"
 #include "device.h"
+#include "omptarget.h"
 
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -30,13 +31,122 @@ PluginManager *PM = nullptr;
 #define PLUGIN_TARGET(Name) extern "C" GenericPluginTy *createPlugin_##Name();
 #include "Shared/Targets.def"
 
-void PluginManager::init() {
-  TIMESCOPE();
-  if (OffloadPolicy::isOffloadDisabled()) {
-    ODBG(ODT_Init) << "Offload is disabled. Skipping plugin initialization";
-    return;
+int AsyncInfoTy::finalize() {
+  int Result = OFFLOAD_SUCCESS;
+  if (!isQueueEmpty()) {
+    switch (SyncType) {
+    case SyncTy::BLOCKING:
+      // If we have a queue we need to synchronize it now.
+      Result = Device.synchronize(*this);
+      assert(AsyncInfo.Queue == nullptr &&
+             "The device plugin should have nulled the queue to indicate there "
+             "are no outstanding actions!");
+      break;
+    case SyncTy::NON_BLOCKING:
+      Result = Device.queryAsync(*this);
+      break;
+    case SyncTy::STATIC_NON_BLOCKING:
+      Result = Device.queryAsyncStatic(*this);
+      break;
+    }
   }
 
+  // Run any pending post-processing function registered on this async object.
+  if (Result == OFFLOAD_SUCCESS && isQueueEmpty())
+    Result = runPostProcessing();
+
+  return Result;
+}
+
+static int32_t processPPFs(SmallVector<AsyncInfoTy::PostProcFuncTy> &PPFs) {
+  for (size_t I = 0; I < PPFs.size(); ++I)
+    if (int Res = PPFs[I](); Res != OFFLOAD_SUCCESS)
+      return Res;
+  return OFFLOAD_SUCCESS;
+}
+
+int AsyncInfoTy::synchronize() {
+  assert(SyncType == SyncTy::STATIC_NON_BLOCKING);
+
+  // We still have not created a queue, or this specific device does not
+  // generate queues.
+  if (isQueueEmpty())
+    return OFFLOAD_SUCCESS;
+
+  int Result = OFFLOAD_SUCCESS;
+  switch (SyncType) {
+  case SyncTy::BLOCKING:
+  case SyncTy::NON_BLOCKING: {
+    // BLOCKING and NON_BLOCKING types return the queue to the RTL after
+    // synchronization.
+    Result = Device.synchronize(*this);
+    assert(AsyncInfo.Queue == nullptr &&
+           "The device plugin should have nulled the queue to indicate there "
+           "are no outstanding actions!");
+    // Run any pending post-processing function registered on this async object.
+    if (Result == OFFLOAD_SUCCESS && isQueueEmpty())
+      Result = runPostProcessing();
+    return Result;
+  }
+  case SyncTy::STATIC_NON_BLOCKING: {
+    // STATIC_NON_BLOCKING retains its queue thus more careful handling of the
+    // post processing functions is required.
+
+    // Collect the enqueued PPFs until this point.
+    SmallVector<PostProcFuncTy> LocalPPFs;
+    {
+      std::lock_guard<std::mutex> PPFGuard{PostProcessingFunctionsMutex};
+      std::swap(LocalPPFs, PostProcessingFunctions);
+    }
+    Result = Device.synchronizeStatic(*this);
+    // Run any pending post-processing function collected _before_ we
+    // synchronize. This is important as between before the synchronization and
+    // after we could have enqueued more post processing operations, which we
+    // must not run yet.
+    if (Result == OFFLOAD_SUCCESS)
+      Result = processPPFs(LocalPPFs);
+
+    return Result;
+  }
+  }
+  llvm_unreachable("Unexpected SyncType");
+}
+
+int AsyncInfoTy::query() {
+  // If we don't have a queue, there are no pending actions.
+  if (isQueueEmpty())
+    return 0;
+  return Device.queryAsyncStatic(*this);
+}
+
+void *&AsyncInfoTy::getVoidPtrLocation() {
+  BufferLocations.push_back(nullptr);
+  return BufferLocations.back();
+}
+
+bool AsyncInfoTy::isDone() const { return isQueueEmpty(); }
+
+int32_t AsyncInfoTy::runPostProcessing() {
+  // Post-processing procedures might add new procedures themselves, so
+  // repeatedly process them until we are done.
+  while (true) {
+    SmallVector<PostProcFuncTy> LocalPPFs;
+    {
+      std::lock_guard<std::mutex> PPFGuard{PostProcessingFunctionsMutex};
+      std::swap(LocalPPFs, PostProcessingFunctions);
+    }
+    if (LocalPPFs.size() == 0)
+      return OFFLOAD_SUCCESS;
+    int32_t Result = processPPFs(LocalPPFs);
+    if (Result != OFFLOAD_SUCCESS)
+      return Result;
+  }
+}
+
+bool AsyncInfoTy::isQueueEmpty() const { return AsyncInfo.Queue == nullptr; }
+
+void PluginManager::initPlugins() {
+  TIMESCOPE();
   ODBG(ODT_Init) << "Loading RTLs";
 
   // Attempt to create an instance of each supported plugin.
@@ -130,13 +240,6 @@ void PluginManager::initializeAllDevices() {
       initializeDevice(Plugin, DeviceId);
     }
   }
-  // After all plugins are initialized, register atExit cleanup handlers
-  std::atexit([]() {
-    // Interop cleanup should be done before the plugins are deinitialized as
-    // the backend libraries may be already unloaded.
-    if (PM)
-      PM->InteropTbl.clear();
-  });
 }
 
 // Returns a pointer to the binary descriptor, upgrading from a legacy format if
@@ -316,10 +419,6 @@ void PluginManager::registerLib(__tgt_bin_desc *Desc) {
   ODBG(ODT_Init) << "Done registering entries!";
 }
 
-// Temporary forward declaration, old style CTor/DTor handling is going away.
-int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
-           KernelArgsTy &KernelArgs, AsyncInfoTy &AsyncInfo);
-
 void PluginManager::unregisterLib(__tgt_bin_desc *Desc) {
   ODBG(ODT_Deinit) << "Unloading target library!";
 
@@ -364,7 +463,8 @@ void PluginManager::unregisterLib(__tgt_bin_desc *Desc) {
   PM->TblMapMtx.lock();
   for (llvm::offloading::EntryTy *Cur = Desc->HostEntriesBegin;
        Cur < Desc->HostEntriesEnd; ++Cur) {
-    if (Cur->Kind == object::OffloadKind::OFK_OpenMP)
+    if (Cur->Kind == object::OffloadKind::OFK_OpenMP ||
+        Cur->Kind == object::OffloadKind::OFK_OpenACC)
       PM->HostPtrToTableMap.erase(Cur->Address);
   }
 
@@ -434,7 +534,8 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
           TransTable->TargetsEntries[DeviceId];
       for (llvm::offloading::EntryTy &Entry :
            llvm::make_range(Img->EntriesBegin, Img->EntriesEnd)) {
-        if (Entry.Kind != object::OffloadKind::OFK_OpenMP)
+        if (Entry.Kind != object::OffloadKind::OFK_OpenMP &&
+            Entry.Kind != object::OffloadKind::OFK_OpenACC)
           continue;
 
         __tgt_device_binary &Binary = *BinaryOrErr;
@@ -488,7 +589,8 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
            CurrDeviceEntry != EntryDeviceEnd;
            CurrDeviceEntry++, CurrHostEntry++) {
         if (CurrDeviceEntry->Size == 0 ||
-            CurrDeviceEntry->Kind != object::OffloadKind::OFK_OpenMP)
+            (CurrDeviceEntry->Kind != object::OffloadKind::OFK_OpenMP &&
+             CurrDeviceEntry->Kind != object::OffloadKind::OFK_OpenACC))
           continue;
 
         assert(CurrDeviceEntry->Size == CurrHostEntry->Size &&
@@ -511,7 +613,7 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
           void *DevPtr;
           Device.retrieveData(&DevPtr, CurrDeviceEntryAddr, sizeof(void *),
                               AsyncInfo, /*Entry=*/nullptr, &HDTTMap);
-          if (AsyncInfo.synchronize() != OFFLOAD_SUCCESS)
+          if (AsyncInfo.finalize() != OFFLOAD_SUCCESS)
             return OFFLOAD_FAIL;
           CurrDeviceEntryAddr = DevPtr;
         }
@@ -571,3 +673,41 @@ Expected<DeviceTy &> PluginManager::getDevice(uint32_t DeviceNo) {
                                        DeviceNo);
   return *DevicePtr;
 }
+
+namespace llvm::offload {
+/// Find the table information in the map or look it up in the translation
+/// tables.
+TableMap *getTableMap(void *HostPtr) {
+  std::lock_guard<std::mutex> TblMapLock(PM->TblMapMtx);
+  HostPtrToTableMapTy::iterator TableMapIt =
+      PM->HostPtrToTableMap.find(HostPtr);
+
+  if (TableMapIt != PM->HostPtrToTableMap.end())
+    return &TableMapIt->second;
+
+  // We don't have a map. So search all the registered libraries.
+  TableMap *TM = nullptr;
+  std::lock_guard<std::mutex> TrlTblLock(PM->TrlTblMtx);
+  for (HostEntriesBeginToTransTableTy::iterator Itr =
+           PM->HostEntriesBeginToTransTable.begin();
+       Itr != PM->HostEntriesBeginToTransTable.end(); ++Itr) {
+    // get the translation table (which contains all the good info).
+    TranslationTable *TransTable = &Itr->second;
+    // iterate over all the host table entries to see if we can locate the
+    // host_ptr.
+    llvm::offloading::EntryTy *Cur = TransTable->HostTable.EntriesBegin;
+    for (uint32_t I = 0; Cur < TransTable->HostTable.EntriesEnd; ++Cur, ++I) {
+      if (Cur->Address != HostPtr)
+        continue;
+      // we got a match, now fill the HostPtrToTableMap so that we
+      // may avoid this search next time.
+      TM = &(PM->HostPtrToTableMap)[HostPtr];
+      TM->Table = TransTable;
+      TM->Index = I;
+      return TM;
+    }
+  }
+
+  return nullptr;
+}
+} // namespace llvm::offload

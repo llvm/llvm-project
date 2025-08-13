@@ -207,7 +207,19 @@ GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs,
 }
 
 Function *createUnregisterFunction(Module &M, GlobalVariable *BinDesc,
-                                   StringRef Suffix) {
+                                   StringRef Suffix, OffloadKind Kind) {
+  StringRef RegFuncName;
+  switch (Kind) {
+  case OFK_OpenMP:
+    RegFuncName = "__tgt_unregister_lib";
+    break;
+  case OFK_OpenACC:
+    RegFuncName = "__tgt_acc_unregister_lib";
+    break;
+  default:
+    llvm_unreachable("Unexpected Kind - only OpenMP or OpenACC allowed");
+  }
+
   LLVMContext &C = M.getContext();
   auto *FuncTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg*/ false);
   auto *Func =
@@ -230,7 +242,7 @@ Function *createUnregisterFunction(Module &M, GlobalVariable *BinDesc,
 }
 
 void createRegisterFunction(Module &M, GlobalVariable *BinDesc,
-                            StringRef Suffix) {
+                            StringRef Suffix, OffloadKind Kind) {
   LLVMContext &C = M.getContext();
   auto *FuncTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg*/ false);
   auto *Func = Function::Create(FuncTy, GlobalValue::InternalLinkage,
@@ -240,14 +252,24 @@ void createRegisterFunction(Module &M, GlobalVariable *BinDesc,
   // Get __tgt_register_lib function declaration.
   auto *RegFuncTy = FunctionType::get(Type::getVoidTy(C), getBinDescPtrTy(M),
                                       /*isVarArg*/ false);
-  FunctionCallee RegFuncC =
-      M.getOrInsertFunction("__tgt_register_lib", RegFuncTy);
+  StringRef RegFuncName;
+  switch (Kind) {
+  case OFK_OpenMP:
+    RegFuncName = "__tgt_register_lib";
+    break;
+  case OFK_OpenACC:
+    RegFuncName = "__tgt_acc_register_lib";
+    break;
+  default:
+    llvm_unreachable("Unexpected Kind - only OpenMP or OpenACC allowed");
+  }
+  FunctionCallee RegFuncC = M.getOrInsertFunction(RegFuncName, RegFuncTy);
 
   auto *AtExitTy = FunctionType::get(
       Type::getInt32Ty(C), PointerType::getUnqual(C), /*isVarArg=*/false);
   FunctionCallee AtExit = M.getOrInsertFunction("atexit", AtExitTy);
 
-  Function *UnregFunc = createUnregisterFunction(M, BinDesc, Suffix);
+  Function *UnregFunc = createUnregisterFunction(M, BinDesc, Suffix, Kind);
 
   // Construct function body
   IRBuilder<> Builder(BasicBlock::Create(C, "entry", Func));
@@ -709,15 +731,15 @@ private:
 
 } // namespace
 
-Error offloading::wrapOpenMPBinaries(Module &M, ArrayRef<ArrayRef<char>> Images,
-                                     EntryArrayTy EntryArray,
-                                     llvm::StringRef Suffix, bool Relocatable) {
+Error offloading::wrapOpenMPOpenACCBinaries(
+    Module &M, ArrayRef<ArrayRef<char>> Images, EntryArrayTy EntryArray,
+    llvm::StringRef Suffix, bool Relocatable, OffloadKind Kind) {
   GlobalVariable *Desc =
       createBinDesc(M, Images, EntryArray, Suffix, Relocatable);
   if (!Desc)
     return createStringError(inconvertibleErrorCode(),
                              "No binary descriptors created.");
-  createRegisterFunction(M, Desc, Suffix);
+  createRegisterFunction(M, Desc, Suffix, Kind);
   return Error::success();
 }
 
