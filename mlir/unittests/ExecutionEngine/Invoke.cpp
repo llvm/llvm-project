@@ -205,7 +205,13 @@ TEST(NativeMemRefJit, SKIP_WITHOUT_JIT(BasicMemref)) {
   };
   int64_t shape[] = {k, m};
   int64_t shapeAlloc[] = {k + 1, m + 1};
-  OwningMemRef<float, 2> a(shape, shapeAlloc, init);
+  // Use a large alignment to stress the case where the memref data/basePtr are
+  // disjoint.
+  int alignment = 8192;
+  OwningMemRef<float, 2> a(shape, shapeAlloc, init, alignment);
+  ASSERT_EQ(
+      (void *)(((uintptr_t)a->basePtr + alignment - 1) & ~(alignment - 1)),
+      a->data);
   ASSERT_EQ(a->sizes[0], k);
   ASSERT_EQ(a->sizes[1], m);
   ASSERT_EQ(a->strides[0], m + 1);

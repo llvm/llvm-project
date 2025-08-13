@@ -1932,10 +1932,6 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     return SI;
   }
   // Rotate is a special case of funnel shift - 1st 2 args are the same.
-  case X86::BI__builtin_ia32_vprotb:
-  case X86::BI__builtin_ia32_vprotw:
-  case X86::BI__builtin_ia32_vprotd:
-  case X86::BI__builtin_ia32_vprotq:
   case X86::BI__builtin_ia32_vprotbi:
   case X86::BI__builtin_ia32_vprotwi:
   case X86::BI__builtin_ia32_vprotdi:
@@ -1946,12 +1942,6 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_prolq128:
   case X86::BI__builtin_ia32_prolq256:
   case X86::BI__builtin_ia32_prolq512:
-  case X86::BI__builtin_ia32_prolvd128:
-  case X86::BI__builtin_ia32_prolvd256:
-  case X86::BI__builtin_ia32_prolvd512:
-  case X86::BI__builtin_ia32_prolvq128:
-  case X86::BI__builtin_ia32_prolvq256:
-  case X86::BI__builtin_ia32_prolvq512:
     return EmitX86FunnelShift(*this, Ops[0], Ops[0], Ops[1], false);
   case X86::BI__builtin_ia32_prord128:
   case X86::BI__builtin_ia32_prord256:
@@ -1959,12 +1949,6 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_prorq128:
   case X86::BI__builtin_ia32_prorq256:
   case X86::BI__builtin_ia32_prorq512:
-  case X86::BI__builtin_ia32_prorvd128:
-  case X86::BI__builtin_ia32_prorvd256:
-  case X86::BI__builtin_ia32_prorvd512:
-  case X86::BI__builtin_ia32_prorvq128:
-  case X86::BI__builtin_ia32_prorvq256:
-  case X86::BI__builtin_ia32_prorvq512:
     return EmitX86FunnelShift(*this, Ops[0], Ops[0], Ops[1], true);
   case X86::BI__builtin_ia32_selectb_128:
   case X86::BI__builtin_ia32_selectb_256:
@@ -2354,29 +2338,6 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_vpshrdw128:
   case X86::BI__builtin_ia32_vpshrdw256:
   case X86::BI__builtin_ia32_vpshrdw512:
-    // Ops 0 and 1 are swapped.
-    return EmitX86FunnelShift(*this, Ops[1], Ops[0], Ops[2], true);
-
-  case X86::BI__builtin_ia32_vpshldvd128:
-  case X86::BI__builtin_ia32_vpshldvd256:
-  case X86::BI__builtin_ia32_vpshldvd512:
-  case X86::BI__builtin_ia32_vpshldvq128:
-  case X86::BI__builtin_ia32_vpshldvq256:
-  case X86::BI__builtin_ia32_vpshldvq512:
-  case X86::BI__builtin_ia32_vpshldvw128:
-  case X86::BI__builtin_ia32_vpshldvw256:
-  case X86::BI__builtin_ia32_vpshldvw512:
-    return EmitX86FunnelShift(*this, Ops[0], Ops[1], Ops[2], false);
-
-  case X86::BI__builtin_ia32_vpshrdvd128:
-  case X86::BI__builtin_ia32_vpshrdvd256:
-  case X86::BI__builtin_ia32_vpshrdvd512:
-  case X86::BI__builtin_ia32_vpshrdvq128:
-  case X86::BI__builtin_ia32_vpshrdvq256:
-  case X86::BI__builtin_ia32_vpshrdvq512:
-  case X86::BI__builtin_ia32_vpshrdvw128:
-  case X86::BI__builtin_ia32_vpshrdvw256:
-  case X86::BI__builtin_ia32_vpshrdvw512:
     // Ops 0 and 1 are swapped.
     return EmitX86FunnelShift(*this, Ops[1], Ops[0], Ops[2], true);
 

@@ -4310,7 +4310,7 @@ _mm256_maskz_scalef_ps (__mmask8 __U, __m256 __A, __m256 __B) {
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_rolv_epi32 (__m128i __A, __m128i __B)
 {
-  return (__m128i)__builtin_ia32_prolvd128((__v4si)__A, (__v4si)__B);
+  return (__m128i)__builtin_elementwise_fshl((__v4su)__A, (__v4su)__A, (__v4su)__B);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
@@ -4332,7 +4332,7 @@ _mm_maskz_rolv_epi32 (__mmask8 __U, __m128i __A, __m128i __B)
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_rolv_epi32 (__m256i __A, __m256i __B)
 {
-  return (__m256i)__builtin_ia32_prolvd256((__v8si)__A, (__v8si)__B);
+  return (__m256i)__builtin_elementwise_fshl((__v8su)__A, (__v8su)__A, (__v8su)__B);
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
@@ -4354,7 +4354,7 @@ _mm256_maskz_rolv_epi32 (__mmask8 __U, __m256i __A, __m256i __B)
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_rolv_epi64 (__m128i __A, __m128i __B)
 {
-  return (__m128i)__builtin_ia32_prolvq128((__v2di)__A, (__v2di)__B);
+  return (__m128i)__builtin_elementwise_fshl((__v2du)__A, (__v2du)__A, (__v2du)__B);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
@@ -4376,7 +4376,7 @@ _mm_maskz_rolv_epi64 (__mmask8 __U, __m128i __A, __m128i __B)
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_rolv_epi64 (__m256i __A, __m256i __B)
 {
-  return (__m256i)__builtin_ia32_prolvq256((__v4di)__A, (__v4di)__B);
+  return (__m256i)__builtin_elementwise_fshl((__v4du)__A, (__v4du)__A, (__v4du)__B);
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
@@ -4578,7 +4578,7 @@ _mm256_maskz_slli_epi64(__mmask8 __U, __m256i __A, unsigned int __B)
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_rorv_epi32 (__m128i __A, __m128i __B)
 {
-  return (__m128i)__builtin_ia32_prorvd128((__v4si)__A, (__v4si)__B);
+  return (__m128i)__builtin_elementwise_fshr((__v4su)__A, (__v4su)__A, (__v4su)__B);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
@@ -4600,7 +4600,7 @@ _mm_maskz_rorv_epi32 (__mmask8 __U, __m128i __A, __m128i __B)
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_rorv_epi32 (__m256i __A, __m256i __B)
 {
-  return (__m256i)__builtin_ia32_prorvd256((__v8si)__A, (__v8si)__B);
+  return (__m256i)__builtin_elementwise_fshr((__v8su)__A, (__v8su)__A, (__v8su)__B);
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
@@ -4622,7 +4622,7 @@ _mm256_maskz_rorv_epi32 (__mmask8 __U, __m256i __A, __m256i __B)
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_rorv_epi64 (__m128i __A, __m128i __B)
 {
-  return (__m128i)__builtin_ia32_prorvq128((__v2di)__A, (__v2di)__B);
+  return (__m128i)__builtin_elementwise_fshr((__v2du)__A, (__v2du)__A, (__v2du)__B);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
@@ -4644,7 +4644,7 @@ _mm_maskz_rorv_epi64 (__mmask8 __U, __m128i __A, __m128i __B)
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_rorv_epi64 (__m256i __A, __m256i __B)
 {
-  return (__m256i)__builtin_ia32_prorvq256((__v4di)__A, (__v4di)__B);
+  return (__m256i)__builtin_elementwise_fshr((__v4du)__A, (__v4du)__A, (__v4du)__B);
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS256

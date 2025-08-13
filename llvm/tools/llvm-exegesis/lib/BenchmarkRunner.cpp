@@ -8,6 +8,7 @@
 
 #include "BenchmarkRunner.h"
 #include "Assembler.h"
+#include "DisassemblerHelper.h"
 #include "Error.h"
 #include "MCInstrDescView.h"
 #include "MmapUtils.h"
@@ -20,6 +21,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Support/CrashRecoveryContext.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -588,6 +590,89 @@ private:
   const std::optional<int> BenchmarkProcessCPU;
 };
 #endif // __linux__
+
+// Structure to hold instruction information for assembly printing
+struct InstructionInfo {
+  std::string Text;
+  uint64_t Address;
+  std::string HexBytes;
+};
+
+// Helper function to print generated assembly snippets
+void printInstructions(const std::vector<InstructionInfo> &Instructions,
+                       int InitialLinesCount, int LastLinesCount) {
+  int N = Instructions.size();
+  dbgs() << "Generated assembly snippet:\n```\n";
+
+  // Print initial lines
+  for (int i = 0; i < InitialLinesCount; ++i)
+    dbgs() << format_hex_no_prefix(Instructions[i].Address, 0) << ":\t"
+           << Instructions[i].HexBytes << Instructions[i].Text << '\n';
+
+  // Show truncation message if needed
+  int SkippedInstructions = N - InitialLinesCount - LastLinesCount;
+  if (SkippedInstructions > 0)
+    dbgs() << "...\t(" << SkippedInstructions << " more instructions)\n";
+
+  // Print last min(PreviewLast, N - PreviewFirst) lines
+  int LastLinesToPrint = std::min(
+      LastLinesCount, N > InitialLinesCount ? N - InitialLinesCount : 0);
+  for (int i = N - LastLinesToPrint; i < N; ++i)
+    dbgs() << format_hex_no_prefix(Instructions[i].Address, 0) << ":\t"
+           << Instructions[i].HexBytes << Instructions[i].Text << '\n';
+  dbgs() << "```\n";
+}
+
+// Function to extract and print assembly from snippet
+Error printAssembledSnippet(const LLVMState &State,
+                            const SmallString<0> &Snippet) {
+  // Extract the actual function bytes from the object file
+  std::vector<uint8_t> FunctionBytes;
+  if (auto Err = getBenchmarkFunctionBytes(Snippet, FunctionBytes))
+    return make_error<Failure>("Failed to extract function bytes: " +
+                               toString(std::move(Err)));
+
+  // Decode all instructions first
+  DisassemblerHelper DisHelper(State);
+  uint64_t Address = 0;
+  std::vector<InstructionInfo> Instructions;
+  const size_t FunctionBytesSize = FunctionBytes.size();
+
+  while (Address < FunctionBytesSize) {
+    MCInst Inst;
+    uint64_t Size;
+    ArrayRef<uint8_t> Bytes(FunctionBytes.data() + Address,
+                            FunctionBytesSize - Address);
+
+    if (!DisHelper.decodeInst(Inst, Size, Bytes)) {
+      Instructions.push_back({"<decode error>", Address, ""});
+      break;
+    }
+
+    // Format instruction text
+    std::string InstStr;
+    raw_string_ostream OS(InstStr);
+    DisHelper.printInst(&Inst, OS);
+
+    // Create hex string for this instruction (big-endian order)
+    std::string HexStr;
+    raw_string_ostream HexOS(HexStr);
+    for (int i = Size - 1; i >= 0; --i)
+      HexOS << format_hex_no_prefix(Bytes[i], 2);
+
+    Instructions.push_back({OS.str(), Address, HexOS.str()});
+    Address += Size;
+  }
+
+#undef DEBUG_TYPE
+#define DEBUG_TYPE "preview-gen-assembly"
+  LLVM_DEBUG(printInstructions(Instructions, 10, 3));
+#undef DEBUG_TYPE
+#define DEBUG_TYPE "print-gen-assembly"
+  LLVM_DEBUG(printInstructions(Instructions, Instructions.size(), 0));
+#undef DEBUG_TYPE
+  return Error::success();
+}
 } // namespace
 
 Expected<SmallString<0>> BenchmarkRunner::assembleSnippet(
@@ -655,6 +740,10 @@ BenchmarkRunner::getRunnableConfiguration(
     if (Error E = Snippet.takeError())
       return std::move(E);
     RC.ObjectFile = getObjectFromBuffer(*Snippet);
+
+    // Print the assembled snippet by disassembling the binary data
+    if (Error E = printAssembledSnippet(State, *Snippet))
+      return std::move(E);
   }
 
   return std::move(RC);
