@@ -644,8 +644,14 @@ SymbolFileNativePDB::CreateClassStructUnion(PdbTypeSymId type_id,
 
   std::string uname = GetUnqualifiedTypeName(record);
 
-  // FIXME: Search IPI stream for LF_UDT_MOD_SRC_LINE.
+  llvm::Expected maybeDecl = ResolveUdtDeclaration(type_id);
   Declaration decl;
+  if (maybeDecl)
+    decl = std::move(*maybeDecl);
+  else
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), maybeDecl.takeError(),
+                   "Failed to resolve declaration for '{1}': {0}", uname);
+
   return MakeType(toOpaqueUid(type_id), ConstString(uname), size, nullptr,
                   LLDB_INVALID_UID, Type::eEncodingIsUID, decl, ct,
                   Type::ResolveState::Forward);
@@ -668,7 +674,14 @@ lldb::TypeSP SymbolFileNativePDB::CreateTagType(PdbTypeSymId type_id,
                                                 CompilerType ct) {
   std::string uname = GetUnqualifiedTypeName(er);
 
+  llvm::Expected maybeDecl = ResolveUdtDeclaration(type_id);
   Declaration decl;
+  if (maybeDecl)
+    decl = std::move(*maybeDecl);
+  else
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), maybeDecl.takeError(),
+                   "Failed to resolve declaration for '{1}': {0}", uname);
+
   TypeSP underlying_type = GetOrCreateType(er.UnderlyingType);
 
   return MakeType(
@@ -2555,4 +2568,71 @@ SymbolFileNativePDB::GetContextForType(TypeIndex ti) {
     break;
   }
   return ctx;
+}
+
+void SymbolFileNativePDB::CacheUdtDeclarations() {
+  for (CVType cvt : m_index->ipi().typeArray()) {
+    switch (cvt.kind()) {
+    case LF_UDT_SRC_LINE: {
+      UdtSourceLineRecord udt_src;
+      llvm::cantFail(TypeDeserializer::deserializeAs(cvt, udt_src));
+      m_udt_declarations.try_emplace(
+          udt_src.UDT, UdtDeclaration{/*FileNameIndex=*/udt_src.SourceFile,
+                                      /*IsIpiIndex=*/true,
+                                      /*Line=*/udt_src.LineNumber});
+    } break;
+    case LF_UDT_MOD_SRC_LINE: {
+      UdtModSourceLineRecord udt_mod_src;
+      llvm::cantFail(TypeDeserializer::deserializeAs(cvt, udt_mod_src));
+      // Some types might be contributed by multiple modules. We assume that
+      // they all point to the same file and line because we can only provide
+      // one location.
+      m_udt_declarations.try_emplace(
+          udt_mod_src.UDT,
+          UdtDeclaration{/*FileNameIndex=*/udt_mod_src.SourceFile,
+                         /*IsIpiIndex=*/false,
+                         /*Line=*/udt_mod_src.LineNumber});
+    } break;
+    default:
+      break;
+    }
+  }
+}
+
+llvm::Expected<Declaration>
+SymbolFileNativePDB::ResolveUdtDeclaration(PdbTypeSymId type_id) {
+  std::call_once(m_cached_udt_declarations, [this] { CacheUdtDeclarations(); });
+
+  auto it = m_udt_declarations.find(type_id.index);
+  if (it == m_udt_declarations.end())
+    return llvm::createStringError("No UDT declaration found");
+
+  llvm::StringRef file_name;
+  if (it->second.IsIpiIndex) {
+    CVType cvt = m_index->ipi().getType(it->second.FileNameIndex);
+    if (cvt.kind() != LF_STRING_ID)
+      return llvm::createStringError("File name was not a LF_STRING_ID");
+
+    StringIdRecord sid;
+    llvm::cantFail(TypeDeserializer::deserializeAs(cvt, sid));
+    file_name = sid.String;
+  } else {
+    // The file name index is an index into the string table
+    auto string_table = m_index->pdb().getStringTable();
+    if (!string_table)
+      return string_table.takeError();
+
+    llvm::Expected<llvm::StringRef> string =
+        string_table->getStringTable().getString(
+            it->second.FileNameIndex.getIndex());
+    if (!string)
+      return string.takeError();
+    file_name = *string;
+  }
+
+  // rustc sets the filename to "<unknown>" for some files
+  if (file_name == "\\<unknown>")
+    return Declaration();
+
+  return Declaration(FileSpec(file_name), it->second.Line);
 }
