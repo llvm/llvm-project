@@ -159,6 +159,119 @@ Value *EmitAMDGPUGridSize(CodeGenFunction &CGF, unsigned Index) {
                   llvm::MDNode::get(CGF.getLLVMContext(), {}));
   return LD;
 }
+// Lowers __builtin_amdgcn_ds_bpermute to the corresponding LLVM intrinsic with
+// careful bit-level coercions of operands and result to match Clang types.
+llvm::Value *emitAMDGCNDsBpermute(clang::CodeGen::CodeGenFunction &CGF,
+                                  const clang::CallExpr *Call) {
+  auto &Builder = CGF.Builder;
+  auto &CGM = CGF.CGM;
+  const llvm::DataLayout &DL = CGM.getDataLayout();
+
+  llvm::Type *I32Ty = Builder.getInt32Ty();
+
+  auto GetBitWidth = [&](llvm::Type *Ty) -> unsigned {
+    return DL.getTypeSizeInBits(Ty).getFixedValue();
+  };
+
+  // Coerces arbitrary scalar/vector/pointer to i32 by preserving value/bit
+  // semantics where applicable.
+  auto ToI32Bits = [&](llvm::Value *Val, clang::QualType Qt) -> llvm::Value * {
+    llvm::Type *Ty = Val->getType();
+
+    if (Ty->isIntegerTy()) {
+      unsigned BitWidth = Ty->getIntegerBitWidth();
+      if (BitWidth < 32) {
+        if (Qt->isSignedIntegerType())
+          return Builder.CreateSExt(Val, I32Ty);
+        else
+          return Builder.CreateZExt(Val, I32Ty);
+      } else
+        return Builder.CreateZExtOrTrunc(Val, I32Ty);
+    }
+
+    if (Ty->isPointerTy()) {
+      unsigned PtrBits = DL.getPointerSizeInBits(Ty->getPointerAddressSpace());
+      llvm::Type *IntPtrTy = Builder.getIntNTy(PtrBits);
+      llvm::Value *AsInt = Builder.CreatePtrToInt(Val, IntPtrTy);
+      return Builder.CreateZExtOrTrunc(AsInt, I32Ty);
+    }
+
+    unsigned Bits = GetBitWidth(Ty);
+    llvm::Type *IntN = Builder.getIntNTy(Bits);
+    llvm::Value *AsInt = Builder.CreateBitCast(Val, IntN);
+    return Builder.CreateZExtOrTrunc(AsInt, I32Ty);
+  };
+
+  // Bit-preserving resize/cast between arbitrary source and destination LLVM
+  // types.
+  auto BitCoerceTo = [&](llvm::Value *Val, llvm::Type *DstTy) -> llvm::Value * {
+    llvm::Type *SrcTy = Val->getType();
+    if (SrcTy == DstTy)
+      return Val;
+
+    unsigned SrcBits = DL.getTypeSizeInBits(SrcTy).getFixedValue();
+    unsigned DstBits = DL.getTypeSizeInBits(DstTy).getFixedValue();
+
+    if (SrcTy->isIntegerTy() && DstTy->isIntegerTy())
+      return Builder.CreateZExtOrTrunc(Val, DstTy);
+
+    if (SrcBits == DstBits)
+      return Builder.CreateBitCast(Val, DstTy);
+
+    llvm::Type *IntSrcTy = Builder.getIntNTy(SrcBits);
+    llvm::Value *AsInt = Val;
+    if (SrcTy->isPointerTy())
+      AsInt = Builder.CreatePtrToInt(Val, IntSrcTy);
+    else if (!SrcTy->isIntegerTy())
+      AsInt = Builder.CreateBitCast(Val, IntSrcTy);
+
+    llvm::Type *IntDstTy = Builder.getIntNTy(DstBits);
+    llvm::Value *Resized = Builder.CreateZExtOrTrunc(AsInt, IntDstTy);
+
+    if (DstTy->isPointerTy())
+      return Builder.CreateIntToPtr(Resized, DstTy);
+
+    return Builder.CreateBitCast(Resized, DstTy);
+  };
+
+  llvm::Value *Index = CGF.EmitScalarExpr(Call->getArg(0));
+  llvm::Value *Source = CGF.EmitScalarExpr(Call->getArg(1));
+
+  llvm::Type *ReturnTy = CGF.ConvertType(Call->getType());
+
+  llvm::Value *IndexI32 = ToI32Bits(Index, Call->getArg(0)->getType());
+
+  llvm::Value *SourceForIntrinsic;
+  llvm::Type *SourceTy = Source->getType();
+
+  if (SourceTy->isDoubleTy()) {
+    llvm::Value *AsFloat = Builder.CreateFPTrunc(Source, Builder.getFloatTy());
+    SourceForIntrinsic = Builder.CreateBitCast(AsFloat, I32Ty);
+  } else
+    SourceForIntrinsic = ToI32Bits(Source, Call->getArg(1)->getType());
+
+  llvm::Function *IntrinsicFn =
+      CGM.getIntrinsic(llvm::Intrinsic::amdgcn_ds_bpermute);
+
+  llvm::Value *Result =
+      Builder.CreateCall(IntrinsicFn, {IndexI32, SourceForIntrinsic});
+
+  if (ReturnTy->isDoubleTy()) {
+    llvm::Value *AsFloat = Builder.CreateBitCast(Result, Builder.getFloatTy());
+    return Builder.CreateFPExt(AsFloat, ReturnTy);
+  }
+
+  if (ReturnTy->isIntegerTy() && ReturnTy->getIntegerBitWidth() > 32) {
+    clang::QualType SourceQt = Call->getArg(1)->getType();
+    if (SourceQt->isSignedIntegerType())
+      return Builder.CreateSExt(Result, ReturnTy);
+    else
+      return Builder.CreateZExt(Result, ReturnTy);
+  }
+
+  return BitCoerceTo(Result, ReturnTy);
+}
+
 } // namespace
 
 // Generates the IR for __builtin_read_exec_*.
@@ -341,6 +454,10 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_ds_swizzle:
     return emitBuiltinWithOneOverloadedType<2>(*this, E,
                                                Intrinsic::amdgcn_ds_swizzle);
+
+  case AMDGPU::BI__builtin_amdgcn_ds_bpermute:
+    return emitAMDGCNDsBpermute(*this, E);
+
   case AMDGPU::BI__builtin_amdgcn_mov_dpp8:
   case AMDGPU::BI__builtin_amdgcn_mov_dpp:
   case AMDGPU::BI__builtin_amdgcn_update_dpp: {

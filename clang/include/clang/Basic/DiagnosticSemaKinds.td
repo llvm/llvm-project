@@ -13547,4 +13547,11 @@ def warn_acc_var_referenced_lacks_op
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;
 def note_amdgcn_load_lds_size_valid_value : Note<"size must be %select{1, 2, or 4|1, 2, 4, 12 or 16}0">;
+def err_amdgcn_builtin_vector_pointer_arg_size
+    : Error<"the vector or pointer argument to %0 must have a total size of %1 "
+            "bits or less, but type %2 has a size of %3 bits">;
+def warn_amdgcn_builtin_arg_truncation
+    : Warning<"the %0-bit argument will be truncated to %1 bits in this call "
+              "to %2">,
+      InGroup<DiagGroup<"amdgcn-builtin-arg-trunc">>;
 } // end of sema component.
