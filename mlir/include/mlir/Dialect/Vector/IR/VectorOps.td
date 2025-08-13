@@ -2054,7 +2054,9 @@ def Vector_GatherOp :
                Variadic<Index>:$indices,
                VectorOfNonZeroRankOf<[AnyInteger, Index]>:$index_vec,
                VectorOfNonZeroRankOf<[I1]>:$mask,
-               AnyVectorOfNonZeroRank:$pass_thru)>,
+               AnyVectorOfNonZeroRank:$pass_thru,
+               ConfinedAttr<OptionalAttr<I64Attr>,
+                   [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment)>,
     Results<(outs AnyVectorOfNonZeroRank:$result)> {
 
   let summary = [{
@@ -2085,6 +2087,12 @@ def Vector_GatherOp :
     during progressively lowering to bring other memory operations closer to
     hardware ISA support for a gather.
 
+    An optional `alignment` attribute allows to specify the byte alignment of the
+    scatter operation. It must be a positive power of 2. The operation must access
+    memory at an address aligned to this boundary. Violations may lead to
+    architecture-specific faults or performance penalties.
+    A value of 0 indicates no specific alignment requirement.
+
     Examples:
 
     ```mlir
@@ -2111,6 +2119,20 @@ def Vector_GatherOp :
     "`into` type($result)";
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
+
+  let builders = [
+    OpBuilder<(ins "VectorType":$resultType,
+                   "Value":$base,
+                   "ValueRange":$indices,
+                   "Value":$index_vec,
+                   "Value":$mask,
+                   "Value":$passthrough,
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
+      return build($_builder, $_state, resultType, base, indices, index_vec, mask, passthrough,
+                   alignment.has_value() ? $_builder.getI64IntegerAttr(alignment->value()) :
+                                    nullptr);
+    }]>
+  ];
 }
 
 def Vector_ScatterOp :
@@ -2119,7 +2141,9 @@ def Vector_ScatterOp :
                Variadic<Index>:$indices,
                VectorOfNonZeroRankOf<[AnyInteger, Index]>:$index_vec,
                VectorOfNonZeroRankOf<[I1]>:$mask,
-               AnyVectorOfNonZeroRank:$valueToStore)> {
+               AnyVectorOfNonZeroRank:$valueToStore,
+               ConfinedAttr<OptionalAttr<I64Attr>,
+                   [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment)> {
 
   let summary = [{
     scatters elements from a vector into memory as defined by an index vector
@@ -2153,6 +2177,12 @@ def Vector_ScatterOp :
     correspond to those of the `llvm.masked.scatter`
     [intrinsic](https://llvm.org/docs/LangRef.html#llvm-masked-scatter-intrinsics).
 
+    An optional `alignment` attribute allows to specify the byte alignment of the
+    scatter operation. It must be a positive power of 2. The operation must access
+    memory at an address aligned to this boundary. Violations may lead to
+    architecture-specific faults or performance penalties.
+    A value of 0 indicates no specific alignment requirement.
+
     Examples:
 
     ```mlir
@@ -2177,6 +2207,19 @@ def Vector_ScatterOp :
       "type($index_vec)  `,` type($mask) `,` type($valueToStore)";
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
+
+  let builders = [
+    OpBuilder<(ins "Value":$base,
+                   "ValueRange":$indices,
+                   "Value":$index_vec,
+                   "Value":$mask,
+                   "Value":$valueToStore,
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">: $alignment), [{
+      return build($_builder, $_state, base, indices, index_vec, mask, valueToStore,
+                   alignment.has_value() ? $_builder.getI64IntegerAttr(alignment->value()) :
+                                    nullptr);
+    }]>
+  ];
 }
 
 def Vector_ExpandLoadOp :
@@ -2184,7 +2227,9 @@ def Vector_ExpandLoadOp :
     Arguments<(ins Arg<AnyMemRef, "", [MemRead]>:$base,
                Variadic<Index>:$indices,
                FixedVectorOfNonZeroRankOf<[I1]>:$mask,
-               AnyVectorOfNonZeroRank:$pass_thru)>,
+               AnyVectorOfNonZeroRank:$pass_thru,
+               ConfinedAttr<OptionalAttr<I64Attr>,
+                            [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment)>,
     Results<(outs AnyVectorOfNonZeroRank:$result)> {
 
   let summary = "reads elements from memory and spreads them into a vector as defined by a mask";
@@ -2216,6 +2261,12 @@ def Vector_ExpandLoadOp :
     correspond to those of the `llvm.masked.expandload`
     [intrinsic](https://llvm.org/docs/LangRef.html#llvm-masked-expandload-intrinsics).
 
+    An optional `alignment` attribute allows to specify the byte alignment of the
+    load operation. It must be a positive power of 2. The operation must access
+    memory at an address aligned to this boundary. Violations may lead to
+    architecture-specific faults or performance penalties.
+    A value of 0 indicates no specific alignment requirement.
+
     Note, at the moment this Op is only available for fixed-width vectors.
 
     Examples:
@@ -2246,6 +2297,19 @@ def Vector_ExpandLoadOp :
     "type($base) `,` type($mask) `,` type($pass_thru) `into` type($result)";
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
+
+  let builders = [
+    OpBuilder<(ins "VectorType":$resultType,
+                   "Value":$base,
+                   "ValueRange":$indices,
+                   "Value":$mask,
+                   "Value":$passthrough,
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
+      return build($_builder, $_state, resultType, base, indices, mask, passthrough,
+                   alignment.has_value() ? $_builder.getI64IntegerAttr(alignment->value()) :
+                                    nullptr);
+    }]>
+  ];
 }
 
 def Vector_CompressStoreOp :
@@ -2253,7 +2317,9 @@ def Vector_CompressStoreOp :
     Arguments<(ins Arg<AnyMemRef, "", [MemWrite]>:$base,
                Variadic<Index>:$indices,
                FixedVectorOfNonZeroRankOf<[I1]>:$mask,
-               AnyVectorOfNonZeroRank:$valueToStore)> {
+               AnyVectorOfNonZeroRank:$valueToStore,
+               ConfinedAttr<OptionalAttr<I64Attr>,
+                            [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment)> {
 
   let summary = "writes elements selectively from a vector as defined by a mask";
 
@@ -2284,6 +2350,12 @@ def Vector_CompressStoreOp :
     correspond to those of the `llvm.masked.compressstore`
     [intrinsic](https://llvm.org/docs/LangRef.html#llvm-masked-compressstore-intrinsics).
 
+    An optional `alignment` attribute allows to specify the byte alignment of the
+    store operation. It must be a positive power of 2. The operation must access
+    memory at an address aligned to this boundary. Violations may lead to
+    architecture-specific faults or performance penalties.
+    A value of 0 indicates no specific alignment requirement.
+
     Note, at the moment this Op is only available for fixed-width vectors.
 
     Examples:
@@ -2312,6 +2384,17 @@ def Vector_CompressStoreOp :
       "type($base) `,` type($mask) `,` type($valueToStore)";
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
+  let builders = [
+    OpBuilder<(ins "Value":$base,
+                   "ValueRange":$indices,
+                   "Value":$mask,
+                   "Value":$valueToStore,
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
+      return build($_builder, $_state, base, indices, valueToStore, mask,
+                   alignment.has_value() ? $_builder.getI64IntegerAttr(alignment->value()) :
+                                    nullptr);
+    }]>
+  ];
 }
 
 def Vector_ShapeCastOp :
