@@ -3931,12 +3931,23 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     //                <16 x i8> into <4 x i8>  (reduction factor == 4)
     Value *OutShadow =
         horizontalReduce(I, ReductionFactor, ComboNonZero, nullptr);
-    // TODO: it could be faster to squash <8 x i1> into <4 x i2>, compare to
-    //       zero to get <4 x i1>, then sign-extend to <4 x i8>.
+    // TODO: it could be faster to bitcast <8 x i1> into <4 x i2>, compare to
+    //       zero to get <4 x i1>, then sign-extend to <4 x i8>. This
+    //       approximation works because we treat each element as either fully
+    //       initialized or fully uninitialized.
 
     // Extend to <4 x i32>.
-    // For MMX, cast it back to <1 x i64>.
-    *OutShadow = CreateShadowCast(IRB, OutShadow, getShadowTy(&I));
+    if (EltSizeInBits) {
+      FixedVectorType *ImplicitReturnType = cast<FixedVectorType>(
+          getMMXVectorTy(EltSizeInBits * 2, ParamType->getPrimitiveSizeInBits()));
+      OutShadow = IRB.CreateSExt(OutShadow, ImplicitReturnType);
+    } else {
+      assert(cast<FixedVectorType>(OutShadow->getType())->getNumElements()
+             == cast<FixedVectorType>(getShadowTy(&I))->getNumElements());
+    }
+
+    // For MMX, cast it back to the required fake return type (<1 x i64>).
+    OutShadow = CreateShadowCast(IRB, OutShadow, getShadowTy(&I));
 
     setShadow(&I, OutShadow);
     setOriginForNaryOp(I);
