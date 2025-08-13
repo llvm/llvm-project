@@ -234,6 +234,9 @@ RISC-V Support
 - Add support for `__attribute__((interrupt("rnmi")))` to be used with the `Smrnmi` extension.
   With this the `Smrnmi` extension is fully supported.
 
+- Add `-march=unset` to clear any previous `-march=` value. This ISA string will
+  be computed from `-mcpu` or the platform default.
+
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
