@@ -6521,15 +6521,15 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
       return false;
 
     const SCEVAddExpr *Add = dyn_cast<SCEVAddExpr>(PtrSCEV);
-    if (!Add)
-      return false;
     int64_t Offset = 0;
-    for (int I : seq<int>(Add->getNumOperands())) {
-      auto *SC = dyn_cast<SCEVConstant>(Add->getOperand(I));
-      if (!SC)
-        continue;
-      Offset = SC->getAPInt().getSExtValue();
-      break;
+    if (Add) {
+      for (int I : seq<int>(Add->getNumOperands())) {
+        const SCEVConstant *SC = dyn_cast<SCEVConstant>(Add->getOperand(I));
+        if (!SC)
+          continue;
+        Offset = SC->getAPInt().getSExtValue();
+        break;
+      }
     }
     OffsetToPointerOpIdxMap[Offset].first.push_back(Ptr);
     OffsetToPointerOpIdxMap[Offset].second.push_back(Idx);
