@@ -2077,9 +2077,9 @@ def Vector_GatherOp :
         %base: memref<?x10x?xf32>, %i0: index, %i1: index, %i2: index,
         %index_vec: vector<2x3xi32>, %mask: vector<2x3xi1>,
         %fall_thru: vector<2x3xf32>) -> vector<2x3xf32> {
-           %result = vector.gather %base[%i0, %i1, %i2]
+            %result = vector.gather %base[%i0, %i1, %i2]
                                    [%index_vec], %mask, %fall_thru : [...]
-       return %result : vector<2x3xf32>
+            return %result : vector<2x3xf32>
     }
     ```
 
