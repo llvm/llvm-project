@@ -400,9 +400,8 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
     return symbolMap;
   };
   engine->registerSymbols(runtimeSymbolMap);
-  if (options.shouldInitialize) {
+  if (options.shouldInitialize)
     engine->initialize();
-  }
   return std::move(engine);
 }
 
