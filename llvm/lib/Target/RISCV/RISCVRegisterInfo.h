@@ -107,8 +107,8 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
   int64_t getFrameIndexInstrOffset(const MachineInstr *MI,
                                    int Idx) const override;
 
-  void lowerVSPILL(MachineBasicBlock::iterator II) const;
-  void lowerVRELOAD(MachineBasicBlock::iterator II) const;
+  void lowerSegmentSpillReload(MachineBasicBlock::iterator II,
+                               bool IsSpill) const;
 
   Register getFrameRegister(const MachineFunction &MF) const override;
 
