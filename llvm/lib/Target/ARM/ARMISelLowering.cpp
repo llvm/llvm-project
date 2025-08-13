@@ -7406,7 +7406,7 @@ static bool isVTRNMask(ArrayRef<int> M, EVT VT, unsigned &WhichResult) {
     return false;
 
   unsigned NumElts = VT.getVectorNumElements();
-  if (M.size() != NumElts && M.size() != NumElts*2)
+  if ((M.size() != NumElts && M.size() != NumElts * 2) || NumElts % 2 != 0)
     return false;
 
   // If the mask is twice as long as the input vector then we need to check the
@@ -7438,7 +7438,7 @@ static bool isVTRN_v_undef_Mask(ArrayRef<int> M, EVT VT, unsigned &WhichResult){
     return false;
 
   unsigned NumElts = VT.getVectorNumElements();
-  if (M.size() != NumElts && M.size() != NumElts*2)
+  if ((M.size() != NumElts && M.size() != NumElts * 2) || NumElts % 2 != 0)
     return false;
 
   for (unsigned i = 0; i < M.size(); i += NumElts) {
@@ -7541,7 +7541,7 @@ static bool isVZIPMask(ArrayRef<int> M, EVT VT, unsigned &WhichResult) {
     return false;
 
   unsigned NumElts = VT.getVectorNumElements();
-  if (M.size() != NumElts && M.size() != NumElts*2)
+  if ((M.size() != NumElts && M.size() != NumElts * 2) || NumElts % 2 != 0)
     return false;
 
   for (unsigned i = 0; i < M.size(); i += NumElts) {
@@ -7574,7 +7574,7 @@ static bool isVZIP_v_undef_Mask(ArrayRef<int> M, EVT VT, unsigned &WhichResult){
     return false;
 
   unsigned NumElts = VT.getVectorNumElements();
-  if (M.size() != NumElts && M.size() != NumElts*2)
+  if ((M.size() != NumElts && M.size() != NumElts * 2) || NumElts % 2 != 0)
     return false;
 
   for (unsigned i = 0; i < M.size(); i += NumElts) {
