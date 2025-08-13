@@ -259,9 +259,6 @@ static NamedDecl *LookupSingleName(Interpreter &Interp, const char *Name) {
 }
 
 TEST_F(InterpreterTest, InstantiateTemplate) {
-#ifdef __EMSCRIPTEN__
-  GTEST_SKIP() << "Test fails for Emscipten builds";
-#endif
   // FIXME: We cannot yet handle delayed template parsing. If we run with
   // -fdelayed-template-parsing we try adding the newly created decl to the
   // active PTU which causes an assert.
