@@ -29,6 +29,7 @@
   ],
   "devDependencies": {
     "@types/node": "^18.19.41",
+    "@types/tabulator-tables": "^6.2.10",
     "@types/vscode": "1.75.0",
     "@vscode/debugprotocol": "^1.68.0",
     "@vscode/vsce": "^3.2.2",
@@ -43,9 +44,9 @@
   ],
   "main": "./out/extension",
   "scripts": {
-    "bundle-assets": "cp node_modules/tabulator-tables/dist/js/tabulator.min.js ./out/ && cp node_modules/tabulator-tables/dist/css/tabulator.min.css ./out/",
-    "vscode:prepublish": "npm run bundle-assets && tsc -p ./",
-    "watch": "npm run bundle-assets && tsc -watch -p ./",
+    "bundle-webview": "tsc -p ./src-ts-webview/ && cp node_modules/tabulator-tables/dist/js/tabulator.min.js ./out/webview/ && cp node_modules/tabulator-tables/dist/css/tabulator.min.css ./out/webview/",
+    "vscode:prepublish": "npm run bundle-webview && tsc -p ./src-ts/",
+    "watch": "npm run bundle-webview && tsc -watch -p ./src-ts/",
     "format": "npx prettier './src-ts/' --write",
     "package": "rm -rf ./out/lldb-dap.vsix && vsce package --out ./out/lldb-dap.vsix",
     "publish": "vsce publish",

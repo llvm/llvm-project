@@ -1,16 +1,17 @@
 {
 	"compilerOptions": {
+		"moduleResolution": "node",
 		"module": "commonjs",
-		"outDir": "out",
-		"rootDir": "src-ts",
+		"outDir": "../out",
+		"rootDir": ".",
 		"sourceMap": true,
 		"strict": true,
 		"target": "es6"
 	},
 	"include": [
-		"src-ts"
+		"./**/*"
 	],
 	"exclude": [
-		"node_modules",
+		"../node_modules",
 	]
 }
