@@ -56,7 +56,6 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
@@ -14054,13 +14053,6 @@ void SelectionDAG::copyExtraInfo(SDNode *From, SDNode *To) {
   assert(false && "From subgraph too complex - increase max. MaxDepth?");
   // Best-effort fallback if assertions disabled.
   SDEI[To] = std::move(NEI);
-}
-
-MachineMemOperand::Flags
-SelectionDAG::getNonTemporalMemFlag(const VPIntrinsic &VPIntrin) {
-  return VPIntrin.hasMetadata(LLVMContext::MD_nontemporal)
-             ? MachineMemOperand::MONonTemporal
-             : MachineMemOperand::MONone;
 }
 
 #ifndef NDEBUG

@@ -91,7 +91,6 @@ class TargetLowering;
 class TargetMachine;
 class TargetSubtargetInfo;
 class Value;
-class VPIntrinsic;
 
 template <typename T> class GenericSSAContext;
 using SSAContext = GenericSSAContext<Function>;
@@ -1007,9 +1006,6 @@ public:
     }
     llvm_unreachable("Unknown opcode");
   }
-
-  static MachineMemOperand::Flags
-  getNonTemporalMemFlag(const VPIntrinsic &VPIntrin);
 
   /// Convert Op, which must be of integer type, to the
   /// integer type VT, by either any-extending or truncating it.

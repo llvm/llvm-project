@@ -8440,8 +8440,7 @@ void SelectionDAGBuilder::visitVPLoad(
   SDValue InChain = AddToChain ? DAG.getRoot() : DAG.getEntryNode();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   MachineMemOperand::Flags MMOFlags =
-      MachineMemOperand::MOLoad | TLI.getTargetMMOFlags(VPIntrin) |
-      SelectionDAG::getNonTemporalMemFlag(VPIntrin);
+      TLI.getVPIntrinsicMemOperandFlags(VPIntrin);
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(PtrOperand), MMOFlags,
       LocationSize::beforeOrAfterPointer(), *Alignment, AAInfo, Ranges);
@@ -8495,8 +8494,7 @@ void SelectionDAGBuilder::visitVPGather(
   unsigned AS =
     PtrOperand->getType()->getScalarType()->getPointerAddressSpace();
   MachineMemOperand::Flags MMOFlags =
-      MachineMemOperand::MOLoad | TLI.getTargetMMOFlags(VPIntrin) |
-      SelectionDAG::getNonTemporalMemFlag(VPIntrin);
+      TLI.getVPIntrinsicMemOperandFlags(VPIntrin);
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(AS), MMOFlags, LocationSize::beforeOrAfterPointer(),
       *Alignment, AAInfo, Ranges);
@@ -8539,8 +8537,7 @@ void SelectionDAGBuilder::visitVPStore(
   SDValue Offset = DAG.getUNDEF(Ptr.getValueType());
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   MachineMemOperand::Flags MMOFlags =
-      MachineMemOperand::MOStore | TLI.getTargetMMOFlags(VPIntrin) |
-      SelectionDAG::getNonTemporalMemFlag(VPIntrin);
+      TLI.getVPIntrinsicMemOperandFlags(VPIntrin);
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(PtrOperand), MMOFlags,
       LocationSize::beforeOrAfterPointer(), *Alignment, AAInfo);
@@ -8565,8 +8562,7 @@ void SelectionDAGBuilder::visitVPScatter(
   unsigned AS =
       PtrOperand->getType()->getScalarType()->getPointerAddressSpace();
   MachineMemOperand::Flags MMOFlags =
-      MachineMemOperand::MOStore | TLI.getTargetMMOFlags(VPIntrin) |
-      SelectionDAG::getNonTemporalMemFlag(VPIntrin);
+      TLI.getVPIntrinsicMemOperandFlags(VPIntrin);
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(AS), MMOFlags, LocationSize::beforeOrAfterPointer(),
       *Alignment, AAInfo);
@@ -8612,8 +8608,7 @@ void SelectionDAGBuilder::visitVPStridedLoad(
   unsigned AS = PtrOperand->getType()->getPointerAddressSpace();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   MachineMemOperand::Flags MMOFlags =
-      MachineMemOperand::MOLoad | TLI.getTargetMMOFlags(VPIntrin) |
-      SelectionDAG::getNonTemporalMemFlag(VPIntrin);
+      TLI.getVPIntrinsicMemOperandFlags(VPIntrin);
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(AS), MMOFlags, LocationSize::beforeOrAfterPointer(),
       *Alignment, AAInfo, Ranges);
@@ -8639,8 +8634,7 @@ void SelectionDAGBuilder::visitVPStridedStore(
   unsigned AS = PtrOperand->getType()->getPointerAddressSpace();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   MachineMemOperand::Flags MMOFlags =
-      MachineMemOperand::MOStore | TLI.getTargetMMOFlags(VPIntrin) |
-      SelectionDAG::getNonTemporalMemFlag(VPIntrin);
+      TLI.getVPIntrinsicMemOperandFlags(VPIntrin);
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(AS), MMOFlags, LocationSize::beforeOrAfterPointer(),
       *Alignment, AAInfo);
