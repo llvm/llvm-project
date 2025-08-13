@@ -284,8 +284,7 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
   if (F.hasMinSize())
     Key += "+minsize";
 
-  DenormalMode DM = parseDenormalFPAttribute(
-      F.getFnAttribute("denormal-fp-math").getValueAsString());
+  DenormalMode DM = F.getDenormalModeRaw();
   if (DM != DenormalMode::getIEEE())
     Key += "denormal-fp-math=" + DM.str();
 
