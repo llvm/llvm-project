@@ -710,39 +710,39 @@ implicit none
   end interface
 
   interface __ddiv_rn
-    attributes(device) double precision function __ddiv_rn(x,y) bind(c)
+    attributes(device) double precision function __ddiv_rn(x,y) bind(c, name='__nv_ddiv_rn')
       !dir$ ignore_tkr (d) x, (d) y
       double precision, value :: x, y
     end function
   end interface
 
   interface __ddiv_rz
-    attributes(device) double precision function __ddiv_rz(x,y) bind(c)
+    attributes(device) double precision function __ddiv_rz(x,y) bind(c, name='__nv_ddiv_rz')
       !dir$ ignore_tkr (d) x, (d) y
       double precision, value :: x, y
     end function
   end interface
 
   interface __ddiv_ru
-    attributes(device) double precision function __ddiv_ru(x,y) bind(c)
+    attributes(device) double precision function __ddiv_ru(x,y) bind(c, name='__nv_ddiv_ru')
       !dir$ ignore_tkr (d) x, (d) y
       double precision, value :: x, y
     end function
   end interface
 
   interface __ddiv_rd
-    attributes(device) double precision function __ddiv_rd(x,y) bind(c)
+    attributes(device) double precision function __ddiv_rd(x,y) bind(c, name='__nv_ddiv_rd')
       !dir$ ignore_tkr (d) x, (d) y
       double precision, value :: x, y
     end function
   end interface
 
   interface __clz
-    attributes(device) integer function __clz(i) bind(c)
+    attributes(device) integer function __clz(i) bind(c, name='__nv_clz')
       !dir$ ignore_tkr (d) i
       integer, value :: i
     end function
-    attributes(device) integer function __clzll(i) bind(c)
+    attributes(device) integer function __clzll(i) bind(c, name='__nv_clzll')
       !dir$ ignore_tkr (d) i
       integer(8), value :: i
     end function
@@ -767,6 +767,13 @@ implicit none
     attributes(device) integer function __popcll(i) bind(c, name='__nv_popcll')
       !dir$ ignore_tkr (d) i
       integer(8), value :: i
+    end function
+  end interface
+
+  interface
+    attributes(device) real(4) function __powf(x,y) bind(c, name='__nv_powf')
+      !dir$ ignore_tkr (d) x, y
+      real(4), value :: x, y
     end function
   end interface
 
