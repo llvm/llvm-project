@@ -770,6 +770,13 @@ implicit none
     end function
   end interface
 
+  interface
+    attributes(device) real(4) function __powf(x,y) bind(c, name='__nv_powf')
+      !dir$ ignore_tkr (d) x, y
+      real(4), value :: x, y
+    end function
+  end interface
+
   interface __brev
     attributes(device) integer function __brev(i) bind(c, name='__nv_brev')
       !dir$ ignore_tkr (d) i
