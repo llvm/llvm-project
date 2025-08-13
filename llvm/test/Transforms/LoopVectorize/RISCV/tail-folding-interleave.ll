@@ -137,8 +137,6 @@ define i32 @load_factor_4_with_gap(i64 %n, ptr noalias %a) {
 ; IF-EVL-NEXT:  entry:
 ; IF-EVL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IF-EVL:       vector.ph:
-; IF-EVL-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
 ; IF-EVL-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
 ; IF-EVL-NEXT:    [[TMP3:%.*]] = mul <vscale x 4 x i64> [[TMP2]], splat (i64 1)
 ; IF-EVL-NEXT:    [[INDUCTION:%.*]] = add <vscale x 4 x i64> zeroinitializer, [[TMP3]]
@@ -292,8 +290,6 @@ define void @store_factor_4_with_gap(i32 %n, ptr noalias %a) {
 ; IF-EVL-NEXT:  entry:
 ; IF-EVL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IF-EVL:       vector.ph:
-; IF-EVL-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
-; IF-EVL-NEXT:    [[TMP1:%.*]] = mul nuw i32 [[TMP0]], 4
 ; IF-EVL-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
 ; IF-EVL-NEXT:    [[TMP5:%.*]] = mul <vscale x 4 x i32> [[TMP4]], splat (i32 1)
 ; IF-EVL-NEXT:    [[INDUCTION1:%.*]] = add <vscale x 4 x i32> zeroinitializer, [[TMP5]]
@@ -421,8 +417,6 @@ define i32 @load_factor_4_with_tail_gap(i64 %n, ptr noalias %a) {
 ; IF-EVL-NEXT:  entry:
 ; IF-EVL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IF-EVL:       vector.ph:
-; IF-EVL-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
 ; IF-EVL-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
 ; IF-EVL-NEXT:    [[TMP3:%.*]] = mul <vscale x 4 x i64> [[TMP2]], splat (i64 1)
 ; IF-EVL-NEXT:    [[INDUCTION:%.*]] = add <vscale x 4 x i64> zeroinitializer, [[TMP3]]
@@ -577,8 +571,6 @@ define void @store_factor_4_with_tail_gap(i32 %n, ptr noalias %a) {
 ; IF-EVL-NEXT:  entry:
 ; IF-EVL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IF-EVL:       vector.ph:
-; IF-EVL-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
-; IF-EVL-NEXT:    [[TMP1:%.*]] = mul nuw i32 [[TMP0]], 4
 ; IF-EVL-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
 ; IF-EVL-NEXT:    [[TMP5:%.*]] = mul <vscale x 4 x i32> [[TMP4]], splat (i32 1)
 ; IF-EVL-NEXT:    [[INDUCTION1:%.*]] = add <vscale x 4 x i32> zeroinitializer, [[TMP5]]
@@ -698,8 +690,6 @@ define i32 @load_factor_4_reverse(i64 %n, ptr noalias %a) {
 ; IF-EVL-NEXT:    [[TMP1:%.*]] = sub i64 [[N]], [[SMIN]]
 ; IF-EVL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IF-EVL:       vector.ph:
-; IF-EVL-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
 ; IF-EVL-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
 ; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[N]], i64 0
 ; IF-EVL-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
@@ -868,8 +858,6 @@ define void @store_factor_4_reverse(i32 %n, ptr noalias %a) {
 ; IF-EVL-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP6]], [[SMIN]]
 ; IF-EVL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IF-EVL:       vector.ph:
-; IF-EVL-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
-; IF-EVL-NEXT:    [[TMP3:%.*]] = mul nuw i32 [[TMP2]], 4
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
 ; IF-EVL-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP6]], i64 0
 ; IF-EVL-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
