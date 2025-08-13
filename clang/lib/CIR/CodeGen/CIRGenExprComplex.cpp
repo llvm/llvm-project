@@ -10,6 +10,7 @@ namespace {
 class ComplexExprEmitter : public StmtVisitor<ComplexExprEmitter, mlir::Value> {
   CIRGenFunction &cgf;
   CIRGenBuilderTy &builder;
+  bool fpHasBeenPromoted = false;
 
 public:
   explicit ComplexExprEmitter(CIRGenFunction &cgf)
@@ -128,6 +129,35 @@ public:
   mlir::Value emitBinAdd(const BinOpInfo &op);
   mlir::Value emitBinSub(const BinOpInfo &op);
   mlir::Value emitBinMul(const BinOpInfo &op);
+  mlir::Value emitBinDiv(const BinOpInfo &op);
+
+  QualType higherPrecisionTypeForComplexArithmetic(QualType elementType,
+                                                   bool isDivOpCode) {
+    ASTContext &astContext = cgf.getContext();
+    const QualType higherElementType =
+        astContext.GetHigherPrecisionFPType(elementType);
+    const llvm::fltSemantics &elementTypeSemantics =
+        astContext.getFloatTypeSemantics(elementType);
+    const llvm::fltSemantics &higherElementTypeSemantics =
+        astContext.getFloatTypeSemantics(higherElementType);
+
+    // Check that the promoted type can handle the intermediate values without
+    // overflowing. This can be interpreted as:
+    // (SmallerType.LargestFiniteVal * SmallerType.LargestFiniteVal) * 2 <=
+    // LargerType.LargestFiniteVal.
+    // In terms of exponent it gives this formula:
+    // (SmallerType.LargestFiniteVal * SmallerType.LargestFiniteVal
+    // doubles the exponent of SmallerType.LargestFiniteVal)
+    if (llvm::APFloat::semanticsMaxExponent(elementTypeSemantics) * 2 + 1 <=
+        llvm::APFloat::semanticsMaxExponent(higherElementTypeSemantics)) {
+      fpHasBeenPromoted = true;
+      return astContext.getComplexType(higherElementType);
+    }
+
+    // The intermediate values can't be represented in the promoted type
+    // without overflowing.
+    return QualType();
+  }
 
   QualType getPromotionType(QualType ty, bool isDivOpCode = false) {
     if (auto *complexTy = ty->getAs<ComplexType>()) {
@@ -135,8 +165,7 @@ public:
       if (isDivOpCode && elementTy->isFloatingType() &&
           cgf.getLangOpts().getComplexRange() ==
               LangOptions::ComplexRangeKind::CX_Promoted) {
-        cgf.cgm.errorNYI("HigherPrecisionTypeForComplexArithmetic");
-        return QualType();
+        return higherPrecisionTypeForComplexArithmetic(elementTy, isDivOpCode);
       }
 
       if (elementTy.UseExcessPrecision(cgf.getContext()))
@@ -154,13 +183,14 @@ public:
         e->getType(), e->getOpcode() == BinaryOperatorKind::BO_Div);           \
     mlir::Value result = emitBin##OP(emitBinOps(e, promotionTy));              \
     if (!promotionTy.isNull())                                                 \
-      cgf.cgm.errorNYI("Binop emitUnPromotedValue");                           \
+      result = cgf.emitUnPromotedValue(result, e->getType());                  \
     return result;                                                             \
   }
 
   HANDLEBINOP(Add)
   HANDLEBINOP(Sub)
   HANDLEBINOP(Mul)
+  HANDLEBINOP(Div)
 #undef HANDLEBINOP
 
   // Compound assignments.
@@ -858,6 +888,22 @@ mlir::Value ComplexExprEmitter::emitBinMul(const BinOpInfo &op) {
   return builder.createComplexCreate(op.loc, newReal, newImag);
 }
 
+mlir::Value ComplexExprEmitter::emitBinDiv(const BinOpInfo &op) {
+  assert(!cir::MissingFeatures::fastMathFlags());
+  assert(!cir::MissingFeatures::cgFPOptionsRAII());
+
+  if (mlir::isa<cir::ComplexType>(op.lhs.getType()) &&
+      mlir::isa<cir::ComplexType>(op.rhs.getType())) {
+    cir::ComplexRangeKind rangeKind =
+        getComplexRangeAttr(op.fpFeatures.getComplexRange());
+    return builder.create<cir::ComplexDivOp>(op.loc, op.lhs, op.rhs, rangeKind,
+                                             fpHasBeenPromoted);
+  }
+
+  cgf.cgm.errorNYI("ComplexExprEmitter::emitBinMu between Complex & Scalar");
+  return {};
+}
+
 LValue CIRGenFunction::emitComplexAssignmentLValue(const BinaryOperator *e) {
   assert(e->getOpcode() == BO_Assign && "Expected assign op");
 
@@ -952,6 +998,14 @@ mlir::Value CIRGenFunction::emitPromotedValue(mlir::Value result,
          "integral complex will never be promoted");
   return builder.createCast(cir::CastKind::float_complex, result,
                             convertType(promotionType));
+}
+
+mlir::Value CIRGenFunction::emitUnPromotedValue(mlir::Value result,
+                                                QualType unPromotionType) {
+  assert(!mlir::cast<cir::ComplexType>(result.getType()).isIntegerComplex() &&
+         "integral complex will never be promoted");
+  return builder.createCast(cir::CastKind::float_complex, result,
+                            convertType(unPromotionType));
 }
 
 LValue CIRGenFunction::emitScalarCompoundAssignWithComplex(
