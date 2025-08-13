@@ -1257,10 +1257,19 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
   // The simple contiguity of the actual is "lost" when passing a polymorphic
   // to a non polymorphic entity because the dummy dynamic type matters for
   // the contiguity.
+#if 0
   const bool mustDoCopyInOut =
       actual.isArray() && arg.mustBeMadeContiguous() &&
       (passingPolymorphicToNonPolymorphic ||
        !isSimplyContiguous(*arg.entity, foldingContext));
+#else
+  bool mustDoCopyIn = false;
+  bool mustDoCopyOut = false;
+  if constexpr (std::is_same_v<decltype(arg.entity), const Fortran::evaluate::ActualArgument *>) {
+    mustDoCopyIn = arg.entity->GetMayNeedCopyIn();
+    mustDoCopyIn = arg.entity->GetMayNeedCopyOut();
+  }
+#endif
 
   const bool actualIsAssumedRank = actual.isAssumedRank();
   // Create dummy type with actual argument rank when the dummy is an assumed
@@ -1370,7 +1379,7 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       entity = hlfir::Entity{associate.getBase()};
       // Register the temporary destruction after the call.
       preparedDummy.pushExprAssociateCleanUp(associate);
-    } else if (mustDoCopyInOut) {
+    } else if (mustDoCopyIn) {
       // Copy-in non contiguous variables.
       // TODO: for non-finalizable monomorphic derived type actual
       // arguments associated with INTENT(OUT) dummy arguments
@@ -1379,7 +1388,8 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       // allocation for the temp in this case. We can communicate
       // this to the codegen via some CopyInOp flag.
       // This is a performance concern.
-      entity = genCopyIn(entity, arg.mayBeModifiedByCall());
+      //entity = genCopyIn(entity, arg.mayBeModifiedByCall());
+      entity = genCopyIn(entity, mustDoCopyOut);
     }
   } else {
     const Fortran::lower::SomeExpr *expr = arg.entity->UnwrapExpr();

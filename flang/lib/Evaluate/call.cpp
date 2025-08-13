@@ -260,7 +260,8 @@ static void DetermineCopyInOutArgument(
     // Actual argument expressions that aren’t variables are copy-in, but
     // not copy-out.
     actual.SetMayNeedCopyIn();
-  } else if (!IsSimplyContiguous(actual, sc.foldingContext())) {
+  } else if (bool actualIsArray{actual.Rank() > 0}; actualIsArray &&
+    !IsSimplyContiguous(actual, sc.foldingContext())) {
     // Actual arguments that are variables are copy-in when non-contiguous.
     // They are copy-out when don't have vector subscripts
     actual.SetMayNeedCopyIn();
@@ -279,6 +280,12 @@ static void DetermineCopyInOutArgument(
     characteristics::DummyArgument &dummy, semantics::SemanticsContext &sc) {
   assert(procInfo.HasExplicitInterface() && "expect explicit interface proc");
   if (actual.isAlternateReturn()) {
+    return;
+  }
+  if (!evaluate::IsVariable(actual)) {
+    // Actual argument expressions that aren’t variables are copy-in, but
+    // not copy-out.
+    actual.SetMayNeedCopyIn();
     return;
   }
   const auto *dummyObj{std::get_if<characteristics::DummyDataObject>(&dummy.u)};
@@ -309,13 +316,17 @@ static void DetermineCopyInOutArgument(
     }
   };
 
+  bool actualIsArray{actual.Rank() > 0};
+  if (!actualIsArray) {
+    return;
+  }
+
   // Check actual contiguity, unless dummy doesn't care
   bool actualTreatAsContiguous{
       dummyObj->ignoreTKR.test(common::IgnoreTKR::Contiguous) ||
       IsSimplyContiguous(actual, sc.foldingContext())};
 
   bool actualHasVectorSubscript{HasVectorSubscript(actual)};
-  bool actualIsArray{actual.Rank() > 0};
 
   bool dummyIsArray{dummyObj->type.Rank() > 0};
   bool dummyIsExplicitShape{
@@ -328,15 +339,28 @@ static void DetermineCopyInOutArgument(
               characteristics::DummyDataObject::Attr::Contiguous))};
   if (!actualTreatAsContiguous && dummyNeedsContiguity) {
     setCopyIn();
+    // Cannot do copy-out for vector subscripts: there could be repeated
+    // indices, for example
     if (!actualHasVectorSubscript) {
       setCopyOut();
     }
     return;
   }
 
-  // TODO: passing polymorphic to non-polymorphic
+  if (!dummyObj->ignoreTKR.test(common::IgnoreTKR::Type)) {
+    // flang supports limited cases of passing polymorphic to non-polimorphic.
+    // These cases require temporary of non-polymorphic type.
+    auto actualType{characteristics::TypeAndShape::Characterize(
+        actual, sc.foldingContext())};
+    bool actualIsPolymorphic{actualType->type().IsPolymorphic()};
+    bool dummyIsPolymorphic{dummyObj->type.type().IsPolymorphic()};
+    if (actualIsPolymorphic && !dummyIsPolymorphic) {
+      setCopyIn();
+      setCopyOut();
+    }
+  }
 
-  // TODO
+  // TODO: character type differences?
 }
 
 void ProcedureRef::DetermineCopyInOut() {
