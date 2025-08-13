@@ -513,7 +513,7 @@ LogicalResult detail::verifySymbolTable(Operation *op) {
     if (SymbolUserOpInterface user = dyn_cast<SymbolUserOpInterface>(op))
       if (failed(user.verifySymbolUses(symbolTable)))
         return WalkResult::interrupt();
-    for (auto &attr : op->getRawDictionaryAttrs()) {
+    for (auto &attr : op->getAttrs()) {
       if (auto user = dyn_cast<SymbolUserAttrInterface>(attr.getValue())) {
         if (failed(user.verifySymbolUses(op, symbolTable)))
           return WalkResult::interrupt();
