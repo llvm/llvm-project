@@ -15063,15 +15063,12 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         Align CommonAlignment =
             computeCommonAlignment<LoadInst>(UniqueValues.getArrayRef());
         VecLdCost = TTI->getStridedMemoryOpCost(
-            Instruction::Load, VecTy, LI0->getPointerOperand(),
+            Instruction::Load, StridedLoadTy, LI0->getPointerOperand(),
             /*VariableMask=*/false, CommonAlignment, CostKind);
-        //VecLdCost = TTI->getStridedMemoryOpCost(
-        //    Instruction::Load, StridedLoadTy, LI0->getPointerOperand(),
-        //    /*VariableMask=*/false, CommonAlignment, CostKind);
-        //if (StridedLoadTy != VecTy)
-        //  VecLdCost +=
-        //      TTI->getCastInstrCost(Instruction::BitCast, StridedLoadTy, VecTy,
-        //                            getCastContextHint(*E), CostKind);
+        if (StridedLoadTy != VecTy)
+          VecLdCost +=
+              TTI->getCastInstrCost(Instruction::BitCast, VecTy, StridedLoadTy,
+                                    getCastContextHint(*E), CostKind);
 
         break;
       }
