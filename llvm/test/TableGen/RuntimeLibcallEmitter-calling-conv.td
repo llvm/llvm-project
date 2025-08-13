@@ -48,47 +48,79 @@ def MSP430LibraryWithCondCC : SystemRuntimeLibrary<isMSP430,
 // CHECK-NEXT:     Entry = DefaultCC;
 // CHECK-NEXT:   }
 // CHECK-EMPTY:
-// CHECK-NEXT:    setLibcallsImpl({
-// CHECK-NEXT:      {RTLIB::MALLOC, RTLIB::malloc}, // malloc
-// CHECK-NEXT:    });
+// CHECK-NEXT:    static const LibcallImplPair LibraryCalls[] = {
+// CHECK-NEXT:        {RTLIB::MALLOC, RTLIB::malloc}, // malloc
+// CHECK-NEXT:    };
 // CHECK-EMPTY:
-// CHECK-NEXT:    setLibcallsImpl({
+// CHECK-NEXT:    for (const auto [Func, Impl] : LibraryCalls) {
+// CHECK-NEXT:      setLibcallImpl(Func, Impl);
+// CHECK-NEXT:    }
+// CHECK-EMPTY:
+// CHECK-NEXT:    static const LibcallImplPair LibraryCalls_AlwaysAvailable[] = {
 // CHECK-NEXT:        {RTLIB::SDIVREM_I8, RTLIB::__divmodqi4}, // __divmodqi4
 // CHECK-NEXT:        {RTLIB::UDIVREM_I16, RTLIB::__udivmodhi4}, // __udivmodhi4
-// CHECK-NEXT:    }, CallingConv::AVR_BUILTIN);
+// CHECK-NEXT:    };
+// CHECK-EMPTY:
+// CHECK-NEXT:    for (const auto [Func, Impl] : LibraryCalls_AlwaysAvailable) {
+// CHECK-NEXT:      setLibcallImpl(Func, Impl);
+// CHECK-NEXT:      setLibcallImplCallingConv(Impl, CallingConv::AVR_BUILTIN);
+// CHECK-NEXT:    }
 // CHECK-EMPTY:
 // CHECK-NEXT:    return;
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
 // CHECK-NEXT: if (TT.getArch() == Triple::avr) {
-// CHECK-NEXT:   setLibcallsImpl({
+// CHECK-NEXT:   static const LibcallImplPair LibraryCalls[] = {
 // CHECK-NEXT:       {RTLIB::MALLOC, RTLIB::malloc}, // malloc
-// CHECK-NEXT:   });
+// CHECK-NEXT:   };
 // CHECK-EMPTY:
-// CHECK-NEXT:   setLibcallsImpl({
+// CHECK-NEXT:   for (const auto [Func, Impl] : LibraryCalls) {
+// CHECK-NEXT:     setLibcallImpl(Func, Impl);
+// CHECK-NEXT:   }
+// CHECK-EMPTY:
+// CHECK-NEXT:   static const LibcallImplPair LibraryCalls_AlwaysAvailable[] = {
 // CHECK-NEXT:       {RTLIB::SDIVREM_I8, RTLIB::__divmodqi4}, // __divmodqi4
 // CHECK-NEXT:       {RTLIB::UDIVREM_I16, RTLIB::__udivmodhi4}, // __udivmodhi4
-// CHECK-NEXT:   }, CallingConv::AVR_BUILTIN);
+// CHECK-NEXT:   };
+// CHECK-EMPTY:
+// CHECK-NEXT:   for (const auto [Func, Impl] : LibraryCalls_AlwaysAvailable) {
+// CHECK-NEXT:     setLibcallImpl(Func, Impl);
+// CHECK-NEXT:     setLibcallImplCallingConv(Impl, CallingConv::AVR_BUILTIN);
+// CHECK-NEXT:   }
 // CHECK-EMPTY:
 // CHECK-NEXT:   return;
 // CHECK-NEXT:  }
 // CHECK-EMPTY:
 // CHECK-NEXT:  if (TT.getArch() == Triple::msp430) {
-// CHECK-NEXT:    setLibcallsImpl({
+// CHECK-NEXT:    static const LibcallImplPair LibraryCalls[] = {
 // CHECK-NEXT:        {RTLIB::MALLOC, RTLIB::malloc}, // malloc
-// CHECK-NEXT:    });
+// CHECK-NEXT:    };
+// CHECK-EMPTY:
+// CHECK-NEXT:    for (const auto [Func, Impl] : LibraryCalls) {
+// CHECK-NEXT:      setLibcallImpl(Func, Impl);
+// CHECK-NEXT:    }
 // CHECK-EMPTY:
 // CHECK-NEXT:    if ( isFoo() ) {
-// CHECK-NEXT:      setLibcallsImpl({
-// CHECK-NEXT:        {RTLIB::SDIVREM_I8, RTLIB::__divmodqi4}, // __divmodqi4
-// CHECK-NEXT:      }, CallingConv::AVR_BUILTIN);
+// CHECK-NEXT:      static const LibcallImplPair LibraryCalls_anonymous_3[] = {
+// CHECK-NEXT:          {RTLIB::SDIVREM_I8, RTLIB::__divmodqi4}, // __divmodqi4
+// CHECK-NEXT:      };
+// CHECK-EMPTY:
+// CHECK-NEXT:      for (const auto [Func, Impl] : LibraryCalls_anonymous_3) {
+// CHECK-NEXT:        setLibcallImpl(Func, Impl);
+// CHECK-NEXT:        setLibcallImplCallingConv(Impl, CallingConv::AVR_BUILTIN);
+// CHECK-NEXT:      }
 // CHECK-EMPTY:
 // CHECK-NEXT:    }
 // CHECK-EMPTY:
 // CHECK-NEXT:    if ( isBar() ) {
-// CHECK-NEXT:      setLibcallsImpl({
+// CHECK-NEXT:      static const LibcallImplPair LibraryCalls_anonymous_5[] = {
 // CHECK-NEXT:          {RTLIB::UDIVREM_I16, RTLIB::__udivmodhi4}, // __udivmodhi4
-// CHECK-NEXT:      }, CallingConv::MSP430_BUILTIN);
+// CHECK-NEXT:      };
+// CHECK-EMPTY:
+// CHECK-NEXT:      for (const auto [Func, Impl] : LibraryCalls_anonymous_5) {
+// CHECK-NEXT:        setLibcallImpl(Func, Impl);
+// CHECK-NEXT:        setLibcallImplCallingConv(Impl, CallingConv::MSP430_BUILTIN);
+// CHECK-NEXT:      }
 // CHECK-EMPTY:
 // CHECK-NEXT:    }
 // CHECK-EMPTY:

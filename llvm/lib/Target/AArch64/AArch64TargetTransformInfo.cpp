@@ -220,16 +220,20 @@ static cl::opt<bool> EnableFixedwidthAutovecInStreamingMode(
 static cl::opt<bool> EnableScalableAutovecInStreamingMode(
     "enable-scalable-autovec-in-streaming-mode", cl::init(false), cl::Hidden);
 
-static bool isSMEABIRoutineCall(const CallInst &CI, const TargetLowering &TLI) {
+static bool isSMEABIRoutineCall(const CallInst &CI) {
   const auto *F = CI.getCalledFunction();
-  return F && SMEAttrs(F->getName(), TLI).isSMEABIRoutine();
+  return F && StringSwitch<bool>(F->getName())
+                  .Case("__arm_sme_state", true)
+                  .Case("__arm_tpidr2_save", true)
+                  .Case("__arm_tpidr2_restore", true)
+                  .Case("__arm_za_disable", true)
+                  .Default(false);
 }
 
 /// Returns true if the function has explicit operations that can only be
 /// lowered using incompatible instructions for the selected mode. This also
 /// returns true if the function F may use or modify ZA state.
-static bool hasPossibleIncompatibleOps(const Function *F,
-                                       const TargetLowering &TLI) {
+static bool hasPossibleIncompatibleOps(const Function *F) {
   for (const BasicBlock &BB : *F) {
     for (const Instruction &I : BB) {
       // Be conservative for now and assume that any call to inline asm or to
@@ -238,7 +242,7 @@ static bool hasPossibleIncompatibleOps(const Function *F,
       // all native LLVM instructions can be lowered to compatible instructions.
       if (isa<CallInst>(I) && !I.isDebugOrPseudoInst() &&
           (cast<CallInst>(I).isInlineAsm() || isa<IntrinsicInst>(I) ||
-           isSMEABIRoutineCall(cast<CallInst>(I), TLI)))
+           isSMEABIRoutineCall(cast<CallInst>(I))))
         return true;
     }
   }
@@ -286,7 +290,7 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
   if (CallAttrs.requiresLazySave() || CallAttrs.requiresSMChange() ||
       CallAttrs.requiresPreservingZT0() ||
       CallAttrs.requiresPreservingAllZAState()) {
-    if (hasPossibleIncompatibleOps(Callee, *getTLI()))
+    if (hasPossibleIncompatibleOps(Callee))
       return false;
   }
 
@@ -353,7 +357,7 @@ AArch64TTIImpl::getInlineCallPenalty(const Function *F, const CallBase &Call,
   // change only once and avoid inlining of G into F.
 
   SMEAttrs FAttrs(*F);
-  SMECallAttrs CallAttrs(Call, getTLI());
+  SMECallAttrs CallAttrs(Call);
 
   if (SMECallAttrs(FAttrs, CallAttrs.callee()).requiresSMChange()) {
     if (F == Call.getCaller()) // (1)
