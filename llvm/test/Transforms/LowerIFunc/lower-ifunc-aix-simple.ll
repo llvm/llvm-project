@@ -27,7 +27,8 @@ define void @call_ifunc(ptr %ptr) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DESC_PTR:%.*]] = call ptr @llvm.ppc.get.function.descriptor(ptr @ifunc_1)
 ; CHECK-NEXT:    [[DESC_T_ADDR:%.*]] = getelementptr inbounds nuw { ptr, ptr, ptr }, ptr [[DESC_PTR]], i32 0, i32 0
-; CHECK-NEXT:    [[ADDR_IN_DESC:%.*]] = load ptr, ptr [[DESC_T_ADDR]], align 1
+; CHECK-64-NEXT:    [[ADDR_IN_DESC:%.*]] = load ptr, ptr [[DESC_T_ADDR]], align 8
+; CHECK-32-NEXT:    [[ADDR_IN_DESC:%.*]] = load ptr, ptr [[DESC_T_ADDR]], align 4
 ; CHECK-NEXT:    [[ORIGINAL_ADDR:%.*]] = call ptr @llvm.ppc.get.function.entry(ptr @ifunc_1)
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq ptr [[ADDR_IN_DESC]], [[ORIGINAL_ADDR]]
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[RESOLVER:%.*]], label [[END:%.*]]
