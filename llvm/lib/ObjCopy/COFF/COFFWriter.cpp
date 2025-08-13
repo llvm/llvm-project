@@ -12,6 +12,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/COFF.h"
+#include "llvm/Support/CRC.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstddef>
@@ -88,6 +89,63 @@ Error COFFWriter::finalizeSymbolContents() {
                                  Sym.Name.str().c_str());
       WE->TagIndex = Target->RawIndex;
     }
+  }
+  return Error::success();
+}
+
+Error COFFWriter::finalizeCFGuardContents() {
+  DenseMap<size_t, size_t> SymIdMap;
+  bool NeedUpdate = false;
+  for (Symbol &Sym : Obj.getMutableSymbols()) {
+    NeedUpdate |= Sym.OriginalRawIndex == Sym.RawIndex;
+    SymIdMap[Sym.OriginalRawIndex] = Sym.RawIndex;
+  }
+
+  if (!NeedUpdate)
+    return Error::success();
+
+  for (auto &Sym : Obj.getMutableSymbols()) {
+    if (Sym.Name != ".gljmp$y" && Sym.Name != ".giats$y" &&
+        Sym.Name != ".gfids$y")
+      continue;
+
+    auto Sec = find_if(Obj.getMutableSections(),
+                       [&Sym](Section &S) { return S.Name == Sym.Name; });
+
+    if (Sec == Obj.getMutableSections().end() ||
+        Sec->UniqueId != Sym.TargetSectionId)
+      return createStringError(object_error::invalid_symbol_index,
+                               "symbol '%s' is missing its section",
+                               Sym.Name.str().c_str());
+
+    if (Sym.Sym.NumberOfAuxSymbols != 1 ||
+        Sym.Sym.StorageClass != IMAGE_SYM_CLASS_STATIC)
+      return createStringError(object_error::invalid_symbol_index,
+                               "symbol '%s' has unexpected section format",
+                               Sym.Name.str().c_str());
+
+    ArrayRef<uint8_t> RawIds = Sec->getContents();
+    // Nothing to do and also CheckSum will be -1 instead of 0 if we recalculate
+    // it on empty input.
+    if (RawIds.size() == 0)
+      return Error::success();
+
+    // Create updated content
+    ArrayRef<uint32_t> Ids(reinterpret_cast<const uint32_t *>(RawIds.data()),
+                           RawIds.size() / 4);
+    std::vector<uint32_t> NewIds;
+    for (auto Id : Ids)
+      NewIds.push_back(SymIdMap[Id]);
+    ArrayRef<uint8_t> NewRawIds(reinterpret_cast<uint8_t *>(NewIds.data()),
+                                RawIds.size());
+    // Update check sum
+    JamCRC JC(/*Init=*/0);
+    JC.update(NewRawIds);
+    coff_aux_section_definition *SD =
+        reinterpret_cast<coff_aux_section_definition *>(Sym.AuxData[0].Opaque);
+    SD->CheckSum = JC.getCRC();
+    // Set new content
+    Sec->setOwnedContents(NewRawIds);
   }
   return Error::success();
 }
@@ -182,6 +240,8 @@ Error COFFWriter::finalize(bool IsBigObj) {
   if (Error E = finalizeRelocTargets())
     return E;
   if (Error E = finalizeSymbolContents())
+    return E;
+  if (Error E = finalizeCFGuardContents())
     return E;
 
   size_t SizeOfHeaders = 0;

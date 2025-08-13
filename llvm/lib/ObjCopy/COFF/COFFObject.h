@@ -89,6 +89,7 @@ struct Symbol {
   std::optional<size_t> WeakTargetSymbolId;
   size_t UniqueId;
   size_t RawIndex;
+  size_t OriginalRawIndex;
   bool Referenced;
 };
 

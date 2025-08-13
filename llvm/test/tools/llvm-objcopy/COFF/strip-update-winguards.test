@@ -1,0 +1,237 @@
+# RUN: yaml2obj %s -o %t.in.o
+
+# RUN: llvm-readobj -r -s  -x '.gfids$y' -x '.giats$y' -x '.gljmp$y' %t.in.o | FileCheck %s --check-prefix=ORIG
+# RUN: llvm-objcopy --strip-debug %t.in.o %t.out.o
+# RUN: llvm-readobj -r -s  -x '.gfids$y' -x '.giats$y' -x '.gljmp$y' %t.out.o | FileCheck %s --check-prefix=STRIP
+
+# ORIG:      Relocations [
+# ORIG-NEXT:   Section (1) .text {
+# ORIG-NEXT:     0x3 IMAGE_REL_AMD64_REL32 foo (14)
+# ORIG-NEXT:     0xA IMAGE_REL_AMD64_REL32 bar (15)
+# ORIG-NEXT:     0x11 IMAGE_REL_AMD64_REL32 baz (16)
+# ORIG-NEXT:     0x18 IMAGE_REL_AMD64_REL32 foobar (17)
+# ORIG-NEXT:   }
+# ORIG-NEXT: ]
+# ORIG:      Symbols [
+# ORIG:          Name: .gfids$y
+# ORIG:          Section: .gfids$y
+# ORIG:          AuxSymbolCount: 1
+# ORIG:          AuxSectionDef {
+# ORIG:            Checksum: 0x459345AD
+# ORIG:          }
+# ORIG:          Name: .giats$y
+# ORIG:          Section: .giats$y
+# ORIG:          AuxSymbolCount: 1
+# ORIG:          AuxSectionDef {
+# ORIG:            Checksum: 0x31852256
+# ORIG:          }
+# ORIG:          Name: .gljmp$y
+# ORIG:          Section: .gljmp$y
+# ORIG:          AuxSymbolCount: 1
+# ORIG:          AuxSectionDef {
+# ORIG:            Checksum: 0xC608680B
+# ORIG:          }
+# ORIG:      ]
+# ORIG:      Hex dump of section '.gfids$y':
+# ORIG-NEXT: 0x00000000 0e000000 10000000                   ........
+# ORIG:      Hex dump of section '.giats$y':
+# ORIG-NEXT: 0x00000000 0f000000 11000000                   ........
+# ORIG:      Hex dump of section '.gljmp$y':
+# ORIG-NEXT: 0x00000000 0e000000 0f000000 10000000 11000000 ................
+
+# STRIP:      Relocations [
+# STRIP-NEXT:   Section (1) .text {
+# STRIP-NEXT:     0x3 IMAGE_REL_AMD64_REL32 foo (12)
+# STRIP-NEXT:     0xA IMAGE_REL_AMD64_REL32 bar (13)
+# STRIP-NEXT:     0x11 IMAGE_REL_AMD64_REL32 baz (14)
+# STRIP-NEXT:     0x18 IMAGE_REL_AMD64_REL32 foobar (15)
+# STRIP-NEXT:   }
+# STRIP-NEXT: ]
+# STRIP:      Symbols [
+# STRIP:          Name: .gfids$y
+# STRIP:          Section: .gfids$y
+# STRIP:          AuxSymbolCount: 1
+# STRIP:          AuxSectionDef {
+# STRIP:            Checksum: 0xB770627C
+# STRIP:          }
+# STRIP:          Name: .giats$y
+# STRIP:          Section: .giats$y
+# STRIP:          AuxSymbolCount: 1
+# STRIP:          AuxSectionDef {
+# STRIP:            Checksum: 0xC3660587
+# STRIP:          }
+# STRIP:          Name: .gljmp$y
+# STRIP:          Section: .gljmp$y
+# STRIP:          AuxSymbolCount: 1
+# STRIP:          AuxSectionDef {
+# STRIP:            Checksum: 0x7464D042
+# STRIP:          }
+# STRIP:      ]
+# STRIP:      Hex dump of section '.gfids$y':
+# STRIP-NEXT: 0x00000000 0c000000 0e000000                   ........
+# STRIP:      Hex dump of section '.giats$y':
+# STRIP-NEXT: 0x00000000 0d000000 0f000000                   ........
+# STRIP:      Hex dump of section '.gljmp$y':
+# STRIP-NEXT: 0x00000000 0c000000 0d000000 0e000000 0f000000 ................
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     488D0500000000488D0D00000000488D0500000000488D0500000000
+    SizeOfRawData:   28
+    Relocations:
+      - VirtualAddress:  3
+        SymbolName:      foo
+        Type:            IMAGE_REL_AMD64_REL32
+      - VirtualAddress:  10
+        SymbolName:      bar
+        Type:            IMAGE_REL_AMD64_REL32
+      - VirtualAddress:  17
+        SymbolName:      baz
+        Type:            IMAGE_REL_AMD64_REL32
+      - VirtualAddress:  24
+        SymbolName:      foobar
+        Type:            IMAGE_REL_AMD64_REL32
+  - Name:            .data
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+    Alignment:       4
+    SectionData:     ''
+  - Name:            .bss
+    Characteristics: [ IMAGE_SCN_CNT_UNINITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+    Alignment:       4
+    SectionData:     ''
+  - Name:            '.debug$S'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     04000000F100000044656275672073656374696F6E20746F20626520737472697070656400
+    SizeOfRawData:   37
+  - Name:            '.gfids$y'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     '0E00000010000000'
+    SizeOfRawData:   8
+  - Name:            '.giats$y'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     0F00000011000000
+    SizeOfRawData:   8
+  - Name:            '.gljmp$y'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     0E0000000F0000001000000011000000
+    SizeOfRawData:   16
+symbols:
+  - Name:            .text
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          28
+      NumberOfRelocations: 4
+      NumberOfLinenumbers: 0
+      CheckSum:        3583480811
+      Number:          1
+  - Name:            .data
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          0
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          2
+  - Name:            .bss
+    Value:           0
+    SectionNumber:   3
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          0
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          3
+  - Name:            '.debug$S'
+    Value:           0
+    SectionNumber:   4
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          37
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        2941632545
+      Number:          4
+  - Name:            '.gfids$y'
+    Value:           0
+    SectionNumber:   5
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          8
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        1167279533
+      Number:          5
+  - Name:            '.giats$y'
+    Value:           0
+    SectionNumber:   6
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          8
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        830808662
+      Number:          6
+  - Name:            '.gljmp$y'
+    Value:           0
+    SectionNumber:   7
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          16
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        3322439691
+      Number:          7
+  - Name:            foo
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            bar
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            baz
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            foobar
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...
