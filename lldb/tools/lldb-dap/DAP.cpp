@@ -23,13 +23,14 @@
 #include "Transport.h"
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBCommandInterpreter.h"
-#include "lldb/API/SBCommandReturnObject.h"
 #include "lldb/API/SBEvent.h"
 #include "lldb/API/SBLanguageRuntime.h"
 #include "lldb/API/SBListener.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
-#include "lldb/Utility/IOObject.h"
+#include "lldb/Host/JSONTransport.h"
+#include "lldb/Host/MainLoop.h"
+#include "lldb/Host/MainLoopBase.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
@@ -52,7 +53,7 @@
 #include <cstdarg>
 #include <cstdint>
 #include <cstdio>
-#include <fstream>
+#include <functional>
 #include <future>
 #include <memory>
 #include <mutex>
@@ -919,6 +920,8 @@ llvm::Error DAP::Disconnect(bool terminateDebuggee) {
   SendTerminatedEvent();
 
   disconnecting = true;
+  m_loop.AddPendingCallback(
+      [](MainLoopBase &loop) { loop.RequestTermination(); });
 
   return ToError(error);
 }
@@ -949,75 +952,74 @@ static std::optional<T> getArgumentsIfRequest(const Message &pm,
   return args;
 }
 
+Status DAP::TransportHandler() {
+  llvm::set_thread_name(transport.GetClientName() + ".transport_handler");
+
+  auto cleanup = llvm::make_scope_exit([&]() {
+    // Ensure we're marked as disconnecting when the reader exits.
+    disconnecting = true;
+    m_queue_cv.notify_all();
+  });
+
+  Status status;
+  auto handle = transport.RegisterReadObject<protocol::Message>(
+      m_loop,
+      [&](MainLoopBase &loop, llvm::Expected<protocol::Message> message) {
+        if (message.errorIsA<TransportEOFError>()) {
+          llvm::consumeError(message.takeError());
+          loop.RequestTermination();
+          return;
+        }
+
+        if (llvm::Error err = message.takeError()) {
+          status = Status::FromError(std::move(err));
+          loop.RequestTermination();
+          return;
+        }
+
+        if (const protocol::Request *req =
+                std::get_if<protocol::Request>(&*message);
+            req && req->arguments == "disconnect")
+          disconnecting = true;
+
+        const std::optional<CancelArguments> cancel_args =
+            getArgumentsIfRequest<CancelArguments>(*message, "cancel");
+        if (cancel_args) {
+          {
+            std::lock_guard<std::mutex> guard(m_cancelled_requests_mutex);
+            if (cancel_args->requestId)
+              m_cancelled_requests.insert(*cancel_args->requestId);
+          }
+
+          // If a cancel is requested for the active request, make a best
+          // effort attempt to interrupt.
+          std::lock_guard<std::mutex> guard(m_active_request_mutex);
+          if (m_active_request &&
+              cancel_args->requestId == m_active_request->seq) {
+            DAP_LOG(log,
+                    "({0}) interrupting inflight request (command={1} seq={2})",
+                    transport.GetClientName(), m_active_request->command,
+                    m_active_request->seq);
+            debugger.RequestInterrupt();
+          }
+        }
+
+        std::lock_guard<std::mutex> guard(m_queue_mutex);
+        m_queue.push_back(std::move(*message));
+        m_queue_cv.notify_one();
+      });
+  if (auto err = handle.takeError())
+    return Status::FromError(std::move(err));
+  if (llvm::Error err = m_loop.Run().takeError())
+    return Status::FromError(std::move(err));
+  return status;
+}
+
 llvm::Error DAP::Loop() {
   // Can't use \a std::future<llvm::Error> because it doesn't compile on
   // Windows.
-  std::future<lldb::SBError> queue_reader =
-      std::async(std::launch::async, [&]() -> lldb::SBError {
-        llvm::set_thread_name(transport.GetClientName() + ".transport_handler");
-        auto cleanup = llvm::make_scope_exit([&]() {
-          // Ensure we're marked as disconnecting when the reader exits.
-          disconnecting = true;
-          m_queue_cv.notify_all();
-        });
-
-        while (!disconnecting) {
-          llvm::Expected<Message> next =
-              transport.Read<protocol::Message>(std::chrono::seconds(1));
-          if (next.errorIsA<TransportEOFError>()) {
-            consumeError(next.takeError());
-            break;
-          }
-
-          // If the read timed out, continue to check if we should disconnect.
-          if (next.errorIsA<TransportTimeoutError>()) {
-            consumeError(next.takeError());
-            continue;
-          }
-
-          if (llvm::Error err = next.takeError()) {
-            lldb::SBError errWrapper;
-            errWrapper.SetErrorString(llvm::toString(std::move(err)).c_str());
-            return errWrapper;
-          }
-
-          if (const protocol::Request *req =
-                  std::get_if<protocol::Request>(&*next);
-              req && req->command == "disconnect")
-            disconnecting = true;
-
-          const std::optional<CancelArguments> cancel_args =
-              getArgumentsIfRequest<CancelArguments>(*next, "cancel");
-          if (cancel_args) {
-            {
-              std::lock_guard<std::mutex> guard(m_cancelled_requests_mutex);
-              if (cancel_args->requestId)
-                m_cancelled_requests.insert(*cancel_args->requestId);
-            }
-
-            // If a cancel is requested for the active request, make a best
-            // effort attempt to interrupt.
-            std::lock_guard<std::mutex> guard(m_active_request_mutex);
-            if (m_active_request &&
-                cancel_args->requestId == m_active_request->seq) {
-              DAP_LOG(
-                  log,
-                  "({0}) interrupting inflight request (command={1} seq={2})",
-                  transport.GetClientName(), m_active_request->command,
-                  m_active_request->seq);
-              debugger.RequestInterrupt();
-            }
-          }
-
-          {
-            std::lock_guard<std::mutex> guard(m_queue_mutex);
-            m_queue.push_back(std::move(*next));
-          }
-          m_queue_cv.notify_one();
-        }
-
-        return lldb::SBError();
-      });
+  std::future<Status> queue_reader =
+      std::async(std::launch::async, &DAP::TransportHandler, this);
 
   auto cleanup = llvm::make_scope_exit([&]() {
     out.Stop();
@@ -1043,7 +1045,7 @@ llvm::Error DAP::Loop() {
                                      "unhandled packet");
   }
 
-  return ToError(queue_reader.get());
+  return queue_reader.get().takeError();
 }
 
 lldb::SBError DAP::WaitForProcessToStop(std::chrono::seconds seconds) {
