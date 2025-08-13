@@ -596,7 +596,26 @@ static std::pair<Value *, APInt> getMask(Value *WideMask, unsigned Factor,
 
   if (auto *IMI = dyn_cast<IntrinsicInst>(WideMask)) {
     if (unsigned F = getInterleaveIntrinsicFactor(IMI->getIntrinsicID());
-        F && F == Factor && llvm::all_equal(IMI->args())) {
+        F && F == Factor) {
+      Value *RefArg = nullptr;
+      // Check if all the intrinsic arguments are the same, except those that
+      // are zeros, which we mark them as gaps in the gap mask.
+      for (auto [Idx, Arg] : enumerate(IMI->args())) {
+        if (auto *C = dyn_cast<Constant>(Arg); C && C->isZeroValue()) {
+          GapMask.clearBit(Idx);
+          continue;
+        }
+
+        if (!RefArg)
+          RefArg = Arg;
+
+        if (RefArg != Arg)
+          return {nullptr, GapMask};
+      }
+
+      // In a very rare occasion, all the intrinsic arguments might be zeros,
+      // in which case we still want to return an all-zeros constant instead of
+      // nullptr, so we're not using RefArg here.
       return {IMI->getArgOperand(0), GapMask};
     }
   }
