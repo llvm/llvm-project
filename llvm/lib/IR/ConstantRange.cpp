@@ -872,7 +872,8 @@ ConstantRange ConstantRange::signExtend(uint32_t DstTySize) const {
   return ConstantRange(Lower.sext(DstTySize), Upper.sext(DstTySize));
 }
 
-ConstantRange ConstantRange::truncate(uint32_t DstTySize) const {
+ConstantRange ConstantRange::truncate(uint32_t DstTySize,
+                                      unsigned NoWrapKind) const {
   assert(getBitWidth() > DstTySize && "Not a value truncation");
   if (isEmptySet())
     return getEmpty(DstTySize);
@@ -886,22 +887,36 @@ ConstantRange ConstantRange::truncate(uint32_t DstTySize) const {
   // We use the non-wrapped set code to analyze the [Lower, MaxValue) part, and
   // then we do the union with [MaxValue, Upper)
   if (isUpperWrapped()) {
-    // If Upper is greater than or equal to MaxValue(DstTy), it covers the whole
-    // truncated range.
-    if (Upper.getActiveBits() > DstTySize || Upper.countr_one() == DstTySize)
+    // If Upper is greater than MaxValue(DstTy), it covers the whole truncated
+    // range.
+    if (Upper.getActiveBits() > DstTySize)
       return getFull(DstTySize);
 
-    Union = ConstantRange(APInt::getMaxValue(DstTySize),Upper.trunc(DstTySize));
-    UpperDiv.setAllBits();
-
-    // Union covers the MaxValue case, so return if the remaining range is just
-    // MaxValue(DstTy).
-    if (LowerDiv == UpperDiv)
-      return Union;
+    // For nuw the two parts are: [0, Upper) \/ [Lower, MaxValue(DstTy)]
+    if (NoWrapKind & TruncInst::NoUnsignedWrap) {
+      Union = ConstantRange(APInt::getZero(DstTySize), Upper.trunc(DstTySize));
+      UpperDiv = APInt::getOneBitSet(getBitWidth(), DstTySize);
+    } else {
+      // If Upper is equal to MaxValue(DstTy), it covers the whole truncated
+      // range.
+      if (Upper.countr_one() == DstTySize)
+        return getFull(DstTySize);
+      Union =
+          ConstantRange(APInt::getMaxValue(DstTySize), Upper.trunc(DstTySize));
+      UpperDiv.setAllBits();
+      // Union covers the MaxValue case, so return if the remaining range is
+      // just MaxValue(DstTy).
+      if (LowerDiv == UpperDiv)
+        return Union;
+    }
   }
 
   // Chop off the most significant bits that are past the destination bitwidth.
   if (LowerDiv.getActiveBits() > DstTySize) {
+    // For trunc nuw if LowerDiv is greater than MaxValue(DstTy), the range is
+    // outside the whole truncated range.
+    if (NoWrapKind & TruncInst::NoUnsignedWrap)
+      return Union;
     // Mask to just the signficant bits and subtract from LowerDiv/UpperDiv.
     APInt Adjust = LowerDiv & APInt::getBitsSetFrom(getBitWidth(), DstTySize);
     LowerDiv -= Adjust;
@@ -912,6 +927,10 @@ ConstantRange ConstantRange::truncate(uint32_t DstTySize) const {
   if (UpperDivWidth <= DstTySize)
     return ConstantRange(LowerDiv.trunc(DstTySize),
                          UpperDiv.trunc(DstTySize)).unionWith(Union);
+
+  if (!LowerDiv.isZero() && NoWrapKind & TruncInst::NoUnsignedWrap)
+    return ConstantRange(LowerDiv.trunc(DstTySize), APInt::getZero(DstTySize))
+        .unionWith(Union);
 
   // The truncated value wraps around. Check if we can do better than fullset.
   if (UpperDivWidth == DstTySize + 1) {
