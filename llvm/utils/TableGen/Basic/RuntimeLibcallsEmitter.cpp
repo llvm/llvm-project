@@ -363,8 +363,6 @@ computePerfectHashParameters(ArrayRef<uint64_t> Hashes) {
         return {N, MaxCollisions};
     }
   }
-
-  llvm_unreachable("loop should terminate");
 }
 
 static std::vector<LookupEntry>
