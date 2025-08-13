@@ -23,6 +23,7 @@
 #include "Address.h"
 
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/BaseSubobject.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Stmt.h"
@@ -509,6 +510,25 @@ public:
   static bool
   isConstructorDelegationValid(const clang::CXXConstructorDecl *ctor);
 
+  struct VPtr {
+    clang::BaseSubobject base;
+    const clang::CXXRecordDecl *nearestVBase;
+    clang::CharUnits offsetFromNearestVBase;
+    const clang::CXXRecordDecl *vtableClass;
+  };
+
+  using VPtrsVector = llvm::SmallVector<VPtr, 4>;
+  VPtrsVector getVTablePointers(const clang::CXXRecordDecl *vtableClass);
+  void getVTablePointers(clang::BaseSubobject base,
+                         const clang::CXXRecordDecl *nearestVBase,
+                         clang::CharUnits offsetFromNearestVBase,
+                         bool baseIsNonVirtualPrimaryBase,
+                         const clang::CXXRecordDecl *vtableClass,
+                         VPtrsVector &vptrs);
+  /// Return the Value of the vtable pointer member pointed to by thisAddr.
+  mlir::Value getVTablePtr(mlir::Location loc, Address thisAddr,
+                           const clang::CXXRecordDecl *vtableClass);
+
   /// A scope within which we are constructing the fields of an object which
   /// might use a CXXDefaultInitExpr. This stashes away a 'this' value to use if
   /// we need to evaluate the CXXDefaultInitExpr within the evaluation.
@@ -556,6 +576,10 @@ public:
   LValue makeAddrLValue(Address addr, QualType ty, LValueBaseInfo baseInfo) {
     return LValue::makeAddr(addr, ty, baseInfo);
   }
+
+  void initializeVTablePointers(mlir::Location loc,
+                                const clang::CXXRecordDecl *rd);
+  void initializeVTablePointer(mlir::Location loc, const VPtr &vptr);
 
   /// Return the address of a local variable.
   Address getAddrOfLocalVar(const clang::VarDecl *vd) {
