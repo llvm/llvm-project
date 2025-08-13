@@ -112,8 +112,10 @@ inline const bool __is_invocable_r_v = __is_invocable_r_impl<_Ret, __is_invocabl
 template <bool __is_invocable, class... _Args>
 inline const bool __is_nothrow_invocable_impl = false;
 
+#  ifndef _LIBCPP_CXX03_LANG
 template <class... _Args>
 inline const bool __is_nothrow_invocable_impl<true, _Args...> = noexcept(__builtin_invoke(std::declval<_Args>()...));
+#  endif
 
 template <class... _Args>
 inline const bool __is_nothrow_invocable_v = __is_nothrow_invocable_impl<__is_invocable_v<_Args...>, _Args...>;

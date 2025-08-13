@@ -32,14 +32,25 @@ getDataSlice(ArrayRef<uint8_t> Data, uint64_t Offset, uint64_t Size) {
 }
 
 template <typename T>
-static Expected<const T &> getDataSliceAs(ArrayRef<uint8_t> Data,
-                                          uint64_t Offset) {
+static Expected<ArrayRef<T>>
+getDataSliceAsArrayOf(ArrayRef<uint8_t> Data, uint64_t Offset, uint64_t Count) {
   static_assert(std::is_trivial_v<T>);
-  Expected<ArrayRef<uint8_t>> Slice = getDataSlice(Data, Offset, sizeof(T));
+  Expected<ArrayRef<uint8_t>> Slice =
+      getDataSlice(Data, Offset, sizeof(T) * Count);
   if (!Slice)
     return Slice.takeError();
 
-  return *reinterpret_cast<const T *>(Slice->data());
+  return ArrayRef(reinterpret_cast<const T *>(Slice->data()), Count);
+}
+
+template <typename T>
+static Expected<const T &> getDataSliceAs(ArrayRef<uint8_t> Data,
+                                          uint64_t Offset) {
+  Expected<ArrayRef<T>> Array = getDataSliceAsArrayOf<T>(Data, Offset, 1);
+  if (!Array)
+    return Array.takeError();
+
+  return Array->front();
 }
 
 template <endianness E>
@@ -98,6 +109,120 @@ uint64_t SFrameParser<E>::getAbsoluteStartAddress(
   }
 
   return Result;
+}
+
+template <typename EndianT>
+static Error readArray(ArrayRef<uint8_t> Data, uint64_t Count, uint64_t &Offset,
+                       SmallVectorImpl<int32_t> &Vec) {
+  Expected<ArrayRef<EndianT>> RawArray =
+      getDataSliceAsArrayOf<EndianT>(Data, Offset, Count);
+  if (!RawArray)
+    return RawArray.takeError();
+  Offset += Count * sizeof(EndianT);
+  Vec.resize(Count);
+  llvm::copy(*RawArray, Vec.begin());
+  return Error::success();
+}
+
+template <typename T, endianness E>
+static Error readFRE(ArrayRef<uint8_t> Data, uint64_t &Offset,
+                     typename SFrameParser<E>::FrameRowEntry &FRE) {
+  Expected<sframe::FrameRowEntry<T, E>> RawFRE =
+      getDataSliceAs<sframe::FrameRowEntry<T, E>>(Data, Offset);
+  if (!RawFRE)
+    return RawFRE.takeError();
+
+  Offset += sizeof(*RawFRE);
+  FRE.StartAddress = RawFRE->StartAddress;
+  FRE.Info.Info = RawFRE->Info.Info;
+
+  switch (FRE.Info.getOffsetSize()) {
+  case sframe::FREOffset::B1:
+    return readArray<sframe::detail::packed<int8_t, E>>(
+        Data, FRE.Info.getOffsetCount(), Offset, FRE.Offsets);
+  case sframe::FREOffset::B2:
+    return readArray<sframe::detail::packed<int16_t, E>>(
+        Data, FRE.Info.getOffsetCount(), Offset, FRE.Offsets);
+  case sframe::FREOffset::B4:
+    return readArray<sframe::detail::packed<int32_t, E>>(
+        Data, FRE.Info.getOffsetCount(), Offset, FRE.Offsets);
+  }
+  return createError(formatv("unsupported FRE offset size {0} at offset {1:x+}",
+                             static_cast<unsigned>(FRE.Info.getOffsetSize()),
+                             Offset));
+}
+
+template <endianness E> Error SFrameParser<E>::FallibleFREIterator::inc() {
+  if (++Idx == Size)
+    return Error::success();
+
+  switch (FREType) {
+  case sframe::FREType::Addr1:
+    return readFRE<uint8_t, E>(Data, Offset, FRE);
+  case sframe::FREType::Addr2:
+    return readFRE<uint16_t, E>(Data, Offset, FRE);
+  case sframe::FREType::Addr4:
+    return readFRE<uint32_t, E>(Data, Offset, FRE);
+  }
+  return createError(formatv("unsupported FRE type {0} at offset {1:x+}",
+                             static_cast<unsigned>(FREType), Offset));
+}
+
+template <endianness E>
+iterator_range<typename SFrameParser<E>::fre_iterator>
+SFrameParser<E>::fres(const sframe::FuncDescEntry<E> &FDE, Error &Err) const {
+  uint64_t Offset = getFREBase() + FDE.StartFREOff;
+  fre_iterator BeforeBegin = make_fallible_itr(
+      FallibleFREIterator(Data, FDE.getFREType(), -1, FDE.NumFREs, Offset),
+      Err);
+  fre_iterator End = make_fallible_end(
+      FallibleFREIterator(Data, FDE.getFREType(), FDE.NumFREs, FDE.NumFREs,
+                          /*Offset=*/0));
+  return {++BeforeBegin, End};
+}
+
+static std::optional<int32_t> getOffset(ArrayRef<int32_t> Offsets, size_t Idx) {
+  if (Offsets.size() > Idx)
+    return Offsets[Idx];
+  return std::nullopt;
+}
+
+// The interpretation of offsets is ABI-specific. The implementation of this and
+// the following functions may need to be adjusted when adding support for a new
+// ABI.
+template <endianness E>
+std::optional<int32_t>
+SFrameParser<E>::getCFAOffset(const FrameRowEntry &FRE) const {
+  return getOffset(FRE.Offsets, 0);
+}
+
+template <endianness E>
+std::optional<int32_t>
+SFrameParser<E>::getRAOffset(const FrameRowEntry &FRE) const {
+  if (usesFixedRAOffset())
+    return Header.CFAFixedRAOffset;
+  return getOffset(FRE.Offsets, 1);
+}
+
+template <endianness E>
+std::optional<int32_t>
+SFrameParser<E>::getFPOffset(const FrameRowEntry &FRE) const {
+  if (usesFixedFPOffset())
+    return Header.CFAFixedFPOffset;
+  return getOffset(FRE.Offsets, usesFixedRAOffset() ? 1 : 2);
+}
+
+template <endianness E>
+ArrayRef<int32_t>
+SFrameParser<E>::getExtraOffsets(const FrameRowEntry &FRE) const {
+  size_t UsedOffsets = 1; // CFA
+  if (!usesFixedRAOffset())
+    ++UsedOffsets;
+  if (!usesFixedFPOffset())
+    ++UsedOffsets;
+  if (FRE.Offsets.size() > UsedOffsets)
+    return ArrayRef<int32_t>(FRE.Offsets).drop_front(UsedOffsets);
+  return {};
 }
 
 template class LLVM_EXPORT_TEMPLATE llvm::object::SFrameParser<endianness::big>;

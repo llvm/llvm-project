@@ -11688,6 +11688,41 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
+  case Builtin::BI__builtin_elementwise_max:
+  case Builtin::BI__builtin_elementwise_min: {
+    APValue SourceLHS, SourceRHS;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
+      return false;
+
+    QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
+
+    if (!DestEltTy->isIntegerType())
+      return false;
+
+    unsigned SourceLen = SourceLHS.getVectorLength();
+    SmallVector<APValue, 4> ResultElements;
+    ResultElements.reserve(SourceLen);
+
+    for (unsigned EltNum = 0; EltNum < SourceLen; ++EltNum) {
+      APSInt LHS = SourceLHS.getVectorElt(EltNum).getInt();
+      APSInt RHS = SourceRHS.getVectorElt(EltNum).getInt();
+      switch (E->getBuiltinCallee()) {
+      case Builtin::BI__builtin_elementwise_max:
+        ResultElements.push_back(
+            APValue(APSInt(std::max(LHS, RHS),
+                           DestEltTy->isUnsignedIntegerOrEnumerationType())));
+        break;
+      case Builtin::BI__builtin_elementwise_min:
+        ResultElements.push_back(
+            APValue(APSInt(std::min(LHS, RHS),
+                           DestEltTy->isUnsignedIntegerOrEnumerationType())));
+        break;
+      }
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
   }
 }
 
@@ -13585,7 +13620,24 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     APInt Result = LHS.isSigned() ? LHS.ssub_sat(RHS) : LHS.usub_sat(RHS);
     return Success(APSInt(Result, !LHS.isSigned()), E);
   }
+  case Builtin::BI__builtin_elementwise_max: {
+    APSInt LHS, RHS;
+    if (!EvaluateInteger(E->getArg(0), LHS, Info) ||
+        !EvaluateInteger(E->getArg(1), RHS, Info))
+      return false;
 
+    APInt Result = std::max(LHS, RHS);
+    return Success(APSInt(Result, !LHS.isSigned()), E);
+  }
+  case Builtin::BI__builtin_elementwise_min: {
+    APSInt LHS, RHS;
+    if (!EvaluateInteger(E->getArg(0), LHS, Info) ||
+        !EvaluateInteger(E->getArg(1), RHS, Info))
+      return false;
+
+    APInt Result = std::min(LHS, RHS);
+    return Success(APSInt(Result, !LHS.isSigned()), E);
+  }
   case Builtin::BIstrlen:
   case Builtin::BIwcslen:
     // A call to strlen is not a constant expression.
