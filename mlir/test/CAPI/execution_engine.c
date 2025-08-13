@@ -69,7 +69,7 @@ void testSimpleExecution(void) {
   mlirRegisterAllLLVMTranslations(ctx);
   MlirExecutionEngine jit = mlirExecutionEngineCreate(
       module, /*optLevel=*/2, /*numPaths=*/0, /*sharedLibPaths=*/NULL,
-      /*enableObjectDump=*/false, /*shouldInitialize=*/true);
+      /*enableObjectDump=*/false);
   if (mlirExecutionEngineIsNull(jit)) {
     fprintf(stderr, "Execution engine creation failed");
     exit(2);
@@ -125,7 +125,7 @@ void testOmpCreation(void) {
   // against the OpenMP library.
   MlirExecutionEngine jit = mlirExecutionEngineCreate(
       module, /*optLevel=*/2, /*numPaths=*/0, /*sharedLibPaths=*/NULL,
-      /*enableObjectDump=*/false, /*shouldInitialize=*/true);
+      /*enableObjectDump=*/false);
   if (mlirExecutionEngineIsNull(jit)) {
     fprintf(stderr, "Engine creation failed with OpenMP");
     exit(2);
@@ -169,7 +169,7 @@ void testGlobalCtorJitCallback(void) {
   // Create execution engine with initialization disabled
   MlirExecutionEngine jit = mlirExecutionEngineCreate(
       module, /*optLevel=*/2, /*numPaths=*/0, /*sharedLibPaths=*/NULL,
-      /*enableObjectDump=*/false, /*shouldInitialize=*/false);
+      /*enableObjectDump=*/false);
 
   if (mlirExecutionEngineIsNull(jit)) {
     fprintf(stderr, "Execution engine creation failed");

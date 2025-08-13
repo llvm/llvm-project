@@ -42,10 +42,9 @@ DEFINE_C_API_STRUCT(MlirExecutionEngine, void);
 /// that will be loaded are specified via `numPaths` and `sharedLibPaths`
 /// respectively.
 /// TODO: figure out other options.
-MLIR_CAPI_EXPORTED MlirExecutionEngine
-mlirExecutionEngineCreate(MlirModule op, int optLevel, int numPaths,
-                          const MlirStringRef *sharedLibPaths,
-                          bool enableObjectDump, bool shouldInitialize);
+MLIR_CAPI_EXPORTED MlirExecutionEngine mlirExecutionEngineCreate(
+    MlirModule op, int optLevel, int numPaths,
+    const MlirStringRef *sharedLibPaths, bool enableObjectDump);
 
 /// Execute the global constructors from the module.
 MLIR_CAPI_EXPORTED void mlirExecutionEngineInitialize(MlirExecutionEngine jit);

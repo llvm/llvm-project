@@ -99,9 +99,6 @@ struct ExecutionEngineOptions {
   /// If `enablePerfNotificationListener` is set, the JIT compiler will notify
   /// the llvm's global Perf notification listener.
   bool enablePerfNotificationListener = true;
-
-  /// Setting initialize=false to defer initialization
-  bool shouldInitialize = true;
 };
 
 /// JIT-backed execution engine for MLIR. Assumes the IR can be converted to

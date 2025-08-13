@@ -339,8 +339,6 @@ TEST(GlobalCtorJit, MAYBE_JITCallback) {
   ASSERT_TRUE(!!module);
   ASSERT_TRUE(succeeded(lowerToLLVMDialect(*module)));
   ExecutionEngineOptions jitOptions;
-  // Defer the initialization to register symbols used in ctors.
-  jitOptions.shouldInitialize = false;
   auto jitOrError = ExecutionEngine::create(*module, jitOptions);
   ASSERT_TRUE(!!jitOrError);
   auto jit = std::move(jitOrError.get());
