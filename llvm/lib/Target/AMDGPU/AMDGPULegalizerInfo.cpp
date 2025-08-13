@@ -5653,7 +5653,7 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
   unsigned SplitSize = 32;
   if (IID == Intrinsic::amdgcn_update_dpp && (Size % 64 == 0) &&
       ST.hasDPALU_DPP() &&
-      AMDGPU::isLegalDPALU_DPPControl(MI.getOperand(4).getImm()))
+      AMDGPU::isLegalDPALU_DPPControl(ST, MI.getOperand(4).getImm()))
     SplitSize = 64;
 
   if (Size == SplitSize) {

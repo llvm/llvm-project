@@ -266,17 +266,19 @@ public:
 
 static bool CC_Mips(unsigned ValNo, MVT ValVT, MVT LocVT,
                     CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-                    CCState &State) LLVM_ATTRIBUTE_UNUSED;
+                    Type *OrigTy, CCState &State) LLVM_ATTRIBUTE_UNUSED;
 
 static bool CC_MipsO32_FP32(unsigned ValNo, MVT ValVT, MVT LocVT,
                             CCValAssign::LocInfo LocInfo,
-                            ISD::ArgFlagsTy ArgFlags, CCState &State) {
+                            ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                            CCState &State) {
   llvm_unreachable("should not be called");
 }
 
 static bool CC_MipsO32_FP64(unsigned ValNo, MVT ValVT, MVT LocVT,
                             CCValAssign::LocInfo LocInfo,
-                            ISD::ArgFlagsTy ArgFlags, CCState &State) {
+                            ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                            CCState &State) {
   llvm_unreachable("should not be called");
 }
 
@@ -1144,8 +1146,12 @@ bool MipsFastISel::processCallArgs(CallLoweringInfo &CLI,
                                    unsigned &NumBytes) {
   CallingConv::ID CC = CLI.CallConv;
   SmallVector<CCValAssign, 16> ArgLocs;
+  SmallVector<Type *, 16> ArgTys;
+  for (const ArgListEntry &Arg : CLI.Args)
+    ArgTys.push_back(Arg.Val->getType());
   CCState CCInfo(CC, false, *FuncInfo.MF, ArgLocs, *Context);
-  CCInfo.AnalyzeCallOperands(OutVTs, CLI.OutFlags, CCAssignFnForCall(CC));
+  CCInfo.AnalyzeCallOperands(OutVTs, CLI.OutFlags, ArgTys,
+                             CCAssignFnForCall(CC));
   // Get a count of how many bytes are to be pushed on the stack.
   NumBytes = CCInfo.getStackSize();
   // This is the minimum argument area used for A0-A3.

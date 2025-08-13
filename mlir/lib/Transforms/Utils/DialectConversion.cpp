@@ -2257,15 +2257,17 @@ OperationLegalizer::legalize(Operation *op,
     return success();
   }
 
-  // If the operation isn't legal, try to fold it in-place.
-  // TODO: Should we always try to do this, even if the op is
-  // already legal?
-  if (succeeded(legalizeWithFold(op, rewriter))) {
-    LLVM_DEBUG({
-      logSuccess(logger, "operation was folded");
-      logger.startLine() << logLineComment;
-    });
-    return success();
+  // If the operation is not legal, try to fold it in-place if the folding mode
+  // is 'BeforePatterns'. 'Never' will skip this.
+  const ConversionConfig &config = rewriter.getConfig();
+  if (config.foldingMode == DialectConversionFoldingMode::BeforePatterns) {
+    if (succeeded(legalizeWithFold(op, rewriter))) {
+      LLVM_DEBUG({
+        logSuccess(logger, "operation was folded");
+        logger.startLine() << logLineComment;
+      });
+      return success();
+    }
   }
 
   // Otherwise, we need to apply a legalization pattern to this operation.
@@ -2275,6 +2277,18 @@ OperationLegalizer::legalize(Operation *op,
       logger.startLine() << logLineComment;
     });
     return success();
+  }
+
+  // If the operation can't be legalized via patterns, try to fold it in-place
+  // if the folding mode is 'AfterPatterns'.
+  if (config.foldingMode == DialectConversionFoldingMode::AfterPatterns) {
+    if (succeeded(legalizeWithFold(op, rewriter))) {
+      LLVM_DEBUG({
+        logSuccess(logger, "operation was folded");
+        logger.startLine() << logLineComment;
+      });
+      return success();
+    }
   }
 
   LLVM_DEBUG({

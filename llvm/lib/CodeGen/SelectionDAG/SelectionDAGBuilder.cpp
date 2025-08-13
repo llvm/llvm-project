@@ -2273,8 +2273,9 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
           Flags.setNoExt();
 
         for (unsigned i = 0; i < NumParts; ++i) {
-          Outs.push_back(ISD::OutputArg(
-              Flags, Parts[i].getValueType().getSimpleVT(), VT, 0, 0));
+          Outs.push_back(ISD::OutputArg(Flags,
+                                        Parts[i].getValueType().getSimpleVT(),
+                                        VT, I.getOperand(0)->getType(), 0, 0));
           OutVals.push_back(Parts[i]);
         }
       }
@@ -2292,6 +2293,7 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
     Flags.setSwiftError();
     Outs.push_back(ISD::OutputArg(Flags, /*vt=*/TLI.getPointerTy(DL),
                                   /*argvt=*/EVT(TLI.getPointerTy(DL)),
+                                  PointerType::getUnqual(*DAG.getContext()),
                                   /*origidx=*/1, /*partOffs=*/0));
     // Create SDNode for the swifterror virtual register.
     OutVals.push_back(
@@ -11067,23 +11069,20 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
       unsigned NumRegs = getNumRegistersForCallingConv(CLI.RetTy->getContext(),
                                                        CLI.CallConv, VT);
       for (unsigned i = 0; i != NumRegs; ++i) {
-        ISD::InputArg MyFlags;
-        MyFlags.Flags = Flags;
-        MyFlags.VT = RegisterVT;
-        MyFlags.ArgVT = VT;
-        MyFlags.Used = CLI.IsReturnValueUsed;
+        ISD::InputArg Ret(Flags, RegisterVT, VT, CLI.RetTy,
+                          CLI.IsReturnValueUsed, ISD::InputArg::NoArgIndex, 0);
         if (CLI.RetTy->isPointerTy()) {
-          MyFlags.Flags.setPointer();
-          MyFlags.Flags.setPointerAddrSpace(
+          Ret.Flags.setPointer();
+          Ret.Flags.setPointerAddrSpace(
               cast<PointerType>(CLI.RetTy)->getAddressSpace());
         }
         if (CLI.RetSExt)
-          MyFlags.Flags.setSExt();
+          Ret.Flags.setSExt();
         if (CLI.RetZExt)
-          MyFlags.Flags.setZExt();
+          Ret.Flags.setZExt();
         if (CLI.IsInReg)
-          MyFlags.Flags.setInReg();
-        CLI.Ins.push_back(MyFlags);
+          Ret.Flags.setInReg();
+        CLI.Ins.push_back(Ret);
       }
     }
   }
@@ -11093,11 +11092,12 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
   if (supportSwiftError()) {
     for (const ArgListEntry &Arg : Args) {
       if (Arg.IsSwiftError) {
-        ISD::InputArg MyFlags;
-        MyFlags.VT = getPointerTy(DL);
-        MyFlags.ArgVT = EVT(getPointerTy(DL));
-        MyFlags.Flags.setSwiftError();
-        CLI.Ins.push_back(MyFlags);
+        ISD::ArgFlagsTy Flags;
+        Flags.setSwiftError();
+        ISD::InputArg Ret(Flags, getPointerTy(DL), EVT(getPointerTy(DL)),
+                          PointerType::getUnqual(CLI.RetTy->getContext()),
+                          /*Used=*/true, ISD::InputArg::NoArgIndex, 0);
+        CLI.Ins.push_back(Ret);
       }
     }
   }
@@ -11252,7 +11252,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
         // For scalable vectors the scalable part is currently handled
         // by individual targets, so we just use the known minimum size here.
         ISD::OutputArg MyFlags(
-            Flags, Parts[j].getValueType().getSimpleVT(), VT, i,
+            Flags, Parts[j].getValueType().getSimpleVT(), VT, Args[i].Ty, i,
             j * Parts[j].getValueType().getStoreSize().getKnownMinValue());
         if (NumParts > 1 && j == 0)
           MyFlags.Flags.setSplit();
@@ -11630,7 +11630,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
     ISD::ArgFlagsTy Flags;
     Flags.setSRet();
     MVT RegisterVT = TLI->getRegisterType(*DAG.getContext(), ValueVT);
-    ISD::InputArg RetArg(Flags, RegisterVT, ValueVT, true,
+    ISD::InputArg RetArg(Flags, RegisterVT, ValueVT, F.getReturnType(), true,
                          ISD::InputArg::NoArgIndex, 0);
     Ins.push_back(RetArg);
   }
@@ -11768,7 +11768,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
         // are responsible for handling scalable vector arguments and
         // return values.
         ISD::InputArg MyFlags(
-            Flags, RegisterVT, VT, isArgValueUsed, ArgNo,
+            Flags, RegisterVT, VT, Arg.getType(), isArgValueUsed, ArgNo,
             PartBase + i * RegisterVT.getStoreSize().getKnownMinValue());
         if (NumRegs > 1 && i == 0)
           MyFlags.Flags.setSplit();
@@ -12742,17 +12742,22 @@ static Register FollowCopyChain(MachineRegisterInfo &MRI, Register Reg) {
   assert(MI->getOpcode() == TargetOpcode::COPY &&
          "start of copy chain MUST be COPY");
   Reg = MI->getOperand(1).getReg();
+
+  // If the copied register in the first copy must be virtual.
+  assert(Reg.isVirtual() && "expected COPY of virtual register");
   MI = MRI.def_begin(Reg)->getParent();
+
   // There may be an optional second copy.
   if (MI->getOpcode() == TargetOpcode::COPY) {
     assert(Reg.isVirtual() && "expected COPY of virtual register");
     Reg = MI->getOperand(1).getReg();
     assert(Reg.isPhysical() && "expected COPY of physical register");
-    MI = MRI.def_begin(Reg)->getParent();
+  } else {
+    // The start of the chain must be an INLINEASM_BR.
+    assert(MI->getOpcode() == TargetOpcode::INLINEASM_BR &&
+           "end of copy chain MUST be INLINEASM_BR");
   }
-  // The start of the chain must be an INLINEASM_BR.
-  assert(MI->getOpcode() == TargetOpcode::INLINEASM_BR &&
-         "end of copy chain MUST be INLINEASM_BR");
+
   return Reg;
 }
 

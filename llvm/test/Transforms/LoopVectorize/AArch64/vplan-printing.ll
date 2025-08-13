@@ -72,7 +72,6 @@ define i32 @print_partial_reduction(ptr %a, ptr %b) {
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ; CHECK: VPlan 'Final VPlan for VF={8,16},UF={1}' {
-; CHECK-NEXT: Live-in ir<[[EP_VFxUF:.+]]> = VF * UF
 ; CHECK-NEXT: Live-in ir<1024> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
@@ -115,6 +114,7 @@ define i32 @print_partial_reduction(ptr %a, ptr %b) {
 ; CHECK-NEXT: ir-bb<scalar.ph>:
 ; CHECK-NEXT:   EMIT-SCALAR vp<[[EP_RESUME:%.+]]> = phi [ vp<[[VEC_TC]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:   EMIT-SCALAR vp<[[EP_MERGE:%.+]]> = phi [ vp<[[RED_RESULT]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:   EMIT-SCALAR vp<%6> = resume-for-epilogue vp<%vec.epilog.resume.val>
 ; CHECK-NEXT: Successor(s): ir-bb<for.body>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<for.body>:

@@ -177,6 +177,11 @@ namespace llvm {
 
     bool isCheapToSpeculateCttz(Type *Ty) const override;
 
+    bool enableAggressiveFMAFusion(EVT VT) const override { return true; };
+
+    bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
+                                    EVT VT) const override;
+
     bool shouldInsertFencesForAtomic(const Instruction *I) const override {
       // FIXME: We insert fences for each atomics and generate
       // sub-optimal code for PSO/TSO. (Approximately nobody uses any

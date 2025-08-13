@@ -5582,9 +5582,13 @@ AArch64:
 AMDGPU:
 
 - ``r``: A 32 or 64-bit integer register.
-- ``[0-9]v``: The 32-bit VGPR register, number 0-9.
-- ``[0-9]s``: The 32-bit SGPR register, number 0-9.
-- ``[0-9]a``: The 32-bit AGPR register, number 0-9.
+- ``s``: SGPR register or tuple
+- ``v``: VGPR register or tuple
+- ``a``: AGPR register or tuple. Only valid on gfx908+.
+- ``VA``: VGPR or AGPR register or tuple. Only valid on gfx90a+.
+- ``v[0-9]``: The 32-bit VGPR register, number 0-9.
+- ``s[0-9]``: The 32-bit SGPR register, number 0-9.
+- ``a[0-9]``: The 32-bit AGPR register, number 0-9.
 - ``I``: An integer inline constant in the range from -16 to 64.
 - ``J``: A 16-bit signed integer constant.
 - ``A``: An integer or a floating-point inline constant.
@@ -12632,10 +12636,11 @@ Example:
 """"""""
 This example assumes pointers in address space 1 are 64 bits in size with an
 address width of 32 bits (``p1:64:64:64:32`` :ref:`datalayout string<langref_datalayout>`)
+
 .. code-block:: llvm
 
-      %X = ptrtoaddr ptr addrspace(1) %P to i32  ; extracts low 32 bits of pointer
-      %Y = ptrtoaddr <4 x ptr addrspace(1)> %P to <4 x i32>; yields vector of low 32 bits for each pointer
+      %X = ptrtoaddr ptr addrspace(1) %P to i32              ; extracts low 32 bits of pointer
+      %Y = ptrtoaddr <4 x ptr addrspace(1)> %P to <4 x i32>  ; yields vector of low 32 bits for each pointer
 
 
 .. _i_inttoptr:
