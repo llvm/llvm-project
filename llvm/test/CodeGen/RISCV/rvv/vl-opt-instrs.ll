@@ -3438,9 +3438,8 @@ define <vscale x 4 x i32> @vbrev_v(<vscale x 4 x i32> %a, iXLen %vl) {
 define <vscale x 4 x i32> @vbrev8_v(<vscale x 4 x i32> %a, iXLen %vl) {
 ; CHECK-LABEL: vbrev8_v:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vbrev8.v v10, v8
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; CHECK-NEXT:    vbrev8.v v10, v8
 ; CHECK-NEXT:    vadd.vv v8, v10, v8
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vbrev8.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> %a, iXLen -1)
@@ -3451,9 +3450,8 @@ define <vscale x 4 x i32> @vbrev8_v(<vscale x 4 x i32> %a, iXLen %vl) {
 define <vscale x 4 x i32> @vrev8_v(<vscale x 4 x i32> %a, iXLen %vl) {
 ; CHECK-LABEL: vrev8_v:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vrev8.v v10, v8
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; CHECK-NEXT:    vrev8.v v10, v8
 ; CHECK-NEXT:    vadd.vv v8, v10, v8
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vrev8.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i32> %a, iXLen -1)
@@ -3560,9 +3558,8 @@ define <vscale x 4 x i32> @vrol_vx(<vscale x 4 x i32> %a, iXLen %b, iXLen %vl) {
 define <vscale x 2 x i64> @vclmul_vv(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, iXLen %vl) {
 ; CHECK-LABEL: vclmul_vv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
-; CHECK-NEXT:    vclmul.vv v10, v8, v10
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
+; CHECK-NEXT:    vclmul.vv v10, v8, v10
 ; CHECK-NEXT:    vadd.vv v8, v10, v8
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 2 x i64> @llvm.riscv.vclmul.nxv2i64.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b, iXLen -1)
@@ -3573,9 +3570,8 @@ define <vscale x 2 x i64> @vclmul_vv(<vscale x 2 x i64> %a, <vscale x 2 x i64> %
 define <vscale x 2 x i64> @vclmul_vx(<vscale x 2 x i64> %a, i32 %b, iXLen %vl) {
 ; CHECK-LABEL: vclmul_vx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a2, zero, e64, m2, ta, ma
-; CHECK-NEXT:    vclmul.vx v10, v8, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m2, ta, ma
+; CHECK-NEXT:    vclmul.vx v10, v8, a0
 ; CHECK-NEXT:    vadd.vv v8, v10, v8
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 2 x i64> @llvm.riscv.vclmul.nxv2i64.i32(<vscale x 2 x i64> undef, <vscale x 2 x i64> %a, i32 %b, iXLen -1)
@@ -3586,9 +3582,8 @@ define <vscale x 2 x i64> @vclmul_vx(<vscale x 2 x i64> %a, i32 %b, iXLen %vl) {
 define <vscale x 2 x i64> @vclmulh_vv(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b, iXLen %vl) {
 ; CHECK-LABEL: vclmulh_vv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
-; CHECK-NEXT:    vclmulh.vv v10, v8, v10
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
+; CHECK-NEXT:    vclmulh.vv v10, v8, v10
 ; CHECK-NEXT:    vadd.vv v8, v10, v8
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 2 x i64> @llvm.riscv.vclmulh.nxv2i64.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i64> %a, <vscale x 2 x i64> %b, iXLen -1)
@@ -3599,9 +3594,8 @@ define <vscale x 2 x i64> @vclmulh_vv(<vscale x 2 x i64> %a, <vscale x 2 x i64> 
 define <vscale x 2 x i64> @vclmulh_vx(<vscale x 2 x i64> %a, i32 %b, iXLen %vl) {
 ; CHECK-LABEL: vclmulh_vx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a2, zero, e64, m2, ta, ma
-; CHECK-NEXT:    vclmulh.vx v10, v8, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m2, ta, ma
+; CHECK-NEXT:    vclmulh.vx v10, v8, a0
 ; CHECK-NEXT:    vadd.vv v8, v10, v8
 ; CHECK-NEXT:    ret
   %1 = call <vscale x 2 x i64> @llvm.riscv.vclmulh.nxv2i64.i32(<vscale x 2 x i64> undef, <vscale x 2 x i64> %a, i32 %b, iXLen -1)
