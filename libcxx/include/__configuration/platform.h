@@ -53,6 +53,13 @@
         _LIBCPP_PICOLIBC_VERSION_INT(maj, min, patch)
 #endif
 
+#if __has_include(<corecrt.h>)
+#  include <corecrt.h>
+#  if defined(_UCRT)
+#    define _LIBCPP_UCRT
+#  endif
+#endif
+
 #ifndef __BYTE_ORDER__
 #  error                                                                                                               \
       "Your compiler doesn't seem to define __BYTE_ORDER__, which is required by libc++ to know the endianness of your target platform"
