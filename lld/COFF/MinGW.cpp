@@ -235,6 +235,19 @@ void lld::coff::addWrappedSymbols(SymbolTable &symtab,
         symtab.addUndefined(mangle("__wrap_" + name, symtab.machine));
     v.push_back({sym, real, wrap});
 
+    if (auto *usym = dyn_cast<Undefined>(sym)) {
+      if (auto *ureal = dyn_cast<Undefined>(real);
+          ureal && ureal->weakAlias && !usym->weakAlias) {
+        Log(symtab.ctx) << "inheriting weak alias to: " << usym->getName();
+        usym->weakAlias = ureal->weakAlias;
+      }
+      if (auto *uwrap = dyn_cast<Undefined>(wrap);
+          uwrap && usym->weakAlias && !uwrap->weakAlias) {
+        Log(symtab.ctx) << "inheriting weak alias to: " << uwrap->getName();
+        uwrap->weakAlias = usym->weakAlias;
+      }
+    }
+
     // These symbols may seem undefined initially, but don't bail out
     // at symtab.reportUnresolvable() due to them, but let wrapSymbols
     // below sort things out before checking finally with
