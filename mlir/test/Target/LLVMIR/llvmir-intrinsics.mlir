@@ -579,8 +579,8 @@ llvm.func @masked_expand_compress_intrinsics(%ptr: !llvm.ptr, %mask: vector<7xi1
 
 // CHECK-LABEL: @masked_expand_compress_intrinsics_with_alignment
 llvm.func @masked_expand_compress_intrinsics_with_alignment(%ptr: !llvm.ptr, %mask: vector<7xi1>, %passthru: vector<7xf32>) {
-  // CHECK: call <7 x float> @llvm.masked.expandload.v7f32(ptr %{{.*}}, <7 x i1> %{{.*}}, <7 x float> %{{.*}})
-  %0 = "llvm.intr.masked.expandload"(%ptr, %mask, %passthru)
+  // CHECK: call <7 x float> @llvm.masked.expandload.v7f32(ptr align 8 %{{.*}}, <7 x i1> %{{.*}}, <7 x float> %{{.*}})
+  %0 = "llvm.intr.masked.expandload"(%ptr, %mask, %passthru) {arg_attrs = [{llvm.align = 8 : i32}, {}, {}]}
     : (!llvm.ptr, vector<7xi1>, vector<7xf32>) -> (vector<7xf32>)
   // CHECK: call void @llvm.masked.compressstore.v7f32(<7 x float> %{{.*}}, ptr align 8 %{{.*}}, <7 x i1> %{{.*}})
   "llvm.intr.masked.compressstore"(%0, %ptr, %mask) {arg_attrs = [{}, {llvm.align = 8 : i32}, {}]}

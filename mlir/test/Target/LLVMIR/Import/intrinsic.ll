@@ -547,8 +547,8 @@ define void @masked_expand_compress_intrinsics(ptr %0, <7 x i1> %1, <7 x float> 
 
 ; CHECK-LABEL:  llvm.func @masked_expand_compress_intrinsics_with_alignment
 define void @masked_expand_compress_intrinsics_with_alignment(ptr %0, <7 x i1> %1, <7 x float> %2) {
-  ; CHECK: %[[val1:.+]] = "llvm.intr.masked.expandload"(%{{.*}}, %{{.*}}, %{{.*}}) : (!llvm.ptr, vector<7xi1>, vector<7xf32>) -> vector<7xf32>
-  %4 = call <7 x float> @llvm.masked.expandload.v7f32(ptr %0, <7 x i1> %1, <7 x float> %2)
+  ; CHECK: %[[val1:.+]] = "llvm.intr.masked.expandload"(%{{.*}}, %{{.*}}, %{{.*}}) <{arg_attrs = [{llvm.align = 8 : i64}, {}, {}]}> : (!llvm.ptr, vector<7xi1>, vector<7xf32>) -> vector<7xf32>
+  %4 = call <7 x float> @llvm.masked.expandload.v7f32(ptr align 8 %0, <7 x i1> %1, <7 x float> %2)
   ; CHECK: "llvm.intr.masked.compressstore"(%[[val1]], %{{.*}}, %{{.*}}) <{arg_attrs = [{}, {llvm.align = 8 : i64}, {}]}> : (vector<7xf32>, !llvm.ptr, vector<7xi1>) -> ()
   call void @llvm.masked.compressstore.v7f32(<7 x float> %4, ptr align 8 %0, <7 x i1> %1)
   ret void

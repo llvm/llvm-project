@@ -1070,8 +1070,45 @@ def LLVM_masked_scatter : LLVM_ZeroResultIntrOp<"masked.scatter"> {
 }
 
 /// Create a call to Masked Expand Load intrinsic.
-def LLVM_masked_expandload : LLVM_IntrOp<"masked.expandload", [0], [], [], 1> {
-  let arguments = (ins LLVM_AnyPointer, LLVM_VectorOf<I1>, LLVM_AnyVector);
+def LLVM_masked_expandload
+  : LLVM_OneResultIntrOp<"masked.expandload", [0], [],
+  /*traits=*/[], /*requiresFastMath=*/0, /*requiresArgAndResultAttrs=*/1,
+  /*immArgPositions=*/[], /*immArgAttrNames=*/[]> {
+  dag args = (ins LLVM_AnyPointer:$ptr,
+                       LLVM_VectorOf<I1>:$mask,
+                       LLVM_AnyVector:$passthru);
+
+  let arguments = !con(args, baseArgs);
+
+  let builders = [LLVM_OneResultOpBuilder];
+
+  string llvmBuilder = [{
+    auto argAttrs = op.getArgAttrs();
+    uint64_t alignment = 1;
+    if (argAttrs.has_value()) {
+      NamedAttrList argAttr = cast<DictionaryAttr>((*argAttrs)[0]);
+      auto maybeAlignmentAttr = argAttr.get("llvm.align");
+      IntegerAttr alignmentAttr = maybeAlignmentAttr ? dyn_cast<IntegerAttr>(maybeAlignmentAttr) : nullptr;
+      alignment = alignmentAttr ? alignmentAttr.getValue().getZExtValue() : 1;
+    }
+    $res = builder.CreateMaskedExpandLoad(
+      $_resultType, $ptr, alignment != 1 ? llvm::Align(alignment) : llvm::MaybeAlign(), $mask, $passthru);
+  }];
+
+  let builders = [
+    OpBuilder<(ins "TypeRange":$resTy, "Value":$ptr, "Value":$mask, "Value":$passthru, CArg<"uint64_t", "1">:$align), [{
+      ArrayAttr callArgs = nullptr;
+      if (align != 1) {
+        auto emptyDictAttr = $_builder.getDictionaryAttr({});
+        auto alignmentAttr = $_builder.getI64IntegerAttr(align);
+        auto namedAttr = $_builder.getNamedAttr("llvm.align", alignmentAttr);
+        SmallVector<mlir::NamedAttribute> attrs = {namedAttr};
+        auto alignDictAttr = $_builder.getDictionaryAttr(attrs);
+        callArgs = $_builder.getArrayAttr({emptyDictAttr, alignDictAttr, emptyDictAttr});
+      }
+      build($_builder, $_state, resTy, ptr, mask, passthru, /*arg_attrs=*/callArgs, /*res_attrs=*/nullptr);
+    }]>
+  ];
 }
 
 /// Create a call to Masked Compress Store intrinsic.
