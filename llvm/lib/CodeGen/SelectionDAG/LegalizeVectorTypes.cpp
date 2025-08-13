@@ -1617,8 +1617,6 @@ void DAGTypeLegalizer::SplitVecRes_BITCAST(SDNode *N, SDValue &Lo,
 
 void DAGTypeLegalizer::SplitVecRes_LOOP_DEPENDENCE_MASK(SDNode *N, SDValue &Lo,
                                                         SDValue &Hi) {
-  unsigned EltSize = N->getConstantOperandVal(2);
-
   SDLoc DL(N);
   EVT LoVT, HiVT;
   std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(N->getValueType(0));
@@ -1626,13 +1624,13 @@ void DAGTypeLegalizer::SplitVecRes_LOOP_DEPENDENCE_MASK(SDNode *N, SDValue &Lo,
   SDValue PtrB = N->getOperand(1);
   Lo = DAG.getNode(N->getOpcode(), DL, LoVT, PtrA, PtrB, N->getOperand(2));
 
+  unsigned EltSize = N->getConstantOperandVal(2);
   unsigned Offset = EltSize * HiVT.getVectorMinNumElements();
   SDValue Addend = HiVT.isScalableVT()
                        ? DAG.getVScale(DL, MVT::i64, APInt(64, Offset))
                        : DAG.getConstant(Offset, DL, MVT::i64);
 
   PtrA = DAG.getNode(ISD::ADD, DL, MVT::i64, PtrA, Addend);
-  PtrB = DAG.getNode(ISD::ADD, DL, MVT::i64, PtrB, Addend);
   Hi = DAG.getNode(N->getOpcode(), DL, HiVT, PtrA, PtrB, N->getOperand(2));
 }
 
