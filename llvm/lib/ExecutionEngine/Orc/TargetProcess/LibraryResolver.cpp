@@ -199,7 +199,7 @@ void LibraryResolver::resolveSymbolsInLibrary(LibraryInfo &lib,
                                               SymbolQuery &unresolvedSymbols) {
   LLVM_DEBUG(dbgs() << "Checking unresolved symbols "
                     << " in library : " << lib.getFileName() << "\n";);
-  std::unordered_set<std::string> discoveredSymbols;
+  StringSet<> discoveredSymbols;
   bool hasEnumerated = false;
 
   auto enumerateSymbolsIfNeeded = [&]() {
@@ -216,7 +216,7 @@ void LibraryResolver::resolveSymbolsInLibrary(LibraryInfo &lib,
     SymbolEnumerator::enumerateSymbols(
         lib.getFullPath(),
         [&](StringRef sym) {
-          discoveredSymbols.insert(sym.str());
+          discoveredSymbols.insert(sym);
           return EnumerateResult::Continue;
         },
         opts);
@@ -240,12 +240,17 @@ void LibraryResolver::resolveSymbolsInLibrary(LibraryInfo &lib,
   if (!lib.hasFilter()) {
     LLVM_DEBUG(dbgs() << "Building filter for library: " << lib.getFullPath()
                       << "\n";);
-    lib.ensureFilterBuilt(FB,
-                          {discoveredSymbols.begin(), discoveredSymbols.end()});
+
+    SmallVector<StringRef> SymbolVec;
+    SymbolVec.reserve(discoveredSymbols.size());
+    for (const auto &KV : discoveredSymbols)
+      SymbolVec.push_back(KV.first());
+
+    lib.ensureFilterBuilt(FB, SymbolVec);
     LLVM_DEBUG({
       dbgs() << "discoveredSymbols : " << discoveredSymbols.size() << "\n";
-      for (const auto &sym : discoveredSymbols)
-        dbgs() << "discoveredSymbols : " << sym << "\n";
+      for (const auto &KV : discoveredSymbols)
+        dbgs() << "discoveredSymbols : " << KV.first() << "\n";
     });
   }
 
@@ -257,7 +262,7 @@ void LibraryResolver::resolveSymbolsInLibrary(LibraryInfo &lib,
     if (lib.mayContain(symbol)) {
       LLVM_DEBUG(dbgs() << "Checking symbol '" << symbol
                         << "' in library: " << lib.getFullPath() << "\n";);
-      if (discoveredSymbols.count(symbol.str()) > 0) {
+      if (discoveredSymbols.count(symbol) > 0) {
         LLVM_DEBUG(dbgs() << "  Resolved symbol: " << symbol
                           << " in library: " << lib.getFullPath() << "\n";);
         unresolvedSymbols.resolve(symbol, lib.getFullPath());
@@ -355,7 +360,6 @@ bool LibraryResolver::symbolExistsInLibrary(
 
         if (sym == symbolName) {
           found = true;
-          // return EnumerateResult::Stop;
         }
 
         return EnumerateResult::Continue;
