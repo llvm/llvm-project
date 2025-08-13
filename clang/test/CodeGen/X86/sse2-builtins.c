@@ -581,12 +581,14 @@ int test_mm_cvtsi128_si32(__m128i A) {
   // CHECK: extractelement <4 x i32> %{{.*}}, i32 0
   return _mm_cvtsi128_si32(A);
 }
+TEST_CONSTEXPR(_mm_cvtsi128_si32((__m128i)(__v4si){+1, -2, -3, +4}) == +1);
 
 long long test_mm_cvtsi128_si64(__m128i A) {
   // CHECK-LABEL: test_mm_cvtsi128_si64
   // CHECK: extractelement <2 x i64> %{{.*}}, i32 0
   return _mm_cvtsi128_si64(A);
 }
+TEST_CONSTEXPR(_mm_cvtsi128_si64((__m128i)(__v2di){42LL, -42LL}) == 42LL);
 
 __m128d test_mm_cvtsi32_sd(__m128d A, int B) {
   // CHECK-LABEL: test_mm_cvtsi32_sd
@@ -604,6 +606,7 @@ __m128i test_mm_cvtsi32_si128(int A) {
   // CHECK: insertelement <4 x i32> %{{.*}}, i32 0, i32 3
   return _mm_cvtsi32_si128(A);
 }
+TEST_CONSTEXPR(match_v4si(_mm_cvtsi32_si128(55), 55, 0, 0, 0));
 
 #ifdef __x86_64__
 __m128d test_mm_cvtsi64_sd(__m128d A, long long B) {
@@ -621,6 +624,7 @@ __m128i test_mm_cvtsi64_si128(long long A) {
   // CHECK: insertelement <2 x i64> %{{.*}}, i64 0, i32 1
   return _mm_cvtsi64_si128(A);
 }
+TEST_CONSTEXPR(match_v2di(_mm_cvtsi64_si128(-99LL), -99LL, 0LL));
 
 __m128d test_mm_cvtss_sd(__m128d A, __m128 B) {
   // CHECK-LABEL: test_mm_cvtss_sd

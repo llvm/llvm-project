@@ -754,7 +754,7 @@ def Vector_FMAOp :
 }
 
 def Vector_ToElementsOp : Vector_Op<"to_elements", [
-    Pure,
+    InferTypeOpAdaptor, Pure,
     ShapedTypeMatchesElementCountAndTypes<"source", "elements">]> {
   let summary = "operation that decomposes a vector into all its scalar elements";
   let description = [{
