@@ -27,6 +27,17 @@ dialects, build system and language bindings.
   [@joker-eph](https://github.com/joker-eph) (GitHub),
   mehdi_amini (Discourse)
 
+### Python Bindings
+
+ - Maksim Levental \
+   maksim.levental@gmail.com (email),
+   [@makslevental](https://github.com/makslevental) (GitHub),
+   makslevental (Discourse)
+ - Rolf Morel \
+   rolf.morel@intel.com (email)
+   [@rolfmorel](https://github.com/rolfmorel) (GitHub),
+   rolfmorel (Discourse)
+
 ## Egress
 
 MLIR components pertaining to egress flows from MLIR, in particular to LLVM IR.
