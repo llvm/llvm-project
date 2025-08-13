@@ -13,8 +13,8 @@
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/CRC.h"
-#include "llvm/Support/Errc.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstddef>
 #include <cstdint>
@@ -136,8 +136,9 @@ Error COFFWriter::finalizeCFGuardContents() {
       continue;
 
     // Create updated content
-    ArrayRef<support::ulittle32_t> Ids(reinterpret_cast<const support::ulittle32_t *>(RawIds.data()),
-                              RawIds.size() / 4);
+    ArrayRef<support::ulittle32_t> Ids(
+        reinterpret_cast<const support::ulittle32_t *>(RawIds.data()),
+        RawIds.size() / 4);
     std::vector<support::ulittle32_t> NewIds;
     for (auto Id : Ids)
       NewIds.push_back(support::ulittle32_t(SymIdMap[Id]));
@@ -150,7 +151,7 @@ Error COFFWriter::finalizeCFGuardContents() {
         reinterpret_cast<coff_aux_section_definition *>(Sym.AuxData[0].Opaque);
     SD->CheckSum = JC.getCRC();
     // Set new content
-    Sec->setOwnedContents(NewRawIds);
+    Sec->setOwnedContents(NewRawIds.vec());
   }
   return Error::success();
 }
