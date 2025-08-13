@@ -1544,9 +1544,8 @@ let Predicates = [HasVendorXqcicm, NoVendorXqcics, IsRV32] in {
 // This exists to prioritise over the `Select_GPR_Using_CC_GPR` pattern.
 def : Pat<(i32 (riscv_selectcc (i32 GPRNoX0:$rs1), (i32 0), SETNE, (i32 GPRNoX0:$rs3), (i32 GPRNoX0:$rd))),
           (QC_MVNEI GPRNoX0:$rd, GPRNoX0:$rs1, 0, GPRNoX0:$rs3)>;
-
-// def : Pat<(select (i32 GPRNoX0:$rs1), (i32 GPRNoX0:$rd),(i32 GPRNoX0:$rs3)),
-//           (QC_MVEQI GPRNoX0:$rd, GPRNoX0:$rs1, (i32 0), GPRNoX0:$rs3)>;
+def : Pat<(i32 (riscv_selectcc (i32 GPRNoX0:$rs1), (i32 0), SETEQ, (i32 GPRNoX0:$rs3), (i32 GPRNoX0:$rd))),
+          (QC_MVEQI GPRNoX0:$rd, GPRNoX0:$rs1, 0, GPRNoX0:$rs3)>;
 
 def : QCIMVCCIPat<SETEQ,  QC_MVEQI, simm5>;
 def : QCIMVCCIPat<SETNE,  QC_MVNEI, simm5>;
@@ -1588,6 +1587,8 @@ let Predicates = [HasVendorXqcics, IsRV32] in {
 
 def : Pat<(i32 (riscv_selectcc (i32 GPRNoX0:$rd), (i32 0), SETNE, (i32 GPRNoX0:$rs2), (i32 GPRNoX0:$rs3))),
           (QC_SELECTNEI GPRNoX0:$rd, (i32 0), GPRNoX0:$rs2, GPRNoX0:$rs3)>;
+def : Pat<(i32 (riscv_selectcc (i32 GPRNoX0:$rd), (i32 0), SETEQ, (i32 GPRNoX0:$rs2), (i32 GPRNoX0:$rs3))),
+          (QC_SELECTEQI GPRNoX0:$rd, (i32 0), GPRNoX0:$rs2, GPRNoX0:$rs3)>;
 
 def : Pat<(i32 (riscv_selectcc (i32 GPRNoX0:$rd), (i32 0), SETNE, (i32 GPRNoX0:$rs2), simm5:$simm2)),
           (QC_SELECTINEI GPRNoX0:$rd, (i32 0), GPRNoX0:$rs2, simm5:$simm2)>;
