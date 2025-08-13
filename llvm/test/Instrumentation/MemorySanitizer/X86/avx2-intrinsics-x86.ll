@@ -150,10 +150,9 @@ define <8 x i32> @test_x86_avx2_pmadd_wd(<16 x i16> %a0, <16 x i16> %a1) #0 {
 ; CHECK-NEXT:    [[TMP16:%.*]] = or <16 x i1> [[TMP11]], [[TMP14]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = or <16 x i1> [[TMP16]], [[TMP15]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = sext <16 x i1> [[TMP17]] to <16 x i16>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <16 x i16> [[TMP7]], <16 x i16> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <16 x i16> [[TMP7]], <16 x i16> poison, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
-; CHECK-NEXT:    [[TMP10:%.*]] = or <8 x i16> [[TMP8]], [[TMP9]]
-; CHECK-NEXT:    [[TMP6:%.*]] = zext <8 x i16> [[TMP10]] to <8 x i32>
+; CHECK-NEXT:    [[TMP18:%.*]] = bitcast <16 x i16> [[TMP7]] to <8 x i32>
+; CHECK-NEXT:    [[TMP19:%.*]] = icmp ne <8 x i32> [[TMP18]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = sext <8 x i1> [[TMP19]] to <8 x i32>
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x i32> @llvm.x86.avx2.pmadd.wd(<16 x i16> [[A0]], <16 x i16> [[A1]])
 ; CHECK-NEXT:    store <8 x i32> [[TMP6]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x i32> [[RES]]
@@ -697,10 +696,9 @@ define <16 x i16> @test_x86_avx2_pmadd_ub_sw(<32 x i8> %a0, <32 x i8> %a1) #0 {
 ; CHECK-NEXT:    [[TMP16:%.*]] = or <32 x i1> [[TMP11]], [[TMP14]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = or <32 x i1> [[TMP16]], [[TMP15]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = sext <32 x i1> [[TMP17]] to <32 x i8>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <32 x i8> [[TMP7]], <32 x i8> poison, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <32 x i8> [[TMP7]], <32 x i8> poison, <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31>
-; CHECK-NEXT:    [[TMP10:%.*]] = or <16 x i8> [[TMP8]], [[TMP9]]
-; CHECK-NEXT:    [[TMP6:%.*]] = zext <16 x i8> [[TMP10]] to <16 x i16>
+; CHECK-NEXT:    [[TMP18:%.*]] = bitcast <32 x i8> [[TMP7]] to <16 x i16>
+; CHECK-NEXT:    [[TMP19:%.*]] = icmp ne <16 x i16> [[TMP18]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = sext <16 x i1> [[TMP19]] to <16 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = call <16 x i16> @llvm.x86.avx2.pmadd.ub.sw(<32 x i8> [[A0]], <32 x i8> [[A1]])
 ; CHECK-NEXT:    store <16 x i16> [[TMP6]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <16 x i16> [[RES]]
@@ -736,10 +734,9 @@ define <16 x i16> @test_x86_avx2_pmadd_ub_sw_load_op0(ptr %ptr, <32 x i8> %a1) #
 ; CHECK-NEXT:    [[TMP21:%.*]] = or <32 x i1> [[TMP16]], [[TMP19]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = or <32 x i1> [[TMP21]], [[TMP20]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = sext <32 x i1> [[TMP22]] to <32 x i8>
-; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <32 x i8> [[TMP12]], <32 x i8> poison, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
-; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <32 x i8> [[TMP12]], <32 x i8> poison, <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31>
-; CHECK-NEXT:    [[TMP15:%.*]] = or <16 x i8> [[TMP13]], [[TMP14]]
-; CHECK-NEXT:    [[TMP11:%.*]] = zext <16 x i8> [[TMP15]] to <16 x i16>
+; CHECK-NEXT:    [[TMP23:%.*]] = bitcast <32 x i8> [[TMP12]] to <16 x i16>
+; CHECK-NEXT:    [[TMP24:%.*]] = icmp ne <16 x i16> [[TMP23]], zeroinitializer
+; CHECK-NEXT:    [[TMP11:%.*]] = sext <16 x i1> [[TMP24]] to <16 x i16>
 ; CHECK-NEXT:    [[RES:%.*]] = call <16 x i16> @llvm.x86.avx2.pmadd.ub.sw(<32 x i8> [[A0]], <32 x i8> [[A1]])
 ; CHECK-NEXT:    store <16 x i16> [[TMP11]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <16 x i16> [[RES]]

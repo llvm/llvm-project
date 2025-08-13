@@ -1744,10 +1744,9 @@ define i64 @test49(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP38:%.*]] = or <4 x i1> [[TMP32]], [[TMP36]]
 ; CHECK-NEXT:    [[TMP39:%.*]] = or <4 x i1> [[TMP38]], [[TMP37]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = sext <4 x i1> [[TMP39]] to <4 x i16>
-; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <4 x i16> [[TMP24]], <4 x i16> poison, <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[TMP26:%.*]] = shufflevector <4 x i16> [[TMP24]], <4 x i16> poison, <2 x i32> <i32 1, i32 3>
-; CHECK-NEXT:    [[TMP27:%.*]] = or <2 x i16> [[TMP25]], [[TMP26]]
-; CHECK-NEXT:    [[TMP28:%.*]] = sext <2 x i16> [[TMP27]] to <2 x i32>
+; CHECK-NEXT:    [[TMP25:%.*]] = bitcast <4 x i16> [[TMP24]] to <2 x i32>
+; CHECK-NEXT:    [[TMP26:%.*]] = icmp ne <2 x i32> [[TMP25]], zeroinitializer
+; CHECK-NEXT:    [[TMP28:%.*]] = sext <2 x i1> [[TMP26]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP29:%.*]] = bitcast <2 x i32> [[TMP28]] to i64
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast i64 [[TMP29]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP34:%.*]] = tail call <1 x i64> @llvm.x86.mmx.pmadd.wd(<1 x i64> [[MMX_VAR_I]], <1 x i64> [[MMX_VAR1_I]]) #[[ATTR2]]
@@ -3430,10 +3429,9 @@ define i64 @test7(<1 x i64> %a, <1 x i64> %b) #0 {
 ; CHECK-NEXT:    [[TMP40:%.*]] = or <8 x i1> [[TMP35]], [[TMP38]]
 ; CHECK-NEXT:    [[TMP41:%.*]] = or <8 x i1> [[TMP40]], [[TMP39]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = sext <8 x i1> [[TMP41]] to <8 x i8>
-; CHECK-NEXT:    [[TMP27:%.*]] = shufflevector <8 x i8> [[TMP16]], <8 x i8> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK-NEXT:    [[TMP28:%.*]] = shufflevector <8 x i8> [[TMP16]], <8 x i8> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-; CHECK-NEXT:    [[TMP29:%.*]] = or <4 x i8> [[TMP27]], [[TMP28]]
-; CHECK-NEXT:    [[TMP42:%.*]] = sext <4 x i8> [[TMP29]] to <4 x i16>
+; CHECK-NEXT:    [[TMP27:%.*]] = bitcast <8 x i8> [[TMP16]] to <4 x i16>
+; CHECK-NEXT:    [[TMP28:%.*]] = icmp ne <4 x i16> [[TMP27]], zeroinitializer
+; CHECK-NEXT:    [[TMP42:%.*]] = sext <4 x i1> [[TMP28]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP30:%.*]] = bitcast <4 x i16> [[TMP42]] to i64
 ; CHECK-NEXT:    [[TMP32:%.*]] = bitcast i64 [[TMP30]] to <1 x i64>
 ; CHECK-NEXT:    [[TMP31:%.*]] = tail call <1 x i64> @llvm.x86.ssse3.pmadd.ub.sw(<1 x i64> [[TMP22]], <1 x i64> [[TMP23]]) #[[ATTR5]]

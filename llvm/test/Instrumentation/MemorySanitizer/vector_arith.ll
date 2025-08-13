@@ -27,10 +27,9 @@ define <4 x i32> @Test_sse2_pmadd_wd(<8 x i16> %a, <8 x i16> %b) sanitize_memory
 ; CHECK-NEXT:    [[TMP15:%.*]] = or <8 x i1> [[TMP6]], [[TMP13]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = or <8 x i1> [[TMP15]], [[TMP14]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = sext <8 x i1> [[TMP10]] to <8 x i16>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <8 x i16> [[TMP11]], <8 x i16> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <8 x i16> [[TMP11]], <8 x i16> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-; CHECK-NEXT:    [[TMP9:%.*]] = or <4 x i16> [[TMP7]], [[TMP8]]
-; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i16> [[TMP9]] to <4 x i32>
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <8 x i16> [[TMP11]] to <4 x i32>
+; CHECK-NEXT:    [[TMP17:%.*]] = icmp ne <4 x i32> [[TMP16]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = sext <4 x i1> [[TMP17]] to <4 x i32>
 ; CHECK-NEXT:    [[C:%.*]] = tail call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> [[A]], <8 x i16> [[B]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[C]]
@@ -63,10 +62,9 @@ define <1 x i64> @Test_ssse3_pmadd_ub_sw(<1 x i64> %a, <1 x i64> %b) sanitize_me
 ; CHECK-NEXT:    [[TMP13:%.*]] = or <8 x i1> [[TMP16]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = or <8 x i1> [[TMP13]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = sext <8 x i1> [[TMP22]] to <8 x i8>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <8 x i8> [[TMP7]], <8 x i8> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <8 x i8> [[TMP7]], <8 x i8> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-; CHECK-NEXT:    [[TMP10:%.*]] = or <4 x i8> [[TMP8]], [[TMP9]]
-; CHECK-NEXT:    [[TMP23:%.*]] = sext <4 x i8> [[TMP10]] to <4 x i16>
+; CHECK-NEXT:    [[TMP18:%.*]] = bitcast <8 x i8> [[TMP7]] to <4 x i16>
+; CHECK-NEXT:    [[TMP24:%.*]] = icmp ne <4 x i16> [[TMP18]], zeroinitializer
+; CHECK-NEXT:    [[TMP23:%.*]] = sext <4 x i1> [[TMP24]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP19:%.*]] = bitcast <4 x i16> [[TMP23]] to i64
 ; CHECK-NEXT:    [[TMP20:%.*]] = bitcast i64 [[TMP19]] to <1 x i64>
 ; CHECK-NEXT:    [[C:%.*]] = tail call <1 x i64> @llvm.x86.ssse3.pmadd.ub.sw(<1 x i64> [[A]], <1 x i64> [[B]]) #[[ATTR2]]

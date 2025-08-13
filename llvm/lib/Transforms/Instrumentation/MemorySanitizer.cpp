@@ -3848,6 +3848,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   //
   // e.g., Two operands:
   //         <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %a, <8 x i16> %b)
+  //
+  //       Two operands which require an EltSizeInBits override:
   //         <1 x i64> @llvm.x86.mmx.pmadd.wd(<1 x i64> %a, <1 x i64> %b)
   //
   //       Three operands are not implemented yet:
@@ -3878,8 +3880,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     assert(ParamType->getPrimitiveSizeInBits() ==
            ReturnType->getPrimitiveSizeInBits());
 
+    FixedVectorType *ImplicitReturnType = ReturnType;
     // Step 1: instrument multiplication of corresponding vector elements
     if (EltSizeInBits) {
+      ImplicitReturnType = cast<FixedVectorType>(
+          getMMXVectorTy(EltSizeInBits * 2, ParamType->getPrimitiveSizeInBits()));
       ParamType = cast<FixedVectorType>(
           getMMXVectorTy(EltSizeInBits, ParamType->getPrimitiveSizeInBits()));
 
@@ -3902,7 +3907,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     //   OutShadow =   (SaNonZero & SbNonZero)
     //               | (VaNonZero & SbNonZero)
     //               | (SaNonZero & VbNonZero)
-    //   where non-zero is checked on a per-element basis.
+    //   where non-zero is checked on a per-element basis (not per bit).
     Value *SZero = Constant::getNullValue(Va->getType());
     Value *VZero = Constant::getNullValue(Sa->getType());
     Value *SaNonZero = IRB.CreateICmpNE(Sa, SZero);
@@ -3916,7 +3921,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     // Each element of the vector is represented by a single bit (poisoned or
     // not) e.g., <8 x i1>.
-    Value *ComboNonZero =
+    Value *And =
         IRB.CreateOr({SaAndSbNonZero, VaAndSbNonZero, SaAndVbNonZero});
 
     // Extend <8 x i1> to <8 x i16>.
@@ -3924,30 +3929,22 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // <8 x i32>, but that is irrelevant for our shadow purposes because we
     // consider each element to be either fully initialized or fully
     // uninitialized.)
-    ComboNonZero = IRB.CreateSExt(ComboNonZero, Sa->getType());
+    And = IRB.CreateSExt(And, Sa->getType());
 
     // Step 2: instrument horizontal add
-    // e.g., collapse <8 x i16> into <4 x i16> (reduction factor == 2)
-    //                <16 x i8> into <4 x i8>  (reduction factor == 4)
-    Value *OutShadow =
-        horizontalReduce(I, ReductionFactor, ComboNonZero, nullptr);
-    // TODO: it could be faster to bitcast <8 x i1> into <4 x i2>, compare to
-    //       zero to get <4 x i1>, then sign-extend to <4 x i8>. This
-    //       approximation works because we treat each element as either fully
-    //       initialized or fully uninitialized.
+    // We don't need bit-precise horizontalReduce because we only want to check
+    // if each pair of elements is fully zero.
+    // Cast to <4 x i32>.
+    Value *Horizontal = IRB.CreateBitCast(And, ImplicitReturnType);
 
-    // Extend to <4 x i32>.
-    if (EltSizeInBits) {
-      FixedVectorType *ImplicitReturnType = cast<FixedVectorType>(
-          getMMXVectorTy(EltSizeInBits * 2, ParamType->getPrimitiveSizeInBits()));
-      OutShadow = IRB.CreateSExt(OutShadow, ImplicitReturnType);
-    } else {
-      assert(cast<FixedVectorType>(OutShadow->getType())->getNumElements()
-             == cast<FixedVectorType>(getShadowTy(&I))->getNumElements());
-    }
+    // Compute <4 x i1>, then extend back to <4 x i32>.
+    Value *OutShadow = IRB.CreateSExt(
+                                         IRB.CreateICmpNE(Horizontal, Constant::getNullValue(Horizontal->getType())),
+                                         ImplicitReturnType);
 
     // For MMX, cast it back to the required fake return type (<1 x i64>).
-    OutShadow = CreateShadowCast(IRB, OutShadow, getShadowTy(&I));
+    if (EltSizeInBits)
+        OutShadow = CreateShadowCast(IRB, OutShadow, getShadowTy(&I));
 
     setShadow(&I, OutShadow);
     setOriginForNaryOp(I);

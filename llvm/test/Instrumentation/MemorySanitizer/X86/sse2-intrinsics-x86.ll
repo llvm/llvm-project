@@ -772,10 +772,9 @@ define <4 x i32> @test_x86_sse2_pmadd_wd(<8 x i16> %a0, <8 x i16> %a1) #0 {
 ; CHECK-NEXT:    [[TMP16:%.*]] = or <8 x i1> [[TMP11]], [[TMP14]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = or <8 x i1> [[TMP16]], [[TMP15]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = sext <8 x i1> [[TMP17]] to <8 x i16>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <8 x i16> [[TMP7]], <8 x i16> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <8 x i16> [[TMP7]], <8 x i16> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-; CHECK-NEXT:    [[TMP10:%.*]] = or <4 x i16> [[TMP8]], [[TMP9]]
-; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i16> [[TMP10]] to <4 x i32>
+; CHECK-NEXT:    [[TMP18:%.*]] = bitcast <8 x i16> [[TMP7]] to <4 x i32>
+; CHECK-NEXT:    [[TMP19:%.*]] = icmp ne <4 x i32> [[TMP18]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = sext <4 x i1> [[TMP19]] to <4 x i32>
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> [[A0]], <8 x i16> [[A1]])
 ; CHECK-NEXT:    store <4 x i32> [[TMP6]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
