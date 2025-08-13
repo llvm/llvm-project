@@ -10175,8 +10175,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     }
   } else if (IC > 1 && UserIC == 1) {
     // Tell the user interleaving is beneficial, but it explicitly disabled.
-    LLVM_DEBUG(
-        dbgs() << "LV: Interleaving is beneficial but is explicitly disabled.");
+    LLVM_DEBUG(dbgs() << "LV: Interleaving is beneficial but is explicitly "
+                         "disabled.\n");
     IntDiagMsg = {"InterleavingBeneficialButDisabled",
                   "the cost-model indicates that interleaving is beneficial "
                   "but is explicitly disabled or interleave count is set to 1"};
