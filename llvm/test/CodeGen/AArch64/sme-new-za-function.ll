@@ -37,11 +37,11 @@ define void @private_za() "aarch64_new_za" {
 ; CHECK-NEWLOWERING-NEXT:    b .LBB0_2
 ; CHECK-NEWLOWERING-NEXT:  .LBB0_1:
 ; CHECK-NEWLOWERING-NEXT:    bl __arm_tpidr2_save
+; CHECK-NEWLOWERING-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-NEWLOWERING-NEXT:    zero {za}
 ; CHECK-NEWLOWERING-NEXT:    b .LBB0_2
 ; CHECK-NEWLOWERING-NEXT:  .LBB0_2:
-; CHECK-NEWLOWERING-NEXT:    msr TPIDR2_EL0, xzr
 ; CHECK-NEWLOWERING-NEXT:    smstart za
-; CHECK-NEWLOWERING-NEXT:    zero {za}
 ; CHECK-NEWLOWERING-NEXT:    bl shared_za_callee
 ; CHECK-NEWLOWERING-NEXT:    smstop za
 ; CHECK-NEWLOWERING-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -104,11 +104,11 @@ define i32 @private_za_multiple_exit(i32 %a, i32 %b, i64 %cond) "aarch64_new_za"
 ; CHECK-NEWLOWERING-NEXT:    b .LBB1_2
 ; CHECK-NEWLOWERING-NEXT:  .LBB1_1: // %entry
 ; CHECK-NEWLOWERING-NEXT:    bl __arm_tpidr2_save
+; CHECK-NEWLOWERING-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-NEWLOWERING-NEXT:    zero {za}
 ; CHECK-NEWLOWERING-NEXT:    b .LBB1_2
 ; CHECK-NEWLOWERING-NEXT:  .LBB1_2: // %entry
-; CHECK-NEWLOWERING-NEXT:    msr TPIDR2_EL0, xzr
 ; CHECK-NEWLOWERING-NEXT:    smstart za
-; CHECK-NEWLOWERING-NEXT:    zero {za}
 ; CHECK-NEWLOWERING-NEXT:    str w1, [sp, #8] // 4-byte Folded Spill
 ; CHECK-NEWLOWERING-NEXT:    str w0, [sp, #12] // 4-byte Folded Spill
 ; CHECK-NEWLOWERING-NEXT:    subs x8, x2, #1

@@ -534,18 +534,6 @@ void MachineSMEABI::emitAllocateLazySaveBuffer(
   }
 }
 
-static constexpr unsigned ZERO_ALL_ZA_MASK = 0b11111111;
-static void emitZeroZA(const TargetInstrInfo &TII, DebugLoc DL,
-                       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                       unsigned Mask = ZERO_ALL_ZA_MASK) {
-  MachineInstrBuilder MIB =
-      BuildMI(MBB, MBBI, DL, TII.get(AArch64::ZERO_M)).addImm(Mask);
-  for (unsigned I = 0; I < 8; I++) {
-    if (Mask & (1 << I))
-      MIB.addDef(AArch64::ZAD0 + I, RegState::ImplicitDefine);
-  }
-}
-
 void MachineSMEABI::emitNewZAPrologue(MachineBasicBlock &MBB,
                                       MachineBasicBlock::iterator MBBI) {
   auto *TLI = Subtarget->getTargetLowering();
@@ -557,21 +545,18 @@ void MachineSMEABI::emitNewZAPrologue(MachineBasicBlock &MBB,
       .addReg(TPIDR2EL0, RegState::Define)
       .addImm(AArch64SysReg::TPIDR2_EL0);
   // If TPIDR2_EL0 is non-zero, commit the lazy save.
-  BuildMI(MBB, MBBI, DL, TII->get(AArch64::CommitZAPseudo))
-      .addReg(TPIDR2EL0)
-      .addExternalSymbol(TLI->getLibcallName(RTLIB::SMEABI_TPIDR2_SAVE))
-      .addRegMask(TRI->SMEABISupportRoutinesCallPreservedMaskFromX0());
-  // Clear TPIDR2_EL0.
-  BuildMI(MBB, MBBI, DL, TII->get(AArch64::MSR))
-      .addImm(AArch64SysReg::TPIDR2_EL0)
-      .addReg(AArch64::XZR);
+  auto CommitZA =
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::CommitZAPseudo))
+          .addReg(TPIDR2EL0)
+          .addExternalSymbol(TLI->getLibcallName(RTLIB::SMEABI_TPIDR2_SAVE))
+          .addRegMask(TRI->SMEABISupportRoutinesCallPreservedMaskFromX0());
+  // NOTE: Functions that only use ZT0 don't need to zero ZA.
+  if (MF->getInfo<AArch64FunctionInfo>()->getSMEFnAttrs().hasZAState())
+    CommitZA.addDef(AArch64::ZAB0, RegState::ImplicitDefine);
   // Enable ZA (as ZA could have previously been in the OFF state).
   BuildMI(MBB, MBBI, DL, TII->get(AArch64::MSRpstatesvcrImm1))
       .addImm(AArch64SVCR::SVCRZA)
       .addImm(1);
-  // NOTE: Functions that only use ZT0 don't need to zero ZA.
-  if (MF->getInfo<AArch64FunctionInfo>()->getSMEFnAttrs().hasZAState())
-    emitZeroZA(*TII, DL, MBB, MBBI);
 }
 
 void MachineSMEABI::emitStateChange(MachineBasicBlock &MBB,

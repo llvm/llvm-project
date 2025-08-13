@@ -990,6 +990,8 @@ bool AArch64ExpandPseudo::expandStoreSwiftAsyncContext(
   return true;
 }
 
+static constexpr unsigned ZERO_ALL_ZA_MASK = 0b11111111;
+
 MachineBasicBlock *
 AArch64ExpandPseudo::expandCommitOrRestoreZA(MachineBasicBlock &MBB,
                                              MachineBasicBlock::iterator MBBI) {
@@ -1029,8 +1031,21 @@ AArch64ExpandPseudo::expandCommitOrRestoreZA(MachineBasicBlock &MBB,
   // Replace the pseudo with a call (BL).
   MachineInstrBuilder MIB =
       BuildMI(*SMBB, SMBB->end(), DL, TII->get(AArch64::BL));
-  if (IsRestoreZA)
+  if (IsRestoreZA) {
     MIB.addReg(MI.getOperand(1).getReg(), RegState::Implicit);
+  } else /*CommitZA*/ {
+    auto *TRI = MBB.getParent()->getSubtarget().getRegisterInfo();
+    // Clear TPIDR2_EL0.
+    BuildMI(*SMBB, SMBB->end(), DL, TII->get(AArch64::MSR))
+        .addImm(AArch64SysReg::TPIDR2_EL0)
+        .addReg(AArch64::XZR);
+    bool ZeroZA = MI.definesRegister(AArch64::ZAB0, TRI);
+    if (ZeroZA) {
+      BuildMI(*SMBB, SMBB->end(), DL, TII->get(AArch64::ZERO_M))
+          .addImm(ZERO_ALL_ZA_MASK)
+          .addDef(AArch64::ZAB0, RegState::ImplicitDefine);
+    }
+  }
   unsigned FirstBLOperand = IsRestoreZA ? 2 : 1;
   for (unsigned I = FirstBLOperand; I < MI.getNumOperands(); ++I)
     MIB.add(MI.getOperand(I));

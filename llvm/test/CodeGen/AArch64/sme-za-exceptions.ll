@@ -233,10 +233,10 @@ define void @try_catch_shared_za_callee() "aarch64_new_za" personality ptr @__gx
 ; CHECK-NEXT:    cbz x8, .LBB2_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    bl __arm_tpidr2_save
-; CHECK-NEXT:  .LBB2_2:
 ; CHECK-NEXT:    msr TPIDR2_EL0, xzr
-; CHECK-NEXT:    smstart za
 ; CHECK-NEXT:    zero {za}
+; CHECK-NEXT:  .LBB2_2:
+; CHECK-NEXT:    smstart za
 ; CHECK-NEXT:  .Ltmp6:
 ; CHECK-NEXT:    bl shared_za_call
 ; CHECK-NEXT:  .Ltmp7:

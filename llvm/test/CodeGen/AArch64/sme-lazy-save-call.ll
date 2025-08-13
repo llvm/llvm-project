@@ -395,11 +395,11 @@ define void @test_lazy_save_mixed_shared_and_private_callees() "aarch64_new_za"
 ; CHECK-NEWLOWERING-NEXT:    cbz x8, .LBB4_2
 ; CHECK-NEWLOWERING-NEXT:  // %bb.1:
 ; CHECK-NEWLOWERING-NEXT:    bl __arm_tpidr2_save
-; CHECK-NEWLOWERING-NEXT:  .LBB4_2:
 ; CHECK-NEWLOWERING-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-NEWLOWERING-NEXT:    zero {za}
+; CHECK-NEWLOWERING-NEXT:  .LBB4_2:
 ; CHECK-NEWLOWERING-NEXT:    smstart za
 ; CHECK-NEWLOWERING-NEXT:    sub x8, x29, #16
-; CHECK-NEWLOWERING-NEXT:    zero {za}
 ; CHECK-NEWLOWERING-NEXT:    msr TPIDR2_EL0, x8
 ; CHECK-NEWLOWERING-NEXT:    bl private_za_callee
 ; CHECK-NEWLOWERING-NEXT:    smstart za
