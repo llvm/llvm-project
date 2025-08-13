@@ -2217,6 +2217,49 @@ define {<4 x i32>, <4 x i32>} @maskedload_factor3_combined_mask_skip_field(ptr %
   ret {<4 x i32>, <4 x i32>} %res1
 }
 
+define {<4 x i32>, <4 x i32>} @maskedload_factor4_combined_mask_multi_skip_fields(ptr %ptr, <4 x i1> %mask) {
+; CHECK-LABEL: maskedload_factor4_combined_mask_multi_skip_fields:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 16
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vlsseg2e32.v v8, (a0), a1, v0.t
+; CHECK-NEXT:    ret
+  %interleaved.mask = shufflevector <4 x i1> %mask, <4 x i1> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3>
+  %combined = and <16 x i1> %interleaved.mask, <i1 true, i1 true, i1 true, i1 false, i1 true, i1 true, i1 true, i1 false, i1 true, i1 true, i1 true, i1 false, i1 true, i1 true, i1 true, i1 false>
+  %combined1 = and <16 x i1> %combined, <i1 true, i1 true, i1 false, i1 true, i1 true, i1 true, i1 false, i1 true, i1 true, i1 true, i1 false, i1 true, i1 true, i1 true, i1 false, i1 true>
+  %interleaved.vec = tail call <16 x i32> @llvm.masked.load.v16i32.p0(ptr %ptr, i32 4, <16 x i1> %combined1, <16 x i32> poison)
+  ; mask = %mask, skip the last 2 fields
+  %v0 = shufflevector <16 x i32> %interleaved.vec, <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
+  %v1 = shufflevector <16 x i32> %interleaved.vec, <16 x i32> poison, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
+  %res0 = insertvalue {<4 x i32>, <4 x i32>} undef, <4 x i32> %v0, 0
+  %res1 = insertvalue {<4 x i32>, <4 x i32>} %res0, <4 x i32> %v1, 1
+  ret {<4 x i32>, <4 x i32>} %res1
+}
+
+define {<4 x i32>, <4 x i32>} @maskedload_factor4_combined_mask_multi_skip_fields_and_masks(ptr %ptr, <4 x i1> %mask, <4 x i1> %mask2) {
+; CHECK-LABEL: maskedload_factor4_combined_mask_multi_skip_fields_and_masks:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vmand.mm v0, v0, v8
+; CHECK-NEXT:    li a1, 16
+; CHECK-NEXT:    vlsseg2e32.v v8, (a0), a1, v0.t
+; CHECK-NEXT:    ret
+  %interleaved.mask = shufflevector <4 x i1> %mask, <4 x i1> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3>
+  %combined = and <16 x i1> %interleaved.mask, <i1 true, i1 true, i1 true, i1 false, i1 true, i1 true, i1 true, i1 false, i1 true, i1 true, i1 true, i1 false, i1 true, i1 true, i1 true, i1 false>
+
+  %interleaved.mask2 = shufflevector <4 x i1> %mask2, <4 x i1> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3>
+  %combined1 = and <16 x i1> %interleaved.mask2, <i1 true, i1 true, i1 false, i1 true, i1 true, i1 true, i1 false, i1 true, i1 true, i1 true, i1 false, i1 true, i1 true, i1 true, i1 false, i1 true>
+
+  %combined2 = and <16 x i1> %combined, %combined1
+  %interleaved.vec = tail call <16 x i32> @llvm.masked.load.v16i32.p0(ptr %ptr, i32 4, <16 x i1> %combined2, <16 x i32> poison)
+  ; mask = %mask & %mask2, skip the last 2 fields
+  %v0 = shufflevector <16 x i32> %interleaved.vec, <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
+  %v1 = shufflevector <16 x i32> %interleaved.vec, <16 x i32> poison, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
+  %res0 = insertvalue {<4 x i32>, <4 x i32>} undef, <4 x i32> %v0, 0
+  %res1 = insertvalue {<4 x i32>, <4 x i32>} %res0, <4 x i32> %v1, 1
+  ret {<4 x i32>, <4 x i32>} %res1
+}
+
 ; We can only skip the last field for now.
 define {<4 x i32>, <4 x i32>, <4 x i32>} @maskedload_factor3_invalid_skip_field(ptr %ptr) {
 ; RV32-LABEL: maskedload_factor3_invalid_skip_field:
@@ -2234,8 +2277,8 @@ define {<4 x i32>, <4 x i32>, <4 x i32>} @maskedload_factor3_invalid_skip_field(
 ; RV32-NEXT:    vle32.v v12, (a0), v0.t
 ; RV32-NEXT:    li a0, 36
 ; RV32-NEXT:    vmv.s.x v20, a1
-; RV32-NEXT:    lui a1, %hi(.LCPI70_0)
-; RV32-NEXT:    addi a1, a1, %lo(.LCPI70_0)
+; RV32-NEXT:    lui a1, %hi(.LCPI72_0)
+; RV32-NEXT:    addi a1, a1, %lo(.LCPI72_0)
 ; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vle16.v v21, (a1)
 ; RV32-NEXT:    vcompress.vm v8, v12, v11

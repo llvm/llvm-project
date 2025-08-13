@@ -592,7 +592,6 @@ static void getGapMask(const Constant &MaskConst, unsigned Factor,
 
 static std::pair<Value *, APInt> getMask(Value *WideMask, unsigned Factor,
                                          ElementCount LeafValueEC) {
-  using namespace PatternMatch;
   auto GapMask = APInt::getAllOnes(Factor);
 
   if (auto *IMI = dyn_cast<IntrinsicInst>(WideMask)) {
@@ -602,16 +601,19 @@ static std::pair<Value *, APInt> getMask(Value *WideMask, unsigned Factor,
     }
   }
 
-  // Try to match `and <interleaved mask>, <gap mask>`. The WideMask here is
-  // expected to be a fixed vector and gap mask should be a constant mask.
-  Value *AndMaskLHS;
-  Constant *AndMaskRHS;
-  if (LeafValueEC.isFixed() &&
-      match(WideMask, m_c_And(m_Value(AndMaskLHS), m_Constant(AndMaskRHS)))) {
-    assert(!isa<Constant>(AndMaskLHS) &&
-           "expect constants to be folded already");
-    getGapMask(*AndMaskRHS, Factor, LeafValueEC.getFixedValue(), GapMask);
-    return {getMask(AndMaskLHS, Factor, LeafValueEC).first, GapMask};
+  // Masks that are assembled from bitwise AND.
+  if (auto *AndOp = dyn_cast<BinaryOperator>(WideMask);
+      AndOp && AndOp->getOpcode() == Instruction::And) {
+    auto [MaskLHS, GapMaskLHS] =
+        getMask(AndOp->getOperand(0), Factor, LeafValueEC);
+    auto [MaskRHS, GapMaskRHS] =
+        getMask(AndOp->getOperand(1), Factor, LeafValueEC);
+    if (!MaskLHS || !MaskRHS)
+      return {nullptr, GapMask};
+    // Using IRBuilder here so that any trivial constants could be folded right
+    // away.
+    return {IRBuilder<>(AndOp).CreateAnd(MaskLHS, MaskRHS),
+            GapMaskLHS & GapMaskRHS};
   }
 
   if (auto *ConstMask = dyn_cast<Constant>(WideMask)) {
