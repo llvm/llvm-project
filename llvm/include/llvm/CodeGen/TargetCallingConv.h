@@ -218,12 +218,10 @@ namespace ISD {
     /// registers, we got 4 InputArgs with PartOffsets 0, 4, 8 and 12.
     unsigned PartOffset;
 
-    InputArg(ArgFlagsTy Flags, EVT vt, EVT ArgVT, Type *OrigTy, bool Used,
+    InputArg(ArgFlagsTy Flags, MVT VT, EVT ArgVT, Type *OrigTy, bool Used,
              unsigned OrigArgIndex, unsigned PartOffset)
-        : Flags(Flags), ArgVT(ArgVT), OrigTy(OrigTy), Used(Used),
-          OrigArgIndex(OrigArgIndex), PartOffset(PartOffset) {
-      VT = vt.getSimpleVT();
-    }
+        : Flags(Flags), VT(VT), ArgVT(ArgVT), OrigTy(OrigTy), Used(Used),
+          OrigArgIndex(OrigArgIndex), PartOffset(PartOffset) {}
 
     bool isOrigArg() const {
       return OrigArgIndex != NoArgIndex;
