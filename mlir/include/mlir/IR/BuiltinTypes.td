@@ -101,7 +101,8 @@ class Builtin_CachedFloatType<string name, string mnemonic,
 // Float8E5M2Type
 //===----------------------------------------------------------------------===//
 
-def Builtin_Float8E5M2 : Builtin_FloatType<"Float8E5M2", "f8E5M2"> {
+def Builtin_Float8E5M2 : Builtin_FloatType<"Float8E5M2", "f8E5M2", 
+                                   ["QuantizationInterface"]> {
   let summary = "8-bit floating point with 2 bit mantissa";
   let description = [{
     An 8-bit floating point type with 1 sign bit, 5 bits exponent and 2 bits
@@ -116,6 +117,21 @@ def Builtin_Float8E5M2 : Builtin_FloatType<"Float8E5M2", "f8E5M2"> {
       * denormals when exponent is 0
 
     Described in: https://arxiv.org/abs/2209.05433
+  }];
+
+  let extraClassDeclaration = [{
+    /// QuantizationInterface method implementations
+    bool isStorageSigned() const { return true; }
+    /// Get the bit width of this 8-bit floating point type.
+    unsigned getStorageWidth() const { return 8; }
+    
+    /// Get default maximum value for this 8-bit floating point type.
+    int64_t getDefaultMaximum() const { return 57344; }
+    /// Get default minimum value for this 8-bit floating point type.
+    int64_t getDefaultMinimum() const { return -getDefaultMaximum(); }
+    
+    /// Get the storage type as a string.
+    std::string getStorageType() const { return "f8E5M2"; }
   }];
 }
 
@@ -143,7 +159,8 @@ def Builtin_Float8E4M3 : Builtin_FloatType<"Float8E4M3", "f8E4M3"> {
 // Float8E4M3FNType
 //===----------------------------------------------------------------------===//
 
-def Builtin_Float8E4M3FN : Builtin_FloatType<"Float8E4M3FN", "f8E4M3FN"> {
+def Builtin_Float8E4M3FN : Builtin_FloatType<"Float8E4M3FN", "f8E4M3FN", 
+                                   ["QuantizationInterface"]> {
   let summary = "8-bit floating point with 3 bit mantissa";
   let description = [{
     An 8-bit floating point type with 1 sign bit, 4 bits exponent and 3 bits
@@ -159,6 +176,21 @@ def Builtin_Float8E4M3FN : Builtin_FloatType<"Float8E4M3FN", "f8E4M3FN"> {
       * denormals when exponent is 0
 
     Described in: https://arxiv.org/abs/2209.05433
+  }];
+
+  let extraClassDeclaration = [{
+    /// QuantizationInterface method implementations
+    bool isStorageSigned() const { return true; }
+    /// Get the bit width of this 8-bit floating point type.
+    unsigned getStorageWidth() const { return 8; }
+    
+    /// Get default maximum value for this 8-bit floating point type.
+    int64_t getDefaultMaximum() const { return 448; }
+    /// Get default minimum value for this 8-bit floating point type.
+    int64_t getDefaultMinimum() const { return -getDefaultMaximum(); }
+    
+    /// Get the storage type as a string.
+    std::string getStorageType() const { return "f8E4M3FN"; }
   }];
 }
 
@@ -561,18 +593,11 @@ def Builtin_Integer : Builtin_Type<"Integer", "integer",
     static constexpr unsigned kMaxWidth = (1 << 24) - 1;
 
     /// QuantizationInterface method implementations
-    /// Return true if this is a signed integer type.
+    /// Return true if this is a signed or signless integer type.
     bool isStorageSigned() const { return !isUnsigned(); }
     /// Get the bit width of this integer type.
     unsigned getStorageWidth() const { return getWidth(); }
     
-    /// Get default minimum value for this integer type.
-    int64_t getDefaultMinimum() const {
-      if (isStorageSigned()) {
-        return llvm::minIntN(getStorageWidth());
-      }
-      return 0;
-    }
     /// Get default maximum value for this integer type.
     int64_t getDefaultMaximum() const {
       if (isStorageSigned()) {
@@ -580,7 +605,14 @@ def Builtin_Integer : Builtin_Type<"Integer", "integer",
       }
       return llvm::maxUIntN(getStorageWidth());
     }
-    
+    /// Get default minimum value for this integer type.
+    int64_t getDefaultMinimum() const {
+      if (isStorageSigned()) {
+        return llvm::minIntN(getStorageWidth());
+      }
+      return 0;
+    }
+
     /// Get the storage type as a string.
     std::string getStorageType() const {
       return (isStorageSigned() ? "i" : "u") + std::to_string(getWidth());
