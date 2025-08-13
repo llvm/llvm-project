@@ -3602,30 +3602,43 @@ static void GeneratePointerAuthArgs(const LangOptions &Opts,
 
 static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args,
                                  DiagnosticsEngine &Diags) {
-  Opts.PointerAuthIntrinsics = Args.hasArg(OPT_fptrauth_intrinsics);
-  Opts.PointerAuthCalls = Args.hasArg(OPT_fptrauth_calls);
-  Opts.PointerAuthReturns = Args.hasArg(OPT_fptrauth_returns);
-  Opts.PointerAuthIndirectGotos = Args.hasArg(OPT_fptrauth_indirect_gotos);
-  Opts.PointerAuthAuthTraps = Args.hasArg(OPT_fptrauth_auth_traps);
-  Opts.PointerAuthVTPtrAddressDiscrimination =
-      Args.hasArg(OPT_fptrauth_vtable_pointer_address_discrimination);
-  Opts.PointerAuthVTPtrTypeDiscrimination =
-      Args.hasArg(OPT_fptrauth_vtable_pointer_type_discrimination);
-  Opts.PointerAuthTypeInfoVTPtrDiscrimination =
-      Args.hasArg(OPT_fptrauth_type_info_vtable_pointer_discrimination);
-  Opts.PointerAuthFunctionTypeDiscrimination =
-      Args.hasArg(OPT_fptrauth_function_pointer_type_discrimination);
-  Opts.PointerAuthInitFini = Args.hasArg(OPT_fptrauth_init_fini);
+  const Arg *PedanticErrors = Args.getLastArgNoClaim(OPT_pedantic_errors);
+  auto GetAndCheckPointerAuthArg = [&](driver::options::ID Option) {
+    Arg *OptionArg = Args.getLastArg(Option);
+    if (OptionArg && PedanticErrors) {
+      Diags.Report(diag::err_drv_incompatible_options)
+          << OptionArg->getSpelling() << PedanticErrors->getSpelling();
+    }
+    return OptionArg != nullptr;
+  };
+  Opts.PointerAuthIntrinsics =
+      GetAndCheckPointerAuthArg(OPT_fptrauth_intrinsics);
+  Opts.PointerAuthCalls = GetAndCheckPointerAuthArg(OPT_fptrauth_calls);
+  Opts.PointerAuthReturns = GetAndCheckPointerAuthArg(OPT_fptrauth_returns);
+  Opts.PointerAuthIndirectGotos =
+      GetAndCheckPointerAuthArg(OPT_fptrauth_indirect_gotos);
+  Opts.PointerAuthAuthTraps =
+      GetAndCheckPointerAuthArg(OPT_fptrauth_auth_traps);
+  Opts.PointerAuthVTPtrAddressDiscrimination = GetAndCheckPointerAuthArg(
+      OPT_fptrauth_vtable_pointer_address_discrimination);
+  Opts.PointerAuthVTPtrTypeDiscrimination = GetAndCheckPointerAuthArg(
+      OPT_fptrauth_vtable_pointer_type_discrimination);
+  Opts.PointerAuthTypeInfoVTPtrDiscrimination = GetAndCheckPointerAuthArg(
+      OPT_fptrauth_type_info_vtable_pointer_discrimination);
+  Opts.PointerAuthFunctionTypeDiscrimination = GetAndCheckPointerAuthArg(
+      OPT_fptrauth_function_pointer_type_discrimination);
+  Opts.PointerAuthInitFini = GetAndCheckPointerAuthArg(OPT_fptrauth_init_fini);
   Opts.PointerAuthInitFiniAddressDiscrimination =
-      Args.hasArg(OPT_fptrauth_init_fini_address_discrimination);
-  Opts.PointerAuthELFGOT = Args.hasArg(OPT_fptrauth_elf_got);
+      GetAndCheckPointerAuthArg(OPT_fptrauth_init_fini_address_discrimination);
+  Opts.PointerAuthELFGOT = GetAndCheckPointerAuthArg(OPT_fptrauth_elf_got);
   Opts.AArch64JumpTableHardening =
-      Args.hasArg(OPT_faarch64_jump_table_hardening);
+      GetAndCheckPointerAuthArg(OPT_faarch64_jump_table_hardening);
 
-  Opts.PointerAuthObjcIsa = Args.hasArg(OPT_fptrauth_objc_isa);
-  Opts.PointerAuthObjcClassROPointers = Args.hasArg(OPT_fptrauth_objc_class_ro);
+  Opts.PointerAuthObjcIsa = GetAndCheckPointerAuthArg(OPT_fptrauth_objc_isa);
+  Opts.PointerAuthObjcClassROPointers =
+      GetAndCheckPointerAuthArg(OPT_fptrauth_objc_class_ro);
   Opts.PointerAuthObjcInterfaceSel =
-      Args.hasArg(OPT_fptrauth_objc_interface_sel);
+      GetAndCheckPointerAuthArg(OPT_fptrauth_objc_interface_sel);
 
   if (Opts.PointerAuthObjcInterfaceSel)
     Opts.PointerAuthObjcInterfaceSelKey =
@@ -5021,6 +5034,11 @@ bool CompilerInvocation::CreateFromArgsImpl(
   InputKind DashX = Res.getFrontendOpts().DashX;
   ParseTargetArgs(Res.getTargetOpts(), Args, Diags);
   llvm::Triple T(Res.getTargetOpts().Triple);
+  if (const Arg *PedanticErrors = Args.getLastArgNoClaim(OPT_pedantic_errors);
+      PedanticErrors && T.isArm64e()) {
+    Diags.Report(diag::err_drv_unsupported_opt_for_target)
+        << PedanticErrors->getSpelling() << T.str();
+  }
   ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args, Diags,
                         Res.getFileSystemOpts().WorkingDir);
   if (Res.getFrontendOpts().GenReducedBMI ||
