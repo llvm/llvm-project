@@ -3515,7 +3515,7 @@ RecordDecl *FlexibleArrayMemberUtils::GetFlexibleRecord(QualType QT) {
   if (!RT)
     return nullptr;
 
-  auto *RD = RT->getDecl();
+  auto *RD = RT->getOriginalDecl();
   if (!RD->hasFlexibleArrayMember())
     return nullptr;
 
@@ -3531,7 +3531,7 @@ RecordDecl *FlexibleArrayMemberUtils::GetFlexibleRecord(QualType QT) {
     assert(FlexibleField);
     QualType FieldType = FlexibleField->getType();
     if (auto *RT = FieldType->getAs<RecordType>()) {
-      FlexibleRecord = RT->getDecl();
+      FlexibleRecord = RT->getOriginalDecl();
     } else {
       DCPTy = FieldType->isIncompleteArrayType() ? FieldType->getAs<CountAttributedType>() : nullptr;
       FlexibleRecord = nullptr;
@@ -3563,7 +3563,7 @@ bool FlexibleArrayMemberUtils::Find(
     PathToFlex.push_back(FlexibleField);
     QualType FieldType = FlexibleField->getType();
     if (auto *RT = FieldType->getAs<RecordType>()) {
-      FlexibleRecord = RT->getDecl();
+      FlexibleRecord = RT->getOriginalDecl();
     } else {
       DCPTy = FieldType->isIncompleteArrayType() ? FieldType->getAs<CountAttributedType>() : nullptr;
       FlexibleRecord = nullptr;

@@ -28,7 +28,6 @@ typedef struct {
 // CHECK: |-RecordDecl [[ADDR:0x[a-z0-9]+]] {{.+}} struct definition
 // CHECK: | |-FieldDecl {{.+}} l 'long *__single'
 // CHECK: | `-FieldDecl {{.+}} v 'void *__single'
-// CHECK: `-TypedefDecl {{.+}} T 'struct T':'T'
-// CHECK:   `-ElaboratedType {{.+}} 'struct T' sugar
-// CHECK:     `-RecordType {{.+}} 'T'
-// CHECK:       `-Record [[ADDR]] {{.+}}
+// CHECK: `-TypedefDecl {{.+}} T 'struct T'
+// CHECK:   `-RecordType {{.+}} 'struct T'
+// CHECK:     `-Record [[ADDR]] {{.+}}

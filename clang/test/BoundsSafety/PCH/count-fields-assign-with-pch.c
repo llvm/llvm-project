@@ -31,9 +31,8 @@ int main() {
 // CHECK: | |-FieldDecl {{.*}} imported referenced len 'int'
 // CHECK: | | `-DependerDeclsAttr {{.*}} Implicit [[FIELD_DECL_PTR:0x[a-z0-9]*]] 0
 // CHECK: | `-FieldDecl [[FIELD_DECL_PTR]] {{.*}} imported referenced ptr 'int *__single __counted_by(len)':'int *__single'
-// CHECK: |-TypedefDecl {{.*}} imported referenced S 'struct S':'S'
-// CHECK: | `-ElaboratedType {{.*}} 'struct S' sugar imported
-// CHECK: |   `-RecordType {{.*}} 'S' imported
-// CHECK: |     `-Record [[STRUCT_DEF]]
+// CHECK: |-TypedefDecl {{.*}} imported referenced S 'struct S'
+// CHECK: | `-RecordType {{.*}} 'struct S' imported
+// CHECK: |   `-Record [[STRUCT_DEF]]
 
 #endif
