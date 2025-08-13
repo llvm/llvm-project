@@ -339,14 +339,14 @@ bool mlir::isMemoryEffectMovable(Operation *op) {
 
 bool mlir::isMemoryEffectFree(Operation *op) {
   if (auto memInterface = dyn_cast<MemoryEffectOpInterface>(op)) {
-    if (!memInterface.hasNoEffect()) {
+    if (!memInterface.hasNoEffect())
       return false;
-    }
+    
     // If the op does not have recursive side effects, then it is memory effect
     // free.
-    if (!op->hasTrait<OpTrait::HasRecursiveMemoryEffects>()) {
+    if (!op->hasTrait<OpTrait::HasRecursiveMemoryEffects>())
       return true;
-    }
+    
   } else if (!op->hasTrait<OpTrait::HasRecursiveMemoryEffects>()) {
     // Otherwise, if the op does not implement the memory effect interface and
     // it does not have recursive side effects, then it cannot be known that the
@@ -356,61 +356,55 @@ bool mlir::isMemoryEffectFree(Operation *op) {
 
   // Recurse into the regions and ensure that all nested ops are memory effect
   // free.
-  for (Region &region : op->getRegions()) {
-    for (Operation &op : region.getOps()) {
-      if (!isMemoryEffectFree(&op)) {
+  for (Region &region : op->getRegions())
+    for (Operation &op : region.getOps())
+      if (!isMemoryEffectFree(&op))
         return false;
-      }
-    }
-  }
+
   return true;
 }
 
 bool mlir::isMemoryInitMovable(Operation *op) {
-  if (auto memInterface = dyn_cast<MemoryEffectOpInterface>(op)) {
-    // gather all effects on op
-    llvm::SmallVector<MemoryEffects::EffectInstance> effects;
-    memInterface.getEffects(effects);
-
-    // op has interface but no effects, be conservative
-    if (effects.empty()) {
-      return false;
-    }
-
-    std::unordered_map<std::string, int> resources;
-
-    // ensure op only has Init effects and gather unique
-    // resource names
-    for (const MemoryEffects::EffectInstance &effect : effects) {
-      if (!isa<MemoryEffects::Init>(effect.getEffect())) {
-        return false;
-      }
-
-      std::string name = effect.getResource()->getName().str();
-      resources.try_emplace(name, 0);
-    }
-
-    // op itself is good, need to check rest of its parent region
-    Operation *parent = op->getParentOp();
-
-    for (Region &region : parent->getRegions()) {
-      for (Operation &op_i : region.getOps()) {
-        if (hasMemoryEffectInitConflict(&op_i, resources)) {
-          return false;
-        }
-      }
-    }
-    return true;
-  }
-
+  auto memInterface = dyn_cast<MemoryEffectOpInterface>(op);
   // op does not implement the memory effect op interface
   // meaning it doesn't have any memory init effects and
   // shouldn't be flagged as movable to be conservative
-  return false;
+  if (!memInterface) return false;
+
+  // gather all effects on op
+  llvm::SmallVector<MemoryEffects::EffectInstance> effects;
+  memInterface.getEffects(effects);
+
+  // op has interface but no effects, be conservative
+  if (effects.empty()) return false;
+
+
+  std::unordered_map<std::string, int> resources;
+
+  // ensure op only has Init effects and gather unique
+  // resource names
+  for (const MemoryEffects::EffectInstance &effect : effects) {
+    if (!isa<MemoryEffects::Init>(effect.getEffect()))
+      return false;
+
+    std::string name = effect.getResource()->getName().str();
+    resources.try_emplace(name, 0);
+  }
+
+  // op itself is good, need to check rest of its parent region
+  Operation *parent = op->getParentOp();
+
+  for (Region &region : parent->getRegions())
+    for (Operation &op_i : region.getOps())
+      if (hasMemoryEffectInitConflict(&op_i, resources))
+        return false;
+
+  return true;
 }
 
 bool mlir::hasMemoryEffectInitConflict(
     Operation *op, std::unordered_map<std::string, int> &resources) {
+
   if (auto memInterface = dyn_cast<MemoryEffectOpInterface>(op)) {
     if (!memInterface.hasNoEffect()) {
       llvm::SmallVector<MemoryEffects::EffectInstance> effects;
@@ -419,19 +413,16 @@ bool mlir::hasMemoryEffectInitConflict(
       // ensure op only has Init effects and gather unique
       // resource names
       for (const MemoryEffects::EffectInstance &effect : effects) {
-        if (!isa<MemoryEffects::Init>(effect.getEffect())) {
+        if (!isa<MemoryEffects::Init>(effect.getEffect()))
           return true;
-        }
 
         // only care about resources of the op that called
         // this recursive function for the first time
         std::string name = effect.getResource()->getName().str();
 
-        if (resources.find(name) != resources.end()) {
-          if (++resources[name] > 1) {
+        if (resources.find(name) != resources.end())
+          if (++resources[name] > 1)
             return true;
-          }
-        }
       }
       return false;
     }
@@ -439,13 +430,11 @@ bool mlir::hasMemoryEffectInitConflict(
 
   // Recurse into the regions and ensure that nested ops don't
   // conflict with each others MemInits
-  for (Region &region : op->getRegions()) {
-    for (Operation &op : region.getOps()) {
-      if (hasMemoryEffectInitConflict(&op, resources)) {
+  for (Region &region : op->getRegions())
+    for (Operation &op : region.getOps()) 
+      if (hasMemoryEffectInitConflict(&op, resources))
         return true;
-      }
-    }
-  }
+      
   return false;
 }
 
