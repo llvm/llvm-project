@@ -1320,10 +1320,10 @@ Instruction *InstCombinerImpl::foldICmpWithZero(ICmpInst &Cmp) {
   return nullptr;
 }
 
-// Fold icmp eq (num + (val - 1)) & -val, num
-//      to
-//      icmp eq 0, (and num, val - 1)
-// For val being power of two
+/// Fold icmp eq (num + (val - 1)) & -val, num
+///      to
+///      icmp eq 0, (and num, val - 1)
+/// For val being power of two
 Instruction *InstCombinerImpl::foldIsMultipleOfAPowerOfTwo(ICmpInst &Cmp) {
   Value *Num;
   CmpPredicate Pred;
@@ -1343,8 +1343,8 @@ Instruction *InstCombinerImpl::foldIsMultipleOfAPowerOfTwo(ICmpInst &Cmp) {
     return nullptr;
 
   // Create new icmp eq (num & (val - 1)), 0
-  auto NewAnd = Builder.CreateAnd(Num, *Mask);
-  auto Zero = Constant::getNullValue(Num->getType());
+  auto *NewAnd = Builder.CreateAnd(Num, *Mask);
+  auto *Zero = Constant::getNullValue(Num->getType());
 
   return new ICmpInst(Pred, NewAnd, Zero);
 }
