@@ -3053,7 +3053,7 @@ bool IRTranslator::translateCallBr(const User &U,
     return false;
   if (IID == Intrinsic::not_intrinsic)
     return false;
-  if (!translateTargetIntrinsic(I, IID, MIRBuilder))
+  if (!translateIntrinsic(I, IID, MIRBuilder))
     return false;
 
   // Retrieve successors.
