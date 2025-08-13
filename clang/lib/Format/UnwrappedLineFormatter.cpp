@@ -457,7 +457,7 @@ private:
     }
 
     // Merge an empty class or struct only if WrapEmptyRecord
-    // is not set to Default
+    // is not set to Default.
     if (PreviousLine &&
         Style.BraceWrapping.WrapEmptyRecord == FormatStyle::BWER_Default &&
         TheLine->Last->is(tok::l_brace) && PreviousLine->Last) {

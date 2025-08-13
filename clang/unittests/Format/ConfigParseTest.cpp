@@ -758,6 +758,24 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               "  AfterControlStatement: false",
               BraceWrapping.AfterControlStatement, FormatStyle::BWACS_Never);
 
+  Style.BraceWrapping.WrapEmptyRecord = FormatStyle::BWER_Default;
+  CHECK_PARSE("BraceWrapping:\n"
+              "  WrapEmptyRecord: BeforeBrace",
+              BraceWrapping.WrapEmptyRecord, FormatStyle::BWER_BeforeBrace);
+  CHECK_PARSE("BraceWrapping:\n"
+              "  WrapEmptyRecord: Default",
+              BraceWrapping.WrapEmptyRecord, FormatStyle::BWER_Default);
+  CHECK_PARSE("BraceWrapping:\n"
+              "  WrapEmptyRecord: Never",
+              BraceWrapping.WrapEmptyRecord, FormatStyle::BWER_Never);
+  // For backward compatibility:
+  CHECK_PARSE("BraceWrapping:\n"
+              "  WrapEmptyRecord: true",
+              BraceWrapping.WrapEmptyRecord, FormatStyle::BWER_Default);
+  CHECK_PARSE("BraceWrapping:\n"
+              "  WrapEmptyRecord: false",
+              BraceWrapping.WrapEmptyRecord, FormatStyle::BWER_BeforeBrace);
+
   Style.BreakAfterReturnType = FormatStyle::RTBS_All;
   CHECK_PARSE("BreakAfterReturnType: None", BreakAfterReturnType,
               FormatStyle::RTBS_None);

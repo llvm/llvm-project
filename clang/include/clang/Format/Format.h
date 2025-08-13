@@ -1365,13 +1365,13 @@ struct FormatStyle {
     ///   };
     /// \endcode
     BWER_Default,
-    /// Only wrap before brace (equivalent to ``SplitEmptyRecord=false``).
+    /// Only wrap before brace.
     /// \code
     ///   class foo
     ///   {};
     /// \endcode
     BWER_BeforeBrace,
-    /// Wrap neither before or after the brace.
+    /// Wrap neither before nor after the brace.
     /// \code
     ///   class foo {};
     /// \endcode

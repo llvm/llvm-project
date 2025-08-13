@@ -8625,6 +8625,19 @@ TEST_F(FormatTest, BreaksFunctionDeclarations) {
                Style);
 }
 
+TEST_F(FormatTest, BreakFunctionsReturningRecords) {
+  FormatStyle Style = getLLVMStyle();
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterFunction = true;
+  Style.BraceWrapping.AfterClass = false;
+  Style.BraceWrapping.AfterStruct = false;
+  Style.BraceWrapping.AfterUnion = false;
+
+  verifyFormat("class Bar foo() {}", Style);
+  verifyFormat("struct Bar foo() {}", Style);
+  verifyFormat("union Bar foo() {}", Style);
+}
+
 TEST_F(FormatTest, DontBreakBeforeQualifiedOperator) {
   // Regression test for https://bugs.llvm.org/show_bug.cgi?id=40516:
   // Prefer keeping `::` followed by `operator` together.

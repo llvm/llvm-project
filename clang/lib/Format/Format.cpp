@@ -182,6 +182,10 @@ template <> struct ScalarEnumerationTraits<FormatStyle::BraceBreakingStyle> {
 
 template <> struct MappingTraits<FormatStyle::BraceWrappingFlags> {
   static void mapping(IO &IO, FormatStyle::BraceWrappingFlags &Wrapping) {
+    // For backward compatibility.
+    if (!IO.outputting())
+      IO.mapOptional("SplitEmptyRecord", Wrapping.WrapEmptyRecord);
+
     IO.mapOptional("AfterCaseLabel", Wrapping.AfterCaseLabel);
     IO.mapOptional("AfterClass", Wrapping.AfterClass);
     IO.mapOptional("AfterControlStatement", Wrapping.AfterControlStatement);
@@ -200,9 +204,6 @@ template <> struct MappingTraits<FormatStyle::BraceWrappingFlags> {
     IO.mapOptional("SplitEmptyFunction", Wrapping.SplitEmptyFunction);
     IO.mapOptional("SplitEmptyNamespace", Wrapping.SplitEmptyNamespace);
     IO.mapOptional("WrapEmptyRecord", Wrapping.WrapEmptyRecord);
-
-    // For backward compatibility.
-    IO.mapOptional("SplitEmptyRecord", Wrapping.WrapEmptyRecord);
   }
 };
 
@@ -240,6 +241,7 @@ struct ScalarEnumerationTraits<FormatStyle::BraceWrapEmptyRecordStyle> {
   static void enumeration(IO &IO,
                           FormatStyle::BraceWrapEmptyRecordStyle &Value) {
     IO.enumCase(Value, "Default", FormatStyle::BWER_Default);
+    IO.enumCase(Value, "BeforeBrace", FormatStyle::BWER_BeforeBrace);
     IO.enumCase(Value, "Never", FormatStyle::BWER_Never);
 
     // For backward compatibility.
