@@ -1112,7 +1112,7 @@ ChildListIoStatementState<DIR>::ChildListIoStatementState(
   if constexpr (DIR == Direction::Input) {
     if (const auto *listInput{child.parent()
                 .get_if<ListDirectedStatementState<Direction::Input>>()}) {
-      this->inNamelistSequence_ = listInput->inNamelistSequence();
+      this->namelistGroup_ = listInput->namelistGroup();
       this->set_eatComma(listInput->eatComma());
       if (auto *childListInput{child.parent()
                   .get_if<ChildListIoStatementState<Direction::Input>>()}) {
