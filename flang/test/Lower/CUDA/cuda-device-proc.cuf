@@ -5,6 +5,7 @@
 attributes(global) subroutine devsub()
   implicit none
   integer :: ret
+  real(2) :: r2
   real(4) :: af
   real(8) :: ad
   integer(4) :: ai
@@ -83,6 +84,8 @@ attributes(global) subroutine devsub()
   af = __powf(af, af)
   ad = __dsqrt_rd(ad)
   ad = __dsqrt_ru(ad)
+  r2 = __float2half_rn(af)
+  af = __half2float(r2)
 end
 
 ! CHECK-LABEL: func.func @_QPdevsub() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
@@ -153,6 +156,8 @@ end
 ! CHECK: %{{.*}} = fir.call @__nv_powf(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32, f32) -> f32
 ! CHECK: %{{.*}} = fir.call @__nv_dsqrt_rd(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
 ! CHECK: %{{.*}} = fir.call @__nv_dsqrt_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
+! CHECK: %{{.*}} = fir.call @__nv_float2half_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f16
+! CHECK: %{{.*}} = fir.call @__nv_half2float(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f16) -> f32
 
 subroutine host1()
   integer, device :: a(32)
