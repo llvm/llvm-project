@@ -43,11 +43,10 @@ namespace std_example {
       requires sizeof(a) == 4; // OK
       requires a == 0; // expected-error{{substitution into constraint expression resulted in a non-constant expression}}
       // expected-note@-1{{while checking the satisfaction of nested requirement requested here}}
-      // expected-note@-2{{in instantiation of requirement here}}
-      // expected-note@-3{{while checking the satisfaction of nested requirement requested here}}
-      // expected-note@-6{{while substituting template arguments into constraint expression here}}
-      // expected-note@-5{{function parameter 'a' with unknown value cannot be used in a constant expression}}
-      // expected-note@-8{{declared here}}
+      // expected-note@-2{{while checking the satisfaction of nested requirement requested here}}
+      // expected-note@-5{{while substituting template arguments into constraint expression here}}
+      // expected-note@-4{{function parameter 'a' with unknown value cannot be used in a constant expression}}
+      // expected-note@-7{{declared here}}
     };
     static_assert(C2<int>); // expected-error{{static assertion failed}}
     // expected-note@-1{{while checking the satisfaction of concept 'C2<int>' requested here}}
@@ -158,15 +157,16 @@ void func() {
   // expected-note@#bar {{while substituting template arguments into constraint expression here}}
   // expected-note@#bar {{while checking the satisfaction of nested requirement requested here}}
   // expected-note@#bar {{candidate template ignored: constraints not satisfied [with T = False]}}
-  // expected-note@#bar {{because 'X<SubstitutionFailureNestedRequires::ErrorExpressions_NotSF::False>::value' evaluated to false}}
+  // expected-note@#bar {{because 'X<False>::value' evaluated to false}}
 
   bar<int>();
+  // expected-error@-1 {{no matching function for call to 'bar'}} \
   // expected-note@-1 {{while checking constraint satisfaction for template 'bar<int>' required here}} \
-  // expected-note@-1 {{while substituting deduced template arguments into function template 'bar' [with T = int]}}
+  // expected-note@-1 {{while substituting deduced template arguments into function template 'bar' [with T = int]}} \
   // expected-note@#bar {{in instantiation of static data member}}
-  // expected-note@#bar {{in instantiation of requirement here}}
   // expected-note@#bar {{while checking the satisfaction of nested requirement requested here}}
   // expected-note@#bar {{while substituting template arguments into constraint expression here}}
+  // expected-note@#bar {{candidate template ignored}}
   // expected-error@#X_Value {{type 'int' cannot be used prior to '::' because it has no members}}
 }
 }

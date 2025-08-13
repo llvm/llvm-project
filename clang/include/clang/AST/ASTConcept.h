@@ -28,13 +28,23 @@ namespace clang {
 
 class ConceptDecl;
 class TemplateDecl;
+class ConceptReference;
 class Expr;
 class NamedDecl;
 struct PrintingPolicy;
 
+/// Pairs of unsatisfied atomic constraint expressions along with the
+/// substituted constraint expr, if the template arguments could be
+/// substituted into them, or a diagnostic if substitution resulted in
+/// an invalid expression.
+using UnsatisfiedConstraintRecord =
+    llvm::PointerUnion<const Expr *, const ConceptReference *,
+                       std::pair<SourceLocation, StringRef> *>;
+
 /// The result of a constraint satisfaction check, containing the necessary
 /// information to diagnose an unsatisfied constraint.
 class ConstraintSatisfaction : public llvm::FoldingSetNode {
+private:
   // The template-like entity that 'owns' the constraint checked here (can be a
   // constrained entity or a concept).
   const NamedDecl *ConstraintOwner = nullptr;
@@ -49,7 +59,6 @@ public:
       : ConstraintOwner(ConstraintOwner), TemplateArgs(TemplateArgs) {}
 
   using SubstitutionDiagnostic = std::pair<SourceLocation, StringRef>;
-  using Detail = llvm::PointerUnion<Expr *, SubstitutionDiagnostic *>;
 
   bool IsSatisfied = false;
   bool ContainsErrors = false;
@@ -57,7 +66,7 @@ public:
   /// \brief The substituted constraint expr, if the template arguments could be
   /// substituted into them, or a diagnostic if substitution resulted in an
   /// invalid expression.
-  llvm::SmallVector<Detail, 4> Details;
+  llvm::SmallVector<UnsatisfiedConstraintRecord, 4> Details;
 
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &C) {
     Profile(ID, C, ConstraintOwner, TemplateArgs);
@@ -74,13 +83,6 @@ public:
     return false;
   }
 };
-
-/// Pairs of unsatisfied atomic constraint expressions along with the
-/// substituted constraint expr, if the template arguments could be
-/// substituted into them, or a diagnostic if substitution resulted in
-/// an invalid expression.
-using UnsatisfiedConstraintRecord =
-    llvm::PointerUnion<Expr *, std::pair<SourceLocation, StringRef> *>;
 
 /// \brief The result of a constraint satisfaction check, containing the
 /// necessary information to diagnose an unsatisfied constraint.
@@ -99,6 +101,10 @@ struct ASTConstraintSatisfaction final :
 
   const UnsatisfiedConstraintRecord *end() const {
     return getTrailingObjects() + NumRecords;
+  }
+
+  ArrayRef<UnsatisfiedConstraintRecord> records() const {
+    return {begin(), end()};
   }
 
   ASTConstraintSatisfaction(const ASTContext &C,
@@ -281,6 +287,11 @@ public:
     ConceptRef->print(OS, Policy);
   }
 };
+
+/// Insertion operator for diagnostics.  This allows sending TemplateName's
+/// into a diagnostic with <<.
+const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                      const ConceptReference *C);
 
 } // clang
 
