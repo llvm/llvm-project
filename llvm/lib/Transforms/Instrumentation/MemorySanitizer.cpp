@@ -3883,8 +3883,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     FixedVectorType *ImplicitReturnType = ReturnType;
     // Step 1: instrument multiplication of corresponding vector elements
     if (EltSizeInBits) {
-      ImplicitReturnType = cast<FixedVectorType>(
-          getMMXVectorTy(EltSizeInBits * 2, ParamType->getPrimitiveSizeInBits()));
+      ImplicitReturnType = cast<FixedVectorType>(getMMXVectorTy(
+          EltSizeInBits * 2, ParamType->getPrimitiveSizeInBits()));
       ParamType = cast<FixedVectorType>(
           getMMXVectorTy(EltSizeInBits, ParamType->getPrimitiveSizeInBits()));
 
@@ -3921,8 +3921,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     // Each element of the vector is represented by a single bit (poisoned or
     // not) e.g., <8 x i1>.
-    Value *And =
-        IRB.CreateOr({SaAndSbNonZero, VaAndSbNonZero, SaAndVbNonZero});
+    Value *And = IRB.CreateOr({SaAndSbNonZero, VaAndSbNonZero, SaAndVbNonZero});
 
     // Extend <8 x i1> to <8 x i16>.
     // (The real pmadd intrinsic would have computed intermediate values of
@@ -3939,12 +3938,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     // Compute <4 x i1>, then extend back to <4 x i32>.
     Value *OutShadow = IRB.CreateSExt(
-                                         IRB.CreateICmpNE(Horizontal, Constant::getNullValue(Horizontal->getType())),
-                                         ImplicitReturnType);
+        IRB.CreateICmpNE(Horizontal,
+                         Constant::getNullValue(Horizontal->getType())),
+        ImplicitReturnType);
 
     // For MMX, cast it back to the required fake return type (<1 x i64>).
     if (EltSizeInBits)
-        OutShadow = CreateShadowCast(IRB, OutShadow, getShadowTy(&I));
+      OutShadow = CreateShadowCast(IRB, OutShadow, getShadowTy(&I));
 
     setShadow(&I, OutShadow);
     setOriginForNaryOp(I);
