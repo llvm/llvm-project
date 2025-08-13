@@ -50,11 +50,11 @@ struct byte_pool final {
   byte_pool* link_;
   byte* end_;
 
-  byte_pool(
+  _LIBCPP_HIDE_FROM_ABI byte_pool(
       byte* __bytes, size_t __size, function<void()> __destroy = [] {}, byte_pool* __link = nullptr) noexcept
       : ptr_(__bytes), destroy_(__destroy), link_(__link), end_(__bytes + __size) {}
 
-  byte* operator()(size_t __sz, size_t __align) noexcept {
+  _LIBCPP_HIDE_FROM_ABI byte* operator()(size_t __sz, size_t __align) noexcept {
     auto __ptr      = uintptr_t(ptr_); // convert curr ptr to integer, to do math
     auto __misalign = __ptr % __align; // if current ptr not aligned,
     if (__misalign) {
@@ -74,12 +74,12 @@ template <size_t _Sz>
 struct stack_bytes final {
   byte bytes_[_Sz];
 
-  ~stack_bytes()                  = default;
-  stack_bytes() noexcept          = default;
-  stack_bytes(const stack_bytes&) = delete;
-  stack_bytes(stack_bytes&&)      = delete;
+  _LIBCPP_HIDE_FROM_ABI ~stack_bytes()                  = default;
+  _LIBCPP_HIDE_FROM_ABI stack_bytes() noexcept          = default;
+  _LIBCPP_HIDE_FROM_ABI stack_bytes(const stack_bytes&) = delete;
+  _LIBCPP_HIDE_FROM_ABI stack_bytes(stack_bytes&&)      = delete;
 
-  byte_pool pool() {
+  _LIBCPP_HIDE_FROM_ABI byte_pool pool() {
     return {bytes_, _Sz, [] {}, nullptr};
   }
 };
@@ -95,17 +95,20 @@ struct arena {
   // An arena is scoped to a `basic_stacktrace::current` invocation, so this is usable by only one thread.
   // Additionally, it's used internally throughout many function calls, so for convenience, store it here.
   // Also avoids the need for state inside `alloc`, since it can use this pointer instead of an internal one.
-  static thread_local arena* active_arena_ptr_;
+  _LIBCPP_EXPORTED_FROM_ABI static arena*& active_arena_ptr() {
+    static thread_local arena* __ptr{};
+    return __ptr;
+  }
 
-  static arena& get_active() {
-    auto* __ret = active_arena_ptr_;
+  _LIBCPP_HIDE_FROM_ABI static arena& get_active() {
+    auto* __ret = active_arena_ptr();
     _LIBCPP_ASSERT(__ret, "no active arena for this thread");
     return *__ret;
   }
 
-  ~arena() {
-    _LIBCPP_ASSERT(active_arena_ptr_ == this, "different arena unexpectively set as the active one");
-    active_arena_ptr_ = nullptr;
+  _LIBCPP_HIDE_FROM_ABI ~arena() {
+    _LIBCPP_ASSERT(active_arena_ptr() == this, "different arena unexpectively set as the active one");
+    active_arena_ptr() = nullptr;
     _LIBCPP_ASSERT(deallocs_ == allocs_, "destructed arena still has live objects");
     while (curr_pool_) {
       curr_pool_->destroy_();
@@ -113,37 +116,37 @@ struct arena {
     }
   }
 
-  arena(auto&& __new_bytes, auto&& __del_bytes, byte_pool& __initial_pool) noexcept
+  _LIBCPP_HIDE_FROM_ABI arena(auto&& __new_bytes, auto&& __del_bytes, byte_pool& __initial_pool) noexcept
       : new_bytes_(__new_bytes), del_bytes_(__del_bytes), curr_pool_(&__initial_pool) {
     prep_next_pool();
-    _LIBCPP_ASSERT(!active_arena_ptr_, "already an active arena");
-    active_arena_ptr_ = this;
+    _LIBCPP_ASSERT(!active_arena_ptr(), "already an active arena");
+    active_arena_ptr() = this;
   }
 
   template <class _UA>
-  static auto as_byte_alloc(_UA const& __user_alloc) {
+  _LIBCPP_HIDE_FROM_ABI static auto as_byte_alloc(_UA const& __user_alloc) {
     return (typename allocator_traits<_UA>::template rebind_alloc<std::byte>)(__user_alloc);
   }
 
   template <class _UA>
-  arena(byte_pool& __initial_pool, _UA const& __user_alloc)
+  _LIBCPP_HIDE_FROM_ABI arena(byte_pool& __initial_pool, _UA const& __user_alloc)
       : arena([&__user_alloc](size_t __sz) { return as_byte_alloc(__user_alloc).allocate(__sz); },
               [&__user_alloc](void* __ptr, size_t __sz) {
                 return as_byte_alloc(__user_alloc).deallocate((byte*)__ptr, __sz);
               },
               __initial_pool) {}
 
-  arena(arena const&)            = delete;
-  arena& operator=(arena const&) = delete;
+  _LIBCPP_HIDE_FROM_ABI arena(arena const&)            = delete;
+  _LIBCPP_HIDE_FROM_ABI arena& operator=(arena const&) = delete;
 
-  void prep_next_pool() noexcept {
+  _LIBCPP_HIDE_FROM_ABI void prep_next_pool() noexcept {
     // Allocate (via current pool) a new byte_pool record, while we have enough space.
     // When the current pool runs out of space, this one will be ready to use.
     next_pool_ = (byte_pool*)(*curr_pool_)(sizeof(byte_pool), alignof(byte_pool));
     _LIBCPP_ASSERT(next_pool_, "could not allocate next pool");
   }
 
-  void expand(size_t __atleast) noexcept {
+  _LIBCPP_HIDE_FROM_ABI void expand(size_t __atleast) noexcept {
     constexpr static size_t __k_default_new_pool = 1 << 12;
     auto __size                                  = max(__atleast, __k_default_new_pool);
     // "next_pool_" was already allocated, just need to initialize it
@@ -154,9 +157,9 @@ struct arena {
   }
 
   /** Does nothing; all memory is released when arena is destroyed. */
-  void dealloc(std::byte*, size_t) noexcept { ++deallocs_; }
+  _LIBCPP_HIDE_FROM_ABI void dealloc(std::byte*, size_t) noexcept { ++deallocs_; }
 
-  std::byte* alloc(size_t __size, size_t __align) noexcept {
+  _LIBCPP_HIDE_FROM_ABI std::byte* alloc(size_t __size, size_t __align) noexcept {
     auto* __ret = (*curr_pool_)(__size, __align);
     if (__ret) [[likely]] {
       goto success;
@@ -175,12 +178,12 @@ template <typename _Tp>
 struct alloc {
   using value_type = _Tp;
 
-  _Tp* allocate(size_t __n) {
+  _LIBCPP_HIDE_FROM_ABI _Tp* allocate(size_t __n) {
     auto& __arena = arena::get_active();
     return (_Tp*)__arena.alloc(__n * sizeof(_Tp), alignof(_Tp));
   }
 
-  void deallocate(_Tp* __ptr, size_t __n) {
+  _LIBCPP_HIDE_FROM_ABI void deallocate(_Tp* __ptr, size_t __n) {
     auto& __arena = arena::get_active();
     __arena.dealloc((std::byte*)__ptr, __n * sizeof(_Tp));
   }
@@ -191,12 +194,12 @@ struct str : std::basic_string<char, std::char_traits<char>, alloc<char>> {
   using _Base::basic_string;
   using _Base::operator=;
 
-  bool valid() const { return data() != nullptr; }
+  _LIBCPP_HIDE_FROM_ABI bool valid() const { return data() != nullptr; }
 
-  operator bool() const { return valid() && !empty(); }
+  _LIBCPP_HIDE_FROM_ABI operator bool() const { return valid() && !empty(); }
 
   template <typename... _AL>
-  static str makef(char const* __fmt, _AL&&... __args) {
+  _LIBCPP_HIDE_FROM_ABI static str makef(char const* __fmt, _AL&&... __args) {
     str __ret{};
 
 #  ifdef __clang__
@@ -222,40 +225,42 @@ struct fixed_str final {
   size_t __size_{0};
   char __buf_[_Sz]{0};
 
-  ~fixed_str() = default;
-  fixed_str()  = default;
+  _LIBCPP_HIDE_FROM_ABI ~fixed_str() = default;
+  _LIBCPP_HIDE_FROM_ABI fixed_str()  = default;
 
-  size_t size() const { return __size_; }
-  bool empty() const { return !size(); }
-  auto* data(this auto& __self) { return __self.__buf_; }
-  operator std::string_view() const { return {__buf_, __size_}; }
+  _LIBCPP_HIDE_FROM_ABI size_t size() const { return __size_; }
+  _LIBCPP_HIDE_FROM_ABI bool empty() const { return !size(); }
+  _LIBCPP_HIDE_FROM_ABI auto* data(this auto& __self) { return __self.__buf_; }
+  _LIBCPP_HIDE_FROM_ABI operator std::string_view() const { return {__buf_, __size_}; }
 
-  fixed_str& operator=(std::string_view __sv) {
+  _LIBCPP_HIDE_FROM_ABI fixed_str& operator=(std::string_view __sv) {
     strncpy(__buf_, __sv.data(), std::min(_Sz, __sv.size() + 1));
     __size_         = __sv.size();
     __buf_[__size_] = 0;
     return *this;
   }
 
-  fixed_str(auto const& __rhs) : fixed_str() { *this = __rhs; }
-  fixed_str& operator=(auto const& __rhs) { return (*this = std::string_view(__rhs)); }
+  _LIBCPP_HIDE_FROM_ABI fixed_str(auto const& __rhs) : fixed_str() { *this = __rhs; }
+  _LIBCPP_HIDE_FROM_ABI fixed_str& operator=(auto const& __rhs) { return (*this = std::string_view(__rhs)); }
 
   template <size_t _S2>
     requires requires { _S2 <= _Sz; }
-  fixed_str& operator=(fixed_str<_S2> const& __rhs) {
+  _LIBCPP_HIDE_FROM_ABI fixed_str& operator=(fixed_str<_S2> const& __rhs) {
     return (*this = std::string_view(__rhs));
   }
 
   template <size_t _S2>
     requires requires { _S2 <= _Sz; }
-  fixed_str(fixed_str<_S2> const& __rhs) {
+  _LIBCPP_HIDE_FROM_ABI fixed_str(fixed_str<_S2> const& __rhs) {
     *this = std::string_view(__rhs);
   }
 
-  fixed_str(fixed_str const& __rhs) { *this = std::string_view(__rhs); }
-  fixed_str& operator=(fixed_str const& __rhs) { return (*this = std::string_view(__rhs)); }
+  _LIBCPP_HIDE_FROM_ABI fixed_str(fixed_str const& __rhs) { *this = std::string_view(__rhs); }
+  _LIBCPP_HIDE_FROM_ABI fixed_str& operator=(fixed_str const& __rhs) { return (*this = std::string_view(__rhs)); }
 
-  friend std::ostream& operator<<(std::ostream& __os, fixed_str const& __f) { return __os << std::string_view(__f); }
+  _LIBCPP_HIDE_FROM_ABI friend std::ostream& operator<<(std::ostream& __os, fixed_str const& __f) {
+    return __os << std::string_view(__f);
+  }
 };
 
 } // namespace __stacktrace

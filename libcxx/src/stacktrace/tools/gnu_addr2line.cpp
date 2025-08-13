@@ -100,7 +100,7 @@ void addr2line::parse_loc(entry_base& entry, std::string_view view) const {
 template struct _LIBCPP_EXPORTED_FROM_ABI __executable_name<addr2line>;
 template bool _LIBCPP_EXPORTED_FROM_ABI __has_working_executable<addr2line>();
 
-template<> bool _LIBCPP_EXPORTED_FROM_ABI __run_tool<addr2line>(base& base, arena& arena) {
+template<> bool _LIBCPP_EXPORTED_FROM_ABI  __run_tool<addr2line>(base& base, arena& arena) {
   addr2line tool{base, arena};
   if (!tool.build_argv()) { return false; }
   spawner spawner{tool, base};

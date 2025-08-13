@@ -27,7 +27,7 @@ namespace __stacktrace {
 
 // TODO: consider cases where e.g. libraries are loaded/unloaded, and recomputing image list.
 
-_LIBCPP_EXPORTED_FROM_ABI images::images() {
+images::images() {
   images_[count_++] = {0uz, 0};  // sentinel at low end
   images_[count_++] = {~0uz, 0}; // sentinel at high end
   auto dyld_count   = _dyld_image_count();
@@ -88,7 +88,7 @@ int add_image(dl_phdr_info* info, size_t, void* images_v) {
 }
 } // namespace
 
-_LIBCPP_EXPORTED_FROM_ABI images::images() {
+images::images() {
   dl_iterate_phdr(add_image, this);
   images_[count_++] = {0uz, 0};  // sentinel at low end
   images_[count_++] = {~0uz, 0}; // sentinel at high end

@@ -81,7 +81,7 @@ base::current(arena& arena, size_t skip, size_t max_depth) {
   find_source_locs(arena);
 }
 
-_LIBCPP_EXPORTED_FROM_ABI void base::find_images(arena& arena) {
+void base::find_images(arena& arena) {
   images images;
   size_t i  = 0;
   auto* it  = entries_begin();
@@ -97,9 +97,9 @@ _LIBCPP_EXPORTED_FROM_ABI void base::find_images(arena& arena) {
   }
 }
 
-_LIBCPP_EXPORTED_FROM_ABI void base::find_symbols(arena& arena) {}
+void base::find_symbols(arena& arena) {}
 
-_LIBCPP_EXPORTED_FROM_ABI void base::find_source_locs(arena& arena) {
+void base::find_source_locs(arena& arena) {
 #  if __has_include(<spawn.h>) && _LIBCPP_STACKTRACE_ALLOW_TOOLS_AT_RUNTIME
   (void)(false                                                                                         //
          || (__has_working_executable<atos>() && __run_tool<atos>(*this, arena))                       //

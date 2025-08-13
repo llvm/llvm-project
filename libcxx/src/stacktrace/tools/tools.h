@@ -42,21 +42,22 @@ struct tool_base {
   char* argv_[k_max_argv_]{nullptr}; // refers to argvs_ strings as char** (includes null terminator)
   size_t argc_{0};                   // number of args.  Note: argv_[argc_] is nullptr
 
-  tool_base(base& base, arena& arena, char const* tool_prog) : base_(base), arena_(arena), tool_prog_(tool_prog) {
+  _LIBCPP_HIDE_FROM_ABI tool_base(base& base, arena& arena, char const* tool_prog)
+      : base_(base), arena_(arena), tool_prog_(tool_prog) {
     argv_[0] = nullptr;
   }
 
-  void push_arg(std::string_view sv) {
+  _LIBCPP_HIDE_FROM_ABI void push_arg(std::string_view sv) {
     _LIBCPP_ASSERT(argc_ < k_max_argv_ - 1, "too many args");
     argvs_[argc_]  = sv;                   // Have to copy the string_view into a new string
     argv_[argc_]   = argvs_[argc_].data(); // then we have a char pointer into that string
     argv_[++argc_] = nullptr;              // ensure there's always trailing null after last arg
   }
 
-  void push_arg(str __str) { push_arg(std::string_view{__str.data(), __str.size()}); }
+  _LIBCPP_HIDE_FROM_ABI void push_arg(str __str) { push_arg(std::string_view{__str.data(), __str.size()}); }
 
   template <typename... _Args>
-  void push_arg(char const* format, _Args&&... args) {
+  _LIBCPP_HIDE_FROM_ABI void push_arg(char const* format, _Args&&... args) {
     push_arg(str::makef(format, std::forward<_Args>(args)...));
   }
 
@@ -65,19 +66,19 @@ struct tool_base {
   // and if invalid, the function returns an empty view (instead of throwing).
 
   /** Drop `n` chars from the start of the string; empty string if `n` exceeds string size */
-  static string_view ldrop(string_view sv, size_t n = 1) {
+  _LIBCPP_HIDE_FROM_ABI static string_view ldrop(string_view sv, size_t n = 1) {
     sv.remove_prefix(std::min(sv.size(), n));
     return sv;
   }
 
   /** Drop `n` chars from the end of the string; empty string if `n` exceeds string size */
-  static string_view rdrop(string_view sv, size_t n = 1) {
+  _LIBCPP_HIDE_FROM_ABI static string_view rdrop(string_view sv, size_t n = 1) {
     sv.remove_suffix(std::min(sv.size(), n));
     return sv;
   }
 
   /** Strip whitespace from the start of the string */
-  static string_view lstrip(string_view sv) {
+  _LIBCPP_HIDE_FROM_ABI static string_view lstrip(string_view sv) {
     while (!sv.empty() && isspace(sv.front())) {
       sv = ldrop(sv);
     };
@@ -85,7 +86,7 @@ struct tool_base {
   }
 
   /** Strip whitespace from the back of the string */
-  static string_view rstrip(string_view sv) {
+  _LIBCPP_HIDE_FROM_ABI static string_view rstrip(string_view sv) {
     while (!sv.empty() && isspace(sv.back())) {
       sv = rdrop(sv);
     };
@@ -93,10 +94,10 @@ struct tool_base {
   }
 
   /** Strip whitespace from the start and end of the string */
-  static string_view strip(string_view sv) { return lstrip(rstrip(sv)); }
+  _LIBCPP_HIDE_FROM_ABI static string_view strip(string_view sv) { return lstrip(rstrip(sv)); }
 
   /** Drop prefix if exists; if not found, and if required, return empty (failure); else original arg */
-  static string_view drop_prefix(string_view sv, string_view pre, bool required = true) {
+  _LIBCPP_HIDE_FROM_ABI static string_view drop_prefix(string_view sv, string_view pre, bool required = true) {
     if (sv.starts_with(pre)) {
       return ldrop(sv, pre.size());
     }
@@ -104,7 +105,7 @@ struct tool_base {
   }
 
   /** Drop suffix if exists; if not found, and if required, return empty (failure); else original arg */
-  static string_view drop_suffix(string_view sv, string_view suf, bool required = true) {
+  _LIBCPP_HIDE_FROM_ABI static string_view drop_suffix(string_view sv, string_view suf, bool required = true) {
     if (sv.ends_with(suf)) {
       return rdrop(sv, suf.size());
     }
@@ -119,9 +120,9 @@ struct file_actions {
   fd stdout_write_; // write end of subprocess's stdout, IFF redir_stdout used
   int errno_{};     // set to nonzero if any of these C calls failed
 
-  bool failed() const { return errno_; }
+  _LIBCPP_HIDE_FROM_ABI bool failed() const { return errno_; }
 
-  posix_spawn_file_actions_t* fa() {
+  _LIBCPP_HIDE_FROM_ABI posix_spawn_file_actions_t* fa() {
     if (!fa_) {
       fa_.emplace();
       if (posix_spawn_file_actions_init(&fa_.value())) {
@@ -133,7 +134,7 @@ struct file_actions {
     return fa_ ? &fa_.value() : nullptr;
   }
 
-  ~file_actions() {
+  _LIBCPP_HIDE_FROM_ABI ~file_actions() {
     if (fa_) {
       // Do best-effort teardown, ignore errors
       (void)posix_spawn_file_actions_destroy(&fa_.value());
@@ -141,11 +142,11 @@ struct file_actions {
     }
   }
 
-  file_actions()                               = default;
-  file_actions(file_actions const&)            = delete;
-  file_actions& operator=(file_actions const&) = delete;
+  _LIBCPP_HIDE_FROM_ABI file_actions()                               = default;
+  _LIBCPP_HIDE_FROM_ABI file_actions(file_actions const&)            = delete;
+  _LIBCPP_HIDE_FROM_ABI file_actions& operator=(file_actions const&) = delete;
 
-  file_actions(file_actions&& rhs) {
+  _LIBCPP_HIDE_FROM_ABI file_actions(file_actions&& rhs) {
     fa_ = std::move(rhs.fa_);
     rhs.fa_.reset();
     stdout_read_  = std::move(rhs.stdout_read_);
@@ -153,13 +154,13 @@ struct file_actions {
     errno_        = rhs.errno_;
   }
 
-  file_actions& operator=(file_actions&& rhs) {
+  _LIBCPP_HIDE_FROM_ABI file_actions& operator=(file_actions&& rhs) {
     return (std::addressof(rhs) == this) ? *this : *(new (this) file_actions(std::move(rhs)));
   }
 
   // These have no effect if this is already in `failed` state.
 
-  file_actions& no_stdin() {
+  _LIBCPP_HIDE_FROM_ABI file_actions& no_stdin() {
     if (!failed() && posix_spawn_file_actions_adddup2(fa(), fd::null_fd(), STDIN_FILENO)) {
       _LIBCPP_ASSERT(false, "no_stdin: adddup2 failed");
       errno_ = errno;
@@ -167,7 +168,7 @@ struct file_actions {
     return *this;
   }
 
-  file_actions& no_stdout() {
+  _LIBCPP_HIDE_FROM_ABI file_actions& no_stdout() {
     if (!failed() && posix_spawn_file_actions_adddup2(fa(), fd::null_fd(), STDOUT_FILENO)) {
       _LIBCPP_ASSERT(false, "no_stdout: adddup2 failed");
       errno_ = errno;
@@ -175,7 +176,7 @@ struct file_actions {
     return *this;
   }
 
-  file_actions& no_stderr() {
+  _LIBCPP_HIDE_FROM_ABI file_actions& no_stderr() {
     if (!failed() && posix_spawn_file_actions_adddup2(fa(), fd::null_fd(), STDERR_FILENO)) {
       _LIBCPP_ASSERT(false, "no_stderr: adddup2 failed");
       errno_ = errno;
@@ -183,7 +184,7 @@ struct file_actions {
     return *this;
   }
 
-  file_actions& redir_stdout() {
+  _LIBCPP_HIDE_FROM_ABI file_actions& redir_stdout() {
     if (!failed() && fd::pipe_pair(stdout_read_, stdout_write_)) {
       _LIBCPP_ASSERT(false, "redir_stdout: pipe failed");
       errno_ = errno;
@@ -206,12 +207,12 @@ XXX Thread safety issue almost certainly exists here
 struct sigchld_enable {
   struct sigaction old_;
 
-  ~sigchld_enable() {
+  _LIBCPP_HIDE_FROM_ABI ~sigchld_enable() {
     int res = sigaction(SIGCHLD, &old_, nullptr); // restore old behavior
     _LIBCPP_ASSERT(!res, "~sigchld_enable: sigaction failed");
   }
 
-  sigchld_enable() {
+  _LIBCPP_HIDE_FROM_ABI sigchld_enable() {
     struct sigaction act;
     sigemptyset(&act.sa_mask);
     act.sa_flags   = 0;
@@ -227,11 +228,11 @@ struct pid_waiter {
   int errno_{};  // set to nonzero if any of these C calls failed
   bool done_{};
 
-  operator pid_t() const { return pid_; }
-  bool running() const { return pid_ && !kill(pid_, 0); }
-  bool failed() const { return errno_; }
+  _LIBCPP_HIDE_FROM_ABI operator pid_t() const { return pid_; }
+  _LIBCPP_HIDE_FROM_ABI bool running() const { return pid_ && !kill(pid_, 0); }
+  _LIBCPP_HIDE_FROM_ABI bool failed() const { return errno_; }
 
-  [[nodiscard]] int wait() {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI int wait() {
     while (!done_) { // Until successful waitpid, or a hard error:
       int result;
       if (waitpid(pid_, &result, 0) == pid_) { // attempt a blocking wait, updates status_
@@ -251,7 +252,7 @@ struct pid_waiter {
     return status_;
   }
 
-  ~pid_waiter() {
+  _LIBCPP_HIDE_FROM_ABI ~pid_waiter() {
     if (pid_ && !done_) {
       // this represents a valid but non-waited pid
       if (running()) {
@@ -273,9 +274,9 @@ struct spawner {
   pid_waiter pid_{0};          // set during successful `spawn`, can `waitpid` automatically
   int errno_{};                // set to nonzero if any of these C calls failed
 
-  bool failed() const { return errno_; }
+  _LIBCPP_HIDE_FROM_ABI bool failed() const { return errno_; }
 
-  spawner(tool_base& tool, base& base)
+  _LIBCPP_HIDE_FROM_ABI spawner(tool_base& tool, base& base)
       : tool_{tool},
         base_(base),
         fa_(std::move(file_actions().no_stdin().no_stderr().redir_stdout())),
@@ -294,8 +295,8 @@ struct spawner {
 };
 
 template <class T>
-struct _LIBCPP_EXPORTED_FROM_ABI __executable_name {
-  static char const* get() {
+struct __executable_name {
+  _LIBCPP_EXPORTED_FROM_ABI static char const* get() {
     auto* env_var = T::__override_prog_env;
     if (env_var) {
       auto* env_val = getenv(env_var);
@@ -328,19 +329,19 @@ template <class T>
 bool _LIBCPP_EXPORTED_FROM_ABI __run_tool(base&, arena&);
 
 struct llvm_symbolizer;
-extern template struct _LIBCPP_EXPORTED_FROM_ABI __executable_name<llvm_symbolizer>;
+extern template struct __executable_name<llvm_symbolizer>;
 extern template bool _LIBCPP_EXPORTED_FROM_ABI __has_working_executable<llvm_symbolizer>();
 template <>
 bool _LIBCPP_EXPORTED_FROM_ABI __run_tool<llvm_symbolizer>(base&, arena&);
 
 struct addr2line;
-extern template struct _LIBCPP_EXPORTED_FROM_ABI __executable_name<addr2line>;
+extern template struct __executable_name<addr2line>;
 extern template bool _LIBCPP_EXPORTED_FROM_ABI __has_working_executable<addr2line>();
 template <>
 bool _LIBCPP_EXPORTED_FROM_ABI __run_tool<addr2line>(base&, arena&);
 
 struct atos;
-extern template struct _LIBCPP_EXPORTED_FROM_ABI __executable_name<atos>;
+extern template struct __executable_name<atos>;
 extern template bool _LIBCPP_EXPORTED_FROM_ABI __has_working_executable<atos>();
 template <>
 bool _LIBCPP_EXPORTED_FROM_ABI __run_tool<atos>(base&, arena&);
@@ -349,28 +350,30 @@ struct llvm_symbolizer : tool_base {
   constexpr static char const* __default_prog_name = "llvm-symbolizer";
   constexpr static char const* __override_prog_env = "LIBCXX_STACKTRACE_FORCE_LLVM_SYMBOLIZER_PATH";
 
-  llvm_symbolizer(base& base, arena& arena) : tool_base{base, arena, __executable_name<llvm_symbolizer>::get()} {}
-  bool build_argv();
-  void parse(entry_base** entry_iter, std::string_view view) const;
+  _LIBCPP_HIDE_FROM_ABI llvm_symbolizer(base& base, arena& arena)
+      : tool_base{base, arena, __executable_name<llvm_symbolizer>::get()} {}
+  _LIBCPP_HIDE_FROM_ABI bool build_argv();
+  _LIBCPP_HIDE_FROM_ABI void parse(entry_base** entry_iter, std::string_view view) const;
 };
 
 struct addr2line : tool_base {
   constexpr static char const* __default_prog_name = "addr2line";
   constexpr static char const* __override_prog_env = "LIBCXX_STACKTRACE_FORCE_GNU_ADDR2LINE_PATH";
 
-  addr2line(base& base, arena& arena) : tool_base{base, arena, __executable_name<addr2line>::get()} {}
-  bool build_argv();
-  void parse_sym(entry_base& entry, std::string_view view) const;
-  void parse_loc(entry_base& entry, std::string_view view) const;
+  _LIBCPP_HIDE_FROM_ABI addr2line(base& base, arena& arena)
+      : tool_base{base, arena, __executable_name<addr2line>::get()} {}
+  _LIBCPP_HIDE_FROM_ABI bool build_argv();
+  _LIBCPP_HIDE_FROM_ABI void parse_sym(entry_base& entry, std::string_view view) const;
+  _LIBCPP_HIDE_FROM_ABI void parse_loc(entry_base& entry, std::string_view view) const;
 };
 
 struct atos : tool_base {
   constexpr static char const* __default_prog_name = "atos";
   constexpr static char const* __override_prog_env = "LIBCXX_STACKTRACE_FORCE_APPLE_ATOS_PATH";
 
-  atos(base& base, arena& arena) : tool_base{base, arena, __executable_name<atos>::get()} {}
-  bool build_argv();
-  void parse(entry_base& entry, std::string_view view) const;
+  _LIBCPP_HIDE_FROM_ABI atos(base& base, arena& arena) : tool_base{base, arena, __executable_name<atos>::get()} {}
+  _LIBCPP_HIDE_FROM_ABI bool build_argv();
+  _LIBCPP_HIDE_FROM_ABI void parse(entry_base& entry, std::string_view view) const;
 };
 
 } // namespace __stacktrace

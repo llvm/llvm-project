@@ -47,7 +47,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace __stacktrace {
 
-struct _LIBCPP_HIDE_FROM_ABI base {
+struct base {
   constexpr static size_t __default_max_depth    = 64;
   constexpr static size_t __absolute_max_depth   = 256;
   constexpr static size_t __k_init_pool_on_stack = 1 << 12;
@@ -58,7 +58,7 @@ struct _LIBCPP_HIDE_FROM_ABI base {
   std::function<entry_base&(size_t)> __entry_at_;
 
   template <class _Vp>
-  base(_Vp* __entries)
+  _LIBCPP_HIDE_FROM_ABI base(_Vp* __entries)
       : __entries_size_([=]() { return __entries->size(); }),
         __emplace_entry_([=]() -> entry_base& { return (entry_base&)__entries->emplace_back(); }),
         __entries_data_([=]() -> entry_base* { return (entry_base*)__entries->data(); }),
@@ -67,12 +67,12 @@ struct _LIBCPP_HIDE_FROM_ABI base {
   _LIBCPP_NO_TAIL_CALLS _LIBCPP_NOINLINE _LIBCPP_EXPORTED_FROM_ABI void
   current(arena& __arena, size_t __skip, size_t __max_depth);
 
-  _LIBCPP_EXPORTED_FROM_ABI void find_images(arena& __arena);
-  _LIBCPP_EXPORTED_FROM_ABI void find_symbols(arena& __arena);
-  _LIBCPP_EXPORTED_FROM_ABI void find_source_locs(arena& __arena);
+  _LIBCPP_HIDE_FROM_ABI void find_images(arena& __arena);
+  _LIBCPP_HIDE_FROM_ABI void find_symbols(arena& __arena);
+  _LIBCPP_HIDE_FROM_ABI void find_source_locs(arena& __arena);
 
-  entry_base* entries_begin() { return __entries_data_(); }
-  entry_base* entries_end() { return __entries_data_() + __entries_size_(); }
+  _LIBCPP_EXPORTED_FROM_ABI entry_base* entries_begin() { return __entries_data_(); }
+  _LIBCPP_EXPORTED_FROM_ABI entry_base* entries_end() { return __entries_data_() + __entries_size_(); }
 
   _LIBCPP_EXPORTED_FROM_ABI std::ostream& write_to(std::ostream& __os) const;
   _LIBCPP_EXPORTED_FROM_ABI string to_string() const;
@@ -86,7 +86,7 @@ struct _LIBCPP_HIDE_FROM_ABI base {
 class stacktrace_entry;
 
 template <class _Allocator>
-class _LIBCPP_EXPORTED_FROM_ABI basic_stacktrace : private __stacktrace::base {
+class basic_stacktrace : private __stacktrace::base {
   friend struct hash<basic_stacktrace<_Allocator>>;
 
   using _ATraits _LIBCPP_NODEBUG            = allocator_traits<_Allocator>;
@@ -312,8 +312,9 @@ _LIBCPP_EXPORTED_FROM_ABI string to_string(const basic_stacktrace<_Allocator>& _
 // Hash support [stacktrace.basic.hash]
 
 template <class _Allocator>
-struct _LIBCPP_EXPORTED_FROM_ABI hash<basic_stacktrace<_Allocator>> {
-  [[nodiscard]] size_t operator()(basic_stacktrace<_Allocator> const& __context) const noexcept {
+struct hash<basic_stacktrace<_Allocator>> {
+  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI size_t
+  operator()(basic_stacktrace<_Allocator> const& __context) const noexcept {
     size_t __ret = 1;
     for (auto const& __entry : __context.__entries_) {
       __ret += hash<uintptr_t>()(__entry.native_handle());

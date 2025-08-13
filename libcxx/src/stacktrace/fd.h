@@ -84,10 +84,10 @@ struct _LIBCPP_HIDE_FROM_ABI fd::streambuf final : std::streambuf {
   char* buf_;
   size_t size_;
 
-  _LIBCPP_HIDE_FROM_ABI streambuf(fd& fd, char* buf, size_t size) : fd_(fd), buf_(buf), size_(size) {}
-  _LIBCPP_HIDE_FROM_ABI virtual ~streambuf() = default;
+  streambuf(fd& fd, char* buf, size_t size) : fd_(fd), buf_(buf), size_(size) {}
+  virtual ~streambuf() = default;
 
-  _LIBCPP_HIDE_FROM_ABI int underflow() override {
+  int underflow() override {
     int count = ::read(fd_, buf_, size_);
     if (count <= 0) {
       // error or EOF: return eof to stop
@@ -100,22 +100,22 @@ struct _LIBCPP_HIDE_FROM_ABI fd::streambuf final : std::streambuf {
 };
 
 /** Wraps an `FDInStreamBuffer` in an `istream` */
-struct fd::istream final : std::istream {
+struct _LIBCPP_HIDE_FROM_ABI fd::istream final : std::istream {
   fd::streambuf& buf_;
-  _LIBCPP_HIDE_FROM_ABI virtual ~istream() = default;
-  _LIBCPP_HIDE_FROM_ABI explicit istream(fd::streambuf& buf) : std::istream(nullptr), buf_(buf) { rdbuf(&buf_); }
+  virtual ~istream() = default;
+  explicit istream(fd::streambuf& buf) : std::istream(nullptr), buf_(buf) { rdbuf(&buf_); }
 };
 
 /** Read-only memory mapping.  Requires an `fd`, or a path to open an `fd` out of.  Takes ownership and destruction duty
  * of the fd. */
-struct fd::mmap final {
+struct _LIBCPP_HIDE_FROM_ABI fd::mmap final {
   fd fd_{};
   size_t size_{0};
   std::byte const* addr_{nullptr};
 
-  _LIBCPP_HIDE_FROM_ABI explicit mmap(std::string_view path) : mmap(fd::open_ro(path)) {}
+  explicit mmap(std::string_view path) : mmap(fd::open_ro(path)) {}
 
-  _LIBCPP_HIDE_FROM_ABI explicit mmap(fd&& fd) : fd_(std::move(fd)) {
+  explicit mmap(fd&& fd) : fd_(std::move(fd)) {
     if (fd_) {
       if ((size_ = ::lseek(fd_, 0, SEEK_END))) {
         addr_ = (std::byte const*)::mmap(nullptr, size_, PROT_READ, MAP_SHARED, fd_, 0);
@@ -123,9 +123,9 @@ struct fd::mmap final {
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI operator bool() const { return addr_; }
+  operator bool() const { return addr_; }
 
-  _LIBCPP_HIDE_FROM_ABI ~mmap() {
+  ~mmap() {
     if (addr_) {
       ::munmap(const_cast<void*>((void const*)addr_), size_);
     }
