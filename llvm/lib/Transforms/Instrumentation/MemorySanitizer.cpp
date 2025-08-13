@@ -3931,10 +3931,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     //                <16 x i8> into <4 x i8>  (reduction factor == 4)
     Value *OutShadow =
         horizontalReduce(I, ReductionFactor, ComboNonZero, nullptr);
+    // TODO: it could be faster to squash <8 x i1> into <4 x i2>, compare to
+    //       zero to get <4 x i1>, then sign-extend to <4 x i8>.
 
     // Extend to <4 x i32>.
     // For MMX, cast it back to <1 x i64>.
-    OutShadow = CreateShadowCast(IRB, OutShadow, getShadowTy(&I));
+    *OutShadow = CreateShadowCast(IRB, OutShadow, getShadowTy(&I));
 
     setShadow(&I, OutShadow);
     setOriginForNaryOp(I);
