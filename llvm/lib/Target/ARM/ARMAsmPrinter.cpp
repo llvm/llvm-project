@@ -633,15 +633,9 @@ static bool checkDenormalAttributeConsistency(const Module &M,
 static bool checkDenormalAttributeInconsistency(const Module &M) {
   if (M.functions().empty())
     return false;
-  DenormalMode Value =
-      parseDenormalFPAttribute(M.functions()
-                                   .begin()
-                                   ->getFnAttribute("denormal-fp-math")
-                                   .getValueAsString());
-  return any_of(M, [&](const Function &F) {
-    StringRef AttrVal = F.getFnAttribute("denormal-fp-math").getValueAsString();
-    return parseDenormalFPAttribute(AttrVal) != Value;
-  });
+  DenormalMode Value = M.functions().begin()->getDenormalModeRaw();
+  return any_of(
+      M, [&](const Function &F) { return F.getDenormalModeRaw() != Value; });
 }
 
 void ARMAsmPrinter::emitAttributes() {
