@@ -823,10 +823,13 @@ int processAttachEntries(DeviceTy &Device, AttachInfoTy &AttachInfo,
 
     // Get device version of the pointee (e.g., &p[10]) first, as we can
     // release its TPR after extracting the pointer value.
-    void *TgtPteeBegin;
-    if (auto PteeTPROpt = LookupTargetPointer(HstPteeBegin, 0, "pointee"))
-      TgtPteeBegin = PteeTPROpt->TargetPointer;
-    else
+    void *TgtPteeBegin = [&]() -> void * {
+      if (auto PteeTPROpt = LookupTargetPointer(HstPteeBegin, 0, "pointee"))
+        return PteeTPROpt->TargetPointer;
+      return nullptr;
+    }();
+
+    if (!TgtPteeBegin)
       continue;
 
     // Get device version of the pointer (e.g., &p) next. We need to keep its
