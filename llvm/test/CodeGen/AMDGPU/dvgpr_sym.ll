@@ -14,47 +14,55 @@ define amdgpu_cs_chain void @func0() #0 {
 ; Function with 21 VGPRs, which is 2 blocks.
 ;
 ; DVGPR-LABEL: func21:
+; DVGPR: .set func21.num_vgpr, 21
 ; DVGPR: .set _dvgpr$func21, func21+8
 ;
-define amdgpu_cs_chain void @func21(<21 x float> %arg) #0 {
+define amdgpu_cs_chain void @func21(<13 x float> %arg) #0 {
+  tail call void @func21(<13 x float> %arg)
   ret void
 }
 
 ; Anonymous function with 87 VGPRs, which is 6 blocks.
 ;
 ; DVGPR: [[FUNC87:__unnamed[^:]*]]:
+; DVGPR: .set [[FUNC87]].num_vgpr, 87
 ; DVGPR: .set _dvgpr$[[FUNC87]], [[FUNC87]]+40
 ;
-define amdgpu_cs_chain void @0(<87 x float> %arg) #0 {
+define amdgpu_cs_chain void @0(<79 x float> %arg) #0 {
+  tail call void @0(<79 x float> %arg)
   ret void
 }
 
 ; Function with 128 VGPRs, which is 8 blocks.
 ;
 ; DVGPR-LABEL: func128:
+; DVGPR: .set func128.num_vgpr, 128
 ; DVGPR: .set _dvgpr$func128, func128+56
 ;
-define amdgpu_cs_chain void @func128(<128 x float> %arg) #0 {
-  %vec87 = shufflevector <128 x float> %arg, <128 x float> %arg, <87 x i32> splat(i32 0)
-  tail call void @0(<87 x float> %vec87)
+define amdgpu_cs_chain void @func128(<120 x float> %arg) #0 {
+  tail call void @func128(<120 x float> %arg)
   ret void
 }
 
 ; Function with 79 VGPRs, which is 3 blocks with a block size of 32.
 ;
 ; DVGPR-LABEL: func79:
+; DVGPR: .set func79.num_vgpr, 79
 ; DVGPR: .set _dvgpr$func79, func79+16
 ;
-define amdgpu_cs_chain void @func79(<79 x float> %arg) #1 {
+define amdgpu_cs_chain void @func79(<71 x float> %arg) #1 {
+  tail call void @func79(<71 x float> %arg)
   ret void
 }
 
 ; Function with 225 VGPRs, which is 8 blocks with a block size of 32.
 ;
 ; DVGPR-LABEL: func225:
+; DVGPR: .set func225.num_vgpr, 225
 ; DVGPR: .set _dvgpr$func225, func225+56
 ;
-define amdgpu_cs_chain void @func225(<225 x float> %arg) #1 {
+define amdgpu_cs_chain void @func225(<217 x float> %arg) #1 {
+  tail call void @func225(<217 x float> %arg)
   ret void
 }
 
