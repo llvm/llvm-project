@@ -2812,8 +2812,10 @@ void PPCAIXAsmPrinter::emitGlobalVariableHelper(const GlobalVariable *GV) {
   // When compiling with function sections enabled, we need some special
   // codegen to rename the CSECTs. For each profiling data symbol find its
   // associated profiling counters.
+  std::string InstrProfDataPrefix(INSTR_PROF_DATA_SECT_NAME);
+  InstrProfDataPrefix.append(".");
   if (TM.getFunctionSections() &&
-      Csect->getName().starts_with("__llvm_prf_data.")) {
+      Csect->getName().starts_with(InstrProfDataPrefix)) {
     MDNode *MD = GV->getMetadata(LLVMContext::MD_pgo_associated);
 
     assert(MD &&
