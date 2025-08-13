@@ -1,0 +1,26 @@
+// RUN: cir-opt %s | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module  {
+  cir.func @label() {
+    cir.label "label"
+    cir.return
+  }
+
+  cir.func @label2() {
+    %0 = cir.const #cir.int<0> : !s32i
+    cir.br ^bb1
+  ^bb1:  // pred: ^bb0
+    cir.label "label2"
+    cir.return
+  }
+}
+
+// CHECK:       cir.func @label
+// CHECK-NEXT:    cir.label "label"
+
+// CHECK:       cir.func @label2
+// CHECK:        cir.br ^bb1
+// CHECK-NEXT:  ^bb1:  // pred: ^bb0
+// CHECK-NEXT:    cir.label "label2"
