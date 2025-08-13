@@ -213,7 +213,8 @@ endif()
 if ("SPIRV" IN_LIST LLVM_TARGETS_TO_BUILD)
   set(SPIRV_LIBS
     SPIRVCodeGen
-
+    SPIRVDesc
+    SPIRVInfo
   )
 endif()
 
