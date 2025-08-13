@@ -235,9 +235,9 @@ std::optional<std::string> SerializeGPUModuleBase::findTool(StringRef tool) {
 }
 
 namespace {
-class SpirvSerializer : public SerializeGPUModuleBase {
+class SPIRVSerializer : public SerializeGPUModuleBase {
 public:
-  SpirvSerializer(Operation &module, XeVMTargetAttr xeTarget,
+  SPIRVSerializer(Operation &module, XeVMTargetAttr xeTarget,
                   const gpu::TargetOptions &targetOptions)
       : SerializeGPUModuleBase(module, xeTarget, targetOptions) {}
 
@@ -257,7 +257,7 @@ private:
 };
 } // namespace
 
-void SpirvSerializer::init() {
+void SPIRVSerializer::init() {
   static llvm::once_flag initializeBackendOnce;
   llvm::call_once(initializeBackendOnce, []() {
 #if LLVM_HAS_SPIRV_TARGET
@@ -270,7 +270,7 @@ void SpirvSerializer::init() {
 }
 
 std::optional<SmallVector<char, 0>>
-SpirvSerializer::moduleToObject(llvm::Module &llvmModule) {
+SPIRVSerializer::moduleToObject(llvm::Module &llvmModule) {
 #define DEBUG_TYPE "serialize-to-llvm"
   LLVM_DEBUG({
     llvm::dbgs() << "LLVM IR for module: " << getGPUModuleOp().getNameAttr()
@@ -343,7 +343,7 @@ SpirvSerializer::moduleToObject(llvm::Module &llvmModule) {
 }
 
 std::optional<std::string>
-SpirvSerializer::translateToSPIRVBinary(llvm::Module &llvmModule,
+SPIRVSerializer::translateToSPIRVBinary(llvm::Module &llvmModule,
                                         llvm::TargetMachine &targetMachine) {
   std::string targetISA;
   llvm::raw_string_ostream stream(targetISA);
@@ -380,7 +380,7 @@ XeVMTargetAttrImpl::serializeToObject(Attribute attribute, Operation *module,
       return WalkResult::advance();
     });
 
-    SpirvSerializer serializer(*module, cast<XeVMTargetAttr>(attribute),
+    SPIRVSerializer serializer(*module, cast<XeVMTargetAttr>(attribute),
                                options);
     serializer.init();
 
