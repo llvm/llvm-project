@@ -267,10 +267,8 @@ private:
       const evaluate::Assignment &read, parser::CharBlock source);
   void CheckAtomicWriteAssignment(
       const evaluate::Assignment &write, parser::CharBlock source);
-  std::optional<evaluate::Assignment> CheckAtomicUpdateAssignment(
+  void CheckAtomicUpdateAssignment(
       const evaluate::Assignment &update, parser::CharBlock source);
-  std::pair<bool, bool> CheckAtomicUpdateAssignmentRhs(const SomeExpr &atom,
-      const SomeExpr &rhs, parser::CharBlock source, bool suppressDiagnostics);
   void CheckAtomicConditionalUpdateAssignment(const SomeExpr &cond,
       parser::CharBlock condSource, const evaluate::Assignment &assign,
       parser::CharBlock assignSource);

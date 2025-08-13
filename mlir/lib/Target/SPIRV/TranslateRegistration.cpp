@@ -106,7 +106,7 @@ serializeModule(spirv::ModuleOp moduleOp, raw_ostream &output,
     int fd = 0;
 
     std::error_code errorCode = llvm::sys::fs::createUniqueFile(
-        options.validationFilePrefix + "%%%%%%", fd, filename);
+        options.validationFilePrefix + "%%%%%%.spv", fd, filename);
     if (errorCode)
       return moduleOp.emitError("error creating validation output file: ")
              << errorCode.message() << "\n";

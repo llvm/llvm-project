@@ -914,9 +914,19 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::check(Res, "error in cuStreamWaitEvent: %s");
   }
 
-  // TODO: This should be implementable on CUDA
   Expected<bool> hasPendingWorkImpl(AsyncInfoWrapperTy &AsyncInfo) override {
-    return true;
+    CUstream Stream;
+    if (auto Err = getStream(AsyncInfo, Stream))
+      return Err;
+
+    CUresult Ret = cuStreamQuery(Stream);
+    if (Ret == CUDA_SUCCESS)
+      return false;
+
+    if (Ret == CUDA_ERROR_NOT_READY)
+      return true;
+
+    return Plugin::check(Ret, "error in cuStreamQuery: %s");
   }
 
   /// Synchronize the current thread with the event.

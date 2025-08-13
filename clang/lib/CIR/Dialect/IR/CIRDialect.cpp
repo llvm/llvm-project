@@ -1785,6 +1785,19 @@ LogicalResult cir::ShiftOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// LabelOp Definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::LabelOp::verify() {
+  mlir::Operation *op = getOperation();
+  mlir::Block *blk = op->getBlock();
+  if (&blk->front() != op)
+    return emitError() << "must be the first operation in a block";
+
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // UnaryOp
 //===----------------------------------------------------------------------===//
 

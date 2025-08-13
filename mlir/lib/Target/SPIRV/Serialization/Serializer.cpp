@@ -16,6 +16,7 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
+#include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/Target/SPIRV/SPIRVBinaryUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
@@ -112,7 +113,9 @@ LogicalResult Serializer::serialize() {
 
   // TODO: handle the other sections
   processCapability();
-  processExtension();
+  if (failed(processExtension())) {
+    return failure();
+  }
   processMemoryModel();
   processDebugInfo();
 
@@ -204,13 +207,24 @@ void Serializer::processDebugInfo() {
   // TODO: Encode more debug instructions.
 }
 
-void Serializer::processExtension() {
+LogicalResult Serializer::processExtension() {
   llvm::SmallVector<uint32_t, 16> extName;
-  for (spirv::Extension ext : module.getVceTriple()->getExtensions()) {
+  llvm::SmallSet<Extension, 4> deducedExts(
+      llvm::from_range, module.getVceTriple()->getExtensions());
+  auto nonSemanticInfoExt = spirv::Extension::SPV_KHR_non_semantic_info;
+  if (options.emitDebugInfo && !deducedExts.contains(nonSemanticInfoExt)) {
+    TargetEnvAttr targetEnvAttr = lookupTargetEnvOrDefault(module);
+    if (!is_contained(targetEnvAttr.getExtensions(), nonSemanticInfoExt))
+      return module.emitError(
+          "SPV_KHR_non_semantic_info extension not available");
+    deducedExts.insert(nonSemanticInfoExt);
+  }
+  for (spirv::Extension ext : deducedExts) {
     extName.clear();
     spirv::encodeStringLiteralInto(extName, spirv::stringifyExtension(ext));
     encodeInstructionInto(extensions, spirv::Opcode::OpExtension, extName);
   }
+  return success();
 }
 
 void Serializer::processMemoryModel() {

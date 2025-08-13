@@ -644,7 +644,7 @@ SymbolFileNativePDB::CreateClassStructUnion(PdbTypeSymId type_id,
 
   std::string uname = GetUnqualifiedTypeName(record);
 
-  llvm::Expected maybeDecl = ResolveUdtDeclaration(type_id);
+  llvm::Expected<Declaration> maybeDecl = ResolveUdtDeclaration(type_id);
   Declaration decl;
   if (maybeDecl)
     decl = std::move(*maybeDecl);
@@ -674,7 +674,7 @@ lldb::TypeSP SymbolFileNativePDB::CreateTagType(PdbTypeSymId type_id,
                                                 CompilerType ct) {
   std::string uname = GetUnqualifiedTypeName(er);
 
-  llvm::Expected maybeDecl = ResolveUdtDeclaration(type_id);
+  llvm::Expected<Declaration> maybeDecl = ResolveUdtDeclaration(type_id);
   Declaration decl;
   if (maybeDecl)
     decl = std::move(*maybeDecl);
