@@ -3858,8 +3858,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                                   unsigned EltSizeInBits = 0) {
     IRBuilder<> IRB(&I);
 
-    [[maybe_unused]] FixedVectorType *ReturnType
-        = cast<FixedVectorType>(I.getType());
+    [[maybe_unused]] FixedVectorType *ReturnType =
+        cast<FixedVectorType>(I.getType());
     assert(isa<FixedVectorType>(ReturnType));
 
     assert(I.arg_size() == 2);
