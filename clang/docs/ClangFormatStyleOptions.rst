@@ -2596,7 +2596,7 @@ the configuration (without a prefix: ``Auto``).
         };
 
     * ``BWER_BeforeBrace`` (in configuration: ``BeforeBrace``)
-      Only wrap before brace (equivalent to ``SplitEmptyRecord=false``).
+      Only wrap before brace.
 
       .. code-block:: c++
 
@@ -2604,7 +2604,7 @@ the configuration (without a prefix: ``Auto``).
         {};
 
     * ``BWER_Never`` (in configuration: ``Never``)
-      Wrap neither before or after the brace.
+      Wrap neither before nor after the brace.
 
       .. code-block:: c++
 
