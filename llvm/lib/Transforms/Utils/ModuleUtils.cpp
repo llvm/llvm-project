@@ -430,9 +430,8 @@ void llvm::lowerIFuncsOnAIX(Module &M) {
         Builder.CreateStructGEP(DescriptorType, DescPtr, 0, "desc_t.addr");
 
     //   %AddrInDesc = load ptr, ptr %DesctAddr, align 4
-    auto *AddrInDesc = Builder.CreateAlignedLoad(
-        PtrTy, DesctAddr, MaybeAlign(),
-        "addr.in.desc");
+    auto *AddrInDesc = Builder.CreateAlignedLoad(PtrTy, DesctAddr, MaybeAlign(),
+                                                 "addr.in.desc");
 
     //   %OriginalAddr = call ptr @ppc_get_function_entry(ptr noundef @foo) #3
     auto *OriginalAddr = Builder.CreateIntrinsic(
@@ -475,8 +474,7 @@ void llvm::lowerIFuncsOnAIX(Module &M) {
 
     //   %res = musttail call i32 %DescPtr(i32 noundef %a) #3
     SmallVector<Value *, 10> Args(make_pointer_range(F->args()));
-    CallInst *Result =
-        Builder.CreateCall(F->getFunctionType(), DescPtr, Args);
+    CallInst *Result = Builder.CreateCall(F->getFunctionType(), DescPtr, Args);
     // Result->setTailCallKind(CallInst::TCK_MustTail);
 
     //   ret i32 %res
