@@ -1,0 +1,4 @@
+
+DoesNotExist bar() {
+
+}

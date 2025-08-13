@@ -1,0 +1,27 @@
+{
+    "problemMatcher": [
+        {
+            "owner": "clang",
+            "pattern": [
+                {
+                    "regexp": "^(.+):(\\d+):(\\d+):\\s+(error|warning):\\s+(.+)$",
+                    "file": 1,
+                    "line": 2,
+                    "column": 3,
+                    "severity": 4,
+                    "message": 5
+                }
+            ]
+        },
+        {
+              "owner": "lit",
+              "severity": "error",
+              "pattern": [
+                  {
+                      "regexp": "^\\s*(FAIL|XPASS):\\s+([^\\s]+)\\s+::\\s+(.+?)\\s+\\(\\d+\\s+of\\s+\\d+\\)$",
+                      "message": 2
+                  }
+              ]
+          }
+    ]
+}
