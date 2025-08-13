@@ -8136,10 +8136,10 @@ mlir::Value IntrinsicLibrary::genSinpi(mlir::Type resultType,
   mlir::MLIRContext *context = builder.getContext();
   mlir::FunctionType ftype =
       mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
-  llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
-  mlir::Value dfactor =
-      builder.createRealConstant(loc, mlir::Float64Type::get(context), pi);
-  mlir::Value factor = builder.createConvert(loc, args[0].getType(), dfactor);
+  llvm::APFloat pi =
+      llvm::APFloat(llvm::cast<mlir::FloatType>(resultType).getFloatSemantics(),
+                    llvm::numbers::pis);
+  mlir::Value factor = builder.createRealConstant(loc, resultType, pi);
   mlir::Value arg = mlir::arith::MulFOp::create(builder, loc, args[0], factor);
   return getRuntimeCallGenerator("sin", ftype)(builder, loc, {arg});
 }
