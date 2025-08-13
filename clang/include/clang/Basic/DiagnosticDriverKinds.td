@@ -395,8 +395,6 @@ def warn_drv_fraw_string_literals_in_cxx11 : Warning<
   InGroup<UnusedCommandLineArgument>;
 
 def err_drv_libclc_not_found : Error<"no libclc library '%0' found in the clang resource directory">;
-def err_drv_libclc_not_inferred : Error<
-  "could not infer a libclc library for this target; try providing a namespec or full path">;
 
 def err_drv_invalid_malign_branch_EQ : Error<
   "invalid argument '%0' to -malign-branch=; each element must be one of: %1">;

@@ -3022,10 +3022,7 @@ void tools::addOpenCLBuiltinsLib(const Driver &D,
     FilenameSearch = LibclcNamespec.consume_front(":");
     LibclcTargetFile = LibclcNamespec;
   } else {
-    if (InferredLibclcLibName.empty()) {
-      D.Diag(diag::err_drv_libclc_not_inferred);
-      return;
-    }
+    assert(!InferredLibclcLibName.empty() && "No inferred libclc name");
     LibclcTargetFile = InferredLibclcLibName;
   }
 
