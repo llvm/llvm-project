@@ -16,63 +16,90 @@
 #include <type_traits>
 #include <utility>
 #include "test_iterators.h"
-#include "../types.h"
 
-template <class Iterator>
-constexpr void test() {
-  using Sentinel       = sentinel_wrapper<Iterator>;
-  using View           = minimal_view<Iterator, Sentinel>;
-  using ConcatView     = std::ranges::concat_view<View>;
-  using ConcatIterator = std::ranges::iterator_t<ConcatView>;
+#include "../../range_adaptor_types.h"
 
-  auto make_concat_view = [](auto begin, auto end) {
-    View view{Iterator(begin), Sentinel(Iterator(end))};
-    return ConcatView(std::move(view));
-  };
+struct InputRange : IntBufferView {
+  using IntBufferView::IntBufferView;
+  using iterator = cpp20_input_iterator<int*>;
+  constexpr iterator begin() const { return iterator(buffer_); }
+  constexpr sentinel_wrapper<iterator> end() const { return sentinel_wrapper<iterator>(iterator(buffer_ + size_)); }
+};
 
-  // Increment an iterator when it won't find another satisfied value after begin()
+constexpr bool test() {
+  std::array<int, 4> a{1, 2, 3, 4};
+  std::array<double, 4> b{1.1, 2.2, 3.3};
+
+  // one view
   {
-    std::array<int, 5> array{0, 1, 2, 3, 4};
-    ConcatView view = make_concat_view(array.data(), array.data() + array.size());
+    std::ranges::concat_view view(a);
+    auto it    = view.begin();
+    using Iter = decltype(it);
+    static_assert(std::is_same_v<decltype(it++), Iter>);
+    static_assert(std::is_same_v<decltype(++it), Iter&>);
 
-    auto it      = view.begin();
     auto& result = ++it;
-    ASSERT_SAME_TYPE(ConcatIterator&, decltype(++it));
     assert(&result == &it);
-    assert(*result == 1);
+    assert(*result == 2);
+  }
+
+  // more than one view
+  {
+    std::ranges::concat_view view(a, b);
+    auto it    = view.begin();
+    using Iter = decltype(it);
+    static_assert(std::is_same_v<decltype(it++), Iter>);
+    static_assert(std::is_same_v<decltype(++it), Iter&>);
+    auto& result = ++it;
+    assert(&result == &it);
+    assert(*result == 2);
+  }
+
+  // more than one view
+  {
+    std::ranges::concat_view view(a, b, std::views::iota(0, 5));
+    auto it    = view.begin();
+    using Iter = decltype(it);
+    static_assert(std::is_same_v<decltype(it++), Iter>);
+    static_assert(std::is_same_v<decltype(++it), Iter&>);
+    auto& result = ++it;
+    assert(&result == &it);
+    assert(*result == 2);
+  }
+
+  // input range
+  {
+    int buffer[3] = {4, 5, 6};
+    std::ranges::concat_view view(a, InputRange{buffer});
+    auto it    = view.begin();
+    using Iter = decltype(it);
+    static_assert(std::is_same_v<decltype(it++), void>);
+    static_assert(std::is_same_v<decltype(++it), Iter&>);
+    auto& result = ++it;
+    assert(&result == &it);
+    assert(*result == 2);
   }
 
   // Increment an iterator multiple times
   {
-    std::array<int, 10> array{0, 1, 2, 3, 4};
-    ConcatView view = make_concat_view(array.data(), array.data() + array.size());
+    std::ranges::concat_view view(a);
 
-    ConcatIterator it = view.begin();
-    assert(*it == array[0]);
+    auto it = view.begin();
+    assert(*it == a[0]);
 
     ++it;
-    assert(*it == array[1]);
+    assert(*it == a[1]);
     ++it;
-    assert(*it == array[2]);
+    assert(*it == a[2]);
     ++it;
-    assert(*it == array[3]);
-    ++it;
-    assert(*it == array[4]);
+    assert(*it == a[3]);
   }
-}
-
-constexpr bool tests() {
-  test<cpp17_input_iterator<int*> >();
-  test<forward_iterator<int*> >();
-  test<bidirectional_iterator<int*> >();
-  test<random_access_iterator<int*> >();
-  test<contiguous_iterator<int*> >();
-  test<int* >();
 
   return true;
 }
 
 int main(int, char**) {
-  tests();
+  test();
+  static_assert(test());
   return 0;
 }
