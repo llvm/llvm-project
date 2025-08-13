@@ -1709,41 +1709,45 @@ void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__rehash(size_type __n) _LIBCPP_D
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 template <bool _UniqueKeys>
-void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__do_rehash(size_type __nbc) {
-  __pointer_allocator& __npa = __bucket_list_.get_deleter().__alloc();
-  __bucket_list_.reset(__nbc > 0 ? __pointer_alloc_traits::allocate(__npa, __nbc) : nullptr);
-  __bucket_list_.get_deleter().size() = __nbc;
-  if (__nbc > 0) {
-    for (size_type __i = 0; __i < __nbc; ++__i)
-      __bucket_list_[__i] = nullptr;
-    __next_pointer __pp = __first_node_.__ptr();
-    __next_pointer __cp = __pp->__next_;
-    if (__cp != nullptr) {
-      size_type __chash       = std::__constrain_hash(__cp->__hash(), __nbc);
-      __bucket_list_[__chash] = __pp;
-      size_type __phash       = __chash;
-      for (__pp = __cp, void(), __cp = __cp->__next_; __cp != nullptr; __cp = __pp->__next_) {
-        __chash = std::__constrain_hash(__cp->__hash(), __nbc);
-        if (__chash == __phash)
-          __pp = __cp;
-        else {
-          if (__bucket_list_[__chash] == nullptr) {
-            __bucket_list_[__chash] = __pp;
-            __pp                    = __cp;
-            __phash                 = __chash;
-          } else {
-            __next_pointer __np = __cp;
-            if _LIBCPP_CONSTEXPR_SINCE_CXX17 (!_UniqueKeys) {
-              for (; __np->__next_ != nullptr &&
-                     key_eq()(__cp->__upcast()->__get_value(), __np->__next_->__upcast()->__get_value());
-                   __np = __np->__next_)
-                ;
-            }
-            __pp->__next_                    = __np->__next_;
-            __np->__next_                    = __bucket_list_[__chash]->__next_;
-            __bucket_list_[__chash]->__next_ = __cp;
-          }
+void __hash_table<_Tp, _Hash, _Equal, _Alloc>::__do_rehash(size_type __bucket_count) {
+  __pointer_allocator& __ptr_alloc = __bucket_list_.get_deleter().__alloc();
+  __bucket_list_.reset(__bucket_count > 0 ? __pointer_alloc_traits::allocate(__ptr_alloc, __bucket_count) : nullptr);
+  __bucket_list_.get_deleter().size() = __bucket_count;
+
+  if (__bucket_count == 0)
+    return;
+
+  for (size_type __i = 0; __i < __bucket_count; ++__i)
+    __bucket_list_[__i] = nullptr;
+  __next_pointer __pp = __first_node_.__ptr();
+  __next_pointer __cp = __pp->__next_;
+
+  if (!__cp)
+    return;
+
+  size_type __chash       = std::__constrain_hash(__cp->__hash(), __bucket_count);
+  __bucket_list_[__chash] = __pp;
+  size_type __phash       = __chash;
+  for (__pp = __cp, void(), __cp = __cp->__next_; __cp != nullptr; __cp = __pp->__next_) {
+    __chash = std::__constrain_hash(__cp->__hash(), __bucket_count);
+    if (__chash == __phash)
+      __pp = __cp;
+    else {
+      if (__bucket_list_[__chash] == nullptr) {
+        __bucket_list_[__chash] = __pp;
+        __pp                    = __cp;
+        __phash                 = __chash;
+      } else {
+        __next_pointer __np = __cp;
+        if _LIBCPP_CONSTEXPR (!_UniqueKeys) {
+          for (; __np->__next_ != nullptr &&
+                 key_eq()(__cp->__upcast()->__get_value(), __np->__next_->__upcast()->__get_value());
+               __np = __np->__next_)
+            ;
         }
+        __pp->__next_                    = __np->__next_;
+        __np->__next_                    = __bucket_list_[__chash]->__next_;
+        __bucket_list_[__chash]->__next_ = __cp;
       }
     }
   }

@@ -268,6 +268,11 @@ static RT_API_ATTRS void StorageSequenceExtension(
                 ? source.GetDimension(0).ByteStride()
                 : static_cast<SubscriptValue>(source.ElementBytes())};
         stride != 0) {
+      common::optional<DescriptorAddendum> savedAddendum;
+      if (const DescriptorAddendum *addendum{desc.Addendum()}) {
+        // Preserve a copy of the addendum, if any, before clobbering it
+        savedAddendum.emplace(*addendum);
+      }
       desc.raw().attribute = CFI_attribute_pointer;
       desc.raw().rank = 1;
       desc.GetDimension(0)
@@ -275,6 +280,9 @@ static RT_API_ATTRS void StorageSequenceExtension(
               source.Elements() -
                   ((source.OffsetElement() - desc.OffsetElement()) / stride))
           .SetByteStride(stride);
+      if (savedAddendum) {
+        *desc.Addendum() = *savedAddendum;
+      }
     }
   }
 }
@@ -570,12 +578,14 @@ bool IODEF(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
         addendum && addendum->derivedType()) {
       const NonTbpDefinedIoTable *table{group.nonTbpDefinedIo};
       listInput->ResetForNextNamelistItem(/*inNamelistSequence=*/true);
-      if (!IONAME(InputDerivedType)(cookie, *useDescriptor, table)) {
+      if (!IONAME(InputDerivedType)(cookie, *useDescriptor, table) &&
+          handler.InError()) {
         return false;
       }
     } else {
       listInput->ResetForNextNamelistItem(useDescriptor->rank() > 0);
-      if (!descr::DescriptorIO<Direction::Input>(io, *useDescriptor)) {
+      if (!descr::DescriptorIO<Direction::Input>(io, *useDescriptor) &&
+          handler.InError()) {
         return false;
       }
     }

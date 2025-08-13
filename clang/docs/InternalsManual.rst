@@ -139,7 +139,7 @@ wording a diagnostic.
       you mean %1?``.
 
 * Appropriately capitalize proper nouns like ``Clang``, ``OpenCL``, ``GCC``,
-  ``Objective-C``, etc and language standard versions like ``C11`` or ``C++11``.
+  ``Objective-C``, etc. and language standard versions like ``C11`` or ``C++11``.
 * The wording should be succinct. If necessary, use a semicolon to combine
   sentence fragments instead of using complete sentences. e.g., prefer wording
   like ``'%0' is deprecated; it will be removed in a future release of Clang``
@@ -886,7 +886,7 @@ a string that the tablegen backend uses as a prefix to the
   LANG_OPTION_WITH_MARSHALLING([...], LangOpts->IgnoreExceptions, [...])
   #endif // LANG_OPTION_WITH_MARSHALLING
 
-Such definition can be used used in the function for parsing and generating
+Such definition can be used in the function for parsing and generating
 command line:
 
 .. code-block:: c++
@@ -1745,7 +1745,7 @@ will be found by the lookup, since it effectively replaces the first
 declaration of "``f``".
 
 (Note that because ``f`` can be redeclared at block scope, or in a friend
-declaration, etc. it is possible that the declaration of ``f`` found by name
+declaration, etc., it is possible that the declaration of ``f`` found by name
 lookup will not be the most recent one.)
 
 In the semantics-centric view, overloading of functions is represented
@@ -1945,7 +1945,7 @@ range of iterators over declarations of "``f``".
 function ``DeclContext::getPrimaryContext`` retrieves the "primary" context for
 a given ``DeclContext`` instance, which is the ``DeclContext`` responsible for
 maintaining the lookup table used for the semantics-centric view.  Given a
-DeclContext, one can obtain the set of declaration contexts that are
+``DeclContext``, one can obtain the set of declaration contexts that are
 semantically connected to this declaration context, in source order, including
 this context (which will be the only result, for non-namespace contexts) via
 ``DeclContext::collectAllContexts``. Note that these functions are used
@@ -1985,7 +1985,7 @@ broken code in the AST:
   errors, the Decl node is marked as invalid.
 - dropping invalid node: this often happens for errors that we don’t have
   graceful recovery. Prior to Recovery AST, a mismatched-argument function call
-  expression was dropped though a CallExpr was created for semantic analysis.
+  expression was dropped though a ``CallExpr`` was created for semantic analysis.
 
 With these strategies, clang surfaces better diagnostics, and provides AST
 consumers a rich AST reflecting the written source code as much as possible even

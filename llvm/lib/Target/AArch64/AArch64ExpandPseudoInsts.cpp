@@ -1236,14 +1236,20 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
                 .add(MI.getOperand(3));
         transferImpOps(MI, I, I);
       } else {
+        unsigned RegState =
+            getRenamableRegState(MI.getOperand(1).isRenamable()) |
+            getKillRegState(
+                MI.getOperand(1).isKill() &&
+                MI.getOperand(1).getReg() != MI.getOperand(2).getReg() &&
+                MI.getOperand(1).getReg() != MI.getOperand(3).getReg());
         BuildMI(MBB, MBBI, MI.getDebugLoc(),
                 TII->get(Opcode == AArch64::BSPv8i8 ? AArch64::ORRv8i8
                                                     : AArch64::ORRv16i8))
             .addReg(DstReg,
                     RegState::Define |
                         getRenamableRegState(MI.getOperand(0).isRenamable()))
-            .add(MI.getOperand(1))
-            .add(MI.getOperand(1));
+            .addReg(MI.getOperand(1).getReg(), RegState)
+            .addReg(MI.getOperand(1).getReg(), RegState);
         auto I2 =
             BuildMI(MBB, MBBI, MI.getDebugLoc(),
                     TII->get(Opcode == AArch64::BSPv8i8 ? AArch64::BSLv8i8

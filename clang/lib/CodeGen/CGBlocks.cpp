@@ -425,7 +425,8 @@ static bool isSafeForCXXConstantCapture(QualType type) {
   // Only records can be unsafe.
   if (!recordType) return true;
 
-  const auto *record = cast<CXXRecordDecl>(recordType->getDecl());
+  const auto *record =
+      cast<CXXRecordDecl>(recordType->getOriginalDecl())->getDefinitionOrSelf();
 
   // Maintain semantics for classes with non-trivial dtors or copy ctors.
   if (!record->hasTrivialDestructor()) return false;

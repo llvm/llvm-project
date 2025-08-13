@@ -31,11 +31,9 @@ define void @test_A_sub_B_add_ConstantInt(ptr %p) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[MUL]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[REM]] to i64
 ; CHECK-NEXT:    [[SUB22:%.*]] = sub i64 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[P:%.*]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[SUB22]], 2
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], 2044
-; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 2044
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 [[TMP4]]
 ; CHECK-NEXT:    store float 1.000000e+00, ptr [[TMP7]], align 4
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:

@@ -137,6 +137,7 @@
 
 def llvm_global_ptr_ty  : LLVMQualPointerType<1>;         // (global)ptr
 def llvm_shared_ptr_ty  : LLVMQualPointerType<3>;         // (shared)ptr
+def llvm_constant_ptr_ty: LLVMQualPointerType<4>;         // (const)ptr
 def llvm_local_ptr_ty   : LLVMQualPointerType<5>;         // (local)ptr
 def llvm_tmem_ptr_ty    : LLVMQualPointerType<6>;         // (tensor memory)ptr
 def llvm_shared_cluster_ptr_ty : LLVMQualPointerType<7>;  // (shared_cluster)ptr
@@ -2212,15 +2213,17 @@ def int_nvvm_cp_async_bulk_tensor_prefetch_tile_gather4_2d
 // Intrinsics for Prefetch and Prefetchu
 let IntrProperties = [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>] in {
   foreach level = ["L1", "L2"] in {
-    def int_nvvm_prefetch_ # level : Intrinsic<[], [llvm_ptr_ty]>;
-    def int_nvvm_prefetch_global_ # level : Intrinsic<[], [llvm_global_ptr_ty]>;
-    def int_nvvm_prefetch_local_ # level : Intrinsic<[], [llvm_local_ptr_ty]>;
+    def int_nvvm_prefetch_ # level : DefaultAttrsIntrinsic<[], [llvm_ptr_ty]>;
+    def int_nvvm_prefetch_global_ # level : DefaultAttrsIntrinsic<[], [llvm_global_ptr_ty]>;
+    def int_nvvm_prefetch_local_ # level : DefaultAttrsIntrinsic<[], [llvm_local_ptr_ty]>;
   }
 
+  def int_nvvm_prefetch_tensormap : DefaultAttrsIntrinsic<[], [llvm_anyptr_ty]>;
+  
   foreach eviction_priority = ["evict_normal", "evict_last"] in
-    def int_nvvm_prefetch_global_L2_ # eviction_priority : Intrinsic<[], [llvm_global_ptr_ty]>;
+    def int_nvvm_prefetch_global_L2_ # eviction_priority : DefaultAttrsIntrinsic<[], [llvm_global_ptr_ty]>;
 
-  def int_nvvm_prefetchu_L1 : Intrinsic<[], [llvm_ptr_ty]>;
+  def int_nvvm_prefetchu_L1 : DefaultAttrsIntrinsic<[], [llvm_ptr_ty]>;
 }
 
 // applypriority
