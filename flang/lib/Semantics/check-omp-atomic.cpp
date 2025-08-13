@@ -115,7 +115,7 @@ struct ReassocRewriter : public evaluate::rewrite::Identity {
     auto outer1{reassocOp<T>(inner, sub[2])}; // inner + something
     auto outer2{reassocOp<T>(sub[2], inner)}; // something + inner
 #if !defined(__clang__) && !defined(_MSC_VER) && \
-      (__GNUC__ < 8 || (__GNUC__ == 8 && __GNUC_MINOR__ < 5))
+    (__GNUC__ < 8 || (__GNUC__ == 8 && __GNUC_MINOR__ < 5))
     // If GCC version < 8.5, use this definition. For the other definition
     // (which is equivalent), GCC 7.5 emits a somewhat cryptic error:
     //    use of ‘outer1’ before deduction of ‘auto’
