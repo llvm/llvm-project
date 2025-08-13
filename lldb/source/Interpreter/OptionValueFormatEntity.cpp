@@ -55,11 +55,11 @@ void OptionValueFormatEntity::DumpValue(const ExecutionContext *exe_ctx,
   if (dump_mask & eDumpOptionValue) {
     if (dump_mask & eDumpOptionType)
       strm.PutCString(" = ");
-    strm.QuotedCString(EscapeBackticks(m_current_format).data());
+    strm << '"' << EscapeBackticks(m_current_format) << '"';
     if (dump_mask & eDumpOptionDefaultValue &&
         m_current_format != m_default_format) {
       DefaultValueFormat label(strm);
-      strm.QuotedCString(EscapeBackticks(m_default_format).data());
+      strm << '"' << EscapeBackticks(m_default_format) << '"';
     }
   }
 }

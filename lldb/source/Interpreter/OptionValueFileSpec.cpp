@@ -42,12 +42,12 @@ void OptionValueFileSpec::DumpValue(const ExecutionContext *exe_ctx,
       strm.PutCString(" = ");
 
     if (m_current_value) {
-      strm.QuotedCString(m_current_value.GetPath().data());
+      strm << '"' << m_current_value.GetPath() << '"';
     }
     if (dump_mask & eDumpOptionDefaultValue &&
         m_current_value != m_default_value && m_default_value) {
       DefaultValueFormat label(strm);
-      strm.QuotedCString(m_default_value.GetPath().data());
+      strm << '"' << m_default_value.GetPath() << '"';
     }
   }
 }

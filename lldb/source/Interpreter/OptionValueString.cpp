@@ -20,7 +20,7 @@ static void DumpString(Stream &strm, const std::string &str, bool escape,
                        bool raw) {
   if (escape) {
     std::string escaped_str;
-    Args::ExpandEscapedCharacters(str.data(), escaped_str);
+    Args::ExpandEscapedCharacters(str.c_str(), escaped_str);
     DumpString(strm, escaped_str, false, raw);
     return;
   }
@@ -28,7 +28,7 @@ static void DumpString(Stream &strm, const std::string &str, bool escape,
   if (raw)
     strm.PutCString(str);
   else
-    strm.QuotedCString(str.data());
+    strm.QuotedCString(str.c_str());
 }
 
 void OptionValueString::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
