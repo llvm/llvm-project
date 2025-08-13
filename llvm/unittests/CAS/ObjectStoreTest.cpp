@@ -273,7 +273,7 @@ TEST_P(CASTest, NodesBig) {
 static void testBlobsParallel(ObjectStore &Read1, ObjectStore &Read2,
                               ObjectStore &Write1, ObjectStore &Write2,
                               uint64_t BlobSize) {
-  SCOPED_TRACE(testBlobsParallel);
+  SCOPED_TRACE("testBlobsParallel");
   unsigned BlobCount = 100;
   std::vector<std::string> Blobs;
   Blobs.reserve(BlobCount);
@@ -325,7 +325,7 @@ static void testBlobsParallel(ObjectStore &Read1, ObjectStore &Read2,
 }
 
 static void testBlobsParallel1(ObjectStore &CAS, uint64_t BlobSize) {
-  SCOPED_TRACE(testBlobsParallel1);
+  SCOPED_TRACE("testBlobsParallel1");
   testBlobsParallel(CAS, CAS, CAS, CAS, BlobSize);
 }
 
