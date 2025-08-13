@@ -32,6 +32,12 @@ class A {
   [[clang::sycl_external]] A& operator=(A& a) = default;
 };
 
+class B {
+  [[clang::sycl_external]] virtual void BFunc1WithAttr() { int i = 1; }
+// CHECK: define linkonce_odr spir_func void @_ZN1B14BFunc1WithAttrEv
+  virtual void BFunc2NoAttr() { int i = 2; }
+};
+
 class C {
 // Special member function defined - definition emitted
   [[clang::sycl_external]] ~C() {}

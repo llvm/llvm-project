@@ -132,10 +132,8 @@ class A {
 
 class B {
 public:
-// expected-error@+1{{'clang::sycl_external' cannot be applied to a virtual function}}
   [[clang::sycl_external]] virtual void foo() {}
 
-// expected-error@+1{{'clang::sycl_external' cannot be applied to a virtual function}}
   [[clang::sycl_external]] virtual void bar() = 0;
 };
 

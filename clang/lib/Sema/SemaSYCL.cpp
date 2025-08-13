@@ -262,11 +262,6 @@ void SemaSYCL::CheckSYCLExternalFunctionDecl(FunctionDecl *FD) {
          diag::err_sycl_external_invalid_deleted_function)
         << SEAttr;
   }
-  if (FD->isVirtualAsWritten()) {
-    Diag(SEAttr->getLocation(),
-         diag::err_sycl_external_invalid_virtual_function)
-        << SEAttr;
-  }
 }
 
 void SemaSYCL::CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD) {
