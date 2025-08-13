@@ -1317,11 +1317,23 @@ def logical_vec_hw_shift : Operand<i32> {
 }
 
 // A vector move shifter operand:
-//  {0} - imm1: #8 or #16
-def move_vec_shift : Operand<i32> {
+//  {0} - imm1: #8
+def move_vec_shift_2s : Operand<i32> {
+  let OperandNamespace = "AArch64";
   let PrintMethod = "printShifter";
-  let EncoderMethod = "getMoveVecShifterOpValue";
+  let OperandType = "OPERAND_MSL_SHIFT_2S";
   let ParserMatchClass = MoveVecShifterOperand;
+  let EncoderMethod = "getMoveVecShifterOpValue";
+}
+
+// A vector move shifter operand:
+//  {0} - imm1: #16
+def move_vec_shift_4s : Operand<i32> {
+  let OperandNamespace = "AArch64";
+  let PrintMethod = "printShifter";
+  let OperandType = "OPERAND_MSL_SHIFT_4S";
+  let ParserMatchClass = MoveVecShifterOperand;
+  let EncoderMethod = "getMoveVecShifterOpValue";
 }
 
 let DiagnosticType = "AddSubSecondSource" in {
@@ -1560,6 +1572,20 @@ let OperandNamespace = "AArch64" in {
                                 [{ return ((uint64_t)Imm) == 0; }]>;
     defm VectorIndex032b : VectorIndex<i32, VectorIndex0Operand,
                                 [{ return ((uint32_t)Imm) == 0; }]>;
+  }
+  // Add new aarch64 specific OperandType
+  let OperandType = "OPERAND_MSL_SHIFT_2S" in {
+    def msl_shift_2s : Operand<i32> {
+      let PrintMethod = "printImm";
+      let ParserMatchClass = MoveVecShifterOperand;
+    }
+  }
+
+let OperandType = "OPERAND_MSL_SHIFT_4S" in {
+    def msl_shift_4s : Operand<i32> {
+      let PrintMethod = "printImm";
+      let ParserMatchClass = MoveVecShifterOperand;
+    }
   }
 }
 defm VectorIndex1 : VectorIndex<i64, VectorIndex1Operand,
@@ -8898,11 +8924,22 @@ multiclass SIMDModifiedImmVectorShiftTied<bit op, bits<2> hw_cmode,
                                               (i32 imm:$shift)))]>;
 }
 
-class SIMDModifiedImmMoveMSL<bit Q, bit op, bits<4> cmode,
+class SIMDModifiedImmMoveMSL_2s<bit Q, bit op, bits<4> cmode,
                              RegisterOperand vectype, string asm,
                              string kind, list<dag> pattern>
   : BaseSIMDModifiedImmVector<Q, op, 0, vectype, imm0_255,
-                              (ins move_vec_shift:$shift),
+                              (ins move_vec_shift_2s:$shift),
+                              "$shift", asm, kind, pattern> {
+  bits<1> shift;
+  let Inst{15-13} = cmode{3-1};
+  let Inst{12}    = shift;
+}
+
+class SIMDModifiedImmMoveMSL_4s<bit Q, bit op, bits<4> cmode,
+                             RegisterOperand vectype, string asm,
+                             string kind, list<dag> pattern>
+  : BaseSIMDModifiedImmVector<Q, op, 0, vectype, imm0_255,
+                              (ins move_vec_shift_4s:$shift),
                               "$shift", asm, kind, pattern> {
   bits<1> shift;
   let Inst{15-13} = cmode{3-1};
