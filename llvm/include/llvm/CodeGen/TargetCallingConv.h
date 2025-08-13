@@ -218,12 +218,11 @@ namespace ISD {
     /// registers, we got 4 InputArgs with PartOffsets 0, 4, 8 and 12.
     unsigned PartOffset;
 
-    InputArg(ArgFlagsTy flags, EVT vt, EVT argvt, Type *OrigTy, bool used,
-             unsigned origIdx, unsigned partOffs)
-        : Flags(flags), OrigTy(OrigTy), Used(used), OrigArgIndex(origIdx),
-          PartOffset(partOffs) {
+    InputArg(ArgFlagsTy Flags, EVT vt, EVT ArgVT, Type *OrigTy, bool Used,
+             unsigned OrigArgIndex, unsigned PartOffset)
+        : Flags(Flags), ArgVT(ArgVT), OrigTy(OrigTy), Used(Used),
+          OrigArgIndex(OrigArgIndex), PartOffset(PartOffset) {
       VT = vt.getSimpleVT();
-      ArgVT = argvt;
     }
 
     bool isOrigArg() const {
@@ -254,13 +253,10 @@ namespace ISD {
     /// registers, we got 4 OutputArgs with PartOffsets 0, 4, 8 and 12.
     unsigned PartOffset;
 
-    OutputArg(ArgFlagsTy flags, MVT vt, EVT argvt, Type *OrigTy,
-              unsigned origIdx, unsigned partOffs)
-        : Flags(flags), OrigTy(OrigTy), OrigArgIndex(origIdx),
-          PartOffset(partOffs) {
-      VT = vt;
-      ArgVT = argvt;
-    }
+    OutputArg(ArgFlagsTy Flags, MVT VT, EVT ArgVT, Type *OrigTy,
+              unsigned OrigArgIndex, unsigned PartOffset)
+        : Flags(Flags), VT(VT), ArgVT(ArgVT), OrigTy(OrigTy),
+          OrigArgIndex(OrigArgIndex), PartOffset(PartOffset) {}
   };
 
 } // end namespace ISD
