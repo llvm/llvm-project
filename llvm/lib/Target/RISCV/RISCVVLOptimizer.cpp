@@ -497,7 +497,7 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VANDN_VX:
   // Vector Reverse Bits in Elements
   case RISCV::VBREV_V:
-  // Vector Reverse Bytes in Bytes
+  // Vector Reverse Bits in Bytes
   case RISCV::VBREV8_V:
   // Vector Reverse Bytes
   case RISCV::VREV8_V:
