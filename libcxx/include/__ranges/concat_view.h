@@ -579,8 +579,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator-(const __iterator& __it, difference_type __n)
     requires __concat_is_random_access<_Const, _Views...>
   {
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!__x.__it_.valueless_by_exception() && !__y.__it_.valueless_by_exception(),
-                                        "Trying to compare a valueless iterator of concat_view.");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        !__it.__it_.valueless_by_exception(), "Trying to subtract a valuess iterators of concat_view.");
     auto __temp = __it;
     __temp -= __n;
     return __temp;
