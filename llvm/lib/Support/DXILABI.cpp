@@ -15,6 +15,17 @@
 #include "llvm/Support/ScopedPrinter.h"
 using namespace llvm;
 
+static const EnumEntry<dxil::ResourceClass> ResourceClassNames[] = {
+    {"SRV", llvm::dxil::ResourceClass::SRV},
+    {"UAV", llvm::dxil::ResourceClass::UAV},
+    {"CBV", llvm::dxil::ResourceClass::CBuffer},
+    {"Sampler", llvm::dxil::ResourceClass::Sampler},
+};
+
+ArrayRef<EnumEntry<llvm::dxil::ResourceClass>> dxil::getResourceClasses() {
+  return ArrayRef(ResourceClassNames);
+}
+
 StringRef dxil::getResourceClassName(dxil::ResourceClass RC) {
-  return enumToStringRef(RC, dxbc::getResourceClasses());
+  return enumToStringRef(RC, getResourceClasses());
 }
