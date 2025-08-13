@@ -356,8 +356,8 @@ static bool mayDropFunctionReturn(const ASTContext &astContext,
   // destructor or a non-trivially copyable type.
   if (const RecordType *recordType =
           returnType.getCanonicalType()->getAs<RecordType>()) {
-    if (const auto *classDecl =
-            dyn_cast<CXXRecordDecl>(recordType->getOriginalDecl()))
+    if (const auto *classDecl = dyn_cast<CXXRecordDecl>(
+            recordType->getOriginalDecl()->getDefinitionOrSelf()))
       return classDecl->hasTrivialDestructor();
   }
   return returnType.isTriviallyCopyableType(astContext);

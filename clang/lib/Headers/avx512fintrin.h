@@ -180,9 +180,9 @@ typedef enum
 #define __DEFAULT_FN_ATTRS512_CONSTEXPR __DEFAULT_FN_ATTRS512 constexpr
 #define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS128 constexpr
 #else
-#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS128
+#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS
 #define __DEFAULT_FN_ATTRS512_CONSTEXPR __DEFAULT_FN_ATTRS512
-#define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS
+#define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS128
 #endif
 
 /* Create vectors with repeated elements */
@@ -4926,7 +4926,7 @@ _mm512_maskz_cvtepu16_epi64(__mmask8 __U, __m128i __A)
 static __inline__ __m512i __DEFAULT_FN_ATTRS512
 _mm512_rorv_epi32 (__m512i __A, __m512i __B)
 {
-  return (__m512i)__builtin_ia32_prorvd512((__v16si)__A, (__v16si)__B);
+  return (__m512i)__builtin_elementwise_fshr((__v16su)__A,(__v16su)__A, (__v16su)__B);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS512
@@ -4948,7 +4948,7 @@ _mm512_maskz_rorv_epi32 (__mmask16 __U, __m512i __A, __m512i __B)
 static __inline__ __m512i __DEFAULT_FN_ATTRS512
 _mm512_rorv_epi64 (__m512i __A, __m512i __B)
 {
-  return (__m512i)__builtin_ia32_prorvq512((__v8di)__A, (__v8di)__B);
+  return (__m512i)__builtin_elementwise_fshr((__v8du)__A, (__v8du)__A, (__v8du)__B);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS512
@@ -5038,7 +5038,7 @@ _mm512_maskz_rorv_epi64 (__mmask8 __U, __m512i __A, __m512i __B)
 static __inline__ __m512i __DEFAULT_FN_ATTRS512
 _mm512_rolv_epi32 (__m512i __A, __m512i __B)
 {
-  return (__m512i)__builtin_ia32_prolvd512((__v16si)__A, (__v16si)__B);
+  return (__m512i)__builtin_elementwise_fshl((__v16su)__A, (__v16su)__A, (__v16su)__B);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS512
@@ -5060,7 +5060,7 @@ _mm512_maskz_rolv_epi32 (__mmask16 __U, __m512i __A, __m512i __B)
 static __inline__ __m512i __DEFAULT_FN_ATTRS512
 _mm512_rolv_epi64 (__m512i __A, __m512i __B)
 {
-  return (__m512i)__builtin_ia32_prolvq512((__v8di)__A, (__v8di)__B);
+  return (__m512i)__builtin_elementwise_fshl((__v8du)__A, (__v8du)__A, (__v8du)__B);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS512
