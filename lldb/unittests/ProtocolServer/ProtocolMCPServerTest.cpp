@@ -200,7 +200,7 @@ public:
 
 } // namespace
 
-TEST_F(ProtocolServerMCPTest, Intialization) {
+TEST_F(ProtocolServerMCPTest, Initialization) {
   llvm::StringLiteral request =
       R"json({"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"lldb-unit","version":"0.1.0"}},"jsonrpc":"2.0","id":0})json";
   llvm::StringLiteral response =
