@@ -450,85 +450,85 @@ implicit none
     end function
   end interface
 
-  interface __double2int_rn
-    attributes(device) integer function __double2int_rn(r) bind(c)
+  interface __double2int_rd
+    attributes(device) integer function __double2int_rd(r) bind(c, name='__nv_double2int_rd')
       !dir$ ignore_tkr (d) r
       double precision, value :: r
     end function
   end interface
 
-  interface __double2int_rz
-    attributes(device) integer function __double2int_rz(r) bind(c)
+  interface __double2int_rn
+    attributes(device) integer function __double2int_rn(r) bind(c, name='__nv_double2int_rn')
       !dir$ ignore_tkr (d) r
       double precision, value :: r
     end function
   end interface
 
   interface __double2int_ru
-    attributes(device) integer function __double2int_ru(r) bind(c)
+    attributes(device) integer function __double2int_ru(r) bind(c, name='__nv_double2int_ru')
       !dir$ ignore_tkr (d) r
       double precision, value :: r
     end function
   end interface
 
-  interface __double2int_rd
-    attributes(device) integer function __double2int_rd(r) bind(c)
-      !dir$ ignore_tkr (d) r
-      double precision, value :: r
-    end function
-  end interface
-
-  interface __double2uint_rn
-    attributes(device) integer function __double2uint_rn(r) bind(c)
-      !dir$ ignore_tkr (d) r
-      double precision, value :: r
-    end function
-  end interface
-
-  interface __double2uint_rz
-    attributes(device) integer function __double2uint_rz(r) bind(c)
-      !dir$ ignore_tkr (d) r
-      double precision, value :: r
-    end function
-  end interface
-
-  interface __double2uint_ru
-    attributes(device) integer function __double2uint_ru(r) bind(c)
+  interface __double2int_rz
+    attributes(device) integer function __double2int_rz(r) bind(c, name='__nv_double2int_rz')
       !dir$ ignore_tkr (d) r
       double precision, value :: r
     end function
   end interface
 
   interface __double2uint_rd
-    attributes(device) integer function __double2uint_rd(r) bind(c)
+    attributes(device) integer function __double2uint_rd(r) bind(c, name='__nv_double2uint_rd')
+      !dir$ ignore_tkr (d) r
+      double precision, value :: r
+    end function
+  end interface
+
+  interface __double2uint_rn
+    attributes(device) integer function __double2uint_rn(r) bind(c, name='__nv_double2uint_rn')
+      !dir$ ignore_tkr (d) r
+      double precision, value :: r
+    end function
+  end interface
+
+  interface __double2uint_ru
+    attributes(device) integer function __double2uint_ru(r) bind(c, name='__nv_double2uint_ru')
+      !dir$ ignore_tkr (d) r
+      double precision, value :: r
+    end function
+  end interface
+
+  interface __double2uint_rz
+    attributes(device) integer function __double2uint_rz(r) bind(c, name='__nv_double2uint_rz')
       !dir$ ignore_tkr (d) r
       double precision, value :: r
     end function
   end interface
 
   interface __double2float_rn
-    attributes(device) real function __double2float_rn(r) bind(c)
+    attributes(device) real function __double2float_rn(r) bind(c, name='__nv_double2float_rn')
       !dir$ ignore_tkr (d) r
       double precision, value :: r
     end function
   end interface
 
   interface __double2float_rz
-    attributes(device) real function __double2float_rz(r) bind(c)
+    attributes(device) real function __double2float_rz(r) bind(c, name='__nv_double2float_rz')
       !dir$ ignore_tkr (d) r
       double precision, value :: r
     end function
   end interface
 
   interface __double2float_ru
-    attributes(device) real function __double2float_ru(r) bind(c)
+    attributes(device) real function __double2float_ru(r) bind(c, name='__nv_double2float_ru')
       !dir$ ignore_tkr (d) r
       double precision, value :: r
     end function
   end interface
 
   interface __double2float_rd
-    attributes(device) real function __double2float_rd(r) bind(c)
+    attributes(device) real function __double2float_rd(r) bind(c, name='__nv_double2float_rd')
       !dir$ ignore_tkr (d) r
       double precision, value :: r
     end function
@@ -695,15 +695,15 @@ implicit none
     end function
   end interface
 
-  interface __dsqrt_ru
-    attributes(device) double precision function __dsqrt_ru(x) bind(c)
+  interface __dsqrt_rd
+    attributes(device) double precision function __dsqrt_rd(x) bind(c, name='__nv_dsqrt_rd')
       !dir$ ignore_tkr (d) x
       double precision, value :: x
     end function
   end interface
 
-  interface __dsqrt_rd
-    attributes(device) double precision function __dsqrt_rd(x) bind(c)
+  interface __dsqrt_ru
+    attributes(device) double precision function __dsqrt_ru(x) bind(c, name='__nv_dsqrt_ru')
       !dir$ ignore_tkr (d) x
       double precision, value :: x
     end function

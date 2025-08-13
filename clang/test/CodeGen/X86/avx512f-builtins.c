@@ -4691,6 +4691,7 @@ __m512i test_mm512_unpackhi_epi32(__m512i __A, __m512i __B) {
   // CHECK: shufflevector <16 x i32> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> <i32 2, i32 18, i32 3, i32 19, i32 6, i32 22, i32 7, i32 23, i32 10, i32 26, i32 11, i32 27, i32 14, i32 30, i32 15, i32 31>
   return _mm512_unpackhi_epi32(__A, __B); 
 }
+TEST_CONSTEXPR(match_v16si(_mm512_unpackhi_epi32((__m512i)(__v16si){0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}, (__m512i)(__v16si){16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}), 2, 18, 3, 19, 6, 22, 7, 23, 10, 26, 11, 27, 14, 30, 15, 31));
 
 __m512d test_mm512_maskz_unpackhi_pd(__mmask8 __U, __m512d __A, __m512d __B) {
   // CHECK-LABEL: test_mm512_maskz_unpackhi_pd
@@ -5477,6 +5478,7 @@ __m512i test_mm512_unpackhi_epi64(__m512i __A, __m512i __B) {
   // CHECK: shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
   return _mm512_unpackhi_epi64(__A, __B); 
 }
+TEST_CONSTEXPR(match_m512i(_mm512_unpackhi_epi64((__m512i){0, 1, 2, 3, 4, 5, 6, 7}, (__m512i){8, 9, 10, 11, 12, 13, 14, 15}), 1, 9, 3, 11, 5, 13, 7, 15));
 
 __m512i test_mm512_mask_unpackhi_epi64(__m512i __W, __mmask8 __U, __m512i __A, __m512i __B) {
   // CHECK-LABEL: test_mm512_mask_unpackhi_epi64
@@ -5497,6 +5499,7 @@ __m512i test_mm512_unpacklo_epi32(__m512i __A, __m512i __B) {
   // CHECK: shufflevector <16 x i32> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 4, i32 20, i32 5, i32 21, i32 8, i32 24, i32 9, i32 25, i32 12, i32 28, i32 13, i32 29>
   return _mm512_unpacklo_epi32(__A, __B); 
 }
+TEST_CONSTEXPR(match_v16si(_mm512_unpacklo_epi32((__m512i)(__v16si){0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}, (__m512i)(__v16si){16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}), 0, 16, 1, 17, 4, 20, 5, 21, 8, 24, 9, 25, 12, 28, 13, 29));
 
 __m512i test_mm512_mask_unpacklo_epi32(__m512i __W, __mmask16 __U, __m512i __A, __m512i __B) {
   // CHECK-LABEL: test_mm512_mask_unpacklo_epi32
@@ -5517,6 +5520,7 @@ __m512i test_mm512_unpacklo_epi64(__m512i __A, __m512i __B) {
   // CHECK: shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
   return _mm512_unpacklo_epi64(__A, __B); 
 }
+TEST_CONSTEXPR(match_m512i(_mm512_unpacklo_epi64((__m512i){0, 1, 2, 3, 4, 5, 6, 7}, (__m512i){8, 9, 10, 11, 12, 13, 14, 15}), 0, 8, 2, 10, 4, 12, 6, 14));
 
 __m512i test_mm512_mask_unpacklo_epi64(__m512i __W, __mmask8 __U, __m512i __A, __m512i __B) {
   // CHECK-LABEL: test_mm512_mask_unpacklo_epi64
