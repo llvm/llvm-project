@@ -56,6 +56,23 @@ void single_int_int(int *__single p, int *__single q);
 
 }  // extern "C"
 
+// Check passing to `void *__single`.
+
+void pass_to_single_void(void *pv, std::span<int> sp, my_vec<int> &mv) {
+  char array[42] = {};
+
+  single_void(pv);
+
+  single_void(sp.data());
+  single_void(sp.first(1).data());
+  single_void(sp.first(42).data());
+  single_void(&sp[42]);
+
+  single_void(&mv[0]);
+
+  single_void(array);
+}
+
 // Check passing `nullptr`.
 
 void null() {
