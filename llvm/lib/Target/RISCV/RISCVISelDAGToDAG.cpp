@@ -796,28 +796,20 @@ bool RISCVDAGToDAGISel::tryBitfieldInsertOpFromXor(SDNode *Node) {
   if (!CMask.isShiftedMask(ShAmt, Width))
     return false;
 
-  // Width must be in 1..32(inclusive).
-  if (Width > 32 || Width == 0)
-    return false;
-
-  if (!isUInt<5>(ShAmt))
-    return false;
-
   int64_t Imm = CImm.getSExtValue();
   Imm >>= ShAmt;
-  if (!isInt<32>(Imm))
-    return false;
 
   SDLoc DL(Node);
+  SDValue ImmNode;
   auto Opc = RISCV::QC_INSB;
-  SDValue getImm = selectImm(CurDAG, DL, MVT::i32, Imm, *Subtarget);
 
   if (isInt<5>(Imm)) {
     Opc = RISCV::QC_INSBI;
-    getImm = CurDAG->getSignedTargetConstant(Imm, DL, MVT::i32);
-  }
+    ImmNode = CurDAG->getSignedTargetConstant(Imm, DL, MVT::i32);
+  } else
+    ImmNode = selectImm(CurDAG, DL, MVT::i32, Imm, *Subtarget);
 
-  SDValue Ops[] = {X, getImm, CurDAG->getTargetConstant(Width, DL, MVT::i32),
+  SDValue Ops[] = {X, ImmNode, CurDAG->getTargetConstant(Width, DL, MVT::i32),
                    CurDAG->getTargetConstant(ShAmt, DL, MVT::i32)};
   ReplaceNode(Node, CurDAG->getMachineNode(Opc, DL, MVT::i32, Ops));
 
