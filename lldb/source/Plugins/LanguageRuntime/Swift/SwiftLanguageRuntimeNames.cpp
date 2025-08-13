@@ -394,7 +394,18 @@ CreateRunThroughTaskSwitchThreadPlan(Thread &thread,
     return {};
 
   resume_fn_ptr = thread.GetProcess()->FixCodeAddress(resume_fn_ptr);
-  return std::make_shared<ThreadPlanRunToAddress>(thread, resume_fn_ptr,
+
+  llvm::Expected<uint64_t> maybe_prologue_size =
+      FindPrologueSize(*thread.GetProcess(), resume_fn_ptr);
+
+  uint64_t dest_address =
+      resume_fn_ptr + (maybe_prologue_size ? *maybe_prologue_size : 0);
+
+  if (!maybe_prologue_size)
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Step), maybe_prologue_size.takeError(),
+                   "{1}::{0}", __FUNCTION__);
+
+  return std::make_shared<ThreadPlanRunToAddress>(thread, dest_address,
                                                   /*stop_others*/ false);
 }
 
