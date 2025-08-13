@@ -51,27 +51,27 @@ struct base;
 struct llvm_symbolizer;
 
 template <class T>
-struct _LIBCPP_EXPORTED_FROM_ABI __executable_name {
-  static char const* get();
+struct __executable_name {
+  _LIBCPP_EXPORTED_FROM_ABI static char const* get();
 };
 
 template <class T>
-bool _LIBCPP_EXPORTED_FROM_ABI __has_working_executable();
+_LIBCPP_EXPORTED_FROM_ABI bool __has_working_executable();
 
 template <class T>
-bool _LIBCPP_EXPORTED_FROM_ABI __run_tool(base&, arena&);
+bool __run_tool(base&, arena&);
 
-extern template struct _LIBCPP_EXPORTED_FROM_ABI __executable_name<addr2line>;
-extern template bool _LIBCPP_EXPORTED_FROM_ABI __has_working_executable<addr2line>();
-extern template bool _LIBCPP_EXPORTED_FROM_ABI __run_tool<addr2line>(base&, arena&);
+extern template struct __executable_name<addr2line>;
+extern template bool __has_working_executable<addr2line>();
+extern template bool __run_tool<addr2line>(base&, arena&);
 
-extern template struct _LIBCPP_EXPORTED_FROM_ABI __executable_name<atos>;
-extern template bool _LIBCPP_EXPORTED_FROM_ABI __has_working_executable<atos>();
-extern template bool _LIBCPP_EXPORTED_FROM_ABI __run_tool<atos>(base&, arena&);
+extern template struct __executable_name<atos>;
+extern template bool __has_working_executable<atos>();
+extern template bool __run_tool<atos>(base&, arena&);
 
-extern template struct _LIBCPP_EXPORTED_FROM_ABI __executable_name<llvm_symbolizer>;
-extern template bool _LIBCPP_EXPORTED_FROM_ABI __has_working_executable<llvm_symbolizer>();
-extern template bool _LIBCPP_EXPORTED_FROM_ABI __run_tool<llvm_symbolizer>(base&, arena&);
+extern template struct __executable_name<llvm_symbolizer>;
+extern template bool __has_working_executable<llvm_symbolizer>();
+extern template bool __run_tool<llvm_symbolizer>(base&, arena&);
 
 } // namespace __stacktrace
 _LIBCPP_END_NAMESPACE_STD

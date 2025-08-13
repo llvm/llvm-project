@@ -34,9 +34,9 @@ class stacktrace_entry;
 
 namespace __stacktrace {
 
-struct _LIBCPP_HIDE_FROM_ABI image;
+struct image;
 
-struct _LIBCPP_EXPORTED_FROM_ABI entry_base {
+struct entry_base {
   constexpr static size_t __max_sym_len = 512;
 #  if defined(PATH_MAX)
   constexpr static size_t __max_file_len = PATH_MAX;
@@ -52,14 +52,14 @@ struct _LIBCPP_EXPORTED_FROM_ABI entry_base {
   uint_least32_t __line_{};
   image* __image_{};
 
-  std::ostream& _LIBCPP_EXPORTED_FROM_ABI write_to(std::ostream& __os) const;
-  string _LIBCPP_EXPORTED_FROM_ABI to_string() const;
-  uintptr_t _LIBCPP_EXPORTED_FROM_ABI adjusted_addr() const;
+  _LIBCPP_EXPORTED_FROM_ABI std::ostream& write_to(std::ostream& __os) const;
+  _LIBCPP_EXPORTED_FROM_ABI string to_string() const;
+  _LIBCPP_HIDE_FROM_ABI uintptr_t adjusted_addr() const;
 };
 
 } // namespace __stacktrace
 
-class _LIBCPP_EXPORTED_FROM_ABI stacktrace_entry : private __stacktrace::entry_base {
+class stacktrace_entry : private __stacktrace::entry_base {
 public:
   // (19.6.3.1) Overview [stacktrace.entry.overview]
   using native_handle_type = uintptr_t;
@@ -95,9 +95,9 @@ public:
   }
 };
 
-/** `stacktrace_entry` and `stacktrace_entry` have the same layout,
+/** `stacktrace_entry` and `entry_base` have the same layout,
 so a pointer to one can be safely casted as the other. */
-static_assert(sizeof(stacktrace_entry) == sizeof(stacktrace_entry));
+static_assert(sizeof(stacktrace_entry) == sizeof(__stacktrace::entry_base));
 
 // (19.6.4.6)
 // Non-member functions [stacktrace.basic.nonmem]

@@ -65,7 +65,7 @@ void atos::parse(entry_base& entry, std::string_view view) const {
 template struct _LIBCPP_EXPORTED_FROM_ABI __executable_name<atos>;
 template bool _LIBCPP_EXPORTED_FROM_ABI __has_working_executable<atos>();
 
-template<> bool _LIBCPP_EXPORTED_FROM_ABI __run_tool<atos>(base& base, arena& arena) {
+template<> bool _LIBCPP_EXPORTED_FROM_ABI  __run_tool<atos>(base& base, arena& arena) {
   atos tool{base, arena};
   if (!tool.build_argv()) { return false; }
   spawner spawner{tool, base};

@@ -17,9 +17,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace __stacktrace {
 
-_LIBCPP_EXPORTED_FROM_ABI thread_local arena* arena::active_arena_ptr_{nullptr};
-
-_LIBCPP_EXPORTED_FROM_ABI ostream& entry_base::write_to(ostream& __os) const {
+ostream& entry_base::write_to(ostream& __os) const {
   // Although 64-bit addresses are 16 nibbles long, they're often <= 0x7fff_ffff_ffff
   constexpr static int __k_addr_width = (sizeof(void*) > 4) ? 12 : 8;
 
@@ -36,7 +34,7 @@ _LIBCPP_EXPORTED_FROM_ABI ostream& entry_base::write_to(ostream& __os) const {
   return __os;
 }
 
-_LIBCPP_EXPORTED_FROM_ABI ostream& base::write_to(std::ostream& __os) const {
+ostream& base::write_to(std::ostream& __os) const {
   auto __count = __entries_size_();
   if (!__count) {
     __os << "(empty stacktrace)";
@@ -53,13 +51,13 @@ _LIBCPP_EXPORTED_FROM_ABI ostream& base::write_to(std::ostream& __os) const {
   return __os;
 }
 
-_LIBCPP_EXPORTED_FROM_ABI string entry_base::to_string() const {
+string entry_base::to_string() const {
   stringstream __ss;
   write_to(__ss);
   return __ss.str();
 }
 
-_LIBCPP_EXPORTED_FROM_ABI string base::to_string() const {
+string base::to_string() const {
   stringstream __ss;
   write_to(__ss);
   return __ss.str();

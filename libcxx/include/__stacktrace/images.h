@@ -38,8 +38,8 @@ struct image {
   fixed_str<entry_base::__max_file_len> name_{};
   bool is_main_prog_{};
 
-  bool operator<(image const& __rhs) const { return loaded_at_ < __rhs.loaded_at_; }
-  operator bool() const { return !name_.empty(); }
+  _LIBCPP_HIDE_FROM_ABI bool operator<(image const& __rhs) const { return loaded_at_ < __rhs.loaded_at_; }
+  _LIBCPP_HIDE_FROM_ABI operator bool() const { return !name_.empty(); }
 };
 
 /**
@@ -53,7 +53,7 @@ struct image {
  *  (sentinel)      foo.exe         libc++so.1      libc.so.6         (sentinel)
  *  0x000000000000  0x000100000000  0x633b00000000  0x7c5500000000    0xffffffffffff
  */
-struct _LIBCPP_EXPORTED_FROM_ABI images {
+struct images {
   constexpr static size_t k_max_images = 256;
   std::array<image, k_max_images + 2> images_{}; // space for the L/R sentinels
   unsigned count_{0};                            // image count, including sentinels
@@ -62,13 +62,13 @@ struct _LIBCPP_EXPORTED_FROM_ABI images {
   _LIBCPP_EXPORTED_FROM_ABI images();
 
   /** Get prog_image by index (0 <= index < count_) */
-  _LIBCPP_EXPORTED_FROM_ABI image& operator[](size_t __index) {
+  _LIBCPP_HIDE_FROM_ABI image& operator[](size_t __index) {
     _LIBCPP_ASSERT(__index < count_, "index out of range");
     return images_.at(__index);
   }
 
   /** Image representing the main program (nullptr if we couldn't figure that out) */
-  _LIBCPP_EXPORTED_FROM_ABI image* main_prog_image() {
+  _LIBCPP_HIDE_FROM_ABI image* main_prog_image() {
     for (size_t __i = 1; __i < count_ - 1; __i++) {
       auto& __image = images_[__i];
       if (__image.is_main_prog_) {
@@ -79,7 +79,7 @@ struct _LIBCPP_EXPORTED_FROM_ABI images {
   }
 
   /** Search the sorted images array for one containing this address. */
-  _LIBCPP_EXPORTED_FROM_ABI void find(size_t* __index, uintptr_t __addr) {
+  _LIBCPP_HIDE_FROM_ABI void find(size_t* __index, uintptr_t __addr) {
     // `index` slides left/right as we search through images.
     // It's (probably) likely several consecutive entries are from the same image, so
     // each iteration's `find` uses the same starting point, making it (probably) constant-time.
