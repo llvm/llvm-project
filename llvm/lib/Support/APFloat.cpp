@@ -5536,7 +5536,7 @@ APFloat::opStatus DoubleAPFloat::convertToSignExtendedInteger(
   DoubleAPFloat Integral = *this;
   const opStatus RoundStatus = Integral.roundToIntegral(RM);
   if (RoundStatus == opInvalidOp)
-    return RoundStatus;
+    return opInvalidOp;
   const APFloat &IntegralHi = Integral.getFirst();
   const APFloat &IntegralLo = Integral.getSecond();
 
@@ -5548,7 +5548,7 @@ APFloat::opStatus DoubleAPFloat::convertToSignExtendedInteger(
         IntegralHi.convertToInteger(Input, Width, IsSigned, RM, &HiIsExact);
     // The conversion from an integer-valued float to an APInt may fail if the
     // result would be out of range.  Regardless, taking this path is only
-    // possible if rounding occured during the initial `roundToIntegral`.
+    // possible if rounding occurred during the initial `roundToIntegral`.
     return HiStatus == opOK ? opInexact : HiStatus;
   }
 
@@ -5575,9 +5575,10 @@ APFloat::opStatus DoubleAPFloat::convertToSignExtendedInteger(
     // If the signs differ, the sum will fit. We can compute the result using
     // properties of two's complement arithmetic without a wide intermediate
     // integer. E.g., for uint128_t, (2^128, -1) should be 2^128 - 1.
-    [[maybe_unused]] opStatus LoStatus = IntegralLo.convertToInteger(
+    const opStatus LoStatus = IntegralLo.convertToInteger(
         Input, Width, /*IsSigned=*/true, RM, &LoIsExact);
-    assert(LoStatus == opOK && "Unexpected failure");
+    if (LoStatus == opInvalidOp)
+      return opInvalidOp;
 
     // Adjust the bit pattern of Lo to account for Hi's value:
     //  - For unsigned (Hi=2^Width): `2^Width + Lo` in `Width`-bit
@@ -5592,18 +5593,19 @@ APFloat::opStatus DoubleAPFloat::convertToSignExtendedInteger(
     return RoundStatus;
   }
 
-  // General case: Hi is not a power-of-two boundary, so we know it fits.
-  // Since we already rounded the full value, we now just need to convert the
-  // components to integers.  The rounding mode should not matter.
-  [[maybe_unused]] opStatus HiStatus = IntegralHi.convertToInteger(
+  // Convert Hi into an integer.  This may not fit but that is OK: we know that
+  // Hi + Lo would not fit either in this situation.
+  const opStatus HiStatus = IntegralHi.convertToInteger(
       Input, Width, IsSigned, rmTowardZero, &HiIsExact);
-  assert(HiStatus == opOK && "Unexpected failure");
+  if (HiStatus == opInvalidOp)
+    return HiStatus;
 
   // Convert Lo into a temporary integer of the same width.
   APSInt LoResult{Width, /*isUnsigned=*/!IsSigned};
-  [[maybe_unused]] opStatus LoStatus =
+  const opStatus LoStatus =
       IntegralLo.convertToInteger(LoResult, rmTowardZero, &LoIsExact);
-  assert(LoStatus == opOK && "Unexpected failure");
+  if (LoStatus == opInvalidOp)
+    return LoStatus;
 
   // Add Lo to Hi. This addition is guaranteed not to overflow because of the
   // double-double canonicalization rule (`|Lo| <= ulp(Hi)/2`). The only case
