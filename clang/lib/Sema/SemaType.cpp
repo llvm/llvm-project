@@ -1793,9 +1793,11 @@ bool Sema::CheckQualifiedFunctionForTypeId(QualType T, SourceLocation Loc) {
 }
 
 // Helper to deduce addr space of a pointee type in OpenCL mode.
-static QualType deduceOpenCLPointeeAddrSpace(Sema &S, QualType PointeeType) {
+static QualType deduceOpenCLPointeeAddrSpace(Sema &S, QualType PointeeType,
+                                             bool IsBlock) {
   if (!PointeeType->isUndeducedAutoType() && !PointeeType->isDependentType() &&
       !PointeeType->isSamplerT() &&
+      (!PointeeType->isFunctionType() || IsBlock) &&
       !PointeeType.hasAddressSpace())
     PointeeType = S.getASTContext().getAddrSpaceQualType(
         PointeeType, S.getASTContext().getDefaultOpenCLPointeeAddrSpace());
@@ -1834,7 +1836,7 @@ QualType Sema::BuildPointerType(QualType T,
     T = inferARCLifetimeForPointee(*this, T, Loc, /*reference*/ false);
 
   if (getLangOpts().OpenCL)
-    T = deduceOpenCLPointeeAddrSpace(*this, T);
+    T = deduceOpenCLPointeeAddrSpace(*this, T, /*IsBlock*/ false);
 
   // In WebAssembly, pointers to reference types and pointers to tables are
   // illegal.
@@ -1911,7 +1913,7 @@ QualType Sema::BuildReferenceType(QualType T, bool SpelledAsLValue,
     T = inferARCLifetimeForPointee(*this, T, Loc, /*reference*/ true);
 
   if (getLangOpts().OpenCL)
-    T = deduceOpenCLPointeeAddrSpace(*this, T);
+    T = deduceOpenCLPointeeAddrSpace(*this, T, /*IsBlock*/ false);
 
   // In WebAssembly, references to reference types and tables are illegal.
   if (getASTContext().getTargetInfo().getTriple().isWasm() &&
@@ -2766,7 +2768,7 @@ QualType Sema::BuildBlockPointerType(QualType T,
     return QualType();
 
   if (getLangOpts().OpenCL)
-    T = deduceOpenCLPointeeAddrSpace(*this, T);
+    T = deduceOpenCLPointeeAddrSpace(*this, T, /*IsBlock*/ true);
 
   return Context.getBlockPointerType(T);
 }
