@@ -373,7 +373,8 @@ RT_API_ATTRS int AssignTicket::Begin(WorkQueue &workQueue) {
       // is executed, any noncoarray allocated allocatable subobject of the
       // variable is deallocated before the assignment takes place."
       if (int status{
-              workQueue.BeginDestroy(to_, *toDerived_, /*finalize=*/false)};
+              workQueue.BeginDestroy(to_, *toDerived_, /*finalize=*/false,
+                  /*isNestedFinalizationPossible=*/false)};
           status != StatOk && status != StatContinue) {
         return status;
       }
@@ -683,8 +684,9 @@ RT_API_ATTRS int DerivedAssignTicket<IS_COMPONENTWISE>::Continue(
         if (toDesc->IsAllocated()) {
           if (this->phase_ == 0) {
             if (componentDerived && !componentDerived->noDestructionNeeded()) {
-              if (int status{workQueue.BeginDestroy(
-                      *toDesc, *componentDerived, /*finalize=*/false)};
+              if (int status{workQueue.BeginDestroy(*toDesc, *componentDerived,
+                      /*finalize=*/false,
+                      /*isNestedFinalizationPossible=*/false)};
                   status != StatOk) {
                 this->phase_++;
                 return status;
