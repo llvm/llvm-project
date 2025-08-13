@@ -9,13 +9,8 @@
 #ifndef FORTRAN_SUPPORT_OPENMP_UTILS_H_
 #define FORTRAN_SUPPORT_OPENMP_UTILS_H_
 
-#include "flang/Optimizer/Builder/DirectivesCommon.h"
-#include "flang/Optimizer/Builder/FIRBuilder.h"
-#include "flang/Optimizer/Builder/HLFIRTools.h"
-#include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Semantics/symbol.h"
 
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Value.h"
 
@@ -77,35 +72,6 @@ struct EntryBlockArgs {
 /// \param [in]  region - Empty region in which to create the entry block.
 mlir::Block *genEntryBlock(
     mlir::OpBuilder &builder, const EntryBlockArgs &args, mlir::Region &region);
-
-// Returns true if the variable has a dynamic size and therefore requires
-// bounds operations to describe its extents.
-inline bool needsBoundsOps(mlir::Value var) {
-  assert(mlir::isa<mlir::omp::PointerLikeType>(var.getType()) &&
-      "only pointer like types expected");
-  mlir::Type t = fir::unwrapRefType(var.getType());
-  if (mlir::Type inner = fir::dyn_cast_ptrOrBoxEleTy(t))
-    return fir::hasDynamicSize(inner);
-  return fir::hasDynamicSize(t);
-}
-
-// Generate MapBoundsOp operations for the variable if required.
-inline void genBoundsOps(fir::FirOpBuilder &builder, mlir::Value var,
-    llvm::SmallVectorImpl<mlir::Value> &boundsOps) {
-  mlir::Location loc = var.getLoc();
-  fir::factory::AddrAndBoundsInfo info =
-      fir::factory::getDataOperandBaseAddr(builder, var,
-          /*isOptional=*/false, loc);
-  fir::ExtendedValue exv =
-      hlfir::translateToExtendedValue(loc, builder, hlfir::Entity{info.addr},
-          /*contiguousHint=*/true)
-          .first;
-  llvm::SmallVector<mlir::Value> tmp =
-      fir::factory::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
-          mlir::omp::MapBoundsType>(
-          builder, info, exv, /*dataExvIsAssumedSize=*/false, loc);
-  llvm::append_range(boundsOps, tmp);
-}
 } // namespace Fortran::common::openmp
 
 #endif // FORTRAN_SUPPORT_OPENMP_UTILS_H_

@@ -125,7 +125,7 @@ ObjectStore::storeFromOpenFileImpl(sys::fs::file_t FD,
   // standalone file if the file-system supports it and the file is large.
   uint64_t Size = Status ? Status->getSize() : -1;
   auto Buffer = MemoryBuffer::getOpenFile(FD, /*Filename=*/"", Size);
-  if (Buffer)
+  if (!Buffer)
     return errorCodeToError(Buffer.getError());
 
   return store({}, arrayRefFromStringRef<char>((*Buffer)->getBuffer()));
