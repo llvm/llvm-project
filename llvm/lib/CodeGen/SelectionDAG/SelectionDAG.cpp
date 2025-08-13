@@ -9094,6 +9094,43 @@ SelectionDAG::getMemcmp(SDValue Chain, const SDLoc &dl, SDValue Mem0,
   return TLI->LowerCallTo(CLI);
 }
 
+std::pair<SDValue, SDValue> SelectionDAG::getStrlen(SDValue Chain,
+                                                    const SDLoc &dl,
+                                                    SDValue Src,
+                                                    const CallInst *CI) {
+  const char *LibCallName = TLI->getLibcallName(RTLIB::STRLEN);
+  if (!LibCallName)
+    return {};
+
+  // Emit a library call.
+  auto GetEntry = [](Type *Ty, SDValue &SDV) {
+    TargetLowering::ArgListEntry E;
+    E.Ty = Ty;
+    E.Node = SDV;
+    return E;
+  };
+
+  PointerType *PT = PointerType::getUnqual(*getContext());
+  TargetLowering::ArgListTy Args = {GetEntry(PT, Src)};
+
+  TargetLowering::CallLoweringInfo CLI(*this);
+  bool IsTailCall = false;
+  bool ReturnsFirstArg = CI && funcReturnsFirstArgOfCall(*CI);
+  IsTailCall = CI && CI->isTailCall() &&
+               isInTailCallPosition(*CI, getTarget(), ReturnsFirstArg);
+
+  CLI.setDebugLoc(dl)
+      .setChain(Chain)
+      .setLibCallee(
+          TLI->getLibcallCallingConv(RTLIB::STRLEN),
+          Type::getInt32Ty(*getContext()),
+          getExternalSymbol(LibCallName, TLI->getPointerTy(getDataLayout())),
+          std::move(Args))
+      .setTailCall(IsTailCall);
+
+  return TLI->LowerCallTo(CLI);
+}
+
 SDValue SelectionDAG::getMemcpy(
     SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src, SDValue Size,
     Align Alignment, bool isVol, bool AlwaysInline, const CallInst *CI,
