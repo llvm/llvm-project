@@ -241,6 +241,8 @@ MatchTableRecord MatchTable::IntValue(unsigned NumBytes, int64_t IntValue) {
   if (NumBytes < 8)
     UIntValue &= (UINT64_C(1) << NumBytes * 8) - 1;
   std::string Str = llvm::to_string(UIntValue);
+  if (UIntValue > INT64_MAX)
+    Str += 'u';
   // TODO: Could optimize this directly to save the compiler some work when
   // building the file
   return MatchTableRecord(std::nullopt, Str, NumBytes,
