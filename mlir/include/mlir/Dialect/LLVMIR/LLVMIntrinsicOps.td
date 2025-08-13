@@ -1070,49 +1070,13 @@ def LLVM_masked_scatter : LLVM_ZeroResultIntrOp<"masked.scatter"> {
 
 /// Create a call to Masked Expand Load intrinsic.
 def LLVM_masked_expandload : LLVM_IntrOp<"masked.expandload", [0], [], [], 1> {
-  let arguments = (ins LLVM_AnyPointer:$base,
-                       LLVM_VectorOf<I1>:$mask,
-                       LLVM_AnyVector:$passthru,
-                       DefaultValuedAttr<I32Attr, "1">:$align);
-
-  let assemblyFormat = "`(` $base`,` $mask`,` $passthru `)` attr-dict `:` functional-type(operands, results)";
-
-  string llvmBuilder = [{
-    $res = builder.CreateMaskedExpandLoad(
-      $_resultType, $base, $align != 1 ? llvm::Align($align) : llvm::MaybeAlign(), $mask, $passthru);
-  }];
-  string mlirBuilder = [{
-    auto *intrinInst = dyn_cast<llvm::IntrinsicInst>(inst);
-    llvm::MaybeAlign alignment = intrinInst->getParamAlign(0);
-    IntegerAttr attr = $_builder.getI32IntegerAttr(alignment.has_value() ? alignment->value() : 1);
-    $res = LLVM::masked_expandload::create($_builder, $_location,
-      $_resultType, $base, $mask, $passthru, attr);
-  }];
+  let arguments = (ins LLVM_AnyPointer, LLVM_VectorOf<I1>, LLVM_AnyVector);
 }
 
 /// Create a call to Masked Compress Store intrinsic.
 def LLVM_masked_compressstore
     : LLVM_IntrOp<"masked.compressstore", [], [0], [], 0> {
-  let arguments = (ins LLVM_AnyVector:$vector,
-                       LLVM_AnyPointer:$base,
-                       LLVM_VectorOf<I1>:$mask,
-                       DefaultValuedAttr<I32Attr, "1">:$align);
-
-  let builders = [LLVM_VoidResultTypeOpBuilder, LLVM_ZeroResultOpBuilder];
-
-  let assemblyFormat = "`(` $vector `,` $base `,` $mask `)` attr-dict `:` functional-type(operands, results)";
-
-  string llvmBuilder = [{
-    builder.CreateMaskedCompressStore(
-      $vector, $base, $align != 1 ? llvm::Align($align) : llvm::MaybeAlign(), $mask);
-  }];
-  string mlirBuilder = [{
-    auto *intrinInst = dyn_cast<llvm::IntrinsicInst>(inst);
-    llvm::MaybeAlign alignment = intrinInst->getParamAlign(1);
-    IntegerAttr attr = $_builder.getI32IntegerAttr(alignment.has_value() ? alignment->value() : 1);
-    $_op = LLVM::masked_compressstore::create($_builder, $_location,
-      $vector, $base, $mask, attr);
-  }];
+  let arguments = (ins LLVM_AnyVector, LLVM_AnyPointer, LLVM_VectorOf<I1>);
 }
 
 //
