@@ -10,6 +10,7 @@
 #include "Protocol/ProtocolBase.h"
 #include "TestingSupport/Host/PipeTestUtilities.h"
 #include "Transport.h"
+#include "lldb/Host/MainLoop.h"
 #include "llvm/ADT/StringRef.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -22,8 +23,27 @@ class TransportBase : public PipePairTest {
 protected:
   std::unique_ptr<lldb_dap::Transport> to_dap;
   std::unique_ptr<lldb_dap::Transport> from_dap;
+  lldb_private::MainLoop loop;
 
   void SetUp() override;
+
+  template <typename P>
+  void RunOnce(const std::function<void(llvm::Expected<P>)> &callback,
+               std::chrono::milliseconds timeout = std::chrono::seconds(1)) {
+    auto handle = from_dap->RegisterReadObject<P>(
+        loop, [&](lldb_private::MainLoopBase &loop, llvm::Expected<P> message) {
+          callback(std::move(message));
+          loop.RequestTermination();
+        });
+    loop.AddCallback(
+        [](lldb_private::MainLoopBase &loop) {
+          loop.RequestTermination();
+          FAIL() << "timeout waiting for read callback";
+        },
+        timeout);
+    ASSERT_THAT_EXPECTED(handle, llvm::Succeeded());
+    ASSERT_THAT_ERROR(loop.Run().takeError(), llvm::Succeeded());
+  }
 };
 
 /// Matches an "output" event.

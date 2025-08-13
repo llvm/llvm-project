@@ -25,9 +25,9 @@ int main(int, char**) {
   {
     std::map<int, int, std::less<int>, std::allocator<int>> s1;
     std::map<int, int, std::less<int>, test_allocator<int>> s2;
-    // expected-error-re@*:* {{static assertion failed due to requirement 'is_same<int, std::pair<const int, int>>::value'{{.*}}Allocator::value_type must be same type as value_type}}
+    // expected-error-re@*:* {{static assertion failed due to requirement {{.+}}Allocator::value_type must be same type as value_type}}
     s1 <=> s2;
-    // expected-error-re@*:* {{static assertion failed due to requirement 'is_same<int, std::pair<const int, int>>::value'{{.*}}Allocator::value_type must be same type as value_type}}
+    // expected-error-re@*:* {{static assertion failed due to requirement {{.+}}Allocator::value_type must be same type as value_type}}
     s2 <=> s1;
   }
   // Mismatching comparision functions

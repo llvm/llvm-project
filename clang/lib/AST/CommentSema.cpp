@@ -906,17 +906,9 @@ bool Sema::isClassOrStructOrTagTypedefDecl() {
   if (isClassOrStructDeclImpl(ThisDeclInfo->CurrentDecl))
     return true;
 
-  if (auto *ThisTypedefDecl = dyn_cast<TypedefDecl>(ThisDeclInfo->CurrentDecl)) {
-    auto UnderlyingType = ThisTypedefDecl->getUnderlyingType();
-    if (auto ThisElaboratedType = dyn_cast<ElaboratedType>(UnderlyingType)) {
-      auto DesugaredType = ThisElaboratedType->desugar();
-      if (auto *DesugaredTypePtr = DesugaredType.getTypePtrOrNull()) {
-        if (auto *ThisRecordType = dyn_cast<RecordType>(DesugaredTypePtr)) {
-          return isClassOrStructDeclImpl(ThisRecordType->getAsRecordDecl());
-        }
-      }
-    }
-  }
+  if (auto *ThisTypedefDecl = dyn_cast<TypedefDecl>(ThisDeclInfo->CurrentDecl))
+    if (auto *D = ThisTypedefDecl->getUnderlyingType()->getAsRecordDecl())
+      return isClassOrStructDeclImpl(D);
 
   return false;
 }

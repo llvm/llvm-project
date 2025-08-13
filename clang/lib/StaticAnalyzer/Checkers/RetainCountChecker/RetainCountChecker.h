@@ -280,7 +280,8 @@ public:
   void printState(raw_ostream &Out, ProgramStateRef State,
                   const char *NL, const char *Sep) const override;
 
-  void checkBind(SVal loc, SVal val, const Stmt *S, CheckerContext &C) const;
+  void checkBind(SVal loc, SVal val, const Stmt *S, bool AtDeclInit,
+                 CheckerContext &C) const;
   void checkPostStmt(const BlockExpr *BE, CheckerContext &C) const;
   void checkPostStmt(const CastExpr *CE, CheckerContext &C) const;
 

@@ -272,7 +272,7 @@ bool AggExprEmitter::TypeRequiresGCollection(QualType T) {
   if (!RecordTy) return false;
 
   // Don't mess with non-trivial C++ types.
-  RecordDecl *Record = RecordTy->getDecl();
+  RecordDecl *Record = RecordTy->getOriginalDecl()->getDefinitionOrSelf();
   if (isa<CXXRecordDecl>(Record) &&
       (cast<CXXRecordDecl>(Record)->hasNonTrivialCopyConstructor() ||
        !cast<CXXRecordDecl>(Record)->hasTrivialDestructor()))
@@ -424,7 +424,10 @@ AggExprEmitter::VisitCXXStdInitializerListExpr(CXXStdInitializerListExpr *E) {
       Ctx.getAsConstantArrayType(E->getSubExpr()->getType());
   assert(ArrayType && "std::initializer_list constructed from non-array");
 
-  RecordDecl *Record = E->getType()->castAs<RecordType>()->getDecl();
+  RecordDecl *Record = E->getType()
+                           ->castAs<RecordType>()
+                           ->getOriginalDecl()
+                           ->getDefinitionOrSelf();
   RecordDecl::field_iterator Field = Record->field_begin();
   assert(Field != Record->field_end() &&
          Ctx.hasSameType(Field->getType()->getPointeeType(),
@@ -1806,7 +1809,10 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
   // the disadvantage is that the generated code is more difficult for
   // the optimizer, especially with bitfields.
   unsigned NumInitElements = InitExprs.size();
-  RecordDecl *record = ExprToVisit->getType()->castAs<RecordType>()->getDecl();
+  RecordDecl *record = ExprToVisit->getType()
+                           ->castAs<RecordType>()
+                           ->getOriginalDecl()
+                           ->getDefinitionOrSelf();
 
   // We'll need to enter cleanup scopes in case any of the element
   // initializers throws an exception.
@@ -2116,7 +2122,7 @@ static CharUnits GetNumNonZeroBytesInInit(const Expr *E, CodeGenFunction &CGF) {
   // referencee.  InitListExprs for unions and arrays can't have references.
   if (const RecordType *RT = E->getType()->getAs<RecordType>()) {
     if (!RT->isUnionType()) {
-      RecordDecl *SD = RT->getDecl();
+      RecordDecl *SD = RT->getOriginalDecl()->getDefinitionOrSelf();
       CharUnits NumNonZeroBytes = CharUnits::Zero();
 
       unsigned ILEElement = 0;
@@ -2168,7 +2174,7 @@ static void CheckAggExprForMemSetUse(AggValueSlot &Slot, const Expr *E,
   if (CGF.getLangOpts().CPlusPlus)
     if (const RecordType *RT = CGF.getContext()
                        .getBaseElementType(E->getType())->getAs<RecordType>()) {
-      const CXXRecordDecl *RD = cast<CXXRecordDecl>(RT->getDecl());
+      const CXXRecordDecl *RD = cast<CXXRecordDecl>(RT->getOriginalDecl());
       if (RD->hasUserDeclaredConstructor())
         return;
     }
@@ -2289,7 +2295,8 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
 
   if (getLangOpts().CPlusPlus) {
     if (const RecordType *RT = Ty->getAs<RecordType>()) {
-      CXXRecordDecl *Record = cast<CXXRecordDecl>(RT->getDecl());
+      auto *Record =
+          cast<CXXRecordDecl>(RT->getOriginalDecl())->getDefinitionOrSelf();
       assert((Record->hasTrivialCopyConstructor() ||
               Record->hasTrivialCopyAssignment() ||
               Record->hasTrivialMoveConstructor() ||
@@ -2373,7 +2380,7 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
   if (CGM.getLangOpts().getGC() == LangOptions::NonGC) {
     // fall through
   } else if (const RecordType *RecordTy = Ty->getAs<RecordType>()) {
-    RecordDecl *Record = RecordTy->getDecl();
+    RecordDecl *Record = RecordTy->getOriginalDecl()->getDefinitionOrSelf();
     if (Record->hasObjectMember()) {
       CGM.getObjCRuntime().EmitGCMemmoveCollectable(*this, DestPtr, SrcPtr,
                                                     SizeVal);
@@ -2382,7 +2389,9 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
   } else if (Ty->isArrayType()) {
     QualType BaseType = getContext().getBaseElementType(Ty);
     if (const RecordType *RecordTy = BaseType->getAs<RecordType>()) {
-      if (RecordTy->getDecl()->hasObjectMember()) {
+      if (RecordTy->getOriginalDecl()
+              ->getDefinitionOrSelf()
+              ->hasObjectMember()) {
         CGM.getObjCRuntime().EmitGCMemmoveCollectable(*this, DestPtr, SrcPtr,
                                                       SizeVal);
         return;
