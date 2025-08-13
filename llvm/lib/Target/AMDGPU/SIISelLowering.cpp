@@ -5281,9 +5281,7 @@ static uint32_t getIdentityValueFor32BitWaveReduction(unsigned Opc) {
   case AMDGPU::S_MAX_I32:
     return std::numeric_limits<int32_t>::min();
   case AMDGPU::S_ADD_I32:
-  case AMDGPU::S_ADD_U64_PSEUDO:
   case AMDGPU::S_SUB_I32:
-  case AMDGPU::S_SUB_U64_PSEUDO:
   case AMDGPU::S_OR_B32:
   case AMDGPU::S_XOR_B32:
     return std::numeric_limits<uint32_t>::min();
@@ -5305,6 +5303,9 @@ static uint64_t getIdentityValueFor64BitWaveReduction(unsigned Opc) {
     return std::numeric_limits<uint64_t>::min();
   case AMDGPU::V_CMP_GT_I64_e64: // max.i64
     return std::numeric_limits<int64_t>::min();
+  case AMDGPU::S_ADD_U64_PSEUDO:
+  case AMDGPU::S_SUB_U64_PSEUDO:
+    return std::numeric_limits<uint64_t>::min();
   default:
     llvm_unreachable(
         "Unexpected opcode in getIdentityValueFor64BitWaveReduction");
@@ -5441,7 +5442,8 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
         if (Opc == AMDGPU::S_SUB_U64_PSEUDO) {
           BuildMI(BB, MI, DL, TII->get(AMDGPU::S_SUB_I32), NegatedValLo)
               .addImm(0)
-              .addReg(NewAccumulator->getOperand(0).getReg());
+              .addReg(NewAccumulator->getOperand(0).getReg())
+              .setOperandDead(3); // Dead scc
           BuildMI(BB, MI, DL, TII->get(AMDGPU::S_ASHR_I32), NegatedValHi)
               .addReg(NegatedValLo)
               .addImm(31)
@@ -5630,9 +5632,9 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
       }
       case AMDGPU::S_ADD_U64_PSEUDO:
       case AMDGPU::S_SUB_U64_PSEUDO: {
-        unsigned newOpc1 = Opc == AMDGPU::S_ADD_U64_PSEUDO ? AMDGPU::S_ADD_U32
+        unsigned NewOpc1 = Opc == AMDGPU::S_ADD_U64_PSEUDO ? AMDGPU::S_ADD_U32
                                                            : AMDGPU::S_SUB_U32;
-        unsigned newOpc2 = Opc == AMDGPU::S_ADD_U64_PSEUDO ? AMDGPU::S_ADDC_U32
+        unsigned NewOpc2 = Opc == AMDGPU::S_ADD_U64_PSEUDO ? AMDGPU::S_ADDC_U32
                                                            : AMDGPU::S_SUBB_U32;
         Register DestLo = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
         Register DestHi = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
@@ -5642,12 +5644,13 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
         MachineOperand Accumhi = TII->buildExtractSubRegOrImm(
             MI, MRI, Accumulator->getOperand(0), DstRegClass, AMDGPU::sub1,
             &AMDGPU::SReg_32RegClass);
-        BuildMI(*ComputeLoop, I, DL, TII->get(newOpc1), DestLo)
+        BuildMI(*ComputeLoop, I, DL, TII->get(NewOpc1), DestLo)
             .add(Accumlo)
             .addReg(LaneValueLo->getOperand(0).getReg());
-        BuildMI(*ComputeLoop, I, DL, TII->get(newOpc2), DestHi)
+        BuildMI(*ComputeLoop, I, DL, TII->get(NewOpc2), DestHi)
             .add(Accumhi)
-            .addReg(LaneValueHi->getOperand(0).getReg());
+            .addReg(LaneValueHi->getOperand(0).getReg())
+            .setOperandDead(3); // Dead scc
         NewAccumulator = BuildMI(*ComputeLoop, I, DL,
                                  TII->get(TargetOpcode::REG_SEQUENCE), DstReg)
                              .addReg(DestLo)
