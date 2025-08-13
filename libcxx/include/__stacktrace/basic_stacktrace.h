@@ -299,12 +299,12 @@ swap(basic_stacktrace<_Allocator>& __a, basic_stacktrace<_Allocator>& __b) noexc
 }
 
 template <class _Allocator>
-_LIBCPP_EXPORTED_FROM_ABI ostream& operator<<(ostream& __os, const basic_stacktrace<_Allocator>& __stacktrace) {
+_LIBCPP_EXPORTED_FROM_ABI inline ostream& operator<<(ostream& __os, const basic_stacktrace<_Allocator>& __stacktrace) {
   return ((__stacktrace::base const&)__stacktrace).write_to(__os);
 }
 
 template <class _Allocator>
-_LIBCPP_EXPORTED_FROM_ABI string to_string(const basic_stacktrace<_Allocator>& __stacktrace) {
+_LIBCPP_EXPORTED_FROM_ABI inline string to_string(const basic_stacktrace<_Allocator>& __stacktrace) {
   return ((__stacktrace::base const&)__stacktrace).to_string();
 }
 
