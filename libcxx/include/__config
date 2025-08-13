@@ -1024,8 +1024,8 @@ typedef __char32_t char32_t;
 //
 // picolibc 1.8.9 and newer declare the two functions unconditionally.
 //
-// Microsoft C Runtime, Apple C library and AIX C library do not yet support
-// these functions.
+// Apple C library, Microsoft C Runtime, AIX C library and FreeBSD libc do not
+// yet support these functions.
 #  if defined(_LIBCPP_GLIBC_PREREQ)
 #    if defined(__cpp_char8_t) && _LIBCPP_GLIBC_PREREQ(2, 36)
 #      define _LIBCPP_HAS_C8RTOMB_MBRTOC8 1
@@ -1038,7 +1038,7 @@ typedef __char32_t char32_t;
 #    else
 #      define _LIBCPP_HAS_C8RTOMB_MBRTOC8 0
 #    endif
-#  elif defined(__APPLE__) || defined(_MSC_VER) || defined(_AIX)
+#  elif defined(__APPLE__) || defined(_MSC_VER) || defined(_LIBCPP_UCRT) || defined(_AIX) || defined(__FreeBSD__)
 #    define _LIBCPP_HAS_C8RTOMB_MBRTOC8 0
 #  else
 #    define _LIBCPP_HAS_C8RTOMB_MBRTOC8 1
