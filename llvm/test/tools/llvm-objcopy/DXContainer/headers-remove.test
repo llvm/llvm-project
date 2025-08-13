@@ -1,5 +1,5 @@
 ## Tests that the copied DXContainer correctly has the specified headers
-## removed
+## removed.
 
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy --remove-section=FKE1 --remove-section=FKE4 %t %t.out

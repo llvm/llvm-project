@@ -1,5 +1,5 @@
 ## Tests that the RTS0 (root signature) part is correctly removed from the
-## copied DXContainer
+## copied DXContainer.
 
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy --remove-section=RTS0 %t %t.out
