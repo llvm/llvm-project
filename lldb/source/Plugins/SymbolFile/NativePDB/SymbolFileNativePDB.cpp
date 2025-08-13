@@ -1675,7 +1675,7 @@ void SymbolFileNativePDB::CacheFunctionNames() {
         llvm::cantFail(SymbolDeserializer::deserializeAs<ProcSym>(*iter));
     if ((proc.Flags & ProcSymFlags::IsUnreachable) != ProcSymFlags::None)
       continue;
-    if (proc.Name.empty())
+    if (proc.Name.empty() || proc.FunctionType.isNoneType())
       continue;
 
     // The function/procedure symbol only contains the demangled name.
