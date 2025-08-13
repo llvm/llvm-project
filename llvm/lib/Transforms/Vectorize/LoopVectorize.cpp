@@ -359,6 +359,10 @@ cl::opt<bool> llvm::EnableVPlanNativePath(
     cl::desc("Enable VPlan-native vectorization path with "
              "support for outer loop vectorization."));
 
+cl::opt<bool> EnableWideActiveLaneMask(
+    "enable-wide-lane-mask", cl::init(false), cl::Hidden,
+    cl::desc("Enable use of wide get active lane mask instructions"));
+
 cl::opt<bool>
     llvm::VerifyEachVPlan("vplan-verify-each",
 #ifdef EXPENSIVE_CHECKS
@@ -4292,7 +4296,13 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
           if (!VPI)
             continue;
           switch (VPI->getOpcode()) {
-          case VPInstruction::ActiveLaneMask:
+          case VPInstruction::ActiveLaneMask: {
+            unsigned Multiplier =
+                cast<ConstantInt>(VPI->getOperand(2)->getLiveInIRValue())
+                    ->getZExtValue();
+            C += VPI->cost(VF * Multiplier, CostCtx);
+            break;
+          }
           case VPInstruction::ExplicitVectorLength:
             C += VPI->cost(VF, CostCtx);
             break;

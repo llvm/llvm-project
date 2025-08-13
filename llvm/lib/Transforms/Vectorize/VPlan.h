@@ -1956,6 +1956,9 @@ public:
     return getOperand(1);
   }
 
+  // Update the incoming value from the loop backedge.
+  void setBackedgeValue(VPValue *V) { setOperand(1, V); }
+
   /// Returns the backedge value as a recipe. The backedge value is guaranteed
   /// to be a recipe.
   virtual VPRecipeBase &getBackedgeRecipe() {
