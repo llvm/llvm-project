@@ -103,8 +103,8 @@ static Value calculateMemrefTotalSizeBytes(Location loc, MemRefType memrefType,
                                            OpBuilder &builder) {
   assert(isMemRefTypeLegalForEmitC(memrefType) &&
          "incompatible memref type for EmitC conversion");
-  emitc::CallOpaqueOp elementSize = builder.create<emitc::CallOpaqueOp>(
-      loc, emitc::SizeTType::get(builder.getContext()),
+  emitc::CallOpaqueOp elementSize = emitc::CallOpaqueOp::create(
+      builder, loc, emitc::SizeTType::get(builder.getContext()),
       builder.getStringAttr("sizeof"), ValueRange{},
       ArrayAttr::get(builder.getContext(),
                      {TypeAttr::get(memrefType.getElementType())}));
@@ -113,12 +113,12 @@ static Value calculateMemrefTotalSizeBytes(Location loc, MemRefType memrefType,
   int64_t numElements = std::accumulate(memrefType.getShape().begin(),
                                         memrefType.getShape().end(), int64_t{1},
                                         std::multiplies<int64_t>());
-  emitc::ConstantOp numElementsValue = builder.create<emitc::ConstantOp>(
-      loc, indexType, builder.getIndexAttr(numElements));
+  emitc::ConstantOp numElementsValue = emitc::ConstantOp::create(
+      builder, loc, indexType, builder.getIndexAttr(numElements));
 
   Type sizeTType = emitc::SizeTType::get(builder.getContext());
-  emitc::MulOp totalSizeBytes = builder.create<emitc::MulOp>(
-      loc, sizeTType, elementSize.getResult(0), numElementsValue);
+  emitc::MulOp totalSizeBytes = emitc::MulOp::create(
+      builder, loc, sizeTType, elementSize.getResult(0), numElementsValue);
 
   return totalSizeBytes.getResult();
 }
@@ -127,16 +127,15 @@ static emitc::ApplyOp
 createPointerFromEmitcArray(Location loc, OpBuilder &builder,
                             TypedValue<emitc::ArrayType> arrayValue) {
 
-  emitc::ConstantOp zeroIndex = builder.create<emitc::ConstantOp>(
-      loc, builder.getIndexType(), builder.getIndexAttr(0));
+  emitc::ConstantOp zeroIndex = emitc::ConstantOp::create(
+      builder, loc, builder.getIndexType(), builder.getIndexAttr(0));
 
-  int64_t rank = arrayValue.getType().getRank();
-  llvm::SmallVector<mlir::Value> indices(rank, zeroIndex);
-
+  emitc::ArrayType arrayType = arrayValue.getType();
+  llvm::SmallVector<mlir::Value> indices(arrayType.getRank(), zeroIndex);
   emitc::SubscriptOp subPtr =
-      builder.create<emitc::SubscriptOp>(loc, arrayValue, ValueRange(indices));
-  emitc::ApplyOp ptr = builder.create<emitc::ApplyOp>(
-      loc, emitc::PointerType::get(arrayValue.getType().getElementType()),
+      emitc::SubscriptOp::create(builder, loc, arrayValue, ValueRange(indices));
+  emitc::ApplyOp ptr = emitc::ApplyOp::create(
+      builder, loc, emitc::PointerType::get(arrayType.getElementType()),
       builder.getStringAttr("&"), subPtr);
 
   return ptr;
@@ -233,8 +232,8 @@ struct ConvertCopy final : public OpConversionPattern<memref::CopyOp> {
     emitc::ApplyOp targetPtr =
         createPointerFromEmitcArray(loc, rewriter, targetArrayValue);
 
-    emitc::CallOpaqueOp memCpyCall = rewriter.create<emitc::CallOpaqueOp>(
-        loc, TypeRange{}, "memcpy",
+    emitc::CallOpaqueOp memCpyCall = emitc::CallOpaqueOp::create(
+        rewriter, loc, TypeRange{}, "memcpy",
         ValueRange{
             targetPtr.getResult(), srcPtr.getResult(),
             calculateMemrefTotalSizeBytes(loc, srcMemrefType, rewriter)});
