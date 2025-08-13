@@ -106,6 +106,8 @@ class TestFrameVarDILArraySubscript(TestBase):
         )
 
         self.runCmd("settings set target.experimental.use-DIL true")
+        self.runCmd("script from myArraySynthProvider import *")
+        self.runCmd("type synth add -l myArraySynthProvider myArray")
 
         # Test synthetic value subscription
         self.expect_var_path("vector[1]", value="2")
@@ -113,4 +115,8 @@ class TestFrameVarDILArraySubscript(TestBase):
             "frame var 'vector[100]'",
             error=True,
             substrs=["array index 100 is not valid"],
+        )
+        self.expect(
+            "frame var 'ma_ptr[0]'",
+            substrs=["(myArray) ma_ptr[0] = ([0] = 7, [1] = 8, [2] = 9, [3] = 10)"],
         )
