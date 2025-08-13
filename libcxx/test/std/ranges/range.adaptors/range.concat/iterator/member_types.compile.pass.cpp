@@ -60,7 +60,7 @@ struct ConstVeryDifferentRange {
   forward_iterator<double*> end() const;
 };
 
-void test() {
+constexpr bool test() {
   int buffer[] = {1, 2, 3, 4};
   {
     // random_access_iterator_tag
@@ -98,8 +98,6 @@ void test() {
     static_assert(std::is_same_v<Iter::difference_type, std::ptrdiff_t>);
     static_assert(std::is_same_v<Iter::value_type, int>);
   }
-
-
 
   {
     // forward_iterator_tag
@@ -161,4 +159,12 @@ void test() {
     static_assert(std::is_same_v<ConstIter::value_type, double>);
   }
 
+  return true;
+}
+
+
+int main(int, char**) {
+  test();
+  static_assert(test());
+  return 0;
 }

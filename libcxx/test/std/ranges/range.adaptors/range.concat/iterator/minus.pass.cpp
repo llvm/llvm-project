@@ -17,7 +17,7 @@
 #include "test_macros.h"
 #include "../types.h"
 
-constexpr void test() {
+constexpr bool test() {
   // Test two iterators
   {
     std::array<int, 2> array1{0, 1};
@@ -40,9 +40,12 @@ constexpr void test() {
     auto res = std::default_sentinel_t{} - it1;
     assert(res == 4);
   }
+
+  return true;
 }
 
 int main(int, char**) {
   test();
+  static_assert(test());
   return 0;
 }

@@ -113,7 +113,7 @@ constexpr bool test() {
   // non bidirectional
   {
     int buffer[3] = {4, 5, 6};
-    std::ranges::zip_view v(a, NonBidi{buffer});
+    std::ranges::concat_view v(a, NonBidi{buffer});
     using Iter = std::ranges::iterator_t<decltype(v)>;
     static_assert(!canDecrement<Iter>);
   }
