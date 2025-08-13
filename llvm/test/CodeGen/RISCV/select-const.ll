@@ -5,6 +5,8 @@
 ; RUN:   | FileCheck -check-prefixes=RV32,RV32IF %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zicond -target-abi=ilp32 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV32,RV32ZICOND %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcicm,+experimental-xqcics,+experimental-xqcicli -verify-machineinstrs < %s \
+; RUN:   | FileCheck %s --check-prefixes=RV32IXQCI
 ; RUN: llc -mtriple=riscv64 -target-abi=lp64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV64,RV64I %s
 ; RUN: llc -mtriple=riscv64 -mattr=+f,+d -target-abi=lp64 -verify-machineinstrs < %s \
@@ -25,6 +27,10 @@ define signext i32 @select_const_int_easy(i1 zeroext %a) nounwind {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    ret
 ;
+; RV32IXQCI-LABEL: select_const_int_easy:
+; RV32IXQCI:       # %bb.0:
+; RV32IXQCI-NEXT:    ret
+;
 ; RV64-LABEL: select_const_int_easy:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    ret
@@ -38,6 +44,12 @@ define signext i32 @select_const_int_one_away(i1 zeroext %a) nounwind {
 ; RV32-NEXT:    li a1, 4
 ; RV32-NEXT:    sub a0, a1, a0
 ; RV32-NEXT:    ret
+;
+; RV32IXQCI-LABEL: select_const_int_one_away:
+; RV32IXQCI:       # %bb.0:
+; RV32IXQCI-NEXT:    li a1, 4
+; RV32IXQCI-NEXT:    sub a0, a1, a0
+; RV32IXQCI-NEXT:    ret
 ;
 ; RV64-LABEL: select_const_int_one_away:
 ; RV64:       # %bb.0:
@@ -53,6 +65,11 @@ define signext i32 @select_const_int_pow2_zero(i1 zeroext %a) nounwind {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    slli a0, a0, 2
 ; RV32-NEXT:    ret
+;
+; RV32IXQCI-LABEL: select_const_int_pow2_zero:
+; RV32IXQCI:       # %bb.0:
+; RV32IXQCI-NEXT:    slli a0, a0, 2
+; RV32IXQCI-NEXT:    ret
 ;
 ; RV64-LABEL: select_const_int_pow2_zero:
 ; RV64:       # %bb.0:
@@ -89,6 +106,12 @@ define signext i32 @select_const_int_harder(i1 zeroext %a) nounwind {
 ; RV32ZICOND-NEXT:    czero.nez a0, a1, a0
 ; RV32ZICOND-NEXT:    addi a0, a0, 6
 ; RV32ZICOND-NEXT:    ret
+;
+; RV32IXQCI-LABEL: select_const_int_harder:
+; RV32IXQCI:       # %bb.0:
+; RV32IXQCI-NEXT:    li a1, 38
+; RV32IXQCI-NEXT:    qc.selectieqi a0, 0, a1, 6
+; RV32IXQCI-NEXT:    ret
 ;
 ; RV64I-LABEL: select_const_int_harder:
 ; RV64I:       # %bb.0:
@@ -152,6 +175,13 @@ define float @select_const_fp(i1 zeroext %a) nounwind {
 ; RV32ZICOND-NEXT:    add a0, a0, a1
 ; RV32ZICOND-NEXT:    ret
 ;
+; RV32IXQCI-LABEL: select_const_fp:
+; RV32IXQCI:       # %bb.0:
+; RV32IXQCI-NEXT:    lui a1, 264192
+; RV32IXQCI-NEXT:    lui a2, 263168
+; RV32IXQCI-NEXT:    qc.selectnei a0, 0, a2, a1
+; RV32IXQCI-NEXT:    ret
+;
 ; RV64I-LABEL: select_const_fp:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    mv a1, a0
@@ -194,6 +224,13 @@ define signext i32 @select_eq_zero_negone(i32 signext %a, i32 signext %b) nounwi
 ; RV32-NEXT:    addi a0, a0, -1
 ; RV32-NEXT:    ret
 ;
+; RV32IXQCI-LABEL: select_eq_zero_negone:
+; RV32IXQCI:       # %bb.0:
+; RV32IXQCI-NEXT:    xor a0, a0, a1
+; RV32IXQCI-NEXT:    snez a0, a0
+; RV32IXQCI-NEXT:    addi a0, a0, -1
+; RV32IXQCI-NEXT:    ret
+;
 ; RV64-LABEL: select_eq_zero_negone:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    xor a0, a0, a1
@@ -213,6 +250,13 @@ define signext i32 @select_ne_zero_negone(i32 signext %a, i32 signext %b) nounwi
 ; RV32-NEXT:    addi a0, a0, -1
 ; RV32-NEXT:    ret
 ;
+; RV32IXQCI-LABEL: select_ne_zero_negone:
+; RV32IXQCI:       # %bb.0:
+; RV32IXQCI-NEXT:    xor a0, a0, a1
+; RV32IXQCI-NEXT:    seqz a0, a0
+; RV32IXQCI-NEXT:    addi a0, a0, -1
+; RV32IXQCI-NEXT:    ret
+;
 ; RV64-LABEL: select_ne_zero_negone:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    xor a0, a0, a1
@@ -231,6 +275,12 @@ define signext i32 @select_sgt_zero_negone(i32 signext %a, i32 signext %b) nounw
 ; RV32-NEXT:    neg a0, a0
 ; RV32-NEXT:    ret
 ;
+; RV32IXQCI-LABEL: select_sgt_zero_negone:
+; RV32IXQCI:       # %bb.0:
+; RV32IXQCI-NEXT:    slt a0, a1, a0
+; RV32IXQCI-NEXT:    neg a0, a0
+; RV32IXQCI-NEXT:    ret
+;
 ; RV64-LABEL: select_sgt_zero_negone:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    slt a0, a1, a0
@@ -247,6 +297,12 @@ define signext i32 @select_slt_zero_negone(i32 signext %a, i32 signext %b) nounw
 ; RV32-NEXT:    slt a0, a0, a1
 ; RV32-NEXT:    neg a0, a0
 ; RV32-NEXT:    ret
+;
+; RV32IXQCI-LABEL: select_slt_zero_negone:
+; RV32IXQCI:       # %bb.0:
+; RV32IXQCI-NEXT:    slt a0, a0, a1
+; RV32IXQCI-NEXT:    neg a0, a0
+; RV32IXQCI-NEXT:    ret
 ;
 ; RV64-LABEL: select_slt_zero_negone:
 ; RV64:       # %bb.0:
@@ -265,6 +321,12 @@ define signext i32 @select_sge_zero_negone(i32 signext %a, i32 signext %b) nounw
 ; RV32-NEXT:    addi a0, a0, -1
 ; RV32-NEXT:    ret
 ;
+; RV32IXQCI-LABEL: select_sge_zero_negone:
+; RV32IXQCI:       # %bb.0:
+; RV32IXQCI-NEXT:    slt a0, a0, a1
+; RV32IXQCI-NEXT:    addi a0, a0, -1
+; RV32IXQCI-NEXT:    ret
+;
 ; RV64-LABEL: select_sge_zero_negone:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    slt a0, a0, a1
@@ -281,6 +343,12 @@ define signext i32 @select_sle_zero_negone(i32 signext %a, i32 signext %b) nounw
 ; RV32-NEXT:    slt a0, a1, a0
 ; RV32-NEXT:    addi a0, a0, -1
 ; RV32-NEXT:    ret
+;
+; RV32IXQCI-LABEL: select_sle_zero_negone:
+; RV32IXQCI:       # %bb.0:
+; RV32IXQCI-NEXT:    slt a0, a1, a0
+; RV32IXQCI-NEXT:    addi a0, a0, -1
+; RV32IXQCI-NEXT:    ret
 ;
 ; RV64-LABEL: select_sle_zero_negone:
 ; RV64:       # %bb.0:
@@ -299,6 +367,12 @@ define signext i32 @select_ugt_zero_negone(i32 signext %a, i32 signext %b) nounw
 ; RV32-NEXT:    neg a0, a0
 ; RV32-NEXT:    ret
 ;
+; RV32IXQCI-LABEL: select_ugt_zero_negone:
+; RV32IXQCI:       # %bb.0:
+; RV32IXQCI-NEXT:    sltu a0, a1, a0
+; RV32IXQCI-NEXT:    neg a0, a0
+; RV32IXQCI-NEXT:    ret
+;
 ; RV64-LABEL: select_ugt_zero_negone:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    sltu a0, a1, a0
@@ -315,6 +389,12 @@ define signext i32 @select_ult_zero_negone(i32 signext %a, i32 signext %b) nounw
 ; RV32-NEXT:    sltu a0, a0, a1
 ; RV32-NEXT:    neg a0, a0
 ; RV32-NEXT:    ret
+;
+; RV32IXQCI-LABEL: select_ult_zero_negone:
+; RV32IXQCI:       # %bb.0:
+; RV32IXQCI-NEXT:    sltu a0, a0, a1
+; RV32IXQCI-NEXT:    neg a0, a0
+; RV32IXQCI-NEXT:    ret
 ;
 ; RV64-LABEL: select_ult_zero_negone:
 ; RV64:       # %bb.0:
@@ -333,6 +413,12 @@ define signext i32 @select_uge_zero_negone(i32 signext %a, i32 signext %b) nounw
 ; RV32-NEXT:    addi a0, a0, -1
 ; RV32-NEXT:    ret
 ;
+; RV32IXQCI-LABEL: select_uge_zero_negone:
+; RV32IXQCI:       # %bb.0:
+; RV32IXQCI-NEXT:    sltu a0, a0, a1
+; RV32IXQCI-NEXT:    addi a0, a0, -1
+; RV32IXQCI-NEXT:    ret
+;
 ; RV64-LABEL: select_uge_zero_negone:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    sltu a0, a0, a1
@@ -349,6 +435,12 @@ define signext i32 @select_ule_zero_negone(i32 signext %a, i32 signext %b) nounw
 ; RV32-NEXT:    sltu a0, a1, a0
 ; RV32-NEXT:    addi a0, a0, -1
 ; RV32-NEXT:    ret
+;
+; RV32IXQCI-LABEL: select_ule_zero_negone:
+; RV32IXQCI:       # %bb.0:
+; RV32IXQCI-NEXT:    sltu a0, a1, a0
+; RV32IXQCI-NEXT:    addi a0, a0, -1
+; RV32IXQCI-NEXT:    ret
 ;
 ; RV64-LABEL: select_ule_zero_negone:
 ; RV64:       # %bb.0:
@@ -368,6 +460,13 @@ define i32 @select_eq_1_2(i32 signext %a, i32 signext %b) {
 ; RV32-NEXT:    addi a0, a0, 1
 ; RV32-NEXT:    ret
 ;
+; RV32IXQCI-LABEL: select_eq_1_2:
+; RV32IXQCI:       # %bb.0:
+; RV32IXQCI-NEXT:    xor a0, a0, a1
+; RV32IXQCI-NEXT:    snez a0, a0
+; RV32IXQCI-NEXT:    addi a0, a0, 1
+; RV32IXQCI-NEXT:    ret
+;
 ; RV64-LABEL: select_eq_1_2:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    xor a0, a0, a1
@@ -386,6 +485,13 @@ define i32 @select_ne_1_2(i32 signext %a, i32 signext %b) {
 ; RV32-NEXT:    seqz a0, a0
 ; RV32-NEXT:    addi a0, a0, 1
 ; RV32-NEXT:    ret
+;
+; RV32IXQCI-LABEL: select_ne_1_2:
+; RV32IXQCI:       # %bb.0:
+; RV32IXQCI-NEXT:    xor a0, a0, a1
+; RV32IXQCI-NEXT:    seqz a0, a0
+; RV32IXQCI-NEXT:    addi a0, a0, 1
+; RV32IXQCI-NEXT:    ret
 ;
 ; RV64-LABEL: select_ne_1_2:
 ; RV64:       # %bb.0:
@@ -407,6 +513,15 @@ define i32 @select_eq_10000_10001(i32 signext %a, i32 signext %b) {
 ; RV32-NEXT:    addi a1, a1, 1810
 ; RV32-NEXT:    sub a0, a1, a0
 ; RV32-NEXT:    ret
+;
+; RV32IXQCI-LABEL: select_eq_10000_10001:
+; RV32IXQCI:       # %bb.0:
+; RV32IXQCI-NEXT:    xor a0, a0, a1
+; RV32IXQCI-NEXT:    lui a1, 2
+; RV32IXQCI-NEXT:    seqz a0, a0
+; RV32IXQCI-NEXT:    addi a1, a1, 1810
+; RV32IXQCI-NEXT:    sub a0, a1, a0
+; RV32IXQCI-NEXT:    ret
 ;
 ; RV64-LABEL: select_eq_10000_10001:
 ; RV64:       # %bb.0:
@@ -431,6 +546,15 @@ define i32 @select_ne_10001_10002(i32 signext %a, i32 signext %b) {
 ; RV32-NEXT:    sub a0, a1, a0
 ; RV32-NEXT:    ret
 ;
+; RV32IXQCI-LABEL: select_ne_10001_10002:
+; RV32IXQCI:       # %bb.0:
+; RV32IXQCI-NEXT:    xor a0, a0, a1
+; RV32IXQCI-NEXT:    lui a1, 2
+; RV32IXQCI-NEXT:    snez a0, a0
+; RV32IXQCI-NEXT:    addi a1, a1, 1810
+; RV32IXQCI-NEXT:    sub a0, a1, a0
+; RV32IXQCI-NEXT:    ret
+;
 ; RV64-LABEL: select_ne_10001_10002:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    xor a0, a0, a1
@@ -452,6 +576,13 @@ define i32 @select_slt_zero_constant1_constant2(i32 signext %x) {
 ; RV32-NEXT:    addi a0, a0, -3
 ; RV32-NEXT:    ret
 ;
+; RV32IXQCI-LABEL: select_slt_zero_constant1_constant2:
+; RV32IXQCI:       # %bb.0:
+; RV32IXQCI-NEXT:    srai a0, a0, 31
+; RV32IXQCI-NEXT:    andi a0, a0, 10
+; RV32IXQCI-NEXT:    addi a0, a0, -3
+; RV32IXQCI-NEXT:    ret
+;
 ; RV64-LABEL: select_slt_zero_constant1_constant2:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    srai a0, a0, 63
@@ -470,6 +601,13 @@ define i32 @select_sgt_negative_one_constant1_constant2(i32 signext %x) {
 ; RV32-NEXT:    andi a0, a0, -10
 ; RV32-NEXT:    addi a0, a0, 7
 ; RV32-NEXT:    ret
+;
+; RV32IXQCI-LABEL: select_sgt_negative_one_constant1_constant2:
+; RV32IXQCI:       # %bb.0:
+; RV32IXQCI-NEXT:    srai a0, a0, 31
+; RV32IXQCI-NEXT:    andi a0, a0, -10
+; RV32IXQCI-NEXT:    addi a0, a0, 7
+; RV32IXQCI-NEXT:    ret
 ;
 ; RV64-LABEL: select_sgt_negative_one_constant1_constant2:
 ; RV64:       # %bb.0:

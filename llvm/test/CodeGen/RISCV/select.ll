@@ -4,6 +4,8 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+xventanacondops -verify-machineinstrs < %s | FileCheck --check-prefixes=CHECK,RV64IMXVTCONDOPS %s
 ; RUN: llc -mtriple=riscv32 -mattr=+m,+zicond -verify-machineinstrs < %s | FileCheck --check-prefixes=CHECK,CHECKZICOND,RV32IMZICOND %s
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+zicond -verify-machineinstrs < %s | FileCheck --check-prefixes=CHECK,CHECKZICOND,RV64IMZICOND %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcicm,+experimental-xqcics,+experimental-xqcicli -verify-machineinstrs < %s \
+; RUN:   | FileCheck %s --check-prefixes=RV32IXQCI
 
 define i16 @select_xor_1(i16 %A, i8 %cond) {
 ; RV32IM-LABEL: select_xor_1:
