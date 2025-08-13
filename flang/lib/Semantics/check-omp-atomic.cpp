@@ -718,7 +718,7 @@ OmpStructureChecker::CheckUpdateCapture(
 void OmpStructureChecker::CheckAtomicCaptureAssignment(
     const evaluate::Assignment &capture, const SomeExpr &atom,
     parser::CharBlock source) {
-  auto [lsrc, rsrc]{SplitAssignmentSource(source)};
+  auto [_, rsrc]{SplitAssignmentSource(source)};
   const SomeExpr &cap{capture.lhs};
 
   if (!IsVarOrFunctionRef(atom)) {
@@ -734,7 +734,7 @@ void OmpStructureChecker::CheckAtomicCaptureAssignment(
 
 void OmpStructureChecker::CheckAtomicReadAssignment(
     const evaluate::Assignment &read, parser::CharBlock source) {
-  auto [lsrc, rsrc]{SplitAssignmentSource(source)};
+  auto [_, rsrc]{SplitAssignmentSource(source)};
 
   if (auto maybe{GetConvertInput(read.rhs)}) {
     const SomeExpr &atom{*maybe};
@@ -820,7 +820,7 @@ OmpStructureChecker::CheckAtomicUpdateAssignment(
 std::pair<bool, bool> OmpStructureChecker::CheckAtomicUpdateAssignmentRhs(
     const SomeExpr &atom, const SomeExpr &rhs, parser::CharBlock source,
     bool suppressDiagnostics) {
-  auto [lsrc, rsrc]{SplitAssignmentSource(source)};
+  auto [_, rsrc]{SplitAssignmentSource(source)};
 
   std::pair<operation::Operator, std::vector<SomeExpr>> top{
       operation::Operator::Unknown, {}};
