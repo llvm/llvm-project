@@ -2228,11 +2228,29 @@ public:
   ///       may not be necessary.
   bool isLoadCombineCandidate(ArrayRef<Value *> Stores) const;
 
+  // Suppose we are given pointers of the form: %b + x * %s + y * %c
+  // where %c is constant. Check if the pointers can be rearranged as follows:
+  //  %b + 0 * %s + 0
+  //  %b + 0 * %s + 1
+  //  %b + 0 * %s + 2
+  //  ...
+  //  %b + 0 * %s + w
+  //
+  //  %b + 1 * %s + 0
+  //  %b + 1 * %s + 1
+  //  %b + 1 * %s + 2
+  //  ...
+  //  %b + 1 * %s + w
+  //  ...
+  //
+  //  If the pointers can be rearanged in the above pattern, it means that the
+  //  memory can be accessed with a strided loads of width `w` and stride `%s`.
   bool analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps, Type *ElemTy,
                                 Align CommonAlignment,
                                 SmallVectorImpl<unsigned> &SortedIndices,
                                 StridedPtrInfo &SPtrInfo) const;
 
+  // Same as analyzeRtStrideCandidate, but for constant strides.
   bool analyzeConstantStrideCandidate(ArrayRef<Value *> PointerOps,
                                       Type *ElemTy, Align CommonAlignment,
                                       SmallVectorImpl<unsigned> &SortedIndices,
@@ -6537,9 +6555,8 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
     return false;
 
   SmallVector<int64_t> SortedOffsetsV;
-  for (auto [K, V] : OffsetToPointerOpIdxMap) {
+  for (auto [K, V] : OffsetToPointerOpIdxMap)
     SortedOffsetsV.push_back(K);
-  }
   sort(SortedOffsetsV);
   if (NumOffsets > 1) {
     int64_t CommonDiff = SortedOffsetsV[1] - SortedOffsetsV[0];
@@ -6596,17 +6613,16 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
     const SCEV *StrideWithinGroup = calculateRtStride(
         PointerOpsForOffset, ElemTy, *DL, *SE, SortedIndicesForOffset, Coeffs);
 
-    if ((!StrideWithinGroup) || StrideWithinGroup != Stride0)
+    if (!StrideWithinGroup || StrideWithinGroup != Stride0)
       return false;
     if (Coeffs.size() != NumCoeffs0)
       return false;
     sort(Coeffs);
-    for (int J : seq<int>(0, NumCoeffs0)) {
-      if (Coeffs[J] != Coeffs0[J])
-        return false;
-    }
+    if (Coeffs != Coeffs0)
+      return false
 
-    UpdateSortedIndices(SortedIndicesForOffset, IndicesInAllPointerOps, I);
+          UpdateSortedIndices(SortedIndicesForOffset, IndicesInAllPointerOps,
+                              I);
   }
 
   SortedIndices.clear();
@@ -6951,7 +6967,7 @@ bool BoUpSLP::analyzeConstantStrideCandidate(
   const unsigned Sz = PointerOps.size();
   SmallVector<int64_t> SortedOffsetsFromBase;
   SortedOffsetsFromBase.resize(Sz);
-  for (unsigned I : seq<int>(0, Sz)) {
+  for (unsigned I : seq<int>(Sz)) {
     Value *Ptr =
         SortedIndices.empty() ? PointerOps[I] : PointerOps[SortedIndices[I]];
     SortedOffsetsFromBase[I] =
