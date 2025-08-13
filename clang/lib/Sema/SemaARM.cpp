@@ -1591,7 +1591,7 @@ static void convertPriorityString(unsigned Priority,
                                  "P4", "P5", "P6", "P7"};
 
   assert(Priority > 0 && Priority < 256 && "priority out of range");
-  // Convert priority=[1-31] -> P0 + ... + P4
+  // Convert priority=[1-255] -> P0 + ... + P7
   for (unsigned BitPos = 0; BitPos < 8; ++BitPos)
     if (Priority & (1U << BitPos))
       appendFeature(PriorityString[BitPos], NewParam);
