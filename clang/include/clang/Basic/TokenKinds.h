@@ -104,10 +104,9 @@ inline bool isLiteral(TokenKind K) {
       K == tok::wide_char_constant || K == tok::utf8_char_constant ||
       K == tok::utf16_char_constant || K == tok::utf32_char_constant ||
       isStringLiteral(K) || K == tok::header_name || K == tok::binary_data;
-#endif
-
   assert(isInLiteralRange == isLiteralExplicit &&
-         "TokenKind literals should be contiguous");
+         "TokenKind literals should be contiguous");         
+#endif  
 
   return isInLiteralRange;
 }
