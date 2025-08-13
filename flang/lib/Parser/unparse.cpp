@@ -2606,9 +2606,7 @@ public:
     EndOpenMP();
   }
   void Unparse(const OpenMPCriticalConstruct &x) {
-    Walk(std::get<OmpCriticalDirective>(x.t));
-    Walk(std::get<Block>(x.t), "");
-    Walk(std::get<OmpEndCriticalDirective>(x.t));
+    Unparse(static_cast<const OmpBlockConstruct &>(x));
   }
   void Unparse(const OmpDeclareTargetWithList &x) {
     Put("("), Walk(x.v), Put(")");
@@ -2801,7 +2799,6 @@ public:
     EndOpenMP();
   }
   void Unparse(const OmpFailClause &x) { Walk(x.v); }
-  void Unparse(const OmpMemoryOrderClause &x) { Walk(x.v); }
   void Unparse(const OmpMetadirectiveDirective &x) {
     BeginOpenMP();
     Word("!$OMP METADIRECTIVE ");

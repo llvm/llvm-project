@@ -108,6 +108,7 @@ add_clang_library(clangDaemon STATIC
   SemanticHighlighting.cpp
   SemanticSelection.cpp
   SourceCode.cpp
+  SymbolDocumentation.cpp
   SystemIncludeExtractor.cpp
   TidyProvider.cpp
   TUScheduler.cpp

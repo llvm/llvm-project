@@ -582,7 +582,6 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 #  include <__functional/binary_function.h>
 #  include <__functional/is_transparent.h>
 #  include <__functional/operations.h>
-#  include <__fwd/map.h>
 #  include <__iterator/erase_if_container.h>
 #  include <__iterator/iterator_traits.h>
 #  include <__iterator/ranges_iterator_traits.h>
@@ -692,12 +691,12 @@ public:
 #  if _LIBCPP_STD_VER >= 14
   template <typename _K2>
   _LIBCPP_HIDE_FROM_ABI bool operator()(const _K2& __x, const _CP& __y) const {
-    return __comp_(__x, __y.__get_value().first);
+    return __comp_(__x, __y.first);
   }
 
   template <typename _K2>
   _LIBCPP_HIDE_FROM_ABI bool operator()(const _CP& __x, const _K2& __y) const {
-    return __comp_(__x.__get_value().first, __y);
+    return __comp_(__x.first, __y);
   }
 #  endif
 };
@@ -861,7 +860,10 @@ public:
   friend class __tree_const_iterator;
 };
 
-template <class _Key, class _Tp, class _Compare, class _Allocator>
+template <class _Key, class _Tp, class _Compare = less<_Key>, class _Allocator = allocator<pair<const _Key, _Tp> > >
+class multimap;
+
+template <class _Key, class _Tp, class _Compare = less<_Key>, class _Allocator = allocator<pair<const _Key, _Tp> > >
 class map {
 public:
   // types:
@@ -970,7 +972,7 @@ public:
       : map(from_range, std::forward<_Range>(__range), key_compare(), __a) {}
 #  endif
 
-  _LIBCPP_HIDE_FROM_ABI map(const map& __m) : __tree_(__m.__tree_) { insert(__m.begin(), __m.end()); }
+  _LIBCPP_HIDE_FROM_ABI map(const map& __m) = default;
 
   _LIBCPP_HIDE_FROM_ABI map& operator=(const map& __m) = default;
 
@@ -1637,11 +1639,7 @@ public:
       : multimap(from_range, std::forward<_Range>(__range), key_compare(), __a) {}
 #  endif
 
-  _LIBCPP_HIDE_FROM_ABI multimap(const multimap& __m)
-      : __tree_(__m.__tree_.value_comp(),
-                __alloc_traits::select_on_container_copy_construction(__m.__tree_.__alloc())) {
-    insert(__m.begin(), __m.end());
-  }
+  _LIBCPP_HIDE_FROM_ABI multimap(const multimap& __m) = default;
 
   _LIBCPP_HIDE_FROM_ABI multimap& operator=(const multimap& __m) = default;
 

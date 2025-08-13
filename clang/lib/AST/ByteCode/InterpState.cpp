@@ -11,6 +11,8 @@
 #include "InterpStack.h"
 #include "Program.h"
 #include "State.h"
+#include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclTemplate.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -74,8 +76,9 @@ bool InterpState::reportOverflow(const Expr *E, const llvm::APSInt &Value) {
 
 void InterpState::deallocate(Block *B) {
   assert(B);
-  const Descriptor *Desc = B->getDescriptor();
-  assert(Desc);
+  assert(!B->isDynamic());
+  assert(!B->isStatic());
+  assert(!B->isDead());
 
   // The block might have a pointer saved in a field in its data
   // that points to the block itself. We call the dtor first,
@@ -85,6 +88,7 @@ void InterpState::deallocate(Block *B) {
   if (B->IsInitialized)
     B->invokeDtor();
 
+  assert(!B->isInitialized());
   if (B->hasPointers()) {
     size_t Size = B->getSize();
     // Allocate a new block, transferring over pointers.
@@ -93,24 +97,20 @@ void InterpState::deallocate(Block *B) {
     auto *D = new (Memory) DeadBlock(DeadBlocks, B);
     // Since the block doesn't hold any actual data anymore, we can just
     // memcpy() everything over.
-    std::memcpy(D->rawData(), B->rawData(), Desc->getAllocSize());
-    D->B.IsInitialized = B->IsInitialized;
-
-    // We moved the contents over to the DeadBlock.
-    B->IsInitialized = false;
+    std::memcpy(D->rawData(), B->rawData(), Size);
+    D->B.IsInitialized = false;
   }
 }
 
 bool InterpState::maybeDiagnoseDanglingAllocations() {
-  bool NoAllocationsLeft = (Alloc.getNumAllocations() == 0);
+  bool NoAllocationsLeft = !Alloc.hasAllocations();
 
   if (!checkingPotentialConstantExpression()) {
-    for (const auto &It : Alloc.allocation_sites()) {
-      assert(It.second.size() > 0);
+    for (const auto &[Source, Site] : Alloc.allocation_sites()) {
+      assert(!Site.empty());
 
-      const Expr *Source = It.first;
       CCEDiag(Source->getExprLoc(), diag::note_constexpr_memory_leak)
-          << (It.second.size() - 1) << Source->getSourceRange();
+          << (Site.size() - 1) << Source->getSourceRange();
     }
   }
   // Keep evaluating before C++20, since the CXXNewExpr wasn't valid there

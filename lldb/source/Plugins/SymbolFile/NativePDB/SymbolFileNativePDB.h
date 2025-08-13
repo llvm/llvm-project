@@ -258,6 +258,10 @@ private:
 
   void ParseInlineSite(PdbCompilandSymId inline_site_id, Address func_addr);
 
+  std::vector<CompilerContext> GetContextForType(llvm::codeview::TypeIndex ti);
+
+  void CacheFunctionNames();
+
   llvm::BumpPtrAllocator m_allocator;
 
   lldb::addr_t m_obj_load_address = 0;
@@ -278,6 +282,15 @@ private:
   llvm::DenseMap<lldb::user_id_t, std::shared_ptr<InlineSite>> m_inline_sites;
   llvm::DenseMap<llvm::codeview::TypeIndex, llvm::codeview::TypeIndex>
       m_parent_types;
+
+  lldb_private::UniqueCStringMap<uint32_t> m_type_base_names;
+
+  /// mangled name/full function name -> Global ID(s)
+  lldb_private::UniqueCStringMap<uint32_t> m_func_full_names;
+  /// basename -> Global ID(s)
+  lldb_private::UniqueCStringMap<uint32_t> m_func_base_names;
+  /// method basename -> Global ID(s)
+  lldb_private::UniqueCStringMap<uint32_t> m_func_method_names;
 };
 
 } // namespace npdb
