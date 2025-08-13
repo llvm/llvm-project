@@ -376,7 +376,10 @@ void AggExprEmitter::visitCXXParenListOrInitListExpr(
   // the disadvantage is that the generated code is more difficult for
   // the optimizer, especially with bitfields.
   unsigned numInitElements = args.size();
-  RecordDecl *record = e->getType()->castAs<RecordType>()->getDecl();
+  RecordDecl *record = e->getType()
+                           ->castAs<RecordType>()
+                           ->getOriginalDecl()
+                           ->getDefinitionOrSelf();
 
   // We'll need to enter cleanup scopes in case any of the element
   // initializers throws an exception.
@@ -438,8 +441,7 @@ void AggExprEmitter::visitCXXParenListOrInitListExpr(
     // Push a destructor if necessary.
     // FIXME: if we have an array of structures, all explicitly
     // initialized, we can end up pushing a linear number of cleanups.
-    if (QualType::DestructionKind dtorKind =
-            field->getType().isDestructedType()) {
+    if (field->getType().isDestructedType()) {
       cgf.cgm.errorNYI(e->getSourceRange(),
                        "visitCXXParenListOrInitListExpr destructor");
       return;

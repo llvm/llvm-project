@@ -4922,19 +4922,6 @@ Value *CodeGenFunction::EmitAArch64SMEBuiltinExpr(unsigned BuiltinID,
   if (Builtin->LLVMIntrinsic == 0)
     return nullptr;
 
-  if (BuiltinID == SME::BI__builtin_sme___arm_in_streaming_mode) {
-    // If we already know the streaming mode, don't bother with the intrinsic
-    // and emit a constant instead
-    const auto *FD = cast<FunctionDecl>(CurFuncDecl);
-    if (const auto *FPT = FD->getType()->getAs<FunctionProtoType>()) {
-      unsigned SMEAttrs = FPT->getAArch64SMEAttributes();
-      if (!(SMEAttrs & FunctionType::SME_PStateSMCompatibleMask)) {
-        bool IsStreaming = SMEAttrs & FunctionType::SME_PStateSMEnabledMask;
-        return ConstantInt::getBool(Builder.getContext(), IsStreaming);
-      }
-    }
-  }
-
   // Predicates must match the main datatype.
   for (Value *&Op : Ops)
     if (auto PredTy = dyn_cast<llvm::VectorType>(Op->getType()))

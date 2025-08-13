@@ -16,6 +16,7 @@
 
 using namespace mlir;
 using namespace presburger;
+using ::testing::ElementsAre;
 
 TEST(IntegerRelationTest, getDomainAndRangeSet) {
   IntegerRelation rel = parseRelationFromSet(
@@ -701,4 +702,15 @@ TEST(IntegerRelationTest, rangeProductSymbols) {
       1);
 
   EXPECT_TRUE(expected.isEqual(rangeProd));
+}
+
+TEST(IntegerRelationTest, getVarKindRange) {
+  IntegerRelation r1 = parseRelationFromSet(
+      "(i1, i2, i3, i4, i5) : (i1 >= 0, i2 >= 0, i3 >= 0, i4 >= 0, i5 >= 0)",
+      2);
+  SmallVector<unsigned> actual;
+  for (unsigned var : r1.iterVarKind(VarKind::Range)) {
+    actual.push_back(var);
+  }
+  EXPECT_THAT(actual, ElementsAre(2, 3, 4));
 }

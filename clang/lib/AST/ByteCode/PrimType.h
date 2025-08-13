@@ -13,7 +13,6 @@
 #ifndef LLVM_CLANG_AST_INTERP_TYPE_H
 #define LLVM_CLANG_AST_INTERP_TYPE_H
 
-#include "clang/Basic/UnsignedOrNone.h"
 #include "llvm/Support/raw_ostream.h"
 #include <climits>
 #include <cstddef>

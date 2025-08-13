@@ -2385,13 +2385,6 @@ SDValue LoongArchTargetLowering::lowerBF16_TO_FP(SDValue Op,
   return Res;
 }
 
-static bool isConstantBUILD_VECTOR(const BuildVectorSDNode *Op) {
-  for (unsigned i = 0; i < Op->getNumOperands(); ++i)
-    if (isIntOrFPConstant(Op->getOperand(i)))
-      return true;
-  return false;
-}
-
 // Lower BUILD_VECTOR as broadcast load (if possible).
 // For example:
 //   %a = load i8, ptr %ptr
@@ -2441,10 +2434,14 @@ SDValue LoongArchTargetLowering::lowerBUILD_VECTOR(SDValue Op,
                                                    SelectionDAG &DAG) const {
   BuildVectorSDNode *Node = cast<BuildVectorSDNode>(Op);
   EVT ResTy = Op->getValueType(0);
+  unsigned NumElts = ResTy.getVectorNumElements();
   SDLoc DL(Op);
   APInt SplatValue, SplatUndef;
   unsigned SplatBitSize;
   bool HasAnyUndefs;
+  bool IsConstant = false;
+  bool UseSameConstant = true;
+  SDValue ConstantValue;
   bool Is128Vec = ResTy.is128BitVector();
   bool Is256Vec = ResTy.is256BitVector();
 
@@ -2495,13 +2492,35 @@ SDValue LoongArchTargetLowering::lowerBUILD_VECTOR(SDValue Op,
   if (DAG.isSplatValue(Op, /*AllowUndefs=*/false))
     return Op;
 
-  if (!isConstantBUILD_VECTOR(Node)) {
+  for (unsigned i = 0; i < NumElts; ++i) {
+    SDValue Opi = Node->getOperand(i);
+    if (isIntOrFPConstant(Opi)) {
+      IsConstant = true;
+      if (!ConstantValue.getNode())
+        ConstantValue = Opi;
+      else if (ConstantValue != Opi)
+        UseSameConstant = false;
+    }
+  }
+
+  // If the type of BUILD_VECTOR is v2f64, custom legalizing it has no benefits.
+  if (IsConstant && UseSameConstant && ResTy != MVT::v2f64) {
+    SDValue Result = DAG.getSplatBuildVector(ResTy, DL, ConstantValue);
+    for (unsigned i = 0; i < NumElts; ++i) {
+      SDValue Opi = Node->getOperand(i);
+      if (!isIntOrFPConstant(Opi))
+        Result = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ResTy, Result, Opi,
+                             DAG.getConstant(i, DL, Subtarget.getGRLenVT()));
+    }
+    return Result;
+  }
+
+  if (!IsConstant) {
     // Use INSERT_VECTOR_ELT operations rather than expand to stores.
     // The resulting code is the same length as the expansion, but it doesn't
     // use memory operations.
     assert(ResTy.isVector());
 
-    unsigned NumElts = ResTy.getVectorNumElements();
     SDValue Op0 = Node->getOperand(0);
     SDValue Vector = DAG.getUNDEF(ResTy);
 
@@ -2602,9 +2621,38 @@ LoongArchTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
 SDValue
 LoongArchTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
                                                 SelectionDAG &DAG) const {
-  if (isa<ConstantSDNode>(Op->getOperand(2)))
+  MVT VT = Op.getSimpleValueType();
+  MVT EltVT = VT.getVectorElementType();
+  unsigned NumElts = VT.getVectorNumElements();
+  unsigned EltSizeInBits = EltVT.getScalarSizeInBits();
+  SDLoc DL(Op);
+  SDValue Op0 = Op.getOperand(0);
+  SDValue Op1 = Op.getOperand(1);
+  SDValue Op2 = Op.getOperand(2);
+
+  if (isa<ConstantSDNode>(Op2))
     return Op;
-  return SDValue();
+
+  MVT IdxTy = MVT::getIntegerVT(EltSizeInBits);
+  MVT IdxVTy = MVT::getVectorVT(IdxTy, NumElts);
+
+  if (!isTypeLegal(VT) || !isTypeLegal(IdxVTy))
+    return SDValue();
+
+  SDValue SplatElt = DAG.getSplatBuildVector(VT, DL, Op1);
+  SDValue SplatIdx = DAG.getSplatBuildVector(IdxVTy, DL, Op2);
+
+  SmallVector<SDValue, 32> RawIndices;
+  for (unsigned i = 0; i < NumElts; ++i)
+    RawIndices.push_back(DAG.getConstant(i, DL, Subtarget.getGRLenVT()));
+  SDValue Indices = DAG.getBuildVector(IdxVTy, DL, RawIndices);
+
+  // insert vec, elt, idx
+  // =>
+  // select (splatidx == {0,1,2...}) ? splatelt : vec
+  SDValue SelectCC =
+      DAG.getSetCC(DL, IdxVTy, SplatIdx, Indices, ISD::CondCode::SETEQ);
+  return DAG.getNode(ISD::VSELECT, DL, VT, SelectCC, SplatElt, Op0);
 }
 
 SDValue LoongArchTargetLowering::lowerATOMIC_FENCE(SDValue Op,
@@ -6681,8 +6729,7 @@ static bool CC_LoongArchAssign2GRLen(unsigned GRLen, CCState &State,
 static bool CC_LoongArch(const DataLayout &DL, LoongArchABI::ABI ABI,
                          unsigned ValNo, MVT ValVT,
                          CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-                         CCState &State, bool IsFixed, bool IsRet,
-                         Type *OrigTy) {
+                         CCState &State, bool IsRet, Type *OrigTy) {
   unsigned GRLen = DL.getLargestLegalIntTypeSizeInBits();
   assert((GRLen == 32 || GRLen == 64) && "Unspport GRLen");
   MVT GRLenVT = GRLen == 32 ? MVT::i32 : MVT::i64;
@@ -6704,7 +6751,7 @@ static bool CC_LoongArch(const DataLayout &DL, LoongArchABI::ABI ABI,
   case LoongArchABI::ABI_LP64F:
   case LoongArchABI::ABI_ILP32D:
   case LoongArchABI::ABI_LP64D:
-    UseGPRForFloat = !IsFixed;
+    UseGPRForFloat = ArgFlags.isVarArg();
     break;
   case LoongArchABI::ABI_ILP32S:
   case LoongArchABI::ABI_LP64S:
@@ -6718,7 +6765,8 @@ static bool CC_LoongArch(const DataLayout &DL, LoongArchABI::ABI ABI,
   // will not be passed by registers if the original type is larger than
   // 2*GRLen, so the register alignment rule does not apply.
   unsigned TwoGRLenInBytes = (2 * GRLen) / 8;
-  if (!IsFixed && ArgFlags.getNonZeroOrigAlign() == TwoGRLenInBytes &&
+  if (ArgFlags.isVarArg() &&
+      ArgFlags.getNonZeroOrigAlign() == TwoGRLenInBytes &&
       DL.getTypeAllocSize(OrigTy) == TwoGRLenInBytes) {
     unsigned RegIdx = State.getFirstUnallocated(ArgGPRs);
     // Skip 'odd' register if necessary.
@@ -6868,7 +6916,7 @@ void LoongArchTargetLowering::analyzeInputArgs(
     LoongArchABI::ABI ABI =
         MF.getSubtarget<LoongArchSubtarget>().getTargetABI();
     if (Fn(MF.getDataLayout(), ABI, i, ArgVT, CCValAssign::Full, Ins[i].Flags,
-           CCInfo, /*IsFixed=*/true, IsRet, ArgTy)) {
+           CCInfo, IsRet, ArgTy)) {
       LLVM_DEBUG(dbgs() << "InputArg #" << i << " has unhandled type " << ArgVT
                         << '\n');
       llvm_unreachable("");
@@ -6886,7 +6934,7 @@ void LoongArchTargetLowering::analyzeOutputArgs(
     LoongArchABI::ABI ABI =
         MF.getSubtarget<LoongArchSubtarget>().getTargetABI();
     if (Fn(MF.getDataLayout(), ABI, i, ArgVT, CCValAssign::Full, Outs[i].Flags,
-           CCInfo, Outs[i].IsFixed, IsRet, OrigTy)) {
+           CCInfo, IsRet, OrigTy)) {
       LLVM_DEBUG(dbgs() << "OutputArg #" << i << " has unhandled type " << ArgVT
                         << "\n");
       llvm_unreachable("");
@@ -7025,7 +7073,8 @@ static SDValue convertValVTToLocVT(SelectionDAG &DAG, SDValue Val,
 
 static bool CC_LoongArch_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
                              CCValAssign::LocInfo LocInfo,
-                             ISD::ArgFlagsTy ArgFlags, CCState &State) {
+                             ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                             CCState &State) {
   if (LocVT == MVT::i32 || LocVT == MVT::i64) {
     // Pass in STG registers: Base, Sp, Hp, R1, R2, R3, R4, R5, SpLim
     //                        s0    s1  s2  s3  s4  s5  s6  s7  s8
@@ -7599,8 +7648,7 @@ bool LoongArchTargetLowering::CanLowerReturn(
     LoongArchABI::ABI ABI =
         MF.getSubtarget<LoongArchSubtarget>().getTargetABI();
     if (CC_LoongArch(MF.getDataLayout(), ABI, i, Outs[i].VT, CCValAssign::Full,
-                     Outs[i].Flags, CCInfo, /*IsFixed=*/true, /*IsRet=*/true,
-                     nullptr))
+                     Outs[i].Flags, CCInfo, /*IsRet=*/true, nullptr))
       return false;
   }
   return true;

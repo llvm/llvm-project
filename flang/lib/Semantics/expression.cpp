@@ -165,10 +165,17 @@ public:
   bool CheckForNullPointer(const char *where = "as an operand here");
   bool CheckForAssumedRank(const char *where = "as an operand here");
 
+  bool AnyCUDADeviceData() const;
+  // Returns true if an interface has been defined for an intrinsic operator
+  // with one or more device operands.
+  bool HasDeviceDefinedIntrinsicOpOverride(const char *) const;
+  template <typename E> bool HasDeviceDefinedIntrinsicOpOverride(E opr) const {
+    return HasDeviceDefinedIntrinsicOpOverride(
+        context_.context().languageFeatures().GetNames(opr));
+  }
+
   // Find and return a user-defined operator or report an error.
   // The provided message is used if there is no such operator.
-  // If a definedOpSymbolPtr is provided, the caller must check
-  // for its accessibility.
   MaybeExpr TryDefinedOp(
       const char *, parser::MessageFixedText, bool isUserOp = false);
   template <typename E>
@@ -183,6 +190,8 @@ public:
   void Dump(llvm::raw_ostream &);
 
 private:
+  bool HasDeviceDefinedIntrinsicOpOverride(
+      const std::vector<const char *> &) const;
   MaybeExpr TryDefinedOp(
       const std::vector<const char *> &, parser::MessageFixedText);
   MaybeExpr TryBoundOp(const Symbol &, int passIndex);
@@ -202,7 +211,7 @@ private:
   void SayNoMatch(
       const std::string &, bool isAssignment = false, bool isAmbiguous = false);
   std::string TypeAsFortran(std::size_t);
-  bool AnyUntypedOrMissingOperand();
+  bool AnyUntypedOrMissingOperand() const;
 
   ExpressionAnalyzer &context_;
   ActualArguments actuals_;
@@ -4497,13 +4506,20 @@ void ArgumentAnalyzer::Analyze(
 bool ArgumentAnalyzer::IsIntrinsicRelational(RelationalOperator opr,
     const DynamicType &leftType, const DynamicType &rightType) const {
   CHECK(actuals_.size() == 2);
-  return semantics::IsIntrinsicRelational(
-      opr, leftType, GetRank(0), rightType, GetRank(1));
+  return !(context_.context().languageFeatures().IsEnabled(
+               common::LanguageFeature::CUDA) &&
+             HasDeviceDefinedIntrinsicOpOverride(opr)) &&
+      semantics::IsIntrinsicRelational(
+          opr, leftType, GetRank(0), rightType, GetRank(1));
 }
 
 bool ArgumentAnalyzer::IsIntrinsicNumeric(NumericOperator opr) const {
   std::optional<DynamicType> leftType{GetType(0)};
-  if (actuals_.size() == 1) {
+  if (context_.context().languageFeatures().IsEnabled(
+          common::LanguageFeature::CUDA) &&
+      HasDeviceDefinedIntrinsicOpOverride(AsFortran(opr))) {
+    return false;
+  } else if (actuals_.size() == 1) {
     if (IsBOZLiteral(0)) {
       return opr == NumericOperator::Add; // unary '+'
     } else {
@@ -4615,6 +4631,53 @@ bool ArgumentAnalyzer::CheckForAssumedRank(const char *where) {
     }
   }
   return true;
+}
+
+bool ArgumentAnalyzer::AnyCUDADeviceData() const {
+  for (const std::optional<ActualArgument> &arg : actuals_) {
+    if (arg) {
+      if (const Expr<SomeType> *expr{arg->UnwrapExpr()}) {
+        if (HasCUDADeviceAttrs(*expr)) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+// Some operations can be defined with explicit non-type-bound interfaces
+// that would erroneously conflict with intrinsic operations in their
+// types and ranks but have one or more dummy arguments with the DEVICE
+// attribute.
+bool ArgumentAnalyzer::HasDeviceDefinedIntrinsicOpOverride(
+    const char *opr) const {
+  if (AnyCUDADeviceData() && !AnyUntypedOrMissingOperand()) {
+    std::string oprNameString{"operator("s + opr + ')'};
+    parser::CharBlock oprName{oprNameString};
+    parser::Messages buffer;
+    auto restorer{context_.GetContextualMessages().SetMessages(buffer)};
+    const auto &scope{context_.context().FindScope(source_)};
+    if (Symbol * generic{scope.FindSymbol(oprName)}) {
+      parser::Name name{generic->name(), generic};
+      const Symbol *resultSymbol{nullptr};
+      if (context_.AnalyzeDefinedOp(
+              name, ActualArguments{actuals_}, resultSymbol)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool ArgumentAnalyzer::HasDeviceDefinedIntrinsicOpOverride(
+    const std::vector<const char *> &oprNames) const {
+  for (const char *opr : oprNames) {
+    if (HasDeviceDefinedIntrinsicOpOverride(opr)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 MaybeExpr ArgumentAnalyzer::TryDefinedOp(
@@ -5135,7 +5198,7 @@ std::string ArgumentAnalyzer::TypeAsFortran(std::size_t i) {
   }
 }
 
-bool ArgumentAnalyzer::AnyUntypedOrMissingOperand() {
+bool ArgumentAnalyzer::AnyUntypedOrMissingOperand() const {
   for (const auto &actual : actuals_) {
     if (!actual ||
         (!actual->GetType() && !IsBareNullPointer(actual->UnwrapExpr()))) {

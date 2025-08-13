@@ -420,8 +420,9 @@ end
 * A `NAMELIST` input group may omit its trailing `/` character if
   it is followed by another `NAMELIST` input group.
 * A `NAMELIST` input group may begin with either `&` or `$`.
-* A comma in a fixed-width numeric input field terminates the
-  field rather than signaling an invalid character error.
+* A comma (or semicolon in `DECIMAL='COMMA'` or `DC` mode) in a
+  fixed-width numeric input field terminates the field rather than
+  signaling an invalid character error.
 * Arguments to the intrinsic functions `MAX` and `MIN` are converted
   when necessary to the type of the result.
   An `OPTIONAL`, `POINTER`, or `ALLOCATABLE` argument after
@@ -478,6 +479,9 @@ end
 * Old-style `PARAMETER pi=3.14` statement without parentheses
   [-falternative-parameter-statement]
 * `UNSIGNED` type (-funsigned)
+* Default exponent of zero, e.g. `3.14159E`, on a READ from a
+  fixed-width input field.  Includes the case with only an
+  exponent letter for compatibility with other compilers.
 
 ### Extensions and legacy features deliberately not supported
 
@@ -491,7 +495,7 @@ end
 * `VIRTUAL` as synonym for `DIMENSION`
 * `ENCODE` and `DECODE` as synonyms for internal I/O
 * `IMPLICIT AUTOMATIC`, `IMPLICIT STATIC`
-* Default exponent of zero, e.g. `3.14159E`
+* Default exponent of zero, e.g. `3.14159E`, on a literal constant
 * Characters in defined operators that are neither letters nor digits
 * `B` suffix on unquoted octal constants
 * `Z` prefix on unquoted hexadecimal constants (dangerous)

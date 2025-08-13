@@ -1464,7 +1464,7 @@ define i32 @combine_i32_sdiv_pow2(i32 %x) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    add w8, w0, #15
 ; CHECK-SD-NEXT:    cmp w0, #0
-; CHECK-SD-NEXT:    csel w8, w8, w0, lt
+; CHECK-SD-NEXT:    csel w8, w8, w0, mi
 ; CHECK-SD-NEXT:    asr w0, w8, #4
 ; CHECK-SD-NEXT:    ret
 ;
@@ -1483,7 +1483,7 @@ define i32 @combine_i32_sdiv_negpow2(i32 %x) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    add w8, w0, #255
 ; CHECK-SD-NEXT:    cmp w0, #0
-; CHECK-SD-NEXT:    csel w8, w8, w0, lt
+; CHECK-SD-NEXT:    csel w8, w8, w0, mi
 ; CHECK-SD-NEXT:    neg w0, w8, asr #8
 ; CHECK-SD-NEXT:    ret
 ;
@@ -1502,7 +1502,7 @@ define i64 @combine_i64_sdiv_pow2(i64 %x) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    add x8, x0, #15
 ; CHECK-SD-NEXT:    cmp x0, #0
-; CHECK-SD-NEXT:    csel x8, x8, x0, lt
+; CHECK-SD-NEXT:    csel x8, x8, x0, mi
 ; CHECK-SD-NEXT:    asr x0, x8, #4
 ; CHECK-SD-NEXT:    ret
 ;
@@ -1521,7 +1521,7 @@ define i64 @combine_i64_sdiv_negpow2(i64 %x) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    add x8, x0, #255
 ; CHECK-SD-NEXT:    cmp x0, #0
-; CHECK-SD-NEXT:    csel x8, x8, x0, lt
+; CHECK-SD-NEXT:    csel x8, x8, x0, mi
 ; CHECK-SD-NEXT:    neg x0, x8, asr #8
 ; CHECK-SD-NEXT:    ret
 ;

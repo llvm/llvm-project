@@ -43,7 +43,7 @@ define void @load_store_interleave_group_tc_2(ptr noalias %data) {
 ;
 ; VF4-LABEL: define void @load_store_interleave_group_tc_2(
 ; VF4-SAME: ptr noalias [[DATA:%.*]]) {
-; VF4-NEXT:  [[ENTRY:.*]]:
+; VF4-NEXT:  [[ENTRY:.*:]]
 ; VF4-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF4:       [[VECTOR_PH]]:
 ; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -113,10 +113,9 @@ define void @load_store_interleave_group_tc_2(ptr noalias %data) {
 ; VF4:       [[MIDDLE_BLOCK]]:
 ; VF4-NEXT:    br label %[[EXIT:.*]]
 ; VF4:       [[SCALAR_PH]]:
-; VF4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; VF4-NEXT:    br label %[[LOOP:.*]]
 ; VF4:       [[LOOP]]:
-; VF4-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; VF4-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; VF4-NEXT:    [[MUL_2:%.*]] = shl nsw i64 [[IV]], 1
 ; VF4-NEXT:    [[DATA_0:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[MUL_2]]
 ; VF4-NEXT:    [[L_0:%.*]] = load i64, ptr [[DATA_0]], align 8

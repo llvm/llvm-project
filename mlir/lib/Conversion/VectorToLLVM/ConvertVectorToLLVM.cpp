@@ -247,8 +247,9 @@ public:
     MemRefType memRefTy = loadOrStoreOp.getMemRefType();
 
     // Resolve alignment.
-    unsigned align;
-    if (failed(getVectorToLLVMAlignment(*this->getTypeConverter(), vectorTy,
+    unsigned align = loadOrStoreOp.getAlignment().value_or(0);
+    if (!align &&
+        failed(getVectorToLLVMAlignment(*this->getTypeConverter(), vectorTy,
                                         memRefTy, align, useVectorAlignment)))
       return rewriter.notifyMatchFailure(loadOrStoreOp,
                                          "could not resolve alignment");
@@ -1070,39 +1071,6 @@ public:
   }
 };
 
-class VectorExtractElementOpConversion
-    : public ConvertOpToLLVMPattern<vector::ExtractElementOp> {
-public:
-  using ConvertOpToLLVMPattern<
-      vector::ExtractElementOp>::ConvertOpToLLVMPattern;
-
-  LogicalResult
-  matchAndRewrite(vector::ExtractElementOp extractEltOp, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    auto vectorType = extractEltOp.getSourceVectorType();
-    auto llvmType = typeConverter->convertType(vectorType.getElementType());
-
-    // Bail if result type cannot be lowered.
-    if (!llvmType)
-      return failure();
-
-    if (vectorType.getRank() == 0) {
-      Location loc = extractEltOp.getLoc();
-      auto idxType = rewriter.getIndexType();
-      auto zero = LLVM::ConstantOp::create(rewriter, loc,
-                                           typeConverter->convertType(idxType),
-                                           rewriter.getIntegerAttr(idxType, 0));
-      rewriter.replaceOpWithNewOp<LLVM::ExtractElementOp>(
-          extractEltOp, llvmType, adaptor.getVector(), zero);
-      return success();
-    }
-
-    rewriter.replaceOpWithNewOp<LLVM::ExtractElementOp>(
-        extractEltOp, llvmType, adaptor.getVector(), adaptor.getPosition());
-    return success();
-  }
-};
-
 class VectorExtractOpConversion
     : public ConvertOpToLLVMPattern<vector::ExtractOp> {
 public:
@@ -1202,39 +1170,6 @@ public:
 
     rewriter.replaceOpWithNewOp<LLVM::FMulAddOp>(
         fmaOp, adaptor.getLhs(), adaptor.getRhs(), adaptor.getAcc());
-    return success();
-  }
-};
-
-class VectorInsertElementOpConversion
-    : public ConvertOpToLLVMPattern<vector::InsertElementOp> {
-public:
-  using ConvertOpToLLVMPattern<vector::InsertElementOp>::ConvertOpToLLVMPattern;
-
-  LogicalResult
-  matchAndRewrite(vector::InsertElementOp insertEltOp, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    auto vectorType = insertEltOp.getDestVectorType();
-    auto llvmType = typeConverter->convertType(vectorType);
-
-    // Bail if result type cannot be lowered.
-    if (!llvmType)
-      return failure();
-
-    if (vectorType.getRank() == 0) {
-      Location loc = insertEltOp.getLoc();
-      auto idxType = rewriter.getIndexType();
-      auto zero = LLVM::ConstantOp::create(rewriter, loc,
-                                           typeConverter->convertType(idxType),
-                                           rewriter.getIntegerAttr(idxType, 0));
-      rewriter.replaceOpWithNewOp<LLVM::InsertElementOp>(
-          insertEltOp, llvmType, adaptor.getDest(), adaptor.getSource(), zero);
-      return success();
-    }
-
-    rewriter.replaceOpWithNewOp<LLVM::InsertElementOp>(
-        insertEltOp, llvmType, adaptor.getDest(), adaptor.getSource(),
-        adaptor.getPosition());
     return success();
   }
 };
@@ -2244,8 +2179,7 @@ void mlir::populateVectorToLLVMConversionPatterns(
                VectorGatherOpConversion, VectorScatterOpConversion>(
       converter, useVectorAlignment);
   patterns.add<VectorBitCastOpConversion, VectorShuffleOpConversion,
-               VectorExtractElementOpConversion, VectorExtractOpConversion,
-               VectorFMAOp1DConversion, VectorInsertElementOpConversion,
+               VectorExtractOpConversion, VectorFMAOp1DConversion,
                VectorInsertOpConversion, VectorPrintOpConversion,
                VectorTypeCastOpConversion, VectorScaleOpConversion,
                VectorExpandLoadOpConversion, VectorCompressStoreOpConversion,

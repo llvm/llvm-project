@@ -121,10 +121,10 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
   return std::make_unique<ARMElfTargetObjectFile>();
 }
 
-static std::string computeDataLayout(const Triple &TT, StringRef CPU,
+static std::string computeDataLayout(const Triple &TT,
                                      const TargetOptions &Options,
                                      bool isLittle) {
-  auto ABI = ARM::computeTargetABI(TT, CPU, Options.MCOptions.ABIName);
+  auto ABI = ARM::computeTargetABI(TT, Options.MCOptions.ABIName);
   std::string Ret;
 
   if (isLittle)
@@ -202,11 +202,10 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
                                            std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOptLevel OL, bool isLittle)
-    : CodeGenTargetMachineImpl(T, computeDataLayout(TT, CPU, Options, isLittle),
-                               TT, CPU, FS, Options,
-                               getEffectiveRelocModel(TT, RM),
+    : CodeGenTargetMachineImpl(T, computeDataLayout(TT, Options, isLittle), TT,
+                               CPU, FS, Options, getEffectiveRelocModel(TT, RM),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
-      TargetABI(ARM::computeTargetABI(TT, CPU, Options.MCOptions.ABIName)),
+      TargetABI(ARM::computeTargetABI(TT, Options.MCOptions.ABIName)),
       TLOF(createTLOF(getTargetTriple())), isLittle(isLittle) {
 
   // Default to triple-appropriate float ABI
