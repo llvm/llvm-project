@@ -2166,7 +2166,9 @@ PreRARematStage::RematReg::RematReg(
   Live |= LiveOut;
 
   // Store the register's lane bitmask.
-  Mask = DAG.TRI->getSubRegIndexLaneMask(DefMI->getOperand(0).getSubReg());
+  unsigned SubIdx = DefMI->getOperand(0).getSubReg();
+  Mask = SubIdx ? DAG.TRI->getSubRegIndexLaneMask(SubIdx)
+                : DAG.MRI.getMaxLaneMaskForVReg(Reg);
 }
 
 MachineInstr *
