@@ -17,8 +17,9 @@ define amdgpu_kernel void @scalar_to_vector_v2i32(ptr addrspace(1) %out, ptr add
 ; SI-NEXT:    s_mov_b32 s9, s3
 ; SI-NEXT:    buffer_load_dword v0, off, s[8:11], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; SI-NEXT:    v_alignbit_b32 v0, v1, v0, 16
+; SI-NEXT:    v_and_b32_e32 v1, 0xffff0000, v0
+; SI-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; SI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; SI-NEXT:    s_mov_b32 s4, s0
 ; SI-NEXT:    s_mov_b32 s5, s1
 ; SI-NEXT:    v_mov_b32_e32 v1, v0
@@ -39,8 +40,8 @@ define amdgpu_kernel void @scalar_to_vector_v2i32(ptr addrspace(1) %out, ptr add
 ; VI-NEXT:    s_mov_b32 s4, s0
 ; VI-NEXT:    s_mov_b32 s5, s1
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; VI-NEXT:    v_alignbit_b32 v0, v1, v0, 16
+; VI-NEXT:    v_and_b32_e32 v1, 0xffff0000, v0
+; VI-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; VI-NEXT:    v_mov_b32_e32 v1, v0
 ; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
@@ -85,8 +86,9 @@ define amdgpu_kernel void @scalar_to_vector_v2f32(ptr addrspace(1) %out, ptr add
 ; SI-NEXT:    s_mov_b32 s9, s3
 ; SI-NEXT:    buffer_load_dword v0, off, s[8:11], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; SI-NEXT:    v_alignbit_b32 v0, v1, v0, 16
+; SI-NEXT:    v_and_b32_e32 v1, 0xffff0000, v0
+; SI-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; SI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; SI-NEXT:    s_mov_b32 s4, s0
 ; SI-NEXT:    s_mov_b32 s5, s1
 ; SI-NEXT:    v_mov_b32_e32 v1, v0
@@ -107,8 +109,8 @@ define amdgpu_kernel void @scalar_to_vector_v2f32(ptr addrspace(1) %out, ptr add
 ; VI-NEXT:    s_mov_b32 s4, s0
 ; VI-NEXT:    s_mov_b32 s5, s1
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; VI-NEXT:    v_alignbit_b32 v0, v1, v0, 16
+; VI-NEXT:    v_and_b32_e32 v1, 0xffff0000, v0
+; VI-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; VI-NEXT:    v_mov_b32_e32 v1, v0
 ; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
