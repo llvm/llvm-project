@@ -27,8 +27,8 @@ void m(void) {
 // CHECK:     |-DeclStmt
 // CHECK:     | `-VarDecl {{.+}} used i 'a *__bidi_indexable'
 // CHECK:     |-DeclStmt
-// CHECK:     | `-VarDecl {{.+}} used j 'd' cinit
-// CHECK:     |   `-InitListExpr {{.+}} 'd'
+// CHECK:     | `-VarDecl {{.+}} used j 'd':'struct d' cinit
+// CHECK:     |   `-InitListExpr {{.+}} 'd':'struct d'
 // CHECK:     |     |-ImplicitCastExpr {{.+}} 'a *__single' <BoundsSafetyPointerCast>
 // CHECK:     |     | `-UnaryOperator {{.+}} 'a *__bidi_indexable' prefix '&' cannot overflow
 // CHECK:     |     |   `-ArraySubscriptExpr {{.+}} 'a':'long' lvalue
@@ -45,7 +45,7 @@ void m(void) {
 // CHECK:     |-DeclStmt
 // CHECK:     | `-VarDecl {{.+}} referenced g 'struct d *__bidi_indexable'{{.*}} cinit
 // CHECK:     |   `-UnaryOperator {{.+}} 'd *__bidi_indexable' prefix '&' cannot overflow
-// CHECK:     |     `-DeclRefExpr {{.+}} 'd' lvalue Var {{.+}} 'j' 'd'
+// CHECK:     |     `-DeclRefExpr {{.+}} 'd':'struct d' lvalue Var {{.+}} 'j' 'd':'struct d'
 // CHECK:     `-UnaryExprOrTypeTraitExpr {{.+}} '__size_t':'unsigned long' sizeof
 // CHECK:       `-ParenExpr {{.+}} 'struct d *__bidi_indexable'
 // CHECK:         `-DeclRefExpr {{.+}} 'struct d *__bidi_indexable'{{.*}} 'g' 'struct d *__bidi_indexable'{{.*}} non_odr_use_unevaluated

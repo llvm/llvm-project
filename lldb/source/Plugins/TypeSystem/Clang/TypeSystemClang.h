@@ -262,7 +262,7 @@ public:
 
   template <typename RecordDeclType>
   CompilerType
-  GetTypeForIdentifier(llvm::StringRef type_name,
+  GetTypeForIdentifier(const clang::ASTContext &Ctx, llvm::StringRef type_name,
                        clang::DeclContext *decl_context = nullptr) {
     CompilerType compiler_type;
     if (type_name.empty())
@@ -280,11 +280,10 @@ public:
       return compiler_type;
 
     clang::NamedDecl *named_decl = *result.begin();
-    if (const RecordDeclType *record_decl =
-            llvm::dyn_cast<RecordDeclType>(named_decl))
+    if (const auto *type_decl = llvm::dyn_cast<clang::TypeDecl>(named_decl);
+        llvm::isa_and_nonnull<RecordDeclType>(type_decl))
       compiler_type = CompilerType(
-          weak_from_this(),
-          clang::QualType(record_decl->getTypeForDecl(), 0).getAsOpaquePtr());
+          weak_from_this(), Ctx.getTypeDeclType(type_decl).getAsOpaquePtr());
 
     return compiler_type;
   }
@@ -553,7 +552,7 @@ public:
     clang::EnumDecl *enum_decl =
         CreateEnumerationDecl(name, decl_ctx, owning_module, decl,
                               integer_qual_type, is_scoped, enum_kind);
-    return GetType(getASTContext().getTagDeclType(enum_decl));
+    return GetType(getASTContext().getCanonicalTagType(enum_decl));
   }
 
   // Integer type functions

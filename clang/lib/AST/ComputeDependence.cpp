@@ -514,9 +514,8 @@ ExprDependence clang::computeDependence(OMPIteratorExpr *E) {
 ExprDependence clang::computeDependence(DeclRefExpr *E, const ASTContext &Ctx) {
   auto Deps = ExprDependence::None;
 
-  if (auto *NNS = E->getQualifier())
-    Deps |= toExprDependence(NNS->getDependence() &
-                             ~NestedNameSpecifierDependence::Dependent);
+  Deps |= toExprDependence(E->getQualifier().getDependence() &
+                           ~NestedNameSpecifierDependence::Dependent);
 
   if (auto *FirstArg = E->getTemplateArgs()) {
     unsigned NumArgs = E->getNumTemplateArgs();
@@ -687,9 +686,8 @@ ExprDependence clang::computeDependence(MemberExpr *E) {
   auto D = E->getBase()->getDependence();
   D |= getDependenceInExpr(E->getMemberNameInfo());
 
-  if (auto *NNS = E->getQualifier())
-    D |= toExprDependence(NNS->getDependence() &
-                          ~NestedNameSpecifierDependence::Dependent);
+  D |= toExprDependence(E->getQualifier().getDependence() &
+                        ~NestedNameSpecifierDependence::Dependent);
 
   for (const auto &A : E->template_arguments())
     D |= toExprDependence(A.getArgument().getDependence());
@@ -797,9 +795,8 @@ ExprDependence clang::computeDependence(CXXPseudoDestructorExpr *E) {
   if (auto *ST = E->getScopeTypeInfo())
     D |= turnTypeToValueDependence(
         toExprDependenceAsWritten(ST->getType()->getDependence()));
-  if (auto *Q = E->getQualifier())
-    D |= toExprDependence(Q->getDependence() &
-                          ~NestedNameSpecifierDependence::Dependent);
+  D |= toExprDependence(E->getQualifier().getDependence() &
+                        ~NestedNameSpecifierDependence::Dependent);
   return D;
 }
 
@@ -815,9 +812,8 @@ clang::computeDependence(OverloadExpr *E, bool KnownDependent,
   if (KnownContainsUnexpandedParameterPack)
     Deps |= ExprDependence::UnexpandedPack;
   Deps |= getDependenceInExpr(E->getNameInfo());
-  if (auto *Q = E->getQualifier())
-    Deps |= toExprDependence(Q->getDependence() &
-                             ~NestedNameSpecifierDependence::Dependent);
+  Deps |= toExprDependence(E->getQualifier().getDependence() &
+                           ~NestedNameSpecifierDependence::Dependent);
   for (auto *D : E->decls()) {
     if (D->getDeclContext()->isDependentContext() ||
         isa<UnresolvedUsingValueDecl>(D) || isa<TemplateTemplateParmDecl>(D))
@@ -834,8 +830,7 @@ clang::computeDependence(OverloadExpr *E, bool KnownDependent,
 ExprDependence clang::computeDependence(DependentScopeDeclRefExpr *E) {
   auto D = ExprDependence::TypeValue;
   D |= getDependenceInExpr(E->getNameInfo());
-  if (auto *Q = E->getQualifier())
-    D |= toExprDependence(Q->getDependence());
+  D |= toExprDependence(E->getQualifier().getDependence());
   for (const auto &A : E->template_arguments())
     D |= toExprDependence(A.getArgument().getDependence());
   return D;
@@ -886,8 +881,7 @@ ExprDependence clang::computeDependence(CXXDependentScopeMemberExpr *E) {
   auto D = ExprDependence::TypeValueInstantiation;
   if (!E->isImplicitAccess())
     D |= E->getBase()->getDependence();
-  if (auto *Q = E->getQualifier())
-    D |= toExprDependence(Q->getDependence());
+  D |= toExprDependence(E->getQualifier().getDependence());
   D |= getDependenceInExpr(E->getMemberNameInfo());
   for (const auto &A : E->template_arguments())
     D |= toExprDependence(A.getArgument().getDependence());
