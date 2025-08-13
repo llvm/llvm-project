@@ -253,7 +253,7 @@ define i16 @select_decreasing_induction_icmp_table_i16(i16 noundef %val) {
 ;
 ; IC4VF4-LABEL: define i16 @select_decreasing_induction_icmp_table_i16(
 ; IC4VF4-SAME: i16 noundef [[VAL:%.*]]) {
-; IC4VF4-NEXT:  [[ENTRY:.*]]:
+; IC4VF4-NEXT:  [[ENTRY:.*:]]
 ; IC4VF4-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IC4VF4:       [[VECTOR_PH]]:
 ; IC4VF4-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i16> poison, i16 [[VAL]], i64 0
@@ -469,8 +469,6 @@ define i16 @select_decreasing_induction_icmp_table_i16(i16 noundef %val) {
 ; IC4VF4-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i16 [[TMP116]], i16 0
 ; IC4VF4-NEXT:    br label %[[EXIT:.*]]
 ; IC4VF4:       [[SCALAR_PH]]:
-; IC4VF4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 12, %[[ENTRY]] ]
-; IC4VF4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i16 [ 0, %[[ENTRY]] ]
 ; IC4VF4-NEXT:    br label %[[LOOP:.*]]
 ; IC4VF4:       [[LOOP]]:
 ; IC4VF4-NEXT:    [[IV:%.*]] = phi i16 [ 12, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -624,7 +622,7 @@ define i16 @select_decreasing_induction_icmp_table_half(half noundef %val) {
 ;
 ; IC4VF4-LABEL: define i16 @select_decreasing_induction_icmp_table_half(
 ; IC4VF4-SAME: half noundef [[VAL:%.*]]) {
-; IC4VF4-NEXT:  [[ENTRY:.*]]:
+; IC4VF4-NEXT:  [[ENTRY:.*:]]
 ; IC4VF4-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IC4VF4:       [[VECTOR_PH]]:
 ; IC4VF4-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x half> poison, half [[VAL]], i64 0
@@ -840,8 +838,6 @@ define i16 @select_decreasing_induction_icmp_table_half(half noundef %val) {
 ; IC4VF4-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i16 [[TMP116]], i16 0
 ; IC4VF4-NEXT:    br label %[[EXIT:.*]]
 ; IC4VF4:       [[SCALAR_PH]]:
-; IC4VF4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 12, %[[ENTRY]] ]
-; IC4VF4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i16 [ 0, %[[ENTRY]] ]
 ; IC4VF4-NEXT:    br label %[[LOOP:.*]]
 ; IC4VF4:       [[LOOP]]:
 ; IC4VF4-NEXT:    [[IV:%.*]] = phi i16 [ 12, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]

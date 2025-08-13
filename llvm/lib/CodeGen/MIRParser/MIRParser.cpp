@@ -124,6 +124,11 @@ public:
   bool initializeFrameInfo(PerFunctionMIParsingState &PFS,
                            const yaml::MachineFunction &YamlMF);
 
+  bool initializeSaveRestorePoints(
+      PerFunctionMIParsingState &PFS,
+      const std::vector<yaml::SaveRestorePointEntry> &YamlSRPoints,
+      SmallVectorImpl<MachineBasicBlock *> &SaveRestorePoints);
+
   bool initializeCallSiteInfo(PerFunctionMIParsingState &PFS,
                               const yaml::MachineFunction &YamlMF);
 
@@ -529,7 +534,7 @@ void MIRParserImpl::setupDebugValueTracking(
   unsigned MaxInstrNum = 0;
   for (auto &MBB : MF)
     for (auto &MI : MBB)
-      MaxInstrNum = std::max((unsigned)MI.peekDebugInstrNum(), MaxInstrNum);
+      MaxInstrNum = std::max(MI.peekDebugInstrNum(), MaxInstrNum);
   MF.setDebugInstrNumberingCount(MaxInstrNum);
 
   // Load any substitutions.
@@ -867,18 +872,14 @@ bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
   MFI.setHasTailCall(YamlMFI.HasTailCall);
   MFI.setCalleeSavedInfoValid(YamlMFI.IsCalleeSavedInfoValid);
   MFI.setLocalFrameSize(YamlMFI.LocalFrameSize);
-  if (!YamlMFI.SavePoint.Value.empty()) {
-    MachineBasicBlock *MBB = nullptr;
-    if (parseMBBReference(PFS, MBB, YamlMFI.SavePoint))
-      return true;
-    MFI.setSavePoint(MBB);
-  }
-  if (!YamlMFI.RestorePoint.Value.empty()) {
-    MachineBasicBlock *MBB = nullptr;
-    if (parseMBBReference(PFS, MBB, YamlMFI.RestorePoint))
-      return true;
-    MFI.setRestorePoint(MBB);
-  }
+  SmallVector<MachineBasicBlock *, 4> SavePoints;
+  if (initializeSaveRestorePoints(PFS, YamlMFI.SavePoints, SavePoints))
+    return true;
+  MFI.setSavePoints(SavePoints);
+  SmallVector<MachineBasicBlock *, 4> RestorePoints;
+  if (initializeSaveRestorePoints(PFS, YamlMFI.RestorePoints, RestorePoints))
+    return true;
+  MFI.setRestorePoints(RestorePoints);
 
   std::vector<CalleeSavedInfo> CSIInfo;
   // Initialize the fixed frame objects.
@@ -1090,6 +1091,21 @@ bool MIRParserImpl::initializeConstantPool(PerFunctionMIParsingState &PFS,
                    Twine("redefinition of constant pool item '%const.") +
                        Twine(YamlConstant.ID.Value) + "'");
   }
+  return false;
+}
+
+// Return true if basic block was incorrectly specified in MIR
+bool MIRParserImpl::initializeSaveRestorePoints(
+    PerFunctionMIParsingState &PFS,
+    const std::vector<yaml::SaveRestorePointEntry> &YamlSRPoints,
+    SmallVectorImpl<MachineBasicBlock *> &SaveRestorePoints) {
+  MachineBasicBlock *MBB = nullptr;
+  for (const yaml::SaveRestorePointEntry &Entry : YamlSRPoints) {
+    if (parseMBBReference(PFS, MBB, Entry.Point.Value))
+      return true;
+    SaveRestorePoints.push_back(MBB);
+  }
+
   return false;
 }
 

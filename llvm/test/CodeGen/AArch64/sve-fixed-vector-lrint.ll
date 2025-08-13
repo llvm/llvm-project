@@ -4,7 +4,7 @@
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=aarch64 -mattr=+sve \
 ; RUN:   -aarch64-sve-vector-bits-min=256 | FileCheck --check-prefixes=CHECK-i64 %s
 
-define <1 x iXLen> @lrint_v1f16(<1 x half> %x) {
+define <1 x iXLen> @lrint_v1f16(<1 x half> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v1f16:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    frintx h0, h0
@@ -23,7 +23,7 @@ define <1 x iXLen> @lrint_v1f16(<1 x half> %x) {
 }
 declare <1 x iXLen> @llvm.lrint.v1iXLen.v1f16(<1 x half>)
 
-define <2 x iXLen> @lrint_v2f16(<2 x half> %x) {
+define <2 x iXLen> @lrint_v2f16(<2 x half> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v2f16:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    // kill: def $d0 killed $d0 def $q0
@@ -53,7 +53,7 @@ define <2 x iXLen> @lrint_v2f16(<2 x half> %x) {
 }
 declare <2 x iXLen> @llvm.lrint.v2iXLen.v2f16(<2 x half>)
 
-define <4 x iXLen> @lrint_v4f16(<4 x half> %x) {
+define <4 x iXLen> @lrint_v4f16(<4 x half> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v4f16:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    frintx v0.4h, v0.4h
@@ -81,7 +81,7 @@ define <4 x iXLen> @lrint_v4f16(<4 x half> %x) {
 }
 declare <4 x iXLen> @llvm.lrint.v4iXLen.v4f16(<4 x half>)
 
-define <8 x iXLen> @lrint_v8f16(<8 x half> %x) {
+define <8 x iXLen> @lrint_v8f16(<8 x half> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v8f16:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    frintx v2.8h, v0.8h
@@ -143,7 +143,7 @@ define <8 x iXLen> @lrint_v8f16(<8 x half> %x) {
 }
 declare <8 x iXLen> @llvm.lrint.v8iXLen.v8f16(<8 x half>)
 
-define <16 x iXLen> @lrint_v16f16(<16 x half> %x) {
+define <16 x iXLen> @lrint_v16f16(<16 x half> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v16f16:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    frintx v1.8h, v1.8h
@@ -254,26 +254,17 @@ define <16 x iXLen> @lrint_v16f16(<16 x half> %x) {
 }
 declare <16 x iXLen> @llvm.lrint.v16iXLen.v16f16(<16 x half>)
 
-define <32 x iXLen> @lrint_v32f16(<32 x half> %x) {
+define <32 x iXLen> @lrint_v32f16(<32 x half> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v32f16:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    stp x26, x25, [sp, #-64]! // 16-byte Folded Spill
-; CHECK-i32-NEXT:    stp x24, x23, [sp, #16] // 16-byte Folded Spill
-; CHECK-i32-NEXT:    stp x22, x21, [sp, #32] // 16-byte Folded Spill
-; CHECK-i32-NEXT:    stp x20, x19, [sp, #48] // 16-byte Folded Spill
-; CHECK-i32-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-i32-NEXT:    .cfi_offset w19, -8
-; CHECK-i32-NEXT:    .cfi_offset w20, -16
-; CHECK-i32-NEXT:    .cfi_offset w21, -24
-; CHECK-i32-NEXT:    .cfi_offset w22, -32
-; CHECK-i32-NEXT:    .cfi_offset w23, -40
-; CHECK-i32-NEXT:    .cfi_offset w24, -48
-; CHECK-i32-NEXT:    .cfi_offset w25, -56
-; CHECK-i32-NEXT:    .cfi_offset w26, -64
 ; CHECK-i32-NEXT:    frintx v3.8h, v3.8h
 ; CHECK-i32-NEXT:    frintx v2.8h, v2.8h
+; CHECK-i32-NEXT:    stp x20, x19, [sp, #48] // 16-byte Folded Spill
 ; CHECK-i32-NEXT:    frintx v1.8h, v1.8h
 ; CHECK-i32-NEXT:    frintx v0.8h, v0.8h
+; CHECK-i32-NEXT:    stp x24, x23, [sp, #16] // 16-byte Folded Spill
+; CHECK-i32-NEXT:    stp x22, x21, [sp, #32] // 16-byte Folded Spill
 ; CHECK-i32-NEXT:    mov h4, v3.h[7]
 ; CHECK-i32-NEXT:    mov h5, v3.h[6]
 ; CHECK-i32-NEXT:    mov h6, v3.h[5]
@@ -378,9 +369,6 @@ define <32 x iXLen> @lrint_v32f16(<32 x half> %x) {
 ; CHECK-i64-NEXT:    sub x9, sp, #272
 ; CHECK-i64-NEXT:    mov x29, sp
 ; CHECK-i64-NEXT:    and sp, x9, #0xffffffffffffffe0
-; CHECK-i64-NEXT:    .cfi_def_cfa w29, 16
-; CHECK-i64-NEXT:    .cfi_offset w30, -8
-; CHECK-i64-NEXT:    .cfi_offset w29, -16
 ; CHECK-i64-NEXT:    frintx v5.4h, v0.4h
 ; CHECK-i64-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-i64-NEXT:    ext v4.16b, v1.16b, v1.16b, #8
@@ -505,7 +493,7 @@ define <32 x iXLen> @lrint_v32f16(<32 x half> %x) {
 }
 declare <32 x iXLen> @llvm.lrint.v32iXLen.v32f16(<32 x half>)
 
-define <1 x iXLen> @lrint_v1f32(<1 x float> %x) {
+define <1 x iXLen> @lrint_v1f32(<1 x float> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v1f32:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    frintx v0.2s, v0.2s
@@ -524,7 +512,7 @@ define <1 x iXLen> @lrint_v1f32(<1 x float> %x) {
 }
 declare <1 x iXLen> @llvm.lrint.v1iXLen.v1f32(<1 x float>)
 
-define <2 x iXLen> @lrint_v2f32(<2 x float> %x) {
+define <2 x iXLen> @lrint_v2f32(<2 x float> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v2f32:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    frintx v0.2s, v0.2s
@@ -542,7 +530,7 @@ define <2 x iXLen> @lrint_v2f32(<2 x float> %x) {
 }
 declare <2 x iXLen> @llvm.lrint.v2iXLen.v2f32(<2 x float>)
 
-define <4 x iXLen> @lrint_v4f32(<4 x float> %x) {
+define <4 x iXLen> @lrint_v4f32(<4 x float> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v4f32:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    frintx v0.4s, v0.4s
@@ -569,7 +557,7 @@ define <4 x iXLen> @lrint_v4f32(<4 x float> %x) {
 }
 declare <4 x iXLen> @llvm.lrint.v4iXLen.v4f32(<4 x float>)
 
-define <8 x iXLen> @lrint_v8f32(<8 x float> %x) {
+define <8 x iXLen> @lrint_v8f32(<8 x float> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v8f32:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    ptrue p0.d, vl2
@@ -636,7 +624,7 @@ define <8 x iXLen> @lrint_v8f32(<8 x float> %x) {
 }
 declare <8 x iXLen> @llvm.lrint.v8iXLen.v8f32(<8 x float>)
 
-define <16 x iXLen> @lrint_v16f32(<16 x float> %x) {
+define <16 x iXLen> @lrint_v16f32(<16 x float> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v16f32:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    ptrue p0.d, vl2
@@ -754,24 +742,10 @@ define <16 x iXLen> @lrint_v16f32(<16 x float> %x) {
 }
 declare <16 x iXLen> @llvm.lrint.v16iXLen.v16f32(<16 x float>)
 
-define <32 x iXLen> @lrint_v32f32(<32 x float> %x) {
+define <32 x iXLen> @lrint_v32f32(<32 x float> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v32f32:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    str x27, [sp, #-80]! // 8-byte Folded Spill
-; CHECK-i32-NEXT:    stp x26, x25, [sp, #16] // 16-byte Folded Spill
-; CHECK-i32-NEXT:    stp x24, x23, [sp, #32] // 16-byte Folded Spill
-; CHECK-i32-NEXT:    stp x22, x21, [sp, #48] // 16-byte Folded Spill
-; CHECK-i32-NEXT:    stp x20, x19, [sp, #64] // 16-byte Folded Spill
-; CHECK-i32-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-i32-NEXT:    .cfi_offset w19, -8
-; CHECK-i32-NEXT:    .cfi_offset w20, -16
-; CHECK-i32-NEXT:    .cfi_offset w21, -24
-; CHECK-i32-NEXT:    .cfi_offset w22, -32
-; CHECK-i32-NEXT:    .cfi_offset w23, -40
-; CHECK-i32-NEXT:    .cfi_offset w24, -48
-; CHECK-i32-NEXT:    .cfi_offset w25, -56
-; CHECK-i32-NEXT:    .cfi_offset w26, -64
-; CHECK-i32-NEXT:    .cfi_offset w27, -80
 ; CHECK-i32-NEXT:    ptrue p1.d, vl2
 ; CHECK-i32-NEXT:    // kill: def $q6 killed $q6 def $z6
 ; CHECK-i32-NEXT:    // kill: def $q7 killed $q7 def $z7
@@ -781,11 +755,15 @@ define <32 x iXLen> @lrint_v32f32(<32 x float> %x) {
 ; CHECK-i32-NEXT:    // kill: def $q5 killed $q5 def $z5
 ; CHECK-i32-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-i32-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-i32-NEXT:    stp x24, x23, [sp, #32] // 16-byte Folded Spill
 ; CHECK-i32-NEXT:    ptrue p0.s, vl8
+; CHECK-i32-NEXT:    stp x22, x21, [sp, #48] // 16-byte Folded Spill
 ; CHECK-i32-NEXT:    splice z6.d, p1, z6.d, z7.d
 ; CHECK-i32-NEXT:    splice z2.d, p1, z2.d, z3.d
 ; CHECK-i32-NEXT:    splice z4.d, p1, z4.d, z5.d
 ; CHECK-i32-NEXT:    splice z0.d, p1, z0.d, z1.d
+; CHECK-i32-NEXT:    stp x26, x25, [sp, #16] // 16-byte Folded Spill
+; CHECK-i32-NEXT:    stp x20, x19, [sp, #64] // 16-byte Folded Spill
 ; CHECK-i32-NEXT:    movprfx z3, z6
 ; CHECK-i32-NEXT:    frintx z3.s, p0/m, z6.s
 ; CHECK-i32-NEXT:    frintx z2.s, p0/m, z2.s
@@ -897,9 +875,6 @@ define <32 x iXLen> @lrint_v32f32(<32 x float> %x) {
 ; CHECK-i64-NEXT:    sub x9, sp, #272
 ; CHECK-i64-NEXT:    mov x29, sp
 ; CHECK-i64-NEXT:    and sp, x9, #0xffffffffffffffe0
-; CHECK-i64-NEXT:    .cfi_def_cfa w29, 16
-; CHECK-i64-NEXT:    .cfi_offset w30, -8
-; CHECK-i64-NEXT:    .cfi_offset w29, -16
 ; CHECK-i64-NEXT:    frintx v0.4s, v0.4s
 ; CHECK-i64-NEXT:    frintx v1.4s, v1.4s
 ; CHECK-i64-NEXT:    frintx v2.4s, v2.4s
@@ -1020,7 +995,7 @@ define <32 x iXLen> @lrint_v32f32(<32 x float> %x) {
 }
 declare <32 x iXLen> @llvm.lrint.v32iXLen.v32f32(<32 x float>)
 
-define <1 x iXLen> @lrint_v1f64(<1 x double> %x) {
+define <1 x iXLen> @lrint_v1f64(<1 x double> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v1f64:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    frintx d0, d0
@@ -1039,7 +1014,7 @@ define <1 x iXLen> @lrint_v1f64(<1 x double> %x) {
 }
 declare <1 x iXLen> @llvm.lrint.v1iXLen.v1f64(<1 x double>)
 
-define <2 x iXLen> @lrint_v2f64(<2 x double> %x) {
+define <2 x iXLen> @lrint_v2f64(<2 x double> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v2f64:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    frintx v0.2d, v0.2d
@@ -1061,7 +1036,7 @@ define <2 x iXLen> @lrint_v2f64(<2 x double> %x) {
 }
 declare <2 x iXLen> @llvm.lrint.v2iXLen.v2f64(<2 x double>)
 
-define <4 x iXLen> @lrint_v4f64(<4 x double> %x) {
+define <4 x iXLen> @lrint_v4f64(<4 x double> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v4f64:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    ptrue p0.d, vl2
@@ -1109,7 +1084,7 @@ define <4 x iXLen> @lrint_v4f64(<4 x double> %x) {
 }
 declare <4 x iXLen> @llvm.lrint.v4iXLen.v4f64(<4 x double>)
 
-define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
+define <8 x iXLen> @lrint_v8f64(<8 x double> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v8f64:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    ptrue p0.d, vl2
@@ -1188,7 +1163,7 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
 }
 declare <8 x iXLen> @llvm.lrint.v8iXLen.v8f64(<8 x double>)
 
-define <16 x iXLen> @lrint_v16f64(<16 x double> %x) {
+define <16 x iXLen> @lrint_v16f64(<16 x double> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v16f64:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    ptrue p1.d, vl2
@@ -1329,7 +1304,7 @@ define <16 x iXLen> @lrint_v16f64(<16 x double> %x) {
 }
 declare <16 x iXLen> @llvm.lrint.v16iXLen.v16f64(<16 x double>)
 
-define <32 x iXLen> @lrint_v32f64(<32 x double> %x) {
+define <32 x iXLen> @lrint_v32f64(<32 x double> %x) nounwind {
 ; CHECK-i32-LABEL: lrint_v32f64:
 ; CHECK-i32:       // %bb.0:
 ; CHECK-i32-NEXT:    ptrue p1.d, vl2
@@ -1465,9 +1440,6 @@ define <32 x iXLen> @lrint_v32f64(<32 x double> %x) {
 ; CHECK-i64-NEXT:    sub x9, sp, #272
 ; CHECK-i64-NEXT:    mov x29, sp
 ; CHECK-i64-NEXT:    and sp, x9, #0xffffffffffffffe0
-; CHECK-i64-NEXT:    .cfi_def_cfa w29, 16
-; CHECK-i64-NEXT:    .cfi_offset w30, -8
-; CHECK-i64-NEXT:    .cfi_offset w29, -16
 ; CHECK-i64-NEXT:    ptrue p1.d, vl2
 ; CHECK-i64-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-i64-NEXT:    // kill: def $q1 killed $q1 def $z1
@@ -1611,3 +1583,527 @@ define <32 x iXLen> @lrint_v32f64(<32 x double> %x) {
   ret <32 x iXLen> %a
 }
 declare <32 x iXLen> @llvm.lrint.v32iXLen.v32f64(<32 x double>)
+
+define <1 x iXLen> @lrint_v1fp128(<1 x fp128> %x) nounwind {
+; CHECK-i32-LABEL: lrint_v1fp128:
+; CHECK-i32:       // %bb.0:
+; CHECK-i32-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-i32-NEXT:    bl lrintl
+; CHECK-i32-NEXT:    fmov s0, w0
+; CHECK-i32-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-i32-NEXT:    ret
+;
+; CHECK-i64-LABEL: lrint_v1fp128:
+; CHECK-i64:       // %bb.0:
+; CHECK-i64-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-i64-NEXT:    bl lrintl
+; CHECK-i64-NEXT:    fmov d0, x0
+; CHECK-i64-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-i64-NEXT:    ret
+  %a = call <1 x iXLen> @llvm.lrint.v1iXLen.v1fp128(<1 x fp128> %x)
+  ret <1 x iXLen> %a
+}
+declare <1 x iXLen> @llvm.lrint.v1iXLen.v1fp128(<1 x fp128>)
+
+define <2 x iXLen> @lrint_v2fp128(<2 x fp128> %x) nounwind {
+; CHECK-i32-LABEL: lrint_v2fp128:
+; CHECK-i32:       // %bb.0:
+; CHECK-i32-NEXT:    sub sp, sp, #48
+; CHECK-i32-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-i32-NEXT:    str q1, [sp, #16] // 16-byte Folded Spill
+; CHECK-i32-NEXT:    bl lrintl
+; CHECK-i32-NEXT:    fmov s0, w0
+; CHECK-i32-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-i32-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    bl lrintl
+; CHECK-i32-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-i32-NEXT:    mov v0.s[1], w0
+; CHECK-i32-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-i32-NEXT:    add sp, sp, #48
+; CHECK-i32-NEXT:    ret
+;
+; CHECK-i64-LABEL: lrint_v2fp128:
+; CHECK-i64:       // %bb.0:
+; CHECK-i64-NEXT:    sub sp, sp, #48
+; CHECK-i64-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-i64-NEXT:    mov v0.16b, v1.16b
+; CHECK-i64-NEXT:    str x30, [sp, #32] // 8-byte Folded Spill
+; CHECK-i64-NEXT:    bl lrintl
+; CHECK-i64-NEXT:    fmov d0, x0
+; CHECK-i64-NEXT:    str q0, [sp, #16] // 16-byte Folded Spill
+; CHECK-i64-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    bl lrintl
+; CHECK-i64-NEXT:    fmov d0, x0
+; CHECK-i64-NEXT:    ldr q1, [sp, #16] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-i64-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-i64-NEXT:    add sp, sp, #48
+; CHECK-i64-NEXT:    ret
+  %a = call <2 x iXLen> @llvm.lrint.v2iXLen.v2fp128(<2 x fp128> %x)
+  ret <2 x iXLen> %a
+}
+declare <2 x iXLen> @llvm.lrint.v2iXLen.v2fp128(<2 x fp128>)
+
+define <4 x iXLen> @lrint_v4fp128(<4 x fp128> %x) nounwind {
+; CHECK-i32-LABEL: lrint_v4fp128:
+; CHECK-i32:       // %bb.0:
+; CHECK-i32-NEXT:    sub sp, sp, #80
+; CHECK-i32-NEXT:    str x30, [sp, #64] // 8-byte Folded Spill
+; CHECK-i32-NEXT:    stp q2, q3, [sp, #16] // 32-byte Folded Spill
+; CHECK-i32-NEXT:    str q1, [sp] // 16-byte Folded Spill
+; CHECK-i32-NEXT:    bl lrintl
+; CHECK-i32-NEXT:    fmov s0, w0
+; CHECK-i32-NEXT:    str q0, [sp, #48] // 16-byte Folded Spill
+; CHECK-i32-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    bl lrintl
+; CHECK-i32-NEXT:    ldr q0, [sp, #48] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    mov v0.s[1], w0
+; CHECK-i32-NEXT:    str q0, [sp, #48] // 16-byte Folded Spill
+; CHECK-i32-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    bl lrintl
+; CHECK-i32-NEXT:    ldr q0, [sp, #48] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    mov v0.s[2], w0
+; CHECK-i32-NEXT:    str q0, [sp, #48] // 16-byte Folded Spill
+; CHECK-i32-NEXT:    ldr q0, [sp, #32] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    bl lrintl
+; CHECK-i32-NEXT:    ldr q0, [sp, #48] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    ldr x30, [sp, #64] // 8-byte Folded Reload
+; CHECK-i32-NEXT:    mov v0.s[3], w0
+; CHECK-i32-NEXT:    add sp, sp, #80
+; CHECK-i32-NEXT:    ret
+;
+; CHECK-i64-LABEL: lrint_v4fp128:
+; CHECK-i64:       // %bb.0:
+; CHECK-i64-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-i64-NEXT:    sub sp, sp, #64
+; CHECK-i64-NEXT:    addvl sp, sp, #-1
+; CHECK-i64-NEXT:    str q0, [sp, #48] // 16-byte Folded Spill
+; CHECK-i64-NEXT:    mov v0.16b, v3.16b
+; CHECK-i64-NEXT:    stp q2, q1, [sp, #16] // 32-byte Folded Spill
+; CHECK-i64-NEXT:    bl lrintl
+; CHECK-i64-NEXT:    fmov d0, x0
+; CHECK-i64-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-i64-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    bl lrintl
+; CHECK-i64-NEXT:    fmov d0, x0
+; CHECK-i64-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    add x8, sp, #64
+; CHECK-i64-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-i64-NEXT:    str z0, [x8] // 16-byte Folded Spill
+; CHECK-i64-NEXT:    ldr q0, [sp, #32] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    bl lrintl
+; CHECK-i64-NEXT:    fmov d0, x0
+; CHECK-i64-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
+; CHECK-i64-NEXT:    ldr q0, [sp, #48] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    bl lrintl
+; CHECK-i64-NEXT:    fmov d0, x0
+; CHECK-i64-NEXT:    ldr q1, [sp, #32] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    add x8, sp, #64
+; CHECK-i64-NEXT:    ptrue p0.d, vl2
+; CHECK-i64-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-i64-NEXT:    ldr z1, [x8] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    splice z0.d, p0, z0.d, z1.d
+; CHECK-i64-NEXT:    mov z1.d, z0.d
+; CHECK-i64-NEXT:    ext z1.b, z1.b, z0.b, #16
+; CHECK-i64-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-i64-NEXT:    // kill: def $q1 killed $q1 killed $z1
+; CHECK-i64-NEXT:    addvl sp, sp, #1
+; CHECK-i64-NEXT:    add sp, sp, #64
+; CHECK-i64-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-i64-NEXT:    ret
+  %a = call <4 x iXLen> @llvm.lrint.v4iXLen.v4fp128(<4 x fp128> %x)
+  ret <4 x iXLen> %a
+}
+declare <4 x iXLen> @llvm.lrint.v4iXLen.v4fp128(<4 x fp128>)
+
+define <8 x iXLen> @lrint_v8fp128(<8 x fp128> %x) nounwind {
+; CHECK-i32-LABEL: lrint_v8fp128:
+; CHECK-i32:       // %bb.0:
+; CHECK-i32-NEXT:    sub sp, sp, #176
+; CHECK-i32-NEXT:    str q0, [sp, #96] // 16-byte Folded Spill
+; CHECK-i32-NEXT:    mov v0.16b, v7.16b
+; CHECK-i32-NEXT:    stp x30, x25, [sp, #112] // 16-byte Folded Spill
+; CHECK-i32-NEXT:    stp x24, x23, [sp, #128] // 16-byte Folded Spill
+; CHECK-i32-NEXT:    stp x22, x21, [sp, #144] // 16-byte Folded Spill
+; CHECK-i32-NEXT:    stp x20, x19, [sp, #160] // 16-byte Folded Spill
+; CHECK-i32-NEXT:    stp q6, q5, [sp] // 32-byte Folded Spill
+; CHECK-i32-NEXT:    stp q4, q3, [sp, #32] // 32-byte Folded Spill
+; CHECK-i32-NEXT:    stp q2, q1, [sp, #64] // 32-byte Folded Spill
+; CHECK-i32-NEXT:    bl lrintl
+; CHECK-i32-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    mov w19, w0
+; CHECK-i32-NEXT:    bl lrintl
+; CHECK-i32-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    mov w20, w0
+; CHECK-i32-NEXT:    bl lrintl
+; CHECK-i32-NEXT:    ldr q0, [sp, #32] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    mov w21, w0
+; CHECK-i32-NEXT:    bl lrintl
+; CHECK-i32-NEXT:    ldr q0, [sp, #48] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    mov w22, w0
+; CHECK-i32-NEXT:    bl lrintl
+; CHECK-i32-NEXT:    ldr q0, [sp, #64] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    mov w23, w0
+; CHECK-i32-NEXT:    bl lrintl
+; CHECK-i32-NEXT:    ldr q0, [sp, #80] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    mov w24, w0
+; CHECK-i32-NEXT:    bl lrintl
+; CHECK-i32-NEXT:    ldr q0, [sp, #96] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    mov w25, w0
+; CHECK-i32-NEXT:    bl lrintl
+; CHECK-i32-NEXT:    fmov s1, w22
+; CHECK-i32-NEXT:    fmov s0, w0
+; CHECK-i32-NEXT:    mov v0.s[1], w25
+; CHECK-i32-NEXT:    mov v1.s[1], w21
+; CHECK-i32-NEXT:    ldp x22, x21, [sp, #144] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    ldp x30, x25, [sp, #112] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    mov v0.s[2], w24
+; CHECK-i32-NEXT:    mov v1.s[2], w20
+; CHECK-i32-NEXT:    mov v0.s[3], w23
+; CHECK-i32-NEXT:    mov v1.s[3], w19
+; CHECK-i32-NEXT:    ldp x20, x19, [sp, #160] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    ldp x24, x23, [sp, #128] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    add sp, sp, #176
+; CHECK-i32-NEXT:    ret
+;
+; CHECK-i64-LABEL: lrint_v8fp128:
+; CHECK-i64:       // %bb.0:
+; CHECK-i64-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-i64-NEXT:    sub sp, sp, #128
+; CHECK-i64-NEXT:    addvl sp, sp, #-2
+; CHECK-i64-NEXT:    str q0, [sp, #112] // 16-byte Folded Spill
+; CHECK-i64-NEXT:    mov v0.16b, v7.16b
+; CHECK-i64-NEXT:    stp q6, q5, [sp, #16] // 32-byte Folded Spill
+; CHECK-i64-NEXT:    stp q4, q3, [sp, #48] // 32-byte Folded Spill
+; CHECK-i64-NEXT:    stp q2, q1, [sp, #80] // 32-byte Folded Spill
+; CHECK-i64-NEXT:    bl lrintl
+; CHECK-i64-NEXT:    fmov d0, x0
+; CHECK-i64-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-i64-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    bl lrintl
+; CHECK-i64-NEXT:    fmov d0, x0
+; CHECK-i64-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    add x8, sp, #128
+; CHECK-i64-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-i64-NEXT:    str z0, [x8, #1, mul vl] // 16-byte Folded Spill
+; CHECK-i64-NEXT:    ldr q0, [sp, #32] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    bl lrintl
+; CHECK-i64-NEXT:    fmov d0, x0
+; CHECK-i64-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
+; CHECK-i64-NEXT:    ldr q0, [sp, #48] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    bl lrintl
+; CHECK-i64-NEXT:    fmov d0, x0
+; CHECK-i64-NEXT:    ldr q1, [sp, #32] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    add x8, sp, #128
+; CHECK-i64-NEXT:    ptrue p0.d, vl2
+; CHECK-i64-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-i64-NEXT:    ldr z1, [x8, #1, mul vl] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    splice z0.d, p0, z0.d, z1.d
+; CHECK-i64-NEXT:    str z0, [x8, #1, mul vl] // 16-byte Folded Spill
+; CHECK-i64-NEXT:    ldr q0, [sp, #64] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    bl lrintl
+; CHECK-i64-NEXT:    fmov d0, x0
+; CHECK-i64-NEXT:    str q0, [sp, #64] // 16-byte Folded Spill
+; CHECK-i64-NEXT:    ldr q0, [sp, #80] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    bl lrintl
+; CHECK-i64-NEXT:    fmov d0, x0
+; CHECK-i64-NEXT:    ldr q1, [sp, #64] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    add x8, sp, #128
+; CHECK-i64-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-i64-NEXT:    str z0, [x8] // 16-byte Folded Spill
+; CHECK-i64-NEXT:    ldr q0, [sp, #96] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    bl lrintl
+; CHECK-i64-NEXT:    fmov d0, x0
+; CHECK-i64-NEXT:    str q0, [sp, #96] // 16-byte Folded Spill
+; CHECK-i64-NEXT:    ldr q0, [sp, #112] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    bl lrintl
+; CHECK-i64-NEXT:    fmov d0, x0
+; CHECK-i64-NEXT:    ldr q1, [sp, #96] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    add x8, sp, #128
+; CHECK-i64-NEXT:    ptrue p0.d, vl2
+; CHECK-i64-NEXT:    ldr z2, [x8, #1, mul vl] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-i64-NEXT:    ldr z1, [x8] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    mov z3.d, z2.d
+; CHECK-i64-NEXT:    splice z0.d, p0, z0.d, z1.d
+; CHECK-i64-NEXT:    ext z3.b, z3.b, z2.b, #16
+; CHECK-i64-NEXT:    // kill: def $q2 killed $q2 killed $z2
+; CHECK-i64-NEXT:    // kill: def $q3 killed $q3 killed $z3
+; CHECK-i64-NEXT:    mov z1.d, z0.d
+; CHECK-i64-NEXT:    ext z1.b, z1.b, z0.b, #16
+; CHECK-i64-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-i64-NEXT:    // kill: def $q1 killed $q1 killed $z1
+; CHECK-i64-NEXT:    addvl sp, sp, #2
+; CHECK-i64-NEXT:    add sp, sp, #128
+; CHECK-i64-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-i64-NEXT:    ret
+  %a = call <8 x iXLen> @llvm.lrint.v8iXLen.v8fp128(<8 x fp128> %x)
+  ret <8 x iXLen> %a
+}
+declare <8 x iXLen> @llvm.lrint.v8iXLen.v8fp128(<8 x fp128>)
+
+define <16 x iXLen> @lrint_v16fp128(<16 x fp128> %x) nounwind {
+; CHECK-i32-LABEL: lrint_v16fp128:
+; CHECK-i32:       // %bb.0:
+; CHECK-i32-NEXT:    sub sp, sp, #368
+; CHECK-i32-NEXT:    stp q3, q0, [sp, #144] // 32-byte Folded Spill
+; CHECK-i32-NEXT:    stp q2, q1, [sp, #176] // 32-byte Folded Spill
+; CHECK-i32-NEXT:    ldr q1, [sp, #368]
+; CHECK-i32-NEXT:    stp x29, x30, [sp, #272] // 16-byte Folded Spill
+; CHECK-i32-NEXT:    str q1, [sp, #64] // 16-byte Folded Spill
+; CHECK-i32-NEXT:    ldr q1, [sp, #384]
+; CHECK-i32-NEXT:    stp x28, x27, [sp, #288] // 16-byte Folded Spill
+; CHECK-i32-NEXT:    str q1, [sp, #48] // 16-byte Folded Spill
+; CHECK-i32-NEXT:    ldr q1, [sp, #400]
+; CHECK-i32-NEXT:    stp x26, x25, [sp, #304] // 16-byte Folded Spill
+; CHECK-i32-NEXT:    str q1, [sp, #32] // 16-byte Folded Spill
+; CHECK-i32-NEXT:    ldr q1, [sp, #416]
+; CHECK-i32-NEXT:    stp x24, x23, [sp, #320] // 16-byte Folded Spill
+; CHECK-i32-NEXT:    str q1, [sp, #208] // 16-byte Folded Spill
+; CHECK-i32-NEXT:    ldr q1, [sp, #432]
+; CHECK-i32-NEXT:    stp x22, x21, [sp, #336] // 16-byte Folded Spill
+; CHECK-i32-NEXT:    str q1, [sp, #16] // 16-byte Folded Spill
+; CHECK-i32-NEXT:    ldr q1, [sp, #448]
+; CHECK-i32-NEXT:    stp x20, x19, [sp, #352] // 16-byte Folded Spill
+; CHECK-i32-NEXT:    str q1, [sp, #224] // 16-byte Folded Spill
+; CHECK-i32-NEXT:    ldr q1, [sp, #464]
+; CHECK-i32-NEXT:    stp q7, q6, [sp, #80] // 32-byte Folded Spill
+; CHECK-i32-NEXT:    str q1, [sp, #240] // 16-byte Folded Spill
+; CHECK-i32-NEXT:    ldr q1, [sp, #480]
+; CHECK-i32-NEXT:    stp q5, q4, [sp, #112] // 32-byte Folded Spill
+; CHECK-i32-NEXT:    mov v0.16b, v1.16b
+; CHECK-i32-NEXT:    bl lrintl
+; CHECK-i32-NEXT:    ldr q0, [sp, #240] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    str w0, [sp, #268] // 4-byte Folded Spill
+; CHECK-i32-NEXT:    bl lrintl
+; CHECK-i32-NEXT:    ldr q0, [sp, #224] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    str w0, [sp, #240] // 4-byte Folded Spill
+; CHECK-i32-NEXT:    bl lrintl
+; CHECK-i32-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    str w0, [sp, #224] // 4-byte Folded Spill
+; CHECK-i32-NEXT:    bl lrintl
+; CHECK-i32-NEXT:    ldr q0, [sp, #208] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    mov w23, w0
+; CHECK-i32-NEXT:    bl lrintl
+; CHECK-i32-NEXT:    ldr q0, [sp, #32] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    str w0, [sp, #208] // 4-byte Folded Spill
+; CHECK-i32-NEXT:    bl lrintl
+; CHECK-i32-NEXT:    ldr q0, [sp, #48] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    mov w24, w0
+; CHECK-i32-NEXT:    bl lrintl
+; CHECK-i32-NEXT:    ldr q0, [sp, #64] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    mov w25, w0
+; CHECK-i32-NEXT:    bl lrintl
+; CHECK-i32-NEXT:    ldr q0, [sp, #80] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    mov w27, w0
+; CHECK-i32-NEXT:    bl lrintl
+; CHECK-i32-NEXT:    ldr q0, [sp, #96] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    mov w26, w0
+; CHECK-i32-NEXT:    bl lrintl
+; CHECK-i32-NEXT:    ldr q0, [sp, #112] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    mov w28, w0
+; CHECK-i32-NEXT:    bl lrintl
+; CHECK-i32-NEXT:    ldr q0, [sp, #128] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    mov w29, w0
+; CHECK-i32-NEXT:    bl lrintl
+; CHECK-i32-NEXT:    ldr q0, [sp, #144] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    mov w19, w0
+; CHECK-i32-NEXT:    bl lrintl
+; CHECK-i32-NEXT:    ldr q0, [sp, #176] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    mov w20, w0
+; CHECK-i32-NEXT:    bl lrintl
+; CHECK-i32-NEXT:    ldr q0, [sp, #192] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    mov w21, w0
+; CHECK-i32-NEXT:    bl lrintl
+; CHECK-i32-NEXT:    ldr q0, [sp, #160] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    mov w22, w0
+; CHECK-i32-NEXT:    bl lrintl
+; CHECK-i32-NEXT:    fmov s1, w19
+; CHECK-i32-NEXT:    fmov s0, w0
+; CHECK-i32-NEXT:    ldr w8, [sp, #224] // 4-byte Folded Reload
+; CHECK-i32-NEXT:    fmov s2, w27
+; CHECK-i32-NEXT:    fmov s3, w23
+; CHECK-i32-NEXT:    mov v0.s[1], w22
+; CHECK-i32-NEXT:    mov v1.s[1], w29
+; CHECK-i32-NEXT:    mov v2.s[1], w25
+; CHECK-i32-NEXT:    mov v3.s[1], w8
+; CHECK-i32-NEXT:    ldr w8, [sp, #240] // 4-byte Folded Reload
+; CHECK-i32-NEXT:    ldp x29, x30, [sp, #272] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    mov v0.s[2], w21
+; CHECK-i32-NEXT:    mov v1.s[2], w28
+; CHECK-i32-NEXT:    mov v2.s[2], w24
+; CHECK-i32-NEXT:    mov v3.s[2], w8
+; CHECK-i32-NEXT:    ldr w8, [sp, #208] // 4-byte Folded Reload
+; CHECK-i32-NEXT:    ldp x22, x21, [sp, #336] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    ldp x24, x23, [sp, #320] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    mov v0.s[3], w20
+; CHECK-i32-NEXT:    mov v1.s[3], w26
+; CHECK-i32-NEXT:    mov v2.s[3], w8
+; CHECK-i32-NEXT:    ldr w8, [sp, #268] // 4-byte Folded Reload
+; CHECK-i32-NEXT:    ldp x20, x19, [sp, #352] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    ldp x26, x25, [sp, #304] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    mov v3.s[3], w8
+; CHECK-i32-NEXT:    ldp x28, x27, [sp, #288] // 16-byte Folded Reload
+; CHECK-i32-NEXT:    add sp, sp, #368
+; CHECK-i32-NEXT:    ret
+;
+; CHECK-i64-LABEL: lrint_v16fp128:
+; CHECK-i64:       // %bb.0:
+; CHECK-i64-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-i64-NEXT:    sub sp, sp, #256
+; CHECK-i64-NEXT:    addvl sp, sp, #-4
+; CHECK-i64-NEXT:    addvl x8, sp, #4
+; CHECK-i64-NEXT:    str q1, [sp, #240] // 16-byte Folded Spill
+; CHECK-i64-NEXT:    ldr q1, [x8, #272]
+; CHECK-i64-NEXT:    addvl x8, sp, #4
+; CHECK-i64-NEXT:    str q0, [sp, #224] // 16-byte Folded Spill
+; CHECK-i64-NEXT:    stp q7, q6, [sp, #128] // 32-byte Folded Spill
+; CHECK-i64-NEXT:    str q1, [sp, #112] // 16-byte Folded Spill
+; CHECK-i64-NEXT:    ldr q1, [x8, #288]
+; CHECK-i64-NEXT:    addvl x8, sp, #4
+; CHECK-i64-NEXT:    stp q5, q4, [sp, #160] // 32-byte Folded Spill
+; CHECK-i64-NEXT:    str q1, [sp, #96] // 16-byte Folded Spill
+; CHECK-i64-NEXT:    ldr q1, [x8, #304]
+; CHECK-i64-NEXT:    addvl x8, sp, #4
+; CHECK-i64-NEXT:    stp q3, q2, [sp, #192] // 32-byte Folded Spill
+; CHECK-i64-NEXT:    str q1, [sp, #80] // 16-byte Folded Spill
+; CHECK-i64-NEXT:    ldr q1, [x8, #320]
+; CHECK-i64-NEXT:    addvl x8, sp, #4
+; CHECK-i64-NEXT:    str q1, [sp, #64] // 16-byte Folded Spill
+; CHECK-i64-NEXT:    ldr q1, [x8, #336]
+; CHECK-i64-NEXT:    addvl x8, sp, #4
+; CHECK-i64-NEXT:    str q1, [sp, #48] // 16-byte Folded Spill
+; CHECK-i64-NEXT:    ldr q1, [x8, #352]
+; CHECK-i64-NEXT:    addvl x8, sp, #4
+; CHECK-i64-NEXT:    str q1, [sp, #32] // 16-byte Folded Spill
+; CHECK-i64-NEXT:    ldr q1, [x8, #368]
+; CHECK-i64-NEXT:    addvl x8, sp, #4
+; CHECK-i64-NEXT:    str q1, [sp, #16] // 16-byte Folded Spill
+; CHECK-i64-NEXT:    ldr q1, [x8, #384]
+; CHECK-i64-NEXT:    mov v0.16b, v1.16b
+; CHECK-i64-NEXT:    bl lrintl
+; CHECK-i64-NEXT:    fmov d0, x0
+; CHECK-i64-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-i64-NEXT:    ldr q0, [sp, #16] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    bl lrintl
+; CHECK-i64-NEXT:    fmov d0, x0
+; CHECK-i64-NEXT:    ldr q1, [sp] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    add x8, sp, #256
+; CHECK-i64-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-i64-NEXT:    str z0, [x8, #3, mul vl] // 16-byte Folded Spill
+; CHECK-i64-NEXT:    ldr q0, [sp, #32] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    bl lrintl
+; CHECK-i64-NEXT:    fmov d0, x0
+; CHECK-i64-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
+; CHECK-i64-NEXT:    ldr q0, [sp, #48] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    bl lrintl
+; CHECK-i64-NEXT:    fmov d0, x0
+; CHECK-i64-NEXT:    ldr q1, [sp, #32] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    add x8, sp, #256
+; CHECK-i64-NEXT:    ptrue p0.d, vl2
+; CHECK-i64-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-i64-NEXT:    ldr z1, [x8, #3, mul vl] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    splice z0.d, p0, z0.d, z1.d
+; CHECK-i64-NEXT:    str z0, [x8, #3, mul vl] // 16-byte Folded Spill
+; CHECK-i64-NEXT:    ldr q0, [sp, #64] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    bl lrintl
+; CHECK-i64-NEXT:    fmov d0, x0
+; CHECK-i64-NEXT:    str q0, [sp, #64] // 16-byte Folded Spill
+; CHECK-i64-NEXT:    ldr q0, [sp, #80] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    bl lrintl
+; CHECK-i64-NEXT:    fmov d0, x0
+; CHECK-i64-NEXT:    ldr q1, [sp, #64] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    add x8, sp, #256
+; CHECK-i64-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-i64-NEXT:    str z0, [x8, #2, mul vl] // 16-byte Folded Spill
+; CHECK-i64-NEXT:    ldr q0, [sp, #96] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    bl lrintl
+; CHECK-i64-NEXT:    fmov d0, x0
+; CHECK-i64-NEXT:    str q0, [sp, #96] // 16-byte Folded Spill
+; CHECK-i64-NEXT:    ldr q0, [sp, #112] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    bl lrintl
+; CHECK-i64-NEXT:    fmov d0, x0
+; CHECK-i64-NEXT:    ldr q1, [sp, #96] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    add x8, sp, #256
+; CHECK-i64-NEXT:    ptrue p0.d, vl2
+; CHECK-i64-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-i64-NEXT:    ldr z1, [x8, #2, mul vl] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    splice z0.d, p0, z0.d, z1.d
+; CHECK-i64-NEXT:    str z0, [x8, #2, mul vl] // 16-byte Folded Spill
+; CHECK-i64-NEXT:    ldr q0, [sp, #128] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    bl lrintl
+; CHECK-i64-NEXT:    fmov d0, x0
+; CHECK-i64-NEXT:    str q0, [sp, #128] // 16-byte Folded Spill
+; CHECK-i64-NEXT:    ldr q0, [sp, #144] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    bl lrintl
+; CHECK-i64-NEXT:    fmov d0, x0
+; CHECK-i64-NEXT:    ldr q1, [sp, #128] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    add x8, sp, #256
+; CHECK-i64-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-i64-NEXT:    str z0, [x8, #1, mul vl] // 16-byte Folded Spill
+; CHECK-i64-NEXT:    ldr q0, [sp, #160] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    bl lrintl
+; CHECK-i64-NEXT:    fmov d0, x0
+; CHECK-i64-NEXT:    str q0, [sp, #160] // 16-byte Folded Spill
+; CHECK-i64-NEXT:    ldr q0, [sp, #176] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    bl lrintl
+; CHECK-i64-NEXT:    fmov d0, x0
+; CHECK-i64-NEXT:    ldr q1, [sp, #160] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    add x8, sp, #256
+; CHECK-i64-NEXT:    ptrue p0.d, vl2
+; CHECK-i64-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-i64-NEXT:    ldr z1, [x8, #1, mul vl] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    splice z0.d, p0, z0.d, z1.d
+; CHECK-i64-NEXT:    str z0, [x8, #1, mul vl] // 16-byte Folded Spill
+; CHECK-i64-NEXT:    ldr q0, [sp, #192] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    bl lrintl
+; CHECK-i64-NEXT:    fmov d0, x0
+; CHECK-i64-NEXT:    str q0, [sp, #192] // 16-byte Folded Spill
+; CHECK-i64-NEXT:    ldr q0, [sp, #208] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    bl lrintl
+; CHECK-i64-NEXT:    fmov d0, x0
+; CHECK-i64-NEXT:    ldr q1, [sp, #192] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    add x8, sp, #256
+; CHECK-i64-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-i64-NEXT:    str z0, [x8] // 16-byte Folded Spill
+; CHECK-i64-NEXT:    ldr q0, [sp, #240] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    bl lrintl
+; CHECK-i64-NEXT:    fmov d0, x0
+; CHECK-i64-NEXT:    str q0, [sp, #240] // 16-byte Folded Spill
+; CHECK-i64-NEXT:    ldr q0, [sp, #224] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    bl lrintl
+; CHECK-i64-NEXT:    fmov d0, x0
+; CHECK-i64-NEXT:    ldr q1, [sp, #240] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    add x8, sp, #256
+; CHECK-i64-NEXT:    ptrue p0.d, vl2
+; CHECK-i64-NEXT:    ldr z2, [x8, #1, mul vl] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    ldr z4, [x8, #2, mul vl] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    ldr z6, [x8, #3, mul vl] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-i64-NEXT:    ldr z1, [x8] // 16-byte Folded Reload
+; CHECK-i64-NEXT:    mov z3.d, z2.d
+; CHECK-i64-NEXT:    mov z5.d, z4.d
+; CHECK-i64-NEXT:    mov z7.d, z6.d
+; CHECK-i64-NEXT:    splice z0.d, p0, z0.d, z1.d
+; CHECK-i64-NEXT:    ext z3.b, z3.b, z2.b, #16
+; CHECK-i64-NEXT:    ext z5.b, z5.b, z4.b, #16
+; CHECK-i64-NEXT:    ext z7.b, z7.b, z6.b, #16
+; CHECK-i64-NEXT:    // kill: def $q2 killed $q2 killed $z2
+; CHECK-i64-NEXT:    // kill: def $q4 killed $q4 killed $z4
+; CHECK-i64-NEXT:    // kill: def $q3 killed $q3 killed $z3
+; CHECK-i64-NEXT:    // kill: def $q5 killed $q5 killed $z5
+; CHECK-i64-NEXT:    // kill: def $q6 killed $q6 killed $z6
+; CHECK-i64-NEXT:    // kill: def $q7 killed $q7 killed $z7
+; CHECK-i64-NEXT:    mov z1.d, z0.d
+; CHECK-i64-NEXT:    ext z1.b, z1.b, z0.b, #16
+; CHECK-i64-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-i64-NEXT:    // kill: def $q1 killed $q1 killed $z1
+; CHECK-i64-NEXT:    addvl sp, sp, #4
+; CHECK-i64-NEXT:    add sp, sp, #256
+; CHECK-i64-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-i64-NEXT:    ret
+  %a = call <16 x iXLen> @llvm.lrint.v16iXLen.v16fp128(<16 x fp128> %x)
+  ret <16 x iXLen> %a
+}
+declare <16 x iXLen> @llvm.lrint.v16iXLen.v16fp128(<16 x fp128>)

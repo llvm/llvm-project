@@ -9063,7 +9063,7 @@ static void PrintDyldLoadCommand(MachO::dylinker_command dyld,
   if (dyld.name >= dyld.cmdsize)
     outs() << "         name ?(bad offset " << dyld.name << ")\n";
   else {
-    const char *P = (const char *)(Ptr) + dyld.name;
+    const char *P = Ptr + dyld.name;
     outs() << "         name " << P << " (offset " << dyld.name << ")\n";
   }
 }
@@ -9094,7 +9094,7 @@ static void PrintRpathLoadCommand(MachO::rpath_command rpath, const char *Ptr) {
   if (rpath.path >= rpath.cmdsize)
     outs() << "         path ?(bad offset " << rpath.path << ")\n";
   else {
-    const char *P = (const char *)(Ptr) + rpath.path;
+    const char *P = Ptr + rpath.path;
     outs() << "         path " << P << " (offset " << rpath.path << ")\n";
   }
 }
@@ -10041,7 +10041,7 @@ static void PrintDylibCommand(MachO::dylib_command dl, const char *Ptr) {
   else
     outs() << "\n";
   if (dl.dylib.name < dl.cmdsize) {
-    const char *P = (const char *)(Ptr) + dl.dylib.name;
+    const char *P = Ptr + dl.dylib.name;
     outs() << "         name " << P << " (offset " << dl.dylib.name << ")\n";
   } else {
     outs() << "         name ?(bad offset " << dl.dylib.name << ")\n";
