@@ -5877,8 +5877,8 @@ CanQualType ASTContext::getCanonicalTypeDeclType(const TypeDecl *TD) const {
 QualType ASTContext::getTypeDeclType(const TypeDecl *Decl) const {
   if (const auto *TD = dyn_cast<TagDecl>(Decl))
     return getCanonicalTagType(TD);
-  if (const auto *TD = dyn_cast<TypedefNameDecl>(Decl);
-      isa_and_nonnull<TypedefDecl, TypeAliasDecl>(TD))
+  if (const auto *TD = dyn_cast<TypedefNameDecl>(Decl))
+    // Downstream change: this doesn't handle ObjCTypeParamDecl in upstream
     return getTypedefType(ElaboratedTypeKeyword::None,
                           /*Qualifier=*/std::nullopt, TD);
   if (const auto *Using = dyn_cast<UnresolvedUsingTypenameDecl>(Decl))
