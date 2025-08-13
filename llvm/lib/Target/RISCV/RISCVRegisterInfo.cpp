@@ -390,15 +390,14 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
 }
 
 static std::tuple<RISCVVType::VLMUL, const TargetRegisterClass &, unsigned>
-getSpillReloadInfo(unsigned Idx, unsigned Total, uint16_t RegEncoding,
-                   bool IsSpill) {
-  if (Idx + 8 <= Total && RegEncoding % 8 == 0)
+getSpillReloadInfo(unsigned NumRemaining, uint16_t RegEncoding, bool IsSpill) {
+  if (NumRemaining >= 8 && RegEncoding % 8 == 0)
     return {RISCVVType::LMUL_8, RISCV::VRM8RegClass,
             IsSpill ? RISCV::VS8R_V : RISCV::VL8RE8_V};
-  if (Idx + 4 <= Total && RegEncoding % 4 == 0)
+  if (NumRemaining >= 4 && RegEncoding % 4 == 0)
     return {RISCVVType::LMUL_4, RISCV::VRM4RegClass,
             IsSpill ? RISCV::VS4R_V : RISCV::VL4RE8_V};
-  if (Idx + 2 <= Total && RegEncoding % 2 == 0)
+  if (NumRemaining >= 2 && RegEncoding % 2 == 0)
     return {RISCVVType::LMUL_2, RISCV::VRM2RegClass,
             IsSpill ? RISCV::VS2R_V : RISCV::VL2RE8_V};
   return {RISCVVType::LMUL_1, RISCV::VRRegClass,
@@ -431,20 +430,21 @@ void RISCVRegisterInfo::lowerVSPILL(MachineBasicBlock::iterator II) const {
   auto *OldMMO = *(II->memoperands_begin());
   LocationSize OldLoc = OldMMO->getSize();
   assert(OldLoc.isPrecise() && OldLoc.getValue().isKnownMultipleOf(NF));
-  TypeSize NewSize = OldLoc.getValue().divideCoefficientBy(NumRegs);
+  TypeSize VRegSize = OldLoc.getValue().divideCoefficientBy(NumRegs);
 
   Register VLENB = 0;
   unsigned PreSavedNum = 0;
   unsigned I = 0;
   while (I != NumRegs) {
     auto [LMulSaved, RegClass, Opcode] =
-        getSpillReloadInfo(I, NumRegs, SrcEncoding, true);
+        getSpillReloadInfo(NumRegs - I, SrcEncoding, /*IsSpill=*/true);
     auto [NumSaved, _] = RISCVVType::decodeVLMUL(LMulSaved);
     if (PreSavedNum) {
-      Register Step = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+      Register Step;
       if (auto VLEN = STI.getRealVLen()) {
         const int64_t VLENB = *VLEN / 8;
         int64_t Offset = VLENB * PreSavedNum;
+        Step = MRI.createVirtualRegister(&RISCV::GPRRegClass);
         STI.getInstrInfo()->movImm(MBB, II, DL, Step, Offset);
       } else {
         if (!VLENB) {
@@ -454,10 +454,12 @@ void RISCVRegisterInfo::lowerVSPILL(MachineBasicBlock::iterator II) const {
         uint32_t ShiftAmount = Log2_32(PreSavedNum);
         if (ShiftAmount == 0)
           Step = VLENB;
-        else
+        else {
+          Step = MRI.createVirtualRegister(&RISCV::GPRRegClass);
           BuildMI(MBB, II, DL, TII->get(RISCV::SLLI), Step)
               .addReg(VLENB)
               .addImm(ShiftAmount);
+        }
       }
 
       BuildMI(MBB, II, DL, TII->get(RISCV::ADD), NewBase)
@@ -472,7 +474,7 @@ void RISCVRegisterInfo::lowerVSPILL(MachineBasicBlock::iterator II) const {
         .addReg(ActualSrcReg)
         .addReg(Base, getKillRegState(I + NumSaved == NumRegs))
         .addMemOperand(MF.getMachineMemOperand(OldMMO, OldMMO->getOffset(),
-                                               NewSize * NumSaved))
+                                               VRegSize * NumSaved))
         .addReg(SrcReg, RegState::Implicit);
 
     PreSavedNum = NumSaved;
@@ -508,18 +510,19 @@ void RISCVRegisterInfo::lowerVRELOAD(MachineBasicBlock::iterator II) const {
   auto *OldMMO = *(II->memoperands_begin());
   LocationSize OldLoc = OldMMO->getSize();
   assert(OldLoc.isPrecise() && OldLoc.getValue().isKnownMultipleOf(NF));
-  TypeSize NewSize = OldLoc.getValue().divideCoefficientBy(NumRegs);
+  TypeSize VRegSize = OldLoc.getValue().divideCoefficientBy(NumRegs);
 
   Register VLENB = 0;
   unsigned PreReloadedNum = 0;
   unsigned I = 0;
   while (I != NumRegs) {
     auto [LMulReloaded, RegClass, Opcode] =
-        getSpillReloadInfo(I, NumRegs, DestEncoding, false);
+        getSpillReloadInfo(NumRegs - I, DestEncoding, /*IsSpill=*/false);
     auto [NumReloaded, _] = RISCVVType::decodeVLMUL(LMulReloaded);
     if (PreReloadedNum) {
-      Register Step = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+      Register Step;
       if (auto VLEN = STI.getRealVLen()) {
+        Step = MRI.createVirtualRegister(&RISCV::GPRRegClass);
         const int64_t VLENB = *VLEN / 8;
         int64_t Offset = VLENB * PreReloadedNum;
         STI.getInstrInfo()->movImm(MBB, II, DL, Step, Offset);
@@ -531,10 +534,12 @@ void RISCVRegisterInfo::lowerVRELOAD(MachineBasicBlock::iterator II) const {
         uint32_t ShiftAmount = Log2_32(PreReloadedNum);
         if (ShiftAmount == 0)
           Step = VLENB;
-        else
+        else {
+          Step = MRI.createVirtualRegister(&RISCV::GPRRegClass);
           BuildMI(MBB, II, DL, TII->get(RISCV::SLLI), Step)
               .addReg(VLENB)
               .addImm(ShiftAmount);
+        }
       }
 
       BuildMI(MBB, II, DL, TII->get(RISCV::ADD), NewBase)
@@ -548,7 +553,7 @@ void RISCVRegisterInfo::lowerVRELOAD(MachineBasicBlock::iterator II) const {
     BuildMI(MBB, II, DL, TII->get(Opcode), ActualDestReg)
         .addReg(Base, getKillRegState(I + NumReloaded == NumRegs))
         .addMemOperand(MF.getMachineMemOperand(OldMMO, OldMMO->getOffset(),
-                                               NewSize * NumReloaded));
+                                               VRegSize * NumReloaded));
 
     PreReloadedNum = NumReloaded;
     DestEncoding += NumReloaded;
