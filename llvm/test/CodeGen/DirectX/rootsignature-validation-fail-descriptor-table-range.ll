@@ -5,7 +5,7 @@ entry:
   ret void
 }
 
-; DescriptorTable(UAV(u0, numDescriptors=unbounded), visibility = SHADER_VISIBILITY_HULL), DescriptorTable(UAV(u2, numDescriptors=4))
+; DescriptorTable(UAV(u0, numDescriptors=unbounded)), DescriptorTable(UAV(u2, numDescriptors=4))
 !dx.rootsignatures = !{!0}
 !0 = !{ptr @CSMain, !1, i32 2}
 !1 = !{!2, !4}

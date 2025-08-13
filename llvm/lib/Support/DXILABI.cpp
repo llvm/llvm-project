@@ -1,14 +1,21 @@
+//===-- DXILABI.cpp - ABI Sensitive Values for DXIL ---------------*- C++
+//-*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file implements functions that can be reused accross different stages
+// dxil generation.
+//
+//===----------------------------------------------------------------------===//
 
-#include "llvm/Support/DXILABI.h"
 #include "llvm/BinaryFormat/DXContainer.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ScopedPrinter.h"
-
 using namespace llvm;
-namespace llvm {
-namespace dxil {
-StringRef getResourceClassName(dxil::ResourceClass RC) {
+
+StringRef dxil::getResourceClassName(dxil::ResourceClass RC) {
   return enumToStringRef(RC, dxbc::getResourceClasses());
 }
-} // namespace dxil
-} // namespace llvm

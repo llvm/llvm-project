@@ -51,9 +51,10 @@ static ResourceClass toResourceClass(dxbc::RootParameterType Type) {
   case RootParameterType::CBV:
     return ResourceClass::CBuffer;
   case dxbc::RootParameterType::DescriptorTable:
+    llvm_unreachable("DescriptorTable is not convertible to ResourceClass");
     break;
   }
-  llvm_unreachable("Unconvertible RootParameterType");
+  llvm_unreachable("Unknown RootParameterType");
 }
 
 static void reportInvalidDirection(Module &M, DXILResourceMap &DRM) {
