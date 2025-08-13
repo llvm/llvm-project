@@ -750,6 +750,13 @@ bool LoopConstrainer::run() {
   const SCEVConstant *MinusOneS =
       cast<SCEVConstant>(SE.getConstant(IVTy, -1, true /* isSigned */));
 
+  if ((NeedsPreLoop || NeedsPostLoop) &&
+      !OriginalLoop.isSafeToCloneConditionally(DT)) {
+    LLVM_DEBUG(dbgs() << "cannot clone loop " << OriginalLoop.getName()
+                      << " because it is not safe to clone.\n");
+    return false;
+  }
+
   if (NeedsPreLoop) {
     const SCEV *ExitPreLoopAtSCEV = nullptr;
 
