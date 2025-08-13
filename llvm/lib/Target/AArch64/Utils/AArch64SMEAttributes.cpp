@@ -81,6 +81,10 @@ SMEAttrs::SMEAttrs(const AttributeList &Attrs) {
 
 void SMEAttrs::addKnownFunctionAttrs(StringRef FuncName,
                                      const TargetLowering &TLI) {
+  // Skip functions that do not appear to be builtins (starting with "__").
+  if (!FuncName.starts_with('_'))
+    return;
+
   struct SMERoutineAttr {
     RTLIB::Libcall LC{RTLIB::UNKNOWN_LIBCALL};
     unsigned Attrs{SMEAttrs::Normal};
