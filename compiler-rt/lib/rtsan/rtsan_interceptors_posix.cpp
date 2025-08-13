@@ -66,7 +66,7 @@ struct DlsymAlloc : public DlSymAllocator<DlsymAlloc> {
 };
 } // namespace
 
-// See note in tsan or ddsan as to why this is necessary
+// See note in tsan as to why this is necessary
 static pthread_cond_t *init_cond(pthread_cond_t *c, bool force = false) {
   if (!common_flags()->legacy_pthread_cond)
     return c;
