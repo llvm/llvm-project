@@ -37,6 +37,7 @@ static ResourceClass toResourceClass(dxbc::DescriptorRangeType RangeType) {
   case DescriptorRangeType::Sampler:
     return ResourceClass::Sampler;
   }
+  llvm_unreachable("Unknown DescriptorRangeType");
 }
 
 static ResourceClass toResourceClass(dxbc::RootParameterType Type) {
