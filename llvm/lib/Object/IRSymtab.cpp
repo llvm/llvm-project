@@ -54,7 +54,7 @@ static constexpr StringLiteral PreservedSymbols[] = {
     "__stack_chk_guard",
 };
 
-static constexpr bool isPreservedGlobalVarName(StringRef Name) {
+static bool isPreservedGlobalVarName(StringRef Name) {
   return PreservedSymbols[0] == Name || PreservedSymbols[1] == Name;
 }
 
