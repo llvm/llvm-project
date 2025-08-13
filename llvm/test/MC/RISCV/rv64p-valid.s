@@ -55,7 +55,7 @@ max t3, t4, t5
 # CHECK-ASM-AND-OBJ: maxu a4, a5, a6
 # CHECK-ASM: encoding: [0x33,0xf7,0x07,0x0b]
 maxu a4, a5, a6
-# CHECK-ASM-AND-OBJ: pslli.b a6, a7
+# CHECK-ASM-AND-OBJ: pslli.b a6, a7, 0
 # CHECK-ASM: encoding: [0x1b,0xa8,0x88,0x80]
 pslli.b a6, a7, 0
 # CHECK-ASM-AND-OBJ: pslli.h ra, sp, 1
