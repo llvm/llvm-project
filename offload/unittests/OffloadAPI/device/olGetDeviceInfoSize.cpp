@@ -48,6 +48,13 @@ TEST_P(olGetDeviceInfoSizeTest, SuccessMaxWorkGroupSize) {
   size_t Size = 0;
   ASSERT_SUCCESS(
       olGetDeviceInfoSize(Device, OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE, &Size));
+  ASSERT_EQ(Size, sizeof(uint32_t));
+}
+
+TEST_P(olGetDeviceInfoSizeTest, SuccessMaxWorkGroupSizePerDimension) {
+  size_t Size = 0;
+  ASSERT_SUCCESS(olGetDeviceInfoSize(
+      Device, OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE_PER_DIMENSION, &Size));
   ASSERT_EQ(Size, sizeof(ol_dimensions_t));
   ASSERT_EQ(Size, sizeof(uint32_t) * 3);
 }

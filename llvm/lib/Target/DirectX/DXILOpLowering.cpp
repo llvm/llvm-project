@@ -746,7 +746,7 @@ public:
     IRBuilder<> &IRB = OpBuilder.getIRB();
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
-      Value *Ptr = CI->getArgOperand(1);
+      Value *Ptr = CI->getArgOperand(0);
       assert(Ptr->getType()->isPointerTy() &&
              "Expected operand of lifetime intrinsic to be a pointer");
 

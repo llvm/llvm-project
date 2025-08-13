@@ -42,7 +42,7 @@ class CIR_TypedAttr<string name, string attrMnemonic, list<Trait> traits = []>
   let assemblyFormat = [{}];
 }
 
-class CIRUnitAttr<string name, string attrMnemonic, list<Trait> traits = []>
+class CIR_UnitAttr<string name, string attrMnemonic, list<Trait> traits = []>
     : CIR_Attr<name, attrMnemonic, traits> {
   let returnType = "bool";
   let defaultValue = "false";
@@ -127,7 +127,7 @@ def CIR_BoolAttr : CIR_Attr<"Bool", "bool", [TypedAttrInterface]> {
 // ZeroAttr
 //===----------------------------------------------------------------------===//
 
-def ZeroAttr : CIR_TypedAttr<"Zero", "zero"> {
+def CIR_ZeroAttr : CIR_TypedAttr<"Zero", "zero"> {
   let summary = "Attribute to represent zero initialization";
   let description = [{
     The ZeroAttr is used to indicate zero initialization on structs.
@@ -138,7 +138,7 @@ def ZeroAttr : CIR_TypedAttr<"Zero", "zero"> {
 // UndefAttr
 //===----------------------------------------------------------------------===//
 
-def UndefAttr : CIR_TypedAttr<"Undef", "undef"> {
+def CIR_UndefAttr : CIR_TypedAttr<"Undef", "undef"> {
   let summary = "Represent an undef constant";
   let description = [{
     The UndefAttr represents an undef constant, corresponding to LLVM's notion
@@ -264,7 +264,9 @@ def CIR_FPAttr : CIR_Attr<"FP", "fp", [TypedAttrInterface]> {
 // ConstArrayAttr
 //===----------------------------------------------------------------------===//
 
-def ConstArrayAttr : CIR_Attr<"ConstArray", "const_array", [TypedAttrInterface]> {
+def CIR_ConstArrayAttr : CIR_Attr<"ConstArray", "const_array", [
+  TypedAttrInterface
+]> {
   let summary = "A constant array from ArrayAttr or StringRefAttr";
   let description = [{
     An CIR array attribute is an array of literals of the specified attr types.
@@ -310,8 +312,9 @@ def ConstArrayAttr : CIR_Attr<"ConstArray", "const_array", [TypedAttrInterface]>
 // ConstVectorAttr
 //===----------------------------------------------------------------------===//
 
-def ConstVectorAttr : CIR_Attr<"ConstVector", "const_vector",
-                               [TypedAttrInterface]> {
+def CIR_ConstVectorAttr : CIR_Attr<"ConstVector", "const_vector", [
+  TypedAttrInterface
+]> {
   let summary = "A constant vector from ArrayAttr";
   let description = [{
     A CIR vector attribute is an array of literals of the specified attribute
@@ -342,7 +345,7 @@ def ConstVectorAttr : CIR_Attr<"ConstVector", "const_vector",
 // ConstPtrAttr
 //===----------------------------------------------------------------------===//
 
-def ConstPtrAttr : CIR_Attr<"ConstPtr", "ptr", [TypedAttrInterface]> {
+def CIR_ConstPtrAttr : CIR_Attr<"ConstPtr", "ptr", [TypedAttrInterface]> {
   let summary = "Holds a constant pointer value";
   let parameters = (ins
     AttributeSelfTypeParameter<"", "::cir::PointerType">:$type,
@@ -368,11 +371,59 @@ def ConstPtrAttr : CIR_Attr<"ConstPtr", "ptr", [TypedAttrInterface]> {
 }
 
 //===----------------------------------------------------------------------===//
+// GlobalViewAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_GlobalViewAttr : CIR_Attr<"GlobalView", "global_view", [
+  TypedAttrInterface
+]> {
+  let summary = "Provides constant access to a global address";
+  let description = [{
+    Get constant address of global `symbol`. It provides a way to access globals
+    from other global and always produces a pointer.
+
+    The type of the input symbol can be different from `#cir.global_view`
+    output type, since a given view of the global might require a static
+    cast for initializing other globals.
+
+    The result type of this attribute may be an integer type. In such a case,
+    the pointer to the referenced global is casted to an integer and this
+    attribute represents the casted result.
+
+    Example:
+
+    ```
+      cir.global external @s = @".str2": !cir.ptr<i8>
+      cir.global external @x = #cir.global_view<@s> : !cir.ptr<i8>
+      cir.global external @s_addr = #cir.global_view<@s> : !s64i
+    ```
+  }];
+
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type,
+                        "mlir::FlatSymbolRefAttr":$symbol);
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "mlir::Type":$type,
+                                        "mlir::FlatSymbolRefAttr":$symbol), [{
+      return $_get(type.getContext(), type, symbol);
+    }]>
+  ];
+
+  // let genVerifyDecl = 1;
+  let assemblyFormat = [{
+    `<`
+      $symbol
+    `>`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // ConstComplexAttr
 //===----------------------------------------------------------------------===//
 
-def ConstComplexAttr : CIR_Attr<"ConstComplex", "const_complex",
-                                [TypedAttrInterface]> {
+def CIR_ConstComplexAttr : CIR_Attr<"ConstComplex", "const_complex", [
+  TypedAttrInterface
+]> {
   let summary = "An attribute that contains a constant complex value";
   let description = [{
     The `#cir.const_complex` attribute contains a constant value of complex
@@ -454,7 +505,7 @@ def CIR_VisibilityAttr : CIR_EnumAttr<CIR_VisibilityKind, "visibility"> {
 // BitfieldInfoAttr
 //===----------------------------------------------------------------------===//
 
-def BitfieldInfoAttr : CIR_Attr<"BitfieldInfo", "bitfield_info"> {
+def CIR_BitfieldInfoAttr : CIR_Attr<"BitfieldInfo", "bitfield_info"> {
   let summary = "Represents info for a bit-field member";
   let description = [{
     Holds the following information about bitfields: name, storage type, size
@@ -512,5 +563,36 @@ def BitfieldInfoAttr : CIR_Attr<"BitfieldInfo", "bitfield_info"> {
   ];
 }
 
+//===----------------------------------------------------------------------===//
+// AddressPointAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_AddressPointAttr : CIR_Attr<"AddressPoint", "address_point"> {
+  let summary = "Address point attribute";
+
+  let description = [{
+    Attribute specifying the address point within a C++ virtual table (vtable).
+
+    The `index` (vtable index) parameter identifies which vtable to use within a
+    vtable group, while the `offset` (address point index) specifies the offset
+    within that vtable where the address begins.
+
+    Example:
+    ```mlir
+    cir.global linkonce_odr @_ZTV1B = ...
+    ...
+    %3 = cir.vtable.address_point(@_ZTV1B,
+                                  address_point = <index = 0, offset = 2>)
+                                 : !cir.vptr
+    ```
+  }];
+
+  let parameters = (ins "int32_t":$index,
+                        "int32_t":$offset);
+
+  let assemblyFormat = [{
+    `<` struct($index, $offset) `>`
+  }];
+}
 
 #endif // CLANG_CIR_DIALECT_IR_CIRATTRS_TD

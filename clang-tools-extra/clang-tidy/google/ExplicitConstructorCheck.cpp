@@ -72,7 +72,7 @@ static bool isStdInitializerList(QualType Type) {
   }
   if (const auto *RT = Type->getAs<RecordType>()) {
     if (const auto *Specialization =
-            dyn_cast<ClassTemplateSpecializationDecl>(RT->getDecl()))
+            dyn_cast<ClassTemplateSpecializationDecl>(RT->getOriginalDecl()))
       return declIsStdInitializerList(Specialization->getSpecializedTemplate());
   }
   return false;

@@ -238,9 +238,12 @@ void ContainerSizeEmptyCheck::check(const MatchFinder::MatchResult &Result) {
           ? MemberCallObject
           : (Pointee ? Pointee : Result.Nodes.getNodeAs<Expr>("STLObject"));
   FixItHint Hint;
-  std::string ReplacementText = std::string(
-      Lexer::getSourceText(CharSourceRange::getTokenRange(E->getSourceRange()),
-                           *Result.SourceManager, getLangOpts()));
+  std::string ReplacementText =
+      E->isImplicitCXXThis()
+          ? ""
+          : std::string(Lexer::getSourceText(
+                CharSourceRange::getTokenRange(E->getSourceRange()),
+                *Result.SourceManager, getLangOpts()));
   const auto *OpCallExpr = dyn_cast<CXXOperatorCallExpr>(E);
   if (isBinaryOrTernary(E) || isa<UnaryOperator>(E) ||
       (OpCallExpr && (OpCallExpr->getOperator() == OO_Star))) {
@@ -250,6 +253,8 @@ void ContainerSizeEmptyCheck::check(const MatchFinder::MatchResult &Result) {
       OpCallExpr->getOperator() == OverloadedOperatorKind::OO_Arrow) {
     // This can happen if the object is a smart pointer. Don't add anything
     // because a '->' is already there (PR#51776), just call the method.
+    ReplacementText += "empty()";
+  } else if (E->isImplicitCXXThis()) {
     ReplacementText += "empty()";
   } else if (E->getType()->isPointerType())
     ReplacementText += "->empty()";
