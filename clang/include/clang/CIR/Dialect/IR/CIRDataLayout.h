@@ -34,6 +34,21 @@ public:
   void reset(mlir::DataLayoutSpecInterface spec);
 
   bool isBigEndian() const { return bigEndian; }
+
+  /// Returns the maximum number of bytes that may be overwritten by
+  /// storing the specified type.
+  ///
+  /// If Ty is a scalable vector type, the scalable property will be set and
+  /// the runtime size will be a positive integer multiple of the base size.
+  ///
+  /// For example, returns 5 for i36 and 10 for x86_fp80.
+  llvm::TypeSize getTypeStoreSize(mlir::Type ty) const {
+    llvm::TypeSize baseSize = getTypeSizeInBits(ty);
+    return {llvm::divideCeil(baseSize.getKnownMinValue(), 8),
+            baseSize.isScalable()};
+  }
+
+  llvm::TypeSize getTypeSizeInBits(mlir::Type ty) const;
 };
 
 } // namespace cir
