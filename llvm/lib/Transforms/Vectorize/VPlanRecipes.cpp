@@ -108,9 +108,6 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPWidenLoadEVLSC:
   case VPWidenLoadSC:
     return true;
-  case VPInterleaveEVLSC:
-  case VPInterleaveSC:
-    return cast<VPInterleaveBase>(this)->getNumStoreOperands() == 0;
   case VPReplicateSC:
     return cast<Instruction>(getVPSingleValue()->getUnderlyingValue())
         ->mayReadFromMemory();
@@ -146,6 +143,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
     return false;
   }
   default:
+    // FIXME: Return false if the recipe represents an interleaved store.
     return true;
   }
 }
