@@ -21,6 +21,7 @@
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -475,7 +476,7 @@ LogicalResult MemRefAccess::getAccessRelation(IntegerRelation &rel) const {
       continue;
     Identifier idi = rel.getIds(VarKind::SetDim)[i];
     ArrayRef<Identifier> domainIds = domain.getIds(VarKind::SetDim);
-    if (std::find(domainIds.begin(), domainIds.end(), idi) == domainIds.end()) {
+    if (llvm::is_contained(domainIds, idi)) {
       return failure();
     }
   }
