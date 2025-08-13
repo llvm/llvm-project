@@ -2925,7 +2925,16 @@ Sema::getTrivialTemplateArgumentLoc(const TemplateArgument &Arg,
     case TemplateArgument::TemplateExpansion: {
       NestedNameSpecifierLocBuilder Builder;
       TemplateName Template = Arg.getAsTemplateOrTemplatePattern();
-      Builder.MakeTrivial(Context, Template.getQualifier(), Loc);
+      if (DependentTemplateName *DTN = Template.getAsDependentTemplateName())
+        Builder.MakeTrivial(Context, DTN->getQualifier(), Loc);
+      else if (QualifiedTemplateName *QTN =
+                   Template.getAsQualifiedTemplateName())
+        Builder.MakeTrivial(Context, QTN->getQualifier(), Loc);
+
+      if (Arg.getKind() == TemplateArgument::Template)
+        return TemplateArgumentLoc(Context, Arg,
+                                   Builder.getWithLocInContext(Context), Loc);
+
       return TemplateArgumentLoc(
           Context, Arg, Builder.getWithLocInContext(Context), Loc, Loc);
     }
