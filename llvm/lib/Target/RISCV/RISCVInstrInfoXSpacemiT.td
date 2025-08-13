@@ -6,9 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file describes the xsmtvdot vendor extensions defined by SpacemiT.
-// NOTE: This extension instructions only support cases where LMUL is less than
-//       or equal to 1
+// This file describes the vendor extensions defined by SpacemiT.
 //
 //===----------------------------------------------------------------------===//
 
@@ -63,7 +61,7 @@ def SMT_VDot_Slide3 : SMTVEncoding2<0b10>;
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 // Base vector dot product (no slide) format.
 class RVInstSMTVDot<SMTVEncoding2 sign, string opcodestr, string argstr>
-    : RVInst<(outs VREven:$vd), (ins VR:$vs1, VR:$vs2), opcodestr, argstr, [], InstFormatR> {
+    : RVInst<(outs VRM2:$vd), (ins VR:$vs1, VR:$vs2), opcodestr, argstr, [], InstFormatR> {
   bits<5> vd;
   bits<5> vs1;
   bits<5> vs2;
@@ -80,7 +78,7 @@ class RVInstSMTVDot<SMTVEncoding2 sign, string opcodestr, string argstr>
 
 // Sliding-window vector dot product format.
 class RVInstSMTVDotSlide<SMTVEncoding2 funct2, SMTVEncoding2 sign, string opcodestr, string argstr>
-    : RVInst<(outs VREven:$vd), (ins VREven:$vs1, VR:$vs2), opcodestr, argstr, [], InstFormatR> {
+    : RVInst<(outs VRM2:$vd), (ins VRM2:$vs1, VR:$vs2), opcodestr, argstr, [], InstFormatR> {
   bits<5> vd;
   bits<5> vs1;
   bits<5> vs2;

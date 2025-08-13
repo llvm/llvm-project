@@ -787,9 +787,6 @@ def VR : VReg<!listconcat(VM1VTs, VMaskVTs),
 
 def VRNoV0 : VReg<!listconcat(VM1VTs, VMaskVTs), (sub VR, V0), 1>;
 
-let GeneratePressureSet = false in
-def VREven : VReg<VM1VTs, (add (sequence "V%u", 0, 30, 2)), 1>;
-
 def VRM2 : VReg<VM2VTs, (add (sequence "V%uM2", 8, 31, 2),
                              (sequence "V%uM2", 6, 0, 2)), 2>;
 
