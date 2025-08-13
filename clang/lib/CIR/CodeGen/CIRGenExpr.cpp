@@ -184,8 +184,11 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
   if (const UnaryOperator *uo = dyn_cast<UnaryOperator>(expr)) {
     // TODO(cir): maybe we should use cir.unary for pointers here instead.
     if (uo->getOpcode() == UO_AddrOf) {
-      cgm.errorNYI(expr->getSourceRange(), "emitPointerWithAlignment: unary &");
-      return Address::invalid();
+      LValue lv = emitLValue(uo->getSubExpr());
+      if (baseInfo)
+        *baseInfo = lv.getBaseInfo();
+      assert(!cir::MissingFeatures::opTBAA());
+      return lv.getAddress();
     }
   }
 

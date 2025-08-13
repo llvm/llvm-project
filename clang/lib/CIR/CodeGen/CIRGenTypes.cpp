@@ -493,6 +493,20 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     break;
   }
 
+  case Type::Atomic: {
+    QualType valueType = cast<AtomicType>(ty)->getValueType();
+    resultType = convertTypeForMem(valueType);
+
+    // Pad out to the inflated size if necessary.
+    uint64_t valueSize = astContext.getTypeSize(valueType);
+    uint64_t atomicSize = astContext.getTypeSize(ty);
+    if (valueSize != atomicSize) {
+      cgm.errorNYI("convertType: atomic type value size != atomic size");
+    }
+
+    break;
+  }
+
   default:
     cgm.errorNYI(SourceLocation(), "processing of type",
                  type->getTypeClassName());

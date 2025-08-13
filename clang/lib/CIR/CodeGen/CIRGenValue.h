@@ -190,6 +190,7 @@ public:
   bool isSimple() const { return lvType == Simple; }
   bool isVectorElt() const { return lvType == VectorElt; }
   bool isBitField() const { return lvType == BitField; }
+  bool isGlobalReg() const { return lvType == GlobalReg; }
   bool isVolatile() const { return quals.hasVolatile(); }
 
   bool isVolatileQualified() const { return quals.hasVolatile(); }
