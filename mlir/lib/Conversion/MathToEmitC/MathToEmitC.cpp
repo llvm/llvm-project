@@ -82,4 +82,8 @@ void mlir::populateConvertMathToEmitCPatterns(
                                                         languageTarget);
   patterns.insert<LowerToEmitCCallOpaque<math::PowFOp>>(context, "pow",
                                                         languageTarget);
+  patterns.insert<LowerToEmitCCallOpaque<math::RoundEvenOp>>(context, "rint",
+                                                             languageTarget);
+  patterns.insert<LowerToEmitCCallOpaque<math::RsqrtOp>>(context, "sqrt",
+                                                         languageTarget);
 }

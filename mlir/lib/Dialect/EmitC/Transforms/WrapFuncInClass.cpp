@@ -9,6 +9,7 @@
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/EmitC/Transforms/Passes.h"
 #include "mlir/Dialect/EmitC/Transforms/Transforms.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -17,6 +18,7 @@
 
 using namespace mlir;
 using namespace emitc;
+using namespace func;
 
 namespace mlir {
 namespace emitc {
@@ -41,12 +43,12 @@ struct WrapFuncInClassPass
 } // namespace emitc
 } // namespace mlir
 
-class WrapFuncInClass : public OpRewritePattern<emitc::FuncOp> {
+class WrapFuncInClass : public OpRewritePattern<func::FuncOp> {
 public:
   WrapFuncInClass(MLIRContext *context)
-      : OpRewritePattern<emitc::FuncOp>(context) {}
+      : OpRewritePattern<func::FuncOp>(context) {}
 
-  LogicalResult matchAndRewrite(emitc::FuncOp funcOp,
+  LogicalResult matchAndRewrite(func::FuncOp funcOp,
                                 PatternRewriter &rewriter) const override {
 
     auto className = funcOp.getSymNameAttr().str() + "Class";
@@ -75,8 +77,8 @@ public:
     rewriter.setInsertionPointToEnd(&newClassOp.getBody().front());
     FunctionType funcType = funcOp.getFunctionType();
     Location loc = funcOp.getLoc();
-    FuncOp newFuncOp =
-        emitc::FuncOp::create(rewriter, loc, ("execute"), funcType);
+    func::FuncOp newFuncOp =
+        func::FuncOp::create(rewriter, loc, ("execute"), funcType);
 
     rewriter.createBlock(&newFuncOp.getBody());
     newFuncOp.getBody().takeBody(funcOp.getBody());
