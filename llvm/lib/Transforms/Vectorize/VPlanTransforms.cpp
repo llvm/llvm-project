@@ -1481,8 +1481,7 @@ static bool useWideActiveLaneMask(VPlan &Plan, ElementCount VF, unsigned UF) {
     return false;
 
   auto *Header = cast<VPBasicBlock>(VectorRegion->getEntry());
-  VPCanonicalIVPHIRecipe *CanonicalIV = Plan.getCanonicalIV();
-  LLVMContext &Ctx = CanonicalIV->getScalarType()->getContext();
+  LLVMContext &Ctx = Plan.getContext();
 
   auto extractFromALM = [&](VPInstruction *ALM,
                             SmallVectorImpl<VPValue *> &Extracts) {
@@ -1494,7 +1493,7 @@ static bool useWideActiveLaneMask(VPlan &Plan, ElementCount VF, unsigned UF) {
                                             VF.getKnownMinValue() * Part))});
       auto *Ext = new VPWidenIntrinsicRecipe(Intrinsic::vector_extract, Ops,
                                              IntegerType::getInt1Ty(Ctx), DL);
-      Extracts.push_back(Ext);
+      Extracts[Part] = Ext;
       Ext->insertAfter(ALM);
     }
   };
@@ -1505,11 +1504,13 @@ static bool useWideActiveLaneMask(VPlan &Plan, ElementCount VF, unsigned UF) {
     auto *Phi = dyn_cast<VPActiveLaneMaskPHIRecipe>(&R);
     if (!Phi)
       continue;
-    VPValue *Index;
+    VPValue *Index = nullptr;
     match(Phi->getBackedgeValue(),
           m_ActiveLaneMask(m_VPValue(Index), m_VPValue(), m_VPValue()));
-    if (auto II = dyn_cast<VPInstruction>(Index);
-        II && II->getOpcode() == VPInstruction::CanonicalIVIncrementForPart) {
+    assert(Index && "Expected index from ActiveLaneMask instruction");
+
+    auto *II = dyn_cast<VPInstruction>(Index);
+    if (II && II->getOpcode() == VPInstruction::CanonicalIVIncrementForPart) {
       auto Part = cast<ConstantInt>(II->getOperand(1)->getLiveInIRValue());
       Phis[Part->getZExtValue()] = Phi;
     } else
@@ -1520,8 +1521,8 @@ static bool useWideActiveLaneMask(VPlan &Plan, ElementCount VF, unsigned UF) {
   assert(all_of(Phis, [](VPActiveLaneMaskPHIRecipe *Phi) { return Phi; }) &&
          "Expected one VPActiveLaneMaskPHIRecipe for each unroll part");
 
-  auto *EntryALM = dyn_cast<VPInstruction>(Phis[0]->getStartValue());
-  auto *LoopALM = dyn_cast<VPInstruction>(Phis[0]->getBackedgeValue());
+  auto *EntryALM = cast<VPInstruction>(Phis[0]->getStartValue());
+  auto *LoopALM = cast<VPInstruction>(Phis[0]->getBackedgeValue());
 
   assert((EntryALM->getOpcode() == VPInstruction::ActiveLaneMask &&
           LoopALM->getOpcode() == VPInstruction::ActiveLaneMask) &&
@@ -1535,12 +1536,12 @@ static bool useWideActiveLaneMask(VPlan &Plan, ElementCount VF, unsigned UF) {
   LoopALM->setOperand(2, ALMMultiplier);
 
   // Create UF x extract vectors and insert into preheader.
-  SmallVector<VPValue *> EntryExtracts;
+  SmallVector<VPValue *> EntryExtracts(UF);
   extractFromALM(EntryALM, EntryExtracts);
 
   // Create UF x extract vectors and insert before the loop compare & branch,
   // updating the compare to use the first extract.
-  SmallVector<VPValue *> LoopExtracts;
+  SmallVector<VPValue *> LoopExtracts(UF);
   extractFromALM(LoopALM, LoopExtracts);
   VPInstruction *Not = cast<VPInstruction>(Term->getOperand(0));
   Not->setOperand(0, LoopExtracts[0]);
