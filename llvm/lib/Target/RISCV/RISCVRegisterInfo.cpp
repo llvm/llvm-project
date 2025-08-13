@@ -444,8 +444,7 @@ void RISCVRegisterInfo::lowerSegmentSpillReload(MachineBasicBlock::iterator II,
       Register Step;
       // Optimize for constant VLEN.
       if (auto VLEN = STI.getRealVLen()) {
-        const int64_t VLENB = *VLEN / 8;
-        int64_t Offset = VLENB * PreHandledNum;
+        int64_t Offset = *VLEN / 8 * PreHandledNum;
         Step = MRI.createVirtualRegister(&RISCV::GPRRegClass);
         STI.getInstrInfo()->movImm(MBB, II, DL, Step, Offset);
       } else {
