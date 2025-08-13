@@ -467,7 +467,10 @@ std::optional<DefinitionAndSourceRegister>
 llvm::getDefSrcRegIgnoringCopies(Register Reg, const MachineRegisterInfo &MRI) {
   Register DefSrcReg = Reg;
   auto *DefMI = MRI.getVRegDef(Reg);
-  auto DstTy = MRI.getType(DefMI->getOperand(0).getReg());
+  auto &Opnd = DefMI->getOperand(0);
+  if (!Opnd.isReg())
+    return DefinitionAndSourceRegister{DefMI, DefSrcReg};
+  auto DstTy = MRI.getType(Opnd.getReg());
   if (!DstTy.isValid())
     return std::nullopt;
   unsigned Opc = DefMI->getOpcode();
