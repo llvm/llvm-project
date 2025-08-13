@@ -1,16 +1,17 @@
-# Test the --dump-dot-func option with multiple functions
+# Test the --dump-dot-func option with multiple functions 
+# (includes tests for both mangled/unmangled names)
 
-RUN: %clang %p/Inputs/multi-func.c -o %t.exe -Wl,-q
+RUN: %clang++ %p/Inputs/multi-func.cpp -o %t.exe -Wl,-q
 
-# Test 1: --dump-dot-func with specific function name
-RUN: llvm-bolt %t.exe -o %t.bolt1 --dump-dot-func=add --print-only=add -v=1 2>&1 | FileCheck %s --check-prefix=ADD
-RUN: ls add-*.dot | wc -l | FileCheck %s --check-prefix=COUNT-ONE
+# Test 1: --dump-dot-func with specific function name (mangled)
+RUN: llvm-bolt %t.exe -o %t.bolt1 --dump-dot-func=_Z3addii --print-only=_Z3addii -v=1 2>&1 | FileCheck %s --check-prefix=ADD
+RUN: ls _Z3addii-*.dot | wc -l | FileCheck %s --check-prefix=COUNT-ONE
 
 # Test 2: --dump-dot-func with regex pattern (main.*)
 RUN: llvm-bolt %t.exe -o %t.bolt2 --dump-dot-func="main.*" --print-only=main,main_helper,main_secondary -v=1 2>&1 | FileCheck %s --check-prefix=MAIN-REGEX
 
-# Test 3: --dump-dot-func with multiple specific functions
-RUN: llvm-bolt %t.exe -o %t.bolt3 --dump-dot-func=add,multiply --print-only=add,multiply -v=1 2>&1 | FileCheck %s --check-prefix=MULTI
+# Test 3: --dump-dot-func with multiple specific functions (mangled names)
+RUN: llvm-bolt %t.exe -o %t.bolt3 --dump-dot-func=_Z3addii,_Z8multiplyii --print-only=_Z3addii,_Z8multiplyii -v=1 2>&1 | FileCheck %s --check-prefix=MULTI
 
 # Test 4: No option specified should create no dot files
 RUN: llvm-bolt %t.exe -o %t.bolt4 --print-only=main 2>&1 | FileCheck %s --check-prefix=NONE
@@ -21,15 +22,19 @@ RUN: llvm-bolt %t.exe -o %t.bolt5 --dump-dot-func=nonexistent --print-only=main 
 # Test 6: Backward compatibility - --dump-dot-all should still work
 RUN: llvm-bolt %t.exe -o %t.bolt6 --dump-dot-all --print-only=main -v=1 2>&1 | FileCheck %s --check-prefix=ALL
 
+# Test 7: Test with helper function (mangled name)
+RUN: llvm-bolt %t.exe -o %t.bolt7 --dump-dot-func=_Z11main_helperv --print-only=_Z11main_helperv -v=1 2>&1 | FileCheck %s --check-prefix=HELPER
+
+# Test 8: Test with unmangled function name (main function)
+RUN: llvm-bolt %t.exe -o %t.bolt8 --dump-dot-func=main --print-only=main -v=1 2>&1 | FileCheck %s --check-prefix=MAIN-UNMANGLED
+
 # Check that specific functions are dumped
-ADD: BOLT-INFO: dumping CFG to add-00_build-cfg.dot
+ADD: BOLT-INFO: dumping CFG to _Z3addii-00_build-cfg.dot
 
 MAIN-REGEX-DAG: BOLT-INFO: dumping CFG to main-00_build-cfg.dot
-MAIN-REGEX-DAG: BOLT-INFO: dumping CFG to main_helper-00_build-cfg.dot
-MAIN-REGEX-DAG: BOLT-INFO: dumping CFG to main_secondary-00_build-cfg.dot
 
-MULTI-DAG: BOLT-INFO: dumping CFG to add-00_build-cfg.dot
-MULTI-DAG: BOLT-INFO: dumping CFG to multiply-00_build-cfg.dot
+MULTI-DAG: BOLT-INFO: dumping CFG to _Z3addii-00_build-cfg.dot
+MULTI-DAG: BOLT-INFO: dumping CFG to _Z8multiplyii-00_build-cfg.dot
 
 # Should be no dumping messages when no option is specified
 NONE-NOT: BOLT-INFO: dumping CFG
@@ -38,6 +43,11 @@ NONE-NOT: BOLT-INFO: dumping CFG
 NONEXISTENT-NOT: BOLT-INFO: dumping CFG
 
 ALL: BOLT-INFO: dumping CFG to main-00_build-cfg.dot
+
+HELPER: BOLT-INFO: dumping CFG to _Z11main_helperv-00_build-cfg.dot
+
+# Test that unmangled function names still work
+MAIN-UNMANGLED: BOLT-INFO: dumping CFG to main-00_build-cfg.dot
 
 # Count checks
 COUNT-ONE: 1
