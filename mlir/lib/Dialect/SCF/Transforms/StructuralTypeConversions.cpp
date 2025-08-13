@@ -116,7 +116,8 @@ public:
                                 llvm::getSingleElement(adaptor.getLowerBound()),
                                 llvm::getSingleElement(adaptor.getUpperBound()),
                                 llvm::getSingleElement(adaptor.getStep()),
-                                flattenValues(adaptor.getInitArgs()));
+                                flattenValues(adaptor.getInitArgs()),
+                                /*bodyBuilder=*/nullptr, op.getUnsignedCmp());
 
     // Reserve whatever attributes in the original op.
     newOp->setAttrs(op->getAttrs());
