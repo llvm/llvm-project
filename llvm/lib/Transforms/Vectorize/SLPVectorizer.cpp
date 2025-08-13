@@ -6513,7 +6513,7 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
                                        SmallVectorImpl<unsigned> &SortedIndices,
                                        StridedPtrInfo *SPtrInfo) const {
   // Group the pointers by constant offset.
-  DenseMap<int64_t, std::pair<SmallVector<Value *>, SmallVector<unsigned>>>
+  SmallDenseMap<int64_t, std::pair<SmallVector<Value *>, SmallVector<unsigned>>>
       OffsetToPointerOpIdxMap;
   for (auto [Idx, Ptr] : enumerate(PointerOps)) {
     const SCEV *PtrSCEV = SE->getSCEV(Ptr);
