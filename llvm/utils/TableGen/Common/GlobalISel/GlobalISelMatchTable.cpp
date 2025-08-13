@@ -237,9 +237,10 @@ MatchTableRecord MatchTable::NamedValue(unsigned NumBytes, StringRef Namespace,
 
 MatchTableRecord MatchTable::IntValue(unsigned NumBytes, int64_t IntValue) {
   assert(isUIntN(NumBytes * 8, IntValue) || isIntN(NumBytes * 8, IntValue));
-  auto Str = llvm::to_string(IntValue);
-  if (NumBytes == 1 && IntValue < 0)
-    Str = "uint8_t(" + Str + ")";
+  uint64_t UIntValue = IntValue;
+  if (NumBytes < 8)
+    UIntValue &= (UINT64_C(1) << NumBytes * 8) - 1;
+  auto Str = llvm::to_string(UIntValue);
   // TODO: Could optimize this directly to save the compiler some work when
   // building the file
   return MatchTableRecord(std::nullopt, Str, NumBytes,
