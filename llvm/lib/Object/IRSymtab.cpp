@@ -46,7 +46,7 @@ static cl::opt<bool> DisableBitcodeVersionUpgrade(
     "disable-bitcode-version-upgrade", cl::Hidden,
     cl::desc("Disable automatic bitcode upgrade for version mismatch"));
 
-static const char *PreservedSymbols[] = {
+static constexpr StringLiteral PreservedSymbols[] = {
     // There are global variables, so put it here instead of in
     // RuntimeLibcalls.td.
     // TODO: Are there similar such variables?
@@ -54,9 +54,8 @@ static const char *PreservedSymbols[] = {
     "__stack_chk_guard",
 };
 
-static bool isPreservedGlobalVarName(StringRef Name) {
-  return StringRef(PreservedSymbols[0]) == Name ||
-         StringRef(PreservedSymbols[1]) == Name;
+static constexpr bool isPreservedGlobalVarName(StringRef Name) {
+  return PreservedSymbols[0] == Name || PreservedSymbols[1] == Name;
 }
 
 namespace {
