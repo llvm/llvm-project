@@ -296,13 +296,13 @@ TEST(MachineOperandTest, PrintLaneMask) {
   // Checking some preconditions on the newly created
   // MachineOperand.
   ASSERT_TRUE(MO.isLaneMask());
-  ASSERT_TRUE(MO.getLaneMask() == LaneMask);
+  ASSERT_EQ(MO.getLaneMask(), LaneMask);
 
   std::string str;
   // Print a MachineOperand that is lanemask as in HEX representation.
   raw_string_ostream OS(str);
   MO.print(OS, /*TRI=*/nullptr);
-  ASSERT_TRUE(str == "lanemask(0x000000000000000C)");
+  ASSERT_EQ(str, "lanemask(0x000000000000000C)");
 }
 
 TEST(MachineOperandTest, PrintRegisterLiveOut) {
