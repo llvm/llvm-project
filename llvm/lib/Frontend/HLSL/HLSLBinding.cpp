@@ -76,7 +76,7 @@ BindingInfo BindingInfoBuilder::calculateBindingInfo(
   // remove duplicates
   Binding *NewEnd = llvm::unique(Bindings);
   if (NewEnd != Bindings.end())
-    Bindings.erase(NewEnd);
+    Bindings.erase(NewEnd, Bindings.end());
 
   BindingInfo Info;
 
