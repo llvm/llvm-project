@@ -470,9 +470,9 @@ implementation.
 | need_device_addr modifier for adjust_args clause            | :part:`partial`           | :none:`unclaimed`         | Parsing/Sema: https://github.com/llvm/llvm-project/pull/143442           |
 |                                                             |                           |                           |               https://github.com/llvm/llvm-project/pull/149586           |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
-| Prescriptive num_threads                                    | :part:`In Progress`       | :none:`unclaimed`         |                                                                          |
+| Prescriptive num_threads                                    | :part:`In Progress`       | :none:`unclaimed`         | ro-i                                                                     |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
-| Message and severity clauses                                | :part:`In Progress`       | :none:`unclaimed`         |                                                                          |
+| Message and severity clauses                                | :part:`In Progress`       | :none:`unclaimed`         | ro-i                                                                     |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 | Local clause on declare target                              | :part:`In Progress`       | :none:`unclaimed`         |                                                                          |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
