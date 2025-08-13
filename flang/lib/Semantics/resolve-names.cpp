@@ -30,6 +30,7 @@
 #include "flang/Semantics/attr.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/openmp-modifiers.h"
+#include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/program-tree.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/semantics.h"
@@ -1486,6 +1487,16 @@ public:
   void Post(const parser::OpenMPBlockConstruct &);
   bool Pre(const parser::OmpBeginDirective &x) {
     AddOmpSourceRange(x.source);
+    // Manually resolve names in CRITICAL directives. This is because these
+    // names do not denote Fortran objects, and the CRITICAL directive causes
+    // them to be "auto-declared", i.e. inserted into the global scope.
+    // More specifically, they are not expected to have explicit declarations,
+    // and if they do the behavior is unspeficied.
+    if (x.DirName().v == llvm::omp::Directive::OMPD_critical) {
+      for (const parser::OmpArgument &arg : x.Arguments().v) {
+        ResolveCriticalName(arg);
+      }
+    }
     return true;
   }
   void Post(const parser::OmpBeginDirective &) {
@@ -1493,6 +1504,12 @@ public:
   }
   bool Pre(const parser::OmpEndDirective &x) {
     AddOmpSourceRange(x.source);
+    // Manually resolve names in CRITICAL directives.
+    if (x.DirName().v == llvm::omp::Directive::OMPD_critical) {
+      for (const parser::OmpArgument &arg : x.Arguments().v) {
+        ResolveCriticalName(arg);
+      }
+    }
     return true;
   }
   void Post(const parser::OmpEndDirective &) {
@@ -1589,32 +1606,6 @@ public:
     return true;
   }
   void Post(const parser::OmpEndSectionsDirective &) {
-    messageHandler().set_currStmtSource(std::nullopt);
-  }
-  bool Pre(const parser::OmpCriticalDirective &x) {
-    AddOmpSourceRange(x.source);
-    // Manually resolve names in CRITICAL directives. This is because these
-    // names do not denote Fortran objects, and the CRITICAL directive causes
-    // them to be "auto-declared", i.e. inserted into the global scope.
-    // More specifically, they are not expected to have explicit declarations,
-    // and if they do the behavior is unspeficied.
-    if (auto &maybeName{std::get<std::optional<parser::Name>>(x.t)}) {
-      ResolveCriticalName(*maybeName);
-    }
-    return true;
-  }
-  void Post(const parser::OmpCriticalDirective &) {
-    messageHandler().set_currStmtSource(std::nullopt);
-  }
-  bool Pre(const parser::OmpEndCriticalDirective &x) {
-    AddOmpSourceRange(x.source);
-    // Manually resolve names in CRITICAL directives.
-    if (auto &maybeName{std::get<std::optional<parser::Name>>(x.t)}) {
-      ResolveCriticalName(*maybeName);
-    }
-    return true;
-  }
-  void Post(const parser::OmpEndCriticalDirective &) {
     messageHandler().set_currStmtSource(std::nullopt);
   }
   bool Pre(const parser::OpenMPThreadprivate &) {
@@ -1732,7 +1723,7 @@ private:
       const std::optional<parser::OmpClauseList> &clauses,
       const T &wholeConstruct);
 
-  void ResolveCriticalName(const parser::Name &name);
+  void ResolveCriticalName(const parser::OmpArgument &arg);
 
   int metaLevel_{0};
   const parser::OmpMetadirectiveDirective *metaDirective_{nullptr};
@@ -1961,7 +1952,7 @@ void OmpVisitor::ProcessReductionSpecifier(
   }
 }
 
-void OmpVisitor::ResolveCriticalName(const parser::Name &name) {
+void OmpVisitor::ResolveCriticalName(const parser::OmpArgument &arg) {
   auto &globalScope{[&]() -> Scope & {
     for (Scope *s{&currScope()};; s = &s->parent()) {
       if (s->IsTopLevel()) {
@@ -1971,15 +1962,21 @@ void OmpVisitor::ResolveCriticalName(const parser::Name &name) {
     llvm_unreachable("Cannot find global scope");
   }()};
 
-  if (auto *symbol{FindInScope(globalScope, name)}) {
-    if (!symbol->test(Symbol::Flag::OmpCriticalLock)) {
-      SayWithDecl(name, *symbol,
-          "CRITICAL construct name '%s' conflicts with a previous declaration"_warn_en_US,
-          name.ToString());
+  if (auto *object{parser::Unwrap<parser::OmpObject>(arg.u)}) {
+    if (auto *desg{omp::GetDesignatorFromObj(*object)}) {
+      if (auto *name{getDesignatorNameIfDataRef(*desg)}) {
+        if (auto *symbol{FindInScope(globalScope, *name)}) {
+          if (!symbol->test(Symbol::Flag::OmpCriticalLock)) {
+            SayWithDecl(*name, *symbol,
+                "CRITICAL construct name '%s' conflicts with a previous declaration"_warn_en_US,
+                name->ToString());
+          }
+        } else {
+          name->symbol = &MakeSymbol(globalScope, name->source, Attrs{});
+          name->symbol->set(Symbol::Flag::OmpCriticalLock);
+        }
+      }
     }
-  } else {
-    name.symbol = &MakeSymbol(globalScope, name.source, Attrs{});
-    name.symbol->set(Symbol::Flag::OmpCriticalLock);
   }
 }
 

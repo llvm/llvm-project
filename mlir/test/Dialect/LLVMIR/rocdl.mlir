@@ -981,6 +981,13 @@ llvm.func @rocdl.s.wait.expcnt() {
 
 // -----
 
+llvm.func @rocdl.readfirstlane(%src : f32) -> f32 {
+  // CHECK-LABEL: rocdl.readfirstlane
+  // CHECK: rocdl.readfirstlane %{{.*}} : f32
+  %ret = rocdl.readfirstlane %src : f32
+  llvm.return %ret : f32
+}
+
 llvm.func @rocdl.readlane(%src : f32) -> f32 {
   %cst0 = llvm.mlir.constant(0 : i32) : i32
 

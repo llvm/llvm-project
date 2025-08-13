@@ -13,6 +13,8 @@ module mod1
 
   integer, device, dimension(11:20) :: cdev
 
+  real(kind=8), device, allocatable, dimension(:) :: p
+
 contains
   function dev1(a)
     integer, device :: a(:)
@@ -456,3 +458,19 @@ end
 ! CHECK: %[[M:.*]]:2 = hlfir.declare %4 {data_attr = #cuf.cuda<managed>, uniq_name = "_QFsub24Em"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK: %[[D1:.*]] = hlfir.designate %[[D]]#0 (%c1{{.*}})  : (!fir.ref<!fir.array<4xf32>>, index) -> !fir.ref<f32>
 ! CHECK: cuf.data_transfer %[[D1]] to %[[M]]#0 {transfer_kind = #cuf.cuda_transfer<device_device>} : !fir.ref<f32>, !fir.ref<f32>
+
+subroutine sub25()
+  use mod1
+  integer :: i
+  real(8) :: c
+
+  do i = 1, 10
+    c = c + p(i)
+  end do
+end
+
+! CHECK-LABEL: func.func @_QPsub25()
+! CHECK: fir.allocmem !fir.array<?xf64>, %15#1 {bindc_name = ".tmp", uniq_name = ""}
+! CHECK: cuf.data_transfer %{{.*}} to %{{.*}} {transfer_kind = #cuf.cuda_transfer<device_host>} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.box<!fir.array<?xf64>>
+! CHECK: hlfir.assign %{{.*}} to %{{.*}} : f64, !fir.ref<f64>
+! CHECK: fir.freemem %{{.*}} : !fir.heap<!fir.array<?xf64>>

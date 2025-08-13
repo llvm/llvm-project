@@ -1051,18 +1051,9 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_vfmsubsd3_mask3:
     return EmitScalarFMAExpr(*this, E, Ops, Ops[2], /*ZeroMask*/ false, 2,
                              /*NegAcc*/ true);
-  case X86::BI__builtin_ia32_vfmaddph:
-  case X86::BI__builtin_ia32_vfmaddps:
-  case X86::BI__builtin_ia32_vfmaddpd:
-  case X86::BI__builtin_ia32_vfmaddph256:
-  case X86::BI__builtin_ia32_vfmaddps256:
-  case X86::BI__builtin_ia32_vfmaddpd256:
   case X86::BI__builtin_ia32_vfmaddph512_mask:
   case X86::BI__builtin_ia32_vfmaddph512_maskz:
   case X86::BI__builtin_ia32_vfmaddph512_mask3:
-  case X86::BI__builtin_ia32_vfmaddbf16128:
-  case X86::BI__builtin_ia32_vfmaddbf16256:
-  case X86::BI__builtin_ia32_vfmaddbf16512:
   case X86::BI__builtin_ia32_vfmaddps512_mask:
   case X86::BI__builtin_ia32_vfmaddps512_maskz:
   case X86::BI__builtin_ia32_vfmaddps512_mask3:
@@ -2850,8 +2841,6 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     return getCmpIntrinsicCall(Intrinsic::x86_sse2_cmp_sd, 7);
 
   // f16c half2float intrinsics
-  case X86::BI__builtin_ia32_vcvtph2ps:
-  case X86::BI__builtin_ia32_vcvtph2ps256:
   case X86::BI__builtin_ia32_vcvtph2ps_mask:
   case X86::BI__builtin_ia32_vcvtph2ps256_mask:
   case X86::BI__builtin_ia32_vcvtph2ps512_mask: {

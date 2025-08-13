@@ -4933,6 +4933,43 @@ bool AMDGPUAsmParser::validateOpSel(const MCInst &Inst) {
       return false;
   }
 
+  // Packed math FP32 instructions typically accept SGPRs or VGPRs as source
+  // operands. On gfx12+, if a source operand uses SGPRs, the HW can only read
+  // the first SGPR and use it for both the low and high operations.
+  if (isPackedFP32Inst(Opc) && isGFX12Plus()) {
+    int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
+    int Src1Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1);
+    int OpSelIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel);
+    int OpSelHiIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel_hi);
+
+    const MCOperand &Src0 = Inst.getOperand(Src0Idx);
+    const MCOperand &Src1 = Inst.getOperand(Src1Idx);
+    unsigned OpSel = Inst.getOperand(OpSelIdx).getImm();
+    unsigned OpSelHi = Inst.getOperand(OpSelHiIdx).getImm();
+
+    const MCRegisterInfo *TRI = getContext().getRegisterInfo();
+
+    auto VerifyOneSGPR = [OpSel, OpSelHi](unsigned Index) -> bool {
+      unsigned Mask = 1U << Index;
+      return ((OpSel & Mask) == 0) && ((OpSelHi & Mask) == 0);
+    };
+
+    if (Src0.isReg() && isSGPR(Src0.getReg(), TRI) &&
+        !VerifyOneSGPR(/*Index=*/0))
+      return false;
+    if (Src1.isReg() && isSGPR(Src1.getReg(), TRI) &&
+        !VerifyOneSGPR(/*Index=*/1))
+      return false;
+
+    int Src2Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2);
+    if (Src2Idx != -1) {
+      const MCOperand &Src2 = Inst.getOperand(Src2Idx);
+      if (Src2.isReg() && isSGPR(Src2.getReg(), TRI) &&
+          !VerifyOneSGPR(/*Index=*/2))
+        return false;
+    }
+  }
+
   return true;
 }
 
@@ -5015,11 +5052,13 @@ bool AMDGPUAsmParser::validateDPP(const MCInst &Inst,
   if (DppCtrlIdx >= 0) {
     unsigned DppCtrl = Inst.getOperand(DppCtrlIdx).getImm();
 
-    if (!AMDGPU::isLegalDPALU_DPPControl(DppCtrl) &&
-        AMDGPU::isDPALU_DPP(MII.get(Opc))) {
-      // DP ALU DPP is supported for row_newbcast only on GFX9*
+    if (!AMDGPU::isLegalDPALU_DPPControl(getSTI(), DppCtrl) &&
+        AMDGPU::isDPALU_DPP(MII.get(Opc), getSTI())) {
+      // DP ALU DPP is supported for row_newbcast only on GFX9* and row_share
+      // only on GFX12.
       SMLoc S = getImmLoc(AMDGPUOperand::ImmTyDppCtrl, Operands);
-      Error(S, "DP ALU dpp only supports row_newbcast");
+      Error(S, isGFX12() ? "DP ALU dpp only supports row_share"
+                         : "DP ALU dpp only supports row_newbcast");
       return false;
     }
   }

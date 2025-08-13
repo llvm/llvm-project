@@ -276,6 +276,7 @@ foreach FPTy = ["F32", "F64", "F128", "PPCF128"] in {
 }
 
 // Memory
+def MEMCMP : RuntimeLibcall;
 def MEMCPY : RuntimeLibcall;
 def MEMMOVE : RuntimeLibcall;
 def MEMSET : RuntimeLibcall;
@@ -1990,12 +1991,14 @@ defset list<RuntimeLibcallImpl> PPCRuntimeLibcalls = {
 }
 
 defset list<RuntimeLibcallImpl> PPC64AIXCallList = {
+  def ___memcmp64 : RuntimeLibcallImpl<MEMCMP>;
   def ___memmove64 : RuntimeLibcallImpl<MEMCPY>;
   def ___memset64 : RuntimeLibcallImpl<MEMSET>;
   def ___bzero64 : RuntimeLibcallImpl<BZERO>;
 }
 
 defset list<RuntimeLibcallImpl> PPC32AIXCallList = {
+  def ___memcmp : RuntimeLibcallImpl<MEMCMP>;
   def ___memmove : RuntimeLibcallImpl<MEMMOVE>;
   def ___memset : RuntimeLibcallImpl<MEMSET>;
   def ___bzero : RuntimeLibcallImpl<BZERO>;

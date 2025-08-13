@@ -1066,13 +1066,11 @@ LValue ScalarExprEmitter::emitCompoundAssignLValue(
     const CompoundAssignOperator *e,
     mlir::Value (ScalarExprEmitter::*func)(const BinOpInfo &),
     mlir::Value &result) {
+  if (e->getComputationResultType()->isAnyComplexType())
+    return cgf.emitScalarCompoundAssignWithComplex(e, result);
+
   QualType lhsTy = e->getLHS()->getType();
   BinOpInfo opInfo;
-
-  if (e->getComputationResultType()->isAnyComplexType()) {
-    cgf.cgm.errorNYI(result.getLoc(), "complex lvalue assign");
-    return LValue();
-  }
 
   // Emit the RHS first.  __block variables need to have the rhs evaluated
   // first, plus this should improve codegen a little.

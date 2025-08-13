@@ -16,6 +16,7 @@
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/DXILABI.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/TargetParser/Triple.h"
@@ -156,6 +157,8 @@ enum class FeatureFlags : uint64_t {
 };
 static_assert((uint64_t)FeatureFlags::NextUnusedBit <= 1ull << 63,
               "Shader flag bits exceed enum size.");
+
+LLVM_ABI ArrayRef<EnumEntry<llvm::dxil::ResourceClass>> getResourceClasses();
 
 #define ROOT_SIGNATURE_FLAG(Num, Val) Val = Num,
 enum class RootFlags : uint32_t {
