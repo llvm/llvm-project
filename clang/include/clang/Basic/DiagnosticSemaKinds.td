@@ -13529,7 +13529,7 @@ def err_acc_invalid_modifier
 def err_acc_invalid_default_type
     : Error<"invalid value %0 in '%1' clause; valid values are %2">;
 def err_acc_device_type_multiple_archs
-    : Error<"OpenACC 'device_type' clause on a 'set' construct only permits "
+    : Error<"OpenACC 'device_type' clause on a '%0' construct only permits "
             "one architecture">;
 def warn_acc_var_referenced_non_const_array
     : Warning<"variable of array type %0 referenced in OpenACC '%1' clause "
