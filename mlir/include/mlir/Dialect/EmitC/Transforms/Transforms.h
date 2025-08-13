@@ -29,7 +29,8 @@ ExpressionOp createExpression(Operation *op, OpBuilder &builder);
 void populateExpressionPatterns(RewritePatternSet &patterns);
 
 /// Populates 'patterns' with func-related patterns.
-void populateFuncPatterns(RewritePatternSet &patterns);
+void populateFuncPatterns(RewritePatternSet &patterns,
+                          llvm::SmallVector<emitc::GlobalOp, 4> globalsToMove);
 
 /// Populates `patterns` with patterns to add reflection map for EmitC classes.
 void populateAddReflectionMapPatterns(RewritePatternSet &patterns,

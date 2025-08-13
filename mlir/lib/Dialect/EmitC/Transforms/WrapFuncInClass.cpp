@@ -30,12 +30,18 @@ struct WrapFuncInClassPass
     : public impl::WrapFuncInClassPassBase<WrapFuncInClassPass> {
   using WrapFuncInClassPassBase::WrapFuncInClassPassBase;
   void runOnOperation() override {
-    Operation *rootOp = getOperation();
+    mlir::ModuleOp moduleOp = getOperation();
+
+    SymbolTable moduleSymbolTable(moduleOp);
+    llvm::SmallVector<emitc::GlobalOp, 4> globalsToMove;
+    moduleOp.walk([&](mlir::emitc::GlobalOp globalOp) {
+      globalsToMove.push_back(globalOp);
+    });
 
     RewritePatternSet patterns(&getContext());
-    populateFuncPatterns(patterns);
+    populateFuncPatterns(patterns, globalsToMove);
 
-    walkAndApplyPatterns(rootOp, std::move(patterns));
+    walkAndApplyPatterns(moduleOp, std::move(patterns));
   }
 };
 
@@ -43,12 +49,14 @@ struct WrapFuncInClassPass
 } // namespace emitc
 } // namespace mlir
 
-class WrapFuncInClass : public OpRewritePattern<func::FuncOp> {
+class WrapFuncInClass : public OpRewritePattern<emitc::FuncOp> {
 public:
-  WrapFuncInClass(MLIRContext *context)
-      : OpRewritePattern<func::FuncOp>(context) {}
+  WrapFuncInClass(MLIRContext *context,
+                  llvm::SmallVector<emitc::GlobalOp, 4> globalsToMove)
+      : OpRewritePattern<emitc::FuncOp>(context), globalsToMove(globalsToMove) {
+  }
 
-  LogicalResult matchAndRewrite(func::FuncOp funcOp,
+  LogicalResult matchAndRewrite(emitc::FuncOp funcOp,
                                 PatternRewriter &rewriter) const override {
 
     auto className = funcOp.getSymNameAttr().str() + "Class";
@@ -75,10 +83,16 @@ public:
     }
 
     rewriter.setInsertionPointToEnd(&newClassOp.getBody().front());
+    for (auto globalOp : globalsToMove) {
+      rewriter.clone(*globalOp.getOperation());
+      rewriter.eraseOp(globalOp);
+    }
+
+    rewriter.setInsertionPointToEnd(&newClassOp.getBody().front());
     FunctionType funcType = funcOp.getFunctionType();
     Location loc = funcOp.getLoc();
-    func::FuncOp newFuncOp =
-        func::FuncOp::create(rewriter, loc, ("execute"), funcType);
+    emitc::FuncOp newFuncOp =
+        emitc::FuncOp::create(rewriter, loc, ("execute"), funcType);
 
     rewriter.createBlock(&newFuncOp.getBody());
     newFuncOp.getBody().takeBody(funcOp.getBody());
@@ -104,8 +118,13 @@ public:
     rewriter.replaceOp(funcOp, newClassOp);
     return success();
   }
+
+private:
+  llvm::SmallVector<emitc::GlobalOp, 4> globalsToMove;
 };
 
-void mlir::emitc::populateFuncPatterns(RewritePatternSet &patterns) {
-  patterns.add<WrapFuncInClass>(patterns.getContext());
+void mlir::emitc::populateFuncPatterns(
+    RewritePatternSet &patterns,
+    llvm::SmallVector<emitc::GlobalOp, 4> globalsToMove) {
+  patterns.add<WrapFuncInClass>(patterns.getContext(), globalsToMove);
 }
