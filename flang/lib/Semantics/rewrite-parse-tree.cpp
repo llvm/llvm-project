@@ -154,9 +154,10 @@ void RewriteMutator::OpenMPSimdOnly(parser::SpecificationPart &specPart) {
 void RewriteMutator::OpenMPSimdOnly(
     parser::Block &block, bool isNonSimdLoopBody = false) {
   auto replaceInlineBlock =
-      [&](std::list<parser::ExecutionPartConstruct> &block, auto it) -> auto {
+      [&](std::list<parser::ExecutionPartConstruct> &innerBlock,
+          auto it) -> auto {
     auto insertPos = std::next(it);
-    block.splice(insertPos, block);
+    block.splice(insertPos, innerBlock);
     block.erase(it);
     return insertPos;
   };
