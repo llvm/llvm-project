@@ -1,4 +1,4 @@
-## Tests that the copied DXContainer is identical to the original
+## Tests that the copied DXContainer is identical to the original.
 
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy %t %t.out

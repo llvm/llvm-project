@@ -110,9 +110,8 @@ Expected<const XCOFFConfig &> ConfigManager::getXCOFFConfig() const {
 
 Expected<const DXContainerConfig &>
 ConfigManager::getDXContainerConfig() const {
-  // If a flag is listed below, then it may be implemented in the future. All
-  // other flags are not applicable and will be silently ignored for the
-  // DXContainer object file
+  // All other flags are either supported or not applicable for DXContainer
+  // object files and will be silently ignored.
   if (!Common.AddGnuDebugLink.empty() || !Common.SplitDWO.empty() ||
       !Common.AllocSectionsPrefix.empty() ||
       Common.DiscardMode != DiscardType::None || !Common.AddSection.empty() ||
@@ -130,8 +129,5 @@ ConfigManager::getDXContainerConfig() const {
         llvm::errc::invalid_argument,
         "no flags are supported yet, only basic copying is allowed");
   }
-
-  // If a flag is listed here, then it has support for DXContainer:
-  // Common.PreserveDates
   return DXContainer;
 }
