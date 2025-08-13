@@ -3277,7 +3277,8 @@ InlineCost llvm::getInlineCost(
   }
 
   if (InlineAllViableCalls && isInlineViable(*Callee).isSuccess())
-    return llvm::InlineCost::getAlways("inline all viable calls");
+    return llvm::InlineCost::getAlways(
+        "Inlining forced by --inline-all-viable-calls");
 
   LLVM_DEBUG(llvm::dbgs() << "      Analyzing call of " << Callee->getName()
                           << "... (caller:" << Call.getCaller()->getName()
