@@ -1896,29 +1896,8 @@ AssignmentInstRange at::getAssignmentInsts(DIAssignID *ID) {
   return make_range(MapIt->second.begin(), MapIt->second.end());
 }
 
-AssignmentMarkerRange at::getAssignmentMarkers(DIAssignID *ID) {
-  assert(ID && "Expected non-null ID");
-  LLVMContext &Ctx = ID->getContext();
-
-  auto *IDAsValue = MetadataAsValue::getIfExists(Ctx, ID);
-
-  // The ID is only used wrapped in MetadataAsValue(ID), so lets check that
-  // one of those already exists first.
-  if (!IDAsValue)
-    return make_range(Value::user_iterator(), Value::user_iterator());
-
-  return make_range(IDAsValue->user_begin(), IDAsValue->user_end());
-}
-
 void at::deleteAssignmentMarkers(const Instruction *Inst) {
-  auto Range = getAssignmentMarkers(Inst);
-  SmallVector<DbgVariableRecord *> DVRAssigns = getDVRAssignmentMarkers(Inst);
-  if (Range.empty() && DVRAssigns.empty())
-    return;
-  SmallVector<DbgAssignIntrinsic *> ToDelete(Range.begin(), Range.end());
-  for (auto *DAI : ToDelete)
-    DAI->eraseFromParent();
-  for (auto *DVR : DVRAssigns)
+  for (auto *DVR : getDVRAssignmentMarkers(Inst))
     DVR->eraseFromParent();
 }
 
