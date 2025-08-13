@@ -15,29 +15,29 @@ OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olGetQueueInfoSizeTest);
 
 TEST_P(olGetQueueInfoSizeTest, SuccessDevice) {
   size_t Size = 0;
-  ASSERT_SUCCESS(olGetQueueInfoSize(Queue, OL_QUEUE_INFO_DEVICE, &Size));
-  ASSERT_EQ(Size, sizeof(ol_device_handle_t));
+  EXPECT_SUCCESS(olGetQueueInfoSize(Queue, OL_QUEUE_INFO_DEVICE, &Size));
+  EXPECT_EQ(Size, sizeof(ol_device_handle_t));
 }
 
 TEST_P(olGetQueueInfoSizeTest, SuccessEmpty) {
   size_t Size = 0;
-  ASSERT_SUCCESS(olGetQueueInfoSize(Queue, OL_QUEUE_INFO_EMPTY, &Size));
-  ASSERT_EQ(Size, sizeof(bool));
+  EXPECT_SUCCESS(olGetQueueInfoSize(Queue, OL_QUEUE_INFO_EMPTY, &Size));
+  EXPECT_EQ(Size, sizeof(bool));
 }
 
 TEST_P(olGetQueueInfoSizeTest, InvalidNullHandle) {
   size_t Size = 0;
-  ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE,
+  EXPECT_ERROR(OL_ERRC_INVALID_NULL_HANDLE,
                olGetQueueInfoSize(nullptr, OL_QUEUE_INFO_DEVICE, &Size));
 }
 
 TEST_P(olGetQueueInfoSizeTest, InvalidQueueInfoEnumeration) {
   size_t Size = 0;
-  ASSERT_ERROR(OL_ERRC_INVALID_ENUMERATION,
+  EXPECT_ERROR(OL_ERRC_INVALID_ENUMERATION,
                olGetQueueInfoSize(Queue, OL_QUEUE_INFO_FORCE_UINT32, &Size));
 }
 
 TEST_P(olGetQueueInfoSizeTest, InvalidNullPointer) {
-  ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
+  EXPECT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
                olGetQueueInfoSize(Queue, OL_QUEUE_INFO_DEVICE, nullptr));
 }

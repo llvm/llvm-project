@@ -15,76 +15,79 @@ OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olGetPlatformInfoTest);
 
 TEST_P(olGetPlatformInfoTest, SuccessName) {
   size_t Size = 0;
-  ASSERT_SUCCESS(olGetPlatformInfoSize(Platform, OL_PLATFORM_INFO_NAME, &Size));
-  ASSERT_GT(Size, 0ul);
+  EXPECT_SUCCESS(olGetPlatformInfoSize(Platform, OL_PLATFORM_INFO_NAME, &Size));
+  EXPECT_GT(Size, 0ul);
+  ASSERT_LT(Size, 0x1000);
   std::vector<char> Name;
   Name.resize(Size);
-  ASSERT_SUCCESS(
+  EXPECT_SUCCESS(
       olGetPlatformInfo(Platform, OL_PLATFORM_INFO_NAME, Size, Name.data()));
-  ASSERT_EQ(std::strlen(Name.data()), Size - 1);
+  EXPECT_EQ(std::strlen(Name.data()), Size - 1);
 }
 
 TEST_P(olGetPlatformInfoTest, SuccessVendorName) {
   size_t Size = 0;
-  ASSERT_SUCCESS(
+  EXPECT_SUCCESS(
       olGetPlatformInfoSize(Platform, OL_PLATFORM_INFO_VENDOR_NAME, &Size));
-  ASSERT_GT(Size, 0ul);
+  EXPECT_GT(Size, 0ul);
+  ASSERT_LT(Size, 0x1000);
   std::vector<char> VendorName;
   VendorName.resize(Size);
-  ASSERT_SUCCESS(olGetPlatformInfo(Platform, OL_PLATFORM_INFO_VENDOR_NAME, Size,
+  EXPECT_SUCCESS(olGetPlatformInfo(Platform, OL_PLATFORM_INFO_VENDOR_NAME, Size,
                                    VendorName.data()));
-  ASSERT_EQ(std::strlen(VendorName.data()), Size - 1);
+  EXPECT_EQ(std::strlen(VendorName.data()), Size - 1);
 }
 
 TEST_P(olGetPlatformInfoTest, SuccessVersion) {
   size_t Size = 0;
-  ASSERT_SUCCESS(
+  EXPECT_SUCCESS(
       olGetPlatformInfoSize(Platform, OL_PLATFORM_INFO_VERSION, &Size));
-  ASSERT_GT(Size, 0ul);
+  EXPECT_GT(Size, 0ul);
+  ASSERT_LT(Size, 0x1000);
   std::vector<char> Version;
   Version.resize(Size);
-  ASSERT_SUCCESS(olGetPlatformInfo(Platform, OL_PLATFORM_INFO_VERSION, Size,
+  EXPECT_SUCCESS(olGetPlatformInfo(Platform, OL_PLATFORM_INFO_VERSION, Size,
                                    Version.data()));
-  ASSERT_EQ(std::strlen(Version.data()), Size - 1);
+  EXPECT_EQ(std::strlen(Version.data()), Size - 1);
 }
 
 TEST_P(olGetPlatformInfoTest, SuccessBackend) {
   ol_platform_backend_t Backend;
-  ASSERT_SUCCESS(olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND,
+  EXPECT_SUCCESS(olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND,
                                    sizeof(ol_platform_backend_t), &Backend));
 }
 
 TEST_P(olGetPlatformInfoTest, InvalidNullHandle) {
   ol_platform_backend_t Backend;
-  ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE,
+  EXPECT_ERROR(OL_ERRC_INVALID_NULL_HANDLE,
                olGetPlatformInfo(nullptr, OL_PLATFORM_INFO_BACKEND,
                                  sizeof(Backend), &Backend));
 }
 
 TEST_P(olGetPlatformInfoTest, InvalidPlatformInfoEnumeration) {
   ol_platform_backend_t Backend;
-  ASSERT_ERROR(OL_ERRC_INVALID_ENUMERATION,
+  EXPECT_ERROR(OL_ERRC_INVALID_ENUMERATION,
                olGetPlatformInfo(Platform, OL_PLATFORM_INFO_FORCE_UINT32,
                                  sizeof(Backend), &Backend));
 }
 
 TEST_P(olGetPlatformInfoTest, InvalidSizeZero) {
   ol_platform_backend_t Backend;
-  ASSERT_ERROR(
+  EXPECT_ERROR(
       OL_ERRC_INVALID_SIZE,
       olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND, 0, &Backend));
 }
 
 TEST_P(olGetPlatformInfoTest, InvalidSizeSmall) {
   ol_platform_backend_t Backend;
-  ASSERT_ERROR(OL_ERRC_INVALID_SIZE,
+  EXPECT_ERROR(OL_ERRC_INVALID_SIZE,
                olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND,
                                  sizeof(Backend) - 1, &Backend));
 }
 
 TEST_P(olGetPlatformInfoTest, InvalidNullPointerPropValue) {
   ol_platform_backend_t Backend;
-  ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
+  EXPECT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
                olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND,
                                  sizeof(Backend), nullptr));
 }

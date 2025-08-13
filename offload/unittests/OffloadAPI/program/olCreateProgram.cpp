@@ -17,12 +17,12 @@ TEST_P(olCreateProgramTest, Success) {
 
   std::unique_ptr<llvm::MemoryBuffer> DeviceBin;
   ASSERT_TRUE(TestEnvironment::loadDeviceBinary("foo", Device, DeviceBin));
-  ASSERT_GE(DeviceBin->getBufferSize(), 0lu);
+  EXPECT_GE(DeviceBin->getBufferSize(), 0lu);
 
   ol_program_handle_t Program;
   ASSERT_SUCCESS(olCreateProgram(Device, DeviceBin->getBufferStart(),
                                  DeviceBin->getBufferSize(), &Program));
-  ASSERT_NE(Program, nullptr);
+  EXPECT_NE(Program, nullptr);
 
-  ASSERT_SUCCESS(olDestroyProgram(Program));
+  EXPECT_SUCCESS(olDestroyProgram(Program));
 }
