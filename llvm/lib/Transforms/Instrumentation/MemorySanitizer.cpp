@@ -3850,7 +3850,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   //         <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %a, <8 x i16> %b)
   //         <1 x i64> @llvm.x86.mmx.pmadd.wd(<1 x i64> %a, <1 x i64> %b)
   //
-  //       Three operands:
+  //       Three operands are not implemented yet:
   //         <4 x i32> @llvm.x86.avx512.vpdpbusd.128
   //                       (<4 x i32> %s, <4 x i32> %a, <4 x i32> %b)
   //         (the result of multiply-add'ing %a and %b is accumulated with %s)
@@ -3862,28 +3862,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         = cast<FixedVectorType>(I.getType());
     assert(isa<FixedVectorType>(ReturnType));
 
+    assert(I.arg_size() == 2);
+
     // Vectors A and B, and shadows
-    Value *Va;
-    Value *Vb;
-    Value *Sa;
-    Value *Sb;
+    Value *Va = I.getOperand(0);
+    Value *Vb = I.getOperand(1);
 
-    if (I.arg_size() == 2) {
-      Va = I.getOperand(0);
-      Vb = I.getOperand(1);
-
-      Sa = getShadow(&I, 0);
-      Sb = getShadow(&I, 1);
-    } else if (I.arg_size() == 3) {
-      // Operand 0 is the accumulator. We will deal with that below.
-      Va = I.getOperand(1);
-      Vb = I.getOperand(2);
-
-      Sa = getShadow(&I, 1);
-      Sb = getShadow(&I, 2);
-    } else {
-      assert(I.arg_size() == 2 || I.arg_size() == 3);
-    }
+    Value *Sa = getShadow(&I, 0);
+    Value *Sb = getShadow(&I, 1);
 
     FixedVectorType *ParamType =
         cast<FixedVectorType>(I.getArgOperand(0)->getType());
@@ -3891,11 +3877,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     assert(ParamType->getPrimitiveSizeInBits() ==
            ReturnType->getPrimitiveSizeInBits());
-
-    if (I.arg_size() == 3) {
-      assert(ParamType == ReturnType);
-      assert(ParamType == I.getArgOperand(2)->getType());
-    }
 
     // Step 1: instrument multiplication of corresponding vector elements
     if (EltSizeInBits) {
@@ -3933,10 +3914,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // Extend to <4 x i32>.
     // For MMX, cast it back to <1 x i64>.
     OutShadow = CreateShadowCast(IRB, OutShadow, getShadowTy(&I));
-
-    // Step 3 (if applicable): Accumulate
-    if (I.arg_size() == 3)
-      OutShadow = IRB.CreateOr(OutShadow, getShadow(&I, 0));
 
     setShadow(&I, OutShadow);
     setOriginForNaryOp(I);
