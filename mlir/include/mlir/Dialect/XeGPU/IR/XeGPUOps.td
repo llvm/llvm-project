@@ -1220,6 +1220,9 @@ def XeGPU_MatrixDescSubviewOp: XeGPU_Op<"matrix_desc_subview", [Pure, ViewLikeOp
     Results:
      - `src` : a matrix descriptor.
      - `offsets` : the coordinates within the matrix the subview will be created from.
+     - `layout`: [optional] An attribute for guiding distributions among
+                 subgroups and/or work-items. It currently can accept either
+                 LayoutAttr or SliceAttr.
   }];
   let arguments = (ins XeGPU_MatrixDesc:$src,
                        Variadic<Index>:$offsets,
