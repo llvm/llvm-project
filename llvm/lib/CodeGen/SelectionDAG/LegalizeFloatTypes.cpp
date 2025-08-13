@@ -1969,6 +1969,7 @@ void DAGTypeLegalizer::ExpandFloatRes_FNEG(SDNode *N, SDValue &Lo,
 
 void DAGTypeLegalizer::ExpandFloatRes_AssertNoFPClass(SDNode *N, SDValue &Lo,
                                                       SDValue &Hi) {
+  // TODO: Handle ppcf128 by preserving AssertNoFPClass for one of the halves.
   SDLoc dl(N);
   GetExpandedFloat(N->getOperand(0), Lo, Hi);
 }
