@@ -52,17 +52,34 @@ static Error handleArgs(const CommonConfig &Config, Object &Obj) {
       return Config.ToRemove.matches(P.Name);
     };
 
+  if (!Config.SplitSection.empty()) {
+    NameMatcher SectionMatches;
+    for (StringRef Flag : Config.SplitSection) {
+      StringRef SectionName;
+      StringRef FileName;
+      std::tie(SectionName, FileName) = Flag.split('=');
+
+      if (Error E = splitPartAsObject(SectionName, FileName,
+                                      Config.InputFilename, Obj))
+        return E;
+    }
+
+    RemovePred = [&Config, RemovePred](const Part &P) {
+      if (RemovePred(P))
+        return true;
+
+      for (StringRef Flag : Config.SplitSection) {
+        StringRef SectionName = Flag.take_front(Flag.find('='));
+        if (P.Name == SectionName)
+          return true;
+      }
+
+      return false;
+    };
+  }
+
   if (auto E = Obj.removeParts(RemovePred))
     return E;
-
-  for (StringRef Flag : Config.SplitSection) {
-    StringRef SectionName;
-    StringRef FileName;
-    std::tie(SectionName, FileName) = Flag.split('=');
-    if (Error E =
-            splitPartAsObject(SectionName, FileName, Config.InputFilename, Obj))
-      return E;
-  }
 
   return Error::success();
 }

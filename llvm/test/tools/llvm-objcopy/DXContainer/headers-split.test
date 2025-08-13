@@ -1,8 +1,10 @@
 ## Tests that a separate DXContainer is created with only the specified section
-## for each --split-section specified
+## for each --split-section specified. Also ensure that the part is removed
+## from the original object.
 
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy %t --split-section=FKE1=%t.fke1.out --split-section=FKE4=%t.fke4.out
+# RUN: obj2yaml %t | FileCheck %s --check-prefix=ORIG
 # RUN: obj2yaml %t.fke1.out | FileCheck %s --check-prefixes=CHECK,FKE1
 # RUN: obj2yaml %t.fke4.out | FileCheck %s --check-prefixes=CHECK,FKE4
 
@@ -23,6 +25,8 @@ Header:
 Parts:
 ## FKE1: Name:            FKE1
 ## FKE4: Name:            FKE4
+## ORIG-NOT: FKE1
+## ORIG-NOT: FKE4
 ## CHECK-NOT: FKE0
 ## CHECK-NOT: FKE2
 ## CHECK-NOT: FKE3

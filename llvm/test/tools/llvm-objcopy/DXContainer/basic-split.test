@@ -1,8 +1,10 @@
 ## Tests that a separate DXContainer is created for the RTS0 (root signature)
-## part, specified with --split-section specified
+## part, specified with --split-section. Also ensure that the part is removed
+## from the original object.
 
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy %t --split-section=RTS0=%t.out
+# RUN: obj2yaml %t | FileCheck %s --check-prefix=ORIG
 # RUN: obj2yaml %t.out | FileCheck %s
 
 ## The DXContainer described below was generated with:
@@ -31,6 +33,7 @@ Header:
   PartOffsets:     [ 60, 1792, 1808, 1836, 1852, 1868, 1900 ]
 Parts:
 ## CHECK: Name:            RTS0
+## ORIG-NOT: RTS0
 ## CHECK-NOT: DXIL
 ## CHECK-NOT: SFI0
 ## CHECK-NOT: HASH
