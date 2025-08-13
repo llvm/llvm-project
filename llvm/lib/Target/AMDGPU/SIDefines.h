@@ -407,7 +407,7 @@ enum CPol {
 
   SCAL = 1 << 11, // Scale offset bit
 
-  ALL = TH | SCOPE,
+  ALL = TH | SCOPE | NV,
 
   // Helper bits
   TH_TYPE_LOAD = 1 << 7,    // TH_LOAD policy
