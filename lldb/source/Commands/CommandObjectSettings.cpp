@@ -261,8 +261,8 @@ public:
                           ExecutionContext *execution_context) override {
       const int short_option = m_getopt_table[option_idx].val;
       switch (short_option) {
-      case 'v':
-        m_verbose = true;
+      case 'd':
+        m_include_defaults = true;
         break;
       default:
         llvm_unreachable("Unimplemented option");
@@ -271,14 +271,14 @@ public:
     }
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
-      m_verbose = false;
+      m_include_defaults = false;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
       return g_settings_show_options;
     }
 
-    bool m_verbose = false;
+    bool m_include_defaults = false;
   };
 
 protected:
@@ -286,7 +286,7 @@ protected:
     result.SetStatus(eReturnStatusSuccessFinishResult);
 
     uint32_t dump_mask = OptionValue::eDumpGroupValue;
-    if (m_options.m_verbose)
+    if (m_options.m_include_defaults)
       dump_mask |= OptionValue::eDumpOptionDefaultValue;
 
     if (!args.empty()) {

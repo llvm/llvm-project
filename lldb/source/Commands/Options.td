@@ -57,8 +57,8 @@ let Command = "settings clear" in {
 }
 
 let Command = "settings show" in {
-  def setshow_verbose : Option<"verbose", "v">,
-    Desc<"Enable verbose output.">;
+  def setshow_include_defaults : Option<"include-defaults", "d">,
+    Desc<"Include default values if defined.">;
 }
 
 let Command = "breakpoint list" in {
