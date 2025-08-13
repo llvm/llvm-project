@@ -558,9 +558,8 @@ Error validateDescriptorTableSamplerMixin(mcdxbc::DescriptorTable Table,
  *
  *   It checks if the registers in a descriptor table are overflowing, meaning,
  *   they are trying to bind a register larger than MAX_UINT.
- *   This will usually happen when the descriptor table defined a range after an
- *   unbounded range, which would lead to an overflow in the register;
- *   Or if trying append a bunch or really large ranges.
+ *   This will usually happen when the descriptor table appends a resource
+ *   after an unbounded range.
  **/
 Error validateDescriptorTableRegisterOverflow(mcdxbc::DescriptorTable Table,
                                               uint32_t Location) {
