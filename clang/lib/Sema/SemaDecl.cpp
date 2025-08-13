@@ -12463,7 +12463,8 @@ void Sema::CheckMain(FunctionDecl *FD, const DeclSpec &DS) {
   }
 
   if (FD->hasAttr<SYCLExternalAttr>()) {
-    Diag(FD->getLocation(), diag::err_sycl_external_invalid_main);
+    Diag(FD->getLocation(), diag::err_sycl_external_invalid_main)
+        << FD->getAttr<SYCLExternalAttr>();
     FD->setInvalidDecl();
     return;
   }
@@ -16308,7 +16309,8 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
     SYCLExternalAttr *SEAttr = FD->getAttr<SYCLExternalAttr>();
     if (FD->isDeletedAsWritten())
       Diag(SEAttr->getLocation(),
-           diag::err_sycl_external_invalid_deleted_function);
+           diag::err_sycl_external_invalid_deleted_function)
+          << SEAttr;
   }
 
   {

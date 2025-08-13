@@ -12912,14 +12912,13 @@ def err_sycl_special_type_num_init_method : Error<
 
 // SYCL external attribute diagnostics
 def err_sycl_external_invalid_linkage : Error<
-  "'clang::sycl_external' can only be applied to functions with external"
-  " linkage">;
+  "%0 can only be applied to functions with external linkage">;
 def err_sycl_external_invalid_main : Error<
-  "'clang::sycl_external' cannot be applied to the 'main' function">;
+  "%0 cannot be applied to the 'main' function">;
 def err_sycl_external_invalid_deleted_function : Error<
-  "'clang::sycl_external' cannot be applied to an explicitly deleted function">;
+  "%0 cannot be applied to an explicitly deleted function">;
 def err_sycl_external_invalid_virtual_function : Error<
-  "'clang::sycl_external' cannot be applied to a virtual function">;
+  "%0 cannot be applied to a virtual function">;
 def warn_sycl_external_missing_on_first_decl : Warning<
   "%0 attribute does not appear on the first declaration">,
   InGroup<IgnoredAttributes>;
