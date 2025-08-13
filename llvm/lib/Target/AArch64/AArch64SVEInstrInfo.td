@@ -1023,7 +1023,7 @@ let Predicates = [HasSVE_or_SME] in {
   defm INSR_ZV : sve_int_perm_insrv<"insr", AArch64insr>;
   defm EXT_ZZI : sve_int_perm_extract_i<"ext", AArch64ext, "EXT_ZZI_CONSTRUCTIVE">;
 
-  def EXT_ZZI_CONSTRUCTIVE : UnpredRegImmPseudo<"EXT_ZZI_CONSTRUCTIVE", ZPR8, imm0_255>;
+  def EXT_ZZI_CONSTRUCTIVE : UnpredRegImmPseudo<ZPR8, imm0_255>;
 
   defm RBIT_ZPmZ : sve_int_perm_rev_rbit<"rbit", AArch64rbit_mt>;
   defm REVB_ZPmZ : sve_int_perm_rev_revb<"revb", AArch64revb_mt>;

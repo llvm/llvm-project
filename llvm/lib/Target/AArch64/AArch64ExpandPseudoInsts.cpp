@@ -529,7 +529,8 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
     }
     break;
   case AArch64::Destructive2xRegImmUnpred:
-    // EXT_ZZI_CONSTRUCTIVE Zd, Zs, Imm ==> EXT_ZZI Zds, Zds, Zds, Imm
+    // EXT_ZZI_CONSTRUCTIVE Zd, Zs, Imm
+    //      ==> MOVPRFX Zd Zs; EXT_ZZI Zd, Zd, Zs, Imm
     std::tie(DOPIdx, SrcIdx, Src2Idx) = std::make_tuple(1, 1, 2);
     break;
   default:

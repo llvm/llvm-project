@@ -810,8 +810,8 @@ let hasNoSchedulingInfo = 1 in {
     let FalseLanes = flags;
   }
 
-  class UnpredRegImmPseudo<string name, ZPRRegOp zprty, Operand immty>
-  : SVEPseudo2Instr<name, 0>,
+  class UnpredRegImmPseudo<ZPRRegOp zprty, Operand immty>
+  : SVEPseudo2Instr<NAME, 0>,
     Pseudo<(outs zprty:$Zd), (ins zprty:$Zs, immty:$imm), []> {
   }
 }
@@ -1895,9 +1895,9 @@ class sve_int_perm_extract_i<string asm>
   let hasSideEffects = 0;
 }
 
-multiclass sve_int_perm_extract_i<string asm, SDPatternOperator op, string pseudoInstrName> {
+multiclass sve_int_perm_extract_i<string asm, SDPatternOperator op, string Ps> {
   def NAME : sve_int_perm_extract_i<asm>,
-             SVEPseudo2Instr<pseudoInstrName, 1>;
+             SVEPseudo2Instr<Ps, 1>;
 
   def : SVE_3_Op_Imm_Pat<nxv16i8, op, nxv16i8, nxv16i8, i32, imm0_255,
                          !cast<Instruction>(NAME)>;
