@@ -3277,6 +3277,9 @@ public:
 
   bool isWriteAfterRead() const { return WriteAfterRead; }
 
+InstructionCost computeCost(ElementCount VF,
+                                             VPCostContext &Ctx) const override;
+
 private:
   unsigned ElementSize;
   bool WriteAfterRead;
