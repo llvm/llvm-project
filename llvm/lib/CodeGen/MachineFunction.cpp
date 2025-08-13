@@ -154,17 +154,17 @@ void ilist_alloc_traits<MachineBasicBlock>::deleteNode(MachineBasicBlock *MBB) {
   MBB->getParent()->deleteMachineBasicBlock(MBB);
 }
 
-static inline Align getFnStackAlignment(const TargetSubtargetInfo *STI,
-                                           const Function &F) {
+static inline Align getFnStackAlignment(const TargetSubtargetInfo &STI,
+                                        const Function &F) {
   if (auto MA = F.getFnStackAlign())
     return *MA;
-  return STI->getFrameLowering()->getStackAlign();
+  return STI.getFrameLowering()->getStackAlign();
 }
 
 MachineFunction::MachineFunction(Function &F, const TargetMachine &Target,
                                  const TargetSubtargetInfo &STI, MCContext &Ctx,
                                  unsigned FunctionNum)
-    : F(F), Target(Target), STI(&STI), Ctx(Ctx) {
+    : F(F), Target(Target), STI(STI), Ctx(Ctx) {
   FunctionNumber = FunctionNum;
   init();
 }
@@ -195,7 +195,7 @@ void MachineFunction::init() {
 
   // We can realign the stack if the target supports it and the user hasn't
   // explicitly asked us not to.
-  bool CanRealignSP = STI->getFrameLowering()->isStackRealignable() &&
+  bool CanRealignSP = STI.getFrameLowering()->isStackRealignable() &&
                       !F.hasFnAttribute("no-realign-stack");
   bool ForceRealignSP = F.hasFnAttribute(Attribute::StackAlignment) ||
                         F.hasFnAttribute("stackrealign");
@@ -209,11 +209,11 @@ void MachineFunction::init() {
     FrameInfo->ensureMaxAlignment(*F.getFnStackAlign());
 
   ConstantPool = new (Allocator) MachineConstantPool(getDataLayout());
-  Alignment = STI->getTargetLowering()->getMinFunctionAlignment();
+  Alignment = STI.getTargetLowering()->getMinFunctionAlignment();
 
   if (!F.getAlign() && !F.hasOptSize())
     Alignment = std::max(Alignment,
-                         STI->getTargetLowering()->getPrefFunctionAlignment());
+                         STI.getTargetLowering()->getPrefFunctionAlignment());
 
   // -fsanitize=function and -fsanitize=kcfi instrument indirect function calls
   // to load a type hash before the function label. Ensure functions are aligned
