@@ -1317,9 +1317,10 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   if (MaxDynCGroupMem >= MaxDynCGroupMemLimit) {
     CUresult AttrResult = cuFuncSetAttribute(
         Func, CU_FUNC_ATTRIBUTE_MAX_DYNAMIC_SHARED_SIZE_BYTES, MaxDynCGroupMem);
-    return Plugin::check(
-        AttrResult,
-        "Error in cuLaunchKernel while setting the memory limits: %s");
+    if (auto Err = Plugin::check(
+            AttrResult,
+            "Error in cuLaunchKernel while setting the memory limits: %s"))
+      return Err;
     MaxDynCGroupMemLimit = MaxDynCGroupMem;
   }
 

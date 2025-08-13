@@ -1507,8 +1507,8 @@ struct TestLegalizePatternDriver
     ConversionTarget target(getContext());
     target.addLegalOp<ModuleOp>();
     target.addLegalOp<LegalOpA, LegalOpB, LegalOpC, TestCastOp, TestValidOp,
-                      TerminatorOp, OneRegionOp, TestValidProducerOp,
-                      TestValidConsumerOp>();
+                      TerminatorOp, TestOpConstant, OneRegionOp,
+                      TestValidProducerOp, TestValidConsumerOp>();
     target.addLegalOp(OperationName("test.legal_op", &getContext()));
     target
         .addIllegalOp<ILLegalOpF, TestRegionBuilderOp, TestOpWithRegionFold>();
@@ -1563,6 +1563,7 @@ struct TestLegalizePatternDriver
       DumpNotifications dumpNotifications;
       config.listener = &dumpNotifications;
       config.unlegalizedOps = &unlegalizedOps;
+      config.foldingMode = foldingMode;
       if (failed(applyPartialConversion(getOperation(), target,
                                         std::move(patterns), config))) {
         getOperation()->emitRemark() << "applyPartialConversion failed";
@@ -1582,6 +1583,7 @@ struct TestLegalizePatternDriver
 
       ConversionConfig config;
       DumpNotifications dumpNotifications;
+      config.foldingMode = foldingMode;
       config.listener = &dumpNotifications;
       if (failed(applyFullConversion(getOperation(), target,
                                      std::move(patterns), config))) {
@@ -1596,6 +1598,7 @@ struct TestLegalizePatternDriver
     // Analyze the convertible operations.
     DenseSet<Operation *> legalizedOps;
     ConversionConfig config;
+    config.foldingMode = foldingMode;
     config.legalizableOps = &legalizedOps;
     if (failed(applyAnalysisConversion(getOperation(), target,
                                        std::move(patterns), config)))
@@ -1616,6 +1619,21 @@ struct TestLegalizePatternDriver
           clEnumValN(ConversionMode::Full, "full", "Perform a full conversion"),
           clEnumValN(ConversionMode::Partial, "partial",
                      "Perform a partial conversion"))};
+
+  Option<DialectConversionFoldingMode> foldingMode{
+      *this, "test-legalize-folding-mode",
+      llvm::cl::desc("The folding mode to use with the test driver"),
+      llvm::cl::init(DialectConversionFoldingMode::BeforePatterns),
+      llvm::cl::values(clEnumValN(DialectConversionFoldingMode::Never, "never",
+                                  "Never attempt to fold"),
+                       clEnumValN(DialectConversionFoldingMode::BeforePatterns,
+                                  "before-patterns",
+                                  "Only attempt to fold not legal operations "
+                                  "before applying patterns"),
+                       clEnumValN(DialectConversionFoldingMode::AfterPatterns,
+                                  "after-patterns",
+                                  "Only attempt to fold not legal operations "
+                                  "after applying patterns"))};
 };
 } // namespace
 

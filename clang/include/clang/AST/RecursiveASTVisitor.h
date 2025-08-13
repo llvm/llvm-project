@@ -216,14 +216,14 @@ public:
   ///
   /// \returns false if the visitation was terminated early, true
   /// otherwise (including when the argument is a Null type).
-  bool TraverseType(QualType T);
+  bool TraverseType(QualType T, bool TraverseQualifier = true);
 
   /// Recursively visit a type with location, by dispatching to
   /// Traverse*TypeLoc() based on the argument type's getTypeClass() property.
   ///
   /// \returns false if the visitation was terminated early, true
   /// otherwise (including when the argument is a Null type location).
-  bool TraverseTypeLoc(TypeLoc TL);
+  bool TraverseTypeLoc(TypeLoc TL, bool TraverseQualifier = true);
 
   /// Recursively visit an attribute, by dispatching to
   /// Traverse*Attr() based on the argument's dynamic type.
@@ -242,7 +242,7 @@ public:
   /// Recursively visit a C++ nested-name-specifier.
   ///
   /// \returns false if the visitation was terminated early, true otherwise.
-  bool TraverseNestedNameSpecifier(NestedNameSpecifier *NNS);
+  bool TraverseNestedNameSpecifier(NestedNameSpecifier NNS);
 
   /// Recursively visit a C++ nested-name-specifier with location
   /// information.
@@ -389,7 +389,8 @@ public:
 
 // Declare Traverse*() for all concrete Type classes.
 #define ABSTRACT_TYPE(CLASS, BASE)
-#define TYPE(CLASS, BASE) bool Traverse##CLASS##Type(CLASS##Type *T);
+#define TYPE(CLASS, BASE)                                                      \
+  bool Traverse##CLASS##Type(CLASS##Type *T, bool TraverseQualifier);
 #include "clang/AST/TypeNodes.inc"
   // The above header #undefs ABSTRACT_TYPE and TYPE upon exit.
 
@@ -410,7 +411,8 @@ public:
 
 // Declare Traverse*() for all concrete TypeLoc classes.
 #define ABSTRACT_TYPELOC(CLASS, BASE)
-#define TYPELOC(CLASS, BASE) bool Traverse##CLASS##TypeLoc(CLASS##TypeLoc TL);
+#define TYPELOC(CLASS, BASE)                                                   \
+  bool Traverse##CLASS##TypeLoc(CLASS##TypeLoc TL, bool TraverseQualifier);
 #include "clang/AST/TypeLocNodes.def"
   // The above header #undefs ABSTRACT_TYPELOC and TYPELOC upon exit.
 
@@ -499,6 +501,8 @@ private:
   bool TraverseOMPExecutableDirective(OMPExecutableDirective *S);
   bool TraverseOMPLoopDirective(OMPLoopDirective *S);
   bool TraverseOMPClause(OMPClause *C);
+  bool TraverseTagType(TagType *T, bool TraverseQualifier);
+  bool TraverseTagTypeLoc(TagTypeLoc TL, bool TraverseQualifier);
 #define GEN_CLANG_CLAUSE_CLASS
 #define CLAUSE_CLASS(Enum, Str, Class) bool Visit##Class(Class *C);
 #include "llvm/Frontend/OpenMP/OMP.inc"
@@ -698,7 +702,8 @@ RecursiveASTVisitor<Derived>::TraverseStmt(Stmt *S, DataRecursionQueue *Queue) {
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseType(QualType T) {
+bool RecursiveASTVisitor<Derived>::TraverseType(QualType T,
+                                                bool TraverseQualifier) {
   if (T.isNull())
     return true;
 
@@ -707,7 +712,8 @@ bool RecursiveASTVisitor<Derived>::TraverseType(QualType T) {
 #define TYPE(CLASS, BASE)                                                      \
   case Type::CLASS:                                                            \
     return getDerived().Traverse##CLASS##Type(                                 \
-        static_cast<CLASS##Type *>(const_cast<Type *>(T.getTypePtr())));
+        static_cast<CLASS##Type *>(const_cast<Type *>(T.getTypePtr())),        \
+        TraverseQualifier);
 #include "clang/AST/TypeNodes.inc"
   }
 
@@ -715,7 +721,8 @@ bool RecursiveASTVisitor<Derived>::TraverseType(QualType T) {
 }
 
 template <typename Derived>
-bool RecursiveASTVisitor<Derived>::TraverseTypeLoc(TypeLoc TL) {
+bool RecursiveASTVisitor<Derived>::TraverseTypeLoc(TypeLoc TL,
+                                                   bool TraverseQualifier) {
   if (TL.isNull())
     return true;
 
@@ -723,7 +730,8 @@ bool RecursiveASTVisitor<Derived>::TraverseTypeLoc(TypeLoc TL) {
 #define ABSTRACT_TYPELOC(CLASS, BASE)
 #define TYPELOC(CLASS, BASE)                                                   \
   case TypeLoc::CLASS:                                                         \
-    return getDerived().Traverse##CLASS##TypeLoc(TL.castAs<CLASS##TypeLoc>());
+    return getDerived().Traverse##CLASS##TypeLoc(TL.castAs<CLASS##TypeLoc>(),  \
+                                                 TraverseQualifier);
 #include "clang/AST/TypeLocNodes.def"
   }
 
@@ -779,46 +787,43 @@ bool RecursiveASTVisitor<Derived>::TraverseDecl(Decl *D) {
 
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::TraverseNestedNameSpecifier(
-    NestedNameSpecifier *NNS) {
-  if (!NNS)
+    NestedNameSpecifier NNS) {
+  switch (NNS.getKind()) {
+  case NestedNameSpecifier::Kind::Null:
+  case NestedNameSpecifier::Kind::Global:
+  case NestedNameSpecifier::Kind::MicrosoftSuper:
     return true;
-
-  if (NNS->getPrefix())
-    TRY_TO(TraverseNestedNameSpecifier(NNS->getPrefix()));
-
-  switch (NNS->getKind()) {
-  case NestedNameSpecifier::Identifier:
-  case NestedNameSpecifier::Namespace:
-  case NestedNameSpecifier::Global:
-  case NestedNameSpecifier::Super:
+  case NestedNameSpecifier::Kind::Namespace:
+    TRY_TO(TraverseNestedNameSpecifier(NNS.getAsNamespaceAndPrefix().Prefix));
     return true;
-
-  case NestedNameSpecifier::TypeSpec:
-    TRY_TO(TraverseType(QualType(NNS->getAsType(), 0)));
+  case NestedNameSpecifier::Kind::Type: {
+    auto *T = const_cast<Type *>(NNS.getAsType());
+    TRY_TO(TraverseNestedNameSpecifier(T->getPrefix()));
+    TRY_TO(TraverseType(QualType(T, 0), /*TraverseQualifier=*/false));
+    return true;
   }
-
-  return true;
+  }
+  llvm_unreachable("unhandled kind");
 }
 
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::TraverseNestedNameSpecifierLoc(
     NestedNameSpecifierLoc NNS) {
-  if (!NNS)
+  switch (NNS.getNestedNameSpecifier().getKind()) {
+  case NestedNameSpecifier::Kind::Null:
+  case NestedNameSpecifier::Kind::Global:
+  case NestedNameSpecifier::Kind::MicrosoftSuper:
     return true;
-
-  if (NestedNameSpecifierLoc Prefix = NNS.getPrefix())
-    TRY_TO(TraverseNestedNameSpecifierLoc(Prefix));
-
-  switch (NNS.getNestedNameSpecifier()->getKind()) {
-  case NestedNameSpecifier::Identifier:
-  case NestedNameSpecifier::Namespace:
-  case NestedNameSpecifier::Global:
-  case NestedNameSpecifier::Super:
+  case NestedNameSpecifier::Kind::Namespace:
+    TRY_TO(
+        TraverseNestedNameSpecifierLoc(NNS.castAsNamespaceAndPrefix().Prefix));
     return true;
-
-  case NestedNameSpecifier::TypeSpec:
-    TRY_TO(TraverseTypeLoc(NNS.getTypeLoc()));
-    break;
+  case NestedNameSpecifier::Kind::Type: {
+    TypeLoc TL = NNS.castAsTypeLoc();
+    TRY_TO(TraverseNestedNameSpecifierLoc(TL.getPrefix()));
+    TRY_TO(TraverseTypeLoc(TL, /*TraverseQualifier=*/false));
+    return true;
+  }
   }
 
   return true;
@@ -975,10 +980,13 @@ RecursiveASTVisitor<Derived>::TraverseLambdaCapture(LambdaExpr *LE,
 // This macro makes available a variable T, the passed-in type.
 #define DEF_TRAVERSE_TYPE(TYPE, CODE)                                          \
   template <typename Derived>                                                  \
-  bool RecursiveASTVisitor<Derived>::Traverse##TYPE(TYPE *T) {                 \
+  bool RecursiveASTVisitor<Derived>::Traverse##TYPE(TYPE *T,                   \
+                                                    bool TraverseQualifier) {  \
     if (!getDerived().shouldTraversePostOrder())                               \
       TRY_TO(WalkUpFrom##TYPE(T));                                             \
-    { CODE; }                                                                  \
+    {                                                                          \
+      CODE;                                                                    \
+    }                                                                          \
     if (getDerived().shouldTraversePostOrder())                                \
       TRY_TO(WalkUpFrom##TYPE(T));                                             \
     return true;                                                               \
@@ -1000,10 +1008,11 @@ DEF_TRAVERSE_TYPE(RValueReferenceType,
                   { TRY_TO(TraverseType(T->getPointeeType())); })
 
 DEF_TRAVERSE_TYPE(MemberPointerType, {
-  TRY_TO(TraverseNestedNameSpecifier(T->getQualifier()));
-  if (T->isSugared())
-    TRY_TO(TraverseType(
-        QualType(T->getMostRecentCXXRecordDecl()->getTypeForDecl(), 0)));
+  NestedNameSpecifier Qualifier =
+      T->isSugared() ? cast<MemberPointerType>(T->getCanonicalTypeUnqualified())
+                           ->getQualifier()
+                     : T->getQualifier();
+  TRY_TO(TraverseNestedNameSpecifier(Qualifier));
   TRY_TO(TraverseType(T->getPointeeType()));
 })
 
@@ -1087,9 +1096,18 @@ DEF_TRAVERSE_TYPE(FunctionProtoType, {
     TRY_TO(TraverseStmt(NE));
 })
 
-DEF_TRAVERSE_TYPE(UsingType, {})
-DEF_TRAVERSE_TYPE(UnresolvedUsingType, {})
-DEF_TRAVERSE_TYPE(TypedefType, {})
+DEF_TRAVERSE_TYPE(UsingType, {
+  if (TraverseQualifier)
+    TRY_TO(TraverseNestedNameSpecifier(T->getQualifier()));
+})
+DEF_TRAVERSE_TYPE(UnresolvedUsingType, {
+  if (TraverseQualifier)
+    TRY_TO(TraverseNestedNameSpecifier(T->getQualifier()));
+})
+DEF_TRAVERSE_TYPE(TypedefType, {
+  if (TraverseQualifier)
+    TRY_TO(TraverseNestedNameSpecifier(T->getQualifier()));
+})
 
 DEF_TRAVERSE_TYPE(TypeOfExprType,
                   { TRY_TO(TraverseStmt(T->getUnderlyingExpr())); })
@@ -1115,13 +1133,7 @@ DEF_TRAVERSE_TYPE(AutoType, {
     TRY_TO(TraverseTemplateArguments(T->getTypeConstraintArguments()));
   }
 })
-DEF_TRAVERSE_TYPE(DeducedTemplateSpecializationType, {
-  TRY_TO(TraverseTemplateName(T->getTemplateName()));
-  TRY_TO(TraverseType(T->getDeducedType()));
-})
 
-DEF_TRAVERSE_TYPE(RecordType, {})
-DEF_TRAVERSE_TYPE(EnumType, {})
 DEF_TRAVERSE_TYPE(TemplateTypeParmType, {})
 DEF_TRAVERSE_TYPE(SubstTemplateTypeParmType, {
   TRY_TO(TraverseType(T->getReplacementType()));
@@ -1129,13 +1141,6 @@ DEF_TRAVERSE_TYPE(SubstTemplateTypeParmType, {
 DEF_TRAVERSE_TYPE(SubstTemplateTypeParmPackType, {
   TRY_TO(TraverseTemplateArgument(T->getArgumentPack()));
 })
-
-DEF_TRAVERSE_TYPE(TemplateSpecializationType, {
-  TRY_TO(TraverseTemplateName(T->getTemplateName()));
-  TRY_TO(TraverseTemplateArguments(T->template_arguments()));
-})
-
-DEF_TRAVERSE_TYPE(InjectedClassNameType, {})
 
 DEF_TRAVERSE_TYPE(AttributedType,
                   { TRY_TO(TraverseType(T->getModifiedType())); })
@@ -1165,20 +1170,52 @@ DEF_TRAVERSE_TYPE(ParenType, { TRY_TO(TraverseType(T->getInnerType())); })
 DEF_TRAVERSE_TYPE(MacroQualifiedType,
                   { TRY_TO(TraverseType(T->getUnderlyingType())); })
 
-DEF_TRAVERSE_TYPE(ElaboratedType, {
-  if (T->getQualifier()) {
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::TraverseTagType(TagType *T,
+                                                   bool TraverseQualifier) {
+  if (TraverseQualifier)
     TRY_TO(TraverseNestedNameSpecifier(T->getQualifier()));
-  }
-  TRY_TO(TraverseType(T->getNamedType()));
-})
+  return true;
+}
 
-DEF_TRAVERSE_TYPE(DependentNameType,
-                  { TRY_TO(TraverseNestedNameSpecifier(T->getQualifier())); })
+DEF_TRAVERSE_TYPE(EnumType, { TRY_TO(TraverseTagType(T, TraverseQualifier)); })
+DEF_TRAVERSE_TYPE(RecordType,
+                  { TRY_TO(TraverseTagType(T, TraverseQualifier)); })
+DEF_TRAVERSE_TYPE(InjectedClassNameType,
+                  { TRY_TO(TraverseTagType(T, TraverseQualifier)); })
+
+DEF_TRAVERSE_TYPE(DependentNameType, {
+  if (TraverseQualifier)
+    TRY_TO(TraverseNestedNameSpecifier(T->getQualifier()));
+})
 
 DEF_TRAVERSE_TYPE(DependentTemplateSpecializationType, {
   const DependentTemplateStorage &S = T->getDependentTemplateName();
-  TRY_TO(TraverseNestedNameSpecifier(S.getQualifier()));
+  if (TraverseQualifier)
+    TRY_TO(TraverseNestedNameSpecifier(S.getQualifier()));
   TRY_TO(TraverseTemplateArguments(T->template_arguments()));
+})
+
+DEF_TRAVERSE_TYPE(TemplateSpecializationType, {
+  if (TraverseQualifier) {
+    TRY_TO(TraverseTemplateName(T->getTemplateName()));
+  } else {
+    // FIXME: Try to preserve the rest of the template name.
+    TRY_TO(TraverseTemplateName(TemplateName(
+        T->getTemplateName().getAsTemplateDecl(/*IgnoreDeduced=*/true))));
+  }
+  TRY_TO(TraverseTemplateArguments(T->template_arguments()));
+})
+
+DEF_TRAVERSE_TYPE(DeducedTemplateSpecializationType, {
+  if (TraverseQualifier) {
+    TRY_TO(TraverseTemplateName(T->getTemplateName()));
+  } else {
+    // FIXME: Try to preserve the rest of the template name.
+    TRY_TO(TraverseTemplateName(TemplateName(
+        T->getTemplateName().getAsTemplateDecl(/*IgnoreDeduced=*/true))));
+  }
+  TRY_TO(TraverseType(T->getDeducedType()));
 })
 
 DEF_TRAVERSE_TYPE(PackExpansionType, { TRY_TO(TraverseType(T->getPattern())); })
@@ -1221,13 +1258,16 @@ DEF_TRAVERSE_TYPE(PredefinedSugarType, {})
 // continue to work.
 #define DEF_TRAVERSE_TYPELOC(TYPE, CODE)                                       \
   template <typename Derived>                                                  \
-  bool RecursiveASTVisitor<Derived>::Traverse##TYPE##Loc(TYPE##Loc TL) {       \
+  bool RecursiveASTVisitor<Derived>::Traverse##TYPE##Loc(                      \
+      TYPE##Loc TL, bool TraverseQualifier) {                                  \
     if (!getDerived().shouldTraversePostOrder()) {                             \
       TRY_TO(WalkUpFrom##TYPE##Loc(TL));                                       \
       if (getDerived().shouldWalkTypesOfTypeLocs())                            \
         TRY_TO(WalkUpFrom##TYPE(const_cast<TYPE *>(TL.getTypePtr())));         \
     }                                                                          \
-    { CODE; }                                                                  \
+    {                                                                          \
+      CODE;                                                                    \
+    }                                                                          \
     if (getDerived().shouldTraversePostOrder()) {                              \
       TRY_TO(WalkUpFrom##TYPE##Loc(TL));                                       \
       if (getDerived().shouldWalkTypesOfTypeLocs())                            \
@@ -1237,8 +1277,10 @@ DEF_TRAVERSE_TYPE(PredefinedSugarType, {})
   }
 
 template <typename Derived>
-bool
-RecursiveASTVisitor<Derived>::TraverseQualifiedTypeLoc(QualifiedTypeLoc TL) {
+bool RecursiveASTVisitor<Derived>::TraverseQualifiedTypeLoc(
+    QualifiedTypeLoc TL, bool TraverseQualifier) {
+  assert(TraverseQualifier &&
+         "Qualifiers should never occur within NestedNameSpecifiers");
   // Move this over to the 'main' typeloc tree.  Note that this is a
   // move -- we pretend that we were really looking at the unqualified
   // typeloc all along -- rather than a recursion, so we don't follow
@@ -1391,9 +1433,21 @@ DEF_TRAVERSE_TYPELOC(FunctionProtoType, {
     TRY_TO(TraverseStmt(NE));
 })
 
-DEF_TRAVERSE_TYPELOC(UsingType, {})
-DEF_TRAVERSE_TYPELOC(UnresolvedUsingType, {})
-DEF_TRAVERSE_TYPELOC(TypedefType, {})
+DEF_TRAVERSE_TYPELOC(UsingType, {
+  if (NestedNameSpecifierLoc QualifierLoc = TL.getQualifierLoc();
+      TraverseQualifier && QualifierLoc)
+    TRY_TO(TraverseNestedNameSpecifierLoc(QualifierLoc));
+})
+DEF_TRAVERSE_TYPELOC(UnresolvedUsingType, {
+  if (NestedNameSpecifierLoc QualifierLoc = TL.getQualifierLoc();
+      TraverseQualifier && QualifierLoc)
+    TRY_TO(TraverseNestedNameSpecifierLoc(QualifierLoc));
+})
+DEF_TRAVERSE_TYPELOC(TypedefType, {
+  if (NestedNameSpecifierLoc QualifierLoc = TL.getQualifierLoc();
+      TraverseQualifier && QualifierLoc)
+    TRY_TO(TraverseNestedNameSpecifierLoc(QualifierLoc));
+})
 
 DEF_TRAVERSE_TYPELOC(TypeOfExprType,
                      { TRY_TO(TraverseStmt(TL.getUnderlyingExpr())); })
@@ -1423,13 +1477,6 @@ DEF_TRAVERSE_TYPELOC(AutoType, {
   }
 })
 
-DEF_TRAVERSE_TYPELOC(DeducedTemplateSpecializationType, {
-  TRY_TO(TraverseTemplateName(TL.getTypePtr()->getTemplateName()));
-  TRY_TO(TraverseType(TL.getTypePtr()->getDeducedType()));
-})
-
-DEF_TRAVERSE_TYPELOC(RecordType, {})
-DEF_TRAVERSE_TYPELOC(EnumType, {})
 DEF_TRAVERSE_TYPELOC(TemplateTypeParmType, {})
 DEF_TRAVERSE_TYPELOC(SubstTemplateTypeParmType, {
   TRY_TO(TraverseType(TL.getTypePtr()->getReplacementType()));
@@ -1437,16 +1484,6 @@ DEF_TRAVERSE_TYPELOC(SubstTemplateTypeParmType, {
 DEF_TRAVERSE_TYPELOC(SubstTemplateTypeParmPackType, {
   TRY_TO(TraverseTemplateArgument(TL.getTypePtr()->getArgumentPack()));
 })
-
-// FIXME: use the loc for the template name?
-DEF_TRAVERSE_TYPELOC(TemplateSpecializationType, {
-  TRY_TO(TraverseTemplateName(TL.getTypePtr()->getTemplateName()));
-  for (unsigned I = 0, E = TL.getNumArgs(); I != E; ++I) {
-    TRY_TO(TraverseTemplateArgumentLoc(TL.getArgLoc(I)));
-  }
-})
-
-DEF_TRAVERSE_TYPELOC(InjectedClassNameType, {})
 
 DEF_TRAVERSE_TYPELOC(ParenType, { TRY_TO(TraverseTypeLoc(TL.getInnerLoc())); })
 
@@ -1468,25 +1505,61 @@ DEF_TRAVERSE_TYPELOC(HLSLAttributedResourceType,
 DEF_TRAVERSE_TYPELOC(HLSLInlineSpirvType,
                      { TRY_TO(TraverseType(TL.getType())); })
 
-DEF_TRAVERSE_TYPELOC(ElaboratedType, {
-  if (TL.getQualifierLoc()) {
-    TRY_TO(TraverseNestedNameSpecifierLoc(TL.getQualifierLoc()));
-  }
-  TRY_TO(TraverseTypeLoc(TL.getNamedTypeLoc()));
-})
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::TraverseTagTypeLoc(TagTypeLoc TL,
+                                                      bool TraverseQualifier) {
+  if (NestedNameSpecifierLoc QualifierLoc = TL.getQualifierLoc();
+      TraverseQualifier && QualifierLoc)
+    TRY_TO(TraverseNestedNameSpecifierLoc(QualifierLoc));
+  return true;
+}
+
+DEF_TRAVERSE_TYPELOC(EnumType,
+                     { TRY_TO(TraverseTagTypeLoc(TL, TraverseQualifier)); })
+DEF_TRAVERSE_TYPELOC(RecordType,
+                     { TRY_TO(TraverseTagTypeLoc(TL, TraverseQualifier)); })
+DEF_TRAVERSE_TYPELOC(InjectedClassNameType,
+                     { TRY_TO(TraverseTagTypeLoc(TL, TraverseQualifier)); })
 
 DEF_TRAVERSE_TYPELOC(DependentNameType, {
-  TRY_TO(TraverseNestedNameSpecifierLoc(TL.getQualifierLoc()));
+  if (TraverseQualifier)
+    TRY_TO(TraverseNestedNameSpecifierLoc(TL.getQualifierLoc()));
 })
 
 DEF_TRAVERSE_TYPELOC(DependentTemplateSpecializationType, {
-  if (TL.getQualifierLoc()) {
+  if (TraverseQualifier)
     TRY_TO(TraverseNestedNameSpecifierLoc(TL.getQualifierLoc()));
-  }
 
   for (unsigned I = 0, E = TL.getNumArgs(); I != E; ++I) {
     TRY_TO(TraverseTemplateArgumentLoc(TL.getArgLoc(I)));
   }
+})
+
+DEF_TRAVERSE_TYPELOC(TemplateSpecializationType, {
+  if (TraverseQualifier)
+    TRY_TO(TraverseNestedNameSpecifierLoc(TL.getQualifierLoc()));
+
+  // FIXME: Try to preserve the rest of the template name.
+  TRY_TO(TraverseTemplateName(
+      TemplateName(TL.getTypePtr()->getTemplateName().getAsTemplateDecl(
+          /*IgnoreDeduced=*/true))));
+
+  for (unsigned I = 0, E = TL.getNumArgs(); I != E; ++I) {
+    TRY_TO(TraverseTemplateArgumentLoc(TL.getArgLoc(I)));
+  }
+})
+
+DEF_TRAVERSE_TYPELOC(DeducedTemplateSpecializationType, {
+  if (TraverseQualifier)
+    TRY_TO(TraverseNestedNameSpecifierLoc(TL.getQualifierLoc()));
+
+  const auto *T = TL.getTypePtr();
+  // FIXME: Try to preserve the rest of the template name.
+  TRY_TO(
+      TraverseTemplateName(TemplateName(T->getTemplateName().getAsTemplateDecl(
+          /*IgnoreDeduced=*/true))));
+
+  TRY_TO(TraverseType(T->getDeducedType()));
 })
 
 DEF_TRAVERSE_TYPELOC(PackExpansionType,
@@ -1631,8 +1704,9 @@ DEF_TRAVERSE_DECL(FriendDecl, {
     TRY_TO(TraverseTypeLoc(D->getFriendType()->getTypeLoc()));
     // Traverse any CXXRecordDecl owned by this type, since
     // it will not be in the parent context:
-    if (auto *ET = D->getFriendType()->getType()->getAs<ElaboratedType>())
-      TRY_TO(TraverseDecl(ET->getOwnedTagDecl()));
+    if (auto *TT = D->getFriendType()->getType()->getAs<TagType>();
+        TT && TT->isTagOwned())
+      TRY_TO(TraverseDecl(TT->getOriginalDecl()));
   } else {
     TRY_TO(TraverseDecl(D->getFriendDecl()));
   }
