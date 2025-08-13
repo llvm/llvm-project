@@ -3558,37 +3558,41 @@ class TypePromotionTransaction {
       SmallVector<DbgVariableRecord *> Dbgs;
       findDbgUsers(I, Dbgs);
       for (DbgVariableRecord *Dbg : Dbgs) {
+        DIExpression *Expr = Dbg->getExpression();
+        if (!Expr)
+          continue;
+        std::optional<DIExpression::NewElementsRef> Elems =
+            Expr->getNewElementsRef();
+        if (!Elems.has_value())
+          continue;
+        // Collect arg of Inst
         uint32_t Idx = 0;
-        if (Dbg->hasArgList()) {
-          for (auto *VMD : Dbg->location_ops()) {
-            if (VMD == I) {
-              break;
-            }
-            Idx++;
+        SmallBitVector Idxs(Dbg->getNumVariableLocationOps());
+        for (auto *VMD : Dbg->location_ops()) {
+          if (VMD == I) {
+            Idxs.set(Idx);
           }
+          Idx++;
         }
-        if (DIExpression *Expr = Dbg->getExpression()) {
-          if (auto Elems = Expr->getNewElementsRef()) {
-            DIExprBuilder Builder(Expr->getContext());
-            int i = 0;
-            int ArgI = 0;
-            for (DIOp::Variant Op : *Elems) {
-              DIOp::Arg *AsArg = std::get_if<DIOp::Arg>(&Op);
-              DIOp::Convert *CvtArg = std::get_if<DIOp::Convert>(&Op);
-              if (AsArg && AsArg->getIndex() == Idx) {
-                ArgI = i;
-                Builder.append<DIOp::Arg>(AsArg->getIndex(), Ty);
-                if (Ty != OrigTy)
-                  Builder.append<DIOp::Convert>(OrigTy);
-              } else if (!(CvtArg && i == ArgI + 1 &&
-                           CvtArg->getResultType() == Ty)) {
-                Builder.append(Op);
-              }
-              i++;
-            }
-            Dbg->setExpression(Builder.intoExpression());
+        // Replace types
+        DIExprBuilder Builder(Expr->getContext());
+        int I = 0;
+        int ArgI = 0;
+        for (DIOp::Variant Op : *Elems) {
+          DIOp::Arg *AsArg = std::get_if<DIOp::Arg>(&Op);
+          DIOp::Convert *CvtArg = std::get_if<DIOp::Convert>(&Op);
+          if (AsArg && Idxs[AsArg->getIndex()]) {
+            ArgI = I;
+            Builder.append<DIOp::Arg>(AsArg->getIndex(), Ty);
+            if (Ty != OrigTy)
+              Builder.append<DIOp::Convert>(OrigTy);
+          } else if (!(CvtArg && I == ArgI + 1 &&
+                       CvtArg->getResultType() == Ty)) {
+            Builder.append(Op);
           }
+          I++;
         }
+        Dbg->setExpression(Builder.intoExpression());
       }
     }
 
