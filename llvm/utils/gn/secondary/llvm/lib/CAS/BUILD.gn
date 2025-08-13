@@ -1,0 +1,8 @@
+static_library("CAS") {
+  output_name = "LLVMCAS"
+  sources = [
+    "BuiltinCAS.cpp",
+    "InMemoryCAS.cpp",
+    "ObjectStore.cpp",
+  ]
+}

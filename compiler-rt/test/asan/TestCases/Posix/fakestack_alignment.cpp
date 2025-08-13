@@ -17,6 +17,8 @@
 // RUN: %clangxx_asan -pthread -fsanitize-address-use-after-return=always -O0 -DALIGNMENT=8192  -DTHREAD_COUNT=32 -DTHREAD_STACK_SIZE=131072 %s -o %t && %run %t 2>&1
 // RUN: %clangxx_asan -pthread -fsanitize-address-use-after-return=always -O0 -DALIGNMENT=16384 -DTHREAD_COUNT=32 -DTHREAD_STACK_SIZE=131072 %s -o %t && %run %t 2>&1
 
+// UNSUPPORTED: android
+
 #include <assert.h>
 #include <pthread.h>
 #include <stdio.h>

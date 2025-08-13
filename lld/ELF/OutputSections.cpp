@@ -889,17 +889,9 @@ void OutputSection::sortInitFini() {
 std::array<uint8_t, 4> OutputSection::getFiller(Ctx &ctx) {
   if (filler)
     return *filler;
-  if (!(flags & SHF_EXECINSTR))
-    return {0, 0, 0, 0};
-  if (ctx.arg.relocatable && ctx.arg.emachine == EM_RISCV) {
-    // See RISCV::maybeSynthesizeAlign: Synthesized NOP bytes and ALIGN
-    // relocations might be needed between two input sections. Use a NOP for the
-    // filler.
-    if (ctx.arg.eflags & EF_RISCV_RVC)
-      return {1, 0, 1, 0};
-    return {0x13, 0, 0, 0};
-  }
-  return ctx.target->trapInstr;
+  if (flags & SHF_EXECINSTR)
+    return ctx.target->trapInstr;
+  return {0, 0, 0, 0};
 }
 
 void OutputSection::checkDynRelAddends(Ctx &ctx) {

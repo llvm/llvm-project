@@ -682,14 +682,14 @@ implicit none
   end interface
 
   interface __mul24
-    attributes(device) integer function __mul24(i,j) bind(c)
+    attributes(device) integer function __mul24(i,j) bind(c, name='__nv_mul24')
       !dir$ ignore_tkr (d) i, (d) j
       integer, value :: i,j
     end function
   end interface
 
   interface __umul24
-    attributes(device) integer function __umul24(i,j) bind(c)
+    attributes(device) integer function __umul24(i,j) bind(c, name='__nv_umul24')
       !dir$ ignore_tkr (d) i, (d) j
       integer, value :: i,j
     end function
@@ -738,11 +738,11 @@ implicit none
   end interface
 
   interface __clz
-    attributes(device) integer function __clz(i) bind(c)
+    attributes(device) integer function __clz(i) bind(c, name='__nv_clz')
       !dir$ ignore_tkr (d) i
       integer, value :: i
     end function
-    attributes(device) integer function __clzll(i) bind(c)
+    attributes(device) integer function __clzll(i) bind(c, name='__nv_clzll')
       !dir$ ignore_tkr (d) i
       integer(8), value :: i
     end function
