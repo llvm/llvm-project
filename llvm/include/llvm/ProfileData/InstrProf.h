@@ -526,24 +526,27 @@ private:
   // so it doesn't use a StringSet for function names.
   StringSet<> VTableNames;
   // A map from MD5 keys to function name strings.
-  std::vector<std::pair<uint64_t, StringRef>> MD5NameMap;
+  mutable std::vector<std::pair<uint64_t, StringRef>> MD5NameMap;
   // A map from MD5 keys to function define. We only populate this map
   // when build the Symtab from a Module.
-  std::vector<std::pair<uint64_t, Function *>> MD5FuncMap;
+  mutable std::vector<std::pair<uint64_t, Function *>> MD5FuncMap;
   // A map from MD5 to the global variable. This map is only populated when
   // building the symtab from a module. Use separate container instances for
   // `MD5FuncMap` and `MD5VTableMap`.
   // TODO: Unify the container type and the lambda function 'mapName' inside
   // add{Func,VTable}WithName.
-  DenseMap<uint64_t, GlobalVariable *> MD5VTableMap;
+  mutable DenseMap<uint64_t, GlobalVariable *> MD5VTableMap;
   // A map from function runtime address to function name MD5 hash.
   // This map is only populated and used by raw instr profile reader.
-  AddrHashMap AddrToMD5Map;
+  mutable AddrHashMap AddrToMD5Map;
 
   AddrIntervalMap::Allocator VTableAddrMapAllocator;
   // This map is only populated and used by raw instr profile reader.
   AddrIntervalMap VTableAddrMap;
-  bool Sorted = false;
+
+  // "dirty" flag for the rest of the mutable state. lookup APIs (like
+  // getFunction) need the mutable state to be sorted.
+  mutable bool Sorted = false;
 
   static StringRef getExternalSymbol() { return "** External Symbol **"; }
 
@@ -565,8 +568,10 @@ private:
   // If the symtab is created by a series of calls to \c addFuncName, \c
   // finalizeSymtab needs to be called before looking up function names.
   // This is required because the underlying map is a vector (for space
-  // efficiency) which needs to be sorted.
-  inline void finalizeSymtab();
+  // efficiency) which needs to be sorted. The API is `const` because it's part
+  // of the implementation detail of `const` APIs that need to first ensure this
+  // property of ordering on the other mutable state.
+  inline void finalizeSymtab() const;
 
 public:
   InstrProfSymtab() : VTableAddrMap(VTableAddrMapAllocator) {}
@@ -676,24 +681,25 @@ public:
   }
 
   /// Return a function's hash, or 0, if the function isn't in this SymTab.
-  LLVM_ABI uint64_t getFunctionHashFromAddress(uint64_t Address);
+  LLVM_ABI uint64_t getFunctionHashFromAddress(uint64_t Address) const;
 
   /// Return a vtable's hash, or 0 if the vtable doesn't exist in this SymTab.
-  LLVM_ABI uint64_t getVTableHashFromAddress(uint64_t Address);
+  LLVM_ABI uint64_t getVTableHashFromAddress(uint64_t Address) const;
 
   /// Return function's PGO name from the function name's symbol
   /// address in the object file. If an error occurs, return
   /// an empty string.
-  LLVM_ABI StringRef getFuncName(uint64_t FuncNameAddress, size_t NameSize);
+  LLVM_ABI StringRef getFuncName(uint64_t FuncNameAddress,
+                                 size_t NameSize) const;
 
   /// Return name of functions or global variables from the name's md5 hash
   /// value. If not found, return an empty string.
-  inline StringRef getFuncOrVarName(uint64_t ValMD5Hash);
+  inline StringRef getFuncOrVarName(uint64_t ValMD5Hash) const;
 
   /// Just like getFuncOrVarName, except that it will return literal string
   /// 'External Symbol' if the function or global variable is external to
   /// this symbol table.
-  inline StringRef getFuncOrVarNameIfDefined(uint64_t ValMD5Hash);
+  inline StringRef getFuncOrVarNameIfDefined(uint64_t ValMD5Hash) const;
 
   /// True if Symbol is the value used to represent external symbols.
   static bool isExternalSymbol(const StringRef &Symbol) {
@@ -701,11 +707,11 @@ public:
   }
 
   /// Return function from the name's md5 hash. Return nullptr if not found.
-  inline Function *getFunction(uint64_t FuncMD5Hash);
+  inline Function *getFunction(uint64_t FuncMD5Hash) const;
 
   /// Return the global variable corresponding to md5 hash. Return nullptr if
   /// not found.
-  inline GlobalVariable *getGlobalVariable(uint64_t MD5Hash);
+  inline GlobalVariable *getGlobalVariable(uint64_t MD5Hash) const;
 
   /// Return the name section data.
   inline StringRef getNameData() const { return Data; }
@@ -748,7 +754,7 @@ Error InstrProfSymtab::create(const FuncNameIterRange &FuncIterRange,
   return Error::success();
 }
 
-void InstrProfSymtab::finalizeSymtab() {
+void InstrProfSymtab::finalizeSymtab() const {
   if (Sorted)
     return;
   llvm::sort(MD5NameMap, less_first());
@@ -758,14 +764,14 @@ void InstrProfSymtab::finalizeSymtab() {
   Sorted = true;
 }
 
-StringRef InstrProfSymtab::getFuncOrVarNameIfDefined(uint64_t MD5Hash) {
-  StringRef ret = getFuncOrVarName(MD5Hash);
-  if (ret.empty())
+StringRef InstrProfSymtab::getFuncOrVarNameIfDefined(uint64_t MD5Hash) const {
+  StringRef Ret = getFuncOrVarName(MD5Hash);
+  if (Ret.empty())
     return InstrProfSymtab::getExternalSymbol();
-  return ret;
+  return Ret;
 }
 
-StringRef InstrProfSymtab::getFuncOrVarName(uint64_t MD5Hash) {
+StringRef InstrProfSymtab::getFuncOrVarName(uint64_t MD5Hash) const {
   finalizeSymtab();
   auto Result = llvm::lower_bound(MD5NameMap, MD5Hash,
                                   [](const std::pair<uint64_t, StringRef> &LHS,
@@ -775,7 +781,7 @@ StringRef InstrProfSymtab::getFuncOrVarName(uint64_t MD5Hash) {
   return StringRef();
 }
 
-Function* InstrProfSymtab::getFunction(uint64_t FuncMD5Hash) {
+Function *InstrProfSymtab::getFunction(uint64_t FuncMD5Hash) const {
   finalizeSymtab();
   auto Result = llvm::lower_bound(MD5FuncMap, FuncMD5Hash,
                                   [](const std::pair<uint64_t, Function *> &LHS,
@@ -785,7 +791,7 @@ Function* InstrProfSymtab::getFunction(uint64_t FuncMD5Hash) {
   return nullptr;
 }
 
-GlobalVariable *InstrProfSymtab::getGlobalVariable(uint64_t MD5Hash) {
+GlobalVariable *InstrProfSymtab::getGlobalVariable(uint64_t MD5Hash) const {
   return MD5VTableMap.lookup(MD5Hash);
 }
 
