@@ -78,7 +78,7 @@ TEST(SMEAttributes, Constructors) {
                             "ret void\n}");
   CallBase &Call =
       cast<CallBase>((CallModule->getFunction("foo")->begin()->front()));
-  ASSERT_TRUE(SMECallAttrs(Call, nullptr).callsite().hasUndefZT0());
+  ASSERT_TRUE(SMECallAttrs(Call).callsite().hasUndefZT0());
 
   // Invalid combinations.
   EXPECT_DEBUG_DEATH(SA(SA::SM_Enabled | SA::SM_Compatible),

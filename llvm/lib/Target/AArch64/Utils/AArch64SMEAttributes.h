@@ -13,8 +13,6 @@
 
 namespace llvm {
 
-class TargetLowering;
-
 class Function;
 class CallBase;
 class AttributeList;
@@ -50,17 +48,17 @@ public:
     CallSiteFlags_Mask = ZT0_Undef
   };
 
+  enum class InferAttrsFromName { No, Yes };
+
   SMEAttrs() = default;
   SMEAttrs(unsigned Mask) { set(Mask); }
-  SMEAttrs(const Function &F, const TargetLowering *TLI = nullptr)
+  SMEAttrs(const Function &F, InferAttrsFromName Infer = InferAttrsFromName::No)
       : SMEAttrs(F.getAttributes()) {
-    if (TLI)
-      addKnownFunctionAttrs(F.getName(), *TLI);
+    if (Infer == InferAttrsFromName::Yes)
+      addKnownFunctionAttrs(F.getName());
   }
   SMEAttrs(const AttributeList &L);
-  SMEAttrs(StringRef FuncName, const TargetLowering &TLI) {
-    addKnownFunctionAttrs(FuncName, TLI);
-  };
+  SMEAttrs(StringRef FuncName) { addKnownFunctionAttrs(FuncName); };
 
   void set(unsigned M, bool Enable = true);
 
@@ -148,7 +146,7 @@ public:
   }
 
 private:
-  void addKnownFunctionAttrs(StringRef FuncName, const TargetLowering &TLI);
+  void addKnownFunctionAttrs(StringRef FuncName);
 };
 
 /// SMECallAttrs is a utility class to hold the SMEAttrs for a callsite. It has
@@ -165,7 +163,7 @@ public:
                SMEAttrs Callsite = SMEAttrs::Normal)
       : CallerFn(Caller), CalledFn(Callee), Callsite(Callsite) {}
 
-  SMECallAttrs(const CallBase &CB, const TargetLowering *TLI);
+  SMECallAttrs(const CallBase &CB);
 
   SMEAttrs &caller() { return CallerFn; }
   SMEAttrs &callee() { return IsIndirect ? Callsite : CalledFn; }

@@ -562,7 +562,9 @@ void LibcallPredicateExpander::expand(SetTheory &ST, const Record *Def,
       auto [It, Inserted] = Func2Preds.insert({LibcallImpl, {{}, CCClass}});
       if (!Inserted) {
         PrintError(
-            Def, "combining nested libcall set predicates currently unhandled");
+            Def,
+            "combining nested libcall set predicates currently unhandled: '" +
+                LibcallImpl->getLibcallFuncName() + "'");
       }
 
       It->second.first.push_back(AP.getDef());

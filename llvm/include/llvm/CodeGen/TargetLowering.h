@@ -3560,12 +3560,6 @@ public:
     return Libcalls.getLibcallImplName(Call);
   }
 
-  /// Check if this is valid libcall for the current module, otherwise
-  /// RTLIB::Unsupported.
-  RTLIB::LibcallImpl getSupportedLibcallImpl(StringRef FuncName) const {
-    return Libcalls.getSupportedLibcallImpl(FuncName);
-  }
-
   const char *getMemcpyName() const { return Libcalls.getMemcpyName(); }
 
   /// Get the comparison predicate that's to be used to test the result of the

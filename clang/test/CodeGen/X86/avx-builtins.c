@@ -46,14 +46,14 @@ __m256d test_mm256_and_pd(__m256d A, __m256d B) {
   // CHECK: and <4 x i64>
   return _mm256_and_pd(A, B);
 }
-TEST_CONSTEXPR(match_m256d(_mm256_and_pd((__m256d){-4.0, -5.0, +6.0, +7.0}, (__m256d){+0.0, -0.0, -0.0, +7.0}), -0.0, -0.0, +0.0, +7.0));
+TEST_CONSTEXPR(match_m256d(_mm256_and_pd((__m256d){-4.0, -5.0, +6.0, +7.0}, (__m256d){+0.0, -0.0, -0.0, +7.0}), +0.0, -0.0, +0.0, +7.0));
 
 __m256 test_mm256_and_ps(__m256 A, __m256 B) {
   // CHECK-LABEL: test_mm256_and_ps
   // CHECK: and <8 x i32>
   return _mm256_and_ps(A, B);
 }
-TEST_CONSTEXPR(match_m256(_mm256_and_ps((__m256){-4.0f, -5.0f, +6.0f, +7.0f, +7.0f, +6.0f, -5.0f, -4.0f}, (__m256){+0.0f, -0.0f, -0.0f, +7.0f, +7.0f, -0.0f, -0.0f, +0.0f}), -0.0f, -0.0f, +0.0f, +7.0f, +7.0f, +0.0f, -0.0f, -0.0f));
+TEST_CONSTEXPR(match_m256(_mm256_and_ps((__m256){-4.0f, -5.0f, +6.0f, +7.0f, +7.0f, +6.0f, -5.0f, -4.0f}, (__m256){+0.0f, -0.0f, -0.0f, +7.0f, +7.0f, -0.0f, -0.0f, +0.0f}), +0.0f, -0.0f, +0.0f, +7.0f, +7.0f, +0.0f, -0.0f, +0.0f));
 
 __m256d test_mm256_andnot_pd(__m256d A, __m256d B) {
   // CHECK-LABEL: test_mm256_andnot_pd
@@ -61,7 +61,7 @@ __m256d test_mm256_andnot_pd(__m256d A, __m256d B) {
   // CHECK: and <4 x i64>
   return _mm256_andnot_pd(A, B);
 }
-TEST_CONSTEXPR(match_m256d(_mm256_andnot_pd((__m256d){-4.0, -5.0, +6.0, +7.0}, (__m256d){+0.0, -0.0, -0.0, +7.0}), +0.0, +0.0, +0.0, +0.0));
+TEST_CONSTEXPR(match_m256d(_mm256_andnot_pd((__m256d){-4.0, -5.0, +6.0, +7.0}, (__m256d){+0.0, -0.0, -0.0, +7.0}), +0.0, +0.0, -0.0, +0.0));
 
 __m256 test_mm256_andnot_ps(__m256 A, __m256 B) {
   // CHECK-LABEL: test_mm256_andnot_ps
@@ -69,7 +69,7 @@ __m256 test_mm256_andnot_ps(__m256 A, __m256 B) {
   // CHECK: and <8 x i32>
   return _mm256_andnot_ps(A, B);
 }
-TEST_CONSTEXPR(match_m256(_mm256_andnot_ps((__m256){-4.0f, -5.0f, +6.0f, +7.0f, +7.0f, +6.0f, -5.0f, -4.0f}, (__m256){+0.0f, -0.0f, -0.0f, +7.0f, +7.0f, -0.0f, -0.0f, +0.0f}), +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f));
+TEST_CONSTEXPR(match_m256(_mm256_andnot_ps((__m256){-4.0f, -5.0f, +6.0f, +7.0f, +7.0f, +6.0f, -5.0f, -4.0f}, (__m256){+0.0f, -0.0f, -0.0f, +7.0f, +7.0f, -0.0f, -0.0f, +0.0f}), +0.0f, +0.0f, -0.0f, +0.0f, +0.0f, -0.0f, +0.0f, +0.0f));
 
 __m256d test_mm256_blend_pd(__m256d A, __m256d B) {
   // CHECK-LABEL: test_mm256_blend_pd

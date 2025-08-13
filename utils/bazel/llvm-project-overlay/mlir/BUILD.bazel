@@ -4133,6 +4133,7 @@ cc_library(
         ":TosaToTensor",
         ":UBToLLVM",
         ":UBToSPIRV",
+        ":VectorToAMX",
         ":VectorToArmSME",
         ":VectorToGPU",
         ":VectorToLLVM",
@@ -11129,6 +11130,32 @@ cc_library(
         ":Pass",
         ":TransformUtils",
         "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "VectorToAMX",
+    srcs = glob([
+        "lib/Conversion/VectorToAMX/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/VectorToAMX/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":AMXDialect",
+        ":AffineDialect",
+        ":AffineUtils",
+        ":ArithDialect",
+        ":ConversionPassIncGen",
+        ":DialectUtils",
+        ":IR",
+        ":LinalgInterfaces",
+        ":MemRefDialect",
+        ":Pass",
+        ":SCFDialect",
+        ":TransformUtils",
+        ":VectorDialect",
     ],
 )
 

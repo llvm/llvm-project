@@ -86,6 +86,10 @@ bool operator==(const Notification &, const Notification &);
 
 /// A general message as defined by the JSON-RPC 2.0 spec.
 using Message = std::variant<Request, Response, Notification>;
+// With clang-cl and MSVC STL 202208, convertible can be false later if we do
+// not force it to be checked early here.
+static_assert(std::is_convertible_v<Message, Message>,
+              "Message is not convertible to itself");
 
 bool fromJSON(const llvm::json::Value &, Message &, llvm::json::Path);
 llvm::json::Value toJSON(const Message &);

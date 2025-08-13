@@ -181,7 +181,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       GIM_RecordInsnIgnoreCopies, /*DefineMI*/1, /*MI*/0, /*OpIdx*/1, // MIs[1]
 // CHECK-NEXT:       GIM_CheckOpcode, /*MI*/1, GIMT_Encode2(TargetOpcode::G_CONSTANT),
 // CHECK-NEXT:       // MIs[1] z
-// CHECK-NEXT:       GIM_CheckLiteralInt, /*MI*/1, /*Op*/1, GIMT_Encode8(-42),
+// CHECK-NEXT:       GIM_CheckLiteralInt, /*MI*/1, /*Op*/1, GIMT_Encode8(18446744073709551574),
 // CHECK-NEXT:       GIM_CheckConstantInt8, /*MI*/0, /*Op*/2, 43,
 // CHECK-NEXT:       GIM_CheckIsSafeToFold, /*NumInsns*/1,
 // CHECK-NEXT:       // Combiner Rule #5: InOutInstTest1

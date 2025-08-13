@@ -724,10 +724,10 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{S32}, {{}, {Vgpr32, SgprV4S32, Vgpr32, Vgpr32, Sgpr32}}});
 
   addRulesForGOpcs({G_PTR_ADD})
-      .Any({{UniP1}, {{SgprP1}, {SgprP1, Sgpr64}}})
-      .Any({{DivP1}, {{VgprP1}, {VgprP1, Vgpr64}}})
-      .Any({{DivP0}, {{VgprP0}, {VgprP0, Vgpr64}}})
-      .Any({{UniP4}, {{SgprP4}, {SgprP4, Sgpr64}}});
+      .Any({{UniPtr32}, {{SgprPtr32}, {SgprPtr32, Sgpr32}}})
+      .Any({{DivPtr32}, {{VgprPtr32}, {VgprPtr32, Vgpr32}}})
+      .Any({{UniPtr64}, {{SgprPtr64}, {SgprPtr64, Sgpr64}}})
+      .Any({{DivPtr64}, {{VgprPtr64}, {VgprPtr64, Vgpr64}}});
 
   addRulesForGOpcs({G_INTTOPTR})
       .Any({{UniPtr32}, {{SgprPtr32}, {Sgpr32}}})
