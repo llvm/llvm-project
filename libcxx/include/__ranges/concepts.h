@@ -172,8 +172,6 @@ concept __concatable = requires {
   typename __concat_rvalue_reference_t<_Rs...>;
 } && __concat_indirectly_readable<_Rs...>;
 
-
-
 #  endif // _LIBCPP_STD_VER >= 23
 
 } // namespace ranges
