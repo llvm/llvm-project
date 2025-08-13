@@ -64,6 +64,7 @@ add_mlir_library(MLIRIR
   MLIRCastInterfacesIncGen
   MLIRDataLayoutInterfacesIncGen
   MLIROpAsmInterfaceIncGen
+  MLIRQuantizationInterfaceIncGen
   MLIRRegionKindInterfaceIncGen
   MLIRSideEffectInterfacesIncGen
   MLIRSymbolInterfacesIncGen
