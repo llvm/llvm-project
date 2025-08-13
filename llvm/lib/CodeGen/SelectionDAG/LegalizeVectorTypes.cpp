@@ -1627,11 +1627,9 @@ void DAGTypeLegalizer::SplitVecRes_LOOP_DEPENDENCE_MASK(SDNode *N, SDValue &Lo,
   Lo = DAG.getNode(N->getOpcode(), DL, LoVT, PtrA, PtrB, N->getOperand(2));
 
   unsigned Offset = EltSize * HiVT.getVectorMinNumElements();
-  SDValue Addend;
-  if (HiVT.isScalableVT())
-    Addend = DAG.getVScale(DL, MVT::i64, APInt(64, Offset));
-  else
-    Addend = DAG.getConstant(Offset, DL, MVT::i64);
+  SDValue Addend = HiVT.isScalableVT()
+                       ? DAG.getVScale(DL, MVT::i64, APInt(64, Offset))
+                       : DAG.getConstant(Offset, DL, MVT::i64);
 
   PtrA = DAG.getNode(ISD::ADD, DL, MVT::i64, PtrA, Addend);
   PtrB = DAG.getNode(ISD::ADD, DL, MVT::i64, PtrB, Addend);
