@@ -1,9 +1,14 @@
-//===- ActionCaches.cpp -----------------------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file implements the underlying ActionCache implementations.
+///
 //===----------------------------------------------------------------------===//
 
 #include "BuiltinCAS.h"
@@ -38,9 +43,9 @@ public:
       : ActionCache(builtin::BuiltinCASContext::getDefaultContext()) {}
 
   Error putImpl(ArrayRef<uint8_t> ActionKey, const CASID &Result,
-                bool Globally) final;
+                bool CanBeDistributed) final;
   Expected<std::optional<CASID>> getImpl(ArrayRef<uint8_t> ActionKey,
-                                         bool Globally) const final;
+                                         bool CanBeDistributed) const final;
 
 private:
   using DataT = CacheEntry<sizeof(HashType)>;
@@ -50,18 +55,14 @@ private:
 };
 } // end namespace
 
-static std::string hashToString(ArrayRef<uint8_t> Hash) {
-  SmallString<64> Str;
-  toHex(Hash, /*LowerCase=*/true, Str);
-  return Str.str().str();
-}
-
-static Error createResultCachePoisonedError(StringRef Key,
+static Error createResultCachePoisonedError(ArrayRef<uint8_t> KeyHash,
                                             const CASContext &Context,
                                             CASID Output,
                                             ArrayRef<uint8_t> ExistingOutput) {
   std::string Existing =
       CASID::create(&Context, toStringRef(ExistingOutput)).toString();
+  SmallString<64> Key;
+  toHex(KeyHash, /*LowerCase=*/true, Key);
   return createStringError(std::make_error_code(std::errc::invalid_argument),
                            "cache poisoned for '" + Key + "' (new='" +
                                Output.toString() + "' vs. existing '" +
@@ -69,7 +70,8 @@ static Error createResultCachePoisonedError(StringRef Key,
 }
 
 Expected<std::optional<CASID>>
-InMemoryActionCache::getImpl(ArrayRef<uint8_t> Key, bool /*Globally*/) const {
+InMemoryActionCache::getImpl(ArrayRef<uint8_t> Key,
+                             bool /*CanBeDistributed*/) const {
   auto Result = Cache.find(Key);
   if (!Result)
     return std::nullopt;
@@ -77,7 +79,7 @@ InMemoryActionCache::getImpl(ArrayRef<uint8_t> Key, bool /*Globally*/) const {
 }
 
 Error InMemoryActionCache::putImpl(ArrayRef<uint8_t> Key, const CASID &Result,
-                                   bool /*Globally*/) {
+                                   bool /*CanBeDistributed*/) {
   DataT Expected(Result.getHash());
   const InMemoryCacheT::value_type &Cached = *Cache.insertLazy(
       Key, [&](auto ValueConstructor) { ValueConstructor.emplace(Expected); });
@@ -86,7 +88,7 @@ Error InMemoryActionCache::putImpl(ArrayRef<uint8_t> Key, const CASID &Result,
   if (Expected.getValue() == Observed.getValue())
     return Error::success();
 
-  return createResultCachePoisonedError(hashToString(Key), getContext(), Result,
+  return createResultCachePoisonedError(Key, getContext(), Result,
                                         Observed.getValue());
 }
 

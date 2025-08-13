@@ -116,8 +116,6 @@ define i32 @add_i16_i32(ptr nocapture readonly %x, i32 %n) {
 ; IF-EVL-OUTLOOP:       for.body.preheader:
 ; IF-EVL-OUTLOOP-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IF-EVL-OUTLOOP:       vector.ph:
-; IF-EVL-OUTLOOP-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vscale.i32()
-; IF-EVL-OUTLOOP-NEXT:    [[TMP4:%.*]] = mul nuw i32 [[TMP3]], 4
 ; IF-EVL-OUTLOOP-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL-OUTLOOP:       vector.body:
 ; IF-EVL-OUTLOOP-NEXT:    [[EVL_BASED_IV:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -162,8 +160,6 @@ define i32 @add_i16_i32(ptr nocapture readonly %x, i32 %n) {
 ; IF-EVL-INLOOP:       for.body.preheader:
 ; IF-EVL-INLOOP-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IF-EVL-INLOOP:       vector.ph:
-; IF-EVL-INLOOP-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vscale.i32()
-; IF-EVL-INLOOP-NEXT:    [[TMP4:%.*]] = mul nuw i32 [[TMP3]], 8
 ; IF-EVL-INLOOP-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL-INLOOP:       vector.body:
 ; IF-EVL-INLOOP-NEXT:    [[EVL_BASED_IV:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -314,8 +310,6 @@ define i32 @smin(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-OUTLOOP-NEXT:  entry:
 ; IF-EVL-OUTLOOP-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IF-EVL-OUTLOOP:       vector.ph:
-; IF-EVL-OUTLOOP-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-OUTLOOP-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP7]], 4
 ; IF-EVL-OUTLOOP-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[START:%.*]], i64 0
 ; IF-EVL-OUTLOOP-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; IF-EVL-OUTLOOP-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -357,8 +351,6 @@ define i32 @smin(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-INLOOP-NEXT:  entry:
 ; IF-EVL-INLOOP-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IF-EVL-INLOOP:       vector.ph:
-; IF-EVL-INLOOP-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; IF-EVL-INLOOP-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP7]], 4
 ; IF-EVL-INLOOP-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL-INLOOP:       vector.body:
 ; IF-EVL-INLOOP-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]

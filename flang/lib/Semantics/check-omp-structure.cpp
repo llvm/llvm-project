@@ -2891,7 +2891,8 @@ static bool CheckSymbolSupportsType(const Scope &scope,
 
 static bool IsReductionAllowedForType(
     const parser::OmpReductionIdentifier &ident, const DeclTypeSpec &type,
-    const Scope &scope, SemanticsContext &context) {
+    bool cannotBeBuiltinReduction, const Scope &scope,
+    SemanticsContext &context) {
   auto isLogical{[](const DeclTypeSpec &type) -> bool {
     return type.category() == DeclTypeSpec::Logical;
   }};
@@ -2902,6 +2903,10 @@ static bool IsReductionAllowedForType(
   auto checkOperator{[&](const parser::DefinedOperator &dOpr) {
     if (const auto *intrinsicOp{
             std::get_if<parser::DefinedOperator::IntrinsicOperator>(&dOpr.u)}) {
+      if (cannotBeBuiltinReduction) {
+        return false;
+      }
+
       // OMP5.2: The type [...] of a list item that appears in a
       // reduction clause must be valid for the combiner expression
       // See F2023: Table 10.2
@@ -2953,7 +2958,8 @@ static bool IsReductionAllowedForType(
         // IAND: arguments must be integers: F2023 16.9.100
         // IEOR: arguments must be integers: F2023 16.9.106
         // IOR: arguments must be integers: F2023 16.9.111
-        if (type.IsNumeric(TypeCategory::Integer)) {
+        if (type.IsNumeric(TypeCategory::Integer) &&
+            !cannotBeBuiltinReduction) {
           return true;
         }
       } else if (realName == "max" || realName == "min") {
@@ -2961,8 +2967,9 @@ static bool IsReductionAllowedForType(
         // F2023 16.9.135
         // MIN: arguments must be integer, real, or character:
         // F2023 16.9.141
-        if (type.IsNumeric(TypeCategory::Integer) ||
-            type.IsNumeric(TypeCategory::Real) || isCharacter(type)) {
+        if ((type.IsNumeric(TypeCategory::Integer) ||
+                type.IsNumeric(TypeCategory::Real) || isCharacter(type)) &&
+            !cannotBeBuiltinReduction) {
           return true;
         }
       }
@@ -2995,9 +3002,16 @@ void OmpStructureChecker::CheckReductionObjectTypes(
   GetSymbolsInObjectList(objects, symbols);
 
   for (auto &[symbol, source] : symbols) {
+    // Built in reductions require types which can be used in their initializer
+    // and combiner expressions. For example, for +:
+    // r = 0; r = r + r2
+    // But it might be valid to use these with DECLARE REDUCTION.
+    // Assumed size is already caught elsewhere.
+    bool cannotBeBuiltinReduction{evaluate::IsAssumedRank(*symbol)};
     if (auto *type{symbol->GetType()}) {
       const auto &scope{context_.FindScope(symbol->name())};
-      if (!IsReductionAllowedForType(ident, *type, scope, context_)) {
+      if (!IsReductionAllowedForType(
+              ident, *type, cannotBeBuiltinReduction, scope, context_)) {
         context_.Say(source,
             "The type of '%s' is incompatible with the reduction operator."_err_en_US,
             symbol->name());

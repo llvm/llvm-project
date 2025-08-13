@@ -765,7 +765,7 @@ Error olGetSymbol_impl(ol_program_handle_t Program, const char *Name,
     return Error::success();
   }
   case OL_SYMBOL_KIND_GLOBAL_VARIABLE: {
-    auto &Global = Program->KernelSymbols[Name];
+    auto &Global = Program->GlobalSymbols[Name];
     if (!Global) {
       GlobalTy GlobalObj{Name};
       if (auto Res =
