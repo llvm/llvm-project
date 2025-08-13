@@ -520,8 +520,11 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
       TL.setQualifierLoc(SS ? SS->getWithLocInContext(Context)
                             : NestedNameSpecifierLoc());
       TL.setNameLoc(NameLoc);
-    } else if (auto *TN = dyn_cast<TypedefNameDecl>(TD);
-               TN && !isa<ObjCTypeParamDecl>(TN)) {
+    } else if (auto *TN = dyn_cast<TypedefNameDecl>(TD)) {
+      // Downstream change: This does not handle ObjCTypeParamDecl
+      // in upstream. Upstream sets ObjCTypeParamType to the decl's
+      // TypeForDecl field at construction, but we don't yet use
+      // ObjCTypeParamType.
       T = Context.getTypedefType(ElaboratedTypeKeyword::None,
                                  SS ? SS->getScopeRep() : std::nullopt, TN);
       if (!WantNontrivialTypeSourceInfo)
