@@ -993,13 +993,12 @@ LogicalResult StoreMatrixOp::verify() {
 
 void MatrixDescSubviewOp::build(OpBuilder &builder, OperationState &state,
                                 Type resTy, Value src,
-                                llvm::ArrayRef<OpFoldResult> offsets,
-                                LayoutTrait layout) {
+                                llvm::ArrayRef<OpFoldResult> offsets) {
   llvm::SmallVector<Value> dynamicOffsets;
   llvm::SmallVector<int64_t> staticOffsets;
   dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
   auto staticOffsetsAttr = builder.getDenseI64ArrayAttr(staticOffsets);
-  build(builder, state, resTy, src, dynamicOffsets, staticOffsetsAttr, layout);
+  build(builder, state, resTy, src, dynamicOffsets, staticOffsetsAttr);
 }
 
 LogicalResult MatrixDescSubviewOp::verify() {

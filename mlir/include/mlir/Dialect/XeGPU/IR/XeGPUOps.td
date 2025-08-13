@@ -1220,19 +1220,15 @@ def XeGPU_MatrixDescSubviewOp: XeGPU_Op<"matrix_desc_subview", [Pure, ViewLikeOp
     Results:
      - `src` : a matrix descriptor.
      - `offsets` : the coordinates within the matrix the subview will be created from.
-     - `layout`: [optional] An attribute for guiding distributions among
-                 subgroups and/or work-items. It currently can accept either
-                 LayoutAttr or SliceAttr.
   }];
   let arguments = (ins XeGPU_MatrixDesc:$src,
                        Variadic<Index>:$offsets,
-                       DenseI64ArrayAttr:$const_offsets,
-                       OptionalAttr<LayoutTrait>: $layout);
+                       DenseI64ArrayAttr:$const_offsets);
   let results = (outs XeGPU_MatrixDesc:$res);
   let assemblyFormat = [{$src `` custom<DynamicIndexList>($offsets, $const_offsets) prop-dict
                          attr-dict `` `:` qualified(type($src)) `->` qualified(type($res))}];
   let builders = [
-    OpBuilder<(ins "Type": $res, "Value":$src, "llvm::ArrayRef<OpFoldResult>": $offsets, "LayoutTrait": $layout)>
+    OpBuilder<(ins "Type": $res, "Value":$src, "llvm::ArrayRef<OpFoldResult>": $offsets)>
   ];
 
   let extraClassDeclaration = [{
