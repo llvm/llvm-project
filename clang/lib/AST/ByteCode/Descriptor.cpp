@@ -473,9 +473,7 @@ bool Descriptor::hasTrivialDtor() const {
 bool Descriptor::isUnion() const { return isRecord() && ElemRecord->isUnion(); }
 
 InitMap::InitMap(unsigned N)
-    : UninitFields(N), Data(std::make_unique<T[]>(numFields(N))) {
-  std::fill_n(data(), numFields(N), 0);
-}
+    : UninitFields(N), Data(std::make_unique<T[]>(numFields(N))) {}
 
 bool InitMap::initializeElement(unsigned I) {
   unsigned Bucket = I / PER_FIELD;
