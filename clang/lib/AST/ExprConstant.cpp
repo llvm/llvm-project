@@ -11723,6 +11723,39 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
+  case Builtin::BI__builtin_elementwise_fshl:
+  case Builtin::BI__builtin_elementwise_fshr: {
+    APValue SourceHi, SourceLo, SourceShift;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceHi) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceLo) ||
+        !EvaluateAsRValue(Info, E->getArg(2), SourceShift))
+      return false;
+
+    QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
+
+    if (!DestEltTy->isIntegerType())
+      return false;
+
+    unsigned SourceLen = SourceHi.getVectorLength();
+    SmallVector<APValue> ResultElements;
+    ResultElements.reserve(SourceLen);
+
+    for (unsigned EltNum = 0; EltNum < SourceLen; ++EltNum) {
+      APSInt Hi = SourceHi.getVectorElt(EltNum).getInt();
+      APSInt Lo = SourceLo.getVectorElt(EltNum).getInt();
+      APSInt Shift = SourceShift.getVectorElt(EltNum).getInt();
+      switch (E->getBuiltinCallee()) {
+      case Builtin::BI__builtin_elementwise_fshl:
+        ResultElements.push_back(APValue(HandleFshl(Hi, Lo, Shift)));
+        break;
+      case Builtin::BI__builtin_elementwise_fshr:
+        ResultElements.push_back(APValue(HandleFshr(Hi, Lo, Shift)));
+        break;
+      }
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
   }
 }
 
@@ -13637,6 +13670,28 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
     APInt Result = std::min(LHS, RHS);
     return Success(APSInt(Result, !LHS.isSigned()), E);
+  }
+  case Builtin::BI__builtin_elementwise_fshl:
+  case Builtin::BI__builtin_elementwise_fshr: {
+    if (!E->getArg(0)->isPRValue() ||
+        !E->getArg(1)->isPRValue() ||
+        !E->getArg(2)->isPRValue())
+      return false;
+    APSInt Hi, Lo, Shift;
+    if (!EvaluateInteger(E->getArg(0), Hi, Info) ||
+        !EvaluateInteger(E->getArg(1), Lo, Info) ||
+        !EvaluateInteger(E->getArg(2), Shift, Info))
+      return false;
+    switch (BuiltinOp) {
+    case Builtin::BI__builtin_elementwise_fshl: {
+      APSInt Result = HandleFshl(Hi, Lo, Shift);
+      return Success(Result, E);
+    }
+    case Builtin::BI__builtin_elementwise_fshr: {
+      APSInt Result = HandleFshr(Hi, Lo, Shift);
+      return Success(Result, E);
+    }
+    }
   }
   case Builtin::BIstrlen:
   case Builtin::BIwcslen:
@@ -16403,6 +16458,28 @@ void HandleComplexComplexDiv(APFloat A, APFloat B, APFloat C, APFloat D,
       ResI = APFloat::getZero(ResI.getSemantics()) * (B * C - A * D);
     }
   }
+}
+
+// fshl(X,Y,Z): (X << (Z % BW)) | (Y >> (BW - (Z % BW)))
+APSInt HandleFshl(APSInt Hi, APSInt Lo, APSInt Shift) {
+  bool IsUnsigned = Hi.isUnsigned();
+  APSInt BitWidth(llvm::APInt(Hi.getBitWidth(),
+                              static_cast<uint64_t>(Hi.getBitWidth())),
+                  IsUnsigned);
+  return APSInt((Hi << (Shift % BitWidth)) |
+                (Lo >> (BitWidth - (Shift % BitWidth))),
+                IsUnsigned);
+}
+
+// fshr(X,Y,Z): (X << (BW - (Z % BW))) | (Y >> (Z % BW))
+APSInt HandleFshr(APSInt Hi, APSInt Lo, APSInt Shift) {
+  bool IsUnsigned = Hi.isUnsigned();
+  APSInt BitWidth(llvm::APInt(Hi.getBitWidth(),
+                              static_cast<uint64_t>(Hi.getBitWidth())),
+                  IsUnsigned);
+  return APSInt((Hi << (BitWidth - (Shift % BitWidth))) |
+                (Lo >> (Shift % BitWidth)),
+                IsUnsigned);
 }
 
 bool ComplexExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {

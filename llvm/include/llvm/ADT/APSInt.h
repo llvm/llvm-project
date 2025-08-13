@@ -152,6 +152,9 @@ public:
   APSInt operator>>(unsigned Amt) const {
     return IsUnsigned ? APSInt(lshr(Amt), true) : APSInt(ashr(Amt), false);
   }
+  APSInt operator>>(const APSInt &Amt) const {
+    return IsUnsigned ? APSInt(lshr(Amt), true) : APSInt(ashr(Amt), false);
+  }
   APSInt &operator>>=(unsigned Amt) {
     if (IsUnsigned)
       lshrInPlace(Amt);
@@ -210,6 +213,9 @@ public:
 
   APSInt operator<<(unsigned Bits) const {
     return APSInt(static_cast<const APInt &>(*this) << Bits, IsUnsigned);
+  }
+  APSInt operator<<(const APSInt &Amt) const {
+    return APSInt(static_cast<const APInt &>(*this) << Amt, IsUnsigned);
   }
   APSInt &operator<<=(unsigned Amt) {
     static_cast<APInt &>(*this) <<= Amt;

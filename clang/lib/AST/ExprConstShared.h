@@ -18,6 +18,7 @@
 
 namespace llvm {
 class APFloat;
+class APSInt;
 }
 namespace clang {
 class QualType;
@@ -70,6 +71,9 @@ void HandleComplexComplexMul(llvm::APFloat A, llvm::APFloat B, llvm::APFloat C,
 void HandleComplexComplexDiv(llvm::APFloat A, llvm::APFloat B, llvm::APFloat C,
                              llvm::APFloat D, llvm::APFloat &ResR,
                              llvm::APFloat &ResI);
+
+llvm::APSInt HandleFshl(llvm::APSInt Hi, llvm::APSInt Lo, llvm::APSInt Shift);
+llvm::APSInt HandleFshr(llvm::APSInt Hi, llvm::APSInt Lo, llvm::APSInt Shift);
 
 CharUnits GetAlignOfExpr(const ASTContext &Ctx, const Expr *E,
                          UnaryExprOrTypeTrait ExprKind);
