@@ -2601,7 +2601,7 @@ void SymbolFileNativePDB::CacheUdtDeclarations() {
 
 llvm::Expected<Declaration>
 SymbolFileNativePDB::ResolveUdtDeclaration(PdbTypeSymId type_id) {
-  std::call_once(m_cached_udt_declatations, [this] { CacheUdtDeclarations(); });
+  std::call_once(m_cached_udt_declarations, [this] { CacheUdtDeclarations(); });
 
   auto it = m_udt_declarations.find(type_id.index);
   if (it == m_udt_declarations.end())

@@ -296,7 +296,7 @@ private:
     uint32_t Line;
   };
   llvm::DenseMap<llvm::codeview::TypeIndex, UdtDeclaration> m_udt_declarations;
-  std::once_flag m_cached_udt_declatations;
+  std::once_flag m_cached_udt_declarations;
 
   lldb_private::UniqueCStringMap<uint32_t> m_type_base_names;
 
