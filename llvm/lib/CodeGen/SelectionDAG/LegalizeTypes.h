@@ -681,6 +681,7 @@ private:
       SDNode *N, RTLIB::Libcall LC, std::optional<unsigned> CallRetResNo = {});
 
   // clang-format off
+  void ExpandFloatRes_AssertNoFPClass(SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_FABS      (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_FACOS     (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandFloatRes_FASIN     (SDNode *N, SDValue &Lo, SDValue &Hi);

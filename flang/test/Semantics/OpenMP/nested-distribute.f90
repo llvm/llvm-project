@@ -6,15 +6,15 @@ program main
   real(8) :: arrayA(256), arrayB(256)
   integer :: N
 
-  arrayA = 1.414
-  arrayB = 3.14
+  arrayA = 1.414d0
+  arrayB = 3.14d0
   N = 256
 
   !$omp task
   !ERROR: `DISTRIBUTE` region has to be strictly nested inside `TEAMS` region.
   !$omp distribute 
   do i = 1, N
-     a = 3.14
+     a = 3.14d0
   enddo
   !$omp end distribute
   !$omp end task
@@ -24,7 +24,7 @@ program main
       !ERROR: Only `DISTRIBUTE`, `PARALLEL`, or `LOOP` regions are allowed to be strictly nested inside `TEAMS` region.
       !$omp task
       do k = 1, N
-         a = 3.14
+         a = 3.14d0
       enddo
       !$omp end task
    enddo
@@ -34,7 +34,7 @@ program main
    do i = 1, N
       !$omp parallel
       do k = 1, N
-         a = 3.14
+         a = 3.14d0
       enddo
       !$omp end parallel
    enddo
@@ -44,7 +44,7 @@ program main
   !ERROR: `DISTRIBUTE` region has to be strictly nested inside `TEAMS` region.
   !$omp distribute 
   do i = 1, N
-     a = 3.14
+     a = 3.14d0
   enddo
   !$omp end distribute
   !$omp end parallel

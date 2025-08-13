@@ -474,3 +474,51 @@ end
 ! CHECK: cuf.data_transfer %{{.*}} to %{{.*}} {transfer_kind = #cuf.cuda_transfer<device_host>} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.box<!fir.array<?xf64>>
 ! CHECK: hlfir.assign %{{.*}} to %{{.*}} : f64, !fir.ref<f64>
 ! CHECK: fir.freemem %{{.*}} : !fir.heap<!fir.array<?xf64>>
+
+subroutine sub26(i, j, k)
+  integer :: i, j, k
+  real(2), dimension(i,j,k), device :: d
+  real(4), dimension(i,j,k) :: hd
+
+  hd = d
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub26
+! CHECK: %[[ALLOC_D:.*]] = cuf.alloc !fir.array<?x?x?xf16>, %{{.*}}, %{{.*}}, %{{.*}} : index, index, index {bindc_name = "d", data_attr = #cuf.cuda<device>, uniq_name = "_QFsub26Ed"} -> !fir.ref<!fir.array<?x?x?xf16>>
+! CHECK: %[[D:.*]]:2 = hlfir.declare %[[ALLOC_D]](%{{.*}}) {data_attr = #cuf.cuda<device>, uniq_name = "_QFsub26Ed"} : (!fir.ref<!fir.array<?x?x?xf16>>, !fir.shape<3>) -> (!fir.box<!fir.array<?x?x?xf16>>, !fir.ref<!fir.array<?x?x?xf16>>)
+! CHECK: %[[HD:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFsub26Ehd"} : (!fir.ref<!fir.array<?x?x?xf32>>, !fir.shape<3>) -> (!fir.box<!fir.array<?x?x?xf32>>, !fir.ref<!fir.array<?x?x?xf32>>)
+! CHECK: %[[ALLOC:.*]] = fir.allocmem !fir.array<?x?x?xf16>, %8, %13, %18 {bindc_name = ".tmp", uniq_name = ""}
+! CHECK: %[[TEMP:.*]]:2 = hlfir.declare %[[ALLOC]](%{{.*}}) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?x?x?xf16>>, !fir.shape<3>) -> (!fir.box<!fir.array<?x?x?xf16>>, !fir.heap<!fir.array<?x?x?xf16>>)
+! CHECK: cuf.data_transfer %[[D]]#0 to %[[TEMP]]#0 {transfer_kind = #cuf.cuda_transfer<device_host>} : !fir.box<!fir.array<?x?x?xf16>>, !fir.box<!fir.array<?x?x?xf16>>
+! CHECK: %[[ELE:.*]] = hlfir.elemental %{{.*}} unordered : (!fir.shape<3>) -> !hlfir.expr<?x?x?xf32> {
+! CHECK: ^bb0(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index):
+! CHECK: %[[DESIGNATE:.*]] = hlfir.designate %[[TEMP]]#0 (%{{.*}}, %{{.*}}, %{{.*}})  : (!fir.box<!fir.array<?x?x?xf16>>, index, index, index) -> !fir.ref<f16>
+! CHECK: %[[LOAD:.*]] = fir.load %[[DESIGNATE]] : !fir.ref<f16>
+! CHECK: %[[CONV:.*]] = fir.convert %[[LOAD]] : (f16) -> f32
+! CHECK: hlfir.yield_element %[[CONV]] : f32
+! CHECK: }
+! CHECK: hlfir.assign %[[ELE]] to %[[HD]]#0 : !hlfir.expr<?x?x?xf32>, !fir.box<!fir.array<?x?x?xf32>> 
+
+subroutine sub27()
+  real(2), dimension(10, 20, 30), device :: d
+  real(4), dimension(10, 20, 30) :: hd
+
+  hd = d
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub27()
+! CHECK: %[[ALLOC_D:.*]] = cuf.alloc !fir.array<10x20x30xf16> {bindc_name = "d", data_attr = #cuf.cuda<device>, uniq_name = "_QFsub27Ed"} -> !fir.ref<!fir.array<10x20x30xf16>>
+! CHECK: %[[D:.*]]:2 = hlfir.declare %[[ALLOC_D]](%{{.*}}) {data_attr = #cuf.cuda<device>, uniq_name = "_QFsub27Ed"} : (!fir.ref<!fir.array<10x20x30xf16>>, !fir.shape<3>) -> (!fir.ref<!fir.array<10x20x30xf16>>, !fir.ref<!fir.array<10x20x30xf16>>)
+! CHECK: %[[ALLOC_HD:.*]] = fir.alloca !fir.array<10x20x30xf32> {bindc_name = "hd", uniq_name = "_QFsub27Ehd"}
+! CHECK: %[[HD:.*]]:2 = hlfir.declare %[[ALLOC_HD]](%{{.*}}) {uniq_name = "_QFsub27Ehd"} : (!fir.ref<!fir.array<10x20x30xf32>>, !fir.shape<3>) -> (!fir.ref<!fir.array<10x20x30xf32>>, !fir.ref<!fir.array<10x20x30xf32>>)
+! CHECK: %[[ALLOC_TEMP:.*]] = fir.allocmem !fir.array<10x20x30xf16> {bindc_name = ".tmp", uniq_name = ""}
+! CHECK: %[[TEMP:.*]]:2 = hlfir.declare %[[ALLOC_TEMP]](%{{.*}}) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<10x20x30xf16>>, !fir.shape<3>) -> (!fir.heap<!fir.array<10x20x30xf16>>, !fir.heap<!fir.array<10x20x30xf16>>)
+! CHECK: cuf.data_transfer %[[D]]#0 to %[[TEMP]]#0 {transfer_kind = #cuf.cuda_transfer<device_host>} : !fir.ref<!fir.array<10x20x30xf16>>, !fir.heap<!fir.array<10x20x30xf16>>
+! CHECK: %[[ELE:.*]] = hlfir.elemental %{{.*}} unordered : (!fir.shape<3>) -> !hlfir.expr<10x20x30xf32> {
+! CHECK: ^bb0(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index):
+! CHECK: %[[DESIGNATE:.*]] = hlfir.designate %[[TEMP]]#0 (%{{.*}}, %{{.*}}, %{{.*}})  : (!fir.heap<!fir.array<10x20x30xf16>>, index, index, index) -> !fir.ref<f16>
+! CHECK: %[[LOAD:.*]] = fir.load %[[DESIGNATE]] : !fir.ref<f16>
+! CHECK: %[[CONV:.*]] = fir.convert %[[LOAD]] : (f16) -> f32
+! CHECK: hlfir.yield_element %[[CONV]] : f32
+! CHECK: }
+! CHECKL: hlfir.assign %[[ELE]] to %[[HD]]#0 : !hlfir.expr<10x20x30xf32>, !fir.ref<!fir.array<10x20x30xf32>>

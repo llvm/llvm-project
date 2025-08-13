@@ -23,7 +23,7 @@ services:
       dockerfile: Dockerfile
       target: actions-builder
       args:
-        GITHUB_RUNNER_VERSION: "2.327.1"
+        GITHUB_RUNNER_VERSION: "2.328.0"
         <<: [*image_versions, *compiler_versions]
 
   android-buildkite-builder:

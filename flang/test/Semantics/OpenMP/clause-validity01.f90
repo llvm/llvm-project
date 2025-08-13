@@ -21,8 +21,8 @@ use omp_lib
   integer(omp_allocator_handle_kind) :: xy_alloc
   xy_alloc = omp_init_allocator(xy_memspace, 1, xy_traits)
 
-  arrayA = 1.414
-  arrayB = 3.14
+  arrayA = 1.414d0
+  arrayB = 3.14d0
   N = 1024
 
 ! 2.5 parallel-clause -> if-clause |

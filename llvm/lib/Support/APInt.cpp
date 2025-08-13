@@ -3136,6 +3136,22 @@ APInt APIntOps::mulhu(const APInt &C1, const APInt &C2) {
   return (C1Ext * C2Ext).extractBits(C1.getBitWidth(), C1.getBitWidth());
 }
 
+APInt APIntOps::mulsExtended(const APInt &C1, const APInt &C2) {
+  assert(C1.getBitWidth() == C2.getBitWidth() && "Unequal bitwidths");
+  unsigned FullWidth = C1.getBitWidth() * 2;
+  APInt C1Ext = C1.sext(FullWidth);
+  APInt C2Ext = C2.sext(FullWidth);
+  return C1Ext * C2Ext;
+}
+
+APInt APIntOps::muluExtended(const APInt &C1, const APInt &C2) {
+  assert(C1.getBitWidth() == C2.getBitWidth() && "Unequal bitwidths");
+  unsigned FullWidth = C1.getBitWidth() * 2;
+  APInt C1Ext = C1.zext(FullWidth);
+  APInt C2Ext = C2.zext(FullWidth);
+  return C1Ext * C2Ext;
+}
+
 APInt APIntOps::pow(const APInt &X, int64_t N) {
   assert(N >= 0 && "negative exponents not supported.");
   APInt Acc = APInt(X.getBitWidth(), 1);

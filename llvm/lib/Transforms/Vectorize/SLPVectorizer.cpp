@@ -21375,7 +21375,7 @@ void BoUpSLP::BlockScheduling::resetSchedule() {
   });
   // Reset schedule data for copyable elements.
   for (auto &P : ScheduleCopyableDataMap) {
-    if (isInSchedulingRegion(*P.second.get())) {
+    if (isInSchedulingRegion(*P.second)) {
       P.second->setScheduled(/*Scheduled=*/false);
       P.second->resetUnscheduledDeps();
     }

@@ -128,17 +128,19 @@ public:
   bool empty() const { return values_.empty(); }
   std::size_t size() const { return values_.size(); }
   const std::vector<Element> &values() const { return values_; }
-  constexpr Result result() const { return result_; }
+  Result &result() { return result_; }
+  const Result &result() const { return result_; }
 
   constexpr DynamicType GetType() const { return result_.GetType(); }
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
+  std::string AsFortran() const;
 
 protected:
   std::vector<Element> Reshape(const ConstantSubscripts &) const;
   std::size_t CopyFrom(const ConstantBase &source, std::size_t count,
       ConstantSubscripts &resultSubscripts, const std::vector<int> *dimOrder);
 
-  Result result_;
+  Result result_; // usually empty except for Real & Complex
   std::vector<Element> values_;
 };
 
@@ -209,6 +211,7 @@ public:
 
   Constant Reshape(ConstantSubscripts &&) const;
   llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
+  std::string AsFortran() const;
   DynamicType GetType() const { return {KIND, length_}; }
   std::size_t CopyFrom(const Constant &source, std::size_t count,
       ConstantSubscripts &resultSubscripts, const std::vector<int> *dimOrder);

@@ -605,10 +605,6 @@ public:
                          unsigned FormatMaxPadding = 3,
                          bool TruncateZero = true) const;
 
-  /// If this value has an exact multiplicative inverse, store it in inv and
-  /// return true.
-  LLVM_ABI bool getExactInverse(APFloat *inv) const;
-
   LLVM_ABI LLVM_READONLY int getExactLog2Abs() const;
 
   LLVM_ABI friend int ilogb(const IEEEFloat &Arg);
@@ -885,8 +881,6 @@ public:
   LLVM_ABI void toString(SmallVectorImpl<char> &Str, unsigned FormatPrecision,
                          unsigned FormatMaxPadding,
                          bool TruncateZero = true) const;
-
-  LLVM_ABI bool getExactInverse(APFloat *inv) const;
 
   LLVM_ABI LLVM_READONLY int getExactLog2Abs() const;
 
@@ -1500,9 +1494,9 @@ public:
   LLVM_DUMP_METHOD void dump() const;
 #endif
 
-  bool getExactInverse(APFloat *inv) const {
-    APFLOAT_DISPATCH_ON_SEMANTICS(getExactInverse(inv));
-  }
+  /// If this value has an exact, normal, multiplicative inverse, store it in
+  /// inv and return true.
+  bool getExactInverse(APFloat *Inv) const;
 
   // If this is an exact power of two, return the exponent while ignoring the
   // sign bit. If it's not an exact power of 2, return INT_MIN

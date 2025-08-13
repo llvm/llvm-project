@@ -31,75 +31,75 @@ program openacc_kernels_loop_validity
 
   !$acc kernels loop
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end kernels loop
 
   !$acc kernels loop
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end kernels loop
 
   !$acc kernels loop num_gangs(8)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop num_gangs(gang_size)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop num_gangs(8)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop num_workers(worker_size)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop num_workers(8)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop vector_length(vector_size)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop vector_length(128)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop num_gangs(gang_size)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
 
   !$acc kernels loop if(.TRUE.)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop if(ifCondition)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !ERROR: Unmatched END SERIAL LOOP directive
   !$acc end serial loop
@@ -107,194 +107,194 @@ program openacc_kernels_loop_validity
   !ERROR: Clause IF is not allowed after clause DEVICE_TYPE on the KERNELS LOOP directive
   !$acc kernels loop device_type(*) if(.TRUE.)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
   !$acc end kernels loop
 
   !$acc kernels loop async
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop async(1)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop async(async1)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop wait(wait1)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop wait(wait1, wait2)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop wait(wait1) wait(wait2)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop wait(1, 2) async(3)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop wait(queues: 1, 2) async(3)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop wait(devnum: 1: 1, 2) async(3)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop wait(devnum: 1: queues: 1, 2) async(3)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop num_gangs(8)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop num_workers(8)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop vector_length(128)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop if(.true.)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop if(ifCondition)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !ERROR: At most one IF clause can appear on the KERNELS LOOP directive
   !$acc kernels loop if(.true.) if(ifCondition)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop self
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop self(.true.)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop self(ifCondition)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop copy(aa) copyin(bb) copyout(cc)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop copy(aa, bb) copyout(zero: cc)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop present(aa, bb) create(cc)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop copyin(readonly: aa, bb) create(zero: cc)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop deviceptr(aa, bb) no_create(cc)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !ERROR: Argument `aa` on the ATTACH clause must be a variable or array with the POINTER or ALLOCATABLE attribute
   !$acc kernels loop attach(aa, dd, p)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop private(aa, bb, cc)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop default(none) private(N, a)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop default(none)
   !ERROR: The DEFAULT(NONE) clause requires that 'n' must be listed in a data-mapping clause
   do i = 1, N
     !ERROR: The DEFAULT(NONE) clause requires that 'a' must be listed in a data-mapping clause
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop default(present)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !ERROR: At most one DEFAULT clause can appear on the KERNELS LOOP directive
   !$acc kernels loop default(none) default(present)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop device_type(*)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop device_type(multicore)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop device_type(host, multicore)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop device_type(*) async wait num_gangs(8) num_workers(8) vector_length(128)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc kernels loop device_type(*) async
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !ERROR: Clause IF is not allowed after clause DEVICE_TYPE on the KERNELS LOOP directive
   !$acc kernels loop device_type(*) if(.TRUE.)
   do i = 1, N
-    a(i) = 3.14
+    a(i) = 3.14d0
   end do
 
   !$acc parallel loop

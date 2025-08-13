@@ -46,13 +46,6 @@ MLIR_CAPI_EXPORTED MlirExecutionEngine mlirExecutionEngineCreate(
     MlirModule op, int optLevel, int numPaths,
     const MlirStringRef *sharedLibPaths, bool enableObjectDump);
 
-/// Initialize the ExecutionEngine. Global constructors specified by
-/// `llvm.mlir.global_ctors` will be run. One common scenario is that kernel
-/// binary compiled from `gpu.module` gets loaded during initialization. Make
-/// sure all symbols are resolvable before initialization by calling
-/// `mlirExecutionEngineRegisterSymbol` or including shared libraries.
-MLIR_CAPI_EXPORTED void mlirExecutionEngineInitialize(MlirExecutionEngine jit);
-
 /// Destroy an ExecutionEngine instance.
 MLIR_CAPI_EXPORTED void mlirExecutionEngineDestroy(MlirExecutionEngine jit);
 

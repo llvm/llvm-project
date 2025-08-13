@@ -202,8 +202,6 @@ compileAndExecute(Options &options, Operation *module, StringRef entryPoint,
 
   auto engine = std::move(*expectedEngine);
 
-  engine->initialize();
-
   auto expectedFPtr = engine->lookupPacked(entryPoint);
   if (!expectedFPtr)
     return expectedFPtr.takeError();

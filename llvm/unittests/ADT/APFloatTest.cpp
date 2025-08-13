@@ -1918,6 +1918,15 @@ TEST(APFloatTest, exactInverse) {
   EXPECT_TRUE(inv.bitwiseIsEqual(APFloat(APFloat::PPCDoubleDouble(), "0.5")));
   EXPECT_TRUE(APFloat(APFloat::x87DoubleExtended(), "2.0").getExactInverse(&inv));
   EXPECT_TRUE(inv.bitwiseIsEqual(APFloat(APFloat::x87DoubleExtended(), "0.5")));
+  // 0x1p1022 has a normal inverse for IEEE 754 binary64: 0x1p-1022.
+  EXPECT_TRUE(APFloat(0x1p1022).getExactInverse(&inv));
+  EXPECT_TRUE(inv.bitwiseIsEqual(APFloat(0x1p-1022)));
+  // With regards to getExactInverse, IEEEdouble and PPCDoubleDouble should
+  // behave the same.
+  EXPECT_TRUE(
+      APFloat(APFloat::PPCDoubleDouble(), "0x1p1022").getExactInverse(&inv));
+  EXPECT_TRUE(
+      inv.bitwiseIsEqual(APFloat(APFloat::PPCDoubleDouble(), "0x1p-1022")));
 
   // FLT_MIN
   EXPECT_TRUE(APFloat(1.17549435e-38f).getExactInverse(&inv));
@@ -6661,13 +6670,12 @@ TEST_P(PPCDoubleDoubleFrexpValueTest, PPCDoubleDoubleFrexp) {
 
     int ActualExponent;
     const APFloat ActualFraction = frexp(Input, ActualExponent, RM);
-    if (ExpectedFraction.isNaN()) {
+    if (ExpectedFraction.isNaN())
       EXPECT_TRUE(ActualFraction.isNaN());
-    } else {
+    else
       EXPECT_EQ(ActualFraction.compare(ExpectedFraction), APFloat::cmpEqual)
           << ActualFraction << " vs " << ExpectedFraction << " for input "
           << Params.Input.Hi << " + " << Params.Input.Lo << " RM " << RM;
-    }
     EXPECT_EQ(ActualExponent, Expected.Exponent)
         << "for input " << Params.Input.Hi << " + " << Params.Input.Lo
         << " RM " << RM;

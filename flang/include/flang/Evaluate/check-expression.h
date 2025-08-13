@@ -64,6 +64,13 @@ bool IsInitialProcedureTarget(const Symbol &);
 bool IsInitialProcedureTarget(const ProcedureDesignator &);
 bool IsInitialProcedureTarget(const Expr<SomeType> &);
 
+// Emit warnings about default REAL literal constants in contexts that
+// will be converted to a higher precision REAL kind than the default.
+void CheckRealWidening(
+    const Expr<SomeType> &, const DynamicType &toType, FoldingContext &);
+void CheckRealWidening(const Expr<SomeType> &,
+    const std::optional<DynamicType> &, FoldingContext &);
+
 // Validate the value of a named constant, the static initial
 // value of a non-pointer non-allocatable non-dummy variable, or the
 // default initializer of a component of a derived type (or instantiation

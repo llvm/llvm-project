@@ -647,17 +647,55 @@ struct UnrealizedConversionCastOpPattern
   }
 };
 
+// This pattern distributes arith.constant op into subgroup-level constants
+struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
+  using OpConversionPattern<arith::ConstantOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::ConstantOp op, OneToNOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto vecAttr = dyn_cast<DenseElementsAttr>(op.getValue());
+    auto vecType = dyn_cast<VectorType>(op.getType());
+    if (!vecAttr || !vecAttr.isSplat() || !vecType)
+      return failure();
+
+    xegpu::LayoutAttr layout = xegpu::getLayoutAttr(op.getResult());
+    if (!layout || !layout.getSgLayout())
+      return failure();
+
+    ArrayRef<int64_t> wgShape = vecType.getShape();
+    SmallVector<int64_t> sgShape;
+    int count;
+    std::tie(sgShape, count) = getSgShapeAndCount(wgShape, layout);
+
+    // Current limitation: constant of vector with single value.
+    // TODO: support more complex cases, e.g., vector with multiple values.
+    Attribute singleVal = vecAttr.getSplatValue<Attribute>();
+
+    auto newType = VectorType::get(sgShape, vecType.getElementType());
+    auto sgAttr = DenseElementsAttr::get(newType, singleVal);
+    auto cstOp =
+        rewriter.create<arith::ConstantOp>(op.getLoc(), newType, sgAttr);
+    if (auto newLayout = layout.dropSgLayoutAndData())
+      xegpu::setLayoutAttr(cstOp->getResult(0), newLayout);
+    SmallVector<Value> newConsts(count, cstOp);
+
+    rewriter.replaceOpWithMultiple(op, {newConsts});
+    return success();
+  }
+};
+
 } // namespace
 
 namespace mlir {
 namespace xegpu {
 void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns) {
-  patterns
-      .add<WgToSgCreateNdOp, WgToSgCreateNdOpNoOffset, WgToSgLoadNdOp,
-           WgToSgStoreNdOp, WgToSgUpdateNdOffsetOp, WgToSgDpasOp,
-           WgToSgPrefetchNdOp, UnrealizedConversionCastOpPattern,
-           WgToSgElementwiseOp, WgToSgVectorBroadcastOp, WgToSgConvertLayoutOp>(
-          patterns.getContext());
+  patterns.add<WgToSgCreateNdOp, WgToSgCreateNdOpNoOffset, WgToSgLoadNdOp,
+               WgToSgStoreNdOp, WgToSgUpdateNdOffsetOp, WgToSgDpasOp,
+               WgToSgPrefetchNdOp, UnrealizedConversionCastOpPattern,
+               WgToSgElementwiseOp, WgToSgVectorBroadcastOp,
+               WgToSgConvertLayoutOp, WgToSgArithConstantOp>(
+      patterns.getContext());
 }
 } // namespace xegpu
 } // namespace mlir
@@ -766,6 +804,14 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
 
   target.addDynamicallyLegalOp<vector::BroadcastOp>(
       [=](vector::BroadcastOp op) -> bool {
+        return isLegal(xegpu::getLayoutAttr(op.getResult()));
+      });
+
+  target.addDynamicallyLegalOp<arith::ConstantOp>(
+      [=](arith::ConstantOp op) -> bool {
+        auto vecType = dyn_cast<VectorType>(op.getType());
+        if (!vecType)
+          return true;
         return isLegal(xegpu::getLayoutAttr(op.getResult()));
       });
 
