@@ -90,6 +90,10 @@ attributes(global) subroutine devsub()
   ad = __ull2double_rz(al)
   r2 = __float2half_rn(af)
   af = __half2float(r2)
+  ad = __ll2double_rd(al)
+  ad = __ll2double_rn(al)
+  ad = __ll2double_ru(al)
+  ad = __ll2double_rz(al)
 end
 
 ! CHECK-LABEL: func.func @_QPdevsub() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
@@ -166,6 +170,10 @@ end
 ! CHECK: %{{.*}} = fir.call @__nv_ull2double_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f64
 ! CHECK: %{{.*}} = fir.call @__nv_float2half_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f16
 ! CHECK: %{{.*}} = fir.call @__nv_half2float(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f16) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_ll2double_rd(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f64
+! CHECK: %{{.*}} = fir.call @__nv_ll2double_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f64
+! CHECK: %{{.*}} = fir.call @__nv_ll2double_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f64
+! CHECK: %{{.*}} = fir.call @__nv_ll2double_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f64
 
 subroutine host1()
   integer, device :: a(32)
