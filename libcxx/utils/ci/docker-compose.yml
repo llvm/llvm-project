@@ -4,7 +4,7 @@ x-versions: &compiler_versions
 
 x-image-versions: &image_versions
   BASE_IMAGE: ubuntu:jammy
-  ACTIONS_BASE_IMAGE: builder-base
+  ACTIONS_BASE_IMAGE: ghcr.io/llvm/libcxx-linux-builder-base:77cb0980bcc2675b27d08141526939423fa0be76
 
 services:
   builder-base:
@@ -23,7 +23,7 @@ services:
       dockerfile: Dockerfile
       target: actions-builder
       args:
-        GITHUB_RUNNER_VERSION: "2.326.0"
+        GITHUB_RUNNER_VERSION: "2.327.1"
         <<: [*image_versions, *compiler_versions]
 
   android-buildkite-builder:

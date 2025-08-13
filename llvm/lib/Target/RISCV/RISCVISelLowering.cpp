@@ -2525,7 +2525,8 @@ static void translateSetCCForBranch(const SDLoc &DL, SDValue &LHS, SDValue &RHS,
     case ISD::SETUGT:
       if (Subtarget.hasVendorXqcibi() && C != INT64_MAX && isUInt<16>(C + 1)) {
         // We have a branch immediate instruction for SETUGE but not SETUGT.
-        // Convert X > C to X >= C + 1, if (C + 1) is a 16-bit signed immediate.
+        // Convert X > C to X >= C + 1, if (C + 1) is a 16-bit unsigned
+        // immediate.
         RHS = DAG.getConstant(C + 1, DL, RHS.getValueType());
         CC = ISD::SETUGE;
         return;
@@ -20639,10 +20640,11 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     // Combine store of vmv.x.s/vfmv.f.s to vse with VL of 1.
     // vfmv.f.s is represented as extract element from 0. Match it late to avoid
     // any illegal types.
-    if (Val.getOpcode() == RISCVISD::VMV_X_S ||
-        (DCI.isAfterLegalizeDAG() &&
-         Val.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
-         isNullConstant(Val.getOperand(1)))) {
+    if ((Val.getOpcode() == RISCVISD::VMV_X_S ||
+         (DCI.isAfterLegalizeDAG() &&
+          Val.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+          isNullConstant(Val.getOperand(1)))) &&
+        Val.hasOneUse()) {
       SDValue Src = Val.getOperand(0);
       MVT VecVT = Src.getSimpleValueType();
       // VecVT should be scalable and memory VT should match the element type.

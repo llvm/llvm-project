@@ -62,6 +62,15 @@ static cl::opt<bool> TmpFilesAsBitcode(
     cl::desc("Always write temporary files as bitcode instead of textual IR"),
     cl::init(false), cl::cat(LLVMReduceOptions));
 
+static SmallVector<MachineBasicBlock *> constructSaveRestorePoints(
+    ArrayRef<MachineBasicBlock *> SRPoints,
+    const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &BBMap) {
+  SmallVector<MachineBasicBlock *> Pts;
+  for (auto &Src : SRPoints)
+    Pts.push_back(BBMap.find(Src)->second);
+  return Pts;
+}
+
 static void cloneFrameInfo(
     MachineFrameInfo &DstMFI, const MachineFrameInfo &SrcMFI,
     const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB) {
@@ -95,14 +104,14 @@ static void cloneFrameInfo(
   assert(SrcMFI.getSavePoints().size() < 2 &&
          "Multiple restore points not yet supported!");
 
-  DstMFI.setSavePoints(MachineFrameInfo::constructSaveRestorePoints(
-      SrcMFI.getSavePoints(), Src2DstMBB));
+  DstMFI.setSavePoints(
+      constructSaveRestorePoints(SrcMFI.getSavePoints(), Src2DstMBB));
 
   assert(SrcMFI.getRestorePoints().size() < 2 &&
          "Multiple restore points not yet supported!");
 
-  DstMFI.setRestorePoints(MachineFrameInfo::constructSaveRestorePoints(
-      SrcMFI.getRestorePoints(), Src2DstMBB));
+  DstMFI.setRestorePoints(
+      constructSaveRestorePoints(SrcMFI.getRestorePoints(), Src2DstMBB));
 
   auto CopyObjectProperties = [](MachineFrameInfo &DstMFI,
                                  const MachineFrameInfo &SrcMFI, int FI) {
