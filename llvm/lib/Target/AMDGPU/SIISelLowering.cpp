@@ -5334,12 +5334,9 @@ static uint32_t getIdentityValueFor32BitWaveReduction(unsigned Opc) {
   case AMDGPU::S_ADD_I32:
   case AMDGPU::S_SUB_I32:
   case AMDGPU::S_OR_B32:
-  case AMDGPU::S_OR_B64:
   case AMDGPU::S_XOR_B32:
-  case AMDGPU::S_XOR_B64:
     return std::numeric_limits<uint32_t>::min();
   case AMDGPU::S_AND_B32:
-  case AMDGPU::S_AND_B64:
     return std::numeric_limits<uint32_t>::max();
   default:
     llvm_unreachable(
@@ -5359,7 +5356,11 @@ static uint64_t getIdentityValueFor64BitWaveReduction(unsigned Opc) {
     return std::numeric_limits<int64_t>::min();
   case AMDGPU::S_ADD_U64_PSEUDO:
   case AMDGPU::S_SUB_U64_PSEUDO:
+  case AMDGPU::S_OR_B64:
+  case AMDGPU::S_XOR_B64:
     return std::numeric_limits<uint64_t>::min();
+  case AMDGPU::S_AND_B64:
+    return std::numeric_limits<uint64_t>::max();
   default:
     llvm_unreachable(
         "Unexpected opcode in getIdentityValueFor64BitWaveReduction");
@@ -5680,9 +5681,9 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
                            .addReg(LaneValueHiReg)
                            .addImm(AMDGPU::sub1);
       switch (Opc) {
-      case ::AMDGPU::S_OR_B64:
-      case ::AMDGPU::S_AND_B64:
-      case ::AMDGPU::S_XOR_B64: {
+      case AMDGPU::S_OR_B64:
+      case AMDGPU::S_AND_B64:
+      case AMDGPU::S_XOR_B64: {
         NewAccumulator = BuildMI(*ComputeLoop, I, DL, TII->get(Opc), DstReg)
                              .addReg(Accumulator->getOperand(0).getReg())
                              .addReg(LaneValue->getOperand(0).getReg())
