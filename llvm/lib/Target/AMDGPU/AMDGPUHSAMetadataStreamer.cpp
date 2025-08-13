@@ -357,17 +357,38 @@ void MetadataStreamerMsgPackV4::emitKernelArg(const Argument &Arg,
   Align ArgAlign;
   std::tie(ArgTy, ArgAlign) = getArgumentTypeAlign(Arg, DL);
 
+  // Assuming the argument is not split from struct-type argument by default,
+  // unless we find it in function attribute amdgpu-argument-mapping.
+  unsigned OriginalArgIndex = ~0U;
+  uint64_t OriginalArgOffset = 0;
+  Attribute Attr =
+      Func->getAttributes().getParamAttr(ArgNo, "amdgpu-original-arg");
+  if (Attr.isValid()) {
+    StringRef MappingStr = Attr.getValueAsString();
+    SmallVector<StringRef, 2> Elements;
+    MappingStr.split(Elements, ':');
+    if (Elements.size() == 2) {
+      if (Elements[0].getAsInteger(10, OriginalArgIndex))
+        report_fatal_error(
+            "Invalid original argument index in amdgpu-original-arg attribute");
+      if (Elements[1].getAsInteger(10, OriginalArgOffset))
+        report_fatal_error("Invalid original argument offset in "
+                           "amdgpu-original-arg attribute");
+    }
+  }
+
   emitKernelArg(DL, ArgTy, ArgAlign,
                 getValueKind(ArgTy, TypeQual, BaseTypeName), Offset, Args,
-                PointeeAlign, Name, TypeName, BaseTypeName, ActAccQual,
-                AccQual, TypeQual);
+                PointeeAlign, Name, TypeName, BaseTypeName, ActAccQual, AccQual,
+                TypeQual, OriginalArgIndex, OriginalArgOffset);
 }
 
 void MetadataStreamerMsgPackV4::emitKernelArg(
     const DataLayout &DL, Type *Ty, Align Alignment, StringRef ValueKind,
     unsigned &Offset, msgpack::ArrayDocNode Args, MaybeAlign PointeeAlign,
     StringRef Name, StringRef TypeName, StringRef BaseTypeName,
-    StringRef ActAccQual, StringRef AccQual, StringRef TypeQual) {
+    StringRef ActAccQual, StringRef AccQual, StringRef TypeQual,
+    unsigned OriginalArgIndex, uint64_t OriginalArgOffset) {
   auto Arg = Args.getDocument()->getMapNode();
 
   if (!Name.empty())
@@ -407,6 +428,12 @@ void MetadataStreamerMsgPackV4::emitKernelArg(
       Arg[".is_volatile"] = Arg.getDocument()->getNode(true);
     else if (Key == "pipe")
       Arg[".is_pipe"] = Arg.getDocument()->getNode(true);
+  }
+
+  // Add original argument index and offset to the metadata
+  if (OriginalArgIndex != ~0U) {
+    Arg[".original_arg_index"] = Arg.getDocument()->getNode(OriginalArgIndex);
+    Arg[".original_arg_offset"] = Arg.getDocument()->getNode(OriginalArgOffset);
   }
 
   Args.push_back(Arg);
