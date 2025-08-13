@@ -14094,6 +14094,11 @@ def note_unsafe_count_attributed_pointer_argument : Note<
   "consider using %select{|a safe container and passing '.data()' to the "
   "parameter%select{| '%3'}2 and '.size()' to its dependent parameter '%4' or }0"
   "'std::span' and passing '.first(...).data()' to the parameter%select{| '%3'}2">;
+def note_unsafe_count_attributed_pointer_argument_null_to_nonnull : Note<
+  "passing '%select{__counted_by_or_null()|__sized_by_or_null()}0' to "
+  "'%select{__counted_by()|__sized_by()}1' while "
+  "'%select{__counted_by_or_null()|__sized_by_or_null()}0' can be null with an "
+  "arbirary %select{count|size}0">;
 def warn_unsafe_single_pointer_argument : Warning<
   "unsafe assignment to function parameter of __single pointer type">,
   InGroup<UnsafeBufferUsage>, DefaultIgnore;

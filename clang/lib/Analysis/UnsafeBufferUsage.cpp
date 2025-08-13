@@ -953,7 +953,9 @@ static const DeclRefExpr *tryGetAddressofDRE(const Expr *E) {
 
 // Checks if the argument passed to count-attributed pointer is one of the
 // following forms:
-// 0. `NULL/nullptr`, if the argument to dependent count/size is `0`.
+// 0. `NULL/nullptr`, if the argument to dependent count/size is `0`, or
+//     anything if the type of the pointer is
+//     __counted_by_or_null()/__sized_by_or_null().
 // 1. `&var`, if `var` is a variable identifier and (1.a.) the dependent count
 //     is `1`; or (1.b.) the counted_by expression is constant `1`
 // 2. `&var`, if `var` is a variable identifier and the dependent size is
@@ -1016,6 +1018,8 @@ static bool isCountAttributedPointerArgumentSafeImpl(
 
   // check form 0:
   if (PtrArgNoImp->getType()->isNullPtrType()) {
+    if (isOrNull)
+      return true;
     if (CountArg)
       return hasIntegeralConstant(CountArg, 0, Context);
     // When there is no argument representing the count/size, it is safe iff
@@ -1090,7 +1094,7 @@ static bool isCountAttributedPointerArgumentSafeImpl(
     bool areBoundsAttributesCompatible =
         (ArgCAT->isCountInBytes() == isSizedBy || (ArgInBytes && ParamInBytes));
 
-    if (ArgCAT->isOrNull() == isOrNull && areBoundsAttributesCompatible)
+    if ((isOrNull || !ArgCAT->isOrNull()) && areBoundsAttributesCompatible)
       ActualCount = ArgCAT->getCountExpr();
     // In case `PtrArgNoImp` is a function call expression of counted_by type
     // (i.e., return type is a CAT), create a map for the call:

@@ -2579,6 +2579,15 @@ public:
     SourceLocation DiagLoc =
         Arg->isDefaultArgument() ? Call->getRParenLoc() : Arg->getBeginLoc();
     S.Diag(DiagLoc, diag::warn_unsafe_count_attributed_pointer_argument);
+
+    if (const auto *ArgCATy = Arg->getType()->getAs<CountAttributedType>();
+        ArgCATy && ArgCATy->isOrNull() && !CATy->isOrNull()) {
+      S.Diag(
+          DiagLoc,
+          diag::note_unsafe_count_attributed_pointer_argument_null_to_nonnull)
+          << ArgCATy->isCountInBytes() << CATy->isCountInBytes();
+    }
+
     S.Diag(PVD->getBeginLoc(),
            diag::note_unsafe_count_attributed_pointer_argument)
         << IsSimpleCount << QualType(CATy, 0) << !PtrParamName.empty()

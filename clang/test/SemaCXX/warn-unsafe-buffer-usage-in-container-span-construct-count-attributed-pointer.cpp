@@ -176,3 +176,15 @@ namespace test_fam {
   }
 
 } // namespace test_fam
+
+void test_nullable(int *__counted_by_or_null(count) cbn_p, size_t count,
+                   char *__sized_by_or_null(size) sbn_p, size_t size) {
+  // __counted_by_or_null(count) pointer can be null with an arbitrary count.
+  // We rely here on the dynamic check performed by std::span constructor, and
+  // allow those patterns.
+  std::span<int>{cbn_p, count};
+  std::span<char>{sbn_p, size};
+
+  std::span<int>{cbn_p, 42};  // expected-warning{{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
+  std::span<char>{sbn_p, 42}; // expected-warning{{the two-parameter std::span construction is unsafe as it can introduce mismatch between buffer size and the bound information}}
+}

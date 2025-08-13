@@ -69,7 +69,7 @@ void cb_cchar(const char *__counted_by(len) s, size_t len);
 // expected-note@+1 3{{consider using 'std::span' and passing '.first(...).data()' to the parameter 's'}}
 void cb_cchar_42(const char *__counted_by(42) s);
 
-// expected-note@+1 31{{consider using a safe container and passing '.data()' to the parameter 'p' and '.size()' to its dependent parameter 'count' or 'std::span' and passing '.first(...).data()' to the parameter 'p'}}
+// expected-note@+1 +{{consider using a safe container and passing '.data()' to the parameter 'p' and '.size()' to its dependent parameter 'count' or 'std::span' and passing '.first(...).data()' to the parameter 'p'}}
 void cb_int(int *__counted_by(count) p, size_t count);
 
 // expected-note@+1 34{{consider using a safe container and passing '.data()' to the parameter 'p' and '.size()' to its dependent parameter 'count' or 'std::span' and passing '.first(...).data()' to the parameter 'p'}}
@@ -80,6 +80,9 @@ void cb_cint_42(const int *__counted_by(42) p);
 
 // expected-note@+1 6{{consider using 'std::span' and passing '.first(...).data()' to the parameter 'p'}}
 void cb_cint_multi(const int *__counted_by((a + b) * (c - d)) p, int a, int b, int c, int d);
+
+// expected-note@+1 3{{consider using a safe container and passing '.data()' to the parameter 'p' and '.size()' to its dependent parameter 'size' or 'std::span' and passing '.first(...).data()' to the parameter 'p'}}
+void sb_void(void *__sized_by(size) p, size_t size);
 
 // expected-note@+1 13{{consider using a safe container and passing '.data()' to the parameter 'p' and '.size()' to its dependent parameter 'size' or 'std::span' and passing '.first(...).data()' to the parameter 'p'}}
 void sb_cvoid(const void *__sized_by(size) p, size_t size);
@@ -97,6 +100,12 @@ void sb_cint(const int *__sized_by(size) p, size_t size);
 void sb_cint_42(const int *__sized_by(42) p);
 
 void cb_cint_array(const int (* __counted_by(size) p)[10], size_t size);
+
+// expected-note@+1 +{{consider using a safe container and passing '.data()' to the parameter 'p' and '.size()' to its dependent parameter 'count' or 'std::span' and passing '.first(...).data()' to the parameter 'p'}}
+void cbn_int(int *__counted_by_or_null(count) p, size_t count);
+
+// expected-note@+1 +{{consider using a safe container and passing '.data()' to the parameter 'p' and '.size()' to its dependent parameter 'size' or 'std::span' and passing '.first(...).data()' to the parameter 'p'}}
+void sbn_void(void *__sized_by_or_null(size) p, size_t size);
 
 }  // extern "C"
 
@@ -389,9 +398,22 @@ void from_cb_int_multi(int *__counted_by((a + b) * (c - d)) p, int a, int b, int
   cb_int(p, 42);                 // expected-warning{{unsafe assignment to function parameter of count-attributed type}}
 }
 
-void nullptr_as_arg(void * __sized_by(size) p, unsigned size) { //expected-note{{consider using a safe container and passing '.data()' to the parameter 'p' and '.size()' to its dependent parameter 'size' or 'std::span' and passing '.first(...).data()' to the parameter 'p'}}
-  nullptr_as_arg(nullptr, 0);
-  nullptr_as_arg(nullptr, size); // expected-warning{{unsafe assignment to function parameter of count-attributed type}}
+void nullptr_as_arg(size_t n) {
+  cb_int(nullptr, 0);
+  cb_int(nullptr, 42); // expected-warning{{unsafe assignment to function parameter of count-attributed type}}
+  cb_int(nullptr, n);  // expected-warning{{unsafe assignment to function parameter of count-attributed type}}
+
+  sb_void(nullptr, 0);
+  sb_void(nullptr, 42); // expected-warning{{unsafe assignment to function parameter of count-attributed type}}
+  sb_void(nullptr, n);  // expected-warning{{unsafe assignment to function parameter of count-attributed type}}
+
+  cbn_int(nullptr, 0);
+  cbn_int(nullptr, 42);
+  cbn_int(nullptr, n);
+
+  sbn_void(nullptr, 0);
+  sbn_void(nullptr, 42);
+  sbn_void(nullptr, n);
 }
 
 void single_variable() {
@@ -706,6 +728,42 @@ static void previous_infinite_loop3(int * __counted_by(n + n * m) p, size_t n,
 				    int * __counted_by(o) r, size_t m, size_t o) {
   previous_infinite_loop3(p, n, q, r, m, o);
   previous_infinite_loop3(p, n, q, r, m, o + 1); // expected-warning 2{{unsafe assignment to function parameter of count-attributed type}}
+}
+
+// Check nullable variants.
+
+void nullable(std::span<int> sp, size_t n) {
+  cbn_int(sp.data(), sp.size());
+  cbn_int(sp.data(), sp.size_bytes()); // expected-warning{{unsafe assignment to function parameter of count-attributed type}}
+  cbn_int(sp.first(42).data(), 42);
+  cbn_int(sp.first(n).data(), n);
+  cbn_int(sp.first(42).data(), n); // expected-warning{{unsafe assignment to function parameter of count-attributed type}}
+
+  sbn_void(sp.data(), sp.size_bytes());
+  sbn_void(sp.data(), sp.size());   // expected-warning{{unsafe assignment to function parameter of count-attributed type}}
+  sbn_void(sp.first(42).data(), n); // expected-warning{{unsafe assignment to function parameter of count-attributed type}}
+}
+
+void nonnull_tofrom_nullable(size_t n,
+                             int *__counted_by(n) cb,
+                             int *__counted_by_or_null(n) cbn,
+                             void *__sized_by(n) sb,
+                             void *__sized_by_or_null(n) sbn) {
+  cb_int(cb, n);
+  // expected-note@+2{{passing '__counted_by_or_null()' to '__counted_by()' while '__counted_by_or_null()' can be null with an arbirary count}}
+  // expected-warning@+1{{unsafe assignment to function parameter of count-attributed type}}
+  cb_int(cbn, n);
+
+  cbn_int(cb, n);
+  cbn_int(cbn, n);
+
+  sb_void(sb, n);
+  // expected-note@+2{{passing '__sized_by_or_null()' to '__sized_by()' while '__sized_by_or_null()' can be null with an arbirary size}}
+  // expected-warning@+1{{unsafe assignment to function parameter of count-attributed type}}
+  sb_void(sbn, n);
+
+  sbn_void(sb, n);
+  sbn_void(sbn, n);
 }
 
 // Check default args.
