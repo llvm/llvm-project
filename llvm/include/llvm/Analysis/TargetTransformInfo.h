@@ -1680,9 +1680,9 @@ public:
   /// function. \p SE holds the pointer for the scalar evolution object which
   /// was used in order to get the Ptr step value. \p Ptr holds the SCEV of the
   /// access pointer.
-  LLVM_ABI InstructionCost getAddressComputationCost(
-      Type *PtrTy, ScalarEvolution *SE = nullptr, const SCEV *Ptr = nullptr,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
+  LLVM_ABI InstructionCost
+  getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE, const SCEV *Ptr,
+                            TTI::TargetCostKind CostKind) const;
 
   /// \returns The cost, if any, of keeping values of the given types alive
   /// over a callsite.
