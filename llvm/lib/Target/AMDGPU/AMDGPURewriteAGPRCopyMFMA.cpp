@@ -57,27 +57,47 @@ public:
         TRI(*ST.getRegisterInfo()), MRI(MF.getRegInfo()), VRM(VRM), LRM(LRM),
         LIS(LIS) {}
 
+  // TODO: Remove this restriction
+  bool mfmaHasSameSrc2AndDstReg(const MachineInstr &MI) const {
+    const MachineOperand *Src2 = TII.getNamedOperand(MI, AMDGPU::OpName::src2);
+    const MachineOperand *Dst = TII.getNamedOperand(MI, AMDGPU::OpName::vdst);
+    return Src2->getReg() == Dst->getReg() &&
+           Src2->getSubReg() == Dst->getSubReg();
+  }
+
+  bool isRewriteCandidate(const MachineInstr &MI) const {
+    return TII.isMAI(MI) &&
+           AMDGPU::getMFMASrcCVDstAGPROp(MI.getOpcode()) != -1 &&
+           mfmaHasSameSrc2AndDstReg(MI);
+  }
+
   /// Compute the register class constraints based on the uses of \p Reg,
-  /// excluding uses from \p ExceptMI. This should be nearly identical to
+  /// excluding MFMA uses from which can be rewritten to change the register
+  /// class constraint. This should be nearly identical to
   /// MachineRegisterInfo::recomputeRegClass.
   const TargetRegisterClass *
-  recomputeRegClassExcept(Register Reg, const TargetRegisterClass *OldRC,
-                          const TargetRegisterClass *NewRC,
-                          const MachineInstr *ExceptMI) const;
+  recomputeRegClassExceptRewritable(Register Reg,
+                                    const TargetRegisterClass *OldRC,
+                                    const TargetRegisterClass *NewRC) const;
 
   bool run(MachineFunction &MF) const;
 };
 
 const TargetRegisterClass *
-AMDGPURewriteAGPRCopyMFMAImpl::recomputeRegClassExcept(
+AMDGPURewriteAGPRCopyMFMAImpl::recomputeRegClassExceptRewritable(
     Register Reg, const TargetRegisterClass *OldRC,
-    const TargetRegisterClass *NewRC, const MachineInstr *ExceptMI) const {
+    const TargetRegisterClass *NewRC) const {
 
   // Accumulate constraints from all uses.
   for (MachineOperand &MO : MRI.reg_nodbg_operands(Reg)) {
     // Apply the effect of the given operand to NewRC.
     MachineInstr *MI = MO.getParent();
-    if (MI == ExceptMI)
+
+    // We can swap the classes of dst + src2 as a pair to AGPR, so ignore the
+    // effects of rewrite candidates. It just so happens that we can use either
+    // AGPR or VGPR in src0/src1, so don't bother checking the constraint
+    // effects of the individual operands.
+    if (isRewriteCandidate(*MI))
       continue;
 
     unsigned OpNo = &MO - &MI->getOperand(0);
@@ -190,10 +210,13 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::run(MachineFunction &MF) const {
       // first place, as well as need to assign another register, and need to
       // figure out where to put them. The live range splitting is smarter than
       // anything we're doing here, so trust it did something reasonable.
-      const TargetRegisterClass *Src2ExceptRC = recomputeRegClassExcept(
-          Src2->getReg(), Src2VirtRegRC, VirtRegRC, CopySrcMI);
-      if (!Src2ExceptRC)
+      const TargetRegisterClass *Src2ExceptRC =
+          recomputeRegClassExceptRewritable(Src2->getReg(), Src2VirtRegRC,
+                                            VirtRegRC);
+      if (!Src2ExceptRC) {
+        LLVM_DEBUG(dbgs() << "Could not recompute the regclass\n");
         continue;
+      }
 
       const TargetRegisterClass *NewSrc2ConstraintRC =
           TII.getRegClass(TII.get(AGPROp), Src2->getOperandNo(), &TRI, MF);
@@ -203,8 +226,6 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::run(MachineFunction &MF) const {
       const TargetRegisterClass *NewSrc2RC =
           TRI.getCommonSubClass(Src2ExceptRC, NewSrc2ConstraintRC);
       if (!NewSrc2RC) {
-        // TODO: This is ignoring ther rewritable uses. e.g. a rewritable MFMA
-        // using a rewritable MFMA can be rewritten as a pair.
         LLVM_DEBUG(dbgs() << "Other uses of " << printReg(Src2->getReg(), &TRI)
                           << " are incompatible with replacement class\n");
         continue;
@@ -215,8 +236,19 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::run(MachineFunction &MF) const {
 
       CopySrcMI->setDesc(TII.get(AGPROp));
 
-      // TODO: Is replacing too aggressive, fixup these instructions only?
-      MRI.replaceRegWith(CopySrcReg, VReg);
+      // Perform replacement of the register, rewriting the rewritable uses.
+      for (MachineInstr &UseMI :
+           make_early_inc_range(MRI.reg_instructions(CopySrcReg))) {
+        if (TII.isMAI(UseMI)) {
+          // Note the register we need to rewrite may still appear in src0/src1,
+          // but that's fine since those can use A or V anyway.
+          int ReplacementOp = AMDGPU::getMFMASrcCVDstAGPROp(UseMI.getOpcode());
+          if (ReplacementOp != -1)
+            UseMI.setDesc(TII.get(ReplacementOp));
+        }
+
+        UseMI.substituteRegister(CopySrcReg, VReg, AMDGPU::NoSubRegister, TRI);
+      }
 
       LLVM_DEBUG(dbgs() << "Replaced VGPR MFMA with AGPR: " << *CopySrcMI);
 
