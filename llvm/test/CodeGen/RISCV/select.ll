@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+xventanacondops -verify-machineinstrs < %s | FileCheck --check-prefixes=CHECK,RV64IMXVTCONDOPS %s
 ; RUN: llc -mtriple=riscv32 -mattr=+m,+zicond -verify-machineinstrs < %s | FileCheck --check-prefixes=CHECK,CHECKZICOND,RV32IMZICOND %s
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+zicond -verify-machineinstrs < %s | FileCheck --check-prefixes=CHECK,CHECKZICOND,RV64IMZICOND %s
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcicm,+experimental-xqcics,+experimental-xqcicli -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+m,+experimental-xqcicm,+experimental-xqcics,+experimental-xqcicli -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefixes=RV32IXQCI
 
 define i16 @select_xor_1(i16 %A, i8 %cond) {
@@ -1229,29 +1229,8 @@ define i32 @select_udiv_1(i1 zeroext %cond, i32 %a, i32 %b) {
 ;
 ; RV32IXQCI-LABEL: select_udiv_1:
 ; RV32IXQCI:       # %bb.0: # %entry
-; RV32IXQCI-NEXT:    addi sp, sp, -16
-; RV32IXQCI-NEXT:    .cfi_def_cfa_offset 16
-; RV32IXQCI-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IXQCI-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32IXQCI-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
-; RV32IXQCI-NEXT:    .cfi_offset ra, -4
-; RV32IXQCI-NEXT:    .cfi_offset s0, -8
-; RV32IXQCI-NEXT:    .cfi_offset s1, -12
-; RV32IXQCI-NEXT:    mv s0, a2
-; RV32IXQCI-NEXT:    mv s1, a0
-; RV32IXQCI-NEXT:    mv a0, a1
-; RV32IXQCI-NEXT:    mv a1, a2
-; RV32IXQCI-NEXT:    call __udivsi3
-; RV32IXQCI-NEXT:    qc.selectnei s1, 0, a0, s0
-; RV32IXQCI-NEXT:    mv a0, s1
-; RV32IXQCI-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IXQCI-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32IXQCI-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32IXQCI-NEXT:    .cfi_restore ra
-; RV32IXQCI-NEXT:    .cfi_restore s0
-; RV32IXQCI-NEXT:    .cfi_restore s1
-; RV32IXQCI-NEXT:    addi sp, sp, 16
-; RV32IXQCI-NEXT:    .cfi_def_cfa_offset 0
+; RV32IXQCI-NEXT:    divu a1, a1, a2
+; RV32IXQCI-NEXT:    qc.selectnei a0, 0, a1, a2
 ; RV32IXQCI-NEXT:    ret
 entry:
   %c = udiv i32 %a, %b
@@ -1304,29 +1283,8 @@ define i32 @select_udiv_2(i1 zeroext %cond, i32 %a, i32 %b) {
 ;
 ; RV32IXQCI-LABEL: select_udiv_2:
 ; RV32IXQCI:       # %bb.0: # %entry
-; RV32IXQCI-NEXT:    addi sp, sp, -16
-; RV32IXQCI-NEXT:    .cfi_def_cfa_offset 16
-; RV32IXQCI-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IXQCI-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32IXQCI-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
-; RV32IXQCI-NEXT:    .cfi_offset ra, -4
-; RV32IXQCI-NEXT:    .cfi_offset s0, -8
-; RV32IXQCI-NEXT:    .cfi_offset s1, -12
-; RV32IXQCI-NEXT:    mv s0, a1
-; RV32IXQCI-NEXT:    mv s1, a0
-; RV32IXQCI-NEXT:    mv a0, a1
-; RV32IXQCI-NEXT:    mv a1, a2
-; RV32IXQCI-NEXT:    call __udivsi3
-; RV32IXQCI-NEXT:    qc.selectnei s1, 0, s0, a0
-; RV32IXQCI-NEXT:    mv a0, s1
-; RV32IXQCI-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IXQCI-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32IXQCI-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32IXQCI-NEXT:    .cfi_restore ra
-; RV32IXQCI-NEXT:    .cfi_restore s0
-; RV32IXQCI-NEXT:    .cfi_restore s1
-; RV32IXQCI-NEXT:    addi sp, sp, 16
-; RV32IXQCI-NEXT:    .cfi_def_cfa_offset 0
+; RV32IXQCI-NEXT:    divu a2, a1, a2
+; RV32IXQCI-NEXT:    qc.selectnei a0, 0, a1, a2
 ; RV32IXQCI-NEXT:    ret
 entry:
   %c = udiv i32 %a, %b
@@ -1399,29 +1357,12 @@ define i32 @select_udiv_3(i1 zeroext %cond, i32 %a) {
 ;
 ; RV32IXQCI-LABEL: select_udiv_3:
 ; RV32IXQCI:       # %bb.0: # %entry
-; RV32IXQCI-NEXT:    addi sp, sp, -16
-; RV32IXQCI-NEXT:    .cfi_def_cfa_offset 16
-; RV32IXQCI-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IXQCI-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32IXQCI-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
-; RV32IXQCI-NEXT:    .cfi_offset ra, -4
-; RV32IXQCI-NEXT:    .cfi_offset s0, -8
-; RV32IXQCI-NEXT:    .cfi_offset s1, -12
-; RV32IXQCI-NEXT:    mv s0, a1
-; RV32IXQCI-NEXT:    mv s1, a0
-; RV32IXQCI-NEXT:    li a1, 42
-; RV32IXQCI-NEXT:    mv a0, s0
-; RV32IXQCI-NEXT:    call __udivsi3
-; RV32IXQCI-NEXT:    qc.selectnei s1, 0, s0, a0
-; RV32IXQCI-NEXT:    mv a0, s1
-; RV32IXQCI-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IXQCI-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; RV32IXQCI-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; RV32IXQCI-NEXT:    .cfi_restore ra
-; RV32IXQCI-NEXT:    .cfi_restore s0
-; RV32IXQCI-NEXT:    .cfi_restore s1
-; RV32IXQCI-NEXT:    addi sp, sp, 16
-; RV32IXQCI-NEXT:    .cfi_def_cfa_offset 0
+; RV32IXQCI-NEXT:    srli a2, a1, 1
+; RV32IXQCI-NEXT:    lui a3, 199729
+; RV32IXQCI-NEXT:    addi a3, a3, -975
+; RV32IXQCI-NEXT:    mulhu a2, a2, a3
+; RV32IXQCI-NEXT:    srli a2, a2, 2
+; RV32IXQCI-NEXT:    qc.selectnei a0, 0, a1, a2
 ; RV32IXQCI-NEXT:    ret
 entry:
   %c = udiv i32 %a, 42
