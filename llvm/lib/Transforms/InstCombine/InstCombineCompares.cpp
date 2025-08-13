@@ -1322,7 +1322,7 @@ Instruction *InstCombinerImpl::foldICmpWithZero(ICmpInst &Cmp) {
 
 /// Fold icmp eq (num + (val - 1)) & -val, num
 ///      to
-///      icmp eq 0, (and num, val - 1)
+///      icmp eq (and num, val - 1), 0
 /// For val being power of two
 Instruction *InstCombinerImpl::foldIsMultipleOfAPowerOfTwo(ICmpInst &Cmp) {
   Value *Num;
