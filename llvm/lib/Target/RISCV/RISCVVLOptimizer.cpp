@@ -497,6 +497,10 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VANDN_VX:
   // Vector Reverse Bits in Elements
   case RISCV::VBREV_V:
+  // Vector Reverse Bits in Bytes
+  case RISCV::VBREV8_V:
+  // Vector Reverse Bytes
+  case RISCV::VREV8_V:
   // Vector Count Leading Zeros
   case RISCV::VCLZ_V:
   // Vector Count Trailing Zeros
@@ -510,6 +514,13 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VROR_VI:
   case RISCV::VROR_VV:
   case RISCV::VROR_VX:
+  // Vector Carry-less Multiplication Instructions (Zvbc)
+  // Vector Carry-less Multiply
+  case RISCV::VCLMUL_VV:
+  case RISCV::VCLMUL_VX:
+  // Vector Carry-less Multiply Return High Half
+  case RISCV::VCLMULH_VV:
+  case RISCV::VCLMULH_VX:
     return MILog2SEW;
 
   // Vector Widening Shift Left Logical (Zvbb)
@@ -1046,6 +1057,10 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VANDN_VX:
   // Vector Reverse Bits in Elements
   case RISCV::VBREV_V:
+  // Vector Reverse Bits in Bytes
+  case RISCV::VBREV8_V:
+  // Vector Reverse Bytes
+  case RISCV::VREV8_V:
   // Vector Count Leading Zeros
   case RISCV::VCLZ_V:
   // Vector Count Trailing Zeros
@@ -1063,6 +1078,13 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VWSLL_VI:
   case RISCV::VWSLL_VX:
   case RISCV::VWSLL_VV:
+  // Vector Carry-less Multiplication Instructions (Zvbc)
+  // Vector Carry-less Multiply
+  case RISCV::VCLMUL_VV:
+  case RISCV::VCLMUL_VX:
+  // Vector Carry-less Multiply Return High Half
+  case RISCV::VCLMULH_VV:
+  case RISCV::VCLMULH_VX:
   // Vector Mask Instructions
   // Vector Mask-Register Logical Instructions
   // vmsbf.m set-before-first mask bit
