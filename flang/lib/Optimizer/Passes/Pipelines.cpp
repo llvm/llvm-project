@@ -113,6 +113,7 @@ void addFIRToLLVMPass(mlir::PassManager &pm,
   options.forceUnifiedTBAATree = useOldAliasTags;
   options.typeDescriptorsRenamedForAssembly =
       !disableCompilerGeneratedNamesConversion;
+  options.ComplexRange = config.ComplexRange;
   addPassConditionally(pm, disableFirToLlvmIr,
                        [&]() { return fir::createFIRToLLVMPass(options); });
   // The dialect conversion framework may leave dead unrealized_conversion_cast
@@ -206,6 +207,10 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
   pm.addPass(fir::createPolymorphicOpConversion());
   pm.addPass(fir::createAssumedRankOpConversion());
 
+  // Optimize redundant array repacking operations,
+  // if the source is known to be contiguous.
+  if (pc.OptLevel.isOptimizingForSpeed())
+    pm.addPass(fir::createOptimizeArrayRepacking());
   pm.addPass(fir::createLowerRepackArraysPass());
   // Expand FIR operations that may use SCF dialect for their
   // implementation. This is a mandatory pass.

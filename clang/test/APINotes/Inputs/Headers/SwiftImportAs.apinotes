@@ -19,6 +19,10 @@ Tags:
   SwiftReleaseOp: release
   SwiftRetainOp: retain
   SwiftDefaultOwnership: unretained
+- Name: OpaqueRefCountedType
+  SwiftImportAs: reference
+  SwiftReleaseOp: ORCRelease
+  SwiftRetainOp: ORCRetain
 - Name: NonCopyableType
   SwiftCopyable: false
   SwiftConformsTo: MySwiftModule.MySwiftNonCopyableProtocol
@@ -35,3 +39,7 @@ Functions:
     SwiftReturnOwnership: unretained
   - Name: functionReturningFrt_returns_retained
     SwiftReturnOwnership: retained
+Typedefs:
+  - Name: WrappedOptions
+    SwiftWrapper: struct
+    SwiftConformsTo: Swift.OptionSet

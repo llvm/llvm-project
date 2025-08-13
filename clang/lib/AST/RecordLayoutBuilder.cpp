@@ -1953,7 +1953,7 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
           // silently there. For other targets that have ms_struct enabled
           // (most probably via a pragma or attribute), trigger a diagnostic
           // that defaults to an error.
-          if (!Context.getTargetInfo().getTriple().isWindowsGNUEnvironment())
+          if (!Context.getTargetInfo().getTriple().isOSCygMing())
             Diag(D->getLocation(), diag::warn_npot_ms_struct);
         }
         if (TypeSize > FieldAlign &&
@@ -2012,8 +2012,7 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
     } else if (const BuiltinType *BTy = BaseTy->getAs<BuiltinType>()) {
       performBuiltinTypeAlignmentUpgrade(BTy);
     } else if (const RecordType *RT = BaseTy->getAs<RecordType>()) {
-      const RecordDecl *RD = RT->getDecl();
-      assert(RD && "Expected non-null RecordDecl.");
+      const RecordDecl *RD = RT->getOriginalDecl();
       const ASTRecordLayout &FieldRecord = Context.getASTRecordLayout(RD);
       PreferredAlign = FieldRecord.getPreferredAlignment();
     }
@@ -2128,7 +2127,8 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
           // TODO: Takes no account the alignment of the outer struct
           if (FieldOffset % OriginalFieldAlign != 0)
             Diag(D->getLocation(), diag::warn_unaligned_access)
-                << Context.getTypeDeclType(RD) << D->getName() << D->getType();
+                << Context.getCanonicalTagType(RD) << D->getName()
+                << D->getType();
         }
   }
 
@@ -2193,8 +2193,7 @@ void ItaniumRecordLayoutBuilder::FinishLayout(const NamedDecl *D) {
         InBits = false;
       }
       Diag(RD->getLocation(), diag::warn_padded_struct_size)
-          << Context.getTypeDeclType(RD)
-          << PadSize
+          << Context.getCanonicalTagType(RD) << PadSize
           << (InBits ? 1 : 0); // (byte|bit)
     }
 
@@ -2212,7 +2211,7 @@ void ItaniumRecordLayoutBuilder::FinishLayout(const NamedDecl *D) {
          Context.getLangOpts().getClangABICompat() <=
              LangOptions::ClangABI::Ver15))
       Diag(D->getLocation(), diag::warn_unnecessary_packed)
-          << Context.getTypeDeclType(RD);
+          << Context.getCanonicalTagType(RD);
   }
 }
 
@@ -2306,7 +2305,7 @@ static void CheckFieldPadding(const ASTContext &Context, bool IsUnion,
       Context.getDiagnostics().Report(D->getLocation(),
                                       Diagnostic)
           << getPaddingDiagFromTagKind(D->getParent()->getTagKind())
-          << Context.getTypeDeclType(D->getParent()) << PadSize
+          << Context.getCanonicalTagType(D->getParent()) << PadSize
           << (InBits ? 1 : 0) // (byte|bit)
           << D->getIdentifier();
     } else {
@@ -2315,7 +2314,7 @@ static void CheckFieldPadding(const ASTContext &Context, bool IsUnion,
       Context.getDiagnostics().Report(D->getLocation(),
                                       Diagnostic)
           << getPaddingDiagFromTagKind(D->getParent()->getTagKind())
-          << Context.getTypeDeclType(D->getParent()) << PadSize
+          << Context.getCanonicalTagType(D->getParent()) << PadSize
           << (InBits ? 1 : 0); // (byte|bit)
     }
   }
@@ -2456,15 +2455,6 @@ static bool mustSkipTailPadding(TargetCXXABI ABI, const CXXRecordDecl *RD) {
   }
 
   llvm_unreachable("bad tail-padding use kind");
-}
-
-static bool isMsLayout(const ASTContext &Context) {
-  // Check if it's CUDA device compilation; ensure layout consistency with host.
-  if (Context.getLangOpts().CUDA && Context.getLangOpts().CUDAIsDevice &&
-      Context.getAuxTargetInfo())
-    return Context.getAuxTargetInfo()->getCXXABI().isMicrosoft();
-
-  return Context.getTargetInfo().getCXXABI().isMicrosoft();
 }
 
 // This section contains an implementation of struct layout that is, up to the
@@ -2723,7 +2713,7 @@ MicrosoftRecordLayoutBuilder::getAdjustedElementInfo(
   else {
     if (auto RT =
             FD->getType()->getBaseElementTypeUnsafe()->getAs<RecordType>()) {
-      auto const &Layout = Context.getASTRecordLayout(RT->getDecl());
+      auto const &Layout = Context.getASTRecordLayout(RT->getOriginalDecl());
       EndsWithZeroSizedObject = Layout.endsWithZeroSizedObject();
       FieldRequiredAlignment = std::max(FieldRequiredAlignment,
                                         Layout.getRequiredAlignment());
@@ -3282,7 +3272,7 @@ void MicrosoftRecordLayoutBuilder::finalizeLayout(const RecordDecl *RD) {
 
     Context.getDiagnostics().Report(RD->getLocation(),
                                     diag::warn_padded_struct_size)
-        << Context.getTypeDeclType(RD) << PadSize
+        << Context.getCanonicalTagType(RD) << PadSize
         << (InBits ? 1 : 0); // (byte|bit)
   }
 }
@@ -3399,7 +3389,7 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
 
   const ASTRecordLayout *NewEntry = nullptr;
 
-  if (isMsLayout(*this)) {
+  if (getTargetInfo().hasMicrosoftRecordLayout()) {
     if (const auto *RD = dyn_cast<CXXRecordDecl>(D)) {
       EmptySubobjectMap EmptySubobjects(*this, RD);
       MicrosoftRecordLayoutBuilder Builder(*this, &EmptySubobjects);
@@ -3640,7 +3630,7 @@ static void DumpRecordLayout(raw_ostream &OS, const RecordDecl *RD,
   auto CXXRD = dyn_cast<CXXRecordDecl>(RD);
 
   PrintOffset(OS, Offset, IndentLevel);
-  OS << C.getTypeDeclType(const_cast<RecordDecl *>(RD));
+  OS << C.getCanonicalTagType(const_cast<RecordDecl *>(RD));
   if (Description)
     OS << ' ' << Description;
   if (CXXRD && CXXRD->isEmpty())
@@ -3656,7 +3646,8 @@ static void DumpRecordLayout(raw_ostream &OS, const RecordDecl *RD,
     bool HasOwnVBPtr = Layout.hasOwnVBPtr();
 
     // Vtable pointer.
-    if (CXXRD->isDynamicClass() && !PrimaryBase && !isMsLayout(C)) {
+    if (CXXRD->isDynamicClass() && !PrimaryBase &&
+        !C.getTargetInfo().hasMicrosoftRecordLayout()) {
       PrintOffset(OS, Offset, IndentLevel);
       OS << '(' << *RD << " vtable pointer)\n";
     } else if (HasOwnVFPtr) {
@@ -3705,8 +3696,8 @@ static void DumpRecordLayout(raw_ostream &OS, const RecordDecl *RD,
 
     // Recursively dump fields of record type.
     if (auto RT = Field->getType()->getAs<RecordType>()) {
-      DumpRecordLayout(OS, RT->getDecl(), C, FieldOffset, IndentLevel,
-                       Field->getName().data(),
+      DumpRecordLayout(OS, RT->getOriginalDecl()->getDefinitionOrSelf(), C,
+                       FieldOffset, IndentLevel, Field->getName().data(),
                        /*PrintSizeInfo=*/false,
                        /*IncludeVirtualBases=*/true);
       continue;
@@ -3754,7 +3745,7 @@ static void DumpRecordLayout(raw_ostream &OS, const RecordDecl *RD,
 
   PrintIndentNoOffset(OS, IndentLevel - 1);
   OS << "[sizeof=" << Layout.getSize().getQuantity();
-  if (CXXRD && !isMsLayout(C))
+  if (CXXRD && !C.getTargetInfo().hasMicrosoftRecordLayout())
     OS << ", dsize=" << Layout.getDataSize().getQuantity();
   OS << ", align=" << Layout.getAlignment().getQuantity();
   if (C.getTargetInfo().defaultsToAIXPowerAlignment())
@@ -3789,11 +3780,11 @@ void ASTContext::DumpRecordLayout(const RecordDecl *RD, raw_ostream &OS,
   // in libFrontend.
 
   const ASTRecordLayout &Info = getASTRecordLayout(RD);
-  OS << "Type: " << getTypeDeclType(RD) << "\n";
+  OS << "Type: " << getCanonicalTagType(RD) << "\n";
   OS << "\nLayout: ";
   OS << "<ASTRecordLayout\n";
   OS << "  Size:" << toBits(Info.getSize()) << "\n";
-  if (!isMsLayout(*this))
+  if (!getTargetInfo().hasMicrosoftRecordLayout())
     OS << "  DataSize:" << toBits(Info.getDataSize()) << "\n";
   OS << "  Alignment:" << toBits(Info.getAlignment()) << "\n";
   if (Target->defaultsToAIXPowerAlignment())

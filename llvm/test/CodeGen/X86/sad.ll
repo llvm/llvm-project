@@ -1184,11 +1184,6 @@ define i32 @PR143456(ptr %p0, ptr %p1) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; SSE2-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; SSE2-NEXT:    movdqa %xmm0, %xmm2
-; SSE2-NEXT:    pminub %xmm1, %xmm2
-; SSE2-NEXT:    pmaxub %xmm1, %xmm0
-; SSE2-NEXT:    psubb %xmm2, %xmm0
-; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    psadbw %xmm0, %xmm1
 ; SSE2-NEXT:    movd %xmm1, %eax
 ; SSE2-NEXT:    movzbl %al, %eax
@@ -1198,10 +1193,6 @@ define i32 @PR143456(ptr %p0, ptr %p1) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX-NEXT:    vpminub %xmm1, %xmm0, %xmm2
-; AVX-NEXT:    vpmaxub %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpsubb %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpextrb $0, %xmm0, %eax
 ; AVX-NEXT:    retq

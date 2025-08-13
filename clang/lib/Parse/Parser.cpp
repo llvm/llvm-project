@@ -1774,9 +1774,9 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC,
     /// An Objective-C object type followed by '<' is a specialization of
     /// a parameterized class type or a protocol-qualified type.
     ParsedType Ty = Classification.getType();
+    QualType T = Actions.GetTypeFromParser(Ty);
     if (getLangOpts().ObjC && NextToken().is(tok::less) &&
-        (Ty.get()->isObjCObjectType() ||
-         Ty.get()->isObjCObjectPointerType())) {
+        (T->isObjCObjectType() || T->isObjCObjectPointerType())) {
       // Consume the name.
       SourceLocation IdentifierLoc = ConsumeToken();
       SourceLocation NewEndLoc;
@@ -1838,7 +1838,8 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC,
 
   case NameClassificationKind::TypeTemplate:
     if (Next.isNot(tok::less)) {
-      // This may be a type template being used as a template template argument.
+      // This may be a type or variable template being used as a template
+      // template argument.
       if (SS.isNotEmpty())
         AnnotateScopeToken(SS, !WasScopeAnnotation);
       return AnnotatedNameKind::TemplateName;
@@ -1852,10 +1853,10 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC,
         Classification.getKind() == NameClassificationKind::Concept;
     // We have a template name followed by '<'. Consume the identifier token so
     // we reach the '<' and annotate it.
-    if (Next.is(tok::less))
-      ConsumeToken();
     UnqualifiedId Id;
     Id.setIdentifier(Name, NameLoc);
+    if (Next.is(tok::less))
+      ConsumeToken();
     if (AnnotateTemplateIdToken(
             TemplateTy::make(Classification.getTemplateName()),
             Classification.getTemplateNameKind(), SS, SourceLocation(), Id,
@@ -2031,11 +2032,12 @@ bool Parser::TryAnnotateTypeOrScopeTokenAfterScopeSpec(
       if (SS.isNotEmpty()) // it was a C++ qualified type name.
         BeginLoc = SS.getBeginLoc();
 
+      QualType T = Actions.GetTypeFromParser(Ty);
+
       /// An Objective-C object type followed by '<' is a specialization of
       /// a parameterized class type or a protocol-qualified type.
       if (getLangOpts().ObjC && NextToken().is(tok::less) &&
-          (Ty.get()->isObjCObjectType() ||
-           Ty.get()->isObjCObjectPointerType())) {
+          (T->isObjCObjectType() || T->isObjCObjectPointerType())) {
         // Consume the name.
         SourceLocation IdentifierLoc = ConsumeToken();
         SourceLocation NewEndLoc;
@@ -2519,6 +2521,7 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
     break;
   }
   ExpectAndConsumeSemi(diag::err_module_expected_semi);
+  TryConsumeToken(tok::eod);
 
   if (SeenError)
     return nullptr;

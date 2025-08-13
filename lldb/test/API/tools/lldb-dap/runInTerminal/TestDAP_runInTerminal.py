@@ -37,7 +37,7 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         program = self.getBuildArtifact("a.out")
         source = "main.c"
         self.build_and_launch(
-            program, runInTerminal=True, args=["foobar"], env=["FOO=bar"]
+            program, console="integratedTerminal", args=["foobar"], env=["FOO=bar"]
         )
 
         self.assertEqual(
@@ -83,7 +83,7 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
             launch the inferior with the correct environment variables using an object.
         """
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program, runInTerminal=True, env={"FOO": "BAR"})
+        self.build_and_launch(program, console="integratedTerminal", env={"FOO": "BAR"})
 
         self.assertEqual(
             len(self.dap_server.reverse_requests),
@@ -105,7 +105,7 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         self.build_and_create_debug_adapter()
         response = self.launch(
             "INVALIDPROGRAM",
-            runInTerminal=True,
+            console="integratedTerminal",
             args=["foobar"],
             env=["FOO=bar"],
             expectFailure=True,

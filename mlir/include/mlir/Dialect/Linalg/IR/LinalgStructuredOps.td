@@ -454,7 +454,7 @@ def TransposeOp : LinalgStructuredBase_Op<"transpose", [
     static void regionBuilder(mlir::ImplicitLocOpBuilder &b, mlir::Block &block,
         mlir::ArrayRef<mlir::NamedAttribute>, function_ref<InFlightDiagnostic()> emitError) {
       OpBuilder::InsertionGuard guard(b);
-      b.create<linalg::YieldOp>(b.getLoc(), block.getArgument(0));
+      linalg::YieldOp::create(b, b.getLoc(), block.getArgument(0));
     }
 
     static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
@@ -528,7 +528,7 @@ def BroadcastOp : LinalgStructuredBase_Op<"broadcast", [
                               mlir::ArrayRef<mlir::NamedAttribute>, 
                               function_ref<InFlightDiagnostic()> emitError) {
       OpBuilder::InsertionGuard guard(b);
-      b.create<linalg::YieldOp>(b.getLoc(), block.getArgument(0));
+      linalg::YieldOp::create(b, b.getLoc(), block.getArgument(0));
     }
 
     static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
@@ -784,6 +784,9 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
 
       /// Returns a list of AffineMap with the default matmul indexing charactristic.
       static SmallVector<AffineMap> getDefaultIndexingMaps(MLIRContext *context);
+
+      /// Returns true if the AffineMap is the default matmul indexing charactristic.
+      static bool isDefaultIndexingMaps(Attribute attr);
 
       /// Returns true if the given broadcast map \p bcastMap is valid for this op.
       bool isValidLhsRhsBroadcastMap(AffineMap bcastMap);
@@ -1057,6 +1060,9 @@ def BatchMatmulOp : LinalgStructuredBase_Op<"batch_matmul", !listconcat([AttrSiz
       /// Returns a list with default AffineMap(s), i.e. without broadcasts and transpositions.
       static SmallVector<AffineMap> getDefaultIndexingMaps(MLIRContext *context);
 
+      /// Returns true if the AffineMap is the default batch matmul indexing charactristic.
+      static bool isDefaultIndexingMaps(Attribute attr);
+
       /// Returns true if the given broadcast map \p bcastMap is valid for this op.
       bool isValidLhsRhsBroadcastMap(AffineMap bcastMap, bool isLHS = true);
 
@@ -1180,6 +1186,9 @@ def BatchReduceMatmulOp : LinalgStructuredBase_Op<"batch_reduce_matmul", [
 
       /// Returns a list of AffineMap with the default batch_reduce_matmul indexing charactristic.
       static SmallVector<AffineMap> getDefaultIndexingMaps(MLIRContext *context);
+
+      /// Returns true if the AffineMap is the default batch reduce matmul indexing charactristic.
+      static bool isDefaultIndexingMaps(Attribute attr);
 
       /// Returns true if the given broadcast map \p bcastMap is valid for this op.
       bool isValidLhsRhsBroadcastMap(AffineMap bcastMap, bool isLHS = true);

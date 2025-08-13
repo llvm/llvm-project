@@ -71,6 +71,7 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV32-NEXT:    or t1, t1, t3
 ; RV32-NEXT:    andi t1, t1, 1
 ; RV32-NEXT:    slli t2, t2, 1
+; RV32-NEXT:    csrwi vxrm, 0
 ; RV32-NEXT:    j .LBB0_10
 ; RV32-NEXT:  .LBB0_9: # %for.cond1.for.cond.cleanup3_crit_edge.us
 ; RV32-NEXT:    # in Loop: Header=BB0_10 Depth=1
@@ -93,7 +94,6 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV32-NEXT:    li t3, 0
 ; RV32-NEXT:    neg t4, t2
 ; RV32-NEXT:    and t4, t4, a6
-; RV32-NEXT:    csrwi vxrm, 0
 ; RV32-NEXT:    li t6, 0
 ; RV32-NEXT:    li t5, 0
 ; RV32-NEXT:    vsetvli s0, zero, e8, m2, ta, ma
@@ -304,27 +304,27 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV64X60-NEXT:    li t1, 0
 ; RV64X60-NEXT:    addi s1, a7, -1
 ; RV64X60-NEXT:    zext.w s1, s1
-; RV64X60-NEXT:    mul t2, a1, s1
-; RV64X60-NEXT:    mul t3, a3, s1
-; RV64X60-NEXT:    mul t4, a5, s1
+; RV64X60-NEXT:    mul t3, a1, s1
+; RV64X60-NEXT:    mul t4, a3, s1
+; RV64X60-NEXT:    mul t5, a5, s1
 ; RV64X60-NEXT:    add s0, a0, a6
-; RV64X60-NEXT:    add s1, a2, a6
-; RV64X60-NEXT:    add t5, a4, a6
-; RV64X60-NEXT:    add s0, s0, t2
 ; RV64X60-NEXT:    csrr t2, vlenb
-; RV64X60-NEXT:    add t3, t3, s1
+; RV64X60-NEXT:    add s1, a2, a6
+; RV64X60-NEXT:    add t3, t3, s0
+; RV64X60-NEXT:    add s0, a4, a6
+; RV64X60-NEXT:    add t4, t4, s1
 ; RV64X60-NEXT:    li t6, 32
-; RV64X60-NEXT:    add t4, t4, t5
-; RV64X60-NEXT:    sltu t3, a0, t3
-; RV64X60-NEXT:    sltu s1, a2, s0
-; RV64X60-NEXT:    and t3, t3, s1
-; RV64X60-NEXT:    or t5, a1, a3
-; RV64X60-NEXT:    sltu s1, a0, t4
-; RV64X60-NEXT:    sltu s0, a4, s0
-; RV64X60-NEXT:    slti t4, t5, 0
+; RV64X60-NEXT:    add t5, t5, s0
+; RV64X60-NEXT:    sltu s0, a0, t4
+; RV64X60-NEXT:    sltu s1, a2, t3
+; RV64X60-NEXT:    and t4, s0, s1
+; RV64X60-NEXT:    or s2, a1, a3
+; RV64X60-NEXT:    sltu s0, a0, t5
+; RV64X60-NEXT:    sltu s1, a4, t3
+; RV64X60-NEXT:    slti t3, s2, 0
 ; RV64X60-NEXT:    and s0, s0, s1
 ; RV64X60-NEXT:    or s1, a1, a5
-; RV64X60-NEXT:    or t4, t3, t4
+; RV64X60-NEXT:    or t4, t4, t3
 ; RV64X60-NEXT:    slli t3, t2, 1
 ; RV64X60-NEXT:    slti s1, s1, 0
 ; RV64X60-NEXT:    or s0, s0, s1
@@ -366,8 +366,8 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV64X60-NEXT:    # => This Inner Loop Header: Depth=2
 ; RV64X60-NEXT:    vl2r.v v8, (s2)
 ; RV64X60-NEXT:    vl2r.v v10, (s3)
-; RV64X60-NEXT:    sub s1, s1, t3
 ; RV64X60-NEXT:    vaaddu.vv v8, v8, v10
+; RV64X60-NEXT:    sub s1, s1, t3
 ; RV64X60-NEXT:    vs2r.v v8, (s4)
 ; RV64X60-NEXT:    add s4, s4, t3
 ; RV64X60-NEXT:    add s3, s3, t3
@@ -471,6 +471,7 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV64-NEXT:    or t4, t4, t5
 ; RV64-NEXT:    andi t4, t4, 1
 ; RV64-NEXT:    mv t5, a0
+; RV64-NEXT:    csrwi vxrm, 0
 ; RV64-NEXT:    j .LBB0_6
 ; RV64-NEXT:  .LBB0_5: # %for.cond1.for.cond.cleanup3_crit_edge.us
 ; RV64-NEXT:    # in Loop: Header=BB0_6 Depth=1
@@ -493,7 +494,6 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV64-NEXT:    slli t6, t0, 28
 ; RV64-NEXT:    sub t6, t6, t1
 ; RV64-NEXT:    and t6, t6, a6
-; RV64-NEXT:    csrwi vxrm, 0
 ; RV64-NEXT:    mv s0, a2
 ; RV64-NEXT:    mv s1, a4
 ; RV64-NEXT:    mv s2, t5

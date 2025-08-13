@@ -13,6 +13,7 @@
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -93,8 +94,8 @@ public:
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
   void applyFixup(const MCFragment &, const MCFixup &Fixup,
-                  const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved) override;
+                  const MCValue &Target, uint8_t *Data, uint64_t Value,
+                  bool IsResolved) override;
 
   bool shouldForceRelocation(const MCFixup &Fixup, const MCValue &Target) {
     // If there is a @ specifier, unless it is optimized out (e.g. constant @l),
@@ -112,14 +113,15 @@ public:
       // to resolve the fixup directly.  Emit a relocation and leave
       // resolution of the final target address to the linker.
       if (const auto *A = Target.getAddSym()) {
-        if (const auto *S = dyn_cast<MCSymbolELF>(A)) {
+        if (getContext().isELF()) {
           // The "other" values are stored in the last 6 bits of the second
           // byte. The traditional defines for STO values assume the full byte
           // and thus the shift to pack it.
-          unsigned Other = S->getOther() << 2;
+          unsigned Other = static_cast<const MCSymbolELF *>(A)->getOther() << 2;
           if ((Other & ELF::STO_PPC64_LOCAL_MASK) != 0)
             return true;
-        } else if (const auto *S = dyn_cast<MCSymbolXCOFF>(A)) {
+        } else if (getContext().isXCOFF()) {
+          auto *S = static_cast<const MCSymbolXCOFF *>(A);
           return !Target.isAbsolute() && S->isExternal() &&
                  S->getStorageClass() == XCOFF::C_WEAKEXT;
         }
@@ -185,9 +187,8 @@ MCFixupKindInfo PPCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
 }
 
 void PPCAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
-                               const MCValue &TargetVal,
-                               MutableArrayRef<char> Data, uint64_t Value,
-                               bool IsResolved) {
+                               const MCValue &TargetVal, uint8_t *Data,
+                               uint64_t Value, bool IsResolved) {
   // In PPC64 ELFv1, .quad .TOC.@tocbase in the .opd section is expected to
   // reference the null symbol.
   auto Target = TargetVal;
@@ -205,7 +206,6 @@ void PPCAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   if (!Value)
     return; // Doesn't change encoding.
 
-  unsigned Offset = Fixup.getOffset();
   unsigned NumBytes = getFixupKindNumBytes(Kind);
 
   // For each byte of the fragment that the fixup touches, mask in the bits
@@ -213,7 +213,7 @@ void PPCAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   // bitfields above.
   for (unsigned i = 0; i != NumBytes; ++i) {
     unsigned Idx = Endian == llvm::endianness::little ? i : (NumBytes - 1 - i);
-    Data[Offset + i] |= uint8_t((Value >> (Idx * 8)) & 0xff);
+    Data[i] |= uint8_t((Value >> (Idx * 8)) & 0xff);
   }
 }
 
@@ -243,8 +243,6 @@ public:
   createObjectTargetWriter() const override {
     return createPPCXCOFFObjectWriter(TT.isArch64Bit());
   }
-
-  std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 };
 
 } // end anonymous namespace
@@ -277,13 +275,6 @@ ELFPPCAsmBackend::getFixupKind(StringRef Name) const {
       return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);
   }
   return std::nullopt;
-}
-
-std::optional<MCFixupKind>
-XCOFFPPCAsmBackend::getFixupKind(StringRef Name) const {
-  return StringSwitch<std::optional<MCFixupKind>>(Name)
-      .Case("R_REF", PPC::fixup_ppc_nofixup)
-      .Default(std::nullopt);
 }
 
 MCAsmBackend *llvm::createPPCAsmBackend(const Target &T,

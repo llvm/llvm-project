@@ -15,6 +15,7 @@ Clang Language Extensions
    AutomaticReferenceCounting
    PointerAuthentication
    MatrixTypes
+   CXXTypeAwareAllocators
 
 Introduction
 ============
@@ -66,6 +67,9 @@ It can be used like this:
 
   ``__has_builtin`` should not be used to detect support for a builtin macro;
   use ``#ifdef`` instead.
+
+  When compiling with target offloading, ``__has_builtin`` only considers the
+  currently active target.
 
 ``__has_constexpr_builtin``
 ---------------------------
@@ -137,7 +141,7 @@ for support for non-standardized features, i.e. features not prefixed ``c_``,
 ``cxx_`` or ``objc_``.
 
 Another use of ``__has_feature`` is to check for compiler features not related
-to the language standard, such as e.g. :doc:`AddressSanitizer
+to the language standard, such as :doc:`AddressSanitizer
 <AddressSanitizer>`.
 
 If the ``-pedantic-errors`` option is given, ``__has_extension`` is equivalent
@@ -376,8 +380,8 @@ Builtin Macros
 
 ``__FILE_NAME__``
   Clang-specific extension that functions similar to ``__FILE__`` but only
-  renders the last path component (the filename) instead of an invocation
-  dependent full path to that file.
+  renders the last path component (the filename) instead of an
+  invocation-dependent full path to that file.
 
 ``__COUNTER__``
   Defined to an integer value that starts at zero and is incremented each time
@@ -715,7 +719,7 @@ See also :ref:`langext-__builtin_shufflevector`, :ref:`langext-__builtin_convert
   a NEON vector or an SVE vector, it's only available in C++ and uses normal bool
   conversions (that is, != 0).
   If it's an extension (OpenCL) vector, it's only available in C and OpenCL C.
-  And it selects base on signedness of the condition operands (OpenCL v1.1 s6.3.9).
+  And it selects based on signedness of the condition operands (OpenCL v1.1 s6.3.9).
 .. [#] sizeof can only be used on vector length specific SVE types.
 .. [#] Clang does not allow the address of an element to be taken while GCC
    allows this. This is intentional for vectors with a boolean element type and
@@ -755,7 +759,8 @@ Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±in
 
 The integer elementwise intrinsics, including ``__builtin_elementwise_popcount``,
 ``__builtin_elementwise_bitreverse``, ``__builtin_elementwise_add_sat``,
-``__builtin_elementwise_sub_sat`` can be called in a ``constexpr`` context.
+``__builtin_elementwise_sub_sat``, ``__builtin_elementwise_max``,
+``__builtin_elementwise_min`` can be called in a ``constexpr`` context.
 
 No implicit promotion of integer types takes place. The mixing of integer types
 of different sizes and signs is forbidden in binary and ternary builtins.
@@ -847,6 +852,23 @@ of different sizes and signs is forbidden in binary and ternary builtins.
                                                 semantics, see `LangRef
                                                 <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
                                                 for the comparison.
+ T __builtin_elementwise_maximumnum(T x, T y)   return x or y, whichever is larger. Follows IEEE 754-2019              floating point types
+                                                semantics, see `LangRef
+                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                for the comparison.
+ T __builtin_elementwise_minimumnum(T x, T y)   return x or y, whichever is smaller. Follows IEEE 754-2019             floating point types
+                                                semantics, see `LangRef
+                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                for the comparison.
+T __builtin_elementwise_fshl(T x, T y, T z)     perform a funnel shift left. Concatenate x and y (x is the most        integer types
+                                                significant bits of the wide value), the combined value is shifted
+                                                left by z, and the most significant bits are extracted to produce
+                                                a result that is the same size as the original arguments.
+
+T __builtin_elementwise_fshr(T x, T y, T z)     perform a funnel shift right. Concatenate x and y (x is the most       integer types
+                                                significant bits of the wide value), the combined value is shifted
+                                                right by z, and the least significant bits are extracted to produce
+                                                a result that is the same size as the original arguments.
 ============================================== ====================================================================== =========================================
 
 
@@ -856,7 +878,7 @@ Each builtin returns a scalar equivalent to applying the specified
 operation(x, y) as recursive even-odd pairwise reduction to all vector
 elements. ``operation(x, y)`` is repeatedly applied to each non-overlapping
 even-odd element pair with indices ``i * 2`` and ``i * 2 + 1`` with
-``i in [0, Number of elements / 2)``. If the numbers of elements is not a
+``i in [0, Number of elements / 2)``. If the number of elements is not a
 power of 2, the vector is widened with neutral elements for the reduction
 at the end to the next power of 2.
 
@@ -1490,7 +1512,7 @@ C++14 digit separators
 
 Use ``__cpp_digit_separators`` to determine if support for digit separators
 using single quotes (for instance, ``10'000``) is enabled. At this time, there
-is no corresponding ``__has_feature`` name
+is no corresponding ``__has_feature`` name.
 
 C++14 generalized lambda capture
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1539,6 +1561,13 @@ C++14 variable templates
 Use ``__has_feature(cxx_variable_templates)`` or
 ``__has_extension(cxx_variable_templates)`` to determine if support for
 templated variable declarations is enabled.
+
+C++ type aware allocators
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Use ``__has_extension(cxx_type_aware_allocators)`` to determine the existence of
+support for the future C++2d type aware allocator feature. For full details, see
+:doc:`C++ Type Aware Allocators <CXXTypeAwareAllocators>` for additional details.
 
 C11
 ---
@@ -1635,7 +1664,7 @@ Modules
 Use ``__has_feature(modules)`` to determine if Modules have been enabled.
 For example, compiling code with ``-fmodules`` enables the use of Modules.
 
-More information could be found `here <https://clang.llvm.org/docs/Modules.html>`_.
+More information can be found `here <https://clang.llvm.org/docs/Modules.html>`_.
 
 Language Extensions Back-ported to Previous Standards
 =====================================================
@@ -1870,7 +1899,7 @@ The following type trait primitives are supported by Clang. Those traits marked
   C++26 relocatable types, and types which
   were made trivially relocatable via the ``clang::trivial_abi`` attribute.
   This trait is deprecated and should be replaced by
-  ``__builtin_is_cpp_trivially_relocatable``. Note however that it is generally
+  ``__builtin_is_cpp_trivially_relocatable``. Note, however, that it is generally
   unsafe to relocate a C++-relocatable type with ``memcpy`` or ``memmove``;
   use ``__builtin_trivially_relocate``.
 * ``__builtin_is_cpp_trivially_relocatable`` (C++): Returns true if an object
@@ -1999,7 +2028,7 @@ even if there is no valid ``std::tuple_element`` specialization or suitable
 Blocks
 ======
 
-The syntax and high level language feature description is in
+The syntax and high-level language feature description is in
 :doc:`BlockLanguageSpec<BlockLanguageSpec>`. Implementation and ABI details for
 the clang implementation are in :doc:`Block-ABI-Apple<Block-ABI-Apple>`.
 
@@ -2069,7 +2098,7 @@ producing an object with the following member functions
   constexpr size_t size() const;
 
 such as ``std::string``, ``std::string_view``, ``std::vector<char>``.
-This mechanism follow the same rules as ``static_assert`` messages in
+This mechanism follows the same rules as ``static_assert`` messages in
 C++26, see ``[dcl.pre]/p12``.
 
 Query for this feature with ``__has_extension(gnu_asm_constexpr_strings)``.
@@ -2316,7 +2345,7 @@ Objective-C Autosynthesis of Properties
 
 Clang provides support for autosynthesis of declared properties.  Using this
 feature, clang provides default synthesis of those properties not declared
-@dynamic and not having user provided backing getter and setter methods.
+@dynamic and not having user-provided backing getter and setter methods.
 ``__has_feature(objc_default_synthesize_properties)`` checks for availability
 of this feature in version of clang being used.
 
@@ -2330,7 +2359,7 @@ In Objective-C, functions and methods are generally assumed to follow the
 <https://developer.apple.com/library/mac/#documentation/Cocoa/Conceptual/MemoryMgmt/Articles/mmRules.html>`_
 conventions for ownership of object arguments and
 return values. However, there are exceptions, and so Clang provides attributes
-to allow these exceptions to be documented. This are used by ARC and the
+to allow these exceptions to be documented. These are used by ARC and the
 `static analyzer <https://clang-analyzer.llvm.org>`_ Some exceptions may be
 better described using the ``objc_method_family`` attribute instead.
 
@@ -2556,7 +2585,7 @@ Such functionality is not conformant and does not guarantee to compile
 correctly in any circumstances. It can be used if:
 
 - the kernel source does not contain call expressions to (member-) function
-  pointers, or virtual functions. For example this extension can be used in
+  pointers, or virtual functions. For example, this extension can be used in
   metaprogramming algorithms to be able to specify/detect types generically.
 
 - the generated kernel binary does not contain indirect calls because they
@@ -2594,7 +2623,7 @@ functions with variadic prototypes do not get generated in binary e.g. the
 variadic prototype is used to specify a function type with any number of
 arguments in metaprogramming algorithms in C++ for OpenCL.
 
-This extensions can also be used when the kernel code is intended for targets
+This extension can also be used when the kernel code is intended for targets
 supporting the variadic arguments e.g. majority of CPU targets.
 
 **Example of Use**:
@@ -2683,7 +2712,7 @@ address space qualifiers, therefore, other type qualifiers such as
 Legacy 1.x atomics with generic address space
 ---------------------------------------------
 
-Clang allows use of atomic functions from the OpenCL 1.x standards
+Clang allows the use of atomic functions from the OpenCL 1.x standards
 with the generic address space pointer in C++ for OpenCL mode.
 
 This is a non-portable feature and might not be supported by all
@@ -2814,7 +2843,7 @@ to a possibly overlapping destination region. It takes five arguments.
 The first argument is the destination WebAssembly table, and the second
 argument is the source WebAssembly table. The third argument is the
 destination index from where the copy starts, the fourth argument is the
-source index from there the copy starts, and the fifth and last argument
+source index from where the copy starts, and the fifth and last argument
 is the number of elements to copy. It returns nothing.
 
 .. code-block:: c++
@@ -3114,7 +3143,7 @@ Query for this feature with ``__has_builtin(__builtin_get_vtable_pointer)``.
 ------------------------------------
 
 ``__builtin_call_with_static_chain`` is used to perform a static call while
-setting updating the static chain register.
+updating the static chain register.
 
 **Syntax**:
 
@@ -3226,7 +3255,7 @@ Query for this feature with ``__has_builtin(__builtin_readsteadycounter)``.
 The ``__builtin_cpu_supports`` function detects if the run-time CPU supports
 features specified in string argument. It returns a positive integer if all
 features are supported and 0 otherwise. Feature names are target specific. On
-AArch64 features are combined using ``+`` like this
+AArch64, features are combined using ``+`` like this
 ``__builtin_cpu_supports("flagm+sha3+lse+rcpc2+fcma+memtag+bti+sme2")``.
 If a feature name is not supported, Clang will issue a warning and replace
 builtin by the constant 0.
@@ -3446,7 +3475,7 @@ Query for this feature with ``__has_builtin(__builtin_convertvector)``.
 **Description**:
 
 The '``__builtin_bitreverse``' family of builtins is used to reverse
-the bitpattern of an integer value; for example ``0b10110110`` becomes
+the bitpattern of an integer value; for example, ``0b10110110`` becomes
 ``0b01101101``. These builtins can be used within constant expressions.
 
 ``__builtin_rotateleft``
@@ -3951,7 +3980,7 @@ the debugging experience.
 
 ``__builtin_allow_runtime_check`` returns true if the check at the current
 program location should be executed. It is expected to be used to implement
-``assert`` like checks which can be safely removed by optimizer.
+``assert`` like checks which can be safely removed by the optimizer.
 
 **Syntax**:
 

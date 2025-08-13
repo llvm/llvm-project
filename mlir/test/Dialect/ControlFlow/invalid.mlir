@@ -82,18 +82,6 @@ func.func @wrong_weights_number(%cond: i1) {
 
 // -----
 
-// CHECK-LABEL: func @negative_weight
-func.func @wrong_total_weight(%cond: i1) {
-  // expected-error@+1 {{weight #0 must be non-negative}}
-  cf.cond_br %cond weights([-1, 101]), ^bb1, ^bb2
-  ^bb1:
-    return
-  ^bb2:
-    return
-}
-
-// -----
-
 // CHECK-LABEL: func @zero_weights
 func.func @wrong_total_weight(%cond: i1) {
   // expected-error@+1 {{branch weights cannot all be zero}}

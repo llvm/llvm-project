@@ -2,7 +2,7 @@
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj --triple=riscv64 -mattr=+experimental-p < %s \
 # RUN:     | llvm-objdump --triple=riscv64 --mattr=+experimental-p -M no-aliases --no-print-imm-hex -d -r - \
-# RUN:     | FileCheck --check-prefixes=CHECK-ASM-AND-OBJ,CHECK-OBJ %s
+# RUN:     | FileCheck --check-prefixes=CHECK-ASM-AND-OBJ %s
 
 # CHECK-ASM-AND-OBJ: clz a0, a1
 # CHECK-ASM: encoding: [0x13,0x95,0x05,0x60]
@@ -55,7 +55,7 @@ max t3, t4, t5
 # CHECK-ASM-AND-OBJ: maxu a4, a5, a6
 # CHECK-ASM: encoding: [0x33,0xf7,0x07,0x0b]
 maxu a4, a5, a6
-# CHECK-ASM-AND-OBJ: pslli.b a6, a7
+# CHECK-ASM-AND-OBJ: pslli.b a6, a7, 0
 # CHECK-ASM: encoding: [0x1b,0xa8,0x88,0x80]
 pslli.b a6, a7, 0
 # CHECK-ASM-AND-OBJ: pslli.h ra, sp, 1
@@ -95,16 +95,14 @@ psabs.h t1, t5
 # CHECK-ASM: encoding: [0x1b,0x25,0x79,0xe4]
 psabs.b a0, s2
 # CHECK-ASM-AND-OBJ: plui.h s2, 4
-# CHECK-ASM: encoding: [0x1b,0x29,0x04,0xf0]
+# CHECK-ASM: encoding: [0x1b,0x29,0x01,0xf0]
 plui.h s2, 4
-# CHECK-OBJ: plui.h gp, -412
-# CHECK-ASM: plui.h gp, 612
-# CHECK-ASM: encoding: [0x9b,0xa1,0x64,0xf0]
+# CHECK-ASM-AND-OBJ: plui.h gp, -412
+# CHECK-ASM: encoding: [0x9b,0x21,0x99,0xf0]
 plui.h gp, 612
 # CHECK-ASM-AND-OBJ: plui.w a2, 1
-# CHECK-ASM: encoding: [0x1b,0x26,0x01,0xf2]
+# CHECK-ASM: encoding: [0x1b,0x26,0x00,0xf3]
 plui.w a2, 1
-# CHECK-OBJ: plui.w a2, -1
-# CHECK-ASM: plui.w a2, 1023
+# CHECK-ASM-AND-OBJ: plui.w a2, -1
 # CHECK-ASM: encoding: [0x1b,0xa6,0xff,0xf3]
 plui.w a2, 1023

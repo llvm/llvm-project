@@ -402,7 +402,12 @@ void InstrEmitter::AddOperand(MachineInstrBuilder &MIB, SDValue Op,
     AddRegisterOperand(MIB, Op, IIOpNum, II, VRBaseMap,
                        IsDebug, IsClone, IsCloned);
   } else if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op)) {
-    MIB.addImm(C->getSExtValue());
+    if (C->getAPIntValue().getSignificantBits() <= 64) {
+      MIB.addImm(C->getSExtValue());
+    } else {
+      MIB.addCImm(
+          ConstantInt::get(MF->getFunction().getContext(), C->getAPIntValue()));
+    }
   } else if (ConstantFPSDNode *F = dyn_cast<ConstantFPSDNode>(Op)) {
     MIB.addFPImm(F->getConstantFPValue());
   } else if (RegisterSDNode *R = dyn_cast<RegisterSDNode>(Op)) {
@@ -784,7 +789,7 @@ MachineInstr *
 InstrEmitter::EmitDbgInstrRef(SDDbgValue *SD,
                               VRBaseMapType &VRBaseMap) {
   MDNode *Var = SD->getVariable();
-  const DIExpression *Expr = (DIExpression *)SD->getExpression();
+  const DIExpression *Expr = SD->getExpression();
   DebugLoc DL = SD->getDebugLoc();
   const MCInstrDesc &RefII = TII->get(TargetOpcode::DBG_INSTR_REF);
 
@@ -1173,7 +1178,9 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
   if (Node->getValueType(Node->getNumValues()-1) == MVT::Glue) {
     for (SDNode *F = Node->getGluedUser(); F; F = F->getGluedUser()) {
       if (F->getOpcode() == ISD::CopyFromReg) {
-        UsedRegs.push_back(cast<RegisterSDNode>(F->getOperand(1))->getReg());
+        Register Reg = cast<RegisterSDNode>(F->getOperand(1))->getReg();
+        if (Reg.isPhysical())
+          UsedRegs.push_back(Reg);
         continue;
       } else if (F->getOpcode() == ISD::CopyToReg) {
         // Skip CopyToReg nodes that are internal to the glue chain.

@@ -241,6 +241,26 @@ func.func @clamp_f32_is_noop(%arg0: tensor<4xf32>) -> tensor<4xf32> {
 
 // -----
 
+// CHECK-LABEL: @clamp_boolean_is_noop
+func.func @clamp_boolean_is_noop(%arg0: tensor<4xi1>) -> tensor<4xi1> {
+  // CHECK: return %arg0
+  // CHECK-NOT: tosa.clamp
+  %0 = tosa.clamp %arg0 {min_val = false, max_val = true} : (tensor<4xi1>) -> tensor<4xi1>
+  return %0 : tensor<4xi1>
+}
+
+// -----
+
+// CHECK-LABEL: @clamp_boolean_dynamic_is_noop
+func.func @clamp_boolean_dynamic_is_noop(%arg0: tensor<?xi1>) -> tensor<?xi1> {
+  // CHECK: return %arg0
+  // CHECK-NOT: tosa.clamp
+  %0 = tosa.clamp %arg0 {min_val = false, max_val = true} : (tensor<?xi1>) -> tensor<?xi1>
+  return %0 : tensor<?xi1>
+}
+
+// -----
+
 // CHECK-LABEL: @clamp_int8_is_noop
 func.func @clamp_int8_is_noop(%arg0: tensor<4xi8>) -> tensor<4xi8> {
   // CHECK: return %arg0
@@ -1337,4 +1357,26 @@ func.func @no_fold_mul_result_exceeds_i32() -> tensor<i32> {
     %2 = "tosa.const"() <{values = dense<1> : tensor<1xi8>}> : () -> tensor<1xi8>
     %3 = tosa.mul %0, %1, %2 : (tensor<i32>, tensor<i32>, tensor<1xi8>) -> tensor<i32>
     return %3 : tensor<i32>
+}
+
+// -----
+
+// CHECK-LABEL: @test_fold_i1_to_i32_cast
+// CHECK: %[[OUT:.*]] = "tosa.const"() <{values = dense<1> : tensor<i32>}> : () -> tensor<i32>
+// CHECK: return %[[OUT]] : tensor<i32>
+func.func @test_fold_i1_to_i32_cast() -> tensor<i32> {
+  %0 = "tosa.const"() <{values = dense<1> : tensor<i1>}> : () -> tensor<i1>
+  %1 = "tosa.cast"(%0) : (tensor<i1>) -> tensor<i32>
+  return %1 : tensor<i32>
+}
+
+// -----
+
+// CHECK-LABEL: @test_fold_i32_to_i1_cast
+// CHECK: %[[OUT:.*]] = "tosa.const"() <{values = dense<true> : tensor<i1>}> : () -> tensor<i1>
+// CHECK: return %[[OUT]] : tensor<i1>
+func.func @test_fold_i32_to_i1_cast() -> tensor<i1> {
+  %0 = "tosa.const"() <{values = dense<10> : tensor<i32>}> : () -> tensor<i32>
+  %1 = "tosa.cast"(%0) : (tensor<i32>) -> tensor<i1>
+  return %1 : tensor<i1>
 }

@@ -103,6 +103,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnLanguage_.set(LanguageFeature::ListDirectedSize);
   warnLanguage_.set(LanguageFeature::IgnoreIrrelevantAttributes);
   warnLanguage_.set(LanguageFeature::AmbiguousStructureConstructor);
+  warnLanguage_.set(LanguageFeature::TransferBOZ);
   warnUsage_.set(UsageWarning::ShortArrayActual);
   warnUsage_.set(UsageWarning::FoldingException);
   warnUsage_.set(UsageWarning::FoldingAvoidsRuntimeCrash);

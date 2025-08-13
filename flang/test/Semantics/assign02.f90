@@ -139,7 +139,7 @@ contains
     real, target :: x
     real, pointer :: p
     p => f1()
-    !ERROR: pointer 'p' is associated with the result of a reference to function 'f2' that is a not a pointer
+    !ERROR: pointer 'p' is associated with the result of a reference to function 'f2' that is not a pointer
     p => f2()
   contains
     function f1()

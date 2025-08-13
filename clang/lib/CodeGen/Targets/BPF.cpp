@@ -48,7 +48,7 @@ public:
     }
 
     if (const EnumType *EnumTy = Ty->getAs<EnumType>())
-      Ty = EnumTy->getDecl()->getIntegerType();
+      Ty = EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
 
     ASTContext &Context = getContext();
     if (const auto *EIT = Ty->getAs<BitIntType>())
@@ -70,7 +70,8 @@ public:
 
     // Treat an enum type as its underlying type.
     if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
-      RetTy = EnumTy->getDecl()->getIntegerType();
+      RetTy =
+          EnumTy->getOriginalDecl()->getDefinitionOrSelf()->getIntegerType();
 
     ASTContext &Context = getContext();
     if (const auto *EIT = RetTy->getAs<BitIntType>())

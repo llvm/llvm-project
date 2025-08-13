@@ -10,6 +10,9 @@ attributes(global) subroutine devsub()
   integer(4) :: ai
   integer(8) :: al
   integer(8) :: time
+  integer :: smalltime
+  integer(4) :: res
+  integer(8) :: resl
 
   call syncthreads()
   call syncwarp(1)
@@ -45,7 +48,27 @@ attributes(global) subroutine devsub()
   ai = atomicinc(ai, 1_4)
   ai = atomicdec(ai, 1_4)
 
+  smalltime = clock()
   time = clock64()
+  time = globalTimer()
+
+  res = __popc(ai)
+  res = __popc(al)
+  res = __ffs(ai)
+  res = __ffs(al)
+  res = __brev(ai)
+  resl = __brev(al)
+  res = __clz(ai)
+  res = __clz(al)  
+  af = __cosf(af)
+  ad = __ddiv_rn(ad, ad)
+  ad = __ddiv_rz(ad, ad)
+  ad = __ddiv_ru(ad, ad)
+  ad = __ddiv_rd(ad, ad)
+  ai = __mul24(ai, ai)
+  ai = __umul24(ai, ai)
+  af = __powf(af, af)
+
 end
 
 ! CHECK-LABEL: func.func @_QPdevsub() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
@@ -82,7 +105,26 @@ end
 ! CHECK: %{{.*}} = llvm.atomicrmw uinc_wrap  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
 ! CHECK: %{{.*}} = llvm.atomicrmw udec_wrap  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
 
-! CHECK: fir.call @llvm.nvvm.read.ptx.sreg.clock64()
+! CHECK: %{{.*}} = nvvm.read.ptx.sreg.clock : i32
+! CHECK: %{{.*}} = nvvm.read.ptx.sreg.clock64 : i64
+! CHECK: %{{.*}} = nvvm.read.ptx.sreg.globaltimer : i64
+
+! CHECK: %{{.*}} = fir.call @__nv_popc(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_popcll(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_ffs(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_ffsll(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_brev(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_brevll(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> i64
+! CHECK: %{{.*}} = fir.call @__nv_clz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_clzll(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_cosf(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_ddiv_rn(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64, f64) -> f64
+! CHECK: %{{.*}} = fir.call @__nv_ddiv_rz(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64, f64) -> f64
+! CHECK: %{{.*}} = fir.call @__nv_ddiv_ru(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64, f64) -> f64
+! CHECK: %{{.*}} = fir.call @__nv_ddiv_rd(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64, f64) -> f64
+! CHECK: %{{.*}} = fir.call @__nv_mul24(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32, i32) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_umul24(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32, i32) -> i32
+! CHECK: %{{.*}} = fir.call @__nv_powf(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32, f32) -> f32
 
 subroutine host1()
   integer, device :: a(32)

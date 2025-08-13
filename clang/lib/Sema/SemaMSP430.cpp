@@ -53,7 +53,7 @@ void SemaMSP430::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  Expr *NumParamsExpr = static_cast<Expr *>(AL.getArgAsExpr(0));
+  Expr *NumParamsExpr = AL.getArgAsExpr(0);
   std::optional<llvm::APSInt> NumParams = llvm::APSInt(32);
   if (!(NumParams = NumParamsExpr->getIntegerConstantExpr(getASTContext()))) {
     Diag(AL.getLoc(), diag::err_attribute_argument_type)

@@ -236,18 +236,16 @@ void VarLenCodeEmitterGen::run(raw_ostream &OS) {
       continue;
 
     // Setup alternative encodings according to HwModes
-    if (const RecordVal *RV = R->getValue("EncodingInfos")) {
-      if (auto *DI = dyn_cast_or_null<DefInit>(RV->getValue())) {
-        const CodeGenHwModes &HWM = Target.getHwModes();
-        EncodingInfoByHwMode EBM(DI->getDef(), HWM);
-        for (const auto [Mode, EncodingDef] : EBM) {
-          Modes.try_emplace(Mode, "_" + HWM.getMode(Mode).Name.str());
-          const RecordVal *RV = EncodingDef->getValue("Inst");
-          const DagInit *DI = cast<DagInit>(RV->getValue());
-          VarLenInsts[R].try_emplace(Mode, VarLenInst(DI, RV));
-        }
-        continue;
+    if (const Record *RV = R->getValueAsOptionalDef("EncodingInfos")) {
+      const CodeGenHwModes &HWM = Target.getHwModes();
+      EncodingInfoByHwMode EBM(RV, HWM);
+      for (const auto [Mode, EncodingDef] : EBM) {
+        Modes.try_emplace(Mode, "_" + HWM.getMode(Mode).Name.str());
+        const RecordVal *RV = EncodingDef->getValue("Inst");
+        const DagInit *DI = cast<DagInit>(RV->getValue());
+        VarLenInsts[R].try_emplace(Mode, VarLenInst(DI, RV));
       }
+      continue;
     }
     const RecordVal *RV = R->getValue("Inst");
     const DagInit *DI = cast<DagInit>(RV->getValue());

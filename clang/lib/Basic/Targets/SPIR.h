@@ -205,8 +205,9 @@ public:
     AddrSpaceMap = DefaultIsGeneric ? &SPIRDefIsGenMap : &SPIRDefIsPrivMap;
   }
 
-  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override {
-    TargetInfo::adjust(Diags, Opts);
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+              const TargetInfo *Aux) override {
+    TargetInfo::adjust(Diags, Opts, Aux);
     // FIXME: SYCL specification considers unannotated pointers and references
     // to be pointing to the generic address space. See section 5.9.3 of
     // SYCL 2020 specification.
@@ -263,6 +264,9 @@ public:
     PointerWidth = PointerAlign = 32;
     SizeType = TargetInfo::UnsignedInt;
     PtrDiffType = IntPtrType = TargetInfo::SignedInt;
+    // SPIR32 has support for atomic ops if atomic extension is enabled.
+    // Take the maximum because it's possible the Host supports wider types.
+    MaxAtomicInlineWidth = std::max<unsigned char>(MaxAtomicInlineWidth, 32);
     resetDataLayout("e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-"
                     "v96:128-v192:256-v256:256-v512:512-v1024:1024-G1");
   }
@@ -280,6 +284,9 @@ public:
     PointerWidth = PointerAlign = 64;
     SizeType = TargetInfo::UnsignedLong;
     PtrDiffType = IntPtrType = TargetInfo::SignedLong;
+    // SPIR64 has support for atomic ops if atomic extension is enabled.
+    // Take the maximum because it's possible the Host supports wider types.
+    MaxAtomicInlineWidth = std::max<unsigned char>(MaxAtomicInlineWidth, 64);
     resetDataLayout("e-i64:64-v16:16-v24:32-v32:32-v48:64-"
                     "v96:128-v192:256-v256:256-v512:512-v1024:1024-G1");
   }
@@ -383,8 +390,9 @@ public:
   std::optional<LangAS> getConstantAddressSpace() const override {
     return ConstantAS;
   }
-  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override {
-    BaseSPIRVTargetInfo::adjust(Diags, Opts);
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+              const TargetInfo *Aux) override {
+    BaseSPIRVTargetInfo::adjust(Diags, Opts, Aux);
     // opencl_constant will map to UniformConstant in SPIR-V
     if (Opts.OpenCL)
       ConstantAS = LangAS::opencl_constant;
@@ -430,6 +438,10 @@ public:
 
   ArrayRef<const char *> getGCCRegNames() const override;
 
+  BuiltinVaListKind getBuiltinVaListKind() const override {
+    return TargetInfo::CharPtrBuiltinVaList;
+  }
+
   bool initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
                       StringRef,
                       const std::vector<std::string> &) const override;
@@ -446,8 +458,9 @@ public:
 
   void setAuxTarget(const TargetInfo *Aux) override;
 
-  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override {
-    TargetInfo::adjust(Diags, Opts);
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+              const TargetInfo *Aux) override {
+    TargetInfo::adjust(Diags, Opts, Aux);
   }
 
   bool hasInt128Type() const override { return TargetInfo::hasInt128Type(); }

@@ -2,7 +2,7 @@
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+experimental-p < %s \
 # RUN:     | llvm-objdump --mattr=+experimental-p -M no-aliases -d -r --no-print-imm-hex - \
-# RUN:     | FileCheck --check-prefixes=CHECK-ASM-AND-OBJ,CHECK-OBJ %s
+# RUN:     | FileCheck --check-prefixes=CHECK-ASM-AND-OBJ %s
 
 # CHECK-ASM-AND-OBJ: clz a0, a1
 # CHECK-ASM: encoding: [0x13,0x95,0x05,0x60]
@@ -71,9 +71,8 @@ psabs.h a1, a2
 # CHECK-ASM: encoding: [0x9b,0x22,0x73,0xe4]
 psabs.b t0, t1
 # CHECK-ASM-AND-OBJ: plui.h gp, 32
-# CHECK-ASM: encoding: [0x9b,0x21,0x20,0xf0]
+# CHECK-ASM: encoding: [0x9b,0x21,0x08,0xf0]
 plui.h gp, 32
-# CHECK-OBJ: plui.h gp, -412
-# CHECK-ASM: plui.h gp, 612
-# CHECK-ASM: encoding: [0x9b,0xa1,0x64,0xf0]
+# CHECK-ASM-AND-OBJ: plui.h gp, -412
+# CHECK-ASM: encoding: [0x9b,0x21,0x99,0xf0]
 plui.h gp, 612

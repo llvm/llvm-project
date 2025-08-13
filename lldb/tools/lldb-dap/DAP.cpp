@@ -16,19 +16,21 @@
 #include "LLDBUtils.h"
 #include "OutputRedirector.h"
 #include "Protocol/ProtocolBase.h"
+#include "Protocol/ProtocolEvents.h"
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
 #include "ProtocolUtils.h"
 #include "Transport.h"
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBCommandInterpreter.h"
-#include "lldb/API/SBCommandReturnObject.h"
 #include "lldb/API/SBEvent.h"
 #include "lldb/API/SBLanguageRuntime.h"
 #include "lldb/API/SBListener.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
-#include "lldb/Utility/IOObject.h"
+#include "lldb/Host/JSONTransport.h"
+#include "lldb/Host/MainLoop.h"
+#include "lldb/Host/MainLoopBase.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
@@ -51,7 +53,7 @@
 #include <cstdarg>
 #include <cstdint>
 #include <cstdio>
-#include <fstream>
+#include <functional>
 #include <future>
 #include <memory>
 #include <mutex>
@@ -918,6 +920,8 @@ llvm::Error DAP::Disconnect(bool terminateDebuggee) {
   SendTerminatedEvent();
 
   disconnecting = true;
+  m_loop.AddPendingCallback(
+      [](MainLoopBase &loop) { loop.RequestTermination(); });
 
   return ToError(error);
 }
@@ -948,75 +952,74 @@ static std::optional<T> getArgumentsIfRequest(const Message &pm,
   return args;
 }
 
+Status DAP::TransportHandler() {
+  llvm::set_thread_name(transport.GetClientName() + ".transport_handler");
+
+  auto cleanup = llvm::make_scope_exit([&]() {
+    // Ensure we're marked as disconnecting when the reader exits.
+    disconnecting = true;
+    m_queue_cv.notify_all();
+  });
+
+  Status status;
+  auto handle = transport.RegisterReadObject<protocol::Message>(
+      m_loop,
+      [&](MainLoopBase &loop, llvm::Expected<protocol::Message> message) {
+        if (message.errorIsA<TransportEOFError>()) {
+          llvm::consumeError(message.takeError());
+          loop.RequestTermination();
+          return;
+        }
+
+        if (llvm::Error err = message.takeError()) {
+          status = Status::FromError(std::move(err));
+          loop.RequestTermination();
+          return;
+        }
+
+        if (const protocol::Request *req =
+                std::get_if<protocol::Request>(&*message);
+            req && req->arguments == "disconnect")
+          disconnecting = true;
+
+        const std::optional<CancelArguments> cancel_args =
+            getArgumentsIfRequest<CancelArguments>(*message, "cancel");
+        if (cancel_args) {
+          {
+            std::lock_guard<std::mutex> guard(m_cancelled_requests_mutex);
+            if (cancel_args->requestId)
+              m_cancelled_requests.insert(*cancel_args->requestId);
+          }
+
+          // If a cancel is requested for the active request, make a best
+          // effort attempt to interrupt.
+          std::lock_guard<std::mutex> guard(m_active_request_mutex);
+          if (m_active_request &&
+              cancel_args->requestId == m_active_request->seq) {
+            DAP_LOG(log,
+                    "({0}) interrupting inflight request (command={1} seq={2})",
+                    transport.GetClientName(), m_active_request->command,
+                    m_active_request->seq);
+            debugger.RequestInterrupt();
+          }
+        }
+
+        std::lock_guard<std::mutex> guard(m_queue_mutex);
+        m_queue.push_back(std::move(*message));
+        m_queue_cv.notify_one();
+      });
+  if (auto err = handle.takeError())
+    return Status::FromError(std::move(err));
+  if (llvm::Error err = m_loop.Run().takeError())
+    return Status::FromError(std::move(err));
+  return status;
+}
+
 llvm::Error DAP::Loop() {
   // Can't use \a std::future<llvm::Error> because it doesn't compile on
   // Windows.
-  std::future<lldb::SBError> queue_reader =
-      std::async(std::launch::async, [&]() -> lldb::SBError {
-        llvm::set_thread_name(transport.GetClientName() + ".transport_handler");
-        auto cleanup = llvm::make_scope_exit([&]() {
-          // Ensure we're marked as disconnecting when the reader exits.
-          disconnecting = true;
-          m_queue_cv.notify_all();
-        });
-
-        while (!disconnecting) {
-          llvm::Expected<Message> next =
-              transport.Read<protocol::Message>(std::chrono::seconds(1));
-          if (next.errorIsA<TransportEOFError>()) {
-            consumeError(next.takeError());
-            break;
-          }
-
-          // If the read timed out, continue to check if we should disconnect.
-          if (next.errorIsA<TransportTimeoutError>()) {
-            consumeError(next.takeError());
-            continue;
-          }
-
-          if (llvm::Error err = next.takeError()) {
-            lldb::SBError errWrapper;
-            errWrapper.SetErrorString(llvm::toString(std::move(err)).c_str());
-            return errWrapper;
-          }
-
-          if (const protocol::Request *req =
-                  std::get_if<protocol::Request>(&*next);
-              req && req->arguments == "disconnect")
-            disconnecting = true;
-
-          const std::optional<CancelArguments> cancel_args =
-              getArgumentsIfRequest<CancelArguments>(*next, "cancel");
-          if (cancel_args) {
-            {
-              std::lock_guard<std::mutex> guard(m_cancelled_requests_mutex);
-              if (cancel_args->requestId)
-                m_cancelled_requests.insert(*cancel_args->requestId);
-            }
-
-            // If a cancel is requested for the active request, make a best
-            // effort attempt to interrupt.
-            std::lock_guard<std::mutex> guard(m_active_request_mutex);
-            if (m_active_request &&
-                cancel_args->requestId == m_active_request->seq) {
-              DAP_LOG(
-                  log,
-                  "({0}) interrupting inflight request (command={1} seq={2})",
-                  transport.GetClientName(), m_active_request->command,
-                  m_active_request->seq);
-              debugger.RequestInterrupt();
-            }
-          }
-
-          {
-            std::lock_guard<std::mutex> guard(m_queue_mutex);
-            m_queue.push_back(std::move(*next));
-          }
-          m_queue_cv.notify_one();
-        }
-
-        return lldb::SBError();
-      });
+  std::future<Status> queue_reader =
+      std::async(std::launch::async, &DAP::TransportHandler, this);
 
   auto cleanup = llvm::make_scope_exit([&]() {
     out.Stop();
@@ -1042,7 +1045,7 @@ llvm::Error DAP::Loop() {
                                      "unhandled packet");
   }
 
-  return ToError(queue_reader.get());
+  return queue_reader.get().takeError();
 }
 
 lldb::SBError DAP::WaitForProcessToStop(std::chrono::seconds seconds) {
@@ -1353,37 +1356,37 @@ void DAP::EventThread() {
             event_mask & lldb::SBTarget::eBroadcastBitSymbolsChanged) {
           const uint32_t num_modules =
               lldb::SBTarget::GetNumModulesFromEvent(event);
+          const bool remove_module =
+              event_mask & lldb::SBTarget::eBroadcastBitModulesUnloaded;
+
           std::lock_guard<std::mutex> guard(modules_mutex);
           for (uint32_t i = 0; i < num_modules; ++i) {
             lldb::SBModule module =
                 lldb::SBTarget::GetModuleAtIndexFromEvent(i, event);
-            if (!module.IsValid())
-              continue;
-            llvm::StringRef module_id = module.GetUUIDString();
-            if (module_id.empty())
+
+            std::optional<protocol::Module> p_module =
+                CreateModule(target, module, remove_module);
+            if (!p_module)
               continue;
 
-            llvm::StringRef reason;
-            bool id_only = false;
-            if (modules.contains(module_id)) {
-              if (event_mask & lldb::SBTarget::eBroadcastBitModulesUnloaded) {
-                modules.erase(module_id);
-                reason = "removed";
-                id_only = true;
-              } else {
-                reason = "changed";
-              }
-            } else {
+            llvm::StringRef module_id = p_module->id;
+
+            const bool module_exists = modules.contains(module_id);
+            if (remove_module && module_exists) {
+              modules.erase(module_id);
+              Send(protocol::Event{
+                  "module", ModuleEventBody{std::move(p_module).value(),
+                                            ModuleEventBody::eReasonRemoved}});
+            } else if (module_exists) {
+              Send(protocol::Event{
+                  "module", ModuleEventBody{std::move(p_module).value(),
+                                            ModuleEventBody::eReasonChanged}});
+            } else if (!remove_module) {
               modules.insert(module_id);
-              reason = "new";
+              Send(protocol::Event{
+                  "module", ModuleEventBody{std::move(p_module).value(),
+                                            ModuleEventBody::eReasonNew}});
             }
-
-            llvm::json::Object body;
-            body.try_emplace("reason", reason);
-            body.try_emplace("module", CreateModule(target, module, id_only));
-            llvm::json::Object module_event = CreateEventObject("module");
-            module_event.try_emplace("body", std::move(body));
-            SendJSON(llvm::json::Value(std::move(module_event)));
           }
         }
       } else if (lldb::SBBreakpoint::EventIsBreakpointEvent(event)) {
@@ -1405,11 +1408,15 @@ void DAP::EventThread() {
             // avoids sending paths that should be source mapped. Note that
             // CreateBreakpoint doesn't apply source mapping and certain
             // implementation ignore the source part of this event anyway.
-            llvm::json::Value source_bp = bp.ToProtocolBreakpoint();
-            source_bp.getAsObject()->erase("source");
+            protocol::Breakpoint protocol_bp = bp.ToProtocolBreakpoint();
+
+            // "source" is not needed here, unless we add adapter data to be
+            // saved by the client.
+            if (protocol_bp.source && !protocol_bp.source->adapterData)
+              protocol_bp.source = std::nullopt;
 
             llvm::json::Object body;
-            body.try_emplace("breakpoint", source_bp);
+            body.try_emplace("breakpoint", protocol_bp);
             body.try_emplace("reason", "changed");
 
             llvm::json::Object bp_event = CreateEventObject("breakpoint");
@@ -1490,8 +1497,9 @@ std::vector<protocol::Breakpoint> DAP::SetSourceBreakpoints(
 
       protocol::Breakpoint response_breakpoint =
           iv->second.ToProtocolBreakpoint();
-      response_breakpoint.source = source;
 
+      if (!response_breakpoint.source)
+        response_breakpoint.source = source;
       if (!response_breakpoint.line &&
           src_bp.GetLine() != LLDB_INVALID_LINE_NUMBER)
         response_breakpoint.line = src_bp.GetLine();
@@ -1553,6 +1561,7 @@ void DAP::RegisterRequests() {
   RegisterRequest<StepOutRequestHandler>();
   RegisterRequest<ThreadsRequestHandler>();
   RegisterRequest<VariablesRequestHandler>();
+  RegisterRequest<WriteMemoryRequestHandler>();
 
   // Custom requests
   RegisterRequest<CompileUnitsRequestHandler>();

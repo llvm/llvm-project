@@ -1084,7 +1084,7 @@ InstructionCost ARMTTIImpl::getCmpSelInstrCost(
                                               CostKind, Op1Info, Op2Info, I);
 }
 
-InstructionCost ARMTTIImpl::getAddressComputationCost(Type *Ty,
+InstructionCost ARMTTIImpl::getAddressComputationCost(Type *PtrTy,
                                                       ScalarEvolution *SE,
                                                       const SCEV *Ptr) const {
   // Address computations in vectorized code with non-consecutive addresses will
@@ -1095,7 +1095,7 @@ InstructionCost ARMTTIImpl::getAddressComputationCost(Type *Ty,
   int MaxMergeDistance = 64;
 
   if (ST->hasNEON()) {
-    if (Ty->isVectorTy() && SE &&
+    if (PtrTy->isVectorTy() && SE &&
         !BaseT::isConstantStridedAccessLessThan(SE, Ptr, MaxMergeDistance + 1))
       return NumVectorInstToHideOverhead;
 
@@ -1103,7 +1103,7 @@ InstructionCost ARMTTIImpl::getAddressComputationCost(Type *Ty,
     // addressing mode.
     return 1;
   }
-  return BaseT::getAddressComputationCost(Ty, SE, Ptr);
+  return BaseT::getAddressComputationCost(PtrTy, SE, Ptr);
 }
 
 bool ARMTTIImpl::isProfitableLSRChainElement(Instruction *I) const {
@@ -1213,9 +1213,9 @@ int ARMTTIImpl::getNumMemOps(const IntrinsicInst *I) const {
   // loaded and stored. That's why we multiply the number of elements by 2 to
   // get the cost for this memcpy.
   std::vector<EVT> MemOps;
-  if (getTLI()->findOptimalMemOpLowering(
-          MemOps, Limit, MOp, DstAddrSpace,
-          SrcAddrSpace, F->getAttributes()))
+  LLVMContext &C = F->getContext();
+  if (getTLI()->findOptimalMemOpLowering(C, MemOps, Limit, MOp, DstAddrSpace,
+                                         SrcAddrSpace, F->getAttributes()))
     return MemOps.size() * Factor;
 
   // If we can't find an optimal memop lowering, return the default cost
@@ -1330,8 +1330,7 @@ InstructionCost ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(SrcTy);
       if (const auto *Entry = CostTableLookup(MVEDupTbl, ISD::VECTOR_SHUFFLE,
                                               LT.second))
-        return LT.first * Entry->Cost *
-               ST->getMVEVectorCostFactor(TTI::TCK_RecipThroughput);
+        return LT.first * Entry->Cost * ST->getMVEVectorCostFactor(CostKind);
     }
 
     if (!Mask.empty()) {
@@ -1340,7 +1339,7 @@ InstructionCost ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
           Mask.size() <= LT.second.getVectorNumElements() &&
           (isVREVMask(Mask, LT.second, 16) || isVREVMask(Mask, LT.second, 32) ||
            isVREVMask(Mask, LT.second, 64)))
-        return ST->getMVEVectorCostFactor(TTI::TCK_RecipThroughput) * LT.first;
+        return ST->getMVEVectorCostFactor(CostKind) * LT.first;
     }
   }
 
@@ -1348,7 +1347,7 @@ InstructionCost ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   if (IsExtractSubvector)
     Kind = TTI::SK_ExtractSubvector;
   int BaseCost = ST->hasMVEIntegerOps() && SrcTy->isVectorTy()
-                     ? ST->getMVEVectorCostFactor(TTI::TCK_RecipThroughput)
+                     ? ST->getMVEVectorCostFactor(CostKind)
                      : 1;
   return BaseCost * BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind,
                                           Index, SubTp);

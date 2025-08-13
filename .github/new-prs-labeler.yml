@@ -48,6 +48,9 @@ flang:frontend:
   - flang/Evaluate/**/*
   - flang/Semantics/**/*
 
+libclc:
+  - libclc/**
+
 HLSL:
   - clang/*HLSL*/**/*
   - clang/**/*HLSL*
@@ -717,6 +720,8 @@ mlgo:
   - llvm/lib/Analysis/IR2Vec.cpp
   - llvm/lib/Analysis/models/**
   - llvm/test/Analysis/IR2Vec/**
+  - llvm/tools/llvm-ir2vec/**
+  - llvm/docs/CommandGuide/llvm-ir2vec.rst
 
 tools:llvm-exegesis:
   - llvm/tools/llvm-exegesis/**
@@ -784,18 +789,20 @@ backend:NVPTX:
 backend:MIPS:
   - '**/*mips*'
   - '**/*Mips*'
+  - '**/*mips*/**'
+  - '**/*Mips*/**'
 
 backend:RISC-V:
-  - clang/**/*riscv*
-  - clang/**/*RISCV*
-  - llvm/**/*riscv*
-  - llvm/**/*RISCV*
+  - '**/*riscv*'
+  - '**/*RISCV*'
+  - '**/*riscv*/**'
+  - '**/*RISCV*/**'
 
 backend:Xtensa:
-  - clang/**/*xtensa*
-  - clang/**/*Xtensa*
-  - llvm/**/*xtensa*
-  - llvm/**/*Xtensa*
+  - '**/*xtensa*'
+  - '**/*Xtensa*'
+  - '**/*xtensa*/**'
+  - '**/*Xtensa*/**'
 
 lld:coff:
   - lld/**/COFF/**

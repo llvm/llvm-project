@@ -60,9 +60,8 @@ define float @reduction_sum_float_fastmath(i32 %n, ptr %array) {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP6:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x float> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[ARRAY:%.*]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr float, ptr [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr float, ptr [[TMP2]], i32 4
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP4]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x float>, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP6]] = fadd fast <4 x float> [[VEC_PHI]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP7]] = fadd fast <4 x float> [[VEC_PHI1]], [[WIDE_LOAD2]]
@@ -72,10 +71,10 @@ define float @reduction_sum_float_fastmath(i32 %n, ptr %array) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd fast <4 x float> [[TMP7]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[BIN_RDX]])
-; CHECK-NEXT:    br i1 true, label [[LOOP_EXIT_LOOPEXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[LOOP_EXIT_LOOPEXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 4096, [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP9]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ 0.000000e+00, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_INC:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -126,9 +125,8 @@ define float @reduction_sum_float_only_reassoc(i32 %n, ptr %array) {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ splat (float -0.000000e+00), [[VECTOR_PH]] ], [ [[TMP6:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x float> [ splat (float -0.000000e+00), [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[ARRAY:%.*]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr float, ptr [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr float, ptr [[TMP2]], i32 4
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP4]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x float>, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP6]] = fadd reassoc <4 x float> [[VEC_PHI]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP7]] = fadd reassoc <4 x float> [[VEC_PHI1]], [[WIDE_LOAD2]]
@@ -138,10 +136,10 @@ define float @reduction_sum_float_only_reassoc(i32 %n, ptr %array) {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd reassoc <4 x float> [[TMP7]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call reassoc float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[BIN_RDX]])
-; CHECK-NEXT:    br i1 true, label [[LOOP_EXIT_LOOPEXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[LOOP_EXIT_LOOPEXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 4096, [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP9]], [[MIDDLE_BLOCK]] ], [ -0.000000e+00, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ -0.000000e+00, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_INC:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -192,9 +190,8 @@ define float @reduction_sum_float_only_reassoc_and_contract(i32 %n, ptr %array) 
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ splat (float -0.000000e+00), [[VECTOR_PH]] ], [ [[TMP6:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x float> [ splat (float -0.000000e+00), [[VECTOR_PH]] ], [ [[TMP7:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[ARRAY:%.*]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr float, ptr [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr float, ptr [[TMP2]], i32 4
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP4]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x float>, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP6]] = fadd reassoc contract <4 x float> [[VEC_PHI]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP7]] = fadd reassoc contract <4 x float> [[VEC_PHI1]], [[WIDE_LOAD2]]
@@ -204,10 +201,10 @@ define float @reduction_sum_float_only_reassoc_and_contract(i32 %n, ptr %array) 
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd reassoc contract <4 x float> [[TMP7]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call reassoc contract float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[BIN_RDX]])
-; CHECK-NEXT:    br i1 true, label [[LOOP_EXIT_LOOPEXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[LOOP_EXIT_LOOPEXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 4096, [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP9]], [[MIDDLE_BLOCK]] ], [ -0.000000e+00, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ -0.000000e+00, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_INC:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -265,9 +262,8 @@ define float @PR35538(ptr nocapture readonly %a, i32 %N) #0 {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ splat (float -1.000000e+00), [[VECTOR_PH]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x float> [ splat (float -1.000000e+00), [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i32 4
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP4]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x float>, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = fcmp nnan ninf nsz oge <4 x float> [[WIDE_LOAD]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fcmp nnan ninf nsz oge <4 x float> [[WIDE_LOAD2]], [[VEC_PHI1]]
@@ -347,9 +343,8 @@ define float @PR35538_more_FMF(ptr nocapture readonly %a, i32 %N) #0 {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ splat (float -1.000000e+00), [[VECTOR_PH]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x float> [ splat (float -1.000000e+00), [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i32 4
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP4]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x float>, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = fcmp nnan ninf oge <4 x float> [[WIDE_LOAD]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fcmp nnan ninf oge <4 x float> [[WIDE_LOAD2]], [[VEC_PHI1]]
