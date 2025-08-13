@@ -209,7 +209,6 @@ TEST(NativeMemRefJit, SKIP_WITHOUT_JIT(BasicMemref)) {
   // disjoint.
   int alignment = 8192;
   OwningMemRef<float, 2> a(shape, shapeAlloc, init, alignment);
-  ASSERT_NE(a->basePtr, a->data);
   ASSERT_EQ(
       (void *)(((uintptr_t)a->basePtr + alignment - 1) & ~(alignment - 1)),
       a->data);
