@@ -690,13 +690,12 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
 namespace mlir {
 namespace xegpu {
 void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns) {
-  patterns
-      .add<WgToSgCreateNdOp, WgToSgCreateNdOpNoOffset, WgToSgLoadNdOp,
-           WgToSgStoreNdOp, WgToSgUpdateNdOffsetOp, WgToSgDpasOp,
-           WgToSgPrefetchNdOp, UnrealizedConversionCastOpPattern,
-           WgToSgElementwiseOp, WgToSgVectorBroadcastOp, WgToSgConvertLayoutOp,
-           WgToSgArithConstantOp>(
-          patterns.getContext());
+  patterns.add<WgToSgCreateNdOp, WgToSgCreateNdOpNoOffset, WgToSgLoadNdOp,
+               WgToSgStoreNdOp, WgToSgUpdateNdOffsetOp, WgToSgDpasOp,
+               WgToSgPrefetchNdOp, UnrealizedConversionCastOpPattern,
+               WgToSgElementwiseOp, WgToSgVectorBroadcastOp,
+               WgToSgConvertLayoutOp, WgToSgArithConstantOp>(
+      patterns.getContext());
 }
 } // namespace xegpu
 } // namespace mlir
