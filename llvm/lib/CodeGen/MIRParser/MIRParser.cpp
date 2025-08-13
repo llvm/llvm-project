@@ -126,7 +126,7 @@ public:
 
   bool initializeSaveRestorePoints(
       PerFunctionMIParsingState &PFS,
-      const yaml::SaveRestorePoints &YamlSRPoints,
+      const std::vector<yaml::SaveRestorePointEntry> &YamlSRPoints,
       SmallVectorImpl<MachineBasicBlock *> &SaveRestorePoints);
 
   bool initializeCallSiteInfo(PerFunctionMIParsingState &PFS,
@@ -1096,26 +1096,12 @@ bool MIRParserImpl::initializeConstantPool(PerFunctionMIParsingState &PFS,
 
 // Return true if basic block was incorrectly specified in MIR
 bool MIRParserImpl::initializeSaveRestorePoints(
-    PerFunctionMIParsingState &PFS, const yaml::SaveRestorePoints &YamlSRPoints,
+    PerFunctionMIParsingState &PFS,
+    const std::vector<yaml::SaveRestorePointEntry> &YamlSRPoints,
     SmallVectorImpl<MachineBasicBlock *> &SaveRestorePoints) {
   MachineBasicBlock *MBB = nullptr;
-  if (std::holds_alternative<std::vector<yaml::SaveRestorePointEntry>>(
-          YamlSRPoints)) {
-    const auto &VectorRepr =
-        std::get<std::vector<yaml::SaveRestorePointEntry>>(YamlSRPoints);
-    if (VectorRepr.empty())
-      return false;
-    for (const yaml::SaveRestorePointEntry &Entry : VectorRepr) {
-      const yaml::StringValue &MBBSource = Entry.Point;
-      if (parseMBBReference(PFS, MBB, MBBSource.Value))
-        return true;
-      SaveRestorePoints.push_back(MBB);
-    }
-  } else {
-    yaml::StringValue StringRepr = std::get<yaml::StringValue>(YamlSRPoints);
-    if (StringRepr.Value.empty())
-      return false;
-    if (parseMBBReference(PFS, MBB, StringRepr))
+  for (const yaml::SaveRestorePointEntry &Entry : YamlSRPoints) {
+    if (parseMBBReference(PFS, MBB, Entry.Point.Value))
       return true;
     SaveRestorePoints.push_back(MBB);
   }
