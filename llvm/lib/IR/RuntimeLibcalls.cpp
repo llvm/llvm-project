@@ -33,25 +33,6 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
   if (ExceptionModel == ExceptionHandling::SjLj)
     setLibcallImpl(RTLIB::UNWIND_RESUME, RTLIB::_Unwind_SjLj_Resume);
 
-  if (TT.isARM() || TT.isThumb()) {
-    // The half <-> float conversion functions are always soft-float on
-    // non-watchos platforms, but are needed for some targets which use a
-    // hard-float calling convention by default.
-    if (!TT.isWatchABI()) {
-      if (isAAPCS_ABI(TT, ABIName)) {
-        setLibcallImplCallingConv(RTLIB::__truncsfhf2, CallingConv::ARM_AAPCS);
-        setLibcallImplCallingConv(RTLIB::__truncdfhf2, CallingConv::ARM_AAPCS);
-        setLibcallImplCallingConv(RTLIB::__extendhfsf2, CallingConv::ARM_AAPCS);
-      } else {
-        setLibcallImplCallingConv(RTLIB::__truncsfhf2, CallingConv::ARM_APCS);
-        setLibcallImplCallingConv(RTLIB::__truncdfhf2, CallingConv::ARM_APCS);
-        setLibcallImplCallingConv(RTLIB::__extendhfsf2, CallingConv::ARM_APCS);
-      }
-    }
-
-    return;
-  }
-
   if (TT.getArch() == Triple::ArchType::msp430) {
     setLibcallImplCallingConv(RTLIB::__mspabi_mpyll,
                               CallingConv::MSP430_BUILTIN);
