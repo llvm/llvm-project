@@ -24,5 +24,46 @@ THE SOFTWARE.
 
 int main(int argc, char* argv[]){
     HipBin hipbin;
-    hipbin.executeHipConfig(argc, argv);
+    vector<HipBinBase*>& platformPtrs = hipbin.getHipBinPtrs();
+    for (unsigned int j = 0; j < platformPtrs.size(); j++) {
+        if (argc == 1) {
+        platformPtrs.at(j)->printFull();
+        }
+        for (int i = 1; i < argc; ++i) {
+        HipBinCommand cmd;
+        cmd = platformPtrs.at(j)->gethipconfigCmd(argv[i]);
+        switch (cmd) {
+        case help: platformPtrs.at(j)->printUsage();
+            break;
+        case path: cout << platformPtrs.at(j)->getHipPath();
+            break;
+        case roccmpath: cout << platformPtrs.at(j)->getRoccmPath();
+            break;
+        case cpp_config: cout << platformPtrs.at(j)->getCppConfig();
+            break;
+        case compiler: cout << CompilerTypeStr((
+                                platformPtrs.at(j)->getPlatformInfo()).compiler);
+            break;
+        case platform: cout << PlatformTypeStr((
+                                platformPtrs.at(j)->getPlatformInfo()).platform);
+            break;
+        case runtime: cout << RuntimeTypeStr((
+                                platformPtrs.at(j)->getPlatformInfo()).runtime);
+            break;
+        case hipclangpath: cout << platformPtrs.at(j)->getCompilerPath();
+            break;
+        case full: platformPtrs.at(j)->printFull();
+            break;
+        case version: cout << platformPtrs.at(j)->getHipVersion();
+            break;
+        case check: platformPtrs.at(j)->checkHipconfig();
+            break;
+        case newline: cout << endl;
+            break;
+        default:
+            platformPtrs.at(j)->printUsage();
+            break;
+        }
+        }
+    }
 }

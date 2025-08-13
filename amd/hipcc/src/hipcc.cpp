@@ -24,5 +24,12 @@ THE SOFTWARE.
 
 int main(int argc, char* argv[]){
     HipBin hipbin;
-    hipbin.executeHipCC(argc, argv);
+    vector<HipBinBase*>& platformPtrs = hipbin.getHipBinPtrs();
+    vector<string> argvcc;
+    for (int i = 0; i < argc; i++) {
+        argvcc.push_back(argv[i]);
+    }
+    // 0th index points to the first platform detected.
+    // In the near future this vector will contain mulitple devices
+    platformPtrs.at(0)->executeHipCCCmd(argvcc);
 }
