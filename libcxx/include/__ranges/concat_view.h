@@ -190,13 +190,16 @@ struct __concat_view_iterator_category<_Const, _Views...> {
 private:
   constexpr static bool __derive_pack_random_iterator =
       (derived_from<typename iterator_traits<iterator_t<__maybe_const<_Const, _Views>>>::iterator_category,
-                          random_access_iterator_tag> && ...);
+                    random_access_iterator_tag> &&
+       ...);
   constexpr static bool __derive_pack_bidirectional_iterator =
       (derived_from<typename iterator_traits<iterator_t<__maybe_const<_Const, _Views>>>::iterator_category,
-                          bidirectional_iterator_tag> && ...);
+                    bidirectional_iterator_tag> &&
+       ...);
   constexpr static bool __derive_pack_forward_iterator =
       (derived_from<typename iterator_traits< iterator_t<__maybe_const<_Const, _Views>>>::iterator_category,
-                          forward_iterator_tag> && ...);
+                    forward_iterator_tag> &&
+       ...);
 
 public:
   using iterator_category =
@@ -618,9 +621,8 @@ namespace views {
 namespace __concat {
 struct __fn {
   template <input_range _Range>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto
-  operator()(_Range&& __range) noexcept(noexcept(views::all((std::forward<_Range>(__range)))))
-      -> decltype(views::all((std::forward<_Range>(__range)))) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Range&& __range) noexcept(
+      noexcept(views::all((std::forward<_Range>(__range))))) -> decltype(views::all((std::forward<_Range>(__range)))) {
     return views::all(std::forward<_Range>(__range));
   }
 
