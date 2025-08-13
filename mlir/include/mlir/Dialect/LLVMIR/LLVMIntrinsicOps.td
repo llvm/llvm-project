@@ -1075,8 +1075,44 @@ def LLVM_masked_expandload : LLVM_IntrOp<"masked.expandload", [0], [], [], 1> {
 
 /// Create a call to Masked Compress Store intrinsic.
 def LLVM_masked_compressstore
-    : LLVM_IntrOp<"masked.compressstore", [], [0], [], 0> {
-  let arguments = (ins LLVM_AnyVector, LLVM_AnyPointer, LLVM_VectorOf<I1>);
+    : LLVM_ZeroResultIntrOp<"masked.compressstore", [0],
+  /*traits=*/[], /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
+  /*requiresArgAndResultAttrs=*/1, /*requiresOpBundles=*/0,
+  /*immArgPositions=*/[], /*immArgAttrNames=*/[]> {
+  dag args = (ins LLVM_AnyVector:$value,
+                       LLVM_AnyPointer:$ptr,
+                       LLVM_VectorOf<I1>:$mask);
+
+  let arguments = !con(args, baseArgs);
+
+  string llvmBuilder = [{
+    auto argAttrs = op.getArgAttrs();
+    uint64_t alignment = 1;
+    if (argAttrs.has_value()) {
+      NamedAttrList argAttr = cast<DictionaryAttr>((*argAttrs)[1]);
+      auto maybeAlignmentAttr = argAttr.get("llvm.align");
+      IntegerAttr alignmentAttr = maybeAlignmentAttr ? dyn_cast<IntegerAttr>(maybeAlignmentAttr) : nullptr;
+      alignment = alignmentAttr ? alignmentAttr.getValue().getZExtValue() : 1;
+    }
+    builder.CreateMaskedCompressStore(
+      $value, $ptr, alignment != 1 ? llvm::Align(alignment) : llvm::MaybeAlign(), $mask);
+  }];
+
+  let builders = [
+    OpBuilder<(ins "Value":$value, "Value":$ptr, "Value":$mask, CArg<"uint64_t", "1">:$align), [{
+      ArrayAttr callArgs = nullptr;
+      if (align != 1) {
+        auto emptyDictAttr = $_builder.getDictionaryAttr({});
+        auto alignmentAttr = $_builder.getI64IntegerAttr(align);
+        auto namedAttr = $_builder.getNamedAttr("llvm.align", alignmentAttr);
+        SmallVector<mlir::NamedAttribute> attrs = {namedAttr};
+        auto alignDictAttr = $_builder.getDictionaryAttr(attrs);
+        callArgs = $_builder.getArrayAttr({emptyDictAttr, alignDictAttr, emptyDictAttr});
+      }
+      build($_builder, $_state, value, ptr, mask, /*arg_attrs=*/callArgs, /*res_attrs=*/nullptr);
+    }]>
+  ];
+
 }
 
 //
