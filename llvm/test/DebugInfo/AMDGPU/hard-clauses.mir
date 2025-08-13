@@ -4,7 +4,7 @@
 # CHECK-LABEL: name: debug_instrs
 # CHECK-LABEL: debugValueSubstitutions:
 # CHECK-NEXT: - { srcinst: 3, srcop: 0, dstinst: 4, dstop: 0, subreg: 0 }
-# CHECK-NEXT: - { srcinst: 2, srcop: 0, dstinst: 4, dstop: 3, subreg: 0 }
+# CHECK-NEXT: - { srcinst: 2, srcop: 0, dstinst: 4, dstop: 1, subreg: 0 }
 
 ---
 name: debug_instrs
@@ -18,11 +18,11 @@ body: |
     ; CHECK-NEXT: DBG_VALUE_LIST
     ; CHECK-NEXT: DBG_PHI
     ; CHECK-NEXT: DBG_INSTR_REF
-    ; CHECK-NEXT: BUNDLE implicit-def $sgpr3, implicit-def $sgpr3_lo16, implicit-def $sgpr3_hi16, implicit-def $sgpr2, implicit-def $sgpr2_lo16, implicit-def $sgpr2_hi16, implicit $sgpr0_sgpr1, debug-instr-number 4 {
+    ; CHECK-NEXT: BUNDLE implicit-def $sgpr3, implicit-def $sgpr2, implicit $sgpr0_sgpr1,  debug-instr-number 4 {
     ; CHECK-NEXT:   S_CLAUSE 2
-    ; CHECK-NEXT:   $sgpr3 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0, debug-instr-number 1
-    ; CHECK-NEXT:   $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 4, 0, debug-instr-number 2
-    ; CHECK-NEXT:   $sgpr3 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 8, 0, debug-instr-number 3
+    ; CHECK-NEXT:   $sgpr3 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 0, 0,  debug-instr-number 1
+    ; CHECK-NEXT:   $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 4, 0,  debug-instr-number 2
+    ; CHECK-NEXT:   $sgpr3 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 8, 0,  debug-instr-number 3
     ; CHECK-NEXT: }
     ; CHECK-NEXT: DBG_VALUE
     DBG_VALUE_LIST
@@ -36,7 +36,7 @@ body: |
 
 # CHECK-LABEL: name: only_last_instr
 # CHECK-LABEL: debugValueSubstitutions:
-# CHECK-NEXT: - { srcinst: 1, srcop: 0, dstinst: 2, dstop: 3, subreg: 0 }
+# CHECK-NEXT: - { srcinst: 1, srcop: 0, dstinst: 2, dstop: 1, subreg: 0 }
 
 ---
 name: only_last_instr
@@ -47,10 +47,10 @@ body: |
     liveins: $sgpr0_sgpr1
     ; CHECK: liveins: $sgpr0_sgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: BUNDLE implicit-def $sgpr2, implicit-def $sgpr2_lo16, implicit-def $sgpr2_hi16, implicit-def $sgpr3, implicit-def $sgpr3_lo16, implicit-def $sgpr3_hi16, implicit $sgpr0_sgpr1, debug-instr-number 2 {
+    ; CHECK-NEXT: BUNDLE implicit-def $sgpr2, implicit-def $sgpr3, implicit $sgpr0_sgpr1,  debug-instr-number 2 {
     ; CHECK-NEXT:   S_CLAUSE 1
     ; CHECK-NEXT:   $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 4, 0
-    ; CHECK-NEXT:   $sgpr3 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 8, 0, debug-instr-number 1
+    ; CHECK-NEXT:   $sgpr3 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 8, 0,  debug-instr-number 1
     ; CHECK-NEXT: }
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 4, 0
     $sgpr3 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 8, 0, debug-instr-number 1
