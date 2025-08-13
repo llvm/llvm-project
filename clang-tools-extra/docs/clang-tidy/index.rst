@@ -377,9 +377,12 @@ Running Clang-Tidy on Diff
 
 The :program:`clang-tidy-diff.py` script allows you to run :program:`clang-tidy`
 only on the lines that have been modified in your working directory or in a
-specific diff. This is particularly useful for code reviews and continuous
-integration, as it focuses analysis on the changed code rather than the entire
-codebase.
+specific diff. Importantly, clang-tidy-diff will only analyze and report
+warnings from the changed lines. The script is essentially a wrapper that
+parses diff output and passes it to :program:`clang-tidy` with the
+``--line-filter`` option, which performs all the actual filtering. This is
+particularly useful for code reviews and continuous integration, as it focuses
+analysis on the changed code rather than the entire codebase.
 
 The script can work with various diff sources:
 
@@ -411,6 +414,20 @@ The ``-p1`` option tells the script to strip one level of path prefix from the
 diff, which is typically needed for Git diffs. The script supports most of the
 same options as :program:`clang-tidy` itself, including ``-checks=``, ``-fix``,
 ``-header-filter=``, and configuration options.
+
+While :program:`clang-tidy-diff.py` is useful for focusing on recent changes,
+relying solely on it may lead to incomplete analysis. Since the script only
+reports warnings from the modified lines, it may miss issues that are caused
+by the changes but manifest elsewhere in the code. For example, changes that
+only add lines to a function may cause it to violate size limits (e.g.,
+``readability-function-size``), but the diagnostic will be reported at the
+function declaration, which may not be in the diff and thus filtered out.
+Modifications to header files may also affect many implementation files, but
+only warnings in the modified header lines will be reported.
+
+For comprehensive analysis, especially before merging significant changes,
+consider running :program:`clang-tidy` on the entire affected files or the
+whole project using :program:`run-clang-tidy.py`.
 
 .. _clang-tidy-nolint:
 
