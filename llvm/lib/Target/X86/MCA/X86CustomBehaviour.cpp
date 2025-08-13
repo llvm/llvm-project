@@ -36,11 +36,26 @@ void X86InstrPostProcess::setMemBarriers(std::unique_ptr<Instruction> &Inst,
   }
 }
 
+void X86InstrPostProcess::useStackEngine(std::unique_ptr<Instruction> &Inst,
+                                         const MCInst &MCI) {
+  if (X86::isPOP(MCI.getOpcode()) || X86::isPUSH(MCI.getOpcode())) {
+    auto *StackRegisterDef =
+        llvm::find_if(Inst->getDefs(), [](const WriteState &State) {
+          return State.getRegisterID() == X86::RSP;
+        });
+    assert(
+        StackRegisterDef != Inst->getDefs().end() &&
+        "Expected push instruction to implicitly use stack pointer register.");
+    Inst->getDefs().erase(StackRegisterDef);
+  }
+}
+
 void X86InstrPostProcess::postProcessInstruction(
     std::unique_ptr<Instruction> &Inst, const MCInst &MCI) {
   // Currently, we only modify certain instructions' IsALoadBarrier and
   // IsAStoreBarrier flags.
   setMemBarriers(Inst, MCI);
+  useStackEngine(Inst, MCI);
 }
 
 } // namespace mca
