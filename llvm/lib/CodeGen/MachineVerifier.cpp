@@ -2435,24 +2435,27 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     const Register SrcReg = SrcOp.getReg();
     const Register DstReg = DstOp.getReg();
     const LaneBitmask LaneMask = LaneMaskOp.getLaneMask();
+    LaneBitmask SrcMaxLanemask = LaneBitmask::getAll();
 
-    if (!SrcReg.isPhysical() || !DstReg.isPhysical()) {
-      if (!SrcReg.isPhysical()) {
-        report("Copy with lanemask Instruction uses virtual register", &SrcOp,
-               1);
-      }
-      if (!DstReg.isPhysical()) {
-        report("Copy with lanemask Instruction uses virtual register", &DstOp,
-               0);
-      }
-      break;
+    if (DstOp.getSubReg())
+      report("COPY_LANEMASK must use no sub-register index.", &DstOp, 0);
+
+    if (SrcOp.getSubReg())
+      report("COPY_LANEMASK must use no sub-register index.", &SrcOp, 1);
+
+    if (SrcReg.isVirtual()) {
+      SrcMaxLanemask = MRI->getMaxLaneMaskForVReg(SrcReg);
     }
 
     if (LaneMask.none())
-      report("Lanemask takes up the zero value", MI);
+      report("COPY_LANEMASK copies no lanes.", MI);
 
-    if (LaneMask.all())
-      report("Copy Instruction can be used instead of copy with lanemask", MI);
+    // In case of Src as virtual register, all lanes active implies the max
+    // lanemask bits active for that register class, else all bits would be set.
+    if (LaneMask.all() || (SrcMaxLanemask == LaneMask))
+      report(
+          "COPY should be instead of COPY_LANEMASK, as all lanes are copied.",
+          MI);
 
     break;
   }
