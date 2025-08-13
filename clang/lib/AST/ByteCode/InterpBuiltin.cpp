@@ -1783,11 +1783,24 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
   if (DestPtr.isDummy() || SrcPtr.isDummy())
     return false;
 
+  if (DestPtr.getType()->isIncompleteType()) {
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_memcpy_incomplete_type)
+        << Move << DestPtr.getType();
+    return false;
+  }
+  if (SrcPtr.getType()->isIncompleteType()) {
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_memcpy_incomplete_type)
+        << Move << SrcPtr.getType();
+    return false;
+  }
+
   QualType DestElemType = getElemType(DestPtr);
   if (DestElemType->isIncompleteType()) {
     S.FFDiag(S.Current->getSource(OpPC),
-             diag::note_constexpr_ltor_incomplete_type)
-        << DestElemType;
+             diag::note_constexpr_memcpy_incomplete_type)
+        << Move << DestElemType;
     return false;
   }
 
@@ -1829,16 +1842,6 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
   if (!ASTCtx.hasSameUnqualifiedType(DestElemType, SrcElemType)) {
     S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_memcpy_type_pun)
         << Move << SrcElemType << DestElemType;
-    return false;
-  }
-
-  if (DestElemType->isIncompleteType() ||
-      DestPtr.getType()->isIncompleteType()) {
-    QualType DiagType =
-        DestElemType->isIncompleteType() ? DestElemType : DestPtr.getType();
-    S.FFDiag(S.Current->getSource(OpPC),
-             diag::note_constexpr_memcpy_incomplete_type)
-        << Move << DiagType;
     return false;
   }
 
@@ -2030,8 +2033,13 @@ static bool interp__builtin_memchr(InterpState &S, CodePtr OpPC,
     return true;
   }
 
-  if (Ptr.isDummy())
+  if (Ptr.isDummy()) {
+    if (Ptr.getType()->isIncompleteType())
+      S.FFDiag(S.Current->getSource(OpPC),
+               diag::note_constexpr_ltor_incomplete_type)
+          << Ptr.getType();
     return false;
+  }
 
   // Null is only okay if the given size is 0.
   if (Ptr.isZero()) {

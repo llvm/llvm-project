@@ -120,6 +120,9 @@ public:
 
   mlir::Operation *lastGlobalOp = nullptr;
 
+  /// Tell the consumer that this variable has been instantiated.
+  void handleCXXStaticMemberVarInstantiation(VarDecl *vd);
+
   llvm::DenseMap<const Decl *, cir::GlobalOp> staticLocalDeclMap;
 
   mlir::Operation *getGlobalValue(llvm::StringRef ref);

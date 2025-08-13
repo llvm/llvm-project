@@ -827,22 +827,13 @@ public:
 
   ArrayRef<MachineBasicBlock *> getSavePoints() const { return SavePoints; }
   void setSavePoints(ArrayRef<MachineBasicBlock *> NewSavePoints) {
-    SavePoints = SmallVector<MachineBasicBlock *>(NewSavePoints);
+    SavePoints.assign(NewSavePoints.begin(), NewSavePoints.end());
   }
   ArrayRef<MachineBasicBlock *> getRestorePoints() const {
     return RestorePoints;
   }
   void setRestorePoints(ArrayRef<MachineBasicBlock *> NewRestorePoints) {
-    RestorePoints = SmallVector<MachineBasicBlock *>(NewRestorePoints);
-  }
-
-  static SmallVector<MachineBasicBlock *> constructSaveRestorePoints(
-      ArrayRef<MachineBasicBlock *> SRPoints,
-      const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &BBMap) {
-    SmallVector<MachineBasicBlock *> Pts;
-    for (auto &Src : SRPoints)
-      Pts.push_back(BBMap.find(Src)->second);
-    return Pts;
+    RestorePoints.assign(NewRestorePoints.begin(), NewRestorePoints.end());
   }
 
   uint64_t getUnsafeStackSize() const { return UnsafeStackSize; }
