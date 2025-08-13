@@ -376,13 +376,15 @@ Running Clang-Tidy on Diff
 ---------------------------
 
 The :program:`clang-tidy-diff.py` script allows you to run :program:`clang-tidy`
-only on the lines that have been modified in your working directory or in a
-specific diff. Importantly, clang-tidy-diff will only analyze and report
-warnings from the changed lines. The script is essentially a wrapper that
-parses diff output and passes it to :program:`clang-tidy` with the
-``--line-filter`` option, which performs all the actual filtering. This is
-particularly useful for code reviews and continuous integration, as it focuses
-analysis on the changed code rather than the entire codebase.
+on the lines that have been modified in your working directory or in a
+specific diff. Importantly, clang-tidy-diff only reports diagnostics for changed
+lines; :program:`clang-tidy` still analyzes the entire file and filters out
+unchanged lines after analysis, so this does not improve performance. The script
+is essentially a wrapper that parses diff output and passes it to
+:program:`clang-tidy` with the ``--line-filter`` option, which performs all the
+actual filtering. This is particularly useful for code reviews and continuous
+integration, as it focuses analysis on the changed code rather than the entire
+codebase.
 
 The script can work with various diff sources:
 
