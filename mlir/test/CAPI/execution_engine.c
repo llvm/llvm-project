@@ -179,7 +179,7 @@ void testGlobalCtorJitCallback(void) {
   // Register callback symbol before initialization
   mlirExecutionEngineRegisterSymbol(
       jit, mlirStringRefCreateFromCString("_mlir_ciface_init_callback"),
-      (void *)initCallback);
+      (void *)(uintptr_t)initCallback);
 
   mlirExecutionEngineInitialize(jit);
 
