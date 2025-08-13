@@ -549,8 +549,14 @@ private:
 
     int getScore() const { return Score; }
 
-    bool operator<(const ScoredRemat &O) const { return Score < O.Score; }
-    bool operator==(const ScoredRemat &O) const { return Score == O.Score; }
+    bool operator<(const ScoredRemat &O) const {
+      // Break ties using pointer to rematerializable register. Since
+      // rematerializations are collected in instruction order, registers
+      // appearing earlier have a "higher score" than those appearing later.
+      if (Score == O.Score)
+        return Remat > O.Remat;
+      return Score < O.Score;
+    }
 
   private:
     /// Estimated save/restore latency costs for spilling a register to stack.

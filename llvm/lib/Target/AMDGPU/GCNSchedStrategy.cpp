@@ -1287,16 +1287,16 @@ bool ClusteredLowOccStage::initGCNSchedStage() {
 void PreRARematStage::printTargetRegions(bool PrintAll) const {
   if (PrintAll) {
     for (auto [I, Target] : enumerate(RPTargets))
-      REMAT_DEBUG(dbgs() << "  [" << I << "] " << Target << '\n');
+      dbgs() << REMAT_PREFIX << "  [" << I << "] " << Target << '\n';
     return;
   }
   if (TargetRegions.none()) {
-    REMAT_DEBUG(dbgs() << "No target regions\n");
+    dbgs() << REMAT_PREFIX << "No target regions\n";
     return;
   }
-  REMAT_DEBUG(dbgs() << "Target regions:\n");
+  dbgs() << REMAT_PREFIX << "Target regions:\n";
   for (unsigned I : TargetRegions.set_bits())
-    REMAT_DEBUG(dbgs() << "  [" << I << "] " << RPTargets[I] << '\n');
+    dbgs() << REMAT_PREFIX << "  [" << I << "] " << RPTargets[I] << '\n';
 }
 
 void PreRARematStage::RematReg::print(
@@ -1412,8 +1412,8 @@ bool PreRARematStage::initGCNSchedStage() {
   }
   unsetSatisifedRPTargets(RescheduleRegions);
 
+  LLVM_DEBUG(printTargetRegions());
 #ifndef NDEBUG
-  printTargetRegions();
   unsigned RoundNum = 0;
 #endif
 
@@ -1424,7 +1424,7 @@ bool PreRARematStage::initGCNSchedStage() {
     // (Re-)Score and (re-)sort all remats in increasing score order.
     for (ScoredRemat &Remat : ScoredRemats)
       Remat.update(TargetRegions, RPTargets, RegionFreq, !TargetOcc);
-    stable_sort(ScoredRemats);
+    sort(ScoredRemats);
 
     REMAT_DEBUG({
       dbgs() << "==== ROUND " << RoundNum << " ====\n";
@@ -1476,8 +1476,8 @@ bool PreRARematStage::initGCNSchedStage() {
       unsetSatisifedRPTargets(Remat.Live);
     }
 
+    LLVM_DEBUG(printTargetRegions());
 #ifndef NDEBUG
-    printTargetRegions();
     ++RoundNum;
 #endif
 
