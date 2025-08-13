@@ -129,7 +129,7 @@ public:
     // We must Grow -- find the size where we'd be 75% full, then round up to
     // the next power of two.
     size_type NewSize = NumEntries + (NumEntries / 3);
-    NewSize = 1 << (Log2_32_Ceil(NewSize) + 1);
+    NewSize = 1 << Log2_32_Ceil(NewSize);
     // Like insert_imp_big, always allocate at least 128 elements.
     NewSize = std::max(128u, NewSize);
     Grow(NewSize);
@@ -154,6 +154,10 @@ protected:
 
   iterator_range<const void *const *> small_buckets() const {
     return {CurArray, CurArray + NumNonEmpty};
+  }
+
+  iterator_range<const void **> buckets() {
+    return make_range(CurArray, EndPointer());
   }
 
   /// insert_imp - This returns true if the pointer was new to the set, false if
@@ -441,13 +445,12 @@ public:
       return Removed;
     }
 
-    for (const void **APtr = CurArray, **E = EndPointer(); APtr != E; ++APtr) {
-      const void *Value = *APtr;
-      if (Value == getTombstoneMarker() || Value == getEmptyMarker())
+    for (const void *&Bucket : buckets()) {
+      if (Bucket == getTombstoneMarker() || Bucket == getEmptyMarker())
         continue;
-      PtrType Ptr = PtrTraits::getFromVoidPointer(const_cast<void *>(Value));
+      PtrType Ptr = PtrTraits::getFromVoidPointer(const_cast<void *>(Bucket));
       if (P(Ptr)) {
-        *APtr = getTombstoneMarker();
+        Bucket = getTombstoneMarker();
         ++NumTombstones;
         incrementEpoch();
         Removed = true;

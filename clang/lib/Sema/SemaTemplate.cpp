@@ -4083,7 +4083,6 @@ static bool CheckTemplateSpecializationScope(Sema &S, NamedDecl *Specialized,
 static TemplateSpecializationKind getTemplateSpecializationKind(Decl *D);
 
 static bool isTemplateArgumentTemplateParameter(const TemplateArgument &Arg,
-                                                NamedDecl *Param,
                                                 unsigned Depth,
                                                 unsigned Index) {
   switch (Arg.getKind()) {
@@ -4123,8 +4122,9 @@ static bool isTemplateArgumentTemplateParameter(const TemplateArgument &Arg,
 }
 
 static bool isSameAsPrimaryTemplate(TemplateParameterList *Params,
+                                    TemplateParameterList *SpecParams,
                                     ArrayRef<TemplateArgument> Args) {
-  if (Params->size() != Args.size())
+  if (Params->size() != Args.size() || Params->size() != SpecParams->size())
     return false;
 
   unsigned Depth = Params->getDepth();
@@ -4141,9 +4141,19 @@ static bool isSameAsPrimaryTemplate(TemplateParameterList *Params,
       Arg = Arg.pack_begin()->getPackExpansionPattern();
     }
 
-    if (!isTemplateArgumentTemplateParameter(Arg, Params->getParam(I), Depth,
-                                             I))
+    if (!isTemplateArgumentTemplateParameter(Arg, Depth, I))
       return false;
+
+    // For NTTPs further specialization is allowed via deduced types, so
+    // we need to make sure to only reject here if primary template and
+    // specialization use the same type for the NTTP.
+    if (auto *SpecNTTP =
+            dyn_cast<NonTypeTemplateParmDecl>(SpecParams->getParam(I))) {
+      auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Params->getParam(I));
+      if (!NTTP || NTTP->getType().getCanonicalType() !=
+                       SpecNTTP->getType().getCanonicalType())
+        return false;
+    }
   }
 
   return true;
@@ -4341,7 +4351,7 @@ DeclResult Sema::ActOnVarTemplateSpecialization(
     }
 
     if (isSameAsPrimaryTemplate(VarTemplate->getTemplateParameters(),
-                                CTAI.CanonicalConverted) &&
+                                TemplateParams, CTAI.CanonicalConverted) &&
         (!Context.getLangOpts().CPlusPlus20 ||
          !TemplateParams->hasAssociatedConstraints())) {
       // C++ [temp.class.spec]p9b3:

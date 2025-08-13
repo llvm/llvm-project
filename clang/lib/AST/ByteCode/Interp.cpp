@@ -885,11 +885,11 @@ bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!Ptr.block()->isAccessible()) {
     if (!CheckLive(S, OpPC, Ptr, AK_Assign))
       return false;
+    if (!CheckExtern(S, OpPC, Ptr))
+      return false;
     return CheckDummy(S, OpPC, Ptr.block(), AK_Assign);
   }
   if (!CheckLifetime(S, OpPC, Ptr.getLifetime(), AK_Assign))
-    return false;
-  if (!CheckExtern(S, OpPC, Ptr))
     return false;
   if (!CheckRange(S, OpPC, Ptr, AK_Assign))
     return false;

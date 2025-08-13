@@ -232,6 +232,69 @@ define i64 @load_i64(ptr %p) {
   ret i64 %res
 }
 
+define i64 @load_i64_align2(ptr %p) {
+; RV32I-LABEL: load_i64_align2:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lhu a1, 2(a0)
+; RV32I-NEXT:    lhu a2, 0(a0)
+; RV32I-NEXT:    lhu a3, 6(a0)
+; RV32I-NEXT:    lhu a4, 4(a0)
+; RV32I-NEXT:    slli a0, a1, 16
+; RV32I-NEXT:    or a0, a0, a2
+; RV32I-NEXT:    slli a1, a3, 16
+; RV32I-NEXT:    or a1, a1, a4
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: load_i64_align2:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lhu a1, 2(a0)
+; RV64I-NEXT:    lhu a2, 0(a0)
+; RV64I-NEXT:    lhu a3, 4(a0)
+; RV64I-NEXT:    lhu a0, 6(a0)
+; RV64I-NEXT:    slli a1, a1, 16
+; RV64I-NEXT:    or a1, a1, a2
+; RV64I-NEXT:    slli a3, a3, 32
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    or a0, a0, a3
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV32IZBKB-LABEL: load_i64_align2:
+; RV32IZBKB:       # %bb.0:
+; RV32IZBKB-NEXT:    lhu a1, 0(a0)
+; RV32IZBKB-NEXT:    lhu a2, 2(a0)
+; RV32IZBKB-NEXT:    lhu a3, 4(a0)
+; RV32IZBKB-NEXT:    lhu a4, 6(a0)
+; RV32IZBKB-NEXT:    pack a0, a1, a2
+; RV32IZBKB-NEXT:    pack a1, a3, a4
+; RV32IZBKB-NEXT:    ret
+;
+; RV64IZBKB-LABEL: load_i64_align2:
+; RV64IZBKB:       # %bb.0:
+; RV64IZBKB-NEXT:    lhu a1, 2(a0)
+; RV64IZBKB-NEXT:    lhu a2, 4(a0)
+; RV64IZBKB-NEXT:    lhu a3, 6(a0)
+; RV64IZBKB-NEXT:    lhu a0, 0(a0)
+; RV64IZBKB-NEXT:    packw a2, a2, a3
+; RV64IZBKB-NEXT:    packw a0, a0, a1
+; RV64IZBKB-NEXT:    pack a0, a0, a2
+; RV64IZBKB-NEXT:    ret
+;
+; RV32I-FAST-LABEL: load_i64_align2:
+; RV32I-FAST:       # %bb.0:
+; RV32I-FAST-NEXT:    lw a2, 0(a0)
+; RV32I-FAST-NEXT:    lw a1, 4(a0)
+; RV32I-FAST-NEXT:    mv a0, a2
+; RV32I-FAST-NEXT:    ret
+;
+; RV64I-FAST-LABEL: load_i64_align2:
+; RV64I-FAST:       # %bb.0:
+; RV64I-FAST-NEXT:    ld a0, 0(a0)
+; RV64I-FAST-NEXT:    ret
+  %res = load i64, ptr %p, align 2
+  ret i64 %res
+}
+
 define void @store_i8(ptr %p, i8 %v) {
 ; ALL-LABEL: store_i8:
 ; ALL:       # %bb.0:
@@ -569,8 +632,8 @@ define void @store_large_constant(ptr %x) {
 ;
 ; RV64I-FAST-LABEL: store_large_constant:
 ; RV64I-FAST:       # %bb.0:
-; RV64I-FAST-NEXT:    lui a1, %hi(.LCPI16_0)
-; RV64I-FAST-NEXT:    ld a1, %lo(.LCPI16_0)(a1)
+; RV64I-FAST-NEXT:    lui a1, %hi(.LCPI17_0)
+; RV64I-FAST-NEXT:    ld a1, %lo(.LCPI17_0)(a1)
 ; RV64I-FAST-NEXT:    sd a1, 0(a0)
 ; RV64I-FAST-NEXT:    ret
   store i64 18364758544493064720, ptr %x, align 1

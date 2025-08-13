@@ -25,11 +25,9 @@ define void @fadd(ptr noalias %a, ptr noalias %b, i64 %n) {
 ;
 ; ZVFBFMIN-LABEL: define void @fadd(
 ; ZVFBFMIN-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
-; ZVFBFMIN-NEXT:  [[ENTRY:.*]]:
+; ZVFBFMIN-NEXT:  [[ENTRY:.*:]]
 ; ZVFBFMIN-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; ZVFBFMIN:       [[VECTOR_PH]]:
-; ZVFBFMIN-NEXT:    [[TMP12:%.*]] = call i64 @llvm.vscale.i64()
-; ZVFBFMIN-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP12]], 8
 ; ZVFBFMIN-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; ZVFBFMIN:       [[VECTOR_BODY]]:
 ; ZVFBFMIN-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -49,7 +47,6 @@ define void @fadd(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; ZVFBFMIN:       [[MIDDLE_BLOCK]]:
 ; ZVFBFMIN-NEXT:    br label %[[EXIT:.*]]
 ; ZVFBFMIN:       [[SCALAR_PH]]:
-; ZVFBFMIN-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; ZVFBFMIN-NEXT:    br label %[[LOOP:.*]]
 ; ZVFBFMIN:       [[LOOP]]:
 ; ZVFBFMIN-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
@@ -133,11 +130,9 @@ define void @vfwmaccbf16.vv(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 
 ;
 ; ZVFBFMIN-LABEL: define void @vfwmaccbf16.vv(
 ; ZVFBFMIN-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; ZVFBFMIN-NEXT:  [[ENTRY:.*]]:
+; ZVFBFMIN-NEXT:  [[ENTRY:.*:]]
 ; ZVFBFMIN-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; ZVFBFMIN:       [[VECTOR_PH]]:
-; ZVFBFMIN-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; ZVFBFMIN-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; ZVFBFMIN-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; ZVFBFMIN:       [[VECTOR_BODY]]:
 ; ZVFBFMIN-NEXT:    [[TMP6:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -161,7 +156,6 @@ define void @vfwmaccbf16.vv(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 
 ; ZVFBFMIN:       [[MIDDLE_BLOCK]]:
 ; ZVFBFMIN-NEXT:    br label %[[EXIT:.*]]
 ; ZVFBFMIN:       [[SCALAR_PH]]:
-; ZVFBFMIN-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; ZVFBFMIN-NEXT:    br label %[[LOOP:.*]]
 ; ZVFBFMIN:       [[LOOP]]:
 ; ZVFBFMIN-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]

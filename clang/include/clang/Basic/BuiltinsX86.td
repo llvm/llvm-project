@@ -757,14 +757,6 @@ let Features = "f16c", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] i
   def vcvtps2ph256 : X86Builtin<"_Vector<8, short>(_Vector<8, float>, _Constant int)">;
 }
 
-let Features = "f16c", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
-  def vcvtph2ps : X86Builtin<"_Vector<4, float>(_Vector<8, short>)">;
-}
-
-let Features = "f16c", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
-  def vcvtph2ps256 : X86Builtin<"_Vector<8, float>(_Vector<8, short>)">;
-}
-
 let Features = "rdrnd", Attributes = [NoThrow] in {
   def rdrand16_step : X86Builtin<"unsigned int(unsigned short *)">;
   def rdrand32_step : X86Builtin<"unsigned int(unsigned int *)">;

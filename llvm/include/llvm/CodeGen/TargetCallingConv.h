@@ -205,6 +205,7 @@ namespace ISD {
     ArgFlagsTy Flags;
     MVT VT = MVT::Other;
     EVT ArgVT;
+    Type *OrigTy = nullptr;
     bool Used = false;
 
     /// Index original Function's argument.
@@ -218,9 +219,10 @@ namespace ISD {
     unsigned PartOffset;
 
     InputArg() = default;
-    InputArg(ArgFlagsTy flags, EVT vt, EVT argvt, bool used,
+    InputArg(ArgFlagsTy flags, EVT vt, EVT argvt, Type *OrigTy, bool used,
              unsigned origIdx, unsigned partOffs)
-      : Flags(flags), Used(used), OrigArgIndex(origIdx), PartOffset(partOffs) {
+        : Flags(flags), OrigTy(OrigTy), Used(used), OrigArgIndex(origIdx),
+          PartOffset(partOffs) {
       VT = vt.getSimpleVT();
       ArgVT = argvt;
     }
@@ -243,6 +245,7 @@ namespace ISD {
     ArgFlagsTy Flags;
     MVT VT;
     EVT ArgVT;
+    Type *OrigTy = nullptr;
 
     /// Index original Function's argument.
     unsigned OrigArgIndex;
@@ -253,9 +256,10 @@ namespace ISD {
     unsigned PartOffset;
 
     OutputArg() = default;
-    OutputArg(ArgFlagsTy flags, MVT vt, EVT argvt, unsigned origIdx,
-              unsigned partOffs)
-        : Flags(flags), OrigArgIndex(origIdx), PartOffset(partOffs) {
+    OutputArg(ArgFlagsTy flags, MVT vt, EVT argvt, Type *OrigTy,
+              unsigned origIdx, unsigned partOffs)
+        : Flags(flags), OrigTy(OrigTy), OrigArgIndex(origIdx),
+          PartOffset(partOffs) {
       VT = vt;
       ArgVT = argvt;
     }

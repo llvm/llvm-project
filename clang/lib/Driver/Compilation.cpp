@@ -236,11 +236,6 @@ static bool ActionFailed(const Action *A,
   return false;
 }
 
-static bool InputsOk(const Command &C,
-                     const FailingCommandList &FailingCommands) {
-  return !ActionFailed(&C.getSource(), FailingCommands);
-}
-
 namespace {
 class JobScheduler {
 public:
@@ -335,6 +330,7 @@ private:
   size_t NumJobs; // Number of parallel jobs to run
 };
 } // namespace
+
 void Compilation::ExecuteJobs(const JobList &Jobs,
                               FailingCommandList &FailingCommands,
                               bool LogOnly) const {
@@ -352,7 +348,7 @@ void Compilation::ExecuteJobs(const JobList &Jobs,
       continue;
     }
 
-    if (!InputsOk(*Next, FailingCommands)) {
+    if (ActionFailed(&Next->getSource(), FailingCommands)) {
       JS.setJobState(Next, JobScheduler::JS_FAIL);
       // Bail as soon as one command fails in cl driver mode.
       if (TheDriver.IsCLMode())
