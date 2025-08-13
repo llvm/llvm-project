@@ -2902,31 +2902,15 @@ std::optional<lldb::addr_t> SwiftLanguageRuntime::TrySkipVirtualParentProlog(
   addr_t pc_value = process.ReadPointerFromMemory(pc_location, error);
   if (error.Fail())
     return {};
-  // Clear any high order bits of this code address so that SetLoadAddress works
-  // properly.
-  pc_value = process.FixCodeAddress(pc_value);
 
-  Address pc;
-  Target &target = process.GetTarget();
-  pc.SetLoadAddress(pc_value, &target);
-  if (!pc.IsValid())
-    return {};
+  llvm::Expected<uint64_t> maybe_prologue_size =
+      FindPrologueSize(process, pc_value);
+  if (maybe_prologue_size)
+    return pc_value + *maybe_prologue_size;
 
-  SymbolContext sc;
-  bool sc_ok = pc.CalculateSymbolContext(&sc, eSymbolContextFunction |
-                                                  eSymbolContextSymbol);
-  if (!sc_ok || (!sc.symbol && !sc.function)) {
-    Log *log = GetLog(LLDBLog::Unwind);
-    LLDB_LOGF(log,
-              "SwiftLanguageRuntime::%s Failed to find a symbol context for "
-              "address 0x%" PRIx64,
-              __FUNCTION__, pc_value);
-    return {};
-  }
-
-  auto prologue_size = sc.symbol ? sc.symbol->GetPrologueByteSize()
-                                 : sc.function->GetPrologueByteSize();
-  return pc_value + prologue_size;
+  LLDB_LOG_ERROR(GetLog(LLDBLog::Unwind), maybe_prologue_size.takeError(),
+                 "{1}::{0}", __FUNCTION__);
+  return pc_value;
 }
 
 /// Attempts to read the memory location at `task_addr_location`, producing
@@ -3117,4 +3101,30 @@ llvm::Expected<std::optional<std::string>> GetTaskName(lldb::addr_t task_addr,
   return status.takeError();
 }
 
+llvm::Expected<uint64_t> FindPrologueSize(Process &process,
+                                          uint64_t load_address) {
+  Address addr;
+  Target &target = process.GetTarget();
+  addr.SetLoadAddress(process.FixCodeAddress(load_address), &target);
+  if (!addr.IsValid())
+    return llvm::createStringError(
+        llvm::formatv("Invalid load address for {0:x}", load_address));
+
+  SymbolContext sc;
+  bool sc_ok = addr.CalculateSymbolContext(&sc, eSymbolContextFunction |
+                                                    eSymbolContextSymbol);
+  if (!sc_ok || (!sc.symbol && !sc.function))
+    return llvm::createStringError(llvm::formatv(
+        "Failed to find a symbol context for address {1:x}", load_address));
+
+  uint64_t prologue_size = sc.symbol ? sc.symbol->GetPrologueByteSize()
+                                     : sc.function->GetPrologueByteSize();
+
+  if (prologue_size == 0)
+    return llvm::createStringError(llvm::formatv(
+        "Prologue size is 0 for function {0}",
+        sc.GetFunctionName(Mangled::NamePreference::ePreferMangled)));
+
+  return prologue_size;
+}
 } // namespace lldb_private
