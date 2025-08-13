@@ -6602,8 +6602,7 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
     if (Coeffs != Coeffs0)
       return false;
 
-          UpdateSortedIndices(SortedIndicesForOffset, IndicesInAllPointerOps,
-                              I);
+    UpdateSortedIndices(SortedIndicesForOffset, IndicesInAllPointerOps, I);
   }
 
   SortedIndices.clear();
