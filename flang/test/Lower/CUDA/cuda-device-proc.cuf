@@ -156,6 +156,8 @@ end
 ! CHECK: %{{.*}} = fir.call @__nv_powf(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32, f32) -> f32
 ! CHECK: %{{.*}} = fir.call @__nv_dsqrt_rd(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
 ! CHECK: %{{.*}} = fir.call @__nv_dsqrt_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
+! CHECK: %{{.*}} = fir.call @__nv_float2half_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f16
+! CHECK: %{{.*}} = fir.call @__nv_half2float(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f16) -> f32
 
 subroutine host1()
   integer, device :: a(32)
