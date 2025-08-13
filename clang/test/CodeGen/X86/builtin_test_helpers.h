@@ -28,8 +28,8 @@ constexpr bool match_v4hu(__m64 _v, unsigned short a, unsigned short b, unsigned
   return v[0] == a && v[1] == b && v[2] == c && v[3] == d;
 }
 
-constexpr bool match_v8qi(__m64 _v, char a, char b, char c, char d, char e, char f, char g, char h) {
-  __v8qi v = (__v8qi)_v;
+constexpr bool match_v8qi(__m64 _v, signed char a, signed char b, signed char c, signed char d, signed char e, signed char f, signed char g, signed char h) {
+  __v8qs v = (__v8qs)_v;
   return v[0] == a && v[1] == b && v[2] == c && v[3] == d && v[4] == e && v[5] == f && v[6] == g && v[7] == h;
 }
 
@@ -78,8 +78,8 @@ constexpr bool match_v8hu(__m128i _v, unsigned short a, unsigned short b, unsign
   return v[0] == a && v[1] == b && v[2] == c && v[3] == d && v[4] == e && v[5] == f && v[6] == g && v[7] == h;
 }
 
-constexpr bool match_v16qi(__m128i _v, char a, char b, char c, char d, char e, char f, char g, char h, char i, char j, char k, char l, char m, char n, char o, char p) {
-  __v16qi v = (__v16qi)_v;
+constexpr bool match_v16qi(__m128i _v, signed char a, signed char b, signed char c, signed char d, signed char e, signed char f, signed char g, signed char h, signed char i, signed char j, signed char k, signed char l, signed char m, signed char n, signed char o, signed char p) {
+  __v16qs v = (__v16qs)_v;
   return v[0] == a && v[1] == b && v[2] == c && v[3] == d && v[4] == e && v[5] == f && v[6] == g && v[7] == h && v[8] == i && v[9] == j && v[10] == k && v[11] == l && v[12] == m && v[13] == n && v[14] == o && v[15] == p;
 }
 
@@ -133,11 +133,11 @@ constexpr bool match_v16hu(__m256i _v, unsigned short a, unsigned short b, unsig
   return v[0] == a && v[1] == b && v[2] == c && v[3] == d && v[4] == e && v[5] == f && v[6] == g && v[7] == h && v[8] == i && v[9] == j && v[10] == k && v[11] == l && v[12] == m && v[13] == n && v[14] == o && v[15] == p;
 }
 
-constexpr bool match_v32qi(__m256i _v, char __b00, char __b01, char __b02, char __b03, char __b04, char __b05, char __b06, char __b07,
-                                       char __b08, char __b09, char __b10, char __b11, char __b12, char __b13, char __b14, char __b15,
-                                       char __b16, char __b17, char __b18, char __b19, char __b20, char __b21, char __b22, char __b23,
-                                       char __b24, char __b25, char __b26, char __b27, char __b28, char __b29, char __b30, char __b31) {
-  __v32qi v = (__v32qi)_v;
+constexpr bool match_v32qi(__m256i _v, signed char __b00, signed char __b01, signed char __b02, signed char __b03, signed char __b04, signed char __b05, signed char __b06, signed char __b07,
+                                       signed char __b08, signed char __b09, signed char __b10, signed char __b11, signed char __b12, signed char __b13, signed char __b14, signed char __b15,
+                                       signed char __b16, signed char __b17, signed char __b18, signed char __b19, signed char __b20, signed char __b21, signed char __b22, signed char __b23,
+                                       signed char __b24, signed char __b25, signed char __b26, signed char __b27, signed char __b28, signed char __b29, signed char __b30, signed char __b31) {
+  __v32qs v = (__v32qs)_v;
   return v[ 0] == __b00 && v[ 1] == __b01 && v[ 2] == __b02 && v[ 3] == __b03 && v[ 4] == __b04 && v[ 5] == __b05 && v[ 6] == __b06 && v[ 7] ==  __b07 &&
          v[ 8] == __b08 && v[ 9] == __b09 && v[10] == __b10 && v[11] == __b11 && v[12] == __b12 && v[13] == __b13 && v[14] == __b14 && v[15] ==  __b15 &&
          v[16] == __b16 && v[17] == __b17 && v[18] == __b18 && v[19] == __b19 && v[20] == __b20 && v[21] == __b21 && v[22] == __b22 && v[23] ==  __b23 &&
@@ -221,15 +221,15 @@ constexpr bool match_v32hu(__m512i _v, unsigned short __e00, unsigned short __e0
          v[24] == __e24 && v[25] == __e25 && v[26] == __e26 && v[27] == __e27 && v[28] == __e28 && v[29] == __e29 && v[30] == __e30 && v[31] ==  __e31;
 }
 
-constexpr bool match_v64qi(__m512i _v, char __e00, char __e01, char __e02, char __e03, char __e04, char __e05, char __e06, char __e07,
-                                       char __e08, char __e09, char __e10, char __e11, char __e12, char __e13, char __e14, char __e15,
-                                       char __e16, char __e17, char __e18, char __e19, char __e20, char __e21, char __e22, char __e23,
-                                       char __e24, char __e25, char __e26, char __e27, char __e28, char __e29, char __e30, char __e31,
-                                       char __e32, char __e33, char __e34, char __e35, char __e36, char __e37, char __e38, char __e39,
-                                       char __e40, char __e41, char __e42, char __e43, char __e44, char __e45, char __e46, char __e47,
-                                       char __e48, char __e49, char __e50, char __e51, char __e52, char __e53, char __e54, char __e55,
-                                       char __e56, char __e57, char __e58, char __e59, char __e60, char __e61, char __e62, char __e63) {
-  __v64qi v = (__v64qi)_v;
+constexpr bool match_v64qi(__m512i _v, signed char __e00, signed char __e01, signed char __e02, signed char __e03, signed char __e04, signed char __e05, signed char __e06, signed char __e07,
+                                       signed char __e08, signed char __e09, signed char __e10, signed char __e11, signed char __e12, signed char __e13, signed char __e14, signed char __e15,
+                                       signed char __e16, signed char __e17, signed char __e18, signed char __e19, signed char __e20, signed char __e21, signed char __e22, signed char __e23,
+                                       signed char __e24, signed char __e25, signed char __e26, signed char __e27, signed char __e28, signed char __e29, signed char __e30, signed char __e31,
+                                       signed char __e32, signed char __e33, signed char __e34, signed char __e35, signed char __e36, signed char __e37, signed char __e38, signed char __e39,
+                                       signed char __e40, signed char __e41, signed char __e42, signed char __e43, signed char __e44, signed char __e45, signed char __e46, signed char __e47,
+                                       signed char __e48, signed char __e49, signed char __e50, signed char __e51, signed char __e52, signed char __e53, signed char __e54, signed char __e55,
+                                       signed char __e56, signed char __e57, signed char __e58, signed char __e59, signed char __e60, signed char __e61, signed char __e62, signed char __e63) {
+  __v64qs v = (__v64qs)_v;
   return v[ 0] == __e00 && v[ 1] == __e01 && v[ 2] == __e02 && v[ 3] == __e03 && v[ 4] == __e04 && v[ 5] == __e05 && v[ 6] == __e06 && v[ 7] == __e07 &&
          v[ 8] == __e08 && v[ 9] == __e09 && v[10] == __e10 && v[11] == __e11 && v[12] == __e12 && v[13] == __e13 && v[14] == __e14 && v[15] == __e15 &&
          v[16] == __e16 && v[17] == __e17 && v[18] == __e18 && v[19] == __e19 && v[20] == __e20 && v[21] == __e21 && v[22] == __e22 && v[23] == __e23 &&
