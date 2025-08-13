@@ -449,7 +449,6 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
       // TODO: add support for OutOfBound access
       if (readOp.hasOutOfBoundsDim())
         return failure();
-      // lower TransferReadOp to scattered Loadop
       return lowerToScatteredLoadOp(readOp, rewriter);
     }
 
@@ -521,7 +520,6 @@ struct TransferWriteLowering
       // TODO: add support for OutOfBound access
       if (writeOp.hasOutOfBoundsDim())
         return failure();
-      // lower TransferWriteOp to scattered StoreOp
       return lowerToScatteredStoreOp(writeOp, rewriter);
     }
 
