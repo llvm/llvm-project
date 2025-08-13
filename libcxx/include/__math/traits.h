@@ -25,33 +25,26 @@ namespace __math {
 
 // signbit
 
-// TODO(LLVM 22): Remove conditional once support for Clang 19 is dropped.
-#if defined(_LIBCPP_COMPILER_GCC) || __has_constexpr_builtin(__builtin_signbit)
-#  define _LIBCPP_SIGNBIT_CONSTEXPR _LIBCPP_CONSTEXPR_SINCE_CXX23
-#else
-#  define _LIBCPP_SIGNBIT_CONSTEXPR
-#endif
-
 // The universal C runtime (UCRT) in the WinSDK provides floating point overloads
 // for std::signbit(). By defining our overloads as templates, we can work around
 // this issue as templates are less preferred than non-template functions.
 template <class = void>
-[[__nodiscard__]] inline _LIBCPP_SIGNBIT_CONSTEXPR _LIBCPP_HIDE_FROM_ABI bool signbit(float __x) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool signbit(float __x) _NOEXCEPT {
   return __builtin_signbit(__x);
 }
 
 template <class = void>
-[[__nodiscard__]] inline _LIBCPP_SIGNBIT_CONSTEXPR _LIBCPP_HIDE_FROM_ABI bool signbit(double __x) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool signbit(double __x) _NOEXCEPT {
   return __builtin_signbit(__x);
 }
 
 template <class = void>
-[[__nodiscard__]] inline _LIBCPP_SIGNBIT_CONSTEXPR _LIBCPP_HIDE_FROM_ABI bool signbit(long double __x) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool signbit(long double __x) _NOEXCEPT {
   return __builtin_signbit(__x);
 }
 
 template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
-[[__nodiscard__]] inline _LIBCPP_SIGNBIT_CONSTEXPR _LIBCPP_HIDE_FROM_ABI bool signbit(_A1 __x) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool signbit(_A1 __x) _NOEXCEPT {
   return __x < 0;
 }
 

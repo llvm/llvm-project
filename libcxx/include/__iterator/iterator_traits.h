@@ -15,6 +15,7 @@
 #include <__concepts/convertible_to.h>
 #include <__concepts/copyable.h>
 #include <__concepts/equality_comparable.h>
+#include <__concepts/referenceable.h>
 #include <__concepts/same_as.h>
 #include <__concepts/totally_ordered.h>
 #include <__config>
@@ -32,7 +33,6 @@
 #include <__type_traits/is_object.h>
 #include <__type_traits/is_primary_template.h>
 #include <__type_traits/is_reference.h>
-#include <__type_traits/is_referenceable.h>
 #include <__type_traits/nat.h>
 #include <__type_traits/remove_const.h>
 #include <__type_traits/remove_cv.h>
