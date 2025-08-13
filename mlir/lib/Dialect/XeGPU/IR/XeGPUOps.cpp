@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/LLVMIR/XeVMDialect.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
@@ -28,6 +29,8 @@ bool isSharedMemory(const MemRefType &memrefTy) {
     return intAttr.getInt() == 3;
   if (auto memrefSpace = llvm::dyn_cast<MemorySpaceAttr>(attr))
     return memrefSpace.getValue() == MemorySpace::SLM;
+  if (auto xevmSpace = llvm::dyn_cast<xevm::AddrSpaceAttr>(attr))
+    return xevmSpace.getValue() == xevm::AddrSpace::SHARED;
   return gpu::GPUDialect::isWorkgroupMemoryAddressSpace(attr);
 }
 
