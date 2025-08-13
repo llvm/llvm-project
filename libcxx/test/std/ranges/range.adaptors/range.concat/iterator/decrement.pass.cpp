@@ -13,27 +13,37 @@
 #include <array>
 #include <cassert>
 #include "test_macros.h"
-#include "../types.h"
+#include "../../range_adaptor_types.h"
 
-constexpr void test() {
+template <class Iter>
+concept canDecrement = requires(Iter it) { --it; } || requires(Iter it) { it--; };
+
+struct NonBidi : IntBufferView {
+  using IntBufferView::IntBufferView;
+  using iterator = forward_iterator<int*>;
+  constexpr iterator begin() const { return iterator(buffer_); }
+  constexpr sentinel_wrapper<iterator> end() const { return sentinel_wrapper<iterator>(iterator(buffer_ + size_)); }
+};
+
+constexpr bool test() {
+  std::array<int, 4> a{1, 2, 3, 4};
+  std::array<int, 4> b{5, 6, 7, 8};
+
   // Test with a single view
   {
-    constexpr static std::array<int, 5> array{0, 1, 2, 3, 4};
-    constexpr static std::ranges::concat_view view(std::views::all(array));
+    std::ranges::concat_view view(a);
     auto it = std::ranges::next(view.begin(), view.end());
     assert(it == view.end());
 
     auto& result = --it;
     ASSERT_SAME_TYPE(decltype(result)&, decltype(--it));
     assert(&result == &it);
-    assert(result == view.begin() + 4);
+    assert(result == view.begin() + 3);
   }
 
   // Test with more than one view
   {
-    constexpr static std::array<int, 3> array{0, 1, 2};
-    constexpr static std::array<int, 3> array1{3, 4, 5};
-    constexpr std::ranges::concat_view view(std::views::all(array), std::views::all(array1));
+    std::ranges::concat_view view(a, b);
     auto it = std::ranges::next(view.begin(), view.end());
     assert(it == view.end());
 
@@ -41,36 +51,34 @@ constexpr void test() {
     assert(&result == &it);
 
     --it;
-    assert(*it == 4);
-    assert(it == view.begin() + 4);
+    assert(*it == 7);
+    assert(it == view.begin() + 6);
   }
 
   // Test going forward and then backward on the same iterator
   {
-    constexpr static std::array<int, 5> array{0, 1, 2, 3, 4};
-    constexpr static std::ranges::concat_view view(std::views::all(array));
+    std::ranges::concat_view view(a, b);
     auto it = view.begin();
     ++it;
     --it;
-    assert(*it == array[0]);
+    assert(*it == a[0]);
     ++it;
     ++it;
     --it;
-    assert(*it == array[1]);
+    assert(*it == a[1]);
     ++it;
     ++it;
     --it;
-    assert(*it == array[2]);
+    assert(*it == a[2]);
     ++it;
     ++it;
     --it;
-    assert(*it == array[3]);
+    assert(*it == a[3]);
   }
 
   // Test post-decrement
   {
-    std::array<int, 5> array{0, 1, 2, 3, 4};
-    std::ranges::concat_view view(std::views::all(array));
+    std::ranges::concat_view view(a, b);
     auto it = std::ranges::next(view.begin(), view.end());
     assert(it == view.end()); // test the test
     auto result = it--;
@@ -78,9 +86,43 @@ constexpr void test() {
     assert(result == view.end());
     assert(it == (result - 1));
   }
+
+  // bidirectional
+  {
+    int buffer[2] = {1, 2};
+
+    std::ranges::concat_view v(BidiCommonView{buffer}, std::views::iota(0, 5));
+    auto it    = v.begin();
+    using Iter = decltype(it);
+
+    ++it;
+    ++it;
+
+    static_assert(std::is_same_v<decltype(--it), Iter&>);
+    auto& it_ref = --it;
+    assert(&it_ref == &it);
+
+    assert(it == ++v.begin());
+
+    static_assert(std::is_same_v<decltype(it--), Iter>);
+    auto tmp = it--;
+    assert(it == v.begin());
+    assert(tmp == ++v.begin());
+  }
+
+  // non bidirectional
+  {
+    int buffer[3] = {4, 5, 6};
+    std::ranges::zip_view v(a, NonBidi{buffer});
+    using Iter = std::ranges::iterator_t<decltype(v)>;
+    static_assert(!canDecrement<Iter>);
+  }
+
+  return true;
 }
 
 int main(int, char**) {
   test();
+  static_assert(test());
   return 0;
 }
