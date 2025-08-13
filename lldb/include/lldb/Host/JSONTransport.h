@@ -139,9 +139,8 @@ protected:
     std::string output = Encode(message);
     size_t bytes_written = output.size();
     Status status = m_out->Write(output.data(), bytes_written);
-    if (status.Fail()) {
-      this->Logv("writing failed: s{0}", status.AsCString());
-    }
+    if (status.Fail())
+      this->Logv("writing failed: {0}", status.AsCString());
   }
 
   llvm::SmallString<kReadBufferSize> m_buffer;
@@ -170,8 +169,8 @@ private:
         return;
       }
 
-      for (const auto &raw_message : *raw_messages) {
-        auto message =
+      for (const std::string &raw_message : *raw_messages) {
+        llvm::Expected<typename Transport<Req, Resp, Evt>::Message> message =
             llvm::json::parse<typename Transport<Req, Resp, Evt>::Message>(
                 raw_message);
         if (!message) {
@@ -182,13 +181,20 @@ private:
 
         if (Evt *evt = std::get_if<Evt>(&*message)) {
           handler.OnEvent(*evt);
-        } else if (Req *req = std::get_if<Req>(&*message)) {
-          handler.OnRequest(*req);
-        } else if (Resp *resp = std::get_if<Resp>(&*message)) {
-          handler.OnResponse(*resp);
-        } else {
-          llvm_unreachable("unknown message type");
+          continue;
         }
+
+        if (Req *req = std::get_if<Req>(&*message)) {
+          handler.OnRequest(*req);
+          continue;
+        }
+
+        if (Resp *resp = std::get_if<Resp>(&*message)) {
+          handler.OnResponse(*resp);
+          continue;
+        }
+
+        llvm_unreachable("unknown message type");
       }
     }
 
@@ -235,7 +241,8 @@ protected:
       auto [headers, rest] = buffer.split(kEndOfHeader);
       size_t content_length = 0;
       // HTTP Headers are formatted like `<field-name> ':' [<field-value>]`.
-      for (const auto &header : llvm::split(headers, kHeaderSeparator)) {
+      for (const llvm::StringRef &header :
+           llvm::split(headers, kHeaderSeparator)) {
         auto [key, value] = header.split(kHeaderFieldSeparator);
         // 'Content-Length' is the only meaningful key at the moment. Others are
         // ignored.

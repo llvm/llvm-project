@@ -39,6 +39,7 @@
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Threading.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <condition_variable>
 #include <cstdio>
@@ -349,8 +350,8 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
     for (auto [loop, dap] : dap_sessions) {
       if (llvm::Error error = dap->Disconnect()) {
         client_failed = true;
-        llvm::errs() << "DAP client disconnected failed: "
-                     << llvm::toString(std::move(error)) << "\n";
+        llvm::WithColor::error() << "DAP client disconnected failed: "
+                                 << llvm::toString(std::move(error)) << "\n";
       }
       loop->AddPendingCallback(
           [](MainLoopBase &loop) { loop.RequestTermination(); });

@@ -118,7 +118,6 @@ struct DAP final : private DAPTransport::MessageHandler {
   /// The focused thread for this DAP session.
   lldb::tid_t focus_tid = LLDB_INVALID_THREAD_ID;
 
-  bool disconnecting = false;
   llvm::once_flag terminated_event_flag;
   bool stop_at_entry = false;
   bool is_attach = false;
@@ -467,6 +466,7 @@ private:
   std::deque<protocol::Message> m_queue;
   std::mutex m_queue_mutex;
   std::condition_variable m_queue_cv;
+  bool m_disconnecting = false;
 
   // Loop for managing reading from the client.
   lldb_private::MainLoop &m_loop;

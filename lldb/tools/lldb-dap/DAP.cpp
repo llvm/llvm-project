@@ -268,24 +268,33 @@ void DAP::SendJSON(const llvm::json::Value &json) {
 void DAP::Send(const Message &message) {
   if (const protocol::Event *event = std::get_if<protocol::Event>(&message)) {
     transport.Event(*event);
-  } else if (const Request *req = std::get_if<Request>(&message)) {
+    return;
+  }
+
+  if (const Request *req = std::get_if<Request>(&message)) {
     transport.Request(*req);
-  } else if (const Response *resp = std::get_if<Response>(&message)) {
+    return;
+  }
+
+  if (const Response *resp = std::get_if<Response>(&message)) {
     // FIXME: After all the requests have migrated from LegacyRequestHandler >
     // RequestHandler<> this should be handled in RequestHandler<>::operator().
-    if (debugger.InterruptRequested())
-      // If the debugger was interrupted, convert this response into a
-      // 'cancelled' response because we might have a partial result.
+
+    // If the debugger was interrupted, convert this response into a
+    // 'cancelled' response because we might have a partial result.
+    if (debugger.InterruptRequested()) {
       transport.Response(Response{/*request_seq=*/resp->request_seq,
                                   /*command=*/resp->command,
                                   /*success=*/false,
                                   /*message=*/eResponseMessageCancelled,
                                   /*body=*/std::nullopt});
-    else
+    } else {
       transport.Response(*resp);
-  } else {
-    llvm_unreachable("Unexpected message type");
+    }
+    return;
   }
+
+  llvm_unreachable("Unexpected message type");
 }
 
 // "OutputEvent": {
@@ -916,7 +925,8 @@ llvm::Error DAP::Disconnect(bool terminateDebuggee) {
 
   SendTerminatedEvent();
 
-  disconnecting = true;
+  std::lock_guard<std::mutex> guard(m_queue_mutex);
+  m_disconnecting = true;
 
   return ToError(error);
 }
@@ -952,7 +962,7 @@ void DAP::OnEvent(const protocol::Event &event) {
 
 void DAP::OnRequest(const protocol::Request &request) {
   if (request.command == "disconnect")
-    disconnecting = true;
+    m_disconnecting = true;
 
   const std::optional<CancelArguments> cancel_args =
       getArgumentsIfRequest<CancelArguments>(request, "cancel");
@@ -990,12 +1000,12 @@ void DAP::OnResponse(const protocol::Response &response) {
 
 void DAP::TransportHandler(llvm::Error *error) {
   llvm::ErrorAsOutParameter ErrAsOutParam(*error);
-  auto cleanup = llvm::make_scope_exit([&]() {
-    // Ensure we're marked as disconnecting when the reader exits.
-    disconnecting = true;
-    m_queue_cv.notify_all();
-  });
   *error = transport.Run(m_loop, *this);
+
+  std::lock_guard<std::mutex> guard(m_queue_mutex);
+  // Ensure we're marked as disconnecting when the reader exits.
+  m_disconnecting = true;
+  m_queue_cv.notify_all();
 }
 
 llvm::Error DAP::Loop() {
@@ -1010,9 +1020,9 @@ llvm::Error DAP::Loop() {
 
   while (true) {
     std::unique_lock<std::mutex> lock(m_queue_mutex);
-    m_queue_cv.wait(lock, [&] { return disconnecting || !m_queue.empty(); });
+    m_queue_cv.wait(lock, [&] { return m_disconnecting || !m_queue.empty(); });
 
-    if (disconnecting && m_queue.empty())
+    if (m_disconnecting && m_queue.empty())
       break;
 
     Message next = m_queue.front();
