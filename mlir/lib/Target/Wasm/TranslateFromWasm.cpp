@@ -1,4 +1,4 @@
-//===- TranslateFromWasm.cpp - Translating to C++ calls -------------------===//
+//===- TranslateFromWasm.cpp - Translating to WasmSSA dialect -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -95,24 +95,9 @@ constexpr bool sectionShouldBeUnique(WasmSectionType secType) {
 template <std::byte... Bytes>
 struct ByteSequence {};
 
-template <std::byte... Bytes1, std::byte... Bytes2>
-constexpr ByteSequence<Bytes1..., Bytes2...>
-operator+(ByteSequence<Bytes1...>, ByteSequence<Bytes2...>) {
-  return {};
-}
-
 /// Template class for representing a byte sequence of only one byte
 template <std::byte Byte>
 struct UniqueByte : ByteSequence<Byte> {};
-
-template <typename T, T... Values>
-constexpr ByteSequence<std::byte(Values)...>
-byteSeqFromIntSeq(std::integer_sequence<T, Values...>) {
-  return {};
-}
-
-constexpr auto allOpCodes =
-    byteSeqFromIntSeq(std::make_integer_sequence<int, 256>());
 
 constexpr ByteSequence<
     WasmBinaryEncoding::Type::i32, WasmBinaryEncoding::Type::i64,
