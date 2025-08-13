@@ -9236,8 +9236,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Adjust the stack pointer for the new arguments... and mark ZA uses.
   // These operations are automatically eliminated by the prolog/epilog pass
-  assert((!IsSibCall || !ZAMarkerNode.has_value()) &&
-         "ZA markers require CALLSEQ_START");
+  assert((!IsSibCall || !ZAMarkerNode) && "ZA markers require CALLSEQ_START");
   if (!IsSibCall) {
     Chain = DAG.getCALLSEQ_START(Chain, IsTailCall ? 0 : NumBytes, 0, DL);
     if (ZAMarkerNode) {

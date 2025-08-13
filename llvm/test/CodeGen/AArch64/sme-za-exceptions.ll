@@ -206,8 +206,8 @@ after_catch:
 ; }
 ;
 ; In this example we don't setup a lazy save before shared_za_call(), however,
-; we still enter the catch block in a ZA off state. This leads to use emitting
-; a restore of a uninitialized save buffer in the catch block. This is not ideal
+; we still enter the catch block in a ZA off state. This leads to us emitting a
+; restore of a uninitialized save buffer in the catch block. This is not ideal
 ; but is valid in the SME ABI. Ideally, we would omit the save buffer and
 ; restore and simply set ZA to "on" in the catch block.
 

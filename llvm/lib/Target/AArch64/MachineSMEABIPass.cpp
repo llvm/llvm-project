@@ -333,8 +333,6 @@ void MachineSMEABI::insertStateChanges() {
     BlockInfo &Block = State.Blocks[MBB.getNumber()];
     ZAState InState =
         State.BundleStates[Bundles->getBundle(MBB.getNumber(), /*Out=*/false)];
-    ZAState OutState =
-        State.BundleStates[Bundles->getBundle(MBB.getNumber(), /*Out=*/true)];
 
     ZAState CurrentState = Block.FixedEntryState;
     if (CurrentState == ZAState::ANY)
@@ -350,6 +348,8 @@ void MachineSMEABI::insertStateChanges() {
     if (MBB.succ_empty())
       continue;
 
+    ZAState OutState =
+        State.BundleStates[Bundles->getBundle(MBB.getNumber(), /*Out=*/true)];
     if (CurrentState != OutState)
       emitStateChange(MBB, MBB.getFirstTerminator(), CurrentState, OutState,
                       Block.PhysLiveRegsAtExit);
@@ -397,8 +397,7 @@ PhysRegSave MachineSMEABI::createPhysRegSave(LiveRegs PhysLiveRegs,
   PhysRegSave RegSave{PhysLiveRegs};
   if (PhysLiveRegs & LiveRegs::NZCV) {
     RegSave.StatusFlags = MRI->createVirtualRegister(&AArch64::GPR64RegClass);
-    BuildMI(MBB, MBBI, DL, TII->get(AArch64::MRS))
-        .addReg(RegSave.StatusFlags, RegState::Define)
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::MRS), RegSave.StatusFlags)
         .addImm(AArch64SysReg::NZCV)
         .addReg(AArch64::NZCV, RegState::Implicit);
   }
@@ -445,8 +444,7 @@ void MachineSMEABI::emitRestoreLazySave(MachineBasicBlock &MBB,
       .addImm(AArch64SVCR::SVCRZA)
       .addImm(1);
   // Get current TPIDR2_EL0.
-  BuildMI(MBB, MBBI, DL, TII->get(AArch64::MRS))
-      .addReg(TPIDR2EL0, RegState::Define)
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::MRS), TPIDR2EL0)
       .addImm(AArch64SysReg::TPIDR2_EL0);
   // Get pointer to TPIDR2 block.
   BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADDXri), TPIDR2)
@@ -472,7 +470,6 @@ void MachineSMEABI::emitZAOff(MachineBasicBlock &MBB,
                               bool ClearTPIDR2) {
   DebugLoc DL = getDebugLoc(MBB, MBBI);
 
-  // Clear TPIDR2.
   if (ClearTPIDR2)
     BuildMI(MBB, MBBI, DL, TII->get(AArch64::MSR))
         .addImm(AArch64SysReg::TPIDR2_EL0)
@@ -536,9 +533,10 @@ void MachineSMEABI::emitAllocateLazySaveBuffer(
   }
 }
 
+static constexpr unsigned ZERO_ALL_ZA_MASK = 0b11111111;
 static void emitZeroZA(const TargetInstrInfo &TII, DebugLoc DL,
                        MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                       unsigned Mask) {
+                       unsigned Mask = ZERO_ALL_ZA_MASK) {
   MachineInstrBuilder MIB =
       BuildMI(MBB, MBBI, DL, TII.get(AArch64::ZERO_M)).addImm(Mask);
   for (unsigned I = 0; I < 8; I++) {
@@ -569,9 +567,9 @@ void MachineSMEABI::emitNewZAPrologue(MachineBasicBlock &MBB,
   BuildMI(MBB, MBBI, DL, TII->get(AArch64::MSRpstatesvcrImm1))
       .addImm(AArch64SVCR::SVCRZA)
       .addImm(1);
-  // Zero ZA. Note: ZA state may new be needed for new ZT0 functions.
+  // NOTE: Functions that only use ZT0 don't need to zero ZA.
   if (MF->getInfo<AArch64FunctionInfo>()->getSMEFnAttrs().hasZAState())
-    emitZeroZA(*TII, DL, MBB, MBBI, /*Mask=*/0b11111111);
+    emitZeroZA(*TII, DL, MBB, MBBI);
 }
 
 void MachineSMEABI::emitStateChange(MachineBasicBlock &MBB,
@@ -583,9 +581,14 @@ void MachineSMEABI::emitStateChange(MachineBasicBlock &MBB,
   if (From == ZAState::ANY || To == ZAState::ANY)
     return;
 
+  // If we're exiting from the CALLER_DORMANT state that means this new ZA
+  // function did not touch ZA (so ZA was never turned on).
+  if (From == ZAState::CALLER_DORMANT && To == ZAState::OFF)
+    return;
+
   // TODO: Avoid setting up the save buffer if there's no transition to
   // LOCAL_SAVED.
-  if (From == ZAState::CALLER_DORMANT && To != ZAState::OFF) {
+  if (From == ZAState::CALLER_DORMANT) {
     assert(MBB.getParent()
                ->getInfo<AArch64FunctionInfo>()
                ->getSMEFnAttrs()
@@ -598,7 +601,7 @@ void MachineSMEABI::emitStateChange(MachineBasicBlock &MBB,
       return; // Nothing more to do (ZA is active after the prologue).
 
     // Note: "emitNewZAPrologue" zeros ZA, so we may need to setup a lazy save
-    // if "To" is "ZAState::LOCAL_SAVED". If may be possible to improve this
+    // if "To" is "ZAState::LOCAL_SAVED". It may be possible to improve this
     // case by changing the placement of the zero instruction.
     From = ZAState::ACTIVE;
   }
@@ -608,10 +611,9 @@ void MachineSMEABI::emitStateChange(MachineBasicBlock &MBB,
   else if (From == ZAState::LOCAL_SAVED && To == ZAState::ACTIVE)
     emitRestoreLazySave(MBB, InsertPt, PhysLiveRegs);
   else if (To == ZAState::OFF) {
-    // If we're exiting from the CALLER_DORMANT state that means this new ZA
-    // function did not touch ZA (so ZA was never turned on).
-    if (From != ZAState::CALLER_DORMANT)
-      emitZAOff(MBB, InsertPt, /*ClearTPIDR2=*/From == ZAState::LOCAL_SAVED);
+    assert(From != ZAState::CALLER_DORMANT &&
+           "CALLER_DORMANT to OFF should have already been handled");
+    emitZAOff(MBB, InsertPt, /*ClearTPIDR2=*/From == ZAState::LOCAL_SAVED);
   } else {
     dbgs() << "Error: Transition from " << getZAStateString(From) << " to "
            << getZAStateString(To) << '\n';
