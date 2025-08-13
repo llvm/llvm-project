@@ -130,6 +130,9 @@ void SIPreAllocateWWMRegs::rewriteRegs(MachineFunction &MF) {
         if (VirtReg.isPhysical())
           continue;
 
+        if (!VirtReg.isValid())
+          continue;
+
         if (!VRM->hasPhys(VirtReg))
           continue;
 

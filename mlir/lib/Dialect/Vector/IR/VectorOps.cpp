@@ -2402,6 +2402,16 @@ LogicalResult ToElementsOp::fold(FoldAdaptor adaptor,
   return foldToElementsFromElements(*this, results);
 }
 
+LogicalResult
+ToElementsOp::inferReturnTypes(MLIRContext *ctx, std::optional<Location> loc,
+                               ToElementsOp::Adaptor adaptor,
+                               SmallVectorImpl<Type> &inferredReturnTypes) {
+  auto vecType = cast<VectorType>(adaptor.getSource().getType());
+  Type elType = vecType.getElementType();
+  inferredReturnTypes.append(vecType.getNumElements(), elType);
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // FromElementsOp
 //===----------------------------------------------------------------------===//

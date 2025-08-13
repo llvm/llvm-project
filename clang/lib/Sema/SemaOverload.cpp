@@ -6275,7 +6275,9 @@ static ExprResult BuildConvertedConstantExpression(Sema &S, Expr *From,
                                                    QualType T, CCEKind CCE,
                                                    NamedDecl *Dest,
                                                    APValue &PreNarrowingValue) {
-  assert((S.getLangOpts().CPlusPlus11 || CCE == CCEKind::TempArgStrict) &&
+  [[maybe_unused]] bool isCCEAllowedPreCXX11 =
+      (CCE == CCEKind::TempArgStrict || CCE == CCEKind::ExplicitBool);
+  assert((S.getLangOpts().CPlusPlus11 || isCCEAllowedPreCXX11) &&
          "converted constant expression outside C++11 or TTP matching");
 
   if (checkPlaceholderForOverload(S, From))

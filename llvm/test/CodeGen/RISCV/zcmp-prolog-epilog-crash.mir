@@ -38,8 +38,10 @@ liveins:
 frameInfo:
   maxAlignment:    1
   localFrameSize:  32
-  savePoint:       '%bb.2'
-  restorePoint:    '%bb.2'
+  savePoint:
+    - point:           '%bb.2'
+  restorePoint:
+    - point:           '%bb.2'
 stack:
   - { id: 0, size: 32, alignment: 1, local-offset: -32 }
 machineFunctionInfo:

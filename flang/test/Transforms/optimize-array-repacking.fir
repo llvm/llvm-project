@@ -658,3 +658,136 @@ func.func @_QPneg_test_pointer(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf3
   fir.unpack_array %9 to %7 heap : !fir.box<!fir.array<?xf32>>
   return
 }
+
+// Test a long chain of fir.pack_array operations.
+// The rewriter used to use a down-top traversal that optimized
+// fir.pack_array operations starting from the innermost one.
+// The rewriter did not converge in 10 (default) iterations
+// causing the pass to report a failure.
+// A top-down traversal should fix this an allow optimizing
+// all the repackings.
+// CHECK-LABEL:   func.func @test_long_chain(
+// CHECK-NOT: fir.pack_array
+// CHECK-NOT: fir.unpack_array
+func.func @test_long_chain(%pred: i1) {
+  %c10 = arith.constant 10 : index
+  %3 = fir.dummy_scope : !fir.dscope
+  %4 = fir.address_of(@aaa) : !fir.ref<!fir.array<10x10xi32>>
+  %5 = fir.shape %c10, %c10 : (index, index) -> !fir.shape<2>
+  %6 = fir.declare %4(%5) {uniq_name = "aaa"} : (!fir.ref<!fir.array<10x10xi32>>, !fir.shape<2>) -> !fir.ref<!fir.array<10x10xi32>>
+  %9 = fir.embox %6(%5) : (!fir.ref<!fir.array<10x10xi32>>, !fir.shape<2>) -> !fir.box<!fir.array<10x10xi32>>
+  %10 = fir.convert %9 : (!fir.box<!fir.array<10x10xi32>>) -> !fir.box<!fir.array<?x?xi32>>
+  %11 = fir.dummy_scope : !fir.dscope
+  %12 = fir.pack_array %10 heap innermost : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.array<?x?xi32>>
+  %13 = fir.declare %12 dummy_scope %11 {uniq_name = "aaa"} : (!fir.box<!fir.array<?x?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xi32>>
+  %14 = fir.rebox %13 : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.array<?x?xi32>>
+  cf.cond_br %pred, ^bb17, ^bb1
+^bb1:  // pred: ^bb0
+  %20 = fir.dummy_scope : !fir.dscope
+  %21 = fir.pack_array %14 heap innermost : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.array<?x?xi32>>
+  %22 = fir.declare %21 dummy_scope %20 {uniq_name = "aaa"} : (!fir.box<!fir.array<?x?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xi32>>
+  %23 = fir.rebox %22 : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.array<?x?xi32>>
+  %28 = fir.dummy_scope : !fir.dscope
+  %29 = fir.pack_array %23 heap innermost : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.array<?x?xi32>>
+  %30 = fir.declare %29 dummy_scope %28 {uniq_name = "aaa"} : (!fir.box<!fir.array<?x?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xi32>>
+  %31 = fir.rebox %30 : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.array<?x?xi32>>
+  cf.cond_br %pred, ^bb16, ^bb2
+^bb2:  // pred: ^bb1
+  %37 = fir.dummy_scope : !fir.dscope
+  %38 = fir.pack_array %31 heap innermost : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.array<?x?xi32>>
+  %39 = fir.declare %38 dummy_scope %37 {uniq_name = "aaa"} : (!fir.box<!fir.array<?x?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xi32>>
+  %40 = fir.rebox %39 : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.array<?x?xi32>>
+  %45 = fir.dummy_scope : !fir.dscope
+  %46 = fir.pack_array %40 heap innermost : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.array<?x?xi32>>
+  %47 = fir.declare %46 dummy_scope %45 {uniq_name = "aaa"} : (!fir.box<!fir.array<?x?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xi32>>
+  %48 = fir.rebox %47 : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.array<?x?xi32>>
+  cf.cond_br %pred, ^bb15, ^bb3
+^bb3:  // pred: ^bb2
+  %54 = fir.dummy_scope : !fir.dscope
+  %55 = fir.pack_array %48 heap innermost : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.array<?x?xi32>>
+  %56 = fir.declare %55 dummy_scope %54 {uniq_name = "aaa"} : (!fir.box<!fir.array<?x?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xi32>>
+  %57 = fir.rebox %56 : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.array<?x?xi32>>
+  %62 = fir.dummy_scope : !fir.dscope
+  %63 = fir.pack_array %57 heap innermost : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.array<?x?xi32>>
+  %64 = fir.declare %63 dummy_scope %62 {uniq_name = "aaa"} : (!fir.box<!fir.array<?x?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xi32>>
+  %65 = fir.rebox %64 : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.array<?x?xi32>>
+  cf.cond_br %pred, ^bb14, ^bb4
+^bb4:  // pred: ^bb3
+  %71 = fir.dummy_scope : !fir.dscope
+  %72 = fir.pack_array %65 heap innermost : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.array<?x?xi32>>
+  %73 = fir.declare %72 dummy_scope %71 {uniq_name = "aaa"} : (!fir.box<!fir.array<?x?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xi32>>
+  %74 = fir.rebox %73 : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.array<?x?xi32>>
+  %79 = fir.dummy_scope : !fir.dscope
+  %80 = fir.pack_array %74 heap innermost : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.array<?x?xi32>>
+  %81 = fir.declare %80 dummy_scope %79 {uniq_name = "aaa"} : (!fir.box<!fir.array<?x?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xi32>>
+  %82 = fir.rebox %81 : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.array<?x?xi32>>
+  cf.cond_br %pred, ^bb13, ^bb5
+^bb5:  // pred: ^bb4
+  %88 = fir.dummy_scope : !fir.dscope
+  %89 = fir.pack_array %82 heap innermost : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.array<?x?xi32>>
+  %90 = fir.declare %89 dummy_scope %88 {uniq_name = "aaa"} : (!fir.box<!fir.array<?x?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xi32>>
+  %91 = fir.rebox %90 : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.array<?x?xi32>>
+  %96 = fir.dummy_scope : !fir.dscope
+  %97 = fir.pack_array %91 heap innermost : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.array<?x?xi32>>
+  %98 = fir.declare %97 dummy_scope %96 {uniq_name = "aaa"} : (!fir.box<!fir.array<?x?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xi32>>
+  %99 = fir.rebox %98 : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.array<?x?xi32>>
+  cf.cond_br %pred, ^bb12, ^bb6
+^bb6:  // pred: ^bb5
+  %105 = fir.dummy_scope : !fir.dscope
+  %106 = fir.pack_array %99 heap innermost : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.array<?x?xi32>>
+  %107 = fir.declare %106 dummy_scope %105 {uniq_name = "aaa"} : (!fir.box<!fir.array<?x?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xi32>>
+  %108 = fir.rebox %107 : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.array<?x?xi32>>
+  %113 = fir.dummy_scope : !fir.dscope
+  %114 = fir.pack_array %108 heap innermost : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.array<?x?xi32>>
+  %115 = fir.declare %114 dummy_scope %113 {uniq_name = "aaa"} : (!fir.box<!fir.array<?x?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xi32>>
+  %116 = fir.rebox %115 : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.array<?x?xi32>>
+  cf.cond_br %pred, ^bb11, ^bb7
+^bb7:  // pred: ^bb6
+  %122 = fir.dummy_scope : !fir.dscope
+  %123 = fir.pack_array %116 heap innermost : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.array<?x?xi32>>
+  %124 = fir.declare %123 dummy_scope %122 {uniq_name = "aaa"} : (!fir.box<!fir.array<?x?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xi32>>
+  %125 = fir.rebox %124 : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.array<?x?xi32>>
+  %130 = fir.dummy_scope : !fir.dscope
+  %131 = fir.pack_array %125 heap innermost : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.array<?x?xi32>>
+  %132 = fir.declare %131 dummy_scope %130 {uniq_name = "aaa"} : (!fir.box<!fir.array<?x?xi32>>, !fir.dscope) -> !fir.box<!fir.array<?x?xi32>>
+  %133 = fir.rebox %132 : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.array<?x?xi32>>
+  cf.cond_br %pred, ^bb9, ^bb8
+^bb8:  // pred: ^bb7
+  %139 = fir.dummy_scope : !fir.dscope
+  %140 = fir.pack_array %133 heap innermost : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<!fir.array<?x?xi32>>
+  fir.unpack_array %140 to %133 heap : !fir.box<!fir.array<?x?xi32>>
+  cf.br ^bb9
+^bb9:  // 2 preds: ^bb7, ^bb8
+  fir.unpack_array %131 to %125 heap : !fir.box<!fir.array<?x?xi32>>
+  cf.br ^bb10
+^bb10:  // pred: ^bb9
+  fir.unpack_array %123 to %116 heap : !fir.box<!fir.array<?x?xi32>>
+  cf.br ^bb11
+^bb11:  // 2 preds: ^bb6, ^bb10
+  fir.unpack_array %114 to %108 heap : !fir.box<!fir.array<?x?xi32>>
+  fir.unpack_array %106 to %99 heap : !fir.box<!fir.array<?x?xi32>>
+  cf.br ^bb12
+^bb12:  // 2 preds: ^bb5, ^bb11
+  fir.unpack_array %97 to %91 heap : !fir.box<!fir.array<?x?xi32>>
+  fir.unpack_array %89 to %82 heap : !fir.box<!fir.array<?x?xi32>>
+  cf.br ^bb13
+^bb13:  // 2 preds: ^bb4, ^bb12
+  fir.unpack_array %80 to %74 heap : !fir.box<!fir.array<?x?xi32>>
+  fir.unpack_array %72 to %65 heap : !fir.box<!fir.array<?x?xi32>>
+  cf.br ^bb14
+^bb14:  // 2 preds: ^bb3, ^bb13
+  fir.unpack_array %63 to %57 heap : !fir.box<!fir.array<?x?xi32>>
+  fir.unpack_array %55 to %48 heap : !fir.box<!fir.array<?x?xi32>>
+  cf.br ^bb15
+^bb15:  // 2 preds: ^bb2, ^bb14
+  fir.unpack_array %46 to %40 heap : !fir.box<!fir.array<?x?xi32>>
+  fir.unpack_array %38 to %31 heap : !fir.box<!fir.array<?x?xi32>>
+  cf.br ^bb16
+^bb16:  // 2 preds: ^bb1, ^bb15
+  fir.unpack_array %29 to %23 heap : !fir.box<!fir.array<?x?xi32>>
+  fir.unpack_array %21 to %14 heap : !fir.box<!fir.array<?x?xi32>>
+  cf.br ^bb17
+^bb17:  // 2 preds: ^bb0, ^bb16
+  fir.unpack_array %12 to %10 heap : !fir.box<!fir.array<?x?xi32>>
+  return
+}

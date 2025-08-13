@@ -2504,6 +2504,7 @@ bool ARMFastISel::SelectCall(const Instruction *I,
   // Set all unused physreg defs as dead.
   static_cast<MachineInstr *>(MIB)->setPhysRegsDeadExcept(UsedRegs, TRI);
 
+  diagnoseDontCall(*CI);
   return true;
 }
 

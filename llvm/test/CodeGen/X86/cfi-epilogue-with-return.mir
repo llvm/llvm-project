@@ -21,8 +21,10 @@ liveins:
 frameInfo:
   maxAlignment:    1
   hasCalls:        true
-  savePoint:       '%bb.1'
-  restorePoint:    '%bb.1'
+  savePoint:
+    - point:           '%bb.1'
+  restorePoint:
+    - point:           '%bb.1'
 machineFunctionInfo: {}
 body:             |
   bb.0:

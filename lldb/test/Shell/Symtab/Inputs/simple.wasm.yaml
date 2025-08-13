@@ -1,0 +1,210 @@
+--- !WASM
+FileHeader:
+  Version:         0x1
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ParamTypes:      []
+        ReturnTypes:     []
+      - Index:           1
+        ParamTypes:
+          - I32
+          - I32
+        ReturnTypes:
+          - I32
+      - Index:           2
+        ParamTypes:      []
+        ReturnTypes:
+          - I32
+  - Type:            FUNCTION
+    FunctionTypes:   [ 0, 1, 2, 1 ]
+  - Type:            TABLE
+    Tables:
+      - Index:           0
+        ElemType:        FUNCREF
+        Limits:
+          Flags:           [ HAS_MAX ]
+          Minimum:         0x1
+          Maximum:         0x1
+  - Type:            MEMORY
+    Memories:
+      - Minimum:         0x2
+  - Type:            GLOBAL
+    Globals:
+      - Index:           0
+        Type:            I32
+        Mutable:         true
+        InitExpr:
+          Opcode:          I32_CONST
+          Value:           66560
+      - Index:           1
+        Type:            I32
+        Mutable:         false
+        InitExpr:
+          Opcode:          I32_CONST
+          Value:           1024
+      - Index:           2
+        Type:            I32
+        Mutable:         false
+        InitExpr:
+          Opcode:          I32_CONST
+          Value:           1024
+      - Index:           3
+        Type:            I32
+        Mutable:         false
+        InitExpr:
+          Opcode:          I32_CONST
+          Value:           1024
+      - Index:           4
+        Type:            I32
+        Mutable:         false
+        InitExpr:
+          Opcode:          I32_CONST
+          Value:           66560
+      - Index:           5
+        Type:            I32
+        Mutable:         false
+        InitExpr:
+          Opcode:          I32_CONST
+          Value:           1024
+      - Index:           6
+        Type:            I32
+        Mutable:         false
+        InitExpr:
+          Opcode:          I32_CONST
+          Value:           66560
+      - Index:           7
+        Type:            I32
+        Mutable:         false
+        InitExpr:
+          Opcode:          I32_CONST
+          Value:           131072
+      - Index:           8
+        Type:            I32
+        Mutable:         false
+        InitExpr:
+          Opcode:          I32_CONST
+          Value:           0
+      - Index:           9
+        Type:            I32
+        Mutable:         false
+        InitExpr:
+          Opcode:          I32_CONST
+          Value:           1
+      - Index:           10
+        Type:            I32
+        Mutable:         false
+        InitExpr:
+          Opcode:          I32_CONST
+          Value:           65536
+  - Type:            EXPORT
+    Exports:
+      - Name:            memory
+        Kind:            MEMORY
+        Index:           0
+      - Name:            __wasm_call_ctors
+        Kind:            FUNCTION
+        Index:           0
+      - Name:            add
+        Kind:            FUNCTION
+        Index:           1
+      - Name:            __original_main
+        Kind:            FUNCTION
+        Index:           2
+      - Name:            main
+        Kind:            FUNCTION
+        Index:           3
+      - Name:            __main_void
+        Kind:            FUNCTION
+        Index:           2
+      - Name:            __indirect_function_table
+        Kind:            TABLE
+        Index:           0
+      - Name:            __dso_handle
+        Kind:            GLOBAL
+        Index:           1
+      - Name:            __data_end
+        Kind:            GLOBAL
+        Index:           2
+      - Name:            __stack_low
+        Kind:            GLOBAL
+        Index:           3
+      - Name:            __stack_high
+        Kind:            GLOBAL
+        Index:           4
+      - Name:            __global_base
+        Kind:            GLOBAL
+        Index:           5
+      - Name:            __heap_base
+        Kind:            GLOBAL
+        Index:           6
+      - Name:            __heap_end
+        Kind:            GLOBAL
+        Index:           7
+      - Name:            __memory_base
+        Kind:            GLOBAL
+        Index:           8
+      - Name:            __table_base
+        Kind:            GLOBAL
+        Index:           9
+      - Name:            __wasm_first_page_end
+        Kind:            GLOBAL
+        Index:           10
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:          []
+        Body:            0B
+      - Index:           1
+        Locals:
+          - Type:            I32
+            Count:           1
+        Body:            23808080800041106B21022002200036020C20022001360208200228020C20022802086A0F0B
+      - Index:           2
+        Locals:
+          - Type:            I32
+            Count:           2
+        Body:            23808080800041106B210020002480808080002000410036020C2000410136020820004102360204200028020820002802041081808080002101200041106A24808080800020010F0B
+      - Index:           3
+        Locals:          []
+        Body:            1082808080000F0B
+  - Type:            CUSTOM
+    Name:            name
+    FunctionNames:
+      - Index:           0
+        Name:            __wasm_call_ctors
+      - Index:           1
+        Name:            add
+      - Index:           2
+        Name:            __original_main
+      - Index:           3
+        Name:            main
+    GlobalNames:
+      - Index:           0
+        Name:            __stack_pointer
+  - Type:            CUSTOM
+    Name:            producers
+    Tools:
+      - Name:            clang
+        Version:         '22.0.0git'
+  - Type:            CUSTOM
+    Name:            target_features
+    Features:
+      - Prefix:          USED
+        Name:            bulk-memory
+      - Prefix:          USED
+        Name:            bulk-memory-opt
+      - Prefix:          USED
+        Name:            call-indirect-overlong
+      - Prefix:          USED
+        Name:            multivalue
+      - Prefix:          USED
+        Name:            mutable-globals
+      - Prefix:          USED
+        Name:            nontrapping-fptoint
+      - Prefix:          USED
+        Name:            reference-types
+      - Prefix:          USED
+        Name:            sign-ext
+...

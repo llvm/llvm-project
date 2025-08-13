@@ -339,7 +339,8 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
   }
 
   if (mlir::isa<cir::ConstArrayAttr, cir::ConstVectorAttr,
-                cir::ConstComplexAttr, cir::PoisonAttr>(attrType))
+                cir::ConstComplexAttr, cir::GlobalViewAttr, cir::PoisonAttr>(
+          attrType))
     return success();
 
   assert(isa<TypedAttr>(attrType) && "What else could we be looking at here?");
@@ -1779,6 +1780,19 @@ LogicalResult cir::ShiftOp::verify() {
       return emitOpError() << "vector operands and result type do not have the "
                               "same elements sizes";
   }
+
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// LabelOp Definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::LabelOp::verify() {
+  mlir::Operation *op = getOperation();
+  mlir::Block *blk = op->getBlock();
+  if (&blk->front() != op)
+    return emitError() << "must be the first operation in a block";
 
   return mlir::success();
 }

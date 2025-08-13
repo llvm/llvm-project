@@ -603,6 +603,51 @@ class RangedTypesMatchWith<string summary, string lhsArg, string rhsArg,
                            string transform>
   : TypesMatchWith<summary, lhsArg, rhsArg, transform, "llvm::equal">;
 
+// Checks that each inputArg has the same type as the corresponding entry
+// in allowedTypes
+class InputMatchesTypes<list<string> inputArgs, list<Type> allowedTypes> :
+    PredOpTrait<"operands {" # !interleave(inputArgs, ", ") # "} match expected types",
+                !foldl(TruePred, !range(!size(inputArgs)), acc, i,
+                       And<[acc,
+                           SubstLeaves<"$_self", "$" # inputArgs[i] # ".getType()",
+                                      allowedTypes[i].predicate>
+                       ]>)> {
+    assert !eq(!size(inputArgs), !size(allowedTypes)),
+           "inputArgs and allowedTypes lists must have the same length";
+
+    list<string> inputArgList = inputArgs;
+    list<Type> allowedTypeList = allowedTypes;
+}
+
+// Checks that inputArgs match one of the allowed type combinations.
+// Each combination in allowedCombinations must have the same number of types
+// as there are inputArgs.
+class InputAddressIsCombinationOf<list<string> inputArgs, 
+                                  list<list<Type>> allowedCombinations,
+                                  string description = ""> :
+    PredOpTrait<!if(!empty(description), 
+                    "operands {" # !interleave(inputArgs, ", ") # "} match one of the allowed type combinations",
+                    description),
+                Or<!foreach(combination, allowedCombinations,
+                           !foldl(TruePred, !range(!size(inputArgs)), acc, i,
+                                  And<[acc,
+                                      SubstLeaves<"$_self", "$" # inputArgs[i] # ".getType()",
+                                                 combination[i].predicate>
+                                  ]>))>> {
+    assert !gt(!size(allowedCombinations), 0),
+           "allowedCombinations must not be empty";
+    
+    // Validate that each combination has the same number of types as inputArgs
+    defvar inputArgSize = !size(inputArgs);
+    defvar validSizes = !foldl(1, allowedCombinations, acc, combination,
+                              !and(acc, !eq(inputArgSize, !size(combination))));
+    assert validSizes,
+           "each combination in allowedCombinations must have the same length as inputArgs";
+    
+    list<string> inputArgList = inputArgs;
+    list<list<Type>> allowedCombinationList = allowedCombinations;
+}
+
 // Type Constraint operand `idx`'s Element type is `type`.
 class TCopVTEtIs<int idx, Type type> : And<[
    CPred<"$_op.getNumOperands() > " # idx>,

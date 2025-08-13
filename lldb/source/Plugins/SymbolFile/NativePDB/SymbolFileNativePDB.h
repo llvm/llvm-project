@@ -260,6 +260,11 @@ private:
 
   std::vector<CompilerContext> GetContextForType(llvm::codeview::TypeIndex ti);
 
+  void CacheFunctionNames();
+
+  void CacheUdtDeclarations();
+  llvm::Expected<Declaration> ResolveUdtDeclaration(PdbTypeSymId type_id);
+
   llvm::BumpPtrAllocator m_allocator;
 
   lldb::addr_t m_obj_load_address = 0;
@@ -281,7 +286,26 @@ private:
   llvm::DenseMap<llvm::codeview::TypeIndex, llvm::codeview::TypeIndex>
       m_parent_types;
 
+  struct UdtDeclaration {
+    /// This could either be an index into the `/names` section (string table,
+    /// LF_UDT_MOD_SRC_LINE) or, this could be an index into the IPI stream to a
+    /// LF_STRING_ID record (LF_UDT_SRC_LINE).
+    llvm::codeview::TypeIndex FileNameIndex;
+    bool IsIpiIndex;
+
+    uint32_t Line;
+  };
+  llvm::DenseMap<llvm::codeview::TypeIndex, UdtDeclaration> m_udt_declarations;
+  std::once_flag m_cached_udt_declarations;
+
   lldb_private::UniqueCStringMap<uint32_t> m_type_base_names;
+
+  /// mangled name/full function name -> Global ID(s)
+  lldb_private::UniqueCStringMap<uint32_t> m_func_full_names;
+  /// basename -> Global ID(s)
+  lldb_private::UniqueCStringMap<uint32_t> m_func_base_names;
+  /// method basename -> Global ID(s)
+  lldb_private::UniqueCStringMap<uint32_t> m_func_method_names;
 };
 
 } // namespace npdb
