@@ -121,24 +121,20 @@ isValidGatherScatterBufferParams(Type maskTy, VectorType valueTy,
   auto maskShape = getShapeOf(maskTy);
   auto valueShape = getShapeOf(valueTy);
 
-  if (valueTy.getRank() == 1) {
-    auto maskVecTy = dyn_cast<VectorType>(maskTy);
-    if (!maskVecTy)
-      return emitError() << "Expecting a vector type mask.";
-    int64_t maskSize = maskVecTy.getNumElements();
+  auto maskVecTy = dyn_cast<VectorType>(maskTy);
+  if (!maskVecTy)
+    return emitError() << "Expecting a vector type mask.";
+  int64_t maskSize = maskVecTy.getNumElements();
 
-    auto valueSize = valueTy.getNumElements();
-    if (chunkSize == 1) {
-      if (maskSize != valueSize)
-        return emitError()
-               << "Mask should match value except the chunk size dim.";
-    } else {
-      if (chunkSize != valueSize)
-        return emitError() << "value elements must match chunk size "
-                           << chunkSize;
-    }
-
-    return success();
+  auto valueSize = valueTy.getNumElements();
+  if (chunkSize > 1) {
+    if ((valueTy.getRank() == 1) && (valueSize != chunkSize))
+      return emitError() << "value elements must match chunk size "
+                         << chunkSize;
+  } else {
+    if (valueSize != maskSize)
+      return emitError()
+             << "Mask should match value except the chunk size dim.";
   }
 
   llvm::SmallVector<int64_t> expectedMaskShape(valueShape);
