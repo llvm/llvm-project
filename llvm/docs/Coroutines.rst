@@ -303,7 +303,7 @@ The LLVM IR for this coroutine looks like this:
     call void @free(ptr %mem)
     br label %suspend
   suspend:
-    %unused = call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
+    call void @llvm.coro.end(ptr %hdl, i1 false, token none)
     ret ptr %hdl
   }
 
@@ -637,7 +637,7 @@ store the current value produced by a coroutine.
     call void @free(ptr %mem)
     br label %suspend
   suspend:
-    %unused = call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
+    call void @llvm.coro.end(ptr %hdl, i1 false, token none)
     ret ptr %hdl
   }
 
@@ -806,7 +806,7 @@ The LLVM IR for a coroutine using a Coroutine with a custom ABI looks like:
     call void @free(ptr %mem)
     br label %suspend
   suspend:
-    %unused = call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)
+    call void @llvm.coro.end(ptr %hdl, i1 false, token none)
     ret ptr %hdl
   }
 
@@ -1444,7 +1444,7 @@ A frontend should emit function attribute `presplitcoroutine` for the coroutine.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ::
 
-  declare i1 @llvm.coro.end(ptr <handle>, i1 <unwind>, token <result.token>)
+  declare void @llvm.coro.end(ptr <handle>, i1 <unwind>, token <result.token>)
 
 Overview:
 """""""""
@@ -1502,7 +1502,8 @@ For landingpad based exception model, it is expected that frontend uses the
 .. code-block:: llvm
 
     ehcleanup:
-      %InResumePart = call i1 @llvm.coro.end(ptr null, i1 true, token none)
+      call void @llvm.coro.end(ptr null, i1 true, token none)
+      %InResumePart = call i1 @llvm.coro.where()
       br i1 %InResumePart, label %eh.resume, label %cleanup.cont
 
     cleanup.cont:
@@ -1515,7 +1516,7 @@ For landingpad based exception model, it is expected that frontend uses the
       %lpad.val29 = insertvalue { ptr, i32 } %lpad.val, i32 %sel, 1
       resume { ptr, i32 } %lpad.val29
 
-The `CoroSpit` pass replaces `coro.end` with ``True`` in the resume functions,
+The `CoroSpit` pass replaces `coro.where` with ``True`` in the resume functions,
 thus leading to immediate unwind to the caller, whereas in start function it
 is replaced with ``False``, thus allowing to proceed to the rest of the cleanup
 code that is only needed during initial invocation of the coroutine.
@@ -1527,7 +1528,7 @@ referring to an enclosing cleanuppad as follows:
 
     ehcleanup:
       %tok = cleanuppad within none []
-      %unused = call i1 @llvm.coro.end(ptr null, i1 true, token none) [ "funclet"(token %tok) ]
+      call void @llvm.coro.end(ptr null, i1 true, token none) [ "funclet"(token %tok) ]
       cleanupret from %tok unwind label %RestOfTheCleanup
 
 The `CoroSplit` pass, if the funclet bundle is present, will insert
@@ -1592,7 +1593,7 @@ The number of arguments must match the return type of the continuation function:
 
   cleanup:
     %tok = call token (...) @llvm.coro.end.results(i8 %val)
-    call i1 @llvm.coro.end(ptr %hdl, i1 0, token %tok)
+    call void @llvm.coro.end(ptr %hdl, i1 0, token %tok)
     unreachable
 
   ...
@@ -1604,7 +1605,7 @@ The number of arguments must match the return type of the continuation function:
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ::
 
-  declare i1 @llvm.coro.end.async(ptr <handle>, i1 <unwind>, ...)
+  declare void @llvm.coro.end.async(ptr <handle>, i1 <unwind>, ...)
 
 Overview:
 """""""""
@@ -1635,10 +1636,10 @@ the function call.
 
 .. code-block:: llvm
 
-  call i1 (ptr, i1, ...) @llvm.coro.end.async(
-                           ptr %hdl, i1 0,
-                           ptr @must_tail_call_return,
-                           ptr %ctxt, ptr %task, ptr %actor)
+  call void (ptr, i1, ...) @llvm.coro.end.async(
+                             ptr %hdl, i1 0,
+                             ptr @must_tail_call_return,
+                             ptr %ctxt, ptr %task, ptr %actor)
   unreachable
 
 .. _coro.suspend:
@@ -2116,6 +2117,30 @@ Example:
       %hdl.raw = call ptr @"Awaiter::await_suspend"(ptr %awaiter, ptr %hdl.arg)
       %hdl.result = ... ; get address of returned coroutine handle
       ret ptr %hdl.result
+
+'llvm.coro.where' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+::
+
+  declare i1 @llvm.coro.where()
+
+Overview:
+"""""""""
+
+The '``llvm.coro.where``' intrinsic returns a bool value that marks coroutine resume
+part and start part.
+
+Arguments:
+""""""""""
+
+None
+
+Semantics:
+""""""""""
+
+The `CoroSpit` pass replaces `coro.where` with ``True`` in the resume functions,
+whereas in start function it is replaced with ``False``, thus allowing the frontend
+separate resume part and start part.
 
 Coroutine Transformation Passes
 ===============================

@@ -388,10 +388,6 @@ static void replaceCoroEnd(AnyCoroEndInst *End, const coro::Shape &Shape,
     replaceUnwindCoroEnd(End, Shape, FramePtr, InResume, CG);
   else
     replaceFallthroughCoroEnd(End, Shape, FramePtr, InResume, CG);
-
-  auto &Context = End->getContext();
-  End->replaceAllUsesWith(InResume ? ConstantInt::getTrue(Context)
-                                   : ConstantInt::getFalse(Context));
   End->eraseFromParent();
 }
 
@@ -559,6 +555,15 @@ void coro::BaseCloner::replaceCoroEnds() {
     // the cloned function yet.  We'll just be rebuilding that later.
     auto *NewCE = cast<AnyCoroEndInst>(VMap[CE]);
     replaceCoroEnd(NewCE, Shape, NewFramePtr, /*in resume*/ true, nullptr);
+  }
+}
+
+void coro::BaseCloner::replaceCoroWhere() {
+  auto &Ctx = OrigF.getContext();
+  for (auto *CW : Shape.CoroWheres) {
+    auto *NewCW = cast<CoroWhereInst>(VMap[CW]);
+    NewCW->replaceAllUsesWith(ConstantInt::getTrue(Ctx));
+    NewCW->eraseFromParent();
   }
 }
 
@@ -1076,6 +1081,8 @@ void coro::BaseCloner::create() {
 
   // Remove coro.end intrinsics.
   replaceCoroEnds();
+
+  replaceCoroWhere();
 
   // Salvage debug info that points into the coroutine frame.
   salvageDebugInfo();
@@ -1951,11 +1958,16 @@ static void removeCoroEndsFromRampFunction(const coro::Shape &Shape) {
       replaceCoroEnd(End, Shape, Shape.FramePtr, /*in resume*/ false, nullptr);
     }
   } else {
-    for (llvm::AnyCoroEndInst *End : Shape.CoroEnds) {
-      auto &Context = End->getContext();
-      End->replaceAllUsesWith(ConstantInt::getFalse(Context));
+    for (llvm::AnyCoroEndInst *End : Shape.CoroEnds)
       End->eraseFromParent();
-    }
+  }
+}
+
+static void removeCoroWhereFromRampFunction(const coro::Shape &Shape) {
+  for (auto *CW : Shape.CoroWheres) {
+    auto &Ctx = CW->getContext();
+    CW->replaceAllUsesWith(ConstantInt::getFalse(Ctx));
+    CW->eraseFromParent();
   }
 }
 
@@ -2020,6 +2032,7 @@ static void doSplitCoroutine(Function &F, SmallVectorImpl<Function *> &Clones,
     coro::salvageDebugInfo(ArgToAllocaMap, *DVR, false /*UseEntryValue*/);
 
   removeCoroEndsFromRampFunction(Shape);
+  removeCoroWhereFromRampFunction(Shape);
 
   if (shouldCreateNoAllocVariant)
     SwitchCoroutineSplitter::createNoAllocVariant(F, Shape, Clones);

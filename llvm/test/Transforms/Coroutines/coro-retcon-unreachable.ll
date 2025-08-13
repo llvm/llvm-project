@@ -23,7 +23,7 @@ define hidden swiftcc { ptr, ptr } @no_suspends(ptr %buffer, i64 %arg) #1 {
 
 bb1:
   call void @print(i64 %arg)
-  call i1 @llvm.coro.end(ptr %begin, i1 false, token none)
+  call void @llvm.coro.end(ptr %begin, i1 false, token none)
   unreachable
 }
 
@@ -41,7 +41,7 @@ declare void @llvm.lifetime.start.p0(ptr nocapture) #6
 declare i1 @llvm.coro.suspend.retcon.i1(...) #5
 declare void @llvm.lifetime.end.p0(ptr nocapture) #6
 declare void @llvm.coro.alloca.free(token) #5
-declare i1 @llvm.coro.end(ptr, i1, token) #5
+declare void @llvm.coro.end(ptr, i1, token) #5
 
 declare void @llvm.trap()
 

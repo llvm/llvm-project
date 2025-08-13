@@ -93,6 +93,7 @@ static Intrinsic::ID NonOverloadedCoroIntrinsics[] = {
     Intrinsic::coro_save,
     Intrinsic::coro_subfn_addr,
     Intrinsic::coro_suspend,
+    Intrinsic::coro_where
 };
 
 bool coro::isSuspendBlock(BasicBlock *BB) {
@@ -274,6 +275,9 @@ void coro::Shape::analyze(Function &F,
             std::swap(CoroEnds.front(), CoroEnds.back());
           }
         }
+        break;
+      case Intrinsic::coro_where:
+        CoroWheres.push_back(cast<CoroWhereInst>(II));
         break;
       case Intrinsic::coro_promise:
         assert(CoroPromise == nullptr &&

@@ -428,6 +428,18 @@ public:
   }
 };
 
+/// This represents the llvm.coro.where instruction.
+class CoroWhereInst : public IntrinsicInst {
+public:
+  // Methods to support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::coro_where;
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+};
+
 /// This represents the llvm.coro.free instruction.
 class CoroFreeInst : public IntrinsicInst {
   enum { IdArg, FrameArg };

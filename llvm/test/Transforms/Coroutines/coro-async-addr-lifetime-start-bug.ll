@@ -82,7 +82,7 @@ loop:
 
 loop_exit:
   call void @llvm.lifetime.end.p0(ptr %escaped_addr)
-  call i1 (ptr, i1, ...) @llvm.coro.end.async(ptr %hdl, i1 false)
+  call void (ptr, i1, ...) @llvm.coro.end.async(ptr %hdl, i1 false)
   unreachable
 }
 
@@ -96,8 +96,8 @@ declare { ptr, ptr, ptr, ptr } @llvm.coro.suspend.async.sl_p0i8p0i8p0i8p0i8s(i32
 declare ptr @llvm.coro.prepare.async(ptr)
 declare token @llvm.coro.id.async(i32, i32, i32, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
-declare i1 @llvm.coro.end.async(ptr, i1, ...)
-declare i1 @llvm.coro.end(ptr, i1, token)
+declare void @llvm.coro.end.async(ptr, i1, ...)
+declare void @llvm.coro.end(ptr, i1, token)
 declare {ptr, ptr, ptr} @llvm.coro.suspend.async(i32, ptr, ptr, ...)
 declare ptr @context_alloc()
 declare void @llvm.coro.async.context.dealloc(ptr)

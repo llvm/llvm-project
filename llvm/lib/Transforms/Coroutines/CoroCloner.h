@@ -120,6 +120,7 @@ protected:
   void replaceRetconOrAsyncSuspendUses();
   void replaceCoroSuspends();
   void replaceCoroEnds();
+  void replaceCoroWhere();
   void replaceSwiftErrorOps();
   void salvageDebugInfo();
   void handleFinalSuspend();
