@@ -100,12 +100,13 @@ export class SymbolsProvider extends DisposableContext {
 
     const tabulatorJsPath = panel.webview.asWebviewUri(vscode.Uri.joinPath(this.getExtensionResourcePath(), "tabulator.min.js"));
     const tabulatorCssPath = panel.webview.asWebviewUri(vscode.Uri.joinPath(this.getExtensionResourcePath(), "tabulator.min.css"));
+    const symbolsTableScriptPath = panel.webview.asWebviewUri(vscode.Uri.joinPath(this.getExtensionResourcePath(), "symbols-table-view.js"));
 
-    panel.webview.html = this.getHTMLContentForSymbols(tabulatorJsPath, tabulatorCssPath, symbols);
+    panel.webview.html = this.getHTMLContentForSymbols(tabulatorJsPath, tabulatorCssPath, symbolsTableScriptPath, symbols);
+    panel.webview.postMessage({ command: "setSymbols", symbols: symbols });
   }
 
-  private getHTMLContentForSymbols(tabulatorJsPath: vscode.Uri, tabulatorCssPath: vscode.Uri, symbols: DAPSymbol[]): string {
-    const dataJson = JSON.stringify(symbols);
+  private getHTMLContentForSymbols(tabulatorJsPath: vscode.Uri, tabulatorCssPath: vscode.Uri, symbolsTableScriptPath: vscode.Uri, symbols: DAPSymbol[]): string {
     return `<!DOCTYPE html>
 <html>
 <head>
@@ -119,30 +120,13 @@ export class SymbolsProvider extends DisposableContext {
 <body>
     <div id="table"></div>
     <script src="${tabulatorJsPath}"></script>
-    <script>
-        const tableData = ${dataJson};
-        new Tabulator("#table", {
-            data: tableData,
-            layout: "fitColumns",
-            columns: [
-                {title: "User ID", field: "userId", sorter: "number"},
-                {title: "Debug", field: "isDebug", sorter: "boolean"},
-                {title: "Synthetic", field: "isSynthetic", sorter: "boolean"},
-                {title: "External", field: "isExternal", sorter: "boolean"},
-                {title: "Type", field: "type", sorter: "string"},
-                {title: "File Address", field: "fileAddress", sorter: "number"},
-                {title: "Load Address", field: "loadAddress", sorter: "number"},
-                {title: "Size", field: "size", sorter: "number"},
-                {title: "Name", field: "name", sorter: "string"},
-            ]
-        });
-    </script>
+    <script src="${symbolsTableScriptPath}"></script>
 </body>
 </html>`;
   }
 
   private getExtensionResourcePath(): vscode.Uri {
-    return vscode.Uri.joinPath(this.extensionContext.extensionUri, "out");
+    return vscode.Uri.joinPath(this.extensionContext.extensionUri, "out", "webview");
   }
 }
 
