@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -triple arm64-apple-ios -std=c23 -fsyntax-only -verify -fptrauth-intrinsics %s
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -std=c23 -fsyntax-only -verify -fptrauth-intrinsics %s
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -std=c23 -fsyntax-only -verify -fptrauth-intrinsics -pedantic-errors -Wno-c2y-extensions %s
 
 #if !__has_extension(ptrauth_qualifier)
 // This error means that the __ptrauth qualifier availability test says  that it

@@ -24,8 +24,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !defined(FEATURE) && !defined(EXTENSION)
-#  error Define either the FEATURE or EXTENSION macro to handle features
+#if !defined(FEATURE) && !defined(EXTENSION) && !defined(ABI_EXTENSION)
+#  error Define either the FEATURE, EXTENSION, or ABI_EXTENSION macro to handle features
 #endif
 
 #ifndef FEATURE
@@ -34,6 +34,10 @@
 
 #ifndef EXTENSION
 #define EXTENSION(Name, Predicate)
+#endif
+
+#ifndef ABI_EXTENSION
+#define ABI_EXTENSION(Name, Predicate)
 #endif
 
 FEATURE(speculative_load_hardening, LangOpts.SpeculativeLoadHardening)
@@ -148,7 +152,7 @@ FEATURE(thread_sanitizer, LangOpts.Sanitize.has(SanitizerKind::Thread))
 FEATURE(dataflow_sanitizer, LangOpts.Sanitize.has(SanitizerKind::DataFlow))
 FEATURE(scudo, LangOpts.Sanitize.hasOneOf(SanitizerKind::Scudo))
 FEATURE(ptrauth_intrinsics, LangOpts.PointerAuthIntrinsics)
-EXTENSION(ptrauth_qualifier, LangOpts.PointerAuthIntrinsics)
+ABI_EXTENSION(ptrauth_qualifier, LangOpts.PointerAuthIntrinsics)
 FEATURE(ptrauth_calls, LangOpts.PointerAuthCalls)
 FEATURE(ptrauth_returns, LangOpts.PointerAuthReturns)
 FEATURE(ptrauth_vtable_pointer_address_discrimination, LangOpts.PointerAuthVTPtrAddressDiscrimination)
@@ -385,3 +389,4 @@ EXTENSION(cxx_type_aware_allocators, true)
 
 #undef EXTENSION
 #undef FEATURE
+#undef ABI_EXTENSION

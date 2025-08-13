@@ -1109,18 +1109,25 @@ static bool HasExtension(const Preprocessor &PP, StringRef Extension) {
   if (HasFeature(PP, Extension))
     return true;
 
+  // Normalize the extension name, __foo__ becomes foo.
+  if (Extension.starts_with("__") && Extension.ends_with("__") &&
+      Extension.size() >= 4)
+    Extension = Extension.substr(2, Extension.size() - 4);
+
+  const LangOptions &LangOpts = PP.getLangOpts();
+#define ABI_EXTENSION(Name, Predicate) .Case(#Name, Predicate)
+  bool IsABIExtension = llvm::StringSwitch<bool>(Extension)
+#include "clang/Basic/Features.def"
+      .Default(false);
+#undef ABI_EXTENSION
+  if (IsABIExtension)
+    return true;
+
   // If the use of an extension results in an error diagnostic, extensions are
   // effectively unavailable, so just return false here.
   if (PP.getDiagnostics().getExtensionHandlingBehavior() >=
       diag::Severity::Error)
     return false;
-
-  const LangOptions &LangOpts = PP.getLangOpts();
-
-  // Normalize the extension name, __foo__ becomes foo.
-  if (Extension.starts_with("__") && Extension.ends_with("__") &&
-      Extension.size() >= 4)
-    Extension = Extension.substr(2, Extension.size() - 4);
 
     // Because we inherit the feature list from HasFeature, this string switch
     // must be less restrictive than HasFeature's.

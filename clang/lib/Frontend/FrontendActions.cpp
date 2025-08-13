@@ -1183,11 +1183,15 @@ void DumpCompilerOptionsAction::ExecuteAction() {
   OS << "\n\"extensions\" : [\n";
   {
     llvm::SmallString<128> Str;
-#define EXTENSION(Name, Predicate)                                             \
+#define EXTENSION_OPTION(Name, Predicate)                                          \
   ("\t{\"" #Name "\" : " + llvm::Twine(Predicate ? "true" : "false") + "},\n") \
       .toVector(Str);
+#define EXTENSION(Name, Predicate) EXTENSION_OPTION(Name, Predicate)
+#define ABI_EXTENSION(Name, Predicate) EXTENSION_OPTION(Name, Predicate)
 #include "clang/Basic/Features.def"
 #undef EXTENSION
+#undef ABI_EXTENSION
+#undef EXTENSION_OPTION
     // Remove the newline and comma from the last entry to ensure this remains
     // valid JSON.
     OS << Str.substr(0, Str.size() - 2);
