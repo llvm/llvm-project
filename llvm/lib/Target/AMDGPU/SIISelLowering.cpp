@@ -5332,9 +5332,7 @@ static uint32_t getIdentityValueFor32BitWaveReduction(unsigned Opc) {
   case AMDGPU::S_MAX_I32:
     return std::numeric_limits<int32_t>::min();
   case AMDGPU::S_ADD_I32:
-  case AMDGPU::S_ADD_U64_PSEUDO:
   case AMDGPU::S_SUB_I32:
-  case AMDGPU::S_SUB_U64_PSEUDO:
   case AMDGPU::S_OR_B32:
   case AMDGPU::S_XOR_B32:
     return std::numeric_limits<uint32_t>::min();
