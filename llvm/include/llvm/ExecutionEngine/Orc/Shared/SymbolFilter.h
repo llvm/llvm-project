@@ -11,7 +11,7 @@
 
 #include "llvm/ExecutionEngine/Orc/Shared/SimplePackedSerialization.h"
 
-#include <math.h>
+#include <cmath>
 #include <type_traits>
 #include <vector>
 
@@ -112,11 +112,11 @@ public:
     return *this;
   }
 
-  BloomFilter build(const std::vector<std::string> &symbols) const {
-    assert(!symbols.empty() && "Cannot build filter from empty symbol list.");
-    BloomFilter filter(static_cast<uint32_t>(symbols.size()), falsePositiveRate,
+  BloomFilter build(ArrayRef<StringRef> Symbols) const {
+    assert(!Symbols.empty() && "Cannot build filter from empty symbol list.");
+    BloomFilter filter(static_cast<uint32_t>(Symbols.size()), falsePositiveRate,
                        hashFunc);
-    for (const auto &sym : symbols) {
+    for (const auto &sym : Symbols) {
       filter.add(sym);
     }
     return filter;

@@ -60,11 +60,11 @@ public:
     }
 
     bool ensureFilterBuilt(const BloomFilterBuilder &FB,
-                           const std::vector<std::string> &symbols) {
+                           ArrayRef<StringRef> Symbols) {
       std::lock_guard<std::shared_mutex> lock(mutex);
       if (filter)
         return false;
-      filter.emplace(FB.build(symbols));
+      filter.emplace(FB.build(Symbols));
       return true;
     }
 
@@ -110,6 +110,7 @@ public:
       bool operator!=(const FilterIterator &other) const {
         return it != other.it;
       }
+
       const std::shared_ptr<LibraryInfo> &operator*() const {
         return it->second;
       }
@@ -122,12 +123,9 @@ public:
 
     private:
       void advance() {
-        while (it != end) {
-          const auto &lib = it->second;
-          if (lib->getState() == state && lib->getKind() == kind)
+        for (; it != end; ++it)
+          if (it->second->getState() == state && it->second->getKind() == kind)
             break;
-          ++it;
-        }
       }
       Iterator it, end;
       State state;
@@ -163,11 +161,6 @@ public:
   bool addLibrary(std::string path, PathType kind,
                   std::optional<BloomFilter> filter = std::nullopt) {
     std::unique_lock<std::shared_mutex> lock(mutex);
-    // SmallString<256> nativePath(path);
-    // sys::path::native(nativePath);
-
-    // auto P = nativePath.str();
-
     if (libraries.count(path) > 0)
       return false;
     libraries.insert({std::move(path),
@@ -185,7 +178,6 @@ public:
 
   bool removeLibrary(StringRef path) {
     std::unique_lock<std::shared_mutex> lock(mutex);
-    // auto P = sys::path::native(path);
     auto I = libraries.find(path);
     if (I == libraries.end())
       return false;
@@ -267,7 +259,7 @@ struct SearchPolicy {
   }
 };
 
-/// Scans libraries and resolves symbols across user and system paths.
+/// Scans libraries and resolves Symbols across user and system paths.
 ///
 /// Supports symbol enumeration and filtering via SymbolEnumerator, and tracks
 /// symbol resolution results through SymbolQuery. Thread-safe and uses
@@ -313,62 +305,61 @@ public:
 
   private:
     mutable std::shared_mutex mtx;
-    StringMap<Result> results;
-    std::atomic<size_t> resolvedCount = 0;
+    StringMap<Result> Results;
+    std::atomic<size_t> ResolvedCount = 0;
 
   public:
-    explicit SymbolQuery(const std::vector<std::string> &symbols) {
-      // results.reserve(symbols.size());
-      for (const auto &s : symbols)
-        results.insert({s, Result{s, ""}});
+    explicit SymbolQuery(const std::vector<std::string> &Symbols) {
+      for (const auto &s : Symbols)
+        Results.insert({s, Result{s, ""}});
     }
 
-    std::vector<StringRef> getUnresolvedSymbols() const {
-      std::vector<StringRef> unresolved;
+    SmallVector<StringRef> getUnresolvedSymbols() const {
+      SmallVector<StringRef> Unresolved;
       std::shared_lock<std::shared_mutex> lock(mtx);
-      for (const auto &[name, res] : results) {
+      for (const auto &[name, res] : Results) {
         if (res.ResolvedLibPath.empty())
-          unresolved.push_back(name);
+          Unresolved.push_back(name);
       }
-      return unresolved;
+      return Unresolved;
     }
 
     void resolve(StringRef symbol, const std::string &libPath) {
       std::unique_lock<std::shared_mutex> lock(mtx);
-      auto it = results.find(symbol);
-      if (it != results.end() && it->second.ResolvedLibPath.empty()) {
+      auto it = Results.find(symbol);
+      if (it != Results.end() && it->second.ResolvedLibPath.empty()) {
         it->second.ResolvedLibPath = libPath;
-        resolvedCount.fetch_add(1, std::memory_order_relaxed);
+        ResolvedCount.fetch_add(1, std::memory_order_relaxed);
       }
     }
 
     bool allResolved() const {
-      return resolvedCount.load(std::memory_order_relaxed) == results.size();
+      return ResolvedCount.load(std::memory_order_relaxed) == Results.size();
     }
 
     bool hasUnresolved() const {
-      return resolvedCount.load(std::memory_order_relaxed) < results.size();
+      return ResolvedCount.load(std::memory_order_relaxed) < Results.size();
     }
 
     std::optional<StringRef> getResolvedLib(StringRef symbol) const {
       std::shared_lock<std::shared_mutex> lock(mtx);
-      auto it = results.find(symbol);
-      if (it != results.end() && !it->second.ResolvedLibPath.empty())
+      auto it = Results.find(symbol);
+      if (it != Results.end() && !it->second.ResolvedLibPath.empty())
         return StringRef(it->second.ResolvedLibPath);
       return std::nullopt;
     }
 
     bool isResolved(StringRef symbol) const {
       std::shared_lock<std::shared_mutex> lock(mtx);
-      auto it = results.find(symbol.str());
-      return it != results.end() && !it->second.ResolvedLibPath.empty();
+      auto it = Results.find(symbol.str());
+      return it != Results.end() && !it->second.ResolvedLibPath.empty();
     }
 
     std::vector<const Result *> getAllResults() const {
       std::shared_lock<std::shared_mutex> lock(mtx);
       std::vector<const Result *> out;
-      out.reserve(results.size());
-      for (const auto &[_, res] : results)
+      out.reserve(Results.size());
+      for (const auto &[_, res] : Results)
         out.push_back(&res);
       return out;
     }
@@ -466,7 +457,7 @@ public:
   bool isLibraryLoaded(StringRef path) const {
     return Loader->m_libMgr.isLoaded(path);
   }
-  void resolveSymbols(std::vector<std::string> symbols,
+  void resolveSymbols(std::vector<std::string> Symbols,
                       LibraryResolver::OnSearchComplete OnCompletion,
                       const SearchPolicy &policy = SearchPolicy::defaultPlan());
 
