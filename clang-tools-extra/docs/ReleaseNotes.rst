@@ -112,6 +112,11 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bugprone-cast-to-struct
+  <clang-tidy/checks/bugprone/cast-to-struct>` check.
+
+  Finds casts from pointers to struct or scalar type to pointers to struct type.
+
 - New :doc:`bugprone-invalid-enum-default-initialization
   <clang-tidy/checks/bugprone/invalid-enum-default-initialization>` check.
 

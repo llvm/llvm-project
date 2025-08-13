@@ -85,6 +85,7 @@ Clang-Tidy Checks
    :doc:`bugprone-bool-pointer-implicit-conversion <bugprone/bool-pointer-implicit-conversion>`, "Yes"
    :doc:`bugprone-branch-clone <bugprone/branch-clone>`,
    :doc:`bugprone-capturing-this-in-member-variable <bugprone/capturing-this-in-member-variable>`,
+   :doc:`bugprone-cast-to-struct <bugprone/cast-to-struct>`,
    :doc:`bugprone-casting-through-void <bugprone/casting-through-void>`,
    :doc:`bugprone-chained-comparison <bugprone/chained-comparison>`,
    :doc:`bugprone-compare-pointer-to-member-virtual-function <bugprone/compare-pointer-to-member-virtual-function>`,
