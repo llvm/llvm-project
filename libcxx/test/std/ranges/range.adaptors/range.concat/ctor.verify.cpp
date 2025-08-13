@@ -19,7 +19,6 @@ struct NoSizeRange : std::ranges::view_base {
 };
 
 int main(int, char**) {
-
   {
     // LWG 4082
     std::vector<int> v{1, 2, 3};
@@ -30,7 +29,7 @@ int main(int, char**) {
 
   {
     // input is not a view
-    int x = 1;
+    int x  = 1;
     auto c = std::views::concat(x);
     // expected-error@*:* {{}}
   }
@@ -43,7 +42,7 @@ int main(int, char**) {
 
   {
     // inputs are non-concatable
-    std::vector<int> v1{1,2};
+    std::vector<int> v1{1, 2};
     std::vector<std::string> v2{"Hello", "World"};
     auto c = std::views::concat(v1, v2);
     // expected-error@*:* {{}}

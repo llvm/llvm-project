@@ -25,11 +25,11 @@ private:
 };
 
 struct MoveAwareView : std::ranges::view_base {
-  int moves = 0;
+  int moves                 = 0;
   constexpr MoveAwareView() = default;
   constexpr MoveAwareView(MoveAwareView&& other) : moves(other.moves + 1) { other.moves = 1; }
   constexpr MoveAwareView& operator=(MoveAwareView&& other) {
-    moves = other.moves + 1;
+    moves       = other.moves + 1;
     other.moves = 0;
     return *this;
   }
@@ -38,7 +38,7 @@ struct MoveAwareView : std::ranges::view_base {
 };
 
 constexpr bool test() {
-  int buff[] = {1, 2};
+  int buff[]  = {1, 2};
   int buff2[] = {3, 4};
 
   // constructor from views

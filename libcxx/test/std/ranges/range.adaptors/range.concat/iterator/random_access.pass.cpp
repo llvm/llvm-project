@@ -45,7 +45,7 @@ constexpr bool test() {
   {
     // random_access_range and non common range
     std::ranges::concat_view v(SimpleNonCommonRandomAccessSized{buffer1}, NonSimpleCommonRandomAccessSized{buffer2});
-    auto it = v.begin();
+    auto it                 = v.begin();
     const auto canSubscript = [](auto&& it) { return requires { it[0]; }; };
     static_assert(!canSubscript(it));
 
@@ -66,7 +66,7 @@ constexpr bool test() {
   {
     // non random_access_range
     std::ranges::concat_view v(BidiCommonView{buffer1});
-    auto iter = v.begin();
+    auto iter               = v.begin();
     const auto canSubscript = [](auto&& it) { return requires { it[0]; }; };
     static_assert(!canSubscript(iter));
   }

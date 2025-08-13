@@ -34,8 +34,8 @@ concept HasIterCategory = requires { typename T::iterator_category; };
 template <class T>
 struct DiffTypeIter {
   using iterator_category = std::input_iterator_tag;
-  using value_type = int;
-  using difference_type = T;
+  using value_type        = int;
+  using difference_type   = T;
 
   int operator*() const;
   DiffTypeIter& operator++();
@@ -74,7 +74,6 @@ constexpr bool test() {
     static_assert(HasIterCategory<Iter>);
   }
 
-
   {
     // 3 views
     std::ranges::concat_view v(buffer, buffer, buffer);
@@ -86,7 +85,6 @@ constexpr bool test() {
     static_assert(std::is_same_v<Iter::value_type, int>);
     static_assert(HasIterCategory<Iter>);
   }
-
 
   {
     // bidirectional_iterator_tag
@@ -145,7 +143,7 @@ constexpr bool test() {
   {
     // const-iterator different from iterator
     std::ranges::concat_view v{ConstVeryDifferentRange{}};
-    using Iter = decltype(v.begin());
+    using Iter      = decltype(v.begin());
     using ConstIter = decltype(std::as_const(v).begin());
 
     static_assert(std::is_same_v<Iter::iterator_concept, std::random_access_iterator_tag>);
@@ -161,7 +159,6 @@ constexpr bool test() {
 
   return true;
 }
-
 
 int main(int, char**) {
   test();

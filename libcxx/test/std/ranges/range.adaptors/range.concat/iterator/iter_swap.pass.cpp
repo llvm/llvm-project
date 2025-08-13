@@ -24,7 +24,7 @@ concept has_iter_swap = requires(It it) { std::ranges::iter_swap(it, it); };
 struct ThrowingMove {
   ThrowingMove() = default;
   ThrowingMove(ThrowingMove&&) {}
-  ThrowingMove& operator=(ThrowingMove&&){return *this;}
+  ThrowingMove& operator=(ThrowingMove&&) { return *this; }
 };
 
 template <class Iterator, bool IsNoexcept>
@@ -41,8 +41,8 @@ constexpr void test() {
     View v2{Iterator(array2.data()), Sentinel(Iterator(array2.data() + array2.size()))};
     std::ranges::concat_view view(std::move(v1), std::move(v2));
 
-    auto it1                = view.begin();
-    auto it2                = ++view.begin();
+    auto it1 = view.begin();
+    auto it2 = ++view.begin();
 
     static_assert(std::is_same_v<decltype(iter_swap(it1, it2)), void>);
     static_assert(noexcept(iter_swap(it1, it2)) == IsNoexcept);

@@ -51,7 +51,8 @@ constexpr void test() {
     std::same_as<bool> decltype(auto) result = (it1 == it2);
     assert(result);
 
-    ++it2; ++it2;
+    ++it2;
+    ++it2;
     assert(!(it1 == it2));
     ++it2;
     assert(*it1 == *it2);

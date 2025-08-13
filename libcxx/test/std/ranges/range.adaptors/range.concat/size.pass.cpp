@@ -23,7 +23,7 @@ struct View : std::ranges::view_base {
 };
 
 struct SizedNonConst : std::ranges::view_base {
-  using iterator = forward_iterator<int*>;
+  using iterator    = forward_iterator<int*>;
   std::size_t size_ = 0;
   constexpr SizedNonConst(std::size_t s) : size_(s) {}
   constexpr auto begin() const { return iterator{buffer}; }
@@ -45,8 +45,7 @@ struct NoSizeView : std::ranges::view_base {
 };
 
 constexpr bool test() {
-
-   {
+  {
     // single range
     std::ranges::concat_view v(View(8));
     assert(v.size() == 8);

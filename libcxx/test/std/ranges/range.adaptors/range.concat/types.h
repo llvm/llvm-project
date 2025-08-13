@@ -54,7 +54,7 @@ struct BufferView : std::ranges::view_base {
 using IntBufferView = BufferView<int>;
 
 template <bool Simple>
-struct Common :  IntBufferView {
+struct Common : IntBufferView {
   using IntBufferView::IntBufferView;
 
   constexpr int* begin()
@@ -71,49 +71,53 @@ struct Common :  IntBufferView {
   constexpr const int* end() const { return buffer_ + size_; }
 };
 
-using SimpleCommon = Common<true>;
+using SimpleCommon    = Common<true>;
 using NonSimpleCommon = Common<false>;
 
-using SimpleCommonRandomAccessSized = SimpleCommon;
+using SimpleCommonRandomAccessSized    = SimpleCommon;
 using NonSimpleCommonRandomAccessSized = NonSimpleCommon;
 
 template <bool Simple>
 struct NonCommon : IntBufferView {
   using IntBufferView::IntBufferView;
   constexpr int* begin()
-    requires(!Simple) {
+    requires(!Simple)
+  {
     return buffer_;
   }
   constexpr const int* begin() const { return buffer_; }
   constexpr sentinel_wrapper<int*> end()
-    requires(!Simple) {
+    requires(!Simple)
+  {
     return sentinel_wrapper<int*>(buffer_ + size_);
   }
   constexpr sentinel_wrapper<const int*> end() const { return sentinel_wrapper<const int*>(buffer_ + size_); }
 };
 
-using SimpleNonCommon = NonCommon<true>;
+using SimpleNonCommon    = NonCommon<true>;
 using NonSimpleNonCommon = NonCommon<false>;
 
 template <bool Simple>
 struct NonCommonSized : IntBufferView {
   using IntBufferView::IntBufferView;
   constexpr int* begin()
-    requires(!Simple) {
+    requires(!Simple)
+  {
     return buffer_;
   }
   constexpr const int* begin() const { return buffer_; }
   constexpr sentinel_wrapper<int*> end()
-    requires(!Simple) {
+    requires(!Simple)
+  {
     return sentinel_wrapper<int*>(buffer_ + size_);
   }
   constexpr sentinel_wrapper<const int*> end() const { return sentinel_wrapper<const int*>(buffer_ + size_); }
   constexpr std::size_t size() const { return size_; }
 };
 
-using SimpleNonCommonSized = NonCommonSized<true>;
+using SimpleNonCommonSized                = NonCommonSized<true>;
 using SimpleNonCommonRandomAccessSized    = SimpleNonCommonSized;
-using NonSimpleNonCommonSized = NonCommonSized<false>;
+using NonSimpleNonCommonSized             = NonCommonSized<false>;
 using NonSimpleNonCommonRandomAccessSized = NonSimpleNonCommonSized;
 
 template <bool Simple>
@@ -121,15 +125,17 @@ struct NonCommonNonRandom : IntBufferView {
   using IntBufferView::IntBufferView;
 
   using const_iterator = forward_iterator<const int*>;
-  using iterator = forward_iterator<int*>;
+  using iterator       = forward_iterator<int*>;
 
   constexpr iterator begin()
-    requires(!Simple) {
+    requires(!Simple)
+  {
     return iterator(buffer_);
   }
   constexpr const_iterator begin() const { return const_iterator(buffer_); }
   constexpr sentinel_wrapper<iterator> end()
-    requires(!Simple) {
+    requires(!Simple)
+  {
     return sentinel_wrapper<iterator>(iterator(buffer_ + size_));
   }
   constexpr sentinel_wrapper<const_iterator> end() const {
@@ -137,7 +143,7 @@ struct NonCommonNonRandom : IntBufferView {
   }
 };
 
-using SimpleNonCommonNonRandom = NonCommonNonRandom<true>;
+using SimpleNonCommonNonRandom    = NonCommonNonRandom<true>;
 using NonSimpleNonCommonNonRandom = NonCommonNonRandom<false>;
 
 template <class Iter, class Sent = Iter, class NonConstIter = Iter, class NonConstSent = Sent>
@@ -145,13 +151,15 @@ struct BasicView : IntBufferView {
   using IntBufferView::IntBufferView;
 
   constexpr NonConstIter begin()
-    requires(!std::is_same_v<Iter, NonConstIter>) {
+    requires(!std::is_same_v<Iter, NonConstIter>)
+  {
     return NonConstIter(buffer_);
   }
   constexpr Iter begin() const { return Iter(buffer_); }
 
   constexpr NonConstSent end()
-    requires(!std::is_same_v<Sent, NonConstSent>) {
+    requires(!std::is_same_v<Sent, NonConstSent>)
+  {
     if constexpr (std::is_same_v<NonConstIter, NonConstSent>) {
       return NonConstIter(buffer_ + size_);
     } else {
@@ -172,6 +180,5 @@ using NonSizedRandomAccessView =
     BasicView<random_access_iterator<int*>, sentinel_wrapper<random_access_iterator<int*>>>;
 
 using InputCommonView = BasicView<common_input_iterator<int*>>;
-
 
 #endif // TEST_STD_RANGES_RANGE_ADAPTORS_CONCAT_FILTER_TYPES_H

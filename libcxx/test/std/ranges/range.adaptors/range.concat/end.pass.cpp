@@ -15,7 +15,6 @@
 #include "types.h"
 
 constexpr bool test() {
-
   int buffer1[5] = {1, 2, 3, 4, 5};
   int buffer2[2] = {6, 7};
 

@@ -22,20 +22,17 @@ template <class T>
 concept HasBegin = requires(T& t) { t.begin(); };
 
 template <class T>
-concept HasConstAndNonConstBegin =
-    HasConstBegin<T> &&
-    requires(T& t, const T& ct) { requires !std::same_as<decltype(t.begin()), decltype(ct.begin())>; };
+concept HasConstAndNonConstBegin = HasConstBegin<T> && requires(T& t, const T& ct) {
+  requires !std::same_as<decltype(t.begin()), decltype(ct.begin())>;
+};
 
 template <class T>
-concept HasOnlyNonConstBegin = HasBegin<T> && !
-HasConstBegin<T>;
+concept HasOnlyNonConstBegin = HasBegin<T> && !HasConstBegin<T>;
 
 template <class T>
-concept HasOnlyConstBegin = HasConstBegin<T> && !
-HasConstAndNonConstBegin<T>;
+concept HasOnlyConstBegin = HasConstBegin<T> && !HasConstAndNonConstBegin<T>;
 
 constexpr void tests() {
-  
   // check the case of simple view
   {
     int buffer[4] = {1, 2, 3, 4};
@@ -82,8 +79,6 @@ constexpr void tests() {
     assert(*it == 1);
     assert(it + 4 == view.end());
   }
-
-
 }
 
 constexpr bool test() {

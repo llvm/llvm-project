@@ -40,7 +40,7 @@ struct NoexceptView : std::ranges::view_base {
 };
 
 struct HelperView : std::ranges::view_base {
-  constexpr HelperView(const int* begin, const int *end) : begin_(begin), end_(end) {}
+  constexpr HelperView(const int* begin, const int* end) : begin_(begin), end_(end) {}
   constexpr int const* begin() const { return begin_; }
   constexpr int const* end() const { return end_; }
 
@@ -66,8 +66,8 @@ constexpr void test_with_one_view() {
 constexpr void test_with_more_than_one_view() {
   {
     using View = std::ranges::concat_view<HelperView, HelperView>;
-    int arr1[] = {1,2};
-    int arr2[] = {3,4};
+    int arr1[] = {1, 2};
+    int arr2[] = {3, 4};
     HelperView range1(arr1, arr1 + 2);
     HelperView range2(arr2, arr2 + 2);
     View view(range1, range2);
@@ -81,15 +81,12 @@ constexpr void test_with_more_than_one_view() {
   }
 }
 
-constexpr bool tests()
-{
+constexpr bool tests() {
   test_with_one_view();
   test_with_more_than_one_view();
 
   // Check cases where the default constructor isn't provided
-  {
-    static_assert(!std::is_default_constructible_v<std::ranges::concat_view<NoDefaultView >>);
-  }
+  { static_assert(!std::is_default_constructible_v<std::ranges::concat_view<NoDefaultView >>); }
 
   // Check noexcept-ness
   {

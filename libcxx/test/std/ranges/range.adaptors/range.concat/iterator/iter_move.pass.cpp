@@ -36,8 +36,8 @@ struct ThrowingMove {
 
 template <class Iterator, bool HasNoexceptIterMove>
 constexpr bool test() {
-  using Sentinel       = sentinel_wrapper<Iterator>;
-  using View           = minimal_view<Iterator, Sentinel>;
+  using Sentinel = sentinel_wrapper<Iterator>;
+  using View     = minimal_view<Iterator, Sentinel>;
 
   {
     std::array<int, 5> array1{0, 1, 2, 3, 4};
@@ -60,7 +60,6 @@ constexpr bool test() {
     auto it = v.begin();
     static_assert(!noexcept(std::ranges::iter_move(it)));
   }
-
 
   return true;
 }

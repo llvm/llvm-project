@@ -13,8 +13,11 @@
 
 #include "../../range_adaptor_types.h"
 
-using ConstIterIncompatibleView = BasicView<forward_iterator<int*>, forward_iterator<int*>,
-                                            random_access_iterator<const int*>, random_access_iterator<const int*>>;
+using ConstIterIncompatibleView =
+    BasicView<forward_iterator<int*>,
+              forward_iterator<int*>,
+              random_access_iterator<const int*>,
+              random_access_iterator<const int*>>;
 static_assert(!std::convertible_to<std::ranges::iterator_t<ConstIterIncompatibleView>,
                                    std::ranges::iterator_t<const ConstIterIncompatibleView>>);
 
@@ -23,7 +26,7 @@ constexpr bool test() {
 
   {
     std::ranges::concat_view v(NonSimpleCommon{buffer});
-    auto iter1 = v.begin();
+    auto iter1                                       = v.begin();
     std::ranges::iterator_t<const decltype(v)> iter2 = iter1;
     assert(iter1 == iter2);
 
