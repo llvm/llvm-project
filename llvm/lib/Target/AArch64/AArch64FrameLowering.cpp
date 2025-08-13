@@ -1487,8 +1487,11 @@ bool isVGInstruction(MachineBasicBlock::iterator MBBI) {
 
     if (Opc == AArch64::BL) {
       auto Op1 = MBBI->getOperand(0);
-      return Op1.isSymbol() &&
-             (StringRef(Op1.getSymbolName()) == "__arm_get_current_vg");
+      auto &TLI =
+          *MBBI->getMF()->getSubtarget<AArch64Subtarget>().getTargetLowering();
+      char const *GetCurrentVG =
+          TLI.getLibcallName(RTLIB::SMEABI_GET_CURRENT_VG);
+      return Op1.isSymbol() && StringRef(Op1.getSymbolName()) == GetCurrentVG;
     }
   }
 
@@ -3468,6 +3471,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
     ArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
   MachineFunction &MF = *MBB.getParent();
+  auto &TLI = *MF.getSubtarget<AArch64Subtarget>().getTargetLowering();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   bool NeedsWinCFI = needsWinCFI(MF);
@@ -3581,11 +3585,11 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
               .addReg(AArch64::X0, RegState::Implicit)
               .setMIFlag(MachineInstr::FrameSetup);
 
-        const uint32_t *RegMask = TRI->getCallPreservedMask(
-            MF,
-            CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1);
+        RTLIB::Libcall LC = RTLIB::SMEABI_GET_CURRENT_VG;
+        const uint32_t *RegMask =
+            TRI->getCallPreservedMask(MF, TLI.getLibcallCallingConv(LC));
         BuildMI(MBB, MI, DL, TII.get(AArch64::BL))
-            .addExternalSymbol("__arm_get_current_vg")
+            .addExternalSymbol(TLI.getLibcallName(LC))
             .addRegMask(RegMask)
             .addReg(AArch64::X0, RegState::ImplicitDefine)
             .setMIFlag(MachineInstr::FrameSetup);
