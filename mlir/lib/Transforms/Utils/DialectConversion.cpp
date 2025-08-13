@@ -1785,7 +1785,7 @@ getReplacementValues(ConversionPatternRewriterImpl &impl, ValueRange fromRange,
       continue;
     }
 
-    if (TypeRange(to) == TypeRange(from.getType())) {
+    if (TypeRange(ValueRange(to)) == TypeRange(from.getType())) {
       // The replacement value already has the correct type. Use it directly.
       repls.push_back(to[0]);
       continue;
