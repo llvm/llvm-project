@@ -139,7 +139,8 @@ public:
         LIS(AM.getCachedResult<LiveIntervalsAnalysis>(MF)),
         MLI(AM.getCachedResult<MachineLoopAnalysis>(MF)),
         MDT(AM.getCachedResult<MachineDominatorTreeAnalysis>(MF)),
-        PDT(AM.getCachedResult<MachinePostDominatorTreeAnalysis>(MF)), MFAM(&AM) {}
+        PDT(AM.getCachedResult<MachinePostDominatorTreeAnalysis>(MF)),
+        MFAM(&AM) {}
 
   bool run(MachineFunction &MF);
 };
@@ -212,7 +213,8 @@ void PHIElimination::getAnalysisUsage(AnalysisUsage &AU) const {
 bool PHIEliminationImpl::run(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
 
-  MachineDomTreeUpdater MDTU(MDT, PDT, MachineDomTreeUpdater::UpdateStrategy::Lazy);
+  MachineDomTreeUpdater MDTU(MDT, PDT,
+                             MachineDomTreeUpdater::UpdateStrategy::Lazy);
 
   bool Changed = false;
 
