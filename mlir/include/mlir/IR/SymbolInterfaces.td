@@ -224,7 +224,7 @@ def SymbolUserOpInterface : OpInterface<"SymbolUserOpInterface"> {
 
 def SymbolUserAttrInterface : AttrInterface<"SymbolUserAttrInterface"> {
   let description = [{
-    This interface describes an attrivute that may use a `Symbol`. This
+    This interface describes an attribute that may use a `Symbol`. This
     interface allows for users of symbols to hook into verification and other
     symbol related utilities that are either costly or otherwise disallowed
     within a traditional operation.
