@@ -2248,13 +2248,13 @@ public:
   bool analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps, Type *ElemTy,
                                 Align CommonAlignment,
                                 SmallVectorImpl<unsigned> &SortedIndices,
-                                StridedPtrInfo &SPtrInfo) const;
+                                StridedPtrInfo *SPtrInfo) const;
 
   // Same as analyzeRtStrideCandidate, but for constant strides.
   bool analyzeConstantStrideCandidate(ArrayRef<Value *> PointerOps,
                                       Type *ElemTy, Align CommonAlignment,
                                       SmallVectorImpl<unsigned> &SortedIndices,
-                                      StridedPtrInfo &SPtrInfo, int64_t Diff,
+                                      StridedPtrInfo *SPtrInfo, int64_t Diff,
                                       Value *Ptr0, Value *PtrN) const;
 
   /// Checks if the given array of loads can be represented as a vectorized,
@@ -6513,7 +6513,7 @@ static const SCEV *calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
 bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
                                        Type *ElemTy, Align CommonAlignment,
                                        SmallVectorImpl<unsigned> &SortedIndices,
-                                       StridedPtrInfo &SPtrInfo) const {
+                                       StridedPtrInfo *SPtrInfo) const {
   // Group the pointers by constant offset.
   DenseMap<int64_t, std::pair<SmallVector<Value *>, SmallVector<unsigned>>>
       OffsetToPointerOpIdxMap;
@@ -6626,8 +6626,10 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
 
   SortedIndices.clear();
   SortedIndices = SortedIndicesDraft;
-  SPtrInfo.StrideSCEV = Stride0;
-  SPtrInfo.Ty = StridedLoadTy;
+  if (SPtrInfo) {
+    SPtrInfo->StrideSCEV = Stride0;
+    SPtrInfo->Ty = StridedLoadTy;
+  }
   return true;
 }
 
@@ -6961,7 +6963,7 @@ isMaskedLoadCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
 // Same as analyzeRtStrideCandidate, but for constant strides.
 bool BoUpSLP::analyzeConstantStrideCandidate(
     ArrayRef<Value *> PointerOps, Type *ElemTy, Align CommonAlignment,
-    SmallVectorImpl<unsigned> &SortedIndices, StridedPtrInfo &SPtrInfo,
+    SmallVectorImpl<unsigned> &SortedIndices, StridedPtrInfo *SPtrInfo,
     int64_t Diff, Value *Ptr0, Value *PtrN) const {
   const unsigned Sz = PointerOps.size();
   SmallVector<int64_t> SortedOffsetsFromBase;
@@ -7073,8 +7075,10 @@ bool BoUpSLP::analyzeConstantStrideCandidate(
        AbsoluteDiff > VecSz) ||
       Diff == -(static_cast<int>(VecSz) - 1)) {
     Type *StrideTy = DL->getIndexType(Ptr0->getType());
-    SPtrInfo.StrideVal = ConstantInt::get(StrideTy, StrideIntVal);
-    SPtrInfo.Ty = StridedLoadTy;
+    if (SPtrInfo) {
+      SPtrInfo->StrideVal = ConstantInt::get(StrideTy, StrideIntVal);
+      SPtrInfo->Ty = StridedLoadTy;
+    }
     return true;
   }
   return false;
@@ -7122,7 +7126,7 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
   if (!IsSorted) {
     if (Sz > MinProfitableStridedLoads &&
         analyzeRtStrideCandidate(PointerOps, ScalarTy, CommonAlignment, Order,
-                                 *SPtrInfo))
+                                 SPtrInfo))
       return LoadsState::StridedVectorize;
 
     if (!TTI->isLegalMaskedGather(VecTy, CommonAlignment) ||
@@ -7157,7 +7161,7 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
       return LoadsState::CompressVectorize;
     // Simple check if not a strided access - clear order.
     if (analyzeConstantStrideCandidate(PointerOps, ScalarTy, CommonAlignment,
-                                       Order, *SPtrInfo, *Diff, Ptr0, PtrN))
+                                       Order, SPtrInfo, *Diff, Ptr0, PtrN))
       return LoadsState::StridedVectorize;
   }
   if (!TTI->isLegalMaskedGather(VecTy, CommonAlignment) ||
