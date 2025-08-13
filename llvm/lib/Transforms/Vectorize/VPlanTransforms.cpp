@@ -1772,12 +1772,27 @@ void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
   }
 }
 
-/// Hash the underlying data of a VPSingleDefRecipe pointer, instead of hashing
-/// the pointer itself.
 namespace {
 struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
   static bool isSentinel(const VPSingleDefRecipe *Def) {
     return Def == getEmptyKey() || Def == getTombstoneKey();
+  }
+
+  /// Get any instruction opcode or intrinsic ID data embedded in recipe \p R.
+  /// Returns an optional pair, where the first element indicates whether it is
+  /// an intrinsic ID.
+  static std::optional<std::pair<bool, unsigned>>
+  getOpcodeOrIntrinsicID(const VPRecipeBase &R) {
+    return TypeSwitch<const VPRecipeBase *,
+                      std::optional<std::pair<bool, unsigned>>>(&R)
+        .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
+              VPWidenSelectRecipe, VPHistogramRecipe, VPPartialReductionRecipe,
+              VPReplicateRecipe>(
+            [](auto *I) { return std::make_pair(false, I->getOpcode()); })
+        .Case<VPWidenIntrinsicRecipe>([](auto *I) {
+          return std::make_pair(true, I->getVectorIntrinsicID());
+        })
+        .Default([](auto *) { return std::nullopt; });
   }
 
   static bool canHandle(const VPSingleDefRecipe *Def) {
@@ -1787,8 +1802,10 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
            !Def->mayReadFromMemory();
   }
 
+  /// Hash the underlying data of a VPSingleDefRecipe pointer, instead of
+  /// hashing the pointer itself.
   static unsigned getHashValue(const VPSingleDefRecipe *Def) {
-    return hash_combine(Def->getVPDefID(), vputils::getOpcode(*Def),
+    return hash_combine(Def->getVPDefID(), getOpcodeOrIntrinsicID(*Def),
                         vputils::isSingleScalar(Def),
                         hash_combine_range(Def->operands()));
   }
@@ -1797,7 +1814,7 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     if (isSentinel(L) || isSentinel(R))
       return L == R;
     bool Result = L->getVPDefID() == R->getVPDefID() &&
-                  vputils::getOpcode(*L) == vputils::getOpcode(*R) &&
+                  getOpcodeOrIntrinsicID(*L) == getOpcodeOrIntrinsicID(*R) &&
                   vputils::isSingleScalar(L) == vputils::isSingleScalar(R) &&
                   equal(L->operands(), R->operands());
     assert(!Result || getHashValue(L) == getHashValue(R));
