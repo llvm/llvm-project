@@ -84,6 +84,10 @@ attributes(global) subroutine devsub()
   af = __powf(af, af)
   ad = __dsqrt_rd(ad)
   ad = __dsqrt_ru(ad)
+  ad = __ull2double_rd(al)
+  ad = __ull2double_rn(al)
+  ad = __ull2double_ru(al)
+  ad = __ull2double_rz(al)
   r2 = __float2half_rn(af)
   af = __half2float(r2)
 end
@@ -156,6 +160,10 @@ end
 ! CHECK: %{{.*}} = fir.call @__nv_powf(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32, f32) -> f32
 ! CHECK: %{{.*}} = fir.call @__nv_dsqrt_rd(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
 ! CHECK: %{{.*}} = fir.call @__nv_dsqrt_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
+! CHECK: %{{.*}} = fir.call @__nv_ull2double_rd(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f64
+! CHECK: %{{.*}} = fir.call @__nv_ull2double_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f64
+! CHECK: %{{.*}} = fir.call @__nv_ull2double_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f64
+! CHECK: %{{.*}} = fir.call @__nv_ull2double_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f64
 ! CHECK: %{{.*}} = fir.call @__nv_float2half_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f16
 ! CHECK: %{{.*}} = fir.call @__nv_half2float(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f16) -> f32
 
