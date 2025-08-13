@@ -248,6 +248,7 @@ template <typename T> class MathPerf {
   }
 
 public:
+  // Returns cycles-per-call (lower is better)
   template <size_t N = 1>
   static uint64_t run_throughput_in_range(T f(T), int min_exp, int max_exp,
                                           uint32_t call_index) {
@@ -265,6 +266,7 @@ public:
     return total_time / N;
   }
 
+  // Returns cycles-per-call (lower is better)
   template <size_t N = 1>
   static uint64_t run_throughput_in_range(T f(T, T), int arg1_min_exp,
                                           int arg1_max_exp, int arg2_min_exp,

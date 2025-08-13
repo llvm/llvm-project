@@ -176,11 +176,6 @@ benchmark(const BenchmarkOptions &options,
   uint64_t min = UINT64_MAX;
   uint64_t max = 0;
 
-  uint64_t overhead = UINT64_MAX;
-  int overhead_iterations = 10;
-  for (int i = 0; i < overhead_iterations; i++)
-    overhead = cpp::min(overhead, LIBC_NAMESPACE::overhead());
-
   uint32_t call_index = 0;
 
   for (int64_t time_budget = options.max_duration; time_budget >= 0;) {
@@ -188,9 +183,7 @@ benchmark(const BenchmarkOptions &options,
 
     const clock_t start = clock();
     while (sample_estimator.get_iterations() < iterations) {
-      auto wrapper_intermediate = wrapper_func(call_index++);
-      uint64_t current_result =
-          wrapper_intermediate < overhead ? 0 : wrapper_intermediate - overhead;
+      auto current_result = wrapper_func(call_index++);
       max = cpp::max(max, current_result);
       min = cpp::min(min, current_result);
       sample_estimator.update(current_result);
