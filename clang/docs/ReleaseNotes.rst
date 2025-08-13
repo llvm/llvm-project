@@ -113,6 +113,20 @@ C23 Feature Support
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
+- Added a new builtin, ``__builtin_dedup_pack``, to remove duplicate types from a parameter pack.
+  This feature is particularly useful in template metaprogramming for normalizing type lists.
+  The builtin produces a new, unexpanded parameter pack that can be used in contexts like template
+  argument lists or base specifiers.
+
+  .. code-block:: c++
+    template <typename...> struct TypeList;
+
+    // The resulting type is TypeList<int, double, char>
+    using MyTypeList = TypeList<__builtin_dedup_pack<int, double, int, char, double>...>;
+
+  Currently, the use of ``__builtin_dedup_pack`` is limited to template arguments and base
+  specifiers, it also must be used within a template context.
+
 - Added ``__builtin_elementwise_minnumnum`` and ``__builtin_elementwise_maxnumnum``.
 
 - Trapping UBSan (e.g. ``-fsanitize-trap=undefined``) now emits a string describing the reason for
