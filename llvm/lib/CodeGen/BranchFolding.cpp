@@ -1790,10 +1790,10 @@ ReoptimizeBlock:
       //
       // Similarly, the analyzeBranch call does not consider callbr, which also
       // introduces the possibility of infinite rotation, as there may be
-      // multiple successors of PrevBB. Thus we checks such case by
-      // !FallThrough->isInlineAsmBrIndirectTarget().
-      // NOTE:  Checking if PrevBB contains callbr is more precise, but
-      // much more expensive.
+      // multiple successors of PrevBB. Thus we check such case by
+      // FallThrough->isInlineAsmBrIndirectTarget().
+      // NOTE: Checking if PrevBB contains callbr is more precise, but much
+      // more expensive.
       MachineBasicBlock *PrevTBB = nullptr, *PrevFBB = nullptr;
       SmallVector<MachineOperand, 4> PrevCond;
 

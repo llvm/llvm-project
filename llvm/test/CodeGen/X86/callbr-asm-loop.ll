@@ -3,7 +3,6 @@
 ; RUN: llc -O1 -mtriple=i686-- < %s | FileCheck %s
 
 ; Test that causes multiple defs of %eax.
-; FIXME: The testcase hangs with -O1/2/3 enabled.
 define i32 @loop1() nounwind {
 ; CHECK-LABEL: loop1:
 ; CHECK:       # %bb.0: # %entry
