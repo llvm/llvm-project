@@ -944,10 +944,8 @@ void LoadMatrixOp::build(OpBuilder &builder, OperationState &state, Type res,
                          LayoutTrait layout) {
   llvm::SmallVector<Value> dynamicOffsets;
   llvm::SmallVector<int64_t> staticOffsets;
-
   dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
   auto staticOffsetsAttr = builder.getDenseI64ArrayAttr(staticOffsets);
-
   build(builder, state, res, matrixDesc, dynamicOffsets, staticOffsetsAttr,
         layout);
 }
@@ -970,10 +968,8 @@ void StoreMatrixOp::build(OpBuilder &builder, OperationState &state,
                           LayoutTrait layout) {
   llvm::SmallVector<Value> dynamicOffsets;
   llvm::SmallVector<int64_t> staticOffsets;
-
   dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
   auto staticOffsetsAttr = builder.getDenseI64ArrayAttr(staticOffsets);
-
   build(builder, state, matrixDesc, dynamicOffsets, staticOffsetsAttr, data,
         layout);
 }
@@ -984,6 +980,34 @@ LogicalResult StoreMatrixOp::verify() {
   if (llvm::any_of(llvm::zip_equal(dataShape, mdescShape),
                    [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
     return emitOpError("data shape must not exceed matrix desc shape.");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// XeGPU_MatrixDescSubviewOp
+//===----------------------------------------------------------------------===//
+
+void MatrixDescSubviewOp::build(OpBuilder &builder, OperationState &state,
+                                Type resTy, Value src,
+                                llvm::ArrayRef<OpFoldResult> offsets,
+                                LayoutTrait layout) {
+  llvm::SmallVector<Value> dynamicOffsets;
+  llvm::SmallVector<int64_t> staticOffsets;
+  dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
+  auto staticOffsetsAttr = builder.getDenseI64ArrayAttr(staticOffsets);
+  build(builder, state, resTy, src, dynamicOffsets, staticOffsetsAttr, layout);
+}
+
+LogicalResult MatrixDescSubviewOp::verify() {
+  ArrayRef<int64_t> srcShape = getSrc().getType().getShape();
+  ArrayRef<int64_t> resShape = getRes().getType().getShape();
+  if (llvm::any_of(llvm::zip_equal(resShape, srcShape),
+                   [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
+    return emitOpError("result shape must not exceed source shape.");
+
+  if (getSrc().getType().getLayout() != getRes().getType().getLayout())
+    return emitOpError("result must inherit the source layout.");
 
   return success();
 }

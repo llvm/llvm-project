@@ -798,4 +798,18 @@ gpu.func @store_matrix_desc_with_stride(%arg0: !xegpu.matrix_desc<16x64xf16, str
   gpu.return
 }
 
+// CHECK: gpu.func @matrix_desc_subview([[ARG0:%.+]]: !xegpu.matrix_desc<16x64xf16>)
+gpu.func @matrix_desc_subview(%arg0: !xegpu.matrix_desc<16x64xf16>) {
+  //CHECK: xegpu.matrix_desc_subview [[ARG0]][8, 8] : !xegpu.matrix_desc<16x64xf16> -> !xegpu.matrix_desc<8x16xf16>
+  %data = xegpu.matrix_desc_subview %arg0[8, 8]: !xegpu.matrix_desc<16x64xf16> -> !xegpu.matrix_desc<8x16xf16>
+  gpu.return
+}
+
+// CHECK: gpu.func @matrix_desc_subview_with_stride([[ARG0:%.+]]: !xegpu.matrix_desc<16x64xf16, strided<[1, 16]>>)
+gpu.func @matrix_desc_subview_with_stride(%arg0: !xegpu.matrix_desc<16x64xf16, strided<[1, 16]>>) {
+  //CHECK: xegpu.matrix_desc_subview [[ARG0]][8, 8] : !xegpu.matrix_desc<16x64xf16, strided<[1, 16]>> -> !xegpu.matrix_desc<8x16xf16, strided<[1, 16]>>
+  %data = xegpu.matrix_desc_subview %arg0[8, 8]: !xegpu.matrix_desc<16x64xf16, strided<[1, 16]>> -> !xegpu.matrix_desc<8x16xf16, strided<[1, 16]>>
+  gpu.return
+}
+
 }

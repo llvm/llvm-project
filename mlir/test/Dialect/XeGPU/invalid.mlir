@@ -806,3 +806,23 @@ func.func @store_matrix_desc_invalid_data_size(%arg0: !xegpu.matrix_desc<16x64xf
   return
 }
 
+// -----
+func.func @matrix_desc_subview_size_mismatch(%arg0: !xegpu.matrix_desc<16x64xf16>) {
+  // expected-error@+1 {{result shape must not exceed source shape}}
+  %data = xegpu.matrix_desc_subview %arg0[8, 8]: !xegpu.matrix_desc<16x64xf16> -> !xegpu.matrix_desc<32x16xf16>
+  return
+}
+
+// -----
+func.func @matrix_desc_subview_layout_mismatch(%arg0: !xegpu.matrix_desc<16x64xf16, strided<[1, 16]>>) {
+  // expected-error@+1 {{result must inherit the source layout}}
+  %data = xegpu.matrix_desc_subview %arg0[8, 8]: !xegpu.matrix_desc<16x64xf16, strided<[1, 16]>> -> !xegpu.matrix_desc<8x16xf16>
+  return
+}
+
+// -----
+func.func @matrix_desc_subview_rank_mismatch(%arg0: !xegpu.matrix_desc<16x64xf16>) {
+  // expected-error@+1 {{failed to verify that all of {src, res} have same element type}}
+  %data = xegpu.matrix_desc_subview %arg0[8, 8]: !xegpu.matrix_desc<16x64xf16> -> !xegpu.matrix_desc<8x16xf32>
+  return
+}

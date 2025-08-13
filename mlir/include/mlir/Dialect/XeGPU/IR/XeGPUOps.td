@@ -1206,5 +1206,36 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
   let hasVerifier = 1;
 }
 
+def XeGPU_MatrixDescSubviewOp: XeGPU_Op<"matrix_desc_subview", [Pure, ViewLikeOpInterface,
+                                                                AllElementTypesMatch<["src", "res"]>,
+                                                                AllRanksMatch<["src", "res"]>]> {
+  let description = [{
+    Create a subview of a matrix descriptor.
+    Results:
+     - `src` : a matrix descriptor.
+     - `offsets` : the coordinates within the matrix the subview will be created from.
+  }];
+  let arguments = (ins XeGPU_MatrixDesc:$src,
+                       Variadic<Index>:$offsets,
+                       DenseI64ArrayAttr:$const_offsets,
+                       OptionalAttr<LayoutTrait>: $layout);
+  let results = (outs XeGPU_MatrixDesc:$res);
+  let assemblyFormat = [{$src `` custom<DynamicIndexList>($offsets, $const_offsets) prop-dict
+                         attr-dict `` `:` qualified(type($src)) `->` qualified(type($res))}];
+  let builders = [
+    OpBuilder<(ins "Type": $res, "Value":$src, "llvm::ArrayRef<OpFoldResult>": $offsets, "LayoutTrait": $layout)>
+  ];
+
+  let extraClassDeclaration = [{
+    mlir::Value getViewSource() { return getSrc(); }
+
+    SmallVector<OpFoldResult> getMixedOffsets() {
+      return getMixedValues(getConstOffsets(), getOffsets(), getContext());
+    }
+  }];
+
+  let hasVerifier = 1;
+}
+
 
 #endif // MLIR_DIALECT_XEGPU_IR_XEGPUOPS_TD
