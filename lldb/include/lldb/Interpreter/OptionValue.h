@@ -340,11 +340,17 @@ protected:
   // DeepCopy to it. Inherit from Cloneable to avoid doing this manually.
   virtual lldb::OptionValueSP Clone() const = 0;
 
-  struct DefaultValueFormat {
+  class DefaultValueFormat {
+  public:
     DefaultValueFormat(Stream &stream) : stream(stream) {
       stream.PutCString(" (default: ");
     }
     ~DefaultValueFormat() { stream.PutChar(')'); }
+
+    DefaultValueFormat(const DefaultValueFormat &) = delete;
+    DefaultValueFormat &operator=(const DefaultValueFormat &) = delete;
+
+  private:
     Stream &stream;
   };
 
