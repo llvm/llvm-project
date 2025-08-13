@@ -66,10 +66,11 @@ iota_range<RTLIB::LibcallImpl>
 RuntimeLibcallsInfo::libcallImplNameHit(uint16_t NameOffsetEntry,
                                         uint16_t StrOffset) {
   int NumAliases = 1;
-  for (int E = std::size(RuntimeLibcallNameOffsetTable);
-       NameOffsetEntry + NumAliases != E &&
-       RuntimeLibcallNameOffsetTable[NameOffsetEntry + NumAliases] == StrOffset;
-       ++NumAliases) {
+  for (uint16_t Entry : ArrayRef(RuntimeLibcallNameOffsetTable)
+                            .drop_front(NameOffsetEntry + 1)) {
+    if (Entry != StrOffset)
+      break;
+    ++NumAliases;
   }
 
   RTLIB::LibcallImpl ImplStart = static_cast<RTLIB::LibcallImpl>(
