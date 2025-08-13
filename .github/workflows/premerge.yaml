@@ -35,9 +35,6 @@ jobs:
         with:
           fetch-depth: 2
       - name: Build and Test
-        # Mark the job as a success even if the step fails so that people do
-        # not get notified while the new premerge pipeline is in an
-        # experimental state.
         run: |
           git config --global --add safe.directory '*'
 
@@ -109,9 +106,6 @@ jobs:
           echo "windows-projects=${projects_to_build}" >> $GITHUB_OUTPUT
           echo "windows-check-targets=${project_check_targets}" >> $GITHUB_OUTPUT
       - name: Build and Test
-        # Mark the job as a success even if the step fails so that people do
-        # not get notified while the new premerge pipeline is in an
-        # experimental state.
         if: ${{ steps.vars.outputs.windows-projects != '' }}
         shell: cmd
         run: |
