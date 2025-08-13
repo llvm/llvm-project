@@ -483,7 +483,7 @@ async def main() -> None:
     parser.add_argument(
         "-line-filter",
         default=None,
-        help="List of files with line ranges to filter the warnings.",
+        help="List of files and line ranges to output diagnostics from.",
     )
     if yaml:
         parser.add_argument(
