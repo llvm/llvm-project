@@ -14,12 +14,7 @@
 
 using namespace llvm;
 
-void SMEAttrs::set(unsigned M, bool Enable) {
-  if (Enable)
-    Bitmask |= M;
-  else
-    Bitmask &= ~M;
-
+void SMEAttrs::validate() const {
   // Streaming Mode Attrs
   assert(!(hasStreamingInterface() && hasStreamingCompatibleInterface()) &&
          "SM_Enabled and SM_Compatible are mutually exclusive");
@@ -81,6 +76,10 @@ SMEAttrs::SMEAttrs(const AttributeList &Attrs) {
 
 void SMEAttrs::addKnownFunctionAttrs(StringRef FuncName,
                                      const TargetLowering &TLI) {
+  // If the function name does not start with a _ or #_ is not a builtin.
+  if (!FuncName.starts_with('_') && !FuncName.starts_with("#_"))
+    return;
+
   struct SMERoutineAttr {
     RTLIB::Libcall LC{RTLIB::UNKNOWN_LIBCALL};
     unsigned Attrs{SMEAttrs::Normal};

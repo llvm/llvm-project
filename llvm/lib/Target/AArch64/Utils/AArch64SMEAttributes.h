@@ -62,7 +62,15 @@ public:
     addKnownFunctionAttrs(FuncName, TLI);
   };
 
-  void set(unsigned M, bool Enable = true);
+  void set(unsigned M, bool Enable = true) {
+    if (Enable)
+      Bitmask |= M;
+    else
+      Bitmask &= ~M;
+#ifndef NDEBUG
+    validate();
+#endif
+  }
 
   // Interfaces to query PSTATE.SM
   bool hasStreamingBody() const { return Bitmask & SM_Body; }
@@ -149,6 +157,7 @@ public:
 
 private:
   void addKnownFunctionAttrs(StringRef FuncName, const TargetLowering &TLI);
+  void validate() const;
 };
 
 /// SMECallAttrs is a utility class to hold the SMEAttrs for a callsite. It has
