@@ -2077,15 +2077,11 @@ Instruction *InstCombinerImpl::visitIntToPtr(IntToPtrInst &CI) {
   Value *Base;
   Value *Offset;
   if (match(CI.getOperand(0),
-            m_Add(m_PtrToInt(m_Value(Base)), m_Value(Offset))) &&
+            m_Add(m_PtrToIntSameSize(DL, m_Value(Base)), m_Value(Offset))) &&
+      CI.getType()->getPointerAddressSpace() ==
+          Base->getType()->getPointerAddressSpace() &&
       all_of(CI.users(), IsaPred<ICmpInst>)) {
-    Type *BasePtrTy = Base->getType();
-    if (CI.getType()->getPointerAddressSpace() ==
-            BasePtrTy->getPointerAddressSpace() &&
-        DL.getTypeSizeInBits(BasePtrTy) ==
-            DL.getTypeSizeInBits(CI.getSrcTy())) {
-      return GetElementPtrInst::Create(Builder.getInt8Ty(), Base, Offset);
-    }
+    return GetElementPtrInst::Create(Builder.getInt8Ty(), Base, Offset);
   }
 
   if (Instruction *I = commonCastTransforms(CI))
