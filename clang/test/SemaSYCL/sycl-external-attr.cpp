@@ -48,7 +48,8 @@ template<typename>
 void func8();
 template<> [[clang::sycl_external]] void func8<S8>() {}
 // expected-warning@-1{{'clang::sycl_external' attribute does not appear on the first declaration}}
-// expected-note@-2{{previous declaration is here}}
+// expected-error@-2{{'clang::sycl_external' can only be applied to functions with external linkage}}
+// expected-note@-3{{previous declaration is here}}
 
 // FIXME: The implicit instantiation of func9<S9>() is valid.
 namespace { struct S9 {}; }
@@ -78,8 +79,10 @@ void goo();
 [[clang::sycl_external]] void goo();
 void goo() {}
 
+// expected-note@+2{{previous definition is here}}
 // expected-note@+1{{previous declaration is here}}
 void hoo() {}
+// expected-warning@+2{{attribute declaration must precede definition}}
 // expected-warning@+1{{'clang::sycl_external' attribute does not appear on the first declaration}}
 [[clang::sycl_external]] void hoo();
 
@@ -129,8 +132,10 @@ class A {
 
 class B {
 public:
+// expected-error@+1{{'clang::sycl_external' cannot be applied to a virtual function}}
   [[clang::sycl_external]] virtual void foo() {}
 
+// expected-error@+1{{'clang::sycl_external' cannot be applied to a virtual function}}
   [[clang::sycl_external]] virtual void bar() = 0;
 };
 

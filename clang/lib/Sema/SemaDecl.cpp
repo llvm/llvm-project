@@ -4099,10 +4099,9 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
     //   optionally use SYCL_EXTERNAL, but this is not required.
     const SYCLExternalAttr *SEA = New->getAttr<SYCLExternalAttr>();
     if (SEA && !Old->hasAttr<SYCLExternalAttr>()) {
-      Diag(SEA->getLocation(), diag::warn_attribute_missing_on_first_decl)
+      Diag(SEA->getLocation(), diag::warn_sycl_external_missing_on_first_decl)
           << SEA;
       Diag(Old->getLocation(), diag::note_previous_declaration);
-      New->dropAttr<SYCLExternalAttr>();
     }
 
     // (C++98 8.3.5p3):
@@ -12464,7 +12463,7 @@ void Sema::CheckMain(FunctionDecl *FD, const DeclSpec &DS) {
   }
 
   if (FD->hasAttr<SYCLExternalAttr>()) {
-    Diag(FD->getLocation(), diag::err_sycl_attribute_invalid_main);
+    Diag(FD->getLocation(), diag::err_sycl_external_invalid_main);
     FD->setInvalidDecl();
     return;
   }
@@ -16309,7 +16308,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
     SYCLExternalAttr *SEAttr = FD->getAttr<SYCLExternalAttr>();
     if (FD->isDeletedAsWritten())
       Diag(SEAttr->getLocation(),
-           diag::err_sycl_attribute_invalid_deleted_function);
+           diag::err_sycl_external_invalid_deleted_function);
   }
 
   {

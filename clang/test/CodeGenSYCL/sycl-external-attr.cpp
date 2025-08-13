@@ -22,28 +22,23 @@
 // FIXME: Function declared and used but not defined - emit external reference
 [[clang::sycl_external]] void declUsed(int y);
 
-// Function declared with the attribute and later defined - symbols emitted
+// Function declared with the attribute and later defined - definition emitted
 [[clang::sycl_external]] int func1(int arg);
 int func1(int arg) { return arg; }
 // CHECK: define dso_local spir_func noundef i32 @_Z5func1i
 
 class A {
-// Defaulted special member functions - no symbols emitted
+// Unused defaulted special member functions - no symbols emitted
   [[clang::sycl_external]] A& operator=(A& a) = default;
 };
 
-class B {
-  [[clang::sycl_external]] virtual void BFunc1WithAttr() { int i = 1; }
-// CHECK: define linkonce_odr spir_func void @_ZN1B14BFunc1WithAttrEv
-  virtual void BFunc2NoAttr() { int i = 2; }
-};
-
 class C {
-// Special member function defined - symbols emitted
+// Special member function defined - definition emitted
   [[clang::sycl_external]] ~C() {}
 // CHECK: define linkonce_odr spir_func void @_ZN1CD1Ev
 };
 
+// Function reachable from an unused function - definition emitted
 int ret1() { return 1; }
 [[clang::sycl_external]] int withAttr() { return ret1(); }
 // CHECK: define dso_local spir_func noundef i32 @_Z8withAttrv

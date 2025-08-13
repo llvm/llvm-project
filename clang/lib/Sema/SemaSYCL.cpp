@@ -254,13 +254,15 @@ void SemaSYCL::CheckSYCLExternalFunctionDecl(FunctionDecl *FD) {
   const auto *SEAttr = FD->getAttr<SYCLExternalAttr>();
   assert(SEAttr && "Missing sycl_external attribute");
   if (!FD->isExternallyVisible()) {
-    Diag(SEAttr->getLocation(), diag::err_sycl_attribute_invalid_linkage);
-    return;
+    Diag(SEAttr->getLocation(), diag::err_sycl_external_invalid_linkage);
   }
   if (FD->isDeletedAsWritten()) {
     Diag(SEAttr->getLocation(),
-         diag::err_sycl_attribute_invalid_deleted_function);
-    return;
+         diag::err_sycl_external_invalid_deleted_function);
+  }
+  if (FD->isVirtualAsWritten()) {
+    Diag(SEAttr->getLocation(),
+         diag::err_sycl_external_invalid_virtual_function);
   }
 }
 
