@@ -100,8 +100,7 @@ struct ExecutionEngineOptions {
   /// the llvm's global Perf notification listener.
   bool enablePerfNotificationListener = true;
 
-  /// Setting initialize=false to register symbols might be used in
-  /// initialization
+  /// Setting initialize=false to defer initialization
   bool shouldInitialize = true;
 };
 
