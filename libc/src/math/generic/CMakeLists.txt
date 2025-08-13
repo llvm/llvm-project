@@ -5087,15 +5087,57 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  bf16sub
+  bf16fma
   SRCS
-    bf16sub.cpp
+    bf16fma.cpp
   HDRS
-    ../bf16sub.h
+    ../bf16fma.h
   DEPENDS
     libc.src.__support.common
     libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+)
+
+add_entrypoint_object(
+  bf16fmaf
+  SRCS
+    bf16fmaf.cpp
+  HDRS
+    ../bf16fmaf.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+)
+
+add_entrypoint_object(
+  bf16fmal
+  SRCS
+    bf16fmal.cpp
+  HDRS
+    ../bf16fmal.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+)
+
+add_entrypoint_object(
+  bf16fmaf128
+  SRCS
+    bf16fmaf128.cpp
+  HDRS
+    ../bf16fmaf128.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fma
     libc.src.__support.macros.config
     libc.src.__support.macros.properties.types
 )
@@ -5152,6 +5194,20 @@ add_entrypoint_object(
     libc.src.__support.common
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.generic.mul
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+)
+
+add_entrypoint_object(
+  bf16sub
+  SRCS
+    bf16sub.cpp
+  HDRS
+    ../bf16sub.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.add_sub
     libc.src.__support.macros.config
     libc.src.__support.macros.properties.types
 )
