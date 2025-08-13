@@ -8,40 +8,42 @@
 
 #if defined(_WIN32)
 
-#  include <__config>
+#  define WIN32_LEAN_AND_MEAN
+#  include <windows.h>
+//
+#  include <dbghelp.h>
+#  include <psapi.h>
+//
+#  include <cstring>
+#  include <iostream>
+#  include <mutex>
 #  include <stacktrace>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
 
-// clang-format off
-
-//
-#include "windows.h"
-//
-#include "dbghelp.h"
-#include "psapi.h"
-//
-#include "common.h"
-
-#include <iostream>
-#include <mutex>
-
 namespace {
 
 struct dll {
-  HMODULE module_ {};
-  bool loaded_ {};
+  HMODULE module_{};
+  bool loaded_{};
 
-  explicit dll(char const* name) : module_(LoadLibrary(name)) {}
+  explicit dll(char const* name) : module_(LoadLibraryA(name)) {}
 
-  ~dll() { if (module_) { FreeLibrary(module_); } }
+  ~dll() {
+    if (module_) {
+      FreeLibrary(module_);
+    }
+  }
 
-  template <typename F> bool get_func(F* func, char const* name) {
-    *func = (F) GetProcAddress(module_, name);
+  template <typename F>
+  bool get_func(F* func, char const* name) {
+    *func = (F)GetProcAddress(module_, name);
     return func != nullptr;
   }
 };
+
+// clang-format off
 
 struct dbghelp_dll final : dll {
   IMAGE_NT_HEADERS* (*ImageNtHeader)(void*);
@@ -128,18 +130,18 @@ base::current(arena&, size_t skip, size_t max_depth) {
 
   sym_init_scope symscope(dbghelp, proc);
 
-  TCHAR sym_path[MAX_PATH * 4];
+  char sym_path[MAX_PATH * 4]; // arbitrary
   if (!(*dbghelp.SymGetSearchPath)(proc, sym_path, sizeof(sym_path))) { return; }
 
-  TCHAR exe_dir[MAX_PATH];
-  if (!GetModuleFileName(nullptr, exe_dir, sizeof(exe_dir))) { return; }
+  char exe_dir[MAX_PATH];
+  if (!GetModuleFileNameA(nullptr, exe_dir, sizeof(exe_dir))) { return; }
   size_t exe_dir_len = strlen(exe_dir);
   while (exe_dir_len > 0 && exe_dir[exe_dir_len - 1] != '\\') { exe_dir[--exe_dir_len] = 0; }
   if (exe_dir_len > 0) { exe_dir[--exe_dir_len] = 0; }  // strip last backslash
 
   if (!strstr(sym_path, exe_dir)) {
-    (void) strncat(sym_path, ";", sizeof(sym_path));
-    (void) strncat(sym_path, exe_dir, sizeof(sym_path));
+    (void) strncat(sym_path, ";", sizeof(sym_path) - 1);
+    (void) strncat(sym_path, exe_dir, sizeof(sym_path) - 1);
     if (!(*dbghelp.SymSetSearchPath)(proc, sym_path)) { return; }
   }
 
@@ -202,14 +204,12 @@ base::current(arena&, size_t skip, size_t max_depth) {
 
   DWORD need_bytes = 0;
   HMODULE module_handles[1024] {0};
-  size_t module_count = 0; // 0 IFF module enumeration failed
   if (!(*psapi.EnumProcessModules)(
           proc, module_handles, sizeof(module_handles), LPDWORD(&need_bytes))) {
     return;
   }
-  module_count = need_bytes / sizeof(HMODULE);
 
-  // Symbols longer than this amount will be truncated.
+  // Symbols longer than this will be truncated.
   static constexpr size_t kMaxSymName = 256;
 
   auto* it = entries_begin();
@@ -255,4 +255,4 @@ base::current(arena&, size_t skip, size_t max_depth) {
 } // namespace __stacktrace
 _LIBCPP_END_NAMESPACE_STD
 
-#endif
+#endif  // _WIN32
