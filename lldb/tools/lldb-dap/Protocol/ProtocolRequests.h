@@ -310,6 +310,8 @@ bool fromJSON(const llvm::json::Value &, LaunchRequestArguments &,
 using LaunchResponse = VoidResponse;
 
 #define LLDB_DAP_INVALID_PORT -1
+/// An invalid 'frameId' default value.
+#define LLDB_DAP_INVALID_FRAME_ID UINT64_MAX
 
 /// lldb-dap specific attach arguments.
 struct AttachRequestArguments {
@@ -380,7 +382,7 @@ llvm::json::Value toJSON(const ContinueResponseBody &);
 struct CompletionsArguments {
   /// Returns completions in the scope of this stack frame. If not specified,
   /// the completions are returned for the global scope.
-  uint64_t frameId = LLDB_INVALID_FRAME_ID;
+  uint64_t frameId = LLDB_DAP_INVALID_FRAME_ID;
 
   /// One or more source lines. Typically this is the text users have typed into
   /// the debug console before they asked for completion.
@@ -484,7 +486,7 @@ struct ScopesArguments {
   /// Retrieve the scopes for the stack frame identified by `frameId`. The
   /// `frameId` must have been obtained in the current suspended state. See
   /// 'Lifetime of Object References' in the Overview section for details.
-  uint64_t frameId = LLDB_INVALID_FRAME_ID;
+  uint64_t frameId = LLDB_DAP_INVALID_FRAME_ID;
 };
 bool fromJSON(const llvm::json::Value &, ScopesArguments &, llvm::json::Path);
 
@@ -570,7 +572,7 @@ using StepInResponse = VoidResponse;
 /// Arguments for `stepInTargets` request.
 struct StepInTargetsArguments {
   /// The stack frame for which to retrieve the possible step-in targets.
-  uint64_t frameId = LLDB_INVALID_FRAME_ID;
+  uint64_t frameId = LLDB_DAP_INVALID_FRAME_ID;
 };
 bool fromJSON(const llvm::json::Value &, StepInTargetsArguments &,
               llvm::json::Path);
@@ -719,7 +721,7 @@ struct DataBreakpointInfoArguments {
   /// When `name` is an expression, evaluate it in the scope of this stack
   /// frame. If not specified, the expression is evaluated in the global scope.
   /// When `asAddress` is true, the `frameId` is ignored.
-  std::optional<uint64_t> frameId;
+  uint64_t frameId = LLDB_DAP_INVALID_FRAME_ID;
 
   /// If specified, a debug adapter should return information for the range of
   /// memory extending `bytes` number of bytes from the address or variable
