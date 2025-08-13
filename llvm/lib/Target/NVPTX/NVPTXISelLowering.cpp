@@ -132,8 +132,7 @@ NVPTXTargetLowering::getDivF32Level(const MachineFunction &MF,
   return NVPTX::DivPrecisionLevel::IEEE754;
 }
 
-bool NVPTXTargetLowering::usePrecSqrtF32(const MachineFunction &MF,
-                                         const SDNode *N) const {
+bool NVPTXTargetLowering::usePrecSqrtF32(const SDNode *N) const {
   // If nvptx-prec-sqrtf32 is used on the command-line, always honor it
   if (UsePrecSqrtF32.getNumOccurrences() > 0)
     return UsePrecSqrtF32;
@@ -1118,8 +1117,7 @@ SDValue NVPTXTargetLowering::getSqrtEstimate(SDValue Operand, SelectionDAG &DAG,
                                              bool &UseOneConst,
                                              bool Reciprocal) const {
   if (!(Enabled == ReciprocalEstimate::Enabled ||
-        (Enabled == ReciprocalEstimate::Unspecified &&
-         !usePrecSqrtF32(DAG.getMachineFunction()))))
+        (Enabled == ReciprocalEstimate::Unspecified && !usePrecSqrtF32())))
     return SDValue();
 
   if (ExtraSteps == ReciprocalEstimate::Unspecified)
