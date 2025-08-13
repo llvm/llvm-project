@@ -6,9 +6,9 @@ declare void @use.i32(i32)
 define i64 @simple(i32 %x) {
 ; CHECK-LABEL: define i64 @simple(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[LSHR:%.*]] = and i32 [[X]], -256
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[LSHR]] to i64
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i64 [[ZEXT]], 24
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 [[X]], 8
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext nneg i32 [[LSHR]] to i64
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i64 [[ZEXT]], 32
 ; CHECK-NEXT:    ret i64 [[SHL]]
 ;
   %lshr = lshr i32 %x, 8
@@ -20,9 +20,9 @@ define i64 @simple(i32 %x) {
 define <2 x i64> @simple.vec(<2 x i32> %v) {
 ; CHECK-LABEL: define <2 x i64> @simple.vec(
 ; CHECK-SAME: <2 x i32> [[V:%.*]]) {
-; CHECK-NEXT:    [[LSHR:%.*]] = and <2 x i32> [[V]], splat (i32 -256)
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i32> [[LSHR]] to <2 x i64>
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw <2 x i64> [[ZEXT]], splat (i64 24)
+; CHECK-NEXT:    [[LSHR:%.*]] = lshr <2 x i32> [[V]], splat (i32 8)
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext nneg <2 x i32> [[LSHR]] to <2 x i64>
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw <2 x i64> [[ZEXT]], splat (i64 32)
 ; CHECK-NEXT:    ret <2 x i64> [[SHL]]
 ;
   %lshr = lshr <2 x i32> %v, splat(i32 8)
@@ -128,9 +128,14 @@ define i64 @combine(i32 %lower, i32 %upper) {
 ; CHECK-LABEL: define i64 @combine(
 ; CHECK-SAME: i32 [[LOWER:%.*]], i32 [[UPPER:%.*]]) {
 ; CHECK-NEXT:    [[BASE:%.*]] = zext i32 [[LOWER]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[UPPER]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 32
-; CHECK-NEXT:    [[O_3:%.*]] = or disjoint i64 [[TMP2]], [[BASE]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[UPPER]], 16777215
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[TMP2]], 32
+; CHECK-NEXT:    [[O_2:%.*]] = or disjoint i64 [[TMP3]], [[BASE]]
+; CHECK-NEXT:    [[R_3:%.*]] = lshr i32 [[UPPER]], 24
+; CHECK-NEXT:    [[Z_3:%.*]] = zext nneg i32 [[R_3]] to i64
+; CHECK-NEXT:    [[S_3:%.*]] = shl nuw i64 [[Z_3]], 56
+; CHECK-NEXT:    [[O_3:%.*]] = or disjoint i64 [[O_2]], [[S_3]]
 ; CHECK-NEXT:    ret i64 [[O_3]]
 ;
   %base = zext i32 %lower to i64

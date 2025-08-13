@@ -197,9 +197,9 @@ define i128 @i128_ext_split_neg4(i32 %x) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[LOWERSRC:%.*]] = sext i32 [[X]] to i64
 ; CHECK-NEXT:    [[LO:%.*]] = zext i64 [[LOWERSRC]] to i128
-; CHECK-NEXT:    [[SIGN:%.*]] = and i32 [[X]], -2147483648
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[SIGN]] to i128
-; CHECK-NEXT:    [[HI:%.*]] = shl nuw nsw i128 [[TMP0]], 33
+; CHECK-NEXT:    [[SIGN:%.*]] = lshr i32 [[X]], 31
+; CHECK-NEXT:    [[WIDEN:%.*]] = zext nneg i32 [[SIGN]] to i128
+; CHECK-NEXT:    [[HI:%.*]] = shl nuw nsw i128 [[WIDEN]], 64
 ; CHECK-NEXT:    [[RES:%.*]] = or disjoint i128 [[HI]], [[LO]]
 ; CHECK-NEXT:    ret i128 [[RES]]
 ;

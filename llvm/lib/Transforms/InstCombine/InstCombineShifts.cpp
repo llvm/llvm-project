@@ -530,12 +530,17 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
   return nullptr;
 }
 
+struct OpposingInnerShiftInfo {
+  unsigned ShiftAmount;
+  Instruction *CxtI;
+};
+
 /// Return a bitmask of all constant outer shift amounts that can be simplified
 /// by foldShiftedShift().
-static APInt getEvaluableShiftedShiftMask(bool IsOuterShl,
-                                          Instruction *InnerShift,
-                                          InstCombinerImpl &IC,
-                                          Instruction *CxtI) {
+static APInt
+getEvaluableShiftedShiftMask(std::optional<OpposingInnerShiftInfo> &InnerShInfo,
+                             bool IsOuterShl, Instruction *InnerShift,
+                             InstCombinerImpl &IC, Instruction *CxtI) {
   assert(InnerShift->isLogicalShift() && "Unexpected instruction type");
 
   const unsigned TypeWidth = InnerShift->getType()->getScalarSizeInBits();
@@ -557,6 +562,11 @@ static APInt getEvaluableShiftedShiftMask(bool IsOuterShl,
   bool IsInnerShl = InnerShift->getOpcode() == Instruction::Shl;
   if (IsInnerShl == IsOuterShl)
     return APInt::getLowBitsSet(TypeWidth, TypeWidth - InnerShAmt);
+
+  InnerShInfo = {
+      InnerShAmt,
+      CxtI,
+  };
 
   APInt ShMask = APInt::getZero(TypeWidth);
   // Equal shift amounts in opposite directions become bitwise 'and':
@@ -588,9 +598,11 @@ static APInt getEvaluableShiftedShiftMask(bool IsOuterShl,
 ///
 /// \returns true if and only if at least one bit of the \p ShiftMask is set
 /// after refinement.
-static bool refineEvaluableShiftMask(Value *V, APInt &ShiftMask,
-                                     bool IsLeftShift, InstCombinerImpl &IC,
-                                     Instruction *CxtI) {
+static bool
+refineEvaluableShiftMask(Value *V, APInt &ShiftMask,
+                         std::optional<OpposingInnerShiftInfo> &InnerShInfo,
+                         bool IsLeftShift, InstCombinerImpl &IC,
+                         Instruction *CxtI) {
   // We can always evaluate immediate constants.
   if (match(V, m_ImmConstant()))
     return true;
@@ -616,14 +628,15 @@ static bool refineEvaluableShiftMask(Value *V, APInt &ShiftMask,
   case Instruction::And:
   case Instruction::Or:
   case Instruction::Xor:
-    return refineEvaluableShiftMask(I->getOperand(0), ShiftMask, IsLeftShift,
-                                    IC, I) &&
-           refineEvaluableShiftMask(I->getOperand(1), ShiftMask, IsLeftShift,
-                                    IC, I);
+    return refineEvaluableShiftMask(I->getOperand(0), ShiftMask, InnerShInfo,
+                                    IsLeftShift, IC, I) &&
+           refineEvaluableShiftMask(I->getOperand(1), ShiftMask, InnerShInfo,
+                                    IsLeftShift, IC, I);
 
   case Instruction::Shl:
   case Instruction::LShr: {
-    ShiftMask &= getEvaluableShiftedShiftMask(IsLeftShift, I, IC, CxtI);
+    ShiftMask &=
+        getEvaluableShiftedShiftMask(InnerShInfo, IsLeftShift, I, IC, CxtI);
     return !ShiftMask.isZero();
   }
 
@@ -631,8 +644,10 @@ static bool refineEvaluableShiftMask(Value *V, APInt &ShiftMask,
     SelectInst *SI = cast<SelectInst>(I);
     Value *TrueVal = SI->getTrueValue();
     Value *FalseVal = SI->getFalseValue();
-    return refineEvaluableShiftMask(TrueVal, ShiftMask, IsLeftShift, IC, SI) &&
-           refineEvaluableShiftMask(FalseVal, ShiftMask, IsLeftShift, IC, SI);
+    return refineEvaluableShiftMask(TrueVal, ShiftMask, InnerShInfo,
+                                    IsLeftShift, IC, SI) &&
+           refineEvaluableShiftMask(FalseVal, ShiftMask, InnerShInfo,
+                                    IsLeftShift, IC, SI);
   }
   case Instruction::PHI: {
     // We can change a phi if we can change all operands.  Note that we never
@@ -640,7 +655,8 @@ static bool refineEvaluableShiftMask(Value *V, APInt &ShiftMask,
     // instructions with a single use.
     PHINode *PN = cast<PHINode>(I);
     for (Value *IncValue : PN->incoming_values())
-      if (!refineEvaluableShiftMask(IncValue, ShiftMask, IsLeftShift, IC, PN))
+      if (!refineEvaluableShiftMask(IncValue, ShiftMask, InnerShInfo,
+                                    IsLeftShift, IC, PN))
         return false;
     return true;
   }
@@ -673,7 +689,9 @@ static bool canEvaluateShifted(Value *V, unsigned ShAmt, bool IsLeftShift,
                                InstCombinerImpl &IC, Instruction *CxtI) {
   APInt ShiftMask =
       APInt::getOneBitSet(V->getType()->getScalarSizeInBits(), ShAmt);
-  return refineEvaluableShiftMask(V, ShiftMask, IsLeftShift, IC, CxtI);
+  std::optional<OpposingInnerShiftInfo> InnerShInfo;
+  return refineEvaluableShiftMask(V, ShiftMask, InnerShInfo, IsLeftShift, IC,
+                                  CxtI);
 }
 
 /// Fold OuterShift (InnerShift X, C1), C2.
@@ -1035,16 +1053,27 @@ static Instruction *foldShrThroughZExtedShl(BinaryOperator &I, Value *Op,
     return nullptr;
   APInt ShrMask =
       APInt::getLowBitsSet(InnerBitWidth, std::min(MaxInnerShrAmt, ShlAmt) + 1);
+  std::optional<OpposingInnerShiftInfo> InnerShInfo;
 
   // Undo the maximal inner right shift amount that simplifies the overall
   // computation.
-  if (!refineEvaluableShiftMask(Op, ShrMask, /*IsLeftShift=*/true, IC, nullptr))
+  if (!refineEvaluableShiftMask(Op, ShrMask, InnerShInfo, /*IsLeftShift=*/true,
+                                IC, nullptr))
+    return nullptr;
+  if (!InnerShInfo)
     return nullptr;
 
-  const unsigned InnerShrAmt = ShrMask.getActiveBits() - 1;
+  const unsigned InnerShrAmt = InnerShInfo->ShiftAmount;
   if (InnerShrAmt == 0)
     return nullptr;
   assert(InnerShrAmt <= ShlAmt);
+
+  // Inner shifts will simplify into a mask, so conservatively only enable this
+  // folding if the shift is immediately masked anyway.
+  const bool IsInnerShMasked =
+      InnerShInfo->CxtI && InnerShInfo->CxtI->getOpcode() == Instruction::And;
+  if (!IsInnerShMasked)
+    return nullptr;
 
   const uint64_t ReducedShlAmt = ShlAmt - InnerShrAmt;
   Value *NewOp = getShiftedValue(Op, InnerShrAmt, /*isLeftShift=*/true, IC, DL);

@@ -101,9 +101,9 @@ define void @numsignbits_shl_zext_extended_bits_remains(i8 %x) {
 define void @numsignbits_shl_zext_all_bits_shifted_out(i8 %x) {
 ; CHECK-LABEL: define void @numsignbits_shl_zext_all_bits_shifted_out(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[ASHR:%.*]] = and i8 [[X]], 96
-; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i8 [[ASHR]] to i16
-; CHECK-NEXT:    [[NSB1:%.*]] = shl nuw i16 [[TMP1]], 9
+; CHECK-NEXT:    [[ASHR:%.*]] = lshr i8 [[X]], 5
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext nneg i8 [[ASHR]] to i16
+; CHECK-NEXT:    [[NSB1:%.*]] = shl i16 [[ZEXT]], 14
 ; CHECK-NEXT:    [[AND14:%.*]] = and i16 [[NSB1]], 16384
 ; CHECK-NEXT:    [[ADD14:%.*]] = add i16 [[AND14]], [[NSB1]]
 ; CHECK-NEXT:    call void @escape(i16 [[ADD14]])
