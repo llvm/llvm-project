@@ -76,6 +76,30 @@ plui.h gp, 32
 # CHECK-ASM-AND-OBJ: plui.h gp, -412
 # CHECK-ASM: encoding: [0x9b,0x21,0x99,0xf0]
 plui.h gp, 612
+# CHECK-ASM-AND-OBJ: psll.hs a0, a1, a2
+# CHECK-ASM: encoding: [0x1b,0xa5,0xc5,0x88]
+psll.hs a0, a1, a2
+# CHECK-ASM-AND-OBJ: psll.bs a3, a4, a5
+# CHECK-ASM: encoding: [0x9b,0x26,0xf7,0x8c]
+psll.bs a3, a4, a5
+# CHECK-ASM-AND-OBJ: padd.hs t0, t1, t2
+# CHECK-ASM: encoding: [0x9b,0x22,0x73,0x98]
+padd.hs t0, t1, t2
+# CHECK-ASM-AND-OBJ: padd.bs ra, a1, a2
+# CHECK-ASM: encoding: [0x9b,0xa0,0xc5,0x9c]
+padd.bs ra, a1, a2
+# CHECK-ASM-AND-OBJ: pssha.hs a3, a4, a5
+# CHECK-ASM: encoding: [0x9b,0x26,0xf7,0xe8]
+pssha.hs a3, a4, a5
+# CHECK-ASM-AND-OBJ: ssha gp, a4, a5
+# CHECK-ASM: encoding: [0x9b,0x21,0xf7,0xea]
+ssha gp, a4, a5
+# CHECK-ASM-AND-OBJ: psshar.hs a6, a7, a0
+# CHECK-ASM: encoding: [0x1b,0xa8,0xa8,0xf8]
+psshar.hs a6, a7, a0
+# CHECK-ASM-AND-OBJ: sshar t1, a7, a0
+# CHECK-ASM: encoding: [0x1b,0xa3,0xa8,0xfa]
+sshar t1, a7, a0
 # CHECK-ASM-AND-OBJ: psrli.b a6, a7, 0
 # CHECK-ASM: encoding: [0x1b,0xc8,0x88,0x80]
 psrli.b a6, a7, 0
@@ -106,3 +130,27 @@ psati.h t6, s11, 8
 # CHECK-ASM-AND-OBJ: sati s11, s10, 9
 # CHECK-ASM: encoding: [0x9b,0x4d,0x9d,0xe2]
 sati s11, s10, 9
+# CHECK-ASM-AND-OBJ: psrl.hs a6, a7, a1
+# CHECK-ASM: encoding: [0x1b,0xc8,0xb8,0x88]
+psrl.hs a6, a7, a1
+# CHECK-ASM-AND-OBJ: psrl.bs a1, a2, a3
+# CHECK-ASM: encoding: [0x9b,0x45,0xd6,0x8c]
+psrl.bs a1, a2, a3
+# CHECK-ASM-AND-OBJ: predsum.hs a4, a5, a6
+# CHECK-ASM: encoding: [0x1b,0xc7,0x07,0x99]
+predsum.hs a4, a5, a6
+# CHECK-ASM-AND-OBJ: predsum.bs a7, a1, a1
+# CHECK-ASM: encoding: [0x9b,0xc8,0xb5,0x9c]
+predsum.bs a7, a1, a1
+# CHECK-ASM-AND-OBJ: predsumu.hs t0, t1, t2
+# CHECK-ASM: encoding: [0x9b,0x42,0x73,0xb8]
+predsumu.hs t0, t1, t2
+# CHECK-ASM-AND-OBJ: predsumu.bs t3, t4, t5
+# CHECK-ASM: encoding: [0x1b,0xce,0xee,0xbd]
+predsumu.bs t3, t4, t5
+# CHECK-ASM-AND-OBJ: psra.hs ra, a1, a2
+# CHECK-ASM: encoding: [0x9b,0xc0,0xc5,0xc8]
+psra.hs ra, a1, a2
+# CHECK-ASM-AND-OBJ: psra.bs sp, a2, a3
+# CHECK-ASM: encoding: [0x1b,0x41,0xd6,0xcc]
+psra.bs sp, a2, a3
