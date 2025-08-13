@@ -1126,8 +1126,8 @@ struct DeferredStore {
 /// target region represents a Generic (non-SPMD) kernel.
 ///
 /// This represents a necessary but not sufficient set of conditions to use
-/// device shared memory in place of regular allocas. Depending on the variable,
-/// its uses or the associated OpenMP construct might also need to be taken into
+/// device shared memory in place of regular allocas. For some variables, the
+/// associated OpenMP construct or their uses might also need to be taken into
 /// account.
 static bool
 mightAllocInDeviceSharedMemory(Operation &op,
@@ -1140,9 +1140,8 @@ mightAllocInDeviceSharedMemory(Operation &op,
     targetOp = op.getParentOfType<omp::TargetOp>();
 
   return targetOp &&
-         !bitEnumContainsAny(
-             targetOp.getKernelExecFlags(targetOp.getInnermostCapturedOmpOp()),
-             omp::TargetRegionFlags::spmd);
+         targetOp.getKernelExecFlags(targetOp.getInnermostCapturedOmpOp()) ==
+             omp::TargetExecMode::generic;
 }
 
 /// Check whether the entry block argument representing the private copy of a
@@ -1164,7 +1163,7 @@ static bool mustAllocPrivateVarInDeviceSharedMemory(BlockArgument value) {
       if (llvm::is_contained(parallelOp.getReductionVars(), value))
         return true;
     } else if (auto parallelOp = user->getParentOfType<omp::ParallelOp>()) {
-      if (targetOp->isProperAncestor(parallelOp))
+      if (parentOp->isProperAncestor(parallelOp))
         return true;
     }
   }

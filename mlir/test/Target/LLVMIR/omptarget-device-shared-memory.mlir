@@ -49,38 +49,61 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
       }
       omp.terminator
     }
+    // CHECK: call i32 @__kmpc_target_init
+    // CHECK: call void @[[OUTLINED_TARGET:__omp_offloading_[A-Za-z0-9_.]*]]
+
+    // CHECK: define internal void @[[OUTLINED_TARGET]]
+    // CHECK: %[[X_PRIV:.*]] = call align 8 ptr @__kmpc_alloc_shared(i64 4)
+    // CHECK: %[[GEP_X:.*]] = getelementptr { {{.*}} }, ptr addrspace(5) %structArg
+    // CHECK-NEXT: store ptr %[[X_PRIV]], ptr addrspace(5) %[[GEP_X]]
+    // CHECK-NEXT: call void @[[OUTLINED_TEAMS:__omp_offloading_[A-Za-z0-9_.]*]](ptr %structArg.ascast)
+
+    // CHECK: [[REDUCE_FINALIZE_BB:reduce\.finalize.*]]:
+    // CHECK-NEXT: %{{.*}} = call i32 @__kmpc_global_thread_num
+    // CHECK-NEXT: call void @__kmpc_barrier
+    // CHECK-NEXT: call void @__kmpc_free_shared(ptr %[[X_PRIV]], i64 4)
+
+    // CHECK: define internal void @[[OUTLINED_TEAMS]]
+    // CHECK: %[[Y_PRIV:.*]] = call align 8 ptr @__kmpc_alloc_shared(i64 4)
+    // CHECK: %[[Z_PRIV:.*]] = call align 8 ptr @__kmpc_alloc_shared(i64 4)
+
+    // %[[GEP_Y:.*]] = getelementptr { {{.*}} }, ptr addrspace(5) %structArg
+    // store ptr %[[Y_PRIV]], ptr addrspace(5) %[[GEP_Y]], align 8
+    // %[[GEP_Z:.*]] = getelementptr { {{.*}} }, ptr addrspace(5) %structArg
+    // store ptr %[[Z_PRIV]], ptr addrspace(5) %[[GEP_Z]], align 8
+
+    // CHECK: call void @__kmpc_free_shared(ptr %[[Y_PRIV]], i64 4)
+    // CHECK-NEXT: call void @__kmpc_free_shared(ptr %[[Z_PRIV]], i64 4)
+    // CHECK-NEXT: br label %[[EXIT_BB:.*]]
+
+    // CHECK: [[EXIT_BB]]:
+    // CHECK-NEXT: ret void
+
+    // Test that we don't misidentify a private `distribute` value as being
+    // located inside of a parallel region if that parallel region is not nested
+    // inside of `omp.distribute`.
+    omp.parallel {
+      %18 = omp.map.info var_ptr(%2 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "x"}
+      omp.target map_entries(%18 -> %arg0 : !llvm.ptr) {
+        %19 = llvm.mlir.constant(10000 : i32) : i32
+        %20 = llvm.mlir.constant(1 : i32) : i32
+        omp.teams {
+          omp.distribute private(@privatizer %arg0 -> %arg1 : !llvm.ptr) {
+            omp.loop_nest (%arg2) : i32 = (%20) to (%19) inclusive step (%20) {
+              llvm.store %arg2, %arg1 : i32, !llvm.ptr
+              omp.yield
+            }
+          }
+          omp.terminator
+        }
+        omp.terminator
+      }
+      omp.terminator
+    }
+    // CHECK: call i32 @__kmpc_target_init
+    // CHECK-NOT: call {{.*}} @__kmpc_alloc_shared
+    // CHECK-NOT: call {{.*}} @__kmpc_free_shared
+
     llvm.return
   }
 }
-
-// CHECK: call i32 @__kmpc_target_init
-// CHECK: call void @[[OUTLINED_TARGET:__omp_offloading_[A-Za-z0-9_.]*]]
-
-
-// CHECK: define internal void @[[OUTLINED_TARGET]]
-// CHECK: %[[X_PRIV:.*]] = call align 8 ptr @__kmpc_alloc_shared(i64 4)
-// CHECK: %[[GEP_X:.*]] = getelementptr { {{.*}} }, ptr addrspace(5) %structArg
-// CHECK-NEXT: store ptr %[[X_PRIV]], ptr addrspace(5) %[[GEP_X]]
-// CHECK-NEXT: call void @[[OUTLINED_TEAMS:__omp_offloading_[A-Za-z0-9_.]*]](ptr %structArg.ascast)
-
-// CHECK: [[REDUCE_FINALIZE_BB:reduce\.finalize.*]]:
-// CHECK-NEXT: %{{.*}} = call i32 @__kmpc_global_thread_num
-// CHECK-NEXT: call void @__kmpc_barrier
-// CHECK-NEXT: call void @__kmpc_free_shared(ptr %[[X_PRIV]], i64 4)
-
-
-// CHECK: define internal void @[[OUTLINED_TEAMS]]
-// CHECK: %[[Y_PRIV:.*]] = call align 8 ptr @__kmpc_alloc_shared(i64 4)
-// CHECK: %[[Z_PRIV:.*]] = call align 8 ptr @__kmpc_alloc_shared(i64 4)
-
-// %[[GEP_Y:.*]] = getelementptr { {{.*}} }, ptr addrspace(5) %structArg
-// store ptr %[[Y_PRIV]], ptr addrspace(5) %[[GEP_Y]], align 8
-// %[[GEP_Z:.*]] = getelementptr { {{.*}} }, ptr addrspace(5) %structArg
-// store ptr %[[Z_PRIV]], ptr addrspace(5) %[[GEP_Z]], align 8
-
-// CHECK: call void @__kmpc_free_shared(ptr %[[Y_PRIV]], i64 4)
-// CHECK-NEXT: call void @__kmpc_free_shared(ptr %[[Z_PRIV]], i64 4)
-// CHECK-NEXT: br label %[[EXIT_BB:.*]]
-
-// CHECK: [[EXIT_BB]]:
-// CHECK-NEXT: ret void
