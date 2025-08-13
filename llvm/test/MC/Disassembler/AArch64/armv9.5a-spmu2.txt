@@ -1,4 +1,0 @@
-# RUN: llvm-mc -triple aarch64 -disassemble < %s | FileCheck %s
-
-[0x80,0x9c,0x13,0xd5]
-# CHECK: msr SPMZR_EL0, x0
