@@ -301,10 +301,10 @@ forall = _parfor_cm(ForallOp)
 class ParallelOp(ParallelOp):
     def __init__(
         self,
-        lower_bounds,
-        upper_bounds,
-        steps,
-        inits: Optional[Union[Operation, OpView, Sequence[Value]]] = None,
+        lower_bounds: Sequence[Union[Operation, OpView, Value, int]],
+        upper_bounds: Sequence[Union[Operation, OpView, Value, int]],
+        steps: Sequence[Union[Value, int]],
+        inits: Optional[Sequence[Union[Operation, OpView, Sequence[Value]]]] = None,
         *,
         loc=None,
         ip=None,
@@ -338,7 +338,15 @@ parallel = _parfor_cm(ParallelOp)
 
 
 class ReduceOp(ReduceOp):
-    def __init__(self, operands, num_reductions, *, loc=None, ip=None):
+    def __init__(
+        self,
+        operands: Sequence[Union[Operation, OpView, Sequence[Value]]],
+        num_reductions: int,
+        *,
+        loc=None,
+        ip=None,
+    ):
+        operands = _get_op_results_or_values(operands)
         super().__init__(operands, num_reductions, loc=loc, ip=ip)
         for i in range(num_reductions):
             self.regions[i].blocks.append(operands[i].type, operands[i].type)
@@ -364,14 +372,11 @@ def in_parallel():
 
 
 def parallel_insert_slice(
-    source,
-    dest,
-    static_offsets=None,
-    static_sizes=None,
-    static_strides=None,
-    offsets=None,
-    sizes=None,
-    strides=None,
+    source: Union[Operation, OpView, Value],
+    dest: Union[Operation, OpView, Value],
+    offsets: Optional[Sequence[Union[Operation, OpView, Value, int]]] = None,
+    sizes: Optional[Sequence[Union[Operation, OpView, Value, int]]] = None,
+    strides: Optional[Sequence[Union[Operation, OpView, Value, int]]] = None,
 ):
     from . import tensor
 
@@ -383,7 +388,4 @@ def parallel_insert_slice(
             offsets,
             sizes,
             strides,
-            static_offsets,
-            static_sizes,
-            static_strides,
         )

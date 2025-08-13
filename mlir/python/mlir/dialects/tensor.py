@@ -14,7 +14,11 @@ except ImportError as e:
 
 from typing import Sequence, Union
 from ._ods_common import _cext as _ods_cext
-from ._ods_common import get_op_result_or_op_results as _get_op_result_or_op_results
+from ._ods_common import (
+    get_op_result_or_op_results as _get_op_result_or_op_results,
+    _dispatch_mixed_values,
+    MixedValues,
+)
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)
@@ -68,34 +72,22 @@ generate = region_op(
 
 
 def parallel_insert_slice(
-    source,
-    dest,
-    offsets=None,
-    sizes=None,
-    strides=None,
-    static_offsets=None,
-    static_sizes=None,
-    static_strides=None,
+    source: Union[Operation, OpView, Value],
+    dest: Union[Operation, OpView, Value],
+    offsets: MixedValues,
+    sizes: MixedValues,
+    strides: MixedValues,
 ):
-    S = ShapedType.get_dynamic_size()
-    if static_offsets is None:
-        assert offsets is not None
-        static_offsets = [S, S]
-    if static_sizes is None:
-        assert sizes is not None
-        static_sizes = [S, S]
-    if static_strides is None:
-        assert strides is not None
-        static_strides = [S, S]
     if offsets is None:
-        assert static_offsets
         offsets = []
     if sizes is None:
-        assert static_sizes
         sizes = []
     if strides is None:
-        assert static_strides
         strides = []
+
+    offsets, _packed_offsets, static_offsets = _dispatch_mixed_values(offsets)
+    sizes, _packed_sizes, static_sizes = _dispatch_mixed_values(sizes)
+    strides, _packed_strides, static_strides = _dispatch_mixed_values(strides)
 
     return ParallelInsertSliceOp(
         source,

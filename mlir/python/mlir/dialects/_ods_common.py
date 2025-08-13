@@ -245,7 +245,7 @@ def _dispatch_mixed_values(
                 dynamic_values.append(size)
         static_values = DenseI64ArrayAttr.get(static_values)
 
-    return (dynamic_values, packed_values, static_values)
+    return dynamic_values, packed_values, static_values
 
 
 def _get_value_or_attribute_value(

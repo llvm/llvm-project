@@ -52,8 +52,8 @@ def test_forall_insert_slice_no_region_with_for():
             ten,
             shared_outs,
             offsets=[i, j],
-            static_sizes=[10, 10],
-            static_strides=[1, 1],
+            sizes=[10, 10],
+            strides=[1, 1],
         )
 
     # CHECK:  %[[VAL_0:.*]] = tensor.empty() : tensor<10x10xi32>
