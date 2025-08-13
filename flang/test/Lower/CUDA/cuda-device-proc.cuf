@@ -90,6 +90,10 @@ attributes(global) subroutine devsub()
   ad = __ull2double_rz(al)
   r2 = __float2half_rn(af)
   af = __half2float(r2)
+  ad = __ll2double_rd(al)
+  ad = __ll2double_rn(al)
+  ad = __ll2double_ru(al)
+  ad = __ll2double_rz(al)
 end
 
 ! CHECK-LABEL: func.func @_QPdevsub() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
