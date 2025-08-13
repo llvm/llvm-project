@@ -259,6 +259,75 @@
 ///     __wasm_longjmp(%env, %val)
 ///   catchret to %setjmp.dispatch
 ///
+/// * Wasm __builtin_wasm_js_catch handling
+/// Because JS exceptions don't have a specific target, we always transfer
+/// control to the most recently __builtin_wasm_js_catch call. We also set the
+/// int* result argument to 1 when we do this transfer. The return value is
+/// initially set to ref.null.extern.
+///
+/// This is mostly similar to wasm setjmp/longjmp.
+///
+/// 1) There is no longjmp equivalent
+/// 2) We don't need functionInvocationId, but we do set up two stack variables
+/// DispatchTarget and DispatchArgument, and the ref.null.extern we use as the
+/// first return value of __builtin_wasm_js_catch(). DispatchTarget stores the
+/// label index of the most recently executed __builtin_wasm_js_catch() or -1 if
+/// none have been executed. DispatchArgument stores the argument of the most
+/// recently executed  __builtin_wasm_js_catch().
+///
+/// 3) Lower
+///      __externref_t error = __builtin_wasm_js_catch(&result)
+///    into
+///      result = 0
+///      error = ref.null
+///      DispatchTarget = (index of js_catch call)
+///      DispatchArgument = &result
+///
+/// 4) Create a catchpad with a wasm.catch.js() intrinsic, which returns an
+/// externref containing the JavaScript exception. This is directly used as the
+/// error return value of __builtin_wasm_js_catch().
+///
+/// All function calls that can throw will be converted to an invoke that will
+/// unwind to this catchpad in case a longjmp occurs.
+/// If DispatchTarget is still 0 because we haven't executed a
+/// __builtin_wasm_js_catch() yet, then we rethrow the error. Otherwise, we jump
+/// to the beginning of the function, which contains a switch to each
+/// post-jscatch BB.
+///
+/// The below is the pseudocode for what we have described
+///
+/// entry:
+///   Initialize *DispatchTarget = 0, DispatchArgument, %nullref
+///
+/// jserror.dispatch:
+///    switch %label {
+///      label 1: goto post-jscatch BB 1
+///      label 2: goto post-jscatch BB 2
+///      ...
+///      default: goto split entry BB
+///    }
+/// ...
+///
+///    ;; error = __builtin_wasm_js_catch(&result) expands to
+///    *DispatchTarget = CurrentIndex
+///    *DispatchArgument = &result
+///    error = %nullref
+///    result = 0
+///
+/// bb:
+///   invoke void @foo() ;; foo is a function which can raise a js error
+///     to label %next unwind label %catch.dispatch.jserror
+/// ...
+///
+/// catch.dispatch.jserror:
+///   %0 = catchswitch within none [label %catch.jserror] unwind to caller
+///
+/// catch.jserror:
+///   %jserror = wasm.catch.js()
+///   %label = *DispatchTarget
+///   if (%label == 0)
+///     __builtin_wasm_rethrow(%jserror)
+///   catchret to %jserror.dispatch
 ///===----------------------------------------------------------------------===//
 
 #include "WebAssembly.h"
@@ -307,6 +376,9 @@ class WebAssemblyLowerEmscriptenEHSjLj final : public ModulePass {
   Function *WasmSetjmpTestF = nullptr;    // __wasm_setjmp_test() (Emscripten)
   Function *WasmLongjmpF = nullptr;       // __wasm_longjmp() (Emscripten)
   Function *CatchF = nullptr;             // wasm.catch() (intrinsic)
+  Function *CatchJsF = nullptr;           // wasm.catch.js() (intrinsic)
+  Function *NullExternF = nullptr;        // wasm.ref.null.extern() (intrinsic)
+  Function *WasmRethrowF = nullptr;       // wasm.rethrow() (intrinsic)
 
   // type of 'struct __WasmLongjmpArgs' defined in emscripten
   Type *LongjmpArgsTy = nullptr;
@@ -328,6 +400,7 @@ class WebAssemblyLowerEmscriptenEHSjLj final : public ModulePass {
   using InstVector = SmallVectorImpl<Instruction *>;
   bool runEHOnFunction(Function &F);
   bool runSjLjOnFunction(Function &F);
+  bool runJsCatchOnFunction(Function &F);
   void handleLongjmpableCallsForEmscriptenSjLj(
       Function &F, Instruction *FunctionInvocationId,
       SmallVectorImpl<PHINode *> &SetjmpRetPHIs);
@@ -335,6 +408,15 @@ class WebAssemblyLowerEmscriptenEHSjLj final : public ModulePass {
   handleLongjmpableCallsForWasmSjLj(Function &F,
                                     Instruction *FunctionInvocationId,
                                     SmallVectorImpl<PHINode *> &SetjmpRetPHIs);
+  void handleThrowingCallsForJsCatch(Function &F,
+                                     SmallVectorImpl<PHINode *> &JsCatchRetPHIs,
+                                     SmallVectorImpl<CallInst *> &CIs,
+                                     Instruction *DispatchTarget,
+                                     Instruction *DispatchArgument);
+  void convertLongJumpableCallsToInvokes(
+      IRBuilder<> &IRB, Function &F,
+      SmallVectorImpl<CallInst *> &LongjmpableCalls,
+      BasicBlock *CatchDispatchLongjmpBB, CatchSwitchInst *CatchSwitchLongjmp);
   Function *getFindMatchingCatch(Module &M, unsigned NumClauses);
 
   Value *wrapInvoke(CallBase *CI);
@@ -902,6 +984,35 @@ static void nullifySetjmp(Function *F) {
     I->eraseFromParent();
 }
 
+static void nullifyJsCatch(Function *F, Function *NullExternF) {
+  Module &M = *F->getParent();
+  IRBuilder<> IRB(M.getContext());
+  Function *JsCatchF = M.getFunction("__builtin_wasm_js_catch");
+  SmallVector<Instruction *, 1> ToErase;
+
+  for (User *U : make_early_inc_range(JsCatchF->users())) {
+    auto *CB = cast<CallBase>(U);
+    BasicBlock *BB = CB->getParent();
+    if (BB->getParent() != F) // in other function
+      continue;
+    CallInst *CI = nullptr;
+    // __builtin_wasm_js_catch() cannot throw. So if it is an invoke, lower it
+    // to a call
+    if (auto *II = dyn_cast<InvokeInst>(CB))
+      CI = llvm::changeToCall(II);
+    else
+      CI = cast<CallInst>(CB);
+    ToErase.push_back(CI);
+    auto *Op = CI->getOperand(1);
+    IRB.SetInsertPoint(CI->getPrevNode());
+    IRB.CreateStore(IRB.getInt32(0), Op);
+    auto *Null = IRB.CreateCall(NullExternF, {});
+    CI->replaceAllUsesWith(Null);
+  }
+  for (auto *I : ToErase)
+    I->eraseFromParent();
+}
+
 bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
   LLVM_DEBUG(dbgs() << "********** Lower Emscripten EH & SjLj **********\n");
 
@@ -910,6 +1021,7 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
 
   Function *SetjmpF = M.getFunction("setjmp");
   Function *LongjmpF = M.getFunction("longjmp");
+  Function *JsCatchF = M.getFunction("__builtin_wasm_js_catch");
 
   // In some platforms _setjmp and _longjmp are used instead. Change these to
   // use setjmp/longjmp instead, because we later detect these functions by
@@ -971,9 +1083,13 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
     EHTypeIDF = getFunction(EHTypeIDTy, "llvm_eh_typeid_for", &M);
   }
 
-  // Functions that contains calls to setjmp but don't have other longjmpable
+  // Functions that contains calls to jscatch
+  SmallPtrSet<Function *, 8> JsCatchUsers;
+
+  // Functions that contains calls to setjmp/jscatch but don't have longjmpable
   // calls within them.
   SmallPtrSet<Function *, 4> SetjmpUsersToNullify;
+  SmallPtrSet<Function *, 4> JsCatchUsersToNullify;
 
   if ((EnableEmSjLj || EnableWasmSjLj) && SetjmpF) {
     // Precompute setjmp users
@@ -997,9 +1113,40 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
     }
   }
 
+  if ((EnableEmSjLj || EnableWasmSjLj) && JsCatchF) {
+    for (User *U : JsCatchF->users()) {
+      if (auto *CB = dyn_cast<CallBase>(U)) {
+        auto *UserF = CB->getFunction();
+        if (SetjmpUsers.contains(UserF)) {
+          report_fatal_error("Cannot use JsCatch and setjmp in same function");
+        }
+        // If a function that calls js_catch does not contain any other calls
+        // that can throw JS erros, we don't need to do any transformation on
+        // that function, so can ignore it
+        if (containsLongjmpableCalls(UserF))
+          JsCatchUsers.insert(UserF);
+        else
+          JsCatchUsersToNullify.insert(UserF);
+      } else {
+        std::string S;
+        raw_string_ostream SS(S);
+        SS << *U;
+        report_fatal_error(
+            Twine(
+                "Indirect use of __builtin_wasm_js_catch is not supported: ") +
+            SS.str());
+      }
+    }
+  }
+
   bool SetjmpUsed = SetjmpF && !SetjmpUsers.empty();
+  bool JsCatchUsed = JsCatchF && !JsCatchUsers.empty();
   bool LongjmpUsed = LongjmpF && !LongjmpF->use_empty();
-  DoSjLj = (EnableEmSjLj | EnableWasmSjLj) && (SetjmpUsed || LongjmpUsed);
+  DoSjLj = (EnableEmSjLj || EnableWasmSjLj) &&
+           (SetjmpUsed || LongjmpUsed || JsCatchUsed);
+  if (JsCatchUsed && EnableEmSjLj) {
+    report_fatal_error("JsCatch not supported with EmSjLj");
+  }
 
   // Function registration and data pre-gathering for setjmp/longjmp handling
   if (DoSjLj) {
@@ -1043,6 +1190,14 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
                                       Int32Ty    // val
       );
     }
+    if (JsCatchF) {
+      CatchJsF =
+          Intrinsic::getOrInsertDeclaration(&M, Intrinsic::wasm_catch_js);
+      NullExternF = Intrinsic::getOrInsertDeclaration(
+          &M, Intrinsic::wasm_ref_null_extern);
+      WasmRethrowF =
+          Intrinsic::getOrInsertDeclaration(&M, Intrinsic::wasm_rethrow);
+    }
   }
 
   // Exception handling transformation
@@ -1064,6 +1219,9 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
     if (SetjmpF)
       for (Function *F : SetjmpUsers)
         runSjLjOnFunction(*F);
+    if (JsCatchF)
+      for (Function *F : JsCatchUsers)
+        runJsCatchOnFunction(*F);
   }
 
   // Replace unnecessary setjmp calls with 0
@@ -1072,6 +1230,12 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runOnModule(Module &M) {
     assert(SetjmpF);
     for (Function *F : SetjmpUsersToNullify)
       nullifySetjmp(F);
+  }
+  if ((EnableEmSjLj || EnableWasmSjLj) && !JsCatchUsersToNullify.empty()) {
+    Changed = true;
+    assert(JsCatchF);
+    for (Function *F : JsCatchUsersToNullify)
+      nullifyJsCatch(F, NullExternF);
   }
 
   // Delete unused global variables and functions
@@ -1384,6 +1548,120 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
   return true;
 }
 
+bool WebAssemblyLowerEmscriptenEHSjLj::runJsCatchOnFunction(Function &F) {
+  assert(EnableEmSjLj || EnableWasmSjLj);
+  Module &M = *F.getParent();
+  LLVMContext &C = F.getContext();
+  IRBuilder<> IRB(C);
+  SmallVector<Instruction *, 64> ToErase;
+
+  // jscatch preparation
+
+  SmallVector<AllocaInst *> StaticAllocas;
+  for (Instruction &I : F.getEntryBlock())
+    if (auto *AI = dyn_cast<AllocaInst>(&I))
+      if (AI->isStaticAlloca())
+        StaticAllocas.push_back(AI);
+
+  BasicBlock *Entry = &F.getEntryBlock();
+  DebugLoc FirstDL = getOrCreateDebugLoc(&*Entry->begin(), F.getSubprogram());
+  SplitBlock(Entry, &*Entry->getFirstInsertionPt());
+
+  // Move static allocas back into the entry block, so they stay static.
+  for (AllocaInst *AI : StaticAllocas)
+    AI->moveBefore(Entry->getTerminator()->getIterator());
+
+  IRB.SetInsertPoint(Entry->getTerminator()->getIterator());
+  // We need some pointers to store
+  // 1. which js_catch we should return to if we catch an error (DispatchTarget)
+  // 2. which pointer we should set to 1 to indicate that an error is caught
+  // (DispatchArgument). DispatchArgument is set to the argument of the most
+  // recent call to __builtin_wasm_js_catch.
+  Instruction *DispatchTarget =
+      IRB.CreateAlloca(IRB.getInt32Ty(), nullptr, "DispatchTarget");
+  Instruction *DispatchArgument =
+      IRB.CreateAlloca(IRB.getPtrTy(), nullptr, "DispatchArgument");
+  IRB.CreateStore(IRB.getInt32(0), DispatchTarget);
+  // We also need a null reference to use as the first return value for
+  // js_catch()
+  auto *NullRef = IRB.CreateCall(NullExternF, {}, "nullref");
+  NullRef->setDebugLoc(FirstDL);
+
+  // JsCatch transformation
+  SmallVector<PHINode *, 4> JsCatchRetPHIs;
+  SmallVector<CallInst *, 4> CIs;
+  Function *JsCatchF = M.getFunction("__builtin_wasm_js_catch");
+  // 3) Lower
+  //      __externref_t error = __builtin_wasm_js_catch(&result)
+  //    into
+  //      result = 0
+  //      error = ref.null
+  //      DispatchTarget = (index of js_catch call)
+  //      DispatchArgument = &result
+  for (auto *U : make_early_inc_range(JsCatchF->users())) {
+    auto *CB = cast<CallBase>(U);
+    BasicBlock *BB = CB->getParent();
+    if (BB->getParent() != &F) // in other function
+      continue;
+    if (CB->getOperandBundle(LLVMContext::OB_funclet)) {
+      std::string S;
+      raw_string_ostream SS(S);
+      SS << "In function " + F.getName() +
+                ": __builtin_wasm_js_catch within a catch clause is not "
+                "supported:\n";
+      SS << *CB;
+      report_fatal_error(StringRef(SS.str()));
+    }
+
+    CallInst *CI = nullptr;
+    // __builtin_wasm_js_catch cannot throw. So if it is an invoke, lower
+    // it to a call
+    if (auto *II = dyn_cast<InvokeInst>(CB))
+      CI = llvm::changeToCall(II);
+    else
+      CI = cast<CallInst>(CB);
+
+    CIs.push_back(CI);
+
+    // __builtin_wasm_js_catch initial call returns null and sets the argument
+    // to 0. We also store the index of the current __builtin_wasm_js_catch call
+    // into DispatchTarget and the current argument pointer into
+    // DispatchArgument.
+    IRB.SetInsertPoint(CI);
+    auto *PtrArg = CI->getArgOperand(0);
+    IRB.CreateStore(IRB.getInt32(0), PtrArg);
+    IRB.CreateStore(IRB.getInt32(CIs.size()), DispatchTarget);
+    IRB.CreateStore(CI->getArgOperand(0), DispatchArgument);
+
+    // The tail is everything right after the call, and will be reached once
+    // when js_catch is called, and later when a thrown JS error returns to the
+    // js_catch.
+    BasicBlock *Tail = SplitBlock(BB, CI->getNextNode());
+    // Add a phi to the tail, which will be the output of js_catch. On the first
+    // call it will be the NullRef, on subsequent calls the caught JS Error. The
+    // phi directly uses the right value based on where we arrive from
+    IRB.SetInsertPoint(Tail, Tail->getFirstNonPHIIt());
+
+    // Return value of __builtin_wasm_js_catch
+    PHINode *JsCatchRet = IRB.CreatePHI(IRB.getPtrTy(10), 2, "jscatch.ret");
+    // initially set to Null.
+    JsCatchRet->addIncoming(NullRef, BB);
+    // Replace __builtin_wasm_js_catch return value with JsCatchRet
+    CI->replaceAllUsesWith(JsCatchRet);
+    // The catch block can also return control here so it will add itself to
+    // these phis with the exception value.
+    JsCatchRetPHIs.push_back(JsCatchRet);
+  }
+
+  handleThrowingCallsForJsCatch(F, JsCatchRetPHIs, CIs, DispatchTarget,
+                                DispatchArgument);
+
+  // Finally, our modifications to the cfg can break dominance of SSA variables.
+  // So, we rebuild SSA form here.
+  rebuildSSA(F);
+  return true;
+}
+
 // Update each call that can longjmp so it can return to the corresponding
 // setjmp. Refer to 4) of "Emscripten setjmp/longjmp handling" section in the
 // comments at top of the file for details.
@@ -1577,6 +1855,22 @@ static BasicBlock *getCleanupRetUnwindDest(const CleanupPadInst *CPI) {
   return nullptr;
 }
 
+static void ensurePersonality(IRBuilder<> &IRB, Function &F) {
+  // A function with catchswitch/catchpad instruction should have a personality
+  // function attached to it. Search for the wasm personality function, and if
+  // it exists, use it, and if it doesn't, create a dummy personality function.
+  // (SjLj is not going to call it anyway.)
+  if (!F.hasPersonalityFn()) {
+    StringRef PersName = getEHPersonalityName(EHPersonality::Wasm_CXX);
+    FunctionType *PersType =
+        FunctionType::get(IRB.getInt32Ty(), /* isVarArg */ true);
+    Module &M = *F.getParent();
+    Value *PersF = M.getOrInsertFunction(PersName, PersType).getCallee();
+    F.setPersonalityFn(
+        cast<Constant>(IRB.CreateBitCast(PersF, IRB.getPtrTy())));
+  }
+}
+
 // Create a catchpad in which we catch a longjmp's env and val arguments, test
 // if the longjmp corresponds to one of setjmps in the current function, and if
 // so, jump to the setjmp dispatch BB from which we go to one of post-setjmp
@@ -1589,18 +1883,7 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
   LLVMContext &C = F.getContext();
   IRBuilder<> IRB(C);
 
-  // A function with catchswitch/catchpad instruction should have a personality
-  // function attached to it. Search for the wasm personality function, and if
-  // it exists, use it, and if it doesn't, create a dummy personality function.
-  // (SjLj is not going to call it anyway.)
-  if (!F.hasPersonalityFn()) {
-    StringRef PersName = getEHPersonalityName(EHPersonality::Wasm_CXX);
-    FunctionType *PersType =
-        FunctionType::get(IRB.getInt32Ty(), /* isVarArg */ true);
-    Value *PersF = M.getOrInsertFunction(PersName, PersType).getCallee();
-    F.setPersonalityFn(
-        cast<Constant>(IRB.CreateBitCast(PersF, IRB.getPtrTy())));
-  }
+  ensurePersonality(IRB, F);
 
   // Use the entry BB's debugloc as a fallback
   BasicBlock *Entry = &F.getEntryBlock();
@@ -1719,7 +2002,14 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
       LongjmpableCalls.push_back(CI);
     }
   }
+  convertLongJumpableCallsToInvokes(IRB, F, LongjmpableCalls,
+                                    CatchDispatchLongjmpBB, CatchSwitchLongjmp);
+}
 
+void WebAssemblyLowerEmscriptenEHSjLj::convertLongJumpableCallsToInvokes(
+    IRBuilder<> &IRB, Function &F,
+    SmallVectorImpl<CallInst *> &LongjmpableCalls,
+    BasicBlock *CatchDispatchLongjmpBB, CatchSwitchInst *CatchSwitchLongjmp) {
   SmallDenseMap<BasicBlock *, SmallSetVector<BasicBlock *, 4>, 4>
       UnwindDestToNewPreds;
   for (auto *CI : LongjmpableCalls) {
@@ -1832,4 +2122,125 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForWasmSjLj(
       assert(PN.isComplete());
     }
   }
+}
+
+// Create a catchpad in which we catch a JS error, test if
+// __wasm_builtin_js_catch() has been called yet, and if so, jump to the setjmp
+// dispatch BB from which we go to one of post-setjmp BBs. Refer to 4) of "Wasm
+// setjmp/longjmp handling" section in the comments at top of the file for
+// details.
+void WebAssemblyLowerEmscriptenEHSjLj::handleThrowingCallsForJsCatch(
+    Function &F, SmallVectorImpl<PHINode *> &JsCatchRetPHIs,
+    SmallVectorImpl<CallInst *> &CIs, Instruction *DispatchTarget,
+    Instruction *DispatchArgument) {
+  LLVMContext &C = F.getContext();
+  IRBuilder<> IRB(C);
+
+  ensurePersonality(IRB, F);
+
+  // Use the entry BB's debugloc as a fallback
+  BasicBlock *Entry = &F.getEntryBlock();
+  DebugLoc FirstDL = getOrCreateDebugLoc(&*Entry->begin(), F.getSubprogram());
+  IRB.SetCurrentDebugLocation(FirstDL);
+
+  // Add jscatch.dispatch BB right after the entry block.
+  //
+  // entry:
+  //   Static allocations, allocate DispatchTarget and DispatchArgument, set
+  //   ref.null
+  // jscatch.dispatch:
+  //   switch will be inserted here later
+  // entry.split: (OrigEntry)
+  //   the original function starts here
+  BasicBlock *OrigEntry = Entry->getNextNode();
+  BasicBlock *JsCatchDispatchBB =
+      BasicBlock::Create(C, "jscatch.dispatch", &F, OrigEntry);
+  cast<BranchInst>(Entry->getTerminator())->setSuccessor(0, JsCatchDispatchBB);
+
+  // Create catch.dispatch.jserror BB and a catchswitch instruction
+  BasicBlock *CatchDispatchJsErrorBB =
+      BasicBlock::Create(C, "catch.dispatch.jserror", &F);
+  IRB.SetInsertPoint(CatchDispatchJsErrorBB);
+
+  CatchSwitchInst *CatchSwitchJsError =
+      IRB.CreateCatchSwitch(ConstantTokenNone::get(C), nullptr, 1);
+
+  // Create catch.jserror BB and a catchpad instruction
+  BasicBlock *CatchJsErrorBB = BasicBlock::Create(C, "catch.jserror", &F);
+  CatchSwitchJsError->addHandler(CatchJsErrorBB);
+  IRB.SetInsertPoint(CatchJsErrorBB);
+  CatchPadInst *CatchPad = IRB.CreateCatchPad(CatchSwitchJsError, {});
+
+  Instruction *ThrownValue = IRB.CreateCall(CatchJsF, {}, "thrown");
+
+  // if (*DispatchTargetValue == 0)
+  //   __builtin_wasm_rethrow()
+  // catchret to %jscatch.dispatch
+  BasicBlock *ThenBB = BasicBlock::Create(C, "if.then", &F);
+  BasicBlock *EndBB = BasicBlock::Create(C, "if.end", &F);
+  auto *DispatchTargetValue =
+      IRB.CreateLoad(IRB.getInt32Ty(), DispatchTarget, "dispatch.target.value");
+  Value *Cmp = IRB.CreateICmpEQ(DispatchTargetValue, IRB.getInt32(0));
+  IRB.CreateCondBr(Cmp, ThenBB, EndBB);
+
+  IRB.SetInsertPoint(ThenBB);
+  IRB.CreateCall(WasmRethrowF, {}, OperandBundleDef("funclet", CatchPad));
+  IRB.CreateUnreachable();
+
+  IRB.SetInsertPoint(EndBB);
+  // Set **DispatchArgument = 1
+  auto *DispatchArgumentValue = IRB.CreateLoad(IRB.getPtrTy(), DispatchArgument,
+                                               "dispatch.argument.value");
+  IRB.CreateStore(IRB.getInt32(1), DispatchArgumentValue);
+  // Jump to jscatch.dispatch block
+  IRB.CreateCatchRet(CatchPad, JsCatchDispatchBB);
+
+  // Go back to jscatch.dispatch BB
+  // jscatch.dispatch:
+  //   switch %label {
+  //     label 1: goto post-js-catch BB 1
+  //     label 2: goto post-js-catch BB 2
+  //     ...
+  //     default: goto entry.split BB
+  //   }
+  IRB.SetInsertPoint(JsCatchDispatchBB);
+  PHINode *LabelPHI = IRB.CreatePHI(IRB.getInt32Ty(), 2, "label.phi");
+  LabelPHI->addIncoming(DispatchTargetValue, EndBB);
+  LabelPHI->addIncoming(IRB.getInt32(-1), Entry);
+  for (Instruction *I : CIs) {
+    I->eraseFromParent();
+  }
+
+  // -1 means no error happened, continue normally (will hit the default switch
+  // case). 0 means an error occurred before the first js_catch call, needs a
+  // rethrow. Otherwise the index is the same as the index in P+1 (to avoid 0).
+  SwitchInst *SI = IRB.CreateSwitch(LabelPHI, OrigEntry, JsCatchRetPHIs.size());
+  for (unsigned I = 0; I < JsCatchRetPHIs.size(); I++) {
+    SI->addCase(IRB.getInt32(I + 1), JsCatchRetPHIs[I]->getParent());
+    JsCatchRetPHIs[I]->addIncoming(ThrownValue, JsCatchDispatchBB);
+  }
+
+  // Convert all throwable call instructions to invokes that unwind to the
+  // newly created catch.dispatch.jserror BB.
+  SmallVector<CallInst *, 64> ThrowingCalls;
+  for (auto *BB = &*F.begin(); BB; BB = BB->getNextNode()) {
+    for (auto &I : *BB) {
+      auto *CI = dyn_cast<CallInst>(&I);
+      if (!CI)
+        continue;
+      const Value *Callee = CI->getCalledOperand();
+      if (!canLongjmp(Callee))
+        continue;
+      if (isEmAsmCall(Callee))
+        report_fatal_error(
+            "Cannot use EM_ASM* alongside __builtin_wasm_js_catch in " +
+                F.getName() +
+                ". Please consider using EM_JS, or move the "
+                "EM_ASM into another function.",
+            false);
+      ThrowingCalls.push_back(CI);
+    }
+  }
+  convertLongJumpableCallsToInvokes(IRB, F, ThrowingCalls,
+                                    CatchDispatchJsErrorBB, CatchSwitchJsError);
 }

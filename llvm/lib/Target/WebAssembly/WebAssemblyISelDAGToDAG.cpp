@@ -110,13 +110,25 @@ void WebAssemblyDAGToDAGISel::PreprocessISelDAG() {
 }
 
 static SDValue getTagSymNode(int Tag, SelectionDAG *DAG) {
-  assert(Tag == WebAssembly::CPP_EXCEPTION || WebAssembly::C_LONGJMP);
+  assert(Tag == WebAssembly::CPP_EXCEPTION || Tag == WebAssembly::C_LONGJMP ||
+         Tag == WebAssembly::JS_EXCEPTION);
   auto &MF = DAG->getMachineFunction();
   const auto &TLI = DAG->getTargetLoweringInfo();
   MVT PtrVT = TLI.getPointerTy(DAG->getDataLayout());
-  const char *SymName = Tag == WebAssembly::CPP_EXCEPTION
-                            ? MF.createExternalSymbolName("__cpp_exception")
-                            : MF.createExternalSymbolName("__c_longjmp");
+  const char *SymName;
+  switch (Tag) {
+  case WebAssembly::CPP_EXCEPTION:
+    SymName = MF.createExternalSymbolName("__cpp_exception");
+    break;
+  case WebAssembly::C_LONGJMP:
+    SymName = MF.createExternalSymbolName("__c_longjmp");
+    break;
+  case WebAssembly::JS_EXCEPTION:
+    SymName = MF.createExternalSymbolName("__js_exception");
+    break;
+  default:
+    llvm_unreachable("Should not happen");
+  };
   return DAG->getTargetExternalSymbol(SymName, PtrVT);
 }
 
@@ -330,6 +342,24 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
                                  {
                                      SymNode,            // exception symbol
                                      Node->getOperand(0) // inchain
+                                 });
+      ReplaceNode(Node, Catch);
+      return;
+    }
+    case Intrinsic::wasm_catch_js: {
+      unsigned CatchOpcode = WebAssembly::WasmUseLegacyEH
+                                 ? WebAssembly::CATCH_LEGACY
+                                 : WebAssembly::CATCH;
+      SDValue SymNode = getTagSymNode(WebAssembly::JS_EXCEPTION, CurDAG);
+      MachineSDNode *Catch =
+          CurDAG->getMachineNode(CatchOpcode, DL,
+                                 {
+                                     MVT::externref, // exception pointer
+                                     MVT::Other      // outchain type
+                                 },
+                                 {
+                                     SymNode,             // exception symbol
+                                     Node->getOperand(0), // inchain
                                  });
       ReplaceNode(Node, Catch);
       return;

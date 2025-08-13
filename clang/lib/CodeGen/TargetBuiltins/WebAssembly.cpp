@@ -270,6 +270,20 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_ref_test_func);
     return Builder.CreateCall(Callee, Args);
   }
+  case WebAssembly::BI__builtin_wasm_js_catch: {
+    // We don't do any real lowering here, just make a new function also called
+    // __builtin_wasm_js_catch() and give it the same arguments. We'll lower
+    // it in WebAssemblyLowerEmscriptenEHSjLj.cpp
+    auto *Type = llvm::FunctionType::get(
+        llvm::PointerType::get(getLLVMContext(), 10),
+        {llvm::PointerType::get(getLLVMContext(), 0)}, false);
+    auto Attrs =
+        AttributeList().addFnAttribute(getLLVMContext(), "returns_twice");
+    FunctionCallee Callee = CGM.getModule().getOrInsertFunction(
+        "__builtin_wasm_js_catch", Type, Attrs);
+    Value *Status = EmitScalarExpr(E->getArg(0));
+    return Builder.CreateCall(Callee, {Status});
+  }
   case WebAssembly::BI__builtin_wasm_swizzle_i8x16: {
     Value *Src = EmitScalarExpr(E->getArg(0));
     Value *Indices = EmitScalarExpr(E->getArg(1));

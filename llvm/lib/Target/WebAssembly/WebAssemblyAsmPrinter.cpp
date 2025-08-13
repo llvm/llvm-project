@@ -247,7 +247,12 @@ MCSymbol *WebAssemblyAsmPrinter::getOrCreateWasmSymbol(StringRef Name) {
 
   SmallVector<wasm::ValType, 4> Returns;
   SmallVector<wasm::ValType, 4> Params;
-  if (Name == "__cpp_exception" || Name == "__c_longjmp") {
+  if (Name == "__js_exception") {
+    WasmSym->setType(wasm::WASM_SYMBOL_TYPE_TAG);
+    WasmSym->setImportModule("env");
+    WasmSym->setImportName("__js_exception");
+    Params.push_back(wasm::ValType::EXTERNREF);
+  } else if (Name == "__cpp_exception" || Name == "__c_longjmp") {
     WasmSym->setType(wasm::WASM_SYMBOL_TYPE_TAG);
     // In static linking we define tag symbols in WasmException::endModule().
     // But we may have multiple objects to be linked together, each of which
@@ -321,9 +326,16 @@ void WebAssemblyAsmPrinter::emitDecls(const Module &M) {
     // Emit .globaltype, .tagtype, or .tabletype declarations for extern
     // declarations, i.e. those that have only been declared (but not defined)
     // in the current module
-    auto Sym = static_cast<MCSymbolWasm *>(It.getValue().Symbol);
-    if (Sym && !Sym->isDefined())
+    auto *Sym = static_cast<MCSymbolWasm *>(It.getValue().Symbol);
+    if (Sym && !Sym->isDefined()) {
       emitSymbolType(Sym);
+      if (Sym->hasImportModule()) {
+        getTargetStreamer()->emitImportModule(Sym, Sym->getImportModule());
+      }
+      if (Sym->hasImportName()) {
+        getTargetStreamer()->emitImportName(Sym, Sym->getImportName());
+      }
+    }
   }
 
   DenseSet<MCSymbol *> InvokeSymbols;
