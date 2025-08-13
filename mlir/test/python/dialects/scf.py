@@ -14,6 +14,7 @@ def constructAndPrintInModule(f):
         module = Module.create()
         with InsertionPoint(module.body):
             f()
+        assert module.operation.verify()
         print(module)
     return f
 
@@ -67,6 +68,29 @@ def test_forall_insert_slice_no_region_with_for():
     # CHECK:    %[[VAL_11:.*]] = arith.constant 1.000000e+00 : f32
     # CHECK:    scf.forall.in_parallel {
     # CHECK:      tensor.parallel_insert_slice %[[VAL_0]] into %[[VAL_10]]{{\[}}%[[VAL_8]], %[[VAL_9]]] [10, 10] [1, 1] : tensor<10x10xi32> into tensor<10x10xi32>
+    # CHECK:    }
+    # CHECK:  }
+
+    for ii, jj, shared_outs_1 in scf.forall([1, 1], [2, 2], [3, 3], shared_outs=[ten]):
+        ten_dynamic = tensor.empty([ii, 10], i32)
+        scf.parallel_insert_slice(
+            ten_dynamic,
+            shared_outs_1,
+            offsets=[ii, 0],
+            sizes=[ii, 10],
+            strides=[ii, 1],
+        )
+
+    # CHECK:  %[[VAL_12:.*]] = arith.constant 1 : index
+    # CHECK:  %[[VAL_13:.*]] = arith.constant 1 : index
+    # CHECK:  %[[VAL_14:.*]] = arith.constant 2 : index
+    # CHECK:  %[[VAL_15:.*]] = arith.constant 2 : index
+    # CHECK:  %[[VAL_16:.*]] = arith.constant 3 : index
+    # CHECK:  %[[VAL_17:.*]] = arith.constant 3 : index
+    # CHECK:  %[[VAL_18:.*]] = scf.forall (%[[VAL_19:.*]], %[[VAL_20:.*]]) = (%[[VAL_12]], %[[VAL_13]]) to (%[[VAL_14]], %[[VAL_15]]) step (%[[VAL_16]], %[[VAL_17]]) shared_outs(%[[VAL_21:.*]] = %[[VAL_0]]) -> (tensor<10x10xi32>) {
+    # CHECK:    %[[VAL_22:.*]] = tensor.empty(%[[VAL_19]]) : tensor<?x10xi32>
+    # CHECK:    scf.forall.in_parallel {
+    # CHECK:      tensor.parallel_insert_slice %[[VAL_22]] into %[[VAL_21]]{{\[}}%[[VAL_19]], 0] {{\[}}%[[VAL_19]], 10] {{\[}}%[[VAL_19]], 1] : tensor<?x10xi32> into tensor<10x10xi32>
     # CHECK:    }
     # CHECK:  }
 
