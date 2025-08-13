@@ -1265,7 +1265,8 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
 #else
   bool mustDoCopyIn = false;
   bool mustDoCopyOut = false;
-  if constexpr (std::is_same_v<decltype(arg.entity), const Fortran::evaluate::ActualArgument *>) {
+  if constexpr (std::is_same_v<decltype(arg.entity),
+                               const Fortran::evaluate::ActualArgument *>) {
     mustDoCopyIn = arg.entity->GetMayNeedCopyIn();
     mustDoCopyIn = arg.entity->GetMayNeedCopyOut();
   }
@@ -1388,7 +1389,7 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
       // allocation for the temp in this case. We can communicate
       // this to the codegen via some CopyInOp flag.
       // This is a performance concern.
-      //entity = genCopyIn(entity, arg.mayBeModifiedByCall());
+      // entity = genCopyIn(entity, arg.mayBeModifiedByCall());
       entity = genCopyIn(entity, mustDoCopyOut);
     }
   } else {
