@@ -147,6 +147,8 @@ mergeInfos(std::vector<std::unique_ptr<Info>> &Values) {
     return reduce<ConceptInfo>(Values);
   case InfoType::IT_variable:
     return reduce<VarInfo>(Values);
+  case InfoType::IT_friend:
+    return reduce<FriendInfo>(Values);
   case InfoType::IT_default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "unexpected info type");
@@ -245,6 +247,17 @@ void Reference::merge(Reference &&Other) {
     Name = Other.Name;
   if (Path.empty())
     Path = Other.Path;
+  if (DocumentationFileName.empty())
+    DocumentationFileName = Other.DocumentationFileName;
+}
+
+bool FriendInfo::mergeable(const FriendInfo &Other) {
+  return Ref.USR == Other.Ref.USR && Ref.Name == Other.Ref.Name;
+}
+
+void FriendInfo::merge(FriendInfo &&Other) {
+  assert(mergeable(Other));
+  Ref.merge(std::move(Other.Ref));
 }
 
 void Info::mergeBase(Info &&Other) {
@@ -279,6 +292,8 @@ void SymbolInfo::merge(SymbolInfo &&Other) {
   auto *Last = llvm::unique(Loc);
   Loc.erase(Last, Loc.end());
   mergeBase(std::move(Other));
+  if (MangledName.empty())
+    MangledName = std::move(Other.MangledName);
 }
 
 NamespaceInfo::NamespaceInfo(SymbolID USR, StringRef Name, StringRef Path)
@@ -313,6 +328,8 @@ void RecordInfo::merge(RecordInfo &&Other) {
     Parents = std::move(Other.Parents);
   if (VirtualParents.empty())
     VirtualParents = std::move(Other.VirtualParents);
+  if (Friends.empty())
+    Friends = std::move(Other.Friends);
   // Reduce children if necessary.
   reduceChildren(Children.Records, std::move(Other.Children.Records));
   reduceChildren(Children.Functions, std::move(Other.Children.Functions));
@@ -422,6 +439,9 @@ llvm::SmallString<16> Info::extractName() const {
   case InfoType::IT_variable:
     return llvm::SmallString<16>("@nonymous_variable_" +
                                  toHex(llvm::toStringRef(USR)));
+  case InfoType::IT_friend:
+    return llvm::SmallString<16>("@nonymous_friend_" +
+                                 toHex(llvm::toStringRef(USR)));
   case InfoType::IT_default:
     return llvm::SmallString<16>("@nonymous_" + toHex(llvm::toStringRef(USR)));
   }
@@ -482,13 +502,13 @@ ClangDocContext::ClangDocContext(tooling::ExecutionContext *ECtx,
 }
 
 void ScopeChildren::sort() {
-  llvm::sort(Namespaces.begin(), Namespaces.end());
-  llvm::sort(Records.begin(), Records.end());
-  llvm::sort(Functions.begin(), Functions.end());
-  llvm::sort(Enums.begin(), Enums.end());
-  llvm::sort(Typedefs.begin(), Typedefs.end());
-  llvm::sort(Concepts.begin(), Concepts.end());
-  llvm::sort(Variables.begin(), Variables.end());
+  llvm::sort(Namespaces);
+  llvm::sort(Records);
+  llvm::sort(Functions);
+  llvm::sort(Enums);
+  llvm::sort(Typedefs);
+  llvm::sort(Concepts);
+  llvm::sort(Variables);
 }
 } // namespace doc
 } // namespace clang

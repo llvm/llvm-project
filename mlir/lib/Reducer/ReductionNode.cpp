@@ -18,7 +18,6 @@
 #include "mlir/IR/IRMapping.h"
 #include "llvm/ADT/STLExtras.h"
 
-#include <algorithm>
 #include <limits>
 
 using namespace mlir;

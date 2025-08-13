@@ -107,17 +107,23 @@ def dump_dap_log(log_file):
 
 class Source(object):
     def __init__(
-        self, path: Optional[str] = None, source_reference: Optional[int] = None
+        self,
+        path: Optional[str] = None,
+        source_reference: Optional[int] = None,
+        raw_dict: Optional[dict[str, Any]] = None,
     ):
         self._name = None
         self._path = None
         self._source_reference = None
+        self._raw_dict = None
 
         if path is not None:
             self._name = os.path.basename(path)
             self._path = path
         elif source_reference is not None:
             self._source_reference = source_reference
+        elif raw_dict is not None:
+            self._raw_dict = raw_dict
         else:
             raise ValueError("Either path or source_reference must be provided")
 
@@ -125,6 +131,9 @@ class Source(object):
         return f"Source(name={self.name}, path={self.path}), source_reference={self.source_reference})"
 
     def as_dict(self):
+        if self._raw_dict is not None:
+            return self._raw_dict
+
         source_dict = {}
         if self._name is not None:
             source_dict["name"] = self._name
@@ -133,6 +142,19 @@ class Source(object):
         if self._source_reference is not None:
             source_dict["sourceReference"] = self._source_reference
         return source_dict
+
+
+class Breakpoint(object):
+    def __init__(self, obj):
+        self._breakpoint = obj
+
+    def is_verified(self):
+        """Check if the breakpoint is verified."""
+        return self._breakpoint.get("verified", False)
+
+    def source(self):
+        """Get the source of the breakpoint."""
+        return self._breakpoint.get("source", {})
 
 
 class NotSupportedError(KeyError):
@@ -170,7 +192,7 @@ class DebugCommunication(object):
         self.initialized = False
         self.frame_scopes = {}
         self.init_commands = init_commands
-        self.resolved_breakpoints = {}
+        self.resolved_breakpoints: dict[str, Breakpoint] = {}
 
     @classmethod
     def encode_content(cls, s: str) -> bytes:
@@ -199,8 +221,8 @@ class DebugCommunication(object):
         finally:
             dump_dap_log(self.log_file)
 
-    def get_modules(self):
-        module_list = self.request_modules()["body"]["modules"]
+    def get_modules(self, startModule: int = 0, moduleCount: int = 0):
+        module_list = self.request_modules(startModule, moduleCount)["body"]["modules"]
         modules = {}
         for module in module_list:
             modules[module["name"]] = module
@@ -326,8 +348,8 @@ class DebugCommunication(object):
     def _update_verified_breakpoints(self, breakpoints: list[Event]):
         for breakpoint in breakpoints:
             if "id" in breakpoint:
-                self.resolved_breakpoints[str(breakpoint["id"])] = breakpoint.get(
-                    "verified", False
+                self.resolved_breakpoints[str(breakpoint["id"])] = Breakpoint(
+                    breakpoint
                 )
 
     def send_packet(self, command_dict: Request, set_sequence=True):
@@ -484,7 +506,14 @@ class DebugCommunication(object):
             if breakpoint_event is None:
                 break
 
-        return [id for id in breakpoint_ids if id not in self.resolved_breakpoints]
+        return [
+            id
+            for id in breakpoint_ids
+            if (
+                id not in self.resolved_breakpoints
+                or not self.resolved_breakpoints[id].is_verified()
+            )
+        ]
 
     def wait_for_exited(self, timeout: Optional[float] = None):
         event_dict = self.wait_for_event("exited", timeout=timeout)
@@ -831,6 +860,24 @@ class DebugCommunication(object):
         }
         return self.send_recv(command_dict)
 
+    def request_writeMemory(self, memoryReference, data, offset=0, allowPartial=False):
+        args_dict = {
+            "memoryReference": memoryReference,
+            "data": data,
+        }
+
+        if offset:
+            args_dict["offset"] = offset
+        if allowPartial:
+            args_dict["allowPartial"] = allowPartial
+
+        command_dict = {
+            "command": "writeMemory",
+            "type": "request",
+            "arguments": args_dict,
+        }
+        return self.send_recv(command_dict)
+
     def request_evaluate(self, expression, frameIndex=0, threadId=None, context=None):
         stackFrame = self.get_stackFrame(frameIndex=frameIndex, threadId=threadId)
         if stackFrame is None:
@@ -894,7 +941,7 @@ class DebugCommunication(object):
         disableASLR=False,
         disableSTDIO=False,
         shellExpandArguments=False,
-        runInTerminal=False,
+        console: Optional[str] = None,
         enableAutoVariableSummaries=False,
         displayExtendedBacktrace=False,
         enableSyntheticChildDebugging=False,
@@ -944,8 +991,8 @@ class DebugCommunication(object):
             args_dict["launchCommands"] = launchCommands
         if sourceMap:
             args_dict["sourceMap"] = sourceMap
-        if runInTerminal:
-            args_dict["runInTerminal"] = runInTerminal
+        if console:
+            args_dict["console"] = console
         if postRunCommands:
             args_dict["postRunCommands"] = postRunCommands
         if customFrameFormat:
@@ -1143,8 +1190,14 @@ class DebugCommunication(object):
         }
         return self.send_recv(command_dict)
 
-    def request_modules(self):
-        return self.send_recv({"command": "modules", "type": "request"})
+    def request_modules(self, startModule: int, moduleCount: int):
+        return self.send_recv(
+            {
+                "command": "modules",
+                "type": "request",
+                "arguments": {"startModule": startModule, "moduleCount": moduleCount},
+            }
+        )
 
     def request_stackTrace(
         self, threadId=None, startFrame=None, levels=None, format=None, dump=False

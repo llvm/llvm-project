@@ -150,6 +150,10 @@ static void convertMJTI(ModuleSlotTracker &MST, yaml::MachineJumpTable &YamlJTI,
                         const MachineJumpTableInfo &JTI);
 static void convertMFI(ModuleSlotTracker &MST, yaml::MachineFrameInfo &YamlMFI,
                        const MachineFrameInfo &MFI);
+static void
+convertSRPoints(ModuleSlotTracker &MST,
+                std::vector<yaml::SaveRestorePointEntry> &YamlSRPoints,
+                ArrayRef<MachineBasicBlock *> SaveRestorePoints);
 static void convertStackObjects(yaml::MachineFunction &YMF,
                                 const MachineFunction &MF,
                                 ModuleSlotTracker &MST, MFPrintState &State);
@@ -355,14 +359,10 @@ static void convertMFI(ModuleSlotTracker &MST, yaml::MachineFrameInfo &YamlMFI,
   YamlMFI.HasTailCall = MFI.hasTailCall();
   YamlMFI.IsCalleeSavedInfoValid = MFI.isCalleeSavedInfoValid();
   YamlMFI.LocalFrameSize = MFI.getLocalFrameSize();
-  if (MFI.getSavePoint()) {
-    raw_string_ostream StrOS(YamlMFI.SavePoint.Value);
-    StrOS << printMBBReference(*MFI.getSavePoint());
-  }
-  if (MFI.getRestorePoint()) {
-    raw_string_ostream StrOS(YamlMFI.RestorePoint.Value);
-    StrOS << printMBBReference(*MFI.getRestorePoint());
-  }
+  if (!MFI.getSavePoints().empty())
+    convertSRPoints(MST, YamlMFI.SavePoints, MFI.getSavePoints());
+  if (!MFI.getRestorePoints().empty())
+    convertSRPoints(MST, YamlMFI.RestorePoints, MFI.getRestorePoints());
 }
 
 static void convertEntryValueObjects(yaml::MachineFunction &YMF,
@@ -525,23 +525,29 @@ static void convertCallSiteObjects(yaml::MachineFunction &YMF,
                                    const MachineFunction &MF,
                                    ModuleSlotTracker &MST) {
   const auto *TRI = MF.getSubtarget().getRegisterInfo();
-  for (auto CSInfo : MF.getCallSitesInfo()) {
+  for (auto [MI, CallSiteInfo] : MF.getCallSitesInfo()) {
     yaml::CallSiteInfo YmlCS;
     yaml::MachineInstrLoc CallLocation;
 
     // Prepare instruction position.
-    MachineBasicBlock::const_instr_iterator CallI = CSInfo.first->getIterator();
+    MachineBasicBlock::const_instr_iterator CallI = MI->getIterator();
     CallLocation.BlockNum = CallI->getParent()->getNumber();
     // Get call instruction offset from the beginning of block.
     CallLocation.Offset =
         std::distance(CallI->getParent()->instr_begin(), CallI);
     YmlCS.CallLocation = CallLocation;
+
+    auto [ArgRegPairs, CalleeTypeIds] = CallSiteInfo;
     // Construct call arguments and theirs forwarding register info.
-    for (auto ArgReg : CSInfo.second.ArgRegPairs) {
+    for (auto ArgReg : ArgRegPairs) {
       yaml::CallSiteInfo::ArgRegPair YmlArgReg;
       YmlArgReg.ArgNo = ArgReg.ArgNo;
       printRegMIR(ArgReg.Reg, YmlArgReg.Reg, TRI);
       YmlCS.ArgForwardingRegs.emplace_back(YmlArgReg);
+    }
+    // Get type ids.
+    for (auto *CalleeTypeId : CalleeTypeIds) {
+      YmlCS.CalleeTypeIds.push_back(CalleeTypeId->getZExtValue());
     }
     YMF.CallSitesInfo.push_back(std::move(YmlCS));
   }
@@ -607,6 +613,21 @@ static void convertMCP(yaml::MachineFunction &MF,
     YamlConstant.IsTargetSpecific = Constant.isMachineConstantPoolEntry();
 
     MF.Constants.push_back(std::move(YamlConstant));
+  }
+}
+
+static void
+convertSRPoints(ModuleSlotTracker &MST,
+                std::vector<yaml::SaveRestorePointEntry> &YamlSRPoints,
+                ArrayRef<MachineBasicBlock *> SRPoints) {
+  for (const auto &MBB : SRPoints) {
+    SmallString<16> Str;
+    yaml::SaveRestorePointEntry Entry;
+    raw_svector_ostream StrOS(Str);
+    StrOS << printMBBReference(*MBB);
+    Entry.Point = StrOS.str().str();
+    Str.clear();
+    YamlSRPoints.push_back(Entry);
   }
 }
 
@@ -814,6 +835,11 @@ static void printMI(raw_ostream &OS, MFPrintState &State,
     OS << "nusw ";
   if (MI.getFlag(MachineInstr::SameSign))
     OS << "samesign ";
+  if (MI.getFlag(MachineInstr::InBounds))
+    OS << "inbounds ";
+
+  // NOTE: Please add new MIFlags also to the MI_FLAGS_STR in
+  // llvm/utils/update_mir_test_checks.py.
 
   OS << TII->getName(MI.getOpcode());
 
