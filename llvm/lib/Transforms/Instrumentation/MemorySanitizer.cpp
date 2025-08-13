@@ -3893,23 +3893,44 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
              ReturnType->getNumElements() * ReductionFactor);
     }
 
-    Value *Sab = IRB.CreateOr(Sa, Sb);
+    // Multiplying an *initialized* zero by an uninitialized element results in
+    // an initialized zero element.
+    //
+    // This is analogous to bitwise AND, where "AND" of 0 and a poisoned value
+    // results in an unpoisoned value. We can therefore adapt the visitAnd()
+    // instrumentation:
+    //   OutShadow =   (SaNonZero & SbNonZero)
+    //               | (VaNonZero & SbNonZero)
+    //               | (SaNonZero & VbNonZero)
+    //   where non-zero is checked on a per-element basis.
+    Value *SZero = Constant::getNullValue(Va->getType());
+    Value *VZero = Constant::getNullValue(Sa->getType());
+    Value *SaNonZero = IRB.CreateICmpNE(Sa, SZero);
+    Value *SbNonZero = IRB.CreateICmpNE(Sb, SZero);
+    Value *VaNonZero = IRB.CreateICmpNE(Va, VZero);
+    Value *VbNonZero = IRB.CreateICmpNE(Vb, VZero);
 
-    // Multiplying an uninitialized / element by zero results in an initialized
-    // element.
-    Value *Zero = Constant::getNullValue(Va->getType());
-    Value *VaNotZero = IRB.CreateICmpNE(Va, Zero);
-    Value *VbNotZero = IRB.CreateICmpNE(Vb, Zero);
-    Value *VaAndVbNotZero = IRB.CreateAnd(VaNotZero, VbNotZero);
+    Value *SaAndSbNonZero = IRB.CreateAnd(SaNonZero, SbNonZero);
+    Value *VaAndSbNonZero = IRB.CreateAnd(VaNonZero, SbNonZero);
+    Value *SaAndVbNonZero = IRB.CreateAnd(SaNonZero, VbNonZero);
 
-    // After multiplying e.g., <8 x i16> %a, <8 x i16> %b, we should have
-    // <8 x i32> %ab, but we cheated and ended up with <8 x i16>.
-    Sab = IRB.CreateAnd(Sab, IRB.CreateSExt(VaAndVbNotZero, Sab->getType()));
+    // Each element of the vector is represented by a single bit (poisoned or
+    // not) e.g., <8 x i1>.
+    Value *ComboNonZero =
+        IRB.CreateOr({SaAndSbNonZero, VaAndSbNonZero, SaAndVbNonZero});
+
+    // Extend <8 x i1> to <8 x i16>.
+    // (The real pmadd intrinsic would have computed intermediate values of
+    // <8 x i32>, but that is irrelevant for our shadow purposes because we
+    // consider each element to be either fully initialized or fully
+    // uninitialized.)
+    ComboNonZero = IRB.CreateSExt(ComboNonZero, Sa->getType());
 
     // Step 2: instrument horizontal add
     // e.g., collapse <8 x i16> into <4 x i16> (reduction factor == 2)
     //                <16 x i8> into <4 x i8>  (reduction factor == 4)
-    Value *OutShadow = horizontalReduce(I, ReductionFactor, Sab, nullptr);
+    Value *OutShadow =
+        horizontalReduce(I, ReductionFactor, ComboNonZero, nullptr);
 
     // Extend to <4 x i32>.
     // For MMX, cast it back to <1 x i64>.
@@ -5453,14 +5474,32 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // Multiply and Add Packed Words
     //   < 4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16>, <8 x i16>)
     //   < 8 x i32> @llvm.x86.avx2.pmadd.wd(<16 x i16>, <16 x i16>)
-
+    //   <16 x i32> @llvm.x86.avx512.pmaddw.d.512(<32 x i16>, <32 x i16>)
+    //
     // Multiply and Add Packed Signed and Unsigned Bytes
     //   < 8 x i16> @llvm.x86.ssse3.pmadd.ub.sw.128(<16 x i8>, <16 x i8>)
     //   <16 x i16> @llvm.x86.avx2.pmadd.ub.sw(<32 x i8>, <32 x i8>)
+    //   <32 x i16> @llvm.x86.avx512.pmaddubs.w.512(<64 x i8>, <64 x i8>)
+    //
+    // These intrinsics are auto-upgraded into non-masked forms:
+    //   < 4 x i32> @llvm.x86.avx512.mask.pmaddw.d.128
+    //                  (<8 x i16>, <8 x i16>, <4 x i32>, i8)
+    //   < 8 x i32> @llvm.x86.avx512.mask.pmaddw.d.256
+    //                  (<16 x i16>, <16 x i16>, <8 x i32>, i8)
+    //   <16 x i32> @llvm.x86.avx512.mask.pmaddw.d.512
+    //                  (<32 x i16>, <32 x i16>, <16 x i32>, i16)
+    //   < 8 x i16> @llvm.x86.avx512.mask.pmaddubs.w.128
+    //                  (<16 x i8>, <16 x i8>, <8 x i16>, i8)
+    //   <16 x i16> @llvm.x86.avx512.mask.pmaddubs.w.256
+    //                  (<32 x i8>, <32 x i8>, <16 x i16>, i16)
+    //   <32 x i16> @llvm.x86.avx512.mask.pmaddubs.w.512
+    //                  (<64 x i8>, <64 x i8>, <32 x i16>, i32)
     case Intrinsic::x86_sse2_pmadd_wd:
     case Intrinsic::x86_avx2_pmadd_wd:
+    case Intrinsic::x86_avx512_pmaddw_d_512:
     case Intrinsic::x86_ssse3_pmadd_ub_sw_128:
     case Intrinsic::x86_avx2_pmadd_ub_sw:
+    case Intrinsic::x86_avx512_pmaddubs_w_512:
       handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2);
       break;
 
