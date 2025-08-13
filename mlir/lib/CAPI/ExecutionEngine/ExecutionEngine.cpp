@@ -22,7 +22,7 @@ using namespace mlir;
 extern "C" MlirExecutionEngine
 mlirExecutionEngineCreate(MlirModule op, int optLevel, int numPaths,
                           const MlirStringRef *sharedLibPaths,
-                          bool enableObjectDump) {
+                          bool enableObjectDump, bool shouldInitialize) {
   static bool initOnce = [] {
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmParser(); // needed for inline_asm
@@ -60,12 +60,17 @@ mlirExecutionEngineCreate(MlirModule op, int optLevel, int numPaths,
   jitOptions.jitCodeGenOptLevel = static_cast<llvm::CodeGenOptLevel>(optLevel);
   jitOptions.sharedLibPaths = libPaths;
   jitOptions.enableObjectDump = enableObjectDump;
+  jitOptions.shouldInitialize = shouldInitialize;
   auto jitOrError = ExecutionEngine::create(unwrap(op), jitOptions);
   if (!jitOrError) {
     consumeError(jitOrError.takeError());
     return MlirExecutionEngine{nullptr};
   }
   return wrap(jitOrError->release());
+}
+
+extern "C" void mlirExecutionEngineInitialize(MlirExecutionEngine jit) {
+  unwrap(jit)->initialize();
 }
 
 extern "C" void mlirExecutionEngineDestroy(MlirExecutionEngine jit) {
@@ -106,9 +111,8 @@ extern "C" void mlirExecutionEngineRegisterSymbol(MlirExecutionEngine jit,
                                                   void *sym) {
   unwrap(jit)->registerSymbols([&](llvm::orc::MangleAndInterner interner) {
     llvm::orc::SymbolMap symbolMap;
-    symbolMap[interner(unwrap(name))] =
-        { llvm::orc::ExecutorAddr::fromPtr(sym),
-          llvm::JITSymbolFlags::Exported };
+    symbolMap[interner(unwrap(name))] = {llvm::orc::ExecutorAddr::fromPtr(sym),
+                                         llvm::JITSymbolFlags::Exported};
     return symbolMap;
   });
 }

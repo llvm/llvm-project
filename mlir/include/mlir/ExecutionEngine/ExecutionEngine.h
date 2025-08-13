@@ -99,6 +99,10 @@ struct ExecutionEngineOptions {
   /// If `enablePerfNotificationListener` is set, the JIT compiler will notify
   /// the llvm's global Perf notification listener.
   bool enablePerfNotificationListener = true;
+
+  /// Setting initialize=false to register symbols might be used in
+  /// initialization
+  bool shouldInitialize = true;
 };
 
 /// JIT-backed execution engine for MLIR. Assumes the IR can be converted to
@@ -227,6 +231,8 @@ public:
       llvm::function_ref<llvm::orc::SymbolMap(llvm::orc::MangleAndInterner)>
           symbolMap);
 
+  void initialize();
+
 private:
   /// Ordering of llvmContext and jit is important for destruction purposes: the
   /// jit must be destroyed before the context.
@@ -250,6 +256,8 @@ private:
   /// Destroy functions in the libraries loaded by the ExecutionEngine that are
   /// called when this ExecutionEngine is destructed.
   SmallVector<LibraryDestroyFn> destroyFns;
+
+  bool isInitialized = false;
 };
 
 } // namespace mlir

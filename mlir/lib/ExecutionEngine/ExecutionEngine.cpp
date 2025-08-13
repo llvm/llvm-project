@@ -106,7 +106,7 @@ void ExecutionEngine::dumpToObjectFile(StringRef filename) {
   }
   // Compilation is lazy and it doesn't populate object cache unless requested.
   // In case object dump is requested before cache is populated, we need to
-  // force compilation manually. 
+  // force compilation manually.
   if (cache->isEmpty()) {
     for (std::string &functionName : functionNames) {
       auto result = lookupPacked(functionName);
@@ -400,13 +400,9 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
     return symbolMap;
   };
   engine->registerSymbols(runtimeSymbolMap);
-
-  // Execute the global constructors from the module being processed.
-  // TODO: Allow JIT initialize for AArch64. Currently there's a bug causing a
-  // crash for AArch64 see related issue #71963.
-  if (!engine->jit->getTargetTriple().isAArch64())
-    cantFail(engine->jit->initialize(engine->jit->getMainJITDylib()));
-
+  if (options.shouldInitialize) {
+    engine->initialize();
+  }
   return std::move(engine);
 }
 
@@ -450,4 +446,16 @@ Error ExecutionEngine::invokePacked(StringRef name,
   (*fptr)(args.data());
 
   return Error::success();
+}
+
+void ExecutionEngine::initialize() {
+  // Execute the global constructors from the module.
+  // TODO: Allow JIT initialize for AArch64. Currently there's a bug causing a
+  // crash for AArch64 see related issue #71963.
+  if (isInitialized) {
+    return;
+  }
+  if (!jit->getTargetTriple().isAArch64())
+    cantFail(jit->initialize(jit->getMainJITDylib()));
+  isInitialized = true;
 }
