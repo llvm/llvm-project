@@ -365,4 +365,11 @@ gpu.func @dpas_no_sg_data(%a: memref<128x128xf16>, %b: memref<128x128xf16>) {
   } {sg_id_range = #xegpu.range<[3, 19]>}
   gpu.return
   }
+
+  // CHECK-LABEL: distribute_constant
+  gpu.func @distribute_constant() {
+    // CHECK: arith.constant dense<1.000000e+00> : vector<32x32xf32>
+    %cst = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32]>} dense<1.0> : vector<256x128xf32>
+    gpu.return
+  }
 }
