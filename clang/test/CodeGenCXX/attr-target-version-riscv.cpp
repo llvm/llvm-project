@@ -49,155 +49,6 @@ int bar() { return foo1() + foo2() + foo3(); }
 // CHECK-NEXT:    ret i32 1
 //
 //
-// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo1v.default(
-// CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 1
-//
-//
-// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo2v._zbb(
-// CHECK-SAME: ) #[[ATTR2:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 1
-//
-//
-// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo2v._m(
-// CHECK-SAME: ) #[[ATTR1]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 1
-//
-//
-// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo2v.default(
-// CHECK-SAME: ) #[[ATTR1]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 1
-//
-//
-// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo3v._c_zbb(
-// CHECK-SAME: ) #[[ATTR3:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 1
-//
-//
-// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo3v._m(
-// CHECK-SAME: ) #[[ATTR1]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 1
-//
-//
-// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo3v.default(
-// CHECK-SAME: ) #[[ATTR1]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 1
-//
-//
-// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo4v._zba(
-// CHECK-SAME: ) #[[ATTR4:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 1
-//
-//
-// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo4v._zbb(
-// CHECK-SAME: ) #[[ATTR2]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 1
-//
-//
-// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo4v._zba_zbb(
-// CHECK-SAME: ) #[[ATTR5:[0-9]+]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 1
-//
-//
-// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo4v.default(
-// CHECK-SAME: ) #[[ATTR1]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 1
-//
-//
-// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo5v._zba(
-// CHECK-SAME: ) #[[ATTR4]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 1
-//
-//
-// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo5v._zba_zbb(
-// CHECK-SAME: ) #[[ATTR5]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 1
-//
-//
-// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo5v._zbb(
-// CHECK-SAME: ) #[[ATTR2]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 1
-//
-//
-// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo5v.default(
-// CHECK-SAME: ) #[[ATTR1]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 1
-//
-//
-// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo6v._zba(
-// CHECK-SAME: ) #[[ATTR4]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 1
-//
-//
-// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo6v._zbb(
-// CHECK-SAME: ) #[[ATTR2]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 1
-//
-//
-// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo6v._zba_zbb(
-// CHECK-SAME: ) #[[ATTR5]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 1
-//
-//
-// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo6v.default(
-// CHECK-SAME: ) #[[ATTR1]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 1
-//
-//
-// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo7v._zba(
-// CHECK-SAME: ) #[[ATTR4]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 1
-//
-//
-// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo7v._zbb(
-// CHECK-SAME: ) #[[ATTR2]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 1
-//
-//
-// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo7v._zba_zbb(
-// CHECK-SAME: ) #[[ATTR5]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 1
-//
-//
-// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo7v.default(
-// CHECK-SAME: ) #[[ATTR1]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i32 1
-//
-//
-// CHECK-LABEL: define dso_local noundef signext i32 @_Z3barv(
-// CHECK-SAME: ) #[[ATTR1]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[CALL:%.*]] = call noundef signext i32 @_Z4foo1v()
-// CHECK-NEXT:    [[CALL1:%.*]] = call noundef signext i32 @_Z4foo2v()
-// CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[CALL]], [[CALL1]]
-// CHECK-NEXT:    [[CALL2:%.*]] = call noundef signext i32 @_Z4foo3v()
-// CHECK-NEXT:    [[ADD3:%.*]] = add nsw i32 [[ADD]], [[CALL2]]
-// CHECK-NEXT:    ret i32 [[ADD3]]
-//
-//
 // CHECK-LABEL: define weak_odr ptr @_Z4foo1v.resolver() comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_riscv_feature_bits(ptr null)
@@ -209,6 +60,18 @@ int bar() { return foo1() + foo2() + foo3(); }
 // CHECK-NEXT:    ret ptr @_Z4foo1v._v
 // CHECK:       resolver_else:
 // CHECK-NEXT:    ret ptr @_Z4foo1v.default
+//
+//
+// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo1v.default(
+// CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 1
+//
+//
+// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo2v._zbb(
+// CHECK-SAME: ) #[[ATTR2:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 1
 //
 //
 // CHECK-LABEL: define weak_odr ptr @_Z4foo2v.resolver() comdat {
@@ -231,6 +94,24 @@ int bar() { return foo1() + foo2() + foo3(); }
 // CHECK-NEXT:    ret ptr @_Z4foo2v.default
 //
 //
+// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo2v._m(
+// CHECK-SAME: ) #[[ATTR1]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 1
+//
+//
+// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo2v.default(
+// CHECK-SAME: ) #[[ATTR1]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 1
+//
+//
+// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo3v._c_zbb(
+// CHECK-SAME: ) #[[ATTR3:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 1
+//
+//
 // CHECK-LABEL: define weak_odr ptr @_Z4foo3v.resolver() comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_riscv_feature_bits(ptr null)
@@ -249,6 +130,24 @@ int bar() { return foo1() + foo2() + foo3(); }
 // CHECK-NEXT:    ret ptr @_Z4foo3v._m
 // CHECK:       resolver_else2:
 // CHECK-NEXT:    ret ptr @_Z4foo3v.default
+//
+//
+// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo3v._m(
+// CHECK-SAME: ) #[[ATTR1]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 1
+//
+//
+// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo3v.default(
+// CHECK-SAME: ) #[[ATTR1]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 1
+//
+//
+// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo4v._zba(
+// CHECK-SAME: ) #[[ATTR4:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 1
 //
 //
 // CHECK-LABEL: define weak_odr ptr @_Z4foo4v.resolver() comdat {
@@ -278,6 +177,30 @@ int bar() { return foo1() + foo2() + foo3(); }
 // CHECK-NEXT:    ret ptr @_Z4foo4v.default
 //
 //
+// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo4v._zbb(
+// CHECK-SAME: ) #[[ATTR2]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 1
+//
+//
+// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo4v._zba_zbb(
+// CHECK-SAME: ) #[[ATTR5:[0-9]+]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 1
+//
+//
+// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo4v.default(
+// CHECK-SAME: ) #[[ATTR1]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 1
+//
+//
+// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo5v._zba(
+// CHECK-SAME: ) #[[ATTR4]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 1
+//
+//
 // CHECK-LABEL: define weak_odr ptr @_Z4foo5v.resolver() comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_riscv_feature_bits(ptr null)
@@ -303,6 +226,30 @@ int bar() { return foo1() + foo2() + foo3(); }
 // CHECK-NEXT:    ret ptr @_Z4foo5v._zbb
 // CHECK:       resolver_else4:
 // CHECK-NEXT:    ret ptr @_Z4foo5v.default
+//
+//
+// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo5v._zba_zbb(
+// CHECK-SAME: ) #[[ATTR5]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 1
+//
+//
+// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo5v._zbb(
+// CHECK-SAME: ) #[[ATTR2]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 1
+//
+//
+// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo5v.default(
+// CHECK-SAME: ) #[[ATTR1]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 1
+//
+//
+// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo6v._zba(
+// CHECK-SAME: ) #[[ATTR4]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 1
 //
 //
 // CHECK-LABEL: define weak_odr ptr @_Z4foo6v.resolver() comdat {
@@ -332,6 +279,30 @@ int bar() { return foo1() + foo2() + foo3(); }
 // CHECK-NEXT:    ret ptr @_Z4foo6v.default
 //
 //
+// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo6v._zbb(
+// CHECK-SAME: ) #[[ATTR2]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 1
+//
+//
+// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo6v._zba_zbb(
+// CHECK-SAME: ) #[[ATTR5]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 1
+//
+//
+// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo6v.default(
+// CHECK-SAME: ) #[[ATTR1]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 1
+//
+//
+// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo7v._zba(
+// CHECK-SAME: ) #[[ATTR4]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 1
+//
+//
 // CHECK-LABEL: define weak_odr ptr @_Z4foo7v.resolver() comdat {
 // CHECK-NEXT:  resolver_entry:
 // CHECK-NEXT:    call void @__init_riscv_feature_bits(ptr null)
@@ -357,6 +328,35 @@ int bar() { return foo1() + foo2() + foo3(); }
 // CHECK-NEXT:    ret ptr @_Z4foo7v._zba
 // CHECK:       resolver_else4:
 // CHECK-NEXT:    ret ptr @_Z4foo7v.default
+//
+//
+// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo7v._zbb(
+// CHECK-SAME: ) #[[ATTR2]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 1
+//
+//
+// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo7v._zba_zbb(
+// CHECK-SAME: ) #[[ATTR5]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 1
+//
+//
+// CHECK-LABEL: define dso_local noundef signext i32 @_Z4foo7v.default(
+// CHECK-SAME: ) #[[ATTR1]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i32 1
+//
+//
+// CHECK-LABEL: define dso_local noundef signext i32 @_Z3barv(
+// CHECK-SAME: ) #[[ATTR1]] {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[CALL:%.*]] = call noundef signext i32 @_Z4foo1v()
+// CHECK-NEXT:    [[CALL1:%.*]] = call noundef signext i32 @_Z4foo2v()
+// CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[CALL]], [[CALL1]]
+// CHECK-NEXT:    [[CALL2:%.*]] = call noundef signext i32 @_Z4foo3v()
+// CHECK-NEXT:    [[ADD3:%.*]] = add nsw i32 [[ADD]], [[CALL2]]
+// CHECK-NEXT:    ret i32 [[ADD3]]
 //
 //.
 // CHECK: attributes #[[ATTR0]] = { mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+64bit,+d,+f,+i,+m,+v,+zicsr,+zmmul,+zve32f,+zve32x,+zve64d,+zve64f,+zve64x,+zvl128b,+zvl32b,+zvl64b" }

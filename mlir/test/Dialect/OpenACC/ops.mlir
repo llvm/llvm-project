@@ -19,7 +19,7 @@ func.func @compute1(%A: memref<10x10xf32>, %B: memref<10x10xf32>, %C: memref<10x
       %co = arith.addf %cij, %p : f32
       memref.store %co, %C[%arg3, %arg4] : memref<10x10xf32>
       acc.yield
-    } attributes { collapse = [3], collapseDeviceType = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true, true, true>}
+    } attributes { collapse = [3], collapseDeviceType = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true, true, true>, independent = [#acc.device_type<none>]}
     acc.yield
   }
 
@@ -40,7 +40,7 @@ func.func @compute1(%A: memref<10x10xf32>, %B: memref<10x10xf32>, %C: memref<10x
 //  CHECK-NEXT:       %{{.*}} = arith.addf %{{.*}}, %{{.*}} : f32
 //  CHECK-NEXT:       memref.store %{{.*}}, %{{.*}}[%{{.*}}, %{{.*}}] : memref<10x10xf32>
 //  CHECK-NEXT:       acc.yield
-//  CHECK-NEXT:     } attributes {collapse = [3], collapseDeviceType = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true, true, true>}
+//  CHECK-NEXT:     } attributes {collapse = [3], collapseDeviceType = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true, true, true>, independent = [#acc.device_type<none>]}
 //  CHECK-NEXT:     acc.yield
 //  CHECK-NEXT:   }
 //  CHECK-NEXT:   return %{{.*}} : memref<10x10xf32>
@@ -129,7 +129,7 @@ func.func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10x
           %tmp = arith.addf %axy, %bxy : f32
           memref.store %tmp, %c[%y] : memref<10xf32>
           acc.yield
-        } attributes {inclusiveUpperbound = array<i1: true>}
+        } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
         acc.loop control(%i : index) = (%lb : index) to (%c10 : index) step (%st : index) {
           // for i = 0 to 10 step 1
@@ -139,9 +139,9 @@ func.func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10x
           %z = arith.addf %ci, %dx : f32
           memref.store %z, %d[%x] : memref<10xf32>
           acc.yield
-        } attributes {inclusiveUpperbound = array<i1: true>, seq = [#acc.device_type<nvidia>]}
+        } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>], seq = [#acc.device_type<nvidia>]}
         acc.yield
-      } attributes {inclusiveUpperbound = array<i1: true>}
+      } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
       acc.yield
     }
     acc.terminator
@@ -166,16 +166,16 @@ func.func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10x
 // CHECK-NEXT:           %{{.*}} = arith.addf %{{.*}}, %{{.*}} : f32
 // CHECK-NEXT:           memref.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
 // CHECK-NEXT:           acc.yield
-// CHECK-NEXT:         } attributes {inclusiveUpperbound = array<i1: true>}
+// CHECK-NEXT:         } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 // CHECK-NEXT:         acc.loop control(%{{.*}}) = (%{{.*}}) to (%{{.*}}) step (%{{.*}}) {
 // CHECK-NEXT:           %{{.*}} = memref.load %{{.*}}[%{{.*}}] : memref<10xf32>
 // CHECK-NEXT:           %{{.*}} = memref.load %{{.*}}[%{{.*}}] : memref<10xf32>
 // CHECK-NEXT:           %{{.*}} = arith.addf %{{.*}}, %{{.*}} : f32
 // CHECK-NEXT:           memref.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
 // CHECK-NEXT:           acc.yield
-// CHECK-NEXT:         } attributes {inclusiveUpperbound = array<i1: true>, seq = [#acc.device_type<nvidia>]}
+// CHECK-NEXT:         } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>], seq = [#acc.device_type<nvidia>]}
 // CHECK-NEXT:         acc.yield
-// CHECK-NEXT:       } attributes {inclusiveUpperbound = array<i1: true>}
+// CHECK-NEXT:       } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 // CHECK-NEXT:       acc.yield
 // CHECK-NEXT:     }
 // CHECK-NEXT:     acc.terminator
@@ -196,72 +196,72 @@ func.func @testloopop(%a : memref<10xf32>) -> () {
   acc.loop gang vector worker control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>}
+  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
   acc.loop gang({num=%i64Value: i64}) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>}
+  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
   acc.loop gang({static=%i64Value: i64}) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>}
+  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
   acc.loop worker(%i64Value: i64) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>}
+  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
   acc.loop worker(%i32Value: i32) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>}
+  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
   acc.loop worker(%idxValue: index) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>}
+  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
   acc.loop vector(%i64Value: i64) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>}
+  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
   acc.loop vector(%i32Value: i32) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>}
+  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
   acc.loop vector(%idxValue: index) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>}
+  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
   acc.loop gang({num=%i64Value: i64}) worker vector control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>}
+  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
   acc.loop gang({num=%i64Value: i64, static=%i64Value: i64}) worker(%i64Value: i64) vector(%i64Value: i64) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>}
+  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
   acc.loop gang({num=%i32Value: i32, static=%idxValue: index}) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>}
+  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
   acc.loop tile({%i64Value : i64, %i64Value : i64}) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>}
+  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
   acc.loop tile({%i32Value : i32, %i32Value : i32}) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>}
+  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
   acc.loop gang({static=%i64Value: i64, num=%i64Value: i64}) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>}
+  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
   acc.loop gang({dim=%i64Value : i64, static=%i64Value: i64}) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>}
+  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
   %b = acc.cache varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
   acc.loop cache(%b : memref<10xf32>) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
     "test.openacc_dummy_op"() : () -> ()
     acc.yield
-  } attributes {inclusiveUpperbound = array<i1: true>}
+  } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
   return
 }
 
@@ -271,7 +271,7 @@ func.func @testloopop(%a : memref<10xf32>) -> () {
 // CHECK:      acc.loop
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
-// CHECK-NEXT: attributes {inclusiveUpperbound = array<i1: true>}
+// CHECK-NEXT: attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 // CHECK:      acc.loop gang({num=[[I64VALUE]] : i64})
 // CHECK-NEXT:   "test.openacc_dummy_op"() : () -> ()
 // CHECK-NEXT:   acc.yield
@@ -343,7 +343,7 @@ func.func @acc_loop_multiple_block() {
       cf.br ^bb1(%22 : index)
     ^bb3:
       acc.yield
-    } attributes {inclusiveUpperbound = array<i1: true>}
+    } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
     acc.yield
   }
   return
@@ -435,10 +435,10 @@ func.func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x
   } attributes {defaultAttr = #acc<defaultvalue none>}
   acc.parallel {
   } attributes {defaultAttr = #acc<defaultvalue present>}
-  acc.parallel {
-  } attributes {asyncAttr}
-  acc.parallel {
-  } attributes {waitAttr}
+  acc.parallel async {
+  }
+  acc.parallel wait {
+  }
   acc.parallel {
   } attributes {selfAttr}
   return
@@ -488,10 +488,10 @@ func.func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x
 // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
 // CHECK:      acc.parallel {
 // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue present>}
-// CHECK:      acc.parallel {
-// CHECK-NEXT: } attributes {asyncAttr}
-// CHECK:      acc.parallel {
-// CHECK-NEXT: } attributes {waitAttr}
+// CHECK:      acc.parallel async {
+// CHECK-NEXT: }
+// CHECK:      acc.parallel wait {
+// CHECK-NEXT: }
 // CHECK:      acc.parallel {
 // CHECK-NEXT: } attributes {selfAttr}
 
@@ -567,10 +567,10 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
   } attributes {defaultAttr = #acc<defaultvalue none>}
   acc.serial {
   } attributes {defaultAttr = #acc<defaultvalue present>}
-  acc.serial {
-  } attributes {asyncAttr}
-  acc.serial {
-  } attributes {waitAttr}
+  acc.serial async {
+  }
+  acc.serial wait {
+  }
   acc.serial {
   } attributes {selfAttr}
   acc.serial {
@@ -604,10 +604,10 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
 // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
 // CHECK:      acc.serial {
 // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue present>}
-// CHECK:      acc.serial {
-// CHECK-NEXT: } attributes {asyncAttr}
-// CHECK:      acc.serial {
-// CHECK-NEXT: } attributes {waitAttr}
+// CHECK:      acc.serial async {
+// CHECK-NEXT: }
+// CHECK:      acc.serial wait {
+// CHECK-NEXT: }
 // CHECK:      acc.serial {
 // CHECK-NEXT: } attributes {selfAttr}
 // CHECK:      acc.serial {
@@ -639,10 +639,10 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
   } attributes {defaultAttr = #acc<defaultvalue none>}
   acc.kernels {
   } attributes {defaultAttr = #acc<defaultvalue present>}
-  acc.kernels {
-  } attributes {asyncAttr}
-  acc.kernels {
-  } attributes {waitAttr}
+  acc.kernels async {
+  }
+  acc.kernels wait {
+  }
   acc.kernels {
   } attributes {selfAttr}
   acc.kernels {
@@ -673,10 +673,10 @@ func.func @testserialop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x10
 // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
 // CHECK:      acc.kernels {
 // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue present>}
-// CHECK:      acc.kernels {
-// CHECK-NEXT: } attributes {asyncAttr}
-// CHECK:      acc.kernels {
-// CHECK-NEXT: } attributes {waitAttr}
+// CHECK:      acc.kernels async {
+// CHECK-NEXT: }
+// CHECK:      acc.kernels wait {
+// CHECK-NEXT: }
 // CHECK:      acc.kernels {
 // CHECK-NEXT: } attributes {selfAttr}
 // CHECK:      acc.kernels {
@@ -787,23 +787,23 @@ func.func @testdataop(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> () {
   acc.data {
   } attributes { defaultAttr = #acc<defaultvalue none> }
 
-  acc.data {
-  } attributes { defaultAttr = #acc<defaultvalue none>, async }
+  acc.data async {
+  } attributes { defaultAttr = #acc<defaultvalue none> }
 
   %a1 = arith.constant 1 : i64
   acc.data async(%a1 : i64) {
-  } attributes { defaultAttr = #acc<defaultvalue none>, async }
+  } attributes { defaultAttr = #acc<defaultvalue none> }
 
-  acc.data {
-  } attributes { defaultAttr = #acc<defaultvalue none>, wait }
+  acc.data wait {
+  } attributes { defaultAttr = #acc<defaultvalue none> }
 
   %w1 = arith.constant 1 : i64
   acc.data wait({%w1 : i64}) {
-  } attributes { defaultAttr = #acc<defaultvalue none>, wait }
+  } attributes { defaultAttr = #acc<defaultvalue none> }
 
   %wd1 = arith.constant 1 : i64
   acc.data wait({devnum: %wd1 : i64, %w1 : i64}) {
-  } attributes { defaultAttr = #acc<defaultvalue none>, wait }
+  } attributes { defaultAttr = #acc<defaultvalue none> }
 
   return
 }
@@ -904,20 +904,45 @@ func.func @testdataop(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> () {
 // CHECK:      acc.data {
 // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
 
-// CHECK:      acc.data {
-// CHECK-NEXT: } attributes {async, defaultAttr = #acc<defaultvalue none>}
+// CHECK:      acc.data async {
+// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
 
 // CHECK:      acc.data async(%{{.*}} : i64) {
-// CHECK-NEXT: } attributes {async, defaultAttr = #acc<defaultvalue none>}
+// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
 
-// CHECK:      acc.data {
-// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>, wait}
+// CHECK:      acc.data wait {
+// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
 
 // CHECK:      acc.data wait({%{{.*}} : i64}) {
-// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>, wait}
+// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
 
 // CHECK:      acc.data wait({devnum: %{{.*}} : i64, %{{.*}} : i64}) {
-// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>, wait}
+// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
+
+// -----
+
+func.func @testdataopmodifiers(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> () {
+  %0 = acc.create varPtr(%a : memref<f32>) -> memref<f32> {modifiers = #acc<data_clause_modifier capture,zero>}
+  %1 = acc.copyin varPtr(%b : memref<f32>) -> memref<f32> {modifiers = #acc<data_clause_modifier readonly,capture,always>}
+  %2 = acc.copyin varPtr(%c : memref<f32>) -> memref<f32> {modifiers = #acc<data_clause_modifier always>}
+  %3 = acc.create varPtr(%c : memref<f32>) -> memref<f32> {modifiers = #acc<data_clause_modifier always>}
+  acc.data dataOperands(%0, %1, %2, %3 : memref<f32>, memref<f32>, memref<f32>, memref<f32>) {
+  }
+  acc.copyout accPtr(%0 : memref<f32>) to varPtr(%a : memref<f32>) {modifiers = #acc<data_clause_modifier zero,capture,always>}
+  acc.delete accPtr(%2 : memref<f32>) {modifiers = #acc<data_clause_modifier always>}
+  acc.copyout accPtr(%3 : memref<f32>) to varPtr(%c : memref<f32>) {modifiers = #acc<data_clause_modifier always>}
+
+  func.return
+}
+
+// CHECK:      func @testdataopmodifiers(%[[ARGA:.*]]: memref<f32>, %[[ARGB:.*]]: memref<f32>, %[[ARGC:.*]]: memref<f32>) {
+// CHECK:      %[[CREATEA:.*]] = acc.create varPtr(%[[ARGA]] : memref<f32>) -> memref<f32> {modifiers = #acc<data_clause_modifier zero,capture>}
+// CHECK:      %[[COPYINB:.*]] = acc.copyin varPtr(%[[ARGB]] : memref<f32>) -> memref<f32> {modifiers = #acc<data_clause_modifier always,readonly,capture>}
+// CHECK:      %[[COPYINC:.*]] = acc.copyin varPtr(%[[ARGC]] : memref<f32>) -> memref<f32> {modifiers = #acc<data_clause_modifier always>}
+// CHECK:      %[[CREATEC:.*]] = acc.create varPtr(%[[ARGC]] : memref<f32>) -> memref<f32> {modifiers = #acc<data_clause_modifier always>}
+// CHECK:      acc.copyout accPtr(%[[CREATEA]] : memref<f32>) to varPtr(%[[ARGA]] : memref<f32>) {modifiers = #acc<data_clause_modifier always,zero,capture>}
+// CHECK:      acc.delete accPtr(%[[COPYINC]] : memref<f32>) {modifiers = #acc<data_clause_modifier always>}
+// CHECK:      acc.copyout accPtr(%[[CREATEC]] : memref<f32>) to varPtr(%[[ARGC]] : memref<f32>) {modifiers = #acc<data_clause_modifier always>}
 
 // -----
 
@@ -977,7 +1002,7 @@ acc.wait async(%i32Value: i32)
 acc.wait async(%idxValue: index)
 acc.wait(%i32Value: i32) async(%idxValue: index)
 acc.wait(%i64Value: i64) wait_devnum(%i32Value: i32)
-acc.wait attributes {async}
+acc.wait async
 acc.wait(%i64Value: i64) async(%idxValue: index) wait_devnum(%i32Value: i32)
 acc.wait(%i64Value: i64) wait_devnum(%i32Value: i32) async(%idxValue: index)
 acc.wait if(%ifCond)
@@ -996,7 +1021,7 @@ acc.wait if(%ifCond)
 // CHECK: acc.wait async([[IDXVALUE]] : index)
 // CHECK: acc.wait([[I32VALUE]] : i32) async([[IDXVALUE]] : index)
 // CHECK: acc.wait([[I64VALUE]] : i64) wait_devnum([[I32VALUE]] : i32)
-// CHECK: acc.wait attributes {async}
+// CHECK: acc.wait async
 // CHECK: acc.wait([[I64VALUE]] : i64) async([[IDXVALUE]] : index) wait_devnum([[I32VALUE]] : i32)
 // CHECK: acc.wait([[I64VALUE]] : i64) async([[IDXVALUE]] : index) wait_devnum([[I32VALUE]] : i32)
 // CHECK: acc.wait if([[IFCOND]])
@@ -1078,7 +1103,7 @@ func.func @testexitdataop(%a: !llvm.ptr) -> () {
   acc.delete accPtr(%1 : !llvm.ptr)
 
   %2 = acc.getdeviceptr varPtr(%a : !llvm.ptr) varType(f64) -> !llvm.ptr
-  acc.exit_data dataOperands(%2 : !llvm.ptr) attributes {async,finalize}
+  acc.exit_data async dataOperands(%2 : !llvm.ptr) attributes {finalize}
   acc.delete accPtr(%2 : !llvm.ptr)
 
   %3 = acc.getdeviceptr varPtr(%a : !llvm.ptr) varType(f64) -> !llvm.ptr
@@ -1086,11 +1111,11 @@ func.func @testexitdataop(%a: !llvm.ptr) -> () {
   acc.detach accPtr(%3 : !llvm.ptr)
 
   %4 = acc.getdeviceptr varPtr(%a : !llvm.ptr) varType(f64) -> !llvm.ptr
-  acc.exit_data dataOperands(%4 : !llvm.ptr) attributes {async}
+  acc.exit_data async dataOperands(%4 : !llvm.ptr)
   acc.copyout accPtr(%4 : !llvm.ptr) to varPtr(%a : !llvm.ptr) varType(f64)
 
   %5 = acc.getdeviceptr varPtr(%a : !llvm.ptr) varType(f64) -> !llvm.ptr
-  acc.exit_data dataOperands(%5 : !llvm.ptr) attributes {wait}
+  acc.exit_data wait dataOperands(%5 : !llvm.ptr)
   acc.delete accPtr(%5 : !llvm.ptr)
 
   %6 = acc.getdeviceptr varPtr(%a : !llvm.ptr) varType(f64) -> !llvm.ptr
@@ -1127,7 +1152,7 @@ func.func @testexitdataop(%a: !llvm.ptr) -> () {
 // CHECK: acc.delete accPtr(%[[DEVPTR]] : !llvm.ptr)
 
 // CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr) varType(f64) -> !llvm.ptr
-// CHECK: acc.exit_data dataOperands(%[[DEVPTR]] : !llvm.ptr) attributes {async, finalize}
+// CHECK: acc.exit_data async dataOperands(%[[DEVPTR]] : !llvm.ptr) attributes {finalize}
 // CHECK: acc.delete accPtr(%[[DEVPTR]] : !llvm.ptr)
 
 // CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr) varType(f64) -> !llvm.ptr
@@ -1135,11 +1160,11 @@ func.func @testexitdataop(%a: !llvm.ptr) -> () {
 // CHECK: acc.detach accPtr(%[[DEVPTR]] : !llvm.ptr)
 
 // CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr) varType(f64) -> !llvm.ptr
-// CHECK: acc.exit_data dataOperands(%[[DEVPTR]] : !llvm.ptr) attributes {async}
+// CHECK: acc.exit_data async dataOperands(%[[DEVPTR]] : !llvm.ptr)
 // CHECK: acc.copyout accPtr(%[[DEVPTR]] : !llvm.ptr) to varPtr(%[[ARGA]] : !llvm.ptr) varType(f64)
 
 // CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr) varType(f64) -> !llvm.ptr
-// CHECK: acc.exit_data dataOperands(%[[DEVPTR]] : !llvm.ptr) attributes {wait}
+// CHECK: acc.exit_data wait dataOperands(%[[DEVPTR]] : !llvm.ptr)
 // CHECK: acc.delete accPtr(%[[DEVPTR]] : !llvm.ptr)
 
 // CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr) varType(f64) -> !llvm.ptr
@@ -1176,9 +1201,9 @@ func.func @testenterdataop(%a: !llvm.ptr, %b: !llvm.ptr, %c: !llvm.ptr) -> () {
   %4 = acc.attach varPtr(%a : !llvm.ptr) varType(f64) -> !llvm.ptr
   acc.enter_data dataOperands(%4 : !llvm.ptr)
   %5 = acc.copyin varPtr(%a : !llvm.ptr) varType(f64) -> !llvm.ptr
-  acc.enter_data dataOperands(%5 : !llvm.ptr) attributes {async}
+  acc.enter_data async dataOperands(%5 : !llvm.ptr)
   %6 = acc.create varPtr(%a : !llvm.ptr) varType(f64) -> !llvm.ptr
-  acc.enter_data dataOperands(%6 : !llvm.ptr) attributes {wait}
+  acc.enter_data wait dataOperands(%6 : !llvm.ptr)
   %7 = acc.copyin varPtr(%a : !llvm.ptr) varType(f64) -> !llvm.ptr
   acc.enter_data async(%i64Value : i64) dataOperands(%7 : !llvm.ptr)
   %8 = acc.copyin varPtr(%a : !llvm.ptr) varType(f64) -> !llvm.ptr
@@ -1205,9 +1230,9 @@ func.func @testenterdataop(%a: !llvm.ptr, %b: !llvm.ptr, %c: !llvm.ptr) -> () {
 // CHECK: %[[ATTACH:.*]] = acc.attach varPtr(%[[ARGA]] : !llvm.ptr) varType(f64) -> !llvm.ptr
 // CHECK: acc.enter_data dataOperands(%[[ATTACH]] : !llvm.ptr)
 // CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[ARGA]] : !llvm.ptr) varType(f64) -> !llvm.ptr
-// CHECK: acc.enter_data dataOperands(%[[COPYIN]] : !llvm.ptr) attributes {async}
+// CHECK: acc.enter_data async dataOperands(%[[COPYIN]] : !llvm.ptr)
 // CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[ARGA]] : !llvm.ptr) varType(f64) -> !llvm.ptr
-// CHECK: acc.enter_data dataOperands(%[[CREATE]] : !llvm.ptr) attributes {wait}
+// CHECK: acc.enter_data wait dataOperands(%[[CREATE]] : !llvm.ptr)
 // CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[ARGA]] : !llvm.ptr) varType(f64) -> !llvm.ptr
 // CHECK: acc.enter_data async([[I64VALUE]] : i64) dataOperands(%[[COPYIN]] : !llvm.ptr)
 // CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[ARGA]] : !llvm.ptr) varType(f64) -> !llvm.ptr
@@ -1477,7 +1502,7 @@ func.func @acc_reduc_test(%a : i64) -> () {
   acc.parallel reduction(@reduction_add_i64 -> %a : i64) {
     acc.loop reduction(@reduction_add_i64 -> %a : i64) control(%iv : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
       acc.yield
-    } attributes { inclusiveUpperbound = array<i1: true> }
+    } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
     acc.yield
   }
   return
@@ -1862,24 +1887,28 @@ func.func @acc_num_gangs() {
 
 // CHECK-LABEL: func.func @acc_combined
 func.func @acc_combined() {
+  %c0 = arith.constant 0 : index
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+
   acc.parallel combined(loop) {
-    acc.loop combined(parallel) {
+    acc.loop combined(parallel) control(%arg3 : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
       acc.yield
-    }
+    } attributes {independent = [#acc.device_type<none>]}
     acc.terminator
   }
 
   acc.kernels combined(loop) {
-    acc.loop combined(kernels) {
+    acc.loop combined(kernels) control(%arg3 : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
       acc.yield
-    }
+    } attributes {auto_ = [#acc.device_type<none>]}
     acc.terminator
   }
 
   acc.serial combined(loop) {
-    acc.loop combined(serial) {
+    acc.loop combined(serial) control(%arg3 : index) = (%c0 : index) to (%c10 : index) step (%c1 : index) {
       acc.yield
-    }
+    } attributes {seq = [#acc.device_type<none>]}
     acc.terminator
   }
 
@@ -1933,3 +1962,45 @@ acc.private.recipe @privatization_memref_i32 : memref<i32> init {
 
 // CHECK-LABEL: acc.private.recipe @privatization_memref_i32
 // CHECK:       memref.alloca
+
+// -----
+
+func.func @acc_loop_container() {
+  %c0 = arith.constant 0 : index
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  acc.loop {
+    scf.for %arg4 = %c0 to %c10 step %c1 {
+      scf.yield
+    }
+    acc.yield
+  } attributes {independent = [#acc.device_type<none>]}
+  return
+}
+
+// CHECK-LABEL: func.func @acc_loop_container
+// CHECK:       acc.loop
+// CHECK:       scf.for
+
+// -----
+
+func.func @acc_loop_container() {
+  %c0 = arith.constant 0 : index
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  acc.loop {
+    scf.for %arg4 = %c0 to %c10 step %c1 {
+      scf.for %arg5 = %c0 to %c10 step %c1 {
+        scf.yield
+      }
+      scf.yield
+    }
+    acc.yield
+  } attributes { collapse = [2], collapseDeviceType = [#acc.device_type<none>], independent = [#acc.device_type<none>]}
+  return
+}
+
+// CHECK-LABEL: func.func @acc_loop_container
+// CHECK:       acc.loop
+// CHECK:       scf.for
+// CHECK:       scf.for

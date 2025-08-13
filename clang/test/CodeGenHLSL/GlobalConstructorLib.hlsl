@@ -33,7 +33,7 @@ void SecondEntry() {}
 
 // Verify the constructor is alwaysinline
 // NOINLINE: ; Function Attrs: {{.*}}alwaysinline
-// NOINLINE-NEXT: define linkonce_odr void @_ZN4hlsl8RWBufferIfEC2Ev({{.*}} [[CtorAttr:\#[0-9]+]]
+// NOINLINE-NEXT: define linkonce_odr hidden void @_ZN4hlsl8RWBufferIfEC2EjijjPKc({{.*}} [[CtorAttr:\#[0-9]+]]
 
 // NOINLINE: ; Function Attrs: {{.*}}alwaysinline
 // NOINLINE-NEXT: define internal void @_GLOBAL__sub_I_GlobalConstructorLib.hlsl() [[InitAttr:\#[0-9]+]]

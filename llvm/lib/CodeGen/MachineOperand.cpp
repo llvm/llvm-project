@@ -1232,13 +1232,17 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
           OS, cast<ExternalSymbolPseudoSourceValue>(PVal)->getSymbol());
       break;
     default: {
-      const MIRFormatter *Formatter = TII->getMIRFormatter();
       // FIXME: This is not necessarily the correct MIR serialization format for
       // a custom pseudo source value, but at least it allows
       // MIR printing to work on a target with custom pseudo source
       // values.
       OS << "custom \"";
-      Formatter->printCustomPseudoSourceValue(OS, MST, *PVal);
+      if (TII) {
+        const MIRFormatter *Formatter = TII->getMIRFormatter();
+        Formatter->printCustomPseudoSourceValue(OS, MST, *PVal);
+      } else {
+        PVal->printCustom(OS);
+      }
       OS << '\"';
       break;
     }
@@ -1268,6 +1272,10 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
   if (AAInfo.NoAlias) {
     OS << ", !noalias ";
     AAInfo.NoAlias->printAsOperand(OS, MST);
+  }
+  if (AAInfo.NoAliasAddrSpace) {
+    OS << ", !noalias.addrspace ";
+    AAInfo.NoAliasAddrSpace->printAsOperand(OS, MST);
   }
   if (getRanges()) {
     OS << ", !range ";

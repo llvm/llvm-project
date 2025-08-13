@@ -17,9 +17,8 @@ implicit none
 
   ! Synchronization Functions
 
-  interface
-    attributes(device) subroutine syncthreads()
-    end subroutine
+  interface syncthreads
+    procedure :: syncthreads
   end interface
 
   interface
@@ -374,6 +373,12 @@ implicit none
   end interface
 
   interface
+    attributes(device) real(4) function __cosf(x) bind(c, name='__nv_cosf')
+      real(4), value :: x
+    end function
+  end interface
+
+  interface
     attributes(device) real(4) function cospif(x) bind(c,name='__nv_cospif')
       real(4), value :: x
     end function
@@ -432,14 +437,14 @@ implicit none
   end interface
 
   interface __float2half_rn
-    attributes(device) real(2) function __float2half_rn(r) bind(c)
+    attributes(device) real(2) function __float2half_rn(r) bind(c, name='__nv_float2half_rn')
       !dir$ ignore_tkr (d) r
       real, value :: r
     end function
   end interface
 
   interface __half2float
-    attributes(device) real function __half2float(i) bind(c)
+    attributes(device) real function __half2float(i) bind(c, name='__nv_half2float')
       !dir$ ignore_tkr (d) i
       real(2), value :: i
     end function
@@ -677,14 +682,14 @@ implicit none
   end interface
 
   interface __mul24
-    attributes(device) integer function __mul24(i,j) bind(c)
+    attributes(device) integer function __mul24(i,j) bind(c, name='__nv_mul24')
       !dir$ ignore_tkr (d) i, (d) j
       integer, value :: i,j
     end function
   end interface
 
   interface __umul24
-    attributes(device) integer function __umul24(i,j) bind(c)
+    attributes(device) integer function __umul24(i,j) bind(c, name='__nv_umul24')
       !dir$ ignore_tkr (d) i, (d) j
       integer, value :: i,j
     end function
@@ -705,72 +710,79 @@ implicit none
   end interface
 
   interface __ddiv_rn
-    attributes(device) double precision function __ddiv_rn(x,y) bind(c)
+    attributes(device) double precision function __ddiv_rn(x,y) bind(c, name='__nv_ddiv_rn')
       !dir$ ignore_tkr (d) x, (d) y
       double precision, value :: x, y
     end function
   end interface
 
   interface __ddiv_rz
-    attributes(device) double precision function __ddiv_rz(x,y) bind(c)
+    attributes(device) double precision function __ddiv_rz(x,y) bind(c, name='__nv_ddiv_rz')
       !dir$ ignore_tkr (d) x, (d) y
       double precision, value :: x, y
     end function
   end interface
 
   interface __ddiv_ru
-    attributes(device) double precision function __ddiv_ru(x,y) bind(c)
+    attributes(device) double precision function __ddiv_ru(x,y) bind(c, name='__nv_ddiv_ru')
       !dir$ ignore_tkr (d) x, (d) y
       double precision, value :: x, y
     end function
   end interface
 
   interface __ddiv_rd
-    attributes(device) double precision function __ddiv_rd(x,y) bind(c)
+    attributes(device) double precision function __ddiv_rd(x,y) bind(c, name='__nv_ddiv_rd')
       !dir$ ignore_tkr (d) x, (d) y
       double precision, value :: x, y
     end function
   end interface
 
   interface __clz
-    attributes(device) integer function __clz(i) bind(c)
+    attributes(device) integer function __clz(i) bind(c, name='__nv_clz')
       !dir$ ignore_tkr (d) i
       integer, value :: i
     end function
-    attributes(device) integer function __clzll(i) bind(c)
+    attributes(device) integer function __clzll(i) bind(c, name='__nv_clzll')
       !dir$ ignore_tkr (d) i
       integer(8), value :: i
     end function
   end interface
 
   interface __ffs
-    attributes(device) integer function __ffs(i) bind(c)
+    attributes(device) integer function __ffs(i) bind(c, name='__nv_ffs')
       !dir$ ignore_tkr (d) i
       integer, value :: i
     end function
-    attributes(device) integer function __ffsll(i) bind(c)
+    attributes(device) integer function __ffsll(i) bind(c, name='__nv_ffsll')
       !dir$ ignore_tkr (d) i
       integer(8), value :: i
     end function
   end interface
 
   interface __popc
-    attributes(device) integer function __popc(i) bind(c)
+    attributes(device) integer function __popc(i) bind(c, name='__nv_popc')
       !dir$ ignore_tkr (d) i
       integer, value :: i
     end function
-    attributes(device) integer function __popcll(i) bind(c)
+    attributes(device) integer function __popcll(i) bind(c, name='__nv_popcll')
       !dir$ ignore_tkr (d) i
       integer(8), value :: i
     end function
   end interface
 
+  interface
+    attributes(device) real(4) function __powf(x,y) bind(c, name='__nv_powf')
+      !dir$ ignore_tkr (d) x, y
+      real(4), value :: x, y
+    end function
+  end interface
+
   interface __brev
-    attributes(device) integer function __brev(i) bind(c)
+    attributes(device) integer function __brev(i) bind(c, name='__nv_brev')
       !dir$ ignore_tkr (d) i
       integer, value :: i
     end function
-    attributes(device) integer(8) function __brevll(i) bind(c)
+    attributes(device) integer(8) function __brevll(i) bind(c, name ='__nv_brevll')
       !dir$ ignore_tkr (d) i
       integer(8), value :: i
     end function
@@ -959,7 +971,17 @@ implicit none
   ! Time function
 
   interface
+    attributes(device) integer function clock()
+    end function
+  end interface
+
+  interface
     attributes(device) integer(8) function clock64()
+    end function
+  end interface
+
+  interface
+    attributes(device) integer(8) function globalTimer()
     end function
   end interface
 
@@ -1012,6 +1034,27 @@ implicit none
   !dir$ ignore_tkr(d) mask, (d) val
     integer(4), value :: mask
     real(8), value    :: val
+    end function
+  end interface
+
+  interface all_sync
+    attributes(device) integer function all_sync(mask, pred)
+      !dir$ ignore_tkr(d) mask, (td) pred
+      integer, value :: mask, pred
+    end function
+  end interface
+
+  interface any_sync
+    attributes(device) integer function any_sync(mask, pred)
+      !dir$ ignore_tkr(d) mask, (td) pred
+      integer, value :: mask, pred
+    end function
+  end interface
+
+  interface ballot_sync
+    attributes(device) integer function ballot_sync(mask, pred)
+      !dir$ ignore_tkr(d) mask, (td) pred
+      integer, value :: mask, pred
     end function
   end interface
 
@@ -1587,5 +1630,15 @@ implicit none
       real(8), dimension(2), device, intent(in) :: y, x
     end subroutine
   end interface
+
+  interface
+    attributes(device,host) logical function on_device() bind(c)
+    end function
+  end interface
+
+contains
+
+  attributes(device) subroutine syncthreads()
+  end subroutine
 
 end module

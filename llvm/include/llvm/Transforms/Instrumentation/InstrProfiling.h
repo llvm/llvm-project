@@ -14,6 +14,7 @@
 #define LLVM_TRANSFORMS_INSTRUMENTATION_INSTRPROFILING_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Utils/Instrumentation.h"
 
 namespace llvm {
@@ -33,7 +34,7 @@ public:
   InstrProfilingLoweringPass(const InstrProfOptions &Options, bool IsCS = false)
       : Options(Options), IsCS(IsCS) {}
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 } // end namespace llvm
 

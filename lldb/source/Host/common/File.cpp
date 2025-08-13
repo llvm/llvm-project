@@ -274,7 +274,11 @@ int NativeFile::GetDescriptor() const {
 }
 
 IOObject::WaitableHandle NativeFile::GetWaitableHandle() {
+#ifdef _WIN32
+  return (HANDLE)_get_osfhandle(GetDescriptor());
+#else
   return GetDescriptor();
+#endif
 }
 
 FILE *NativeFile::GetStream() {

@@ -413,15 +413,16 @@
 // bundle and archives them. Therefore for each target, the output is an
 // archive of unbundled bitcodes.
 //
+// RUN: mkdir -p %t.dir
 // RUN: clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
-// RUN:   -input=%t.tgt1 -input=%t.tgt2 -output=%T/hip_bundle1.bc
+// RUN:   -input=%t.tgt1 -input=%t.tgt2 -output=%t.dir/hip_bundle1.bc
 // RUN: clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
-// RUN:   -input=%t.tgt1 -input=%t.tgt2 -output=%T/hip_bundle2.bc
-// RUN: llvm-ar cr %T/hip_archive.a %T/hip_bundle1.bc %T/hip_bundle2.bc
+// RUN:   -input=%t.tgt1 -input=%t.tgt2 -output=%t.dir/hip_bundle2.bc
+// RUN: llvm-ar cr %t.dir/hip_archive.a %t.dir/hip_bundle1.bc %t.dir/hip_bundle2.bc
 // RUN: clang-offload-bundler -unbundle -type=a -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
-// RUN:   -output=%T/hip_900.a -output=%T/hip_906.a -input=%T/hip_archive.a
-// RUN: llvm-ar t %T/hip_900.a | FileCheck -check-prefix=HIP-AR-900 %s
-// RUN: llvm-ar t %T/hip_906.a | FileCheck -check-prefix=HIP-AR-906 %s
+// RUN:   -output=%t.dir/hip_900.a -output=%t.dir/hip_906.a -input=%t.dir/hip_archive.a
+// RUN: llvm-ar t %t.dir/hip_900.a | FileCheck -check-prefix=HIP-AR-900 %s
+// RUN: llvm-ar t %t.dir/hip_906.a | FileCheck -check-prefix=HIP-AR-906 %s
 // HIP-AR-900-DAG: hip_bundle1-hip-amdgcn-amd-amdhsa--gfx900
 // HIP-AR-900-DAG: hip_bundle2-hip-amdgcn-amd-amdhsa--gfx900
 // HIP-AR-906-DAG: hip_bundle1-hip-amdgcn-amd-amdhsa--gfx906
@@ -553,14 +554,14 @@
 
 // Check compatibility of HIP code objects found in the heterogeneous archive library with OpenMP code objects of the target
 // RUN: clang-offload-bundler -unbundle -type=a -targets=openmp-amdgcn-amd-amdhsa--gfx906 \
-// RUN:   -output=%T/hip-openmp_906.a -input=%T/hip_archive.a -hip-openmp-compatible
-// RUN: llvm-ar t %T/hip-openmp_906.a | FileCheck -check-prefix=OPENMPHIPCOMPAT %s
+// RUN:   -output=%t.dir/hip-openmp_906.a -input=%t.dir/hip_archive.a -hip-openmp-compatible
+// RUN: llvm-ar t %t.dir/hip-openmp_906.a | FileCheck -check-prefix=OPENMPHIPCOMPAT %s
 // OPENMPHIPCOMPAT: hip_bundle1-hip-amdgcn-amd-amdhsa--gfx906
 
 // Check if a malformat bundle id can be detected and an error can be emitted.
-// RUN: not clang-offload-bundler -unbundle -type=a -targets=openmp-amdgcn-amd-amdhsa -output=%T/hip-openmp_906.a -input=%T/hip_archive.a -hip-openmp-compatible 2>&1 | FileCheck %s -check-prefix=ERROR-WRONG-FORMAT
+// RUN: not clang-offload-bundler -unbundle -type=a -targets=openmp-amdgcn-amd-amdhsa -output=%t.dir/hip-openmp_906.a -input=%t.dir/hip_archive.a -hip-openmp-compatible 2>&1 | FileCheck %s -check-prefix=ERROR-WRONG-FORMAT
 // ERROR-WRONG-FORMAT: error: Targets need to follow the format '<offload kind>-<target triple>', where '<target triple>' follows the format '<kind>-<arch>-<vendor>-<os>-<env>[-<target id>[:target features]]'.
-// RUN: not clang-offload-bundler -unbundle -type=a -targets=openmp-amdgcn-amd-amdhsa-gfx906 -output=%T/hip-openmp_906.a -input=%T/hip_archive.a -hip-openmp-compatible 2>&1 | FileCheck %s -check-prefix=ERROR-NO-ENV
+// RUN: not clang-offload-bundler -unbundle -type=a -targets=openmp-amdgcn-amd-amdhsa-gfx906 -output=%t.dir/hip-openmp_906.a -input=%t.dir/hip_archive.a -hip-openmp-compatible 2>&1 | FileCheck %s -check-prefix=ERROR-NO-ENV
 // ERROR-NO-ENV: error: no compatible code object found for the target 'openmp-amdgcn-amd-amdhsa--'
 
 // Some code so that we can create a binary out of this file.

@@ -365,3 +365,68 @@ namespace adl_dependent_class {
   void f(A);
   void g() { f(d<C>); }
 } // namespace adl_dependent_class
+
+namespace deduction1 {
+  template <typename> struct RunCallImpl;
+
+  template <typename Derived>
+  struct RunCallImpl<int (Derived::Info::*)(Derived *)> {};
+
+  template <typename d>
+  void RunCall(d) {
+    RunCallImpl<d>();
+  }
+
+  struct Filter {
+    virtual void MakeCall();
+    virtual ~Filter() = default;
+  };
+
+  template <typename Derived>
+  struct ImplementFilter : Filter {
+    void MakeCall() { RunCall(&Derived::Info::OnStuffHandler); }
+  };
+
+  struct FoobarFilter : ImplementFilter<FoobarFilter> {
+    struct Info {
+      int OnStuffHandler(FoobarFilter *);
+    };
+  };
+} // namespace deduction1
+
+namespace deduction2 {
+  template <typename> struct A;
+  template <typename T>
+  struct A<void (T::C::*)(int &, T *)> {};
+  template <typename T> void e(T) {
+    A<T> f;
+  }
+  struct S {
+    struct C {
+      void h(int &, S *);
+    };
+    void i() { e(&C::h); }
+  };
+} // namespace deduction2
+
+namespace deduction_qualifiers {
+  struct A {
+    int v;
+  };
+  using CA = const A;
+
+  template <class T> void g(const T&, int T::*);
+  template <class T> void h(const T&, int CA::*);
+
+  void test(const A a, A b) {
+    g(a, &A::v);
+    g(a, &CA::v);
+    h(a, &A::v);
+    h(a, &CA::v);
+
+    g(b, &A::v);
+    g(b, &CA::v);
+    h(b, &A::v);
+    h(b, &CA::v);
+  }
+} // namespace deduction_qualifiers

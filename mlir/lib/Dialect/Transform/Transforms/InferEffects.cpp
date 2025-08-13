@@ -12,7 +12,6 @@
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/IR/Visitors.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/ADT/DenseSet.h"
 
 using namespace mlir;

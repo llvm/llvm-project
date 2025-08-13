@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Clauses.h"
+#include "flang/Lower/OpenMP/Clauses.h"
 
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/expression.h"
@@ -70,19 +70,18 @@ struct SymbolAndDesignatorExtractor {
 
   static void verify(const SymbolWithDesignator &sd) {
     const semantics::Symbol *symbol = std::get<0>(sd);
-    assert(symbol && "Expecting symbol");
-    auto &maybeDsg = std::get<1>(sd);
+    const std::optional<evaluate::Expr<evaluate::SomeType>> &maybeDsg =
+        std::get<1>(sd);
     if (!maybeDsg)
       return; // Symbol with no designator -> OK
-    std::optional<evaluate::DataRef> maybeRef =
-        evaluate::ExtractDataRef(*maybeDsg);
+    assert(symbol && "Expecting symbol");
+    std::optional<evaluate::DataRef> maybeRef = evaluate::ExtractDataRef(
+        *maybeDsg, /*intoSubstring=*/true, /*intoComplexPart=*/true);
     if (maybeRef) {
       if (&maybeRef->GetLastSymbol() == symbol)
         return; // Symbol with a designator for it -> OK
       llvm_unreachable("Expecting designator for given symbol");
     } else {
-      // This could still be a Substring or ComplexPart, but at least Substring
-      // is not allowed in OpenMP.
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
       maybeDsg->dump();
 #endif
@@ -249,7 +248,6 @@ MAKE_EMPTY_CLASS(Weak, Weak);
 MAKE_EMPTY_CLASS(Write, Write);
 
 // Artificial clauses
-MAKE_EMPTY_CLASS(CancellationConstructType, CancellationConstructType);
 MAKE_EMPTY_CLASS(Depobj, Depobj);
 MAKE_EMPTY_CLASS(Flush, Flush);
 MAKE_EMPTY_CLASS(MemoryOrder, MemoryOrder);
@@ -495,12 +493,13 @@ AtomicDefaultMemOrder make(const parser::OmpClause::AtomicDefaultMemOrder &inp,
                            semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpAtomicDefaultMemOrderClause
   CLAUSET_ENUM_CONVERT( //
-      convert, common::OmpAtomicDefaultMemOrderType,
-      AtomicDefaultMemOrder::MemoryOrder,
+      convert, common::OmpMemoryOrderType, AtomicDefaultMemOrder::MemoryOrder,
       // clang-format off
-      MS(AcqRel,   AcqRel)
+      MS(Acq_Rel,  AcqRel)
+      MS(Acquire,  Acquire)
       MS(Relaxed,  Relaxed)
-      MS(SeqCst,   SeqCst)
+      MS(Release,  Release)
+      MS(Seq_Cst,  SeqCst)
       // clang-format on
   );
 
@@ -524,7 +523,23 @@ Bind make(const parser::OmpClause::Bind &inp,
   return Bind{/*Binding=*/convert(inp.v.v)};
 }
 
-// CancellationConstructType: empty
+CancellationConstructType
+make(const parser::OmpClause::CancellationConstructType &inp,
+     semantics::SemanticsContext &semaCtx) {
+  auto name = std::get<parser::OmpDirectiveName>(inp.v.t);
+  CLAUSET_ENUM_CONVERT(
+      convert, llvm::omp::Directive, llvm::omp::CancellationConstructType,
+      // clang-format off
+      MS(OMPD_parallel, OMP_CANCELLATION_CONSTRUCT_Parallel)
+      MS(OMPD_do, OMP_CANCELLATION_CONSTRUCT_Loop)
+      MS(OMPD_sections, OMP_CANCELLATION_CONSTRUCT_Sections)
+      MS(OMPD_taskgroup, OMP_CANCELLATION_CONSTRUCT_Taskgroup)
+      // clang-format on
+  );
+
+  return CancellationConstructType{convert(name.v)};
+}
+
 // Capture: empty
 
 Collapse make(const parser::OmpClause::Collapse &inp,
@@ -596,7 +611,7 @@ Defaultmap make(const parser::OmpClause::Defaultmap &inp,
       MS(Firstprivate, Firstprivate)
       MS(None,         None)
       MS(Default,      Default)
-      // MS(, Present)  missing-in-parser
+      MS(Present,      Present)
       // clang-format on
   );
 
@@ -757,8 +772,19 @@ Doacross make(const parser::OmpClause::Doacross &inp,
 
 Enter make(const parser::OmpClause::Enter &inp,
            semantics::SemanticsContext &semaCtx) {
-  // inp.v -> parser::OmpObjectList
-  return Enter{makeObjects(/*List=*/inp.v, semaCtx)};
+  // inp.v -> parser::OmpEnterClause
+  CLAUSET_ENUM_CONVERT( //
+      convert, parser::OmpAutomapModifier::Value, Enter::Modifier,
+      // clang-format off
+      MS(Automap, Automap)
+      // clang-format on
+  );
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto *mod = semantics::OmpGetUniqueModifier<parser::OmpAutomapModifier>(mods);
+  auto &objList = std::get<parser::OmpObjectList>(inp.v.t);
+
+  return Enter{{/*Modifier=*/maybeApplyToV(convert, mod),
+                /*List=*/makeObjects(objList, semaCtx)}};
 }
 
 Exclusive make(const parser::OmpClause::Exclusive &inp,
@@ -769,8 +795,19 @@ Exclusive make(const parser::OmpClause::Exclusive &inp,
 
 Fail make(const parser::OmpClause::Fail &inp,
           semantics::SemanticsContext &semaCtx) {
-  // inp -> empty
-  llvm_unreachable("Empty: fail");
+  // inp.v -> parser::OmpFalClause
+  CLAUSET_ENUM_CONVERT( //
+      convert, common::OmpMemoryOrderType, Fail::MemoryOrder,
+      // clang-format off
+      MS(Acq_Rel,  AcqRel)
+      MS(Acquire,  Acquire)
+      MS(Relaxed,  Relaxed)
+      MS(Release,  Release)
+      MS(Seq_Cst,  SeqCst)
+      // clang-format on
+  );
+
+  return Fail{/*MemoryOrder=*/convert(inp.v.v)};
 }
 
 Filter make(const parser::OmpClause::Filter &inp,
@@ -848,8 +885,8 @@ HasDeviceAddr make(const parser::OmpClause::HasDeviceAddr &inp,
 
 Hint make(const parser::OmpClause::Hint &inp,
           semantics::SemanticsContext &semaCtx) {
-  // inp.v -> parser::ConstantExpr
-  return Hint{/*HintExpr=*/makeExpr(inp.v, semaCtx)};
+  // inp.v -> parser::OmpHintClause
+  return Hint{/*HintExpr=*/makeExpr(inp.v.v, semaCtx)};
 }
 
 Holds make(const parser::OmpClause::Holds &inp,
@@ -879,8 +916,8 @@ Inclusive make(const parser::OmpClause::Inclusive &inp,
 
 Indirect make(const parser::OmpClause::Indirect &inp,
               semantics::SemanticsContext &semaCtx) {
-  // inp -> empty
-  llvm_unreachable("Empty: indirect");
+  // inp.v.v -> std::optional<parser::ScalarLogicalExpr>
+  return Indirect{maybeApply(makeExprFn(semaCtx), inp.v.v)};
 }
 
 Init make(const parser::OmpClause::Init &inp,
@@ -975,19 +1012,21 @@ Map make(const parser::OmpClause::Map &inp,
          semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpMapClause
   CLAUSET_ENUM_CONVERT( //
-      convert1, parser::OmpMapType::Value, Map::MapType,
+      convertMapType, parser::OmpMapType::Value, Map::MapType,
       // clang-format off
-      MS(Alloc,    Alloc)
-      MS(Delete,   Delete)
-      MS(From,     From)
-      MS(Release,  Release)
-      MS(To,       To)
-      MS(Tofrom,   Tofrom)
+      MS(Alloc,   Storage)
+      MS(Delete,  Storage)
+      MS(Release, Storage)
+      MS(Storage, Storage)
+      MS(From,    From)
+      MS(To,      To)
+      MS(Tofrom,  Tofrom)
       // clang-format on
   );
 
   CLAUSET_ENUM_CONVERT( //
-      convert2, parser::OmpMapTypeModifier::Value, Map::MapTypeModifier,
+      convertMapTypeMod, parser::OmpMapTypeModifier::Value,
+      Map::MapTypeModifier,
       // clang-format off
       MS(Always,    Always)
       MS(Close,     Close)
@@ -996,43 +1035,76 @@ Map make(const parser::OmpClause::Map &inp,
       // clang-format on
   );
 
+  CLAUSET_ENUM_CONVERT( //
+      convertRefMod, parser::OmpRefModifier::Value, Map::RefModifier,
+      // clang-format off
+      MS(Ref_Ptee,     RefPtee)
+      MS(Ref_Ptr,      RefPtr)
+      MS(Ref_Ptr_Ptee, RefPtrPtee)
+      // clang-format on
+  );
+
+  // Treat always, close, present, self, delete modifiers as map-type-
+  // modifiers.
   auto &mods = semantics::OmpGetModifiers(inp.v);
-  auto *t1 = semantics::OmpGetUniqueModifier<parser::OmpMapper>(mods);
-  auto *t2 = semantics::OmpGetUniqueModifier<parser::OmpIterator>(mods);
-  auto *t3 = semantics::OmpGetUniqueModifier<parser::OmpMapType>(mods);
-  auto &t4 = std::get<parser::OmpObjectList>(inp.v.t);
+
+  auto *t1 = semantics::OmpGetUniqueModifier<parser::OmpMapType>(mods);
+  auto &t2 = std::get<parser::OmpObjectList>(inp.v.t);
+
+  auto type = [&]() -> std::optional<Map::MapType> {
+    if (t1)
+      return convertMapType(t1->v);
+    return std::nullopt;
+  }();
+
+  llvm::DenseSet<Map::MapTypeModifier> modSet;
+  if (t1 && t1->v == parser::OmpMapType::Value::Delete)
+    modSet.insert(Map::MapTypeModifier::Delete);
+
+  for (auto *typeMod :
+       semantics::OmpGetRepeatableModifier<parser::OmpMapTypeModifier>(mods)) {
+    modSet.insert(convertMapTypeMod(typeMod->v));
+  }
+  if (semantics::OmpGetUniqueModifier<parser::OmpAlwaysModifier>(mods))
+    modSet.insert(Map::MapTypeModifier::Always);
+  if (semantics::OmpGetUniqueModifier<parser::OmpCloseModifier>(mods))
+    modSet.insert(Map::MapTypeModifier::Close);
+  if (semantics::OmpGetUniqueModifier<parser::OmpDeleteModifier>(mods))
+    modSet.insert(Map::MapTypeModifier::Delete);
+  if (semantics::OmpGetUniqueModifier<parser::OmpPresentModifier>(mods))
+    modSet.insert(Map::MapTypeModifier::Present);
+  if (semantics::OmpGetUniqueModifier<parser::OmpSelfModifier>(mods))
+    modSet.insert(Map::MapTypeModifier::Self);
+  if (semantics::OmpGetUniqueModifier<parser::OmpxHoldModifier>(mods))
+    modSet.insert(Map::MapTypeModifier::OmpxHold);
+
+  std::optional<Map::MapTypeModifiers> maybeTypeMods{};
+  if (!modSet.empty())
+    maybeTypeMods = Map::MapTypeModifiers(modSet.begin(), modSet.end());
+
+  auto refMod = [&]() -> std::optional<Map::RefModifier> {
+    if (auto *t = semantics::OmpGetUniqueModifier<parser::OmpRefModifier>(mods))
+      return convertRefMod(t->v);
+    return std::nullopt;
+  }();
 
   auto mappers = [&]() -> std::optional<List<Mapper>> {
-    if (t1)
-      return List<Mapper>{Mapper{makeObject(t1->v, semaCtx)}};
+    if (auto *t = semantics::OmpGetUniqueModifier<parser::OmpMapper>(mods))
+      return List<Mapper>{Mapper{makeObject(t->v, semaCtx)}};
     return std::nullopt;
   }();
 
   auto iterator = [&]() -> std::optional<Iterator> {
-    if (t2)
-      return makeIterator(*t2, semaCtx);
+    if (auto *t = semantics::OmpGetUniqueModifier<parser::OmpIterator>(mods))
+      return makeIterator(*t, semaCtx);
     return std::nullopt;
   }();
 
-  auto type = [&]() -> std::optional<Map::MapType> {
-    if (t3)
-      return convert1(t3->v);
-    return Map::MapType::Tofrom;
-  }();
-
-  Map::MapTypeModifiers typeMods;
-  for (auto *typeMod :
-       semantics::OmpGetRepeatableModifier<parser::OmpMapTypeModifier>(mods)) {
-    typeMods.push_back(convert2(typeMod->v));
-  }
-  std::optional<Map::MapTypeModifiers> maybeTypeMods{};
-  if (!typeMods.empty())
-    maybeTypeMods = std::move(typeMods);
-
   return Map{{/*MapType=*/std::move(type),
               /*MapTypeModifiers=*/std::move(maybeTypeMods),
-              /*Mapper=*/std::move(mappers), /*Iterator=*/std::move(iterator),
-              /*LocatorList=*/makeObjects(t4, semaCtx)}};
+              /*RefModifier=*/std::move(refMod), /*Mapper=*/std::move(mappers),
+              /*Iterator=*/std::move(iterator),
+              /*LocatorList=*/makeObjects(t2, semaCtx)}};
 }
 
 Match make(const parser::OmpClause::Match &inp,
@@ -1373,9 +1445,13 @@ Uniform make(const parser::OmpClause::Uniform &inp,
 Update make(const parser::OmpClause::Update &inp,
             semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpUpdateClause
-  auto depType =
-      common::visit([](auto &&s) { return makeDepType(s); }, inp.v.u);
-  return Update{/*DependenceType=*/depType};
+  if (inp.v) {
+    return common::visit(
+        [](auto &&s) { return Update{/*DependenceType=*/makeDepType(s)}; },
+        inp.v->u);
+  } else {
+    return Update{/*DependenceType=*/std::nullopt};
+  }
 }
 
 Use make(const parser::OmpClause::Use &inp,

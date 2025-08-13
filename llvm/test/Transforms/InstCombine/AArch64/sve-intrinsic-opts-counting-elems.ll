@@ -52,7 +52,7 @@ define i64 @cntb_mul4() {
 define i64 @cntb_all() {
 ; CHECK-LABEL: @cntb_all(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[OUT:%.*]] = shl i64 [[TMP1]], 4
+; CHECK-NEXT:    [[OUT:%.*]] = shl nuw i64 [[TMP1]], 4
 ; CHECK-NEXT:    ret i64 [[OUT]]
 ;
   %out = call i64 @llvm.aarch64.sve.cntb(i32 31)
@@ -110,7 +110,7 @@ define i64 @cnth_mul4() {
 define i64 @cnth_all() {
 ; CHECK-LABEL: @cnth_all(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[OUT:%.*]] = shl i64 [[TMP1]], 3
+; CHECK-NEXT:    [[OUT:%.*]] = shl nuw i64 [[TMP1]], 3
 ; CHECK-NEXT:    ret i64 [[OUT]]
 ;
   %out = call i64 @llvm.aarch64.sve.cnth(i32 31)
@@ -170,7 +170,7 @@ define i64 @cntw_mul4() {
 define i64 @cntw_all() {
 ; CHECK-LABEL: @cntw_all(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[OUT:%.*]] = shl i64 [[TMP1]], 2
+; CHECK-NEXT:    [[OUT:%.*]] = shl nuw i64 [[TMP1]], 2
 ; CHECK-NEXT:    ret i64 [[OUT]]
 ;
   %out = call i64 @llvm.aarch64.sve.cntw(i32 31)
@@ -232,7 +232,7 @@ define i64 @cntd_mul4() {
 define i64 @cntd_all() {
 ; CHECK-LABEL: @cntd_all(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[OUT:%.*]] = shl i64 [[TMP1]], 1
+; CHECK-NEXT:    [[OUT:%.*]] = shl nuw i64 [[TMP1]], 1
 ; CHECK-NEXT:    ret i64 [[OUT]]
 ;
   %out = call i64 @llvm.aarch64.sve.cntd(i32 31)

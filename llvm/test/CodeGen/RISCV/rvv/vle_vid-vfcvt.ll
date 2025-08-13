@@ -4,10 +4,12 @@
 define void @foo_1(ptr nocapture noundef writeonly %t) {
 ; CHECK-LABEL: foo_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lui a1, %hi(.LCPI0_0)
-; CHECK-NEXT:    addi a1, a1, %lo(.LCPI0_0)
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a1)
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vsll.vi v8, v8, 7
+; CHECK-NEXT:    lui a1, 524288
+; CHECK-NEXT:    vadd.vx v8, v8, a1
+; CHECK-NEXT:    vfcvt.f.x.v v8, v8
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -18,10 +20,13 @@ entry:
 define void @foo_2(ptr nocapture noundef writeonly %t) {
 ; CHECK-LABEL: foo_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lui a1, %hi(.LCPI1_0)
-; CHECK-NEXT:    addi a1, a1, %lo(.LCPI1_0)
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a1)
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    lui a1, 524288
+; CHECK-NEXT:    vsll.vi v8, v8, 7
+; CHECK-NEXT:    addi a1, a1, -512
+; CHECK-NEXT:    vadd.vx v8, v8, a1
+; CHECK-NEXT:    vfcvt.f.x.v v8, v8
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:

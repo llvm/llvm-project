@@ -15,6 +15,7 @@
 #ifndef LLVM_SUPPORT_CACHING_H
 #define LLVM_SUPPORT_CACHING_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
@@ -24,15 +25,32 @@ class MemoryBuffer;
 /// This class wraps an output stream for a file. Most clients should just be
 /// able to return an instance of this base class from the stream callback, but
 /// if a client needs to perform some action after the stream is written to,
-/// that can be done by deriving from this class and overriding the destructor.
+/// that can be done by deriving from this class and overriding the destructor
+/// or the commit() method.
 class CachedFileStream {
 public:
   CachedFileStream(std::unique_ptr<raw_pwrite_stream> OS,
                    std::string OSPath = "")
       : OS(std::move(OS)), ObjectPathName(OSPath) {}
+
+  /// Must be called exactly once after the writes to OS have been completed
+  /// but before the CachedFileStream object is destroyed.
+  virtual Error commit() {
+    if (Committed)
+      return createStringError(make_error_code(std::errc::invalid_argument),
+                               Twine("CacheStream already committed."));
+    Committed = true;
+
+    return Error::success();
+  }
+
+  bool Committed = false;
   std::unique_ptr<raw_pwrite_stream> OS;
   std::string ObjectPathName;
-  virtual ~CachedFileStream() = default;
+  virtual ~CachedFileStream() {
+    if (!Committed)
+      report_fatal_error("CachedFileStream was not committed.\n");
+  }
 };
 
 /// This type defines the callback to add a file that is generated on the fly.
@@ -96,7 +114,7 @@ using AddBufferFn = std::function<void(unsigned Task, const Twine &ModuleName,
 /// done lazily the first time a file is added.  The cache name appears in error
 /// messages for errors during caching. The temporary file prefix is used in the
 /// temporary file naming scheme used when writing files atomically.
-Expected<FileCache> localCache(
+LLVM_ABI Expected<FileCache> localCache(
     const Twine &CacheNameRef, const Twine &TempFilePrefixRef,
     const Twine &CacheDirectoryPathRef,
     AddBufferFn AddBuffer = [](size_t Task, const Twine &ModuleName,

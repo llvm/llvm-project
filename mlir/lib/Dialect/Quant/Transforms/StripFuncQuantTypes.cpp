@@ -10,16 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/FuncConversions.h"
-#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Quant/IR/Quant.h"
 #include "mlir/Dialect/Quant/IR/QuantTypes.h"
 #include "mlir/Dialect/Quant/Transforms/Passes.h"
-#include "mlir/Dialect/Shape/IR/Shape.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
 
@@ -46,8 +41,8 @@ class QuantizedTypeConverter : public TypeConverter {
 
   static Value materializeConversion(OpBuilder &builder, Type type,
                                      ValueRange inputs, Location loc) {
-    return builder.create<quant::StorageCastOp>(loc, type,
-                                                llvm::getSingleElement(inputs));
+    return quant::StorageCastOp::create(builder, loc, type,
+                                        llvm::getSingleElement(inputs));
   }
 
 public:
@@ -64,14 +59,6 @@ public:
 // Conversion pass
 class StripFuncQuantTypes
     : public impl::StripFuncQuantTypesBase<StripFuncQuantTypes> {
-
-  // Return whether a type is considered legal when occurring in the header of
-  // a function or as an operand to a 'return' op.
-  static bool isLegalType(Type type) {
-    if (auto tensorType = dyn_cast<TensorType>(type))
-      return isLegalType(tensorType.getElementType());
-    return !isa<quant::QuantizedType>(type);
-  }
 
 public:
   void runOnOperation() override {

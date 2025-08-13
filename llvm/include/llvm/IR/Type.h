@@ -119,10 +119,10 @@ public:
   /// When \p NoDetails is true, we only print %st.
   /// Put differently, \p NoDetails prints the type as if
   /// inlined with the operands when printing an instruction.
-  void print(raw_ostream &O, bool IsForDebug = false,
-             bool NoDetails = false) const;
+  LLVM_ABI void print(raw_ostream &O, bool IsForDebug = false,
+                      bool NoDetails = false) const;
 
-  void dump() const;
+  LLVM_ABI void dump() const;
 
   /// Return the LLVMContext in which this type was uniqued.
   LLVMContext &getContext() const { return Context; }
@@ -165,8 +165,8 @@ public:
   bool isPPC_FP128Ty() const { return getTypeID() == PPC_FP128TyID; }
 
   /// Return true if this is a well-behaved IEEE-like type, which has a IEEE
-  /// compatible layout as defined by APFloat::isIEEE(), and does not have
-  /// non-IEEE values, such as x86_fp80's unnormal values.
+  /// compatible layout, and does not have non-IEEE values, such as x86_fp80's
+  /// unnormal values.
   bool isIEEELikeFPTy() const {
     switch (getTypeID()) {
     case DoubleTyID:
@@ -194,7 +194,7 @@ public:
     return getTypeID() == PPC_FP128TyID;
   }
 
-  const fltSemantics &getFltSemantics() const;
+  LLVM_ABI const fltSemantics &getFltSemantics() const;
 
   /// Return true if this is X86 AMX.
   bool isX86_AMXTy() const { return getTypeID() == X86_AMXTyID; }
@@ -203,23 +203,23 @@ public:
   bool isTargetExtTy() const { return getTypeID() == TargetExtTyID; }
 
   /// Return true if this is a target extension type with a scalable layout.
-  bool isScalableTargetExtTy() const;
+  LLVM_ABI bool isScalableTargetExtTy() const;
 
   /// Return true if this is a type whose size is a known multiple of vscale.
-  bool isScalableTy(SmallPtrSetImpl<const Type *> &Visited) const;
-  bool isScalableTy() const;
+  LLVM_ABI bool isScalableTy(SmallPtrSetImpl<const Type *> &Visited) const;
+  LLVM_ABI bool isScalableTy() const;
 
   /// Return true if this type is or contains a target extension type that
   /// disallows being used as a global.
-  bool
+  LLVM_ABI bool
   containsNonGlobalTargetExtType(SmallPtrSetImpl<const Type *> &Visited) const;
-  bool containsNonGlobalTargetExtType() const;
+  LLVM_ABI bool containsNonGlobalTargetExtType() const;
 
   /// Return true if this type is or contains a target extension type that
   /// disallows being used as a local.
-  bool
+  LLVM_ABI bool
   containsNonLocalTargetExtType(SmallPtrSetImpl<const Type *> &Visited) const;
-  bool containsNonLocalTargetExtType() const;
+  LLVM_ABI bool containsNonLocalTargetExtType() const;
 
   /// Return true if this is a FP type or a vector of FP.
   bool isFPOrFPVectorTy() const { return getScalarType()->isFloatingPointTy(); }
@@ -237,7 +237,7 @@ public:
   bool isIntegerTy() const { return getTypeID() == IntegerTyID; }
 
   /// Return true if this is an IntegerType of the given width.
-  bool isIntegerTy(unsigned Bitwidth) const;
+  LLVM_ABI bool isIntegerTy(unsigned Bitwidth) const;
 
   /// Return true if this is an integer type or a vector of integer types.
   bool isIntOrIntVectorTy() const { return getScalarType()->isIntegerTy(); }
@@ -272,23 +272,21 @@ public:
   }
 
   // True if this is an instance of TargetExtType of RISC-V vector tuple.
-  bool isRISCVVectorTupleTy() const;
+  LLVM_ABI bool isRISCVVectorTupleTy() const;
 
   /// Return true if this type could be converted with a lossless BitCast to
   /// type 'Ty'. For example, i8* to i32*. BitCasts are valid for types of the
   /// same size only where no re-interpretation of the bits is done.
   /// Determine if this type could be losslessly bitcast to Ty
-  bool canLosslesslyBitCastTo(Type *Ty) const;
+  LLVM_ABI bool canLosslesslyBitCastTo(Type *Ty) const;
 
   /// Return true if this type is empty, that is, it has no elements or all of
   /// its elements are empty.
-  bool isEmptyTy() const;
+  LLVM_ABI bool isEmptyTy() const;
 
   /// Return true if the type is "first class", meaning it is a valid type for a
   /// Value.
-  bool isFirstClassType() const {
-    return getTypeID() != FunctionTyID && getTypeID() != VoidTyID;
-  }
+  LLVM_ABI bool isFirstClassType() const;
 
   /// Return true if the type is a valid type for a register in codegen. This
   /// includes all first-class types except struct and array types.
@@ -334,21 +332,17 @@ public:
   /// instance of the type is stored to memory. The DataLayout class provides
   /// additional query functions to provide this information.
   ///
-  TypeSize getPrimitiveSizeInBits() const LLVM_READONLY;
+  LLVM_ABI TypeSize getPrimitiveSizeInBits() const LLVM_READONLY;
 
   /// If this is a vector type, return the getPrimitiveSizeInBits value for the
   /// element type. Otherwise return the getPrimitiveSizeInBits value for this
   /// type.
-  unsigned getScalarSizeInBits() const LLVM_READONLY;
+  LLVM_ABI unsigned getScalarSizeInBits() const LLVM_READONLY;
 
   /// Return the width of the mantissa of this type. This is only valid on
   /// floating-point types. If the FP type does not have a stable mantissa (e.g.
   /// ppc long double), this method returns -1.
-  int getFPMantissaWidth() const;
-
-  /// Return whether the type is IEEE compatible, as defined by the eponymous
-  /// method in APFloat.
-  bool isIEEE() const;
+  LLVM_ABI int getFPMantissaWidth() const;
 
   /// If this is a vector type, return the element type, otherwise return
   /// 'this'.
@@ -396,40 +390,40 @@ public:
   // only intended to cover the core methods that are frequently used, helper
   // methods should not be added here.
 
-  inline unsigned getIntegerBitWidth() const;
+  LLVM_ABI inline unsigned getIntegerBitWidth() const;
 
-  inline Type *getFunctionParamType(unsigned i) const;
-  inline unsigned getFunctionNumParams() const;
-  inline bool isFunctionVarArg() const;
+  LLVM_ABI inline Type *getFunctionParamType(unsigned i) const;
+  LLVM_ABI inline unsigned getFunctionNumParams() const;
+  LLVM_ABI inline bool isFunctionVarArg() const;
 
-  inline StringRef getStructName() const;
-  inline unsigned getStructNumElements() const;
-  inline Type *getStructElementType(unsigned N) const;
+  LLVM_ABI inline StringRef getStructName() const;
+  LLVM_ABI inline unsigned getStructNumElements() const;
+  LLVM_ABI inline Type *getStructElementType(unsigned N) const;
 
-  inline uint64_t getArrayNumElements() const;
+  LLVM_ABI inline uint64_t getArrayNumElements() const;
 
   Type *getArrayElementType() const {
     assert(getTypeID() == ArrayTyID);
     return ContainedTys[0];
   }
 
-  inline StringRef getTargetExtName() const;
+  LLVM_ABI inline StringRef getTargetExtName() const;
 
   /// Given vector type, change the element type,
   /// whilst keeping the old number of elements.
   /// For non-vectors simply returns \p EltTy.
-  inline Type *getWithNewType(Type *EltTy) const;
+  LLVM_ABI inline Type *getWithNewType(Type *EltTy) const;
 
   /// Given an integer or vector type, change the lane bitwidth to NewBitwidth,
   /// whilst keeping the old number of lanes.
-  inline Type *getWithNewBitWidth(unsigned NewBitWidth) const;
+  LLVM_ABI inline Type *getWithNewBitWidth(unsigned NewBitWidth) const;
 
   /// Given scalar/vector integer type, returns a type with elements twice as
   /// wide as in the original type. For vectors, preserves element count.
-  inline Type *getExtendedType() const;
+  LLVM_ABI inline Type *getExtendedType() const;
 
   /// Get the address space of this pointer or pointer vector type.
-  inline unsigned getPointerAddressSpace() const;
+  LLVM_ABI inline unsigned getPointerAddressSpace() const;
 
   //===--------------------------------------------------------------------===//
   // Static members exported by the Type class itself.  Useful for getting
@@ -437,30 +431,30 @@ public:
   //
 
   /// Return a type based on an identifier.
-  static Type *getPrimitiveType(LLVMContext &C, TypeID IDNumber);
+  LLVM_ABI static Type *getPrimitiveType(LLVMContext &C, TypeID IDNumber);
 
   //===--------------------------------------------------------------------===//
   // These are the builtin types that are always available.
   //
-  static Type *getVoidTy(LLVMContext &C);
-  static Type *getLabelTy(LLVMContext &C);
-  static Type *getHalfTy(LLVMContext &C);
-  static Type *getBFloatTy(LLVMContext &C);
-  static Type *getFloatTy(LLVMContext &C);
-  static Type *getDoubleTy(LLVMContext &C);
-  static Type *getMetadataTy(LLVMContext &C);
-  static Type *getX86_FP80Ty(LLVMContext &C);
-  static Type *getFP128Ty(LLVMContext &C);
-  static Type *getPPC_FP128Ty(LLVMContext &C);
-  static Type *getX86_AMXTy(LLVMContext &C);
-  static Type *getTokenTy(LLVMContext &C);
-  static IntegerType *getIntNTy(LLVMContext &C, unsigned N);
-  static IntegerType *getInt1Ty(LLVMContext &C);
-  static IntegerType *getInt8Ty(LLVMContext &C);
-  static IntegerType *getInt16Ty(LLVMContext &C);
-  static IntegerType *getInt32Ty(LLVMContext &C);
-  static IntegerType *getInt64Ty(LLVMContext &C);
-  static IntegerType *getInt128Ty(LLVMContext &C);
+  LLVM_ABI static Type *getVoidTy(LLVMContext &C);
+  LLVM_ABI static Type *getLabelTy(LLVMContext &C);
+  LLVM_ABI static Type *getHalfTy(LLVMContext &C);
+  LLVM_ABI static Type *getBFloatTy(LLVMContext &C);
+  LLVM_ABI static Type *getFloatTy(LLVMContext &C);
+  LLVM_ABI static Type *getDoubleTy(LLVMContext &C);
+  LLVM_ABI static Type *getMetadataTy(LLVMContext &C);
+  LLVM_ABI static Type *getX86_FP80Ty(LLVMContext &C);
+  LLVM_ABI static Type *getFP128Ty(LLVMContext &C);
+  LLVM_ABI static Type *getPPC_FP128Ty(LLVMContext &C);
+  LLVM_ABI static Type *getX86_AMXTy(LLVMContext &C);
+  LLVM_ABI static Type *getTokenTy(LLVMContext &C);
+  LLVM_ABI static IntegerType *getIntNTy(LLVMContext &C, unsigned N);
+  LLVM_ABI static IntegerType *getInt1Ty(LLVMContext &C);
+  LLVM_ABI static IntegerType *getInt8Ty(LLVMContext &C);
+  LLVM_ABI static IntegerType *getInt16Ty(LLVMContext &C);
+  LLVM_ABI static IntegerType *getInt32Ty(LLVMContext &C);
+  LLVM_ABI static IntegerType *getInt64Ty(LLVMContext &C);
+  LLVM_ABI static IntegerType *getInt128Ty(LLVMContext &C);
   template <typename ScalarTy> static Type *getScalarTy(LLVMContext &C) {
     int noOfBits = sizeof(ScalarTy) * CHAR_BIT;
     if (std::is_integral<ScalarTy>::value) {
@@ -475,25 +469,27 @@ public:
     }
     llvm_unreachable("Unsupported type in Type::getScalarTy");
   }
-  static Type *getFloatingPointTy(LLVMContext &C, const fltSemantics &S);
+  LLVM_ABI static Type *getFloatingPointTy(LLVMContext &C,
+                                           const fltSemantics &S);
 
   //===--------------------------------------------------------------------===//
   // Convenience methods for getting pointer types.
   //
-  static Type *getWasm_ExternrefTy(LLVMContext &C);
-  static Type *getWasm_FuncrefTy(LLVMContext &C);
+  LLVM_ABI static Type *getWasm_ExternrefTy(LLVMContext &C);
+  LLVM_ABI static Type *getWasm_FuncrefTy(LLVMContext &C);
 
   /// Return a pointer to the current type. This is equivalent to
   /// PointerType::get(Ctx, AddrSpace).
   /// TODO: Remove this after opaque pointer transition is complete.
-  LLVM_DEPRECATED("Use PointerType::get instead", "PointerType::get")
-  PointerType *getPointerTo(unsigned AddrSpace = 0) const;
+  LLVM_ABI LLVM_DEPRECATED("Use PointerType::get instead", "PointerType::get")
+      PointerType *getPointerTo(unsigned AddrSpace = 0) const;
 
 private:
   /// Derived types like structures and arrays are sized iff all of the members
   /// of the type are sized as well. Since asking for their size is relatively
   /// uncommon, move this operation out-of-line.
-  bool isSizedDerivedType(SmallPtrSetImpl<Type*> *Visited = nullptr) const;
+  LLVM_ABI bool
+  isSizedDerivedType(SmallPtrSetImpl<Type *> *Visited = nullptr) const;
 };
 
 // Printing of types.
@@ -519,7 +515,7 @@ inline Type **unwrap(LLVMTypeRef* Tys) {
 }
 
 inline LLVMTypeRef *wrap(Type **Tys) {
-  return reinterpret_cast<LLVMTypeRef*>(const_cast<Type**>(Tys));
+  return reinterpret_cast<LLVMTypeRef *>(Tys);
 }
 
 } // end namespace llvm

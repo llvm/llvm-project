@@ -13,9 +13,10 @@
 
 namespace clang::tidy::modernize {
 
-/// This check will warn on calls to std::uncaught_exception and replace them with calls to
-/// std::uncaught_exceptions, since std::uncaught_exception was deprecated in C++17. In case of
-/// macro ID there will be only a warning without fixits.
+/// This check will warn on calls to std::uncaught_exception and replace them
+/// with calls to std::uncaught_exceptions, since std::uncaught_exception was
+/// deprecated in C++17. In case of macro ID there will be only a warning
+/// without fixits.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-uncaught-exceptions.html

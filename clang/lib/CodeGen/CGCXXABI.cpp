@@ -52,7 +52,7 @@ CGCallee CGCXXABI::EmitLoadOfMemberFunctionPointer(
 
   const auto *RD = MPT->getMostRecentCXXRecordDecl();
   ThisPtrForCall =
-      CGF.getAsNaturalPointerTo(This, CGF.getContext().getRecordType(RD));
+      CGF.getAsNaturalPointerTo(This, CGF.getContext().getCanonicalTagType(RD));
   const FunctionProtoType *FPT =
       MPT->getPointeeType()->getAs<FunctionProtoType>();
   llvm::Constant *FnPtr = llvm::Constant::getNullValue(
@@ -60,10 +60,9 @@ CGCallee CGCXXABI::EmitLoadOfMemberFunctionPointer(
   return CGCallee::forDirect(FnPtr, FPT);
 }
 
-llvm::Value *
-CGCXXABI::EmitMemberDataPointerAddress(CodeGenFunction &CGF, const Expr *E,
-                                       Address Base, llvm::Value *MemPtr,
-                                       const MemberPointerType *MPT) {
+llvm::Value *CGCXXABI::EmitMemberDataPointerAddress(
+    CodeGenFunction &CGF, const Expr *E, Address Base, llvm::Value *MemPtr,
+    const MemberPointerType *MPT, bool IsInBounds) {
   ErrorUnsupportedABI(CGF, "loads of member pointers");
   llvm::Type *Ty =
       llvm::PointerType::get(CGF.getLLVMContext(), Base.getAddressSpace());
@@ -107,7 +106,7 @@ CGCXXABI::EmitNullMemberPointer(const MemberPointerType *MPT) {
 
 llvm::Constant *CGCXXABI::EmitMemberFunctionPointer(const CXXMethodDecl *MD) {
   return GetBogusMemberPointer(CGM.getContext().getMemberPointerType(
-      MD->getType(), /*Qualifier=*/nullptr, MD->getParent()));
+      MD->getType(), /*Qualifier=*/std::nullopt, MD->getParent()));
 }
 
 llvm::Constant *CGCXXABI::EmitMemberDataPointer(const MemberPointerType *MPT,

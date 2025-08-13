@@ -476,6 +476,11 @@ static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
   case Intrinsic::aarch64_neon_facgt:
   case Intrinsic::aarch64_neon_fabd:
   case Intrinsic::aarch64_sisd_fabd:
+  case Intrinsic::aarch64_neon_sqrdmlah:
+  case Intrinsic::aarch64_neon_sqrdmlsh:
+  case Intrinsic::aarch64_neon_sqrdmulh:
+  case Intrinsic::aarch64_neon_sqadd:
+  case Intrinsic::aarch64_neon_sqsub:
     return true;
   case Intrinsic::aarch64_neon_saddlv: {
     const LLT SrcTy = MRI.getType(MI.getOperand(2).getReg());
@@ -485,7 +490,7 @@ static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
   }
 }
 
-bool AArch64RegisterBankInfo::isPHIWithFPContraints(
+bool AArch64RegisterBankInfo::isPHIWithFPConstraints(
     const MachineInstr &MI, const MachineRegisterInfo &MRI,
     const TargetRegisterInfo &TRI, const unsigned Depth) const {
   if (!MI.isPHI() || Depth > MaxFPRSearchDepth)
@@ -495,7 +500,7 @@ bool AArch64RegisterBankInfo::isPHIWithFPContraints(
                 [&](const MachineInstr &UseMI) {
                   if (onlyUsesFP(UseMI, MRI, TRI, Depth + 1))
                     return true;
-                  return isPHIWithFPContraints(UseMI, MRI, TRI, Depth + 1);
+                  return isPHIWithFPConstraints(UseMI, MRI, TRI, Depth + 1);
                 });
 }
 
@@ -633,7 +638,7 @@ bool AArch64RegisterBankInfo::isLoadFromFPType(const MachineInstr &MI) const {
     // Look at the first element of the array to determine its type
     if (isa<ArrayType>(EltTy))
       EltTy = EltTy->getArrayElementType();
-  } else {
+  } else if (!isa<Constant>(LdVal)) {
     // FIXME: grubbing around uses is pretty ugly, but with no more
     // `getPointerElementType` there's not much else we can do.
     for (const auto *LdUser : LdVal->users()) {
@@ -892,7 +897,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                  // Int->FP conversion operations are also captured in
                  // onlyDefinesFP().
 
-                 if (isPHIWithFPContraints(UseMI, MRI, TRI))
+                 if (isPHIWithFPConstraints(UseMI, MRI, TRI))
                    return true;
 
                  return onlyUsesFP(UseMI, MRI, TRI) ||

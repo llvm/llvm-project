@@ -57,6 +57,11 @@ namespace MemoryModel {
 #include "SPIRVGenTables.inc"
 } // namespace MemoryModel
 
+namespace MatrixMultiplyAccumulateOperands {
+#define GET_MatrixMultiplyAccumulateOperands_DECL
+#include "SPIRVGenTables.inc"
+} // namespace MatrixMultiplyAccumulateOperands
+
 namespace ExecutionMode {
 #define GET_ExecutionMode_DECL
 #include "SPIRVGenTables.inc"
@@ -216,6 +221,11 @@ namespace CooperativeMatrixOperands {
 #define GET_CooperativeMatrixOperands_DECL
 #include "SPIRVGenTables.inc"
 } // namespace CooperativeMatrixOperands
+
+namespace SpecConstantOpOperands {
+#define GET_SpecConstantOpOperands_DECL
+#include "SPIRVGenTables.inc"
+} // namespace SpecConstantOpOperands
 
 struct ExtendedBuiltin {
   StringRef Name;

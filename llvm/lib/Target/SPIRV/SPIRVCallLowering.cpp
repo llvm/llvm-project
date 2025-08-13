@@ -215,11 +215,8 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
   Argument *Arg = F.getArg(ArgIdx);
   Type *ArgType = Arg->getType();
   if (isTypedPointerTy(ArgType)) {
-    SPIRVType *ElementType = GR->getOrCreateSPIRVType(
-        cast<TypedPointerType>(ArgType)->getElementType(), MIRBuilder,
-        SPIRV::AccessQualifier::ReadWrite, true);
     return GR->getOrCreateSPIRVPointerType(
-        ElementType, MIRBuilder,
+        cast<TypedPointerType>(ArgType)->getElementType(), MIRBuilder,
         addressSpaceToStorageClass(getPointerAddressSpace(ArgType), ST));
   }
 
@@ -232,11 +229,8 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
   // spv_assign_ptr_type intrinsic or otherwise use default pointer element
   // type.
   if (hasPointeeTypeAttr(Arg)) {
-    SPIRVType *ElementType =
-        GR->getOrCreateSPIRVType(getPointeeTypeByAttr(Arg), MIRBuilder,
-                                 SPIRV::AccessQualifier::ReadWrite, true);
     return GR->getOrCreateSPIRVPointerType(
-        ElementType, MIRBuilder,
+        getPointeeTypeByAttr(Arg), MIRBuilder,
         addressSpaceToStorageClass(getPointerAddressSpace(ArgType), ST));
   }
 
@@ -259,10 +253,8 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
     MetadataAsValue *VMD = cast<MetadataAsValue>(II->getOperand(1));
     Type *ElementTy =
         toTypedPointer(cast<ConstantAsMetadata>(VMD->getMetadata())->getType());
-    SPIRVType *ElementType = GR->getOrCreateSPIRVType(
-        ElementTy, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
     return GR->getOrCreateSPIRVPointerType(
-        ElementType, MIRBuilder,
+        ElementTy, MIRBuilder,
         addressSpaceToStorageClass(
             cast<ConstantInt>(II->getOperand(2))->getZExtValue(), ST));
   }
@@ -275,18 +267,49 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
 
 static SPIRV::ExecutionModel::ExecutionModel
 getExecutionModel(const SPIRVSubtarget &STI, const Function &F) {
-  if (STI.isOpenCLEnv())
+  if (STI.isKernel())
     return SPIRV::ExecutionModel::Kernel;
 
+  if (STI.isShader()) {
+    auto attribute = F.getFnAttribute("hlsl.shader");
+    if (!attribute.isValid()) {
+      report_fatal_error(
+          "This entry point lacks mandatory hlsl.shader attribute.");
+    }
+
+    const auto value = attribute.getValueAsString();
+    if (value == "compute")
+      return SPIRV::ExecutionModel::GLCompute;
+    if (value == "vertex")
+      return SPIRV::ExecutionModel::Vertex;
+    if (value == "pixel")
+      return SPIRV::ExecutionModel::Fragment;
+
+    report_fatal_error(
+        "This HLSL entry point is not supported by this backend.");
+  }
+
+  assert(STI.getEnv() == SPIRVSubtarget::Unknown);
+  // "hlsl.shader" attribute is mandatory for Vulkan, so we can set Env to
+  // Shader whenever we find it, and to Kernel otherwise.
+
+  // We will now change the Env based on the attribute, so we need to strip
+  // `const` out of the ref to STI.
+  SPIRVSubtarget *NonConstSTI = const_cast<SPIRVSubtarget *>(&STI);
   auto attribute = F.getFnAttribute("hlsl.shader");
   if (!attribute.isValid()) {
-    report_fatal_error(
-        "This entry point lacks mandatory hlsl.shader attribute.");
+    NonConstSTI->setEnv(SPIRVSubtarget::Kernel);
+    return SPIRV::ExecutionModel::Kernel;
   }
+  NonConstSTI->setEnv(SPIRVSubtarget::Shader);
 
   const auto value = attribute.getValueAsString();
   if (value == "compute")
     return SPIRV::ExecutionModel::GLCompute;
+  if (value == "vertex")
+    return SPIRV::ExecutionModel::Vertex;
+  if (value == "pixel")
+    return SPIRV::ExecutionModel::Fragment;
 
   report_fatal_error("This HLSL entry point is not supported by this backend.");
 }
@@ -327,7 +350,7 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
           buildOpDecorate(VRegs[i][0], MIRBuilder,
                           SPIRV::Decoration::MaxByteOffset, {DerefBytes});
       }
-      if (Arg.hasAttribute(Attribute::Alignment)) {
+      if (Arg.hasAttribute(Attribute::Alignment) && !ST->isShader()) {
         auto Alignment = static_cast<unsigned>(
             Arg.getAttribute(Attribute::Alignment).getValueAsInt());
         buildOpDecorate(VRegs[i][0], MIRBuilder, SPIRV::Decoration::Alignment,
@@ -398,8 +421,6 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   auto MRI = MIRBuilder.getMRI();
   Register FuncVReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
   MRI->setRegClass(FuncVReg, &SPIRV::iIDRegClass);
-  if (F.isDeclaration())
-    GR->add(&F, &MIRBuilder.getMF(), FuncVReg);
   FunctionType *FTy = getOriginalFunctionType(F);
   Type *FRetTy = FTy->getReturnType();
   if (isUntypedPointerTy(FRetTy)) {
@@ -425,6 +446,8 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                                .addUse(GR->getSPIRVTypeID(FuncTy));
   GR->recordFunctionDefinition(&F, &MB.getInstr()->getOperand(0));
   GR->addGlobalObject(&F, &MIRBuilder.getMF(), FuncVReg);
+  if (F.isDeclaration())
+    GR->add(&F, MB);
 
   // Add OpFunctionParameter instructions
   int i = 0;
@@ -433,11 +456,11 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     Register ArgReg = VRegs[i][0];
     MRI->setRegClass(ArgReg, GR->getRegClass(ArgTypeVRegs[i]));
     MRI->setType(ArgReg, GR->getRegType(ArgTypeVRegs[i]));
-    MIRBuilder.buildInstr(SPIRV::OpFunctionParameter)
-        .addDef(ArgReg)
-        .addUse(GR->getSPIRVTypeID(ArgTypeVRegs[i]));
+    auto MIB = MIRBuilder.buildInstr(SPIRV::OpFunctionParameter)
+                   .addDef(ArgReg)
+                   .addUse(GR->getSPIRVTypeID(ArgTypeVRegs[i]));
     if (F.isDeclaration())
-      GR->add(&Arg, &MIRBuilder.getMF(), ArgReg);
+      GR->add(&Arg, MIB);
     GR->addGlobalObject(&Arg, &MIRBuilder.getMF(), ArgReg);
     i++;
   }
@@ -447,12 +470,18 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 
   // Handle entry points and function linkage.
   if (isEntryPoint(F)) {
+    // EntryPoints can help us to determine the environment we're working on.
+    // Therefore, we need a non-const pointer to SPIRVSubtarget to update the
+    // environment if we need to.
+    const SPIRVSubtarget *ST =
+        static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpEntryPoint)
                    .addImm(static_cast<uint32_t>(getExecutionModel(*ST, F)))
                    .addUse(FuncVReg);
     addStringImm(F.getName(), MIB);
   } else if (F.getLinkage() != GlobalValue::InternalLinkage &&
-             F.getLinkage() != GlobalValue::PrivateLinkage) {
+             F.getLinkage() != GlobalValue::PrivateLinkage &&
+             F.getVisibility() != GlobalValue::HiddenVisibility) {
     SPIRV::LinkageType::LinkageType LnkTy =
         F.isDeclaration()
             ? SPIRV::LinkageType::Import
@@ -462,7 +491,7 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                    ? SPIRV::LinkageType::LinkOnceODR
                    : SPIRV::LinkageType::Export);
     buildOpDecorate(FuncVReg, MIRBuilder, SPIRV::Decoration::LinkageAttributes,
-                    {static_cast<uint32_t>(LnkTy)}, F.getGlobalIdentifier());
+                    {static_cast<uint32_t>(LnkTy)}, F.getName());
   }
 
   // Handle function pointers decoration

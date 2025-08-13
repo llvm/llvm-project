@@ -9,6 +9,7 @@
 
 
 #include <immintrin.h>
+#include "builtin_test_helpers.h"
 
 // NOTE: This should match the tests in llvm/test/CodeGen/X86/avx2-intrinsics-fast-isel.ll
 
@@ -59,12 +60,14 @@ __m256i test_mm256_adds_epi8(__m256i a, __m256i b) {
   // CHECK: call <32 x i8> @llvm.sadd.sat.v32i8(<32 x i8> %{{.*}}, <32 x i8> %{{.*}})
   return _mm256_adds_epi8(a, b);
 }
+TEST_CONSTEXPR(match_v32qi(_mm256_adds_epi8((__m256i)(__v32qs){0, +1, +2, +3, +4, +5, +6, +7, +8, +9, +10, +11, +12, +13, +14, +15, +100, +50, -100, +20, +80, -50, +120, -20, -100, -50, +100, -20, -80, +50, -120, +20}, (__m256i)(__v32qs){0, +1, +2, +3, +4, +5, +6, +7, +8, +9, +10, +11, +12, +13, +14, +15, +50, +80, -50, +110, +60, -30, +20, -10, +50, +80, -50, +110, +60, -30, +20, -10}), 0, +2, +4, +6, +8, +10, +12, +14, +16, +18, +20, +22, +24, +26, +28, +30, +127, +127, -128, +127, +127, -80, +127, -30, -50, +30, +50, +90, -20, +20, -100, +10));
 
 __m256i test_mm256_adds_epi16(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_adds_epi16
   // CHECK: call <16 x i16> @llvm.sadd.sat.v16i16(<16 x i16> %{{.*}}, <16 x i16> %{{.*}})
   return _mm256_adds_epi16(a, b);
 }
+TEST_CONSTEXPR(match_v16hi(_mm256_adds_epi16((__m256i)(__v16hi){0, -1, -2, -3, -4, -5, -6, -7, -8, -9, -10, -11, +32000, -32000, +32000, -32000}, (__m256i)(__v16hi){0, -1, -2, -3, -4, -5, -6, -7, -8, -9, -10, -11, +800, -800, -800, +800}), 0, -2, -4, -6, -8, -10, -12, -14, -16, -18, -20, -22, +32767, -32768, +31200, -31200));
 
 __m256i test_mm256_adds_epu8(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_adds_epu8
@@ -72,6 +75,7 @@ __m256i test_mm256_adds_epu8(__m256i a, __m256i b) {
   // CHECK: call <32 x i8> @llvm.uadd.sat.v32i8(<32 x i8> %{{.*}}, <32 x i8> %{{.*}})
   return _mm256_adds_epu8(a, b);
 }
+TEST_CONSTEXPR(match_v32qu(_mm256_adds_epu8((__m256i)(__v32qu){0, 0, 0, 0, +64, +64, +64, +64, +64, +64, +127, +127, +127, +127, +127, +127, +128, +128, +128, +128, +128, +128, +192, +192, +192, +192, +192, +192, +255, +255, +255, +255}, (__m256i)(__v32qu){0, +127, +128, +255, 0, +64, +127, +128, +192, +255, 0, +64, +127, +128, +192, +255, 0, +64, +127, +128, +192, +255, 0, +64, +127, +128, +192, +255, 0, +127, +128, +255}), 0, +127, +128, +255, +64, +128, +191, +192, +255, +255, +127, +191, +254, +255, +255, +255, +128, +192, +255, +255, +255, +255, +192, +255, +255, +255, +255, +255, +255, +255, +255, +255));
 
 __m256i test_mm256_adds_epu16(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_adds_epu16
@@ -79,6 +83,7 @@ __m256i test_mm256_adds_epu16(__m256i a, __m256i b) {
   // CHECK: call <16 x i16> @llvm.uadd.sat.v16i16(<16 x i16> %{{.*}}, <16 x i16> %{{.*}})
   return _mm256_adds_epu16(a, b);
 }
+TEST_CONSTEXPR(match_v16hu(_mm256_adds_epu16((__m256i)(__v16hu){0, 0, 0, 0, +32767, +32767, +32767, +32767, +32768, +32768, +32768, +32768, +65535, +65535, +65535, +65535}, (__m256i)(__v16hu){0, +32767, +32768, +65535, 0, +32767, +32768, +65535, 0, +32767, +32768, +65535, 0, +32767, +32768, +65535}), 0, +32767, +32768, +65535, +32767, +65534, +65535, +65535, +32768, +65535, +65535, +65535, +65535, +65535, +65535, +65535));
 
 __m256i test_mm256_alignr_epi8(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_alignr_epi8
@@ -97,6 +102,7 @@ __m256i test_mm256_and_si256(__m256i a, __m256i b) {
   // CHECK: and <4 x i64>
   return _mm256_and_si256(a, b);
 }
+TEST_CONSTEXPR(match_v4di(_mm256_and_si256((__m256i)(__v4di){0, -1, 0, -1}, (__m256i)(__v4di){0, 0, -1, -1}), 0, 0, 0, -1));
 
 __m256i test_mm256_andnot_si256(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_andnot_si256
@@ -104,6 +110,7 @@ __m256i test_mm256_andnot_si256(__m256i a, __m256i b) {
   // CHECK: and <4 x i64>
   return _mm256_andnot_si256(a, b);
 }
+TEST_CONSTEXPR(match_v4di(_mm256_andnot_si256((__m256i)(__v4di){0, -1, 0, -1}, (__m256i)(__v4di){0, 0, -1, -1}), 0, 0, -1, 0));
 
 __m256i test_mm256_avg_epu8(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_avg_epu8
@@ -308,12 +315,16 @@ __m256i test_mm256_cvtepi8_epi16(__m128i a) {
   return _mm256_cvtepi8_epi16(a);
 }
 
+TEST_CONSTEXPR(match_v16hi(_mm256_cvtepi8_epi16(_mm_setr_epi8(-3, 2, -1, 0, 1, -2, 3, -4, 5, -6, 7, -8, 9, -10, 11, -12)), -3, 2, -1, 0, 1, -2, 3, -4, 5, -6, 7, -8, 9, -10, 11, -12));
+
 __m256i test_mm256_cvtepi8_epi32(__m128i a) {
   // CHECK-LABEL: test_mm256_cvtepi8_epi32
   // CHECK: shufflevector <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   // CHECK: sext <8 x i8> %{{.*}} to <8 x i32>
   return _mm256_cvtepi8_epi32(a);
 }
+
+TEST_CONSTEXPR(match_v8si(_mm256_cvtepi8_epi32(_mm_setr_epi8(-3, 2, -1, 0, 1, -2, 3, -4, 5, -6, 7, -8, 9, -10, 11, -12)), -3, 2, -1, 0, 1, -2, 3, -4));
 
 __m256i test_mm256_cvtepi8_epi64(__m128i a) {
   // CHECK-LABEL: test_mm256_cvtepi8_epi64
@@ -322,11 +333,15 @@ __m256i test_mm256_cvtepi8_epi64(__m128i a) {
   return _mm256_cvtepi8_epi64(a);
 }
 
+TEST_CONSTEXPR(match_v4di(_mm256_cvtepi8_epi64(_mm_setr_epi8(-3, 2, -1, 0, 1, -2, 3, -4, 5, -6, 7, -8, 9, -10, 11, -12)), -3, 2, -1, 0));
+
 __m256i test_mm256_cvtepi16_epi32(__m128i a) {
   // CHECK-LABEL: test_mm256_cvtepi16_epi32
   // CHECK: sext <8 x i16> %{{.*}} to <8 x i32>
   return _mm256_cvtepi16_epi32(a);
 }
+
+TEST_CONSTEXPR(match_v8si(_mm256_cvtepi16_epi32(_mm_setr_epi16(-300, 2, -1, 0, 1, -2, 3, -4)), -300, 2, -1, 0, 1, -2, 3, -4));
 
 __m256i test_mm256_cvtepi16_epi64(__m128i a) {
   // CHECK-LABEL: test_mm256_cvtepi16_epi64
@@ -335,17 +350,23 @@ __m256i test_mm256_cvtepi16_epi64(__m128i a) {
   return _mm256_cvtepi16_epi64(a);
 }
 
+TEST_CONSTEXPR(match_v4di(_mm256_cvtepi16_epi64(_mm_setr_epi16(-300, 2, -1, 0, 1, -2, 3, -4)), -300, 2, -1, 0));
+
 __m256i test_mm256_cvtepi32_epi64(__m128i a) {
   // CHECK-LABEL: test_mm256_cvtepi32_epi64
   // CHECK: sext <4 x i32> %{{.*}} to <4 x i64>
   return _mm256_cvtepi32_epi64(a);
 }
 
+TEST_CONSTEXPR(match_v4di(_mm256_cvtepi32_epi64(_mm_setr_epi32(-70000, 2, -1, 0)), -70000, 2, -1, 0));
+
 __m256i test_mm256_cvtepu8_epi16(__m128i a) {
   // CHECK-LABEL: test_mm256_cvtepu8_epi16
   // CHECK: zext <16 x i8> %{{.*}} to <16 x i16>
   return _mm256_cvtepu8_epi16(a);
 }
+
+TEST_CONSTEXPR(match_v16hi(_mm256_cvtepu8_epi16(_mm_setr_epi8(-3, 2, -1, 0, 1, -2, 3, -4, 5, -6, 7, -8, 9, -10, 11, -12)), 253, 2, 255, 0, 1, 254, 3, 252, 5, 250, 7, 248, 9, 246, 11, 244));
 
 __m256i test_mm256_cvtepu8_epi32(__m128i a) {
   // CHECK-LABEL: test_mm256_cvtepu8_epi32
@@ -354,6 +375,8 @@ __m256i test_mm256_cvtepu8_epi32(__m128i a) {
   return _mm256_cvtepu8_epi32(a);
 }
 
+TEST_CONSTEXPR(match_v8si(_mm256_cvtepu8_epi32(_mm_setr_epi8(-3, 2, -1, 0, 1, -2, 3, -4, 5, -6, 7, -8, 9, -10, 11, -12)), 253, 2, 255, 0, 1, 254, 3, 252));
+
 __m256i test_mm256_cvtepu8_epi64(__m128i a) {
   // CHECK-LABEL: test_mm256_cvtepu8_epi64
   // CHECK: shufflevector <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -361,11 +384,15 @@ __m256i test_mm256_cvtepu8_epi64(__m128i a) {
   return _mm256_cvtepu8_epi64(a);
 }
 
+TEST_CONSTEXPR(match_v4di(_mm256_cvtepu8_epi64(_mm_setr_epi8(-3, 2, -1, 0, 1, -2, 3, -4, 5, -6, 7, -8, 9, -10, 11, -12)), 253, 2, 255, 0));
+
 __m256i test_mm256_cvtepu16_epi32(__m128i a) {
   // CHECK-LABEL: test_mm256_cvtepu16_epi32
   // CHECK: zext <8 x i16> {{.*}} to <8 x i32>
   return _mm256_cvtepu16_epi32(a);
 }
+
+TEST_CONSTEXPR(match_v8si(_mm256_cvtepu16_epi32(_mm_setr_epi16(-300, 2, -1, 0, 1, -2, 3, -4)), 65236, 2, 65535, 0, 1, 65534, 3, 65532));
 
 __m256i test_mm256_cvtepu16_epi64(__m128i a) {
   // CHECK-LABEL: test_mm256_cvtepu16_epi64
@@ -374,11 +401,15 @@ __m256i test_mm256_cvtepu16_epi64(__m128i a) {
   return _mm256_cvtepu16_epi64(a);
 }
 
+TEST_CONSTEXPR(match_v4di(_mm256_cvtepu16_epi64(_mm_setr_epi16(-300, 2, -1, 0, 1, -2, 3, -4)), 65236, 2, 65535, 0));
+
 __m256i test_mm256_cvtepu32_epi64(__m128i a) {
   // CHECK-LABEL: test_mm256_cvtepu32_epi64
   // CHECK: zext <4 x i32> %{{.*}} to <4 x i64>
   return _mm256_cvtepu32_epi64(a);
 }
+
+TEST_CONSTEXPR(match_v4di(_mm256_cvtepu32_epi64(_mm_setr_epi32(-70000, 2, -1, 0)), 4294897296, 2, 4294967295, 0));
 
 __m128i test0_mm256_extracti128_si256_0(__m256i a) {
   // CHECK-LABEL: test0_mm256_extracti128_si256
@@ -890,12 +921,14 @@ __m256i test_mm256_mulhi_epu16(__m256i a, __m256i b) {
   // CHECK: call <16 x i16> @llvm.x86.avx2.pmulhu.w(<16 x i16> %{{.*}}, <16 x i16> %{{.*}})
   return _mm256_mulhi_epu16(a, b);
 }
+TEST_CONSTEXPR(match_v16hi(_mm256_mulhi_epu16((__m256i)(__v16hi){+1, -2, +3, -4, +5, -6, +7, -8, +9, -10, +11, -12, +13, -14, +15, -16}, (__m256i)(__v16hi){-32, -30, +28, +26, -24, -22, +20, +18, -16, -14, +12, +10, -8, +6, -4, +2}), 0, -32, 0, 25, 4, -28, 0, 17, 8, -24, 0, 9, 12, 5, 14, 1));
 
 __m256i test_mm256_mulhi_epi16(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_mulhi_epi16
   // CHECK: call <16 x i16> @llvm.x86.avx2.pmulh.w(<16 x i16> %{{.*}}, <16 x i16> %{{.*}})
   return _mm256_mulhi_epi16(a, b);
 }
+TEST_CONSTEXPR(match_v16hi(_mm256_mulhi_epi16((__m256i)(__v16hi){+1, -2, +3, -4, +5, -6, +7, -8, +9, -10, +11, -12, +13, -14, +15, -16}, (__m256i)(__v16hi){-32, -30, +28, +26, -24, -22, +20, +18, -16, -14, +12, +10, -8, +6, -4, +2}), -1, 0, 0, -1, -1, 0, 0, -1, -1, 0, 0, -1, -1, -1, -1, -1));
 
 __m256i test_mm256_mulhrs_epi16(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_mulhrs_epi16
@@ -908,6 +941,7 @@ __m256i test_mm256_mullo_epi16(__m256i a, __m256i b) {
   // CHECK: mul <16 x i16>
   return _mm256_mullo_epi16(a, b);
 }
+TEST_CONSTEXPR(match_v16hi(_mm256_mullo_epi16((__m256i)(__v16hi){+1, -2, +3, -4, +5, -6, +7, -8, +9, -10, +11, -12, +13, -14, +15, -16}, (__m256i)(__v16hi){-32, -30, +28, +26, -24, -22, +20, +18, -16, -14, +12, +10, -8, +6, -4, +2}), -32, 60, 84, -104, -120, 132, 140, -144, -144, 140, 132, -120, -104, -84, -60, -32));
 
 __m256i test_mm256_mullo_epi32(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_mullo_epi32
@@ -920,6 +954,7 @@ __m256i test_mm256_or_si256(__m256i a, __m256i b) {
   // CHECK: or <4 x i64>
   return _mm256_or_si256(a, b);
 }
+TEST_CONSTEXPR(match_v4di(_mm256_or_si256((__m256i)(__v4di){0, -1, 0, -1}, (__m256i)(__v4di){0, 0, -1, -1}), 0, -1, -1, -1));
 
 __m256i test_mm256_packs_epi16(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_packs_epi16
@@ -1262,12 +1297,14 @@ __m256i test_mm256_subs_epi8(__m256i a, __m256i b) {
   // CHECK: call <32 x i8> @llvm.ssub.sat.v32i8(<32 x i8> %{{.*}}, <32 x i8> %{{.*}})
   return _mm256_subs_epi8(a, b);
 }
+TEST_CONSTEXPR(match_v32qi(_mm256_subs_epi8((__m256i)(__v32qs){0, +1, +2, +3, +4, +5, +6, +7, +8, +9, +10, +11, +12, +13, +14, +15, +100, +50, -100, +20, +80, -50, +120, -20, -100, -50, +100, -20, -80, +50, -120, +20}, (__m256i)(__v32qs){0, -1, -2, -3, -4, -5, -6, -7, -8, -9, -10, -11, -12, -13, -14, -15, -50, -80, +50, -110, -60, +30, -20, +10, -50, -80, +50, -110, -60, +30, -20, +10}), 0, +2, +4, +6, +8, +10, +12, +14, +16, +18, +20, +22, +24, +26, +28, +30, +127, +127, -128, +127, +127, -80, +127, -30, -50, +30, +50, +90, -20, +20, -100, +10));
 
 __m256i test_mm256_subs_epi16(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_subs_epi16
   // CHECK: call <16 x i16> @llvm.ssub.sat.v16i16(<16 x i16> %{{.*}}, <16 x i16> %{{.*}})
   return _mm256_subs_epi16(a, b);
 }
+TEST_CONSTEXPR(match_v16hi(_mm256_subs_epi16((__m256i)(__v16hi){0, -1, -2, -3, -4, -5, -6, -7, -8, -9, -10, -11, +32000, -32000, +32000, -32000}, (__m256i)(__v16hi){0, +1, +2, +3, +4, +5, +6, +7, +8, +9, +10, +11, -800, +800, +800, -800}),0, -2, -4, -6, -8, -10, -12, -14, -16, -18, -20, -22, +32767, -32768, +31200, -31200));
 
 __m256i test_mm256_subs_epu8(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_subs_epu8
@@ -1275,6 +1312,7 @@ __m256i test_mm256_subs_epu8(__m256i a, __m256i b) {
   // CHECK: call <32 x i8> @llvm.usub.sat.v32i8(<32 x i8> %{{.*}}, <32 x i8> %{{.*}})
   return _mm256_subs_epu8(a, b);
 }
+TEST_CONSTEXPR(match_v32qu(_mm256_subs_epu8((__m256i)(__v32qu){0, 0, 0, 0, +64, +64, +64, +64, +64, +64, +127, +127, +127, +127, +127, +127, +128, +128, +128, +128, +128, +128, +192, +192, +192, +192, +192, +192, +255, +255, +255, +255}, (__m256i)(__v32qu){0, +127, +128, +255, 0, +64, +127, +128, +192, +255, 0, +64, +127, +128, +192, +255, 0, +64, +127, +128, +192, +255, 0, +64, +127, +128, +192, +255, 0, +127, +128, +255}), 0, 0, 0, 0, +64, 0, 0, 0, 0, 0, +127, +63, 0, 0, 0, 0, +128, +64, +1, 0, 0, 0, +192, +128, +65, +64, 0, 0, +255, +128, +127, 0));
 
 __m256i test_mm256_subs_epu16(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_subs_epu16
@@ -1282,6 +1320,7 @@ __m256i test_mm256_subs_epu16(__m256i a, __m256i b) {
   // CHECK: call <16 x i16> @llvm.usub.sat.v16i16(<16 x i16> %{{.*}}, <16 x i16> %{{.*}})
   return _mm256_subs_epu16(a, b);
 }
+TEST_CONSTEXPR(match_v16hu(_mm256_subs_epu16((__m256i)(__v16hu){0, 0, 0, 0, +32767, +32767, +32767, +32767, +32768, +32768, +32768, +32768, +65535, +65535, +65535, +65535}, (__m256i)(__v16hu){0, +32767, +32768, +65535, 0, +32767, +32768, +65535, 0, +32767, +32768, +65535, 0, +32767, +32768, +65535}), 0, 0, 0, 0, +32767, 0, 0, 0, +32768, +1, 0, 0, +65535, +32768, +32767, 0));
 
 __m256i test_mm256_unpackhi_epi8(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_unpackhi_epi8
@@ -1336,3 +1375,4 @@ __m256i test_mm256_xor_si256(__m256i a, __m256i b) {
   // CHECK: xor <4 x i64>
   return _mm256_xor_si256(a, b);
 }
+TEST_CONSTEXPR(match_v4di(_mm256_xor_si256((__m256i)(__v4di){0, -1, 0, -1}, (__m256i)(__v4di){0, 0, -1, -1}), 0, -1, -1, 0));

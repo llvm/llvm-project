@@ -66,6 +66,16 @@ LogicalResult Serializer::processConstantOp(spirv::ConstantOp op) {
   return failure();
 }
 
+LogicalResult Serializer::processConstantCompositeReplicateOp(
+    spirv::EXTConstantCompositeReplicateOp op) {
+  if (uint32_t resultID = prepareConstantCompositeReplicate(
+          op.getLoc(), op.getType(), op.getValue())) {
+    valueIDMap[op.getResult()] = resultID;
+    return success();
+  }
+  return failure();
+}
+
 LogicalResult Serializer::processSpecConstantOp(spirv::SpecConstantOp op) {
   if (auto resultID = prepareConstantScalar(op.getLoc(), op.getDefaultValue(),
                                             /*isSpec=*/true)) {
@@ -113,6 +123,38 @@ Serializer::processSpecConstantCompositeOp(spirv::SpecConstantCompositeOp op) {
 
   encodeInstructionInto(typesGlobalValues,
                         spirv::Opcode::OpSpecConstantComposite, operands);
+  specConstIDMap[op.getSymName()] = resultID;
+
+  return processName(resultID, op.getSymName());
+}
+
+LogicalResult Serializer::processSpecConstantCompositeReplicateOp(
+    spirv::EXTSpecConstantCompositeReplicateOp op) {
+  uint32_t typeID = 0;
+  if (failed(processType(op.getLoc(), op.getType(), typeID))) {
+    return failure();
+  }
+
+  auto constituent = dyn_cast<FlatSymbolRefAttr>(op.getConstituent());
+  if (!constituent)
+    return op.emitError(
+               "expected flat symbol reference for constituent instead of ")
+           << op.getConstituent();
+
+  StringRef constituentName = constituent.getValue();
+  uint32_t constituentID = getSpecConstID(constituentName);
+  if (!constituentID) {
+    return op.emitError("unknown result <id> for replicated spec constant ")
+           << constituentName;
+  }
+
+  uint32_t resultID = getNextID();
+  uint32_t operands[] = {typeID, resultID, constituentID};
+
+  encodeInstructionInto(typesGlobalValues,
+                        spirv::Opcode::OpSpecConstantCompositeReplicateEXT,
+                        operands);
+
   specConstIDMap[op.getSymName()] = resultID;
 
   return processName(resultID, op.getSymName());
@@ -447,6 +489,15 @@ LogicalResult Serializer::processSelectionOp(spirv::SelectionOp selectionOp) {
   auto mergeID = getBlockID(mergeBlock);
   auto loc = selectionOp.getLoc();
 
+  // Before we do anything replace results of the selection operation with
+  // values yielded (with `mlir.merge`) from inside the region. The selection op
+  // is being flattened so we do not have to worry about values being defined
+  // inside a region and used outside it anymore.
+  auto mergeOp = cast<spirv::MergeOp>(mergeBlock->back());
+  assert(selectionOp.getNumResults() == mergeOp.getNumOperands());
+  for (unsigned i = 0, e = selectionOp.getNumResults(); i != e; ++i)
+    selectionOp.getResult(i).replaceAllUsesWith(mergeOp.getOperand(i));
+
   // This SelectionOp is in some MLIR block with preceding and following ops. In
   // the binary format, it should reside in separate SPIR-V blocks from its
   // preceding and following ops. So we need to emit unconditional branches to
@@ -483,6 +534,12 @@ LogicalResult Serializer::processSelectionOp(spirv::SelectionOp selectionOp) {
   // instruction to start a new SPIR-V block for ops following this SelectionOp.
   // The block should use the <id> for the merge block.
   encodeInstructionInto(functionBody, spirv::Opcode::OpLabel, {mergeID});
+
+  // We do not process the mergeBlock but we still need to generate phi
+  // functions from its block arguments.
+  if (failed(emitPhiForBlockArguments(mergeBlock)))
+    return failure();
+
   LLVM_DEBUG(llvm::dbgs() << "done merge ");
   LLVM_DEBUG(printBlock(mergeBlock, llvm::dbgs()));
   LLVM_DEBUG(llvm::dbgs() << "\n");
@@ -504,6 +561,13 @@ LogicalResult Serializer::processLoopOp(spirv::LoopOp loopOp) {
   auto continueID = getBlockID(continueBlock);
   auto mergeID = getBlockID(mergeBlock);
   auto loc = loopOp.getLoc();
+
+  // Before we do anything replace results of the selection operation with
+  // values yielded (with `mlir.merge`) from inside the region.
+  auto mergeOp = cast<spirv::MergeOp>(mergeBlock->back());
+  assert(loopOp.getNumResults() == mergeOp.getNumOperands());
+  for (unsigned i = 0, e = loopOp.getNumResults(); i != e; ++i)
+    loopOp.getResult(i).replaceAllUsesWith(mergeOp.getOperand(i));
 
   // This LoopOp is in some MLIR block with preceding and following ops. In the
   // binary format, it should reside in separate SPIR-V blocks from its

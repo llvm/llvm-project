@@ -177,14 +177,83 @@
 // RUN: %clang -### -target x86_64 -ffast-math -fcomplex-arithmetic=basic -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=BASIC %s
 
-// BASIC: -complex-range=basic
-// FULL: -complex-range=full
-// PRMTD: -complex-range=promoted
-// BASIC-NOT: -complex-range=improved
-// CHECK-NOT: -complex-range=basic
-// IMPRVD: -complex-range=improved
-// IMPRVD-NOT: -complex-range=basic
-// CHECK-NOT: -complex-range=improved
+// RUN: %clang -### --target=x86_64 -fcx-limited-range -fno-fast-math \
+// RUN:   -c %s 2>&1 | FileCheck --check-prefixes=RANGE,WARN21 %s
+
+// RUN: %clang -### -Werror --target=x86_64 -fno-cx-limited-range -fno-fast-math \
+// RUN:   -c %s 2>&1 | FileCheck --check-prefixes=RANGE %s
+
+// RUN: %clang -### --target=x86_64 -fcx-fortran-rules -fno-fast-math \
+// RUN:   -c %s 2>&1 | FileCheck --check-prefixes=RANGE,WARN22 %s
+
+// RUN: %clang -### -Werror --target=x86_64 -fno-cx-fortran-rules -fno-fast-math \
+// RUN:   -c %s 2>&1 | FileCheck --check-prefixes=RANGE %s
+
+// RUN: %clang -### -Werror --target=x86_64 -ffast-math -fno-fast-math \
+// RUN:   -c %s 2>&1 | FileCheck --check-prefixes=RANGE %s
+
+// RUN: %clang -### --target=x86_64 -fcomplex-arithmetic=basic -fno-fast-math \
+// RUN:   -c %s 2>&1 | FileCheck --check-prefixes=RANGE,WARN23 %s
+
+// RUN: %clang -### --target=x86_64 -fcomplex-arithmetic=promoted -fno-fast-math \
+// RUN:   -c %s 2>&1 | FileCheck --check-prefixes=RANGE,WARN24 %s
+
+// RUN: %clang -### --target=x86_64 -fcomplex-arithmetic=improved -fno-fast-math \
+// RUN:   -c %s 2>&1 | FileCheck --check-prefixes=RANGE,WARN25 %s
+
+// RUN: %clang -### -Werror --target=x86_64 -fcomplex-arithmetic=full -fno-fast-math \
+// RUN:   -c %s 2>&1 | FileCheck --check-prefixes=RANGE %s
+
+// RUN: %clang -### -Werror --target=x86_64 -ffp-model=aggressive -fno-fast-math \
+// RUN:   -c %s 2>&1 | FileCheck --check-prefixes=RANGE %s
+
+// RUN: %clang -### -Werror --target=x86_64 -ffp-model=fast -fno-fast-math \
+// RUN:   -c %s 2>&1 | FileCheck --check-prefixes=RANGE %s
+
+// RUN: %clang -### -Werror --target=x86_64 -ffp-model=precise -fno-fast-math \
+// RUN:   -c %s 2>&1 | FileCheck --check-prefixes=RANGE %s
+
+// RUN: %clang -### -Werror --target=x86_64 -ffp-model=strict -fno-fast-math \
+// RUN:   -c %s 2>&1 | FileCheck --check-prefixes=RANGE %s
+
+// RUN: %clang -### -Werror --target=x86_64 -fno-fast-math -fcx-limited-range \
+// RUN:   -c %s 2>&1 | FileCheck --check-prefixes=BASIC %s
+
+// RUN: %clang -### -Werror --target=x86_64 -fno-fast-math -fno-cx-limited-range \
+// RUN:   -c %s 2>&1 | FileCheck --check-prefixes=FULL %s
+
+// RUN: %clang -### -Werror --target=x86_64 -fno-fast-math -fcx-fortran-rules \
+// RUN:   -c %s 2>&1 | FileCheck --check-prefixes=IMPRVD %s
+
+// RUN: %clang -### -Werror --target=x86_64 -fno-fast-math -fno-cx-fortran-rules \
+// RUN:   -c %s 2>&1 | FileCheck --check-prefixes=FULL %s
+
+// RUN: %clang -### -Werror --target=x86_64 -fno-fast-math -ffast-math \
+// RUN:   -c %s 2>&1 | FileCheck --check-prefixes=BASIC %s
+
+// RUN: %clang -### -Werror --target=x86_64 -fno-fast-math -fcomplex-arithmetic=basic \
+// RUN:   -c %s 2>&1 | FileCheck --check-prefixes=BASIC %s
+
+// RUN: %clang -### -Werror --target=x86_64 -fno-fast-math -fcomplex-arithmetic=promoted \
+// RUN:   -c %s 2>&1 | FileCheck --check-prefixes=PRMTD %s
+
+// RUN: %clang -### -Werror --target=x86_64 -fno-fast-math -fcomplex-arithmetic=improved \
+// RUN:   -c %s 2>&1 | FileCheck --check-prefixes=IMPRVD %s
+
+// RUN: %clang -### -Werror --target=x86_64 -fno-fast-math -fcomplex-arithmetic=full \
+// RUN:   -c %s 2>&1 | FileCheck --check-prefixes=FULL %s
+
+// RUN: %clang -### -Werror --target=x86_64 -fno-fast-math -ffp-model=aggressive \
+// RUN:   -c %s 2>&1 | FileCheck --check-prefixes=BASIC %s
+
+// RUN: %clang -### -Werror --target=x86_64 -fno-fast-math -ffp-model=fast \
+// RUN:   -c %s 2>&1 | FileCheck --check-prefixes=PRMTD %s
+
+// RUN: %clang -### -Werror --target=x86_64 -fno-fast-math -ffp-model=precise \
+// RUN:   -c %s 2>&1 | FileCheck --check-prefixes=FULL %s
+
+// RUN: %clang -### -Werror --target=x86_64 -fno-fast-math -ffp-model=strict \
+// RUN:   -c %s 2>&1 | FileCheck --check-prefixes=FULL %s
 
 // WARN1: warning: overriding '-fcx-limited-range' option with '-fcx-fortran-rules' [-Woverriding-option]
 // WARN2: warning: overriding '-fno-cx-limited-range' option with '-fcx-fortran-rules' [-Woverriding-option]
@@ -196,5 +265,20 @@
 // WARN14: overriding '-complex-range=promoted' option with '-fcx-limited-range' [-Woverriding-option]
 // WARN17: warning: overriding '-fcomplex-arithmetic=full' option with '-fcomplex-arithmetic=basic' [-Woverriding-option]
 // WARN20: warning: overriding '-fcx-fortran-rules' option with '-fcx-limited-range' [-Woverriding-option]
+// WARN21: warning: overriding '-fcx-limited-range' option with '-fno-fast-math' [-Woverriding-option]
+// WARN22: warning: overriding '-fcx-fortran-rules' option with '-fno-fast-math' [-Woverriding-option]
+// WARN23: warning: overriding '-fcomplex-arithmetic=basic' option with '-fno-fast-math' [-Woverriding-option]
+// WARN24: warning: overriding '-fcomplex-arithmetic=promoted' option with '-fno-fast-math' [-Woverriding-option]
+// WARN25: warning: overriding '-fcomplex-arithmetic=improved' option with '-fno-fast-math' [-Woverriding-option]
+
+// BASIC: -complex-range=basic
+// FULL: -complex-range=full
+// PRMTD: -complex-range=promoted
+// BASIC-NOT: -complex-range=improved
+// CHECK-NOT: -complex-range=basic
+// IMPRVD: -complex-range=improved
+// IMPRVD-NOT: -complex-range=basic
+// CHECK-NOT: -complex-range=improved
+// RANGE-NOT: -complex-range=
 
 // ERR: error: unsupported argument 'foo' to option '-fcomplex-arithmetic='

@@ -10,13 +10,17 @@
 // extensions that will eventually be implemented in Fortran.
 
 #include "flang/Runtime/extensions.h"
+#include "unit.h"
 #include "flang-rt/runtime/descriptor.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/tools.h"
 #include "flang/Runtime/command.h"
 #include "flang/Runtime/entry-names.h"
 #include "flang/Runtime/io-api.h"
+#include "flang/Runtime/iostat-consts.h"
+#include <atomic>
 #include <chrono>
+#include <cstdio>
 #include <cstring>
 #include <ctime>
 #include <signal.h>
@@ -24,10 +28,7 @@
 #include <thread>
 
 #ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <windows.h>
-
+#include "flang/Common/windows-include.h"
 #include <synchapi.h>
 
 inline void CtimeBuffer(char *buffer, size_t bufsize, const time_t cur_time,
@@ -57,9 +58,75 @@ inline void CtimeBuffer(char *buffer, size_t bufsize, const time_t cur_time,
 #include <direct.h>
 #endif
 
-extern "C" {
-
 namespace Fortran::runtime {
+
+// Common implementation that could be used for either SECNDS() or SECNDSD(),
+// which are defined for float or double.
+template <typename T> T SecndsImpl(T *refTime) {
+  static_assert(std::is_same<T, float>::value || std::is_same<T, double>::value,
+      "T must be float or double");
+  constexpr T FAIL_SECNDS{T{-1.0}}; // Failure code for this function
+  // Failure code for time functions that return std::time_t
+  constexpr std::time_t FAIL_TIME{std::time_t{-1}};
+  constexpr std::time_t TIME_UNINITIALIZED{std::time_t{0}};
+  if (!refTime) {
+    return FAIL_SECNDS;
+  }
+  std::time_t now{std::time(nullptr)};
+  if (now == FAIL_TIME) {
+    return FAIL_SECNDS;
+  }
+  // In case we are using a float result, we can only precisely store
+  // 2^24 seconds, which comes out to about 194 days. Thus, need to pick
+  // a starting point, which will allow us to keep the time diffs as precise
+  // as possible. Given the description of this function, midnight of the
+  // current day is the best starting point.
+  static std::atomic<std::time_t> startingPoint{TIME_UNINITIALIZED};
+  // "Acquire" will give us writes from other threads.
+  std::time_t localStartingPoint{startingPoint.load(std::memory_order_acquire)};
+  // Initialize startingPoint if we haven't initialized it yet or
+  // if we were passed 0.0, which indicates to compute seconds from
+  // current day's midnight.
+  if (localStartingPoint == TIME_UNINITIALIZED || *refTime == 0.0) {
+    // Compute midnight in the current timezone and try to initialize
+    // startingPoint with it. If there are any errors during computation,
+    // exit with error and hope that the other threads have better luck
+    // (or the user retries the call).
+    struct tm timeInfo;
+#ifdef _WIN32
+    if (localtime_s(&timeInfo, &now)) {
+#else
+    if (!localtime_r(&now, &timeInfo)) {
+#endif
+      return FAIL_SECNDS;
+    }
+    // Back to midnight
+    timeInfo.tm_hour = 0;
+    timeInfo.tm_min = 0;
+    timeInfo.tm_sec = 0;
+    localStartingPoint = std::mktime(&timeInfo);
+    if (localStartingPoint == FAIL_TIME) {
+      return FAIL_SECNDS;
+    }
+    INTERNAL_CHECK(localStartingPoint > TIME_UNINITIALIZED);
+    // Attempt to atomically set startingPoint to localStartingPoint
+    std::time_t expected{TIME_UNINITIALIZED};
+    if (startingPoint.compare_exchange_strong(expected, localStartingPoint,
+            std::memory_order_acq_rel, // "Acquire and release" on success
+            std::memory_order_acquire)) { // "Acquire" on failure
+      // startingPoint was set to localStartingPoint
+    } else {
+      // startingPoint was already initialized and its value was loaded
+      // into `expected`. Discard our precomputed midnight value in favor
+      // of the one from startingPoint.
+      localStartingPoint = expected;
+    }
+  }
+  double diffStartingPoint{std::difftime(now, localStartingPoint)};
+  return static_cast<T>(diffStartingPoint) - *refTime;
+}
+
+extern "C" {
 
 gid_t RTNAME(GetGID)() {
 #ifdef _WIN32
@@ -261,6 +328,38 @@ int RTNAME(Chdir)(const char *name) {
 #endif
 }
 
+int FORTRAN_PROCEDURE_NAME(hostnm)(char *hn, int length) {
+  std::int32_t status{0};
+
+  if (!hn || length < 0) {
+    return EINVAL;
+  }
+
+#ifdef _WIN32
+  DWORD dwSize{static_cast<DWORD>(length)};
+
+  // Note: Winsock has gethostname(), but use Win32 API GetComputerNameEx(),
+  // in order to avoid adding dependency on Winsock.
+  if (!GetComputerNameExA(ComputerNameDnsHostname, hn, &dwSize)) {
+    status = GetLastError();
+  }
+#else
+  if (gethostname(hn, length) < 0) {
+    status = errno;
+  }
+#endif
+
+  if (status == 0) {
+    // Find zero terminator and fill the string from the
+    // zero terminator to the end with spaces
+    char *str_end{hn + length};
+    char *str_zero{std::find(hn, str_end, '\0')};
+    std::fill(str_zero, str_end, ' ');
+  }
+
+  return status;
+}
+
 int FORTRAN_PROCEDURE_NAME(ierrno)() { return errno; }
 
 void FORTRAN_PROCEDURE_NAME(qsort)(int *array, int *len, int *isize,
@@ -268,5 +367,54 @@ void FORTRAN_PROCEDURE_NAME(qsort)(int *array, int *len, int *isize,
   qsort(array, *len, *isize, compar);
 }
 
-} // namespace Fortran::runtime
+// PERROR(STRING)
+void RTNAME(Perror)(const char *str) { perror(str); }
+
+// GNU extension function SECNDS(refTime)
+float FORTRAN_PROCEDURE_NAME(secnds)(float *refTime) {
+  return SecndsImpl(refTime);
+}
+
+float RTNAME(Secnds)(float *refTime, const char *sourceFile, int line) {
+  Terminator terminator{sourceFile, line};
+  RUNTIME_CHECK(terminator, refTime != nullptr);
+  return FORTRAN_PROCEDURE_NAME(secnds)(refTime);
+}
+
+// GNU extension function TIME()
+std::int64_t RTNAME(time)() { return time(nullptr); }
+
+// MCLOCK: returns accumulated CPU time in ticks
+std::int32_t FORTRAN_PROCEDURE_NAME(mclock)() { return std::clock(); }
+
+// Extension procedures related to I/O
+
+namespace io {
+std::int32_t RTNAME(Fseek)(int unitNumber, std::int64_t zeroBasedPos,
+    int whence, const char *sourceFileName, int lineNumber) {
+  if (ExternalFileUnit * unit{ExternalFileUnit::LookUp(unitNumber)}) {
+    Terminator terminator{sourceFileName, lineNumber};
+    IoErrorHandler handler{terminator};
+    if (unit->Fseek(
+            zeroBasedPos, static_cast<enum FseekWhence>(whence), handler)) {
+      return IostatOk;
+    } else {
+      return IostatCannotReposition;
+    }
+  } else {
+    return IostatBadUnitNumber;
+  }
+}
+
+std::int64_t RTNAME(Ftell)(int unitNumber) {
+  if (ExternalFileUnit * unit{ExternalFileUnit::LookUp(unitNumber)}) {
+    return unit->InquirePos() - 1; // zero-based result
+  } else {
+    return -1;
+  }
+}
+} // namespace io
+
 } // extern "C"
+
+} // namespace Fortran::runtime

@@ -13,7 +13,6 @@
 
 #include "clang/ASTMatchers/Dynamic/VariantValue.h"
 #include "clang/Basic/LLVM.h"
-#include "llvm/ADT/STLExtras.h"
 #include <optional>
 
 namespace clang {

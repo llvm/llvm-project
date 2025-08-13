@@ -18,8 +18,10 @@ add_clang_library(clangAnalysis
   CodeInjector.cpp
   Dominators.cpp
   ExprMutationAnalyzer.cpp
+  FixitUtil.cpp
   IntervalPartition.cpp
   IssueHash.cpp
+  LifetimeSafety.cpp
   LiveVariables.cpp
   MacroExpansionContext.cpp
   ObjCNoReturn.cpp

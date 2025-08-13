@@ -118,3 +118,135 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+module {
+  // CHECK:           func.func private @func_with_reverse_order_no_result_no_calls(%[[ARG0:.*]]: memref<1xi8, 1>, %[[ARG1:.*]]: memref<3xi8, 1>, %[[ARG2:.*]]: memref<2xi8, 1>) {
+  func.func private @func_with_reverse_order_no_result_no_calls(%arg0: memref<1xi8, 1>, %arg1: memref<2xi8, 1>, %arg2: memref<3xi8, 1>) {
+    // CHECK:             %[[C0:.*]] = arith.constant 0 : index
+    %c0 = arith.constant 0 : index
+    // CHECK:             %[[VAL_4:.*]] = memref.view %[[ARG0]]{{\[}}%[[C0]]][] : memref<1xi8, 1> to memref<1xi8, 1>
+    %view = memref.view %arg0[%c0][] : memref<1xi8, 1> to memref<1xi8, 1>
+    // CHECK:             %[[VAL_5:.*]] = memref.view %[[ARG2]]{{\[}}%[[C0]]][] : memref<2xi8, 1> to memref<2xi8, 1>
+    %view0 = memref.view %arg1[%c0][] : memref<2xi8, 1> to memref<2xi8, 1>
+    // CHECK:             %[[VAL_6:.*]] = memref.view %[[ARG1]]{{\[}}%[[C0]]][] : memref<3xi8, 1> to memref<3xi8, 1>
+    %view1 = memref.view %arg2[%c0][] : memref<3xi8, 1> to memref<3xi8, 1>
+    return
+  }
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    %module = transform.get_parent_op %func : (!transform.any_op) -> !transform.any_op
+    transform.func.replace_func_signature @func_with_reverse_order_no_result_no_calls args_interchange = [0, 2, 1] results_interchange = [] at %module : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+module {
+  // CHECK:           func.func private @func_with_reverse_order_no_result(%[[ARG0:.*]]: memref<1xi8, 1>, %[[ARG1:.*]]: memref<3xi8, 1>, %[[ARG2:.*]]: memref<2xi8, 1>) {
+  func.func private @func_with_reverse_order_no_result(%arg0: memref<1xi8, 1>, %arg1: memref<2xi8, 1>, %arg2: memref<3xi8, 1>) {
+    // CHECK:             %[[C0:.*]] = arith.constant 0 : index
+    %c0 = arith.constant 0 : index
+    // CHECK:             %[[VAL_4:.*]] = memref.view %[[ARG0]]{{\[}}%[[C0]]][] : memref<1xi8, 1> to memref<1xi8, 1>
+    %view = memref.view %arg0[%c0][] : memref<1xi8, 1> to memref<1xi8, 1>
+    // CHECK:             %[[VAL_5:.*]] = memref.view %[[ARG2]]{{\[}}%[[C0]]][] : memref<2xi8, 1> to memref<2xi8, 1>
+    %view0 = memref.view %arg1[%c0][] : memref<2xi8, 1> to memref<2xi8, 1>
+    // CHECK:             %[[VAL_6:.*]] = memref.view %[[ARG1]]{{\[}}%[[C0]]][] : memref<3xi8, 1> to memref<3xi8, 1>
+    %view1 = memref.view %arg2[%c0][] : memref<3xi8, 1> to memref<3xi8, 1>
+    return
+  }
+
+  // CHECK:           func.func @func_with_reverse_order_no_result_caller(%[[ARG0:.*]]: memref<1xi8, 1>, %[[ARG1:.*]]: memref<2xi8, 1>, %[[ARG2:.*]]: memref<3xi8, 1>) {
+  func.func @func_with_reverse_order_no_result_caller(%arg0: memref<1xi8, 1>, %arg1: memref<2xi8, 1>, %arg2: memref<3xi8, 1>) {
+    // CHECK:             call @func_with_reverse_order_no_result(%[[ARG0]], %[[ARG2]], %[[ARG1]]) : (memref<1xi8, 1>, memref<3xi8, 1>, memref<2xi8, 1>) -> ()
+    call @func_with_reverse_order_no_result(%arg0, %arg1, %arg2) : (memref<1xi8, 1>, memref<2xi8, 1>, memref<3xi8, 1>) -> ()
+    return
+  }
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %funcs = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    %f:2 = transform.split_handle %funcs : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %module = transform.get_parent_op %f#0 : (!transform.any_op) -> !transform.any_op
+    transform.func.replace_func_signature @func_with_reverse_order_no_result args_interchange = [0, 2, 1] results_interchange = [] at %module {adjust_func_calls} : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+module {
+  // CHECK:           func.func private @func_with_reverse_order(%[[ARG0:.*]]: memref<1xi8, 1>, %[[ARG1:.*]]: memref<3xi8, 1>, %[[ARG2:.*]]: memref<2xi8, 1>) -> (memref<2xi8, 1>, memref<1xi8, 1>) {
+  func.func private @func_with_reverse_order(%arg0: memref<1xi8, 1>, %arg1: memref<2xi8, 1>, %arg2: memref<3xi8, 1>) -> (memref<1xi8, 1>, memref<2xi8, 1>) {
+    // CHECK:             %[[C0:.*]] = arith.constant 0 : index
+    %c0 = arith.constant 0 : index
+    // CHECK:             %[[RET_0:.*]] = memref.view %[[ARG0]]{{\[}}%[[C0]]][] : memref<1xi8, 1> to memref<1xi8, 1>
+    %view = memref.view %arg0[%c0][] : memref<1xi8, 1> to memref<1xi8, 1>
+    // CHECK:             %[[RET_1:.*]] = memref.view %[[ARG2]]{{\[}}%[[C0]]][] : memref<2xi8, 1> to memref<2xi8, 1>
+    %view0 = memref.view %arg1[%c0][] : memref<2xi8, 1> to memref<2xi8, 1>
+    // CHECK:             %[[VAL_6:.*]] = memref.view %[[ARG1]]{{\[}}%[[C0]]][] : memref<3xi8, 1> to memref<3xi8, 1>
+    %view1 = memref.view %arg2[%c0][] : memref<3xi8, 1> to memref<3xi8, 1>
+    // CHECK:             return %[[RET_1]], %[[RET_0]] : memref<2xi8, 1>, memref<1xi8, 1>
+    return %view, %view0 : memref<1xi8, 1>, memref<2xi8, 1>
+  }
+
+  // CHECK:           func.func @func_with_reverse_order_caller(%[[ARG0:.*]]: memref<1xi8, 1>, %[[ARG1:.*]]: memref<2xi8, 1>, %[[ARG2:.*]]: memref<3xi8, 1>) -> (memref<1xi8, 1>, memref<2xi8, 1>) {
+  func.func @func_with_reverse_order_caller(%arg0: memref<1xi8, 1>, %arg1: memref<2xi8, 1>, %arg2: memref<3xi8, 1>) -> (memref<1xi8, 1>, memref<2xi8, 1>) {
+    // CHECK:             %[[RET:.*]]:2 = call @func_with_reverse_order(%[[ARG0]], %[[ARG2]], %[[ARG1]]) : (memref<1xi8, 1>, memref<3xi8, 1>, memref<2xi8, 1>) -> (memref<2xi8, 1>, memref<1xi8, 1>)
+    %0, %1 = call @func_with_reverse_order(%arg0, %arg1, %arg2) : (memref<1xi8, 1>, memref<2xi8, 1>, memref<3xi8, 1>) -> (memref<1xi8, 1>, memref<2xi8, 1>)
+    // CHECK:             return %[[RET]]#1, %[[RET]]#0 : memref<1xi8, 1>, memref<2xi8, 1>
+    return %0, %1 : memref<1xi8, 1>, memref<2xi8, 1>
+  }
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %funcs = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    %f:2 = transform.split_handle %funcs : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %module = transform.get_parent_op %f#0 : (!transform.any_op) -> !transform.any_op
+    transform.func.replace_func_signature @func_with_reverse_order args_interchange = [0, 2, 1] results_interchange = [1, 0] at %module {adjust_func_calls} : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+module {
+  // CHECK:           func.func private @func_with_reverse_order_with_attr(%[[ARG0:.*]]: memref<1xi8, 1>, %[[ARG1:.*]]: memref<3xi8, 1>, %[[ARG2:.*]]: memref<2xi8, 1> {transform.readonly}) -> (memref<2xi8, 1>, memref<1xi8, 1>) {
+  func.func private @func_with_reverse_order_with_attr(%arg0: memref<1xi8, 1>, %arg1: memref<2xi8, 1>{transform.readonly}, %arg2: memref<3xi8, 1>) -> (memref<1xi8, 1>, memref<2xi8, 1>) {
+    // CHECK:             %[[C0:.*]] = arith.constant 0 : index
+    %c0 = arith.constant 0 : index
+    // CHECK:             %[[RET_0:.*]] = memref.view %[[ARG0]]{{\[}}%[[C0]]][] : memref<1xi8, 1> to memref<1xi8, 1>
+    %view = memref.view %arg0[%c0][] : memref<1xi8, 1> to memref<1xi8, 1>
+    // CHECK:             %[[RET_1:.*]] = memref.view %[[ARG2]]{{\[}}%[[C0]]][] : memref<2xi8, 1> to memref<2xi8, 1>
+    %view0 = memref.view %arg1[%c0][] : memref<2xi8, 1> to memref<2xi8, 1>
+    // CHECK:             %[[VAL_6:.*]] = memref.view %[[ARG1]]{{\[}}%[[C0]]][] : memref<3xi8, 1> to memref<3xi8, 1>
+    %view1 = memref.view %arg2[%c0][] : memref<3xi8, 1> to memref<3xi8, 1>
+    // CHECK:             return %[[RET_1]], %[[RET_0]] : memref<2xi8, 1>, memref<1xi8, 1>
+    return %view, %view0 : memref<1xi8, 1>, memref<2xi8, 1>
+  }
+
+  // CHECK:           func.func @func_with_reverse_order_with_attr_caller(%[[ARG0:.*]]: memref<1xi8, 1>, %[[ARG1:.*]]: memref<2xi8, 1>, %[[ARG2:.*]]: memref<3xi8, 1>) -> (memref<1xi8, 1>, memref<2xi8, 1>) {
+  func.func @func_with_reverse_order_with_attr_caller(%arg0: memref<1xi8, 1>, %arg1: memref<2xi8, 1>, %arg2: memref<3xi8, 1>) -> (memref<1xi8, 1>, memref<2xi8, 1>) {
+    // CHECK:             %[[RET:.*]]:2 = call @func_with_reverse_order_with_attr(%[[ARG0]], %[[ARG2]], %[[ARG1]]) : (memref<1xi8, 1>, memref<3xi8, 1>, memref<2xi8, 1>) -> (memref<2xi8, 1>, memref<1xi8, 1>)
+    %0, %1 = call @func_with_reverse_order_with_attr(%arg0, %arg1, %arg2) : (memref<1xi8, 1>, memref<2xi8, 1>, memref<3xi8, 1>) -> (memref<1xi8, 1>, memref<2xi8, 1>)
+    // CHECK:             return %[[RET]]#1, %[[RET]]#0 : memref<1xi8, 1>, memref<2xi8, 1>
+    return %0, %1 : memref<1xi8, 1>, memref<2xi8, 1>
+  }
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %funcs = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    %f:2 = transform.split_handle %funcs : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    %module = transform.get_parent_op %f#0 : (!transform.any_op) -> !transform.any_op
+    transform.func.replace_func_signature @func_with_reverse_order_with_attr args_interchange = [0, 2, 1] results_interchange = [1, 0] at %module {adjust_func_calls} : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}

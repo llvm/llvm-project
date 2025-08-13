@@ -14,6 +14,7 @@ add_custom_command(
   DEPENDS lldb-sbapi-dwarf-enums
   COMMAND ${SWIG_EXECUTABLE}
       ${SWIG_COMMON_FLAGS}
+      -doxygen
       -I${CMAKE_CURRENT_SOURCE_DIR}
       ${SWIG_EXTRA_FLAGS}
       -outdir ${CMAKE_CURRENT_BINARY_DIR}

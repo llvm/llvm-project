@@ -15,6 +15,7 @@
 #ifndef LLVM_SUPPORT_TYPESIZE_H
 #define LLVM_SUPPORT_TYPESIZE_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -27,7 +28,7 @@ namespace llvm {
 
 /// Reports a diagnostic message to indicate an invalid size request has been
 /// done on a scalable vector. This function may not return.
-void reportInvalidSizeRequest(const char *Msg);
+LLVM_ABI void reportInvalidSizeRequest(const char *Msg);
 
 /// StackOffset holds a fixed and a scalable offset in bytes.
 class StackOffset {
@@ -374,7 +375,7 @@ public:
   //     else
   //       bail out early for scalable vectors and use getFixedValue()
   //   }
-  operator ScalarTy() const;
+  LLVM_ABI operator ScalarTy() const;
 
   // Additional operators needed to avoid ambiguous parses
   // because of the implicit conversion hack.

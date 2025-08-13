@@ -66,7 +66,6 @@
 #include <cassert>
 #include <cstddef>
 #include <cstring>
-#include <memory>
 #include <optional>
 #include <string>
 #include <tuple>
@@ -400,9 +399,9 @@ void LinkageComputer::mergeTemplateLV(
   FunctionTemplateDecl *temp = specInfo->getTemplate();
   // Merge information from the template declaration.
   LinkageInfo tempLV = getLVForDecl(temp, computation);
-  // The linkage of the specialization should be consistent with the
-  // template declaration.
-  LV.setLinkage(tempLV.getLinkage());
+  // The linkage and visibility of the specialization should be
+  // consistent with the template declaration.
+  LV.mergeMaybeWithVisibility(tempLV, considerVisibility);
 
   // Merge information from the template parameters.
   LinkageInfo paramsLV =
@@ -810,8 +809,7 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
     // functions as the host-callable kernel functions are emitted at codegen.
     if (Context.getLangOpts().OpenMP &&
         Context.getLangOpts().OpenMPIsTargetDevice &&
-        ((Context.getTargetInfo().getTriple().isAMDGPU() ||
-          Context.getTargetInfo().getTriple().isNVPTX()) ||
+        (Context.getTargetInfo().getTriple().isGPU() ||
          OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(Function)))
       LV.mergeVisibility(HiddenVisibility, /*newExplicit=*/false);
 
@@ -1052,6 +1050,13 @@ LinkageComputer::getLVForClassMember(const NamedDecl *D,
     if (const auto *redeclTemp = dyn_cast<RedeclarableTemplateDecl>(temp)) {
       if (isExplicitMemberSpecialization(redeclTemp)) {
         explicitSpecSuppressor = temp->getTemplatedDecl();
+      } else if (const RedeclarableTemplateDecl *from =
+                     redeclTemp->getInstantiatedFromMemberTemplate()) {
+        // If no explicit visibility is specified yet, and this is an
+        // instantiated member of a template, look up visibility there
+        // as well.
+        LinkageInfo fromLV = from->getLinkageAndVisibility();
+        LV.mergeMaybeWithVisibility(fromLV, considerVisibility);
       }
     }
   }
@@ -1227,6 +1232,9 @@ getExplicitVisibilityAux(const NamedDecl *ND,
                          NamedDecl::ExplicitVisibilityKind kind,
                          bool IsMostRecent) {
   assert(!IsMostRecent || ND == ND->getMostRecentDecl());
+
+  if (isa<ConceptDecl>(ND))
+    return {};
 
   // Check the declaration itself first.
   if (std::optional<Visibility> V = getVisibilityOf(ND, kind))
@@ -1685,9 +1693,9 @@ void NamedDecl::printQualifiedName(raw_ostream &OS,
     return;
   }
   printNestedNameSpecifier(OS, P);
-  if (getDeclName())
-    OS << *this;
-  else {
+  if (getDeclName()) {
+    printName(OS, P);
+  } else {
     // Give the printName override a chance to pick a different name before we
     // fall back to "(anonymous)".
     SmallString<64> NameBuffer;
@@ -1875,18 +1883,13 @@ bool NamedDecl::declarationReplaces(const NamedDecl *OldD,
 
   // Using declarations can be replaced if they import the same name from the
   // same context.
-  if (const auto *UD = dyn_cast<UsingDecl>(this)) {
-    ASTContext &Context = getASTContext();
-    return Context.getCanonicalNestedNameSpecifier(UD->getQualifier()) ==
-           Context.getCanonicalNestedNameSpecifier(
-               cast<UsingDecl>(OldD)->getQualifier());
-  }
-  if (const auto *UUVD = dyn_cast<UnresolvedUsingValueDecl>(this)) {
-    ASTContext &Context = getASTContext();
-    return Context.getCanonicalNestedNameSpecifier(UUVD->getQualifier()) ==
-           Context.getCanonicalNestedNameSpecifier(
-                        cast<UnresolvedUsingValueDecl>(OldD)->getQualifier());
-  }
+  if (const auto *UD = dyn_cast<UsingDecl>(this))
+    return UD->getQualifier().getCanonical() ==
+
+           cast<UsingDecl>(OldD)->getQualifier().getCanonical();
+  if (const auto *UUVD = dyn_cast<UnresolvedUsingValueDecl>(this))
+    return UUVD->getQualifier().getCanonical() ==
+           cast<UnresolvedUsingValueDecl>(OldD)->getQualifier().getCanonical();
 
   if (isRedeclarable(getKind())) {
     if (getCanonicalDecl() != OldD->getCanonicalDecl())
@@ -2010,8 +2013,8 @@ void DeclaratorDecl::setQualifierInfo(NestedNameSpecifierLoc QualifierLoc) {
   }
 }
 
-void DeclaratorDecl::setTrailingRequiresClause(Expr *TrailingRequiresClause) {
-  assert(TrailingRequiresClause);
+void DeclaratorDecl::setTrailingRequiresClause(const AssociatedConstraint &AC) {
+  assert(AC);
   // Make sure the extended decl info is allocated.
   if (!hasExtInfo()) {
     // Save (non-extended) type source info pointer.
@@ -2022,7 +2025,7 @@ void DeclaratorDecl::setTrailingRequiresClause(Expr *TrailingRequiresClause) {
     getExtInfo()->TInfo = savedTInfo;
   }
   // Set requires clause info.
-  getExtInfo()->TrailingRequiresClause = TrailingRequiresClause;
+  getExtInfo()->TrailingRequiresClause = AC;
 }
 
 void DeclaratorDecl::setTemplateParameterListsInfo(
@@ -2104,7 +2107,7 @@ void QualifierInfo::setTemplateParameterListsInfo(
   if (!TPLists.empty()) {
     TemplParamLists = new (Context) TemplateParameterList *[TPLists.size()];
     NumTemplParamLists = TPLists.size();
-    std::copy(TPLists.begin(), TPLists.end(), TemplParamLists);
+    llvm::copy(TPLists, TemplParamLists);
   }
 }
 
@@ -2433,6 +2436,23 @@ VarDecl *VarDecl::getInitializingDeclaration() {
     }
   }
   return Def;
+}
+
+bool VarDecl::hasInitWithSideEffects() const {
+  if (!hasInit())
+    return false;
+
+  EvaluatedStmt *ES = ensureEvaluatedStmt();
+  if (!ES->CheckedForSideEffects) {
+    const Expr *E = getInit();
+    ES->HasSideEffects =
+        E->HasSideEffects(getASTContext()) &&
+        // We can get a value-dependent initializer during error recovery.
+        (E->isValueDependent() || getType()->isDependentType() ||
+         !evaluateValue());
+    ES->CheckedForSideEffects = true;
+  }
+  return ES->HasSideEffects;
 }
 
 bool VarDecl::isOutOfLine() const {
@@ -2839,7 +2859,8 @@ VarDecl::needsDestruction(const ASTContext &Ctx) const {
 bool VarDecl::hasFlexibleArrayInit(const ASTContext &Ctx) const {
   assert(hasInit() && "Expect initializer to check for flexible array init");
   auto *Ty = getType()->getAs<RecordType>();
-  if (!Ty || !Ty->getDecl()->hasFlexibleArrayMember())
+  if (!Ty ||
+      !Ty->getOriginalDecl()->getDefinitionOrSelf()->hasFlexibleArrayMember())
     return false;
   auto *List = dyn_cast<InitListExpr>(getInit()->IgnoreParens());
   if (!List)
@@ -2854,7 +2875,10 @@ bool VarDecl::hasFlexibleArrayInit(const ASTContext &Ctx) const {
 CharUnits VarDecl::getFlexibleArrayInitChars(const ASTContext &Ctx) const {
   assert(hasInit() && "Expect initializer to check for flexible array init");
   auto *Ty = getType()->getAs<RecordType>();
-  if (!Ty || !Ty->getDecl()->hasFlexibleArrayMember())
+  if (!Ty)
+    return CharUnits::Zero();
+  const RecordDecl *RD = Ty->getOriginalDecl()->getDefinitionOrSelf();
+  if (!Ty || !RD->hasFlexibleArrayMember())
     return CharUnits::Zero();
   auto *List = dyn_cast<InitListExpr>(getInit()->IgnoreParens());
   if (!List || List->getNumInits() == 0)
@@ -2864,7 +2888,7 @@ CharUnits VarDecl::getFlexibleArrayInitChars(const ASTContext &Ctx) const {
   if (!InitTy)
     return CharUnits::Zero();
   CharUnits FlexibleArraySize = Ctx.getTypeSizeInChars(InitTy);
-  const ASTRecordLayout &RL = Ctx.getASTRecordLayout(Ty->getDecl());
+  const ASTRecordLayout &RL = Ctx.getASTRecordLayout(RD);
   CharUnits FlexibleArrayOffset =
       Ctx.toCharUnitsFromBits(RL.getFieldOffset(RL.getFieldCount() - 1));
   if (FlexibleArrayOffset + FlexibleArraySize < RL.getSize())
@@ -2966,7 +2990,10 @@ bool ParmVarDecl::isDestroyedInCallee() const {
   // FIXME: isParamDestroyedInCallee() should probably imply
   // isDestructedType()
   const auto *RT = getType()->getAs<RecordType>();
-  if (RT && RT->getDecl()->isParamDestroyedInCallee() &&
+  if (RT &&
+      RT->getOriginalDecl()
+          ->getDefinitionOrSelf()
+          ->isParamDestroyedInCallee() &&
       getType().isDestructedType())
     return true;
 
@@ -3048,7 +3075,7 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
                            TypeSourceInfo *TInfo, StorageClass S,
                            bool UsesFPIntrin, bool isInlineSpecified,
                            ConstexprSpecKind ConstexprKind,
-                           Expr *TrailingRequiresClause)
+                           const AssociatedConstraint &TrailingRequiresClause)
     : DeclaratorDecl(DK, DC, NameInfo.getLoc(), NameInfo.getName(), T, TInfo,
                      StartLoc),
       DeclContext(DK), redeclarable_base(C), Body(), ODRHash(0),
@@ -3083,6 +3110,7 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
       static_cast<unsigned char>(DeductionCandidate::Normal);
   FunctionDeclBits.HasODRHash = false;
   FunctionDeclBits.FriendConstraintRefersToEnclosingTemplate = false;
+
   if (TrailingRequiresClause)
     setTrailingRequiresClause(TrailingRequiresClause);
 }
@@ -3116,8 +3144,7 @@ FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
   Info->NumLookups = Lookups.size();
   Info->HasDeletedMessage = DeletedMessage != nullptr;
 
-  std::uninitialized_copy(Lookups.begin(), Lookups.end(),
-                          Info->getTrailingObjects<DeclAccessPair>());
+  llvm::uninitialized_copy(Lookups, Info->getTrailingObjects<DeclAccessPair>());
   if (DeletedMessage)
     *Info->getTrailingObjects<StringLiteral *>() = DeletedMessage;
   return Info;
@@ -3344,7 +3371,8 @@ bool FunctionDecl::isMSVCRTEntryPoint() const {
   // semantic analysis for these functions remains the same.
 
   // MSVCRT entry points only exist on MSVCRT targets.
-  if (!TUnit->getASTContext().getTargetInfo().getTriple().isOSMSVCRT())
+  if (!TUnit->getASTContext().getTargetInfo().getTriple().isOSMSVCRT() &&
+      !TUnit->getASTContext().getTargetInfo().getTriple().isUEFI())
     return false;
 
   // Nameless functions like constructors cannot be entry points.
@@ -3362,15 +3390,13 @@ bool FunctionDecl::isMSVCRTEntryPoint() const {
 }
 
 bool FunctionDecl::isReservedGlobalPlacementOperator() const {
-  if (getDeclName().getNameKind() != DeclarationName::CXXOperatorName)
-    return false;
-  if (getDeclName().getCXXOverloadedOperator() != OO_New &&
-      getDeclName().getCXXOverloadedOperator() != OO_Delete &&
-      getDeclName().getCXXOverloadedOperator() != OO_Array_New &&
-      getDeclName().getCXXOverloadedOperator() != OO_Array_Delete)
+  if (!getDeclName().isAnyOperatorNewOrDelete())
     return false;
 
   if (!getDeclContext()->getRedeclContext()->isTranslationUnit())
+    return false;
+
+  if (isTypeAwareOperatorNewOrDelete())
     return false;
 
   const auto *proto = getType()->castAs<FunctionProtoType>();
@@ -3386,14 +3412,9 @@ bool FunctionDecl::isReservedGlobalPlacementOperator() const {
   return (proto->getParamType(1).getCanonicalType() == Context.VoidPtrTy);
 }
 
-bool FunctionDecl::isReplaceableGlobalAllocationFunction(
-    std::optional<unsigned> *AlignmentParam, bool *IsNothrow) const {
-  if (getDeclName().getNameKind() != DeclarationName::CXXOperatorName)
-    return false;
-  if (getDeclName().getCXXOverloadedOperator() != OO_New &&
-      getDeclName().getCXXOverloadedOperator() != OO_Delete &&
-      getDeclName().getCXXOverloadedOperator() != OO_Array_New &&
-      getDeclName().getCXXOverloadedOperator() != OO_Array_Delete)
+bool FunctionDecl::isUsableAsGlobalAllocationFunctionInConstantEvaluation(
+    UnsignedOrNone *AlignmentParam, bool *IsNothrow) const {
+  if (!getDeclName().isAnyOperatorNewOrDelete())
     return false;
 
   if (isa<CXXRecordDecl>(getDeclContext()))
@@ -3403,8 +3424,31 @@ bool FunctionDecl::isReplaceableGlobalAllocationFunction(
   if (!getDeclContext()->getRedeclContext()->isTranslationUnit())
     return false;
 
+  if (isVariadic())
+    return false;
+
+  if (isTypeAwareOperatorNewOrDelete()) {
+    bool IsDelete = getDeclName().isAnyOperatorDelete();
+    unsigned RequiredParameterCount =
+        IsDelete ? FunctionDecl::RequiredTypeAwareDeleteParameterCount
+                 : FunctionDecl::RequiredTypeAwareNewParameterCount;
+    if (AlignmentParam)
+      *AlignmentParam =
+          /* type identity */ 1U + /* address */ IsDelete + /* size */ 1U;
+    if (RequiredParameterCount == getNumParams())
+      return true;
+    if (getNumParams() > RequiredParameterCount + 1)
+      return false;
+    if (!getParamDecl(RequiredParameterCount)->getType()->isNothrowT())
+      return false;
+
+    if (IsNothrow)
+      *IsNothrow = true;
+    return true;
+  }
+
   const auto *FPT = getType()->castAs<FunctionProtoType>();
-  if (FPT->getNumParams() == 0 || FPT->getNumParams() > 4 || FPT->isVariadic())
+  if (FPT->getNumParams() == 0 || FPT->getNumParams() > 4)
     return false;
 
   // If this is a single-parameter function, it must be a replaceable global
@@ -3424,8 +3468,7 @@ bool FunctionDecl::isReplaceableGlobalAllocationFunction(
   // In C++14, the next parameter can be a 'std::size_t' for sized delete.
   bool IsSizedDelete = false;
   if (Ctx.getLangOpts().SizedDeallocation &&
-      (getDeclName().getCXXOverloadedOperator() == OO_Delete ||
-       getDeclName().getCXXOverloadedOperator() == OO_Array_Delete) &&
+      getDeclName().isAnyOperatorDelete() &&
       Ctx.hasSameType(Ty, Ctx.getSizeType())) {
     IsSizedDelete = true;
     Consume();
@@ -3461,7 +3504,7 @@ bool FunctionDecl::isReplaceableGlobalAllocationFunction(
     while (const auto *TD = T->getAs<TypedefType>())
       T = TD->getDecl()->getUnderlyingType();
     const IdentifierInfo *II =
-        T->castAs<EnumType>()->getDecl()->getIdentifier();
+        T->castAs<EnumType>()->getOriginalDecl()->getIdentifier();
     if (II && II->isStr("__hot_cold_t"))
       Consume();
   }
@@ -3495,17 +3538,19 @@ bool FunctionDecl::isInlineBuiltinDeclaration() const {
 }
 
 bool FunctionDecl::isDestroyingOperatorDelete() const {
-  // C++ P0722:
-  //   Within a class C, a single object deallocation function with signature
-  //     (T, std::destroying_delete_t, <more params>)
-  //   is a destroying operator delete.
-  if (!isa<CXXMethodDecl>(this) || getOverloadedOperator() != OO_Delete ||
-      getNumParams() < 2)
-    return false;
+  return getASTContext().isDestroyingOperatorDelete(this);
+}
 
-  auto *RD = getParamDecl(1)->getType()->getAsCXXRecordDecl();
-  return RD && RD->isInStdNamespace() && RD->getIdentifier() &&
-         RD->getIdentifier()->isStr("destroying_delete_t");
+void FunctionDecl::setIsDestroyingOperatorDelete(bool IsDestroyingDelete) {
+  getASTContext().setIsDestroyingOperatorDelete(this, IsDestroyingDelete);
+}
+
+bool FunctionDecl::isTypeAwareOperatorNewOrDelete() const {
+  return getASTContext().isTypeAwareOperatorNewOrDelete(this);
+}
+
+void FunctionDecl::setIsTypeAwareOperatorNewOrDelete(bool IsTypeAware) {
+  getASTContext().setIsTypeAwareOperatorNewOrDelete(this, IsTypeAware);
 }
 
 LanguageLinkage FunctionDecl::getLanguageLinkage() const {
@@ -3517,7 +3562,7 @@ bool FunctionDecl::isExternC() const {
 }
 
 bool FunctionDecl::isInExternCContext() const {
-  if (hasAttr<OpenCLKernelAttr>())
+  if (DeviceKernelAttr::isOpenCLSpelling(getAttr<DeviceKernelAttr>()))
     return true;
   return getLexicalDeclContext()->isExternCContext();
 }
@@ -3572,7 +3617,7 @@ bool FunctionDecl::isMemberLikeConstrainedFriend() const {
     // If these friends don't have constraints, they aren't constrained, and
     // thus don't fall under temp.friend p9. Else the simple presence of a
     // constraint makes them unique.
-    return getTrailingRequiresClause();
+    return !getTrailingRequiresClause().isNull();
   }
 
   return FriendConstraintRefersToEnclosingTemplate();
@@ -3729,7 +3774,7 @@ void FunctionDecl::setParams(ASTContext &C,
   // Zero params -> null pointer.
   if (!NewParamInfo.empty()) {
     ParamInfo = new (C) ParmVarDecl*[NewParamInfo.size()];
-    std::copy(NewParamInfo.begin(), NewParamInfo.end(), ParamInfo);
+    llvm::copy(NewParamInfo, ParamInfo);
   }
 }
 
@@ -3893,8 +3938,25 @@ bool FunctionDecl::doesDeclarationForceExternallyVisibleDefinition() const {
 
 FunctionTypeLoc FunctionDecl::getFunctionTypeLoc() const {
   const TypeSourceInfo *TSI = getTypeSourceInfo();
-  return TSI ? TSI->getTypeLoc().IgnoreParens().getAs<FunctionTypeLoc>()
-             : FunctionTypeLoc();
+
+  if (!TSI)
+    return FunctionTypeLoc();
+
+  TypeLoc TL = TSI->getTypeLoc();
+  FunctionTypeLoc FTL;
+
+  while (!(FTL = TL.getAs<FunctionTypeLoc>())) {
+    if (const auto PTL = TL.getAs<ParenTypeLoc>())
+      TL = PTL.getInnerLoc();
+    else if (const auto ATL = TL.getAs<AttributedTypeLoc>())
+      TL = ATL.getEquivalentTypeLoc();
+    else if (const auto MQTL = TL.getAs<MacroQualifiedTypeLoc>())
+      TL = MQTL.getInnerLoc();
+    else
+      break;
+  }
+
+  return FTL;
 }
 
 SourceRange FunctionDecl::getReturnTypeSourceRange() const {
@@ -4284,8 +4346,7 @@ DependentFunctionTemplateSpecializationInfo::
         const ASTTemplateArgumentListInfo *TemplateArgsWritten)
     : NumCandidates(Candidates.size()),
       TemplateArgumentsAsWritten(TemplateArgsWritten) {
-  std::transform(Candidates.begin(), Candidates.end(),
-                 getTrailingObjects<FunctionTemplateDecl *>(),
+  std::transform(Candidates.begin(), Candidates.end(), getTrailingObjects(),
                  [](NamedDecl *ND) {
                    return cast<FunctionTemplateDecl>(ND->getUnderlyingDecl());
                  });
@@ -4450,6 +4511,7 @@ unsigned FunctionDecl::getMemoryFunctionKind() const {
   case Builtin::BImempcpy:
     return Builtin::BImempcpy;
 
+  case Builtin::BI__builtin_trivially_relocate:
   case Builtin::BI__builtin_memmove:
   case Builtin::BI__builtin___memmove_chk:
   case Builtin::BImemmove:
@@ -4593,7 +4655,7 @@ bool FieldDecl::isAnonymousStructOrUnion() const {
     return false;
 
   if (const auto *Record = getType()->getAs<RecordType>())
-    return Record->getDecl()->isAnonymousStructOrUnion();
+    return Record->getOriginalDecl()->isAnonymousStructOrUnion();
 
   return false;
 }
@@ -4620,11 +4682,14 @@ void FieldDecl::setLazyInClassInitializer(LazyDeclStmtPtr NewInit) {
     Init = NewInit;
 }
 
+bool FieldDecl::hasConstantIntegerBitWidth() const {
+  const auto *CE = dyn_cast_if_present<ConstantExpr>(getBitWidth());
+  return CE && CE->getAPValueResult().isInt();
+}
+
 unsigned FieldDecl::getBitWidthValue() const {
   assert(isBitField() && "not a bitfield");
-  assert(isa<ConstantExpr>(getBitWidth()));
-  assert(cast<ConstantExpr>(getBitWidth())->hasAPValueResult());
-  assert(cast<ConstantExpr>(getBitWidth())->getAPValueResult().isInt());
+  assert(hasConstantIntegerBitWidth());
   return cast<ConstantExpr>(getBitWidth())
       ->getAPValueResult()
       .getInt()
@@ -4650,7 +4715,7 @@ bool FieldDecl::isZeroSize(const ASTContext &Ctx) const {
   const auto *RT = getType()->getAs<RecordType>();
   if (!RT)
     return false;
-  const RecordDecl *RD = RT->getDecl()->getDefinition();
+  const RecordDecl *RD = RT->getOriginalDecl()->getDefinition();
   if (!RD) {
     assert(isInvalidDecl() && "valid field has incomplete type");
     return false;
@@ -4773,10 +4838,6 @@ TagDecl *TagDecl::getCanonicalDecl() { return getFirstDecl(); }
 
 void TagDecl::setTypedefNameForAnonDecl(TypedefNameDecl *TDD) {
   TypedefNameDeclOrQualifier = TDD;
-  if (const Type *T = getTypeForDecl()) {
-    (void)T;
-    assert(T->isLinkageValid());
-  }
   assert(isLinkageValid());
 }
 
@@ -4804,25 +4865,16 @@ void TagDecl::completeDefinition() {
 }
 
 TagDecl *TagDecl::getDefinition() const {
-  if (isCompleteDefinition())
+  if (isCompleteDefinition() || isBeingDefined())
     return const_cast<TagDecl *>(this);
-
-  // If it's possible for us to have an out-of-date definition, check now.
-  if (mayHaveOutOfDateDef()) {
-    if (IdentifierInfo *II = getIdentifier()) {
-      if (II->isOutOfDate()) {
-        updateOutOfDate(*II);
-      }
-    }
-  }
 
   if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(this))
     return CXXRD->getDefinition();
 
-  for (auto *R : redecls())
-    if (R->isCompleteDefinition())
+  for (TagDecl *R :
+       redecl_range(redecl_iterator(getNextRedeclaration()), redecl_iterator()))
+    if (R->isCompleteDefinition() || R->isBeingDefined())
       return R;
-
   return nullptr;
 }
 
@@ -4856,7 +4908,7 @@ void TagDecl::printName(raw_ostream &OS, const PrintingPolicy &Policy) const {
     // is already printed as part of the type.
     PrintingPolicy Copy(Policy);
     Copy.SuppressScope = true;
-    getASTContext().getTagDeclType(this).print(OS, Copy);
+    QualType(getASTContext().getCanonicalTagType(this)).print(OS, Copy);
     return;
   }
   // Otherwise, do the normal printing.
@@ -4900,19 +4952,13 @@ EnumDecl *EnumDecl::Create(ASTContext &C, DeclContext *DC,
                            IdentifierInfo *Id,
                            EnumDecl *PrevDecl, bool IsScoped,
                            bool IsScopedUsingClassTag, bool IsFixed) {
-  auto *Enum = new (C, DC) EnumDecl(C, DC, StartLoc, IdLoc, Id, PrevDecl,
-                                    IsScoped, IsScopedUsingClassTag, IsFixed);
-  Enum->setMayHaveOutOfDateDef(C.getLangOpts().Modules);
-  C.getTypeDeclType(Enum, PrevDecl);
-  return Enum;
+  return new (C, DC) EnumDecl(C, DC, StartLoc, IdLoc, Id, PrevDecl, IsScoped,
+                              IsScopedUsingClassTag, IsFixed);
 }
 
 EnumDecl *EnumDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
-  EnumDecl *Enum =
-      new (C, ID) EnumDecl(C, nullptr, SourceLocation(), SourceLocation(),
-                           nullptr, nullptr, false, false, false);
-  Enum->setMayHaveOutOfDateDef(C.getLangOpts().Modules);
-  return Enum;
+  return new (C, ID) EnumDecl(C, nullptr, SourceLocation(), SourceLocation(),
+                              nullptr, nullptr, false, false, false);
 }
 
 SourceRange EnumDecl::getIntegerTypeRange() const {
@@ -4972,7 +5018,7 @@ EnumDecl *EnumDecl::getTemplateInstantiationPattern() const {
       EnumDecl *ED = getInstantiatedFromMemberEnum();
       while (auto *NewED = ED->getInstantiatedFromMemberEnum())
         ED = NewED;
-      return getDefinitionOrSelf(ED);
+      return ::getDefinitionOrSelf(ED);
     }
   }
 
@@ -5062,26 +5108,15 @@ RecordDecl::RecordDecl(Kind DK, TagKind TK, const ASTContext &C,
 RecordDecl *RecordDecl::Create(const ASTContext &C, TagKind TK, DeclContext *DC,
                                SourceLocation StartLoc, SourceLocation IdLoc,
                                IdentifierInfo *Id, RecordDecl* PrevDecl) {
-  RecordDecl *R = new (C, DC) RecordDecl(Record, TK, C, DC,
-                                         StartLoc, IdLoc, Id, PrevDecl);
-  R->setMayHaveOutOfDateDef(C.getLangOpts().Modules);
-
-  C.getTypeDeclType(R, PrevDecl);
-  return R;
+  return new (C, DC)
+      RecordDecl(Record, TK, C, DC, StartLoc, IdLoc, Id, PrevDecl);
 }
 
 RecordDecl *RecordDecl::CreateDeserialized(const ASTContext &C,
                                            GlobalDeclID ID) {
-  RecordDecl *R = new (C, ID)
+  return new (C, ID)
       RecordDecl(Record, TagTypeKind::Struct, C, nullptr, SourceLocation(),
                  SourceLocation(), nullptr, nullptr);
-  R->setMayHaveOutOfDateDef(C.getLangOpts().Modules);
-  return R;
-}
-
-bool RecordDecl::isInjectedClassName() const {
-  return isImplicit() && getDeclName() && getDeclContext()->isRecord() &&
-    cast<RecordDecl>(getDeclContext())->getDeclName() == getDeclName();
 }
 
 bool RecordDecl::isLambda() const {
@@ -5105,7 +5140,7 @@ bool RecordDecl::isOrContainsUnion() const {
   if (const RecordDecl *Def = getDefinition()) {
     for (const FieldDecl *FD : Def->fields()) {
       const RecordType *RT = FD->getType()->getAs<RecordType>();
-      if (RT && RT->getDecl()->isOrContainsUnion())
+      if (RT && RT->getOriginalDecl()->isOrContainsUnion())
         return true;
     }
   }
@@ -5237,8 +5272,9 @@ const FieldDecl *RecordDecl::findFirstNamedDataMember() const {
       return I;
 
     if (const auto *RT = I->getType()->getAs<RecordType>())
-      if (const FieldDecl *NamedDataMember =
-              RT->getDecl()->findFirstNamedDataMember())
+      if (const FieldDecl *NamedDataMember = RT->getOriginalDecl()
+                                                 ->getDefinitionOrSelf()
+                                                 ->findFirstNamedDataMember())
         return NamedDataMember;
   }
 
@@ -5281,7 +5317,7 @@ void BlockDecl::setParams(ArrayRef<ParmVarDecl *> NewParamInfo) {
   if (!NewParamInfo.empty()) {
     NumParams = NewParamInfo.size();
     ParamInfo = new (getASTContext()) ParmVarDecl*[NewParamInfo.size()];
-    std::copy(NewParamInfo.begin(), NewParamInfo.end(), ParamInfo);
+    llvm::copy(NewParamInfo, ParamInfo);
   }
 }
 
@@ -5338,8 +5374,8 @@ PragmaCommentDecl *PragmaCommentDecl::Create(const ASTContext &C,
   PragmaCommentDecl *PCD =
       new (C, DC, additionalSizeToAlloc<char>(Arg.size() + 1))
           PragmaCommentDecl(DC, CommentLoc, CommentKind);
-  memcpy(PCD->getTrailingObjects<char>(), Arg.data(), Arg.size());
-  PCD->getTrailingObjects<char>()[Arg.size()] = '\0';
+  llvm::copy(Arg, PCD->getTrailingObjects());
+  PCD->getTrailingObjects()[Arg.size()] = '\0';
   return PCD;
 }
 
@@ -5360,11 +5396,10 @@ PragmaDetectMismatchDecl::Create(const ASTContext &C, TranslationUnitDecl *DC,
   PragmaDetectMismatchDecl *PDMD =
       new (C, DC, additionalSizeToAlloc<char>(ValueStart + Value.size() + 1))
           PragmaDetectMismatchDecl(DC, Loc, ValueStart);
-  memcpy(PDMD->getTrailingObjects<char>(), Name.data(), Name.size());
-  PDMD->getTrailingObjects<char>()[Name.size()] = '\0';
-  memcpy(PDMD->getTrailingObjects<char>() + ValueStart, Value.data(),
-         Value.size());
-  PDMD->getTrailingObjects<char>()[ValueStart + Value.size()] = '\0';
+  llvm::copy(Name, PDMD->getTrailingObjects());
+  PDMD->getTrailingObjects()[Name.size()] = '\0';
+  llvm::copy(Value, PDMD->getTrailingObjects() + ValueStart);
+  PDMD->getTrailingObjects()[ValueStart + Value.size()] = '\0';
   return PDMD;
 }
 
@@ -5403,9 +5438,9 @@ LabelDecl *LabelDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
 
 void LabelDecl::setMSAsmLabel(StringRef Name) {
 char *Buffer = new (getASTContext(), 1) char[Name.size() + 1];
-  memcpy(Buffer, Name.data(), Name.size());
-  Buffer[Name.size()] = '\0';
-  MSAsmName = Buffer;
+llvm::copy(Name, Buffer);
+Buffer[Name.size()] = '\0';
+MSAsmName = Buffer;
 }
 
 void ValueDecl::anchor() {}
@@ -5454,7 +5489,7 @@ FunctionDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
                      TypeSourceInfo *TInfo, StorageClass SC, bool UsesFPIntrin,
                      bool isInlineSpecified, bool hasWrittenPrototype,
                      ConstexprSpecKind ConstexprKind,
-                     Expr *TrailingRequiresClause) {
+                     const AssociatedConstraint &TrailingRequiresClause) {
   FunctionDecl *New = new (C, DC) FunctionDecl(
       Function, C, DC, StartLoc, NameInfo, T, TInfo, SC, UsesFPIntrin,
       isInlineSpecified, ConstexprKind, TrailingRequiresClause);
@@ -5465,7 +5500,13 @@ FunctionDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
 FunctionDecl *FunctionDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   return new (C, ID) FunctionDecl(
       Function, C, nullptr, SourceLocation(), DeclarationNameInfo(), QualType(),
-      nullptr, SC_None, false, false, ConstexprSpecKind::Unspecified, nullptr);
+      nullptr, SC_None, false, false, ConstexprSpecKind::Unspecified,
+      /*TrailingRequiresClause=*/{});
+}
+
+bool FunctionDecl::isReferenceableKernel() const {
+  return hasAttr<CUDAGlobalAttr>() ||
+         DeviceKernelAttr::isOpenCLSpelling(getAttr<DeviceKernelAttr>());
 }
 
 BlockDecl *BlockDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation L) {
@@ -5561,10 +5602,11 @@ IndirectFieldDecl::IndirectFieldDecl(ASTContext &C, DeclContext *DC,
     IdentifierNamespace |= IDNS_Tag;
 }
 
-IndirectFieldDecl *
-IndirectFieldDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation L,
-                          const IdentifierInfo *Id, QualType T,
-                          llvm::MutableArrayRef<NamedDecl *> CH) {
+IndirectFieldDecl *IndirectFieldDecl::Create(ASTContext &C, DeclContext *DC,
+                                             SourceLocation L,
+                                             const IdentifierInfo *Id,
+                                             QualType T,
+                                             MutableArrayRef<NamedDecl *> CH) {
   return new (C, DC) IndirectFieldDecl(C, DC, L, Id, T, CH);
 }
 
@@ -5594,14 +5636,14 @@ void TypedefNameDecl::anchor() {}
 
 TagDecl *TypedefNameDecl::getAnonDeclWithTypedefName(bool AnyRedecl) const {
   if (auto *TT = getTypeSourceInfo()->getType()->getAs<TagType>()) {
-    auto *OwningTypedef = TT->getDecl()->getTypedefNameForAnonDecl();
+    auto *OwningTypedef = TT->getOriginalDecl()->getTypedefNameForAnonDecl();
     auto *ThisTypedef = this;
     if (AnyRedecl && OwningTypedef) {
       OwningTypedef = OwningTypedef->getCanonicalDecl();
       ThisTypedef = ThisTypedef->getCanonicalDecl();
     }
     if (OwningTypedef == ThisTypedef)
-      return TT->getDecl();
+      return TT->getOriginalDecl()->getDefinitionOrSelf();
   }
 
   return nullptr;
@@ -5610,7 +5652,7 @@ TagDecl *TypedefNameDecl::getAnonDeclWithTypedefName(bool AnyRedecl) const {
 bool TypedefNameDecl::isTransparentTagSlow() const {
   auto determineIsTransparent = [&]() {
     if (auto *TT = getUnderlyingType()->getAs<TagType>()) {
-      if (auto *TD = TT->getDecl()) {
+      if (auto *TD = TT->getOriginalDecl()) {
         if (TD->getName() != getName())
           return false;
         SourceLocation TTLoc = getLocation();
@@ -5667,8 +5709,7 @@ SourceRange TypeAliasDecl::getSourceRange() const {
 void FileScopeAsmDecl::anchor() {}
 
 FileScopeAsmDecl *FileScopeAsmDecl::Create(ASTContext &C, DeclContext *DC,
-                                           StringLiteral *Str,
-                                           SourceLocation AsmLoc,
+                                           Expr *Str, SourceLocation AsmLoc,
                                            SourceLocation RParenLoc) {
   return new (C, DC) FileScopeAsmDecl(DC, Str, AsmLoc, RParenLoc);
 }
@@ -5677,6 +5718,10 @@ FileScopeAsmDecl *FileScopeAsmDecl::CreateDeserialized(ASTContext &C,
                                                        GlobalDeclID ID) {
   return new (C, ID) FileScopeAsmDecl(nullptr, nullptr, SourceLocation(),
                                       SourceLocation());
+}
+
+std::string FileScopeAsmDecl::getAsmString() const {
+  return GCCAsmStmt::ExtractStringFromGCCAsmStmtComponent(getAsmStringExpr());
 }
 
 void TopLevelStmtDecl::anchor() {}
@@ -5779,7 +5824,7 @@ void HLSLBufferDecl::setDefaultBufferDecls(ArrayRef<Decl *> Decls) {
 
   // allocate array for default decls with ASTContext allocator
   Decl **DeclsArray = new (getASTContext()) Decl *[Decls.size()];
-  std::copy(Decls.begin(), Decls.end(), DeclsArray);
+  llvm::copy(Decls, DeclsArray);
   DefaultBufferDecls = ArrayRef<Decl *>(DeclsArray, Decls.size());
 }
 
@@ -5798,6 +5843,39 @@ HLSLBufferDecl::buffer_decl_iterator HLSLBufferDecl::buffer_decls_end() const {
 
 bool HLSLBufferDecl::buffer_decls_empty() {
   return DefaultBufferDecls.empty() && decls_empty();
+}
+
+//===----------------------------------------------------------------------===//
+// HLSLRootSignatureDecl Implementation
+//===----------------------------------------------------------------------===//
+
+HLSLRootSignatureDecl::HLSLRootSignatureDecl(
+    DeclContext *DC, SourceLocation Loc, IdentifierInfo *ID,
+    llvm::dxbc::RootSignatureVersion Version, unsigned NumElems)
+    : NamedDecl(Decl::Kind::HLSLRootSignature, DC, Loc, DeclarationName(ID)),
+      Version(Version), NumElems(NumElems) {}
+
+HLSLRootSignatureDecl *HLSLRootSignatureDecl::Create(
+    ASTContext &C, DeclContext *DC, SourceLocation Loc, IdentifierInfo *ID,
+    llvm::dxbc::RootSignatureVersion Version,
+    ArrayRef<llvm::hlsl::rootsig::RootElement> RootElements) {
+  HLSLRootSignatureDecl *RSDecl =
+      new (C, DC,
+           additionalSizeToAlloc<llvm::hlsl::rootsig::RootElement>(
+               RootElements.size()))
+          HLSLRootSignatureDecl(DC, Loc, ID, Version, RootElements.size());
+  auto *StoredElems = RSDecl->getElems();
+  llvm::uninitialized_copy(RootElements, StoredElems);
+  return RSDecl;
+}
+
+HLSLRootSignatureDecl *
+HLSLRootSignatureDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
+  HLSLRootSignatureDecl *Result = new (C, ID)
+      HLSLRootSignatureDecl(nullptr, SourceLocation(), nullptr,
+                            /*Version*/ llvm::dxbc::RootSignatureVersion::V1_1,
+                            /*NumElems=*/0);
+  return Result;
 }
 
 //===----------------------------------------------------------------------===//
@@ -5821,16 +5899,15 @@ ImportDecl::ImportDecl(DeclContext *DC, SourceLocation StartLoc,
     : Decl(Import, DC, StartLoc), ImportedModule(Imported),
       NextLocalImportAndComplete(nullptr, true) {
   assert(getNumModuleIdentifiers(Imported) == IdentifierLocs.size());
-  auto *StoredLocs = getTrailingObjects<SourceLocation>();
-  std::uninitialized_copy(IdentifierLocs.begin(), IdentifierLocs.end(),
-                          StoredLocs);
+  auto *StoredLocs = getTrailingObjects();
+  llvm::uninitialized_copy(IdentifierLocs, StoredLocs);
 }
 
 ImportDecl::ImportDecl(DeclContext *DC, SourceLocation StartLoc,
                        Module *Imported, SourceLocation EndLoc)
     : Decl(Import, DC, StartLoc), ImportedModule(Imported),
       NextLocalImportAndComplete(nullptr, false) {
-  *getTrailingObjects<SourceLocation>() = EndLoc;
+  *getTrailingObjects() = EndLoc;
 }
 
 ImportDecl *ImportDecl::Create(ASTContext &C, DeclContext *DC,
@@ -5861,14 +5938,12 @@ ArrayRef<SourceLocation> ImportDecl::getIdentifierLocs() const {
   if (!isImportComplete())
     return {};
 
-  const auto *StoredLocs = getTrailingObjects<SourceLocation>();
-  return llvm::ArrayRef(StoredLocs,
-                        getNumModuleIdentifiers(getImportedModule()));
+  return getTrailingObjects(getNumModuleIdentifiers(getImportedModule()));
 }
 
 SourceRange ImportDecl::getSourceRange() const {
   if (!isImportComplete())
-    return SourceRange(getLocation(), *getTrailingObjects<SourceLocation>());
+    return SourceRange(getLocation(), *getTrailingObjects());
 
   return SourceRange(getLocation(), getIdentifierLocs().back());
 }
@@ -5894,11 +5969,10 @@ bool clang::IsArmStreamingFunction(const FunctionDecl *FD,
     if (FD->hasAttr<ArmLocallyStreamingAttr>())
       return true;
 
-  if (const Type *Ty = FD->getType().getTypePtrOrNull())
-    if (const auto *FPT = Ty->getAs<FunctionProtoType>())
-      if (FPT->getAArch64SMEAttributes() &
-          FunctionType::SME_PStateSMEnabledMask)
-        return true;
+  assert(!FD->getType().isNull() && "Expected a valid FunctionDecl");
+  if (const auto *FPT = FD->getType()->getAs<FunctionProtoType>())
+    if (FPT->getAArch64SMEAttributes() & FunctionType::SME_PStateSMEnabledMask)
+      return true;
 
   return false;
 }

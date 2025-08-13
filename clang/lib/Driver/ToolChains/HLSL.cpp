@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "HLSL.h"
-#include "CommonArgs.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Job.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/TargetParser/Triple.h"
+#include <regex>
 
 using namespace clang::driver;
 using namespace clang::driver::tools;
@@ -173,6 +173,41 @@ bool isLegalValidatorVersion(StringRef ValVersionStr, const Driver &D) {
   return true;
 }
 
+std::string getSpirvExtArg(ArrayRef<std::string> SpvExtensionArgs) {
+  if (SpvExtensionArgs.empty()) {
+    return "-spirv-ext=all";
+  }
+
+  std::string LlvmOption =
+      (Twine("-spirv-ext=+") + SpvExtensionArgs.front()).str();
+  SpvExtensionArgs = SpvExtensionArgs.slice(1);
+  for (auto Extension : SpvExtensionArgs) {
+    if (Extension != "KHR")
+      Extension = (Twine("+") + Extension).str();
+    LlvmOption = (Twine(LlvmOption) + "," + Extension).str();
+  }
+  return LlvmOption;
+}
+
+bool isValidSPIRVExtensionName(const std::string &str) {
+  std::regex pattern("KHR|SPV_[a-zA-Z0-9_]+");
+  return std::regex_match(str, pattern);
+}
+
+// SPIRV extension names are of the form `SPV_[a-zA-Z0-9_]+`. We want to
+// disallow obviously invalid names to avoid issues when parsing `spirv-ext`.
+bool checkExtensionArgsAreValid(ArrayRef<std::string> SpvExtensionArgs,
+                                const Driver &Driver) {
+  bool AllValid = true;
+  for (auto Extension : SpvExtensionArgs) {
+    if (!isValidSPIRVExtensionName(Extension)) {
+      Driver.Diag(diag::err_drv_invalid_value)
+          << "-fspv-extension" << Extension;
+      AllValid = false;
+    }
+  }
+  return AllValid;
+}
 } // namespace
 
 void tools::hlsl::Validator::ConstructJob(Compilation &C, const JobAction &JA,
@@ -253,13 +288,19 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
   for (Arg *A : Args) {
     if (A->getOption().getID() == options::OPT_dxil_validator_version) {
       StringRef ValVerStr = A->getValue();
-      std::string ErrorMsg;
       if (!isLegalValidatorVersion(ValVerStr, getDriver()))
         continue;
     }
     if (A->getOption().getID() == options::OPT_dxc_entrypoint) {
       DAL->AddSeparateArg(nullptr, Opts.getOption(options::OPT_hlsl_entrypoint),
                           A->getValue());
+      A->claim();
+      continue;
+    }
+    if (A->getOption().getID() == options::OPT_dxc_rootsig_ver) {
+      DAL->AddJoinedArg(nullptr,
+                        Opts.getOption(options::OPT_fdx_rootsignature_version),
+                        A->getValue());
       A->claim();
       continue;
     }
@@ -298,7 +339,43 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
       A->claim();
       continue;
     }
+    if (A->getOption().getID() == options::OPT_dxc_gis) {
+      // Translate -Gis into -ffp_model_EQ=strict
+      DAL->AddSeparateArg(nullptr, Opts.getOption(options::OPT_ffp_model_EQ),
+                          "strict");
+      A->claim();
+      continue;
+    }
+    if (A->getOption().getID() == options::OPT_fvk_use_dx_layout) {
+      // This is the only implemented layout so far.
+      A->claim();
+      continue;
+    }
+
+    if (A->getOption().getID() == options::OPT_fvk_use_scalar_layout) {
+      getDriver().Diag(diag::err_drv_clang_unsupported) << A->getAsString(Args);
+      A->claim();
+      continue;
+    }
+
+    if (A->getOption().getID() == options::OPT_fvk_use_gl_layout) {
+      getDriver().Diag(diag::err_drv_clang_unsupported) << A->getAsString(Args);
+      A->claim();
+      continue;
+    }
+
     DAL->append(A);
+  }
+
+  if (getArch() == llvm::Triple::spirv) {
+    std::vector<std::string> SpvExtensionArgs =
+        Args.getAllArgValues(options::OPT_fspv_extension_EQ);
+    if (checkExtensionArgsAreValid(SpvExtensionArgs, getDriver())) {
+      std::string LlvmOption = getSpirvExtArg(SpvExtensionArgs);
+      DAL->AddSeparateArg(nullptr, Opts.getOption(options::OPT_mllvm),
+                          LlvmOption);
+    }
+    Args.claimAllArgs(options::OPT_fspv_extension_EQ);
   }
 
   if (!DAL->hasArg(options::OPT_O_Group)) {
@@ -309,6 +386,9 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
 }
 
 bool HLSLToolChain::requiresValidation(DerivedArgList &Args) const {
+  if (!Args.hasArg(options::OPT_dxc_Fo))
+    return false;
+
   if (Args.getLastArg(options::OPT_dxc_disable_validation))
     return false;
 

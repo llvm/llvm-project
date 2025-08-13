@@ -169,8 +169,8 @@ protected:
     }
 
     if (resultEntity->isVariable()) {
-      hlfir::AsExprOp asExpr = builder.create<hlfir::AsExprOp>(
-          loc, *resultEntity, builder.createBool(loc, mustBeFreed));
+      hlfir::AsExprOp asExpr = hlfir::AsExprOp::create(
+          builder, loc, *resultEntity, builder.createBool(loc, mustBeFreed));
       resultEntity = hlfir::EntityWithAttributes{asExpr.getResult()};
     }
 
@@ -557,8 +557,8 @@ public:
     // Pattern rewriting only requires that the resulting IR is still valid
     mlir::GreedyRewriteConfig config;
     // Prevent the pattern driver from merging blocks
-    config.enableRegionSimplification =
-        mlir::GreedySimplifyRegionLevel::Disabled;
+    config.setRegionSimplificationLevel(
+        mlir::GreedySimplifyRegionLevel::Disabled);
 
     if (mlir::failed(
             mlir::applyPatternsGreedily(module, std::move(patterns), config))) {

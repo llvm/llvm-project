@@ -191,6 +191,35 @@ void TargetLoweringObjectFile::emitCGProfileMetadata(MCStreamer &Streamer,
   }
 }
 
+void TargetLoweringObjectFile::emitPseudoProbeDescMetadata(MCStreamer &Streamer,
+                                                           Module &M) const {
+  NamedMDNode *FuncInfo = M.getNamedMetadata(PseudoProbeDescMetadataName);
+  if (!FuncInfo)
+    return;
+
+  // Emit a descriptor for every function including functions that have an
+  // available external linkage. We may not want this for imported functions
+  // that has code in another thinLTO module but we don't have a good way to
+  // tell them apart from inline functions defined in header files. Therefore
+  // we put each descriptor in a separate comdat section and rely on the
+  // linker to deduplicate.
+  auto &C = getContext();
+  for (const auto *Operand : FuncInfo->operands()) {
+    const auto *MD = cast<MDNode>(Operand);
+    auto *GUID = mdconst::extract<ConstantInt>(MD->getOperand(0));
+    auto *Hash = mdconst::extract<ConstantInt>(MD->getOperand(1));
+    auto *Name = cast<MDString>(MD->getOperand(2));
+    auto *S = C.getObjectFileInfo()->getPseudoProbeDescSection(
+        TM->getFunctionSections() ? Name->getString() : StringRef());
+
+    Streamer.switchSection(S);
+    Streamer.emitInt64(GUID->getZExtValue());
+    Streamer.emitInt64(Hash->getZExtValue());
+    Streamer.emitULEB128IntValue(Name->getString().size());
+    Streamer.emitBytes(Name->getString());
+  }
+}
+
 /// getKindForGlobal - This is a top-level target-independent classifier for
 /// a global object.  Given a global variable and information from the TM, this
 /// function classifies the global in a target independent manner. This function
@@ -383,6 +412,18 @@ MCSection *TargetLoweringObjectFile::getSectionForConstant(
     return ReadOnlySection;
 
   return DataSection;
+}
+
+MCSection *TargetLoweringObjectFile::getSectionForConstant(
+    const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment,
+    StringRef SectionPrefix) const {
+  // Fallback to `getSectionForConstant` without `SectionPrefix` parameter if it
+  // is empty.
+  if (SectionPrefix.empty())
+    return getSectionForConstant(DL, Kind, C, Alignment);
+  report_fatal_error(
+      "TargetLoweringObjectFile::getSectionForConstant that "
+      "accepts SectionPrefix is not implemented for the object file format");
 }
 
 MCSection *TargetLoweringObjectFile::getSectionForMachineBasicBlock(

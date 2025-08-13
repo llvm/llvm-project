@@ -14,6 +14,7 @@
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/CodeViewError.h"
 #include "llvm/Support/BinaryStreamReader.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include <cinttypes>
@@ -39,8 +40,8 @@ struct RecordPrefix {
 
 /// Reinterpret a byte array as an array of characters. Does not interpret as
 /// a C string, as StringRef has several helpers (split) that make that easy.
-StringRef getBytesAsCharacters(ArrayRef<uint8_t> LeafData);
-StringRef getBytesAsCString(ArrayRef<uint8_t> LeafData);
+LLVM_ABI StringRef getBytesAsCharacters(ArrayRef<uint8_t> LeafData);
+LLVM_ABI StringRef getBytesAsCString(ArrayRef<uint8_t> LeafData);
 
 inline Error consume(BinaryStreamReader &Reader) { return Error::success(); }
 
@@ -48,20 +49,20 @@ inline Error consume(BinaryStreamReader &Reader) { return Error::success(); }
 /// the type stream. If the value is positive and less than LF_NUMERIC (1 <<
 /// 15), it is emitted directly in Data. Otherwise, it has a tag like LF_CHAR
 /// that indicates the bitwidth and sign of the numeric data.
-Error consume(BinaryStreamReader &Reader, APSInt &Num);
+LLVM_ABI Error consume(BinaryStreamReader &Reader, APSInt &Num);
 
 /// Decodes a numeric leaf value that is known to be a particular type.
-Error consume_numeric(BinaryStreamReader &Reader, uint64_t &Value);
+LLVM_ABI Error consume_numeric(BinaryStreamReader &Reader, uint64_t &Value);
 
 /// Decodes signed and unsigned fixed-length integers.
-Error consume(BinaryStreamReader &Reader, uint32_t &Item);
-Error consume(BinaryStreamReader &Reader, int32_t &Item);
+LLVM_ABI Error consume(BinaryStreamReader &Reader, uint32_t &Item);
+LLVM_ABI Error consume(BinaryStreamReader &Reader, int32_t &Item);
 
 /// Decodes a null terminated string.
-Error consume(BinaryStreamReader &Reader, StringRef &Item);
+LLVM_ABI Error consume(BinaryStreamReader &Reader, StringRef &Item);
 
-Error consume(StringRef &Data, APSInt &Num);
-Error consume(StringRef &Data, uint32_t &Item);
+LLVM_ABI Error consume(StringRef &Data, APSInt &Num);
+LLVM_ABI Error consume(StringRef &Data, uint32_t &Item);
 
 /// Decodes an arbitrary object whose layout matches that of the underlying
 /// byte sequence, and returns a pointer to the object.

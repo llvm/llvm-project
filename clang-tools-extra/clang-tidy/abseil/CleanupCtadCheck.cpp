@@ -8,22 +8,19 @@
 
 #include "CleanupCtadCheck.h"
 #include "../utils/TransformerClangTidyCheck.h"
-#include "clang/AST/ASTContext.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Transformer/RangeSelector.h"
 #include "clang/Tooling/Transformer/RewriteRule.h"
 #include "clang/Tooling/Transformer/Stencil.h"
-#include "llvm/ADT/StringRef.h"
 
 using namespace ::clang::ast_matchers;
 using namespace ::clang::transformer;
 
 namespace clang::tidy::abseil {
 
-RewriteRuleWith<std::string> CleanupCtadCheckImpl() {
-  auto warning_message = cat("prefer absl::Cleanup's class template argument "
-                             "deduction pattern in C++17 and higher");
+static RewriteRuleWith<std::string> cleanupCtadCheckImpl() {
+  auto WarningMessage = cat("prefer absl::Cleanup's class template argument "
+                            "deduction pattern in C++17 and higher");
 
   return makeRule(
       declStmt(hasSingleDecl(varDecl(
@@ -34,10 +31,10 @@ RewriteRuleWith<std::string> CleanupCtadCheckImpl() {
                   .bind("make_cleanup_call")))))),
       {changeTo(node("auto_type_loc"), cat("absl::Cleanup")),
        changeTo(node("make_cleanup_call"), cat(callArgs("make_cleanup_call")))},
-      warning_message);
+      WarningMessage);
 }
 
 CleanupCtadCheck::CleanupCtadCheck(StringRef Name, ClangTidyContext *Context)
-    : utils::TransformerClangTidyCheck(CleanupCtadCheckImpl(), Name, Context) {}
+    : utils::TransformerClangTidyCheck(cleanupCtadCheckImpl(), Name, Context) {}
 
 } // namespace clang::tidy::abseil

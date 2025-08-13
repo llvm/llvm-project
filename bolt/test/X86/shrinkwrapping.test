@@ -8,6 +8,7 @@ REQUIRES: shell
 
 RUN: %clangxx %cxxflags -no-pie %S/Inputs/exc4sw.S -o %t.exe -Wl,-q
 RUN: llvm-bolt %t.exe -o %t --relocs --frame-opt=all \
+RUN:   --print-only=main --print-cfg \
 RUN:   --data=%p/Inputs/exc4sw.fdata --reorder-blocks=cache 2>&1 | \
 RUN:   FileCheck %s --check-prefix=CHECK-BOLT
 
@@ -19,6 +20,7 @@ RUN: llvm-objdump --dwarf=frames %t | grep -A20 -e \
 RUN:   `llvm-nm --numeric-sort %t | grep main | tail -n 1 | cut -f1 -d' ' | \
 RUN:    tail -c9` 2>&1 | FileCheck %s --check-prefix=CHECK-OUTPUT
 
+CHECK-BOLT: Extern Entry Count: 100
 CHECK-BOLT: Shrink wrapping moved 2 spills inserting load/stores and 0 spills inserting push/pops
 
 CHECK-INPUT:  DW_CFA_advance_loc: 2

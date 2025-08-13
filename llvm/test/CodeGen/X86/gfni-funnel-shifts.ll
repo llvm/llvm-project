@@ -492,7 +492,7 @@ define <16 x i8> @splatconstant_fshl_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind 
 ; GFNIAVX512:       # %bb.0:
 ; GFNIAVX512-NEXT:    vpsllw $3, %xmm0, %xmm2
 ; GFNIAVX512-NEXT:    vpsrlw $5, %xmm1, %xmm0
-; GFNIAVX512-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm0 ^ (mem & (xmm0 ^ xmm2))
+; GFNIAVX512-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm0 ^ (m32bcst & (xmm0 ^ xmm2))
 ; GFNIAVX512-NEXT:    retq
   %res = call <16 x i8> @llvm.fshl.v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>)
   ret <16 x i8> %res
@@ -518,7 +518,7 @@ define <16 x i8> @splatconstant_fshr_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind 
 ; GFNIAVX512:       # %bb.0:
 ; GFNIAVX512-NEXT:    vpaddw %xmm0, %xmm0, %xmm2
 ; GFNIAVX512-NEXT:    vpsrlw $7, %xmm1, %xmm0
-; GFNIAVX512-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm0 ^ (mem & (xmm0 ^ xmm2))
+; GFNIAVX512-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm0 ^ (m32bcst & (xmm0 ^ xmm2))
 ; GFNIAVX512-NEXT:    retq
   %res = call <16 x i8> @llvm.fshr.v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>)
   ret <16 x i8> %res
@@ -1311,7 +1311,7 @@ define <32 x i8> @splatconstant_fshl_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind 
 ; GFNIAVX512:       # %bb.0:
 ; GFNIAVX512-NEXT:    vpsllw $4, %ymm0, %ymm2
 ; GFNIAVX512-NEXT:    vpsrlw $4, %ymm1, %ymm0
-; GFNIAVX512-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (mem & (ymm0 ^ ymm2))
+; GFNIAVX512-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (m32bcst & (ymm0 ^ ymm2))
 ; GFNIAVX512-NEXT:    retq
   %res = call <32 x i8> @llvm.fshl.v32i8(<32 x i8> %a, <32 x i8> %b, <32 x i8> <i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4>)
   ret <32 x i8> %res
@@ -1349,7 +1349,7 @@ define <32 x i8> @splatconstant_fshr_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind 
 ; GFNIAVX512:       # %bb.0:
 ; GFNIAVX512-NEXT:    vpsllw $2, %ymm0, %ymm2
 ; GFNIAVX512-NEXT:    vpsrlw $6, %ymm1, %ymm0
-; GFNIAVX512-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (mem & (ymm0 ^ ymm2))
+; GFNIAVX512-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (m32bcst & (ymm0 ^ ymm2))
 ; GFNIAVX512-NEXT:    retq
   %res = call <32 x i8> @llvm.fshr.v32i8(<32 x i8> %a, <32 x i8> %b, <32 x i8> <i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6, i8 6>)
   ret <32 x i8> %res
@@ -2775,7 +2775,7 @@ define <64 x i8> @splatconstant_fshl_v64i8(<64 x i8> %a, <64 x i8> %b) nounwind 
 ; GFNIAVX512BW:       # %bb.0:
 ; GFNIAVX512BW-NEXT:    vpaddw %zmm0, %zmm0, %zmm2
 ; GFNIAVX512BW-NEXT:    vpsrlw $7, %zmm1, %zmm0
-; GFNIAVX512BW-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm0 ^ (mem & (zmm0 ^ zmm2))
+; GFNIAVX512BW-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm0 ^ (m32bcst & (zmm0 ^ zmm2))
 ; GFNIAVX512BW-NEXT:    retq
   %res = call <64 x i8> @llvm.fshl.v64i8(<64 x i8> %a, <64 x i8> %b, <64 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>)
   ret <64 x i8> %res
@@ -2836,7 +2836,7 @@ define <64 x i8> @splatconstant_fshr_v64i8(<64 x i8> %a, <64 x i8> %b) nounwind 
 ; GFNIAVX512BW:       # %bb.0:
 ; GFNIAVX512BW-NEXT:    vpsllw $6, %zmm0, %zmm2
 ; GFNIAVX512BW-NEXT:    vpsrlw $2, %zmm1, %zmm0
-; GFNIAVX512BW-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm0 ^ (mem & (zmm0 ^ zmm2))
+; GFNIAVX512BW-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm0 ^ (m32bcst & (zmm0 ^ zmm2))
 ; GFNIAVX512BW-NEXT:    retq
   %res = call <64 x i8> @llvm.fshr.v64i8(<64 x i8> %a, <64 x i8> %b, <64 x i8> <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>)
   ret <64 x i8> %res

@@ -74,7 +74,6 @@ TEST(Decl, AsmLabelAttr) {
   StringRef Code = R"(
     struct S {
       void f() {}
-      void g() {}
     };
   )";
   auto AST =
@@ -87,25 +86,20 @@ TEST(Decl, AsmLabelAttr) {
   const auto *DeclS =
       selectFirst<CXXRecordDecl>("d", match(cxxRecordDecl().bind("d"), Ctx));
   NamedDecl *DeclF = *DeclS->method_begin();
-  NamedDecl *DeclG = *(++DeclS->method_begin());
 
-  // Attach asm labels to the decls: one literal, and one not.
-  DeclF->addAttr(AsmLabelAttr::Create(Ctx, "foo", /*LiteralLabel=*/true));
-  DeclG->addAttr(AsmLabelAttr::Create(Ctx, "goo", /*LiteralLabel=*/false));
+  DeclF->addAttr(AsmLabelAttr::Create(Ctx, "foo"));
 
   // Mangle the decl names.
-  std::string MangleF, MangleG;
+  std::string MangleF;
   std::unique_ptr<ItaniumMangleContext> MC(
       ItaniumMangleContext::create(Ctx, Diags));
   {
     llvm::raw_string_ostream OS_F(MangleF);
-    llvm::raw_string_ostream OS_G(MangleG);
     MC->mangleName(DeclF, OS_F);
-    MC->mangleName(DeclG, OS_G);
   }
 
-  ASSERT_TRUE(0 == MangleF.compare("\x01" "foo"));
-  ASSERT_TRUE(0 == MangleG.compare("goo"));
+  ASSERT_EQ(MangleF, "\x01"
+                     "foo");
 }
 
 TEST(Decl, MangleDependentSizedArray) {
@@ -138,8 +132,8 @@ TEST(Decl, MangleDependentSizedArray) {
   MC->mangleCanonicalTypeName(DeclA->getType(), OS_A);
   MC->mangleCanonicalTypeName(DeclB->getType(), OS_B);
 
-  ASSERT_TRUE(0 == MangleA.compare("_ZTSA_i"));
-  ASSERT_TRUE(0 == MangleB.compare("_ZTSAT0__T_"));
+  ASSERT_EQ(MangleA, "_ZTSA_i");
+  ASSERT_EQ(MangleB, "_ZTSAT0__T_");
 }
 
 TEST(Decl, ConceptDecl) {

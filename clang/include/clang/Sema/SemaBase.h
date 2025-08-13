@@ -219,6 +219,10 @@ public:
   SemaDiagnosticBuilder Diag(SourceLocation Loc, const PartialDiagnostic &PD,
                              bool DeferHint = false);
 
+  /// Emit a compatibility diagnostic.
+  SemaDiagnosticBuilder DiagCompat(SourceLocation Loc, unsigned CompatDiagId,
+                                   bool DeferHint = false);
+
   /// Build a partial diagnostic.
   PartialDiagnostic PDiag(unsigned DiagID = 0);
 };

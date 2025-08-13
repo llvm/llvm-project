@@ -24,16 +24,21 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_VPLANVERIFIER_H
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANVERIFIER_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 class VPlan;
 
-/// Verify invariants for general VPlans. Currently it checks the following:
+/// Verify invariants for general VPlans. If \p VerifyLate is passed, skip some
+/// checks that are not applicable at later stages of the transform pipeline.
+/// Currently it checks the following:
 /// 1. Region/Block verification: Check the Region/Block verification
 /// invariants for every region in the H-CFG.
 /// 2. all phi-like recipes must be at the beginning of a block, with no other
 /// recipes in between. Note that currently there is still an exception for
 /// VPBlendRecipes.
-bool verifyVPlanIsValid(const VPlan &Plan);
+LLVM_ABI_FOR_TEST bool verifyVPlanIsValid(const VPlan &Plan,
+                                          bool VerifyLate = false);
 
 } // namespace llvm
 

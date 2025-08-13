@@ -19,6 +19,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 
 namespace llvm {
@@ -107,7 +108,8 @@ static MCInstPrinter *createSparcMCInstPrinter(const Triple &T,
   return new SparcInstPrinter(MAI, MII, MRI);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSparcTargetMC() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeSparcTargetMC() {
   // Register the MC asm info.
   RegisterMCAsmInfoFn X(getTheSparcTarget(), createSparcMCAsmInfo);
   RegisterMCAsmInfoFn Y(getTheSparcV9Target(), createSparcV9MCAsmInfo);

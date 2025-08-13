@@ -52,8 +52,15 @@ program openacc_serial_validity
   !$acc serial async(1)
   !$acc end serial
 
-  !ERROR: At most one ASYNC clause can appear on the SERIAL directive
+  !ERROR: At most one ASYNC clause can appear on the SERIAL directive or in group separated by the DEVICE_TYPE clause
   !$acc serial async(1) async(2)
+  !$acc end serial
+
+  !ERROR: At most one ASYNC clause can appear on the SERIAL directive or in group separated by the DEVICE_TYPE clause
+  !$acc serial async(1) device_type(nvidia) async(2) async(4)
+  !$acc end serial
+
+  !$acc serial async(1) device_type(nvidia) async(2)
   !$acc end serial
 
   !$acc serial async(async1)
@@ -77,15 +84,15 @@ program openacc_serial_validity
   !$acc serial wait(wait1) wait(wait2)
   !$acc end serial
 
-  !PORTABILITY: NUM_GANGS clause is not allowed on the SERIAL directive and will be ignored
+  !PORTABILITY: NUM_GANGS clause is not allowed on the SERIAL directive and will be ignored [-Wportability]
   !$acc serial num_gangs(8)
   !$acc end serial
 
-  !PORTABILITY: NUM_WORKERS clause is not allowed on the SERIAL directive and will be ignored
+  !PORTABILITY: NUM_WORKERS clause is not allowed on the SERIAL directive and will be ignored [-Wportability]
   !$acc serial num_workers(8)
   !$acc end serial
 
-  !PORTABILITY: VECTOR_LENGTH clause is not allowed on the SERIAL directive and will be ignored
+  !PORTABILITY: VECTOR_LENGTH clause is not allowed on the SERIAL directive and will be ignored [-Wportability]
   !$acc serial vector_length(128)
   !$acc end serial
 

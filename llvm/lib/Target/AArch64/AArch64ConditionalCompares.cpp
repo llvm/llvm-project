@@ -573,7 +573,7 @@ void SSACCmpConv::convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks) {
   // Update the CFG first.
   updateTailPHIs();
 
-  // Save successor probabilties before removing CmpBB and Tail from their
+  // Save successor probabilities before removing CmpBB and Tail from their
   // parents.
   BranchProbability Head2CmpBB = MBPI->getEdgeProbability(Head, CmpBB);
   BranchProbability CmpBB2Tail = MBPI->getEdgeProbability(CmpBB, Tail);
@@ -581,7 +581,7 @@ void SSACCmpConv::convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks) {
   Head->removeSuccessor(CmpBB);
   CmpBB->removeSuccessor(Tail);
 
-  // If Head and CmpBB had successor probabilties, udpate the probabilities to
+  // If Head and CmpBB had successor probabilities, update the probabilities to
   // reflect the ccmp-conversion.
   if (Head->hasSuccessorProbabilities() && CmpBB->hasSuccessorProbabilities()) {
 
@@ -596,7 +596,7 @@ void SSACCmpConv::convert(SmallVectorImpl<MachineBasicBlock *> &RemovedBlocks) {
                              Head2Tail + Head2CmpBB * CmpBB2Tail);
 
     // We will transfer successors of CmpBB to Head in a moment without
-    // normalizing the successor probabilities. Set the successor probabilites
+    // normalizing the successor probabilities. Set the successor probabilities
     // before doing so.
     //
     // Pr(I|Head) = Pr(CmpBB|Head) * Pr(I|CmpBB).
@@ -771,9 +771,7 @@ class AArch64ConditionalCompares : public MachineFunctionPass {
 
 public:
   static char ID;
-  AArch64ConditionalCompares() : MachineFunctionPass(ID) {
-    initializeAArch64ConditionalComparesPass(*PassRegistry::getPassRegistry());
-  }
+  AArch64ConditionalCompares() : MachineFunctionPass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnMachineFunction(MachineFunction &MF) override;
   StringRef getPassName() const override {

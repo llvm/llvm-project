@@ -6,11 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SingleInputSingleOutputPerf.h"
-
+#include "PerfTest.h"
 #include "src/math/sinf.h"
 
 #include <math.h>
 
-SINGLE_INPUT_SINGLE_OUTPUT_PERF(float, LIBC_NAMESPACE::sinf, ::sinf,
-                                "sinf_perf.log")
+int main() {
+  SINGLE_INPUT_SINGLE_OUTPUT_PERF(float, LIBC_NAMESPACE::sinf, ::sinf,
+                                  "sinf_perf.log")
+  return 0;
+}

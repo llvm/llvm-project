@@ -16,13 +16,14 @@
 
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace orc {
 
 class ExecutorProcessControl;
 
-class EPCDynamicLibrarySearchGenerator : public DefinitionGenerator {
+class LLVM_ABI EPCDynamicLibrarySearchGenerator : public DefinitionGenerator {
 public:
   using SymbolPredicate = unique_function<bool(const SymbolStringPtr &)>;
   using AddAbsoluteSymbolsFn = unique_function<Error(JITDylib &, SymbolMap)>;

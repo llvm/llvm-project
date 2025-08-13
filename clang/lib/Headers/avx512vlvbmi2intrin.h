@@ -415,8 +415,8 @@ _mm256_maskz_expandloadu_epi8(__mmask32 __U, void const *__P)
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_shldv_epi64(__m256i __A, __m256i __B, __m256i __C)
 {
-  return (__m256i)__builtin_ia32_vpshldvq256((__v4di)__A, (__v4di)__B,
-                                             (__v4di)__C);
+  return (__m256i)__builtin_elementwise_fshl((__v4du)__A, (__v4du)__B,
+                                             (__v4du)__C);
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
@@ -438,8 +438,8 @@ _mm256_maskz_shldv_epi64(__mmask8 __U, __m256i __A, __m256i __B, __m256i __C)
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_shldv_epi64(__m128i __A, __m128i __B, __m128i __C)
 {
-  return (__m128i)__builtin_ia32_vpshldvq128((__v2di)__A, (__v2di)__B,
-                                             (__v2di)__C);
+  return (__m128i)__builtin_elementwise_fshl((__v2du)__A, (__v2du)__B,
+                                             (__v2du)__C);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
@@ -461,8 +461,8 @@ _mm_maskz_shldv_epi64(__mmask8 __U, __m128i __A, __m128i __B, __m128i __C)
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_shldv_epi32(__m256i __A, __m256i __B, __m256i __C)
 {
-  return (__m256i)__builtin_ia32_vpshldvd256((__v8si)__A, (__v8si)__B,
-                                             (__v8si)__C);
+  return (__m256i)__builtin_elementwise_fshl((__v8su)__A, (__v8su)__B,
+                                             (__v8su)__C);
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
@@ -484,8 +484,8 @@ _mm256_maskz_shldv_epi32(__mmask8 __U, __m256i __A, __m256i __B, __m256i __C)
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_shldv_epi32(__m128i __A, __m128i __B, __m128i __C)
 {
-  return (__m128i)__builtin_ia32_vpshldvd128((__v4si)__A, (__v4si)__B,
-                                             (__v4si)__C);
+  return (__m128i)__builtin_elementwise_fshl((__v4su)__A, (__v4su)__B,
+                                             (__v4su)__C);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
@@ -507,8 +507,8 @@ _mm_maskz_shldv_epi32(__mmask8 __U, __m128i __A, __m128i __B, __m128i __C)
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_shldv_epi16(__m256i __A, __m256i __B, __m256i __C)
 {
-  return (__m256i)__builtin_ia32_vpshldvw256((__v16hi)__A, (__v16hi)__B,
-                                             (__v16hi)__C);
+  return (__m256i)__builtin_elementwise_fshl((__v16hu)__A, (__v16hu)__B,
+                                             (__v16hu)__C);
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
@@ -530,8 +530,8 @@ _mm256_maskz_shldv_epi16(__mmask16 __U, __m256i __A, __m256i __B, __m256i __C)
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_shldv_epi16(__m128i __A, __m128i __B, __m128i __C)
 {
-  return (__m128i)__builtin_ia32_vpshldvw128((__v8hi)__A, (__v8hi)__B,
-                                             (__v8hi)__C);
+  return (__m128i)__builtin_elementwise_fshl((__v8hu)__A, (__v8hu)__B,
+                                             (__v8hu)__C);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
@@ -553,8 +553,9 @@ _mm_maskz_shldv_epi16(__mmask8 __U, __m128i __A, __m128i __B, __m128i __C)
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_shrdv_epi64(__m256i __A, __m256i __B, __m256i __C)
 {
-  return (__m256i)__builtin_ia32_vpshrdvq256((__v4di)__A, (__v4di)__B,
-                                             (__v4di)__C);
+  // Ops __A and __B are swapped.
+  return (__m256i)__builtin_elementwise_fshr((__v4du)__B, (__v4du)__A,
+                                             (__v4du)__C);
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
@@ -576,8 +577,9 @@ _mm256_maskz_shrdv_epi64(__mmask8 __U, __m256i __A, __m256i __B, __m256i __C)
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_shrdv_epi64(__m128i __A, __m128i __B, __m128i __C)
 {
-  return (__m128i)__builtin_ia32_vpshrdvq128((__v2di)__A, (__v2di)__B,
-                                             (__v2di)__C);
+  // Ops __A and __B are swapped.
+  return (__m128i)__builtin_elementwise_fshr((__v2du)__B, (__v2du)__A,
+                                             (__v2du)__C);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
@@ -599,8 +601,9 @@ _mm_maskz_shrdv_epi64(__mmask8 __U, __m128i __A, __m128i __B, __m128i __C)
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_shrdv_epi32(__m256i __A, __m256i __B, __m256i __C)
 {
-  return (__m256i)__builtin_ia32_vpshrdvd256((__v8si)__A, (__v8si)__B,
-                                             (__v8si)__C);
+  // Ops __A and __B are swapped.
+  return (__m256i)__builtin_elementwise_fshr((__v8su)__B, (__v8su)__A,
+                                             (__v8su)__C);
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
@@ -622,8 +625,9 @@ _mm256_maskz_shrdv_epi32(__mmask8 __U, __m256i __A, __m256i __B, __m256i __C)
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_shrdv_epi32(__m128i __A, __m128i __B, __m128i __C)
 {
-  return (__m128i)__builtin_ia32_vpshrdvd128((__v4si)__A, (__v4si)__B,
-                                             (__v4si)__C);
+  // Ops __A and __B are swapped.
+  return (__m128i)__builtin_elementwise_fshr((__v4su)__B, (__v4su)__A,
+                                             (__v4su)__C);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
@@ -645,8 +649,9 @@ _mm_maskz_shrdv_epi32(__mmask8 __U, __m128i __A, __m128i __B, __m128i __C)
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_shrdv_epi16(__m256i __A, __m256i __B, __m256i __C)
 {
-  return (__m256i)__builtin_ia32_vpshrdvw256((__v16hi)__A, (__v16hi)__B,
-                                             (__v16hi)__C);
+  // Ops __A and __B are swapped.
+  return (__m256i)__builtin_elementwise_fshr((__v16hu)__B, (__v16hu)__A,
+                                             (__v16hu)__C);
 }
 
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
@@ -668,8 +673,9 @@ _mm256_maskz_shrdv_epi16(__mmask16 __U, __m256i __A, __m256i __B, __m256i __C)
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_shrdv_epi16(__m128i __A, __m128i __B, __m128i __C)
 {
-  return (__m128i)__builtin_ia32_vpshrdvw128((__v8hi)__A, (__v8hi)__B,
-                                             (__v8hi)__C);
+  // Ops __A and __B are swapped.
+  return (__m128i)__builtin_elementwise_fshr((__v8hu)__B, (__v8hu)__A,
+                                             (__v8hu)__C);
 }
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS128

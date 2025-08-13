@@ -160,10 +160,9 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
   // If the cast operand is a constant vector, perform the cast by
   // operating on each element. In the cast of bitcasts, the element
   // count may be mismatched; don't attempt to handle that here.
-  if ((isa<ConstantVector>(V) || isa<ConstantDataVector>(V)) &&
-      DestTy->isVectorTy() &&
-      cast<FixedVectorType>(DestTy)->getNumElements() ==
-          cast<FixedVectorType>(V->getType())->getNumElements()) {
+  if (DestTy->isVectorTy() && V->getType()->isVectorTy() &&
+      cast<VectorType>(DestTy)->getElementCount() ==
+          cast<VectorType>(V->getType())->getElementCount()) {
     VectorType *DestVecTy = cast<VectorType>(DestTy);
     Type *DstEltTy = DestVecTy->getElementType();
     // Fast path for splatted constants.
@@ -174,6 +173,8 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
       return ConstantVector::getSplat(
           cast<VectorType>(DestTy)->getElementCount(), Res);
     }
+    if (isa<ScalableVectorType>(DestTy))
+      return nullptr;
     SmallVector<Constant *, 16> res;
     Type *Ty = IntegerType::get(V->getContext(), 32);
     for (unsigned i = 0,
@@ -253,6 +254,7 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
     return FoldBitCast(V, DestTy);
   case Instruction::AddrSpaceCast:
   case Instruction::IntToPtr:
+  case Instruction::PtrToAddr:
   case Instruction::PtrToInt:
     return nullptr;
   }
@@ -462,10 +464,9 @@ Constant *llvm::ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
     Constant *Elt =
         ConstantExpr::getExtractElement(V1, ConstantInt::get(Ty, 0));
 
-    if (Elt->isNullValue()) {
-      auto *VTy = VectorType::get(EltTy, MaskEltCount);
-      return ConstantAggregateZero::get(VTy);
-    } else if (!MaskEltCount.isScalable())
+    // For scalable vectors, make sure this doesn't fold back into a
+    // shufflevector.
+    if (!MaskEltCount.isScalable() || Elt->isNullValue() || isa<UndefValue>(Elt))
       return ConstantVector::getSplat(MaskEltCount, Elt);
   }
 
@@ -1148,10 +1149,10 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
   }
 
   // If the comparison is a comparison between two i1's, simplify it.
-  if (C1->getType()->isIntegerTy(1)) {
+  if (C1->getType()->isIntOrIntVectorTy(1)) {
     switch (Predicate) {
     case ICmpInst::ICMP_EQ:
-      if (isa<ConstantInt>(C2))
+      if (isa<ConstantExpr>(C1))
         return ConstantExpr::getXor(C1, ConstantExpr::getNot(C2));
       return ConstantExpr::getXor(ConstantExpr::getNot(C1), C2);
     case ICmpInst::ICMP_NE:

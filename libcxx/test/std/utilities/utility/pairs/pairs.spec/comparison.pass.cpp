@@ -19,8 +19,21 @@
 
 #include <utility>
 #include <cassert>
+#include <concepts>
 
+#include "test_comparisons.h"
 #include "test_macros.h"
+
+#if TEST_STD_VER >= 26
+
+// Test SFINAE.
+
+static_assert(std::equality_comparable<std::pair<EqualityComparable, EqualityComparable>>);
+
+static_assert(!std::equality_comparable<std::pair<EqualityComparable, NonComparable>>);
+static_assert(!std::equality_comparable<std::pair<NonComparable, EqualityComparable>>);
+
+#endif // TEST_STD_VER >= 26
 
 int main(int, char**)
 {

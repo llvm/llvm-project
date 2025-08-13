@@ -75,15 +75,7 @@ RT_API_ATTRS void Terminator::CrashHeader() const {
 #endif
   NotifyOtherImagesOfErrorTermination();
 #if defined(RT_DEVICE_COMPILATION)
-#if defined(__CUDACC__)
-  // NVCC supports __trap().
-  __trap();
-#elif defined(__clang__)
-  // Clang supports __builtin_trap().
-  __builtin_trap();
-#else
-#error "unsupported compiler"
-#endif
+  DeviceTrap();
 #else
   std::abort();
 #endif

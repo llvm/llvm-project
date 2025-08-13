@@ -12,7 +12,8 @@
 #include <clc/clcfunc.h>
 #include <clc/clctypes.h>
 
-#define _CLC_ALL_DECL(TYPE) _CLC_OVERLOAD _CLC_DECL int __clc_all(TYPE v);
+#define _CLC_ALL_DECL(TYPE)                                                    \
+  _CLC_OVERLOAD _CLC_CONST _CLC_DECL int __clc_all(TYPE v);
 
 #define _CLC_VECTOR_ALL_DECL(TYPE)                                             \
   _CLC_ALL_DECL(TYPE)                                                          \

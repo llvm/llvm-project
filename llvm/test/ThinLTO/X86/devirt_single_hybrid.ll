@@ -2,8 +2,32 @@
 ; when we're running hybrid LTO.
 ;
 ; RUN: opt -thinlto-bc -thinlto-split-lto-unit %s -o %t-main.bc
-; RUN: opt -thinlto-bc -thinlto-split-lto-unit %p/Inputs/devirt_single_hybrid_foo.ll -o %t-foo.bc
 ; RUN: opt -thinlto-bc -thinlto-split-lto-unit %p/Inputs/devirt_single_hybrid_bar.ll -o %t-bar.bc
+
+; Test the assume(type.test) case.
+ 
+; RUN: opt -thinlto-bc -thinlto-split-lto-unit %p/Inputs/devirt_single_hybrid_foo.ll -o %t-foo.bc
+; RUN: llvm-lto2 run -save-temps %t-main.bc %t-foo.bc %t-bar.bc -pass-remarks=. -o %t \
+; RUN:   -whole-program-visibility \
+; RUN:    -r=%t-foo.bc,_Z3fooP1A,pl \
+; RUN:    -r=%t-main.bc,main,plx \
+; RUN:    -r=%t-main.bc,_Z3barv,l \
+; RUN:    -r=%t-bar.bc,_Z3barv,pl \
+; RUN:    -r=%t-bar.bc,_Z3fooP1A, \
+; RUN:    -r=%t-bar.bc,_ZNK1A1fEv,pl \
+; RUN:    -r=%t-bar.bc,_ZTV1A,l \
+; RUN:    -r=%t-bar.bc,_ZTVN10__cxxabiv117__class_type_infoE, \
+; RUN:    -r=%t-bar.bc,_ZTS1A,pl \
+; RUN:    -r=%t-bar.bc,_ZTI1A,pl \
+; RUN:    -r=%t-bar.bc,_ZNK1A1fEv, \
+; RUN:    -r=%t-bar.bc,_ZTV1A,pl \
+; RUN:    -r=%t-bar.bc,_ZTI1A, 2>&1 | FileCheck %s --check-prefix=REMARK
+; RUN: llvm-dis %t.1.3.import.bc -o - | FileCheck %s --check-prefix=IMPORT
+; RUN: llvm-dis %t.1.5.precodegen.bc -o - | FileCheck %s --check-prefix=CODEGEN
+
+; Test the type.checked.load case.
+ 
+; RUN: opt -thinlto-bc -thinlto-split-lto-unit %p/Inputs/devirt_single_hybrid_foo_tcl.ll -o %t-foo.bc
 ; RUN: llvm-lto2 run -save-temps %t-main.bc %t-foo.bc %t-bar.bc -pass-remarks=. -o %t \
 ; RUN:   -whole-program-visibility \
 ; RUN:    -r=%t-foo.bc,_Z3fooP1A,pl \

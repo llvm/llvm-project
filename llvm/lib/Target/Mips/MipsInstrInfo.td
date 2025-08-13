@@ -236,7 +236,6 @@ def NotInMicroMips :  Predicate<"!Subtarget->inMicroMipsMode()">,
                       AssemblerPredicate<(all_of (not FeatureMicroMips))>;
 def IsLE           :  Predicate<"Subtarget->isLittle()">;
 def IsBE           :  Predicate<"!Subtarget->isLittle()">;
-def IsNotNaCl    :    Predicate<"!Subtarget->isTargetNaCl()">;
 def UseTCCInDIV    :  AssemblerPredicate<(all_of FeatureUseTCCInDIV)>;
 def HasEVA       :    Predicate<"Subtarget->hasEVA()">,
                       AssemblerPredicate<(all_of FeatureEVA)>;
@@ -3358,9 +3357,9 @@ let AdditionalPredicates = [NotInMicroMips] in {
   }
 
   // Atomic load patterns.
-  def : MipsPat<(atomic_load_8 addr:$a), (LB addr:$a)>, ISA_MIPS1;
-  def : MipsPat<(atomic_load_16 addr:$a), (LH addr:$a)>, ISA_MIPS1;
-  def : MipsPat<(atomic_load_32 addr:$a), (LW addr:$a)>, ISA_MIPS1;
+  def : MipsPat<(atomic_load_asext_8 addr:$a), (LB addr:$a)>, ISA_MIPS1;
+  def : MipsPat<(atomic_load_asext_16 addr:$a), (LH addr:$a)>, ISA_MIPS1;
+  def : MipsPat<(atomic_load_nonext_32 addr:$a), (LW addr:$a)>, ISA_MIPS1;
 
   // Atomic store patterns.
   def : MipsPat<(atomic_store_8 GPR32:$v, addr:$a), (SB GPR32:$v, addr:$a)>,

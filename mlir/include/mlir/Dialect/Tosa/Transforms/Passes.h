@@ -41,13 +41,7 @@ void populateTosaConstantReduction(MLIRContext *ctx,
 
 void populateTosaTypeConversion(TypeConverter &converter);
 
-std::unique_ptr<Pass> createTosaLayerwiseConstantFoldPass();
-std::unique_ptr<Pass> createTosaLayerwiseConstantFoldPass(
-    const TosaLayerwiseConstantFoldPassOptions &options);
-std::unique_ptr<Pass> createTosaInferShapesPass();
-std::unique_ptr<Pass> createTosaMakeBroadcastablePass();
 std::unique_ptr<Pass> createTosaTestQuantUtilAPIPass();
-std::unique_ptr<Pass> createTosaOptionalDecompositions();
 
 #define GEN_PASS_REGISTRATION
 #include "mlir/Dialect/Tosa/Transforms/Passes.h.inc"

@@ -28,13 +28,13 @@
         bl $4
         beq $4 + 4
 
-@ CHECK: b      ($foo)                      @ encoding: [A,A,A,0xea]
-@ CHECK: bl     ($foo)                      @ encoding: [A,A,A,0xeb]
-@ CHECK: beq    ($foo)                      @ encoding: [A,A,A,0x0a]
-@ CHECK: blx    ($foo)                      @ encoding: [A,A,A,0xfa]
-@ CHECK: b      #($foo)+4                   @ encoding: [A,A,A,0xea]
-@ CHECK: bl     ($4)                        @ encoding: [A,A,A,0xeb]
-@ CHECK: beq    #($4)+4                     @ encoding: [A,A,A,0x0a]
+@ CHECK: b      $foo                      @ encoding: [A,A,A,0xea]
+@ CHECK: bl     $foo                      @ encoding: [A,A,A,0xeb]
+@ CHECK: beq    $foo                      @ encoding: [A,A,A,0x0a]
+@ CHECK: blx    $foo                      @ encoding: [A,A,A,0xfa]
+@ CHECK: b      #$foo+4                   @ encoding: [A,A,A,0xea]
+@ CHECK: bl     $4                        @ encoding: [A,A,A,0xeb]
+@ CHECK: beq    #$4+4                     @ encoding: [A,A,A,0x0a]
 
 @------------------------------------------------------------------------------
 @ Leading '$' should be allowed to introduce an expression

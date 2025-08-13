@@ -54,8 +54,8 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
   localFrameSize:  24
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
 stack:
   - { id: 0, name: '', type: default, offset: -20, size: 4, alignment: 4,

@@ -1,0 +1,37 @@
+# RUN: yaml2obj %s -o %t.obj
+# RUN: llvm-readobj --string-table %t.obj \
+# RUN:   %p/Inputs/coff-load-config-x64.dll \
+# RUN:   %p/Inputs/zero-string-table.obj.coff-i386 | FileCheck %s
+
+# CHECK-LABEL: File: {{.*}}string-table.test.tmp.obj
+# CHECK:       StringTable {
+# CHECK-NEXT:    Length: 31
+# CHECK-NEXT:    [     4] .debug_str
+# CHECK-NEXT:    [     f] _main_test_test
+# CHECK-NEXT:  }
+
+# CHECK-LABEL: File: {{.*}}coff-load-config-x64.dll
+# CHECK:       StringTable {
+# CHECK-NEXT:    Length: 0
+# CHECK-NEXT:  }
+
+# CHECK-LABEL: File: {{.*}}zero-string-table.obj.coff-i386
+# CHECK:       StringTable {
+# CHECK-NEXT:    Length: 4
+# CHECK-NEXT:  }
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+  - Name:            .debug_str
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+symbols:
+  - Name:            _main_test_test
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL

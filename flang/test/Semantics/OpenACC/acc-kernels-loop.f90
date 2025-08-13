@@ -243,8 +243,15 @@ program openacc_kernels_loop_validity
     a(i) = 3.14
   end do
 
-  !$acc kernels loop default(none)
+  !$acc kernels loop default(none) private(N, a)
   do i = 1, N
+    a(i) = 3.14
+  end do
+
+  !$acc kernels loop default(none)
+  !ERROR: The DEFAULT(NONE) clause requires that 'n' must be listed in a data-mapping clause
+  do i = 1, N
+    !ERROR: The DEFAULT(NONE) clause requires that 'a' must be listed in a data-mapping clause
     a(i) = 3.14
   end do
 
@@ -293,6 +300,15 @@ program openacc_kernels_loop_validity
   !$acc parallel loop
   do i = 1, N
     if(i == 10) cycle
+  end do
+
+  !$acc kernels loop async(1) device_type(nvidia) async(3)
+  do i = 1, n
+  end do
+
+!ERROR: At most one ASYNC clause can appear on the KERNELS LOOP directive or in group separated by the DEVICE_TYPE clause
+  !$acc kernels loop async(1) device_type(nvidia) async async
+  do i = 1, n
   end do
 
 end program openacc_kernels_loop_validity

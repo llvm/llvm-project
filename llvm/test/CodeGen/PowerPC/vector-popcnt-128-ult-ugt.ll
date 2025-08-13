@@ -7838,9 +7838,9 @@ define <4 x i32> @ult_16_v4i32(<4 x i32> %0) {
 ;
 ; PWR9-LABEL: ult_16_v4i32:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    vspltisw 3, 8
+; PWR9-NEXT:    xxspltib 35, 16
 ; PWR9-NEXT:    vpopcntw 2, 2
-; PWR9-NEXT:    vadduwm 3, 3, 3
+; PWR9-NEXT:    vextsb2w 3, 3
 ; PWR9-NEXT:    vcmpgtuw 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -7974,9 +7974,9 @@ define <4 x i32> @ugt_16_v4i32(<4 x i32> %0) {
 ;
 ; PWR9-LABEL: ugt_16_v4i32:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    vspltisw 3, 8
+; PWR9-NEXT:    xxspltib 35, 16
 ; PWR9-NEXT:    vpopcntw 2, 2
-; PWR9-NEXT:    vadduwm 3, 3, 3
+; PWR9-NEXT:    vextsb2w 3, 3
 ; PWR9-NEXT:    vcmpgtuw 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -8108,10 +8108,9 @@ define <4 x i32> @ult_17_v4i32(<4 x i32> %0) {
 ;
 ; PWR9-LABEL: ult_17_v4i32:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    vspltisw 3, -16
-; PWR9-NEXT:    vspltisw 4, 1
+; PWR9-NEXT:    xxspltib 35, 17
 ; PWR9-NEXT:    vpopcntw 2, 2
-; PWR9-NEXT:    vsubuwm 3, 4, 3
+; PWR9-NEXT:    vextsb2w 3, 3
 ; PWR9-NEXT:    vcmpgtuw 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -8243,10 +8242,9 @@ define <4 x i32> @ugt_17_v4i32(<4 x i32> %0) {
 ;
 ; PWR9-LABEL: ugt_17_v4i32:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    vspltisw 3, -16
-; PWR9-NEXT:    vspltisw 4, 1
+; PWR9-NEXT:    xxspltib 35, 17
 ; PWR9-NEXT:    vpopcntw 2, 2
-; PWR9-NEXT:    vsubuwm 3, 4, 3
+; PWR9-NEXT:    vextsb2w 3, 3
 ; PWR9-NEXT:    vcmpgtuw 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -8380,9 +8378,9 @@ define <4 x i32> @ult_18_v4i32(<4 x i32> %0) {
 ;
 ; PWR9-LABEL: ult_18_v4i32:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    vspltisw 3, 9
+; PWR9-NEXT:    xxspltib 35, 18
 ; PWR9-NEXT:    vpopcntw 2, 2
-; PWR9-NEXT:    vadduwm 3, 3, 3
+; PWR9-NEXT:    vextsb2w 3, 3
 ; PWR9-NEXT:    vcmpgtuw 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -8516,9 +8514,9 @@ define <4 x i32> @ugt_18_v4i32(<4 x i32> %0) {
 ;
 ; PWR9-LABEL: ugt_18_v4i32:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    vspltisw 3, 9
+; PWR9-NEXT:    xxspltib 35, 18
 ; PWR9-NEXT:    vpopcntw 2, 2
-; PWR9-NEXT:    vadduwm 3, 3, 3
+; PWR9-NEXT:    vextsb2w 3, 3
 ; PWR9-NEXT:    vcmpgtuw 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -8653,10 +8651,9 @@ define <4 x i32> @ult_19_v4i32(<4 x i32> %0) {
 ;
 ; PWR9-LABEL: ult_19_v4i32:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    vspltisw 3, -16
-; PWR9-NEXT:    vspltisw 4, 3
+; PWR9-NEXT:    xxspltib 35, 19
 ; PWR9-NEXT:    vpopcntw 2, 2
-; PWR9-NEXT:    vsubuwm 3, 4, 3
+; PWR9-NEXT:    vextsb2w 3, 3
 ; PWR9-NEXT:    vcmpgtuw 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -8791,10 +8788,9 @@ define <4 x i32> @ugt_19_v4i32(<4 x i32> %0) {
 ;
 ; PWR9-LABEL: ugt_19_v4i32:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    vspltisw 3, -16
-; PWR9-NEXT:    vspltisw 4, 3
+; PWR9-NEXT:    xxspltib 35, 19
 ; PWR9-NEXT:    vpopcntw 2, 2
-; PWR9-NEXT:    vsubuwm 3, 4, 3
+; PWR9-NEXT:    vextsb2w 3, 3
 ; PWR9-NEXT:    vcmpgtuw 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -8928,9 +8924,9 @@ define <4 x i32> @ult_20_v4i32(<4 x i32> %0) {
 ;
 ; PWR9-LABEL: ult_20_v4i32:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    vspltisw 3, 10
+; PWR9-NEXT:    xxspltib 35, 20
 ; PWR9-NEXT:    vpopcntw 2, 2
-; PWR9-NEXT:    vadduwm 3, 3, 3
+; PWR9-NEXT:    vextsb2w 3, 3
 ; PWR9-NEXT:    vcmpgtuw 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -9064,9 +9060,9 @@ define <4 x i32> @ugt_20_v4i32(<4 x i32> %0) {
 ;
 ; PWR9-LABEL: ugt_20_v4i32:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    vspltisw 3, 10
+; PWR9-NEXT:    xxspltib 35, 20
 ; PWR9-NEXT:    vpopcntw 2, 2
-; PWR9-NEXT:    vadduwm 3, 3, 3
+; PWR9-NEXT:    vextsb2w 3, 3
 ; PWR9-NEXT:    vcmpgtuw 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -9201,10 +9197,9 @@ define <4 x i32> @ult_21_v4i32(<4 x i32> %0) {
 ;
 ; PWR9-LABEL: ult_21_v4i32:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    vspltisw 3, -16
-; PWR9-NEXT:    vspltisw 4, 5
+; PWR9-NEXT:    xxspltib 35, 21
 ; PWR9-NEXT:    vpopcntw 2, 2
-; PWR9-NEXT:    vsubuwm 3, 4, 3
+; PWR9-NEXT:    vextsb2w 3, 3
 ; PWR9-NEXT:    vcmpgtuw 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -9339,10 +9334,9 @@ define <4 x i32> @ugt_21_v4i32(<4 x i32> %0) {
 ;
 ; PWR9-LABEL: ugt_21_v4i32:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    vspltisw 3, -16
-; PWR9-NEXT:    vspltisw 4, 5
+; PWR9-NEXT:    xxspltib 35, 21
 ; PWR9-NEXT:    vpopcntw 2, 2
-; PWR9-NEXT:    vsubuwm 3, 4, 3
+; PWR9-NEXT:    vextsb2w 3, 3
 ; PWR9-NEXT:    vcmpgtuw 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -9476,9 +9470,9 @@ define <4 x i32> @ult_22_v4i32(<4 x i32> %0) {
 ;
 ; PWR9-LABEL: ult_22_v4i32:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    vspltisw 3, 11
+; PWR9-NEXT:    xxspltib 35, 22
 ; PWR9-NEXT:    vpopcntw 2, 2
-; PWR9-NEXT:    vadduwm 3, 3, 3
+; PWR9-NEXT:    vextsb2w 3, 3
 ; PWR9-NEXT:    vcmpgtuw 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -9612,9 +9606,9 @@ define <4 x i32> @ugt_22_v4i32(<4 x i32> %0) {
 ;
 ; PWR9-LABEL: ugt_22_v4i32:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    vspltisw 3, 11
+; PWR9-NEXT:    xxspltib 35, 22
 ; PWR9-NEXT:    vpopcntw 2, 2
-; PWR9-NEXT:    vadduwm 3, 3, 3
+; PWR9-NEXT:    vextsb2w 3, 3
 ; PWR9-NEXT:    vcmpgtuw 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -9749,10 +9743,9 @@ define <4 x i32> @ult_23_v4i32(<4 x i32> %0) {
 ;
 ; PWR9-LABEL: ult_23_v4i32:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    vspltisw 3, -16
-; PWR9-NEXT:    vspltisw 4, 7
+; PWR9-NEXT:    xxspltib 35, 23
 ; PWR9-NEXT:    vpopcntw 2, 2
-; PWR9-NEXT:    vsubuwm 3, 4, 3
+; PWR9-NEXT:    vextsb2w 3, 3
 ; PWR9-NEXT:    vcmpgtuw 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -9887,10 +9880,9 @@ define <4 x i32> @ugt_23_v4i32(<4 x i32> %0) {
 ;
 ; PWR9-LABEL: ugt_23_v4i32:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    vspltisw 3, -16
-; PWR9-NEXT:    vspltisw 4, 7
+; PWR9-NEXT:    xxspltib 35, 23
 ; PWR9-NEXT:    vpopcntw 2, 2
-; PWR9-NEXT:    vsubuwm 3, 4, 3
+; PWR9-NEXT:    vextsb2w 3, 3
 ; PWR9-NEXT:    vcmpgtuw 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -10018,9 +10010,9 @@ define <4 x i32> @ult_24_v4i32(<4 x i32> %0) {
 ;
 ; PWR9-LABEL: ult_24_v4i32:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    vspltisw 3, 12
+; PWR9-NEXT:    xxspltib 35, 24
 ; PWR9-NEXT:    vpopcntw 2, 2
-; PWR9-NEXT:    vadduwm 3, 3, 3
+; PWR9-NEXT:    vextsb2w 3, 3
 ; PWR9-NEXT:    vcmpgtuw 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -10148,9 +10140,9 @@ define <4 x i32> @ugt_24_v4i32(<4 x i32> %0) {
 ;
 ; PWR9-LABEL: ugt_24_v4i32:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    vspltisw 3, 12
+; PWR9-NEXT:    xxspltib 35, 24
 ; PWR9-NEXT:    vpopcntw 2, 2
-; PWR9-NEXT:    vadduwm 3, 3, 3
+; PWR9-NEXT:    vextsb2w 3, 3
 ; PWR9-NEXT:    vcmpgtuw 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -10285,10 +10277,9 @@ define <4 x i32> @ult_25_v4i32(<4 x i32> %0) {
 ;
 ; PWR9-LABEL: ult_25_v4i32:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    vspltisw 3, -16
-; PWR9-NEXT:    vspltisw 4, 9
+; PWR9-NEXT:    xxspltib 35, 25
 ; PWR9-NEXT:    vpopcntw 2, 2
-; PWR9-NEXT:    vsubuwm 3, 4, 3
+; PWR9-NEXT:    vextsb2w 3, 3
 ; PWR9-NEXT:    vcmpgtuw 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -10423,10 +10414,9 @@ define <4 x i32> @ugt_25_v4i32(<4 x i32> %0) {
 ;
 ; PWR9-LABEL: ugt_25_v4i32:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    vspltisw 3, -16
-; PWR9-NEXT:    vspltisw 4, 9
+; PWR9-NEXT:    xxspltib 35, 25
 ; PWR9-NEXT:    vpopcntw 2, 2
-; PWR9-NEXT:    vsubuwm 3, 4, 3
+; PWR9-NEXT:    vextsb2w 3, 3
 ; PWR9-NEXT:    vcmpgtuw 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -10560,9 +10550,9 @@ define <4 x i32> @ult_26_v4i32(<4 x i32> %0) {
 ;
 ; PWR9-LABEL: ult_26_v4i32:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    vspltisw 3, 13
+; PWR9-NEXT:    xxspltib 35, 26
 ; PWR9-NEXT:    vpopcntw 2, 2
-; PWR9-NEXT:    vadduwm 3, 3, 3
+; PWR9-NEXT:    vextsb2w 3, 3
 ; PWR9-NEXT:    vcmpgtuw 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -10696,9 +10686,9 @@ define <4 x i32> @ugt_26_v4i32(<4 x i32> %0) {
 ;
 ; PWR9-LABEL: ugt_26_v4i32:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    vspltisw 3, 13
+; PWR9-NEXT:    xxspltib 35, 26
 ; PWR9-NEXT:    vpopcntw 2, 2
-; PWR9-NEXT:    vadduwm 3, 3, 3
+; PWR9-NEXT:    vextsb2w 3, 3
 ; PWR9-NEXT:    vcmpgtuw 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -10833,10 +10823,9 @@ define <4 x i32> @ult_27_v4i32(<4 x i32> %0) {
 ;
 ; PWR9-LABEL: ult_27_v4i32:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    vspltisw 3, -16
-; PWR9-NEXT:    vspltisw 4, 11
+; PWR9-NEXT:    xxspltib 35, 27
 ; PWR9-NEXT:    vpopcntw 2, 2
-; PWR9-NEXT:    vsubuwm 3, 4, 3
+; PWR9-NEXT:    vextsb2w 3, 3
 ; PWR9-NEXT:    vcmpgtuw 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -10971,10 +10960,9 @@ define <4 x i32> @ugt_27_v4i32(<4 x i32> %0) {
 ;
 ; PWR9-LABEL: ugt_27_v4i32:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    vspltisw 3, -16
-; PWR9-NEXT:    vspltisw 4, 11
+; PWR9-NEXT:    xxspltib 35, 27
 ; PWR9-NEXT:    vpopcntw 2, 2
-; PWR9-NEXT:    vsubuwm 3, 4, 3
+; PWR9-NEXT:    vextsb2w 3, 3
 ; PWR9-NEXT:    vcmpgtuw 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -11108,9 +11096,9 @@ define <4 x i32> @ult_28_v4i32(<4 x i32> %0) {
 ;
 ; PWR9-LABEL: ult_28_v4i32:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    vspltisw 3, 14
+; PWR9-NEXT:    xxspltib 35, 28
 ; PWR9-NEXT:    vpopcntw 2, 2
-; PWR9-NEXT:    vadduwm 3, 3, 3
+; PWR9-NEXT:    vextsb2w 3, 3
 ; PWR9-NEXT:    vcmpgtuw 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -11244,9 +11232,9 @@ define <4 x i32> @ugt_28_v4i32(<4 x i32> %0) {
 ;
 ; PWR9-LABEL: ugt_28_v4i32:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    vspltisw 3, 14
+; PWR9-NEXT:    xxspltib 35, 28
 ; PWR9-NEXT:    vpopcntw 2, 2
-; PWR9-NEXT:    vadduwm 3, 3, 3
+; PWR9-NEXT:    vextsb2w 3, 3
 ; PWR9-NEXT:    vcmpgtuw 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -11381,10 +11369,9 @@ define <4 x i32> @ult_29_v4i32(<4 x i32> %0) {
 ;
 ; PWR9-LABEL: ult_29_v4i32:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    vspltisw 3, -16
-; PWR9-NEXT:    vspltisw 4, 13
+; PWR9-NEXT:    xxspltib 35, 29
 ; PWR9-NEXT:    vpopcntw 2, 2
-; PWR9-NEXT:    vsubuwm 3, 4, 3
+; PWR9-NEXT:    vextsb2w 3, 3
 ; PWR9-NEXT:    vcmpgtuw 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -11519,10 +11506,9 @@ define <4 x i32> @ugt_29_v4i32(<4 x i32> %0) {
 ;
 ; PWR9-LABEL: ugt_29_v4i32:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    vspltisw 3, -16
-; PWR9-NEXT:    vspltisw 4, 13
+; PWR9-NEXT:    xxspltib 35, 29
 ; PWR9-NEXT:    vpopcntw 2, 2
-; PWR9-NEXT:    vsubuwm 3, 4, 3
+; PWR9-NEXT:    vextsb2w 3, 3
 ; PWR9-NEXT:    vcmpgtuw 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -11656,9 +11642,9 @@ define <4 x i32> @ult_30_v4i32(<4 x i32> %0) {
 ;
 ; PWR9-LABEL: ult_30_v4i32:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    vspltisw 3, 15
+; PWR9-NEXT:    xxspltib 35, 30
 ; PWR9-NEXT:    vpopcntw 2, 2
-; PWR9-NEXT:    vadduwm 3, 3, 3
+; PWR9-NEXT:    vextsb2w 3, 3
 ; PWR9-NEXT:    vcmpgtuw 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -11792,9 +11778,9 @@ define <4 x i32> @ugt_30_v4i32(<4 x i32> %0) {
 ;
 ; PWR9-LABEL: ugt_30_v4i32:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    vspltisw 3, 15
+; PWR9-NEXT:    xxspltib 35, 30
 ; PWR9-NEXT:    vpopcntw 2, 2
-; PWR9-NEXT:    vadduwm 3, 3, 3
+; PWR9-NEXT:    vextsb2w 3, 3
 ; PWR9-NEXT:    vcmpgtuw 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -11929,10 +11915,9 @@ define <4 x i32> @ult_31_v4i32(<4 x i32> %0) {
 ;
 ; PWR9-LABEL: ult_31_v4i32:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    vspltisw 3, -16
-; PWR9-NEXT:    vspltisw 4, 15
+; PWR9-NEXT:    xxspltib 35, 31
 ; PWR9-NEXT:    vpopcntw 2, 2
-; PWR9-NEXT:    vsubuwm 3, 4, 3
+; PWR9-NEXT:    vextsb2w 3, 3
 ; PWR9-NEXT:    vcmpgtuw 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %0)
@@ -11945,11 +11930,11 @@ define <2 x i64> @ugt_1_v2i64(<2 x i64> %0) {
 ; PWR5-LABEL: ugt_1_v2i64:
 ; PWR5:       # %bb.0:
 ; PWR5-NEXT:    addi 5, 3, -1
+; PWR5-NEXT:    addi 6, 4, -1
 ; PWR5-NEXT:    and 3, 3, 5
-; PWR5-NEXT:    addi 5, 4, -1
+; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    subfic 3, 3, 0
 ; PWR5-NEXT:    subfe 3, 3, 3
-; PWR5-NEXT:    and 4, 4, 5
 ; PWR5-NEXT:    subfic 4, 4, 0
 ; PWR5-NEXT:    subfe 4, 4, 4
 ; PWR5-NEXT:    blr
@@ -11957,11 +11942,11 @@ define <2 x i64> @ugt_1_v2i64(<2 x i64> %0) {
 ; PWR6-LABEL: ugt_1_v2i64:
 ; PWR6:       # %bb.0:
 ; PWR6-NEXT:    addi 5, 3, -1
+; PWR6-NEXT:    addi 6, 4, -1
 ; PWR6-NEXT:    and 3, 3, 5
-; PWR6-NEXT:    addi 5, 4, -1
+; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    subfic 3, 3, 0
 ; PWR6-NEXT:    subfe 3, 3, 3
-; PWR6-NEXT:    and 4, 4, 5
 ; PWR6-NEXT:    subfic 4, 4, 0
 ; PWR6-NEXT:    subfe 4, 4, 4
 ; PWR6-NEXT:    blr
@@ -11991,19 +11976,17 @@ define <2 x i64> @ugt_1_v2i64(<2 x i64> %0) {
 ;
 ; PWR8-LABEL: ugt_1_v2i64:
 ; PWR8:       # %bb.0:
-; PWR8-NEXT:    addis 3, 2, .LCPI100_0@toc@ha
+; PWR8-NEXT:    vspltisw 3, 1
 ; PWR8-NEXT:    vpopcntd 2, 2
-; PWR8-NEXT:    addi 3, 3, .LCPI100_0@toc@l
-; PWR8-NEXT:    lxvd2x 35, 0, 3
+; PWR8-NEXT:    vupklsw 3, 3
 ; PWR8-NEXT:    vcmpgtud 2, 2, 3
 ; PWR8-NEXT:    blr
 ;
 ; PWR9-LABEL: ugt_1_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI100_0@toc@ha
+; PWR9-NEXT:    vspltisw 3, 1
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI100_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vupklsw 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -12016,11 +11999,11 @@ define <2 x i64> @ult_2_v2i64(<2 x i64> %0) {
 ; PWR5-LABEL: ult_2_v2i64:
 ; PWR5:       # %bb.0:
 ; PWR5-NEXT:    addi 5, 3, -1
+; PWR5-NEXT:    addi 6, 4, -1
 ; PWR5-NEXT:    and 3, 3, 5
-; PWR5-NEXT:    addi 5, 4, -1
+; PWR5-NEXT:    and 4, 4, 6
 ; PWR5-NEXT:    addic 3, 3, -1
 ; PWR5-NEXT:    subfe 3, 3, 3
-; PWR5-NEXT:    and 4, 4, 5
 ; PWR5-NEXT:    addic 4, 4, -1
 ; PWR5-NEXT:    subfe 4, 4, 4
 ; PWR5-NEXT:    blr
@@ -12028,11 +12011,11 @@ define <2 x i64> @ult_2_v2i64(<2 x i64> %0) {
 ; PWR6-LABEL: ult_2_v2i64:
 ; PWR6:       # %bb.0:
 ; PWR6-NEXT:    addi 5, 3, -1
+; PWR6-NEXT:    addi 6, 4, -1
 ; PWR6-NEXT:    and 3, 3, 5
-; PWR6-NEXT:    addi 5, 4, -1
+; PWR6-NEXT:    and 4, 4, 6
 ; PWR6-NEXT:    addic 3, 3, -1
 ; PWR6-NEXT:    subfe 3, 3, 3
-; PWR6-NEXT:    and 4, 4, 5
 ; PWR6-NEXT:    addic 4, 4, -1
 ; PWR6-NEXT:    subfe 4, 4, 4
 ; PWR6-NEXT:    blr
@@ -12061,19 +12044,17 @@ define <2 x i64> @ult_2_v2i64(<2 x i64> %0) {
 ;
 ; PWR8-LABEL: ult_2_v2i64:
 ; PWR8:       # %bb.0:
-; PWR8-NEXT:    addis 3, 2, .LCPI101_0@toc@ha
+; PWR8-NEXT:    vspltisw 3, 2
 ; PWR8-NEXT:    vpopcntd 2, 2
-; PWR8-NEXT:    addi 3, 3, .LCPI101_0@toc@l
-; PWR8-NEXT:    lxvd2x 35, 0, 3
+; PWR8-NEXT:    vupklsw 3, 3
 ; PWR8-NEXT:    vcmpgtud 2, 3, 2
 ; PWR8-NEXT:    blr
 ;
 ; PWR9-LABEL: ult_2_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI101_0@toc@ha
+; PWR9-NEXT:    vspltisw 3, 2
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI101_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vupklsw 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -12195,19 +12176,17 @@ define <2 x i64> @ugt_2_v2i64(<2 x i64> %0) {
 ;
 ; PWR8-LABEL: ugt_2_v2i64:
 ; PWR8:       # %bb.0:
-; PWR8-NEXT:    addis 3, 2, .LCPI102_0@toc@ha
+; PWR8-NEXT:    vspltisw 3, 2
 ; PWR8-NEXT:    vpopcntd 2, 2
-; PWR8-NEXT:    addi 3, 3, .LCPI102_0@toc@l
-; PWR8-NEXT:    lxvd2x 35, 0, 3
+; PWR8-NEXT:    vupklsw 3, 3
 ; PWR8-NEXT:    vcmpgtud 2, 2, 3
 ; PWR8-NEXT:    blr
 ;
 ; PWR9-LABEL: ugt_2_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI102_0@toc@ha
+; PWR9-NEXT:    vspltisw 3, 2
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI102_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vupklsw 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -12329,19 +12308,17 @@ define <2 x i64> @ult_3_v2i64(<2 x i64> %0) {
 ;
 ; PWR8-LABEL: ult_3_v2i64:
 ; PWR8:       # %bb.0:
-; PWR8-NEXT:    addis 3, 2, .LCPI103_0@toc@ha
+; PWR8-NEXT:    vspltisw 3, 3
 ; PWR8-NEXT:    vpopcntd 2, 2
-; PWR8-NEXT:    addi 3, 3, .LCPI103_0@toc@l
-; PWR8-NEXT:    lxvd2x 35, 0, 3
+; PWR8-NEXT:    vupklsw 3, 3
 ; PWR8-NEXT:    vcmpgtud 2, 3, 2
 ; PWR8-NEXT:    blr
 ;
 ; PWR9-LABEL: ult_3_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI103_0@toc@ha
+; PWR9-NEXT:    vspltisw 3, 3
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI103_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vupklsw 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -12463,19 +12440,17 @@ define <2 x i64> @ugt_3_v2i64(<2 x i64> %0) {
 ;
 ; PWR8-LABEL: ugt_3_v2i64:
 ; PWR8:       # %bb.0:
-; PWR8-NEXT:    addis 3, 2, .LCPI104_0@toc@ha
+; PWR8-NEXT:    vspltisw 3, 3
 ; PWR8-NEXT:    vpopcntd 2, 2
-; PWR8-NEXT:    addi 3, 3, .LCPI104_0@toc@l
-; PWR8-NEXT:    lxvd2x 35, 0, 3
+; PWR8-NEXT:    vupklsw 3, 3
 ; PWR8-NEXT:    vcmpgtud 2, 2, 3
 ; PWR8-NEXT:    blr
 ;
 ; PWR9-LABEL: ugt_3_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI104_0@toc@ha
+; PWR9-NEXT:    vspltisw 3, 3
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI104_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vupklsw 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -12597,19 +12572,17 @@ define <2 x i64> @ult_4_v2i64(<2 x i64> %0) {
 ;
 ; PWR8-LABEL: ult_4_v2i64:
 ; PWR8:       # %bb.0:
-; PWR8-NEXT:    addis 3, 2, .LCPI105_0@toc@ha
+; PWR8-NEXT:    vspltisw 3, 4
 ; PWR8-NEXT:    vpopcntd 2, 2
-; PWR8-NEXT:    addi 3, 3, .LCPI105_0@toc@l
-; PWR8-NEXT:    lxvd2x 35, 0, 3
+; PWR8-NEXT:    vupklsw 3, 3
 ; PWR8-NEXT:    vcmpgtud 2, 3, 2
 ; PWR8-NEXT:    blr
 ;
 ; PWR9-LABEL: ult_4_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI105_0@toc@ha
+; PWR9-NEXT:    vspltisw 3, 4
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI105_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vupklsw 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -12731,19 +12704,17 @@ define <2 x i64> @ugt_4_v2i64(<2 x i64> %0) {
 ;
 ; PWR8-LABEL: ugt_4_v2i64:
 ; PWR8:       # %bb.0:
-; PWR8-NEXT:    addis 3, 2, .LCPI106_0@toc@ha
+; PWR8-NEXT:    vspltisw 3, 4
 ; PWR8-NEXT:    vpopcntd 2, 2
-; PWR8-NEXT:    addi 3, 3, .LCPI106_0@toc@l
-; PWR8-NEXT:    lxvd2x 35, 0, 3
+; PWR8-NEXT:    vupklsw 3, 3
 ; PWR8-NEXT:    vcmpgtud 2, 2, 3
 ; PWR8-NEXT:    blr
 ;
 ; PWR9-LABEL: ugt_4_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI106_0@toc@ha
+; PWR9-NEXT:    vspltisw 3, 4
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI106_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vupklsw 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -12865,19 +12836,17 @@ define <2 x i64> @ult_5_v2i64(<2 x i64> %0) {
 ;
 ; PWR8-LABEL: ult_5_v2i64:
 ; PWR8:       # %bb.0:
-; PWR8-NEXT:    addis 3, 2, .LCPI107_0@toc@ha
+; PWR8-NEXT:    vspltisw 3, 5
 ; PWR8-NEXT:    vpopcntd 2, 2
-; PWR8-NEXT:    addi 3, 3, .LCPI107_0@toc@l
-; PWR8-NEXT:    lxvd2x 35, 0, 3
+; PWR8-NEXT:    vupklsw 3, 3
 ; PWR8-NEXT:    vcmpgtud 2, 3, 2
 ; PWR8-NEXT:    blr
 ;
 ; PWR9-LABEL: ult_5_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI107_0@toc@ha
+; PWR9-NEXT:    vspltisw 3, 5
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI107_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vupklsw 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -12999,19 +12968,17 @@ define <2 x i64> @ugt_5_v2i64(<2 x i64> %0) {
 ;
 ; PWR8-LABEL: ugt_5_v2i64:
 ; PWR8:       # %bb.0:
-; PWR8-NEXT:    addis 3, 2, .LCPI108_0@toc@ha
+; PWR8-NEXT:    vspltisw 3, 5
 ; PWR8-NEXT:    vpopcntd 2, 2
-; PWR8-NEXT:    addi 3, 3, .LCPI108_0@toc@l
-; PWR8-NEXT:    lxvd2x 35, 0, 3
+; PWR8-NEXT:    vupklsw 3, 3
 ; PWR8-NEXT:    vcmpgtud 2, 2, 3
 ; PWR8-NEXT:    blr
 ;
 ; PWR9-LABEL: ugt_5_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI108_0@toc@ha
+; PWR9-NEXT:    vspltisw 3, 5
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI108_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vupklsw 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -13133,19 +13100,17 @@ define <2 x i64> @ult_6_v2i64(<2 x i64> %0) {
 ;
 ; PWR8-LABEL: ult_6_v2i64:
 ; PWR8:       # %bb.0:
-; PWR8-NEXT:    addis 3, 2, .LCPI109_0@toc@ha
+; PWR8-NEXT:    vspltisw 3, 6
 ; PWR8-NEXT:    vpopcntd 2, 2
-; PWR8-NEXT:    addi 3, 3, .LCPI109_0@toc@l
-; PWR8-NEXT:    lxvd2x 35, 0, 3
+; PWR8-NEXT:    vupklsw 3, 3
 ; PWR8-NEXT:    vcmpgtud 2, 3, 2
 ; PWR8-NEXT:    blr
 ;
 ; PWR9-LABEL: ult_6_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI109_0@toc@ha
+; PWR9-NEXT:    vspltisw 3, 6
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI109_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vupklsw 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -13267,19 +13232,17 @@ define <2 x i64> @ugt_6_v2i64(<2 x i64> %0) {
 ;
 ; PWR8-LABEL: ugt_6_v2i64:
 ; PWR8:       # %bb.0:
-; PWR8-NEXT:    addis 3, 2, .LCPI110_0@toc@ha
+; PWR8-NEXT:    vspltisw 3, 6
 ; PWR8-NEXT:    vpopcntd 2, 2
-; PWR8-NEXT:    addi 3, 3, .LCPI110_0@toc@l
-; PWR8-NEXT:    lxvd2x 35, 0, 3
+; PWR8-NEXT:    vupklsw 3, 3
 ; PWR8-NEXT:    vcmpgtud 2, 2, 3
 ; PWR8-NEXT:    blr
 ;
 ; PWR9-LABEL: ugt_6_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI110_0@toc@ha
+; PWR9-NEXT:    vspltisw 3, 6
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI110_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vupklsw 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -13401,19 +13364,17 @@ define <2 x i64> @ult_7_v2i64(<2 x i64> %0) {
 ;
 ; PWR8-LABEL: ult_7_v2i64:
 ; PWR8:       # %bb.0:
-; PWR8-NEXT:    addis 3, 2, .LCPI111_0@toc@ha
+; PWR8-NEXT:    vspltisw 3, 7
 ; PWR8-NEXT:    vpopcntd 2, 2
-; PWR8-NEXT:    addi 3, 3, .LCPI111_0@toc@l
-; PWR8-NEXT:    lxvd2x 35, 0, 3
+; PWR8-NEXT:    vupklsw 3, 3
 ; PWR8-NEXT:    vcmpgtud 2, 3, 2
 ; PWR8-NEXT:    blr
 ;
 ; PWR9-LABEL: ult_7_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI111_0@toc@ha
+; PWR9-NEXT:    vspltisw 3, 7
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI111_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vupklsw 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -13535,19 +13496,17 @@ define <2 x i64> @ugt_7_v2i64(<2 x i64> %0) {
 ;
 ; PWR8-LABEL: ugt_7_v2i64:
 ; PWR8:       # %bb.0:
-; PWR8-NEXT:    addis 3, 2, .LCPI112_0@toc@ha
+; PWR8-NEXT:    vspltisw 3, 7
 ; PWR8-NEXT:    vpopcntd 2, 2
-; PWR8-NEXT:    addi 3, 3, .LCPI112_0@toc@l
-; PWR8-NEXT:    lxvd2x 35, 0, 3
+; PWR8-NEXT:    vupklsw 3, 3
 ; PWR8-NEXT:    vcmpgtud 2, 2, 3
 ; PWR8-NEXT:    blr
 ;
 ; PWR9-LABEL: ugt_7_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI112_0@toc@ha
+; PWR9-NEXT:    vspltisw 3, 7
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI112_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vupklsw 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -13669,19 +13628,17 @@ define <2 x i64> @ult_8_v2i64(<2 x i64> %0) {
 ;
 ; PWR8-LABEL: ult_8_v2i64:
 ; PWR8:       # %bb.0:
-; PWR8-NEXT:    addis 3, 2, .LCPI113_0@toc@ha
+; PWR8-NEXT:    vspltisw 3, 8
 ; PWR8-NEXT:    vpopcntd 2, 2
-; PWR8-NEXT:    addi 3, 3, .LCPI113_0@toc@l
-; PWR8-NEXT:    lxvd2x 35, 0, 3
+; PWR8-NEXT:    vupklsw 3, 3
 ; PWR8-NEXT:    vcmpgtud 2, 3, 2
 ; PWR8-NEXT:    blr
 ;
 ; PWR9-LABEL: ult_8_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI113_0@toc@ha
+; PWR9-NEXT:    vspltisw 3, 8
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI113_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vupklsw 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -13803,19 +13760,17 @@ define <2 x i64> @ugt_8_v2i64(<2 x i64> %0) {
 ;
 ; PWR8-LABEL: ugt_8_v2i64:
 ; PWR8:       # %bb.0:
-; PWR8-NEXT:    addis 3, 2, .LCPI114_0@toc@ha
+; PWR8-NEXT:    vspltisw 3, 8
 ; PWR8-NEXT:    vpopcntd 2, 2
-; PWR8-NEXT:    addi 3, 3, .LCPI114_0@toc@l
-; PWR8-NEXT:    lxvd2x 35, 0, 3
+; PWR8-NEXT:    vupklsw 3, 3
 ; PWR8-NEXT:    vcmpgtud 2, 2, 3
 ; PWR8-NEXT:    blr
 ;
 ; PWR9-LABEL: ugt_8_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI114_0@toc@ha
+; PWR9-NEXT:    vspltisw 3, 8
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI114_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vupklsw 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -13937,19 +13892,17 @@ define <2 x i64> @ult_9_v2i64(<2 x i64> %0) {
 ;
 ; PWR8-LABEL: ult_9_v2i64:
 ; PWR8:       # %bb.0:
-; PWR8-NEXT:    addis 3, 2, .LCPI115_0@toc@ha
+; PWR8-NEXT:    vspltisw 3, 9
 ; PWR8-NEXT:    vpopcntd 2, 2
-; PWR8-NEXT:    addi 3, 3, .LCPI115_0@toc@l
-; PWR8-NEXT:    lxvd2x 35, 0, 3
+; PWR8-NEXT:    vupklsw 3, 3
 ; PWR8-NEXT:    vcmpgtud 2, 3, 2
 ; PWR8-NEXT:    blr
 ;
 ; PWR9-LABEL: ult_9_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI115_0@toc@ha
+; PWR9-NEXT:    vspltisw 3, 9
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI115_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vupklsw 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -14071,19 +14024,17 @@ define <2 x i64> @ugt_9_v2i64(<2 x i64> %0) {
 ;
 ; PWR8-LABEL: ugt_9_v2i64:
 ; PWR8:       # %bb.0:
-; PWR8-NEXT:    addis 3, 2, .LCPI116_0@toc@ha
+; PWR8-NEXT:    vspltisw 3, 9
 ; PWR8-NEXT:    vpopcntd 2, 2
-; PWR8-NEXT:    addi 3, 3, .LCPI116_0@toc@l
-; PWR8-NEXT:    lxvd2x 35, 0, 3
+; PWR8-NEXT:    vupklsw 3, 3
 ; PWR8-NEXT:    vcmpgtud 2, 2, 3
 ; PWR8-NEXT:    blr
 ;
 ; PWR9-LABEL: ugt_9_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI116_0@toc@ha
+; PWR9-NEXT:    vspltisw 3, 9
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI116_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vupklsw 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -14205,19 +14156,17 @@ define <2 x i64> @ult_10_v2i64(<2 x i64> %0) {
 ;
 ; PWR8-LABEL: ult_10_v2i64:
 ; PWR8:       # %bb.0:
-; PWR8-NEXT:    addis 3, 2, .LCPI117_0@toc@ha
+; PWR8-NEXT:    vspltisw 3, 10
 ; PWR8-NEXT:    vpopcntd 2, 2
-; PWR8-NEXT:    addi 3, 3, .LCPI117_0@toc@l
-; PWR8-NEXT:    lxvd2x 35, 0, 3
+; PWR8-NEXT:    vupklsw 3, 3
 ; PWR8-NEXT:    vcmpgtud 2, 3, 2
 ; PWR8-NEXT:    blr
 ;
 ; PWR9-LABEL: ult_10_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI117_0@toc@ha
+; PWR9-NEXT:    vspltisw 3, 10
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI117_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vupklsw 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -14339,19 +14288,17 @@ define <2 x i64> @ugt_10_v2i64(<2 x i64> %0) {
 ;
 ; PWR8-LABEL: ugt_10_v2i64:
 ; PWR8:       # %bb.0:
-; PWR8-NEXT:    addis 3, 2, .LCPI118_0@toc@ha
+; PWR8-NEXT:    vspltisw 3, 10
 ; PWR8-NEXT:    vpopcntd 2, 2
-; PWR8-NEXT:    addi 3, 3, .LCPI118_0@toc@l
-; PWR8-NEXT:    lxvd2x 35, 0, 3
+; PWR8-NEXT:    vupklsw 3, 3
 ; PWR8-NEXT:    vcmpgtud 2, 2, 3
 ; PWR8-NEXT:    blr
 ;
 ; PWR9-LABEL: ugt_10_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI118_0@toc@ha
+; PWR9-NEXT:    vspltisw 3, 10
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI118_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vupklsw 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -14473,19 +14420,17 @@ define <2 x i64> @ult_11_v2i64(<2 x i64> %0) {
 ;
 ; PWR8-LABEL: ult_11_v2i64:
 ; PWR8:       # %bb.0:
-; PWR8-NEXT:    addis 3, 2, .LCPI119_0@toc@ha
+; PWR8-NEXT:    vspltisw 3, 11
 ; PWR8-NEXT:    vpopcntd 2, 2
-; PWR8-NEXT:    addi 3, 3, .LCPI119_0@toc@l
-; PWR8-NEXT:    lxvd2x 35, 0, 3
+; PWR8-NEXT:    vupklsw 3, 3
 ; PWR8-NEXT:    vcmpgtud 2, 3, 2
 ; PWR8-NEXT:    blr
 ;
 ; PWR9-LABEL: ult_11_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI119_0@toc@ha
+; PWR9-NEXT:    vspltisw 3, 11
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI119_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vupklsw 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -14607,19 +14552,17 @@ define <2 x i64> @ugt_11_v2i64(<2 x i64> %0) {
 ;
 ; PWR8-LABEL: ugt_11_v2i64:
 ; PWR8:       # %bb.0:
-; PWR8-NEXT:    addis 3, 2, .LCPI120_0@toc@ha
+; PWR8-NEXT:    vspltisw 3, 11
 ; PWR8-NEXT:    vpopcntd 2, 2
-; PWR8-NEXT:    addi 3, 3, .LCPI120_0@toc@l
-; PWR8-NEXT:    lxvd2x 35, 0, 3
+; PWR8-NEXT:    vupklsw 3, 3
 ; PWR8-NEXT:    vcmpgtud 2, 2, 3
 ; PWR8-NEXT:    blr
 ;
 ; PWR9-LABEL: ugt_11_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI120_0@toc@ha
+; PWR9-NEXT:    vspltisw 3, 11
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI120_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vupklsw 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -14741,19 +14684,17 @@ define <2 x i64> @ult_12_v2i64(<2 x i64> %0) {
 ;
 ; PWR8-LABEL: ult_12_v2i64:
 ; PWR8:       # %bb.0:
-; PWR8-NEXT:    addis 3, 2, .LCPI121_0@toc@ha
+; PWR8-NEXT:    vspltisw 3, 12
 ; PWR8-NEXT:    vpopcntd 2, 2
-; PWR8-NEXT:    addi 3, 3, .LCPI121_0@toc@l
-; PWR8-NEXT:    lxvd2x 35, 0, 3
+; PWR8-NEXT:    vupklsw 3, 3
 ; PWR8-NEXT:    vcmpgtud 2, 3, 2
 ; PWR8-NEXT:    blr
 ;
 ; PWR9-LABEL: ult_12_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI121_0@toc@ha
+; PWR9-NEXT:    vspltisw 3, 12
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI121_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vupklsw 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -14875,19 +14816,17 @@ define <2 x i64> @ugt_12_v2i64(<2 x i64> %0) {
 ;
 ; PWR8-LABEL: ugt_12_v2i64:
 ; PWR8:       # %bb.0:
-; PWR8-NEXT:    addis 3, 2, .LCPI122_0@toc@ha
+; PWR8-NEXT:    vspltisw 3, 12
 ; PWR8-NEXT:    vpopcntd 2, 2
-; PWR8-NEXT:    addi 3, 3, .LCPI122_0@toc@l
-; PWR8-NEXT:    lxvd2x 35, 0, 3
+; PWR8-NEXT:    vupklsw 3, 3
 ; PWR8-NEXT:    vcmpgtud 2, 2, 3
 ; PWR8-NEXT:    blr
 ;
 ; PWR9-LABEL: ugt_12_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI122_0@toc@ha
+; PWR9-NEXT:    vspltisw 3, 12
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI122_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vupklsw 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -15009,19 +14948,17 @@ define <2 x i64> @ult_13_v2i64(<2 x i64> %0) {
 ;
 ; PWR8-LABEL: ult_13_v2i64:
 ; PWR8:       # %bb.0:
-; PWR8-NEXT:    addis 3, 2, .LCPI123_0@toc@ha
+; PWR8-NEXT:    vspltisw 3, 13
 ; PWR8-NEXT:    vpopcntd 2, 2
-; PWR8-NEXT:    addi 3, 3, .LCPI123_0@toc@l
-; PWR8-NEXT:    lxvd2x 35, 0, 3
+; PWR8-NEXT:    vupklsw 3, 3
 ; PWR8-NEXT:    vcmpgtud 2, 3, 2
 ; PWR8-NEXT:    blr
 ;
 ; PWR9-LABEL: ult_13_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI123_0@toc@ha
+; PWR9-NEXT:    vspltisw 3, 13
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI123_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vupklsw 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -15143,19 +15080,17 @@ define <2 x i64> @ugt_13_v2i64(<2 x i64> %0) {
 ;
 ; PWR8-LABEL: ugt_13_v2i64:
 ; PWR8:       # %bb.0:
-; PWR8-NEXT:    addis 3, 2, .LCPI124_0@toc@ha
+; PWR8-NEXT:    vspltisw 3, 13
 ; PWR8-NEXT:    vpopcntd 2, 2
-; PWR8-NEXT:    addi 3, 3, .LCPI124_0@toc@l
-; PWR8-NEXT:    lxvd2x 35, 0, 3
+; PWR8-NEXT:    vupklsw 3, 3
 ; PWR8-NEXT:    vcmpgtud 2, 2, 3
 ; PWR8-NEXT:    blr
 ;
 ; PWR9-LABEL: ugt_13_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI124_0@toc@ha
+; PWR9-NEXT:    vspltisw 3, 13
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI124_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vupklsw 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -15277,19 +15212,17 @@ define <2 x i64> @ult_14_v2i64(<2 x i64> %0) {
 ;
 ; PWR8-LABEL: ult_14_v2i64:
 ; PWR8:       # %bb.0:
-; PWR8-NEXT:    addis 3, 2, .LCPI125_0@toc@ha
+; PWR8-NEXT:    vspltisw 3, 14
 ; PWR8-NEXT:    vpopcntd 2, 2
-; PWR8-NEXT:    addi 3, 3, .LCPI125_0@toc@l
-; PWR8-NEXT:    lxvd2x 35, 0, 3
+; PWR8-NEXT:    vupklsw 3, 3
 ; PWR8-NEXT:    vcmpgtud 2, 3, 2
 ; PWR8-NEXT:    blr
 ;
 ; PWR9-LABEL: ult_14_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI125_0@toc@ha
+; PWR9-NEXT:    vspltisw 3, 14
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI125_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vupklsw 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -15411,19 +15344,17 @@ define <2 x i64> @ugt_14_v2i64(<2 x i64> %0) {
 ;
 ; PWR8-LABEL: ugt_14_v2i64:
 ; PWR8:       # %bb.0:
-; PWR8-NEXT:    addis 3, 2, .LCPI126_0@toc@ha
+; PWR8-NEXT:    vspltisw 3, 14
 ; PWR8-NEXT:    vpopcntd 2, 2
-; PWR8-NEXT:    addi 3, 3, .LCPI126_0@toc@l
-; PWR8-NEXT:    lxvd2x 35, 0, 3
+; PWR8-NEXT:    vupklsw 3, 3
 ; PWR8-NEXT:    vcmpgtud 2, 2, 3
 ; PWR8-NEXT:    blr
 ;
 ; PWR9-LABEL: ugt_14_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI126_0@toc@ha
+; PWR9-NEXT:    vspltisw 3, 14
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI126_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vupklsw 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -15545,19 +15476,17 @@ define <2 x i64> @ult_15_v2i64(<2 x i64> %0) {
 ;
 ; PWR8-LABEL: ult_15_v2i64:
 ; PWR8:       # %bb.0:
-; PWR8-NEXT:    addis 3, 2, .LCPI127_0@toc@ha
+; PWR8-NEXT:    vspltisw 3, 15
 ; PWR8-NEXT:    vpopcntd 2, 2
-; PWR8-NEXT:    addi 3, 3, .LCPI127_0@toc@l
-; PWR8-NEXT:    lxvd2x 35, 0, 3
+; PWR8-NEXT:    vupklsw 3, 3
 ; PWR8-NEXT:    vcmpgtud 2, 3, 2
 ; PWR8-NEXT:    blr
 ;
 ; PWR9-LABEL: ult_15_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI127_0@toc@ha
+; PWR9-NEXT:    vspltisw 3, 15
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI127_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vupklsw 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -15679,19 +15608,17 @@ define <2 x i64> @ugt_15_v2i64(<2 x i64> %0) {
 ;
 ; PWR8-LABEL: ugt_15_v2i64:
 ; PWR8:       # %bb.0:
-; PWR8-NEXT:    addis 3, 2, .LCPI128_0@toc@ha
+; PWR8-NEXT:    vspltisw 3, 15
 ; PWR8-NEXT:    vpopcntd 2, 2
-; PWR8-NEXT:    addi 3, 3, .LCPI128_0@toc@l
-; PWR8-NEXT:    lxvd2x 35, 0, 3
+; PWR8-NEXT:    vupklsw 3, 3
 ; PWR8-NEXT:    vcmpgtud 2, 2, 3
 ; PWR8-NEXT:    blr
 ;
 ; PWR9-LABEL: ugt_15_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI128_0@toc@ha
+; PWR9-NEXT:    vspltisw 3, 15
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI128_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vupklsw 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -15822,10 +15749,9 @@ define <2 x i64> @ult_16_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_16_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI129_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 16
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI129_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -15956,10 +15882,9 @@ define <2 x i64> @ugt_16_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_16_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI130_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 16
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI130_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -16090,10 +16015,9 @@ define <2 x i64> @ult_17_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_17_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI131_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 17
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI131_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -16224,10 +16148,9 @@ define <2 x i64> @ugt_17_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_17_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI132_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 17
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI132_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -16358,10 +16281,9 @@ define <2 x i64> @ult_18_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_18_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI133_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 18
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI133_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -16492,10 +16414,9 @@ define <2 x i64> @ugt_18_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_18_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI134_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 18
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI134_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -16626,10 +16547,9 @@ define <2 x i64> @ult_19_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_19_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI135_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 19
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI135_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -16760,10 +16680,9 @@ define <2 x i64> @ugt_19_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_19_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI136_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 19
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI136_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -16894,10 +16813,9 @@ define <2 x i64> @ult_20_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_20_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI137_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 20
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI137_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -17028,10 +16946,9 @@ define <2 x i64> @ugt_20_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_20_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI138_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 20
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI138_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -17162,10 +17079,9 @@ define <2 x i64> @ult_21_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_21_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI139_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 21
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI139_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -17296,10 +17212,9 @@ define <2 x i64> @ugt_21_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_21_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI140_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 21
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI140_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -17430,10 +17345,9 @@ define <2 x i64> @ult_22_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_22_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI141_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 22
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI141_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -17564,10 +17478,9 @@ define <2 x i64> @ugt_22_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_22_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI142_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 22
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI142_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -17698,10 +17611,9 @@ define <2 x i64> @ult_23_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_23_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI143_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 23
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI143_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -17832,10 +17744,9 @@ define <2 x i64> @ugt_23_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_23_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI144_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 23
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI144_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -17966,10 +17877,9 @@ define <2 x i64> @ult_24_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_24_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI145_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 24
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI145_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -18100,10 +18010,9 @@ define <2 x i64> @ugt_24_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_24_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI146_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 24
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI146_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -18234,10 +18143,9 @@ define <2 x i64> @ult_25_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_25_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI147_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 25
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI147_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -18368,10 +18276,9 @@ define <2 x i64> @ugt_25_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_25_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI148_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 25
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI148_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -18502,10 +18409,9 @@ define <2 x i64> @ult_26_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_26_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI149_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 26
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI149_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -18636,10 +18542,9 @@ define <2 x i64> @ugt_26_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_26_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI150_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 26
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI150_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -18770,10 +18675,9 @@ define <2 x i64> @ult_27_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_27_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI151_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 27
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI151_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -18904,10 +18808,9 @@ define <2 x i64> @ugt_27_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_27_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI152_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 27
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI152_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -19038,10 +18941,9 @@ define <2 x i64> @ult_28_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_28_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI153_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 28
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI153_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -19172,10 +19074,9 @@ define <2 x i64> @ugt_28_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_28_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI154_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 28
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI154_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -19306,10 +19207,9 @@ define <2 x i64> @ult_29_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_29_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI155_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 29
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI155_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -19440,10 +19340,9 @@ define <2 x i64> @ugt_29_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_29_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI156_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 29
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI156_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -19574,10 +19473,9 @@ define <2 x i64> @ult_30_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_30_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI157_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 30
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI157_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -19708,10 +19606,9 @@ define <2 x i64> @ugt_30_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_30_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI158_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 30
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI158_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -19842,10 +19739,9 @@ define <2 x i64> @ult_31_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_31_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI159_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 31
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI159_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -19976,10 +19872,9 @@ define <2 x i64> @ugt_31_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_31_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI160_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 31
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI160_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -20110,10 +20005,9 @@ define <2 x i64> @ult_32_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_32_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI161_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 32
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI161_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -20244,10 +20138,9 @@ define <2 x i64> @ugt_32_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_32_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI162_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 32
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI162_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -20378,10 +20271,9 @@ define <2 x i64> @ult_33_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_33_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI163_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 33
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI163_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -20512,10 +20404,9 @@ define <2 x i64> @ugt_33_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_33_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI164_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 33
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI164_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -20646,10 +20537,9 @@ define <2 x i64> @ult_34_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_34_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI165_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 34
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI165_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -20780,10 +20670,9 @@ define <2 x i64> @ugt_34_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_34_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI166_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 34
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI166_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -20914,10 +20803,9 @@ define <2 x i64> @ult_35_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_35_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI167_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 35
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI167_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -21048,10 +20936,9 @@ define <2 x i64> @ugt_35_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_35_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI168_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 35
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI168_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -21182,10 +21069,9 @@ define <2 x i64> @ult_36_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_36_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI169_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 36
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI169_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -21316,10 +21202,9 @@ define <2 x i64> @ugt_36_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_36_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI170_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 36
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI170_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -21450,10 +21335,9 @@ define <2 x i64> @ult_37_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_37_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI171_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 37
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI171_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -21584,10 +21468,9 @@ define <2 x i64> @ugt_37_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_37_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI172_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 37
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI172_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -21718,10 +21601,9 @@ define <2 x i64> @ult_38_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_38_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI173_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 38
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI173_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -21852,10 +21734,9 @@ define <2 x i64> @ugt_38_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_38_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI174_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 38
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI174_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -21986,10 +21867,9 @@ define <2 x i64> @ult_39_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_39_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI175_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 39
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI175_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -22120,10 +22000,9 @@ define <2 x i64> @ugt_39_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_39_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI176_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 39
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI176_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -22254,10 +22133,9 @@ define <2 x i64> @ult_40_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_40_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI177_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 40
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI177_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -22388,10 +22266,9 @@ define <2 x i64> @ugt_40_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_40_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI178_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 40
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI178_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -22522,10 +22399,9 @@ define <2 x i64> @ult_41_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_41_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI179_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 41
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI179_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -22656,10 +22532,9 @@ define <2 x i64> @ugt_41_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_41_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI180_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 41
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI180_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -22790,10 +22665,9 @@ define <2 x i64> @ult_42_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_42_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI181_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 42
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI181_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -22924,10 +22798,9 @@ define <2 x i64> @ugt_42_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_42_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI182_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 42
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI182_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -23058,10 +22931,9 @@ define <2 x i64> @ult_43_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_43_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI183_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 43
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI183_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -23192,10 +23064,9 @@ define <2 x i64> @ugt_43_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_43_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI184_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 43
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI184_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -23326,10 +23197,9 @@ define <2 x i64> @ult_44_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_44_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI185_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 44
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI185_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -23460,10 +23330,9 @@ define <2 x i64> @ugt_44_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_44_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI186_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 44
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI186_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -23594,10 +23463,9 @@ define <2 x i64> @ult_45_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_45_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI187_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 45
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI187_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -23728,10 +23596,9 @@ define <2 x i64> @ugt_45_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_45_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI188_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 45
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI188_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -23862,10 +23729,9 @@ define <2 x i64> @ult_46_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_46_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI189_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 46
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI189_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -23996,10 +23862,9 @@ define <2 x i64> @ugt_46_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_46_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI190_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 46
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI190_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -24130,10 +23995,9 @@ define <2 x i64> @ult_47_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_47_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI191_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 47
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI191_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -24264,10 +24128,9 @@ define <2 x i64> @ugt_47_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_47_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI192_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 47
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI192_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -24398,10 +24261,9 @@ define <2 x i64> @ult_48_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_48_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI193_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 48
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI193_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -24532,10 +24394,9 @@ define <2 x i64> @ugt_48_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_48_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI194_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 48
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI194_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -24666,10 +24527,9 @@ define <2 x i64> @ult_49_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_49_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI195_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 49
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI195_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -24800,10 +24660,9 @@ define <2 x i64> @ugt_49_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_49_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI196_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 49
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI196_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -24934,10 +24793,9 @@ define <2 x i64> @ult_50_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_50_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI197_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 50
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI197_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -25068,10 +24926,9 @@ define <2 x i64> @ugt_50_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_50_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI198_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 50
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI198_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -25202,10 +25059,9 @@ define <2 x i64> @ult_51_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_51_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI199_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 51
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI199_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -25336,10 +25192,9 @@ define <2 x i64> @ugt_51_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_51_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI200_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 51
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI200_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -25470,10 +25325,9 @@ define <2 x i64> @ult_52_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_52_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI201_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 52
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI201_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -25604,10 +25458,9 @@ define <2 x i64> @ugt_52_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_52_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI202_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 52
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI202_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -25738,10 +25591,9 @@ define <2 x i64> @ult_53_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_53_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI203_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 53
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI203_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -25872,10 +25724,9 @@ define <2 x i64> @ugt_53_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_53_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI204_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 53
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI204_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -26006,10 +25857,9 @@ define <2 x i64> @ult_54_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_54_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI205_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 54
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI205_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -26140,10 +25990,9 @@ define <2 x i64> @ugt_54_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_54_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI206_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 54
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI206_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -26274,10 +26123,9 @@ define <2 x i64> @ult_55_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_55_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI207_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 55
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI207_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -26408,10 +26256,9 @@ define <2 x i64> @ugt_55_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_55_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI208_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 55
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI208_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -26542,10 +26389,9 @@ define <2 x i64> @ult_56_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_56_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI209_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 56
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI209_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -26676,10 +26522,9 @@ define <2 x i64> @ugt_56_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_56_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI210_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 56
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI210_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -26810,10 +26655,9 @@ define <2 x i64> @ult_57_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_57_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI211_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 57
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI211_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -26944,10 +26788,9 @@ define <2 x i64> @ugt_57_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_57_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI212_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 57
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI212_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -27078,10 +26921,9 @@ define <2 x i64> @ult_58_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_58_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI213_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 58
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI213_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -27212,10 +27054,9 @@ define <2 x i64> @ugt_58_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_58_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI214_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 58
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI214_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -27346,10 +27187,9 @@ define <2 x i64> @ult_59_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_59_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI215_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 59
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI215_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -27480,10 +27320,9 @@ define <2 x i64> @ugt_59_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_59_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI216_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 59
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI216_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -27614,10 +27453,9 @@ define <2 x i64> @ult_60_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_60_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI217_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 60
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI217_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -27748,10 +27586,9 @@ define <2 x i64> @ugt_60_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_60_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI218_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 60
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI218_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -27882,10 +27719,9 @@ define <2 x i64> @ult_61_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_61_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI219_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 61
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI219_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -28016,10 +27852,9 @@ define <2 x i64> @ugt_61_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_61_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI220_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 61
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI220_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -28150,10 +27985,9 @@ define <2 x i64> @ult_62_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_62_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI221_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 62
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI221_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -28284,10 +28118,9 @@ define <2 x i64> @ugt_62_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ugt_62_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI222_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 62
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI222_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 2, 3
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)
@@ -28418,10 +28251,9 @@ define <2 x i64> @ult_63_v2i64(<2 x i64> %0) {
 ;
 ; PWR9-LABEL: ult_63_v2i64:
 ; PWR9:       # %bb.0:
-; PWR9-NEXT:    addis 3, 2, .LCPI223_0@toc@ha
+; PWR9-NEXT:    xxspltib 35, 63
 ; PWR9-NEXT:    vpopcntd 2, 2
-; PWR9-NEXT:    addi 3, 3, .LCPI223_0@toc@l
-; PWR9-NEXT:    lxv 35, 0(3)
+; PWR9-NEXT:    vextsb2d 3, 3
 ; PWR9-NEXT:    vcmpgtud 2, 3, 2
 ; PWR9-NEXT:    blr
   %2 = tail call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %0)

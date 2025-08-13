@@ -1,6 +1,8 @@
 header: stdio.h
 header_template: stdio.h.def
 macros:
+  - macro_name: NULL
+    macro_header: null-macro.h
   - macro_name: stdout
     macro_value: stdout
   - macro_name: stdin
@@ -247,6 +249,12 @@ functions:
       - POSIX
     return_type: int
     arguments: []
+  - name: perror
+    standards:
+      - stdc
+    return_type: void
+    arguments:
+      - type: const char *
   - name: printf
     standards:
       - stdc

@@ -777,7 +777,7 @@ define i32 @test_unsigned_f128_i32(fp128 %f) {
 ; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-SD-NEXT:    cmp w19, #0
 ; CHECK-SD-NEXT:    ldr q1, [x8, :lo12:.LCPI30_1]
-; CHECK-SD-NEXT:    csel w19, wzr, w0, lt
+; CHECK-SD-NEXT:    csel w19, wzr, w0, mi
 ; CHECK-SD-NEXT:    bl __gttf2
 ; CHECK-SD-NEXT:    cmp w0, #0
 ; CHECK-SD-NEXT:    csinv w0, w19, wzr, le
@@ -811,11 +811,11 @@ define i32 @test_unsigned_f128_i32(fp128 %f) {
 ; CHECK-GI-NEXT:    bl __lttf2
 ; CHECK-GI-NEXT:    cmp w0, #0
 ; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
-; CHECK-GI-NEXT:    csel x8, x19, xzr, lt
+; CHECK-GI-NEXT:    csel x8, x19, xzr, mi
 ; CHECK-GI-NEXT:    mov v0.d[0], x8
 ; CHECK-GI-NEXT:    mov x8, #281474976579584 // =0xfffffffe0000
 ; CHECK-GI-NEXT:    movk x8, #16414, lsl #48
-; CHECK-GI-NEXT:    csel x8, x20, x8, lt
+; CHECK-GI-NEXT:    csel x8, x20, x8, mi
 ; CHECK-GI-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v0.d[1], x8
 ; CHECK-GI-NEXT:    add sp, sp, #48

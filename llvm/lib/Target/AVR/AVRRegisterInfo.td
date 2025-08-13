@@ -112,14 +112,13 @@ let SubRegIndices = [sub_lo, sub_hi], CoveredBySubRegs = 1 in {
 
 // Main 8-bit register class.
 def GPR8 : RegisterClass<"AVR", [i8], 8,
-                         (
-                             // Return value and argument registers.
-                             add R24, R25, R18, R19, R20, R21, R22, R23,
-                             // Scratch registers.
-                             R30, R31, R26, R27,
-                             // Callee saved registers.
-                             R28, R29, R17, R16, R15, R14, R13, R12, R11, R10,
-                             R9, R8, R7, R6, R5, R4, R3, R2, R0, R1)>;
+                         (// Return value and argument registers.
+                          add R24, R25, R18, R19, R20, R21, R22, R23,
+                          // Scratch registers.
+                          R30, R31, R26, R27,
+                          // Callee saved registers.
+                          R28, R29, R17, R16, R15, R14, R13, R12, R11, R10,
+                          R9, R8, R7, R6, R5, R4, R3, R2, R0, R1)>;
 
 // Simple lower registers r0..r15
 def GPR8lo : RegisterClass<"AVR", [i8], 8,
@@ -128,13 +127,12 @@ def GPR8lo : RegisterClass<"AVR", [i8], 8,
 
 // 8-bit register class for instructions which take immediates.
 def LD8 : RegisterClass<"AVR", [i8], 8,
-                        (
-                            // Return value and arguments.
-                            add R24, R25, R18, R19, R20, R21, R22, R23,
-                            // Scratch registers.
-                            R30, R31, R26, R27,
-                            // Callee saved registers.
-                            R28, R29, R17, R16)>;
+                        (// Return value and arguments.
+                         add R24, R25, R18, R19, R20, R21, R22, R23,
+                         // Scratch registers.
+                         R30, R31, R26, R27,
+                         // Callee saved registers.
+                         R28, R29, R17, R16)>;
 
 // Simple lower registers r16..r23
 def LD8lo : RegisterClass<"AVR", [i8], 8,
@@ -142,17 +140,16 @@ def LD8lo : RegisterClass<"AVR", [i8], 8,
 
 // Main 16-bit pair register class.
 def DREGS : RegisterClass<"AVR", [i16], 8,
-                          (
-                              // Return value and arguments.
-                              add R25R24, R19R18, R21R20, R23R22,
-                              // Scratch registers.
-                              R31R30, R27R26,
-                              // Callee saved registers.
-                              R29R28, R17R16, R15R14, R13R12, R11R10, R9R8,
-                              R7R6, R5R4, R3R2, R1R0,
-                              // Pseudo regs for unaligned 16-bits
-                              R26R25, R24R23, R22R21, R20R19, R18R17, R16R15,
-                              R14R13, R12R11, R10R9)>;
+                          (// Return value and arguments.
+                           add R25R24, R19R18, R21R20, R23R22,
+                           // Scratch registers.
+                           R31R30, R27R26,
+                           // Callee saved registers.
+                           R29R28, R17R16, R15R14, R13R12, R11R10, R9R8,
+                           R7R6, R5R4, R3R2, R1R0,
+                           // Pseudo regs for unaligned 16-bits
+                           R26R25, R24R23, R22R21, R20R19, R18R17, R16R15,
+                           R14R13, R12R11, R10R9)>;
 
 // Lower 16-bit pair registers in R0..R15, only used in inline assembly.
 def DREGSlo
@@ -161,42 +158,38 @@ def DREGSlo
 
 // Lower 16-bit pair registers in r16..r23, only used in inline assembly.
 def DREGSLD8lo : RegisterClass<"AVR", [i16], 8,
-                               (
-                                   // Return value and arguments.
-                                   add R19R18, R21R20, R23R22,
-                                   // Callee saved registers.
-                                   R17R16)>;
+                               (// Return value and arguments.
+                                add R19R18, R21R20, R23R22,
+                                // Callee saved registers.
+                                R17R16)>;
 
 // 16-bit pair register class for movw
 def DREGSMOVW : RegisterClass<"AVR", [i16], 8,
-                              (
-                                  // Return value and arguments.
-                                  add R25R24, R19R18, R21R20, R23R22,
-                                  // Scratch registers.
-                                  R31R30, R27R26,
-                                  // Callee saved registers.
-                                  R29R28, R17R16, R15R14, R13R12, R11R10, R9R8,
-                                  R7R6, R5R4, R3R2, R1R0)>;
-
-// 16-bit register class for immediate instructions.
-def DLDREGS : RegisterClass<"AVR", [i16], 8,
-                            (
-                                // Return value and arguments.
-                                add R25R24, R19R18, R21R20, R23R22,
-                                // Scratch registers.
-                                R31R30, R27R26,
-                                // Callee saved registers.
-                                R29R28, R17R16)>;
-
-// 16-bit register class for the adiw/sbiw instructions.
-def IWREGS : RegisterClass<"AVR", [i16], 8,
-                           (
-                               // Return value and arguments.
-                               add R25R24,
+                              (// Return value and arguments.
+                               add R25R24, R19R18, R21R20, R23R22,
                                // Scratch registers.
                                R31R30, R27R26,
                                // Callee saved registers.
-                               R29R28)>;
+                               R29R28, R17R16, R15R14, R13R12, R11R10, R9R8,
+                               R7R6, R5R4, R3R2, R1R0)>;
+
+// 16-bit register class for immediate instructions.
+def DLDREGS : RegisterClass<"AVR", [i16], 8,
+                            (// Return value and arguments.
+                             add R25R24, R19R18, R21R20, R23R22,
+                             // Scratch registers.
+                             R31R30, R27R26,
+                             // Callee saved registers.
+                             R29R28, R17R16)>;
+
+// 16-bit register class for the adiw/sbiw instructions.
+def IWREGS : RegisterClass<"AVR", [i16], 8,
+                           (// Return value and arguments.
+                            add R25R24,
+                            // Scratch registers.
+                            R31R30, R27R26,
+                            // Callee saved registers.
+                            R29R28)>;
 
 // 16-bit register class for the ld and st instructions.
 // AKA X,Y, and Z
@@ -204,7 +197,7 @@ def PTRREGS : RegisterClass<"AVR", [i16], 8,
                             (add R27R26, // X
                              R29R28,     // Y
                              R31R30),    // Z
-                            ptr>;
+                             ptr>;
 
 // 16-bit register class for the ldd and std instructions.
 // AKA Y and Z.

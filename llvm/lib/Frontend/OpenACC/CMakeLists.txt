@@ -9,5 +9,5 @@ add_llvm_component_library(LLVMFrontendOpenACC
   acc_gen
 )
 
-target_link_libraries(LLVMFrontendOpenACC LLVMSupport)
+target_link_libraries(LLVMFrontendOpenACC LLVMSupport LLVMFrontendDirective)
 

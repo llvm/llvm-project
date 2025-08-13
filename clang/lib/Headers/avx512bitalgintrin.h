@@ -20,7 +20,13 @@
                  __target__("avx512bitalg,evex512"),                           \
                  __min_vector_width__(512)))
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS constexpr
+#else
+#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS
+#endif
+
+static __inline__ __m512i __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm512_popcnt_epi16(__m512i __A)
 {
   return (__m512i)__builtin_elementwise_popcount((__v32hu)__A);
@@ -42,7 +48,7 @@ _mm512_maskz_popcnt_epi16(__mmask32 __U, __m512i __B)
               __B);
 }
 
-static __inline__ __m512i __DEFAULT_FN_ATTRS
+static __inline__ __m512i __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm512_popcnt_epi8(__m512i __A)
 {
   return (__m512i)__builtin_elementwise_popcount((__v64qu)__A);
@@ -80,7 +86,7 @@ _mm512_bitshuffle_epi64_mask(__m512i __A, __m512i __B)
               __B);
 }
 
-
 #undef __DEFAULT_FN_ATTRS
+#undef __DEFAULT_FN_ATTRS_CONSTEXPR
 
 #endif

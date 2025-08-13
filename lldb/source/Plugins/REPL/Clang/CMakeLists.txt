@@ -1,6 +1,8 @@
 add_lldb_library(lldbPluginClangREPL PLUGIN
   ClangREPL.cpp
 
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbCore
     lldbDataFormatters
@@ -11,7 +13,4 @@ add_lldb_library(lldbPluginClangREPL PLUGIN
     lldbPluginClangCommon
     lldbPluginCPPRuntime
     lldbPluginTypeSystemClang
-
-  LINK_COMPONENTS
-    Support
 )

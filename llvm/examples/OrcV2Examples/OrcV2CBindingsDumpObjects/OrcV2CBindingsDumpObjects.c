@@ -31,8 +31,7 @@ int handleError(LLVMErrorRef Err) {
 }
 
 LLVMOrcThreadSafeModuleRef createDemoModule(void) {
-  LLVMOrcThreadSafeContextRef TSCtx = LLVMOrcCreateNewThreadSafeContext();
-  LLVMContextRef Ctx = LLVMOrcThreadSafeContextGetContext(TSCtx);
+  LLVMContextRef Ctx = LLVMContextCreate();
   LLVMModuleRef M = LLVMModuleCreateWithNameInContext("demo", Ctx);
   LLVMTypeRef ParamTypes[] = {LLVMInt32Type(), LLVMInt32Type()};
   LLVMTypeRef SumFunctionType =
@@ -45,6 +44,8 @@ LLVMOrcThreadSafeModuleRef createDemoModule(void) {
   LLVMValueRef SumArg1 = LLVMGetParam(SumFunction, 1);
   LLVMValueRef Result = LLVMBuildAdd(Builder, SumArg0, SumArg1, "result");
   LLVMBuildRet(Builder, Result);
+  LLVMOrcThreadSafeContextRef TSCtx =
+      LLVMOrcCreateNewThreadSafeContextFromLLVMContext(Ctx);
   LLVMOrcThreadSafeModuleRef TSM = LLVMOrcCreateNewThreadSafeModule(M, TSCtx);
   LLVMOrcDisposeThreadSafeContext(TSCtx);
   return TSM;

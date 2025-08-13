@@ -19,7 +19,6 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/IRMapping.h"
-#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
@@ -28,7 +27,7 @@
 #include <utility>
 
 namespace mlir {
-#define GEN_PASS_DEF_ASYNCPARALLELFOR
+#define GEN_PASS_DEF_ASYNCPARALLELFORPASS
 #include "mlir/Dialect/Async/Passes.h.inc"
 } // namespace mlir
 
@@ -99,15 +98,8 @@ namespace {
 //   }
 //
 struct AsyncParallelForPass
-    : public impl::AsyncParallelForBase<AsyncParallelForPass> {
-  AsyncParallelForPass() = default;
-
-  AsyncParallelForPass(bool asyncDispatch, int32_t numWorkerThreads,
-                       int32_t minTaskSize) {
-    this->asyncDispatch = asyncDispatch;
-    this->numWorkerThreads = numWorkerThreads;
-    this->minTaskSize = minTaskSize;
-  }
+    : public impl::AsyncParallelForPassBase<AsyncParallelForPass> {
+  using Base::Base;
 
   void runOnOperation() override;
 };
@@ -198,8 +190,8 @@ static SmallVector<Value> delinearize(ImplicitLocOpBuilder &b, Value index,
   assert(!tripCounts.empty() && "tripCounts must be not empty");
 
   for (ssize_t i = tripCounts.size() - 1; i >= 0; --i) {
-    coords[i] = b.create<arith::RemSIOp>(index, tripCounts[i]);
-    index = b.create<arith::DivSIOp>(index, tripCounts[i]);
+    coords[i] = arith::RemSIOp::create(b, index, tripCounts[i]);
+    index = arith::DivSIOp::create(b, index, tripCounts[i]);
   }
 
   return coords;
@@ -283,15 +275,15 @@ static ParallelComputeFunction createParallelComputeFunction(
   BlockArgument blockSize = args.blockSize();
 
   // Constants used below.
-  Value c0 = b.create<arith::ConstantIndexOp>(0);
-  Value c1 = b.create<arith::ConstantIndexOp>(1);
+  Value c0 = arith::ConstantIndexOp::create(b, 0);
+  Value c1 = arith::ConstantIndexOp::create(b, 1);
 
   // Materialize known constants as constant operation in the function body.
   auto values = [&](ArrayRef<BlockArgument> args, ArrayRef<IntegerAttr> attrs) {
     return llvm::to_vector(
         llvm::map_range(llvm::zip(args, attrs), [&](auto tuple) -> Value {
           if (IntegerAttr attr = std::get<1>(tuple))
-            return b.create<arith::ConstantOp>(attr);
+            return arith::ConstantOp::create(b, attr);
           return std::get<0>(tuple);
         }));
   };
@@ -310,17 +302,17 @@ static ParallelComputeFunction createParallelComputeFunction(
   // one-dimensional iteration space.
   Value tripCount = tripCounts[0];
   for (unsigned i = 1; i < tripCounts.size(); ++i)
-    tripCount = b.create<arith::MulIOp>(tripCount, tripCounts[i]);
+    tripCount = arith::MulIOp::create(b, tripCount, tripCounts[i]);
 
   // Find one-dimensional iteration bounds: [blockFirstIndex, blockLastIndex]:
   //   blockFirstIndex = blockIndex * blockSize
-  Value blockFirstIndex = b.create<arith::MulIOp>(blockIndex, blockSize);
+  Value blockFirstIndex = arith::MulIOp::create(b, blockIndex, blockSize);
 
   // The last one-dimensional index in the block defined by the `blockIndex`:
   //   blockLastIndex = min(blockFirstIndex + blockSize, tripCount) - 1
-  Value blockEnd0 = b.create<arith::AddIOp>(blockFirstIndex, blockSize);
-  Value blockEnd1 = b.create<arith::MinSIOp>(blockEnd0, tripCount);
-  Value blockLastIndex = b.create<arith::SubIOp>(blockEnd1, c1);
+  Value blockEnd0 = arith::AddIOp::create(b, blockFirstIndex, blockSize);
+  Value blockEnd1 = arith::MinSIOp::create(b, blockEnd0, tripCount);
+  Value blockLastIndex = arith::SubIOp::create(b, blockEnd1, c1);
 
   // Convert one-dimensional indices to multi-dimensional coordinates.
   auto blockFirstCoord = delinearize(b, blockFirstIndex, tripCounts);
@@ -333,7 +325,7 @@ static ParallelComputeFunction createParallelComputeFunction(
   // dimension when inner compute dimension contains multiple blocks.
   SmallVector<Value> blockEndCoord(op.getNumLoops());
   for (size_t i = 0; i < blockLastCoord.size(); ++i)
-    blockEndCoord[i] = b.create<arith::AddIOp>(blockLastCoord[i], c1);
+    blockEndCoord[i] = arith::AddIOp::create(b, blockLastCoord[i], c1);
 
   // Construct a loop nest out of scf.for operations that will iterate over
   // all coordinates in [blockFirstCoord, blockLastCoord] range.
@@ -376,21 +368,22 @@ static ParallelComputeFunction createParallelComputeFunction(
       ImplicitLocOpBuilder b(loc, nestedBuilder);
 
       // Compute induction variable for `loopIdx`.
-      computeBlockInductionVars[loopIdx] = b.create<arith::AddIOp>(
-          lowerBounds[loopIdx], b.create<arith::MulIOp>(iv, steps[loopIdx]));
+      computeBlockInductionVars[loopIdx] =
+          arith::AddIOp::create(b, lowerBounds[loopIdx],
+                                arith::MulIOp::create(b, iv, steps[loopIdx]));
 
       // Check if we are inside first or last iteration of the loop.
-      isBlockFirstCoord[loopIdx] = b.create<arith::CmpIOp>(
-          arith::CmpIPredicate::eq, iv, blockFirstCoord[loopIdx]);
-      isBlockLastCoord[loopIdx] = b.create<arith::CmpIOp>(
-          arith::CmpIPredicate::eq, iv, blockLastCoord[loopIdx]);
+      isBlockFirstCoord[loopIdx] = arith::CmpIOp::create(
+          b, arith::CmpIPredicate::eq, iv, blockFirstCoord[loopIdx]);
+      isBlockLastCoord[loopIdx] = arith::CmpIOp::create(
+          b, arith::CmpIPredicate::eq, iv, blockLastCoord[loopIdx]);
 
       // Check if the previous loop is in its first or last iteration.
       if (loopIdx > 0) {
-        isBlockFirstCoord[loopIdx] = b.create<arith::AndIOp>(
-            isBlockFirstCoord[loopIdx], isBlockFirstCoord[loopIdx - 1]);
-        isBlockLastCoord[loopIdx] = b.create<arith::AndIOp>(
-            isBlockLastCoord[loopIdx], isBlockLastCoord[loopIdx - 1]);
+        isBlockFirstCoord[loopIdx] = arith::AndIOp::create(
+            b, isBlockFirstCoord[loopIdx], isBlockFirstCoord[loopIdx - 1]);
+        isBlockLastCoord[loopIdx] = arith::AndIOp::create(
+            b, isBlockLastCoord[loopIdx], isBlockLastCoord[loopIdx - 1]);
       }
 
       // Keep building loop nest.
@@ -398,24 +391,24 @@ static ParallelComputeFunction createParallelComputeFunction(
         if (loopIdx + 1 >= op.getNumLoops() - numBlockAlignedInnerLoops) {
           // For block aligned loops we always iterate starting from 0 up to
           // the loop trip counts.
-          b.create<scf::ForOp>(c0, tripCounts[loopIdx + 1], c1, ValueRange(),
-                               workLoopBuilder(loopIdx + 1));
+          scf::ForOp::create(b, c0, tripCounts[loopIdx + 1], c1, ValueRange(),
+                             workLoopBuilder(loopIdx + 1));
 
         } else {
           // Select nested loop lower/upper bounds depending on our position in
           // the multi-dimensional iteration space.
-          auto lb = b.create<arith::SelectOp>(isBlockFirstCoord[loopIdx],
-                                              blockFirstCoord[loopIdx + 1], c0);
+          auto lb = arith::SelectOp::create(b, isBlockFirstCoord[loopIdx],
+                                            blockFirstCoord[loopIdx + 1], c0);
 
-          auto ub = b.create<arith::SelectOp>(isBlockLastCoord[loopIdx],
-                                              blockEndCoord[loopIdx + 1],
-                                              tripCounts[loopIdx + 1]);
+          auto ub = arith::SelectOp::create(b, isBlockLastCoord[loopIdx],
+                                            blockEndCoord[loopIdx + 1],
+                                            tripCounts[loopIdx + 1]);
 
-          b.create<scf::ForOp>(lb, ub, c1, ValueRange(),
-                               workLoopBuilder(loopIdx + 1));
+          scf::ForOp::create(b, lb, ub, c1, ValueRange(),
+                             workLoopBuilder(loopIdx + 1));
         }
 
-        b.create<scf::YieldOp>(loc);
+        scf::YieldOp::create(b, loc);
         return;
       }
 
@@ -426,13 +419,13 @@ static ParallelComputeFunction createParallelComputeFunction(
 
       for (auto &bodyOp : op.getRegion().front().without_terminator())
         b.clone(bodyOp, mapping);
-      b.create<scf::YieldOp>(loc);
+      scf::YieldOp::create(b, loc);
     };
   };
 
-  b.create<scf::ForOp>(blockFirstCoord[0], blockEndCoord[0], c1, ValueRange(),
-                       workLoopBuilder(0));
-  b.create<func::ReturnOp>(ValueRange());
+  scf::ForOp::create(b, blockFirstCoord[0], blockEndCoord[0], c1, ValueRange(),
+                     workLoopBuilder(0));
+  func::ReturnOp::create(b, ValueRange());
 
   return {op.getNumLoops(), func, std::move(computeFuncType.captures)};
 }
@@ -492,8 +485,8 @@ createAsyncDispatchFunction(ParallelComputeFunction &computeFunc,
   b.setInsertionPointToEnd(block);
 
   Type indexTy = b.getIndexType();
-  Value c1 = b.create<arith::ConstantIndexOp>(1);
-  Value c2 = b.create<arith::ConstantIndexOp>(2);
+  Value c1 = arith::ConstantIndexOp::create(b, 1);
+  Value c2 = arith::ConstantIndexOp::create(b, 2);
 
   // Get the async group that will track async dispatch completion.
   Value group = block->getArgument(0);
@@ -508,7 +501,7 @@ createAsyncDispatchFunction(ParallelComputeFunction &computeFunc,
   SmallVector<Location> locations = {loc, loc};
 
   // Create a recursive dispatch loop.
-  scf::WhileOp whileOp = b.create<scf::WhileOp>(types, operands);
+  scf::WhileOp whileOp = scf::WhileOp::create(b, types, operands);
   Block *before = b.createBlock(&whileOp.getBefore(), {}, types, locations);
   Block *after = b.createBlock(&whileOp.getAfter(), {}, types, locations);
 
@@ -518,10 +511,10 @@ createAsyncDispatchFunction(ParallelComputeFunction &computeFunc,
     b.setInsertionPointToEnd(before);
     Value start = before->getArgument(0);
     Value end = before->getArgument(1);
-    Value distance = b.create<arith::SubIOp>(end, start);
+    Value distance = arith::SubIOp::create(b, end, start);
     Value dispatch =
-        b.create<arith::CmpIOp>(arith::CmpIPredicate::sgt, distance, c1);
-    b.create<scf::ConditionOp>(dispatch, before->getArguments());
+        arith::CmpIOp::create(b, arith::CmpIPredicate::sgt, distance, c1);
+    scf::ConditionOp::create(b, dispatch, before->getArguments());
   }
 
   // Setup the async dispatch loop body: recursively call dispatch function
@@ -530,9 +523,9 @@ createAsyncDispatchFunction(ParallelComputeFunction &computeFunc,
     b.setInsertionPointToEnd(after);
     Value start = after->getArgument(0);
     Value end = after->getArgument(1);
-    Value distance = b.create<arith::SubIOp>(end, start);
-    Value halfDistance = b.create<arith::DivSIOp>(distance, c2);
-    Value midIndex = b.create<arith::AddIOp>(start, halfDistance);
+    Value distance = arith::SubIOp::create(b, end, start);
+    Value halfDistance = arith::DivSIOp::create(b, distance, c2);
+    Value midIndex = arith::AddIOp::create(b, start, halfDistance);
 
     // Call parallel compute function inside the async.execute region.
     auto executeBodyBuilder = [&](OpBuilder &executeBuilder,
@@ -543,16 +536,16 @@ createAsyncDispatchFunction(ParallelComputeFunction &computeFunc,
       operands[1] = midIndex;
       operands[2] = end;
 
-      executeBuilder.create<func::CallOp>(executeLoc, func.getSymName(),
-                                          func.getResultTypes(), operands);
-      executeBuilder.create<async::YieldOp>(executeLoc, ValueRange());
+      func::CallOp::create(executeBuilder, executeLoc, func.getSymName(),
+                           func.getResultTypes(), operands);
+      async::YieldOp::create(executeBuilder, executeLoc, ValueRange());
     };
 
     // Create async.execute operation to dispatch half of the block range.
-    auto execute = b.create<ExecuteOp>(TypeRange(), ValueRange(), ValueRange(),
-                                       executeBodyBuilder);
-    b.create<AddToGroupOp>(indexTy, execute.getToken(), group);
-    b.create<scf::YieldOp>(ValueRange({start, midIndex}));
+    auto execute = ExecuteOp::create(b, TypeRange(), ValueRange(), ValueRange(),
+                                     executeBodyBuilder);
+    AddToGroupOp::create(b, indexTy, execute.getToken(), group);
+    scf::YieldOp::create(b, ValueRange({start, midIndex}));
   }
 
   // After dispatching async operations to process the tail of the block range
@@ -564,10 +557,9 @@ createAsyncDispatchFunction(ParallelComputeFunction &computeFunc,
   SmallVector<Value> computeFuncOperands = {blockStart};
   computeFuncOperands.append(forwardedInputs.begin(), forwardedInputs.end());
 
-  b.create<func::CallOp>(computeFunc.func.getSymName(),
-                         computeFunc.func.getResultTypes(),
-                         computeFuncOperands);
-  b.create<func::ReturnOp>(ValueRange());
+  func::CallOp::create(b, computeFunc.func.getSymName(),
+                       computeFunc.func.getResultTypes(), computeFuncOperands);
+  func::ReturnOp::create(b, ValueRange());
 
   return func;
 }
@@ -585,8 +577,8 @@ static void doAsyncDispatch(ImplicitLocOpBuilder &b, PatternRewriter &rewriter,
   func::FuncOp asyncDispatchFunction =
       createAsyncDispatchFunction(parallelComputeFunction, rewriter);
 
-  Value c0 = b.create<arith::ConstantIndexOp>(0);
-  Value c1 = b.create<arith::ConstantIndexOp>(1);
+  Value c0 = arith::ConstantIndexOp::create(b, 0);
+  Value c1 = arith::ConstantIndexOp::create(b, 1);
 
   // Appends operands shared by async dispatch and parallel compute functions to
   // the given operands vector.
@@ -602,7 +594,7 @@ static void doAsyncDispatch(ImplicitLocOpBuilder &b, PatternRewriter &rewriter,
   // completely. If this will be known statically, then canonicalization will
   // erase async group operations.
   Value isSingleBlock =
-      b.create<arith::CmpIOp>(arith::CmpIPredicate::eq, blockCount, c1);
+      arith::CmpIOp::create(b, arith::CmpIPredicate::eq, blockCount, c1);
 
   auto syncDispatch = [&](OpBuilder &nestedBuilder, Location loc) {
     ImplicitLocOpBuilder b(loc, nestedBuilder);
@@ -611,10 +603,10 @@ static void doAsyncDispatch(ImplicitLocOpBuilder &b, PatternRewriter &rewriter,
     SmallVector<Value> operands = {c0, blockSize};
     appendBlockComputeOperands(operands);
 
-    b.create<func::CallOp>(parallelComputeFunction.func.getSymName(),
-                           parallelComputeFunction.func.getResultTypes(),
-                           operands);
-    b.create<scf::YieldOp>();
+    func::CallOp::create(b, parallelComputeFunction.func.getSymName(),
+                         parallelComputeFunction.func.getResultTypes(),
+                         operands);
+    scf::YieldOp::create(b);
   };
 
   auto asyncDispatch = [&](OpBuilder &nestedBuilder, Location loc) {
@@ -623,24 +615,24 @@ static void doAsyncDispatch(ImplicitLocOpBuilder &b, PatternRewriter &rewriter,
     // Create an async.group to wait on all async tokens from the concurrent
     // execution of multiple parallel compute function. First block will be
     // executed synchronously in the caller thread.
-    Value groupSize = b.create<arith::SubIOp>(blockCount, c1);
-    Value group = b.create<CreateGroupOp>(GroupType::get(ctx), groupSize);
+    Value groupSize = arith::SubIOp::create(b, blockCount, c1);
+    Value group = CreateGroupOp::create(b, GroupType::get(ctx), groupSize);
 
     // Launch async dispatch function for [0, blockCount) range.
     SmallVector<Value> operands = {group, c0, blockCount, blockSize};
     appendBlockComputeOperands(operands);
 
-    b.create<func::CallOp>(asyncDispatchFunction.getSymName(),
-                           asyncDispatchFunction.getResultTypes(), operands);
+    func::CallOp::create(b, asyncDispatchFunction.getSymName(),
+                         asyncDispatchFunction.getResultTypes(), operands);
 
     // Wait for the completion of all parallel compute operations.
-    b.create<AwaitAllOp>(group);
+    AwaitAllOp::create(b, group);
 
-    b.create<scf::YieldOp>();
+    scf::YieldOp::create(b);
   };
 
   // Dispatch either single block compute function, or launch async dispatch.
-  b.create<scf::IfOp>(isSingleBlock, syncDispatch, asyncDispatch);
+  scf::IfOp::create(b, isSingleBlock, syncDispatch, asyncDispatch);
 }
 
 // Dispatch parallel compute functions by submitting all async compute tasks
@@ -654,14 +646,14 @@ doSequentialDispatch(ImplicitLocOpBuilder &b, PatternRewriter &rewriter,
 
   func::FuncOp compute = parallelComputeFunction.func;
 
-  Value c0 = b.create<arith::ConstantIndexOp>(0);
-  Value c1 = b.create<arith::ConstantIndexOp>(1);
+  Value c0 = arith::ConstantIndexOp::create(b, 0);
+  Value c1 = arith::ConstantIndexOp::create(b, 1);
 
   // Create an async.group to wait on all async tokens from the concurrent
   // execution of multiple parallel compute function. First block will be
   // executed synchronously in the caller thread.
-  Value groupSize = b.create<arith::SubIOp>(blockCount, c1);
-  Value group = b.create<CreateGroupOp>(GroupType::get(ctx), groupSize);
+  Value groupSize = arith::SubIOp::create(b, blockCount, c1);
+  Value group = CreateGroupOp::create(b, GroupType::get(ctx), groupSize);
 
   // Call parallel compute function for all blocks.
   using LoopBodyBuilder =
@@ -688,28 +680,27 @@ doSequentialDispatch(ImplicitLocOpBuilder &b, PatternRewriter &rewriter,
     // Call parallel compute function inside the async.execute region.
     auto executeBodyBuilder = [&](OpBuilder &executeBuilder,
                                   Location executeLoc, ValueRange executeArgs) {
-      executeBuilder.create<func::CallOp>(executeLoc, compute.getSymName(),
-                                          compute.getResultTypes(),
-                                          computeFuncOperands(iv));
-      executeBuilder.create<async::YieldOp>(executeLoc, ValueRange());
+      func::CallOp::create(executeBuilder, executeLoc, compute.getSymName(),
+                           compute.getResultTypes(), computeFuncOperands(iv));
+      async::YieldOp::create(executeBuilder, executeLoc, ValueRange());
     };
 
     // Create async.execute operation to launch parallel computate function.
-    auto execute = b.create<ExecuteOp>(TypeRange(), ValueRange(), ValueRange(),
-                                       executeBodyBuilder);
-    b.create<AddToGroupOp>(rewriter.getIndexType(), execute.getToken(), group);
-    b.create<scf::YieldOp>();
+    auto execute = ExecuteOp::create(b, TypeRange(), ValueRange(), ValueRange(),
+                                     executeBodyBuilder);
+    AddToGroupOp::create(b, rewriter.getIndexType(), execute.getToken(), group);
+    scf::YieldOp::create(b);
   };
 
   // Iterate over all compute blocks and launch parallel compute operations.
-  b.create<scf::ForOp>(c1, blockCount, c1, ValueRange(), loopBuilder);
+  scf::ForOp::create(b, c1, blockCount, c1, ValueRange(), loopBuilder);
 
   // Call parallel compute function for the first block in the caller thread.
-  b.create<func::CallOp>(compute.getSymName(), compute.getResultTypes(),
-                         computeFuncOperands(c0));
+  func::CallOp::create(b, compute.getSymName(), compute.getResultTypes(),
+                       computeFuncOperands(c0));
 
   // Wait for the completion of all async compute operations.
-  b.create<AwaitAllOp>(group);
+  AwaitAllOp::create(b, group);
 }
 
 LogicalResult
@@ -745,17 +736,17 @@ AsyncParallelForRewrite::matchAndRewrite(scf::ParallelOp op,
   // for the scf.parallel operation.
   Value tripCount = tripCounts[0];
   for (size_t i = 1; i < tripCounts.size(); ++i)
-    tripCount = b.create<arith::MulIOp>(tripCount, tripCounts[i]);
+    tripCount = arith::MulIOp::create(b, tripCount, tripCounts[i]);
 
   // Short circuit no-op parallel loops (zero iterations) that can arise from
   // the memrefs with dynamic dimension(s) equal to zero.
-  Value c0 = b.create<arith::ConstantIndexOp>(0);
+  Value c0 = arith::ConstantIndexOp::create(b, 0);
   Value isZeroIterations =
-      b.create<arith::CmpIOp>(arith::CmpIPredicate::eq, tripCount, c0);
+      arith::CmpIOp::create(b, arith::CmpIPredicate::eq, tripCount, c0);
 
   // Do absolutely nothing if the trip count is zero.
   auto noOp = [&](OpBuilder &nestedBuilder, Location loc) {
-    nestedBuilder.create<scf::YieldOp>(loc);
+    scf::YieldOp::create(nestedBuilder, loc);
   };
 
   // Compute the parallel block size and dispatch concurrent tasks computing
@@ -805,9 +796,9 @@ AsyncParallelForRewrite::matchAndRewrite(scf::ParallelOp op,
 
     Value numWorkerThreadsVal;
     if (numWorkerThreads >= 0)
-      numWorkerThreadsVal = b.create<arith::ConstantIndexOp>(numWorkerThreads);
+      numWorkerThreadsVal = arith::ConstantIndexOp::create(b, numWorkerThreads);
     else
-      numWorkerThreadsVal = b.create<async::RuntimeNumWorkerThreadsOp>();
+      numWorkerThreadsVal = async::RuntimeNumWorkerThreadsOp::create(b);
 
     // With large number of threads the value of creating many compute blocks
     // is reduced because the problem typically becomes memory bound. For this
@@ -826,38 +817,38 @@ AsyncParallelForRewrite::matchAndRewrite(scf::ParallelOp op,
         {4, 4.0f}, {8, 2.0f}, {16, 1.0f}, {32, 0.8f}, {64, 0.6f}};
     const float initialOvershardingFactor = 8.0f;
 
-    Value scalingFactor = b.create<arith::ConstantFloatOp>(
-        llvm::APFloat(initialOvershardingFactor), b.getF32Type());
+    Value scalingFactor = arith::ConstantFloatOp::create(
+        b, b.getF32Type(), llvm::APFloat(initialOvershardingFactor));
     for (const std::pair<int, float> &p : overshardingBrackets) {
-      Value bracketBegin = b.create<arith::ConstantIndexOp>(p.first);
-      Value inBracket = b.create<arith::CmpIOp>(
-          arith::CmpIPredicate::sgt, numWorkerThreadsVal, bracketBegin);
-      Value bracketScalingFactor = b.create<arith::ConstantFloatOp>(
-          llvm::APFloat(p.second), b.getF32Type());
-      scalingFactor = b.create<arith::SelectOp>(inBracket, bracketScalingFactor,
-                                                scalingFactor);
+      Value bracketBegin = arith::ConstantIndexOp::create(b, p.first);
+      Value inBracket = arith::CmpIOp::create(
+          b, arith::CmpIPredicate::sgt, numWorkerThreadsVal, bracketBegin);
+      Value bracketScalingFactor = arith::ConstantFloatOp::create(
+          b, b.getF32Type(), llvm::APFloat(p.second));
+      scalingFactor = arith::SelectOp::create(
+          b, inBracket, bracketScalingFactor, scalingFactor);
     }
     Value numWorkersIndex =
-        b.create<arith::IndexCastOp>(b.getI32Type(), numWorkerThreadsVal);
+        arith::IndexCastOp::create(b, b.getI32Type(), numWorkerThreadsVal);
     Value numWorkersFloat =
-        b.create<arith::SIToFPOp>(b.getF32Type(), numWorkersIndex);
+        arith::SIToFPOp::create(b, b.getF32Type(), numWorkersIndex);
     Value scaledNumWorkers =
-        b.create<arith::MulFOp>(scalingFactor, numWorkersFloat);
+        arith::MulFOp::create(b, scalingFactor, numWorkersFloat);
     Value scaledNumInt =
-        b.create<arith::FPToSIOp>(b.getI32Type(), scaledNumWorkers);
+        arith::FPToSIOp::create(b, b.getI32Type(), scaledNumWorkers);
     Value scaledWorkers =
-        b.create<arith::IndexCastOp>(b.getIndexType(), scaledNumInt);
+        arith::IndexCastOp::create(b, b.getIndexType(), scaledNumInt);
 
-    Value maxComputeBlocks = b.create<arith::MaxSIOp>(
-        b.create<arith::ConstantIndexOp>(1), scaledWorkers);
+    Value maxComputeBlocks = arith::MaxSIOp::create(
+        b, arith::ConstantIndexOp::create(b, 1), scaledWorkers);
 
     // Compute parallel block size from the parallel problem size:
     //   blockSize = min(tripCount,
     //                   max(ceil_div(tripCount, maxComputeBlocks),
     //                       minTaskSize))
-    Value bs0 = b.create<arith::CeilDivSIOp>(tripCount, maxComputeBlocks);
-    Value bs1 = b.create<arith::MaxSIOp>(bs0, minTaskSize);
-    Value blockSize = b.create<arith::MinSIOp>(tripCount, bs1);
+    Value bs0 = arith::CeilDivSIOp::create(b, tripCount, maxComputeBlocks);
+    Value bs1 = arith::MaxSIOp::create(b, bs0, minTaskSize);
+    Value blockSize = arith::MinSIOp::create(b, tripCount, bs1);
 
     // Dispatch parallel compute function using async recursive work splitting,
     // or by submitting compute task sequentially from a caller thread.
@@ -867,7 +858,7 @@ AsyncParallelForRewrite::matchAndRewrite(scf::ParallelOp op,
     // the parallel operation body for a subset of iteration space.
 
     // Compute the number of parallel compute blocks.
-    Value blockCount = b.create<arith::CeilDivSIOp>(tripCount, blockSize);
+    Value blockCount = arith::CeilDivSIOp::create(b, tripCount, blockSize);
 
     // Dispatch parallel compute function without hints to unroll inner loops.
     auto dispatchDefault = [&](OpBuilder &nestedBuilder, Location loc) {
@@ -876,7 +867,7 @@ AsyncParallelForRewrite::matchAndRewrite(scf::ParallelOp op,
 
       ImplicitLocOpBuilder b(loc, nestedBuilder);
       doDispatch(b, rewriter, compute, op, blockSize, blockCount, tripCounts);
-      b.create<scf::YieldOp>();
+      scf::YieldOp::create(b);
     };
 
     // Dispatch parallel compute function with hints for unrolling inner loops.
@@ -887,34 +878,34 @@ AsyncParallelForRewrite::matchAndRewrite(scf::ParallelOp op,
       ImplicitLocOpBuilder b(loc, nestedBuilder);
       // Align the block size to be a multiple of the statically known
       // number of iterations in the inner loops.
-      Value numIters = b.create<arith::ConstantIndexOp>(
-          numIterations[op.getNumLoops() - numUnrollableLoops]);
-      Value alignedBlockSize = b.create<arith::MulIOp>(
-          b.create<arith::CeilDivSIOp>(blockSize, numIters), numIters);
+      Value numIters = arith::ConstantIndexOp::create(
+          b, numIterations[op.getNumLoops() - numUnrollableLoops]);
+      Value alignedBlockSize = arith::MulIOp::create(
+          b, arith::CeilDivSIOp::create(b, blockSize, numIters), numIters);
       doDispatch(b, rewriter, compute, op, alignedBlockSize, blockCount,
                  tripCounts);
-      b.create<scf::YieldOp>();
+      scf::YieldOp::create(b);
     };
 
     // Dispatch to block aligned compute function only if the computed block
     // size is larger than the number of iterations in the unrollable inner
     // loops, because otherwise it can reduce the available parallelism.
     if (numUnrollableLoops > 0) {
-      Value numIters = b.create<arith::ConstantIndexOp>(
-          numIterations[op.getNumLoops() - numUnrollableLoops]);
-      Value useBlockAlignedComputeFn = b.create<arith::CmpIOp>(
-          arith::CmpIPredicate::sge, blockSize, numIters);
+      Value numIters = arith::ConstantIndexOp::create(
+          b, numIterations[op.getNumLoops() - numUnrollableLoops]);
+      Value useBlockAlignedComputeFn = arith::CmpIOp::create(
+          b, arith::CmpIPredicate::sge, blockSize, numIters);
 
-      b.create<scf::IfOp>(useBlockAlignedComputeFn, dispatchBlockAligned,
-                          dispatchDefault);
-      b.create<scf::YieldOp>();
+      scf::IfOp::create(b, useBlockAlignedComputeFn, dispatchBlockAligned,
+                        dispatchDefault);
+      scf::YieldOp::create(b);
     } else {
       dispatchDefault(b, loc);
     }
   };
 
   // Replace the `scf.parallel` operation with the parallel compute function.
-  b.create<scf::IfOp>(isZeroIterations, noOp, dispatch);
+  scf::IfOp::create(b, isZeroIterations, noOp, dispatch);
 
   // Parallel operation was replaced with a block iteration loop.
   rewriter.eraseOp(op);
@@ -929,21 +920,10 @@ void AsyncParallelForPass::runOnOperation() {
   populateAsyncParallelForPatterns(
       patterns, asyncDispatch, numWorkerThreads,
       [&](ImplicitLocOpBuilder builder, scf::ParallelOp op) {
-        return builder.create<arith::ConstantIndexOp>(minTaskSize);
+        return arith::ConstantIndexOp::create(builder, minTaskSize);
       });
   if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
     signalPassFailure();
-}
-
-std::unique_ptr<Pass> mlir::createAsyncParallelForPass() {
-  return std::make_unique<AsyncParallelForPass>();
-}
-
-std::unique_ptr<Pass> mlir::createAsyncParallelForPass(bool asyncDispatch,
-                                                       int32_t numWorkerThreads,
-                                                       int32_t minTaskSize) {
-  return std::make_unique<AsyncParallelForPass>(asyncDispatch, numWorkerThreads,
-                                                minTaskSize);
 }
 
 void mlir::async::populateAsyncParallelForPatterns(

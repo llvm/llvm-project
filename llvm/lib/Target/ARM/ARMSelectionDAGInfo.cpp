@@ -121,18 +121,20 @@ SDValue ARMSelectionDAGInfo::EmitSpecializedLibcall(
     Args.push_back(Entry);
   }
 
-  char const *FunctionNames[4][3] = {
-    { "__aeabi_memcpy",  "__aeabi_memcpy4",  "__aeabi_memcpy8"  },
-    { "__aeabi_memmove", "__aeabi_memmove4", "__aeabi_memmove8" },
-    { "__aeabi_memset",  "__aeabi_memset4",  "__aeabi_memset8"  },
-    { "__aeabi_memclr",  "__aeabi_memclr4",  "__aeabi_memclr8"  }
-  };
+  static const RTLIB::Libcall FunctionImpls[4][3] = {
+      {RTLIB::MEMCPY, RTLIB::AEABI_MEMCPY4, RTLIB::AEABI_MEMCPY8},
+      {RTLIB::MEMMOVE, RTLIB::AEABI_MEMMOVE4, RTLIB::AEABI_MEMMOVE8},
+      {RTLIB::MEMSET, RTLIB::AEABI_MEMSET4, RTLIB::AEABI_MEMSET8},
+      {RTLIB::AEABI_MEMCLR, RTLIB::AEABI_MEMCLR4, RTLIB::AEABI_MEMCLR8}};
+
+  RTLIB::Libcall NewLC = FunctionImpls[AEABILibcall][AlignVariant];
+
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl)
       .setChain(Chain)
       .setLibCallee(
-          TLI->getLibcallCallingConv(LC), Type::getVoidTy(*DAG.getContext()),
-          DAG.getExternalSymbol(FunctionNames[AEABILibcall][AlignVariant],
+          TLI->getLibcallCallingConv(NewLC), Type::getVoidTy(*DAG.getContext()),
+          DAG.getExternalSymbol(TLI->getLibcallName(NewLC),
                                 TLI->getPointerTy(DAG.getDataLayout())),
           std::move(Args))
       .setDiscardResult();

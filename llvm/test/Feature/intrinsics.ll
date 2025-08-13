@@ -3,8 +3,12 @@
 ; RUN: diff %t1.ll %t2.ll
 ; RUN: FileCheck %s < %t1.ll
 
+; CHECK: Unknown intrinsic
+; CHECK-NEXT: declare i1 @llvm.isunordered.f32(float, float)
 declare i1 @llvm.isunordered.f32(float, float)
 
+; CHECK: Unknown intrinsic
+; CHECK-NEXT: declare i1 @llvm.isunordered.f64(double, double)
 declare i1 @llvm.isunordered.f64(double, double)
 
 
@@ -60,7 +64,6 @@ define void @libm() {
 
 ; FIXME: test ALL the intrinsics in this file.
 
-; rdar://11542750
 ; CHECK: declare void @llvm.trap() #1
 declare void @llvm.trap()
 

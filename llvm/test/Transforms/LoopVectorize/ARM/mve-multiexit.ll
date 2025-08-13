@@ -30,11 +30,9 @@ define void @multiple_exits_unique_exit_block(ptr %A, ptr %B, i32 %N) #0 {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP6]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP7]], i32 0
-; CHECK-NEXT:    store <4 x i32> [[WIDE_LOAD]], ptr [[TMP8]], align 4
+; CHECK-NEXT:    store <4 x i32> [[WIDE_LOAD]], ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -103,11 +101,9 @@ define i32 @multiple_exits_multiple_exit_blocks(ptr %A, ptr %B, i32 %N) #0 {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP6]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP7]], i32 0
-; CHECK-NEXT:    store <4 x i32> [[WIDE_LOAD]], ptr [[TMP8]], align 4
+; CHECK-NEXT:    store <4 x i32> [[WIDE_LOAD]], ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]

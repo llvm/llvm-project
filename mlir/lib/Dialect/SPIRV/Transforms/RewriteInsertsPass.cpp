@@ -16,7 +16,6 @@
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinOps.h"
 
 namespace mlir {
 namespace spirv {
@@ -66,8 +65,8 @@ void RewriteInsertsPass::runOnOperation() {
       operands.push_back(insertionOp.getObject());
 
     OpBuilder builder(lastCompositeInsertOp);
-    auto compositeConstructOp = builder.create<spirv::CompositeConstructOp>(
-        location, compositeType, operands);
+    auto compositeConstructOp = spirv::CompositeConstructOp::create(
+        builder, location, compositeType, operands);
 
     lastCompositeInsertOp.replaceAllUsesWith(
         compositeConstructOp->getResult(0));
@@ -84,6 +83,9 @@ void RewriteInsertsPass::runOnOperation() {
 LogicalResult RewriteInsertsPass::collectInsertionChain(
     spirv::CompositeInsertOp op,
     SmallVectorImpl<spirv::CompositeInsertOp> &insertions) {
+  if (isa<spirv::CooperativeMatrixType>(op.getComposite().getType()))
+    return failure();
+
   auto indicesArrayAttr = cast<ArrayAttr>(op.getIndices());
   // TODO: handle nested composite object.
   if (indicesArrayAttr.size() == 1) {

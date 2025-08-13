@@ -15,14 +15,12 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
-#include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/DWARF.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/xxhash.h"
 #include <algorithm>
-#include <mutex>
 #include <optional>
 #include <vector>
 
@@ -432,8 +430,9 @@ InputSectionBase *InputSection::getRelocatedSection() const {
 
 template <class ELFT, class RelTy>
 void InputSection::copyRelocations(Ctx &ctx, uint8_t *buf) {
-  if (ctx.arg.relax && !ctx.arg.relocatable &&
-      (ctx.arg.emachine == EM_RISCV || ctx.arg.emachine == EM_LOONGARCH)) {
+  bool linkerRelax =
+      ctx.arg.relax && is_contained({EM_RISCV, EM_LOONGARCH}, ctx.arg.emachine);
+  if (!ctx.arg.relocatable && (linkerRelax || ctx.arg.branchToBranch)) {
     // On LoongArch and RISC-V, relaxation might change relocations: copy
     // from internal ones that are updated by relaxation.
     InputSectionBase *sec = getRelocatedSection();
@@ -831,6 +830,7 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
   case R_GOTPLT_PC:
     return r.sym->getGotPltVA(ctx) + a - p;
   case RE_LOONGARCH_GOT_PAGE_PC:
+  case RE_LOONGARCH_RELAX_TLS_GD_TO_IE_PAGE_PC:
     if (r.sym->hasFlag(NEEDS_TLSGD))
       return getLoongArchPageDelta(ctx.in.got->getGlobalDynAddr(*r.sym) + a, p,
                                    r.type);
@@ -861,6 +861,11 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
     return ctx.in.mipsGot->getVA() +
            ctx.in.mipsGot->getPageEntryOffset(file, *r.sym, a) -
            ctx.in.mipsGot->getGp(file);
+  case RE_MIPS_OSEC_LOCAL_PAGE:
+    // This is used by the MIPS multi-GOT implementation. It relocates
+    // addresses of 64kb pages that lie inside the output section that sym is
+    // a representative for.
+    return getMipsPageAddr(r.sym->getOutputSection()->addr) + a;
   case RE_MIPS_GOT_OFF:
   case RE_MIPS_GOT_OFF32:
     // In case of MIPS if a GOT relocation has non-zero addend this addend

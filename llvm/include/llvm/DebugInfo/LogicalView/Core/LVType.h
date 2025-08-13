@@ -15,6 +15,7 @@
 #define LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVTYPE_H
 
 #include "llvm/DebugInfo/LogicalView/Core/LVElement.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace logicalview {
@@ -48,13 +49,16 @@ using LVTypeDispatch = std::map<LVTypeKind, LVTypeGetFunction>;
 using LVTypeRequest = std::vector<LVTypeGetFunction>;
 
 // Class to represent a DWARF Type.
-class LVType : public LVElement {
+class LLVM_ABI LVType : public LVElement {
   enum class Property { IsSubrangeCount, LastEntry };
 
   // Typed bitvector with kinds and properties for this type.
   LVProperties<LVTypeKind> Kinds;
   LVProperties<Property> Properties;
   static LVTypeDispatch Dispatch;
+
+  // Size in bits of a symbol of this type.
+  uint32_t BitSize = 0;
 
   // Find the current type in the given 'Targets'.
   LVType *findIn(const LVTypes *Targets) const;
@@ -109,6 +113,10 @@ public:
   virtual LVElement *getUnderlyingType() { return nullptr; }
   virtual void setUnderlyingType(LVElement *Element) {}
 
+  // Return the size in bits of an entity of this type.
+  uint32_t getBitSize() const override { return BitSize; }
+  void setBitSize(uint32_t Size) override { BitSize = Size; }
+
   void resolveName() override;
   void resolveReferences() override;
 
@@ -138,14 +146,10 @@ public:
 
   void print(raw_ostream &OS, bool Full = true) const override;
   void printExtra(raw_ostream &OS, bool Full = true) const override;
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  void dump() const override { print(dbgs()); }
-#endif
 };
 
 // Class to represent DW_TAG_typedef_type.
-class LVTypeDefinition final : public LVType {
+class LLVM_ABI LVTypeDefinition final : public LVType {
 public:
   LVTypeDefinition() : LVType() {
     setIsTypedef();
@@ -168,7 +172,7 @@ public:
 };
 
 // Class to represent a DW_TAG_enumerator.
-class LVTypeEnumerator final : public LVType {
+class LLVM_ABI LVTypeEnumerator final : public LVType {
   // Index in the String pool representing any initial value.
   size_t ValueIndex = 0;
 
@@ -197,7 +201,7 @@ public:
 };
 
 // Class to represent DW_TAG_imported_module / DW_TAG_imported_declaration.
-class LVTypeImport final : public LVType {
+class LLVM_ABI LVTypeImport final : public LVType {
 public:
   LVTypeImport() : LVType() { setIncludeInPrint(); }
   LVTypeImport(const LVTypeImport &) = delete;
@@ -211,7 +215,7 @@ public:
 };
 
 // Class to represent a DWARF Template parameter holder (type or param).
-class LVTypeParam final : public LVType {
+class LLVM_ABI LVTypeParam final : public LVType {
   // Index in the String pool representing any initial value.
   size_t ValueIndex = 0;
 
@@ -240,7 +244,7 @@ public:
 };
 
 // Class to represent a DW_TAG_subrange_type.
-class LVTypeSubrange final : public LVType {
+class LLVM_ABI LVTypeSubrange final : public LVType {
   // Values describing the subrange bounds.
   int64_t LowerBound = 0; // DW_AT_lower_bound or DW_AT_count value.
   int64_t UpperBound = 0; // DW_AT_upper_bound value.
