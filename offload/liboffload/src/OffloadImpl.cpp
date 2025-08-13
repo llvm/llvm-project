@@ -553,8 +553,8 @@ Error olGetQueueInfoSize_impl(ol_queue_handle_t Queue, ol_queue_info_t PropName,
 }
 
 Error olSyncEvent_impl(ol_event_handle_t Event) {
+  // No event info means that this event was complete on creation
   if (!Event->EventInfo)
-    // Event always complete
     return Plugin::success();
 
   if (auto Res = Event->Queue->Device->Device->syncEvent(Event->EventInfo))
@@ -581,8 +581,8 @@ Error olGetEventInfoImplDetail(ol_event_handle_t Event,
   case OL_EVENT_INFO_QUEUE:
     return Info.write<ol_queue_handle_t>(Queue);
   case OL_EVENT_INFO_IS_COMPLETE: {
+    // No event info means that this event was complete on creation
     if (!Event->EventInfo)
-      // Event always complete
       return Info.write<bool>(true);
 
     auto Res = Queue->Device->Device->isEventComplete(Event->EventInfo,

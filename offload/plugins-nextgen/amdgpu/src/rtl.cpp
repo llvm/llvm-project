@@ -2620,10 +2620,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
                                      AsyncInfoWrapperTy &AsyncInfo) override {
     AMDGPUEventTy *Event = reinterpret_cast<AMDGPUEventTy *>(EventPtr);
     auto Stream = AsyncInfo.getQueueAs<AMDGPUStreamTy *>();
-    if (!Stream)
-      return false;
-
-    return Stream->isEventComplete(*Event);
+    return Stream && Stream->isEventComplete(*Event);
   }
 
   /// Synchronize the current thread with the event.
