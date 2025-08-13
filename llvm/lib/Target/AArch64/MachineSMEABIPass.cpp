@@ -107,8 +107,10 @@ static bool isZAorZT0RegOp(const TargetRegisterInfo &TRI,
   });
 }
 
+/// Returns the required ZA state needed before \p MI and an iterator pointing
+/// to where any code required to change the ZA state should be inserted.
 static std::pair<ZAState, MachineBasicBlock::iterator>
-getInstNeededZAState(const TargetRegisterInfo &TRI, MachineInstr &MI,
+getZAStateBeforeInst(const TargetRegisterInfo &TRI, MachineInstr &MI,
                      bool ZALiveAtReturn) {
   MachineBasicBlock::iterator InsertPt(MI);
 
@@ -254,7 +256,7 @@ void MachineSMEABI::collectNeededZAStates(SMEAttrs SMEFnAttrs) {
       MachineBasicBlock::iterator MBBI(MI);
       LiveUnits.stepBackward(MI);
       LiveRegs PhysLiveRegs = GetPhysLiveRegs();
-      auto [NeededState, InsertPt] = getInstNeededZAState(
+      auto [NeededState, InsertPt] = getZAStateBeforeInst(
           *TRI, MI, /*ZALiveAtReturn=*/SMEFnAttrs.hasSharedZAInterface());
       assert((InsertPt == MBBI ||
               InsertPt->getOpcode() == AArch64::ADJCALLSTACKDOWN) &&
@@ -545,14 +547,14 @@ void MachineSMEABI::emitNewZAPrologue(MachineBasicBlock &MBB,
       .addReg(TPIDR2EL0, RegState::Define)
       .addImm(AArch64SysReg::TPIDR2_EL0);
   // If TPIDR2_EL0 is non-zero, commit the lazy save.
-  auto CommitZA =
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::CommitZAPseudo))
+  auto CommitZASave =
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::CommitZASavePseudo))
           .addReg(TPIDR2EL0)
           .addExternalSymbol(TLI->getLibcallName(RTLIB::SMEABI_TPIDR2_SAVE))
           .addRegMask(TRI->SMEABISupportRoutinesCallPreservedMaskFromX0());
   // NOTE: Functions that only use ZT0 don't need to zero ZA.
   if (MF->getInfo<AArch64FunctionInfo>()->getSMEFnAttrs().hasZAState())
-    CommitZA.addDef(AArch64::ZAB0, RegState::ImplicitDefine);
+    CommitZASave.addDef(AArch64::ZAB0, RegState::ImplicitDefine);
   // Enable ZA (as ZA could have previously been in the OFF state).
   BuildMI(MBB, MBBI, DL, TII->get(AArch64::MSRpstatesvcrImm1))
       .addImm(AArch64SVCR::SVCRZA)

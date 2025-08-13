@@ -99,7 +99,7 @@ let hasSideEffects = 1 in {
   def RequiresZASavePseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
 }
 
-def CommitZAPseudo
+def CommitZASavePseudo
   : Pseudo<(outs),
            (ins GPR64:$tpidr2_el0, i64imm:$commit_routine, variable_ops), []>,
            Sched<[]>;

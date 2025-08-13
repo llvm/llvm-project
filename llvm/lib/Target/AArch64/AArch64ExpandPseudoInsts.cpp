@@ -92,8 +92,9 @@ private:
   bool expandCALL_BTI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
   bool expandStoreSwiftAsyncContext(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator MBBI);
-  MachineBasicBlock *expandCommitOrRestoreZA(MachineBasicBlock &MBB,
-                                             MachineBasicBlock::iterator MBBI);
+  MachineBasicBlock *
+  expandCommitOrRestoreZASave(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MBBI);
   MachineBasicBlock *expandCondSMToggle(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator MBBI);
 };
@@ -992,13 +993,12 @@ bool AArch64ExpandPseudo::expandStoreSwiftAsyncContext(
 
 static constexpr unsigned ZERO_ALL_ZA_MASK = 0b11111111;
 
-MachineBasicBlock *
-AArch64ExpandPseudo::expandCommitOrRestoreZA(MachineBasicBlock &MBB,
-                                             MachineBasicBlock::iterator MBBI) {
+MachineBasicBlock *AArch64ExpandPseudo::expandCommitOrRestoreZASave(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
   MachineInstr &MI = *MBBI;
   bool IsRestoreZA = MI.getOpcode() == AArch64::RestoreZAPseudo;
   assert((MI.getOpcode() == AArch64::RestoreZAPseudo ||
-          MI.getOpcode() == AArch64::CommitZAPseudo) &&
+          MI.getOpcode() == AArch64::CommitZASavePseudo) &&
          "Expected ZA commit or restore");
   assert((std::next(MBBI) != MBB.end() ||
           MI.getParent()->successors().begin() !=
@@ -1669,9 +1669,9 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
      return expandCALL_BTI(MBB, MBBI);
    case AArch64::StoreSwiftAsyncContext:
      return expandStoreSwiftAsyncContext(MBB, MBBI);
-   case AArch64::CommitZAPseudo:
+   case AArch64::CommitZASavePseudo:
    case AArch64::RestoreZAPseudo: {
-     auto *NewMBB = expandCommitOrRestoreZA(MBB, MBBI);
+     auto *NewMBB = expandCommitOrRestoreZASave(MBB, MBBI);
      if (NewMBB != &MBB)
        NextMBBI = MBB.end(); // The NextMBBI iterator is invalidated.
      return true;
