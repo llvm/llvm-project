@@ -535,7 +535,7 @@ public:
   using const_reference = const value_type&;
 
   using iterator       = __deque_iterator<value_type, pointer, reference, __map_pointer, difference_type>;
-  using const_iterator = // Use of __map_const_pointer is merely kept for API stability.
+  using const_iterator = // Use of __map_const_pointer is merely kept for stability of const_iterator's true name.
       __deque_iterator<value_type, const_pointer, const_reference, __map_const_pointer, difference_type>;
   using reverse_iterator       = std::reverse_iterator<iterator>;
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
