@@ -37,8 +37,7 @@
                  __min_vector_width__(256)))
 #endif
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_popcnt_epi64(__m128i __A) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_popcnt_epi64(__m128i __A) {
   return (__m128i)__builtin_elementwise_popcount((__v2du)__A);
 }
 
@@ -53,8 +52,7 @@ _mm_maskz_popcnt_epi64(__mmask8 __U, __m128i __A) {
   return _mm_mask_popcnt_epi64((__m128i)_mm_setzero_si128(), __U, __A);
 }
 
-static __inline__ __m128i __DEFAULT_FN_ATTRS128
-_mm_popcnt_epi32(__m128i __A) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_popcnt_epi32(__m128i __A) {
   return (__m128i)__builtin_elementwise_popcount((__v4su)__A);
 }
 
