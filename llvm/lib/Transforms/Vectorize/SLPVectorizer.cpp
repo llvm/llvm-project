@@ -1916,17 +1916,15 @@ class BoUpSLP {
   class ShuffleCostEstimator;
   class ShuffleInstructionBuilder;
 
-  // If we decide to generate strided load / store, this struct contains all the
-  // necessary info. It's fields are calculated by analyzeRtStrideCandidate and
-  // analyzeConstantStrideCandidate. Note that Stride can be given either as a
-  // SCEV or as a Value if it already exists.
-  // To get the stride in bytes, StrideVal (or value obtained from StrideSCEV)
-  // has to by multiplied by the size of element of FixedVectorType.
+  /// If we decide to generate strided load / store, this struct contains all
+  /// the necessary info. It's fields are calculated by analyzeRtStrideCandidate
+  /// and analyzeConstantStrideCandidate. Note that Stride can be given either
+  /// as a SCEV or as a Value if it already exists. To get the stride in bytes,
+  /// StrideVal (or value obtained from StrideSCEV) has to by multiplied by the
+  /// size of element of FixedVectorType.
   struct StridedPtrInfo {
     Value *StrideVal = nullptr;
     const SCEV *StrideSCEV = nullptr;
-    // Represents the ammount which needs to be added to the base pointer of
-    // strided load.
     FixedVectorType *Ty = nullptr;
   };
   SmallDenseMap<TreeEntry *, StridedPtrInfo> TreeEntryToStridedPtrInfoMap;
@@ -2228,29 +2226,29 @@ public:
   ///       may not be necessary.
   bool isLoadCombineCandidate(ArrayRef<Value *> Stores) const;
 
-  // Suppose we are given pointers of the form: %b + x * %s + y * %c
-  // where %c is constant. Check if the pointers can be rearranged as follows:
-  //  %b + 0 * %s + 0
-  //  %b + 0 * %s + 1
-  //  %b + 0 * %s + 2
-  //  ...
-  //  %b + 0 * %s + w
-  //
-  //  %b + 1 * %s + 0
-  //  %b + 1 * %s + 1
-  //  %b + 1 * %s + 2
-  //  ...
-  //  %b + 1 * %s + w
-  //  ...
-  //
-  //  If the pointers can be rearanged in the above pattern, it means that the
-  //  memory can be accessed with a strided loads of width `w` and stride `%s`.
+  /// Suppose we are given pointers of the form: %b + x * %s + y * %c
+  /// where %c is constant. Check if the pointers can be rearranged as follows:
+  ///  %b + 0 * %s + 0
+  ///  %b + 0 * %s + 1
+  ///  %b + 0 * %s + 2
+  ///  ...
+  ///  %b + 0 * %s + w
+  ///
+  ///  %b + 1 * %s + 0
+  ///  %b + 1 * %s + 1
+  ///  %b + 1 * %s + 2
+  ///  ...
+  ///  %b + 1 * %s + w
+  ///  ...
+  ///
+  ///  If the pointers can be rearanged in the above pattern, it means that the
+  ///  memory can be accessed with a strided loads of width `w` and stride `%s`.
   bool analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps, Type *ElemTy,
                                 Align CommonAlignment,
                                 SmallVectorImpl<unsigned> &SortedIndices,
                                 StridedPtrInfo *SPtrInfo) const;
 
-  // Same as analyzeRtStrideCandidate, but for constant strides.
+  /// Same as analyzeRtStrideCandidate, but for constant strides.
   bool analyzeConstantStrideCandidate(ArrayRef<Value *> PointerOps,
                                       Type *ElemTy, Align CommonAlignment,
                                       SmallVectorImpl<unsigned> &SortedIndices,
@@ -6493,23 +6491,23 @@ static const SCEV *calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
   return Stride;
 }
 
-// Suppose we are given pointers of the form: %b + x * %s + y * %c
-// where %c is constant. Check if the pointers can be rearranged as follows:
-//  %b + 0 * %s + 0
-//  %b + 0 * %s + 1
-//  %b + 0 * %s + 2
-//  ...
-//  %b + 0 * %s + w
-//
-//  %b + 1 * %s + 0
-//  %b + 1 * %s + 1
-//  %b + 1 * %s + 2
-//  ...
-//  %b + 1 * %s + w
-//  ...
-//
-//  If the pointers can be rearanged in the above pattern, it means that the
-//  memory can be accessed with a strided loads of width `w` and stride `%s`.
+/// Suppose we are given pointers of the form: %b + x * %s + y * %c
+/// where %c is constant. Check if the pointers can be rearranged as follows:
+///  %b + 0 * %s + 0
+///  %b + 0 * %s + 1
+///  %b + 0 * %s + 2
+///  ...
+///  %b + 0 * %s + w
+///
+///  %b + 1 * %s + 0
+///  %b + 1 * %s + 1
+///  %b + 1 * %s + 2
+///  ...
+///  %b + 1 * %s + w
+///  ...
+///
+///  If the pointers can be rearanged in the above pattern, it means that the
+///  memory can be accessed with a strided loads of width `w` and stride `%s`.
 bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
                                        Type *ElemTy, Align CommonAlignment,
                                        SmallVectorImpl<unsigned> &SortedIndices,
@@ -6960,7 +6958,7 @@ isMaskedLoadCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
                               CompressMask, LoadVecTy);
 }
 
-// Same as analyzeRtStrideCandidate, but for constant strides.
+/// Same as analyzeRtStrideCandidate, but for constant strides.
 bool BoUpSLP::analyzeConstantStrideCandidate(
     ArrayRef<Value *> PointerOps, Type *ElemTy, Align CommonAlignment,
     SmallVectorImpl<unsigned> &SortedIndices, StridedPtrInfo *SPtrInfo,
@@ -15065,12 +15063,15 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         Align CommonAlignment =
             computeCommonAlignment<LoadInst>(UniqueValues.getArrayRef());
         VecLdCost = TTI->getStridedMemoryOpCost(
-            Instruction::Load, StridedLoadTy, LI0->getPointerOperand(),
+            Instruction::Load, VecTy, LI0->getPointerOperand(),
             /*VariableMask=*/false, CommonAlignment, CostKind);
-        if (StridedLoadTy != VecTy)
-          VecLdCost +=
-              TTI->getCastInstrCost(Instruction::BitCast, StridedLoadTy, VecTy,
-                                    getCastContextHint(*E), CostKind);
+        //VecLdCost = TTI->getStridedMemoryOpCost(
+        //    Instruction::Load, StridedLoadTy, LI0->getPointerOperand(),
+        //    /*VariableMask=*/false, CommonAlignment, CostKind);
+        //if (StridedLoadTy != VecTy)
+        //  VecLdCost +=
+        //      TTI->getCastInstrCost(Instruction::BitCast, StridedLoadTy, VecTy,
+        //                            getCastContextHint(*E), CostKind);
 
         break;
       }
