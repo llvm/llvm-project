@@ -37,6 +37,14 @@ void RTDECL(CUFDescriptorSync)(Descriptor *dst, const Descriptor *src,
 void RTDECL(CUFSyncGlobalDescriptor)(
     void *hostPtr, const char *sourceFile = nullptr, int sourceLine = 0);
 
+/// Check descriptor passed to a kernel.
+void RTDECL(CUFDescriptorCheckSection)(
+    const Descriptor *, const char *sourceFile = nullptr, int sourceLine = 0);
+
+/// Set the allocator index with the provided value.
+void RTDECL(CUFSetAllocatorIndex)(Descriptor *, int index,
+    const char *sourceFile = nullptr, int sourceLine = 0);
+
 } // extern "C"
 
 } // namespace Fortran::runtime::cuda

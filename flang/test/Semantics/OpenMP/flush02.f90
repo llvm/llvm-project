@@ -78,7 +78,6 @@ use omp_lib
 
   !$omp parallel num_threads(4)
     array = (/1, 2, 3, 4, 5, 6, 7, 8, 9, 10/)
-    !WARNING: OpenMP directive MASTER has been deprecated, please use MASKED instead.
     !$omp master
       !$omp flush (array)
     !$omp end master

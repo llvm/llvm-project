@@ -11,6 +11,7 @@ add_libc_unittest(
     libc.src.sys.statvfs.statvfs
     libc.src.sys.stat.mkdirat
     libc.src.unistd.rmdir
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
@@ -27,5 +28,6 @@ add_libc_unittest(
     libc.src.unistd.rmdir
     libc.src.fcntl.open
     libc.src.unistd.close
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )

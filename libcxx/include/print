@@ -123,7 +123,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __encode(_OutIt& __out_it, char32_t __value
   _LIBCPP_ASSERT_UNCATEGORIZED(__is_scalar_value(__value), "an invalid unicode scalar value results in invalid UTF-16");
 
   if (__value < 0x10000) {
-    *__out_it++ = __value;
+    *__out_it++ = static_cast<iter_value_t<_OutIt>>(__value);
     return;
   }
 
@@ -329,7 +329,8 @@ __vprint_unicode([[maybe_unused]] FILE* __stream,
 } // namespace __print
 
 template <class... _Args>
-_LIBCPP_HIDE_FROM_ABI void print(FILE* __stream, format_string<_Args...> __fmt, _Args&&... __args) {
+_LIBCPP_HIDE_FROM_ABI void
+print(FILE* _LIBCPP_DIAGNOSE_NULLPTR __stream, format_string<_Args...> __fmt, _Args&&... __args) {
 #    if _LIBCPP_HAS_UNICODE
   if constexpr (__print::__use_unicode_execution_charset)
     __print::__vprint_unicode(__stream, __fmt.get(), std::make_format_args(__args...), false);
@@ -346,7 +347,8 @@ _LIBCPP_HIDE_FROM_ABI void print(format_string<_Args...> __fmt, _Args&&... __arg
 }
 
 template <class... _Args>
-_LIBCPP_HIDE_FROM_ABI void println(FILE* __stream, format_string<_Args...> __fmt, _Args&&... __args) {
+_LIBCPP_HIDE_FROM_ABI void
+println(FILE* _LIBCPP_DIAGNOSE_NULLPTR __stream, format_string<_Args...> __fmt, _Args&&... __args) {
 #    if _LIBCPP_HAS_UNICODE
   // Note the wording in the Standard is inefficient. The output of
   // std::format is a std::string which is then copied. This solution
@@ -361,7 +363,7 @@ _LIBCPP_HIDE_FROM_ABI void println(FILE* __stream, format_string<_Args...> __fmt
 }
 
 template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
-_LIBCPP_HIDE_FROM_ABI inline void println(FILE* __stream) {
+_LIBCPP_HIDE_FROM_ABI inline void println(FILE* _LIBCPP_DIAGNOSE_NULLPTR __stream) {
   std::print(__stream, "\n");
 }
 
@@ -377,7 +379,8 @@ _LIBCPP_HIDE_FROM_ABI void println(format_string<_Args...> __fmt, _Args&&... __a
 
 #    if _LIBCPP_HAS_UNICODE
 template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
-_LIBCPP_HIDE_FROM_ABI inline void vprint_unicode(FILE* __stream, string_view __fmt, format_args __args) {
+_LIBCPP_HIDE_FROM_ABI inline void
+vprint_unicode(FILE* _LIBCPP_DIAGNOSE_NULLPTR __stream, string_view __fmt, format_args __args) {
   __print::__vprint_unicode(__stream, __fmt, __args, false);
 }
 
@@ -389,7 +392,8 @@ _LIBCPP_HIDE_FROM_ABI inline void vprint_unicode(string_view __fmt, format_args 
 #    endif // _LIBCPP_HAS_UNICODE
 
 template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
-_LIBCPP_HIDE_FROM_ABI inline void vprint_nonunicode(FILE* __stream, string_view __fmt, format_args __args) {
+_LIBCPP_HIDE_FROM_ABI inline void
+vprint_nonunicode(FILE* _LIBCPP_DIAGNOSE_NULLPTR __stream, string_view __fmt, format_args __args) {
   __print::__vprint_nonunicode(__stream, __fmt, __args, false);
 }
 

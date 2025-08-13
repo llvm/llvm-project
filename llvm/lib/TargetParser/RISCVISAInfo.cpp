@@ -449,8 +449,7 @@ RISCVISAInfo::parseFeatures(unsigned XLen,
   assert(XLen == 32 || XLen == 64);
   std::unique_ptr<RISCVISAInfo> ISAInfo(new RISCVISAInfo(XLen));
 
-  for (auto &Feature : Features) {
-    StringRef ExtName = Feature;
+  for (StringRef ExtName : Features) {
     assert(ExtName.size() > 1 && (ExtName[0] == '+' || ExtName[0] == '-'));
     bool Add = ExtName[0] == '+';
     ExtName = ExtName.drop_front(1); // Drop '+' or '-'
@@ -859,16 +858,15 @@ void RISCVISAInfo::updateImplication() {
     StringRef ExtName = WorkList.pop_back_val();
     auto Range = std::equal_range(std::begin(ImpliedExts),
                                   std::end(ImpliedExts), ExtName);
-    std::for_each(Range.first, Range.second,
-                  [&](const ImpliedExtsEntry &Implied) {
-                    const char *ImpliedExt = Implied.ImpliedExt;
-                    auto [It, Inserted] = Exts.try_emplace(ImpliedExt);
-                    if (!Inserted)
-                      return;
-                    auto Version = findDefaultVersion(ImpliedExt);
-                    It->second = *Version;
-                    WorkList.push_back(ImpliedExt);
-                  });
+    for (const ImpliedExtsEntry &Implied : llvm::make_range(Range)) {
+      const char *ImpliedExt = Implied.ImpliedExt;
+      auto [It, Inserted] = Exts.try_emplace(ImpliedExt);
+      if (!Inserted)
+        continue;
+      auto Version = findDefaultVersion(ImpliedExt);
+      It->second = *Version;
+      WorkList.push_back(ImpliedExt);
+    }
   }
 
   // Add Zcd if C and D are enabled.
@@ -925,8 +923,9 @@ void RISCVISAInfo::updateImpliedLengths() {
   assert(FLen == 0 && MaxELenFp == 0 && MaxELen == 0 && MinVLen == 0 &&
          "Expected lengths to be initialied to zero");
 
-  // TODO: Handle q extension.
-  if (Exts.count("d"))
+  if (Exts.count("q"))
+    FLen = 128;
+  else if (Exts.count("d"))
     FLen = 64;
   else if (Exts.count("f"))
     FLen = 32;

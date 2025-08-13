@@ -17,9 +17,7 @@
 #include "mlir/IR/TensorEncoding.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/Sequence.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
@@ -323,7 +321,7 @@ RankedTensorType::verify(function_ref<InFlightDiagnostic()> emitError,
                          ArrayRef<int64_t> shape, Type elementType,
                          Attribute encoding) {
   for (int64_t s : shape)
-    if (s < 0 && !ShapedType::isDynamic(s))
+    if (s < 0 && ShapedType::isStatic(s))
       return emitError() << "invalid tensor dimension size";
   if (auto v = llvm::dyn_cast_or_null<VerifiableTensorEncoding>(encoding))
     if (failed(v.verifyEncoding(shape, elementType, emitError)))
@@ -374,6 +372,20 @@ BaseMemRefType BaseMemRefType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
     builder.setShape(*shape);
   builder.setElementType(elementType);
   return builder;
+}
+
+FailureOr<PtrLikeTypeInterface>
+BaseMemRefType::clonePtrWith(Attribute memorySpace,
+                             std::optional<Type> elementType) const {
+  Type eTy = elementType ? *elementType : getElementType();
+  if (llvm::dyn_cast<UnrankedMemRefType>(*this))
+    return cast<PtrLikeTypeInterface>(
+        UnrankedMemRefType::get(eTy, memorySpace));
+
+  MemRefType::Builder builder(llvm::cast<MemRefType>(*this));
+  builder.setElementType(eTy);
+  builder.setMemorySpace(memorySpace);
+  return cast<PtrLikeTypeInterface>(static_cast<MemRefType>(builder));
 }
 
 MemRefType BaseMemRefType::clone(::llvm::ArrayRef<int64_t> shape,
@@ -484,6 +496,14 @@ bool mlir::detail::isSupportedMemorySpace(Attribute memorySpace) {
   return false;
 }
 
+Attribute mlir::detail::wrapIntegerMemorySpace(unsigned memorySpace,
+                                               MLIRContext *ctx) {
+  if (memorySpace == 0)
+    return nullptr;
+
+  return IntegerAttr::get(IntegerType::get(ctx, 64), memorySpace);
+}
+
 Attribute mlir::detail::skipDefaultMemorySpace(Attribute memorySpace) {
   IntegerAttr intMemorySpace = llvm::dyn_cast_or_null<IntegerAttr>(memorySpace);
   if (intMemorySpace && intMemorySpace.getValue() == 0)
@@ -575,6 +595,46 @@ MemRefType::getChecked(function_ref<InFlightDiagnostic()> emitErrorFn,
                           elementType, layout, memorySpace);
 }
 
+MemRefType MemRefType::get(ArrayRef<int64_t> shape, Type elementType,
+                           AffineMap map, unsigned memorySpaceInd) {
+
+  // Use default layout for empty map.
+  if (!map)
+    map = AffineMap::getMultiDimIdentityMap(shape.size(),
+                                            elementType.getContext());
+
+  // Wrap AffineMap into Attribute.
+  auto layout = AffineMapAttr::get(map);
+
+  // Convert deprecated integer-like memory space to Attribute.
+  Attribute memorySpace =
+      wrapIntegerMemorySpace(memorySpaceInd, elementType.getContext());
+
+  return Base::get(elementType.getContext(), shape, elementType, layout,
+                   memorySpace);
+}
+
+MemRefType
+MemRefType::getChecked(function_ref<InFlightDiagnostic()> emitErrorFn,
+                       ArrayRef<int64_t> shape, Type elementType, AffineMap map,
+                       unsigned memorySpaceInd) {
+
+  // Use default layout for empty map.
+  if (!map)
+    map = AffineMap::getMultiDimIdentityMap(shape.size(),
+                                            elementType.getContext());
+
+  // Wrap AffineMap into Attribute.
+  auto layout = AffineMapAttr::get(map);
+
+  // Convert deprecated integer-like memory space to Attribute.
+  Attribute memorySpace =
+      wrapIntegerMemorySpace(memorySpaceInd, elementType.getContext());
+
+  return Base::getChecked(emitErrorFn, elementType.getContext(), shape,
+                          elementType, layout, memorySpace);
+}
+
 LogicalResult MemRefType::verify(function_ref<InFlightDiagnostic()> emitError,
                                  ArrayRef<int64_t> shape, Type elementType,
                                  MemRefLayoutAttrInterface layout,
@@ -584,7 +644,7 @@ LogicalResult MemRefType::verify(function_ref<InFlightDiagnostic()> emitError,
 
   // Negative sizes are not allowed except for `kDynamic`.
   for (int64_t s : shape)
-    if (s < 0 && !ShapedType::isDynamic(s))
+    if (s < 0 && ShapedType::isStatic(s))
       return emitError() << "invalid memref size";
 
   assert(layout && "missing layout specification");
@@ -598,35 +658,45 @@ LogicalResult MemRefType::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 bool MemRefType::areTrailingDimsContiguous(int64_t n) {
-  if (!isLastDimUnitStride())
-    return false;
+  assert(n <= getRank() &&
+         "number of dimensions to check must not exceed rank");
+  return n <= getNumContiguousTrailingDims();
+}
 
-  auto memrefShape = getShape().take_back(n);
-  if (ShapedType::isDynamicShape(memrefShape))
-    return false;
+int64_t MemRefType::getNumContiguousTrailingDims() {
+  const int64_t n = getRank();
 
+  // memrefs with identity layout are entirely contiguous.
   if (getLayout().isIdentity())
-    return true;
+    return n;
 
+  // Get the strides (if any). Failing to do that, conservatively assume a
+  // non-contiguous layout.
   int64_t offset;
-  SmallVector<int64_t> stridesFull;
-  if (!succeeded(getStridesAndOffset(stridesFull, offset)))
-    return false;
-  auto strides = ArrayRef<int64_t>(stridesFull).take_back(n);
+  SmallVector<int64_t> strides;
+  if (!succeeded(getStridesAndOffset(strides, offset)))
+    return 0;
 
-  if (strides.empty())
-    return true;
+  ArrayRef<int64_t> shape = getShape();
 
-  // Check whether strides match "flattened" dims.
-  SmallVector<int64_t> flattenedDims;
-  auto dimProduct = 1;
-  for (auto dim : llvm::reverse(memrefShape.drop_front(1))) {
-    dimProduct *= dim;
-    flattenedDims.push_back(dimProduct);
+  // A memref with dimensions `d0, d1, ..., dn-1` and strides
+  // `s0, s1, ..., sn-1` is contiguous up to dimension `k`
+  // if each stride `si` is the product of the dimensions `di+1, ..., dn-1`,
+  // for `i` in `[k, n-1]`.
+  // Ignore stride elements if the corresponding dimension is 1, as they are
+  // of no consequence.
+  int64_t dimProduct = 1;
+  for (int64_t i = n - 1; i >= 0; --i) {
+    if (shape[i] == 1)
+      continue;
+    if (strides[i] != dimProduct)
+      return n - i - 1;
+    if (shape[i] == ShapedType::kDynamic)
+      return n - i;
+    dimProduct *= shape[i];
   }
 
-  strides = strides.drop_back(1);
-  return llvm::equal(strides, llvm::reverse(flattenedDims));
+  return n;
 }
 
 MemRefType MemRefType::canonicalizeStridedLayout() {
@@ -668,11 +738,12 @@ MemRefType MemRefType::canonicalizeStridedLayout() {
 }
 
 LogicalResult MemRefType::getStridesAndOffset(SmallVectorImpl<int64_t> &strides,
-                                              int64_t &offset) {
+                                              int64_t &offset) const {
   return getLayout().getStridesAndOffset(getShape(), strides, offset);
 }
 
-std::pair<SmallVector<int64_t>, int64_t> MemRefType::getStridesAndOffset() {
+std::pair<SmallVector<int64_t>, int64_t>
+MemRefType::getStridesAndOffset() const {
   SmallVector<int64_t> strides;
   int64_t offset;
   LogicalResult status = getStridesAndOffset(strides, offset);

@@ -349,6 +349,18 @@ public:
 
   SBError SetLabel(const char *label);
 
+  /// Architecture opcode byte size width accessor
+  ///
+  /// \return
+  /// The minimum size in 8-bit (host) bytes of an opcode.
+  uint32_t GetMinimumOpcodeByteSize() const;
+
+  /// Architecture opcode byte size width accessor
+  ///
+  /// \return
+  /// The maximum size in 8-bit (host) bytes of an opcode.
+  uint32_t GetMaximumOpcodeByteSize() const;
+
   /// Architecture data byte width accessor
   ///
   /// \return
@@ -645,6 +657,14 @@ public:
           name_type_mask, // Logical OR one or more FunctionNameType enum bits
       lldb::LanguageType symbol_language,
       const SBFileSpecList &module_list, const SBFileSpecList &comp_unit_list);
+
+  lldb::SBBreakpoint BreakpointCreateByName(
+      const char *symbol_name,
+      uint32_t
+          name_type_mask, // Logical OR one or more FunctionNameType enum bits
+      lldb::LanguageType symbol_language, lldb::addr_t offset,
+      bool offset_is_insn_count, const SBFileSpecList &module_list,
+      const SBFileSpecList &comp_unit_list);
 
 #ifdef SWIG
   lldb::SBBreakpoint BreakpointCreateByNames(

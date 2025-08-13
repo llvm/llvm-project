@@ -7,10 +7,11 @@
 ; RUN:   --test-arg %s
 
 ; Check if the final output really parses
-; RUN: not llvm-as -o /dev/null %t.reduced.ll
+; RUN: llvm-as -o /dev/null %t.reduced.ll
 ; RUN: FileCheck --check-prefix=RESULT %s < %t.reduced.ll
 
 
+; RESULT-LABEL: define void @kernel_ocl_path_trace_direct_lighting(
 define void @kernel_ocl_path_trace_direct_lighting(i1 %cond.i, i1 %cmp5.i.i, i32 %arg) {
 ; INTERESTING: entry:
 ; INTERESTING: 0
@@ -48,4 +49,5 @@ kernel_direct_lighting.exit:
   ret void
 }
 
-; RESULT: uselistorder i32 0, { 4, 0, 5, 1, 6, 2, 7, 3 }
+; FIXME: Should probably fix test to use a global address
+; RESULT-NOT: uselistorder

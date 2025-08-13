@@ -65,6 +65,7 @@ ModulePass *createAMDGPULowerBufferFatPointersPass();
 FunctionPass *createSIModeRegisterPass();
 FunctionPass *createGCNPreRAOptimizationsLegacyPass();
 FunctionPass *createAMDGPUPreloadKernArgPrologLegacyPass();
+ModulePass *createAMDGPUPreloadKernelArgumentsLegacyPass(const TargetMachine *);
 
 struct AMDGPUSimplifyLibCallsPass : PassInfoMixin<AMDGPUSimplifyLibCallsPass> {
   AMDGPUSimplifyLibCallsPass() {}
@@ -96,9 +97,6 @@ void initializeAMDGPUDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeAMDGPUAlwaysInlinePass(PassRegistry&);
 
 void initializeAMDGPUAsmPrinterPass(PassRegistry &);
-
-Pass *createAMDGPUAttributorLegacyPass();
-void initializeAMDGPUAttributorLegacyPass(PassRegistry &);
 
 // DPP/Iterative option enables the atomic optimizer with given strategy
 // whereas None disables the atomic optimizer.
@@ -154,6 +152,9 @@ struct AMDGPULowerBufferFatPointersPass
 private:
   const TargetMachine &TM;
 };
+
+void initializeAMDGPUPrepareAGPRAllocLegacyPass(PassRegistry &);
+extern char &AMDGPUPrepareAGPRAllocLegacyID;
 
 void initializeAMDGPUReserveWWMRegsLegacyPass(PassRegistry &);
 extern char &AMDGPUReserveWWMRegsLegacyID;
@@ -233,14 +234,13 @@ extern char &GCNRegPressurePrinterID;
 void initializeAMDGPUPreloadKernArgPrologLegacyPass(PassRegistry &);
 extern char &AMDGPUPreloadKernArgPrologLegacyID;
 
+void initializeAMDGPUPreloadKernelArgumentsLegacyPass(PassRegistry &);
+extern char &AMDGPUPreloadKernelArgumentsLegacyID;
+
 // Passes common to R600 and SI
 FunctionPass *createAMDGPUPromoteAlloca();
 void initializeAMDGPUPromoteAllocaPass(PassRegistry&);
 extern char &AMDGPUPromoteAllocaID;
-
-FunctionPass *createAMDGPUPromoteAllocaToVector();
-void initializeAMDGPUPromoteAllocaToVectorPass(PassRegistry&);
-extern char &AMDGPUPromoteAllocaToVectorID;
 
 struct AMDGPUPromoteAllocaPass : PassInfoMixin<AMDGPUPromoteAllocaPass> {
   AMDGPUPromoteAllocaPass(TargetMachine &TM) : TM(TM) {}
@@ -347,6 +347,16 @@ public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
+class AMDGPUPreloadKernelArgumentsPass
+    : public PassInfoMixin<AMDGPUPreloadKernelArgumentsPass> {
+  const TargetMachine &TM;
+
+public:
+  explicit AMDGPUPreloadKernelArgumentsPass(const TargetMachine &TM) : TM(TM) {}
+
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
 class AMDGPUAnnotateUniformValuesPass
     : public PassInfoMixin<AMDGPUAnnotateUniformValuesPass> {
 public:
@@ -421,17 +431,13 @@ ModulePass *createAMDGPUPrintfRuntimeBinding();
 void initializeAMDGPUPrintfRuntimeBindingPass(PassRegistry&);
 extern char &AMDGPUPrintfRuntimeBindingID;
 
-void initializeAMDGPUResourceUsageAnalysisPass(PassRegistry &);
+void initializeAMDGPUResourceUsageAnalysisWrapperPassPass(PassRegistry &);
 extern char &AMDGPUResourceUsageAnalysisID;
 
 struct AMDGPUPrintfRuntimeBindingPass
     : PassInfoMixin<AMDGPUPrintfRuntimeBindingPass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
-
-ModulePass* createAMDGPUUnifyMetadataPass();
-void initializeAMDGPUUnifyMetadataPass(PassRegistry&);
-extern char &AMDGPUUnifyMetadataID;
 
 struct AMDGPUUnifyMetadataPass : PassInfoMixin<AMDGPUUnifyMetadataPass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
@@ -534,6 +540,17 @@ extern char &GCNRewritePartialRegUsesID;
 
 void initializeAMDGPUWaitSGPRHazardsLegacyPass(PassRegistry &);
 extern char &AMDGPUWaitSGPRHazardsLegacyID;
+
+class AMDGPURewriteAGPRCopyMFMAPass
+    : public PassInfoMixin<AMDGPURewriteAGPRCopyMFMAPass> {
+public:
+  AMDGPURewriteAGPRCopyMFMAPass() = default;
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+void initializeAMDGPURewriteAGPRCopyMFMALegacyPass(PassRegistry &);
+extern char &AMDGPURewriteAGPRCopyMFMALegacyID;
 
 namespace AMDGPU {
 enum TargetIndex {

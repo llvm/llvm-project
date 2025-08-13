@@ -10,14 +10,13 @@ target triple = "nvptx-nvidia-cuda"
 define void @foo() {
 ; CHECK-LABEL: foo(
 ; CHECK:    .reg .pred %p<2>;
-; CHECK:    .reg .b16 %rs<4>;
+; CHECK:    .reg .b16 %rs<3>;
 ; CHECK-EMPTY:
-; CHECK:    ld.global.u8 %rs1, [i1g];
+; CHECK:    ld.global.b8 %rs1, [i1g];
 ; CHECK:    and.b16 %rs2, %rs1, 1;
 ; CHECK:    setp.ne.b16 %p1, %rs2, 0;
 ; CHECK:    @%p1 bra $L__BB0_2;
-; CHECK:    mov.b16 %rs3, 1;
-; CHECK:    st.global.u8 [i1g], %rs3;
+; CHECK:    st.global.b8 [i1g], 1;
 ; CHECK:    ret;
   %tmp = load i1, ptr addrspace(1) @i1g, align 2
   br i1 %tmp, label %if.end, label %if.then

@@ -87,6 +87,7 @@ bool CommandCompletions::InvokeCommonCompletionCallbacks(
       {lldb::eTypeCategoryNameCompletion,
        CommandCompletions::TypeCategoryNames},
       {lldb::eThreadIDCompletion, CommandCompletions::ThreadIDs},
+      {lldb::eManagedPluginCompletion, CommandCompletions::ManagedPlugins},
       {lldb::eTerminatorCompletion,
        nullptr} // This one has to be last in the list.
   };
@@ -570,7 +571,7 @@ void CommandCompletions::ModuleUUIDs(CommandInterpreter &interpreter,
                                lldb::eDescriptionLevelInitial);
         request.TryCompleteCurrentArg(module->GetUUID().GetAsString(),
                                       strm.GetString());
-        return true;
+        return IterationAction::Continue;
       });
 }
 
@@ -848,6 +849,13 @@ void CommandCompletions::ThreadIDs(CommandInterpreter &interpreter,
     request.TryCompleteCurrentArg(std::to_string(thread_sp->GetID()),
                                   strm.GetString());
   }
+}
+
+void CommandCompletions::ManagedPlugins(CommandInterpreter &interpreter,
+                                        CompletionRequest &request,
+                                        SearchFilter *searcher) {
+  PluginManager::AutoCompletePluginName(request.GetCursorArgumentPrefix(),
+                                        request);
 }
 
 void CommandCompletions::CompleteModifiableCmdPathArgs(

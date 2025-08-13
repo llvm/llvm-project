@@ -317,9 +317,10 @@ TEST(CheckOptionsValidation, MissingOptions) {
   ClangTidyContext Context(std::make_unique<DefaultOptionsProvider>(
       ClangTidyGlobalOptions(), Options));
   ClangTidyDiagnosticConsumer DiagConsumer(Context);
-  DiagnosticsEngine DE(new DiagnosticIDs(), new DiagnosticOptions,
-                       &DiagConsumer, false);
-  Context.setDiagnosticsEngine(&DE);
+  auto DiagOpts = std::make_unique<DiagnosticOptions>();
+  DiagnosticsEngine DE(DiagnosticIDs::create(), *DiagOpts, &DiagConsumer,
+                       false);
+  Context.setDiagnosticsEngine(std::move(DiagOpts), &DE);
   TestCheck TestCheck(&Context);
   EXPECT_FALSE(TestCheck.getLocal("Opt"));
   EXPECT_EQ(TestCheck.getLocal("Opt", "Unknown"), "Unknown");
@@ -347,9 +348,10 @@ TEST(CheckOptionsValidation, ValidIntOptions) {
   ClangTidyContext Context(std::make_unique<DefaultOptionsProvider>(
       ClangTidyGlobalOptions(), Options));
   ClangTidyDiagnosticConsumer DiagConsumer(Context);
-  DiagnosticsEngine DE(new DiagnosticIDs(), new DiagnosticOptions,
-                       &DiagConsumer, false);
-  Context.setDiagnosticsEngine(&DE);
+  auto DiagOpts = std::make_unique<DiagnosticOptions>();
+  DiagnosticsEngine DE(DiagnosticIDs::create(), *DiagOpts, &DiagConsumer,
+                       false);
+  Context.setDiagnosticsEngine(std::move(DiagOpts), &DE);
   TestCheck TestCheck(&Context);
 
   CHECK_VAL(TestCheck.getIntLocal("IntExpected"), 1);
@@ -409,9 +411,10 @@ TEST(ValidConfiguration, ValidEnumOptions) {
   ClangTidyContext Context(std::make_unique<DefaultOptionsProvider>(
       ClangTidyGlobalOptions(), Options));
   ClangTidyDiagnosticConsumer DiagConsumer(Context);
-  DiagnosticsEngine DE(new DiagnosticIDs(), new DiagnosticOptions,
-                       &DiagConsumer, false);
-  Context.setDiagnosticsEngine(&DE);
+  auto DiagOpts = std::make_unique<DiagnosticOptions>();
+  DiagnosticsEngine DE(DiagnosticIDs::create(), *DiagOpts, &DiagConsumer,
+                       false);
+  Context.setDiagnosticsEngine(std::move(DiagOpts), &DE);
   TestCheck TestCheck(&Context);
 
   CHECK_VAL(TestCheck.getIntLocal<Colours>("Valid"), Colours::Red);

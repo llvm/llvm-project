@@ -194,7 +194,7 @@ void TestSubElementsAccessAttr::print(::mlir::AsmPrinter &printer) const {
 ArrayRef<uint64_t> TestExtern1DI64ElementsAttr::getElements() const {
   if (auto *blob = getHandle().getBlob())
     return blob->getDataAs<uint64_t>();
-  return std::nullopt;
+  return {};
 }
 
 //===----------------------------------------------------------------------===//
@@ -211,6 +211,16 @@ static ParseResult parseTrueFalse(AsmParser &p, std::optional<int> &result) {
 
 static void printTrueFalse(AsmPrinter &p, std::optional<int> result) {
   p << (*result ? "true" : "false");
+}
+
+//===----------------------------------------------------------------------===//
+// TestCopyCountAttr Implementation
+//===----------------------------------------------------------------------===//
+
+LogicalResult TestCopyCountAttr::verify(
+    llvm::function_ref<::mlir::InFlightDiagnostic()> /*emitError*/,
+    CopyCount /*copy_count*/) {
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -495,6 +505,36 @@ getDynamicCustomAssemblyFormatAttr(TestDialect *testDialect) {
   return DynamicAttrDefinition::get("dynamic_custom_assembly_format",
                                     testDialect, std::move(verifier),
                                     std::move(parser), std::move(printer));
+}
+
+//===----------------------------------------------------------------------===//
+// SlashAttr
+//===----------------------------------------------------------------------===//
+
+Attribute SlashAttr::parse(AsmParser &parser, Type type) {
+  int lhs, rhs;
+
+  if (parser.parseLess() || parser.parseInteger(lhs) || parser.parseSlash() ||
+      parser.parseInteger(rhs) || parser.parseGreater())
+    return Attribute();
+
+  return SlashAttr::get(parser.getContext(), lhs, rhs);
+}
+
+void SlashAttr::print(AsmPrinter &printer) const {
+  printer << "<" << getLhs() << " / " << getRhs() << ">";
+}
+
+//===----------------------------------------------------------------------===//
+// TestCustomStorageCtorAttr
+//===----------------------------------------------------------------------===//
+
+test::detail::TestCustomStorageCtorAttrAttrStorage *
+test::detail::TestCustomStorageCtorAttrAttrStorage::construct(
+    mlir::StorageUniquer::StorageAllocator &, std::tuple<int> &&) {
+  // Note: this tests linker error ("undefined symbol"), the actual
+  // implementation is not important.
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//

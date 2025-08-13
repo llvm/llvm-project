@@ -19,8 +19,10 @@
 #include "DXILIntrinsicExpansion.h"
 #include "DXILLegalizePass.h"
 #include "DXILOpLowering.h"
+#include "DXILPostOptimizationValidation.h"
 #include "DXILPrettyPrinter.h"
 #include "DXILResourceAccess.h"
+#include "DXILResourceImplicitBinding.h"
 #include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
 #include "DXILTranslateMetadata.h"
@@ -43,6 +45,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
+#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/Scalarizer.h"
 #include <optional>
 
@@ -62,12 +65,15 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeDirectXTarget() {
   initializeDXContainerGlobalsPass(*PR);
   initializeDXILOpLoweringLegacyPass(*PR);
   initializeDXILResourceAccessLegacyPass(*PR);
+  initializeDXILResourceImplicitBindingLegacyPass(*PR);
   initializeDXILTranslateMetadataLegacyPass(*PR);
+  initializeDXILPostOptimizationValidationLegacyPass(*PR);
   initializeShaderFlagsAnalysisWrapperPass(*PR);
   initializeRootSignatureAnalysisWrapperPass(*PR);
   initializeDXILFinalizeLinkageLegacyPass(*PR);
   initializeDXILPrettyPrinterLegacyPass(*PR);
   initializeDXILForwardHandleAccessesLegacyPass(*PR);
+  initializeDSELegacyPassPass(*PR);
   initializeDXILCBufferAccessLegacyPass(*PR);
 }
 
@@ -99,17 +105,20 @@ public:
   FunctionPass *createTargetRegisterAllocator(bool) override { return nullptr; }
   void addCodeGenPrepare() override {
     addPass(createDXILFinalizeLinkageLegacyPass());
+    addPass(createDXILResourceAccessLegacyPass());
     addPass(createDXILIntrinsicExpansionLegacyPass());
     addPass(createDXILCBufferAccessLegacyPass());
     addPass(createDXILDataScalarizationLegacyPass());
-    addPass(createDXILFlattenArraysLegacyPass());
-    addPass(createDXILResourceAccessLegacyPass());
     ScalarizerPassOptions DxilScalarOptions;
     DxilScalarOptions.ScalarizeLoadStore = true;
     addPass(createScalarizerPass(DxilScalarOptions));
+    addPass(createDXILFlattenArraysLegacyPass());
     addPass(createDXILForwardHandleAccessesLegacyPass());
+    addPass(createDeadStoreEliminationPass());
     addPass(createDXILLegalizeLegacyPass());
+    addPass(createDXILResourceImplicitBindingLegacyPass());
     addPass(createDXILTranslateMetadataLegacyPass());
+    addPass(createDXILPostOptimizationValidationLegacyPass());
     addPass(createDXILOpLoweringLegacyPass());
     addPass(createDXILPrepareModulePass());
   }

@@ -51,6 +51,12 @@ static cl::opt<bool> emitFir("emit-fir",
                              cl::desc("Parse and pretty-print the input"),
                              cl::init(false));
 
+static cl::opt<unsigned>
+    OptLevel("O",
+             cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
+                      "(default = '-O2')"),
+             cl::Prefix, cl::init(2));
+
 static cl::opt<std::string> targetTriple("target",
                                          cl::desc("specify a target triple"),
                                          cl::init("native"));
@@ -70,11 +76,46 @@ static cl::opt<bool> codeGenLLVM(
     cl::desc("Run only CodeGen passes and translate FIR to LLVM IR"),
     cl::init(false));
 
+static cl::opt<bool> emitFinalMLIR(
+    "emit-final-mlir",
+    cl::desc("Only translate FIR to MLIR, do not lower to LLVM IR"),
+    cl::init(false));
+
+static cl::opt<bool>
+    simplifyMLIR("simplify-mlir",
+                 cl::desc("Run CSE and canonicalization on MLIR output"),
+                 cl::init(false));
+
+// Enabled by default to accurately reflect -O2
+static cl::opt<bool> enableAliasAnalysis("enable-aa",
+                                         cl::desc("Enable FIR alias analysis"),
+                                         cl::init(true));
+
+static cl::opt<bool> testGeneratorMode(
+    "test-gen", cl::desc("-emit-final-mlir -simplify-mlir -enable-aa=false"),
+    cl::init(false));
+
 #include "flang/Optimizer/Passes/CommandLineOpts.h"
 #include "flang/Optimizer/Passes/Pipelines.h"
 
 static void printModule(mlir::ModuleOp mod, raw_ostream &output) {
   output << mod << '\n';
+}
+
+static std::optional<llvm::OptimizationLevel>
+getOptimizationLevel(unsigned level) {
+  switch (level) {
+  default:
+    return std::nullopt;
+  case 0:
+    return llvm::OptimizationLevel::O0;
+  case 1:
+    return llvm::OptimizationLevel::O1;
+  case 2:
+    return llvm::OptimizationLevel::O2;
+  case 3:
+    return llvm::OptimizationLevel::O3;
+  }
 }
 
 // compile a .fir file
@@ -138,9 +179,17 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
     if (mlir::failed(passPipeline.addToPipeline(pm, errorHandler)))
       return mlir::failure();
   } else {
-    MLIRToLLVMPassPipelineConfig config(llvm::OptimizationLevel::O2);
+    std::optional<llvm::OptimizationLevel> level =
+        getOptimizationLevel(OptLevel);
+    if (!level) {
+      errs() << "Error invalid optimization level\n";
+      return mlir::failure();
+    }
+    MLIRToLLVMPassPipelineConfig config(*level);
+    // TODO: config.StackArrays should be set here?
     config.EnableOpenMP = true;  // assume the input contains OpenMP
-    config.AliasAnalysis = true; // enabled when optimizing for speed
+    config.AliasAnalysis = enableAliasAnalysis && !testGeneratorMode;
+    config.LoopVersioning = OptLevel > 2;
     if (codeGenLLVM) {
       // Run only CodeGen passes.
       fir::createDefaultFIRCodeGenPassPipeline(pm, config);
@@ -149,13 +198,20 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
       fir::registerDefaultInlinerPass(config);
       fir::createMLIRToLLVMPassPipeline(pm, config);
     }
-    fir::addLLVMDialectToLLVMPass(pm, out.os());
+    if (simplifyMLIR || testGeneratorMode) {
+      pm.addPass(mlir::createCanonicalizerPass());
+      pm.addPass(mlir::createCSEPass());
+    }
+    if (!emitFinalMLIR && !testGeneratorMode)
+      fir::addLLVMDialectToLLVMPass(pm, out.os());
   }
 
   // run the pass manager
   if (mlir::succeeded(pm.run(*owningRef))) {
     // passes ran successfully, so keep the output
-    if ((emitFir || passPipeline.hasAnyOccurrences()) && !codeGenLLVM)
+    if ((emitFir || passPipeline.hasAnyOccurrences() || emitFinalMLIR ||
+         testGeneratorMode) &&
+        !codeGenLLVM)
       printModule(*owningRef, out.os());
     out.keep();
     return mlir::success();

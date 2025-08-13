@@ -3,7 +3,7 @@
 // REQUIRES: system-linux
 
 // Test that there are no changes to a function with existed fused loc debug
-module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
+module {
   func.func @_QPs1() {
     return loc(#loc1)
   } loc(#loc2)

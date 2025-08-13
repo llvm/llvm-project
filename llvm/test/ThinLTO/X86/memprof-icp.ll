@@ -229,6 +229,7 @@
 ; RUN: llvm-lto2 run %t/main.o %t/foo.o -enable-memprof-context-disambiguation \
 ; RUN:	-import-instr-limit=0 \
 ; RUN:	-memprof-require-definition-for-promotion \
+; RUN:	-icp-allow-decls=false \
 ; RUN:	-enable-memprof-indirect-call-support=true \
 ; RUN:  -supports-hot-cold-new \
 ; RUN:  -r=%t/foo.o,_Z3fooR2B0j,plx \

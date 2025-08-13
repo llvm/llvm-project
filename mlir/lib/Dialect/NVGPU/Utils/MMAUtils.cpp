@@ -7,10 +7,8 @@
 //===----------------------------------------------------------------------===//
 #include "mlir/Dialect/NVGPU/Utils/MMAUtils.h"
 
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
-#include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 
 using namespace mlir;
@@ -285,7 +283,7 @@ bool nvgpu::canLowerToWarpMatrixOperation(vector::TransferReadOp op) {
   // information to ensure correctness of downstream assumptions. It is possible
   // to enable this if caller can assert that tensor will be lowered in a
   // particular manner.
-  auto sourceType = dyn_cast<MemRefType>(op.getSource().getType());
+  auto sourceType = dyn_cast<MemRefType>(op.getBase().getType());
   if (!sourceType)
     return false;
 
@@ -309,7 +307,7 @@ bool nvgpu::canLowerToWarpMatrixOperation(vector::TransferWriteOp op) {
     return false;
   // Currently we can't support reads on tensor types because we need stride
   // information to ensure correctness of downstream assumptions.
-  auto sourceType = dyn_cast<MemRefType>(op.getSource().getType());
+  auto sourceType = dyn_cast<MemRefType>(op.getBase().getType());
   if (!sourceType)
     return false;
 

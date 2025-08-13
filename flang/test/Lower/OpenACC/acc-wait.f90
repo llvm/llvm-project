@@ -25,7 +25,7 @@ subroutine acc_update
 
   !$acc wait(1) async
 !CHECK: [[WAIT3:%.*]] = arith.constant 1 : i32
-!CHECK: acc.wait([[WAIT3]] : i32) attributes {async}
+!CHECK: acc.wait([[WAIT3]] : i32) async
 
   !$acc wait(1) async(async)
 !CHECK: [[WAIT3:%.*]] = arith.constant 1 : i32

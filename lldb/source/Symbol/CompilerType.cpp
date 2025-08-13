@@ -354,12 +354,11 @@ bool CompilerType::IsSigned() const {
 }
 
 bool CompilerType::IsNullPtrType() const {
-  return GetCanonicalType().GetBasicTypeEnumeration() ==
-         lldb::eBasicTypeNullPtr;
+  return GetBasicTypeEnumeration() == lldb::eBasicTypeNullPtr;
 }
 
 bool CompilerType::IsBoolean() const {
-  return GetCanonicalType().GetBasicTypeEnumeration() == lldb::eBasicTypeBool;
+  return GetBasicTypeEnumeration() == lldb::eBasicTypeBool;
 }
 
 bool CompilerType::IsEnumerationIntegerTypeSigned() const {
@@ -379,7 +378,7 @@ bool CompilerType::IsPromotableIntegerType() const {
   if (IsUnscopedEnumerationType())
     return true;
 
-  switch (GetCanonicalType().GetBasicTypeEnumeration()) {
+  switch (GetBasicTypeEnumeration()) {
   case lldb::eBasicTypeBool:
   case lldb::eBasicTypeChar:
   case lldb::eBasicTypeSignedChar:
@@ -455,8 +454,7 @@ bool CompilerType::IsContextuallyConvertibleToBool() const {
 }
 
 bool CompilerType::IsBasicType() const {
-  return GetCanonicalType().GetBasicTypeEnumeration() !=
-         lldb::eBasicTypeInvalid;
+  return GetBasicTypeEnumeration() != lldb::eBasicTypeInvalid;
 }
 
 std::string CompilerType::TypeDescription() {
@@ -891,6 +889,18 @@ CompilerDecl CompilerType::GetStaticFieldWithName(llvm::StringRef name) const {
   if (IsValid())
     return GetTypeSystem()->GetStaticFieldWithName(m_type, name);
   return CompilerDecl();
+}
+
+llvm::Expected<CompilerType> CompilerType::GetDereferencedType(
+    ExecutionContext *exe_ctx, std::string &deref_name,
+    uint32_t &deref_byte_size, int32_t &deref_byte_offset, ValueObject *valobj,
+    uint64_t &language_flags) const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetDereferencedType(
+          m_type, exe_ctx, deref_name, deref_byte_size, deref_byte_offset,
+          valobj, language_flags);
+  return CompilerType();
 }
 
 llvm::Expected<CompilerType> CompilerType::GetChildCompilerTypeAtIndex(

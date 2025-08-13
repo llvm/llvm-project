@@ -21,7 +21,7 @@ static cl::opt<cl::boolOrDefault> EnableRemarksSection(
     "remarks-section",
     cl::desc(
         "Emit a section containing remark diagnostics metadata. By default, "
-        "this is enabled for the following formats: yaml-strtab, bitstream."),
+        "this is enabled for the following formats: bitstream."),
     cl::init(cl::BOU_UNSET), cl::Hidden);
 
 RemarkStreamer::RemarkStreamer(
@@ -63,9 +63,7 @@ bool RemarkStreamer::needsSection() const {
 
   // Only some formats need a section:
   // * bitstream
-  // * yaml-strtab
   switch (RemarkSerializer->SerializerFormat) {
-  case remarks::Format::YAMLStrTab:
   case remarks::Format::Bitstream:
     return true;
   default:

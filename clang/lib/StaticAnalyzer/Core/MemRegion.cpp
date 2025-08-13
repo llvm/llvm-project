@@ -28,7 +28,6 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SValBuilder.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
@@ -49,7 +48,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
-#include <functional>
 #include <iterator>
 #include <optional>
 #include <string>
@@ -194,11 +192,11 @@ QualType ObjCIvarRegion::getValueType() const {
 }
 
 QualType CXXBaseObjectRegion::getValueType() const {
-  return QualType(getDecl()->getTypeForDecl(), 0);
+  return getContext().getCanonicalTagType(getDecl());
 }
 
 QualType CXXDerivedObjectRegion::getValueType() const {
-  return QualType(getDecl()->getTypeForDecl(), 0);
+  return getContext().getCanonicalTagType(getDecl());
 }
 
 QualType ParamVarRegion::getValueType() const {
@@ -1024,6 +1022,22 @@ getStackOrCaptureRegionForDeclContext(const LocationContext *LC,
   return (const StackFrameContext *)nullptr;
 }
 
+static bool isStdStreamVar(const VarDecl *D) {
+  const IdentifierInfo *II = D->getIdentifier();
+  if (!II)
+    return false;
+  if (!D->getDeclContext()->isTranslationUnit())
+    return false;
+  StringRef N = II->getName();
+  QualType FILETy = D->getASTContext().getFILEType();
+  if (FILETy.isNull())
+    return false;
+  FILETy = FILETy.getCanonicalType();
+  QualType Ty = D->getType().getCanonicalType();
+  return Ty->isPointerType() && Ty->getPointeeType() == FILETy &&
+         (N == "stdin" || N == "stdout" || N == "stderr");
+}
+
 const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
                                                 const LocationContext *LC) {
   const auto *PVD = dyn_cast<ParmVarDecl>(D);
@@ -1056,10 +1070,18 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
     assert(!Ty.isNull());
     if (Ty.isConstQualified()) {
       sReg = getGlobalsRegion(MemRegion::GlobalImmutableSpaceRegionKind);
-    } else if (Ctx.getSourceManager().isInSystemHeader(D->getLocation())) {
-      sReg = getGlobalsRegion(MemRegion::GlobalSystemSpaceRegionKind);
     } else {
-      sReg = getGlobalsRegion(MemRegion::GlobalInternalSpaceRegionKind);
+      // Pointer value of C standard streams is usually not modified by calls
+      // to functions declared in system headers. This means that they should
+      // not get invalidated by calls to functions declared in system headers,
+      // so they are placed in the global internal space, which is not
+      // invalidated by calls to functions declared in system headers.
+      if (Ctx.getSourceManager().isInSystemHeader(D->getLocation()) &&
+          !isStdStreamVar(D)) {
+        sReg = getGlobalsRegion(MemRegion::GlobalSystemSpaceRegionKind);
+      } else {
+        sReg = getGlobalsRegion(MemRegion::GlobalInternalSpaceRegionKind);
+      }
     }
 
   // Finally handle static locals.
@@ -1196,6 +1218,16 @@ MemRegionManager::getElementRegion(QualType elementType, NonLoc Idx,
                                    const SubRegion *superRegion,
                                    const ASTContext &Ctx) {
   QualType T = Ctx.getCanonicalType(elementType).getUnqualifiedType();
+
+  // The address space must be preserved because some target-specific address
+  // spaces influence the size of the pointer value which is represented by the
+  // element region.
+  LangAS AS = elementType.getAddressSpace();
+  if (AS != LangAS::Default) {
+    Qualifiers Quals;
+    Quals.setAddressSpace(AS);
+    T = Ctx.getQualifiedType(T, Quals);
+  }
 
   llvm::FoldingSetNodeID ID;
   ElementRegion::ProfileRegion(ID, T, Idx, superRegion);
