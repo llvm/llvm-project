@@ -14,3 +14,19 @@ B *exact(A *a) {
   // EXACT-NOT: call {{.*}} @__dynamic_cast
   return dynamic_cast<B*>(a);
 }
+
+struct C {
+  virtual ~C();
+};
+
+struct D final : private C {
+
+};
+
+// CHECK-LABEL: @_Z5exactP1C
+D *exact(C *a) {
+  // INEXACT: call {{.*}} @__dynamic_cast
+  // EXACT: entry:
+  // EXACT-NEXT: ret ptr null
+  return dynamic_cast<D*>(a);
+}

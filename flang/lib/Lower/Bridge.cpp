@@ -13,6 +13,7 @@
 #include "flang/Lower/Bridge.h"
 
 #include "flang/Lower/Allocatable.h"
+#include "flang/Lower/CUDA.h"
 #include "flang/Lower/CallInterface.h"
 #include "flang/Lower/Coarray.h"
 #include "flang/Lower/ConvertCall.h"
@@ -20,7 +21,6 @@
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/ConvertVariable.h"
-#include "flang/Lower/Cuda.h"
 #include "flang/Lower/DirectivesCommon.h"
 #include "flang/Lower/HostAssociations.h"
 #include "flang/Lower/IO.h"
@@ -2121,6 +2121,9 @@ private:
                              .first);
       }
     }
+
+    if (!doConcurrentLoopOp)
+      return;
 
     llvm::SmallVector<bool> reduceVarByRef;
     llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
@@ -4898,7 +4901,6 @@ private:
 
     // device = device
     if (lhsIsDevice && rhsIsDevice) {
-      assert(rhs.isVariable() && "CUDA Fortran assignment rhs is not legal");
       auto transferKindAttr = cuf::DataTransferKindAttr::get(
           builder.getContext(), cuf::DataTransferKind::DeviceDevice);
       cuf::DataTransferOp::create(builder, loc, rhsVal, lhsVal, shape,

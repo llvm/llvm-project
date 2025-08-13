@@ -184,8 +184,11 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
   if (const UnaryOperator *uo = dyn_cast<UnaryOperator>(expr)) {
     // TODO(cir): maybe we should use cir.unary for pointers here instead.
     if (uo->getOpcode() == UO_AddrOf) {
-      cgm.errorNYI(expr->getSourceRange(), "emitPointerWithAlignment: unary &");
-      return Address::invalid();
+      LValue lv = emitLValue(uo->getSubExpr());
+      if (baseInfo)
+        *baseInfo = lv.getBaseInfo();
+      assert(!cir::MissingFeatures::opTBAA());
+      return lv.getAddress();
     }
   }
 
@@ -1013,7 +1016,9 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
   case CK_DerivedToBase: {
     const auto *derivedClassTy =
         e->getSubExpr()->getType()->castAs<clang::RecordType>();
-    auto *derivedClassDecl = cast<CXXRecordDecl>(derivedClassTy->getDecl());
+    auto *derivedClassDecl =
+        cast<CXXRecordDecl>(derivedClassTy->getOriginalDecl())
+            ->getDefinitionOrSelf();
 
     LValue lv = emitLValue(e->getSubExpr());
     Address thisAddr = lv.getAddress();
@@ -1167,9 +1172,11 @@ static void pushTemporaryCleanup(CIRGenFunction &cgf,
                                         ->getBaseElementTypeUnsafe()
                                         ->getAs<clang::RecordType>()) {
     // Get the destructor for the reference temporary.
-    auto *classDecl = cast<CXXRecordDecl>(rt->getDecl());
+    auto *classDecl =
+        cast<CXXRecordDecl>(rt->getOriginalDecl()->getDefinitionOrSelf());
     if (!classDecl->hasTrivialDestructor())
-      referenceTemporaryDtor = classDecl->getDestructor();
+      referenceTemporaryDtor =
+          classDecl->getDefinitionOrSelf()->getDestructor();
   }
 
   if (!referenceTemporaryDtor)
@@ -1540,9 +1547,9 @@ CIRGenCallee CIRGenFunction::emitCallee(const clang::Expr *e) {
     cgm.errorNYI(e->getSourceRange(),
                  "emitCallee: call to member function is NYI");
     return {};
+  } else if (auto *pde = dyn_cast<CXXPseudoDestructorExpr>(e)) {
+    return CIRGenCallee::forPseudoDestructor(pde);
   }
-
-  assert(!cir::MissingFeatures::opCallPseudoDtor());
 
   // Otherwise, we have an indirect reference.
   mlir::Value calleePtr;
@@ -1595,10 +1602,8 @@ RValue CIRGenFunction::emitCallExpr(const clang::CallExpr *e,
     return emitBuiltinExpr(callee.getBuiltinDecl(), callee.getBuiltinID(), e,
                            returnValue);
 
-  if (isa<CXXPseudoDestructorExpr>(e->getCallee())) {
-    cgm.errorNYI(e->getSourceRange(), "call to pseudo destructor");
-  }
-  assert(!cir::MissingFeatures::opCallPseudoDtor());
+  if (callee.isPseudoDestructor())
+    return emitCXXPseudoDestructorExpr(callee.getPseudoDestructorExpr());
 
   return emitCall(e->getCallee()->getType(), callee, e, returnValue);
 }
@@ -1831,7 +1836,7 @@ RValue CIRGenFunction::emitCXXMemberCallExpr(const CXXMemberCallExpr *ce,
   }
 
   bool hasQualifier = me->hasQualifier();
-  NestedNameSpecifier *qualifier = hasQualifier ? me->getQualifier() : nullptr;
+  NestedNameSpecifier qualifier = me->getQualifier();
   bool isArrow = me->isArrow();
   const Expr *base = me->getBase();
 
