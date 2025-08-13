@@ -171,18 +171,18 @@ struct GPUSubgroupSizeOpToROCDL : ConvertOpToLLVMPattern<gpu::SubgroupSizeOp> {
   const amdgpu::Chipset chipset;
 };
 
-struct GPUBroadcastLaneOpToROCDL
-    : public ConvertOpToLLVMPattern<gpu::BroadcastLaneOp> {
+struct GPUSubgroupBroadcastOpToROCDL
+    : public ConvertOpToLLVMPattern<gpu::SubgroupBroadcastOp> {
   using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(gpu::BroadcastLaneOp op, OpAdaptor adaptor,
+  matchAndRewrite(gpu::SubgroupBroadcastOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Value src = adaptor.getSrc();
-    if (adaptor.getBroadcastType() == gpu::BroadcastType::lane) {
+    if (adaptor.getBroadcastType() == gpu::BroadcastType::specific_lane) {
       rewriter.replaceOpWithNewOp<ROCDL::ReadlaneOp>(op, src.getType(), src,
                                                      adaptor.getLane());
-    } else { // first_lane or any_lane
+    } else { // first_active_lane or any_lane
       // any_lane is lowered to readfirstlane too, to force value into scalar
       // register.
       rewriter.replaceOpWithNewOp<ROCDL::ReadfirstlaneOp>(op, src.getType(),
@@ -484,9 +484,8 @@ void mlir::populateGpuToROCDLConversionPatterns(
   // TODO: Add alignment for workgroup memory
   patterns.add<GPUDynamicSharedMemoryOpLowering>(converter);
 
-  patterns
-      .add<GPUShuffleOpLowering, GPULaneIdOpToROCDL, GPUBroadcastLaneOpToROCDL>(
-          converter);
+  patterns.add<GPUShuffleOpLowering, GPULaneIdOpToROCDL,
+               GPUSubgroupBroadcastOpToROCDL>(converter);
   patterns.add<GPUSubgroupSizeOpToROCDL>(converter, chipset);
 
   populateMathToROCDLConversionPatterns(converter, patterns);
