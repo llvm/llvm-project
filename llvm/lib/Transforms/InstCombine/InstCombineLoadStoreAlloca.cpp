@@ -771,12 +771,8 @@ static Instruction *unpackLoadToAggregate(InstCombinerImpl &IC, LoadInst &LI) {
           ST->getElementType(i), Ptr,
           commonAlignment(Align, SL->getElementOffset(i).getKnownMinValue()),
           Name + ".unpack");
-      // Adjust AA metadata to new offset and size.
-      AAMDNodes adjustedAANodes = LI.getAAMetadata().adjustForAccess(
-          SL->getElementOffset(i),
-          SL->getElementOffset(i).getKnownMinValue());
       // Propagate AA metadata. It'll still be valid on the narrowed load.
-      L->setAAMetadata(adjustedAANodes);
+      L->setAAMetadata(LI.getAAMetadata());
       copyInvariantLoadMetadata(LI, L);
       V = IC.Builder.CreateInsertValue(V, L, i);
     }
