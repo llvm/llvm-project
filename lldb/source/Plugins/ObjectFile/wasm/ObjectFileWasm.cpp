@@ -63,7 +63,7 @@ GetWasmString(llvm::DataExtractor &data, llvm::DataExtractor::Cursor &c) {
     return std::nullopt;
   }
 
-  if (len >= (uint64_t(1) << 32)) {
+  if (len > std::numeric_limits<uint32_t>::max()) {
     return std::nullopt;
   }
 
@@ -175,7 +175,7 @@ bool ObjectFileWasm::DecodeNextSection(lldb::offset_t *offset_ptr) {
   if (!c)
     return !llvm::errorToBool(c.takeError());
 
-  if (payload_len >= (uint64_t(1) << 32))
+  if (payload_len > std::numeric_limits<uint32_t>::max())
     return false;
 
   if (section_id == llvm::wasm::WASM_SEC_CUSTOM) {
@@ -256,7 +256,7 @@ ParseFunctions(SectionSP code_section_sp) {
   lldb::offset_t offset = 0;
 
   const uint64_t function_count = code_section_data.GetULEB128(&offset);
-  if (function_count >= std::numeric_limits<uint32_t>::max())
+  if (function_count > std::numeric_limits<uint32_t>::max())
     return llvm::createStringError("function count overflows uint32_t");
 
   std::vector<AddressRange> functions;
@@ -264,7 +264,7 @@ ParseFunctions(SectionSP code_section_sp) {
 
   for (uint32_t i = 0; i < function_count; ++i) {
     const uint64_t function_size = code_section_data.GetULEB128(&offset);
-    if (function_size >= std::numeric_limits<uint32_t>::max())
+    if (function_size > std::numeric_limits<uint32_t>::max())
       return llvm::createStringError("function size overflows uint32_t");
     // llvm-objdump considers the ULEB with the function size to be part of the
     // function. We can't do that here because that would break symbolic
@@ -293,13 +293,13 @@ ParseNames(SectionSP name_section_sp,
   while (c && c.tell() < data.size()) {
     const uint8_t type = data.getU8(c);
     const uint64_t size = data.getULEB128(c);
-    if (size >= std::numeric_limits<uint32_t>::max())
+    if (size > std::numeric_limits<uint32_t>::max())
       return llvm::createStringError("size overflows uint32_t");
 
     switch (type) {
     case llvm::wasm::WASM_NAMES_FUNCTION: {
       const uint64_t count = data.getULEB128(c);
-      if (count >= std::numeric_limits<uint32_t>::max())
+      if (count > std::numeric_limits<uint32_t>::max())
         return llvm::createStringError("function count overflows uint32_t");
 
       for (uint64_t i = 0; c && i < count; ++i) {
