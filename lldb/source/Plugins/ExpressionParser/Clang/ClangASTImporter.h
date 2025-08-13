@@ -157,6 +157,8 @@ public:
   /// \see ClangASTImporter::Import
   bool CanImport(const CompilerType &type);
 
+  bool CanImport(const clang::Decl *d);
+
   /// If the given type was copied from another TypeSystemClang then copy over
   /// all missing information (e.g., the definition of a 'class' type).
   ///
