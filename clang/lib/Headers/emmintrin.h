@@ -4421,8 +4421,8 @@ static __inline__ int __DEFAULT_FN_ATTRS _mm_movemask_epi8(__m128i __a) {
 ///    Bits [119:112] are written to bits [111:104] of the result. \n
 ///    Bits [127:120] are written to bits [127:120] of the result.
 /// \returns A 128-bit vector of [16 x i8] containing the interleaved values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_unpackhi_epi8(__m128i __a,
-                                                               __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_unpackhi_epi8(__m128i __a, __m128i __b) {
   return (__m128i)__builtin_shufflevector(
       (__v16qi)__a, (__v16qi)__b, 8, 16 + 8, 9, 16 + 9, 10, 16 + 10, 11,
       16 + 11, 12, 16 + 12, 13, 16 + 13, 14, 16 + 14, 15, 16 + 15);
@@ -4449,8 +4449,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_unpackhi_epi8(__m128i __a,
 ///    Bits [111:96] are written to bits [95:80] of the result. \n
 ///    Bits [127:112] are written to bits [127:112] of the result.
 /// \returns A 128-bit vector of [8 x i16] containing the interleaved values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_unpackhi_epi16(__m128i __a,
-                                                                __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_unpackhi_epi16(__m128i __a, __m128i __b) {
   return (__m128i)__builtin_shufflevector((__v8hi)__a, (__v8hi)__b, 4, 8 + 4, 5,
                                           8 + 5, 6, 8 + 6, 7, 8 + 7);
 }
@@ -4472,8 +4472,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_unpackhi_epi16(__m128i __a,
 ///    Bits [95:64] are written to bits [64:32] of the destination. \n
 ///    Bits [127:96] are written to bits [127:96] of the destination.
 /// \returns A 128-bit vector of [4 x i32] containing the interleaved values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_unpackhi_epi32(__m128i __a,
-                                                                __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_unpackhi_epi32(__m128i __a, __m128i __b) {
   return (__m128i)__builtin_shufflevector((__v4si)__a, (__v4si)__b, 2, 4 + 2, 3,
                                           4 + 3);
 }
@@ -4493,8 +4493,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_unpackhi_epi32(__m128i __a,
 ///    A 128-bit vector of [2 x i64]. \n
 ///    Bits [127:64] are written to bits [127:64] of the destination.
 /// \returns A 128-bit vector of [2 x i64] containing the interleaved values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_unpackhi_epi64(__m128i __a,
-                                                                __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_unpackhi_epi64(__m128i __a, __m128i __b) {
   return (__m128i)__builtin_shufflevector((__v2di)__a, (__v2di)__b, 1, 2 + 1);
 }
 
@@ -4527,8 +4527,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_unpackhi_epi64(__m128i __a,
 ///    Bits [55:48] are written to bits [111:104] of the result. \n
 ///    Bits [63:56] are written to bits [127:120] of the result.
 /// \returns A 128-bit vector of [16 x i8] containing the interleaved values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_unpacklo_epi8(__m128i __a,
-                                                               __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_unpacklo_epi8(__m128i __a, __m128i __b) {
   return (__m128i)__builtin_shufflevector(
       (__v16qi)__a, (__v16qi)__b, 0, 16 + 0, 1, 16 + 1, 2, 16 + 2, 3, 16 + 3, 4,
       16 + 4, 5, 16 + 5, 6, 16 + 6, 7, 16 + 7);
@@ -4556,8 +4556,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_unpacklo_epi8(__m128i __a,
 ///    Bits [47:32] are written to bits [95:80] of the result. \n
 ///    Bits [63:48] are written to bits [127:112] of the result.
 /// \returns A 128-bit vector of [8 x i16] containing the interleaved values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_unpacklo_epi16(__m128i __a,
-                                                                __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_unpacklo_epi16(__m128i __a, __m128i __b) {
   return (__m128i)__builtin_shufflevector((__v8hi)__a, (__v8hi)__b, 0, 8 + 0, 1,
                                           8 + 1, 2, 8 + 2, 3, 8 + 3);
 }
@@ -4579,8 +4579,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_unpacklo_epi16(__m128i __a,
 ///    Bits [31:0] are written to bits [64:32] of the destination. \n
 ///    Bits [63:32] are written to bits [127:96] of the destination.
 /// \returns A 128-bit vector of [4 x i32] containing the interleaved values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_unpacklo_epi32(__m128i __a,
-                                                                __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_unpacklo_epi32(__m128i __a, __m128i __b) {
   return (__m128i)__builtin_shufflevector((__v4si)__a, (__v4si)__b, 0, 4 + 0, 1,
                                           4 + 1);
 }
@@ -4600,8 +4600,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_unpacklo_epi32(__m128i __a,
 ///    A 128-bit vector of [2 x i64]. \n
 ///    Bits [63:0] are written to bits [127:64] of the destination. \n
 /// \returns A 128-bit vector of [2 x i64] containing the interleaved values.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_unpacklo_epi64(__m128i __a,
-                                                                __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_unpacklo_epi64(__m128i __a, __m128i __b) {
   return (__m128i)__builtin_shufflevector((__v2di)__a, (__v2di)__b, 0, 2 + 0);
 }
 
