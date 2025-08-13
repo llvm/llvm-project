@@ -386,8 +386,8 @@ class Extension<list<I32EnumAttrCase> extensions> : Availability {
 //===----------------------------------------------------------------------===//
 // Defined in `section 3. Enumerations` of the TOSA specification.
 
-def Tosa_RESIZE_BILINEAR          : I32EnumAttrCase<"NEAREST_NEIGHBOR", 1>;
-def Tosa_RESIZE_NEAREST_NEIGHBOR  : I32EnumAttrCase<"BILINEAR", 2>;
+def Tosa_RESIZE_NEAREST_NEIGHBOR          : I32EnumAttrCase<"NEAREST_NEIGHBOR", 1>;
+def Tosa_RESIZE_BILINEAR                  : I32EnumAttrCase<"BILINEAR", 2>;
 
 def Tosa_ResizeTypeAttr
     : Tosa_I32EnumAttr<"ResizeType", "Supported resize/upsampling strategies", "resize_type",
