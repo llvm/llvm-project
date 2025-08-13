@@ -5314,18 +5314,22 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
   if (isSGPR) {
     switch (Opc) {
     case AMDGPU::S_MIN_U32:
-    case AMDGPU::V_CMP_LT_U64_e64: /*umin*/
     case AMDGPU::S_MIN_I32:
-    case AMDGPU::V_CMP_LT_I64_e64: /*min*/
     case AMDGPU::S_MAX_U32:
-    case AMDGPU::V_CMP_GT_U64_e64: /*umax*/
     case AMDGPU::S_MAX_I32:
-    case AMDGPU::V_CMP_GT_I64_e64: /*max*/
     case AMDGPU::S_AND_B32:
     case AMDGPU::S_OR_B32: {
       // Idempotent operations.
-      unsigned movOpc = is32BitOpc ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
-      BuildMI(BB, MI, DL, TII->get(movOpc), DstReg).addReg(SrcReg);
+      BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MOV_B32), DstReg).addReg(SrcReg);
+      RetBB = &BB;
+      break;
+    }
+    case AMDGPU::V_CMP_LT_U64_e64: // umin
+    case AMDGPU::V_CMP_LT_I64_e64: // min
+    case AMDGPU::V_CMP_GT_U64_e64: // umax
+    case AMDGPU::V_CMP_GT_I64_e64: { // max
+      // Idempotent operations.
+      BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MOV_B64), DstReg).addReg(SrcReg);
       RetBB = &BB;
       break;
     }
@@ -5519,9 +5523,7 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
         Register LaneMaskReg = MRI.createVirtualRegister(WaveMaskRegClass);
         Register ComparisonResultReg =
             MRI.createVirtualRegister(WaveMaskRegClass);
-        const TargetRegisterClass *VregClass =
-            ST.needsAlignedVGPRs() ? &AMDGPU::VReg_64_Align2RegClass
-                                   : &AMDGPU::VReg_64RegClass;
+        const TargetRegisterClass *VregClass = TRI->getVGPR64Class();
         const TargetRegisterClass *VSubRegClass =
             TRI->getSubRegisterClass(VregClass, AMDGPU::sub0);
         Register AccumulatorVReg = MRI.createVirtualRegister(VregClass);
