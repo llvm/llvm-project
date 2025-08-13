@@ -562,13 +562,16 @@ class _LIBCPP_STANDALONE_DEBUG __tree_node : public __tree_node_base<_VoidPtr> {
 public:
   using __node_value_type _LIBCPP_NODEBUG = __get_node_value_type_t<_Tp>;
 
+  union {
   __node_value_type __value_;
+  };
 
   _LIBCPP_HIDE_FROM_ABI __node_value_type& __get_value() { return __value_; }
 
-  template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree_node(_Args&&... __args)
-      : __value_(std::forward<_Args>(__args)...) {}
+  template <class _Alloc, class... _Args>
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 explicit __tree_node(_Alloc& __na, _Args&&... __args) {
+    allocator_traits<_Alloc>::construct(__na, std::addressof(__value_), std::forward<_Args>(__args)...);
+  }
   ~__tree_node()                             = delete;
   __tree_node(__tree_node const&)            = delete;
   __tree_node& operator=(__tree_node const&) = delete;
@@ -1882,11 +1885,14 @@ __tree<_Tp, _Compare, _Allocator>::__construct_node(_Args&&... __args) {
 #if _LIBCPP_STD_VER >= 26
   if (__libcpp_is_constant_evaluated()) {
     // note: construction of subobject of object outside its lifetime is not allowed in a constant expression
-    std::__construct_at(std::addressof(*__h), std::forward<_Args>(__args)...);
+    std::__construct_at(std::addressof(*__h), __na, std::forward<_Args>(__args)...);
+    // std::__construct_at(std::addressof(*__h));
+    // __node_traits::construct(__na, std::addressof(__h->__value_), std::forward<_Args>(__args)...);
   } else
 #endif
   {
-    __node_traits::construct(__na, std::addressof(__h->__value_), std::forward<_Args>(__args)...);
+    std::__construct_at(std::addressof(*__h), __na, std::forward<_Args>(__args)...);
+    // __node_traits::construct(__na, std::addressof(__h->__value_), std::forward<_Args>(__args)...);
   }
 
   __h.get_deleter().__value_constructed = true;
