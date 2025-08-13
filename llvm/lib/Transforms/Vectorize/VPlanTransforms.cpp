@@ -1231,7 +1231,7 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   }
 }
 
-void VPlanTransforms::simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy) {
+void VPlanTransforms::simplifyRecipes(VPlan &Plan) {
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getEntry());
   VPTypeAnalysis TypeInfo(Plan);
@@ -1498,7 +1498,6 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
   // the region, otherwise replace the terminator controlling the latch with
   // (BranchOnCond true).
   auto *Header = cast<VPBasicBlock>(VectorRegion->getEntry());
-  auto *CanIVTy = Plan.getCanonicalIV()->getScalarType();
   if (all_of(Header->phis(),
              IsaPred<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe,
                      VPFirstOrderRecurrencePHIRecipe, VPPhi>)) {
@@ -1518,7 +1517,7 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
 
     VPBlockUtils::connectBlocks(Preheader, Header);
     VPBlockUtils::connectBlocks(ExitingVPBB, Exit);
-    VPlanTransforms::simplifyRecipes(Plan, *CanIVTy);
+    VPlanTransforms::simplifyRecipes(Plan);
   } else {
     // The vector region contains header phis for which we cannot remove the
     // loop region yet.
@@ -1932,13 +1931,13 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   runPass(removeRedundantCanonicalIVs, Plan);
   runPass(removeRedundantInductionCasts, Plan);
 
-  runPass(simplifyRecipes, Plan, *Plan.getCanonicalIV()->getScalarType());
+  runPass(simplifyRecipes, Plan);
   runPass(simplifyBlends, Plan);
   runPass(removeDeadRecipes, Plan);
   runPass(narrowToSingleScalarRecipes, Plan);
   runPass(legalizeAndOptimizeInductions, Plan);
   runPass(removeRedundantExpandSCEVRecipes, Plan);
-  runPass(simplifyRecipes, Plan, *Plan.getCanonicalIV()->getScalarType());
+  runPass(simplifyRecipes, Plan);
   runPass(removeBranchOnConst, Plan);
   runPass(removeDeadRecipes, Plan);
 
@@ -2853,8 +2852,7 @@ void VPlanTransforms::dissolveLoopRegions(VPlan &Plan) {
     R->dissolveToCFGLoop();
 }
 
-void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
-                                               Type &CanonicalIVTy) {
+void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
   VPTypeAnalysis TypeInfo(Plan);
   SmallVector<VPRecipeBase *> ToRemove;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
