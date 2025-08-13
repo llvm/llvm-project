@@ -14,6 +14,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
@@ -170,39 +171,22 @@ createNdDescriptor(PatternRewriter &rewriter, Location loc,
 //     Original strides: [s0, s1, s2, s3]
 //     After permutation: [s0, s1, s3, s2]
 //
-void adjustStridesForPermutation(Operation *op, PatternRewriter &rewriter,
-                                 MemRefType memrefType, AffineMap permMap,
-                                 VectorType vecType,
-                                 SmallVectorImpl<Value> &strides) {
-  unsigned vecRank;
-  unsigned memrefRank = memrefType.getRank();
+static void adjustStridesForPermutation(Operation *op,
+                                        PatternRewriter &rewriter,
+                                        MemRefType memrefType,
+                                        AffineMap permMap, VectorType vecType,
+                                        SmallVectorImpl<Value> &strides) {
 
-  if (permMap.isMinorIdentity())
-    return;
-  vecRank = vecType.getRank();
-  // Only adjust the last vecRank strides according to the permutation
-  ArrayRef<Value> relevantStrides = ArrayRef<Value>(strides).take_back(vecRank);
-  SmallVector<Value> adjustedStrides(vecRank);
-  // For each output dimension in the permutation map, find which input dim it
-  // refers to, and assign the corresponding stride.
-  for (unsigned outIdx = 0; outIdx < vecRank; ++outIdx) {
-    AffineExpr expr = permMap.getResult(outIdx);
-    auto dimExpr = dyn_cast<AffineDimExpr>(expr);
-    assert(dimExpr && "The permutation expr must be affine expression");
-    unsigned pos = dimExpr.getPosition();
-    // Map permutation to the relevant strides (innermost dims)
-    assert((pos >= (memrefRank - vecRank)) &&
-           "Permuted index must be in the inner dimensions");
-
-    // The stride for output dimension outIdx is the stride of input dimension
-    // pos
-    adjustedStrides[outIdx] = relevantStrides[pos - (memrefRank - vecRank)];
-  }
-  // Replace the last vecRank strides with the adjusted ones
-  for (unsigned i = 0; i < vecRank; ++i)
-    strides[memrefRank - vecRank + i] = adjustedStrides[i];
+  AffineMap invMap = inverseAndBroadcastProjectedPermutation(permMap);
+  SmallVector<unsigned> perms;
+  invMap.isPermutationOfMinorIdentityWithBroadcasting(perms);
+  SmallVector<int64_t> perms64(perms.begin(), perms.end());
+  strides = applyPermutation(strides, perms64);
 }
 
+// Computes memory strides for vector transfer operations, handling both
+// static and dynamic memrefs while applying permutation transformations
+// for XeGPU lowering.
 SmallVector<Value> computeStrides(VectorTransferOpInterface xferOp,
                                   PatternRewriter &rewriter) {
   SmallVector<Value> strides;
@@ -232,12 +216,12 @@ SmallVector<Value> computeStrides(VectorTransferOpInterface xferOp,
     resultTypes.push_back(MemRefType::get(
         {}, memrefType.getElementType())); // base memref (unranked)
     resultTypes.push_back(indexType);      // offset
-    for (unsigned i = 0; i < rank; ++i) {
+
+    for (unsigned i = 0; i < rank; ++i)
       resultTypes.push_back(indexType); // strides
-    }
-    for (unsigned i = 0; i < rank; ++i) {
+
+    for (unsigned i = 0; i < rank; ++i)
       resultTypes.push_back(indexType); // sizes
-    }
 
     auto meta = memref::ExtractStridedMetadataOp::create(
         rewriter, loc, resultTypes, baseMemref);
@@ -288,11 +272,12 @@ static Value computeOffsets(VectorTransferOpInterface xferOp,
 
   // Create vector.step operations for each dimension
   SmallVector<Value> stepVectors;
-  for (int64_t dim : vectorShape) {
+  llvm::map_to_vector(vectorShape, [&](int64_t dim) {
     auto stepType = VectorType::get({dim}, rewriter.getIndexType());
     auto stepOp = vector::StepOp::create(rewriter, loc, stepType);
     stepVectors.push_back(stepOp);
-  }
+    return stepOp;
+  });
 
   // Multiply step vectors by corresponding strides
   size_t memrefRank = strides.size();
@@ -384,8 +369,8 @@ static Value collapseMemrefTo1D(VectorTransferOpInterface xferOp,
   return collapseOp;
 }
 
-LogicalResult lowerToRegularLoadOp(vector::TransferReadOp readOp,
-                                   PatternRewriter &rewriter) {
+static LogicalResult lowerToScatteredLoadOp(vector::TransferReadOp readOp,
+                                            PatternRewriter &rewriter) {
 
   Location loc = readOp.getLoc();
   VectorType vectorType = readOp.getVectorType();
@@ -416,8 +401,8 @@ LogicalResult lowerToRegularLoadOp(vector::TransferReadOp readOp,
   return success();
 }
 
-LogicalResult lowerToRegularStoreOp(vector::TransferWriteOp writeOp,
-                                    PatternRewriter &rewriter) {
+static LogicalResult lowerToScatteredStoreOp(vector::TransferWriteOp writeOp,
+                                             PatternRewriter &rewriter) {
 
   Location loc = writeOp.getLoc();
   VectorType vectorType = writeOp.getVectorType();
@@ -456,15 +441,16 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
     if (failed(transferPreconditions(rewriter, readOp)))
       return failure();
 
-    // lower to regular load Op if the target HW is not PVC
     // TODO:This check needs to be replaced with proper uArch capability check
     auto chip = xegpu::getChipStr(readOp);
     if (chip != "pvc" && chip != "bmg") {
+      // lower to scattered load Op if the target HW doesn't have 2d block load
+      // support
       // TODO: add support for OutOfBound access
       if (readOp.hasOutOfBoundsDim())
         return failure();
-      // calling another function that lower TransferReadOp to regular Loadop
-      return lowerToRegularLoadOp(readOp, rewriter);
+      // lower TransferReadOp to scattered Loadop
+      return lowerToScatteredLoadOp(readOp, rewriter);
     }
 
     // Perform common data transfer checks.
@@ -527,15 +513,16 @@ struct TransferWriteLowering
     if (failed(transferPreconditions(rewriter, writeOp)))
       return failure();
 
-    // lower to regular write Op if the target HW is not PVC
     // TODO:This check needs to be replaced with proper uArch capability check
     auto chip = xegpu::getChipStr(writeOp);
     if (chip != "pvc" && chip != "bmg") {
+      // lower to scattered load Op if the target HW doesn't have 2d block load
+      // support
       // TODO: add support for OutOfBound access
       if (writeOp.hasOutOfBoundsDim())
         return failure();
-      // calling another function that lower TransferWriteOp to regular StoreOp
-      return lowerToRegularStoreOp(writeOp, rewriter);
+      // lower TransferWriteOp to scattered StoreOp
+      return lowerToScatteredStoreOp(writeOp, rewriter);
     }
 
     // Perform common data transfer checks.
