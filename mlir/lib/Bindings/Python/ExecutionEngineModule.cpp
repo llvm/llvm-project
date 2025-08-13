@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir-c/ExecutionEngine.h"
-#include "mlir/Bindings/Python/NanobindAdaptors.h"
 #include "mlir/Bindings/Python/Nanobind.h"
+#include "mlir/Bindings/Python/NanobindAdaptors.h"
 
 namespace nb = nanobind;
 using namespace mlir;
@@ -75,13 +75,13 @@ NB_MODULE(_mlirExecutionEngine, m) {
           "__init__",
           [](PyExecutionEngine &self, MlirModule module, int optLevel,
              const std::vector<std::string> &sharedLibPaths,
-             bool enableObjectDump) {
+             bool enableObjectDump, bool shouldInitialize) {
             llvm::SmallVector<MlirStringRef, 4> libPaths;
             for (const std::string &path : sharedLibPaths)
               libPaths.push_back({path.c_str(), path.length()});
-            MlirExecutionEngine executionEngine =
-                mlirExecutionEngineCreate(module, optLevel, libPaths.size(),
-                                          libPaths.data(), enableObjectDump);
+            MlirExecutionEngine executionEngine = mlirExecutionEngineCreate(
+                module, optLevel, libPaths.size(), libPaths.data(),
+                enableObjectDump, shouldInitialize);
             if (mlirExecutionEngineIsNull(executionEngine))
               throw std::runtime_error(
                   "Failure while creating the ExecutionEngine.");
@@ -90,6 +90,7 @@ NB_MODULE(_mlirExecutionEngine, m) {
           nb::arg("module"), nb::arg("opt_level") = 2,
           nb::arg("shared_libs") = nb::list(),
           nb::arg("enable_object_dump") = true,
+          nb::arg("should_initialize") = true,
           "Create a new ExecutionEngine instance for the given Module. The "
           "module must contain only dialects that can be translated to LLVM. "
           "Perform transformations and code generation at the optimization "
@@ -124,6 +125,12 @@ NB_MODULE(_mlirExecutionEngine, m) {
           },
           nb::arg("name"), nb::arg("callback"),
           "Register `callback` as the runtime symbol `name`.")
+      .def(
+          "initialize",
+          [](PyExecutionEngine &executionEngine) {
+            mlirExecutionEngineInitialize(executionEngine.get());
+          },
+          "Initialize the ExecutionEngine.")
       .def(
           "dump_to_object_file",
           [](PyExecutionEngine &executionEngine, const std::string &fileName) {
