@@ -102,8 +102,6 @@ private:
   SDValue getPTXCmpMode(const CondCodeSDNode &CondCode);
   SDValue selectPossiblyImm(SDValue V);
 
-  bool ChkMemSDNodeAddressSpace(SDNode *N, unsigned int spN) const;
-
   // Returns the Memory Order and Scope that the PTX memory instruction should
   // use, and inserts appropriate fence instruction before the memory
   // instruction, if needed to implement the instructions memory order. Required
