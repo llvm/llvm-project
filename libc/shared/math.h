@@ -34,6 +34,7 @@
 #include "math/cbrtf.h"
 #include "math/cos.h"
 #include "math/cosf.h"
+#include "math/cosf16.h"
 #include "math/erff.h"
 #include "math/exp.h"
 #include "math/exp10.h"

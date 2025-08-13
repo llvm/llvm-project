@@ -30,6 +30,7 @@ add_fp_unittest(
     libc.src.__support.math.cbrtf
     libc.src.__support.math.cos
     libc.src.__support.math.cosf
+    libc.src.__support.math.cosf16
     libc.src.__support.math.erff
     libc.src.__support.math.exp
     libc.src.__support.math.exp10
