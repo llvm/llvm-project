@@ -103,6 +103,8 @@ struct StableFunctionMapRecord {
     serializeYAML(YOS);
   }
 
+  /// Set whether to read stable function names from the buffer.
+  /// Has no effect if the function map is read from a YAML stream.
   void setReadStableFunctionMapNames(bool Read) {
     assert(
         FunctionMap->empty() &&
