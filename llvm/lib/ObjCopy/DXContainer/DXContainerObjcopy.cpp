@@ -53,7 +53,6 @@ static Error handleArgs(const CommonConfig &Config, Object &Obj) {
     };
 
   if (!Config.SplitSection.empty()) {
-    NameMatcher SectionMatches;
     for (StringRef Flag : Config.SplitSection) {
       StringRef SectionName;
       StringRef FileName;
