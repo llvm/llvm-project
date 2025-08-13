@@ -1369,7 +1369,7 @@ def getTempPaths(test):
     root, not test source root."""
     execpath = test.getExecPath()
     execdir, execbase = os.path.split(execpath)
-    tmpDir = os.path.join(execdir, "Output")
+    tmpDir = os.path.join(execdir, "Output", f"{execbase}.dir")
     tmpBase = os.path.join(tmpDir, execbase)
     return tmpDir, tmpBase
 
