@@ -6,3 +6,15 @@ void f(...) {
 }
 
 void h(int n..., int m); // expected-error {{expected ')'}} expected-note {{to match}}
+
+
+namespace GH153445 {
+void f(int = {}...);
+
+struct S {
+  void f(int = {}...);
+  void g(int...);
+};
+
+void S::g(int = {}...) {}
+}
