@@ -3202,10 +3202,12 @@ public:
   /// \p Shuffles is the shufflevector list to DE-interleave the loaded vector.
   /// \p Indices is the corresponding indices for each shufflevector.
   /// \p Factor is the interleave factor.
+  /// \p GapMask is a mask with zeros for components / fields that may not be
+  /// accessed.
   virtual bool lowerInterleavedLoad(Instruction *Load, Value *Mask,
                                     ArrayRef<ShuffleVectorInst *> Shuffles,
-                                    ArrayRef<unsigned> Indices,
-                                    unsigned Factor) const {
+                                    ArrayRef<unsigned> Indices, unsigned Factor,
+                                    const APInt &GapMask) const {
     return false;
   }
 

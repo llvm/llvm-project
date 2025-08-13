@@ -7,8 +7,6 @@ define void @test(ptr %p, i64 %a, i8 %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH1:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw i32 [[TMP3]], 2
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i8> poison, i8 [[B]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i8> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[A]], i64 0

@@ -441,13 +441,10 @@ void insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpvType,
   // Tablegen definition assumes SPIRV::ASSIGN_TYPE pseudo-instruction is
   // present after each auto-folded instruction to take a type reference from.
   Register NewReg = MRI.createGenericVirtualRegister(MRI.getType(Reg));
-  if (auto *RC = MRI.getRegClassOrNull(Reg)) {
-    MRI.setRegClass(NewReg, RC);
-  } else {
-    auto RegClass = GR->getRegClass(SpvType);
-    MRI.setRegClass(NewReg, RegClass);
-    MRI.setRegClass(Reg, RegClass);
-  }
+  const auto *RegClass = GR->getRegClass(SpvType);
+  MRI.setRegClass(NewReg, RegClass);
+  MRI.setRegClass(Reg, RegClass);
+
   GR->assignSPIRVTypeToVReg(SpvType, Reg, MIB.getMF());
   // This is to make it convenient for Legalizer to get the SPIRVType
   // when processing the actual MI (i.e. not pseudo one).

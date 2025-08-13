@@ -2259,7 +2259,6 @@ static bool interp__builtin_is_within_lifetime(InterpState &S, CodePtr OpPC,
 static bool interp__builtin_elementwise_sat(InterpState &S, CodePtr OpPC,
                                             const CallExpr *Call,
                                             unsigned BuiltinID) {
-  Call->dumpColor();
   assert(Call->getNumArgs() == 2);
 
   // Single integer case.
@@ -2313,6 +2312,80 @@ static bool interp__builtin_elementwise_sat(InterpState &S, CodePtr OpPC,
     } else if (BuiltinID == Builtin::BI__builtin_elementwise_sub_sat) {
       Result = APSInt(Elem1.isSigned() ? Elem1.ssub_sat(Elem2)
                                        : Elem1.usub_sat(Elem2),
+                      Call->getType()->isUnsignedIntegerOrEnumerationType());
+    } else {
+      llvm_unreachable("Wrong builtin ID");
+    }
+
+    INT_TYPE_SWITCH_NO_BOOL(ElemT,
+                            { Dst.elem<T>(I) = static_cast<T>(Result); });
+  }
+  Dst.initializeAllElements();
+
+  return true;
+}
+
+static bool interp__builtin_elementwise_maxmin(InterpState &S, CodePtr OpPC,
+                                               const CallExpr *Call,
+                                               unsigned BuiltinID) {
+  assert(Call->getNumArgs() == 2);
+
+  QualType Arg0Type = Call->getArg(0)->getType();
+
+  // TODO: Support floating-point types.
+  if (!(Arg0Type->isIntegerType() ||
+        (Arg0Type->isVectorType() &&
+         Arg0Type->castAs<VectorType>()->getElementType()->isIntegerType())))
+    return false;
+
+  if (!Arg0Type->isVectorType()) {
+    assert(!Call->getArg(1)->getType()->isVectorType());
+    APSInt RHS = popToAPSInt(
+        S.Stk, *S.getContext().classify(Call->getArg(1)->getType()));
+    APSInt LHS = popToAPSInt(
+        S.Stk, *S.getContext().classify(Call->getArg(0)->getType()));
+    APInt Result;
+    if (BuiltinID == Builtin::BI__builtin_elementwise_max) {
+      Result = std::max(LHS, RHS);
+    } else if (BuiltinID == Builtin::BI__builtin_elementwise_min) {
+      Result = std::min(LHS, RHS);
+    } else {
+      llvm_unreachable("Wrong builtin ID");
+    }
+
+    pushInteger(S, APSInt(Result, !LHS.isSigned()), Call->getType());
+    return true;
+  }
+
+  // Vector case.
+  assert(Call->getArg(0)->getType()->isVectorType() &&
+         Call->getArg(1)->getType()->isVectorType());
+  const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
+  assert(VT->getElementType() ==
+         Call->getArg(1)->getType()->castAs<VectorType>()->getElementType());
+  assert(VT->getNumElements() ==
+         Call->getArg(1)->getType()->castAs<VectorType>()->getNumElements());
+  assert(VT->getElementType()->isIntegralOrEnumerationType());
+
+  const Pointer &RHS = S.Stk.pop<Pointer>();
+  const Pointer &LHS = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+  PrimType ElemT = *S.getContext().classify(VT->getElementType());
+  unsigned NumElems = VT->getNumElements();
+  for (unsigned I = 0; I != NumElems; ++I) {
+    APSInt Elem1;
+    APSInt Elem2;
+    INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+      Elem1 = LHS.elem<T>(I).toAPSInt();
+      Elem2 = RHS.elem<T>(I).toAPSInt();
+    });
+
+    APSInt Result;
+    if (BuiltinID == Builtin::BI__builtin_elementwise_max) {
+      Result = APSInt(std::max(Elem1, Elem2),
+                      Call->getType()->isUnsignedIntegerOrEnumerationType());
+    } else if (BuiltinID == Builtin::BI__builtin_elementwise_min) {
+      Result = APSInt(std::min(Elem1, Elem2),
                       Call->getType()->isUnsignedIntegerOrEnumerationType());
     } else {
       llvm_unreachable("Wrong builtin ID");
@@ -2732,6 +2805,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_elementwise_add_sat:
   case Builtin::BI__builtin_elementwise_sub_sat:
     return interp__builtin_elementwise_sat(S, OpPC, Call, BuiltinID);
+
+  case Builtin::BI__builtin_elementwise_max:
+  case Builtin::BI__builtin_elementwise_min:
+    return interp__builtin_elementwise_maxmin(S, OpPC, Call, BuiltinID);
 
   default:
     S.FFDiag(S.Current->getLocation(OpPC),

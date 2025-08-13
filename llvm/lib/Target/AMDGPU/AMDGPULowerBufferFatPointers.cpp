@@ -599,8 +599,8 @@ bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::visitStoreInst(StoreInst &SI) {
 
   IRB.SetInsertPoint(&SI);
   Value *IntV = fatPtrsToInts(V, Ty, IntTy, V->getName());
-  for (auto *Dbg : at::getAssignmentMarkers(&SI))
-    Dbg->setValue(IntV);
+  for (auto *Dbg : at::getDVRAssignmentMarkers(&SI))
+    Dbg->setRawLocation(ValueAsMetadata::get(IntV));
 
   SI.setOperand(0, IntV);
   return true;

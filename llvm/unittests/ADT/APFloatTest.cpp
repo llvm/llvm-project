@@ -2692,9 +2692,7 @@ static APFloat makeDoubleAPFloat(T Hi, U Lo) {
   return APFloat(APFloat::PPCDoubleDouble(), Bits);
 }
 
-static APFloat makeDoubleAPFloat(DD X) {
-  return makeDoubleAPFloat(X.Hi, X.Lo);
-}
+static APFloat makeDoubleAPFloat(DD X) { return makeDoubleAPFloat(X.Hi, X.Lo); }
 
 TEST(APFloatTest, PPCDoubleDouble) {
   APFloat test(APFloat::PPCDoubleDouble(), "1.0");
@@ -5799,6 +5797,363 @@ TEST_P(PPCDoubleDoubleRoundToIntegralValueTest,
   }
 }
 
+namespace PPCDoubleDoubleConvertToIntegerTestDetails {
+// Define the rounding modes for easier readability.
+static constexpr auto RNE = APFloat::rmNearestTiesToEven;
+static constexpr auto RNA = APFloat::rmNearestTiesToAway;
+static constexpr auto RTZ = APFloat::rmTowardZero;
+static constexpr auto RUP = APFloat::rmTowardPositive;
+static constexpr auto RDN = APFloat::rmTowardNegative;
+
+struct TestCase {
+  // Structure to hold the expected result of a conversion
+  struct ExpectedConversion {
+    // The expected integer value represented as a string (decimal).
+    // We use a string to easily represent arbitrary precision values in
+    // constexpr. The test runner should parse this into an APSInt matching the
+    // test configuration.
+    const char *ExpectedIntStr;
+    APFloat::opStatus Status;
+  };
+
+  DD Input;
+  unsigned IntegerWidth;
+  bool IsSigned;
+  // Array indexed by the rounding mode enum value.
+  std::array<ExpectedConversion, 5> Rounded = {};
+
+  // Helper to define the expected results for a specific rounding mode.
+  constexpr TestCase &with(APFloat::roundingMode RM, const char *ExpectedStr,
+                           APFloat::opStatus Status) {
+    Rounded[static_cast<std::underlying_type_t<APFloat::roundingMode>>(RM)] = {
+        ExpectedStr,
+        Status,
+    };
+    return *this;
+  }
+
+  // Helper to define the same result for all rounding modes.
+  constexpr TestCase &withAll(const char *ExpectedStr,
+                              APFloat::opStatus Status) {
+    return with(RNE, ExpectedStr, Status)
+        .with(RNA, ExpectedStr, Status)
+        .with(RTZ, ExpectedStr, Status)
+        .with(RUP, ExpectedStr, Status)
+        .with(RDN, ExpectedStr, Status);
+  }
+};
+
+auto testCases() {
+  // Define the status codes.
+  constexpr auto OK = llvm::APFloat::opOK;
+  constexpr auto Inexact = llvm::APFloat::opInexact;
+  // The API specifies opInvalidOp for out-of-range (overflow/underflow) and
+  // NaN.
+  constexpr auto Invalid = llvm::APFloat::opInvalidOp;
+
+  // Helper constants for constructing specific DD values.
+  constexpr double Infinity = std::numeric_limits<double>::infinity();
+  constexpr double NaN = std::numeric_limits<double>::quiet_NaN();
+  constexpr double DMAX = std::numeric_limits<double>::max();
+
+  // Powers of 2
+  constexpr double P53 = 0x1p53;
+  constexpr double P63 = 0x1p63;
+  constexpr double P64 = 0x1p64;
+  // 2^-100 (A very small delta demonstrating extended precision)
+  constexpr double PM100 = 0x1p-100;
+
+  static constexpr auto ConvertToIntegerTestCases = std::array{
+      // 1. Zeros, NaNs, and Infinities (Target: 64-bit Signed)
+      // INT64_MAX = 9223372036854775807
+      // INT64_MIN = -9223372036854775808
+
+      // Input: Positive Zero (0.0, 0.0)
+      TestCase{{0.0, 0.0}, 64, true}.withAll("0", OK),
+
+      // Input: Negative Zero (-0.0, 0.0)
+      TestCase{{-0.0, 0.0}, 64, true}.withAll("0", OK),
+
+      // Input: NaN. Expected behavior: Invalid, deterministic result of 0.
+      TestCase{{NaN, 0.0}, 64, true}.withAll("0", Invalid),
+
+      // Input: +Infinity. Expected behavior: Invalid, deterministic result of
+      // INT64_MAX.
+      TestCase{{Infinity, 0.0}, 64, true}.withAll("9223372036854775807",
+                                                  Invalid),
+
+      // Input: -Infinity. Expected behavior: Invalid, deterministic result of
+      // INT64_MIN.
+      TestCase{{-Infinity, 0.0}, 64, true}.withAll("-9223372036854775808",
+                                                   Invalid),
+
+      // 2. Basic Rounding and Tie-Breaking (Target: 32-bit Signed)
+
+      // Input: 2.5 (Tie, preceding integer is Even)
+      TestCase{{2.5, 0.0}, 32, true}
+          .with(RTZ, "2", Inexact)
+          .with(RDN, "2", Inexact)
+          .with(RUP, "3", Inexact)
+          .with(RNA, "3", Inexact)
+          .with(RNE, "2", Inexact),
+
+      // Input: 3.5 (Tie, preceding integer is Odd)
+      TestCase{{3.5, 0.0}, 32, true}
+          .with(RTZ, "3", Inexact)
+          .with(RDN, "3", Inexact)
+          .with(RUP, "4", Inexact)
+          .with(RNA, "4", Inexact)
+          .with(RNE, "4", Inexact),
+
+      // Input: -2.5 (Tie, preceding integer is Even)
+      TestCase{{-2.5, 0.0}, 32, true}
+          .with(RTZ, "-2", Inexact)
+          .with(RDN, "-3", Inexact)
+          .with(RUP, "-2", Inexact)
+          .with(RNA, "-3", Inexact)
+          .with(RNE, "-2", Inexact),
+
+      // 3. Double-Double Precision (The role of 'lo')
+      // Testing how extended precision affects rounding decisions.
+
+      // Input: 2.5 + Epsilon (Slightly above tie)
+      TestCase{{2.5, PM100}, 32, true}
+          .with(RTZ, "2", Inexact)
+          .with(RDN, "2", Inexact)
+          .with(RUP, "3", Inexact)
+          .with(RNA, "3", Inexact)
+          .with(RNE, "3", Inexact),
+
+      // Input: 2.5 - Epsilon (Slightly below tie)
+      TestCase{{2.5, -PM100}, 32, true}
+          .with(RTZ, "2", Inexact)
+          .with(RDN, "2", Inexact)
+          .with(RUP, "3", Inexact)
+          .with(RNA, "2", Inexact)
+          .with(RNE, "2", Inexact),
+
+      // Input: 1.0 + Epsilon (Just above 1.0, e.g., 1.00...1)
+      TestCase{{1.0, PM100}, 32, true}
+          .with(RTZ, "1", Inexact)
+          .with(RDN, "1", Inexact)
+          .with(RUP, "2", Inexact)
+          .with(RNA, "1", Inexact)
+          .with(RNE, "1", Inexact),
+
+      // Input: 1.0 - Epsilon (Just below 1.0, e.g. 0.999...)
+      TestCase{{1.0, -PM100}, 32, true}
+          .with(RTZ, "0", Inexact)
+          .with(RDN, "0", Inexact)
+          .with(RUP, "1", Inexact)
+          .with(RNA, "1", Inexact)
+          .with(RNE, "1", Inexact),
+
+      // Input: Large number tie-breaking (Crucial test for DD implementation)
+      // Input: 2^53 + 1.5.
+      // A standard double(2^53 + 1.5) rounds to 2^53 + 2.0.
+      // The DD representation must precisely hold 2^53 + 1.5.
+      // The canonical DD representation is {2^53 + 2.0, -0.5}.
+      // Value is 9007199254740993.5
+      TestCase{{P53 + 2.0, -0.5}, 64, true}
+          .with(RTZ, "9007199254740993", Inexact)
+          .with(RDN, "9007199254740993", Inexact)
+          .with(RUP, "9007199254740994", Inexact)
+          .with(RNA, "9007199254740994", Inexact)
+          .with(RNE, "9007199254740994", Inexact),
+
+      // 4. Overflow Boundaries (Signed)
+
+      // Input: Exactly INT64_MAX. (2^63 - 1)
+      // Represented precisely as (2^63, -1.0)
+      TestCase{{P63, -1.0}, 64, true}.withAll("9223372036854775807", OK),
+
+      // Input: INT64_MAX + 0.3.
+      // Represented as (2^63, -0.7)
+      TestCase{{P63, -0.7}, 64, true}
+          .with(RTZ, "9223372036854775807", Inexact)
+          .with(RDN, "9223372036854775807", Inexact)
+          .with(RNA, "9223372036854775807", Inexact)
+          .with(RNE, "9223372036854775807", Inexact)
+          .with(RUP, "9223372036854775807", Invalid),
+
+      // Input: INT64_MAX + 0.5 (Tie at the boundary)
+      // Represented as (2^63, -0.5). Target integers are MAX (odd) and 2^63
+      // (even).
+      TestCase{{P63, -0.5}, 64, true}
+          .with(RTZ, "9223372036854775807", Inexact)
+          .with(RDN, "9223372036854775807", Inexact)
+          .with(RUP, "9223372036854775807", Invalid)
+          .with(RNA, "9223372036854775807", Invalid)
+          .with(RNE, "9223372036854775807", Invalid),
+
+      // Input: 2^55 - 2^1 - 2^-52 to signed integer.
+      // Represented as (2^55 - 2^2, 2^1 - 2^-1).
+      TestCase{{0x1.fffffffffffffp+54, 0x1.8p0}, 56, true}
+          .with(RTZ, "36028797018963965", Inexact)
+          .with(RDN, "36028797018963965", Inexact)
+          .with(RUP, "36028797018963966", Inexact)
+          .with(RNA, "36028797018963966", Inexact)
+          .with(RNE, "36028797018963966", Inexact),
+
+      // Input: 2^55 - 2^1 - 2^-52 to signed integer.
+      // Represented as (2^55 - 2^2, 2^1 - 2^-52).
+      TestCase{{0x1.fffffffffffffp+54, 0x1.fffffffffffffp0}, 56, true}
+          .with(RTZ, "36028797018963965", Inexact)
+          .with(RDN, "36028797018963965", Inexact)
+          .with(RUP, "36028797018963966", Inexact)
+          .with(RNA, "36028797018963966", Inexact)
+          .with(RNE, "36028797018963966", Inexact),
+
+      // Input: Exactly 2^63 (One past INT64_MAX)
+      TestCase{{P63, 0.0}, 64, true}.withAll("9223372036854775807", Invalid),
+
+      // Input: Exactly INT64_MIN (-2^63)
+      TestCase{{-P63, 0.0}, 64, true}.withAll("-9223372036854775808", OK),
+
+      // Input: INT64_MIN - 0.5 (Tie at the lower boundary)
+      // Target integers are -2^63-1 (odd) and MIN (even).
+      TestCase{{-P63, -0.5}, 64, true}
+          .with(RTZ, "-9223372036854775808", Inexact)
+          .with(RUP, "-9223372036854775808", Inexact)
+          // RDN rounds down, causing overflow.
+          .with(RDN, "-9223372036854775808", Invalid)
+          // RNA rounds away (down), causing overflow.
+          .with(RNA, "-9223372036854775808", Invalid)
+          // RNE rounds to even (up to -2^63), which is OK.
+          .with(RNE, "-9223372036854775808", Inexact),
+
+      // 5. Overflow Boundaries (Unsigned)
+      // UINT64_MAX = 18446744073709551615 (2^64 - 1)
+
+      // Input: Exactly UINT64_MAX. (2^64 - 1)
+      // Represented precisely as (2^64, -1.0)
+      TestCase{{P64, -1.0}, 64, false}.withAll("18446744073709551615", OK),
+
+      // Input: UINT64_MAX + 0.5 (Tie at the boundary)
+      // Represented as (2^64, -0.5)
+      TestCase{{P64, -0.5}, 64, false}
+          .with(RTZ, "18446744073709551615", Inexact)
+          .with(RDN, "18446744073709551615", Inexact)
+          // RUP rounds up (2^64), causing overflow.
+          .with(RUP, "18446744073709551615", Invalid)
+          // RNA rounds away (up), causing overflow.
+          .with(RNA, "18446744073709551615", Invalid)
+          // RNE rounds to even (up to 2^64), causing overflow.
+          .with(RNE, "18446744073709551615", Invalid),
+
+      // Input: 2^55 - 2^1 - 2^-52 to unsigned integer.
+      // Represented as (2^55 - 2^2, 2^1 - 2^-1).
+      TestCase{{0x1.fffffffffffffp+54, 0x1.8p0}, 55, false}
+          .with(RTZ, "36028797018963965", Inexact)
+          .with(RDN, "36028797018963965", Inexact)
+          .with(RUP, "36028797018963966", Inexact)
+          .with(RNA, "36028797018963966", Inexact)
+          .with(RNE, "36028797018963966", Inexact),
+
+      // Input: 2^55 - 2^1 - 2^-52 to unsigned integer.
+      // Represented as (2^55 - 2^2, 2^1 - 2^-52).
+      TestCase{{0x1.fffffffffffffp+54, 0x1.fffffffffffffp0}, 55, false}
+          .with(RTZ, "36028797018963965", Inexact)
+          .with(RDN, "36028797018963965", Inexact)
+          .with(RUP, "36028797018963966", Inexact)
+          .with(RNA, "36028797018963966", Inexact)
+          .with(RNE, "36028797018963966", Inexact),
+
+      // Input: -0.3 (Slightly below zero)
+      TestCase{{-0.3, 0.0}, 64, false}
+          .with(RTZ, "0", Inexact)
+          .with(RUP, "0", Inexact)
+          .with(RNA, "0", Inexact)
+          .with(RNE, "0", Inexact)
+          .with(RDN, "0", Invalid),
+
+      // Input: -0.5 (Tie at zero)
+      TestCase{{-0.5, 0.0}, 64, false}
+          .with(RTZ, "0", Inexact)
+          .with(RUP, "0", Inexact)
+          // RNE rounds to even (0).
+          .with(RNE, "0", Inexact)
+          .with(RDN, "0", Invalid)
+          // RNA rounds away (-1), causing overflow.
+          .with(RNA, "0", Invalid),
+
+      // Input: -1.0 (Negative integer)
+      TestCase{{-1.0, 0.0}, 64, false}.withAll("0", Invalid),
+
+      // 6. High Precision Integers (Target: 128-bit Signed)
+      // INT128_MAX = 170141183460469231731687303715884105727
+
+      // Input: 2^100 (Exactly representable in DD)
+      // 2^100 = 1267650600228229401496703205376.0
+      TestCase{{1267650600228229401496703205376.0, 0.0}, 128, true}.withAll(
+          "1267650600228229401496703205376", OK),
+
+      // Input: DMAX. (Approx 1.8e308).
+      // This is vastly larger than INT128_MAX (Approx 1.7e38).
+      TestCase{{DMAX, 0.0}, 128, true}.withAll(
+          "170141183460469231731687303715884105727", Invalid),
+
+      // Input: Largest semPPCDoubleDoubleLegacy
+      TestCase{{DMAX, 0x1.ffffffffffffep+969}, 128, true}.withAll(
+          "170141183460469231731687303715884105727", Invalid),
+
+      // 7. Round to negative -0
+      TestCase{{-PM100, 0.0}, 32, true}
+          .with(RTZ, "0", Inexact)
+          .with(RUP, "0", Inexact)
+          .with(RNA, "0", Inexact)
+          .with(RNE, "0", Inexact)
+          .with(RDN, "-1", Inexact),
+  };
+  return ConvertToIntegerTestCases;
+}
+} // namespace PPCDoubleDoubleConvertToIntegerTestDetails
+
+class PPCDoubleDoubleConvertToIntegerValueTest
+    : public testing::Test,
+      public ::testing::WithParamInterface<
+          PPCDoubleDoubleConvertToIntegerTestDetails::TestCase> {};
+
+INSTANTIATE_TEST_SUITE_P(
+    PPCDoubleDoubleConvertToIntegerValueParamTests,
+    PPCDoubleDoubleConvertToIntegerValueTest,
+    ::testing::ValuesIn(
+        PPCDoubleDoubleConvertToIntegerTestDetails::testCases()));
+
+TEST_P(PPCDoubleDoubleConvertToIntegerValueTest,
+       PPCDoubleDoubleConvertToInteger) {
+  const PPCDoubleDoubleConvertToIntegerTestDetails::TestCase Params =
+      GetParam();
+  const APFloat Input = makeDoubleAPFloat(Params.Input);
+  EXPECT_FALSE(Input.isDenormal())
+      << Params.Input.Hi << " + " << Params.Input.Lo;
+
+  for (size_t I = 0, E = std::size(Params.Rounded); I != E; ++I) {
+    const auto RM = static_cast<APFloat::roundingMode>(I);
+    const auto &Expected = Params.Rounded[I];
+    APSInt ActualInteger(Params.IntegerWidth, /*isUnsigned=*/!Params.IsSigned);
+
+    APSInt ExpectedInteger{Expected.ExpectedIntStr};
+    EXPECT_LE(ExpectedInteger.getBitWidth(), Params.IntegerWidth);
+    ExpectedInteger = ExpectedInteger.extend(Params.IntegerWidth);
+    if (ExpectedInteger.isUnsigned() && Params.IsSigned) {
+      ExpectedInteger.setIsSigned(Params.IsSigned);
+      EXPECT_FALSE(ExpectedInteger.isNegative());
+    }
+
+    const bool NegativeUnderflow =
+        ExpectedInteger.isZero() && Input.isNegative();
+    const bool ExpectedIsExact =
+        Expected.Status == APFloat::opOK && !NegativeUnderflow;
+    bool ActualIsExact;
+    const auto ActualStatus =
+        Input.convertToInteger(ActualInteger, RM, &ActualIsExact);
+    EXPECT_EQ(ActualStatus, Expected.Status);
+    EXPECT_EQ(ActualIsExact, ExpectedIsExact);
+    EXPECT_EQ(ActualInteger, ExpectedInteger);
+  }
+}
+
 TEST(APFloatTest, PPCDoubleDoubleCompare) {
   using DataType =
       std::tuple<uint64_t, uint64_t, uint64_t, uint64_t, APFloat::cmpResult>;
@@ -5994,19 +6349,329 @@ TEST(APFloatTest, PPCDoubleDoubleScalbn) {
   EXPECT_EQ(0x3cc8000000000000ull, Result.bitcastToAPInt().getRawData()[1]);
 }
 
-TEST(APFloatTest, PPCDoubleDoubleFrexp) {
-  // 3.0 + 3.0 << 53
-  uint64_t Input[] = {
-      0x4008000000000000ull, 0x3cb8000000000000ull,
+namespace PPCDoubleDoubleFrexpTestDetails {
+// Define the rounding modes for easier readability.
+static constexpr auto RNE = APFloat::rmNearestTiesToEven;
+static constexpr auto RNA = APFloat::rmNearestTiesToAway;
+static constexpr auto RTZ = APFloat::rmTowardZero;
+static constexpr auto RUP = APFloat::rmTowardPositive;
+static constexpr auto RDN = APFloat::rmTowardNegative;
+
+struct TestCase {
+  // Structure to hold the expected result of a conversion
+  struct ExpectedFractionExponent {
+    DD Fraction;
+    int Exponent;
+    friend APFloat::cmpResult compare(const ExpectedFractionExponent &Lhs,
+                                      const ExpectedFractionExponent &Rhs) {
+      const APFloat LhsFraction = makeDoubleAPFloat(Lhs.Fraction);
+      const APFloat RhsFraction = makeDoubleAPFloat(Rhs.Fraction);
+      const APFloat::cmpResult FractionRelation =
+          LhsFraction.compare(RhsFraction);
+      if (FractionRelation == APFloat::cmpUnordered)
+        return APFloat::cmpUnordered;
+      if (LhsFraction.isZero() && RhsFraction.isZero())
+        return APFloat::cmpEqual;
+      if (!LhsFraction.isNegative() &&
+          (RhsFraction.isNegative() || RhsFraction.isZero()))
+        return APFloat::cmpGreaterThan;
+      if (!RhsFraction.isNegative() &&
+          (LhsFraction.isNegative() || LhsFraction.isZero()))
+        return APFloat::cmpLessThan;
+      if (Lhs.Exponent > Rhs.Exponent)
+        return LhsFraction.isNegative() ? APFloat::cmpLessThan
+                                        : APFloat::cmpGreaterThan;
+      if (Lhs.Exponent < Rhs.Exponent)
+        return RhsFraction.isNegative() ? APFloat::cmpGreaterThan
+                                        : APFloat::cmpLessThan;
+      return FractionRelation;
+    }
   };
-  int Exp;
-  // 0.75 + 0.75 << 53
-  APFloat Result =
-      frexp(APFloat(APFloat::PPCDoubleDouble(), APInt(128, 2, Input)), Exp,
-            APFloat::rmNearestTiesToEven);
-  EXPECT_EQ(2, Exp);
-  EXPECT_EQ(0x3fe8000000000000ull, Result.bitcastToAPInt().getRawData()[0]);
-  EXPECT_EQ(0x3c98000000000000ull, Result.bitcastToAPInt().getRawData()[1]);
+
+  DD Input;
+  // Array indexed by the rounding mode enum value.
+  std::array<ExpectedFractionExponent, 5> Rounded = {};
+
+  // Helper to define the expected results for a specific rounding mode.
+  constexpr TestCase &with(APFloat::roundingMode RM, DD ExpectedDD,
+                           int ExpectedExponent) {
+    Rounded[static_cast<std::underlying_type_t<APFloat::roundingMode>>(RM)] = {
+        ExpectedDD,
+        ExpectedExponent,
+    };
+    return *this;
+  }
+
+  // Helper to define the same result for all rounding modes.
+  constexpr TestCase &withAll(DD ExpectedDD, int ExpectedExponent) {
+    return with(RNE, ExpectedDD, ExpectedExponent)
+        .with(RNA, ExpectedDD, ExpectedExponent)
+        .with(RTZ, ExpectedDD, ExpectedExponent)
+        .with(RUP, ExpectedDD, ExpectedExponent)
+        .with(RDN, ExpectedDD, ExpectedExponent);
+  }
+};
+
+auto testCases() {
+  static constexpr auto FrexpTestCases = std::array{
+      // Input: +infinity
+      TestCase{{std::numeric_limits<double>::infinity(), 0.0}}.withAll(
+          {std::numeric_limits<double>::infinity(), 0.0}, INT_MAX),
+
+      // Input: -infinity
+      TestCase{{-std::numeric_limits<double>::infinity(), 0.0}}.withAll(
+          {-std::numeric_limits<double>::infinity(), 0.0}, INT_MAX),
+
+      // Input: NaN
+      TestCase{{std::numeric_limits<double>::quiet_NaN(), 0.0}}.withAll(
+          {std::numeric_limits<double>::quiet_NaN(), 0.0}, INT_MIN),
+
+      // Input: 2^-1074
+      TestCase{{0x1p-1074, 0.0}}.withAll({0x1p-1, 0.0}, -1073),
+      TestCase{{-0x1p-1074, 0.0}}.withAll({-0x1p-1, 0.0}, -1073),
+
+      // Input: (2^1, -2^-1073 + -2^-1074)
+      TestCase{{0x1p1, -0x1.8p-1073}}
+          .withAll({0x1p0, -0x1p-1073}, 1)
+          .with(RNA, {0x1p0, -0x1p-1074}, 1)
+          .with(RUP, {0x1p0, -0x1p-1074}, 1),
+      TestCase{{-0x1p1, 0x1.8p-1073}}
+          .withAll({-0x1p0, 0x1p-1073}, 1)
+          .with(RNA, {-0x1p0, 0x1p-1074}, 1)
+          .with(RDN, {-0x1p0, 0x1p-1074}, 1),
+
+      // Input: (2^1, -2^-1073)
+      TestCase{{0x1p1, -0x1p-1073}}.withAll({0x1p0, -0x1p-1074}, 1),
+
+      // Input: (2^1, -2^-1074)
+      TestCase{{0x1p1, -0x1p-1074}}
+          .withAll({0x1p-1, -0.0}, 2)
+          .with(RDN, {0x1p0, -0x1p-1074}, 1)
+          .with(RTZ, {0x1p0, -0x1p-1074}, 1),
+
+      // Input: (2^2, -2^-1072 + -2^-1073 + -2^-1074)
+      TestCase{{0x1p2, -0x1.cp-1072}}
+          .withAll({0x1p0, -0x1p-1073}, 2)
+          .with(RUP, {0x1p0, -0x1p-1074}, 2),
+
+      // Input: (2^2, -2^-1072 + -2^-1073)
+      TestCase{{0x1p2, -0x1.8p-1072}}
+          .withAll({0x1p0, -0x1p-1073}, 2)
+          .with(RNA, {0x1p0, -0x1p-1074}, 2)
+          .with(RUP, {0x1p0, -0x1p-1074}, 2),
+      TestCase{{-0x1p2, 0x1.8p-1072}}
+          .withAll({-0x1p0, 0x1p-1073}, 2)
+          .with(RNA, {-0x1p0, 0x1p-1074}, 2)
+          .with(RDN, {-0x1p0, 0x1p-1074}, 2),
+
+      // Input: (2^2, -2^-1072 + -2^-1074)
+      TestCase{{0x1p2, -0x1.4cp-1072}}
+          .withAll({0x1p0, -0x1p-1074}, 2)
+          .with(RDN, {0x1p0, -0x1p-1073}, 2)
+          .with(RTZ, {0x1p0, -0x1p-1073}, 2),
+
+      // Input: (2^2, -2^-1072)
+      TestCase{{0x1p2, -0x1p-1072}}.withAll({0x1p0, -0x1p-1074}, 2),
+
+      // Input: (2^2, -2^-1073 + -2^-1074)
+      TestCase{{0x1p2, -0x1.8p-1073}}
+          .withAll({0x1p0, -0x1p-1074}, 2)
+          .with(RUP, {0x1p-1, -0.0}, 3),
+
+      // Input: (2^2, -2^-1073)
+      TestCase{{0x1p2, -0x1p-1073}}
+          .withAll({0x1p-1, -0.0}, 3)
+          .with(RDN, {0x1p0, -0x1p-1074}, 2)
+          .with(RTZ, {0x1p0, -0x1p-1074}, 2),
+
+      // Input: (2^2, -2^-1074)
+      TestCase{{0x1p2, -0x1p-1074}}
+          .withAll({0x1p-1, -0.0}, 3)
+          .with(RDN, {0x1p0, -0x1p-1074}, 2)
+          .with(RTZ, {0x1p0, -0x1p-1074}, 2),
+
+      // Input: 3+3*2^-53 canonicalized to (3+2^-51, -2^-53)
+      // Output: 0.75+0.75*2^-53 canonicalized to (.75+2^-53, -2^-55)
+      TestCase{{0x1.8000000000001p1, -0x1p-53}}.withAll(
+          {0x1.8000000000001p-1, -0x1p-55}, 2),
+      TestCase{{-0x1.8000000000001p1, 0x1p-53}}.withAll(
+          {-0x1.8000000000001p-1, 0x1p-55}, 2),
+
+      // Input: (2^1021+2^969, 2^968-2^915)
+      TestCase{{0x1.0000000000001p1021, 0x1.fffffffffffffp967}}.withAll(
+          {0x1.0000000000001p-1, 0x1.fffffffffffffp-55}, 1022),
+      TestCase{{-0x1.0000000000001p1021, -0x1.fffffffffffffp967}}.withAll(
+          {-0x1.0000000000001p-1, -0x1.fffffffffffffp-55}, 1022),
+
+      // Input: (2^1023, -2^-1)
+      TestCase{{0x1p+1023, -0x1p-1}}.withAll({0x1p0, -0x1p-1024}, 1023),
+      TestCase{{-0x1p+1023, 0x1p-1}}.withAll({-0x1p0, 0x1p-1024}, 1023),
+
+      // Input: (2^1023, -2^-51)
+      TestCase{{0x1p+1023, -0x1p-51}}.withAll({0x1p0, -0x1p-1074}, 1023),
+      TestCase{{-0x1p+1023, 0x1p-51}}.withAll({-0x1p0, 0x1p-1074}, 1023),
+
+      // Input: (2^1023, -2^-52)
+      TestCase{{0x1p+1023, -0x1p-52}}
+          .withAll({0x1p-1, -0x0p0}, 1024)
+          .with(RDN, {0x1p0, -0x1p-1074}, 1023)
+          .with(RTZ, {0x1p0, -0x1p-1074}, 1023),
+      TestCase{{-0x1p+1023, 0x1p-52}}
+          .withAll({-0x1p-1, 0x0p0}, 1024)
+          .with(RUP, {-0x1p0, 0x1p-1074}, 1023)
+          .with(RTZ, {-0x1p0, 0x1p-1074}, 1023),
+
+      // Input: (2^1023, 2^-1074)
+      TestCase{{0x1p+1023, 0x1p-1074}}
+          .withAll({0x1p-1, 0x0p+0}, 1024)
+          .with(RUP, {0x1p-1, 0x1p-1074}, 1024),
+      TestCase{{-0x1p+1023, -0x1p-1074}}
+          .withAll({-0x1p-1, -0x0p+0}, 1024)
+          .with(RDN, {-0x1p-1, -0x1p-1074}, 1024),
+
+      // Input: (2^1024-2^971, 2^970-2^918)
+      TestCase{{0x1.fffffffffffffp+1023, 0x1.ffffffffffffep+969}}.withAll(
+          {0x1.fffffffffffffp-1, 0x1.ffffffffffffep-55}, 1024),
+      TestCase{{-0x1.fffffffffffffp+1023, -0x1.ffffffffffffep+969}}.withAll(
+          {-0x1.fffffffffffffp-1, -0x1.ffffffffffffep-55}, 1024),
+  };
+  return FrexpTestCases;
+}
+} // namespace PPCDoubleDoubleFrexpTestDetails
+
+class PPCDoubleDoubleFrexpValueTest
+    : public testing::Test,
+      public ::testing::WithParamInterface<
+          PPCDoubleDoubleFrexpTestDetails::TestCase> {};
+
+INSTANTIATE_TEST_SUITE_P(
+    PPCDoubleDoubleFrexpValueParamTests, PPCDoubleDoubleFrexpValueTest,
+    ::testing::ValuesIn(PPCDoubleDoubleFrexpTestDetails::testCases()));
+
+TEST_P(PPCDoubleDoubleFrexpValueTest, PPCDoubleDoubleFrexp) {
+  const PPCDoubleDoubleFrexpTestDetails::TestCase Params = GetParam();
+  const APFloat Input = makeDoubleAPFloat(Params.Input);
+  auto RmToIdx = [](APFloat::roundingMode RM) {
+    return static_cast<std::underlying_type_t<APFloat::roundingMode>>(RM);
+  };
+  // First, make sure our expected results are consistent with each other before
+  // bothering to test the implementation.
+  if (Input.isFinite()) {
+    // Make sure the input is canonical.
+    EXPECT_EQ(APFloat{Params.Input.Hi},
+              APFloat{Params.Input.Hi} + APFloat{Params.Input.Lo})
+        << Params.Input.Hi << " + " << Params.Input.Lo;
+
+    const auto Dn = Params.Rounded[RmToIdx(APFloat::rmTowardNegative)];
+    const auto Up = Params.Rounded[RmToIdx(APFloat::rmTowardPositive)];
+    const auto Tz = Params.Rounded[RmToIdx(APFloat::rmTowardZero)];
+    const auto Ne = Params.Rounded[RmToIdx(APFloat::rmNearestTiesToEven)];
+    const auto Na = Params.Rounded[RmToIdx(APFloat::rmNearestTiesToAway)];
+
+    // The rdn result must be no larger than the rup result.
+    const APFloat::cmpResult DnVsUp = compare(Dn, Up);
+    EXPECT_TRUE(DnVsUp == APFloat::cmpLessThan || DnVsUp == APFloat::cmpEqual);
+
+    for (size_t I = 0, E = std::size(Params.Rounded); I != E; ++I) {
+      const APFloat RoundedFraction =
+          makeDoubleAPFloat(Params.Rounded[I].Fraction);
+      // All possible results should be bracketed by [Dn, Up].
+      const APFloat::cmpResult VsDn = compare(Params.Rounded[I], Dn);
+      EXPECT_TRUE(VsDn == APFloat::cmpGreaterThan || VsDn == APFloat::cmpEqual);
+      const APFloat::cmpResult VsUp = compare(Params.Rounded[I], Up);
+      EXPECT_TRUE(VsUp == APFloat::cmpLessThan || VsUp == APFloat::cmpEqual);
+      // A rounding result is either equal to the rup or rdn result.
+      EXPECT_TRUE(VsUp == APFloat::cmpEqual || VsDn == APFloat::cmpEqual);
+      // frexp returns a result whose magnitude is in in [.5, 1) so its exponent
+      // should be -1.
+      if (!RoundedFraction.isZero())
+        EXPECT_EQ(ilogb(RoundedFraction), -1)
+            << static_cast<APFloat::roundingMode>(I);
+      // Decomposition preserves sign.
+      EXPECT_EQ(RoundedFraction.isNegative(), Input.isNegative());
+      // A rounding result must be canonical.
+      EXPECT_EQ(APFloat{Params.Rounded[I].Fraction.Hi},
+                APFloat{Params.Rounded[I].Fraction.Hi} +
+                    APFloat{Params.Rounded[I].Fraction.Lo})
+          << Params.Rounded[I].Fraction.Hi << " + "
+          << Params.Rounded[I].Fraction.Lo;
+    }
+
+    // The rtz result must be either rup or rdn depending on the sign.
+    if (Input.isNegative()) {
+      const APFloat::cmpResult TzVsUp = compare(Tz, Up);
+      EXPECT_EQ(TzVsUp, APFloat::cmpEqual);
+    } else {
+      const APFloat::cmpResult TzVsDn = compare(Tz, Dn);
+      EXPECT_EQ(TzVsDn, APFloat::cmpEqual);
+    }
+
+    // The recomposed up should be at least as big as the input.
+    const APFloat RecomposedUp =
+        scalbn(makeDoubleAPFloat(Up.Fraction), Up.Exponent,
+               APFloat::rmNearestTiesToEven);
+    EXPECT_TRUE(RecomposedUp >= Input);
+    // The recomposed down can't be larger than the input.
+    const APFloat RecomposedDn =
+        scalbn(makeDoubleAPFloat(Dn.Fraction), Dn.Exponent,
+               APFloat::rmNearestTiesToEven);
+    EXPECT_TRUE(RecomposedDn <= Input);
+    // The recomposed tz must have a smaller magnitude.
+    const APFloat RecomposedTz =
+        scalbn(makeDoubleAPFloat(Tz.Fraction), Tz.Exponent,
+               APFloat::rmNearestTiesToEven);
+    EXPECT_TRUE(abs(RecomposedTz) <= abs(Input));
+    // Either both or neither of the recomposed round-to-nearest results are
+    // equal to the input.
+    const APFloat RecomposedNe =
+        scalbn(makeDoubleAPFloat(Ne.Fraction), Ne.Exponent,
+               APFloat::rmNearestTiesToEven);
+    const APFloat RecomposedNa =
+        scalbn(makeDoubleAPFloat(Na.Fraction), Na.Exponent,
+               APFloat::rmNearestTiesToEven);
+    EXPECT_EQ(RecomposedNe == Input, RecomposedNa == Input);
+    // Either the ne result equals the na result or the na result has a bigger
+    // magnitude.
+    const APFloat::cmpResult NeVsNa =
+        abs(RecomposedNe).compare(abs(RecomposedNa));
+    EXPECT_TRUE(NeVsNa == APFloat::cmpLessThan || NeVsNa == APFloat::cmpEqual);
+    // ne and na may only disagree if they broke a tie differently.
+    if (NeVsNa == APFloat::cmpLessThan) {
+      // ne's magnitude should be lower than input.
+      const APFloat::cmpResult NeVsInput =
+          abs(RecomposedNe).compare(abs(Input));
+      EXPECT_EQ(NeVsInput, APFloat::cmpLessThan);
+      // na's magnitude should be greater than input.
+      const APFloat::cmpResult NaVsInput =
+          abs(RecomposedNa).compare(abs(Input));
+      EXPECT_EQ(NaVsInput, APFloat::cmpGreaterThan);
+    }
+    // If up or down perfectly reconstructs the input, the round-to-nearest
+    // results should too.
+    if (RecomposedUp == Input || RecomposedDn == Input) {
+      EXPECT_EQ(RecomposedNe, Input);
+      EXPECT_EQ(RecomposedNa, Input);
+    }
+  }
+
+  for (size_t I = 0, E = std::size(Params.Rounded); I != E; ++I) {
+    const auto RM = static_cast<APFloat::roundingMode>(I);
+    const auto &Expected = Params.Rounded[I];
+    const APFloat ExpectedFraction = makeDoubleAPFloat(Expected.Fraction);
+
+    int ActualExponent;
+    const APFloat ActualFraction = frexp(Input, ActualExponent, RM);
+    if (ExpectedFraction.isNaN()) {
+      EXPECT_TRUE(ActualFraction.isNaN());
+    } else {
+      EXPECT_EQ(ActualFraction.compare(ExpectedFraction), APFloat::cmpEqual)
+          << ActualFraction << " vs " << ExpectedFraction << " for input "
+          << Params.Input.Hi << " + " << Params.Input.Lo << " RM " << RM;
+    }
+    EXPECT_EQ(ActualExponent, Expected.Exponent)
+        << "for input " << Params.Input.Hi << " + " << Params.Input.Lo
+        << " RM " << RM;
+  }
 }
 
 TEST(APFloatTest, PPCDoubleDoubleNext) {
@@ -8259,13 +8924,8 @@ TEST(APFloatTest, getExactLog2) {
       continue;
 
     APFloat One(Semantics, "1.0");
-
-    if (I == APFloat::S_PPCDoubleDouble) {
-      // Not implemented
-      EXPECT_EQ(INT_MIN, One.getExactLog2());
-      EXPECT_EQ(INT_MIN, One.getExactLog2Abs());
-      continue;
-    }
+    APFloat Smallest = APFloat::getSmallest(Semantics);
+    APFloat Largest = APFloat::getLargest(Semantics);
 
     int MinExp = APFloat::semanticsMinExponent(Semantics);
     int MaxExp = APFloat::semanticsMaxExponent(Semantics);
@@ -8312,16 +8972,15 @@ TEST(APFloatTest, getExactLog2) {
       EXPECT_EQ(INT_MIN, APFloat::getNaN(Semantics, true).getExactLog2Abs());
     }
 
-    EXPECT_EQ(INT_MIN,
-              scalbn(One, MinExp - Precision - 1, APFloat::rmNearestTiesToEven)
-                  .getExactLog2());
-    EXPECT_EQ(INT_MIN,
-              scalbn(One, MinExp - Precision, APFloat::rmNearestTiesToEven)
-                  .getExactLog2());
-
     EXPECT_EQ(
         INT_MIN,
-        scalbn(One, MaxExp + 1, APFloat::rmNearestTiesToEven).getExactLog2());
+        scalbn(Smallest, -2, APFloat::rmNearestTiesToEven).getExactLog2());
+    EXPECT_EQ(
+        INT_MIN,
+        scalbn(Smallest, -1, APFloat::rmNearestTiesToEven).getExactLog2());
+
+    EXPECT_EQ(INT_MIN,
+              scalbn(Largest, 1, APFloat::rmNearestTiesToEven).getExactLog2());
 
     for (int i = MinExp - Precision + 1; i <= MaxExp; ++i) {
       EXPECT_EQ(i, scalbn(One, i, APFloat::rmNearestTiesToEven).getExactLog2());

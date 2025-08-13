@@ -169,6 +169,8 @@ cl::opt<unsigned> llvm::SetLicmMssaNoAccForPromotionCap(
              "number of accesses allowed to be present in a loop in order to "
              "enable memory promotion."));
 
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+
 static bool inSubLoop(BasicBlock *BB, Loop *CurLoop, LoopInfo *LI);
 static bool isNotUsedOrFoldableInLoop(const Instruction &I, const Loop *CurLoop,
                                       const LoopSafetyInfo *SafetyInfo,
@@ -857,9 +859,18 @@ public:
     }
 
     // Now finally clone BI.
-    ReplaceInstWithInst(
-        HoistTarget->getTerminator(),
-        BranchInst::Create(HoistTrueDest, HoistFalseDest, BI->getCondition()));
+    auto *NewBI =
+        BranchInst::Create(HoistTrueDest, HoistFalseDest, BI->getCondition(),
+                           HoistTarget->getTerminator()->getIterator());
+    HoistTarget->getTerminator()->eraseFromParent();
+    // md_prof should also come from the original branch - since the
+    // condition was hoisted, the branch probabilities shouldn't change.
+    if (!ProfcheckDisableMetadataFixes)
+      NewBI->copyMetadata(*BI, {LLVMContext::MD_prof});
+    // FIXME: Issue #152767: debug info should also be the same as the
+    // original branch, **if** the user explicitly indicated that.
+    NewBI->setDebugLoc(HoistTarget->getTerminator()->getDebugLoc());
+
     ++NumClonedBranches;
 
     assert(CurLoop->getLoopPreheader() &&

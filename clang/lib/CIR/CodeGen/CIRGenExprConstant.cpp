@@ -340,7 +340,11 @@ struct ConstantLValue {
   llvm::PointerUnion<mlir::Value, mlir::Attribute> value;
   bool hasOffsetApplied;
 
-  ConstantLValue(std::nullptr_t) : value(nullptr), hasOffsetApplied(false) {}
+  /*implicit*/ ConstantLValue(std::nullptr_t)
+      : value(nullptr), hasOffsetApplied(false) {}
+  /*implicit*/ ConstantLValue(cir::GlobalViewAttr address)
+      : value(address), hasOffsetApplied(false) {}
+
   ConstantLValue() : value(nullptr), hasOffsetApplied(false) {}
 };
 
@@ -380,6 +384,33 @@ private:
   ConstantLValue VisitCXXTypeidExpr(const CXXTypeidExpr *e);
   ConstantLValue
   VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *e);
+
+  /// Return GEP-like value offset
+  mlir::ArrayAttr getOffset(mlir::Type ty) {
+    int64_t offset = value.getLValueOffset().getQuantity();
+    if (offset == 0)
+      return {};
+
+    cgm.errorNYI("ConstantLValueEmitter: global view with offset");
+    return {};
+  }
+
+  /// Apply the value offset to the given constant.
+  ConstantLValue applyOffset(ConstantLValue &c) {
+    // Handle attribute constant LValues.
+    if (auto attr = mlir::dyn_cast<mlir::Attribute>(c.value)) {
+      if (auto gv = mlir::dyn_cast<cir::GlobalViewAttr>(attr)) {
+        if (value.getLValueOffset().getQuantity() == 0)
+          return gv;
+        cgm.errorNYI("ConstantLValue: global view with offset");
+        return {};
+      }
+      llvm_unreachable("Unsupported attribute type to offset");
+    }
+
+    cgm.errorNYI("ConstantLValue: non-attribute offset");
+    return {};
+  }
 };
 
 } // namespace
@@ -411,10 +442,8 @@ mlir::Attribute ConstantLValueEmitter::tryEmit() {
     return {};
 
   // Apply the offset if necessary and not already done.
-  if (!result.hasOffsetApplied) {
-    cgm.errorNYI("ConstantLValueEmitter: apply offset");
-    return {};
-  }
+  if (!result.hasOffsetApplied)
+    value = applyOffset(result).value;
 
   // Convert to the appropriate type; this could be an lvalue for
   // an integer. FIXME: performAddrSpaceCast
@@ -453,15 +482,35 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
     }
 
     if (auto *fd = dyn_cast<FunctionDecl>(d)) {
-      cgm.errorNYI(fd->getSourceRange(),
-                   "ConstantLValueEmitter: function decl");
-      return {};
+      cir::FuncOp fop = cgm.getAddrOfFunction(fd);
+      CIRGenBuilderTy &builder = cgm.getBuilder();
+      mlir::MLIRContext *mlirContext = builder.getContext();
+      return cir::GlobalViewAttr::get(
+          builder.getPointerTo(fop.getFunctionType()),
+          mlir::FlatSymbolRefAttr::get(mlirContext, fop.getSymNameAttr()));
     }
 
     if (auto *vd = dyn_cast<VarDecl>(d)) {
-      cgm.errorNYI(vd->getSourceRange(), "ConstantLValueEmitter: var decl");
-      return {};
+      // We can never refer to a variable with local storage.
+      if (!vd->hasLocalStorage()) {
+        if (vd->isFileVarDecl() || vd->hasExternalStorage())
+          return cgm.getAddrOfGlobalVarAttr(vd);
+
+        if (vd->isLocalVarDecl()) {
+          cgm.errorNYI(vd->getSourceRange(),
+                       "ConstantLValueEmitter: local var decl");
+          return {};
+        }
+      }
     }
+
+    // Classic codegen handles MSGuidDecl,UnnamedGlobalConstantDecl, and
+    // TemplateParamObjectDecl, but it can also fall through from VarDecl,
+    // in which case it silently returns nullptr. For now, let's emit an
+    // error to see what cases we need to handle.
+    cgm.errorNYI(d->getSourceRange(),
+                 "ConstantLValueEmitter: unhandled value decl");
+    return {};
   }
 
   // Handle typeid(T).

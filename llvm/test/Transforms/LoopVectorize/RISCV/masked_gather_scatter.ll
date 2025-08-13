@@ -30,8 +30,6 @@ define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; RV32-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT5]]
 ; RV32-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; RV32:       vector.ph:
-; RV32-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; RV32-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 2
 ; RV32-NEXT:    [[TMP7:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
 ; RV32-NEXT:    [[TMP9:%.*]] = mul <vscale x 2 x i64> [[TMP7]], splat (i64 16)
 ; RV32-NEXT:    [[INDUCTION:%.*]] = add <vscale x 2 x i64> zeroinitializer, [[TMP9]]
@@ -104,8 +102,6 @@ define void @foo4(ptr nocapture %A, ptr nocapture readonly %B, ptr nocapture rea
 ; RV64-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT5]]
 ; RV64-NEXT:    br i1 [[CONFLICT_RDX]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; RV64:       vector.ph:
-; RV64-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; RV64-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 2
 ; RV64-NEXT:    [[TMP7:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
 ; RV64-NEXT:    [[TMP9:%.*]] = mul <vscale x 2 x i64> [[TMP7]], splat (i64 16)
 ; RV64-NEXT:    [[INDUCTION:%.*]] = add <vscale x 2 x i64> zeroinitializer, [[TMP9]]
