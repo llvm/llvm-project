@@ -28275,22 +28275,6 @@ void AArch64TargetLowering::ReplaceNodeResults(
   case ISD::GET_ACTIVE_LANE_MASK:
     ReplaceGetActiveLaneMaskResults(N, Results, DAG);
     return;
-  case ISD::LOOP_DEPENDENCE_WAR_MASK:
-  case ISD::LOOP_DEPENDENCE_RAW_MASK: {
-    EVT VT = N->getValueType(0);
-    if (!VT.isFixedLengthVector() || VT.getVectorElementType() != MVT::i1)
-      return;
-
-    // NOTE: Only trivial type promotion is supported.
-    EVT NewVT = getTypeToTransformTo(*DAG.getContext(), VT);
-    if (NewVT.getVectorNumElements() != VT.getVectorNumElements())
-      return;
-
-    SDLoc DL(N);
-    auto V = DAG.getNode(N->getOpcode(), DL, NewVT, N->ops());
-    Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, V));
-    return;
-  }
   case ISD::INTRINSIC_WO_CHAIN: {
     EVT VT = N->getValueType(0);
 
