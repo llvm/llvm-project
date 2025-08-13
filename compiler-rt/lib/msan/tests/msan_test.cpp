@@ -4290,7 +4290,7 @@ TEST(VectorMaddTest, mmx_pmadd_wd) {
 
   V4x16 d = {Poisoned<U2>(0), 1, 0, 3};
   V4x16 e = {100, 101, Poisoned<U2>(102), 103};
-  V2x32 f = _mm_madd_pi16(a, b);
+  V2x32 f = _mm_madd_pi16(d, e);
   // Multiply step:
   //    {Poison * 100, 1 * 101, 0 * Poison, 3 * 103}
   // == {Poison,       1 * 101, 0         , 3 * 103}
