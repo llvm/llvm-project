@@ -1,5 +1,6 @@
 // RUN: mlir-opt -convert-openmp-to-llvm -split-input-file %s | FileCheck %s
 // RUN: mlir-opt -convert-to-llvm -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -convert-to-llvm="allow-pattern-rollback=0" -split-input-file %s | FileCheck %s
 
 // CHECK-LABEL: llvm.func @foo(i64, i64)
 func.func private @foo(index, index)
