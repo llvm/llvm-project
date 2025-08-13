@@ -379,7 +379,7 @@ bool mlir::isMemoryInitMovable(Operation *op) {
   if (effects.empty()) return false;
 
 
-  std::unordered_map<std::string, int> resources;
+  DenseMap<TypeID, int> resourceCounts;
 
   // ensure op only has Init effects and gather unique
   // resource names
@@ -387,8 +387,7 @@ bool mlir::isMemoryInitMovable(Operation *op) {
     if (!isa<MemoryEffects::Init>(effect.getEffect()))
       return false;
 
-    std::string name = effect.getResource()->getName().str();
-    resources.try_emplace(name, 0);
+    resourceCounts.try_emplace(effect.getResource()->getResourceID(), 0);
   }
 
   // op itself is good, need to check rest of its parent region
@@ -396,14 +395,14 @@ bool mlir::isMemoryInitMovable(Operation *op) {
 
   for (Region &region : parent->getRegions())
     for (Operation &op_i : region.getOps())
-      if (hasMemoryEffectInitConflict(&op_i, resources))
+      if (hasMemoryEffectInitConflict(&op_i, resourceCounts))
         return false;
 
   return true;
 }
 
 bool mlir::hasMemoryEffectInitConflict(
-    Operation *op, std::unordered_map<std::string, int> &resources) {
+    Operation *op, DenseMap<TypeID, int> &resourceCounts) {
 
   if (auto memInterface = dyn_cast<MemoryEffectOpInterface>(op)) {
     if (!memInterface.hasNoEffect()) {
@@ -418,10 +417,10 @@ bool mlir::hasMemoryEffectInitConflict(
 
         // only care about resources of the op that called
         // this recursive function for the first time
-        std::string name = effect.getResource()->getName().str();
+        auto resourceID = effect.getResource()->getResourceID();
 
-        if (resources.find(name) != resources.end())
-          if (++resources[name] > 1)
+        if (resourceCounts.contains(resourceID))
+          if (++resourceCounts[resourceID] > 1)
             return true;
       }
       return false;
@@ -432,7 +431,7 @@ bool mlir::hasMemoryEffectInitConflict(
   // conflict with each others MemInits
   for (Region &region : op->getRegions())
     for (Operation &op : region.getOps()) 
-      if (hasMemoryEffectInitConflict(&op, resources))
+      if (hasMemoryEffectInitConflict(&op, resourceCounts))
         return true;
       
   return false;

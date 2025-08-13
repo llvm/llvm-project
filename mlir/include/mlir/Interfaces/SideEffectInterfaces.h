@@ -474,7 +474,7 @@ bool isMemoryInitMovable(Operation *op);
 ///
 /// If no resources are in conflict, the op is movable.
 bool hasMemoryEffectInitConflict(
-    Operation *op, std::unordered_map<std::string, int> &resources);
+    Operation *op, DenseMap<TypeID, int> &resourceCounts);
 
 /// Returns the side effects of an operation. If the operation has
 /// RecursiveMemoryEffects, include all side effects of child operations.
