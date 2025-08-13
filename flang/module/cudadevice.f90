@@ -373,6 +373,12 @@ implicit none
   end interface
 
   interface
+    attributes(device) real(4) function __cosf(x) bind(c, name='__nv_cosf')
+      real(4), value :: x
+    end function
+  end interface
+
+  interface
     attributes(device) real(4) function cospif(x) bind(c,name='__nv_cospif')
       real(4), value :: x
     end function
@@ -431,14 +437,14 @@ implicit none
   end interface
 
   interface __float2half_rn
-    attributes(device) real(2) function __float2half_rn(r) bind(c)
+    attributes(device) real(2) function __float2half_rn(r) bind(c, name='__nv_float2half_rn')
       !dir$ ignore_tkr (d) r
       real, value :: r
     end function
   end interface
 
   interface __half2float
-    attributes(device) real function __half2float(i) bind(c)
+    attributes(device) real function __half2float(i) bind(c, name='__nv_half2float')
       !dir$ ignore_tkr (d) i
       real(2), value :: i
     end function
@@ -676,14 +682,14 @@ implicit none
   end interface
 
   interface __mul24
-    attributes(device) integer function __mul24(i,j) bind(c)
+    attributes(device) integer function __mul24(i,j) bind(c, name='__nv_mul24')
       !dir$ ignore_tkr (d) i, (d) j
       integer, value :: i,j
     end function
   end interface
 
   interface __umul24
-    attributes(device) integer function __umul24(i,j) bind(c)
+    attributes(device) integer function __umul24(i,j) bind(c, name='__nv_umul24')
       !dir$ ignore_tkr (d) i, (d) j
       integer, value :: i,j
     end function
@@ -732,11 +738,11 @@ implicit none
   end interface
 
   interface __clz
-    attributes(device) integer function __clz(i) bind(c)
+    attributes(device) integer function __clz(i) bind(c, name='__nv_clz')
       !dir$ ignore_tkr (d) i
       integer, value :: i
     end function
-    attributes(device) integer function __clzll(i) bind(c)
+    attributes(device) integer function __clzll(i) bind(c, name='__nv_clzll')
       !dir$ ignore_tkr (d) i
       integer(8), value :: i
     end function
@@ -761,6 +767,13 @@ implicit none
     attributes(device) integer function __popcll(i) bind(c, name='__nv_popcll')
       !dir$ ignore_tkr (d) i
       integer(8), value :: i
+    end function
+  end interface
+
+  interface
+    attributes(device) real(4) function __powf(x,y) bind(c, name='__nv_powf')
+      !dir$ ignore_tkr (d) x, y
+      real(4), value :: x, y
     end function
   end interface
 
