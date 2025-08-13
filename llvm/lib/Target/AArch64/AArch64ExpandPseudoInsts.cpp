@@ -1031,7 +1031,13 @@ MachineBasicBlock *AArch64ExpandPseudo::expandCommitOrRestoreZASave(
   // Replace the pseudo with a call (BL).
   MachineInstrBuilder MIB =
       BuildMI(*SMBB, SMBB->end(), DL, TII->get(AArch64::BL));
+  // Copy operands (mainly the regmask) from the pseudo.
+  unsigned FirstBLOperand = IsRestoreZA ? 2 : 1;
+  for (unsigned I = FirstBLOperand; I < MI.getNumOperands(); ++I)
+    MIB.add(MI.getOperand(I));
+
   if (IsRestoreZA) {
+    // Mark the TPIDR2 block pointer (X0) as an implicit use.
     MIB.addReg(MI.getOperand(1).getReg(), RegState::Implicit);
   } else /*CommitZA*/ {
     auto *TRI = MBB.getParent()->getSubtarget().getRegisterInfo();
@@ -1046,11 +1052,8 @@ MachineBasicBlock *AArch64ExpandPseudo::expandCommitOrRestoreZASave(
           .addDef(AArch64::ZAB0, RegState::ImplicitDefine);
     }
   }
-  unsigned FirstBLOperand = IsRestoreZA ? 2 : 1;
-  for (unsigned I = FirstBLOperand; I < MI.getNumOperands(); ++I)
-    MIB.add(MI.getOperand(I));
-  BuildMI(SMBB, DL, TII->get(AArch64::B)).addMBB(EndBB);
 
+  BuildMI(SMBB, DL, TII->get(AArch64::B)).addMBB(EndBB);
   MI.eraseFromParent();
   return EndBB;
 }
