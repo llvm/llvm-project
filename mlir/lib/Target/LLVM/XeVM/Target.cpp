@@ -235,10 +235,10 @@ std::optional<std::string> SerializeGPUModuleBase::findTool(StringRef tool) {
 }
 
 namespace {
-class SpirSerializer : public SerializeGPUModuleBase {
+class SpirvSerializer : public SerializeGPUModuleBase {
 public:
-  SpirSerializer(Operation &module, XeVMTargetAttr xeTarget,
-                 const gpu::TargetOptions &targetOptions)
+  SpirvSerializer(Operation &module, XeVMTargetAttr xeTarget,
+                  const gpu::TargetOptions &targetOptions)
       : SerializeGPUModuleBase(module, xeTarget, targetOptions) {}
 
   static void init();
@@ -257,7 +257,7 @@ private:
 };
 } // namespace
 
-void SpirSerializer::init() {
+void SpirvSerializer::init() {
   static llvm::once_flag initializeBackendOnce;
   llvm::call_once(initializeBackendOnce, []() {
 #if LLVM_HAS_SPIRV_TARGET
@@ -270,7 +270,7 @@ void SpirSerializer::init() {
 }
 
 std::optional<SmallVector<char, 0>>
-SpirSerializer::moduleToObject(llvm::Module &llvmModule) {
+SpirvSerializer::moduleToObject(llvm::Module &llvmModule) {
 #define DEBUG_TYPE "serialize-to-llvm"
   LLVM_DEBUG({
     llvm::dbgs() << "LLVM IR for module: " << getGPUModuleOp().getNameAttr()
@@ -343,8 +343,8 @@ SpirSerializer::moduleToObject(llvm::Module &llvmModule) {
 }
 
 std::optional<std::string>
-SpirSerializer::translateToSPIRVBinary(llvm::Module &llvmModule,
-                                       llvm::TargetMachine &targetMachine) {
+SpirvSerializer::translateToSPIRVBinary(llvm::Module &llvmModule,
+                                        llvm::TargetMachine &targetMachine) {
   std::string targetISA;
   llvm::raw_string_ostream stream(targetISA);
 
@@ -371,7 +371,7 @@ XeVMTargetAttrImpl::serializeToObject(Attribute attribute, Operation *module,
     return std::nullopt;
   }
   auto xeTarget = cast<XeVMTargetAttr>(attribute);
-  if (xeTarget.getTriple().starts_with("spir")) {
+  if (xeTarget.getTriple().starts_with("spirv")) {
     gpuMod.walk([&](LLVM::LLVMFuncOp funcOp) {
       if (funcOp->hasAttr(gpu::GPUDialect::getKernelFuncAttrName())) {
         funcOp.setIntelReqdSubGroupSize(16);
@@ -380,8 +380,8 @@ XeVMTargetAttrImpl::serializeToObject(Attribute attribute, Operation *module,
       return WalkResult::advance();
     });
 
-    SpirSerializer serializer(*module, cast<XeVMTargetAttr>(attribute),
-                              options);
+    SpirvSerializer serializer(*module, cast<XeVMTargetAttr>(attribute),
+                               options);
     serializer.init();
 
 #if !LLVM_HAS_SPIRV_TARGET
