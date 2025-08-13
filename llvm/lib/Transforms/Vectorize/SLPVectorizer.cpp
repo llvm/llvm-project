@@ -5689,7 +5689,8 @@ private:
     /// Updates the dependency information of a bundle and of all instructions/
     /// bundles which depend on the original bundle.
     void calculateDependencies(ScheduleBundle &Bundle, bool InsertInReadyList,
-                               BoUpSLP *SLP);
+                               BoUpSLP *SLP,
+                               ArrayRef<ScheduleData *> ControlDeps = {});
 
     /// Sets all instruction in the scheduling region to un-scheduled.
     void resetSchedule();
@@ -20727,15 +20728,21 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
   LLVM_DEBUG(dbgs() << "SLP:  bundle: " << *S.getMainOp() << "\n");
 
   auto TryScheduleBundleImpl = [=](bool ReSchedule, ScheduleBundle &Bundle) {
-    // Clear deps or reculate the region, if the memory instruction is a
-    // copyable. It may have memory deps, which must be reaculated.
+    // Clear deps or recalculate the region, if the memory instruction is a
+    // copyable. It may have memory deps, which must be recalculated.
+    SmallVector<ScheduleData *> ControlDependentMembers;
     auto CheckIfNeedToClearDeps = [&](ScheduleBundle &Bundle) {
       SmallDenseMap<std::pair<Instruction *, Value *>, unsigned> UserOpToNumOps;
       for (ScheduleEntity *SE : Bundle.getBundle()) {
         if (ScheduleCopyableData *SD = dyn_cast<ScheduleCopyableData>(SE)) {
           if (ScheduleData *BundleMember = getScheduleData(SD->getInst());
-              BundleMember && BundleMember->hasValidDependencies())
+              BundleMember && BundleMember->hasValidDependencies()) {
             BundleMember->clearDirectDependencies();
+            if (RegionHasStackSave ||
+                !isGuaranteedToTransferExecutionToSuccessor(
+                    BundleMember->getInst()))
+              ControlDependentMembers.push_back(BundleMember);
+          }
           continue;
         }
         auto *SD = cast<ScheduleData>(SE);
@@ -20748,8 +20755,12 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
           if (auto *Op = dyn_cast<Instruction>(U.get());
               Op && areAllOperandsReplacedByCopyableData(SD->getInst(), Op,
                                                          *SLP, NumOps)) {
-            if (ScheduleData *OpSD = getScheduleData(Op))
+            if (ScheduleData *OpSD = getScheduleData(Op)) {
               OpSD->clearDirectDependencies();
+              if (RegionHasStackSave ||
+                  !isGuaranteedToTransferExecutionToSuccessor(OpSD->getInst()))
+                ControlDependentMembers.push_back(OpSD);
+            }
           }
         }
       }
@@ -20783,7 +20794,8 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
         CheckIfNeedToClearDeps(Bundle);
       LLVM_DEBUG(dbgs() << "SLP: try schedule bundle " << Bundle << " in block "
                         << BB->getName() << "\n");
-      calculateDependencies(Bundle, /*InsertInReadyList=*/!ReSchedule, SLP);
+      calculateDependencies(Bundle, /*InsertInReadyList=*/!ReSchedule, SLP,
+                            ControlDependentMembers);
     }
 
     if (ReSchedule) {
@@ -21048,9 +21060,9 @@ void BoUpSLP::BlockScheduling::initScheduleData(Instruction *FromI,
   }
 }
 
-void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleBundle &Bundle,
-                                                     bool InsertInReadyList,
-                                                     BoUpSLP *SLP) {
+void BoUpSLP::BlockScheduling::calculateDependencies(
+    ScheduleBundle &Bundle, bool InsertInReadyList, BoUpSLP *SLP,
+    ArrayRef<ScheduleData *> ControlDeps) {
   SmallVector<ScheduleEntity *> WorkList;
   auto ProcessNode = [&](ScheduleEntity *SE) {
     if (auto *CD = dyn_cast<ScheduleCopyableData>(SE)) {
@@ -21293,6 +21305,7 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleBundle &Bundle,
   };
 
   WorkList.push_back(Bundle.getBundle().front());
+  WorkList.append(ControlDeps.begin(), ControlDeps.end());
   SmallPtrSet<ScheduleBundle *, 16> Visited;
   while (!WorkList.empty()) {
     ScheduleEntity *SD = WorkList.pop_back_val();
