@@ -339,7 +339,8 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
   }
 
   if (mlir::isa<cir::ConstArrayAttr, cir::ConstVectorAttr,
-                cir::ConstComplexAttr, cir::PoisonAttr>(attrType))
+                cir::ConstComplexAttr, cir::GlobalViewAttr, cir::PoisonAttr>(
+          attrType))
     return success();
 
   assert(isa<TypedAttr>(attrType) && "What else could we be looking at here?");

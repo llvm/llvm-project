@@ -1,0 +1,79 @@
+//===- XtensaTargetParser.def - Xtensa target parsing defines ---*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file provides defines to build up the Xtensa target parser's logic.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef XTENSA_FEATURE
+#define XTENSA_FEATURE(ID, STR)
+#endif
+
+XTENSA_FEATURE(XF_DENSITY,                 "density")
+XTENSA_FEATURE(XF_FP,                      "fp")
+XTENSA_FEATURE(XF_WINDOWED,                "windowed")
+XTENSA_FEATURE(XF_BOOLEAN,                 "bool")
+XTENSA_FEATURE(XF_LOOP,                    "loop")
+XTENSA_FEATURE(XF_SEXT,                    "sext")
+XTENSA_FEATURE(XF_NSA,                     "nsa")
+XTENSA_FEATURE(XF_CLAMPS,                  "clamps")
+XTENSA_FEATURE(XF_MINMAX,                  "minmax")
+XTENSA_FEATURE(XF_MAC16,                   "mac16")
+XTENSA_FEATURE(XF_MUL32,                   "mul32")
+XTENSA_FEATURE(XF_MUL32HIGH,               "mul32high")
+XTENSA_FEATURE(XF_DIV32,                   "div32")
+XTENSA_FEATURE(XF_MUL16,                   "mul16")
+XTENSA_FEATURE(XF_DFPACCEL,                "dfpaccel")
+XTENSA_FEATURE(XF_S32C1I,                  "s32c1i")
+XTENSA_FEATURE(XF_THREADPTR,               "threadptr")
+XTENSA_FEATURE(XF_EXTENDEDL32R,            "extendedl32r")
+XTENSA_FEATURE(XF_DATACACHE,               "dcache")
+XTENSA_FEATURE(XF_DEBUG,                   "debug")
+XTENSA_FEATURE(XF_EXCEPTION,               "exception")
+XTENSA_FEATURE(XF_HIGHPRIINTERRUPTS,       "highpriinterrupts")
+XTENSA_FEATURE(XF_HIGHPRIINTERRUPTSLEVEL3, "highpriinterruptslevel3")
+XTENSA_FEATURE(XF_HIGHPRIINTERRUPTSLEVEL4, "highpriinterruptslevel4")
+XTENSA_FEATURE(XF_HIGHPRIINTERRUPTSLEVEL5, "highpriinterruptslevel5")
+XTENSA_FEATURE(XF_HIGHPRIINTERRUPTSLEVEL6, "highpriinterruptslevel6")
+XTENSA_FEATURE(XF_HIGHPRIINTERRUPTSLEVEL7, "highpriinterruptslevel7")
+XTENSA_FEATURE(XF_COPROCESSOR,             "coprocessor")
+XTENSA_FEATURE(XF_INTERRUPT,               "interrupt")
+XTENSA_FEATURE(XF_RVECTOR,                 "rvector")
+XTENSA_FEATURE(XF_TIMERS1,                 "timers1")
+XTENSA_FEATURE(XF_TIMERS2,                 "timers2")
+XTENSA_FEATURE(XF_TIMERS3,                 "timers3")
+XTENSA_FEATURE(XF_PRID,                    "prid")
+XTENSA_FEATURE(XF_REGPROTECT,              "regprotect")
+XTENSA_FEATURE(XF_MISCSR,                  "miscsr")
+
+#undef XTENSA_FEATURE
+
+#ifndef XTENSA_CPU
+#define XTENSA_CPU(ENUM, NAME, FEATURES)
+#endif
+
+XTENSA_CPU(INVALID, {"invalid"}, XF_INVALID)
+XTENSA_CPU(GENERIC, {"generic"}, XF_NONE)
+XTENSA_CPU(ESP8266, {"esp8266"},
+               (XF_DENSITY | XF_NSA | XF_MUL16 | XF_MUL32 | XF_EXTENDEDL32R | XF_DEBUG | XF_EXCEPTION |
+                XF_HIGHPRIINTERRUPTS | XF_HIGHPRIINTERRUPTSLEVEL3 | XF_INTERRUPT | XF_RVECTOR | XF_TIMERS1 |
+                XF_REGPROTECT | XF_PRID))
+XTENSA_CPU(ESP32,   {"esp32"},
+               (XF_DENSITY | XF_FP | XF_LOOP | XF_MAC16 | XF_WINDOWED | XF_BOOLEAN | XF_SEXT | XF_NSA |
+                XF_CLAMPS | XF_MINMAX | XF_MUL32 | XF_MUL32HIGH | XF_MUL16 | XF_DFPACCEL | XF_S32C1I |
+                XF_THREADPTR | XF_DIV32 | XF_DATACACHE | XF_DEBUG | XF_EXCEPTION | XF_HIGHPRIINTERRUPTS |
+                XF_HIGHPRIINTERRUPTSLEVEL7 | XF_COPROCESSOR | XF_INTERRUPT | XF_RVECTOR | XF_TIMERS3 | XF_PRID |
+				XF_REGPROTECT | XF_MISCSR))
+
+#undef XTENSA_CPU
+
+#ifndef XTENSA_CPU_ALIAS
+#define XTENSA_CPU_ALIAS(NAME, ALTNMAME)
+#endif
+
+#undef XTENSA_CPU_ALIAS

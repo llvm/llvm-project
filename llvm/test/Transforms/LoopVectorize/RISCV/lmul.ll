@@ -47,8 +47,6 @@ define void @load_store(ptr %p) {
 ; LMUL2-NEXT:  entry:
 ; LMUL2-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; LMUL2:       vector.ph:
-; LMUL2-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
-; LMUL2-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP8]], 2
 ; LMUL2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; LMUL2:       vector.body:
 ; LMUL2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -83,8 +81,6 @@ define void @load_store(ptr %p) {
 ; LMUL4-NEXT:  entry:
 ; LMUL4-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; LMUL4:       vector.ph:
-; LMUL4-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
-; LMUL4-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP8]], 4
 ; LMUL4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; LMUL4:       vector.body:
 ; LMUL4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -119,8 +115,6 @@ define void @load_store(ptr %p) {
 ; LMUL8-NEXT:  entry:
 ; LMUL8-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; LMUL8:       vector.ph:
-; LMUL8-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
-; LMUL8-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP8]], 8
 ; LMUL8-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; LMUL8:       vector.body:
 ; LMUL8-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]

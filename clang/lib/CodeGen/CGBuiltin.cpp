@@ -4030,6 +4030,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_elementwise_fma:
     return RValue::get(
         emitBuiltinWithOneOverloadedType<3>(*this, E, Intrinsic::fma));
+  case Builtin::BI__builtin_elementwise_fshl:
+    return RValue::get(
+        emitBuiltinWithOneOverloadedType<3>(*this, E, Intrinsic::fshl));
+  case Builtin::BI__builtin_elementwise_fshr:
+    return RValue::get(
+        emitBuiltinWithOneOverloadedType<3>(*this, E, Intrinsic::fshr));
+
   case Builtin::BI__builtin_elementwise_add_sat:
   case Builtin::BI__builtin_elementwise_sub_sat: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));

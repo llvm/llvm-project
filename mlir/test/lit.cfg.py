@@ -378,3 +378,6 @@ if config.run_rocm_tests:
 
 if config.arm_emulator_executable:
     config.available_features.add("arm-emulator")
+
+if sys.version_info >= (3, 11):
+    config.available_features.add("python-ge-311")

@@ -23,10 +23,8 @@ include "XtensaFeatures.td"
 //===----------------------------------------------------------------------===//
 // Xtensa supported processors.
 //===----------------------------------------------------------------------===//
-class Proc<string Name, list<SubtargetFeature> Features>
-    : Processor<Name, NoItineraries, Features>;
 
-def : Proc<"generic", []>;
+include "XtensaProcessors.td"
 
 //===----------------------------------------------------------------------===//
 // Register File Description

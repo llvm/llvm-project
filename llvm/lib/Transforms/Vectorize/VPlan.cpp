@@ -950,22 +950,6 @@ VPlan::~VPlan() {
     delete BackedgeTakenCount;
 }
 
-void VPlan::prepareToExecute(VPTransformState &State) {
-  IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
-  Type *TCTy = VPTypeAnalysis(*this).inferScalarType(getTripCount());
-  // FIXME: Model VF * UF computation completely in VPlan.
-  unsigned UF = getUF();
-  if (VF.getNumUsers()) {
-    Value *RuntimeVF = getRuntimeVF(Builder, TCTy, State.VF);
-    VF.setUnderlyingValue(RuntimeVF);
-    VFxUF.setUnderlyingValue(
-        UF > 1 ? Builder.CreateMul(RuntimeVF, ConstantInt::get(TCTy, UF))
-               : RuntimeVF);
-  } else {
-    VFxUF.setUnderlyingValue(createStepForVF(Builder, TCTy, State.VF, UF));
-  }
-}
-
 VPIRBasicBlock *VPlan::getExitBlock(BasicBlock *IRBB) const {
   auto Iter = find_if(getExitBlocks(), [IRBB](const VPIRBasicBlock *VPIRBB) {
     return VPIRBB->getIRBasicBlock() == IRBB;

@@ -23,50 +23,72 @@ namespace lldb_protocol::mcp {
 
 static llvm::StringLiteral kProtocolVersion = "2024-11-05";
 
+/// A Request or Response 'id'.
+///
+/// NOTE: This differs from the JSON-RPC 2.0 spec. The MCP spec says this must
+/// be a string or number, excluding a json 'null' as a valid id.
+using Id = std::variant<int64_t, std::string>;
+
 /// A request that expects a response.
 struct Request {
-  uint64_t id = 0;
+  /// The request id.
+  Id id = 0;
+  /// The method to be invoked.
   std::string method;
+  /// The method's params.
   std::optional<llvm::json::Value> params;
 };
 
 llvm::json::Value toJSON(const Request &);
 bool fromJSON(const llvm::json::Value &, Request &, llvm::json::Path);
-
-struct ErrorInfo {
-  int64_t code = 0;
-  std::string message;
-  std::string data;
-};
-
-llvm::json::Value toJSON(const ErrorInfo &);
-bool fromJSON(const llvm::json::Value &, ErrorInfo &, llvm::json::Path);
+bool operator==(const Request &, const Request &);
 
 struct Error {
-  uint64_t id = 0;
-  ErrorInfo error;
+  /// The error type that occurred.
+  int64_t code = 0;
+  /// A short description of the error. The message SHOULD be limited to a
+  /// concise single sentence.
+  std::string message;
+  /// Additional information about the error. The value of this member is
+  /// defined by the sender (e.g. detailed error information, nested errors
+  /// etc.).
+  std::optional<llvm::json::Value> data;
 };
 
 llvm::json::Value toJSON(const Error &);
 bool fromJSON(const llvm::json::Value &, Error &, llvm::json::Path);
+bool operator==(const Error &, const Error &);
 
+/// A response to a request, either an error or a result.
 struct Response {
-  uint64_t id = 0;
-  std::optional<llvm::json::Value> result;
-  std::optional<ErrorInfo> error;
+  /// The request id.
+  Id id = 0;
+  /// The result of the request, either an Error or the JSON value of the
+  /// response.
+  std::variant<Error, llvm::json::Value> result;
 };
 
 llvm::json::Value toJSON(const Response &);
 bool fromJSON(const llvm::json::Value &, Response &, llvm::json::Path);
+bool operator==(const Response &, const Response &);
 
 /// A notification which does not expect a response.
 struct Notification {
+  /// The method to be invoked.
   std::string method;
+  /// The notification's params.
   std::optional<llvm::json::Value> params;
 };
 
 llvm::json::Value toJSON(const Notification &);
 bool fromJSON(const llvm::json::Value &, Notification &, llvm::json::Path);
+bool operator==(const Notification &, const Notification &);
+
+/// A general message as defined by the JSON-RPC 2.0 spec.
+using Message = std::variant<Request, Response, Notification>;
+
+bool fromJSON(const llvm::json::Value &, Message &, llvm::json::Path);
+llvm::json::Value toJSON(const Message &);
 
 struct ToolCapability {
   /// Whether this server supports notifications for changes to the tool list.
@@ -175,11 +197,6 @@ struct ToolDefinition {
 
 llvm::json::Value toJSON(const ToolDefinition &);
 bool fromJSON(const llvm::json::Value &, ToolDefinition &, llvm::json::Path);
-
-using Message = std::variant<Request, Response, Notification, Error>;
-
-bool fromJSON(const llvm::json::Value &, Message &, llvm::json::Path);
-llvm::json::Value toJSON(const Message &);
 
 using ToolArguments = std::variant<std::monostate, llvm::json::Value>;
 

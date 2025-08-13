@@ -134,6 +134,13 @@ void ReadCommonTypeInfo(const uint8_t *&Data, CommonTypeInfo &Info) {
         reinterpret_cast<const char *>(Data), ErrorDomainLength - 1)));
     Data += ErrorDomainLength - 1;
   }
+
+  if (unsigned ConformanceLength =
+          endian::readNext<uint16_t, llvm::endianness::little>(Data)) {
+    Info.setSwiftConformance(std::string(reinterpret_cast<const char *>(Data),
+                                         ConformanceLength - 1));
+    Data += ConformanceLength - 1;
+  }
 }
 
 /// Used to deserialize the on-disk identifier table.
@@ -628,12 +635,6 @@ public:
       Info.SwiftDefaultOwnership = std::string(
           reinterpret_cast<const char *>(Data), DefaultOwnershipLength - 1);
       Data += DefaultOwnershipLength - 1;
-    }
-    if (unsigned ConformanceLength =
-            endian::readNext<uint16_t, llvm::endianness::little>(Data)) {
-      Info.SwiftConformance = std::string(reinterpret_cast<const char *>(Data),
-                                          ConformanceLength - 1);
-      Data += ConformanceLength - 1;
     }
 
     ReadCommonTypeInfo(Data, Info);

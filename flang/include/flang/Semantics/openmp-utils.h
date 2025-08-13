@@ -22,6 +22,8 @@
 
 #include <optional>
 #include <string>
+#include <type_traits>
+#include <utility>
 
 namespace Fortran::semantics {
 class SemanticsContext;
@@ -29,6 +31,12 @@ class Symbol;
 
 // Add this namespace to avoid potential conflicts
 namespace omp {
+template <typename T, typename U = std::remove_const_t<T>> U AsRvalue(T &t) {
+  return U(t);
+}
+
+template <typename T> T &&AsRvalue(T &&t) { return std::move(t); }
+
 // There is no consistent way to get the source of an ActionStmt, but there
 // is "source" in Statement<T>. This structure keeps the ActionStmt with the
 // extracted source for further use.

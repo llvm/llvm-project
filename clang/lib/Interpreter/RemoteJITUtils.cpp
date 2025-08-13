@@ -33,10 +33,6 @@
 using namespace llvm;
 using namespace llvm::orc;
 
-#if LLVM_ON_UNIX
-static std::vector<pid_t> LaunchedExecutorPID;
-#endif
-
 Expected<uint64_t> getSlabAllocSize(StringRef SizeString) {
   SizeString = SizeString.trim();
 
@@ -93,14 +89,9 @@ createSharedMemoryManager(SimpleRemoteEPC &SREPC,
       SlabSize, SREPC, SAs);
 }
 
-// Launches an out-of-process executor for remote JIT. The calling program can
-// provide a CustomizeFork callback, which allows it to run custom code in the
-// child process before exec. This enables sending custom setup or code to be
-// executed in the child (out-of-process) executor.
 Expected<std::unique_ptr<SimpleRemoteEPC>>
 launchExecutor(StringRef ExecutablePath, bool UseSharedMemory,
-               llvm::StringRef SlabAllocateSizeString,
-               std::function<void()> CustomizeFork) {
+               llvm::StringRef SlabAllocateSizeString) {
 #ifndef LLVM_ON_UNIX
   // FIXME: Add support for Windows.
   return make_error<StringError>("-" + ExecutablePath +
@@ -143,9 +134,6 @@ launchExecutor(StringRef ExecutablePath, bool UseSharedMemory,
     close(ToExecutor[WriteEnd]);
     close(FromExecutor[ReadEnd]);
 
-    if (CustomizeFork)
-      CustomizeFork();
-
     // Execute the child process.
     std::unique_ptr<char[]> ExecutorPath, FDSpecifier;
     {
@@ -169,8 +157,6 @@ launchExecutor(StringRef ExecutablePath, bool UseSharedMemory,
     }
   }
   // else we're the parent...
-
-  LaunchedExecutorPID.push_back(ChildPID);
 
   // Close the child ends of the pipes
   close(ToExecutor[ReadEnd]);
@@ -279,18 +265,3 @@ connectTCPSocket(StringRef NetworkAddress, bool UseSharedMemory,
       std::move(S), *SockFD, *SockFD);
 #endif
 }
-
-#if LLVM_ON_UNIX
-
-pid_t getLastLaunchedExecutorPID() {
-  if (!LaunchedExecutorPID.size())
-    return -1;
-  return LaunchedExecutorPID.back();
-}
-
-pid_t getNthLaunchedExecutorPID(int n) {
-  if (n - 1 < 0 || n - 1 >= static_cast<int>(LaunchedExecutorPID.size()))
-    return -1;
-  return LaunchedExecutorPID.at(n - 1);
-}
-#endif

@@ -11,8 +11,8 @@ typedef float float4 __attribute__((ext_vector_type(4)));
 // CHECK-LABEL: define dso_local spir_kernel void @foo(
 // CHECK-SAME: ptr addrspace(1) noundef readonly align 16 captures(none) [[A:%.*]], ptr addrspace(1) noundef writeonly align 16 captures(none) initializes((0, 16)) [[B:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] !kernel_arg_addr_space [[META3:![0-9]+]] !kernel_arg_access_qual [[META4:![0-9]+]] !kernel_arg_type [[META5:![0-9]+]] !kernel_arg_base_type [[META6:![0-9]+]] !kernel_arg_type_qual [[META7:![0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[LOADVECN:%.*]] = load <4 x float>, ptr addrspace(1) [[A]], align 16
-// CHECK-NEXT:    [[EXTRACTVEC1:%.*]] = shufflevector <4 x float> [[LOADVECN]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+// CHECK-NEXT:    [[TMP0:%.*]] = load <3 x float>, ptr addrspace(1) [[A]], align 16
+// CHECK-NEXT:    [[EXTRACTVEC1:%.*]] = shufflevector <3 x float> [[TMP0]], <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
 // CHECK-NEXT:    store <4 x float> [[EXTRACTVEC1]], ptr addrspace(1) [[B]], align 16, !tbaa [[TBAA8:![0-9]+]]
 // CHECK-NEXT:    ret void
 //
@@ -23,8 +23,8 @@ void kernel foo(global float3 *a, global float3 *b) {
 // CHECK-LABEL: define dso_local spir_kernel void @float4_to_float3(
 // CHECK-SAME: ptr addrspace(1) noundef writeonly align 16 captures(none) initializes((0, 16)) [[A:%.*]], ptr addrspace(1) noundef readonly align 16 captures(none) [[B:%.*]]) local_unnamed_addr #[[ATTR0]] !kernel_arg_addr_space [[META3]] !kernel_arg_access_qual [[META4]] !kernel_arg_type [[META11:![0-9]+]] !kernel_arg_base_type [[META12:![0-9]+]] !kernel_arg_type_qual [[META7]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr addrspace(1) [[B]], align 16, !tbaa [[TBAA8]]
-// CHECK-NEXT:    [[EXTRACTVEC:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+// CHECK-NEXT:    [[TMP0:%.*]] = load <3 x float>, ptr addrspace(1) [[B]], align 16, !tbaa [[TBAA8]]
+// CHECK-NEXT:    [[EXTRACTVEC:%.*]] = shufflevector <3 x float> [[TMP0]], <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
 // CHECK-NEXT:    store <4 x float> [[EXTRACTVEC]], ptr addrspace(1) [[A]], align 16, !tbaa [[TBAA8]]
 // CHECK-NEXT:    ret void
 //
@@ -35,8 +35,8 @@ void kernel float4_to_float3(global float3 *a, global float4 *b) {
 // CHECK-LABEL: define dso_local spir_kernel void @float3_to_float4(
 // CHECK-SAME: ptr addrspace(1) noundef readonly align 16 captures(none) [[A:%.*]], ptr addrspace(1) noundef writeonly align 16 captures(none) initializes((0, 16)) [[B:%.*]]) local_unnamed_addr #[[ATTR0]] !kernel_arg_addr_space [[META3]] !kernel_arg_access_qual [[META4]] !kernel_arg_type [[META11]] !kernel_arg_base_type [[META12]] !kernel_arg_type_qual [[META7]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[LOADVECN:%.*]] = load <4 x float>, ptr addrspace(1) [[A]], align 16
-// CHECK-NEXT:    [[ASTYPE:%.*]] = shufflevector <4 x float> [[LOADVECN]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+// CHECK-NEXT:    [[TMP0:%.*]] = load <3 x float>, ptr addrspace(1) [[A]], align 16
+// CHECK-NEXT:    [[ASTYPE:%.*]] = shufflevector <3 x float> [[TMP0]], <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
 // CHECK-NEXT:    store <4 x float> [[ASTYPE]], ptr addrspace(1) [[B]], align 16, !tbaa [[TBAA8]]
 // CHECK-NEXT:    ret void
 //
@@ -47,9 +47,9 @@ void kernel float3_to_float4(global float3 *a, global float4 *b) {
 // CHECK-LABEL: define dso_local spir_kernel void @float3_to_double2(
 // CHECK-SAME: ptr addrspace(1) noundef readonly align 16 captures(none) [[A:%.*]], ptr addrspace(1) noundef writeonly align 16 captures(none) initializes((0, 16)) [[B:%.*]]) local_unnamed_addr #[[ATTR0]] !kernel_arg_addr_space [[META3]] !kernel_arg_access_qual [[META4]] !kernel_arg_type [[META13:![0-9]+]] !kernel_arg_base_type [[META14:![0-9]+]] !kernel_arg_type_qual [[META7]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[LOADVECN:%.*]] = load <4 x float>, ptr addrspace(1) [[A]], align 16
-// CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x float> [[LOADVECN]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
-// CHECK-NEXT:    store <4 x float> [[TMP0]], ptr addrspace(1) [[B]], align 16, !tbaa [[TBAA8]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load <3 x float>, ptr addrspace(1) [[A]], align 16
+// CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <3 x float> [[TMP0]], <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+// CHECK-NEXT:    store <4 x float> [[TMP1]], ptr addrspace(1) [[B]], align 16, !tbaa [[TBAA8]]
 // CHECK-NEXT:    ret void
 //
 void kernel float3_to_double2(global float3 *a, global double2 *b) {
@@ -59,8 +59,8 @@ void kernel float3_to_double2(global float3 *a, global double2 *b) {
 // CHECK-LABEL: define dso_local spir_kernel void @char8_to_short3(
 // CHECK-SAME: ptr addrspace(1) noundef writeonly align 8 captures(none) initializes((0, 8)) [[A:%.*]], ptr addrspace(1) noundef readonly align 8 captures(none) [[B:%.*]]) local_unnamed_addr #[[ATTR0]] !kernel_arg_addr_space [[META3]] !kernel_arg_access_qual [[META4]] !kernel_arg_type [[META15:![0-9]+]] !kernel_arg_base_type [[META16:![0-9]+]] !kernel_arg_type_qual [[META7]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr addrspace(1) [[B]], align 8, !tbaa [[TBAA8]]
-// CHECK-NEXT:    [[EXTRACTVEC:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+// CHECK-NEXT:    [[TMP0:%.*]] = load <3 x i16>, ptr addrspace(1) [[B]], align 8, !tbaa [[TBAA8]]
+// CHECK-NEXT:    [[EXTRACTVEC:%.*]] = shufflevector <3 x i16> [[TMP0]], <3 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
 // CHECK-NEXT:    store <4 x i16> [[EXTRACTVEC]], ptr addrspace(1) [[A]], align 8, !tbaa [[TBAA8]]
 // CHECK-NEXT:    ret void
 //

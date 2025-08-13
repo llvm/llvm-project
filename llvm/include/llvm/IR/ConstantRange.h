@@ -380,8 +380,9 @@ public:
   /// Return a new range in the specified integer type, which must be
   /// strictly smaller than the current type.  The returned range will
   /// correspond to the possible range of values if the source range had been
-  /// truncated to the specified type.
-  LLVM_ABI ConstantRange truncate(uint32_t BitWidth) const;
+  /// truncated to the specified type with wrap type \p NoWrapKind.
+  LLVM_ABI ConstantRange truncate(uint32_t BitWidth,
+                                  unsigned NoWrapKind = 0) const;
 
   /// Make this range have the bit width given by \p BitWidth. The
   /// value is zero extended, truncated, or left alone to make it that width.

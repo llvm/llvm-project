@@ -9,7 +9,7 @@ body: |
     ; CHECK-LABEL: name: test_overlap
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: BUNDLE implicit-def $vgpr2_vgpr3, implicit-def $vgpr2, implicit-def $vgpr2_lo16, implicit-def $vgpr2_hi16, implicit-def $vgpr3, implicit-def $vgpr3_lo16, implicit-def $vgpr3_hi16, implicit-def $vgpr3_vgpr4, implicit-def $vgpr4, implicit-def $vgpr4_lo16, implicit-def $vgpr4_hi16, implicit $vgpr0_vgpr1, implicit $exec, implicit $vgpr1_vgpr2 {
+    ; CHECK-NEXT: BUNDLE implicit-def $vgpr2_vgpr3, implicit-def $vgpr3_vgpr4, implicit $vgpr0_vgpr1, implicit $exec, implicit $vgpr1_vgpr2 {
     ; CHECK-NEXT:   $vgpr2_vgpr3 = V_LSHLREV_B64_pseudo_e32 1, $vgpr0_vgpr1, implicit $exec
     ; CHECK-NEXT:   $vgpr3_vgpr4 = V_LSHLREV_B64_pseudo_e32 1, $vgpr1_vgpr2, implicit $exec
     ; CHECK-NEXT: }

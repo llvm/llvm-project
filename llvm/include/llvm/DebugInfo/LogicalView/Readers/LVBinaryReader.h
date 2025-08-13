@@ -159,7 +159,8 @@ protected:
   LVAddress WasmCodeSectionOffset = 0;
 
   // Loads all info for the architecture of the provided object file.
-  Error loadGenericTargetInfo(StringRef TheTriple, StringRef TheFeatures);
+  Error loadGenericTargetInfo(StringRef TheTriple, StringRef TheFeatures,
+                              StringRef TheCPU);
 
   virtual void mapRangeAddress(const object::ObjectFile &Obj) {}
   virtual void mapRangeAddress(const object::ObjectFile &Obj,

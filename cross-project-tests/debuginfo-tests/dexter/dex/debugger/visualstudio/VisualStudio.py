@@ -308,7 +308,7 @@ class VisualStudio(
         self.context.logger.note("Launching VS debugger...")
         self._fn_go(False)
 
-    def step(self):
+    def step_in(self):
         self._fn_step(False)
 
     def go(self) -> ReturnCode:
