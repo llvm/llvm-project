@@ -66,18 +66,18 @@ public:
 
   bool VisitDependentScopeDeclRefExpr(DependentScopeDeclRefExpr *E) {
     const DeclarationNameInfo &Info = E->getNameInfo();
-    const NestedNameSpecifier *NNS = E->getQualifier();
+    const NestedNameSpecifier NNS = E->getQualifier();
     return visitDependentReference(
-        NNS->getAsType(), Info.getName(), Info.getLoc(),
+        NNS.getAsType(), Info.getName(), Info.getLoc(),
         [](const NamedDecl *D) { return !D->isCXXInstanceMember(); });
   }
 
   bool VisitDependentNameTypeLoc(DependentNameTypeLoc TL) {
     const DependentNameType *DNT = TL.getTypePtr();
-    const NestedNameSpecifier *NNS = DNT->getQualifier();
+    const NestedNameSpecifier NNS = DNT->getQualifier();
     DeclarationName Name(DNT->getIdentifier());
     return visitDependentReference(
-        NNS->getAsType(), Name, TL.getNameLoc(),
+        NNS.getAsType(), Name, TL.getNameLoc(),
         [](const NamedDecl *ND) { return isa<TypeDecl>(ND); });
   }
 
