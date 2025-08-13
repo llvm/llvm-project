@@ -404,9 +404,10 @@ getSpillReloadInfo(unsigned NumRemaining, uint16_t RegEncoding, bool IsSpill) {
           IsSpill ? RISCV::VS1R_V : RISCV::VL1RE8_V};
 }
 
-// Split a VSPILLx_Mx pseudo into multiple whole register stores separated by
-// LMUL*VLENB bytes.
-void RISCVRegisterInfo::lowerVSPILL(MachineBasicBlock::iterator II) const {
+// Split a VSPILLx_Mx/VSPILLx_Mx pseudo into multiple whole register stores
+// separated by LMUL*VLENB bytes.
+void RISCVRegisterInfo::lowerSegmentSpillReload(MachineBasicBlock::iterator II,
+                                                bool IsSpill) const {
   DebugLoc DL = II->getDebugLoc();
   MachineBasicBlock &MBB = *II->getParent();
   MachineFunction &MF = *MBB.getParent();
@@ -421,8 +422,8 @@ void RISCVRegisterInfo::lowerVSPILL(MachineBasicBlock::iterator II) const {
   unsigned NumRegs = NF * LMUL;
   assert(NumRegs <= 8 && "Invalid NF/LMUL combinations.");
 
-  Register SrcReg = II->getOperand(0).getReg();
-  uint16_t SrcEncoding = TRI->getEncodingValue(SrcReg);
+  Register Reg = II->getOperand(0).getReg();
+  uint16_t RegEncoding = TRI->getEncodingValue(Reg);
   Register Base = II->getOperand(1).getReg();
   bool IsBaseKill = II->getOperand(1).isKill();
   Register NewBase = MRI.createVirtualRegister(&RISCV::GPRRegClass);
@@ -433,17 +434,18 @@ void RISCVRegisterInfo::lowerVSPILL(MachineBasicBlock::iterator II) const {
   TypeSize VRegSize = OldLoc.getValue().divideCoefficientBy(NumRegs);
 
   Register VLENB = 0;
-  unsigned PreSavedNum = 0;
+  unsigned PreHandledNum = 0;
   unsigned I = 0;
   while (I != NumRegs) {
-    auto [LMulSaved, RegClass, Opcode] =
-        getSpillReloadInfo(NumRegs - I, SrcEncoding, /*IsSpill=*/true);
-    auto [NumSaved, _] = RISCVVType::decodeVLMUL(LMulSaved);
-    if (PreSavedNum) {
+    auto [LMulHandled, RegClass, Opcode] =
+        getSpillReloadInfo(NumRegs - I, RegEncoding, IsSpill);
+    auto [RegNumHandled, _] = RISCVVType::decodeVLMUL(LMulHandled);
+    if (PreHandledNum) {
       Register Step;
+      // Optimize for constant VLEN.
       if (auto VLEN = STI.getRealVLen()) {
         const int64_t VLENB = *VLEN / 8;
-        int64_t Offset = VLENB * PreSavedNum;
+        int64_t Offset = VLENB * PreHandledNum;
         Step = MRI.createVirtualRegister(&RISCV::GPRRegClass);
         STI.getInstrInfo()->movImm(MBB, II, DL, Step, Offset);
       } else {
@@ -451,7 +453,7 @@ void RISCVRegisterInfo::lowerVSPILL(MachineBasicBlock::iterator II) const {
           VLENB = MRI.createVirtualRegister(&RISCV::GPRRegClass);
           BuildMI(MBB, II, DL, TII->get(RISCV::PseudoReadVLENB), VLENB);
         }
-        uint32_t ShiftAmount = Log2_32(PreSavedNum);
+        uint32_t ShiftAmount = Log2_32(PreHandledNum);
         if (ShiftAmount == 0)
           Step = VLENB;
         else {
@@ -468,96 +470,27 @@ void RISCVRegisterInfo::lowerVSPILL(MachineBasicBlock::iterator II) const {
       Base = NewBase;
     }
 
-    MCRegister ActualSrcReg = findVRegWithEncoding(RegClass, SrcEncoding);
+    MCRegister ActualReg = findVRegWithEncoding(RegClass, RegEncoding);
+    MachineInstrBuilder MI;
+    if (IsSpill)
+      MI = BuildMI(MBB, II, DL, TII->get(Opcode)).addReg(ActualReg);
+    else
+      MI = BuildMI(MBB, II, DL, TII->get(Opcode), ActualReg);
 
-    BuildMI(MBB, II, DL, TII->get(Opcode))
-        .addReg(ActualSrcReg)
-        .addReg(Base, getKillRegState(I + NumSaved == NumRegs))
+    MI.addReg(Base, getKillRegState(I + RegNumHandled == NumRegs))
         .addMemOperand(MF.getMachineMemOperand(OldMMO, OldMMO->getOffset(),
-                                               VRegSize * NumSaved))
-        .addReg(SrcReg, RegState::Implicit);
+                                               VRegSize * RegNumHandled));
 
-    PreSavedNum = NumSaved;
-    SrcEncoding += NumSaved;
-    I += NumSaved;
-  }
-  II->eraseFromParent();
-}
+    // Adding implicit-use of super register to describe we are using part of
+    // super register, that prevents machine verifier complaining when part of
+    // subreg is undef, see comment in MachineVerifier::checkLiveness for more
+    // detail.
+    if (IsSpill)
+      MI.addReg(Reg, RegState::Implicit);
 
-// Split a VSPILLx_Mx pseudo into multiple whole register loads separated by
-// LMUL*VLENB bytes.
-void RISCVRegisterInfo::lowerVRELOAD(MachineBasicBlock::iterator II) const {
-  DebugLoc DL = II->getDebugLoc();
-  MachineBasicBlock &MBB = *II->getParent();
-  MachineFunction &MF = *MBB.getParent();
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-  const RISCVSubtarget &STI = MF.getSubtarget<RISCVSubtarget>();
-  const TargetInstrInfo *TII = STI.getInstrInfo();
-  const TargetRegisterInfo *TRI = STI.getRegisterInfo();
-
-  auto ZvlssegInfo = RISCV::isRVVSpillForZvlsseg(II->getOpcode());
-  unsigned NF = ZvlssegInfo->first;
-  unsigned LMUL = ZvlssegInfo->second;
-  unsigned NumRegs = NF * LMUL;
-  assert(NumRegs <= 8 && "Invalid NF/LMUL combinations.");
-
-  Register DestReg = II->getOperand(0).getReg();
-  uint16_t DestEncoding = TRI->getEncodingValue(DestReg);
-  Register Base = II->getOperand(1).getReg();
-  bool IsBaseKill = II->getOperand(1).isKill();
-  Register NewBase = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-
-  auto *OldMMO = *(II->memoperands_begin());
-  LocationSize OldLoc = OldMMO->getSize();
-  assert(OldLoc.isPrecise() && OldLoc.getValue().isKnownMultipleOf(NF));
-  TypeSize VRegSize = OldLoc.getValue().divideCoefficientBy(NumRegs);
-
-  Register VLENB = 0;
-  unsigned PreReloadedNum = 0;
-  unsigned I = 0;
-  while (I != NumRegs) {
-    auto [LMulReloaded, RegClass, Opcode] =
-        getSpillReloadInfo(NumRegs - I, DestEncoding, /*IsSpill=*/false);
-    auto [NumReloaded, _] = RISCVVType::decodeVLMUL(LMulReloaded);
-    if (PreReloadedNum) {
-      Register Step;
-      if (auto VLEN = STI.getRealVLen()) {
-        Step = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-        const int64_t VLENB = *VLEN / 8;
-        int64_t Offset = VLENB * PreReloadedNum;
-        STI.getInstrInfo()->movImm(MBB, II, DL, Step, Offset);
-      } else {
-        if (!VLENB) {
-          VLENB = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-          BuildMI(MBB, II, DL, TII->get(RISCV::PseudoReadVLENB), VLENB);
-        }
-        uint32_t ShiftAmount = Log2_32(PreReloadedNum);
-        if (ShiftAmount == 0)
-          Step = VLENB;
-        else {
-          Step = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-          BuildMI(MBB, II, DL, TII->get(RISCV::SLLI), Step)
-              .addReg(VLENB)
-              .addImm(ShiftAmount);
-        }
-      }
-
-      BuildMI(MBB, II, DL, TII->get(RISCV::ADD), NewBase)
-          .addReg(Base, getKillRegState(I != 0 || IsBaseKill))
-          .addReg(Step, getKillRegState(true));
-      Base = NewBase;
-    }
-
-    MCRegister ActualDestReg = findVRegWithEncoding(RegClass, DestEncoding);
-
-    BuildMI(MBB, II, DL, TII->get(Opcode), ActualDestReg)
-        .addReg(Base, getKillRegState(I + NumReloaded == NumRegs))
-        .addMemOperand(MF.getMachineMemOperand(OldMMO, OldMMO->getOffset(),
-                                               VRegSize * NumReloaded));
-
-    PreReloadedNum = NumReloaded;
-    DestEncoding += NumReloaded;
-    I += NumReloaded;
+    PreHandledNum = RegNumHandled;
+    RegEncoding += RegNumHandled;
+    I += RegNumHandled;
   }
   II->eraseFromParent();
 }
@@ -661,7 +594,7 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   case RISCV::PseudoVSPILL6_M1:
   case RISCV::PseudoVSPILL7_M1:
   case RISCV::PseudoVSPILL8_M1:
-    lowerVSPILL(II);
+    lowerSegmentSpillReload(II, /*IsSpill=*/true);
     return true;
   case RISCV::PseudoVRELOAD2_M1:
   case RISCV::PseudoVRELOAD2_M2:
@@ -674,7 +607,7 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   case RISCV::PseudoVRELOAD6_M1:
   case RISCV::PseudoVRELOAD7_M1:
   case RISCV::PseudoVRELOAD8_M1:
-    lowerVRELOAD(II);
+    lowerSegmentSpillReload(II, /*IsSpill=*/false);
     return true;
   }
 
