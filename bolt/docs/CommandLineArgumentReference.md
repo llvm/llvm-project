@@ -141,7 +141,8 @@
 - `--dump-dot-func=<func1,func2,func3...>`
 
   Dump function CFGs to graphviz format for specified functions only;
-  takes function name patterns (regex supported)
+  takes function name patterns (regex supported). Note: C++ function names
+  must be passed using their mangled names
 
 - `--dump-linux-exceptions`
 
