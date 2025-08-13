@@ -136,7 +136,9 @@ struct ReassocRewriter : public evaluate::rewrite::Identity {
           [&](auto &&s) {
             using Expr = evaluate::Expr<T>;
             using TypeS = llvm::remove_cvref_t<decltype(s)>;
-            // This visitor has to work for all possible types of s.
+            // This visitor has to be semantically correct for all possible
+            // types of s even though at runtime s will only be one of the
+            // matched types.
             // Limit the construction to the operation types that we tried
             // to match (otherwise TypeS(op1, op2) would fail for non-binary
             // operations).
