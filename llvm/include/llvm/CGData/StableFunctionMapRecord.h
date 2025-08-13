@@ -75,7 +75,7 @@ struct StableFunctionMapRecord {
   LLVM_ABI void deserialize(const unsigned char *&Ptr);
 
   /// Lazily deserialize the stable function map from `Buffer` starting at
-  /// `Offset`. The individial stable function entry would be read lazily from
+  /// `Offset`. The individual stable function entry would be read lazily from
   /// `Buffer` when the function map is accessed.
   LLVM_ABI void lazyDeserialize(std::shared_ptr<MemoryBuffer> Buffer,
                                 uint64_t Offset);
