@@ -3136,7 +3136,7 @@ APInt APIntOps::mulhu(const APInt &C1, const APInt &C2) {
   return (C1Ext * C2Ext).extractBits(C1.getBitWidth(), C1.getBitWidth());
 }
 
-APInt APIntOps::mulsi_extended(const APInt &C1, const APInt &C2) {
+APInt APIntOps::mulsExtended(const APInt &C1, const APInt &C2) {
   assert(C1.getBitWidth() == C2.getBitWidth() && "Unequal bitwidths");
   unsigned FullWidth = C1.getBitWidth() * 2;
   APInt C1Ext = C1.sext(FullWidth);
@@ -3144,7 +3144,7 @@ APInt APIntOps::mulsi_extended(const APInt &C1, const APInt &C2) {
   return C1Ext * C2Ext;
 }
 
-APInt APIntOps::mului_extended(const APInt &C1, const APInt &C2) {
+APInt APIntOps::muluExtended(const APInt &C1, const APInt &C2) {
   assert(C1.getBitWidth() == C2.getBitWidth() && "Unequal bitwidths");
   unsigned FullWidth = C1.getBitWidth() * 2;
   APInt C1Ext = C1.zext(FullWidth);

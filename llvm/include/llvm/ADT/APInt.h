@@ -2295,10 +2295,10 @@ LLVM_ABI APInt mulhs(const APInt &C1, const APInt &C2);
 LLVM_ABI APInt mulhu(const APInt &C1, const APInt &C2);
 
 /// Performs (2*N)-bit multiplication on sign-extended operands.
-LLVM_ABI APInt mulsi_extended(const APInt &C1, const APInt &C2);
+LLVM_ABI APInt mulsExtended(const APInt &C1, const APInt &C2);
 
 /// Performs (2*N)-bit multiplication on zero-extended operands.
-LLVM_ABI APInt mului_extended(const APInt &C1, const APInt &C2);
+LLVM_ABI APInt muluExtended(const APInt &C1, const APInt &C2);
 
 /// Compute X^N for N>=0.
 /// 0^0 is supported and returns 1.
