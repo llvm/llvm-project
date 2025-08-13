@@ -20,6 +20,7 @@
 #include <__concepts/invocable.h>
 #include <__concepts/movable.h>
 #include <__concepts/predicate.h>
+#include <__concepts/referenceable.h>
 #include <__concepts/regular.h>
 #include <__concepts/relation.h>
 #include <__concepts/same_as.h>
@@ -40,7 +41,6 @@
 #include <__type_traits/is_pointer.h>
 #include <__type_traits/is_primary_template.h>
 #include <__type_traits/is_reference.h>
-#include <__type_traits/is_referenceable.h>
 #include <__type_traits/is_valid_expansion.h>
 #include <__type_traits/remove_cv.h>
 #include <__type_traits/remove_cvref.h>
@@ -117,15 +117,12 @@ template <class _Tp>
 concept __signed_integer_like = signed_integral<_Tp>;
 
 template <class _Ip>
-concept weakly_incrementable =
-    // TODO: remove this once the clang bug is fixed (bugs.llvm.org/PR48173).
-    !same_as<_Ip, bool> && // Currently, clang does not handle bool correctly.
-    movable<_Ip> && requires(_Ip __i) {
-      typename iter_difference_t<_Ip>;
-      requires __signed_integer_like<iter_difference_t<_Ip>>;
-      { ++__i } -> same_as<_Ip&>; // not required to be equality-preserving
-      __i++;                      // not required to be equality-preserving
-    };
+concept weakly_incrementable = movable<_Ip> && requires(_Ip __i) {
+  typename iter_difference_t<_Ip>;
+  requires __signed_integer_like<iter_difference_t<_Ip>>;
+  { ++__i } -> same_as<_Ip&>; // not required to be equality-preserving
+  __i++;                      // not required to be equality-preserving
+};
 
 // [iterator.concept.inc]
 template <class _Ip>
