@@ -49,6 +49,11 @@ add_distinct_clang_unittest(ClangReplInterpreterTests
   )
 
 if(EMSCRIPTEN)
+# Without the above you try to link to LLVMSupport twice, and end
+# up with a duplicate symbol error when creating the main module
+get_target_property(LINKED_LIBS ClangReplInterpreterTests LINK_LIBRARIES)
+list(REMOVE_ITEM LINKED_LIBS LLVMSupport)
+set_target_properties(ClangReplInterpreterTests PROPERTIES LINK_LIBRARIES "${LINKED_LIBS}")
 target_link_options(ClangReplInterpreterTests
   PUBLIC "SHELL: -s MAIN_MODULE=1"
   PUBLIC "SHELL: -s ALLOW_MEMORY_GROWTH=1"
