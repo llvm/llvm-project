@@ -4,12 +4,14 @@
 // RUN: %clang_cc1 -x c++ -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +avx512bitalg -target-feature +avx512vl -emit-llvm -o - -Wall -Werror | FileCheck %s
 
 #include <immintrin.h>
+#include "builtin_test_helpers.h"
 
 __m256i test_mm256_popcnt_epi16(__m256i __A) {
   // CHECK-LABEL: test_mm256_popcnt_epi16
   // CHECK: @llvm.ctpop.v16i16
   return _mm256_popcnt_epi16(__A);
 }
+TEST_CONSTEXPR(match_v16hi(_mm256_popcnt_epi16((__m256i)(__v16hi){+5, -3, -10, +8, 0, -256, +256, -128, +3, +9, +15, +33, +63, +129, +511, +1025}), 2, 15, 14, 1, 0, 8, 1, 9, 2, 2, 4, 2, 6, 2, 9, 2));
 
 __m256i test_mm256_mask_popcnt_epi16(__m256i __A, __mmask16 __U, __m256i __B) {
   // CHECK-LABEL: test_mm256_mask_popcnt_epi16
@@ -29,6 +31,7 @@ __m128i test_mm_popcnt_epi16(__m128i __A) {
   // CHECK: @llvm.ctpop.v8i16
   return _mm_popcnt_epi16(__A);
 }
+TEST_CONSTEXPR(match_v8hi(_mm_popcnt_epi16((__m128i)(__v8hi){+5, -3, -10, +8, 0, -256, +256, -128}), 2, 15, 14, 1, 0, 8, 1, 9));
 
 __m128i test_mm_mask_popcnt_epi16(__m128i __A, __mmask8 __U, __m128i __B) {
   // CHECK-LABEL: test_mm_mask_popcnt_epi16
@@ -48,6 +51,7 @@ __m256i test_mm256_popcnt_epi8(__m256i __A) {
   // CHECK: @llvm.ctpop.v32i8
   return _mm256_popcnt_epi8(__A);
 }
+TEST_CONSTEXPR(match_v32qi(_mm256_popcnt_epi8((__m256i)(__v32qi){+5, -3, -10, +8, 0, -16, +16, -16, +3, +9, +15, +33, +63, +33, +53, +73, +5, -3, -10, +8, 0, -16, +16, -16, +3, +9, +15, +33, +63, +33, +53, +73}), 2, 7, 6, 1, 0, 4, 1, 4, 2, 2, 4, 2, 6, 2, 4, 3, 2, 7, 6, 1, 0, 4, 1, 4, 2, 2, 4, 2, 6, 2, 4, 3));
 
 __m256i test_mm256_mask_popcnt_epi8(__m256i __A, __mmask32 __U, __m256i __B) {
   // CHECK-LABEL: test_mm256_mask_popcnt_epi8
@@ -67,6 +71,7 @@ __m128i test_mm_popcnt_epi8(__m128i __A) {
   // CHECK: @llvm.ctpop.v16i8
   return _mm_popcnt_epi8(__A);
 }
+TEST_CONSTEXPR(match_v16qi(_mm_popcnt_epi8((__m128i)(__v16qi){+5, -3, -10, +8, 0, -16, +16, -16, +3, +9, +15, +33, +63, +33, +53, +73}), 2, 7, 6, 1, 0, 4, 1, 4, 2, 2, 4, 2, 6, 2, 4, 3));
 
 __m128i test_mm_mask_popcnt_epi8(__m128i __A, __mmask16 __U, __m128i __B) {
   // CHECK-LABEL: test_mm_mask_popcnt_epi8

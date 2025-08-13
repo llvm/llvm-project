@@ -725,7 +725,7 @@ public:
   };
 
   /// Header for data within LifetimeExtendedCleanupStack.
-  struct LifetimeExtendedCleanupHeader {
+  struct alignas(uint64_t) LifetimeExtendedCleanupHeader {
     /// The size of the following cleanup object.
     unsigned Size;
     /// The kind of cleanup to push.
@@ -947,7 +947,8 @@ public:
         LifetimeExtendedCleanupStack.size() + sizeof(Header) + Header.Size +
         (Header.IsConditional ? sizeof(ActiveFlag) : 0));
 
-    static_assert(sizeof(Header) % alignof(T) == 0,
+    static_assert((alignof(LifetimeExtendedCleanupHeader) == alignof(T)) &&
+                      (alignof(T) == alignof(RawAddress)),
                   "Cleanup will be allocated on misaligned address");
     char *Buffer = &LifetimeExtendedCleanupStack[OldSize];
     new (Buffer) LifetimeExtendedCleanupHeader(Header);
@@ -2972,7 +2973,7 @@ public:
   /// member.
   bool hasVolatileMember(QualType T) {
     if (const RecordType *RT = T->getAs<RecordType>()) {
-      const RecordDecl *RD = cast<RecordDecl>(RT->getDecl());
+      const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
       return RD->hasVolatileMember();
     }
     return false;
@@ -4552,7 +4553,7 @@ public:
                                        ArrayRef<llvm::Value *> args);
 
   CGCallee BuildAppleKextVirtualCall(const CXXMethodDecl *MD,
-                                     NestedNameSpecifier *Qual, llvm::Type *Ty);
+                                     NestedNameSpecifier Qual, llvm::Type *Ty);
 
   CGCallee BuildAppleKextVirtualDestructorCall(const CXXDestructorDecl *DD,
                                                CXXDtorType Type,
@@ -4657,7 +4658,7 @@ public:
                                llvm::CallBase **CallOrInvoke = nullptr);
   RValue EmitCXXMemberOrOperatorMemberCallExpr(
       const CallExpr *CE, const CXXMethodDecl *MD, ReturnValueSlot ReturnValue,
-      bool HasQualifier, NestedNameSpecifier *Qualifier, bool IsArrow,
+      bool HasQualifier, NestedNameSpecifier Qualifier, bool IsArrow,
       const Expr *Base, llvm::CallBase **CallOrInvoke);
   // Compute the object pointer.
   Address EmitCXXMemberDataPointerAddress(
@@ -5211,6 +5212,12 @@ public:
   /// An enumeration which makes it easier to specify whether or not an
   /// operation is a subtraction.
   enum { NotSubtraction = false, IsSubtraction = true };
+
+  /// Emit pointer + index arithmetic.
+  llvm::Value *EmitPointerArithmetic(const BinaryOperator *BO,
+                                     Expr *pointerOperand, llvm::Value *pointer,
+                                     Expr *indexOperand, llvm::Value *index,
+                                     bool isSubtraction);
 
   /// Same as IRBuilder::CreateInBoundsGEP, but additionally emits a check to
   /// detect undefined behavior when the pointer overflow sanitizer is enabled.
