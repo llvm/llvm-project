@@ -3740,6 +3740,87 @@ static Instruction *foldIntegerPackFromVector(Instruction &I,
   return CastInst::Create(Instruction::BitCast, MaskedVec, I.getType());
 }
 
+/// Match \p V as "lshr -> mask -> zext -> shl".
+///
+/// \p Int is the underlying integer being extracted from.
+/// \p Mask is a bitmask identifying which bits of the integer are being
+/// extracted. \p Offset identifies which bit of the result \p V corresponds to
+/// the least significant bit of \p Int
+static bool matchZExtedSubInteger(Value *V, Value *&Int, APInt &Mask,
+                                  uint64_t &Offset, bool &IsShlNUW,
+                                  bool &IsShlNSW) {
+  Value *ShlOp0;
+  const APInt *ShlConst;
+  if (!match(V, m_OneUse(m_Shl(m_Value(ShlOp0), m_APInt(ShlConst)))))
+    return false;
+
+  IsShlNUW = cast<BinaryOperator>(V)->hasNoUnsignedWrap();
+  IsShlNSW = cast<BinaryOperator>(V)->hasNoSignedWrap();
+
+  Value *ZExtOp0;
+  if (!match(ShlOp0, m_OneUse(m_ZExt(m_Value(ZExtOp0)))))
+    return false;
+
+  Value *MaskedOp0;
+  const APInt *ShiftedMaskConst = nullptr;
+  if (!match(ZExtOp0, m_CombineOr(m_OneUse(m_And(m_Value(MaskedOp0),
+                                                 m_APInt(ShiftedMaskConst))),
+                                  m_Value(MaskedOp0))))
+    return false;
+
+  const APInt *LShrConst = nullptr;
+  if (!match(MaskedOp0,
+             m_CombineOr(m_OneUse(m_LShr(m_Value(Int), m_APInt(LShrConst))),
+                         m_Value(Int))))
+    return false;
+
+  assert(ShlConst != nullptr);
+  const uint64_t ShlAmt = ShlConst->getZExtValue();
+  const uint64_t LShrAmt = LShrConst ? LShrConst->getZExtValue() : 0;
+  if (LShrAmt > ShlAmt)
+    return false;
+
+  Mask = (ShiftedMaskConst
+              ? *ShiftedMaskConst
+              : APInt::getAllOnes(Int->getType()->getScalarSizeInBits()))
+             .shl(LShrAmt);
+  assert(LShrAmt < INT64_MAX && ShlAmt < INT64_MAX);
+  Offset = static_cast<int64_t>(ShlAmt) - static_cast<int64_t>(LShrAmt);
+
+  return true;
+}
+
+/// Try to fold the join of two scalar integers whose bits are unpacked and
+/// zexted from the same source integer.
+static Value *foldIntegerRepackThroughZExt(Value *Lhs, Value *Rhs,
+                                           InstCombiner::BuilderTy &Builder) {
+
+  Value *LhsInt, *RhsInt;
+  APInt LhsMask, RhsMask;
+  uint64_t LhsOffset, RhsOffset;
+  bool IsLhsShlNUW, IsLhsShlNSW, IsRhsShlNUW, IsRhsShlNSW;
+  if (!matchZExtedSubInteger(Lhs, LhsInt, LhsMask, LhsOffset, IsLhsShlNUW,
+                             IsLhsShlNSW))
+    return nullptr;
+  if (!matchZExtedSubInteger(Rhs, RhsInt, RhsMask, RhsOffset, IsRhsShlNUW,
+                             IsRhsShlNSW))
+    return nullptr;
+  if (LhsInt != RhsInt || LhsOffset != RhsOffset)
+    return nullptr;
+
+  APInt Mask = LhsMask | RhsMask;
+
+  Type *DestTy = Lhs->getType();
+  Value *Res = Builder.CreateShl(
+      Builder.CreateZExt(
+          Builder.CreateAnd(LhsInt, Mask, LhsInt->getName() + ".mask"), DestTy,
+          LhsInt->getName() + ".zext"),
+      ConstantInt::get(DestTy, LhsOffset), "", IsLhsShlNUW && IsRhsShlNUW,
+      IsLhsShlNSW && IsRhsShlNSW);
+  Res->takeName(Lhs);
+  return Res;
+}
+
 // A decomposition of ((X & Mask) * Factor). The NUW / NSW bools
 // track these properities for preservation. Note that we can decompose
 // equivalent select form of this expression (e.g. (!(X & Mask) ? 0 : Mask *
@@ -3840,6 +3921,8 @@ static Value *foldBitmaskMul(Value *Op0, Value *Op1,
 
 Value *InstCombinerImpl::foldDisjointOr(Value *LHS, Value *RHS) {
   if (Value *Res = foldBitmaskMul(LHS, RHS, Builder))
+    return Res;
+  if (Value *Res = foldIntegerRepackThroughZExt(LHS, RHS, Builder))
     return Res;
 
   return nullptr;
@@ -3974,6 +4057,10 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
       return R;
 
     if (Value *Res = foldBitmaskMul(I.getOperand(0), I.getOperand(1), Builder))
+      return replaceInstUsesWith(I, Res);
+
+    if (Value *Res = foldIntegerRepackThroughZExt(I.getOperand(0),
+                                                  I.getOperand(1), Builder))
       return replaceInstUsesWith(I, Res);
 
     if (Value *Res = reassociateDisjointOr(I.getOperand(0), I.getOperand(1)))
