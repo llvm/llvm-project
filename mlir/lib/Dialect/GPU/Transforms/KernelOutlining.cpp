@@ -431,8 +431,7 @@ private:
       if (std::optional<SymbolTable::UseRange> symbolUses =
               SymbolTable::getSymbolUses(symbolDefWorklist.pop_back_val())) {
         for (SymbolTable::SymbolUse symbolUse : *symbolUses) {
-          StringRef symbolName =
-              cast<FlatSymbolRefAttr>(symbolUse.getSymbolRef()).getValue();
+          StringAttr symbolName = symbolUse.getSymbolRef().getLeafReference();
           if (symbolTable.lookup(symbolName))
             continue;
 
