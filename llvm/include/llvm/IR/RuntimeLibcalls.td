@@ -1149,8 +1149,7 @@ defvar WindowsExclusions = !listconcat(WindowsMathRemovals, MostPowI);
 
 // Targets which support windows should start with these as a base and
 // add in calls for other OSes
-defvar Win32DefaultLibcallImpls = !listremove(DefaultLibcallImpls32, WindowsExclusions);
-defvar Win64DefaultLibcallImpls = !listremove(DefaultLibcallImpls64, WindowsExclusions);
+defvar WinDefaultLibcallImpls = !listremove(DefaultRuntimeLibcallImpls, WindowsExclusions);
 
 defvar LibmHasFrexpF32 = LibcallImpls<(add frexpf), isNotOSWindowsOrIsCygwinMinGW>;
 defvar LibmHasLdexpF32 = LibcallImpls<(add ldexpf), isNotOSWindowsOrIsCygwinMinGW>;
@@ -1234,7 +1233,7 @@ def isAArch64_ILP64  : RuntimeLibcallPredicate<"TT.isAArch64(64)">;
 
 def AArch64SystemLibrary : SystemRuntimeLibrary<
   isAArch64_ExceptArm64EC,
-  (add Win64DefaultLibcallImpls,
+  (add WinDefaultLibcallImpls,
        LibcallImpls<(add __powisf2, __powidf2), isNotOSMSVCRT>,
        LibmHasFrexpF32, LibmHasLdexpF32,
        LibmHasFrexpF128, LibmHasLdexpF128,
@@ -1250,7 +1249,7 @@ def AArch64SystemLibrary : SystemRuntimeLibrary<
 
 // Prepend a # to every name
 defset list<RuntimeLibcallImpl> WinArm64ECDefaultRuntimeLibcallImpls = {
-  foreach libcall = Win64DefaultLibcallImpls in {
+  foreach libcall = WinDefaultLibcallImpls in {
     def arm64ec_#libcall : DuplicateLibcallImplWithPrefix<libcall, "#">;
   }
 
@@ -1508,7 +1507,7 @@ def isARMOrThumb : RuntimeLibcallPredicate<"TT.isARM() || TT.isThumb()">;
 
 def ARMSystemLibrary
     : SystemRuntimeLibrary<isARMOrThumb,
-      (add Win32DefaultLibcallImpls,
+      (add WinDefaultLibcallImpls,
            LibcallImpls<(add __powisf2, __powidf2), isNotOSMSVCRT>,
            LibmHasFrexpF32, LibmHasLdexpF32,
            LibmHasFrexpF128, LibmHasLdexpF128,
@@ -2164,7 +2163,8 @@ defvar X86_F128_Libcalls = LibcallImpls<(add LibmF128Libcalls, LibmF128FiniteLib
 defvar SinCosF32F64Libcalls = LibcallImpls<(add sincosf, sincos), hasSinCos_f32_f64>;
 
 defvar X86CommonLibcalls =
-  (add DarwinSinCosStret, DarwinExp10,
+  (add WinDefaultLibcallImpls,
+       DarwinSinCosStret, DarwinExp10,
        X86_F128_Libcalls,
        LibmHasSinCosF80, // FIXME: Depends on long double
        SinCosF32F64Libcalls,
@@ -2189,11 +2189,11 @@ defvar Windows32DivRemMulCalls =
 def X86_32SystemLibrary
     : SystemRuntimeLibrary<isX86_32,
       (add X86CommonLibcalls,
-           Windows32DivRemMulCalls, Win32DefaultLibcallImpls)>;
+           Windows32DivRemMulCalls)>;
 
 def X86_64SystemLibrary
     : SystemRuntimeLibrary<isX86_64,
-      (add X86CommonLibcalls, Win64DefaultLibcallImpls, Int128RTLibcalls)>;
+      (add X86CommonLibcalls, Int128RTLibcalls)>;
 
 //===----------------------------------------------------------------------===//
 // XCore Runtime Libcalls

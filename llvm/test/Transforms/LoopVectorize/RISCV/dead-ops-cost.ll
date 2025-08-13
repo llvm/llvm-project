@@ -20,8 +20,6 @@ define void @dead_load(ptr %p, i16 %start) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP4]], 1
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP14:%.*]] = mul nuw i64 [[TMP13]], 8
 ; CHECK-NEXT:    [[TMP15:%.*]] = call <vscale x 8 x i64> @llvm.stepvector.nxv8i64()
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x i64> poison, i64 [[START_EXT]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 8 x i64> [[DOTSPLATINSERT]], <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
@@ -308,8 +306,6 @@ define void @test_phi_in_latch_redundant(ptr %dst, i32 %a) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP4]], 4
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[A]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP19:%.*]] = xor <vscale x 4 x i32> [[BROADCAST_SPLAT]], splat (i32 -1)
@@ -396,8 +392,6 @@ define void @gather_interleave_group_with_dead_insert_pos(i64 %N, ptr noalias %s
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP7]], 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
 ; CHECK-NEXT:    [[TMP11:%.*]] = mul <vscale x 4 x i64> [[TMP9]], splat (i64 2)
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <vscale x 4 x i64> zeroinitializer, [[TMP11]]
