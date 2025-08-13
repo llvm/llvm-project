@@ -242,6 +242,26 @@ bool X86FixupInstTuningPass::processInstruction(
     return ProcessUNPCKToIntDomain(NewOpc);
   };
 
+  auto ProcessBLENDWToBLENDD = [&](unsigned MovOpc, unsigned NumElts) -> bool {
+    if (!ST->hasAVX2() || !NewOpcPreferable(MovOpc))
+      return false;
+    // Convert to VPBLENDD if scaling the VPBLENDW mask down/up loses no bits.
+    APInt MaskW =
+        APInt(8, MI.getOperand(NumOperands - 1).getImm(), /*IsSigned=*/false);
+    APInt MaskD = APIntOps::ScaleBitMask(MaskW, 4, /*MatchAllBits=*/true);
+    if (MaskW != APIntOps::ScaleBitMask(MaskD, 8, /*MatchAllBits=*/true))
+      return false;
+    APInt NewMaskD = APInt::getSplat(NumElts, MaskD);
+    LLVM_DEBUG(dbgs() << "Replacing: " << MI);
+    {
+      MI.setDesc(TII->get(MovOpc));
+      MI.removeOperand(NumOperands - 1);
+      MI.addOperand(MachineOperand::CreateImm(NewMaskD.getZExtValue()));
+    }
+    LLVM_DEBUG(dbgs() << "     With: " << MI);
+    return true;
+  };
+
   auto ProcessBLENDToMOV = [&](unsigned MovOpc, unsigned Mask,
                                unsigned MovImm) -> bool {
     if ((MI.getOperand(NumOperands - 1).getImm() & Mask) != MovImm)
@@ -269,6 +289,12 @@ bool X86FixupInstTuningPass::processInstruction(
   case X86::VBLENDPSrri:
     return ProcessBLENDToMOV(X86::VMOVSSrr, 0xF, 0x1) ||
            ProcessBLENDToMOV(X86::VMOVSDrr, 0xF, 0x3);
+
+  case X86::VPBLENDWrri:
+    // TODO: Add X86::VPBLENDWrmi handling
+    // TODO: Add X86::VPBLENDWYrri handling
+    // TODO: Add X86::VPBLENDWYrmi handling
+    return ProcessBLENDWToBLENDD(X86::VPBLENDDrri, 4);
 
   case X86::VPERMILPDri:
     return ProcessVPERMILPDri(X86::VSHUFPDrri);

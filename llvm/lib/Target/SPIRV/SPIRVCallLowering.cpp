@@ -480,7 +480,8 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                    .addUse(FuncVReg);
     addStringImm(F.getName(), MIB);
   } else if (F.getLinkage() != GlobalValue::InternalLinkage &&
-             F.getLinkage() != GlobalValue::PrivateLinkage) {
+             F.getLinkage() != GlobalValue::PrivateLinkage &&
+             F.getVisibility() != GlobalValue::HiddenVisibility) {
     SPIRV::LinkageType::LinkageType LnkTy =
         F.isDeclaration()
             ? SPIRV::LinkageType::Import

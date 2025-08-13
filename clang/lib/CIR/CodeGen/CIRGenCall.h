@@ -33,7 +33,8 @@ public:
   CIRGenCalleeInfo(const clang::FunctionProtoType *calleeProtoTy,
                    clang::GlobalDecl calleeDecl)
       : calleeProtoTy(calleeProtoTy), calleeDecl(calleeDecl) {}
-  CIRGenCalleeInfo(clang::GlobalDecl calleeDecl) : calleeDecl(calleeDecl) {}
+  CIRGenCalleeInfo(clang::GlobalDecl calleeDecl)
+      : calleeProtoTy(nullptr), calleeDecl(calleeDecl) {}
 
   const clang::FunctionProtoType *getCalleeFunctionProtoType() const {
     return calleeProtoTy;
@@ -45,6 +46,7 @@ class CIRGenCallee {
   enum class SpecialKind : uintptr_t {
     Invalid,
     Builtin,
+    PseudoDestructor,
 
     Last = Builtin,
   };
@@ -53,12 +55,16 @@ class CIRGenCallee {
     const clang::FunctionDecl *decl;
     unsigned id;
   };
+  struct PseudoDestructorInfoStorage {
+    const clang::CXXPseudoDestructorExpr *expr;
+  };
 
   SpecialKind kindOrFunctionPtr;
 
   union {
     CIRGenCalleeInfo abstractInfo;
     BuiltinInfoStorage builtinInfo;
+    PseudoDestructorInfoStorage pseudoDestructorInfo;
   };
 
   explicit CIRGenCallee(SpecialKind kind) : kindOrFunctionPtr(kind) {}
@@ -97,6 +103,22 @@ public:
     return result;
   }
 
+  static CIRGenCallee
+  forPseudoDestructor(const clang::CXXPseudoDestructorExpr *expr) {
+    CIRGenCallee result(SpecialKind::PseudoDestructor);
+    result.pseudoDestructorInfo.expr = expr;
+    return result;
+  }
+
+  bool isPseudoDestructor() const {
+    return kindOrFunctionPtr == SpecialKind::PseudoDestructor;
+  }
+
+  const CXXPseudoDestructorExpr *getPseudoDestructorExpr() const {
+    assert(isPseudoDestructor());
+    return pseudoDestructorInfo.expr;
+  }
+
   bool isOrdinary() const {
     return uintptr_t(kindOrFunctionPtr) > uintptr_t(SpecialKind::Last);
   }
@@ -105,9 +127,20 @@ public:
   /// callee
   CIRGenCallee prepareConcreteCallee(CIRGenFunction &cgf) const;
 
+  CIRGenCalleeInfo getAbstractInfo() const {
+    assert(!cir::MissingFeatures::opCallVirtual());
+    assert(isOrdinary());
+    return abstractInfo;
+  }
+
   mlir::Operation *getFunctionPointer() const {
     assert(isOrdinary());
     return reinterpret_cast<mlir::Operation *>(kindOrFunctionPtr);
+  }
+
+  void setFunctionPointer(mlir::Operation *functionPtr) {
+    assert(isOrdinary());
+    kindOrFunctionPtr = SpecialKind(reinterpret_cast<uintptr_t>(functionPtr));
   }
 };
 
@@ -125,7 +158,7 @@ private:
 
   /// A data-flow flag to make sure getRValue and/or copyInto are not
   /// called twice for duplicated IR emission.
-  mutable bool isUsed;
+  [[maybe_unused]] mutable bool isUsed;
 
 public:
   clang::QualType ty;

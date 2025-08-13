@@ -10,7 +10,6 @@ define float @load_float(ptr %fptr) {
 ; CHECK-NEXT:    call void @__tsan_func_entry(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @__tsan_atomic32_load(ptr [[FPTR]], i32 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32 [[TMP2]] to float
-; CHECK-NEXT:    [[V:%.*]] = load atomic float, ptr [[FPTR]] unordered, align 4
 ; CHECK-NEXT:    call void @__tsan_func_exit()
 ; CHECK-NEXT:    ret float [[TMP3]]
 ;
@@ -25,7 +24,6 @@ define double @load_double(ptr %fptr) {
 ; CHECK-NEXT:    call void @__tsan_func_entry(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @__tsan_atomic64_load(ptr [[FPTR]], i32 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i64 [[TMP2]] to double
-; CHECK-NEXT:    [[V:%.*]] = load atomic double, ptr [[FPTR]] unordered, align 8
 ; CHECK-NEXT:    call void @__tsan_func_exit()
 ; CHECK-NEXT:    ret double [[TMP3]]
 ;
@@ -40,7 +38,6 @@ define fp128 @load_fp128(ptr %fptr) {
 ; CHECK-NEXT:    call void @__tsan_func_entry(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i128 @__tsan_atomic128_load(ptr [[FPTR]], i32 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i128 [[TMP2]] to fp128
-; CHECK-NEXT:    [[V:%.*]] = load atomic fp128, ptr [[FPTR]] unordered, align 16
 ; CHECK-NEXT:    call void @__tsan_func_exit()
 ; CHECK-NEXT:    ret fp128 [[TMP3]]
 ;

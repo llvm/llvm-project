@@ -10,7 +10,7 @@ Written by the `Libc++ Team <https://libcxx.llvm.org>`_
 
 .. warning::
 
-   These are in-progress notes for the upcoming libc++ 20.0.0 release.
+   These are in-progress notes for the upcoming libc++ 21.0.0 release.
    Release notes for previous releases can be found on
    `the Download Page <https://releases.llvm.org/download.html>`_.
 
@@ -18,7 +18,7 @@ Introduction
 ============
 
 This document contains the release notes for the libc++ C++ Standard Library,
-part of the LLVM Compiler Infrastructure, release 20.0.0. Here we describe the
+part of the LLVM Compiler Infrastructure, release 21.0.0. Here we describe the
 status of libc++ in some detail, including major improvements from the previous
 release and new feature work. For the general LLVM release notes, see `the LLVM
 documentation <https://llvm.org/docs/ReleaseNotes.html>`_. All LLVM releases may
@@ -42,11 +42,19 @@ Implemented Papers
 - P0767R1: Deprecate POD (`Github <https://github.com/llvm/llvm-project/issues/104013>`__)
 - P1361R2: Integration of chrono with text formatting (`Github <https://github.com/llvm/llvm-project/issues/100014>`__)
 - P2255R2: A type trait to detect reference binding to temporary (implemented the type traits only) (`Github <https://github.com/llvm/llvm-project/issues/105180>`__)
+- P2372R3: Fixing locale handling in chrono formatters (`Github <https://github.com/llvm/llvm-project/issues/100043>`__)
 - P2562R1: ``constexpr`` Stable Sorting (`Github <https://github.com/llvm/llvm-project/issues/105360>`__)
 - P0472R3: Put std::monostate in <utility> (`Github <https://github.com/llvm/llvm-project/issues/127874>`__)
 - P1222R4: A Standard ``flat_set`` (`Github <https://github.com/llvm/llvm-project/issues/105193>`__)
 - P2897R7: ``aligned_accessor``: An mdspan accessor expressing pointer over-alignment (`Github <https://github.com/llvm/llvm-project/issues/118372>`__)
 - P3247R2: Deprecate the notion of trivial types (`Github <https://github.com/llvm/llvm-project/issues/118387>`__)
+- P3372R3: ``constexpr`` containers and adaptors (`Github <https://github.com/llvm/llvm-project/issues/127876>`__) (``forward_list``, ``list``, ``priority_queue``, ``flat_map``, and ``flat_set`` are implemented)
+- P2441R2: ``views::join_with`` (`Github <https://github.com/llvm/llvm-project/issues/105185>`__)
+- P2711R1: Making multi-param constructors of ``views`` ``explicit`` (`Github <https://github.com/llvm/llvm-project/issues/105252>`__)
+- P2770R0: Stashing stashing ``iterators`` for proper flattening (`Github <https://github.com/llvm/llvm-project/issues/105250>`__)
+- P2655R3: ``common_reference_t`` of ``reference_wrapper`` Should Be a Reference Type (`Github <https://github.com/llvm/llvm-project/issues/105260>`__)
+- P2944R3: Comparisons for ``reference_wrapper`` (`Github <https://github.com/llvm/llvm-project/issues/105424>`__)
+- P3379R0: Constrain ``std::expected equality`` operators (`Github <https://github.com/llvm/llvm-project/issues/118135>`__)
 
 Improvements and New Features
 -----------------------------
@@ -70,11 +78,23 @@ Improvements and New Features
 - The segmented iterator optimization for ``std::for_each`` has been backported to C++11. Previously it was only available
   in C++23 and later.
 
-- The ``std::for_each_n`` algorithm has been optimized for segmented iterators, resulting in a performance improvement of
-  up to 17.7x for ``std::deque<short>`` iterators, and up to 13.9x for ``std::join_view<vector<vector<short>>>`` iterators.
+- The ``std::for_each_n``, ``std::ranges::for_each`` and ``std::ranges::for_each_n`` algorithms have been optimized for
+  segmented iterators, resulting in a performance improvement of up to 17.7x for ``std::deque<short>`` iterators, and up
+  to 13.9x for ``std::join_view<vector<vector<short>>>`` iterators.
 
 - The ``bitset::to_string`` function has been optimized, resulting in a performance improvement of up to 8.3x for bitsets
   with uniformly distributed zeros and ones, and up to 13.5x and 16.1x for sparse and dense bitsets, respectively.
+
+- The ``flat_map::insert`` and ``flat_set::insert_range`` have been optimized, resulting in a performance improvement of up
+  to 10x for inserting elements into a ``flat_map`` when the input range is a ``flat_map`` or a ``zip_view``.
+
+- ``ctype::tolower`` and ``ctype::toupper`` have been optimized, resulting in a 2x performance improvement.
+
+- As an experimental feature, Hardening now supports assertion semantics that allow customizing how a hardening
+  assertion failure is handled. The four available semantics, modeled on C++26 Contracts, are ``ignore``, ``observe``,
+  ``quick-enforce`` and ``enforce``. The ``observe`` semantic is intended to make it easier to adopt Hardening in
+  production but should not be used outside of this scenario. Please refer to the :ref:`Hardening documentation
+  <hardening>` for details.
 
 Deprecations and Removals
 -------------------------
@@ -89,7 +109,7 @@ Deprecations and Removals
 - libc++ no longer adds ``constexpr`` to ``std::hash<std::vector<bool, A>>::operator()``, as the ``constexpr`` addition
   since C++20 was an unintended extension.
 
-- TODO: The non-conforming extension ``packaged_task::result_type`` has been removed in LLVM 21.
+- The non-conforming extension ``packaged_task::result_type`` has been removed in LLVM 21.
 
 Potentially breaking changes
 ----------------------------

@@ -185,7 +185,8 @@ LLVM_ABI bool hoistRegion(DomTreeNode *, AAResults *, LoopInfo *,
                           TargetLibraryInfo *, Loop *, MemorySSAUpdater &,
                           ScalarEvolution *, ICFLoopSafetyInfo *,
                           SinkAndHoistLICMFlags &, OptimizationRemarkEmitter *,
-                          bool, bool AllowSpeculation);
+                          bool, bool AllowSpeculation,
+                          bool HasCoroSuspendInst = false);
 
 /// Return true if the induction variable \p IV in a Loop whose latch is
 /// \p LatchBlock would become dead if the exit test \p Cond were removed.
@@ -434,7 +435,8 @@ LLVM_ABI Value *createAnyOfReduction(IRBuilderBase &B, Value *Src,
 /// Create a reduction of the given vector \p Src for a reduction of the
 /// kind RecurKind::FindLastIV.
 LLVM_ABI Value *createFindLastIVReduction(IRBuilderBase &B, Value *Src,
-                                          Value *Start, Value *Sentinel);
+                                          RecurKind RdxKind, Value *Start,
+                                          Value *Sentinel);
 
 /// Create an ordered reduction intrinsic using the given recurrence
 /// kind \p RdxKind.

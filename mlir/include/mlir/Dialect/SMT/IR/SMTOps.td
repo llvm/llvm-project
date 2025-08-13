@@ -227,7 +227,7 @@ def YieldOp : SMTOp<"yield", [
   let arguments = (ins Variadic<AnyType>:$values);
   let assemblyFormat = "($values^ `:` qualified(type($values)))? attr-dict";
   let builders = [OpBuilder<(ins), [{
-    build($_builder, $_state, std::nullopt);
+    build($_builder, $_state, {});
   }]>];
 }
 

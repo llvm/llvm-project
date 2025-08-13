@@ -96,7 +96,7 @@ unsigned AMDGPUABIInfo::numRegsForType(QualType Ty) const {
   }
 
   if (const RecordType *RT = Ty->getAs<RecordType>()) {
-    const RecordDecl *RD = RT->getDecl();
+    const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
     assert(!RD->hasFlexibleArrayMember());
 
     for (const FieldDecl *Field : RD->fields()) {
@@ -153,7 +153,7 @@ ABIArgInfo AMDGPUABIInfo::classifyReturnType(QualType RetTy) const {
         return ABIArgInfo::getDirect(CGT.ConvertType(QualType(SeltTy, 0)));
 
       if (const RecordType *RT = RetTy->getAs<RecordType>()) {
-        const RecordDecl *RD = RT->getDecl();
+        const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
         if (RD->hasFlexibleArrayMember())
           return DefaultABIInfo::classifyReturnType(RetTy);
       }
@@ -246,7 +246,7 @@ ABIArgInfo AMDGPUABIInfo::classifyArgumentType(QualType Ty, bool Variadic,
       return ABIArgInfo::getDirect(CGT.ConvertType(QualType(SeltTy, 0)));
 
     if (const RecordType *RT = Ty->getAs<RecordType>()) {
-      const RecordDecl *RD = RT->getDecl();
+      const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
       if (RD->hasFlexibleArrayMember())
         return DefaultABIInfo::classifyArgumentType(Ty);
     }
@@ -304,7 +304,7 @@ public:
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &M) const override;
-  unsigned getOpenCLKernelCallingConv() const override;
+  unsigned getDeviceKernelCallingConv() const override;
 
   llvm::Constant *getNullPointer(const CodeGen::CodeGenModule &CGM,
       llvm::PointerType *T, QualType QT) const override;
@@ -431,7 +431,7 @@ void AMDGPUTargetCodeGenInfo::setTargetAttributes(
     F->addFnAttr("amdgpu-ieee", "false");
 }
 
-unsigned AMDGPUTargetCodeGenInfo::getOpenCLKernelCallingConv() const {
+unsigned AMDGPUTargetCodeGenInfo::getDeviceKernelCallingConv() const {
   return llvm::CallingConv::AMDGPU_KERNEL;
 }
 

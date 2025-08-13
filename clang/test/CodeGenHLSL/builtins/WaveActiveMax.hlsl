@@ -16,7 +16,7 @@ int test_int(int expr) {
 }
 
 // CHECK-DXIL: declare [[TY]] @llvm.dx.wave.reduce.max.i32([[TY]]) #[[#attr:]]
-// CHECK-SPIRV: declare spir_func [[TY]] @llvm.spv.wave.reduce.max.i32([[TY]]) #[[#attr:]]
+// CHECK-SPIRV: declare [[TY]] @llvm.spv.wave.reduce.max.i32([[TY]]) #[[#attr:]]
 
 // CHECK-LABEL: test_uint64_t
 uint64_t test_uint64_t(uint64_t expr) {
@@ -27,7 +27,7 @@ uint64_t test_uint64_t(uint64_t expr) {
 }
 
 // CHECK-DXIL: declare [[TY]] @llvm.dx.wave.reduce.umax.i64([[TY]]) #[[#attr:]]
-// CHECK-SPIRV: declare spir_func [[TY]] @llvm.spv.wave.reduce.umax.i64([[TY]]) #[[#attr:]]
+// CHECK-SPIRV: declare [[TY]] @llvm.spv.wave.reduce.umax.i64([[TY]]) #[[#attr:]]
 
 // Test basic lowering to runtime function call with array and float value.
 
@@ -40,7 +40,7 @@ float4 test_floatv4(float4 expr) {
 }
 
 // CHECK-DXIL: declare [[TY1]] @llvm.dx.wave.reduce.max.v4f32([[TY1]]) #[[#attr]]
-// CHECK-SPIRV: declare spir_func [[TY1]] @llvm.spv.wave.reduce.max.v4f32([[TY1]]) #[[#attr]]
+// CHECK-SPIRV: declare [[TY1]] @llvm.spv.wave.reduce.max.v4f32([[TY1]]) #[[#attr]]
 
 // CHECK: attributes #[[#attr]] = {{{.*}} convergent {{.*}}}
 

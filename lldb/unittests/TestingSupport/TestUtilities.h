@@ -11,11 +11,11 @@
 
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Utility/DataBuffer.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/FileUtilities.h"
+#include "llvm/Support/JSON.h"
+#include "llvm/Support/raw_ostream.h"
 #include <string>
 
 #define ASSERT_NO_ERROR(x)                                                     \
@@ -59,6 +59,13 @@ private:
 
   std::string Buffer;
 };
+
+template <typename T> static llvm::Expected<T> roundtripJSON(const T &input) {
+  std::string encoded;
+  llvm::raw_string_ostream OS(encoded);
+  OS << toJSON(input);
+  return llvm::json::parse<T>(encoded);
+}
 } // namespace lldb_private
 
 #endif

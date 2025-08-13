@@ -1,9 +1,11 @@
+// RUN: %clang_cc1 -triple powerpc64le-unknown-unknown -target-cpu future \
+// RUN:   -ast-dump  %s | FileCheck %s
 // RUN: %clang_cc1 -triple powerpc64le-unknown-unknown -target-cpu pwr10 \
-// RUN:   -ast-dump -ast-dump-filter __vector %s | FileCheck %s
+// RUN:   -ast-dump  %s | FileCheck %s
 // RUN: %clang_cc1 -triple powerpc64le-unknown-unknown -target-cpu pwr9 \
-// RUN:   -ast-dump -ast-dump-filter __vector %s | FileCheck %s
+// RUN:   -ast-dump  %s | FileCheck %s
 // RUN: %clang_cc1 -triple powerpc64le-unknown-unknown -target-cpu pwr8 \
-// RUN:   -ast-dump -ast-dump-filter __vector %s | FileCheck %s
+// RUN:   -ast-dump  %s | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -ast-dump %s | FileCheck %s \
 // RUN:   --check-prefix=CHECK-X86_64
 // RUN: %clang_cc1 -triple arm-unknown-unknown -ast-dump %s | FileCheck %s \
@@ -15,16 +17,21 @@
 // are correctly defined. We also added checks on a couple of other targets to
 // ensure the types are target-dependent.
 
+// CHECK: TypedefDecl {{.*}} implicit __dmr1024 '__dmr1024'
+// CHECK: `-BuiltinType {{.*}} '__dmr1024'
 // CHECK: TypedefDecl {{.*}} implicit __vector_quad '__vector_quad'
 // CHECK-NEXT: -BuiltinType {{.*}} '__vector_quad'
 // CHECK: TypedefDecl {{.*}} implicit __vector_pair '__vector_pair'
 // CHECK-NEXT: -BuiltinType {{.*}} '__vector_pair'
 
+// CHECK-X86_64-NOT: __dmr1024
 // CHECK-X86_64-NOT: __vector_quad
 // CHECK-X86_64-NOT: __vector_pair
 
+// CHECK-ARM-NOT: __dmr1024
 // CHECK-ARM-NOT: __vector_quad
 // CHECK-ARM-NOT: __vector_pair
 
+// CHECK-RISCV64-NOT: __dmr1024
 // CHECK-RISCV64-NOT: __vector_quad
 // CHECK-RISCV64-NOT: __vector_pair

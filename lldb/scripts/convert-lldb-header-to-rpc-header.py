@@ -27,7 +27,7 @@ LLDB_LOCAL_INCLUDE_REGEX = re.compile(r'#include "lldb/lldb-\s*', re.M)
 LLDB_NAMESPACE_DEFINITION_REGEX = re.compile(
     r"(?P<comment_marker>//\s*){,1}namespace lldb\s{1}", re.M
 )
-LLDB_NAMESPACE_REGEX = re.compile(r"\s*.+lldb::\s*", re.M)
+LLDB_NAMESPACE_REGEX = re.compile(r"lldb::\s*", re.M)
 
 
 def main():
