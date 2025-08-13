@@ -1076,24 +1076,32 @@ static bool isHardcodedCountedByPointerArgumentSafe(
 
 // Checks if the argument passed to __single pointer is one of the following
 // forms:
-// 0. `nullptr`.
-// 1. `&var`, if `var` is a variable identifier.
-// 2. `&C[_]`, if `C` is a hardened container/view.
-// 3. `sp.first(1).data()` and friends.
-bool isSinglePointerArgumentSafe(ASTContext &Context, const Expr *Arg) {
-  const Expr *ArgNoImp = Arg->IgnoreParenImpCasts();
+// 0. Anything, if the param type is a `void *__single`.
+// 1. `nullptr`.
+// 2. `&var`, if `var` is a variable identifier.
+// 3. `&C[_]`, if `C` is a hardened container/view.
+// 4. `sp.first(1).data()` and friends.
+bool isSinglePointerArgumentSafe(ASTContext &Context, QualType ParamTy,
+                                 const Expr *Arg) {
+  assert(ParamTy->isSinglePointerType());
 
   // Check form 0:
+  if (ParamTy->getPointeeType()->isVoidType())
+    return true;
+
+  const Expr *ArgNoImp = Arg->IgnoreParenImpCasts();
+
+  // Check form 1:
   if (ArgNoImp->getType()->isNullPtrType())
     return true;
 
-  // Check form 1:
+  // Check form 2:
   {
     if (tryGetAddressofDRE(ArgNoImp))
       return true;
   }
 
-  // Check form 2:
+  // Check form 3:
   {
     if (const auto *UO = dyn_cast<UnaryOperator>(ArgNoImp))
       if (UO->getOpcode() == UnaryOperator::Opcode::UO_AddrOf) {
@@ -1108,7 +1116,7 @@ bool isSinglePointerArgumentSafe(ASTContext &Context, const Expr *Arg) {
       }
   }
 
-  // Check form 3:
+  // Check form 4:
   if (const Expr *ExtentExpr =
           extractExtentFromSubviewDataCall(Context, ArgNoImp)) {
     std::optional<llvm::APSInt> ExtentVal =
@@ -3463,7 +3471,7 @@ public:
       ast_matchers::matchEachArgumentWithParamType(
           *Call, [&Results, &Ctx, &Found](QualType QT, const Expr *Arg) {
             if (isSinglePointerType(QT) &&
-                !isSinglePointerArgumentSafe(Ctx, Arg)) {
+                !isSinglePointerArgumentSafe(Ctx, QT, Arg)) {
               Results.emplace_back(ArgTag, DynTypedNode::create(*Arg));
               Found = true;
             }
