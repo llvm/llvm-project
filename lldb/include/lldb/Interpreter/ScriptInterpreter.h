@@ -16,6 +16,7 @@
 #include "lldb/API/SBEvent.h"
 #include "lldb/API/SBExecutionContext.h"
 #include "lldb/API/SBLaunchInfo.h"
+#include "lldb/API/SBModule.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBSymbolContext.h"
@@ -25,6 +26,7 @@
 #include "lldb/Core/ThreadedCommunication.h"
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/StreamFile.h"
+#include "lldb/Interpreter/Interfaces/JITLoaderInterface.h"
 #include "lldb/Interpreter/Interfaces/OperatingSystemInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedPlatformInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedProcessInterface.h"
@@ -540,6 +542,10 @@ public:
     return {};
   }
 
+  virtual lldb::JITLoaderInterfaceSP CreateJITLoaderInterface() {
+    return {};
+  }
+
   virtual lldb::ScriptedPlatformInterfaceUP GetScriptedPlatformInterface() {
     return {};
   }
@@ -585,6 +591,8 @@ public:
   lldb::ExecutionContextRefSP GetOpaqueTypeFromSBExecutionContext(
       const lldb::SBExecutionContext &exe_ctx) const;
 
+  lldb::ModuleSP GetOpaqueTypeFromSBModule(const lldb::SBModule &module) const;
+  
 protected:
   Debugger &m_debugger;
   lldb::ScriptLanguage m_script_lang;
