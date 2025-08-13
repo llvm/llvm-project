@@ -1932,15 +1932,10 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
               dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts())) {
         PrimType TargetT = classifyPrim(Init->getType());
 
-        auto Eval = [&](const Expr *Init, unsigned ElemIndex) {
-          PrimType InitT = classifyPrim(Init->getType());
-          if (!this->visit(Init))
+        auto Eval = [&](const IntegerLiteral *IL, unsigned ElemIndex) {
+          if (!this->emitConst(IL->getValue(), Init))
             return false;
-          if (InitT != TargetT) {
-            if (!this->emitCast(InitT, TargetT, E))
-              return false;
-          }
-          return this->emitInitElem(TargetT, ElemIndex, Init);
+          return this->emitInitElem(TargetT, ElemIndex, IL);
         };
         if (!EmbedS->doForEachDataElement(Eval, ElementIndex))
           return false;
