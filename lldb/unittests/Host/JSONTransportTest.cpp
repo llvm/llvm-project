@@ -132,6 +132,9 @@ public:
 
 } // namespace
 
+// Failing on Windows, see https://github.com/llvm/llvm-project/issues/153446.
+#ifndef _WIN32
+
 TEST_F(HTTPDelimitedJSONTransportTest, MalformedRequests) {
   std::string malformed_header =
       "COnTent-LenGth: -1\r\nContent-Type: text/json\r\n\r\nnotjosn";
@@ -336,3 +339,5 @@ TEST_F(JSONRPCTransportTest, NoDataTimeout) {
       RunOnce<JSONTestType>(/*timeout=*/std::chrono::milliseconds(10)),
       FailedWithMessage("timeout"));
 }
+
+#endif
