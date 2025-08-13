@@ -9,9 +9,10 @@
 def BITOP3_32 : ComplexPattern<i32, 4, "SelectBITOP3", [and, or, xor]>;
 def BITOP3_16 : ComplexPattern<i16, 4, "SelectBITOP3", [and, or, xor]>;
 
-// Matches PTRADD as a commutative operation. Patterns using this PatFrag must
-// set GISelShouldIgnore = 1 as commuting the corresponding G_PTR_ADD is
-// invalid.
+// Matches PTRADD as a commutative operation.
+// FIXME: Patterns using this PatFrag together with a C++ predicate must set
+// GISelShouldIgnore = 1 to avoid a bug in the GlobalISelMatchTable optimizer
+// that hoists the predicate check above the operand matching checks.
 def ptradd_commutative : PatFrags<(ops node:$src0, node:$src1),
   [(ptradd node:$src0, node:$src1), (ptradd node:$src1, node:$src0)]>;
 
