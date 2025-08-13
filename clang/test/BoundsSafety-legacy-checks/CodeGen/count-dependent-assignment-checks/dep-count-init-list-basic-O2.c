@@ -96,7 +96,7 @@ void TestAccessFail() {
 // CHECK-LABEL: @TestAccessFail2(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[ARR:%.*]] = alloca [9 x i32], align 16
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 36, ptr nonnull [[ARR]]) #[[ATTR6:[0-9]+]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARR]]) #[[ATTR6:[0-9]+]]
 // CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 36
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i8, ptr [[ARR]], i64 -4
 // CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[ARRAYIDX]], [[UPPER]], {{!annotation ![0-9]+}}
@@ -107,7 +107,7 @@ void TestAccessFail() {
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont47:
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 36, ptr nonnull [[ARR]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ARR]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
 //
 void TestAccessFail2() {

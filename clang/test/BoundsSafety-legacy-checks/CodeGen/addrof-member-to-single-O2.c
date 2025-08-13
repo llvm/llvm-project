@@ -66,7 +66,7 @@ char **addrof_bidi_ptr_to_single_oob_upper(void) {
 // CHECK-LABEL: @addrof_bidi_ptr_to_single_oob_lower(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[F:%.*]] = alloca [[STRUCT_FOO:%.*]], align 8
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[F]]) #[[ATTR6:[0-9]+]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[F]]) #[[ATTR6:[0-9]+]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[F]], i64 24
 // CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr i8, ptr [[F]], i64 -24
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[BOUND_PTR_ARITH]], [[TMP0]], {{!annotation ![0-9]+}}
@@ -77,7 +77,7 @@ char **addrof_bidi_ptr_to_single_oob_upper(void) {
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       __addrof_bidi_ptr_to_single.exit:
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 24, ptr nonnull [[F]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[F]]) #[[ATTR6]]
 // CHECK-NEXT:    ret ptr [[BOUND_PTR_ARITH]]
 //
 char **addrof_bidi_ptr_to_single_oob_lower(void) {
@@ -93,9 +93,9 @@ static inline int *__addrof_bidi_i_to_single(struct foo *__bidi_indexable f) {
 // CHECK-LABEL: @addrof_bidi_i_to_single(
 // CHECK-NEXT:  __addrof_bidi_i_to_single.exit:
 // CHECK-NEXT:    [[F:%.*]] = alloca [[STRUCT_FOO:%.*]], align 8
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[F]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[F]]) #[[ATTR6]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[F]], i64 8
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 24, ptr nonnull [[F]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[F]]) #[[ATTR6]]
 // CHECK-NEXT:    ret ptr [[TMP0]]
 //
 int *addrof_bidi_i_to_single(void) {
@@ -117,7 +117,7 @@ int *addrof_bidi_i_to_single_oob_upper(void) {
 // CHECK-LABEL: @addrof_bidi_i_to_single_oob_lower(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[F:%.*]] = alloca [[STRUCT_FOO:%.*]], align 8
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[F]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[F]]) #[[ATTR6]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[F]], i64 24
 // CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr i8, ptr [[F]], i64 -24
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[BOUND_PTR_ARITH]], [[TMP0]], {{!annotation ![0-9]+}}
@@ -129,7 +129,7 @@ int *addrof_bidi_i_to_single_oob_upper(void) {
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       __addrof_bidi_i_to_single.exit:
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[F]], i64 -16
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 24, ptr nonnull [[F]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[F]]) #[[ATTR6]]
 // CHECK-NEXT:    ret ptr [[TMP3]]
 //
 int *addrof_bidi_i_to_single_oob_lower(void) {
@@ -145,9 +145,9 @@ static inline long *__addrof_bidi_l_to_single(struct foo *__bidi_indexable f) {
 // CHECK-LABEL: @addrof_bidi_l_to_single(
 // CHECK-NEXT:  __addrof_bidi_l_to_single.exit:
 // CHECK-NEXT:    [[F:%.*]] = alloca [[STRUCT_FOO:%.*]], align 8
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[F]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[F]]) #[[ATTR6]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[F]], i64 16
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 24, ptr nonnull [[F]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[F]]) #[[ATTR6]]
 // CHECK-NEXT:    ret ptr [[TMP0]]
 //
 long *addrof_bidi_l_to_single(void) {
@@ -169,7 +169,7 @@ long *addrof_bidi_l_to_single_oob_upper(void) {
 // CHECK-LABEL: @addrof_bidi_l_to_single_oob_lower(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[F:%.*]] = alloca [[STRUCT_FOO:%.*]], align 8
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[F]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[F]]) #[[ATTR6]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[F]], i64 24
 // CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr i8, ptr [[F]], i64 -24
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[BOUND_PTR_ARITH]], [[TMP0]], {{!annotation ![0-9]+}}
@@ -181,7 +181,7 @@ long *addrof_bidi_l_to_single_oob_upper(void) {
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       __addrof_bidi_l_to_single.exit:
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[F]], i64 -8
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 24, ptr nonnull [[F]]) #[[ATTR6]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[F]]) #[[ATTR6]]
 // CHECK-NEXT:    ret ptr [[TMP3]]
 //
 long *addrof_bidi_l_to_single_oob_lower(void) {
