@@ -38,8 +38,10 @@ liveins:
 frameInfo:
   maxAlignment:  4
   hasCalls:      true
-  savePoint:     '%bb.2'
-  restorePoint:  '%bb.2'
+  savePoint:
+   - point:           '%bb.2'
+  restorePoint:
+    - point:           '%bb.2'
 stack:
   - { id: 0, name: tmp, offset: 0, size: 4, alignment: 4 }
 body: |
