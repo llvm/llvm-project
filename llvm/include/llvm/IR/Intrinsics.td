@@ -59,6 +59,7 @@ def AArch64_ZA:   IntrinsicMemoryLocation;
 // IntrInaccessible{Read|Write}MemOnly needs to set Location
 class IntrInaccessibleReadMemOnly<IntrinsicMemoryLocation idx> : IntrinsicProperty{IntrinsicMemoryLocation Loc=idx;}
 class IntrInaccessibleWriteMemOnly<IntrinsicMemoryLocation idx> : IntrinsicProperty{IntrinsicMemoryLocation Loc=idx;}
+class IntrInaccessibleReadWriteMem<IntrinsicMemoryLocation idx> : IntrinsicProperty{IntrinsicMemoryLocation Loc=idx;}
 
 // IntrInaccessibleMemOrArgMemOnly -- This intrinsic only accesses memory that
 // its pointer-typed arguments point to or memory that is not accessible

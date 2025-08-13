@@ -169,6 +169,12 @@ public:
     return MemoryEffectsBase(Loc, ModRefInfo::Mod);
   }
 
+  /// Create MemoryEffectsBase that can read write inaccessible memory.
+  static MemoryEffectsBase
+  inaccessibleReadWriteMem(Location Loc = Location::InaccessibleMem) {
+    return MemoryEffectsBase(Loc, ModRefInfo::ModRef);
+  }
+
   /// Checks if only target-specific memory locations are set.
   /// Ignores standard locations like ArgMem or InaccessibleMem.
   /// Needed because `Data` may be non-zero by default unless explicitly
