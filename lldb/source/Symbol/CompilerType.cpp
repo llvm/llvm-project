@@ -318,6 +318,13 @@ bool CompilerType::IsArrayOfScalarType() const {
   return false;
 }
 
+bool CompilerType::IsCXXClassType() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsCXXClassType(m_type);
+  return false;
+}
+
 bool CompilerType::IsBeingDefined() const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())

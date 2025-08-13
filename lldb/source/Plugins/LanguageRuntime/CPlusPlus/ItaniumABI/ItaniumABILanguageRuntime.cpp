@@ -116,8 +116,7 @@ TypeAndOrName ItaniumABILanguageRuntime::GetTypeInfo(
       if (class_types.GetSize() == 1) {
         type_sp = class_types.GetTypeAtIndex(0);
         if (type_sp) {
-          if (TypeSystemClang::IsCXXClassType(
-                  type_sp->GetForwardCompilerType())) {
+          if (type_sp->GetForwardCompilerType().IsCXXClassType()) {
             LLDB_LOGF(log,
                       "0x%16.16" PRIx64
                       ": static-type = '%s' has dynamic type: uid={0x%" PRIx64
@@ -148,8 +147,7 @@ TypeAndOrName ItaniumABILanguageRuntime::GetTypeInfo(
         for (i = 0; i < class_types.GetSize(); i++) {
           type_sp = class_types.GetTypeAtIndex(i);
           if (type_sp) {
-            if (TypeSystemClang::IsCXXClassType(
-                    type_sp->GetForwardCompilerType())) {
+            if (type_sp->GetForwardCompilerType().IsCXXClassType()) {
               LLDB_LOGF(log,
                         "0x%16.16" PRIx64 ": static-type = '%s' has multiple "
                         "matching dynamic types, picking "

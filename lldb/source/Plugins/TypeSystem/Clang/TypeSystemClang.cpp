@@ -80,8 +80,9 @@
 
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserClang.h"
-#include "Plugins/SymbolFile/PDB/PDBASTParser.h"
 #include "Plugins/SymbolFile/NativePDB/PdbAstBuilder.h"
+#include "Plugins/SymbolFile/PDB/PDBASTParser.h"
+#include "lldb/lldb-types.h"
 
 #include <cstdio>
 
@@ -3747,11 +3748,11 @@ TypeSystemClang::GetCXXClassName(const CompilerType &type) {
   return std::string(cxx_record_decl->getIdentifier()->getNameStart());
 }
 
-bool TypeSystemClang::IsCXXClassType(const CompilerType &type) {
+bool TypeSystemClang::IsCXXClassType(lldb::opaque_compiler_type_t type) {
   if (!type)
     return false;
 
-  clang::QualType qual_type(ClangUtil::GetCanonicalQualType(type));
+  clang::QualType qual_type(GetCanonicalQualType(type));
   return !qual_type.isNull() && qual_type->getAsCXXRecordDecl() != nullptr;
 }
 
@@ -9573,7 +9574,7 @@ TypeSystemClang::DeclContextGetTypeSystemClang(const CompilerDeclContext &dc) {
 void TypeSystemClang::RequireCompleteType(CompilerType type) {
   // Technically, enums can be incomplete too, but we don't handle those as they
   // are emitted even under -flimit-debug-info.
-  if (!TypeSystemClang::IsCXXClassType(type))
+  if (!type.IsCXXClassType())
     return;
 
   if (type.GetCompleteType())
