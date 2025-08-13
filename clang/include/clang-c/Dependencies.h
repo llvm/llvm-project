@@ -752,7 +752,8 @@ typedef struct CXOpaqueDepGraphModuleLinkLibrary *CXDepGraphModuleLinkLibrary;
 /**
  * Get the set of link libraries given a \c CXDepGraphModule instance.
  * The returned set is a pointer into memory that the \c CXDepGraphModule
- * instance owns. Therefore the set does not need to be disposed.
+ * instance owns. Therefore the set does not need to be disposed, and it has
+ * the same lifetime as the \c CXDepGraphModule instance.
  */
 CINDEX_LINKAGE CXDepGraphModuleLinkLibrarySet
     clang_experimental_DepGraphModule_getLinkLibrarySet(CXDepGraphModule);
@@ -765,7 +766,10 @@ CINDEX_LINKAGE size_t clang_experimental_DepGraphModuleLinkLibrarySet_getSize(
 
 /**
  * Retrieve the \c CXDepGraphModuleLinkLibrary instance at index \p Idx from the
- * \c CXDepGraphModuleLinkLibrarySet instance.
+ * \c CXDepGraphModuleLinkLibrarySet instance. The returned object is owned
+ * by the \c CXDepGraphModule instance where the
+ * \c CXDepGraphModuleLinkLibrarySet was retrieved from, and has the same
+ * lifetime as the \c CXDepGraphModule instance.
  */
 CINDEX_LINKAGE CXDepGraphModuleLinkLibrary
 clang_experimental_DepGraphModuleLinkLibrarySet_getLinkLibrary(
@@ -775,7 +779,9 @@ clang_experimental_DepGraphModuleLinkLibrarySet_getLinkLibrary(
  * Get the `Library` string from the \c CXDepGraphModuleLinkLibrary instance.
  * `Library` could be a library name, or an absolute path to a library or a
  * framework, as specified in the corresponding \c CXDepGraphModule instance's
- * modulemap.
+ * modulemap. The returned \c CXString is a reference to a string owned
+ * by the \c CXDepGraphModule instance, and has the same lifetime as the
+ * the \c CXDepGraphModule instance.
  */
 CINDEX_LINKAGE CXString clang_experimental_DepGraphModuleLinkLibrary_getLibrary(
     CXDepGraphModuleLinkLibrary);
