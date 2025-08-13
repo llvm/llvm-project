@@ -230,6 +230,11 @@ public:
       llvm::function_ref<llvm::orc::SymbolMap(llvm::orc::MangleAndInterner)>
           symbolMap);
 
+  /// Initialize the ExecutionEngine. Global constructors specified by
+  /// `llvm.mlir.global_ctors` will be run. One common scenario is that kernel
+  /// binary compiled from `gpu.module` gets loaded during initialization. Make
+  /// sure all symbols are solvable before initialization by calling
+  /// `registerSymbols` or including shared libraries.
   void initialize();
 
 private:
