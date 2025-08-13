@@ -1477,7 +1477,8 @@ static bool requiresSaveVG(const MachineFunction &MF) {
 
 static bool matchLibcall(const TargetLowering &TLI, const MachineOperand &MO,
                          RTLIB::Libcall LC) {
-  return MO.isSymbol() && TLI.getLibcallName(LC) == MO.getSymbolName();
+  return MO.isSymbol() &&
+         StringRef(TLI.getLibcallName(LC)) == MO.getSymbolName();
 }
 
 bool isVGInstruction(MachineBasicBlock::iterator MBBI,
