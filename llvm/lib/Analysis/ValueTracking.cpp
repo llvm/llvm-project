@@ -423,6 +423,49 @@ static void computeKnownBitsMul(const Value *Op0, const Value *Op1, bool NSW,
     Known.makeNonNegative();
   else if (isKnownNegative && !Known.isNonNegative())
     Known.makeNegative();
+
+  // Additional logic: If both operands are the same sign- or zero-extended
+  // value from a small integer, and the multiplication is (sext x) * (sext x)
+  // or (zext x) * (zext x), then the result cannot set bits above the maximum
+  // possible square. This allows InstCombine and other passes to fold (x * x) &
+  // (1 << N) to 0 when N is out of range.
+  using namespace PatternMatch;
+  const Value *A = nullptr;
+  // Only handle the case where both operands are the same extension of the same
+  // value.
+  if ((match(Op0, m_SExt(m_Value(A))) && match(Op1, m_SExt(m_Specific(A)))) ||
+      (match(Op0, m_ZExt(m_Value(A))) && match(Op1, m_ZExt(m_Specific(A))))) {
+    Type *FromTy = A->getType();
+    Type *ToTy = Op0->getType();
+    if (FromTy->isIntegerTy() && ToTy->isIntegerTy() &&
+        FromTy->getScalarSizeInBits() < ToTy->getScalarSizeInBits()) {
+      unsigned FromBits = FromTy->getScalarSizeInBits();
+      unsigned ToBits = ToTy->getScalarSizeInBits();
+      // For both signed and unsigned, the maximum absolute value is max(|min|,
+      // |max|)
+      APInt minVal(FromBits, 0), maxVal(FromBits, 0);
+      bool isSigned = isa<SExtInst>(Op0);
+      if (isSigned) {
+        minVal = APInt::getSignedMinValue(FromBits);
+        maxVal = APInt::getSignedMaxValue(FromBits);
+      } else {
+        minVal = APInt::getMinValue(FromBits);
+        maxVal = APInt::getMaxValue(FromBits);
+      }
+      APInt absMin = minVal.abs();
+      APInt absMax = maxVal.abs();
+      APInt maxAbs = absMin.ugt(absMax) ? absMin : absMax;
+      APInt maxSquare = maxAbs.zext(ToBits);
+      maxSquare = maxSquare * maxSquare;
+      // All bits above the highest set bit in maxSquare are known zero.
+      unsigned MaxBit = maxSquare.isZero() ? 0 : maxSquare.logBase2();
+      if (MaxBit + 1 < ToBits) {
+        APInt KnownZeroMask =
+            APInt::getHighBitsSet(ToBits, ToBits - (MaxBit + 1));
+        Known.Zero |= KnownZeroMask;
+      }
+    }
+  }
 }
 
 void llvm::computeKnownBitsFromRangeMetadata(const MDNode &Ranges,
