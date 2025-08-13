@@ -754,9 +754,10 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
 
   if (ConstantInt *CI = dyn_cast<ConstantInt>(NextInChain)) {
     if (CI->isZero()) {
-      // Special handling for XOR with disjoint bits:
-      // Keep the original XOR instruction with the non disjoint part of
-      // the constant, and the remaining operation is still meaningful.
+      // Custom XOR handling for disjoint bits - preserves original XOR
+      // with non-disjoint constant bits.
+      // TODO: The design should be updated to support partial constant
+      // extraction.
       if (BO->getOpcode() == Instruction::Xor)
         return BO;
 
