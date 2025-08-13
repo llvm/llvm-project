@@ -179,6 +179,17 @@ evaluateBooleanExpression(Value *Expr,
     }
   }
 
+  // Check for instructions being in the same BB
+  if (!Instructions.empty()) {
+    BasicBlock *FirstBB = Instructions.front()->getParent();
+    if (!llvm::all_of(Instructions, [FirstBB](Instruction *I) {
+          return I->getParent() == FirstBB;
+        })) {
+      return std::nullopt;
+    }
+  }
+
+  // Sort instructions within the same BB
   llvm::sort(Instructions,
              [](Instruction *A, Instruction *B) { return A->comesBefore(B); });
 
