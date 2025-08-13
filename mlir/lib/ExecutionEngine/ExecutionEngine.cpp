@@ -449,9 +449,8 @@ Error ExecutionEngine::invokePacked(StringRef name,
 }
 
 void ExecutionEngine::initialize() {
-  if (isInitialized) {
+  if (isInitialized)
     return;
-  }
   // TODO: Allow JIT initialize for AArch64. Currently there's a bug causing a
   // crash for AArch64 see related issue #71963.
   if (!jit->getTargetTriple().isAArch64())
