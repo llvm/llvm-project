@@ -432,6 +432,7 @@ void MachineSMEABI::restorePhyRegSave(PhysRegSave const &RegSave,
 void MachineSMEABI::emitRestoreLazySave(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator MBBI,
                                         LiveRegs PhysLiveRegs) {
+  auto *TLI = Subtarget->getTargetLowering();
   DebugLoc DL = getDebugLoc(MBB, MBBI);
   Register TPIDR2EL0 = MRI->createVirtualRegister(&AArch64::GPR64RegClass);
   Register TPIDR2 = AArch64::X0;
@@ -455,7 +456,7 @@ void MachineSMEABI::emitRestoreLazySave(MachineBasicBlock &MBB,
   BuildMI(MBB, MBBI, DL, TII->get(AArch64::RestoreZAPseudo))
       .addReg(TPIDR2EL0)
       .addReg(TPIDR2)
-      .addExternalSymbol("__arm_tpidr2_restore")
+      .addExternalSymbol(TLI->getLibcallName(RTLIB::SMEABI_TPIDR2_RESTORE))
       .addRegMask(TRI->SMEABISupportRoutinesCallPreservedMaskFromX0());
   // Zero TPIDR2_EL0.
   BuildMI(MBB, MBBI, DL, TII->get(AArch64::MSR))
@@ -547,6 +548,7 @@ static void emitZeroZA(const TargetInstrInfo &TII, DebugLoc DL,
 
 void MachineSMEABI::emitNewZAPrologue(MachineBasicBlock &MBB,
                                       MachineBasicBlock::iterator MBBI) {
+  auto *TLI = Subtarget->getTargetLowering();
   DebugLoc DL = getDebugLoc(MBB, MBBI);
 
   // Get current TPIDR2_EL0.
@@ -557,7 +559,7 @@ void MachineSMEABI::emitNewZAPrologue(MachineBasicBlock &MBB,
   // If TPIDR2_EL0 is non-zero, commit the lazy save.
   BuildMI(MBB, MBBI, DL, TII->get(AArch64::CommitZAPseudo))
       .addReg(TPIDR2EL0)
-      .addExternalSymbol("__arm_tpidr2_save")
+      .addExternalSymbol(TLI->getLibcallName(RTLIB::SMEABI_TPIDR2_SAVE))
       .addRegMask(TRI->SMEABISupportRoutinesCallPreservedMaskFromX0());
   // Clear TPIDR2_EL0.
   BuildMI(MBB, MBBI, DL, TII->get(AArch64::MSR))
