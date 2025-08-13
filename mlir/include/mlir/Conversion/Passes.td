@@ -1532,6 +1532,19 @@ def ConvertVectorToXeGPU : Pass<"convert-vector-to-xegpu"> {
 }
 
 //===----------------------------------------------------------------------===//
+// VectorToAMX
+//===----------------------------------------------------------------------===//
+
+def ConvertVectorToAMX : Pass<"convert-vector-to-amx"> {
+  let summary = "Lower the operations from the vector dialect into the AMX "
+                "dialect";
+  let dependentDialects = [
+    "affine::AffineDialect", "amx::AMXDialect", "arith::ArithDialect",
+    "memref::MemRefDialect", "scf::SCFDialect", "vector::VectorDialect"
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // XeVMToLLVM
 //===----------------------------------------------------------------------===//
 
