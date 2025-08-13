@@ -7140,10 +7140,6 @@ bool Compiler<Emitter>::emitDestruction(const Descriptor *Desc,
   assert(!Desc->isPrimitive());
   assert(!Desc->isPrimitiveArray());
 
-  // Can happen if the decl is invalid.
-  if (Desc->isDummy())
-    return true;
-
   // Arrays.
   if (Desc->isArray()) {
     const Descriptor *ElemDesc = Desc->ElemDesc;
