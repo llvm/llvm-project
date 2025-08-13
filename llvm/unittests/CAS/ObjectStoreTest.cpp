@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CAS/ObjectStore.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/ThreadPool.h"
@@ -268,6 +269,7 @@ TEST_P(CASTest, NodesBig) {
     ASSERT_THAT_ERROR(CAS->validate(CAS->getID(ID)), Succeeded());
 }
 
+#if LLVM_ENABLE_THREADS
 /// Common test functionality for creating blobs in parallel. You can vary which
 /// cas instances are the same or different, and the size of the created blobs.
 static void testBlobsParallel(ObjectStore &Read1, ObjectStore &Read2,
@@ -342,4 +344,5 @@ TEST_P(CASTest, BlobsBigParallel) {
   uint64_t Size = 100ULL * 1024;
   ASSERT_NO_FATAL_FAILURE(testBlobsParallel1(*CAS, Size));
 }
-#endif
+#endif // EXPENSIVE_CHECKS
+#endif // LLVM_ENABLE_THREADS
