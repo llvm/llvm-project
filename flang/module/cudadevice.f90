@@ -324,6 +324,20 @@ implicit none
       real(8), value :: x
     end function
   end interface
+
+  interface __sad
+    attributes(device) integer function __sad(i,j,k) bind(c, name='__nv_sad')
+      !dir$ ignore_tkr (d) i, (d) j, (d) k
+      integer, value :: i,j,k
+    end function
+  end interface
+
+  interface __usad
+    attributes(device) integer function __usad(i,j,k) bind(c, name='__nv_usad')
+      !dir$ ignore_tkr (d) i, (d) j, (d) k
+      integer, value :: i,j,k
+    end function
+  end interface
   
   interface signbit
     attributes(device) integer(4) function signbitf(x) bind(c,name='__nv_signbitf')
@@ -478,29 +492,29 @@ implicit none
     end function
   end interface
 
-  interface __double2uint_rn
-    attributes(device) integer function __double2uint_rn(r) bind(c)
+  interface __double2uint_rd
+    attributes(device) integer function __double2uint_rd(r) bind(c, name='__nv_double2uint_rd')
       !dir$ ignore_tkr (d) r
       double precision, value :: r
     end function
   end interface
 
-  interface __double2uint_rz
-    attributes(device) integer function __double2uint_rz(r) bind(c)
+  interface __double2uint_rn
+    attributes(device) integer function __double2uint_rn(r) bind(c, name='__nv_double2uint_rn')
       !dir$ ignore_tkr (d) r
       double precision, value :: r
     end function
   end interface
 
   interface __double2uint_ru
-    attributes(device) integer function __double2uint_ru(r) bind(c)
+    attributes(device) integer function __double2uint_ru(r) bind(c, name='__nv_double2uint_ru')
       !dir$ ignore_tkr (d) r
       double precision, value :: r
     end function
   end interface
 
-  interface __double2uint_rd
-    attributes(device) integer function __double2uint_rd(r) bind(c)
+  interface __double2uint_rz
+    attributes(device) integer function __double2uint_rz(r) bind(c, name='__nv_double2uint_rz')
       !dir$ ignore_tkr (d) r
       double precision, value :: r
     end function
