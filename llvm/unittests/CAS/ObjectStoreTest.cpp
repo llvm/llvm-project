@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CAS/ObjectStore.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/ThreadPool.h"
@@ -329,6 +330,7 @@ static void testBlobsParallel1(ObjectStore &CAS, uint64_t BlobSize) {
   testBlobsParallel(CAS, CAS, CAS, CAS, BlobSize);
 }
 
+#if LLVM_ENABLE_THREADS
 TEST_P(CASTest, BlobsParallel) {
   std::shared_ptr<ObjectStore> CAS = createObjectStore();
   uint64_t Size = 1ULL * 1024;
@@ -342,4 +344,5 @@ TEST_P(CASTest, BlobsBigParallel) {
   uint64_t Size = 100ULL * 1024;
   ASSERT_NO_FATAL_FAILURE(testBlobsParallel1(*CAS, Size));
 }
-#endif
+#endif // EXPENSIVE_CHECKS
+#endif // LLVM_ENABLE_THREADS
