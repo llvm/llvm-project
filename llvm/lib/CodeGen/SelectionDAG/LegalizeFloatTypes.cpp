@@ -1551,6 +1551,7 @@ void DAGTypeLegalizer::ExpandFloatResult(SDNode *N, unsigned ResNo) {
   case ISD::VAARG:              ExpandRes_VAARG(N, Lo, Hi); break;
 
   case ISD::ConstantFP: ExpandFloatRes_ConstantFP(N, Lo, Hi); break;
+  case ISD::AssertNoFPClass: ExpandFloatRes_AssertNoFPClass(N, Lo, Hi); break;
   case ISD::FABS:       ExpandFloatRes_FABS(N, Lo, Hi); break;
   case ISD::STRICT_FMINNUM:
   case ISD::FMINNUM:    ExpandFloatRes_FMINNUM(N, Lo, Hi); break;
@@ -1964,6 +1965,13 @@ void DAGTypeLegalizer::ExpandFloatRes_FNEG(SDNode *N, SDValue &Lo,
   GetExpandedFloat(N->getOperand(0), Lo, Hi);
   Lo = DAG.getNode(ISD::FNEG, dl, Lo.getValueType(), Lo);
   Hi = DAG.getNode(ISD::FNEG, dl, Hi.getValueType(), Hi);
+}
+
+void DAGTypeLegalizer::ExpandFloatRes_AssertNoFPClass(SDNode *N, SDValue &Lo,
+                                                      SDValue &Hi) {
+  // TODO: Handle ppcf128 by preserving AssertNoFPClass for one of the halves.
+  SDLoc dl(N);
+  GetExpandedFloat(N->getOperand(0), Lo, Hi);
 }
 
 void DAGTypeLegalizer::ExpandFloatRes_FP_EXTEND(SDNode *N, SDValue &Lo,
