@@ -84,7 +84,7 @@ public:
   static StateValue decodeZAState(unsigned Bitmask) {
     return static_cast<StateValue>((Bitmask & ZA_Mask) >> ZA_Shift);
   }
-  static unsigned encodeZAState(StateValue S) {
+  static constexpr unsigned encodeZAState(StateValue S) {
     return static_cast<unsigned>(S) << ZA_Shift;
   }
 

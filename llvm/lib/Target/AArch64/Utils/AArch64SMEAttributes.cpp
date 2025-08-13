@@ -81,34 +81,40 @@ SMEAttrs::SMEAttrs(const AttributeList &Attrs) {
 
 void SMEAttrs::addKnownFunctionAttrs(StringRef FuncName,
                                      const TargetLowering &TLI) {
-  RTLIB::LibcallImpl Impl = TLI.getSupportedLibcallImpl(FuncName);
-  if (Impl == RTLIB::Unsupported)
-    return;
-  RTLIB::Libcall LC = RTLIB::RuntimeLibcallsInfo::getLibcallFromImpl(Impl);
+  struct SMERoutineAttr {
+    RTLIB::Libcall LC{RTLIB::UNKNOWN_LIBCALL};
+    unsigned Attrs{SMEAttrs::Normal};
+  };
+
+  static constexpr unsigned SMCompatiableABIRoutine =
+      SMEAttrs::SM_Compatible | SMEAttrs::SME_ABI_Routine;
+  static constexpr unsigned SMCompatiableABIRoutineInZA =
+      SMCompatiableABIRoutine | encodeZAState(StateValue::In);
+
+  // Table of SME routine -> Known attributes.
+  static constexpr SMERoutineAttr SMERoutineAttrs[]{
+      {RTLIB::SMEABI_SME_STATE, SMCompatiableABIRoutine},
+      {RTLIB::SMEABI_TPIDR2_SAVE, SMCompatiableABIRoutine},
+      {RTLIB::SMEABI_GET_CURRENT_VG, SMCompatiableABIRoutine},
+      {RTLIB::SMEABI_SME_STATE_SIZE, SMCompatiableABIRoutine},
+      {RTLIB::SMEABI_SME_SAVE, SMCompatiableABIRoutine},
+      {RTLIB::SMEABI_SME_RESTORE, SMCompatiableABIRoutine},
+      {RTLIB::SMEABI_ZA_DISABLE, SMCompatiableABIRoutineInZA},
+      {RTLIB::SMEABI_TPIDR2_RESTORE, SMCompatiableABIRoutineInZA},
+      {RTLIB::SC_MEMCPY, SMEAttrs::SM_Compatible},
+      {RTLIB::SC_MEMMOVE, SMEAttrs::SM_Compatible},
+      {RTLIB::SC_MEMSET, SMEAttrs::SM_Compatible},
+      {RTLIB::SC_MEMCHR, SMEAttrs::SM_Compatible},
+  };
+
   unsigned KnownAttrs = SMEAttrs::Normal;
-  switch (LC) {
-  case RTLIB::SMEABI_SME_STATE:
-  case RTLIB::SMEABI_TPIDR2_SAVE:
-  case RTLIB::SMEABI_GET_CURRENT_VG:
-  case RTLIB::SMEABI_SME_STATE_SIZE:
-  case RTLIB::SMEABI_SME_SAVE:
-  case RTLIB::SMEABI_SME_RESTORE:
-    KnownAttrs |= SMEAttrs::SM_Compatible | SMEAttrs::SME_ABI_Routine;
-    break;
-  case RTLIB::SMEABI_ZA_DISABLE:
-  case RTLIB::SMEABI_TPIDR2_RESTORE:
-    KnownAttrs |= SMEAttrs::SM_Compatible | encodeZAState(StateValue::In) |
-                  SMEAttrs::SME_ABI_Routine;
-    break;
-  case RTLIB::SC_MEMCPY:
-  case RTLIB::SC_MEMMOVE:
-  case RTLIB::SC_MEMSET:
-  case RTLIB::SC_MEMCHR:
-    KnownAttrs |= SMEAttrs::SM_Compatible;
-    break;
-  default:
-    break;
+  for (auto [LC, Attrs] : SMERoutineAttrs) {
+    if (TLI.getLibcallName(LC) == FuncName) {
+      KnownAttrs = Attrs;
+      break;
+    }
   }
+
   set(KnownAttrs);
 }
 
