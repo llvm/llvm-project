@@ -198,9 +198,11 @@ template <> struct MappingTraits<FormatStyle::BraceWrappingFlags> {
     IO.mapOptional("BeforeWhile", Wrapping.BeforeWhile);
     IO.mapOptional("IndentBraces", Wrapping.IndentBraces);
     IO.mapOptional("SplitEmptyFunction", Wrapping.SplitEmptyFunction);
-    IO.mapOptional("SplitEmptyRecord", Wrapping.WrapEmptyRecord); // For backward compatibility.
     IO.mapOptional("SplitEmptyNamespace", Wrapping.SplitEmptyNamespace);
     IO.mapOptional("WrapEmptyRecord", Wrapping.WrapEmptyRecord);
+
+    // For backward compatibility.
+    IO.mapOptional("SplitEmptyRecord", Wrapping.WrapEmptyRecord);
   }
 };
 

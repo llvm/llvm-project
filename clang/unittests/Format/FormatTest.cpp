@@ -1491,7 +1491,8 @@ TEST_F(FormatTest, FormatShortBracedStatements) {
   AllowSimpleBracedStatements.AllowShortLoopsOnASingleLine = true;
   AllowSimpleBracedStatements.BreakBeforeBraces = FormatStyle::BS_Custom;
   AllowSimpleBracedStatements.BraceWrapping.AfterFunction = true;
-  AllowSimpleBracedStatements.BraceWrapping.WrapEmptyRecord = FormatStyle::BWER_BeforeBrace;
+  AllowSimpleBracedStatements.BraceWrapping.WrapEmptyRecord =
+      FormatStyle::BWER_BeforeBrace;
 
   verifyFormat("if (true) {}", AllowSimpleBracedStatements);
   verifyFormat("if constexpr (true) {}", AllowSimpleBracedStatements);
