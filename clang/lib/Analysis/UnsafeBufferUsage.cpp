@@ -686,6 +686,11 @@ struct CompatibleCountExprVisitor
     }
     return false;
   }
+
+  bool VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *SelfDAE,
+                              const Expr *Other, bool hasBeenSubstituted) {
+    return Visit(SelfDAE->getExpr(), Other, hasBeenSubstituted);
+  }
 };
 
 // TL'DR:
@@ -930,7 +935,10 @@ static bool isCountAttributedPointerArgumentSafeImpl(
   assert((CountedByExpr || !DependentValueMap) &&
          "If the __counted_by information is hardcoded, there is no "
          "dependent value map.");
+
   const Expr *PtrArgNoImp = PtrArg->IgnoreParenImpCasts();
+  if (const auto *DAE = dyn_cast<CXXDefaultArgExpr>(PtrArgNoImp))
+    PtrArgNoImp = DAE->getExpr()->IgnoreParenImpCasts();
 
   // check form 0:
   if (PtrArgNoImp->getType()->isNullPtrType()) {

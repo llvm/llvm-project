@@ -664,3 +664,44 @@ static void previous_infinite_loop3(int * __counted_by(n + n * m) p, size_t n,
   previous_infinite_loop3(p, n, q, r, m, o);
   previous_infinite_loop3(p, n, q, r, m, o + 1); // expected-warning 2{{unsafe assignment to function parameter of count-attributed type}}
 }
+
+// Check default args.
+
+void cb_def_arg_null_0(int *__counted_by(count) p = nullptr, size_t count = 0);
+
+// expected-note@+1{{consider using a safe container and passing '.data()' to the parameter 'p' and '.size()' to its dependent parameter 'count' or 'std::span' and passing '.first(...).data()' to the parameter 'p'}}
+void cb_def_arg_0_null(size_t count = 0, int *__counted_by(count) p = nullptr);
+
+// expected-note@+1 6{{consider using a safe container and passing '.data()' to the parameter 'p' and '.size()' to its dependent parameter 'count' or 'std::span' and passing '.first(...).data()' to the parameter 'p'}}
+void cb_def_arg_null_42(int *__counted_by(count) p = nullptr, size_t count = 42);
+
+void default_arg(std::span<int> sp) {
+  cb_def_arg_null_0();
+  cb_def_arg_null_0(nullptr);
+  cb_def_arg_null_0(nullptr, 0);
+  cb_def_arg_null_0(sp.data(), sp.size());
+
+  cb_def_arg_0_null();
+  cb_def_arg_0_null(0);
+  cb_def_arg_0_null(0, nullptr);
+  cb_def_arg_0_null(sp.size(), sp.data());
+  cb_def_arg_0_null(42);                       // expected-warning{{unsafe assignment to function parameter of count-attributed type}}
+  cb_def_arg_0_null(42, sp.first(42).data());
+
+  cb_def_arg_null_42();                        // expected-warning{{unsafe assignment to function parameter of count-attributed type}}
+  cb_def_arg_null_42(nullptr);                 // expected-warning{{unsafe assignment to function parameter of count-attributed type}}
+  cb_def_arg_null_42(nullptr, 42);             // expected-warning{{unsafe assignment to function parameter of count-attributed type}}
+  cb_def_arg_null_42(nullptr, 0);
+  cb_def_arg_null_42(sp.data());               // expected-warning{{unsafe assignment to function parameter of count-attributed type}}
+  cb_def_arg_null_42(sp.data(), sp.size());
+  cb_def_arg_null_42(sp.first(42).data());
+  cb_def_arg_null_42(sp.first(42).data(), 42);
+  cb_def_arg_null_42(sp.first(41).data());     // expected-warning{{unsafe assignment to function parameter of count-attributed type}}
+
+  // Check if the diagnostic is at the right paren.
+  // clang-format off
+  cb_def_arg_null_42
+    (
+    ); // expected-warning{{unsafe assignment to function parameter of count-attributed type}}
+  // clang-format on
+}

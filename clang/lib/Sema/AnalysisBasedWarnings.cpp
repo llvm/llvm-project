@@ -2576,8 +2576,9 @@ public:
         IsSimpleCount ? CATy->dependent_decls().begin()->getDecl()->getName()
                       : "";
 
-    S.Diag(Arg->getBeginLoc(),
-           diag::warn_unsafe_count_attributed_pointer_argument);
+    SourceLocation DiagLoc =
+        Arg->isDefaultArgument() ? Call->getRParenLoc() : Arg->getBeginLoc();
+    S.Diag(DiagLoc, diag::warn_unsafe_count_attributed_pointer_argument);
     S.Diag(PVD->getBeginLoc(),
            diag::note_unsafe_count_attributed_pointer_argument)
         << IsSimpleCount << QualType(CATy, 0) << !PtrParamName.empty()
