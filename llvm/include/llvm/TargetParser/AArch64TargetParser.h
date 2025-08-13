@@ -80,7 +80,7 @@ struct FMVInfo {
   std::optional<ArchExtKind> ID; // The architecture extension to enable.
   FMVInfo(StringRef Name, std::optional<CPUFeatures> FeatureBit,
           FeatPriorities PriorityBit, std::optional<ArchExtKind> ID)
-      : Name(Name), FeatureBit(FeatureBit), PriorityBit(PriorityBit), ID(ID){};
+      : Name(Name), FeatureBit(FeatureBit), PriorityBit(PriorityBit), ID(ID) {};
 };
 
 LLVM_ABI const std::vector<FMVInfo> &getFMVInfo();
