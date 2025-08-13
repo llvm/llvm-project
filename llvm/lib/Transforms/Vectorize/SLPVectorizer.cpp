@@ -10876,7 +10876,7 @@ public:
       switch (MainOpcode) {
       case Instruction::Add:
       case Instruction::LShr:
-      VectorCost = TTI.getArithmeticInstrCost(MainOpcode, VecTy, Kind);
+        VectorCost = TTI.getArithmeticInstrCost(MainOpcode, VecTy, Kind);
         break;
       default:
         llvm_unreachable("Unexpected instruction.");
