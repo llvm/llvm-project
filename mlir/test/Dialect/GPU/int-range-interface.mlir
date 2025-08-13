@@ -335,9 +335,9 @@ module attributes {gpu.container_module} {
 // CHECK-LABEL: func @broadcast
 func.func @broadcast(%idx: i32) {
   %0 = test.with_bounds { umin = 0 : index, umax = 10 : index, smin = 0 : index, smax = 10 : index } : index
-  %1 = gpu.broadcast_lane %0, first_lane : index
-  %2 = gpu.broadcast_lane %0, any_lane : index
-  %3 = gpu.broadcast_lane %0, lane %idx : index
+  %1 = gpu.subgroup_broadcast %0, first_active_lane : index
+  %2 = gpu.subgroup_broadcast %0, any_lane : index
+  %3 = gpu.subgroup_broadcast %0, specific_lane %idx : index
 
   // CHECK: test.reflect_bounds {smax = 10 : index, smin = 0 : index, umax = 10 : index, umin = 0 : index}
   // CHECK: test.reflect_bounds {smax = 10 : index, smin = 0 : index, umax = 10 : index, umin = 0 : index}
