@@ -4893,16 +4893,18 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
   // Limit to loops with trip counts that are cheap to expand.
   UP.SCEVExpansionBudget = 1;
 
-  // Try to unroll small, single block loops, if they have load/store
-  // dependencies, to expose more parallel memory access streams.
+  // Try to unroll small loops, of few-blocks with low budget, if they have
+  // load/store dependencies, to expose more parallel memory access streams,
+  // or if they do little work inside a block (i.e. load -> X -> store pattern).
   BasicBlock *Header = L->getHeader();
   if (Header == L->getLoopLatch()) {
     // Estimate the size of the loop.
     unsigned Size;
-    if (!isLoopSizeWithinBudget(L, TTI, 8, &Size))
+    unsigned Width = 10;
+    if (!isLoopSizeWithinBudget(L, TTI, Width, &Size))
       return;
 
-    SmallPtrSet<Value *, 8> LoadedValues;
+    SmallPtrSet<Value *, 8> LoadedValuesPlus;
     SmallVector<StoreInst *> Stores;
     for (auto *BB : L->blocks()) {
       for (auto &I : *BB) {
@@ -4912,9 +4914,13 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
         const SCEV *PtrSCEV = SE.getSCEV(Ptr);
         if (SE.isLoopInvariant(PtrSCEV, L))
           continue;
-        if (isa<LoadInst>(&I))
-          LoadedValues.insert(&I);
-        else
+        if (isa<LoadInst>(&I)) {
+          LoadedValuesPlus.insert(&I);
+          // Include in-loop 1st users of loaded values.
+          for (auto *U : I.users())
+            if (L->contains(cast<Instruction>(U)))
+              LoadedValuesPlus.insert(U);
+        } else
           Stores.push_back(cast<StoreInst>(&I));
       }
     }
@@ -4937,8 +4943,8 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
       UC++;
     }
 
-    if (BestUC == 1 || none_of(Stores, [&LoadedValues](StoreInst *SI) {
-          return LoadedValues.contains(SI->getOperand(0));
+    if (BestUC == 1 || none_of(Stores, [&LoadedValuesPlus](StoreInst *SI) {
+          return LoadedValuesPlus.contains(SI->getOperand(0));
         }))
       return;
 
