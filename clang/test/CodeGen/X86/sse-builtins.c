@@ -31,7 +31,7 @@ __m128 test_mm_and_ps(__m128 A, __m128 B) {
   // CHECK: and <4 x i32>
   return _mm_and_ps(A, B);
 }
-TEST_CONSTEXPR(match_m128(_mm_and_ps((__m128){-4.0f, -5.0f, +6.0f, +7.0f}, (__m128){+0.0f, -0.0f, -0.0f, +7.0f}), -0.0f, -0.0f, +0.0f, +7.0f));
+TEST_CONSTEXPR(match_m128(_mm_and_ps((__m128){-4.0f, -5.0f, +6.0f, +7.0f}, (__m128){+0.0f, -0.0f, -0.0f, +7.0f}), +0.0f, -0.0f, +0.0f, +7.0f));
 
 __m128 test_mm_andnot_ps(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_andnot_ps
@@ -39,7 +39,7 @@ __m128 test_mm_andnot_ps(__m128 A, __m128 B) {
   // CHECK: and <4 x i32>
   return _mm_andnot_ps(A, B);
 }
-TEST_CONSTEXPR(match_m128(_mm_andnot_ps((__m128){-4.0f, -5.0f, +6.0f, +7.0f}, (__m128){+0.0f, -0.0f, -0.0f, +7.0f}), +0.0f, +0.0f, +0.0f, +0.0f));
+TEST_CONSTEXPR(match_m128(_mm_andnot_ps((__m128){-4.0f, -5.0f, +6.0f, +7.0f}, (__m128){+0.0f, -0.0f, -0.0f, +7.0f}), +0.0f, +0.0f, -0.0f, +0.0f));
 
 __m128 test_mm_cmp_ps_eq_oq(__m128 a, __m128 b) {
   // CHECK-LABEL: test_mm_cmp_ps_eq_oq

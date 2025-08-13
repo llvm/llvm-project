@@ -108,7 +108,7 @@ __m128d test_mm_andnot_pd(__m128d A, __m128d B) {
   // CHECK: and <2 x i64>
   return _mm_andnot_pd(A, B);
 }
-TEST_CONSTEXPR(match_m128d(_mm_andnot_pd((__m128d){+1.0, -3.0}, (__m128d){+0.0, -0.0}), +0.0, -0.0));
+TEST_CONSTEXPR(match_m128d(_mm_andnot_pd((__m128d){+1.0, -3.0}, (__m128d){-0.0, +0.0}), -0.0, +0.0));
 
 __m128i test_mm_andnot_si128(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_andnot_si128
