@@ -312,27 +312,27 @@ void loop_accesses_out_of_bounds_eliminate_lower_check_len_ull(int* __counted_by
 // No checks can be eliminated, as dst + i + 2 may wrap and is out of bounds.
 // CHECK-LABEL: @loop_accesses_out_of_bounds_cannot_eliminate_wrap_check(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i8, ptr [[DST:%.*]], i64 8
 // CHECK-NEXT:    [[CMP6_NOT:%.*]] = icmp eq i32 [[N:%.*]], 0
 // CHECK-NEXT:    br i1 [[CMP6_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY_LR_PH:%.*]]
 // CHECK:       for.body.lr.ph:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[N]] to i64
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[DST]], i64 [[IDX_EXT]]
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[DST:%.*]], i64 [[IDX_EXT]]
 // CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 // CHECK:       for.cond.cleanup:
 // CHECK-NEXT:    ret void
 // CHECK:       for.body:
 // CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[CONT1:%.*]] ]
-// CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[INVARIANT_GEP]], i64 [[INDVARS_IV]]
-// CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[GEP]], [[ADD_PTR]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp uge ptr [[GEP]], [[DST]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP0]], [[TMP1]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[DST]], i64 [[INDVARS_IV]]
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i8, ptr [[TMP0]], i64 8
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[ARRAYIDX]], [[ADD_PTR]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[ARRAYIDX]], [[DST]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP1]], [[TMP2]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT1]], label [[TRAP:%.*]], !prof [[PROF10]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) {{#[0-9]+}}, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont1:
-// CHECK-NEXT:    store i32 0, ptr [[GEP]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 // CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[IDX_EXT]]
 // CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], {{!llvm.loop ![0-9]+}}
@@ -344,27 +344,27 @@ void loop_accesses_out_of_bounds_cannot_eliminate_wrap_check(int* __counted_by(n
 
 // CHECK-LABEL: @loop_accesses_out_of_bounds_cannot_eliminate_wrap_check_signed_len(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i8, ptr [[DST:%.*]], i64 8
 // CHECK-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[N:%.*]], 0
 // CHECK-NEXT:    br i1 [[CMP6]], label [[FOR_BODY_LR_PH:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 // CHECK:       for.body.lr.ph:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = zext nneg i32 [[N]] to i64
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[DST]], i64 [[IDX_EXT]]
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[DST:%.*]], i64 [[IDX_EXT]]
 // CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 // CHECK:       for.cond.cleanup:
 // CHECK-NEXT:    ret void
 // CHECK:       for.body:
 // CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[CONT1:%.*]] ]
-// CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[INVARIANT_GEP]], i64 [[INDVARS_IV]]
-// CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[GEP]], [[ADD_PTR]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp uge ptr [[GEP]], [[DST]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP0]], [[TMP1]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[DST]], i64 [[INDVARS_IV]]
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i8, ptr [[TMP0]], i64 8
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[ARRAYIDX]], [[ADD_PTR]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[ARRAYIDX]], [[DST]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP1]], [[TMP2]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT1]], label [[TRAP:%.*]], !prof [[PROF10]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) {{#[0-9]+}}, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont1:
-// CHECK-NEXT:    store i32 0, ptr [[GEP]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 // CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[IDX_EXT]]
 // CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], {{!llvm.loop ![0-9]+}}
@@ -376,28 +376,28 @@ void loop_accesses_out_of_bounds_cannot_eliminate_wrap_check_signed_len(int* __c
 
 // CHECK-LABEL: @loop_accesses_out_of_bounds_cannot_eliminate_wrap_check_ull_len(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i8, ptr [[DST:%.*]], i64 8
 // CHECK-NEXT:    [[CMP7_NOT:%.*]] = icmp eq i64 [[N:%.*]], 0
 // CHECK-NEXT:    br i1 [[CMP7_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY_LR_PH:%.*]]
 // CHECK:       for.body.lr.ph:
 // CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i64 [[N]], -1
 // CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP1]])
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[DST]], i64 [[N]]
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[DST:%.*]], i64 [[N]]
 // CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 // CHECK:       for.cond.cleanup:
 // CHECK-NEXT:    ret void
 // CHECK:       for.body:
 // CHECK-NEXT:    [[I_08:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[ADD3:%.*]], [[CONT2:%.*]] ]
-// CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[INVARIANT_GEP]], i64 [[I_08]]
-// CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[GEP]], [[ADD_PTR]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp uge ptr [[GEP]], [[DST]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP0]], [[TMP1]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[DST]], i64 [[I_08]]
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i8, ptr [[TMP0]], i64 8
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[ARRAYIDX]], [[ADD_PTR]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[ARRAYIDX]], [[DST]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP1]], [[TMP2]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT2]], label [[TRAP:%.*]], !prof [[PROF10]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) {{#[0-9]+}}, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont2:
-// CHECK-NEXT:    store i32 0, ptr [[GEP]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[ADD3]] = add nuw i64 [[I_08]], 1
 // CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[ADD3]], [[N]]
 // CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], {{!llvm.loop ![0-9]+}}
@@ -420,12 +420,11 @@ void loop_accesses_out_of_bounds_cannot_eliminate_wrap_check_ull_len(int* __coun
 // FIXME: Regressed at the moment, rdar://120485098.
 // CHECK-LABEL: @loop_accesses_eliminate_second_lower_check(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i8, ptr [[DST:%.*]], i64 8
 // CHECK-NEXT:    [[CMP24_NOT:%.*]] = icmp eq i32 [[N:%.*]], 0
 // CHECK-NEXT:    br i1 [[CMP24_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY_LR_PH:%.*]]
 // CHECK:       for.body.lr.ph:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[N]] to i64
-// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[DST]], i64 [[IDX_EXT]]
+// CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[DST:%.*]], i64 [[IDX_EXT]]
 // CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 // CHECK:       for.cond.cleanup:
 // CHECK-NEXT:    ret void
@@ -440,13 +439,14 @@ void loop_accesses_out_of_bounds_cannot_eliminate_wrap_check_ull_len(int* __coun
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont1:
 // CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX]], align 4, {{!tbaa ![0-9]+}}
-// CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[INVARIANT_GEP]], i64 [[INDVARS_IV]]
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[GEP]], [[ADD_PTR]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[GEP]], [[DST]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[OR_COND17:%.*]] = and i1 [[TMP1]], [[TMP2]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[DST]], i64 [[INDVARS_IV]]
+// CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr i8, ptr [[TMP1]], i64 8
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp ult ptr [[ARRAYIDX9]], [[ADD_PTR]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP3:%.*]] = icmp uge ptr [[ARRAYIDX9]], [[DST]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[OR_COND17:%.*]] = and i1 [[TMP2]], [[TMP3]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    br i1 [[OR_COND17]], label [[CONT15]], label [[TRAP]], !prof [[PROF10]], {{!annotation ![0-9]+}}
 // CHECK:       cont15:
-// CHECK-NEXT:    store i32 0, ptr [[GEP]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX9]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[IDX_EXT]]
 // CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], {{!llvm.loop ![0-9]+}}
 //
@@ -463,27 +463,27 @@ void loop_accesses_eliminate_second_lower_check(int* __counted_by(n) dst, unsign
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[N:%.*]] to i64
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[DST:%.*]], i64 [[IDX_EXT]]
-// CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 8
 // CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 // CHECK:       for.cond.cleanup:
 // CHECK-NEXT:    ret void
 // CHECK:       for.body:
 // CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[CONT15:%.*]] ]
-// CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[INVARIANT_GEP]], i64 [[INDVARS_IV]]
-// CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[GEP]], [[ADD_PTR]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp uge ptr [[GEP]], [[DST]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP0]], [[TMP1]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[DST]], i64 [[INDVARS_IV]]
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i8, ptr [[TMP0]], i64 8
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[ARRAYIDX]], [[ADD_PTR]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[ARRAYIDX]], [[DST]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP1]], [[TMP2]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT1:%.*]], label [[TRAP:%.*]], !prof [[PROF10]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) {{#[0-9]+}}, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont1:
-// CHECK-NEXT:    store i32 0, ptr [[GEP]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 // CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr i32, ptr [[DST]], i64 [[INDVARS_IV_NEXT]]
-// CHECK-NEXT:    [[TMP2:%.*]] = icmp ult ptr [[ARRAYIDX9]], [[ADD_PTR]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[TMP3:%.*]] = icmp uge ptr [[ARRAYIDX9]], [[DST]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[OR_COND17:%.*]] = and i1 [[TMP2]], [[TMP3]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP3:%.*]] = icmp ult ptr [[ARRAYIDX9]], [[ADD_PTR]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP4:%.*]] = icmp uge ptr [[ARRAYIDX9]], [[DST]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[OR_COND17:%.*]] = and i1 [[TMP3]], [[TMP4]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    br i1 [[OR_COND17]], label [[CONT15]], label [[TRAP]], !prof [[PROF10]], {{!annotation ![0-9]+}}
 // CHECK:       cont15:
 // CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX9]], align 4, {{!tbaa ![0-9]+}}
