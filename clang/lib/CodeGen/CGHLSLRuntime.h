@@ -145,6 +145,16 @@ protected:
     uint32_t Index;
   };
 
+  llvm::Value *emitSPIRVUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+                                         SemanticInfo &ActiveSemantic);
+
+  llvm::Value *emitDXILUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+                                        SemanticInfo &ActiveSemantic);
+
+  llvm::Value *emitUserSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
+                                    const clang::DeclaratorDecl *Decl,
+                                    SemanticInfo &ActiveSemantic);
+
   llvm::Value *emitSystemSemanticLoad(llvm::IRBuilder<> &B, llvm::Type *Type,
                                       const clang::DeclaratorDecl *Decl,
                                       SemanticInfo &ActiveSemantic);
@@ -200,6 +210,8 @@ private:
 
   std::unordered_set<std::string> ActiveInputSemantics;
   std::unordered_set<std::string> ActiveOutputSemantics;
+
+  unsigned SPIRVLastAssignedInputSemanticLocation = 0;
 };
 
 } // namespace CodeGen

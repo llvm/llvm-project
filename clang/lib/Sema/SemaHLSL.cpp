@@ -858,6 +858,8 @@ void SemaHLSL::CheckSemanticAnnotation(
       return;
     DiagnoseAttrStageMismatch(AnnotationAttr, ST, {llvm::Triple::Pixel});
     break;
+  case attr::HLSLUserSemantic:
+    return;
   default:
     llvm_unreachable("Unknown HLSLAnnotationAttr");
   }
@@ -1581,7 +1583,7 @@ void SemaHLSL::handleSemanticAttr(Decl *D, const ParsedAttr &AL) {
   if (AL.getAttrName()->getName().starts_with("SV_"))
     diagnoseSystemSemanticAttr(D, AL, Index);
   else
-    Diag(AL.getLoc(), diag::err_hlsl_unknown_semantic) << AL;
+    D->addAttr(createSemanticAttr<HLSLUserSemanticAttr>(AL, Index));
 }
 
 void SemaHLSL::handlePackOffsetAttr(Decl *D, const ParsedAttr &AL) {
