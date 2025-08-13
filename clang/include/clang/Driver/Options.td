@@ -1422,6 +1422,21 @@ def fno_hip_emit_relocatable : Flag<["-"], "fno-hip-emit-relocatable">,
   HelpText<"Do not override toolchain to compile HIP source to relocatable">;
 }
 
+// Clang specific/exclusive options for OpenACC.
+def openacc_macro_override
+    : Separate<["-"], "fexperimental-openacc-macro-override">,
+      Visibility<[ClangOption, CC1Option]>,
+      Group<f_Group>,
+      HelpText<"Overrides the _OPENACC macro value for experimental testing "
+               "during OpenACC support development">;
+def openacc_macro_override_EQ
+    : Joined<["-"], "fexperimental-openacc-macro-override=">,
+      Alias<openacc_macro_override>;
+
+// End Clang specific/exclusive options for OpenACC.
+
+def libclc_lib_EQ : Joined<["--"], "libclc-lib=">, Group<opencl_Group>,
+  HelpText<"Namespec of libclc OpenCL bitcode library to link">;
 def libomptarget_amdgpu_bc_path_EQ : Joined<["--"], "libomptarget-amdgpu-bc-path=">, Group<i_Group>,
   HelpText<"Path to libomptarget-amdgcn bitcode library">;
 def libomptarget_amdgcn_bc_path_EQ : Joined<["--"], "libomptarget-amdgcn-bc-path=">, Group<i_Group>,
@@ -2320,21 +2335,21 @@ def fsymbol_partition_EQ : Joined<["-"], "fsymbol-partition=">, Group<f_Group>,
 
 defm atomic_remote_memory : BoolFOption<"atomic-remote-memory",
   LangOpts<"AtomicRemoteMemory">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option], "May have">,
-  NegFlag<SetFalse, [], [ClangOption], "Assume no">,
-  BothFlags<[], [ClangOption], " atomic operations on remote memory">>;
+  PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option], "May have">,
+  NegFlag<SetFalse, [], [ClangOption, FlangOption], "Assume no">,
+  BothFlags<[], [ClangOption, FlangOption], " atomic operations on remote memory">>;
 
 defm atomic_fine_grained_memory : BoolFOption<"atomic-fine-grained-memory",
   LangOpts<"AtomicFineGrainedMemory">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option], "May have">,
-  NegFlag<SetFalse, [], [ClangOption], "Assume no">,
-  BothFlags<[], [ClangOption], " atomic operations on fine-grained memory">>;
+  PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option], "May have">,
+  NegFlag<SetFalse, [], [ClangOption, FlangOption], "Assume no">,
+  BothFlags<[], [ClangOption, FlangOption], " atomic operations on fine-grained memory">>;
 
 defm atomic_ignore_denormal_mode : BoolFOption<"atomic-ignore-denormal-mode",
   LangOpts<"AtomicIgnoreDenormalMode">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Allow">,
-  NegFlag<SetFalse, [], [ClangOption], "Disallow">,
-  BothFlags<[], [ClangOption], " atomic operations to ignore denormal mode">>;
+  PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option], "Allow">,
+  NegFlag<SetFalse, [], [ClangOption, FlangOption], "Disallow">,
+  BothFlags<[], [ClangOption, FlangOption], " atomic operations to ignore denormal mode">>;
 
 defm memory_profile : OptInCC1FFlag<"memory-profile", "Enable", "Disable", " heap memory profiling">;
 def fmemory_profile_EQ : Joined<["-"], "fmemory-profile=">,
@@ -5312,6 +5327,8 @@ def mextended_const : Flag<["-"], "mextended-const">, Group<m_wasm_Features_Grou
 def mno_extended_const : Flag<["-"], "mno-extended-const">, Group<m_wasm_Features_Group>;
 def mfp16 : Flag<["-"], "mfp16">, Group<m_wasm_Features_Group>;
 def mno_fp16 : Flag<["-"], "mno-fp16">, Group<m_wasm_Features_Group>;
+def mgc : Flag<["-"], "mgc">, Group<m_wasm_Features_Group>;
+def mno_gc : Flag<["-"], "mno-gc">, Group<m_wasm_Features_Group>;
 def mmultimemory : Flag<["-"], "mmultimemory">, Group<m_wasm_Features_Group>;
 def mno_multimemory : Flag<["-"], "mno-multimemory">, Group<m_wasm_Features_Group>;
 def mmultivalue : Flag<["-"], "mmultivalue">, Group<m_wasm_Features_Group>;
@@ -5370,9 +5387,9 @@ defm amdgpu_precise_memory_op
                   " precise memory mode (AMDGPU only)">;
 
 def munsafe_fp_atomics : Flag<["-"], "munsafe-fp-atomics">,
-  Visibility<[ClangOption, CC1Option]>, Alias<fatomic_ignore_denormal_mode>;
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>, Alias<fatomic_ignore_denormal_mode>;
 def mno_unsafe_fp_atomics : Flag<["-"], "mno-unsafe-fp-atomics">,
-  Visibility<[ClangOption]>, Alias<fno_atomic_ignore_denormal_mode>;
+  Visibility<[ClangOption, FlangOption]>, Alias<fno_atomic_ignore_denormal_mode>;
 
 def faltivec : Flag<["-"], "faltivec">, Group<f_Group>;
 def fno_altivec : Flag<["-"], "fno-altivec">, Group<f_Group>;

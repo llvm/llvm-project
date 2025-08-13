@@ -1552,9 +1552,11 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
       HasSiFiveCLICType = true;
       break;
     case RISCVInterruptAttr::supervisor:
+    case RISCVInterruptAttr::rnmi:
     case RISCVInterruptAttr::qcinest:
     case RISCVInterruptAttr::qcinonest:
-      // "supervisor" and "qci-(no)nest" cannot be combined with any other types
+      // "supervisor", "rnmi" and "qci-(no)nest" cannot be combined with any
+      // other types
       HasUnaryType = true;
       break;
     }
@@ -1605,6 +1607,14 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
              diag::err_riscv_attribute_interrupt_requires_extension)
             << RISCVInterruptAttr::ConvertInterruptTypeToStr(Type)
             << "XSfmclic";
+        return;
+      }
+    } break;
+    case RISCVInterruptAttr::rnmi: {
+      if (!HasFeature("smrnmi")) {
+        Diag(AL.getLoc(),
+             diag::err_riscv_attribute_interrupt_requires_extension)
+            << RISCVInterruptAttr::ConvertInterruptTypeToStr(Type) << "Smrnmi";
         return;
       }
     } break;

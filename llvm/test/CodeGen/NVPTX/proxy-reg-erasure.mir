@@ -66,8 +66,8 @@ frameInfo:
   hasTailCall:     false
   isCalleeSavedInfoValid: false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:           []
 entry_values:    []
@@ -77,7 +77,7 @@ constants:       []
 machineFunctionInfo: {}
 body:             |
   bb.0:
-    %0:b32, %1:b32, %2:b32, %3:b32 = LoadParamMemV4I32 0
+    %0:b32, %1:b32, %2:b32, %3:b32 = LDV_i32_v4 0, 0, 101, 3, 32, &retval0, 0 :: (load (s128), addrspace 101)
     ; CHECK-NOT: ProxyReg
     %4:b32 = ProxyRegB32 killed %0
     %5:b32 = ProxyRegB32 killed %1
@@ -86,7 +86,7 @@ body:             |
     ; CHECK: STV_i32_v4 killed %0, killed %1, killed %2, killed %3
     STV_i32_v4 killed %4, killed %5, killed %6, killed %7, 0, 0, 101, 32, &func_retval0, 0 :: (store (s128), addrspace 101)
 
-    %8:b32 = LoadParamMemI32 0
+    %8:b32 = LD_i32 0, 0, 101, 3, 32, &retval0, 0 :: (load (s32), addrspace 101)
     ; CHECK-NOT: ProxyReg
     %9:b32 = ProxyRegB32 killed %8
     %10:b32 = ProxyRegB32 killed %9

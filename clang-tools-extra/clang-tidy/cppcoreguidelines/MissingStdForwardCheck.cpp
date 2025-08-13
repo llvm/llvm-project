@@ -132,8 +132,7 @@ void MissingStdForwardCheck::registerMatchers(MatchFinder *Finder) {
           hasAncestor(functionDecl().bind("func")),
           hasAncestor(functionDecl(
               isDefinition(), equalsBoundNode("func"), ToParam,
-              unless(anyOf(isDeleted(),
-                           hasDescendant(std::move(ForwardCallMatcher))))))),
+              unless(anyOf(isDeleted(), hasDescendant(ForwardCallMatcher)))))),
       this);
 }
 

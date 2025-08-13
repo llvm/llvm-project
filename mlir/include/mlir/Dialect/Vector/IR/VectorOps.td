@@ -646,55 +646,6 @@ def Vector_DeinterleaveOp :
       }];
     }
 
-def Vector_ExtractElementOp :
-  Vector_Op<"extractelement", [Pure,
-     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
-     TypesMatchWith<"result type matches element type of vector operand",
-                    "vector", "result",
-                    "::llvm::cast<VectorType>($_self).getElementType()">]>,
-    Arguments<(ins AnyVectorOfAnyRank:$vector,
-                   Optional<AnySignlessIntegerOrIndex>:$position)>,
-    Results<(outs AnyType:$result)> {
-  let summary = "extractelement operation";
-  let description = [{
-    Note: This operation is deprecated. Please use vector.extract insert.
-
-    Takes a 0-D or 1-D vector and a optional dynamic index position and
-    extracts the scalar at that position.
-
-    Note that this instruction resembles vector.extract, but is restricted to
-    0-D and 1-D vectors.
-    If the vector is 0-D, the position must be std::nullopt.
-
-
-    It is meant to be closer to LLVM's version:
-    https://llvm.org/docs/LangRef.html#extractelement-instruction
-
-    Example:
-
-    ```mlir
-    %c = arith.constant 15 : i32
-    %1 = vector.extractelement %0[%c : i32]: vector<16xf32>
-    %2 = vector.extractelement %z[]: vector<f32>
-    ```
-  }];
-  let assemblyFormat = [{
-    $vector `[` ($position^ `:` type($position))? `]` attr-dict `:` type($vector)
-  }];
-
-  let builders = [
-    // 0-D builder.
-    OpBuilder<(ins "Value":$source)>,
-  ];
-  let extraClassDeclaration = [{
-    VectorType getSourceVectorType() {
-      return ::llvm::cast<VectorType>(getVector().getType());
-    }
-  }];
-  let hasVerifier = 1;
-  let hasFolder = 1;
-}
-
 def Vector_ExtractOp :
   Vector_Op<"extract", [Pure,
      DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
@@ -803,7 +754,7 @@ def Vector_FMAOp :
 }
 
 def Vector_ToElementsOp : Vector_Op<"to_elements", [
-    Pure,
+    InferTypeOpAdaptor, Pure,
     ShapedTypeMatchesElementCountAndTypes<"source", "elements">]> {
   let summary = "operation that decomposes a vector into all its scalar elements";
   let description = [{
@@ -888,57 +839,6 @@ def Vector_FromElementsOp : Vector_Op<"from_elements", [
   let assemblyFormat = "$elements attr-dict `:` type($dest)";
   let hasFolder = 1;
   let hasCanonicalizer = 1;
-}
-
-def Vector_InsertElementOp :
-  Vector_Op<"insertelement", [Pure,
-     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
-     TypesMatchWith<"source operand type matches element type of result",
-                    "result", "source",
-                    "::llvm::cast<VectorType>($_self).getElementType()">,
-     AllTypesMatch<["dest", "result"]>]>,
-     Arguments<(ins AnyType:$source, AnyVectorOfAnyRank:$dest,
-                    Optional<AnySignlessIntegerOrIndex>:$position)>,
-     Results<(outs AnyVectorOfAnyRank:$result)> {
-  let summary = "insertelement operation";
-  let description = [{
-    Note: This operation is deprecated. Please use vector.insert instead.
-
-    Takes a scalar source, a 0-D or 1-D destination vector and a dynamic index
-    position and inserts the source into the destination at the proper position.
-
-    Note that this instruction resembles vector.insert, but is restricted to 0-D
-    and 1-D vectors.
-
-    It is meant to be closer to LLVM's version:
-    https://llvm.org/docs/LangRef.html#insertelement-instruction
-
-    Example:
-
-    ```mlir
-    %c = arith.constant 15 : i32
-    %f = arith.constant 0.0f : f32
-    %1 = vector.insertelement %f, %0[%c : i32]: vector<16xf32>
-    %2 = vector.insertelement %f, %z[]: vector<f32>
-    ```
-  }];
-  let assemblyFormat = [{
-    $source `,` $dest `[` ($position^ `:` type($position))? `]`  attr-dict `:`
-    type($result)
-  }];
-
-  let builders = [
-    // 0-D builder.
-    OpBuilder<(ins "Value":$source, "Value":$dest)>,
-  ];
-  let extraClassDeclaration = [{
-    Type getSourceType() { return getSource().getType(); }
-    VectorType getDestVectorType() {
-      return ::llvm::cast<VectorType>(getDest().getType());
-    }
-  }];
-  let hasVerifier = 1;
-  let hasFolder = 1;
 }
 
 def Vector_InsertOp :
@@ -1829,18 +1729,18 @@ def Vector_LoadOp : Vector_Op<"load", [
                    "Value":$base,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"uint64_t", "0">:$alignment), [{
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
       return build($_builder, $_state, resultType, base, indices, nontemporal,
-                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
+                   alignment.has_value() ? $_builder.getI64IntegerAttr(alignment->value()) :
                                     nullptr);
     }]>,
     OpBuilder<(ins "TypeRange":$resultTypes,
                    "Value":$base,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"uint64_t", "0">:$alignment), [{
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
       return build($_builder, $_state, resultTypes, base, indices, nontemporal,
-                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
+                   alignment.has_value() ? $_builder.getI64IntegerAttr(alignment->value()) :
                                     nullptr);
     }]>
   ];
@@ -1947,9 +1847,9 @@ def Vector_StoreOp : Vector_Op<"store", [
                    "Value":$base,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"uint64_t", "0">:$alignment), [{
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
       return build($_builder, $_state, valueToStore, base, indices, nontemporal,
-                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
+                   alignment.has_value() ? $_builder.getI64IntegerAttr(alignment->value()) :
                                     nullptr);
     }]>
   ];
@@ -1976,7 +1876,9 @@ def Vector_MaskedLoadOp :
     Arguments<(ins Arg<AnyMemRef, "", [MemRead]>:$base,
                Variadic<Index>:$indices,
                VectorOfNonZeroRankOf<[I1]>:$mask,
-               AnyVectorOfNonZeroRank:$pass_thru)>,
+               AnyVectorOfNonZeroRank:$pass_thru,
+               ConfinedAttr<OptionalAttr<I64Attr>,
+                   [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment)>,
     Results<(outs AnyVectorOfNonZeroRank:$result)> {
 
   let summary = "loads elements from memory into a vector as defined by a mask vector";
@@ -2012,6 +1914,12 @@ def Vector_MaskedLoadOp :
     %1 = vector.maskedload %base[%i, %j], %mask, %pass_thru
        : memref<?x?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
     ```
+
+    An optional `alignment` attribute allows to specify the byte alignment of the
+    load operation. It must be a positive power of 2. The operation must access
+    memory at an address aligned to this boundary. Violations may lead to
+    architecture-specific faults or performance penalties.
+    A value of 0 indicates no specific alignment requirement.
   }];
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
@@ -2032,6 +1940,29 @@ def Vector_MaskedLoadOp :
   let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
+
+  let builders = [
+    OpBuilder<(ins "VectorType":$resultType,
+                   "Value":$base,
+                   "ValueRange":$indices,
+                   "Value":$mask,
+                   "Value":$passthrough,
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
+      return build($_builder, $_state, resultType, base, indices, mask, passthrough,
+                   alignment.has_value() ? $_builder.getI64IntegerAttr(alignment->value()) :
+                                    nullptr);
+    }]>,
+    OpBuilder<(ins "TypeRange":$resultTypes,
+                   "Value":$base,
+                   "ValueRange":$indices,
+                   "Value":$mask,
+                   "Value":$passthrough,
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
+      return build($_builder, $_state, resultTypes, base, indices, mask, passthrough,
+                   alignment.has_value() ? $_builder.getI64IntegerAttr(alignment->value()) :
+                                    nullptr);
+    }]>
+  ];
 }
 
 def Vector_MaskedStoreOp :
@@ -2039,7 +1970,9 @@ def Vector_MaskedStoreOp :
     Arguments<(ins Arg<AnyMemRef, "", [MemWrite]>:$base,
                Variadic<Index>:$indices,
                VectorOfNonZeroRankOf<[I1]>:$mask,
-               AnyVectorOfNonZeroRank:$valueToStore)> {
+               AnyVectorOfNonZeroRank:$valueToStore,
+               ConfinedAttr<OptionalAttr<I64Attr>,
+                   [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment)> {
 
   let summary = "stores elements from a vector into memory as defined by a mask vector";
 
@@ -2074,6 +2007,12 @@ def Vector_MaskedStoreOp :
     vector.maskedstore %base[%i, %j], %mask, %value
       : memref<?x?xf32>, vector<16xi1>, vector<16xf32>
     ```
+
+    An optional `alignment` attribute allows to specify the byte alignment of the
+    store operation. It must be a positive power of 2. The operation must access
+    memory at an address aligned to this boundary. Violations may lead to
+    architecture-specific faults or performance penalties.
+    A value of 0 indicates no specific alignment requirement.
   }];
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
@@ -2092,6 +2031,18 @@ def Vector_MaskedStoreOp :
   let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
+
+  let builders = [
+    OpBuilder<(ins "Value":$base,
+                   "ValueRange":$indices,
+                   "Value":$mask,
+                   "Value":$valueToStore,
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
+      return build($_builder, $_state, base, indices, mask, valueToStore,
+                   alignment.has_value() ? $_builder.getI64IntegerAttr(alignment->value()) :
+                                    nullptr);
+    }]>
+  ];
 }
 
 def Vector_GatherOp :
@@ -2695,6 +2646,7 @@ def Vector_MaskOp : Vector_Op<"mask", [
 
 def Vector_TransposeOp :
   Vector_Op<"transpose", [Pure,
+    DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
     PredOpTrait<"operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>]> {
@@ -2879,6 +2831,10 @@ def Vector_SplatOp : Vector_Op<"splat", [
   let assemblyFormat = "$input attr-dict `:` type($aggregate)";
 
   let hasFolder = 1;
+
+  // vector.splat is deprecated, and vector.broadcast should be used instead.
+  // Canonicalize vector.splat to vector.broadcast.
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2976,7 +2932,10 @@ def Vector_ScanOp :
 // VectorStepOp
 //===----------------------------------------------------------------------===//
 
-def Vector_StepOp : Vector_Op<"step", [Pure]> {
+def Vector_StepOp : Vector_Op<"step", [
+    Pure,
+    DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>
+  ]> {
   let summary = "A linear sequence of values from 0 to N";
   let description = [{
     A `step` operation produces an index vector, i.e. a 1-D vector of values of

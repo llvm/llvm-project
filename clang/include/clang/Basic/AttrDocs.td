@@ -2905,9 +2905,12 @@ the backend to generate appropriate function entry/exit code so that it can be
 used directly as an interrupt service routine.
 
 Permissible values for this parameter are ``machine``, ``supervisor``,
-``qci-nest``, ``qci-nonest``, ``SiFive-CLIC-preemptible``, and
+``rnmi``, ``qci-nest``, ``qci-nonest``, ``SiFive-CLIC-preemptible``, and
 ``SiFive-CLIC-stack-swap``. If there is no parameter, then it defaults to
 ``machine``.
+
+The ``rnmi`` value is used for resumable non-maskable interrupts. It requires the
+standard Smrnmi extension.
 
 The ``qci-nest`` and ``qci-nonest`` values require Qualcomm's Xqciint extension
 and are used for Machine-mode Interrupts and Machine-mode Non-maskable
@@ -8778,6 +8781,32 @@ def ReadOnlyPlacementDocs : Documentation {
   }];
 }
 
+def HLSLVkBindingDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+The ``[[vk::binding]]`` attribute allows you to explicitly specify the descriptor
+set and binding for a resource when targeting SPIR-V. This is particularly
+useful when you need different bindings for SPIR-V and DXIL, as the ``register``
+attribute can be used for DXIL-specific bindings.
+
+The attribute takes two integer arguments: the binding and the descriptor set.
+The descriptor set is optional and defaults to 0 if not provided.
+
+.. code-block:: c++
+
+  // A structured buffer with binding 23 in descriptor set 102.
+  [[vk::binding(23, 102)]] StructuredBuffer<float> Buf;
+
+  // A structured buffer with binding 14 in descriptor set 0.
+  [[vk::binding(14)]] StructuredBuffer<float> Buf2;
+
+  // A cbuffer with binding 1 in descriptor set 2.
+  [[vk::binding(1, 2)]] cbuffer MyCBuffer {
+    float4x4 worldViewProj;
+  };
+  }];
+}
+
 def WebAssemblyFuncrefDocs : Documentation {
   let Category = DocCatType;
   let Content = [{
@@ -9417,9 +9446,9 @@ def NonStringDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
 The ``nonstring`` attribute can be applied to the declaration of a variable or
-a field whose type is a character array to specify that the character array is
-not intended to behave like a null-terminated string. This will silence
-diagnostics with code like:
+a field whose type is a character pointer or character array to specify that
+the buffer is not intended to behave like a null-terminated string. This will
+silence diagnostics with code like:
 
 .. code-block:: c
 

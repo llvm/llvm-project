@@ -3,7 +3,7 @@
 ; RUN:   -mtriple riscv64-linux-gnu -mattr=+v,+f -S -disable-output -debug-only=loop-vectorize 2>&1 | FileCheck %s --check-prefix=DATA
 
 ; RUN: opt < %s -passes=loop-vectorize -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue \
-; RUN:   -mtriple riscv64-linux-gnu -force-tail-folding-style=data-with-evl -mattr=+v,+f -S \
+; RUN:   -mtriple riscv64-linux-gnu -mattr=+v,+f -S \
 ; RUN:   -disable-output -debug-only=loop-vectorize 2>&1 | FileCheck %s --check-prefix=EVL
 
 ; DATA: Cost of 2 for VF 2: EMIT{{.*}} = active lane mask

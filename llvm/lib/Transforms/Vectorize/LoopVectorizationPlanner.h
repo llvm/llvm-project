@@ -170,8 +170,7 @@ public:
         new VPInstruction(Opcode, Operands, Flags, DL, Name));
   }
 
-  VPInstruction *createNaryOp(unsigned Opcode,
-                              std::initializer_list<VPValue *> Operands,
+  VPInstruction *createNaryOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
                               Type *ResultTy, const VPIRFlags &Flags = {},
                               DebugLoc DL = DebugLoc::getUnknown(),
                               const Twine &Name = "") {
@@ -180,7 +179,7 @@ public:
   }
 
   VPInstruction *createOverflowingOp(unsigned Opcode,
-                                     std::initializer_list<VPValue *> Operands,
+                                     ArrayRef<VPValue *> Operands,
                                      VPRecipeWithIRFlags::WrapFlagsTy WrapFlags,
                                      DebugLoc DL = DebugLoc::getUnknown(),
                                      const Twine &Name = "") {
@@ -264,10 +263,31 @@ public:
         new VPInstruction(VPInstruction::PtrAdd, {Ptr, Offset},
                           GEPNoWrapFlags::inBounds(), DL, Name));
   }
+  VPInstruction *createWidePtrAdd(VPValue *Ptr, VPValue *Offset,
+                                  DebugLoc DL = DebugLoc::getUnknown(),
+                                  const Twine &Name = "") {
+    return tryInsertInstruction(
+        new VPInstruction(VPInstruction::WidePtrAdd, {Ptr, Offset},
+                          GEPNoWrapFlags::none(), DL, Name));
+  }
 
   VPPhi *createScalarPhi(ArrayRef<VPValue *> IncomingValues, DebugLoc DL,
                          const Twine &Name = "") {
     return tryInsertInstruction(new VPPhi(IncomingValues, DL, Name));
+  }
+
+  VPValue *createElementCount(Type *Ty, ElementCount EC) {
+    VPlan &Plan = *getInsertBlock()->getPlan();
+    VPValue *RuntimeEC =
+        Plan.getOrAddLiveIn(ConstantInt::get(Ty, EC.getKnownMinValue()));
+    if (EC.isScalable()) {
+      VPValue *VScale = createNaryOp(VPInstruction::VScale, {}, Ty);
+      RuntimeEC = EC.getKnownMinValue() == 1
+                      ? VScale
+                      : createOverflowingOp(Instruction::Mul,
+                                            {VScale, RuntimeEC}, {true, false});
+    }
+    return RuntimeEC;
   }
 
   /// Convert the input value \p Current to the corresponding value of an
@@ -486,6 +506,13 @@ public:
   /// Compute and return the most profitable vectorization factor. Also collect
   /// all profitable VFs in ProfitableVFs.
   VectorizationFactor computeBestVF();
+
+  /// \return The desired interleave count.
+  /// If interleave count has been specified by metadata it will be returned.
+  /// Otherwise, the interleave count is computed and returned. VF and LoopCost
+  /// are the selected vectorization factor and the cost of the selected VF.
+  unsigned selectInterleaveCount(VPlan &Plan, ElementCount VF,
+                                 InstructionCost LoopCost);
 
   /// Generate the IR code for the vectorized loop captured in VPlan \p BestPlan
   /// according to the best selected \p VF and  \p UF.

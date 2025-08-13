@@ -114,8 +114,7 @@ define void @test_pr54223_sink_after_insertion_order(ptr noalias %a, ptr noalias
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[VECTOR_RECUR1]], <4 x float> [[BROADCAST_SPLAT3]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP6:%.*]] = fneg <4 x float> [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[TMP3]], <4 x float> [[TMP6]], <4 x float> zeroinitializer)
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 0
-; CHECK-NEXT:    store <4 x float> [[TMP7]], ptr [[TMP8]], align 4
+; CHECK-NEXT:    store <4 x float> [[TMP7]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10000
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -235,8 +234,7 @@ define void @test_pr54233_for_depend_on_each_other(ptr noalias %a, ptr noalias %
 ; CHECK-NEXT:    [[TMP7:%.*]] = xor <4 x i32> [[TMP6]], splat (i32 255)
 ; CHECK-NEXT:    [[TMP8:%.*]] = and <4 x i32> [[TMP7]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP9]], i32 0
-; CHECK-NEXT:    store <4 x i32> [[TMP8]], ptr [[TMP10]], align 4
+; CHECK-NEXT:    store <4 x i32> [[TMP8]], ptr [[TMP9]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
@@ -398,13 +396,12 @@ define void @hoist_previous_value_and_operand(ptr %dst, i64 %mask) {
 ; CHECK-NEXT:    [[VECTOR_RECUR1:%.*]] = phi <4 x i32> [ <i32 poison, i32 poison, i32 poison, i32 0>, [[VECTOR_PH]] ], [ [[TMP6:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = and <4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP4]] = trunc <4 x i64> [[TMP3]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR]], <4 x i32> [[TMP4]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP6]] = or <4 x i32> [[TMP5]], splat (i32 3)
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[VECTOR_RECUR1]], <4 x i32> [[TMP6]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
-; CHECK-NEXT:    store <4 x i32> [[TMP7]], ptr [[TMP2]], align 4
+; CHECK-NEXT:    store <4 x i32> [[TMP7]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 336

@@ -534,15 +534,25 @@ static DecodeStatus decodeRTZArg(MCInst &Inst, uint32_t Imm, int64_t Address,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus decodeXTHeadMemPair(MCInst &Inst, uint32_t Insn,
-                                        uint64_t Address,
-                                        const MCDisassembler *Decoder);
-
 static DecodeStatus decodeZcmpRlist(MCInst &Inst, uint32_t Imm,
                                     uint64_t Address,
-                                    const MCDisassembler *Decoder);
+                                    const MCDisassembler *Decoder) {
+  bool IsRVE = Decoder->getSubtargetInfo().hasFeature(RISCV::FeatureStdExtE);
+  if (Imm < RISCVZC::RA || (IsRVE && Imm >= RISCVZC::RA_S0_S2))
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::createImm(Imm));
+  return MCDisassembler::Success;
+}
 
 static DecodeStatus decodeXqccmpRlistS0(MCInst &Inst, uint32_t Imm,
+                                        uint64_t Address,
+                                        const MCDisassembler *Decoder) {
+  if (Imm < RISCVZC::RA_S0)
+    return MCDisassembler::Fail;
+  return decodeZcmpRlist(Inst, Imm, Address, Decoder);
+}
+
+static DecodeStatus decodeXTHeadMemPair(MCInst &Inst, uint32_t Insn,
                                         uint64_t Address,
                                         const MCDisassembler *Decoder);
 
@@ -590,24 +600,6 @@ static DecodeStatus decodeXTHeadMemPair(MCInst &Inst, uint32_t Insn,
     Inst.addOperand(MCOperand::createImm(4));
 
   return S;
-}
-
-static DecodeStatus decodeZcmpRlist(MCInst &Inst, uint32_t Imm,
-                                    uint64_t Address,
-                                    const MCDisassembler *Decoder) {
-  bool IsRVE = Decoder->getSubtargetInfo().hasFeature(RISCV::FeatureStdExtE);
-  if (Imm < RISCVZC::RA || (IsRVE && Imm >= RISCVZC::RA_S0_S2))
-    return MCDisassembler::Fail;
-  Inst.addOperand(MCOperand::createImm(Imm));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus decodeXqccmpRlistS0(MCInst &Inst, uint32_t Imm,
-                                        uint64_t Address,
-                                        const MCDisassembler *Decoder) {
-  if (Imm < RISCVZC::RA_S0)
-    return MCDisassembler::Fail;
-  return decodeZcmpRlist(Inst, Imm, Address, Decoder);
 }
 
 // Add implied SP operand for C.*SP compressed instructions. The SP operand
@@ -682,6 +674,9 @@ static constexpr FeatureBitset XAndesGroup = {
 
 static constexpr DecoderListEntry DecoderList32[]{
     // Vendor Extensions
+    {DecoderTableXCV32, XCVFeatureGroup, "CORE-V extensions"},
+    {DecoderTableXRivos32, XRivosFeatureGroup, "Rivos"},
+    {DecoderTableXqci32, XqciFeatureGroup, "Qualcomm uC Extensions"},
     {DecoderTableXVentana32,
      {RISCV::FeatureVendorXVentanaCondOps},
      "XVentanaCondOps"},
@@ -698,9 +693,6 @@ static constexpr DecoderListEntry DecoderList32[]{
      "MIPS mips.pref"},
     {DecoderTableXAndes32, XAndesGroup, "Andes extensions"},
     // Standard Extensions
-    {DecoderTableXCV32, XCVFeatureGroup, "CORE-V extensions"},
-    {DecoderTableXqci32, XqciFeatureGroup, "Qualcomm uC Extensions"},
-    {DecoderTableXRivos32, XRivosFeatureGroup, "Rivos"},
     {DecoderTable32, {}, "standard 32-bit instructions"},
     {DecoderTableRV32Only32, {}, "RV32-only standard 32-bit instructions"},
     {DecoderTableZfinx32, {}, "Zfinx (Float in Integer)"},
