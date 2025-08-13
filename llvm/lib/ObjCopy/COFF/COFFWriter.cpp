@@ -14,6 +14,7 @@
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstddef>
 #include <cstdint>
@@ -94,9 +95,13 @@ Error COFFWriter::finalizeSymbolContents() {
 }
 
 Error COFFWriter::finalizeCFGuardContents() {
+  // CFGuards shouldn't be present in PE
+  if (Obj.IsPE)
+    return Error::success();
+
   DenseMap<size_t, size_t> SymIdMap;
   bool NeedUpdate = false;
-  for (Symbol &Sym : Obj.getMutableSymbols()) {
+  for (const auto &Sym : Obj.getSymbols()) {
     NeedUpdate |= Sym.OriginalRawIndex == Sym.RawIndex;
     SymIdMap[Sym.OriginalRawIndex] = Sym.RawIndex;
   }
@@ -128,14 +133,14 @@ Error COFFWriter::finalizeCFGuardContents() {
     // Nothing to do and also CheckSum will be -1 instead of 0 if we recalculate
     // it on empty input.
     if (RawIds.size() == 0)
-      return Error::success();
+      continue;
 
     // Create updated content
-    ArrayRef<uint32_t> Ids(reinterpret_cast<const uint32_t *>(RawIds.data()),
-                           RawIds.size() / 4);
-    std::vector<uint32_t> NewIds;
+    ArrayRef<support::ulittle32_t> Ids(reinterpret_cast<const support::ulittle32_t *>(RawIds.data()),
+                              RawIds.size() / 4);
+    std::vector<support::ulittle32_t> NewIds;
     for (auto Id : Ids)
-      NewIds.push_back(SymIdMap[Id]);
+      NewIds.push_back(support::ulittle32_t(SymIdMap[Id]));
     ArrayRef<uint8_t> NewRawIds(reinterpret_cast<uint8_t *>(NewIds.data()),
                                 RawIds.size());
     // Update check sum
