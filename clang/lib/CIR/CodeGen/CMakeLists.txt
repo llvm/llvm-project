@@ -22,6 +22,7 @@ add_clang_library(clangCIR
   CIRGenExprAggregate.cpp
   CIRGenExprComplex.cpp
   CIRGenExprConstant.cpp
+  CIRGenExprCXX.cpp
   CIRGenExprScalar.cpp
   CIRGenFunction.cpp
   CIRGenItaniumCXXABI.cpp
