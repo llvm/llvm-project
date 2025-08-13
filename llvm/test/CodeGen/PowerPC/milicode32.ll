@@ -68,5 +68,4 @@ entry:
   ret i32 %call
 }
 
-; Function Attrs: nounwind
 declare i32 @strlen(ptr noundef) nounwind
