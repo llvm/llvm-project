@@ -157,6 +157,10 @@ end
 ! CHECK: %{{.*}} = fir.call @__nv_powf(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32, f32) -> f32
 ! CHECK: %{{.*}} = fir.call @__nv_dsqrt_rd(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
 ! CHECK: %{{.*}} = fir.call @__nv_dsqrt_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
+! CHECK: %{{.*}} = fir.call @__nv_ull2double_rd(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f64
+! CHECK: %{{.*}} = fir.call @__nv_ull2double_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f64
+! CHECK: %{{.*}} = fir.call @__nv_ull2double_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f64
+! CHECK: %{{.*}} = fir.call @__nv_ull2double_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f64
 
 subroutine host1()
   integer, device :: a(32)
