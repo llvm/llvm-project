@@ -4,6 +4,7 @@
 // RUN: %clang_cc1 -x c++ -ffreestanding -flax-vector-conversions=none %s -triple=i686-unknown-unknown -target-feature +avx512fp16 -emit-llvm -o - -Wall -Werror | FileCheck %s --check-prefixes=CHECK
 
 #include <immintrin.h>
+#include "builtin_test_helpers.h"
 
 _Float16 test_mm512_cvtsh_h(__m512h __A) {
   // CHECK-LABEL: test_mm512_cvtsh_h
@@ -16,12 +17,14 @@ __m128h test_mm_setzero_ph(void) {
   // CHECK: zeroinitializer
   return _mm_setzero_ph();
 }
+TEST_CONSTEXPR(match_m128h(_mm_setzero_ph(), +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f));
 
 __m256h test_mm256_setzero_ph(void) {
   // CHECK-LABEL: test_mm256_setzero_ph
   // CHECK: zeroinitializer
   return _mm256_setzero_ph();
 }
+TEST_CONSTEXPR(match_m256h(_mm256_setzero_ph(), +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f));
 
 __m256h test_mm256_undefined_ph(void) {
   // CHECK-LABEL: test_mm256_undefined_ph
@@ -34,6 +37,7 @@ __m512h test_mm512_setzero_ph(void) {
   // CHECK: zeroinitializer
   return _mm512_setzero_ph();
 }
+TEST_CONSTEXPR(match_m512h(_mm512_setzero_ph(), +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f, +0.0f));
 
 __m128h test_mm_undefined_ph(void) {
   // CHECK-LABEL: test_mm_undefined_ph
@@ -83,6 +87,7 @@ __m512h test_mm512_set1_ph(_Float16 h) {
   // CHECK: insertelement <32 x half> {{.*}}, i32 31
   return _mm512_set1_ph(h);
 }
+TEST_CONSTEXPR(match_m512h(_mm512_set1_ph(-101.0f), -101.0f, -101.0f, -101.0f, -101.0f, -101.0f, -101.0f, -101.0f, -101.0f, -101.0f, -101.0f, -101.0f, -101.0f, -101.0f, -101.0f, -101.0f, -101.0f, -101.0f, -101.0f, -101.0f, -101.0f, -101.0f, -101.0f, -101.0f, -101.0f, -101.0f, -101.0f, -101.0f, -101.0f, -101.0f, -101.0f, -101.0f, -101.0f));
 
 __m512h test_mm512_set1_pch(_Float16 _Complex h) {
   // CHECK-LABEL: test_mm512_set1_pch
@@ -152,6 +157,13 @@ __m512h test_mm512_set_ph(_Float16 __h1, _Float16 __h2, _Float16 __h3, _Float16 
                        __h17, __h18, __h19, __h20, __h21, __h22, __h23, __h24,
                        __h25, __h26, __h27, __h28, __h29, __h30, __h31, __h32);
 }
+TEST_CONSTEXPR(match_m512h(_mm512_set_ph(32.0f, -31.0f, 30.0f, -29.0f, 28.0f, -27.0f, 26.0f, -25.0f,
+                                        24.0f, -23.0f, 22.0f, -21.0f, 20.0f, -19.0f, 18.0f, -17.0f,
+                                        16.0f, -15.0f, 14.0f, -13.0f, 12.0f, -11.0f, 10.0f, -9.0f,
+                                        8.0f, -7.0f, 6.0f, -5.0f, 4.0f, -3.0f, 2.0f, -1.0f), -1.0f, 2.0f, -3.0f, 4.0f, -5.0f, 6.0f, -7.0f, 8.0f,
+                                        -9.0f, 10.0f, -11.0f, 12.0f, -13.0f, 14.0f, -15.0f, 16.0f,
+                                        -17.0f, 18.0f, -19.0f, 20.0f, -21.0f, 22.0f, -23.0f, 24.0f,
+                                        -25.0f, 26.0f, -27.0f, 28.0f, -29.0f, 30.0f, -31.0f, 32.0f));
 
 __m512h test_mm512_setr_ph(_Float16 __h1, _Float16 __h2, _Float16 __h3, _Float16 __h4,
                            _Float16 __h5, _Float16 __h6, _Float16 __h7, _Float16 __h8,
@@ -199,6 +211,14 @@ __m512h test_mm512_setr_ph(_Float16 __h1, _Float16 __h2, _Float16 __h3, _Float16
                         __h17, __h18, __h19, __h20, __h21, __h22, __h23, __h24,
                         __h25, __h26, __h27, __h28, __h29, __h30, __h31, __h32);
 }
+TEST_CONSTEXPR(match_m512h(_mm512_setr_ph(1.0f, -3.0f, 5.0f, -7.0f, 9.0f, -11.0f, 13.0f, -15.0f,
+                                         17.0f, -19.0f, 21.0f, -23.0f, 25.0f, -27.0f, 29.0f, -31.0f,
+                                         33.0f, -35.0f, 37.0f, -39.0f, 41.0f, -43.0f, 45.0f, -47.0f,
+                                         49.0f, -51.0f, 53.0f, -55.0f, 57.0f, -59.0f, 61.0f, -63.0f),
+                          1.0f, -3.0f, 5.0f, -7.0f, 9.0f, -11.0f, 13.0f, -15.0f,
+                          17.0f, -19.0f, 21.0f, -23.0f, 25.0f, -27.0f, 29.0f, -31.0f,
+                          33.0f, -35.0f, 37.0f, -39.0f, 41.0f, -43.0f, 45.0f, -47.0f,
+                          49.0f, -51.0f, 53.0f, -55.0f, 57.0f, -59.0f, 61.0f, -63.0f));
 
 __m128 test_mm_castph_ps(__m128h A) {
   // CHECK-LABEL: test_mm_castph_ps
