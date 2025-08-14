@@ -2931,23 +2931,23 @@ mlir::LogicalResult CIRToLLVMInlineAsmOpLowering::matchAndRewrite(
 
   SmallVector<mlir::Value> llvmOperands;
   SmallVector<mlir::Value> cirOperands;
-  for (auto [llvmOp, cirOp] :
-       llvm::zip(adaptor.getAsmOperands(), op.getAsmOperands())) {
-    llvmOperands.append(llvmOp.begin(), llvmOp.end());
-    cirOperands.append(cirOp.begin(), cirOp.end());
+  for (auto const&[llvmOp, cirOp] :
+       zip(adaptor.getAsmOperands(), op.getAsmOperands())) {
+    append_range(llvmOperands, llvmOp);
+    append_range(cirOperands, cirOp);
   }
 
   // so far we infer the llvm dialect element type attr from
   // CIR operand type.
-  for (auto [i, cirOpAttr] : llvm::enumerate(op.getOperandAttrs())) {
+  for (auto const&[cirOpAttr, cirOp] : zip(op.getOperandAttrs(), cirOperands)) {    
     if (!cirOpAttr) {
       opAttrs.push_back(mlir::Attribute());
       continue;
     }
 
-    SmallVector<mlir::NamedAttribute> attrs;
+    llvm::SmallVector<mlir::NamedAttribute, 1> attrs;
     cir::PointerType typ =
-        mlir::cast<cir::PointerType>(cirOperands[i].getType());
+        mlir::cast<cir::PointerType>(cirOp.getType());
     mlir::TypeAttr typAttr = mlir::TypeAttr::get(convertTypeForMemory(
         *getTypeConverter(), dataLayout, typ.getPointee()));
 
