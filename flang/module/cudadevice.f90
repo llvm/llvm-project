@@ -392,6 +392,20 @@ implicit none
     end function
   end interface
 
+  interface __sinf
+    attributes(device) real function __sinf(r) bind(c, name='__nv_sinf')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
+    end function
+  end interface
+
+  interface __tanf
+    attributes(device) real function __tanf(r) bind(c, name='__nv_tanf')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
+    end function
+  end interface
+
   interface
     attributes(device) real(4) function cospif(x) bind(c,name='__nv_cospif')
       real(4), value :: x
@@ -1675,6 +1689,27 @@ implicit none
 
   interface
     attributes(device,host) logical function on_device() bind(c)
+    end function
+  end interface
+
+  interface __log2f
+    attributes(device) real function __log2f(r) bind(c, name='__nv_log2f')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
+    end function
+  end interface
+
+  interface __log10f
+    attributes(device) real function __log10f(r) bind(c, name='__nv_log10f')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
+    end function
+  end interface
+
+  interface __logf
+    attributes(device) real function __logf(r) bind(c, name='__nv_logf')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
     end function
   end interface
 
