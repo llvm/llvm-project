@@ -2202,7 +2202,7 @@ def JUMPTABLE_TBH :
 PseudoInst<(outs), (ins cpinst_operand:$instid, cpinst_operand:$cpidx,
                         i32imm:$size), NoItinerary, []>;
 
-let Defs = [SP], Uses = [SP], hasSideEffects = 1, isCodeGenOnly = 1 in {
+let Defs = [SP], Uses = [SP], hasSideEffects = 1 in {
 def ADJCALLSTACKUP :
 PseudoInst<(outs), (ins i32imm:$amt1, i32imm:$amt2, pred:$p), NoItinerary,
            [(ARMcallseq_end timm:$amt1, timm:$amt2)]>;

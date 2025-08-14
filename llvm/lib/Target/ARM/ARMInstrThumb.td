@@ -297,7 +297,7 @@ def non_imm32 : PatLeaf<(i32 GPR), [{ return !isa<ConstantSDNode>(N); }]>;
 //  Miscellaneous Instructions.
 //
 
-let Defs = [SP], Uses = [SP], hasSideEffects = 1, isCodeGenOnly = 1 in {
+let Defs = [SP], Uses = [SP], hasSideEffects = 1 in {
 def tADJCALLSTACKUP :
   PseudoInst<(outs), (ins i32imm:$amt1, i32imm:$amt2), NoItinerary,
              [(ARMcallseq_end imm:$amt1, imm:$amt2)]>,
