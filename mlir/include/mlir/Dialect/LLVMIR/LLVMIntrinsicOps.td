@@ -1080,19 +1080,6 @@ def LLVM_masked_expandload
 
   let arguments = !con(args, baseArgs);
 
-  string llvmBuilder = [{
-    auto argAttrs = op.getArgAttrs();
-    uint64_t alignment = 1;
-    if (argAttrs.has_value()) {
-      NamedAttrList argAttr = cast<DictionaryAttr>((*argAttrs)[0]);
-      auto maybeAlignmentAttr = argAttr.get(LLVMDialect::getAlignAttrName());
-      IntegerAttr alignmentAttr = maybeAlignmentAttr ? dyn_cast<IntegerAttr>(maybeAlignmentAttr) : nullptr;
-      alignment = alignmentAttr ? alignmentAttr.getValue().getZExtValue() : 1;
-    }
-    $res = builder.CreateMaskedExpandLoad(
-      $_resultType, $ptr, alignment != 1 ? llvm::Align(alignment) : llvm::MaybeAlign(), $mask, $passthru);
-  }];
-
   let builders = [
     OpBuilder<(ins "TypeRange":$resTy, "Value":$ptr, "Value":$mask, "Value":$passthru, CArg<"uint64_t", "1">:$align)>
   ];
@@ -1110,23 +1097,9 @@ def LLVM_masked_compressstore
 
   let arguments = !con(args, baseArgs);
 
-  string llvmBuilder = [{
-    auto argAttrs = op.getArgAttrs();
-    uint64_t alignment = 1;
-    if (argAttrs.has_value()) {
-      NamedAttrList argAttr = cast<DictionaryAttr>((*argAttrs)[1]);
-      auto maybeAlignmentAttr = argAttr.get(LLVMDialect::getAlignAttrName());
-      IntegerAttr alignmentAttr = maybeAlignmentAttr ? dyn_cast<IntegerAttr>(maybeAlignmentAttr) : nullptr;
-      alignment = alignmentAttr ? alignmentAttr.getValue().getZExtValue() : 1;
-    }
-    builder.CreateMaskedCompressStore(
-      $value, $ptr, alignment != 1 ? llvm::Align(alignment) : llvm::MaybeAlign(), $mask);
-  }];
-
   let builders = [
     OpBuilder<(ins "Value":$value, "Value":$ptr, "Value":$mask, CArg<"uint64_t", "1">:$align)>
   ];
-
 }
 
 //
