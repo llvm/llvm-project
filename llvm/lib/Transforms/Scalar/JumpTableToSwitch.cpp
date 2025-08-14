@@ -149,9 +149,8 @@ expandToSwitch(CallBase *CB, const JumpTableTy &JT, DomTreeUpdater &DTU,
         std::numeric_limits<uint32_t>::max(), TotalCount);
 
     for (const auto &[G, C] : Targets) {
-      auto It = GuidToCounter.insert({G, C});
+      [[maybe_unused]] auto It = GuidToCounter.insert({G, C});
       assert(It.second);
-      (void)It;
     }
   }
   for (auto [Index, Func] : llvm::enumerate(JT.Funcs)) {
