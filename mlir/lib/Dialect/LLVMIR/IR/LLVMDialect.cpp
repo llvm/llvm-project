@@ -4156,8 +4156,8 @@ void LLVM::masked_expandload::build(OpBuilder &builder, OperationState &state,
                                     mlir::TypeRange resTys, Value ptr,
                                     Value mask, Value passthru,
                                     uint64_t align) {
-  ArrayAttr callArgs = getLLVMAlignParamForCompressExpand(builder, true, align);
-  build(builder, state, resTys, ptr, mask, passthru, /*arg_attrs=*/callArgs,
+  ArrayAttr argAttrs = getLLVMAlignParamForCompressExpand(builder, true, align);
+  build(builder, state, resTys, ptr, mask, passthru, /*arg_attrs=*/argAttrs,
         /*res_attrs=*/nullptr);
 }
 
@@ -4168,10 +4168,9 @@ void LLVM::masked_expandload::build(OpBuilder &builder, OperationState &state,
 void LLVM::masked_compressstore::build(OpBuilder &builder,
                                        OperationState &state, Value value,
                                        Value ptr, Value mask, uint64_t align) {
-
-  ArrayAttr callArgs =
+  ArrayAttr argAttrs =
       getLLVMAlignParamForCompressExpand(builder, false, align);
-  build(builder, state, value, ptr, mask, /*arg_attrs=*/callArgs,
+  build(builder, state, value, ptr, mask, /*arg_attrs=*/argAttrs,
         /*res_attrs=*/nullptr);
 }
 
