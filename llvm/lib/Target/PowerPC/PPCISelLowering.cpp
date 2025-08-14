@@ -15613,6 +15613,66 @@ SDValue PPCTargetLowering::combineSetCC(SDNode *N,
       SDValue Add = DAG.getNode(ISD::ADD, DL, OpVT, LHS, RHS.getOperand(1));
       return DAG.getSetCC(DL, VT, Add, DAG.getConstant(0, DL, OpVT), CC);
     }
+
+    if (LHS.getOpcode() == ISD::LOAD && RHS.getOpcode() == ISD::LOAD &&
+        LHS.hasOneUse() && RHS.hasOneUse() && LHS.getValueType() == MVT::i128 &&
+        RHS.getValueType() == MVT::i128) {
+      SDLoc DL(N);
+      SelectionDAG &DAG = DCI.DAG;
+      auto *LA = dyn_cast<LoadSDNode>(LHS);
+      auto *LB = dyn_cast<LoadSDNode>(RHS);
+      if (!LA || !LB)
+        return SDValue();
+
+      // If either memory operation (LA or LB) is volatile, do not perform any
+      // optimization or transformation. Volatile operations must be preserved
+      // as written to ensure correct program behavior, so we return an empty
+      // SDValue to indicate no action.
+      if (LA->isVolatile() || LB->isVolatile())
+        return SDValue();
+
+      // Only combine loads if both use the unindexed addressing mode.
+      // PowerPC AltiVec/VMX does not support vector loads or stores with
+      // pre/post-increment addressing. Indexed modes may imply implicit pointer
+      // updates, which are not compatible with AltiVec vector instructions.
+      if (LA->getAddressingMode() != ISD::UNINDEXED ||
+          LB->getAddressingMode() != ISD::UNINDEXED)
+        return SDValue();
+
+      // Only combine loads if both are non-extending loads (ISD::NON_EXTLOAD).
+      // Extending loads (such as ISD::ZEXTLOAD or ISD::SEXTLOAD) perform zero
+      // or sign extension, which may change the loaded value's semantics and
+      // are not compatible with vector loads.
+      if (LA->getExtensionType() != ISD::NON_EXTLOAD ||
+          LB->getExtensionType() != ISD::NON_EXTLOAD)
+        return SDValue();
+      // Build new v16i8 loads using the SAME chain/base/MMO (no extra memory
+      // op).
+      SDValue LHSVec = DAG.getLoad(MVT::v16i8, DL, LA->getChain(),
+                                   LA->getBasePtr(), LA->getMemOperand());
+      SDValue RHSVec = DAG.getLoad(MVT::v16i8, DL, LB->getChain(),
+                                   LB->getBasePtr(), LB->getMemOperand());
+
+      // Replace old loads?¡¥ results (value and chain) so the old nodes die.
+     // DAG.DeleteNode(LHS.getNode());
+      // DAG.DeleteNode(RHS.getNode()); 
+
+      //   SDValue LHSVec = DAG.getBitcast(MVT::v16i8, LHS);
+      // SDValue RHSVec = DAG.getBitcast(MVT::v16i8, RHS);
+      SDValue IntrID =
+          DAG.getTargetConstant(Intrinsic::ppc_altivec_vcmpequb_p, DL,
+                                Subtarget.isPPC64() ? MVT::i64 : MVT::i32);
+      SDValue CRSel =
+          DAG.getConstant(2, DL, MVT::i32); // which CR6 predicate field
+      SDValue Ops[] = {IntrID, CRSel, LHSVec, RHSVec};
+      SDValue PredResult =
+          DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32, Ops);
+      // ppc_altivec_vcmpequb_p returns 1 when two vectors are the same,
+      // so we need to invert the CC opcode.
+      return DAG.getSetCC(DL, N->getValueType(0), PredResult,
+                          DAG.getConstant(0, DL, MVT::i32),
+                          CC == ISD::SETNE ? ISD::SETEQ : ISD::SETNE);
+    }
   }
 
   return DAGCombineTruncBoolExt(N, DCI);
