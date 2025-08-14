@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_TAGGED_POINTER_H
-#define LLVM_LIBC_SRC___SUPPORT_TAGGED_POINTER_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_ABA_PTR_H
+#define LLVM_LIBC_SRC___SUPPORT_ABA_PTR_H
 
 #include "hdr/types/size_t.h"
 #include "src/__support/CPP/atomic.h"
@@ -85,5 +85,4 @@ template <class T, bool IsAtomic> struct AbaPtrImpl {
 template <class T> using AbaPtr = AbaPtrImpl<T, LIBC_ABA_PTR_IS_ATOMIC>;
 } // namespace LIBC_NAMESPACE_DECL
 
-#undef LIBC_ABA_PTR_IS_ATOMIC
 #endif
