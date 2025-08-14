@@ -109,6 +109,9 @@ Improvements to clang-tidy
   `enable-check-profile` to enable per-check timing profiles and print a
   report based on all analyzed files.
 
+- Improved documentation of the `-line-filter` command-line flag of
+  :program:`clang-tidy` and :program:`run-clang-tidy.py`.
+
 New checks
 ^^^^^^^^^^
 

@@ -811,24 +811,58 @@ LogicalResult NVVM::WMMAMmaOp::verify() {
 }
 
 LogicalResult NVVM::LdMatrixOp::verify() {
-  unsigned addressSpace =
-      llvm::cast<LLVM::LLVMPointerType>(getPtr().getType()).getAddressSpace();
-  if (addressSpace != NVVM::kSharedMemorySpace)
-    return emitOpError("expected source pointer in memory space 3");
-
-  if (getNum() != 1 && getNum() != 2 && getNum() != 4)
-    return emitOpError("expected num attribute to be 1, 2 or 4");
+  uint32_t num = getNum(), m = getShape().getM(), n = getShape().getN();
+  if (m == 8 && n == 8) {
+    if (num != 1 && num != 2 && num != 4) {
+      return emitOpError("expected num attribute to be 1, 2 or 4 for 8x8 "
+                         "matrix");
+    }
+    if (getEltType() != LdStMatrixEltType::B16) {
+      return emitOpError("expected element type to be b16 for 8x8 matrix");
+    }
+  } else if (m == 8 && n == 16) {
+    if (num != 1 && num != 2 && num != 4) {
+      return emitOpError("expected num attribute to be 1, 2 or 4 for 8x16 "
+                         "matrix");
+    }
+    if (getLayout() != MMALayout::row) {
+      return emitOpError("expected layout to be row for 8x16 matrix");
+    }
+    if (getEltType() != LdStMatrixEltType::B8X16_B4X16_P64 &&
+        getEltType() != LdStMatrixEltType::B8X16_B6X16_P32) {
+      return emitOpError("expected element type to be b8x16.b4x16_p64 or "
+                         "b8x16.b6x16_p32 for 8x16 matrix");
+    }
+  } else if (m == 16 && n == 16) {
+    if (num != 1 && num != 2) {
+      return emitOpError("expected num attribute to be 1 or 2 for 16x16 "
+                         "matrix");
+    }
+    if (getLayout() != MMALayout::col) {
+      return emitOpError("expected layout to be col for 16x16 matrix");
+    }
+    if (getEltType() != LdStMatrixEltType::B8 &&
+        getEltType() != LdStMatrixEltType::B8X16_B4X16_P64 &&
+        getEltType() != LdStMatrixEltType::B8X16_B6X16_P32) {
+      return emitOpError("expected element type to be b8, b8x16.b4x16_p64 or "
+                         "b8x16.b6x16_p32 for 16x16 matrix");
+    }
+  } else {
+    return emitOpError("expected shape to be 8x8, 8x16 or 16x16");
+  }
 
   Type i32 = IntegerType::get(getContext(), 32);
-  if (getNum() == 1 && getType() != i32)
+  uint32_t numElements = (m == 16 && n == 16 ? num * 2 : num);
+  if (numElements == 1 && getType() != i32)
     return emitOpError("expected destination type is i32");
-  if (getNum() == 2 || getNum() == 4) {
+  if (numElements == 2 || numElements == 4) {
     Type dstType = LLVM::LLVMStructType::getLiteral(
-        getContext(), SmallVector<Type>(getNum(), i32));
+        getContext(), SmallVector<Type>(numElements, i32));
     if (getType() != dstType)
       return emitOpError("expected destination type is a structure of ")
-             << getNum() << " elements of type i32";
+             << numElements << " elements of type i32";
   }
+
   return success();
 }
 
