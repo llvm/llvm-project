@@ -1,4 +1,9 @@
-import type { ColumnDefinition } from "tabulator-tables";
+import type { CellComponent, ColumnDefinition } from "tabulator-tables";
+
+const TABULATOR_HEXA_FORMATTER = (cell: CellComponent) => {
+    const val = cell.getValue();
+    return val !== undefined ? "0x" + val.toString(16).toUpperCase() : "";
+};
 
 const SYMBOL_TABLE_COLUMNS: ColumnDefinition[] = [
     { title: "User ID", field: "userId", sorter: "number" },
@@ -10,16 +15,13 @@ const SYMBOL_TABLE_COLUMNS: ColumnDefinition[] = [
         title: "File Address",
         field: "fileAddress",
         sorter: "number",
-        formatter: cell => "0x" + cell.getValue().toString(16).toUpperCase()
+        formatter: TABULATOR_HEXA_FORMATTER,
     },
     {
         title: "Load Address",
         field: "loadAddress",
         sorter: "number",
-        formatter: cell => {
-            const val = cell.getValue();
-            return val !== undefined ? "0x" + val.toString(16).toUpperCase() : "";
-        }
+        formatter: TABULATOR_HEXA_FORMATTER,
     },
     { title: "Size", field: "size", sorter: "number" },
     {
