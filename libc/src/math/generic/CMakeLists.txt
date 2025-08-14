@@ -278,16 +278,6 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.generic.add_sub
 )
 
-add_header_library(
-  sincosf16_utils
-  HDRS
-    sincosf16_utils.h
-  DEPENDS
-    libc.src.__support.FPUtil.polyeval
-    libc.src.__support.FPUtil.nearest_integer
-    libc.src.__support.common
-)
-
 add_entrypoint_object(
   cos
   SRCS
@@ -315,16 +305,7 @@ add_entrypoint_object(
   HDRS
     ../cosf16.h
   DEPENDS
-    .sincosf16_utils
-    libc.hdr.errno_macros
-    libc.hdr.fenv_macros
-    libc.src.__support.FPUtil.cast
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.except_value_utils
-    libc.src.__support.FPUtil.multiply_add
-    libc.src.__support.macros.optimization
-    libc.src.__support.macros.properties.types
+    libc.src.__support.math.cosf16
 )
 
 add_entrypoint_object(
@@ -349,7 +330,6 @@ add_entrypoint_object(
   HDRS
     ../cospif16.h
   DEPENDS
-    .sincosf16_utils
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.__support.FPUtil.cast
@@ -357,6 +337,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.macros.optimization
+    libc.src.__support.math.sincosf16_utils
 )
 
 add_entrypoint_object(
@@ -405,7 +386,6 @@ add_entrypoint_object(
   HDRS
     ../sinf16.h
   DEPENDS
-    .sincosf16_utils
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.__support.FPUtil.cast
@@ -415,6 +395,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.types
+    libc.src.__support.math.sincosf16_utils
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
 )
@@ -482,7 +463,6 @@ add_entrypoint_object(
   HDRS
     ../sinpif16.h
   DEPENDS
-    .sincosf16_utils
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.__support.FPUtil.cast
@@ -490,6 +470,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.macros.optimization
+    libc.src.__support.math.sincosf16_utils
 )
 
 add_entrypoint_object(
@@ -538,7 +519,6 @@ add_entrypoint_object(
   HDRS
     ../tanf16.h
   DEPENDS
-    .sincosf16_utils
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.__support.FPUtil.cast
@@ -548,6 +528,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.types
+    libc.src.__support.math.sincosf16_utils
 )
 
 add_entrypoint_object(
@@ -572,7 +553,6 @@ add_entrypoint_object(
   HDRS
     ../tanpif16.h
   DEPENDS
-    .sincosf16_utils
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.__support.FPUtil.cast
@@ -581,6 +561,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.except_value_utils
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.macros.optimization
+    libc.src.__support.math.sincosf16_utils
 )
 
 add_entrypoint_object(
