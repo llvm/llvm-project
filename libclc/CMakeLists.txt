@@ -492,3 +492,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     )
   endforeach( d )
 endforeach( t )
+
+if( NOT LIBCLC_STANDALONE_BUILD )
+  add_subdirectory( test )
+endif()
