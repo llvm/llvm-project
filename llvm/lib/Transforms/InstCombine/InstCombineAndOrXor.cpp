@@ -106,9 +106,6 @@ extractThreeVariables(Value *Root) {
   SmallVector<Value *> Worklist;
   Worklist.push_back(Root);
 
-  // Track all instructions to ensure they're in the same BB
-  BasicBlock *FirstBB = nullptr;
-
   while (!Worklist.empty()) {
     Value *V = Worklist.pop_back_val();
 
@@ -126,12 +123,6 @@ extractThreeVariables(Value *Root) {
       if (!BO->isBitwiseLogicOp())
         return {nullptr, nullptr, nullptr};
 
-      // Check BB consistency
-      if (!FirstBB)
-        FirstBB = BO->getParent();
-      else if (BO->getParent() != FirstBB)
-        return {nullptr, nullptr, nullptr};
-
       if (V == Root || V->hasOneUse()) {
         Visited.insert(BO->getOperand(0));
         Visited.insert(BO->getOperand(1));
@@ -146,8 +137,20 @@ extractThreeVariables(Value *Root) {
   }
 
   if (Variables.size() == 3) {
-    // Sort variables by instruction order
+    // Check that all instruction variables are in the same BB
     SmallVector<Value *, 3> SortedVars(Variables.begin(), Variables.end());
+    BasicBlock *FirstBB = nullptr;
+    for (Value *V : SortedVars) {
+      if (auto *I = dyn_cast<Instruction>(V)) {
+        if (!FirstBB) {
+          FirstBB = I->getParent();
+        } else if (I->getParent() != FirstBB) {
+          return {nullptr, nullptr, nullptr};
+        }
+      }
+    }
+
+    // Sort variables by instruction order
     llvm::sort(SortedVars, [](Value *A, Value *B) {
       if (auto *IA = dyn_cast<Instruction>(A))
         if (auto *IB = dyn_cast<Instruction>(B))
