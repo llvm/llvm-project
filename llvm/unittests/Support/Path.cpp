@@ -1493,6 +1493,9 @@ TEST_F(FileSystemTest, FileMappingSync) {
     // Synchronize and check the contents before unmapping.
     MFR.sync();
     auto Buffer = MemoryBuffer::getFile(File.TmpName);
+    if (!Buffer)
+      llvm::outs() << "failed to open \'" << File.TmpName
+                   << "\': " << Buffer.getError().message() << "\n";
     ASSERT_TRUE((bool)Buffer);
     ASSERT_EQ(Content, Buffer->get()->getBuffer());
   }
