@@ -6941,7 +6941,13 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
           return true;
 
         if (auto *MemR = dyn_cast<VPWidenMemoryRecipe>(&R)) {
-          if (MemR->isReverse()) {
+          bool IsReverse = CostCtx.CM.getWideningDecision(UI, VF) ==
+                           LoopVectorizationCostModel::CM_Widen_Reverse;
+          if (IsReverse) {
+            // The legacy model have not computed the cost of reverse mask.
+            if (CostCtx.CM.Legal->isMaskRequired(UI))
+              return true;
+
             // If the stored value of a reverse store is invariant, LICM will
             // hoist the reverse operation to the preheader. In this case, the
             // result of the VPlan-based cost model will diverge from that of
@@ -7685,9 +7691,12 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(Instruction *I,
     Ptr = VectorPtr;
   }
 
+  if (Reverse && Mask)
+    Mask = Builder.createNaryOp(VPInstruction::Reverse, Mask, I->getDebugLoc());
+
   if (auto *Load = dyn_cast<LoadInst>(I)) {
     auto *LoadR =
-        new VPWidenLoadRecipe(*Load, Ptr, Mask, Consecutive, Reverse,
+        new VPWidenLoadRecipe(*Load, Ptr, Mask, Consecutive,
                               VPIRMetadata(*Load, LVer), Load->getDebugLoc());
     if (Reverse) {
       Builder.insert(LoadR);
@@ -7703,7 +7712,7 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(Instruction *I,
     StoredVal = Builder.createNaryOp(VPInstruction::Reverse, StoredVal,
                                      Store->getDebugLoc());
   return new VPWidenStoreRecipe(*Store, Ptr, StoredVal, Mask, Consecutive,
-                                Reverse, VPIRMetadata(*Store, LVer),
+                                VPIRMetadata(*Store, LVer),
                                 Store->getDebugLoc());
 }
 

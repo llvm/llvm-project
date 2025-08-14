@@ -2231,8 +2231,6 @@ InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
       return TTI::CastContextHint::None;
     if (!WidenMemoryRecipe->isConsecutive())
       return TTI::CastContextHint::GatherScatter;
-    if (WidenMemoryRecipe->isReverse())
-      return TTI::CastContextHint::Reversed;
     if (WidenMemoryRecipe->isMasked())
       return TTI::CastContextHint::Masked;
     return TTI::CastContextHint::Normal;
@@ -2241,6 +2239,7 @@ InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
   using namespace llvm::VPlanPatternMatch;
   VPValue *Operand = getOperand(0);
   TTI::CastContextHint CCH = TTI::CastContextHint::None;
+  bool IsReverse = false;
   // For Trunc/FPTrunc, get the context from the only user.
   if (Opcode == Instruction::Trunc || Opcode == Instruction::FPTrunc) {
     auto GetOnlyUser = [](const VPSingleDefRecipe *R) -> VPRecipeBase * {
@@ -2250,8 +2249,10 @@ InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
     };
 
     if (VPRecipeBase *Recipe = GetOnlyUser(this)) {
-      if (match(Recipe, m_VPInstruction<VPInstruction::Reverse>(m_VPValue())))
+      if (match(Recipe, m_VPInstruction<VPInstruction::Reverse>(m_VPValue()))) {
         Recipe = GetOnlyUser(cast<VPInstruction>(Recipe));
+        IsReverse = true;
+      }
       if (Recipe)
         CCH = ComputeCCH(Recipe);
     }
@@ -2263,13 +2264,17 @@ InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
       CCH = TTI::CastContextHint::Normal;
     else if (auto *Recipe = Operand->getDefiningRecipe()) {
       VPValue *ReverseOp;
-      if (match(Recipe,
-                m_VPInstruction<VPInstruction::Reverse>(m_VPValue(ReverseOp))))
+      if (match(Recipe, m_VPInstruction<VPInstruction::Reverse>(
+                            m_VPValue(ReverseOp)))) {
         Recipe = ReverseOp->getDefiningRecipe();
+        IsReverse = true;
+      }
       if (Recipe)
         CCH = ComputeCCH(Recipe);
     }
   }
+  if (IsReverse && CCH != TTI::CastContextHint::None)
+    CCH = TTI::CastContextHint::Reversed;
 
   auto *SrcTy =
       cast<VectorType>(toVectorTy(Ctx.Types.inferScalarType(Operand), VF));
@@ -3273,9 +3278,6 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
     // TODO: Using the original IR may not be accurate.
     // Currently, ARM will use the underlying IR to calculate gather/scatter
     // instruction cost.
-    assert(!Reverse &&
-           "Inconsecutive memory access should not have the order.");
-
     const Value *Ptr = getLoadStorePointerOperand(&Ingredient);
     Type *PtrTy = Ptr->getType();
 
@@ -3312,13 +3314,8 @@ void VPWidenLoadRecipe::execute(VPTransformState &State) {
 
   auto &Builder = State.Builder;
   Value *Mask = nullptr;
-  if (auto *VPMask = getMask()) {
-    // Mask reversal is only needed for non-all-one (null) masks, as reverse
-    // of a null all-one mask is a null mask.
+  if (auto *VPMask = getMask())
     Mask = State.get(VPMask);
-    if (isReverse())
-      Mask = Builder.CreateVectorReverse(Mask, "reverse");
-  }
 
   Value *Addr = State.get(getAddr(), /*IsScalar*/ !CreateGather);
   Value *NewLI;
@@ -3346,17 +3343,6 @@ void VPWidenLoadRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-/// Use all-true mask for reverse rather than actual mask, as it avoids a
-/// dependence w/o affecting the result.
-static Instruction *createReverseEVL(IRBuilderBase &Builder, Value *Operand,
-                                     Value *EVL, const Twine &Name) {
-  VectorType *ValTy = cast<VectorType>(Operand->getType());
-  Value *AllTrueMask =
-      Builder.CreateVectorSplat(ValTy->getElementCount(), Builder.getTrue());
-  return Builder.CreateIntrinsic(ValTy, Intrinsic::experimental_vp_reverse,
-                                 {Operand, AllTrueMask, EVL}, nullptr, Name);
-}
-
 void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   Type *ScalarDataTy = getLoadStoreType(&Ingredient);
   auto *DataTy = VectorType::get(ScalarDataTy, State.VF);
@@ -3368,13 +3354,10 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
   Value *EVL = State.get(getEVL(), VPLane(0));
   Value *Addr = State.get(getAddr(), !CreateGather);
   Value *Mask = nullptr;
-  if (VPValue *VPMask = getMask()) {
+  if (VPValue *VPMask = getMask())
     Mask = State.get(VPMask);
-    if (isReverse())
-      Mask = createReverseEVL(Builder, Mask, EVL, "vp.reverse.mask");
-  } else {
+  else
     Mask = Builder.CreateVectorSplat(State.VF, Builder.getTrue());
-  }
 
   if (CreateGather) {
     NewLI =
@@ -3428,13 +3411,8 @@ void VPWidenStoreRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
 
   Value *Mask = nullptr;
-  if (auto *VPMask = getMask()) {
-    // Mask reversal is only needed for non-all-one (null) masks, as reverse
-    // of a null all-one mask is a null mask.
+  if (auto *VPMask = getMask())
     Mask = State.get(VPMask);
-    if (isReverse())
-      Mask = Builder.CreateVectorReverse(Mask, "reverse");
-  }
 
   Value *StoredVal = State.get(StoredVPValue);
   Value *Addr = State.get(getAddr(), /*IsScalar*/ !CreateScatter);
@@ -3467,13 +3445,11 @@ void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
   Value *StoredVal = State.get(StoredValue);
   Value *EVL = State.get(getEVL(), VPLane(0));
   Value *Mask = nullptr;
-  if (VPValue *VPMask = getMask()) {
+  if (VPValue *VPMask = getMask())
     Mask = State.get(VPMask);
-    if (isReverse())
-      Mask = createReverseEVL(Builder, Mask, EVL, "vp.reverse.mask");
-  } else {
+  else
     Mask = Builder.CreateVectorSplat(State.VF, Builder.getTrue());
-  }
+
   Value *Addr = State.get(getAddr(), !CreateScatter);
   if (CreateScatter) {
     NewSI = Builder.CreateIntrinsic(Type::getVoidTy(EVL->getContext()),
