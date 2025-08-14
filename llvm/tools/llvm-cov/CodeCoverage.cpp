@@ -462,9 +462,10 @@ std::unique_ptr<CoverageMapping> CodeCoverageTool::load() {
                 ObjectFilename);
   }
   auto FS = vfs::getRealFileSystem();
-  auto CoverageOrErr = CoverageMapping::load(
-      ObjectFilenames, PGOFilename, *FS, CoverageArches,
-      ViewOpts.CompilationDirectory, BIDFetcher.get(), CheckBinaryIDs);
+  auto CoverageOrErr =
+      CoverageMapping::load(ObjectFilenames, PGOFilename, *FS, CoverageArches,
+                            ViewOpts.CompilationDirectory, BIDFetcher.get(),
+                            CheckBinaryIDs, ViewOpts.MergeBinaryCoverage);
   if (Error E = CoverageOrErr.takeError()) {
     error("failed to load coverage: " + toString(std::move(E)));
     return nullptr;
@@ -801,6 +802,12 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       "check-binary-ids", cl::desc("Fail if an object couldn't be found for a "
                                    "binary ID in the profile"));
 
+  cl::opt<bool> MergeBinaryCoverage(
+      "merge-binary-coverage",
+      cl::desc("Enable merging of coverage profiles from binaries compiled for "
+               "different architectures"),
+      cl::init(false));
+
   auto commandLineParser = [&, this](int argc, const char **argv) -> int {
     cl::ParseCommandLineOptions(argc, argv, "LLVM code coverage tool\n");
     ViewOpts.Debug = DebugDump;
@@ -966,6 +973,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
     ViewOpts.ExportSummaryOnly = SummaryOnly;
     ViewOpts.NumThreads = NumThreads;
     ViewOpts.CompilationDirectory = CompilationDirectory;
+    ViewOpts.MergeBinaryCoverage = MergeBinaryCoverage;
 
     return 0;
   };

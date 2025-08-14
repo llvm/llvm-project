@@ -196,6 +196,12 @@ static cl::opt<std::string> RemappingFile("remapping-file",
                                           cl::desc("Symbol remapping file"));
 static cl::alias RemappingFileA("r", cl::desc("Alias for --remapping-file"),
                                 cl::aliasopt(RemappingFile));
+static cl::list<std::string> ObjectAwareHashing(
+    "object-aware-hashing",
+    cl::desc("Includes the object file name when hashing function names "
+             "and control flow hashes, allowing functions from different "
+             "binaries to be distinguished"),
+    cl::sub(MergeSubcommand));
 static cl::opt<bool>
     UseMD5("use-md5", cl::init(false), cl::Hidden,
            cl::desc("Choose to use MD5 to represent string in name table (only "
@@ -694,19 +700,27 @@ static void
 loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
           const InstrProfCorrelator *Correlator, const StringRef ProfiledBinary,
           WriterContext *WC, const object::BuildIDFetcher *BIDFetcher = nullptr,
-          const ProfCorrelatorKind *BIDFetcherCorrelatorKind = nullptr) {
+          const ProfCorrelatorKind *BIDFetcherCorrelatorKind = nullptr,
+          StringRef ObjectAwareHashing = "") {
   std::unique_lock<std::mutex> CtxGuard{WC->Lock};
 
   // Copy the filename, because llvm::ThreadPool copied the input "const
   // WeightedFile &" by value, making a reference to the filename within it
   // invalid outside of this packaged task.
   std::string Filename = Input.Filename;
+  std::string ProfileFile = Input.Filename;
+  StringRef ObjectFilename = "";
+
+  StringRef FilenameRef = Filename;
+  if (!ObjectAwareHashing.empty()) {
+    ObjectFilename = ObjectAwareHashing.data();
+  }
 
   using ::llvm::memprof::RawMemProfReader;
-  if (RawMemProfReader::hasFormat(Input.Filename)) {
-    auto ReaderOrErr = RawMemProfReader::create(Input.Filename, ProfiledBinary);
+  if (RawMemProfReader::hasFormat(ProfileFile)) {
+    auto ReaderOrErr = RawMemProfReader::create(ProfileFile, ProfiledBinary);
     if (!ReaderOrErr) {
-      exitWithError(ReaderOrErr.takeError(), Input.Filename);
+      exitWithError(ReaderOrErr.takeError(), ProfileFile);
     }
     std::unique_ptr<RawMemProfReader> Reader = std::move(ReaderOrErr.get());
     // Check if the profile types can be merged, e.g. clang frontend profiles
@@ -790,7 +804,7 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
   const ProfCorrelatorKind CorrelatorKind = BIDFetcherCorrelatorKind
                                                 ? *BIDFetcherCorrelatorKind
                                                 : ProfCorrelatorKind::NONE;
-  auto ReaderOrErr = InstrProfReader::create(Input.Filename, *FS, Correlator,
+  auto ReaderOrErr = InstrProfReader::create(ProfileFile, *FS, Correlator,
                                              BIDFetcher, CorrelatorKind, Warn);
   if (Error E = ReaderOrErr.takeError()) {
     // Skip the empty profiles by returning silently.
@@ -817,19 +831,22 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
       I.Name = (*Remapper)(I.Name);
     const StringRef FuncName = I.Name;
     bool Reported = false;
-    WC->Writer.addRecord(std::move(I), Input.Weight, [&](Error E) {
-      if (Reported) {
-        consumeError(std::move(E));
-        return;
-      }
-      Reported = true;
-      // Only show hint the first time an error occurs.
-      auto [ErrCode, Msg] = InstrProfError::take(std::move(E));
-      std::unique_lock<std::mutex> ErrGuard{WC->ErrLock};
-      bool firstTime = WC->WriterErrorCodes.insert(ErrCode).second;
-      handleMergeWriterError(make_error<InstrProfError>(ErrCode, Msg),
-                             Input.Filename, FuncName, firstTime);
-    });
+    WC->Writer.addRecord(
+        std::move(I), Input.Weight,
+        [&](Error E) {
+          if (Reported) {
+            consumeError(std::move(E));
+            return;
+          }
+          Reported = true;
+          // Only show hint the first time an error occurs.
+          auto [ErrCode, Msg] = InstrProfError::take(std::move(E));
+          std::unique_lock<std::mutex> ErrGuard{WC->ErrLock};
+          bool firstTime = WC->WriterErrorCodes.insert(ErrCode).second;
+          handleMergeWriterError(make_error<InstrProfError>(ErrCode, Msg),
+                                 Input.Filename, FuncName, firstTime);
+        },
+        ObjectFilename);
   }
 
   if (KeepVTableSymbols) {
@@ -1038,18 +1055,20 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
         MaxTraceLength));
 
   if (NumThreads == 1) {
-    for (const auto &Input : Inputs)
-      loadInput(Input, Remapper, Correlator.get(), ProfiledBinary,
-                Contexts[0].get(), BIDFetcher.get(), &BIDFetcherCorrelateKind);
+    for (int I = 0; I < int(Inputs.size()); ++I)
+      loadInput(Inputs[I], Remapper, Correlator.get(), ProfiledBinary,
+                Contexts[0].get(), BIDFetcher.get(), &BIDFetcherCorrelateKind,
+                !ObjectAwareHashing.empty() ? ObjectAwareHashing[I] : "");
   } else {
     DefaultThreadPool Pool(hardware_concurrency(NumThreads));
 
     // Load the inputs in parallel (N/NumThreads serial steps).
     unsigned Ctx = 0;
-    for (const auto &Input : Inputs) {
-      Pool.async(loadInput, Input, Remapper, Correlator.get(), ProfiledBinary,
-                 Contexts[Ctx].get(), BIDFetcher.get(),
-                 &BIDFetcherCorrelateKind);
+    for (int I = 0; I < int(Inputs.size()); ++I) {
+      Pool.async(loadInput, Inputs[I], Remapper, Correlator.get(),
+                 ProfiledBinary, Contexts[Ctx].get(), BIDFetcher.get(),
+                 &BIDFetcherCorrelateKind,
+                 !ObjectAwareHashing.empty() ? ObjectAwareHashing[I] : "");
       Ctx = (Ctx + 1) % NumThreads;
     }
     Pool.wait();
