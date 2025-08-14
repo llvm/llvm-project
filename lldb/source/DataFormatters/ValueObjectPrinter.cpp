@@ -9,7 +9,6 @@
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
 
 #include "lldb/DataFormatters/DataVisualization.h"
-#include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Target.h"
