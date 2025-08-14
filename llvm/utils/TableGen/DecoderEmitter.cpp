@@ -1553,18 +1553,17 @@ void FilterChooser::reportRegion(bitAttr_t RA, unsigned StartBit,
 bool FilterChooser::filterProcessor(bool AllowMixed, bool Greedy) {
   Filters.clear();
   BestIndex = -1;
-  unsigned numInstructions = Opcodes.size();
 
-  assert(numInstructions && "Filter created with no instructions");
+  assert(!Opcodes.empty() && "Filter created with no instructions");
 
   // No further filtering is necessary.
-  if (numInstructions == 1)
+  if (Opcodes.size() == 1)
     return true;
 
   // Heuristics.  See also doFilter()'s "Heuristics" comment when num of
   // instructions is 3.
   if (AllowMixed && !Greedy) {
-    assert(numInstructions == 3);
+    assert(Opcodes.size() == 3);
 
     for (const auto &Opcode : Opcodes) {
       insn_t Insn = insnWithID(Opcode.EncodingID);
@@ -1771,8 +1770,7 @@ bool FilterChooser::filterProcessor(bool AllowMixed, bool Greedy) {
 // the instructions.  A conflict of instructions may occur, in which case we
 // dump the conflict set to the standard error.
 void FilterChooser::doFilter() {
-  unsigned Num = Opcodes.size();
-  assert(Num && "FilterChooser created with no instructions");
+  assert(!Opcodes.empty() && "FilterChooser created with no instructions");
 
   // Try regions of consecutive known bit values first.
   if (filterProcessor(false))
@@ -1786,7 +1784,7 @@ void FilterChooser::doFilter() {
   // no single instruction for the maximum ATTR_MIXED region Inst{14-4} has a
   // well-known encoding pattern.  In such case, we backtrack and scan for the
   // the very first consecutive ATTR_ALL_SET region and assign a filter to it.
-  if (Num == 3 && filterProcessor(true, false))
+  if (Opcodes.size() == 3 && filterProcessor(true, false))
     return;
 
   // If we come to here, the instruction decoding has failed.
