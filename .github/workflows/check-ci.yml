@@ -5,6 +5,8 @@ permissions:
 
 on:
   push:
+    branches:
+     - main
     paths:
      - '.ci/**'
      - '.github/workflows/check-ci.yml'

@@ -412,7 +412,7 @@ def CheckDecl : Opcode {
 
 def CheckEnumValue : Opcode {
   let Args = [ArgEnumDecl];
-  let Types = [FixedSizeIntegralTypeClass];
+  let Types = [IntegralTypeClass];
   let HasGroup = 1;
 }
 
@@ -734,6 +734,8 @@ def PtrPtrCast : Opcode {
   let Args = [ArgBool];
 
 }
+
+def FnPtrCast : Opcode;
 
 def DecayPtr : Opcode {
   let Types = [PtrTypeClass, PtrTypeClass];

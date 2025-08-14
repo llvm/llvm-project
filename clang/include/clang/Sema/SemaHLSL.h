@@ -84,7 +84,7 @@ struct DeclBindingInfo {
 
 // ResourceBindings class stores information about all resource bindings
 // in a shader. It is used for binding diagnostics and implicit binding
-// assigments.
+// assignments.
 class ResourceBindings {
 public:
   DeclBindingInfo *addDeclBindingInfo(const VarDecl *VD,
@@ -161,6 +161,7 @@ public:
   void handleNumThreadsAttr(Decl *D, const ParsedAttr &AL);
   void handleWaveSizeAttr(Decl *D, const ParsedAttr &AL);
   void handleVkConstantIdAttr(Decl *D, const ParsedAttr &AL);
+  void handleVkBindingAttr(Decl *D, const ParsedAttr &AL);
   void handleSV_DispatchThreadIDAttr(Decl *D, const ParsedAttr &AL);
   void handleSV_GroupThreadIDAttr(Decl *D, const ParsedAttr &AL);
   void handleSV_GroupIDAttr(Decl *D, const ParsedAttr &AL);

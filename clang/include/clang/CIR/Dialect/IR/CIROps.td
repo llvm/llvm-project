@@ -291,6 +291,9 @@ def CIR_ConstantOp : CIR_Op<"const", [
         return ptrAttr.isNullValue();
       return false;
     }
+
+    template <typename T>
+    T getValueAttr() { return mlir::dyn_cast<T>(getValue()); }
   }];
 
   let hasFolder = 1;
@@ -607,8 +610,8 @@ def CIR_ConditionOp : CIR_Op<"condition", [
 //===----------------------------------------------------------------------===//
 
 defvar CIR_YieldableScopes = [
-  "ArrayCtor", "CaseOp", "DoWhileOp", "ForOp", "IfOp", "ScopeOp", "SwitchOp",
-  "TernaryOp", "WhileOp"
+  "ArrayCtor", "ArrayDtor", "CaseOp", "DoWhileOp", "ForOp", "IfOp", "ScopeOp",
+  "SwitchOp", "TernaryOp", "WhileOp"
 ];
 
 def CIR_YieldOp : CIR_Op<"yield", [
@@ -1689,6 +1692,49 @@ def CIR_GetGlobalOp : CIR_Op<"get_global", [
 }
 
 //===----------------------------------------------------------------------===//
+// VTableAddrPointOp
+//===----------------------------------------------------------------------===//
+
+def CIR_VTableAddrPointOp : CIR_Op<"vtable.address_point", [
+  Pure, DeclareOpInterfaceMethods<SymbolUserOpInterface>
+]> {
+  let summary = "Get the vtable (global variable) address point";
+  let description = [{
+    The `vtable.address_point` operation retrieves the "effective" address
+    (address point) of a C++ virtual table. An object internal `__vptr`
+    gets initializated on top of the value returned by this operation.
+
+    `address_point.index` (vtable index) provides the appropriate vtable within
+    the vtable group (as specified by Itanium ABI), and `address_point.offset`
+    (address point index) the actual address point within that vtable.
+
+    The return type is always `!cir.vptr`.
+
+    Example:
+    ```mlir
+    cir.global linkonce_odr @_ZTV1B = ...
+    ...
+    %3 = cir.vtable.address_point(@_ZTV1B,
+              address_point = <index = 0, offset = 2>) : !cir.vptr
+    ```
+  }];
+
+  let arguments = (ins
+    FlatSymbolRefAttr:$name,
+    CIR_AddressPointAttr:$address_point
+  );
+
+  let results = (outs Res<CIR_VPtrType, "", []>:$addr);
+
+  let assemblyFormat = [{
+    `(`
+      $name `,` `address_point` `=` $address_point
+    `)`
+    `:` qualified(type($addr)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // SetBitfieldOp
 //===----------------------------------------------------------------------===//
 
@@ -1747,7 +1793,7 @@ def CIR_SetBitfieldOp : CIR_Op<"set_bitfield"> {
   let arguments = (ins
     Arg<CIR_PointerType, "the address to store the value", [MemWrite]>:$addr,
     CIR_AnyType:$src,
-    BitfieldInfoAttr:$bitfield_info,
+    CIR_BitfieldInfoAttr:$bitfield_info,
     DefaultValuedOptionalAttr<I64Attr, "0">:$alignment,
     UnitAttr:$is_volatile
   );
@@ -1834,7 +1880,7 @@ def CIR_GetBitfieldOp : CIR_Op<"get_bitfield"> {
 
   let arguments = (ins
     Arg<CIR_PointerType, "the address to load from", [MemRead]>:$addr,
-    BitfieldInfoAttr:$bitfield_info,
+    CIR_BitfieldInfoAttr:$bitfield_info,
     DefaultValuedOptionalAttr<I64Attr, "0">:$alignment,
     UnitAttr:$is_volatile
     );
@@ -1946,6 +1992,10 @@ def CIR_FuncOp : CIR_Op<"func", [
     The function linkage information is specified by `linkage`, as defined by
     `GlobalLinkageKind` attribute.
 
+    The `no_proto` keyword is used to identify functions that were declared
+    without a prototype and, consequently, may contain calls with invalid
+    arguments and undefined behavior.
+
     Example:
 
     ```mlir
@@ -1964,6 +2014,7 @@ def CIR_FuncOp : CIR_Op<"func", [
   let arguments = (ins SymbolNameAttr:$sym_name,
                        CIR_VisibilityAttr:$global_visibility,
                        TypeAttrOf<CIR_FuncType>:$function_type,
+                       UnitAttr:$no_proto,
                        UnitAttr:$dso_local,
                        DefaultValuedAttr<CIR_GlobalLinkageKind,
                                          "cir::GlobalLinkageKind::ExternalLinkage">:$linkage,
@@ -2003,13 +2054,6 @@ def CIR_FuncOp : CIR_Op<"func", [
     /// returing void)
     llvm::ArrayRef<mlir::Type> getResultTypes() {
        return getFunctionType().getReturnTypes();
-    }
-
-    // TODO(cir): this should be an operand attribute, but for now we just hard-
-    // wire this as a function. Will later add a $no_proto argument to this op.
-    bool getNoProto() {
-      assert(!cir::MissingFeatures::opFuncNoProto());
-      return false;
     }
 
     //===------------------------------------------------------------------===//
@@ -2229,7 +2273,7 @@ def CIR_TrapOp : CIR_Op<"trap", [Terminator]> {
 }
 
 //===----------------------------------------------------------------------===//
-// ArrayCtor
+// ArrayCtor & ArrayDtor
 //===----------------------------------------------------------------------===//
 
 class CIR_ArrayInitDestroy<string mnemonic> : CIR_Op<mnemonic> {
@@ -2260,12 +2304,33 @@ def CIR_ArrayCtor : CIR_ArrayInitDestroy<"array.ctor"> {
   let description = [{
     Initialize each array element using the same C++ constructor. This
     operation has one region, with one single block. The block has an
-    incoming argument for the current array index to initialize.
+    incoming argument for the current array element to initialize.
+
+    Example:
 
     ```mlir
     cir.array.ctor(%0 : !cir.ptr<!cir.array<!rec_S x 42>>) {
       ^bb0(%arg0: !cir.ptr<!rec_S>):
         cir.call @some_ctor(%arg0) : (!cir.ptr<!rec_S>) -> ()
+        cir.yield
+    }
+    ```
+  }];
+}
+
+def CIR_ArrayDtor : CIR_ArrayInitDestroy<"array.dtor"> {
+  let summary = "Destroy array elements with C++ dtors";
+  let description = [{
+    Destroy each array element using the same C++ destructor. This
+    operation has one region, with one single block. The block has an
+    incoming argument for the current array element to destruct.
+
+    Example:
+
+    ```mlir
+    cir.array.dtor(%0 : !cir.ptr<!cir.array<!rec_S x 42>>) {
+      ^bb0(%arg0: !cir.ptr<!rec_S>):
+        cir.call @some_dtor(%arg0) : (!cir.ptr<!rec_S>) -> ()
         cir.yield
     }
     ```
@@ -2804,6 +2869,53 @@ def CIR_ComplexSubOp : CIR_Op<"complex.sub", [
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// ComplexMulOp
+//===----------------------------------------------------------------------===//
+
+def CIR_ComplexRangeKind : CIR_I32EnumAttr<
+  "ComplexRangeKind", "complex multiplication and division implementation", [
+    I32EnumAttrCase<"Full", 0, "full">,
+    I32EnumAttrCase<"Improved", 1, "improved">,
+    I32EnumAttrCase<"Promoted", 2, "promoted">,
+    I32EnumAttrCase<"Basic", 3, "basic">,
+]>;
+
+def CIR_ComplexMulOp : CIR_Op<"complex.mul", [
+  Pure, SameOperandsAndResultType
+]> {
+  let summary = "Complex multiplication";
+  let description = [{
+    The `cir.complex.mul` operation takes two complex numbers and returns
+    their product.
+
+    Range is used to select the implementation used when the operation
+    is lowered to the LLVM dialect. For multiplication, 'improved',
+    'promoted', and 'basic' are all handled equivalently, producing the
+    algebraic formula with no special handling for NaN value. If 'full' is
+    used, a runtime-library function is called if one of the intermediate
+    calculations produced a NaN value.
+
+    Example:
+
+    ```mlir
+    %2 = cir.complex.mul %0, %1 range(basic) : !cir.complex<!cir.float>
+    %2 = cir.complex.mul %0, %1 range(full) : !cir.complex<!cir.float>
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_ComplexType:$lhs,
+    CIR_ComplexType:$rhs,
+    CIR_ComplexRangeKind:$range
+  );
+
+  let results = (outs CIR_ComplexType:$result);
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs `range` `(` $range `)` `:` qualified(type($result)) attr-dict
+  }];
+}
 
 //===----------------------------------------------------------------------===//
 // Bit Manipulation Operations
@@ -2907,6 +3019,28 @@ def CIR_BitCtzOp : CIR_BitZeroCountOpBase<"ctz",
     %0 = cir.const #cir.int<8> : !u32i
     // %1 will be 3
     %1 = cir.ctz %0 poison_zero : !u32i
+    ```
+  }];
+}
+
+def CIR_BitFfsOp : CIR_BitOpBase<"ffs", CIR_SIntOfWidths<[32, 64]>> {
+  let summary = "Get the position of the least significant 1-bit in input";
+  let description = [{
+    Compute the 1-based position of the least significant 1-bit of the input.
+
+    The input integer must be a signed integer. The `cir.ffs` operation returns
+    one plus the index of the least significant 1-bit of the input signed
+    integer. If the input integer is 0, `cir.ffs` yields 0.
+
+    Example:
+
+    ```mlir
+    !s32i = !cir.int<s, 32>
+
+    // %0 = 0x0010_1000
+    %0 = cir.const #cir.int<40> : !s32i
+    // #1 will be 4 since the 4th least significant bit is 1.
+    %1 = cir.ffs %0 : !s32i
     ```
   }];
 }
@@ -3049,6 +3183,56 @@ def CIR_AssumeOp : CIR_Op<"assume"> {
 
   let assemblyFormat = [{
     $predicate `:` type($predicate) attr-dict
+  }];
+}
+
+def CIR_AssumeAlignedOp : CIR_Op<"assume_aligned", [
+  Pure, AllTypesMatch<["pointer", "result"]>
+]> {
+  let summary = "Tell the optimizer that a pointer is aligned";
+  let description = [{
+    The `cir.assume_aligned` operation takes two or three arguments. The first
+    argument `pointer` gives the pointer value whose alignment is to be assumed,
+    and the second argument `align` is an integer attribute that gives the
+    assumed alignment.
+
+    The `offset` argument is optional. If given, it represents misalignment
+    offset. When it's present, this operation tells the optimizer that the
+    pointer is always misaligned to the alignment by `offset` bytes, a.k.a. the
+    pointer yielded by `(char *)pointer - offset` is aligned to the specified
+    alignment. Note that the `offset` argument is an SSA value rather than an
+    attribute, which means that you could pass a dynamically determined value
+    as the mialignment offset.
+
+    The result of this operation has the same value as the `pointer` argument,
+    but it additionally carries any alignment information indicated by this
+    operation.
+
+    This operation corresponds to the `__builtin_assume_aligned` builtin
+    function.
+
+    Example:
+
+    ```mlir
+    // Assume that %0 is a CIR pointer value of type !cir.ptr<!s32i>
+    %1 = cir.assume_aligned %0 alignment 16 : !cir.ptr<!s32i>
+
+    // With a misalignment offset of 4 bytes:
+    %2 = cir.const #cir.int<4> : !u64i
+    %3 = cir.assume_aligned %0 alignment 16 [offset %2 : !u64i] : !cir.ptr<!s32i>
+    ```
+  }];
+
+  let arguments = (ins CIR_PointerType:$pointer,
+                       I64Attr:$alignment,
+                       Optional<CIR_IntType>:$offset);
+  let results = (outs CIR_PointerType:$result);
+
+  let assemblyFormat = [{
+    $pointer
+    `alignment` $alignment
+    (`[` `offset` $offset^ `:` type($offset) `]`)?
+    `:` qualified(type($pointer)) attr-dict
   }];
 }
 

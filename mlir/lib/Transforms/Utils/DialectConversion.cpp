@@ -20,6 +20,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -120,17 +121,8 @@ struct ConversionValueMapping {
   /// false positives.
   bool isMappedTo(Value value) const { return mappedTo.contains(value); }
 
-  /// Lookup the most recently mapped values with the desired types in the
-  /// mapping.
-  ///
-  /// Special cases:
-  /// - If the desired type range is empty, simply return the most recently
-  ///   mapped values.
-  /// - If there is no mapping to the desired types, also return the most
-  ///   recently mapped values.
-  /// - If there is no mapping for the given values at all, return the given
-  ///   value.
-  ValueVector lookupOrDefault(Value from, TypeRange desiredTypes = {}) const;
+  /// Lookup a value in the mapping.
+  ValueVector lookup(const ValueVector &from) const;
 
   template <typename T>
   struct IsValueVector : std::is_same<std::decay_t<T>, ValueVector> {};
@@ -184,54 +176,31 @@ private:
 };
 } // namespace
 
-ValueVector
-ConversionValueMapping::lookupOrDefault(Value from,
-                                        TypeRange desiredTypes) const {
-  // Try to find the deepest values that have the desired types. If there is no
-  // such mapping, simply return the deepest values.
-  ValueVector desiredValue;
-  ValueVector current{from};
-  do {
-    // Store the current value if the types match.
-    if (TypeRange(ValueRange(current)) == desiredTypes)
-      desiredValue = current;
+/// Marker attribute for pure type conversions. I.e., mappings whose only
+/// purpose is to resolve a type mismatch. (In contrast, mappings that point to
+/// the replacement values of a "replaceOp" call, etc., are not pure type
+/// conversions.)
+static const StringRef kPureTypeConversionMarker = "__pure_type_conversion__";
 
-    // If possible, Replace each value with (one or multiple) mapped values.
-    ValueVector next;
-    for (Value v : current) {
-      auto it = mapping.find({v});
-      if (it != mapping.end()) {
-        llvm::append_range(next, it->second);
-      } else {
-        next.push_back(v);
-      }
-    }
-    if (next != current) {
-      // If at least one value was replaced, continue the lookup from there.
-      current = std::move(next);
-      continue;
-    }
+/// A vector of values is a pure type conversion if all values are defined by
+/// the same operation and the operation has the `kPureTypeConversionMarker`
+/// attribute.
+static bool isPureTypeConversion(const ValueVector &values) {
+  assert(!values.empty() && "expected non-empty value vector");
+  Operation *op = values.front().getDefiningOp();
+  for (Value v : llvm::drop_begin(values))
+    if (v.getDefiningOp() != op)
+      return false;
+  return op && op->hasAttr(kPureTypeConversionMarker);
+}
 
-    // Otherwise: Check if there is a mapping for the entire vector. Such
-    // mappings are materializations. (N:M mapping are not supported for value
-    // replacements.)
-    //
-    // Note: From a correctness point of view, materializations do not have to
-    // be stored (and looked up) in the mapping. But for performance reasons,
-    // we choose to reuse existing IR (when possible) instead of creating it
-    // multiple times.
-    auto it = mapping.find(current);
-    if (it == mapping.end()) {
-      // No mapping found: The lookup stops here.
-      break;
-    }
-    current = it->second;
-  } while (true);
-
-  // If the desired values were found use them, otherwise default to the leaf
-  // values.
-  // Note: If `desiredTypes` is empty, this function always returns `current`.
-  return !desiredValue.empty() ? std::move(desiredValue) : std::move(current);
+ValueVector ConversionValueMapping::lookup(const ValueVector &from) const {
+  auto it = mapping.find(from);
+  if (it == mapping.end()) {
+    // No mapping found: The lookup stops here.
+    return {};
+  }
+  return it->second;
 }
 
 //===----------------------------------------------------------------------===//
@@ -929,7 +898,11 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
   ///   recently mapped values.
   /// - If there is no mapping for the given values at all, return the given
   ///   value.
-  ValueVector lookupOrDefault(Value from, TypeRange desiredTypes = {}) const;
+  ///
+  /// If `skipPureTypeConversions` is "true", materializations that are pure
+  /// type conversions are not considered.
+  ValueVector lookupOrDefault(Value from, TypeRange desiredTypes = {},
+                              bool skipPureTypeConversions = false) const;
 
   /// Lookup the given value within the map, or return an empty vector if the
   /// value is not mapped. If it is mapped, this follows the same behavior
@@ -992,11 +965,19 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
   /// If `valuesToMap` is set to a non-null Value, then that value is mapped to
   /// the results of the unresolved materialization in the conversion value
   /// mapping.
+  ///
+  /// If `isPureTypeConversion` is "true", the materialization is created only
+  /// to resolve a type mismatch. That means it is not a regular value
+  /// replacement issued by the user. (Replacement values that are created
+  /// "out of thin air" appear like unresolved materializations because they are
+  /// unrealized_conversion_cast ops. However, they must be treated like
+  /// regular value replacements.)
   ValueRange buildUnresolvedMaterialization(
       MaterializationKind kind, OpBuilder::InsertPoint ip, Location loc,
       ValueVector valuesToMap, ValueRange inputs, TypeRange outputTypes,
       Type originalType, const TypeConverter *converter,
-      UnrealizedConversionCastOp *castOp = nullptr);
+      UnrealizedConversionCastOp *castOp = nullptr,
+      bool isPureTypeConversion = true);
 
   /// Find a replacement value for the given SSA value in the conversion value
   /// mapping. The replacement value must have the same type as the given SSA
@@ -1129,8 +1110,13 @@ struct ConversionPatternRewriterImpl : public RewriterBase::Listener {
   /// verification.
   SmallPtrSet<Operation *, 1> pendingRootUpdates;
 
+  /// A raw output stream used to prefix the debug log.
+  llvm::impl::raw_ldbg_ostream os{(Twine("[") + DEBUG_TYPE + "] ").str(),
+                                  llvm::dbgs(), /*HasPendingNewline=*/false};
+
   /// A logger used to emit diagnostics during the conversion process.
-  llvm::ScopedPrinter logger{llvm::dbgs()};
+  llvm::ScopedPrinter logger{os};
+  std::string logPrefix;
 #endif
 };
 } // namespace detail
@@ -1258,10 +1244,77 @@ void ConversionPatternRewriterImpl::applyRewrites() {
 // State Management
 //===----------------------------------------------------------------------===//
 
-ValueVector
-ConversionPatternRewriterImpl::lookupOrDefault(Value from,
-                                               TypeRange desiredTypes) const {
-  return mapping.lookupOrDefault(from, desiredTypes);
+ValueVector ConversionPatternRewriterImpl::lookupOrDefault(
+    Value from, TypeRange desiredTypes, bool skipPureTypeConversions) const {
+  // Helper function that looks up each value in `values` individually and then
+  // composes the results. If that fails, it tries to look up the entire vector
+  // at once.
+  auto composedLookup = [&](const ValueVector &values) -> ValueVector {
+    // If possible, replace each value with (one or multiple) mapped values.
+    ValueVector next;
+    for (Value v : values) {
+      ValueVector r = mapping.lookup({v});
+      if (!r.empty()) {
+        llvm::append_range(next, r);
+      } else {
+        next.push_back(v);
+      }
+    }
+    if (next != values) {
+      // At least one value was replaced.
+      return next;
+    }
+
+    // Otherwise: Check if there is a mapping for the entire vector. Such
+    // mappings are materializations. (N:M mapping are not supported for value
+    // replacements.)
+    //
+    // Note: From a correctness point of view, materializations do not have to
+    // be stored (and looked up) in the mapping. But for performance reasons,
+    // we choose to reuse existing IR (when possible) instead of creating it
+    // multiple times.
+    ValueVector r = mapping.lookup(values);
+    if (r.empty()) {
+      // No mapping found: The lookup stops here.
+      return {};
+    }
+    return r;
+  };
+
+  // Try to find the deepest values that have the desired types. If there is no
+  // such mapping, simply return the deepest values.
+  ValueVector desiredValue;
+  ValueVector current{from};
+  ValueVector lastNonMaterialization{from};
+  do {
+    // Store the current value if the types match.
+    bool match = TypeRange(ValueRange(current)) == desiredTypes;
+    if (skipPureTypeConversions) {
+      // Skip pure type conversions, if requested.
+      bool pureConversion = isPureTypeConversion(current);
+      match &= !pureConversion;
+      // Keep track of the last mapped value that was not a pure type
+      // conversion.
+      if (!pureConversion)
+        lastNonMaterialization = current;
+    }
+    if (match)
+      desiredValue = current;
+
+    // Lookup next value in the mapping.
+    ValueVector next = composedLookup(current);
+    if (next.empty())
+      break;
+    current = std::move(next);
+  } while (true);
+
+  // If the desired values were found use them, otherwise default to the leaf
+  // values. (Skip pure type conversions, if requested.)
+  if (!desiredTypes.empty())
+    return desiredValue;
+  if (skipPureTypeConversions)
+    return lastNonMaterialization;
+  return current;
 }
 
 ValueVector
@@ -1318,10 +1371,13 @@ LogicalResult ConversionPatternRewriterImpl::remapValues(
     Location operandLoc = inputLoc ? *inputLoc : operand.getLoc();
 
     if (!currentTypeConverter) {
-      // The current pattern does not have a type converter. I.e., it does not
-      // distinguish between legal and illegal types. For each operand, simply
-      // pass through the most recently mapped values.
-      remapped.push_back(lookupOrDefault(operand));
+      // The current pattern does not have a type converter. Pass the most
+      // recently mapped values, excluding materializations. Materializations
+      // are intentionally excluded because their presence may depend on other
+      // patterns. Including materializations would make the lookup fragile
+      // and unpredictable.
+      remapped.push_back(lookupOrDefault(operand, /*desiredTypes=*/{},
+                                         /*skipPureTypeConversions=*/true));
       continue;
     }
 
@@ -1350,7 +1406,8 @@ LogicalResult ConversionPatternRewriterImpl::remapValues(
     }
 
     // Create a materialization for the most recently mapped values.
-    repl = lookupOrDefault(operand);
+    repl = lookupOrDefault(operand, /*desiredTypes=*/{},
+                           /*skipPureTypeConversions=*/true);
     ValueRange castValues = buildUnresolvedMaterialization(
         MaterializationKind::Target, computeInsertPoint(repl), operandLoc,
         /*valuesToMap=*/repl, /*inputs=*/repl, /*outputTypes=*/legalTypes,
@@ -1476,7 +1533,8 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
               OpBuilder::InsertPoint(newBlock, newBlock->begin()),
               origArg.getLoc(),
               /*valuesToMap=*/{}, /*inputs=*/ValueRange(),
-              /*outputTypes=*/origArgType, /*originalType=*/Type(), converter)
+              /*outputTypes=*/origArgType, /*originalType=*/Type(), converter,
+              /*castOp=*/nullptr, /*isPureTypeConversion=*/false)
               .front();
       replaceUsesOfBlockArgument(origArg, mat, converter);
       continue;
@@ -1517,7 +1575,7 @@ ValueRange ConversionPatternRewriterImpl::buildUnresolvedMaterialization(
     MaterializationKind kind, OpBuilder::InsertPoint ip, Location loc,
     ValueVector valuesToMap, ValueRange inputs, TypeRange outputTypes,
     Type originalType, const TypeConverter *converter,
-    UnrealizedConversionCastOp *castOp) {
+    UnrealizedConversionCastOp *castOp, bool isPureTypeConversion) {
   assert((!originalType || kind == MaterializationKind::Target) &&
          "original type is valid only for target materializations");
   assert(TypeRange(inputs) != outputTypes &&
@@ -1529,6 +1587,8 @@ ValueRange ConversionPatternRewriterImpl::buildUnresolvedMaterialization(
   builder.setInsertionPoint(ip.getBlock(), ip.getPoint());
   auto convertOp =
       UnrealizedConversionCastOp::create(builder, loc, outputTypes, inputs);
+  if (isPureTypeConversion)
+    convertOp->setAttr(kPureTypeConversionMarker, builder.getUnitAttr());
   if (!valuesToMap.empty())
     mapping.map(valuesToMap, convertOp.getResults());
   if (castOp)
@@ -1644,7 +1704,8 @@ void ConversionPatternRewriterImpl::replaceOp(
           MaterializationKind::Source, computeInsertPoint(result),
           result.getLoc(), /*valuesToMap=*/{result}, /*inputs=*/ValueRange(),
           /*outputTypes=*/result.getType(), /*originalType=*/Type(),
-          currentTypeConverter);
+          currentTypeConverter, /*castOp=*/nullptr,
+          /*isPureTypeConversion=*/false);
       continue;
     }
 
@@ -1747,6 +1808,10 @@ ConversionPatternRewriter::ConversionPatternRewriter(
 }
 
 ConversionPatternRewriter::~ConversionPatternRewriter() = default;
+
+const ConversionConfig &ConversionPatternRewriter::getConfig() const {
+  return impl->config;
+}
 
 void ConversionPatternRewriter::replaceOp(Operation *op, Operation *newOp) {
   assert(op && newOp && "expected non-null op");
@@ -1889,7 +1954,7 @@ void ConversionPatternRewriter::inlineBlockBefore(Block *source, Block *dest,
   // ops should be moved one-by-one ("slow path"), so that a separate
   // `MoveOperationRewrite` is enqueued for each moved op. Moving ops in bulk is
   // a bit more efficient, so we try to do that when possible.
-  bool fastPath = !impl->config.listener;
+  bool fastPath = !getConfig().listener;
 
   if (fastPath)
     impl->inlineBlockBefore(source, dest, before);
@@ -2012,8 +2077,7 @@ public:
   using LegalizationAction = ConversionTarget::LegalizationAction;
 
   OperationLegalizer(const ConversionTarget &targetInfo,
-                     const FrozenRewritePatternSet &patterns,
-                     const ConversionConfig &config);
+                     const FrozenRewritePatternSet &patterns);
 
   /// Returns true if the given operation is known to be illegal on the target.
   bool isIllegal(Operation *op) const;
@@ -2110,16 +2174,12 @@ private:
 
   /// The pattern applicator to use for conversions.
   PatternApplicator applicator;
-
-  /// Dialect conversion configuration.
-  const ConversionConfig &config;
 };
 } // namespace
 
 OperationLegalizer::OperationLegalizer(const ConversionTarget &targetInfo,
-                                       const FrozenRewritePatternSet &patterns,
-                                       const ConversionConfig &config)
-    : target(targetInfo), applicator(patterns), config(config) {
+                                       const FrozenRewritePatternSet &patterns)
+    : target(targetInfo), applicator(patterns) {
   // The set of patterns that can be applied to illegal operations to transform
   // them into legal ones.
   DenseMap<OperationName, LegalizationPatterns> legalizerPatterns;
@@ -2197,15 +2257,17 @@ OperationLegalizer::legalize(Operation *op,
     return success();
   }
 
-  // If the operation isn't legal, try to fold it in-place.
-  // TODO: Should we always try to do this, even if the op is
-  // already legal?
-  if (succeeded(legalizeWithFold(op, rewriter))) {
-    LLVM_DEBUG({
-      logSuccess(logger, "operation was folded");
-      logger.startLine() << logLineComment;
-    });
-    return success();
+  // If the operation is not legal, try to fold it in-place if the folding mode
+  // is 'BeforePatterns'. 'Never' will skip this.
+  const ConversionConfig &config = rewriter.getConfig();
+  if (config.foldingMode == DialectConversionFoldingMode::BeforePatterns) {
+    if (succeeded(legalizeWithFold(op, rewriter))) {
+      LLVM_DEBUG({
+        logSuccess(logger, "operation was folded");
+        logger.startLine() << logLineComment;
+      });
+      return success();
+    }
   }
 
   // Otherwise, we need to apply a legalization pattern to this operation.
@@ -2215,6 +2277,18 @@ OperationLegalizer::legalize(Operation *op,
       logger.startLine() << logLineComment;
     });
     return success();
+  }
+
+  // If the operation can't be legalized via patterns, try to fold it in-place
+  // if the folding mode is 'AfterPatterns'.
+  if (config.foldingMode == DialectConversionFoldingMode::AfterPatterns) {
+    if (succeeded(legalizeWithFold(op, rewriter))) {
+      LLVM_DEBUG({
+        logSuccess(logger, "operation was folded");
+        logger.startLine() << logLineComment;
+      });
+      return success();
+    }
   }
 
   LLVM_DEBUG({
@@ -2280,7 +2354,7 @@ OperationLegalizer::legalizeWithFold(Operation *op,
       LLVM_DEBUG(logFailure(rewriterImpl.logger,
                             "failed to legalize generated constant '{0}'",
                             newOp->getName()));
-      if (!config.allowPatternRollback) {
+      if (!rewriter.getConfig().allowPatternRollback) {
         // Rolling back a folder is like rolling back a pattern.
         llvm::report_fatal_error(
             "op '" + opName +
@@ -2296,10 +2370,36 @@ OperationLegalizer::legalizeWithFold(Operation *op,
   return success();
 }
 
+/// Report a fatal error indicating that newly produced or modified IR could
+/// not be legalized.
+static void
+reportNewIrLegalizationFatalError(const Pattern &pattern,
+                                  const SetVector<Operation *> &newOps,
+                                  const SetVector<Operation *> &modifiedOps,
+                                  const SetVector<Block *> &insertedBlocks) {
+  auto newOpNames = llvm::map_range(
+      newOps, [](Operation *op) { return op->getName().getStringRef(); });
+  auto modifiedOpNames = llvm::map_range(
+      modifiedOps, [](Operation *op) { return op->getName().getStringRef(); });
+  StringRef detachedBlockStr = "(detached block)";
+  auto insertedBlockNames = llvm::map_range(insertedBlocks, [&](Block *block) {
+    if (block->getParentOp())
+      return block->getParentOp()->getName().getStringRef();
+    return detachedBlockStr;
+  });
+  llvm::report_fatal_error(
+      "pattern '" + pattern.getDebugName() +
+      "' produced IR that could not be legalized. " + "new ops: {" +
+      llvm::join(newOpNames, ", ") + "}, " + "modified ops: {" +
+      llvm::join(modifiedOpNames, ", ") + "}, " + "inserted block into ops: {" +
+      llvm::join(insertedBlockNames, ", ") + "}");
+}
+
 LogicalResult
 OperationLegalizer::legalizeWithPattern(Operation *op,
                                         ConversionPatternRewriter &rewriter) {
   auto &rewriterImpl = rewriter.getImpl();
+  const ConversionConfig &config = rewriter.getConfig();
 
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
   Operation *checkOp;
@@ -2383,8 +2483,8 @@ OperationLegalizer::legalizeWithPattern(Operation *op,
     appliedPatterns.erase(&pattern);
     if (failed(result)) {
       if (!rewriterImpl.config.allowPatternRollback)
-        llvm::report_fatal_error("pattern '" + pattern.getDebugName() +
-                                 "' produced IR that could not be legalized");
+        reportNewIrLegalizationFatalError(pattern, newOps, modifiedOps,
+                                          insertedBlocks);
       rewriterImpl.resetState(curState, pattern.getDebugName());
     }
     if (config.listener)
@@ -2743,8 +2843,7 @@ struct OperationConverter {
                               const FrozenRewritePatternSet &patterns,
                               const ConversionConfig &config,
                               OpConversionMode mode)
-      : config(config), opLegalizer(target, patterns, this->config),
-        mode(mode) {}
+      : config(config), opLegalizer(target, patterns), mode(mode) {}
 
   /// Converts the given operations to the conversion target.
   LogicalResult convertOperations(ArrayRef<Operation *> ops);
@@ -2895,6 +2994,10 @@ LogicalResult OperationConverter::convertOperations(ArrayRef<Operation *> ops) {
   // patterns.)
   SmallVector<UnrealizedConversionCastOp> remainingCastOps;
   reconcileUnrealizedCasts(allCastOps, &remainingCastOps);
+
+  // Drop markers.
+  for (UnrealizedConversionCastOp castOp : remainingCastOps)
+    castOp->removeAttr(kPureTypeConversionMarker);
 
   // Try to legalize all unresolved materializations.
   if (config.buildMaterializations) {

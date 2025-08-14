@@ -88,10 +88,10 @@ void entry() {
 // CHECK-NEXT: InitListExpr
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: MemberExpr {{.*}} 'float' lvalue .f {{.*}}
-// CHECK-NEXT: DeclRefExpr {{.*}} 'struct S':'S' lvalue Var {{.*}} 's' 'struct S':'S'
+// CHECK-NEXT: DeclRefExpr {{.*}} 'struct S' lvalue Var {{.*}} 's' 'struct S'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: MemberExpr {{.*}} 'float' lvalue .f {{.*}}
-// CHECK-NEXT: DeclRefExpr {{.*}} 'struct S':'S' lvalue Var {{.*}} 's' 'struct S':'S'
+// CHECK-NEXT: DeclRefExpr {{.*}} 'struct S' lvalue Var {{.*}} 's' 'struct S'
 
   struct T {
     operator float() const { return 1.0f; }
@@ -105,12 +105,12 @@ void entry() {
 // CHECK-NEXT: CXXMemberCallExpr {{.*}} 'float'
 // CHECK-NEXT: MemberExpr {{.*}} '<bound member function type>' .operator float {{.*}}
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'const T' lvalue <NoOp>
-// CHECK-NEXT: DeclRefExpr {{.*}} 'struct T':'T' lvalue Var {{.*}} 't' 'struct T':'T'
+// CHECK-NEXT: DeclRefExpr {{.*}} 'struct T' lvalue Var {{.*}} 't' 'struct T'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <UserDefinedConversion>
 // CHECK-NEXT: CXXMemberCallExpr {{.*}} 'float'
 // CHECK-NEXT: MemberExpr {{.*}} '<bound member function type>' .operator float {{.*}}
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'const T' lvalue <NoOp>
-// CHECK-NEXT: DeclRefExpr {{.*}} 'struct T':'T' lvalue Var {{.*}} 't' 'struct T':'T'
+// CHECK-NEXT: DeclRefExpr {{.*}} 'struct T' lvalue Var {{.*}} 't' 'struct T'
 
   typedef float2 second_level_of_typedefs;
   second_level_of_typedefs foo6 = float2(1.0f, 2.0f);
