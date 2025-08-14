@@ -2086,10 +2086,13 @@ void COFFDumper::printCOFFPseudoReloc() {
   }
 
   if (RelocBegin.getSectionNumber() != RelocEnd.getSectionNumber()) {
-    reportWarning(createStringError(
-                      "the marker symbols for runtime pseudo-relocation must "
-                      "point to the same section"),
-                  Obj->getFileName());
+    reportWarning(
+        createStringError(
+            "the end marker symbol for runtime pseudo-relocation must "
+            "point to the same section where the begin marker points to: "
+            "expected %d, but got %d",
+            RelocBegin.getSectionNumber(), RelocEnd.getSectionNumber()),
+        Obj->getFileName());
     return;
   }
 

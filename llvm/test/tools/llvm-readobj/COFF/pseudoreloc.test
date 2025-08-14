@@ -159,7 +159,7 @@ WARN-MISSINGMARKER-NEXT:  {{.*}}warning: {{.*}}: the marker symbols for runtime 
 WARN-INVALIDHEADER-NEXT:  {{.*}}warning: {{.*}}: invalid runtime pseudo-relocation records
 WARN-LOWEREND-NEXT:       {{.*}}warning: {{.*}}: the begin marker symbol for runtime pseudo-relocation must point to a lower address than where the end marker points
 WARN-OUTOFRANGE-NEXT:     {{.*}}warning: {{.*}}: the marker symbol of runtime pseudo-relocation points past the end of the section
-WARN-SECTIONDIFFERS-NEXT: {{.*}}warning: {{.*}}: the marker symbols for runtime pseudo-relocation must point to the same section
+WARN-SECTIONDIFFERS-NEXT: {{.*}}warning: {{.*}}: the end marker symbol for runtime pseudo-relocation must point to the same section where the begin marker points to: expected 1, but got {{[2-9]}}
 EMPTY-NEXT: ]
 
 ;;
