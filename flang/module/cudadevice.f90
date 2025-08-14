@@ -325,6 +325,13 @@ implicit none
     end function
   end interface
 
+  interface saturate
+    attributes(device) real function __saturatef(r) bind(c, name='__nv_saturatef')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
+    end function
+  end interface
+
   interface __sad
     attributes(device) integer function __sad(i,j,k) bind(c, name='__nv_sad')
       !dir$ ignore_tkr (d) i, (d) j, (d) k
@@ -466,6 +473,90 @@ implicit none
 
   interface __float2half_rn
     attributes(device) real(2) function __float2half_rn(r) bind(c, name='__nv_float2half_rn')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
+    end function
+  end interface
+
+  interface __float2int_rd
+    attributes(device) integer function __float2int_rd(r) bind(c, name='__nv_float2int_rd')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
+    end function
+  end interface
+
+  interface __float2int_rn
+    attributes(device) integer function __float2int_rn(r) bind(c, name='__nv_float2int_rn')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
+    end function
+  end interface
+
+  interface __float2int_ru
+    attributes(device) integer function __float2int_ru(r) bind(c, name='__nv_float2int_ru')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
+    end function
+  end interface
+
+  interface __float2int_rz
+    attributes(device) integer function __float2int_rz(r) bind(c, name='__nv_float2int_rz')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
+    end function
+  end interface
+
+  interface __float2uint_rd
+    attributes(device) integer function __float2uint_rd(r) bind(c, name='__nv_float2uint_rd')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
+    end function
+  end interface
+
+  interface __float2uint_rn
+    attributes(device) integer function __float2uint_rn(r) bind(c, name='__nv_float2uint_rn')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
+    end function
+  end interface
+
+  interface __float2uint_ru
+    attributes(device) integer function __float2uint_ru(r) bind(c, name='__nv_float2uint_ru')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
+    end function
+  end interface
+
+  interface __float2uint_rz
+    attributes(device) integer function __float2uint_rz(r) bind(c, name='__nv_float2uint_rz')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
+    end function
+  end interface
+
+  interface __float2ll_rd
+    attributes(device) integer(8) function __float2ll_rd(r) bind(c, name='__nv_float2ll_rd')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
+    end function
+  end interface
+
+  interface __float2ll_rn
+    attributes(device) integer(8) function __float2ll_rn(r) bind(c, name='__nv_float2ll_rn')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
+    end function
+  end interface
+
+  interface __float2ll_ru
+    attributes(device) integer(8) function __float2ll_ru(r) bind(c, name='__nv_float2ll_ru')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
+    end function
+  end interface
+
+  interface __float2ll_rz
+    attributes(device) integer(8) function __float2ll_rz(r) bind(c, name='__nv_float2ll_rz')
       !dir$ ignore_tkr (d) r
       real, value :: r
     end function
