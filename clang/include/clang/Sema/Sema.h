@@ -9479,6 +9479,10 @@ public:
   LabelDecl *LookupOrCreateLabel(IdentifierInfo *II, SourceLocation IdentLoc,
                                  SourceLocation GnuLabelLoc = SourceLocation());
 
+  /// Perform a name lookup for a label with the specified name; this does not
+  /// create a new label if the lookup fails.
+  LabelDecl *LookupExistingLabel(IdentifierInfo *II, SourceLocation IdentLoc);
+
   /// Look up the constructors for the given class.
   DeclContextLookupResult LookupConstructors(CXXRecordDecl *Class);
 

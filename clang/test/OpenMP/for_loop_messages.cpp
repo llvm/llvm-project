@@ -843,13 +843,12 @@ void test_static_data_member() {
   }
 }
 
-// FIXME: The diagnostics here aren't exactly great; see Sema::ActOnBreakStmt() for more details.
 void test_labeled_break() {
 #pragma omp parallel
 #pragma omp for
   a: // expected-error {{statement after '#pragma omp for' must be a for loop}}
   for (int i = 0; i < 16; ++i) {
-    break a;
+    break a; // expected-error {{'break' statement cannot be used in OpenMP for loop}}
     continue a;
   }
 
@@ -857,8 +856,8 @@ void test_labeled_break() {
 #pragma omp parallel
 #pragma omp for
     for (int i = 0; i < 16; ++i) {
-      break b; // expected-error {{use of undeclared label 'b'}}
-      continue c; // expected-error {{use of undeclared label 'c'}}
+      break b; // expected-error {{'break' label does not name an enclosing loop or 'switch'}}
+      continue c; // expected-error {{'continue' label does not name an enclosing loop}}
     }
   }
 }

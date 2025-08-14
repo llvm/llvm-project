@@ -3282,15 +3282,45 @@ static void CheckJumpOutOfSEHFinally(Sema &S, SourceLocation Loc,
   }
 }
 
+Scope *FindLabeledBreakContinueScope(Sema &S, Scope *CurScope,
+                                     LabelDecl *Target, SourceLocation LabelLoc,
+                                     bool IsBreak) {
+  for (Scope* Scope = CurScope; Scope; Scope = Scope->getParent()) {
+    if (Scope->isFunctionScope()) {
+      S.Diag(LabelLoc, diag::err_break_continue_label_not_found) << IsBreak;
+      return nullptr;
+    }
+
+    if (Scope->getLoopOrSwitchName() != Target)
+      continue;
+
+    if (!Scope->isBreakOrContinueScope()) {
+      S.Diag(LabelLoc, diag::err_break_continue_label_not_found) << IsBreak;
+      return nullptr;
+    }
+
+    if (!IsBreak && !Scope->isContinueScope()) {
+      S.Diag(LabelLoc, diag::err_continue_switch);
+      return nullptr;
+    }
+
+    return Scope;
+  }
+  return nullptr;
+}
+
 StmtResult Sema::ActOnContinueStmt(SourceLocation ContinueLoc, Scope *CurScope,
                                    LabelDecl *Target, SourceLocation LabelLoc) {
+  Scope *S;
   if (Target) {
-    getCurFunction()->setHasLabeledBreakOrContinue();
-    return new (Context) ContinueStmt(ContinueLoc, LabelLoc, Target);
+    S = FindLabeledBreakContinueScope(*this, CurScope, Target, LabelLoc,
+                                      /*IsBreak=*/false);
+    if (!S)
+      return StmtError();
+  } else {
+    S = CurScope->getContinueParent();
   }
 
-  assert(CurScope && "unlabeled continue requires a scope");
-  Scope *S = CurScope->getContinueParent();
   if (!S) {
     // C99 6.8.6.2p1: A break shall appear only in or as a loop body.
     return StmtError(Diag(ContinueLoc, diag::err_continue_not_in_loop));
@@ -3312,32 +3342,26 @@ StmtResult Sema::ActOnContinueStmt(SourceLocation ContinueLoc, Scope *CurScope,
 
   CheckJumpOutOfSEHFinally(*this, ContinueLoc, *S);
 
-  return new (Context) ContinueStmt(ContinueLoc);
+  return new (Context) ContinueStmt(ContinueLoc, LabelLoc, Target);
 }
 
 StmtResult Sema::ActOnBreakStmt(SourceLocation BreakLoc, Scope *CurScope,
                                 LabelDecl *Target, SourceLocation LabelLoc) {
+  Scope *S;
   if (Target) {
-    getCurFunction()->setHasLabeledBreakOrContinue();
-    return new (Context) BreakStmt(BreakLoc, LabelLoc, Target);
+    S = FindLabeledBreakContinueScope(*this, CurScope, Target, LabelLoc,
+                                      /*IsBreak=*/true);
+    if (!S)
+      return StmtError();
+  } else {
+    S = CurScope->getBreakParent();
   }
 
-  assert(CurScope && "unlabeled break requires a scope");
-  Scope *S = CurScope->getBreakParent();
   if (!S) {
     // C99 6.8.6.3p1: A break shall appear only in or as a switch/loop body.
     return StmtError(Diag(BreakLoc, diag::err_break_not_in_loop_or_switch));
   }
 
-  // FIXME: We currently omit this check for labeled 'break' statements; this
-  // is fine since trying to label an OpenMP loop causes an error because we
-  // expect a ForStmt, not a LabelStmt. Trying to branch out of a loop that
-  // contains the OpenMP loop also doesn't work because the former is outlined
-  // into a separate function, i.e. the target label and 'break' are not in
-  // the same function. What's not great is that we only print 'use of
-  // undeclared label', which is a bit confusing because to the user the label
-  // does in fact appear to be declared. It would be better to print a more
-  // helpful error message instead, but that seems complicated.
   if (S->isOpenMPLoopScope())
     return StmtError(Diag(BreakLoc, diag::err_omp_loop_cannot_use_stmt)
                      << "break");
@@ -3358,7 +3382,7 @@ StmtResult Sema::ActOnBreakStmt(SourceLocation BreakLoc, Scope *CurScope,
 
   CheckJumpOutOfSEHFinally(*this, BreakLoc, *S);
 
-  return new (Context) BreakStmt(BreakLoc);
+  return new (Context) BreakStmt(BreakLoc, LabelLoc, Target);
 }
 
 Sema::NamedReturnInfo Sema::getNamedReturnInfo(Expr *&E,

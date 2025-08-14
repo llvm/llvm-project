@@ -8561,8 +8561,8 @@ TreeTransform<Derived>::TransformContinueStmt(ContinueStmt *S) {
   if (!LD)
     return StmtError();
 
-  return SemaRef.ActOnContinueStmt(S->getKwLoc(), /*CurScope=*/nullptr,
-                                   cast<LabelDecl>(LD), S->getLabelLoc());
+  return new (SemaRef.Context)
+      ContinueStmt(S->getKwLoc(), S->getLabelLoc(), cast<LabelDecl>(LD));
 }
 
 template<typename Derived>
@@ -8576,8 +8576,8 @@ TreeTransform<Derived>::TransformBreakStmt(BreakStmt *S) {
   if (!LD)
     return StmtError();
 
-  return SemaRef.ActOnBreakStmt(S->getKwLoc(), /*CurScope=*/nullptr,
-                                cast<LabelDecl>(LD), S->getLabelLoc());
+  return new (SemaRef.Context)
+      BreakStmt(S->getKwLoc(), S->getLabelLoc(), cast<LabelDecl>(LD));
 }
 
 template<typename Derived>

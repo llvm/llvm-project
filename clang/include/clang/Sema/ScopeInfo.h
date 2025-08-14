@@ -124,9 +124,6 @@ public:
   /// Whether this function contains any indirect gotos.
   bool HasIndirectGoto : 1;
 
-  /// Whether this function contains any labeled break or continue statements.
-  bool HasLabeledBreakOrContinue : 1;
-
   /// Whether this function contains any statement marked with
   /// \c [[clang::musttail]].
   bool HasMustTail : 1;
@@ -394,8 +391,7 @@ protected:
 public:
   FunctionScopeInfo(DiagnosticsEngine &Diag)
       : Kind(SK_Function), HasBranchProtectedScope(false),
-        HasBranchIntoScope(false), HasIndirectGoto(false),
-        HasLabeledBreakOrContinue(false), HasMustTail(false),
+        HasBranchIntoScope(false), HasIndirectGoto(false), HasMustTail(false),
         HasDroppedStmt(false), HasOMPDeclareReductionCombiner(false),
         HasFallthroughStmt(false), UsesFPIntrin(false),
         HasPotentialAvailabilityViolations(false), ObjCShouldCallSuper(false),
@@ -439,8 +435,6 @@ public:
   void setHasBranchIntoScope() {
     HasBranchIntoScope = true;
   }
-
-  void setHasLabeledBreakOrContinue() { HasLabeledBreakOrContinue = true; }
 
   void setHasBranchProtectedScope() {
     HasBranchProtectedScope = true;
@@ -491,9 +485,8 @@ public:
   }
 
   bool NeedsScopeChecking() const {
-    return !HasDroppedStmt &&
-           (HasIndirectGoto || HasMustTail || HasLabeledBreakOrContinue ||
-            (HasBranchProtectedScope && HasBranchIntoScope));
+    return !HasDroppedStmt && (HasIndirectGoto || HasMustTail ||
+                               (HasBranchProtectedScope && HasBranchIntoScope));
   }
 
   // Add a block introduced in this function.
