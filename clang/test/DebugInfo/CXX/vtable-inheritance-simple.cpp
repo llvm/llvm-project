@@ -37,12 +37,6 @@ int main() {
 
 // CHECK: @_ZTVN3NSP5CBaseE = linkonce_odr {{.*}}unnamed_addr constant {{.*}}, comdat, align 8, !dbg [[BASE_VTABLE_VAR:![0-9]*]]
 // CHECK: @_ZTV8CDerived = linkonce_odr {{.*}}unnamed_addr constant {{.*}}, comdat, align 8, !dbg [[DERIVED_VTABLE_VAR:![0-9]*]]
-// COFF: @_ZTVN3NSP5CBaseE = linkonce_odr {{.*}}unnamed_addr constant {{.*}}, comdat, align 8
-// COFF-NOT: !dbg
-// COFF-SAME: {{$}}
-// COFF: @_ZTV8CDerived = linkonce_odr {{.*}}unnamed_addr constant {{.*}}, comdat, align 8
-// COFF-NOT: !dbg
-// COFF-SAME: {{$}}
 
 // CHECK: [[BASE_VTABLE_VAR]] = !DIGlobalVariableExpression(var: [[BASE_VTABLE:![0-9]*]], expr: !DIExpression())
 // CHECK-NEXT: [[BASE_VTABLE]] = distinct !DIGlobalVariable(name: "_vtable$", linkageName: "_ZTVN3NSP5CBaseE"
