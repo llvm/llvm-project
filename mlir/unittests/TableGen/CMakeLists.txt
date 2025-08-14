@@ -8,6 +8,7 @@ mlir_tablegen(PassGenTest.h.inc -gen-pass-decls -name TableGenTest)
 add_public_tablegen_target(MLIRTableGenTestPassIncGen)
 
 add_mlir_unittest(MLIRTableGenTests
+  CodeGenHelpersTest.cpp
   EnumsGenTest.cpp
   FormatTest.cpp
   OpBuildGen.cpp
