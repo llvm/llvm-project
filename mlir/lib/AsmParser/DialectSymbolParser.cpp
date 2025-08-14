@@ -251,7 +251,7 @@ static Symbol parseExtendedSymbol(Parser &p, AsmParserState *asmState,
     // Skip cached attribute if it has type.
     if (cacheIt != cache.end() && !p.getToken().is(Token::colon))
       return cacheIt->second;
-    
+
     return cache[symbolData] = createSymbol(dialectName, symbolData, loc);
   }
   return createSymbol(dialectName, symbolData, loc);
