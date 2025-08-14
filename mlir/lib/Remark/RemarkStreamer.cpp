@@ -62,8 +62,9 @@ LogicalResult enableOptimizationRemarksToFile(MLIRContext &ctx, StringRef path,
       detail::LLVMRemarkStreamer::createToFile(path, fmt);
   if (failed(sOr))
     return failure();
-  return ctx.enableOptimizationRemarks(std::move(*sOr), cat,
-                                       printAsEmitRemarks);
+
+  return remark::enableOptimizationRemarks(ctx, std::move(*sOr), cat,
+                                           printAsEmitRemarks);
 }
 
 } // namespace mlir::remark

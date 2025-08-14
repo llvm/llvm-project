@@ -32,7 +32,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/RWMutex.h"
@@ -406,21 +405,6 @@ void MLIRContext::setRemarkEngine(
 
 remark::detail::RemarkEngine *MLIRContext::getRemarkEngine() {
   return getImpl().remarkEngine.get();
-}
-
-LogicalResult MLIRContext::enableOptimizationRemarks(
-    std::unique_ptr<remark::detail::MLIRRemarkStreamerBase> streamer,
-    const remark::RemarkCategories &cats, bool printAsEmitRemarks) {
-  auto engine =
-      std::make_unique<remark::detail::RemarkEngine>(printAsEmitRemarks, cats);
-
-  std::string errMsg;
-  if (failed(engine->initialize(std::move(streamer), &errMsg))) {
-    llvm::report_fatal_error(
-        llvm::Twine("Failed to initialize remark engine. Error: ") + errMsg);
-  }
-  setRemarkEngine(std::move(engine));
-  return success();
 }
 
 //===----------------------------------------------------------------------===//

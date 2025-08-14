@@ -174,7 +174,7 @@ TEST(Remark, TestOutputOptimizationRemarkDiagnostic) {
                                         /*failed=*/categoryUnroll};
 
     LogicalResult isEnabled =
-        context.enableOptimizationRemarks(nullptr, cats, true);
+        remark::enableOptimizationRemarks(context, nullptr, cats, true);
 
     ASSERT_TRUE(succeeded(isEnabled)) << "Failed to enable remark engine";
 
@@ -246,8 +246,8 @@ TEST(Remark, TestCustomOptimizationRemarkDiagnostic) {
                                         /*analysis=*/std::nullopt,
                                         /*failed=*/categoryLoopunroll};
 
-    LogicalResult isEnabled = context.enableOptimizationRemarks(
-        std::make_unique<MyCustomStreamer>(), cats, true);
+    LogicalResult isEnabled = remark::enableOptimizationRemarks(
+        context, std::make_unique<MyCustomStreamer>(), cats, true);
     ASSERT_TRUE(succeeded(isEnabled)) << "Failed to enable remark engine";
 
     // Remark 1: pass, category LoopUnroll

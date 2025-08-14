@@ -213,7 +213,9 @@ struct LazyTextBuild {
 /// Similar to InFlightDiagnostic, but for remarks.
 class InFlightRemark {
 public:
-  explicit InFlightRemark(Remark *diag) : remark(diag) {}
+  explicit InFlightRemark(std::unique_ptr<Remark> diag)
+      : remark(std::move(diag)) {}
+
   InFlightRemark(RemarkEngine &eng, std::unique_ptr<Remark> diag)
       : owner(&eng), remark(std::move(diag)) {}
 
@@ -428,6 +430,19 @@ inline detail::InFlightRemark analysis(Location loc, StringRef cat,
   return withEngine(&detail::RemarkEngine::emitOptimizationRemarkAnalysis, loc,
                     passName, cat);
 }
+
+/// Setup remarks for the context. This function will enable the remark engine
+/// and set the streamer to be used for optimization remarks.
+/// The remark categories are used to filter the remarks that will be emitted
+/// by the remark engine. If a category is not specified, it will not be
+/// emitted. If `printAsEmitRemarks` is true, the remarks will be printed as
+/// mlir::emitRemarks.
+/// 'streamer' must inherit from MLIRRemarkStreamerBase and will be used to
+/// stream the remarks.
+LogicalResult enableOptimizationRemarks(
+    MLIRContext &ctx,
+    std::unique_ptr<remark::detail::MLIRRemarkStreamerBase> streamer,
+    const remark::RemarkCategories &cats, bool printAsEmitRemarks = false);
 
 } // namespace mlir::remark
 

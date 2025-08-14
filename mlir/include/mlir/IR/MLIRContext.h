@@ -34,11 +34,7 @@ class MLIRContextImpl;
 class RegisteredOperationName;
 class StorageUniquer;
 class IRUnit;
-namespace remark {
-struct RemarkCategories;
-}
 namespace remark::detail {
-class MLIRRemarkStreamerBase;
 class RemarkEngine;
 } // namespace remark::detail
 
@@ -222,6 +218,9 @@ public:
   /// Returns the remark engine for this context.
   remark::detail::RemarkEngine *getRemarkEngine();
 
+  /// Set the remark engine for this context.
+  void setRemarkEngine(std::unique_ptr<remark::detail::RemarkEngine> engine);
+
   /// Returns the storage uniquer used for creating affine constructs.
   StorageUniquer &getAffineUniquer();
 
@@ -254,18 +253,6 @@ public:
   /// context registry correlates to loaded dialects and their entities
   /// (attributes, operations, types, etc.).
   llvm::hash_code getRegistryHash();
-
-  /// Setup remarks for the context. This function will enable the remark engine
-  /// and set the streamer to be used for optimization remarks.
-  /// The remark categories are used to filter the remarks that will be emitted
-  /// by the remark engine. If a category is not specified, it will not be
-  /// emitted. If `printAsEmitRemarks` is true, the remarks will be printed as
-  /// mlir::emitRemarks.
-  /// 'streamer' must inherit from MLIRRemarkStreamerBase and will be used to
-  /// stream the remarks.
-  LogicalResult enableOptimizationRemarks(
-      std::unique_ptr<remark::detail::MLIRRemarkStreamerBase> streamer,
-      const remark::RemarkCategories &cats, bool printAsEmitRemarks = false);
 
   //===--------------------------------------------------------------------===//
   // Action API
@@ -303,9 +290,6 @@ public:
   }
 
 private:
-  /// Set the remark engine for this context.
-  void setRemarkEngine(std::unique_ptr<remark::detail::RemarkEngine> engine);
-
   /// Return true if the given dialect is currently loading.
   bool isDialectLoading(StringRef dialectNamespace);
 

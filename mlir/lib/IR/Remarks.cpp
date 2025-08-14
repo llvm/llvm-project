@@ -243,3 +243,20 @@ RemarkEngine::RemarkEngine(bool printAsEmitRemarks,
   if (cats.failed)
     failedFilter = llvm::Regex(cats.failed.value());
 }
+
+llvm::LogicalResult mlir::remark::enableOptimizationRemarks(
+    MLIRContext &ctx,
+    std::unique_ptr<remark::detail::MLIRRemarkStreamerBase> streamer,
+    const remark::RemarkCategories &cats, bool printAsEmitRemarks) {
+  auto engine =
+      std::make_unique<remark::detail::RemarkEngine>(printAsEmitRemarks, cats);
+
+  std::string errMsg;
+  if (failed(engine->initialize(std::move(streamer), &errMsg))) {
+    llvm::report_fatal_error(
+        llvm::Twine("Failed to initialize remark engine. Error: ") + errMsg);
+  }
+  ctx.setRemarkEngine(std::move(engine));
+
+  return success();
+}
