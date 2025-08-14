@@ -68,28 +68,6 @@ func.func @pow_caller(%z: complex<f32>, %w: complex<f32>) -> complex<f32> {
   return %r : complex<f32>
 }
 
-// CHECK-LABEL: @pow_int_caller
-func.func @pow_int_caller(%f : complex<f32>, %d : complex<f64>)
-    ->(complex<f32>, complex<f64>) {
-  // CHECK-NOT: call @__ocml
-  // CHECK: %[[M2:.*]] = complex.mul %{{.*}}, %{{.*}} : complex<f32>
-  %c2_i32 = arith.constant 2 : i32
-  %c2r = "fir.convert"(%c2_i32) : (i32) -> f32
-  %c2i = arith.constant 0.0 : f32
-  %c2 = complex.create %c2r, %c2i : complex<f32>
-  %p2 = complex.pow %f, %c2 : complex<f32>
-  // CHECK-NOT: call @__ocml
-  // CHECK: %[[M3A:.*]] = complex.mul %{{.*}}, %{{.*}} : complex<f64>
-  // CHECK: %[[M3B:.*]] = complex.mul %[[M3A]], %{{.*}} : complex<f64>
-  %c3_i32 = arith.constant 3 : i32
-  %c3r = "fir.convert"(%c3_i32) : (i32) -> f64
-  %c3i = arith.constant 0.0 : f64
-  %c3 = complex.create %c3r, %c3i : complex<f64>
-  %p3 = complex.pow %d, %c3 : complex<f64>
-  // CHECK: return %[[M2]], %[[M3B]]
-  return %p2, %p3 : complex<f32>, complex<f64>
-}
-
 //CHECK-LABEL: @sin_caller
 func.func @sin_caller(%f: complex<f32>, %d: complex<f64>) -> (complex<f32>, complex<f64>) {
   // CHECK: %[[SF:.*]] = call @__ocml_csin_f32(%{{.*}})

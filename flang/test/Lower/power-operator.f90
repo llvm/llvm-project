@@ -143,3 +143,11 @@ subroutine pow_c8_c8(x, y, z)
   ! PRECISE: call @cpow
 end subroutine
 
+! CHECK-LABEL: pow_const
+subroutine pow_const(a, b)
+  complex :: a, b
+  ! CHECK-NOT: complex.pow
+  ! CHECK-NOT: @_FortranAcpowi
+  ! CHECK-COUNT-3: complex.mul
+  a = b**4
+end subroutine
