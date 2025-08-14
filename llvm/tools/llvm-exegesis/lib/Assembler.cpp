@@ -106,7 +106,6 @@ static bool generateSnippetSetupCode(const ExegesisTarget &ET,
       // the setup.
       if (Register(RV.Register) == StackPointerRegister)
         continue;
-#if defined(__aarch64__)
       auto StackLoadInsts = ET._generateRegisterStackPop(RV.Register, 16);
       if (!StackLoadInsts.empty() && isFirstRegister) {
         for (const auto &Inst : StackLoadInsts)
@@ -116,7 +115,6 @@ static bool generateSnippetSetupCode(const ExegesisTarget &ET,
                           << " bytes\n");
         continue;
       }
-#endif
     }
     // Load a constant in the register.
     LLVM_DEBUG(dbgs() << " to " << RV.Value << "\n");
