@@ -1243,7 +1243,9 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
            !vputils::onlyFirstLaneUsed(RepOrWidenR)) ||
           RepOrWidenR->getNumUsers() == 0 ||
           any_of(RepOrWidenR->users(), [RepOrWidenR](VPUser *U) {
-            return !U->usesScalars(RepOrWidenR);
+            // TODO: Making an exception for VPWidenMemoryRecipe seems is a
+            // hack, but is in place to avoid regressions.
+            return !isa<VPWidenMemoryRecipe>(U) && !U->usesScalars(RepOrWidenR);
           }))
         continue;
 
