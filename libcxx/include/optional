@@ -604,69 +604,20 @@ private:
   static_assert(!is_array_v<value_type>, "instantiation of optional with an array type is ill-formed");
 
   // LWG2756: conditionally explicit conversion from _Up
-  struct _CheckOptionalArgsConstructor {
-    template <class _Up>
-    _LIBCPP_HIDE_FROM_ABI static constexpr bool __enable_implicit() {
-      return is_constructible_v<_Tp, _Up&&> && is_convertible_v<_Up&&, _Tp>;
-    }
 
-    template <class _Up>
-    _LIBCPP_HIDE_FROM_ABI static constexpr bool __enable_explicit() {
-      return is_constructible_v<_Tp, _Up&&> && !is_convertible_v<_Up&&, _Tp>;
-    }
-  };
-  template <class _Up>
-  using _CheckOptionalArgsCtor _LIBCPP_NODEBUG =
-      _If< _IsNotSame<__remove_cvref_t<_Up>, in_place_t>::value && _IsNotSame<__remove_cvref_t<_Up>, optional>::value &&
-               (!is_same_v<remove_cv_t<_Tp>, bool> || !__is_std_optional<__remove_cvref_t<_Up>>::value),
-           _CheckOptionalArgsConstructor,
-           __check_tuple_constructor_fail >;
-  template <class _QualUp>
-  struct _CheckOptionalLikeConstructor {
-    template <class _Up, class _Opt = optional<_Up>>
-    using __check_constructible_from_opt _LIBCPP_NODEBUG =
-        _Or< is_constructible<_Tp, _Opt&>,
-             is_constructible<_Tp, _Opt const&>,
-             is_constructible<_Tp, _Opt&&>,
-             is_constructible<_Tp, _Opt const&&>,
-             is_convertible<_Opt&, _Tp>,
-             is_convertible<_Opt const&, _Tp>,
-             is_convertible<_Opt&&, _Tp>,
-             is_convertible<_Opt const&&, _Tp> >;
-    template <class _Up, class _Opt = optional<_Up>>
-    using __check_assignable_from_opt _LIBCPP_NODEBUG =
-        _Or< is_assignable<_Tp&, _Opt&>,
-             is_assignable<_Tp&, _Opt const&>,
-             is_assignable<_Tp&, _Opt&&>,
-             is_assignable<_Tp&, _Opt const&&> >;
-    template <class _Up, class _QUp = _QualUp>
-    _LIBCPP_HIDE_FROM_ABI static constexpr bool __enable_implicit() {
-      return is_convertible<_QUp, _Tp>::value &&
-             (is_same_v<remove_cv_t<_Tp>, bool> || !__check_constructible_from_opt<_Up>::value);
-    }
-    template <class _Up, class _QUp = _QualUp>
-    _LIBCPP_HIDE_FROM_ABI static constexpr bool __enable_explicit() {
-      return !is_convertible<_QUp, _Tp>::value &&
-             (is_same_v<remove_cv_t<_Tp>, bool> || !__check_constructible_from_opt<_Up>::value);
-    }
-    template <class _Up, class _QUp = _QualUp>
-    _LIBCPP_HIDE_FROM_ABI static constexpr bool __enable_assign() {
-      // Construction and assignability of _QUp to _Tp has already been
-      // checked.
-      return !__check_constructible_from_opt<_Up>::value && !__check_assignable_from_opt<_Up>::value;
-    }
-  };
+  template <class _Up, class _Opt = optional<_Up>>
+  using __check_constructible_from_opt _LIBCPP_NODEBUG =
+      _Or<is_constructible<_Tp, _Opt&>,
+          is_constructible<_Tp, _Opt const&>,
+          is_constructible<_Tp, _Opt&&>,
+          is_constructible<_Tp, _Opt const&&>>;
 
-  template <class _Up, class _QualUp>
-  using _CheckOptionalLikeCtor _LIBCPP_NODEBUG =
-      _If< _And< _IsNotSame<_Up, _Tp>, is_constructible<_Tp, _QualUp> >::value,
-           _CheckOptionalLikeConstructor<_QualUp>,
-           __check_tuple_constructor_fail >;
-  template <class _Up, class _QualUp>
-  using _CheckOptionalLikeAssign _LIBCPP_NODEBUG =
-      _If< _And< _IsNotSame<_Up, _Tp>, is_constructible<_Tp, _QualUp>, is_assignable<_Tp&, _QualUp> >::value,
-           _CheckOptionalLikeConstructor<_QualUp>,
-           __check_tuple_constructor_fail >;
+  template <class _Up, class _Opt = optional<_Up>>
+  using __check_assignable_from_opt _LIBCPP_NODEBUG =
+      _Or<is_assignable<_Tp&, _Opt&>,
+          is_assignable<_Tp&, _Opt const&>,
+          is_assignable<_Tp&, _Opt&&>,
+          is_assignable<_Tp&, _Opt const&&>>;
 
 public:
   _LIBCPP_HIDE_FROM_ABI constexpr optional() noexcept {}
@@ -686,30 +637,34 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit optional(in_place_t, initializer_list<_Up> __il, _Args&&... __args)
       : __base(in_place, __il, std::forward<_Args>(__args)...) {}
 
-  template <class _Up                                                                        = value_type,
-            enable_if_t<_CheckOptionalArgsCtor<_Up>::template __enable_implicit<_Up>(), int> = 0>
-  _LIBCPP_HIDE_FROM_ABI constexpr optional(_Up&& __v) : __base(in_place, std::forward<_Up>(__v)) {}
-
-  template <class _Up, enable_if_t<_CheckOptionalArgsCtor<_Up>::template __enable_explicit<_Up>(), int> = 0>
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit optional(_Up&& __v) : __base(in_place, std::forward<_Up>(__v)) {}
+  template <class _Up,
+            class _DependentU = enable_if_t<
+                !is_same_v<__remove_cvref_t<_Up>, in_place_t> && !is_same_v<__remove_cvref_t<_Up>, optional> &&
+                    (!is_same_v<remove_cv_t<_Tp>, bool> || !__is_std_optional<__remove_cvref_t<_Up>>::value),
+                _Up>,
+            enable_if_t<is_constructible_v<_Tp, _DependentU>, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit(!is_convertible_v<_Up&&, _Tp>) optional(_Up&& __v)
+      : __base(in_place, std::forward<_Up>(__v)) {}
 
   // LWG2756: conditionally explicit conversion from const optional<_Up>&
-  template <class _Up, enable_if_t<_CheckOptionalLikeCtor<_Up, _Up const&>::template __enable_implicit<_Up>(), int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 optional(const optional<_Up>& __v) {
-    this->__construct_from(__v);
-  }
-  template <class _Up, enable_if_t<_CheckOptionalLikeCtor<_Up, _Up const&>::template __enable_explicit<_Up>(), int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit optional(const optional<_Up>& __v) {
+  template <class _Up,
+            class _DependentU = enable_if_t<!is_same_v<_Up, _Tp>, _Up>,
+            enable_if_t<is_constructible_v<_Tp, const _DependentU&> &&
+                            (is_same_v<remove_cv_t<_Tp>, bool> || !__check_constructible_from_opt<_DependentU>::value),
+                        int>  = 0>
+  _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit(!is_convertible_v<const _Up&, _Tp>) optional(const optional<_Up>& __v) {
     this->__construct_from(__v);
   }
 
   // LWG2756: conditionally explicit conversion from optional<_Up>&&
-  template <class _Up, enable_if_t<_CheckOptionalLikeCtor<_Up, _Up&&>::template __enable_implicit<_Up>(), int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 optional(optional<_Up>&& __v) {
-    this->__construct_from(std::move(__v));
-  }
-  template <class _Up, enable_if_t<_CheckOptionalLikeCtor<_Up, _Up&&>::template __enable_explicit<_Up>(), int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit optional(optional<_Up>&& __v) {
+  template <class _Up,
+            class _DependentU = enable_if_t<!is_same_v<_Up, _Tp>, _Up>,
+            enable_if_t<is_constructible_v<_Tp, _DependentU&&> &&
+                            (is_same_v<remove_cv_t<_Tp>, bool> || !__check_constructible_from_opt<_DependentU>::value),
+                        int>  = 0>
+  _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit(!is_convertible_v<_Up&&, _Tp>) optional(optional<_Up>&& __v) {
     this->__construct_from(std::move(__v));
   }
 
@@ -746,14 +701,22 @@ public:
   }
 
   // LWG2756
-  template <class _Up, enable_if_t<_CheckOptionalLikeAssign<_Up, _Up const&>::template __enable_assign<_Up>(), int> = 0>
+  template <class _Up,
+            class _DependentU = enable_if_t<!is_same_v<_Tp, _Up>, _Up>,
+            enable_if_t<is_constructible_v<_Tp, const _DependentU&> && is_assignable_v<_Tp&, const _DependentU&> &&
+                            !__check_constructible_from_opt<_Up>::value && !__check_assignable_from_opt<_Up>::value,
+                        int>  = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 optional& operator=(const optional<_Up>& __v) {
     this->__assign_from(__v);
     return *this;
   }
 
   // LWG2756
-  template <class _Up, enable_if_t<_CheckOptionalLikeCtor<_Up, _Up&&>::template __enable_assign<_Up>(), int> = 0>
+  template <class _Up,
+            class _DependentU = enable_if_t<!is_same_v<_Tp, _Up>, _Up>,
+            enable_if_t<is_constructible_v<_Tp, _DependentU&&> && is_assignable_v<_Tp&, _DependentU&&> &&
+                            !__check_constructible_from_opt<_Up>::value && !__check_assignable_from_opt<_Up>::value,
+                        int>  = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 optional& operator=(optional<_Up>&& __v) {
     this->__assign_from(std::move(__v));
     return *this;
