@@ -1371,7 +1371,7 @@ static void printEnclosingMethodScope(const Decl *D, llvm::raw_ostream &OS,
     return;
   if (!MD->isOutOfLine() || !MD->getQualifier())
     return;
-  MD->getQualifier()->print(OS, PP);
+  MD->getQualifier().print(OS, PP);
 }
 
 static SourceLocation

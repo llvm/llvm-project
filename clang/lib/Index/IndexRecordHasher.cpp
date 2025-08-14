@@ -46,7 +46,7 @@ struct IndexRecordHasher {
   void hashType(QualType ty);
   void hashCanonicalType(CanQualType canTy);
   void hashDeclName(DeclarationName name);
-  void hashNameSpec(const NestedNameSpecifier *nestedName);
+  void hashNameSpec(NestedNameSpecifier nestedName);
   void hashSelector(Selector selector);
   void hashTemplateName(TemplateName name);
   void hashTemplateArg(const TemplateArgument &arg);
@@ -270,7 +270,7 @@ void IndexRecordHasher::hashCanonicalType(CanQualType CT) {
     }
     if (const TagType *tag = dyn_cast<TagType>(T)) {
       HashBuilder.add('$');
-      hashDecl(tag->getDecl()->getCanonicalDecl());
+      hashDecl(tag->getOriginalDecl()->getCanonicalDecl());
       return;
     }
     if (const ObjCInterfaceType *interface = dyn_cast<ObjCInterfaceType>(T)) {
@@ -293,8 +293,8 @@ void IndexRecordHasher::hashCanonicalType(CanQualType CT) {
     }
     if (const InjectedClassNameType *injected =
             dyn_cast<InjectedClassNameType>(T)) {
-      CT =
-          asCanon(injected->getInjectedSpecializationType().getCanonicalType());
+      // InjectedClassNameType is always canonical
+      CT = asCanon(QualType(injected, 0));
       continue;
     }
     if (const PackExpansionType *expansion = dyn_cast<PackExpansionType>(T)) {
@@ -331,7 +331,7 @@ void IndexRecordHasher::hashCanonicalType(CanQualType CT) {
     }
     if (const DependentNameType *depName = dyn_cast<DependentNameType>(T)) {
       HashBuilder.add('^');
-      if (const NestedNameSpecifier *nameSpec = depName->getQualifier()) {
+      if (NestedNameSpecifier nameSpec = depName->getQualifier()) {
         hashNameSpec(nameSpec);
       }
       HashBuilder.add(depName->getIdentifier()->getName());
@@ -378,32 +378,32 @@ void IndexRecordHasher::hashDeclName(DeclarationName name) {
   }
 }
 
-void IndexRecordHasher::hashNameSpec(const NestedNameSpecifier *nameSpec) {
+void IndexRecordHasher::hashNameSpec(NestedNameSpecifier nameSpec) {
   assert(nameSpec);
 
-  if (auto *prefix = nameSpec->getPrefix()) {
+  if (auto prefix = nameSpec.getAsNamespaceAndPrefix().Prefix) {
     hashNameSpec(prefix);
   }
 
-  HashBuilder.add(nameSpec->getKind());
+  HashBuilder.add(nameSpec.getKind());
 
-  switch (nameSpec->getKind()) {
-  case NestedNameSpecifier::Identifier:
-    HashBuilder.add(nameSpec->getAsIdentifier()->getName());
+  switch (nameSpec.getKind()) {
+  case NestedNameSpecifier::Kind::Namespace:
+    hashDecl(nameSpec.getAsNamespaceAndPrefix().Namespace->getCanonicalDecl());
     break;
 
-  case NestedNameSpecifier::Namespace:
-    hashDecl(nameSpec->getAsNamespace()->getCanonicalDecl());
+  case NestedNameSpecifier::Kind::Global:
     break;
 
-  case NestedNameSpecifier::Global:
+  case NestedNameSpecifier::Kind::MicrosoftSuper:
     break;
 
-  case NestedNameSpecifier::Super:
+  case NestedNameSpecifier::Kind::Type:
+    hashType(QualType(nameSpec.getAsType(), 0));
     break;
 
-  case NestedNameSpecifier::TypeSpec:
-    hashType(QualType(nameSpec->getAsType(), 0));
+  case NestedNameSpecifier::Kind::Null:
+    llvm_unreachable("expected some namespecifier kind");
     break;
   }
 }

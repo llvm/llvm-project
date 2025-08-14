@@ -310,7 +310,7 @@ public:
     }
     TypedefTypeLoc TTL = Loc.getAs<TypedefTypeLoc>();
     if (TTL) {
-      const auto *TND = TTL.getTypedefNameDecl();
+      const auto *TND = TTL.getDecl();
       if (TND->isTransparentTag()) {
         if (const auto *Underlying = TND->getUnderlyingType()->getAsTagDecl())
           return checkOccurrence(Underlying, TTL.getNameLoc());
@@ -365,15 +365,13 @@ public:
   bool isDone() const { return Result; }
 
   // \brief Determines if a namespace qualifier contains the point.
-  // \returns false on success and sets Result.
+  // Sets Result on success.
   void handleNestedNameSpecifierLoc(NestedNameSpecifierLoc NameLoc) {
     while (NameLoc) {
-      const NamespaceDecl *Decl = nullptr;
-      if (auto *NS = NameLoc.getNestedNameSpecifier()->getAsNamespace())
-        Decl = NS->getNamespace();
-      checkOccurrence(Decl, NameLoc.getLocalBeginLoc(),
+      const auto [Namespace, PrefixLoc] = NameLoc.getAsNamespaceAndPrefix();
+      checkOccurrence(Namespace, NameLoc.getLocalBeginLoc(),
                       NameLoc.getLocalEndLoc());
-      NameLoc = NameLoc.getPrefix();
+      NameLoc = PrefixLoc;
     }
   }
 

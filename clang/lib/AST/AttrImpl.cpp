@@ -300,8 +300,8 @@ bool clang::isValidPointerAttrType(QualType T, bool RefOkay) {
   // The nonnull attribute, and other similar attributes, can be applied to a
   // transparent union that contains a pointer type.
   if (const RecordType *UT = T->getAsUnionType()) {
-    if (UT && UT->getDecl()->hasAttr<TransparentUnionAttr>()) {
-      RecordDecl *UD = UT->getDecl();
+    RecordDecl *UD = UT->getOriginalDecl()->getDefinitionOrSelf();
+    if (UD->hasAttr<TransparentUnionAttr>()) {
       for (const auto *I : UD->fields()) {
         QualType QT = I->getType();
         if (QT->isAnyPointerType() || QT->isBlockPointerType())

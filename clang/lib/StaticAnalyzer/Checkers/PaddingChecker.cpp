@@ -104,7 +104,7 @@ public:
       // There is not enough excess padding to trigger a warning.
       return;
     }
-    reportRecord(RD, BaselinePad, OptimalPad, OptimalFieldsOrder);
+    reportRecord(ASTContext, RD, BaselinePad, OptimalPad, OptimalFieldsOrder);
   }
 
   /// Look for arrays of overly padded types. If the padding of the
@@ -123,7 +123,7 @@ public:
       return;
 
     // TODO: Recurse into the fields to see if they have excess padding.
-    visitRecord(RT->getDecl(), Elts);
+    visitRecord(RT->getOriginalDecl()->getDefinitionOrSelf(), Elts);
   }
 
   bool shouldSkipDecl(const RecordDecl *RD) const {
@@ -159,9 +159,7 @@ public:
         return true;
       // Can't layout a template, so skip it. We do still layout the
       // instantiations though.
-      if (CXXRD->getTypeForDecl()->isDependentType())
-        return true;
-      if (CXXRD->getTypeForDecl()->isInstantiationDependentType())
+      if (CXXRD->isDependentType())
         return true;
     }
     // How do you reorder fields if you haven't got any?
@@ -306,14 +304,14 @@ public:
   }
 
   void reportRecord(
-      const RecordDecl *RD, CharUnits BaselinePad, CharUnits OptimalPad,
+      const ASTContext &Ctx, const RecordDecl *RD, CharUnits BaselinePad,
+      CharUnits OptimalPad,
       const SmallVector<const FieldDecl *, 20> &OptimalFieldsOrder) const {
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
     Os << "Excessive padding in '";
-    Os << QualType::getAsString(RD->getTypeForDecl(), Qualifiers(),
-                                LangOptions())
-       << "'";
+    QualType(Ctx.getCanonicalTagType(RD)).print(Os, LangOptions());
+    Os << "'";
 
     if (auto *TSD = dyn_cast<ClassTemplateSpecializationDecl>(RD)) {
       // TODO: make this show up better in the console output and in

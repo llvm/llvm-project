@@ -268,7 +268,7 @@ public:
   bool VisitTypeLoc(const TypeLoc Loc) {
     TypedefTypeLoc TTL = Loc.getAs<TypedefTypeLoc>();
     if (TTL) {
-      const auto *TND = TTL.getTypedefNameDecl();
+      const auto *TND = TTL.getDecl();
       if (TND->isTransparentTag()) {
         if (const auto *Underlying = TND->getUnderlyingType()->getAsTagDecl()) {
           checkDecl(Underlying, TTL.getNameLoc());
@@ -316,9 +316,10 @@ public:
   // Namespace traversal:
   void handleNestedNameSpecifierLoc(NestedNameSpecifierLoc NameLoc) {
     while (NameLoc) {
-      checkDecl(NameLoc.getNestedNameSpecifier()->getAsNamespace(),
+      auto [Namespace, PrefixLoc] = NameLoc.getAsNamespaceAndPrefix();
+      checkDecl(Namespace,
                 NameLoc.getLocalBeginLoc());
-      NameLoc = NameLoc.getPrefix();
+      NameLoc = PrefixLoc;
     }
   }
 
