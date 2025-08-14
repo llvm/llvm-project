@@ -7948,7 +7948,7 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
 
     StringRef Argument;
     if (!S.checkStringLiteralArgumentAttr(attr, 0, Argument))
-      return false;
+      return true;
 
     // Delay if this is not a function type.
     if (!unwrapped.isFunctionType())
