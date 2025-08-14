@@ -1745,7 +1745,7 @@ func.func @step() -> vector<4xindex> {
 // vector.from_elements
 //===----------------------------------------------------------------------===//
 
-// NOTE: For now, we unroll multi-dimensional from_elements ops with pattern `UnrollFromElements`
+// NOTE: We unroll multi-dimensional from_elements ops with pattern `UnrollFromElements`
 // and then convert the 1-D from_elements ops to llvm.
 
 // CHECK-LABEL: func @from_elements_3d
