@@ -25,12 +25,10 @@
 #if defined(LIBC_COPT_STRING_UNSAFE_WIDE_READ)
 #if defined(LIBC_TARGET_ARCH_IS_X86)
 #include "src/string/memory_utils/x86_64/inline_strlen.h"
-namespace wide_read_impl = x86;
 #elif defined(LIBC_TARGET_ARCH_IS_AARCH64) && defined(__ARM_NEON)
 #include "src/string/memory_utils/aarch64/inline_strlen.h"
-namespace wide_read_impl = aarch64;
 #else
-namespace wide_read_impl = default_wide_read;
+namespace string_length_impl = LIBC_NAMESPACE::wide_read;
 #endif
 #endif
 
@@ -72,7 +70,6 @@ template <typename Word> LIBC_INLINE constexpr bool has_zeroes(Word block) {
   return (subtracted & inverted & HIGH_BITS) != 0;
 }
 
-namespace default_wide_read {
 template <typename Word>
 LIBC_INLINE size_t string_length_wide_read(const char *src) {
   const char *char_ptr = src;
@@ -93,18 +90,24 @@ LIBC_INLINE size_t string_length_wide_read(const char *src) {
   }
   return static_cast<size_t>(char_ptr - src);
 }
-} // namespace default_wide_read
+
+namespace wide_read {
+LIBC_INLINE size_t string_length(const char *src) {
+  // Unsigned int is the default size for most processors, and on x86-64 it
+  // performs better than larger sizes when the src pointer can't be assumed to
+  // be aligned to a word boundary, so it's the size we use for reading the
+  // string a block at a time.
+  return string_length_wide_read<unsigned int>(src);
+}
+
+} // namespace wide_read
 
 // Returns the length of a string, denoted by the first occurrence
 // of a null terminator.
 template <typename T> LIBC_INLINE size_t string_length(const T *src) {
 #ifdef LIBC_COPT_STRING_UNSAFE_WIDE_READ
-  // Unsigned int is the default size for most processors, and on x86-64 it
-  // performs better than larger sizes when the src pointer can't be assumed to
-  // be aligned to a word boundary, so it's the size we use for reading the
-  // string a block at a time.
   if constexpr (cpp::is_same_v<T, char>)
-    return wide_read_impl::string_length(src);
+    return string_length_impl::string_length(src);
 #endif
   size_t length;
   for (length = 0; *src; ++src, ++length)

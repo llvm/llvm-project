@@ -9,13 +9,14 @@
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_STRLEN_H
 
 #include "src/__support/CPP/bit.h"          // countr_zero
-#include "src/string/memory_utils/op_x86.h" // K_AVX
 
+#include <immintrin.h>
 #include <stddef.h> // size_t
 
 namespace LIBC_NAMESPACE_DECL {
 
-[[maybe_unused]] LIBC_INLINE size_t string_length_sse2(const char *src) {
+namespace sse2 {
+[[maybe_unused]] LIBC_INLINE size_t string_length(const char *src) {
   using Vector __attribute__((may_alias)) = __m128i;
 
   Vector z = _mm_setzero_si128();
@@ -40,9 +41,11 @@ namespace LIBC_NAMESPACE_DECL {
                                  cpp::countr_zero(cmp));
   }
 }
+}  // namespace sse2
 
 #if defined(__AVX2__)
-[[maybe_unused]] LIBC_INLINE size_t string_length_avx2(const char *src) {
+namespace avx2 {
+[[maybe_unused]] LIBC_INLINE size_t string_length(const char *src) {
   using Vector __attribute__((may_alias)) = __mm256i;
 
   Vector z = _mm256_setzero_si256();
@@ -67,10 +70,12 @@ namespace LIBC_NAMESPACE_DECL {
                                  cpp::countr_zero(cmp));
   }
 }
-#endif // __AVX2__
+}
+#endif
 
 #if defined(__AVX512F__)
-[[maybe_unused]] LIBC_INLINE size_t string_length_avx512(const char *src) {
+namespace avx512 {
+[[maybe_unused]] LIBC_INLINE size_t string_length(const char *src) {
   using Vector __attribute__((may_alias)) = __mm512i;
 
   Vector z = _mm512_setzero_si512();
@@ -92,18 +97,16 @@ namespace LIBC_NAMESPACE_DECL {
                                  cpp::countr_zero(cmp));
   }
 }
-#endif // __AVX512F__
-
-namespace x86 {
-template <typename T> LIBC_INLINE size_t string_length_x86_64(const char *src) {
-#if defined(__AVX512F__)
-  return string_length_avx512(src);
-#elif defined(__AVX2__)
-  return string_length_avx2(src);
+} // namespace avx512
 #endif
-  return string_length_sse2(src);
-}
-}
+
+#if defined(__AVX512F__)
+namespace string_length_impl = avx512;
+#elif defined(__AVX2__)
+namespace string_length_impl = avx2;
+#else
+namespace string_length_impl = sse2;
+#endif
 
 } // namespace LIBC_NAMESPACE_DECL
 

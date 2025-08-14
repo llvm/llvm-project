@@ -15,7 +15,9 @@
 #include <stddef.h> // size_t
 
 namespace LIBC_NAMESPACE_DECL {
-[[maybe_unused]] LIBC_INLINE size_t string_length_neon(const char *src) {
+
+namespace neon {
+[[maybe_unused]] LIBC_INLINE size_t string_length(const char *src) {
   using Vector __attribute__((may_alias)) = uint8x8_t;
 
   uintptr_t misalign_bytes = reinterpret_cast<uintptr_t>(src) % sizeof(Vector);
@@ -40,12 +42,10 @@ namespace LIBC_NAMESPACE_DECL {
                                  (cpp::countr_zero(cmp) >> 3));
   }
 }
+}  // namespace neon
 
-template <typename T>
-[[maybe_unused]] LIBC_INLINE void string_length_aarch64(const char *src) {
-  return inline_string_length_neon(src);
-}
-} // namespace LIBC_NAMESPACE_DECL
+namespace string_length_impl = neon;
 
+}  // namespace LIBC_NAMESPACE_DECL
 #endif // __ARM_NEON
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_INLINE_STRLEN_H
