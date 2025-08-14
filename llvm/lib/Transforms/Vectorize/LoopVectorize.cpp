@@ -826,12 +826,13 @@ Value *createStepForVF(IRBuilderBase &B, Type *Ty, ElementCount VF,
   assert(Ty->isIntegerTy() && "Expected an integer step");
   ElementCount VFxStep = VF.multiplyCoefficientBy(Step);
   assert(isPowerOf2_64(VF.getKnownMinValue()) && "must pass power-of-2 VF");
-  if (!VF.isScalable() || !isPowerOf2_64(Step))
-    return B.CreateElementCount(Ty, VFxStep);
-
-  return B.CreateShl(
-      B.CreateVScale(Ty),
-      ConstantInt::get(Ty, Log2_64((VF * Step).getKnownMinValue())), "", true);
+  if (VF.isScalable() && isPowerOf2_64(Step)) {
+    return B.CreateShl(
+        B.CreateVScale(Ty),
+        ConstantInt::get(Ty, Log2_64((VF * Step).getKnownMinValue())), "",
+        true);
+  }
+  return B.CreateElementCount(Ty, VFxStep);
 }
 
 /// Return the runtime value for VF.
