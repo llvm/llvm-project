@@ -681,6 +681,34 @@ implicit none
     end function
   end interface
 
+  interface __ll2float_rd
+    attributes(device) real function __ll2float_rd(i) bind(c, name='__nv_ll2float_rd')
+      !dir$ ignore_tkr (d) i
+      integer(8), value :: i
+    end function
+  end interface
+
+  interface __ll2float_rn
+    attributes(device) real function __ll2float_rn(i) bind(c, name='__nv_ll2float_rn')
+      !dir$ ignore_tkr (d) i
+      integer(8), value :: i
+    end function
+    end interface
+
+  interface __ll2float_ru
+    attributes(device) real function __ll2float_ru(i) bind(c, name='__nv_ll2float_ru')
+      !dir$ ignore_tkr (d) i
+      integer(8), value :: i
+    end function
+  end interface
+
+  interface __ll2float_rz
+    attributes(device) real function __ll2float_rz(i) bind(c, name='__nv_ll2float_rz')
+      !dir$ ignore_tkr (d) i
+      integer(8), value :: i
+    end function
+  end interface
+
   interface __ll2double_rd
     attributes(device) double precision function __ll2double_rd(i) bind(c, name='__nv_ll2double_rd')
       !dir$ ignore_tkr (d) i
