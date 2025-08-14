@@ -85,3 +85,44 @@ define i128 @i128_addc_4(i128 %a, i128 %b) {
   ret i128 %ext
 }
 
+define i128 @i128_addc_xor(i128 %a, i128 %b) {
+; CHECK-LABEL: i128_addc_xor:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vl %v1, 0(%r4), 3
+; CHECK-NEXT:    vl %v0, 0(%r3), 3
+; CHECK-NEXT:    vno %v1, %v1, %v1
+; CHECK-NEXT:    veclg %v1, %v0
+; CHECK-NEXT:    jlh .LBB6_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    vchlgs %v0, %v0, %v1
+; CHECK-NEXT:  .LBB6_2:
+; CHECK-NEXT:    jnl .LBB6_4
+; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    larl %r1, .LCPI6_0
+; CHECK-NEXT:    vl %v0, 0(%r1), 3
+; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    br %r14
+; CHECK-NEXT:  .LBB6_4:
+; CHECK-NEXT:    vgbm %v0, 0
+; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    br %r14
+  %b.not = xor i128 %b, -1
+  %cmp = icmp ugt i128 %a, %b.not
+  %ext = zext i1 %cmp to i128
+  ret i128 %ext
+}
+
+define i128 @i128_addc_xor_inv(i128 %a, i128 %b) {
+; CHECK-LABEL: i128_addc_xor_inv:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vl %v1, 0(%r4), 3
+; CHECK-NEXT:    vl %v0, 0(%r3), 3
+; CHECK-NEXT:    vno %v1, %v1, %v1
+; CHECK-NEXT:    vscbiq %v0, %v1, %v0
+; CHECK-NEXT:    vst %v0, 0(%r2), 3
+; CHECK-NEXT:    br %r14
+  %b.not = xor i128 %b, -1
+  %cmp = icmp ule i128 %a, %b.not
+  %ext = zext i1 %cmp to i128
+  ret i128 %ext
+}
