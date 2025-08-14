@@ -25,13 +25,13 @@ Header:
     Minor:           0
 ## FileSize = 1984 - 24 (RTS0 content) - 4 (1 part offset) - 8 (1 part header)
 ##          = 1948
-## CHECK: FileSize:       1948
+# CHECK: FileSize:       1948
   FileSize:        1984
-## CHECK: PartCount:      6
+# CHECK: PartCount:      6
   PartCount:       7
   PartOffsets:     [ 60, 1792, 1808, 1836, 1852, 1868, 1900 ]
 Parts:
-## CHECK-NOT: RTS0
+# CHECK-NOT: RTS0
   - Name:            DXIL
     Size:            1724
     Program:

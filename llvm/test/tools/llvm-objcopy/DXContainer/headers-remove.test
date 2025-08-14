@@ -12,18 +12,18 @@ Header:
   Version:
     Major:           1
     Minor:           0
-## FileSize = 1996 - 8 (FKE0 content) - 1688 (FKE4 content)
+## FileSize = 1996 - 8 (FKE1 content) - 1688 (FKE4 content)
 ##          - 8 (2 part offsets) - 16 (2 part headers)
 ##          = 276
-## CHECK: FileSize:       276
+# CHECK: FileSize:       276
   FileSize:        1996
-## CHECK: PartCount:      5
+# CHECK: PartCount:      5
   PartCount:       7
-## CHECK: PartOffsets:    [ 52, 68, 84, 212, 240 ]
+# CHECK: PartOffsets:    [ 52, 68, 84, 212, 240 ]
   PartOffsets:     [ 60, 76, 92, 108, 236, 1932, 1960 ]
 Parts:
-## CHECK-NOT: FKE1
-## CHECK-NOT: FKE4
+# CHECK-NOT: FKE1
+# CHECK-NOT: FKE4
   - Name:            FKE0
     Size:            8
   - Name:            FKE1
