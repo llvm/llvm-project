@@ -9,8 +9,6 @@
 #ifndef FORTRAN_SUPPORT_OPENMP_UTILS_H_
 #define FORTRAN_SUPPORT_OPENMP_UTILS_H_
 
-#include "flang/Optimizer/Builder/FIRBuilder.h"
-#include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Semantics/symbol.h"
 
 #include "mlir/IR/Builders.h"
@@ -74,14 +72,6 @@ struct EntryBlockArgs {
 /// \param [in]  region - Empty region in which to create the entry block.
 mlir::Block *genEntryBlock(
     mlir::OpBuilder &builder, const EntryBlockArgs &args, mlir::Region &region);
-
-// Returns true if the variable has a dynamic size and therefore requires
-// bounds operations to describe its extents.
-bool needsBoundsOps(mlir::Value var);
-
-// Generate MapBoundsOp operations for the variable if required.
-void genBoundsOps(fir::FirOpBuilder &builder, mlir::Value var,
-    llvm::SmallVectorImpl<mlir::Value> &boundsOps);
 } // namespace Fortran::common::openmp
 
 #endif // FORTRAN_SUPPORT_OPENMP_UTILS_H_
