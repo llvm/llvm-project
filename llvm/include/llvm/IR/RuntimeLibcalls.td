@@ -25,7 +25,8 @@ def isNotOSMSVCRT : RuntimeLibcallPredicate<"!TT.isOSMSVCRT()">;
 def isPS : RuntimeLibcallPredicate<"TT.isPS()">;
 def isNotOSWindowsOrIsCygwinMinGW
   : RuntimeLibcallPredicate<"!TT.isOSWindows() || TT.isOSCygMing()">;
-
+def isWindowsMSVCEnvironment : RuntimeLibcallPredicate<
+  [{TT.isWindowsMSVCEnvironment()}]>;
 
 def isGNUEnvironment : RuntimeLibcallPredicate<"TT.isGNUEnvironment()">;
 def darwinHasSinCosStret : RuntimeLibcallPredicate<"darwinHasSinCosStret(TT)">;
@@ -275,6 +276,7 @@ foreach FPTy = ["F32", "F64", "F128", "PPCF128"] in {
 }
 
 // Memory
+def MEMCMP : RuntimeLibcall;
 def MEMCPY : RuntimeLibcall;
 def MEMMOVE : RuntimeLibcall;
 def MEMSET : RuntimeLibcall;
@@ -368,6 +370,8 @@ def STACK_SMASH_HANDLER : RuntimeLibcall;
 
 // Safe stack
 def SAFESTACK_POINTER_ADDRESS : RuntimeLibcall;
+
+def SECURITY_CHECK_COOKIE : RuntimeLibcall;
 
 // Deoptimization
 def DEOPTIMIZE : RuntimeLibcall;
@@ -1009,6 +1013,10 @@ def __stack_smash_handler : RuntimeLibcallImpl<STACK_SMASH_HANDLER>;
 
 def __riscv_flush_icache : RuntimeLibcallImpl<RISCV_FLUSH_ICACHE>;
 
+def __security_check_cookie : RuntimeLibcallImpl<SECURITY_CHECK_COOKIE>;
+def __security_check_cookie_arm64ec : RuntimeLibcallImpl<SECURITY_CHECK_COOKIE,
+  "#__security_check_cookie_arm64ec">;
+
 //===----------------------------------------------------------------------===//
 // F128 libm Runtime Libcalls
 //===----------------------------------------------------------------------===//
@@ -1111,6 +1119,9 @@ defvar DarwinSinCosStret = LibcallImpls<(add __sincosf_stret, __sincos_stret),
                                         darwinHasSinCosStret>;
 defvar DarwinExp10 = LibcallImpls<(add __exp10f, __exp10), darwinHasExp10>;
 
+defvar SecurityCheckCookieIfWinMSVC =
+    LibcallImpls<(add __security_check_cookie), isWindowsMSVCEnvironment>;
+
 defvar LibmHasSinCosF32 = LibcallImpls<(add sincosf), hasSinCos>;
 defvar LibmHasSinCosF64 =  LibcallImpls<(add sincos), hasSinCos>;
 defvar LibmHasSinCosF80 = LibcallImpls<(add sincos_f80), hasSinCos>;
@@ -1138,8 +1149,7 @@ defvar WindowsExclusions = !listconcat(WindowsMathRemovals, MostPowI);
 
 // Targets which support windows should start with these as a base and
 // add in calls for other OSes
-defvar Win32DefaultLibcallImpls = !listremove(DefaultLibcallImpls32, WindowsExclusions);
-defvar Win64DefaultLibcallImpls = !listremove(DefaultLibcallImpls64, WindowsExclusions);
+defvar WinDefaultLibcallImpls = !listremove(DefaultRuntimeLibcallImpls, WindowsExclusions);
 
 defvar LibmHasFrexpF32 = LibcallImpls<(add frexpf), isNotOSWindowsOrIsCygwinMinGW>;
 defvar LibmHasLdexpF32 = LibcallImpls<(add ldexpf), isNotOSWindowsOrIsCygwinMinGW>;
@@ -1223,7 +1233,7 @@ def isAArch64_ILP64  : RuntimeLibcallPredicate<"TT.isAArch64(64)">;
 
 def AArch64SystemLibrary : SystemRuntimeLibrary<
   isAArch64_ExceptArm64EC,
-  (add Win64DefaultLibcallImpls,
+  (add WinDefaultLibcallImpls,
        LibcallImpls<(add __powisf2, __powidf2), isNotOSMSVCRT>,
        LibmHasFrexpF32, LibmHasLdexpF32,
        LibmHasFrexpF128, LibmHasLdexpF128,
@@ -1233,12 +1243,13 @@ def AArch64SystemLibrary : SystemRuntimeLibrary<
        DarwinExp10, DarwinSinCosStret,
        LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
        DefaultLibmExp10,
-       DefaultStackProtector)
+       DefaultStackProtector,
+       SecurityCheckCookieIfWinMSVC)
 >;
 
 // Prepend a # to every name
 defset list<RuntimeLibcallImpl> WinArm64ECDefaultRuntimeLibcallImpls = {
-  foreach libcall = Win64DefaultLibcallImpls in {
+  foreach libcall = WinDefaultLibcallImpls in {
     def arm64ec_#libcall : DuplicateLibcallImplWithPrefix<libcall, "#">;
   }
 
@@ -1252,7 +1263,9 @@ def arm64ec___stack_chk_fail : DuplicateLibcallImplWithPrefix<__stack_chk_fail, 
 def WindowsARM64ECSystemLibrary
     : SystemRuntimeLibrary<isWindowsArm64EC,
                            (add WinArm64ECDefaultRuntimeLibcallImpls,
-                                arm64ec___stack_chk_fail)>;
+                                arm64ec___stack_chk_fail,
+                                LibcallImpls<(add __security_check_cookie_arm64ec),
+                                              isWindowsMSVCEnvironment>)>;
 
 //===----------------------------------------------------------------------===//
 // AMDGPU Runtime Libcalls
@@ -1494,12 +1507,13 @@ def isARMOrThumb : RuntimeLibcallPredicate<"TT.isARM() || TT.isThumb()">;
 
 def ARMSystemLibrary
     : SystemRuntimeLibrary<isARMOrThumb,
-      (add Win32DefaultLibcallImpls,
+      (add WinDefaultLibcallImpls,
            LibcallImpls<(add __powisf2, __powidf2), isNotOSMSVCRT>,
            LibmHasFrexpF32, LibmHasLdexpF32,
            LibmHasFrexpF128, LibmHasLdexpF128,
            WindowARMDivRemCalls,
            WindowARMFPIntCasts,
+           SecurityCheckCookieIfWinMSVC,
            AEABIDivRemCalls,
            DarwinSinCosStret, DarwinExp10,
            LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
@@ -1511,10 +1525,9 @@ def ARMSystemLibrary
                                                   (!TT.isiOS() || !TT.isOSVersionLT(5, 0))}]>>,
            DefaultStackProtector)> {
   let DefaultLibcallCallingConv = LibcallCallingConv<[{
-     (!TT.isOSDarwin() && !TT.isiOS() && !TT.isWatchOS() && !TT.isDriverKit()) ?
+     TT.isOSDarwin() ? CallingConv::C :
         (FloatABI == FloatABI::Hard ? CallingConv::ARM_AAPCS_VFP
-                                    : CallingConv::ARM_AAPCS) :
-                                      CallingConv::C
+                                    : CallingConv::ARM_AAPCS)
   }]>;
 }
 
@@ -1977,12 +1990,14 @@ defset list<RuntimeLibcallImpl> PPCRuntimeLibcalls = {
 }
 
 defset list<RuntimeLibcallImpl> PPC64AIXCallList = {
+  def ___memcmp64 : RuntimeLibcallImpl<MEMCMP>;
   def ___memmove64 : RuntimeLibcallImpl<MEMCPY>;
   def ___memset64 : RuntimeLibcallImpl<MEMSET>;
   def ___bzero64 : RuntimeLibcallImpl<BZERO>;
 }
 
 defset list<RuntimeLibcallImpl> PPC32AIXCallList = {
+  def ___memcmp : RuntimeLibcallImpl<MEMCMP>;
   def ___memmove : RuntimeLibcallImpl<MEMMOVE>;
   def ___memset : RuntimeLibcallImpl<MEMSET>;
   def ___bzero : RuntimeLibcallImpl<BZERO>;
@@ -2148,7 +2163,8 @@ defvar X86_F128_Libcalls = LibcallImpls<(add LibmF128Libcalls, LibmF128FiniteLib
 defvar SinCosF32F64Libcalls = LibcallImpls<(add sincosf, sincos), hasSinCos_f32_f64>;
 
 defvar X86CommonLibcalls =
-  (add DarwinSinCosStret, DarwinExp10,
+  (add WinDefaultLibcallImpls,
+       DarwinSinCosStret, DarwinExp10,
        X86_F128_Libcalls,
        LibmHasSinCosF80, // FIXME: Depends on long double
        SinCosF32F64Libcalls,
@@ -2159,6 +2175,7 @@ defvar X86CommonLibcalls =
        DefaultRuntimeLibcallImpls_f80,
        LibmHasExp10F32, LibmHasExp10F64, LibmHasExp10F80,
        LibcallImpls<(add MostPowI), isNotOSMSVCRT>,
+       SecurityCheckCookieIfWinMSVC,
        // FIXME: MSVCRT doesn't have powi. The f128 case is added as a
        // hack for one test relying on it.
        __powitf2_f128,
@@ -2172,11 +2189,11 @@ defvar Windows32DivRemMulCalls =
 def X86_32SystemLibrary
     : SystemRuntimeLibrary<isX86_32,
       (add X86CommonLibcalls,
-           Windows32DivRemMulCalls, Win32DefaultLibcallImpls)>;
+           Windows32DivRemMulCalls)>;
 
 def X86_64SystemLibrary
     : SystemRuntimeLibrary<isX86_64,
-      (add X86CommonLibcalls, Win64DefaultLibcallImpls, Int128RTLibcalls)>;
+      (add X86CommonLibcalls, Int128RTLibcalls)>;
 
 //===----------------------------------------------------------------------===//
 // XCore Runtime Libcalls

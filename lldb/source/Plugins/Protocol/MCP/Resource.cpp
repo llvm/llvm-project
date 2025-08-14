@@ -5,13 +5,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "Resource.h"
-#include "MCPError.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Protocol/MCP/MCPError.h"
 #include "lldb/Target/Platform.h"
 
 using namespace lldb_private;
 using namespace lldb_private::mcp;
+using namespace lldb_protocol::mcp;
 
 namespace {
 struct DebuggerResource {
