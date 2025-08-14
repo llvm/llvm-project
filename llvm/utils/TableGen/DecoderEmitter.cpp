@@ -2557,20 +2557,18 @@ namespace {
   NumberedEncodings.reserve(NumberedInstructions.size());
   for (const auto &NumberedInstruction : NumberedInstructions) {
     const Record *InstDef = NumberedInstruction->TheDef;
-    if (const RecordVal *RV = InstDef->getValue("EncodingInfos")) {
-      if (const DefInit *DI = dyn_cast_or_null<DefInit>(RV->getValue())) {
-        EncodingInfoByHwMode EBM(DI->getDef(), HWM);
-        for (auto &[ModeId, Encoding] : EBM) {
-          // DecoderTables with DefaultMode should not have any suffix.
-          if (ModeId == DefaultMode) {
-            NumberedEncodings.emplace_back(Encoding, NumberedInstruction, "");
-          } else {
-            NumberedEncodings.emplace_back(Encoding, NumberedInstruction,
-                                           HWM.getMode(ModeId).Name);
-          }
+    if (const Record *RV = InstDef->getValueAsOptionalDef("EncodingInfos")) {
+      EncodingInfoByHwMode EBM(RV, HWM);
+      for (auto &[ModeId, Encoding] : EBM) {
+        // DecoderTables with DefaultMode should not have any suffix.
+        if (ModeId == DefaultMode) {
+          NumberedEncodings.emplace_back(Encoding, NumberedInstruction, "");
+        } else {
+          NumberedEncodings.emplace_back(Encoding, NumberedInstruction,
+                                         HWM.getMode(ModeId).Name);
         }
-        continue;
       }
+      continue;
     }
     // This instruction is encoded the same on all HwModes.
     // According to user needs, provide varying degrees of suppression.
