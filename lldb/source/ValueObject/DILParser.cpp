@@ -386,7 +386,7 @@ ASTNodeUP DILParser::ParseNumericLiteral() {
     numeric_constant = ParseIntegerLiteral();
   else
     numeric_constant = ParseFloatingPointLiteral();
-  if (numeric_constant->GetKind() == NodeKind::eErrorNode) {
+  if (!numeric_constant) {
     BailOut(llvm::formatv("Failed to parse token as numeric-constant: {0}",
                           CurToken()),
             CurToken().GetLocation(), CurToken().GetSpelling().length());
@@ -402,25 +402,23 @@ ASTNodeUP DILParser::ParseIntegerLiteral() {
   llvm::StringRef spelling_ref = spelling;
 
   auto radix = llvm::getAutoSenseRadix(spelling_ref);
-  bool is_unsigned = false, is_long = false, is_longlong = false;
+  IntegerTypeSuffix type = IntegerTypeSuffix::None;
+  bool is_unsigned = false;
   if (spelling_ref.consume_back_insensitive("u"))
     is_unsigned = true;
   if (spelling_ref.consume_back_insensitive("ll"))
-    is_longlong = true;
-  if (spelling_ref.consume_back_insensitive("l"))
-    is_long = true;
+    type = IntegerTypeSuffix::LongLong;
+  else if (spelling_ref.consume_back_insensitive("l"))
+    type = IntegerTypeSuffix::Long;
   // Suffix 'u' can be only specified only once, before or after 'l'
   if (!is_unsigned && spelling_ref.consume_back_insensitive("u"))
     is_unsigned = true;
 
   llvm::APInt raw_value;
-  if (!spelling_ref.getAsInteger(radix, raw_value)) {
-    Scalar scalar_value(raw_value);
+  if (!spelling_ref.getAsInteger(radix, raw_value))
     return std::make_unique<IntegerLiteralNode>(token.GetLocation(), raw_value,
-                                                radix, is_unsigned, is_long,
-                                                is_longlong);
-  }
-  return std::make_unique<ErrorNode>();
+                                                radix, is_unsigned, type);
+  return nullptr;
 }
 
 ASTNodeUP DILParser::ParseFloatingPointLiteral() {
@@ -428,20 +426,15 @@ ASTNodeUP DILParser::ParseFloatingPointLiteral() {
   auto spelling = token.GetSpelling();
   llvm::StringRef spelling_ref = spelling;
 
-  bool is_float = false;
   llvm::APFloat raw_float(llvm::APFloat::IEEEdouble());
-  if (spelling_ref.consume_back_insensitive("f")) {
-    is_float = true;
+  if (spelling_ref.consume_back_insensitive("f"))
     raw_float = llvm::APFloat(llvm::APFloat::IEEEsingle());
-  }
 
   auto StatusOrErr = raw_float.convertFromString(
       spelling_ref, llvm::APFloat::rmNearestTiesToEven);
-  if (!errorToBool(StatusOrErr.takeError())) {
-    return std::make_unique<FloatLiteralNode>(token.GetLocation(), raw_float,
-                                              is_float);
-  }
-  return std::make_unique<ErrorNode>();
+  if (!errorToBool(StatusOrErr.takeError()))
+    return std::make_unique<FloatLiteralNode>(token.GetLocation(), raw_float);
+  return nullptr;
 }
 
 void DILParser::Expect(Token::Kind kind) {
