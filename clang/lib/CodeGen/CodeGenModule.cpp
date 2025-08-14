@@ -2369,6 +2369,10 @@ static QualType GeneralizeFunctionType(ASTContext &Ctx, QualType Ty) {
 llvm::ConstantInt *CodeGenModule::CreateKCFITypeId(QualType T, StringRef Salt) {
   if (getCodeGenOpts().SanitizeCfiICallGeneralizePointers)
     T = GeneralizeFunctionType(getContext(), T);
+  if (auto *FnType = T->getAs<FunctionProtoType>())
+    T = getContext().getFunctionType(
+        FnType->getReturnType(), FnType->getParamTypes(),
+        FnType->getExtProtoInfo().withExceptionSpec(EST_None));
 
   std::string OutName;
   llvm::raw_string_ostream Out(OutName);
