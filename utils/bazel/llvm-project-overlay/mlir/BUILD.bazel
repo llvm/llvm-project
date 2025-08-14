@@ -3723,11 +3723,14 @@ cc_library(
     includes = ["include"],
     deps = [
         ":DialectUtils",
+        ":GPUDialect",
         ":IR",
+        ":LLVMDialect",
         ":LoopLikeInterface",
         ":SCFTransforms",
         ":TransformUtils",
         ":XeGPUDialect",
+        ":XeVMDialect",
         "//llvm:Support",
     ],
 )
