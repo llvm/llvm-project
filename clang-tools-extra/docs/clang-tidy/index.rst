@@ -335,7 +335,7 @@ Clang-Tidy Automation
 =====================
 
 :program:`clang-tidy` can analyze multiple source files by specifying them on the
-command line or by using a compilation database. For larger projects, automation
+command line. For larger projects, automation
 scripts provide additional functionality like parallel execution and integration
 with version control systems.
 
