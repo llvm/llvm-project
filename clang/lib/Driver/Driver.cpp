@@ -4348,15 +4348,6 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
                    options::OPT_no_offload_new_driver,
                    C.isOffloadingHostKind(Action::OFK_Cuda));
 
-  if (C.isOffloadingHostKind(Action::OFK_OpenMP) &&
-      Args.hasArg(options::OPT_offload_new_driver,
-                  options::OPT_no_offload_new_driver)) {
-    Arg *A = Args.getLastArg(options::OPT_offload_new_driver,
-                             options::OPT_no_offload_new_driver);
-    Diag(clang::diag::warn_ignored_clang_option) << A->getAsString(Args);
-    A->claim();
-  }
-
   bool HIPNoRDC =
       C.isOffloadingHostKind(Action::OFK_HIP) &&
       !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false);
