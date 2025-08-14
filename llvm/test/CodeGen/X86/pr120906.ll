@@ -11,13 +11,13 @@ define i32 @PR120906(ptr %p) {
 ; CHECK-NEXT:    pxor %xmm2, %xmm2
 ; CHECK-NEXT:    pcmpgtb %xmm1, %xmm2
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm3 = [11,11,11,11,u,u,u,u,u,u,u,u,u,u,u,u]
-; CHECK-NEXT:    movdqa %xmm3, %xmm4
-; CHECK-NEXT:    psllw $2, %xmm4
-; CHECK-NEXT:    movdqa {{.*#+}} xmm5 = [252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252]
-; CHECK-NEXT:    pand %xmm2, %xmm5
-; CHECK-NEXT:    pand %xmm4, %xmm5
-; CHECK-NEXT:    pandn %xmm3, %xmm2
-; CHECK-NEXT:    por %xmm5, %xmm2
+; CHECK-NEXT:    movdqa %xmm2, %xmm4
+; CHECK-NEXT:    pandn %xmm3, %xmm4
+; CHECK-NEXT:    movdqa %xmm3, %xmm5
+; CHECK-NEXT:    psllw $2, %xmm5
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; CHECK-NEXT:    pand %xmm5, %xmm2
+; CHECK-NEXT:    por %xmm4, %xmm2
 ; CHECK-NEXT:    paddb %xmm1, %xmm1
 ; CHECK-NEXT:    pxor %xmm4, %xmm4
 ; CHECK-NEXT:    pcmpgtb %xmm1, %xmm4

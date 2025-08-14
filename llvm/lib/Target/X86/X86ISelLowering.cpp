@@ -45131,6 +45131,13 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
     bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const {
 
   switch (Op.getOpcode()) {
+  // Logic ops.
+  case X86ISD::ANDNP:
+  case X86ISD::FAND:
+  case X86ISD::FOR:
+  case X86ISD::FXOR:
+  case X86ISD::FANDN:
+    return false;
   // SSE vector insert/extracts use modulo indices.
   case X86ISD::PINSRB:
   case X86ISD::PINSRW:

@@ -415,12 +415,12 @@ define <16 x i8> @vec_v16i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; X64-NEXT:    paddb %xmm1, %xmm1
 ; X64-NEXT:    pxor %xmm5, %xmm5
 ; X64-NEXT:    pcmpgtb %xmm1, %xmm5
-; X64-NEXT:    movdqa %xmm5, %xmm3
-; X64-NEXT:    pandn %xmm6, %xmm3
+; X64-NEXT:    movdqa %xmm5, %xmm7
+; X64-NEXT:    pandn %xmm6, %xmm7
 ; X64-NEXT:    psllw $2, %xmm6
-; X64-NEXT:    movdqa {{.*#+}} xmm7 = [252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252]
-; X64-NEXT:    pand %xmm5, %xmm7
-; X64-NEXT:    pand %xmm6, %xmm7
+; X64-NEXT:    movdqa {{.*#+}} xmm3 = [252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252]
+; X64-NEXT:    pand %xmm5, %xmm3
+; X64-NEXT:    pand %xmm6, %xmm3
 ; X64-NEXT:    por %xmm7, %xmm3
 ; X64-NEXT:    paddb %xmm1, %xmm1
 ; X64-NEXT:    pcmpgtb %xmm1, %xmm2
