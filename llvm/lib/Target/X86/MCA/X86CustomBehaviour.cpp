@@ -55,8 +55,7 @@ void X86InstrPostProcess::useStackEngine(std::unique_ptr<Instruction> &Inst,
 
 void X86InstrPostProcess::postProcessInstruction(
     std::unique_ptr<Instruction> &Inst, const MCInst &MCI) {
-  // Currently, we only modify certain instructions' IsALoadBarrier and
-  // IsAStoreBarrier flags.
+  // Set IsALoadBarrier and IsAStoreBarrier flags.
   setMemBarriers(Inst, MCI);
   useStackEngine(Inst, MCI);
 }
