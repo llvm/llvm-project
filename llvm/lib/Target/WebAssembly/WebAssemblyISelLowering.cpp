@@ -3429,7 +3429,7 @@ combineVectorSizedSetCCEquality(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                    DL, MVT::i32),
                    Cmp});
 
-  return DAG.getSetCC(DL, VT, Intr, DAG.getConstant(0, DL, MVT::i32), CC);
+  return DAG.getSetCC(DL, VT, Intr, DAG.getConstant(0, DL, MVT::i32), ISD::SETNE);
 }
 
 static SDValue performSETCCCombine(SDNode *N,
