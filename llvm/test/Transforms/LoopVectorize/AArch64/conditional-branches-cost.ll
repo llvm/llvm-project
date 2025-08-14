@@ -377,7 +377,7 @@ define void @latch_branch_cost(ptr %dst) {
 ;
 ; PRED-LABEL: define void @latch_branch_cost(
 ; PRED-SAME: ptr [[DST:%.*]]) {
-; PRED-NEXT:  [[ENTRY:.*]]:
+; PRED-NEXT:  [[ENTRY:.*:]]
 ; PRED-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; PRED:       [[VECTOR_PH]]:
 ; PRED-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -456,7 +456,6 @@ define void @latch_branch_cost(ptr %dst) {
 ; PRED:       [[MIDDLE_BLOCK]]:
 ; PRED-NEXT:    br label %[[EXIT:.*]]
 ; PRED:       [[SCALAR_PH]]:
-; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; PRED-NEXT:    br label %[[LOOP:.*]]
 ; PRED:       [[LOOP]]:
 ; PRED-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -697,7 +696,7 @@ define void @multiple_exit_conditions(ptr %src, ptr noalias %dst) #1 {
 ;
 ; PRED-LABEL: define void @multiple_exit_conditions(
 ; PRED-SAME: ptr [[SRC:%.*]], ptr noalias [[DST:%.*]]) #[[ATTR2:[0-9]+]] {
-; PRED-NEXT:  [[ENTRY:.*]]:
+; PRED-NEXT:  [[ENTRY:.*:]]
 ; PRED-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; PRED:       [[VECTOR_PH]]:
 ; PRED-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
@@ -728,8 +727,6 @@ define void @multiple_exit_conditions(ptr %src, ptr noalias %dst) #1 {
 ; PRED:       [[MIDDLE_BLOCK]]:
 ; PRED-NEXT:    br label %[[EXIT:.*]]
 ; PRED:       [[SCALAR_PH]]:
-; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[DST]], %[[ENTRY]] ]
-; PRED-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; PRED-NEXT:    br label %[[LOOP:.*]]
 ; PRED:       [[LOOP]]:
 ; PRED-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[DST]], %[[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], %[[LOOP]] ]
@@ -769,7 +766,7 @@ exit:
 define void @low_trip_count_fold_tail_scalarized_store(ptr %dst) {
 ; DEFAULT-LABEL: define void @low_trip_count_fold_tail_scalarized_store(
 ; DEFAULT-SAME: ptr [[DST:%.*]]) {
-; DEFAULT-NEXT:  [[ENTRY:.*]]:
+; DEFAULT-NEXT:  [[ENTRY:.*:]]
 ; DEFAULT-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
 ; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -856,7 +853,6 @@ define void @low_trip_count_fold_tail_scalarized_store(ptr %dst) {
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
 ; DEFAULT-NEXT:    br label %[[EXIT:.*]]
 ; DEFAULT:       [[SCALAR_PH]]:
-; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; DEFAULT-NEXT:    br label %[[LOOP:.*]]
 ; DEFAULT:       [[LOOP]]:
 ; DEFAULT-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -871,7 +867,7 @@ define void @low_trip_count_fold_tail_scalarized_store(ptr %dst) {
 ;
 ; PRED-LABEL: define void @low_trip_count_fold_tail_scalarized_store(
 ; PRED-SAME: ptr [[DST:%.*]]) {
-; PRED-NEXT:  [[ENTRY:.*]]:
+; PRED-NEXT:  [[ENTRY:.*:]]
 ; PRED-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; PRED:       [[VECTOR_PH]]:
 ; PRED-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -958,7 +954,6 @@ define void @low_trip_count_fold_tail_scalarized_store(ptr %dst) {
 ; PRED:       [[MIDDLE_BLOCK]]:
 ; PRED-NEXT:    br label %[[EXIT:.*]]
 ; PRED:       [[SCALAR_PH]]:
-; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; PRED-NEXT:    br label %[[LOOP:.*]]
 ; PRED:       [[LOOP]]:
 ; PRED-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -1497,7 +1492,7 @@ define void @redundant_branch_and_tail_folding(ptr %dst, i1 %c) {
 ;
 ; PRED-LABEL: define void @redundant_branch_and_tail_folding(
 ; PRED-SAME: ptr [[DST:%.*]], i1 [[C:%.*]]) {
-; PRED-NEXT:  [[ENTRY:.*]]:
+; PRED-NEXT:  [[ENTRY:.*:]]
 ; PRED-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; PRED:       [[VECTOR_PH]]:
 ; PRED-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1542,7 +1537,6 @@ define void @redundant_branch_and_tail_folding(ptr %dst, i1 %c) {
 ; PRED:       [[MIDDLE_BLOCK]]:
 ; PRED-NEXT:    br label %[[EXIT:.*]]
 ; PRED:       [[SCALAR_PH]]:
-; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; PRED-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; PRED:       [[LOOP_HEADER]]:
 ; PRED-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
