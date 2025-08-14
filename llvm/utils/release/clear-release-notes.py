@@ -20,7 +20,7 @@ if __name__ == "__main__":
         "--source-root",
         default=None,
         help="LLVM source root (/path/llvm-project). Defaults to the "
-             "llvm-project the script is located in.",
+        "llvm-project the script is located in.",
     )
 
     args = parser.parse_args()
