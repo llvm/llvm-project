@@ -25,22 +25,23 @@ Header:
   Version:
     Major:           1
     Minor:           0
-## CHECK: FileSize:       68
+# ORIG: FileSize:       1948
+# CHECK: FileSize:       68
   FileSize:        1984
-## CHECK: PartCount:     1
-## CHECK: PartOffsets:   [ 36 ]
+# CHECK: PartCount:     1
+# CHECK: PartOffsets:   [ 36 ]
   PartCount:       7
   PartOffsets:     [ 60, 1792, 1808, 1836, 1852, 1868, 1900 ]
 Parts:
-## CHECK: Name:            RTS0
-## ORIG-NOT: RTS0
-## CHECK-NOT: DXIL
-## CHECK-NOT: SFI0
-## CHECK-NOT: HASH
-## CHECK-NOT: ISG1
-## CHECK-NOT: OSG1
-## CHECK-NOT: PSV0
-## CHECK-NOT: DXIL
+# CHECK: Name:            RTS0
+# ORIG-NOT: RTS0
+# CHECK-NOT: DXIL
+# CHECK-NOT: SFI0
+# CHECK-NOT: HASH
+# CHECK-NOT: ISG1
+# CHECK-NOT: OSG1
+# CHECK-NOT: PSV0
+# CHECK-NOT: DXIL
   - Name:            DXIL
     Size:            1724
     Program:

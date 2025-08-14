@@ -15,22 +15,23 @@ Header:
   Version:
     Major:           1
     Minor:           0
-## FKE1: FileSize:       52
-## FKE4: FileSize:       1732
+# ORIG: FileSize:       276
+# FKE1: FileSize:       52
+# FKE4: FileSize:       1732
   FileSize:        1996
-## CHECK: PartCount:     1
-## CHECK: PartOffsets:   [ 36 ]
+# CHECK: PartCount:     1
+# CHECK: PartOffsets:   [ 36 ]
   PartCount:       7
   PartOffsets:     [ 60, 76, 92, 108, 236, 1932, 1960 ]
 Parts:
-## FKE1: Name:            FKE1
-## FKE4: Name:            FKE4
-## ORIG-NOT: FKE1
-## ORIG-NOT: FKE4
-## CHECK-NOT: FKE0
-## CHECK-NOT: FKE2
-## CHECK-NOT: FKE3
-## CHECK-NOT: FKE5
+# FKE1: Name:            FKE1
+# FKE4: Name:            FKE4
+# ORIG-NOT: FKE1
+# ORIG-NOT: FKE4
+# CHECK-NOT: FKE0
+# CHECK-NOT: FKE2
+# CHECK-NOT: FKE3
+# CHECK-NOT: FKE5
   - Name:            FKE0
     Size:            8
   - Name:            FKE1
