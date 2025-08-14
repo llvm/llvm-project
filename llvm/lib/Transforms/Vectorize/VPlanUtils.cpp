@@ -24,7 +24,7 @@ bool vputils::onlyFirstPartUsed(const VPValue *Def) {
                 [Def](const VPUser *U) { return U->onlyFirstPartUsed(Def); });
 }
 
-bool vputils::onlyUsedByScalars(const VPValue *Def) {
+bool vputils::onlyScalarValuesUsed(const VPValue *Def) {
   return all_of(Def->users(),
                 [Def](const VPUser *U) { return U->usesScalars(Def); });
 }
