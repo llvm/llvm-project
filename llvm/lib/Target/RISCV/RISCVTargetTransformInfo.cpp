@@ -2415,6 +2415,23 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
   return BaseCost + SlideCost;
 }
 
+InstructionCost
+RISCVTTIImpl::getVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
+                                        TTI::TargetCostKind CostKind,
+                                        unsigned Index) const {
+  if (auto *FixedVecTy = dyn_cast<FixedVectorType>(Val))
+    return BaseT::getVectorInstrCostFromEnd(Opcode, Val, CostKind, Index);
+
+  // TODO: This code replicates what LoopVectorize.cpp used to do when asking
+  // for the cost of extracting the last lane of a scalable vector. It probably
+  // needs a more accurate cost.
+  ElementCount EC = cast<VectorType>(Val)->getElementCount();
+  assert(Index < EC.getKnownMinValue() && "Unexpected reverse index");
+  return getVectorInstrCost(Opcode, Val, CostKind,
+                            EC.getKnownMinValue() - 1 - Index, nullptr,
+                            nullptr);
+}
+
 InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
