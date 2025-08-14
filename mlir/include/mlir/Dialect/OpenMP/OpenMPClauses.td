@@ -1470,4 +1470,47 @@ class OpenMP_UseDevicePtrClauseSkip<
 
 def OpenMP_UseDevicePtrClause : OpenMP_UseDevicePtrClauseSkip<>;
 
+//===----------------------------------------------------------------------===//
+// V6.1 `dyn_groupprivate` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_DynGroupPrivateClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+
+  let arguments = (ins
+    DynGroupPrivateModifierAttr:$modifier_first,
+    DynGroupPrivateModifierAttr:$modifier_second,
+    AnyInteger:$size
+  );
+
+  let description = [{
+    The `dyn_groupprivate` clause allows you to dynamically allocate group-private
+    memory in OpenMP parallel regions, specifically for `target` and `teams` directives.
+    This clause enables runtime-sized private memory allocation and applicable to
+    target and teams ops.
+
+    Syntax:
+    ```
+    dyn_groupprivate(modifier_first ,modifier_second : size)
+    ```
+
+    Example:
+    ```
+    omp.target dyn_groupprivate(strict, cgroup : %size : i32)
+    ```
+  }];
+
+  let optAssemblyFormat = [{
+  `dyn_groupprivate` `(`
+    $modifier_first `,` $modifier_second
+    `:` $size `:` type($size)
+  `)`
+  }];
+}
+
+def OpenMP_DynGroupPrivateClause : OpenMP_DynGroupPrivateClauseSkip<>;
+
 #endif // OPENMP_CLAUSES
