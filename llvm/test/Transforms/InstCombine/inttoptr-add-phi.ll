@@ -7,13 +7,13 @@ define i64 @inttoptr_used_by_phi_with_ptrtoint(i1 %c, ptr %src, ptr %p2) {
 ; CHECK-SAME: i1 [[C:%.*]], ptr [[SRC:%.*]], ptr [[P2:%.*]]) {
 ; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[THEN]]:
-; CHECK-NEXT:    [[I:%.*]] = ptrtoint ptr [[SRC]] to i64
-; CHECK-NEXT:    [[A:%.*]] = add i64 [[I]], 10
+; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, ptr [[SRC]], i64 10
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[ELSE]]:
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ [[A]], %[[THEN]] ], [ 0, %[[ELSE]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ [[TMP1]], %[[THEN]] ], [ 0, %[[ELSE]] ]
 ; CHECK-NEXT:    ret i64 [[PHI]]
 ;
   %i = ptrtoint ptr %src to i64
