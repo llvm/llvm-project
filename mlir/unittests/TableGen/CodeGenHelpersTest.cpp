@@ -27,4 +27,3 @@ TEST(CodeGenHelpersTest, BuildErrorStreamingString) {
       "here {{reformat($_self)}} is block", ctx, ErrorStreamType::InString);
   EXPECT_THAT(result2, StrEq("here \" << reformat(this_thing) << \" is block"));
 }
-
