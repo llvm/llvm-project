@@ -4140,6 +4140,29 @@ void LLVM::masked_expandload::build(OpBuilder &builder, OperationState &state,
 }
 
 //===----------------------------------------------------------------------===//
+// masked_compressstore (intrinsic)
+//===----------------------------------------------------------------------===//
+
+void LLVM::masked_compressstore::build(OpBuilder &builder,
+                                       OperationState &state, Value value,
+                                       Value ptr, Value mask, uint64_t align) {
+
+  ArrayAttr callArgs = nullptr;
+  if (align != 1) {
+    auto emptyDictAttr = builder.getDictionaryAttr({});
+    auto alignmentAttr = builder.getI64IntegerAttr(align);
+    auto namedAttr =
+        builder.getNamedAttr(LLVMDialect::getAlignAttrName(), alignmentAttr);
+    SmallVector<mlir::NamedAttribute> attrs = {namedAttr};
+    auto alignDictAttr = builder.getDictionaryAttr(attrs);
+    callArgs =
+        builder.getArrayAttr({emptyDictAttr, alignDictAttr, emptyDictAttr});
+  }
+  build(builder, state, value, ptr, mask, /*arg_attrs=*/callArgs,
+        /*res_attrs=*/nullptr);
+}
+
+//===----------------------------------------------------------------------===//
 // InlineAsmOp
 //===----------------------------------------------------------------------===//
 

@@ -1124,18 +1124,7 @@ def LLVM_masked_compressstore
   }];
 
   let builders = [
-    OpBuilder<(ins "Value":$value, "Value":$ptr, "Value":$mask, CArg<"uint64_t", "1">:$align), [{
-      ArrayAttr callArgs = nullptr;
-      if (align != 1) {
-        auto emptyDictAttr = $_builder.getDictionaryAttr({});
-        auto alignmentAttr = $_builder.getI64IntegerAttr(align);
-        auto namedAttr = $_builder.getNamedAttr(LLVMDialect::getAlignAttrName(), alignmentAttr);
-        SmallVector<mlir::NamedAttribute> attrs = {namedAttr};
-        auto alignDictAttr = $_builder.getDictionaryAttr(attrs);
-        callArgs = $_builder.getArrayAttr({emptyDictAttr, alignDictAttr, emptyDictAttr});
-      }
-      build($_builder, $_state, value, ptr, mask, /*arg_attrs=*/callArgs, /*res_attrs=*/nullptr);
-    }]>
+    OpBuilder<(ins "Value":$value, "Value":$ptr, "Value":$mask, CArg<"uint64_t", "1">:$align)>
   ];
 
 }
