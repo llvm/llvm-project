@@ -1001,6 +1001,7 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   }
   case Intrinsic::loop_dependence_raw_mask:
   case Intrinsic::loop_dependence_war_mask:
+    // The whilewr/rw instructions require SVE2
     if (ST->hasSVE2() || ST->hasSME())
       return 1;
     break;
@@ -5600,7 +5601,7 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
 
 bool AArch64TTIImpl::useSafeEltsMask() const {
   // The whilewr/rw instructions require SVE2
-  return ST->hasSVE2();
+  return ST->hasSVE2() || ST->hasSME();
 }
 
 InstructionCost
