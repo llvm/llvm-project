@@ -1473,7 +1473,9 @@ TEST_F(FileSystemTest, FileMapping) {
 
 TEST_F(FileSystemTest, FileMappingSync) {
   // Create a temp file.
-  auto TempFileOrError = fs::TempFile::create(TestDirectory + "/test-%%%%");
+  SmallString<0> TempPath(TestDirectory);
+  sys::path::append(TempPath, "test-%%%%");
+  auto TempFileOrError = fs::TempFile::create(TempPath);
   ASSERT_TRUE((bool)TempFileOrError);
   fs::TempFile File = std::move(*TempFileOrError);
   StringRef Content("hello there");
@@ -1488,13 +1490,12 @@ TEST_F(FileSystemTest, FileMappingSync) {
     ASSERT_NO_ERROR(EC);
     std::copy(Content.begin(), Content.end(), MFR.data());
 
-    // Synchronize.
+    // Synchronize and check the contents before unmapping.
     MFR.sync();
+    auto Buffer = MemoryBuffer::getFile(File.TmpName);
+    ASSERT_TRUE((bool)Buffer);
+    ASSERT_EQ(Content, Buffer->get()->getBuffer());
   }
-
-  auto Buffer = MemoryBuffer::getFile(File.TmpName);
-  ASSERT_TRUE((bool)Buffer);
-  ASSERT_EQ(Content, Buffer->get()->getBuffer());
   ASSERT_FALSE((bool)File.discard());
 }
 
