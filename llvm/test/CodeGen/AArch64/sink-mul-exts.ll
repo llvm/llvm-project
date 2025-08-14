@@ -6,13 +6,12 @@ define <8 x i16> @mul_splat_sext_v8i16(ptr %x, ptr %y) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr d1, [x0]
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    dup v1.8b, v1.b[3]
 ; CHECK-NEXT:  .LBB0_1: // %l1
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr d2, [x1, x8]
-; CHECK-NEXT:    add x8, x8, #4
-; CHECK-NEXT:    cmp w8, #4
+; CHECK-NEXT:    ldr d2, [x1], #4
+; CHECK-NEXT:    subs w8, w8, #1
 ; CHECK-NEXT:    smlal v0.8h, v2.8b, v1.8b
 ; CHECK-NEXT:    b.eq .LBB0_1
 ; CHECK-NEXT:  // %bb.2: // %l2
@@ -45,12 +44,11 @@ define <4 x i32> @mul_splat_sext_v4i32(ptr %x, ptr %y) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ldr d1, [x0]
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:  .LBB1_1: // %l1
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr d2, [x1, x8]
-; CHECK-NEXT:    add x8, x8, #8
-; CHECK-NEXT:    cmp w8, #8
+; CHECK-NEXT:    ldr d2, [x1], #8
+; CHECK-NEXT:    subs w8, w8, #1
 ; CHECK-NEXT:    smlal v0.4s, v2.4h, v1.h[3]
 ; CHECK-NEXT:    b.eq .LBB1_1
 ; CHECK-NEXT:  // %bb.2: // %l2
@@ -83,12 +81,11 @@ define <2 x i64> @mul_splat_sext_v2i64(ptr %x, ptr %y) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ldr d1, [x0]
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:  .LBB2_1: // %l1
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr d2, [x1, x8]
-; CHECK-NEXT:    add x8, x8, #16
-; CHECK-NEXT:    cmp w8, #16
+; CHECK-NEXT:    ldr d2, [x1], #16
+; CHECK-NEXT:    subs w8, w8, #1
 ; CHECK-NEXT:    smlal v0.2d, v2.2s, v1.s[1]
 ; CHECK-NEXT:    b.eq .LBB2_1
 ; CHECK-NEXT:  // %bb.2: // %l2
@@ -121,13 +118,12 @@ define <8 x i16> @mul_sext_splat_v8i16(ptr %x, ptr %y) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr d1, [x0]
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    dup v1.8b, v1.b[3]
 ; CHECK-NEXT:  .LBB3_1: // %l1
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr d2, [x1, x8]
-; CHECK-NEXT:    add x8, x8, #4
-; CHECK-NEXT:    cmp w8, #4
+; CHECK-NEXT:    ldr d2, [x1], #4
+; CHECK-NEXT:    subs w8, w8, #1
 ; CHECK-NEXT:    smlal v0.8h, v2.8b, v1.8b
 ; CHECK-NEXT:    b.eq .LBB3_1
 ; CHECK-NEXT:  // %bb.2: // %l2
@@ -160,12 +156,11 @@ define <4 x i32> @mul_sext_splat_v4i32(ptr %x, ptr %y) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ldr d1, [x0]
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:  .LBB4_1: // %l1
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr d2, [x1, x8]
-; CHECK-NEXT:    add x8, x8, #8
-; CHECK-NEXT:    cmp w8, #8
+; CHECK-NEXT:    ldr d2, [x1], #8
+; CHECK-NEXT:    subs w8, w8, #1
 ; CHECK-NEXT:    smlal v0.4s, v2.4h, v1.h[3]
 ; CHECK-NEXT:    b.eq .LBB4_1
 ; CHECK-NEXT:  // %bb.2: // %l2
@@ -198,12 +193,11 @@ define <2 x i64> @mul_sext_splat_v2i64(ptr %x, ptr %y) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ldr d1, [x0]
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:  .LBB5_1: // %l1
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr d2, [x1, x8]
-; CHECK-NEXT:    add x8, x8, #16
-; CHECK-NEXT:    cmp w8, #16
+; CHECK-NEXT:    ldr d2, [x1], #16
+; CHECK-NEXT:    subs w8, w8, #1
 ; CHECK-NEXT:    smlal v0.2d, v2.2s, v1.s[1]
 ; CHECK-NEXT:    b.eq .LBB5_1
 ; CHECK-NEXT:  // %bb.2: // %l2

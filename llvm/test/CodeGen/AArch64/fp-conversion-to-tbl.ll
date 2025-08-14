@@ -32,13 +32,11 @@ define void @fptoui_v8f32_to_v8i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-NEXT:    adrp x8, lCPI0_0@PAGE
 ; CHECK-NEXT:  Lloh1:
 ; CHECK-NEXT:    ldr q0, [x8, lCPI0_0@PAGEOFF]
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w8, #1000 ; =0x3e8
 ; CHECK-NEXT:  LBB0_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add x9, x0, x8, lsl #5
-; CHECK-NEXT:    add x8, x8, #1
-; CHECK-NEXT:    cmp x8, #1000
-; CHECK-NEXT:    ldp q2, q1, [x9]
+; CHECK-NEXT:    ldp q2, q1, [x0], #32
+; CHECK-NEXT:    subs x8, x8, #1
 ; CHECK-NEXT:    fcvtzu.4s v4, v1
 ; CHECK-NEXT:    fcvtzu.4s v3, v2
 ; CHECK-NEXT:    tbl.16b v1, { v3, v4 }, v0
@@ -111,22 +109,18 @@ define void @fptoui_2x_v8f32_to_v8i8_in_loop(ptr %A, ptr %B, ptr %dst) {
 ; CHECK-NEXT:    adrp x8, lCPI2_0@PAGE
 ; CHECK-NEXT:  Lloh3:
 ; CHECK-NEXT:    ldr q0, [x8, lCPI2_0@PAGEOFF]
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w8, #1000 ; =0x3e8
 ; CHECK-NEXT:  LBB2_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    lsl x9, x8, #5
-; CHECK-NEXT:    add x10, x0, x9
-; CHECK-NEXT:    add x9, x1, x9
-; CHECK-NEXT:    ldp q2, q1, [x10]
+; CHECK-NEXT:    ldp q2, q1, [x0], #32
+; CHECK-NEXT:    subs x8, x8, #1
 ; CHECK-NEXT:    fcvtzu.4s v4, v1
-; CHECK-NEXT:    ldp q7, q1, [x9]
+; CHECK-NEXT:    ldp q7, q1, [x1], #32
 ; CHECK-NEXT:    fcvtzu.4s v3, v2
 ; CHECK-NEXT:    fcvtzu.4s v6, v1
 ; CHECK-NEXT:    fcvtzu.4s v5, v7
 ; CHECK-NEXT:    tbl.16b v1, { v3, v4, v5, v6 }, v0
-; CHECK-NEXT:    str q1, [x2, x8, lsl #4]
-; CHECK-NEXT:    add x8, x8, #1
-; CHECK-NEXT:    cmp x8, #1000
+; CHECK-NEXT:    str q1, [x2], #16
 ; CHECK-NEXT:    b.eq LBB2_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
@@ -178,22 +172,18 @@ define void @fptoui_2x_v8f32_to_v8i8_in_loop_no_concat_shuffle(ptr %A, ptr %B, p
 ; CHECK-NEXT:    adrp x8, lCPI3_0@PAGE
 ; CHECK-NEXT:  Lloh5:
 ; CHECK-NEXT:    ldr q0, [x8, lCPI3_0@PAGEOFF]
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w8, #1000 ; =0x3e8
 ; CHECK-NEXT:  LBB3_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    lsl x9, x8, #5
-; CHECK-NEXT:    add x10, x0, x9
-; CHECK-NEXT:    add x9, x1, x9
-; CHECK-NEXT:    ldp q2, q1, [x10]
+; CHECK-NEXT:    ldp q2, q1, [x0], #32
+; CHECK-NEXT:    subs x8, x8, #1
 ; CHECK-NEXT:    fcvtzu.4s v4, v1
-; CHECK-NEXT:    ldp q7, q1, [x9]
+; CHECK-NEXT:    ldp q7, q1, [x1], #32
 ; CHECK-NEXT:    fcvtzu.4s v3, v2
 ; CHECK-NEXT:    fcvtzu.4s v6, v1
 ; CHECK-NEXT:    fcvtzu.4s v5, v7
 ; CHECK-NEXT:    tbl.16b v1, { v3, v4, v5, v6 }, v0
-; CHECK-NEXT:    str q1, [x2, x8, lsl #4]
-; CHECK-NEXT:    add x8, x8, #1
-; CHECK-NEXT:    cmp x8, #1000
+; CHECK-NEXT:    str q1, [x2], #16
 ; CHECK-NEXT:    b.eq LBB3_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
@@ -245,15 +235,13 @@ define void @fptoui_v16f32_to_v16i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-NEXT:    adrp x8, lCPI4_0@PAGE
 ; CHECK-NEXT:  Lloh7:
 ; CHECK-NEXT:    ldr q0, [x8, lCPI4_0@PAGEOFF]
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w8, #1000 ; =0x3e8
 ; CHECK-NEXT:  LBB4_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add x9, x0, x8, lsl #6
-; CHECK-NEXT:    add x8, x8, #1
-; CHECK-NEXT:    cmp x8, #1000
-; CHECK-NEXT:    ldp q2, q1, [x9, #32]
+; CHECK-NEXT:    ldp q2, q1, [x0, #32]
+; CHECK-NEXT:    subs x8, x8, #1
 ; CHECK-NEXT:    fcvtzu.4s v6, v1
-; CHECK-NEXT:    ldp q7, q1, [x9]
+; CHECK-NEXT:    ldp q7, q1, [x0], #64
 ; CHECK-NEXT:    fcvtzu.4s v5, v2
 ; CHECK-NEXT:    fcvtzu.4s v4, v1
 ; CHECK-NEXT:    fcvtzu.4s v3, v7
@@ -306,30 +294,25 @@ define void @fptoui_2x_v16f32_to_v16i8_in_loop(ptr %A, ptr %B, ptr %dst) {
 ; CHECK-NEXT:    adrp x8, lCPI5_0@PAGE
 ; CHECK-NEXT:  Lloh9:
 ; CHECK-NEXT:    ldr q0, [x8, lCPI5_0@PAGEOFF]
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w8, #1000 ; =0x3e8
 ; CHECK-NEXT:  LBB5_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    lsl x9, x8, #6
-; CHECK-NEXT:    add x10, x1, x9
-; CHECK-NEXT:    add x9, x0, x9
-; CHECK-NEXT:    ldp q2, q1, [x10, #32]
-; CHECK-NEXT:    ldp q3, q4, [x9, #32]
-; CHECK-NEXT:    ldp q5, q6, [x10]
+; CHECK-NEXT:    ldp q2, q1, [x1, #32]
+; CHECK-NEXT:    subs x8, x8, #1
+; CHECK-NEXT:    ldp q3, q4, [x0, #32]
+; CHECK-NEXT:    ldp q5, q6, [x1], #64
 ; CHECK-NEXT:    fcvtzu.4s v19, v1
 ; CHECK-NEXT:    fcvtzu.4s v18, v2
-; CHECK-NEXT:    ldp q2, q1, [x9]
 ; CHECK-NEXT:    fcvtzu.4s v23, v4
-; CHECK-NEXT:    fcvtzu.4s v17, v6
-; CHECK-NEXT:    add x9, x2, x8, lsl #5
+; CHECK-NEXT:    ldp q2, q1, [x0], #64
 ; CHECK-NEXT:    fcvtzu.4s v22, v3
+; CHECK-NEXT:    fcvtzu.4s v17, v6
 ; CHECK-NEXT:    fcvtzu.4s v16, v5
-; CHECK-NEXT:    add x8, x8, #1
 ; CHECK-NEXT:    fcvtzu.4s v21, v1
-; CHECK-NEXT:    cmp x8, #1000
 ; CHECK-NEXT:    fcvtzu.4s v20, v2
 ; CHECK-NEXT:    tbl.16b v1, { v16, v17, v18, v19 }, v0
 ; CHECK-NEXT:    tbl.16b v2, { v20, v21, v22, v23 }, v0
-; CHECK-NEXT:    stp q2, q1, [x9]
+; CHECK-NEXT:    stp q2, q1, [x2], #32
 ; CHECK-NEXT:    b.eq LBB5_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
@@ -359,17 +342,15 @@ exit:
 define void @fptoui_v8f32_to_v8i16_in_loop(ptr %A, ptr %dst) {
 ; CHECK-LABEL: fptoui_v8f32_to_v8i16_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w8, #1000 ; =0x3e8
 ; CHECK-NEXT:  LBB6_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add x9, x0, x8, lsl #5
-; CHECK-NEXT:    ldp q0, q1, [x9]
+; CHECK-NEXT:    ldp q0, q1, [x0], #32
+; CHECK-NEXT:    subs x8, x8, #1
 ; CHECK-NEXT:    fcvtzu.4s v1, v1
 ; CHECK-NEXT:    fcvtzu.4s v0, v0
 ; CHECK-NEXT:    uzp1.8h v0, v0, v1
-; CHECK-NEXT:    str q0, [x1, x8, lsl #4]
-; CHECK-NEXT:    add x8, x8, #1
-; CHECK-NEXT:    cmp x8, #1000
+; CHECK-NEXT:    str q0, [x1], #16
 ; CHECK-NEXT:    b.eq LBB6_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
@@ -394,24 +375,19 @@ exit:
 define void @fptoui_2x_v8f32_to_v8i16_in_loop(ptr %A, ptr %B, ptr %dst) {
 ; CHECK-LABEL: fptoui_2x_v8f32_to_v8i16_in_loop:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w8, #1000 ; =0x3e8
 ; CHECK-NEXT:  LBB7_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    lsl x9, x8, #5
-; CHECK-NEXT:    add x8, x8, #1
-; CHECK-NEXT:    cmp x8, #1000
-; CHECK-NEXT:    add x10, x0, x9
-; CHECK-NEXT:    add x11, x1, x9
-; CHECK-NEXT:    add x9, x2, x9
-; CHECK-NEXT:    ldp q0, q1, [x10]
-; CHECK-NEXT:    ldp q2, q3, [x11]
+; CHECK-NEXT:    ldp q0, q1, [x0], #32
+; CHECK-NEXT:    ldp q2, q3, [x1], #32
+; CHECK-NEXT:    subs x8, x8, #1
 ; CHECK-NEXT:    fcvtzu.4s v1, v1
 ; CHECK-NEXT:    fcvtzu.4s v0, v0
 ; CHECK-NEXT:    fcvtzu.4s v3, v3
 ; CHECK-NEXT:    fcvtzu.4s v2, v2
 ; CHECK-NEXT:    uzp1.8h v0, v0, v1
 ; CHECK-NEXT:    uzp1.8h v1, v2, v3
-; CHECK-NEXT:    stp q0, q1, [x9]
+; CHECK-NEXT:    stp q0, q1, [x2], #32
 ; CHECK-NEXT:    b.eq LBB7_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
@@ -483,18 +459,16 @@ define void @uitofp_v8i8_to_v8f32(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    ldr q0, [x8, lCPI8_0@PAGEOFF]
 ; CHECK-NEXT:  Lloh13:
 ; CHECK-NEXT:    ldr q1, [x9, lCPI8_1@PAGEOFF]
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w8, #1000 ; =0x3e8
 ; CHECK-NEXT:  LBB8_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr d2, [x0, x8, lsl #3]
-; CHECK-NEXT:    add x9, x1, x8, lsl #5
-; CHECK-NEXT:    add x8, x8, #1
-; CHECK-NEXT:    cmp x8, #1000
+; CHECK-NEXT:    ldr d2, [x0], #8
+; CHECK-NEXT:    subs x8, x8, #1
 ; CHECK-NEXT:    tbl.16b v3, { v2 }, v0
 ; CHECK-NEXT:    tbl.16b v2, { v2 }, v1
 ; CHECK-NEXT:    ucvtf.4s v3, v3
 ; CHECK-NEXT:    ucvtf.4s v2, v2
-; CHECK-NEXT:    stp q2, q3, [x9]
+; CHECK-NEXT:    stp q2, q3, [x1], #32
 ; CHECK-NEXT:    b.eq LBB8_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
@@ -606,13 +580,11 @@ define void @uitofp_v16i8_to_v16f32(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    ldr q2, [x10, lCPI9_2@PAGEOFF]
 ; CHECK-NEXT:  Lloh21:
 ; CHECK-NEXT:    ldr q3, [x8, lCPI9_3@PAGEOFF]
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w8, #1000 ; =0x3e8
 ; CHECK-NEXT:  LBB9_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr q4, [x0, x8, lsl #4]
-; CHECK-NEXT:    add x9, x1, x8, lsl #6
-; CHECK-NEXT:    add x8, x8, #1
-; CHECK-NEXT:    cmp x8, #1000
+; CHECK-NEXT:    ldr q4, [x0], #16
+; CHECK-NEXT:    subs x8, x8, #1
 ; CHECK-NEXT:    tbl.16b v5, { v4 }, v0
 ; CHECK-NEXT:    tbl.16b v6, { v4 }, v1
 ; CHECK-NEXT:    tbl.16b v7, { v4 }, v2
@@ -621,8 +593,8 @@ define void @uitofp_v16i8_to_v16f32(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    ucvtf.4s v6, v6
 ; CHECK-NEXT:    ucvtf.4s v7, v7
 ; CHECK-NEXT:    ucvtf.4s v4, v4
-; CHECK-NEXT:    stp q6, q5, [x9, #32]
-; CHECK-NEXT:    stp q4, q7, [x9]
+; CHECK-NEXT:    stp q6, q5, [x1, #32]
+; CHECK-NEXT:    stp q4, q7, [x1], #64
 ; CHECK-NEXT:    b.eq LBB9_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
@@ -668,13 +640,11 @@ define void @uitofp_v8i16_to_v8f64(ptr nocapture noundef readonly %x, ptr nocapt
 ; CHECK-NEXT:    ldr q2, [x10, lCPI10_2@PAGEOFF]
 ; CHECK-NEXT:  Lloh29:
 ; CHECK-NEXT:    ldr q3, [x8, lCPI10_3@PAGEOFF]
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w8, #1024 ; =0x400
 ; CHECK-NEXT:  LBB10_1: ; %vector.body
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr q4, [x0, x8]
-; CHECK-NEXT:    add x9, x1, x8
-; CHECK-NEXT:    add x8, x8, #64
-; CHECK-NEXT:    cmp x8, #2, lsl #12 ; =8192
+; CHECK-NEXT:    ldr q4, [x0], #64
+; CHECK-NEXT:    subs x8, x8, #8
 ; CHECK-NEXT:    tbl.16b v5, { v4 }, v0
 ; CHECK-NEXT:    tbl.16b v6, { v4 }, v1
 ; CHECK-NEXT:    tbl.16b v7, { v4 }, v2
@@ -683,8 +653,8 @@ define void @uitofp_v8i16_to_v8f64(ptr nocapture noundef readonly %x, ptr nocapt
 ; CHECK-NEXT:    ucvtf.2d v6, v6
 ; CHECK-NEXT:    ucvtf.2d v7, v7
 ; CHECK-NEXT:    ucvtf.2d v4, v4
-; CHECK-NEXT:    stp q6, q5, [x9, #32]
-; CHECK-NEXT:    stp q4, q7, [x9]
+; CHECK-NEXT:    stp q6, q5, [x1, #32]
+; CHECK-NEXT:    stp q4, q7, [x1], #64
 ; CHECK-NEXT:    b.ne LBB10_1
 ; CHECK-NEXT:  ; %bb.2: ; %for.cond.cleanup
 ; CHECK-NEXT:    ret
@@ -731,61 +701,58 @@ define void @uitofp_ld4_v32i16_to_v8f64(ptr nocapture noundef readonly %x, ptr n
 ; CHECK-NEXT:    ldr q2, [x10, lCPI11_2@PAGEOFF]
 ; CHECK-NEXT:  Lloh37:
 ; CHECK-NEXT:    ldr q3, [x8, lCPI11_3@PAGEOFF]
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w8, #1024 ; =0x400
 ; CHECK-NEXT:  LBB11_1: ; %vector.body
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add x9, x0, x8
-; CHECK-NEXT:    ldp q5, q4, [x9, #32]
-; CHECK-NEXT:    ldp q7, q6, [x9]
-; CHECK-NEXT:    add x9, x1, x8
-; CHECK-NEXT:    add x8, x8, #64
+; CHECK-NEXT:    ldp q4, q5, [x0, #32]
+; CHECK-NEXT:    subs x8, x8, #8
+; CHECK-NEXT:    ldp q7, q6, [x0], #64
 ; CHECK-NEXT:    tbl.16b v16, { v4 }, v0
-; CHECK-NEXT:    tbl.16b v17, { v5 }, v0
+; CHECK-NEXT:    tbl.16b v19, { v5 }, v0
+; CHECK-NEXT:    tbl.16b v20, { v5 }, v1
+; CHECK-NEXT:    tbl.16b v17, { v6 }, v0
+; CHECK-NEXT:    tbl.16b v18, { v7 }, v0
 ; CHECK-NEXT:    tbl.16b v21, { v4 }, v1
-; CHECK-NEXT:    tbl.16b v18, { v6 }, v0
-; CHECK-NEXT:    tbl.16b v19, { v7 }, v0
-; CHECK-NEXT:    tbl.16b v20, { v7 }, v1
-; CHECK-NEXT:    tbl.16b v22, { v5 }, v1
+; CHECK-NEXT:    tbl.16b v22, { v4 }, v2
 ; CHECK-NEXT:    tbl.16b v23, { v5 }, v2
-; CHECK-NEXT:    tbl.16b v24, { v4 }, v2
-; CHECK-NEXT:    tbl.16b v25, { v7 }, v2
 ; CHECK-NEXT:    tbl.16b v5, { v5 }, v3
 ; CHECK-NEXT:    tbl.16b v4, { v4 }, v3
+; CHECK-NEXT:    tbl.16b v24, { v7 }, v1
+; CHECK-NEXT:    tbl.16b v25, { v7 }, v2
 ; CHECK-NEXT:    tbl.16b v7, { v7 }, v3
 ; CHECK-NEXT:    tbl.16b v26, { v6 }, v1
 ; CHECK-NEXT:    tbl.16b v27, { v6 }, v2
 ; CHECK-NEXT:    tbl.16b v6, { v6 }, v3
-; CHECK-NEXT:    ucvtf.2d v17, v17
 ; CHECK-NEXT:    ucvtf.2d v16, v16
 ; CHECK-NEXT:    ucvtf.2d v19, v19
 ; CHECK-NEXT:    ucvtf.2d v18, v18
+; CHECK-NEXT:    ucvtf.2d v17, v17
+; CHECK-NEXT:    ucvtf.2d v21, v21
 ; CHECK-NEXT:    ucvtf.2d v22, v22
+; CHECK-NEXT:    ucvtf.2d v4, v4
+; CHECK-NEXT:    ucvtf.2d v20, v20
 ; CHECK-NEXT:    ucvtf.2d v23, v23
 ; CHECK-NEXT:    ucvtf.2d v5, v5
-; CHECK-NEXT:    ucvtf.2d v21, v21
 ; CHECK-NEXT:    ucvtf.2d v24, v24
-; CHECK-NEXT:    ucvtf.2d v4, v4
-; CHECK-NEXT:    cmp x8, #2, lsl #12 ; =8192
-; CHECK-NEXT:    ucvtf.2d v20, v20
 ; CHECK-NEXT:    ucvtf.2d v25, v25
 ; CHECK-NEXT:    ucvtf.2d v7, v7
 ; CHECK-NEXT:    ucvtf.2d v26, v26
 ; CHECK-NEXT:    ucvtf.2d v27, v27
 ; CHECK-NEXT:    ucvtf.2d v6, v6
-; CHECK-NEXT:    fadd.2d v17, v22, v17
-; CHECK-NEXT:    fadd.2d v5, v23, v5
 ; CHECK-NEXT:    fadd.2d v16, v21, v16
-; CHECK-NEXT:    fadd.2d v4, v24, v4
+; CHECK-NEXT:    fadd.2d v4, v22, v4
 ; CHECK-NEXT:    fadd.2d v19, v20, v19
+; CHECK-NEXT:    fadd.2d v5, v23, v5
+; CHECK-NEXT:    fadd.2d v18, v24, v18
 ; CHECK-NEXT:    fadd.2d v7, v25, v7
-; CHECK-NEXT:    fadd.2d v18, v26, v18
+; CHECK-NEXT:    fadd.2d v17, v26, v17
 ; CHECK-NEXT:    fadd.2d v6, v27, v6
-; CHECK-NEXT:    fadd.2d v5, v17, v5
 ; CHECK-NEXT:    fadd.2d v4, v16, v4
-; CHECK-NEXT:    fadd.2d v7, v19, v7
-; CHECK-NEXT:    fadd.2d v6, v18, v6
-; CHECK-NEXT:    stp q5, q4, [x9, #32]
-; CHECK-NEXT:    stp q7, q6, [x9]
+; CHECK-NEXT:    fadd.2d v5, v19, v5
+; CHECK-NEXT:    fadd.2d v7, v18, v7
+; CHECK-NEXT:    fadd.2d v6, v17, v6
+; CHECK-NEXT:    stp q4, q5, [x1, #32]
+; CHECK-NEXT:    stp q7, q6, [x1], #64
 ; CHECK-NEXT:    b.ne LBB11_1
 ; CHECK-NEXT:  ; %bb.2: ; %for.cond.cleanup
 ; CHECK-NEXT:    ret

@@ -234,12 +234,11 @@ define <4 x float> @fmul(ptr %x, ptr %y) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    ldr s1, [x0]
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:  .LBB7_1: // %l1
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr q2, [x1, x8]
-; CHECK-NEXT:    add x8, x8, #16
-; CHECK-NEXT:    cmp w8, #16
+; CHECK-NEXT:    ldr q2, [x1], #16
+; CHECK-NEXT:    subs w8, w8, #1
 ; CHECK-NEXT:    fmul v2.4s, v2.4s, v1.s[0]
 ; CHECK-NEXT:    fadd v0.4s, v2.4s, v0.4s
 ; CHECK-NEXT:    b.eq .LBB7_1
@@ -427,14 +426,13 @@ define <4 x half> @fmul_half(ptr %x, ptr %y) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ld1r { v1.4h }, [x0]
 ; CHECK-NEXT:    movi d0, #0000000000000000
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    fcvtl v1.4s, v1.4h
 ; CHECK-NEXT:  .LBB13_1: // %l1
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr d2, [x1, x8]
+; CHECK-NEXT:    ldr d2, [x1], #8
 ; CHECK-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-NEXT:    add x8, x8, #8
-; CHECK-NEXT:    cmp w8, #8
+; CHECK-NEXT:    subs w8, w8, #1
 ; CHECK-NEXT:    fcvtl v2.4s, v2.4h
 ; CHECK-NEXT:    fmul v2.4s, v2.4s, v1.4s
 ; CHECK-NEXT:    fcvtn v2.4h, v2.4s
@@ -471,12 +469,11 @@ define <4 x half> @fmul_half_fullfp16(ptr %x, ptr %y) "target-features"="+fullfp
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    ldr h1, [x0]
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:  .LBB14_1: // %l1
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr d2, [x1, x8]
-; CHECK-NEXT:    add x8, x8, #8
-; CHECK-NEXT:    cmp w8, #8
+; CHECK-NEXT:    ldr d2, [x1], #8
+; CHECK-NEXT:    subs w8, w8, #1
 ; CHECK-NEXT:    fmul v2.4h, v2.4h, v1.h[0]
 ; CHECK-NEXT:    fadd v0.4h, v2.4h, v0.4h
 ; CHECK-NEXT:    b.eq .LBB14_1

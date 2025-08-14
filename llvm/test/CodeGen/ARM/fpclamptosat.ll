@@ -3555,29 +3555,30 @@ define void @unroll_maxmin(ptr nocapture %0, ptr nocapture readonly %1, i32 %2) 
 ; SOFT-NEXT:    push {r4, r5, r6, r7, lr}
 ; SOFT-NEXT:    .pad #20
 ; SOFT-NEXT:    sub sp, #20
-; SOFT-NEXT:    mov r4, r1
-; SOFT-NEXT:    mov r5, r0
-; SOFT-NEXT:    movs r0, #0
-; SOFT-NEXT:    str r0, [sp, #16] @ 4-byte Spill
-; SOFT-NEXT:    mvns r0, r0
-; SOFT-NEXT:    str r0, [sp, #8] @ 4-byte Spill
-; SOFT-NEXT:    movs r0, #1
-; SOFT-NEXT:    lsls r1, r0, #31
-; SOFT-NEXT:    str r1, [sp, #12] @ 4-byte Spill
-; SOFT-NEXT:    str r0, [sp, #4] @ 4-byte Spill
-; SOFT-NEXT:    lsls r7, r0, #10
+; SOFT-NEXT:    movs r2, #0
+; SOFT-NEXT:    str r2, [sp, #16] @ 4-byte Spill
+; SOFT-NEXT:    mvns r2, r2
+; SOFT-NEXT:    str r2, [sp, #8] @ 4-byte Spill
+; SOFT-NEXT:    movs r2, #1
+; SOFT-NEXT:    lsls r3, r2, #31
+; SOFT-NEXT:    str r3, [sp, #12] @ 4-byte Spill
+; SOFT-NEXT:    str r2, [sp, #4] @ 4-byte Spill
+; SOFT-NEXT:    lsls r7, r2, #10
+; SOFT-NEXT:    adds r5, r1, #4
+; SOFT-NEXT:    adds r6, r0, #4
 ; SOFT-NEXT:    b .LBB54_2
 ; SOFT-NEXT:  .LBB54_1: @ in Loop: Header=BB54_2 Depth=1
-; SOFT-NEXT:    str r0, [r5, #4]
-; SOFT-NEXT:    adds r4, #8
+; SOFT-NEXT:    str r0, [r6]
 ; SOFT-NEXT:    adds r5, #8
+; SOFT-NEXT:    adds r6, #8
 ; SOFT-NEXT:    subs r7, r7, #2
 ; SOFT-NEXT:    beq .LBB54_18
 ; SOFT-NEXT:  .LBB54_2: @ =>This Inner Loop Header: Depth=1
-; SOFT-NEXT:    ldr r0, [r4]
-; SOFT-NEXT:    movs r1, #79
-; SOFT-NEXT:    lsls r6, r1, #24
-; SOFT-NEXT:    mov r1, r6
+; SOFT-NEXT:    movs r0, #79
+; SOFT-NEXT:    lsls r4, r0, #24
+; SOFT-NEXT:    subs r0, r5, #4
+; SOFT-NEXT:    ldr r0, [r0]
+; SOFT-NEXT:    mov r1, r4
 ; SOFT-NEXT:    bl __aeabi_fmul
 ; SOFT-NEXT:    bl __aeabi_f2lz
 ; SOFT-NEXT:    ldr r2, .LCPI54_0
@@ -3603,9 +3604,10 @@ define void @unroll_maxmin(ptr nocapture %0, ptr nocapture readonly %1, i32 %2) 
 ; SOFT-NEXT:  @ %bb.7: @ in Loop: Header=BB54_2 Depth=1
 ; SOFT-NEXT:    ldr r0, [sp, #12] @ 4-byte Reload
 ; SOFT-NEXT:  .LBB54_8: @ in Loop: Header=BB54_2 Depth=1
-; SOFT-NEXT:    str r0, [r5]
-; SOFT-NEXT:    ldr r0, [r4, #4]
-; SOFT-NEXT:    mov r1, r6
+; SOFT-NEXT:    subs r1, r6, #4
+; SOFT-NEXT:    str r0, [r1]
+; SOFT-NEXT:    ldr r0, [r5]
+; SOFT-NEXT:    mov r1, r4
 ; SOFT-NEXT:    bl __aeabi_fmul
 ; SOFT-NEXT:    bl __aeabi_f2lz
 ; SOFT-NEXT:    ldr r2, .LCPI54_0
@@ -3658,22 +3660,22 @@ define void @unroll_maxmin(ptr nocapture %0, ptr nocapture readonly %1, i32 %2) 
 ;
 ; VFP2-LABEL: unroll_maxmin:
 ; VFP2:       @ %bb.0:
-; VFP2-NEXT:    subs r1, #8
-; VFP2-NEXT:    subs r0, #8
+; VFP2-NEXT:    adds r1, #4
+; VFP2-NEXT:    adds r0, #4
 ; VFP2-NEXT:    vldr s0, .LCPI54_0
 ; VFP2-NEXT:    mov.w r2, #1024
 ; VFP2-NEXT:  .LBB54_1: @ =>This Inner Loop Header: Depth=1
-; VFP2-NEXT:    vldr s2, [r1, #8]
+; VFP2-NEXT:    vldr s2, [r1, #-4]
 ; VFP2-NEXT:    subs r2, #2
 ; VFP2-NEXT:    vmul.f32 s2, s2, s0
 ; VFP2-NEXT:    vcvt.s32.f32 s2, s2
-; VFP2-NEXT:    vmov r3, s2
-; VFP2-NEXT:    str r3, [r0, #8]!
-; VFP2-NEXT:    vldr s2, [r1, #12]
+; VFP2-NEXT:    vstr s2, [r0, #-4]
+; VFP2-NEXT:    vldr s2, [r1]
 ; VFP2-NEXT:    add.w r1, r1, #8
 ; VFP2-NEXT:    vmul.f32 s2, s2, s0
 ; VFP2-NEXT:    vcvt.s32.f32 s2, s2
-; VFP2-NEXT:    vstr s2, [r0, #4]
+; VFP2-NEXT:    vstr s2, [r0]
+; VFP2-NEXT:    add.w r0, r0, #8
 ; VFP2-NEXT:    bne .LBB54_1
 ; VFP2-NEXT:  @ %bb.2:
 ; VFP2-NEXT:    bx lr
@@ -3687,20 +3689,20 @@ define void @unroll_maxmin(ptr nocapture %0, ptr nocapture readonly %1, i32 %2) 
 ; FULL-NEXT:    .save {r7, lr}
 ; FULL-NEXT:    push {r7, lr}
 ; FULL-NEXT:    mov.w lr, #512
-; FULL-NEXT:    subs r1, #8
-; FULL-NEXT:    subs r0, #8
+; FULL-NEXT:    adds r1, #4
+; FULL-NEXT:    adds r0, #4
 ; FULL-NEXT:    vldr s0, .LCPI54_0
 ; FULL-NEXT:  .LBB54_1: @ =>This Inner Loop Header: Depth=1
-; FULL-NEXT:    vldr s2, [r1, #8]
+; FULL-NEXT:    vldr s2, [r1, #-4]
 ; FULL-NEXT:    vmul.f32 s2, s2, s0
 ; FULL-NEXT:    vcvt.s32.f32 s2, s2
-; FULL-NEXT:    vmov r2, s2
-; FULL-NEXT:    str r2, [r0, #8]!
-; FULL-NEXT:    vldr s2, [r1, #12]
+; FULL-NEXT:    vstr s2, [r0, #-4]
+; FULL-NEXT:    vldr s2, [r1]
 ; FULL-NEXT:    adds r1, #8
 ; FULL-NEXT:    vmul.f32 s2, s2, s0
 ; FULL-NEXT:    vcvt.s32.f32 s2, s2
-; FULL-NEXT:    vstr s2, [r0, #4]
+; FULL-NEXT:    vstr s2, [r0]
+; FULL-NEXT:    adds r0, #8
 ; FULL-NEXT:    le lr, .LBB54_1
 ; FULL-NEXT:  @ %bb.2:
 ; FULL-NEXT:    pop {r7, pc}
@@ -3750,28 +3752,29 @@ define void @unroll_minmax(ptr nocapture %0, ptr nocapture readonly %1, i32 %2) 
 ; SOFT-NEXT:    push {r4, r5, r6, r7, lr}
 ; SOFT-NEXT:    .pad #12
 ; SOFT-NEXT:    sub sp, #12
-; SOFT-NEXT:    mov r4, r1
-; SOFT-NEXT:    mov r5, r0
-; SOFT-NEXT:    movs r0, #0
-; SOFT-NEXT:    str r0, [sp] @ 4-byte Spill
-; SOFT-NEXT:    mvns r0, r0
-; SOFT-NEXT:    str r0, [sp, #8] @ 4-byte Spill
-; SOFT-NEXT:    movs r0, #1
-; SOFT-NEXT:    lsls r1, r0, #31
-; SOFT-NEXT:    str r1, [sp, #4] @ 4-byte Spill
-; SOFT-NEXT:    lsls r7, r0, #10
+; SOFT-NEXT:    movs r2, #0
+; SOFT-NEXT:    str r2, [sp] @ 4-byte Spill
+; SOFT-NEXT:    mvns r2, r2
+; SOFT-NEXT:    str r2, [sp, #8] @ 4-byte Spill
+; SOFT-NEXT:    movs r2, #1
+; SOFT-NEXT:    lsls r3, r2, #31
+; SOFT-NEXT:    str r3, [sp, #4] @ 4-byte Spill
+; SOFT-NEXT:    lsls r5, r2, #10
+; SOFT-NEXT:    adds r6, r1, #4
+; SOFT-NEXT:    adds r7, r0, #4
 ; SOFT-NEXT:    b .LBB55_2
 ; SOFT-NEXT:  .LBB55_1: @ in Loop: Header=BB55_2 Depth=1
-; SOFT-NEXT:    str r0, [r5, #4]
-; SOFT-NEXT:    adds r4, #8
-; SOFT-NEXT:    adds r5, #8
-; SOFT-NEXT:    subs r7, r7, #2
+; SOFT-NEXT:    str r0, [r7]
+; SOFT-NEXT:    adds r6, #8
+; SOFT-NEXT:    adds r7, #8
+; SOFT-NEXT:    subs r5, r5, #2
 ; SOFT-NEXT:    beq .LBB55_14
 ; SOFT-NEXT:  .LBB55_2: @ =>This Inner Loop Header: Depth=1
-; SOFT-NEXT:    ldr r0, [r4]
-; SOFT-NEXT:    movs r1, #79
-; SOFT-NEXT:    lsls r6, r1, #24
-; SOFT-NEXT:    mov r1, r6
+; SOFT-NEXT:    movs r0, #79
+; SOFT-NEXT:    lsls r4, r0, #24
+; SOFT-NEXT:    subs r0, r6, #4
+; SOFT-NEXT:    ldr r0, [r0]
+; SOFT-NEXT:    mov r1, r4
 ; SOFT-NEXT:    bl __aeabi_fmul
 ; SOFT-NEXT:    bl __aeabi_f2lz
 ; SOFT-NEXT:    ldr r2, [sp, #4] @ 4-byte Reload
@@ -3794,9 +3797,10 @@ define void @unroll_minmax(ptr nocapture %0, ptr nocapture readonly %1, i32 %2) 
 ; SOFT-NEXT:  @ %bb.7: @ in Loop: Header=BB55_2 Depth=1
 ; SOFT-NEXT:    ldr r0, .LCPI55_0
 ; SOFT-NEXT:  .LBB55_8: @ in Loop: Header=BB55_2 Depth=1
-; SOFT-NEXT:    str r0, [r5]
-; SOFT-NEXT:    ldr r0, [r4, #4]
-; SOFT-NEXT:    mov r1, r6
+; SOFT-NEXT:    subs r1, r7, #4
+; SOFT-NEXT:    str r0, [r1]
+; SOFT-NEXT:    ldr r0, [r6]
+; SOFT-NEXT:    mov r1, r4
 ; SOFT-NEXT:    bl __aeabi_fmul
 ; SOFT-NEXT:    bl __aeabi_f2lz
 ; SOFT-NEXT:    ldr r2, [sp, #4] @ 4-byte Reload
@@ -3829,22 +3833,22 @@ define void @unroll_minmax(ptr nocapture %0, ptr nocapture readonly %1, i32 %2) 
 ;
 ; VFP2-LABEL: unroll_minmax:
 ; VFP2:       @ %bb.0:
-; VFP2-NEXT:    subs r1, #8
-; VFP2-NEXT:    subs r0, #8
+; VFP2-NEXT:    adds r1, #4
+; VFP2-NEXT:    adds r0, #4
 ; VFP2-NEXT:    vldr s0, .LCPI55_0
 ; VFP2-NEXT:    mov.w r2, #1024
 ; VFP2-NEXT:  .LBB55_1: @ =>This Inner Loop Header: Depth=1
-; VFP2-NEXT:    vldr s2, [r1, #8]
+; VFP2-NEXT:    vldr s2, [r1, #-4]
 ; VFP2-NEXT:    subs r2, #2
 ; VFP2-NEXT:    vmul.f32 s2, s2, s0
 ; VFP2-NEXT:    vcvt.s32.f32 s2, s2
-; VFP2-NEXT:    vmov r3, s2
-; VFP2-NEXT:    str r3, [r0, #8]!
-; VFP2-NEXT:    vldr s2, [r1, #12]
+; VFP2-NEXT:    vstr s2, [r0, #-4]
+; VFP2-NEXT:    vldr s2, [r1]
 ; VFP2-NEXT:    add.w r1, r1, #8
 ; VFP2-NEXT:    vmul.f32 s2, s2, s0
 ; VFP2-NEXT:    vcvt.s32.f32 s2, s2
-; VFP2-NEXT:    vstr s2, [r0, #4]
+; VFP2-NEXT:    vstr s2, [r0]
+; VFP2-NEXT:    add.w r0, r0, #8
 ; VFP2-NEXT:    bne .LBB55_1
 ; VFP2-NEXT:  @ %bb.2:
 ; VFP2-NEXT:    bx lr
@@ -3858,20 +3862,20 @@ define void @unroll_minmax(ptr nocapture %0, ptr nocapture readonly %1, i32 %2) 
 ; FULL-NEXT:    .save {r7, lr}
 ; FULL-NEXT:    push {r7, lr}
 ; FULL-NEXT:    mov.w lr, #512
-; FULL-NEXT:    subs r1, #8
-; FULL-NEXT:    subs r0, #8
+; FULL-NEXT:    adds r1, #4
+; FULL-NEXT:    adds r0, #4
 ; FULL-NEXT:    vldr s0, .LCPI55_0
 ; FULL-NEXT:  .LBB55_1: @ =>This Inner Loop Header: Depth=1
-; FULL-NEXT:    vldr s2, [r1, #8]
+; FULL-NEXT:    vldr s2, [r1, #-4]
 ; FULL-NEXT:    vmul.f32 s2, s2, s0
 ; FULL-NEXT:    vcvt.s32.f32 s2, s2
-; FULL-NEXT:    vmov r2, s2
-; FULL-NEXT:    str r2, [r0, #8]!
-; FULL-NEXT:    vldr s2, [r1, #12]
+; FULL-NEXT:    vstr s2, [r0, #-4]
+; FULL-NEXT:    vldr s2, [r1]
 ; FULL-NEXT:    adds r1, #8
 ; FULL-NEXT:    vmul.f32 s2, s2, s0
 ; FULL-NEXT:    vcvt.s32.f32 s2, s2
-; FULL-NEXT:    vstr s2, [r0, #4]
+; FULL-NEXT:    vstr s2, [r0]
+; FULL-NEXT:    adds r0, #8
 ; FULL-NEXT:    le lr, .LBB55_1
 ; FULL-NEXT:  @ %bb.2:
 ; FULL-NEXT:    pop {r7, pc}
