@@ -2855,6 +2855,9 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     SmallVector<PartialDiagnosticAt, 8> Notes;
     Expr::EvalResult Eval;
     Eval.Diag = &Notes;
+    if (ProbArg->isValueDependent() || ProbArg->isTypeDependent())
+      break;
+
     if ((!ProbArg->EvaluateAsConstantExpr(Eval, Context)) ||
         !Eval.Val.isFloat()) {
       Diag(ProbArg->getBeginLoc(), diag::err_probability_not_constant_float)
