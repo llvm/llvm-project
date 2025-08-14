@@ -1709,7 +1709,6 @@ Attributes (N2335)                                                             C
 ``#embed`` (N3017)                                                             C23           C89, C++
 Octal literals prefixed with ``0o`` or ``0O``                                  C2y           C89, C++
 ``_Countof`` (N3369, N3469)                                                    C2y           C89
-Named Loops (N3355)                                                            C2y           C89, C++
 ============================================= ================================ ============= =============
 
 Builtin type aliases
