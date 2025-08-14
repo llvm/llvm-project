@@ -14,7 +14,6 @@ namespace dxbc {
 
 Error Object::removeParts(PartPred ToRemove) {
   erase_if(Parts, ToRemove);
-  recomputeHeader();
   return Error::success();
 }
 

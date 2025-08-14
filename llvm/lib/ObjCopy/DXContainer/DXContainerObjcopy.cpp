@@ -31,6 +31,7 @@ static Error handleArgs(const CommonConfig &Config, Object &Obj) {
   if (auto E = Obj.removeParts(RemovePred))
     return E;
 
+  Obj.recomputeHeader();
   return Error::success();
 }
 
