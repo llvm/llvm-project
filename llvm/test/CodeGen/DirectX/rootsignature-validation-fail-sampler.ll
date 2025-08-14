@@ -1,7 +1,6 @@
 ; RUN: not opt -S -passes='dxil-post-optimization-validation' -mtriple=dxil-pc-shadermodel6.6-compute %s 2>&1 | FileCheck %s
 ; CHECK: error: resource Sampler (space=0, registers=[42, 42]) overlaps with resource Sampler (space=0, registers=[42, 42])
 
-
 define void @CSMain() "hlsl.shader"="compute" {
 entry:
   ret void
