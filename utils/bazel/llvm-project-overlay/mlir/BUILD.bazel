@@ -13839,6 +13839,7 @@ cc_library(
         "//llvm:BitWriter",
         "//llvm:Core",
         "//llvm:Object",
+        "//llvm:SPIRVCodeGen",
         "//llvm:Support",
         "//llvm:Target",
         "//llvm:config",
