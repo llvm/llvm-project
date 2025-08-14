@@ -14,7 +14,15 @@
 #include <__random/uniform_real_distribution.h>
 #include <cmath>
 #include <iosfwd>
+
+#ifndef _REENTRANT
+#  define _LIBCPP_MUST_UNDEFINE_REENTRANT
+#  define _REENTRANT
+#endif
 #include <math.h> // for ::lgamma_r
+#ifdef _LIBCPP_MUST_UNDEFINE_REENTRANT
+#  undef _REENTRANT
+#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
