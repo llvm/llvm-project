@@ -1954,22 +1954,6 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "explogxf",
-    hdrs = ["src/math/generic/explogxf.h"],
-    deps = [
-        ":__support_fputil_fenv_impl",
-        ":__support_fputil_fma",
-        ":__support_fputil_multiply_add",
-        ":__support_fputil_nearest_integer",
-        ":__support_macros_properties_cpu_features",
-        ":__support_math_acoshf_utils",
-        ":__support_math_exp10f_utils",
-        ":__support_math_exp_utils",
-        ":common_constants",
-    ],
-)
-
-libc_support_library(
     name = "log_range_reduction",
     hdrs = ["src/math/generic/log_range_reduction.h"],
     deps = [
@@ -1991,8 +1975,8 @@ libc_support_library(
         ":__support_fputil_polyeval",
         ":__support_fputil_rounding_mode",
         ":__support_macros_optimization",
+        ":__support_math_exp10f_utils",
         ":common_constants",
-        ":explogxf",
     ],
 )
 
@@ -2395,6 +2379,18 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_coshf",
+    hdrs = ["src/__support/math/coshf.h"],
+    deps = [
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_rounding_mode",
+        ":__support_macros_optimization",
+        ":__support_math_sinhfcoshf_utils",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_erff",
     hdrs = ["src/__support/math/erff.h"],
     deps = [
@@ -2718,6 +2714,15 @@ libc_support_library(
     ],
 )
 
+libc_support_library(
+    name = "__support_math_sinhfcoshf_utils",
+    hdrs = ["src/__support/math/sinhfcoshf_utils.h"],
+    deps = [
+        ":__support_math_exp10f_utils",
+        ":__support_fputil_multiply_add",
+    ],
+)
+
 ############################### complex targets ################################
 
 libc_function(
@@ -2989,7 +2994,6 @@ libc_math_function(
     name = "acoshf",
     additional_deps = [
         ":__support_math_acoshf",
-        ":explogxf",
     ],
 )
 
@@ -3188,14 +3192,7 @@ libc_math_function(
 libc_math_function(
     name = "coshf",
     additional_deps = [
-        ":__support_fputil_fma",
-        ":__support_fputil_multiply_add",
-        ":__support_fputil_nearest_integer",
-        ":__support_fputil_polyeval",
-        ":__support_fputil_rounding_mode",
-        ":__support_macros_optimization",
-        ":common_constants",
-        ":explogxf",
+        ":__support_math_coshf",
     ],
 )
 
@@ -3215,9 +3212,8 @@ libc_math_function(
         ":__support_fputil_polyeval",
         ":__support_fputil_rounding_mode",
         ":__support_macros_optimization",
-        ":common_constants",
-        ":explogxf",
         ":__support_sincosf_utils",
+        ":common_constants",
     ],
 )
 
@@ -3339,7 +3335,7 @@ libc_math_function(
 libc_math_function(
     name = "exp10m1f",
     additional_deps = [
-        ":explogxf",
+        ":__support_math_exp10f_utils",
     ],
 )
 
@@ -3355,8 +3351,8 @@ libc_math_function(
         ":__support_fputil_triple_double",
         ":__support_integer_literals",
         ":__support_macros_optimization",
+        ":__support_math_exp_utils",
         ":common_constants",
-        ":explogxf",
     ],
 )
 
@@ -3378,7 +3374,7 @@ libc_math_function(
     name = "exp2m1f",
     additional_deps = [
         ":__support_fputil_polyeval",
-        ":explogxf",
+        ":__support_math_exp10f_utils",
     ],
 )
 
@@ -3395,14 +3391,12 @@ libc_math_function(
         ":__support_fputil_double_double",
         ":__support_fputil_dyadic_float",
         ":__support_fputil_multiply_add",
-        ":__support_fputil_nearest_integer",
         ":__support_fputil_polyeval",
         ":__support_fputil_rounding_mode",
         ":__support_fputil_triple_double",
         ":__support_integer_literals",
         ":__support_macros_optimization",
         ":common_constants",
-        ":explogxf",
     ],
 )
 
@@ -4180,7 +4174,6 @@ libc_math_function(
         ":__support_macros_optimization",
         ":__support_math_exp10f",
         ":common_constants",
-        ":explogxf",
         ":exp2f_impl",
     ],
 )
@@ -4340,8 +4333,8 @@ libc_math_function(
         ":__support_fputil_polyeval",
         ":__support_fputil_rounding_mode",
         ":__support_macros_optimization",
+        ":__support_math_sinhfcoshf_utils",
         ":common_constants",
-        ":explogxf",
     ],
 )
 
@@ -4447,8 +4440,8 @@ libc_math_function(
         ":__support_fputil_rounding_mode",
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
+        ":__support_math_exp10f_utils",
         ":common_constants",
-        ":explogxf",
     ],
 )
 
