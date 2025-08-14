@@ -315,15 +315,15 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_return_address:
   case Builtin::BI__builtin_frame_address: {
     mlir::Location loc = getLoc(e->getExprLoc());
-    mlir::Attribute levelAttr = ConstantEmitter(*this).emitAbstract(
-        e->getArg(0), e->getArg(0)->getType());
-    uint64_t level = mlir::cast<cir::IntAttr>(levelAttr).getUInt();
+    llvm::APSInt level = e->getArg(0)->EvaluateKnownConstInt(getContext());
     if (builtinID == Builtin::BI__builtin_return_address) {
-      return RValue::get(cir::ReturnAddrOp::create(builder,
-          loc, builder.getUInt32(level, loc)));
+      return RValue::get(cir::ReturnAddrOp::create(
+          builder, loc,
+          builder.getConstAPInt(loc, builder.getUInt32Ty(), level)));
     }
-    return RValue::get(
-        cir::FrameAddrOp::create(builder, loc, builder.getUInt32(level, loc)));
+    return RValue::get(cir::FrameAddrOp::create(
+        builder, loc,
+        builder.getConstAPInt(loc, builder.getUInt32Ty(), level)));
   }
 
   case Builtin::BI__builtin_trap:

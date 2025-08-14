@@ -2230,6 +2230,7 @@ def CIR_ReturnAddrOp : CIR_FuncAddrBuiltinOp<"return_address"> {
     Represents a call to builtin function ` __builtin_return_address` in CIR.
     This builtin function returns the return address of the current function,
     or of one of its callers.
+
     The `level` argument is number of frames to scan up the call stack.
     For instance, value of 0 yields the return address of the current function,
     value of 1 yields the return address of the caller of the current function,
