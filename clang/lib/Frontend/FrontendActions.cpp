@@ -1183,7 +1183,7 @@ void DumpCompilerOptionsAction::ExecuteAction() {
   OS << "\n\"extensions\" : [\n";
   {
     llvm::SmallString<128> Str;
-#define EXTENSION_OPTION(Name, Predicate)                                          \
+#define EXTENSION_OPTION(Name, Predicate)                                      \
   ("\t{\"" #Name "\" : " + llvm::Twine(Predicate ? "true" : "false") + "},\n") \
       .toVector(Str);
 #define EXTENSION(Name, Predicate) EXTENSION_OPTION(Name, Predicate)

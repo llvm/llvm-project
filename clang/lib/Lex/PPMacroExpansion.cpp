@@ -1118,7 +1118,7 @@ static bool HasExtension(const Preprocessor &PP, StringRef Extension) {
 #define ABI_EXTENSION(Name, Predicate) .Case(#Name, Predicate)
   bool IsABIExtension = llvm::StringSwitch<bool>(Extension)
 #include "clang/Basic/Features.def"
-      .Default(false);
+                            .Default(false);
 #undef ABI_EXTENSION
   if (IsABIExtension)
     return true;
