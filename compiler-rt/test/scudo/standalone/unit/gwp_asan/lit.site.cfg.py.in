@@ -21,4 +21,4 @@ config.test_source_root = config.test_exec_root
 config.environment['SCUDO_OPTIONS'] = 'GWP_ASAN_SampleRate=1:GWP_ASAN_MaxSimultaneousAllocations=100000'
 
 # GWP-ASan doesn't support malloc-type mismatch.
-config.environment['SKIP_TYPE_MISMATCH'] = '1'
+config.environment['SKIP_DEALLOC_TYPE_MISMATCH'] = '1'
