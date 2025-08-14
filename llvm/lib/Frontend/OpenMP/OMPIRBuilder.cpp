@@ -290,7 +290,7 @@ computeOpenMPScheduleType(ScheduleKind ClauseKind, bool HasChunks,
 }
 
 /// Given a function, if it represents the entry point of a target kernel, this
-/// returns the execution mode flags associated to that kernel.
+/// returns the execution mode flags associated with that kernel.
 static std::optional<omp::OMPTgtExecModeFlags>
 getTargetKernelExecMode(Function &Kernel) {
   CallInst *TargetInitCall = nullptr;
