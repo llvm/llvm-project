@@ -615,9 +615,7 @@ static std::pair<Value *, APInt> getMask(Value *WideMask, unsigned Factor,
       // In a very rare occasion, all the intrinsic arguments might be zeros,
       // in which case we still want to return an all-zeros constant instead of
       // nullptr.
-      return {RefArg ? RefArg
-                     : Constant::getNullValue(IMI->getArgOperand(0)->getType()),
-              GapMask};
+      return {RefArg ? RefArg : IMI->getArgOperand(0), GapMask};
     }
   }
 
