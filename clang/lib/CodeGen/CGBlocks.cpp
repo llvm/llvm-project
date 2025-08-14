@@ -188,13 +188,14 @@ static llvm::Constant *buildBlockDescriptor(CodeGenModule &CGM,
   // Optional copy/dispose helpers.
   bool hasInternalHelper = false;
   if (blockInfo.NeedsCopyDispose) {
+    auto &Schema = CGM.getCodeGenOpts().PointerAuth.BlockHelperFunctionPointers;
     // copy_func_helper_decl
     llvm::Constant *copyHelper = buildCopyHelper(CGM, blockInfo);
-    elements.add(copyHelper);
+    elements.addSignedPointer(copyHelper, Schema, GlobalDecl(), QualType());
 
     // destroy_func_decl
     llvm::Constant *disposeHelper = buildDisposeHelper(CGM, blockInfo);
-    elements.add(disposeHelper);
+    elements.addSignedPointer(disposeHelper, Schema, GlobalDecl(), QualType());
 
     if (cast<llvm::Function>(copyHelper->stripPointerCasts())
             ->hasInternalLinkage() ||
@@ -568,9 +569,8 @@ static void computeBlockInfo(CodeGenModule &CGM, CodeGenFunction *CGF,
       llvm::StructType::get(CGM.getLLVMContext(), elementTypes, true);
     info.CanBeGlobal = true;
     return;
-  }
-  else if (C.getLangOpts().ObjC &&
-           CGM.getLangOpts().getGC() == LangOptions::NonGC)
+  } else if (C.getLangOpts().ObjC &&
+             CGM.getLangOpts().getGC() == LangOptions::NonGC)
     info.HasCapturedVariableLayout = true;
 
   if (block->doesNotEscape())
@@ -784,7 +784,7 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const BlockExpr *blockExpr) {
 
 llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
   bool IsOpenCL = CGM.getContext().getLangOpts().OpenCL;
-  auto GenVoidPtrTy =
+  llvm::PointerType *GenVoidPtrTy =
       IsOpenCL ? CGM.getOpenCLRuntime().getGenericVoidPointerType() : VoidPtrTy;
   LangAS GenVoidPtrAddr = IsOpenCL ? LangAS::opencl_generic : LangAS::Default;
   auto GenVoidPtrSize = CharUnits::fromQuantity(
@@ -818,9 +818,6 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
                                    : CGM.getNSConcreteStackBlock();
     isa = blockISA;
 
-    // Build the block descriptor.
-    descriptor = buildBlockDescriptor(CGM, blockInfo);
-
     // Compute the initial on-stack block flags.
     if (!CGM.getCodeGenOpts().DisableBlockSignatureString)
       flags = BLOCK_HAS_SIGNATURE;
@@ -834,6 +831,9 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
       flags |= BLOCK_USE_STRET;
     if (blockInfo.NoEscape)
       flags |= BLOCK_IS_NOESCAPE | BLOCK_IS_GLOBAL;
+
+    // Build the block descriptor.
+    descriptor = buildBlockDescriptor(CGM, blockInfo);
   }
 
   auto projectField = [&](unsigned index, const Twine &name) -> Address {
@@ -884,11 +884,25 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
           llvm::ConstantInt::get(IntTy, blockInfo.BlockAlign.getQuantity()),
           getIntSize(), "block.align");
     }
-    addHeaderField(blockFn, GenVoidPtrSize, "block.invoke");
-    if (!IsOpenCL)
-      addHeaderField(descriptor, getPointerSize(), "block.descriptor");
-    else if (auto *Helper =
-                 CGM.getTargetCodeGenInfo().getTargetOpenCLBlockHelper()) {
+
+    if (!IsOpenCL) {
+      llvm::Value *blockFnPtr =
+          llvm::ConstantExpr::getBitCast(InvokeFn, VoidPtrTy);
+      QualType type = blockInfo.getBlockExpr()
+                          ->getType()
+                          ->castAs<BlockPointerType>()
+                          ->getPointeeType();
+      addSignedHeaderField(
+          blockFnPtr,
+          CGM.getCodeGenOpts().PointerAuth.BlockInvocationFunctionPointers,
+          GlobalDecl(), type, getPointerSize(), "block.invoke");
+
+      addSignedHeaderField(
+          descriptor, CGM.getCodeGenOpts().PointerAuth.BlockDescriptorPointers,
+          GlobalDecl(), type, getPointerSize(), "block.descriptor");
+    } else if (auto *Helper =
+                   CGM.getTargetCodeGenInfo().getTargetOpenCLBlockHelper()) {
+      addHeaderField(blockFn, GenVoidPtrSize, "block.invoke");
       for (auto I : Helper->getCustomFieldValues(*this, blockInfo)) {
         addHeaderField(
             I.first,
@@ -896,7 +910,8 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
                 CGM.getDataLayout().getTypeAllocSize(I.first->getType())),
             I.second);
       }
-    }
+    } else
+      addHeaderField(blockFn, GenVoidPtrSize, "block.invoke");
   }
 
   // Finally, capture all the values into the block.
@@ -1167,6 +1182,8 @@ RValue CodeGenFunction::EmitBlockCallExpr(const CallExpr *E,
   ASTContext &Ctx = getContext();
   CallArgList Args;
 
+  llvm::Value *FuncPtr = nullptr;
+
   if (getLangOpts().OpenCL) {
     // For OpenCL, BlockPtr is already casted to generic block literal.
 
@@ -1186,7 +1203,7 @@ RValue CodeGenFunction::EmitBlockCallExpr(const CallExpr *E,
     if (!isa<ParmVarDecl>(E->getCalleeDecl()))
       Func = CGM.getOpenCLRuntime().getInvokeFunction(E->getCallee());
     else {
-      llvm::Value *FuncPtr = Builder.CreateStructGEP(GenBlockTy, BlockPtr, 2);
+      FuncPtr = Builder.CreateStructGEP(GenBlockTy, BlockPtr, 2);
       Func = Builder.CreateAlignedLoad(GenericVoidPtrTy, FuncPtr,
                                        getPointerAlign());
     }
@@ -1195,7 +1212,7 @@ RValue CodeGenFunction::EmitBlockCallExpr(const CallExpr *E,
     BlockPtr =
         Builder.CreatePointerCast(BlockPtr, UnqualPtrTy, "block.literal");
     // Get pointer to the block invoke function
-    llvm::Value *FuncPtr = Builder.CreateStructGEP(GenBlockTy, BlockPtr, 3);
+    FuncPtr = Builder.CreateStructGEP(GenBlockTy, BlockPtr, 3);
 
     // First argument is a block literal casted to a void pointer
     BlockPtr = Builder.CreatePointerCast(BlockPtr, VoidPtrTy);
@@ -1212,7 +1229,15 @@ RValue CodeGenFunction::EmitBlockCallExpr(const CallExpr *E,
     CGM.getTypes().arrangeBlockFunctionCall(Args, FuncTy);
 
   // Prepare the callee.
-  CGCallee Callee(CGCalleeInfo(), Func);
+  CGPointerAuthInfo PointerAuth;
+  if (auto &AuthSchema =
+          CGM.getCodeGenOpts().PointerAuth.BlockInvocationFunctionPointers) {
+    assert(FuncPtr != nullptr && "Missing function pointer for AuthInfo");
+    PointerAuth =
+        EmitPointerAuthInfo(AuthSchema, FuncPtr, GlobalDecl(), FnType);
+  }
+
+  CGCallee Callee(CGCalleeInfo(), Func, PointerAuth);
 
   // And call the block.
   return EmitCall(FnInfo, Callee, ReturnValue, Args, CallOrInvoke);
@@ -1296,14 +1321,15 @@ static llvm::Constant *buildGlobalBlock(CodeGenModule &CGM,
 
   bool IsOpenCL = CGM.getLangOpts().OpenCL;
   bool IsWindows = CGM.getTarget().getTriple().isOSWindows();
+  auto &CGOPointerAuth = CGM.getCodeGenOpts().PointerAuth;
   if (!IsOpenCL) {
     // isa
     if (IsWindows)
       fields.addNullPointer(CGM.Int8PtrPtrTy);
     else
       fields.addSignedPointer(CGM.getNSConcreteGlobalBlock(),
-                              CGM.getCodeGenOpts().PointerAuth.ObjCIsaPointers,
-                              GlobalDecl(), QualType());
+                              CGOPointerAuth.ObjCIsaPointers, GlobalDecl(),
+                              QualType());
 
     // __flags
     BlockFlags flags = BLOCK_IS_GLOBAL;
@@ -1322,11 +1348,20 @@ static llvm::Constant *buildGlobalBlock(CodeGenModule &CGM,
   }
 
   // Function
-  fields.add(blockFn);
+  if (auto &Schema = CGOPointerAuth.BlockInvocationFunctionPointers) {
+    QualType FnType = blockInfo.getBlockExpr()
+                          ->getType()
+                          ->castAs<BlockPointerType>()
+                          ->getPointeeType();
+    fields.addSignedPointer(blockFn, Schema, GlobalDecl(), FnType);
+  } else
+    fields.add(blockFn);
 
   if (!IsOpenCL) {
     // Descriptor
-    fields.add(buildBlockDescriptor(CGM, blockInfo));
+    llvm::Constant *Descriptor = buildBlockDescriptor(CGM, blockInfo);
+    fields.addSignedPointer(Descriptor, CGOPointerAuth.BlockDescriptorPointers,
+                            GlobalDecl(), QualType());
   } else if (auto *Helper =
                  CGM.getTargetCodeGenInfo().getTargetOpenCLBlockHelper()) {
     for (auto *I : Helper->getCustomFieldValues(CGM, blockInfo)) {
@@ -1996,8 +2031,8 @@ CodeGenFunction::GenerateCopyHelperFunction(const CGBlockInfo &blockInfo) {
         // it. It's not quite worth the annoyance to avoid creating it in the
         // first place.
         if (!needsEHCleanup(captureType.isDestructedType()))
-          if (auto *I =
-                  cast_or_null<llvm::Instruction>(dstField.getBasePointer()))
+          if (auto *I = cast_or_null<llvm::Instruction>(
+                  dstField.getPointerIfNotSigned()))
             I->eraseFromParent();
       }
       break;
@@ -2731,8 +2766,16 @@ void CodeGenFunction::emitByrefStructureInit(const AutoVarEmission &emission) {
   unsigned nextHeaderIndex = 0;
   CharUnits nextHeaderOffset;
   auto storeHeaderField = [&](llvm::Value *value, CharUnits fieldSize,
-                              const Twine &name) {
+                              const Twine &name, bool isFunction = false) {
     auto fieldAddr = Builder.CreateStructGEP(addr, nextHeaderIndex, name);
+    if (isFunction) {
+      if (auto &Schema = CGM.getCodeGenOpts()
+                             .PointerAuth.BlockByrefHelperFunctionPointers) {
+        auto PointerAuth = EmitPointerAuthInfo(
+            Schema, fieldAddr.emitRawPointer(*this), GlobalDecl(), QualType());
+        value = EmitPointerAuthSign(PointerAuth, value);
+      }
+    }
     Builder.CreateStore(value, fieldAddr);
 
     nextHeaderIndex++;
@@ -2815,10 +2858,10 @@ void CodeGenFunction::emitByrefStructureInit(const AutoVarEmission &emission) {
   storeHeaderField(V, getIntSize(), "byref.size");
 
   if (helpers) {
-    storeHeaderField(helpers->CopyHelper, getPointerSize(),
-                     "byref.copyHelper");
+    storeHeaderField(helpers->CopyHelper, getPointerSize(), "byref.copyHelper",
+                     /*isFunction=*/true);
     storeHeaderField(helpers->DisposeHelper, getPointerSize(),
-                     "byref.disposeHelper");
+                     "byref.disposeHelper", /*isFunction=*/true);
   }
 
   if (ByRefHasLifetime && HasByrefExtendedLayout) {
