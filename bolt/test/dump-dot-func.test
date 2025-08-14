@@ -4,60 +4,40 @@
 RUN: %clang++ %p/Inputs/multi-func.cpp -o %t.exe -Wl,-q
 
 # Test 1: --dump-dot-func with specific function name (mangled)
-RUN: rm -f *.dot
 RUN: llvm-bolt %t.exe -o %t.bolt1 --dump-dot-func=_Z3addii -v=1 2>&1 | FileCheck %s --check-prefix=ADD
-RUN: test -f _Z3addii-00_build-cfg.dot
-RUN: test ! -f main-00_build-cfg.dot
-RUN: test ! -f _Z8multiplyii-00_build-cfg.dot
 
 # Test 2: --dump-dot-func with regex pattern (main.*)
-RUN: rm -f *.dot
 RUN: llvm-bolt %t.exe -o %t.bolt2 --dump-dot-func="main.*" -v=1 2>&1 | FileCheck %s --check-prefix=MAIN-REGEX
-RUN: test -f main-00_build-cfg.dot
-RUN: test ! -f _Z3addii-00_build-cfg.dot
-RUN: test ! -f _Z8multiplyii-00_build-cfg.dot
 
 # Test 3: --dump-dot-func with multiple specific functions (mangled names)
-RUN: rm -f *.dot
 RUN: llvm-bolt %t.exe -o %t.bolt3 --dump-dot-func=_Z3addii,_Z8multiplyii -v=1 2>&1 | FileCheck %s --check-prefix=MULTI
-RUN: test -f _Z3addii-00_build-cfg.dot
-RUN: test -f _Z8multiplyii-00_build-cfg.dot
-RUN: test ! -f main-00_build-cfg.dot
-RUN: test ! -f _Z11main_helperv-00_build-cfg.dot
 
 # Test 4: No option specified should create no dot files
-RUN: rm -f *.dot
 RUN: llvm-bolt %t.exe -o %t.bolt4 2>&1 | FileCheck %s --check-prefix=NONE
-RUN: test ! -f _Z3addii-00_build-cfg.dot
-RUN: test ! -f main-00_build-cfg.dot
-RUN: test ! -f _Z8multiplyii-00_build-cfg.dot
 
 # Test 5: --dump-dot-func with non-existent function
-RUN: rm -f *.dot
 RUN: llvm-bolt %t.exe -o %t.bolt5 --dump-dot-func=nonexistent -v=1 2>&1 | FileCheck %s --check-prefix=NONEXISTENT
-RUN: test ! -f nonexistent-00_build-cfg.dot
-RUN: test ! -f _Z3addii-00_build-cfg.dot
-RUN: test ! -f main-00_build-cfg.dot
 
 # Test 6: Backward compatibility - --dump-dot-all should still work
-RUN: rm -f *.dot
 RUN: llvm-bolt %t.exe -o %t.bolt6 --dump-dot-all -v=1 2>&1 | FileCheck %s --check-prefix=ALL
-RUN: test -f main-00_build-cfg.dot
 
 # Test 7: Test with unmangled function name (main function)
-RUN: rm -f *.dot
 RUN: llvm-bolt %t.exe -o %t.bolt7 --dump-dot-func=main -v=1 2>&1 | FileCheck %s --check-prefix=MAIN-UNMANGLED
-RUN: test -f main-00_build-cfg.dot
-RUN: test ! -f _Z3addii-00_build-cfg.dot
-RUN: test ! -f _Z8multiplyii-00_build-cfg.dot
 
 # Check that specific functions are dumped
 ADD: BOLT-INFO: dumping CFG to _Z3addii-00_build-cfg.dot
+ADD-NOT: BOLT-INFO: dumping CFG to main-00_build-cfg.dot
+ADD-NOT: BOLT-INFO: dumping CFG to _Z8multiplyii-00_build-cfg.dot
+ADD-NOT: BOLT-INFO: dumping CFG to _Z11main_helperv-00_build-cfg.dot
 
 MAIN-REGEX-DAG: BOLT-INFO: dumping CFG to main-00_build-cfg.dot
+MAIN-REGEX-NOT: BOLT-INFO: dumping CFG to _Z3addii-00_build-cfg.dot
+MAIN-REGEX-NOT: BOLT-INFO: dumping CFG to _Z8multiplyii-00_build-cfg.dot
 
 MULTI-DAG: BOLT-INFO: dumping CFG to _Z3addii-00_build-cfg.dot
 MULTI-DAG: BOLT-INFO: dumping CFG to _Z8multiplyii-00_build-cfg.dot
+MULTI-NOT: BOLT-INFO: dumping CFG to main-00_build-cfg.dot
+MULTI-NOT: BOLT-INFO: dumping CFG to _Z11main_helperv-00_build-cfg.dot
 
 # Should be no dumping messages when no option is specified
 NONE-NOT: BOLT-INFO: dumping CFG
@@ -67,5 +47,6 @@ NONEXISTENT-NOT: BOLT-INFO: dumping CFG
 
 ALL: BOLT-INFO: dumping CFG to main-00_build-cfg.dot
 
-# Test that unmangled function names still work
 MAIN-UNMANGLED: BOLT-INFO: dumping CFG to main-00_build-cfg.dot
+MAIN-UNMANGLED-NOT: BOLT-INFO: dumping CFG to _Z3addii-00_build-cfg.dot
+MAIN-UNMANGLED-NOT: BOLT-INFO: dumping CFG to _Z8multiplyii-00_build-cfg.dot
