@@ -1,6 +1,6 @@
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: clang-doc --extra-arg -std=c++20 --output=%t --format=json --executor=standalone %s
-// RUN: FileCheck %s < %t/index.json
+// RUN: FileCheck %s < %t/json/index.json
 
 template<typename T>
 concept Incrementable = requires(T x) {
