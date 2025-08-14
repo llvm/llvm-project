@@ -156,25 +156,21 @@ createNdDescriptor(PatternRewriter &rewriter, Location loc,
 // Adjusts the strides of a memref according to a given permutation map for
 // vector operations.
 //
-// This function updates the last `vecRank` elements of the `strides` array to
-// reflect the permutation specified by `permMap`. The permutation is applied
-// to the innermost dimensions of the memref, corresponding to the vector
-// shape. This is typically used when lowering vector transfer operations with
-// permutation maps to memory accesses, ensuring that the memory strides match
-// the logical permutation of vector dimensions.
+// This function updates the innermost strides in the `strides` array to
+// reflect the permutation specified by `permMap`. The permutation is computed
+// using the inverse and broadcasting-aware version of the permutation map,
+// and is applied to the relevant strides. This ensures that memory accesses
+// are consistent with the logical permutation of vector elements.
 //
 // Example:
-//   Suppose we have a memref of rank 4 with strides `[s0, s1, s2, s3]` and a
-//   vector of rank 2. If the permutation map swaps the last two dimensions
-//   (e.g., [0, 1] -> [1, 0]), then after calling this function, the last two
-//   strides will be swapped:
+//   Suppose we have a memref of rank 4 with strides `[s0, s1, s2, s3]`.
+//   If the permutation map swaps the last two dimensions (e.g., [0, 1] -> [1,
+//   0]), then after calling this function, the last two strides will be
+//   swapped:
 //     Original strides: [s0, s1, s2, s3]
 //     After permutation: [s0, s1, s3, s2]
 //
-static void adjustStridesForPermutation(Operation *op,
-                                        PatternRewriter &rewriter,
-                                        MemRefType memrefType,
-                                        AffineMap permMap, VectorType vecType,
+static void adjustStridesForPermutation(AffineMap permMap,
                                         SmallVectorImpl<Value> &strides) {
 
   AffineMap invMap = inverseAndBroadcastProjectedPermutation(permMap);
@@ -187,12 +183,11 @@ static void adjustStridesForPermutation(Operation *op,
 // Computes memory strides for vector transfer operations, handling both
 // static and dynamic memrefs while applying permutation transformations
 // for XeGPU lowering.
-SmallVector<Value> computeStrides(VectorTransferOpInterface xferOp,
-                                  PatternRewriter &rewriter) {
+static SmallVector<Value> computeStrides(VectorTransferOpInterface xferOp,
+                                         PatternRewriter &rewriter) {
   SmallVector<Value> strides;
   Value baseMemref = xferOp.getBase();
   AffineMap permMap = xferOp.getPermutationMap();
-  VectorType vectorType = xferOp.getVectorType();
   MemRefType memrefType = dyn_cast<MemRefType>(baseMemref.getType());
 
   Location loc = xferOp.getLoc();
@@ -228,8 +223,7 @@ SmallVector<Value> computeStrides(VectorTransferOpInterface xferOp,
     strides.append(meta.getStrides().begin(), meta.getStrides().end());
   }
   // Adjust strides according to the permutation map (e.g., for transpose)
-  adjustStridesForPermutation(xferOp, rewriter, memrefType, permMap, vectorType,
-                              strides);
+  adjustStridesForPermutation(permMap, strides);
   return strides;
 }
 
@@ -316,10 +310,9 @@ static Value computeOffsets(VectorTransferOpInterface xferOp,
 
   // Add all broadcasted vectors together to compute local offsets
   Value localOffsets = broadcasted[0];
-  for (size_t i = 1; i < broadcasted.size(); ++i) {
+  for (size_t i = 1; i < broadcasted.size(); ++i)
     localOffsets =
         arith::AddIOp::create(rewriter, loc, localOffsets, broadcasted[i]);
-  }
 
   // Compute base offset from transfer read indices
   Value baseOffset = nullptr;
@@ -515,8 +508,8 @@ struct TransferWriteLowering
     // TODO:This check needs to be replaced with proper uArch capability check
     auto chip = xegpu::getChipStr(writeOp);
     if (chip != "pvc" && chip != "bmg") {
-      // lower to scattered load Op if the target HW doesn't have 2d block load
-      // support
+      // lower to scattered store Op if the target HW doesn't have 2d block
+      // store support
       // TODO: add support for OutOfBound access
       if (writeOp.hasOutOfBoundsDim())
         return failure();
