@@ -333,6 +333,8 @@ private:
         collectRewrite(privateVar, rewriteValues);
       for (Value threadLimit : targetOp.getThreadLimitVars())
         collectRewrite(threadLimit, rewriteValues);
+      if (Value dynGpSize = targetOp.getDynGroupprivateSize())
+        collectRewrite(dynGpSize, rewriteValues);
     }
 
     // Move omp.map.info ops to the new block and collect dependencies.
