@@ -3,16 +3,14 @@
 
 ; Crash reproducer for: https://github.com/llvm/llvm-project/issues/142314
 
-define <2 x ptr addrspace(1)> @widget() gc "statepoint-example" {
+define <2 x ptr addrspace(1)> @widget() nounwind gc "statepoint-example" {
 ; CHECK-LABEL: widget:
 ; CHECK:       // %bb.0: // %bb
 ; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    mov x0, xzr
 ; CHECK-NEXT:    mov x1, xzr
+; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    str q0, [sp]
 ; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    blr xzr
