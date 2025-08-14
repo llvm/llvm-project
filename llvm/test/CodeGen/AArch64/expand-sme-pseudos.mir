@@ -54,7 +54,7 @@ body:             |
     ; CHECK-NEXT: successors: %bb.2(0x80000000)
     ; CHECK-NEXT: liveins: $x8
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: BL &__arm_tpidr2_restore, csr_aarch64_sme_abi_support_routines_preservemost_from_x0, implicit-def $lr, implicit $sp
+    ; CHECK-NEXT: BL &__arm_tpidr2_save, csr_aarch64_sme_abi_support_routines_preservemost_from_x0, implicit-def $lr, implicit $sp
     ; CHECK-NEXT: MSR 56965, $xzr
     ; CHECK-NEXT: B %bb.2
     ; CHECK-NEXT: {{  $}}
@@ -62,7 +62,7 @@ body:             |
     ; CHECK-NEXT: RET undef $lr
     $x8 = MRS 56965, implicit-def $nzcv
 
-    CommitZASavePseudo $x8, 0, &__arm_tpidr2_restore, csr_aarch64_sme_abi_support_routines_preservemost_from_x0
+    CommitZASavePseudo $x8, 0, &__arm_tpidr2_save, csr_aarch64_sme_abi_support_routines_preservemost_from_x0
 
     RET_ReallyLR
 
@@ -85,7 +85,7 @@ body:             |
     ; CHECK-NEXT: successors: %bb.2(0x80000000)
     ; CHECK-NEXT: liveins: $x8
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: BL &__arm_tpidr2_restore, csr_aarch64_sme_abi_support_routines_preservemost_from_x0, implicit-def $lr, implicit $sp, implicit-def $zab0
+    ; CHECK-NEXT: BL &__arm_tpidr2_save, csr_aarch64_sme_abi_support_routines_preservemost_from_x0, implicit-def $lr, implicit $sp, implicit-def $zab0
     ; CHECK-NEXT: MSR 56965, $xzr
     ; CHECK-NEXT: ZERO_M 255, implicit-def $zab0
     ; CHECK-NEXT: B %bb.2
@@ -94,7 +94,7 @@ body:             |
     ; CHECK-NEXT: RET undef $lr
     $x8 = MRS 56965, implicit-def $nzcv
 
-    CommitZASavePseudo $x8, 1, &__arm_tpidr2_restore, csr_aarch64_sme_abi_support_routines_preservemost_from_x0, implicit-def $zab0
+    CommitZASavePseudo $x8, 1, &__arm_tpidr2_save, csr_aarch64_sme_abi_support_routines_preservemost_from_x0, implicit-def $zab0
 
     RET_ReallyLR
 
