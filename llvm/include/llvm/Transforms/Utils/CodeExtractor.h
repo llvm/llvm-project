@@ -98,15 +98,15 @@ public:
     BranchProbabilityInfo *BPI;
     AssumptionCache *AC;
 
-    // A block outside of the extraction set where any intermediate
-    // allocations will be placed inside. If this is null, allocations
-    // will be placed in the entry block of the function.
+    /// A block outside of the extraction set where any intermediate
+    /// allocations will be placed inside. If this is null, allocations
+    /// will be placed in the entry block of the function.
     BasicBlock *AllocationBlock;
 
-    // If true, varargs functions can be extracted.
+    /// If true, varargs functions can be extracted.
     bool AllowVarArgs;
 
-    // Bits of intermediate state computed at various phases of extraction.
+    /// Bits of intermediate state computed at various phases of extraction.
     SetVector<BasicBlock *> Blocks;
 
     /// Lists of blocks that are branched from the code region to be extracted,
@@ -128,32 +128,32 @@ public:
     /// returns 1, etc.
     SmallVector<BasicBlock *> ExtractedFuncRetVals;
 
-    // Suffix to use when creating extracted function (appended to the original
-    // function name + "."). If empty, the default is to use the entry block
-    // label, if non-empty, otherwise "extracted".
+    /// Suffix to use when creating extracted function (appended to the original
+    /// function name + "."). If empty, the default is to use the entry block
+    /// label, if non-empty, otherwise "extracted".
     std::string Suffix;
 
-    // If true, the outlined function has aggregate argument in zero address
-    // space.
+    /// If true, the outlined function has aggregate argument in zero address
+    /// space.
     bool ArgsInZeroAddressSpace;
 
-    // If set, this callback will be used to allocate the arguments in the
-    // caller before passing it to the outlined function holding the extracted
-    // piece of code.
+    /// If set, this callback will be used to allocate the arguments in the
+    /// caller before passing it to the outlined function holding the extracted
+    /// piece of code.
     CustomArgAllocatorCBTy *CustomArgAllocatorCB;
 
-    // A block outside of the extraction set where previously introduced
-    // intermediate allocations can be deallocated. This is only used when an
-    // custom deallocator is specified.
+    /// A block outside of the extraction set where previously introduced
+    /// intermediate allocations can be deallocated. This is only used when a
+    /// custom deallocator is specified.
     BasicBlock *DeallocationBlock;
 
-    // If set, this callback will be used to deallocate the arguments in the
-    // caller after running the outlined function holding the extracted piece of
-    // code. It will not be called if a custom allocator isn't also present.
-    //
-    // By default, this will be done at the end of the basic block containing
-    // the call to the outlined function, except if a deallocation block is
-    // specified. In that case, that will take precedence.
+    /// If set, this callback will be used to deallocate the arguments in the
+    /// caller after running the outlined function holding the extracted piece
+    /// of code. It will not be called if a custom allocator isn't also present.
+    ///
+    /// By default, this will be done at the end of the basic block containing
+    /// the call to the outlined function, except if a deallocation block is
+    /// specified. In that case, that will take precedence.
     CustomArgDeallocatorCBTy *CustomArgDeallocatorCB;
 
   public:
