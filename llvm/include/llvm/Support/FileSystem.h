@@ -1342,6 +1342,9 @@ public:
   LLVM_ABI size_t size() const;
   LLVM_ABI char *data() const;
 
+  /// Write changes to disk and synchronize. Equivalent to POSIX msync.
+  LLVM_ABI std::error_code sync() const;
+
   /// Get a const view of the data. Modifying this memory has undefined
   /// behavior.
   LLVM_ABI const char *const_data() const;
