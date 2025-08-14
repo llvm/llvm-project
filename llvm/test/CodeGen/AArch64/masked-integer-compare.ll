@@ -7,9 +7,8 @@
 define i1 @combine_masked_i32(i32 %x) {
 ; CHECK-LABEL: combine_masked_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #2139095040 // =0x7f800000
-; CHECK-NEXT:    and w9, w0, #0x7fffffff
-; CHECK-NEXT:    cmp w9, w8
+; CHECK-NEXT:    mov w8, #-16777216 // =0xff000000
+; CHECK-NEXT:    cmp w8, w0, lsl #1
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %and = and i32 %x, u0x7fffffff
@@ -21,9 +20,8 @@ define i1 @combine_masked_i32(i32 %x) {
 define i1 @combine_masked_i64(i64 %x) {
 ; CHECK-LABEL: combine_masked_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #9218868437227405312 // =0x7ff0000000000000
-; CHECK-NEXT:    and x9, x0, #0x7fffffffffffffff
-; CHECK-NEXT:    cmp x9, x8
+; CHECK-NEXT:    mov x8, #-9007199254740992 // =0xffe0000000000000
+; CHECK-NEXT:    cmp x8, x0, lsl #1
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %and = and i64 %x, u0x7fffffffffffffff
@@ -35,9 +33,8 @@ define i1 @combine_masked_i64(i64 %x) {
 define i1 @combine_masked_ne(i32 %x) {
 ; CHECK-LABEL: combine_masked_ne:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #2139095040 // =0x7f800000
-; CHECK-NEXT:    and w9, w0, #0x7fffffff
-; CHECK-NEXT:    cmp w9, w8
+; CHECK-NEXT:    mov w8, #-16777216 // =0xff000000
+; CHECK-NEXT:    cmp w8, w0, lsl #1
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %and = and i32 %x, u0x7fffffff
@@ -48,9 +45,8 @@ define i1 @combine_masked_ne(i32 %x) {
 define i1 @combine_masked_lsl4(i32 %x) {
 ; CHECK-LABEL: combine_masked_lsl4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #260046848 // =0xf800000
-; CHECK-NEXT:    and w9, w0, #0xfffffff
-; CHECK-NEXT:    cmp w9, w8
+; CHECK-NEXT:    mov w8, #-134217728 // =0xf8000000
+; CHECK-NEXT:    cmp w8, w0, lsl #4
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %and = and i32 %x, u0x0fffffff
