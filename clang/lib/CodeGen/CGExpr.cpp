@@ -1629,12 +1629,13 @@ LValue CodeGenFunction::EmitCheckedLValue(const Expr *E, TypeCheckKind TCK) {
 /// length type, this is not possible.
 ///
 LValue CodeGenFunction::EmitLValue(const Expr *E,
-                                   KnownNonNull_t IsKnownNonNull) {
+                                   KnownNonNull_t IsKnownNonNull, bool SuppressLocation) {
   // Running with sufficient stack space to avoid deeply nested expressions
   // cause a stack overflow.
   LValue LV;
-  CGM.runWithSufficientStackSpace(
-      E->getExprLoc(), [&] { LV = EmitLValueHelper(E, IsKnownNonNull); });
+  CGM.runWithSufficientStackSpace(E->getExprLoc(), [&] {
+    LV = EmitLValueHelper(E, IsKnownNonNull, SuppressLocation);
+  });
 
   if (IsKnownNonNull && !LV.isKnownNonNull())
     LV.setKnownNonNull();
@@ -1650,8 +1651,11 @@ static QualType getConstantExprReferredType(const FullExpr *E,
 }
 
 LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
-                                         KnownNonNull_t IsKnownNonNull) {
-  ApplyDebugLocation DL(*this, E);
+                                         KnownNonNull_t IsKnownNonNull,
+                                         bool SuppressLocation) {
+  std::optional<ApplyDebugLocation> DL;
+  if (!SuppressLocation)
+    DL.emplace(*this, E);
   switch (E->getStmtClass()) {
   default: return EmitUnsupportedLValue(E, "l-value expression");
 
@@ -3387,7 +3391,7 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
       auto *FD = LambdaCaptureFields.lookup(BD);
       return EmitCapturedFieldLValue(*this, FD, CXXABIThisValue);
     }
-    return EmitLValue(BD->getBinding());
+    return EmitLValue(BD->getBinding(), NotKnownNonNull, true);
   }
 
   // We can form DeclRefExprs naming GUID declarations when reconstituting
