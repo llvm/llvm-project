@@ -598,7 +598,10 @@ template <class T>
 #    define _LIBCPP_STDATOMIC_H_HAS_DEFINITELY_BEEN_INCLUDED 0
 #  endif
 
-#  if _LIBCPP_STD_VER < 23 && _LIBCPP_STDATOMIC_H_HAS_DEFINITELY_BEEN_INCLUDED
+// The Android LLVM toolchain has historically allowed combining the <atomic>
+// and <stdatomic.h> headers in dialects before C++23, so for backwards
+// compatibility, preserve that ability when targeting Android.
+#  if _LIBCPP_STD_VER < 23 && !defined(__ANDROID__) && _LIBCPP_STDATOMIC_H_HAS_DEFINITELY_BEEN_INCLUDED
 #    error <atomic> is incompatible with <stdatomic.h> before C++23. Please compile with -std=c++23.
 #  endif
 
