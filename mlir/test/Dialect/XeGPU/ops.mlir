@@ -763,9 +763,9 @@ gpu.func @create_matrix_desc() {
 // CHECK-LABEL: gpu.func @create_matrix_desc_with_stride({{.*}}) {
 gpu.func @create_matrix_desc_with_stride() {
   //CHECK: [[alloc:%.+]] = memref.alloca() {alignment = 1024 : i64} : memref<2048xi8, 3>
-  //CHECK: [[mdesc:%.+]] = xegpu.create_matrix_desc [[alloc]] : memref<2048xi8, 3> -> !xegpu.matrix_desc<16x64xf16, strided<[1, 16]>>
+  //CHECK: [[mdesc:%.+]] = xegpu.create_matrix_desc [[alloc]] : memref<2048xi8, 3> -> !xegpu.matrix_desc<16x64xf16, #xegpu.mem_layout<stride = [1, 16]>>
   %m = memref.alloca() {alignment = 1024} : memref<2048xi8, 3>
-  %matrix_desc = xegpu.create_matrix_desc %m : memref<2048xi8, 3> -> !xegpu.matrix_desc<16x64xf16, strided<[1, 16]>>
+  %matrix_desc = xegpu.create_matrix_desc %m : memref<2048xi8, 3> -> !xegpu.matrix_desc<16x64xf16, #xegpu.mem_layout<stride = [1, 16]>>
   gpu.return
 }
 
@@ -776,10 +776,10 @@ gpu.func @load_matrix_desc(%arg0: !xegpu.matrix_desc<16x64xf16>) {
   gpu.return
 }
 
-// CHECK: gpu.func @load_matrix_desc_with_stride(%arg0: !xegpu.matrix_desc<16x64xf16, strided<[1, 16]>>)
-gpu.func @load_matrix_desc_with_stride(%arg0: !xegpu.matrix_desc<16x64xf16, strided<[1, 16]>>) {
-  // CHECK: xegpu.load_matrix [[ARG0]][8, 8] : !xegpu.matrix_desc<16x64xf16, strided<[1, 16]>> -> vector<8x16xf16>
-  %data = xegpu.load_matrix %arg0[8, 8]: !xegpu.matrix_desc<16x64xf16, strided<[1, 16]>> -> vector<8x16xf16>
+// CHECK: gpu.func @load_matrix_desc_with_stride(%arg0: !xegpu.matrix_desc<16x64xf16, #xegpu.mem_layout<stride = [1, 16]>>)
+gpu.func @load_matrix_desc_with_stride(%arg0: !xegpu.matrix_desc<16x64xf16, #xegpu.mem_layout<stride = [1, 16]>>) {
+  // CHECK: xegpu.load_matrix [[ARG0]][8, 8] : !xegpu.matrix_desc<16x64xf16, #xegpu.mem_layout<stride = [1, 16]>> -> vector<8x16xf16>
+  %data = xegpu.load_matrix %arg0[8, 8]: !xegpu.matrix_desc<16x64xf16, #xegpu.mem_layout<stride = [1, 16]>> -> vector<8x16xf16>
   gpu.return
 }
 
@@ -791,31 +791,31 @@ gpu.func @store_matrix_desc(%arg0: !xegpu.matrix_desc<16x64xf16>, %arg1: vector<
   gpu.return
 }
 
-// CHECK: gpu.func @store_matrix_desc_with_stride([[ARG0:%.+]]: !xegpu.matrix_desc<16x64xf16, strided<[1, 16]>>, [[ARG1:%.+]]: vector<16x16xf16>)
-gpu.func @store_matrix_desc_with_stride(%arg0: !xegpu.matrix_desc<16x64xf16, strided<[1, 16]>>, %arg1: vector<16x16xf16>) {
-  // CHECK: xegpu.store_matrix [[ARG1]], [[ARG0]][8, 8] : vector<16x16xf16>, !xegpu.matrix_desc<16x64xf16, strided<[1, 16]>>
-  xegpu.store_matrix %arg1, %arg0[8, 8]: vector<16x16xf16>, !xegpu.matrix_desc<16x64xf16, strided<[1, 16]>>
+// CHECK: gpu.func @store_matrix_desc_with_stride([[ARG0:%.+]]: !xegpu.matrix_desc<16x64xf16, #xegpu.mem_layout<stride = [1, 16]>>, [[ARG1:%.+]]: vector<16x16xf16>)
+gpu.func @store_matrix_desc_with_stride(%arg0: !xegpu.matrix_desc<16x64xf16, #xegpu.mem_layout<stride = [1, 16]>>, %arg1: vector<16x16xf16>) {
+  // CHECK: xegpu.store_matrix [[ARG1]], [[ARG0]][8, 8] : vector<16x16xf16>, !xegpu.matrix_desc<16x64xf16, #xegpu.mem_layout<stride = [1, 16]>>
+  xegpu.store_matrix %arg1, %arg0[8, 8]: vector<16x16xf16>, !xegpu.matrix_desc<16x64xf16, #xegpu.mem_layout<stride = [1, 16]>>
   gpu.return
 }
 
 // CHECK: gpu.func @matrix_desc_subview([[ARG0:%.+]]: !xegpu.matrix_desc<16x64xf16>)
 gpu.func @matrix_desc_subview(%arg0: !xegpu.matrix_desc<16x64xf16>) {
-  //CHECK: xegpu.matrix_desc_subview [[ARG0]][8, 8] : !xegpu.matrix_desc<16x64xf16> -> !xegpu.matrix_desc<8x16xf16>
-  %data = xegpu.matrix_desc_subview %arg0[8, 8]: !xegpu.matrix_desc<16x64xf16> -> !xegpu.matrix_desc<8x16xf16>
+  //CHECK: xegpu.matrix_desc_subview [[ARG0]][8, 8] : !xegpu.matrix_desc<16x64xf16> -> !xegpu.matrix_desc<8x16xf16, #xegpu.mem_layout<stride = [64, 1]>>
+  %data = xegpu.matrix_desc_subview %arg0[8, 8]: !xegpu.matrix_desc<16x64xf16> -> !xegpu.matrix_desc<8x16xf16, #xegpu.mem_layout<stride = [64, 1]>>
   gpu.return
 }
 
 // CHECK: gpu.func @matrix_desc_subview_lower_rank([[ARG0:%.+]]: !xegpu.matrix_desc<16x64xf16>)
 gpu.func @matrix_desc_subview_lower_rank(%arg0: !xegpu.matrix_desc<16x64xf16>) {
-  //CHECK: xegpu.matrix_desc_subview [[ARG0]][8, 8] : !xegpu.matrix_desc<16x64xf16> -> !xegpu.matrix_desc<16xf16>
-  %data = xegpu.matrix_desc_subview %arg0[8, 8]: !xegpu.matrix_desc<16x64xf16> -> !xegpu.matrix_desc<16xf16>
+  //CHECK: xegpu.matrix_desc_subview [[ARG0]][8, 8] : !xegpu.matrix_desc<16x64xf16> -> !xegpu.matrix_desc<16xf16, #xegpu.mem_layout<stride = [64, 1]>>
+  %data = xegpu.matrix_desc_subview %arg0[8, 8]: !xegpu.matrix_desc<16x64xf16> -> !xegpu.matrix_desc<16xf16, #xegpu.mem_layout<stride = [64, 1]>>
   gpu.return
 }
 
-// CHECK: gpu.func @matrix_desc_subview_with_stride([[ARG0:%.+]]: !xegpu.matrix_desc<16x64xf16, strided<[1, 16]>>)
-gpu.func @matrix_desc_subview_with_stride(%arg0: !xegpu.matrix_desc<16x64xf16, strided<[1, 16]>>) {
-  //CHECK: xegpu.matrix_desc_subview [[ARG0]][8, 8] : !xegpu.matrix_desc<16x64xf16, strided<[1, 16]>> -> !xegpu.matrix_desc<8x16xf16, strided<[1, 16]>>
-  %data = xegpu.matrix_desc_subview %arg0[8, 8]: !xegpu.matrix_desc<16x64xf16, strided<[1, 16]>> -> !xegpu.matrix_desc<8x16xf16, strided<[1, 16]>>
+// CHECK: gpu.func @matrix_desc_subview_with_stride([[ARG0:%.+]]: !xegpu.matrix_desc<16x64xf16, #xegpu.mem_layout<stride = [1, 16]>>)
+gpu.func @matrix_desc_subview_with_stride(%arg0: !xegpu.matrix_desc<16x64xf16, #xegpu.mem_layout<stride = [1, 16]>>) {
+  //CHECK: xegpu.matrix_desc_subview [[ARG0]][8, 8] : !xegpu.matrix_desc<16x64xf16, #xegpu.mem_layout<stride = [1, 16]>> -> !xegpu.matrix_desc<8x16xf16, #xegpu.mem_layout<stride = [1, 16]>>
+  %data = xegpu.matrix_desc_subview %arg0[8, 8]: !xegpu.matrix_desc<16x64xf16, #xegpu.mem_layout<stride = [1, 16]>> -> !xegpu.matrix_desc<8x16xf16, #xegpu.mem_layout<stride = [1, 16]>>
   gpu.return
 }
 

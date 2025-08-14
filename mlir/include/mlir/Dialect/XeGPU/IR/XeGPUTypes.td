@@ -210,13 +210,27 @@ def XeGPU_MatrixDesc: XeGPUTypeDef<"MatrixDesc", "matrix_desc", [ShapedTypeInter
   }];
   let parameters = (ins ArrayRefParameter<"int64_t">: $shape,
                         "mlir::Type": $elementType,
-                        OptionalParameter<"mlir::Attribute">: $layout);
+                        OptionalParameter<"MemLayoutAttr">: $mem_layout);
 
   let extraClassDeclaration = [{
     bool hasRank() const { return true; }
 
     MatrixDescType cloneWith(std::optional<llvm::ArrayRef<int64_t>> shape, Type elementType) const {
-      return MatrixDescType::get(getContext(), shape.value_or(getShape()), elementType, getLayout());
+      return MatrixDescType::get(getContext(), shape.value_or(getShape()), elementType, getMemLayout());
+    }
+
+    ArrayAttr getStrides() {
+      auto layout = getMemLayout();
+      if (layout && layout.hasAttr("stride")) {
+        return layout.getStrides();
+      }
+
+      // derive and return default strides
+      SmallVector<int64_t> defaultStrides;
+      llvm::append_range(defaultStrides, getShape().drop_front());
+      llvm::append_values(defaultStrides, 1);
+      Builder builder(getContext());
+      return builder.getI64ArrayAttr(defaultStrides);
     }
   }];
 

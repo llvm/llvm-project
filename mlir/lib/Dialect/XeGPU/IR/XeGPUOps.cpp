@@ -1015,8 +1015,8 @@ LogicalResult MatrixDescSubviewOp::verify() {
           [](auto p) { return std::get<0>(p) > std::get<1>(p); }))
     return emitOpError("result shape must not exceed source shape.");
 
-  if (srcTy.getLayout() != resTy.getLayout())
-    return emitOpError("result must inherit the source layout.");
+  if (srcTy.getStrides() != resTy.getStrides())
+    return emitOpError("result must inherit the source strides.");
 
   return success();
 }
