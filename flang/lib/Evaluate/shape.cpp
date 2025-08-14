@@ -47,17 +47,6 @@ bool IsExplicitShape(const Symbol &original) {
   }
 }
 
-bool IsExplicitShape(const Shape &shape) {
-  // If extent expression is present for all dimensions, then assume
-  // explicit shape.
-  for (const auto &dim : shape) {
-    if (!dim) {
-      return false;
-    }
-  }
-  return true;
-}
-
 Shape GetShapeHelper::ConstantShape(const Constant<ExtentType> &arrayConstant) {
   CHECK(arrayConstant.Rank() == 1);
   Shape result;

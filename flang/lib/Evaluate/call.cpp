@@ -300,6 +300,13 @@ static void DetermineCopyInOutArgument(
     actual.SetMayNeedCopyIn();
     return;
   }
+  // All the checks below are for arrays
+  bool actualIsArray{actual.Rank() > 0};
+  bool dummyIsArray{dummyObj->type.Rank() > 0};
+  if (!actualIsArray || !dummyIsArray) {
+    return;
+  }
+
   bool dummyIntentIn{dummyObj->intent == common::Intent::In};
   bool dummyIntentOut{dummyObj->intent == common::Intent::Out};
 
@@ -316,27 +323,17 @@ static void DetermineCopyInOutArgument(
     }
   };
 
-  bool actualIsArray{actual.Rank() > 0};
-  if (!actualIsArray) {
-    return;
-  }
-
   // Check actual contiguity, unless dummy doesn't care
   bool actualTreatAsContiguous{
       dummyObj->ignoreTKR.test(common::IgnoreTKR::Contiguous) ||
       IsSimplyContiguous(actual, sc.foldingContext())};
-
   bool actualHasVectorSubscript{HasVectorSubscript(actual)};
-
-  bool dummyIsArray{dummyObj->type.Rank() > 0};
-  bool dummyIsExplicitShape{
-      dummyIsArray ? IsExplicitShape(*dummyObj->type.shape()) : false};
+  bool dummyIsExplicitShape{dummyObj->type.IsExplicitShape()};
   bool dummyIsAssumedSize{dummyObj->type.attrs().test(
       characteristics::TypeAndShape::Attr::AssumedSize)};
-  bool dummyNeedsContiguity{dummyIsArray &&
-      (dummyIsExplicitShape || dummyIsAssumedSize ||
-          dummyObj->attrs.test(
-              characteristics::DummyDataObject::Attr::Contiguous))};
+  bool dummyNeedsContiguity{dummyIsExplicitShape || dummyIsAssumedSize ||
+      dummyObj->attrs.test(
+          characteristics::DummyDataObject::Attr::Contiguous)};
   if (!actualTreatAsContiguous && dummyNeedsContiguity) {
     setCopyIn();
     // Cannot do copy-out for vector subscripts: there could be repeated
@@ -349,7 +346,9 @@ static void DetermineCopyInOutArgument(
 
   if (!dummyObj->ignoreTKR.test(common::IgnoreTKR::Type)) {
     // flang supports limited cases of passing polymorphic to non-polimorphic.
-    // These cases require temporary of non-polymorphic type.
+    // These cases require temporary of non-polymorphic type. (For example,
+    // the actual argument could be polymorphic array of child type,
+    // while the dummy argument could be non-polymorphic array of parent type.)
     auto actualType{characteristics::TypeAndShape::Characterize(
         actual, sc.foldingContext())};
     bool actualIsPolymorphic{actualType->type().IsPolymorphic()};
