@@ -165,7 +165,7 @@ set common_cmake_flags=^
   -DCMAKE_C_FLAGS="%common_compiler_flags%" ^
   -DCMAKE_CXX_FLAGS="%common_compiler_flags%" ^
   -DLLVM_ENABLE_RPMALLOC=ON ^
-  -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;compiler-rt;lldb;openmp"
+  -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;compiler-rt;lldb;openmp;flang"
 
 if "%force-msvc%" == "" (
   where /q clang-cl
@@ -532,3 +532,4 @@ exit /b 0
 
 :parse_args_done
 exit /b 0
+
