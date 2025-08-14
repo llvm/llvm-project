@@ -770,7 +770,8 @@ bool VectorCombine::foldInsExtBinop(Instruction &I) {
     return false;
 
   // Avoid splitting the unfoldable constant expression binop(x,y), otherwise
-  // binop(insert(x,a,idx),insert(y,b,idx)) may be folded back and forth.
+  // binop(insert(x,a,idx),insert(y,b,idx)) may be folded back and forth due to
+  // the possible cost table mismatch.
   if (match(VecBinOp, m_BinOp(m_Constant(), m_Constant())))
     return false;
 
