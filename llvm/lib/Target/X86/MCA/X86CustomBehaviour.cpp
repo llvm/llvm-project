@@ -38,6 +38,9 @@ void X86InstrPostProcess::setMemBarriers(std::unique_ptr<Instruction> &Inst,
 
 void X86InstrPostProcess::useStackEngine(std::unique_ptr<Instruction> &Inst,
                                          const MCInst &MCI) {
+  // TODO(boomanaiden154): We currently do not handle PUSHF/POPF because we
+  // have not done the necessary benchmarking to see if they are also
+  // optimized by the stack engine.
   if (X86::isPOP(MCI.getOpcode()) || X86::isPUSH(MCI.getOpcode())) {
     auto *StackRegisterDef =
         llvm::find_if(Inst->getDefs(), [](const WriteState &State) {
