@@ -103,14 +103,14 @@ multiclass avx10_minmax_packed<string OpStr, AVX512VLVectorVTInfo VTI, SDNode Op
 }
 
 multiclass avx10_minmax_scalar<string OpStr, X86VectorVTInfo _, SDNode OpNode,
-                                SDNode OpNodeSAE> {
+                                SDNode OpNodeSAE, ValueType CT> {
   let ExeDomain = _.ExeDomain, Predicates = [HasAVX10_2] in {
     let mayRaiseFPException = 1 in {
       let isCodeGenOnly = 1 in {
         def rri : AVX512Ii8<0x53, MRMSrcReg, (outs _.FRC:$dst),
                             (ins _.FRC:$src1, _.FRC:$src2, i32u8imm:$src3),
                              !strconcat(OpStr, "\t{$src3, $src2, $src1|$src1, $src2, $src3}"),
-                             [(set _.FRC:$dst, (OpNode _.FRC:$src1, _.FRC:$src2, (i32 timm:$src3)))]>,
+                             [(set _.FRC:$dst, (OpNode (CT _.FRC:$src1), (CT _.FRC:$src2), (i32 timm:$src3)))]>,
                        Sched<[WriteFMAX]>;
 
         def rmi : AVX512Ii8<0x53, MRMSrcMem, (outs _.FRC:$dst),
@@ -165,11 +165,11 @@ defm VMINMAXPS : avx10_minmax_packed<"vminmaxps", avx512vl_f32_info, X86vminmax>
                  avx10_minmax_packed_sae<"vminmaxps", avx512vl_f32_info, X86vminmaxSae>,
                  AVX512PDIi8Base, TA, EVEX_CD8<32, CD8VF>;
 
-defm VMINMAXSD : avx10_minmax_scalar<"vminmaxsd", v2f64x_info, X86vminmaxs, X86vminmaxsSae>,
+defm VMINMAXSD : avx10_minmax_scalar<"vminmaxsd", v2f64x_info, X86vminmaxs, X86vminmaxsSae, f64>,
                  AVX512AIi8Base, VEX_LIG, EVEX, VVVV, EVEX_CD8<64, CD8VT1>, REX_W;
-defm VMINMAXSH : avx10_minmax_scalar<"vminmaxsh", v8f16x_info, X86vminmaxs, X86vminmaxsSae>,
+defm VMINMAXSH : avx10_minmax_scalar<"vminmaxsh", v8f16x_info, X86vminmaxs, X86vminmaxsSae, f16>,
                  AVX512PSIi8Base, VEX_LIG, EVEX, VVVV, EVEX_CD8<16, CD8VT1>, TA;
-defm VMINMAXSS : avx10_minmax_scalar<"vminmaxss", v4f32x_info, X86vminmaxs, X86vminmaxsSae>,
+defm VMINMAXSS : avx10_minmax_scalar<"vminmaxss", v4f32x_info, X86vminmaxs, X86vminmaxsSae, f32>,
                  AVX512AIi8Base, VEX_LIG, EVEX, VVVV, EVEX_CD8<32, CD8VT1>;
 
 //-------------------------------------------------
