@@ -3325,7 +3325,7 @@ bool AMDGPUDAGToDAGISel::SelectVOP3ModsImpl(SDValue In, SDValue &Src,
 
   auto ReplaceSrc = [&]() -> SDValue {
     if (Src->getOpcode() != ISD::EXTRACT_VECTOR_ELT)
-      return PeekSrc.getOperand(0);
+      return Src.getOperand(0);
 
     SDValue LHS = PeekSrc->getOperand(0);
     SDValue Index = Src->getOperand(1);
