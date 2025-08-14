@@ -710,28 +710,28 @@ implicit none
   end interface
 
   interface __ddiv_rn
-    attributes(device) double precision function __ddiv_rn(x,y) bind(c)
+    attributes(device) double precision function __ddiv_rn(x,y) bind(c, name='__nv_ddiv_rn')
       !dir$ ignore_tkr (d) x, (d) y
       double precision, value :: x, y
     end function
   end interface
 
   interface __ddiv_rz
-    attributes(device) double precision function __ddiv_rz(x,y) bind(c)
+    attributes(device) double precision function __ddiv_rz(x,y) bind(c, name='__nv_ddiv_rz')
       !dir$ ignore_tkr (d) x, (d) y
       double precision, value :: x, y
     end function
   end interface
 
   interface __ddiv_ru
-    attributes(device) double precision function __ddiv_ru(x,y) bind(c)
+    attributes(device) double precision function __ddiv_ru(x,y) bind(c, name='__nv_ddiv_ru')
       !dir$ ignore_tkr (d) x, (d) y
       double precision, value :: x, y
     end function
   end interface
 
   interface __ddiv_rd
-    attributes(device) double precision function __ddiv_rd(x,y) bind(c)
+    attributes(device) double precision function __ddiv_rd(x,y) bind(c, name='__nv_ddiv_rd')
       !dir$ ignore_tkr (d) x, (d) y
       double precision, value :: x, y
     end function
