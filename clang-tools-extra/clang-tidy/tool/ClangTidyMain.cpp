@@ -162,14 +162,19 @@ in .clang-tidy file, if any.
                                    cl::init(false), cl::cat(ClangTidyCategory));
 
 static cl::opt<std::string> LineFilter("line-filter", desc(R"(
-List of files with line ranges to filter the
-warnings. Can be used together with
--header-filter. The format of the list is a
-JSON array of objects:
+List of files and line ranges to output diagnostics from.
+The range is inclusive on both ends. Can be used together
+with -header-filter. The format of the list is a JSON
+array of objects. For example:
+
   [
     {"name":"file1.cpp","lines":[[1,3],[5,7]]},
     {"name":"file2.h"}
   ]
+
+This will output diagnostics from 'file1.cpp' only for
+the line ranges [1,3] and [5,7], as well as all from the
+entire 'file2.h'.
 )"),
                                        cl::init(""),
                                        cl::cat(ClangTidyCategory));

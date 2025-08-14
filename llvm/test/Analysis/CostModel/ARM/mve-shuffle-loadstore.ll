@@ -7,41 +7,41 @@
 define void @vld2(ptr %p) {
 ; CHECK-LABEL: 'vld2'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i8 = load <4 x i8>, ptr %p, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v4i8_0 = shufflevector <4 x i8> %v4i8, <4 x i8> undef, <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v4i8_1 = shufflevector <4 x i8> %v4i8, <4 x i8> undef, <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v4i8_0 = shufflevector <4 x i8> %v4i8, <4 x i8> undef, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v4i8_1 = shufflevector <4 x i8> %v4i8, <4 x i8> undef, <2 x i32> <i32 1, i32 3>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i8 = load <8 x i8>, ptr %p, align 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %v8i8_0 = shufflevector <8 x i8> %v8i8, <8 x i8> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %v8i8_1 = shufflevector <8 x i8> %v8i8, <8 x i8> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v8i8_0 = shufflevector <8 x i8> %v8i8, <8 x i8> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v8i8_1 = shufflevector <8 x i8> %v8i8, <8 x i8> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i8 = load <16 x i8>, ptr %p, align 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 384 for instruction: %v16i8_0 = shufflevector <16 x i8> %v16i8, <16 x i8> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 384 for instruction: %v16i8_1 = shufflevector <16 x i8> %v16i8, <16 x i8> undef, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 130 for instruction: %v16i8_0 = shufflevector <16 x i8> %v16i8, <16 x i8> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 130 for instruction: %v16i8_1 = shufflevector <16 x i8> %v16i8, <16 x i8> undef, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v32i8 = load <32 x i8>, ptr %p, align 32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 768 for instruction: %v32i8_0 = shufflevector <32 x i8> %v32i8, <32 x i8> undef, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 768 for instruction: %v32i8_1 = shufflevector <32 x i8> %v32i8, <32 x i8> undef, <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 258 for instruction: %v32i8_0 = shufflevector <32 x i8> %v32i8, <32 x i8> undef, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 258 for instruction: %v32i8_1 = shufflevector <32 x i8> %v32i8, <32 x i8> undef, <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i16 = load <4 x i16>, ptr %p, align 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v4i16_0 = shufflevector <4 x i16> %v4i16, <4 x i16> undef, <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v4i16_1 = shufflevector <4 x i16> %v4i16, <4 x i16> undef, <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v4i16_0 = shufflevector <4 x i16> %v4i16, <4 x i16> undef, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v4i16_1 = shufflevector <4 x i16> %v4i16, <4 x i16> undef, <2 x i32> <i32 1, i32 3>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i16 = load <8 x i16>, ptr %p, align 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %v8i16_0 = shufflevector <8 x i16> %v8i16, <8 x i16> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %v8i16_1 = shufflevector <8 x i16> %v8i16, <8 x i16> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v8i16_0 = shufflevector <8 x i16> %v8i16, <8 x i16> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v8i16_1 = shufflevector <8 x i16> %v8i16, <8 x i16> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v16i16 = load <16 x i16>, ptr %p, align 32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 384 for instruction: %v16i16_0 = shufflevector <16 x i16> %v16i16, <16 x i16> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 384 for instruction: %v16i16_1 = shufflevector <16 x i16> %v16i16, <16 x i16> undef, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 130 for instruction: %v16i16_0 = shufflevector <16 x i16> %v16i16, <16 x i16> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 130 for instruction: %v16i16_1 = shufflevector <16 x i16> %v16i16, <16 x i16> undef, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v32i16 = load <32 x i16>, ptr %p, align 64
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 768 for instruction: %v32i16_0 = shufflevector <32 x i16> %v32i16, <32 x i16> undef, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 768 for instruction: %v32i16_1 = shufflevector <32 x i16> %v32i16, <32 x i16> undef, <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 258 for instruction: %v32i16_0 = shufflevector <32 x i16> %v32i16, <32 x i16> undef, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 258 for instruction: %v32i16_1 = shufflevector <32 x i16> %v32i16, <32 x i16> undef, <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i32 = load <4 x i32>, ptr %p, align 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v4i32_0 = shufflevector <4 x i32> %v4i32, <4 x i32> undef, <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v4i32_1 = shufflevector <4 x i32> %v4i32, <4 x i32> undef, <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v4i32_0 = shufflevector <4 x i32> %v4i32, <4 x i32> undef, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v4i32_1 = shufflevector <4 x i32> %v4i32, <4 x i32> undef, <2 x i32> <i32 1, i32 3>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v8i32 = load <8 x i32>, ptr %p, align 32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %v8i32_0 = shufflevector <8 x i32> %v8i32, <8 x i32> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %v8i32_1 = shufflevector <8 x i32> %v8i32, <8 x i32> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v8i32_0 = shufflevector <8 x i32> %v8i32, <8 x i32> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v8i32_1 = shufflevector <8 x i32> %v8i32, <8 x i32> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v16i32 = load <16 x i32>, ptr %p, align 64
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 384 for instruction: %v16i32_0 = shufflevector <16 x i32> %v16i32, <16 x i32> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 384 for instruction: %v16i32_1 = shufflevector <16 x i32> %v16i32, <16 x i32> undef, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 130 for instruction: %v16i32_0 = shufflevector <16 x i32> %v16i32, <16 x i32> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 130 for instruction: %v16i32_1 = shufflevector <16 x i32> %v16i32, <16 x i32> undef, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v32i32 = load <32 x i32>, ptr %p, align 128
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 768 for instruction: %v32i32_0 = shufflevector <32 x i32> %v32i32, <32 x i32> undef, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 768 for instruction: %v32i32_1 = shufflevector <32 x i32> %v32i32, <32 x i32> undef, <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 260 for instruction: %v32i32_0 = shufflevector <32 x i32> %v32i32, <32 x i32> undef, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 260 for instruction: %v32i32_1 = shufflevector <32 x i32> %v32i32, <32 x i32> undef, <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2i64 = load <4 x i64>, ptr %p, align 32
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %v2i64_0 = shufflevector <4 x i64> %v2i64, <4 x i64> undef, <2 x i32> <i32 0, i32 2>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %v2i64_1 = shufflevector <4 x i64> %v2i64, <4 x i64> undef, <2 x i32> <i32 1, i32 3>
@@ -252,88 +252,171 @@ define void @vld3(ptr %p) {
 }
 
 define void @vld4(ptr %p) {
-; CHECK-LABEL: 'vld4'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i8 = load <8 x i8>, ptr %p, align 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %v2i8_0 = shufflevector <8 x i8> %v2i8, <8 x i8> undef, <2 x i32> <i32 0, i32 4>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %v2i8_1 = shufflevector <8 x i8> %v2i8, <8 x i8> undef, <2 x i32> <i32 1, i32 5>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %v2i8_2 = shufflevector <8 x i8> %v2i8, <8 x i8> undef, <2 x i32> <i32 2, i32 6>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %v2i8_3 = shufflevector <8 x i8> %v2i8, <8 x i8> undef, <2 x i32> <i32 3, i32 7>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i8 = load <16 x i8>, ptr %p, align 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v4i8_0 = shufflevector <16 x i8> %v4i8, <16 x i8> undef, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v4i8_1 = shufflevector <16 x i8> %v4i8, <16 x i8> undef, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v4i8_2 = shufflevector <16 x i8> %v4i8, <16 x i8> undef, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v4i8_3 = shufflevector <16 x i8> %v4i8, <16 x i8> undef, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v8i8 = load <32 x i8>, ptr %p, align 32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 640 for instruction: %v8i8_0 = shufflevector <32 x i8> %v8i8, <32 x i8> undef, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 640 for instruction: %v8i8_1 = shufflevector <32 x i8> %v8i8, <32 x i8> undef, <8 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 640 for instruction: %v8i8_2 = shufflevector <32 x i8> %v8i8, <32 x i8> undef, <8 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 640 for instruction: %v8i8_3 = shufflevector <32 x i8> %v8i8, <32 x i8> undef, <8 x i32> <i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v16i8 = load <64 x i8>, ptr %p, align 64
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1280 for instruction: %v16i8_0 = shufflevector <64 x i8> %v16i8, <64 x i8> undef, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 32, i32 36, i32 40, i32 44, i32 48, i32 52, i32 56, i32 60>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1280 for instruction: %v16i8_1 = shufflevector <64 x i8> %v16i8, <64 x i8> undef, <16 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29, i32 33, i32 37, i32 41, i32 45, i32 49, i32 53, i32 57, i32 61>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1280 for instruction: %v16i8_2 = shufflevector <64 x i8> %v16i8, <64 x i8> undef, <16 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30, i32 34, i32 38, i32 42, i32 46, i32 50, i32 54, i32 58, i32 62>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1280 for instruction: %v16i8_3 = shufflevector <64 x i8> %v16i8, <64 x i8> undef, <16 x i32> <i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31, i32 35, i32 39, i32 43, i32 47, i32 51, i32 55, i32 59, i32 63>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i16 = load <8 x i16>, ptr %p, align 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %v2i16_0 = shufflevector <8 x i16> %v2i16, <8 x i16> undef, <2 x i32> <i32 0, i32 4>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %v2i16_1 = shufflevector <8 x i16> %v2i16, <8 x i16> undef, <2 x i32> <i32 1, i32 5>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %v2i16_2 = shufflevector <8 x i16> %v2i16, <8 x i16> undef, <2 x i32> <i32 2, i32 6>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %v2i16_3 = shufflevector <8 x i16> %v2i16, <8 x i16> undef, <2 x i32> <i32 3, i32 7>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4i16 = load <16 x i16>, ptr %p, align 32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v4i16_0 = shufflevector <16 x i16> %v4i16, <16 x i16> undef, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v4i16_1 = shufflevector <16 x i16> %v4i16, <16 x i16> undef, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v4i16_2 = shufflevector <16 x i16> %v4i16, <16 x i16> undef, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v4i16_3 = shufflevector <16 x i16> %v4i16, <16 x i16> undef, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v8i16 = load <32 x i16>, ptr %p, align 64
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 640 for instruction: %v8i16_0 = shufflevector <32 x i16> %v8i16, <32 x i16> undef, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 640 for instruction: %v8i16_1 = shufflevector <32 x i16> %v8i16, <32 x i16> undef, <8 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 640 for instruction: %v8i16_2 = shufflevector <32 x i16> %v8i16, <32 x i16> undef, <8 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 640 for instruction: %v8i16_3 = shufflevector <32 x i16> %v8i16, <32 x i16> undef, <8 x i32> <i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v16i16 = load <64 x i16>, ptr %p, align 128
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1280 for instruction: %v16i16_0 = shufflevector <64 x i16> %v16i16, <64 x i16> undef, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 32, i32 36, i32 40, i32 44, i32 48, i32 52, i32 56, i32 60>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1280 for instruction: %v16i16_1 = shufflevector <64 x i16> %v16i16, <64 x i16> undef, <16 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29, i32 33, i32 37, i32 41, i32 45, i32 49, i32 53, i32 57, i32 61>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1280 for instruction: %v16i16_2 = shufflevector <64 x i16> %v16i16, <64 x i16> undef, <16 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30, i32 34, i32 38, i32 42, i32 46, i32 50, i32 54, i32 58, i32 62>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1280 for instruction: %v16i16_3 = shufflevector <64 x i16> %v16i16, <64 x i16> undef, <16 x i32> <i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31, i32 35, i32 39, i32 43, i32 47, i32 51, i32 55, i32 59, i32 63>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2i32 = load <8 x i32>, ptr %p, align 32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %v2i32_0 = shufflevector <8 x i32> %v2i32, <8 x i32> undef, <2 x i32> <i32 0, i32 4>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %v2i32_1 = shufflevector <8 x i32> %v2i32, <8 x i32> undef, <2 x i32> <i32 1, i32 5>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %v2i32_2 = shufflevector <8 x i32> %v2i32, <8 x i32> undef, <2 x i32> <i32 2, i32 6>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %v2i32_3 = shufflevector <8 x i32> %v2i32, <8 x i32> undef, <2 x i32> <i32 3, i32 7>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4i32 = load <16 x i32>, ptr %p, align 64
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v4i32_0 = shufflevector <16 x i32> %v4i32, <16 x i32> undef, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v4i32_1 = shufflevector <16 x i32> %v4i32, <16 x i32> undef, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v4i32_2 = shufflevector <16 x i32> %v4i32, <16 x i32> undef, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v4i32_3 = shufflevector <16 x i32> %v4i32, <16 x i32> undef, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8i32 = load <32 x i32>, ptr %p, align 128
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 640 for instruction: %v8i32_0 = shufflevector <32 x i32> %v8i32, <32 x i32> undef, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 640 for instruction: %v8i32_1 = shufflevector <32 x i32> %v8i32, <32 x i32> undef, <8 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 640 for instruction: %v8i32_2 = shufflevector <32 x i32> %v8i32, <32 x i32> undef, <8 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 640 for instruction: %v8i32_3 = shufflevector <32 x i32> %v8i32, <32 x i32> undef, <8 x i32> <i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16i32 = load <64 x i32>, ptr %p, align 256
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1280 for instruction: %v16i32_0 = shufflevector <64 x i32> %v16i32, <64 x i32> undef, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 32, i32 36, i32 40, i32 44, i32 48, i32 52, i32 56, i32 60>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1280 for instruction: %v16i32_1 = shufflevector <64 x i32> %v16i32, <64 x i32> undef, <16 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29, i32 33, i32 37, i32 41, i32 45, i32 49, i32 53, i32 57, i32 61>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1280 for instruction: %v16i32_2 = shufflevector <64 x i32> %v16i32, <64 x i32> undef, <16 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30, i32 34, i32 38, i32 42, i32 46, i32 50, i32 54, i32 58, i32 62>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1280 for instruction: %v16i32_3 = shufflevector <64 x i32> %v16i32, <64 x i32> undef, <16 x i32> <i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31, i32 35, i32 39, i32 43, i32 47, i32 51, i32 55, i32 59, i32 63>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2i64 = load <8 x i64>, ptr %p, align 64
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v2i64_0 = shufflevector <8 x i64> %v2i64, <8 x i64> undef, <2 x i32> <i32 0, i32 4>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v2i64_1 = shufflevector <8 x i64> %v2i64, <8 x i64> undef, <2 x i32> <i32 1, i32 5>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v2i64_2 = shufflevector <8 x i64> %v2i64, <8 x i64> undef, <2 x i32> <i32 2, i32 6>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v2i64_3 = shufflevector <8 x i64> %v2i64, <8 x i64> undef, <2 x i32> <i32 3, i32 7>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4i64 = load <16 x i64>, ptr %p, align 128
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 640 for instruction: %v4i64_0 = shufflevector <16 x i64> %v4i64, <16 x i64> undef, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 640 for instruction: %v4i64_1 = shufflevector <16 x i64> %v4i64, <16 x i64> undef, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 640 for instruction: %v4i64_2 = shufflevector <16 x i64> %v4i64, <16 x i64> undef, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 640 for instruction: %v4i64_3 = shufflevector <16 x i64> %v4i64, <16 x i64> undef, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v8i64 = load <32 x i64>, ptr %p, align 256
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1280 for instruction: %v8i64_0 = shufflevector <32 x i64> %v8i64, <32 x i64> undef, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1280 for instruction: %v8i64_1 = shufflevector <32 x i64> %v8i64, <32 x i64> undef, <8 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1280 for instruction: %v8i64_2 = shufflevector <32 x i64> %v8i64, <32 x i64> undef, <8 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1280 for instruction: %v8i64_3 = shufflevector <32 x i64> %v8i64, <32 x i64> undef, <8 x i32> <i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v16i64 = load <64 x i64>, ptr %p, align 512
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2560 for instruction: %v16i64_0 = shufflevector <64 x i64> %v16i64, <64 x i64> undef, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 32, i32 36, i32 40, i32 44, i32 48, i32 52, i32 56, i32 60>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2560 for instruction: %v16i64_1 = shufflevector <64 x i64> %v16i64, <64 x i64> undef, <16 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29, i32 33, i32 37, i32 41, i32 45, i32 49, i32 53, i32 57, i32 61>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2560 for instruction: %v16i64_2 = shufflevector <64 x i64> %v16i64, <64 x i64> undef, <16 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30, i32 34, i32 38, i32 42, i32 46, i32 50, i32 54, i32 58, i32 62>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2560 for instruction: %v16i64_3 = shufflevector <64 x i64> %v16i64, <64 x i64> undef, <16 x i32> <i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31, i32 35, i32 39, i32 43, i32 47, i32 51, i32 55, i32 59, i32 63>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+; CHECK-UF2-LABEL: 'vld4'
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i8 = load <8 x i8>, ptr %p, align 8
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %v2i8_0 = shufflevector <8 x i8> %v2i8, <8 x i8> undef, <2 x i32> <i32 0, i32 4>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %v2i8_1 = shufflevector <8 x i8> %v2i8, <8 x i8> undef, <2 x i32> <i32 1, i32 5>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %v2i8_2 = shufflevector <8 x i8> %v2i8, <8 x i8> undef, <2 x i32> <i32 2, i32 6>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %v2i8_3 = shufflevector <8 x i8> %v2i8, <8 x i8> undef, <2 x i32> <i32 3, i32 7>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i8 = load <16 x i8>, ptr %p, align 8
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v4i8_0 = shufflevector <16 x i8> %v4i8, <16 x i8> undef, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v4i8_1 = shufflevector <16 x i8> %v4i8, <16 x i8> undef, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v4i8_2 = shufflevector <16 x i8> %v4i8, <16 x i8> undef, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v4i8_3 = shufflevector <16 x i8> %v4i8, <16 x i8> undef, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v8i8 = load <32 x i8>, ptr %p, align 32
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 640 for instruction: %v8i8_0 = shufflevector <32 x i8> %v8i8, <32 x i8> undef, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 640 for instruction: %v8i8_1 = shufflevector <32 x i8> %v8i8, <32 x i8> undef, <8 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 640 for instruction: %v8i8_2 = shufflevector <32 x i8> %v8i8, <32 x i8> undef, <8 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 640 for instruction: %v8i8_3 = shufflevector <32 x i8> %v8i8, <32 x i8> undef, <8 x i32> <i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v16i8 = load <64 x i8>, ptr %p, align 64
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 1280 for instruction: %v16i8_0 = shufflevector <64 x i8> %v16i8, <64 x i8> undef, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 32, i32 36, i32 40, i32 44, i32 48, i32 52, i32 56, i32 60>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 1280 for instruction: %v16i8_1 = shufflevector <64 x i8> %v16i8, <64 x i8> undef, <16 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29, i32 33, i32 37, i32 41, i32 45, i32 49, i32 53, i32 57, i32 61>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 1280 for instruction: %v16i8_2 = shufflevector <64 x i8> %v16i8, <64 x i8> undef, <16 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30, i32 34, i32 38, i32 42, i32 46, i32 50, i32 54, i32 58, i32 62>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 1280 for instruction: %v16i8_3 = shufflevector <64 x i8> %v16i8, <64 x i8> undef, <16 x i32> <i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31, i32 35, i32 39, i32 43, i32 47, i32 51, i32 55, i32 59, i32 63>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i16 = load <8 x i16>, ptr %p, align 8
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %v2i16_0 = shufflevector <8 x i16> %v2i16, <8 x i16> undef, <2 x i32> <i32 0, i32 4>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %v2i16_1 = shufflevector <8 x i16> %v2i16, <8 x i16> undef, <2 x i32> <i32 1, i32 5>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %v2i16_2 = shufflevector <8 x i16> %v2i16, <8 x i16> undef, <2 x i32> <i32 2, i32 6>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %v2i16_3 = shufflevector <8 x i16> %v2i16, <8 x i16> undef, <2 x i32> <i32 3, i32 7>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4i16 = load <16 x i16>, ptr %p, align 32
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v4i16_0 = shufflevector <16 x i16> %v4i16, <16 x i16> undef, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v4i16_1 = shufflevector <16 x i16> %v4i16, <16 x i16> undef, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v4i16_2 = shufflevector <16 x i16> %v4i16, <16 x i16> undef, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v4i16_3 = shufflevector <16 x i16> %v4i16, <16 x i16> undef, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v8i16 = load <32 x i16>, ptr %p, align 64
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 640 for instruction: %v8i16_0 = shufflevector <32 x i16> %v8i16, <32 x i16> undef, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 640 for instruction: %v8i16_1 = shufflevector <32 x i16> %v8i16, <32 x i16> undef, <8 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 640 for instruction: %v8i16_2 = shufflevector <32 x i16> %v8i16, <32 x i16> undef, <8 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 640 for instruction: %v8i16_3 = shufflevector <32 x i16> %v8i16, <32 x i16> undef, <8 x i32> <i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v16i16 = load <64 x i16>, ptr %p, align 128
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 1280 for instruction: %v16i16_0 = shufflevector <64 x i16> %v16i16, <64 x i16> undef, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 32, i32 36, i32 40, i32 44, i32 48, i32 52, i32 56, i32 60>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 1280 for instruction: %v16i16_1 = shufflevector <64 x i16> %v16i16, <64 x i16> undef, <16 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29, i32 33, i32 37, i32 41, i32 45, i32 49, i32 53, i32 57, i32 61>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 1280 for instruction: %v16i16_2 = shufflevector <64 x i16> %v16i16, <64 x i16> undef, <16 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30, i32 34, i32 38, i32 42, i32 46, i32 50, i32 54, i32 58, i32 62>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 1280 for instruction: %v16i16_3 = shufflevector <64 x i16> %v16i16, <64 x i16> undef, <16 x i32> <i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31, i32 35, i32 39, i32 43, i32 47, i32 51, i32 55, i32 59, i32 63>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2i32 = load <8 x i32>, ptr %p, align 32
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %v2i32_0 = shufflevector <8 x i32> %v2i32, <8 x i32> undef, <2 x i32> <i32 0, i32 4>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %v2i32_1 = shufflevector <8 x i32> %v2i32, <8 x i32> undef, <2 x i32> <i32 1, i32 5>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %v2i32_2 = shufflevector <8 x i32> %v2i32, <8 x i32> undef, <2 x i32> <i32 2, i32 6>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %v2i32_3 = shufflevector <8 x i32> %v2i32, <8 x i32> undef, <2 x i32> <i32 3, i32 7>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4i32 = load <16 x i32>, ptr %p, align 64
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v4i32_0 = shufflevector <16 x i32> %v4i32, <16 x i32> undef, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v4i32_1 = shufflevector <16 x i32> %v4i32, <16 x i32> undef, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v4i32_2 = shufflevector <16 x i32> %v4i32, <16 x i32> undef, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v4i32_3 = shufflevector <16 x i32> %v4i32, <16 x i32> undef, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8i32 = load <32 x i32>, ptr %p, align 128
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 640 for instruction: %v8i32_0 = shufflevector <32 x i32> %v8i32, <32 x i32> undef, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 640 for instruction: %v8i32_1 = shufflevector <32 x i32> %v8i32, <32 x i32> undef, <8 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 640 for instruction: %v8i32_2 = shufflevector <32 x i32> %v8i32, <32 x i32> undef, <8 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 640 for instruction: %v8i32_3 = shufflevector <32 x i32> %v8i32, <32 x i32> undef, <8 x i32> <i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16i32 = load <64 x i32>, ptr %p, align 256
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 1280 for instruction: %v16i32_0 = shufflevector <64 x i32> %v16i32, <64 x i32> undef, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 32, i32 36, i32 40, i32 44, i32 48, i32 52, i32 56, i32 60>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 1280 for instruction: %v16i32_1 = shufflevector <64 x i32> %v16i32, <64 x i32> undef, <16 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29, i32 33, i32 37, i32 41, i32 45, i32 49, i32 53, i32 57, i32 61>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 1280 for instruction: %v16i32_2 = shufflevector <64 x i32> %v16i32, <64 x i32> undef, <16 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30, i32 34, i32 38, i32 42, i32 46, i32 50, i32 54, i32 58, i32 62>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 1280 for instruction: %v16i32_3 = shufflevector <64 x i32> %v16i32, <64 x i32> undef, <16 x i32> <i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31, i32 35, i32 39, i32 43, i32 47, i32 51, i32 55, i32 59, i32 63>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2i64 = load <8 x i64>, ptr %p, align 64
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v2i64_0 = shufflevector <8 x i64> %v2i64, <8 x i64> undef, <2 x i32> <i32 0, i32 4>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v2i64_1 = shufflevector <8 x i64> %v2i64, <8 x i64> undef, <2 x i32> <i32 1, i32 5>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v2i64_2 = shufflevector <8 x i64> %v2i64, <8 x i64> undef, <2 x i32> <i32 2, i32 6>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v2i64_3 = shufflevector <8 x i64> %v2i64, <8 x i64> undef, <2 x i32> <i32 3, i32 7>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4i64 = load <16 x i64>, ptr %p, align 128
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 640 for instruction: %v4i64_0 = shufflevector <16 x i64> %v4i64, <16 x i64> undef, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 640 for instruction: %v4i64_1 = shufflevector <16 x i64> %v4i64, <16 x i64> undef, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 640 for instruction: %v4i64_2 = shufflevector <16 x i64> %v4i64, <16 x i64> undef, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 640 for instruction: %v4i64_3 = shufflevector <16 x i64> %v4i64, <16 x i64> undef, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v8i64 = load <32 x i64>, ptr %p, align 256
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 1280 for instruction: %v8i64_0 = shufflevector <32 x i64> %v8i64, <32 x i64> undef, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 1280 for instruction: %v8i64_1 = shufflevector <32 x i64> %v8i64, <32 x i64> undef, <8 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 1280 for instruction: %v8i64_2 = shufflevector <32 x i64> %v8i64, <32 x i64> undef, <8 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 1280 for instruction: %v8i64_3 = shufflevector <32 x i64> %v8i64, <32 x i64> undef, <8 x i32> <i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v16i64 = load <64 x i64>, ptr %p, align 512
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 2560 for instruction: %v16i64_0 = shufflevector <64 x i64> %v16i64, <64 x i64> undef, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 32, i32 36, i32 40, i32 44, i32 48, i32 52, i32 56, i32 60>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 2560 for instruction: %v16i64_1 = shufflevector <64 x i64> %v16i64, <64 x i64> undef, <16 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29, i32 33, i32 37, i32 41, i32 45, i32 49, i32 53, i32 57, i32 61>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 2560 for instruction: %v16i64_2 = shufflevector <64 x i64> %v16i64, <64 x i64> undef, <16 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30, i32 34, i32 38, i32 42, i32 46, i32 50, i32 54, i32 58, i32 62>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 2560 for instruction: %v16i64_3 = shufflevector <64 x i64> %v16i64, <64 x i64> undef, <16 x i32> <i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31, i32 35, i32 39, i32 43, i32 47, i32 51, i32 55, i32 59, i32 63>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-UF4-LABEL: 'vld4'
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i8 = load <8 x i8>, ptr %p, align 8
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v2i8_0 = shufflevector <8 x i8> %v2i8, <8 x i8> undef, <2 x i32> <i32 0, i32 4>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v2i8_1 = shufflevector <8 x i8> %v2i8, <8 x i8> undef, <2 x i32> <i32 1, i32 5>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v2i8_2 = shufflevector <8 x i8> %v2i8, <8 x i8> undef, <2 x i32> <i32 2, i32 6>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v2i8_3 = shufflevector <8 x i8> %v2i8, <8 x i8> undef, <2 x i32> <i32 3, i32 7>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i8 = load <16 x i8>, ptr %p, align 8
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v4i8_0 = shufflevector <16 x i8> %v4i8, <16 x i8> undef, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v4i8_1 = shufflevector <16 x i8> %v4i8, <16 x i8> undef, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v4i8_2 = shufflevector <16 x i8> %v4i8, <16 x i8> undef, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v4i8_3 = shufflevector <16 x i8> %v4i8, <16 x i8> undef, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v8i8 = load <32 x i8>, ptr %p, align 32
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 130 for instruction: %v8i8_0 = shufflevector <32 x i8> %v8i8, <32 x i8> undef, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 130 for instruction: %v8i8_1 = shufflevector <32 x i8> %v8i8, <32 x i8> undef, <8 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 130 for instruction: %v8i8_2 = shufflevector <32 x i8> %v8i8, <32 x i8> undef, <8 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 130 for instruction: %v8i8_3 = shufflevector <32 x i8> %v8i8, <32 x i8> undef, <8 x i32> <i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v16i8 = load <64 x i8>, ptr %p, align 64
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 258 for instruction: %v16i8_0 = shufflevector <64 x i8> %v16i8, <64 x i8> undef, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 32, i32 36, i32 40, i32 44, i32 48, i32 52, i32 56, i32 60>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 258 for instruction: %v16i8_1 = shufflevector <64 x i8> %v16i8, <64 x i8> undef, <16 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29, i32 33, i32 37, i32 41, i32 45, i32 49, i32 53, i32 57, i32 61>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 258 for instruction: %v16i8_2 = shufflevector <64 x i8> %v16i8, <64 x i8> undef, <16 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30, i32 34, i32 38, i32 42, i32 46, i32 50, i32 54, i32 58, i32 62>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 258 for instruction: %v16i8_3 = shufflevector <64 x i8> %v16i8, <64 x i8> undef, <16 x i32> <i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31, i32 35, i32 39, i32 43, i32 47, i32 51, i32 55, i32 59, i32 63>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2i16 = load <8 x i16>, ptr %p, align 8
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v2i16_0 = shufflevector <8 x i16> %v2i16, <8 x i16> undef, <2 x i32> <i32 0, i32 4>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v2i16_1 = shufflevector <8 x i16> %v2i16, <8 x i16> undef, <2 x i32> <i32 1, i32 5>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v2i16_2 = shufflevector <8 x i16> %v2i16, <8 x i16> undef, <2 x i32> <i32 2, i32 6>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v2i16_3 = shufflevector <8 x i16> %v2i16, <8 x i16> undef, <2 x i32> <i32 3, i32 7>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4i16 = load <16 x i16>, ptr %p, align 32
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v4i16_0 = shufflevector <16 x i16> %v4i16, <16 x i16> undef, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v4i16_1 = shufflevector <16 x i16> %v4i16, <16 x i16> undef, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v4i16_2 = shufflevector <16 x i16> %v4i16, <16 x i16> undef, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v4i16_3 = shufflevector <16 x i16> %v4i16, <16 x i16> undef, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v8i16 = load <32 x i16>, ptr %p, align 64
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 130 for instruction: %v8i16_0 = shufflevector <32 x i16> %v8i16, <32 x i16> undef, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 130 for instruction: %v8i16_1 = shufflevector <32 x i16> %v8i16, <32 x i16> undef, <8 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 130 for instruction: %v8i16_2 = shufflevector <32 x i16> %v8i16, <32 x i16> undef, <8 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 130 for instruction: %v8i16_3 = shufflevector <32 x i16> %v8i16, <32 x i16> undef, <8 x i32> <i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v16i16 = load <64 x i16>, ptr %p, align 128
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 260 for instruction: %v16i16_0 = shufflevector <64 x i16> %v16i16, <64 x i16> undef, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 32, i32 36, i32 40, i32 44, i32 48, i32 52, i32 56, i32 60>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 260 for instruction: %v16i16_1 = shufflevector <64 x i16> %v16i16, <64 x i16> undef, <16 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29, i32 33, i32 37, i32 41, i32 45, i32 49, i32 53, i32 57, i32 61>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 260 for instruction: %v16i16_2 = shufflevector <64 x i16> %v16i16, <64 x i16> undef, <16 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30, i32 34, i32 38, i32 42, i32 46, i32 50, i32 54, i32 58, i32 62>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 260 for instruction: %v16i16_3 = shufflevector <64 x i16> %v16i16, <64 x i16> undef, <16 x i32> <i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31, i32 35, i32 39, i32 43, i32 47, i32 51, i32 55, i32 59, i32 63>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v2i32 = load <8 x i32>, ptr %p, align 32
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v2i32_0 = shufflevector <8 x i32> %v2i32, <8 x i32> undef, <2 x i32> <i32 0, i32 4>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v2i32_1 = shufflevector <8 x i32> %v2i32, <8 x i32> undef, <2 x i32> <i32 1, i32 5>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v2i32_2 = shufflevector <8 x i32> %v2i32, <8 x i32> undef, <2 x i32> <i32 2, i32 6>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 34 for instruction: %v2i32_3 = shufflevector <8 x i32> %v2i32, <8 x i32> undef, <2 x i32> <i32 3, i32 7>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v4i32 = load <16 x i32>, ptr %p, align 64
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v4i32_0 = shufflevector <16 x i32> %v4i32, <16 x i32> undef, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v4i32_1 = shufflevector <16 x i32> %v4i32, <16 x i32> undef, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v4i32_2 = shufflevector <16 x i32> %v4i32, <16 x i32> undef, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 66 for instruction: %v4i32_3 = shufflevector <16 x i32> %v4i32, <16 x i32> undef, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v8i32 = load <32 x i32>, ptr %p, align 128
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 132 for instruction: %v8i32_0 = shufflevector <32 x i32> %v8i32, <32 x i32> undef, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 132 for instruction: %v8i32_1 = shufflevector <32 x i32> %v8i32, <32 x i32> undef, <8 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 132 for instruction: %v8i32_2 = shufflevector <32 x i32> %v8i32, <32 x i32> undef, <8 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 132 for instruction: %v8i32_3 = shufflevector <32 x i32> %v8i32, <32 x i32> undef, <8 x i32> <i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v16i32 = load <64 x i32>, ptr %p, align 256
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 264 for instruction: %v16i32_0 = shufflevector <64 x i32> %v16i32, <64 x i32> undef, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 32, i32 36, i32 40, i32 44, i32 48, i32 52, i32 56, i32 60>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 264 for instruction: %v16i32_1 = shufflevector <64 x i32> %v16i32, <64 x i32> undef, <16 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29, i32 33, i32 37, i32 41, i32 45, i32 49, i32 53, i32 57, i32 61>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 264 for instruction: %v16i32_2 = shufflevector <64 x i32> %v16i32, <64 x i32> undef, <16 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30, i32 34, i32 38, i32 42, i32 46, i32 50, i32 54, i32 58, i32 62>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 264 for instruction: %v16i32_3 = shufflevector <64 x i32> %v16i32, <64 x i32> undef, <16 x i32> <i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31, i32 35, i32 39, i32 43, i32 47, i32 51, i32 55, i32 59, i32 63>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v2i64 = load <8 x i64>, ptr %p, align 64
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v2i64_0 = shufflevector <8 x i64> %v2i64, <8 x i64> undef, <2 x i32> <i32 0, i32 4>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v2i64_1 = shufflevector <8 x i64> %v2i64, <8 x i64> undef, <2 x i32> <i32 1, i32 5>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v2i64_2 = shufflevector <8 x i64> %v2i64, <8 x i64> undef, <2 x i32> <i32 2, i32 6>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %v2i64_3 = shufflevector <8 x i64> %v2i64, <8 x i64> undef, <2 x i32> <i32 3, i32 7>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v4i64 = load <16 x i64>, ptr %p, align 128
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 640 for instruction: %v4i64_0 = shufflevector <16 x i64> %v4i64, <16 x i64> undef, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 640 for instruction: %v4i64_1 = shufflevector <16 x i64> %v4i64, <16 x i64> undef, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 640 for instruction: %v4i64_2 = shufflevector <16 x i64> %v4i64, <16 x i64> undef, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 640 for instruction: %v4i64_3 = shufflevector <16 x i64> %v4i64, <16 x i64> undef, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v8i64 = load <32 x i64>, ptr %p, align 256
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 1280 for instruction: %v8i64_0 = shufflevector <32 x i64> %v8i64, <32 x i64> undef, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 1280 for instruction: %v8i64_1 = shufflevector <32 x i64> %v8i64, <32 x i64> undef, <8 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 1280 for instruction: %v8i64_2 = shufflevector <32 x i64> %v8i64, <32 x i64> undef, <8 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 1280 for instruction: %v8i64_3 = shufflevector <32 x i64> %v8i64, <32 x i64> undef, <8 x i32> <i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v16i64 = load <64 x i64>, ptr %p, align 512
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 2560 for instruction: %v16i64_0 = shufflevector <64 x i64> %v16i64, <64 x i64> undef, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 32, i32 36, i32 40, i32 44, i32 48, i32 52, i32 56, i32 60>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 2560 for instruction: %v16i64_1 = shufflevector <64 x i64> %v16i64, <64 x i64> undef, <16 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29, i32 33, i32 37, i32 41, i32 45, i32 49, i32 53, i32 57, i32 61>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 2560 for instruction: %v16i64_2 = shufflevector <64 x i64> %v16i64, <64 x i64> undef, <16 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30, i32 34, i32 38, i32 42, i32 46, i32 50, i32 54, i32 58, i32 62>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 2560 for instruction: %v16i64_3 = shufflevector <64 x i64> %v16i64, <64 x i64> undef, <16 x i32> <i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31, i32 35, i32 39, i32 43, i32 47, i32 51, i32 55, i32 59, i32 63>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %v2i8 = load <8 x i8>, ptr %p
   %v2i8_0 = shufflevector <8 x i8> %v2i8, <8 x i8> undef, <2 x i32> <i32 0, i32 4>
@@ -424,29 +507,29 @@ define void @vld4(ptr %p) {
 
 define void @vst2(ptr %p) {
 ; CHECK-LABEL: 'vst2'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v4i8 = shufflevector <2 x i8> undef, <2 x i8> undef, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i8 = shufflevector <2 x i8> undef, <2 x i8> undef, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x i8> %v4i8, ptr %p, align 4
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %v8i8 = shufflevector <4 x i8> undef, <4 x i8> undef, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i8 = shufflevector <4 x i8> undef, <4 x i8> undef, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x i8> %v8i8, ptr %p, align 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 256 for instruction: %v16i8 = shufflevector <8 x i8> undef, <8 x i8> undef, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i8 = shufflevector <8 x i8> undef, <8 x i8> undef, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <16 x i8> %v16i8, ptr %p, align 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 512 for instruction: %v32i8 = shufflevector <16 x i8> undef, <16 x i8> undef, <32 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23, i32 8, i32 24, i32 9, i32 25, i32 10, i32 26, i32 11, i32 27, i32 12, i32 28, i32 13, i32 29, i32 14, i32 30, i32 15, i32 31>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v32i8 = shufflevector <16 x i8> undef, <16 x i8> undef, <32 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23, i32 8, i32 24, i32 9, i32 25, i32 10, i32 26, i32 11, i32 27, i32 12, i32 28, i32 13, i32 29, i32 14, i32 30, i32 15, i32 31>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <32 x i8> %v32i8, ptr %p, align 32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v4i16 = shufflevector <2 x i16> undef, <2 x i16> undef, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i16 = shufflevector <2 x i16> undef, <2 x i16> undef, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x i16> %v4i16, ptr %p, align 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %v8i16 = shufflevector <4 x i16> undef, <4 x i16> undef, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i16 = shufflevector <4 x i16> undef, <4 x i16> undef, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x i16> %v8i16, ptr %p, align 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 256 for instruction: %v16i16 = shufflevector <8 x i16> undef, <8 x i16> undef, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v16i16 = shufflevector <8 x i16> undef, <8 x i16> undef, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <16 x i16> %v16i16, ptr %p, align 32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 512 for instruction: %v32i16 = shufflevector <16 x i16> undef, <16 x i16> undef, <32 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23, i32 8, i32 24, i32 9, i32 25, i32 10, i32 26, i32 11, i32 27, i32 12, i32 28, i32 13, i32 29, i32 14, i32 30, i32 15, i32 31>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v32i16 = shufflevector <16 x i16> undef, <16 x i16> undef, <32 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23, i32 8, i32 24, i32 9, i32 25, i32 10, i32 26, i32 11, i32 27, i32 12, i32 28, i32 13, i32 29, i32 14, i32 30, i32 15, i32 31>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <32 x i16> %v32i16, ptr %p, align 64
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %v4i32 = shufflevector <2 x i32> undef, <2 x i32> undef, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i32 = shufflevector <2 x i32> undef, <2 x i32> undef, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <4 x i32> %v4i32, ptr %p, align 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %v8i32 = shufflevector <4 x i32> undef, <4 x i32> undef, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v8i32 = shufflevector <4 x i32> undef, <4 x i32> undef, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <8 x i32> %v8i32, ptr %p, align 32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 256 for instruction: %v16i32 = shufflevector <8 x i32> undef, <8 x i32> undef, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v16i32 = shufflevector <8 x i32> undef, <8 x i32> undef, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <16 x i32> %v16i32, ptr %p, align 64
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 512 for instruction: %v32i32 = shufflevector <16 x i32> undef, <16 x i32> undef, <32 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23, i32 8, i32 24, i32 9, i32 25, i32 10, i32 26, i32 11, i32 27, i32 12, i32 28, i32 13, i32 29, i32 14, i32 30, i32 15, i32 31>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v32i32 = shufflevector <16 x i32> undef, <16 x i32> undef, <32 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23, i32 8, i32 24, i32 9, i32 25, i32 10, i32 26, i32 11, i32 27, i32 12, i32 28, i32 13, i32 29, i32 14, i32 30, i32 15, i32 31>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: store <32 x i32> %v32i32, ptr %p, align 128
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %v4i64 = shufflevector <2 x i64> undef, <2 x i64> undef, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <4 x i64> %v4i64, ptr %p, align 32
@@ -575,40 +658,75 @@ define void @vst3(ptr %p) {
 
 
 define void @vst4(ptr %p) {
-; CHECK-LABEL: 'vst4'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %v8i8 = shufflevector <8 x i8> undef, <8 x i8> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 1, i32 3, i32 5, i32 7>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x i8> %v8i8, ptr %p, align 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 256 for instruction: %v16i8 = shufflevector <16 x i8> undef, <16 x i8> undef, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <16 x i8> %v16i8, ptr %p, align 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 512 for instruction: %v32i8 = shufflevector <32 x i8> undef, <32 x i8> undef, <32 x i32> <i32 0, i32 8, i32 16, i32 24, i32 1, i32 9, i32 17, i32 25, i32 2, i32 10, i32 18, i32 26, i32 3, i32 11, i32 19, i32 27, i32 4, i32 12, i32 20, i32 28, i32 5, i32 13, i32 21, i32 29, i32 6, i32 14, i32 22, i32 30, i32 7, i32 15, i32 23, i32 31>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <32 x i8> %v32i8, ptr %p, align 32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1024 for instruction: %v64i8 = shufflevector <64 x i8> undef, <64 x i8> undef, <64 x i32> <i32 0, i32 16, i32 32, i32 48, i32 1, i32 17, i32 33, i32 49, i32 2, i32 18, i32 34, i32 50, i32 3, i32 19, i32 35, i32 51, i32 4, i32 20, i32 36, i32 52, i32 5, i32 21, i32 37, i32 53, i32 6, i32 22, i32 38, i32 54, i32 7, i32 23, i32 39, i32 55, i32 8, i32 24, i32 40, i32 56, i32 9, i32 25, i32 41, i32 57, i32 10, i32 26, i32 42, i32 58, i32 11, i32 27, i32 43, i32 59, i32 12, i32 28, i32 44, i32 60, i32 13, i32 29, i32 45, i32 61, i32 14, i32 30, i32 46, i32 62, i32 15, i32 31, i32 47, i32 63>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <64 x i8> %v64i8, ptr %p, align 64
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %v8i16 = shufflevector <8 x i16> undef, <8 x i16> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 1, i32 3, i32 5, i32 7>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x i16> %v8i16, ptr %p, align 8
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 256 for instruction: %v16i16 = shufflevector <16 x i16> undef, <16 x i16> undef, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <16 x i16> %v16i16, ptr %p, align 32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 512 for instruction: %v32i16 = shufflevector <32 x i16> undef, <32 x i16> undef, <32 x i32> <i32 0, i32 8, i32 16, i32 24, i32 1, i32 9, i32 17, i32 25, i32 2, i32 10, i32 18, i32 26, i32 3, i32 11, i32 19, i32 27, i32 4, i32 12, i32 20, i32 28, i32 5, i32 13, i32 21, i32 29, i32 6, i32 14, i32 22, i32 30, i32 7, i32 15, i32 23, i32 31>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <32 x i16> %v32i16, ptr %p, align 64
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1024 for instruction: %v64i16 = shufflevector <64 x i16> undef, <64 x i16> undef, <64 x i32> <i32 0, i32 16, i32 32, i32 48, i32 1, i32 17, i32 33, i32 49, i32 2, i32 18, i32 34, i32 50, i32 3, i32 19, i32 35, i32 51, i32 4, i32 20, i32 36, i32 52, i32 5, i32 21, i32 37, i32 53, i32 6, i32 22, i32 38, i32 54, i32 7, i32 23, i32 39, i32 55, i32 8, i32 24, i32 40, i32 56, i32 9, i32 25, i32 41, i32 57, i32 10, i32 26, i32 42, i32 58, i32 11, i32 27, i32 43, i32 59, i32 12, i32 28, i32 44, i32 60, i32 13, i32 29, i32 45, i32 61, i32 14, i32 30, i32 46, i32 62, i32 15, i32 31, i32 47, i32 63>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: store <64 x i16> %v64i16, ptr %p, align 128
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %v8i32 = shufflevector <8 x i32> undef, <8 x i32> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 1, i32 3, i32 5, i32 7>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <8 x i32> %v8i32, ptr %p, align 32
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 256 for instruction: %v16i32 = shufflevector <16 x i32> undef, <16 x i32> undef, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <16 x i32> %v16i32, ptr %p, align 64
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 512 for instruction: %v32i32 = shufflevector <32 x i32> undef, <32 x i32> undef, <32 x i32> <i32 0, i32 8, i32 16, i32 24, i32 1, i32 9, i32 17, i32 25, i32 2, i32 10, i32 18, i32 26, i32 3, i32 11, i32 19, i32 27, i32 4, i32 12, i32 20, i32 28, i32 5, i32 13, i32 21, i32 29, i32 6, i32 14, i32 22, i32 30, i32 7, i32 15, i32 23, i32 31>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: store <32 x i32> %v32i32, ptr %p, align 128
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1024 for instruction: %v64i32 = shufflevector <64 x i32> undef, <64 x i32> undef, <64 x i32> <i32 0, i32 16, i32 32, i32 48, i32 1, i32 17, i32 33, i32 49, i32 2, i32 18, i32 34, i32 50, i32 3, i32 19, i32 35, i32 51, i32 4, i32 20, i32 36, i32 52, i32 5, i32 21, i32 37, i32 53, i32 6, i32 22, i32 38, i32 54, i32 7, i32 23, i32 39, i32 55, i32 8, i32 24, i32 40, i32 56, i32 9, i32 25, i32 41, i32 57, i32 10, i32 26, i32 42, i32 58, i32 11, i32 27, i32 43, i32 59, i32 12, i32 28, i32 44, i32 60, i32 13, i32 29, i32 45, i32 61, i32 14, i32 30, i32 46, i32 62, i32 15, i32 31, i32 47, i32 63>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: store <64 x i32> %v64i32, ptr %p, align 256
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 256 for instruction: %v8i64 = shufflevector <8 x i64> undef, <8 x i64> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 1, i32 3, i32 5, i32 7>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <8 x i64> %v8i64, ptr %p, align 64
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 512 for instruction: %v16i64 = shufflevector <16 x i64> undef, <16 x i64> undef, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: store <16 x i64> %v16i64, ptr %p, align 128
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 1024 for instruction: %v32i64 = shufflevector <32 x i64> undef, <32 x i64> undef, <32 x i32> <i32 0, i32 8, i32 16, i32 24, i32 1, i32 9, i32 17, i32 25, i32 2, i32 10, i32 18, i32 26, i32 3, i32 11, i32 19, i32 27, i32 4, i32 12, i32 20, i32 28, i32 5, i32 13, i32 21, i32 29, i32 6, i32 14, i32 22, i32 30, i32 7, i32 15, i32 23, i32 31>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: store <32 x i64> %v32i64, ptr %p, align 256
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2048 for instruction: %v64i64 = shufflevector <64 x i64> undef, <64 x i64> undef, <64 x i32> <i32 0, i32 16, i32 32, i32 48, i32 1, i32 17, i32 33, i32 49, i32 2, i32 18, i32 34, i32 50, i32 3, i32 19, i32 35, i32 51, i32 4, i32 20, i32 36, i32 52, i32 5, i32 21, i32 37, i32 53, i32 6, i32 22, i32 38, i32 54, i32 7, i32 23, i32 39, i32 55, i32 8, i32 24, i32 40, i32 56, i32 9, i32 25, i32 41, i32 57, i32 10, i32 26, i32 42, i32 58, i32 11, i32 27, i32 43, i32 59, i32 12, i32 28, i32 44, i32 60, i32 13, i32 29, i32 45, i32 61, i32 14, i32 30, i32 46, i32 62, i32 15, i32 31, i32 47, i32 63>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: store <64 x i64> %v64i64, ptr %p, align 512
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+; CHECK-UF2-LABEL: 'vst4'
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %v8i8 = shufflevector <8 x i8> undef, <8 x i8> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 1, i32 3, i32 5, i32 7>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x i8> %v8i8, ptr %p, align 8
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 256 for instruction: %v16i8 = shufflevector <16 x i8> undef, <16 x i8> undef, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <16 x i8> %v16i8, ptr %p, align 8
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 512 for instruction: %v32i8 = shufflevector <32 x i8> undef, <32 x i8> undef, <32 x i32> <i32 0, i32 8, i32 16, i32 24, i32 1, i32 9, i32 17, i32 25, i32 2, i32 10, i32 18, i32 26, i32 3, i32 11, i32 19, i32 27, i32 4, i32 12, i32 20, i32 28, i32 5, i32 13, i32 21, i32 29, i32 6, i32 14, i32 22, i32 30, i32 7, i32 15, i32 23, i32 31>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <32 x i8> %v32i8, ptr %p, align 32
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 1024 for instruction: %v64i8 = shufflevector <64 x i8> undef, <64 x i8> undef, <64 x i32> <i32 0, i32 16, i32 32, i32 48, i32 1, i32 17, i32 33, i32 49, i32 2, i32 18, i32 34, i32 50, i32 3, i32 19, i32 35, i32 51, i32 4, i32 20, i32 36, i32 52, i32 5, i32 21, i32 37, i32 53, i32 6, i32 22, i32 38, i32 54, i32 7, i32 23, i32 39, i32 55, i32 8, i32 24, i32 40, i32 56, i32 9, i32 25, i32 41, i32 57, i32 10, i32 26, i32 42, i32 58, i32 11, i32 27, i32 43, i32 59, i32 12, i32 28, i32 44, i32 60, i32 13, i32 29, i32 45, i32 61, i32 14, i32 30, i32 46, i32 62, i32 15, i32 31, i32 47, i32 63>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <64 x i8> %v64i8, ptr %p, align 64
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %v8i16 = shufflevector <8 x i16> undef, <8 x i16> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 1, i32 3, i32 5, i32 7>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x i16> %v8i16, ptr %p, align 8
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 256 for instruction: %v16i16 = shufflevector <16 x i16> undef, <16 x i16> undef, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <16 x i16> %v16i16, ptr %p, align 32
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 512 for instruction: %v32i16 = shufflevector <32 x i16> undef, <32 x i16> undef, <32 x i32> <i32 0, i32 8, i32 16, i32 24, i32 1, i32 9, i32 17, i32 25, i32 2, i32 10, i32 18, i32 26, i32 3, i32 11, i32 19, i32 27, i32 4, i32 12, i32 20, i32 28, i32 5, i32 13, i32 21, i32 29, i32 6, i32 14, i32 22, i32 30, i32 7, i32 15, i32 23, i32 31>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <32 x i16> %v32i16, ptr %p, align 64
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 1024 for instruction: %v64i16 = shufflevector <64 x i16> undef, <64 x i16> undef, <64 x i32> <i32 0, i32 16, i32 32, i32 48, i32 1, i32 17, i32 33, i32 49, i32 2, i32 18, i32 34, i32 50, i32 3, i32 19, i32 35, i32 51, i32 4, i32 20, i32 36, i32 52, i32 5, i32 21, i32 37, i32 53, i32 6, i32 22, i32 38, i32 54, i32 7, i32 23, i32 39, i32 55, i32 8, i32 24, i32 40, i32 56, i32 9, i32 25, i32 41, i32 57, i32 10, i32 26, i32 42, i32 58, i32 11, i32 27, i32 43, i32 59, i32 12, i32 28, i32 44, i32 60, i32 13, i32 29, i32 45, i32 61, i32 14, i32 30, i32 46, i32 62, i32 15, i32 31, i32 47, i32 63>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: store <64 x i16> %v64i16, ptr %p, align 128
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %v8i32 = shufflevector <8 x i32> undef, <8 x i32> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 1, i32 3, i32 5, i32 7>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <8 x i32> %v8i32, ptr %p, align 32
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 256 for instruction: %v16i32 = shufflevector <16 x i32> undef, <16 x i32> undef, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <16 x i32> %v16i32, ptr %p, align 64
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 512 for instruction: %v32i32 = shufflevector <32 x i32> undef, <32 x i32> undef, <32 x i32> <i32 0, i32 8, i32 16, i32 24, i32 1, i32 9, i32 17, i32 25, i32 2, i32 10, i32 18, i32 26, i32 3, i32 11, i32 19, i32 27, i32 4, i32 12, i32 20, i32 28, i32 5, i32 13, i32 21, i32 29, i32 6, i32 14, i32 22, i32 30, i32 7, i32 15, i32 23, i32 31>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: store <32 x i32> %v32i32, ptr %p, align 128
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 1024 for instruction: %v64i32 = shufflevector <64 x i32> undef, <64 x i32> undef, <64 x i32> <i32 0, i32 16, i32 32, i32 48, i32 1, i32 17, i32 33, i32 49, i32 2, i32 18, i32 34, i32 50, i32 3, i32 19, i32 35, i32 51, i32 4, i32 20, i32 36, i32 52, i32 5, i32 21, i32 37, i32 53, i32 6, i32 22, i32 38, i32 54, i32 7, i32 23, i32 39, i32 55, i32 8, i32 24, i32 40, i32 56, i32 9, i32 25, i32 41, i32 57, i32 10, i32 26, i32 42, i32 58, i32 11, i32 27, i32 43, i32 59, i32 12, i32 28, i32 44, i32 60, i32 13, i32 29, i32 45, i32 61, i32 14, i32 30, i32 46, i32 62, i32 15, i32 31, i32 47, i32 63>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: store <64 x i32> %v64i32, ptr %p, align 256
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 256 for instruction: %v8i64 = shufflevector <8 x i64> undef, <8 x i64> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 1, i32 3, i32 5, i32 7>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <8 x i64> %v8i64, ptr %p, align 64
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 512 for instruction: %v16i64 = shufflevector <16 x i64> undef, <16 x i64> undef, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: store <16 x i64> %v16i64, ptr %p, align 128
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 1024 for instruction: %v32i64 = shufflevector <32 x i64> undef, <32 x i64> undef, <32 x i32> <i32 0, i32 8, i32 16, i32 24, i32 1, i32 9, i32 17, i32 25, i32 2, i32 10, i32 18, i32 26, i32 3, i32 11, i32 19, i32 27, i32 4, i32 12, i32 20, i32 28, i32 5, i32 13, i32 21, i32 29, i32 6, i32 14, i32 22, i32 30, i32 7, i32 15, i32 23, i32 31>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: store <32 x i64> %v32i64, ptr %p, align 256
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 2048 for instruction: %v64i64 = shufflevector <64 x i64> undef, <64 x i64> undef, <64 x i32> <i32 0, i32 16, i32 32, i32 48, i32 1, i32 17, i32 33, i32 49, i32 2, i32 18, i32 34, i32 50, i32 3, i32 19, i32 35, i32 51, i32 4, i32 20, i32 36, i32 52, i32 5, i32 21, i32 37, i32 53, i32 6, i32 22, i32 38, i32 54, i32 7, i32 23, i32 39, i32 55, i32 8, i32 24, i32 40, i32 56, i32 9, i32 25, i32 41, i32 57, i32 10, i32 26, i32 42, i32 58, i32 11, i32 27, i32 43, i32 59, i32 12, i32 28, i32 44, i32 60, i32 13, i32 29, i32 45, i32 61, i32 14, i32 30, i32 46, i32 62, i32 15, i32 31, i32 47, i32 63>
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: store <64 x i64> %v64i64, ptr %p, align 512
+; CHECK-UF2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; CHECK-UF4-LABEL: 'vst4'
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i8 = shufflevector <8 x i8> undef, <8 x i8> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 1, i32 3, i32 5, i32 7>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x i8> %v8i8, ptr %p, align 8
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i8 = shufflevector <16 x i8> undef, <16 x i8> undef, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <16 x i8> %v16i8, ptr %p, align 8
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v32i8 = shufflevector <32 x i8> undef, <32 x i8> undef, <32 x i32> <i32 0, i32 8, i32 16, i32 24, i32 1, i32 9, i32 17, i32 25, i32 2, i32 10, i32 18, i32 26, i32 3, i32 11, i32 19, i32 27, i32 4, i32 12, i32 20, i32 28, i32 5, i32 13, i32 21, i32 29, i32 6, i32 14, i32 22, i32 30, i32 7, i32 15, i32 23, i32 31>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <32 x i8> %v32i8, ptr %p, align 32
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v64i8 = shufflevector <64 x i8> undef, <64 x i8> undef, <64 x i32> <i32 0, i32 16, i32 32, i32 48, i32 1, i32 17, i32 33, i32 49, i32 2, i32 18, i32 34, i32 50, i32 3, i32 19, i32 35, i32 51, i32 4, i32 20, i32 36, i32 52, i32 5, i32 21, i32 37, i32 53, i32 6, i32 22, i32 38, i32 54, i32 7, i32 23, i32 39, i32 55, i32 8, i32 24, i32 40, i32 56, i32 9, i32 25, i32 41, i32 57, i32 10, i32 26, i32 42, i32 58, i32 11, i32 27, i32 43, i32 59, i32 12, i32 28, i32 44, i32 60, i32 13, i32 29, i32 45, i32 61, i32 14, i32 30, i32 46, i32 62, i32 15, i32 31, i32 47, i32 63>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <64 x i8> %v64i8, ptr %p, align 64
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i16 = shufflevector <8 x i16> undef, <8 x i16> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 1, i32 3, i32 5, i32 7>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: store <8 x i16> %v8i16, ptr %p, align 8
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v16i16 = shufflevector <16 x i16> undef, <16 x i16> undef, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <16 x i16> %v16i16, ptr %p, align 32
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v32i16 = shufflevector <32 x i16> undef, <32 x i16> undef, <32 x i32> <i32 0, i32 8, i32 16, i32 24, i32 1, i32 9, i32 17, i32 25, i32 2, i32 10, i32 18, i32 26, i32 3, i32 11, i32 19, i32 27, i32 4, i32 12, i32 20, i32 28, i32 5, i32 13, i32 21, i32 29, i32 6, i32 14, i32 22, i32 30, i32 7, i32 15, i32 23, i32 31>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <32 x i16> %v32i16, ptr %p, align 64
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v64i16 = shufflevector <64 x i16> undef, <64 x i16> undef, <64 x i32> <i32 0, i32 16, i32 32, i32 48, i32 1, i32 17, i32 33, i32 49, i32 2, i32 18, i32 34, i32 50, i32 3, i32 19, i32 35, i32 51, i32 4, i32 20, i32 36, i32 52, i32 5, i32 21, i32 37, i32 53, i32 6, i32 22, i32 38, i32 54, i32 7, i32 23, i32 39, i32 55, i32 8, i32 24, i32 40, i32 56, i32 9, i32 25, i32 41, i32 57, i32 10, i32 26, i32 42, i32 58, i32 11, i32 27, i32 43, i32 59, i32 12, i32 28, i32 44, i32 60, i32 13, i32 29, i32 45, i32 61, i32 14, i32 30, i32 46, i32 62, i32 15, i32 31, i32 47, i32 63>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: store <64 x i16> %v64i16, ptr %p, align 128
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v8i32 = shufflevector <8 x i32> undef, <8 x i32> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 1, i32 3, i32 5, i32 7>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: store <8 x i32> %v8i32, ptr %p, align 32
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v16i32 = shufflevector <16 x i32> undef, <16 x i32> undef, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <16 x i32> %v16i32, ptr %p, align 64
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v32i32 = shufflevector <32 x i32> undef, <32 x i32> undef, <32 x i32> <i32 0, i32 8, i32 16, i32 24, i32 1, i32 9, i32 17, i32 25, i32 2, i32 10, i32 18, i32 26, i32 3, i32 11, i32 19, i32 27, i32 4, i32 12, i32 20, i32 28, i32 5, i32 13, i32 21, i32 29, i32 6, i32 14, i32 22, i32 30, i32 7, i32 15, i32 23, i32 31>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: store <32 x i32> %v32i32, ptr %p, align 128
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %v64i32 = shufflevector <64 x i32> undef, <64 x i32> undef, <64 x i32> <i32 0, i32 16, i32 32, i32 48, i32 1, i32 17, i32 33, i32 49, i32 2, i32 18, i32 34, i32 50, i32 3, i32 19, i32 35, i32 51, i32 4, i32 20, i32 36, i32 52, i32 5, i32 21, i32 37, i32 53, i32 6, i32 22, i32 38, i32 54, i32 7, i32 23, i32 39, i32 55, i32 8, i32 24, i32 40, i32 56, i32 9, i32 25, i32 41, i32 57, i32 10, i32 26, i32 42, i32 58, i32 11, i32 27, i32 43, i32 59, i32 12, i32 28, i32 44, i32 60, i32 13, i32 29, i32 45, i32 61, i32 14, i32 30, i32 46, i32 62, i32 15, i32 31, i32 47, i32 63>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: store <64 x i32> %v64i32, ptr %p, align 256
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 256 for instruction: %v8i64 = shufflevector <8 x i64> undef, <8 x i64> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 1, i32 3, i32 5, i32 7>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: store <8 x i64> %v8i64, ptr %p, align 64
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 512 for instruction: %v16i64 = shufflevector <16 x i64> undef, <16 x i64> undef, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: store <16 x i64> %v16i64, ptr %p, align 128
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 1024 for instruction: %v32i64 = shufflevector <32 x i64> undef, <32 x i64> undef, <32 x i32> <i32 0, i32 8, i32 16, i32 24, i32 1, i32 9, i32 17, i32 25, i32 2, i32 10, i32 18, i32 26, i32 3, i32 11, i32 19, i32 27, i32 4, i32 12, i32 20, i32 28, i32 5, i32 13, i32 21, i32 29, i32 6, i32 14, i32 22, i32 30, i32 7, i32 15, i32 23, i32 31>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: store <32 x i64> %v32i64, ptr %p, align 256
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 2048 for instruction: %v64i64 = shufflevector <64 x i64> undef, <64 x i64> undef, <64 x i32> <i32 0, i32 16, i32 32, i32 48, i32 1, i32 17, i32 33, i32 49, i32 2, i32 18, i32 34, i32 50, i32 3, i32 19, i32 35, i32 51, i32 4, i32 20, i32 36, i32 52, i32 5, i32 21, i32 37, i32 53, i32 6, i32 22, i32 38, i32 54, i32 7, i32 23, i32 39, i32 55, i32 8, i32 24, i32 40, i32 56, i32 9, i32 25, i32 41, i32 57, i32 10, i32 26, i32 42, i32 58, i32 11, i32 27, i32 43, i32 59, i32 12, i32 28, i32 44, i32 60, i32 13, i32 29, i32 45, i32 61, i32 14, i32 30, i32 46, i32 62, i32 15, i32 31, i32 47, i32 63>
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: store <64 x i64> %v64i64, ptr %p, align 512
+; CHECK-UF4-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %v8i8 = shufflevector <8 x i8> undef, <8 x i8> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 1, i32 3, i32 5, i32 7>
   store <8 x i8> %v8i8, ptr %p
@@ -648,6 +766,3 @@ define void @vst4(ptr %p) {
 
   ret void
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; CHECK-UF2: {{.*}}
-; CHECK-UF4: {{.*}}

@@ -81,12 +81,11 @@ static unsigned countOperands(SDNode *Node, unsigned NumExpUses,
 
 /// EmitCopyFromReg - Generate machine code for an CopyFromReg node or an
 /// implicit physical register output.
-void InstrEmitter::EmitCopyFromReg(SDNode *Node, unsigned ResNo, bool IsClone,
-                                   Register SrcReg, VRBaseMapType &VRBaseMap) {
+void InstrEmitter::EmitCopyFromReg(SDValue Op, bool IsClone, Register SrcReg,
+                                   VRBaseMapType &VRBaseMap) {
   Register VRBase;
   if (SrcReg.isVirtual()) {
     // Just use the input register directly!
-    SDValue Op(Node, ResNo);
     if (IsClone)
       VRBaseMap.erase(Op);
     bool isNew = VRBaseMap.insert(std::make_pair(Op, SrcReg)).second;
@@ -99,17 +98,15 @@ void InstrEmitter::EmitCopyFromReg(SDNode *Node, unsigned ResNo, bool IsClone,
   // the CopyToReg'd destination register instead of creating a new vreg.
   bool MatchReg = true;
   const TargetRegisterClass *UseRC = nullptr;
-  MVT VT = Node->getSimpleValueType(ResNo);
+  MVT VT = Op.getSimpleValueType();
 
   // Stick to the preferred register classes for legal types.
   if (TLI->isTypeLegal(VT))
-    UseRC = TLI->getRegClassFor(VT, Node->isDivergent());
+    UseRC = TLI->getRegClassFor(VT, Op->isDivergent());
 
-  for (SDNode *User : Node->users()) {
+  for (SDNode *User : Op->users()) {
     bool Match = true;
-    if (User->getOpcode() == ISD::CopyToReg &&
-        User->getOperand(2).getNode() == Node &&
-        User->getOperand(2).getResNo() == ResNo) {
+    if (User->getOpcode() == ISD::CopyToReg && User->getOperand(2) == Op) {
       Register DestReg = cast<RegisterSDNode>(User->getOperand(1))->getReg();
       if (DestReg.isVirtual()) {
         VRBase = DestReg;
@@ -118,10 +115,8 @@ void InstrEmitter::EmitCopyFromReg(SDNode *Node, unsigned ResNo, bool IsClone,
         Match = false;
     } else {
       for (unsigned i = 0, e = User->getNumOperands(); i != e; ++i) {
-        SDValue Op = User->getOperand(i);
-        if (Op.getNode() != Node || Op.getResNo() != ResNo)
+        if (User->getOperand(i) != Op)
           continue;
-        MVT VT = Node->getSimpleValueType(Op.getResNo());
         if (VT == MVT::Other || VT == MVT::Glue)
           continue;
         Match = false;
@@ -170,11 +165,11 @@ void InstrEmitter::EmitCopyFromReg(SDNode *Node, unsigned ResNo, bool IsClone,
   } else {
     // Create the reg, emit the copy.
     VRBase = MRI->createVirtualRegister(DstRC);
-    BuildMI(*MBB, InsertPos, Node->getDebugLoc(), TII->get(TargetOpcode::COPY),
-            VRBase).addReg(SrcReg);
+    BuildMI(*MBB, InsertPos, Op.getDebugLoc(), TII->get(TargetOpcode::COPY),
+            VRBase)
+        .addReg(SrcReg);
   }
 
-  SDValue Op(Node, ResNo);
   if (IsClone)
     VRBaseMap.erase(Op);
   bool isNew = VRBaseMap.insert(std::make_pair(Op, VRBase)).second;
@@ -1170,7 +1165,7 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
         continue;
       // This implicitly defined physreg has a use.
       UsedRegs.push_back(Reg);
-      EmitCopyFromReg(Node, i, IsClone, Reg, VRBaseMap);
+      EmitCopyFromReg(SDValue(Node, i), IsClone, Reg, VRBaseMap);
     }
   }
 
@@ -1283,7 +1278,7 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
   }
   case ISD::CopyFromReg: {
     Register SrcReg = cast<RegisterSDNode>(Node->getOperand(1))->getReg();
-    EmitCopyFromReg(Node, 0, IsClone, SrcReg, VRBaseMap);
+    EmitCopyFromReg(SDValue(Node, 0), IsClone, SrcReg, VRBaseMap);
     break;
   }
   case ISD::EH_LABEL:
