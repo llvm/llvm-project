@@ -19,3 +19,18 @@ end subroutine
 
 ! CHECK-LABEL: _QPtest_usad
 ! CHECK: %{{.*}} = fir.call @__nv_usad(%{{.*}}, %{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32, i32, i32) -> i32
+
+attributes(global) subroutine test_dsqrt_rX()
+  double precision :: res
+  double precision :: p
+  res = __dsqrt_rd(p)
+  res = __dsqrt_rn(p)
+  res = __dsqrt_ru(p)
+  res = __dsqrt_rz(p)
+end subroutine
+
+! CHECK-LABEL: _QPtest_dsqrt_rx
+! CHECK: %{{.*}} = fir.call @__nv_dsqrt_rd(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
+! CHECK: %{{.*}} = fir.call @__nv_dsqrt_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
+! CHECK: %{{.*}} = fir.call @__nv_dsqrt_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
+! CHECK: %{{.*}} = fir.call @__nv_dsqrt_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
