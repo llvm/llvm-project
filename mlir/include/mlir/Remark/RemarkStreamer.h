@@ -43,9 +43,8 @@ namespace mlir::remark {
 /// The remark categories are used to filter the remarks that are emitted.
 /// If the printAsEmitRemarks flag is set, remarks will also be printed using
 /// mlir::emitRemarks.
-LogicalResult enableOptimizationRemarksToFile(MLIRContext &ctx, StringRef path,
-                                              llvm::remarks::Format fmt,
-                                              const RemarkCategories &cat,
-                                              bool printAsEmitRemarks = false);
+LogicalResult enableOptimizationRemarksWithLLVMStreamer(
+    MLIRContext &ctx, StringRef filePath, llvm::remarks::Format fmt,
+    const RemarkCategories &cat, bool printAsEmitRemarks = false);
 
 } // namespace mlir::remark

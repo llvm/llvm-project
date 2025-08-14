@@ -53,10 +53,9 @@ LLVMRemarkStreamer::~LLVMRemarkStreamer() {
 } // namespace mlir::remark::detail
 
 namespace mlir::remark {
-LogicalResult enableOptimizationRemarksToFile(MLIRContext &ctx, StringRef path,
-                                              llvm::remarks::Format fmt,
-                                              const RemarkCategories &cat,
-                                              bool printAsEmitRemarks) {
+LogicalResult enableOptimizationRemarksWithLLVMStreamer(
+    MLIRContext &ctx, StringRef path, llvm::remarks::Format fmt,
+    const RemarkCategories &cat, bool printAsEmitRemarks) {
 
   FailureOr<std::unique_ptr<detail::MLIRRemarkStreamerBase>> sOr =
       detail::LLVMRemarkStreamer::createToFile(path, fmt);

@@ -51,8 +51,9 @@ TEST(Remark, TestOutputOptimizationRemark) {
                                         /*analysis=*/categoryRegister,
                                         /*failed=*/categoryUnroll};
 
-    LogicalResult isEnabled = mlir::remark::enableOptimizationRemarksToFile(
-        context, yamlFile, llvm::remarks::Format::YAML, cats);
+    LogicalResult isEnabled =
+        mlir::remark::enableOptimizationRemarksWithLLVMStreamer(
+            context, yamlFile, llvm::remarks::Format::YAML, cats);
     ASSERT_TRUE(succeeded(isEnabled)) << "Failed to enable remark engine";
 
     // PASS: something succeeded

@@ -154,7 +154,7 @@ mlir::remark::RemarkCategories cats{/*passed=*/categoryLoopunroll,
                                      /*analysis=*/std::nullopt,
                                      /*failed=*/categoryLoopunroll};
 
-mlir::remark::enableOptimizationRemarksToFile(
+mlir::remark::enableOptimizationRemarksWithLLVMStreamer(
     context, yamlFile, llvm::remarks::Format::YAML, cats);
 ```
 
