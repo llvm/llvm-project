@@ -2332,9 +2332,10 @@ StmtResult Parser::ParseBreakOrContinueStatement(bool IsContinue) {
     Target =
         Actions.LookupExistingLabel(Tok.getIdentifierInfo(), Tok.getLocation());
     LabelLoc = ConsumeToken();
-    Diag(LabelLoc, getLangOpts().C2y ? diag::warn_c2y_labeled_break_continue
-                                     : diag::ext_c2y_labeled_break_continue)
-        << IsContinue;
+    if (!getLangOpts().NamedLoops)
+      // TODO: Make this a compatibility/extension warning instead once the
+      // syntax of this feature is finalised.
+      Diag(LabelLoc, diag::err_c2y_labeled_break_continue) << IsContinue;
     if (!Target) {
       Diag(LabelLoc, diag::err_break_continue_label_not_found) << !IsContinue;
       return StmtError();

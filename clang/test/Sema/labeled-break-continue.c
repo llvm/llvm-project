@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -std=c2y -verify -fsyntax-only -fblocks %s
-// RUN: %clang_cc1 -x c++ -verify -fsyntax-only -fblocks %s
+// RUN: %clang_cc1 -std=c23 -verify -fsyntax-only -fblocks -fnamed-loops %s
+// RUN: %clang_cc1 -x c++ -verify -fsyntax-only -fblocks -fnamed-loops %s
 
 void f1() {
   l1: while (true) {

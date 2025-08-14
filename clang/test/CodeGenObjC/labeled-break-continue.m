@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -Wno-objc-root-class -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -std=c2y -triple x86_64-apple-darwin -Wno-objc-root-class -emit-llvm -o - %s | FileCheck %s
 
 int g(id x);
 

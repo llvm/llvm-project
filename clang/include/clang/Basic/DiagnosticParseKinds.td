@@ -215,14 +215,8 @@ def warn_c23_compat_case_range : Warning<
   DefaultIgnore, InGroup<CPre2yCompat>;
 def ext_c2y_case_range : Extension<
   "case ranges are a C2y extension">, InGroup<C2y>;
-def warn_c2y_labeled_break_continue
-    : Warning<"labeled %select{'break'|'continue'}0 is incompatible with C "
-              "standards before C2y">,
-      DefaultIgnore,
-      InGroup<CPre2yCompat>;
-def ext_c2y_labeled_break_continue
-    : Extension<"labeled %select{'break'|'continue'}0 is a C2y extension">,
-      InGroup<C2y>;
+def err_c2y_labeled_break_continue
+    : Error<"labeled %select{'break'|'continue'}0 is only supported in C2y">;
 
 // Generic errors.
 def err_expected_expression : Error<"expected expression">;

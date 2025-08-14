@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -std=c++20 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -fnamed-loops -triple x86_64-unknown-linux -std=c++20 -emit-llvm -o - %s | FileCheck %s
 
 static int a[10]{};
 struct NonTrivialDestructor {

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++20 -verify -fsyntax-only %s
+// RUN: %clang_cc1 -std=c++20 -verify -fsyntax-only -fnamed-loops %s
 
 int a[10]{};
 struct S {

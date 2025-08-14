@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -fblocks %s
+// RUN: %clang_cc1 -std=c2y -fsyntax-only -verify -fblocks %s
 
 void f1(id y) {
     l1: for (id x in y) {

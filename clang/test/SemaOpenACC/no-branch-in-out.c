@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -verify -fopenacc
+// RUN: %clang_cc1 %s -verify -fopenacc -fnamed-loops
 
 void BreakContinue() {
 
