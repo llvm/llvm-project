@@ -352,6 +352,8 @@ TEST(MLIRExecutionEngine, MAYBE_JITCallbackInGlobalCtor) {
   ExecutionEngineOptions jitOptions;
   auto jitOrError = ExecutionEngine::create(*module, jitOptions);
   ASSERT_TRUE(!!jitOrError);
+  // validate initialization is not run on construction
+  ASSERT_EQ(initCnt, 0);
   auto jit = std::move(jitOrError.get());
   // Define any extra symbols so they're available at initialization.
   jit->registerSymbols([&](llvm::orc::MangleAndInterner interner) {
@@ -362,7 +364,17 @@ TEST(MLIRExecutionEngine, MAYBE_JITCallbackInGlobalCtor) {
     return symbolMap;
   });
   jit->initialize();
-  ASSERT_EQ(initCnt, 1);
+  // TODO: Allow JIT initialize for AArch64. Currently there's a bug causing a
+  // crash for AArch64 see related issue #71963.
+  auto tmBuilderOrError = llvm::orc::JITTargetMachineBuilder::detectHost();
+  ASSERT_TRUE(!!tmBuilderOrError);
+  if (!tmBuilderOrError->getTargetTriple().isAArch64()) {
+    // validate the side effect of initialization
+    ASSERT_EQ(initCnt, 1);
+    // next initialization should be noop
+    jit->initialize();
+    ASSERT_EQ(initCnt, 1);
+  }
 }
 
 #endif // _WIN32
