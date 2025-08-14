@@ -21,7 +21,6 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace platform_android;
-using namespace llvm;
 
 static const lldb::pid_t g_remote_platform_pid =
     0; // Alias for the process id of lldb-platform
@@ -33,12 +32,12 @@ static Status ForwardPortWithAdb(
     std::string &device_id) {
   Log *log = GetLog(LLDBLog::Platform);
 
-  auto resolved_device_id_or_error = AdbClient::ResolveDeviceID(device_id);
-  if (!resolved_device_id_or_error)
-    return Status::FromError(resolved_device_id_or_error.takeError());
-  device_id = *resolved_device_id_or_error;
+  AdbClient adb;
+  auto error = AdbClient::CreateByDeviceID(device_id, adb);
+  if (error.Fail())
+    return error;
 
-  AdbClient adb(device_id);
+  device_id = adb.GetDeviceID();
   LLDB_LOGF(log, "Connected to Android device \"%s\"", device_id.c_str());
 
   if (remote_port != 0) {
