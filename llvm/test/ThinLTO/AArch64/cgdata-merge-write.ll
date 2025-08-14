@@ -36,11 +36,9 @@
 
 ; Merge the cgdata using llvm-cgdata.
 ; We now validate the content of the merged cgdata.
-; Two functions have the same hash with only one different constant at the same location.
+; Two functions have the same hash with only one different constnat at a same location.
 ; RUN: llvm-cgdata --merge -o %tout.cgdata %tout-nowrite.1 %tout-nowrite.2
 ; RUN: llvm-cgdata --convert %tout.cgdata   -o - | FileCheck %s
-; RUN: llvm-cgdata --merge -o %tout-lazy.cgdata %tout-nowrite.1 %tout-nowrite.2 -indexed-codegen-data-lazy-loading
-; RUN: llvm-cgdata --convert %tout-lazy.cgdata -indexed-codegen-data-lazy-loading -o - | FileCheck %s
 
 ; CHECK:      - Hash: [[#%d,HASH:]]
 ; CHECK-NEXT:   FunctionName: f1

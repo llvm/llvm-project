@@ -117,7 +117,7 @@ TEST(StableFunctionMap, Finalize3) {
   Map.finalize();
   auto &M = Map.getFunctionMap();
   EXPECT_THAT(M, SizeIs(1));
-  auto &FuncEntries = M.begin()->second.Entries;
+  auto &FuncEntries = M.begin()->second;
   for (auto &FuncEntry : FuncEntries) {
     EXPECT_THAT(*FuncEntry->IndexOperandHashMap, SizeIs(1));
     ASSERT_THAT(*FuncEntry->IndexOperandHashMap,

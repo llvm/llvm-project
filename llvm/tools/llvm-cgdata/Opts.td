@@ -31,4 +31,3 @@ def : JoinedOrSeparate<["-"], "o">, Alias<output>, MetaVarName<"<file>">, HelpTe
 def format : Option<["--"], "format", KIND_SEPARATE>,
              HelpText<"Specify the output format (text or binary)">, MetaVarName<"<value>">;
 def : JoinedOrSeparate<["-"], "f">, Alias<format>, HelpText<"Alias for --format">;
-def indexed_codegen_data_lazy_loading : F<"indexed-codegen-data-lazy-loading", "Lazily load indexed CodeGenData for testing purpose.">, Flags<[HelpHidden]>;
