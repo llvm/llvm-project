@@ -42,10 +42,10 @@ namespace neon {
                                  (cpp::countr_zero(cmp) >> 3));
   }
 }
-}  // namespace neon
+} // namespace neon
 
 namespace string_length_impl = neon;
 
-}  // namespace LIBC_NAMESPACE_DECL
+} // namespace LIBC_NAMESPACE_DECL
 #endif // __ARM_NEON
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_INLINE_STRLEN_H

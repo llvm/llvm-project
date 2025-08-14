@@ -8,7 +8,7 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_STRLEN_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_STRLEN_H
 
-#include "src/__support/CPP/bit.h"          // countr_zero
+#include "src/__support/CPP/bit.h" // countr_zero
 
 #include <immintrin.h>
 #include <stddef.h> // size_t
@@ -41,7 +41,7 @@ namespace sse2 {
                                  cpp::countr_zero(cmp));
   }
 }
-}  // namespace sse2
+} // namespace sse2
 
 #if defined(__AVX2__)
 namespace avx2 {
@@ -70,7 +70,7 @@ namespace avx2 {
                                  cpp::countr_zero(cmp));
   }
 }
-}
+} // namespace avx2
 #endif
 
 #if defined(__AVX512F__)
