@@ -2786,6 +2786,14 @@ private:
   PyOperationRef operation;
 };
 
+// bpo-40429 added PyThreadState_GetFrame() to Python 3.9.0b1
+#if PY_VERSION_HEX < 0x030900B1 && !defined(PYPY_VERSION)
+static inline PyFrameObject *PyThreadState_GetFrame(PyThreadState *tstate) {
+  assert(tstate != _Py_NULL);
+  return _Py_CAST(PyFrameObject *, Py_XNewRef(tstate->frame));
+}
+#endif
+
 MlirLocation tracebackToLocation(MlirContext ctx) {
   size_t framesLimit =
       PyGlobals::get().getTracebackLoc().locTracebackFramesLimit();
