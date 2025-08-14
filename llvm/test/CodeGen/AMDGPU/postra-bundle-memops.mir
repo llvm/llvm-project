@@ -114,7 +114,7 @@ body:             |
     $vgpr3 = DS_READ_B32_gfx9 $vgpr1, 0, 0, implicit $exec
 ...
 
-# Middle dbg_value should be bundled
+# Loads are not bundled due to middle deb_value
 ---
 name: bundle_dbg_value_0
 tracksRegLiveness: true
@@ -124,18 +124,16 @@ body:             |
     ; GCN-LABEL: name: bundle_dbg_value_0
     ; GCN: liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr1, implicit $vgpr3_vgpr4, implicit $exec, implicit $vgpr5_vgpr6 {
-    ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
-    ; GCN-NEXT:   DBG_VALUE $vgpr0, 0, 0
-    ; GCN-NEXT:   $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
-    ; GCN-NEXT: }
+    ; GCN-NEXT: $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
+    ; GCN-NEXT: DBG_VALUE $vgpr0, 0, 0
+    ; GCN-NEXT: $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
     $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
     DBG_VALUE $vgpr0, 0, 0
     $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
 
 ...
 
-# Middle dbg_value should be bundled
+# Loads are not bundled due to middle deb_value
 ---
 name: bundle_dbg_value_1
 tracksRegLiveness: true
@@ -145,12 +143,10 @@ body:             |
     ; GCN-LABEL: name: bundle_dbg_value_1
     ; GCN: liveins: $vgpr3_vgpr4, $vgpr5_vgpr6, $vgpr1
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr2, implicit $vgpr3_vgpr4, implicit $exec, implicit $vgpr5_vgpr6 {
-    ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
-    ; GCN-NEXT:   DBG_VALUE $vgpr0, 0, 0
-    ; GCN-NEXT:   DBG_VALUE $vgpr1, 0, 0
-    ; GCN-NEXT:   $vgpr2 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
-    ; GCN-NEXT: }
+    ; GCN-NEXT: $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
+    ; GCN-NEXT: DBG_VALUE $vgpr0, 0, 0
+    ; GCN-NEXT: DBG_VALUE $vgpr1, 0, 0
+    ; GCN-NEXT: $vgpr2 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
     ; GCN-NEXT: DBG_VALUE $vgpr2, 0, 0
     $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
     DBG_VALUE $vgpr0, 0, 0
@@ -159,7 +155,7 @@ body:             |
     DBG_VALUE $vgpr2, 0, 0
 ...
 
-# Starting and ending dbg_values should not be in the bundle
+# Loads are not bundled due to middle deb_value
 ---
 name: bundle_dbg_value_2
 tracksRegLiveness: true
@@ -170,11 +166,9 @@ body:             |
     ; GCN: liveins: $vgpr3_vgpr4, $vgpr5_vgpr6, $vgpr1
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: DBG_VALUE $vgpr1, 0, 0
-    ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr2, implicit $vgpr3_vgpr4, implicit $exec, implicit $vgpr5_vgpr6 {
-    ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
-    ; GCN-NEXT:   DBG_VALUE $vgpr0, 0, 0
-    ; GCN-NEXT:   $vgpr2 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
-    ; GCN-NEXT: }
+    ; GCN-NEXT: $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
+    ; GCN-NEXT: DBG_VALUE $vgpr0, 0, 0
+    ; GCN-NEXT: $vgpr2 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
     ; GCN-NEXT: DBG_VALUE $vgpr2, 0, 0
     DBG_VALUE $vgpr1, 0, 0
     $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
@@ -183,6 +177,7 @@ body:             |
     DBG_VALUE $vgpr2, 0, 0
 ...
 
+# Loads are not bundled due to KILL
 ---
 name: bundle_kill
 tracksRegLiveness: true
@@ -193,11 +188,9 @@ body:             |
     ; GCN: liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 0, implicit $exec
-    ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr2, implicit $vgpr3_vgpr4, implicit $exec, implicit $vgpr1, implicit $vgpr5_vgpr6 {
-    ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
-    ; GCN-NEXT:   KILL $vgpr1
-    ; GCN-NEXT:   $vgpr2 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
-    ; GCN-NEXT: }
+    ; GCN-NEXT: $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
+    ; GCN-NEXT: KILL $vgpr1
+    ; GCN-NEXT: $vgpr2 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
     $vgpr1 = V_MOV_B32_e32 0, implicit $exec
     $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
     KILL $vgpr1
@@ -215,11 +208,9 @@ body:             |
     ; GCN: liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 0, implicit $exec
-    ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr2, implicit $vgpr3_vgpr4, implicit $exec, implicit $vgpr5_vgpr6 {
-    ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
-    ; GCN-NEXT:   KILL internal $vgpr0
-    ; GCN-NEXT:   $vgpr2 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
-    ; GCN-NEXT: }
+    ; GCN-NEXT: $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
+    ; GCN-NEXT: KILL $vgpr0
+    ; GCN-NEXT: $vgpr2 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
     $vgpr1 = V_MOV_B32_e32 0, implicit $exec
     $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
     KILL $vgpr0
@@ -341,11 +332,10 @@ body:             |
     ; GCN-LABEL: name: post_bundle_kill_and_null_reg_dbginfo
     ; GCN: liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr1, implicit $vgpr3_vgpr4, implicit $exec, implicit $vgpr5_vgpr6 {
-    ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
-    ; GCN-NEXT:   DBG_VALUE $noreg, $noreg
-    ; GCN-NEXT:   $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
-    ; GCN-NEXT: }
+    ; GCN-NEXT: $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
+    ; GCN-NEXT: DBG_VALUE $noreg, $noreg
+    ; GCN-NEXT: $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
+    ; GCN-NEXT: KILL killed $vgpr3_vgpr4, killed $vgpr5_vgpr6
     $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
     DBG_VALUE $noreg, $noreg
     $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
