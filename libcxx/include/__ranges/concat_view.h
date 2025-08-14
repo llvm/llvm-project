@@ -292,7 +292,7 @@ private:
     return [&__func, this]<std::size_t _Is>(this auto&& __self) {
       if (_Is == __it_.index()) {
         return __func.template operator()<_Is>();
-      } else if constexpr (_Is + 1 < sizeof...(_Views)) {
+      } if constexpr (_Is + 1 < sizeof...(_Views)) {
         return __self.template operator()<_Is + 1>();
       }
       __builtin_unreachable();
