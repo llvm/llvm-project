@@ -76,6 +76,8 @@ public:
 
   DumpValueObjectOptions &SetShowLocation(bool show = false);
 
+  DumpValueObjectOptions &DisableObjectiveC();
+
   DumpValueObjectOptions &SetUseObjectiveC(bool use = false);
 
   DumpValueObjectOptions &SetShowSummary(bool show = true);

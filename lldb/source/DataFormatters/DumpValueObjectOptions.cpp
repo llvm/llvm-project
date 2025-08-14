@@ -65,6 +65,16 @@ DumpValueObjectOptions &DumpValueObjectOptions::SetShowLocation(bool show) {
   return *this;
 }
 
+DumpValueObjectOptions &DumpValueObjectOptions::DisableObjectiveC() {
+  // Reset these options to their default values.
+  SetUseObjectiveC(false);
+  SetHideRootType(false);
+  SetHideRootName(false);
+  SetHideValue(false);
+  SetShowSummary(true);
+  return *this;
+}
+
 DumpValueObjectOptions &DumpValueObjectOptions::SetUseObjectiveC(bool use) {
   m_use_objc = use;
   return *this;
