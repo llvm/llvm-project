@@ -159,8 +159,9 @@ TEST(DILLexerTests, NumbersTest) {
   // These strings should lex into number tokens.
   std::vector<std::string> valid_integers = {"123", "0x123", "0123", "0b101"};
   std::vector<std::string> valid_floats = {
-      "1.2",    ".2",    "2.f",     "0x1.2",    "0x.2",     ".2e1f",
-      "2.e+1f", "0x1.f", "0x1.2p1", "0x1.p-1f", "0x1.2p+3f"};
+      "1.2",    ".2",    "2.f",     "0x1.2",    "0x.2",      ".2e1f",
+      "2.e+1f", "0x1.f", "0x1.2p1", "0x1.p-1f", "0x1.2p+3f", "1e1",
+      "1e+1",   "0x1p1", "0x1p+1",  "0xf.fp1f"};
 
   // The lexer can lex these strings, but they should not be numbers.
   std::vector<std::string> invalid_numbers = {"", "x123", "b123", "a.b"};
