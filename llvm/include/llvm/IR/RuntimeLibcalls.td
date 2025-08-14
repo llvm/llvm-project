@@ -406,17 +406,6 @@ multiclass LibmLongDoubleLibCall<string libcall_basename = !toupper(NAME),
 def SC_MEMCPY : RuntimeLibcall;
 def SC_MEMMOVE : RuntimeLibcall;
 def SC_MEMSET : RuntimeLibcall;
-def SC_MEMCHR: RuntimeLibcall;
-
-// AArch64 SME ABI calls
-def SMEABI_SME_STATE : RuntimeLibcall;
-def SMEABI_TPIDR2_SAVE : RuntimeLibcall;
-def SMEABI_ZA_DISABLE : RuntimeLibcall;
-def SMEABI_TPIDR2_RESTORE : RuntimeLibcall;
-def SMEABI_GET_CURRENT_VG : RuntimeLibcall;
-def SMEABI_SME_STATE_SIZE : RuntimeLibcall;
-def SMEABI_SME_SAVE : RuntimeLibcall;
-def SMEABI_SME_RESTORE : RuntimeLibcall;
 
 // ARM EABI calls
 def AEABI_MEMCPY4 : RuntimeLibcall; // Align 4
@@ -1234,34 +1223,7 @@ defset list<RuntimeLibcallImpl> AArch64LibcallImpls = {
   def __arm_sc_memcpy : RuntimeLibcallImpl<SC_MEMCPY>;
   def __arm_sc_memmove : RuntimeLibcallImpl<SC_MEMMOVE>;
   def __arm_sc_memset : RuntimeLibcallImpl<SC_MEMSET>;
-  def __arm_sc_memchr : RuntimeLibcallImpl<SC_MEMCHR>;
 } // End AArch64LibcallImpls
-
-def __arm_sme_state : RuntimeLibcallImpl<SMEABI_SME_STATE>;
-def __arm_tpidr2_save : RuntimeLibcallImpl<SMEABI_TPIDR2_SAVE>;
-def __arm_za_disable : RuntimeLibcallImpl<SMEABI_ZA_DISABLE>;
-def __arm_tpidr2_restore : RuntimeLibcallImpl<SMEABI_TPIDR2_RESTORE>;
-def __arm_get_current_vg : RuntimeLibcallImpl<SMEABI_GET_CURRENT_VG>;
-def __arm_sme_state_size : RuntimeLibcallImpl<SMEABI_SME_STATE_SIZE>;
-def __arm_sme_save : RuntimeLibcallImpl<SMEABI_SME_SAVE>;
-def __arm_sme_restore : RuntimeLibcallImpl<SMEABI_SME_RESTORE>;
-
-def SMEABI_LibCalls_PreserveMost_From_X0 : LibcallsWithCC<(add
-  __arm_tpidr2_save,
-  __arm_za_disable,
-  __arm_tpidr2_restore),
-  SMEABI_PreserveMost_From_X0>;
-
-def SMEABI_LibCalls_PreserveMost_From_X1 : LibcallsWithCC<(add
-  __arm_get_current_vg,
-  __arm_sme_state_size,
-  __arm_sme_save,
-  __arm_sme_restore),
-  SMEABI_PreserveMost_From_X1>;
-
-def SMEABI_LibCalls_PreserveMost_From_X2 : LibcallsWithCC<(add
-  __arm_sme_state),
-  SMEABI_PreserveMost_From_X2>;
 
 def isAArch64_ExceptArm64EC
     : RuntimeLibcallPredicate<"(TT.isAArch64() && !TT.isWindowsArm64EC())">;
@@ -1282,10 +1244,7 @@ def AArch64SystemLibrary : SystemRuntimeLibrary<
        LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
        DefaultLibmExp10,
        DefaultStackProtector,
-       SecurityCheckCookieIfWinMSVC,
-       SMEABI_LibCalls_PreserveMost_From_X0,
-       SMEABI_LibCalls_PreserveMost_From_X1,
-       SMEABI_LibCalls_PreserveMost_From_X2)
+       SecurityCheckCookieIfWinMSVC)
 >;
 
 // Prepend a # to every name
