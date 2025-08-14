@@ -23,6 +23,14 @@
                  __target__("avx512vl,no-evex512"),                            \
                  __min_vector_width__(256)))
 
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+#define __DEFAULT_FN_ATTRS256_CONSTEXPR __DEFAULT_FN_ATTRS256 constexpr
+#define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS128 constexpr
+#else
+#define __DEFAULT_FN_ATTRS256_CONSTEXPR __DEFAULT_FN_ATTRS256
+#define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS128
+#endif
+
 typedef short __v2hi __attribute__((__vector_size__(4)));
 typedef char __v4qi __attribute__((__vector_size__(4)));
 typedef char __v2qi __attribute__((__vector_size__(2)));
@@ -6744,9 +6752,8 @@ _mm256_maskz_rsqrt14_ps (__mmask8 __U, __m256 __A)
                 (__mmask8) __U);
 }
 
-static __inline__ __m256 __DEFAULT_FN_ATTRS256
-_mm256_broadcast_f32x4(__m128 __A)
-{
+static __inline__ __m256 __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_broadcast_f32x4(__m128 __A) {
   return (__m256)__builtin_shufflevector((__v4sf)__A, (__v4sf)__A,
                                          0, 1, 2, 3, 0, 1, 2, 3);
 }
@@ -6767,9 +6774,8 @@ _mm256_maskz_broadcast_f32x4 (__mmask8 __M, __m128 __A)
                                             (__v8sf)_mm256_setzero_ps());
 }
 
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
-_mm256_broadcast_i32x4(__m128i __A)
-{
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
+_mm256_broadcast_i32x4(__m128i __A) {
   return (__m256i)__builtin_shufflevector((__v4si)__A, (__v4si)__A,
                                           0, 1, 2, 3, 0, 1, 2, 3);
 }
@@ -8385,5 +8391,7 @@ _mm256_maskz_cvtph_ps (__mmask8 __U, __m128i __A)
 
 #undef __DEFAULT_FN_ATTRS128
 #undef __DEFAULT_FN_ATTRS256
+#undef __DEFAULT_FN_ATTRS256_CONSTEXPR
+#undef __DEFAULT_FN_ATTRS128_CONSTEXPR
 
 #endif /* __AVX512VLINTRIN_H */
