@@ -13,6 +13,7 @@
 #include "flang/Lower/CUDA.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/HLFIR/HLFIROps.h"
 
 #define DEBUG_TYPE "flang-lower-cuda"
 

@@ -54,8 +54,8 @@ gpu.module @test_module {
     // CHECK: = llvm.sext %{{.*}} : i32 to i64
     %gDimZ = gpu.grid_dim z
 
-    // CHECK: = rocdl.mbcnt.lo %{{.*}}, %{{.*}} : (i32, i32) -> i32
-    // CHECK: = rocdl.mbcnt.hi %{{.*}}, %{{.*}} : (i32, i32) -> i32
+    // CHECK: = rocdl.mbcnt.lo %{{.*}}, %{{.*}} {res_attrs = [{llvm.noundef, llvm.range = #llvm.constant_range<i32, 0, 32>}]} : (i32, i32) -> i32
+    // CHECK: = rocdl.mbcnt.hi %{{.*}}, %{{.*}} {res_attrs = [{llvm.noundef, llvm.range = #llvm.constant_range<i32, 0, 64>}]} : (i32, i32) -> i32
     // CHECK: = llvm.sext %{{.*}} : i32 to i64
     %laneId = gpu.lane_id
 
@@ -701,7 +701,7 @@ gpu.module @test_module {
     // CHECK: %[[#CAST_VALUE:]] = llvm.bitcast %[[#VALUE]] : f32 to i32
     // CHECK: %[[#PERMUTE:]] = rocdl.ds_bpermute %[[#ALIGNED_DST_LANE]], %[[#CAST_VALUE]] : (i32, i32) -> i32
     // CHECK: %[[#CAST_SHFL_VALUE:]] = llvm.bitcast %[[#PERMUTE]] : i32 to f32
-    %shfli, %predi = gpu.shuffle idx %arg0, %arg1, %arg2 : f32 
+    %shfli, %predi = gpu.shuffle idx %arg0, %arg1, %arg2 : f32
     // *** UP mode shuffle ***
     // CHECK: %[[#LANE_ID:]] = rocdl.mbcnt.hi
     // CHECK: %[[#ZERO:]] = llvm.mlir.constant(0 : i32) : i32
