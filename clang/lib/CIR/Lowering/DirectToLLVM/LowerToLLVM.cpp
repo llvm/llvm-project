@@ -426,7 +426,22 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::GlobalViewAttr globalAttr) {
   mlir::Value addrOp = rewriter.create<mlir::LLVM::AddressOfOp>(
       loc, mlir::LLVM::LLVMPointerType::get(rewriter.getContext()), symName);
 
-  assert(!cir::MissingFeatures::globalViewIndices());
+  if (globalAttr.getIndices()) {
+    llvm::SmallVector<mlir::LLVM::GEPArg> indices;
+
+    if (mlir::isa<mlir::LLVM::LLVMArrayType, mlir::LLVM::LLVMStructType>(
+            sourceType))
+      indices.push_back(0);
+
+    for (mlir::Attribute idx : globalAttr.getIndices()) {
+      auto intAttr = mlir::cast<mlir::IntegerAttr>(idx);
+      indices.push_back(intAttr.getValue().getSExtValue());
+    }
+    mlir::Type resTy = addrOp.getType();
+    mlir::Type eltTy = converter->convertType(sourceType);
+    addrOp = rewriter.create<mlir::LLVM::GEPOp>(
+        loc, resTy, eltTy, addrOp, indices, mlir::LLVM::GEPNoWrapFlags::none);
+  }
 
   // The incubator has handling here for the attribute having integer type, but
   // the only test case I could find that reaches it is a direct CIR-to-LLVM IR
