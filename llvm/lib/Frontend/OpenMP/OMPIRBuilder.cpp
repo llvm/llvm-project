@@ -92,18 +92,6 @@ static bool isConflictIP(IRBuilder<>::InsertPoint IP1,
   return IP1.getBlock() == IP2.getBlock() && IP1.getPoint() == IP2.getPoint();
 }
 
-/// This is wrapper over IRBuilderBase::restoreIP that also restores the current
-/// debug location to the last instruction in the specified basic block if the
-/// insert point points to the end of the block.
-static void restoreIPandDebugLoc(llvm::IRBuilderBase &Builder,
-                                 llvm::IRBuilderBase::InsertPoint IP) {
-  Builder.restoreIP(IP);
-  llvm::BasicBlock *BB = Builder.GetInsertBlock();
-  llvm::BasicBlock::iterator I = Builder.GetInsertPoint();
-  if (!BB->empty() && I == BB->end())
-    Builder.SetCurrentDebugLocation(BB->back().getStableDebugLoc());
-}
-
 static bool isValidWorkshareLoopScheduleType(OMPScheduleType SchedType) {
   // Valid ordered/unordered and base algorithm combinations.
   switch (SchedType & ~OMPScheduleType::MonotonicityMask) {
@@ -162,6 +150,18 @@ static bool isValidWorkshareLoopScheduleType(OMPScheduleType SchedType) {
   return true;
 }
 #endif
+
+/// This is wrapper over IRBuilderBase::restoreIP that also restores the current
+/// debug location to the last instruction in the specified basic block if the
+/// insert point points to the end of the block.
+static void restoreIPandDebugLoc(llvm::IRBuilderBase &Builder,
+                                 llvm::IRBuilderBase::InsertPoint IP) {
+  Builder.restoreIP(IP);
+  llvm::BasicBlock *BB = Builder.GetInsertBlock();
+  llvm::BasicBlock::iterator I = Builder.GetInsertPoint();
+  if (!BB->empty() && I == BB->end())
+    Builder.SetCurrentDebugLocation(BB->back().getStableDebugLoc());
+}
 
 static const omp::GV &getGridValue(const Triple &T, Function *Kernel) {
   if (T.isAMDGPU()) {
