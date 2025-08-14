@@ -65,10 +65,13 @@ attributes(global) subroutine devsub()
   ad = __ddiv_rz(ad, ad)
   ad = __ddiv_ru(ad, ad)
   ad = __ddiv_rd(ad, ad)
+  af = __double2float_rn(ad)
+  af = __double2float_rz(ad)
+  af = __double2float_ru(ad)
+  af = __double2float_rd(ad)
   ai = __mul24(ai, ai)
   ai = __umul24(ai, ai)
   af = __powf(af, af)
-
 end
 
 ! CHECK-LABEL: func.func @_QPdevsub() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
@@ -122,6 +125,10 @@ end
 ! CHECK: %{{.*}} = fir.call @__nv_ddiv_rz(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64, f64) -> f64
 ! CHECK: %{{.*}} = fir.call @__nv_ddiv_ru(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64, f64) -> f64
 ! CHECK: %{{.*}} = fir.call @__nv_ddiv_rd(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64, f64) -> f64
+! CHECK: %{{.*}} = fir.call @__nv_double2float_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_double2float_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_double2float_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_double2float_rd(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f32
 ! CHECK: %{{.*}} = fir.call @__nv_mul24(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32, i32) -> i32
 ! CHECK: %{{.*}} = fir.call @__nv_umul24(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32, i32) -> i32
 ! CHECK: %{{.*}} = fir.call @__nv_powf(%{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32, f32) -> f32
