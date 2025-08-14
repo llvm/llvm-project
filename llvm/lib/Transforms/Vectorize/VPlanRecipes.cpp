@@ -2256,21 +2256,37 @@ InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
     return TTI::CastContextHint::Normal;
   };
 
+  using namespace llvm::VPlanPatternMatch;
   VPValue *Operand = getOperand(0);
   TTI::CastContextHint CCH = TTI::CastContextHint::None;
   // For Trunc/FPTrunc, get the context from the only user.
-  if ((Opcode == Instruction::Trunc || Opcode == Instruction::FPTrunc) &&
-      !hasMoreThanOneUniqueUser() && getNumUsers() > 0) {
-    if (auto *StoreRecipe = dyn_cast<VPRecipeBase>(*user_begin()))
-      CCH = ComputeCCH(StoreRecipe);
+  if (Opcode == Instruction::Trunc || Opcode == Instruction::FPTrunc) {
+    auto GetOnlyUser = [](const VPSingleDefRecipe *R) -> VPRecipeBase * {
+      if (R->getNumUsers() == 0 || R->hasMoreThanOneUniqueUser())
+        return nullptr;
+      return dyn_cast<VPRecipeBase>(*R->user_begin());
+    };
+
+    if (VPRecipeBase *Recipe = GetOnlyUser(this)) {
+      if (match(Recipe, m_VPInstruction<VPInstruction::Reverse>(m_VPValue())))
+        Recipe = GetOnlyUser(cast<VPInstruction>(Recipe));
+      if (Recipe)
+        CCH = ComputeCCH(Recipe);
+    }
   }
   // For Z/Sext, get the context from the operand.
   else if (Opcode == Instruction::ZExt || Opcode == Instruction::SExt ||
            Opcode == Instruction::FPExt) {
     if (Operand->isLiveIn())
       CCH = TTI::CastContextHint::Normal;
-    else if (Operand->getDefiningRecipe())
-      CCH = ComputeCCH(Operand->getDefiningRecipe());
+    else if (auto *Recipe = Operand->getDefiningRecipe()) {
+      VPValue *ReverseOp;
+      if (match(Recipe,
+                m_VPInstruction<VPInstruction::Reverse>(m_VPValue(ReverseOp))))
+        Recipe = ReverseOp->getDefiningRecipe();
+      if (Recipe)
+        CCH = ComputeCCH(Recipe);
+    }
   }
 
   auto *SrcTy =
