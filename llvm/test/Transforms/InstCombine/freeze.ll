@@ -153,6 +153,19 @@ define i32 @early_freeze_test4(i32 %v1) {
   ret i32 %v2.fr
 }
 
+define i32 @assume(i32 %a, i32 %b) {
+; CHECK-LABEL: @assume(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "noundef"(i32 [[A:%.*]]) ]
+; CHECK-NEXT:    [[B_FR:%.*]] = freeze i32 [[B:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A]], [[B_FR]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  call void @llvm.assume(i1 true) [ "noundef"(i32 %a) ]
+  %add = add nsw nuw i32 %a, %b
+  %add.fr = freeze i32 %add
+  ret i32 %add.fr
+}
+
 ; If replace all dominated uses of v to freeze(v).
 
 define void @freeze_dominated_uses_test1(i32 %v) {
@@ -460,7 +473,7 @@ invoke.unwind:
 define i32 @freeze_callbr_use_after_phi(i1 %c) {
 ; CHECK-LABEL: @freeze_callbr_use_after_phi(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X:%.*]] = callbr i32 asm sideeffect "", "=r"() #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    [[X:%.*]] = callbr i32 asm sideeffect "", "=r"() #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:            to label [[CALLBR_CONT:%.*]] []
 ; CHECK:       callbr.cont:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[X]], [[ENTRY:%.*]] ], [ 0, [[CALLBR_CONT]] ]
@@ -889,17 +902,17 @@ exit:                                             ; preds = %loop
 }
 
 ; The recurrence for the GEP offset can't produce poison so the freeze should
-; be pushed through to the ptr, but this is not currently supported.
+; be pushed through to the ptr.
 define void @fold_phi_gep_phi_offset(ptr %init, ptr %end, i64 noundef %n) {
 ; CHECK-LABEL: @fold_phi_gep_phi_offset(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INIT:%.*]] = freeze ptr [[INIT1:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi ptr [ [[INIT:%.*]], [[ENTRY:%.*]] ], [ [[I_NEXT_FR:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi ptr [ [[INIT]], [[ENTRY:%.*]] ], [ [[I_NEXT_FR:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[OFF:%.*]] = phi i64 [ [[N:%.*]], [[ENTRY]] ], [ [[OFF_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[OFF_NEXT]] = shl i64 [[OFF]], 3
-; CHECK-NEXT:    [[I_NEXT:%.*]] = getelementptr i8, ptr [[I]], i64 [[OFF_NEXT]]
-; CHECK-NEXT:    [[I_NEXT_FR]] = freeze ptr [[I_NEXT]]
+; CHECK-NEXT:    [[I_NEXT_FR]] = getelementptr i8, ptr [[I]], i64 [[OFF_NEXT]]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq ptr [[I_NEXT_FR]], [[END:%.*]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -921,18 +934,18 @@ exit:                                             ; preds = %loop
   ret void
 }
 
-; Offset is still guaranteed not to be poison, so the freeze could be moved
-; here if we strip inbounds from the GEP, but this is not currently supported.
+; Offset is still guaranteed not to be poison, so the freeze can be moved
+; here if we strip inbounds from the GEP.
 define void @fold_phi_gep_inbounds_phi_offset(ptr %init, ptr %end, i64 noundef %n) {
 ; CHECK-LABEL: @fold_phi_gep_inbounds_phi_offset(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[INIT:%.*]] = freeze ptr [[INIT1:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi ptr [ [[INIT:%.*]], [[ENTRY:%.*]] ], [ [[I_NEXT_FR:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi ptr [ [[INIT]], [[ENTRY:%.*]] ], [ [[I_NEXT_FR:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[OFF:%.*]] = phi i64 [ [[N:%.*]], [[ENTRY]] ], [ [[OFF_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[OFF_NEXT]] = shl i64 [[OFF]], 3
-; CHECK-NEXT:    [[I_NEXT:%.*]] = getelementptr inbounds i8, ptr [[I]], i64 [[OFF_NEXT]]
-; CHECK-NEXT:    [[I_NEXT_FR]] = freeze ptr [[I_NEXT]]
+; CHECK-NEXT:    [[I_NEXT_FR]] = getelementptr i8, ptr [[I]], i64 [[OFF_NEXT]]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq ptr [[I_NEXT_FR]], [[END:%.*]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -986,6 +999,40 @@ exit:                                             ; preds = %loop
   ret void
 }
 
+; 'assume' says GEP ptr can't produce poison, check freeze is pushed to offset.
+define void @fold_phi_gep_phi_offset_assume(ptr %init, ptr %end, i64 %n) {
+; CHECK-LABEL: @fold_phi_gep_phi_offset_assume(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N:%.*]] = freeze i64 [[N1:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi ptr [ [[INIT:%.*]], [[ENTRY:%.*]] ], [ [[I_NEXT_FR:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[OFF:%.*]] = phi i64 [ [[N]], [[ENTRY]] ], [ [[OFF_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[OFF_NEXT]] = shl i64 [[OFF]], 3
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "noundef"(ptr [[I]]) ]
+; CHECK-NEXT:    [[I_NEXT_FR]] = getelementptr i8, ptr [[I]], i64 [[OFF_NEXT]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq ptr [[I_NEXT_FR]], [[END:%.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:                                             ; preds = %loop, %entry
+  %i = phi ptr [ %init, %entry ], [ %i.next.fr, %loop ]
+  %off = phi i64 [ %n, %entry ], [ %off.next, %loop ]
+  %off.next = shl i64 %off, 3
+  call void @llvm.assume(i1 true) [ "noundef"(ptr %i) ]
+  %i.next = getelementptr inbounds i8, ptr %i, i64 %off.next
+  %i.next.fr = freeze ptr %i.next
+  %cond = icmp eq ptr %i.next.fr, %end
+  br i1 %cond, label %loop, label %exit
+
+exit:                                             ; preds = %loop
+  ret void
+}
+
 define void @fold_phi_multiple_insts(i32 %init, i32 %n) {
 ; CHECK-LABEL: @fold_phi_multiple_insts(
 ; CHECK-NEXT:  entry:
@@ -994,7 +1041,7 @@ define void @fold_phi_multiple_insts(i32 %init, i32 %n) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[INIT_FR]], [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[I_SQ:%.*]] = mul i32 [[I]], [[I]]
-; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I_SQ]], 1
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I_SQ]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[I_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -1127,7 +1174,7 @@ define void @fold_phi_invoke_noundef_start_value(i32 %n) personality ptr undef {
 ; CHECK-NEXT:            to label [[LOOP:%.*]] unwind label [[UNWIND:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[INIT]], [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[I_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       unwind:
@@ -1346,7 +1393,8 @@ define ptr @freeze_ptrmask_nonnull(ptr %p, i64 noundef %m) {
 !2 = !{i32 0, i32 100}
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-; CHECK: attributes #[[ATTR1]] = { nounwind }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
+; CHECK: attributes #[[ATTR2]] = { nounwind }
 ;.
 ; CHECK: [[META0]] = !{}
 ; CHECK: [[META1]] = !{i64 4}
