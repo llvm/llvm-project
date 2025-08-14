@@ -639,7 +639,6 @@ public:
     assert(DT.verify());
     assert(PDT.verify());
     LI.verify(DT);
-    SE.verify();
 #endif
 
     LLVM_DEBUG(dbgs() << "Loop Fusion complete\n");
@@ -1786,7 +1785,6 @@ private:
     assert(DT.verify(DominatorTree::VerificationLevel::Fast));
     assert(PDT.verify());
     LI.verify(DT);
-    SE.verify();
 #endif
 
     LLVM_DEBUG(dbgs() << "Fusion done:\n");
@@ -2082,7 +2080,6 @@ private:
     assert(DT.verify(DominatorTree::VerificationLevel::Fast));
     assert(PDT.verify());
     LI.verify(DT);
-    SE.verify();
 #endif
 
     LLVM_DEBUG(dbgs() << "Fusion done:\n");
@@ -2122,7 +2119,6 @@ PreservedAnalyses LoopFusePass::run(Function &F, FunctionAnalysisManager &AM) {
   PreservedAnalyses PA;
   PA.preserve<DominatorTreeAnalysis>();
   PA.preserve<PostDominatorTreeAnalysis>();
-  PA.preserve<ScalarEvolutionAnalysis>();
   PA.preserve<LoopAnalysis>();
   return PA;
 }
