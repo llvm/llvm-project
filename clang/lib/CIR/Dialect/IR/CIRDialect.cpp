@@ -2607,7 +2607,7 @@ ParseResult cir::InlineAsmOp::parse(OpAsmParser &parser,
       parser.parseType(resType).failed())
     return mlir::failure();
 
-  if (parser.parseOptionalAttrDict(result.attributes))
+  if (parser.parseOptionalAttrDict(result.attributes).failed())
     return mlir::failure();
 
   result.attributes.set("asm_flavor", AsmFlavorAttr::get(ctxt, *flavor));
