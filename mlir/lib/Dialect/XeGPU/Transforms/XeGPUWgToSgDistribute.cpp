@@ -128,6 +128,12 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
   LogicalResult
   matchAndRewrite(xegpu::CreateNdDescOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+
+    // Ensure that the op has explicit offsets specified (either dynamic or
+    // constant).
+    if (op.getMixedOffsets().empty())
+      return failure();
+
     Location loc = op.getLoc();
     MLIRContext *ctx = op.getContext();
     xegpu::TensorDescType tdescTy = op.getType();
@@ -194,6 +200,49 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
           op.getMixedSizes(), op.getMixedStrides());
       newCreateNdOps.push_back(newOp);
     }
+    rewriter.replaceOpWithMultiple(op, {newCreateNdOps});
+    return success();
+  }
+};
+
+// This pattern transforms the CreateNdDescOp without offsets to create a
+// subgroup descriptor from a workgroup descriptor
+struct WgToSgCreateNdOpNoOffset
+    : public OpConversionPattern<xegpu::CreateNdDescOp> {
+  using OpConversionPattern<xegpu::CreateNdDescOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(xegpu::CreateNdDescOp op, OneToNOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    // Check no offsets are specified.
+    if (!op.getMixedOffsets().empty())
+      return failure();
+
+    Location loc = op.getLoc();
+    MLIRContext *ctx = op.getContext();
+    xegpu::TensorDescType tdescTy = op.getType();
+    auto layout = dyn_cast<xegpu::LayoutAttr>(tdescTy.getLayout());
+    if (!layout || !layout.isWgLayout())
+      return failure();
+
+    Type elemTy = tdescTy.getElementType();
+    ArrayRef<int64_t> wgShape = tdescTy.getShape();
+
+    SmallVector<int64_t> sgShape;
+    int count;
+    std::tie(sgShape, count) = getSgShapeAndCount(wgShape, layout);
+    xegpu::TensorDescType newTdescTy =
+        xegpu::TensorDescType::get(ctx, sgShape, elemTy, tdescTy.getEncoding(),
+                                   layout.dropSgLayoutAndData());
+
+    SmallVector<Value> newCreateNdOps(count);
+    std::generate(newCreateNdOps.begin(), newCreateNdOps.end(), [&]() {
+      return xegpu::CreateNdDescOp::create(rewriter, loc, newTdescTy,
+                                           op.getSource(), op.getMixedSizes(),
+                                           op.getMixedStrides());
+    });
+
     rewriter.replaceOpWithMultiple(op, {newCreateNdOps});
     return success();
   }
@@ -603,11 +652,12 @@ struct UnrealizedConversionCastOpPattern
 namespace mlir {
 namespace xegpu {
 void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns) {
-  patterns.add<WgToSgCreateNdOp, WgToSgLoadNdOp, WgToSgStoreNdOp,
-               WgToSgUpdateNdOffsetOp, WgToSgDpasOp, WgToSgPrefetchNdOp,
-               UnrealizedConversionCastOpPattern, WgToSgElementwiseOp,
-               WgToSgVectorBroadcastOp, WgToSgConvertLayoutOp>(
-      patterns.getContext());
+  patterns
+      .add<WgToSgCreateNdOp, WgToSgCreateNdOpNoOffset, WgToSgLoadNdOp,
+           WgToSgStoreNdOp, WgToSgUpdateNdOffsetOp, WgToSgDpasOp,
+           WgToSgPrefetchNdOp, UnrealizedConversionCastOpPattern,
+           WgToSgElementwiseOp, WgToSgVectorBroadcastOp, WgToSgConvertLayoutOp>(
+          patterns.getContext());
 }
 } // namespace xegpu
 } // namespace mlir
