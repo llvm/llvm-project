@@ -1087,9 +1087,6 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
   // also become the break target.
   JumpDest LoopExit = getJumpDestInCurrentScope("while.end");
 
-  // Store the blocks to use for break and continue.
-  BreakContinueStack.push_back(BreakContinue(LoopExit, LoopHeader));
-
   // C++ [stmt.while]p2:
   //   When the condition of a while statement is a declaration, the
   //   scope of the variable that is declared extends from its point
@@ -1158,6 +1155,9 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
         << SourceRange(S.getWhileLoc(), S.getRParenLoc());
   }
 
+  // Store the blocks to use for break and continue.
+  BreakContinueStack.push_back(BreakContinue(LoopExit, LoopHeader));
+
   // Emit the loop body.  We have to emit this in a cleanup scope
   // because it might be a singleton DeclStmt.
   {
@@ -1206,8 +1206,6 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
 
   uint64_t ParentCount = getCurrentProfileCount();
 
-  // Store the blocks to use for break and continue.
-  BreakContinueStack.push_back(BreakContinue(LoopExit, LoopCond));
 
   // Emit the body of the loop.
   llvm::BasicBlock *LoopBody = createBasicBlock("do.body");
@@ -1220,10 +1218,13 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
   if (CGM.shouldEmitConvergenceTokens())
     ConvergenceTokenStack.push_back(emitConvergenceLoopToken(LoopBody));
 
+  // Store the blocks to use for break and continue.
+  BreakContinueStack.push_back(BreakContinue(LoopExit, LoopCond));
   {
     RunCleanupsScope BodyScope(*this);
     EmitStmt(S.getBody());
   }
+  BreakContinueStack.pop_back();
 
   EmitBlock(LoopCond.getBlock());
   // When single byte coverage mode is enabled, add a counter to loop condition.
@@ -1237,8 +1238,6 @@ void CodeGenFunction::EmitDoStmt(const DoStmt &S,
   // C99 6.8.5p2/p4: The first substatement is executed if the expression
   // compares unequal to 0.  The condition must be a scalar type.
   llvm::Value *BoolCondVal = EvaluateExprAsBool(S.getCond());
-
-  BreakContinueStack.pop_back();
 
   // "do {} while (0)" is common in macros, avoid extra blocks.  Be sure
   // to correctly handle break/continue though.
@@ -1328,7 +1327,6 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
     Continue = CondDest;
   else if (!S.getConditionVariable())
     Continue = getJumpDestInCurrentScope("for.inc");
-  BreakContinueStack.push_back(BreakContinue(LoopExit, Continue));
 
   if (S.getCond()) {
     // If the for statement has a condition scope, emit the local variable
@@ -1339,7 +1337,6 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
       // We have entered the condition variable's scope, so we're now able to
       // jump to the continue block.
       Continue = S.getInc() ? getJumpDestInCurrentScope("for.inc") : CondDest;
-      BreakContinueStack.back().ContinueBlock = Continue;
     }
 
     // When single byte coverage mode is enabled, add a counter to loop
@@ -1381,7 +1378,6 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
       EmitBlock(ExitBlock);
       EmitBranchThroughCleanup(LoopExit);
     }
-
     EmitBlock(ForBody);
   } else {
     // Treat it as a non-zero constant.  Don't even create a new block for the
@@ -1393,12 +1389,15 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
     incrementProfileCounter(S.getBody());
   else
     incrementProfileCounter(&S);
+
+  BreakContinueStack.push_back(BreakContinue(LoopExit, Continue));
   {
     // Create a separate cleanup scope for the body, in case it is not
     // a compound statement.
     RunCleanupsScope BodyScope(*this);
     EmitStmt(S.getBody());
   }
+  BreakContinueStack.pop_back();
 
   // The last block in the loop's body (which unconditionally branches to the
   // `inc` block if there is one).
@@ -1411,8 +1410,6 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
     if (llvm::EnableSingleByteCoverage)
       incrementProfileCounter(S.getInc());
   }
-
-  BreakContinueStack.pop_back();
 
   ConditionScope.ForceCleanup();
 
@@ -1518,6 +1515,8 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
     EmitStmt(S.getLoopVarStmt());
     EmitStmt(S.getBody());
   }
+  BreakContinueStack.pop_back();
+
   // The last block in the loop's body (which unconditionally branches to the
   // `inc` block if there is one).
   auto *FinalBodyBB = Builder.GetInsertBlock();
@@ -1526,8 +1525,6 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
   // If there is an increment, emit it next.
   EmitBlock(Continue.getBlock());
   EmitStmt(S.getInc());
-
-  BreakContinueStack.pop_back();
 
   EmitBranch(CondBlock);
 

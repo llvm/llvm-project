@@ -31,3 +31,27 @@ int main(void) {     // CHECK: File 0, [[@LINE]]:16 -> {{[0-9]+}}:2 = #0
     ++cnt;
   }
 }
+
+// CHECK-LABEL: break_continue_in_increment:
+/*
+  52:41 -> 57:2 = #0
+  53:10 -> 53:11 = ((#0 + #1) + #2)
+  Branch,File 0, 53:10 -> 53:11 = #1, 0
+
+  53:13 -> 56:4 = #1
+
+
+  
+
+*/
+
+  // CHECK: [[@LINE+6]]:20 -> [[@LINE+6]]:21 = #2
+  // CHECK: [[@LINE+5]]:23 -> [[@LINE+5]]:28 = #3
+  // CHECK: [[@LINE+4]]:35 -> [[@LINE+4]]:43 = (#2 - #3)
+  // CHECK: [[@LINE+4]]:7 -> [[@LINE+4]]:8 = #2
+void break_continue_in_increment(int x) {
+  while (1) {
+    for (;; ({ if (x) break; else continue; }))
+      ;
+  }
+}
