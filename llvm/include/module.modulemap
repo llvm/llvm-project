@@ -107,6 +107,12 @@ module LLVM_BinaryFormat {
     textual header "llvm/BinaryFormat/MsgPack.def"
 }
 
+module LLVM_CAS {
+  requires cplusplus
+  umbrella "llvm/CAS"
+  module * { export * }
+}
+
 module LLVM_Config {
   requires cplusplus
   umbrella "llvm/Config"
