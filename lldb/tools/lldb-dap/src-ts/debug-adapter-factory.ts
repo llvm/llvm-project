@@ -158,6 +158,42 @@ async function getDAPArguments(
 }
 
 /**
+ * Retrieves the environment that will be provided to lldb-dap either from settings or the provided
+ * {@link vscode.DebugConfiguration}.
+ *
+ * @param workspaceFolder The {@link vscode.WorkspaceFolder} that the debug session will be launched within
+ * @param configuration The {@link vscode.DebugConfiguration} that will be launched
+ * @throws An {@link ErrorWithNotification} if something went wrong
+ * @returns The environment that will be provided to lldb-dap
+ */
+async function getDAPEnvironment(
+  workspaceFolder: vscode.WorkspaceFolder | undefined,
+  configuration: vscode.DebugConfiguration,
+): Promise<string[]> {
+  const debugConfigEnv = configuration.debugAdapterEnv;
+  if (debugConfigEnv) {
+    if (
+      Array.isArray(debugConfigEnv) ||
+      typeof debugConfigEnv !== "object" ||
+      Object.values(debugConfigEnv).findIndex(
+        (entry) => typeof entry !== "string",
+      ) !== -1
+    ) {
+      throw new ErrorWithNotification(
+        "The debugAdapterEnv property must be a dictionary with string values. Please update your launch configuration",
+        new ConfigureButton(),
+      );
+    }
+    return debugConfigEnv;
+  }
+
+  const config = vscode.workspace.workspaceFile
+    ? vscode.workspace.getConfiguration("lldb-dap")
+    : vscode.workspace.getConfiguration("lldb-dap", workspaceFolder);
+  return config.get<{ [key: string]: string }>("environment") || {};
+}
+
+/**
  * Creates a new {@link vscode.DebugAdapterExecutable} based on the provided workspace folder and
  * debug configuration. Assumes that the given debug configuration is for a local launch of lldb-dap.
  *
@@ -186,8 +222,10 @@ export async function createDebugAdapterExecutable(
   ) {
     env["LLDBDAP_LOG"] = logFilePath.get(LogType.DEBUG_SESSION);
   }
-  const configEnvironment =
-    config.get<{ [key: string]: string }>("environment") || {};
+  const configEnvironment = await getDAPEnvironment(
+    workspaceFolder,
+    configuration,
+  );
   const dapPath = await getDAPExecutable(workspaceFolder, configuration);
 
   const dbgOptions = {
