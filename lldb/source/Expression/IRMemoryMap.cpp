@@ -640,6 +640,13 @@ void IRMemoryMap::WritePointerToMemory(lldb::addr_t process_address,
                                        lldb::addr_t address, Status &error) {
   error.Clear();
 
+  /// Only ask the Process to fix the address if this address belongs to the
+  /// process (host allocations are stored in m_data).
+  if (auto it = FindAllocation(process_address, 1);
+      it != m_allocations.end() && it->second.m_data.GetByteSize() == 0)
+    if (auto process_sp = GetProcessWP().lock())
+      address = process_sp->FixAnyAddress(address);
+
   Scalar scalar(address);
 
   WriteScalarToMemory(process_address, scalar, GetAddressByteSize(), error);
