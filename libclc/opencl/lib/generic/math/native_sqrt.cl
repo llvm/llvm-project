@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_native_sqrt.h>
-#include <clc/opencl/clc.h>
+#include <clc/opencl/math/native_sqrt.h>
 
 #define __FLOAT_ONLY
 #define FUNCTION native_sqrt

@@ -53,17 +53,17 @@ exit4:
 ; PREDINF-NEXT:    br label %[[BLOCK1:.*]]
 ; PREDINF:       [[BLOCK1]]:
 ; PREDINF-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], 0
-; PREDINF:         [[CMP_0:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[CMP]])
-; PREDINF:         [[X_0:%.*]] = call i32 @llvm.ssa.copy.i32(i32 [[X]])
-; PREDINF:         [[X_4:%.*]] = call i32 @llvm.ssa.copy.i32(i32 [[X]])
+; PREDINF:         [[CMP_0:%.*]] = bitcast i1 [[CMP]] to i1
+; PREDINF:         [[X_0:%.*]] = bitcast i32 [[X]] to i32
+; PREDINF:         [[X_4:%.*]] = bitcast i32 [[X]] to i32
 ; PREDINF-NEXT:    br i1 [[CMP]], label %[[BLOCK2:.*]], label %[[EXIT1:.*]]
 ; PREDINF:       [[BLOCK2]]:
-; PREDINF:         [[CMP_0_1:%.*]] = call i1 @llvm.ssa.copy.i1(i1 [[CMP_0]])
-; PREDINF:         [[X_0_1:%.*]] = call i32 @llvm.ssa.copy.i32(i32 [[X_0]])
-; PREDINF:         [[X_0_3:%.*]] = call i32 @llvm.ssa.copy.i32(i32 [[X_0]])
+; PREDINF:         [[CMP_0_1:%.*]] = bitcast i1 [[CMP_0]] to i1
+; PREDINF:         [[X_0_1:%.*]] = bitcast i32 [[X_0]] to i32
+; PREDINF:         [[X_0_3:%.*]] = bitcast i32 [[X_0]] to i32
 ; PREDINF-NEXT:    br i1 [[CMP_0]], label %[[BLOCK3:.*]], label %[[EXIT2:.*]]
 ; PREDINF:       [[BLOCK3]]:
-; PREDINF:         [[X_0_1_2:%.*]] = call i32 @llvm.ssa.copy.i32(i32 [[X_0_1]])
+; PREDINF:         [[X_0_1_2:%.*]] = bitcast i32 [[X_0_1]] to i32
 ; PREDINF-NEXT:    br i1 [[CMP_0_1]], label %[[EXIT4:.*]], label %[[EXIT3:.*]]
 ; PREDINF:       [[EXIT1]]:
 ; PREDINF-NEXT:    ret i32 [[X_4]]

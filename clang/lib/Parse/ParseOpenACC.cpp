@@ -606,13 +606,20 @@ unsigned getOpenACCScopeFlags(OpenACCDirectiveKind DirKind) {
   case OpenACCDirectiveKind::Parallel:
   case OpenACCDirectiveKind::Serial:
   case OpenACCDirectiveKind::Kernels:
+    // Mark this as a BreakScope/ContinueScope as well as a compute construct
+    // so that we can diagnose trying to 'break'/'continue' inside of one.
+    return Scope::BreakScope | Scope::ContinueScope |
+           Scope::OpenACCComputeConstructScope;
   case OpenACCDirectiveKind::ParallelLoop:
   case OpenACCDirectiveKind::SerialLoop:
   case OpenACCDirectiveKind::KernelsLoop:
     // Mark this as a BreakScope/ContinueScope as well as a compute construct
     // so that we can diagnose trying to 'break'/'continue' inside of one.
     return Scope::BreakScope | Scope::ContinueScope |
-           Scope::OpenACCComputeConstructScope;
+           Scope::OpenACCComputeConstructScope |
+           Scope::OpenACCLoopConstructScope;
+  case OpenACCDirectiveKind::Loop:
+    return Scope::OpenACCLoopConstructScope;
   case OpenACCDirectiveKind::Data:
   case OpenACCDirectiveKind::EnterData:
   case OpenACCDirectiveKind::ExitData:
@@ -621,7 +628,6 @@ unsigned getOpenACCScopeFlags(OpenACCDirectiveKind DirKind) {
   case OpenACCDirectiveKind::Init:
   case OpenACCDirectiveKind::Shutdown:
   case OpenACCDirectiveKind::Cache:
-  case OpenACCDirectiveKind::Loop:
   case OpenACCDirectiveKind::Atomic:
   case OpenACCDirectiveKind::Declare:
   case OpenACCDirectiveKind::Routine:
@@ -653,7 +659,7 @@ ExprResult Parser::ParseOpenACCConditionExpr() {
   // it does in an if/while/etc (See ParseCXXCondition), however as it was
   // written with Fortran/C in mind, we're going to assume it just means an
   // 'expression evaluating to boolean'.
-  ExprResult ER = getActions().CorrectDelayedTyposInExpr(ParseExpression());
+  ExprResult ER = ParseExpression();
 
   if (!ER.isUsable())
     return ER;
@@ -691,6 +697,7 @@ OpenACCModifierKind Parser::tryParseModifierList(OpenACCClauseKind CK) {
         .Case("alwaysout", OpenACCModifierKind::AlwaysOut)
         .Case("readonly", OpenACCModifierKind::Readonly)
         .Case("zero", OpenACCModifierKind::Zero)
+        .Case("capture", OpenACCModifierKind::Capture)
         .Default(OpenACCModifierKind::Invalid);
   };
 
@@ -759,12 +766,6 @@ Parser::ParseOpenACCIntExpr(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
   // don't try to continue.
   if (!ER.isUsable())
     return {ER, OpenACCParseCanContinue::Cannot};
-
-  // Parsing can continue after the initial assignment expression parsing, so
-  // even if there was a typo, we can continue.
-  ER = getActions().CorrectDelayedTyposInExpr(ER);
-  if (!ER.isUsable())
-    return {ER, OpenACCParseCanContinue::Can};
 
   return {getActions().OpenACC().ActOnIntExpr(DK, CK, Loc, ER.get()),
           OpenACCParseCanContinue::Can};
@@ -835,8 +836,7 @@ ExprResult Parser::ParseOpenACCSizeExpr(OpenACCClauseKind CK) {
     return getActions().OpenACC().ActOnOpenACCAsteriskSizeExpr(AsteriskLoc);
   }
 
-  ExprResult SizeExpr =
-      getActions().CorrectDelayedTyposInExpr(ParseConstantExpression());
+  ExprResult SizeExpr = ParseConstantExpression();
 
   if (!SizeExpr.isUsable())
     return SizeExpr;
@@ -890,8 +890,7 @@ Parser::OpenACCGangArgRes Parser::ParseOpenACCGangArg(SourceLocation GangLoc) {
     ConsumeToken();
     // Parse this as a const-expression, and we'll check its integer-ness/value
     // in CheckGangExpr.
-    ExprResult Res =
-        getActions().CorrectDelayedTyposInExpr(ParseConstantExpression());
+    ExprResult Res = ParseConstantExpression();
     return {OpenACCGangKind::Dim, Res};
   }
 
@@ -1088,8 +1087,7 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
     case OpenACCClauseKind::Collapse: {
       bool HasForce = tryParseAndConsumeSpecialTokenKind(
           *this, OpenACCSpecialTokenKind::Force, ClauseKind);
-      ExprResult LoopCount =
-          getActions().CorrectDelayedTyposInExpr(ParseConstantExpression());
+      ExprResult LoopCount = ParseConstantExpression();
       if (LoopCount.isInvalid()) {
         Parens.skipToEnd();
         return OpenACCCanContinue();
@@ -1386,7 +1384,7 @@ ExprResult Parser::ParseOpenACCIDExpression() {
                                     /*isAddressOfOperand=*/false);
   }
 
-  return getActions().CorrectDelayedTyposInExpr(Res);
+  return Res;
 }
 
 std::variant<std::monostate, clang::StringLiteral *, IdentifierInfo *>
@@ -1413,9 +1411,8 @@ Parser::ParseOpenACCBindClauseArgument() {
     return std::monostate{};
   }
 
-  ExprResult Res =
-      getActions().CorrectDelayedTyposInExpr(ParseStringLiteralExpression(
-          /*AllowUserDefinedLiteral=*/false, /*Unevaluated=*/true));
+  ExprResult Res = ParseStringLiteralExpression(
+      /*AllowUserDefinedLiteral=*/false, /*Unevaluated=*/true);
   if (!Res.isUsable())
     return std::monostate{};
   return cast<StringLiteral>(Res.get());
@@ -1425,16 +1422,15 @@ Parser::OpenACCVarParseResult Parser::ParseOpenACCVar(OpenACCDirectiveKind DK,
                                                       OpenACCClauseKind CK) {
   OpenACCArraySectionRAII ArraySections(*this);
 
+  getActions().OpenACC().ActOnStartParseVar(DK, CK);
   ExprResult Res = ParseAssignmentExpression();
-  if (!Res.isUsable())
-    return {Res, OpenACCParseCanContinue::Cannot};
 
-  Res = getActions().CorrectDelayedTyposInExpr(Res.get());
-  if (!Res.isUsable())
-    return {Res, OpenACCParseCanContinue::Can};
+  if (!Res.isUsable()) {
+    getActions().OpenACC().ActOnInvalidParseVar();
+    return {Res, OpenACCParseCanContinue::Cannot};
+  }
 
   Res = getActions().OpenACC().ActOnVar(DK, CK, Res.get());
-
   return {Res, OpenACCParseCanContinue::Can};
 }
 

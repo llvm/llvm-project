@@ -40,6 +40,10 @@ public:
 };
 } // namespace
 
+uint64_t elf::getMipsPageAddr(uint64_t addr) {
+  return (addr + 0x8000) & ~0xffff;
+}
+
 template <class ELFT> MIPS<ELFT>::MIPS(Ctx &ctx) : TargetInfo(ctx) {
   gotPltHeaderEntriesNum = 2;
   defaultMaxPageSize = 65536;

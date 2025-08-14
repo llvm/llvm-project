@@ -559,7 +559,7 @@ define <vscale x 1 x i64> @vp_bswap_nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 
 ; RV64-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; RV64-NEXT:    vand.vx v9, v8, a1, v0.t
 ; RV64-NEXT:    slli a2, a2, 24
-; RV64-NEXT:    addiw a0, a4, -256
+; RV64-NEXT:    addi a0, a4, -256
 ; RV64-NEXT:    vsll.vi v9, v9, 24, v0.t
 ; RV64-NEXT:    vand.vx v10, v8, a2, v0.t
 ; RV64-NEXT:    vsll.vi v10, v10, 8, v0.t
@@ -642,7 +642,7 @@ define <vscale x 1 x i64> @vp_bswap_nxv1i64_unmasked(<vscale x 1 x i64> %va, i32
 ; RV64-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; RV64-NEXT:    vsrl.vi v9, v8, 24
 ; RV64-NEXT:    vsrl.vi v10, v8, 8
-; RV64-NEXT:    addiw a0, a4, -256
+; RV64-NEXT:    addi a0, a4, -256
 ; RV64-NEXT:    vsrl.vx v11, v8, a3
 ; RV64-NEXT:    vsrl.vx v12, v8, a5
 ; RV64-NEXT:    vand.vx v12, v12, a0
@@ -727,7 +727,7 @@ define <vscale x 2 x i64> @vp_bswap_nxv2i64(<vscale x 2 x i64> %va, <vscale x 2 
 ; RV64-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; RV64-NEXT:    vand.vx v10, v8, a1, v0.t
 ; RV64-NEXT:    slli a2, a2, 24
-; RV64-NEXT:    addiw a0, a4, -256
+; RV64-NEXT:    addi a0, a4, -256
 ; RV64-NEXT:    vsll.vi v10, v10, 24, v0.t
 ; RV64-NEXT:    vand.vx v12, v8, a2, v0.t
 ; RV64-NEXT:    vsll.vi v12, v12, 8, v0.t
@@ -810,7 +810,7 @@ define <vscale x 2 x i64> @vp_bswap_nxv2i64_unmasked(<vscale x 2 x i64> %va, i32
 ; RV64-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; RV64-NEXT:    vsrl.vi v10, v8, 24
 ; RV64-NEXT:    vsrl.vi v12, v8, 8
-; RV64-NEXT:    addiw a0, a4, -256
+; RV64-NEXT:    addi a0, a4, -256
 ; RV64-NEXT:    vsrl.vx v14, v8, a3
 ; RV64-NEXT:    vsrl.vx v16, v8, a5
 ; RV64-NEXT:    vand.vx v16, v16, a0
@@ -895,7 +895,7 @@ define <vscale x 4 x i64> @vp_bswap_nxv4i64(<vscale x 4 x i64> %va, <vscale x 4 
 ; RV64-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; RV64-NEXT:    vand.vx v12, v8, a1, v0.t
 ; RV64-NEXT:    slli a2, a2, 24
-; RV64-NEXT:    addiw a0, a4, -256
+; RV64-NEXT:    addi a0, a4, -256
 ; RV64-NEXT:    vsll.vi v12, v12, 24, v0.t
 ; RV64-NEXT:    vand.vx v16, v8, a2, v0.t
 ; RV64-NEXT:    vsll.vi v16, v16, 8, v0.t
@@ -978,7 +978,7 @@ define <vscale x 4 x i64> @vp_bswap_nxv4i64_unmasked(<vscale x 4 x i64> %va, i32
 ; RV64-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; RV64-NEXT:    vsrl.vi v12, v8, 24
 ; RV64-NEXT:    vsrl.vi v16, v8, 8
-; RV64-NEXT:    addiw a0, a4, -256
+; RV64-NEXT:    addi a0, a4, -256
 ; RV64-NEXT:    vsrl.vx v20, v8, a3
 ; RV64-NEXT:    vsrl.vx v24, v8, a5
 ; RV64-NEXT:    vand.vx v24, v24, a0
@@ -1118,7 +1118,7 @@ define <vscale x 7 x i64> @vp_bswap_nxv7i64(<vscale x 7 x i64> %va, <vscale x 7 
 ; RV64-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; RV64-NEXT:    vand.vx v16, v8, a1, v0.t
 ; RV64-NEXT:    slli a2, a2, 24
-; RV64-NEXT:    addiw a0, a4, -256
+; RV64-NEXT:    addi a0, a4, -256
 ; RV64-NEXT:    vsll.vi v16, v16, 24, v0.t
 ; RV64-NEXT:    vand.vx v24, v8, a2, v0.t
 ; RV64-NEXT:    vsll.vi v24, v24, 8, v0.t
@@ -1239,7 +1239,7 @@ define <vscale x 7 x i64> @vp_bswap_nxv7i64_unmasked(<vscale x 7 x i64> %va, i32
 ; RV64-NEXT:    li a5, 40
 ; RV64-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; RV64-NEXT:    vsrl.vi v24, v8, 24
-; RV64-NEXT:    addiw a0, a4, -256
+; RV64-NEXT:    addi a0, a4, -256
 ; RV64-NEXT:    vsrl.vx v16, v8, a3
 ; RV64-NEXT:    vsrl.vx v0, v8, a5
 ; RV64-NEXT:    vand.vx v0, v0, a0
@@ -1390,7 +1390,7 @@ define <vscale x 8 x i64> @vp_bswap_nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 
 ; RV64-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; RV64-NEXT:    vand.vx v16, v8, a1, v0.t
 ; RV64-NEXT:    slli a2, a2, 24
-; RV64-NEXT:    addiw a0, a4, -256
+; RV64-NEXT:    addi a0, a4, -256
 ; RV64-NEXT:    vsll.vi v16, v16, 24, v0.t
 ; RV64-NEXT:    vand.vx v24, v8, a2, v0.t
 ; RV64-NEXT:    vsll.vi v24, v24, 8, v0.t
@@ -1511,7 +1511,7 @@ define <vscale x 8 x i64> @vp_bswap_nxv8i64_unmasked(<vscale x 8 x i64> %va, i32
 ; RV64-NEXT:    li a5, 40
 ; RV64-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; RV64-NEXT:    vsrl.vi v24, v8, 24
-; RV64-NEXT:    addiw a0, a4, -256
+; RV64-NEXT:    addi a0, a4, -256
 ; RV64-NEXT:    vsrl.vx v16, v8, a3
 ; RV64-NEXT:    vsrl.vx v0, v8, a5
 ; RV64-NEXT:    vand.vx v0, v0, a0
@@ -1709,7 +1709,7 @@ define <vscale x 1 x i48> @vp_bswap_nxv1i48(<vscale x 1 x i48> %va, <vscale x 1 
 ; RV64-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; RV64-NEXT:    vand.vx v9, v8, a1, v0.t
 ; RV64-NEXT:    slli a2, a2, 24
-; RV64-NEXT:    addiw a0, a4, -256
+; RV64-NEXT:    addi a0, a4, -256
 ; RV64-NEXT:    vsll.vi v9, v9, 24, v0.t
 ; RV64-NEXT:    vand.vx v10, v8, a2, v0.t
 ; RV64-NEXT:    vsll.vi v10, v10, 8, v0.t

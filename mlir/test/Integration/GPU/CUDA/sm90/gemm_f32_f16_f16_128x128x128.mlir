@@ -120,7 +120,7 @@ func.func @main() {
             threads(%arg3, %arg4, %arg5) in (%arg9 = %hc128, %arg10 = %hc1, %arg11 = %hc1) 
             dynamic_shared_memory_size %shmemSize 
   {  
-    memref.assume_alignment %matrixD, 16 : memref<128x128xf32>
+    %align_matrixD = memref.assume_alignment %matrixD, 16 : memref<128x128xf32>
 
     %c256 = arith.constant 256 : index
     %c10000000 = arith.constant 10000000 : index
@@ -226,7 +226,7 @@ func.func @main() {
     scf.for %arg12 = %17 to %c128 step %c4 {
       %19 = arith.muli %18, %c4 : index
       %20 = vector.load %accShmemPtr[%arg12, %19] : memref<128x128xf32, 3>, vector<4xf32>
-      vector.store %20, %matrixD[%arg12, %19] : memref<128x128xf32>, vector<4xf32>
+      vector.store %20, %align_matrixD[%arg12, %19] : memref<128x128xf32>, vector<4xf32>
     }
     gpu.terminator
   }

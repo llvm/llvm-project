@@ -63,7 +63,7 @@ public:
 
   mlir::Value getConstAPInt(mlir::Location loc, mlir::Type typ,
                             const llvm::APInt &val) {
-    return create<cir::ConstantOp>(loc, getAttr<cir::IntAttr>(typ, val));
+    return create<cir::ConstantOp>(loc, cir::IntAttr::get(typ, val));
   }
 
   cir::ConstantOp getConstant(mlir::Location loc, mlir::TypedAttr attr) {
@@ -73,6 +73,18 @@ public:
   cir::ConstantOp getConstantInt(mlir::Location loc, mlir::Type ty,
                                  int64_t value) {
     return getConstant(loc, cir::IntAttr::get(ty, value));
+  }
+
+  mlir::Value getSignedInt(mlir::Location loc, int64_t val, unsigned numBits) {
+    auto type = cir::IntType::get(getContext(), numBits, /*isSigned=*/true);
+    return getConstAPInt(loc, type,
+                         llvm::APInt(numBits, val, /*isSigned=*/true));
+  }
+
+  mlir::Value getUnsignedInt(mlir::Location loc, uint64_t val,
+                             unsigned numBits) {
+    auto type = cir::IntType::get(getContext(), numBits, /*isSigned=*/false);
+    return getConstAPInt(loc, type, llvm::APInt(numBits, val));
   }
 
   // Creates constant null value for integral type ty.
@@ -90,6 +102,8 @@ public:
       return cir::IntAttr::get(ty, 0);
     if (cir::isAnyFloatingPointType(ty))
       return cir::FPAttr::getZero(ty);
+    if (auto complexType = mlir::dyn_cast<cir::ComplexType>(ty))
+      return cir::ZeroAttr::get(complexType);
     if (auto arrTy = mlir::dyn_cast<cir::ArrayType>(ty))
       return cir::ZeroAttr::get(arrTy);
     if (auto vecTy = mlir::dyn_cast<cir::VectorType>(ty))
@@ -126,6 +140,22 @@ public:
 
   cir::BoolAttr getTrueAttr() { return getCIRBoolAttr(true); }
   cir::BoolAttr getFalseAttr() { return getCIRBoolAttr(false); }
+
+  mlir::Value createComplexCreate(mlir::Location loc, mlir::Value real,
+                                  mlir::Value imag) {
+    auto resultComplexTy = cir::ComplexType::get(real.getType());
+    return create<cir::ComplexCreateOp>(loc, resultComplexTy, real, imag);
+  }
+
+  mlir::Value createComplexReal(mlir::Location loc, mlir::Value operand) {
+    auto operandTy = mlir::cast<cir::ComplexType>(operand.getType());
+    return create<cir::ComplexRealOp>(loc, operandTy.getElementType(), operand);
+  }
+
+  mlir::Value createComplexImag(mlir::Location loc, mlir::Value operand) {
+    auto operandTy = mlir::cast<cir::ComplexType>(operand.getType());
+    return create<cir::ComplexImagOp>(loc, operandTy.getElementType(), operand);
+  }
 
   mlir::Value createNot(mlir::Value value) {
     return create<cir::UnaryOp>(value.getLoc(), value.getType(),
@@ -167,6 +197,11 @@ public:
     return create<cir::ContinueOp>(loc);
   }
 
+  mlir::Value createUnaryOp(mlir::Location loc, cir::UnaryOpKind kind,
+                            mlir::Value operand) {
+    return create<cir::UnaryOp>(loc, kind, operand);
+  }
+
   mlir::TypedAttr getConstPtrAttr(mlir::Type type, int64_t value) {
     return cir::ConstPtrAttr::get(type, getI64IntegerAttr(value));
   }
@@ -177,15 +212,36 @@ public:
     return create<cir::AllocaOp>(loc, addrType, type, name, alignment);
   }
 
+  /// Get constant address of a global variable as an MLIR attribute.
+  cir::GlobalViewAttr getGlobalViewAttr(cir::PointerType type,
+                                        cir::GlobalOp globalOp) {
+    auto symbol = mlir::FlatSymbolRefAttr::get(globalOp.getSymNameAttr());
+    return cir::GlobalViewAttr::get(type, symbol);
+  }
+
   mlir::Value createGetGlobal(mlir::Location loc, cir::GlobalOp global) {
     assert(!cir::MissingFeatures::addressSpace());
     return create<cir::GetGlobalOp>(loc, getPointerTo(global.getSymType()),
                                     global.getSymName());
   }
 
+  mlir::Value createGetGlobal(cir::GlobalOp global) {
+    return createGetGlobal(global.getLoc(), global);
+  }
+
   cir::StoreOp createStore(mlir::Location loc, mlir::Value val, mlir::Value dst,
                            mlir::IntegerAttr align = {}) {
     return create<cir::StoreOp>(loc, val, dst, align);
+  }
+
+  [[nodiscard]] cir::GlobalOp createGlobal(mlir::ModuleOp mlirModule,
+                                           mlir::Location loc,
+                                           mlir::StringRef name,
+                                           mlir::Type type,
+                                           cir::GlobalLinkageKind linkage) {
+    mlir::OpBuilder::InsertionGuard guard(*this);
+    setInsertionPointToStart(mlirModule.getBody());
+    return create<cir::GlobalOp>(loc, name, type, linkage);
   }
 
   cir::GetMemberOp createGetMember(mlir::Location loc, mlir::Type resultTy,
@@ -211,22 +267,29 @@ public:
   //===--------------------------------------------------------------------===//
 
   cir::CallOp createCallOp(mlir::Location loc, mlir::SymbolRefAttr callee,
-                           mlir::Type returnType, mlir::ValueRange operands) {
-    return create<cir::CallOp>(loc, callee, returnType, operands);
+                           mlir::Type returnType, mlir::ValueRange operands,
+                           llvm::ArrayRef<mlir::NamedAttribute> attrs = {}) {
+    auto op = create<cir::CallOp>(loc, callee, returnType, operands);
+    op->setAttrs(attrs);
+    return op;
   }
 
   cir::CallOp createCallOp(mlir::Location loc, cir::FuncOp callee,
-                           mlir::ValueRange operands) {
+                           mlir::ValueRange operands,
+                           llvm::ArrayRef<mlir::NamedAttribute> attrs = {}) {
     return createCallOp(loc, mlir::SymbolRefAttr::get(callee),
-                        callee.getFunctionType().getReturnType(), operands);
+                        callee.getFunctionType().getReturnType(), operands,
+                        attrs);
   }
 
-  cir::CallOp createIndirectCallOp(mlir::Location loc,
-                                   mlir::Value indirectTarget,
-                                   cir::FuncType funcType,
-                                   mlir::ValueRange operands) {
-    return create<cir::CallOp>(loc, indirectTarget, funcType.getReturnType(),
-                               operands);
+  cir::CallOp
+  createIndirectCallOp(mlir::Location loc, mlir::Value indirectTarget,
+                       cir::FuncType funcType, mlir::ValueRange operands,
+                       llvm::ArrayRef<mlir::NamedAttribute> attrs = {}) {
+    llvm::SmallVector<mlir::Value> resOperands{indirectTarget};
+    resOperands.append(operands.begin(), operands.end());
+    return createCallOp(loc, mlir::SymbolRefAttr(), funcType.getReturnType(),
+                        resOperands, attrs);
   }
 
   //===--------------------------------------------------------------------===//
@@ -276,6 +339,11 @@ public:
     return createCast(loc, cir::CastKind::bitcast, src, newTy);
   }
 
+  mlir::Value createPtrBitcast(mlir::Value src, mlir::Type newPointeeTy) {
+    assert(mlir::isa<cir::PointerType>(src.getType()) && "expected ptr src");
+    return createBitcast(src, getPointerTo(newPointeeTy));
+  }
+
   //===--------------------------------------------------------------------===//
   // Binary Operators
   //===--------------------------------------------------------------------===//
@@ -298,6 +366,24 @@ public:
 
   mlir::Value createOr(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     return createBinop(loc, lhs, cir::BinOpKind::Or, rhs);
+  }
+
+  mlir::Value createSelect(mlir::Location loc, mlir::Value condition,
+                           mlir::Value trueValue, mlir::Value falseValue) {
+    assert(trueValue.getType() == falseValue.getType() &&
+           "trueValue and falseValue should have the same type");
+    return create<cir::SelectOp>(loc, trueValue.getType(), condition, trueValue,
+                                 falseValue);
+  }
+
+  mlir::Value createLogicalAnd(mlir::Location loc, mlir::Value lhs,
+                               mlir::Value rhs) {
+    return createSelect(loc, lhs, rhs, getBool(false, loc));
+  }
+
+  mlir::Value createLogicalOr(mlir::Location loc, mlir::Value lhs,
+                              mlir::Value rhs) {
+    return createSelect(loc, lhs, getBool(true, loc), rhs);
   }
 
   mlir::Value createMul(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
@@ -366,6 +452,10 @@ public:
   cir::CmpOp createCompare(mlir::Location loc, cir::CmpOpKind kind,
                            mlir::Value lhs, mlir::Value rhs) {
     return create<cir::CmpOp>(loc, getBoolTy(), kind, lhs, rhs);
+  }
+
+  mlir::Value createIsNaN(mlir::Location loc, mlir::Value operand) {
+    return createCompare(loc, cir::CmpOpKind::ne, operand, operand);
   }
 
   mlir::Value createShift(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,

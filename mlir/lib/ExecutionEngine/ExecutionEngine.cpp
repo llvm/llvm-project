@@ -315,7 +315,8 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
   // process and dynamically linked libraries.
   auto objectLinkingLayerCreator = [&](ExecutionSession &session) {
     auto objectLayer = std::make_unique<RTDyldObjectLinkingLayer>(
-        session, [sectionMemoryMapper = options.sectionMemoryMapper]() {
+        session, [sectionMemoryMapper =
+                      options.sectionMemoryMapper](const MemoryBuffer &) {
           return std::make_unique<SectionMemoryManager>(sectionMemoryMapper);
         });
 

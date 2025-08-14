@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef __CLC_OPENCL_SHARED_VLOAD_H__
+#define __CLC_OPENCL_SHARED_VLOAD_H__
+
+#include <clc/opencl/opencl-base.h>
+
 #define _CLC_VLOAD_DECL(SUFFIX, MEM_TYPE, VEC_TYPE, WIDTH, ADDR_SPACE)         \
   _CLC_OVERLOAD _CLC_DECL VEC_TYPE vload##SUFFIX##WIDTH(                       \
       size_t offset, const ADDR_SPACE MEM_TYPE *x);
@@ -79,3 +84,5 @@ _CLC_VLOAD_DECL(a_half, half, float, , __generic)
 #undef _CLC_VECTOR_VLOAD_PRIM3
 #undef _CLC_VECTOR_VLOAD_PRIM1
 #undef _CLC_VECTOR_VLOAD_GENERIC_DECL
+
+#endif // __CLC_OPENCL_SHARED_VLOAD_H__

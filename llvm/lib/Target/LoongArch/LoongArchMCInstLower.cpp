@@ -13,7 +13,7 @@
 
 #include "LoongArch.h"
 #include "MCTargetDesc/LoongArchBaseInfo.h"
-#include "MCTargetDesc/LoongArchMCExpr.h"
+#include "MCTargetDesc/LoongArchMCAsmInfo.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"

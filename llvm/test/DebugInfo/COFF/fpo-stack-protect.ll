@@ -15,7 +15,7 @@
 ; CHECK:         subl    $20, %esp
 ; CHECK:         .cv_fpo_stackalloc      20
 ; CHECK:         .cv_fpo_endprologue
-; CHECK:         ___security_cookie
+; CHECK:         movl    ___security_cookie, %ea
 
 ; CHECK:         movl    28(%esp), %esi
 ; CHECK:         movl    %esi, {{[0-9]*}}(%esp)
@@ -24,13 +24,16 @@
 ; CHECK:         movl    %esi, {{[0-9]*}}(%esp)
 
 ; CHECK:         calll   _escape
-; CHECK:         calll   @__security_check_cookie@4
+
+; CHECK:         movl    ___security_cookie, %ecx
+; CHECK:         cmpl    %eax, %ecx
 
 ; CHECK:         movl    %esi, %eax
 ; CHECK:         addl    $20, %esp
 ; CHECK:         popl    %esi
 ; CHECK:         retl
 ; CHECK: Ltmp4:
+; CHECK:         calll   @__security_check_cookie@4
 ; CHECK:         .cv_fpo_endproc
 
 ; ModuleID = 't.c'

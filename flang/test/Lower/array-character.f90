@@ -32,7 +32,7 @@ program p
   call charlit
 end program p
 
-! CHECK-LABEL:   func.func @_QQmain() attributes {fir.bindc_name = "p"} {
+! CHECK-LABEL:   func.func @_QQmain() attributes {fir.bindc_name = "P"} {
 ! CHECK:           %[[VAL_0:.*]] = arith.constant 4 : index
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.array<3x!fir.char<1,4>> {bindc_name = "c1", uniq_name = "_QFEc1"}

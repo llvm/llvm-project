@@ -18,6 +18,7 @@
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 
 using namespace llvm;
 
@@ -46,8 +47,8 @@ static MCDisassembler *createSparcDisassembler(const Target &T,
   return new SparcDisassembler(STI, Ctx);
 }
 
-
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSparcDisassembler() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeSparcDisassembler() {
   // Register the disassembler.
   TargetRegistry::RegisterMCDisassembler(getTheSparcTarget(),
                                          createSparcDisassembler);

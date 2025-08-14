@@ -19,6 +19,7 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;
@@ -45,7 +46,8 @@ static MCDisassembler *createLoongArchDisassembler(const Target &T,
   return new LoongArchDisassembler(STI, Ctx);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLoongArchDisassembler() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeLoongArchDisassembler() {
   // Register the disassembler for each target.
   TargetRegistry::RegisterMCDisassembler(getTheLoongArch32Target(),
                                          createLoongArchDisassembler);

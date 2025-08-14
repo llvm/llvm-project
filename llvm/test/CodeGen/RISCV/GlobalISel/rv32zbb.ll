@@ -385,7 +385,7 @@ define i1 @ctpop_i64_ugt_two(i64 %a) nounwind {
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    j .LBB6_2
 ; RV32ZBB-NEXT:  # %bb.1:
-; RV32ZBB-NEXT:    sltiu a0, zero, 0
+; RV32ZBB-NEXT:    li a0, 0
 ; RV32ZBB-NEXT:    ret
 ; RV32ZBB-NEXT:  .LBB6_2:
 ; RV32ZBB-NEXT:    cpop a0, a0
@@ -415,7 +415,7 @@ define i1 @ctpop_i64_ugt_one(i64 %a) nounwind {
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    j .LBB7_2
 ; RV32ZBB-NEXT:  # %bb.1:
-; RV32ZBB-NEXT:    snez a0, zero
+; RV32ZBB-NEXT:    li a0, 0
 ; RV32ZBB-NEXT:    ret
 ; RV32ZBB-NEXT:  .LBB7_2:
 ; RV32ZBB-NEXT:    cpop a0, a0

@@ -125,13 +125,6 @@ void getUsesOfLDSByFunction(const CallGraph &CG, Module &M,
 }
 
 bool isKernelLDS(const Function *F) {
-  // Some weirdness here. AMDGPU::isKernelCC does not call into
-  // AMDGPU::isKernel with the calling conv, it instead calls into
-  // isModuleEntryFunction which returns true for more calling conventions
-  // than AMDGPU::isKernel does. There's a FIXME on AMDGPU::isKernel.
-  // There's also a test that checks that the LDS lowering does not hit on
-  // a graphics shader, denoted amdgpu_ps, so stay with the limited case.
-  // Putting LDS in the name of the function to draw attention to this.
   return AMDGPU::isKernel(F->getCallingConv());
 }
 
@@ -285,8 +278,8 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
         }
         if (HasAbsoluteGVs.has_value()) {
           if (*HasAbsoluteGVs != IsAbsolute) {
-            report_fatal_error(
-                "Module cannot mix absolute and non-absolute LDS GVs");
+            reportFatalUsageError(
+                "module cannot mix absolute and non-absolute LDS GVs");
           }
         } else
           HasAbsoluteGVs = IsAbsolute;
@@ -359,7 +352,10 @@ bool isReallyAClobber(const Value *Ptr, MemoryDef *Def, AAResults *AA) {
     case Intrinsic::amdgcn_s_barrier_signal:
     case Intrinsic::amdgcn_s_barrier_signal_var:
     case Intrinsic::amdgcn_s_barrier_signal_isfirst:
+    case Intrinsic::amdgcn_s_barrier_init:
+    case Intrinsic::amdgcn_s_barrier_join:
     case Intrinsic::amdgcn_s_barrier_wait:
+    case Intrinsic::amdgcn_s_barrier_leave:
     case Intrinsic::amdgcn_s_get_barrier_state:
     case Intrinsic::amdgcn_wave_barrier:
     case Intrinsic::amdgcn_sched_barrier:

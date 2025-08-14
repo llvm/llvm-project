@@ -18,11 +18,14 @@
 #include "lldb/Interpreter/OptionGroupValueObjectDisplay.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 
 #include <regex>
 
@@ -132,25 +135,22 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
   };
 
   // Dump `valobj` according to whether `po` was requested or not.
-  auto dump_val_object = [&](ValueObject &valobj) {
+  auto dump_val_object = [&](ValueObject &valobj) -> Error {
     if (is_po) {
       StreamString temp_result_stream;
-      if (llvm::Error error = valobj.Dump(temp_result_stream, dump_options)) {
-        result.AppendError(toString(std::move(error)));
-        return;
-      }
+      if (Error err = valobj.Dump(temp_result_stream, dump_options))
+        return err;
       llvm::StringRef output = temp_result_stream.GetString();
       maybe_add_hint(output);
       result.GetOutputStream() << output;
     } else {
-      llvm::Error error =
-        valobj.Dump(result.GetOutputStream(), dump_options);
-      if (error) {
-        result.AppendError(toString(std::move(error)));
-        return;
-      }
+      if (Error err = valobj.Dump(result.GetOutputStream(), dump_options))
+        return err;
     }
+    m_interpreter.PrintWarningsIfNecessary(result.GetOutputStream(),
+                                           m_cmd_name);
     result.SetStatus(eReturnStatusSuccessFinishResult);
+    return Error::success();
   };
 
   // First, try `expr` as a _limited_ frame variable expression path: only the
@@ -184,8 +184,13 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
                                      expr);
       }
 
-      dump_val_object(*valobj_sp);
-      return;
+      Error err = dump_val_object(*valobj_sp);
+      if (!err)
+        return;
+
+      // Dump failed, continue on to expression evaluation.
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Expressions), std::move(err),
+                     "could not print frame variable '{1}': {0}", expr);
     }
   }
 
@@ -194,8 +199,14 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
     if (auto *state = target.GetPersistentExpressionStateForLanguage(language))
       if (auto var_sp = state->GetVariable(expr))
         if (auto valobj_sp = var_sp->GetValueObject()) {
-          dump_val_object(*valobj_sp);
-          return;
+          Error err = dump_val_object(*valobj_sp);
+          if (!err)
+            return;
+
+          // Dump failed, continue on to expression evaluation.
+          LLDB_LOG_ERROR(GetLog(LLDBLog::Expressions), std::move(err),
+                         "could not print persistent variable '{1}': {0}",
+                         expr);
         }
 
   // Third, and lastly, try `expr` as a source expression to evaluate.
@@ -246,10 +257,12 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
       result.AppendNoteWithFormatv("ran `expression {0}{1}`", flags, expr);
     }
 
-    if (valobj_sp->GetError().GetError() != UserExpression::kNoResult)
-      dump_val_object(*valobj_sp);
-    else
+    if (valobj_sp->GetError().GetError() != UserExpression::kNoResult) {
+      if (Error err = dump_val_object(*valobj_sp))
+        result.SetError(std::move(err));
+    } else {
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
+    }
 
     if (suppress_result)
       if (auto result_var_sp =

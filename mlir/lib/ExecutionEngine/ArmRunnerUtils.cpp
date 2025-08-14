@@ -38,6 +38,17 @@ extern "C" {
 // PR_SVE_VL_LEN_MASK.
 #define PR_VL_LEN_MASK 0xffff
 
+/// Sets the vector length (streaming or not, as indicated by `option`) to
+/// `bits`.
+///
+/// Caveat emptor: If a function has allocated stack slots for SVE registers
+/// (e.g. slots for callee-saved SVE registers or spill slots) changing
+/// the vector length is tricky and error prone - it may cause incorrect stack
+/// deallocation or incorrect access to stack slots.
+///
+/// The recommended strategy is to call `setArmVectorLength` only from functions
+/// that do not access SVE registers, either by themselves or by inlining other
+/// functions.
 static void setArmVectorLength(std::string_view helper_name, int option,
                                uint32_t bits) {
 #if defined(__linux__) && defined(__aarch64__)

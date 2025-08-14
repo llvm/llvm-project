@@ -408,7 +408,7 @@ entry:
   store i32 %i, ptr %i.addr, align 4
   store ptr %A, ptr %A.addr, align 8
   store ptr %B, ptr %B.addr, align 8
-  call void @llvm.lifetime.start.p0(i64 4, ptr %j) #3
+  call void @llvm.lifetime.start.p0(ptr %j) #3
   store i32 0, ptr %j, align 4
   br label %for.cond
 
@@ -419,11 +419,11 @@ for.cond:                                         ; preds = %for.inc12, %entry
 
 for.cond.cleanup:                                 ; preds = %for.cond
   store i32 2, ptr %cleanup.dest.slot, align 4
-  call void @llvm.lifetime.end.p0(i64 4, ptr %j) #3
+  call void @llvm.lifetime.end.p0(ptr %j) #3
   br label %for.end14
 
 for.body:                                         ; preds = %for.cond
-  call void @llvm.lifetime.start.p0(i64 4, ptr %k) #3
+  call void @llvm.lifetime.start.p0(ptr %k) #3
   store i32 0, ptr %k, align 4
   br label %for.cond1
 
@@ -435,7 +435,7 @@ for.cond1:                                        ; preds = %for.inc, %for.body
 
 for.cond.cleanup3:                                ; preds = %for.cond1
   store i32 5, ptr %cleanup.dest.slot, align 4
-  call void @llvm.lifetime.end.p0(i64 4, ptr %k) #3
+  call void @llvm.lifetime.end.p0(ptr %k) #3
   br label %for.end
 
 for.body4:                                        ; preds = %for.cond1
@@ -501,13 +501,13 @@ for.end14:                                        ; preds = %for.cond.cleanup
 }
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 
 ; Function Attrs: inaccessiblememonly nofree nosync nounwind willreturn
 declare void @llvm.assume(i1 noundef) #2
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture) #1
 
 ; Function Attrs: nounwind ssp uwtable mustprogress
 

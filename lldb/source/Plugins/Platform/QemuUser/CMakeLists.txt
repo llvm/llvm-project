@@ -9,10 +9,10 @@ lldb_tablegen(PlatformQemuUserPropertiesEnum.inc -gen-lldb-property-enum-defs
 add_lldb_library(lldbPluginPlatformQemuUser PLUGIN
   PlatformQemuUser.cpp
 
-  LINK_LIBS
-    lldbUtility
   LINK_COMPONENTS
     Support
+  LINK_LIBS
+    lldbUtility
     )
 
 add_dependencies(lldbPluginPlatformQemuUser

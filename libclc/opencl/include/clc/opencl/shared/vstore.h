@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef __CLC_OPENCL_SHARED_VSTORE_H__
+#define __CLC_OPENCL_SHARED_VSTORE_H__
+
+#include <clc/opencl/opencl-base.h>
+
 #define _CLC_VSTORE_DECL(SUFFIX, PRIM_TYPE, VEC_TYPE, WIDTH, ADDR_SPACE, RND)  \
   _CLC_OVERLOAD _CLC_DECL void vstore##SUFFIX##WIDTH##RND(                     \
       VEC_TYPE vec, size_t offset, ADDR_SPACE PRIM_TYPE *out);
@@ -82,3 +87,5 @@ _CLC_VECTOR_VSTORE_PRIM1(half)
 #undef _CLC_VECTOR_VSTORE_PRIM3
 #undef _CLC_VECTOR_VSTORE_PRIM1
 #undef _CLC_VECTOR_VSTORE_GENERIC_DECL
+
+#endif // __CLC_OPENCL_SHARED_VSTORE_H__

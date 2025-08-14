@@ -21,6 +21,7 @@
 #include "llvm/ExecutionEngine/Orc/Shared/OrcError.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/Object/Archive.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include <algorithm>
 #include <cstdint>
@@ -65,23 +66,23 @@ public:
 
   /// Construct an iterator instance. If End is true then this iterator
   ///        acts as the end of the range, otherwise it is the beginning.
-  CtorDtorIterator(const GlobalVariable *GV, bool End);
+  LLVM_ABI CtorDtorIterator(const GlobalVariable *GV, bool End);
 
   /// Test iterators for equality.
-  bool operator==(const CtorDtorIterator &Other) const;
+  LLVM_ABI bool operator==(const CtorDtorIterator &Other) const;
 
   /// Test iterators for inequality.
-  bool operator!=(const CtorDtorIterator &Other) const;
+  LLVM_ABI bool operator!=(const CtorDtorIterator &Other) const;
 
   /// Pre-increment iterator.
-  CtorDtorIterator& operator++();
+  LLVM_ABI CtorDtorIterator &operator++();
 
   /// Post-increment iterator.
-  CtorDtorIterator operator++(int);
+  LLVM_ABI CtorDtorIterator operator++(int);
 
   /// Dereference iterator. The resulting value provides a read-only view
   ///        of this element of the global_ctors/global_dtors list.
-  Element operator*() const;
+  LLVM_ABI Element operator*() const;
 
 private:
   const ConstantArray *InitList;
@@ -90,11 +91,11 @@ private:
 
 /// Create an iterator range over the entries of the llvm.global_ctors
 ///        array.
-iterator_range<CtorDtorIterator> getConstructors(const Module &M);
+LLVM_ABI iterator_range<CtorDtorIterator> getConstructors(const Module &M);
 
 /// Create an iterator range over the entries of the llvm.global_ctors
 ///        array.
-iterator_range<CtorDtorIterator> getDestructors(const Module &M);
+LLVM_ABI iterator_range<CtorDtorIterator> getDestructors(const Module &M);
 
 /// This iterator provides a convenient way to iterate over GlobalValues that
 /// have initialization effects.
@@ -124,7 +125,7 @@ public:
   GlobalValue &operator*() { return *I; }
 
 private:
-  bool isStaticInitGlobal(GlobalValue &GV);
+  LLVM_ABI bool isStaticInitGlobal(GlobalValue &GV);
   void moveToNextStaticInitGlobal() {
     ++I;
     while (I != E && !isStaticInitGlobal(*I))
@@ -146,8 +147,8 @@ inline iterator_range<StaticInitGVIterator> getStaticInitGVs(Module &M) {
 class CtorDtorRunner {
 public:
   CtorDtorRunner(JITDylib &JD) : JD(JD) {}
-  void add(iterator_range<CtorDtorIterator> CtorDtors);
-  Error run();
+  LLVM_ABI void add(iterator_range<CtorDtorIterator> CtorDtors);
+  LLVM_ABI Error run();
 
 private:
   using CtorDtorList = std::vector<SymbolStringPtr>;
@@ -176,20 +177,20 @@ class LocalCXXRuntimeOverridesBase {
 public:
   /// Run any destructors recorded by the overriden __cxa_atexit function
   /// (CXAAtExitOverride).
-  void runDestructors();
+  LLVM_ABI void runDestructors();
 
 protected:
   using DestructorPtr = void (*)(void *);
   using CXXDestructorDataPair = std::pair<DestructorPtr, void *>;
   using CXXDestructorDataPairList = std::vector<CXXDestructorDataPair>;
   CXXDestructorDataPairList DSOHandleOverride;
-  static int CXAAtExitOverride(DestructorPtr Destructor, void *Arg,
-                               void *DSOHandle);
+  LLVM_ABI static int CXAAtExitOverride(DestructorPtr Destructor, void *Arg,
+                                        void *DSOHandle);
 };
 
 class LocalCXXRuntimeOverrides : public LocalCXXRuntimeOverridesBase {
 public:
-  Error enable(JITDylib &JD, MangleAndInterner &Mangler);
+  LLVM_ABI Error enable(JITDylib &JD, MangleAndInterner &Mangler);
 };
 
 /// An interface for Itanium __cxa_atexit interposer implementations.
@@ -200,8 +201,8 @@ public:
     void *Ctx;
   };
 
-  void registerAtExit(void (*F)(void *), void *Ctx, void *DSOHandle);
-  void runAtExits(void *DSOHandle);
+  LLVM_ABI void registerAtExit(void (*F)(void *), void *Ctx, void *DSOHandle);
+  LLVM_ABI void runAtExits(void *DSOHandle);
 
 private:
   std::mutex AtExitsMutex;
@@ -213,7 +214,7 @@ private:
 /// If an instance of this class is attached to a JITDylib as a fallback
 /// definition generator, then any symbol found in the given DynamicLibrary that
 /// passes the 'Allow' predicate will be added to the JITDylib.
-class DynamicLibrarySearchGenerator : public DefinitionGenerator {
+class LLVM_ABI DynamicLibrarySearchGenerator : public DefinitionGenerator {
 public:
   using SymbolPredicate = std::function<bool(const SymbolStringPtr &)>;
   using AddAbsoluteSymbolsFn = unique_function<Error(JITDylib &, SymbolMap)>;
@@ -266,7 +267,7 @@ private:
 /// If an instance of this class is attached to a JITDylib as a fallback
 /// definition generator, then any symbol found in the archive will result in
 /// the containing object being added to the JITDylib.
-class StaticLibraryDefinitionGenerator : public DefinitionGenerator {
+class LLVM_ABI StaticLibraryDefinitionGenerator : public DefinitionGenerator {
 public:
   /// Interface builder function for objects loaded from this archive.
   using GetObjectFileInterface =
@@ -355,7 +356,7 @@ private:
 /// definition generator, PLT stubs and dllimport __imp_ symbols will be
 /// generated for external symbols found outside the given jitdylib. Currently
 /// only supports x86_64 architecture.
-class DLLImportDefinitionGenerator : public DefinitionGenerator {
+class LLVM_ABI DLLImportDefinitionGenerator : public DefinitionGenerator {
 public:
   /// Creates a DLLImportDefinitionGenerator instance.
   static std::unique_ptr<DLLImportDefinitionGenerator>

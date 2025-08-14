@@ -412,6 +412,19 @@ int testTaintedDivFP(void) {
   return 5/x; // x cannot be 0, so no tainted warning either
 }
 
+void clang_analyzer_warnIfReached();
+
+int testTaintDivZeroNonfatal() {
+  int x;
+  scanf("%d", &x);
+  int y = 5/x; // expected-warning {{Division by a tainted value, possibly zero}}
+  if (x == 0)
+    clang_analyzer_warnIfReached();
+  else
+    clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
+  return y;
+}
+
 // Zero-sized VLAs.
 void testTaintedVLASize(void) {
   int x;

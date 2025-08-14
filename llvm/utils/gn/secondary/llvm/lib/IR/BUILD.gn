@@ -90,7 +90,6 @@ static_library("IR") {
     "VFABIDemangler.cpp",
     "Value.cpp",
     "ValueSymbolTable.cpp",
-    "VectorBuilder.cpp",
     "VectorTypeUtils.cpp",
     "Verifier.cpp",
   ]

@@ -8,6 +8,7 @@
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationClient.h"
 #include "GDBRemoteTestUtils.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/XML.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Utility/DataBuffer.h"
@@ -63,8 +64,12 @@ std::string one_register_hex = "41424344";
 class GDBRemoteCommunicationClientTest : public GDBRemoteTest {
 public:
   void SetUp() override {
-    ASSERT_THAT_ERROR(GDBRemoteCommunication::ConnectLocally(client, server),
-                      llvm::Succeeded());
+    llvm::Expected<Socket::Pair> pair = Socket::CreatePair();
+    ASSERT_THAT_EXPECTED(pair, llvm::Succeeded());
+    client.SetConnection(
+        std::make_unique<ConnectionFileDescriptor>(std::move(pair->first)));
+    server.SetConnection(
+        std::make_unique<ConnectionFileDescriptor>(std::move(pair->second)));
   }
 
 protected:

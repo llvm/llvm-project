@@ -15,6 +15,7 @@
 
 #include "llvm/ProfileData/IndexedMemProfData.h"
 #include "llvm/ProfileData/MemProf.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace memprof {
@@ -353,6 +354,12 @@ public:
     return std::move(CallStackPos);
   }
 };
+
+// Defined in MemProfRadixTree.cpp
+extern template class LLVM_TEMPLATE_ABI CallStackRadixTreeBuilder<FrameId>;
+extern template class LLVM_TEMPLATE_ABI
+    CallStackRadixTreeBuilder<LinearFrameId>;
+
 } // namespace memprof
 } // namespace llvm
 #endif // LLVM_PROFILEDATA_MEMPROFRADIXTREE_H

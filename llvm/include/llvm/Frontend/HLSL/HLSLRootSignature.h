@@ -6,83 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-/// \file This file contains helper objects for working with HLSL Root
-/// Signatures.
+/// \file This file contains structure definitions of HLSL Root Signature
+/// objects.
 ///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_FRONTEND_HLSL_HLSLROOTSIGNATURE_H
 #define LLVM_FRONTEND_HLSL_HLSLROOTSIGNATURE_H
 
-#include "llvm/ADT/ArrayRef.h"
+#include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/raw_ostream.h"
+#include <limits>
 #include <variant>
 
 namespace llvm {
-class LLVMContext;
-class MDNode;
-class Metadata;
-
 namespace hlsl {
 namespace rootsig {
-
-// Definition of the various enumerations and flags
-
-enum class RootFlags : uint32_t {
-  None = 0,
-  AllowInputAssemblerInputLayout = 0x1,
-  DenyVertexShaderRootAccess = 0x2,
-  DenyHullShaderRootAccess = 0x4,
-  DenyDomainShaderRootAccess = 0x8,
-  DenyGeometryShaderRootAccess = 0x10,
-  DenyPixelShaderRootAccess = 0x20,
-  AllowStreamOutput = 0x40,
-  LocalRootSignature = 0x80,
-  DenyAmplificationShaderRootAccess = 0x100,
-  DenyMeshShaderRootAccess = 0x200,
-  CBVSRVUAVHeapDirectlyIndexed = 0x400,
-  SamplerHeapDirectlyIndexed = 0x800,
-  ValidFlags = 0x00000fff
-};
-
-enum class RootDescriptorFlags : unsigned {
-  None = 0,
-  DataVolatile = 0x2,
-  DataStaticWhileSetAtExecute = 0x4,
-  DataStatic = 0x8,
-  ValidFlags = 0xe,
-};
-
-enum class DescriptorRangeFlags : unsigned {
-  None = 0,
-  DescriptorsVolatile = 0x1,
-  DataVolatile = 0x2,
-  DataStaticWhileSetAtExecute = 0x4,
-  DataStatic = 0x8,
-  DescriptorsStaticKeepingBufferBoundsChecks = 0x10000,
-  ValidFlags = 0x1000f,
-  ValidSamplerFlags = DescriptorsVolatile,
-};
-
-enum class ShaderVisibility {
-  All = 0,
-  Vertex = 1,
-  Hull = 2,
-  Domain = 3,
-  Geometry = 4,
-  Pixel = 5,
-  Amplification = 6,
-  Mesh = 7,
-};
-
-enum class TextureAddressMode {
-  Wrap = 1,
-  Mirror = 2,
-  Clamp = 3,
-  Border = 4,
-  MirrorOnce = 5
-};
 
 // Definitions of the in-memory data layout structures
 
@@ -98,7 +39,7 @@ struct RootConstants {
   uint32_t Num32BitConstants;
   Register Reg;
   uint32_t Space = 0;
-  ShaderVisibility Visibility = ShaderVisibility::All;
+  dxbc::ShaderVisibility Visibility = dxbc::ShaderVisibility::All;
 };
 
 enum class DescriptorType : uint8_t { SRV = 0, UAV, CBuffer };
@@ -107,17 +48,24 @@ struct RootDescriptor {
   DescriptorType Type;
   Register Reg;
   uint32_t Space = 0;
-  ShaderVisibility Visibility = ShaderVisibility::All;
-  RootDescriptorFlags Flags;
+  dxbc::ShaderVisibility Visibility = dxbc::ShaderVisibility::All;
+  dxbc::RootDescriptorFlags Flags;
 
-  void setDefaultFlags() {
+  void setDefaultFlags(dxbc::RootSignatureVersion Version) {
+    if (Version == dxbc::RootSignatureVersion::V1_0) {
+      Flags = dxbc::RootDescriptorFlags::DataVolatile;
+      return;
+    }
+
+    assert(Version == llvm::dxbc::RootSignatureVersion::V1_1 &&
+           "Specified an invalid root signature version");
     switch (Type) {
     case DescriptorType::CBuffer:
     case DescriptorType::SRV:
-      Flags = RootDescriptorFlags::DataStaticWhileSetAtExecute;
+      Flags = dxbc::RootDescriptorFlags::DataStaticWhileSetAtExecute;
       break;
     case DescriptorType::UAV:
-      Flags = RootDescriptorFlags::DataVolatile;
+      Flags = dxbc::RootDescriptorFlags::DataVolatile;
       break;
     }
   }
@@ -125,13 +73,11 @@ struct RootDescriptor {
 
 // Models the end of a descriptor table and stores its visibility
 struct DescriptorTable {
-  ShaderVisibility Visibility = ShaderVisibility::All;
+  dxbc::ShaderVisibility Visibility = dxbc::ShaderVisibility::All;
   // Denotes that the previous NumClauses in the RootElement array
   // are the clauses in the table.
   uint32_t NumClauses = 0;
 };
-
-raw_ostream &operator<<(raw_ostream &OS, const DescriptorTable &Table);
 
 static const uint32_t NumDescriptorsUnbounded = 0xffffffff;
 static const uint32_t DescriptorTableOffsetAppend = 0xffffffff;
@@ -143,35 +89,47 @@ struct DescriptorTableClause {
   uint32_t NumDescriptors = 1;
   uint32_t Space = 0;
   uint32_t Offset = DescriptorTableOffsetAppend;
-  DescriptorRangeFlags Flags;
+  dxbc::DescriptorRangeFlags Flags;
 
-  void setDefaultFlags() {
+  void setDefaultFlags(dxbc::RootSignatureVersion Version) {
+    if (Version == dxbc::RootSignatureVersion::V1_0) {
+      Flags = dxbc::DescriptorRangeFlags::DescriptorsVolatile;
+      if (Type != ClauseType::Sampler)
+        Flags |= dxbc::DescriptorRangeFlags::DataVolatile;
+      return;
+    }
+
+    assert(Version == dxbc::RootSignatureVersion::V1_1 &&
+           "Specified an invalid root signature version");
     switch (Type) {
     case ClauseType::CBuffer:
     case ClauseType::SRV:
-      Flags = DescriptorRangeFlags::DataStaticWhileSetAtExecute;
+      Flags = dxbc::DescriptorRangeFlags::DataStaticWhileSetAtExecute;
       break;
     case ClauseType::UAV:
-      Flags = DescriptorRangeFlags::DataVolatile;
+      Flags = dxbc::DescriptorRangeFlags::DataVolatile;
       break;
     case ClauseType::Sampler:
-      Flags = DescriptorRangeFlags::None;
+      Flags = dxbc::DescriptorRangeFlags::None;
       break;
     }
   }
 };
 
-raw_ostream &operator<<(raw_ostream &OS, const DescriptorTableClause &Clause);
-
 struct StaticSampler {
   Register Reg;
-  TextureAddressMode AddressU = TextureAddressMode::Wrap;
-  TextureAddressMode AddressV = TextureAddressMode::Wrap;
-  TextureAddressMode AddressW = TextureAddressMode::Wrap;
+  dxbc::SamplerFilter Filter = dxbc::SamplerFilter::Anisotropic;
+  dxbc::TextureAddressMode AddressU = dxbc::TextureAddressMode::Wrap;
+  dxbc::TextureAddressMode AddressV = dxbc::TextureAddressMode::Wrap;
+  dxbc::TextureAddressMode AddressW = dxbc::TextureAddressMode::Wrap;
   float MipLODBias = 0.f;
   uint32_t MaxAnisotropy = 16;
+  dxbc::ComparisonFunc CompFunc = dxbc::ComparisonFunc::LessEqual;
+  dxbc::StaticBorderColor BorderColor = dxbc::StaticBorderColor::OpaqueWhite;
   float MinLOD = 0.f;
   float MaxLOD = std::numeric_limits<float>::max();
+  uint32_t Space = 0;
+  dxbc::ShaderVisibility Visibility = dxbc::ShaderVisibility::All;
 };
 
 /// Models RootElement : RootFlags | RootConstants | RootParam
@@ -191,31 +149,23 @@ struct StaticSampler {
 /// RootElements in the array, and it holds a data member for the Visibility
 /// parameter.
 using RootElement =
-    std::variant<RootFlags, RootConstants, RootDescriptor, DescriptorTable,
-                 DescriptorTableClause, StaticSampler>;
+    std::variant<dxbc::RootFlags, RootConstants, RootDescriptor,
+                 DescriptorTable, DescriptorTableClause, StaticSampler>;
 
-void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements);
+/// The following contains the serialization interface for root elements
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const dxbc::RootFlags &Flags);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const RootConstants &Constants);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const DescriptorTableClause &Clause);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const DescriptorTable &Table);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const RootDescriptor &Descriptor);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+                                 const StaticSampler &StaticSampler);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const RootElement &Element);
 
-class MetadataBuilder {
-public:
-  MetadataBuilder(llvm::LLVMContext &Ctx, ArrayRef<RootElement> Elements)
-      : Ctx(Ctx), Elements(Elements) {}
-
-  /// Iterates through the elements and dispatches onto the correct Build method
-  ///
-  /// Accumulates the root signature and returns the Metadata node that is just
-  /// a list of all the elements
-  MDNode *BuildRootSignature();
-
-private:
-  /// Define the various builders for the different metadata types
-  MDNode *BuildDescriptorTable(const DescriptorTable &Table);
-  MDNode *BuildDescriptorTableClause(const DescriptorTableClause &Clause);
-
-  llvm::LLVMContext &Ctx;
-  ArrayRef<RootElement> Elements;
-  SmallVector<Metadata *> GeneratedMetadata;
-};
+LLVM_ABI void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements);
 
 } // namespace rootsig
 } // namespace hlsl

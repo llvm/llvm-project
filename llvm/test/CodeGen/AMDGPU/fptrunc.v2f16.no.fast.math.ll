@@ -12,18 +12,272 @@ define <2 x half> @v_test_cvt_v2f32_v2f16(<2 x float> %src) {
   ret <2 x half> %res
 }
 
-define half @fptrunc_v2f32_v2f16_then_extract(<2 x float> %src) {
-; GFX950-LABEL: fptrunc_v2f32_v2f16_then_extract:
+define <3 x half> @v_test_cvt_v3f32_v3f16(<3 x float> %src) {
+; GFX950-LABEL: v_test_cvt_v3f32_v3f16:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_cvt_f16_f32_e32 v2, v2
+; GFX950-NEXT:    v_cvt_pk_f16_f32 v0, v0, v1
+; GFX950-NEXT:    v_mov_b32_e32 v1, v2
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
+  %res = fptrunc <3 x float> %src to <3 x half>
+  ret <3 x half> %res
+}
+
+define <4 x half> @v_test_cvt_v4f32_v4f16(<4 x float> %src) {
+; GFX950-LABEL: v_test_cvt_v4f32_v4f16:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-NEXT:    v_cvt_pk_f16_f32 v0, v0, v1
-; GFX950-NEXT:    v_add_f16_sdwa v0, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX950-NEXT:    v_cvt_pk_f16_f32 v1, v2, v3
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
+  %res = fptrunc <4 x float> %src to <4 x half>
+  ret <4 x half> %res
+}
+
+define <8 x half> @v_test_cvt_v8f32_v2f16(<8 x float> %src) {
+; GFX950-LABEL: v_test_cvt_v8f32_v2f16:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_cvt_pk_f16_f32 v0, v0, v1
+; GFX950-NEXT:    v_cvt_pk_f16_f32 v1, v2, v3
+; GFX950-NEXT:    v_cvt_pk_f16_f32 v2, v4, v5
+; GFX950-NEXT:    v_cvt_pk_f16_f32 v3, v6, v7
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
+  %res = fptrunc <8 x float> %src to <8 x half>
+  ret <8 x half> %res
+}
+
+define <16 x half> @v_test_cvt_v16f32_v16f16(<16 x float> %src) {
+; GFX950-LABEL: v_test_cvt_v16f32_v16f16:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_cvt_pk_f16_f32 v0, v0, v1
+; GFX950-NEXT:    v_cvt_pk_f16_f32 v1, v2, v3
+; GFX950-NEXT:    v_cvt_pk_f16_f32 v2, v4, v5
+; GFX950-NEXT:    v_cvt_pk_f16_f32 v3, v6, v7
+; GFX950-NEXT:    v_cvt_pk_f16_f32 v4, v8, v9
+; GFX950-NEXT:    v_cvt_pk_f16_f32 v5, v10, v11
+; GFX950-NEXT:    v_cvt_pk_f16_f32 v6, v12, v13
+; GFX950-NEXT:    v_cvt_pk_f16_f32 v7, v14, v15
+; GFX950-NEXT:    s_setpc_b64 s[30:31]
+  %res = fptrunc <16 x float> %src to <16 x half>
+  ret <16 x half> %res
+}
+
+define half @fptrunc_v2f32_v2f16_extract_uses(<2 x float> %src) {
+; GFX950-LABEL: fptrunc_v2f32_v2f16_extract_uses:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-NEXT:    v_cvt_pk_f16_f32 v0, v0, v1
+; GFX950-NEXT:    v_add_f16_sdwa v0, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
   %vec_half = fptrunc <2 x float> %src to <2 x half>
-  %first = extractelement <2 x half> %vec_half, i64 1
-  %second = extractelement <2 x half> %vec_half, i64 0
-  %res = fadd half %first, %second
-  ret half %res
+  %f0 = extractelement <2 x half> %vec_half, i64 0
+  %f1 = extractelement <2 x half> %vec_half, i64 1
+  %rslt = fadd half %f0, %f1
+  ret half %rslt
+}
+
+define half @fptrunc_v3f32_v3f16_extract_uses(<3 x float> %vec_float) {
+; GFX950-SDAG-LABEL: fptrunc_v3f32_v3f16_extract_uses:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; GFX950-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX950-SDAG-NEXT:    v_cvt_f16_f32_e32 v2, v2
+; GFX950-SDAG-NEXT:    v_add_f16_e32 v0, v0, v1
+; GFX950-SDAG-NEXT:    v_add_f16_e32 v0, v2, v0
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-GISEL-LABEL: fptrunc_v3f32_v3f16_extract_uses:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_cvt_f16_f32_e32 v2, v2
+; GFX950-GISEL-NEXT:    v_cvt_pk_f16_f32 v0, v0, v1
+; GFX950-GISEL-NEXT:    v_add_f16_sdwa v0, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX950-GISEL-NEXT:    v_add_f16_e32 v0, v2, v0
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %vec_half = fptrunc <3 x float> %vec_float to <3 x half>
+  %f0 = extractelement <3 x half> %vec_half, i64 0
+  %f1 = extractelement <3 x half> %vec_half, i64 1
+  %f2 = extractelement <3 x half> %vec_half, i64 2
+  %sum0 = fadd half %f0, %f1
+  %rslt = fadd half %f2, %sum0
+  ret half %rslt
+}
+
+define half @fptrunc_v4f32_v4f16_extract_uses(<4 x float> %vec_float) {
+; GFX950-SDAG-LABEL: fptrunc_v4f32_v4f16_extract_uses:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_cvt_pk_f16_f32 v2, v2, v3
+; GFX950-SDAG-NEXT:    v_cvt_pk_f16_f32 v0, v0, v1
+; GFX950-SDAG-NEXT:    v_add_f16_sdwa v0, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX950-SDAG-NEXT:    v_add_f16_sdwa v1, v2, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX950-SDAG-NEXT:    v_add_f16_e32 v0, v0, v1
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-GISEL-LABEL: fptrunc_v4f32_v4f16_extract_uses:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_cvt_pk_f16_f32 v0, v0, v1
+; GFX950-GISEL-NEXT:    v_cvt_pk_f16_f32 v1, v2, v3
+; GFX950-GISEL-NEXT:    v_add_f16_sdwa v0, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX950-GISEL-NEXT:    v_add_f16_sdwa v1, v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX950-GISEL-NEXT:    v_add_f16_e32 v0, v0, v1
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %vec_half = fptrunc <4 x float> %vec_float to <4 x half>
+  %f0 = extractelement <4 x half> %vec_half, i64 0
+  %f1 = extractelement <4 x half> %vec_half, i64 1
+  %f2 = extractelement <4 x half> %vec_half, i64 2
+  %f3 = extractelement <4 x half> %vec_half, i64 3
+  %sum0 = fadd half %f0, %f1
+  %sum1 = fadd half %f2, %f3
+  %rslt = fadd half %sum0, %sum1
+  ret half %rslt
+}
+
+define half @fptrunc_v8f32_v8f16_extract_uses(<8 x float> %vec_float) {
+; GFX950-SDAG-LABEL: fptrunc_v8f32_v8f16_extract_uses:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_cvt_pk_f16_f32 v6, v6, v7
+; GFX950-SDAG-NEXT:    v_cvt_pk_f16_f32 v4, v4, v5
+; GFX950-SDAG-NEXT:    v_cvt_pk_f16_f32 v2, v2, v3
+; GFX950-SDAG-NEXT:    v_cvt_pk_f16_f32 v0, v0, v1
+; GFX950-SDAG-NEXT:    v_add_f16_sdwa v0, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX950-SDAG-NEXT:    v_add_f16_sdwa v1, v2, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX950-SDAG-NEXT:    v_add_f16_sdwa v2, v4, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX950-SDAG-NEXT:    v_add_f16_sdwa v3, v6, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX950-SDAG-NEXT:    v_add_f16_e32 v0, v0, v1
+; GFX950-SDAG-NEXT:    v_add_f16_e32 v1, v2, v3
+; GFX950-SDAG-NEXT:    v_add_f16_e32 v0, v0, v1
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-GISEL-LABEL: fptrunc_v8f32_v8f16_extract_uses:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_cvt_pk_f16_f32 v0, v0, v1
+; GFX950-GISEL-NEXT:    v_cvt_pk_f16_f32 v1, v2, v3
+; GFX950-GISEL-NEXT:    v_cvt_pk_f16_f32 v2, v4, v5
+; GFX950-GISEL-NEXT:    v_cvt_pk_f16_f32 v3, v6, v7
+; GFX950-GISEL-NEXT:    v_add_f16_sdwa v0, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX950-GISEL-NEXT:    v_add_f16_sdwa v1, v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX950-GISEL-NEXT:    v_add_f16_sdwa v2, v2, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX950-GISEL-NEXT:    v_add_f16_sdwa v3, v3, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX950-GISEL-NEXT:    v_add_f16_e32 v0, v0, v1
+; GFX950-GISEL-NEXT:    v_add_f16_e32 v1, v2, v3
+; GFX950-GISEL-NEXT:    v_add_f16_e32 v0, v0, v1
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %vec_half = fptrunc <8 x float> %vec_float to <8 x half>
+  %f0 = extractelement <8 x half> %vec_half, i64 0
+  %f1 = extractelement <8 x half> %vec_half, i64 1
+  %f2 = extractelement <8 x half> %vec_half, i64 2
+  %f3 = extractelement <8 x half> %vec_half, i64 3
+  %f4 = extractelement <8 x half> %vec_half, i64 4
+  %f5 = extractelement <8 x half> %vec_half, i64 5
+  %f6 = extractelement <8 x half> %vec_half, i64 6
+  %f7 = extractelement <8 x half> %vec_half, i64 7
+  %sum0 = fadd half %f0, %f1
+  %sum1 = fadd half %f2, %f3
+  %sum2 = fadd half %f4, %f5
+  %sum3 = fadd half %f6, %f7
+  %sum4 = fadd half %sum0, %sum1
+  %sum5 = fadd half %sum2, %sum3
+  %rslt = fadd half %sum4, %sum5
+  ret half %rslt
+}
+
+define half @fptrunc_v16f32_v16f16_extract_uses(<16 x float> %vec_float) {
+; GFX950-SDAG-LABEL: fptrunc_v16f32_v16f16_extract_uses:
+; GFX950-SDAG:       ; %bb.0:
+; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-SDAG-NEXT:    v_cvt_pk_f16_f32 v14, v14, v15
+; GFX950-SDAG-NEXT:    v_cvt_pk_f16_f32 v12, v12, v13
+; GFX950-SDAG-NEXT:    v_cvt_pk_f16_f32 v10, v10, v11
+; GFX950-SDAG-NEXT:    v_cvt_pk_f16_f32 v8, v8, v9
+; GFX950-SDAG-NEXT:    v_cvt_pk_f16_f32 v6, v6, v7
+; GFX950-SDAG-NEXT:    v_cvt_pk_f16_f32 v4, v4, v5
+; GFX950-SDAG-NEXT:    v_cvt_pk_f16_f32 v2, v2, v3
+; GFX950-SDAG-NEXT:    v_cvt_pk_f16_f32 v0, v0, v1
+; GFX950-SDAG-NEXT:    v_add_f16_sdwa v0, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX950-SDAG-NEXT:    v_add_f16_sdwa v1, v2, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX950-SDAG-NEXT:    v_add_f16_sdwa v2, v4, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX950-SDAG-NEXT:    v_add_f16_sdwa v3, v6, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX950-SDAG-NEXT:    v_add_f16_sdwa v4, v8, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX950-SDAG-NEXT:    v_add_f16_sdwa v5, v10, v10 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX950-SDAG-NEXT:    v_add_f16_sdwa v6, v12, v12 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX950-SDAG-NEXT:    v_add_f16_sdwa v7, v14, v14 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX950-SDAG-NEXT:    v_add_f16_e32 v0, v0, v1
+; GFX950-SDAG-NEXT:    v_add_f16_e32 v1, v2, v3
+; GFX950-SDAG-NEXT:    v_add_f16_e32 v2, v4, v5
+; GFX950-SDAG-NEXT:    v_add_f16_e32 v3, v6, v7
+; GFX950-SDAG-NEXT:    v_add_f16_e32 v0, v0, v1
+; GFX950-SDAG-NEXT:    v_add_f16_e32 v1, v2, v3
+; GFX950-SDAG-NEXT:    v_add_f16_e32 v0, v0, v1
+; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX950-GISEL-LABEL: fptrunc_v16f32_v16f16_extract_uses:
+; GFX950-GISEL:       ; %bb.0:
+; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX950-GISEL-NEXT:    v_cvt_pk_f16_f32 v0, v0, v1
+; GFX950-GISEL-NEXT:    v_cvt_pk_f16_f32 v1, v2, v3
+; GFX950-GISEL-NEXT:    v_cvt_pk_f16_f32 v2, v4, v5
+; GFX950-GISEL-NEXT:    v_cvt_pk_f16_f32 v3, v6, v7
+; GFX950-GISEL-NEXT:    v_cvt_pk_f16_f32 v4, v8, v9
+; GFX950-GISEL-NEXT:    v_cvt_pk_f16_f32 v5, v10, v11
+; GFX950-GISEL-NEXT:    v_cvt_pk_f16_f32 v6, v12, v13
+; GFX950-GISEL-NEXT:    v_cvt_pk_f16_f32 v7, v14, v15
+; GFX950-GISEL-NEXT:    v_add_f16_sdwa v0, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX950-GISEL-NEXT:    v_add_f16_sdwa v1, v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX950-GISEL-NEXT:    v_add_f16_sdwa v2, v2, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX950-GISEL-NEXT:    v_add_f16_sdwa v3, v3, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX950-GISEL-NEXT:    v_add_f16_sdwa v4, v4, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX950-GISEL-NEXT:    v_add_f16_sdwa v5, v5, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX950-GISEL-NEXT:    v_add_f16_sdwa v6, v6, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX950-GISEL-NEXT:    v_add_f16_sdwa v7, v7, v7 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX950-GISEL-NEXT:    v_add_f16_e32 v0, v0, v1
+; GFX950-GISEL-NEXT:    v_add_f16_e32 v1, v2, v3
+; GFX950-GISEL-NEXT:    v_add_f16_e32 v2, v4, v5
+; GFX950-GISEL-NEXT:    v_add_f16_e32 v3, v6, v7
+; GFX950-GISEL-NEXT:    v_add_f16_e32 v0, v0, v1
+; GFX950-GISEL-NEXT:    v_add_f16_e32 v1, v2, v3
+; GFX950-GISEL-NEXT:    v_add_f16_e32 v0, v0, v1
+; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %vec_half = fptrunc <16 x float> %vec_float to <16 x half>
+  %f0 = extractelement <16 x half> %vec_half, i64 0
+  %f1 = extractelement <16 x half> %vec_half, i64 1
+  %f2 = extractelement <16 x half> %vec_half, i64 2
+  %f3 = extractelement <16 x half> %vec_half, i64 3
+  %f4 = extractelement <16 x half> %vec_half, i64 4
+  %f5 = extractelement <16 x half> %vec_half, i64 5
+  %f6 = extractelement <16 x half> %vec_half, i64 6
+  %f7 = extractelement <16 x half> %vec_half, i64 7
+  %f8 = extractelement <16 x half> %vec_half, i64 8
+  %f9 = extractelement <16 x half> %vec_half, i64 9
+  %f10 = extractelement <16 x half> %vec_half, i64 10
+  %f11 = extractelement <16 x half> %vec_half, i64 11
+  %f12 = extractelement <16 x half> %vec_half, i64 12
+  %f13 = extractelement <16 x half> %vec_half, i64 13
+  %f14 = extractelement <16 x half> %vec_half, i64 14
+  %f15 = extractelement <16 x half> %vec_half, i64 15
+  %sum0 = fadd half %f0, %f1
+  %sum1 = fadd half %f2, %f3
+  %sum2 = fadd half %f4, %f5
+  %sum3 = fadd half %f6, %f7
+  %sum4 = fadd half %f8, %f9
+  %sum5 = fadd half %f10, %f11
+  %sum6 = fadd half %f12, %f13
+  %sum7 = fadd half %f14, %f15
+  %sum8 = fadd half %sum0, %sum1
+  %sum9 = fadd half %sum2, %sum3
+  %sum10 = fadd half %sum4, %sum5
+  %sum11 = fadd half %sum6, %sum7
+  %sum12 = fadd half %sum8, %sum9
+  %sum13 = fadd half %sum10, %sum11
+  %rslt = fadd half %sum12, %sum13
+  ret half %rslt
 }
 
 define <2 x half> @v_test_cvt_v2f64_v2f16(<2 x double> %src) {

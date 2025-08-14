@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/libc_errno.h"
 #include "src/dirent/closedir.h"
 #include "src/dirent/dirfd.h"
 #include "src/dirent/opendir.h"
 #include "src/dirent/readdir.h"
-#include "src/errno/libc_errno.h"
 
 #include "test/UnitTest/Test.h"
 
@@ -55,17 +55,17 @@ TEST(LlvmLibcDirentTest, SimpleOpenAndRead) {
 }
 
 TEST(LlvmLibcDirentTest, OpenNonExistentDir) {
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
   ::DIR *dir = LIBC_NAMESPACE::opendir("___xyz123__.non_existent__");
   ASSERT_TRUE(dir == nullptr);
   ASSERT_ERRNO_EQ(ENOENT);
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
 }
 
 TEST(LlvmLibcDirentTest, OpenFile) {
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
   ::DIR *dir = LIBC_NAMESPACE::opendir("testdata/file1.txt");
   ASSERT_TRUE(dir == nullptr);
   ASSERT_ERRNO_EQ(ENOTDIR);
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
 }

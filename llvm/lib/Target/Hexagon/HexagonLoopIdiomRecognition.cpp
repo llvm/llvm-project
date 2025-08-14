@@ -38,7 +38,6 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsHexagon.h"
 #include "llvm/IR/Module.h"
@@ -2318,7 +2317,7 @@ bool HexagonLoopIdiomRecognize::coverLoop(Loop *L,
   // instructions in it that are not involved in the original set Insts.
   for (auto *B : L->blocks()) {
     for (auto &In : *B) {
-      if (isa<BranchInst>(In) || isa<DbgInfoIntrinsic>(In))
+      if (isa<BranchInst>(In))
         continue;
       if (!Worklist.count(&In) && In.mayHaveSideEffects())
         return false;

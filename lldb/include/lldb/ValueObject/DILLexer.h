@@ -31,6 +31,7 @@ public:
     identifier,
     l_paren,
     l_square,
+    minus,
     numeric_constant,
     period,
     r_paren,

@@ -181,7 +181,7 @@ attributes #3 = { noreturn nounwind }
 ; LOWERTYPETESTS-NEXT:    store ptr [[COND]], ptr [[FP]], align 8
 ; LOWERTYPETESTS-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[FP]], align 8
 ; LOWERTYPETESTS-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[TMP2]] to i64
-; LOWERTYPETESTS-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], ptrtoint (ptr @.cfi.jumptable to i64)
+; LOWERTYPETESTS-NEXT:    [[TMP4:%.*]] = sub i64 ptrtoint (ptr getelementptr (i8, ptr @.cfi.jumptable, i64 8) to i64), [[TMP3]]
 ; LOWERTYPETESTS-NEXT:    [[TMP5:%.*]] = call i64 @llvm.fshr.i64(i64 [[TMP4]], i64 [[TMP4]], i64 3)
 ; LOWERTYPETESTS-NEXT:    [[TMP6:%.*]] = icmp ule i64 [[TMP5]], 1
 ; LOWERTYPETESTS-NEXT:    br i1 [[TMP6]], label [[CONT:%.*]], label [[TRAP:%.*]], !nosanitize [[META4:![0-9]+]]

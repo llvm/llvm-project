@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++26 -fexceptions    -fsized-deallocation    -faligned-allocation 
-// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++26 -fexceptions -fno-sized-deallocation    -faligned-allocation 
-// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++26 -fexceptions    -fsized-deallocation -fno-aligned-allocation 
-// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++26 -fexceptions -fno-sized-deallocation -fno-aligned-allocation 
-// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++26 -fexceptions    -fsized-deallocation    -faligned-allocation -fexperimental-new-constant-interpreter 
-// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++26 -fexceptions -fno-sized-deallocation    -faligned-allocation -fexperimental-new-constant-interpreter 
-// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++26 -fexceptions    -fsized-deallocation -fno-aligned-allocation -fexperimental-new-constant-interpreter 
-// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++26 -fexceptions -fno-sized-deallocation -fno-aligned-allocation -fexperimental-new-constant-interpreter 
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++26 -Wno-ext-cxx-type-aware-allocators -fexceptions    -fsized-deallocation    -faligned-allocation
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++26 -Wno-ext-cxx-type-aware-allocators -fexceptions -fno-sized-deallocation    -faligned-allocation
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++26 -Wno-ext-cxx-type-aware-allocators -fexceptions    -fsized-deallocation -fno-aligned-allocation
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++26 -Wno-ext-cxx-type-aware-allocators -fexceptions -fno-sized-deallocation -fno-aligned-allocation
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++26 -Wno-ext-cxx-type-aware-allocators -fexceptions    -fsized-deallocation    -faligned-allocation -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++26 -Wno-ext-cxx-type-aware-allocators -fexceptions -fno-sized-deallocation    -faligned-allocation -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++26 -Wno-ext-cxx-type-aware-allocators -fexceptions    -fsized-deallocation -fno-aligned-allocation -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++26 -Wno-ext-cxx-type-aware-allocators -fexceptions -fno-sized-deallocation -fno-aligned-allocation -fexperimental-new-constant-interpreter
 
 
 namespace std {

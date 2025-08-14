@@ -10,10 +10,10 @@
 #define __CLC_MATH_CLC_ATANPI_H__
 
 #define __CLC_BODY <clc/math/unary_decl.inc>
-#define __CLC_FUNCTION __clc_atanpi
+#define FUNCTION __clc_atanpi
 
 #include <clc/math/gentype.inc>
 
-#undef __CLC_FUNCTION
+#undef FUNCTION
 
 #endif // __CLC_MATH_CLC_ATANPI_H__

@@ -2023,7 +2023,7 @@ define signext i16 @atomicrmw_umax_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    lhu a1, 0(a0)
 ; RV64I-NEXT:    lui s2, 16
-; RV64I-NEXT:    addiw s2, s2, -1
+; RV64I-NEXT:    addi s2, s2, -1
 ; RV64I-NEXT:    and s3, s0, s2
 ; RV64I-NEXT:    j .LBB23_2
 ; RV64I-NEXT:  .LBB23_1: # %atomicrmw.start
@@ -2171,7 +2171,7 @@ define signext i16 @atomicrmw_umin_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; RV64I-NEXT:    mv s1, a0
 ; RV64I-NEXT:    lhu a1, 0(a0)
 ; RV64I-NEXT:    lui s2, 16
-; RV64I-NEXT:    addiw s2, s2, -1
+; RV64I-NEXT:    addi s2, s2, -1
 ; RV64I-NEXT:    and s3, s0, s2
 ; RV64I-NEXT:    j .LBB24_2
 ; RV64I-NEXT:  .LBB24_1: # %atomicrmw.start
@@ -4582,7 +4582,7 @@ define signext i32 @atomicrmw_and_i32_monotonic_crossbb(ptr %a, i1 %c) nounwind 
 ; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    ret
 ; RV64I-NEXT:  .LBB56_2: # %else
-; RV64I-NEXT:    lwu a1, 0(a0)
+; RV64I-NEXT:    lw a1, 0(a0)
 ; RV64I-NEXT:    andi a2, a1, 1
 ; RV64I-NEXT:    sw a2, 0(a0)
 ; RV64I-NEXT:    sext.w a0, a1
@@ -4700,7 +4700,7 @@ define signext i32 @atomicrmw_nand_i32_monotonic_crossbb(ptr %a, i1 %c) nounwind
 ; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    ret
 ; RV64I-NEXT:  .LBB57_2: # %else
-; RV64I-NEXT:    lwu a1, 0(a0)
+; RV64I-NEXT:    lw a1, 0(a0)
 ; RV64I-NEXT:    andi a2, a1, 1
 ; RV64I-NEXT:    sw a2, 0(a0)
 ; RV64I-NEXT:    sext.w a0, a1

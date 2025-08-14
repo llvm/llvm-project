@@ -144,9 +144,9 @@ class TestDAP_console(lldbdap_testcase.DAPTestCaseBase):
         )
 
         # Verify the exit status message is printed.
-        self.assertIn(
-            "exited with status = -1 (0xffffffff) debugserver died with signal SIGTERM",
+        self.assertRegex(
             console_output,
+            ".*exited with status = -1 .* died with signal SIGTERM.*",
             "Exit status does not contain message 'exited with status'",
         )
 

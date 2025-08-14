@@ -18,7 +18,7 @@
 #define LLVM_CLANG_AST_TYPE_H
 
 #include "clang/AST/DependenceFlags.h"
-#include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/NestedNameSpecifierBase.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/AttrKinds.h"
@@ -133,6 +133,7 @@ struct PrintingPolicy;
 class RecordDecl;
 class Stmt;
 class TagDecl;
+class ClassTemplateDecl;
 class TemplateArgument;
 class TemplateArgumentListInfo;
 class TemplateArgumentLoc;
@@ -1985,6 +1986,10 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasTrailingReturn : 1;
 
+    /// Whether this function has is a cfi unchecked callee.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned CFIUncheckedCallee : 1;
+
     /// Extra information which affects how the function is called, like
     /// regparm and the calling convention.
     LLVM_PREFERRED_TYPE(CallingConv)
@@ -2040,8 +2045,8 @@ protected:
     unsigned InnerRef : 1;
   };
 
-  class TypeWithKeywordBitfields {
-    friend class TypeWithKeyword;
+  class KeywordWrapperBitfields {
+    template <class> friend class KeywordWrapper;
 
     LLVM_PREFERRED_TYPE(TypeBitfields)
     unsigned : NumTypeBits;
@@ -2053,15 +2058,23 @@ protected:
 
   enum { NumTypeWithKeywordBits = NumTypeBits + 8 };
 
-  class ElaboratedTypeBitfields {
-    friend class ElaboratedType;
+  class TagTypeBitfields {
+    friend class TagType;
 
-    LLVM_PREFERRED_TYPE(TypeWithKeywordBitfields)
+    LLVM_PREFERRED_TYPE(KeywordWrapperBitfields)
     unsigned : NumTypeWithKeywordBits;
 
-    /// Whether the ElaboratedType has a trailing OwnedTagDecl.
+    /// Whether the TagType has a trailing Qualifier.
     LLVM_PREFERRED_TYPE(bool)
-    unsigned HasOwnedTagDecl : 1;
+    unsigned HasQualifier : 1;
+
+    /// Whether the TagType owns the Tag.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned OwnsTag : 1;
+
+    /// Whether the TagType was created from an injected name.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned IsInjected : 1;
   };
 
   class VectorTypeBitfields {
@@ -2120,22 +2133,37 @@ protected:
     unsigned Kind : 1;
   };
 
+  class UnresolvedUsingBitfields {
+    friend class UnresolvedUsingType;
+
+    LLVM_PREFERRED_TYPE(KeywordWrapperBitfields)
+    unsigned : NumTypeWithKeywordBits;
+
+    /// True if there is a non-null qualifier.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned hasQualifier : 1;
+  };
+
   class UsingBitfields {
     friend class UsingType;
 
-    LLVM_PREFERRED_TYPE(TypeBitfields)
-    unsigned : NumTypeBits;
+    LLVM_PREFERRED_TYPE(KeywordWrapperBitfields)
+    unsigned : NumTypeWithKeywordBits;
 
-    /// True if the underlying type is different from the declared one.
+    /// True if there is a non-null qualifier.
     LLVM_PREFERRED_TYPE(bool)
-    unsigned hasTypeDifferentFromDecl : 1;
+    unsigned hasQualifier : 1;
   };
 
   class TypedefBitfields {
     friend class TypedefType;
 
-    LLVM_PREFERRED_TYPE(TypeBitfields)
-    unsigned : NumTypeBits;
+    LLVM_PREFERRED_TYPE(KeywordWrapperBitfields)
+    unsigned : NumTypeWithKeywordBits;
+
+    /// True if there is a non-null qualifier.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned hasQualifier : 1;
 
     /// True if the underlying type is different from the declared one.
     LLVM_PREFERRED_TYPE(bool)
@@ -2201,8 +2229,8 @@ protected:
   class TemplateSpecializationTypeBitfields {
     friend class TemplateSpecializationType;
 
-    LLVM_PREFERRED_TYPE(TypeBitfields)
-    unsigned : NumTypeBits;
+    LLVM_PREFERRED_TYPE(KeywordWrapperBitfields)
+    unsigned : NumTypeWithKeywordBits;
 
     /// Whether this template specialization type is a substituted type alias.
     LLVM_PREFERRED_TYPE(bool)
@@ -2221,7 +2249,7 @@ protected:
   class DependentTemplateSpecializationTypeBitfields {
     friend class DependentTemplateSpecializationType;
 
-    LLVM_PREFERRED_TYPE(TypeWithKeywordBitfields)
+    LLVM_PREFERRED_TYPE(KeywordWrapperBitfields)
     unsigned : NumTypeWithKeywordBits;
 
     /// The number of template arguments named in this class template
@@ -2254,6 +2282,30 @@ protected:
     unsigned NumExpansions;
   };
 
+  enum class PredefinedSugarKind {
+    /// The "size_t" type.
+    SizeT,
+
+    /// The signed integer type corresponding to "size_t".
+    SignedSizeT,
+
+    /// The "ptrdiff_t" type.
+    PtrdiffT,
+
+    // Indicates how many items the enum has.
+    Last = PtrdiffT
+  };
+
+  class PresefinedSugarTypeBitfields {
+    friend class PredefinedSugarType;
+
+    LLVM_PREFERRED_TYPE(TypeBitfields)
+    unsigned : NumTypeBits;
+
+    LLVM_PREFERRED_TYPE(PredefinedSugarKind)
+    unsigned Kind : 8;
+  };
+
   class CountAttributedTypeBitfields {
     friend class CountAttributedType;
 
@@ -2277,13 +2329,14 @@ protected:
     AutoTypeBitfields AutoTypeBits;
     TypeOfBitfields TypeOfBits;
     TypedefBitfields TypedefBits;
+    UnresolvedUsingBitfields UnresolvedUsingBits;
     UsingBitfields UsingBits;
     BuiltinTypeBitfields BuiltinTypeBits;
     FunctionTypeBitfields FunctionTypeBits;
     ObjCObjectTypeBitfields ObjCObjectTypeBits;
     ReferenceTypeBitfields ReferenceTypeBits;
-    TypeWithKeywordBitfields TypeWithKeywordBits;
-    ElaboratedTypeBitfields ElaboratedTypeBits;
+    KeywordWrapperBitfields KeywordWrapperBits;
+    TagTypeBitfields TagTypeBits;
     VectorTypeBitfields VectorTypeBits;
     TemplateTypeParmTypeBitfields TemplateTypeParmTypeBits;
     SubstTemplateTypeParmTypeBitfields SubstTemplateTypeParmTypeBits;
@@ -2293,6 +2346,7 @@ protected:
       DependentTemplateSpecializationTypeBits;
     PackExpansionTypeBitfields PackExpansionTypeBits;
     CountAttributedTypeBitfields CountAttributedTypeBits;
+    PresefinedSugarTypeBitfields PredefinedSugarTypeBits;
   };
 
 private:
@@ -2566,6 +2620,8 @@ public:
   bool isSignableIntegerType(const ASTContext &Ctx) const;
   bool isAnyPointerType() const;   // Any C pointer or ObjC object pointer
   bool isCountAttributedType() const;
+  bool isCFIUncheckedCalleeFunctionType() const;
+  bool hasPointeeToToCFIUncheckedCalleeFunctionType() const;
   bool isBlockPointerType() const;
   bool isVoidPointerType() const;
   bool isReferenceType() const;
@@ -2693,6 +2749,7 @@ public:
   bool isHLSLAttributedResourceType() const;
   bool isHLSLInlineSpirvType() const;
   bool isHLSLResourceRecord() const;
+  bool isHLSLResourceRecordArray() const;
   bool isHLSLIntangibleType()
       const; // Any HLSL intangible type (builtin, array, class)
 
@@ -2899,6 +2956,11 @@ public:
   /// A variant of castAs<> for array type which silently discards
   /// qualifiers from the outermost type.
   const ArrayType *castAsArrayTypeUnsafe() const;
+
+  /// If this type represents a qualified-id, this returns its nested name
+  /// specifier. For example, for the qualified-id "foo::bar::baz", this returns
+  /// "foo::bar". Returns null if this type represents an unqualified-id.
+  NestedNameSpecifier getPrefix() const;
 
   /// Determine whether this type had the specified attribute applied to it
   /// (looking through top-level type sugar).
@@ -3577,12 +3639,12 @@ class MemberPointerType : public Type, public llvm::FoldingSetNode {
 
   /// The class of which the pointee is a member. Must ultimately be a
   /// CXXRecordType, but could be a typedef or a template parameter too.
-  NestedNameSpecifier *Qualifier;
+  NestedNameSpecifier Qualifier;
 
-  MemberPointerType(QualType Pointee, NestedNameSpecifier *Qualifier,
+  MemberPointerType(QualType Pointee, NestedNameSpecifier Qualifier,
                     QualType CanonicalPtr)
       : Type(MemberPointer, CanonicalPtr,
-             (toTypeDependence(Qualifier->getDependence()) &
+             (toTypeDependence(Qualifier.getDependence()) &
               ~TypeDependence::VariablyModified) |
                  Pointee->getDependence()),
         PointeeType(Pointee), Qualifier(Qualifier) {}
@@ -3602,7 +3664,7 @@ public:
     return !PointeeType->isFunctionProtoType();
   }
 
-  NestedNameSpecifier *getQualifier() const { return Qualifier; }
+  NestedNameSpecifier getQualifier() const { return Qualifier; }
   /// Note: this can trigger extra deserialization when external AST sources are
   /// used. Prefer `getCXXRecordDecl()` unless you really need the most recent
   /// decl.
@@ -3621,7 +3683,7 @@ public:
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, QualType Pointee,
-                      const NestedNameSpecifier *Qualifier,
+                      const NestedNameSpecifier Qualifier,
                       const CXXRecordDecl *Cls);
 
   static bool classof(const Type *T) {
@@ -4713,6 +4775,10 @@ public:
   /// type.
   bool getNoReturnAttr() const { return getExtInfo().getNoReturn(); }
 
+  /// Determine whether this is a function prototype that includes the
+  /// cfi_unchecked_callee attribute.
+  bool getCFIUncheckedCalleeAttr() const;
+
   bool getCmseNSCallAttr() const { return getExtInfo().getCmseNSCall(); }
   CallingConv getCallConv() const { return getExtInfo().getCC(); }
   ExtInfo getExtInfo() const { return ExtInfo(FunctionTypeBits.ExtInfo); }
@@ -5249,8 +5315,12 @@ public:
   /// the various bits of extra information about a function prototype.
   struct ExtProtoInfo {
     FunctionType::ExtInfo ExtInfo;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned Variadic : 1;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned HasTrailingReturn : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned CFIUncheckedCallee : 1;
     unsigned AArch64SMEAttributes : 9;
     Qualifiers TypeQuals;
     RefQualifierKind RefQualifier = RQ_None;
@@ -5260,16 +5330,22 @@ public:
     FunctionEffectsRef FunctionEffects;
 
     ExtProtoInfo()
-        : Variadic(false), HasTrailingReturn(false),
+        : Variadic(false), HasTrailingReturn(false), CFIUncheckedCallee(false),
           AArch64SMEAttributes(SME_NormalFunction) {}
 
     ExtProtoInfo(CallingConv CC)
         : ExtInfo(CC), Variadic(false), HasTrailingReturn(false),
-          AArch64SMEAttributes(SME_NormalFunction) {}
+          CFIUncheckedCallee(false), AArch64SMEAttributes(SME_NormalFunction) {}
 
     ExtProtoInfo withExceptionSpec(const ExceptionSpecInfo &ESI) {
       ExtProtoInfo Result(*this);
       Result.ExceptionSpec = ESI;
+      return Result;
+    }
+
+    ExtProtoInfo withCFIUncheckedCallee(bool CFIUncheckedCallee) {
+      ExtProtoInfo Result(*this);
+      Result.CFIUncheckedCallee = CFIUncheckedCallee;
       return Result;
     }
 
@@ -5330,10 +5406,6 @@ private:
 
   unsigned numTrailingObjects(OverloadToken<FunctionEffect>) const {
     return getNumFunctionEffects();
-  }
-
-  unsigned numTrailingObjects(OverloadToken<EffectConditionExpr>) const {
-    return getNumFunctionEffectConditions();
   }
 
   /// Determine whether there are any argument types that
@@ -5423,7 +5495,7 @@ public:
   }
 
   ArrayRef<QualType> getParamTypes() const {
-    return llvm::ArrayRef(param_type_begin(), param_type_end());
+    return {param_type_begin(), param_type_end()};
   }
 
   ExtProtoInfo getExtProtoInfo() const {
@@ -5432,6 +5504,7 @@ public:
     EPI.Variadic = isVariadic();
     EPI.EllipsisLoc = getEllipsisLoc();
     EPI.HasTrailingReturn = hasTrailingReturn();
+    EPI.CFIUncheckedCallee = hasCFIUncheckedCallee();
     EPI.ExceptionSpec = getExceptionSpecInfo();
     EPI.TypeQuals = getMethodQuals();
     EPI.RefQualifier = getRefQualifier();
@@ -5557,6 +5630,10 @@ public:
   /// Whether this function prototype has a trailing return type.
   bool hasTrailingReturn() const { return FunctionTypeBits.HasTrailingReturn; }
 
+  bool hasCFIUncheckedCallee() const {
+    return FunctionTypeBits.CFIUncheckedCallee;
+  }
+
   Qualifiers getMethodQuals() const {
     if (hasExtQualifiers())
       return *getTrailingObjects<Qualifiers>();
@@ -5572,7 +5649,7 @@ public:
   using param_type_iterator = const QualType *;
 
   ArrayRef<QualType> param_types() const {
-    return llvm::ArrayRef(param_type_begin(), param_type_end());
+    return {param_type_begin(), param_type_end()};
   }
 
   param_type_iterator param_type_begin() const {
@@ -5586,7 +5663,7 @@ public:
   using exception_iterator = const QualType *;
 
   ArrayRef<QualType> exceptions() const {
-    return llvm::ArrayRef(exception_begin(), exception_end());
+    return {exception_begin(), exception_end()};
   }
 
   exception_iterator exception_begin() const {
@@ -5661,8 +5738,8 @@ public:
     if (hasExtraBitfields()) {
       const auto *Bitfields = getTrailingObjects<FunctionTypeExtraBitfields>();
       if (Bitfields->NumFunctionEffects > 0)
-        return {getTrailingObjects<FunctionEffect>(),
-                Bitfields->NumFunctionEffects};
+        return getTrailingObjects<FunctionEffect>(
+            Bitfields->NumFunctionEffects);
     }
     return {};
   }
@@ -5681,8 +5758,8 @@ public:
     if (hasExtraBitfields()) {
       const auto *Bitfields = getTrailingObjects<FunctionTypeExtraBitfields>();
       if (Bitfields->EffectsHaveConditions)
-        return {getTrailingObjects<EffectConditionExpr>(),
-                Bitfields->NumFunctionEffects};
+        return getTrailingObjects<EffectConditionExpr>(
+            Bitfields->NumFunctionEffects);
     }
     return {};
   }
@@ -5696,8 +5773,7 @@ public:
                                     ? Bitfields->NumFunctionEffects
                                     : 0;
         return FunctionEffectsRef(
-            {getTrailingObjects<FunctionEffect>(),
-             Bitfields->NumFunctionEffects},
+            getTrailingObjects<FunctionEffect>(Bitfields->NumFunctionEffects),
             {NumConds ? getTrailingObjects<EffectConditionExpr>() : nullptr,
              NumConds});
       }
@@ -5722,84 +5798,254 @@ public:
                       bool Canonical);
 };
 
+/// The elaboration keyword that precedes a qualified type name or
+/// introduces an elaborated-type-specifier.
+enum class ElaboratedTypeKeyword {
+  /// The "struct" keyword introduces the elaborated-type-specifier.
+  Struct,
+
+  /// The "__interface" keyword introduces the elaborated-type-specifier.
+  Interface,
+
+  /// The "union" keyword introduces the elaborated-type-specifier.
+  Union,
+
+  /// The "class" keyword introduces the elaborated-type-specifier.
+  Class,
+
+  /// The "enum" keyword introduces the elaborated-type-specifier.
+  Enum,
+
+  /// The "typename" keyword precedes the qualified type name, e.g.,
+  /// \c typename T::type.
+  Typename,
+
+  /// No keyword precedes the qualified type name.
+  None
+};
+
+/// The kind of a tag type.
+enum class TagTypeKind {
+  /// The "struct" keyword.
+  Struct,
+
+  /// The "__interface" keyword.
+  Interface,
+
+  /// The "union" keyword.
+  Union,
+
+  /// The "class" keyword.
+  Class,
+
+  /// The "enum" keyword.
+  Enum
+};
+
+/// Provides a few static helpers for converting and printing
+/// elaborated type keyword and tag type kind enumerations.
+struct KeywordHelpers {
+  /// Converts a type specifier (DeclSpec::TST) into an elaborated type keyword.
+  static ElaboratedTypeKeyword getKeywordForTypeSpec(unsigned TypeSpec);
+
+  /// Converts a type specifier (DeclSpec::TST) into a tag type kind.
+  /// It is an error to provide a type specifier which *isn't* a tag kind here.
+  static TagTypeKind getTagTypeKindForTypeSpec(unsigned TypeSpec);
+
+  /// Converts a TagTypeKind into an elaborated type keyword.
+  static ElaboratedTypeKeyword getKeywordForTagTypeKind(TagTypeKind Tag);
+
+  /// Converts an elaborated type keyword into a TagTypeKind.
+  /// It is an error to provide an elaborated type keyword
+  /// which *isn't* a tag kind here.
+  static TagTypeKind getTagTypeKindForKeyword(ElaboratedTypeKeyword Keyword);
+
+  static bool KeywordIsTagTypeKind(ElaboratedTypeKeyword Keyword);
+
+  static StringRef getKeywordName(ElaboratedTypeKeyword Keyword);
+
+  static StringRef getTagTypeKindName(TagTypeKind Kind) {
+    return getKeywordName(getKeywordForTagTypeKind(Kind));
+  }
+};
+
+template <class T> class KeywordWrapper : public T, public KeywordHelpers {
+protected:
+  template <class... As>
+  KeywordWrapper(ElaboratedTypeKeyword Keyword, As &&...as)
+      : T(std::forward<As>(as)...) {
+    this->KeywordWrapperBits.Keyword = llvm::to_underlying(Keyword);
+  }
+
+public:
+  ElaboratedTypeKeyword getKeyword() const {
+    return static_cast<ElaboratedTypeKeyword>(this->KeywordWrapperBits.Keyword);
+  }
+
+  class CannotCastToThisType {};
+  static CannotCastToThisType classof(const T *);
+};
+
+/// A helper class for Type nodes having an ElaboratedTypeKeyword.
+/// The keyword in stored in the free bits of the base class.
+class TypeWithKeyword : public KeywordWrapper<Type> {
+protected:
+  TypeWithKeyword(ElaboratedTypeKeyword Keyword, TypeClass tc,
+                  QualType Canonical, TypeDependence Dependence)
+      : KeywordWrapper(Keyword, tc, Canonical, Dependence) {}
+};
+
+template <class T> struct FoldingSetPlaceholder : llvm::FoldingSetNode {
+  void Profile(llvm::FoldingSetNodeID &ID) { getType()->Profile(ID); }
+
+  inline const T *getType() const {
+    constexpr unsigned long Offset =
+        llvm::alignTo(sizeof(T), alignof(FoldingSetPlaceholder));
+    const auto *Addr = reinterpret_cast<const T *>(
+        reinterpret_cast<const char *>(this) - Offset);
+    assert(llvm::isAddrAligned(llvm::Align(alignof(T)), Addr));
+    return Addr;
+  }
+};
+
 /// Represents the dependent type named by a dependently-scoped
 /// typename using declaration, e.g.
 ///   using typename Base<T>::foo;
 ///
 /// Template instantiation turns these into the underlying type.
-class UnresolvedUsingType : public Type {
+class UnresolvedUsingType final
+    : public TypeWithKeyword,
+      private llvm::TrailingObjects<UnresolvedUsingType,
+                                    FoldingSetPlaceholder<UnresolvedUsingType>,
+                                    NestedNameSpecifier> {
   friend class ASTContext; // ASTContext creates these.
+  friend TrailingObjects;
 
   UnresolvedUsingTypenameDecl *Decl;
 
-  UnresolvedUsingType(const UnresolvedUsingTypenameDecl *D)
-      : Type(UnresolvedUsing, QualType(),
-             TypeDependence::DependentInstantiation),
-        Decl(const_cast<UnresolvedUsingTypenameDecl *>(D)) {}
+  unsigned numTrailingObjects(
+      OverloadToken<FoldingSetPlaceholder<UnresolvedUsingType>>) const {
+    assert(UnresolvedUsingBits.hasQualifier ||
+           getKeyword() != ElaboratedTypeKeyword::None);
+    return 1;
+  }
+
+  FoldingSetPlaceholder<UnresolvedUsingType> *getFoldingSetPlaceholder() {
+    assert(numTrailingObjects(
+               OverloadToken<FoldingSetPlaceholder<UnresolvedUsingType>>{}) ==
+           1);
+    return getTrailingObjects<FoldingSetPlaceholder<UnresolvedUsingType>>();
+  }
+
+  UnresolvedUsingType(ElaboratedTypeKeyword Keyword,
+                      NestedNameSpecifier Qualifier,
+                      const UnresolvedUsingTypenameDecl *D,
+                      const Type *CanonicalType);
 
 public:
+  NestedNameSpecifier getQualifier() const {
+    return UnresolvedUsingBits.hasQualifier
+               ? *getTrailingObjects<NestedNameSpecifier>()
+               : std::nullopt;
+  }
+
   UnresolvedUsingTypenameDecl *getDecl() const { return Decl; }
 
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
 
+  static void Profile(llvm::FoldingSetNodeID &ID, ElaboratedTypeKeyword Keyword,
+                      NestedNameSpecifier Qualifier,
+                      const UnresolvedUsingTypenameDecl *D) {
+    static_assert(llvm::to_underlying(ElaboratedTypeKeyword::None) <= 7);
+    ID.AddInteger(uintptr_t(D) | llvm::to_underlying(Keyword));
+    if (Qualifier)
+      Qualifier.Profile(ID);
+  }
+
+  void Profile(llvm::FoldingSetNodeID &ID) const {
+    Profile(ID, getKeyword(), getQualifier(), getDecl());
+  }
+
   static bool classof(const Type *T) {
     return T->getTypeClass() == UnresolvedUsing;
   }
-
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    return Profile(ID, Decl);
-  }
-
-  static void Profile(llvm::FoldingSetNodeID &ID,
-                      UnresolvedUsingTypenameDecl *D) {
-    ID.AddPointer(D);
-  }
 };
 
-class UsingType final : public Type,
+class UsingType final : public TypeWithKeyword,
                         public llvm::FoldingSetNode,
-                        private llvm::TrailingObjects<UsingType, QualType> {
-  UsingShadowDecl *Found;
+                        llvm::TrailingObjects<UsingType, NestedNameSpecifier> {
+  UsingShadowDecl *D;
+  QualType UnderlyingType;
+
   friend class ASTContext; // ASTContext creates these.
   friend TrailingObjects;
 
-  UsingType(const UsingShadowDecl *Found, QualType Underlying, QualType Canon);
+  UsingType(ElaboratedTypeKeyword Keyword, NestedNameSpecifier Qualifier,
+            const UsingShadowDecl *D, QualType UnderlyingType);
 
 public:
-  UsingShadowDecl *getFoundDecl() const { return Found; }
-  QualType getUnderlyingType() const;
+  NestedNameSpecifier getQualifier() const {
+    return UsingBits.hasQualifier ? *getTrailingObjects() : std::nullopt;
+  }
 
+  UsingShadowDecl *getDecl() const { return D; }
+
+  QualType desugar() const { return UnderlyingType; }
   bool isSugared() const { return true; }
 
-  // This always has the 'same' type as declared, but not necessarily identical.
-  QualType desugar() const { return getUnderlyingType(); }
-
-  // Internal helper, for debugging purposes.
-  bool typeMatchesDecl() const { return !UsingBits.hasTypeDifferentFromDecl; }
-
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, Found, getUnderlyingType());
+  static void Profile(llvm::FoldingSetNodeID &ID, ElaboratedTypeKeyword Keyword,
+                      NestedNameSpecifier Qualifier, const UsingShadowDecl *D,
+                      QualType UnderlyingType) {
+    static_assert(llvm::to_underlying(ElaboratedTypeKeyword::None) <= 7);
+    ID.AddInteger(uintptr_t(D) | llvm::to_underlying(Keyword));
+    UnderlyingType.Profile(ID);
+    if (Qualifier)
+      Qualifier.Profile(ID);
   }
-  static void Profile(llvm::FoldingSetNodeID &ID, const UsingShadowDecl *Found,
-                      QualType Underlying) {
-    ID.AddPointer(Found);
-    Underlying.Profile(ID);
+
+  void Profile(llvm::FoldingSetNodeID &ID) const {
+    Profile(ID, getKeyword(), getQualifier(), D, desugar());
   }
   static bool classof(const Type *T) { return T->getTypeClass() == Using; }
 };
 
-class TypedefType final : public Type,
-                          public llvm::FoldingSetNode,
-                          private llvm::TrailingObjects<TypedefType, QualType> {
+class TypedefType final
+    : public TypeWithKeyword,
+      private llvm::TrailingObjects<TypedefType,
+                                    FoldingSetPlaceholder<TypedefType>,
+                                    NestedNameSpecifier, QualType> {
   TypedefNameDecl *Decl;
   friend class ASTContext; // ASTContext creates these.
   friend TrailingObjects;
 
-  TypedefType(TypeClass tc, const TypedefNameDecl *D, QualType underlying,
-              QualType can);
+  unsigned
+  numTrailingObjects(OverloadToken<FoldingSetPlaceholder<TypedefType>>) const {
+    assert(TypedefBits.hasQualifier || TypedefBits.hasTypeDifferentFromDecl ||
+           getKeyword() != ElaboratedTypeKeyword::None);
+    return 1;
+  }
+
+  unsigned numTrailingObjects(OverloadToken<NestedNameSpecifier>) const {
+    return TypedefBits.hasQualifier;
+  }
+
+  TypedefType(TypeClass TC, ElaboratedTypeKeyword Keyword,
+              NestedNameSpecifier Qualifier, const TypedefNameDecl *D,
+              QualType UnderlyingType, bool HasTypeDifferentFromDecl);
+
+  FoldingSetPlaceholder<TypedefType> *getFoldingSetPlaceholder() {
+    assert(numTrailingObjects(
+               OverloadToken<FoldingSetPlaceholder<TypedefType>>{}) == 1);
+    return getTrailingObjects<FoldingSetPlaceholder<TypedefType>>();
+  }
 
 public:
+  NestedNameSpecifier getQualifier() const {
+    return TypedefBits.hasQualifier ? *getTrailingObjects<NestedNameSpecifier>()
+                                    : std::nullopt;
+  }
+
   TypedefNameDecl *getDecl() const { return Decl; }
 
   bool isSugared() const { return true; }
@@ -5810,14 +6056,23 @@ public:
   // Internal helper, for debugging purposes.
   bool typeMatchesDecl() const { return !TypedefBits.hasTypeDifferentFromDecl; }
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, Decl, typeMatchesDecl() ? QualType() : desugar());
-  }
-  static void Profile(llvm::FoldingSetNodeID &ID, const TypedefNameDecl *Decl,
-                      QualType Underlying) {
-    ID.AddPointer(Decl);
+  static void Profile(llvm::FoldingSetNodeID &ID, ElaboratedTypeKeyword Keyword,
+                      NestedNameSpecifier Qualifier,
+                      const TypedefNameDecl *Decl, QualType Underlying) {
+
+    ID.AddInteger(uintptr_t(Decl) | (Keyword != ElaboratedTypeKeyword::None) |
+                  (!Qualifier << 1));
+    if (Keyword != ElaboratedTypeKeyword::None)
+      ID.AddInteger(llvm::to_underlying(Keyword));
+    if (Qualifier)
+      Qualifier.Profile(ID);
     if (!Underlying.isNull())
       Underlying.Profile(ID);
+  }
+
+  void Profile(llvm::FoldingSetNodeID &ID) const {
+    Profile(ID, getKeyword(), getQualifier(), getDecl(),
+            typeMatchesDecl() ? QualType() : desugar());
   }
 
   static bool classof(const Type *T) { return T->getTypeClass() == Typedef; }
@@ -6032,14 +6287,10 @@ public:
                       ArrayRef<QualType> Expansions);
 
 private:
-  const QualType *getExpansionsPtr() const {
-    return getTrailingObjects<QualType>();
-  }
+  const QualType *getExpansionsPtr() const { return getTrailingObjects(); }
 
   static TypeDependence computeDependence(QualType Pattern, Expr *IndexExpr,
                                           ArrayRef<QualType> Expansions = {});
-
-  unsigned numTrailingObjects(OverloadToken<QualType>) const { return Size; }
 };
 
 /// A unary type transform, which is a type constructed from another.
@@ -6090,71 +6341,143 @@ public:
   }
 };
 
-class TagType : public Type {
-  friend class ASTReader;
-  template <class T> friend class serialization::AbstractTypeReader;
+class TagType : public TypeWithKeyword {
+  friend class ASTContext; // ASTContext creates these.
 
   /// Stores the TagDecl associated with this type. The decl may point to any
   /// TagDecl that declares the entity.
   TagDecl *decl;
 
+  void *getTrailingPointer() const;
+  NestedNameSpecifier &getTrailingQualifier() const;
+
 protected:
-  TagType(TypeClass TC, const TagDecl *D, QualType can);
+  TagType(TypeClass TC, ElaboratedTypeKeyword Keyword,
+          NestedNameSpecifier Qualifier, const TagDecl *TD, bool OwnsTag,
+          bool IsInjected, const Type *CanonicalType);
 
 public:
-  TagDecl *getDecl() const;
+  TagDecl *getOriginalDecl() const { return decl; }
 
-  /// Determines whether this type is in the process of being defined.
-  bool isBeingDefined() const;
+  NestedNameSpecifier getQualifier() const;
+
+  /// Does the TagType own this declaration of the Tag?
+  bool isTagOwned() const { return TagTypeBits.OwnsTag; }
+
+  bool isInjected() const { return TagTypeBits.IsInjected; }
+
+  ClassTemplateDecl *getTemplateDecl() const;
+  TemplateName getTemplateName(const ASTContext &Ctx) const;
+  ArrayRef<TemplateArgument> getTemplateArgs(const ASTContext &Ctx) const;
+
+  bool isSugared() const { return false; }
+  QualType desugar() const { return getCanonicalTypeInternal(); }
 
   static bool classof(const Type *T) {
-    return T->getTypeClass() == Enum || T->getTypeClass() == Record;
+    return T->getTypeClass() == Enum || T->getTypeClass() == Record ||
+           T->getTypeClass() == InjectedClassName;
+  }
+};
+
+struct TagTypeFoldingSetPlaceholder : public llvm::FoldingSetNode {
+  static constexpr size_t getOffset() {
+    return alignof(TagType) -
+           (sizeof(TagTypeFoldingSetPlaceholder) % alignof(TagType));
+  }
+
+  static void Profile(llvm::FoldingSetNodeID &ID, ElaboratedTypeKeyword Keyword,
+                      NestedNameSpecifier Qualifier, const TagDecl *Tag,
+                      bool OwnsTag, bool IsInjected) {
+    ID.AddInteger(uintptr_t(Tag) | OwnsTag | (IsInjected << 1) |
+                  ((Keyword != ElaboratedTypeKeyword::None) << 2));
+    if (Keyword != ElaboratedTypeKeyword::None)
+      ID.AddInteger(llvm::to_underlying(Keyword));
+    if (Qualifier)
+      Qualifier.Profile(ID);
+  }
+
+  void Profile(llvm::FoldingSetNodeID &ID) const {
+    const TagType *T = getTagType();
+    Profile(ID, T->getKeyword(), T->getQualifier(), T->getOriginalDecl(),
+            T->isTagOwned(), T->isInjected());
+  }
+
+  TagType *getTagType() {
+    return reinterpret_cast<TagType *>(reinterpret_cast<char *>(this + 1) +
+                                       getOffset());
+  }
+  const TagType *getTagType() const {
+    return const_cast<TagTypeFoldingSetPlaceholder *>(this)->getTagType();
+  }
+  static TagTypeFoldingSetPlaceholder *fromTagType(TagType *T) {
+    return reinterpret_cast<TagTypeFoldingSetPlaceholder *>(
+               reinterpret_cast<char *>(T) - getOffset()) -
+           1;
   }
 };
 
 /// A helper class that allows the use of isa/cast/dyncast
 /// to detect TagType objects of structs/unions/classes.
-class RecordType : public TagType {
-protected:
-  friend class ASTContext; // ASTContext creates these.
-
-  explicit RecordType(const RecordDecl *D)
-      : TagType(Record, reinterpret_cast<const TagDecl*>(D), QualType()) {}
-  explicit RecordType(TypeClass TC, RecordDecl *D)
-      : TagType(TC, reinterpret_cast<const TagDecl*>(D), QualType()) {}
+class RecordType final : public TagType {
+  using TagType::TagType;
 
 public:
-  RecordDecl *getDecl() const {
-    return reinterpret_cast<RecordDecl*>(TagType::getDecl());
+  RecordDecl *getOriginalDecl() const {
+    return reinterpret_cast<RecordDecl *>(TagType::getOriginalDecl());
   }
 
   /// Recursively check all fields in the record for const-ness. If any field
   /// is declared const, return true. Otherwise, return false.
   bool hasConstFields() const;
 
-  bool isSugared() const { return false; }
-  QualType desugar() const { return QualType(this, 0); }
-
   static bool classof(const Type *T) { return T->getTypeClass() == Record; }
 };
 
 /// A helper class that allows the use of isa/cast/dyncast
 /// to detect TagType objects of enums.
-class EnumType : public TagType {
-  friend class ASTContext; // ASTContext creates these.
-
-  explicit EnumType(const EnumDecl *D)
-      : TagType(Enum, reinterpret_cast<const TagDecl*>(D), QualType()) {}
+class EnumType final : public TagType {
+  using TagType::TagType;
 
 public:
-  EnumDecl *getDecl() const {
-    return reinterpret_cast<EnumDecl*>(TagType::getDecl());
+  EnumDecl *getOriginalDecl() const {
+    return reinterpret_cast<EnumDecl *>(TagType::getOriginalDecl());
   }
 
-  bool isSugared() const { return false; }
-  QualType desugar() const { return QualType(this, 0); }
-
   static bool classof(const Type *T) { return T->getTypeClass() == Enum; }
+};
+
+/// The injected class name of a C++ class template or class
+/// template partial specialization.  Used to record that a type was
+/// spelled with a bare identifier rather than as a template-id; the
+/// equivalent for non-templated classes is just RecordType.
+///
+/// Injected class name types are always dependent.  Template
+/// instantiation turns these into RecordTypes.
+///
+/// Injected class name types are always canonical.  This works
+/// because it is impossible to compare an injected class name type
+/// with the corresponding non-injected template type, for the same
+/// reason that it is impossible to directly compare template
+/// parameters from different dependent contexts: injected class name
+/// types can only occur within the scope of a particular templated
+/// declaration, and within that scope every template specialization
+/// will canonicalize to the injected class name (when appropriate
+/// according to the rules of the language).
+class InjectedClassNameType final : public TagType {
+  friend class ASTContext; // ASTContext creates these.
+
+  InjectedClassNameType(ElaboratedTypeKeyword Keyword,
+                        NestedNameSpecifier Qualifier, const TagDecl *TD,
+                        bool IsInjected, const Type *CanonicalType);
+
+public:
+  CXXRecordDecl *getOriginalDecl() const {
+    return reinterpret_cast<CXXRecordDecl *>(TagType::getOriginalDecl());
+  }
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == InjectedClassName;
+  }
 };
 
 /// An attributed type is a type to which a type attribute has been applied.
@@ -6388,17 +6711,12 @@ public:
   SpirvOperand() : Kind(Invalid), ResultType(), Value() {}
 
   SpirvOperand(SpirvOperandKind Kind, QualType ResultType, llvm::APInt Value)
-      : Kind(Kind), ResultType(ResultType), Value(Value) {}
+      : Kind(Kind), ResultType(ResultType), Value(std::move(Value)) {}
 
   SpirvOperand(const SpirvOperand &Other) { *this = Other; }
   ~SpirvOperand() {}
 
-  SpirvOperand &operator=(const SpirvOperand &Other) {
-    this->Kind = Other.Kind;
-    this->ResultType = Other.ResultType;
-    this->Value = Other.Value;
-    return *this;
-  }
+  SpirvOperand &operator=(const SpirvOperand &Other) = default;
 
   bool operator==(const SpirvOperand &Other) const {
     return Kind == Other.Kind && ResultType == Other.ResultType &&
@@ -6427,11 +6745,11 @@ public:
   }
 
   static SpirvOperand createConstant(QualType ResultType, llvm::APInt Val) {
-    return SpirvOperand(ConstantId, ResultType, Val);
+    return SpirvOperand(ConstantId, ResultType, std::move(Val));
   }
 
   static SpirvOperand createLiteral(llvm::APInt Val) {
-    return SpirvOperand(Literal, QualType(), Val);
+    return SpirvOperand(Literal, QualType(), std::move(Val));
   }
 
   static SpirvOperand createType(QualType T) {
@@ -6466,8 +6784,7 @@ private:
     for (size_t I = 0; I < NumOperands; I++) {
       // Since Operands are stored as a trailing object, they have not been
       // initialized yet. Call the constructor manually.
-      auto *Operand =
-          new (&getTrailingObjects<SpirvOperand>()[I]) SpirvOperand();
+      auto *Operand = new (&getTrailingObjects()[I]) SpirvOperand();
       *Operand = Operands[I];
     }
   }
@@ -6477,7 +6794,7 @@ public:
   uint32_t getSize() const { return Size; }
   uint32_t getAlignment() const { return Alignment; }
   ArrayRef<SpirvOperand> getOperands() const {
-    return {getTrailingObjects<SpirvOperand>(), NumOperands};
+    return getTrailingObjects(NumOperands);
   }
 
   bool isSugared() const { return false; }
@@ -6577,7 +6894,7 @@ public:
   /// parameter.
   QualType getReplacementType() const {
     return SubstTemplateTypeParmTypeBits.HasNonCanonicalUnderlyingType
-               ? *getTrailingObjects<QualType>()
+               ? *getTrailingObjects()
                : getCanonicalTypeInternal();
   }
 
@@ -6727,10 +7044,10 @@ public:
 class AutoType : public DeducedType {
   friend class ASTContext; // ASTContext creates these
 
-  ConceptDecl *TypeConstraintConcept;
+  TemplateDecl *TypeConstraintConcept;
 
   AutoType(QualType DeducedAsType, AutoTypeKeyword Keyword,
-           TypeDependence ExtraDependence, QualType Canon, ConceptDecl *CD,
+           TypeDependence ExtraDependence, QualType Canon, TemplateDecl *CD,
            ArrayRef<TemplateArgument> TypeConstraintArgs);
 
 public:
@@ -6739,7 +7056,7 @@ public:
             AutoTypeBits.NumArgs};
   }
 
-  ConceptDecl *getTypeConstraintConcept() const {
+  TemplateDecl *getTypeConstraintConcept() const {
     return TypeConstraintConcept;
   }
 
@@ -6762,7 +7079,7 @@ public:
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context);
   static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
                       QualType Deduced, AutoTypeKeyword Keyword,
-                      bool IsDependent, ConceptDecl *CD,
+                      bool IsDependent, TemplateDecl *CD,
                       ArrayRef<TemplateArgument> Arguments);
 
   static bool classof(const Type *T) {
@@ -6771,34 +7088,38 @@ public:
 };
 
 /// Represents a C++17 deduced template specialization type.
-class DeducedTemplateSpecializationType : public DeducedType,
+class DeducedTemplateSpecializationType : public KeywordWrapper<DeducedType>,
                                           public llvm::FoldingSetNode {
   friend class ASTContext; // ASTContext creates these
 
   /// The name of the template whose arguments will be deduced.
   TemplateName Template;
 
-  DeducedTemplateSpecializationType(TemplateName Template,
+  DeducedTemplateSpecializationType(ElaboratedTypeKeyword Keyword,
+                                    TemplateName Template,
                                     QualType DeducedAsType,
                                     bool IsDeducedAsDependent, QualType Canon)
-      : DeducedType(DeducedTemplateSpecialization, DeducedAsType,
-                    toTypeDependence(Template.getDependence()) |
-                        (IsDeducedAsDependent
-                             ? TypeDependence::DependentInstantiation
-                             : TypeDependence::None),
-                    Canon),
+      : KeywordWrapper(Keyword, DeducedTemplateSpecialization, DeducedAsType,
+                       toTypeDependence(Template.getDependence()) |
+                           (IsDeducedAsDependent
+                                ? TypeDependence::DependentInstantiation
+                                : TypeDependence::None),
+                       Canon),
         Template(Template) {}
 
 public:
   /// Retrieve the name of the template that we are deducing.
-  TemplateName getTemplateName() const { return Template;}
+  TemplateName getTemplateName() const { return Template; }
 
   void Profile(llvm::FoldingSetNodeID &ID) const {
-    Profile(ID, getTemplateName(), getDeducedType(), isDependentType());
+    Profile(ID, getKeyword(), getTemplateName(), getDeducedType(),
+            isDependentType());
   }
 
-  static void Profile(llvm::FoldingSetNodeID &ID, TemplateName Template,
-                      QualType Deduced, bool IsDependent) {
+  static void Profile(llvm::FoldingSetNodeID &ID, ElaboratedTypeKeyword Keyword,
+                      TemplateName Template, QualType Deduced,
+                      bool IsDependent) {
+    ID.AddInteger(llvm::to_underlying(Keyword));
     Template.Profile(ID);
     Deduced.Profile(ID);
     ID.AddBoolean(IsDependent || Template.isDependent());
@@ -6829,7 +7150,8 @@ public:
 /// TemplateArguments, followed by a QualType representing the
 /// non-canonical aliased type when the template is a type alias
 /// template.
-class TemplateSpecializationType : public Type, public llvm::FoldingSetNode {
+class TemplateSpecializationType : public TypeWithKeyword,
+                                   public llvm::FoldingSetNode {
   friend class ASTContext; // ASTContext creates these
 
   /// The name of the template being specialized.  This is
@@ -6841,8 +7163,8 @@ class TemplateSpecializationType : public Type, public llvm::FoldingSetNode {
   /// replacement must, recursively, be one of these).
   TemplateName Template;
 
-  TemplateSpecializationType(TemplateName T, bool IsAlias,
-                             ArrayRef<TemplateArgument> Args,
+  TemplateSpecializationType(ElaboratedTypeKeyword Keyword, TemplateName T,
+                             bool IsAlias, ArrayRef<TemplateArgument> Args,
                              QualType Underlying);
 
 public:
@@ -6943,242 +7265,6 @@ bool isSubstitutedDefaultArgument(ASTContext &Ctx, TemplateArgument Arg,
                                   ArrayRef<TemplateArgument> Args,
                                   unsigned Depth);
 
-/// The injected class name of a C++ class template or class
-/// template partial specialization.  Used to record that a type was
-/// spelled with a bare identifier rather than as a template-id; the
-/// equivalent for non-templated classes is just RecordType.
-///
-/// Injected class name types are always dependent.  Template
-/// instantiation turns these into RecordTypes.
-///
-/// Injected class name types are always canonical.  This works
-/// because it is impossible to compare an injected class name type
-/// with the corresponding non-injected template type, for the same
-/// reason that it is impossible to directly compare template
-/// parameters from different dependent contexts: injected class name
-/// types can only occur within the scope of a particular templated
-/// declaration, and within that scope every template specialization
-/// will canonicalize to the injected class name (when appropriate
-/// according to the rules of the language).
-class InjectedClassNameType : public Type {
-  friend class ASTContext; // ASTContext creates these.
-  friend class ASTNodeImporter;
-  friend class ASTReader; // FIXME: ASTContext::getInjectedClassNameType is not
-                          // currently suitable for AST reading, too much
-                          // interdependencies.
-  template <class T> friend class serialization::AbstractTypeReader;
-
-  CXXRecordDecl *Decl;
-
-  /// The template specialization which this type represents.
-  /// For example, in
-  ///   template <class T> class A { ... };
-  /// this is A<T>, whereas in
-  ///   template <class X, class Y> class A<B<X,Y> > { ... };
-  /// this is A<B<X,Y> >.
-  ///
-  /// It is always unqualified, always a template specialization type,
-  /// and always dependent.
-  QualType InjectedType;
-
-  InjectedClassNameType(CXXRecordDecl *D, QualType TST)
-      : Type(InjectedClassName, QualType(),
-             TypeDependence::DependentInstantiation),
-        Decl(D), InjectedType(TST) {
-    assert(isa<TemplateSpecializationType>(TST));
-    assert(!TST.hasQualifiers());
-    assert(TST->isDependentType());
-  }
-
-public:
-  QualType getInjectedSpecializationType() const { return InjectedType; }
-
-  const TemplateSpecializationType *getInjectedTST() const {
-    return cast<TemplateSpecializationType>(InjectedType.getTypePtr());
-  }
-
-  TemplateName getTemplateName() const {
-    return getInjectedTST()->getTemplateName();
-  }
-
-  CXXRecordDecl *getDecl() const;
-
-  bool isSugared() const { return false; }
-  QualType desugar() const { return QualType(this, 0); }
-
-  static bool classof(const Type *T) {
-    return T->getTypeClass() == InjectedClassName;
-  }
-};
-
-/// The elaboration keyword that precedes a qualified type name or
-/// introduces an elaborated-type-specifier.
-enum class ElaboratedTypeKeyword {
-  /// The "struct" keyword introduces the elaborated-type-specifier.
-  Struct,
-
-  /// The "__interface" keyword introduces the elaborated-type-specifier.
-  Interface,
-
-  /// The "union" keyword introduces the elaborated-type-specifier.
-  Union,
-
-  /// The "class" keyword introduces the elaborated-type-specifier.
-  Class,
-
-  /// The "enum" keyword introduces the elaborated-type-specifier.
-  Enum,
-
-  /// The "typename" keyword precedes the qualified type name, e.g.,
-  /// \c typename T::type.
-  Typename,
-
-  /// No keyword precedes the qualified type name.
-  None
-};
-
-/// The kind of a tag type.
-enum class TagTypeKind {
-  /// The "struct" keyword.
-  Struct,
-
-  /// The "__interface" keyword.
-  Interface,
-
-  /// The "union" keyword.
-  Union,
-
-  /// The "class" keyword.
-  Class,
-
-  /// The "enum" keyword.
-  Enum
-};
-
-/// A helper class for Type nodes having an ElaboratedTypeKeyword.
-/// The keyword in stored in the free bits of the base class.
-/// Also provides a few static helpers for converting and printing
-/// elaborated type keyword and tag type kind enumerations.
-class TypeWithKeyword : public Type {
-protected:
-  TypeWithKeyword(ElaboratedTypeKeyword Keyword, TypeClass tc,
-                  QualType Canonical, TypeDependence Dependence)
-      : Type(tc, Canonical, Dependence) {
-    TypeWithKeywordBits.Keyword = llvm::to_underlying(Keyword);
-  }
-
-public:
-  ElaboratedTypeKeyword getKeyword() const {
-    return static_cast<ElaboratedTypeKeyword>(TypeWithKeywordBits.Keyword);
-  }
-
-  /// Converts a type specifier (DeclSpec::TST) into an elaborated type keyword.
-  static ElaboratedTypeKeyword getKeywordForTypeSpec(unsigned TypeSpec);
-
-  /// Converts a type specifier (DeclSpec::TST) into a tag type kind.
-  /// It is an error to provide a type specifier which *isn't* a tag kind here.
-  static TagTypeKind getTagTypeKindForTypeSpec(unsigned TypeSpec);
-
-  /// Converts a TagTypeKind into an elaborated type keyword.
-  static ElaboratedTypeKeyword getKeywordForTagTypeKind(TagTypeKind Tag);
-
-  /// Converts an elaborated type keyword into a TagTypeKind.
-  /// It is an error to provide an elaborated type keyword
-  /// which *isn't* a tag kind here.
-  static TagTypeKind getTagTypeKindForKeyword(ElaboratedTypeKeyword Keyword);
-
-  static bool KeywordIsTagTypeKind(ElaboratedTypeKeyword Keyword);
-
-  static StringRef getKeywordName(ElaboratedTypeKeyword Keyword);
-
-  static StringRef getTagTypeKindName(TagTypeKind Kind) {
-    return getKeywordName(getKeywordForTagTypeKind(Kind));
-  }
-
-  class CannotCastToThisType {};
-  static CannotCastToThisType classof(const Type *);
-};
-
-/// Represents a type that was referred to using an elaborated type
-/// keyword, e.g., struct S, or via a qualified name, e.g., N::M::type,
-/// or both.
-///
-/// This type is used to keep track of a type name as written in the
-/// source code, including tag keywords and any nested-name-specifiers.
-/// The type itself is always "sugar", used to express what was written
-/// in the source code but containing no additional semantic information.
-class ElaboratedType final
-    : public TypeWithKeyword,
-      public llvm::FoldingSetNode,
-      private llvm::TrailingObjects<ElaboratedType, TagDecl *> {
-  friend class ASTContext; // ASTContext creates these
-  friend TrailingObjects;
-
-  /// The nested name specifier containing the qualifier.
-  NestedNameSpecifier *NNS;
-
-  /// The type that this qualified name refers to.
-  QualType NamedType;
-
-  /// The (re)declaration of this tag type owned by this occurrence is stored
-  /// as a trailing object if there is one. Use getOwnedTagDecl to obtain
-  /// it, or obtain a null pointer if there is none.
-
-  ElaboratedType(ElaboratedTypeKeyword Keyword, NestedNameSpecifier *NNS,
-                 QualType NamedType, QualType CanonType, TagDecl *OwnedTagDecl)
-      : TypeWithKeyword(Keyword, Elaborated, CanonType,
-                        // Any semantic dependence on the qualifier will have
-                        // been incorporated into NamedType. We still need to
-                        // track syntactic (instantiation / error / pack)
-                        // dependence on the qualifier.
-                        NamedType->getDependence() |
-                            (NNS ? toSyntacticDependence(
-                                       toTypeDependence(NNS->getDependence()))
-                                 : TypeDependence::None)),
-        NNS(NNS), NamedType(NamedType) {
-    ElaboratedTypeBits.HasOwnedTagDecl = false;
-    if (OwnedTagDecl) {
-      ElaboratedTypeBits.HasOwnedTagDecl = true;
-      *getTrailingObjects<TagDecl *>() = OwnedTagDecl;
-    }
-  }
-
-public:
-  /// Retrieve the qualification on this type.
-  NestedNameSpecifier *getQualifier() const { return NNS; }
-
-  /// Retrieve the type named by the qualified-id.
-  QualType getNamedType() const { return NamedType; }
-
-  /// Remove a single level of sugar.
-  QualType desugar() const { return getNamedType(); }
-
-  /// Returns whether this type directly provides sugar.
-  bool isSugared() const { return true; }
-
-  /// Return the (re)declaration of this type owned by this occurrence of this
-  /// type, or nullptr if there is none.
-  TagDecl *getOwnedTagDecl() const {
-    return ElaboratedTypeBits.HasOwnedTagDecl ? *getTrailingObjects<TagDecl *>()
-                                              : nullptr;
-  }
-
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, getKeyword(), NNS, NamedType, getOwnedTagDecl());
-  }
-
-  static void Profile(llvm::FoldingSetNodeID &ID, ElaboratedTypeKeyword Keyword,
-                      NestedNameSpecifier *NNS, QualType NamedType,
-                      TagDecl *OwnedTagDecl) {
-    ID.AddInteger(llvm::to_underlying(Keyword));
-    ID.AddPointer(NNS);
-    NamedType.Profile(ID);
-    ID.AddPointer(OwnedTagDecl);
-  }
-
-  static bool classof(const Type *T) { return T->getTypeClass() == Elaborated; }
-};
-
 /// Represents a qualified type name for which the type name is
 /// dependent.
 ///
@@ -7195,24 +7281,24 @@ class DependentNameType : public TypeWithKeyword, public llvm::FoldingSetNode {
   friend class ASTContext; // ASTContext creates these
 
   /// The nested name specifier containing the qualifier.
-  NestedNameSpecifier *NNS;
+  NestedNameSpecifier NNS;
 
   /// The type that this typename specifier refers to.
   const IdentifierInfo *Name;
 
-  DependentNameType(ElaboratedTypeKeyword Keyword, NestedNameSpecifier *NNS,
+  DependentNameType(ElaboratedTypeKeyword Keyword, NestedNameSpecifier NNS,
                     const IdentifierInfo *Name, QualType CanonType)
       : TypeWithKeyword(Keyword, DependentName, CanonType,
                         TypeDependence::DependentInstantiation |
-                            toTypeDependence(NNS->getDependence())),
+                            (NNS ? toTypeDependence(NNS.getDependence())
+                                 : TypeDependence::Dependent)),
         NNS(NNS), Name(Name) {
-    assert(NNS);
     assert(Name);
   }
 
 public:
   /// Retrieve the qualification on this type.
-  NestedNameSpecifier *getQualifier() const { return NNS; }
+  NestedNameSpecifier getQualifier() const { return NNS; }
 
   /// Retrieve the identifier that terminates this type name.
   /// For example, "type" in "typename T::type".
@@ -7228,9 +7314,9 @@ public:
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, ElaboratedTypeKeyword Keyword,
-                      NestedNameSpecifier *NNS, const IdentifierInfo *Name) {
+                      NestedNameSpecifier NNS, const IdentifierInfo *Name) {
     ID.AddInteger(llvm::to_underlying(Keyword));
-    ID.AddPointer(NNS);
+    NNS.Profile(ID);
     ID.AddPointer(Name);
   }
 
@@ -7242,8 +7328,7 @@ public:
 /// Represents a template specialization type whose template cannot be
 /// resolved, e.g.
 ///   A<T>::template B<T>
-class DependentTemplateSpecializationType : public TypeWithKeyword,
-                                            public llvm::FoldingSetNode {
+class DependentTemplateSpecializationType : public TypeWithKeyword {
   friend class ASTContext; // ASTContext creates these
 
   DependentTemplateStorage Name;
@@ -7596,7 +7681,7 @@ public:
   /// Retrieve the type arguments of this object type as they were
   /// written.
   ArrayRef<QualType> getTypeArgsAsWritten() const {
-    return llvm::ArrayRef(getTypeArgStorage(), ObjCObjectTypeBits.NumTypeArgs);
+    return {getTypeArgStorage(), ObjCObjectTypeBits.NumTypeArgs};
   }
 
   /// Whether this is a "__kindof" type as written.
@@ -8029,6 +8114,37 @@ public:
   }
 };
 
+class PredefinedSugarType final : public Type {
+public:
+  friend class ASTContext;
+  using Kind = PredefinedSugarKind;
+
+private:
+  PredefinedSugarType(Kind KD, const IdentifierInfo *IdentName,
+                      QualType CanonicalType)
+      : Type(PredefinedSugar, CanonicalType, TypeDependence::None),
+        Name(IdentName) {
+    PredefinedSugarTypeBits.Kind = llvm::to_underlying(KD);
+  }
+
+  static StringRef getName(Kind KD);
+
+  const IdentifierInfo *Name;
+
+public:
+  bool isSugared() const { return true; }
+
+  QualType desugar() const { return getCanonicalTypeInternal(); }
+
+  Kind getKind() const { return Kind(PredefinedSugarTypeBits.Kind); }
+
+  const IdentifierInfo *getIdentifier() const { return Name; }
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == PredefinedSugar;
+  }
+};
+
 /// A qualifier set is used to build a set of qualifiers.
 class QualifierCollector : public Qualifiers {
 public:
@@ -8391,6 +8507,27 @@ inline bool Type::isObjectPointerType() const {
     return false;
 }
 
+inline bool Type::isCFIUncheckedCalleeFunctionType() const {
+  if (const auto *Fn = getAs<FunctionProtoType>())
+    return Fn->hasCFIUncheckedCallee();
+  return false;
+}
+
+inline bool Type::hasPointeeToToCFIUncheckedCalleeFunctionType() const {
+  QualType Pointee;
+  if (const auto *PT = getAs<PointerType>())
+    Pointee = PT->getPointeeType();
+  else if (const auto *RT = getAs<ReferenceType>())
+    Pointee = RT->getPointeeType();
+  else if (const auto *MPT = getAs<MemberPointerType>())
+    Pointee = MPT->getPointeeType();
+  else if (const auto *DT = getAs<DecayedType>())
+    Pointee = DT->getPointeeType();
+  else
+    return false;
+  return Pointee->isCFIUncheckedCalleeFunctionType();
+}
+
 inline bool Type::isFunctionPointerType() const {
   if (const auto *T = getAs<PointerType>())
     return T->getPointeeType()->isFunctionType();
@@ -8730,8 +8867,8 @@ inline bool Type::isIntegerType() const {
   if (const EnumType *ET = dyn_cast<EnumType>(CanonicalType)) {
     // Incomplete enum types are not treated as integer types.
     // FIXME: In C++, enum types are never integer types.
-    return IsEnumDeclComplete(ET->getDecl()) &&
-      !IsEnumDeclScoped(ET->getDecl());
+    return IsEnumDeclComplete(ET->getOriginalDecl()) &&
+           !IsEnumDeclScoped(ET->getOriginalDecl());
   }
   return isBitIntType();
 }
@@ -8789,7 +8926,7 @@ inline bool Type::isScalarType() const {
   if (const EnumType *ET = dyn_cast<EnumType>(CanonicalType))
     // Enums are scalar types, but only if they are defined.  Incomplete enums
     // are not treated as scalar types.
-    return IsEnumDeclComplete(ET->getDecl());
+    return IsEnumDeclComplete(ET->getOriginalDecl());
   return isa<PointerType>(CanonicalType) ||
          isa<BlockPointerType>(CanonicalType) ||
          isa<MemberPointerType>(CanonicalType) ||
@@ -8805,7 +8942,7 @@ inline bool Type::isIntegralOrEnumerationType() const {
   // Check for a complete enum type; incomplete enum types are not properly an
   // enumeration type in the sense required here.
   if (const auto *ET = dyn_cast<EnumType>(CanonicalType))
-    return IsEnumDeclComplete(ET->getDecl());
+    return IsEnumDeclComplete(ET->getOriginalDecl());
 
   return isBitIntType();
 }
@@ -8941,8 +9078,6 @@ template <typename T> const T *Type::getAsAdjusted() const {
       Ty = A->getWrappedType().getTypePtr();
     else if (const auto *A = dyn_cast<HLSLAttributedResourceType>(Ty))
       Ty = A->getWrappedType().getTypePtr();
-    else if (const auto *E = dyn_cast<ElaboratedType>(Ty))
-      Ty = E->desugar().getTypePtr();
     else if (const auto *P = dyn_cast<ParenType>(Ty))
       Ty = P->desugar().getTypePtr();
     else if (const auto *A = dyn_cast<AdjustedType>(Ty))

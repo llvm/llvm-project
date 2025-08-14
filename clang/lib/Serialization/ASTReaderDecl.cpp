@@ -49,7 +49,6 @@
 #include "clang/Basic/PragmaKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
-#include "clang/Basic/Stack.h"
 #include "clang/Sema/IdentifierResolver.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ASTRecordReader.h"
@@ -57,12 +56,10 @@
 #include "clang/Serialization/ModuleFile.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Bitstream/BitstreamReader.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include <algorithm>
@@ -417,9 +414,7 @@ public:
   void VisitOpenACCDeclareDecl(OpenACCDeclareDecl *D);
   void VisitOpenACCRoutineDecl(OpenACCRoutineDecl *D);
 
-  void VisitDeclContext(DeclContext *DC, uint64_t &LexicalOffset,
-                        uint64_t &VisibleOffset, uint64_t &ModuleLocalOffset,
-                        uint64_t &TULocalOffset);
+  void VisitDeclContext(DeclContext *DC, LookupBlockOffsets &Offsets);
 
   template <typename T>
   RedeclarableResult VisitRedeclarable(Redeclarable<T> *D);
@@ -543,7 +538,11 @@ void ASTDeclReader::Visit(Decl *D) {
 
   if (auto *TD = dyn_cast<TypeDecl>(D)) {
     // We have a fully initialized TypeDecl. Read its type now.
-    TD->setTypeForDecl(Reader.GetType(DeferredTypeID).getTypePtrOrNull());
+    if (isa<TagDecl, TypedefDecl, TypeAliasDecl>(TD))
+      assert(DeferredTypeID == 0 &&
+             "Deferred type not used for TagDecls and Typedefs");
+    else
+      TD->setTypeForDecl(Reader.GetType(DeferredTypeID).getTypePtrOrNull());
 
     // If this is a tag declaration with a typedef name for linkage, it's safe
     // to load that typedef now.
@@ -669,22 +668,21 @@ void ASTDeclReader::VisitPragmaCommentDecl(PragmaCommentDecl *D) {
   D->setLocation(readSourceLocation());
   D->CommentKind = (PragmaMSCommentKind)Record.readInt();
   std::string Arg = readString();
-  memcpy(D->getTrailingObjects<char>(), Arg.data(), Arg.size());
-  D->getTrailingObjects<char>()[Arg.size()] = '\0';
+  memcpy(D->getTrailingObjects(), Arg.data(), Arg.size());
+  D->getTrailingObjects()[Arg.size()] = '\0';
 }
 
 void ASTDeclReader::VisitPragmaDetectMismatchDecl(PragmaDetectMismatchDecl *D) {
   VisitDecl(D);
   D->setLocation(readSourceLocation());
   std::string Name = readString();
-  memcpy(D->getTrailingObjects<char>(), Name.data(), Name.size());
-  D->getTrailingObjects<char>()[Name.size()] = '\0';
+  memcpy(D->getTrailingObjects(), Name.data(), Name.size());
+  D->getTrailingObjects()[Name.size()] = '\0';
 
   D->ValueStart = Name.size() + 1;
   std::string Value = readString();
-  memcpy(D->getTrailingObjects<char>() + D->ValueStart, Value.data(),
-         Value.size());
-  D->getTrailingObjects<char>()[D->ValueStart + Value.size()] = '\0';
+  memcpy(D->getTrailingObjects() + D->ValueStart, Value.data(), Value.size());
+  D->getTrailingObjects()[D->ValueStart + Value.size()] = '\0';
 }
 
 void ASTDeclReader::VisitTranslationUnitDecl(TranslationUnitDecl *TU) {
@@ -701,7 +699,8 @@ void ASTDeclReader::VisitTypeDecl(TypeDecl *TD) {
   VisitNamedDecl(TD);
   TD->setLocStart(readSourceLocation());
   // Delay type reading until after we have fully initialized the decl.
-  DeferredTypeID = Record.getGlobalTypeID(Record.readInt());
+  if (!isa<TagDecl, TypedefDecl, TypeAliasDecl>(TD))
+    DeferredTypeID = Record.getGlobalTypeID(Record.readInt());
 }
 
 RedeclarableResult ASTDeclReader::VisitTypedefNameDecl(TypedefNameDecl *TD) {
@@ -1153,7 +1152,8 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
     const SYCLKernelInfo *SKI = C.findSYCLKernelInfo(SKEPAttr->getKernelName());
     if (SKI) {
       if (!declaresSameEntity(FD, SKI->getKernelEntryPointDecl())) {
-        Reader.Diag(FD->getLocation(), diag::err_sycl_kernel_name_conflict);
+        Reader.Diag(FD->getLocation(), diag::err_sycl_kernel_name_conflict)
+            << SKEPAttr;
         Reader.Diag(SKI->getKernelEntryPointDecl()->getLocation(),
                     diag::note_previous_declaration);
         SKEPAttr->setInvalidAttr();
@@ -1640,6 +1640,7 @@ RedeclarableResult ASTDeclReader::VisitVarDeclImpl(VarDecl *VD) {
         VarDeclBits.getNextBits(/*Width*/ 3);
 
     VD->NonParmVarDeclBits.ObjCForDecl = VarDeclBits.getNextBit();
+    VD->NonParmVarDeclBits.IsCXXForRangeImplicitVar = VarDeclBits.getNextBit();
   }
 
   // If this variable has a deduced type, defer reading that type until we are
@@ -1704,6 +1705,8 @@ void ASTDeclReader::ReadVarDeclInit(VarDecl *VD) {
     Eval->HasConstantInitialization = (Val & 2) != 0;
     Eval->HasConstantDestruction = (Val & 4) != 0;
     Eval->WasEvaluated = (Val & 8) != 0;
+    Eval->HasSideEffects = (Val & 16) != 0;
+    Eval->CheckedForSideEffects = true;
     if (Eval->WasEvaluated) {
       Eval->Evaluated = Record.readAPValue();
       if (Eval->Evaluated.needsCleanup())
@@ -1751,7 +1754,7 @@ void ASTDeclReader::VisitParmVarDecl(ParmVarDecl *PD) {
 
 void ASTDeclReader::VisitDecompositionDecl(DecompositionDecl *DD) {
   VisitVarDecl(DD);
-  auto **BDs = DD->getTrailingObjects<BindingDecl *>();
+  auto **BDs = DD->getTrailingObjects();
   for (unsigned I = 0; I != DD->NumBindings; ++I) {
     BDs[I] = readDeclAs<BindingDecl>();
     BDs[I]->setDecomposedDecl(DD);
@@ -1878,12 +1881,8 @@ void ASTDeclReader::VisitNamespaceDecl(NamespaceDecl *D) {
 
 void ASTDeclReader::VisitHLSLBufferDecl(HLSLBufferDecl *D) {
   VisitNamedDecl(D);
-  uint64_t LexicalOffset = 0;
-  uint64_t VisibleOffset = 0;
-  uint64_t ModuleLocalOffset = 0;
-  uint64_t TULocalOffset = 0;
-  VisitDeclContext(D, LexicalOffset, VisibleOffset, ModuleLocalOffset,
-                   TULocalOffset);
+  LookupBlockOffsets Offsets;
+  VisitDeclContext(D, Offsets);
   D->IsCBuffer = Record.readBool();
   D->KwLoc = readSourceLocation();
   D->LBraceLoc = readSourceLocation();
@@ -1896,7 +1895,7 @@ void ASTDeclReader::VisitNamespaceAliasDecl(NamespaceAliasDecl *D) {
   D->NamespaceLoc = readSourceLocation();
   D->IdentLoc = readSourceLocation();
   D->QualifierLoc = Record.readNestedNameSpecifierLoc();
-  D->Namespace = readDeclAs<NamedDecl>();
+  D->Namespace = readDeclAs<NamespaceBaseDecl>();
   mergeRedeclarable(D, Redecl);
 }
 
@@ -1926,7 +1925,7 @@ void ASTDeclReader::VisitUsingEnumDecl(UsingEnumDecl *D) {
 void ASTDeclReader::VisitUsingPackDecl(UsingPackDecl *D) {
   VisitNamedDecl(D);
   D->InstantiatedFrom = readDeclAs<NamedDecl>();
-  auto **Expansions = D->getTrailingObjects<NamedDecl *>();
+  auto **Expansions = D->getTrailingObjects();
   for (unsigned I = 0; I != D->NumExpansions; ++I)
     Expansions[I] = readDeclAs<NamedDecl>();
   mergeMergeable(D);
@@ -2243,15 +2242,6 @@ RedeclarableResult ASTDeclReader::VisitCXXRecordDeclImpl(CXXRecordDecl *D) {
     // Merged when we merge the template.
     auto *Template = readDeclAs<ClassTemplateDecl>();
     D->TemplateOrInstantiation = Template;
-    if (!Template->getTemplatedDecl()) {
-      // We've not actually loaded the ClassTemplateDecl yet, because we're
-      // currently being loaded as its pattern. Rely on it to set up our
-      // TypeForDecl (see VisitClassTemplateDecl).
-      //
-      // Beware: we do not yet know our canonical declaration, and may still
-      // get merged once the surrounding class template has got off the ground.
-      DeferredTypeID = 0;
-    }
     break;
   }
   case CXXRecMemberSpecialization: {
@@ -2367,7 +2357,7 @@ void ASTDeclReader::VisitImportDecl(ImportDecl *D) {
   VisitDecl(D);
   D->ImportedModule = readModule();
   D->setImportComplete(Record.readInt());
-  auto *StoredLocs = D->getTrailingObjects<SourceLocation>();
+  auto *StoredLocs = D->getTrailingObjects();
   for (unsigned I = 0, N = Record.back(); I != N; ++I)
     StoredLocs[I] = readSourceLocation();
   Record.skipInts(1); // The number of stored source locations.
@@ -2385,8 +2375,7 @@ void ASTDeclReader::VisitFriendDecl(FriendDecl *D) {
   else
     D->Friend = readTypeSourceInfo();
   for (unsigned i = 0; i != D->NumTPLists; ++i)
-    D->getTrailingObjects<TemplateParameterList *>()[i] =
-        Record.readTemplateParameterList();
+    D->getTrailingObjects()[i] = Record.readTemplateParameterList();
   D->NextFriend = readDeclID().getRawValue();
   D->UnsupportedFriend = (Record.readInt() != 0);
   D->FriendLoc = readSourceLocation();
@@ -2485,14 +2474,6 @@ void ASTDeclReader::VisitClassTemplateDecl(ClassTemplateDecl *D) {
     // the specializations.
     ReadSpecializations(*Loc.F, D, Loc.F->DeclsCursor, /*IsPartial=*/false);
     ReadSpecializations(*Loc.F, D, Loc.F->DeclsCursor, /*IsPartial=*/true);
-  }
-
-  if (D->getTemplatedDecl()->TemplateOrInstantiation) {
-    // We were loaded before our templated declaration was. We've not set up
-    // its corresponding type yet (see VisitCXXRecordDeclImpl), so reconstruct
-    // it now.
-    Reader.getContext().getInjectedClassNameType(
-        D->getTemplatedDecl(), D->getInjectedClassNameSpecialization());
   }
 }
 
@@ -2749,12 +2730,13 @@ void ASTDeclReader::VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
 
 void ASTDeclReader::VisitTemplateTemplateParmDecl(TemplateTemplateParmDecl *D) {
   VisitTemplateDecl(D);
+  D->ParameterKind = static_cast<TemplateNameKind>(Record.readInt());
   D->setDeclaredWithTypename(Record.readBool());
   // TemplateParmPosition.
   D->setDepth(Record.readInt());
   D->setPosition(Record.readInt());
   if (D->isExpandedParameterPack()) {
-    auto **Data = D->getTrailingObjects<TemplateParameterList *>();
+    auto **Data = D->getTrailingObjects();
     for (unsigned I = 0, N = D->getNumExpansionTemplateParameters();
          I != N; ++I)
       Data[I] = Record.readTemplateParameterList();
@@ -2797,14 +2779,12 @@ void ASTDeclReader::VisitLifetimeExtendedTemporaryDecl(
   mergeMergeable(D);
 }
 
-void ASTDeclReader::VisitDeclContext(DeclContext *DC, uint64_t &LexicalOffset,
-                                     uint64_t &VisibleOffset,
-                                     uint64_t &ModuleLocalOffset,
-                                     uint64_t &TULocalOffset) {
-  LexicalOffset = ReadLocalOffset();
-  VisibleOffset = ReadLocalOffset();
-  ModuleLocalOffset = ReadLocalOffset();
-  TULocalOffset = ReadLocalOffset();
+void ASTDeclReader::VisitDeclContext(DeclContext *DC,
+                                     LookupBlockOffsets &Offsets) {
+  Offsets.LexicalOffset = ReadLocalOffset();
+  Offsets.VisibleOffset = ReadLocalOffset();
+  Offsets.ModuleLocalOffset = ReadLocalOffset();
+  Offsets.TULocalOffset = ReadLocalOffset();
 }
 
 template <typename T>
@@ -3201,8 +3181,8 @@ Attr *ASTRecordReader::readAttr() {
                     SpellingIndex == AlignedAttr::Keyword_alignas);
   bool IsRegularKeywordAttribute = Record.readBool();
 
-  AttributeCommonInfo Info(AttrName, ScopeName, AttrRange, ScopeLoc,
-                           AttributeCommonInfo::Kind(ParsedKind),
+  AttributeCommonInfo Info(AttrName, AttributeScopeInfo(ScopeName, ScopeLoc),
+                           AttrRange, AttributeCommonInfo::Kind(ParsedKind),
                            {AttributeCommonInfo::Syntax(Syntax), SpellingIndex,
                             IsAlignas, IsRegularKeywordAttribute});
 
@@ -4252,42 +4232,37 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
   // If this declaration is also a declaration context, get the
   // offsets for its tables of lexical and visible declarations.
   if (auto *DC = dyn_cast<DeclContext>(D)) {
-    uint64_t LexicalOffset = 0;
-    uint64_t VisibleOffset = 0;
-    uint64_t ModuleLocalOffset = 0;
-    uint64_t TULocalOffset = 0;
+    LookupBlockOffsets Offsets;
 
-    Reader.VisitDeclContext(DC, LexicalOffset, VisibleOffset, ModuleLocalOffset,
-                            TULocalOffset);
+    Reader.VisitDeclContext(DC, Offsets);
 
     // Get the lexical and visible block for the delayed namespace.
     // It is sufficient to judge if ID is in DelayedNamespaceOffsetMap.
     // But it may be more efficient to filter the other cases.
-    if (!LexicalOffset && !VisibleOffset && !ModuleLocalOffset &&
-        isa<NamespaceDecl>(D))
+    if (!Offsets && isa<NamespaceDecl>(D))
       if (auto Iter = DelayedNamespaceOffsetMap.find(ID);
-          Iter != DelayedNamespaceOffsetMap.end()) {
-        LexicalOffset = Iter->second.LexicalOffset;
-        VisibleOffset = Iter->second.VisibleOffset;
-        ModuleLocalOffset = Iter->second.ModuleLocalOffset;
-        TULocalOffset = Iter->second.TULocalOffset;
-      }
+          Iter != DelayedNamespaceOffsetMap.end())
+        Offsets = Iter->second;
 
-    if (LexicalOffset &&
-        ReadLexicalDeclContextStorage(*Loc.F, DeclsCursor, LexicalOffset, DC))
-      return nullptr;
-    if (VisibleOffset && ReadVisibleDeclContextStorage(
-                             *Loc.F, DeclsCursor, VisibleOffset, ID,
-                             VisibleDeclContextStorageKind::GenerallyVisible))
-      return nullptr;
-    if (ModuleLocalOffset &&
+    if (Offsets.VisibleOffset &&
         ReadVisibleDeclContextStorage(
-            *Loc.F, DeclsCursor, ModuleLocalOffset, ID,
+            *Loc.F, DeclsCursor, Offsets.VisibleOffset, ID,
+            VisibleDeclContextStorageKind::GenerallyVisible))
+      return nullptr;
+    if (Offsets.ModuleLocalOffset &&
+        ReadVisibleDeclContextStorage(
+            *Loc.F, DeclsCursor, Offsets.ModuleLocalOffset, ID,
             VisibleDeclContextStorageKind::ModuleLocalVisible))
       return nullptr;
-    if (TULocalOffset && ReadVisibleDeclContextStorage(
-                             *Loc.F, DeclsCursor, TULocalOffset, ID,
-                             VisibleDeclContextStorageKind::TULocalVisible))
+    if (Offsets.TULocalOffset &&
+        ReadVisibleDeclContextStorage(
+            *Loc.F, DeclsCursor, Offsets.TULocalOffset, ID,
+            VisibleDeclContextStorageKind::TULocalVisible))
+      return nullptr;
+
+    if (Offsets.LexicalOffset &&
+        ReadLexicalDeclContextStorage(*Loc.F, DeclsCursor,
+                                      Offsets.LexicalOffset, DC))
       return nullptr;
   }
   assert(Record.getIdx() == Record.size());
@@ -4634,11 +4609,10 @@ namespace {
 
       // Perform a binary search to find the local redeclarations for this
       // declaration (if any).
-      const ObjCCategoriesInfo Compare = { LocalID, 0 };
-      const ObjCCategoriesInfo *Result
-        = std::lower_bound(M.ObjCCategoriesMap,
-                           M.ObjCCategoriesMap + M.LocalNumObjCCategoriesInMap,
-                           Compare);
+      const ObjCCategoriesInfo Compare = {LocalID, 0};
+      const ObjCCategoriesInfo *Result = std::lower_bound(
+          M.ObjCCategoriesMap,
+          M.ObjCCategoriesMap + M.LocalNumObjCCategoriesInMap, Compare);
       if (Result == M.ObjCCategoriesMap + M.LocalNumObjCCategoriesInMap ||
           LocalID != Result->getDefinitionID()) {
         // We didn't find anything. If the class definition is in this module

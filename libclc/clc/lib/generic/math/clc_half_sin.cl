@@ -10,7 +10,7 @@
 
 #define __FLOAT_ONLY
 #define FUNCTION __clc_half_sin
-#define __CLC_FUNCTION(x) __clc_sin
+#define __IMPL_FUNCTION(x) __clc_sin
 #define __CLC_BODY <clc/shared/unary_def.inc>
 
 #include <clc/math/gentype.inc>

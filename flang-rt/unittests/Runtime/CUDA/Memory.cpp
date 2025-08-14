@@ -70,3 +70,29 @@ TEST(MemoryCUFTest, CUFDataTransferDescDesc) {
     EXPECT_EQ(*host->ZeroBasedIndexedElement<std::int32_t>(i), (std::int32_t)i);
   }
 }
+
+TEST(MemoryCUFTest, CUFDataTransferDescDescDstNotAllocated) {
+  using Fortran::common::TypeCategory;
+  RTNAME(CUFRegisterAllocator)();
+  // INTEGER(4), DEVICE, ALLOCATABLE :: a(:)
+  auto dev{createAllocatable(TypeCategory::Integer, 4)};
+  dev->SetAllocIdx(kDeviceAllocatorPos);
+  EXPECT_EQ((int)kDeviceAllocatorPos, dev->GetAllocIdx());
+  EXPECT_FALSE(dev->IsAllocated());
+
+  // Create temp array to transfer to device.
+  auto x{MakeArray<TypeCategory::Integer, 4>(std::vector<int>{10},
+      std::vector<int32_t>{0, 1, 2, 3, 4, 5, 6, 7, 8, 9})};
+  RTNAME(CUFDataTransferDescDesc)
+  (dev.get(), x.get(), kHostToDevice, __FILE__, __LINE__);
+
+  // Retrieve data from device.
+  auto host{MakeArray<TypeCategory::Integer, 4>(std::vector<int>{10},
+      std::vector<int32_t>{0, 0, 0, 0, 0, 0, 0, 0, 0, 0})};
+  RTNAME(CUFDataTransferDescDesc)
+  (host.get(), dev.get(), kDeviceToHost, __FILE__, __LINE__);
+
+  for (unsigned i = 0; i < 10; ++i) {
+    EXPECT_EQ(*host->ZeroBasedIndexedElement<std::int32_t>(i), (std::int32_t)i);
+  }
+}

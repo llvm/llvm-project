@@ -8,7 +8,6 @@
 
 #include "hdr/signal_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/macros/sanitizer.h"
 #include "src/math/nanf.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
@@ -43,8 +42,8 @@ TEST_F(LlvmLibcNanfTest, RandomString) {
   run_test("123 ", 0x7fc00000);
 }
 
-#if defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
+#if defined(LIBC_ADD_NULL_CHECKS)
 TEST_F(LlvmLibcNanfTest, InvalidInput) {
-  EXPECT_DEATH([] { LIBC_NAMESPACE::nanf(nullptr); });
+  EXPECT_DEATH([] { LIBC_NAMESPACE::nanf(nullptr); }, WITH_SIGNAL(-1));
 }
-#endif // LIBC_HAS_ADDRESS_SANITIZER
+#endif // LIBC_ADD_NULL_CHECKS

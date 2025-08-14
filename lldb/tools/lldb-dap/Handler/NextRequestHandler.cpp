@@ -8,6 +8,7 @@
 
 #include "DAP.h"
 #include "EventHelper.h"
+#include "LLDBUtils.h"
 #include "Protocol/ProtocolTypes.h"
 #include "RequestHandler.h"
 #include "llvm/Support/Error.h"
@@ -30,16 +31,21 @@ Error NextRequestHandler::Run(const NextArguments &args) const {
   if (!thread.IsValid())
     return make_error<DAPError>("invalid thread");
 
+  if (!SBDebugger::StateIsStoppedState(dap.target.GetProcess().GetState()))
+    return make_error<NotStoppedError>();
+
   // Remember the thread ID that caused the resume so we can set the
   // "threadCausedFocus" boolean value in the "stopped" events.
   dap.focus_tid = thread.GetThreadID();
+  lldb::SBError error;
   if (args.granularity == eSteppingGranularityInstruction) {
-    thread.StepInstruction(/*step_over=*/true);
+    thread.StepInstruction(/*step_over=*/true, error);
   } else {
-    thread.StepOver(args.singleThread ? eOnlyThisThread : eOnlyDuringStepping);
+    thread.StepOver(args.singleThread ? eOnlyThisThread : eOnlyDuringStepping,
+                    error);
   }
 
-  return Error::success();
+  return ToError(error);
 }
 
 } // namespace lldb_dap

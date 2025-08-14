@@ -17,11 +17,8 @@
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitstream/BitCodes.h"
-#include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <utility>
@@ -756,10 +753,9 @@ DiagnosticsEngine *SDiagsWriter::getMetaDiags() {
   //    to be distinct from the engine the writer was being added to and would
   //    normally not be used.
   if (!State->MetaDiagnostics) {
-    IntrusiveRefCntPtr<DiagnosticIDs> IDs(new DiagnosticIDs());
     auto Client = new TextDiagnosticPrinter(llvm::errs(), State->DiagOpts);
-    State->MetaDiagnostics =
-        std::make_unique<DiagnosticsEngine>(IDs, State->DiagOpts, Client);
+    State->MetaDiagnostics = std::make_unique<DiagnosticsEngine>(
+        DiagnosticIDs::create(), State->DiagOpts, Client);
   }
   return State->MetaDiagnostics.get();
 }

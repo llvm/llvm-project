@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -235,6 +236,15 @@ class TargetRegisterInfo;
     LLVM_ABI void dump(const TargetRegisterInfo *TRI = nullptr) const;
   };
 
+  /// Keep record of which SUnit are in the same cluster group.
+  typedef SmallSet<SUnit *, 8> ClusterInfo;
+  constexpr unsigned InvalidClusterId = ~0u;
+
+  /// Return whether the input cluster ID's are the same and valid.
+  inline bool isTheSameCluster(unsigned A, unsigned B) {
+    return A != InvalidClusterId && A == B;
+  }
+
   /// Scheduling unit. This is a node in the scheduling DAG.
   class SUnit {
   private:
@@ -274,6 +284,8 @@ class TargetRegisterInfo;
     unsigned WeakSuccsLeft = 0;        ///< # of weak succs not scheduled.
     unsigned TopReadyCycle = 0; ///< Cycle relative to start when node is ready.
     unsigned BotReadyCycle = 0; ///< Cycle relative to end when node is ready.
+
+    unsigned ParentClusterIdx = InvalidClusterId; ///< The parent cluster id.
 
   private:
     unsigned Depth = 0;  ///< Node depth.

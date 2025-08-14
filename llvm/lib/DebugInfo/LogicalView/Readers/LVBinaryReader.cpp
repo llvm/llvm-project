@@ -275,10 +275,11 @@ void LVBinaryReader::mapVirtualAddress(const object::COFFObjectFile &COFFObj) {
 }
 
 Error LVBinaryReader::loadGenericTargetInfo(StringRef TheTriple,
-                                            StringRef TheFeatures) {
+                                            StringRef TheFeatures,
+                                            StringRef TheCPU) {
   std::string TargetLookupError;
   const Target *TheTarget =
-      TargetRegistry::lookupTarget(std::string(TheTriple), TargetLookupError);
+      TargetRegistry::lookupTarget(TheTriple, TargetLookupError);
   if (!TheTarget)
     return createStringError(errc::invalid_argument, TargetLookupError.c_str());
 
@@ -298,9 +299,8 @@ Error LVBinaryReader::loadGenericTargetInfo(StringRef TheTriple,
   MAI.reset(AsmInfo);
 
   // Target subtargets.
-  StringRef CPU;
   MCSubtargetInfo *SubtargetInfo(
-      TheTarget->createMCSubtargetInfo(TheTriple, CPU, TheFeatures));
+      TheTarget->createMCSubtargetInfo(TheTriple, TheCPU, TheFeatures));
   if (!SubtargetInfo)
     return createStringError(errc::invalid_argument,
                              "no subtarget info for target " + TheTriple);
@@ -365,30 +365,6 @@ LVBinaryReader::getSection(LVScope *Scope, LVAddress Address,
   if (Iter != SectionAddresses.begin())
     --Iter;
   return std::make_pair(Iter->first, Iter->second);
-}
-
-void LVBinaryReader::addSectionRange(LVSectionIndex SectionIndex,
-                                     LVScope *Scope) {
-  LVRange *ScopesWithRanges = getSectionRanges(SectionIndex);
-  ScopesWithRanges->addEntry(Scope);
-}
-
-void LVBinaryReader::addSectionRange(LVSectionIndex SectionIndex,
-                                     LVScope *Scope, LVAddress LowerAddress,
-                                     LVAddress UpperAddress) {
-  LVRange *ScopesWithRanges = getSectionRanges(SectionIndex);
-  ScopesWithRanges->addEntry(Scope, LowerAddress, UpperAddress);
-}
-
-LVRange *LVBinaryReader::getSectionRanges(LVSectionIndex SectionIndex) {
-  // Check if we already have a mapping for this section index.
-  LVSectionRanges::iterator IterSection = SectionRanges.find(SectionIndex);
-  if (IterSection == SectionRanges.end())
-    IterSection =
-        SectionRanges.emplace(SectionIndex, std::make_unique<LVRange>()).first;
-  LVRange *Range = IterSection->second.get();
-  assert(Range && "Range is null.");
-  return Range;
 }
 
 Error LVBinaryReader::createInstructions(LVScope *Scope,

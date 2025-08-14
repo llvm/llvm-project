@@ -16,6 +16,6 @@ void __attribute__((annotate("foo"))) foo(float *a) {
   float b = __builtin_annotation(*a, "foo"); // expected-error {{first argument to __builtin_annotation must be an integer}}
 
   __attribute__((annotate())) int c; // expected-error {{'annotate' attribute takes at least 1 argument}}
-  [[clang::annotate()]] int c2;      // expected-error {{'annotate' attribute takes at least 1 argument}}
-  [[clang::annotate()]] c2 += 1;     // expected-error {{'annotate' attribute takes at least 1 argument}}
+  [[clang::annotate()]] int c2;      // expected-error {{'clang::annotate' attribute takes at least 1 argument}}
+  [[clang::annotate()]] c2 += 1;     // expected-error {{'clang::annotate' attribute takes at least 1 argument}}
 }

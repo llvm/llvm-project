@@ -535,11 +535,9 @@ void UnwindInfoSectionImpl::finalize() {
   llvm::sort(commonEncodings,
              [](const std::pair<compact_unwind_encoding_t, size_t> &a,
                 const std::pair<compact_unwind_encoding_t, size_t> &b) {
-               if (a.second == b.second)
-                 // When frequencies match, secondarily sort on encoding
-                 // to maintain parity with validate-unwind-info.py
-                 return a.first > b.first;
-               return a.second > b.second;
+               // When frequencies match, secondarily sort on encoding
+               // to maintain parity with validate-unwind-info.py
+               return std::tie(a.second, a.first) > std::tie(b.second, b.first);
              });
 
   // Truncate the vector to 127 elements.

@@ -18,7 +18,6 @@
 
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/FileSystemStatCache.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Config/llvm-config.h"
@@ -26,7 +25,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <climits>
 #include <cstdint>
@@ -143,7 +141,7 @@ FileManager::getDirectoryRef(StringRef DirName, bool CacheFailure) {
   if (DirName.size() > 1 &&
       DirName != llvm::sys::path::root_path(DirName) &&
       llvm::sys::path::is_separator(DirName.back()))
-    DirName = DirName.substr(0, DirName.size()-1);
+    DirName = DirName.drop_back();
   std::optional<std::string> DirNameStr;
   if (is_style_windows(llvm::sys::path::Style::native)) {
     // Fixing a problem with "clang C:test.c" on Windows.
@@ -368,11 +366,6 @@ void FileManager::trackVFSUsage(bool Active) {
     if (auto *RFS = dyn_cast<llvm::vfs::RedirectingFileSystem>(&FileSys))
       RFS->setUsageTrackingActive(Active);
   });
-}
-
-const FileEntry *FileManager::getVirtualFile(StringRef Filename, off_t Size,
-                                             time_t ModificationTime) {
-  return &getVirtualFileRef(Filename, Size, ModificationTime).getFileEntry();
 }
 
 FileEntryRef FileManager::getVirtualFileRef(StringRef Filename, off_t Size,

@@ -8,31 +8,42 @@
 
 #include "DAP.h"
 #include "Protocol/ProtocolBase.h"
+#include "TestingSupport/Host/PipeTestUtilities.h"
 #include "Transport.h"
-#include "lldb/Host/Pipe.h"
+#include "lldb/Host/MainLoop.h"
 #include "llvm/ADT/StringRef.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 namespace lldb_dap_tests {
 
-/// A base class for tests that need a pair of pipes for communication.
-class PipeBase : public testing::Test {
-protected:
-  lldb_private::Pipe input;
-  lldb_private::Pipe output;
-
-  void SetUp() override;
-};
-
 /// A base class for tests that need transport configured for communicating DAP
 /// messages.
-class TransportBase : public PipeBase {
+class TransportBase : public PipePairTest {
 protected:
   std::unique_ptr<lldb_dap::Transport> to_dap;
   std::unique_ptr<lldb_dap::Transport> from_dap;
+  lldb_private::MainLoop loop;
 
   void SetUp() override;
+
+  template <typename P>
+  void RunOnce(const std::function<void(llvm::Expected<P>)> &callback,
+               std::chrono::milliseconds timeout = std::chrono::seconds(1)) {
+    auto handle = from_dap->RegisterReadObject<P>(
+        loop, [&](lldb_private::MainLoopBase &loop, llvm::Expected<P> message) {
+          callback(std::move(message));
+          loop.RequestTermination();
+        });
+    loop.AddCallback(
+        [](lldb_private::MainLoopBase &loop) {
+          loop.RequestTermination();
+          FAIL() << "timeout waiting for read callback";
+        },
+        timeout);
+    ASSERT_THAT_EXPECTED(handle, llvm::Succeeded());
+    ASSERT_THAT_ERROR(loop.Run().takeError(), llvm::Succeeded());
+  }
 };
 
 /// Matches an "output" event.

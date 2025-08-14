@@ -221,12 +221,12 @@ define float @test11(ptr %xptr) nounwind optsize {
 ;
 ; CHECK-AVX-LABEL: test11:
 ; CHECK-AVX:       ## %bb.0:
-; CHECK-AVX-NEXT:    vroundss $11, (%rdi), %xmm0, %xmm0
+; CHECK-AVX-NEXT:    vroundss $11, (%rdi), %xmm15, %xmm0
 ; CHECK-AVX-NEXT:    retq
 ;
 ; CHECK-AVX512-LABEL: test11:
 ; CHECK-AVX512:       ## %bb.0:
-; CHECK-AVX512-NEXT:    vroundss $11, (%rdi), %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vroundss $11, (%rdi), %xmm15, %xmm0
 ; CHECK-AVX512-NEXT:    retq
   %x = load float, ptr %xptr
   %call = tail call float @truncf(float %x) nounwind readnone
@@ -241,12 +241,12 @@ define double @test12(ptr %xptr) nounwind optsize {
 ;
 ; CHECK-AVX-LABEL: test12:
 ; CHECK-AVX:       ## %bb.0:
-; CHECK-AVX-NEXT:    vroundsd $11, (%rdi), %xmm0, %xmm0
+; CHECK-AVX-NEXT:    vroundsd $11, (%rdi), %xmm15, %xmm0
 ; CHECK-AVX-NEXT:    retq
 ;
 ; CHECK-AVX512-LABEL: test12:
 ; CHECK-AVX512:       ## %bb.0:
-; CHECK-AVX512-NEXT:    vroundsd $11, (%rdi), %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vroundsd $11, (%rdi), %xmm15, %xmm0
 ; CHECK-AVX512-NEXT:    retq
   %x = load double, ptr %xptr
   %call = tail call double @trunc(double %x) nounwind readnone
@@ -261,12 +261,12 @@ define float @test11_pgso(ptr %xptr) nounwind !prof !14 {
 ;
 ; CHECK-AVX-LABEL: test11_pgso:
 ; CHECK-AVX:       ## %bb.0:
-; CHECK-AVX-NEXT:    vroundss $11, (%rdi), %xmm0, %xmm0
+; CHECK-AVX-NEXT:    vroundss $11, (%rdi), %xmm15, %xmm0
 ; CHECK-AVX-NEXT:    retq
 ;
 ; CHECK-AVX512-LABEL: test11_pgso:
 ; CHECK-AVX512:       ## %bb.0:
-; CHECK-AVX512-NEXT:    vroundss $11, (%rdi), %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vroundss $11, (%rdi), %xmm15, %xmm0
 ; CHECK-AVX512-NEXT:    retq
   %x = load float, ptr %xptr
   %call = tail call float @truncf(float %x) nounwind readnone
@@ -281,12 +281,12 @@ define double @test12_pgso(ptr %xptr) nounwind !prof !14 {
 ;
 ; CHECK-AVX-LABEL: test12_pgso:
 ; CHECK-AVX:       ## %bb.0:
-; CHECK-AVX-NEXT:    vroundsd $11, (%rdi), %xmm0, %xmm0
+; CHECK-AVX-NEXT:    vroundsd $11, (%rdi), %xmm15, %xmm0
 ; CHECK-AVX-NEXT:    retq
 ;
 ; CHECK-AVX512-LABEL: test12_pgso:
 ; CHECK-AVX512:       ## %bb.0:
-; CHECK-AVX512-NEXT:    vroundsd $11, (%rdi), %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vroundsd $11, (%rdi), %xmm15, %xmm0
 ; CHECK-AVX512-NEXT:    retq
   %x = load double, ptr %xptr
   %call = tail call double @trunc(double %x) nounwind readnone

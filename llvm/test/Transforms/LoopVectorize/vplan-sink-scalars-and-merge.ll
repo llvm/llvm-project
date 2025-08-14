@@ -1090,7 +1090,7 @@ define void @merge_with_dead_gep_between_regions(i32 %n, i32 %k, ptr noalias %sr
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME:%.+]]> = resume-phi vp<[[END]]>, ir<%n>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME:%.+]]> = phi [ vp<[[END]]>, middle.block ], [ ir<%n>, ir-bb<entry> ]
 ; CHECK-NEXT: Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop>:
@@ -1184,7 +1184,7 @@ define void @ptr_induction_remove_dead_recipe(ptr %start, ptr %end) {
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME:%.+]]> = resume-phi vp<[[END]]>, ir<%start>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME:%.+]]> = phi [ vp<[[END]]>, middle.block ], [ ir<%start>, ir-bb<entry> ]
 ; CHECK-NEXT: Successor(s): ir-bb<loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop.header>:

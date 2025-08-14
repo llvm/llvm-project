@@ -8,6 +8,10 @@ add_llvm_library(
   LINK_COMPONENTS
   FrontendOpenMP
   Support
+
+  DEPENDS
+  OffloadAPI
+  PluginErrcodes
   )
 
 foreach(plugin IN LISTS LIBOMPTARGET_PLUGINS_TO_BUILD)
@@ -19,11 +23,13 @@ if(LLVM_HAVE_LINK_VERSION_SCRIPT)
 endif()
 
 target_include_directories(LLVMOffload PUBLIC
+                            ${CMAKE_CURRENT_BINARY_DIR}/API
                             ${CMAKE_CURRENT_BINARY_DIR}/../include
                             ${CMAKE_CURRENT_SOURCE_DIR}/include
-                            ${CMAKE_CURRENT_SOURCE_DIR}/include/generated
                             ${CMAKE_CURRENT_SOURCE_DIR}/../include
-                            ${CMAKE_CURRENT_SOURCE_DIR}/../plugins-nextgen/common/include)
+                            ${CMAKE_CURRENT_SOURCE_DIR}/../plugins-nextgen/common/include
+                            ${CMAKE_CURRENT_BINARY_DIR}/../plugins-nextgen/common/include
+                            )
 
 target_compile_options(LLVMOffload PRIVATE ${offload_compile_flags})
 target_link_options(LLVMOffload PRIVATE ${offload_link_flags})
@@ -39,5 +45,5 @@ set_target_properties(LLVMOffload PROPERTIES
                       BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/..")
 install(TARGETS LLVMOffload LIBRARY COMPONENT LLVMOffload DESTINATION "${OFFLOAD_INSTALL_LIBDIR}")
 
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/generated/OffloadAPI.h DESTINATION ${CMAKE_INSTALL_PREFIX}/include/offload)
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/generated/OffloadPrint.hpp DESTINATION ${CMAKE_INSTALL_PREFIX}/include/offload)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/API/OffloadAPI.h DESTINATION ${CMAKE_INSTALL_PREFIX}/include/offload)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/API/OffloadPrint.hpp DESTINATION ${CMAKE_INSTALL_PREFIX}/include/offload)

@@ -41,7 +41,7 @@ define i1 @foo(ptr %p) {
 ; AARCH64-LABEL: define i1 @foo
 ; AARCH64-SAME: (ptr [[P:%.*]]) {
 ; AARCH64-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[P]] to i64
-; AARCH64-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], ptrtoint (ptr @.cfi.jumptable to i64)
+; AARCH64-NEXT:    [[TMP2:%.*]] = sub i64 ptrtoint (ptr getelementptr (i8, ptr @.cfi.jumptable, i64 8) to i64), [[TMP1]]
 ; AARCH64-NEXT:    [[TMP3:%.*]] = call i64 @llvm.fshr.i64(i64 [[TMP2]], i64 [[TMP2]], i64 3)
 ; AARCH64-NEXT:    [[TMP4:%.*]] = icmp ule i64 [[TMP3]], 1
 ; AARCH64-NEXT:    ret i1 [[TMP4]]
