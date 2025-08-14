@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/ComplexToROCDLLibraryCalls/ComplexToROCDLLibraryCalls.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/PatternMatch.h"
@@ -59,52 +58,12 @@ private:
 };
 
 // Rewrite complex.pow(z, w) -> complex.exp(w * complex.log(z))
-// Rewrite complex.pow(z, i) -> z * z ... * z for 2 >= i <=8
 struct PowOpToROCDLLibraryCalls : public OpRewritePattern<complex::PowOp> {
   using OpRewritePattern<complex::PowOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(complex::PowOp op,
                                 PatternRewriter &rewriter) const final {
     auto loc = op.getLoc();
-
-    auto peelConst = [&](Value val) -> std::optional<TypedAttr> {
-      while (val) {
-        Operation *defOp = val.getDefiningOp();
-        if (!defOp)
-          return std::nullopt;
-
-        if (auto constVal = dyn_cast<arith::ConstantOp>(defOp))
-          return dyn_cast<TypedAttr>(constVal.getValue());
-
-        if (defOp->getName().getStringRef() == "fir.convert" &&
-            defOp->getNumOperands() == 1) {
-          val = defOp->getOperand(0);
-          continue;
-        }
-        return std::nullopt;
-      }
-      return std::nullopt;
-    };
-
-    if (auto createOp = op.getRhs().getDefiningOp<complex::CreateOp>()) {
-      auto image = peelConst(createOp.getImaginary());
-      auto real = peelConst(createOp.getReal());
-      if (image && real) {
-        auto imagFloat = dyn_cast<FloatAttr>(*image);
-        if (imagFloat && imagFloat.getValue().isZero()) {
-          auto realInt = dyn_cast<IntegerAttr>(*real);
-          if (realInt && realInt.getInt() >= 2 && realInt.getInt() <= 8) {
-            Value base = op.getLhs();
-            Value result = base;
-            for (int i = 1; i < realInt.getInt(); ++i)
-              result = rewriter.create<complex::MulOp>(loc, result, base);
-            rewriter.replaceOp(op, result);
-            return success();
-          }
-        }
-      }
-    }
-
     Value logBase = rewriter.create<complex::LogOp>(loc, op.getLhs());
     Value mul = rewriter.create<complex::MulOp>(loc, op.getRhs(), logBase);
     Value exp = rewriter.create<complex::ExpOp>(loc, mul);
