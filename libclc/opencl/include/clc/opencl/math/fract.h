@@ -6,7 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define __CLC_FUNCTION fract
+#ifndef __CLC_OPENCL_MATH_FRACT_H__
+#define __CLC_OPENCL_MATH_FRACT_H__
+
+#define FUNCTION fract
 #define __CLC_BODY <clc/math/unary_decl_with_ptr.inc>
 #include <clc/math/gentype.inc>
-#undef __CLC_FUNCTION
+#undef FUNCTION
+
+#endif // __CLC_OPENCL_MATH_FRACT_H__

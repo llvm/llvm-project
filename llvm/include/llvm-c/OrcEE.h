@@ -29,6 +29,7 @@
 #include "llvm-c/Orc.h"
 #include "llvm-c/TargetMachine.h"
 #include "llvm-c/Types.h"
+#include "llvm-c/Visibility.h"
 
 LLVM_C_EXTERN_C_BEGIN
 
@@ -46,7 +47,7 @@ typedef void (*LLVMMemoryManagerNotifyTerminatingCallback)(void *CtxCtx);
  * Create a RTDyldObjectLinkingLayer instance using the standard
  * SectionMemoryManager for memory management.
  */
-LLVMOrcObjectLayerRef
+LLVM_C_ABI LLVMOrcObjectLayerRef
 LLVMOrcCreateRTDyldObjectLinkingLayerWithSectionMemoryManager(
     LLVMOrcExecutionSessionRef ES);
 
@@ -74,7 +75,7 @@ LLVMOrcCreateRTDyldObjectLinkingLayerWithSectionMemoryManager(
  * This scheme simply reuses the CreateContextCtx pointer as the one-and-only
  * allocation context.
  */
-LLVMOrcObjectLayerRef
+LLVM_C_ABI LLVMOrcObjectLayerRef
 LLVMOrcCreateRTDyldObjectLinkingLayerWithMCJITMemoryManagerLikeCallbacks(
     LLVMOrcExecutionSessionRef ES, void *CreateContextCtx,
     LLVMMemoryManagerCreateContextCallback CreateContext,
@@ -90,7 +91,7 @@ LLVMOrcCreateRTDyldObjectLinkingLayerWithMCJITMemoryManagerLikeCallbacks(
  * Note: Layer must be an RTDyldObjectLinkingLayer instance or
  * behavior is undefined.
  */
-void LLVMOrcRTDyldObjectLinkingLayerRegisterJITEventListener(
+LLVM_C_ABI void LLVMOrcRTDyldObjectLinkingLayerRegisterJITEventListener(
     LLVMOrcObjectLayerRef RTDyldObjLinkingLayer,
     LLVMJITEventListenerRef Listener);
 

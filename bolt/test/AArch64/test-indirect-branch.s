@@ -7,8 +7,8 @@
 
 // RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown -mattr=+pauth %s -o %t.o
 // RUN: %clang %cflags --target=aarch64-unknown-linux %t.o -o %t.exe -Wl,-q
-// RUN: llvm-bolt %t.exe -o %t.bolt --print-cfg --strict --debug-only=mcplus \
-// RUN:  -v=1 2>&1 | FileCheck %s
+// RUN: llvm-bolt %t.exe -o %t.bolt --print-cfg --debug-only=mcplus -v=1 2>&1 \
+// RUN:   | FileCheck %s
 
 // Pattern 1: there is no shift amount after the 'add' instruction.
 //
@@ -45,6 +45,7 @@ _start:
   .type  test1, %function
 test1:
   mov     x1, #0
+  nop
   adr     x3, datatable
   add     x3, x3, x1, lsl #2
   ldr     w2, [x3]
@@ -56,6 +57,11 @@ test1_1:
    ret
 test1_2:
    ret
+   .size test1, .-test1
+
+// Temporary workaround for PC-relative relocations from datatable leaking into
+// test2 function and creating phantom entry points.
+.skip 0x100
 
 // Pattern 2
 // CHECK: BOLT-DEBUG: failed to match indirect branch: nop/adr instead of adrp/add
@@ -65,6 +71,7 @@ test2:
   nop
   adr     x3, jump_table
   ldrh    w3, [x3, x1, lsl #1]
+  nop
   adr     x1, test2_0
   add     x3, x1, w3, sxth #2
   br      x3

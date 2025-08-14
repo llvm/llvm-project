@@ -432,6 +432,10 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
   assert(ByteOffset <= DL.getTypeAllocSize(C->getType()) &&
          "Out of range access");
 
+  // Reading type padding, return zero.
+  if (ByteOffset >= DL.getTypeStoreSize(C->getType()))
+    return true;
+
   // If this element is zero or undefined, we can just return since *CurPtr is
   // zero initialized.
   if (isa<ConstantAggregateZero>(C) || isa<UndefValue>(C))
@@ -925,12 +929,11 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
     if (!AllConstantInt)
       break;
 
-    // TODO: Try to intersect two inrange attributes?
-    if (!InRange) {
-      InRange = GEP->getInRange();
-      if (InRange)
-        // Adjust inrange by offset until now.
-        InRange = InRange->sextOrTrunc(BitWidth).subtract(Offset);
+    // Adjust inrange offset and intersect inrange attributes
+    if (auto GEPRange = GEP->getInRange()) {
+      auto AdjustedGEPRange = GEPRange->sextOrTrunc(BitWidth).subtract(Offset);
+      InRange =
+          InRange ? InRange->intersectWith(AdjustedGEPRange) : AdjustedGEPRange;
     }
 
     Ptr = cast<Constant>(GEP->getOperand(0));
@@ -1370,7 +1373,7 @@ Constant *llvm::FlushFPConstant(Constant *Operand, const Instruction *Inst,
   if (ConstantFP *CFP = dyn_cast<ConstantFP>(Operand))
     return flushDenormalConstantFP(CFP, Inst, IsOutput);
 
-  if (isa<ConstantAggregateZero, UndefValue, ConstantExpr>(Operand))
+  if (isa<ConstantAggregateZero, UndefValue>(Operand))
     return Operand;
 
   Type *Ty = Operand->getType();
@@ -1385,6 +1388,9 @@ Constant *llvm::FlushFPConstant(Constant *Operand, const Instruction *Inst,
 
     Ty = VecTy->getElementType();
   }
+
+  if (isa<ConstantExpr>(Operand))
+    return Operand;
 
   if (const auto *CV = dyn_cast<ConstantVector>(Operand)) {
     SmallVector<Constant *, 16> NewElts;
@@ -1479,6 +1485,9 @@ Constant *llvm::ConstantFoldCastOperand(unsigned Opcode, Constant *C,
   switch (Opcode) {
   default:
     llvm_unreachable("Missing case");
+  case Instruction::PtrToAddr:
+    // TODO: Add some of the ptrtoint folds here as well.
+    break;
   case Instruction::PtrToInt:
     if (auto *CE = dyn_cast<ConstantExpr>(C)) {
       Constant *FoldedValue = nullptr;
@@ -1635,6 +1644,10 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::vector_reduce_smax:
   case Intrinsic::vector_reduce_umin:
   case Intrinsic::vector_reduce_umax:
+  case Intrinsic::vector_extract:
+  case Intrinsic::vector_insert:
+  case Intrinsic::vector_interleave2:
+  case Intrinsic::vector_deinterleave2:
   // Target intrinsics
   case Intrinsic::amdgcn_perm:
   case Intrinsic::amdgcn_wave_reduce_umin:
@@ -1647,6 +1660,8 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::arm_mve_vctp32:
   case Intrinsic::arm_mve_vctp64:
   case Intrinsic::aarch64_sve_convert_from_svbool:
+  case Intrinsic::wasm_alltrue:
+  case Intrinsic::wasm_anytrue:
   // WebAssembly float semantics are always known
   case Intrinsic::wasm_trunc_signed:
   case Intrinsic::wasm_trunc_unsigned:
@@ -1672,6 +1687,7 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::sincos:
   case Intrinsic::sinh:
   case Intrinsic::cosh:
+  case Intrinsic::atan:
   case Intrinsic::pow:
   case Intrinsic::powi:
   case Intrinsic::ldexp:
@@ -1790,6 +1806,44 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::nvvm_d2ull_rn:
   case Intrinsic::nvvm_d2ull_rp:
   case Intrinsic::nvvm_d2ull_rz:
+
+  // NVVM math intrinsics:
+  case Intrinsic::nvvm_ceil_d:
+  case Intrinsic::nvvm_ceil_f:
+  case Intrinsic::nvvm_ceil_ftz_f:
+
+  case Intrinsic::nvvm_fabs:
+  case Intrinsic::nvvm_fabs_ftz:
+
+  case Intrinsic::nvvm_floor_d:
+  case Intrinsic::nvvm_floor_f:
+  case Intrinsic::nvvm_floor_ftz_f:
+
+  case Intrinsic::nvvm_rcp_rm_d:
+  case Intrinsic::nvvm_rcp_rm_f:
+  case Intrinsic::nvvm_rcp_rm_ftz_f:
+  case Intrinsic::nvvm_rcp_rn_d:
+  case Intrinsic::nvvm_rcp_rn_f:
+  case Intrinsic::nvvm_rcp_rn_ftz_f:
+  case Intrinsic::nvvm_rcp_rp_d:
+  case Intrinsic::nvvm_rcp_rp_f:
+  case Intrinsic::nvvm_rcp_rp_ftz_f:
+  case Intrinsic::nvvm_rcp_rz_d:
+  case Intrinsic::nvvm_rcp_rz_f:
+  case Intrinsic::nvvm_rcp_rz_ftz_f:
+
+  case Intrinsic::nvvm_round_d:
+  case Intrinsic::nvvm_round_f:
+  case Intrinsic::nvvm_round_ftz_f:
+
+  case Intrinsic::nvvm_saturate_d:
+  case Intrinsic::nvvm_saturate_f:
+  case Intrinsic::nvvm_saturate_ftz_f:
+
+  case Intrinsic::nvvm_sqrt_f:
+  case Intrinsic::nvvm_sqrt_rn_d:
+  case Intrinsic::nvvm_sqrt_rn_f:
+  case Intrinsic::nvvm_sqrt_rn_ftz_f:
     return !Call->isStrictFP();
 
   // Sign operations are actually bitwise operations, they do not raise
@@ -1807,6 +1861,7 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::nearbyint:
   case Intrinsic::rint:
   case Intrinsic::canonicalize:
+
   // Constrained intrinsics can be folded if FP environment is known
   // to compiler.
   case Intrinsic::experimental_constrained_fma:
@@ -1954,22 +2009,55 @@ inline bool llvm_fenv_testexcept() {
   return false;
 }
 
-static const APFloat FTZPreserveSign(const APFloat &V) {
+static APFloat FTZPreserveSign(const APFloat &V) {
   if (V.isDenormal())
     return APFloat::getZero(V.getSemantics(), V.isNegative());
   return V;
 }
 
-Constant *ConstantFoldFP(double (*NativeFP)(double), const APFloat &V,
-                         Type *Ty) {
+static APFloat FlushToPositiveZero(const APFloat &V) {
+  if (V.isDenormal())
+    return APFloat::getZero(V.getSemantics(), false);
+  return V;
+}
+
+static APFloat FlushWithDenormKind(const APFloat &V,
+                                   DenormalMode::DenormalModeKind DenormKind) {
+  assert(DenormKind != DenormalMode::DenormalModeKind::Invalid &&
+         DenormKind != DenormalMode::DenormalModeKind::Dynamic);
+  switch (DenormKind) {
+  case DenormalMode::DenormalModeKind::IEEE:
+    return V;
+  case DenormalMode::DenormalModeKind::PreserveSign:
+    return FTZPreserveSign(V);
+  case DenormalMode::DenormalModeKind::PositiveZero:
+    return FlushToPositiveZero(V);
+  default:
+    llvm_unreachable("Invalid denormal mode!");
+  }
+}
+
+Constant *ConstantFoldFP(double (*NativeFP)(double), const APFloat &V, Type *Ty,
+                         DenormalMode DenormMode = DenormalMode::getIEEE()) {
+  if (!DenormMode.isValid() ||
+      DenormMode.Input == DenormalMode::DenormalModeKind::Dynamic ||
+      DenormMode.Output == DenormalMode::DenormalModeKind::Dynamic)
+    return nullptr;
+
   llvm_fenv_clearexcept();
-  double Result = NativeFP(V.convertToDouble());
+  auto Input = FlushWithDenormKind(V, DenormMode.Input);
+  double Result = NativeFP(Input.convertToDouble());
   if (llvm_fenv_testexcept()) {
     llvm_fenv_clearexcept();
     return nullptr;
   }
 
-  return GetConstantFoldFPValue(Result, Ty);
+  Constant *Output = GetConstantFoldFPValue(Result, Ty);
+  if (DenormMode.Output == DenormalMode::DenormalModeKind::IEEE)
+    return Output;
+  const auto *CFP = static_cast<ConstantFP *>(Output);
+  const auto Res = FlushWithDenormKind(CFP->getValueAPF(), DenormMode.Output);
+  return ConstantFP::get(Ty->getContext(), Res);
 }
 
 #if defined(HAS_IEE754_FLOAT128) && defined(HAS_LOGF128)
@@ -2127,7 +2215,7 @@ static bool mayFoldConstrained(ConstrainedFPIntrinsic *CI,
 
   // If evaluation raised FP exception, the result can depend on rounding
   // mode. If the latter is unknown, folding is not possible.
-  if (ORM && *ORM == RoundingMode::Dynamic)
+  if (ORM == RoundingMode::Dynamic)
     return false;
 
   // If FP exceptions are ignored, fold the call, even if such exception is
@@ -2218,12 +2306,6 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     if (Operands[0]->isManifestConstant())
       return ConstantInt::getTrue(Ty->getContext());
     return nullptr;
-  }
-
-  if (isa<PoisonValue>(Operands[0])) {
-    // TODO: All of these operations should probably propagate poison.
-    if (IntrinsicID == Intrinsic::canonicalize)
-      return PoisonValue::get(Ty);
   }
 
   if (isa<UndefValue>(Operands[0])) {
@@ -2408,7 +2490,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
         if (IntrinsicID == Intrinsic::experimental_constrained_rint &&
             St == APFloat::opInexact) {
           std::optional<fp::ExceptionBehavior> EB = CI->getExceptionBehavior();
-          if (EB && *EB == fp::ebStrict)
+          if (EB == fp::ebStrict)
             return nullptr;
         }
       } else if (U.isSignaling()) {
@@ -2538,8 +2620,102 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
         return ConstantFoldFP(sinh, APF, Ty);
       case Intrinsic::cosh:
         return ConstantFoldFP(cosh, APF, Ty);
+      case Intrinsic::atan:
+        // Implement optional behavior from C's Annex F for +/-0.0.
+        if (U.isZero())
+          return ConstantFP::get(Ty->getContext(), U);
+        return ConstantFoldFP(atan, APF, Ty);
       case Intrinsic::sqrt:
         return ConstantFoldFP(sqrt, APF, Ty);
+
+      // NVVM Intrinsics:
+      case Intrinsic::nvvm_ceil_ftz_f:
+      case Intrinsic::nvvm_ceil_f:
+      case Intrinsic::nvvm_ceil_d:
+        return ConstantFoldFP(
+            ceil, APF, Ty,
+            nvvm::GetNVVMDenormMode(
+                nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID)));
+
+      case Intrinsic::nvvm_fabs_ftz:
+      case Intrinsic::nvvm_fabs:
+        return ConstantFoldFP(
+            fabs, APF, Ty,
+            nvvm::GetNVVMDenormMode(
+                nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID)));
+
+      case Intrinsic::nvvm_floor_ftz_f:
+      case Intrinsic::nvvm_floor_f:
+      case Intrinsic::nvvm_floor_d:
+        return ConstantFoldFP(
+            floor, APF, Ty,
+            nvvm::GetNVVMDenormMode(
+                nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID)));
+
+      case Intrinsic::nvvm_rcp_rm_ftz_f:
+      case Intrinsic::nvvm_rcp_rn_ftz_f:
+      case Intrinsic::nvvm_rcp_rp_ftz_f:
+      case Intrinsic::nvvm_rcp_rz_ftz_f:
+      case Intrinsic::nvvm_rcp_rm_d:
+      case Intrinsic::nvvm_rcp_rm_f:
+      case Intrinsic::nvvm_rcp_rn_d:
+      case Intrinsic::nvvm_rcp_rn_f:
+      case Intrinsic::nvvm_rcp_rp_d:
+      case Intrinsic::nvvm_rcp_rp_f:
+      case Intrinsic::nvvm_rcp_rz_d:
+      case Intrinsic::nvvm_rcp_rz_f: {
+        APFloat::roundingMode RoundMode = nvvm::GetRCPRoundingMode(IntrinsicID);
+        bool IsFTZ = nvvm::RCPShouldFTZ(IntrinsicID);
+
+        auto Denominator = IsFTZ ? FTZPreserveSign(APF) : APF;
+        APFloat Res = APFloat::getOne(APF.getSemantics());
+        APFloat::opStatus Status = Res.divide(Denominator, RoundMode);
+
+        if (Status == APFloat::opOK || Status == APFloat::opInexact) {
+          if (IsFTZ)
+            Res = FTZPreserveSign(Res);
+          return ConstantFP::get(Ty->getContext(), Res);
+        }
+        return nullptr;
+      }
+
+      case Intrinsic::nvvm_round_ftz_f:
+      case Intrinsic::nvvm_round_f:
+      case Intrinsic::nvvm_round_d: {
+        // nvvm_round is lowered to PTX cvt.rni, which will round to nearest
+        // integer, choosing even integer if source is equidistant between two
+        // integers, so the semantics are closer to "rint" rather than "round".
+        bool IsFTZ = nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID);
+        auto V = IsFTZ ? FTZPreserveSign(APF) : APF;
+        V.roundToIntegral(APFloat::rmNearestTiesToEven);
+        return ConstantFP::get(Ty->getContext(), V);
+      }
+
+      case Intrinsic::nvvm_saturate_ftz_f:
+      case Intrinsic::nvvm_saturate_d:
+      case Intrinsic::nvvm_saturate_f: {
+        bool IsFTZ = nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID);
+        auto V = IsFTZ ? FTZPreserveSign(APF) : APF;
+        if (V.isNegative() || V.isZero() || V.isNaN())
+          return ConstantFP::getZero(Ty);
+        APFloat One = APFloat::getOne(APF.getSemantics());
+        if (V > One)
+          return ConstantFP::get(Ty->getContext(), One);
+        return ConstantFP::get(Ty->getContext(), APF);
+      }
+
+      case Intrinsic::nvvm_sqrt_rn_ftz_f:
+      case Intrinsic::nvvm_sqrt_f:
+      case Intrinsic::nvvm_sqrt_rn_d:
+      case Intrinsic::nvvm_sqrt_rn_f:
+        if (APF.isNegative())
+          return nullptr;
+        return ConstantFoldFP(
+            sqrt, APF, Ty,
+            nvvm::GetNVVMDenormMode(
+                nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID)));
+
+      // AMDGCN Intrinsics:
       case Intrinsic::amdgcn_cos:
       case Intrinsic::amdgcn_sin: {
         double V = getValueAsDouble(Op);
@@ -2590,6 +2766,9 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       break;
     case LibFunc_atan:
     case LibFunc_atanf:
+      // Implement optional behavior from C's Annex F for +/-0.0.
+      if (U.isZero())
+        return ConstantFP::get(Ty->getContext(), U);
       if (TLI->has(Func))
         return ConstantFoldFP(atan, APF, Ty);
       break;
@@ -2821,7 +3000,8 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
 
   // Support ConstantVector in case we have an Undef in the top.
   if (isa<ConstantVector>(Operands[0]) ||
-      isa<ConstantDataVector>(Operands[0])) {
+      isa<ConstantDataVector>(Operands[0]) ||
+      isa<ConstantAggregateZero>(Operands[0])) {
     auto *Op = cast<Constant>(Operands[0]);
     switch (IntrinsicID) {
     default: break;
@@ -2845,6 +3025,20 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
                                            /*roundTowardZero=*/true, Ty,
                                            /*IsSigned*/true);
       break;
+
+    case Intrinsic::wasm_anytrue:
+      return Op->isZeroValue() ? ConstantInt::get(Ty, 0)
+                               : ConstantInt::get(Ty, 1);
+
+    case Intrinsic::wasm_alltrue:
+      // Check each element individually
+      unsigned E = cast<FixedVectorType>(Op->getType())->getNumElements();
+      for (unsigned I = 0; I != E; ++I)
+        if (Constant *Elt = Op->getAggregateElement(I))
+          if (Elt->isZeroValue())
+            return ConstantInt::get(Ty, 0);
+
+      return ConstantInt::get(Ty, 1);
     }
   }
 
@@ -3206,11 +3400,6 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
     case Intrinsic::smin:
     case Intrinsic::umax:
     case Intrinsic::umin:
-      // This is the same as for binary ops - poison propagates.
-      // TODO: Poison handling should be consolidated.
-      if (isa<PoisonValue>(Operands[0]) || isa<PoisonValue>(Operands[1]))
-        return PoisonValue::get(Ty);
-
       if (!C0 && !C1)
         return UndefValue::get(Ty);
       if (!C0 || !C1)
@@ -3223,9 +3412,6 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
 
     case Intrinsic::scmp:
     case Intrinsic::ucmp:
-      if (isa<PoisonValue>(Operands[0]) || isa<PoisonValue>(Operands[1]))
-        return PoisonValue::get(Ty);
-
       if (!C0 || !C1)
         return ConstantInt::get(Ty, 0);
 
@@ -3292,11 +3478,6 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
     }
     case Intrinsic::uadd_sat:
     case Intrinsic::sadd_sat:
-      // This is the same as for binary ops - poison propagates.
-      // TODO: Poison handling should be consolidated.
-      if (isa<PoisonValue>(Operands[0]) || isa<PoisonValue>(Operands[1]))
-        return PoisonValue::get(Ty);
-
       if (!C0 && !C1)
         return UndefValue::get(Ty);
       if (!C0 || !C1)
@@ -3307,11 +3488,6 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
         return ConstantInt::get(Ty, C0->sadd_sat(*C1));
     case Intrinsic::usub_sat:
     case Intrinsic::ssub_sat:
-      // This is the same as for binary ops - poison propagates.
-      // TODO: Poison handling should be consolidated.
-      if (isa<PoisonValue>(Operands[0]) || isa<PoisonValue>(Operands[1]))
-        return PoisonValue::get(Ty);
-
       if (!C0 && !C1)
         return UndefValue::get(Ty);
       if (!C0 || !C1)
@@ -3570,11 +3746,6 @@ static Constant *ConstantFoldScalarCall3(StringRef Name,
 
   if (IntrinsicID == Intrinsic::smul_fix ||
       IntrinsicID == Intrinsic::smul_fix_sat) {
-    // poison * C -> poison
-    // C * poison -> poison
-    if (isa<PoisonValue>(Operands[0]) || isa<PoisonValue>(Operands[1]))
-      return PoisonValue::get(Ty);
-
     const APInt *C0, *C1;
     if (!getConstIntOrUndef(Operands[0], C0) ||
         !getConstIntOrUndef(Operands[1], C1))
@@ -3648,6 +3819,11 @@ static Constant *ConstantFoldScalarCall(StringRef Name,
                                         ArrayRef<Constant *> Operands,
                                         const TargetLibraryInfo *TLI,
                                         const CallBase *Call) {
+  if (IntrinsicID != Intrinsic::not_intrinsic &&
+      any_of(Operands, IsaPred<PoisonValue>) &&
+      intrinsicPropagatesPoison(IntrinsicID))
+    return PoisonValue::get(Ty);
+
   if (Operands.size() == 1)
     return ConstantFoldScalarCall1(Name, IntrinsicID, Ty, Operands, TLI, Call);
 
@@ -3749,6 +3925,72 @@ static Constant *ConstantFoldFixedVectorCall(
       return ConstantVector::get(NCs);
     }
     return nullptr;
+  }
+  case Intrinsic::vector_extract: {
+    auto *Idx = dyn_cast<ConstantInt>(Operands[1]);
+    Constant *Vec = Operands[0];
+    if (!Idx || !isa<FixedVectorType>(Vec->getType()))
+      return nullptr;
+
+    unsigned NumElements = FVTy->getNumElements();
+    unsigned VecNumElements =
+        cast<FixedVectorType>(Vec->getType())->getNumElements();
+    unsigned StartingIndex = Idx->getZExtValue();
+
+    // Extracting entire vector is nop
+    if (NumElements == VecNumElements && StartingIndex == 0)
+      return Vec;
+
+    for (unsigned I = StartingIndex, E = StartingIndex + NumElements; I < E;
+         ++I) {
+      Constant *Elt = Vec->getAggregateElement(I);
+      if (!Elt)
+        return nullptr;
+      Result[I - StartingIndex] = Elt;
+    }
+
+    return ConstantVector::get(Result);
+  }
+  case Intrinsic::vector_insert: {
+    Constant *Vec = Operands[0];
+    Constant *SubVec = Operands[1];
+    auto *Idx = dyn_cast<ConstantInt>(Operands[2]);
+    if (!Idx || !isa<FixedVectorType>(Vec->getType()))
+      return nullptr;
+
+    unsigned SubVecNumElements =
+        cast<FixedVectorType>(SubVec->getType())->getNumElements();
+    unsigned VecNumElements =
+        cast<FixedVectorType>(Vec->getType())->getNumElements();
+    unsigned IdxN = Idx->getZExtValue();
+    // Replacing entire vector with a subvec is nop
+    if (SubVecNumElements == VecNumElements && IdxN == 0)
+      return SubVec;
+
+    for (unsigned I = 0; I < VecNumElements; ++I) {
+      Constant *Elt;
+      if (I < IdxN + SubVecNumElements)
+        Elt = SubVec->getAggregateElement(I - IdxN);
+      else
+        Elt = Vec->getAggregateElement(I);
+      if (!Elt)
+        return nullptr;
+      Result[I] = Elt;
+    }
+    return ConstantVector::get(Result);
+  }
+  case Intrinsic::vector_interleave2: {
+    unsigned NumElements =
+        cast<FixedVectorType>(Operands[0]->getType())->getNumElements();
+    for (unsigned I = 0; I < NumElements; ++I) {
+      Constant *Elt0 = Operands[0]->getAggregateElement(I);
+      Constant *Elt1 = Operands[1]->getAggregateElement(I);
+      if (!Elt0 || !Elt1)
+        return nullptr;
+      Result[2 * I] = Elt0;
+      Result[2 * I + 1] = Elt1;
+    }
+    return ConstantVector::get(Result);
   }
   default:
     break;
@@ -3910,6 +4152,32 @@ ConstantFoldStructCall(StringRef Name, Intrinsic::ID IntrinsicID,
     if (!SinResult || !CosResult)
       return nullptr;
     return ConstantStruct::get(StTy, SinResult, CosResult);
+  }
+  case Intrinsic::vector_deinterleave2: {
+    auto *Vec = Operands[0];
+    auto *VecTy = cast<VectorType>(Vec->getType());
+
+    if (auto *EltC = Vec->getSplatValue()) {
+      ElementCount HalfEC = VecTy->getElementCount().divideCoefficientBy(2);
+      auto *HalfVec = ConstantVector::getSplat(HalfEC, EltC);
+      return ConstantStruct::get(StTy, HalfVec, HalfVec);
+    }
+
+    if (!isa<FixedVectorType>(Vec->getType()))
+      return nullptr;
+
+    unsigned NumElements = VecTy->getElementCount().getFixedValue() / 2;
+    SmallVector<Constant *, 4> Res0(NumElements), Res1(NumElements);
+    for (unsigned I = 0; I < NumElements; ++I) {
+      Constant *Elt0 = Vec->getAggregateElement(2 * I);
+      Constant *Elt1 = Vec->getAggregateElement(2 * I + 1);
+      if (!Elt0 || !Elt1)
+        return nullptr;
+      Res0[I] = Elt0;
+      Res1[I] = Elt1;
+    }
+    return ConstantStruct::get(StTy, ConstantVector::get(Res0),
+                               ConstantVector::get(Res1));
   }
   default:
     // TODO: Constant folding of vector intrinsics that fall through here does

@@ -168,42 +168,6 @@ def NonNegFlagInterface : OpInterface<"NonNegFlagInterface"> {
   ];
 }
 
-def BranchWeightOpInterface : OpInterface<"BranchWeightOpInterface"> {
-  let description = [{
-    An interface for operations that can carry branch weights metadata. It
-    provides setters and getters for the operation's branch weights attribute.
-    The default implementation of the interface methods expect the operation to
-    have an attribute of type DenseI32ArrayAttr named branch_weights.
-  }];
-
-  let cppNamespace = "::mlir::LLVM";
-
-  let methods = [
-    InterfaceMethod<
-      /*desc=*/        "Returns the branch weights attribute or nullptr",
-      /*returnType=*/  "::mlir::DenseI32ArrayAttr",
-      /*methodName=*/  "getBranchWeightsOrNull",
-      /*args=*/        (ins),
-      /*methodBody=*/  [{}],
-      /*defaultImpl=*/ [{
-        auto op = cast<ConcreteOp>(this->getOperation());
-        return op.getBranchWeightsAttr();
-      }]
-      >,
-    InterfaceMethod<
-      /*desc=*/        "Sets the branch weights attribute",
-      /*returnType=*/  "void",
-      /*methodName=*/  "setBranchWeights",
-      /*args=*/        (ins "::mlir::DenseI32ArrayAttr":$attr),
-      /*methodBody=*/  [{}],
-      /*defaultImpl=*/ [{
-        auto op = cast<ConcreteOp>(this->getOperation());
-        op.setBranchWeightsAttr(attr);
-      }]
-      >
-  ];
-}
-
 def AccessGroupOpInterface : OpInterface<"AccessGroupOpInterface"> {
   let description = [{
     An interface for memory operations that can carry access groups metadata.

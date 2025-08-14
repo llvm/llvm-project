@@ -131,9 +131,23 @@ Extensions
 
 The SPIR-V backend supports a variety of `extensions <https://github.com/KhronosGroup/SPIRV-Registry/tree/main/extensions>`_
 that enable or enhance features beyond the core SPIR-V specification.
-These extensions can be enabled using the ``-spirv-extensions`` option
-followed by the name of the extension(s) you wish to enable. Below is a
-list of supported SPIR-V extensions, sorted alphabetically by their extension names:
+The enabled extensions can be controlled using the ``-spirv-ext`` option followed by a list of
+extensions to enable or disable, each prefixed with ``+`` or ``-``, respectively.
+
+To enable multiple extensions, list them separated by comma. For example, to enable support for atomic operations on floating-point numbers and arbitrary precision integers, use:
+
+``-spirv-ext=+SPV_EXT_shader_atomic_float_add,+SPV_INTEL_arbitrary_precision_integers``
+
+To enable all extensions, use the following option:
+``-spirv-ext=all``
+
+To enable all KHR extensions, use the following option:
+``-spirv-ext=khr``
+
+To enable all extensions except specified, specify ``all`` followed by a list of disallowed extensions. For example:
+``-spirv-ext=all,-SPV_INTEL_arbitrary_precision_integers``
+
+Below is a list of supported SPIR-V extensions, sorted alphabetically by their extension names:
 
 .. list-table:: Supported SPIR-V Extensions
    :widths: 50 150
@@ -217,16 +231,8 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
      - Adds an instruction to compute the matrix product of an M x K matrix with a K x N matrix and then add an M x N matrix. 
    * - ``SPV_INTEL_int4``
      - Adds support for 4-bit integer type, and allow this type to be used in cooperative matrices.
-
-To enable multiple extensions, list them separated by comma. For example, to enable support for atomic operations on floating-point numbers and arbitrary precision integers, use:
-
-``-spirv-ext=+SPV_EXT_shader_atomic_float_add,+SPV_INTEL_arbitrary_precision_integers``
-
-To enable all extensions, use the following option:
-``-spirv-ext=all``
-
-To enable all extensions except specified, specify ``all`` followed by a list of disallowed extensions. For example:
-``-spirv-ext=all,-SPV_INTEL_arbitrary_precision_integers``
+   * - ``SPV_KHR_float_controls2``
+     - Adds ability to specify the floating-point environment in shaders. It can be used on whole modules and individual instructions.
 
 SPIR-V representation in LLVM IR
 ================================
@@ -255,6 +261,7 @@ using target extension types and are represented as follows:
      SPIR-V Type        LLVM type name          LLVM type arguments
      ================== ======================= ===========================================================================================
      OpTypeImage        ``spirv.Image``         sampled type, dimensionality, depth, arrayed, MS, sampled, image format, [access qualifier]
+     OpTypeImage        ``spirv.SignedImage``   sampled type, dimensionality, depth, arrayed, MS, sampled, image format, [access qualifier]
      OpTypeSampler      ``spirv.Sampler``       (none)
      OpTypeSampledImage ``spirv.SampledImage``  sampled type, dimensionality, depth, arrayed, MS, sampled, image format, [access qualifier]
      OpTypeEvent        ``spirv.Event``         (none)
@@ -274,6 +281,12 @@ dimensionality parameter as ``1`` meaning 2D. Sampled image types include the
 parameters of its underlying image type, so that a sampled image for the
 previous type has the representation
 ``target("spirv.SampledImage, void, 1, 1, 0, 0, 0, 0, 0)``.
+
+The differences between ``spirv.Image`` and ``spirv.SignedImage`` is that the
+backend will generate code assuming that the format of the image is a signed
+integer instead of unsigned. This is required because llvm-ir will create the
+same sampled type for signed and unsigned integers. If the image format is
+unknown, the backend cannot distinguish the two case.
 
 See `wg-hlsl proposal 0018 <https://github.com/llvm/wg-hlsl/blob/main/proposals/0018-spirv-resource-representation.md>`_
 for details on ``spirv.VulkanBuffer``.

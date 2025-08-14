@@ -17,6 +17,30 @@
 #include <cctype>
 #include <optional>
 
+namespace clang::tidy {
+
+template <>
+struct OptionEnumMapping<
+    modernize::UseTrailingReturnTypeCheck::TransformLambda> {
+  static llvm::ArrayRef<std::pair<
+      modernize::UseTrailingReturnTypeCheck::TransformLambda, StringRef>>
+  getEnumMapping() {
+    static constexpr std::pair<
+        modernize::UseTrailingReturnTypeCheck::TransformLambda, StringRef>
+        Mapping[] = {
+            {modernize::UseTrailingReturnTypeCheck::TransformLambda::All,
+             "all"},
+            {modernize::UseTrailingReturnTypeCheck::TransformLambda::
+                 AllExceptAuto,
+             "all_except_auto"},
+            {modernize::UseTrailingReturnTypeCheck::TransformLambda::None,
+             "none"}};
+    return Mapping;
+  }
+};
+
+} // namespace clang::tidy
+
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
@@ -40,66 +64,65 @@ public:
     return false;
   }
 
-  bool TraverseTypeLoc(TypeLoc TL, bool Elaborated = false) {
+  bool TraverseTypeLoc(TypeLoc TL, bool TraverseQualifier = true) {
     if (TL.isNull())
       return true;
 
-    if (!Elaborated) {
-      switch (TL.getTypeLocClass()) {
-      case TypeLoc::Record:
-        if (visitUnqualName(
-                TL.getAs<RecordTypeLoc>().getTypePtr()->getDecl()->getName()))
-          return false;
+    switch (TL.getTypeLocClass()) {
+    case TypeLoc::InjectedClassName:
+    case TypeLoc::Record:
+    case TypeLoc::Enum: {
+      auto TTL = TL.getAs<TagTypeLoc>();
+      const auto *T = TTL.getTypePtr();
+      if (T->getKeyword() != ElaboratedTypeKeyword::None ||
+          TTL.getQualifierLoc())
         break;
-      case TypeLoc::Enum:
-        if (visitUnqualName(
-                TL.getAs<EnumTypeLoc>().getTypePtr()->getDecl()->getName()))
-          return false;
+      if (visitUnqualName(T->getOriginalDecl()->getName()))
+        return false;
+      break;
+    }
+    case TypeLoc::TemplateSpecialization: {
+      auto TTL = TL.getAs<TemplateSpecializationTypeLoc>();
+      const auto *T = TTL.getTypePtr();
+      if (T->getKeyword() != ElaboratedTypeKeyword::None ||
+          TTL.getQualifierLoc())
         break;
-      case TypeLoc::TemplateSpecialization:
-        if (visitUnqualName(TL.getAs<TemplateSpecializationTypeLoc>()
-                                .getTypePtr()
-                                ->getTemplateName()
-                                .getAsTemplateDecl()
-                                ->getName()))
-          return false;
+      if (visitUnqualName(T->getTemplateName().getAsTemplateDecl()->getName()))
+        return false;
+      break;
+    }
+    case TypeLoc::Typedef: {
+      auto TTL = TL.getAs<TypedefTypeLoc>();
+      const auto *T = TTL.getTypePtr();
+      if (T->getKeyword() != ElaboratedTypeKeyword::None ||
+          TTL.getQualifierLoc())
         break;
-      case TypeLoc::Typedef:
-        if (visitUnqualName(
-                TL.getAs<TypedefTypeLoc>().getTypePtr()->getDecl()->getName()))
-          return false;
+      if (visitUnqualName(T->getDecl()->getName()))
+        return false;
+      break;
+    }
+    case TypeLoc::Using: {
+      auto TTL = TL.getAs<UsingTypeLoc>();
+      const auto *T = TTL.getTypePtr();
+      if (T->getKeyword() != ElaboratedTypeKeyword::None ||
+          TTL.getQualifierLoc())
         break;
-      case TypeLoc::Using:
-        if (visitUnqualName(TL.getAs<UsingTypeLoc>()
-                                .getTypePtr()
-                                ->getFoundDecl()
-                                ->getName()))
-          return false;
-        break;
-      default:
-        break;
-      }
+      if (visitUnqualName(T->getDecl()->getName()))
+        return false;
+      break;
+    }
+    default:
+      break;
     }
 
-    return RecursiveASTVisitor<UnqualNameVisitor>::TraverseTypeLoc(TL);
+    return RecursiveASTVisitor<UnqualNameVisitor>::TraverseTypeLoc(
+        TL, TraverseQualifier);
   }
 
   // Replace the base method in order to call our own
   // TraverseTypeLoc().
-  bool TraverseQualifiedTypeLoc(QualifiedTypeLoc TL) {
-    return TraverseTypeLoc(TL.getUnqualifiedLoc());
-  }
-
-  // Replace the base version to inform TraverseTypeLoc that the type is
-  // elaborated.
-  bool TraverseElaboratedTypeLoc(ElaboratedTypeLoc TL) {
-    if (TL.getQualifierLoc() &&
-        !TraverseNestedNameSpecifierLoc(TL.getQualifierLoc()))
-      return false;
-    const auto *T = TL.getTypePtr();
-    return TraverseTypeLoc(TL.getNamedTypeLoc(),
-                           T->getKeyword() != ElaboratedTypeKeyword::None ||
-                               T->getQualifier());
+  bool TraverseQualifiedTypeLoc(QualifiedTypeLoc TL, bool TraverseQualifier) {
+    return TraverseTypeLoc(TL.getUnqualifiedLoc(), TraverseQualifier);
   }
 
   bool VisitDeclRefExpr(DeclRefExpr *S) {
@@ -111,10 +134,17 @@ public:
 private:
   const FunctionDecl &F;
 };
+
+AST_MATCHER(LambdaExpr, hasExplicitResultType) {
+  return Node.hasExplicitResultType();
+}
+
 } // namespace
 
 constexpr llvm::StringLiteral ErrorMessageOnFunction =
     "use a trailing return type for this function";
+constexpr llvm::StringLiteral ErrorMessageOnLambda =
+    "use a trailing return type for this lambda";
 
 static SourceLocation expandIfMacroId(SourceLocation Loc,
                                       const SourceManager &SM) {
@@ -285,7 +315,6 @@ findReturnTypeAndCVSourceRange(const FunctionDecl &F, const TypeLoc &ReturnLoc,
     return {};
   }
 
-
   // If the return type has no local qualifiers, it's source range is accurate.
   if (!hasAnyNestedLocalQualifiers(F.getReturnType()))
     return ReturnTypeRange;
@@ -327,6 +356,48 @@ findReturnTypeAndCVSourceRange(const FunctionDecl &F, const TypeLoc &ReturnLoc,
   assert(!ReturnTypeRange.getEnd().isMacroID() &&
          "Return type source range end must not be a macro");
   return ReturnTypeRange;
+}
+
+static SourceLocation findLambdaTrailingReturnInsertLoc(
+    const CXXMethodDecl *Method, const SourceManager &SM,
+    const LangOptions &LangOpts, const ASTContext &Ctx) {
+  // 'requires' keyword is present in lambda declaration
+  if (Method->getTrailingRequiresClause()) {
+    SourceLocation ParamEndLoc;
+    if (Method->param_empty())
+      ParamEndLoc = Method->getBeginLoc();
+    else
+      ParamEndLoc = Method->getParametersSourceRange().getEnd();
+
+    std::pair<FileID, unsigned> ParamEndLocInfo =
+        SM.getDecomposedLoc(ParamEndLoc);
+    StringRef Buffer = SM.getBufferData(ParamEndLocInfo.first);
+
+    Lexer Lexer(SM.getLocForStartOfFile(ParamEndLocInfo.first), LangOpts,
+                Buffer.begin(), Buffer.data() + ParamEndLocInfo.second,
+                Buffer.end());
+
+    Token Token;
+    while (!Lexer.LexFromRawLexer(Token)) {
+      if (Token.is(tok::raw_identifier)) {
+        IdentifierInfo &Info = Ctx.Idents.get(StringRef(
+            SM.getCharacterData(Token.getLocation()), Token.getLength()));
+        Token.setIdentifierInfo(&Info);
+        Token.setKind(Info.getTokenID());
+      }
+
+      if (Token.is(tok::kw_requires))
+        return Token.getLocation().getLocWithOffset(-1);
+    }
+
+    return {};
+  }
+
+  // If no requires clause, insert before the body
+  if (const Stmt *Body = Method->getBody())
+    return Body->getBeginLoc().getLocWithOffset(-1);
+
+  return {};
 }
 
 static void keepSpecifiers(std::string &ReturnType, std::string &Auto,
@@ -382,14 +453,43 @@ static void keepSpecifiers(std::string &ReturnType, std::string &Auto,
   }
 }
 
-void UseTrailingReturnTypeCheck::registerMatchers(MatchFinder *Finder) {
-  auto F = functionDecl(
-               unless(anyOf(hasTrailingReturn(), returns(voidType()),
-                            cxxConversionDecl(), cxxMethodDecl(isImplicit()))))
-               .bind("Func");
+UseTrailingReturnTypeCheck::UseTrailingReturnTypeCheck(
+    StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      TransformFunctions(Options.get("TransformFunctions", true)),
+      TransformLambdas(Options.get("TransformLambdas", TransformLambda::All)) {
 
-  Finder->addMatcher(F, this);
-  Finder->addMatcher(friendDecl(hasDescendant(F)).bind("Friend"), this);
+  if (TransformFunctions == false && TransformLambdas == TransformLambda::None)
+    this->configurationDiag(
+        "The check 'modernize-use-trailing-return-type' will not perform any "
+        "analysis because 'TransformFunctions' and 'TransformLambdas' are "
+        "disabled.");
+}
+
+void UseTrailingReturnTypeCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "TransformFunctions", TransformFunctions);
+  Options.store(Opts, "TransformLambdas", TransformLambdas);
+}
+
+void UseTrailingReturnTypeCheck::registerMatchers(MatchFinder *Finder) {
+  auto F =
+      functionDecl(
+          unless(anyOf(
+              hasTrailingReturn(), returns(voidType()), cxxConversionDecl(),
+              cxxMethodDecl(
+                  anyOf(isImplicit(),
+                        hasParent(cxxRecordDecl(hasParent(lambdaExpr()))))))))
+          .bind("Func");
+
+  if (TransformFunctions) {
+    Finder->addMatcher(F, this);
+    Finder->addMatcher(friendDecl(hasDescendant(F)).bind("Friend"), this);
+  }
+
+  if (TransformLambdas != TransformLambda::None)
+    Finder->addMatcher(
+        lambdaExpr(unless(hasExplicitResultType())).bind("Lambda"), this);
 }
 
 void UseTrailingReturnTypeCheck::registerPPCallbacks(
@@ -401,8 +501,13 @@ void UseTrailingReturnTypeCheck::check(const MatchFinder::MatchResult &Result) {
   assert(PP && "Expected registerPPCallbacks() to have been called before so "
                "preprocessor is available");
 
-  const auto *F = Result.Nodes.getNodeAs<FunctionDecl>("Func");
+  if (const auto *Lambda = Result.Nodes.getNodeAs<LambdaExpr>("Lambda")) {
+    diagOnLambda(Lambda, Result);
+    return;
+  }
+
   const auto *Fr = Result.Nodes.getNodeAs<FriendDecl>("Friend");
+  const auto *F = Result.Nodes.getNodeAs<FunctionDecl>("Func");
   assert(F && "Matcher is expected to find only FunctionDecls");
 
   // Three-way comparison operator<=> is syntactic sugar and generates implicit
@@ -493,6 +598,43 @@ void UseTrailingReturnTypeCheck::check(const MatchFinder::MatchResult &Result) {
   diag(F->getLocation(), ErrorMessageOnFunction)
       << FixItHint::CreateReplacement(ReturnTypeCVRange, Auto)
       << FixItHint::CreateInsertion(InsertionLoc, " -> " + ReturnType);
+}
+
+void UseTrailingReturnTypeCheck::diagOnLambda(
+    const LambdaExpr *Lambda,
+    const ast_matchers::MatchFinder::MatchResult &Result) {
+
+  const CXXMethodDecl *Method = Lambda->getCallOperator();
+  if (!Method || Lambda->hasExplicitResultType())
+    return;
+
+  const ASTContext *Ctx = Result.Context;
+  const QualType ReturnType = Method->getReturnType();
+
+  // We can't write 'auto' in C++11 mode, try to write generic msg and bail out.
+  if (ReturnType->isDependentType() &&
+      Ctx->getLangOpts().LangStd == LangStandard::lang_cxx11) {
+    if (TransformLambdas == TransformLambda::All)
+      diag(Lambda->getBeginLoc(), ErrorMessageOnLambda);
+    return;
+  }
+
+  if (ReturnType->isUndeducedAutoType() &&
+      TransformLambdas == TransformLambda::AllExceptAuto)
+    return;
+
+  const SourceLocation TrailingReturnInsertLoc =
+      findLambdaTrailingReturnInsertLoc(Method, *Result.SourceManager,
+                                        getLangOpts(), *Result.Context);
+
+  if (TrailingReturnInsertLoc.isValid())
+    diag(Lambda->getBeginLoc(), "use a trailing return type for this lambda")
+        << FixItHint::CreateInsertion(
+               TrailingReturnInsertLoc,
+               " -> " +
+                   ReturnType.getAsString(Result.Context->getPrintingPolicy()));
+  else
+    diag(Lambda->getBeginLoc(), ErrorMessageOnLambda);
 }
 
 } // namespace clang::tidy::modernize

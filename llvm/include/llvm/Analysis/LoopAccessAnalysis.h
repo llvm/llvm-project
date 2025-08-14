@@ -180,10 +180,12 @@ public:
                         const SmallVectorImpl<Instruction *> &Instrs) const;
   };
 
-  MemoryDepChecker(PredicatedScalarEvolution &PSE, const Loop *L,
+  MemoryDepChecker(PredicatedScalarEvolution &PSE, AssumptionCache *AC,
+                   DominatorTree *DT, const Loop *L,
                    const DenseMap<Value *, const SCEV *> &SymbolicStrides,
                    unsigned MaxTargetVectorWidthInBits)
-      : PSE(PSE), InnermostLoop(L), SymbolicStrides(SymbolicStrides),
+      : PSE(PSE), AC(AC), DT(DT), InnermostLoop(L),
+        SymbolicStrides(SymbolicStrides),
         MaxTargetVectorWidthInBits(MaxTargetVectorWidthInBits) {}
 
   /// Register the location (instructions are given increasing numbers)
@@ -194,7 +196,8 @@ public:
   /// of a write access.
   LLVM_ABI void addAccess(LoadInst *LI);
 
-  /// Check whether the dependencies between the accesses are safe.
+  /// Check whether the dependencies between the accesses are safe, and records
+  /// the dependence information in Dependences if so.
   ///
   /// Only checks sets with elements in \p CheckDeps.
   LLVM_ABI bool areDepsSafe(const DepCandidates &AccessSets,
@@ -235,8 +238,8 @@ public:
 
   /// In same cases when the dependency check fails we can still
   /// vectorize the loop with a dynamic array access check.
-  bool shouldRetryWithRuntimeCheck() const {
-    return FoundNonConstantDistanceDependence &&
+  bool shouldRetryWithRuntimeChecks() const {
+    return ShouldRetryWithRuntimeChecks &&
            Status == VectorizationSafetyStatus::PossiblySafeWithRtChecks;
   }
 
@@ -287,6 +290,15 @@ public:
     return PointerBounds;
   }
 
+  DominatorTree *getDT() const {
+    assert(DT && "requested DT, but it is not available");
+    return DT;
+  }
+  AssumptionCache *getAC() const {
+    assert(AC && "requested AC, but it is not available");
+    return AC;
+  }
+
 private:
   /// A wrapper around ScalarEvolution, used to add runtime SCEV checks, and
   /// applies dynamic knowledge to simplify SCEV expressions and convert them
@@ -295,6 +307,10 @@ private:
   /// example we might assume a unit stride for a pointer in order to prove
   /// that a memory access is strided and doesn't wrap.
   PredicatedScalarEvolution &PSE;
+
+  AssumptionCache *AC;
+  DominatorTree *DT;
+
   const Loop *InnermostLoop;
 
   /// Reference to map of pointer values to
@@ -326,9 +342,9 @@ private:
   uint64_t MaxStoreLoadForwardSafeDistanceInBits =
       std::numeric_limits<uint64_t>::max();
 
-  /// If we see a non-constant dependence distance we can still try to
-  /// vectorize this loop with runtime checks.
-  bool FoundNonConstantDistanceDependence = false;
+  /// Whether we should try to vectorize the loop with runtime checks, if the
+  /// dependencies are not safe.
+  bool ShouldRetryWithRuntimeChecks = false;
 
   /// Result of the dependence checks, indicating whether the checked
   /// dependences are safe for vectorization, require RT checks or are known to
@@ -395,8 +411,6 @@ private:
     uint64_t MaxStride;
     std::optional<uint64_t> CommonStride;
 
-    bool ShouldRetryWithRuntimeCheck;
-
     /// TypeByteSize is either the common store size of both accesses, or 0 when
     /// store sizes mismatch.
     uint64_t TypeByteSize;
@@ -406,11 +420,9 @@ private:
 
     DepDistanceStrideAndSizeInfo(const SCEV *Dist, uint64_t MaxStride,
                                  std::optional<uint64_t> CommonStride,
-                                 bool ShouldRetryWithRuntimeCheck,
                                  uint64_t TypeByteSize, bool AIsWrite,
                                  bool BIsWrite)
         : Dist(Dist), MaxStride(MaxStride), CommonStride(CommonStride),
-          ShouldRetryWithRuntimeCheck(ShouldRetryWithRuntimeCheck),
           TypeByteSize(TypeByteSize), AIsWrite(AIsWrite), BIsWrite(BIsWrite) {}
   };
 
@@ -426,6 +438,11 @@ private:
   getDependenceDistanceStrideAndSize(const MemAccessInfo &A, Instruction *AInst,
                                      const MemAccessInfo &B,
                                      Instruction *BInst);
+
+  // Return true if we can prove that \p Sink only accesses memory after \p
+  // Src's end or vice versa.
+  bool areAccessesCompletelyBeforeOrAfter(const SCEV *Src, Type *SrcTy,
+                                          const SCEV *Sink, Type *SinkTy);
 };
 
 class RuntimePointerChecking;
@@ -654,7 +671,8 @@ private:
 /// For memory dependences that cannot be determined at compile time, it
 /// generates run-time checks to prove independence.  This is done by
 /// AccessAnalysis::canCheckPtrAtRT and the checks are maintained by the
-/// RuntimePointerCheck class.
+/// RuntimePointerCheck class. \p AllowPartial determines whether partial checks
+/// are generated when not all pointers could be analyzed.
 ///
 /// If pointers can wrap or can't be expressed as affine AddRec expressions by
 /// ScalarEvolution, we will generate run-time checks by emitting a
@@ -667,7 +685,8 @@ public:
   LLVM_ABI LoopAccessInfo(Loop *L, ScalarEvolution *SE,
                           const TargetTransformInfo *TTI,
                           const TargetLibraryInfo *TLI, AAResults *AA,
-                          DominatorTree *DT, LoopInfo *LI);
+                          DominatorTree *DT, LoopInfo *LI, AssumptionCache *AC,
+                          bool AllowPartial = false);
 
   /// Return true we can analyze the memory accesses in the loop and there are
   /// no memory dependence cycles. Note that for dependences between loads &
@@ -681,6 +700,11 @@ public:
   /// still be reported runtime pointer checks that would be required, but it is
   /// not legal to insert them.
   bool hasConvergentOp() const { return HasConvergentOp; }
+
+  /// Return true if, when runtime pointer checking does not have complete
+  /// results, it instead has partial results for those memory accesses that
+  /// could be analyzed.
+  bool hasAllowPartial() const { return AllowPartial; }
 
   const RuntimePointerChecking *getRuntimePointerChecking() const {
     return PtrRtChecking.get();
@@ -784,13 +808,22 @@ private:
 
   /// We need to check that all of the pointers in this list are disjoint
   /// at runtime. Using std::unique_ptr to make using move ctor simpler.
+  /// If AllowPartial is true then this list may contain only partial
+  /// information when we've failed to analyze all the memory accesses in the
+  /// loop, in which case HasCompletePtrRtChecking will be false.
   std::unique_ptr<RuntimePointerChecking> PtrRtChecking;
 
-  /// the Memory Dependence Checker which can determine the
+  /// The Memory Dependence Checker which can determine the
   /// loop-independent and loop-carried dependences between memory accesses.
+  /// This will be empty if we've failed to analyze all the memory access in the
+  /// loop (i.e. CanVecMem is false).
   std::unique_ptr<MemoryDepChecker> DepChecker;
 
   Loop *TheLoop;
+
+  /// Determines whether we should generate partial runtime checks when not all
+  /// memory accesses could be analyzed.
+  bool AllowPartial;
 
   unsigned NumLoads = 0;
   unsigned NumStores = 0;
@@ -798,6 +831,7 @@ private:
   /// Cache the result of analyzeLoop.
   bool CanVecMem = false;
   bool HasConvergentOp = false;
+  bool HasCompletePtrRtChecking = false;
 
   /// Indicator that there are two non vectorizable stores to the same uniform
   /// address.
@@ -883,7 +917,10 @@ LLVM_ABI bool sortPtrAccesses(ArrayRef<Value *> VL, Type *ElemTy,
 LLVM_ABI bool isConsecutiveAccess(Value *A, Value *B, const DataLayout &DL,
                                   ScalarEvolution &SE, bool CheckType = true);
 
-/// Calculate Start and End points of memory access.
+/// Calculate Start and End points of memory access using exact backedge taken
+/// count \p BTC if computable or maximum backedge taken count \p MaxBTC
+/// otherwise.
+///
 /// Let's assume A is the first access and B is a memory access on N-th loop
 /// iteration. Then B is calculated as:
 ///   B = A + Step*N .
@@ -897,10 +934,11 @@ LLVM_ABI bool isConsecutiveAccess(Value *A, Value *B, const DataLayout &DL,
 /// There is no conflict when the intervals are disjoint:
 /// NoConflict = (P2.Start >= P1.End) || (P1.Start >= P2.End)
 LLVM_ABI std::pair<const SCEV *, const SCEV *> getStartAndEndForAccess(
-    const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy, const SCEV *MaxBECount,
-    ScalarEvolution *SE,
+    const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy, const SCEV *BTC,
+    const SCEV *MaxBTC, ScalarEvolution *SE,
     DenseMap<std::pair<const SCEV *, Type *>,
-             std::pair<const SCEV *, const SCEV *>> *PointerBounds);
+             std::pair<const SCEV *, const SCEV *>> *PointerBounds,
+    DominatorTree *DT, AssumptionCache *AC);
 
 class LoopAccessInfoManager {
   /// The cache.
@@ -913,14 +951,15 @@ class LoopAccessInfoManager {
   LoopInfo &LI;
   TargetTransformInfo *TTI;
   const TargetLibraryInfo *TLI = nullptr;
+  AssumptionCache *AC;
 
 public:
   LoopAccessInfoManager(ScalarEvolution &SE, AAResults &AA, DominatorTree &DT,
                         LoopInfo &LI, TargetTransformInfo *TTI,
-                        const TargetLibraryInfo *TLI)
-      : SE(SE), AA(AA), DT(DT), LI(LI), TTI(TTI), TLI(TLI) {}
+                        const TargetLibraryInfo *TLI, AssumptionCache *AC)
+      : SE(SE), AA(AA), DT(DT), LI(LI), TTI(TTI), TLI(TLI), AC(AC) {}
 
-  LLVM_ABI const LoopAccessInfo &getInfo(Loop &L);
+  LLVM_ABI const LoopAccessInfo &getInfo(Loop &L, bool AllowPartial = false);
 
   LLVM_ABI void clear();
 

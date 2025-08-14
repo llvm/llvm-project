@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "MSP430.h"
-#include "CommonArgs.h"
 #include "Gnu.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Multilib.h"

@@ -35,6 +35,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/ThreadPool.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <atomic>
 #include <mutex>
@@ -104,7 +105,12 @@ static llvm::cl::opt<std::string> RepositoryCodeLinePrefix(
     llvm::cl::desc("Prefix of line code for repository."),
     llvm::cl::cat(ClangDocCategory));
 
-enum OutputFormatTy { md, yaml, html, mustache };
+static llvm::cl::opt<bool> FTimeTrace("ftime-trace", llvm::cl::desc(R"(
+Turn on time profiler. Generates clang-doc-tracing.json)"),
+                                      llvm::cl::init(false),
+                                      llvm::cl::cat(ClangDocCategory));
+
+enum OutputFormatTy { md, yaml, html, mustache, json };
 
 static llvm::cl::opt<OutputFormatTy> FormatEnum(
     "format", llvm::cl::desc("Format for outputted docs."),
@@ -115,7 +121,9 @@ static llvm::cl::opt<OutputFormatTy> FormatEnum(
                      clEnumValN(OutputFormatTy::html, "html",
                                 "Documentation in HTML format."),
                      clEnumValN(OutputFormatTy::mustache, "mustache",
-                                "Documentation in mustache HTML format")),
+                                "Documentation in mustache HTML format"),
+                     clEnumValN(OutputFormatTy::json, "json",
+                                "Documentation in JSON format")),
     llvm::cl::init(OutputFormatTy::yaml), llvm::cl::cat(ClangDocCategory));
 
 static llvm::ExitOnError ExitOnErr;
@@ -130,6 +138,8 @@ static std::string getFormatString() {
     return "html";
   case OutputFormatTy::mustache:
     return "mustache";
+  case OutputFormatTy::json:
+    return "json";
   }
   llvm_unreachable("Unknown OutputFormatTy");
 }
@@ -261,7 +271,8 @@ static llvm::Error handleMappingFailures(llvm::Error Err) {
 
 static llvm::Error createDirectories(llvm::StringRef OutDirectory) {
   if (std::error_code Err = llvm::sys::fs::create_directories(OutDirectory))
-    return llvm::createFileError(OutDirectory, Err);
+    return llvm::createFileError(OutDirectory, Err,
+                                 "failed to create directory.");
   return llvm::Error::success();
 }
 
@@ -286,115 +297,162 @@ Example usage for a project using a compile commands database:
   auto Executor = ExitOnErr(clang::tooling::createExecutorFromCommandLineArgs(
       argc, argv, ClangDocCategory, Overview));
 
-  // Fail early if an invalid format was provided.
-  std::string Format = getFormatString();
-  llvm::outs() << "Emiting docs in " << Format << " format.\n";
-  auto G = ExitOnErr(doc::findGeneratorByName(Format));
+  // turns on ftime trace profiling
+  if (FTimeTrace)
+    llvm::timeTraceProfilerInitialize(200, "clang-doc");
+  {
+    llvm::TimeTraceScope("main");
 
-  ArgumentsAdjuster ArgAdjuster;
-  if (!DoxygenOnly)
-    ArgAdjuster = combineAdjusters(
-        getInsertArgumentAdjuster("-fparse-all-comments",
-                                  tooling::ArgumentInsertPosition::END),
-        ArgAdjuster);
+    // Fail early if an invalid format was provided.
+    std::string Format = getFormatString();
+    llvm::outs() << "Emiting docs in " << Format << " format.\n";
+    auto G = ExitOnErr(doc::findGeneratorByName(Format));
 
-  clang::doc::ClangDocContext CDCtx = {
-      Executor->getExecutionContext(),
-      ProjectName,
-      PublicOnly,
-      OutDirectory,
-      SourceRoot,
-      RepositoryUrl,
-      RepositoryCodeLinePrefix,
-      BaseDirectory,
-      {UserStylesheets.begin(), UserStylesheets.end()}};
+    ArgumentsAdjuster ArgAdjuster;
+    if (!DoxygenOnly)
+      ArgAdjuster = combineAdjusters(
+          getInsertArgumentAdjuster("-fparse-all-comments",
+                                    tooling::ArgumentInsertPosition::END),
+          ArgAdjuster);
 
-  if (Format == "html") {
-    ExitOnErr(getHtmlAssetFiles(argv[0], CDCtx));
+    clang::doc::ClangDocContext CDCtx = {
+        Executor->getExecutionContext(),
+        ProjectName,
+        PublicOnly,
+        OutDirectory,
+        SourceRoot,
+        RepositoryUrl,
+        RepositoryCodeLinePrefix,
+        BaseDirectory,
+        {UserStylesheets.begin(), UserStylesheets.end()},
+        FTimeTrace};
+
+    if (Format == "html") {
+      ExitOnErr(getHtmlAssetFiles(argv[0], CDCtx));
+    } else if (Format == "mustache") {
+      ExitOnErr(getMustacheHtmlFiles(argv[0], CDCtx));
+    }
+
+    llvm::timeTraceProfilerBegin("Executor Launch", "total runtime");
+    // Mapping phase
+    llvm::outs() << "Mapping decls...\n";
+    ExitOnErr(handleMappingFailures(
+        Executor->execute(doc::newMapperActionFactory(CDCtx), ArgAdjuster)));
+    llvm::timeTraceProfilerEnd();
+
+    // Collect values into output by key.
+    // In ToolResults, the Key is the hashed USR and the value is the
+    // bitcode-encoded representation of the Info object.
+    llvm::timeTraceProfilerBegin("Collect Info", "total runtime");
+    llvm::outs() << "Collecting infos...\n";
+    llvm::StringMap<std::vector<StringRef>> USRToBitcode;
+    Executor->getToolResults()->forEachResult(
+        [&](StringRef Key, StringRef Value) {
+          USRToBitcode[Key].emplace_back(Value);
+        });
+    llvm::timeTraceProfilerEnd();
+
+    // Collects all Infos according to their unique USR value. This map is added
+    // to from the thread pool below and is protected by the USRToInfoMutex.
+    llvm::sys::Mutex USRToInfoMutex;
+    llvm::StringMap<std::unique_ptr<doc::Info>> USRToInfo;
+
+    // First reducing phase (reduce all decls into one info per decl).
+    llvm::outs() << "Reducing " << USRToBitcode.size() << " infos...\n";
+    std::atomic<bool> Error;
+    Error = false;
+    llvm::sys::Mutex IndexMutex;
+    // ExecutorConcurrency is a flag exposed by AllTUsExecution.h
+    llvm::DefaultThreadPool Pool(
+        llvm::hardware_concurrency(ExecutorConcurrency));
+    {
+      llvm::TimeTraceScope TS("Reduce");
+      for (auto &Group : USRToBitcode) {
+        Pool.async([&]() { // time trace decoding bitcode
+          if (FTimeTrace)
+            llvm::timeTraceProfilerInitialize(200, "clang-doc");
+
+          std::vector<std::unique_ptr<doc::Info>> Infos;
+          {
+            llvm::TimeTraceScope Red("decoding bitcode");
+            for (auto &Bitcode : Group.getValue()) {
+              llvm::BitstreamCursor Stream(Bitcode);
+              doc::ClangDocBitcodeReader Reader(Stream);
+              auto ReadInfos = Reader.readBitcode();
+              if (!ReadInfos) {
+                llvm::errs() << toString(ReadInfos.takeError()) << "\n";
+                Error = true;
+                return;
+              }
+              std::move(ReadInfos->begin(), ReadInfos->end(),
+                        std::back_inserter(Infos));
+            }
+          } // time trace decoding bitcode
+
+          std::unique_ptr<doc::Info> Reduced;
+
+          {
+            llvm::TimeTraceScope Merge("merging bitcode");
+            auto ExpReduced = doc::mergeInfos(Infos);
+
+            if (!ExpReduced) {
+              llvm::errs() << llvm::toString(ExpReduced.takeError());
+              return;
+            }
+            Reduced = std::move(*ExpReduced);
+          } // time trace merging bitcode
+
+          // Add a reference to this Info in the Index
+          {
+            llvm::TimeTraceScope Merge("addInfoToIndex");
+            std::lock_guard<llvm::sys::Mutex> Guard(IndexMutex);
+            clang::doc::Generator::addInfoToIndex(CDCtx.Idx, Reduced.get());
+          }
+          // Save in the result map (needs a lock due to threaded access).
+          {
+            llvm::TimeTraceScope Merge("USRToInfo");
+            std::lock_guard<llvm::sys::Mutex> Guard(USRToInfoMutex);
+            USRToInfo[Group.getKey()] = std::move(Reduced);
+          }
+
+          if (CDCtx.FTimeTrace)
+            llvm::timeTraceProfilerFinishThread();
+        });
+      }
+
+      Pool.wait();
+    } // time trace reduce
+
+    if (Error)
+      return 1;
+
+    {
+      llvm::TimeTraceScope Sort("Sort USRToInfo");
+      sortUsrToInfo(USRToInfo);
+    }
+
+    llvm::timeTraceProfilerBegin("Writing output", "total runtime");
+    // Ensure the root output directory exists.
+    ExitOnErr(createDirectories(OutDirectory));
+
+    // Run the generator.
+    llvm::outs() << "Generating docs...\n";
+
+    ExitOnErr(G->generateDocs(OutDirectory, std::move(USRToInfo), CDCtx));
+    llvm::outs() << "Generating assets for docs...\n";
+    ExitOnErr(G->createResources(CDCtx));
+    llvm::timeTraceProfilerEnd();
+  } // time trace main
+
+  if (FTimeTrace) {
+    std::error_code EC;
+    llvm::raw_fd_ostream OS("clang-doc-tracing.json", EC,
+                            llvm::sys::fs::OF_Text);
+    if (!EC) {
+      llvm::timeTraceProfilerWrite(OS);
+      llvm::timeTraceProfilerCleanup();
+    } else
+      return 1;
   }
-
-  if (Format == "mustache") {
-    ExitOnErr(getMustacheHtmlFiles(argv[0], CDCtx));
-  }
-
-  // Mapping phase
-  llvm::outs() << "Mapping decls...\n";
-  ExitOnErr(handleMappingFailures(
-      Executor->execute(doc::newMapperActionFactory(CDCtx), ArgAdjuster)));
-
-  // Collect values into output by key.
-  // In ToolResults, the Key is the hashed USR and the value is the
-  // bitcode-encoded representation of the Info object.
-  llvm::outs() << "Collecting infos...\n";
-  llvm::StringMap<std::vector<StringRef>> USRToBitcode;
-  Executor->getToolResults()->forEachResult(
-      [&](StringRef Key, StringRef Value) {
-        USRToBitcode[Key].emplace_back(Value);
-      });
-
-  // Collects all Infos according to their unique USR value. This map is added
-  // to from the thread pool below and is protected by the USRToInfoMutex.
-  llvm::sys::Mutex USRToInfoMutex;
-  llvm::StringMap<std::unique_ptr<doc::Info>> USRToInfo;
-
-  // First reducing phase (reduce all decls into one info per decl).
-  llvm::outs() << "Reducing " << USRToBitcode.size() << " infos...\n";
-  std::atomic<bool> Error;
-  Error = false;
-  llvm::sys::Mutex IndexMutex;
-  // ExecutorConcurrency is a flag exposed by AllTUsExecution.h
-  llvm::DefaultThreadPool Pool(llvm::hardware_concurrency(ExecutorConcurrency));
-  for (auto &Group : USRToBitcode) {
-    Pool.async([&]() {
-      std::vector<std::unique_ptr<doc::Info>> Infos;
-      for (auto &Bitcode : Group.getValue()) {
-        llvm::BitstreamCursor Stream(Bitcode);
-        doc::ClangDocBitcodeReader Reader(Stream);
-        auto ReadInfos = Reader.readBitcode();
-        if (!ReadInfos) {
-          llvm::errs() << toString(ReadInfos.takeError()) << "\n";
-          Error = true;
-          return;
-        }
-        std::move(ReadInfos->begin(), ReadInfos->end(),
-                  std::back_inserter(Infos));
-      }
-
-      auto Reduced = doc::mergeInfos(Infos);
-      if (!Reduced) {
-        llvm::errs() << llvm::toString(Reduced.takeError());
-        return;
-      }
-
-      // Add a reference to this Info in the Index
-      {
-        std::lock_guard<llvm::sys::Mutex> Guard(IndexMutex);
-        clang::doc::Generator::addInfoToIndex(CDCtx.Idx, Reduced.get().get());
-      }
-
-      // Save in the result map (needs a lock due to threaded access).
-      {
-        std::lock_guard<llvm::sys::Mutex> Guard(USRToInfoMutex);
-        USRToInfo[Group.getKey()] = std::move(Reduced.get());
-      }
-    });
-  }
-
-  Pool.wait();
-
-  if (Error)
-    return 1;
-
-  sortUsrToInfo(USRToInfo);
-
-  // Ensure the root output directory exists.
-  ExitOnErr(createDirectories(OutDirectory));
-
-  // Run the generator.
-  llvm::outs() << "Generating docs...\n";
-  ExitOnErr(G->generateDocs(OutDirectory, std::move(USRToInfo), CDCtx));
-  llvm::outs() << "Generating assets for docs...\n";
-  ExitOnErr(G->createResources(CDCtx));
-
   return 0;
 }

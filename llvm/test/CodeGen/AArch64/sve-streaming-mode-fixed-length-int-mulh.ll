@@ -973,11 +973,11 @@ define <4 x i32> @smulh_v4i32(<4 x i32> %op1, <4 x i32> %op2) {
 ; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #48]
 ; NONEON-NOSVE-NEXT:    ldpsw x13, x12, [sp, #48]
 ; NONEON-NOSVE-NEXT:    smull x11, w11, w12
-; NONEON-NOSVE-NEXT:    ldpsw x12, x14, [sp, #56]
+; NONEON-NOSVE-NEXT:    ldpsw x14, x12, [sp, #56]
 ; NONEON-NOSVE-NEXT:    smull x10, w10, w13
 ; NONEON-NOSVE-NEXT:    lsr x11, x11, #32
-; NONEON-NOSVE-NEXT:    smull x9, w9, w14
-; NONEON-NOSVE-NEXT:    smull x8, w8, w12
+; NONEON-NOSVE-NEXT:    smull x9, w9, w12
+; NONEON-NOSVE-NEXT:    smull x8, w8, w14
 ; NONEON-NOSVE-NEXT:    lsr x10, x10, #32
 ; NONEON-NOSVE-NEXT:    lsr x9, x9, #32
 ; NONEON-NOSVE-NEXT:    stp w10, w11, [sp, #72]
@@ -1038,12 +1038,12 @@ define void @smulh_v8i32(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #112]
 ; NONEON-NOSVE-NEXT:    ldpsw x17, x16, [sp, #112]
 ; NONEON-NOSVE-NEXT:    smull x15, w15, w16
-; NONEON-NOSVE-NEXT:    ldpsw x16, x18, [sp, #120]
+; NONEON-NOSVE-NEXT:    ldpsw x18, x16, [sp, #120]
 ; NONEON-NOSVE-NEXT:    smull x14, w14, w17
 ; NONEON-NOSVE-NEXT:    ldpsw x17, x1, [sp, #80]
-; NONEON-NOSVE-NEXT:    smull x13, w13, w18
+; NONEON-NOSVE-NEXT:    smull x13, w13, w16
 ; NONEON-NOSVE-NEXT:    lsr x15, x15, #32
-; NONEON-NOSVE-NEXT:    smull x12, w12, w16
+; NONEON-NOSVE-NEXT:    smull x12, w12, w18
 ; NONEON-NOSVE-NEXT:    lsr x14, x14, #32
 ; NONEON-NOSVE-NEXT:    ldpsw x16, x18, [sp, #88]
 ; NONEON-NOSVE-NEXT:    smull x11, w11, w1
@@ -2172,11 +2172,11 @@ define <4 x i32> @umulh_v4i32(<4 x i32> %op1, <4 x i32> %op2) {
 ; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #48]
 ; NONEON-NOSVE-NEXT:    ldp w13, w12, [sp, #48]
 ; NONEON-NOSVE-NEXT:    umull x11, w11, w12
-; NONEON-NOSVE-NEXT:    ldp w12, w14, [sp, #56]
+; NONEON-NOSVE-NEXT:    ldp w14, w12, [sp, #56]
 ; NONEON-NOSVE-NEXT:    umull x10, w10, w13
 ; NONEON-NOSVE-NEXT:    lsr x11, x11, #32
-; NONEON-NOSVE-NEXT:    umull x9, w9, w14
-; NONEON-NOSVE-NEXT:    umull x8, w8, w12
+; NONEON-NOSVE-NEXT:    umull x9, w9, w12
+; NONEON-NOSVE-NEXT:    umull x8, w8, w14
 ; NONEON-NOSVE-NEXT:    lsr x10, x10, #32
 ; NONEON-NOSVE-NEXT:    lsr x9, x9, #32
 ; NONEON-NOSVE-NEXT:    stp w10, w11, [sp, #72]
@@ -2237,12 +2237,12 @@ define void @umulh_v8i32(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #112]
 ; NONEON-NOSVE-NEXT:    ldp w17, w16, [sp, #112]
 ; NONEON-NOSVE-NEXT:    umull x15, w15, w16
-; NONEON-NOSVE-NEXT:    ldp w16, w18, [sp, #120]
+; NONEON-NOSVE-NEXT:    ldp w18, w16, [sp, #120]
 ; NONEON-NOSVE-NEXT:    umull x14, w14, w17
 ; NONEON-NOSVE-NEXT:    ldp w17, w1, [sp, #80]
-; NONEON-NOSVE-NEXT:    umull x13, w13, w18
+; NONEON-NOSVE-NEXT:    umull x13, w13, w16
 ; NONEON-NOSVE-NEXT:    lsr x15, x15, #32
-; NONEON-NOSVE-NEXT:    umull x12, w12, w16
+; NONEON-NOSVE-NEXT:    umull x12, w12, w18
 ; NONEON-NOSVE-NEXT:    lsr x14, x14, #32
 ; NONEON-NOSVE-NEXT:    ldp w16, w18, [sp, #88]
 ; NONEON-NOSVE-NEXT:    umull x11, w11, w1

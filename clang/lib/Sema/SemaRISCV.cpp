@@ -46,6 +46,9 @@ struct RVVIntrinsicDef {
   /// Mapping to which clang built-in function, e.g. __builtin_rvv_vadd.
   std::string BuiltinName;
 
+  /// Mapping to RequiredFeatures in riscv_vector.td
+  StringRef RequiredExtensions;
+
   /// Function signature, first element is return type.
   RVVTypes Signature;
 };
@@ -177,7 +180,6 @@ namespace {
 class RISCVIntrinsicManagerImpl : public sema::RISCVIntrinsicManager {
 private:
   Sema &S;
-  ASTContext &Context;
   RVVTypeCache TypeCache;
   bool ConstructedRISCVVBuiltins;
   bool ConstructedRISCVSiFiveVectorBuiltins;
@@ -204,7 +206,7 @@ private:
                               IntrinsicKind K);
 
 public:
-  RISCVIntrinsicManagerImpl(clang::Sema &S) : S(S), Context(S.Context) {
+  RISCVIntrinsicManagerImpl(clang::Sema &S) : S(S) {
     ConstructedRISCVVBuiltins = false;
     ConstructedRISCVSiFiveVectorBuiltins = false;
     ConstructedRISCVAndesVectorBuiltins = false;
@@ -222,40 +224,9 @@ public:
 
 void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
     ArrayRef<RVVIntrinsicRecord> Recs, IntrinsicKind K) {
-  const TargetInfo &TI = Context.getTargetInfo();
-  static const std::pair<const char *, unsigned> FeatureCheckList[] = {
-      {"64bit", RVV_REQ_RV64},
-      {"xandesvdot", RVV_REQ_Xandesvdot},
-      {"xandesvpackfph", RVV_REQ_Xandesvpackfph},
-      {"xsfvcp", RVV_REQ_Xsfvcp},
-      {"xsfvfnrclipxfqf", RVV_REQ_Xsfvfnrclipxfqf},
-      {"xsfvfwmaccqqq", RVV_REQ_Xsfvfwmaccqqq},
-      {"xsfvqmaccdod", RVV_REQ_Xsfvqmaccdod},
-      {"xsfvqmaccqoq", RVV_REQ_Xsfvqmaccqoq},
-      {"zvbb", RVV_REQ_Zvbb},
-      {"zvbc", RVV_REQ_Zvbc},
-      {"zvkb", RVV_REQ_Zvkb},
-      {"zvkg", RVV_REQ_Zvkg},
-      {"zvkned", RVV_REQ_Zvkned},
-      {"zvknha", RVV_REQ_Zvknha},
-      {"zvknhb", RVV_REQ_Zvknhb},
-      {"zvksed", RVV_REQ_Zvksed},
-      {"zvksh", RVV_REQ_Zvksh},
-      {"zvfbfwma", RVV_REQ_Zvfbfwma},
-      {"zvfbfmin", RVV_REQ_Zvfbfmin},
-      {"zvfh", RVV_REQ_Zvfh},
-      {"experimental", RVV_REQ_Experimental}};
-
   // Construction of RVVIntrinsicRecords need to sync with createRVVIntrinsics
   // in RISCVVEmitter.cpp.
   for (auto &Record : Recs) {
-    // Check requirements.
-    if (llvm::any_of(FeatureCheckList, [&](const auto &Item) {
-          return Record.RequiredExtensions[Item.second] &&
-                 !TI.hasFeature(Item.first);
-        }))
-      continue;
-
     // Create Intrinsics for each type and LMUL.
     BasicType BaseType = BasicType::Unknown;
     ArrayRef<PrototypeDescriptor> BasicProtoSeq =
@@ -414,7 +385,7 @@ void RISCVIntrinsicManagerImpl::InitRVVIntrinsic(
   uint32_t Index = IntrinsicList.size();
   assert(IntrinsicList.size() == (size_t)Index &&
          "Intrinsics indices overflow.");
-  IntrinsicList.push_back({BuiltinName, Signature});
+  IntrinsicList.push_back({BuiltinName, Record.RequiredExtensions, Signature});
 
   // Creating mapping to Intrinsics.
   Intrinsics.insert({Name, Index});
@@ -446,7 +417,7 @@ void RISCVIntrinsicManagerImpl::CreateRVVIntrinsicDecl(LookupResult &LR,
     ArgTypes.push_back(RVVType2Qual(Context, Sigs[i]));
 
   FunctionProtoType::ExtProtoInfo PI(
-      Context.getDefaultCallingConvention(false, false, true));
+      Context.getTargetInfo().getDefaultCallingConv());
 
   PI.Variadic = false;
 
@@ -477,6 +448,9 @@ void RISCVIntrinsicManagerImpl::CreateRVVIntrinsicDecl(LookupResult &LR,
   if (IsOverload)
     RVVIntrinsicDecl->addAttr(OverloadableAttr::CreateImplicit(Context));
 
+  if (IDef.RequiredExtensions != "")
+    RVVIntrinsicDecl->addAttr(
+        TargetAttr::CreateImplicit(Context, IDef.RequiredExtensions));
   // Setup alias to __builtin_rvv_*
   IdentifierInfo &IntrinsicII =
       PP.getIdentifierTable().get("__builtin_rvv_" + IDef.BuiltinName);
@@ -584,6 +558,17 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
   const FunctionDecl *FD = SemaRef.getCurFunctionDecl();
   llvm::StringMap<bool> FunctionFeatureMap;
   Context.getFunctionFeatureMap(FunctionFeatureMap, FD);
+
+  if (const auto *A = TheCall->getCalleeDecl()->getAttr<TargetAttr>()) {
+    StringRef FeaturesStr = A->getFeaturesStr();
+    llvm::SmallVector<StringRef> RequiredFeatures;
+    FeaturesStr.split(RequiredFeatures, ',');
+    for (auto RF : RequiredFeatures)
+      if (!TI.hasFeature(RF) && !FunctionFeatureMap.lookup(RF))
+        return Diag(TheCall->getBeginLoc(),
+                    diag::err_riscv_builtin_requires_extension)
+               << /* IsExtension */ true << TheCall->getSourceRange() << RF;
+  }
 
   // vmulh.vv, vmulh.vx, vmulhu.vv, vmulhu.vx, vmulhsu.vv, vmulhsu.vx,
   // vsmul.vv, vsmul.vx are not included for EEW=64 in Zve64*.
@@ -782,6 +767,13 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
       return Diag(TheCall->getBeginLoc(),
                   diag::err_riscv_builtin_requires_extension)
              << /* IsExtension */ true << TheCall->getSourceRange() << "zvknhb";
+    // If ElemSize is 32, check at least zvknha or zvknhb is enabled.
+    if (!TI.hasFeature("zvknha") && !FunctionFeatureMap.lookup("zvknha") &&
+        !TI.hasFeature("zvknhb") && !FunctionFeatureMap.lookup("zvknhb"))
+      return Diag(TheCall->getBeginLoc(),
+                  diag::err_riscv_builtin_requires_extension)
+             << /* IsExtension */ true << TheCall->getSourceRange()
+             << "zvknha or zvknhb";
 
     return CheckInvalidVLENandLMUL(TI, FunctionFeatureMap, TheCall, SemaRef,
                                    Arg0Type, ElemSize * 4) ||
@@ -1443,11 +1435,24 @@ void SemaRISCV::checkRVVTypeSupport(QualType Ty, SourceLocation Loc, Decl *D,
            !FeatureMap.lookup("zve64x"))
     Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zve64x";
   else if (Info.ElementType->isFloat16Type() && !FeatureMap.lookup("zvfh") &&
-           !FeatureMap.lookup("zvfhmin"))
-    Diag(Loc, diag::err_riscv_type_requires_extension, D)
-        << Ty << "zvfh or zvfhmin";
-  else if (Info.ElementType->isBFloat16Type() && !FeatureMap.lookup("zvfbfmin"))
-    Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zvfbfmin";
+           !FeatureMap.lookup("zvfhmin") &&
+           !FeatureMap.lookup("xandesvpackfph"))
+    if (DeclareAndesVectorBuiltins) {
+      Diag(Loc, diag::err_riscv_type_requires_extension, D)
+          << Ty << "zvfh, zvfhmin or xandesvpackfph";
+    } else {
+      Diag(Loc, diag::err_riscv_type_requires_extension, D)
+          << Ty << "zvfh or zvfhmin";
+    }
+  else if (Info.ElementType->isBFloat16Type() &&
+           !FeatureMap.lookup("zvfbfmin") &&
+           !FeatureMap.lookup("xandesvbfhcvt"))
+    if (DeclareAndesVectorBuiltins) {
+      Diag(Loc, diag::err_riscv_type_requires_extension, D)
+          << Ty << "zvfbfmin or xandesvbfhcvt";
+    } else {
+      Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zvfbfmin";
+    }
   else if (Info.ElementType->isSpecificBuiltinType(BuiltinType::Float) &&
            !FeatureMap.lookup("zve32f"))
     Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zve32f";
@@ -1547,9 +1552,11 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
       HasSiFiveCLICType = true;
       break;
     case RISCVInterruptAttr::supervisor:
+    case RISCVInterruptAttr::rnmi:
     case RISCVInterruptAttr::qcinest:
     case RISCVInterruptAttr::qcinonest:
-      // "supervisor" and "qci-(no)nest" cannot be combined with any other types
+      // "supervisor", "rnmi" and "qci-(no)nest" cannot be combined with any
+      // other types
       HasUnaryType = true;
       break;
     }
@@ -1603,6 +1610,14 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
         return;
       }
     } break;
+    case RISCVInterruptAttr::rnmi: {
+      if (!HasFeature("smrnmi")) {
+        Diag(AL.getLoc(),
+             diag::err_riscv_attribute_interrupt_requires_extension)
+            << RISCVInterruptAttr::ConvertInterruptTypeToStr(Type) << "Smrnmi";
+        return;
+      }
+    } break;
     default:
       break;
     }
@@ -1628,6 +1643,116 @@ bool SemaRISCV::isValidFMVExtension(StringRef Ext) {
     return false;
 
   return -1 != RISCVISAInfo::getRISCVFeaturesBitsInfo(Ext).second;
+}
+
+bool SemaRISCV::checkTargetVersionAttr(const StringRef Param,
+                                       const SourceLocation Loc) {
+  using namespace DiagAttrParams;
+
+  llvm::SmallVector<StringRef, 8> AttrStrs;
+  Param.split(AttrStrs, ';');
+
+  bool HasArch = false;
+  bool HasPriority = false;
+  bool HasDefault = false;
+  bool DuplicateAttr = false;
+  for (StringRef AttrStr : AttrStrs) {
+    AttrStr = AttrStr.trim();
+    // Only support arch=+ext,... syntax.
+    if (AttrStr.starts_with("arch=+")) {
+      DuplicateAttr = HasArch;
+      HasArch = true;
+      ParsedTargetAttr TargetAttr =
+          getASTContext().getTargetInfo().parseTargetAttr(AttrStr);
+
+      if (TargetAttr.Features.empty() ||
+          llvm::any_of(TargetAttr.Features, [&](const StringRef Ext) {
+            return !isValidFMVExtension(Ext);
+          }))
+        return Diag(Loc, diag::warn_unsupported_target_attribute)
+               << Unsupported << None << AttrStr << TargetVersion;
+    } else if (AttrStr == "default") {
+      DuplicateAttr = HasDefault;
+      HasDefault = true;
+    } else if (AttrStr.consume_front("priority=")) {
+      DuplicateAttr = HasPriority;
+      HasPriority = true;
+      unsigned Digit;
+      if (AttrStr.getAsInteger(0, Digit))
+        return Diag(Loc, diag::warn_unsupported_target_attribute)
+               << Unsupported << None << AttrStr << TargetVersion;
+    } else {
+      return Diag(Loc, diag::warn_unsupported_target_attribute)
+             << Unsupported << None << AttrStr << TargetVersion;
+    }
+  }
+
+  if (((HasPriority || HasArch) && HasDefault) || DuplicateAttr ||
+      (HasPriority && !HasArch))
+    return Diag(Loc, diag::warn_unsupported_target_attribute)
+           << Unsupported << None << Param << TargetVersion;
+
+  return false;
+}
+
+bool SemaRISCV::checkTargetClonesAttr(
+    SmallVectorImpl<StringRef> &Params, SmallVectorImpl<SourceLocation> &Locs,
+    SmallVectorImpl<SmallString<64>> &NewParams) {
+  using namespace DiagAttrParams;
+
+  assert(Params.size() == Locs.size() &&
+         "Mismatch between number of string parameters and locations");
+
+  bool HasDefault = false;
+  for (unsigned I = 0, E = Params.size(); I < E; ++I) {
+    const StringRef Param = Params[I].trim();
+    const SourceLocation &Loc = Locs[I];
+
+    llvm::SmallVector<StringRef, 8> AttrStrs;
+    Param.split(AttrStrs, ';');
+
+    bool IsPriority = false;
+    bool IsDefault = false;
+    for (StringRef AttrStr : AttrStrs) {
+      AttrStr = AttrStr.trim();
+      // Only support arch=+ext,... syntax.
+      if (AttrStr.starts_with("arch=+")) {
+        ParsedTargetAttr TargetAttr =
+            getASTContext().getTargetInfo().parseTargetAttr(AttrStr);
+
+        if (TargetAttr.Features.empty() ||
+            llvm::any_of(TargetAttr.Features, [&](const StringRef Ext) {
+              return !isValidFMVExtension(Ext);
+            }))
+          return Diag(Loc, diag::warn_unsupported_target_attribute)
+                 << Unsupported << None << Param << TargetClones;
+      } else if (AttrStr == "default") {
+        IsDefault = true;
+        HasDefault = true;
+      } else if (AttrStr.consume_front("priority=")) {
+        IsPriority = true;
+        unsigned Digit;
+        if (AttrStr.getAsInteger(0, Digit))
+          return Diag(Loc, diag::warn_unsupported_target_attribute)
+                 << Unsupported << None << Param << TargetClones;
+      } else {
+        return Diag(Loc, diag::warn_unsupported_target_attribute)
+               << Unsupported << None << Param << TargetClones;
+      }
+    }
+
+    if (IsPriority && IsDefault)
+      return Diag(Loc, diag::warn_unsupported_target_attribute)
+             << Unsupported << None << Param << TargetClones;
+
+    if (llvm::is_contained(NewParams, Param))
+      Diag(Loc, diag::warn_target_clone_duplicate_options);
+    NewParams.push_back(Param);
+  }
+  if (!HasDefault)
+    return Diag(Locs[0], diag::err_target_clone_must_have_default);
+
+  return false;
 }
 
 SemaRISCV::SemaRISCV(Sema &S) : SemaBase(S) {}

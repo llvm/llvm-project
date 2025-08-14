@@ -449,13 +449,9 @@ define <16 x i32> @v16i32(<16 x i32> %x, <16 x i32> %y) nounwind {
 define void @v1i64(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-SD-LABEL: v1i64:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ldr x8, [x1]
-; CHECK-SD-NEXT:    ldr x9, [x0]
-; CHECK-SD-NEXT:    subs x8, x9, x8
-; CHECK-SD-NEXT:    asr x9, x8, #63
-; CHECK-SD-NEXT:    eor x9, x9, #0x8000000000000000
-; CHECK-SD-NEXT:    csel x8, x9, x8, vs
-; CHECK-SD-NEXT:    fmov d0, x8
+; CHECK-SD-NEXT:    ldr d0, [x0]
+; CHECK-SD-NEXT:    ldr d1, [x1]
+; CHECK-SD-NEXT:    sqsub d0, d0, d1
 ; CHECK-SD-NEXT:    str d0, [x2]
 ; CHECK-SD-NEXT:    ret
 ;

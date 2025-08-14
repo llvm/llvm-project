@@ -4,10 +4,8 @@
 ; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 define ptx_kernel void @t1(ptr %a) {
-; PTX32:      mov.b16 %rs{{[0-9]+}}, 0;
-; PTX32-NEXT: st.global.b8 [%r{{[0-9]+}}], %rs{{[0-9]+}};
-; PTX64:      mov.b16 %rs{{[0-9]+}}, 0;
-; PTX64-NEXT: st.global.b8 [%rd{{[0-9]+}}], %rs{{[0-9]+}};
+; PTX32:      st.global.b8 [%r{{[0-9]+}}], 0;
+; PTX64:      st.global.b8 [%rd{{[0-9]+}}], 0;
   store i1 false, ptr %a
   ret void
 }

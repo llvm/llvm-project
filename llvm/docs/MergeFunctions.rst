@@ -7,7 +7,7 @@ MergeFunctions pass, how it works
 
 Introduction
 ============
-Sometimes code contains equal functions, or functions that does exactly the same
+Sometimes code contains equal functions, or functions that do exactly the same
 thing even though they are non-equal on the IR level (e.g.: multiplication on 2
 and 'shl 1'). It could happen due to several reasons: mainly, the usage of
 templates and automatic code generators. Though, sometimes the user itself could
@@ -16,7 +16,7 @@ write the same thing twice :-)
 The main purpose of this pass is to recognize such functions and merge them.
 
 This document is the extension to pass comments and describes the pass logic. It
-describes the algorithm that is used in order to compare functions and
+describes the algorithm used to compare functions and
 explains how we could combine equal functions correctly to keep the module
 valid.
 
@@ -58,7 +58,7 @@ It's especially important to understand chapter 3 of tutorial:
 
 :doc:`tutorial/LangImpl03`
 
-The reader should also know how passes work in LLVM. They could use this
+The reader should also know how passes work in LLVM. They can use this
 article as a reference and start point here:
 
 :doc:`WritingAnLLVMPass`
@@ -68,7 +68,7 @@ debugging and bug-fixing.
 
 Narrative structure
 -------------------
-The article consists of three parts. The first part explains pass functionality
+This article consists of three parts. The first part explains pass functionality
 on the top-level. The second part describes the comparison procedure itself.
 The third part describes the merging process.
 
@@ -130,7 +130,7 @@ access lookup? The answer is: "yes".
 
 Random-access
 """""""""""""
-How it could this be done? Just convert each function to a number, and gather
+How can this be done? Just convert each function to a number, and gather
 all of them in a special hash-table. Functions with equal hashes are equal.
 Good hashing means, that every function part must be taken into account. That
 means we have to convert every function part into some number, and then add it
@@ -190,17 +190,17 @@ The algorithm is pretty simple:
 
 1. Put all module's functions into the *worklist*.
 
-2. Scan *worklist*'s functions twice: first enumerate only strong functions and
+2. Scan *worklist*'s functions twice: first, enumerate only strong functions and
 then only weak ones:
 
    2.1. Loop body: take a function from *worklist*  (call it *FCur*) and try to
    insert it into *FnTree*: check whether *FCur* is equal to one of functions
    in *FnTree*. If there *is* an equal function in *FnTree*
-   (call it *FExists*): merge function *FCur* with *FExists*. Otherwise add
+   (call it *FExists*): merge function *FCur* with *FExists*. Otherwise, add
    the function from the *worklist* to *FnTree*.
 
 3. Once the *worklist* scanning and merging operations are complete, check the
-*Deferred* list. If it is not empty: refill the *worklist* contents with
+*Deferred* list. If it is not empty, refill the *worklist* contents with
 *Deferred* list and redo step 2, if the *Deferred* list is empty, then exit
 from method.
 
@@ -249,14 +249,14 @@ Below, we will use the following operations:
 
 The rest of the article is based on *MergeFunctions.cpp* source code
 (found in *<llvm_dir>/lib/Transforms/IPO/MergeFunctions.cpp*). We would like
-to ask reader to keep this file open, so we could use it as a reference
+to ask the reader to keep this file open, so we could use it as a reference
 for further explanations.
 
 Now, we're ready to proceed to the next chapter and see how it works.
 
 Functions comparison
 ====================
-At first, let's define how exactly we compare complex objects.
+First, let's define exactly how we compare complex objects.
 
 Complex object comparison (function, basic-block, etc) is mostly based on its
 sub-object comparison results. It is similar to the next "tree" objects
@@ -307,7 +307,7 @@ to those we met later in function body (value we met first would be *less*).
 This is done by “``FunctionComparator::cmpValues(const Value*, const Value*)``”
 method (will be described a bit later).
 
-4. Function body comparison. As it written in method comments:
+4. Function body comparison. As written in method comments:
 
 “We do a CFG-ordered walk since the actual ordering of the blocks in the linked
 list is immaterial. Our walk starts at the entry block for both functions, then
@@ -477,7 +477,7 @@ Of course, we can combine insertion and comparison:
     = sn_mapR.insert(std::make_pair(Right, sn_mapR.size()));
   return cmpNumbers(LeftRes.first->second, RightRes.first->second);
 
-Let's look, how whole method could be implemented.
+Let's look at how the whole method could be implemented.
 
 1. We have to start with the bad news. Consider function self and
 cross-referencing cases:
@@ -519,7 +519,7 @@ the result of numbers comparison:
    if (LeftRes.first->second < RightRes.first->second) return -1;
    return 1;
 
-Now when *cmpValues* returns 0, we can proceed the comparison procedure.
+Now, when *cmpValues* returns 0, we can proceed with the comparison procedure.
 Otherwise, if we get (-1 or 1), we need to pass this result to the top level,
 and finish comparison procedure.
 
@@ -549,7 +549,7 @@ losslessly bitcasted to each other. The further explanation is modification of
    2.1.3.1. If types are vectors, compare their bitwidth using the
    *cmpNumbers*. If result is not 0, return it.
 
-   2.1.3.2. Different types, but not a vectors:
+   2.1.3.2. Different types, but not vectors:
 
    * if both of them are pointers, good for us, we can proceed to step 3.
    * if one of types is pointer, return result of *isPointer* flags
@@ -654,7 +654,7 @@ O(N*N) to O(log(N)).
 
 Merging process, mergeTwoFunctions
 ==================================
-Once *MergeFunctions* detected that current function (*G*) is equal to one that
+Once *MergeFunctions* detects that current function (*G*) is equal to one that
 were analyzed before (function *F*) it calls ``mergeTwoFunctions(Function*,
 Function*)``.
 
@@ -664,7 +664,7 @@ Operation affects ``FnTree`` contents with next way: *F* will stay in
 functions that calls *G* would be put into ``Deferred`` set and removed from
 ``FnTree``, and analyzed again.
 
-The approach is next:
+The approach is as follows:
 
 1. Most wished case: when we can use alias and both of *F* and *G* are weak. We
 make both of them with aliases to the third strong function *H*. Actually *H*
@@ -691,12 +691,12 @@ ok: we can use alias to *F* instead of *G* or change call instructions itself.
 
 HasGlobalAliases, removeUsers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-First consider the case when we have global aliases of one function name to
+First, consider the case when we have global aliases of one function name to
 another. Our purpose is  make both of them with aliases to the third strong
 function. Though if we keep *F* alive and without major changes we can leave it
 in ``FnTree``. Try to combine these two goals.
 
-Do stub replacement of *F* itself with an alias to *F*.
+Do a stub replacement of *F* itself with an alias to *F*.
 
 1. Create stub function *H*, with the same name and attributes like function
 *F*. It takes maximum alignment of *F* and *G*.
@@ -725,7 +725,7 @@ also have alias to *F*.
 
 No global aliases, replaceDirectCallers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-If global aliases are not supported. We call ``replaceDirectCallers``. Just
+If global aliases are not supported, we call ``replaceDirectCallers``. Just
 go through all calls of *G* and replace it with calls of *F*. If you look into
 the method you will see that it scans all uses of *G* too, and if use is callee
 (if user is call instruction and *G* is used as what to be called), we replace

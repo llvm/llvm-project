@@ -45,13 +45,7 @@ define <1 x i64> @sqsub1d(ptr %A, ptr %B) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    fmov x8, d1
-; CHECK-NEXT:    fmov x9, d0
-; CHECK-NEXT:    subs x8, x9, x8
-; CHECK-NEXT:    asr x9, x8, #63
-; CHECK-NEXT:    eor x9, x9, #0x8000000000000000
-; CHECK-NEXT:    csel x8, x9, x8, vs
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    sqsub d0, d0, d1
 ; CHECK-NEXT:    ret
   %tmp1 = load <1 x i64>, ptr %A
   %tmp2 = load <1 x i64>, ptr %B
@@ -104,11 +98,7 @@ define <1 x i64> @uqsub1d(ptr %A, ptr %B) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    fmov x8, d1
-; CHECK-NEXT:    fmov x9, d0
-; CHECK-NEXT:    subs x8, x9, x8
-; CHECK-NEXT:    csel x8, xzr, x8, lo
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    uqsub d0, d0, d1
 ; CHECK-NEXT:    ret
   %tmp1 = load <1 x i64>, ptr %A
   %tmp2 = load <1 x i64>, ptr %B

@@ -7,6 +7,7 @@
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/SpeculateAnalyses.h"
 #include "llvm/ExecutionEngine/Orc/Speculation.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/TargetExecutionUtils.h"
@@ -125,7 +126,8 @@ private:
     ExitOnErr(CXXRuntimeoverrides.enable(MainJD, Mangle));
   }
 
-  static std::unique_ptr<SectionMemoryManager> createMemMgr() {
+  static std::unique_ptr<SectionMemoryManager>
+  createMemMgr(const MemoryBuffer &) {
     return std::make_unique<SectionMemoryManager>();
   }
 

@@ -36,25 +36,25 @@ define i64 @load_unaligned(ptr %p) {
 ; SLOW-LABEL: load_unaligned:
 ; SLOW:       # %bb.0:
 ; SLOW-NEXT:    lbu a1, 1(a0)
-; SLOW-NEXT:    lbu a2, 0(a0)
-; SLOW-NEXT:    lbu a3, 2(a0)
-; SLOW-NEXT:    lbu a4, 3(a0)
+; SLOW-NEXT:    lbu a2, 2(a0)
+; SLOW-NEXT:    lbu a3, 3(a0)
+; SLOW-NEXT:    lbu a4, 0(a0)
 ; SLOW-NEXT:    slli a1, a1, 8
-; SLOW-NEXT:    or a1, a1, a2
-; SLOW-NEXT:    lbu a2, 4(a0)
-; SLOW-NEXT:    lbu a5, 5(a0)
-; SLOW-NEXT:    slli a3, a3, 16
-; SLOW-NEXT:    slli a4, a4, 24
-; SLOW-NEXT:    or a3, a4, a3
-; SLOW-NEXT:    lbu a4, 6(a0)
+; SLOW-NEXT:    slli a2, a2, 16
+; SLOW-NEXT:    slli a3, a3, 24
+; SLOW-NEXT:    or a1, a1, a4
+; SLOW-NEXT:    or a2, a3, a2
+; SLOW-NEXT:    lbu a3, 5(a0)
+; SLOW-NEXT:    lbu a4, 4(a0)
+; SLOW-NEXT:    lbu a5, 6(a0)
 ; SLOW-NEXT:    lbu a0, 7(a0)
-; SLOW-NEXT:    slli a5, a5, 8
-; SLOW-NEXT:    or a2, a5, a2
-; SLOW-NEXT:    slli a4, a4, 16
+; SLOW-NEXT:    slli a3, a3, 8
+; SLOW-NEXT:    or a3, a3, a4
+; SLOW-NEXT:    slli a5, a5, 16
 ; SLOW-NEXT:    slli a0, a0, 24
-; SLOW-NEXT:    or a4, a0, a4
-; SLOW-NEXT:    or a0, a3, a1
-; SLOW-NEXT:    or a1, a4, a2
+; SLOW-NEXT:    or a5, a0, a5
+; SLOW-NEXT:    or a0, a2, a1
+; SLOW-NEXT:    or a1, a5, a3
 ; SLOW-NEXT:    ret
 ;
 ; FAST-LABEL: load_unaligned:
@@ -115,5 +115,24 @@ define void @store_g() nounwind {
 ; CHECK-NEXT:    ret
 entyr:
   store i64 0, ptr @g
+  ret void
+}
+
+define void @large_offset(ptr nocapture %p, i64 %d) nounwind {
+; CHECK-LABEL: large_offset:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lui a1, 4
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    ld a2, -384(a0)
+; CHECK-NEXT:    addi a2, a2, 1
+; CHECK-NEXT:    seqz a1, a2
+; CHECK-NEXT:    add a3, a3, a1
+; CHECK-NEXT:    sd a2, -384(a0)
+; CHECK-NEXT:    ret
+entry:
+  %add.ptr = getelementptr inbounds i64, ptr %p, i64 2000
+  %a = load i64, ptr %add.ptr, align 8
+  %b = add i64 %a, 1
+  store i64 %b, ptr %add.ptr, align 8
   ret void
 }

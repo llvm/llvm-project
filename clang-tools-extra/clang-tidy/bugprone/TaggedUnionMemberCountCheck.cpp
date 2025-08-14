@@ -105,11 +105,15 @@ void TaggedUnionMemberCountCheck::storeOptions(
 
 void TaggedUnionMemberCountCheck::registerMatchers(MatchFinder *Finder) {
 
-  auto UnionField = fieldDecl(hasType(qualType(
-      hasCanonicalType(recordType(hasDeclaration(recordDecl(isUnion())))))));
+  auto NotFromSystemHeaderOrStdNamespace =
+      unless(anyOf(isExpansionInSystemHeader(), isInStdNamespace()));
 
-  auto EnumField = fieldDecl(hasType(
-      qualType(hasCanonicalType(enumType(hasDeclaration(enumDecl()))))));
+  auto UnionField =
+      fieldDecl(hasType(qualType(hasCanonicalType(recordType(hasDeclaration(
+          recordDecl(isUnion(), NotFromSystemHeaderOrStdNamespace)))))));
+
+  auto EnumField = fieldDecl(hasType(qualType(hasCanonicalType(
+      enumType(hasDeclaration(enumDecl(NotFromSystemHeaderOrStdNamespace)))))));
 
   auto HasOneUnionField = fieldCountOfKindIsOne(UnionField, UnionMatchBindName);
   auto HasOneEnumField = fieldCountOfKindIsOne(EnumField, TagMatchBindName);
@@ -144,7 +148,8 @@ TaggedUnionMemberCountCheck::getNumberOfEnumValues(const EnumDecl *ED) {
 
   if (EnableCountingEnumHeuristic && LastEnumConstant &&
       isCountingEnumLikeName(LastEnumConstant->getName()) &&
-      (LastEnumConstant->getInitVal() == (EnumValues.size() - 1))) {
+      llvm::APSInt::isSameValue(LastEnumConstant->getInitVal(),
+                                llvm::APSInt::get(EnumValues.size() - 1))) {
     return {EnumValues.size() - 1, LastEnumConstant};
   }
 

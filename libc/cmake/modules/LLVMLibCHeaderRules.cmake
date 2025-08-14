@@ -97,8 +97,13 @@ function(add_gen_header target_name)
   set(out_file ${LIBC_INCLUDE_DIR}/${relative_path})
   set(dep_file "${out_file}.d")
   set(yaml_file ${CMAKE_SOURCE_DIR}/${ADD_GEN_HDR_YAML_FILE})
+  
+  if(LLVM_LIBC_ALL_HEADERS)
+    set(entry_points "")
+  else()
+    set(entry_points "${TARGET_ENTRYPOINT_NAME_LIST}")
+  endif()
 
-  set(entry_points "${TARGET_ENTRYPOINT_NAME_LIST}")
   list(TRANSFORM entry_points PREPEND "--entry-point=")
 
   add_custom_command(

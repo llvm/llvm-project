@@ -215,20 +215,6 @@ public:
 
 LLVM_ABI void checkForCycles(const SelectionDAG *DAG, bool force = false);
 
-/// Keeps track of state when getting the sign of a floating-point value as an
-/// integer.
-struct FloatSignAsInt {
-  EVT FloatVT;
-  SDValue Chain;
-  SDValue FloatPtr;
-  SDValue IntPtr;
-  MachinePointerInfo IntPointerInfo;
-  MachinePointerInfo FloatPointerInfo;
-  SDValue IntValue;
-  APInt SignMask;
-  uint8_t SignBit;
-};
-
 /// This is used to represent a portion of an LLVM function in a low-level
 /// Data Dependence DAG representation suitable for instruction selection.
 /// This DAG is constructed as the first step of instruction selection in order
@@ -1212,13 +1198,16 @@ public:
   LLVM_ABI SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                            ArrayRef<SDValue> Ops, const SDNodeFlags Flags);
   LLVM_ABI SDValue getNode(unsigned Opcode, const SDLoc &DL,
-                           ArrayRef<EVT> ResultTys, ArrayRef<SDValue> Ops);
+                           ArrayRef<EVT> ResultTys, ArrayRef<SDValue> Ops,
+                           const SDNodeFlags Flags);
   LLVM_ABI SDValue getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
                            ArrayRef<SDValue> Ops, const SDNodeFlags Flags);
 
   // Use flags from current flag inserter.
   LLVM_ABI SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                            ArrayRef<SDValue> Ops);
+  LLVM_ABI SDValue getNode(unsigned Opcode, const SDLoc &DL,
+                           ArrayRef<EVT> ResultTys, ArrayRef<SDValue> Ops);
   LLVM_ABI SDValue getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
                            ArrayRef<SDValue> Ops);
   LLVM_ABI SDValue getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
@@ -1267,6 +1256,9 @@ public:
   /// stack arguments from being clobbered.
   LLVM_ABI SDValue getStackArgumentTokenFactor(SDValue Chain);
 
+  std::pair<SDValue, SDValue> getMemcmp(SDValue Chain, const SDLoc &dl,
+                                        SDValue Dst, SDValue Src, SDValue Size,
+                                        const CallInst *CI);
   /* \p CI if not null is the memset call being lowered.
    * \p OverrideTailCall is an optional parameter that can be used to override
    * the tail call optimization decision. */
@@ -1356,9 +1348,10 @@ public:
   /// Helper function to make it easier to build SelectCC's if you just have an
   /// ISD::CondCode instead of an SDValue.
   SDValue getSelectCC(const SDLoc &DL, SDValue LHS, SDValue RHS, SDValue True,
-                      SDValue False, ISD::CondCode Cond) {
+                      SDValue False, ISD::CondCode Cond,
+                      SDNodeFlags Flags = SDNodeFlags()) {
     return getNode(ISD::SELECT_CC, DL, True.getValueType(), LHS, RHS, True,
-                   False, getCondCode(Cond));
+                   False, getCondCode(Cond), Flags);
   }
 
   /// Try to simplify a select/vselect into 1 of its operands or a constant.
@@ -1434,11 +1427,9 @@ public:
                                        EVT MemVT, MachineMemOperand *MMO);
 
   /// Creates a LifetimeSDNode that starts (`IsStart==true`) or ends
-  /// (`IsStart==false`) the lifetime of the portion of `FrameIndex` between
-  /// offsets `Offset` and `Offset + Size`.
+  /// (`IsStart==false`) the lifetime of the `FrameIndex`.
   LLVM_ABI SDValue getLifetimeNode(bool IsStart, const SDLoc &dl, SDValue Chain,
-                                   int FrameIndex, int64_t Size,
-                                   int64_t Offset = -1);
+                                   int FrameIndex);
 
   /// Creates a PseudoProbeSDNode with function GUID `Guid` and
   /// the index of the block `Index` it is probing, as well as the attributes
@@ -1676,6 +1667,9 @@ public:
                                       ArrayRef<SDValue> Ops,
                                       MachineMemOperand *MMO,
                                       ISD::MemIndexType IndexType);
+  LLVM_ABI SDValue getLoadFFVP(EVT VT, const SDLoc &DL, SDValue Chain,
+                               SDValue Ptr, SDValue Mask, SDValue EVL,
+                               MachineMemOperand *MMO);
 
   LLVM_ABI SDValue getGetFPEnv(SDValue Chain, const SDLoc &dl, SDValue Ptr,
                                EVT MemVT, MachineMemOperand *MMO);
@@ -2031,16 +2025,6 @@ public:
   /// value types.
   LLVM_ABI SDValue CreateStackTemporary(EVT VT1, EVT VT2);
 
-  /// Bitcast a floating-point value to an integer value. Only bitcast the part
-  /// containing the sign bit if the target has no integer value capable of
-  /// holding all bits of the floating-point value.
-  void getSignAsIntValue(FloatSignAsInt &State, const SDLoc &DL, SDValue Value);
-
-  /// Replace the integer value produced by getSignAsIntValue() with a new value
-  /// and cast the result back to a floating-point type.
-  SDValue modifySignAsInt(const FloatSignAsInt &State, const SDLoc &DL,
-                          SDValue NewIntValue);
-
   LLVM_ABI SDValue FoldSymbolOffset(unsigned Opcode, EVT VT,
                                     const GlobalAddressSDNode *GA,
                                     const SDNode *N2);
@@ -2053,6 +2037,11 @@ public:
   /// undefined.
   LLVM_ABI SDValue foldConstantFPMath(unsigned Opcode, const SDLoc &DL, EVT VT,
                                       ArrayRef<SDValue> Ops);
+
+  /// Fold BUILD_VECTOR of constants/undefs to the destination type
+  /// BUILD_VECTOR of constants/undefs elements.
+  LLVM_ABI SDValue FoldConstantBuildVector(BuildVectorSDNode *BV,
+                                           const SDLoc &DL, EVT DstEltVT);
 
   /// Constant fold a setcc to true or false.
   LLVM_ABI SDValue FoldSetCC(EVT VT, SDValue N1, SDValue N2, ISD::CondCode Cond,
@@ -2503,8 +2492,7 @@ public:
 
   /// Check if a value \op N is a constant using the target's BooleanContent for
   /// its type.
-  LLVM_ABI std::optional<bool>
-  isBoolConstant(SDValue N, bool AllowTruncation = false) const;
+  LLVM_ABI std::optional<bool> isBoolConstant(SDValue N) const;
 
   /// Set CallSiteInfo to be associated with Node.
   void addCallSiteInfo(const SDNode *Node, CallSiteInfo &&CallInfo) {

@@ -3,6 +3,11 @@
 // RUN: %clang_cc1 -xc++ -triple x86_64-apple-macosx10.14.0 %s -verify
 // RUN: %clang_cc1 -xc++ -triple x86_64-apple-macosx10.14.0 %s -verify -DUSE_BUILTINS
 
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.14.0 %s -verify -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -triple x86_64-apple-macosx10.14.0 %s -verify -DUSE_BUILTINS -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -xc++ -triple x86_64-apple-macosx10.14.0 %s -verify -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -xc++ -triple x86_64-apple-macosx10.14.0 %s -verify -DUSE_BUILTINS -fexperimental-new-constant-interpreter
+
 typedef unsigned long size_t;
 
 #ifdef __cplusplus
@@ -69,6 +74,14 @@ void call_strcpy_nowarn(void) {
   char dst[5];
   // We should not get a warning here.
   __builtin_strcpy(dst, src);
+}
+
+void call_stpcpy(void) {
+  const char *const src = "abcd";
+  char dst1[5];
+  char dst2[4];
+  __builtin_stpcpy(dst1, src);
+  __builtin_stpcpy(dst2, src); // expected-warning {{'stpcpy' will always overflow; destination buffer has size 4, but the source string has length 5 (including NUL byte)}}
 }
 
 void call_memmove(void) {

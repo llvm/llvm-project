@@ -2190,10 +2190,10 @@ float4 sqrt(float4);
 // step builtins
 //===----------------------------------------------------------------------===//
 
-/// \fn T step(T x, T y)
+/// \fn T step(T y, T x)
 /// \brief Returns 1 if the x parameter is greater than or equal to the y
-/// parameter; otherwise, 0. vector. \param x [in] The first floating-point
-/// value to compare. \param y [in] The first floating-point value to compare.
+/// parameter; otherwise, 0. vector. \param y [in] The first floating-point
+/// value to compare. \param x [in] The second floating-point value to compare.
 ///
 /// Step is based on the following formula: (x >= y) ? 1 : 0
 
@@ -2349,6 +2349,10 @@ __attribute__((convergent)) uint WaveGetLaneIndex();
 _HLSL_AVAILABILITY(shadermodel, 6.0)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_is_first_lane)
 __attribute__((convergent)) bool WaveIsFirstLane();
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_get_lane_count)
+__attribute__((convergent)) uint WaveGetLaneCount();
 
 //===----------------------------------------------------------------------===//
 // WaveReadLaneAt builtins

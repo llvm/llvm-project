@@ -22,7 +22,7 @@ def : Enum {
   ];
 }
 
-def : Enum {
+def DeviceInfo : Enum {
   let name = "ol_device_info_t";
   let desc = "Supported device info.";
   let is_typed = 1;
@@ -31,7 +31,9 @@ def : Enum {
     TaggedEtor<"PLATFORM", "ol_platform_handle_t", "the platform associated with the device">,
     TaggedEtor<"NAME", "char[]", "Device name">,
     TaggedEtor<"VENDOR", "char[]", "Device vendor">,
-    TaggedEtor<"DRIVER_VERSION", "char[]", "Driver version">
+    TaggedEtor<"DRIVER_VERSION", "char[]", "Driver version">,
+    TaggedEtor<"MAX_WORK_GROUP_SIZE", "uint32_t", "Maximum total work group size in work items">,
+    TaggedEtor<"MAX_WORK_GROUP_SIZE_PER_DIMENSION", "ol_dimensions_t", "Maximum work group size in each dimension">,
   ];
 }
 

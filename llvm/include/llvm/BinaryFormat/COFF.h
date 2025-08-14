@@ -22,6 +22,7 @@
 #ifndef LLVM_BINARYFORMAT_COFF_H
 #define LLVM_BINARYFORMAT_COFF_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include <cassert>
 
@@ -693,7 +694,24 @@ enum DLLCharacteristics : unsigned {
 
 enum ExtendedDLLCharacteristics : unsigned {
   /// Image is CET compatible
-  IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT = 0x0001
+  IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT = 0x0001,
+  /// Image is CET compatible in strict mode
+  IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT_STRICT_MODE = 0x0002,
+  /// Image is CET compatible in such a way that context IP validation is
+  /// relaxed
+  IMAGE_DLL_CHARACTERISTICS_EX_CET_SET_CONTEXT_IP_VALIDATION_RELAXED_MODE =
+      0x0004,
+  /// Image is CET compatible in such a way that the use of
+  /// dynamic APIs is restricted to processes only
+  IMAGE_DLL_CHARACTERISTICS_EX_CET_DYNAMIC_APIS_ALLOW_IN_PROC_ONLY = 0x0008,
+  /// Reserved for future use. Not used by MSVC link.exe
+  IMAGE_DLL_CHARACTERISTICS_EX_CET_RESERVED_1 = 0x0010,
+  /// Reserved for future use. Not used by MSVC link.exe
+  IMAGE_DLL_CHARACTERISTICS_EX_CET_RESERVED_2 = 0x0020,
+  /// Image is CFI compatible.
+  IMAGE_DLL_CHARACTERISTICS_EX_FORWARD_CFI_COMPAT = 0x0040,
+  /// Image is hotpatch compatible.
+  IMAGE_DLL_CHARACTERISTICS_EX_HOTPATCH_COMPATIBLE = 0x0080,
 };
 
 enum DebugType : unsigned {
@@ -851,7 +869,7 @@ inline bool isReservedSectionNumber(int32_t SectionNumber) {
 
 /// Encode section name based on string table offset.
 /// The size of Out must be at least COFF::NameSize.
-bool encodeSectionName(char *Out, uint64_t Offset);
+LLVM_ABI bool encodeSectionName(char *Out, uint64_t Offset);
 
 } // End namespace COFF.
 } // End namespace llvm.

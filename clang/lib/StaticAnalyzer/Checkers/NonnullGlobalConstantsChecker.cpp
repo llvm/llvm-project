@@ -114,10 +114,7 @@ bool NonnullGlobalConstantsChecker::isGlobalConstString(SVal V) const {
       if (AT->getAttrKind() == attr::TypeNonNull)
         return true;
       Ty = AT->getModifiedType();
-    } else if (const auto *ET = dyn_cast<ElaboratedType>(T)) {
-      const auto *TT = dyn_cast<TypedefType>(ET->getNamedType());
-      if (!TT)
-        return false;
+    } else if (const auto *TT = dyn_cast<TypedefType>(T)) {
       Ty = TT->getDecl()->getUnderlyingType();
       // It is sufficient for any intermediate typedef
       // to be classified const.

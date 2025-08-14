@@ -14,6 +14,7 @@
 #define LLVM_CLANG_LIB_CODEGEN_CGDEBUGINFO_H
 
 #include "CGBuilder.h"
+#include "SanitizerHandler.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExternalASTSource.h"
@@ -157,7 +158,6 @@ class CGDebugInfo {
   /// This is a storage for names that are constructed on demand. For
   /// example, C++ destructors, C++ operators etc..
   llvm::BumpPtrAllocator DebugInfoNames;
-  StringRef CWDName;
 
   llvm::DenseMap<const char *, llvm::TrackingMDRef> DIFileCache;
   llvm::DenseMap<const FunctionDecl *, llvm::TrackingMDRef> SPCache;
@@ -262,9 +262,14 @@ private:
   /// to get a method type which includes \c this pointer.
   llvm::DISubroutineType *getOrCreateMethodType(const CXXMethodDecl *Method,
                                                 llvm::DIFile *F);
+
+  llvm::DISubroutineType *
+  getOrCreateMethodTypeForDestructor(const CXXMethodDecl *Method,
+                                     llvm::DIFile *F, QualType FNType);
+
   llvm::DISubroutineType *
   getOrCreateInstanceMethodType(QualType ThisPtr, const FunctionProtoType *Func,
-                                llvm::DIFile *Unit);
+                                llvm::DIFile *Unit, bool SkipFirst = false);
   llvm::DISubroutineType *
   getOrCreateFunctionType(const Decl *D, QualType FnType, llvm::DIFile *F);
   /// \return debug info descriptor for vtable.
@@ -972,6 +977,17 @@ public:
   ApplyInlineDebugLocation(CodeGenFunction &CGF, GlobalDecl InlinedFn);
   /// Restore everything back to the original state.
   ~ApplyInlineDebugLocation();
+};
+
+class SanitizerDebugLocation {
+  CodeGenFunction *CGF;
+  ApplyDebugLocation Apply;
+
+public:
+  SanitizerDebugLocation(CodeGenFunction *CGF,
+                         ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals,
+                         SanitizerHandler Handler);
+  ~SanitizerDebugLocation();
 };
 
 } // namespace CodeGen

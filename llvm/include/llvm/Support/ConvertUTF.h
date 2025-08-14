@@ -346,9 +346,9 @@ LLVM_ABI bool convertUTF32ToUTF8String(ArrayRef<UTF32> Src, std::string &Out);
 LLVM_ABI bool convertUTF8ToUTF16String(StringRef SrcUTF8,
                                        SmallVectorImpl<UTF16> &DstUTF16);
 
-bool IsSingleCodeUnitUTF8Codepoint(unsigned);
-bool IsSingleCodeUnitUTF16Codepoint(unsigned);
-bool IsSingleCodeUnitUTF32Codepoint(unsigned);
+LLVM_ABI bool IsSingleCodeUnitUTF8Codepoint(unsigned);
+LLVM_ABI bool IsSingleCodeUnitUTF16Codepoint(unsigned);
+LLVM_ABI bool IsSingleCodeUnitUTF32Codepoint(unsigned);
 
 #if defined(_WIN32)
 namespace sys {

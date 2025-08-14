@@ -561,7 +561,7 @@ public:
   }
 
   /// Overload to compute a hash_code for an APInt value.
-  friend hash_code hash_value(const APInt &Arg);
+  LLVM_ABI friend hash_code hash_value(const APInt &Arg);
 
   /// This function returns a pointer to the internal storage of the APInt.
   /// This is useful for writing out the APInt in binary form without any
@@ -2293,6 +2293,12 @@ LLVM_ABI APInt mulhs(const APInt &C1, const APInt &C2);
 /// Performs (2*N)-bit multiplication on zero-extended operands.
 /// Returns the high N bits of the multiplication result.
 LLVM_ABI APInt mulhu(const APInt &C1, const APInt &C2);
+
+/// Performs (2*N)-bit multiplication on sign-extended operands.
+LLVM_ABI APInt mulsExtended(const APInt &C1, const APInt &C2);
+
+/// Performs (2*N)-bit multiplication on zero-extended operands.
+LLVM_ABI APInt muluExtended(const APInt &C1, const APInt &C2);
 
 /// Compute X^N for N>=0.
 /// 0^0 is supported and returns 1.

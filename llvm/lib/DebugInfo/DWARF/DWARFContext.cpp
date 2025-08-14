@@ -621,10 +621,6 @@ public:
     else
       return getNormalTypeUnitMap();
   }
-
-  Error doWorkThreadSafely(function_ref<Error()> Work) override {
-    return Work();
-  }
 };
 
 class ThreadSafeState : public ThreadUnsafeDWARFContextState {
@@ -739,11 +735,6 @@ public:
   getTypeUnitMap(bool IsDWO) override {
     std::unique_lock<std::recursive_mutex> LockGuard(Mutex);
     return ThreadUnsafeDWARFContextState::getTypeUnitMap(IsDWO);
-  }
-
-  Error doWorkThreadSafely(function_ref<Error()> Work) override {
-    std::unique_lock<std::recursive_mutex> LockGuard(Mutex);
-    return ThreadUnsafeDWARFContextState::doWorkThreadSafely(Work);
   }
 };
 } // namespace
@@ -2269,7 +2260,7 @@ public:
           continue;
       }
 
-      if (Section.relocation_begin() == Section.relocation_end())
+      if (Section.relocations().empty())
         continue;
 
       // Symbol to [address, section index] cache mapping.

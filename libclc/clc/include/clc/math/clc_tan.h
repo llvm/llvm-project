@@ -10,10 +10,10 @@
 #define __CLC_MATH_CLC_TAN_H__
 
 #define __CLC_BODY <clc/math/unary_decl.inc>
-#define __CLC_FUNCTION __clc_tan
+#define FUNCTION __clc_tan
 
 #include <clc/math/gentype.inc>
 
-#undef __CLC_FUNCTION
+#undef FUNCTION
 
 #endif // __CLC_MATH_CLC_TAN_H__

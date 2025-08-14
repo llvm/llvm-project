@@ -1161,7 +1161,7 @@ bool CombineRuleBuilder::buildPermutationsToEmit() {
     PermutationsToEmit.clear();
 
     for (const auto &Perm : CurPerms) {
-      assert(!Perm.count(Pat.get()) && "Pattern already emitted?");
+      assert(!Perm.contains(Pat.get()) && "Pattern already emitted?");
       for (unsigned K = 0; K < NumAlts; ++K) {
         PatternAlternatives NewPerm = Perm;
         NewPerm[Pat.get()] = K;
@@ -2414,6 +2414,7 @@ class GICombinerEmitter final : public GlobalISelMatchTableExecutorEmitter {
   void emitAdditionalImpl(raw_ostream &OS) override;
 
   void emitMIPredicateFns(raw_ostream &OS) override;
+  void emitLeafPredicateFns(raw_ostream &OS) override;
   void emitI64ImmPredicateFns(raw_ostream &OS) override;
   void emitAPFloatImmPredicateFns(raw_ostream &OS) override;
   void emitAPIntImmPredicateFns(raw_ostream &OS) override;
@@ -2579,6 +2580,12 @@ void GICombinerEmitter::emitMIPredicateFns(raw_ostream &OS) {
       OS, "", ArrayRef<const CXXPredicateCode *>(MatchCode),
       [](const CXXPredicateCode *C) -> StringRef { return C->BaseEnumName; },
       [](const CXXPredicateCode *C) -> StringRef { return C->Code; });
+}
+
+void GICombinerEmitter::emitLeafPredicateFns(raw_ostream &OS) {
+  // Unused, but still needs to be called.
+  emitLeafPredicateFnsImpl<unsigned>(
+      OS, "", {}, [](unsigned) { return ""; }, [](unsigned) { return ""; });
 }
 
 void GICombinerEmitter::emitI64ImmPredicateFns(raw_ostream &OS) {

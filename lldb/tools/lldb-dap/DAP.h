@@ -31,6 +31,8 @@
 #include "lldb/API/SBMutex.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
+#include "lldb/Host/MainLoop.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -99,7 +101,7 @@ struct DAP {
   lldb::SBBroadcaster broadcaster;
   FunctionBreakpointMap function_breakpoints;
   InstructionBreakpointMap instruction_breakpoints;
-  std::optional<std::vector<ExceptionBreakpoint>> exception_breakpoints;
+  std::vector<ExceptionBreakpoint> exception_breakpoints;
   llvm::once_flag init_exception_breakpoints_flag;
 
   /// Map step in target id to list of function targets that user can choose.
@@ -152,7 +154,7 @@ struct DAP {
   llvm::DenseSet<ClientFeature> clientFeatures;
 
   /// The initial thread list upon attaching.
-  std::optional<llvm::json::Array> initial_thread_list;
+  std::vector<protocol::Thread> initial_thread_list;
 
   /// Keep track of all the modules our client knows about: either through the
   /// modules request or the module events.
@@ -219,7 +221,9 @@ struct DAP {
   void __attribute__((format(printf, 3, 4)))
   SendFormattedOutput(OutputType o, const char *format, ...);
 
-  static int64_t GetNextSourceReference();
+  int32_t CreateSourceReference(lldb::addr_t address);
+
+  std::optional<lldb::addr_t> GetSourceReferenceAddress(int32_t reference);
 
   ExceptionBreakpoint *GetExceptionBPFromStopReason(lldb::SBThread &thread);
 
@@ -251,6 +255,40 @@ struct DAP {
   /// \return the expression mode
   ReplMode DetectReplMode(lldb::SBFrame frame, std::string &expression,
                           bool partial_expression);
+
+  /// Create a `protocol::Source` object as described in the debug adapter
+  /// definition.
+  ///
+  /// \param[in] frame
+  ///     The frame to use when populating the "Source" object.
+  ///
+  /// \return
+  ///     A `protocol::Source` object that follows the formal JSON
+  ///     definition outlined by Microsoft.
+  std::optional<protocol::Source> ResolveSource(const lldb::SBFrame &frame);
+
+  /// Create a "Source" JSON object as described in the debug adapter
+  /// definition.
+  ///
+  /// \param[in] address
+  ///     The address to use when populating out the "Source" object.
+  ///
+  /// \return
+  ///     An optional "Source" JSON object that follows the formal JSON
+  ///     definition outlined by Microsoft.
+  std::optional<protocol::Source> ResolveSource(lldb::SBAddress address);
+
+  /// Create a "Source" JSON object as described in the debug adapter
+  /// definition.
+  ///
+  /// \param[in] address
+  ///     The address to use when populating out the "Source" object.
+  ///
+  /// \return
+  ///     An optional "Source" JSON object that follows the formal JSON
+  ///     definition outlined by Microsoft.
+  std::optional<protocol::Source>
+  ResolveAssemblySource(lldb::SBAddress address);
 
   /// \return
   ///   \b false if a fatal error was found while executing these commands,
@@ -320,7 +358,7 @@ struct DAP {
     });
   }
 
-  /// The set of capablities supported by this adapter.
+  /// The set of capabilities supported by this adapter.
   protocol::Capabilities GetCapabilities();
 
   /// Debuggee will continue from stopped state.
@@ -388,6 +426,8 @@ private:
       const std::optional<std::vector<protocol::SourceBreakpoint>> &breakpoints,
       SourceBreakpointMap &existing_breakpoints);
 
+  lldb_private::Status TransportHandler();
+
   /// Registration of request handler.
   /// @{
   void RegisterRequests();
@@ -406,10 +446,17 @@ private:
   std::thread progress_event_thread;
   /// @}
 
+  /// List of addresses mapped by sourceReference.
+  std::vector<lldb::addr_t> m_source_references;
+  std::mutex m_source_references_mutex;
+
   /// Queue for all incoming messages.
   std::deque<protocol::Message> m_queue;
   std::mutex m_queue_mutex;
   std::condition_variable m_queue_cv;
+
+  // Loop for managing reading from the client.
+  lldb_private::MainLoop m_loop;
 
   std::mutex m_cancelled_requests_mutex;
   llvm::SmallSet<int64_t, 4> m_cancelled_requests;

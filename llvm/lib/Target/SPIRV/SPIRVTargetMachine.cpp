@@ -28,6 +28,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
@@ -35,7 +36,7 @@
 
 using namespace llvm;
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   // Register the target.
   RegisterTargetMachine<SPIRVTargetMachine> X(getTheSPIRV32Target());
   RegisterTargetMachine<SPIRVTargetMachine> Y(getTheSPIRV64Target());
@@ -188,7 +189,7 @@ TargetPassConfig *SPIRVTargetMachine::createPassConfig(PassManagerBase &PM) {
 void SPIRVPassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
 
-  if (TM.getSubtargetImpl()->isVulkanEnv()) {
+  if (TM.getSubtargetImpl()->isShader()) {
     // Vulkan does not allow address space casts. This pass is run to remove
     // address space casts that can be removed.
     // If an address space cast is not removed while targeting Vulkan, lowering
@@ -225,8 +226,9 @@ void SPIRVPassConfig::addIRPasses() {
 }
 
 void SPIRVPassConfig::addISelPrepare() {
+  addPass(createSPIRVLegalizeImplicitBindingPass());
   addPass(createSPIRVEmitIntrinsicsPass(&getTM<SPIRVTargetMachine>()));
-  if (TM.getSubtargetImpl()->isVulkanEnv())
+  if (TM.getSubtargetImpl()->isLogicalSPIRV())
     addPass(createSPIRVLegalizePointerCastPass(&getTM<SPIRVTargetMachine>()));
   TargetPassConfig::addISelPrepare();
 }

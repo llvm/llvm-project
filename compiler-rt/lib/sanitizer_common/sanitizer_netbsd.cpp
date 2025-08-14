@@ -229,12 +229,12 @@ uptr internal_execve(const char *filename, char *const argv[],
   return _sys_execve(filename, argv, envp);
 }
 
-tid_t GetTid() {
+ThreadID GetTid() {
   DEFINE__REAL(int, _lwp_self);
   return _REAL(_lwp_self);
 }
 
-int TgKill(pid_t pid, tid_t tid, int sig) {
+int TgKill(pid_t pid, ThreadID tid, int sig) {
   DEFINE__REAL(int, _lwp_kill, int a, int b);
   (void)pid;
   return _REAL(_lwp_kill, tid, sig);

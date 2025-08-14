@@ -42,7 +42,7 @@ define float @fmul_fneg(float %x) {
 
 define float @fmul_fsub_fmf(float %x) {
 ; CHECK-LABEL: @fmul_fsub_fmf(
-; CHECK-NEXT:    [[R:%.*]] = fmul reassoc nsz float [[X:%.*]], -4.200000e+01
+; CHECK-NEXT:    [[R:%.*]] = fmul nsz float [[X:%.*]], -4.200000e+01
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %m = fmul float %x, 42.0
@@ -52,7 +52,7 @@ define float @fmul_fsub_fmf(float %x) {
 
 define float @fmul_fneg_fmf(float %x) {
 ; CHECK-LABEL: @fmul_fneg_fmf(
-; CHECK-NEXT:    [[R:%.*]] = fmul reassoc nsz float [[X:%.*]], -4.200000e+01
+; CHECK-NEXT:    [[R:%.*]] = fmul nsz float [[X:%.*]], -4.200000e+01
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %m = fmul float %x, 42.0
@@ -1140,6 +1140,168 @@ define <vscale x 2 x double> @test_fneg_select_svec_3(<vscale x 2 x i1> %cond, <
   %1 = select <vscale x 2 x i1> %cond, <vscale x 2 x double> zeroinitializer, <vscale x 2 x double> zeroinitializer
   %2 = fneg fast <vscale x 2 x double> %1
   ret <vscale x 2 x double> %2
+}
+
+define float @test_fneg_ninf_mul_with_anyzero(float %a) {
+; CHECK-LABEL: @test_fneg_ninf_mul_with_anyzero(
+; CHECK-NEXT:    [[F:%.*]] = fmul float [[A:%.*]], -0.000000e+00
+; CHECK-NEXT:    ret float [[F]]
+;
+  %mul = fmul float %a, 0.0
+  %f = fneg ninf float %mul
+  ret float %f
+}
+
+define float @test_fsub_ninf_mul_with_anyzero(float %a) {
+; CHECK-LABEL: @test_fsub_ninf_mul_with_anyzero(
+; CHECK-NEXT:    [[F2:%.*]] = fmul nsz float [[A:%.*]], -0.000000e+00
+; CHECK-NEXT:    ret float [[F2]]
+;
+  %f1 = fmul nsz float %a, 0.000000
+  %f2 = fsub ninf float -0.000000, %f1
+  ret float %f2
+}
+
+define float @test_fneg_nnan_mul_with_anyzero(float %a) {
+; CHECK-LABEL: @test_fneg_nnan_mul_with_anyzero(
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg nnan float [[A:%.*]]
+; CHECK-NEXT:    [[F2:%.*]] = call nnan float @llvm.copysign.f32(float 0.000000e+00, float [[TMP1]])
+; CHECK-NEXT:    ret float [[F2]]
+;
+  %f1 = fmul ninf float %a, 0.000000
+  %f2 = fneg nnan float %f1
+  ret float %f2
+}
+
+define float @test_fneg_nsz_mul_with_anyzero(float %a) {
+; CHECK-LABEL: @test_fneg_nsz_mul_with_anyzero(
+; CHECK-NEXT:    [[F2:%.*]] = fmul nsz float [[A:%.*]], -0.000000e+00
+; CHECK-NEXT:    ret float [[F2]]
+;
+  %f1 = fmul ninf float %a, 0.000000
+  %f2 = fneg nsz float %f1
+  ret float %f2
+}
+
+define float @test_fneg_ninf_mul_nnan_with_const(float %a) {
+; CHECK-LABEL: @test_fneg_ninf_mul_nnan_with_const(
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg float [[A:%.*]]
+; CHECK-NEXT:    [[F2:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[TMP1]])
+; CHECK-NEXT:    ret float [[F2]]
+;
+  %f1 = fmul nnan float %a, 0.000000
+  %f2 = fneg ninf float %f1
+  ret float %f2
+}
+
+define float @test_fneg_ninf_mul_nsz_with_const(float %a) {
+; CHECK-LABEL: @test_fneg_ninf_mul_nsz_with_const(
+; CHECK-NEXT:    [[F2:%.*]] = fmul nsz float [[A:%.*]], -0.000000e+00
+; CHECK-NEXT:    ret float [[F2]]
+;
+  %f1 = fmul nsz float %a, 0.000000
+  %f2 = fneg ninf float %f1
+  ret float %f2
+}
+
+define <2 x float> @test_fneg_mul_combine_nnan_ninf_with_vec_const(<2 x float> %a) {
+; CHECK-LABEL: @test_fneg_mul_combine_nnan_ninf_with_vec_const(
+; CHECK-NEXT:    [[F2:%.*]] = fmul nnan <2 x float> [[A:%.*]], <float -0.000000e+00, float 0.000000e+00>
+; CHECK-NEXT:    ret <2 x float> [[F2]]
+;
+  %f1 = fmul nnan <2 x float> %a, <float 0.000000, float -0.000000>
+  %f2 = fneg ninf <2 x float> %f1
+  ret <2 x float> %f2
+}
+
+define <2 x float> @test_fneg_mul_combine_nsz_ninf_with_vec_const(<2 x float> %a) {
+; CHECK-LABEL: @test_fneg_mul_combine_nsz_ninf_with_vec_const(
+; CHECK-NEXT:    [[F2:%.*]] = fmul nsz <2 x float> [[A:%.*]], <float -0.000000e+00, float 0.000000e+00>
+; CHECK-NEXT:    ret <2 x float> [[F2]]
+;
+  %f1 = fmul nsz <2 x float> %a, <float 0.000000, float -0.000000>
+  %f2 = fneg ninf <2 x float> %f1
+  ret <2 x float> %f2
+}
+
+define <2 x float> @test_fneg_ninf_nnan_mul_with_vec_const(<2 x float> %a) {
+; CHECK-LABEL: @test_fneg_ninf_nnan_mul_with_vec_const(
+; CHECK-NEXT:    [[F2:%.*]] = fmul nnan <2 x float> [[A:%.*]], <float -0.000000e+00, float 0.000000e+00>
+; CHECK-NEXT:    ret <2 x float> [[F2]]
+;
+  %f1 = fmul <2 x float> %a, <float 0.000000, float -0.000000>
+  %f2 = fneg nnan ninf <2 x float> %f1
+  ret <2 x float> %f2
+}
+
+define <2 x float> @test_fneg_mul_combine_nnan_ninf_with_vec_const2(<2 x float> %a) {
+; CHECK-LABEL: @test_fneg_mul_combine_nnan_ninf_with_vec_const2(
+; CHECK-NEXT:    [[F2:%.*]] = fmul nnan ninf <2 x float> [[A:%.*]], <float -0.000000e+00, float 0.000000e+00>
+; CHECK-NEXT:    ret <2 x float> [[F2]]
+;
+  %f1 = fmul ninf <2 x float> %a, <float 0.000000, float -0.000000>
+  %f2 = fneg nnan ninf <2 x float> %f1
+  ret <2 x float> %f2
+}
+
+define <2 x float> @test_fneg_mul_combine_reassoc_ninf_with_vec_const1(<2 x float> %a) {
+; CHECK-LABEL: @test_fneg_mul_combine_reassoc_ninf_with_vec_const1(
+; CHECK-NEXT:    [[F2:%.*]] = fmul <2 x float> [[A:%.*]], <float -0.000000e+00, float 0.000000e+00>
+; CHECK-NEXT:    ret <2 x float> [[F2]]
+;
+  %f1 = fmul reassoc <2 x float> %a, <float 0.000000, float -0.000000>
+  %f2 = fneg ninf <2 x float> %f1
+  ret <2 x float> %f2
+}
+
+define <2 x float> @test_fneg_mul_combine_reassoc_ninf_with_vec_const2(<2 x float> %a) {
+; CHECK-LABEL: @test_fneg_mul_combine_reassoc_ninf_with_vec_const2(
+; CHECK-NEXT:    [[F2:%.*]] = fmul ninf <2 x float> [[A:%.*]], <float -0.000000e+00, float 0.000000e+00>
+; CHECK-NEXT:    ret <2 x float> [[F2]]
+;
+  %f1 = fmul ninf <2 x float> %a, <float 0.000000, float -0.000000>
+  %f2 = fneg reassoc ninf <2 x float> %f1
+  ret <2 x float> %f2
+}
+
+define <2 x float> @test_fneg_mul_combine_reassoc_ninf_with_vec_const3(<2 x float> %a) {
+; CHECK-LABEL: @test_fneg_mul_combine_reassoc_ninf_with_vec_const3(
+; CHECK-NEXT:    [[F2:%.*]] = fmul reassoc <2 x float> [[A:%.*]], <float -0.000000e+00, float 0.000000e+00>
+; CHECK-NEXT:    ret <2 x float> [[F2]]
+;
+  %f1 = fmul reassoc <2 x float> %a, <float 0.000000, float -0.000000>
+  %f2 = fneg reassoc ninf <2 x float> %f1
+  ret <2 x float> %f2
+}
+
+define <2 x float> @test_fneg_mul_combine_contract_ninf_with_vec_const1(<2 x float> %a) {
+; CHECK-LABEL: @test_fneg_mul_combine_contract_ninf_with_vec_const1(
+; CHECK-NEXT:    [[F2:%.*]] = fmul <2 x float> [[A:%.*]], <float -0.000000e+00, float 0.000000e+00>
+; CHECK-NEXT:    ret <2 x float> [[F2]]
+;
+  %f1 = fmul contract <2 x float> %a, <float 0.000000, float -0.000000>
+  %f2 = fneg ninf <2 x float> %f1
+  ret <2 x float> %f2
+}
+
+define <2 x float> @test_fneg_mul_combine_contract_ninf_with_vec_const2(<2 x float> %a) {
+; CHECK-LABEL: @test_fneg_mul_combine_contract_ninf_with_vec_const2(
+; CHECK-NEXT:    [[F2:%.*]] = fmul ninf <2 x float> [[A:%.*]], <float -0.000000e+00, float 0.000000e+00>
+; CHECK-NEXT:    ret <2 x float> [[F2]]
+;
+  %f1 = fmul ninf <2 x float> %a, <float 0.000000, float -0.000000>
+  %f2 = fneg contract ninf <2 x float> %f1
+  ret <2 x float> %f2
+}
+
+define <2 x float> @test_fneg_mul_combine_contract_ninf_with_vec_const3(<2 x float> %a) {
+; CHECK-LABEL: @test_fneg_mul_combine_contract_ninf_with_vec_const3(
+; CHECK-NEXT:    [[F2:%.*]] = fmul contract <2 x float> [[A:%.*]], <float -0.000000e+00, float 0.000000e+00>
+; CHECK-NEXT:    ret <2 x float> [[F2]]
+;
+  %f1 = fmul contract <2 x float> %a, <float 0.000000, float -0.000000>
+  %f2 = fneg contract ninf <2 x float> %f1
+  ret <2 x float> %f2
 }
 
 !0 = !{}

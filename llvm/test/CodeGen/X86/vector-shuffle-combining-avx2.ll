@@ -435,7 +435,7 @@ define <8 x float> @combine_pshufb_as_vzmovl_32(<8 x float> %a0) {
 ; CHECK-LABEL: combine_pshufb_as_vzmovl_32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = bitcast <8 x float> %a0 to <32 x i8>
   %2 = call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %1, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>)
@@ -773,6 +773,17 @@ define <32 x i8> @combine_pshufb_pshufb_or_pshufb(<32 x i8> %a0) {
   %3 = or <32 x i8> %1, %2
   %4 = call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %3, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 0, i8 1, i8 2, i8 3, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 0, i8 1, i8 2, i8 3, i8 0, i8 1, i8 2, i8 3, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7>)
   ret <32 x i8> %4
+}
+
+define <4 x i32> @extract_vpermd(<8 x i32> %a0) {
+; CHECK-LABEL: extract_vpermd:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1,3,0]
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    ret{{[l|q]}}
+  %1 = tail call <8 x i32> @llvm.x86.avx2.permd(<8 x i32> %a0, <8 x i32> <i32 1, i32 1, i32 3, i32 0, i32 1, i32 0, i32 7, i32 6>)
+  %2 = shufflevector <8 x i32> %1, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i32> %2
 }
 
 ; Not beneficial to concatenate both inputs just to create a 256-bit vpaddb

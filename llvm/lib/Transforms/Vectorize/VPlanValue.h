@@ -26,6 +26,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -44,18 +45,12 @@ class VPPhiAccessors;
 // flow into, within and out of the VPlan. VPValues can stand for live-ins
 // coming from the input IR and instructions which VPlan will generate if
 // executed.
-class VPValue {
-  friend class VPBuilder;
+class LLVM_ABI_FOR_TEST VPValue {
   friend class VPDef;
   friend struct VPDoubleValueDef;
-  friend class VPInstruction;
   friend class VPInterleaveRecipe;
-  friend struct VPlanTransforms;
-  friend class VPBasicBlock;
-  friend class VPInterleavedAccessInfo;
-  friend class VPSlotTracker;
-  friend class VPRecipeBase;
   friend class VPlan;
+  friend class VPExpressionRecipe;
 
   const unsigned char SubclassID; ///< Subclass identifier (for isa/dyn_cast).
 
@@ -337,13 +332,12 @@ public:
     VPBranchOnMaskSC,
     VPDerivedIVSC,
     VPExpandSCEVSC,
+    VPExpressionSC,
     VPIRInstructionSC,
     VPInstructionSC,
     VPInterleaveSC,
     VPReductionEVLSC,
     VPReductionSC,
-    VPMulAccumulateReductionSC,
-    VPExtendedReductionSC,
     VPPartialReductionSC,
     VPReplicateSC,
     VPScalarIVStepsSC,

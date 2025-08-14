@@ -16,6 +16,7 @@
 #include "TargetInfo/AMDGPUTargetInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/WithColor.h"
 
 namespace llvm::mca {
@@ -353,7 +354,8 @@ createAMDGPUInstrPostProcess(const MCSubtargetInfo &STI,
 
 /// Extern function to initialize the targets for the AMDGPU backend
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTargetMCA() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeAMDGPUTargetMCA() {
   TargetRegistry::RegisterCustomBehaviour(getTheR600Target(),
                                           createAMDGPUCustomBehaviour);
   TargetRegistry::RegisterInstrPostProcess(getTheR600Target(),

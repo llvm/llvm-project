@@ -2,21 +2,21 @@
 // RUN: FileCheck --implicit-check-not OwnerAttr --implicit-check-not PointerAttr %s
 
 int [[gsl::Owner]] i;
-// expected-error@-1 {{'Owner' attribute cannot be applied to types}}
+// expected-error@-1 {{'gsl::Owner' attribute cannot be applied to types}}
 void [[gsl::Owner]] f();
-// expected-error@-1 {{'Owner' attribute cannot be applied to types}}
+// expected-error@-1 {{'gsl::Owner' attribute cannot be applied to types}}
 
 [[gsl::Owner]] void f();
-// expected-warning@-1 {{'Owner' attribute only applies to structs}}
+// expected-warning@-1 {{'gsl::Owner' attribute only applies to structs}}
 
 union [[gsl::Owner(int)]] Union{};
-// expected-warning@-1 {{'Owner' attribute only applies to structs}}
+// expected-warning@-1 {{'gsl::Owner' attribute only applies to structs}}
 
 struct S {
 };
 
 S [[gsl::Owner]] Instance;
-// expected-error@-1 {{'Owner' attribute cannot be applied to types}}
+// expected-error@-1 {{'gsl::Owner' attribute cannot be applied to types}}
 
 class [[gsl::Owner(7)]] OwnerDerefNoType{};
 // expected-error@-1 {{expected a type}}
@@ -25,7 +25,7 @@ class [[gsl::Pointer("int")]] PointerDerefNoType{};
 // expected-error@-1 {{expected a type}}
 
 class [[gsl::Owner(int)]] [[gsl::Pointer(int)]] BothOwnerPointer{};
-// expected-error@-1 {{'Pointer' and 'Owner' attributes are not compatible}}
+// expected-error@-1 {{'gsl::Pointer' and 'gsl::Owner' attributes are not compatible}}
 // expected-note@-2 {{conflicting attribute is here}}
 // CHECK: CXXRecordDecl {{.*}} BothOwnerPointer
 // CHECK: OwnerAttr {{.*}} int
@@ -41,7 +41,7 @@ class [[gsl::Pointer(int)]] AddConflictLater{};
 // CHECK: CXXRecordDecl {{.*}} AddConflictLater
 // CHECK: PointerAttr {{.*}} int
 class [[gsl::Owner(int)]] AddConflictLater;
-// expected-error@-1 {{'Owner' and 'Pointer' attributes are not compatible}}
+// expected-error@-1 {{'gsl::Owner' and 'gsl::Pointer' attributes are not compatible}}
 // expected-note@-5 {{conflicting attribute is here}}
 // CHECK: CXXRecordDecl {{.*}} AddConflictLater
 // CHECK: PointerAttr {{.*}} Inherited int
@@ -50,22 +50,22 @@ class [[gsl::Owner(int)]] AddConflictLater2{};
 // CHECK: CXXRecordDecl {{.*}} AddConflictLater2
 // CHECK: OwnerAttr {{.*}} int
 class [[gsl::Owner(float)]] AddConflictLater2;
-// expected-error@-1 {{'Owner' and 'Owner' attributes are not compatible}}
+// expected-error@-1 {{'gsl::Owner' and 'gsl::Owner' attributes are not compatible}}
 // expected-note@-5 {{conflicting attribute is here}}
 // CHECK: CXXRecordDecl {{.*}} AddConflictLater
 // CHECK: OwnerAttr {{.*}} Inherited int
 
 class [[gsl::Owner()]] [[gsl::Owner(int)]] WithAndWithoutParameter{};
-// expected-error@-1 {{'Owner' and 'Owner' attributes are not compatible}}
+// expected-error@-1 {{'gsl::Owner' and 'gsl::Owner' attributes are not compatible}}
 // expected-note@-2 {{conflicting attribute is here}}
 // CHECK: CXXRecordDecl {{.*}} WithAndWithoutParameter
 // CHECK: OwnerAttr
 
 class [[gsl::Owner(int &)]] ReferenceType{};
-// expected-error@-1 {{a reference type is an invalid argument to attribute 'Owner'}}
+// expected-error@-1 {{a reference type is an invalid argument to attribute 'gsl::Owner'}}
 
 class [[gsl::Pointer(int[])]] ArrayType{};
-// expected-error@-1 {{an array type is an invalid argument to attribute 'Pointer'}}
+// expected-error@-1 {{an array type is an invalid argument to attribute 'gsl::Pointer'}}
 
 class [[gsl::Owner]] OwnerMissingParameter{};
 // CHECK: CXXRecordDecl {{.*}} OwnerMissingParameter

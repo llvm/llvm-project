@@ -18,6 +18,7 @@
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
+#include "llvm/Support/Compiler.h"
 
 #include <future>
 #include <thread>
@@ -65,7 +66,7 @@ using DeferredRuntimeFnMap = std::unordered_map<
     FunctionPairKeyHash, FunctionPairKeyEqual>;
 
 /// Mediates between ELFNix initialization and ExecutionSession state.
-class ELFNixPlatform : public Platform {
+class LLVM_ABI ELFNixPlatform : public Platform {
 public:
   /// Try to create a ELFNixPlatform instance, adding the ORC runtime to the
   /// given JITDylib.
@@ -165,7 +166,7 @@ private:
   // The ELFNixPlatformPlugin scans/modifies LinkGraphs to support ELF
   // platform features including initializers, exceptions, TLV, and language
   // runtime registration.
-  class ELFNixPlatformPlugin : public ObjectLinkingLayer::Plugin {
+  class LLVM_ABI ELFNixPlatformPlugin : public ObjectLinkingLayer::Plugin {
   public:
     ELFNixPlatformPlugin(ELFNixPlatform &MP) : MP(MP) {}
 

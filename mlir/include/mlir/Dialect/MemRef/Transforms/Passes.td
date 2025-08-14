@@ -182,6 +182,68 @@ def ResolveShapedTypeResultDimsPass : Pass<"resolve-shaped-type-result-dims"> {
   ];
 }
 
+def ReifyResultShapesPass : Pass<"reify-result-shapes"> {
+  let summary ="Reifies the results of `tensor::PadOp` and `tensor::ConcatOp`.";
+  let description = [{
+    This pass reifies the shapes of a subset of `ReifyRankedShapedTypeOpInterface`
+    ops with `tensor` results.
+    
+    The pass currently only supports result shape type reification for:
+      - tensor::PadOp
+      - tensor::ConcatOp
+    It addresses a representation gap where implicit op semantics are needed to
+    infer static result types from dynamic operands.
+    But it does so by using `ReifyRankedShapedTypeOpInterface` as the source of
+    truth rather than the op itself. As a consequence, this cannot generalize
+    today.
+
+    TODO: in the future, we should consider coupling this information with op
+    "transfer functions" (e.g. `IndexingMapOpInterface`) to provide a source of
+    truth that can work across result shape inference, canonicalization and op
+    verifiers.
+
+    The pass replaces the operations with their reified versions, when more
+    static information can be derived, and inserts casts when results shapes
+    are updated.
+
+    Example:
+    ```mlir
+    #map = affine_map<(d0) -> (-d0 + 256)>
+    func.func @func(%arg0: f32, %arg1: index, %arg2: tensor<64x?x64xf32>)
+        -> tensor<1x?x64xf32>
+    {
+      %0 = affine.apply #map(%arg1)
+      %extracted_slice = tensor.extract_slice %arg2[0, 0, 0] [1, %arg1, 64] [1, 1, 1]
+        : tensor<64x?x64xf32> to tensor<1x?x64xf32>
+      %padded = tensor.pad %extracted_slice low[0, 0, 0] high[0, %0, 0] {
+      ^bb0(%arg3: index, %arg4: index, %arg5: index):
+        tensor.yield %arg0 : f32
+      } : tensor<1x?x64xf32> to tensor<1x?x64xf32>
+      return %padded : tensor<1x?x64xf32>
+    }
+
+    // mlir-opt --reify-result-shapes
+    #map = affine_map<()[s0] -> (-s0 + 256)>
+    func.func @func(%arg0: f32, %arg1: index, %arg2: tensor<64x?x64xf32>)
+        -> tensor<1x?x64xf32>
+    {
+      %0 = affine.apply #map()[%arg1]
+      %extracted_slice = tensor.extract_slice %arg2[0, 0, 0] [1, %arg1, 64] [1, 1, 1]
+        : tensor<64x?x64xf32> to tensor<1x?x64xf32>
+      %padded = tensor.pad %extracted_slice low[0, 0, 0] high[0, %0, 0] {
+      ^bb0(%arg3: index, %arg4: index, %arg5: index):
+        tensor.yield %arg0 : f32
+      } : tensor<1x?x64xf32> to tensor<1x256x64xf32>
+      %cast = tensor.cast %padded : tensor<1x256x64xf32> to tensor<1x?x64xf32>
+      return %cast : tensor<1x?x64xf32>
+    }
+    ```
+  }];
+  let dependentDialects = [
+    "affine::AffineDialect", "memref::MemRefDialect", "tensor::TensorDialect"
+  ];
+}
+
 def ExpandStridedMetadataPass : Pass<"expand-strided-metadata"> {
   let summary = "Expand memref operations into easier to analyze constructs";
   let description = [{

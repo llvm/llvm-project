@@ -655,6 +655,14 @@ let TargetPrefix = "ppc" in {  // All intrinsics start with "llvm.ppc.".
       DefaultAttrsIntrinsic<[llvm_v1i128_ty],[llvm_v1i128_ty],[IntrNoMem]>;
 
   // BCD intrinsics.
+  def int_ppc_national2packed: ClangBuiltin<"__builtin_ppc_national2packed">,
+    DefaultAttrsIntrinsic<[llvm_v16i8_ty],[llvm_v16i8_ty, llvm_i32_ty], [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+  def int_ppc_packed2national: ClangBuiltin<"__builtin_ppc_packed2national">,
+    DefaultAttrsIntrinsic<[llvm_v16i8_ty],[llvm_v16i8_ty], [IntrNoMem]>;
+  def int_ppc_packed2zoned: ClangBuiltin<"__builtin_ppc_packed2zoned">,
+    DefaultAttrsIntrinsic<[llvm_v16i8_ty],[llvm_v16i8_ty, llvm_i32_ty], [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+  def int_ppc_zoned2packed: ClangBuiltin<"__builtin_ppc_zoned2packed">,
+    DefaultAttrsIntrinsic<[llvm_v16i8_ty],[llvm_v16i8_ty, llvm_i32_ty], [IntrNoMem, ImmArg<ArgIndex<1>>]>;
   def int_ppc_cdtbcdd : ClangBuiltin<"__builtin_ppc_cdtbcd">,
     DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty], [IntrNoMem]>;
   def int_ppc_cbcdtdd: ClangBuiltin<"__builtin_ppc_cbcdtd">,
@@ -1835,6 +1843,19 @@ let TargetPrefix = "ppc" in {
                       Intrinsic<[],[],[]>;
   def int_ppc_iospace_eieio : ClangBuiltin<"__builtin_ppc_iospace_eieio">,
                               Intrinsic<[],[],[]>;
+  def int_ppc_lbarx :
+    Intrinsic<[llvm_i32_ty], [llvm_ptr_ty],
+              [IntrReadMem, IntrArgMemOnly]>;
+  def int_ppc_lharx :
+    Intrinsic<[llvm_i32_ty],[llvm_ptr_ty],
+              [IntrReadMem, IntrArgMemOnly]>;
+  def int_ppc_lwarx :
+    Intrinsic<[llvm_i32_ty], [llvm_ptr_ty],
+              [IntrReadMem, IntrArgMemOnly]>;
+  def int_ppc_ldarx :
+    Intrinsic<[llvm_i64_ty],[llvm_ptr_ty],
+              [IntrReadMem, IntrArgMemOnly]>;
+
   def int_ppc_stdcx :
     ClangBuiltin<"__builtin_ppc_stdcx">,
     Intrinsic<[llvm_i32_ty], [llvm_ptr_ty, llvm_i64_ty],
@@ -1844,7 +1865,7 @@ let TargetPrefix = "ppc" in {
     Intrinsic<[llvm_i32_ty], [llvm_ptr_ty, llvm_i32_ty],
               [IntrWriteMem, IntrArgMemOnly]>;
   def int_ppc_sthcx :
-    Intrinsic<[llvm_i32_ty], [ llvm_ptr_ty, llvm_i32_ty ],
+    Intrinsic<[llvm_i32_ty], [ llvm_ptr_ty, llvm_i32_ty],
               [IntrWriteMem, IntrArgMemOnly, IntrNoDuplicate]>;
   def int_ppc_stbcx :
     ClangBuiltin<"__builtin_ppc_stbcx">,

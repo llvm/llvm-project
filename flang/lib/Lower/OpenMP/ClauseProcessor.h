@@ -13,12 +13,11 @@
 #define FORTRAN_LOWER_CLAUSEPROCESSOR_H
 
 #include "ClauseFinder.h"
-#include "Clauses.h"
-#include "ReductionProcessor.h"
 #include "Utils.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/DirectivesCommon.h"
+#include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/parse-tree.h"
@@ -119,7 +118,7 @@ public:
   bool processDepend(lower::SymMap &symMap, lower::StatementContext &stmtCtx,
                      mlir::omp::DependClauseOps &result) const;
   bool
-  processEnter(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
+  processEnter(llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &result) const;
   bool processIf(omp::clause::If::DirectiveNameModifier directiveName,
                  mlir::omp::IfClauseOps &result) const;
   bool processInReduction(
@@ -130,7 +129,7 @@ public:
       llvm::SmallVectorImpl<const semantics::Symbol *> &isDeviceSyms) const;
   bool processLinear(mlir::omp::LinearClauseOps &result) const;
   bool
-  processLink(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
+  processLink(llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &result) const;
 
   // This method is used to process a map clause.
   // The optional parameter mapSyms is used to store the original Fortran symbol
@@ -139,6 +138,7 @@ public:
   bool processMap(mlir::Location currentLocation,
                   lower::StatementContext &stmtCtx,
                   mlir::omp::MapClauseOps &result,
+                  llvm::omp::Directive directive = llvm::omp::OMPD_unknown,
                   llvm::SmallVectorImpl<const semantics::Symbol *> *mapSyms =
                       nullptr) const;
   bool processMotionClauses(lower::StatementContext &stmtCtx,
@@ -150,7 +150,7 @@ public:
   bool processTaskReduction(
       mlir::Location currentLocation, mlir::omp::TaskReductionClauseOps &result,
       llvm::SmallVectorImpl<const semantics::Symbol *> &outReductionSyms) const;
-  bool processTo(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
+  bool processTo(llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &result) const;
   bool processUseDeviceAddr(
       lower::StatementContext &stmtCtx,
       mlir::omp::UseDeviceAddrClauseOps &result,
@@ -208,11 +208,15 @@ void ClauseProcessor::processTODO(mlir::Location currentLocation,
     if (!x)
       return;
     unsigned version = semaCtx.langOptions().OpenMPVersion;
-    TODO(currentLocation,
-         "Unhandled clause " + llvm::omp::getOpenMPClauseName(id).upper() +
-             " in " +
-             llvm::omp::getOpenMPDirectiveName(directive, version).upper() +
-             " construct");
+    bool isSimdDirective = llvm::omp::getOpenMPDirectiveName(directive, version)
+                               .upper()
+                               .find("SIMD") != llvm::StringRef::npos;
+    if (!semaCtx.langOptions().OpenMPSimd || isSimdDirective)
+      TODO(currentLocation,
+           "Unhandled clause " + llvm::omp::getOpenMPClauseName(id).upper() +
+               " in " +
+               llvm::omp::getOpenMPDirectiveName(directive, version).upper() +
+               " construct");
   };
 
   for (ClauseIterator it = clauses.begin(); it != clauses.end(); ++it)

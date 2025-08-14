@@ -2355,25 +2355,6 @@ TEST_F(PatternMatchTest, VectorLogicalSelects) {
   EXPECT_FALSE(match(MixedTypeOr, m_LogicalOr(m_Value(), m_Value())));
 }
 
-TEST_F(PatternMatchTest, VScale) {
-  DataLayout DL = M->getDataLayout();
-
-  Type *VecTy = ScalableVectorType::get(IRB.getInt8Ty(), 1);
-  Value *NullPtrVec =
-      Constant::getNullValue(PointerType::getUnqual(VecTy->getContext()));
-  Value *GEP = IRB.CreateGEP(VecTy, NullPtrVec, IRB.getInt64(1));
-  Value *PtrToInt = IRB.CreatePtrToInt(GEP, DL.getIntPtrType(GEP->getType()));
-  EXPECT_TRUE(match(PtrToInt, m_VScale()));
-
-  Type *VecTy2 = ScalableVectorType::get(IRB.getInt8Ty(), 2);
-  Value *NullPtrVec2 =
-      Constant::getNullValue(PointerType::getUnqual(VecTy2->getContext()));
-  Value *GEP2 = IRB.CreateGEP(VecTy, NullPtrVec2, IRB.getInt64(1));
-  Value *PtrToInt2 =
-      IRB.CreatePtrToInt(GEP2, DL.getIntPtrType(GEP2->getType()));
-  EXPECT_TRUE(match(PtrToInt2, m_VScale()));
-}
-
 TEST_F(PatternMatchTest, NotForbidPoison) {
   Type *ScalarTy = IRB.getInt8Ty();
   Type *VectorTy = FixedVectorType::get(ScalarTy, 3);

@@ -19,7 +19,6 @@
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -31,15 +30,9 @@
 #include "mlir/IR/Types.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/AsmParser/Parser.h"
-#include "llvm/IR/Attributes.h"
-#include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/IntrinsicsNVPTX.h"
-#include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <optional>
@@ -194,6 +187,26 @@ LogicalResult BulkStoreOp::verify() {
   if (getInitVal() != 0)
     return emitOpError("only 0 is supported for initVal, got ") << getInitVal();
   return success();
+}
+
+LogicalResult PMEventOp::verify() {
+  auto eventId = getEventId();
+  auto maskedEventId = getMaskedEventId();
+  if (!maskedEventId && !eventId) {
+    return emitOpError() << "either `id` or `mask` must be set";
+  }
+
+  if (maskedEventId && eventId) {
+    return emitOpError() << "`id` and `mask` cannot be set at the same time";
+  }
+
+  if (eventId) {
+    if (eventId < 0 || eventId > 15) {
+      return emitOpError() << "`id` must be between 0 and 15";
+    }
+  }
+
+  return llvm::success();
 }
 
 // Given the element type of an operand and whether or not it is an accumulator,
@@ -798,36 +811,81 @@ LogicalResult NVVM::WMMAMmaOp::verify() {
 }
 
 LogicalResult NVVM::LdMatrixOp::verify() {
-  unsigned addressSpace =
-      llvm::cast<LLVM::LLVMPointerType>(getPtr().getType()).getAddressSpace();
-  if (addressSpace != NVVM::kSharedMemorySpace)
-    return emitOpError("expected source pointer in memory space 3");
-
-  if (getNum() != 1 && getNum() != 2 && getNum() != 4)
-    return emitOpError("expected num attribute to be 1, 2 or 4");
+  uint32_t num = getNum(), m = getShape().getM(), n = getShape().getN();
+  if (m == 8 && n == 8) {
+    if (num != 1 && num != 2 && num != 4) {
+      return emitOpError("expected num attribute to be 1, 2 or 4 for 8x8 "
+                         "matrix");
+    }
+    if (getEltType() != LdStMatrixEltType::B16) {
+      return emitOpError("expected element type to be b16 for 8x8 matrix");
+    }
+  } else if (m == 8 && n == 16) {
+    if (num != 1 && num != 2 && num != 4) {
+      return emitOpError("expected num attribute to be 1, 2 or 4 for 8x16 "
+                         "matrix");
+    }
+    if (getLayout() != MMALayout::row) {
+      return emitOpError("expected layout to be row for 8x16 matrix");
+    }
+    if (getEltType() != LdStMatrixEltType::B8X16_B4X16_P64 &&
+        getEltType() != LdStMatrixEltType::B8X16_B6X16_P32) {
+      return emitOpError("expected element type to be b8x16.b4x16_p64 or "
+                         "b8x16.b6x16_p32 for 8x16 matrix");
+    }
+  } else if (m == 16 && n == 16) {
+    if (num != 1 && num != 2) {
+      return emitOpError("expected num attribute to be 1 or 2 for 16x16 "
+                         "matrix");
+    }
+    if (getLayout() != MMALayout::col) {
+      return emitOpError("expected layout to be col for 16x16 matrix");
+    }
+    if (getEltType() != LdStMatrixEltType::B8 &&
+        getEltType() != LdStMatrixEltType::B8X16_B4X16_P64 &&
+        getEltType() != LdStMatrixEltType::B8X16_B6X16_P32) {
+      return emitOpError("expected element type to be b8, b8x16.b4x16_p64 or "
+                         "b8x16.b6x16_p32 for 16x16 matrix");
+    }
+  } else {
+    return emitOpError("expected shape to be 8x8, 8x16 or 16x16");
+  }
 
   Type i32 = IntegerType::get(getContext(), 32);
-  if (getNum() == 1 && getType() != i32)
+  uint32_t numElements = (m == 16 && n == 16 ? num * 2 : num);
+  if (numElements == 1 && getType() != i32)
     return emitOpError("expected destination type is i32");
-  if (getNum() == 2 || getNum() == 4) {
+  if (numElements == 2 || numElements == 4) {
     Type dstType = LLVM::LLVMStructType::getLiteral(
-        getContext(), SmallVector<Type>(getNum(), i32));
+        getContext(), SmallVector<Type>(numElements, i32));
     if (getType() != dstType)
       return emitOpError("expected destination type is a structure of ")
-             << getNum() << " elements of type i32";
+             << numElements << " elements of type i32";
   }
+
   return success();
 }
 
 LogicalResult NVVM::StMatrixOp::verify() {
-  unsigned addressSpace =
-      llvm::cast<LLVM::LLVMPointerType>(getPtr().getType()).getAddressSpace();
-  if (addressSpace != NVVM::kSharedMemorySpace)
-    return emitOpError("expected source pointer in memory space 3");
-
   int numMatrix = getSources().size();
   if (numMatrix != 1 && numMatrix != 2 && numMatrix != 4)
     return emitOpError("expected num attribute to be 1, 2 or 4");
+
+  int m = getShape().getM(), n = getShape().getN();
+  if (m == 8 && n == 8) {
+    if (getEltType() != NVVM::LdStMatrixEltType::B16) {
+      return emitOpError("expected element type to be B16 for 8x8 matrix");
+    }
+  } else if (m == 16 && n == 8) {
+    if (getEltType() != NVVM::LdStMatrixEltType::B8) {
+      return emitOpError("expected element type to be B8 for 16x8 matrix");
+    }
+    if (getLayout() != NVVM::MMALayout::col) {
+      return emitOpError("expected layout to be col for 16x8 matrix");
+    }
+  } else {
+    return emitOpError("expected shape to be 8x8 or 16x8");
+  }
 
   return success();
 }
@@ -1202,6 +1260,42 @@ LogicalResult NVVM::VoteSyncOp::verify() {
       return emitOpError("vote.sync 'any', 'all' and 'uni' returns an i1");
     }
   }
+  return success();
+}
+
+LogicalResult NVVM::PrefetchOp::verify() {
+  using MemSpace = NVVM::NVVMMemorySpace;
+  using CacheLevel = NVVM::PrefetchCacheLevel;
+
+  unsigned addressSpace =
+      llvm::cast<LLVM::LLVMPointerType>(getAddr().getType()).getAddressSpace();
+  std::optional<NVVM::CacheEvictionPriority> evictPriority = getEvictPriority();
+
+  if (getUniform()) {
+    if (getCacheLevel() != CacheLevel::L1)
+      return emitOpError("unsupported cache level, the only supported uniform "
+                         "cache level is L1");
+
+    if (addressSpace != MemSpace::kGenericMemorySpace)
+      return emitOpError(
+          "prefetch to uniform cache requires a generic pointer");
+  }
+
+  if (evictPriority) {
+    if (getCacheLevel() != CacheLevel::L2)
+      return emitOpError(
+          "cache eviction priority supported only for cache level L2");
+
+    if (addressSpace != MemSpace::kGlobalMemorySpace)
+      return emitOpError("cache eviction priority requires a global pointer");
+
+    if (*evictPriority != NVVM::CacheEvictionPriority::EvictNormal &&
+        *evictPriority != NVVM::CacheEvictionPriority::EvictLast)
+      return emitOpError(
+          "unsupported cache eviction priority, only evict_last and "
+          "evict_normal are supported");
+  }
+
   return success();
 }
 
@@ -1710,6 +1804,70 @@ NVVM::IDArgPair DotAccumulate4WayOp::getIntrinsicIDAndArgs(
       llvm::Intrinsic::nvvm_idp4a_s_s,
   };
   return {ids[type], args};
+}
+
+NVVM::IDArgPair DotAccumulate2WayOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto curOp = cast<NVVM::DotAccumulate2WayOp>(op);
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(getAsPackedI32(mt.lookupValue(curOp.getA()), builder));
+  args.push_back(getAsPackedI32(mt.lookupValue(curOp.getB()), builder));
+  args.push_back(builder.getInt1(curOp.getBHi()));
+  args.push_back(mt.lookupValue(curOp.getC()));
+
+  bool isASigned = curOp.getAType() == NVVM::DotAccumulateType::SIGNED;
+  bool isBSigned = curOp.getBType() == NVVM::DotAccumulateType::SIGNED;
+  unsigned type = (isASigned << 1) | isBSigned;
+  const llvm::Intrinsic::ID ids[] = {
+      llvm::Intrinsic::nvvm_idp2a_u_u,
+      llvm::Intrinsic::nvvm_idp2a_u_s,
+      llvm::Intrinsic::nvvm_idp2a_s_u,
+      llvm::Intrinsic::nvvm_idp2a_s_s,
+  };
+  return {ids[type], args};
+}
+
+llvm::Intrinsic::ID PrefetchOp::getIntrinsicID(NVVM::PrefetchOp &op) {
+  using MemSpace = NVVM::NVVMMemorySpace;
+  using CacheLevel = NVVM::PrefetchCacheLevel;
+
+  NVVM::PrefetchCacheLevel cacheLevel = op.getCacheLevel();
+  std::optional<NVVM::CacheEvictionPriority> evictPriority =
+      op.getEvictPriority();
+  unsigned addressSpace =
+      llvm::cast<LLVM::LLVMPointerType>(op.getAddr().getType())
+          .getAddressSpace();
+
+  if (op.getUniform() && cacheLevel == CacheLevel::L1)
+    return llvm::Intrinsic::nvvm_prefetchu_L1;
+
+  if (evictPriority && cacheLevel == CacheLevel::L2) {
+    switch (*evictPriority) {
+    case NVVM::CacheEvictionPriority::EvictLast:
+      return llvm::Intrinsic::nvvm_prefetch_global_L2_evict_last;
+    case NVVM::CacheEvictionPriority::EvictNormal:
+      return llvm::Intrinsic::nvvm_prefetch_global_L2_evict_normal;
+    default:
+      llvm_unreachable("Invalid cache eviction priority");
+    }
+  }
+
+  switch (addressSpace) {
+  case MemSpace::kGenericMemorySpace:
+    return cacheLevel == CacheLevel::L1 ? llvm::Intrinsic::nvvm_prefetch_L1
+                                        : llvm::Intrinsic::nvvm_prefetch_L2;
+  case MemSpace::kGlobalMemorySpace:
+    return cacheLevel == CacheLevel::L1
+               ? llvm::Intrinsic::nvvm_prefetch_global_L1
+               : llvm::Intrinsic::nvvm_prefetch_global_L2;
+  case MemSpace::kLocalMemorySpace:
+    return cacheLevel == CacheLevel::L1
+               ? llvm::Intrinsic::nvvm_prefetch_local_L1
+               : llvm::Intrinsic::nvvm_prefetch_local_L2;
+  default:
+    llvm_unreachable("Invalid pointer address space");
+  }
 }
 
 //===----------------------------------------------------------------------===//

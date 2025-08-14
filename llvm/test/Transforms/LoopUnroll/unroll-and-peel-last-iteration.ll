@@ -71,8 +71,106 @@ exit:
   ret i32 %1
 }
 
+; Test case for https://github.com/llvm/llvm-project/issues/142895.
+
+define i32 @pr142895_exit_value_is_arg(i32 %arg) {
+; CHECK-LABEL: define i32 @pr142895_exit_value_is_arg(
+; CHECK-SAME: i32 [[ARG:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[INDVAR:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[INDVAR]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INC]], 32
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[LOOP]], label %[[EXIT_PEEL_BEGIN:.*]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK:       [[EXIT_PEEL_BEGIN]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[INC]], %[[LOOP]] ]
+; CHECK-NEXT:    br label %[[LOOP_PEEL:.*]]
+; CHECK:       [[LOOP_PEEL]]:
+; CHECK-NEXT:    [[CMP1_PEEL:%.*]] = icmp eq i32 [[TMP0]], 32
+; CHECK-NEXT:    [[SEL_PEEL:%.*]] = select i1 [[CMP1_PEEL]], i32 0, i32 0
+; CHECK-NEXT:    [[SUB_PEEL:%.*]] = sub i32 0, 0
+; CHECK-NEXT:    [[XOR_PEEL:%.*]] = xor i32 0, 0
+; CHECK-NEXT:    [[INC_PEEL:%.*]] = add i32 [[TMP0]], 1
+; CHECK-NEXT:    [[EXITCOND_PEEL:%.*]] = icmp ne i32 [[INC_PEEL]], 33
+; CHECK-NEXT:    br i1 [[EXITCOND_PEEL]], label %[[EXIT_PEEL_NEXT:.*]], label %[[EXIT_PEEL_NEXT]]
+; CHECK:       [[EXIT_PEEL_NEXT]]:
+; CHECK-NEXT:    br label %[[LOOP_PEEL_NEXT:.*]]
+; CHECK:       [[LOOP_PEEL_NEXT]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i32 [[ARG]]
+;
+entry:
+  br label %loop
+
+loop:
+  %indvar = phi i32 [ 0, %entry ], [ %inc, %loop ]
+  %cmp1 = icmp eq i32 %indvar, 32
+  %sel = select i1 %cmp1, i32 0, i32 0
+  %sub = sub i32 0, 0
+  %xor = xor i32 0, 0
+  %inc = add i32 %indvar, 1
+  %exitcond = icmp ne i32 %inc, 33
+  br i1 %exitcond, label %loop, label %exit
+
+exit:
+  %exit.lcssa = phi i32 [ %arg, %loop ]
+  ret i32 %exit.lcssa
+}
+
+define i32 @pr142895_exit_value_is_inst(i32 %arg) {
+; CHECK-LABEL: define i32 @pr142895_exit_value_is_inst(
+; CHECK-SAME: i32 [[ARG:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[ARG]], 7
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[INDVAR:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[INDVAR]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INC]], 32
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[LOOP]], label %[[EXIT_PEEL_BEGIN:.*]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK:       [[EXIT_PEEL_BEGIN]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[INC]], %[[LOOP]] ]
+; CHECK-NEXT:    br label %[[LOOP_PEEL:.*]]
+; CHECK:       [[LOOP_PEEL]]:
+; CHECK-NEXT:    [[CMP1_PEEL:%.*]] = icmp eq i32 [[TMP0]], 32
+; CHECK-NEXT:    [[SEL_PEEL:%.*]] = select i1 [[CMP1_PEEL]], i32 0, i32 0
+; CHECK-NEXT:    [[SUB_PEEL:%.*]] = sub i32 0, 0
+; CHECK-NEXT:    [[XOR_PEEL:%.*]] = xor i32 0, 0
+; CHECK-NEXT:    [[INC_PEEL:%.*]] = add i32 [[TMP0]], 1
+; CHECK-NEXT:    [[EXITCOND_PEEL:%.*]] = icmp ne i32 [[INC_PEEL]], 33
+; CHECK-NEXT:    br i1 [[EXITCOND_PEEL]], label %[[EXIT_PEEL_NEXT:.*]], label %[[EXIT_PEEL_NEXT]]
+; CHECK:       [[EXIT_PEEL_NEXT]]:
+; CHECK-NEXT:    br label %[[LOOP_PEEL_NEXT:.*]]
+; CHECK:       [[LOOP_PEEL_NEXT]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+entry:
+  %mul = mul i32 %arg, 7
+  br label %loop
+
+loop:
+  %indvar = phi i32 [ 0, %entry ], [ %inc, %loop ]
+  %cmp1 = icmp eq i32 %indvar, 32
+  %sel = select i1 %cmp1, i32 0, i32 0
+  %sub = sub i32 0, 0
+  %xor = xor i32 0, 0
+  %inc = add i32 %indvar, 1
+  %exitcond = icmp ne i32 %inc, 33
+  br i1 %exitcond, label %loop, label %exit
+
+exit:
+  %exit.lcssa = phi i32 [ %mul, %loop ]
+  ret i32 %exit.lcssa
+}
+
 declare void @foo(i32)
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.peeled.count", i32 1}
+; CHECK: [[LOOP2]] = distinct !{[[LOOP2]], [[META1]]}
+; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]]}
 ;.

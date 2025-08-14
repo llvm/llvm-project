@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Module.h"
 
 using namespace llvm;
@@ -30,6 +31,15 @@ STATISTIC(MeetsUnwindV2Criteria,
           "Number of functions that meet Unwind v2 criteria");
 STATISTIC(FailsUnwindV2Criteria,
           "Number of functions that fail Unwind v2 criteria");
+
+static cl::opt<unsigned> MaximumUnwindCodes(
+    "x86-wineh-unwindv2-max-unwind-codes", cl::Hidden,
+    cl::desc("Maximum number of unwind codes permitted in each unwind info."),
+    cl::init(UINT8_MAX));
+
+static cl::opt<unsigned>
+    ForceMode("x86-wineh-unwindv2-force-mode", cl::Hidden,
+              cl::desc("Overwrites the Unwind v2 mode for testing purposes."));
 
 namespace {
 
@@ -44,10 +54,12 @@ public:
   StringRef getPassName() const override { return "WinEH Unwind V2"; }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
-  bool rejectCurrentFunction() const {
-    FailsUnwindV2Criteria++;
-    return false;
-  }
+
+private:
+  /// Rejects the current function due to an internal error within LLVM.
+  static bool rejectCurrentFunctionInternalError(const MachineFunction &MF,
+                                                 WinX64EHUnwindV2Mode Mode,
+                                                 StringRef Reason);
 };
 
 enum class FunctionState {
@@ -69,8 +81,21 @@ FunctionPass *llvm::createX86WinEHUnwindV2Pass() {
   return new X86WinEHUnwindV2();
 }
 
+DebugLoc findDebugLoc(const MachineBasicBlock &MBB) {
+  for (const MachineInstr &MI : MBB)
+    if (MI.getDebugLoc())
+      return MI.getDebugLoc();
+
+  return DebugLoc::getUnknown();
+}
+
 bool X86WinEHUnwindV2::runOnMachineFunction(MachineFunction &MF) {
-  if (!MF.getFunction().getParent()->getModuleFlag("winx64-eh-unwindv2"))
+  WinX64EHUnwindV2Mode Mode =
+      ForceMode.getNumOccurrences()
+          ? static_cast<WinX64EHUnwindV2Mode>(ForceMode.getValue())
+          : MF.getFunction().getParent()->getWinX64EHUnwindV2Mode();
+
+  if (Mode == WinX64EHUnwindV2Mode::Disabled)
     return false;
 
   // Current state of processing the function. We'll assume that all functions
@@ -80,6 +105,7 @@ bool X86WinEHUnwindV2::runOnMachineFunction(MachineFunction &MF) {
   // Prolog information.
   SmallVector<int64_t> PushedRegs;
   bool HasStackAlloc = false;
+  unsigned ApproximatePrologCodeCount = 0;
 
   // Requested changes.
   SmallVector<MachineInstr *> UnwindV2StartLocations;
@@ -99,6 +125,7 @@ bool X86WinEHUnwindV2::runOnMachineFunction(MachineFunction &MF) {
       case X86::SEH_PushReg:
         if (State != FunctionState::InProlog)
           llvm_unreachable("SEH_PushReg outside of prolog");
+        ApproximatePrologCodeCount++;
         PushedRegs.push_back(MI.getOperand(0).getImm());
         break;
 
@@ -106,7 +133,24 @@ bool X86WinEHUnwindV2::runOnMachineFunction(MachineFunction &MF) {
       case X86::SEH_SetFrame:
         if (State != FunctionState::InProlog)
           llvm_unreachable("SEH_StackAlloc or SEH_SetFrame outside of prolog");
+        // Assume a large alloc...
+        ApproximatePrologCodeCount +=
+            (MI.getOpcode() == X86::SEH_StackAlloc) ? 3 : 1;
         HasStackAlloc = true;
+        break;
+
+      case X86::SEH_SaveReg:
+      case X86::SEH_SaveXMM:
+        if (State != FunctionState::InProlog)
+          llvm_unreachable("SEH_SaveXMM or SEH_SaveReg outside of prolog");
+        // Assume a big reg...
+        ApproximatePrologCodeCount += 3;
+        break;
+
+      case X86::SEH_PushFrame:
+        if (State != FunctionState::InProlog)
+          llvm_unreachable("SEH_PushFrame outside of prolog");
+        ApproximatePrologCodeCount++;
         break;
 
       case X86::SEH_EndPrologue:
@@ -127,10 +171,16 @@ bool X86WinEHUnwindV2::runOnMachineFunction(MachineFunction &MF) {
       case X86::SEH_EndEpilogue:
         if (State != FunctionState::InEpilog)
           llvm_unreachable("SEH_EndEpilogue outside of epilog");
-        if ((HasStackAlloc != HasStackDealloc) ||
-            (PoppedRegCount != PushedRegs.size()))
-          // Non-canonical epilog, reject the function.
-          return rejectCurrentFunction();
+        if (HasStackAlloc != HasStackDealloc)
+          return rejectCurrentFunctionInternalError(
+              MF, Mode,
+              "The prolog made a stack allocation, "
+              "but the epilog did not deallocate it");
+        if (PoppedRegCount != PushedRegs.size())
+          return rejectCurrentFunctionInternalError(
+              MF, Mode,
+              "The prolog pushed more registers than "
+              "the epilog popped");
 
         // If we didn't find the start location, then use the end of the
         // epilog.
@@ -145,13 +195,26 @@ bool X86WinEHUnwindV2::runOnMachineFunction(MachineFunction &MF) {
         if (State == FunctionState::InEpilog) {
           // If the prolog contains a stack allocation, then the first
           // instruction in the epilog must be to adjust the stack pointer.
-          if (!HasStackAlloc || HasStackDealloc || (PoppedRegCount > 0)) {
-            return rejectCurrentFunction();
-          }
+          if (!HasStackAlloc)
+            return rejectCurrentFunctionInternalError(
+                MF, Mode,
+                "The epilog is deallocating a stack "
+                "allocation, but the prolog did "
+                "not allocate one");
+          if (HasStackDealloc)
+            return rejectCurrentFunctionInternalError(
+                MF, Mode,
+                "The epilog is deallocating the stack "
+                "allocation more than once");
+          if (PoppedRegCount > 0)
+            llvm_unreachable(
+                "Should have raised an error: either popping before "
+                "deallocating or deallocating without an allocation");
+
           HasStackDealloc = true;
         } else if (State == FunctionState::FinishedEpilog)
-          // Unexpected instruction after the epilog.
-          return rejectCurrentFunction();
+          return rejectCurrentFunctionInternalError(
+              MF, Mode, "Unexpected mov or add instruction after the epilog");
         break;
 
       case X86::POP64r:
@@ -159,12 +222,22 @@ bool X86WinEHUnwindV2::runOnMachineFunction(MachineFunction &MF) {
           // After the stack pointer has been adjusted, the epilog must
           // POP each register in reverse order of the PUSHes in the prolog.
           PoppedRegCount++;
-          if ((HasStackAlloc != HasStackDealloc) ||
-              (PoppedRegCount > PushedRegs.size()) ||
-              (PushedRegs[PushedRegs.size() - PoppedRegCount] !=
-               MI.getOperand(0).getReg())) {
-            return rejectCurrentFunction();
-          }
+          if (HasStackAlloc != HasStackDealloc)
+            return rejectCurrentFunctionInternalError(
+                MF, Mode,
+                "Cannot pop registers before the stack "
+                "allocation has been deallocated");
+          if (PoppedRegCount > PushedRegs.size())
+            return rejectCurrentFunctionInternalError(
+                MF, Mode,
+                "The epilog is popping more registers than the prolog pushed");
+          if (PushedRegs[PushedRegs.size() - PoppedRegCount] !=
+              MI.getOperand(0).getReg())
+            return rejectCurrentFunctionInternalError(
+                MF, Mode,
+                "The epilog is popping a registers in "
+                "a different order than the "
+                "prolog pushed them");
 
           // Unwind v2 records the size of the epilog not from where we place
           // SEH_BeginEpilogue (as that contains the instruction to adjust the
@@ -176,7 +249,8 @@ bool X86WinEHUnwindV2::runOnMachineFunction(MachineFunction &MF) {
           }
         } else if (State == FunctionState::FinishedEpilog)
           // Unexpected instruction after the epilog.
-          return rejectCurrentFunction();
+          return rejectCurrentFunctionInternalError(
+              MF, Mode, "Registers are being popped after the epilog");
         break;
 
       default:
@@ -191,7 +265,8 @@ bool X86WinEHUnwindV2::runOnMachineFunction(MachineFunction &MF) {
           if ((State == FunctionState::FinishedEpilog) ||
               (State == FunctionState::InEpilog))
             // Unknown instruction in or after the epilog.
-            return rejectCurrentFunction();
+            return rejectCurrentFunctionInternalError(
+                MF, Mode, "Unexpected instruction in or after the epilog");
         }
       }
     }
@@ -200,6 +275,25 @@ bool X86WinEHUnwindV2::runOnMachineFunction(MachineFunction &MF) {
   if (UnwindV2StartLocations.empty()) {
     assert(State == FunctionState::InProlog &&
            "If there are no epilogs, then there should be no prolog");
+    return false;
+  }
+
+  MachineBasicBlock &FirstMBB = MF.front();
+  // Assume +1 for the "header" UOP_Epilog that contains the epilog size, and
+  // that we won't be able to use the "last epilog at the end of function"
+  // optimization.
+  if (ApproximatePrologCodeCount + UnwindV2StartLocations.size() + 1 >
+      static_cast<unsigned>(MaximumUnwindCodes)) {
+    if (Mode == WinX64EHUnwindV2Mode::Required)
+      MF.getFunction().getContext().diagnose(DiagnosticInfoGenericWithLoc(
+          "Windows x64 Unwind v2 is required, but the function '" +
+              MF.getName() +
+              "' has too many unwind codes. Try splitting the function or "
+              "reducing the number of places where it exits early with a tail "
+              "call.",
+          MF.getFunction(), findDebugLoc(FirstMBB)));
+
+    FailsUnwindV2Criteria++;
     return false;
   }
 
@@ -212,10 +306,20 @@ bool X86WinEHUnwindV2::runOnMachineFunction(MachineFunction &MF) {
             TII->get(X86::SEH_UnwindV2Start));
   }
   // Note that the function is using Unwind v2.
-  MachineBasicBlock &FirstMBB = MF.front();
-  BuildMI(FirstMBB, FirstMBB.front(), FirstMBB.front().getDebugLoc(),
+  BuildMI(FirstMBB, FirstMBB.front(), findDebugLoc(FirstMBB),
           TII->get(X86::SEH_UnwindVersion))
       .addImm(2);
 
   return true;
+}
+
+bool X86WinEHUnwindV2::rejectCurrentFunctionInternalError(
+    const MachineFunction &MF, WinX64EHUnwindV2Mode Mode, StringRef Reason) {
+  if (Mode == WinX64EHUnwindV2Mode::Required)
+    reportFatalInternalError("Windows x64 Unwind v2 is required, but LLVM has "
+                             "generated incompatible code in function '" +
+                             MF.getName() + "': " + Reason);
+
+  FailsUnwindV2Criteria++;
+  return false;
 }

@@ -222,6 +222,11 @@ namespace CooperativeMatrixOperands {
 #include "SPIRVGenTables.inc"
 } // namespace CooperativeMatrixOperands
 
+namespace SpecConstantOpOperands {
+#define GET_SpecConstantOpOperands_DECL
+#include "SPIRVGenTables.inc"
+} // namespace SpecConstantOpOperands
+
 struct ExtendedBuiltin {
   StringRef Name;
   InstructionSet::InstructionSet Set;

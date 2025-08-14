@@ -9,10 +9,10 @@
 #ifndef __CLC_MATH_CLC_ILOGB_H__
 #define __CLC_MATH_CLC_ILOGB_H__
 
-#define __CLC_FUNCTION __clc_ilogb
+#define FUNCTION __clc_ilogb
 #define __CLC_BODY <clc/math/unary_decl_with_int_return.inc>
 #include <clc/math/gentype.inc>
 
-#undef __CLC_FUNCTION
+#undef FUNCTION
 
 #endif // __CLC_MATH_CLC_ILOGB_H__

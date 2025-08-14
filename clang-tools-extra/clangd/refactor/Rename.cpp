@@ -1308,7 +1308,7 @@ getMappedRanges(ArrayRef<Range> Indexed, ArrayRef<SymbolRange> Lexed) {
     return std::nullopt;
   }
   // Fast check for the special subset case.
-  if (std::includes(Indexed.begin(), Indexed.end(), Lexed.begin(), Lexed.end()))
+  if (llvm::includes(Indexed, Lexed))
     return Lexed.vec();
 
   std::vector<size_t> Best;

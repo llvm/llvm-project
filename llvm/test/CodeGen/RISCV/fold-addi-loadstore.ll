@@ -909,7 +909,7 @@ define i64 @fold_addi_from_different_bb(i64 %k, i64 %n, ptr %a) nounwind {
 ; RV32I-NEXT:    mv s2, a2
 ; RV32I-NEXT:    beqz a3, .LBB20_3
 ; RV32I-NEXT:  # %bb.1: # %entry
-; RV32I-NEXT:    slti a1, s1, 0
+; RV32I-NEXT:    srli a1, s1, 31
 ; RV32I-NEXT:    beqz a1, .LBB20_4
 ; RV32I-NEXT:  .LBB20_2:
 ; RV32I-NEXT:    li s3, 0
@@ -974,7 +974,7 @@ define i64 @fold_addi_from_different_bb(i64 %k, i64 %n, ptr %a) nounwind {
 ; RV32I-MEDIUM-NEXT:    mv s2, a2
 ; RV32I-MEDIUM-NEXT:    beqz a3, .LBB20_3
 ; RV32I-MEDIUM-NEXT:  # %bb.1: # %entry
-; RV32I-MEDIUM-NEXT:    slti a1, s1, 0
+; RV32I-MEDIUM-NEXT:    srli a1, s1, 31
 ; RV32I-MEDIUM-NEXT:    beqz a1, .LBB20_4
 ; RV32I-MEDIUM-NEXT:  .LBB20_2:
 ; RV32I-MEDIUM-NEXT:    li s3, 0
@@ -1263,7 +1263,7 @@ define i1 @pr134525() nounwind {
 ; RV64I-NEXT:    lui a0, %hi(ki_end+2145386496)
 ; RV64I-NEXT:    addi a0, a0, %lo(ki_end+2145386496)
 ; RV64I-NEXT:    lui a1, 32
-; RV64I-NEXT:    addiw a1, a1, 1
+; RV64I-NEXT:    addi a1, a1, 1
 ; RV64I-NEXT:    sltu a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
@@ -1275,7 +1275,7 @@ define i1 @pr134525() nounwind {
 ; RV64I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi15)
 ; RV64I-MEDIUM-NEXT:    add a0, a0, a1
 ; RV64I-MEDIUM-NEXT:    lui a1, 32
-; RV64I-MEDIUM-NEXT:    addiw a1, a1, 1
+; RV64I-MEDIUM-NEXT:    addi a1, a1, 1
 ; RV64I-MEDIUM-NEXT:    sltu a0, a0, a1
 ; RV64I-MEDIUM-NEXT:    ret
 ;
@@ -1287,7 +1287,7 @@ define i1 @pr134525() nounwind {
 ; RV64I-LARGE-NEXT:    lui a1, 523776
 ; RV64I-LARGE-NEXT:    add a0, a0, a1
 ; RV64I-LARGE-NEXT:    lui a1, 32
-; RV64I-LARGE-NEXT:    addiw a1, a1, 1
+; RV64I-LARGE-NEXT:    addi a1, a1, 1
 ; RV64I-LARGE-NEXT:    sltu a0, a0, a1
 ; RV64I-LARGE-NEXT:    ret
 entry:

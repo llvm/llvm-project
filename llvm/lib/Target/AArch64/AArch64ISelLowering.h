@@ -181,6 +181,15 @@ public:
                                                MachineBasicBlock *BB) const;
   MachineBasicBlock *EmitGetSMESaveSize(MachineInstr &MI,
                                         MachineBasicBlock *BB) const;
+  MachineBasicBlock *EmitEntryPStateSM(MachineInstr &MI,
+                                       MachineBasicBlock *BB) const;
+
+  /// Replace (0, vreg) discriminator components with the operands of blend
+  /// or with (immediate, NoRegister) when possible.
+  void fixupPtrauthDiscriminator(MachineInstr &MI, MachineBasicBlock *BB,
+                                 MachineOperand &IntDiscOp,
+                                 MachineOperand &AddrDiscOp,
+                                 const TargetRegisterClass *AddrDiscRC) const;
 
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
@@ -207,22 +216,24 @@ public:
   bool optimizeExtendOrTruncateConversion(
       Instruction *I, Loop *L, const TargetTransformInfo &TTI) const override;
 
-  bool hasPairedLoad(EVT LoadedType, Align &RequiredAligment) const override;
+  bool hasPairedLoad(EVT LoadedType, Align &RequiredAlignment) const override;
 
   unsigned getMaxSupportedInterleaveFactor() const override { return 4; }
 
-  bool lowerInterleavedLoad(LoadInst *LI,
+  bool lowerInterleavedLoad(Instruction *Load, Value *Mask,
                             ArrayRef<ShuffleVectorInst *> Shuffles,
-                            ArrayRef<unsigned> Indices,
-                            unsigned Factor) const override;
-  bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
+                            ArrayRef<unsigned> Indices, unsigned Factor,
+                            const APInt &GapMask) const override;
+  bool lowerInterleavedStore(Instruction *Store, Value *Mask,
+                             ShuffleVectorInst *SVI,
                              unsigned Factor) const override;
 
-  bool lowerDeinterleaveIntrinsicToLoad(
-      LoadInst *LI, ArrayRef<Value *> DeinterleaveValues) const override;
+  bool lowerDeinterleaveIntrinsicToLoad(Instruction *Load, Value *Mask,
+                                        IntrinsicInst *DI) const override;
 
   bool lowerInterleaveIntrinsicToStore(
-      StoreInst *SI, ArrayRef<Value *> InterleaveValues) const override;
+      Instruction *Store, Value *Mask,
+      ArrayRef<Value *> InterleaveValues) const override;
 
   bool isLegalAddImmediate(int64_t) const override;
   bool isLegalAddScalableImmediate(int64_t) const override;
@@ -233,7 +244,7 @@ public:
 
   bool shouldConsiderGEPOffsetSplit() const override;
 
-  EVT getOptimalMemOpType(const MemOp &Op,
+  EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                           const AttributeList &FuncAttributes) const override;
 
   LLT getOptimalMemOpLLT(const MemOp &Op,
@@ -449,6 +460,10 @@ public:
   /// Enable aggressive FMA fusion on targets that want it.
   bool enableAggressiveFMAFusion(EVT VT) const override;
 
+  bool aggressivelyPreferBuildVectorSources(EVT VecVT) const override {
+    return true;
+  }
+
   /// Returns the size of the platform's va_list object.
   unsigned getVaListSizeInBits(const DataLayout &DL) const override;
 
@@ -510,8 +525,8 @@ public:
   /// node. \p Condition should be one of the enum values from
   /// AArch64SME::ToggleCondition.
   SDValue changeStreamingMode(SelectionDAG &DAG, SDLoc DL, bool Enable,
-                              SDValue Chain, SDValue InGlue, unsigned Condition,
-                              SDValue PStateSM = SDValue()) const;
+                              SDValue Chain, SDValue InGlue,
+                              unsigned Condition) const;
 
   bool isVScaleKnownToBeAPowerOfTwo() const override { return true; }
 
@@ -535,13 +550,14 @@ public:
   /// True if stack clash protection is enabled for this functions.
   bool hasInlineStackProbe(const MachineFunction &MF) const override;
 
+  /// In AArch64, true if FEAT_CPA is present. Allows pointer arithmetic
+  /// semantics to be preserved for instruction selection.
+  bool shouldPreservePtrArith(const Function &F, EVT PtrVT) const override;
+
 private:
   /// Keep a pointer to the AArch64Subtarget around so that we can
   /// make the right decision when generating code for different targets.
   const AArch64Subtarget *Subtarget;
-
-  llvm::BumpPtrAllocator BumpAlloc;
-  llvm::StringSaver Saver{BumpAlloc};
 
   bool isExtFreeImpl(const Instruction *Ext) const override;
 
@@ -646,7 +662,9 @@ private:
   SDValue LowerSELECT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSELECT_CC(ISD::CondCode CC, SDValue LHS, SDValue RHS,
-                         SDValue TVal, SDValue FVal, const SDLoc &dl,
+                         SDValue TVal, SDValue FVal,
+                         iterator_range<SDNode::user_iterator> Users,
+                         SDNodeFlags Flags, const SDLoc &dl,
                          SelectionDAG &DAG) const;
   SDValue LowerINIT_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerADJUST_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
@@ -825,6 +843,9 @@ private:
   void ReplaceExtractSubVectorResults(SDNode *N,
                                       SmallVectorImpl<SDValue> &Results,
                                       SelectionDAG &DAG) const;
+  void ReplaceGetActiveLaneMaskResults(SDNode *N,
+                                       SmallVectorImpl<SDValue> &Results,
+                                       SelectionDAG &DAG) const;
 
   bool shouldNormalizeToSelectSequence(LLVMContext &, EVT) const override;
 
@@ -867,6 +888,10 @@ private:
 
   bool shouldScalarizeBinop(SDValue VecOp) const override {
     return VecOp.getOpcode() == ISD::SETCC;
+  }
+
+  bool hasMultipleConditionRegisters(EVT VT) const override {
+    return VT.isScalableVector();
   }
 };
 

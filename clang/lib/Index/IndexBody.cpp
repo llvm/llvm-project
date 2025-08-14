@@ -69,7 +69,7 @@ public:
     while (isa<CastExpr>(*It) || isa<ParenExpr>(*It)) {
       if (auto ICE = dyn_cast<ImplicitCastExpr>(*It)) {
         if (ICE->getCastKind() == CK_LValueToRValue)
-          Roles |= (unsigned)(unsigned)SymbolRole::Read;
+          Roles |= (unsigned)SymbolRole::Read;
       }
       if (It == StmtStack.begin())
         break;
@@ -434,6 +434,13 @@ public:
             return IndexCtx.handleReference(FD, D.getFieldLoc(), Parent,
                                             ParentDC, SymbolRoleSet(),
                                             /*Relations=*/{}, E);
+          }
+        } else {
+          if (D.isArrayDesignator())
+            TraverseStmt(E->getArrayIndex(D));
+          else if (D.isArrayRangeDesignator()) {
+            TraverseStmt(E->getArrayRangeStart(D));
+            TraverseStmt(E->getArrayRangeEnd(D));
           }
         }
       }

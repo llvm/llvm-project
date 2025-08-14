@@ -10,19 +10,12 @@ legalized:       true
 regBankSelected: true
 body:             |
   bb.1:
-    ; RV32-LABEL: name: float_imm
-    ; RV32: [[LUI:%[0-9]+]]:gpr = LUI 263313
-    ; RV32-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI [[LUI]], -37
-    ; RV32-NEXT: [[FMV_W_X:%[0-9]+]]:fpr32 = FMV_W_X [[ADDI]]
-    ; RV32-NEXT: $f10_f = COPY [[FMV_W_X]]
-    ; RV32-NEXT: PseudoRET implicit $f10_f
-    ;
-    ; RV64-LABEL: name: float_imm
-    ; RV64: [[LUI:%[0-9]+]]:gpr = LUI 263313
-    ; RV64-NEXT: [[ADDIW:%[0-9]+]]:gpr = ADDIW [[LUI]], -37
-    ; RV64-NEXT: [[FMV_W_X:%[0-9]+]]:fpr32 = FMV_W_X [[ADDIW]]
-    ; RV64-NEXT: $f10_f = COPY [[FMV_W_X]]
-    ; RV64-NEXT: PseudoRET implicit $f10_f
+    ; CHECK-LABEL: name: float_imm
+    ; CHECK: [[LUI:%[0-9]+]]:gpr = LUI 263313
+    ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI [[LUI]], -37
+    ; CHECK-NEXT: [[FMV_W_X:%[0-9]+]]:fpr32 = FMV_W_X [[ADDI]]
+    ; CHECK-NEXT: $f10_f = COPY [[FMV_W_X]]
+    ; CHECK-NEXT: PseudoRET implicit $f10_f
     %0:fprb(s32) = G_FCONSTANT float 0x400921FB60000000
     $f10_f = COPY %0(s32)
     PseudoRET implicit $f10_f
@@ -109,14 +102,14 @@ body:             |
     ;
     ; RV64-LABEL: name: double_imm
     ; RV64: [[LUI:%[0-9]+]]:gpr = LUI 512
-    ; RV64-NEXT: [[ADDIW:%[0-9]+]]:gpr = ADDIW [[LUI]], 1169
-    ; RV64-NEXT: [[SLLI:%[0-9]+]]:gpr = SLLI [[ADDIW]], 15
-    ; RV64-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI [[SLLI]], -299
-    ; RV64-NEXT: [[SLLI1:%[0-9]+]]:gpr = SLLI [[ADDI]], 14
-    ; RV64-NEXT: [[ADDI1:%[0-9]+]]:gpr = ADDI [[SLLI1]], 1091
-    ; RV64-NEXT: [[SLLI2:%[0-9]+]]:gpr = SLLI [[ADDI1]], 12
-    ; RV64-NEXT: [[ADDI2:%[0-9]+]]:gpr = ADDI [[SLLI2]], -744
-    ; RV64-NEXT: [[FMV_D_X:%[0-9]+]]:fpr64 = FMV_D_X [[ADDI2]]
+    ; RV64-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI [[LUI]], 1169
+    ; RV64-NEXT: [[SLLI:%[0-9]+]]:gpr = SLLI [[ADDI]], 15
+    ; RV64-NEXT: [[ADDI1:%[0-9]+]]:gpr = ADDI [[SLLI]], -299
+    ; RV64-NEXT: [[SLLI1:%[0-9]+]]:gpr = SLLI [[ADDI1]], 14
+    ; RV64-NEXT: [[ADDI2:%[0-9]+]]:gpr = ADDI [[SLLI1]], 1091
+    ; RV64-NEXT: [[SLLI2:%[0-9]+]]:gpr = SLLI [[ADDI2]], 12
+    ; RV64-NEXT: [[ADDI3:%[0-9]+]]:gpr = ADDI [[SLLI2]], -744
+    ; RV64-NEXT: [[FMV_D_X:%[0-9]+]]:fpr64 = FMV_D_X [[ADDI3]]
     ; RV64-NEXT: $f10_d = COPY [[FMV_D_X]]
     ; RV64-NEXT: PseudoRET implicit $f10_d
     %0:fprb(s64) = G_FCONSTANT double 0x400921FB54442D18

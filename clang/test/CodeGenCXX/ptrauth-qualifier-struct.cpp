@@ -24,7 +24,7 @@ struct __attribute__((trivial_abi)) TrivialSA {
 // Check that TrivialSA is passed indirectly despite being annotated with
 // 'trivial_abi'.
 
-// CHECK: define {{.*}}void @_Z18testParamTrivialSA9TrivialSA(ptr noundef %{{.*}})
+// CHECK: define {{.*}}void @_Z18testParamTrivialSA9TrivialSA(ptr dead_on_return noundef %{{.*}})
 
 void testParamTrivialSA(TrivialSA a) {
 }
@@ -99,7 +99,7 @@ void testMoveAssignment(SA a) {
   t = static_cast<SA &&>(a);
 }
 
-// CHECK: define {{.*}}void @_Z19testCopyConstructor2SI(i
+// CHECK: define {{.*}}void @_Z19testCopyConstructor2SI(
 // CHECK: call void @llvm.memcpy.p0.p0.i64(
 
 void testCopyConstructor(SI a) {
