@@ -73,7 +73,7 @@ jobs:
         python-version: '3.12'
 
     - name: Checkout LLVM
-      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
     - name: Install Dependencies
       shell: bash
@@ -195,7 +195,7 @@ jobs:
     steps:
 
     - name: Checkout Actions
-      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       with:
         ref: ${{ (github.event_name == 'pull_request' && github.sha) || 'main' }}
         sparse-checkout: |
@@ -216,7 +216,7 @@ jobs:
       run: mv workflows  ../workflows-main
 
     - name: Checkout LLVM
-      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       with:
         ref: ${{ needs.prepare.outputs.ref }}
 
@@ -286,7 +286,7 @@ jobs:
 
     steps:
     - name: Checkout Release Scripts
-      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       with:
         sparse-checkout: |
           llvm/utils/release/github-upload-release.py
@@ -338,7 +338,7 @@ jobs:
     runs-on: ${{ needs.prepare.outputs.test-runs-on }}
     steps:
     - name: Checkout Actions
-      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       with:
         ref: ${{ (github.event_name == 'pull_request' && github.sha) || 'main' }}
         sparse-checkout: |
