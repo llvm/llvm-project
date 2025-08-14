@@ -1638,7 +1638,7 @@ define <2 x float> @test_sqrt(<2 x float> %a) #0 {
 ;  ret <2 x float> %r
 ;}
 
-define <2 x float> @test_sin(<2 x float> %a) #0 #1 {
+define <2 x float> @test_sin(<2 x float> %a) #0 {
 ; CHECK-LABEL: test_sin(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<5>;
@@ -1651,11 +1651,11 @@ define <2 x float> @test_sin(<2 x float> %a) #0 #1 {
 ; CHECK-NEXT:    sin.approx.f32 %r4, %r1;
 ; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
 ; CHECK-NEXT:    ret;
-  %r = call <2 x float> @llvm.sin(<2 x float> %a)
+  %r = call afn <2 x float> @llvm.sin(<2 x float> %a)
   ret <2 x float> %r
 }
 
-define <2 x float> @test_cos(<2 x float> %a) #0 #1 {
+define <2 x float> @test_cos(<2 x float> %a) #0 {
 ; CHECK-LABEL: test_cos(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<5>;
@@ -1668,7 +1668,7 @@ define <2 x float> @test_cos(<2 x float> %a) #0 #1 {
 ; CHECK-NEXT:    cos.approx.f32 %r4, %r1;
 ; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r4, %r3};
 ; CHECK-NEXT:    ret;
-  %r = call <2 x float> @llvm.cos(<2 x float> %a)
+  %r = call afn <2 x float> @llvm.cos(<2 x float> %a)
   ret <2 x float> %r
 }
 
@@ -2157,5 +2157,4 @@ define void @test_trunc_to_v2f16(<2 x float> %a, ptr %p) {
 
 
 attributes #0 = { nounwind }
-attributes #1 = { "unsafe-fp-math" = "true" }
 attributes #2 = { "denormal-fp-math"="preserve-sign" }
