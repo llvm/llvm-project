@@ -140,4 +140,9 @@ def AutomapToTargetDataPass
   let dependentDialects = ["mlir::omp::OpenMPDialect"];
 }
 
+def SimdOnlyPass : Pass<"omp-simd-only", "mlir::ModuleOp"> {
+  let summary = "Filters out non-simd OpenMP constructs";
+  let dependentDialects = ["mlir::omp::OpenMPDialect"];
+}
+
 #endif //FORTRAN_OPTIMIZER_OPENMP_PASSES

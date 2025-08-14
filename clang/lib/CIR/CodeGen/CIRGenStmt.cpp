@@ -33,6 +33,8 @@ void CIRGenFunction::emitCompoundStmtWithoutScope(const CompoundStmt &s) {
 }
 
 void CIRGenFunction::emitCompoundStmt(const CompoundStmt &s) {
+  // Add local scope to track new declared variables.
+  SymTableScopeTy varScope(symbolTable);
   mlir::Location scopeLoc = getLoc(s.getSourceRange());
   mlir::OpBuilder::InsertPoint scopeInsPt;
   builder.create<cir::ScopeOp>(
