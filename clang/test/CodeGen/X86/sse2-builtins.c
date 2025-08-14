@@ -1780,24 +1780,28 @@ __m128i test_mm_unpackhi_epi8(__m128i A, __m128i B) {
   // CHECK: shufflevector <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i32> <i32 8, i32 24, i32 9, i32 25, i32 10, i32 26, i32 11, i32 27, i32 12, i32 28, i32 13, i32 29, i32 14, i32 30, i32 15, i32 31>
   return _mm_unpackhi_epi8(A, B);
 }
+TEST_CONSTEXPR(match_v16qi(_mm_unpackhi_epi8((__m128i)(__v16qi){0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}, (__m128i)(__v16qi){16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}), 8, 24, 9, 25, 10, 26, 11, 27, 12, 28, 13, 29, 14, 30, 15, 31));
 
 __m128i test_mm_unpackhi_epi16(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_unpackhi_epi16
   // CHECK: shufflevector <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i32> <i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
   return _mm_unpackhi_epi16(A, B);
 }
+TEST_CONSTEXPR(match_v8hi(_mm_unpackhi_epi16((__m128i)(__v8hi){0, 1, 2, 3, 4, 5, 6, 7}, (__m128i)(__v8hi){8, 9, 10, 11, 12, 13, 14, 15}), 4, 12, 5, 13, 6, 14, 7, 15));
 
 __m128i test_mm_unpackhi_epi32(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_unpackhi_epi32
   // CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
   return _mm_unpackhi_epi32(A, B);
 }
+TEST_CONSTEXPR(match_v4si(_mm_unpackhi_epi32((__m128i)(__v4si){0, 1, 2, 3}, (__m128i)(__v4si){ 4, 5, 6, 7}), 2, 6, 3, 7));
 
 __m128i test_mm_unpackhi_epi64(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_unpackhi_epi64
   // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i32> <i32 1, i32 3>
   return _mm_unpackhi_epi64(A, B);
 }
+TEST_CONSTEXPR(match_v2di(_mm_unpackhi_epi64((__m128i)(__v2di){0, 1}, (__m128i)(__v2di){2, 3}), 1, 3));
 
 __m128d test_mm_unpackhi_pd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_unpackhi_pd
@@ -1811,24 +1815,28 @@ __m128i test_mm_unpacklo_epi8(__m128i A, __m128i B) {
   // CHECK: shufflevector <16 x i8> %{{.*}}, <16 x i8> %{{.*}}, <16 x i32> <i32 0, i32 16, i32 1, i32 17, i32 2, i32 18, i32 3, i32 19, i32 4, i32 20, i32 5, i32 21, i32 6, i32 22, i32 7, i32 23>
   return _mm_unpacklo_epi8(A, B);
 }
+TEST_CONSTEXPR(match_v16qi(_mm_unpacklo_epi8((__m128i)(__v16qi){0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}, (__m128i)(__v16qi){16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}), 0, 16, 1, 17, 2, 18, 3, 19, 4, 20, 5, 21, 6, 22, 7, 23));
 
 __m128i test_mm_unpacklo_epi16(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_unpacklo_epi16
   // CHECK: shufflevector <8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
   return _mm_unpacklo_epi16(A, B);
 }
+TEST_CONSTEXPR(match_v8hi(_mm_unpacklo_epi16((__m128i)(__v8hi){0, 1, 2, 3, 4, 5, 6, 7}, (__m128i)(__v8hi){8, 9, 10, 11, 12, 13, 14, 15}), 0, 8, 1, 9, 2, 10, 3, 11));
 
 __m128i test_mm_unpacklo_epi32(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_unpacklo_epi32
   // CHECK: shufflevector <4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
   return _mm_unpacklo_epi32(A, B);
 }
+TEST_CONSTEXPR(match_v4si(_mm_unpacklo_epi32((__m128i)(__v4si){0, 1, 2, 3}, (__m128i)(__v4si){ 4, 5, 6, 7}), 0, 4, 1, 5));
 
 __m128i test_mm_unpacklo_epi64(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_unpacklo_epi64
   // CHECK: shufflevector <2 x i64> %{{.*}}, <2 x i64> %{{.*}}, <2 x i32> <i32 0, i32 2>
   return _mm_unpacklo_epi64(A, B);
 }
+TEST_CONSTEXPR(match_v2di(_mm_unpacklo_epi64((__m128i)(__v2di){0, 1}, (__m128i)(__v2di){2, 3}), 0, 2));
 
 __m128d test_mm_unpacklo_pd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_unpacklo_pd

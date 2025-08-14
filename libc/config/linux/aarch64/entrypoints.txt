@@ -850,6 +850,9 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.bf16div
   libc.src.math.bf16divf
   libc.src.math.bf16divl
+  libc.src.math.bf16fma
+  libc.src.math.bf16fmaf
+  libc.src.math.bf16fmal
   libc.src.math.bf16mul
   libc.src.math.bf16mulf
   libc.src.math.bf16mull
@@ -879,6 +882,7 @@ if(LIBC_TYPES_HAS_FLOAT128)
     # math.h C++23 mixed bfloat16 and _Float128 entrypoints
     libc.src.math.bf16addf128
     libc.src.math.bf16divf128
+    libc.src.math.bf16fmaf128
     libc.src.math.bf16mulf128
     libc.src.math.bf16subf128
   )

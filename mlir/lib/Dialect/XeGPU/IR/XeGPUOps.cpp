@@ -121,12 +121,20 @@ isValidGatherScatterBufferParams(Type maskTy, VectorType valueTy,
   auto maskShape = getShapeOf(maskTy);
   auto valueShape = getShapeOf(valueTy);
 
-  // a valid shape for SIMT case
-  if (valueTy.getRank() == 1) {
-    if (valueTy.getNumElements() != chunkSize)
-      return emitError() << "value elements must match chunk size " << chunkSize
-                         << " for SIMT code.";
-    return success();
+  auto maskVecTy = dyn_cast<VectorType>(maskTy);
+  if (!maskVecTy)
+    return emitError() << "Expecting a vector type mask.";
+  int64_t maskSize = maskVecTy.getNumElements();
+
+  auto valueSize = valueTy.getNumElements();
+  if (chunkSize > 1) {
+    if ((valueTy.getRank() == 1) && (valueSize != chunkSize))
+      return emitError() << "value elements must match chunk size "
+                         << chunkSize;
+  } else {
+    if (valueSize != maskSize)
+      return emitError()
+             << "Mask should match value except the chunk size dim.";
   }
 
   llvm::SmallVector<int64_t> expectedMaskShape(valueShape);
@@ -657,7 +665,7 @@ LogicalResult PrefetchOp::verify() {
   auto tdescTy = getTensorDescType();
 
   if (tdescTy && !tdescTy.isScattered())
-    return emitOpError("Expects a scattered TensorDesc.\n");
+    return emitOpError("Expects a scattered TensorDesc.");
 
   if (!tdescTy && getRankOf(getSource()) > 1)
     return emitOpError(
@@ -738,7 +746,7 @@ LogicalResult StoreScatterOp::verify() {
   auto valueTy = getValueType();
 
   if (tdescTy && !tdescTy.isScattered())
-    return emitOpError("Expects a scattered TensorDesc.\n");
+    return emitOpError("Expects a scattered TensorDesc.");
 
   if (!tdescTy && getRankOf(getDest()) > 1)
     return emitOpError(

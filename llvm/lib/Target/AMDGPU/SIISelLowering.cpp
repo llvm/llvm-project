@@ -16894,6 +16894,11 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
 
   const TargetRegisterClass *RC = nullptr;
   if (Constraint.size() == 1) {
+    // Check if we cannot determine the bit size of the given value type.  This
+    // can happen, for example, in this situation where we have an empty struct
+    // (size 0): `call void asm "", "v"({} poison)`-
+    if (VT == MVT::Other)
+      return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
     const unsigned BitWidth = VT.getSizeInBits();
     switch (Constraint[0]) {
     default:

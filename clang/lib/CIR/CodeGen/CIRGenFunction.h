@@ -31,6 +31,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CIR/TypeEvaluationKind.h"
+#include "llvm/ADT/ScopedHashTable.h"
 
 namespace {
 class ScalarExprEmitter;
@@ -102,6 +103,14 @@ public:
 
   /// Sanitizers enabled for this function.
   clang::SanitizerSet sanOpts;
+
+  /// The symbol table maps a variable name to a value in the current scope.
+  /// Entering a function creates a new scope, and the function arguments are
+  /// added to the mapping. When the processing of a function is terminated,
+  /// the scope is destroyed and the mappings created in this scope are
+  /// dropped.
+  using SymTableTy = llvm::ScopedHashTable<const clang::Decl *, mlir::Value>;
+  SymTableTy symbolTable;
 
   /// Whether or not a Microsoft-style asm block has been processed within
   /// this fuction. These can potentially set the return value.
@@ -325,6 +334,9 @@ public:
     ~SourceLocRAIIObject() { restore(); }
   };
 
+  using SymTableScopeTy =
+      llvm::ScopedHashTableScope<const clang::Decl *, mlir::Value>;
+
   /// Hold counters for incrementally naming temporaries
   unsigned counterRefTmp = 0;
   unsigned counterAggTmp = 0;
@@ -499,7 +511,11 @@ public:
   void setAddrOfLocalVar(const clang::VarDecl *vd, Address addr) {
     assert(!localDeclMap.count(vd) && "Decl already exists in LocalDeclMap!");
     localDeclMap.insert({vd, addr});
-    // TODO: Add symbol table support
+
+    // Add to the symbol table if not there already.
+    if (symbolTable.count(vd))
+      return;
+    symbolTable.insert(vd, addr.getPointer());
   }
 
   bool shouldNullCheckClassCastValue(const CastExpr *ce);

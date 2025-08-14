@@ -3731,14 +3731,20 @@ def fopenmp_relocatable_target : Flag<["-"], "fopenmp-relocatable-target">,
 def fnoopenmp_relocatable_target : Flag<["-"], "fnoopenmp-relocatable-target">,
   Group<f_Group>, Flags<[NoArgumentUnused, HelpHidden]>,
   Visibility<[ClangOption, CC1Option]>;
-def fopenmp_simd : Flag<["-"], "fopenmp-simd">, Group<f_Group>,
-  Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Emit OpenMP code only for SIMD-based constructs.">;
+def fopenmp_simd : Flag<["-"], "fopenmp-simd">,
+                   Group<f_Group>,
+                   Flags<[NoArgumentUnused]>,
+                   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
+                   HelpText<"Emit OpenMP code only for SIMD-based constructs.">;
 def fopenmp_enable_irbuilder : Flag<["-"], "fopenmp-enable-irbuilder">, Group<f_Group>,
   Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Use the experimental OpenMP-IR-Builder codegen path.">;
-def fno_openmp_simd : Flag<["-"], "fno-openmp-simd">, Group<f_Group>,
-  Flags<[NoArgumentUnused]>, Visibility<[ClangOption, CC1Option]>;
+def fno_openmp_simd
+    : Flag<["-"], "fno-openmp-simd">,
+      Group<f_Group>,
+      Flags<[NoArgumentUnused]>,
+      Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
+      HelpText<"Do not emit code for any OpenMP constructs.">;
 def fopenmp_cuda_mode : Flag<["-"], "fopenmp-cuda-mode">, Group<f_Group>,
   Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>;
 def fno_openmp_cuda_mode : Flag<["-"], "fno-openmp-cuda-mode">, Group<f_Group>,
@@ -5589,7 +5595,8 @@ def mno_outline_atomics : Flag<["-"], "mno-outline-atomics">, Group<f_clang_Grou
   HelpText<"Don't generate local calls to out-of-line atomic operations">;
 def mno_implicit_float : Flag<["-"], "mno-implicit-float">, Group<m_Group>,
   HelpText<"Don't generate implicit floating point or vector instructions">;
-def mimplicit_float : Flag<["-"], "mimplicit-float">, Group<m_Group>;
+def mimplicit_float : Flag<["-"], "mimplicit-float">, Group<m_Group>,
+  HelpText<"Generate implicit floating point or vector instructions">;
 def mrecip : Flag<["-"], "mrecip">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Equivalent to '-mrecip=all'">;

@@ -644,7 +644,7 @@ SymbolFileNativePDB::CreateClassStructUnion(PdbTypeSymId type_id,
 
   std::string uname = GetUnqualifiedTypeName(record);
 
-  llvm::Expected maybeDecl = ResolveUdtDeclaration(type_id);
+  llvm::Expected<Declaration> maybeDecl = ResolveUdtDeclaration(type_id);
   Declaration decl;
   if (maybeDecl)
     decl = std::move(*maybeDecl);
@@ -674,7 +674,7 @@ lldb::TypeSP SymbolFileNativePDB::CreateTagType(PdbTypeSymId type_id,
                                                 CompilerType ct) {
   std::string uname = GetUnqualifiedTypeName(er);
 
-  llvm::Expected maybeDecl = ResolveUdtDeclaration(type_id);
+  llvm::Expected<Declaration> maybeDecl = ResolveUdtDeclaration(type_id);
   Declaration decl;
   if (maybeDecl)
     decl = std::move(*maybeDecl);
@@ -1688,7 +1688,7 @@ void SymbolFileNativePDB::CacheFunctionNames() {
         llvm::cantFail(SymbolDeserializer::deserializeAs<ProcSym>(*iter));
     if ((proc.Flags & ProcSymFlags::IsUnreachable) != ProcSymFlags::None)
       continue;
-    if (proc.Name.empty())
+    if (proc.Name.empty() || proc.FunctionType.isSimple())
       continue;
 
     // The function/procedure symbol only contains the demangled name.

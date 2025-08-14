@@ -200,15 +200,11 @@ template <typename Ops_t, unsigned Opcode, bool Commutative,
 struct Recipe_match {
   Ops_t Ops;
 
-  Recipe_match() : Ops() {
-    static_assert(std::tuple_size<Ops_t>::value == 0 &&
-                  "constructor can only be used with zero operands");
-  }
-  Recipe_match(Ops_t Ops) : Ops(Ops) {}
-  template <typename A_t, typename B_t>
-  Recipe_match(A_t A, B_t B) : Ops({A, B}) {
-    static_assert(std::tuple_size<Ops_t>::value == 2 &&
-                  "constructor can only be used for binary matcher");
+  template <typename... OpTy> Recipe_match(OpTy... Ops) : Ops(Ops...) {
+    static_assert(std::tuple_size<Ops_t>::value == sizeof...(Ops) &&
+                  "number of operands in constructor doesn't match Ops_t");
+    static_assert((!Commutative || std::tuple_size<Ops_t>::value == 2) &&
+                  "only binary ops can be commutative");
   }
 
   bool match(const VPValue *V) const {
@@ -254,7 +250,6 @@ private:
     // Check for recipes that do not have opcodes.
     if constexpr (std::is_same<RecipeTy, VPScalarIVStepsRecipe>::value ||
                   std::is_same<RecipeTy, VPCanonicalIVPHIRecipe>::value ||
-                  std::is_same<RecipeTy, VPWidenSelectRecipe>::value ||
                   std::is_same<RecipeTy, VPDerivedIVRecipe>::value ||
                   std::is_same<RecipeTy, VPWidenGEPRecipe>::value)
       return DefR;
@@ -270,195 +265,128 @@ private:
   }
 };
 
-template <unsigned Opcode, typename... RecipeTys>
-using ZeroOpRecipe_match =
-    Recipe_match<std::tuple<>, Opcode, false, RecipeTys...>;
+template <unsigned Opcode, typename... OpTys>
+using AllRecipe_match =
+    Recipe_match<std::tuple<OpTys...>, Opcode, /*Commutative*/ false,
+                 VPWidenRecipe, VPReplicateRecipe, VPWidenCastRecipe,
+                 VPInstruction, VPWidenSelectRecipe>;
 
-template <typename Op0_t, unsigned Opcode, typename... RecipeTys>
-using UnaryRecipe_match =
-    Recipe_match<std::tuple<Op0_t>, Opcode, false, RecipeTys...>;
+template <unsigned Opcode, typename... OpTys>
+using AllRecipe_commutative_match =
+    Recipe_match<std::tuple<OpTys...>, Opcode, /*Commutative*/ true,
+                 VPWidenRecipe, VPReplicateRecipe, VPInstruction>;
 
-template <typename Op0_t, unsigned Opcode>
-using UnaryVPInstruction_match =
-    UnaryRecipe_match<Op0_t, Opcode, VPInstruction>;
+template <unsigned Opcode, typename... OpTys>
+using VPInstruction_match = Recipe_match<std::tuple<OpTys...>, Opcode,
+                                         /*Commutative*/ false, VPInstruction>;
 
-template <unsigned Opcode>
-using ZeroOpVPInstruction_match = ZeroOpRecipe_match<Opcode, VPInstruction>;
-
-template <typename Op0_t, unsigned Opcode>
-using AllUnaryRecipe_match =
-    UnaryRecipe_match<Op0_t, Opcode, VPWidenRecipe, VPReplicateRecipe,
-                      VPWidenCastRecipe, VPInstruction>;
-
-template <typename Op0_t, typename Op1_t, unsigned Opcode, bool Commutative,
-          typename... RecipeTys>
-using BinaryRecipe_match =
-    Recipe_match<std::tuple<Op0_t, Op1_t>, Opcode, Commutative, RecipeTys...>;
-
-template <typename Op0_t, typename Op1_t, unsigned Opcode>
-using BinaryVPInstruction_match =
-    BinaryRecipe_match<Op0_t, Op1_t, Opcode, /*Commutative*/ false,
-                       VPInstruction>;
-
-template <typename Op0_t, typename Op1_t, typename Op2_t, unsigned Opcode,
-          bool Commutative, typename... RecipeTys>
-using TernaryRecipe_match = Recipe_match<std::tuple<Op0_t, Op1_t, Op2_t>,
-                                         Opcode, Commutative, RecipeTys...>;
-
-template <typename Op0_t, typename Op1_t, typename Op2_t, unsigned Opcode>
-using TernaryVPInstruction_match =
-    TernaryRecipe_match<Op0_t, Op1_t, Op2_t, Opcode, /*Commutative*/ false,
-                        VPInstruction>;
-
-template <typename Op0_t, typename Op1_t, unsigned Opcode,
-          bool Commutative = false>
-using AllBinaryRecipe_match =
-    BinaryRecipe_match<Op0_t, Op1_t, Opcode, Commutative, VPWidenRecipe,
-                       VPReplicateRecipe, VPWidenCastRecipe, VPInstruction>;
+template <unsigned Opcode, typename... OpTys>
+inline VPInstruction_match<Opcode, OpTys...>
+m_VPInstruction(const OpTys &...Ops) {
+  return VPInstruction_match<Opcode, OpTys...>(Ops...);
+}
 
 /// BuildVector is matches only its opcode, w/o matching its operands as the
 /// number of operands is not fixed.
-inline ZeroOpVPInstruction_match<VPInstruction::BuildVector> m_BuildVector() {
-  return ZeroOpVPInstruction_match<VPInstruction::BuildVector>();
+inline VPInstruction_match<VPInstruction::BuildVector> m_BuildVector() {
+  return m_VPInstruction<VPInstruction::BuildVector>();
 }
 
-template <unsigned Opcode, typename Op0_t>
-inline UnaryVPInstruction_match<Op0_t, Opcode>
-m_VPInstruction(const Op0_t &Op0) {
-  return UnaryVPInstruction_match<Op0_t, Opcode>(Op0);
-}
-
-template <unsigned Opcode, typename Op0_t, typename Op1_t>
-inline BinaryVPInstruction_match<Op0_t, Op1_t, Opcode>
-m_VPInstruction(const Op0_t &Op0, const Op1_t &Op1) {
-  return BinaryVPInstruction_match<Op0_t, Op1_t, Opcode>(Op0, Op1);
-}
-
-template <unsigned Opcode, typename Op0_t, typename Op1_t, typename Op2_t>
-inline TernaryVPInstruction_match<Op0_t, Op1_t, Op2_t, Opcode>
-m_VPInstruction(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
-  return TernaryVPInstruction_match<Op0_t, Op1_t, Op2_t, Opcode>(
-      {Op0, Op1, Op2});
-}
-
-template <typename Op0_t, typename Op1_t, typename Op2_t, typename Op3_t,
-          unsigned Opcode, bool Commutative, typename... RecipeTys>
-using Recipe4Op_match = Recipe_match<std::tuple<Op0_t, Op1_t, Op2_t, Op3_t>,
-                                     Opcode, Commutative, RecipeTys...>;
-
-template <typename Op0_t, typename Op1_t, typename Op2_t, typename Op3_t,
-          unsigned Opcode>
-using VPInstruction4Op_match =
-    Recipe4Op_match<Op0_t, Op1_t, Op2_t, Op3_t, Opcode, /*Commutative*/ false,
-                    VPInstruction>;
-
-template <unsigned Opcode, typename Op0_t, typename Op1_t, typename Op2_t,
-          typename Op3_t>
-inline VPInstruction4Op_match<Op0_t, Op1_t, Op2_t, Op3_t, Opcode>
-m_VPInstruction(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2,
-                const Op3_t &Op3) {
-  return VPInstruction4Op_match<Op0_t, Op1_t, Op2_t, Op3_t, Opcode>(
-      {Op0, Op1, Op2, Op3});
-}
 template <typename Op0_t>
-inline UnaryVPInstruction_match<Op0_t, Instruction::Freeze>
+inline VPInstruction_match<Instruction::Freeze, Op0_t>
 m_Freeze(const Op0_t &Op0) {
   return m_VPInstruction<Instruction::Freeze>(Op0);
 }
 
 template <typename Op0_t>
-inline UnaryVPInstruction_match<Op0_t, VPInstruction::BranchOnCond>
+inline VPInstruction_match<VPInstruction::BranchOnCond, Op0_t>
 m_BranchOnCond(const Op0_t &Op0) {
   return m_VPInstruction<VPInstruction::BranchOnCond>(Op0);
 }
 
 template <typename Op0_t>
-inline UnaryVPInstruction_match<Op0_t, VPInstruction::Broadcast>
+inline VPInstruction_match<VPInstruction::Broadcast, Op0_t>
 m_Broadcast(const Op0_t &Op0) {
   return m_VPInstruction<VPInstruction::Broadcast>(Op0);
 }
 
 template <typename Op0_t, typename Op1_t>
-inline BinaryVPInstruction_match<Op0_t, Op1_t, VPInstruction::ActiveLaneMask>
+inline VPInstruction_match<VPInstruction::ActiveLaneMask, Op0_t, Op1_t>
 m_ActiveLaneMask(const Op0_t &Op0, const Op1_t &Op1) {
   return m_VPInstruction<VPInstruction::ActiveLaneMask>(Op0, Op1);
 }
 
 template <typename Op0_t, typename Op1_t>
-inline BinaryVPInstruction_match<Op0_t, Op1_t, VPInstruction::BranchOnCount>
+inline VPInstruction_match<VPInstruction::BranchOnCount, Op0_t, Op1_t>
 m_BranchOnCount(const Op0_t &Op0, const Op1_t &Op1) {
   return m_VPInstruction<VPInstruction::BranchOnCount>(Op0, Op1);
 }
 
 template <unsigned Opcode, typename Op0_t>
-inline AllUnaryRecipe_match<Op0_t, Opcode> m_Unary(const Op0_t &Op0) {
-  return AllUnaryRecipe_match<Op0_t, Opcode>(Op0);
+inline AllRecipe_match<Opcode, Op0_t> m_Unary(const Op0_t &Op0) {
+  return AllRecipe_match<Opcode, Op0_t>(Op0);
 }
 
 template <typename Op0_t>
-inline AllUnaryRecipe_match<Op0_t, Instruction::Trunc>
-m_Trunc(const Op0_t &Op0) {
+inline AllRecipe_match<Instruction::Trunc, Op0_t> m_Trunc(const Op0_t &Op0) {
   return m_Unary<Instruction::Trunc, Op0_t>(Op0);
 }
 
 template <typename Op0_t>
-inline AllUnaryRecipe_match<Op0_t, Instruction::ZExt> m_ZExt(const Op0_t &Op0) {
+inline AllRecipe_match<Instruction::ZExt, Op0_t> m_ZExt(const Op0_t &Op0) {
   return m_Unary<Instruction::ZExt, Op0_t>(Op0);
 }
 
 template <typename Op0_t>
-inline AllUnaryRecipe_match<Op0_t, Instruction::SExt> m_SExt(const Op0_t &Op0) {
+inline AllRecipe_match<Instruction::SExt, Op0_t> m_SExt(const Op0_t &Op0) {
   return m_Unary<Instruction::SExt, Op0_t>(Op0);
 }
 
 template <typename Op0_t>
-inline match_combine_or<AllUnaryRecipe_match<Op0_t, Instruction::ZExt>,
-                        AllUnaryRecipe_match<Op0_t, Instruction::SExt>>
+inline match_combine_or<AllRecipe_match<Instruction::ZExt, Op0_t>,
+                        AllRecipe_match<Instruction::SExt, Op0_t>>
 m_ZExtOrSExt(const Op0_t &Op0) {
   return m_CombineOr(m_ZExt(Op0), m_SExt(Op0));
 }
 
-template <unsigned Opcode, typename Op0_t, typename Op1_t,
-          bool Commutative = false>
-inline AllBinaryRecipe_match<Op0_t, Op1_t, Opcode, Commutative>
-m_Binary(const Op0_t &Op0, const Op1_t &Op1) {
-  return AllBinaryRecipe_match<Op0_t, Op1_t, Opcode, Commutative>(Op0, Op1);
+template <unsigned Opcode, typename Op0_t, typename Op1_t>
+inline AllRecipe_match<Opcode, Op0_t, Op1_t> m_Binary(const Op0_t &Op0,
+                                                      const Op1_t &Op1) {
+  return AllRecipe_match<Opcode, Op0_t, Op1_t>(Op0, Op1);
 }
 
 template <unsigned Opcode, typename Op0_t, typename Op1_t>
-inline AllBinaryRecipe_match<Op0_t, Op1_t, Opcode, true>
+inline AllRecipe_commutative_match<Opcode, Op0_t, Op1_t>
 m_c_Binary(const Op0_t &Op0, const Op1_t &Op1) {
-  return AllBinaryRecipe_match<Op0_t, Op1_t, Opcode, true>(Op0, Op1);
+  return AllRecipe_commutative_match<Opcode, Op0_t, Op1_t>(Op0, Op1);
 }
 
 template <typename Op0_t, typename Op1_t>
-inline AllBinaryRecipe_match<Op0_t, Op1_t, Instruction::Mul>
-m_Mul(const Op0_t &Op0, const Op1_t &Op1) {
+inline AllRecipe_match<Instruction::Mul, Op0_t, Op1_t> m_Mul(const Op0_t &Op0,
+                                                             const Op1_t &Op1) {
   return m_Binary<Instruction::Mul, Op0_t, Op1_t>(Op0, Op1);
 }
 
 template <typename Op0_t, typename Op1_t>
-inline AllBinaryRecipe_match<Op0_t, Op1_t, Instruction::Mul,
-                             /* Commutative =*/true>
+inline AllRecipe_commutative_match<Instruction::Mul, Op0_t, Op1_t>
 m_c_Mul(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_Binary<Instruction::Mul, Op0_t, Op1_t, true>(Op0, Op1);
+  return m_c_Binary<Instruction::Mul, Op0_t, Op1_t>(Op0, Op1);
 }
 
 /// Match a binary OR operation. Note that while conceptually the operands can
 /// be matched commutatively, \p Commutative defaults to false in line with the
 /// IR-based pattern matching infrastructure. Use m_c_BinaryOr for a commutative
 /// version of the matcher.
-template <typename Op0_t, typename Op1_t, bool Commutative = false>
-inline AllBinaryRecipe_match<Op0_t, Op1_t, Instruction::Or, Commutative>
+template <typename Op0_t, typename Op1_t>
+inline AllRecipe_match<Instruction::Or, Op0_t, Op1_t>
 m_BinaryOr(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_Binary<Instruction::Or, Op0_t, Op1_t, Commutative>(Op0, Op1);
+  return m_Binary<Instruction::Or, Op0_t, Op1_t>(Op0, Op1);
 }
 
 template <typename Op0_t, typename Op1_t>
-inline AllBinaryRecipe_match<Op0_t, Op1_t, Instruction::Or,
-                             /*Commutative*/ true>
+inline AllRecipe_commutative_match<Instruction::Or, Op0_t, Op1_t>
 m_c_BinaryOr(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_BinaryOr<Op0_t, Op1_t, /*Commutative*/ true>(Op0, Op1);
+  return m_c_Binary<Instruction::Or, Op0_t, Op1_t>(Op0, Op1);
 }
 
 /// ICmp_match is a variant of BinaryRecipe_match that also binds the comparison
@@ -523,9 +451,9 @@ m_SpecificICmp(CmpPredicate MatchPred, const Op0_t &Op0, const Op1_t &Op1) {
 
 template <typename Op0_t, typename Op1_t>
 using GEPLikeRecipe_match =
-    BinaryRecipe_match<Op0_t, Op1_t, Instruction::GetElementPtr, false,
-                       VPWidenRecipe, VPReplicateRecipe, VPWidenGEPRecipe,
-                       VPInstruction>;
+    Recipe_match<std::tuple<Op0_t, Op1_t>, Instruction::GetElementPtr,
+                 /*Commutative*/ false, VPWidenRecipe, VPReplicateRecipe,
+                 VPWidenGEPRecipe, VPInstruction>;
 
 template <typename Op0_t, typename Op1_t>
 inline GEPLikeRecipe_match<Op0_t, Op1_t> m_GetElementPtr(const Op0_t &Op0,
@@ -533,22 +461,17 @@ inline GEPLikeRecipe_match<Op0_t, Op1_t> m_GetElementPtr(const Op0_t &Op0,
   return GEPLikeRecipe_match<Op0_t, Op1_t>(Op0, Op1);
 }
 
-template <typename Op0_t, typename Op1_t, typename Op2_t, unsigned Opcode>
-using AllTernaryRecipe_match =
-    Recipe_match<std::tuple<Op0_t, Op1_t, Op2_t>, Opcode, false,
-                 VPReplicateRecipe, VPInstruction, VPWidenSelectRecipe>;
-
 template <typename Op0_t, typename Op1_t, typename Op2_t>
-inline AllTernaryRecipe_match<Op0_t, Op1_t, Op2_t, Instruction::Select>
+inline AllRecipe_match<Instruction::Select, Op0_t, Op1_t, Op2_t>
 m_Select(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
-  return AllTernaryRecipe_match<Op0_t, Op1_t, Op2_t, Instruction::Select>(
+  return AllRecipe_match<Instruction::Select, Op0_t, Op1_t, Op2_t>(
       {Op0, Op1, Op2});
 }
 
 template <typename Op0_t>
-inline match_combine_or<UnaryVPInstruction_match<Op0_t, VPInstruction::Not>,
-                        AllBinaryRecipe_match<int_pred_ty<is_all_ones>, Op0_t,
-                                              Instruction::Xor, true>>
+inline match_combine_or<VPInstruction_match<VPInstruction::Not, Op0_t>,
+                        AllRecipe_commutative_match<
+                            Instruction::Xor, int_pred_ty<is_all_ones>, Op0_t>>
 m_Not(const Op0_t &Op0) {
   return m_CombineOr(m_VPInstruction<VPInstruction::Not>(Op0),
                      m_c_Binary<Instruction::Xor>(m_AllOnes(), Op0));
@@ -556,9 +479,8 @@ m_Not(const Op0_t &Op0) {
 
 template <typename Op0_t, typename Op1_t>
 inline match_combine_or<
-    BinaryVPInstruction_match<Op0_t, Op1_t, VPInstruction::LogicalAnd>,
-    AllTernaryRecipe_match<Op0_t, Op1_t, specific_intval<1>,
-                           Instruction::Select>>
+    VPInstruction_match<VPInstruction::LogicalAnd, Op0_t, Op1_t>,
+    AllRecipe_match<Instruction::Select, Op0_t, Op1_t, specific_intval<1>>>
 m_LogicalAnd(const Op0_t &Op0, const Op1_t &Op1) {
   return m_CombineOr(
       m_VPInstruction<VPInstruction::LogicalAnd, Op0_t, Op1_t>(Op0, Op1),
@@ -566,15 +488,14 @@ m_LogicalAnd(const Op0_t &Op0, const Op1_t &Op1) {
 }
 
 template <typename Op0_t, typename Op1_t>
-inline AllTernaryRecipe_match<Op0_t, specific_intval<1>, Op1_t,
-                              Instruction::Select>
+inline AllRecipe_match<Instruction::Select, Op0_t, specific_intval<1>, Op1_t>
 m_LogicalOr(const Op0_t &Op0, const Op1_t &Op1) {
   return m_Select(Op0, m_True(), Op1);
 }
 
 template <typename Op0_t, typename Op1_t, typename Op2_t>
-using VPScalarIVSteps_match =
-    TernaryRecipe_match<Op0_t, Op1_t, Op2_t, 0, false, VPScalarIVStepsRecipe>;
+using VPScalarIVSteps_match = Recipe_match<std::tuple<Op0_t, Op1_t, Op2_t>, 0,
+                                           false, VPScalarIVStepsRecipe>;
 
 template <typename Op0_t, typename Op1_t, typename Op2_t>
 inline VPScalarIVSteps_match<Op0_t, Op1_t, Op2_t>

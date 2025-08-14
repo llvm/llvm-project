@@ -86,7 +86,6 @@ ReassocOp<T, Op0, Op1> reassocOp(const Op0 &op0, const Op1 &op1) {
 
 struct ReassocRewriter : public evaluate::rewrite::Identity {
   using Id = evaluate::rewrite::Identity;
-  using Id::operator();
   struct NonIntegralTag {};
 
   ReassocRewriter(const SomeExpr &atom) : atom_(atom) {}
@@ -114,6 +113,18 @@ struct ReassocRewriter : public evaluate::rewrite::Identity {
     auto inner{reassocOp<T>(sub[0], sub[1])};
     auto outer1{reassocOp<T>(inner, sub[2])}; // inner + something
     auto outer2{reassocOp<T>(sub[2], inner)}; // something + inner
+#if !defined(__clang__) && !defined(_MSC_VER) && \
+    (__GNUC__ < 8 || (__GNUC__ == 8 && __GNUC_MINOR__ < 5))
+    // If GCC version < 8.5, use this definition. For the other definition
+    // (which is equivalent), GCC 7.5 emits a somewhat cryptic error:
+    //    use of ‘outer1’ before deduction of ‘auto’
+    // inside of the visitor function in common::visit.
+    // Since this works with clang, MSVC and at least GCC 8.5, I'm assuming
+    // that this is some kind of a GCC issue.
+    using MatchTypes = std::tuple<evaluate::Add<T>, evaluate::Multiply<T>>;
+#else
+    using MatchTypes = typename decltype(outer1)::MatchTypes;
+#endif
     // There is no way to ensure that the outer operation is the same as
     // the inner one. They are matched independently, so we need to compare
     // the index in the member variant that represents the matched type.
@@ -142,8 +153,7 @@ struct ReassocRewriter : public evaluate::rewrite::Identity {
             // Limit the construction to the operation types that we tried
             // to match (otherwise TypeS(op1, op2) would fail for non-binary
             // operations).
-            if constexpr (common::HasMember<TypeS,
-                              typename decltype(outer1)::MatchTypes>) {
+            if constexpr (common::HasMember<TypeS, MatchTypes>) {
               Expr atom{*sub[atomIdx].ref};
               Expr op1{*sub[(atomIdx + 1) % 3].ref};
               Expr op2{*sub[(atomIdx + 2) % 3].ref};
@@ -718,7 +728,8 @@ OmpStructureChecker::CheckUpdateCapture(
 void OmpStructureChecker::CheckAtomicCaptureAssignment(
     const evaluate::Assignment &capture, const SomeExpr &atom,
     parser::CharBlock source) {
-  auto [_, rsrc]{SplitAssignmentSource(source)};
+  auto [lsrc, rsrc]{SplitAssignmentSource(source)};
+  (void)lsrc;
   const SomeExpr &cap{capture.lhs};
 
   if (!IsVarOrFunctionRef(atom)) {
@@ -734,7 +745,8 @@ void OmpStructureChecker::CheckAtomicCaptureAssignment(
 
 void OmpStructureChecker::CheckAtomicReadAssignment(
     const evaluate::Assignment &read, parser::CharBlock source) {
-  auto [_, rsrc]{SplitAssignmentSource(source)};
+  auto [lsrc, rsrc]{SplitAssignmentSource(source)};
+  (void)lsrc;
 
   if (auto maybe{GetConvertInput(read.rhs)}) {
     const SomeExpr &atom{*maybe};
@@ -820,7 +832,8 @@ OmpStructureChecker::CheckAtomicUpdateAssignment(
 std::pair<bool, bool> OmpStructureChecker::CheckAtomicUpdateAssignmentRhs(
     const SomeExpr &atom, const SomeExpr &rhs, parser::CharBlock source,
     bool suppressDiagnostics) {
-  auto [_, rsrc]{SplitAssignmentSource(source)};
+  auto [lsrc, rsrc]{SplitAssignmentSource(source)};
+  (void)lsrc;
 
   std::pair<operation::Operator, std::vector<SomeExpr>> top{
       operation::Operator::Unknown, {}};

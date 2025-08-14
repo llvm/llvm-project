@@ -688,28 +688,34 @@ struct ReturnOpLowering : public ConvertOpToLLVMPattern<func::ReturnOp> {
     auto funcOp = op->getParentOfType<LLVM::LLVMFuncOp>();
     bool useBarePtrCallConv =
         shouldUseBarePtrCallConv(funcOp, this->getTypeConverter());
-    if (useBarePtrCallConv) {
-      // For the bare-ptr calling convention, extract the aligned pointer to
-      // be returned from the memref descriptor.
-      for (auto it : llvm::zip(op->getOperands(), adaptor.getOperands())) {
-        Type oldTy = std::get<0>(it).getType();
-        Value newOperand = std::get<1>(it);
-        if (isa<MemRefType>(oldTy) && getTypeConverter()->canConvertToBarePtr(
-                                          cast<BaseMemRefType>(oldTy))) {
+
+    for (auto [oldOperand, newOperand] :
+         llvm::zip_equal(op->getOperands(), adaptor.getOperands())) {
+      Type oldTy = oldOperand.getType();
+      if (auto memRefType = dyn_cast<MemRefType>(oldTy)) {
+        if (useBarePtrCallConv &&
+            getTypeConverter()->canConvertToBarePtr(memRefType)) {
+          // For the bare-ptr calling convention, extract the aligned pointer to
+          // be returned from the memref descriptor.
           MemRefDescriptor memrefDesc(newOperand);
-          newOperand = memrefDesc.allocatedPtr(rewriter, loc);
-        } else if (isa<UnrankedMemRefType>(oldTy)) {
+          updatedOperands.push_back(memrefDesc.allocatedPtr(rewriter, loc));
+          continue;
+        }
+      } else if (auto unrankedMemRefType =
+                     dyn_cast<UnrankedMemRefType>(oldTy)) {
+        if (useBarePtrCallConv) {
           // Unranked memref is not supported in the bare pointer calling
           // convention.
           return failure();
         }
-        updatedOperands.push_back(newOperand);
+        Value updatedDesc = copyUnrankedDescriptor(
+            rewriter, loc, unrankedMemRefType, newOperand, /*toDynamic=*/true);
+        if (!updatedDesc)
+          return failure();
+        updatedOperands.push_back(updatedDesc);
+        continue;
       }
-    } else {
-      updatedOperands = llvm::to_vector<4>(adaptor.getOperands());
-      (void)copyUnrankedDescriptors(rewriter, loc, op.getOperands().getTypes(),
-                                    updatedOperands,
-                                    /*toDynamic=*/true);
+      updatedOperands.push_back(newOperand);
     }
 
     // If ReturnOp has 0 or 1 operand, create it and return immediately.

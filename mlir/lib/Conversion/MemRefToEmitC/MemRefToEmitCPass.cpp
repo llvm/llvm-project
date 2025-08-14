@@ -18,6 +18,8 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTMEMREFTOEMITC
@@ -27,6 +29,15 @@ namespace mlir {
 using namespace mlir;
 
 namespace {
+
+emitc::IncludeOp addStandardHeader(OpBuilder &builder, ModuleOp module,
+                                   StringRef headerName) {
+  StringAttr includeAttr = builder.getStringAttr(headerName);
+  return builder.create<emitc::IncludeOp>(
+      module.getLoc(), includeAttr,
+      /*is_standard_include=*/builder.getUnitAttr());
+}
+
 struct ConvertMemRefToEmitCPass
     : public impl::ConvertMemRefToEmitCBase<ConvertMemRefToEmitCPass> {
   using Base::Base;
@@ -55,34 +66,29 @@ struct ConvertMemRefToEmitCPass
       return signalPassFailure();
 
     mlir::ModuleOp module = getOperation();
+    llvm::SmallSet<StringRef, 4> existingHeaders;
+    mlir::OpBuilder builder(module.getBody(), module.getBody()->begin());
+    module.walk([&](mlir::emitc::IncludeOp includeOp) {
+      if (includeOp.getIsStandardInclude())
+        existingHeaders.insert(includeOp.getInclude());
+    });
+
     module.walk([&](mlir::emitc::CallOpaqueOp callOp) {
-      if (callOp.getCallee() != alignedAllocFunctionName &&
-          callOp.getCallee() != mallocFunctionName) {
+      StringRef expectedHeader;
+      if (callOp.getCallee() == alignedAllocFunctionName ||
+          callOp.getCallee() == mallocFunctionName)
+        expectedHeader = options.lowerToCpp ? cppStandardLibraryHeader
+                                            : cStandardLibraryHeader;
+      else if (callOp.getCallee() == memcpyFunctionName)
+        expectedHeader =
+            options.lowerToCpp ? cppStringLibraryHeader : cStringLibraryHeader;
+      else
         return mlir::WalkResult::advance();
+      if (!existingHeaders.contains(expectedHeader)) {
+        addStandardHeader(builder, module, expectedHeader);
+        existingHeaders.insert(expectedHeader);
       }
-
-      for (auto &op : *module.getBody()) {
-        emitc::IncludeOp includeOp = llvm::dyn_cast<mlir::emitc::IncludeOp>(op);
-        if (!includeOp) {
-          continue;
-        }
-        if (includeOp.getIsStandardInclude() &&
-            ((options.lowerToCpp &&
-              includeOp.getInclude() == cppStandardLibraryHeader) ||
-             (!options.lowerToCpp &&
-              includeOp.getInclude() == cStandardLibraryHeader))) {
-          return mlir::WalkResult::interrupt();
-        }
-      }
-
-      mlir::OpBuilder builder(module.getBody(), module.getBody()->begin());
-      StringAttr includeAttr =
-          builder.getStringAttr(options.lowerToCpp ? cppStandardLibraryHeader
-                                                   : cStandardLibraryHeader);
-      builder.create<mlir::emitc::IncludeOp>(
-          module.getLoc(), includeAttr,
-          /*is_standard_include=*/builder.getUnitAttr());
-      return mlir::WalkResult::interrupt();
+      return mlir::WalkResult::advance();
     });
   }
 };
