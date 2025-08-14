@@ -105,7 +105,8 @@ CPlusPlusLanguage::GetFunctionNameInfo(ConstString name) const {
 
 bool CPlusPlusLanguage::SymbolNameFitsToLanguage(Mangled mangled) const {
   const char *mangled_name = mangled.GetMangledName().GetCString();
-  return mangled_name && Mangled::IsMangledName(mangled_name);
+  return mangled_name && Mangled::GetManglingScheme(mangled_name) ==
+                             Mangled::eManglingSchemeItanium;
 }
 
 ConstString CPlusPlusLanguage::GetDemangledFunctionNameWithoutArguments(

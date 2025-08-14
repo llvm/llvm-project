@@ -397,3 +397,16 @@ TEST(CPlusPlusLanguage, CPlusPlusNameParser) {
   // Don't crash.
   CPlusPlusNameParser((const char *)nullptr);
 }
+
+TEST(CPlusPlusLanguage, DoesNotMatchCxx) {
+  // Test that a symbol name that is NOT C++ does not match C++.
+
+  SubsystemRAII<CPlusPlusLanguage> lang;
+  Language *CPlusPlusLang =
+      Language::FindPlugin(lldb::eLanguageTypeC_plus_plus);
+
+  EXPECT_TRUE(CPlusPlusLang != nullptr);
+
+  Mangled swiftSymbol("$sS");
+  EXPECT_FALSE(CPlusPlusLang->SymbolNameFitsToLanguage(swiftSymbol));
+}
