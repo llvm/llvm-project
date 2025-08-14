@@ -24,8 +24,8 @@ TEST(RuntimeLibcallsTest, LibcallImplByName) {
 
   for (RTLIB::LibcallImpl LC : RTLIB::libcall_impls()) {
     const char *Name = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LC);
-    EXPECT_FALSE(
-        RTLIB::RuntimeLibcallsInfo::lookupLibcallImplName(Name).empty());
+    EXPECT_TRUE(is_contained(
+        RTLIB::RuntimeLibcallsInfo::lookupLibcallImplName(Name), LC));
   }
 
   // Test first libcall name
