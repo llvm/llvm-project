@@ -208,7 +208,6 @@ Bug Fixes to C++ Support
 - Fix a crash when using ``explicit(bool)`` in pre-C++11 language modes. (#GH152729)
 - Fix the parsing of variadic member functions when the ellipis immediately follows a default argument.(#GH153445)
 
-
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fix incorrect name qualifiers applied to alias CTAD. (#GH136624)

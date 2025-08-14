@@ -18,3 +18,12 @@ struct S {
 
 void S::g(int = {}...) {}
 }
+
+
+template <typename ...T>
+constexpr int a() {return 1;}
+
+struct S2 {
+  template <typename ...Ts>
+  void f(int = a<Ts...>()...);
+};
