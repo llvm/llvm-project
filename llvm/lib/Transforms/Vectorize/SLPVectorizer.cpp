@@ -23783,7 +23783,8 @@ public:
 
   /// Attempt to vectorize the tree found by matchAssociativeReduction.
   Value *tryToReduce(BoUpSLP &V, const DataLayout &DL, TargetTransformInfo *TTI,
-                     const TargetLibraryInfo &TLI, AssumptionCache *AC) {
+                     const TargetLibraryInfo &TLI, AssumptionCache *AC,
+                     DominatorTree &DT) {
     constexpr unsigned RegMaxNumber = 4;
     constexpr unsigned RedValsMaxNumber = 128;
     // If there are a sufficient number of reduction values, reduce
@@ -23900,8 +23901,44 @@ public:
     bool CheckForReusedReductionOps = false;
     // Try to vectorize elements based on their type.
     SmallVector<InstructionsState> States;
-    for (ArrayRef<Value *> RV : ReducedVals)
+    SmallVector<SmallVector<Value*>> LocalReducedVals;
+    for (ArrayRef<Value *> RV : ReducedVals) {
+      // Loads are not very compatible with undefs.
+      if (isa<UndefValue>(RV.front()) &&
+          (States.empty() || !States.back() ||
+           States.back().getOpcode() == Instruction::Load)) {
+        LocalReducedVals.emplace_back().append(RV.begin(), RV.end());
+        States.push_back(InstructionsState::invalid());
+        continue;
+      }
+      if (!LocalReducedVals.empty() &&
+          isa<UndefValue>(LocalReducedVals.back().front()) &&
+          isa<LoadInst>(RV.front())) {
+        LocalReducedVals.emplace_back().append(RV.begin(), RV.end());
+        States.push_back(getSameOpcode(RV, TLI));
+        continue;
+      }
+      SmallVector<Value *> Ops;
+      if (!LocalReducedVals.empty())
+        Ops = LocalReducedVals.back();
+      Ops.append(RV.begin(), RV.end());
+      InstructionsCompatibilityAnalysis Analysis(DT, DL, *TTI, TLI);
+      InstructionsState OpS =
+          Analysis.buildInstructionsState(Ops, V, VectorizeCopyableElements);
+      if (LocalReducedVals.empty()) {
+        LocalReducedVals.push_back(Ops);
+        States.push_back(OpS);
+        continue;
+      }
+      if (OpS) {
+        LocalReducedVals.back().swap(Ops);
+        States.back() = OpS;
+        continue;
+      }
+      LocalReducedVals.emplace_back().append(RV.begin(), RV.end());
       States.push_back(getSameOpcode(RV, TLI));
+    }
+    ReducedVals.swap(LocalReducedVals);
     for (unsigned I = 0, E = ReducedVals.size(); I < E; ++I) {
       ArrayRef<Value *> OrigReducedVals = ReducedVals[I];
       InstructionsState S = States[I];
@@ -23916,8 +23953,10 @@ public:
         // Also check if the instruction was folded to constant/other value.
         auto *Inst = dyn_cast<Instruction>(RdxVal);
         if ((Inst && isVectorLikeInstWithConstOps(Inst) &&
-             (!S || !S.getMatchingMainOpOrAltOp(Inst))) ||
-            (S && !Inst))
+             (!S || (!S.getMatchingMainOpOrAltOp(Inst) &&
+                     !S.isCopyableElement(Inst)))) ||
+            (S && !Inst && !isa<PoisonValue>(RdxVal) &&
+             !S.isCopyableElement(RdxVal)))
           continue;
         Candidates.push_back(RdxVal);
         TrackedToOrig.try_emplace(RdxVal, ReducedVal);
@@ -24503,6 +24542,8 @@ private:
       // Scalar cost is repeated for N-1 elements.
       int Cnt = ReducedVals.size();
       for (Value *RdxVal : ReducedVals) {
+        if (!isa<Instruction>(RdxVal))
+          continue;
         if (Cnt == 1)
           break;
         --Cnt;
@@ -25247,7 +25288,7 @@ bool SLPVectorizerPass::vectorizeHorReduction(
     HorizontalReduction HorRdx;
     if (!HorRdx.matchAssociativeReduction(R, Inst, *SE, *DL, *TLI))
       return nullptr;
-    return HorRdx.tryToReduce(R, *DL, TTI, *TLI, AC);
+    return HorRdx.tryToReduce(R, *DL, TTI, *TLI, AC, *DT);
   };
   auto TryAppendToPostponedInsts = [&](Instruction *FutureSeed) {
     if (TryOperandsAsNewSeeds && FutureSeed == Root) {
@@ -25392,7 +25433,7 @@ bool SLPVectorizerPass::tryToVectorize(Instruction *I, BoUpSLP &R) {
     if (RedCost >= ScalarCost)
       return false;
 
-    return HorRdx.tryToReduce(R, *DL, &TTI, *TLI, AC) != nullptr;
+    return HorRdx.tryToReduce(R, *DL, &TTI, *TLI, AC, *DT) != nullptr;
   };
   if (Candidates.size() == 1)
     return TryToReduce(I, {Op0, Op1}) || tryToVectorizeList({Op0, Op1}, R);
