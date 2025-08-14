@@ -1,4 +1,4 @@
-; RUN: llc %s -mtriple=x86_64-unknown-unknown -pass-remarks=stack-protector -o /dev/null 2>&1 | FileCheck %s
+; RUN: llc %s -optimize-ssp=false -mtriple=x86_64-unknown-unknown -pass-remarks=stack-protector -o /dev/null 2>&1 | FileCheck %s
 ; CHECK-NOT: nossp
 ; CHECK: function attribute_ssp
 ; CHECK-SAME: a function attribute or command-line switch
