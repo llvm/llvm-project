@@ -237,7 +237,6 @@ static void validateRootSignature(Module &M,
             Builder.findOverlapping(ReportedBinding);
         reportOverlappingRegisters(M, ReportedBinding, Overlaping);
       });
-  // Next checks require that the root signature definition is valid.
   for (const auto &ResList :
        {std::make_pair(ResourceClass::SRV, DRM.srvs()),
         std::make_pair(ResourceClass::UAV, DRM.uavs()),
