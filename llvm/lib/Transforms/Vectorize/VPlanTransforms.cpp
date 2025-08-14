@@ -517,7 +517,7 @@ static void removeRedundantCanonicalIVs(VPlan &Plan) {
     // everything WidenNewIV's users need. That is, WidenOriginalIV will
     // generate a vector phi or all users of WidenNewIV demand the first lane
     // only.
-    if (!vputils::onlyScalarsUsed(WidenOriginalIV) ||
+    if (!vputils::onlyUsedByScalars(WidenOriginalIV) ||
         vputils::onlyFirstLaneUsed(WidenNewIV)) {
       WidenNewIV->replaceAllUsesWith(WidenOriginalIV);
       WidenNewIV->eraseFromParent();
@@ -1261,7 +1261,7 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
       // scalar results used. In the latter case, we would introduce extra
       // broadcasts.
       if (!vputils::isSingleScalar(RepOrWidenR) ||
-          !vputils::onlyScalarsUsed(RepOrWidenR))
+          !vputils::onlyUsedByScalars(RepOrWidenR))
         continue;
 
       auto *Clone = new VPReplicateRecipe(RepOrWidenR->getUnderlyingInstr(),
@@ -3214,7 +3214,7 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
 
   auto *VectorPreheader = Plan.getVectorPreheader();
   for (VPValue *VPV : VPValues) {
-    if (vputils::onlyScalarsUsed(VPV) ||
+    if (vputils::onlyUsedByScalars(VPV) ||
         (VPV->isLiveIn() && VPV->getLiveInIRValue() &&
          isa<Constant>(VPV->getLiveInIRValue())))
       continue;
@@ -3370,7 +3370,7 @@ void VPlanTransforms::materializeVFAndVFxUF(VPlan &Plan, VPBasicBlock *VectorPH,
   // For users of the runtime VF, compute it as VF * vscale, and VFxUF as (VF *
   // vscale) * UF.
   VPValue *RuntimeVF = Builder.createElementCount(TCTy, VFEC);
-  if (!vputils::onlyScalarsUsed(&VF)) {
+  if (!vputils::onlyUsedByScalars(&VF)) {
     VPValue *BC = Builder.createNaryOp(VPInstruction::Broadcast, RuntimeVF);
     VF.replaceUsesWithIf(
         BC, [&VF](VPUser &U, unsigned) { return !U.usesScalars(&VF); });
