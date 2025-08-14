@@ -2914,13 +2914,13 @@ mlir::LogicalResult CIRToLLVMInlineAsmOpLowering::matchAndRewrite(
   if (op.getNumResults())
     llResTy = getTypeConverter()->convertType(op.getType(0));
 
-  auto dialect = op.getAsmFlavor();
-  auto llDialect = dialect == cir::AsmFlavor::x86_att
-                       ? mlir::LLVM::AsmDialect::AD_ATT
-                       : mlir::LLVM::AsmDialect::AD_Intel;
+  cir::AsmFlavor dialect = op.getAsmFlavor();
+  mlir::LLVM::AsmDialect llDialect = dialect == cir::AsmFlavor::x86_att
+                                         ? mlir::LLVM::AsmDialect::AD_ATT
+                                         : mlir::LLVM::AsmDialect::AD_Intel;
 
   SmallVector<mlir::Attribute> opAttrs;
-  auto llvmAttrName = mlir::LLVM::InlineAsmOp::getElementTypeAttrName();
+  StringRef llvmAttrName = mlir::LLVM::InlineAsmOp::getElementTypeAttrName();
 
   // this is for the lowering to LLVM from LLVM dialect. Otherwise, if we
   // don't have the result (i.e. void type as a result of operation), the
@@ -2931,31 +2931,28 @@ mlir::LogicalResult CIRToLLVMInlineAsmOpLowering::matchAndRewrite(
 
   SmallVector<mlir::Value> llvmOperands;
   SmallVector<mlir::Value> cirOperands;
-  auto llvmAsmOps = adaptor.getAsmOperands();
-  auto cirAsmOps = op.getAsmOperands();
-  for (size_t i = 0; i < llvmAsmOps.size(); ++i) {
-    auto llvmOps = llvmAsmOps[i];
-    auto cirOps = cirAsmOps[i];
-    llvmOperands.append(llvmOps.begin(), llvmOps.end());
-    cirOperands.append(cirOps.begin(), cirOps.end());
+  for (auto [llvmOp, cirOp] :
+       llvm::zip(adaptor.getAsmOperands(), op.getAsmOperands())) {
+    llvmOperands.append(llvmOp.begin(), llvmOp.end());
+    cirOperands.append(cirOp.begin(), cirOp.end());
   }
 
   // so far we infer the llvm dialect element type attr from
   // CIR operand type.
-  auto cirOpAttrs = op.getOperandAttrs();
-  for (std::size_t i = 0; i < cirOpAttrs.size(); ++i) {
-    if (!cirOpAttrs[i]) {
+  for (auto [i, cirOpAttr] : llvm::enumerate(op.getOperandAttrs())) {
+    if (!cirOpAttr) {
       opAttrs.push_back(mlir::Attribute());
       continue;
     }
 
     SmallVector<mlir::NamedAttribute> attrs;
-    auto typ = cast<cir::PointerType>(cirOperands[i].getType());
-    auto typAttr = mlir::TypeAttr::get(convertTypeForMemory(
+    cir::PointerType typ =
+        mlir::cast<cir::PointerType>(cirOperands[i].getType());
+    mlir::TypeAttr typAttr = mlir::TypeAttr::get(convertTypeForMemory(
         *getTypeConverter(), dataLayout, typ.getPointee()));
 
     attrs.push_back(rewriter.getNamedAttr(llvmAttrName, typAttr));
-    auto newDict = rewriter.getDictionaryAttr(attrs);
+    mlir::DictionaryAttr newDict = rewriter.getDictionaryAttr(attrs);
     opAttrs.push_back(newDict);
   }
 
