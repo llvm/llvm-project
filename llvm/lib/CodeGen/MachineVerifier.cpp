@@ -2325,6 +2325,15 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
       report("Missing mayStore flag", MI);
   }
 
+  // Verify earlyClobber def operand
+  for (unsigned i = 0; i < MI->getNumOperands(); i++)
+    if (MCID.getOperandConstraint(i, MCOI::EARLY_CLOBBER) != -1) {
+      const MachineOperand &Op = MI->getOperand(i);
+      if (!Op.isReg())
+        report("Early clobber must be a register", MI);
+      if (!Op.isEarlyClobber())
+        report("Missing earlyClobber flag", MI);
+    }
   // Debug values must not have a slot index.
   // Other instructions must have one, unless they are inside a bundle.
   if (LiveInts) {
