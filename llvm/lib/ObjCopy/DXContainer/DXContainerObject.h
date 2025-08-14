@@ -42,8 +42,6 @@ struct Object {
   }
 
   Error removeParts(PartPred ToRemove);
-
-private:
   void recomputeHeader();
 };
 
