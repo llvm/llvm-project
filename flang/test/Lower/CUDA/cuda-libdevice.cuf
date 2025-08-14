@@ -162,6 +162,15 @@ end subroutine
 ! CHECK: %{{.*}} = fir.call @__nv_double2ull_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> i64
 ! CHECK: %{{.*}} = fir.call @__nv_double2ull_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> i64
 
+attributes(global) subroutine test_saturatef()
+  real :: res
+  real :: r
+  res = __saturatef(r)
+end subroutine
+
+! CHECK-LABEL: _QPtest_saturatef
+! CHECK: %{{.*}} = fir.call @__nv_saturatef(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
+
 attributes(global) subroutine test_float2ll_rX()
   integer(8) :: res
   real :: r
