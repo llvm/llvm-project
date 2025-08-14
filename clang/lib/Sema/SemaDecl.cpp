@@ -3653,7 +3653,9 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
   FunctionDecl *Old = OldD->getAsFunction();
   if (!Old) {
     if (UsingShadowDecl *Shadow = dyn_cast<UsingShadowDecl>(OldD)) {
-      if (New->getFriendObjectKind()) {
+      // We don't need to check the using friend pattern from other module unit
+      // since we should have diagnosed such cases in its unit already.
+      if (New->getFriendObjectKind() && !OldD->isInAnotherModuleUnit()) {
         Diag(New->getLocation(), diag::err_using_decl_friend);
         Diag(Shadow->getTargetDecl()->getLocation(),
              diag::note_using_decl_target);

@@ -68,10 +68,6 @@ mlirExecutionEngineCreate(MlirModule op, int optLevel, int numPaths,
   return wrap(jitOrError->release());
 }
 
-extern "C" void mlirExecutionEngineInitialize(MlirExecutionEngine jit) {
-  unwrap(jit)->initialize();
-}
-
 extern "C" void mlirExecutionEngineDestroy(MlirExecutionEngine jit) {
   delete (unwrap(jit));
 }
@@ -110,8 +106,9 @@ extern "C" void mlirExecutionEngineRegisterSymbol(MlirExecutionEngine jit,
                                                   void *sym) {
   unwrap(jit)->registerSymbols([&](llvm::orc::MangleAndInterner interner) {
     llvm::orc::SymbolMap symbolMap;
-    symbolMap[interner(unwrap(name))] = {llvm::orc::ExecutorAddr::fromPtr(sym),
-                                         llvm::JITSymbolFlags::Exported};
+    symbolMap[interner(unwrap(name))] =
+        { llvm::orc::ExecutorAddr::fromPtr(sym),
+          llvm::JITSymbolFlags::Exported };
     return symbolMap;
   });
 }

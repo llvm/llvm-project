@@ -5488,9 +5488,10 @@ InstructionCost X86TTIImpl::getPointersChainCost(
   return BaseT::getPointersChainCost(Ptrs, Base, Info, AccessTy, CostKind);
 }
 
-InstructionCost X86TTIImpl::getAddressComputationCost(Type *PtrTy,
-                                                      ScalarEvolution *SE,
-                                                      const SCEV *Ptr) const {
+InstructionCost
+X86TTIImpl::getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
+                                      const SCEV *Ptr,
+                                      TTI::TargetCostKind CostKind) const {
   // Address computations in vectorized code with non-consecutive addresses will
   // likely result in more instructions compared to scalar code where the
   // computation can more often be merged into the index mode. The resulting
@@ -5513,7 +5514,7 @@ InstructionCost X86TTIImpl::getAddressComputationCost(Type *PtrTy,
       return 1;
   }
 
-  return BaseT::getAddressComputationCost(PtrTy, SE, Ptr);
+  return BaseT::getAddressComputationCost(PtrTy, SE, Ptr, CostKind);
 }
 
 InstructionCost
