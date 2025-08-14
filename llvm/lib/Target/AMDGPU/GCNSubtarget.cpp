@@ -567,12 +567,6 @@ unsigned GCNSubtarget::getMaxNumVGPRs(const Function &F) const {
           getMaxNumVGPRs(Waves.first, DynamicVGPRBlockSize)});
 }
 
-unsigned GCNSubtarget::getMaxNumAGPRs(const Function &F, unsigned ArchVGPRs,
-                                      unsigned WavesPerEU) const {
-  assert(WavesPerEU > 0);
-  return (getTotalNumVGPRs() - ArchVGPRs) / WavesPerEU;
-}
-
 unsigned GCNSubtarget::getMaxNumVGPRs(const MachineFunction &MF) const {
   return getMaxNumVGPRs(MF.getFunction());
 }
