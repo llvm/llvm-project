@@ -52,8 +52,7 @@ void fork_and_execv_signal_exit() {
   ASSERT_TRUE(WTERMSIG(status) == SIGUSR1);
 }
 
-TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
-          [[maybe_unused]] char **envp) {
+TEST_MAIN(int argc, char **argv, char **envp) {
   fork_and_execv_normal_exit();
   fork_and_execv_signal_exit();
   return 0;

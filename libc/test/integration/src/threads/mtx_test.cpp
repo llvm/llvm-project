@@ -23,7 +23,7 @@ constexpr int MAX = 10000;
 mtx_t mutex;
 static int shared_int = START;
 
-int counter([[maybe_unused]] void *arg) {
+int counter(void *arg) {
   int last_count = START;
   while (true) {
     LIBC_NAMESPACE::mtx_lock(&mutex);
@@ -74,7 +74,7 @@ void relay_counter() {
 mtx_t start_lock, step_lock;
 bool started, step;
 
-int stepper([[maybe_unused]] void *arg) {
+int stepper(void *arg) {
   LIBC_NAMESPACE::mtx_lock(&start_lock);
   started = true;
   LIBC_NAMESPACE::mtx_unlock(&start_lock);

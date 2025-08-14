@@ -100,7 +100,7 @@ namespace single_waiter_test {
 mtx_t waiter_mtx, main_thread_mtx;
 cnd_t waiter_cnd, main_thread_cnd;
 
-int waiter_thread_func([[maybe_unused]] void *unused) {
+int waiter_thread_func(void *unused) {
   LIBC_NAMESPACE::mtx_lock(&waiter_mtx);
 
   LIBC_NAMESPACE::mtx_lock(&main_thread_mtx);

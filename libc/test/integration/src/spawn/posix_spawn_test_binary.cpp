@@ -2,7 +2,7 @@
 #include <string.h>
 #include <unistd.h>
 
-int main(int argc, [[maybe_unused]] char **argv) {
+int main(int argc, char **argv) {
   if (argc != 1)
     return 5;
   constexpr size_t bufsize = sizeof(TEXT);

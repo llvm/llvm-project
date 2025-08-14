@@ -357,7 +357,7 @@ public:
     ASSERT_STREQ_LEN(written, buff, "1.0e+01");
   }
 
-  void floatDecimalExpLongDoublePrec([[maybe_unused]] FunctionT func) {
+  void floatDecimalExpLongDoublePrec(FunctionT func) {
     // Mark as maybe_unused to silence unused variable
     // warning when long double is not 80-bit
     [[maybe_unused]] char buff[100];
@@ -422,7 +422,7 @@ public:
     ASSERT_STREQ_LEN(written, buff, "1.2340000000000000814e-10");
   }
 
-  void floatDecimalAutoLongDoublePrec([[maybe_unused]] FunctionT func) {
+  void floatDecimalAutoLongDoublePrec(FunctionT func) {
     // Mark as maybe_unused to silence unused variable
     // warning when long double is not 80-bit
     [[maybe_unused]] char buff[100];

@@ -43,7 +43,7 @@ public:
   // Takes ownership of func.
   explicit FPExceptMatcher(FunctionCaller *func);
 
-  bool match([[maybe_unused]] bool unused) { return exceptionRaised; }
+  bool match(bool unused) { return exceptionRaised; }
 
   void explainError() override {
     tlog << "A floating point exception should have been raised but it "

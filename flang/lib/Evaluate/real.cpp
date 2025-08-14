@@ -750,6 +750,14 @@ llvm::raw_ostream &Real<W, P>::AsFortran(
   return o;
 }
 
+template <typename W, int P>
+std::string Real<W, P>::AsFortran(int kind, bool minimal) const {
+  std::string result;
+  llvm::raw_string_ostream sstream(result);
+  AsFortran(sstream, kind, minimal);
+  return result;
+}
+
 // 16.9.180
 template <typename W, int P> Real<W, P> Real<W, P>::RRSPACING() const {
   if (IsNotANumber()) {
