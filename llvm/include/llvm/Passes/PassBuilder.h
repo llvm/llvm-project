@@ -773,6 +773,8 @@ private:
                          IntrusiveRefCntPtr<vfs::FileSystem> FS);
   void addPostPGOLoopRotation(ModulePassManager &MPM, OptimizationLevel Level);
 
+  bool isInstrumentedPGOUse() const;
+
   // Extension Point callbacks
   SmallVector<std::function<void(FunctionPassManager &, OptimizationLevel)>, 2>
       PeepholeEPCallbacks;

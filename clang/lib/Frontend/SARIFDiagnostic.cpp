@@ -91,8 +91,8 @@ SarifResult SARIFDiagnostic::addLocationToResult(
     SourceLocation E = ERange.getEnd();
     bool IsTokenRange = ERange.isTokenRange();
 
-    std::pair<FileID, unsigned> BInfo = SM.getDecomposedLoc(B);
-    std::pair<FileID, unsigned> EInfo = SM.getDecomposedLoc(E);
+    FileIDAndOffset BInfo = SM.getDecomposedLoc(B);
+    FileIDAndOffset EInfo = SM.getDecomposedLoc(E);
 
     // If the start or end of the range is in another file, just discard
     // it.

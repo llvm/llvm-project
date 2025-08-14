@@ -1396,6 +1396,11 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       args.hasFlag(OPT_dependent_libraries, OPT_no_dependent_libraries, true);
   ctx.arg.disableVerify = args.hasArg(OPT_disable_verify);
   ctx.arg.discard = getDiscard(args);
+  ctx.arg.dtltoDistributor = args.getLastArgValue(OPT_thinlto_distributor_eq);
+  ctx.arg.dtltoDistributorArgs =
+      args::getStrings(args, OPT_thinlto_distributor_arg);
+  ctx.arg.dtltoCompiler = args.getLastArgValue(OPT_thinlto_compiler_eq);
+  ctx.arg.dtltoCompilerArgs = args::getStrings(args, OPT_thinlto_compiler_arg);
   ctx.arg.dwoDir = args.getLastArgValue(OPT_plugin_opt_dwo_dir_eq);
   ctx.arg.dynamicLinker = getDynamicLinker(ctx, args);
   ctx.arg.ehFrameHdr =
@@ -1620,6 +1625,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.zIfuncNoplt = hasZOption(args, "ifunc-noplt");
   ctx.arg.zInitfirst = hasZOption(args, "initfirst");
   ctx.arg.zInterpose = hasZOption(args, "interpose");
+  ctx.arg.zKeepDataSectionPrefix = getZFlag(
+      args, "keep-data-section-prefix", "nokeep-data-section-prefix", false);
   ctx.arg.zKeepTextSectionPrefix = getZFlag(
       args, "keep-text-section-prefix", "nokeep-text-section-prefix", false);
   ctx.arg.zLrodataAfterBss =
@@ -1644,6 +1651,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.zWxneeded = hasZOption(args, "wxneeded");
   setUnresolvedSymbolPolicy(ctx, args);
   ctx.arg.power10Stubs = args.getLastArgValue(OPT_power10_stubs_eq) != "no";
+  ctx.arg.branchToBranch = args.hasFlag(
+      OPT_branch_to_branch, OPT_no_branch_to_branch, ctx.arg.optimize >= 2);
 
   if (opt::Arg *arg = args.getLastArg(OPT_eb, OPT_el)) {
     if (arg->getOption().matches(OPT_eb))
@@ -3131,6 +3140,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     ctx.symtab->insert(arg->getValue())->traced = true;
 
   ctx.internalFile = createInternalFile(ctx, "<internal>");
+  ctx.dummySym = make<Undefined>(ctx.internalFile, "", STB_LOCAL, 0, 0);
 
   // Handle -u/--undefined before input files. If both a.a and b.so define foo,
   // -u foo a.a b.so will extract a.a.
@@ -3438,6 +3448,10 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // output sections in the usual way.
   if (!ctx.arg.relocatable)
     combineEhSections(ctx);
+
+  // Merge .hexagon.attributes sections.
+  if (ctx.arg.emachine == EM_HEXAGON)
+    mergeHexagonAttributesSections(ctx);
 
   // Merge .riscv.attributes sections.
   if (ctx.arg.emachine == EM_RISCV)

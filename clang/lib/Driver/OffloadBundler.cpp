@@ -744,8 +744,7 @@ private:
     // Input is the same as the content of the original input file, therefore
     // temporary file is not needed.
     if (StringRef(BundlerConfig.FilesType).starts_with("a")) {
-      auto InputFileOrErr =
-          TempFiles.Create(ArrayRef<char>(Input.data(), Input.size()));
+      auto InputFileOrErr = TempFiles.Create(ArrayRef<char>(Input));
       if (!InputFileOrErr)
         return InputFileOrErr.takeError();
       ObjcopyInputFileName = *InputFileOrErr;
@@ -1289,8 +1288,7 @@ CompressedOffloadBundle::decompress(const llvm::MemoryBuffer &Input,
     HashRecalcTimer.startTimer();
     llvm::MD5 Hash;
     llvm::MD5::MD5Result Result;
-    Hash.update(llvm::ArrayRef<uint8_t>(DecompressedData.data(),
-                                        DecompressedData.size()));
+    Hash.update(llvm::ArrayRef<uint8_t>(DecompressedData));
     Hash.final(Result);
     uint64_t RecalculatedHash = Result.low();
     HashRecalcTimer.stopTimer();

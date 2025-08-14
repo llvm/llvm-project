@@ -384,8 +384,7 @@ CompoundStmt::CompoundStmt(ArrayRef<Stmt *> Stmts, FPOptionsOverride FPFeatures,
 void CompoundStmt::setStmts(ArrayRef<Stmt *> Stmts) {
   assert(CompoundStmtBits.NumStmts == Stmts.size() &&
          "NumStmts doesn't fit in bits of CompoundStmtBits.NumStmts!");
-
-  std::copy(Stmts.begin(), Stmts.end(), body_begin());
+  llvm::copy(Stmts, body_begin());
 }
 
 CompoundStmt *CompoundStmt::Create(const ASTContext &C, ArrayRef<Stmt *> Stmts,
@@ -947,10 +946,10 @@ void MSAsmStmt::initialize(const ASTContext &C, StringRef asmstr,
   AsmStr = copyIntoContext(C, asmstr);
 
   Exprs = new (C) Stmt*[exprs.size()];
-  std::copy(exprs.begin(), exprs.end(), Exprs);
+  llvm::copy(exprs, Exprs);
 
   AsmToks = new (C) Token[asmtoks.size()];
-  std::copy(asmtoks.begin(), asmtoks.end(), AsmToks);
+  llvm::copy(asmtoks, AsmToks);
 
   Constraints = new (C) StringRef[exprs.size()];
   std::transform(constraints.begin(), constraints.end(), Constraints,
@@ -1385,7 +1384,7 @@ CapturedStmt::CapturedStmt(Stmt *S, CapturedRegionKind Kind,
 
   // Copy all Capture objects.
   Capture *Buffer = getStoredCaptures();
-  std::copy(Captures.begin(), Captures.end(), Buffer);
+  llvm::copy(Captures, Buffer);
 }
 
 CapturedStmt::CapturedStmt(EmptyShell Empty, unsigned NumCaptures)

@@ -19,6 +19,7 @@
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Type.h"
 
+#include "CIRGenRecordLayout.h"
 #include "mlir/IR/Value.h"
 
 #include "clang/CIR/MissingFeatures.h"
@@ -33,11 +34,7 @@ class RValue {
   enum Flavor { Scalar, Complex, Aggregate };
 
   union {
-    // Stores first and second value.
-    struct {
-      mlir::Value first;
-      mlir::Value second;
-    } vals;
+    mlir::Value value;
 
     // Stores aggregate address.
     Address aggregateAddr;
@@ -47,7 +44,7 @@ class RValue {
   unsigned flavor : 2;
 
 public:
-  RValue() : vals{nullptr, nullptr}, flavor(Scalar) {}
+  RValue() : value(nullptr), flavor(Scalar) {}
 
   bool isScalar() const { return flavor == Scalar; }
   bool isComplex() const { return flavor == Complex; }
@@ -56,14 +53,15 @@ public:
   bool isVolatileQualified() const { return isVolatile; }
 
   /// Return the value of this scalar value.
-  mlir::Value getScalarVal() const {
+  mlir::Value getValue() const {
     assert(isScalar() && "Not a scalar!");
-    return vals.first;
+    return value;
   }
 
-  /// Return the real/imag components of this complex value.
-  std::pair<mlir::Value, mlir::Value> getComplexVal() const {
-    return std::make_pair(vals.first, vals.second);
+  /// Return the value of this complex value.
+  mlir::Value getComplexValue() const {
+    assert(isComplex() && "Not a complex!");
+    return value;
   }
 
   /// Return the value of the address of the aggregate.
@@ -83,23 +81,20 @@ public:
 
   static RValue get(mlir::Value v) {
     RValue er;
-    er.vals.first = v;
+    er.value = v;
     er.flavor = Scalar;
     er.isVolatile = false;
     return er;
   }
 
-  static RValue getComplex(mlir::Value v1, mlir::Value v2) {
+  static RValue getComplex(mlir::Value v) {
     RValue er;
-    er.vals = {v1, v2};
+    er.value = v;
     er.flavor = Complex;
     er.isVolatile = false;
     return er;
   }
-  static RValue getComplex(const std::pair<mlir::Value, mlir::Value> &c) {
-    return getComplex(c.first, c.second);
-  }
-  // FIXME: Aggregate rvalues need to retain information about whether they are
+
   // volatile or not.  Remove default to find all places that probably get this
   // wrong.
 
@@ -174,6 +169,7 @@ class LValue {
   mlir::Value vectorIdx; // Index for vector subscript
   mlir::Type elementType;
   LValueBaseInfo baseInfo;
+  const CIRGenBitFieldInfo *bitFieldInfo{nullptr};
 
   void initialize(clang::QualType type, clang::Qualifiers quals,
                   clang::CharUnits alignment, LValueBaseInfo baseInfo) {
@@ -194,9 +190,10 @@ public:
   bool isSimple() const { return lvType == Simple; }
   bool isVectorElt() const { return lvType == VectorElt; }
   bool isBitField() const { return lvType == BitField; }
+  bool isGlobalReg() const { return lvType == GlobalReg; }
+  bool isVolatile() const { return quals.hasVolatile(); }
 
-  // TODO: Add support for volatile
-  bool isVolatile() const { return false; }
+  bool isVolatileQualified() const { return quals.hasVolatile(); }
 
   unsigned getVRQualifiers() const {
     return quals.getCVRQualifiers() & ~clang::Qualifiers::Const;
@@ -257,6 +254,38 @@ public:
     r.elementType = vecAddress.getElementType();
     r.vectorIdx = index;
     r.initialize(t, t.getQualifiers(), vecAddress.getAlignment(), baseInfo);
+    return r;
+  }
+
+  // bitfield lvalue
+  Address getBitFieldAddress() const {
+    return Address(getBitFieldPointer(), elementType, getAlignment());
+  }
+
+  mlir::Value getBitFieldPointer() const {
+    assert(isBitField());
+    return v;
+  }
+
+  const CIRGenBitFieldInfo &getBitFieldInfo() const {
+    assert(isBitField());
+    return *bitFieldInfo;
+  }
+
+  /// Create a new object to represent a bit-field access.
+  ///
+  /// \param Addr - The base address of the bit-field sequence this
+  /// bit-field refers to.
+  /// \param Info - The information describing how to perform the bit-field
+  /// access.
+  static LValue makeBitfield(Address addr, const CIRGenBitFieldInfo &info,
+                             clang::QualType type, LValueBaseInfo baseInfo) {
+    LValue r;
+    r.lvType = BitField;
+    r.v = addr.getPointer();
+    r.elementType = addr.getElementType();
+    r.bitFieldInfo = &info;
+    r.initialize(type, type.getQualifiers(), addr.getAlignment(), baseInfo);
     return r;
   }
 };

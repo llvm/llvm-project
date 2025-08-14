@@ -113,7 +113,11 @@ protected:
   Type getVoidType() const;
 
   /// Get the MLIR type wrapping the LLVM i8* type.
+  [[deprecated("Use getPtrType() instead!")]]
   Type getVoidPtrType() const;
+
+  /// Get the MLIR type wrapping the LLVM ptr type.
+  Type getPtrType(unsigned addressSpace = 0) const;
 
   /// Create a constant Op producing a value of `resultType` from an index-typed
   /// integer attribute.

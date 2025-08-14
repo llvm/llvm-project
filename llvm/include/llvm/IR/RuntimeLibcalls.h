@@ -16,31 +16,29 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 
-namespace llvm {
-namespace RTLIB {
+/// TableGen will produce 2 enums, RTLIB::Libcall and
+/// RTLIB::LibcallImpl. RTLIB::Libcall describes abstract functionality the
+/// compiler may choose to access, RTLIB::LibcallImpl describes a particular ABI
+/// implementation, which includes a name and type signature.
+#define GET_RUNTIME_LIBCALL_ENUM
+#include "llvm/IR/RuntimeLibcalls.inc"
+#undef GET_RUNTIME_LIBCALL_ENUM
 
-/// RTLIB::Libcall enum - This enum defines all of the runtime library calls
-/// the backend can emit.  The various long double types cannot be merged,
-/// because 80-bit library functions use "xf" and 128-bit use "tf".
-///
-/// When adding PPCF128 functions here, note that their names generally need
-/// to be overridden for Darwin with the xxx$LDBL128 form.  See
-/// PPCISelLowering.cpp.
-///
-enum Libcall {
-#define HANDLE_LIBCALL(code, name) code,
-#include "llvm/IR/RuntimeLibcalls.def"
-#undef HANDLE_LIBCALL
-};
-} // namespace RTLIB
+namespace llvm {
 
 template <> struct enum_iteration_traits<RTLIB::Libcall> {
+  static constexpr bool is_iterable = true;
+};
+
+template <> struct enum_iteration_traits<RTLIB::LibcallImpl> {
   static constexpr bool is_iterable = true;
 };
 
@@ -51,76 +49,126 @@ static inline auto libcalls() {
   return enum_seq(static_cast<RTLIB::Libcall>(0), RTLIB::UNKNOWN_LIBCALL);
 }
 
+static inline auto libcall_impls() {
+  return enum_seq(static_cast<RTLIB::LibcallImpl>(1), RTLIB::NumLibcallImpls);
+}
+
 /// A simple container for information about the supported runtime calls.
 struct RuntimeLibcallsInfo {
-  explicit RuntimeLibcallsInfo(const Triple &TT) {
-    initLibcalls(TT);
+  explicit RuntimeLibcallsInfo(
+      const Triple &TT,
+      ExceptionHandling ExceptionModel = ExceptionHandling::None,
+      FloatABI::ABIType FloatABI = FloatABI::Default,
+      EABI EABIVersion = EABI::Default, StringRef ABIName = "") {
+    // FIXME: The ExceptionModel parameter is to handle the field in
+    // TargetOptions. This interface fails to distinguish the forced disable
+    // case for targets which support exceptions by default. This should
+    // probably be a module flag and removed from TargetOptions.
+    if (ExceptionModel == ExceptionHandling::None)
+      ExceptionModel = TT.getDefaultExceptionHandling();
+
+    initLibcalls(TT, ExceptionModel, FloatABI, EABIVersion, ABIName);
   }
 
   /// Rename the default libcall routine name for the specified libcall.
-  void setLibcallName(RTLIB::Libcall Call, const char *Name) {
-    LibcallRoutineNames[Call] = Name;
-  }
-
-  void setLibcallName(ArrayRef<RTLIB::Libcall> Calls, const char *Name) {
-    for (auto Call : Calls)
-      setLibcallName(Call, Name);
+  void setLibcallImpl(RTLIB::Libcall Call, RTLIB::LibcallImpl Impl) {
+    LibcallImpls[Call] = Impl;
   }
 
   /// Get the libcall routine name for the specified libcall.
+  // FIXME: This should be removed. Only LibcallImpl should have a name.
   const char *getLibcallName(RTLIB::Libcall Call) const {
-    return LibcallRoutineNames[Call];
+    return getLibcallImplName(LibcallImpls[Call]);
   }
 
-  /// Set the CallingConv that should be used for the specified libcall.
-  void setLibcallCallingConv(RTLIB::Libcall Call, CallingConv::ID CC) {
-    LibcallCallingConvs[Call] = CC;
+  /// Get the libcall routine name for the specified libcall implementation.
+  // FIXME: Change to return StringRef
+  static const char *getLibcallImplName(RTLIB::LibcallImpl CallImpl) {
+    if (CallImpl == RTLIB::Unsupported)
+      return nullptr;
+    return RuntimeLibcallImplNameTable[RuntimeLibcallNameOffsetTable[CallImpl]]
+        .data();
+  }
+
+  /// Return the lowering's selection of implementation call for \p Call
+  RTLIB::LibcallImpl getLibcallImpl(RTLIB::Libcall Call) const {
+    return LibcallImpls[Call];
+  }
+
+  /// Set the CallingConv that should be used for the specified libcall
+  /// implementation
+  void setLibcallImplCallingConv(RTLIB::LibcallImpl Call, CallingConv::ID CC) {
+    LibcallImplCallingConvs[Call] = CC;
+  }
+
+  // FIXME: Remove this wrapper in favor of directly using
+  // getLibcallImplCallingConv
+  CallingConv::ID getLibcallCallingConv(RTLIB::Libcall Call) const {
+    return LibcallImplCallingConvs[LibcallImpls[Call]];
   }
 
   /// Get the CallingConv that should be used for the specified libcall.
-  CallingConv::ID getLibcallCallingConv(RTLIB::Libcall Call) const {
-    return LibcallCallingConvs[Call];
+  CallingConv::ID getLibcallImplCallingConv(RTLIB::LibcallImpl Call) const {
+    return LibcallImplCallingConvs[Call];
   }
 
-  ArrayRef<const char *> getLibcallNames() const {
-    // Trim UNKNOWN_LIBCALL from the end
-    return ArrayRef(LibcallRoutineNames).drop_back();
+  ArrayRef<RTLIB::LibcallImpl> getLibcallImpls() const {
+    // Trim UNKNOWN_LIBCALL from the back
+    return ArrayRef(LibcallImpls).drop_back();
   }
 
-  /// Get the comparison predicate that's to be used to test the result of the
-  /// comparison libcall against zero. This should only be used with
-  /// floating-point compare libcalls.
-  CmpInst::Predicate
-  getSoftFloatCmpLibcallPredicate(RTLIB::Libcall Call) const {
-    return SoftFloatCompareLibcallPredicates[Call];
+  /// Return a function name compatible with RTLIB::MEMCPY, or nullptr if fully
+  /// unsupported.
+  const char *getMemcpyName() const {
+    if (const char *Memcpy = getLibcallName(RTLIB::MEMCPY))
+      return Memcpy;
+
+    // Fallback to memmove if memcpy isn't available.
+    return getLibcallName(RTLIB::MEMMOVE);
   }
 
-  // FIXME: This should be removed. This should be private constant.
-  void setSoftFloatCmpLibcallPredicate(RTLIB::Libcall Call,
-                                       CmpInst::Predicate Pred) {
-    SoftFloatCompareLibcallPredicates[Call] = Pred;
+  /// Return the libcall provided by \p Impl
+  static RTLIB::Libcall getLibcallFromImpl(RTLIB::LibcallImpl Impl) {
+    return ImplToLibcall[Impl];
   }
+
+  /// Check if this is valid libcall for the current module, otherwise
+  /// RTLIB::Unsupported.
+  LLVM_ABI RTLIB::LibcallImpl getSupportedLibcallImpl(StringRef FuncName) const;
 
 private:
-  /// Stores the name each libcall.
-  const char *LibcallRoutineNames[RTLIB::UNKNOWN_LIBCALL + 1] = {nullptr};
+  /// Stores the implementation choice for each each libcall.
+  RTLIB::LibcallImpl LibcallImpls[RTLIB::UNKNOWN_LIBCALL + 1] = {
+      RTLIB::Unsupported};
 
   static_assert(static_cast<int>(CallingConv::C) == 0,
                 "default calling conv should be encoded as 0");
 
-  /// Stores the CallingConv that should be used for each libcall.
-  CallingConv::ID LibcallCallingConvs[RTLIB::UNKNOWN_LIBCALL] = {};
+  /// Stores the CallingConv that should be used for each libcall
+  /// implementation.;
+  CallingConv::ID LibcallImplCallingConvs[RTLIB::NumLibcallImpls] = {};
 
-  /// The condition type that should be used to test the result of each of the
-  /// soft floating-point comparison libcall against integer zero.
-  ///
-  // FIXME: This is only relevant for the handful of floating-point comparison
-  // runtime calls; it's excessive to have a table entry for every single
-  // opcode.
-  CmpInst::Predicate SoftFloatCompareLibcallPredicates[RTLIB::UNKNOWN_LIBCALL];
+  /// Names of concrete implementations of runtime calls. e.g. __ashlsi3 for
+  /// SHL_I32
+  LLVM_ABI static const char RuntimeLibcallImplNameTableStorage[];
+  LLVM_ABI static const StringTable RuntimeLibcallImplNameTable;
+  LLVM_ABI static const uint16_t RuntimeLibcallNameOffsetTable[];
+
+  /// Map from a concrete LibcallImpl implementation to its RTLIB::Libcall kind.
+  LLVM_ABI static const RTLIB::Libcall ImplToLibcall[RTLIB::NumLibcallImpls];
+
+  /// Check if a function name is a recognized runtime call of any kind. This
+  /// does not consider if this call is available for any current compilation,
+  /// just that it is a known call somewhere. This returns the set of all
+  /// LibcallImpls which match the name; multiple implementations with the same
+  /// name may exist but differ in interpretation based on the target context.
+  LLVM_ABI static iterator_range<ArrayRef<uint16_t>::const_iterator>
+  getRecognizedLibcallImpls(StringRef FuncName);
 
   static bool darwinHasSinCosStret(const Triple &TT) {
-    assert(TT.isOSDarwin() && "should be called with darwin triple");
+    if (!TT.isOSDarwin())
+      return false;
+
     // Don't bother with 32 bit x86.
     if (TT.getArch() == Triple::x86)
       return false;
@@ -134,17 +182,35 @@ private:
     return true;
   }
 
+  static bool hasAEABILibcalls(const Triple &TT) {
+    return TT.isTargetAEABI() || TT.isTargetGNUAEABI() ||
+           TT.isTargetMuslAEABI() || TT.isAndroid();
+  }
+
+  LLVM_READONLY
+  static bool isAAPCS_ABI(const Triple &TT, StringRef ABIName);
+
+  static bool darwinHasExp10(const Triple &TT);
+
   /// Return true if the target has sincosf/sincos/sincosl functions
   static bool hasSinCos(const Triple &TT) {
     return TT.isGNUEnvironment() || TT.isOSFuchsia() ||
            (TT.isAndroid() && !TT.isAndroidVersionLT(9));
   }
 
-  void initSoftFloatCmpLibcallPredicates();
+  static bool hasSinCos_f32_f64(const Triple &TT) {
+    return hasSinCos(TT) || TT.isPS();
+  }
+
+  /// Generated by tablegen.
+  void setTargetRuntimeLibcallSets(const Triple &TT, FloatABI::ABIType FloatABI,
+                                   EABI ABIType, StringRef ABIName);
 
   /// Set default libcall names. If a target wants to opt-out of a libcall it
   /// should be placed here.
-  LLVM_ABI void initLibcalls(const Triple &TT);
+  LLVM_ABI void initLibcalls(const Triple &TT, ExceptionHandling ExceptionModel,
+                             FloatABI::ABIType FloatABI, EABI ABIType,
+                             StringRef ABIName);
 };
 
 } // namespace RTLIB

@@ -4,7 +4,28 @@
 target triple = "dxilv1.5-pc-shadermodel6.5-compute"
 
 ; DXILFinalizeLinkage changes linkage of all functions that are hidden to
-; internal.
+; internal, and converts private global variables to internal linkage.
+
+; CHECK: @switch.table = internal unnamed_addr constant [4 x i32]
+@switch.table = private unnamed_addr constant [4 x i32] [i32 1, i32 257, i32 65793, i32 16843009], align 4
+
+; CHECK: @private_array = internal constant [3 x float]
+@private_array = private constant [3 x float] [float 1.0, float 2.0, float 3.0], align 4
+
+; CHECK: @private_var = internal global i32
+@private_var = private global i32 1, align 4
+
+; Internal global should remain internal
+; CHECK: @internal_var = internal global i32
+@internal_var = internal global i32 1, align 4
+
+; External global should remain external
+; CHECK: @external_var = external global i32
+@external_var = external global i32, align 4
+
+; Hidden global should remain hidden
+; CHECK: @hidden_var = hidden global i32
+@hidden_var = hidden global i32 1, align 4
 
 ; CHECK-NOT: define internal void @"?f1@@YAXXZ"()
 define void @"?f1@@YAXXZ"() #0 {

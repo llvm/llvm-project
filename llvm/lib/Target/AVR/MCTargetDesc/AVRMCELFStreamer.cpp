@@ -36,10 +36,8 @@ void AVRMCELFStreamer::emitValueForModiferKind(
     Kind = AVR::S_HI8;
   else if (ModifierKind == AVR::S_HH8)
     Kind = AVR::S_HH8;
-  MCELFStreamer::emitValue(
-      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VariantKind(Kind),
-                              getContext()),
-      SizeInBytes, Loc);
+  MCELFStreamer::emitValue(MCSymbolRefExpr::create(Sym, Kind, getContext()),
+                           SizeInBytes, Loc);
 }
 
 namespace llvm {

@@ -1,0 +1,99 @@
+# REQUIRES: x86
+
+## Test that the LLD options --save-temps, --thinlto-emit-index-files,
+## and --thinlto-emit-imports-files function correctly with DTLTO.
+
+RUN: rm -rf %t && split-file %s %t && cd %t
+
+RUN: sed 's/@t1/@t2/g' t1.ll > t2.ll
+
+## Generate ThinLTO bitcode files. Note that t3.bc will not be used by the
+## linker.
+RUN: opt -thinlto-bc t1.ll -o t1.bc
+RUN: opt -thinlto-bc t2.ll -o t2.bc
+RUN: cp t1.bc t3.bc
+
+## Generate object files for mock.py to return.
+RUN: llc t1.ll --filetype=obj -o t1.o
+RUN: llc t2.ll --filetype=obj -o t2.o
+
+## Create response file containing shared ThinLTO linker arguments.
+## --start-lib/--end-lib is used to test the special case where unused lazy
+## bitcode inputs result in empty index/imports files.
+## Note that mock.py does not do any compilation; instead, it simply writes
+## the contents of the object files supplied on the command line into the
+## output object files in job order.
+RUN: echo "t1.bc t2.bc --start-lib t3.bc --end-lib -o my.elf \
+RUN:   --thinlto-distributor=\"%python\" \
+RUN:   --thinlto-distributor-arg=\"%llvm_src_root/utils/dtlto/mock.py\" \
+RUN:   --thinlto-distributor-arg=t1.o \
+RUN:   --thinlto-distributor-arg=t2.o" > l.rsp
+
+## Check that without extra flags, no index/imports files are produced and
+## backend temp files are removed.
+RUN: ld.lld @l.rsp
+RUN: ls | FileCheck %s \
+RUN:   --check-prefixes=NOBACKEND,NOINDEXFILES,NOIMPORTSFILES,NOEMPTYIMPORTS
+
+## Check that index files are created with --thinlto-emit-index-files.
+RUN: rm -f *.imports *.thinlto.bc
+RUN: ld.lld @l.rsp --thinlto-emit-index-files
+RUN: ls | sort | FileCheck %s \
+RUN:   --check-prefixes=NOBACKEND,INDEXFILES,NOIMPORTSFILES,NOEMPTYIMPORTS
+
+## Check that imports files are created with --thinlto-emit-imports-files.
+RUN: rm -f *.imports *.thinlto.bc
+RUN: ld.lld @l.rsp --thinlto-emit-imports-files
+RUN: ls | sort | FileCheck %s \
+RUN:   --check-prefixes=NOBACKEND,NOINDEXFILES,IMPORTSFILES,NOEMPTYIMPORTS
+
+## Check that both index and imports files are emitted with both flags.
+RUN: rm -f *.imports *.thinlto.bc
+RUN: ld.lld @l.rsp --thinlto-emit-index-files \
+RUN:   --thinlto-emit-imports-files
+RUN: ls | sort | FileCheck %s \
+RUN:   --check-prefixes=NOBACKEND,INDEXFILES,IMPORTSFILES,EMPTYIMPORTS
+
+## Check that backend temp files are retained with --save-temps.
+RUN: rm -f *.imports *.thinlto.bc
+RUN: ld.lld @l.rsp --save-temps
+RUN: ls | sort | FileCheck %s \
+RUN:   --check-prefixes=BACKEND,NOINDEXFILES,NOIMPORTSFILES,NOEMPTYIMPORTS
+
+## Check that all files are emitted when all options are enabled.
+RUN: rm -f *.imports *.thinlto.bc
+RUN: ld.lld @l.rsp --save-temps --thinlto-emit-index-files \
+RUN:   --thinlto-emit-imports-files
+RUN: ls | sort | FileCheck %s \
+RUN:   --check-prefixes=BACKEND,INDEXFILES,IMPORTSFILES,EMPTYIMPORTS
+
+## JSON jobs description, retained with --save-temps.
+## Note that DTLTO temporary files include a PID component.
+NOBACKEND-NOT:      {{^}}my.[[#]].dist-file.json{{$}}
+BACKEND:            {{^}}my.[[#]].dist-file.json{{$}}
+
+## Index/imports files for t1.bc.
+NOIMPORTSFILES-NOT: {{^}}t1.bc.imports{{$}}
+IMPORTSFILES:       {{^}}t1.bc.imports{{$}}
+NOINDEXFILES-NOT:   {{^}}t1.bc.thinlto.bc{{$}}
+INDEXFILES:         {{^}}t1.bc.thinlto.bc{{$}}
+
+## Index/imports files for t2.bc.
+NOIMPORTSFILES-NOT: {{^}}t2.bc.imports{{$}}
+IMPORTSFILES:       {{^}}t2.bc.imports{{$}}
+NOINDEXFILES-NOT:   {{^}}t2.bc.thinlto.bc{{$}}
+INDEXFILES:         {{^}}t2.bc.thinlto.bc{{$}}
+
+## Empty index/imports files for unused t3.bc.
+NOEMPTYIMPORTS-NOT: {{^}}t3.bc.imports{{$}}
+EMPTYIMPORTS:       {{^}}t3.bc.imports{{$}}
+NOINDEXFILES-NOT:   {{^}}t3.bc.thinlto.bc{{$}}
+INDEXFILES:         {{^}}t3.bc.thinlto.bc{{$}}
+
+#--- t1.ll
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+define void @t1() {
+  ret void
+}

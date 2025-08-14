@@ -34,8 +34,8 @@
 #include "SymbolFileDWARFDwo.h"
 
 using namespace lldb_private;
-using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
+using namespace llvm::dwarf;
 extern int g_verbose;
 
 // Extract a debug info entry for a given DWARFUnit from the data
@@ -403,6 +403,9 @@ dw_offset_t DWARFDebugInfoEntry::GetAttributeValue(
       const dw_offset_t attr_offset = offset;
       form_value.SetUnit(cu);
       form_value.SetForm(abbrevDecl->getFormByIndex(idx));
+      if (abbrevDecl->getAttrIsImplicitConstByIndex(idx))
+        form_value.SetValue(abbrevDecl->getAttrImplicitConstValueByIndex(idx));
+
       if (form_value.ExtractValue(data, &offset)) {
         if (end_attr_offset_ptr)
           *end_attr_offset_ptr = offset;

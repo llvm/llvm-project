@@ -32,6 +32,7 @@ private:
   const bool AllowPartialMove;
   const bool IgnoreUnnamedParams;
   const bool IgnoreNonDeducedTemplateTypes;
+  const StringRef MoveFunction;
 };
 
 } // namespace clang::tidy::cppcoreguidelines

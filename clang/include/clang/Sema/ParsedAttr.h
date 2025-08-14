@@ -678,7 +678,7 @@ class AttributePool {
   friend class AttributeFactory;
   friend class ParsedAttributes;
   AttributeFactory &Factory;
-  llvm::SmallVector<ParsedAttr *> Attrs;
+  llvm::SmallVector<ParsedAttr *, 2> Attrs;
 
   void *allocate(size_t size) {
     return Factory.allocate(size);
@@ -808,7 +808,7 @@ public:
 
 class ParsedAttributesView {
   friend class AttributePool;
-  using VecTy = llvm::SmallVector<ParsedAttr *>;
+  using VecTy = llvm::SmallVector<ParsedAttr *, 2>;
   using SizeType = decltype(std::declval<VecTy>().size());
 
 public:
@@ -1093,45 +1093,6 @@ enum AttributeDeclKind {
   ExpectedClass,
   ExpectedTypedef,
 };
-
-inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
-                                             const ParsedAttr &At) {
-  DB.AddTaggedVal(reinterpret_cast<uint64_t>(At.getAttrName()),
-                  DiagnosticsEngine::ak_identifierinfo);
-  return DB;
-}
-
-inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
-                                             const ParsedAttr *At) {
-  DB.AddTaggedVal(reinterpret_cast<uint64_t>(At->getAttrName()),
-                  DiagnosticsEngine::ak_identifierinfo);
-  return DB;
-}
-
-/// AttributeCommonInfo has a non-explicit constructor which takes an
-/// SourceRange as its only argument, this constructor has many uses so making
-/// it explicit is hard. This constructor causes ambiguity with
-/// DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB, SourceRange R).
-/// We use SFINAE to disable any conversion and remove any ambiguity.
-template <
-    typename ACI,
-    std::enable_if_t<std::is_same<ACI, AttributeCommonInfo>::value, int> = 0>
-inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
-                                             const ACI &CI) {
-  DB.AddTaggedVal(reinterpret_cast<uint64_t>(CI.getAttrName()),
-                  DiagnosticsEngine::ak_identifierinfo);
-  return DB;
-}
-
-template <
-    typename ACI,
-    std::enable_if_t<std::is_same<ACI, AttributeCommonInfo>::value, int> = 0>
-inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
-                                             const ACI *CI) {
-  DB.AddTaggedVal(reinterpret_cast<uint64_t>(CI->getAttrName()),
-                  DiagnosticsEngine::ak_identifierinfo);
-  return DB;
-}
 
 } // namespace clang
 

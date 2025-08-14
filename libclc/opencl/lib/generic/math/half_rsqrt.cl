@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_half_rsqrt.h>
-#include <clc/opencl/clc.h>
+#include <clc/opencl/math/half_rsqrt.h>
 
 #define __FLOAT_ONLY
 #define FUNCTION half_rsqrt

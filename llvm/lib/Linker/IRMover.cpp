@@ -9,7 +9,6 @@
 #include "llvm/Linker/IRMover.h"
 #include "LinkDiagnosticInfo.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/Constants.h"
@@ -1134,8 +1133,11 @@ void IRLinker::linkNamedMDNodes() {
 
     NamedMDNode *DestNMD = DstM.getOrInsertNamedMetadata(NMD.getName());
     // Add Src elements into Dest node.
-    for (const MDNode *Op : NMD.operands())
-      DestNMD->addOperand(Mapper.mapMDNode(*Op));
+    for (const MDNode *Op : NMD.operands()) {
+      MDNode *MD = Mapper.mapMDNode(*Op);
+      if (!is_contained(DestNMD->operands(), MD))
+        DestNMD->addOperand(MD);
+    }
   }
 }
 

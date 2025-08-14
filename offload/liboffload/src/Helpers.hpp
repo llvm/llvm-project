@@ -61,39 +61,34 @@ llvm::Error getInfoArray(size_t array_length, size_t ParamValueSize,
                      array_length * sizeof(T), memcpy);
 }
 
-template <>
-inline llvm::Error
-getInfo<const char *>(size_t ParamValueSize, void *ParamValue,
-                      size_t *ParamValueSizeRet, const char *Value) {
-  return getInfoArray(strlen(Value) + 1, ParamValueSize, ParamValue,
-                      ParamValueSizeRet, Value);
+llvm::Error getInfoString(size_t ParamValueSize, void *ParamValue,
+                          size_t *ParamValueSizeRet, llvm::StringRef Value) {
+  return getInfoArray(Value.size() + 1, ParamValueSize, ParamValue,
+                      ParamValueSizeRet, Value.data());
 }
 
-class ReturnHelper {
+class InfoWriter {
 public:
-  ReturnHelper(size_t ParamValueSize, void *ParamValue,
-               size_t *ParamValueSizeRet)
-      : ParamValueSize(ParamValueSize), ParamValue(ParamValue),
-        ParamValueSizeRet(ParamValueSizeRet) {}
+  InfoWriter(size_t Size, void *Target, size_t *SizeRet)
+      : Size(Size), Target(Target), SizeRet(SizeRet) {};
+  InfoWriter() = delete;
+  InfoWriter(InfoWriter &) = delete;
+  ~InfoWriter() = default;
 
-  // A version where in/out info size is represented by a single pointer
-  // to a value which is updated on return
-  ReturnHelper(size_t *ParamValueSize, void *ParamValue)
-      : ParamValueSize(*ParamValueSize), ParamValue(ParamValue),
-        ParamValueSizeRet(ParamValueSize) {}
-
-  // Scalar return Value
-  template <class T> llvm::Error operator()(const T &t) {
-    return getInfo(ParamValueSize, ParamValue, ParamValueSizeRet, t);
+  template <typename T> llvm::Error write(T Val) {
+    return getInfo(Size, Target, SizeRet, Val);
   }
 
-  // Array return Value
-  template <class T> llvm::Error operator()(const T *t, size_t s) {
-    return getInfoArray(s, ParamValueSize, ParamValue, ParamValueSizeRet, t);
+  template <typename T> llvm::Error writeArray(T Val, size_t Elems) {
+    return getInfoArray(Elems, Size, Target, SizeRet, Val);
   }
 
-protected:
-  size_t ParamValueSize;
-  void *ParamValue;
-  size_t *ParamValueSizeRet;
+  llvm::Error writeString(llvm::StringRef Val) {
+    return getInfoString(Size, Target, SizeRet, Val);
+  }
+
+private:
+  size_t Size;
+  void *Target;
+  size_t *SizeRet;
 };

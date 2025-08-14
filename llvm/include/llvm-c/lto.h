@@ -46,7 +46,7 @@ typedef bool lto_bool_t;
  * @{
  */
 
-#define LTO_API_VERSION 29
+#define LTO_API_VERSION 30
 
 /**
  * \since prior to LTO_API_VERSION=3
@@ -285,6 +285,21 @@ lto_module_get_symbol_name(lto_module_t mod, unsigned int index);
  */
 extern lto_symbol_attributes
 lto_module_get_symbol_attribute(lto_module_t mod, unsigned int index);
+
+/**
+ * Returns the number of asm undefined symbols in the object module.
+ *
+ * \since prior to LTO_API_VERSION=30
+ */
+extern unsigned int lto_module_get_num_asm_undef_symbols(lto_module_t mod);
+
+/**
+ * Returns the name of the ith asm undefined symbol in the object module.
+ *
+ * \since prior to LTO_API_VERSION=30
+ */
+extern const char *lto_module_get_asm_undef_symbol_name(lto_module_t mod,
+                                                        unsigned int index);
 
 /**
  * Returns the module's linker options.

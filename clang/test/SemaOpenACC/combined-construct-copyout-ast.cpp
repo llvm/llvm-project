@@ -14,7 +14,7 @@ void NormalUses(float *PointerParam) {
   // CHECK: ParmVarDecl
   // CHECK-NEXT: CompoundStmt
 
-#pragma acc parallel loop copyout(GlobalArray) pcopyout(zero:PointerParam[Global]) present_or_copyout(always, alwaysin: Global)
+#pragma acc parallel loop copyout(GlobalArray) pcopyout(zero:PointerParam[Global]) present_or_copyout(always, alwaysout: Global)
   for (unsigned i = 0; i < 5; ++i);
   // CHECK-NEXT: OpenACCCombinedConstruct{{.*}} parallel loop
   // CHECK-NEXT: copyout clause
@@ -25,7 +25,7 @@ void NormalUses(float *PointerParam) {
   // CHECK-NEXT: DeclRefExpr{{.*}}'float *' lvalue ParmVar{{.*}}'PointerParam' 'float *'
   // CHECK-NEXT: ImplicitCastExpr{{.*}} 'int' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue Var{{.*}}'Global' 'int'
-  // CHECK-NEXT: present_or_copyout clause modifiers: always, alwaysin
+  // CHECK-NEXT: present_or_copyout clause modifiers: always, alwaysout
   // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue Var{{.*}}'Global' 'int'
   // CHECK-NEXT: For
   // CHECK: NullStmt
@@ -42,10 +42,10 @@ void TemplUses(T t, U u) {
   // CHECK-NEXT: ParmVarDecl{{.*}} referenced u 'U'
   // CHECK-NEXT: CompoundStmt
 
-#pragma acc parallel loop copyout(always, alwaysin: t) pcopyout(zero: NTTP, u) present_or_copyout(u[0:t])
+#pragma acc parallel loop copyout(always, alwaysout: t) pcopyout(zero: NTTP, u) present_or_copyout(u[0:t])
   for (unsigned i = 0; i < 5; ++i);
   // CHECK-NEXT: OpenACCCombinedConstruct{{.*}} parallel loop
-  // CHECK-NEXT: copyout clause modifiers: always, alwaysin
+  // CHECK-NEXT: copyout clause modifiers: always, alwaysout
   // CHECK-NEXT: DeclRefExpr{{.*}}'T' lvalue ParmVar{{.*}} 't' 'T'
   // CHECK-NEXT: pcopyout clause modifiers: zero
   // CHECK-NEXT: DeclRefExpr{{.*}}'auto' lvalue NonTypeTemplateParm{{.*}} 'NTTP' 'auto &'
@@ -73,7 +73,7 @@ void TemplUses(T t, U u) {
 
 // #pragma acc parallel copyout(t) pcopyout(zero: NTTP, u) present_or_copyout(u[0:t])
   // CHECK-NEXT: OpenACCCombinedConstruct{{.*}} parallel loop
-  // CHECK-NEXT: copyout clause modifiers: always, alwaysin
+  // CHECK-NEXT: copyout clause modifiers: always, alwaysout
   // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue ParmVar{{.*}} 't' 'int'
   // CHECK-NEXT: pcopyout clause modifiers: zero
   // CHECK-NEXT: SubstNonTypeTemplateParmExpr{{.*}}'const unsigned int' lvalue

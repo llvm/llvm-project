@@ -27,7 +27,7 @@ int is_constant_evaluated() {
   return __builtin_is_constant_evaluated();
 }
 
-// CIR: cir.func @_Z21is_constant_evaluatedv() -> !s32i
+// CIR: cir.func{{.*}} @_Z21is_constant_evaluatedv() -> !s32i
 // CIR: %[[ZERO:.+]] = cir.const #cir.int<0>
 
 // LLVM: define {{.*}}i32 @_Z21is_constant_evaluatedv()
@@ -45,7 +45,7 @@ long double constant_fp_builtin_ld() {
   return __builtin_fabsl(-0.1L);
 }
 
-// CIR: cir.func @_Z22constant_fp_builtin_ldv() -> !cir.long_double<!cir.f80>
+// CIR: cir.func{{.*}} @_Z22constant_fp_builtin_ldv() -> !cir.long_double<!cir.f80>
 // CIR: %[[PONE:.+]] = cir.const #cir.fp<1.000000e-01> : !cir.long_double<!cir.f80>
 
 // LLVM: define {{.*}}x86_fp80 @_Z22constant_fp_builtin_ldv()
@@ -63,7 +63,7 @@ float constant_fp_builtin_single() {
   return __builtin_fabsf(-0.1f);
 }
 
-// CIR: cir.func @_Z26constant_fp_builtin_singlev() -> !cir.float
+// CIR: cir.func{{.*}} @_Z26constant_fp_builtin_singlev() -> !cir.float
 // CIR: %[[PONE:.+]] = cir.const #cir.fp<1.000000e-01> : !cir.float
 
 // LLVM: define {{.*}}float @_Z26constant_fp_builtin_singlev()
@@ -82,15 +82,179 @@ void library_builtins() {
   __builtin_abort();
 }
 
-// CIR: cir.func @_Z16library_builtinsv() {
+// CIR: cir.func{{.*}} @_Z16library_builtinsv() {
 // CIR: %[[NULL:.+]] = cir.const #cir.ptr<null> : !cir.ptr<!s8i>
-// CIR: cir.call @printf(%[[NULL]]) : (!cir.ptr<!s8i>) -> !s32i
-// CIR: cir.call @abort() : () -> ()
+// CIR: cir.call @printf(%[[NULL]]) nothrow : (!cir.ptr<!s8i>) -> !s32i
+// CIR: cir.call @abort() nothrow : () -> ()
 
-// LLVM: define void @_Z16library_builtinsv()
+// LLVM: define{{.*}} void @_Z16library_builtinsv()
 // LLVM: call i32 (ptr, ...) @printf(ptr null)
 // LLVM: call void @abort()
 
-// OGCG: define dso_local void @_Z16library_builtinsv()
+// OGCG: define{{.*}} void @_Z16library_builtinsv()
 // OGCG: call i32 (ptr, ...) @printf(ptr noundef null)
 // OGCG: call void @abort()
+
+void assume(bool arg) {
+  __builtin_assume(arg);
+}
+
+// CIR: cir.func{{.*}} @_Z6assumeb
+// CIR:   cir.assume %{{.+}} : !cir.bool
+// CIR: }
+
+// LLVM: define {{.*}}void @_Z6assumeb
+// LLVM:   call void @llvm.assume(i1 %{{.+}})
+// LLVM: }
+
+// OGCG: define {{.*}}void @_Z6assumeb
+// OGCG:   call void @llvm.assume(i1 %{{.+}})
+// OGCG: }
+
+void *assume_aligned(void *ptr) {
+  return __builtin_assume_aligned(ptr, 16);
+}
+
+// CIR: @_Z14assume_alignedPv
+// CIR:   %{{.+}} = cir.assume_aligned %{{.+}} alignment 16 : !cir.ptr<!void>
+// CIR: }
+
+// LLVM: @_Z14assume_alignedPv
+// LLVM:   call void @llvm.assume(i1 true) [ "align"(ptr %{{.+}}, i64 16) ]
+// LLVM: }
+
+// OGCG: @_Z14assume_alignedPv
+// OGCG:   call void @llvm.assume(i1 true) [ "align"(ptr %{{.+}}, i64 16) ]
+// OGCG: }
+
+void *assume_aligned_misalignment(void *ptr, unsigned misalignment) {
+  return __builtin_assume_aligned(ptr, 16, misalignment);
+}
+
+// CIR: @_Z27assume_aligned_misalignmentPvj
+// CIR:   %{{.+}} = cir.assume_aligned %{{.+}} alignment 16[offset %{{.+}} : !u64i] : !cir.ptr<!void>
+// CIR: }
+
+// LLVM: @_Z27assume_aligned_misalignmentPvj
+// LLVM:   call void @llvm.assume(i1 true) [ "align"(ptr %{{.+}}, i64 16, i64 %{{.+}}) ]
+// LLVM: }
+
+// OGCG: @_Z27assume_aligned_misalignmentPvj
+// OGCG:   call void @llvm.assume(i1 true) [ "align"(ptr %{{.+}}, i64 16, i64 %{{.+}}) ]
+// OGCG: }
+
+void assume_separate_storage(void *p1, void *p2) {
+  __builtin_assume_separate_storage(p1, p2);
+}
+
+// CIR: cir.func{{.*}} @_Z23assume_separate_storagePvS_
+// CIR:   cir.assume_separate_storage %{{.+}}, %{{.+}} : !cir.ptr<!void>
+// CIR: }
+
+// LLVM: define {{.*}}void @_Z23assume_separate_storagePvS_
+// LLVM:   call void @llvm.assume(i1 true) [ "separate_storage"(ptr %{{.+}}, ptr %{{.+}}) ]
+// LLVM: }
+
+// OGCG: define {{.*}}void @_Z23assume_separate_storagePvS_
+// OGCG:   call void @llvm.assume(i1 true) [ "separate_storage"(ptr %{{.+}}, ptr %{{.+}}) ]
+// OGCG: }
+
+void expect(int x, int y) {
+  __builtin_expect(x, y);
+}
+
+// CIR-LABEL: cir.func{{.*}} @_Z6expectii
+// CIR:         %[[X:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:    %[[X_LONG:.+]] = cir.cast(integral, %[[X]] : !s32i), !s64i
+// CIR-NEXT:    %[[Y:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:    %[[Y_LONG:.+]] = cir.cast(integral, %[[Y]] : !s32i), !s64i
+// CIR-NEXT:    %{{.+}} = cir.expect(%[[X_LONG]], %[[Y_LONG]]) : !s64i
+// CIR:       }
+
+// LLVM-LABEL: define{{.*}} void @_Z6expectii
+// LLVM:         %[[X:.+]] = load i32, ptr %{{.+}}, align 4
+// LLVM-NEXT:    %[[X_LONG:.+]] = sext i32 %[[X]] to i64
+// LLVM-NEXT:    %[[Y:.+]] = load i32, ptr %{{.+}}, align 4
+// LLVM-NEXT:    %[[Y_LONG:.+]] = sext i32 %[[Y]] to i64
+// LLVM-NEXT:    %{{.+}} = call i64 @llvm.expect.i64(i64 %[[X_LONG]], i64 %[[Y_LONG]])
+// LLVM:       }
+
+void expect_prob(int x, int y) {
+  __builtin_expect_with_probability(x, y, 0.25);
+}
+
+// CIR-LABEL: cir.func{{.*}} @_Z11expect_probii
+// CIR:         %[[X:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:    %[[X_LONG:.+]] = cir.cast(integral, %[[X]] : !s32i), !s64i
+// CIR-NEXT:    %[[Y:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:    %[[Y_LONG:.+]] = cir.cast(integral, %[[Y]] : !s32i), !s64i
+// CIR-NEXT:    %{{.+}} = cir.expect(%[[X_LONG]], %[[Y_LONG]], 2.500000e-01) : !s64i
+// CIR:       }
+
+// LLVM:       define{{.*}} void @_Z11expect_probii
+// LLVM:         %[[X:.+]] = load i32, ptr %{{.+}}, align 4
+// LLVM-NEXT:    %[[X_LONG:.+]] = sext i32 %[[X]] to i64
+// LLVM-NEXT:    %[[Y:.+]] = load i32, ptr %{{.+}}, align 4
+// LLVM-NEXT:    %[[Y_LONG:.+]] = sext i32 %[[Y]] to i64
+// LLVM-NEXT:    %{{.+}} = call i64 @llvm.expect.with.probability.i64(i64 %[[X_LONG]], i64 %[[Y_LONG]], double 2.500000e-01)
+// LLVM:       }
+
+void unreachable() {
+  __builtin_unreachable();
+}
+
+// CIR-LABEL: @_Z11unreachablev
+// CIR:         cir.unreachable
+// CIR:       }
+
+// LLVM-LABEL: @_Z11unreachablev
+// LLVM:         unreachable
+// LLVM:       }
+
+void f1();
+void unreachable2() {
+  __builtin_unreachable();
+  f1();
+}
+
+// CIR-LABEL: @_Z12unreachable2v
+// CIR:         cir.unreachable
+// CIR-NEXT:  ^{{.+}}:
+// CIR-NEXT:    cir.call @_Z2f1v() : () -> ()
+// CIR:       }
+
+// LLVM-LABEL: @_Z12unreachable2v
+// LLVM:         unreachable
+// LLVM:       {{.+}}:
+// LLVM-NEXT:    call void @_Z2f1v()
+// LLVM:       }
+
+void trap() {
+  __builtin_trap();
+}
+
+// CIR-LABEL: @_Z4trapv
+// CIR:         cir.trap
+// CIR:       }
+
+// LLVM-LABEL: @_Z4trapv
+// LLVM:         call void @llvm.trap()
+// LLVM:       }
+
+void trap2() {
+  __builtin_trap();
+  f1();
+}
+
+// CIR-LABEL: @_Z5trap2v
+// CIR:         cir.trap
+// CIR-NEXT:  ^{{.+}}:
+// CIR-NEXT:    cir.call @_Z2f1v() : () -> ()
+// CIR:       }
+
+// LLVM-LABEL: @_Z5trap2v
+// LLVM:         call void @llvm.trap()
+// LLVM-NEXT:    unreachable
+// LLVM:       {{.+}}:
+// LLVM-NEXT:    call void @_Z2f1v()
+// LLVM:       }

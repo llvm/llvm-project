@@ -1325,15 +1325,27 @@ public:
   /// \return The cost of a partial reduction, which is a reduction from a
   /// vector to another vector with fewer elements of larger size. They are
   /// represented by the llvm.experimental.partial.reduce.add intrinsic, which
-  /// takes an accumulator and a binary operation operand that itself is fed by
-  /// two extends. An example of an operation that uses a partial reduction is a
-  /// dot product, which reduces two vectors to another of 4 times fewer and 4
+  /// takes an accumulator of type \p AccumType and a second vector operand to
+  /// be accumulated, whose element count is specified by \p VF. The type of
+  /// reduction is specified by \p Opcode. The second operand passed to the
+  /// intrinsic could be the result of an extend, such as sext or zext. In
+  /// this case \p BinOp is nullopt, \p InputTypeA represents the type being
+  /// extended and \p OpAExtend the operation, i.e. sign- or zero-extend.
+  /// Also, \p InputTypeB should be nullptr and OpBExtend should be None.
+  /// Alternatively, the second operand could be the result of a binary
+  /// operation performed on two extends, i.e.
+  ///   mul(zext i8 %a -> i32, zext i8 %b -> i32).
+  /// In this case \p BinOp may specify the opcode of the binary operation,
+  /// \p InputTypeA and \p InputTypeB the types being extended, and
+  /// \p OpAExtend, \p OpBExtend the form of extensions. An example of an
+  /// operation that uses a partial reduction is a dot product, which reduces
+  /// two vectors in binary mul operation to another of 4 times fewer and 4
   /// times larger elements.
   LLVM_ABI InstructionCost getPartialReductionCost(
       unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
       ElementCount VF, PartialReductionExtendKind OpAExtend,
-      PartialReductionExtendKind OpBExtend,
-      std::optional<unsigned> BinOp = std::nullopt) const;
+      PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+      TTI::TargetCostKind CostKind) const;
 
   /// \return The maximum interleave factor that any transform should try to
   /// perform for this target. This number depends on the level of parallelism
@@ -1381,16 +1393,16 @@ public:
       const SmallBitVector &OpcodeMask,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
 
-  /// \return The cost of a shuffle instruction of kind Kind and of type Tp.
-  /// The exact mask may be passed as Mask, or else the array will be empty.
-  /// The index and subtype parameters are used by the subvector insertion and
-  /// extraction shuffle kinds to show the insert/extract point and the type of
-  /// the subvector being inserted/extracted. The operands of the shuffle can be
-  /// passed through \p Args, which helps improve the cost estimation in some
-  /// cases, like in broadcast loads.
-  /// NOTE: For subvector extractions Tp represents the source type.
+  /// \return The cost of a shuffle instruction of kind Kind with inputs of type
+  /// SrcTy, producing a vector of type DstTy. The exact mask may be passed as
+  /// Mask, or else the array will be empty. The Index and SubTp parameters
+  /// are used by the subvector insertions shuffle kinds to show the insert
+  /// point and the type of the subvector being inserted. The operands of the
+  /// shuffle can be passed through \p Args, which helps improve the cost
+  /// estimation in some cases, like in broadcast loads.
   LLVM_ABI InstructionCost getShuffleCost(
-      ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask = {},
+      ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
+      ArrayRef<int> Mask = {},
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput, int Index = 0,
       VectorType *SubTp = nullptr, ArrayRef<const Value *> Args = {},
       const Instruction *CxtI = nullptr) const;
@@ -1663,13 +1675,14 @@ public:
 
   /// \returns The cost of the address computation. For most targets this can be
   /// merged into the instruction indexing mode. Some targets might want to
-  /// distinguish between address computation for memory operations on vector
-  /// types and scalar types. Such targets should override this function.
-  /// The 'SE' parameter holds pointer for the scalar evolution object which
-  /// is used in order to get the Ptr step value in case of constant stride.
-  /// The 'Ptr' parameter holds SCEV of the access pointer.
-  LLVM_ABI InstructionCost getAddressComputationCost(
-      Type *Ty, ScalarEvolution *SE = nullptr, const SCEV *Ptr = nullptr) const;
+  /// distinguish between address computation for memory operations with vector
+  /// pointer types and scalar pointer types. Such targets should override this
+  /// function. \p SE holds the pointer for the scalar evolution object which
+  /// was used in order to get the Ptr step value. \p Ptr holds the SCEV of the
+  /// access pointer.
+  LLVM_ABI InstructionCost
+  getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE, const SCEV *Ptr,
+                            TTI::TargetCostKind CostKind) const;
 
   /// \returns The cost, if any, of keeping values of the given types alive
   /// over a callsite.
@@ -1690,12 +1703,13 @@ public:
   /// unordered-atomic memory intrinsic.
   LLVM_ABI unsigned getAtomicMemIntrinsicMaxElementSize() const;
 
-  /// \returns A value which is the result of the given memory intrinsic.  New
-  /// instructions may be created to extract the result from the given intrinsic
-  /// memory operation.  Returns nullptr if the target cannot create a result
-  /// from the given intrinsic.
-  LLVM_ABI Value *getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
-                                                    Type *ExpectedType) const;
+  /// \returns A value which is the result of the given memory intrinsic. If \p
+  /// CanCreate is true, new instructions may be created to extract the result
+  /// from the given intrinsic memory operation. Returns nullptr if the target
+  /// cannot create a result from the given intrinsic.
+  LLVM_ABI Value *
+  getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst, Type *ExpectedType,
+                                    bool CanCreate = true) const;
 
   /// \returns The type to use in a loop expansion of a memcpy call.
   LLVM_ABI Type *getMemcpyLoopLoweringType(
@@ -1850,11 +1864,9 @@ public:
   /// \name Vector Predication Information
   /// @{
   /// Whether the target supports the %evl parameter of VP intrinsic efficiently
-  /// in hardware, for the given opcode and type/alignment. (see LLVM Language
-  /// Reference - "Vector Predication Intrinsics").
-  /// Use of %evl is discouraged when that is not the case.
-  LLVM_ABI bool hasActiveVectorLength(unsigned Opcode, Type *DataType,
-                                      Align Alignment) const;
+  /// in hardware. (see LLVM Language Reference - "Vector Predication
+  /// Intrinsics"). Use of %evl is discouraged when that is not the case.
+  LLVM_ABI bool hasActiveVectorLength() const;
 
   /// Return true if sinking I's operands to the same basic block as I is
   /// profitable, e.g. because the operands can be folded into a target
@@ -1919,7 +1931,7 @@ public:
 
   /// Returns a bitmask constructed from the target-features or fmv-features
   /// metadata of a function.
-  LLVM_ABI uint64_t getFeatureMask(const Function &F) const;
+  LLVM_ABI APInt getFeatureMask(const Function &F) const;
 
   /// Returns true if this is an instance of a function with multiple versions.
   LLVM_ABI bool isMultiversionedFunction(const Function &F) const;
@@ -1938,6 +1950,10 @@ public:
   LLVM_ABI void collectKernelLaunchBounds(
       const Function &F,
       SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const;
+
+  /// Returns true if GEP should not be used to index into vectors for this
+  /// target.
+  LLVM_ABI bool allowVectorElementIndexingUsingGEP() const;
 
 private:
   std::unique_ptr<const TargetTransformInfoImplBase> TTIImpl;

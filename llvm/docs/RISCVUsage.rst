@@ -136,7 +136,7 @@ on support follow.
      ``Smepmp``        Supported
      ``Smmpm``         Supported
      ``Smnpm``         Supported
-     ``Smrnmi``        Assembly Support
+     ``Smrnmi``        Supported
      ``Smstateen``     Assembly Support
      ``Ssaia``         Supported
      ``Ssccfg``        Supported
@@ -498,6 +498,9 @@ The current vendor extensions supported are:
 ``experimental-Xqcisync``
   LLVM implements `version 0.3 of the Qualcomm uC Sync Delay extension specification <https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0>`__ by Qualcomm. These instructions are only available for riscv32.
 
+``Xmipscbop``
+  LLVM implements MIPS prefetch extension `p8700 processor <https://mips.com/products/hardware/p8700/>`__ by MIPS.
+
 ``Xmipscmov``
   LLVM implements conditional move for the `p8700 processor <https://mips.com/products/hardware/p8700/>`__ by MIPS.
 
@@ -512,6 +515,15 @@ The current vendor extensions supported are:
 
 ``XAndesPerf``
   LLVM implements `version 5.0.0 of the Andes Performance Extension specification <https://github.com/andestech/andes-v5-isa/releases/download/ast-v5_4_0-release/AndeStar_V5_ISA_Spec_UM165-v1.5.08-20250317.pdf>`__ by Andes Technology. All instructions are prefixed with `nds.` as described in the specification.
+
+``XAndesBFHCvt``
+  LLVM implements `version 5.0.0 of the Andes Scalar BFLOAT16 Conversion Extension specification <https://github.com/andestech/andes-v5-isa/releases/download/ast-v5_4_0-release/AndeStar_V5_ISA_Spec_UM165-v1.5.08-20250317.pdf>`__ by Andes Technology. All instructions are prefixed with `nds.` as described in the specification.
+
+``XAndesVBFHCvt``
+  LLVM implements `version 5.0.0 of the Andes Vector BFLOAT16 Conversion Extension specification <https://github.com/andestech/andes-v5-isa/releases/download/ast-v5_4_0-release/AndeStar_V5_ISA_Spec_UM165-v1.5.08-20250317.pdf>`__ by Andes Technology. All instructions are prefixed with `nds.` as described in the specification.
+
+``XAndesVSINTLoad``
+  LLVM implements `version 5.0.0 of the Andes Vector INT4 Load Extension specification <https://github.com/andestech/andes-v5-isa/releases/download/ast-v5_4_0-release/AndeStar_V5_ISA_Spec_UM165-v1.5.08-20250317.pdf>`__ by Andes Technology. All instructions are prefixed with `nds.` as described in the specification.
 
 ``XAndesVPackFPH``
   LLVM implements `version 5.0.0 of the Andes Vector Packed FP16 Extension specification <https://github.com/andestech/andes-v5-isa/releases/download/ast-v5_4_0-release/AndeStar_V5_ISA_Spec_UM165-v1.5.08-20250317.pdf>`__ by Andes Technology. All instructions are prefixed with `nds.` as described in the specification.

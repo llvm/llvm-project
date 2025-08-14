@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/geometric/clc_normalize.h>
-#include <clc/opencl/clc.h>
+#include <clc/opencl/geometric/normalize.h>
 
 #define FUNCTION normalize
 #define __CLC_GEOMETRIC_RET_GENTYPE

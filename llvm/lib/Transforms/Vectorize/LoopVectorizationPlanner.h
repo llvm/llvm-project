@@ -28,6 +28,10 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/InstructionCost.h"
 
+namespace {
+class GeneratedRTChecks;
+}
+
 namespace llvm {
 
 class LoopInfo;
@@ -62,12 +66,6 @@ class VPBuilder {
                                    ArrayRef<VPValue *> Operands, DebugLoc DL,
                                    const Twine &Name = "") {
     return tryInsertInstruction(new VPInstruction(Opcode, Operands, DL, Name));
-  }
-
-  VPInstruction *createInstruction(unsigned Opcode,
-                                   std::initializer_list<VPValue *> Operands,
-                                   DebugLoc DL, const Twine &Name = "") {
-    return createInstruction(Opcode, ArrayRef<VPValue *>(Operands), DL, Name);
   }
 
 public:
@@ -172,8 +170,7 @@ public:
         new VPInstruction(Opcode, Operands, Flags, DL, Name));
   }
 
-  VPInstruction *createNaryOp(unsigned Opcode,
-                              std::initializer_list<VPValue *> Operands,
+  VPInstruction *createNaryOp(unsigned Opcode, ArrayRef<VPValue *> Operands,
                               Type *ResultTy, const VPIRFlags &Flags = {},
                               DebugLoc DL = DebugLoc::getUnknown(),
                               const Twine &Name = "") {
@@ -182,7 +179,7 @@ public:
   }
 
   VPInstruction *createOverflowingOp(unsigned Opcode,
-                                     std::initializer_list<VPValue *> Operands,
+                                     ArrayRef<VPValue *> Operands,
                                      VPRecipeWithIRFlags::WrapFlagsTy WrapFlags,
                                      DebugLoc DL = DebugLoc::getUnknown(),
                                      const Twine &Name = "") {
@@ -190,37 +187,38 @@ public:
         new VPInstruction(Opcode, Operands, WrapFlags, DL, Name));
   }
 
-  VPValue *createNot(VPValue *Operand, DebugLoc DL = DebugLoc::getUnknown(),
-                     const Twine &Name = "") {
+  VPInstruction *createNot(VPValue *Operand,
+                           DebugLoc DL = DebugLoc::getUnknown(),
+                           const Twine &Name = "") {
     return createInstruction(VPInstruction::Not, {Operand}, DL, Name);
   }
 
-  VPValue *createAnd(VPValue *LHS, VPValue *RHS,
-                     DebugLoc DL = DebugLoc::getUnknown(),
-                     const Twine &Name = "") {
+  VPInstruction *createAnd(VPValue *LHS, VPValue *RHS,
+                           DebugLoc DL = DebugLoc::getUnknown(),
+                           const Twine &Name = "") {
     return createInstruction(Instruction::BinaryOps::And, {LHS, RHS}, DL, Name);
   }
 
-  VPValue *createOr(VPValue *LHS, VPValue *RHS,
-                    DebugLoc DL = DebugLoc::getUnknown(),
-                    const Twine &Name = "") {
+  VPInstruction *createOr(VPValue *LHS, VPValue *RHS,
+                          DebugLoc DL = DebugLoc::getUnknown(),
+                          const Twine &Name = "") {
 
     return tryInsertInstruction(new VPInstruction(
         Instruction::BinaryOps::Or, {LHS, RHS},
         VPRecipeWithIRFlags::DisjointFlagsTy(false), DL, Name));
   }
 
-  VPValue *createLogicalAnd(VPValue *LHS, VPValue *RHS,
-                            DebugLoc DL = DebugLoc::getUnknown(),
-                            const Twine &Name = "") {
+  VPInstruction *createLogicalAnd(VPValue *LHS, VPValue *RHS,
+                                  DebugLoc DL = DebugLoc::getUnknown(),
+                                  const Twine &Name = "") {
     return tryInsertInstruction(
         new VPInstruction(VPInstruction::LogicalAnd, {LHS, RHS}, DL, Name));
   }
 
-  VPValue *createSelect(VPValue *Cond, VPValue *TrueVal, VPValue *FalseVal,
-                        DebugLoc DL = DebugLoc::getUnknown(),
-                        const Twine &Name = "",
-                        std::optional<FastMathFlags> FMFs = std::nullopt) {
+  VPInstruction *
+  createSelect(VPValue *Cond, VPValue *TrueVal, VPValue *FalseVal,
+               DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "",
+               std::optional<FastMathFlags> FMFs = std::nullopt) {
     auto *Select =
         FMFs ? new VPInstruction(Instruction::Select, {Cond, TrueVal, FalseVal},
                                  *FMFs, DL, Name)
@@ -231,14 +229,24 @@ public:
 
   /// Create a new ICmp VPInstruction with predicate \p Pred and operands \p A
   /// and \p B.
-  /// TODO: add createFCmp when needed.
-  VPValue *createICmp(CmpInst::Predicate Pred, VPValue *A, VPValue *B,
-                      DebugLoc DL = DebugLoc::getUnknown(),
-                      const Twine &Name = "") {
+  VPInstruction *createICmp(CmpInst::Predicate Pred, VPValue *A, VPValue *B,
+                            DebugLoc DL = DebugLoc::getUnknown(),
+                            const Twine &Name = "") {
     assert(Pred >= CmpInst::FIRST_ICMP_PREDICATE &&
            Pred <= CmpInst::LAST_ICMP_PREDICATE && "invalid predicate");
     return tryInsertInstruction(
         new VPInstruction(Instruction::ICmp, {A, B}, Pred, DL, Name));
+  }
+
+  /// Create a new FCmp VPInstruction with predicate \p Pred and operands \p A
+  /// and \p B.
+  VPInstruction *createFCmp(CmpInst::Predicate Pred, VPValue *A, VPValue *B,
+                            DebugLoc DL = DebugLoc::getUnknown(),
+                            const Twine &Name = "") {
+    assert(Pred >= CmpInst::FIRST_FCMP_PREDICATE &&
+           Pred <= CmpInst::LAST_FCMP_PREDICATE && "invalid predicate");
+    return tryInsertInstruction(
+        new VPInstruction(Instruction::FCmp, {A, B}, Pred, DL, Name));
   }
 
   VPInstruction *createPtrAdd(VPValue *Ptr, VPValue *Offset,
@@ -248,17 +256,38 @@ public:
         new VPInstruction(VPInstruction::PtrAdd, {Ptr, Offset},
                           GEPNoWrapFlags::none(), DL, Name));
   }
-  VPValue *createInBoundsPtrAdd(VPValue *Ptr, VPValue *Offset,
-                                DebugLoc DL = DebugLoc::getUnknown(),
-                                const Twine &Name = "") {
+  VPInstruction *createInBoundsPtrAdd(VPValue *Ptr, VPValue *Offset,
+                                      DebugLoc DL = DebugLoc::getUnknown(),
+                                      const Twine &Name = "") {
     return tryInsertInstruction(
         new VPInstruction(VPInstruction::PtrAdd, {Ptr, Offset},
                           GEPNoWrapFlags::inBounds(), DL, Name));
   }
+  VPInstruction *createWidePtrAdd(VPValue *Ptr, VPValue *Offset,
+                                  DebugLoc DL = DebugLoc::getUnknown(),
+                                  const Twine &Name = "") {
+    return tryInsertInstruction(
+        new VPInstruction(VPInstruction::WidePtrAdd, {Ptr, Offset},
+                          GEPNoWrapFlags::none(), DL, Name));
+  }
 
-  VPInstruction *createScalarPhi(ArrayRef<VPValue *> IncomingValues,
-                                 DebugLoc DL, const Twine &Name = "") {
+  VPPhi *createScalarPhi(ArrayRef<VPValue *> IncomingValues, DebugLoc DL,
+                         const Twine &Name = "") {
     return tryInsertInstruction(new VPPhi(IncomingValues, DL, Name));
+  }
+
+  VPValue *createElementCount(Type *Ty, ElementCount EC) {
+    VPlan &Plan = *getInsertBlock()->getPlan();
+    VPValue *RuntimeEC =
+        Plan.getOrAddLiveIn(ConstantInt::get(Ty, EC.getKnownMinValue()));
+    if (EC.isScalable()) {
+      VPValue *VScale = createNaryOp(VPInstruction::VScale, {}, Ty);
+      RuntimeEC = EC.getKnownMinValue() == 1
+                      ? VScale
+                      : createOverflowingOp(Instruction::Mul,
+                                            {VScale, RuntimeEC}, {true, false});
+    }
+    return RuntimeEC;
   }
 
   /// Convert the input value \p Current to the corresponding value of an
@@ -276,6 +305,17 @@ public:
                                   Type *ResultTy, DebugLoc DL) {
     return tryInsertInstruction(
         new VPInstructionWithType(Opcode, Op, ResultTy, {}, DL));
+  }
+
+  VPValue *createScalarZExtOrTrunc(VPValue *Op, Type *ResultTy, Type *SrcTy,
+                                   DebugLoc DL) {
+    if (ResultTy == SrcTy)
+      return Op;
+    Instruction::CastOps CastOp =
+        ResultTy->getScalarSizeInBits() < SrcTy->getScalarSizeInBits()
+            ? Instruction::Trunc
+            : Instruction::ZExt;
+    return createScalarCast(CastOp, Op, ResultTy, DL);
   }
 
   VPWidenCastRecipe *createWidenCast(Instruction::CastOps Opcode, VPValue *Op,
@@ -467,6 +507,13 @@ public:
   /// all profitable VFs in ProfitableVFs.
   VectorizationFactor computeBestVF();
 
+  /// \return The desired interleave count.
+  /// If interleave count has been specified by metadata it will be returned.
+  /// Otherwise, the interleave count is computed and returned. VF and LoopCost
+  /// are the selected vectorization factor and the cost of the selected VF.
+  unsigned selectInterleaveCount(VPlan &Plan, ElementCount VF,
+                                 InstructionCost LoopCost);
+
   /// Generate the IR code for the vectorized loop captured in VPlan \p BestPlan
   /// according to the best selected \p VF and  \p UF.
   ///
@@ -547,6 +594,10 @@ private:
   void adjustRecipesForReductions(VPlanPtr &Plan,
                                   VPRecipeBuilder &RecipeBuilder,
                                   ElementCount MinVF);
+
+  /// Attach the runtime checks of \p RTChecks to \p Plan.
+  void attachRuntimeChecks(VPlan &Plan, GeneratedRTChecks &RTChecks,
+                           bool HasBranchWeights) const;
 
 #ifndef NDEBUG
   /// \return The most profitable vectorization factor for the available VPlans

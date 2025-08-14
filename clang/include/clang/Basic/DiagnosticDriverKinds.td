@@ -116,6 +116,8 @@ def err_drv_cuda_host_arch : Error<
   "unsupported architecture '%0' for host compilation">;
 def err_drv_mix_cuda_hip : Error<
   "mixed CUDA and HIP compilation is not supported">;
+def err_drv_mix_offload : Error<
+  "mixed %0 and %1 offloading compilation is not supported">;
 def err_drv_bad_target_id : Error<
   "invalid target ID '%0'; format is a processor name followed by an optional "
   "colon-delimited list of features followed by an enable/disable sign (e.g., "
@@ -143,8 +145,8 @@ def warn_drv_unsupported_option_for_processor : Warning<
 def warn_drv_unsupported_openmp_library : Warning<
   "the library '%0=%1' is not supported, OpenMP will not be enabled">,
   InGroup<OptionIgnored>;
-def warn_openmp_experimental : Warning<
-  "OpenMP support in flang is still experimental">,
+def warn_openmp_incomplete : Warning<
+  "OpenMP support for version %0 in flang is still incomplete">,
   InGroup<ExperimentalOption>;
 
 def err_drv_invalid_thread_model_for_target : Error<
@@ -391,6 +393,8 @@ def err_drv_small_columns : Error<
 def warn_drv_fraw_string_literals_in_cxx11 : Warning<
   "ignoring '-f%select{no-|}0raw-string-literals', which is only valid for C and C++ standards before C++11">,
   InGroup<UnusedCommandLineArgument>;
+
+def err_drv_libclc_not_found : Error<"no libclc library '%0' found in the clang resource directory">;
 
 def err_drv_invalid_malign_branch_EQ : Error<
   "invalid argument '%0' to -malign-branch=; each element must be one of: %1">;
@@ -847,6 +851,9 @@ def note_drv_available_multilibs : Note<
   "available multilibs are:%0">;
 def err_drv_multilib_custom_error : Error<
   "multilib configuration error: %0">;
+def warn_drv_multilib_not_available_for_target: Warning<
+  "no multilib structure encoded for Arm, Aarch64 and PPC targets">,
+  InGroup<DiagGroup<"multilib-not-found">>;
 
 def err_drv_experimental_crel : Error<
   "-Wa,--allow-experimental-crel must be specified to use -Wa,--crel. "

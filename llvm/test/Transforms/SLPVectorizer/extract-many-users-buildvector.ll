@@ -16,17 +16,19 @@ define i1 @test(float %0, double %1) {
 ; X86-NEXT:    [[TMP11:%.*]] = shufflevector <6 x double> [[TMP7]], <6 x double> poison, <4 x i32> <i32 2, i32 0, i32 1, i32 poison>
 ; X86-NEXT:    [[TMP12:%.*]] = shufflevector <4 x double> [[TMP11]], <4 x double> <double poison, double poison, double poison, double 0.000000e+00>, <4 x i32> <i32 0, i32 1, i32 2, i32 7>
 ; X86-NEXT:    [[TMP13:%.*]] = fmul <4 x double> [[TMP10]], [[TMP12]]
-; X86-NEXT:    [[TMP14:%.*]] = call <8 x double> @llvm.vector.insert.v8f64.v4f64(<8 x double> <double poison, double poison, double poison, double poison, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00>, <4 x double> [[TMP13]], i64 0)
-; X86-NEXT:    [[TMP15:%.*]] = call <8 x double> @llvm.vector.insert.v8f64.v6f64(<8 x double> <double poison, double poison, double poison, double poison, double poison, double poison, double 0.000000e+00, double 0.000000e+00>, <6 x double> [[TMP8]], i64 0)
-; X86-NEXT:    [[TMP16:%.*]] = fsub <8 x double> [[TMP14]], [[TMP15]]
-; X86-NEXT:    [[TMP17:%.*]] = fmul <8 x double> [[TMP14]], [[TMP15]]
-; X86-NEXT:    [[TMP18:%.*]] = shufflevector <8 x double> [[TMP16]], <8 x double> [[TMP17]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 13, i32 14, i32 15>
-; X86-NEXT:    [[TMP19:%.*]] = fptrunc <8 x double> [[TMP18]] to <8 x float>
-; X86-NEXT:    [[TMP20:%.*]] = fmul <8 x float> [[TMP19]], zeroinitializer
-; X86-NEXT:    [[TMP21:%.*]] = fcmp oeq <8 x float> [[TMP20]], zeroinitializer
-; X86-NEXT:    [[TMP22:%.*]] = freeze <8 x i1> [[TMP21]]
-; X86-NEXT:    [[TMP23:%.*]] = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> [[TMP22]])
-; X86-NEXT:    ret i1 [[TMP23]]
+; X86-NEXT:    [[TMP14:%.*]] = shufflevector <4 x double> [[TMP13]], <4 x double> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; X86-NEXT:    [[TMP15:%.*]] = shufflevector <8 x double> <double poison, double poison, double poison, double poison, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00>, <8 x double> [[TMP14]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
+; X86-NEXT:    [[TMP16:%.*]] = shufflevector <6 x double> [[TMP8]], <6 x double> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 poison, i32 poison>
+; X86-NEXT:    [[TMP17:%.*]] = shufflevector <8 x double> <double poison, double poison, double poison, double poison, double poison, double poison, double 0.000000e+00, double 0.000000e+00>, <8 x double> [[TMP16]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 6, i32 7>
+; X86-NEXT:    [[TMP18:%.*]] = fsub <8 x double> [[TMP15]], [[TMP17]]
+; X86-NEXT:    [[TMP19:%.*]] = fmul <8 x double> [[TMP15]], [[TMP17]]
+; X86-NEXT:    [[TMP20:%.*]] = shufflevector <8 x double> [[TMP18]], <8 x double> [[TMP19]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 13, i32 14, i32 15>
+; X86-NEXT:    [[TMP21:%.*]] = fptrunc <8 x double> [[TMP20]] to <8 x float>
+; X86-NEXT:    [[TMP22:%.*]] = fmul <8 x float> [[TMP21]], zeroinitializer
+; X86-NEXT:    [[TMP23:%.*]] = fcmp oeq <8 x float> [[TMP22]], zeroinitializer
+; X86-NEXT:    [[TMP24:%.*]] = freeze <8 x i1> [[TMP23]]
+; X86-NEXT:    [[TMP25:%.*]] = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> [[TMP24]])
+; X86-NEXT:    ret i1 [[TMP25]]
 ;
 ; AARCH64-LABEL: define i1 @test
 ; AARCH64-SAME: (float [[TMP0:%.*]], double [[TMP1:%.*]]) {
@@ -42,17 +44,19 @@ define i1 @test(float %0, double %1) {
 ; AARCH64-NEXT:    [[TMP12:%.*]] = shufflevector <4 x double> [[TMP11]], <4 x double> <double poison, double poison, double poison, double 0.000000e+00>, <4 x i32> <i32 0, i32 1, i32 poison, i32 7>
 ; AARCH64-NEXT:    [[TMP13:%.*]] = shufflevector <4 x double> [[TMP12]], <4 x double> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 5, i32 3>
 ; AARCH64-NEXT:    [[TMP14:%.*]] = fmul <4 x double> [[TMP10]], [[TMP13]]
-; AARCH64-NEXT:    [[TMP15:%.*]] = call <8 x double> @llvm.vector.insert.v8f64.v4f64(<8 x double> <double poison, double poison, double poison, double poison, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00>, <4 x double> [[TMP14]], i64 0)
-; AARCH64-NEXT:    [[TMP16:%.*]] = call <8 x double> @llvm.vector.insert.v8f64.v6f64(<8 x double> <double poison, double poison, double poison, double poison, double poison, double poison, double 0.000000e+00, double 0.000000e+00>, <6 x double> [[TMP8]], i64 0)
-; AARCH64-NEXT:    [[TMP17:%.*]] = fsub <8 x double> [[TMP15]], [[TMP16]]
-; AARCH64-NEXT:    [[TMP18:%.*]] = fmul <8 x double> [[TMP15]], [[TMP16]]
-; AARCH64-NEXT:    [[TMP19:%.*]] = shufflevector <8 x double> [[TMP17]], <8 x double> [[TMP18]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 13, i32 14, i32 15>
-; AARCH64-NEXT:    [[TMP20:%.*]] = fptrunc <8 x double> [[TMP19]] to <8 x float>
-; AARCH64-NEXT:    [[TMP21:%.*]] = fmul <8 x float> [[TMP20]], zeroinitializer
-; AARCH64-NEXT:    [[TMP22:%.*]] = fcmp oeq <8 x float> [[TMP21]], zeroinitializer
-; AARCH64-NEXT:    [[TMP23:%.*]] = freeze <8 x i1> [[TMP22]]
-; AARCH64-NEXT:    [[TMP24:%.*]] = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> [[TMP23]])
-; AARCH64-NEXT:    ret i1 [[TMP24]]
+; AARCH64-NEXT:    [[TMP15:%.*]] = shufflevector <4 x double> [[TMP14]], <4 x double> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; AARCH64-NEXT:    [[TMP16:%.*]] = shufflevector <8 x double> <double poison, double poison, double poison, double poison, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00>, <8 x double> [[TMP15]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
+; AARCH64-NEXT:    [[TMP17:%.*]] = shufflevector <6 x double> [[TMP8]], <6 x double> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 poison, i32 poison>
+; AARCH64-NEXT:    [[TMP18:%.*]] = shufflevector <8 x double> <double poison, double poison, double poison, double poison, double poison, double poison, double 0.000000e+00, double 0.000000e+00>, <8 x double> [[TMP17]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 6, i32 7>
+; AARCH64-NEXT:    [[TMP19:%.*]] = fsub <8 x double> [[TMP16]], [[TMP18]]
+; AARCH64-NEXT:    [[TMP20:%.*]] = fmul <8 x double> [[TMP16]], [[TMP18]]
+; AARCH64-NEXT:    [[TMP21:%.*]] = shufflevector <8 x double> [[TMP19]], <8 x double> [[TMP20]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 13, i32 14, i32 15>
+; AARCH64-NEXT:    [[TMP22:%.*]] = fptrunc <8 x double> [[TMP21]] to <8 x float>
+; AARCH64-NEXT:    [[TMP23:%.*]] = fmul <8 x float> [[TMP22]], zeroinitializer
+; AARCH64-NEXT:    [[TMP24:%.*]] = fcmp oeq <8 x float> [[TMP23]], zeroinitializer
+; AARCH64-NEXT:    [[TMP25:%.*]] = freeze <8 x i1> [[TMP24]]
+; AARCH64-NEXT:    [[TMP26:%.*]] = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> [[TMP25]])
+; AARCH64-NEXT:    ret i1 [[TMP26]]
 ;
   %3 = fpext float %0 to double
   %4 = fpext float 0.000000e+00 to double

@@ -4,7 +4,7 @@ set(LLVM_SUBPROJECT_TITLE "libc")
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   message(FATAL_ERROR "Builds rooted in the libc directory are not supported. "
     "Builds should be rooted in the runtimes directory instead. "
-    "Please see the documentation at https://libc.llvm.org/usage_modes.html for more info.")
+    "Please see the documentation at https://libc.llvm.org/build_and_test.html for more info.")
 endif()
 
 # Include LLVM's cmake policies.
@@ -75,6 +75,13 @@ add_compile_definitions(LIBC_NAMESPACE=${LIBC_NAMESPACE})
 # Flags to pass down to the compiler while building the libc functions.
 set(LIBC_COMPILE_OPTIONS_DEFAULT "" CACHE STRING "Architecture to tell clang to optimize for (e.g. -march=... or -mcpu=...)")
 set(LIBC_TEST_COMPILE_OPTIONS_DEFAULT "" CACHE STRING "Common compile options for all the tests.")
+
+set(LIBC_LINK_OPTIONS_DEFAULT "" CACHE STRING "Arguments used when linking.")
+set(LIBC_TEST_LINK_OPTIONS_DEFAULT "" CACHE STRING "Common link options for all the tests.")
+
+set(LIBC_TEST_CMD "" CACHE STRING
+  "The full test command in the form <command> binary=@BINARY@, if using another program to test (e.g. QEMU)")
+set(LIBC_TEST_HERMETIC_ONLY "" OFF CACHE BOOL "Only enable hermetic tests.")
 
 list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT ${LIBC_COMMON_TUNE_OPTIONS})
 

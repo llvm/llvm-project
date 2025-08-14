@@ -236,6 +236,26 @@ def SapphireRapidsPfmCounters : ProcPfmCounters {
 }
 def : PfmCountersBinding<"sapphirerapids", SapphireRapidsPfmCounters>;
 
+def LunarLakePfmCounters : ProcPfmCounters {
+  let CycleCounter = UnhaltedCoreCyclesPfmCounter;
+  let UopsCounter = UopsIssuedPfmCounter;
+  let IssueCounters = [
+    // Refer: https://perfmon-events.intel.com/ section Lunar Lake Hybrid Event
+    // ALU Dispatch - Any of ALUs with latency 1 cycle that is not jmp or Shift.
+    PfmIssueCounter<"LNLPVPort02_03", "uops_dispatched:alu">,
+    PfmIssueCounter<"LNLPPort00_01_02_03_04_05", "uops_dispatched:int_eu_all">,
+    PfmIssueCounter<"LNLPPort00_02_04", "uops_dispatched:jmp">,
+    PfmIssueCounter<"LNLPPort20_21_22", "uops_dispatched:load">,
+    PfmIssueCounter<"LNLPPort01_03_05", "uops_dispatched:shift">,
+    // Slow Dispatch - If uops latency > 1, counted as slow. TBD
+    // PfmIssueCounter<"LNLPPort01_03_05", "uops_dispatched:slow">,
+    PfmIssueCounter<"LNLPPort25_26_27", "uops_dispatched:sta">,
+    PfmIssueCounter<"LNLPPort10_11", "uops_dispatched:std">
+  ];
+  let ValidationCounters = DefaultIntelPfmValidationCounters;
+}
+def : PfmCountersBinding<"lunarlake", LunarLakePfmCounters>;
+
 // AMD X86 Counters.
 defvar DefaultAMDPfmValidationCounters = [
   PfmValidationCounter<InstructionRetired, "RETIRED_INSTRUCTIONS">,

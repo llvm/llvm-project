@@ -57,6 +57,7 @@ namespace clang {
   class StringLiteral;
   class TargetInfo;
   class ValueDecl;
+  class WarnUnusedResultAttr;
 
 /// A simple array of base specifiers.
 typedef SmallVector<CXXBaseSpecifier*, 4> CXXCastPath;
@@ -261,6 +262,12 @@ public:
   bool isUnusedResultAWarning(const Expr *&WarnExpr, SourceLocation &Loc,
                               SourceRange &R1, SourceRange &R2,
                               ASTContext &Ctx) const;
+
+  /// Returns the WarnUnusedResultAttr that is declared on the callee
+  /// or its return type declaration, together with a NamedDecl that
+  /// refers to the declaration the attribute is attached to.
+  static std::pair<const NamedDecl *, const WarnUnusedResultAttr *>
+  getUnusedResultAttrImpl(const Decl *Callee, QualType ReturnType);
 
   /// isLValue - True if this expression is an "l-value" according to
   /// the rules of the current language.  C and C++ give somewhat
@@ -546,17 +553,13 @@ public:
       bool IgnoreTemplateOrMacroSubstitution = false) const;
 
   /// isIntegerConstantExpr - Return the value if this expression is a valid
-  /// integer constant expression.  If not a valid i-c-e, return std::nullopt
-  /// and fill in Loc (if specified) with the location of the invalid
-  /// expression.
+  /// integer constant expression.  If not a valid i-c-e, return std::nullopt.
   ///
   /// Note: This does not perform the implicit conversions required by C++11
   /// [expr.const]p5.
   std::optional<llvm::APSInt>
-  getIntegerConstantExpr(const ASTContext &Ctx,
-                         SourceLocation *Loc = nullptr) const;
-  bool isIntegerConstantExpr(const ASTContext &Ctx,
-                             SourceLocation *Loc = nullptr) const;
+  getIntegerConstantExpr(const ASTContext &Ctx) const;
+  bool isIntegerConstantExpr(const ASTContext &Ctx) const;
 
   /// isCXX98IntegralConstantExpr - Return true if this expression is an
   /// integral constant expression in C++98. Can only be used in C++.
@@ -567,8 +570,8 @@ public:
   ///
   /// Note: This does not perform the implicit conversions required by C++11
   /// [expr.const]p5.
-  bool isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result = nullptr,
-                           SourceLocation *Loc = nullptr) const;
+  bool isCXX11ConstantExpr(const ASTContext &Ctx,
+                           APValue *Result = nullptr) const;
 
   /// isPotentialConstantExpr - Return true if this function's definition
   /// might be usable in a constant expression in C++11, if it were marked
@@ -1366,7 +1369,7 @@ public:
 
   /// If the name was qualified, retrieves the nested-name-specifier
   /// that precedes the name. Otherwise, returns NULL.
-  NestedNameSpecifier *getQualifier() const {
+  NestedNameSpecifier getQualifier() const {
     return getQualifierLoc().getNestedNameSpecifier();
   }
 
@@ -1834,8 +1837,7 @@ class StringLiteral final
 
   /// Build a string literal.
   StringLiteral(const ASTContext &Ctx, StringRef Str, StringLiteralKind Kind,
-                bool Pascal, QualType Ty, const SourceLocation *Loc,
-                unsigned NumConcatenated);
+                bool Pascal, QualType Ty, ArrayRef<SourceLocation> Locs);
 
   /// Build an empty string literal.
   StringLiteral(EmptyShell Empty, unsigned NumConcatenated, unsigned Length,
@@ -1853,18 +1855,10 @@ class StringLiteral final
 
 public:
   /// This is the "fully general" constructor that allows representation of
-  /// strings formed from multiple concatenated tokens.
+  /// strings formed from one or more concatenated tokens.
   static StringLiteral *Create(const ASTContext &Ctx, StringRef Str,
                                StringLiteralKind Kind, bool Pascal, QualType Ty,
-                               const SourceLocation *Loc,
-                               unsigned NumConcatenated);
-
-  /// Simple constructor for string literals made from one token.
-  static StringLiteral *Create(const ASTContext &Ctx, StringRef Str,
-                               StringLiteralKind Kind, bool Pascal, QualType Ty,
-                               SourceLocation Loc) {
-    return Create(Ctx, Str, Kind, Pascal, Ty, &Loc, 1);
-  }
+                               ArrayRef<SourceLocation> Locs);
 
   /// Construct an empty string literal.
   static StringLiteral *CreateEmpty(const ASTContext &Ctx,
@@ -3106,9 +3100,9 @@ public:
   /// Compute and set dependence bits.
   void computeDependence() {
     setDependence(clang::computeDependence(
-        this, llvm::ArrayRef(
-                  reinterpret_cast<Expr **>(getTrailingStmts() + PREARGS_START),
-                  getNumPreArgs())));
+        this,
+        ArrayRef(reinterpret_cast<Expr **>(getTrailingStmts() + PREARGS_START),
+                 getNumPreArgs())));
   }
 
   /// Reduce the number of arguments in this call expression. This is used for
@@ -3153,8 +3147,7 @@ public:
   /// interface.  This provides efficient reverse iteration of the
   /// subexpressions.  This is currently used for CFG construction.
   ArrayRef<Stmt *> getRawSubExprs() {
-    return llvm::ArrayRef(getTrailingStmts(),
-                          PREARGS_START + getNumPreArgs() + getNumArgs());
+    return {getTrailingStmts(), PREARGS_START + getNumPreArgs() + getNumArgs()};
   }
 
   /// Get FPOptionsOverride from trailing storage.
@@ -3200,11 +3193,13 @@ public:
   /// type.
   QualType getCallReturnType(const ASTContext &Ctx) const;
 
-  /// Returns the WarnUnusedResultAttr that is either declared on the called
-  /// function, or its return type declaration, together with a NamedDecl that
-  /// refers to the declaration the attribute is attached onto.
-  std::pair<const NamedDecl *, const Attr *>
-  getUnusedResultAttr(const ASTContext &Ctx) const;
+  /// Returns the WarnUnusedResultAttr that is declared on the callee
+  /// or its return type declaration, together with a NamedDecl that
+  /// refers to the declaration the attribute is attached to.
+  std::pair<const NamedDecl *, const WarnUnusedResultAttr *>
+  getUnusedResultAttr(const ASTContext &Ctx) const {
+    return getUnusedResultAttrImpl(getCalleeDecl(), getCallReturnType(Ctx));
+  }
 
   /// Returns true if this call expression should warn on unused results.
   bool hasUnusedResultAttr(const ASTContext &Ctx) const {
@@ -3403,7 +3398,7 @@ public:
   /// If the member name was qualified, retrieves the
   /// nested-name-specifier that precedes the member name. Otherwise, returns
   /// NULL.
-  NestedNameSpecifier *getQualifier() const {
+  NestedNameSpecifier getQualifier() const {
     return getQualifierLoc().getNestedNameSpecifier();
   }
 
@@ -3544,11 +3539,16 @@ class CompoundLiteralExpr : public Expr {
   /// The int part of the pair stores whether this expr is file scope.
   llvm::PointerIntPair<TypeSourceInfo *, 1, bool> TInfoAndScope;
   Stmt *Init;
+
+  /// Value of constant literals with static storage duration.
+  mutable APValue *StaticValue = nullptr;
+
 public:
   CompoundLiteralExpr(SourceLocation lparenloc, TypeSourceInfo *tinfo,
                       QualType T, ExprValueKind VK, Expr *init, bool fileScope)
       : Expr(CompoundLiteralExprClass, T, VK, OK_Ordinary),
         LParenLoc(lparenloc), TInfoAndScope(tinfo, fileScope), Init(init) {
+    assert(Init && "Init is a nullptr");
     setDependence(computeDependence(this));
   }
 
@@ -3573,20 +3573,16 @@ public:
     TInfoAndScope.setPointer(tinfo);
   }
 
+  bool hasStaticStorage() const { return isFileScope() && isGLValue(); }
+  APValue &getOrCreateStaticValue(ASTContext &Ctx) const;
+  APValue &getStaticValue() const;
+
   SourceLocation getBeginLoc() const LLVM_READONLY {
-    // FIXME: Init should never be null.
-    if (!Init)
-      return SourceLocation();
     if (LParenLoc.isInvalid())
       return Init->getBeginLoc();
     return LParenLoc;
   }
-  SourceLocation getEndLoc() const LLVM_READONLY {
-    // FIXME: Init should never be null.
-    if (!Init)
-      return SourceLocation();
-    return Init->getEndLoc();
-  }
+  SourceLocation getEndLoc() const LLVM_READONLY { return Init->getEndLoc(); }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CompoundLiteralExprClass;
@@ -5276,11 +5272,9 @@ public:
     return reinterpret_cast<Expr * const *>(InitExprs.data());
   }
 
-  ArrayRef<Expr *> inits() { return llvm::ArrayRef(getInits(), getNumInits()); }
+  ArrayRef<Expr *> inits() { return {getInits(), getNumInits()}; }
 
-  ArrayRef<Expr *> inits() const {
-    return llvm::ArrayRef(getInits(), getNumInits());
-  }
+  ArrayRef<Expr *> inits() const { return {getInits(), getNumInits()}; }
 
   const Expr *getInit(unsigned Init) const {
     assert(Init < getNumInits() && "Initializer access out of range!");
@@ -5508,7 +5502,7 @@ private:
   Designator *Designators;
 
   DesignatedInitExpr(const ASTContext &C, QualType Ty,
-                     llvm::ArrayRef<Designator> Designators,
+                     ArrayRef<Designator> Designators,
                      SourceLocation EqualOrColonLoc, bool GNUSyntax,
                      ArrayRef<Expr *> IndexExprs, Expr *Init);
 
@@ -5701,8 +5695,8 @@ public:
   };
 
   static DesignatedInitExpr *Create(const ASTContext &C,
-                                    llvm::ArrayRef<Designator> Designators,
-                                    ArrayRef<Expr*> IndexExprs,
+                                    ArrayRef<Designator> Designators,
+                                    ArrayRef<Expr *> IndexExprs,
                                     SourceLocation EqualOrColonLoc,
                                     bool GNUSyntax, Expr *Init);
 
@@ -5713,11 +5707,11 @@ public:
   unsigned size() const { return NumDesignators; }
 
   // Iterator access to the designators.
-  llvm::MutableArrayRef<Designator> designators() {
+  MutableArrayRef<Designator> designators() {
     return {Designators, NumDesignators};
   }
 
-  llvm::ArrayRef<Designator> designators() const {
+  ArrayRef<Designator> designators() const {
     return {Designators, NumDesignators};
   }
 
@@ -6052,7 +6046,7 @@ public:
 
   Expr **getExprs() { return reinterpret_cast<Expr **>(getTrailingObjects()); }
 
-  ArrayRef<Expr *> exprs() { return llvm::ArrayRef(getExprs(), getNumExprs()); }
+  ArrayRef<Expr *> exprs() { return {getExprs(), getNumExprs()}; }
 
   SourceLocation getLParenLoc() const { return LParenLoc; }
   SourceLocation getRParenLoc() const { return RParenLoc; }
@@ -7364,17 +7358,14 @@ public:
                               ArrayRef<Expr *> SubExprs);
   static RecoveryExpr *CreateEmpty(ASTContext &Ctx, unsigned NumSubExprs);
 
-  ArrayRef<Expr *> subExpressions() {
-    auto *B = getTrailingObjects<Expr *>();
-    return llvm::ArrayRef(B, B + NumExprs);
-  }
+  ArrayRef<Expr *> subExpressions() { return getTrailingObjects(NumExprs); }
 
   ArrayRef<const Expr *> subExpressions() const {
     return const_cast<RecoveryExpr *>(this)->subExpressions();
   }
 
   child_range children() {
-    Stmt **B = reinterpret_cast<Stmt **>(getTrailingObjects<Expr *>());
+    Stmt **B = reinterpret_cast<Stmt **>(getTrailingObjects());
     return child_range(B, B + NumExprs);
   }
 

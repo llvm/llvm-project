@@ -29,8 +29,8 @@
 // RUN:   --stdlib=libc++ --rtlib=compiler-rt --unwindlib=libunwind 2>&1 | FileCheck --check-prefix=CHECK-X86-64-LIBS %s
 // CHECK-X86-64-LIBS:      "-cc1"
 // CHECK-X86-64-LIBS-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
-// CHECK-X86-64-LIBS-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
-// CHECK-X86-64-LIBS-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/local/include"
+// CHECK-X86-64-LIBS-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/include/c++/v1"
+// CHECK-X86-64-LIBS-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/local/include"
 // CHECK-X86-64-LIBS-SAME: "-internal-externc-isystem"
 // CHECK-X86-64-LIBS-SAME: {{^}} "[[SYSROOT]]/usr/include/x86_64-managarm-mlibc"
 // CHECK-X86-64-LIBS-SAME: {{^}} "-internal-externc-isystem" "[[SYSROOT]]/include"
@@ -118,8 +118,8 @@
 // RUN:   --stdlib=libc++ --rtlib=compiler-rt --unwindlib=libunwind 2>&1 | FileCheck --check-prefix=CHECK-AARCH64-LIBS %s
 // CHECK-AARCH64-LIBS:      "-cc1"
 // CHECK-AARCH64-LIBS-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
-// CHECK-AARCH64-LIBS-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
-// CHECK-AARCH64-LIBS-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/local/include"
+// CHECK-AARCH64-LIBS-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/include/c++/v1"
+// CHECK-AARCH64-LIBS-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/local/include"
 // CHECK-AARCH64-LIBS-SAME: "-internal-externc-isystem"
 // CHECK-AARCH64-LIBS-SAME: {{^}} "[[SYSROOT]]/usr/include/aarch64-managarm-mlibc"
 // CHECK-AARCH64-LIBS-SAME: {{^}} "-internal-externc-isystem" "[[SYSROOT]]/include"
@@ -208,8 +208,8 @@
 // RUN:   --stdlib=libc++ --rtlib=compiler-rt --unwindlib=libunwind 2>&1 | FileCheck --check-prefix=CHECK-RISCV64-LIBS %s
 // CHECK-RISCV64-LIBS:      "-cc1"
 // CHECK-RISCV64-LIBS-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
-// CHECK-RISCV64-LIBS-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
-// CHECK-RISCV64-LIBS-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/local/include"
+// CHECK-RISCV64-LIBS-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/include/c++/v1"
+// CHECK-RISCV64-LIBS-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/local/include"
 // CHECK-RISCV64-LIBS-SAME: "-internal-externc-isystem"
 // CHECK-RISCV64-LIBS-SAME: {{^}} "[[SYSROOT]]/usr/include/riscv64-managarm-mlibc"
 // CHECK-RISCV64-LIBS-SAME: {{^}} "-internal-externc-isystem" "[[SYSROOT]]/include"

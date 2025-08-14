@@ -23,12 +23,12 @@ SUBROUTINE s1()
   INTEGER, PARAMETER :: constInt = 0
 
   ! Warn on this one for backwards compatibility
-  !WARNING: DO step expression should not be zero
+  !WARNING: DO step expression should not be zero [-Wzero-do-step]
   DO 10 I = 1, 10, 0
   10 CONTINUE
 
   ! Warn on this one for backwards compatibility
-  !WARNING: DO step expression should not be zero
+  !WARNING: DO step expression should not be zero [-Wzero-do-step]
   DO 20 I = 1, 10, 5 - 5
   20 CONTINUE
 

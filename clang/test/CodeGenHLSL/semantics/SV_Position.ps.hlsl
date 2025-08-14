@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple spirv-unknown-vulkan1.3-pixel -x hlsl -emit-llvm -finclude-default-header -disable-llvm-passes -o - %s | FileCheck %s
 
-// CHECK: @sv_position = external thread_local addrspace(7) externally_initialized constant <4 x float>, !spirv.Decorations !0
+// CHECK: @sv_position = external hidden thread_local addrspace(7) externally_initialized constant <4 x float>, !spirv.Decorations !0
 
 // CHECK: define void @main() {{.*}} {
 float4 main(float4 p : SV_Position) {

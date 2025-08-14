@@ -353,13 +353,6 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
     } else if (isa<CallInst>(CurInst) || isa<InvokeInst>(CurInst)) {
       CallBase &CB = *cast<CallBase>(&*CurInst);
 
-      // Debug info can safely be ignored here.
-      if (isa<DbgInfoIntrinsic>(CB)) {
-        LLVM_DEBUG(dbgs() << "Ignoring debug info.\n");
-        ++CurInst;
-        continue;
-      }
-
       // Cannot handle inline asm.
       if (CB.isInlineAsm()) {
         LLVM_DEBUG(dbgs() << "Found inline asm, can not evaluate.\n");

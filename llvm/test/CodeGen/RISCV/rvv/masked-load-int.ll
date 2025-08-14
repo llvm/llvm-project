@@ -34,9 +34,8 @@ define <vscale x 1 x i8> @masked_load_passthru_nxv1i8(ptr %a, <vscale x 1 x i1> 
 ; ZVE32:       # %bb.0:
 ; ZVE32-NEXT:    csrr a1, vlenb
 ; ZVE32-NEXT:    srli a1, a1, 3
-; ZVE32-NEXT:    vsetvli a2, zero, e8, mf4, ta, ma
-; ZVE32-NEXT:    vmv.v.i v8, 0
 ; ZVE32-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
+; ZVE32-NEXT:    vmv.v.i v8, 0
 ; ZVE32-NEXT:    vle8.v v8, (a0), v0.t
 ; ZVE32-NEXT:    ret
   %load = call <vscale x 1 x i8> @llvm.masked.load.nxv1i8(ptr %a, i32 1, <vscale x 1 x i1> %mask, <vscale x 1 x i8> zeroinitializer)

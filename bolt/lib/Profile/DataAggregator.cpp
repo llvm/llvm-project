@@ -49,6 +49,9 @@ static cl::opt<bool>
                      cl::desc("aggregate basic samples (without LBR info)"),
                      cl::cat(AggregatorCategory));
 
+cl::opt<bool> ArmSPE("spe", cl::desc("Enable Arm SPE mode."),
+                     cl::cat(AggregatorCategory));
+
 static cl::opt<std::string>
     ITraceAggregation("itrace",
                       cl::desc("Generate LBR info with perf itrace argument"),
@@ -73,6 +76,11 @@ FilterPID("pid",
   cl::init(0),
   cl::Optional,
   cl::cat(AggregatorCategory));
+
+static cl::opt<bool> ImputeTraceFallthrough(
+    "impute-trace-fall-through",
+    cl::desc("impute missing fall-throughs for branch-only traces"),
+    cl::Optional, cl::cat(AggregatorCategory));
 
 static cl::opt<bool>
 IgnoreBuildID("ignore-build-id",
@@ -181,37 +189,40 @@ void DataAggregator::start() {
 
   findPerfExecutable();
 
+  if (opts::ArmSPE) {
+    // pid    from_ip      to_ip        flags
+    // where flags could be:
+    // P/M: whether branch was Predicted or Mispredicted.
+    // N: optionally appears when the branch was Not-Taken (ie fall-through)
+    // 12345  0x123/0x456/PN/-/-/8/RET/-
+    opts::ITraceAggregation = "bl";
+    opts::ParseMemProfile = true;
+    opts::BasicAggregation = false;
+  }
+
   if (opts::BasicAggregation) {
-    launchPerfProcess("events without LBR",
-                      MainEventsPPI,
-                      "script -F pid,event,ip",
-                      /*Wait = */false);
+    launchPerfProcess("events without LBR", MainEventsPPI,
+                      "script -F pid,event,ip");
   } else if (!opts::ITraceAggregation.empty()) {
     // Disable parsing memory profile from trace data, unless requested by user.
     if (!opts::ParseMemProfile.getNumOccurrences())
       opts::ParseMemProfile = false;
-
-    std::string ItracePerfScriptArgs = llvm::formatv(
-        "script -F pid,brstack --itrace={0}", opts::ITraceAggregation);
     launchPerfProcess("branch events with itrace", MainEventsPPI,
-                      ItracePerfScriptArgs.c_str(),
-                      /*Wait = */ false);
+                      "script -F pid,brstack --itrace=" +
+                          opts::ITraceAggregation);
   } else {
-    launchPerfProcess("branch events", MainEventsPPI, "script -F pid,brstack",
-                      /*Wait = */ false);
+    launchPerfProcess("branch events", MainEventsPPI, "script -F pid,brstack");
   }
 
   if (opts::ParseMemProfile)
-    launchPerfProcess("mem events", MemEventsPPI, "script -F pid,event,addr,ip",
-                      /*Wait = */ false);
+    launchPerfProcess("mem events", MemEventsPPI,
+                      "script -F pid,event,addr,ip");
 
   launchPerfProcess("process events", MMapEventsPPI,
-                    "script --show-mmap-events --no-itrace",
-                    /*Wait = */ false);
+                    "script --show-mmap-events --no-itrace");
 
   launchPerfProcess("task events", TaskEventsPPI,
-                    "script --show-task-events --no-itrace",
-                    /*Wait = */ false);
+                    "script --show-task-events --no-itrace");
 }
 
 void DataAggregator::abort() {
@@ -233,13 +244,13 @@ void DataAggregator::abort() {
 }
 
 void DataAggregator::launchPerfProcess(StringRef Name, PerfProcessInfo &PPI,
-                                       const char *ArgsString, bool Wait) {
+                                       StringRef Args) {
   SmallVector<StringRef, 4> Argv;
 
   outs() << "PERF2BOLT: spawning perf job to read " << Name << '\n';
   Argv.push_back(PerfPath.data());
 
-  StringRef(ArgsString).split(Argv, ' ');
+  Args.split(Argv, ' ');
   Argv.push_back("-f");
   Argv.push_back("-i");
   Argv.push_back(Filename.c_str());
@@ -273,64 +284,45 @@ void DataAggregator::launchPerfProcess(StringRef Name, PerfProcessInfo &PPI,
            << "\n";
   });
 
-  if (Wait)
-    PPI.PI.ReturnCode = sys::ExecuteAndWait(PerfPath.data(), Argv,
-                                            /*envp*/ std::nullopt, Redirects);
-  else
-    PPI.PI = sys::ExecuteNoWait(PerfPath.data(), Argv, /*envp*/ std::nullopt,
-                                Redirects);
+  PPI.PI = sys::ExecuteNoWait(PerfPath.data(), Argv, /*envp*/ std::nullopt,
+                              Redirects);
 }
 
 void DataAggregator::processFileBuildID(StringRef FileBuildID) {
+  auto WarningCallback = [](int ReturnCode, StringRef ErrBuf) {
+    errs() << "PERF-ERROR: return code " << ReturnCode << "\n" << ErrBuf;
+  };
+
   PerfProcessInfo BuildIDProcessInfo;
-  launchPerfProcess("buildid list",
-                    BuildIDProcessInfo,
-                    "buildid-list",
-                    /*Wait = */true);
-
-  if (BuildIDProcessInfo.PI.ReturnCode != 0) {
-    ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
-        MemoryBuffer::getFileOrSTDIN(BuildIDProcessInfo.StderrPath.data());
-    StringRef ErrBuf = (*MB)->getBuffer();
-
-    errs() << "PERF-ERROR: return code " << BuildIDProcessInfo.PI.ReturnCode
-           << '\n';
-    errs() << ErrBuf;
+  launchPerfProcess("buildid list", BuildIDProcessInfo, "buildid-list");
+  if (prepareToParse("buildid", BuildIDProcessInfo, WarningCallback))
     return;
-  }
-
-  ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
-      MemoryBuffer::getFileOrSTDIN(BuildIDProcessInfo.StdoutPath.data());
-  if (std::error_code EC = MB.getError()) {
-    errs() << "Cannot open " << BuildIDProcessInfo.StdoutPath.data() << ": "
-           << EC.message() << "\n";
-    return;
-  }
-
-  FileBuf = std::move(*MB);
-  ParsingBuf = FileBuf->getBuffer();
 
   std::optional<StringRef> FileName = getFileNameForBuildID(FileBuildID);
-  if (!FileName) {
-    if (hasAllBuildIDs()) {
-      errs() << "PERF2BOLT-ERROR: failed to match build-id from perf output. "
-                "This indicates the input binary supplied for data aggregation "
-                "is not the same recorded by perf when collecting profiling "
-                "data, or there were no samples recorded for the binary. "
-                "Use -ignore-build-id option to override.\n";
-      if (!opts::IgnoreBuildID)
-        abort();
-    } else {
-      errs() << "PERF2BOLT-WARNING: build-id will not be checked because perf "
-                "data was recorded without it\n";
-      return;
-    }
-  } else if (*FileName != llvm::sys::path::filename(BC->getFilename())) {
+  if (FileName && *FileName == sys::path::filename(BC->getFilename())) {
+    outs() << "PERF2BOLT: matched build-id and file name\n";
+    return;
+  }
+
+  if (FileName) {
     errs() << "PERF2BOLT-WARNING: build-id matched a different file name\n";
     BuildIDBinaryName = std::string(*FileName);
-  } else {
-    outs() << "PERF2BOLT: matched build-id and file name\n";
+    return;
   }
+
+  if (!hasAllBuildIDs()) {
+    errs() << "PERF2BOLT-WARNING: build-id will not be checked because perf "
+              "data was recorded without it\n";
+    return;
+  }
+
+  errs() << "PERF2BOLT-ERROR: failed to match build-id from perf output. "
+            "This indicates the input binary supplied for data aggregation "
+            "is not the same recorded by perf when collecting profiling "
+            "data, or there were no samples recorded for the binary. "
+            "Use -ignore-build-id option to override.\n";
+  if (!opts::IgnoreBuildID)
+    abort();
 }
 
 bool DataAggregator::checkPerfDataMagic(StringRef FileName) {
@@ -419,13 +411,23 @@ int DataAggregator::prepareToParse(StringRef Name, PerfProcessInfo &Process,
   std::string Error;
   outs() << "PERF2BOLT: waiting for perf " << Name
          << " collection to finish...\n";
-  sys::ProcessInfo PI = sys::Wait(Process.PI, std::nullopt, &Error);
+  std::optional<sys::ProcessStatistics> PS;
+  sys::ProcessInfo PI = sys::Wait(Process.PI, std::nullopt, &Error, &PS);
 
   if (!Error.empty()) {
     errs() << "PERF-ERROR: " << PerfPath << ": " << Error << "\n";
     deleteTempFiles();
     exit(1);
   }
+
+  LLVM_DEBUG({
+    const float UserSec = 1.f * PS->UserTime.count() / 1e6;
+    const float TotalSec = 1.f * PS->TotalTime.count() / 1e6;
+    const float PeakGiB = 1.f * PS->PeakMemory / (1 << 20);
+    dbgs() << formatv("Finished in {0:f2}s user time, {1:f2}s total time, "
+                      "{2:f2} GiB peak RSS\n",
+                      UserSec, TotalSec, PeakGiB);
+  });
 
   if (PI.ReturnCode != 0) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> ErrorMB =
@@ -453,9 +455,7 @@ int DataAggregator::prepareToParse(StringRef Name, PerfProcessInfo &Process,
   return PI.ReturnCode;
 }
 
-Error DataAggregator::preprocessProfile(BinaryContext &BC) {
-  this->BC = &BC;
-
+void DataAggregator::parsePerfData(BinaryContext &BC) {
   auto ErrorCallback = [](int ReturnCode, StringRef ErrBuf) {
     errs() << "PERF-ERROR: return code " << ReturnCode << "\n" << ErrBuf;
     exit(1);
@@ -467,11 +467,6 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
     if (!NoData.match(ErrBuf))
       ErrorCallback(ReturnCode, ErrBuf);
   };
-
-  if (opts::ReadPreAggregated) {
-    parsePreAggregated();
-    goto heatmap;
-  }
 
   if (std::optional<StringRef> FileBuildID = BC.getFileBuildID()) {
     outs() << "BOLT-INFO: binary build-id is:     " << *FileBuildID << "\n";
@@ -521,23 +516,94 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
              << '\n';
 
   deleteTempFiles();
+}
 
-heatmap:
+void DataAggregator::imputeFallThroughs() {
+  if (Traces.empty())
+    return;
+
+  std::pair PrevBranch(Trace::EXTERNAL, Trace::EXTERNAL);
+  uint64_t AggregateCount = 0;
+  uint64_t AggregateFallthroughSize = 0;
+  uint64_t InferredTraces = 0;
+
+  // Helper map with whether the instruction is a call/ret/unconditional branch
+  std::unordered_map<uint64_t, bool> IsUncondCTMap;
+  auto checkUnconditionalControlTransfer = [&](const uint64_t Addr) {
+    auto isUncondCT = [&](const MCInst &MI) -> bool {
+      return BC->MIB->isUnconditionalControlTransfer(MI);
+    };
+    return testAndSet<bool>(Addr, isUncondCT, IsUncondCTMap).value_or(true);
+  };
+
+  // Traces are sorted by their component addresses (Branch, From, To).
+  // assert(is_sorted(Traces));
+
+  // Traces corresponding to the top-of-stack branch entry with a missing
+  // fall-through have BR_ONLY(-1ULL/UINT64_MAX) in To field, meaning that for
+  // fixed values of Branch and From branch-only traces are stored after all
+  // traces with valid fall-through.
+  //
+  // Group traces by (Branch, From) and compute weighted average fall-through
+  // length for the top-of-stack trace (closing the group) by accumulating the
+  // fall-through lengths of traces with valid fall-throughs earlier in the
+  // group.
+  for (auto &[Trace, Info] : Traces) {
+    // Skip fall-throughs in external code.
+    if (Trace.From == Trace::EXTERNAL)
+      continue;
+    std::pair CurrentBranch(Trace.Branch, Trace.From);
+    // BR_ONLY must be the last trace in the group
+    if (Trace.To == Trace::BR_ONLY) {
+      // If the group is not empty, use aggregate values, otherwise 0-length
+      // for unconditional jumps (call/ret/uncond branch) or 1-length for others
+      uint64_t InferredBytes =
+          PrevBranch == CurrentBranch
+              ? AggregateFallthroughSize / AggregateCount
+              : !checkUnconditionalControlTransfer(Trace.From);
+      Trace.To = Trace.From + InferredBytes;
+      LLVM_DEBUG(dbgs() << "imputed " << Trace << " (" << InferredBytes
+                        << " bytes)\n");
+      ++InferredTraces;
+    } else {
+      // Trace with a valid fall-through
+      // New group: reset aggregates.
+      if (CurrentBranch != PrevBranch)
+        AggregateCount = AggregateFallthroughSize = 0;
+      // Only use valid fall-through lengths
+      if (Trace.To != Trace::EXTERNAL)
+        AggregateFallthroughSize += (Trace.To - Trace.From) * Info.TakenCount;
+      AggregateCount += Info.TakenCount;
+    }
+    PrevBranch = CurrentBranch;
+  }
+  if (opts::Verbosity >= 1)
+    outs() << "BOLT-INFO: imputed " << InferredTraces << " traces\n";
+}
+
+Error DataAggregator::preprocessProfile(BinaryContext &BC) {
+  this->BC = &BC;
+
+  if (opts::ReadPreAggregated) {
+    parsePreAggregated();
+  } else {
+    parsePerfData(BC);
+  }
+
   // Sort parsed traces for faster processing.
-  if (!opts::BasicAggregation)
-    llvm::sort(Traces, llvm::less_first());
+  llvm::sort(Traces, llvm::less_first());
 
-  if (!opts::HeatmapMode)
-    return Error::success();
+  if (opts::ImputeTraceFallthrough)
+    imputeFallThroughs();
 
-  if (std::error_code EC = printLBRHeatMap())
-    return errorCodeToError(EC);
+  if (opts::HeatmapMode) {
+    if (std::error_code EC = printLBRHeatMap())
+      return errorCodeToError(EC);
+    if (opts::HeatmapMode == opts::HeatmapModeKind::HM_Exclusive)
+      exit(0);
+  }
 
-  if (opts::HeatmapMode == opts::HeatmapModeKind::HM_Optional)
-    return Error::success();
-
-  assert(opts::HeatmapMode == opts::HeatmapModeKind::HM_Exclusive);
-  exit(0);
+  return Error::success();
 }
 
 Error DataAggregator::readProfile(BinaryContext &BC) {
@@ -730,49 +796,41 @@ bool DataAggregator::doInterBranch(BinaryFunction *FromFunc,
   return true;
 }
 
+bool DataAggregator::checkReturn(uint64_t Addr) {
+  auto isReturn = [&](const MCInst &MI) -> bool {
+    return BC->MIB->isReturn(MI);
+  };
+  return testAndSet<bool>(Addr, isReturn, Returns).value_or(false);
+}
+
 bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
                               uint64_t Mispreds) {
-  // Returns whether \p Offset in \p Func contains a return instruction.
-  auto checkReturn = [&](const BinaryFunction &Func, const uint64_t Offset) {
-    auto isReturn = [&](auto MI) { return MI && BC->MIB->isReturn(*MI); };
-    return Func.hasInstructions()
-               ? isReturn(Func.getInstructionAtOffset(Offset))
-               : isReturn(Func.disassembleInstructionAtOffset(Offset));
-  };
-
   // Mutates \p Addr to an offset into the containing function, performing BAT
   // offset translation and parent lookup.
   //
-  // Returns the containing function (or BAT parent) and whether the address
-  // corresponds to a return (if \p IsFrom) or a call continuation (otherwise).
+  // Returns the containing function (or BAT parent).
   auto handleAddress = [&](uint64_t &Addr, bool IsFrom) {
     BinaryFunction *Func = getBinaryFunctionContainingAddress(Addr);
     if (!Func) {
       Addr = 0;
-      return std::pair{Func, false};
+      return Func;
     }
 
     Addr -= Func->getAddress();
-
-    bool IsRet = IsFrom && checkReturn(*Func, Addr);
 
     if (BAT)
       Addr = BAT->translate(Func->getAddress(), Addr, IsFrom);
 
     if (BinaryFunction *ParentFunc = getBATParentFunction(*Func))
-      Func = ParentFunc;
+      return ParentFunc;
 
-    return std::pair{Func, IsRet};
+    return Func;
   };
 
-  auto [FromFunc, IsReturn] = handleAddress(From, /*IsFrom*/ true);
-  auto [ToFunc, _] = handleAddress(To, /*IsFrom*/ false);
+  BinaryFunction *FromFunc = handleAddress(From, /*IsFrom*/ true);
+  BinaryFunction *ToFunc = handleAddress(To, /*IsFrom*/ false);
   if (!FromFunc && !ToFunc)
     return false;
-
-  // Ignore returns.
-  if (IsReturn)
-    return true;
 
   // Treat recursive control transfers as inter-branches.
   if (FromFunc == ToFunc && To != 0) {
@@ -783,7 +841,8 @@ bool DataAggregator::doBranch(uint64_t From, uint64_t To, uint64_t Count,
   return doInterBranch(FromFunc, ToFunc, From, To, Count, Mispreds);
 }
 
-bool DataAggregator::doTrace(const Trace &Trace, uint64_t Count) {
+bool DataAggregator::doTrace(const Trace &Trace, uint64_t Count,
+                             bool IsReturn) {
   const uint64_t From = Trace.From, To = Trace.To;
   BinaryFunction *FromFunc = getBinaryFunctionContainingAddress(From);
   BinaryFunction *ToFunc = getBinaryFunctionContainingAddress(To);
@@ -808,8 +867,8 @@ bool DataAggregator::doTrace(const Trace &Trace, uint64_t Count) {
   const uint64_t FuncAddress = FromFunc->getAddress();
   std::optional<BoltAddressTranslation::FallthroughListTy> FTs =
       BAT && BAT->isBATFunction(FuncAddress)
-          ? BAT->getFallthroughsInTrace(FuncAddress, From, To)
-          : getFallthroughsInTrace(*FromFunc, Trace, Count);
+          ? BAT->getFallthroughsInTrace(FuncAddress, From - IsReturn, To)
+          : getFallthroughsInTrace(*FromFunc, Trace, Count, IsReturn);
   if (!FTs) {
     LLVM_DEBUG(dbgs() << "Invalid trace " << Trace << '\n');
     NumInvalidTraces += Count;
@@ -818,20 +877,15 @@ bool DataAggregator::doTrace(const Trace &Trace, uint64_t Count) {
 
   LLVM_DEBUG(dbgs() << "Processing " << FTs->size() << " fallthroughs for "
                     << FromFunc->getPrintName() << ":" << Trace << '\n');
-  for (auto [From, To] : *FTs) {
-    if (BAT) {
-      From = BAT->translate(FromFunc->getAddress(), From, /*IsBranchSrc=*/true);
-      To = BAT->translate(FromFunc->getAddress(), To, /*IsBranchSrc=*/false);
-    }
+  for (const auto &[From, To] : *FTs)
     doIntraBranch(*ParentFunc, From, To, Count, false);
-  }
 
   return true;
 }
 
 std::optional<SmallVector<std::pair<uint64_t, uint64_t>, 16>>
 DataAggregator::getFallthroughsInTrace(BinaryFunction &BF, const Trace &Trace,
-                                       uint64_t Count) const {
+                                       uint64_t Count, bool IsReturn) const {
   SmallVector<std::pair<uint64_t, uint64_t>, 16> Branches;
 
   BinaryContext &BC = BF.getBinaryContext();
@@ -852,10 +906,9 @@ DataAggregator::getFallthroughsInTrace(BinaryFunction &BF, const Trace &Trace,
   if (BF.isPseudo())
     return Branches;
 
-  if (!BF.isSimple())
+  // Can only record traces in CFG state
+  if (!BF.hasCFG())
     return std::nullopt;
-
-  assert(BF.hasCFG() && "can only record traces in CFG state");
 
   const BinaryBasicBlock *FromBB = BF.getBasicBlockContainingOffset(From);
   const BinaryBasicBlock *ToBB = BF.getBasicBlockContainingOffset(To);
@@ -866,8 +919,8 @@ DataAggregator::getFallthroughsInTrace(BinaryFunction &BF, const Trace &Trace,
   // Adjust FromBB if the first LBR is a return from the last instruction in
   // the previous block (that instruction should be a call).
   if (Trace.Branch != Trace::FT_ONLY && !BF.containsAddress(Trace.Branch) &&
-      From == FromBB->getOffset() && !FromBB->isEntryPoint() &&
-      !FromBB->isLandingPad()) {
+      From == FromBB->getOffset() &&
+      (IsReturn ? From : !(FromBB->isEntryPoint() || FromBB->isLandingPad()))) {
     const BinaryBasicBlock *PrevBB =
         BF.getLayout().getBlock(FromBB->getIndex() - 1);
     if (PrevBB->getSuccessor(FromBB->getLabel())) {
@@ -985,9 +1038,22 @@ ErrorOr<DataAggregator::LBREntry> DataAggregator::parseLBREntry() {
   if (std::error_code EC = MispredStrRes.getError())
     return EC;
   StringRef MispredStr = MispredStrRes.get();
-  if (MispredStr.size() != 1 ||
-      (MispredStr[0] != 'P' && MispredStr[0] != 'M' && MispredStr[0] != '-')) {
-    reportError("expected single char for mispred bit");
+  // SPE brstack mispredicted flags might be up to two characters long:
+  // 'PN' or 'MN'. Where 'N' optionally appears.
+  bool ValidStrSize = opts::ArmSPE
+                          ? MispredStr.size() >= 1 && MispredStr.size() <= 2
+                          : MispredStr.size() == 1;
+  bool SpeTakenBitErr =
+      (opts::ArmSPE && MispredStr.size() == 2 && MispredStr[1] != 'N');
+  bool PredictionBitErr =
+      !ValidStrSize ||
+      (MispredStr[0] != 'P' && MispredStr[0] != 'M' && MispredStr[0] != '-');
+  if (SpeTakenBitErr)
+    reportError("expected 'N' as SPE prediction bit for a not-taken branch");
+  if (PredictionBitErr)
+    reportError("expected 'P', 'M' or '-' char as a prediction bit");
+
+  if (SpeTakenBitErr || PredictionBitErr) {
     Diag << "Found: " << MispredStr << "\n";
     return make_error_code(llvm::errc::io_error);
   }
@@ -1193,12 +1259,14 @@ ErrorOr<Location> DataAggregator::parseLocationOrOffset() {
 std::error_code DataAggregator::parseAggregatedLBREntry() {
   enum AggregatedLBREntry : char {
     INVALID = 0,
-    EVENT_NAME,        // E
-    TRACE,             // T
-    SAMPLE,            // S
-    BRANCH,            // B
-    FT,                // F
-    FT_EXTERNAL_ORIGIN // f
+    EVENT_NAME,         // E
+    TRACE,              // T
+    RETURN,             // R
+    SAMPLE,             // S
+    BRANCH,             // B
+    FT,                 // F
+    FT_EXTERNAL_ORIGIN, // f
+    FT_EXTERNAL_RETURN  // r
   } Type = INVALID;
 
   /// The number of fields to parse, set based on \p Type.
@@ -1226,20 +1294,22 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
 
     Type = StringSwitch<AggregatedLBREntry>(Str)
                .Case("T", TRACE)
+               .Case("R", RETURN)
                .Case("S", SAMPLE)
                .Case("E", EVENT_NAME)
                .Case("B", BRANCH)
                .Case("F", FT)
                .Case("f", FT_EXTERNAL_ORIGIN)
+               .Case("r", FT_EXTERNAL_RETURN)
                .Default(INVALID);
 
     if (Type == INVALID) {
-      reportError("expected T, S, E, B, F or f");
+      reportError("expected T, R, S, E, B, F, f or r");
       return make_error_code(llvm::errc::io_error);
     }
 
     using SSI = StringSwitch<int>;
-    AddrNum = SSI(Str).Case("T", 3).Case("S", 1).Case("E", 0).Default(2);
+    AddrNum = SSI(Str).Cases("T", "R", 3).Case("S", 1).Case("E", 0).Default(2);
     CounterNum = SSI(Str).Case("B", 2).Case("E", 0).Default(1);
   }
 
@@ -1296,17 +1366,30 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
   if (ToFunc)
     ToFunc->setHasProfileAvailable();
 
-  /// For legacy fall-through types, adjust locations to match Trace container.
-  if (Type == FT || Type == FT_EXTERNAL_ORIGIN) {
+  /// For fall-through types, adjust locations to match Trace container.
+  if (Type == FT || Type == FT_EXTERNAL_ORIGIN || Type == FT_EXTERNAL_RETURN) {
     Addr[2] = Location(Addr[1]->Offset); // Trace To
     Addr[1] = Location(Addr[0]->Offset); // Trace From
-    // Put a magic value into Trace Branch to differentiate from a full trace.
-    Addr[0] = Location(Type == FT ? Trace::FT_ONLY : Trace::FT_EXTERNAL_ORIGIN);
+    // Put a magic value into Trace Branch to differentiate from a full trace:
+    if (Type == FT)
+      Addr[0] = Location(Trace::FT_ONLY);
+    else if (Type == FT_EXTERNAL_ORIGIN)
+      Addr[0] = Location(Trace::FT_EXTERNAL_ORIGIN);
+    else if (Type == FT_EXTERNAL_RETURN)
+      Addr[0] = Location(Trace::FT_EXTERNAL_RETURN);
+    else
+      llvm_unreachable("Unexpected fall-through type");
   }
 
-  /// For legacy branch type, mark Trace To to differentite from a full trace.
-  if (Type == BRANCH) {
+  /// For branch type, mark Trace To to differentiate from a full trace.
+  if (Type == BRANCH)
     Addr[2] = Location(Trace::BR_ONLY);
+
+  if (Type == RETURN) {
+    if (!Addr[0]->Offset)
+      Addr[0]->Offset = Trace::FT_EXTERNAL_RETURN;
+    else
+      Returns.emplace(Addr[0]->Offset, true);
   }
 
   /// Record a trace.
@@ -1488,7 +1571,9 @@ void DataAggregator::printBranchStacksDiagnostics(
 }
 
 std::error_code DataAggregator::parseBranchEvents() {
-  outs() << "PERF2BOLT: parse branch events...\n";
+  std::string BranchEventTypeStr =
+      opts::ArmSPE ? "SPE branch events in LBR-format" : "branch events";
+  outs() << "PERF2BOLT: parse " << BranchEventTypeStr << "...\n";
   NamedRegionTimer T("parseBranch", "Parsing branch events", TimerGroupName,
                      TimerGroupDesc, opts::TimeAggregator);
 
@@ -1516,7 +1601,8 @@ std::error_code DataAggregator::parseBranchEvents() {
     }
 
     NumEntries += Sample.LBR.size();
-    if (BAT && Sample.LBR.size() == 32 && !NeedsSkylakeFix) {
+    if (this->BC->isX86() && BAT && Sample.LBR.size() == 32 &&
+        !NeedsSkylakeFix) {
       errs() << "PERF2BOLT-WARNING: using Intel Skylake bug workaround\n";
       NeedsSkylakeFix = true;
     }
@@ -1539,10 +1625,18 @@ std::error_code DataAggregator::parseBranchEvents() {
     if (NumSamples && NumSamplesNoLBR == NumSamples) {
       // Note: we don't know if perf2bolt is being used to parse memory samples
       // at this point. In this case, it is OK to parse zero LBRs.
-      errs() << "PERF2BOLT-WARNING: all recorded samples for this binary lack "
-                "LBR. Record profile with perf record -j any or run perf2bolt "
-                "in no-LBR mode with -nl (the performance improvement in -nl "
-                "mode may be limited)\n";
+      if (!opts::ArmSPE)
+        errs()
+            << "PERF2BOLT-WARNING: all recorded samples for this binary lack "
+               "LBR. Record profile with perf record -j any or run perf2bolt "
+               "in no-LBR mode with -nl (the performance improvement in -nl "
+               "mode may be limited)\n";
+      else
+        errs()
+            << "PERF2BOLT-WARNING: All recorded samples for this binary lack "
+               "SPE brstack entries. Make sure you are running Linux perf 6.14 "
+               "or later, otherwise you get zero samples. Record the profile "
+               "with: perf record -e 'arm_spe_0/branch_filter=1/'.";
     } else {
       printBranchStacksDiagnostics(NumTotalSamples - NumSamples);
     }
@@ -1556,12 +1650,15 @@ void DataAggregator::processBranchEvents() {
   NamedRegionTimer T("processBranch", "Processing branch events",
                      TimerGroupName, TimerGroupDesc, opts::TimeAggregator);
 
+  Returns.emplace(Trace::FT_EXTERNAL_RETURN, true);
   for (const auto &[Trace, Info] : Traces) {
-    if (Trace.Branch != Trace::FT_ONLY &&
+    bool IsReturn = checkReturn(Trace.Branch);
+    // Ignore returns.
+    if (!IsReturn && Trace.Branch != Trace::FT_ONLY &&
         Trace.Branch != Trace::FT_EXTERNAL_ORIGIN)
       doBranch(Trace.Branch, Trace.From, Info.TakenCount, Info.MispredCount);
     if (Trace.To != Trace::BR_ONLY)
-      doTrace(Trace, Info.TakenCount);
+      doTrace(Trace, Info.TakenCount, IsReturn);
   }
   printBranchSamplesDiagnostics();
 }

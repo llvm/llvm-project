@@ -8,16 +8,16 @@ module m
  !DEF: /m/j PUBLIC (Implicit, InNamelist) ObjectEntity INTEGER(4)
  namelist/a/j
 end module m
-!DEF: /main MainProgram
-program main
- !DEF: /main/j (Implicit) ObjectEntity INTEGER(4)
+!DEF: /MAIN MainProgram
+program MAIN
+ !DEF: /MAIN/j (Implicit) ObjectEntity INTEGER(4)
  j = 1
 contains
- !DEF: /main/inner (Subroutine) Subprogram
+ !DEF: /MAIN/inner (Subroutine) Subprogram
  subroutine inner
   !REF: /m
   use :: m
-  !DEF: /main/inner/j (Implicit, InNamelist) Use INTEGER(4)
+  !DEF: /MAIN/inner/j (Implicit, InNamelist) Use INTEGER(4)
   j = 2
  end subroutine
 end program

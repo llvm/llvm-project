@@ -32,6 +32,25 @@ class ParsedAttr;
 class Scope;
 class VarDecl;
 
+namespace hlsl {
+
+// Introduce a wrapper struct around the underlying RootElement. This structure
+// will retain extra clang diagnostic information that is not available in llvm.
+struct RootSignatureElement {
+  RootSignatureElement(SourceLocation Loc,
+                       llvm::hlsl::rootsig::RootElement Element)
+      : Loc(Loc), Element(Element) {}
+
+  const llvm::hlsl::rootsig::RootElement &getElement() const { return Element; }
+  const SourceLocation &getLocation() const { return Loc; }
+
+private:
+  SourceLocation Loc;
+  llvm::hlsl::rootsig::RootElement Element;
+};
+
+} // namespace hlsl
+
 using llvm::dxil::ResourceClass;
 
 // FIXME: This can be hidden (as static function in SemaHLSL.cpp) once we no
@@ -65,7 +84,7 @@ struct DeclBindingInfo {
 
 // ResourceBindings class stores information about all resource bindings
 // in a shader. It is used for binding diagnostics and implicit binding
-// assigments.
+// assignments.
 class ResourceBindings {
 public:
   DeclBindingInfo *addDeclBindingInfo(const VarDecl *VD,
@@ -98,6 +117,8 @@ public:
   HLSLWaveSizeAttr *mergeWaveSizeAttr(Decl *D, const AttributeCommonInfo &AL,
                                       int Min, int Max, int Preferred,
                                       int SpelledArgsCount);
+  HLSLVkConstantIdAttr *
+  mergeVkConstantIdAttr(Decl *D, const AttributeCommonInfo &AL, int Id);
   HLSLShaderAttr *mergeShaderAttr(Decl *D, const AttributeCommonInfo &AL,
                                   llvm::Triple::EnvironmentType ShaderType);
   HLSLParamModifierAttr *
@@ -119,9 +140,28 @@ public:
                                        bool IsCompAssign);
   void emitLogicalOperatorFixIt(Expr *LHS, Expr *RHS, BinaryOperatorKind Opc);
 
+  /// Computes the unique Root Signature identifier from the given signature,
+  /// then lookup if there is a previousy created Root Signature decl.
+  ///
+  /// Returns the identifier and if it was found
+  std::pair<IdentifierInfo *, bool>
+  ActOnStartRootSignatureDecl(StringRef Signature);
+
+  /// Creates the Root Signature decl of the parsed Root Signature elements
+  /// onto the AST and push it onto current Scope
+  void
+  ActOnFinishRootSignatureDecl(SourceLocation Loc, IdentifierInfo *DeclIdent,
+                               ArrayRef<hlsl::RootSignatureElement> Elements);
+
+  // Returns true if any RootSignatureElement is invalid and a diagnostic was
+  // produced
+  bool
+  handleRootSignatureElements(ArrayRef<hlsl::RootSignatureElement> Elements);
   void handleRootSignatureAttr(Decl *D, const ParsedAttr &AL);
   void handleNumThreadsAttr(Decl *D, const ParsedAttr &AL);
   void handleWaveSizeAttr(Decl *D, const ParsedAttr &AL);
+  void handleVkConstantIdAttr(Decl *D, const ParsedAttr &AL);
+  void handleVkBindingAttr(Decl *D, const ParsedAttr &AL);
   void handleSV_DispatchThreadIDAttr(Decl *D, const ParsedAttr &AL);
   void handleSV_GroupThreadIDAttr(Decl *D, const ParsedAttr &AL);
   void handleSV_GroupIDAttr(Decl *D, const ParsedAttr &AL);
@@ -158,7 +198,7 @@ public:
   QualType getInoutParameterType(QualType Ty);
 
   bool transformInitList(const InitializedEntity &Entity, InitListExpr *Init);
-
+  bool handleInitialization(VarDecl *VDecl, Expr *&Init);
   void deduceAddressSpace(VarDecl *Decl);
 
 private:

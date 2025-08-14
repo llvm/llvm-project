@@ -110,11 +110,11 @@ bool Lowerer::lower(Function &F) {
 
 static bool declaresCoroCleanupIntrinsics(const Module &M) {
   return coro::declaresIntrinsics(
-      M, {"llvm.coro.alloc", "llvm.coro.begin", "llvm.coro.subfn.addr",
-          "llvm.coro.free", "llvm.coro.id", "llvm.coro.id.retcon",
-          "llvm.coro.id.async", "llvm.coro.id.retcon.once",
-          "llvm.coro.async.size.replace", "llvm.coro.async.resume",
-          "llvm.coro.begin.custom.abi"});
+      M, {Intrinsic::coro_alloc, Intrinsic::coro_begin,
+          Intrinsic::coro_subfn_addr, Intrinsic::coro_free, Intrinsic::coro_id,
+          Intrinsic::coro_id_retcon, Intrinsic::coro_id_async,
+          Intrinsic::coro_id_retcon_once, Intrinsic::coro_async_size_replace,
+          Intrinsic::coro_async_resume, Intrinsic::coro_begin_custom_abi});
 }
 
 PreservedAnalyses CoroCleanupPass::run(Module &M,

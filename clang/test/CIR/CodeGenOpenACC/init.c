@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fopenacc -emit-cir -fclangir %s -o - | FileCheck %s
 
 void acc_init(int cond) {
-  // CHECK: cir.func @acc_init(%[[ARG:.*]]: !s32i{{.*}}) {
+  // CHECK: cir.func{{.*}} @acc_init(%[[ARG:.*]]: !s32i{{.*}}) {
   // CHECK-NEXT: %[[COND:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["cond", init]
   // CHECK-NEXT: cir.store %[[ARG]], %[[COND]] : !s32i, !cir.ptr<!s32i>
 #pragma acc init
@@ -11,12 +11,8 @@ void acc_init(int cond) {
   // CHECK-NEXT: acc.init attributes {device_types = [#acc.device_type<star>]}
 #pragma acc init device_type(nvidia)
   // CHECK-NEXT: acc.init attributes {device_types = [#acc.device_type<nvidia>]}
-#pragma acc init device_type(host, multicore)
-  // CHECK-NEXT: acc.init attributes {device_types = [#acc.device_type<host>, #acc.device_type<multicore>]}
 #pragma acc init device_type(NVIDIA)
   // CHECK-NEXT: acc.init attributes {device_types = [#acc.device_type<nvidia>]}
-#pragma acc init device_type(HoSt, MuLtIcORe)
-  // CHECK-NEXT: acc.init attributes {device_types = [#acc.device_type<host>, #acc.device_type<multicore>]}
 #pragma acc init device_type(HoSt) device_type(MuLtIcORe)
   // CHECK-NEXT: acc.init attributes {device_types = [#acc.device_type<host>, #acc.device_type<multicore>]}
 

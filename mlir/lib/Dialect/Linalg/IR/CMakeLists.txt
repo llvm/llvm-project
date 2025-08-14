@@ -24,6 +24,7 @@ add_mlir_dialect_library(MLIRLinalgDialect
   MLIRDestinationStyleOpInterface
   MLIRDialectUtils
   MLIRFunctionInterfaces
+  MLIRIndexingMapOpInterface
   MLIRInferTypeOpInterface
   MLIRIR
   MLIRParser

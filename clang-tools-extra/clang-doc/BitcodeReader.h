@@ -64,6 +64,13 @@ private:
   // Helper function to set up the appropriate type of Info.
   llvm::Expected<std::unique_ptr<Info>> readBlockToInfo(unsigned ID);
 
+  template <typename InfoType, typename T, typename CallbackFunction>
+  llvm::Error handleSubBlock(unsigned ID, T Parent, CallbackFunction Function);
+
+  template <typename InfoType, typename T, typename CallbackFunction>
+  llvm::Error handleTypeSubBlock(unsigned ID, T Parent,
+                                 CallbackFunction Function);
+
   llvm::BitstreamCursor &Stream;
   std::optional<llvm::BitstreamBlockInfo> BlockInfo;
   FieldId CurrentReferenceField;

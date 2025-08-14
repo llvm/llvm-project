@@ -56,10 +56,10 @@ public:
   /// This function is assumed to always succeed and if it fails, the front-end
   /// should know to deal with it in the correct way (most probably, by refusing
   /// to return any children). The return value of \ref Update should actually
-  /// be interpreted as "ValueObjectSyntheticFilter cache is good/bad". If this
+  /// be interpreted as "ValueObjectSynthetic cache is good/bad". If this
   /// function returns \ref lldb::ChildCacheState::eReuse, \ref
-  /// ValueObjectSyntheticFilter is allowed to use the children it fetched
-  /// previously and cached. Otherwise, \ref ValueObjectSyntheticFilter must
+  /// ValueObjectSynthetic is allowed to use the children it fetched
+  /// previously and cached. Otherwise, \ref ValueObjectSynthetic must
   /// throw away its cache, and query again for children.
   virtual lldb::ChildCacheState Update() = 0;
 

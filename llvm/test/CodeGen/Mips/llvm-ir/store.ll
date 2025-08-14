@@ -26,48 +26,48 @@ define void @f1(i8 %a) {
 ; MIPS32:       # %bb.0:
 ; MIPS32-NEXT:    lui $1, %hi(a) # <MCInst #[[#MCINST1:]] LUi
 ; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG1:]]>
-; MIPS32-NEXT:    # <MCOperand Expr:specifier(4028,a)>>
+; MIPS32-NEXT:    # <MCOperand Expr:specifier(4024,a)>>
 ; MIPS32-NEXT:    jr $ra # <MCInst #[[#MCINST2:]] JR
 ; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG2:]]>>
 ; MIPS32-NEXT:    sb $4, %lo(a)($1) # <MCInst #[[#MCINST3:]] SB
 ; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG3:]]>
 ; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32-NEXT:    # <MCOperand Expr:specifier(4031,a)>>
+; MIPS32-NEXT:    # <MCOperand Expr:specifier(4027,a)>>
 ;
 ; MMR3-LABEL: f1:
 ; MMR3:       # %bb.0:
 ; MMR3-NEXT:    lui $1, %hi(a) # <MCInst #[[#MCINST4:]] LUi_MM
 ; MMR3-NEXT:    # <MCOperand Reg:[[#MCREG1:]]>
-; MMR3-NEXT:    # <MCOperand Expr:specifier(4028,a)>>
+; MMR3-NEXT:    # <MCOperand Expr:specifier(4024,a)>>
 ; MMR3-NEXT:    jr $ra # <MCInst #[[#MCINST5:]] JR_MM
 ; MMR3-NEXT:    # <MCOperand Reg:[[#MCREG2:]]>>
 ; MMR3-NEXT:    sb $4, %lo(a)($1) # <MCInst #[[#MCINST6:]] SB_MM
 ; MMR3-NEXT:    # <MCOperand Reg:[[#MCREG3:]]>
 ; MMR3-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MMR3-NEXT:    # <MCOperand Expr:specifier(4031,a)>>
+; MMR3-NEXT:    # <MCOperand Expr:specifier(4027,a)>>
 ;
 ; MIPS32R6-LABEL: f1:
 ; MIPS32R6:       # %bb.0:
 ; MIPS32R6-NEXT:    lui $1, %hi(a) # <MCInst #[[#MCINST1:]] LUi
 ; MIPS32R6-NEXT:    # <MCOperand Reg:[[#MCREG1:]]>
-; MIPS32R6-NEXT:    # <MCOperand Expr:specifier(4028,a)>>
+; MIPS32R6-NEXT:    # <MCOperand Expr:specifier(4024,a)>>
 ; MIPS32R6-NEXT:    jr $ra # <MCInst #[[#MCINST7:]] JALR
 ; MIPS32R6-NEXT:    # <MCOperand Reg:[[#MCREG4:]]>
 ; MIPS32R6-NEXT:    # <MCOperand Reg:[[#MCREG2:]]>>
 ; MIPS32R6-NEXT:    sb $4, %lo(a)($1) # <MCInst #[[#MCINST3:]] SB
 ; MIPS32R6-NEXT:    # <MCOperand Reg:[[#MCREG3:]]>
 ; MIPS32R6-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32R6-NEXT:    # <MCOperand Expr:specifier(4031,a)>>
+; MIPS32R6-NEXT:    # <MCOperand Expr:specifier(4027,a)>>
 ;
 ; MMR6-LABEL: f1:
 ; MMR6:       # %bb.0:
 ; MMR6-NEXT:    lui $1, %hi(a) # <MCInst #[[#MCINST4:]] LUi_MM
 ; MMR6-NEXT:    # <MCOperand Reg:[[#MCREG1:]]>
-; MMR6-NEXT:    # <MCOperand Expr:specifier(4028,a)>>
+; MMR6-NEXT:    # <MCOperand Expr:specifier(4024,a)>>
 ; MMR6-NEXT:    sb $4, %lo(a)($1) # <MCInst #[[#MCINST6:]] SB_MM
 ; MMR6-NEXT:    # <MCOperand Reg:[[#MCREG3:]]>
 ; MMR6-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MMR6-NEXT:    # <MCOperand Expr:specifier(4031,a)>>
+; MMR6-NEXT:    # <MCOperand Expr:specifier(4027,a)>>
 ; MMR6-NEXT:    jrc $ra # <MCInst #[[#MCINST8:]] JRC16_MM
 ; MMR6-NEXT:    # <MCOperand Reg:[[#MCREG2:]]>>
 ;
@@ -75,11 +75,11 @@ define void @f1(i8 %a) {
 ; MIPS4:       # %bb.0:
 ; MIPS4-NEXT:    lui $1, %highest(a) # <MCInst #[[#MCINST9:]] LUi64
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5:]]>
-; MIPS4-NEXT:    # <MCOperand Expr:specifier(4030,a)>>
+; MIPS4-NEXT:    # <MCOperand Expr:specifier(4026,a)>>
 ; MIPS4-NEXT:    daddiu $1, $1, %higher(a) # <MCInst #[[#MCINST10:]] DADDiu
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS4-NEXT:    # <MCOperand Expr:specifier(4029,a)>>
+; MIPS4-NEXT:    # <MCOperand Expr:specifier(4025,a)>>
 ; MIPS4-NEXT:    dsll $1, $1, 16 # <MCInst #[[#MCINST11:]] DSLL
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
@@ -87,7 +87,7 @@ define void @f1(i8 %a) {
 ; MIPS4-NEXT:    daddiu $1, $1, %hi(a) # <MCInst #[[#MCINST10]] DADDiu
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS4-NEXT:    # <MCOperand Expr:specifier(4028,a)>>
+; MIPS4-NEXT:    # <MCOperand Expr:specifier(4024,a)>>
 ; MIPS4-NEXT:    dsll $1, $1, 16 # <MCInst #[[#MCINST11]] DSLL
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
@@ -97,17 +97,17 @@ define void @f1(i8 %a) {
 ; MIPS4-NEXT:    sb $4, %lo(a)($1) # <MCInst #[[#MCINST12:]] SB64
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG7:]]>
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS4-NEXT:    # <MCOperand Expr:specifier(4031,a)>>
+; MIPS4-NEXT:    # <MCOperand Expr:specifier(4027,a)>>
 ;
 ; MIPS64R6-LABEL: f1:
 ; MIPS64R6:       # %bb.0:
 ; MIPS64R6-NEXT:    lui $1, %highest(a) # <MCInst #[[#MCINST9:]] LUi64
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5:]]>
-; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4030,a)>>
+; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4026,a)>>
 ; MIPS64R6-NEXT:    daddiu $1, $1, %higher(a) # <MCInst #[[#MCINST10:]] DADDiu
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4029,a)>>
+; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4025,a)>>
 ; MIPS64R6-NEXT:    dsll $1, $1, 16 # <MCInst #[[#MCINST11:]] DSLL
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
@@ -115,7 +115,7 @@ define void @f1(i8 %a) {
 ; MIPS64R6-NEXT:    daddiu $1, $1, %hi(a) # <MCInst #[[#MCINST10]] DADDiu
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4028,a)>>
+; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4024,a)>>
 ; MIPS64R6-NEXT:    dsll $1, $1, 16 # <MCInst #[[#MCINST11]] DSLL
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
@@ -126,31 +126,31 @@ define void @f1(i8 %a) {
 ; MIPS64R6-NEXT:    sb $4, %lo(a)($1) # <MCInst #[[#MCINST12:]] SB64
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG7:]]>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4031,a)>>
+; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4027,a)>>
 ;
 ; MMR5FP64-LABEL: f1:
 ; MMR5FP64:       # %bb.0:
 ; MMR5FP64-NEXT:    lui $1, %hi(a) # <MCInst #[[#MCINST4:]] LUi_MM
 ; MMR5FP64-NEXT:    # <MCOperand Reg:[[#MCREG1:]]>
-; MMR5FP64-NEXT:    # <MCOperand Expr:specifier(4028,a)>>
+; MMR5FP64-NEXT:    # <MCOperand Expr:specifier(4024,a)>>
 ; MMR5FP64-NEXT:    jr $ra # <MCInst #[[#MCINST5:]] JR_MM
 ; MMR5FP64-NEXT:    # <MCOperand Reg:[[#MCREG2:]]>>
 ; MMR5FP64-NEXT:    sb $4, %lo(a)($1) # <MCInst #[[#MCINST6:]] SB_MM
 ; MMR5FP64-NEXT:    # <MCOperand Reg:[[#MCREG3:]]>
 ; MMR5FP64-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MMR5FP64-NEXT:    # <MCOperand Expr:specifier(4031,a)>>
+; MMR5FP64-NEXT:    # <MCOperand Expr:specifier(4027,a)>>
 ;
 ; MIPS32R5FP643-LABEL: f1:
 ; MIPS32R5FP643:       # %bb.0:
 ; MIPS32R5FP643-NEXT:    lui $1, %hi(a) # <MCInst #[[#MCINST1:]] LUi
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:[[#MCREG1:]]>
-; MIPS32R5FP643-NEXT:    # <MCOperand Expr:specifier(4028,a)>>
+; MIPS32R5FP643-NEXT:    # <MCOperand Expr:specifier(4024,a)>>
 ; MIPS32R5FP643-NEXT:    jr $ra # <MCInst #[[#MCINST2:]] JR
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:[[#MCREG2:]]>>
 ; MIPS32R5FP643-NEXT:    sb $4, %lo(a)($1) # <MCInst #[[#MCINST3:]] SB
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:[[#MCREG3:]]>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32R5FP643-NEXT:    # <MCOperand Expr:specifier(4031,a)>>
+; MIPS32R5FP643-NEXT:    # <MCOperand Expr:specifier(4027,a)>>
   store i8 %a, ptr @a
   ret void
 }
@@ -160,48 +160,48 @@ define void @f2(i16 %a) {
 ; MIPS32:       # %bb.0:
 ; MIPS32-NEXT:    lui $1, %hi(b) # <MCInst #[[#MCINST1]] LUi
 ; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32-NEXT:    # <MCOperand Expr:specifier(4028,b)>>
+; MIPS32-NEXT:    # <MCOperand Expr:specifier(4024,b)>>
 ; MIPS32-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG2]]>>
 ; MIPS32-NEXT:    sh $4, %lo(b)($1) # <MCInst #[[#MCINST14:]] SH
 ; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG3]]>
 ; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32-NEXT:    # <MCOperand Expr:specifier(4031,b)>>
+; MIPS32-NEXT:    # <MCOperand Expr:specifier(4027,b)>>
 ;
 ; MMR3-LABEL: f2:
 ; MMR3:       # %bb.0:
 ; MMR3-NEXT:    lui $1, %hi(b) # <MCInst #[[#MCINST4]] LUi_MM
 ; MMR3-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MMR3-NEXT:    # <MCOperand Expr:specifier(4028,b)>>
+; MMR3-NEXT:    # <MCOperand Expr:specifier(4024,b)>>
 ; MMR3-NEXT:    jr $ra # <MCInst #[[#MCINST5]] JR_MM
 ; MMR3-NEXT:    # <MCOperand Reg:[[#MCREG2]]>>
 ; MMR3-NEXT:    sh $4, %lo(b)($1) # <MCInst #[[#MCINST15:]] SH_MM
 ; MMR3-NEXT:    # <MCOperand Reg:[[#MCREG3]]>
 ; MMR3-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MMR3-NEXT:    # <MCOperand Expr:specifier(4031,b)>>
+; MMR3-NEXT:    # <MCOperand Expr:specifier(4027,b)>>
 ;
 ; MIPS32R6-LABEL: f2:
 ; MIPS32R6:       # %bb.0:
 ; MIPS32R6-NEXT:    lui $1, %hi(b) # <MCInst #[[#MCINST1]] LUi
 ; MIPS32R6-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32R6-NEXT:    # <MCOperand Expr:specifier(4028,b)>>
+; MIPS32R6-NEXT:    # <MCOperand Expr:specifier(4024,b)>>
 ; MIPS32R6-NEXT:    jr $ra # <MCInst #[[#MCINST7]] JALR
 ; MIPS32R6-NEXT:    # <MCOperand Reg:[[#MCREG4]]>
 ; MIPS32R6-NEXT:    # <MCOperand Reg:[[#MCREG2]]>>
 ; MIPS32R6-NEXT:    sh $4, %lo(b)($1) # <MCInst #[[#MCINST14:]] SH
 ; MIPS32R6-NEXT:    # <MCOperand Reg:[[#MCREG3]]>
 ; MIPS32R6-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32R6-NEXT:    # <MCOperand Expr:specifier(4031,b)>>
+; MIPS32R6-NEXT:    # <MCOperand Expr:specifier(4027,b)>>
 ;
 ; MMR6-LABEL: f2:
 ; MMR6:       # %bb.0:
 ; MMR6-NEXT:    lui $1, %hi(b) # <MCInst #[[#MCINST4]] LUi_MM
 ; MMR6-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MMR6-NEXT:    # <MCOperand Expr:specifier(4028,b)>>
+; MMR6-NEXT:    # <MCOperand Expr:specifier(4024,b)>>
 ; MMR6-NEXT:    sh $4, %lo(b)($1) # <MCInst #[[#MCINST15:]] SH_MM
 ; MMR6-NEXT:    # <MCOperand Reg:[[#MCREG3]]>
 ; MMR6-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MMR6-NEXT:    # <MCOperand Expr:specifier(4031,b)>>
+; MMR6-NEXT:    # <MCOperand Expr:specifier(4027,b)>>
 ; MMR6-NEXT:    jrc $ra # <MCInst #[[#MCINST8]] JRC16_MM
 ; MMR6-NEXT:    # <MCOperand Reg:[[#MCREG2]]>>
 ;
@@ -209,11 +209,11 @@ define void @f2(i16 %a) {
 ; MIPS4:       # %bb.0:
 ; MIPS4-NEXT:    lui $1, %highest(b) # <MCInst #[[#MCINST9]] LUi64
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS4-NEXT:    # <MCOperand Expr:specifier(4030,b)>>
+; MIPS4-NEXT:    # <MCOperand Expr:specifier(4026,b)>>
 ; MIPS4-NEXT:    daddiu $1, $1, %higher(b) # <MCInst #[[#MCINST10]] DADDiu
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS4-NEXT:    # <MCOperand Expr:specifier(4029,b)>>
+; MIPS4-NEXT:    # <MCOperand Expr:specifier(4025,b)>>
 ; MIPS4-NEXT:    dsll $1, $1, 16 # <MCInst #[[#MCINST11]] DSLL
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
@@ -221,7 +221,7 @@ define void @f2(i16 %a) {
 ; MIPS4-NEXT:    daddiu $1, $1, %hi(b) # <MCInst #[[#MCINST10]] DADDiu
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS4-NEXT:    # <MCOperand Expr:specifier(4028,b)>>
+; MIPS4-NEXT:    # <MCOperand Expr:specifier(4024,b)>>
 ; MIPS4-NEXT:    dsll $1, $1, 16 # <MCInst #[[#MCINST11]] DSLL
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
@@ -231,17 +231,17 @@ define void @f2(i16 %a) {
 ; MIPS4-NEXT:    sh $4, %lo(b)($1) # <MCInst #[[#MCINST16:]] SH64
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG7]]>
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS4-NEXT:    # <MCOperand Expr:specifier(4031,b)>>
+; MIPS4-NEXT:    # <MCOperand Expr:specifier(4027,b)>>
 ;
 ; MIPS64R6-LABEL: f2:
 ; MIPS64R6:       # %bb.0:
 ; MIPS64R6-NEXT:    lui $1, %highest(b) # <MCInst #[[#MCINST9]] LUi64
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4030,b)>>
+; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4026,b)>>
 ; MIPS64R6-NEXT:    daddiu $1, $1, %higher(b) # <MCInst #[[#MCINST10]] DADDiu
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4029,b)>>
+; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4025,b)>>
 ; MIPS64R6-NEXT:    dsll $1, $1, 16 # <MCInst #[[#MCINST11]] DSLL
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
@@ -249,7 +249,7 @@ define void @f2(i16 %a) {
 ; MIPS64R6-NEXT:    daddiu $1, $1, %hi(b) # <MCInst #[[#MCINST10]] DADDiu
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4028,b)>>
+; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4024,b)>>
 ; MIPS64R6-NEXT:    dsll $1, $1, 16 # <MCInst #[[#MCINST11]] DSLL
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
@@ -260,31 +260,31 @@ define void @f2(i16 %a) {
 ; MIPS64R6-NEXT:    sh $4, %lo(b)($1) # <MCInst #[[#MCINST16:]] SH64
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG7]]>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4031,b)>>
+; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4027,b)>>
 ;
 ; MMR5FP64-LABEL: f2:
 ; MMR5FP64:       # %bb.0:
 ; MMR5FP64-NEXT:    lui $1, %hi(b) # <MCInst #[[#MCINST4]] LUi_MM
 ; MMR5FP64-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MMR5FP64-NEXT:    # <MCOperand Expr:specifier(4028,b)>>
+; MMR5FP64-NEXT:    # <MCOperand Expr:specifier(4024,b)>>
 ; MMR5FP64-NEXT:    jr $ra # <MCInst #[[#MCINST5]] JR_MM
 ; MMR5FP64-NEXT:    # <MCOperand Reg:[[#MCREG2]]>>
 ; MMR5FP64-NEXT:    sh $4, %lo(b)($1) # <MCInst #[[#MCINST15:]] SH_MM
 ; MMR5FP64-NEXT:    # <MCOperand Reg:[[#MCREG3]]>
 ; MMR5FP64-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MMR5FP64-NEXT:    # <MCOperand Expr:specifier(4031,b)>>
+; MMR5FP64-NEXT:    # <MCOperand Expr:specifier(4027,b)>>
 ;
 ; MIPS32R5FP643-LABEL: f2:
 ; MIPS32R5FP643:       # %bb.0:
 ; MIPS32R5FP643-NEXT:    lui $1, %hi(b) # <MCInst #[[#MCINST1]] LUi
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32R5FP643-NEXT:    # <MCOperand Expr:specifier(4028,b)>>
+; MIPS32R5FP643-NEXT:    # <MCOperand Expr:specifier(4024,b)>>
 ; MIPS32R5FP643-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:[[#MCREG2]]>>
 ; MIPS32R5FP643-NEXT:    sh $4, %lo(b)($1) # <MCInst #[[#MCINST14:]] SH
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:[[#MCREG3]]>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32R5FP643-NEXT:    # <MCOperand Expr:specifier(4031,b)>>
+; MIPS32R5FP643-NEXT:    # <MCOperand Expr:specifier(4027,b)>>
   store i16 %a, ptr @b
   ret void
 }
@@ -294,48 +294,48 @@ define void @f3(i32 %a) {
 ; MIPS32:       # %bb.0:
 ; MIPS32-NEXT:    lui $1, %hi(c) # <MCInst #[[#MCINST1]] LUi
 ; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32-NEXT:    # <MCOperand Expr:specifier(4028,c)>>
+; MIPS32-NEXT:    # <MCOperand Expr:specifier(4024,c)>>
 ; MIPS32-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG2]]>>
 ; MIPS32-NEXT:    sw $4, %lo(c)($1) # <MCInst #[[#MCINST17:]] SW
 ; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG3]]>
 ; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32-NEXT:    # <MCOperand Expr:specifier(4031,c)>>
+; MIPS32-NEXT:    # <MCOperand Expr:specifier(4027,c)>>
 ;
 ; MMR3-LABEL: f3:
 ; MMR3:       # %bb.0:
 ; MMR3-NEXT:    lui $1, %hi(c) # <MCInst #[[#MCINST4]] LUi_MM
 ; MMR3-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MMR3-NEXT:    # <MCOperand Expr:specifier(4028,c)>>
+; MMR3-NEXT:    # <MCOperand Expr:specifier(4024,c)>>
 ; MMR3-NEXT:    jr $ra # <MCInst #[[#MCINST5]] JR_MM
 ; MMR3-NEXT:    # <MCOperand Reg:[[#MCREG2]]>>
 ; MMR3-NEXT:    sw $4, %lo(c)($1) # <MCInst #[[#MCINST18:]] SW_MM
 ; MMR3-NEXT:    # <MCOperand Reg:[[#MCREG3]]>
 ; MMR3-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MMR3-NEXT:    # <MCOperand Expr:specifier(4031,c)>>
+; MMR3-NEXT:    # <MCOperand Expr:specifier(4027,c)>>
 ;
 ; MIPS32R6-LABEL: f3:
 ; MIPS32R6:       # %bb.0:
 ; MIPS32R6-NEXT:    lui $1, %hi(c) # <MCInst #[[#MCINST1]] LUi
 ; MIPS32R6-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32R6-NEXT:    # <MCOperand Expr:specifier(4028,c)>>
+; MIPS32R6-NEXT:    # <MCOperand Expr:specifier(4024,c)>>
 ; MIPS32R6-NEXT:    jr $ra # <MCInst #[[#MCINST7]] JALR
 ; MIPS32R6-NEXT:    # <MCOperand Reg:[[#MCREG4]]>
 ; MIPS32R6-NEXT:    # <MCOperand Reg:[[#MCREG2]]>>
 ; MIPS32R6-NEXT:    sw $4, %lo(c)($1) # <MCInst #[[#MCINST17:]] SW
 ; MIPS32R6-NEXT:    # <MCOperand Reg:[[#MCREG3]]>
 ; MIPS32R6-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32R6-NEXT:    # <MCOperand Expr:specifier(4031,c)>>
+; MIPS32R6-NEXT:    # <MCOperand Expr:specifier(4027,c)>>
 ;
 ; MMR6-LABEL: f3:
 ; MMR6:       # %bb.0:
 ; MMR6-NEXT:    lui $1, %hi(c) # <MCInst #[[#MCINST4]] LUi_MM
 ; MMR6-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MMR6-NEXT:    # <MCOperand Expr:specifier(4028,c)>>
+; MMR6-NEXT:    # <MCOperand Expr:specifier(4024,c)>>
 ; MMR6-NEXT:    sw $4, %lo(c)($1) # <MCInst #[[#MCINST18:]] SW_MM
 ; MMR6-NEXT:    # <MCOperand Reg:[[#MCREG3]]>
 ; MMR6-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MMR6-NEXT:    # <MCOperand Expr:specifier(4031,c)>>
+; MMR6-NEXT:    # <MCOperand Expr:specifier(4027,c)>>
 ; MMR6-NEXT:    jrc $ra # <MCInst #[[#MCINST8]] JRC16_MM
 ; MMR6-NEXT:    # <MCOperand Reg:[[#MCREG2]]>>
 ;
@@ -343,11 +343,11 @@ define void @f3(i32 %a) {
 ; MIPS4:       # %bb.0:
 ; MIPS4-NEXT:    lui $1, %highest(c) # <MCInst #[[#MCINST9]] LUi64
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS4-NEXT:    # <MCOperand Expr:specifier(4030,c)>>
+; MIPS4-NEXT:    # <MCOperand Expr:specifier(4026,c)>>
 ; MIPS4-NEXT:    daddiu $1, $1, %higher(c) # <MCInst #[[#MCINST10]] DADDiu
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS4-NEXT:    # <MCOperand Expr:specifier(4029,c)>>
+; MIPS4-NEXT:    # <MCOperand Expr:specifier(4025,c)>>
 ; MIPS4-NEXT:    dsll $1, $1, 16 # <MCInst #[[#MCINST11]] DSLL
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
@@ -355,7 +355,7 @@ define void @f3(i32 %a) {
 ; MIPS4-NEXT:    daddiu $1, $1, %hi(c) # <MCInst #[[#MCINST10]] DADDiu
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS4-NEXT:    # <MCOperand Expr:specifier(4028,c)>>
+; MIPS4-NEXT:    # <MCOperand Expr:specifier(4024,c)>>
 ; MIPS4-NEXT:    dsll $1, $1, 16 # <MCInst #[[#MCINST11]] DSLL
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
@@ -365,17 +365,17 @@ define void @f3(i32 %a) {
 ; MIPS4-NEXT:    sw $4, %lo(c)($1) # <MCInst #[[#MCINST19:]] SW64
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG7]]>
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS4-NEXT:    # <MCOperand Expr:specifier(4031,c)>>
+; MIPS4-NEXT:    # <MCOperand Expr:specifier(4027,c)>>
 ;
 ; MIPS64R6-LABEL: f3:
 ; MIPS64R6:       # %bb.0:
 ; MIPS64R6-NEXT:    lui $1, %highest(c) # <MCInst #[[#MCINST9]] LUi64
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4030,c)>>
+; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4026,c)>>
 ; MIPS64R6-NEXT:    daddiu $1, $1, %higher(c) # <MCInst #[[#MCINST10]] DADDiu
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4029,c)>>
+; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4025,c)>>
 ; MIPS64R6-NEXT:    dsll $1, $1, 16 # <MCInst #[[#MCINST11]] DSLL
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
@@ -383,7 +383,7 @@ define void @f3(i32 %a) {
 ; MIPS64R6-NEXT:    daddiu $1, $1, %hi(c) # <MCInst #[[#MCINST10]] DADDiu
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4028,c)>>
+; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4024,c)>>
 ; MIPS64R6-NEXT:    dsll $1, $1, 16 # <MCInst #[[#MCINST11]] DSLL
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
@@ -394,31 +394,31 @@ define void @f3(i32 %a) {
 ; MIPS64R6-NEXT:    sw $4, %lo(c)($1) # <MCInst #[[#MCINST19:]] SW64
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG7]]>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4031,c)>>
+; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4027,c)>>
 ;
 ; MMR5FP64-LABEL: f3:
 ; MMR5FP64:       # %bb.0:
 ; MMR5FP64-NEXT:    lui $1, %hi(c) # <MCInst #[[#MCINST4]] LUi_MM
 ; MMR5FP64-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MMR5FP64-NEXT:    # <MCOperand Expr:specifier(4028,c)>>
+; MMR5FP64-NEXT:    # <MCOperand Expr:specifier(4024,c)>>
 ; MMR5FP64-NEXT:    jr $ra # <MCInst #[[#MCINST5]] JR_MM
 ; MMR5FP64-NEXT:    # <MCOperand Reg:[[#MCREG2]]>>
 ; MMR5FP64-NEXT:    sw $4, %lo(c)($1) # <MCInst #[[#MCINST18:]] SW_MM
 ; MMR5FP64-NEXT:    # <MCOperand Reg:[[#MCREG3]]>
 ; MMR5FP64-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MMR5FP64-NEXT:    # <MCOperand Expr:specifier(4031,c)>>
+; MMR5FP64-NEXT:    # <MCOperand Expr:specifier(4027,c)>>
 ;
 ; MIPS32R5FP643-LABEL: f3:
 ; MIPS32R5FP643:       # %bb.0:
 ; MIPS32R5FP643-NEXT:    lui $1, %hi(c) # <MCInst #[[#MCINST1]] LUi
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32R5FP643-NEXT:    # <MCOperand Expr:specifier(4028,c)>>
+; MIPS32R5FP643-NEXT:    # <MCOperand Expr:specifier(4024,c)>>
 ; MIPS32R5FP643-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:[[#MCREG2]]>>
 ; MIPS32R5FP643-NEXT:    sw $4, %lo(c)($1) # <MCInst #[[#MCINST17:]] SW
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:[[#MCREG3]]>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32R5FP643-NEXT:    # <MCOperand Expr:specifier(4031,c)>>
+; MIPS32R5FP643-NEXT:    # <MCOperand Expr:specifier(4027,c)>>
   store i32 %a, ptr @c
   ret void
 }
@@ -428,15 +428,15 @@ define void @f4(i64 %a) {
 ; MIPS32:       # %bb.0:
 ; MIPS32-NEXT:    lui $1, %hi(d) # <MCInst #[[#MCINST1]] LUi
 ; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32-NEXT:    # <MCOperand Expr:specifier(4028,d)>>
+; MIPS32-NEXT:    # <MCOperand Expr:specifier(4024,d)>>
 ; MIPS32-NEXT:    sw $4, %lo(d)($1) # <MCInst #[[#MCINST17]] SW
 ; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG3]]>
 ; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32-NEXT:    # <MCOperand Expr:specifier(4031,d)>>
+; MIPS32-NEXT:    # <MCOperand Expr:specifier(4027,d)>>
 ; MIPS32-NEXT:    addiu $1, $1, %lo(d) # <MCInst #[[#MCINST20:]] ADDiu
 ; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
 ; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32-NEXT:    # <MCOperand Expr:specifier(4031,d)>>
+; MIPS32-NEXT:    # <MCOperand Expr:specifier(4027,d)>>
 ; MIPS32-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG2]]>>
 ; MIPS32-NEXT:    sw $5, 4($1) # <MCInst #[[#MCINST17]] SW
@@ -448,15 +448,15 @@ define void @f4(i64 %a) {
 ; MMR3:       # %bb.0:
 ; MMR3-NEXT:    lui $1, %hi(d) # <MCInst #[[#MCINST4]] LUi_MM
 ; MMR3-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MMR3-NEXT:    # <MCOperand Expr:specifier(4028,d)>>
+; MMR3-NEXT:    # <MCOperand Expr:specifier(4024,d)>>
 ; MMR3-NEXT:    sw $4, %lo(d)($1) # <MCInst #[[#MCINST18]] SW_MM
 ; MMR3-NEXT:    # <MCOperand Reg:[[#MCREG3]]>
 ; MMR3-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MMR3-NEXT:    # <MCOperand Expr:specifier(4031,d)>>
+; MMR3-NEXT:    # <MCOperand Expr:specifier(4027,d)>>
 ; MMR3-NEXT:    addiu $2, $1, %lo(d) # <MCInst #[[#MCINST21:]] ADDiu_MM
 ; MMR3-NEXT:    # <MCOperand Reg:[[#MCREG10:]]>
 ; MMR3-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MMR3-NEXT:    # <MCOperand Expr:specifier(4031,d)>>
+; MMR3-NEXT:    # <MCOperand Expr:specifier(4027,d)>>
 ; MMR3-NEXT:    sw16 $5, 4($2) # <MCInst #[[#MCINST22:]] SW16_MM
 ; MMR3-NEXT:    # <MCOperand Reg:[[#MCREG9:]]>
 ; MMR3-NEXT:    # <MCOperand Reg:[[#MCREG10]]>
@@ -468,15 +468,15 @@ define void @f4(i64 %a) {
 ; MIPS32R6:       # %bb.0:
 ; MIPS32R6-NEXT:    lui $1, %hi(d) # <MCInst #[[#MCINST1]] LUi
 ; MIPS32R6-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32R6-NEXT:    # <MCOperand Expr:specifier(4028,d)>>
+; MIPS32R6-NEXT:    # <MCOperand Expr:specifier(4024,d)>>
 ; MIPS32R6-NEXT:    sw $4, %lo(d)($1) # <MCInst #[[#MCINST17]] SW
 ; MIPS32R6-NEXT:    # <MCOperand Reg:[[#MCREG3]]>
 ; MIPS32R6-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32R6-NEXT:    # <MCOperand Expr:specifier(4031,d)>>
+; MIPS32R6-NEXT:    # <MCOperand Expr:specifier(4027,d)>>
 ; MIPS32R6-NEXT:    addiu $1, $1, %lo(d) # <MCInst #[[#MCINST20:]] ADDiu
 ; MIPS32R6-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
 ; MIPS32R6-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32R6-NEXT:    # <MCOperand Expr:specifier(4031,d)>>
+; MIPS32R6-NEXT:    # <MCOperand Expr:specifier(4027,d)>>
 ; MIPS32R6-NEXT:    jr $ra # <MCInst #[[#MCINST7]] JALR
 ; MIPS32R6-NEXT:    # <MCOperand Reg:[[#MCREG4]]>
 ; MIPS32R6-NEXT:    # <MCOperand Reg:[[#MCREG2]]>>
@@ -489,15 +489,15 @@ define void @f4(i64 %a) {
 ; MMR6:       # %bb.0:
 ; MMR6-NEXT:    lui $1, %hi(d) # <MCInst #[[#MCINST4]] LUi_MM
 ; MMR6-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MMR6-NEXT:    # <MCOperand Expr:specifier(4028,d)>>
+; MMR6-NEXT:    # <MCOperand Expr:specifier(4024,d)>>
 ; MMR6-NEXT:    sw $4, %lo(d)($1) # <MCInst #[[#MCINST18]] SW_MM
 ; MMR6-NEXT:    # <MCOperand Reg:[[#MCREG3]]>
 ; MMR6-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MMR6-NEXT:    # <MCOperand Expr:specifier(4031,d)>>
+; MMR6-NEXT:    # <MCOperand Expr:specifier(4027,d)>>
 ; MMR6-NEXT:    addiu $2, $1, %lo(d) # <MCInst #[[#MCINST21:]] ADDiu_MM
 ; MMR6-NEXT:    # <MCOperand Reg:[[#MCREG10:]]>
 ; MMR6-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MMR6-NEXT:    # <MCOperand Expr:specifier(4031,d)>>
+; MMR6-NEXT:    # <MCOperand Expr:specifier(4027,d)>>
 ; MMR6-NEXT:    sw16 $5, 4($2) # <MCInst #[[#MCINST22:]] SW16_MM
 ; MMR6-NEXT:    # <MCOperand Reg:[[#MCREG9:]]>
 ; MMR6-NEXT:    # <MCOperand Reg:[[#MCREG10]]>
@@ -509,11 +509,11 @@ define void @f4(i64 %a) {
 ; MIPS4:       # %bb.0:
 ; MIPS4-NEXT:    lui $1, %highest(d) # <MCInst #[[#MCINST9]] LUi64
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS4-NEXT:    # <MCOperand Expr:specifier(4030,d)>>
+; MIPS4-NEXT:    # <MCOperand Expr:specifier(4026,d)>>
 ; MIPS4-NEXT:    daddiu $1, $1, %higher(d) # <MCInst #[[#MCINST10]] DADDiu
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS4-NEXT:    # <MCOperand Expr:specifier(4029,d)>>
+; MIPS4-NEXT:    # <MCOperand Expr:specifier(4025,d)>>
 ; MIPS4-NEXT:    dsll $1, $1, 16 # <MCInst #[[#MCINST11]] DSLL
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
@@ -521,7 +521,7 @@ define void @f4(i64 %a) {
 ; MIPS4-NEXT:    daddiu $1, $1, %hi(d) # <MCInst #[[#MCINST10]] DADDiu
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS4-NEXT:    # <MCOperand Expr:specifier(4028,d)>>
+; MIPS4-NEXT:    # <MCOperand Expr:specifier(4024,d)>>
 ; MIPS4-NEXT:    dsll $1, $1, 16 # <MCInst #[[#MCINST11]] DSLL
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
@@ -531,17 +531,17 @@ define void @f4(i64 %a) {
 ; MIPS4-NEXT:    sd $4, %lo(d)($1) # <MCInst #[[#MCINST23:]] SD
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG7]]>
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS4-NEXT:    # <MCOperand Expr:specifier(4031,d)>>
+; MIPS4-NEXT:    # <MCOperand Expr:specifier(4027,d)>>
 ;
 ; MIPS64R6-LABEL: f4:
 ; MIPS64R6:       # %bb.0:
 ; MIPS64R6-NEXT:    lui $1, %highest(d) # <MCInst #[[#MCINST9]] LUi64
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4030,d)>>
+; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4026,d)>>
 ; MIPS64R6-NEXT:    daddiu $1, $1, %higher(d) # <MCInst #[[#MCINST10]] DADDiu
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4029,d)>>
+; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4025,d)>>
 ; MIPS64R6-NEXT:    dsll $1, $1, 16 # <MCInst #[[#MCINST11]] DSLL
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
@@ -549,7 +549,7 @@ define void @f4(i64 %a) {
 ; MIPS64R6-NEXT:    daddiu $1, $1, %hi(d) # <MCInst #[[#MCINST10]] DADDiu
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4028,d)>>
+; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4024,d)>>
 ; MIPS64R6-NEXT:    dsll $1, $1, 16 # <MCInst #[[#MCINST11]] DSLL
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
@@ -560,21 +560,21 @@ define void @f4(i64 %a) {
 ; MIPS64R6-NEXT:    sd $4, %lo(d)($1) # <MCInst #[[#MCINST23:]] SD
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG7]]>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4031,d)>>
+; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4027,d)>>
 ;
 ; MMR5FP64-LABEL: f4:
 ; MMR5FP64:       # %bb.0:
 ; MMR5FP64-NEXT:    lui $1, %hi(d) # <MCInst #[[#MCINST4]] LUi_MM
 ; MMR5FP64-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MMR5FP64-NEXT:    # <MCOperand Expr:specifier(4028,d)>>
+; MMR5FP64-NEXT:    # <MCOperand Expr:specifier(4024,d)>>
 ; MMR5FP64-NEXT:    sw $4, %lo(d)($1) # <MCInst #[[#MCINST18]] SW_MM
 ; MMR5FP64-NEXT:    # <MCOperand Reg:[[#MCREG3]]>
 ; MMR5FP64-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MMR5FP64-NEXT:    # <MCOperand Expr:specifier(4031,d)>>
+; MMR5FP64-NEXT:    # <MCOperand Expr:specifier(4027,d)>>
 ; MMR5FP64-NEXT:    addiu $2, $1, %lo(d) # <MCInst #[[#MCINST21:]] ADDiu_MM
 ; MMR5FP64-NEXT:    # <MCOperand Reg:[[#MCREG10:]]>
 ; MMR5FP64-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MMR5FP64-NEXT:    # <MCOperand Expr:specifier(4031,d)>>
+; MMR5FP64-NEXT:    # <MCOperand Expr:specifier(4027,d)>>
 ; MMR5FP64-NEXT:    sw16 $5, 4($2) # <MCInst #[[#MCINST22:]] SW16_MM
 ; MMR5FP64-NEXT:    # <MCOperand Reg:[[#MCREG9:]]>
 ; MMR5FP64-NEXT:    # <MCOperand Reg:[[#MCREG10]]>
@@ -586,15 +586,15 @@ define void @f4(i64 %a) {
 ; MIPS32R5FP643:       # %bb.0:
 ; MIPS32R5FP643-NEXT:    lui $1, %hi(d) # <MCInst #[[#MCINST1]] LUi
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32R5FP643-NEXT:    # <MCOperand Expr:specifier(4028,d)>>
+; MIPS32R5FP643-NEXT:    # <MCOperand Expr:specifier(4024,d)>>
 ; MIPS32R5FP643-NEXT:    sw $4, %lo(d)($1) # <MCInst #[[#MCINST17]] SW
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:[[#MCREG3]]>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32R5FP643-NEXT:    # <MCOperand Expr:specifier(4031,d)>>
+; MIPS32R5FP643-NEXT:    # <MCOperand Expr:specifier(4027,d)>>
 ; MIPS32R5FP643-NEXT:    addiu $1, $1, %lo(d) # <MCInst #[[#MCINST20:]] ADDiu
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32R5FP643-NEXT:    # <MCOperand Expr:specifier(4031,d)>>
+; MIPS32R5FP643-NEXT:    # <MCOperand Expr:specifier(4027,d)>>
 ; MIPS32R5FP643-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:[[#MCREG2]]>>
 ; MIPS32R5FP643-NEXT:    sw $5, 4($1) # <MCInst #[[#MCINST17]] SW
@@ -610,48 +610,48 @@ define void @f5(float %e) {
 ; MIPS32:       # %bb.0:
 ; MIPS32-NEXT:    lui $1, %hi(e) # <MCInst #[[#MCINST1]] LUi
 ; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32-NEXT:    # <MCOperand Expr:specifier(4028,e)>>
+; MIPS32-NEXT:    # <MCOperand Expr:specifier(4024,e)>>
 ; MIPS32-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG2]]>>
 ; MIPS32-NEXT:    swc1 $f12, %lo(e)($1) # <MCInst #[[#MCINST24:]] SWC1
 ; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG11:]]>
 ; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32-NEXT:    # <MCOperand Expr:specifier(4031,e)>>
+; MIPS32-NEXT:    # <MCOperand Expr:specifier(4027,e)>>
 ;
 ; MMR3-LABEL: f5:
 ; MMR3:       # %bb.0:
 ; MMR3-NEXT:    lui $1, %hi(e) # <MCInst #[[#MCINST4]] LUi_MM
 ; MMR3-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MMR3-NEXT:    # <MCOperand Expr:specifier(4028,e)>>
+; MMR3-NEXT:    # <MCOperand Expr:specifier(4024,e)>>
 ; MMR3-NEXT:    jr $ra # <MCInst #[[#MCINST5]] JR_MM
 ; MMR3-NEXT:    # <MCOperand Reg:[[#MCREG2]]>>
 ; MMR3-NEXT:    swc1 $f12, %lo(e)($1) # <MCInst #[[#MCINST25:]] SWC1_MM
 ; MMR3-NEXT:    # <MCOperand Reg:[[#MCREG11:]]>
 ; MMR3-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MMR3-NEXT:    # <MCOperand Expr:specifier(4031,e)>>
+; MMR3-NEXT:    # <MCOperand Expr:specifier(4027,e)>>
 ;
 ; MIPS32R6-LABEL: f5:
 ; MIPS32R6:       # %bb.0:
 ; MIPS32R6-NEXT:    lui $1, %hi(e) # <MCInst #[[#MCINST1]] LUi
 ; MIPS32R6-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32R6-NEXT:    # <MCOperand Expr:specifier(4028,e)>>
+; MIPS32R6-NEXT:    # <MCOperand Expr:specifier(4024,e)>>
 ; MIPS32R6-NEXT:    jr $ra # <MCInst #[[#MCINST7]] JALR
 ; MIPS32R6-NEXT:    # <MCOperand Reg:[[#MCREG4]]>
 ; MIPS32R6-NEXT:    # <MCOperand Reg:[[#MCREG2]]>>
 ; MIPS32R6-NEXT:    swc1 $f12, %lo(e)($1) # <MCInst #[[#MCINST24:]] SWC1
 ; MIPS32R6-NEXT:    # <MCOperand Reg:[[#MCREG11:]]>
 ; MIPS32R6-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32R6-NEXT:    # <MCOperand Expr:specifier(4031,e)>>
+; MIPS32R6-NEXT:    # <MCOperand Expr:specifier(4027,e)>>
 ;
 ; MMR6-LABEL: f5:
 ; MMR6:       # %bb.0:
 ; MMR6-NEXT:    lui $1, %hi(e) # <MCInst #[[#MCINST4]] LUi_MM
 ; MMR6-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MMR6-NEXT:    # <MCOperand Expr:specifier(4028,e)>>
+; MMR6-NEXT:    # <MCOperand Expr:specifier(4024,e)>>
 ; MMR6-NEXT:    swc1 $f12, %lo(e)($1) # <MCInst #[[#MCINST25:]] SWC1_MM
 ; MMR6-NEXT:    # <MCOperand Reg:[[#MCREG11:]]>
 ; MMR6-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MMR6-NEXT:    # <MCOperand Expr:specifier(4031,e)>>
+; MMR6-NEXT:    # <MCOperand Expr:specifier(4027,e)>>
 ; MMR6-NEXT:    jrc $ra # <MCInst #[[#MCINST8]] JRC16_MM
 ; MMR6-NEXT:    # <MCOperand Reg:[[#MCREG2]]>>
 ;
@@ -659,11 +659,11 @@ define void @f5(float %e) {
 ; MIPS4:       # %bb.0:
 ; MIPS4-NEXT:    lui $1, %highest(e) # <MCInst #[[#MCINST9]] LUi64
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS4-NEXT:    # <MCOperand Expr:specifier(4030,e)>>
+; MIPS4-NEXT:    # <MCOperand Expr:specifier(4026,e)>>
 ; MIPS4-NEXT:    daddiu $1, $1, %higher(e) # <MCInst #[[#MCINST10]] DADDiu
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS4-NEXT:    # <MCOperand Expr:specifier(4029,e)>>
+; MIPS4-NEXT:    # <MCOperand Expr:specifier(4025,e)>>
 ; MIPS4-NEXT:    dsll $1, $1, 16 # <MCInst #[[#MCINST11]] DSLL
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
@@ -671,7 +671,7 @@ define void @f5(float %e) {
 ; MIPS4-NEXT:    daddiu $1, $1, %hi(e) # <MCInst #[[#MCINST10]] DADDiu
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS4-NEXT:    # <MCOperand Expr:specifier(4028,e)>>
+; MIPS4-NEXT:    # <MCOperand Expr:specifier(4024,e)>>
 ; MIPS4-NEXT:    dsll $1, $1, 16 # <MCInst #[[#MCINST11]] DSLL
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
@@ -681,17 +681,17 @@ define void @f5(float %e) {
 ; MIPS4-NEXT:    swc1 $f12, %lo(e)($1) # <MCInst #[[#MCINST24:]] SWC1
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG11:]]>
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS4-NEXT:    # <MCOperand Expr:specifier(4031,e)>>
+; MIPS4-NEXT:    # <MCOperand Expr:specifier(4027,e)>>
 ;
 ; MIPS64R6-LABEL: f5:
 ; MIPS64R6:       # %bb.0:
 ; MIPS64R6-NEXT:    lui $1, %highest(e) # <MCInst #[[#MCINST9]] LUi64
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4030,e)>>
+; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4026,e)>>
 ; MIPS64R6-NEXT:    daddiu $1, $1, %higher(e) # <MCInst #[[#MCINST10]] DADDiu
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4029,e)>>
+; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4025,e)>>
 ; MIPS64R6-NEXT:    dsll $1, $1, 16 # <MCInst #[[#MCINST11]] DSLL
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
@@ -699,7 +699,7 @@ define void @f5(float %e) {
 ; MIPS64R6-NEXT:    daddiu $1, $1, %hi(e) # <MCInst #[[#MCINST10]] DADDiu
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4028,e)>>
+; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4024,e)>>
 ; MIPS64R6-NEXT:    dsll $1, $1, 16 # <MCInst #[[#MCINST11]] DSLL
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
@@ -710,31 +710,31 @@ define void @f5(float %e) {
 ; MIPS64R6-NEXT:    swc1 $f12, %lo(e)($1) # <MCInst #[[#MCINST24:]] SWC1
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG11:]]>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4031,e)>>
+; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4027,e)>>
 ;
 ; MMR5FP64-LABEL: f5:
 ; MMR5FP64:       # %bb.0:
 ; MMR5FP64-NEXT:    lui $1, %hi(e) # <MCInst #[[#MCINST4]] LUi_MM
 ; MMR5FP64-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MMR5FP64-NEXT:    # <MCOperand Expr:specifier(4028,e)>>
+; MMR5FP64-NEXT:    # <MCOperand Expr:specifier(4024,e)>>
 ; MMR5FP64-NEXT:    jr $ra # <MCInst #[[#MCINST5]] JR_MM
 ; MMR5FP64-NEXT:    # <MCOperand Reg:[[#MCREG2]]>>
 ; MMR5FP64-NEXT:    swc1 $f12, %lo(e)($1) # <MCInst #[[#MCINST25:]] SWC1_MM
 ; MMR5FP64-NEXT:    # <MCOperand Reg:[[#MCREG11:]]>
 ; MMR5FP64-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MMR5FP64-NEXT:    # <MCOperand Expr:specifier(4031,e)>>
+; MMR5FP64-NEXT:    # <MCOperand Expr:specifier(4027,e)>>
 ;
 ; MIPS32R5FP643-LABEL: f5:
 ; MIPS32R5FP643:       # %bb.0:
 ; MIPS32R5FP643-NEXT:    lui $1, %hi(e) # <MCInst #[[#MCINST1]] LUi
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32R5FP643-NEXT:    # <MCOperand Expr:specifier(4028,e)>>
+; MIPS32R5FP643-NEXT:    # <MCOperand Expr:specifier(4024,e)>>
 ; MIPS32R5FP643-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:[[#MCREG2]]>>
 ; MIPS32R5FP643-NEXT:    swc1 $f12, %lo(e)($1) # <MCInst #[[#MCINST24:]] SWC1
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:[[#MCREG11:]]>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32R5FP643-NEXT:    # <MCOperand Expr:specifier(4031,e)>>
+; MIPS32R5FP643-NEXT:    # <MCOperand Expr:specifier(4027,e)>>
   store float %e, ptr @e
   ret void
 }
@@ -744,48 +744,48 @@ define void @f6(double %f) {
 ; MIPS32:       # %bb.0:
 ; MIPS32-NEXT:    lui $1, %hi(f) # <MCInst #[[#MCINST1]] LUi
 ; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32-NEXT:    # <MCOperand Expr:specifier(4028,f)>>
+; MIPS32-NEXT:    # <MCOperand Expr:specifier(4024,f)>>
 ; MIPS32-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG2]]>>
 ; MIPS32-NEXT:    sdc1 $f12, %lo(f)($1) # <MCInst #[[#MCINST26:]] SDC1
 ; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG12:]]>
 ; MIPS32-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32-NEXT:    # <MCOperand Expr:specifier(4031,f)>>
+; MIPS32-NEXT:    # <MCOperand Expr:specifier(4027,f)>>
 ;
 ; MMR3-LABEL: f6:
 ; MMR3:       # %bb.0:
 ; MMR3-NEXT:    lui $1, %hi(f) # <MCInst #[[#MCINST4]] LUi_MM
 ; MMR3-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MMR3-NEXT:    # <MCOperand Expr:specifier(4028,f)>>
+; MMR3-NEXT:    # <MCOperand Expr:specifier(4024,f)>>
 ; MMR3-NEXT:    jr $ra # <MCInst #[[#MCINST5]] JR_MM
 ; MMR3-NEXT:    # <MCOperand Reg:[[#MCREG2]]>>
 ; MMR3-NEXT:    sdc1 $f12, %lo(f)($1) # <MCInst #[[#MCINST27:]] SDC1_MM_D32
 ; MMR3-NEXT:    # <MCOperand Reg:[[#MCREG12:]]>
 ; MMR3-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MMR3-NEXT:    # <MCOperand Expr:specifier(4031,f)>>
+; MMR3-NEXT:    # <MCOperand Expr:specifier(4027,f)>>
 ;
 ; MIPS32R6-LABEL: f6:
 ; MIPS32R6:       # %bb.0:
 ; MIPS32R6-NEXT:    lui $1, %hi(f) # <MCInst #[[#MCINST1]] LUi
 ; MIPS32R6-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32R6-NEXT:    # <MCOperand Expr:specifier(4028,f)>>
+; MIPS32R6-NEXT:    # <MCOperand Expr:specifier(4024,f)>>
 ; MIPS32R6-NEXT:    jr $ra # <MCInst #[[#MCINST7]] JALR
 ; MIPS32R6-NEXT:    # <MCOperand Reg:[[#MCREG4]]>
 ; MIPS32R6-NEXT:    # <MCOperand Reg:[[#MCREG2]]>>
 ; MIPS32R6-NEXT:    sdc1 $f12, %lo(f)($1) # <MCInst #[[#MCINST28:]] SDC164
 ; MIPS32R6-NEXT:    # <MCOperand Reg:[[#MCREG13:]]>
 ; MIPS32R6-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32R6-NEXT:    # <MCOperand Expr:specifier(4031,f)>>
+; MIPS32R6-NEXT:    # <MCOperand Expr:specifier(4027,f)>>
 ;
 ; MMR6-LABEL: f6:
 ; MMR6:       # %bb.0:
 ; MMR6-NEXT:    lui $1, %hi(f) # <MCInst #[[#MCINST4]] LUi_MM
 ; MMR6-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MMR6-NEXT:    # <MCOperand Expr:specifier(4028,f)>>
+; MMR6-NEXT:    # <MCOperand Expr:specifier(4024,f)>>
 ; MMR6-NEXT:    sdc1 $f12, %lo(f)($1) # <MCInst #[[#MCINST29:]] SDC1_D64_MMR6
 ; MMR6-NEXT:    # <MCOperand Reg:[[#MCREG13:]]>
 ; MMR6-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MMR6-NEXT:    # <MCOperand Expr:specifier(4031,f)>>
+; MMR6-NEXT:    # <MCOperand Expr:specifier(4027,f)>>
 ; MMR6-NEXT:    jrc $ra # <MCInst #[[#MCINST8]] JRC16_MM
 ; MMR6-NEXT:    # <MCOperand Reg:[[#MCREG2]]>>
 ;
@@ -793,11 +793,11 @@ define void @f6(double %f) {
 ; MIPS4:       # %bb.0:
 ; MIPS4-NEXT:    lui $1, %highest(f) # <MCInst #[[#MCINST9]] LUi64
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS4-NEXT:    # <MCOperand Expr:specifier(4030,f)>>
+; MIPS4-NEXT:    # <MCOperand Expr:specifier(4026,f)>>
 ; MIPS4-NEXT:    daddiu $1, $1, %higher(f) # <MCInst #[[#MCINST10]] DADDiu
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS4-NEXT:    # <MCOperand Expr:specifier(4029,f)>>
+; MIPS4-NEXT:    # <MCOperand Expr:specifier(4025,f)>>
 ; MIPS4-NEXT:    dsll $1, $1, 16 # <MCInst #[[#MCINST11]] DSLL
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
@@ -805,7 +805,7 @@ define void @f6(double %f) {
 ; MIPS4-NEXT:    daddiu $1, $1, %hi(f) # <MCInst #[[#MCINST10]] DADDiu
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS4-NEXT:    # <MCOperand Expr:specifier(4028,f)>>
+; MIPS4-NEXT:    # <MCOperand Expr:specifier(4024,f)>>
 ; MIPS4-NEXT:    dsll $1, $1, 16 # <MCInst #[[#MCINST11]] DSLL
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
@@ -815,17 +815,17 @@ define void @f6(double %f) {
 ; MIPS4-NEXT:    sdc1 $f12, %lo(f)($1) # <MCInst #[[#MCINST28:]] SDC164
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG13:]]>
 ; MIPS4-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS4-NEXT:    # <MCOperand Expr:specifier(4031,f)>>
+; MIPS4-NEXT:    # <MCOperand Expr:specifier(4027,f)>>
 ;
 ; MIPS64R6-LABEL: f6:
 ; MIPS64R6:       # %bb.0:
 ; MIPS64R6-NEXT:    lui $1, %highest(f) # <MCInst #[[#MCINST9]] LUi64
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4030,f)>>
+; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4026,f)>>
 ; MIPS64R6-NEXT:    daddiu $1, $1, %higher(f) # <MCInst #[[#MCINST10]] DADDiu
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4029,f)>>
+; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4025,f)>>
 ; MIPS64R6-NEXT:    dsll $1, $1, 16 # <MCInst #[[#MCINST11]] DSLL
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
@@ -833,7 +833,7 @@ define void @f6(double %f) {
 ; MIPS64R6-NEXT:    daddiu $1, $1, %hi(f) # <MCInst #[[#MCINST10]] DADDiu
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4028,f)>>
+; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4024,f)>>
 ; MIPS64R6-NEXT:    dsll $1, $1, 16 # <MCInst #[[#MCINST11]] DSLL
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
@@ -844,31 +844,31 @@ define void @f6(double %f) {
 ; MIPS64R6-NEXT:    sdc1 $f12, %lo(f)($1) # <MCInst #[[#MCINST28:]] SDC164
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG13:]]>
 ; MIPS64R6-NEXT:    # <MCOperand Reg:[[#MCREG5]]>
-; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4031,f)>>
+; MIPS64R6-NEXT:    # <MCOperand Expr:specifier(4027,f)>>
 ;
 ; MMR5FP64-LABEL: f6:
 ; MMR5FP64:       # %bb.0:
 ; MMR5FP64-NEXT:    lui $1, %hi(f) # <MCInst #[[#MCINST4]] LUi_MM
 ; MMR5FP64-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MMR5FP64-NEXT:    # <MCOperand Expr:specifier(4028,f)>>
+; MMR5FP64-NEXT:    # <MCOperand Expr:specifier(4024,f)>>
 ; MMR5FP64-NEXT:    jr $ra # <MCInst #[[#MCINST5]] JR_MM
 ; MMR5FP64-NEXT:    # <MCOperand Reg:[[#MCREG2]]>>
 ; MMR5FP64-NEXT:    sdc1 $f12, %lo(f)($1) # <MCInst #[[#MCINST30:]] SDC1_MM_D64
 ; MMR5FP64-NEXT:    # <MCOperand Reg:[[#MCREG13:]]>
 ; MMR5FP64-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MMR5FP64-NEXT:    # <MCOperand Expr:specifier(4031,f)>>
+; MMR5FP64-NEXT:    # <MCOperand Expr:specifier(4027,f)>>
 ;
 ; MIPS32R5FP643-LABEL: f6:
 ; MIPS32R5FP643:       # %bb.0:
 ; MIPS32R5FP643-NEXT:    lui $1, %hi(f) # <MCInst #[[#MCINST1]] LUi
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32R5FP643-NEXT:    # <MCOperand Expr:specifier(4028,f)>>
+; MIPS32R5FP643-NEXT:    # <MCOperand Expr:specifier(4024,f)>>
 ; MIPS32R5FP643-NEXT:    jr $ra # <MCInst #[[#MCINST2]] JR
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:[[#MCREG2]]>>
 ; MIPS32R5FP643-NEXT:    sdc1 $f12, %lo(f)($1) # <MCInst #[[#MCINST28:]] SDC164
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:[[#MCREG13:]]>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:[[#MCREG1]]>
-; MIPS32R5FP643-NEXT:    # <MCOperand Expr:specifier(4031,f)>>
+; MIPS32R5FP643-NEXT:    # <MCOperand Expr:specifier(4027,f)>>
   store double %f, ptr @f
   ret void
 }

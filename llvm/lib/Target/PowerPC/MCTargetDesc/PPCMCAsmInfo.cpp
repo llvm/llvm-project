@@ -10,8 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PPCMCAsmInfo.h"
-#include "PPCMCExpr.h"
+#include "MCTargetDesc/PPCMCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
@@ -20,7 +19,7 @@ using namespace llvm;
 
 void PPCELFMCAsmInfo::anchor() { }
 
-const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
+const MCAsmInfo::AtSpecifier elfAtSpecifiers[] = {
     {PPC::S_DTPREL, "DTPREL"},
     {PPC::S_GOT, "GOT"},
     {PPC::S_GOT_HA, "got@ha"},
@@ -35,7 +34,6 @@ const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
     {PPC::S_HIGHEST, "highest"},
     {PPC::S_HIGHESTA, "highesta"},
     {PPC::S_LO, "l"},
-    {PPC::S_L, "l"}, // FIXME: share the name with VK_LO
     {PPC::S_PCREL, "PCREL"},
     {PPC::S_PLT, "PLT"},
     {PPC::S_TLSGD, "tlsgd"},
@@ -96,8 +94,80 @@ const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
     {PPC::S_TPREL_HIGHEST, "tprel@highest"},
     {PPC::S_TPREL_HIGHESTA, "tprel@highesta"},
     {PPC::S_TPREL_LO, "tprel@l"},
-    {PPC::S_U, "u"},
 };
+
+const MCAsmInfo::AtSpecifier xcoffAtSpecifiers[] = {
+    // clang-format off
+    {PPC::S_AIX_TLSGD, "gd"},
+    {PPC::S_AIX_TLSGDM, "m"},
+    {PPC::S_AIX_TLSIE, "ie"},
+    {PPC::S_AIX_TLSLD, "ld"},
+    {PPC::S_AIX_TLSLE, "le"},
+    {PPC::S_AIX_TLSML, "ml"},
+    {PPC::S_L, "l"},
+    {PPC::S_U, "u"},
+    // clang-format on
+};
+
+static std::optional<int64_t> evaluateAsInt64(uint16_t specifier,
+                                              int64_t Value) {
+  switch (specifier) {
+  case PPC::S_LO:
+    return Value & 0xffff;
+  case PPC::S_HI:
+    return (Value >> 16) & 0xffff;
+  case PPC::S_HA:
+    return ((Value + 0x8000) >> 16) & 0xffff;
+  case PPC::S_HIGH:
+    return (Value >> 16) & 0xffff;
+  case PPC::S_HIGHA:
+    return ((Value + 0x8000) >> 16) & 0xffff;
+  case PPC::S_HIGHER:
+    return (Value >> 32) & 0xffff;
+  case PPC::S_HIGHERA:
+    return ((Value + 0x8000) >> 32) & 0xffff;
+  case PPC::S_HIGHEST:
+    return (Value >> 48) & 0xffff;
+  case PPC::S_HIGHESTA:
+    return ((Value + 0x8000) >> 48) & 0xffff;
+  default:
+    return {};
+  }
+}
+
+bool PPC::evaluateAsConstant(const MCSpecifierExpr &Expr, int64_t &Res) {
+  MCValue Value;
+
+  if (!Expr.getSubExpr()->evaluateAsRelocatable(Value, nullptr))
+    return false;
+
+  if (!Value.isAbsolute())
+    return false;
+  auto Tmp = evaluateAsInt64(Expr.getSpecifier(), Value.getConstant());
+  if (!Tmp)
+    return false;
+  Res = *Tmp;
+  return true;
+}
+
+static bool evaluateAsRelocatable(const MCSpecifierExpr &Expr, MCValue &Res,
+                                  const MCAssembler *Asm) {
+  if (!Expr.getSubExpr()->evaluateAsRelocatable(Res, Asm))
+    return false;
+
+  // The signedness of the result is dependent on the instruction operand. E.g.
+  // in addis 3,3,65535@l, 65535@l is signed. In the absence of information at
+  // parse time (!Asm), disable the folding.
+  std::optional<int64_t> MaybeInt =
+      evaluateAsInt64(Expr.getSpecifier(), Res.getConstant());
+  if (Res.isAbsolute() && MaybeInt) {
+    Res = MCValue::get(*MaybeInt);
+  } else {
+    Res.setSpecifier(Expr.getSpecifier());
+  }
+
+  return true;
+}
 
 PPCELFMCAsmInfo::PPCELFMCAsmInfo(bool is64Bit, const Triple& T) {
   // FIXME: This is not always needed. For example, it is not needed in the
@@ -122,6 +192,7 @@ PPCELFMCAsmInfo::PPCELFMCAsmInfo(bool is64Bit, const Triple& T) {
   SupportsDebugInformation = true;
 
   DollarIsPC = true;
+  AllowDollarAtStartOfIdentifier = false;
 
   // Set up DWARF directives
   MinInstAlignment = 4;
@@ -134,7 +205,7 @@ PPCELFMCAsmInfo::PPCELFMCAsmInfo(bool is64Bit, const Triple& T) {
   AssemblerDialect = 1;           // New-Style mnemonics.
   LCOMMDirectiveAlignmentType = LCOMM::ByteAlignment;
 
-  initializeVariantKinds(variantKindDescs);
+  initializeAtSpecifiers(elfAtSpecifiers);
 }
 
 void PPCELFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
@@ -146,10 +217,8 @@ void PPCELFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
 bool PPCELFMCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr,
                                                 MCValue &Res,
                                                 const MCAssembler *Asm) const {
-  return PPC::evaluateAsRelocatableImpl(Expr, Res, Asm);
+  return evaluateAsRelocatable(Expr, Res, Asm);
 }
-
-void PPCXCOFFMCAsmInfo::anchor() {}
 
 PPCXCOFFMCAsmInfo::PPCXCOFFMCAsmInfo(bool Is64Bit, const Triple &T) {
   if (T.getArch() == Triple::ppc64le || T.getArch() == Triple::ppcle)
@@ -167,10 +236,11 @@ PPCXCOFFMCAsmInfo::PPCXCOFFMCAsmInfo(bool Is64Bit, const Triple &T) {
 
   // Support $ as PC in inline asm
   DollarIsPC = true;
+  AllowDollarAtStartOfIdentifier = false;
 
   UsesSetToEquateSymbol = true;
 
-  initializeVariantKinds(variantKindDescs);
+  initializeAtSpecifiers(xcoffAtSpecifiers);
 }
 
 void PPCXCOFFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
@@ -181,5 +251,5 @@ void PPCXCOFFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
 
 bool PPCXCOFFMCAsmInfo::evaluateAsRelocatableImpl(
     const MCSpecifierExpr &Expr, MCValue &Res, const MCAssembler *Asm) const {
-  return PPC::evaluateAsRelocatableImpl(Expr, Res, Asm);
+  return evaluateAsRelocatable(Expr, Res, Asm);
 }

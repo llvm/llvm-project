@@ -10,9 +10,9 @@
 #include "QueryParser.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/IR/Verifier.h"
 #include "mlir/Query/Matcher/MatchFinder.h"
 #include "mlir/Query/QuerySession.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -68,6 +68,8 @@ static Operation *extractFunction(std::vector<Operation *> &ops,
   // Clone operations and build function body
   std::vector<Operation *> clonedOps;
   std::vector<Value> clonedVals;
+  // TODO: Handle extraction of operations with compute payloads defined via
+  // regions.
   for (Operation *slicedOp : slice) {
     Operation *clonedOp =
         clonedOps.emplace_back(builder.clone(*slicedOp, mapper));
@@ -75,7 +77,7 @@ static Operation *extractFunction(std::vector<Operation *> &ops,
                       clonedOp->result_end());
   }
   // Add return operation
-  builder.create<func::ReturnOp>(loc, clonedVals);
+  func::ReturnOp::create(builder, loc, clonedVals);
 
   // Remove unused function arguments
   size_t currentIndex = 0;
@@ -129,6 +131,8 @@ LogicalResult MatchQuery::run(llvm::raw_ostream &os, QuerySession &qs) const {
         finder.flattenMatchedOps(matches);
     Operation *function =
         extractFunction(flattenedMatches, rootOp->getContext(), functionName);
+    if (failed(verify(function)))
+      return mlir::failure();
     os << "\n" << *function << "\n\n";
     function->erase();
     return mlir::success();

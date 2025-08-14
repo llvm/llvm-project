@@ -83,7 +83,7 @@ define i64 @func1() {
 ; CHECK-LINUX-NEXT:    str w9, [sp, #16]
 ; CHECK-LINUX-NEXT:    add x9, sp, #56
 ; CHECK-LINUX-NEXT:    stp x9, x8, [sp, #24]
-; CHECK-LINUX-NEXT:    mov x8, #132 // =0x84
+; CHECK-LINUX-NEXT:    mov x8, #143 // =0x8f
 ; CHECK-LINUX-NEXT:    movk x8, #22528, lsl #16
 ; CHECK-LINUX-NEXT:    movk x8, #177, lsl #32
 ; CHECK-LINUX-NEXT:    movk x8, #22528, lsl #48
@@ -112,7 +112,7 @@ define i64 @func1() {
 ; CHECK-PC-NEXT:    add x0, sp, #8
 ; CHECK-PC-NEXT:    movk w8, #54815, lsl #16
 ; CHECK-PC-NEXT:    str w8, [sp, #16]
-; CHECK-PC-NEXT:    mov x8, #132 // =0x84
+; CHECK-PC-NEXT:    mov x8, #143 // =0x8f
 ; CHECK-PC-NEXT:    movk x8, #22528, lsl #16
 ; CHECK-PC-NEXT:    movk x8, #177, lsl #32
 ; CHECK-PC-NEXT:    movk x8, #22528, lsl #48
@@ -148,7 +148,7 @@ define i64 @func1() {
 ; CHECK-APPLE-NEXT:    mov x0, sp
 ; CHECK-APPLE-NEXT:    movk w8, #54815, lsl #16
 ; CHECK-APPLE-NEXT:    str w8, [sp, #8]
-; CHECK-APPLE-NEXT:    mov x8, #132 ; =0x84
+; CHECK-APPLE-NEXT:    mov x8, #143 ; =0x8f
 ; CHECK-APPLE-NEXT:    movk x8, #22528, lsl #16
 ; CHECK-APPLE-NEXT:    movk x8, #177, lsl #32
 ; CHECK-APPLE-NEXT:    movk x8, #22528, lsl #48
@@ -184,7 +184,7 @@ define i64 @func2() {
 ; CHECK-LINUX-NEXT:    add x9, sp, #8
 ; CHECK-LINUX-NEXT:    add x1, x0, #12
 ; CHECK-LINUX-NEXT:    stp x9, x8, [x0, #16]
-; CHECK-LINUX-NEXT:    mov x8, #132 // =0x84
+; CHECK-LINUX-NEXT:    mov x8, #143 // =0x8f
 ; CHECK-LINUX-NEXT:    movk x8, #22528, lsl #16
 ; CHECK-LINUX-NEXT:    movk x8, #177, lsl #32
 ; CHECK-LINUX-NEXT:    movk x8, #22528, lsl #48
@@ -210,7 +210,7 @@ define i64 @func2() {
 ; CHECK-PC-NEXT:    mov w8, #544 // =0x220
 ; CHECK-PC-NEXT:    movk w8, #54815, lsl #16
 ; CHECK-PC-NEXT:    str w8, [x0, #8]
-; CHECK-PC-NEXT:    mov x8, #132 // =0x84
+; CHECK-PC-NEXT:    mov x8, #143 // =0x8f
 ; CHECK-PC-NEXT:    movk x8, #22528, lsl #16
 ; CHECK-PC-NEXT:    movk x8, #177, lsl #32
 ; CHECK-PC-NEXT:    movk x8, #22528, lsl #48
@@ -246,7 +246,7 @@ define i64 @func2() {
 ; CHECK-APPLE-NEXT:    mov w8, #544 ; =0x220
 ; CHECK-APPLE-NEXT:    movk w8, #54815, lsl #16
 ; CHECK-APPLE-NEXT:    str w8, [x0, #8]
-; CHECK-APPLE-NEXT:    mov x8, #132 ; =0x84
+; CHECK-APPLE-NEXT:    mov x8, #143 ; =0x8f
 ; CHECK-APPLE-NEXT:    movk x8, #22528, lsl #16
 ; CHECK-APPLE-NEXT:    movk x8, #177, lsl #32
 ; CHECK-APPLE-NEXT:    movk x8, #22528, lsl #48

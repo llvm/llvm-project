@@ -9,7 +9,6 @@
 #include "mlir/Dialect/Transform/IR/TransformOps.h"
 
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
-#include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/Transform/IR/TransformAttrs.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
@@ -23,11 +22,9 @@
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Verifier.h"
-#include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Transforms/CSE.h"
@@ -799,8 +796,8 @@ transform::ApplyRegisteredPassOp::apply(transform::TransformRewriter &rewriter,
     if (auto paramOperand = dyn_cast<transform::ParamOperandAttr>(valueAttr)) {
       // The corresponding value attribute(s) is/are passed in via a param.
       // Obtain the param-operand via its specified index.
-      size_t dynamicOptionIdx = paramOperand.getIndex().getInt();
-      assert(dynamicOptionIdx < dynamicOptions.size() &&
+      int64_t dynamicOptionIdx = paramOperand.getIndex().getInt();
+      assert(dynamicOptionIdx < static_cast<int64_t>(dynamicOptions.size()) &&
              "the number of ParamOperandAttrs in the options DictionaryAttr"
              "should be the same as the number of options passed as params");
       ArrayRef<Attribute> attrsAssociatedToParam =
@@ -1015,8 +1012,9 @@ LogicalResult transform::ApplyRegisteredPassOp::verify() {
   std::function<LogicalResult(Attribute)> checkOptionValue =
       [&](Attribute valueAttr) -> LogicalResult {
     if (auto paramOperand = dyn_cast<transform::ParamOperandAttr>(valueAttr)) {
-      size_t dynamicOptionIdx = paramOperand.getIndex().getInt();
-      if (dynamicOptionIdx < 0 || dynamicOptionIdx >= dynamicOptions.size())
+      int64_t dynamicOptionIdx = paramOperand.getIndex().getInt();
+      if (dynamicOptionIdx < 0 ||
+          dynamicOptionIdx >= static_cast<int64_t>(dynamicOptions.size()))
         return emitOpError()
                << "dynamic option index " << dynamicOptionIdx
                << " is out of bounds for the number of dynamic options: "

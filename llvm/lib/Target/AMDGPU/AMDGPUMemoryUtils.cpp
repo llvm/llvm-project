@@ -278,8 +278,8 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
         }
         if (HasAbsoluteGVs.has_value()) {
           if (*HasAbsoluteGVs != IsAbsolute) {
-            report_fatal_error(
-                "Module cannot mix absolute and non-absolute LDS GVs");
+            reportFatalUsageError(
+                "module cannot mix absolute and non-absolute LDS GVs");
           }
         } else
           HasAbsoluteGVs = IsAbsolute;
@@ -352,7 +352,10 @@ bool isReallyAClobber(const Value *Ptr, MemoryDef *Def, AAResults *AA) {
     case Intrinsic::amdgcn_s_barrier_signal:
     case Intrinsic::amdgcn_s_barrier_signal_var:
     case Intrinsic::amdgcn_s_barrier_signal_isfirst:
+    case Intrinsic::amdgcn_s_barrier_init:
+    case Intrinsic::amdgcn_s_barrier_join:
     case Intrinsic::amdgcn_s_barrier_wait:
+    case Intrinsic::amdgcn_s_barrier_leave:
     case Intrinsic::amdgcn_s_get_barrier_state:
     case Intrinsic::amdgcn_wave_barrier:
     case Intrinsic::amdgcn_sched_barrier:

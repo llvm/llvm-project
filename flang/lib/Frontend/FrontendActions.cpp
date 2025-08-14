@@ -74,10 +74,6 @@
 #include <memory>
 #include <system_error>
 
-namespace llvm {
-extern cl::opt<bool> PrintPipelinePasses;
-} // namespace llvm
-
 using namespace Fortran::frontend;
 
 constexpr llvm::StringLiteral timingIdParse = "Parse";
@@ -168,8 +164,9 @@ static void addDependentLibs(mlir::ModuleOp mlirModule, CompilerInstance &ci) {
   // Add linker options specified by --dependent-lib
   auto builder = mlir::OpBuilder(mlirModule.getRegion());
   for (const std::string &lib : libs) {
-    builder.create<mlir::LLVM::LinkerOptionsOp>(
-        mlirModule.getLoc(), builder.getStrArrayAttr({"/DEFAULTLIB:" + lib}));
+    mlir::LLVM::LinkerOptionsOp::create(
+        builder, mlirModule.getLoc(),
+        builder.getStrArrayAttr({"/DEFAULTLIB:" + lib}));
   }
 }
 
@@ -753,6 +750,8 @@ void CodeGenAction::generateLLVMIR() {
 
   if (ci.getInvocation().getLoweringOpts().getIntegerWrapAround())
     config.NSWOnLoopVarInc = false;
+
+  config.ComplexRange = opts.getComplexRange();
 
   // Create the pass pipeline
   fir::createMLIRToLLVMPassPipeline(pm, config, getCurrentFile());

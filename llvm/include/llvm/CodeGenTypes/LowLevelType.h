@@ -28,6 +28,7 @@
 
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include <cassert>
 
@@ -140,7 +141,7 @@ public:
   explicit constexpr LLT()
       : IsScalar(false), IsPointer(false), IsVector(false), RawData(0) {}
 
-  explicit LLT(MVT VT);
+  LLVM_ABI explicit LLT(MVT VT);
 
   constexpr bool isValid() const { return IsScalar || RawData != 0; }
   constexpr bool isScalar() const { return IsScalar; }
@@ -282,7 +283,7 @@ public:
       return scalar(getScalarSizeInBits());
   }
 
-  void print(raw_ostream &OS) const;
+  LLVM_ABI void print(raw_ostream &OS) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;

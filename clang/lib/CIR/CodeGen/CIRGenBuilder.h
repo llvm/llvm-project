@@ -10,8 +10,9 @@
 #define LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENBUILDER_H
 
 #include "Address.h"
+#include "CIRGenRecordLayout.h"
 #include "CIRGenTypeCache.h"
-#include "clang/CIR/Interfaces/CIRFPTypeInterface.h"
+#include "clang/CIR/Interfaces/CIRTypeInterfaces.h"
 #include "clang/CIR/MissingFeatures.h"
 
 #include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
@@ -139,19 +140,6 @@ public:
     return getType<cir::RecordType>(nameAttr, kind);
   }
 
-  bool isSized(mlir::Type ty) {
-    if (mlir::isa<cir::PointerType, cir::ArrayType, cir::BoolType, cir::IntType,
-                  cir::CIRFPTypeInterface, cir::ComplexType, cir::RecordType>(
-            ty))
-      return true;
-
-    if (const auto vt = mlir::dyn_cast<cir::VectorType>(ty))
-      return isSized(vt.getElementType());
-
-    assert(!cir::MissingFeatures::unsizedTypes());
-    return false;
-  }
-
   // Return true if the value is a null constant such as null pointer, (+0.0)
   // for floating-point or zero initializer
   bool isNullValue(mlir::Attribute attr) const {
@@ -255,6 +243,17 @@ public:
     return i == typeCache.UInt64Ty || i == typeCache.SInt64Ty;
   }
   bool isInt(mlir::Type i) { return mlir::isa<cir::IntType>(i); }
+
+  // Fetch the type representing a pointer to unsigned int8 values.
+  cir::PointerType getUInt8PtrTy() { return typeCache.UInt8PtrTy; }
+
+  /// Get a CIR anonymous record type.
+  cir::RecordType getAnonRecordTy(llvm::ArrayRef<mlir::Type> members,
+                                  bool packed = false, bool padded = false) {
+    assert(!cir::MissingFeatures::astRecordDeclAttr());
+    auto kind = cir::RecordType::RecordKind::Struct;
+    return getType<cir::RecordType>(members, packed, padded, kind);
+  }
 
   //
   // Constant creation helpers
@@ -360,10 +359,33 @@ public:
     return CIRBaseBuilderTy::createStore(loc, val, dst.getPointer(), align);
   }
 
-  mlir::Value createComplexCreate(mlir::Location loc, mlir::Value real,
-                                  mlir::Value imag) {
-    auto resultComplexTy = cir::ComplexType::get(real.getType());
-    return create<cir::ComplexCreateOp>(loc, resultComplexTy, real, imag);
+  /// Create a cir.complex.real_ptr operation that derives a pointer to the real
+  /// part of the complex value pointed to by the specified pointer value.
+  mlir::Value createComplexRealPtr(mlir::Location loc, mlir::Value value) {
+    auto srcPtrTy = mlir::cast<cir::PointerType>(value.getType());
+    auto srcComplexTy = mlir::cast<cir::ComplexType>(srcPtrTy.getPointee());
+    return create<cir::ComplexRealPtrOp>(
+        loc, getPointerTo(srcComplexTy.getElementType()), value);
+  }
+
+  Address createComplexRealPtr(mlir::Location loc, Address addr) {
+    return Address{createComplexRealPtr(loc, addr.getPointer()),
+                   addr.getAlignment()};
+  }
+
+  /// Create a cir.complex.imag_ptr operation that derives a pointer to the
+  /// imaginary part of the complex value pointed to by the specified pointer
+  /// value.
+  mlir::Value createComplexImagPtr(mlir::Location loc, mlir::Value value) {
+    auto srcPtrTy = mlir::cast<cir::PointerType>(value.getType());
+    auto srcComplexTy = mlir::cast<cir::ComplexType>(srcPtrTy.getPointee());
+    return create<cir::ComplexImagPtrOp>(
+        loc, getPointerTo(srcComplexTy.getElementType()), value);
+  }
+
+  Address createComplexImagPtr(mlir::Location loc, Address addr) {
+    return Address{createComplexImagPtr(loc, addr.getPointer()),
+                   addr.getAlignment()};
   }
 
   /// Create a cir.ptr_stride operation to get access to an array element.
@@ -394,6 +416,42 @@ public:
       uniqueName = name.str();
 
     return createGlobal(module, loc, uniqueName, type, linkage);
+  }
+
+  mlir::Value createSetBitfield(mlir::Location loc, mlir::Type resultType,
+                                Address dstAddr, mlir::Type storageType,
+                                mlir::Value src, const CIRGenBitFieldInfo &info,
+                                bool isLvalueVolatile, bool useVolatile) {
+    unsigned offset = useVolatile ? info.volatileOffset : info.offset;
+
+    // If using AAPCS and the field is volatile, load with the size of the
+    // declared field
+    storageType =
+        useVolatile ? cir::IntType::get(storageType.getContext(),
+                                        info.volatileStorageSize, info.isSigned)
+                    : storageType;
+    return create<cir::SetBitfieldOp>(
+        loc, resultType, dstAddr.getPointer(), storageType, src, info.name,
+        info.size, offset, info.isSigned, isLvalueVolatile,
+        dstAddr.getAlignment().getAsAlign().value());
+  }
+
+  mlir::Value createGetBitfield(mlir::Location loc, mlir::Type resultType,
+                                Address addr, mlir::Type storageType,
+                                const CIRGenBitFieldInfo &info,
+                                bool isLvalueVolatile, bool useVolatile) {
+    unsigned offset = useVolatile ? info.volatileOffset : info.offset;
+
+    // If using AAPCS and the field is volatile, load with the size of the
+    // declared field
+    storageType =
+        useVolatile ? cir::IntType::get(storageType.getContext(),
+                                        info.volatileStorageSize, info.isSigned)
+                    : storageType;
+    return create<cir::GetBitfieldOp>(loc, resultType, addr.getPointer(),
+                                      storageType, info.name, info.size, offset,
+                                      info.isSigned, isLvalueVolatile,
+                                      addr.getAlignment().getAsAlign().value());
   }
 };
 
