@@ -115,3 +115,18 @@ end subroutine
 ! CHECK: %{{.*}} = fir.call @__nv_double2ll_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> i64
 ! CHECK: %{{.*}} = fir.call @__nv_double2ll_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> i64
 ! CHECK: %{{.*}} = fir.call @__nv_double2ll_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> i64
+
+attributes(global) subroutine test_double2ull_rX()
+  integer(8) :: res
+  double precision :: r
+  res = __double2ull_rd(r)
+  res = __double2ull_rn(r)
+  res = __double2ull_ru(r)
+  res = __double2ull_rz(r)
+end subroutine
+
+! CHECK-LABEL: _QPtest_double2ull_rx
+! CHECK: %{{.*}} = fir.call @__nv_double2ull_rd(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> i64
+! CHECK: %{{.*}} = fir.call @__nv_double2ull_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> i64
+! CHECK: %{{.*}} = fir.call @__nv_double2ull_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> i64
+! CHECK: %{{.*}} = fir.call @__nv_double2ull_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> i64
