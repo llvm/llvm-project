@@ -26261,10 +26261,8 @@ static SDValue getScalarMaskingNode(SDValue Op, SDValue Mask,
                                     SDValue PreservedSrc,
                                     const X86Subtarget &Subtarget,
                                     SelectionDAG &DAG) {
-
   if (auto *MaskConst = dyn_cast<ConstantSDNode>(Mask))
-    if (MaskConst->getZExtValue() & 0x1)
-      return Op;
+    return (MaskConst->getZExtValue() & 0x1) ? Op : PreservedSrc;
 
   MVT VT = Op.getSimpleValueType();
   SDLoc dl(Op);
