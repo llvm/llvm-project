@@ -71,6 +71,8 @@ static void emitCATTR(raw_ostream &OS, StringRef Name, GOFF::ESDRmode Rmode,
     case GOFF::ESD_RMODE_64:
       OS << "64";
       break;
+    case GOFF::ESD_RMODE_None:
+      break;
     }
     OS << ')';
   }
