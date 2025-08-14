@@ -824,9 +824,10 @@ namespace llvm {
 Value *createStepForVF(IRBuilderBase &B, Type *Ty, ElementCount VF,
                        int64_t Step) {
   assert(Ty->isIntegerTy() && "Expected an integer step");
-  if (!VF.isScalable() || !isPowerOf2_64(VF.getKnownMinValue()) ||
-      !isPowerOf2_64(Step))
-    return B.CreateElementCount(Ty, VF.multiplyCoefficientBy(Step));
+  ElementCount VFxStep = VF.multiplyCoefficientBy(Step);
+  assert(isPowerOf2_64(VF.getKnownMinValue()) && "must pass power-of-2 VF");
+  if (!VF.isScalable() || !isPowerOf2_64(Step))
+    return B.CreateElementCount(Ty, VFxStep);
 
   return B.CreateShl(
       B.CreateVScale(Ty),
@@ -2319,7 +2320,7 @@ Value *InnerLoopVectorizer::createIterationCountCheck(ElementCount VF,
       return createStepForVF(Builder, CountTy, VF, UF);
 
     Value *MinProfTC =
-        createStepForVF(Builder, CountTy, MinProfitableTripCount, 1);
+        Builder.CreateElementCount(CountTy, MinProfitableTripCount);
     if (!VF.isScalable())
       return MinProfTC;
     return Builder.CreateBinaryIntrinsic(
