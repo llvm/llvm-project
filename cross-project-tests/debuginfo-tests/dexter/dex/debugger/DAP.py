@@ -635,7 +635,7 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
     def _post_step_hook(self):
         """Hook to be executed after completing a step request."""
 
-    def step(self):
+    def step_in(self):
         self._flush_breakpoints()
         step_req_id = self.send_message(
             self.make_request("stepIn", {"threadId": self._debugger_state.thread})
