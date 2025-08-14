@@ -39,7 +39,7 @@ define i32 @test(ptr nocapture %f) #0 {
 ;
 ; UNROLL-NOSIMPLIFY-LABEL: @test(
 ; UNROLL-NOSIMPLIFY-NEXT:  entry:
-; UNROLL-NOSIMPLIFY-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; UNROLL-NOSIMPLIFY-NEXT:    br label [[VECTOR_PH:%.*]]
 ; UNROLL-NOSIMPLIFY:       vector.ph:
 ; UNROLL-NOSIMPLIFY-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL-NOSIMPLIFY:       vector.body:
@@ -71,7 +71,7 @@ define i32 @test(ptr nocapture %f) #0 {
 ; UNROLL-NOSIMPLIFY:       scalar.ph:
 ; UNROLL-NOSIMPLIFY-NEXT:    br label [[FOR_BODY:%.*]]
 ; UNROLL-NOSIMPLIFY:       for.body:
-; UNROLL-NOSIMPLIFY-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
+; UNROLL-NOSIMPLIFY-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
 ; UNROLL-NOSIMPLIFY-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[F]], i64 [[INDVARS_IV]]
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP11:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; UNROLL-NOSIMPLIFY-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[TMP11]], 100
@@ -83,7 +83,7 @@ define i32 @test(ptr nocapture %f) #0 {
 ; UNROLL-NOSIMPLIFY:       for.inc:
 ; UNROLL-NOSIMPLIFY-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; UNROLL-NOSIMPLIFY-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 128
-; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]]
 ; UNROLL-NOSIMPLIFY:       for.end:
 ; UNROLL-NOSIMPLIFY-NEXT:    ret i32 0
 ;
@@ -264,7 +264,7 @@ define void @bug18724(i1 %cond, ptr %ptr, i1 %cond.2, i64 %v.1, i32 %v.2) {
 ; UNROLL-NOSIMPLIFY-NEXT:    [[PREDPHI4]] = select i1 [[COND_2]], i32 [[TMP11]], i32 [[VEC_PHI1]]
 ; UNROLL-NOSIMPLIFY-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; UNROLL-NOSIMPLIFY:       middle.block:
 ; UNROLL-NOSIMPLIFY-NEXT:    [[BIN_RDX:%.*]] = add i32 [[PREDPHI4]], [[PREDPHI]]
 ; UNROLL-NOSIMPLIFY-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
@@ -288,7 +288,7 @@ define void @bug18724(i1 %cond, ptr %ptr, i1 %cond.2, i64 %v.1, i32 %v.2) {
 ; UNROLL-NOSIMPLIFY-NEXT:    [[INDVARS_IV_NEXT4]] = add nsw i64 [[INDVARS_IV3]], 1
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP1:%.*]] = trunc i64 [[INDVARS_IV3]] to i32
 ; UNROLL-NOSIMPLIFY-NEXT:    [[CMP13:%.*]] = icmp slt i32 [[TMP1]], 0
-; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[CMP13]], label [[FOR_BODY14]], label [[FOR_INC26_LOOPEXIT]], !llvm.loop [[LOOP5:![0-9]+]]
+; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[CMP13]], label [[FOR_BODY14]], label [[FOR_INC26_LOOPEXIT]], !llvm.loop [[LOOP4:![0-9]+]]
 ; UNROLL-NOSIMPLIFY:       for.inc26.loopexit:
 ; UNROLL-NOSIMPLIFY-NEXT:    [[INEWCHUNKS_2_LCSSA:%.*]] = phi i32 [ [[INEWCHUNKS_2]], [[FOR_INC23]] ], [ [[BIN_RDX]], [[MIDDLE_BLOCK]] ]
 ; UNROLL-NOSIMPLIFY-NEXT:    br label [[FOR_INC26]]
@@ -425,7 +425,7 @@ define void @minimal_bit_widths(i1 %c) {
 ;
 ; UNROLL-NOSIMPLIFY-LABEL: @minimal_bit_widths(
 ; UNROLL-NOSIMPLIFY-NEXT:  entry:
-; UNROLL-NOSIMPLIFY-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; UNROLL-NOSIMPLIFY-NEXT:    br label [[VECTOR_PH:%.*]]
 ; UNROLL-NOSIMPLIFY:       vector.ph:
 ; UNROLL-NOSIMPLIFY-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL-NOSIMPLIFY:       vector.body:
@@ -447,13 +447,13 @@ define void @minimal_bit_widths(i1 %c) {
 ; UNROLL-NOSIMPLIFY:       pred.store.continue2:
 ; UNROLL-NOSIMPLIFY-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
-; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; UNROLL-NOSIMPLIFY:       middle.block:
 ; UNROLL-NOSIMPLIFY-NEXT:    br label [[FOR_END:%.*]]
 ; UNROLL-NOSIMPLIFY:       scalar.ph:
 ; UNROLL-NOSIMPLIFY-NEXT:    br label [[FOR_BODY:%.*]]
 ; UNROLL-NOSIMPLIFY:       for.body:
-; UNROLL-NOSIMPLIFY-NEXT:    [[TMP1:%.*]] = phi i64 [ [[TMP9:%.*]], [[FOR_INC:%.*]] ], [ 0, [[SCALAR_PH]] ]
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP1:%.*]] = phi i64 [ [[TMP9:%.*]], [[FOR_INC:%.*]] ], [ 0, [[SCALAR_PH:%.*]] ]
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP2:%.*]] = phi i64 [ [[TMP7:%.*]], [[FOR_INC]] ], [ 1000, [[SCALAR_PH]] ]
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr undef, i64 [[TMP1]]
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP3]], align 1
@@ -467,7 +467,7 @@ define void @minimal_bit_widths(i1 %c) {
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP9]] = add nuw nsw i64 [[TMP1]], 1
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP7]] = add i64 [[TMP2]], -1
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[TMP7]], 0
-; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[TMP8]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[TMP8]], label [[FOR_END]], label [[FOR_BODY]]
 ; UNROLL-NOSIMPLIFY:       for.end:
 ; UNROLL-NOSIMPLIFY-NEXT:    ret void
 ;
@@ -549,7 +549,7 @@ define void @minimal_bit_widths_with_aliasing_store(i1 %c, ptr %ptr) {
 ;
 ; UNROLL-NOSIMPLIFY-LABEL: @minimal_bit_widths_with_aliasing_store(
 ; UNROLL-NOSIMPLIFY-NEXT:  entry:
-; UNROLL-NOSIMPLIFY-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; UNROLL-NOSIMPLIFY-NEXT:    br label [[VECTOR_PH:%.*]]
 ; UNROLL-NOSIMPLIFY:       vector.ph:
 ; UNROLL-NOSIMPLIFY-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL-NOSIMPLIFY:       vector.body:
@@ -573,13 +573,13 @@ define void @minimal_bit_widths_with_aliasing_store(i1 %c, ptr %ptr) {
 ; UNROLL-NOSIMPLIFY:       pred.store.continue2:
 ; UNROLL-NOSIMPLIFY-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
-; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; UNROLL-NOSIMPLIFY:       middle.block:
 ; UNROLL-NOSIMPLIFY-NEXT:    br label [[FOR_END:%.*]]
 ; UNROLL-NOSIMPLIFY:       scalar.ph:
 ; UNROLL-NOSIMPLIFY-NEXT:    br label [[FOR_BODY:%.*]]
 ; UNROLL-NOSIMPLIFY:       for.body:
-; UNROLL-NOSIMPLIFY-NEXT:    [[TMP1:%.*]] = phi i64 [ [[TMP9:%.*]], [[FOR_INC:%.*]] ], [ 0, [[SCALAR_PH]] ]
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP1:%.*]] = phi i64 [ [[TMP9:%.*]], [[FOR_INC:%.*]] ], [ 0, [[SCALAR_PH:%.*]] ]
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP2:%.*]] = phi i64 [ [[TMP7:%.*]], [[FOR_INC]] ], [ 1000, [[SCALAR_PH]] ]
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[TMP1]]
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP3]], align 1
@@ -594,7 +594,7 @@ define void @minimal_bit_widths_with_aliasing_store(i1 %c, ptr %ptr) {
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP9]] = add nuw nsw i64 [[TMP1]], 1
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP7]] = add i64 [[TMP2]], -1
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[TMP7]], 0
-; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[TMP8]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[TMP8]], label [[FOR_END]], label [[FOR_BODY]]
 ; UNROLL-NOSIMPLIFY:       for.end:
 ; UNROLL-NOSIMPLIFY-NEXT:    ret void
 ;
@@ -684,7 +684,7 @@ define void @sdiv_with_uniform_ops(i16 %0, i1 %c, ptr %dst) {
 ;
 ; UNROLL-NOSIMPLIFY-LABEL: @sdiv_with_uniform_ops(
 ; UNROLL-NOSIMPLIFY-NEXT:  entry:
-; UNROLL-NOSIMPLIFY-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; UNROLL-NOSIMPLIFY-NEXT:    br label [[VECTOR_PH:%.*]]
 ; UNROLL-NOSIMPLIFY:       vector.ph:
 ; UNROLL-NOSIMPLIFY-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL-NOSIMPLIFY:       vector.body:
@@ -703,14 +703,13 @@ define void @sdiv_with_uniform_ops(i16 %0, i1 %c, ptr %dst) {
 ; UNROLL-NOSIMPLIFY:       pred.store.continue2:
 ; UNROLL-NOSIMPLIFY-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 98
-; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; UNROLL-NOSIMPLIFY:       middle.block:
-; UNROLL-NOSIMPLIFY-NEXT:    br label [[SCALAR_PH]]
+; UNROLL-NOSIMPLIFY-NEXT:    br label [[SCALAR_PH:%.*]]
 ; UNROLL-NOSIMPLIFY:       scalar.ph:
-; UNROLL-NOSIMPLIFY-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ 99, [[MIDDLE_BLOCK]] ], [ 1, [[ENTRY:%.*]] ]
 ; UNROLL-NOSIMPLIFY-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; UNROLL-NOSIMPLIFY:       loop.header:
-; UNROLL-NOSIMPLIFY-NEXT:    [[IV:%.*]] = phi i16 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[LOOP_LATCH:%.*]] ]
+; UNROLL-NOSIMPLIFY-NEXT:    [[IV:%.*]] = phi i16 [ 99, [[SCALAR_PH]] ], [ [[INC:%.*]], [[LOOP_LATCH:%.*]] ]
 ; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[LOOP_LATCH]]
 ; UNROLL-NOSIMPLIFY:       then:
 ; UNROLL-NOSIMPLIFY-NEXT:    [[DIV:%.*]] = sdiv i16 10, [[TMP0]]
@@ -719,7 +718,7 @@ define void @sdiv_with_uniform_ops(i16 %0, i1 %c, ptr %dst) {
 ; UNROLL-NOSIMPLIFY:       loop.latch:
 ; UNROLL-NOSIMPLIFY-NEXT:    [[INC]] = add i16 [[IV]], 1
 ; UNROLL-NOSIMPLIFY-NEXT:    [[EC:%.*]] = icmp eq i16 [[INC]], 100
-; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP_HEADER]], !llvm.loop [[LOOP11:![0-9]+]]
+; UNROLL-NOSIMPLIFY-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP_HEADER]], !llvm.loop [[LOOP8:![0-9]+]]
 ; UNROLL-NOSIMPLIFY:       exit:
 ; UNROLL-NOSIMPLIFY-NEXT:    ret void
 ;

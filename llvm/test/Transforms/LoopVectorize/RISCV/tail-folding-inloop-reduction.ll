@@ -12,7 +12,7 @@
 define i32 @add(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-LABEL: @add(
 ; IF-EVL-NEXT:  entry:
-; IF-EVL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; IF-EVL-NEXT:    br label [[VECTOR_PH:%.*]]
 ; IF-EVL:       vector.ph:
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
@@ -34,7 +34,7 @@ define i32 @add(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL:       scalar.ph:
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       for.body:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[RDX:%.*]] = phi i32 [ [[START]], [[SCALAR_PH]] ], [ [[ADD:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
 ; IF-EVL-NEXT:    [[TMP18:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
@@ -215,7 +215,7 @@ for.end:
 define i32 @or(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-LABEL: @or(
 ; IF-EVL-NEXT:  entry:
-; IF-EVL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; IF-EVL-NEXT:    br label [[VECTOR_PH:%.*]]
 ; IF-EVL:       vector.ph:
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
@@ -237,7 +237,7 @@ define i32 @or(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL:       scalar.ph:
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       for.body:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[RDX:%.*]] = phi i32 [ [[START]], [[SCALAR_PH]] ], [ [[OR:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
 ; IF-EVL-NEXT:    [[TMP18:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
@@ -311,7 +311,7 @@ for.end:
 define i32 @and(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-LABEL: @and(
 ; IF-EVL-NEXT:  entry:
-; IF-EVL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; IF-EVL-NEXT:    br label [[VECTOR_PH:%.*]]
 ; IF-EVL:       vector.ph:
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
@@ -333,7 +333,7 @@ define i32 @and(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL:       scalar.ph:
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       for.body:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[RDX:%.*]] = phi i32 [ [[START]], [[SCALAR_PH]] ], [ [[AND:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
 ; IF-EVL-NEXT:    [[TMP18:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
@@ -407,7 +407,7 @@ for.end:
 define i32 @xor(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-LABEL: @xor(
 ; IF-EVL-NEXT:  entry:
-; IF-EVL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; IF-EVL-NEXT:    br label [[VECTOR_PH:%.*]]
 ; IF-EVL:       vector.ph:
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
@@ -429,7 +429,7 @@ define i32 @xor(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL:       scalar.ph:
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       for.body:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[RDX:%.*]] = phi i32 [ [[START]], [[SCALAR_PH]] ], [ [[XOR:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
 ; IF-EVL-NEXT:    [[TMP18:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
@@ -503,7 +503,7 @@ for.end:
 define i32 @smin(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-LABEL: @smin(
 ; IF-EVL-NEXT:  entry:
-; IF-EVL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; IF-EVL-NEXT:    br label [[VECTOR_PH:%.*]]
 ; IF-EVL:       vector.ph:
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
@@ -525,7 +525,7 @@ define i32 @smin(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL:       scalar.ph:
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       for.body:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[RDX:%.*]] = phi i32 [ [[START]], [[SCALAR_PH]] ], [ [[SMIN:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
@@ -602,7 +602,7 @@ for.end:
 define i32 @smax(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-LABEL: @smax(
 ; IF-EVL-NEXT:  entry:
-; IF-EVL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; IF-EVL-NEXT:    br label [[VECTOR_PH:%.*]]
 ; IF-EVL:       vector.ph:
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
@@ -624,7 +624,7 @@ define i32 @smax(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL:       scalar.ph:
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       for.body:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[RDX:%.*]] = phi i32 [ [[START]], [[SCALAR_PH]] ], [ [[SMAX:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
@@ -701,7 +701,7 @@ for.end:
 define i32 @umin(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-LABEL: @umin(
 ; IF-EVL-NEXT:  entry:
-; IF-EVL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; IF-EVL-NEXT:    br label [[VECTOR_PH:%.*]]
 ; IF-EVL:       vector.ph:
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
@@ -723,7 +723,7 @@ define i32 @umin(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL:       scalar.ph:
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       for.body:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[RDX:%.*]] = phi i32 [ [[START]], [[SCALAR_PH]] ], [ [[UMIN:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
@@ -800,7 +800,7 @@ for.end:
 define i32 @umax(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-LABEL: @umax(
 ; IF-EVL-NEXT:  entry:
-; IF-EVL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; IF-EVL-NEXT:    br label [[VECTOR_PH:%.*]]
 ; IF-EVL:       vector.ph:
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
@@ -822,7 +822,7 @@ define i32 @umax(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL:       scalar.ph:
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       for.body:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[RDX:%.*]] = phi i32 [ [[START]], [[SCALAR_PH]] ], [ [[UMAX:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
@@ -899,7 +899,7 @@ for.end:
 define float @fadd(ptr %a, i64 %n, float %start) {
 ; IF-EVL-LABEL: @fadd(
 ; IF-EVL-NEXT:  entry:
-; IF-EVL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; IF-EVL-NEXT:    br label [[VECTOR_PH:%.*]]
 ; IF-EVL:       vector.ph:
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
@@ -921,7 +921,7 @@ define float @fadd(ptr %a, i64 %n, float %start) {
 ; IF-EVL:       scalar.ph:
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       for.body:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[RDX:%.*]] = phi float [ [[START]], [[SCALAR_PH]] ], [ [[ADD:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
 ; IF-EVL-NEXT:    [[TMP18:%.*]] = load float, ptr [[ARRAYIDX]], align 4
@@ -1102,7 +1102,7 @@ for.end:
 define float @fmin(ptr %a, i64 %n, float %start) #0 {
 ; IF-EVL-LABEL: @fmin(
 ; IF-EVL-NEXT:  entry:
-; IF-EVL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; IF-EVL-NEXT:    br label [[VECTOR_PH:%.*]]
 ; IF-EVL:       vector.ph:
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
@@ -1125,7 +1125,7 @@ define float @fmin(ptr %a, i64 %n, float %start) #0 {
 ; IF-EVL:       scalar.ph:
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       for.body:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[RDX:%.*]] = phi float [ [[START]], [[SCALAR_PH]] ], [ [[MIN:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = load float, ptr [[ARRAYIDX]], align 4
@@ -1203,7 +1203,7 @@ for.end:
 define float @fmax(ptr %a, i64 %n, float %start) #0 {
 ; IF-EVL-LABEL: @fmax(
 ; IF-EVL-NEXT:  entry:
-; IF-EVL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; IF-EVL-NEXT:    br label [[VECTOR_PH:%.*]]
 ; IF-EVL:       vector.ph:
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
@@ -1226,7 +1226,7 @@ define float @fmax(ptr %a, i64 %n, float %start) #0 {
 ; IF-EVL:       scalar.ph:
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       for.body:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[RDX:%.*]] = phi float [ [[START]], [[SCALAR_PH]] ], [ [[MAX:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
 ; IF-EVL-NEXT:    [[TMP17:%.*]] = load float, ptr [[ARRAYIDX]], align 4
@@ -1520,7 +1520,7 @@ for.end:
 define float @fmuladd(ptr %a, ptr %b, i64 %n, float %start) {
 ; IF-EVL-LABEL: @fmuladd(
 ; IF-EVL-NEXT:  entry:
-; IF-EVL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; IF-EVL-NEXT:    br label [[VECTOR_PH:%.*]]
 ; IF-EVL:       vector.ph:
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
@@ -1545,7 +1545,7 @@ define float @fmuladd(ptr %a, ptr %b, i64 %n, float %start) {
 ; IF-EVL:       scalar.ph:
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       for.body:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[RDX:%.*]] = phi float [ [[START]], [[SCALAR_PH]] ], [ [[MULADD:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
 ; IF-EVL-NEXT:    [[TMP21:%.*]] = load float, ptr [[ARRAYIDX]], align 4
@@ -1628,7 +1628,7 @@ for.end:
 define i32 @anyof_icmp(ptr %a, i64 %n, i32 %start, i32 %inv) {
 ; IF-EVL-LABEL: @anyof_icmp(
 ; IF-EVL-NEXT:  entry:
-; IF-EVL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; IF-EVL-NEXT:    br label [[VECTOR_PH:%.*]]
 ; IF-EVL:       vector.ph:
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
@@ -1653,7 +1653,7 @@ define i32 @anyof_icmp(ptr %a, i64 %n, i32 %start, i32 %inv) {
 ; IF-EVL:       scalar.ph:
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       for.body:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[RDX:%.*]] = phi i32 [ [[START]], [[SCALAR_PH]] ], [ [[ANYOF:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
 ; IF-EVL-NEXT:    [[TMP21:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
@@ -1733,7 +1733,7 @@ for.end:
 define i32 @anyof_fcmp(ptr %a, i64 %n, i32 %start, i32 %inv) {
 ; IF-EVL-LABEL: @anyof_fcmp(
 ; IF-EVL-NEXT:  entry:
-; IF-EVL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; IF-EVL-NEXT:    br label [[VECTOR_PH:%.*]]
 ; IF-EVL:       vector.ph:
 ; IF-EVL-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; IF-EVL:       vector.body:
@@ -1758,7 +1758,7 @@ define i32 @anyof_fcmp(ptr %a, i64 %n, i32 %start, i32 %inv) {
 ; IF-EVL:       scalar.ph:
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       for.body:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[RDX:%.*]] = phi i32 [ [[START]], [[SCALAR_PH]] ], [ [[ANYOF:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
 ; IF-EVL-NEXT:    [[TMP21:%.*]] = load float, ptr [[ARRAYIDX]], align 4

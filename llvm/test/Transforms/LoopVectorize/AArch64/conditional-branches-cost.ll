@@ -286,7 +286,7 @@ define void @latch_branch_cost(ptr %dst) {
 ; PRED-LABEL: define void @latch_branch_cost(
 ; PRED-SAME: ptr [[DST:%.*]]) {
 ; PRED-NEXT:  [[ENTRY:.*:]]
-; PRED-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; PRED-NEXT:    br label %[[VECTOR_PH:.*]]
 ; PRED:       [[VECTOR_PH]]:
 ; PRED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; PRED:       [[VECTOR_BODY]]:
@@ -363,7 +363,7 @@ define void @latch_branch_cost(ptr %dst) {
 ; PRED-NEXT:    br i1 [[TMP25]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; PRED:       [[MIDDLE_BLOCK]]:
 ; PRED-NEXT:    br [[EXIT:label %.*]]
-; PRED:       [[SCALAR_PH]]:
+; PRED:       [[SCALAR_PH:.*:]]
 ;
 entry:
   br label %loop
@@ -533,7 +533,7 @@ define void @multiple_exit_conditions(ptr %src, ptr noalias %dst) #1 {
 ; DEFAULT-LABEL: define void @multiple_exit_conditions(
 ; DEFAULT-SAME: ptr [[SRC:%.*]], ptr noalias [[DST:%.*]]) #[[ATTR2:[0-9]+]] {
 ; DEFAULT-NEXT:  [[ENTRY:.*:]]
-; DEFAULT-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; DEFAULT-NEXT:    br label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
 ; DEFAULT-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[DST]], i64 2048
 ; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -551,13 +551,13 @@ define void @multiple_exit_conditions(ptr %src, ptr noalias %dst) #1 {
 ; DEFAULT-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
 ; DEFAULT-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
-; DEFAULT-NEXT:    br label %[[SCALAR_PH]]
+; DEFAULT-NEXT:    br label %[[SCALAR_PH:.*]]
 ; DEFAULT:       [[SCALAR_PH]]:
 ;
 ; PRED-LABEL: define void @multiple_exit_conditions(
 ; PRED-SAME: ptr [[SRC:%.*]], ptr noalias [[DST:%.*]]) #[[ATTR2:[0-9]+]] {
 ; PRED-NEXT:  [[ENTRY:.*:]]
-; PRED-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; PRED-NEXT:    br label %[[VECTOR_PH:.*]]
 ; PRED:       [[VECTOR_PH]]:
 ; PRED-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; PRED-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 2
@@ -583,10 +583,10 @@ define void @multiple_exit_conditions(ptr %src, ptr noalias %dst) #1 {
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX]], i64 [[TMP10]])
 ; PRED-NEXT:    [[TMP15:%.*]] = extractelement <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
 ; PRED-NEXT:    [[TMP16:%.*]] = xor i1 [[TMP15]], true
-; PRED-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; PRED-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; PRED:       [[MIDDLE_BLOCK]]:
 ; PRED-NEXT:    br [[EXIT:label %.*]]
-; PRED:       [[SCALAR_PH]]:
+; PRED:       [[SCALAR_PH:.*:]]
 ;
 entry:
   br label %loop
@@ -609,65 +609,6 @@ exit:
 }
 
 define void @low_trip_count_fold_tail_scalarized_store(ptr %dst) {
-; COMMON-LABEL: define void @low_trip_count_fold_tail_scalarized_store(
-; COMMON-SAME: ptr [[DST:%.*]]) {
-; COMMON-NEXT:  [[ENTRY:.*:]]
-; COMMON-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
-; COMMON:       [[VECTOR_PH]]:
-; COMMON-NEXT:    br label %[[VECTOR_BODY:.*]]
-; COMMON:       [[VECTOR_BODY]]:
-; COMMON-NEXT:    br i1 true, label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
-; COMMON:       [[PRED_STORE_IF]]:
-; COMMON-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[DST]], i64 0
-; COMMON-NEXT:    store i8 0, ptr [[TMP0]], align 1
-; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE]]
-; COMMON:       [[PRED_STORE_CONTINUE]]:
-; COMMON-NEXT:    br i1 true, label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
-; COMMON:       [[PRED_STORE_IF1]]:
-; COMMON-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[DST]], i64 1
-; COMMON-NEXT:    store i8 1, ptr [[TMP1]], align 1
-; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
-; COMMON:       [[PRED_STORE_CONTINUE2]]:
-; COMMON-NEXT:    br i1 true, label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
-; COMMON:       [[PRED_STORE_IF3]]:
-; COMMON-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[DST]], i64 2
-; COMMON-NEXT:    store i8 2, ptr [[TMP2]], align 1
-; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
-; COMMON:       [[PRED_STORE_CONTINUE4]]:
-; COMMON-NEXT:    br i1 true, label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
-; COMMON:       [[PRED_STORE_IF5]]:
-; COMMON-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[DST]], i64 3
-; COMMON-NEXT:    store i8 3, ptr [[TMP3]], align 1
-; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
-; COMMON:       [[PRED_STORE_CONTINUE6]]:
-; COMMON-NEXT:    br i1 true, label %[[PRED_STORE_IF7:.*]], label %[[PRED_STORE_CONTINUE8:.*]]
-; COMMON:       [[PRED_STORE_IF7]]:
-; COMMON-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[DST]], i64 4
-; COMMON-NEXT:    store i8 4, ptr [[TMP4]], align 1
-; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE8]]
-; COMMON:       [[PRED_STORE_CONTINUE8]]:
-; COMMON-NEXT:    br i1 true, label %[[PRED_STORE_IF9:.*]], label %[[PRED_STORE_CONTINUE10:.*]]
-; COMMON:       [[PRED_STORE_IF9]]:
-; COMMON-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DST]], i64 5
-; COMMON-NEXT:    store i8 5, ptr [[TMP5]], align 1
-; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE10]]
-; COMMON:       [[PRED_STORE_CONTINUE10]]:
-; COMMON-NEXT:    br i1 true, label %[[PRED_STORE_IF11:.*]], label %[[PRED_STORE_CONTINUE12:.*]]
-; COMMON:       [[PRED_STORE_IF11]]:
-; COMMON-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[DST]], i64 6
-; COMMON-NEXT:    store i8 6, ptr [[TMP6]], align 1
-; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE12]]
-; COMMON:       [[PRED_STORE_CONTINUE12]]:
-; COMMON-NEXT:    br i1 false, label %[[PRED_STORE_IF13:.*]], label %[[PRED_STORE_CONTINUE14:.*]]
-; COMMON:       [[PRED_STORE_IF13]]:
-; COMMON-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[DST]], i64 7
-; COMMON-NEXT:    store i8 7, ptr [[TMP7]], align 1
-; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE14]]
-; COMMON:       [[PRED_STORE_CONTINUE14]]:
-; COMMON-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
-; COMMON:       [[MIDDLE_BLOCK]]:
-; COMMON-NEXT:    br [[EXIT:label %.*]]
-; COMMON:       [[SCALAR_PH]]:
 ;
 entry:
   br label %loop
@@ -876,7 +817,7 @@ define void @test_conditional_interleave_group (ptr noalias %src.1, ptr noalias 
 ; PRED-SAME: ptr noalias [[SRC_1:%.*]], ptr noalias [[SRC_2:%.*]], ptr noalias [[SRC_3:%.*]], ptr noalias [[SRC_4:%.*]], ptr noalias [[DST:%.*]], i64 [[N:%.*]]) #[[ATTR3:[0-9]+]] {
 ; PRED-NEXT:  [[ENTRY:.*:]]
 ; PRED-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
-; PRED-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
+; PRED-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; PRED:       [[VECTOR_SCEVCHECK]]:
 ; PRED-NEXT:    [[MUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[N]])
 ; PRED-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i64, i1 } [[MUL]], 0
@@ -903,7 +844,7 @@ define void @test_conditional_interleave_group (ptr noalias %src.1, ptr noalias 
 ; PRED-NEXT:    [[TMP12:%.*]] = or i1 [[TMP11]], [[MUL_OVERFLOW7]]
 ; PRED-NEXT:    [[TMP13:%.*]] = or i1 [[TMP4]], [[TMP8]]
 ; PRED-NEXT:    [[TMP14:%.*]] = or i1 [[TMP13]], [[TMP12]]
-; PRED-NEXT:    br i1 [[TMP14]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; PRED-NEXT:    br i1 [[TMP14]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; PRED:       [[VECTOR_PH]]:
 ; PRED-NEXT:    [[TMP15:%.*]] = sub i64 [[TMP0]], 8
 ; PRED-NEXT:    [[TMP16:%.*]] = icmp ugt i64 [[TMP0]], 8
@@ -1057,7 +998,6 @@ define void @test_conditional_interleave_group (ptr noalias %src.1, ptr noalias 
 ; PRED-NEXT:    [[TMP84:%.*]] = extractelement <8 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
 ; PRED-NEXT:    [[TMP85:%.*]] = xor i1 [[TMP84]], true
 ; PRED-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], splat (i64 8)
-; PRED-NEXT:    br i1 [[TMP85]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; PRED:       [[MIDDLE_BLOCK]]:
 ; PRED-NEXT:    br [[EXIT:label %.*]]
 ; PRED:       [[SCALAR_PH]]:
@@ -1101,7 +1041,7 @@ define void @redundant_branch_and_tail_folding(ptr %dst, i1 %c) {
 ; DEFAULT-LABEL: define void @redundant_branch_and_tail_folding(
 ; DEFAULT-SAME: ptr [[DST:%.*]], i1 [[C:%.*]]) {
 ; DEFAULT-NEXT:  [[ENTRY:.*:]]
-; DEFAULT-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; DEFAULT-NEXT:    br label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
 ; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; DEFAULT:       [[VECTOR_BODY]]:
@@ -1117,13 +1057,13 @@ define void @redundant_branch_and_tail_folding(ptr %dst, i1 %c) {
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
 ; DEFAULT-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP27:![0-9]+]]
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
-; DEFAULT-NEXT:    br label %[[SCALAR_PH]]
+; DEFAULT-NEXT:    br label %[[SCALAR_PH:.*]]
 ; DEFAULT:       [[SCALAR_PH]]:
 ;
 ; PRED-LABEL: define void @redundant_branch_and_tail_folding(
 ; PRED-SAME: ptr [[DST:%.*]], i1 [[C:%.*]]) {
 ; PRED-NEXT:  [[ENTRY:.*:]]
-; PRED-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; PRED-NEXT:    br label %[[VECTOR_PH:.*]]
 ; PRED:       [[VECTOR_PH]]:
 ; PRED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; PRED:       [[VECTOR_BODY]]:
@@ -1163,10 +1103,9 @@ define void @redundant_branch_and_tail_folding(ptr %dst, i1 %c) {
 ; PRED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; PRED-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; PRED-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 24
-; PRED-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; PRED:       [[MIDDLE_BLOCK]]:
 ; PRED-NEXT:    br [[EXIT:label %.*]]
-; PRED:       [[SCALAR_PH]]:
+; PRED:       [[SCALAR_PH:.*:]]
 ;
 entry:
   br label %loop.header
@@ -1302,7 +1241,7 @@ define void @pred_udiv_select_cost(ptr %A, ptr %B, ptr %C, i64 %n, i8 %y) #1 {
 ; PRED-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i64
 ; PRED-NEXT:    [[C1:%.*]] = ptrtoint ptr [[C]] to i64
 ; PRED-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
-; PRED-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; PRED-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; PRED:       [[VECTOR_MEMCHECK]]:
 ; PRED-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; PRED-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 16
@@ -1311,7 +1250,7 @@ define void @pred_udiv_select_cost(ptr %A, ptr %B, ptr %C, i64 %n, i8 %y) #1 {
 ; PRED-NEXT:    [[TMP4:%.*]] = sub i64 [[C1]], [[B3]]
 ; PRED-NEXT:    [[DIFF_CHECK4:%.*]] = icmp ult i64 [[TMP4]], [[TMP2]]
 ; PRED-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
-; PRED-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; PRED-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; PRED:       [[VECTOR_PH]]:
 ; PRED-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; PRED-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 16
@@ -1351,7 +1290,6 @@ define void @pred_udiv_select_cost(ptr %A, ptr %B, ptr %C, i64 %n, i8 %y) #1 {
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX]], i64 [[TMP11]])
 ; PRED-NEXT:    [[TMP28:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
 ; PRED-NEXT:    [[TMP29:%.*]] = xor i1 [[TMP28]], true
-; PRED-NEXT:    br i1 [[TMP29]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; PRED:       [[MIDDLE_BLOCK]]:
 ; PRED-NEXT:    br [[EXIT:label %.*]]
 ; PRED:       [[SCALAR_PH]]:
