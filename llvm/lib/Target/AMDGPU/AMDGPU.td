@@ -1013,6 +1013,14 @@ def FeatureAgentScopeFineGrainedRemoteMemoryAtomics
   "device memory."
 >;
 
+def FeatureEmulatedSystemScopeAtomics
+  : SubtargetFeature<"emulated-system-scope-atomics",
+  "HasEmulatedSystemScopeAtomics",
+  "true",
+  "System scope atomics unsupported by the PCI-e are emulated in HW via CAS "
+  "loop and functional."
+>;
+
 def FeatureDefaultComponentZero : SubtargetFeature<"default-component-zero",
   "HasDefaultComponentZero",
   "true",
@@ -2062,6 +2070,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureAtomicFMinFMaxF64FlatInsts,
    FeatureFlatBufferGlobalAtomicFaddF64Inst,
    FeatureMemoryAtomicFAddF32DenormalSupport,
+   FeatureEmulatedSystemScopeAtomics,
    FeatureGloballyAddressableScratch,
    FeatureKernargPreload,
    FeatureVmemPrefInsts,
@@ -2601,6 +2610,10 @@ def HasPkAddMinMaxInsts :
 
 def HasPkMinMax3Insts :
   Predicate<"Subtarget->hasPkMinMax3Insts()">,
+  AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
+
+def HasSGetShaderCyclesInst :
+  Predicate<"Subtarget->hasSGetShaderCyclesInst()">,
   AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
 
 def HasImageInsts : Predicate<"Subtarget->hasImageInsts()">,

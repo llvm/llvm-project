@@ -93,7 +93,7 @@ getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
       if (Reqs.isCapabilityAvailable(Cap)) {
         ReqExts.append(getSymbolicOperandExtensions(
             SPIRV::OperandCategory::CapabilityOperand, Cap));
-        return {true, {Cap}, ReqExts, ReqMinVer, ReqMaxVer};
+        return {true, {Cap}, std::move(ReqExts), ReqMinVer, ReqMaxVer};
       }
     } else {
       // By SPIR-V specification: "If an instruction, enumerant, or other
@@ -111,7 +111,7 @@ getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
         if (i == Sz - 1 || !AvoidCaps.S.contains(Cap)) {
           ReqExts.append(getSymbolicOperandExtensions(
               SPIRV::OperandCategory::CapabilityOperand, Cap));
-          return {true, {Cap}, ReqExts, ReqMinVer, ReqMaxVer};
+          return {true, {Cap}, std::move(ReqExts), ReqMinVer, ReqMaxVer};
         }
       }
     }
@@ -558,7 +558,7 @@ static void collectOtherInstr(MachineInstr &MI, SPIRV::ModuleAnalysisInfo &MAI,
                               bool Append = true) {
   MAI.setSkipEmission(&MI);
   InstrSignature MISign = instrToSignature(MI, MAI, true);
-  auto FoundMI = IS.insert(MISign);
+  auto FoundMI = IS.insert(std::move(MISign));
   if (!FoundMI.second)
     return; // insert failed, so we found a duplicate; don't add it to MAI.MS
   // No duplicates, so add it.

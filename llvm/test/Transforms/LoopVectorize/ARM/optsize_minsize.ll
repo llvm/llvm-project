@@ -217,7 +217,7 @@ for.cond.cleanup:
 define void @tail_predicate_without_optsize(ptr %p, i8 %a, i8 %b, i8 %c, i32 %n) {
 ; DEFAULT-LABEL: define void @tail_predicate_without_optsize(
 ; DEFAULT-SAME: ptr [[P:%.*]], i8 [[A:%.*]], i8 [[B:%.*]], i8 [[C:%.*]], i32 [[N:%.*]]) {
-; DEFAULT-NEXT:  [[ENTRY:.*]]:
+; DEFAULT-NEXT:  [[ENTRY:.*:]]
 ; DEFAULT-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; DEFAULT:       [[VECTOR_PH]]:
 ; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i8> poison, i8 [[A]], i64 0
@@ -390,10 +390,9 @@ define void @tail_predicate_without_optsize(ptr %p, i8 %a, i8 %b, i8 %c, i32 %n)
 ; DEFAULT:       [[MIDDLE_BLOCK]]:
 ; DEFAULT-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; DEFAULT:       [[SCALAR_PH]]:
-; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; DEFAULT-NEXT:    br label %[[FOR_BODY:.*]]
 ; DEFAULT:       [[FOR_BODY]]:
-; DEFAULT-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; DEFAULT-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; DEFAULT-NEXT:    [[TMP72:%.*]] = trunc nuw nsw i64 [[INDVARS_IV]] to i8
 ; DEFAULT-NEXT:    [[MUL:%.*]] = mul i8 [[A]], [[TMP72]]
 ; DEFAULT-NEXT:    [[SHR:%.*]] = lshr i8 [[TMP72]], 1

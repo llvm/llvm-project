@@ -866,7 +866,8 @@ def TTMP_64 : SIRegisterClass<"AMDGPU", [v2i32, i64, f64, v4i16, v4f16, v4bf16],
 
 def SReg_64_XEXEC_XNULL : SIRegisterClass<"AMDGPU", [v2i32, i64, v2f32, f64, i1, v4i16, v4f16, v4bf16], 32,
   (add SGPR_64, VCC, FLAT_SCR, XNACK_MASK, SRC_SHARED_BASE,
-       SRC_SHARED_LIMIT, SRC_PRIVATE_BASE, SRC_PRIVATE_LIMIT, TTMP_64, TBA, TMA)> {
+       SRC_SHARED_LIMIT, SRC_PRIVATE_BASE, SRC_PRIVATE_LIMIT, TTMP_64, TBA, TMA,
+       SRC_FLAT_SCRATCH_BASE)> {
   let CopyCost = 1;
   let AllocationPriority = 1;
   let HasSGPR = 1;

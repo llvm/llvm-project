@@ -33,8 +33,6 @@ define void @multiple_exits_unique_exit_block(ptr %A, ptr %B, i32 %N) #0 {
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i32 [[TMP8]], i32 [[N_MOD_VF]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP0]], [[TMP10]]
-; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP12:%.*]] = mul nuw i32 [[TMP11]], 8
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -50,7 +48,7 @@ define void @multiple_exits_unique_exit_block(ptr %A, ptr %B, i32 %N) #0 {
 ; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i32, ptr [[TMP25]], i64 [[TMP29]]
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[WIDE_LOAD]], ptr [[TMP25]], align 4
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[WIDE_LOAD3]], ptr [[TMP30]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP12]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP31:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP31]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
@@ -105,8 +103,6 @@ define i32 @multiple_exits_multiple_exit_blocks(ptr %A, ptr %B, i32 %N) #0 {
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i32 [[TMP8]], i32 [[N_MOD_VF]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP0]], [[TMP10]]
-; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP12:%.*]] = mul nuw i32 [[TMP11]], 8
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -122,7 +118,7 @@ define i32 @multiple_exits_multiple_exit_blocks(ptr %A, ptr %B, i32 %N) #0 {
 ; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i32, ptr [[TMP25]], i64 [[TMP29]]
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[WIDE_LOAD]], ptr [[TMP25]], align 4
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[WIDE_LOAD3]], ptr [[TMP30]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP12]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP31:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP31]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:

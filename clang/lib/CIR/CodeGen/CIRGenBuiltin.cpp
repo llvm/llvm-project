@@ -72,6 +72,19 @@ RValue CIRGenFunction::emitRotate(const CallExpr *e, bool isRotateLeft) {
   return RValue::get(r);
 }
 
+template <class Operation>
+static RValue emitUnaryMaybeConstrainedFPBuiltin(CIRGenFunction &cgf,
+                                                 const CallExpr &e) {
+  mlir::Value arg = cgf.emitScalarExpr(e.getArg(0));
+
+  assert(!cir::MissingFeatures::cgFPOptionsRAII());
+  assert(!cir::MissingFeatures::fpConstraints());
+
+  auto call =
+      Operation::create(cgf.getBuilder(), arg.getLoc(), arg.getType(), arg);
+  return RValue::get(call->getResult(0));
+}
+
 RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
                                        const CallExpr *e,
                                        ReturnValueSlot returnValue) {
@@ -112,6 +125,16 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   default:
     break;
 
+  case Builtin::BIfabs:
+  case Builtin::BIfabsf:
+  case Builtin::BIfabsl:
+  case Builtin::BI__builtin_fabs:
+  case Builtin::BI__builtin_fabsf:
+  case Builtin::BI__builtin_fabsf16:
+  case Builtin::BI__builtin_fabsl:
+  case Builtin::BI__builtin_fabsf128:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::FAbsOp>(*this, *e);
+
   case Builtin::BI__assume:
   case Builtin::BI__builtin_assume: {
     if (e->getArg(0)->HasSideEffects(getContext()))
@@ -127,6 +150,24 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Value value1 = emitScalarExpr(e->getArg(1));
     builder.create<cir::AssumeSepStorageOp>(loc, value0, value1);
     return RValue::get(nullptr);
+  }
+
+  case Builtin::BI__builtin_assume_aligned: {
+    const Expr *ptrExpr = e->getArg(0);
+    mlir::Value ptrValue = emitScalarExpr(ptrExpr);
+    mlir::Value offsetValue =
+        (e->getNumArgs() > 2) ? emitScalarExpr(e->getArg(2)) : nullptr;
+
+    std::optional<llvm::APSInt> alignment =
+        e->getArg(1)->getIntegerConstantExpr(getContext());
+    assert(alignment.has_value() &&
+           "the second argument to __builtin_assume_aligned must be an "
+           "integral constant expression");
+
+    mlir::Value result =
+        emitAlignmentAssumption(ptrValue, ptrExpr, ptrExpr->getExprLoc(),
+                                alignment->getSExtValue(), offsetValue);
+    return RValue::get(result);
   }
 
   case Builtin::BI__builtin_complex: {
