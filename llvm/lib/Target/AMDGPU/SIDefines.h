@@ -197,7 +197,7 @@ enum ClassFlags : unsigned {
 
 namespace AMDGPU {
 enum OperandType : unsigned {
-  /// Operands with register or 32-bit immediate
+  /// Operands with register, 32-bit, or 64-bit immediate
   OPERAND_REG_IMM_INT32 = MCOI::OPERAND_FIRST_TARGET,
   OPERAND_REG_IMM_INT64,
   OPERAND_REG_IMM_INT16,
