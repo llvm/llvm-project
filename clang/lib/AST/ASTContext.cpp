@@ -5887,10 +5887,11 @@ ASTContext::getSubstTemplateTypeParmPackType(Decl *AssociatedDecl,
 
 QualType
 ASTContext::getSubstBuiltinTemplatePack(const TemplateArgument &ArgPack) {
-#ifndef NDEBUG
-  for (const auto &P : ArgPack.pack_elements())
-    assert(P.getKind() == TemplateArgument::Type && "Pack contains a non-type");
-#endif
+  assert(llvm::all_of(ArgPack.pack_elements(),
+                      [](const auto &P) {
+                        return P.getKind() == TemplateArgument::Type;
+                      }) &&
+         "Pack contains a non-type");
 
   llvm::FoldingSetNodeID ID;
   SubstBuiltinTemplatePackType::Profile(ID, ArgPack);
