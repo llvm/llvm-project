@@ -12,7 +12,7 @@ name:            test_ext_zzi_unique
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_ext_zzi_unique
-    ; CHECK: BUNDLE implicit-def $z2, implicit-def $q2, implicit-def $d2, implicit-def $s2, implicit-def $h2, implicit-def $b2, implicit-def $b2_hi, implicit-def $h2_hi, implicit-def $s2_hi, implicit-def $d2_hi, implicit-def $q2_hi, implicit killed $z0 {
+    ; CHECK: BUNDLE implicit-def $z2, implicit killed $z0 {
     ; CHECK-NEXT:   $z2 = MOVPRFX_ZZ $z0
     ; CHECK-NEXT:   $z2 = EXT_ZZI internal killed $z2, killed $z0, 1
     ; CHECK-NEXT: }
@@ -37,7 +37,7 @@ name:            test_ext_zzi_unique_implicit_ops
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_ext_zzi_unique_implicit_ops
-    ; CHECK: BUNDLE implicit-def $z2, implicit-def $q2, implicit-def $d2, implicit-def $s2, implicit-def $h2, implicit-def $b2, implicit-def $b2_hi, implicit-def $h2_hi, implicit-def $s2_hi, implicit-def $d2_hi, implicit-def $q2_hi, implicit killed $z0, implicit killed $q0 {
+    ; CHECK: BUNDLE implicit-def $z2, implicit-def $q2, implicit killed $z0, implicit killed $q0 {
     ; CHECK-NEXT:   $z2 = MOVPRFX_ZZ $z0, implicit killed $q0
     ; CHECK-NEXT:   $z2 = EXT_ZZI internal killed $z2, killed $z0, 1, implicit-def $q2
     ; CHECK-NEXT: }
@@ -51,7 +51,7 @@ name:            test_ext_zzi_undef
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_ext_zzi_undef
-    ; CHECK: BUNDLE implicit-def $z2, implicit-def $q2, implicit-def $d2, implicit-def $s2, implicit-def $h2, implicit-def $b2, implicit-def $b2_hi, implicit-def $h2_hi, implicit-def $s2_hi, implicit-def $d2_hi, implicit-def $q2_hi, implicit undef $z0 {
+    ; CHECK: BUNDLE implicit-def $z2, implicit undef $z0 {
     ; CHECK-NEXT:   $z2 = MOVPRFX_ZZ undef $z0
     ; CHECK-NEXT:   $z2 = EXT_ZZI internal killed $z2, undef $z0, 1
     ; CHECK-NEXT: }
