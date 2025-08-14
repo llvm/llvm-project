@@ -390,7 +390,11 @@ public:
   /// the original value.
   bool zeroesHigh16BitsOfDest(unsigned Opcode) const;
 
-  bool supportsWGP() const { return getGeneration() >= GFX10; }
+  bool supportsWGP() const {
+    if (GFX1250Insts)
+      return false;
+    return getGeneration() >= GFX10;
+  }
 
   bool hasIntClamp() const {
     return HasIntClamp;
