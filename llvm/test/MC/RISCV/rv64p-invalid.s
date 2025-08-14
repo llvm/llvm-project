@@ -10,6 +10,9 @@ pslli.b a6, a7, 100 # CHECK: :[[@LINE]]:17: error: immediate must be an integer 
 pslli.h ra, sp, 100 # CHECK: :[[@LINE]]:17: error: immediate must be an integer in the range [0, 15]
 pslli.w ra, sp, 100 # CHECK: :[[@LINE]]:17: error: immediate must be an integer in the range [0, 31]
 
+ssha a0, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set
+sshar a0, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set
+
 psslai.h t0, t1, 100 # CHECK: :[[@LINE]]:18: error: immediate must be an integer in the range [0, 15]
 psslai.w a4, a5, -1 # CHECK: :[[@LINE]]:18: error: immediate must be an integer in the range [0, 31]
 sslai ra, sp, 10 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV32I Base Instruction Set

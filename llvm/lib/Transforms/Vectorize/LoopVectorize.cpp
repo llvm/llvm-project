@@ -824,7 +824,14 @@ namespace llvm {
 Value *createStepForVF(IRBuilderBase &B, Type *Ty, ElementCount VF,
                        int64_t Step) {
   assert(Ty->isIntegerTy() && "Expected an integer step");
-  return B.CreateElementCount(Ty, VF.multiplyCoefficientBy(Step));
+  ElementCount VFxStep = VF.multiplyCoefficientBy(Step);
+  assert(isPowerOf2_64(VF.getKnownMinValue()) && "must pass power-of-2 VF");
+  if (VF.isScalable() && isPowerOf2_64(Step)) {
+    return B.CreateShl(
+        B.CreateVScale(Ty),
+        ConstantInt::get(Ty, Log2_64(VFxStep.getKnownMinValue())), "", true);
+  }
+  return B.CreateElementCount(Ty, VFxStep);
 }
 
 /// Return the runtime value for VF.
@@ -2298,7 +2305,10 @@ Value *InnerLoopVectorizer::createIterationCountCheck(ElementCount VF,
   // Reuse existing vector loop preheader for TC checks.
   // Note that new preheader block is generated for vector loop.
   BasicBlock *const TCCheckBlock = LoopVectorPreHeader;
-  IRBuilder<> Builder(TCCheckBlock->getTerminator());
+  IRBuilder<InstSimplifyFolder> Builder(
+      TCCheckBlock->getContext(),
+      InstSimplifyFolder(TCCheckBlock->getDataLayout()));
+  Builder.SetInsertPoint(TCCheckBlock->getTerminator());
 
   // If tail is to be folded, vector loop takes care of all iterations.
   Value *Count = getTripCount();
@@ -2310,7 +2320,7 @@ Value *InnerLoopVectorizer::createIterationCountCheck(ElementCount VF,
       return createStepForVF(Builder, CountTy, VF, UF);
 
     Value *MinProfTC =
-        createStepForVF(Builder, CountTy, MinProfitableTripCount, 1);
+        Builder.CreateElementCount(CountTy, MinProfitableTripCount);
     if (!VF.isScalable())
       return MinProfTC;
     return Builder.CreateBinaryIntrinsic(
@@ -2492,7 +2502,6 @@ BasicBlock *InnerLoopVectorizer::createVectorizedLoopSkeleton() {
   // to the scalar loop.
   emitIterationCountCheck(LoopScalarPreHeader);
 
-  replaceVPBBWithIRVPBB(Plan.getScalarPreheader(), LoopScalarPreHeader);
   replaceVPBBWithIRVPBB(VectorPHVPBB, LoopVectorPreHeader);
   return LoopVectorPreHeader;
 }
@@ -2678,11 +2687,8 @@ void InnerLoopVectorizer::fixNonInductionPHIs(VPTransformState &State) {
       PHINode *NewPhi = cast<PHINode>(State.get(VPPhi));
       // Make sure the builder has a valid insert point.
       Builder.SetInsertPoint(NewPhi);
-      for (unsigned Idx = 0; Idx < VPPhi->getNumIncoming(); ++Idx) {
-        VPValue *Inc = VPPhi->getIncomingValue(Idx);
-        const VPBasicBlock *VPBB = VPPhi->getIncomingBlock(Idx);
+      for (const auto &[Inc, VPBB] : VPPhi->incoming_values_and_blocks())
         NewPhi->addIncoming(State.get(Inc), State.CFG.VPBB2IRBB[VPBB]);
-      }
     }
   }
 }
@@ -7338,6 +7344,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   BasicBlock *EntryBB =
       cast<VPIRBasicBlock>(BestVPlan.getEntry())->getIRBasicBlock();
   State.CFG.PrevBB = ILV.createVectorizedLoopSkeleton();
+  replaceVPBBWithIRVPBB(BestVPlan.getScalarPreheader(),
+                        State.CFG.PrevBB->getSingleSuccessor());
   VPlanTransforms::removeDeadRecipes(BestVPlan);
 
   assert(verifyVPlanIsValid(BestVPlan, true /*VerifyLate*/) &&
@@ -7469,7 +7477,6 @@ BasicBlock *EpilogueVectorizerMainLoop::createEpilogueVectorizedLoopSkeleton() {
   EPI.MainLoopIterationCountCheck =
       emitIterationCountCheck(LoopScalarPreHeader, false);
 
-  replaceVPBBWithIRVPBB(Plan.getScalarPreheader(), LoopScalarPreHeader);
   return LoopVectorPreHeader;
 }
 
@@ -7604,7 +7611,6 @@ EpilogueVectorizerEpilogueLoop::createEpilogueVectorizedLoopSkeleton() {
       Phi->removeIncomingValue(MemCheckBlock);
   }
 
-  replaceVPBBWithIRVPBB(Plan.getScalarPreheader(), LoopScalarPreHeader);
   return LoopVectorPreHeader;
 }
 
