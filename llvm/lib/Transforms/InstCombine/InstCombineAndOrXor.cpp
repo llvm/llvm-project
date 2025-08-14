@@ -3774,18 +3774,15 @@ static bool matchZExtedSubInteger(Value *V, Value *&Int, APInt &Mask,
                          m_Value(Int))))
     return false;
 
-  assert(ShlConst != nullptr);
   const uint64_t ShlAmt = ShlConst->getZExtValue();
   const uint64_t LShrAmt = LShrConst ? LShrConst->getZExtValue() : 0;
   if (LShrAmt > ShlAmt)
     return false;
+  Offset = ShlAmt - LShrAmt;
 
-  Mask = (ShiftedMaskConst
-              ? *ShiftedMaskConst
-              : APInt::getAllOnes(Int->getType()->getScalarSizeInBits()))
-             .shl(LShrAmt);
-  assert(LShrAmt < INT64_MAX && ShlAmt < INT64_MAX);
-  Offset = static_cast<int64_t>(ShlAmt) - static_cast<int64_t>(LShrAmt);
+  Mask = ShiftedMaskConst ? ShiftedMaskConst->shl(LShrAmt)
+                          : APInt::getBitsSetFrom(
+                                Int->getType()->getScalarSizeInBits(), LShrAmt);
 
   return true;
 }
@@ -4056,11 +4053,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
                                    /*NSW=*/true, /*NUW=*/true))
       return R;
 
-    if (Value *Res = foldBitmaskMul(I.getOperand(0), I.getOperand(1), Builder))
-      return replaceInstUsesWith(I, Res);
-
-    if (Value *Res = foldIntegerRepackThroughZExt(I.getOperand(0),
-                                                  I.getOperand(1), Builder))
+    if (Value *Res = foldDisjointOr(I.getOperand(0), I.getOperand(1)))
       return replaceInstUsesWith(I, Res);
 
     if (Value *Res = reassociateDisjointOr(I.getOperand(0), I.getOperand(1)))
