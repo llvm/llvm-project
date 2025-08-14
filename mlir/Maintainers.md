@@ -30,6 +30,7 @@ dialects, build system and language bindings.
 ### Code
 
 #### Standalone subcategories
+* Core tooling (ODS, DRR, PDLL, LSP) (core)
 * CMake ([christopherbate](https://github.com/christopherbate))
 * Dialect Conversion ([matthias-springer](https://github.com/matthias-springer), [zero9178](https://github.com/zero9178))
 * Python Bindings ([makslevental](https://github.com/makslevental), [rolfmorel](https://github.com/rolfmorel))
@@ -59,7 +60,7 @@ dialects, build system and language bindings.
 * ‘shape’ Dialect ([jpienaar](https://github.com/jpienaar))
 * ‘smt’ Dialect ([fabianschuiki](https://github.com/fabianschuiki), [maerhart](https://github.com/maerhart))
 * ‘ub’ Dialect ([Hardcode84](https://github.com/Hardcode84))
-* ‘complex’ Dialect (unmaintained)
+* ‘complex’ Dialect (core)
 * ‘async’ Dialect (unmaintained)
 
 ## Egress
