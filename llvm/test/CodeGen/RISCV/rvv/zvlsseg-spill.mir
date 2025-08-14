@@ -41,7 +41,7 @@ body: |
     ; CHECK-NEXT: $x11 = ADDI $x2, 16
     ; CHECK-NEXT: $v7 = VL1RE8_V $x11 :: (load (<vscale x 1 x s64>) from %stack.0)
     ; CHECK-NEXT: $x12 = PseudoReadVLENB
-    ; CHECK-NEXT: $x11 = ADD killed $x11, $x12
+    ; CHECK-NEXT: $x11 = ADD killed $x11, killed $x12
     ; CHECK-NEXT: $v8m4 = VL4RE8_V $x11 :: (load (<vscale x 1 x s256>) from %stack.0, align 8)
     ; CHECK-NEXT: $x12 = SLLI killed $x12, 2
     ; CHECK-NEXT: $x11 = ADD killed $x11, killed $x12
@@ -85,7 +85,7 @@ body: |
     ; CHECK-NEXT: $x11 = ADDI $x2, 16
     ; CHECK-NEXT: VS1R_V $v1, $x11, implicit $v1_v2_v3_v4_v5_v6_v7 :: (store (<vscale x 1 x s64>) into %stack.0)
     ; CHECK-NEXT: $x12 = PseudoReadVLENB
-    ; CHECK-NEXT: $x11 = ADD killed $x11, $x12
+    ; CHECK-NEXT: $x11 = ADD killed $x11, killed $x12
     ; CHECK-NEXT: VS2R_V $v2m2, $x11, implicit $v1_v2_v3_v4_v5_v6_v7 :: (store (<vscale x 1 x s128>) into %stack.0, align 8)
     ; CHECK-NEXT: $x12 = SLLI killed $x12, 1
     ; CHECK-NEXT: $x11 = ADD killed $x11, killed $x12
