@@ -137,6 +137,14 @@ else()
   set(MLIR_ENABLE_ROCM_CONVERSIONS 0)
 endif()
 
+# Build the XeVM conversions and run according tests if the SPIRV backend
+# is available.
+if ("SPIRV" IN_LIST LLVM_TARGETS_TO_BUILD)
+  set(MLIR_ENABLE_XEVM_CONVERSIONS 1)
+else()
+  set(MLIR_ENABLE_XEVM_CONVERSIONS 0)
+endif()
+
 set(MLIR_ENABLE_CUDA_RUNNER 0 CACHE BOOL "Enable building the MLIR CUDA runner")
 set(MLIR_ENABLE_ROCM_RUNNER 0 CACHE BOOL "Enable building the MLIR ROCm runner")
 set(MLIR_ENABLE_SYCL_RUNNER 0 CACHE BOOL "Enable building the MLIR SYCL runner")
