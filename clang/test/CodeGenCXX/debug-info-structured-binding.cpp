@@ -7,6 +7,7 @@
 // CHECK: #dbg_declare(ptr %{{[0-9]+}}, ![[VAR_4:[0-9]+]], !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 4),
 // CHECK: #dbg_declare(ptr %z1, ![[VAR_5:[0-9]+]], !DIExpression()
 // CHECK: #dbg_declare(ptr %z2, ![[VAR_6:[0-9]+]], !DIExpression()
+// CHECK: load ptr, ptr %z1, {{.*}}!dbg ![[Z1_DEBUG_LOC:[0-9]+]]
 // CHECK: ![[VAR_0]] = !DILocalVariable(name: "a"
 // CHECK: ![[VAR_1]] = !DILocalVariable(name: "x1", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}})
 // CHECK: ![[VAR_2]] = !DILocalVariable(name: "y1", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}})
@@ -46,5 +47,9 @@ int f() {
   auto [x1, y1] = a;
   auto &[x2, y2] = a;
   auto [z1, z2] = B{1, 2};
-  return x1 + y1 + x2 + y2 + z1 + z2;
+  return x1 + y1 + x2 + y2 + 
+// CHECK: ![[Z1_DEBUG_LOC]] = !DILocation(line: [[@LINE+1]]
+     z1  //
+     +   //
+     z2; //
 }
