@@ -1534,18 +1534,24 @@ private:
       mlir::Location loc, fir::FirOpBuilder &builder, hlfir::EOShiftOp op,
       mlir::Value precomputedScalarBoundary, mlir::Value boundaryIsScalarPred,
       mlir::ValueRange oneBasedIndices) {
+    // Boundary is statically absent: a default value has been precomputed.
     if (!op.getBoundary())
       return precomputedScalarBoundary;
 
+    // Boundary is statically present and is a scalar: boundary does not depend
+    // upon the indices and so it has been precomputed.
     hlfir::Entity boundary{op.getBoundary()};
     if (boundary.isScalar())
       return precomputedScalarBoundary;
 
-    if (!precomputedScalarBoundary) {
-      // The array boundary must be present, so we just need to load
-      // the scalar boundary value.
+    // Boundary is statically present and is an array: if the scalar
+    // boundary has not been precomputed, this means that the data type
+    // of the shifted values does not provide a way to compute
+    // the default boundary value, so the array boundary must be dynamically
+    // present, and we can load the boundary values from it.
+    bool mustBePresent = !precomputedScalarBoundary;
+    if (mustBePresent)
       return loadEoshiftVal(loc, builder, boundary, oneBasedIndices);
-    }
 
     // The array boundary may be dynamically absent.
     // In this case, precomputedScalarBoundary is a pre-computed scalar
