@@ -87,7 +87,6 @@ define i64 @strlen_test(ptr noundef %str) nounwind {
 ; CHECK-AIX-64-P9-NEXT:    std r3, 120(r1)
 ; CHECK-AIX-64-P9-NEXT:    bl .___strlen64[PR]
 ; CHECK-AIX-64-P9-NEXT:    nop
-; CHECK-AIX-64-P9-NEXT:    clrldi r3, r3, 32
 ; CHECK-AIX-64-P9-NEXT:    addi r1, r1, 128
 ; CHECK-AIX-64-P9-NEXT:    ld r0, 16(r1)
 ; CHECK-AIX-64-P9-NEXT:    mtlr r0
