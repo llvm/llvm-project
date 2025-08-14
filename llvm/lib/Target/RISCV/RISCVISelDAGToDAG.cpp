@@ -18,6 +18,7 @@
 #include "RISCVInstrInfo.h"
 #include "RISCVSelectionDAGInfo.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Debug.h"
@@ -772,6 +773,49 @@ bool RISCVDAGToDAGISel::trySignedBitfieldInsertInSign(SDNode *Node) {
   return false;
 }
 
+// (xor X, (and (xor X, C1), C2))
+// -> (qc.insbi X, (C1 >> ShAmt), Width, ShAmt)
+// where C2 is a shifted mask with width=Width and shift=ShAmt
+bool RISCVDAGToDAGISel::tryBitfieldInsertOpFromXor(SDNode *Node) {
+
+  if (!Subtarget->hasVendorXqcibm())
+    return false;
+
+  using namespace SDPatternMatch;
+
+  SDValue X;
+  APInt CImm, CMask;
+  if (!sd_match(
+          Node,
+          m_Xor(m_Value(X),
+                m_OneUse(m_And(m_OneUse(m_Xor(m_Deferred(X), m_ConstInt(CImm))),
+                               m_ConstInt(CMask))))))
+    return false;
+
+  unsigned Width, ShAmt;
+  if (!CMask.isShiftedMask(ShAmt, Width))
+    return false;
+
+  int64_t Imm = CImm.getSExtValue();
+  Imm >>= ShAmt;
+
+  SDLoc DL(Node);
+  SDValue ImmNode;
+  auto Opc = RISCV::QC_INSB;
+
+  if (isInt<5>(Imm)) {
+    Opc = RISCV::QC_INSBI;
+    ImmNode = CurDAG->getSignedTargetConstant(Imm, DL, MVT::i32);
+  } else {
+    ImmNode = selectImm(CurDAG, DL, MVT::i32, Imm, *Subtarget);
+  }
+  SDValue Ops[] = {X, ImmNode, CurDAG->getTargetConstant(Width, DL, MVT::i32),
+                   CurDAG->getTargetConstant(ShAmt, DL, MVT::i32)};
+  ReplaceNode(Node, CurDAG->getMachineNode(Opc, DL, MVT::i32, Ops));
+
+  return true;
+}
+
 bool RISCVDAGToDAGISel::tryUnsignedBitfieldExtract(SDNode *Node,
                                                    const SDLoc &DL, MVT VT,
                                                    SDValue X, unsigned Msb,
@@ -1347,6 +1391,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   }
   case ISD::XOR:
     if (tryShrinkShlLogicImm(Node))
+      return;
+
+    if (tryBitfieldInsertOpFromXor(Node))
       return;
 
     break;
@@ -2827,6 +2874,8 @@ static bool selectConstantAddr(SelectionDAG *CurDAG, const SDLoc &DL,
 static bool isWorthFoldingAdd(SDValue Add) {
   for (auto *User : Add->users()) {
     if (User->getOpcode() != ISD::LOAD && User->getOpcode() != ISD::STORE &&
+        User->getOpcode() != RISCVISD::LD_RV32 &&
+        User->getOpcode() != RISCVISD::SD_RV32 &&
         User->getOpcode() != ISD::ATOMIC_LOAD &&
         User->getOpcode() != ISD::ATOMIC_STORE)
       return false;
@@ -2840,6 +2889,9 @@ static bool isWorthFoldingAdd(SDValue Add) {
       return false;
     if (User->getOpcode() == ISD::ATOMIC_STORE &&
         cast<AtomicSDNode>(User)->getVal() == Add)
+      return false;
+    if (User->getOpcode() == RISCVISD::SD_RV32 &&
+        (User->getOperand(0) == Add || User->getOperand(1) == Add))
       return false;
     if (isStrongerThanMonotonic(cast<MemSDNode>(User)->getSuccessOrdering()))
       return false;
@@ -2942,8 +2994,8 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
 /// Similar to SelectAddrRegImm, except that the offset is restricted to uimm9.
 bool RISCVDAGToDAGISel::SelectAddrRegImm9(SDValue Addr, SDValue &Base,
                                           SDValue &Offset) {
-  // FIXME: Support FrameIndex. Need to teach eliminateFrameIndex that only
-  // a 9-bit immediate can be folded.
+  if (SelectAddrFrameIndex(Addr, Base, Offset))
+    return true;
 
   SDLoc DL(Addr);
   MVT VT = Addr.getSimpleValueType();
@@ -2953,8 +3005,8 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm9(SDValue Addr, SDValue &Base,
     if (isUInt<9>(CVal)) {
       Base = Addr.getOperand(0);
 
-      // FIXME: Support FrameIndex. Need to teach eliminateFrameIndex that only
-      // a 9-bit immediate can be folded.
+      if (auto *FIN = dyn_cast<FrameIndexSDNode>(Base))
+        Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), VT);
       Offset = CurDAG->getSignedTargetConstant(CVal, DL, VT);
       return true;
     }

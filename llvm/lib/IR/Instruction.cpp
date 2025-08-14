@@ -26,8 +26,17 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 using namespace llvm;
+
+// FIXME: Flag used for an ablation performance test, Issue #147390. Placing it
+// here because referencing IR should be feasible from anywhere. Will be
+// removed after the ablation test.
+cl::opt<bool> ProfcheckDisableMetadataFixes(
+    "profcheck-disable-metadata-fixes", cl::Hidden, cl::init(false),
+    cl::desc(
+        "Disable metadata propagation fixes discovered through Issue #147390"));
 
 InsertPosition::InsertPosition(Instruction *InsertBefore)
     : InsertAt(InsertBefore ? InsertBefore->getIterator()
@@ -817,6 +826,7 @@ const char *Instruction::getOpcodeName(unsigned OpCode) {
   case UIToFP:        return "uitofp";
   case SIToFP:        return "sitofp";
   case IntToPtr:      return "inttoptr";
+  case PtrToAddr:     return "ptrtoaddr";
   case PtrToInt:      return "ptrtoint";
   case BitCast:       return "bitcast";
   case AddrSpaceCast: return "addrspacecast";
@@ -942,14 +952,13 @@ bool Instruction::isIdenticalToWhenDefined(const Instruction *I,
 
   // We have two instructions of identical opcode and #operands.  Check to see
   // if all operands are the same.
-  if (!std::equal(op_begin(), op_end(), I->op_begin()))
+  if (!equal(operands(), I->operands()))
     return false;
 
   // WARNING: this logic must be kept in sync with EliminateDuplicatePHINodes()!
-  if (const PHINode *thisPHI = dyn_cast<PHINode>(this)) {
-    const PHINode *otherPHI = cast<PHINode>(I);
-    return std::equal(thisPHI->block_begin(), thisPHI->block_end(),
-                      otherPHI->block_begin());
+  if (const PHINode *Phi = dyn_cast<PHINode>(this)) {
+    const PHINode *OtherPhi = cast<PHINode>(I);
+    return equal(Phi->blocks(), OtherPhi->blocks());
   }
 
   return this->hasSameSpecialState(I, /*IgnoreAlignment=*/false,

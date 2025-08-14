@@ -1422,6 +1422,21 @@ def fno_hip_emit_relocatable : Flag<["-"], "fno-hip-emit-relocatable">,
   HelpText<"Do not override toolchain to compile HIP source to relocatable">;
 }
 
+// Clang specific/exclusive options for OpenACC.
+def openacc_macro_override
+    : Separate<["-"], "fexperimental-openacc-macro-override">,
+      Visibility<[ClangOption, CC1Option]>,
+      Group<f_Group>,
+      HelpText<"Overrides the _OPENACC macro value for experimental testing "
+               "during OpenACC support development">;
+def openacc_macro_override_EQ
+    : Joined<["-"], "fexperimental-openacc-macro-override=">,
+      Alias<openacc_macro_override>;
+
+// End Clang specific/exclusive options for OpenACC.
+
+def libclc_lib_EQ : Joined<["--"], "libclc-lib=">, Group<opencl_Group>,
+  HelpText<"Namespec of libclc OpenCL bitcode library to link">;
 def libomptarget_amdgpu_bc_path_EQ : Joined<["--"], "libomptarget-amdgpu-bc-path=">, Group<i_Group>,
   HelpText<"Path to libomptarget-amdgcn bitcode library">;
 def libomptarget_amdgcn_bc_path_EQ : Joined<["--"], "libomptarget-amdgcn-bc-path=">, Group<i_Group>,
@@ -5312,6 +5327,8 @@ def mextended_const : Flag<["-"], "mextended-const">, Group<m_wasm_Features_Grou
 def mno_extended_const : Flag<["-"], "mno-extended-const">, Group<m_wasm_Features_Group>;
 def mfp16 : Flag<["-"], "mfp16">, Group<m_wasm_Features_Group>;
 def mno_fp16 : Flag<["-"], "mno-fp16">, Group<m_wasm_Features_Group>;
+def mgc : Flag<["-"], "mgc">, Group<m_wasm_Features_Group>;
+def mno_gc : Flag<["-"], "mno-gc">, Group<m_wasm_Features_Group>;
 def mmultimemory : Flag<["-"], "mmultimemory">, Group<m_wasm_Features_Group>;
 def mno_multimemory : Flag<["-"], "mno-multimemory">, Group<m_wasm_Features_Group>;
 def mmultivalue : Flag<["-"], "mmultivalue">, Group<m_wasm_Features_Group>;
@@ -5572,7 +5589,8 @@ def mno_outline_atomics : Flag<["-"], "mno-outline-atomics">, Group<f_clang_Grou
   HelpText<"Don't generate local calls to out-of-line atomic operations">;
 def mno_implicit_float : Flag<["-"], "mno-implicit-float">, Group<m_Group>,
   HelpText<"Don't generate implicit floating point or vector instructions">;
-def mimplicit_float : Flag<["-"], "mimplicit-float">, Group<m_Group>;
+def mimplicit_float : Flag<["-"], "mimplicit-float">, Group<m_Group>,
+  HelpText<"Generate implicit floating point or vector instructions">;
 def mrecip : Flag<["-"], "mrecip">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Equivalent to '-mrecip=all'">;

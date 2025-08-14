@@ -14,11 +14,11 @@ module attributes {transform.with_named_sequence} {
       : (!transform.any_op) -> !transform.any_op
 
     // Tile to 5 then pad to 8
-    %fill_l1, %loops_l1 = transform.structured.tile_using_for %fill tile_sizes [5] 
+    %fill_l1, %loops_l1 = transform.structured.tile_using_for %fill tile_sizes [5]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
     %fill_padded, %_ = transform.structured.pad_tiling_interface %fill_l1 to padding_sizes [8] {
-      padding_values=[0.0 : f32, 0.0 : f32]
+      padding_values= [#ub.poison, 0.0 : f32]
     } : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
     transform.yield
@@ -33,9 +33,9 @@ func.func @pad_lhs(
      -> tensor<24x25xf32>
 {
   //      CHECK: scf.for %{{.*}} -> (tensor<24x25xf32>)
-  //      CHECK:   tensor.pad %{{.*}} 
+  //      CHECK:   tensor.pad %{{.*}}
   //      CHECK:     : tensor<?x12xf32> to tensor<8x12xf32>
-  //      CHECK:   tensor.pad %{{.*}} 
+  //      CHECK:   tensor.pad %{{.*}}
   //      CHECK:     : tensor<?x25xf32> to tensor<8x25xf32>
   //      CHECK:   linalg.matmul ins(%{{.*}}, %{{.*}} : tensor<8x12xf32>, tensor<12x25xf32>) outs(%{{.*}} : tensor<8x25xf32>) -> tensor<8x25xf32>
   //      CHECK:   tensor.extract_slice %{{.*}}[0, 0] [%{{.*}}, 25] [1, 1]
@@ -92,7 +92,7 @@ module {
       %padded, %pad = transform.structured.pad_tiling_interface %0 to padding_sizes [8, 0, 14] {
         padding_values = [0.000000e+00 : f32, 0.000000e+00 : f32, 0.000000e+00 : f32]
       } : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
-      transform.yield 
+      transform.yield
     }
   }
 }
@@ -147,7 +147,7 @@ module {
       %padded, %pad = transform.structured.pad_tiling_interface %0 to padding_sizes [8, 0, 14] {
         padding_values = [0.000000e+00 : f32, 0.000000e+00 : f32, 0.000000e+00 : f32]
       } : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
-      transform.yield 
+      transform.yield
     }
   }
 }

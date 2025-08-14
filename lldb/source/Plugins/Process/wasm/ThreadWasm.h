@@ -25,6 +25,9 @@ public:
   /// Retrieve the current call stack from the WebAssembly remote process.
   llvm::Expected<std::vector<lldb::addr_t>> GetWasmCallStack();
 
+  lldb::RegisterContextSP
+  CreateRegisterContextForFrame(StackFrame *frame) override;
+
 protected:
   Unwind &GetUnwinder() override;
 
