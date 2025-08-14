@@ -137,6 +137,7 @@ Non-comprehensive list of changes in this release
   argument lists or base specifiers.
 
   .. code-block:: c++
+
     template <typename...> struct TypeList;
 
     // The resulting type is TypeList<int, double, char>
