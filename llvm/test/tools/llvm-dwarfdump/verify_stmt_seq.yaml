@@ -5,14 +5,24 @@
 # RUN: yaml2obj %s -o verify_stmt_seq.o
 # RUN: not llvm-dwarfdump -verify -debug-info verify_stmt_seq.o | FileCheck %s --check-prefix=CHECK_INVALID
 
-# Line 1326 0XAB
-# CHECK_INVALID: error: DW_AT_LLVM_stmt_sequence offset 0x000000ab does not point to a valid sequence start in the line table
-# Line 1372 0xEEEEE7
+
+# CHECK_INVALID: error: DW_AT_LLVM_stmt_sequence offset 0x00000000 is not within the line table bounds [0x0000002e, 0x000000fd)
+# CHECK_INVALID: DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset]     (0x00000000)
+
+# CHECK_INVALID: error: DIE has invalid DW_AT_LLVM_stmt_sequence encoding
+# CHECK_INVALID: DW_AT_LLVM_stmt_sequence [DW_FORM_data4]  (0x000000a7)
+
+# CHECK_INVALID: error: DW_AT_LLVM_stmt_sequence offset 0x000000ab does not point to a valid sequence offset in the line table
+# CHECK_INVALID: DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset]     (0x000000ab)
+
 # CHECK_INVALID: error: DW_AT_LLVM_stmt_sequence offset is beyond .debug_line bounds: 0x00eeeee7
+# CHECK_INVALID: DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset]     (0x00eeeee7)
 
 # CHECK_INVALID: error: Aggregated error counts:
-# CHECK_INVALID: error: DW_AT_LLVM_stmt_sequence offset out of bounds occurred 1 time(s).
-# CHECK_INVALID: error: Invalid DW_AT_LLVM_stmt_sequence offset occurred 1 time(s).
+# CHECK_INVALID-NEXT: error: DW_AT_LLVM_stmt_sequence offset out of bounds occurred 1 time(s).
+# CHECK_INVALID-NEXT: error: DW_AT_LLVM_stmt_sequence offset out of line table bounds occurred 1 time(s).
+# CHECK_INVALID-NEXT: error: Invalid DW_AT_LLVM_stmt_sequence encoding occurred 1 time(s).
+# CHECK_INVALID-NEXT: error: Invalid DW_AT_LLVM_stmt_sequence offset occurred 1 time(s).
 
 # CHECK_INVALID-NOT: error:
 --- !mach-o
@@ -808,7 +818,7 @@ DWARF:
             - Attribute:       DW_AT_high_pc
               Form:            DW_FORM_data4
             - Attribute:       DW_AT_LLVM_stmt_sequence
-              Form:            DW_FORM_sec_offset
+              Form:            DW_FORM_data4
             - Attribute:       DW_AT_frame_base
               Form:            DW_FORM_exprloc
             - Attribute:       DW_AT_call_all_calls
@@ -1041,7 +1051,7 @@ DWARF:
             - Value:           0x0
             - Value:           0x8
             - Value:           0x1
-            - Value:           0x34
+            - BlockData:       [ 0x6F ]
             - Value:           0x1
               BlockData:       [ 0x6F ]
             - Value:           0x1

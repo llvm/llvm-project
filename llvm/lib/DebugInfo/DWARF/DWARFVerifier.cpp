@@ -853,11 +853,11 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
   }
   case DW_AT_LLVM_stmt_sequence: {
     // Make sure the offset in the DW_AT_LLVM_stmt_sequence attribute is valid
-    // and points to a valid sequence start in the line table.
+    // and points to a valid sequence offset in the line table.
     auto SectionOffset = AttrValue.Value.getAsSectionOffset();
     if (!SectionOffset) {
       ReportError("Invalid DW_AT_LLVM_stmt_sequence encoding",
-                  "DIE has invalid DW_AT_LLVM_stmt_sequence encoding:");
+                  "DIE has invalid DW_AT_LLVM_stmt_sequence encoding");
       break;
     }
     if (*SectionOffset >= U->getLineSection().Data.size()) {
@@ -868,7 +868,7 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
       break;
     }
 
-    // Check if the offset points to a valid sequence start
+    // Get the line table for this unit to validate bounds
     const auto *LineTable = DCtx.getLineTableForUnit(U);
     if (!LineTable) {
       ReportError("DW_AT_LLVM_stmt_sequence without line table",
@@ -876,8 +876,42 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
                   "line table");
       break;
     }
+
+    // Get the DW_AT_stmt_list offset from the compile unit DIE
+    DWARFDie CUDie = U->getUnitDIE();
+    auto StmtListOffset = toSectionOffset(CUDie.find(DW_AT_stmt_list));
+    if (!StmtListOffset) {
+      ReportError("DW_AT_LLVM_stmt_sequence without DW_AT_stmt_list",
+                  "DIE has DW_AT_LLVM_stmt_sequence but compile unit has no "
+                  "DW_AT_stmt_list");
+      break;
+    }
+
+    // Calculate the bounds of this specific line table
+    uint64_t LineTableStart = *StmtListOffset;
+    uint64_t PrologueLength = LineTable->Prologue.PrologueLength;
+    uint64_t TotalLength = LineTable->Prologue.TotalLength;
+    uint64_t LineTableEnd =
+        LineTableStart + TotalLength +
+        (LineTable->Prologue.getFormParams().Format == dwarf::DWARF64 ? 12 : 4);
+    uint64_t SequencesStart =
+        LineTableStart + PrologueLength +
+        (LineTable->Prologue.getFormParams().Format == dwarf::DWARF64 ? 12 : 4);
+
+    // Check if the offset is within the bounds of this specific line table
+    if (*SectionOffset < SequencesStart || *SectionOffset >= LineTableEnd) {
+      ReportError("DW_AT_LLVM_stmt_sequence offset out of line table bounds",
+                  "DW_AT_LLVM_stmt_sequence offset " +
+                      llvm::formatv("{0:x8}", *SectionOffset) +
+                      " is not within the line table bounds [" +
+                      llvm::formatv("{0:x8}", SequencesStart) + ", " +
+                      llvm::formatv("{0:x8}", LineTableEnd) + ")");
+      break;
+    }
+
+    // Check if the offset points to a valid sequence offset
     bool ValidSequenceOffset = false;
-    // Check if the offset matches any of the sequence start offsets using
+    // Check if the offset matches any of the sequence offset offsets using
     // binary search
     auto it = std::lower_bound(LineTable->Sequences.begin(),
                                LineTable->Sequences.end(), *SectionOffset,
@@ -894,7 +928,7 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
           "Invalid DW_AT_LLVM_stmt_sequence offset",
           "DW_AT_LLVM_stmt_sequence offset " +
               llvm::formatv("{0:x8}", *SectionOffset) +
-              " does not point to a valid sequence start in the line table");
+              " does not point to a valid sequence offset in the line table");
     break;
   }
   default:
