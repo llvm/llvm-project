@@ -799,6 +799,167 @@ static void printNumTasksClause(OpAsmPrinter &p, Operation *op,
 }
 
 //===----------------------------------------------------------------------===//
+// Parser, printer and verify for dyn_groupprivate Clause
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verifyDynGroupprivateClause(
+    Operation *op, DynGroupprivateModifierAttr modifierFirst,
+    DynGroupprivateModifierAttr modifierSecond, Value dynGroupprivateSize) {
+
+  // Helper to get modifier name as string
+  auto getModifierName = [](DynGroupprivateModifier mod) -> StringRef {
+    switch (mod) {
+    case DynGroupprivateModifier::strict:
+      return "strict";
+    case DynGroupprivateModifier::cgroup:
+      return "cgroup";
+    case DynGroupprivateModifier::fallback:
+      return "fallback";
+    }
+    return "unknown";
+  };
+
+  // Check for duplicate modifiers
+  if (modifierFirst && modifierSecond &&
+      modifierFirst.getValue() == modifierSecond.getValue()) {
+    return op->emitOpError("duplicate dyn_groupprivate modifier '")
+           << getModifierName(modifierFirst.getValue()) << "'";
+  }
+
+  // Check for incompatible modifier combinations
+  if (modifierFirst && modifierSecond) {
+    auto m1 = modifierFirst.getValue();
+    auto m2 = modifierSecond.getValue();
+
+    // strict and fallback are incompatible
+    if ((m1 == DynGroupprivateModifier::strict &&
+         m2 == DynGroupprivateModifier::fallback) ||
+        (m1 == DynGroupprivateModifier::fallback &&
+         m2 == DynGroupprivateModifier::strict)) {
+      return op->emitOpError("incompatible dyn_groupprivate modifiers: '")
+             << getModifierName(m1) << "' and '" << getModifierName(m2)
+             << "' cannot be used together";
+    }
+  }
+
+  // Verify the size
+  if (dynGroupprivateSize) {
+    Type size_type = dynGroupprivateSize.getType();
+    // Check if the size type is an integer type
+    if (!size_type.isIntOrIndex()) {
+      return op->emitOpError(
+                 "dyn_groupprivate size must be an integer type, got ")
+             << size_type;
+    }
+  }
+
+  return success();
+}
+
+static ParseResult parseDynGroupprivateClause(
+    OpAsmParser &parser, DynGroupprivateModifierAttr &modifierFirst,
+    DynGroupprivateModifierAttr &modifierSecond,
+    std::optional<OpAsmParser::UnresolvedOperand> &dynGroupprivateSize,
+    Type &size_type) {
+
+  bool hasModifiers = false;
+
+  // Parse first modifier if present
+  if (succeeded(parser.parseOptionalKeyword("strict"))) {
+    modifierFirst = DynGroupprivateModifierAttr::get(
+        parser.getContext(), DynGroupprivateModifier::strict);
+    hasModifiers = true;
+  } else if (succeeded(parser.parseOptionalKeyword("cgroup"))) {
+    modifierFirst = DynGroupprivateModifierAttr::get(
+        parser.getContext(), DynGroupprivateModifier::cgroup);
+    hasModifiers = true;
+  } else if (succeeded(parser.parseOptionalKeyword("fallback"))) {
+    modifierFirst = DynGroupprivateModifierAttr::get(
+        parser.getContext(), DynGroupprivateModifier::fallback);
+    hasModifiers = true;
+  }
+
+  // If first modifier found, check for comma and second modifier
+  if (hasModifiers && succeeded(parser.parseOptionalComma())) {
+    if (succeeded(parser.parseOptionalKeyword("strict"))) {
+      modifierSecond = DynGroupprivateModifierAttr::get(
+          parser.getContext(), DynGroupprivateModifier::strict);
+    } else if (succeeded(parser.parseOptionalKeyword("cgroup"))) {
+      modifierSecond = DynGroupprivateModifierAttr::get(
+          parser.getContext(), DynGroupprivateModifier::cgroup);
+    } else if (succeeded(parser.parseOptionalKeyword("fallback"))) {
+      modifierSecond = DynGroupprivateModifierAttr::get(
+          parser.getContext(), DynGroupprivateModifier::fallback);
+    } else {
+      return parser.emitError(parser.getCurrentLocation(),
+                              "expected modifier after comma");
+    }
+  }
+
+  // Parse colon and size if modifiers were present, or just try to parse
+  // operand
+  if (hasModifiers) {
+    // Modifiers present, expect colon
+    if (failed(parser.parseColon())) {
+      return parser.emitError(parser.getCurrentLocation(),
+                              "expected ':' after modifiers");
+    }
+
+    // Parse operand and type
+    OpAsmParser::UnresolvedOperand operand;
+    if (succeeded(parser.parseOperand(operand))) {
+      dynGroupprivateSize = operand;
+      if (failed(parser.parseColon()) || failed(parser.parseType(size_type))) {
+        return parser.emitError(parser.getCurrentLocation(),
+                                "expected ':' and type after size operand");
+      }
+    }
+  } else {
+    // No modifiers, try to parse operand directly
+    OpAsmParser::UnresolvedOperand operand;
+    if (succeeded(parser.parseOperand(operand))) {
+      dynGroupprivateSize = operand;
+      if (failed(parser.parseColon()) || failed(parser.parseType(size_type))) {
+        return parser.emitError(parser.getCurrentLocation(),
+                                "expected ':' and type after size operand");
+      }
+    } else {
+      return parser.emitError(parser.getCurrentLocation(),
+                              "expected dyn_groupprivate_size operand");
+    }
+  }
+
+  return success();
+}
+
+static void
+printDynGroupprivateClause(OpAsmPrinter &printer, Operation *op,
+                           DynGroupprivateModifierAttr modifierFirst,
+                           DynGroupprivateModifierAttr modifierSecond,
+                           Value dynGroupprivateSize, Type size_type) {
+
+  bool needsComma = false;
+
+  if (modifierFirst) {
+    printer << modifierFirst.getValue();
+    needsComma = true;
+  }
+
+  if (modifierSecond) {
+    if (needsComma)
+      printer << ", ";
+    printer << modifierSecond.getValue();
+    needsComma = true;
+  }
+
+  if (dynGroupprivateSize) {
+    if (needsComma)
+      printer << " : ";
+    printer << dynGroupprivateSize << " : " << size_type;
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // Parsers for operations including clauses that define entry block arguments.
 //===----------------------------------------------------------------------===//
 
@@ -2211,6 +2372,8 @@ void TargetOp::build(OpBuilder &builder, OperationState &state,
                   clauses.mapVars, clauses.nowait, clauses.privateVars,
                   makeArrayAttr(ctx, clauses.privateSyms),
                   clauses.privateNeedsBarrier, clauses.threadLimitVars,
+                  clauses.modifierFirst, clauses.modifierSecond,
+                  clauses.dynGroupprivateSize,
                   /*private_maps=*/nullptr);
 }
 
@@ -2223,6 +2386,12 @@ LogicalResult TargetOp::verify() {
     return failure();
 
   if (failed(verifyMapClause(*this, getMapVars())))
+    return failure();
+
+  // check dyn_groupprivate clause restrictions
+  if (failed(verifyDynGroupprivateClause(*this, getModifierFirstAttr(),
+                                         getModifierSecondAttr(),
+                                         getDynGroupprivateSize())))
     return failure();
 
   return verifyPrivateVarsMapping(*this);
@@ -2625,6 +2794,7 @@ void TeamsOp::build(OpBuilder &builder, OperationState &state,
                     const TeamsOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
   // TODO Store clauses in op: privateVars, privateSyms, privateNeedsBarrier
+<<<<<<< HEAD
   TeamsOp::build(
       builder, state, clauses.allocateVars, clauses.allocatorVars,
       clauses.ifExpr, clauses.numTeamsLower, clauses.numTeamsUpperVars,
@@ -2651,6 +2821,17 @@ static LogicalResult verifyNumTeamsClause(Operation *op, Value numTeamsLower,
   }
 
   return success();
+=======
+  TeamsOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
+                 clauses.ifExpr, clauses.numTeamsLower, clauses.numTeamsUpper,
+                 /*private_vars=*/{}, /*private_syms=*/nullptr,
+                 /*private_needs_barrier=*/nullptr, clauses.reductionMod,
+                 clauses.reductionVars,
+                 makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
+                 makeArrayAttr(ctx, clauses.reductionSyms), clauses.threadLimit,
+                 clauses.modifierFirst, clauses.modifierSecond,
+                 clauses.dynGroupprivateSize);
+>>>>>>> [OpenMP][mlir] Add DynGroupPrivateClause in omp dialect
 }
 
 LogicalResult TeamsOp::verify() {
@@ -2674,6 +2855,12 @@ LogicalResult TeamsOp::verify() {
   if (getAllocateVars().size() != getAllocatorVars().size())
     return emitError(
         "expected equal sizes for allocate and allocator variables");
+
+  // check dyn_groupprivate clause restrictions
+  if (failed(verifyDynGroupprivateClause(op, getModifierFirstAttr(),
+                                         getModifierSecondAttr(),
+                                         getDynGroupprivateSize())))
+    return failure();
 
   return verifyReductionVarList(*this, getReductionSyms(), getReductionVars(),
                                 getReductionByref());

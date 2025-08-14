@@ -1438,7 +1438,7 @@ func.func @omp_teams_allocate(%data_var : memref<i32>) {
     // expected-error @below {{expected equal sizes for allocate and allocator variables}}
     "omp.teams" (%data_var) ({
       omp.terminator
-    }) {operandSegmentSizes = array<i32: 1,0,0,0,0,0,0,0>} : (memref<i32>) -> ()
+    }) {operandSegmentSizes = array<i32: 1,0,0,0,0,0,0,0,0>} : (memref<i32>) -> ()
     omp.terminator
   }
   return
@@ -1451,7 +1451,7 @@ func.func @omp_teams_num_teams1(%lb : i32) {
     // expected-error @below {{expected exactly one num_teams upper bound when lower bound is specified}}
     "omp.teams" (%lb) ({
       omp.terminator
-    }) {operandSegmentSizes = array<i32: 0,0,0,1,0,0,0,0>} : (i32) -> ()
+    }) {operandSegmentSizes = array<i32: 0,0,0,1,0,0,0,0,0>} : (i32) -> ()
     omp.terminator
   }
   return
@@ -1482,6 +1482,26 @@ func.func @omp_teams_num_teams2(%lb : i32, %ub : i16) {
     omp.teams num_teams(%lb : i32 to %ub : i16) {
       omp.terminator
     }
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @test_teams_dyn_groupprivate_errors_1(%dyn_size: i32) {
+  // expected-error @below {{duplicate dyn_groupprivate modifier 'strict'}}
+  omp.teams dyn_groupprivate(strict, strict : %dyn_size : i32) {
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @test_teams_dyn_groupprivate_errors_2(%dyn_size: i32) {
+  // expected-error @below {{incompatible dyn_groupprivate modifiers: 'strict' and 'fallback' cannot be used together}}
+  omp.teams dyn_groupprivate(strict, fallback : %dyn_size : i32) {
     omp.terminator
   }
   return
@@ -2475,8 +2495,22 @@ func.func @omp_target_depend(%data_var: memref<i32>) {
   // expected-error @below {{op expected as many depend values as depend variables}}
     "omp.target"(%data_var) ({
       "omp.terminator"() : () -> ()
-    }) {depend_kinds = [], operandSegmentSizes = array<i32: 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0>} : (memref<i32>) -> ()
+    }) {depend_kinds = [], operandSegmentSizes = array<i32: 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0>} : (memref<i32>) -> ()
    "func.return"() : () -> ()
+}
+
+// -----
+
+func.func @test_target_dyn_groupprivate_errors(%dyn_size: i32) {
+  // expected-error @below {{duplicate dyn_groupprivate modifier 'strict'}}
+  omp.target dyn_groupprivate(strict, strict : %dyn_size : i32) {
+    omp.terminator
+  }
+  // expected-error @below {{incompatible dyn_groupprivate modifiers: 'strict' and 'fallback' cannot be used together}}
+  omp.target dyn_groupprivate(strict, fallback : %dyn_size : i32) {
+    omp.terminator
+  }
+  return
 }
 
 // -----

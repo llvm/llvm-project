@@ -241,7 +241,8 @@ def TeamsOp : OpenMP_Op<"teams", traits = [
     AttrSizedOperandSegments, RecursiveMemoryEffects, OutlineableOpenMPOpInterface
   ], clauses = [
     OpenMP_AllocateClause, OpenMP_IfClause, OpenMP_NumTeamsClause,
-    OpenMP_PrivateClause, OpenMP_ReductionClause, OpenMP_ThreadLimitClause
+    OpenMP_PrivateClause, OpenMP_ReductionClause, OpenMP_ThreadLimitClause,
+    OpenMP_DynGroupprivateClause
   ], singleRegion = true> {
   let summary = "teams construct";
   let description = [{
@@ -1457,7 +1458,7 @@ def TargetOp : OpenMP_Op<"target", traits = [
     OpenMP_DeviceClause, OpenMP_HasDeviceAddrClause, OpenMP_HostEvalClause,
     OpenMP_IfClause, OpenMP_InReductionClause, OpenMP_IsDevicePtrClause,
     OpenMP_MapClauseSkip<assemblyFormat = true>, OpenMP_NowaitClause,
-    OpenMP_PrivateClause, OpenMP_ThreadLimitClause
+    OpenMP_PrivateClause, OpenMP_ThreadLimitClause, OpenMP_DynGroupprivateClause
   ], singleRegion = true> {
   let summary = "target construct";
   let description = [{
