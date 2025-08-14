@@ -175,7 +175,38 @@ def XeGPU_FenceScopeAttr:
     let assemblyFormat = "$value";
 }
 
-def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout"> {
+def LayoutTrait: AttrInterface<"LayoutTrait"> {
+  let cppNamespace = "::mlir::xegpu";
+  let description = [{
+    Common trait for all XeGPU layouts.
+  }];
+
+  let methods = [
+    InterfaceMethod<"Get the rank of attribute",
+                    "int64_t",
+                    "getRank">,
+    InterfaceMethod<"Get the SgLayout field of the attribute as integer array",
+                    "std::optional<SmallVector<int64_t>>",
+                    "getSgLayoutAsInt">,
+    InterfaceMethod<"Get the SgData field of the attribute as integer array",
+                    "std::optional<SmallVector<int64_t>>",
+                    "getSgDataAsInt">,
+    InterfaceMethod<[{Delinearizes a linear subgroup ID into its multidimensional
+                      indices based on the effective subgroup layout.}],
+                    "FailureOr<SmallVector<Value>>",
+                    "delinearizeSubgroupId",
+                    (ins "OpBuilder &": $builder, "Location":$loc, "Value":$linearId)>,
+    InterfaceMethod<[{Generates instructions to compute multidimensional offsets for blocks
+                      assigned to a subgroup identified by linearId. The shape parameter
+                      represents the workgroup-level problem size. Each subgroup may access
+                      multiple blocks according to round-robin distribution rules.}],
+                    "FailureOr<SmallVector<SmallVector<Value>>>",
+                    "getOffsets",
+                    (ins "OpBuilder &": $builder, "Location":$loc, "Value":$linearId, "ArrayRef<int64_t>":$shape)>
+  ];
+}
+
+def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [LayoutTrait]> {
   let summary = [{
     Describes the data distribution to subgroups and work-items for a tensor
     specified by the tensor descriptor.
@@ -330,9 +361,140 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout"> {
       return LayoutAttr::get(getContext(), getSgLayout(), getSgData(), nullptr,
                              getLaneLayout(), getLaneData(), getOrder());
     }
+
+    std::optional<SmallVector<int64_t>> getSgLayoutAsInt() const {
+      if (DenseI32ArrayAttr layout = getSgLayout())
+        return llvm::to_vector_of<int64_t>(layout.asArrayRef());
+      return std::nullopt;
+    }
+
+    std::optional<SmallVector<int64_t>> getSgDataAsInt() const {
+      if (DenseI32ArrayAttr data = getSgData())
+        return llvm::to_vector_of<int64_t>(data.asArrayRef());
+      return std::nullopt;
+    }
+
+    /// Delinearizes a linear subgroup ID into its multidimensional indices
+    /// based on the effective subgroup layout.
+    FailureOr<SmallVector<Value>>
+    delinearizeSubgroupId(OpBuilder &builder, Location loc, Value linearId);
+
+    /// Generates instructions to compute multidimensional offsets for blocks
+    /// assigned to a subgroup identified by linearId. The shape parameter
+    /// represents the workgroup-level problem size. Each subgroup may access
+    /// multiple blocks according to round-robin distribution rules.
+    FailureOr<SmallVector<SmallVector<Value>>>
+    getOffsets(OpBuilder &builder, Location loc, Value linearId, ArrayRef<int64_t> shape);
+
   }];
 
   let assemblyFormat = "`<` struct(params) `>`";
+  let genVerifyDecl = 1;
+}
+
+
+def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [LayoutTrait]> {
+  let summary = [{Describes the data distribution and sharing among subgroups or work-items.}];
+
+  let description = [{
+    Like LayoutAttr, SliceAttr describes data distribution among subgroups or work-items.
+    However, whereas LayoutAttr requires the data to have the same rank as the attribute,
+    SliceAttr permits the data to have a lower rank. In this case, compute units in the
+    specified dimensions (given by `$dims`) share the data, provided that the remaining
+    ranks match the data rank. SliceAttr is commonly used by operations such as
+    vector.multi_reduction and vector.broadcast.
+
+    Example:
+    ```
+    #l = #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32]>
+    #r = #xegpu.slice<#l, dim = [0]>
+
+    %exp = math.exp %input {layout_result_0 = #l}: vector<256x128xf32>
+    %red = vector.multi_reduction<add>, %exp, %acc [0] {layout_result_0 = #r}: vector<256x128xf32> to vector<128xf32>
+    %bcast = vector.broadcast %red {layout_result_0 = #l} : vector<128xf32> to vector<256x128xf32>
+    ```
+    In this example, %red is conceptually divided into 4 vectors of type vector<32xf32>, each assigned to
+    a group of subgroups. Each group consists of 8 subgroups from the same column of sg_layout, sharing a
+    single reduction result of type vector<32xf32>.
+
+  }];
+
+  let parameters = (ins
+    "xegpu::LayoutTrait": $parent,
+    "DenseI64ArrayAttr": $dims
+  );
+
+  let extraClassDeclaration = [{
+
+    int64_t getRank() const {
+      SliceAttr attr = flatten();
+      auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+      return parent.getRank() - attr.getDims().size();
+    }
+
+    DenseI32ArrayAttr getOrder() const {
+      SliceAttr attr = flatten();
+      auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+      return parent.getOrder();
+    }
+
+    bool isWgLayout() const {
+      SliceAttr attr = flatten();
+      auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+      return parent.isWgLayout();
+    }
+
+    bool isSgLayout() const {
+      SliceAttr attr = flatten();
+      auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+      return parent.isSgLayout();
+    }
+
+    /// Returns the SgLayout of the attribute, computed by applying
+    /// the slice dimensions to the underlying LayoutAttr.
+    std::optional<SmallVector<int64_t>> getSgLayoutAsInt() const {
+      SliceAttr attr = flatten();
+      auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+      if (auto layout = parent.getSgLayoutAsInt()) {
+        ArrayRef<int64_t> dims = attr.getDims().asArrayRef();
+        return XeGPUDialect::slice(llvm::ArrayRef<int64_t>(*layout), dims);
+      }
+      return std::nullopt;
+    }
+
+    /// Returns the SgData of the attribute, computed by applying
+    /// the slice dimensions to the underlying LayoutAttr.
+    std::optional<SmallVector<int64_t>> getSgDataAsInt() const {
+      SliceAttr attr = flatten();
+      auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+      if (auto data = parent.getSgDataAsInt()) {
+        ArrayRef<int64_t> dims = attr.getDims().asArrayRef();
+        return XeGPUDialect::slice(llvm::ArrayRef<int64_t>(*data), dims);
+      }
+      return std::nullopt;
+    }
+
+    /// flatten a nested SliceAttr, e.g., for 2-level nested SliceAttr
+    /// #xegpu.slice<#xegpu.slice<#xegpu.layout<sg_layout = [4, 8, 12]>, dims = [0]>, dims = [0]>
+    /// it will coalese two slice operations and return a simplified SliceAttr
+    /// #xegpu.slice<#xegpu.layout<sg_layout = [4, 8, 12]>, dims = [0, 1]>
+    SliceAttr flatten() const;
+
+    /// Delinearizes a linear subgroup ID into its multidimensional indices
+    /// based on the effective subgroup layout.
+    FailureOr<SmallVector<Value>>
+    delinearizeSubgroupId(OpBuilder &builder, Location loc, Value linearId);
+
+    /// Generates instructions to compute multidimensional offsets for blocks
+    /// assigned to a subgroup identified by linearId. The shape parameter
+    /// represents the workgroup-level problem size. Each subgroup may access
+    /// multiple blocks according to round-robin distribution rules.
+    FailureOr<SmallVector<SmallVector<Value>>>
+    getOffsets(OpBuilder &builder, Location loc, Value linearId, ArrayRef<int64_t> shape);
+
+  }];
+
+  let assemblyFormat = "`<` qualified($parent) `,` `dims` `=` $dims `>`";
   let genVerifyDecl = 1;
 }
 

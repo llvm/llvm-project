@@ -80,19 +80,22 @@ private:
 
   FragmentType Kind;
 
-protected:
+  //== Used by certain fragment types for better packing.
+
+  // The number of fixups for the optional variable-size tail must be small.
+  uint8_t VarFixupSize = 0;
+
   bool LinkerRelaxable : 1;
 
-  /// Used by certain fragment types for better packing.
-  ///
   /// FT_Data, FT_Relaxable
   bool HasInstructions : 1;
   /// FT_Relaxable, x86-specific
   bool AllowAutoPadding : 1;
 
   // Track content and fixups for the fixed-size part as fragments are
-  // appended to the section. The content remains immutable, except when
-  // modified by applyFixup.
+  // appended to the section. The content is stored as trailing data of the
+  // MCFragment. The content remains immutable, except when modified by
+  // applyFixup.
   uint32_t FixedSize = 0;
   uint32_t FixupStart = 0;
   uint32_t FixupEnd = 0;
@@ -102,7 +105,6 @@ protected:
   uint32_t VarContentStart = 0;
   uint32_t VarContentEnd = 0;
   uint32_t VarFixupStart = 0;
-  uint32_t VarFixupEnd = 0;
 
   const MCSubtargetInfo *STI = nullptr;
 
@@ -190,7 +192,7 @@ public:
   MutableArrayRef<char> getContents();
   ArrayRef<char> getContents() const;
 
-  void setVarContents(ArrayRef<char> Contents);
+  LLVM_ABI void setVarContents(ArrayRef<char> Contents);
   void clearVarContents() { setVarContents({}); }
   MutableArrayRef<char> getVarContents();
   ArrayRef<char> getVarContents() const;
@@ -211,7 +213,7 @@ public:
 
   // Source fixup offsets are relative to the variable part's start.
   // Stored fixup offsets are relative to the fixed part's start.
-  void setVarFixups(ArrayRef<MCFixup> Fixups);
+  LLVM_ABI void setVarFixups(ArrayRef<MCFixup> Fixups);
   void clearVarFixups() { setVarFixups({}); }
   MutableArrayRef<MCFixup> getVarFixups();
   ArrayRef<MCFixup> getVarFixups() const;
@@ -296,13 +298,8 @@ public:
   }
 };
 
-/// Interface implemented by fragments that contain encoded instructions and/or
-/// data.
-class MCEncodedFragment : public MCFragment {
-protected:
-  MCEncodedFragment(MCFragment::FragmentType FType, bool HasInstructions)
-      : MCFragment(FType, HasInstructions) {}
-};
+// MCFragment subclasses do not use the fixed-size part or variable-size tail of
+// MCFragment. Instead, they encode content in a specialized way.
 
 class MCFillFragment : public MCFragment {
   uint8_t ValueSize;
@@ -318,7 +315,7 @@ class MCFillFragment : public MCFragment {
 public:
   MCFillFragment(uint64_t Value, uint8_t VSize, const MCExpr &NumValues,
                  SMLoc Loc)
-      : MCFragment(FT_Fill, false), ValueSize(VSize), Value(Value),
+      : MCFragment(FT_Fill), ValueSize(VSize), Value(Value),
         NumValues(NumValues), Loc(Loc) {}
 
   uint64_t getValue() const { return Value; }
@@ -349,7 +346,7 @@ class MCNopsFragment : public MCFragment {
 public:
   MCNopsFragment(int64_t NumBytes, int64_t ControlledNopLength, SMLoc L,
                  const MCSubtargetInfo &STI)
-      : MCFragment(FT_Nops, false), Size(NumBytes),
+      : MCFragment(FT_Nops), Size(NumBytes),
         ControlledNopLength(ControlledNopLength), Loc(L), STI(STI) {}
 
   int64_t getNumBytes() const { return Size; }
@@ -374,13 +371,16 @@ class MCOrgFragment : public MCFragment {
   /// Source location of the directive that this fragment was created for.
   SMLoc Loc;
 
+  uint64_t Size = 0;
+
 public:
   MCOrgFragment(const MCExpr &Offset, int8_t Value, SMLoc Loc)
-      : MCFragment(FT_Org, false), Value(Value), Offset(&Offset), Loc(Loc) {}
+      : MCFragment(FT_Org), Value(Value), Offset(&Offset), Loc(Loc) {}
 
   const MCExpr &getOffset() const { return *Offset; }
-
   uint8_t getValue() const { return Value; }
+  uint64_t getSize() const { return Size; }
+  void setSize(uint64_t Value) { Size = Value; }
 
   SMLoc getLoc() const { return Loc; }
 
@@ -394,8 +394,7 @@ class MCSymbolIdFragment : public MCFragment {
   const MCSymbol *Sym;
 
 public:
-  MCSymbolIdFragment(const MCSymbol *Sym)
-      : MCFragment(FT_SymbolId, false), Sym(Sym) {}
+  MCSymbolIdFragment(const MCSymbol *Sym) : MCFragment(FT_SymbolId), Sym(Sym) {}
 
   const MCSymbol *getSymbol() { return Sym; }
   const MCSymbol *getSymbol() const { return Sym; }
@@ -407,7 +406,7 @@ public:
 
 /// Fragment representing the binary annotations produced by the
 /// .cv_inline_linetable directive.
-class MCCVInlineLineTableFragment : public MCEncodedFragment {
+class MCCVInlineLineTableFragment : public MCFragment {
   unsigned SiteFuncId;
   unsigned StartFileId;
   unsigned StartLineNum;
@@ -422,7 +421,7 @@ public:
   MCCVInlineLineTableFragment(unsigned SiteFuncId, unsigned StartFileId,
                               unsigned StartLineNum, const MCSymbol *FnStartSym,
                               const MCSymbol *FnEndSym)
-      : MCEncodedFragment(FT_CVInlineLines, false), SiteFuncId(SiteFuncId),
+      : MCFragment(FT_CVInlineLines), SiteFuncId(SiteFuncId),
         StartFileId(StartFileId), StartLineNum(StartLineNum),
         FnStartSym(FnStartSym), FnEndSym(FnEndSym) {}
 
@@ -435,7 +434,7 @@ public:
 };
 
 /// Fragment representing the .cv_def_range directive.
-class MCCVDefRangeFragment : public MCEncodedFragment {
+class MCCVDefRangeFragment : public MCFragment {
   ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges;
   StringRef FixedSizePortion;
 
@@ -447,8 +446,7 @@ public:
   MCCVDefRangeFragment(
       ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
       StringRef FixedSizePortion)
-      : MCEncodedFragment(FT_CVDefRange, false),
-        Ranges(Ranges.begin(), Ranges.end()),
+      : MCFragment(FT_CVDefRange), Ranges(Ranges.begin(), Ranges.end()),
         FixedSizePortion(FixedSizePortion) {}
 
   ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> getRanges() const {
@@ -479,8 +477,7 @@ class MCBoundaryAlignFragment : public MCFragment {
 
 public:
   MCBoundaryAlignFragment(Align AlignBoundary, const MCSubtargetInfo &STI)
-      : MCFragment(FT_BoundaryAlign, false), AlignBoundary(AlignBoundary),
-        STI(STI) {}
+      : MCFragment(FT_BoundaryAlign), AlignBoundary(AlignBoundary), STI(STI) {}
 
   uint64_t getSize() const { return Size; }
   void setSize(uint64_t Value) { Size = Value; }
@@ -537,6 +534,10 @@ private:
   Align Alignment;
   /// The section index in the assemblers section list.
   unsigned Ordinal = 0;
+  // If not -1u, the first linker-relaxable fragment's order within the
+  // subsection. When present, the offset between two locations crossing this
+  // fragment may not be fully resolved.
+  unsigned FirstLinkerRelaxable = -1u;
 
   /// Whether this section has had instructions emitted into it.
   bool HasInstructions : 1;
@@ -545,10 +546,6 @@ private:
 
   bool IsText : 1;
   bool IsBss : 1;
-
-  /// Whether the section contains linker-relaxable fragments. If true, the
-  /// offset between two locations may not be fully resolved.
-  bool LinkerRelaxable : 1;
 
   MCFragment DummyFragment;
 
@@ -604,8 +601,9 @@ public:
   bool isRegistered() const { return IsRegistered; }
   void setIsRegistered(bool Value) { IsRegistered = Value; }
 
-  bool isLinkerRelaxable() const { return LinkerRelaxable; }
-  void setLinkerRelaxable() { LinkerRelaxable = true; }
+  unsigned firstLinkerRelaxable() const { return FirstLinkerRelaxable; }
+  bool isLinkerRelaxable() const { return FirstLinkerRelaxable != -1u; }
+  void setFirstLinkerRelaxable(unsigned Order) { FirstLinkerRelaxable = Order; }
 
   MCFragment &getDummyFragment() { return DummyFragment; }
 
@@ -650,11 +648,10 @@ inline ArrayRef<MCFixup> MCFragment::getFixups() const {
 
 inline MutableArrayRef<MCFixup> MCFragment::getVarFixups() {
   return MutableArrayRef(getParent()->FixupStorage)
-      .slice(VarFixupStart, VarFixupEnd - VarFixupStart);
+      .slice(VarFixupStart, VarFixupSize);
 }
 inline ArrayRef<MCFixup> MCFragment::getVarFixups() const {
-  return ArrayRef(getParent()->FixupStorage)
-      .slice(VarFixupStart, VarFixupEnd - VarFixupStart);
+  return ArrayRef(getParent()->FixupStorage).slice(VarFixupStart, VarFixupSize);
 }
 
 //== FT_Relaxable functions
