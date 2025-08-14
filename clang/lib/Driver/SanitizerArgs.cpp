@@ -854,6 +854,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   }
 
   if (AllAddedKinds & SanitizerKind::KCFI) {
+    CfiICallGeneralizePointers =
+        Args.hasArg(options::OPT_fsanitize_cfi_icall_generalize_pointers);
     CfiICallNormalizeIntegers =
         Args.hasArg(options::OPT_fsanitize_cfi_icall_normalize_integers);
 
