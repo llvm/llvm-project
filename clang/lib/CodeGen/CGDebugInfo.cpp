@@ -4183,7 +4183,7 @@ llvm::DICompositeType *CGDebugInfo::CreateLimitedType(const RecordType *Ty) {
         llvm::MDNode::replaceWithDistinct(llvm::TempDICompositeType(RealDecl));
     break;
   }
-  
+
   if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD)) {
     RD = CTSD->getSpecializedTemplate()->getTemplatedDecl();
   }
