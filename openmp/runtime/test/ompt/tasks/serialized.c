@@ -1,6 +1,8 @@
+// clang-format off
 // RUN: %libomp-compile-and-run | %sort-threads | FileCheck %s
 // REQUIRES: ompt
 // UNSUPPORTED: gcc-4, gcc-5, gcc-6, gcc-7
+// clang-format on
 #define TEST_NEED_PRINT_FRAME_FROM_OUTLINED_FN
 #include "callback.h"
 #include <omp.h>
@@ -43,6 +45,7 @@ int main() {
     print_ids(0);
   }
 
+  // clang-format off
   // Check if libomp supports the callbacks for this test.
   // CHECK-NOT: {{^}}0: Could not register callback
 
@@ -150,6 +153,7 @@ int main() {
 
   // CHECK: {{^}}[[THREAD_ID]]: ompt_event_implicit_task_end
   // CHECK-SAME: parallel_id=0, task_id=[[IMPLICIT_TASK_ID]]
+  // clang-format on
 
   return 0;
 }

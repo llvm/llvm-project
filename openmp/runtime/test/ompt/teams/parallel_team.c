@@ -1,8 +1,10 @@
+// clang-format off
 // RUN: %libomp-compile-and-run | %sort-threads | FileCheck %s
 // REQUIRES: ompt, multicpu
 // UNSUPPORTED: gcc
 // Compilation fails for icc
 // XFAIL: icc
+// clang-format on
 #include "callback.h"
 
 int main() {
@@ -12,6 +14,7 @@ int main() {
   return 0;
 }
 
+// clang-format off
 // CHECK: 0: NULL_POINTER=[[NULL:.*$]]
 
 // CHECK-NOT: 0: parallel_data initially not null
@@ -81,3 +84,4 @@ int main() {
 //
 // CHECK: {{^}}[[WORKER]]: ompt_event_implicit_task_end:
 // CHECK-SAME: {{.*}} parallel_id={{[0-f]+}}, task_id=[[IMPL_TASK_01]]
+// clang-format on

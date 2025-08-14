@@ -1,3 +1,4 @@
+// clang-format off
 // RUN: %libomp-compile-and-run | FileCheck %s
 // RUN: %libomp-compile-and-run | FileCheck --check-prefix=TASKS %s
 // REQUIRES: ompt
@@ -6,6 +7,7 @@
 // UNSUPPORTED: gcc-4, gcc-5, icc-16
 // GCC 6 has support for taskloops, but at least 6.3.0 is crashing on this test
 // UNSUPPORTED: gcc-6
+// clang-format on
 
 #include "callback.h"
 #include <omp.h>
@@ -23,6 +25,7 @@ int main() {
       x++;
     }
   }
+  // clang-format off
   // CHECK: 0: NULL_POINTER=[[NULL:.*$]]
 
   // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_parallel_begin:
@@ -75,6 +78,7 @@ int main() {
   // TASKS-DAG: {{^.*}}first_task_id={{[0-f]+}}, second_task_id=[[TASK_ID2]]
   // TASKS-DAG: {{^.*}}first_task_id=[[TASK_ID2]], second_task_id={{[0-f]+}}
   // TASKS-NOT: ompt_event_task_schedule
+  // clang-format on
 
   return 0;
 }

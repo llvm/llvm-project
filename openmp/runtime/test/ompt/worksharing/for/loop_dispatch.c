@@ -1,7 +1,9 @@
+// clang-format off
 // RUN: %libomp-compile-and-run | %sort-threads | FileCheck %s
 // REQUIRES: ompt
 // XFAIL: gcc
 // GCC doesn't call runtime for static schedule
+// clang-format on
 
 #include "callback.h"
 
@@ -42,6 +44,7 @@ int main() {
   return 0;
 }
 
+// clang-format off
 // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_parallel_begin'
 // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_implicit_task'
 // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_work'
@@ -125,3 +128,4 @@ int main() {
 // CHECK: {{^}}[[THREAD_ID3]]: ompt_event_ws_loop_chunk_begin:
 // CHECK-SAME: parallel_id=[[PARALLEL_ID]], task_id=[[TASK_ID3]]
 // CHECK-SAME: chunk_start={{[0-9]+}}, chunk_iterations={{[1-9][0-9]*}}
+// clang-format on

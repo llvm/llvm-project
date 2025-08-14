@@ -1,6 +1,8 @@
+// clang-format off
 // RUN:  %libomp-compile-and-run | %sort-threads | FileCheck %s
 // REQUIRES: ompt
 // UNSUPPORTED: gcc-4, gcc-5, gcc-6, gcc-7
+// clang-format on
 
 #include "callback.h"
 #include <unistd.h>  
@@ -27,7 +29,7 @@ int main()
     }
   }
 
-
+  // clang-format off
   // Check if libomp supports the callbacks for this test.
   // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_task_create'
   // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_task_schedule'
@@ -43,6 +45,7 @@ int main()
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_wait_taskgroup_end: parallel_id=[[PARALLEL_ID]], task_id=[[TASK_ID]], codeptr_ra=[[RETURN_ADDRESS]]
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_taskgroup_end: parallel_id=[[PARALLEL_ID]], task_id=[[TASK_ID]], codeptr_ra=[[RETURN_ADDRESS]]
   // CHECK-NEXT: {{^}}[[MASTER_ID]]: current_address={{.*}}[[RETURN_ADDRESS]]
+  // clang-format on
 
   return 0;
 }

@@ -1,4 +1,6 @@
+// clang-format off
 // RUN: %libomp-compile-and-run
+// clang-format on
 
 #include <omp.h>
 

@@ -1,5 +1,7 @@
+// clang-format off
 // RUN: %libomp-compile-and-run | %sort-threads | FileCheck %s
 // REQUIRES: ompt
+// clang-format on
 
 #include "callback.h"
 #include <omp.h>
@@ -25,6 +27,7 @@ int main() {
   return 0;
 }
 
+// clang-format off
 // Check if libomp supports the callbacks for this test.
 // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_task_create'
 // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_dependences'
@@ -73,3 +76,4 @@ int main() {
 // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_end: task_id=[[SECOND_TASK]]
 
 // CHECK: {{^}}[[MASTER_ID]]: fuzzy_address={{.*}}[[RETURN_ADDRESS]]
+// clang-format on

@@ -1,8 +1,10 @@
+// clang-format off
 // RUN:  %libomp-compile && env OMP_CANCELLATION=true %libomp-run | %sort-threads | FileCheck %s
 // REQUIRES: ompt
 // UNSUPPORTED: clang-3, clang-4.0.0
 // Current GOMP interface implementation does not support cancellation; icc 16 has a bug
 // XFAIL: gcc, icc-16
+// clang-format on
 
 #include "callback.h"
 #include <unistd.h>  
@@ -58,6 +60,7 @@ int main()
     #pragma omp barrier
   }
 
+  // clang-format off
   // Check if libomp supports the callbacks for this test.
   // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_masked'
   // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_task_create'
@@ -85,6 +88,7 @@ int main()
   
   // CHECK-DAG: {{^}}[[THREAD_ID:[0-9]+]]: ompt_event_thread_begin: thread_type=ompt_thread_worker=2, thread_id=[[THREAD_ID]]
   // CHECK-DAG: {{^}}[[THREAD_ID]]: ompt_event_cancel: task_id={{[0-f]+}}, flags=ompt_cancel_taskgroup|ompt_cancel_detected=40, codeptr_ra={{(0x)?[0-f]*}}
+  // clang-format on
 
   return 0;
 }

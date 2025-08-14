@@ -1,6 +1,8 @@
+// clang-format off
 // RUN: %libomp-compile-and-run | FileCheck %s
 // RUN: %libomp-compile-and-run | %sort-threads | FileCheck --check-prefix=THREADS %s
 // REQUIRES: ompt
+// clang-format on
 #include "callback.h"
 
 int main()

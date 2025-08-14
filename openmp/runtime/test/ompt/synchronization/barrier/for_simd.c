@@ -1,6 +1,8 @@
+// clang-format off
 // RUN: %libomp-compile-and-run | FileCheck %s
 // REQUIRES: ompt
 // XFAIL: gcc-4
+// clang-format on
 
 #include "callback.h"
 #include <omp.h>

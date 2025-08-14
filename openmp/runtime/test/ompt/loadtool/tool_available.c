@@ -1,3 +1,4 @@
+// clang-format off
 // The OpenMP standard defines 3 ways of providing ompt_start_tool:
 
 // RUN: mkdir -p %t.tool_dir
@@ -74,6 +75,7 @@
 
 
 // REQUIRES: ompt
+// clang-format on
 
 /*
  *  This file contains code for an OMPT shared library tool to be
@@ -82,6 +84,7 @@
  *  -DCODE enables the code for the executable during compilation
  */
 
+// clang-format off
 // Check if libomp supports the callbacks for this test.
 // CHECK-NOT: {{^}}0: Could not register callback
 
@@ -99,6 +102,7 @@
 // TOOLLIB-SAME: [[PARENTPATH]]/tool.so... Success.
 // TOOLLIB-NEXT: Tool was started and is using the OMPT interface.
 // TOOLLIB-NEXT: ----- END LOGGING OF TOOL REGISTRATION -----
+// clang-format on
 
 #ifdef CODE
 #include "omp.h"
@@ -109,11 +113,13 @@ int main()
   {
   }
 
+  // clang-format off
   // CHECK-NOT: ----- START LOGGING OF TOOL REGISTRATION -----
   // CHECK-NOT: ----- END LOGGING OF TOOL REGISTRATION -----
 
   // CHECK: {{^}}0: NULL_POINTER=[[NULL:.*$]]
   // CHECK: {{^}}0: ompt_event_runtime_shutdown
+  // clang-format on
 
   return 0;
 }

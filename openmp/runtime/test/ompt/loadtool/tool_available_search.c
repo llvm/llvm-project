@@ -1,3 +1,4 @@
+// clang-format off
 // RUN: mkdir -p %t.tool_dir
 // RUN: %clang %flags -shared -fPIC %s -o %t.tool_dir/first_tool.so
 // RUN: %clang %flags -DTOOL -DSECOND_TOOL -shared -fPIC %s -o %t.tool_dir/second_tool.so
@@ -8,6 +9,7 @@
 
 // REQUIRES: ompt
 // XFAIL: darwin
+// clang-format on
 
 /*
  *  This file contains code for three OMPT shared library tool to be
@@ -19,6 +21,7 @@
  *  -DCODE enables the code for the executable during compilation
  */
 
+// clang-format off
 // CHECK: ----- START LOGGING OF TOOL REGISTRATION -----
 // CHECK-NEXT: Search for OMP tool in current address space... Failed.
 // CHECK-NEXT: Searching tool libraries...
@@ -53,7 +56,7 @@
 // CHECK-DAG: {{^}}0: ompt_event_thread_begin
 // CHECK-DAG: {{^}}0: control_tool()=-1
 // CHECK: {{^}}0: Tool finalized
-
+// clang-format on
 
 #ifdef CODE
 #include "stdio.h"

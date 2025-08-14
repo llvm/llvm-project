@@ -1,7 +1,9 @@
+// clang-format off
 // RUN: %libomp-compile && env OMP_CANCELLATION=true %libomp-run | %sort-threads | FileCheck %s
 // REQUIRES: ompt
 // Current GOMP interface implementation does not support cancellation; icc 16 does not distinguish between sections and loops
 // XFAIL: icc-16
+// clang-format on
 
 #include "callback.h"
 #include <unistd.h>
@@ -49,7 +51,7 @@ int main()
     }
   }
 
-
+  // clang-format off
   // Check if libomp supports the callbacks for this test.
   // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_implicit_task'
   // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_cancel'
@@ -62,6 +64,7 @@ int main()
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_cancel: task_id=[[TASK_ID:[0-f]+]], flags=ompt_cancel_sections|ompt_cancel_{{activated=18|detected=34}}, codeptr_ra={{(0x)?[0-f]*}}
   // CHECK: {{^}}[[OTHER_THREAD_ID:[0-9]+]]: ompt_event_cancel: task_id=[[TASK_ID:[0-f]+]], flags=ompt_cancel_loop|ompt_cancel_detected=36, codeptr_ra={{(0x)?[0-f]*}}
   // CHECK: {{^}}[[OTHER_THREAD_ID:[0-9]+]]: ompt_event_cancel: task_id=[[TASK_ID:[0-f]+]], flags=ompt_cancel_sections|ompt_cancel_{{activated=18|detected=34}}, codeptr_ra={{(0x)?[0-f]*}}
+  // clang-format on
 
   return 0;
 }

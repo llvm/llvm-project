@@ -1,6 +1,8 @@
+// clang-format off
 // RUN: %libomp-compile-and-run | %sort-threads | FileCheck %s
 // REQUIRES: ompt
 // UNSUPPORTED: gcc-4, gcc-5, gcc-6, gcc-7
+// clang-format on
 #include "callback.h"
 #include <omp.h>
 
@@ -31,6 +33,7 @@ int main()
 
   omp_destroy_nest_lock(&nest_lock);
 
+  // clang-format off
   // Check if libomp supports the callbacks for this test.
   // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_mutex_acquire'
   // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_mutex_acquired'
@@ -55,6 +58,7 @@ int main()
   // CHECK: {{^}}[[THREAD_ID:[0-9]+]]: ompt_event_wait_test_nest_lock: wait_id=[[WAIT_ID]], hint=0, impl={{[0-9]+}}, codeptr_ra=[[RETURN_ADDRESS:(0x)?[0-f]+]]{{[0-f][0-f]}}
   // CHECK-NOT: {{^}}[[THREAD_ID]]: ompt_event_acquired_test_nest_lock_next: wait_id=[[WAIT_ID]]
   // CHECK-NEXT: {{^}}[[THREAD_ID]]: fuzzy_address={{.*}}[[RETURN_ADDRESS]]
+  // clang-format on
 
   return 0;
 }

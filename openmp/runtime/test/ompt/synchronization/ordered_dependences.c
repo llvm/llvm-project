@@ -1,6 +1,8 @@
+// clang-format off
 // RUN: %libomp-c99-compile-and-run | %sort-threads | FileCheck %s
 // REQUIRES: ompt
 // UNSUPPORTED: gcc-4, gcc-5, gcc-6, gcc-7
+// clang-format on
 #include "callback.h"
 #include <omp.h>
 
@@ -21,6 +23,7 @@ int main() {
 
   return 0;
 }
+// clang-format off
 // CHECK: 0: NULL_POINTER=[[NULL:.*$]]
 
 // CHECK: {{^}}[[MASTER:[0-9]+]]: ompt_event_loop_static_begin:
@@ -58,3 +61,4 @@ int main() {
 // CHECK: {{^}}[[WORKER]]: ompt_event_dependences: task_id=[[ITASK]],
 // CHECK-SAME: deps=[(1, ompt_dependence_type_source), (1,
 // CHECK-SAME: ompt_dependence_type_source)], ndeps=2
+// clang-format on

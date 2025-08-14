@@ -1,3 +1,4 @@
+// clang-format off
 // RUN: %libomp-compile && env OMP_NUM_THREADS='3' \
 // RUN:    %libomp-run | %sort-threads | FileCheck %s
 // REQUIRES: ompt
@@ -10,6 +11,7 @@
 // UNSUPPORTED: clang-10, clang-9, clang-8, clang-7
 // icc compiler does not support detach clause.
 // UNSUPPORTED: icc
+// clang-format on
 
 #include "callback.h"
 #include <omp.h>
@@ -26,6 +28,7 @@ int main() {
   return 0;
 }
 
+// clang-format off
 // Check if libomp supports the callbacks for this test.
 // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_task_create'
 // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_task_schedule'
@@ -69,3 +72,4 @@ int main() {
 // CHECK-SAME: first_task_id=[[TASK_ID]],
 // CHECK-SAME: second_task_id=[[IMPLICIT_TASK_ID]],
 // CHECK-SAME: prior_task_status=ompt_task_complete=1
+// clang-format on

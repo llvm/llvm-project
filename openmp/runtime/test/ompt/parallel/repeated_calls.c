@@ -1,5 +1,7 @@
+// clang-format off
 // RUN: %libomp-compile-and-run | FileCheck %s
 // REQUIRES: ompt
+// clang-format on
 
 #define USE_PRIVATE_TOOL 1
 #include "callback.h"
@@ -31,6 +33,7 @@ int main() {
   y = foo(y);
   return 0;
 
+  // clang-format off
   // CHECK-NOT: {{^}}0: Could not register callback
   // CHECK: 0: NULL_POINTER=[[NULL:.*$]]
 
@@ -44,7 +47,7 @@ int main() {
   // Second call to foo
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_parallel_begin
   // CHECK-SAME: {{.*}}codeptr_ra=[[RETURN_ADDRESS]]
-
+  // clang-format on
 }
 
 static void on_ompt_callback_thread_begin(

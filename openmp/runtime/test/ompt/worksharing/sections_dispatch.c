@@ -1,8 +1,10 @@
+// clang-format off
 // RUN: %libomp-compile-and-run | %sort-threads | FileCheck %s
 // REQUIRES: ompt
 // UNSUPPORTED: intel-15.0, intel-16.0, intel-17.0, intel-18.0
 // GCC generates code that does not distinguish between sections and loops
 // UNSUPPORTED: gcc
+// clang-format on
 
 #include "callback.h"
 #include <omp.h>
@@ -21,6 +23,7 @@ int main()
     }
   }
 
+  // clang-format off
   // Check if libomp supports the callbacks for this test.
   // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_work'
   // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_dispatch'
@@ -47,6 +50,7 @@ int main()
   // CHECK: {{^}}[[THREAD_ID]]: ompt_event_sections_end:
   // CHECK-SAME: parallel_id=[[PARALLEL_ID]], task_id={{[0-f]+}},
   // CHECK-SAME: codeptr_ra=[[SECT_END]]
+  // clang-format on
 
   return 0;
 }

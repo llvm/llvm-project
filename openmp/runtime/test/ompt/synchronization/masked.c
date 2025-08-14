@@ -1,7 +1,9 @@
+// clang-format off
 // RUN: %libomp-compile-and-run | FileCheck %s
 // REQUIRES: ompt
 // GCC generates code that does not call the runtime for the master construct
 // XFAIL: gcc
+// clang-format on
 
 #include "callback.h"
 #include <omp.h>
@@ -23,6 +25,7 @@ int main() {
   return 0;
 }
 
+// clang-format off
 // Check if libomp supports the callbacks for this test.
 // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_masked'
 
@@ -36,3 +39,4 @@ int main() {
 // CHECK-SAME: parallel_id=[[PARALLEL_ID]], task_id=[[TASK_ID]],
 // CHECK-SAME: codeptr_ra=[[RETURN_ADDRESS_END:(0x)?[0-f]+]]
 // CHECK: {{^}}[[MASTER_ID]]: current_address={{.*}}[[RETURN_ADDRESS_END]]
+// clang-format on

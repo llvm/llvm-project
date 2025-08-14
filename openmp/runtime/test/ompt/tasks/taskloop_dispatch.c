@@ -1,6 +1,8 @@
+// clang-format off
 // RUN: %libomp-compile-and-run | %sort-threads | FileCheck %s
 // REQUIRES: ompt
 // UNSUPPORTED: gnu, intel-16.0
+// clang-format on
 
 #include "callback.h"
 #include <omp.h>
@@ -19,6 +21,7 @@ int main() {
       delay(1000);
     }
   }
+  // clang-format off
   // CHECK: 0: NULL_POINTER=[[NULL:.*$]]
 
   // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_parallel_begin:
@@ -48,6 +51,7 @@ int main() {
   // CHECK-DAG: {{.*}}: ompt_event_taskloop_chunk_begin:{{.*}}task_id=[[TASK_ID1]]{{.*}}chunk_iterations=4
   // CHECK-DAG: {{.*}}: ompt_event_taskloop_chunk_begin:{{.*}}task_id=[[TASK_ID2]]{{.*}}chunk_iterations=4
   // CHECK-DAG: {{.*}}: ompt_event_taskloop_chunk_begin:{{.*}}task_id=[[TASK_ID3]]{{.*}}chunk_iterations=4
+  // clang-format on
 
   return 0;
 }

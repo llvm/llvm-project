@@ -1,5 +1,7 @@
+// clang-format off
 // RUN: %libomp-compile-and-run | %sort-threads | FileCheck %s
 // REQUIRES: ompt
+// clang-format on
 
 #include "callback.h"
 #include <omp.h>
@@ -27,6 +29,7 @@ int main()
     }
   }
 
+  // clang-format off
   // Check if libomp supports the callbacks for this test.
   // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_task_create'
   // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_implicit_task'
@@ -76,6 +79,7 @@ int main()
   // CHECK-SAME: exit_frame=[[NULL]]
   // CHECK-SAME: reenter_frame=[[INITIAL_TASK_FRAME_ENTER]]
   // CHECK-SAME: task_type=ompt_task_initial
+  // clang-format on
 
   return 0;
 }

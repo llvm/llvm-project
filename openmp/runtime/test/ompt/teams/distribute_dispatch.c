@@ -1,9 +1,11 @@
+// clang-format off
 // RUN: %libomp-compile-and-run | %sort-threads | FileCheck %s
 // REQUIRES: ompt
 
 /// GCC lowering of distribute results in calls to 
 /// omp_get_num_teams/omp_get_team_num rather than region calls
 // UNSUPPORTED: gcc
+// clang-format on
 #include "callback.h"
 
 #define WORK_SIZE 64
@@ -17,6 +19,7 @@ int main() {
   return 0;
 }
 
+// clang-format off
 // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_work'
 // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_dispatch'
 
@@ -49,3 +52,4 @@ int main() {
 // CHECK: {{^}}[[THREAD_ID3]]: ompt_event_distribute_chunk_begin:
 // CHECK-SAME: parallel_id=[[PARALLEL_ID3]], task_id=[[TASK_ID3]]
 // CHECK-SAME: chunk_start={{[0-9]+}}, chunk_iterations=16
+// clang-format on

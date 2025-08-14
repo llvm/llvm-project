@@ -1,5 +1,7 @@
+// clang-format off
 // RUN: %libomp-compile-and-run | %sort-threads  | FileCheck %s
 // REQUIRES: ompt
+// clang-format on
 #include "callback.h"
 #include <omp.h>
 

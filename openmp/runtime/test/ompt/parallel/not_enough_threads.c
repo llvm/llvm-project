@@ -1,8 +1,10 @@
+// clang-format off
 // RUN: %libomp-compile && env OMP_THREAD_LIMIT=2 %libomp-run | FileCheck %s
 // RUN: %libomp-compile && env OMP_THREAD_LIMIT=2 %libomp-run | %sort-threads \
 // RUN:     | FileCheck --check-prefix=THREADS %s
 
 // REQUIRES: ompt
+// clang-format on
 
 #include "callback.h"
 
@@ -14,6 +16,7 @@ int main() {
   }
   print_fuzzy_address(1);
 
+  // clang-format off
   // Check if libomp supports the callbacks for this test.
   // CHECK-NOT: {{^}}0: Could not register callback
 
@@ -85,6 +88,7 @@ int main() {
   // THREADS-SAME: parallel_id=0, task_id=[[IMPLICIT_TASK_ID]]
   // THREADS: {{^}}[[THREAD_ID]]: ompt_event_implicit_task_end
   // THREADS-SAME: parallel_id=0, task_id=[[IMPLICIT_TASK_ID]]
+  // clang-format on
 
   return 0;
 }

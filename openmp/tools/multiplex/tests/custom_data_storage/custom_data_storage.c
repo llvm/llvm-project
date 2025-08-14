@@ -1,3 +1,4 @@
+// clang-format off
 // RUN: %libomp-tool -DFIRST_TOOL -o %t.first.tool.so %s && \
 // RUN: %libomp-tool -DSECOND_TOOL -o %t.second.tool.so %s && \
 // RUN: %libomp-compile && \
@@ -8,6 +9,7 @@
 // For GCC we don't get an event for master,
 // see runtime/test/ompt/sycnchronization/master.c
 // UNSUPPORTED: gcc
+// clang-format on
 
 #if defined(FIRST_TOOL)
 #include "first-tool.h"
@@ -36,6 +38,7 @@ int main() {
   }
   return 0;
 }
+// clang-format off
 // Check if libomp supports the callbacks for this test.
 // CHECK-NOT: {{^}}0: Could not register callback
 
@@ -329,5 +332,6 @@ int main() {
 
 // CHECK: {{^}}[[_2ND_WRKR_TID]]: second_tool: ompt_event_thread_end:
 // CHECK-SAME: thread_id=[[_2ND_WRKR_TID]]
+// clang-format on
 
 #endif /* APP */

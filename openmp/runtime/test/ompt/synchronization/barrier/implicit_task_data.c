@@ -1,3 +1,4 @@
+// clang-format off
 // RUN: %libomp-compile-and-run | %sort-threads | FileCheck %s
 // REQUIRES: ompt
 
@@ -6,6 +7,7 @@
 // Therefore, callback implementations different from the ones in callback.h are necessary.
 // This is a test for an issue reported in 
 // https://github.com/OpenMPToolsInterface/LLVM-openmp/issues/39
+// clang-format on
 
 #define _BSD_SOURCE
 #include <stdio.h>

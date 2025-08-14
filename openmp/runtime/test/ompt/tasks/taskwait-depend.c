@@ -1,3 +1,4 @@
+// clang-format off
 // RUN: %libomp-compile-and-run | %sort-threads | FileCheck %s
 // REQUIRES: ompt
 
@@ -9,6 +10,7 @@
 
 // support for taskwait with depend clause introduced in clang-14
 // UNSUPPORTED: clang-5, clang-6, clang-6, clang-8, clang-9, clang-10, clang-11, clang-12, clang-13
+// clang-format on
 
 #include "callback.h"
 #include <omp.h>
@@ -33,6 +35,7 @@ int main() {
   return 0;
 }
 
+// clang-format off
 // Check if libomp supports the callbacks for this test.
 // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_task_create'
 // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_dependences'
@@ -81,3 +84,4 @@ int main() {
 // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_end: task_id=[[SECOND_TASK]]
 
 // CHECK: {{^}}[[MASTER_ID]]: fuzzy_address={{.*}}[[RETURN_ADDRESS]]
+// clang-format on

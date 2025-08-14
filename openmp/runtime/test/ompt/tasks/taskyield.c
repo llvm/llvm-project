@@ -1,7 +1,9 @@
+// clang-format off
 // RUN: %libomp-compile-and-run | %sort-threads | FileCheck %s
 // REQUIRES: ompt
 // Current GOMP interface implements taskyield as stub
 // XFAIL: gcc
+// clang-format on
 
 #include "callback.h"
 #include <omp.h>   
@@ -31,7 +33,7 @@ int main()
     }
   }
 
-
+  // clang-format off
   // Check if libomp supports the callbacks for this test.
   // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_task_create'
   // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_task_schedule'
@@ -53,10 +55,7 @@ int main()
 
   // CHECK: {{^}}[[THREAD_ID:[0-9]+]]: ompt_event_task_schedule: first_task_id={{[0-f]+}}, second_task_id=[[WORKER_TASK]], prior_task_status=ompt_task_switch=7
   // CHECK: {{^}}[[THREAD_ID]]: ompt_event_task_schedule: first_task_id=[[WORKER_TASK]], second_task_id={{[0-f]+}}, prior_task_status=ompt_task_complete=1
-
-
-
-
+  // clang-format on
 
   return 0;
 }

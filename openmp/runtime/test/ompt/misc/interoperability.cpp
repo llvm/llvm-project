@@ -1,5 +1,7 @@
+// clang-format off
 // RUN: %libomp-cxx-compile-and-run | %sort-threads | FileCheck %s
 // REQUIRES: ompt
+// clang-format on
 
 #include <iostream>
 #include <thread>
@@ -43,6 +45,7 @@ int main() {
   t2.join();
 }
 
+// clang-format off
 // Check if libomp supports the callbacks for this test.
 // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_task_schedule'
 // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_parallel_begin'
@@ -120,3 +123,4 @@ int main() {
 
 // CHECK: {{^}}[[THREAD_ID_2]]: ompt_event_thread_end:
 // CHECK-SAME: thread_id=[[THREAD_ID_2]]
+// clang-format on

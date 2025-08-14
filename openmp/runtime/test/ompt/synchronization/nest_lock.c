@@ -1,5 +1,7 @@
+// clang-format off
 // RUN: %libomp-compile-and-run | FileCheck %s
 // REQUIRES: ompt
+// clang-format on
 #include "callback.h"
 #include <omp.h>
 
@@ -25,7 +27,7 @@ int main()
   omp_destroy_nest_lock(&nest_lock);
   print_fuzzy_address(6);
 
-
+  // clang-format off
   // Check if libomp supports the callbacks for this test.
   // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_mutex_acquire'
   // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_mutex_acquired'
@@ -48,6 +50,7 @@ int main()
   // CHECK-NEXT: {{^}}[[MASTER_ID]]: fuzzy_address={{.*}}[[RETURN_ADDRESS]]
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_destroy_nest_lock: wait_id=[[WAIT_ID]], codeptr_ra=[[RETURN_ADDRESS:(0x)?[0-f]+]]{{[0-f][0-f]}}
   // CHECK-NEXT: {{^}}[[MASTER_ID]]: fuzzy_address={{.*}}[[RETURN_ADDRESS]]
+  // clang-format on
 
   return 0;
 }

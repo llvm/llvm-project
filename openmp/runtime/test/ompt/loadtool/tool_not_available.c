@@ -1,3 +1,4 @@
+// clang-format off
 // The OpenMP standard defines 3 ways of providing ompt_start_tool:
 
 // RUN: mkdir -p %t.tool_dir
@@ -44,6 +45,7 @@
 // RUN:    FileCheck %s -DPARENTPATH=%t.tool_dir --check-prefixes CHECK,TOOLLIB
 
 // REQUIRES: ompt
+// clang-format on
 
 /*
  *  This file contains code for an OMPT shared library tool to be 
@@ -68,7 +70,7 @@ int main()
     }
   }
 
-
+  // clang-format off
   // Check if libomp supports the callbacks for this test.
   // CHECK-NOT: {{^}}0: Could not register callback
 
@@ -98,7 +100,7 @@ int main()
   // TOOLLIB-NEXT: ----- END LOGGING OF TOOL REGISTRATION -----
 
   // CHECK: {{^}}0: control_tool()=-2
-  
+  // clang-format on
 
   return 0;
 }

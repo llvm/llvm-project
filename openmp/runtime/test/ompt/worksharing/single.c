@@ -1,7 +1,9 @@
+// clang-format off
 // RUN: %libomp-compile-and-run | %sort-threads | FileCheck %s
 // REQUIRES: ompt
 // GCC generates code that does not call the runtime for the single construct
 // XFAIL: gcc
+// clang-format on
 
 #include "callback.h"
 #include <omp.h>

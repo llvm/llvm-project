@@ -1,6 +1,8 @@
+// clang-format off
 // RUN: %libomp-compile-and-run | FileCheck %s
 // REQUIRES: ompt
 // UNSUPPORTED: gcc-4, gcc-5, gcc-6, gcc-7
+// clang-format on
 #include "callback.h"
 
 int main()
@@ -32,6 +34,7 @@ int main()
   }
   print_fuzzy_address(2);
 
+  // clang-format off
   // Check if libomp supports the callbacks for this test.
   // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_parallel_begin'
   // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_parallel_end'
@@ -71,6 +74,7 @@ int main()
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_implicit_task_end: parallel_id=0, task_id=[[IMPLICIT_TASK_ID]]
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_parallel_end: parallel_id=[[PARALLEL_ID]], task_id=[[PARENT_TASK_ID]], invoker=[[PARALLEL_INVOKER]]
   // CHECK: {{^}}[[MASTER_ID]]: fuzzy_address={{.*}}[[RETURN_ADDRESS]]
+  // clang-format on
 
   return 0;
 }
