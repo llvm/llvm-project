@@ -705,9 +705,16 @@ static bool IsInRequestedScope(bool statics, bool arguments, bool locals,
   return false;
 }
 
-SBFrame::WasInterrupted SBFrame::FetchVariablesUnlessInterrupted(
+enum WasInterrupted { Yes, No };
+
+/// Populates `value_list` with the variables from `frame` according to
+/// `options`. This method checks whether the Debugger received an interrupt
+/// before processing every variable, returning `WasInterrupted::yes` in that
+/// case.
+static std::pair<WasInterrupted, Status> FetchVariablesUnlessInterrupted(
     const lldb::SBVariablesOptions &options, StackFrame &frame,
-    SBValueList &value_list, Debugger &dbg) {
+    SBValueList &value_list, Debugger &dbg,
+    std::function<SBValue(ValueObjectSP, bool)> to_sbvalue) {
   const bool statics = options.GetIncludeStatics();
   const bool arguments = options.GetIncludeArguments();
   const bool locals = options.GetIncludeLocals();
@@ -721,11 +728,8 @@ SBFrame::WasInterrupted SBFrame::FetchVariablesUnlessInterrupted(
 
   std::set<VariableSP> variable_set;
 
-  if (var_error.Fail())
-    value_list.SetError(std::move(var_error));
-
   if (!variable_list)
-    return WasInterrupted::No;
+    return {WasInterrupted::No, std::move(var_error)};
   const size_t num_variables = variable_list->GetSize();
   size_t num_produced = 0;
   for (const VariableSP &variable_sp : *variable_list) {
@@ -738,7 +742,7 @@ SBFrame::WasInterrupted SBFrame::FetchVariablesUnlessInterrupted(
             "Interrupted getting frame variables with {0} of {1} "
             "produced.",
             num_produced, num_variables))
-      return WasInterrupted::Yes;
+      return {WasInterrupted::Yes, std::move(var_error)};
 
     // Only add variables once so we don't end up with duplicates
     if (variable_set.insert(variable_sp).second == false)
@@ -753,13 +757,11 @@ SBFrame::WasInterrupted SBFrame::FetchVariablesUnlessInterrupted(
         valobj_sp->IsRuntimeSupportValue())
       continue;
 
-    SBValue value_sb;
-    value_sb.SetSP(valobj_sp, use_dynamic);
-    value_list.Append(value_sb);
+    value_list.Append(to_sbvalue(valobj_sp, use_dynamic));
   }
   num_produced++;
 
-  return WasInterrupted::No;
+  return {WasInterrupted::No, std::move(var_error)};
 }
 
 /// Populates `value_list` with recognized arguments of `frame` according to
@@ -795,10 +797,20 @@ SBValueList SBFrame::GetVariables(const lldb::SBVariablesOptions &options) {
   if (!frame)
     return SBValueList();
 
+  auto valobj_to_sbvalue = [](ValueObjectSP valobj, bool use_dynamic) {
+    SBValue value_sb;
+    value_sb.SetSP(valobj, use_dynamic);
+    return value_sb;
+  };
   SBValueList value_list;
-  if (WasInterrupted::Yes ==
+  std::pair<WasInterrupted, Status> fetch_result =
       FetchVariablesUnlessInterrupted(options, *frame, value_list,
-                                      exe_ctx->GetTargetPtr()->GetDebugger()))
+                                      exe_ctx->GetTargetPtr()->GetDebugger(),
+                                      valobj_to_sbvalue);
+  if (fetch_result.second.Fail())
+    value_list.SetError(std::move(fetch_result.second));
+
+  if (fetch_result.first == WasInterrupted::Yes)
     return value_list;
 
   const lldb::DynamicValueType use_dynamic = options.GetUseDynamic();
