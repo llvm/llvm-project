@@ -447,7 +447,7 @@ protected:
                                         DIEArray &&variable_dies);
 
   llvm::Expected<SymbolContext>
-  ResolveFunctionCallLabel(const FunctionCallLabel &label) override;
+  ResolveFunctionCallLabel(FunctionCallLabel &label) override;
 
   // Given a die_offset, figure out the symbol context representing that die.
   bool ResolveFunction(const DWARFDIE &die, bool include_inlines,

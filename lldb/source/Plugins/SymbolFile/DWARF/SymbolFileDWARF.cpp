@@ -13,6 +13,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/Threading.h"
@@ -24,6 +25,7 @@
 #include "lldb/Core/Progress.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/Value.h"
+#include "lldb/Expression/Expression.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/RegularExpression.h"
@@ -2486,14 +2488,14 @@ bool SymbolFileDWARF::ResolveFunction(const DWARFDIE &orig_die,
   return false;
 }
 
-static int ClangToItaniumCtorKind(clang::CXXCtorType kind) {
+static llvm::StringRef ClangToItaniumCtorKind(clang::CXXCtorType kind) {
   switch (kind) {
   case clang::CXXCtorType::Ctor_Complete:
-    return 1;
+    return "C1";
   case clang::CXXCtorType::Ctor_Base:
-    return 2;
+    return "C2";
   case clang::CXXCtorType::Ctor_Unified:
-    return 4;
+    return "C4";
   case clang::CXXCtorType::Ctor_CopyingClosure:
   case clang::CXXCtorType::Ctor_DefaultClosure:
   case clang::CXXCtorType::Ctor_Comdat:
@@ -2501,41 +2503,41 @@ static int ClangToItaniumCtorKind(clang::CXXCtorType kind) {
   }
 }
 
-static int ClangToItaniumDtorKind(clang::CXXDtorType kind) {
+static llvm::StringRef ClangToItaniumDtorKind(clang::CXXDtorType kind) {
   switch (kind) {
   case clang::CXXDtorType::Dtor_Deleting:
-    return 0;
+    return "D0";
   case clang::CXXDtorType::Dtor_Complete:
-    return 1;
+    return "D1";
   case clang::CXXDtorType::Dtor_Base:
-    return 2;
+    return "D2";
   case clang::CXXDtorType::Dtor_Unified:
-    return 4;
+    return "D4";
   case clang::CXXDtorType::Dtor_Comdat:
     llvm_unreachable("Unexpected destructor kind.");
   }
 }
 
-static std::optional<int>
+static llvm::StringRef
 GetItaniumCtorDtorVariant(llvm::StringRef discriminator) {
   const bool is_ctor = discriminator.consume_front("C");
   if (!is_ctor && !discriminator.consume_front("D"))
-    return std::nullopt;
+    return {};
 
   uint64_t structor_kind;
   if (!llvm::to_integer(discriminator, structor_kind))
-    return std::nullopt;
+    return {};
 
   if (is_ctor) {
     if (structor_kind > clang::CXXCtorType::Ctor_Unified)
-      return std::nullopt;
+      return {};
 
     return ClangToItaniumCtorKind(
         static_cast<clang::CXXCtorType>(structor_kind));
   }
 
   if (structor_kind > clang::CXXDtorType::Dtor_Unified)
-    return std::nullopt;
+    return {};
 
   return ClangToItaniumDtorKind(static_cast<clang::CXXDtorType>(structor_kind));
 }
@@ -2543,81 +2545,73 @@ GetItaniumCtorDtorVariant(llvm::StringRef discriminator) {
 llvm::Expected<DWARFDIE>
 SymbolFileDWARF::FindFunctionDefinition(const FunctionCallLabel &label,
                                         const DWARFDIE &declaration) {
-  DWARFDIE definition;
-  llvm::DenseMap<int, DWARFDIE> structor_variant_to_die;
+  auto do_lookup = [this](llvm::StringRef lookup_name) -> DWARFDIE {
+    DWARFDIE found;
+    Module::LookupInfo info(ConstString(lookup_name),
+                            lldb::eFunctionNameTypeFull,
+                            lldb::eLanguageTypeUnknown);
 
-  Module::LookupInfo info(ConstString(label.lookup_name),
-                          lldb::eFunctionNameTypeFull,
-                          lldb::eLanguageTypeUnknown);
+    m_index->GetFunctions(info, *this, {}, [&](DWARFDIE entry) {
+      if (entry.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_declaration, 0))
+        return IterationAction::Continue;
 
-  m_index->GetFunctions(info, *this, {}, [&](DWARFDIE entry) {
-    if (entry.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_declaration, 0))
-      return IterationAction::Continue;
-
-    // We're not picking a specific structor variant DIE, so we're done here.
-    if (label.discriminator.empty()) {
-      definition = entry;
+      found = entry;
       return IterationAction::Stop;
-    }
+    });
 
-    const char *mangled =
-        entry.GetMangledName(/*substitute_name_allowed=*/false);
-    if (!mangled)
-      return IterationAction::Continue;
+    return found;
+  };
 
-    // FIXME: we should make DWARF encode the structor variant instead of
-    // needing to re-demangle.
-    llvm::ItaniumPartialDemangler D;
-    if (D.partialDemangle(mangled))
-      return IterationAction::Continue;
-
-    auto structor_variant = D.getCtorOrDtorVariant();
-    if (!structor_variant)
-      return IterationAction::Continue;
-
-    auto [_, inserted] = structor_variant_to_die.try_emplace(*structor_variant,
-                                                             std::move(entry));
-    assert(inserted);
-
-    // The compiler may choose to alias the constructor variants
-    // (notably this happens on Linux), so we might not have a definition
-    // DIE for some structor variants. Hence we iterate over all variants
-    // and pick the most appropriate one out of those.
-    return IterationAction::Continue;
-  });
-
+  DWARFDIE definition = do_lookup(label.lookup_name);
   if (definition.IsValid())
     return definition;
 
-  auto label_variant = GetItaniumCtorDtorVariant(label.discriminator);
-  if (!label_variant)
+  // This is not a structor lookup. Nothing else to be done here.
+  if (label.discriminator.empty())
     return llvm::createStringError(
-        llvm::formatv("failed to retrieve structor variant from label: {0}",
-                      label.discriminator));
+        "no definition DIE found in this SymbolFile");
 
-  auto it = structor_variant_to_die.find(*label_variant);
-
-  // Found the exact variant.
-  if (it != structor_variant_to_die.end())
-    return it->getSecond();
-
-  // We need a C1 constructor. If debug-info only contains a DIE for C2,
-  // assume C1 was aliased to C2.
+  // We're doing a structor lookup. Maybe we didn't find the structor variant
+  // because the complete object structor was aliased to the base object
+  // structor. Try finding the alias instead.
   //
-  // FIXME: can DWARF encode this information for us?
-  if (!label.lookup_name.starts_with("~") && label_variant == 1) {
-    if (auto it = structor_variant_to_die.find(2);
-        it != structor_variant_to_die.end())
-      return it->getSecond();
-  }
+  // TODO: there are other reasons for why a subprogram definition might be
+  // missing. Ideally DWARF would tell us more details about which structor
+  // variant a DIE corresponds to and whether it's an alias.
+  auto subst_or_err =
+      CPlusPlusLanguage::SubstituteStructorAliases_ItaniumMangle(
+          label.lookup_name);
+  if (!subst_or_err)
+    return subst_or_err.takeError();
 
-  return llvm::createStringError(llvm::formatv(
-      "failed to find DIE for structor variant: {0}", label.discriminator));
+  definition = do_lookup(*subst_or_err);
+
+  if (!definition.IsValid())
+    return llvm::createStringError(
+        "failed to find definition DIE for structor alias in fallback lookup");
+
+  return definition;
 }
 
 llvm::Expected<SymbolContext>
-SymbolFileDWARF::ResolveFunctionCallLabel(const FunctionCallLabel &label) {
+SymbolFileDWARF::ResolveFunctionCallLabel(FunctionCallLabel &label) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+
+  if (!label.discriminator.empty()) {
+    llvm::StringRef from = label.discriminator[0] == 'C' ? "C4" : "D4";
+
+    llvm::StringRef variant = GetItaniumCtorDtorVariant(label.discriminator);
+    if (variant.empty())
+      return llvm::createStringError(
+          "failed to get Itanium variant for discriminator");
+
+    auto subst_or_err = CPlusPlusLanguage::SubstituteStructor_ItaniumMangle(
+        label.lookup_name, from, variant);
+    if (subst_or_err && *subst_or_err)
+      label.lookup_name = subst_or_err->GetStringRef();
+    else
+      llvm::consumeError(subst_or_err.takeError());
+  }
 
   DWARFDIE die = GetDIE(label.symbol_id);
   if (!die.IsValid())
