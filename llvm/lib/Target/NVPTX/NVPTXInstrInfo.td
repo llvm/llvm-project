@@ -1133,9 +1133,8 @@ defm FMA_F64    : FMA<F64RT,    allow_ftz = false>;
 // sin/cos/tanh
 
 class UnaryOpAllowsApproxFn<SDPatternOperator operator>
-    : PatFrag<(ops node:$A),
-              (operator node:$A), [{
-  return allowUnsafeFPMath() || N->getFlags().hasApproximateFuncs();
+    : PatFrag<(ops node:$A), (operator node:$A), [{
+  return N->getFlags().hasApproximateFuncs();
 }]>;
 
 def SIN_APPROX_f32 :
