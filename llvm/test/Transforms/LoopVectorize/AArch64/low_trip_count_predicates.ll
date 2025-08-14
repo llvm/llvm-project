@@ -92,7 +92,7 @@ define void @low_vf_ic_is_better(ptr nocapture noundef %p, i32 %tc, i16 noundef 
 ; CHECK-VS1-NEXT:    [[IND_END4:%.*]] = add i64 [[TMP0]], [[N_VEC]]
 ; CHECK-VS1-NEXT:    [[N_VEC_REMAINING:%.*]] = sub i64 [[TMP3]], [[N_VEC]]
 ; CHECK-VS1-NEXT:    [[TMP26:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-VS1-NEXT:    [[TMP27:%.*]] = mul nuw i64 [[TMP26]], 8
+; CHECK-VS1-NEXT:    [[TMP27:%.*]] = shl nuw i64 [[TMP26]], 3
 ; CHECK-VS1-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_VEC_REMAINING]], [[TMP27]]
 ; CHECK-VS1-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]]
 ; CHECK-VS1:       [[VEC_EPILOG_PH]]:
@@ -192,7 +192,7 @@ define void @low_vf_ic_is_better(ptr nocapture noundef %p, i32 %tc, i16 noundef 
 ; CHECK-VS2-NEXT:    [[IND_END4:%.*]] = add i64 [[TMP0]], [[N_VEC]]
 ; CHECK-VS2-NEXT:    [[N_VEC_REMAINING:%.*]] = sub i64 [[TMP3]], [[N_VEC]]
 ; CHECK-VS2-NEXT:    [[TMP26:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-VS2-NEXT:    [[TMP27:%.*]] = mul nuw i64 [[TMP26]], 4
+; CHECK-VS2-NEXT:    [[TMP27:%.*]] = shl nuw i64 [[TMP26]], 2
 ; CHECK-VS2-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_VEC_REMAINING]], [[TMP27]]
 ; CHECK-VS2-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]]
 ; CHECK-VS2:       [[VEC_EPILOG_PH]]:

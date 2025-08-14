@@ -26,7 +26,7 @@ define i64 @int_reduction_and(ptr noalias nocapture %a, i64 %N) {
 ; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi i64 [ -1, [[VECTOR_PH]] ], [ [[TMP19:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP14:%.*]] = mul nuw i64 [[TMP13]], 2
+; CHECK-NEXT:    [[TMP14:%.*]] = shl nuw i64 [[TMP13]], 1
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i64, ptr [[TMP10]], i64 [[TMP14]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP10]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 2 x i64>, ptr [[TMP15]], align 8

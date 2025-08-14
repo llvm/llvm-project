@@ -9,8 +9,7 @@ define i64 @pr97452_scalable_vf1_for_live_out(ptr %src) {
 ; CHECK-SAME: ptr [[SRC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 0
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 23, [[TMP2]]
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 23, [[TMP0]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
@@ -77,8 +76,7 @@ define void @pr97452_scalable_vf1_for_no_live_out(ptr %src, ptr noalias %dst) {
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr noalias [[DST:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP0]], 0
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 23, [[TMP2]]
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 23, [[TMP0]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()

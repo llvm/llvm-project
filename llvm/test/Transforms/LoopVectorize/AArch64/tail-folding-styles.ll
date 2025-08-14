@@ -171,7 +171,7 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 4
+; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[UMAX]], [[TMP6]]
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt i64 [[UMAX]], [[TMP6]]
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i64 [[TMP7]], i64 0

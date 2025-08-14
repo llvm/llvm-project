@@ -824,7 +824,13 @@ namespace llvm {
 Value *createStepForVF(IRBuilderBase &B, Type *Ty, ElementCount VF,
                        int64_t Step) {
   assert(Ty->isIntegerTy() && "Expected an integer step");
-  return B.CreateElementCount(Ty, VF.multiplyCoefficientBy(Step));
+  if (!VF.isScalable() || !isPowerOf2_64(VF.getKnownMinValue()) ||
+      !isPowerOf2_64(Step))
+    return B.CreateElementCount(Ty, VF.multiplyCoefficientBy(Step));
+
+  return B.CreateShl(
+      B.CreateVScale(Ty),
+      ConstantInt::get(Ty, Log2_64((VF * Step).getKnownMinValue())), "", true);
 }
 
 /// Return the runtime value for VF.
@@ -2298,34 +2304,26 @@ Value *InnerLoopVectorizer::createIterationCountCheck(ElementCount VF,
   // Reuse existing vector loop preheader for TC checks.
   // Note that new preheader block is generated for vector loop.
   BasicBlock *const TCCheckBlock = LoopVectorPreHeader;
-  IRBuilder<> Builder(TCCheckBlock->getTerminator());
+  IRBuilder<InstSimplifyFolder> Builder(
+      TCCheckBlock->getContext(),
+      InstSimplifyFolder(TCCheckBlock->getDataLayout()));
+  Builder.SetInsertPoint(TCCheckBlock->getTerminator());
 
   // If tail is to be folded, vector loop takes care of all iterations.
   Value *Count = getTripCount();
   Type *CountTy = Count->getType();
   Value *CheckMinIters = Builder.getFalse();
   auto CreateStep = [&]() -> Value * {
-    ElementCount VFTimesUF = VF.multiplyCoefficientBy(UF);
-    Value *VFxUF = nullptr;
-    if (!VFTimesUF.isScalable() ||
-        !isPowerOf2_64(VFTimesUF.getKnownMinValue())) {
-      VFxUF = createStepForVF(Builder, CountTy, VF, UF);
-    } else {
-      VFxUF = Builder.CreateShl(
-          Builder.CreateVScale(CountTy),
-          ConstantInt::get(CountTy, Log2_64(VFTimesUF.getKnownMinValue())), "",
-          true);
-    }
-
     // Create step with max(MinProTripCount, UF * VF).
-    if (ElementCount::isKnownGE(VFTimesUF, MinProfitableTripCount))
-      return VFxUF;
+    if (UF * VF.getKnownMinValue() >= MinProfitableTripCount.getKnownMinValue())
+      return createStepForVF(Builder, CountTy, VF, UF);
 
     Value *MinProfTC =
         createStepForVF(Builder, CountTy, MinProfitableTripCount, 1);
     if (!VF.isScalable())
       return MinProfTC;
-    return Builder.CreateBinaryIntrinsic(Intrinsic::umax, MinProfTC, VFxUF);
+    return Builder.CreateBinaryIntrinsic(
+        Intrinsic::umax, MinProfTC, createStepForVF(Builder, CountTy, VF, UF));
   };
 
   TailFoldingStyle Style = Cost->getTailFoldingStyle();
