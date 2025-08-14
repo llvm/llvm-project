@@ -478,6 +478,34 @@ implicit none
     end function
   end interface
 
+  interface __float2ll_rd
+    attributes(device) integer(8) function __float2ll_rd(r) bind(c, name='__nv_float2ll_rd')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
+    end function
+  end interface
+
+  interface __float2ll_rn
+    attributes(device) integer(8) function __float2ll_rn(r) bind(c, name='__nv_float2ll_rn')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
+    end function
+  end interface
+
+  interface __float2ll_ru
+    attributes(device) integer(8) function __float2ll_ru(r) bind(c, name='__nv_float2ll_ru')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
+    end function
+  end interface
+
+  interface __float2ll_rz
+    attributes(device) integer(8) function __float2ll_rz(r) bind(c, name='__nv_float2ll_rz')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
+    end function
+  end interface
+
   interface __half2float
     attributes(device) real function __half2float(i) bind(c, name='__nv_half2float')
       !dir$ ignore_tkr (d) i
@@ -685,6 +713,34 @@ implicit none
     attributes(device) integer(8) function __double2ull_rz(r) bind(c, name='__nv_double2ull_rz')
       !dir$ ignore_tkr (d) r
       double precision, value :: r
+    end function
+  end interface
+
+  interface __ll2float_rd
+    attributes(device) real function __ll2float_rd(i) bind(c, name='__nv_ll2float_rd')
+      !dir$ ignore_tkr (d) i
+      integer(8), value :: i
+    end function
+  end interface
+
+  interface __ll2float_rn
+    attributes(device) real function __ll2float_rn(i) bind(c, name='__nv_ll2float_rn')
+      !dir$ ignore_tkr (d) i
+      integer(8), value :: i
+    end function
+    end interface
+
+  interface __ll2float_ru
+    attributes(device) real function __ll2float_ru(i) bind(c, name='__nv_ll2float_ru')
+      !dir$ ignore_tkr (d) i
+      integer(8), value :: i
+    end function
+  end interface
+
+  interface __ll2float_rz
+    attributes(device) real function __ll2float_rz(i) bind(c, name='__nv_ll2float_rz')
+      !dir$ ignore_tkr (d) i
+      integer(8), value :: i
     end function
   end interface
 
