@@ -371,9 +371,11 @@ class OpenACCClauseCIREmitter final
       } else if constexpr (std::is_same_v<RecipeTy,
                                           mlir::acc::ReductionRecipeOp>) {
         stream << "reduction_";
-        // We don't have the reduction operation here well enough to know how to
-        // spell this correctly (+ == 'add', etc), so when we implement
-        // 'reduction' we have to do that here.
+        // TODO: OpenACC: once we have this part implemented, we can remove the
+        // SourceRange `loc` variable from this function. We don't have the
+        // reduction operation here well enough to know how to spell this
+        // correctly (+ == 'add', etc), so when we implement 'reduction' we have
+        // to do that here.
         cgf.cgm.errorNYI(loc, "OpenACC reduction recipe name creation");
       } else {
         static_assert(!sizeof(RecipeTy), "Unknown Recipe op kind");
@@ -410,10 +412,8 @@ class OpenACCClauseCIREmitter final
 
     // Do the 'init' section of the recipe IR, which does an alloca, then the
     // initialization (except for firstprivate).
-    llvm::SmallVector<mlir::Type> argsTys{mainOp.getType()};
-    llvm::SmallVector<mlir::Location> argsLocs{loc};
     builder.createBlock(&recipe.getInitRegion(), recipe.getInitRegion().end(),
-                        argsTys, argsLocs);
+                        {mainOp.getType()}, {loc});
     builder.setInsertionPointToEnd(&recipe.getInitRegion().back());
     tempDeclEmission =
         cgf.emitAutoVarAlloca(*varRecipe, builder.saveInsertionPoint());
@@ -463,11 +463,8 @@ class OpenACCClauseCIREmitter final
                                   mlir::Value mainOp, CharUnits alignment,
                                   QualType baseType,
                                   mlir::Region &destroyRegion) {
-    llvm::SmallVector<mlir::Type> argsTys{mainOp.getType()};
-    llvm::SmallVector<mlir::Location> argsLocs{loc};
-
     mlir::Block *block = builder.createBlock(
-        &destroyRegion, destroyRegion.end(), argsTys, argsLocs);
+        &destroyRegion, destroyRegion.end(), {mainOp.getType()}, {loc});
     builder.setInsertionPointToEnd(&destroyRegion.back());
 
     mlir::Type elementTy =
