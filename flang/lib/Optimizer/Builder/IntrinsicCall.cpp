@@ -2855,10 +2855,10 @@ mlir::Value IntrinsicLibrary::genAsinpi(mlir::Type resultType,
   mlir::FunctionType ftype =
       mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
   mlir::Value asin = getRuntimeCallGenerator("asin", ftype)(builder, loc, args);
-  llvm::APFloat inv_pi = llvm::APFloat(llvm::numbers::inv_pi);
-  mlir::Value dfactor =
-      builder.createRealConstant(loc, mlir::Float64Type::get(context), inv_pi);
-  mlir::Value factor = builder.createConvert(loc, resultType, dfactor);
+  llvm::APFloat inv_pi =
+      llvm::APFloat(llvm::cast<mlir::FloatType>(resultType).getFloatSemantics(),
+                    llvm::numbers::inv_pis);
+  mlir::Value factor = builder.createRealConstant(loc, resultType, inv_pi);
   return mlir::arith::MulFOp::create(builder, loc, asin, factor);
 }
 
@@ -2905,10 +2905,10 @@ mlir::Value IntrinsicLibrary::genAtanpi(mlir::Type resultType,
         mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
     atan = getRuntimeCallGenerator("atan", ftype)(builder, loc, args);
   }
-  llvm::APFloat inv_pi = llvm::APFloat(llvm::numbers::inv_pi);
-  mlir::Value dfactor =
-      builder.createRealConstant(loc, mlir::Float64Type::get(context), inv_pi);
-  mlir::Value factor = builder.createConvert(loc, resultType, dfactor);
+  llvm::APFloat inv_pi =
+      llvm::APFloat(llvm::cast<mlir::FloatType>(resultType).getFloatSemantics(),
+                    llvm::numbers::inv_pis);
+  mlir::Value factor = builder.createRealConstant(loc, resultType, inv_pi);
   return mlir::arith::MulFOp::create(builder, loc, atan, factor);
 }
 
@@ -3684,10 +3684,10 @@ mlir::Value IntrinsicLibrary::genCospi(mlir::Type resultType,
   mlir::MLIRContext *context = builder.getContext();
   mlir::FunctionType ftype =
       mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
-  llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
-  mlir::Value dfactor =
-      builder.createRealConstant(loc, mlir::Float64Type::get(context), pi);
-  mlir::Value factor = builder.createConvert(loc, args[0].getType(), dfactor);
+  llvm::APFloat pi =
+      llvm::APFloat(llvm::cast<mlir::FloatType>(resultType).getFloatSemantics(),
+                    llvm::numbers::pis);
+  mlir::Value factor = builder.createRealConstant(loc, resultType, pi);
   mlir::Value arg = mlir::arith::MulFOp::create(builder, loc, args[0], factor);
   return getRuntimeCallGenerator("cos", ftype)(builder, loc, {arg});
 }
@@ -8136,10 +8136,10 @@ mlir::Value IntrinsicLibrary::genSinpi(mlir::Type resultType,
   mlir::MLIRContext *context = builder.getContext();
   mlir::FunctionType ftype =
       mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
-  llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
-  mlir::Value dfactor =
-      builder.createRealConstant(loc, mlir::Float64Type::get(context), pi);
-  mlir::Value factor = builder.createConvert(loc, args[0].getType(), dfactor);
+  llvm::APFloat pi =
+      llvm::APFloat(llvm::cast<mlir::FloatType>(resultType).getFloatSemantics(),
+                    llvm::numbers::pis);
+  mlir::Value factor = builder.createRealConstant(loc, resultType, pi);
   mlir::Value arg = mlir::arith::MulFOp::create(builder, loc, args[0], factor);
   return getRuntimeCallGenerator("sin", ftype)(builder, loc, {arg});
 }
@@ -8233,10 +8233,10 @@ mlir::Value IntrinsicLibrary::genTanpi(mlir::Type resultType,
   mlir::MLIRContext *context = builder.getContext();
   mlir::FunctionType ftype =
       mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
-  llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
-  mlir::Value dfactor =
-      builder.createRealConstant(loc, mlir::Float64Type::get(context), pi);
-  mlir::Value factor = builder.createConvert(loc, args[0].getType(), dfactor);
+  llvm::APFloat pi =
+      llvm::APFloat(llvm::cast<mlir::FloatType>(resultType).getFloatSemantics(),
+                    llvm::numbers::pis);
+  mlir::Value factor = builder.createRealConstant(loc, resultType, pi);
   mlir::Value arg = mlir::arith::MulFOp::create(builder, loc, args[0], factor);
   return getRuntimeCallGenerator("tan", ftype)(builder, loc, {arg});
 }

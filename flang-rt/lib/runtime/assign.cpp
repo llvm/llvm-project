@@ -369,6 +369,9 @@ RT_API_ATTRS int AssignTicket::Begin(WorkQueue &workQueue) {
         return status;
       }
     } else if (!toDerived_->noDestructionNeeded()) {
+      // F'2023 9.7.3.2 p7: "When an intrinsic assignment statement (10.2.1.3)
+      // is executed, any noncoarray allocated allocatable subobject of the
+      // variable is deallocated before the assignment takes place."
       if (int status{
               workQueue.BeginDestroy(to_, *toDerived_, /*finalize=*/false)};
           status != StatOk && status != StatContinue) {

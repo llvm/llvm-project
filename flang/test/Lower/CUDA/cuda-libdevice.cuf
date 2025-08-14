@@ -1,0 +1,21 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! Test CUDA Fortran procedures available in cudadevice module
+
+attributes(global) subroutine test_sad()
+  integer :: res
+  integer :: i, j, k
+  res = __sad(i, j, k)
+end subroutine
+
+! CHECK-LABEL: _QPtest_sad
+! CHECK: %{{.*}} = fir.call @__nv_sad(%{{.*}}, %{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32, i32, i32) -> i32
+
+attributes(global) subroutine test_usad()
+  integer :: res
+  integer :: i, j, k
+  res = __usad(i, j, k)
+end subroutine
+
+! CHECK-LABEL: _QPtest_usad
+! CHECK: %{{.*}} = fir.call @__nv_usad(%{{.*}}, %{{.*}}, %{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32, i32, i32) -> i32

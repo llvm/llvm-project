@@ -7,7 +7,7 @@ UNSUPPORTED: system-windows
 UNSUPPORTED: offload-cuda
 
 RUN: %if system-aix %{ export OBJECT_MODE=64 %}
-RUN: %cc -std=c99 %s -I%include -L"%libdir" -lflang_rt.runtime -lm \
+RUN: %cc -std=c99 %s %isysroot -I%include -L"%libdir" -lflang_rt.runtime -lm \
 RUN: %if system-aix %{-lpthread %}
 RUN: rm a.out
 */

@@ -124,8 +124,8 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
   const QualType elementType =
       cgf.getContext().getAsArrayType(arrayQTy)->getElementType();
 
-  if (elementType.isDestructedType()) {
-    cgf.cgm.errorNYI(loc, "dtorKind NYI");
+  if (elementType.isDestructedType() && cgf.cgm.getLangOpts().Exceptions) {
+    cgf.cgm.errorNYI(loc, "initialized array requires destruction");
     return;
   }
 
@@ -135,9 +135,9 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
   const cir::PointerType cirElementPtrType =
       builder.getPointerTo(cirElementType);
 
-  auto begin = builder.create<cir::CastOp>(loc, cirElementPtrType,
-                                           cir::CastKind::array_to_ptrdecay,
-                                           destPtr.getPointer());
+  auto begin = cir::CastOp::create(builder, loc, cirElementPtrType,
+                                   cir::CastKind::array_to_ptrdecay,
+                                   destPtr.getPointer());
 
   const CharUnits elementSize =
       cgf.getContext().getTypeSizeInChars(elementType);
@@ -182,8 +182,8 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
     // Advance to the start of the rest of the array.
     if (numInitElements) {
       one = builder.getConstantInt(loc, cgf.PtrDiffTy, 1);
-      element = builder.create<cir::PtrStrideOp>(loc, cirElementPtrType,
-                                                 element, one);
+      element = cir::PtrStrideOp::create(builder, loc, cirElementPtrType,
+                                         element, one);
     }
 
     // Allocate the temporary variable
@@ -193,25 +193,52 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
     LValue tmpLV = cgf.makeAddrLValue(tmpAddr, elementPtrType);
     cgf.emitStoreThroughLValue(RValue::get(element), tmpLV);
 
-    // TODO(CIR): Replace this part later with cir::DoWhileOp
-    for (unsigned i = numInitElements; i != numArrayElements; ++i) {
-      cir::LoadOp currentElement = builder.createLoad(loc, tmpAddr);
+    // Compute the end of array
+    cir::ConstantOp numArrayElementsConst = builder.getConstInt(
+        loc, mlir::cast<cir::IntType>(cgf.PtrDiffTy), numArrayElements);
+    mlir::Value end = cir::PtrStrideOp::create(builder, loc, cirElementPtrType,
+                                               begin, numArrayElementsConst);
 
-      // Emit the actual filler expression.
-      const LValue elementLV = cgf.makeAddrLValue(
-          Address(currentElement, cirElementType, elementAlign), elementType);
+    builder.createDoWhile(
+        loc,
+        /*condBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          cir::LoadOp currentElement = builder.createLoad(loc, tmpAddr);
+          mlir::Type boolTy = cgf.convertType(cgf.getContext().BoolTy);
+          cir::CmpOp cmp = cir::CmpOp::create(
+              builder, loc, boolTy, cir::CmpOpKind::ne, currentElement, end);
+          builder.createCondition(cmp);
+        },
+        /*bodyBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          cir::LoadOp currentElement = builder.createLoad(loc, tmpAddr);
 
-      if (arrayFiller)
-        emitInitializationToLValue(arrayFiller, elementLV);
-      else
-        emitNullInitializationToLValue(loc, elementLV);
+          assert(!cir::MissingFeatures::requiresCleanups());
 
-      // Advance pointer and store them to temporary variable
-      one = builder.getConstantInt(loc, cgf.PtrDiffTy, 1);
-      cir::PtrStrideOp nextElement =
-          builder.createPtrStride(loc, currentElement, one);
-      cgf.emitStoreThroughLValue(RValue::get(nextElement), tmpLV);
-    }
+          // Emit the actual filler expression.
+          LValue elementLV = cgf.makeAddrLValue(
+              Address(currentElement, cirElementType, elementAlign),
+              elementType);
+          if (arrayFiller)
+            emitInitializationToLValue(arrayFiller, elementLV);
+          else
+            emitNullInitializationToLValue(loc, elementLV);
+
+          // Tell the EH cleanup that we finished with the last element.
+          if (cgf.cgm.getLangOpts().Exceptions) {
+            cgf.cgm.errorNYI(loc, "update destructed array element for EH");
+            return;
+          }
+
+          // Advance pointer and store them to temporary variable
+          cir::ConstantOp one = builder.getConstInt(
+              loc, mlir::cast<cir::IntType>(cgf.PtrDiffTy), 1);
+          auto nextElement = cir::PtrStrideOp::create(
+              builder, loc, cirElementPtrType, currentElement, one);
+          cgf.emitStoreThroughLValue(RValue::get(nextElement), tmpLV);
+
+          builder.createYield(loc);
+        });
   }
 }
 

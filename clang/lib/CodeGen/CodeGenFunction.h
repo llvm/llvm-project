@@ -725,7 +725,7 @@ public:
   };
 
   /// Header for data within LifetimeExtendedCleanupStack.
-  struct LifetimeExtendedCleanupHeader {
+  struct alignas(uint64_t) LifetimeExtendedCleanupHeader {
     /// The size of the following cleanup object.
     unsigned Size;
     /// The kind of cleanup to push.
@@ -947,7 +947,8 @@ public:
         LifetimeExtendedCleanupStack.size() + sizeof(Header) + Header.Size +
         (Header.IsConditional ? sizeof(ActiveFlag) : 0));
 
-    static_assert(sizeof(Header) % alignof(T) == 0,
+    static_assert((alignof(LifetimeExtendedCleanupHeader) == alignof(T)) &&
+                      (alignof(T) == alignof(RawAddress)),
                   "Cleanup will be allocated on misaligned address");
     char *Buffer = &LifetimeExtendedCleanupStack[OldSize];
     new (Buffer) LifetimeExtendedCleanupHeader(Header);

@@ -30,6 +30,7 @@
 #include <__ranges/movable_box.h>
 #include <__ranges/view_interface.h>
 #include <__type_traits/conditional.h>
+#include <__type_traits/decay.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/make_unsigned.h>
 #include <__type_traits/type_identity.h>
@@ -374,10 +375,10 @@ namespace views {
 namespace __iota {
 struct __fn {
   template <class _Start>
+    requires(requires(_Start __s) { ranges::iota_view<decay_t<_Start>>(std::forward<_Start>(__s)); })
   _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Start&& __start) const
-      noexcept(noexcept(ranges::iota_view(std::forward<_Start>(__start))))
-          -> decltype(ranges::iota_view(std::forward<_Start>(__start))) {
-    return ranges::iota_view(std::forward<_Start>(__start));
+      noexcept(noexcept(ranges::iota_view<decay_t<_Start>>(std::forward<_Start>(__start)))) {
+    return ranges::iota_view<decay_t<_Start>>(std::forward<_Start>(__start));
   }
 
   template <class _Start, class _BoundSentinel>

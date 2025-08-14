@@ -1061,6 +1061,21 @@ def CIR_BrOp : CIR_Op<"br",[
 }
 
 //===----------------------------------------------------------------------===//
+// LabelOp
+//===----------------------------------------------------------------------===//
+
+// The LabelOp has AlwaysSpeculatable trait in order to not to be swept
+// by canonicalizer
+def CIR_LabelOp : CIR_Op<"label", [AlwaysSpeculatable]> {
+  let description = [{
+    An identifier which may be referred by cir.goto operation
+  }];
+  let arguments = (ins StrAttr:$label);
+  let assemblyFormat = [{ $label attr-dict }];
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // UnaryOp
 //===----------------------------------------------------------------------===//
 
@@ -3292,6 +3307,30 @@ def CIR_ExpectOp : CIR_Op<"expect", [
 
   let assemblyFormat = [{
     `(` $val`,` $expected (`,` $prob^)? `)` `:` type($val) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Floating Point Ops
+//===----------------------------------------------------------------------===//
+
+class CIR_UnaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
+    : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]>
+{
+  let arguments = (ins CIR_AnyFloatOrVecOfFloatType:$src);
+  let results = (outs CIR_AnyFloatOrVecOfFloatType:$result);
+
+  let assemblyFormat = "$src `:` type($src) attr-dict";
+
+  let llvmOp = llvmOpName;
+}
+
+def CIR_FAbsOp : CIR_UnaryFPToFPBuiltinOp<"fabs", "FAbsOp"> {
+  let summary = "Computes the floating-point absolute value";
+  let description = [{
+    `cir.fabs` computes the absolute value of a floating-point operand
+    and returns a result of the same type, ignoring floating-point
+    exceptions. It does not set `errno`.
   }];
 }
 
