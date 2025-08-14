@@ -41,7 +41,7 @@ def MSP430LibraryWithCondCC : SystemRuntimeLibrary<isMSP430,
 >;
 
 
-// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(const llvm::Triple &TT, FloatABI::ABIType FloatABI) {
+// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(const llvm::Triple &TT, FloatABI::ABIType FloatABI, EABI EABIVersion, StringRef ABIName) {
 // CHECK: if (TT.getArch() == Triple::avr && TT.isOSHurd()) {
 // CHECK-NEXT:   const CallingConv::ID DefaultCC = isFoo() ? CallingConv::Fast : CallingConv::GHC;
 // CHECK-NEXT:   for (CallingConv::ID &Entry : LibcallImplCallingConvs) {
