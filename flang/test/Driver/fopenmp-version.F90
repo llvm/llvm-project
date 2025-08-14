@@ -23,3 +23,7 @@
 !RUN: not %flang -c -fopenmp -fopenmp-version=29 %s 2>&1 | FileCheck --check-prefix=ERR-BAD %s
 
 !ERR-BAD: error: '29' is not a valid OpenMP version in '-fopenmp-version=29', valid versions are 31, 40, 45, 50, 51, 52, 60, 61
+
+!RUN: %flang -c -fopenmp -fopenmp-version=61 %s 2>&1 | FileCheck --check-prefix=FUTURE %s
+
+!FUTURE: The specification for OpenMP 61 is still under development; the behavior of new features is subject to change
