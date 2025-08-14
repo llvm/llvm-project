@@ -257,7 +257,20 @@ function Retry($downloadBlock, $maxRetries = 5) {
 
 function GetDotNetInstallScript([string] $dotnetRoot) {
   $installScript = Join-Path $dotnetRoot 'dotnet-install.ps1'
+  $shouldDownload = $false
+  
   if (!(Test-Path $installScript)) {
+    $shouldDownload = $true
+  } else {
+    # Check if the script is older than 30 days
+    $fileAge = (Get-Date) - (Get-Item $installScript).LastWriteTime
+    if ($fileAge.Days -gt 30) {
+      Write-Host "Existing install script is too old, re-downloading..."
+      $shouldDownload = $true
+    }
+  }
+  
+  if ($shouldDownload) {
     Create-Directory $dotnetRoot
     $ProgressPreference = 'SilentlyContinue' # Don't display the console progress UI - it's a huge perf hit
     $uri = "https://builds.dotnet.microsoft.com/dotnet/scripts/$dotnetInstallScriptVersion/dotnet-install.ps1"

@@ -4,7 +4,7 @@ parameters:
 
   # Optional: A defined YAML pool - https://docs.microsoft.com/en-us/azure/devops/pipelines/yaml-schema?view=vsts&tabs=schema#pool
   pool: ''
-    
+
   CeapexPat: $(dn-bot-ceapex-package-r) # PAT for the loc AzDO instance https://dev.azure.com/ceapex
   GithubPat: $(BotAccount-dotnet-bot-repo-PAT)
 
@@ -27,7 +27,7 @@ parameters:
   is1ESPipeline: ''
 jobs:
 - job: OneLocBuild${{ parameters.JobNameSuffix }}
-  
+
   dependsOn: ${{ parameters.dependsOn }}
 
   displayName: OneLocBuild${{ parameters.JobNameSuffix }}
@@ -99,22 +99,20 @@ jobs:
           mirrorBranch: ${{ parameters.MirrorBranch }}
       condition: ${{ parameters.condition }}
 
-    - template: /eng/common/core-templates/steps/publish-build-artifacts.yml
-      parameters:
-        is1ESPipeline: ${{ parameters.is1ESPipeline }}
-        args:
-          displayName: Publish Localization Files
-          pathToPublish: '$(Build.ArtifactStagingDirectory)/loc'
-          publishLocation: Container
-          artifactName: Loc
-          condition: ${{ parameters.condition }}
+    # Copy the locProject.json to the root of the Loc directory, then publish a pipeline artifact
+    - task: CopyFiles@2
+      displayName: Copy LocProject.json
+      inputs:
+        SourceFolder: '$(Build.SourcesDirectory)/eng/Localize/'
+        Contents: 'LocProject.json'
+        TargetFolder: '$(Build.ArtifactStagingDirectory)/loc'
+      condition: ${{ parameters.condition }}
 
-    - template: /eng/common/core-templates/steps/publish-build-artifacts.yml
+    - template: /eng/common/core-templates/steps/publish-pipeline-artifacts.yml
       parameters:
         is1ESPipeline: ${{ parameters.is1ESPipeline }}
         args:
-          displayName: Publish LocProject.json
-          pathToPublish: '$(Build.SourcesDirectory)/eng/Localize/'
-          publishLocation: Container
-          artifactName: Loc
+          targetPath: '$(Build.ArtifactStagingDirectory)/loc'
+          artifactName: 'Loc'
+          displayName: 'Publish Localization Files'
           condition: ${{ parameters.condition }}
