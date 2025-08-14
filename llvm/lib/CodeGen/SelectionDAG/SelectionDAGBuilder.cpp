@@ -11004,6 +11004,12 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
   for (Type *Ty : RetOrigTys)
     RetVTs.push_back(getValueType(DL, Ty));
 
+  if (CLI.RetTy != CLI.OrigRetTy) {
+    assert(RetOrigTys.size() == 1 &&
+           "Only supported for non-aggregate returns");
+    RetOrigTys[0] = CLI.OrigRetTy;
+  }
+
   if (CLI.IsPostTypeLegalization) {
     // If we are lowering a libcall after legalization, split the return type.
     SmallVector<Type *, 4> OldRetOrigTys;
@@ -11053,7 +11059,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     CLI.getArgs().insert(CLI.getArgs().begin(), Entry);
     CLI.NumFixedArgs += 1;
     CLI.getArgs()[0].IndirectType = CLI.RetTy;
-    CLI.RetTy = Type::getVoidTy(Context);
+    CLI.RetTy = CLI.OrigRetTy = Type::getVoidTy(Context);
 
     // sret demotion isn't compatible with tail-calls, since the sret argument
     // points into the callers stack frame.
@@ -11121,6 +11127,12 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     for (unsigned Value = 0, NumValues = ArgTys.size(); Value != NumValues;
          ++Value) {
       Type *ArgTy = ArgTys[Value];
+      Type *OrigArgTy = ArgTy;
+      if (Args[i].Ty != Args[i].OrigTy) {
+        assert(Value == 0 && "Only supported for non-aggregate arguments");
+        OrigArgTy = Args[i].OrigTy;
+      }
+
       EVT VT = getValueType(DL, ArgTy);
       SDValue Op = SDValue(Args[i].Node.getNode(),
                            Args[i].Node.getResNo() + Value);
@@ -11254,7 +11266,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
         // For scalable vectors the scalable part is currently handled
         // by individual targets, so we just use the known minimum size here.
         ISD::OutputArg MyFlags(
-            Flags, Parts[j].getValueType().getSimpleVT(), VT, ArgTy, i,
+            Flags, Parts[j].getValueType().getSimpleVT(), VT, OrigArgTy, i,
             j * Parts[j].getValueType().getStoreSize().getKnownMinValue());
         if (NumParts > 1 && j == 0)
           MyFlags.Flags.setSplit();
