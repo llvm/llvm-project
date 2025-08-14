@@ -1416,9 +1416,12 @@ bool Fortran::lower::CallInterface<T>::PassedEntity::isIntentOut() const {
     return true;
   return characteristics->GetIntent() == Fortran::common::Intent::Out;
 }
+
+/// Returning "true" from this function is a prerequisite for running
+/// contiguity check on the actual argument.
 template <typename T>
-bool Fortran::lower::CallInterface<T>::PassedEntity::mustBeMadeContiguous()
-    const {
+bool Fortran::lower::CallInterface<T>::PassedEntity::mustBeMadeContiguous(
+    const bool argHasTriplet) const {
   if (!characteristics)
     return true;
   const auto *dummy =
@@ -1426,6 +1429,13 @@ bool Fortran::lower::CallInterface<T>::PassedEntity::mustBeMadeContiguous()
           &characteristics->u);
   if (!dummy)
     return false;
+  if (dummy->ignoreTKR.test(common::IgnoreTKR::Contiguous))
+    return false;
+
+  // TODO: should this check ignore "device" or "managed"?
+  if (dummy->ignoreTKR.any() && argHasTriplet)
+    return true;
+
   const auto &shapeAttrs = dummy->type.attrs();
   using ShapeAttrs = Fortran::evaluate::characteristics::TypeAndShape::Attr;
   if (shapeAttrs.test(ShapeAttrs::AssumedRank) ||
