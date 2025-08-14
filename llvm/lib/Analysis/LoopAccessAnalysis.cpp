@@ -482,7 +482,7 @@ bool RuntimePointerChecking::tryToCreateDiffCheck(
     }
   }
 
-  bool WriteAfterRead = isa<LoadInst>(SrcInsts[0]);
+  bool WriteAfterRead = !Src->IsWritePtr && Sink->IsWritePtr;
 
   LLVM_DEBUG(dbgs() << "LAA: Creating diff runtime check for:\n"
                     << "SrcStart: " << *SrcStartInt << '\n'
