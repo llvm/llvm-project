@@ -4075,7 +4075,8 @@ public:
     default:
       m_options.GenerateOptionUsage(
           result.GetErrorStream(), *this,
-          GetCommandInterpreter().GetDebugger().GetTerminalWidth());
+          GetCommandInterpreter().GetDebugger().GetTerminalWidth(),
+          GetCommandInterpreter().GetDebugger().GetUseColor());
       syntax_error = true;
       break;
     }
