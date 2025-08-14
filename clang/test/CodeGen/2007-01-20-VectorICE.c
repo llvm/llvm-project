@@ -6,6 +6,6 @@ typedef int __v4si __attribute__((__vector_size__(16)));
 
 __v2di bar(void);
 void foo(int X, __v4si *P) {
-	*P = X == 2 ? (__v4si)(bar()) : (__v4si)(bar());
+	*P = X == 2 ? (__v4si)bar() : (__v4si)bar();
 }
 

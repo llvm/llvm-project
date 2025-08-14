@@ -56,6 +56,11 @@ namespace Vector {
   static_assert(__builtin_vectorelements(v2) == (32 / sizeof(double)), "");
 }
 
+namespace {
+  typedef float __attribute__((vector_size(16))) VI42;
+  constexpr VI42 A2 = {1.f, 2.f, 3.f, 4.f};
+}
+
 namespace BoolToSignedIntegralCast{
   typedef __attribute__((__ext_vector_type__(4))) unsigned int int4;
   constexpr int4 intsT = (int4)true;
