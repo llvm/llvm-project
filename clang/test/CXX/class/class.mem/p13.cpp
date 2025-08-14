@@ -63,7 +63,7 @@ struct X4 { // expected-note{{previous}}
     int X;
     union {
       float Y;
-      unsigned X4; // expected-error{{redeclares 'X4'}} expected-error {{'X4' has the same name as its class}}
+      unsigned X4; // expected-error{{redeclares 'X4'}}
     };
   };
 };

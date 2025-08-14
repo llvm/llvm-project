@@ -5494,6 +5494,7 @@ InjectAnonymousStructOrUnionMembers(Sema &SemaRef, Scope *S, DeclContext *Owner,
                                     RecordDecl *AnonRecord, AccessSpecifier AS,
                                     StorageClass SC,
                                     SmallVectorImpl<NamedDecl *> &Chaining) {
+
   bool Invalid = false;
 
   // Look every FieldDecl and IndirectFieldDecl with a name.
@@ -5501,17 +5502,19 @@ InjectAnonymousStructOrUnionMembers(Sema &SemaRef, Scope *S, DeclContext *Owner,
     if ((isa<FieldDecl>(D) || isa<IndirectFieldDecl>(D)) &&
         cast<NamedDecl>(D)->getDeclName()) {
       ValueDecl *VD = cast<ValueDecl>(D);
-      if (CheckAnonMemberRedeclaration(SemaRef, S, Owner, VD->getDeclName(),
-                                       VD->getLocation(), AnonRecord->isUnion(),
-                                       SC)) {
-        // C++ [class.union]p2:
-        //   The names of the members of an anonymous union shall be
-        //   distinct from the names of any other entity in the
-        //   scope in which the anonymous union is declared.
+      // C++ [class.union]p2:
+      //   The names of the members of an anonymous union shall be
+      //   distinct from the names of any other entity in the
+      //   scope in which the anonymous union is declared.
+
+      const bool FieldInvalid = CheckAnonMemberRedeclaration(
+          SemaRef, S, Owner, VD->getDeclName(), VD->getLocation(),
+          AnonRecord->isUnion(), SC);
+      if (FieldInvalid)
         Invalid = true;
-      }
+
       // Inject the IndirectFieldDecl even if invalid, because later
-      // diagnostics may depend on it being present.
+      // diagnostics may depend on it being present, see findDefaultInitializer.
 
       // C++ [class.union]p2:
       //   For the purpose of name lookup, after the anonymous union
@@ -5539,7 +5542,7 @@ InjectAnonymousStructOrUnionMembers(Sema &SemaRef, Scope *S, DeclContext *Owner,
 
       IndirectField->setAccess(AS);
       IndirectField->setImplicit();
-      IndirectField->setInvalidDecl(Invalid);
+      IndirectField->setInvalidDecl(FieldInvalid);
       SemaRef.PushOnScopeChains(IndirectField, S);
 
       // That includes picking up the appropriate access specifier.
