@@ -25,6 +25,9 @@
 #include "mlir/IR/Value.h"
 
 namespace mlir::remark {
+/// Define an the set of categories to accept.
+/// By default none are, the provided regex matches against
+/// the category names for each kind of remark.
 struct RemarkCategories {
   std::optional<std::string> passed, missed, analysis, failed;
 };

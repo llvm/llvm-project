@@ -185,8 +185,7 @@ mlir::remark::RemarkCategories cats{/*passed=*/categoryLoopunroll,
                                      /*missed=*/std::nullopt,
                                      /*analysis=*/std::nullopt,
                                      /*failed=*/categoryLoopunroll};
-
-context.enableOptimizationRemarks(
+remark::enableOptimizationRemarks(
     /*streamer=*/nullptr, cats,
     /*printAsEmitRemarks=*/true);
 ```
@@ -207,7 +206,7 @@ public:
 };
 
 auto myStreamer = std::make_unique<MyStreamer>();
-context.setupOptimizationRemarks(path, std::move(myStreamer),
-                                 /*printAsEmitRemarks=*/false,
-                                 /*categories=*/cats);
+remark::enableOptimizationRemarks(
+    /*streamer=*/myStreamer, cats,
+    /*printAsEmitRemarks=*/true);
 ```
