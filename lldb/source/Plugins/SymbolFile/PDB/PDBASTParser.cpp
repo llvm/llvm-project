@@ -684,7 +684,7 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
 
     CompilerType element_ast_type = element_type->GetForwardCompilerType();
     // If element type is UDT, it needs to be complete.
-    if (element_ast_type.IsCXXClassType() &&
+    if (TypeSystemClang::IsCXXClassType(element_ast_type) &&
         !element_ast_type.GetCompleteType()) {
       if (TypeSystemClang::StartTagDeclarationDefinition(element_ast_type)) {
         TypeSystemClang::CompleteTagDeclarationDefinition(element_ast_type);

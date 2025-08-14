@@ -3748,11 +3748,29 @@ TypeSystemClang::GetCXXClassName(const CompilerType &type) {
   return std::string(cxx_record_decl->getIdentifier()->getNameStart());
 }
 
-bool TypeSystemClang::IsCXXClassType(lldb::opaque_compiler_type_t type) {
+bool TypeSystemClang::IsClassTypeForLanguage(lldb::opaque_compiler_type_t type,
+                                             lldb::LanguageType language) {
+  CompilerType ct(GetType(GetCanonicalQualType(type)));
+  if (!ct)
+    return false;
+
+  if (language == lldb::eLanguageTypeObjC)
+    return IsObjCClassType(ct);
+
+  if (language == lldb::eLanguageTypeObjC_plus_plus)
+    return IsObjCClassType(ct) || IsCXXClassType(ct);
+
+  if (Language::LanguageIsCPlusPlus(language))
+    return IsCXXClassType(ct);
+
+  return false;
+}
+
+bool TypeSystemClang::IsCXXClassType(const CompilerType &type) {
   if (!type)
     return false;
 
-  clang::QualType qual_type(GetCanonicalQualType(type));
+  clang::QualType qual_type(ClangUtil::GetCanonicalQualType(type));
   return !qual_type.isNull() && qual_type->getAsCXXRecordDecl() != nullptr;
 }
 
@@ -9574,7 +9592,7 @@ TypeSystemClang::DeclContextGetTypeSystemClang(const CompilerDeclContext &dc) {
 void TypeSystemClang::RequireCompleteType(CompilerType type) {
   // Technically, enums can be incomplete too, but we don't handle those as they
   // are emitted even under -flimit-debug-info.
-  if (!type.IsCXXClassType())
+  if (!TypeSystemClang::IsCXXClassType(type))
     return;
 
   if (type.GetCompleteType())

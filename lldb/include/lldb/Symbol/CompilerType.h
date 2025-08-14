@@ -136,7 +136,7 @@ public:
 
   bool IsBeingDefined() const;
 
-  bool IsCXXClassType() const;
+  bool IsClassTypeForLanguage(lldb::LanguageType language) const;
 
   bool IsCharType() const;
 

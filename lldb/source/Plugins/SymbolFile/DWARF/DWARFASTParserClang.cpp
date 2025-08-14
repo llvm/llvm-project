@@ -1248,7 +1248,7 @@ std::pair<bool, TypeSP> DWARFASTParserClang::ParseCXXMethod(
   }
 
   CompilerType class_opaque_type = class_type->GetForwardCompilerType();
-  if (!class_opaque_type.IsCXXClassType())
+  if (!TypeSystemClang::IsCXXClassType(class_opaque_type))
     return {};
 
   PrepareContextToReceiveMembers(

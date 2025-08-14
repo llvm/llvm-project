@@ -2816,7 +2816,8 @@ ValueObjectSP ValueObject::Dereference(Status &error) {
     // FIXME(#59012): C++ stdlib formatters break with incomplete types (e.g.
     // `std::vector<int> &`). Remove ObjC restriction once that's resolved.
     if (Language::LanguageIsObjC(GetPreferredDisplayLanguage()) &&
-        !compiler_type.GetPointeeType().IsCXXClassType() &&
+        !compiler_type.GetPointeeType().IsClassTypeForLanguage(
+            lldb::eLanguageTypeC_plus_plus) &&
         HasSyntheticValue()) {
       deref_compiler_type = compiler_type.GetPointeeType();
 

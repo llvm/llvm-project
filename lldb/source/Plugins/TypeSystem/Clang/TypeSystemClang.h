@@ -647,7 +647,10 @@ public:
 
   bool IsCStringType(lldb::opaque_compiler_type_t type, uint32_t &length);
 
-  bool IsCXXClassType(lldb::opaque_compiler_type_t type) override;
+  static bool IsCXXClassType(const CompilerType &type);
+
+  bool IsClassTypeForLanguage(lldb::opaque_compiler_type_t type,
+                              lldb::LanguageType language) override;
 
   bool IsDefined(lldb::opaque_compiler_type_t type) override;
 

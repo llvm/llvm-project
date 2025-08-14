@@ -160,7 +160,8 @@ public:
 
   virtual bool IsCompleteType(lldb::opaque_compiler_type_t type) = 0;
 
-  virtual bool IsCXXClassType(lldb::opaque_compiler_type_t type) = 0;
+  virtual bool IsClassTypeForLanguage(lldb::opaque_compiler_type_t type,
+                                      lldb::LanguageType language) = 0;
 
   virtual bool IsDefined(lldb::opaque_compiler_type_t type) = 0;
 

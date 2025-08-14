@@ -318,10 +318,10 @@ bool CompilerType::IsArrayOfScalarType() const {
   return false;
 }
 
-bool CompilerType::IsCXXClassType() const {
+bool CompilerType::IsClassTypeForLanguage(lldb::LanguageType language) const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
-      return type_system_sp->IsCXXClassType(m_type);
+      return type_system_sp->IsClassTypeForLanguage(m_type, language);
   return false;
 }
 
