@@ -1915,23 +1915,16 @@ void at::RAUW(DIAssignID *Old, DIAssignID *New) {
 }
 
 void at::deleteAll(Function *F) {
-  SmallVector<DbgAssignIntrinsic *, 12> ToDelete;
-  SmallVector<DbgVariableRecord *, 12> DPToDelete;
   for (BasicBlock &BB : *F) {
     for (Instruction &I : BB) {
-      for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
+      for (DbgVariableRecord &DVR :
+           make_early_inc_range(filterDbgVars(I.getDbgRecordRange())))
         if (DVR.isDbgAssign())
-          DPToDelete.push_back(&DVR);
-      if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(&I))
-        ToDelete.push_back(DAI);
-      else
-        I.setMetadata(LLVMContext::MD_DIAssignID, nullptr);
+          DVR.eraseFromParent();
+
+      I.setMetadata(LLVMContext::MD_DIAssignID, nullptr);
     }
   }
-  for (auto *DAI : ToDelete)
-    DAI->eraseFromParent();
-  for (auto *DVR : DPToDelete)
-    DVR->eraseFromParent();
 }
 
 /// FIXME: Remove this wrapper function and call
@@ -2008,8 +2001,6 @@ void at::remapAssignID(DenseMap<DIAssignID *, DIAssignID *> &Map,
   }
   if (auto *ID = I.getMetadata(LLVMContext::MD_DIAssignID))
     I.setMetadata(LLVMContext::MD_DIAssignID, GetNewID(ID));
-  else if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(&I))
-    DAI->setAssignId(GetNewID(DAI->getAssignID()));
 }
 
 /// Collect constant properies (base, size, offset) of \p StoreDest.
