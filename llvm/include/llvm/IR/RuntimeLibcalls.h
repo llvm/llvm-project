@@ -15,6 +15,7 @@
 #define LLVM_IR_RUNTIME_LIBCALLS_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Bitset.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringTable.h"
 #include "llvm/IR/CallingConv.h"
@@ -53,8 +54,22 @@ static inline auto libcall_impls() {
   return enum_seq(static_cast<RTLIB::LibcallImpl>(1), RTLIB::NumLibcallImpls);
 }
 
+/// Manage a bitset representing the list of available libcalls for a module.
+class LibcallImplBitset : public Bitset<RTLIB::NumLibcallImpls> {
+public:
+  constexpr LibcallImplBitset() = default;
+  constexpr LibcallImplBitset(
+      const Bitset<RTLIB::NumLibcallImpls>::StorageType &Src)
+      : Bitset(Src) {}
+};
+
 /// A simple container for information about the supported runtime calls.
 struct RuntimeLibcallsInfo {
+private:
+  /// Bitset of libcalls a module may emit a call to.
+  LibcallImplBitset AvailableLibcallImpls;
+
+public:
   explicit RuntimeLibcallsInfo(
       const Triple &TT,
       ExceptionHandling ExceptionModel = ExceptionHandling::None,
@@ -130,6 +145,14 @@ struct RuntimeLibcallsInfo {
   /// Return the libcall provided by \p Impl
   static RTLIB::Libcall getLibcallFromImpl(RTLIB::LibcallImpl Impl) {
     return ImplToLibcall[Impl];
+  }
+
+  bool isAvailable(RTLIB::LibcallImpl Impl) const {
+    return AvailableLibcallImpls.test(Impl);
+  }
+
+  void setAvailable(RTLIB::LibcallImpl Impl) {
+    AvailableLibcallImpls.set(Impl);
   }
 
   /// Check if this is valid libcall for the current module, otherwise
