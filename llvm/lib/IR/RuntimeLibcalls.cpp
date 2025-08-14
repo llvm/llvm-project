@@ -9,8 +9,8 @@
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/ADT/StringTable.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/TargetParser/ARMTargetParser.h"
 #include "llvm/Support/xxhash.h"
+#include "llvm/TargetParser/ARMTargetParser.h"
 
 #define DEBUG_TYPE "runtime-libcalls-info"
 
