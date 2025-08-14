@@ -398,10 +398,15 @@ public:
       CurrentBlockFacts.clear();
       for (unsigned I = 0; I < Block->size(); ++I) {
         const CFGElement &Element = Block->Elements[I];
-        if (std::optional<CFGStmt> CS = Element.getAs<CFGStmt>())
+        if (std::optional<CFGStmt> CS = Element.getAs<CFGStmt>()) {
+          DEBUG_WITH_TYPE("PrintCFG",
+                          llvm::dbgs()
+                              << "======CFGStmt and ASTStmt========\n");
+          DEBUG_WITH_TYPE("PrintCFG", CS->dump());
+          DEBUG_WITH_TYPE("PrintCFG", CS->getStmt()->dumpColor());
           Visit(CS->getStmt());
-        else if (std::optional<CFGAutomaticObjDtor> DtorOpt =
-                     Element.getAs<CFGAutomaticObjDtor>())
+        } else if (std::optional<CFGAutomaticObjDtor> DtorOpt =
+                       Element.getAs<CFGAutomaticObjDtor>())
           handleDestructor(*DtorOpt);
       }
       FactMgr.addBlockFacts(Block, CurrentBlockFacts);
