@@ -26020,7 +26020,10 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
   if (ExtIdx == 0 && V.getOpcode() == ISD::EXTRACT_SUBVECTOR && V.hasOneUse()) {
     if (TLI.isExtractSubvectorCheap(NVT, V.getOperand(0).getValueType(),
                                     V.getConstantOperandVal(1)) &&
-        TLI.isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, NVT)) {
+        TLI.isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, NVT) &&
+        // The index has to be a multiple of the new result type's known minimum
+        // vector length.
+        V.getConstantOperandVal(1) % NVT.getVectorMinNumElements() == 0) {
       return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NVT, V.getOperand(0),
                          V.getOperand(1));
     }
