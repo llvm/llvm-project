@@ -68,8 +68,9 @@ static Error handleArgs(const CommonConfig &Config, Object &Obj) {
         return true;
 
       for (StringRef Flag : Config.SplitSection) {
-        StringRef SectionName = Flag.take_front(Flag.find('='));
-        if (P.Name == SectionName)
+        bool CanContain = Flag.size() > P.Name.size();
+        if (CanContain && Flag.starts_with(P.Name) &&
+            Flag[P.Name.size()] == '=')
           return true;
       }
 
