@@ -814,8 +814,22 @@ implicit none
     end function
   end interface
 
+  interface __dsqrt_rn
+    attributes(device) double precision function __dsqrt_rn(x) bind(c, name='__nv_dsqrt_rn')
+      !dir$ ignore_tkr (d) x
+      double precision, value :: x
+    end function
+  end interface
+
   interface __dsqrt_ru
     attributes(device) double precision function __dsqrt_ru(x) bind(c, name='__nv_dsqrt_ru')
+      !dir$ ignore_tkr (d) x
+      double precision, value :: x
+    end function
+  end interface
+
+  interface __dsqrt_rz
+    attributes(device) double precision function __dsqrt_rz(x) bind(c, name='__nv_dsqrt_rz')
       !dir$ ignore_tkr (d) x
       double precision, value :: x
     end function
