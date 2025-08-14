@@ -23405,7 +23405,7 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       if (TRI->isTypeLegalForClass(*RC, VT.SimpleTy))
         return std::make_pair(0U, RC);
 
-      if (VT.isFixedLengthVector() && Subtarget.useRVVForFixedLengthVectors()) {
+      if (VT.isFixedLengthVector() && useRVVForFixedLengthVectorVT(VT)) {
         MVT ContainerVT = getContainerForFixedLengthVector(VT);
         if (TRI->isTypeLegalForClass(*RC, ContainerVT))
           return std::make_pair(0U, RC);
@@ -23424,7 +23424,7 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       if (TRI->isTypeLegalForClass(*RC, VT.SimpleTy))
         return std::make_pair(0U, RC);
 
-      if (VT.isFixedLengthVector() && Subtarget.useRVVForFixedLengthVectors()) {
+      if (VT.isFixedLengthVector() && useRVVForFixedLengthVectorVT(VT)) {
         MVT ContainerVT = getContainerForFixedLengthVector(VT);
         if (TRI->isTypeLegalForClass(*RC, ContainerVT))
           return std::make_pair(0U, RC);
@@ -23434,7 +23434,7 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     if (TRI->isTypeLegalForClass(RISCV::VMV0RegClass, VT.SimpleTy))
       return std::make_pair(0U, &RISCV::VMV0RegClass);
 
-    if (VT.isFixedLengthVector() && Subtarget.useRVVForFixedLengthVectors()) {
+    if (VT.isFixedLengthVector() && useRVVForFixedLengthVectorVT(VT)) {
       MVT ContainerVT = getContainerForFixedLengthVector(VT);
       // VT here might be coerced to vector with i8 elements, so we need to
       // check if this is a M1 register here instead of checking VMV0RegClass.
