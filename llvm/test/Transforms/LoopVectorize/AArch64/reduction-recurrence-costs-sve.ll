@@ -174,7 +174,7 @@ define i32 @chained_recurrences(i32 %x, i64 %y, ptr %src.1, i32 %z, ptr %src.2) 
 ;
 ; PRED-LABEL: define i32 @chained_recurrences(
 ; PRED-SAME: i32 [[X:%.*]], i64 [[Y:%.*]], ptr [[SRC_1:%.*]], i32 [[Z:%.*]], ptr [[SRC_2:%.*]]) #[[ATTR0:[0-9]+]] {
-; PRED-NEXT:  [[ENTRY:.*]]:
+; PRED-NEXT:  [[ENTRY:.*:]]
 ; PRED-NEXT:    [[TMP0:%.*]] = add i64 [[Y]], 1
 ; PRED-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; PRED:       [[VECTOR_PH]]:
@@ -242,10 +242,6 @@ define i32 @chained_recurrences(i32 %x, i64 %y, ptr %src.1, i32 %z, ptr %src.2) 
 ; PRED-NEXT:    [[TMP44:%.*]] = call i32 @llvm.vector.reduce.or.nxv4i32(<vscale x 4 x i32> [[TMP41]])
 ; PRED-NEXT:    br label %[[EXIT:.*]]
 ; PRED:       [[SCALAR_PH]]:
-; PRED-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ 0, %[[ENTRY]] ]
-; PRED-NEXT:    [[SCALAR_RECUR_INIT8:%.*]] = phi i32 [ 0, %[[ENTRY]] ]
-; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
-; PRED-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, %[[ENTRY]] ]
 ; PRED-NEXT:    br label %[[LOOP:.*]]
 ; PRED:       [[LOOP]]:
 ; PRED-NEXT:    [[TMP45:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[TMP53:%.*]], %[[LOOP]] ]
@@ -436,7 +432,7 @@ define i16 @reduce_udiv(ptr %src, i16 %x, i64 %N) #0 {
 ;
 ; PRED-LABEL: define i16 @reduce_udiv(
 ; PRED-SAME: ptr [[SRC:%.*]], i16 [[X:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; PRED-NEXT:  [[ENTRY:.*]]:
+; PRED-NEXT:  [[ENTRY:.*:]]
 ; PRED-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; PRED-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; PRED:       [[VECTOR_PH]]:
@@ -469,8 +465,6 @@ define i16 @reduce_udiv(ptr %src, i16 %x, i64 %N) #0 {
 ; PRED-NEXT:    [[TMP19:%.*]] = call i16 @llvm.vector.reduce.or.nxv8i16(<vscale x 8 x i16> [[TMP16]])
 ; PRED-NEXT:    br label %[[EXIT:.*]]
 ; PRED:       [[SCALAR_PH]]:
-; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
-; PRED-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i16 [ 0, %[[ENTRY]] ]
 ; PRED-NEXT:    br label %[[LOOP:.*]]
 ; PRED:       [[LOOP]]:
 ; PRED-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
