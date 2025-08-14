@@ -3074,6 +3074,42 @@ void MallocChecker::checkPostCall(const CallEvent &Call,
     (*PostFN)(this, C.getState(), Call, C);
     return;
   }
+
+  ProgramStateRef State = C.getState();
+
+  if (const auto *Ctor = dyn_cast<CXXConstructorCall>(&Call)) {
+    // Ensure we are constructing a concrete object/subobject.
+    if (const MemRegion *ObjUnderConstr = Ctor->getCXXThisVal().getAsRegion()) {
+      ProgramStateRef NewState = State;
+
+      for (unsigned I = 0, E = Call.getNumArgs(); I != E; ++I) {
+        SVal ArgV = Call.getArgSVal(I);
+
+        SymbolRef Sym = ArgV.getAsSymbol();
+        if (!Sym)
+          continue;
+
+        // Look up current ref-state for this symbol in the RegionState map.
+        if (const RefState *RS = State->get<RegionState>(Sym)) {
+          // Only re-label symbols that are still owned allocations from C++ new/new[].
+          if (RS->isAllocated() &&
+              (RS->getAllocationFamily().Kind == AF_CXXNew ||
+               RS->getAllocationFamily().Kind == AF_CXXNewArray)) {
+
+            // Mark as Relinquished at the constructor site: ownership moves
+            // into the constructed subobject. Pass the ctor's origin expr as
+            // the statement associated with this transition.
+            NewState = NewState->set<RegionState>(
+                Sym, RefState::getRelinquished(RS->getAllocationFamily(),
+                                               Ctor->getOriginExpr()));
+          }
+        }
+      }
+
+      if (NewState != State)
+        C.addTransition(NewState);
+    }
+  }
 }
 
 void MallocChecker::checkPreCall(const CallEvent &Call,
