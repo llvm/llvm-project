@@ -146,7 +146,7 @@ define void @test_typedbuffer() {
   ; CHECK:     Space: 1
   ; CHECK:     Lower Bound: 0
   ; CHECK:     Size: 1
-  ; CHECK:   Class: CBuffer
+  ; CHECK:   Class: CBV
   ; CHECK:   Kind: CBuffer
   ; CHECK:   CBuffer size: 4
 
@@ -159,7 +159,7 @@ define void @test_typedbuffer() {
   ; CHECK:     Space: 1
   ; CHECK:     Lower Bound: 8
   ; CHECK:     Size: 1
-  ; CHECK:   Class: CBuffer
+  ; CHECK:   Class: CBV
   ; CHECK:   Kind: CBuffer
   ; CHECK:   CBuffer size: 4
 
