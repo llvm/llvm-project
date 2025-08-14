@@ -600,7 +600,9 @@ Error JSONGenerator::generateDocs(
     Info *Info = Group.getValue().get();
 
     SmallString<128> Path;
-    sys::path::native(RootDir, Path);
+    auto RootDirStr = RootDir.str() + "/json";
+    StringRef JSONDir = StringRef(RootDirStr);
+    sys::path::native(JSONDir, Path);
     if (!CreatedDirs.contains(Path)) {
       if (std::error_code Err = sys::fs::create_directories(Path);
           Err != std::error_code())

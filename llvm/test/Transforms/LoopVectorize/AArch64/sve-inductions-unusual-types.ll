@@ -36,7 +36,7 @@ define void @induction_i7(ptr %dst) #0 {
 ; CHECK-NEXT:    [[TMP23:%.*]] = zext <vscale x 2 x i7> [[TMP19]] to <vscale x 2 x i64>
 ; CHECK-NEXT:    [[TMP24:%.*]] = zext <vscale x 2 x i7> [[TMP20]] to <vscale x 2 x i64>
 ; CHECK-NEXT:    [[TMP26:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP27:%.*]] = mul nuw i64 [[TMP26]], 2
+; CHECK-NEXT:    [[TMP27:%.*]] = shl nuw i64 [[TMP26]], 1
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i64, ptr [[TMP21]], i64 [[TMP27]]
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP23]], ptr [[TMP21]], align 8
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP24]], ptr [[TMP28]], align 8
@@ -96,7 +96,7 @@ define void @induction_i3_zext(ptr %dst) #0 {
 ; CHECK-NEXT:    [[TMP20:%.*]] = zext <vscale x 2 x i3> [[STEP_ADD]] to <vscale x 2 x i64>
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP25:%.*]] = mul nuw i64 [[TMP24]], 2
+; CHECK-NEXT:    [[TMP25:%.*]] = shl nuw i64 [[TMP24]], 1
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i64, ptr [[TMP21]], i64 [[TMP25]]
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP19]], ptr [[TMP21]], align 8
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP20]], ptr [[TMP26]], align 8
