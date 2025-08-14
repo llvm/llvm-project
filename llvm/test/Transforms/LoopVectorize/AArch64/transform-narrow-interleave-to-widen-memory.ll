@@ -9,7 +9,7 @@ define void @load_store_interleave_group(ptr noalias %data) {
 ; VF2-LABEL: define void @load_store_interleave_group(
 ; VF2-SAME: ptr noalias [[DATA:%.*]]) {
 ; VF2-NEXT:  [[ENTRY:.*:]]
-; VF2-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; VF2-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF2:       [[VECTOR_PH]]:
 ; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2:       [[VECTOR_BODY]]:
@@ -23,12 +23,12 @@ define void @load_store_interleave_group(ptr noalias %data) {
 ; VF2-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
 ; VF2-NEXT:    br [[EXIT:label %.*]]
-; VF2:       [[SCALAR_PH]]:
+; VF2:       [[SCALAR_PH:.*:]]
 ;
 ; VF4-LABEL: define void @load_store_interleave_group(
 ; VF4-SAME: ptr noalias [[DATA:%.*]]) {
 ; VF4-NEXT:  [[ENTRY:.*:]]
-; VF4-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; VF4-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF4:       [[VECTOR_PH]]:
 ; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF4:       [[VECTOR_BODY]]:
@@ -46,7 +46,7 @@ define void @load_store_interleave_group(ptr noalias %data) {
 ; VF4-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
 ; VF4-NEXT:    br [[EXIT:label %.*]]
-; VF4:       [[SCALAR_PH]]:
+; VF4:       [[SCALAR_PH:.*:]]
 ;
 entry:
   br label %loop
@@ -73,7 +73,7 @@ define void @load_store_interleave_group_different_objecs(ptr noalias %src, ptr 
 ; VF2-LABEL: define void @load_store_interleave_group_different_objecs(
 ; VF2-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]]) {
 ; VF2-NEXT:  [[ENTRY:.*:]]
-; VF2-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; VF2-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF2:       [[VECTOR_PH]]:
 ; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2:       [[VECTOR_BODY]]:
@@ -88,12 +88,12 @@ define void @load_store_interleave_group_different_objecs(ptr noalias %src, ptr 
 ; VF2-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
 ; VF2-NEXT:    br [[EXIT:label %.*]]
-; VF2:       [[SCALAR_PH]]:
+; VF2:       [[SCALAR_PH:.*:]]
 ;
 ; VF4-LABEL: define void @load_store_interleave_group_different_objecs(
 ; VF4-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]]) {
 ; VF4-NEXT:  [[ENTRY:.*:]]
-; VF4-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; VF4-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF4:       [[VECTOR_PH]]:
 ; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF4:       [[VECTOR_BODY]]:
@@ -112,7 +112,7 @@ define void @load_store_interleave_group_different_objecs(ptr noalias %src, ptr 
 ; VF4-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
 ; VF4-NEXT:    br [[EXIT:label %.*]]
-; VF4:       [[SCALAR_PH]]:
+; VF4:       [[SCALAR_PH:.*:]]
 ;
 entry:
   br label %loop
@@ -141,7 +141,7 @@ define void @single_wide_load_store_interleave_group(ptr noalias %src, ptr noali
 ; VF2-LABEL: define void @single_wide_load_store_interleave_group(
 ; VF2-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]]) {
 ; VF2-NEXT:  [[ENTRY:.*:]]
-; VF2-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; VF2-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF2:       [[VECTOR_PH]]:
 ; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2:       [[VECTOR_BODY]]:
@@ -158,12 +158,12 @@ define void @single_wide_load_store_interleave_group(ptr noalias %src, ptr noali
 ; VF2-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
 ; VF2-NEXT:    br [[EXIT:label %.*]]
-; VF2:       [[SCALAR_PH]]:
+; VF2:       [[SCALAR_PH:.*:]]
 ;
 ; VF4-LABEL: define void @single_wide_load_store_interleave_group(
 ; VF4-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]]) {
 ; VF4-NEXT:  [[ENTRY:.*:]]
-; VF4-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; VF4-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF4:       [[VECTOR_PH]]:
 ; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF4:       [[VECTOR_BODY]]:
@@ -180,7 +180,7 @@ define void @single_wide_load_store_interleave_group(ptr noalias %src, ptr noali
 ; VF4-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
 ; VF4-NEXT:    br [[EXIT:label %.*]]
-; VF4:       [[SCALAR_PH]]:
+; VF4:       [[SCALAR_PH:.*:]]
 ;
 entry:
   br label %loop
@@ -207,7 +207,7 @@ define void @same_constant_store_interleave_group(i64 %x, ptr noalias %dst) {
 ; VF2-LABEL: define void @same_constant_store_interleave_group(
 ; VF2-SAME: i64 [[X:%.*]], ptr noalias [[DST:%.*]]) {
 ; VF2-NEXT:  [[ENTRY:.*:]]
-; VF2-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; VF2-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF2:       [[VECTOR_PH]]:
 ; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2:       [[VECTOR_BODY]]:
@@ -220,12 +220,12 @@ define void @same_constant_store_interleave_group(i64 %x, ptr noalias %dst) {
 ; VF2-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
 ; VF2-NEXT:    br [[EXIT:label %.*]]
-; VF2:       [[SCALAR_PH]]:
+; VF2:       [[SCALAR_PH:.*:]]
 ;
 ; VF4-LABEL: define void @same_constant_store_interleave_group(
 ; VF4-SAME: i64 [[X:%.*]], ptr noalias [[DST:%.*]]) {
 ; VF4-NEXT:  [[ENTRY:.*:]]
-; VF4-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; VF4-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF4:       [[VECTOR_PH]]:
 ; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF4:       [[VECTOR_BODY]]:
@@ -238,7 +238,7 @@ define void @same_constant_store_interleave_group(i64 %x, ptr noalias %dst) {
 ; VF4-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
 ; VF4-NEXT:    br [[EXIT:label %.*]]
-; VF4:       [[SCALAR_PH]]:
+; VF4:       [[SCALAR_PH:.*:]]
 ;
 entry:
   br label %loop
@@ -263,7 +263,7 @@ define void @different_constants_store_interleave_group(i64 %x, i64 %y, ptr noal
 ; VF2-LABEL: define void @different_constants_store_interleave_group(
 ; VF2-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], ptr noalias [[DST:%.*]]) {
 ; VF2-NEXT:  [[ENTRY:.*:]]
-; VF2-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; VF2-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF2:       [[VECTOR_PH]]:
 ; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2:       [[VECTOR_BODY]]:
@@ -276,12 +276,12 @@ define void @different_constants_store_interleave_group(i64 %x, i64 %y, ptr noal
 ; VF2-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
 ; VF2-NEXT:    br [[EXIT:label %.*]]
-; VF2:       [[SCALAR_PH]]:
+; VF2:       [[SCALAR_PH:.*:]]
 ;
 ; VF4-LABEL: define void @different_constants_store_interleave_group(
 ; VF4-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], ptr noalias [[DST:%.*]]) {
 ; VF4-NEXT:  [[ENTRY:.*:]]
-; VF4-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; VF4-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF4:       [[VECTOR_PH]]:
 ; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF4:       [[VECTOR_BODY]]:
@@ -294,7 +294,7 @@ define void @different_constants_store_interleave_group(i64 %x, i64 %y, ptr noal
 ; VF4-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
 ; VF4-NEXT:    br [[EXIT:label %.*]]
-; VF4:       [[SCALAR_PH]]:
+; VF4:       [[SCALAR_PH:.*:]]
 ;
 entry:
   br label %loop
@@ -319,7 +319,7 @@ define void @same_live_in_store_interleave_group(i64 %x, ptr noalias %dst) {
 ; VF2-LABEL: define void @same_live_in_store_interleave_group(
 ; VF2-SAME: i64 [[X:%.*]], ptr noalias [[DST:%.*]]) {
 ; VF2-NEXT:  [[ENTRY:.*:]]
-; VF2-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; VF2-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF2:       [[VECTOR_PH]]:
 ; VF2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[X]], i64 0
 ; VF2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
@@ -336,12 +336,12 @@ define void @same_live_in_store_interleave_group(i64 %x, ptr noalias %dst) {
 ; VF2-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
 ; VF2-NEXT:    br [[EXIT:label %.*]]
-; VF2:       [[SCALAR_PH]]:
+; VF2:       [[SCALAR_PH:.*:]]
 ;
 ; VF4-LABEL: define void @same_live_in_store_interleave_group(
 ; VF4-SAME: i64 [[X:%.*]], ptr noalias [[DST:%.*]]) {
 ; VF4-NEXT:  [[ENTRY:.*:]]
-; VF4-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; VF4-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF4:       [[VECTOR_PH]]:
 ; VF4-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[X]], i64 0
 ; VF4-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
@@ -358,7 +358,7 @@ define void @same_live_in_store_interleave_group(i64 %x, ptr noalias %dst) {
 ; VF4-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
 ; VF4-NEXT:    br [[EXIT:label %.*]]
-; VF4:       [[SCALAR_PH]]:
+; VF4:       [[SCALAR_PH:.*:]]
 ;
 entry:
   br label %loop
@@ -383,7 +383,7 @@ define void @different_live_ins_store_interleave_group(i64 %x, i64 %y, ptr noali
 ; VF2-LABEL: define void @different_live_ins_store_interleave_group(
 ; VF2-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], ptr noalias [[DST:%.*]]) {
 ; VF2-NEXT:  [[ENTRY:.*:]]
-; VF2-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; VF2-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF2:       [[VECTOR_PH]]:
 ; VF2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[X]], i64 0
 ; VF2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
@@ -402,12 +402,12 @@ define void @different_live_ins_store_interleave_group(i64 %x, i64 %y, ptr noali
 ; VF2-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
 ; VF2-NEXT:    br [[EXIT:label %.*]]
-; VF2:       [[SCALAR_PH]]:
+; VF2:       [[SCALAR_PH:.*:]]
 ;
 ; VF4-LABEL: define void @different_live_ins_store_interleave_group(
 ; VF4-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], ptr noalias [[DST:%.*]]) {
 ; VF4-NEXT:  [[ENTRY:.*:]]
-; VF4-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; VF4-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF4:       [[VECTOR_PH]]:
 ; VF4-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[X]], i64 0
 ; VF4-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
@@ -426,7 +426,7 @@ define void @different_live_ins_store_interleave_group(i64 %x, i64 %y, ptr noali
 ; VF4-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
 ; VF4-NEXT:    br [[EXIT:label %.*]]
-; VF4:       [[SCALAR_PH]]:
+; VF4:       [[SCALAR_PH:.*:]]
 ;
 entry:
   br label %loop
@@ -451,7 +451,7 @@ define void @single_uniform_load_store_interleave_group(ptr noalias %src, ptr no
 ; VF2-LABEL: define void @single_uniform_load_store_interleave_group(
 ; VF2-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]]) {
 ; VF2-NEXT:  [[ENTRY:.*:]]
-; VF2-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; VF2-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF2:       [[VECTOR_PH]]:
 ; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2:       [[VECTOR_BODY]]:
@@ -467,12 +467,12 @@ define void @single_uniform_load_store_interleave_group(ptr noalias %src, ptr no
 ; VF2-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
 ; VF2-NEXT:    br [[EXIT:label %.*]]
-; VF2:       [[SCALAR_PH]]:
+; VF2:       [[SCALAR_PH:.*:]]
 ;
 ; VF4-LABEL: define void @single_uniform_load_store_interleave_group(
 ; VF4-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]]) {
 ; VF4-NEXT:  [[ENTRY:.*:]]
-; VF4-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; VF4-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF4:       [[VECTOR_PH]]:
 ; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF4:       [[VECTOR_BODY]]:
@@ -490,7 +490,7 @@ define void @single_uniform_load_store_interleave_group(ptr noalias %src, ptr no
 ; VF4-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
 ; VF4-NEXT:    br [[EXIT:label %.*]]
-; VF4:       [[SCALAR_PH]]:
+; VF4:       [[SCALAR_PH:.*:]]
 ;
 entry:
   br label %loop
@@ -516,7 +516,7 @@ define void @multiple_uniform_load_store_interleave_group(ptr noalias %src.0, pt
 ; VF2-LABEL: define void @multiple_uniform_load_store_interleave_group(
 ; VF2-SAME: ptr noalias [[SRC_0:%.*]], ptr noalias [[SRC_1:%.*]], ptr noalias [[DST:%.*]]) {
 ; VF2-NEXT:  [[ENTRY:.*:]]
-; VF2-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; VF2-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF2:       [[VECTOR_PH]]:
 ; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2:       [[VECTOR_BODY]]:
@@ -537,12 +537,12 @@ define void @multiple_uniform_load_store_interleave_group(ptr noalias %src.0, pt
 ; VF2-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
 ; VF2-NEXT:    br [[EXIT:label %.*]]
-; VF2:       [[SCALAR_PH]]:
+; VF2:       [[SCALAR_PH:.*:]]
 ;
 ; VF4-LABEL: define void @multiple_uniform_load_store_interleave_group(
 ; VF4-SAME: ptr noalias [[SRC_0:%.*]], ptr noalias [[SRC_1:%.*]], ptr noalias [[DST:%.*]]) {
 ; VF4-NEXT:  [[ENTRY:.*:]]
-; VF4-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; VF4-NEXT:    br label %[[VECTOR_PH:.*]]
 ; VF4:       [[VECTOR_PH]]:
 ; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF4:       [[VECTOR_BODY]]:
@@ -563,7 +563,7 @@ define void @multiple_uniform_load_store_interleave_group(ptr noalias %src.0, pt
 ; VF4-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
 ; VF4-NEXT:    br [[EXIT:label %.*]]
-; VF4:       [[SCALAR_PH]]:
+; VF4:       [[SCALAR_PH:.*:]]
 ;
 entry:
   br label %loop

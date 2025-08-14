@@ -16,7 +16,7 @@ define void @f(ptr noundef captures(none) %a, float noundef %x) {
 ; CHECK-LABEL: define void @f(
 ; CHECK-SAME: ptr noundef captures(none) [[A:%.*]], float noundef [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[X]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
@@ -67,53 +67,17 @@ define void @f(ptr noundef captures(none) %a, float noundef %x) {
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH]]:
+; CHECK:       [[SCALAR_PH:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT_7:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X]], [[LOAD]]
 ; CHECK-NEXT:    store float [[MUL]], ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[IV_NEXT:%.*]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[IV_NEXT]]
-; CHECK-NEXT:    [[LOAD_1:%.*]] = load float, ptr [[ARRAYIDX_1]], align 4
-; CHECK-NEXT:    [[MUL_1:%.*]] = fmul float [[X]], [[LOAD_1]]
-; CHECK-NEXT:    store float [[MUL_1]], ptr [[ARRAYIDX_1]], align 4
-; CHECK-NEXT:    [[IV_NEXT_1:%.*]] = add nuw nsw i64 [[IV]], 2
-; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[IV_NEXT_1]]
-; CHECK-NEXT:    [[LOAD_2:%.*]] = load float, ptr [[ARRAYIDX_2]], align 4
-; CHECK-NEXT:    [[MUL_2:%.*]] = fmul float [[X]], [[LOAD_2]]
-; CHECK-NEXT:    store float [[MUL_2]], ptr [[ARRAYIDX_2]], align 4
-; CHECK-NEXT:    [[IV_NEXT_2:%.*]] = add nuw nsw i64 [[IV]], 3
-; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[IV_NEXT_2]]
-; CHECK-NEXT:    [[LOAD_3:%.*]] = load float, ptr [[ARRAYIDX_3]], align 4
-; CHECK-NEXT:    [[MUL_3:%.*]] = fmul float [[X]], [[LOAD_3]]
-; CHECK-NEXT:    store float [[MUL_3]], ptr [[ARRAYIDX_3]], align 4
-; CHECK-NEXT:    [[IV_NEXT_3:%.*]] = add nuw nsw i64 [[IV]], 4
-; CHECK-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[IV_NEXT_3]]
-; CHECK-NEXT:    [[LOAD_4:%.*]] = load float, ptr [[ARRAYIDX_4]], align 4
-; CHECK-NEXT:    [[MUL_4:%.*]] = fmul float [[X]], [[LOAD_4]]
-; CHECK-NEXT:    store float [[MUL_4]], ptr [[ARRAYIDX_4]], align 4
-; CHECK-NEXT:    [[IV_NEXT_4:%.*]] = add nuw nsw i64 [[IV]], 5
-; CHECK-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[IV_NEXT_4]]
-; CHECK-NEXT:    [[LOAD_5:%.*]] = load float, ptr [[ARRAYIDX_5]], align 4
-; CHECK-NEXT:    [[MUL_5:%.*]] = fmul float [[X]], [[LOAD_5]]
-; CHECK-NEXT:    store float [[MUL_5]], ptr [[ARRAYIDX_5]], align 4
-; CHECK-NEXT:    [[IV_NEXT_5:%.*]] = add nuw nsw i64 [[IV]], 6
-; CHECK-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[IV_NEXT_5]]
-; CHECK-NEXT:    [[LOAD_6:%.*]] = load float, ptr [[ARRAYIDX_6]], align 4
-; CHECK-NEXT:    [[MUL_6:%.*]] = fmul float [[X]], [[LOAD_6]]
-; CHECK-NEXT:    store float [[MUL_6]], ptr [[ARRAYIDX_6]], align 4
-; CHECK-NEXT:    [[IV_NEXT_6:%.*]] = add nuw nsw i64 [[IV]], 7
-; CHECK-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[IV_NEXT_6]]
-; CHECK-NEXT:    [[LOAD_7:%.*]] = load float, ptr [[ARRAYIDX_7]], align 4
-; CHECK-NEXT:    [[MUL_7:%.*]] = fmul float [[X]], [[LOAD_7]]
-; CHECK-NEXT:    store float [[MUL_7]], ptr [[ARRAYIDX_7]], align 4
-; CHECK-NEXT:    [[IV_NEXT_7]] = add nuw nsw i64 [[IV]], 8
-; CHECK-NEXT:    br i1 true, label %[[EXIT_LOOPEXIT:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
-; CHECK:       [[EXIT_LOOPEXIT]]:
-; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[COMP:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[COMP]], label %[[EXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -143,5 +107,8 @@ exit:
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized"}
 ; CHECK: [[META2]] = !{!"llvm.loop.unroll.disable"}
-; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]], [[META2]]}
+; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META4:![0-9]+]], [[META5:![0-9]+]]}
+; CHECK: [[META4]] = !{!"llvm.loop.vectorize.enable", i1 true}
+; CHECK: [[META5]] = !{!"llvm.loop.vectorize.followup_all", [[META1]], [[META6:![0-9]+]]}
+; CHECK: [[META6]] = !{!"llvm.loop.unroll.count", i32 8}
 ;.

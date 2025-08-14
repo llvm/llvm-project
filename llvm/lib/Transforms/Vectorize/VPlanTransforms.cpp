@@ -1927,7 +1927,7 @@ void VPlanTransforms::removeBranchOnConst(VPlan &Plan) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getEntry()))) {
     VPValue *Cond;
-    if (VPBB->getNumSuccessors() != 2 || VPBB == Plan.getEntry() ||
+    if (VPBB->getNumSuccessors() != 2 || VPBB->empty() ||
         !match(&VPBB->back(), m_BranchOnCond(m_VPValue(Cond))))
       continue;
 

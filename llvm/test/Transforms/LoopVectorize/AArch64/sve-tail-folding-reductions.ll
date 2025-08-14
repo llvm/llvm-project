@@ -10,7 +10,7 @@ define i32 @add_reduction_i32(ptr %ptr, i64 %n) #0 {
 ; CHECK-LABEL: @add_reduction_i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N:%.*]], i64 1)
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP16:%.*]] = mul nuw i64 [[TMP15]], 4
@@ -40,7 +40,7 @@ define i32 @add_reduction_i32(ptr %ptr, i64 %n) #0 {
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH:%.*]] ]
 ; CHECK-NEXT:    [[RED:%.*]] = phi i32 [ [[RED_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[GEP]], align 4
@@ -55,7 +55,7 @@ define i32 @add_reduction_i32(ptr %ptr, i64 %n) #0 {
 ; CHECK-IN-LOOP-LABEL: @add_reduction_i32(
 ; CHECK-IN-LOOP-NEXT:  entry:
 ; CHECK-IN-LOOP-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N:%.*]], i64 1)
-; CHECK-IN-LOOP-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-IN-LOOP-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK-IN-LOOP:       vector.ph:
 ; CHECK-IN-LOOP-NEXT:    [[TMP16:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-IN-LOOP-NEXT:    [[TMP17:%.*]] = mul nuw i64 [[TMP16]], 4
@@ -85,7 +85,7 @@ define i32 @add_reduction_i32(ptr %ptr, i64 %n) #0 {
 ; CHECK-IN-LOOP:       scalar.ph:
 ; CHECK-IN-LOOP-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK-IN-LOOP:       while.body:
-; CHECK-IN-LOOP-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH]] ]
+; CHECK-IN-LOOP-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH:%.*]] ]
 ; CHECK-IN-LOOP-NEXT:    [[RED:%.*]] = phi i32 [ [[RED_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH]] ]
 ; CHECK-IN-LOOP-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[INDEX]]
 ; CHECK-IN-LOOP-NEXT:    [[VAL:%.*]] = load i32, ptr [[GEP]], align 4
@@ -118,7 +118,7 @@ define float @add_reduction_f32(ptr %ptr, i64 %n) #0 {
 ; CHECK-LABEL: @add_reduction_f32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N:%.*]], i64 1)
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP16:%.*]] = mul nuw i64 [[TMP15]], 4
@@ -147,7 +147,7 @@ define float @add_reduction_f32(ptr %ptr, i64 %n) #0 {
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH:%.*]] ]
 ; CHECK-NEXT:    [[RED:%.*]] = phi float [ [[RED_NEXT:%.*]], [[WHILE_BODY]] ], [ 0.000000e+00, [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr float, ptr [[PTR]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load float, ptr [[GEP]], align 4
@@ -162,7 +162,7 @@ define float @add_reduction_f32(ptr %ptr, i64 %n) #0 {
 ; CHECK-IN-LOOP-LABEL: @add_reduction_f32(
 ; CHECK-IN-LOOP-NEXT:  entry:
 ; CHECK-IN-LOOP-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N:%.*]], i64 1)
-; CHECK-IN-LOOP-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-IN-LOOP-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK-IN-LOOP:       vector.ph:
 ; CHECK-IN-LOOP-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-IN-LOOP-NEXT:    [[TMP16:%.*]] = mul nuw i64 [[TMP15]], 4
@@ -191,7 +191,7 @@ define float @add_reduction_f32(ptr %ptr, i64 %n) #0 {
 ; CHECK-IN-LOOP:       scalar.ph:
 ; CHECK-IN-LOOP-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK-IN-LOOP:       while.body:
-; CHECK-IN-LOOP-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH]] ]
+; CHECK-IN-LOOP-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH:%.*]] ]
 ; CHECK-IN-LOOP-NEXT:    [[RED:%.*]] = phi float [ [[RED_NEXT:%.*]], [[WHILE_BODY]] ], [ 0.000000e+00, [[SCALAR_PH]] ]
 ; CHECK-IN-LOOP-NEXT:    [[GEP:%.*]] = getelementptr float, ptr [[PTR]], i64 [[INDEX]]
 ; CHECK-IN-LOOP-NEXT:    [[VAL:%.*]] = load float, ptr [[GEP]], align 4
@@ -223,7 +223,7 @@ while.end.loopexit:                               ; preds = %while.body
 define i32 @cond_xor_reduction(ptr noalias %a, ptr noalias %cond, i64 %N) #0 {
 ; CHECK-LABEL: @cond_xor_reduction(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP21:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP22:%.*]] = mul nuw i64 [[TMP21]], 4
@@ -258,7 +258,7 @@ define i32 @cond_xor_reduction(ptr noalias %a, ptr noalias %cond, i64 %N) #0 {
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
 ; CHECK-NEXT:    [[RDX:%.*]] = phi i32 [ 7, [[SCALAR_PH]] ], [ [[RES:%.*]], [[FOR_INC]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[COND]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
@@ -280,7 +280,7 @@ define i32 @cond_xor_reduction(ptr noalias %a, ptr noalias %cond, i64 %N) #0 {
 ;
 ; CHECK-IN-LOOP-LABEL: @cond_xor_reduction(
 ; CHECK-IN-LOOP-NEXT:  entry:
-; CHECK-IN-LOOP-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-IN-LOOP-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK-IN-LOOP:       vector.ph:
 ; CHECK-IN-LOOP-NEXT:    [[TMP20:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-IN-LOOP-NEXT:    [[TMP21:%.*]] = mul nuw i64 [[TMP20]], 4
@@ -314,7 +314,7 @@ define i32 @cond_xor_reduction(ptr noalias %a, ptr noalias %cond, i64 %N) #0 {
 ; CHECK-IN-LOOP:       scalar.ph:
 ; CHECK-IN-LOOP-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-IN-LOOP:       for.body:
-; CHECK-IN-LOOP-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
+; CHECK-IN-LOOP-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
 ; CHECK-IN-LOOP-NEXT:    [[RDX:%.*]] = phi i32 [ 7, [[SCALAR_PH]] ], [ [[RES:%.*]], [[FOR_INC]] ]
 ; CHECK-IN-LOOP-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[COND]], i64 [[IV]]
 ; CHECK-IN-LOOP-NEXT:    [[TMP24:%.*]] = load i32, ptr [[ARRAYIDX]], align 4

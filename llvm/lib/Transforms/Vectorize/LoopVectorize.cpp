@@ -2352,9 +2352,9 @@ EpilogueVectorizerMainLoop::createIterationCountCheck(ElementCount VF,
 /// VPBB are moved to the end of the newly created VPIRBasicBlock. VPBB must
 /// have a single predecessor, which is rewired to the new VPIRBasicBlock. All
 /// successors of VPBB, if any, are rewired to the new VPIRBasicBlock.
-static VPIRBasicBlock *replaceVPBBWithIRVPBB(VPBasicBlock *VPBB,
+static VPIRBasicBlock *replaceVPBBWithIRVPBB(VPlan &Plan, VPBasicBlock *VPBB,
                                              BasicBlock *IRBB) {
-  VPIRBasicBlock *IRVPBB = VPBB->getPlan()->createVPIRBasicBlock(IRBB);
+  VPIRBasicBlock *IRVPBB = Plan.createVPIRBasicBlock(IRBB);
   auto IP = IRVPBB->begin();
   for (auto &R : make_early_inc_range(VPBB->phis()))
     R.moveBefore(*IRVPBB, IP);
@@ -2564,6 +2564,9 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State) {
 
   // Remove redundant induction instructions.
   cse(HeaderBB);
+
+  if (Plan.getScalarPreheader()->getNumPredecessors() == 0)
+    return;
 
   // Set/update profile weights for the vector and remainder loops as original
   // loop iterations are now distributed among them. Note that original loop
@@ -7220,6 +7223,12 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
   VPlanTransforms::simplifyRecipes(BestVPlan);
   VPlanTransforms::removeBranchOnConst(BestVPlan);
+  if (BestVPlan.getEntry()->getSingleSuccessor() ==
+      BestVPlan.getScalarPreheader()) {
+    // TODO: Should not even try to vectorize.
+    return DenseMap<const SCEV *, Value *>();
+  }
+
   VPlanTransforms::narrowInterleaveGroups(
       BestVPlan, BestVF,
       TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector));
@@ -7262,7 +7271,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   BasicBlock *EntryBB =
       cast<VPIRBasicBlock>(BestVPlan.getEntry())->getIRBasicBlock();
   State.CFG.PrevBB = ILV.createVectorizedLoopSkeleton();
-  replaceVPBBWithIRVPBB(BestVPlan.getScalarPreheader(),
+  replaceVPBBWithIRVPBB(BestVPlan, BestVPlan.getScalarPreheader(),
                         State.CFG.PrevBB->getSingleSuccessor());
   VPlanTransforms::removeDeadRecipes(BestVPlan);
 
@@ -7345,8 +7354,9 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
     } else {
       // Keep all loop hints from the original loop on the vector loop (we'll
       // replace the vectorizer-specific hints below).
-      if (MDNode *LID = OrigLoop->getLoopID())
-        L->setLoopID(LID);
+      if (BestVPlan.getScalarPreheader()->getNumPredecessors() > 0)
+        if (MDNode *LID = OrigLoop->getLoopID())
+          L->setLoopID(LID);
 
       LoopVectorizeHints Hints(L, true, *ORE);
       Hints.setAlreadyVectorized();
@@ -7375,6 +7385,16 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
     TTI.getUnrollingPreferences(L, *PSE.getSE(), UP, ORE);
     if (!UP.UnrollVectorizedLoop || VectorizingEpilogue)
       addRuntimeUnrollDisableMetaData(L);
+  }
+
+  if (BestVPlan.getScalarPreheader()->getNumPredecessors() == 0) {
+    // If the original loop became unreachable, we need to delete it.
+    auto Blocks = OrigLoop->getBlocksVector();
+    Blocks.push_back(cast<VPIRBasicBlock>(BestVPlan.getScalarPreheader())
+                         ->getIRBasicBlock());
+    for (auto *BB : Blocks)
+      LI->removeBlock(BB);
+    LI->erase(OrigLoop);
   }
 
   // 3. Fix the vectorized code: take care of header phi's, live-outs,
@@ -7452,7 +7472,8 @@ EpilogueVectorizerMainLoop::emitIterationCountCheck(BasicBlock *Bypass,
     // generated here dominates the vector epilog iter check.
     EPI.TripCount = Count;
   } else {
-    VectorPHVPBB = replaceVPBBWithIRVPBB(VectorPHVPBB, LoopVectorPreHeader);
+    VectorPHVPBB =
+        replaceVPBBWithIRVPBB(Plan, VectorPHVPBB, LoopVectorPreHeader);
   }
 
   BranchInst &BI =
@@ -7485,7 +7506,7 @@ BasicBlock *EpilogueVectorizerEpilogueLoop::createVectorizedLoopSkeleton() {
   BasicBlock *VecEpilogueIterationCountCheck =
       SplitBlock(LoopVectorPreHeader, LoopVectorPreHeader->begin(), DT, LI,
                  nullptr, "vec.epilog.iter.check", true);
-  VectorPHVPBB = replaceVPBBWithIRVPBB(VectorPHVPBB, LoopVectorPreHeader);
+  VectorPHVPBB = replaceVPBBWithIRVPBB(Plan, VectorPHVPBB, LoopVectorPreHeader);
 
   emitMinimumVectorEpilogueIterCountCheck(ScalarPH,
                                           VecEpilogueIterationCountCheck);
@@ -10205,6 +10226,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   }
 
   bool DisableRuntimeUnroll = false;
+  bool LoopRemoved = false;
   MDNode *OrigLoopID = L->getLoopID();
 
   // Report the vectorization decision.
@@ -10293,10 +10315,14 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     // rarely used is not worth unrolling.
     if (!Checks.hasChecks() && !VF.Width.isScalar())
       DisableRuntimeUnroll = true;
+    LoopRemoved = BestPlan.getScalarPreheader()->getNumPredecessors() == 0;
   }
 
   assert(DT->verify(DominatorTree::VerificationLevel::Fast) &&
          "DT not preserved correctly");
+
+  if (LoopRemoved)
+    return true;
 
   std::optional<MDNode *> RemainderLoopID =
       makeFollowupLoopID(OrigLoopID, {LLVMLoopVectorizeFollowupAll,
