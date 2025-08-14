@@ -2020,10 +2020,61 @@ Value *llvm::addRuntimeChecks(
   return MemoryRuntimeCheck;
 }
 
+Value *llvm::addSafeEltsRuntimeChecks(Instruction *Loc,
+                                      ArrayRef<PointerDiffInfo> Checks,
+                                      SCEVExpander &Expander, ElementCount VF) {
+  IRBuilder ChkBuilder(Loc->getContext(),
+                       InstSimplifyFolder(Loc->getDataLayout()));
+  ChkBuilder.SetInsertPoint(Loc);
+  Value *MemoryRuntimeCheck = nullptr;
+
+  // Map to keep track of created compares, The key is the pair of operands for
+  // the compare, to allow detecting and re-using redundant compares.
+  DenseMap<std::pair<Value *, Value *>, Value *> SeenCompares;
+  Value *AliasLaneMask = nullptr;
+  for (const auto &[SrcStart, SinkStart, AccessSize, NeedsFreeze,
+                    WriteAfterRead] : Checks) {
+    Type *Ty = SinkStart->getType();
+    Value *Sink = Expander.expandCodeFor(SinkStart, Ty, Loc);
+    Value *Src = Expander.expandCodeFor(SrcStart, Ty, Loc);
+    if (SeenCompares.lookup({Sink, Src}))
+      continue;
+
+    unsigned IntOpc = WriteAfterRead ? Intrinsic::loop_dependence_war_mask
+                                     : Intrinsic::loop_dependence_raw_mask;
+    Value *SourceAsPtr = ChkBuilder.CreateCast(Instruction::IntToPtr, Src,
+                                               ChkBuilder.getPtrTy());
+    Value *SinkAsPtr = ChkBuilder.CreateCast(Instruction::IntToPtr, Sink,
+                                             ChkBuilder.getPtrTy());
+    Value *M = ChkBuilder.CreateIntrinsic(
+        IntOpc, {VectorType::get(ChkBuilder.getInt1Ty(), VF)},
+        {SourceAsPtr, SinkAsPtr, ChkBuilder.getInt64(AccessSize)}, nullptr,
+        "alias.lane.mask");
+    SeenCompares.insert({{Sink, Src}, M});
+    if (AliasLaneMask)
+      M = ChkBuilder.CreateAnd(AliasLaneMask, M);
+    else
+      AliasLaneMask = M;
+  }
+  assert(AliasLaneMask && "Expected an alias lane mask to have been created.");
+  auto *VecVT = VectorType::get(ChkBuilder.getInt1Ty(), VF);
+  // Extend to an i8 since i1 is too small to add with
+  Value *PopCount = ChkBuilder.CreateCast(
+      Instruction::ZExt, AliasLaneMask,
+      VectorType::get(ChkBuilder.getInt8Ty(), VecVT->getElementCount()));
+
+  PopCount =
+      ChkBuilder.CreateUnaryIntrinsic(Intrinsic::vector_reduce_add, PopCount);
+  PopCount = ChkBuilder.CreateCast(Instruction::ZExt, PopCount,
+                                   ChkBuilder.getInt64Ty());
+  MemoryRuntimeCheck = ChkBuilder.CreateICmpUGT(
+      PopCount, ConstantInt::get(ChkBuilder.getInt64Ty(), 0));
+  return MemoryRuntimeCheck;
+}
+
 Value *llvm::addDiffRuntimeChecks(
     Instruction *Loc, ArrayRef<PointerDiffInfo> Checks, SCEVExpander &Expander,
-    function_ref<Value *(IRBuilderBase &, unsigned)> GetVF, unsigned IC,
-    ElementCount VF, bool UseSafeEltsMask) {
+    function_ref<Value *(IRBuilderBase &, unsigned)> GetVF, unsigned IC) {
 
   LLVMContext &Ctx = Loc->getContext();
   IRBuilder ChkBuilder(Ctx, InstSimplifyFolder(Loc->getDataLayout()));
@@ -2035,68 +2086,33 @@ Value *llvm::addDiffRuntimeChecks(
   // Map to keep track of created compares, The key is the pair of operands for
   // the compare, to allow detecting and re-using redundant compares.
   DenseMap<std::pair<Value *, Value *>, Value *> SeenCompares;
-  Value *AliasLaneMask = nullptr;
   for (const auto &[SrcStart, SinkStart, AccessSize, NeedsFreeze,
                     WriteAfterRead] : Checks) {
     Type *Ty = SinkStart->getType();
-    if (!VF.isScalar() && UseSafeEltsMask) {
-      Value *Sink = Expander.expandCodeFor(SinkStart, Ty, Loc);
-      Value *Src = Expander.expandCodeFor(SrcStart, Ty, Loc);
-      unsigned IntOpc = WriteAfterRead ? Intrinsic::loop_dependence_war_mask
-                                       : Intrinsic::loop_dependence_raw_mask;
-      Value *SourceAsPtr = ChkBuilder.CreateCast(Instruction::IntToPtr, Src,
-                                                 ChkBuilder.getPtrTy());
-      Value *SinkAsPtr = ChkBuilder.CreateCast(Instruction::IntToPtr, Sink,
-                                               ChkBuilder.getPtrTy());
-      Value *M = ChkBuilder.CreateIntrinsic(
-          IntOpc, {VectorType::get(ChkBuilder.getInt1Ty(), VF)},
-          {SourceAsPtr, SinkAsPtr, ChkBuilder.getInt64(AccessSize)}, nullptr,
-          "alias.lane.mask");
-      if (AliasLaneMask)
-        M = ChkBuilder.CreateAnd(AliasLaneMask, M);
-      else
-        AliasLaneMask = M;
-    } else {
-      // Compute VF * IC * AccessSize.
-      auto *VFTimesICTimesSize =
-          ChkBuilder.CreateMul(GetVF(ChkBuilder, Ty->getScalarSizeInBits()),
-                               ConstantInt::get(Ty, IC * AccessSize));
-      Value *Diff =
-          Expander.expandCodeFor(SE.getMinusSCEV(SinkStart, SrcStart), Ty, Loc);
+    // Compute VF * IC * AccessSize.
+    auto *VFTimesICTimesSize =
+        ChkBuilder.CreateMul(GetVF(ChkBuilder, Ty->getScalarSizeInBits()),
+                             ConstantInt::get(Ty, IC * AccessSize));
+    Value *Diff =
+        Expander.expandCodeFor(SE.getMinusSCEV(SinkStart, SrcStart), Ty, Loc);
 
-      // Check if the same compare has already been created earlier. In that
-      // case, there is no need to check it again.
-      Value *IsConflict = SeenCompares.lookup({Diff, VFTimesICTimesSize});
-      if (IsConflict)
-        continue;
+    // Check if the same compare has already been created earlier. In that
+    // case, there is no need to check it again.
+    Value *IsConflict = SeenCompares.lookup({Diff, VFTimesICTimesSize});
+    if (IsConflict)
+      continue;
 
+    IsConflict =
+        ChkBuilder.CreateICmpULT(Diff, VFTimesICTimesSize, "diff.check");
+    SeenCompares.insert({{Diff, VFTimesICTimesSize}, IsConflict});
+    if (NeedsFreeze)
       IsConflict =
-          ChkBuilder.CreateICmpULT(Diff, VFTimesICTimesSize, "diff.check");
-      SeenCompares.insert({{Diff, VFTimesICTimesSize}, IsConflict});
-      if (NeedsFreeze)
-        IsConflict =
-            ChkBuilder.CreateFreeze(IsConflict, IsConflict->getName() + ".fr");
-      if (MemoryRuntimeCheck) {
-        IsConflict =
-            ChkBuilder.CreateOr(MemoryRuntimeCheck, IsConflict, "conflict.rdx");
+          ChkBuilder.CreateFreeze(IsConflict, IsConflict->getName() + ".fr");
+    if (MemoryRuntimeCheck) {
+      IsConflict =
+          ChkBuilder.CreateOr(MemoryRuntimeCheck, IsConflict, "conflict.rdx");
       }
       MemoryRuntimeCheck = IsConflict;
-    }
-  }
-
-  if (AliasLaneMask) {
-    auto *VecVT = VectorType::get(ChkBuilder.getInt1Ty(), VF);
-    // Extend to an i8 since i1 is too small to add with
-    Value *PopCount = ChkBuilder.CreateCast(
-        Instruction::ZExt, AliasLaneMask,
-        VectorType::get(ChkBuilder.getInt8Ty(), VecVT->getElementCount()));
-
-    PopCount =
-        ChkBuilder.CreateUnaryIntrinsic(Intrinsic::vector_reduce_add, PopCount);
-    PopCount = ChkBuilder.CreateCast(Instruction::ZExt, PopCount,
-                                     ChkBuilder.getInt64Ty());
-    MemoryRuntimeCheck = ChkBuilder.CreateICmpUGT(
-        PopCount, ConstantInt::get(ChkBuilder.getInt64Ty(), 0));
   }
 
   return MemoryRuntimeCheck;

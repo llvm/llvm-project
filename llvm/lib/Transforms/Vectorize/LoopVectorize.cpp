@@ -1867,7 +1867,10 @@ public:
                                  "vector.memcheck");
 
       auto DiffChecks = RtPtrChecking.getDiffChecks();
-      if (DiffChecks) {
+      if (UseSafeEltsMask) {
+        MemRuntimeCheckCond = addSafeEltsRuntimeChecks(
+            MemCheckBlock->getTerminator(), *DiffChecks, MemCheckExp, VF);
+      } else if (DiffChecks) {
         Value *RuntimeVF = nullptr;
         MemRuntimeCheckCond = addDiffRuntimeChecks(
             MemCheckBlock->getTerminator(), *DiffChecks, MemCheckExp,
@@ -1876,7 +1879,7 @@ public:
                 RuntimeVF = getRuntimeVF(B, B.getIntNTy(Bits), VF);
               return RuntimeVF;
             },
-            IC, VF, UseSafeEltsMask);
+            IC);
       } else {
         MemRuntimeCheckCond = addRuntimeChecks(
             MemCheckBlock->getTerminator(), L, RtPtrChecking.getChecks(),
