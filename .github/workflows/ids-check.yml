@@ -50,6 +50,8 @@ jobs:
               -D CMAKE_BUILD_TYPE=Release \
               -S C:/a/llvm-project/llvm-project/llvm-project/llvm/ \
               -D LLVM_ENABLE_PROJECTS=clang \
+              -D CMAKE_C_COMPILER=clang \
+              -D CMAKE_CXX_COMPILER=clang++ \
               -D LLVM_TARGETS_TO_BUILD="host" \
               -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
               -G Ninja
@@ -68,7 +70,7 @@ jobs:
                -D LLVM_DIR="C:/a/llvm-project/llvm-project/clang+llvm-20.1.8-x86_64-pc-windows-msvc/lib/cmake/llvm/" \
                -D Clang_DIR="C:/a/llvm-project/llvm-project/clang+llvm-20.1.8-x86_64-pc-windows-msvc/lib/cmake/clang/" \
                -D FILECHECK_EXECUTABLE=$(which filecheck) \
-               -D LIT_EXECUTABLE=$(which lit)
+               -D LIT_EXECUTABLE=$(which lit) \
                -G Ninja
 
     - name: Build ids
