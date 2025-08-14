@@ -1,4 +1,4 @@
-//===-- Single-precision general exp/log functions ------------------------===//
+//===-- Single-precision general sinhf/coshf functions --------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,21 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_MATH_GENERIC_EXPLOGXF_H
-#define LLVM_LIBC_SRC_MATH_GENERIC_EXPLOGXF_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_SINHFCOSHF_UTILS_H
+#define LLVM_LIBC_SRC___SUPPORT_MATH_SINHFCOSHF_UTILS_H
 
-#include "common_constants.h"
-
-#include "src/__support/common.h"
-#include "src/__support/macros/properties/cpu_features.h"
-#include "src/__support/math/acoshf_utils.h"
-#include "src/__support/math/exp10f_utils.h"
-#include "src/__support/math/exp_utils.h"
+#include "exp10f_utils.h"
+#include "src/__support/FPUtil/multiply_add.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-constexpr int LOG_P1_BITS = 6;
-constexpr int LOG_P1_SIZE = 1 << LOG_P1_BITS;
+namespace math {
+
+namespace sinhfcoshf_internal {
 
 // The function correctly calculates sinh(x) and cosh(x) by calculating exp(x)
 // and exp(-x) simultaneously.
@@ -121,6 +117,10 @@ template <bool is_sinh> LIBC_INLINE double exp_pm_eval(float x) {
   return r;
 }
 
+} // namespace sinhfcoshf_internal
+
+} // namespace math
+
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_MATH_GENERIC_EXPLOGXF_H
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_SINHFCOSHF_UTILS_H

@@ -8,9 +8,7 @@
 
 #include "src/math/expm1.h"
 #include "common_constants.h" // Lookup tables EXP_M1 and EXP_M2.
-#include "explogxf.h"         // ziv_test_denorm.
 #include "src/__support/CPP/bit.h"
-#include "src/__support/CPP/optional.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
@@ -18,7 +16,6 @@
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
-#include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/FPUtil/triple_double.h"
 #include "src/__support/common.h"
