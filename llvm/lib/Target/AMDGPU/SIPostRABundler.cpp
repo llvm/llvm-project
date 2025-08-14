@@ -188,10 +188,11 @@ bool SIPostRABundler::run(MachineFunction &MF) {
           // IGLP_OPT, amdgcn.unreachable.
           break;
         }
-          BundleEnd = I;
-          if (I->getNumExplicitDefs() != 0)
-            Defs.insert(I->defs().begin()->getReg());
-          ++ClauseLength;
+        
+        BundleEnd = I;
+        if (I->getNumExplicitDefs() != 0)
+          Defs.insert(I->defs().begin()->getReg());
+        ++ClauseLength;
       }
 
       Next = std::next(BundleEnd);
