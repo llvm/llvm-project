@@ -160,13 +160,26 @@ endif()
 # Check for -nostdlib++ first; if there's no C++ standard library yet,
 # all check_cxx_compiler_flag commands will fail until we add -nostdlib++
 # (or -nodefaultlibs).
-llvm_check_compiler_linker_flag(CXX "-nostdlib++" CXX_SUPPORTS_NOSTDLIBXX_FLAG)
-if (CXX_SUPPORTS_NOSTDLIBXX_FLAG)
-  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdlib++")
-endif()
-check_cxx_compiler_flag(-nostdinc++ CXX_SUPPORTS_NOSTDINCXX_FLAG)
-if (CXX_SUPPORTS_NOSTDINCXX_FLAG)
-  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdinc++")
+#
+# CMAKE_REQUIRED_FLAGS is used both for C and C++ compilation. This breaks
+# compiling with GCC (and we should not need to force -nostd* for GCC anyway),
+# so apply it only with Clang. However, since there are cases when appending
+# the flag actually breaks the build, still perform the checks rather than
+# appending it unconditionally.
+#
+# TODO: find a better solution. See the discussion on:
+# https://github.com/llvm/llvm-project/issues/90332
+# https://github.com/llvm/llvm-project/pull/108357
+
+if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+  llvm_check_compiler_linker_flag(CXX "-nostdlib++" CXX_SUPPORTS_NOSTDLIBXX_FLAG)
+  if (CXX_SUPPORTS_NOSTDLIBXX_FLAG)
+    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdlib++")
+  endif()
+  check_cxx_compiler_flag(-nostdinc++ CXX_SUPPORTS_NOSTDINCXX_FLAG)
+  if (CXX_SUPPORTS_NOSTDINCXX_FLAG)
+    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdinc++")
+  endif()
 endif()
 
 # Avoid checking whether the compiler is working.
