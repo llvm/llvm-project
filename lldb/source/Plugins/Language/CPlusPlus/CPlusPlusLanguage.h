@@ -164,6 +164,19 @@ public:
   ConstString FindBestAlternateFunctionMangledName(
       const Mangled mangled, const SymbolContext &sym_ctx) const override;
 
+  static llvm::Expected<ConstString>
+  SubstituteType_ItaniumMangle(llvm::StringRef mangled_name,
+                               llvm::StringRef subst_from,
+                               llvm::StringRef subst_to);
+
+  static llvm::Expected<ConstString>
+  SubstituteStructor_ItaniumMangle(llvm::StringRef mangled_name,
+                                   llvm::StringRef subst_from,
+                                   llvm::StringRef subst_to);
+
+  static llvm::Expected<ConstString>
+  SubstituteStructorAliases_ItaniumMangle(llvm::StringRef mangled_name);
+
   llvm::StringRef GetInstanceVariableName() override { return "this"; }
 
   FormatEntity::Entry GetFunctionNameFormat() const override;
