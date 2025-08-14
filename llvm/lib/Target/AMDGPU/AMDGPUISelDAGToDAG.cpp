@@ -3333,9 +3333,11 @@ bool AMDGPUDAGToDAGISel::SelectVOP3ModsImpl(SDValue In, SDValue &Src,
                            Src.getValueType(), LHS, Index);
   };
 
-  // Recognise (xor a, 0x80000000) as NEG SrcMod.
-  // Recognise (and a, 0x7fffffff) as ABS SrcMod.
-  // Recognise (or a, 0x80000000) as NEG+ABS SrcModifiers.
+  // Recognise Srcmods:
+  // (xor a, 0x80000000) or v2i32 (xor a, {0x80000000,0x80000000}) as NEG.
+  // (and a, 0x7fffffff) or v2i32 (and a, {0x7fffffff,0x7fffffff}) as ABS.
+  // (or a, 0x80000000) or v2i32 (or a, {0x80000000,0x80000000}) as NEG+ABS
+  // SrcModifiers.
   if (Opc == ISD::XOR && CRHS->getAPIntValue().isSignMask()) {
     Mods |= SISrcMods::NEG;
     Src = ReplaceSrc();
