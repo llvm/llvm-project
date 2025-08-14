@@ -5049,6 +5049,61 @@ add_entrypoint_object(
     libc.src.__support.macros.properties.types
 )
 
+add_entrypoint_object(
+  bf16div
+  SRCS
+    bf16div.cpp
+  HDRS
+    ../bf16div.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.div
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+)
+
+add_entrypoint_object(
+  bf16divf
+  SRCS
+    bf16divf.cpp
+  HDRS
+    ../bf16divf.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.div
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+)
+
+add_entrypoint_object(
+  bf16divl
+  SRCS
+    bf16divl.cpp
+  HDRS
+    ../bf16divl.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.div
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+)
+
+add_entrypoint_object(
+  bf16divf128
+  SRCS
+    bf16divf128.cpp
+  HDRS
+    ../bf16divf128.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.div
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+)
 
 add_entrypoint_object(
   bf16sub
