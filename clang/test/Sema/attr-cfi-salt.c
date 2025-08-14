@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -fsanitize=kcfi -verify %s
+// RUN: %clang_cc1 -std=c11 -fsyntax-only -fsanitize=kcfi -verify %s
 // RUN: %clang_cc1 -std=c89 -DKNR -fsyntax-only -fsanitize=kcfi -verify %s
 
 #define __cfi_salt(S) __attribute__((cfi_salt(S)))
