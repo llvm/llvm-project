@@ -726,8 +726,8 @@ define amdgpu_ps <3 x i32> @s_uitofp_v3i1_to_v3bf16(<3 x i1> inreg %num) {
 ; GFX9-LABEL: s_uitofp_v3i1_to_v3bf16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_and_b32 s4, 1, s2
-; GFX9-NEXT:    s_and_b32 s2, 1, s1
-; GFX9-NEXT:    s_bitcmp1_b32 s0, 0
+; GFX9-NEXT:    s_and_b32 s2, 1, s0
+; GFX9-NEXT:    s_bitcmp1_b32 s1, 0
 ; GFX9-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; GFX9-NEXT:    s_cmp_eq_u32 s2, 1
 ; GFX9-NEXT:    s_cselect_b64 s[2:3], -1, 0
@@ -760,8 +760,8 @@ define amdgpu_ps <3 x i32> @s_uitofp_v3i1_to_v3bf16(<3 x i1> inreg %num) {
 ; GFX9-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX9-NEXT:    v_cndmask_b32_e32 v2, v4, v3, vcc
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
-; GFX9-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX9-NEXT:    v_readfirstlane_b32 s0, v2
+; GFX9-NEXT:    v_readfirstlane_b32 s0, v1
+; GFX9-NEXT:    v_readfirstlane_b32 s1, v2
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: s_uitofp_v3i1_to_v3bf16:
@@ -1178,8 +1178,8 @@ define amdgpu_ps <4 x i32> @s_uitofp_v4i1_to_v4bf16(<4 x i1> inreg %num) {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_and_b32 s6, 1, s3
 ; GFX9-NEXT:    s_and_b32 s4, 1, s2
-; GFX9-NEXT:    s_and_b32 s2, 1, s1
-; GFX9-NEXT:    s_bitcmp1_b32 s0, 0
+; GFX9-NEXT:    s_and_b32 s2, 1, s0
+; GFX9-NEXT:    s_bitcmp1_b32 s1, 0
 ; GFX9-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; GFX9-NEXT:    s_cmp_eq_u32 s2, 1
 ; GFX9-NEXT:    s_cselect_b64 s[2:3], -1, 0
@@ -1223,8 +1223,8 @@ define amdgpu_ps <4 x i32> @s_uitofp_v4i1_to_v4bf16(<4 x i1> inreg %num) {
 ; GFX9-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX9-NEXT:    v_cndmask_b32_e32 v3, v5, v4, vcc
 ; GFX9-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
-; GFX9-NEXT:    v_readfirstlane_b32 s1, v2
-; GFX9-NEXT:    v_readfirstlane_b32 s0, v3
+; GFX9-NEXT:    v_readfirstlane_b32 s0, v2
+; GFX9-NEXT:    v_readfirstlane_b32 s1, v3
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: s_uitofp_v4i1_to_v4bf16:
