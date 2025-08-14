@@ -69,10 +69,19 @@ Optimization/transformation didn’t apply — ideally with actionable feedback.
 
 #### 3. **Failure**
 
-Optimization/transformation attempted but failed (or could not run).
+Optimization/transformation attempted but failed. This is slightly different
+from the `Missed` category.
+
+For example, the user specifies `-use-max-register=100` when invoking the
+compiler, but the attempt fails for some reason:
+
+```bash
+$ your-compiler -use-max-register=100 mycode.xyz
+```
 
 ```c++
-[Failure] Unroll: {Reason=failed due to unsupported pattern}
+[Failed]  { Limiting to use-max-register=100 failed;
+            ; it now uses 104 registers for better performance ... }
 ```
 
 #### 4. **Analysis**
