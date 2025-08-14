@@ -220,11 +220,10 @@ benchmark(const BenchmarkOptions &options,
   result.samples = samples;
 
   result.total_iterations = estimator.get_iterations();
-  if (result.total_iterations > 0) {
+  if (result.total_iterations > 0)
     result.total_time = total_time / result.total_iterations;
-  } else {
+  else
     result.total_time = 0;
-  }
 
   return result;
 }
