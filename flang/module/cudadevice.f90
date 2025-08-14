@@ -324,6 +324,20 @@ implicit none
       real(8), value :: x
     end function
   end interface
+
+  interface __sad
+    attributes(device) integer function __sad(i,j,k) bind(c, name='__nv_sad')
+      !dir$ ignore_tkr (d) i, (d) j, (d) k
+      integer, value :: i,j,k
+    end function
+  end interface
+
+  interface __usad
+    attributes(device) integer function __usad(i,j,k) bind(c, name='__nv_usad')
+      !dir$ ignore_tkr (d) i, (d) j, (d) k
+      integer, value :: i,j,k
+    end function
+  end interface
   
   interface signbit
     attributes(device) integer(4) function signbitf(x) bind(c,name='__nv_signbitf')
