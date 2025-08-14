@@ -23,8 +23,8 @@ RUN: llvm-ar rcs %t/merge-archive.a %t/merge-1.o %t/merge-2.o
 # Merge the archive into the codegen data file.
 RUN: llvm-cgdata --merge --skip-trim %t/merge-archive.a -o %t/merge-archive.cgdata
 RUN: llvm-cgdata --show %t/merge-archive.cgdata | FileCheck %s
-RUN: llvm-cgdata --merge --skip-trim %t/merge-archive.a -o %t/merge-archive-lazy.cgdata -indexed-codegen-data-lazy-loading
-RUN: llvm-cgdata --show %t/merge-archive-lazy.cgdata -indexed-codegen-data-lazy-loading | FileCheck %s
+
+RUN: llvm-cgdata --show %t/merge-archive.cgdata| FileCheck %s
 CHECK: Stable function map:
 CHECK-NEXT:  Unique hash Count: 1
 CHECK-NEXT:  Total function Count: 2
@@ -65,7 +65,7 @@ MAP-NEXT: ...
 ...
 
 ;--- merge-1-template.ll
-@.data = private unnamed_addr constant [84 x i8] c"<RAW_1_BYTES>", section "__DATA,__llvm_merge"
+@.data = private unnamed_addr constant [68 x i8] c"<RAW_1_BYTES>", section "__DATA,__llvm_merge"
 
 ;--- raw-2.cgtext
 :stable_function_map
@@ -80,4 +80,4 @@ MAP-NEXT: ...
 ...
 
 ;--- merge-2-template.ll
-@.data = private unnamed_addr constant [84 x i8] c"<RAW_2_BYTES>", section "__DATA,__llvm_merge"
+@.data = private unnamed_addr constant [68 x i8] c"<RAW_2_BYTES>", section "__DATA,__llvm_merge"
