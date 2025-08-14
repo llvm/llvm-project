@@ -956,7 +956,7 @@ SIMemOpAccess::getLdsLoadStoreInfo(
     const MachineBasicBlock::iterator &MI) const {
   assert(MI->getDesc().TSFlags & SIInstrFlags::maybeAtomic);
 
-  if (!(MI->mayLoad() && MI->mayStore()))
+  if (!MI->mayLoad() || !MI->mayStore())
     return std::nullopt;
 
   // An LDS DMA will have exactly two memory operands.
