@@ -16,6 +16,7 @@
 
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
@@ -151,6 +152,26 @@ public:
   }
 
   virtual bool isNoopAddrSpaceCast(unsigned, unsigned) const { return false; }
+
+  // Assuming that the cast between the two given addrspaces is not a noop,
+  // calculate the known bits of the resulting ptr in the destination addrspace.
+  // The default implementation returns 0 known bits in case either one of the
+  // addrspaces is not integral or the bit size of the source addrspace is
+  // smaller than the bit size of the destination addrspace.
+  virtual KnownBits computeKnownBitsAddrSpaceCast(unsigned FromAS,
+                                                  unsigned ToAS) const {
+    if (DL.isNonIntegralAddressSpace(FromAS) ||
+        DL.isNonIntegralAddressSpace(ToAS))
+      return 0;
+    unsigned FromASBitSize = DL.getPointerSizeInBits(FromAS);
+    unsigned ToASBitSize = DL.getPointerSizeInBits(ToAS);
+    // Per default, we assume that all valid "larger" (e.g. 64-bit) to "smaller"
+    // (e.g. 32-bit) casts work by chopping off the high bits.
+    if (FromASBitSize < ToASBitSize)
+      return 0;
+    return ToASBitSize;
+  }
+
   virtual bool
   canHaveNonUndefGlobalInitializerInAddressSpace(unsigned AS) const {
     return AS == 0;
