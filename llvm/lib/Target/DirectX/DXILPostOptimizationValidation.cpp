@@ -53,7 +53,6 @@ static ResourceClass toResourceClass(dxbc::RootParameterType Type) {
     return ResourceClass::CBuffer;
   case dxbc::RootParameterType::DescriptorTable:
     llvm_unreachable("DescriptorTable is not convertible to ResourceClass");
-    break;
   }
   llvm_unreachable("Unknown RootParameterType");
 }
@@ -160,7 +159,7 @@ static void validateRootSignature(Module &M,
 
   hlsl::BindingInfoBuilder Builder;
   dxbc::ShaderVisibility Visibility = tripleToVisibility(MMI.ShaderProfile);
-  SmallVector<char> IDs;
+
   for (const mcdxbc::RootParameterInfo &ParamInfo : RSD.ParametersContainer) {
     dxbc::ShaderVisibility ParamVisibility =
         static_cast<dxbc::ShaderVisibility>(ParamInfo.Header.ShaderVisibility);
@@ -175,7 +174,7 @@ static void validateRootSignature(Module &M,
           RSD.ParametersContainer.getConstant(ParamInfo.Location);
       Builder.trackBinding(dxil::ResourceClass::CBuffer, Const.RegisterSpace,
                            Const.ShaderRegister, Const.ShaderRegister,
-                           &IDs.emplace_back());
+                           &ParamInfo);
       break;
     }
 
@@ -187,7 +186,7 @@ static void validateRootSignature(Module &M,
       Builder.trackBinding(toResourceClass(static_cast<dxbc::RootParameterType>(
                                ParamInfo.Header.ParameterType)),
                            Desc.RegisterSpace, Desc.ShaderRegister,
-                           Desc.ShaderRegister, &IDs.emplace_back());
+                           Desc.ShaderRegister, &ParamInfo);
 
       break;
     }
@@ -204,7 +203,7 @@ static void validateRootSignature(Module &M,
             toResourceClass(
                 static_cast<dxbc::DescriptorRangeType>(Range.RangeType)),
             Range.RegisterSpace, Range.BaseShaderRegister, UpperBound,
-            &IDs.emplace_back());
+            &ParamInfo);
       }
       break;
     }
@@ -213,8 +212,7 @@ static void validateRootSignature(Module &M,
 
   for (const dxbc::RTS0::v1::StaticSampler &S : RSD.StaticSamplers)
     Builder.trackBinding(dxil::ResourceClass::Sampler, S.RegisterSpace,
-                         S.ShaderRegister, S.ShaderRegister,
-                         &IDs.emplace_back());
+                         S.ShaderRegister, S.ShaderRegister, &S);
 
   Builder.calculateBindingInfo(
       [&M](const llvm::hlsl::BindingInfoBuilder &Builder,
