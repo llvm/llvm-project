@@ -93,10 +93,10 @@ public:
       : Type(Type), Register(Register), Space(Space) {}
 
   void log(raw_ostream &OS) const override {
-    OS << "Cannot bind resource of type "
+    OS << "Cannot append range with implicit lower bound after an unbounded "
+          "range "
        << getResourceClassName(toResourceClass(Type))
-       << "(register=" << Register << ", space=" << Space
-       << "), it exceeds the maximum allowed register value.";
+       << "(register=" << Register << ", space=" << Space << ").";
   }
 
   std::error_code convertToErrorCode() const override {

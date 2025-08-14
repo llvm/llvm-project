@@ -1,5 +1,5 @@
 ; RUN: not opt -S -passes='dxil-post-optimization-validation' -mtriple=dxil-pc-shadermodel6.6-compute %s 2>&1 | FileCheck %s
-; CHECK: error: Cannot bind resource of type UAV(register=4294967295, space=0), it exceeds the maximum allowed register value.
+; CHECK: error: Cannot append range with implicit lower bound after an unbounded range UAV(register=4294967295, space=0).
 @TB.str = private unnamed_addr constant [3 x i8] c"TB\00", align 1
 
 define void @CSMain() "hlsl.shader"="compute" {
@@ -13,4 +13,3 @@ entry:
 !1 = !{!3}
 !3 = !{!"DescriptorTable", i32 0, !4}
 !4 = !{!"UAV", i32 100, i32 4294967295, i32 0, i32 -1, i32 0}
-
