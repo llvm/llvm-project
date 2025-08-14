@@ -62,10 +62,10 @@ class TestFrameVarDILLiterals(TestBase):
             ],
         )
 
-        # These check only apply if `int` and `long` have different sizes
+        # These check only apply if adjacent types have different sizes
         if int_size < long_size:
-            # 0xFFFFFFFF and 4294967295 will have different types even though
-            # the numeric value is the same
+            # For exmaple, 0xFFFFFFFF and 4294967295 will have different types
+            # even though the numeric value is the same
             hex_str = "0x" + "F" * int_size * 2
             dec_str = str(int(hex_str, 16))
             self.assert_literal_type(frame, hex_str, lldb.eBasicTypeUnsignedInt)
@@ -74,6 +74,17 @@ class TestFrameVarDILLiterals(TestBase):
             ulong_str = long_str + "u"
             self.assert_literal_type(frame, long_str, lldb.eBasicTypeLong)
             self.assert_literal_type(frame, ulong_str, lldb.eBasicTypeUnsignedLong)
+        if long_size < longlong_size:
+            hex_str = "0x" + "F" * long_size * 2
+            dec_str = str(int(hex_str, 16))
+            self.assert_literal_type(frame, hex_str, lldb.eBasicTypeUnsignedLong)
+            self.assert_literal_type(frame, dec_str, lldb.eBasicTypeLongLong)
+            longlong_str = "0x" + "F" * long_size * 2 + "F"
+            ulonglong_str = longlong_str + "u"
+            self.assert_literal_type(frame, longlong_str, lldb.eBasicTypeLongLong)
+            self.assert_literal_type(
+                frame, ulonglong_str, lldb.eBasicTypeUnsignedLongLong
+            )
 
     def assert_literal_type(self, frame, literal, expected_type):
         value = frame.GetValueForVariablePath(literal)
