@@ -5033,7 +5033,8 @@ struct AAKernelInfoCallSite : AAKernelInfo {
       case OMPRTL___kmpc_for_static_loop_8:
       case OMPRTL___kmpc_for_static_loop_8u:
         // Parallel regions might be reached by these calls, as they take a
-        // callback argument potentially arbitrary user-provided code.
+        // callback argument potentially containing arbitrary user-provided
+        // code.
         ReachedUnknownParallelRegions.insert(&CB);
         // TODO: The presence of these calls on their own does not prevent a
         // kernel from being SPMD-izable. We mark it as such because we need
