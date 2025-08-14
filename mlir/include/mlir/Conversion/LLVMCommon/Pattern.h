@@ -183,10 +183,20 @@ protected:
                          ArrayRef<Value> sizes, ArrayRef<Value> strides,
                          ConversionPatternRewriter &rewriter) const;
 
+  /// Copies the given unranked memory descriptor to heap-allocated memory (if
+  /// toDynamic is true) or to stack-allocated memory (otherwise) and returns
+  /// the new descriptor. Also frees the previously used memory (that is assumed
+  /// to be heap-allocated) if toDynamic is false. Returns a "null" SSA value
+  /// on failure.
+  Value copyUnrankedDescriptor(OpBuilder &builder, Location loc,
+                               UnrankedMemRefType memRefType, Value operand,
+                               bool toDynamic) const;
+
   /// Copies the memory descriptor for any operands that were unranked
   /// descriptors originally to heap-allocated memory (if toDynamic is true) or
-  /// to stack-allocated memory (otherwise). Also frees the previously used
-  /// memory (that is assumed to be heap-allocated) if toDynamic is false.
+  /// to stack-allocated memory (otherwise). The vector of descriptors is
+  /// updated in place. Also frees the previously used memory (that is assumed
+  /// to be heap-allocated) if toDynamic is false.
   LogicalResult copyUnrankedDescriptors(OpBuilder &builder, Location loc,
                                         TypeRange origTypes,
                                         SmallVectorImpl<Value> &operands,
