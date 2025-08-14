@@ -1203,6 +1203,10 @@ bool HasVectorSubscript(const Expr<SomeType> &expr) {
   return HasVectorSubscriptHelper{}(expr);
 }
 
+bool IsArraySection(const Expr<SomeType> &expr) {
+  return expr.Rank() > 0 && IsVariable(expr) && !UnwrapWholeSymbolDataRef(expr);
+}
+
 // HasConstant()
 struct HasConstantHelper : public AnyTraverse<HasConstantHelper, bool,
                                /*TraverseAssocEntityDetails=*/false> {

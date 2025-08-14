@@ -1124,6 +1124,9 @@ extern template semantics::UnorderedSymbolSet CollectCudaSymbols(
 // Predicate: does a variable contain a vector-valued subscript (not a triplet)?
 bool HasVectorSubscript(const Expr<SomeType> &);
 
+// Predicate: is an expression an expression a section of an array?
+bool IsArraySection(const Expr<SomeType> &expr);
+
 // Predicate: does an expression contain constant?
 bool HasConstant(const Expr<SomeType> &);
 
