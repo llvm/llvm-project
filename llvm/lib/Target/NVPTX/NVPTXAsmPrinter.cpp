@@ -414,17 +414,6 @@ void NVPTXAsmPrinter::emitKernelFunctionDirectives(const Function &F,
   // the reqntid directive, and set the unspecified ones to 1.
   // If none of Reqntid* is specified, don't output reqntid directive.
   const auto ReqNTID = getReqNTID(F);
-
-  const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
-  const auto *STI = static_cast<const NVPTXSubtarget *>(NTM.getSubtargetImpl());
-
-  const bool BlocksAreClusters = F.hasFnAttribute("nvvm.blocksareclusters");
-  if (BlocksAreClusters && STI->getSmVersion() >= 90) {
-    if (ReqNTID.empty() || getClusterDim(F).empty())
-      report_fatal_error("blocksareclusters requires reqntid and cluster_dim");
-    O << ".blocksareclusters\n";
-  }
-
   if (!ReqNTID.empty())
     O << formatv(".reqntid {0:$[, ]}\n",
                  make_range(ReqNTID.begin(), ReqNTID.end()));
@@ -442,8 +431,12 @@ void NVPTXAsmPrinter::emitKernelFunctionDirectives(const Function &F,
 
   // .maxclusterrank directive requires SM_90 or higher, make sure that we
   // filter it out for lower SM versions, as it causes a hard ptxas crash.
+  const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
+  const auto *STI = static_cast<const NVPTXSubtarget *>(NTM.getSubtargetImpl());
+
   if (STI->getSmVersion() >= 90) {
     const auto ClusterDim = getClusterDim(F);
+    const bool BlocksAreClusters = hasBlocksAreClusters(F);
 
     if (!ClusterDim.empty()) {
 
@@ -463,6 +456,19 @@ void NVPTXAsmPrinter::emitKernelFunctionDirectives(const Function &F,
                "should be 0 as well");
       }
     }
+
+    if (BlocksAreClusters) {
+      LLVMContext &Ctx = F.getContext();
+      if (ReqNTID.empty() || ClusterDim.empty()) {
+        Ctx.emitError(
+            "blocksareclusters requires reqntid and cluster_dim attributes");
+      } else if (STI->getPTXVersion() < 90) {
+        Ctx.emitError("blocksareclusters requires PTX version >= 9.0");
+      } else {
+        O << ".blocksareclusters\n";
+      }
+    }
+
     if (const auto Maxclusterrank = getMaxClusterRank(F))
       O << ".maxclusterrank " << *Maxclusterrank << "\n";
   }
