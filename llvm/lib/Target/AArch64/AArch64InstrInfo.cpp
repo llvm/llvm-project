@@ -5920,7 +5920,7 @@ static MCCFIInstruction createDefCFAExpression(const TargetRegisterInfo &TRI,
   // Build up the expression (Reg + NumBytes + VG * NumVGScaledBytes)
   SmallString<64> Expr;
   unsigned DwarfReg = TRI.getDwarfRegNum(Reg, true);
-  assert(DwarfReg >= 0 && DwarfReg <= 31 && "DwarfReg out of bounds (0..31)");
+  assert(DwarfReg <= 31 && "DwarfReg out of bounds (0..31)");
   // Reg + NumBytes
   Expr.push_back(dwarf::DW_OP_breg0 + DwarfReg);
   appendLEB128<LEB128Sign::Signed>(Expr, NumBytes);

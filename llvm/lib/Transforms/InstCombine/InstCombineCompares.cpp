@@ -1320,6 +1320,35 @@ Instruction *InstCombinerImpl::foldICmpWithZero(ICmpInst &Cmp) {
   return nullptr;
 }
 
+/// Fold icmp eq (num + mask) & ~mask, num
+///      to
+///      icmp eq (and num, mask), 0
+/// Where mask is a low bit mask.
+Instruction *InstCombinerImpl::foldIsMultipleOfAPowerOfTwo(ICmpInst &Cmp) {
+  Value *Num;
+  CmpPredicate Pred;
+  const APInt *Mask, *Neg;
+
+  if (!match(&Cmp,
+             m_c_ICmp(Pred, m_Value(Num),
+                      m_OneUse(m_c_And(m_OneUse(m_c_Add(m_Deferred(Num),
+                                                        m_LowBitMask(Mask))),
+                                       m_APInt(Neg))))))
+    return nullptr;
+
+  if (*Neg != ~*Mask)
+    return nullptr;
+
+  if (!ICmpInst::isEquality(Pred))
+    return nullptr;
+
+  // Create new icmp eq (num & mask), 0
+  auto *NewAnd = Builder.CreateAnd(Num, *Mask);
+  auto *Zero = Constant::getNullValue(Num->getType());
+
+  return new ICmpInst(Pred, NewAnd, Zero);
+}
+
 /// Fold icmp Pred X, C.
 /// TODO: This code structure does not make sense. The saturating add fold
 /// should be moved to some other helper and extended as noted below (it is also
@@ -7642,6 +7671,9 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     return Res;
 
   if (Instruction *Res = foldICmpUsingKnownBits(I))
+    return Res;
+
+  if (Instruction *Res = foldIsMultipleOfAPowerOfTwo(I))
     return Res;
 
   // Test if the ICmpInst instruction is used exclusively by a select as

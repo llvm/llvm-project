@@ -47,6 +47,30 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
+_LIBCPP_DIAGNOSTIC_PUSH
+// GCC complains about the backslashes at the end, see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=121528
+_LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wcomment")
+// __tree is a red-black-tree implementation used for the associative containers (i.e. (multi)map/set). It stores
+// - (1) a pointer to the node with the smallest (i.e. leftmost) element, namely __begin_node_
+// - (2) the number of nodes in the tree, namely __size_
+// - (3) a pointer to the root of the tree, namely __end_node_
+//
+// Storing (1) and (2) is required to allow for constant time lookups. A tree looks like this in memory:
+//
+//      __end_node_
+//           |
+//          root
+//         /    \
+//       l1       r1
+//      /  \     /  \
+//    ...  ... ...  ...
+//
+// All nodes except __end_node_ have a __left_ and __right_ pointer as well as a __parent_ pointer.
+// __end_node_ only contains a __left_ pointer, which points to the root of the tree.
+// This layout allows for iteration through the tree without a need for special handling of the end node. See
+// __tree_next_iter and __tree_prev_iter for more details.
+_LIBCPP_DIAGNOSTIC_POP
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Pointer>
@@ -167,6 +191,11 @@ _LIBCPP_HIDE_FROM_ABI _NodePtr __tree_next(_NodePtr __x) _NOEXCEPT {
   return __x->__parent_unsafe();
 }
 
+// __tree_next_iter and __tree_prev_iter implement iteration through the tree. The order is as follows:
+// left sub-tree -> node -> right sub-tree. When the right-most node of a sub-tree is reached, we walk up the tree until
+// we find a node where we were in the left sub-tree. We are _always_ in a left sub-tree, since the __end_node_ points
+// to the actual root of the tree through a __left_ pointer. Incrementing the end() pointer is UB, so we can assume that
+// never happens.
 template <class _EndNodePtr, class _NodePtr>
 inline _LIBCPP_HIDE_FROM_ABI _EndNodePtr __tree_next_iter(_NodePtr __x) _NOEXCEPT {
   _LIBCPP_ASSERT_INTERNAL(__x != nullptr, "node shouldn't be null");

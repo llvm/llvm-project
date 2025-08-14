@@ -3130,7 +3130,8 @@ InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
     Type *PtrTy = toVectorTy(Ptr->getType(), VF);
     assert(!Reverse &&
            "Inconsecutive memory access should not have the order.");
-    return Ctx.TTI.getAddressComputationCost(PtrTy) +
+    return Ctx.TTI.getAddressComputationCost(PtrTy, nullptr, nullptr,
+                                             Ctx.CostKind) +
            Ctx.TTI.getGatherScatterOpCost(Opcode, Ty, Ptr, IsMasked, Alignment,
                                           Ctx.CostKind, &Ingredient);
   }

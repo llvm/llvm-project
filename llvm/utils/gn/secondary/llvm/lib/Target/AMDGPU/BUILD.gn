@@ -201,7 +201,6 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPUTargetObjectFile.cpp",
     "AMDGPUTargetTransformInfo.cpp",
     "AMDGPUUnifyDivergentExitNodes.cpp",
-    "AMDGPUUnifyMetadata.cpp",
     "AMDGPUWaitSGPRHazards.cpp",
     "GCNCreateVOPD.cpp",
     "GCNDPPCombine.cpp",

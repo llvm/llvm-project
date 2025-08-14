@@ -439,10 +439,6 @@ struct AMDGPUPrintfRuntimeBindingPass
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
-struct AMDGPUUnifyMetadataPass : PassInfoMixin<AMDGPUUnifyMetadataPass> {
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-};
-
 void initializeSIOptimizeExecMaskingPreRALegacyPass(PassRegistry &);
 extern char &SIOptimizeExecMaskingPreRAID;
 
