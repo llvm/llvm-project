@@ -29,6 +29,8 @@ namespace mlir {
 namespace linalg {
 class IteratorTypeAttr;
 class LinalgOp;
+class ConvolutionOpInterface;
+class GroupedConvolutionOpInterface;
 class GenericOp;
 
 namespace detail {
@@ -151,6 +153,34 @@ std::optional<Value> isaFillOpInterface(GenericOp genericOp);
 
 namespace detail {
 
+// Common implementations for ConvolutionOpInterface
+namespace convolution_impl {
+// Returns strides as a vector.
+SmallVector<int64_t, 2> getStrides(ConvolutionOpInterface op);
+// Returns dilations as a vector.
+SmallVector<int64_t, 2> getDilations(ConvolutionOpInterface op);
+// Region builder for basic convolution
+void regionBuilder(ImplicitLocOpBuilder &b, Block &block,
+                   ArrayRef<NamedAttribute> attrs);
+// Region builder for basic quantized convolution
+void quantizedRegionBuilder(ImplicitLocOpBuilder &b, Block &block,
+                            ArrayRef<NamedAttribute> attrs);
+ParseResult parse(OpAsmParser &parser, OperationState &result,
+                  bool isQuantized = false);
+void print(LinalgOp op, OpAsmPrinter &p);
+} // namespace convolution_impl
+
+// Common implementations for GroupedConvolutionOpInterface
+namespace grouped_convolution_impl {
+int64_t getSpatialRank(GroupedConvolutionOpInterface op);
+ArrayAttr createCommonIndexingMaps(
+    MLIRContext *ctx, int64_t numSpatial,
+    const SmallVector<SmallVector<utils::GroupedConvDim>> &layouts,
+    const SmallVectorImpl<int64_t> &strides,
+    const SmallVectorImpl<int64_t> &dilations);
+ArrayAttr getIteratorTypes(GroupedConvolutionOpInterface op);
+} // namespace grouped_convolution_impl
+
 /// Returns true if the block contains a contraction of the following form:
 ///
 ///   %0 = <elemwise>(permutation-of(cu(block-argument-0),
@@ -209,6 +239,9 @@ LogicalResult verifyContractionInterface(Operation *op);
 
 /// Verify that `op` conforms to the ConvolutionOpInterface.
 LogicalResult verifyConvolutionInterface(Operation *op);
+
+/// Verify that `op` conforms to the GroupedConvolutionOpInterface.
+LogicalResult verifyGroupedConvolutionInterface(Operation *op);
 
 /// Verify that `op` conforms to the FillOpInterface.
 LogicalResult verifyFillInterface(Operation *op);
