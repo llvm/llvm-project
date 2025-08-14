@@ -1213,8 +1213,9 @@ def XeGPU_StoreMatrixOp: XeGPU_Op<"store_matrix", [MemoryEffects<[MemWrite]>,
 def XeGPU_MatrixDescSubviewOp: XeGPU_Op<"matrix_desc_subview",
           [Pure, ViewLikeOpInterface, AllElementTypesMatch<["src", "res"]>]> {
   let description = [{
-    Creates a subview of a matrix descriptor. The resulting matrix descriptor
-    may have a lower rank than the source, in which case the dimensions are left-aligned.
+    Creates a subview of a matrix descriptor. The resulting matrix descriptor can have
+    a lower rank than the source; in this case, the result dimensions correspond to the
+    higher-order dimensions of the source matrix descriptor.
 
     Arguments:
      - `src` : a matrix descriptor.

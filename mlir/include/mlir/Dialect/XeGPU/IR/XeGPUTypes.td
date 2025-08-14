@@ -207,6 +207,19 @@ def XeGPU_MatrixDesc: XeGPUTypeDef<"MatrixDesc", "matrix_desc", [ShapedTypeInter
     MatrixDesc represents a block of data stored in shared local memory.
     By default, unless a layout attribute is provided, the data is stored
     contiguously in row-major order within the region.
+
+    Examples:
+    ```mlir
+    // A matrix of data stored in column-major order.
+    !xegpu.matrix_desc<128x128xf16, #xegpu.mem_layout<stride = [1, 128]>>
+
+    // A matrix of data stored in a blocked layout. Elements within the same block
+    // are stored contiguously in memory. Blocks are stored in row-major order.
+    !xegpu.matrix_desc<128x128xf16, #xegpu.mem_layout<block = [8, 8]>>
+
+    // A matrix of data stored in column-major order with blocked layout.
+    !xegpu.matrix_desc<128x128xf16, #xegpu.mem_layout<stride = [1, 128], block = [8, 8]>>
+    ```
   }];
   let parameters = (ins ArrayRefParameter<"int64_t">: $shape,
                         "mlir::Type": $elementType,
