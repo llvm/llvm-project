@@ -84,3 +84,71 @@ define i32 @test3_already_optimal(i32 %x, i32 %y, i32 %z) {
   %not = xor i32 %xor, -1
   ret i32 %not
 }
+; Negative Tests
+; Test with non-bitwise operation (should not transform - add/sub not supported)
+define i32 @negative_non_bitwise_add(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @negative_non_bitwise_add(
+; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], [[Z:%.*]]
+; CHECK-NEXT:    ret i32 [[ADD2]]
+;
+  %add1 = add i32 %x, %y
+  %add2 = add i32 %add1, %z
+  ret i32 %add2
+}
+; Test with only 2 variables (should not transform - needs exactly 3 variables)
+define i32 @negative_two_variables(i32 %x, i32 %y) {
+; CHECK-LABEL: @negative_two_variables(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[AND]], -1
+; CHECK-NEXT:    ret i32 [[NOT]]
+;
+  %and = and i32 %x, %y
+  %not = xor i32 %and, -1
+  ret i32 %not
+}
+; Test with 4 variables (should not transform - needs exactly 3 variables)
+define i32 @negative_four_variables(i32 %x, i32 %y, i32 %z, i32 %w) {
+; CHECK-LABEL: @negative_four_variables(
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[Z:%.*]], [[W:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[AND1]], [[AND2]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %and1 = and i32 %x, %y
+  %and2 = and i32 %z, %w
+  %or = or i32 %and1, %and2
+  ret i32 %or
+}
+; Test with simple 2-level expression (should not transform - not complex enough)
+define i32 @negative_simple_expression(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @negative_simple_expression(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[AND]], [[Z:%.*]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %and = and i32 %x, %y
+  %or = or i32 %and, %z
+  ret i32 %or
+}
+; Test with instructions in different basic blocks (should not transform)
+define i32 @negative_different_basic_blocks(i32 %x, i32 %y, i32 %z, i1 %cond) {
+; CHECK-LABEL: @negative_different_basic_blocks(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK:       if.true:
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[AND1]], [[Z:%.*]]
+; CHECK-NEXT:    ret i32 [[AND2]]
+; CHECK:       if.false:
+; CHECK-NEXT:    ret i32 [[AND1]]
+;
+entry:
+  %and1 = and i32 %x, %y
+  br i1 %cond, label %if.true, label %if.false
+if.true:
+  %and2 = and i32 %and1, %z
+  ret i32 %and2
+if.false:
+  ret i32 %and1
+}
