@@ -274,7 +274,10 @@ CodeExtractor::CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
       Suffix(Suffix), ArgsInZeroAddressSpace(ArgsInZeroAddressSpace),
       CustomArgAllocatorCB(CustomArgAllocatorCB),
       DeallocationBlock(DeallocationBlock),
-      CustomArgDeallocatorCB(CustomArgDeallocatorCB) {}
+      CustomArgDeallocatorCB(CustomArgDeallocatorCB) {
+  assert((!CustomArgDeallocatorCB || CustomArgAllocatorCB) &&
+         "custom deallocator only allowed if a custom allocator is provided");
+}
 
 /// definedInRegion - Return true if the specified value is defined in the
 /// extracted region.
