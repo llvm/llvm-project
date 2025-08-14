@@ -1678,7 +1678,7 @@ auto HvxIdioms::matchFxpMul(Instruction &In) const -> std::optional<FxpOp> {
   };
 
   uint64_t Qn = 0;
-  if (Value * T; match(Exp, m_Shr(m_Value(T), m_ConstantInt(Qn)))) {
+  if (Value *T; match(Exp, m_Shr(m_Value(T), m_ConstantInt(Qn)))) {
     Op.Frac = Qn;
     Exp = T;
   } else {
@@ -1690,7 +1690,7 @@ auto HvxIdioms::matchFxpMul(Instruction &In) const -> std::optional<FxpOp> {
 
   // Check if there is rounding added.
   uint64_t CV;
-  if (Value * T;
+  if (Value *T;
       Op.Frac > 0 && match(Exp, m_Add(m_Value(T), m_ConstantInt(CV)))) {
     if (CV != 0 && !isPowerOf2_64(CV))
       return std::nullopt;
