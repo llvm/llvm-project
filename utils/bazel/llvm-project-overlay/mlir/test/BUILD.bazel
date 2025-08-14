@@ -47,6 +47,7 @@ expand_template(
         "@MLIR_ENABLE_SPIRV_CPU_RUNNER@": "0",
         "@MLIR_ENABLE_VULKAN_RUNNER@": "0",
         "@MLIR_ENABLE_BINDINGS_PYTHON@": "0",
+        "@MLIR_ENABLE_XEVM_CONVERSIONS@": "0",
         "@MLIR_RUN_AMX_TESTS@": "0",
         "@MLIR_RUN_ARM_SVE_TESTS@": "0",
         "@MLIR_RUN_ARM_SME_TESTS@": "0",
