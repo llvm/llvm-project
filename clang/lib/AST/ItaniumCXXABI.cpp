@@ -42,10 +42,10 @@ namespace {
 ///
 /// Returns the name of anonymous union VarDecl or nullptr if it is not found.
 static const IdentifierInfo *findAnonymousUnionVarDeclName(const VarDecl& VD) {
-  const RecordType *RT = VD.getType()->getAs<RecordType>();
-  assert(RT && "type of VarDecl is expected to be RecordType.");
-  assert(RT->getDecl()->isUnion() && "RecordType is expected to be a union.");
-  if (const FieldDecl *FD = RT->getDecl()->findFirstNamedDataMember()) {
+  const auto *RT = VD.getType()->castAs<RecordType>();
+  const RecordDecl *RD = RT->getOriginalDecl()->getDefinitionOrSelf();
+  assert(RD->isUnion() && "RecordType is expected to be a union.");
+  if (const FieldDecl *FD = RD->findFirstNamedDataMember()) {
     return FD->getIdentifier();
   }
 

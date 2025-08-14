@@ -77,6 +77,9 @@ bool InterpState::reportOverflow(const Expr *E, const llvm::APSInt &Value) {
 void InterpState::deallocate(Block *B) {
   assert(B);
   assert(!B->isDynamic());
+  assert(!B->isStatic());
+  assert(!B->isDead());
+
   // The block might have a pointer saved in a field in its data
   // that points to the block itself. We call the dtor first,
   // which will destroy all the data but leave InlineDescriptors

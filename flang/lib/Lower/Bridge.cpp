@@ -4827,7 +4827,9 @@ private:
 
   void genCUDADataTransfer(fir::FirOpBuilder &builder, mlir::Location loc,
                            const Fortran::evaluate::Assignment &assign,
-                           hlfir::Entity &lhs, hlfir::Entity &rhs) {
+                           hlfir::Entity &lhs, hlfir::Entity &rhs,
+                           bool isWholeAllocatableAssignment,
+                           bool keepLhsLengthInAllocatableAssignment) {
     bool lhsIsDevice = Fortran::evaluate::HasCUDADeviceAttrs(assign.lhs);
     bool rhsIsDevice = Fortran::evaluate::HasCUDADeviceAttrs(assign.rhs);
 
@@ -4892,6 +4894,28 @@ private:
 
     // host = device
     if (!lhsIsDevice && rhsIsDevice) {
+      if (Fortran::lower::isTransferWithConversion(rhs)) {
+        mlir::OpBuilder::InsertionGuard insertionGuard(builder);
+        auto elementalOp =
+            mlir::dyn_cast<hlfir::ElementalOp>(rhs.getDefiningOp());
+        assert(elementalOp && "expect elemental op");
+        auto designateOp =
+            *elementalOp.getBody()->getOps<hlfir::DesignateOp>().begin();
+        builder.setInsertionPoint(elementalOp);
+        // Create a temp to transfer the rhs before applying the conversion.
+        hlfir::Entity entity{designateOp.getMemref()};
+        auto [temp, cleanup] = hlfir::createTempFromMold(loc, builder, entity);
+        auto transferKindAttr = cuf::DataTransferKindAttr::get(
+            builder.getContext(), cuf::DataTransferKind::DeviceHost);
+        cuf::DataTransferOp::create(builder, loc, designateOp.getMemref(), temp,
+                                    /*shape=*/mlir::Value{}, transferKindAttr);
+        designateOp.getMemrefMutable().assign(temp);
+        builder.setInsertionPointAfter(elementalOp);
+        hlfir::AssignOp::create(builder, loc, elementalOp, lhs,
+                                isWholeAllocatableAssignment,
+                                keepLhsLengthInAllocatableAssignment);
+        return;
+      }
       auto transferKindAttr = cuf::DataTransferKindAttr::get(
           builder.getContext(), cuf::DataTransferKind::DeviceHost);
       cuf::DataTransferOp::create(builder, loc, rhsVal, lhsVal, shape,
@@ -5039,7 +5063,9 @@ private:
       hlfir::Entity rhs = evaluateRhs(localStmtCtx);
       hlfir::Entity lhs = evaluateLhs(localStmtCtx);
       if (isCUDATransfer && !hasCUDAImplicitTransfer)
-        genCUDADataTransfer(builder, loc, assign, lhs, rhs);
+        genCUDADataTransfer(builder, loc, assign, lhs, rhs,
+                            isWholeAllocatableAssignment,
+                            keepLhsLengthInAllocatableAssignment);
       else
         hlfir::AssignOp::create(builder, loc, rhs, lhs,
                                 isWholeAllocatableAssignment,
