@@ -32,8 +32,8 @@ void f2(id y) {
 void f3(id y) {
   a: b: for (id x in y) {
     (void) ^{
-      break a; // expected-error {{use of undeclared label 'a'}}
-      continue b; // expected-error {{use of undeclared label 'b'}}
+      break a; // expected-error {{'break' label does not name an enclosing loop or 'switch'}}
+      continue b; // expected-error {{'continue' label does not name an enclosing loop}}
     };
   }
 }

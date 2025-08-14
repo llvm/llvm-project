@@ -99,6 +99,7 @@ void Scope::Init(Scope *parent, unsigned flags) {
   UsingDirectives.clear();
   Entity = nullptr;
   ErrorTrap.reset();
+  LoopOrSwitchNames = {};
   NRVO = std::nullopt;
 }
 

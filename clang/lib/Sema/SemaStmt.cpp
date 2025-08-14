@@ -3283,29 +3283,33 @@ static void CheckJumpOutOfSEHFinally(Sema &S, SourceLocation Loc,
 }
 
 Scope *FindLabeledBreakContinueScope(Sema &S, Scope *CurScope,
-                                     LabelDecl *Target, SourceLocation LabelLoc,
-                                     bool IsBreak) {
+                                     SourceLocation KWLoc, LabelDecl *Target,
+                                     SourceLocation LabelLoc, bool IsBreak) {
+  Scope* Found = nullptr;
   for (Scope* Scope = CurScope; Scope; Scope = Scope->getParent()) {
-    if (Scope->isFunctionScope()) {
-      S.Diag(LabelLoc, diag::err_break_continue_label_not_found) << IsBreak;
+    if (Scope->isFunctionScope())
+      break;
+    if (Scope->isOpenACCComputeConstructScope()) {
+      S.Diag(KWLoc, diag::err_acc_branch_in_out_compute_construct)
+        << /*branch*/ 0 << /*out of */ 0;
       return nullptr;
     }
-
-    if (Scope->getLoopOrSwitchName() != Target)
+    if (!llvm::is_contained(Scope->getLoopOrSwitchNames(), Target))
       continue;
+    if (Scope->isBreakOrContinueScope())
+      Found = Scope;
+    break;
+  }
 
-    if (!Scope->isBreakOrContinueScope()) {
-      S.Diag(LabelLoc, diag::err_break_continue_label_not_found) << IsBreak;
-      return nullptr;
-    }
-
-    if (!IsBreak && !Scope->isContinueScope()) {
+  if (Found) {
+    if (!IsBreak && !Found->isContinueScope()) {
       S.Diag(LabelLoc, diag::err_continue_switch);
       return nullptr;
     }
-
-    return Scope;
+    return Found;
   }
+
+  S.Diag(LabelLoc, diag::err_break_continue_label_not_found) << IsBreak;
   return nullptr;
 }
 
@@ -3313,7 +3317,7 @@ StmtResult Sema::ActOnContinueStmt(SourceLocation ContinueLoc, Scope *CurScope,
                                    LabelDecl *Target, SourceLocation LabelLoc) {
   Scope *S;
   if (Target) {
-    S = FindLabeledBreakContinueScope(*this, CurScope, Target, LabelLoc,
+    S = FindLabeledBreakContinueScope(*this, CurScope, ContinueLoc, Target, LabelLoc,
                                       /*IsBreak=*/false);
     if (!S)
       return StmtError();
@@ -3349,7 +3353,7 @@ StmtResult Sema::ActOnBreakStmt(SourceLocation BreakLoc, Scope *CurScope,
                                 LabelDecl *Target, SourceLocation LabelLoc) {
   Scope *S;
   if (Target) {
-    S = FindLabeledBreakContinueScope(*this, CurScope, Target, LabelLoc,
+    S = FindLabeledBreakContinueScope(*this, CurScope, BreakLoc, Target, LabelLoc,
                                       /*IsBreak=*/true);
     if (!S)
       return StmtError();

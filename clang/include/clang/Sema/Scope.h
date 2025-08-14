@@ -257,7 +257,7 @@ private:
 
   /// If this scope belongs to a loop or switch statement, the label that names
   /// it, if any.
-  LabelDecl *LoopOrSwitchName = nullptr;
+  ArrayRef<LabelDecl *> LoopOrSwitchNames;
 
   void setFlags(Scope *Parent, unsigned F);
 
@@ -273,11 +273,14 @@ public:
   void setFlags(unsigned F) { setFlags(getParent(), F); }
 
   /// Get the loop name of this scope.
-  LabelDecl *getLoopOrSwitchName() const { return LoopOrSwitchName; }
-  void setLoopOrSwitchName(LabelDecl *Name) {
+  ArrayRef<LabelDecl *> getLoopOrSwitchNames() const {
+    return LoopOrSwitchNames;
+  }
+
+  void setLoopOrSwitchNames(ArrayRef<LabelDecl *> Names) {
     assert((Flags & BreakScope || Flags & ContinueScope) &&
            "not a loop or switch");
-    LoopOrSwitchName = Name;
+    LoopOrSwitchNames = Names;
   }
 
   /// isBlockScope - Return true if this scope correspond to a closure.

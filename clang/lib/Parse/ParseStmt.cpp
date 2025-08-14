@@ -37,14 +37,14 @@ using namespace clang;
 //===----------------------------------------------------------------------===//
 
 StmtResult Parser::ParseStatement(SourceLocation *TrailingElseLoc,
-                                  ParsedStmtContext StmtCtx, LabelDecl *Name) {
+                                  ParsedStmtContext StmtCtx, SmallVectorImpl<LabelDecl *> *LoopOrSwitchNames) {
   StmtResult Res;
 
   // We may get back a null statement if we found a #pragma. Keep going until
   // we get an actual statement.
   StmtVector Stmts;
   do {
-    Res = ParseStatementOrDeclaration(Stmts, StmtCtx, TrailingElseLoc, Name);
+    Res = ParseStatementOrDeclaration(Stmts, StmtCtx, TrailingElseLoc, LoopOrSwitchNames);
   } while (!Res.isInvalid() && !Res.get());
 
   return Res;
@@ -53,7 +53,7 @@ StmtResult Parser::ParseStatement(SourceLocation *TrailingElseLoc,
 StmtResult
 Parser::ParseStatementOrDeclaration(StmtVector &Stmts,
                                     ParsedStmtContext StmtCtx,
-                                    SourceLocation *TrailingElseLoc, LabelDecl *Name) {
+                                    SourceLocation *TrailingElseLoc, SmallVectorImpl<LabelDecl *> *LoopOrSwitchNames) {
 
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
 
@@ -73,7 +73,7 @@ Parser::ParseStatementOrDeclaration(StmtVector &Stmts,
     MaybeParseMicrosoftAttributes(GNUOrMSAttrs);
 
   StmtResult Res = ParseStatementOrDeclarationAfterAttributes(
-      Stmts, StmtCtx, TrailingElseLoc, CXX11Attrs, GNUOrMSAttrs, Name);
+      Stmts, StmtCtx, TrailingElseLoc, CXX11Attrs, GNUOrMSAttrs, LoopOrSwitchNames);
   MaybeDestroyTemplateIds();
 
   takeAndConcatenateAttrs(CXX11Attrs, std::move(GNUOrMSAttrs));
@@ -130,7 +130,7 @@ private:
 StmtResult Parser::ParseStatementOrDeclarationAfterAttributes(
     StmtVector &Stmts, ParsedStmtContext StmtCtx,
     SourceLocation *TrailingElseLoc, ParsedAttributes &CXX11Attrs,
-    ParsedAttributes &GNUAttrs, LabelDecl *Name) {
+    ParsedAttributes &GNUAttrs, SmallVectorImpl<LabelDecl *> *LoopOrSwitchNames) {
   const char *SemiError = nullptr;
   StmtResult Res;
   SourceLocation GNUAttributeLoc;
@@ -164,7 +164,7 @@ Retry:
       takeAndConcatenateAttrs(CXX11Attrs, std::move(GNUAttrs));
 
       // identifier ':' statement
-      return ParseLabeledStatement(CXX11Attrs, StmtCtx);
+      return ParseLabeledStatement(CXX11Attrs, StmtCtx, LoopOrSwitchNames);
     }
 
     // Look up the identifier, and typo-correct it to a keyword if it's not
@@ -278,16 +278,16 @@ Retry:
   case tok::kw_if:                  // C99 6.8.4.1: if-statement
     return ParseIfStatement(TrailingElseLoc);
   case tok::kw_switch:              // C99 6.8.4.2: switch-statement
-    return ParseSwitchStatement(TrailingElseLoc, Name);
+    return ParseSwitchStatement(TrailingElseLoc, LoopOrSwitchNames);
 
   case tok::kw_while:               // C99 6.8.5.1: while-statement
-    return ParseWhileStatement(TrailingElseLoc, Name);
+    return ParseWhileStatement(TrailingElseLoc, LoopOrSwitchNames);
   case tok::kw_do:                  // C99 6.8.5.2: do-statement
-    Res = ParseDoStatement(Name);
+    Res = ParseDoStatement(LoopOrSwitchNames);
     SemiError = "do/while";
     break;
   case tok::kw_for:                 // C99 6.8.5.3: for-statement
-    return ParseForStatement(TrailingElseLoc, Name);
+    return ParseForStatement(TrailingElseLoc, LoopOrSwitchNames);
 
   case tok::kw_goto:                // C99 6.8.6.1: goto-statement
     Res = ParseGotoStatement();
@@ -483,7 +483,7 @@ Retry:
   case tok::annot_pragma_loop_hint:
     ProhibitAttributes(CXX11Attrs);
     ProhibitAttributes(GNUAttrs);
-    return ParsePragmaLoopHint(Stmts, StmtCtx, TrailingElseLoc, CXX11Attrs, Name);
+    return ParsePragmaLoopHint(Stmts, StmtCtx, TrailingElseLoc, CXX11Attrs, LoopOrSwitchNames);
 
   case tok::annot_pragma_dump:
     ProhibitAttributes(CXX11Attrs);
@@ -679,10 +679,16 @@ static void DiagnoseLabelFollowedByDecl(Parser &P, const Stmt *SubStmt) {
   }
 }
 
-StmtResult Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
-                                         ParsedStmtContext StmtCtx) {
+StmtResult
+Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
+                              ParsedStmtContext StmtCtx,
+                              SmallVectorImpl<LabelDecl *> *LoopOrSwitchNames) {
   assert(Tok.is(tok::identifier) && Tok.getIdentifierInfo() &&
          "Not an identifier!");
+
+  SmallVector<LabelDecl *, 1> LoopOrSwitchNamesStorage;
+  if (!LoopOrSwitchNames)
+    LoopOrSwitchNames = &LoopOrSwitchNamesStorage;
 
   // [OpenMP 5.1] 2.1.3: A stand-alone directive may not be used in place of a
   // substatement in a selection statement, in place of the loop body in an
@@ -699,6 +705,7 @@ StmtResult Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
 
   LabelDecl *LD = Actions.LookupOrCreateLabel(IdentTok.getIdentifierInfo(),
                                               IdentTok.getLocation());
+  LoopOrSwitchNames->push_back(LD);
 
   // Read label attributes, if present.
   StmtResult SubStmt;
@@ -719,7 +726,7 @@ StmtResult Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
       StmtVector Stmts;
       ParsedAttributes EmptyCXX11Attrs(AttrFactory);
       SubStmt = ParseStatementOrDeclarationAfterAttributes(
-          Stmts, StmtCtx, nullptr, EmptyCXX11Attrs, TempAttrs, LD);
+          Stmts, StmtCtx, nullptr, EmptyCXX11Attrs, TempAttrs, LoopOrSwitchNames);
       if (!TempAttrs.empty() && !SubStmt.isInvalid())
         SubStmt = Actions.ActOnAttributedStmt(TempAttrs, SubStmt.get());
     }
@@ -733,7 +740,7 @@ StmtResult Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
 
   // If we've not parsed a statement yet, parse one now.
   if (SubStmt.isUnset())
-    SubStmt = ParseStatement(nullptr, StmtCtx, LD);
+    SubStmt = ParseStatement(nullptr, StmtCtx, LoopOrSwitchNames);
 
   // Broken substmt shouldn't prevent the label from being added to the AST.
   if (SubStmt.isInvalid())
@@ -1622,7 +1629,7 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
 }
 
 StmtResult Parser::ParseSwitchStatement(SourceLocation *TrailingElseLoc,
-                                        LabelDecl *Name) {
+                                        SmallVectorImpl<LabelDecl *> *LoopOrSwitchNames) {
   assert(Tok.is(tok::kw_switch) && "Not a switch stmt!");
   SourceLocation SwitchLoc = ConsumeToken();  // eat the 'switch'.
 
@@ -1688,7 +1695,8 @@ StmtResult Parser::ParseSwitchStatement(SourceLocation *TrailingElseLoc,
   // condition and a new scope for substatement in C++.
   //
   getCurScope()->AddFlags(Scope::BreakScope);
-  getCurScope()->setLoopOrSwitchName(Name);
+  if (LoopOrSwitchNames)
+    getCurScope()->setLoopOrSwitchNames(*LoopOrSwitchNames);
   ParseScope InnerScope(this, Scope::DeclScope, C99orCXX, Tok.is(tok::l_brace));
 
   // We have incremented the mangling number for the SwitchScope and the
@@ -1706,7 +1714,7 @@ StmtResult Parser::ParseSwitchStatement(SourceLocation *TrailingElseLoc,
   return Actions.ActOnFinishSwitchStmt(SwitchLoc, Switch.get(), Body.get());
 }
 
-StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc, LabelDecl *Name) {
+StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc, SmallVectorImpl<LabelDecl *> *LoopOrSwitchNames) {
   assert(Tok.is(tok::kw_while) && "Not a while stmt!");
   SourceLocation WhileLoc = Tok.getLocation();
   ConsumeToken();  // eat the 'while'.
@@ -1751,7 +1759,8 @@ StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc, LabelDec
   // combinations, so diagnose that here in OpenACC mode.
   SemaOpenACC::LoopInConstructRAII LCR{getActions().OpenACC()};
   getActions().OpenACC().ActOnWhileStmt(WhileLoc);
-  getCurScope()->setLoopOrSwitchName(Name);
+  if (LoopOrSwitchNames)
+    getCurScope()->setLoopOrSwitchNames(*LoopOrSwitchNames);
 
   // C99 6.8.5p5 - In C99, the body of the while statement is a scope, even if
   // there is no compound stmt.  C90 does not have this clause.  We only do this
@@ -1783,7 +1792,7 @@ StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc, LabelDec
   return Actions.ActOnWhileStmt(WhileLoc, LParen, Cond, RParen, Body.get());
 }
 
-StmtResult Parser::ParseDoStatement(LabelDecl *Name) {
+StmtResult Parser::ParseDoStatement(SmallVectorImpl<LabelDecl *> *LoopOrSwitchNames) {
   assert(Tok.is(tok::kw_do) && "Not a do stmt!");
   SourceLocation DoLoc = ConsumeToken();  // eat the 'do'.
 
@@ -1801,7 +1810,8 @@ StmtResult Parser::ParseDoStatement(LabelDecl *Name) {
   // combinations, so diagnose that here in OpenACC mode.
   SemaOpenACC::LoopInConstructRAII LCR{getActions().OpenACC()};
   getActions().OpenACC().ActOnDoStmt(DoLoc);
-  getCurScope()->setLoopOrSwitchName(Name);
+  if (LoopOrSwitchNames)
+    getCurScope()->setLoopOrSwitchNames(*LoopOrSwitchNames);
 
   // C99 6.8.5p5 - In C99, the body of the do statement is a scope, even if
   // there is no compound stmt.  C90 does not have this clause. We only do this
@@ -1821,7 +1831,7 @@ StmtResult Parser::ParseDoStatement(LabelDecl *Name) {
   InnerScope.Exit();
 
   // Reset this to disallow break/continue out of the condition.
-  getCurScope()->setLoopOrSwitchName(nullptr);
+  getCurScope()->setLoopOrSwitchNames(ArrayRef<LabelDecl *>{});
 
   if (Tok.isNot(tok::kw_while)) {
     if (!Body.isInvalid()) {
@@ -1884,7 +1894,7 @@ bool Parser::isForRangeIdentifier() {
   return false;
 }
 
-StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc, LabelDecl *Name) {
+StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc, SmallVectorImpl<LabelDecl *> *LoopOrSwitchNames) {
   assert(Tok.is(tok::kw_for) && "Not a for stmt!");
   SourceLocation ForLoc = ConsumeToken();  // eat the 'for'.
 
@@ -2218,7 +2228,8 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc, LabelDecl 
 
   // Set this only right before parsing the body to disallow break/continue in
   // the other parts.
-  getCurScope()->setLoopOrSwitchName(Name);
+  if (LoopOrSwitchNames)
+    getCurScope()->setLoopOrSwitchNames(*LoopOrSwitchNames);
 
   // C99 6.8.5p5 - In C99, the body of the for statement is a scope, even if
   // there is no compound stmt.  C90 does not have this clause.  We only do this
@@ -2371,7 +2382,7 @@ StmtResult Parser::ParseReturnStatement() {
 StmtResult Parser::ParsePragmaLoopHint(StmtVector &Stmts,
                                        ParsedStmtContext StmtCtx,
                                        SourceLocation *TrailingElseLoc,
-                                       ParsedAttributes &Attrs, LabelDecl *Name) {
+                                       ParsedAttributes &Attrs, SmallVectorImpl<LabelDecl *> *LoopOrSwitchNames) {
   // Create temporary attribute list.
   ParsedAttributes TempAttrs(AttrFactory);
 
@@ -2395,7 +2406,7 @@ StmtResult Parser::ParsePragmaLoopHint(StmtVector &Stmts,
 
   ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);
   StmtResult S = ParseStatementOrDeclarationAfterAttributes(
-      Stmts, StmtCtx, TrailingElseLoc, Attrs, EmptyDeclSpecAttrs, Name);
+      Stmts, StmtCtx, TrailingElseLoc, Attrs, EmptyDeclSpecAttrs, LoopOrSwitchNames);
 
   Attrs.takeAllFrom(TempAttrs);
 

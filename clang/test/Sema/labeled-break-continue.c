@@ -126,7 +126,7 @@ void f6() {
 
   d: switch (({
     break d; // expected-error {{'break' label does not name an enclosing loop or 'switch'}}
-    continue d; // expected-error {{label of 'continue' refers to a switch statement}}
+    continue d; // expected-error {{'continue' label does not name an enclosing loop}}
     1;
   })) { case 1:; }
 }
@@ -134,13 +134,13 @@ void f6() {
 void f7() {
   a: b: while (true) {
     (void) ^{
-      break a; // expected-error {{use of undeclared label 'a'}}
-      continue b; // expected-error {{use of undeclared label 'b'}}
+      break a; // expected-error {{'break' label does not name an enclosing loop or 'switch'}}
+      continue b; // expected-error {{'continue' label does not name an enclosing loop}}
     };
   }
 
   while (true) {
-    break c; // expected-error {{use of undeclared label 'c'}}
-    continue d; // expected-error {{use of undeclared label 'd'}}
+    break c; // expected-error {{'break' label does not name an enclosing loop or 'switch'}}
+    continue d; // expected-error {{'continue' label does not name an enclosing loop}}
   }
 }
