@@ -3319,8 +3319,7 @@ bool AMDGPUDAGToDAGISel::SelectVOP3ModsImpl(SDValue In, SDValue &Src,
       (VT != MVT::i32 && VT != MVT::v2i32 && VT != MVT::i64))
     return true;
 
-  ConstantSDNode *CRHS = isConstOrConstSplat(PeekSrc ? PeekSrc->getOperand(1)
-                                                     : Src->getOperand(1));
+  ConstantSDNode *CRHS = isConstOrConstSplat(PeekSrc->getOperand(1));
   if (!CRHS)
     return true;
 
