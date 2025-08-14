@@ -88,7 +88,6 @@ MCFRAGMENT_NODE_REF(MCRelaxableFragment, FT_Relaxable, mc:relaxable)
 MCFRAGMENT_NODE_REF(MCDwarfLineAddrFragment, FT_Dwarf, mc:dwarf)
 MCFRAGMENT_NODE_REF(MCDwarfCallFrameFragment, FT_DwarfFrame, mc:dwarf_frame)
 MCFRAGMENT_NODE_REF(MCCVDefRangeFragment, FT_CVDefRange, mc:cv_def_range)
-MCFRAGMENT_NODE_REF(MCPseudoProbeAddrFragment, FT_PseudoProbe, mc:presudo_pro)
 
 #undef MCFRAGMENT_NODE_REF
 #endif /* MCFRAGMENT_NODE_REF */
