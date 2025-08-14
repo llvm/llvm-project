@@ -641,7 +641,8 @@ void IRMemoryMap::WritePointerToMemory(lldb::addr_t process_address,
   error.Clear();
 
   /// Only ask the Process to fix the address if this address belongs to the
-  /// process (host allocations are stored in m_data).
+  /// process. An address belongs to the process if the Allocation contains a
+  /// non-empty m_data member.
   if (auto it = FindAllocation(process_address, 1);
       it != m_allocations.end() && it->second.m_data.GetByteSize() == 0)
     if (auto process_sp = GetProcessWP().lock())
