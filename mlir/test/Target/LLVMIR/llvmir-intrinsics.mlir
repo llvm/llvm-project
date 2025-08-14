@@ -829,7 +829,7 @@ llvm.func @coro_suspend(%arg0: i32, %arg1 : i1, %arg2 : !llvm.ptr) {
 llvm.func @coro_end(%arg0: !llvm.ptr, %arg1 : i1) {
   %none = llvm.mlir.none : !llvm.token
   // CHECK: call void @llvm.coro.end
-  llvm.intr.coro.end %arg0, %arg1, %none : (!llvm.ptr, i1, !llvm.token) -> ()
+  llvm.intr.coro.end %arg0, %arg1, %none : (!llvm.ptr, i1, !llvm.token) -> !llvm.void
   llvm.return
 }
 
