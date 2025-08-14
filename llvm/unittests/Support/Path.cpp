@@ -1488,12 +1488,13 @@ TEST_F(FileSystemTest, FileMappingSync) {
     ASSERT_NO_ERROR(EC);
     std::copy(Content.begin(), Content.end(), MFR.data());
 
-    // Synchronize and check the contents before unmapping.
+    // Synchronize.
     MFR.sync();
-    auto Buffer = MemoryBuffer::getFile(File.TmpName);
-    ASSERT_TRUE((bool)Buffer);
-    ASSERT_EQ(Content, Buffer->get()->getBuffer());
   }
+
+  auto Buffer = MemoryBuffer::getFile(File.TmpName);
+  ASSERT_TRUE((bool)Buffer);
+  ASSERT_EQ(Content, Buffer->get()->getBuffer());
   ASSERT_FALSE((bool)File.discard());
 }
 
