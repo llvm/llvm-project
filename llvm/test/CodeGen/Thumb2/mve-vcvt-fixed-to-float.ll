@@ -476,9 +476,7 @@ define arm_aapcs_vfpcc <8 x half> @vcvt_i16_14(<8 x i16> %0) {
 define arm_aapcs_vfpcc <8 x half> @vcvt_i16_15(<8 x i16> %0) {
 ; CHECK-LABEL: vcvt_i16_15:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.i16 q1, #0x200
-; CHECK-NEXT:    vcvt.f16.s16 q0, q0
-; CHECK-NEXT:    vmul.f16 q0, q0, q1
+; CHECK-NEXT:    vcvt.f16.s16 q0, q0, #15
 ; CHECK-NEXT:    bx lr
   %2 = sitofp <8 x i16> %0 to <8 x half>
   %3 = fmul ninf <8 x half> %2, <half 0xH0200, half 0xH0200, half 0xH0200, half 0xH0200, half 0xH0200, half 0xH0200, half 0xH0200, half 0xH0200>
@@ -962,9 +960,7 @@ define arm_aapcs_vfpcc <8 x half> @vcvt_u16_14(<8 x i16> %0) {
 define arm_aapcs_vfpcc <8 x half> @vcvt_u16_15(<8 x i16> %0) {
 ; CHECK-LABEL: vcvt_u16_15:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.i16 q1, #0x200
-; CHECK-NEXT:    vcvt.f16.u16 q0, q0
-; CHECK-NEXT:    vmul.f16 q0, q0, q1
+; CHECK-NEXT:    vcvt.f16.u16 q0, q0, #15
 ; CHECK-NEXT:    bx lr
   %2 = uitofp <8 x i16> %0 to <8 x half>
   %3 = fmul ninf <8 x half> %2, <half 0xH0200, half 0xH0200, half 0xH0200, half 0xH0200, half 0xH0200, half 0xH0200, half 0xH0200, half 0xH0200>

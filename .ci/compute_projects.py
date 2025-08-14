@@ -80,6 +80,7 @@ DEPENDENT_RUNTIMES_TO_TEST = {
     "clang": {"compiler-rt"},
     "clang-tools-extra": {"libc"},
     "libc": {"libc"},
+    "compiler-rt": {"compiler-rt"},
     ".ci": {"compiler-rt", "libc"},
 }
 DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG = {
@@ -100,6 +101,9 @@ EXCLUDE_WINDOWS = {
     "libc",  # No Windows Support.
     "lldb",  # TODO(issues/132800): Needs environment setup.
     "bolt",  # No Windows Support.
+    "libcxx",
+    "libcxxabi",
+    "libunwind",
 }
 
 # These are projects that we should test if the project itself is changed but
@@ -118,6 +122,9 @@ EXCLUDE_MAC = {
     "lldb",
     "openmp",
     "polly",
+    "libcxx",
+    "libcxxabi",
+    "libunwind",
 }
 
 PROJECT_CHECK_TARGETS = {

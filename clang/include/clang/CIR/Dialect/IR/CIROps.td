@@ -1061,6 +1061,21 @@ def CIR_BrOp : CIR_Op<"br",[
 }
 
 //===----------------------------------------------------------------------===//
+// LabelOp
+//===----------------------------------------------------------------------===//
+
+// The LabelOp has AlwaysSpeculatable trait in order to not to be swept
+// by canonicalizer
+def CIR_LabelOp : CIR_Op<"label", [AlwaysSpeculatable]> {
+  let description = [{
+    An identifier which may be referred by cir.goto operation
+  }];
+  let arguments = (ins StrAttr:$label);
+  let assemblyFormat = [{ $label attr-dict }];
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // UnaryOp
 //===----------------------------------------------------------------------===//
 
@@ -1688,6 +1703,49 @@ def CIR_GetGlobalOp : CIR_Op<"get_global", [
 
   let assemblyFormat = [{
     $name `:` qualified(type($addr)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// VTableAddrPointOp
+//===----------------------------------------------------------------------===//
+
+def CIR_VTableAddrPointOp : CIR_Op<"vtable.address_point", [
+  Pure, DeclareOpInterfaceMethods<SymbolUserOpInterface>
+]> {
+  let summary = "Get the vtable (global variable) address point";
+  let description = [{
+    The `vtable.address_point` operation retrieves the "effective" address
+    (address point) of a C++ virtual table. An object internal `__vptr`
+    gets initializated on top of the value returned by this operation.
+
+    `address_point.index` (vtable index) provides the appropriate vtable within
+    the vtable group (as specified by Itanium ABI), and `address_point.offset`
+    (address point index) the actual address point within that vtable.
+
+    The return type is always `!cir.vptr`.
+
+    Example:
+    ```mlir
+    cir.global linkonce_odr @_ZTV1B = ...
+    ...
+    %3 = cir.vtable.address_point(@_ZTV1B,
+              address_point = <index = 0, offset = 2>) : !cir.vptr
+    ```
+  }];
+
+  let arguments = (ins
+    FlatSymbolRefAttr:$name,
+    CIR_AddressPointAttr:$address_point
+  );
+
+  let results = (outs Res<CIR_VPtrType, "", []>:$addr);
+
+  let assemblyFormat = [{
+    `(`
+      $name `,` `address_point` `=` $address_point
+    `)`
+    `:` qualified(type($addr)) attr-dict
   }];
 }
 
@@ -3143,6 +3201,56 @@ def CIR_AssumeOp : CIR_Op<"assume"> {
   }];
 }
 
+def CIR_AssumeAlignedOp : CIR_Op<"assume_aligned", [
+  Pure, AllTypesMatch<["pointer", "result"]>
+]> {
+  let summary = "Tell the optimizer that a pointer is aligned";
+  let description = [{
+    The `cir.assume_aligned` operation takes two or three arguments. The first
+    argument `pointer` gives the pointer value whose alignment is to be assumed,
+    and the second argument `align` is an integer attribute that gives the
+    assumed alignment.
+
+    The `offset` argument is optional. If given, it represents misalignment
+    offset. When it's present, this operation tells the optimizer that the
+    pointer is always misaligned to the alignment by `offset` bytes, a.k.a. the
+    pointer yielded by `(char *)pointer - offset` is aligned to the specified
+    alignment. Note that the `offset` argument is an SSA value rather than an
+    attribute, which means that you could pass a dynamically determined value
+    as the mialignment offset.
+
+    The result of this operation has the same value as the `pointer` argument,
+    but it additionally carries any alignment information indicated by this
+    operation.
+
+    This operation corresponds to the `__builtin_assume_aligned` builtin
+    function.
+
+    Example:
+
+    ```mlir
+    // Assume that %0 is a CIR pointer value of type !cir.ptr<!s32i>
+    %1 = cir.assume_aligned %0 alignment 16 : !cir.ptr<!s32i>
+
+    // With a misalignment offset of 4 bytes:
+    %2 = cir.const #cir.int<4> : !u64i
+    %3 = cir.assume_aligned %0 alignment 16 [offset %2 : !u64i] : !cir.ptr<!s32i>
+    ```
+  }];
+
+  let arguments = (ins CIR_PointerType:$pointer,
+                       I64Attr:$alignment,
+                       Optional<CIR_IntType>:$offset);
+  let results = (outs CIR_PointerType:$result);
+
+  let assemblyFormat = [{
+    $pointer
+    `alignment` $alignment
+    (`[` `offset` $offset^ `:` type($offset) `]`)?
+    `:` qualified(type($pointer)) attr-dict
+  }];
+}
+
 def CIR_AssumeSepStorageOp : CIR_Op<"assume_separate_storage", [
   SameTypeOperands
 ]> {
@@ -3199,6 +3307,30 @@ def CIR_ExpectOp : CIR_Op<"expect", [
 
   let assemblyFormat = [{
     `(` $val`,` $expected (`,` $prob^)? `)` `:` type($val) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Floating Point Ops
+//===----------------------------------------------------------------------===//
+
+class CIR_UnaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
+    : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]>
+{
+  let arguments = (ins CIR_AnyFloatOrVecOfFloatType:$src);
+  let results = (outs CIR_AnyFloatOrVecOfFloatType:$result);
+
+  let assemblyFormat = "$src `:` type($src) attr-dict";
+
+  let llvmOp = llvmOpName;
+}
+
+def CIR_FAbsOp : CIR_UnaryFPToFPBuiltinOp<"fabs", "FAbsOp"> {
+  let summary = "Computes the floating-point absolute value";
+  let description = [{
+    `cir.fabs` computes the absolute value of a floating-point operand
+    and returns a result of the same type, ignoring floating-point
+    exceptions. It does not set `errno`.
   }];
 }
 

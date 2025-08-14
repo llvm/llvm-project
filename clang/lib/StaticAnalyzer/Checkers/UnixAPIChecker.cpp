@@ -137,8 +137,7 @@ ProgramStateRef UnixAPIMisuseChecker::EnsurePtrNotNull(
       auto R = std::make_unique<PathSensitiveBugReport>(
           BT.value_or(std::cref(BT_ArgumentNull)),
           (PtrDescr + " pointer might be NULL.").str(), N);
-      if (PtrExpr)
-        bugreporter::trackExpressionValue(N, PtrExpr, *R);
+      bugreporter::trackExpressionValue(N, PtrExpr, *R);
       C.emitReport(std::move(R));
     }
     return nullptr;

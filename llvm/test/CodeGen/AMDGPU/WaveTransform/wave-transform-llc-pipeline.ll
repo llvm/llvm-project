@@ -271,6 +271,7 @@
 ; GCN-O3-NEXT:        Uniformity Analysis
 ; GCN-O3-NEXT:        AMDGPU IR late optimizations
 ; GCN-O3-NEXT:        Post-Dominator Tree Construction
+; GCN-O3-NEXT:        Uniformity Analysis
 ; GCN-O3-NEXT:        Unify divergent function exit nodes
 ; GCN-O3-NEXT:        Dominator Tree Construction
 ; GCN-O3-NEXT:        Cycle Info Analysis

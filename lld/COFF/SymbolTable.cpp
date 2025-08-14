@@ -478,17 +478,11 @@ void SymbolTable::resolveRemainingUndefines(std::vector<Undefined *> &aliases) {
     if (name.starts_with("__imp_")) {
       auto findLocalSym = [&](StringRef n) {
         Symbol *sym = find(n);
-        if (auto undef = dyn_cast_or_null<Undefined>(sym)) {
-          // The unprefixed symbol might come later in symMap, so handle it now
-          // if needed.
-          if (!undef->resolveWeakAlias())
-            sym = nullptr;
-        }
-        return sym;
+        return sym ? sym->getDefined() : nullptr;
       };
 
       StringRef impName = name.substr(strlen("__imp_"));
-      Symbol *imp = findLocalSym(impName);
+      Defined *imp = findLocalSym(impName);
       if (!imp && isEC()) {
         // Try to use the mangled symbol on ARM64EC.
         std::optional<std::string> mangledName =
@@ -502,11 +496,10 @@ void SymbolTable::resolveRemainingUndefines(std::vector<Undefined *> &aliases) {
             imp = findLocalSym(*mangledName);
         }
       }
-      if (imp && isa<Defined>(imp)) {
-        auto *d = cast<Defined>(imp);
-        replaceSymbol<DefinedLocalImport>(sym, ctx, name, d);
+      if (imp) {
+        replaceSymbol<DefinedLocalImport>(sym, ctx, name, imp);
         localImportChunks.push_back(cast<DefinedLocalImport>(sym)->getChunk());
-        localImports[sym] = d;
+        localImports[sym] = imp;
         continue;
       }
     }

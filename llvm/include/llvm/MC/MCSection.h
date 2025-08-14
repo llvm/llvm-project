@@ -93,10 +93,10 @@ private:
   bool AllowAutoPadding : 1;
 
   // Track content and fixups for the fixed-size part as fragments are
-  // appended to the section. The content remains immutable, except when
-  // modified by applyFixup.
-  uint32_t ContentStart = 0;
-  uint32_t ContentEnd = 0;
+  // appended to the section. The content is stored as trailing data of the
+  // MCFragment. The content remains immutable, except when modified by
+  // applyFixup.
+  uint32_t FixedSize = 0;
   uint32_t FixupStart = 0;
   uint32_t FixupEnd = 0;
 
@@ -189,18 +189,6 @@ public:
   //== Content-related functions manage parent's storage using ContentStart and
   // ContentSize.
 
-  // Get a SmallVector reference. The caller should call doneAppending to update
-  // `ContentEnd`.
-  SmallVectorImpl<char> &getContentsForAppending();
-  void doneAppending();
-  void appendContents(ArrayRef<char> Contents) {
-    getContentsForAppending().append(Contents.begin(), Contents.end());
-    doneAppending();
-  }
-  void appendContents(size_t Num, char Elt) {
-    getContentsForAppending().append(Num, Elt);
-    doneAppending();
-  }
   MutableArrayRef<char> getContents();
   ArrayRef<char> getContents() const;
 
@@ -209,10 +197,10 @@ public:
   MutableArrayRef<char> getVarContents();
   ArrayRef<char> getVarContents() const;
 
-  size_t getFixedSize() const { return ContentEnd - ContentStart; }
+  size_t getFixedSize() const { return FixedSize; }
   size_t getVarSize() const { return VarContentEnd - VarContentStart; }
   size_t getSize() const {
-    return ContentEnd - ContentStart + (VarContentEnd - VarContentStart);
+    return FixedSize + (VarContentEnd - VarContentStart);
   }
 
   //== Fixup-related functions manage parent's storage using FixupStart and
@@ -383,13 +371,16 @@ class MCOrgFragment : public MCFragment {
   /// Source location of the directive that this fragment was created for.
   SMLoc Loc;
 
+  uint64_t Size = 0;
+
 public:
   MCOrgFragment(const MCExpr &Offset, int8_t Value, SMLoc Loc)
       : MCFragment(FT_Org), Value(Value), Offset(&Offset), Loc(Loc) {}
 
   const MCExpr &getOffset() const { return *Offset; }
-
   uint8_t getValue() const { return Value; }
+  uint64_t getSize() const { return Size; }
+  void setSize(uint64_t Value) { Size = Value; }
 
   SMLoc getLoc() const { return Loc; }
 
@@ -543,6 +534,10 @@ private:
   Align Alignment;
   /// The section index in the assemblers section list.
   unsigned Ordinal = 0;
+  // If not -1u, the first linker-relaxable fragment's order within the
+  // subsection. When present, the offset between two locations crossing this
+  // fragment may not be fully resolved.
+  unsigned FirstLinkerRelaxable = -1u;
 
   /// Whether this section has had instructions emitted into it.
   bool HasInstructions : 1;
@@ -551,10 +546,6 @@ private:
 
   bool IsText : 1;
   bool IsBss : 1;
-
-  /// Whether the section contains linker-relaxable fragments. If true, the
-  /// offset between two locations may not be fully resolved.
-  bool LinkerRelaxable : 1;
 
   MCFragment DummyFragment;
 
@@ -610,8 +601,9 @@ public:
   bool isRegistered() const { return IsRegistered; }
   void setIsRegistered(bool Value) { IsRegistered = Value; }
 
-  bool isLinkerRelaxable() const { return LinkerRelaxable; }
-  void setLinkerRelaxable() { LinkerRelaxable = true; }
+  unsigned firstLinkerRelaxable() const { return FirstLinkerRelaxable; }
+  bool isLinkerRelaxable() const { return FirstLinkerRelaxable != -1u; }
+  void setFirstLinkerRelaxable(unsigned Order) { FirstLinkerRelaxable = Order; }
 
   MCFragment &getDummyFragment() { return DummyFragment; }
 
@@ -627,28 +619,11 @@ public:
   bool isBssSection() const { return IsBss; }
 };
 
-inline SmallVectorImpl<char> &MCFragment::getContentsForAppending() {
-  SmallVectorImpl<char> &S = getParent()->ContentStorage;
-  if (LLVM_UNLIKELY(ContentEnd != S.size())) {
-    // Move the elements to the end. Reserve space to avoid invalidating
-    // S.begin()+I for `append`.
-    auto Size = ContentEnd - ContentStart;
-    auto I = std::exchange(ContentStart, S.size());
-    S.reserve(S.size() + Size);
-    S.append(S.begin() + I, S.begin() + I + Size);
-  }
-  return S;
-}
-inline void MCFragment::doneAppending() {
-  ContentEnd = getParent()->ContentStorage.size();
-}
 inline MutableArrayRef<char> MCFragment::getContents() {
-  return MutableArrayRef(getParent()->ContentStorage)
-      .slice(ContentStart, ContentEnd - ContentStart);
+  return {reinterpret_cast<char *>(this + 1), FixedSize};
 }
 inline ArrayRef<char> MCFragment::getContents() const {
-  return ArrayRef(getParent()->ContentStorage)
-      .slice(ContentStart, ContentEnd - ContentStart);
+  return {reinterpret_cast<const char *>(this + 1), FixedSize};
 }
 
 inline MutableArrayRef<char> MCFragment::getVarContents() {

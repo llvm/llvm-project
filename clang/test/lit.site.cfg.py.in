@@ -47,7 +47,6 @@ config.have_llvm_driver = @LLVM_TOOL_LLVM_DRIVER_BUILD@
 config.spirv_tools_tests = @LLVM_INCLUDE_SPIRV_TOOLS_TESTS@
 config.substitutions.append(("%llvm-version-major", "@LLVM_VERSION_MAJOR@"))
 config.enable_amdclang = @CLANG_ENABLE_AMDCLANG@
-config.has_key_instructions = @LLVM_EXPERIMENTAL_KEY_INSTRUCTIONS@
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)

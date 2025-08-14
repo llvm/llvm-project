@@ -84,6 +84,7 @@ define i64 @test3(i64 %x) nounwind {
 ; CHECK-NEXT:    seq %d0
 ; CHECK-NEXT:    move.l %d0, %d1
 ; CHECK-NEXT:    and.l #255, %d1
+; CHECK-NEXT:    and.l #1, %d1
 ; CHECK-NEXT:    moveq #0, %d0
 ; CHECK-NEXT:    rts
   %t = icmp eq i64 %x, 0
@@ -103,6 +104,7 @@ define i64 @test4(i64 %x) nounwind {
 ; CHECK-NEXT:    subx.l %d0, %d1
 ; CHECK-NEXT:    slt %d1
 ; CHECK-NEXT:    and.l #255, %d1
+; CHECK-NEXT:    and.l #1, %d1
 ; CHECK-NEXT:    movem.l (0,%sp), %d2 ; 8-byte Folded Reload
 ; CHECK-NEXT:    adda.l #4, %sp
 ; CHECK-NEXT:    rts
@@ -144,6 +146,7 @@ define i32 @test7(i64 %res) nounwind {
 ; CHECK-NEXT:    cmpi.l #0, (4,%sp)
 ; CHECK-NEXT:    seq %d0
 ; CHECK-NEXT:    and.l #255, %d0
+; CHECK-NEXT:    and.l #1, %d0
 ; CHECK-NEXT:    rts
 entry:
   %lnot = icmp ult i64 %res, 4294967296
@@ -158,6 +161,7 @@ define i32 @test8(i64 %res) nounwind {
 ; CHECK-NEXT:    sub.l #3, %d0
 ; CHECK-NEXT:    scs %d0
 ; CHECK-NEXT:    and.l #255, %d0
+; CHECK-NEXT:    and.l #1, %d0
 ; CHECK-NEXT:    rts
 entry:
   %lnot = icmp ult i64 %res, 12884901888
@@ -173,6 +177,7 @@ define i32 @test11(i64 %l) nounwind {
 ; CHECK-NEXT:    sub.l #32768, %d0
 ; CHECK-NEXT:    seq %d0
 ; CHECK-NEXT:    and.l #255, %d0
+; CHECK-NEXT:    and.l #1, %d0
 ; CHECK-NEXT:    rts
 entry:
   %shr.mask = and i64 %l, -140737488355328
@@ -240,6 +245,7 @@ define zeroext i1 @test15(i32 %bf.load, i32 %n) {
 ; CHECK-NEXT:    or.b %d0, %d1
 ; CHECK-NEXT:    move.l %d1, %d0
 ; CHECK-NEXT:    and.l #255, %d0
+; CHECK-NEXT:    and.l #1, %d0
 ; CHECK-NEXT:    rts
   %bf.lshr = lshr i32 %bf.load, 16
   %cmp2 = icmp eq i32 %bf.lshr, 0
@@ -288,20 +294,24 @@ define void @test20(i32 %bf.load, i8 %x1, ptr %b_addr) {
 ; CHECK-NEXT:  ; %bb.0:
 ; CHECK-NEXT:    suba.l #4, %sp
 ; CHECK-NEXT:    .cfi_def_cfa_offset -8
-; CHECK-NEXT:    movem.l %d2, (0,%sp) ; 8-byte Folded Spill
+; CHECK-NEXT:    movem.l %d2, (0,%sp)                    ; 8-byte Folded Spill
 ; CHECK-NEXT:    move.l #16777215, %d0
 ; CHECK-NEXT:    and.l (8,%sp), %d0
 ; CHECK-NEXT:    sne %d1
 ; CHECK-NEXT:    and.l #255, %d1
-; CHECK-NEXT:    move.l (16,%sp), %a0
+; CHECK-NEXT:    and.l #1, %d1
 ; CHECK-NEXT:    move.b (15,%sp), %d2
 ; CHECK-NEXT:    and.l #255, %d2
 ; CHECK-NEXT:    add.l %d1, %d2
-; CHECK-NEXT:    sne (%a0)
+; CHECK-NEXT:    sne %d1
+; CHECK-NEXT:    and.b #1, %d1
+; CHECK-NEXT:    move.l (16,%sp), %a0
+; CHECK-NEXT:    move.b %d1, (%a0)
 ; CHECK-NEXT:    cmpi.l #0, %d0
-; CHECK-NEXT:    lea (d,%pc), %a0
-; CHECK-NEXT:    sne (%a0)
-; CHECK-NEXT:    movem.l (0,%sp), %d2 ; 8-byte Folded Reload
+; CHECK-NEXT:    sne %d0
+; CHECK-NEXT:    and.b #1, %d0
+; CHECK-NEXT:    move.b %d0, (d,%pc)
+; CHECK-NEXT:    movem.l (0,%sp), %d2                    ; 8-byte Folded Reload
 ; CHECK-NEXT:    adda.l #4, %sp
 ; CHECK-NEXT:    rts
   %bf.shl = shl i32 %bf.load, 8

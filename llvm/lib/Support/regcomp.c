@@ -305,7 +305,7 @@ llvm_regcomp(llvm_regex_t *preg, const char *pattern, int cflags) {
       return (REG_INVARG);
     len = preg->re_endp - pattern;
   } else {
-    len = strlen((const char *)pattern);
+    len = strlen(pattern);
   }
 
   /* do the mallocs early so failure handling is easy */

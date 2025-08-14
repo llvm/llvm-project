@@ -27,11 +27,11 @@ int main(int argc, char *argv[]) {
   SizeSource = setBuf(argv[1], &BufSource);
 
   amd_comgr_language_t OpenCLVersion;
-  if (strcmp(argv[3], "1.2")) {
+  if (strcmp(argv[3], "1.2") == 0) {
     OpenCLVersion = AMD_COMGR_LANGUAGE_OPENCL_1_2;
   }
-  else if (strcmp(argv[3], "2.0")) {
-    OpenCLVersion = AMD_COMGR_LANGUAGE_OPENCL_1_2;
+  else if (strcmp(argv[3], "2.0") == 0) {
+    OpenCLVersion = AMD_COMGR_LANGUAGE_OPENCL_2_0;
   }
   else
     fail("unsupported OCL version: %s", argv[3]);
@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
 
   amd_comgr_(create_action_info(&DataAction));
   amd_comgr_(
-      action_info_set_language(DataAction, AMD_COMGR_LANGUAGE_OPENCL_1_2));
+      action_info_set_language(DataAction, OpenCLVersion));
   amd_comgr_(action_info_set_isa_name(DataAction, "amdgcn-amd-amdhsa--gfx900"));
   amd_comgr_(action_info_set_option_list(DataAction, CodeGenOptions,
                                          CodeGenOptionsCount));

@@ -189,6 +189,20 @@ def ROCDL_BallotOp :
   let assemblyFormat = "$pred attr-dict `:` type($res)";
 }
 
+def ROCDL_ReadfirstlaneOp : ROCDL_IntrOp<"readfirstlane", [], [0], [AllTypesMatch<["res", "src"]>], 1>,
+  Arguments<(ins LLVM_Type:$src)> {
+  let results = (outs LLVM_Type:$res);
+  let summary = "Get the value in first active lane.";
+
+  let description = [{
+    Returns the value in the lowest active lane of the input operand.
+  }];
+
+  let assemblyFormat = [{
+    $src attr-dict `:` type($res)
+  }];
+}
+
 def ROCDL_ReadlaneOp : ROCDL_IntrOp<"readlane", [], [0], [AllTypesMatch<["res", "src0"]>], 1>,
   Arguments<(ins LLVM_Type:$src0,
                  I32:$src1)> {
@@ -201,7 +215,7 @@ def ROCDL_ReadlaneOp : ROCDL_IntrOp<"readlane", [], [0], [AllTypesMatch<["res", 
 
   let assemblyFormat = [{
     $src0 `,` $src1  attr-dict `:` `(` type($src0) `,` type($src1) `)` `->` type($res)
-   }];
+  }];
 }
 
 //===----------------------------------------------------------------------===//
