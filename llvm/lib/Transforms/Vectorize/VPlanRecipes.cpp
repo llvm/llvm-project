@@ -1014,7 +1014,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
   case VPInstruction::ExtractLastElement: {
     // Add on the cost of extracting the element.
     auto *VecTy = toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF);
-    return Ctx.TTI.getReverseVectorInstrCost(Instruction::ExtractElement, VecTy,
+    return Ctx.TTI.getVectorInstrCostFromEnd(Instruction::ExtractElement, VecTy,
                                              Ctx.CostKind, 0);
   }
   case VPInstruction::ExtractPenultimateElement:

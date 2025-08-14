@@ -243,7 +243,7 @@ public:
                                      unsigned Index, const Value *Op0,
                                      const Value *Op1) const override;
 
-  InstructionCost getReverseVectorInstrCost(unsigned Opcode, Type *Val,
+  InstructionCost getVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
                                             TTI::TargetCostKind CostKind,
                                             unsigned Index) const override;
 

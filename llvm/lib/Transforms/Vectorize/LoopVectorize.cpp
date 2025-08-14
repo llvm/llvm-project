@@ -5307,14 +5307,9 @@ LoopVectorizationCostModel::getUniformMemOpCost(Instruction *I,
   InstructionCost Cost =
       TTI.getAddressComputationCost(PtrTy, nullptr, nullptr, CostKind) +
       TTI.getMemoryOpCost(Instruction::Store, ValTy, Alignment, AS, CostKind);
-  if (!IsLoopInvariantStoreValue) {
-    if (VF.isFixed())
-      Cost += TTI.getVectorInstrCost(Instruction::ExtractElement, VectorTy,
-                                     CostKind, VF.getKnownMinValue() - 1);
-    else
-      Cost += TTI.getReverseVectorInstrCost(Instruction::ExtractElement,
-                                            VectorTy, CostKind, 0);
-  }
+  if (!IsLoopInvariantStoreValue)
+    Cost += TTI.getVectorInstrCostFromEnd(Instruction::ExtractElement, VectorTy,
+                                          CostKind, 0);
   return Cost;
 }
 

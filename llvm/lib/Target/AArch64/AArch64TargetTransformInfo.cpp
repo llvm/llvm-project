@@ -3977,15 +3977,12 @@ InstructionCost AArch64TTIImpl::getVectorInstrCost(const Instruction &I,
 }
 
 InstructionCost
-AArch64TTIImpl::getReverseVectorInstrCost(unsigned Opcode, Type *Val,
+AArch64TTIImpl::getVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
                                           TTI::TargetCostKind CostKind,
                                           unsigned Index) const {
-  if (auto *FixedVecTy = dyn_cast<FixedVectorType>(Val)) {
-    unsigned NumElems = FixedVecTy->getNumElements();
-    assert(Index < NumElems && "Unexpected reverse index");
-    return getVectorInstrCostHelper(Opcode, Val, CostKind,
-                                    NumElems - 1 - Index);
-  }
+  if (auto *FixedVecTy = dyn_cast<FixedVectorType>(Val))
+    return BaseT::getVectorInstrCostFromEnd(Opcode, Val, CostKind, Index);
+
   // This typically requires both while and lastb instructions in order
   // to extract the last element. If this is in a loop the while
   // instruction can at least be hoisted out, although it will consume a

@@ -1517,7 +1517,7 @@ public:
   /// the lane is (VF - 1 - Index). This is required for scalable vectors where
   /// the exact lane index is unknown at compile time.
   LLVM_ABI InstructionCost
-  getReverseVectorInstrCost(unsigned Opcode, Type *Val,
+  getVectorInstrCostFromEnd(unsigned Opcode, Type *Val,
                             TTI::TargetCostKind CostKind, unsigned Index) const;
 
   /// \return The expected cost of aggregate inserts and extracts. This is
