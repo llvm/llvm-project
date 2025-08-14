@@ -1,4 +1,5 @@
 #include "LibcGpuBenchmark.h"
+
 #include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/algorithm.h"
 #include "src/__support/CPP/array.h"
@@ -161,9 +162,8 @@ void Benchmark::run_benchmarks() {
   gpu::sync_threads();
 }
 
-BenchmarkResult
-benchmark(const BenchmarkOptions &options,
-          const cpp::function<uint64_t(uint32_t)> &wrapper_func) {
+BenchmarkResult benchmark(const BenchmarkOptions &options,
+                          const BenchmarkTarget &target) {
   BenchmarkResult result;
   RuntimeEstimationProgression rep;
   uint32_t iterations = options.initial_iterations;
@@ -183,7 +183,7 @@ benchmark(const BenchmarkOptions &options,
 
     const clock_t start = clock();
     while (sample_estimator.get_iterations() < iterations) {
-      auto current_result = wrapper_func(call_index++);
+      auto current_result = target(call_index++);
       max = cpp::max(max, current_result);
       min = cpp::min(min, current_result);
       sample_estimator.update(current_result);

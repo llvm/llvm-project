@@ -49,7 +49,6 @@ add_unittest_framework_library(
     libc.src.__support.CPP.string
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.type_traits
-    libc.src.__support.CPP.functional
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.atomic

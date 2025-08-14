@@ -6,7 +6,6 @@
 #include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/algorithm.h"
 #include "src/__support/CPP/array.h"
-#include "src/__support/CPP/functional.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/type_traits.h"
@@ -121,21 +120,48 @@ struct BenchmarkResult {
   clock_t total_time = 0;
 };
 
-BenchmarkResult
-benchmark(const BenchmarkOptions &options,
-          const cpp::function<uint64_t(uint32_t)> &wrapper_func);
+struct BenchmarkTarget {
+  using IndexedFnPtr = uint64_t (*)(uint32_t);
+  using IndexlessFnPtr = uint64_t (*)();
+
+  enum class Kind : uint8_t { Indexed, Indexless } kind;
+  union {
+    IndexedFnPtr indexed_fn_ptr;
+    IndexlessFnPtr indexless_fn_ptr;
+  };
+
+  LIBC_INLINE BenchmarkTarget(IndexedFnPtr func)
+      : kind(Kind::Indexed), indexed_fn_ptr(func) {}
+  LIBC_INLINE BenchmarkTarget(IndexlessFnPtr func)
+      : kind(Kind::Indexless), indexless_fn_ptr(func) {}
+
+  LIBC_INLINE uint64_t operator()([[maybe_unused]] uint32_t call_index) const {
+    return kind == Kind::Indexed ? indexed_fn_ptr(call_index)
+                                 : indexless_fn_ptr();
+  }
+};
+
+BenchmarkResult benchmark(const BenchmarkOptions &options,
+                          const BenchmarkTarget &target);
 
 class Benchmark {
-  const cpp::function<uint64_t(uint32_t)> func;
+  const BenchmarkTarget target;
   const cpp::string_view suite_name;
   const cpp::string_view test_name;
   const uint32_t num_threads;
 
 public:
-  Benchmark(cpp::function<uint64_t(uint32_t)> func, char const *suite_name,
+  Benchmark(uint64_t (*f)(), const char *suite, const char *test,
+            uint32_t threads)
+      : target(BenchmarkTarget(f)), suite_name(suite), test_name(test),
+        num_threads(threads) {
+    add_benchmark(this);
+  }
+
+  Benchmark(uint64_t (*f)(uint32_t), char const *suite_name,
             char const *test_name, uint32_t num_threads)
-      : func(func), suite_name(suite_name), test_name(test_name),
-        num_threads(num_threads) {
+      : target(BenchmarkTarget(f)), suite_name(suite_name),
+        test_name(test_name), num_threads(num_threads) {
     add_benchmark(this);
   }
 
@@ -149,7 +175,7 @@ protected:
 private:
   BenchmarkResult run() {
     BenchmarkOptions options;
-    return benchmark(options, func);
+    return benchmark(options, target);
   }
 };
 

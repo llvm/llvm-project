@@ -7,7 +7,6 @@ add_benchmark(
   SRCS
     isalnum_benchmark.cpp
   DEPENDS
-    libc.hdr.stdint_proxy
     libc.src.ctype.isalnum
   LOADER_ARGS
     --threads 64
@@ -20,6 +19,5 @@ add_benchmark(
   SRCS
     isalpha_benchmark.cpp
   DEPENDS
-    libc.hdr.stdint_proxy
     libc.src.ctype.isalpha
 )
