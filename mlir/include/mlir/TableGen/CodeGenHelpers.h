@@ -52,6 +52,13 @@ private:
   std::optional<llvm::NamespaceEmitter> nsEmitter;
 };
 
+enum class ErrorStreamType {
+  // Inside a string that's streamed into an InflightDiagnostic.
+  InString,
+  // Inside a string inside an OpError.
+  InsideOpError,
+};
+
 /// This class deduplicates shared operation verification code by emitting
 /// static functions alongside the op definitions. These methods are local to
 /// the definition file, and are invoked within the operation verify methods.
@@ -192,7 +199,8 @@ private:
 
   /// A generic function to emit constraints
   void emitConstraints(const ConstraintMap &constraints, StringRef selfName,
-                       const char *codeTemplate);
+                       const char *codeTemplate,
+                       ErrorStreamType errorStreamType);
 
   /// Assign a unique name to a unique constraint.
   std::string getUniqueName(StringRef kind, unsigned index);
@@ -242,6 +250,16 @@ std::string stringify(T &&t) {
   return detail::stringifier<std::remove_reference_t<std::remove_const_t<T>>>::
       apply(std::forward<T>(t));
 }
+
+/// Helper to generate a C++ streaming error messages from a given message.
+/// Message can contain '{{...}}' placeholders that are substituted with
+/// C-expressions via tgfmt. It would effectively convert:
+///   "Failed to verify {{foo}}"
+/// into:
+///   "Failed to verify " << tgfmt(foo, &ctx)
+std::string buildErrorStreamingString(
+    StringRef message, const FmtContext &ctx,
+    ErrorStreamType errorStreamType = ErrorStreamType::InString);
 
 } // namespace tblgen
 } // namespace mlir

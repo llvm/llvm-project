@@ -16,7 +16,7 @@ def AType : Type<ATypePred, "a type">;
 def OtherType : Type<ATypePred, "another type">;
 
 def AnAttrPred : CPred<"attrPred($_self, $_op)">;
-def AnAttr : Attr<AnAttrPred, "an attribute">;
+def AnAttr : Attr<AnAttrPred, "an attribute (got {{reformat($_self)}})">;
 def OtherAttr : Attr<AnAttrPred, "another attribute">;
 
 def ASuccessorPred : CPred<"successorPred($_self, $_op)">;
@@ -71,10 +71,10 @@ def OpC : NS_Op<"op_c"> {
 // CHECK:    static ::llvm::LogicalResult [[$A_ATTR_CONSTRAINT:__mlir_ods_local_attr_constraint.*]](
 // CHECK:      if (attr && !((attrPred(attr, *op))))
 // CHECK-NEXT:   return emitError() << "attribute '" << attrName
-// CHECK-NEXT:       << "' failed to satisfy constraint: an attribute";
+// CHECK-NEXT:       << "' failed to satisfy constraint: an attribute (got " << reformat(attr) << ")";
 
 /// Test that duplicate attribute constraint was not generated.
-// CHECK-NOT:        << "' failed to satisfy constraint: an attribute";
+// CHECK-NOT:        << "' failed to satisfy constraint: an attribute
 
 /// Test that a attribute constraint with a different description was generated.
 // CHECK:    static ::llvm::LogicalResult [[$O_ATTR_CONSTRAINT:__mlir_ods_local_attr_constraint.*]](
