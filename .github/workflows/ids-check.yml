@@ -22,7 +22,7 @@ jobs:
   build:
     if: github.repository_owner == 'llvm'
     name: ids-check
-    runs-on: windows-2025
+    runs-on: windows-11-arm
 
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -39,8 +39,9 @@ jobs:
     - name: Install dependencies
       shell: pwsh
       run: |
-        Invoke-WebRequest -Uri "https://github.com/llvm/llvm-project/releases/download/llvmorg-20.1.8/clang+llvm-20.1.8-x86_64-pc-windows-msvc.tar.xz" -OutFile "clang20.tar.xz"
+        Invoke-WebRequest -Uri "https://github.com/llvm/llvm-project/releases/download/llvmorg-20.1.8/clang+llvm-20.1.8-aarch64-pc-windows-msvc.tar.xz" -OutFile "clang20.tar.xz"
         & "C:\Program Files\Git\usr\bin\tar.exe" -xf .\clang20.tar.xz
+        choco install visualstudio2022community
         pip install lit filecheck
 
     - name: Configure and build minimal LLVM for use by ids
@@ -67,8 +68,8 @@ jobs:
                -D CMAKE_C_COMPILER=clang \
                -D CMAKE_CXX_COMPILER=clang++ \
                -D CMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld \
-               -D LLVM_DIR="C:/a/llvm-project/llvm-project/clang+llvm-20.1.8-x86_64-pc-windows-msvc/lib/cmake/llvm/" \
-               -D Clang_DIR="C:/a/llvm-project/llvm-project/clang+llvm-20.1.8-x86_64-pc-windows-msvc/lib/cmake/clang/" \
+               -D LLVM_DIR="C:/a/llvm-project/llvm-project/clang+llvm-20.1.8-aarch64-pc-windows-msvc/lib/cmake/llvm/" \
+               -D Clang_DIR="C:/a/llvm-project/llvm-project/clang+llvm-20.1.8-aarch64-pc-windows-msvc/lib/cmake/clang/" \
                -D FILECHECK_EXECUTABLE=$(which filecheck) \
                -D LIT_EXECUTABLE=$(which lit) \
                -G Ninja
