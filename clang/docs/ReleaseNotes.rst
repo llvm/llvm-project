@@ -115,6 +115,8 @@ Non-comprehensive list of changes in this release
 -------------------------------------------------
 - Added ``__builtin_elementwise_fshl`` and ``__builtin_elementwise_fshr``.
 
+- ``__builtin_elementwise_abs`` can now be used in constant expression.
+
 - Added ``__builtin_elementwise_minnumnum`` and ``__builtin_elementwise_maxnumnum``.
 
 - Trapping UBSan (e.g. ``-fsanitize-trap=undefined``) now emits a string describing the reason for
@@ -166,6 +168,10 @@ Improvements to Clang's diagnostics
   "signedness of format specifier 'u' is incompatible with 'c' [-Wformat-signedness]"
   and the API-visible diagnostic id will be appropriate.
   
+- Fixed false positives in ``-Waddress-of-packed-member`` diagnostics when
+  potential misaligned members get processed before they can get discarded.
+  (#GH144729)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -209,12 +215,14 @@ Bug Fixes to C++ Support
   casts that are guaranteed to fail (#GH137518).
 - Fix bug rejecting partial specialization of variable templates with auto NTTPs (#GH118190).
 - Fix a crash when using ``explicit(bool)`` in pre-C++11 language modes. (#GH152729)
+- Fix the parsing of variadic member functions when the ellipis immediately follows a default argument.(#GH153445)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fix incorrect name qualifiers applied to alias CTAD. (#GH136624)
 - Fixed ElaboratedTypes appearing within NestedNameSpecifier, which was not a
   legal representation. This is fixed because ElaboratedTypes don't exist anymore. (#GH43179) (#GH68670) (#GH92757)
+- Fix comment lexing of special command names (#GH152943)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^

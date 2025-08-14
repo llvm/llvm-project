@@ -2867,7 +2867,7 @@ static bool hoistBOAssociation(Instruction &I, Loop &L,
   bool LVInRHS = L.isLoopInvariant(BO->getOperand(0));
   auto *BO0 = dyn_cast<BinaryOperator>(BO->getOperand(LVInRHS));
   if (!BO0 || BO0->getOpcode() != Opcode || !BO0->isAssociative() ||
-      BO0->hasNUsesOrMore(3))
+      BO0->hasNUsesOrMore(BO0->getType()->isIntegerTy() ? 2 : 3))
     return false;
 
   Value *LV = BO0->getOperand(0);

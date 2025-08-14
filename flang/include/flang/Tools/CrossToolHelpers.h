@@ -134,6 +134,7 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
                                       ///< functions.
   bool NSWOnLoopVarInc = true; ///< Add nsw flag to loop variable increments.
   bool EnableOpenMP = false; ///< Enable OpenMP lowering.
+  bool EnableOpenMPSimd = false; ///< Enable OpenMP simd-only mode.
   std::string InstrumentFunctionEntry =
       ""; ///< Name of the instrument-function that is called on each
           ///< function-entry

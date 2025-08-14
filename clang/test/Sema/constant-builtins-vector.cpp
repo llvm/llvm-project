@@ -876,3 +876,21 @@ static_assert(__builtin_elementwise_min(~0U, 0U) == 0U);
 static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_min((vector4char){1, -2, 3, -4}, (vector4char){4, -3, 2, -1})) == (LITTLE_END ? 0xFC02FD01 : 0x01FD02FC));
 static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_min((vector4uchar){1, 2, 3, 4}, (vector4uchar){4, 3, 2, 1})) == 0x01020201U);
 static_assert(__builtin_bit_cast(unsigned long long, __builtin_elementwise_min((vector4short){1, -2, 3, -4}, (vector4short){4, -3, 2, -1})) == (LITTLE_END ? 0xFFFC0002FFFD0001 : 0x0001FFFD0002FFFC));
+
+static_assert(__builtin_elementwise_abs(10) == 10);
+static_assert(__builtin_elementwise_abs(-10) == 10);
+static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_abs((vector4char){-1, -2, -3, 4})) == (LITTLE_END ? 0x04030201 : 0x01020304));
+static_assert(__builtin_elementwise_abs((int)(-2147483648)) == (int)(-2147483648)); // the absolute value of the most negative integer remains the most negative integer
+
+// check floating point for elementwise abs
+#define CHECK_FOUR_FLOAT_VEC(vec1, vec2) \
+    static_assert(__builtin_fabs(vec1[0] - vec2[0]) < 1e-6); \
+    static_assert(__builtin_fabs(vec1[1] - vec2[1]) < 1e-6); \
+    static_assert(__builtin_fabs(vec1[2] - vec2[2]) < 1e-6); \
+    static_assert(__builtin_fabs(vec1[3] - vec2[3]) < 1e-6);
+
+// checking floating point vector
+CHECK_FOUR_FLOAT_VEC(__builtin_elementwise_abs((vector4float){-1.123, 2.123, -3.123, 4.123}), ((vector4float){1.123, 2.123, 3.123, 4.123}))
+CHECK_FOUR_FLOAT_VEC(__builtin_elementwise_abs((vector4double){-1.123, 2.123, -3.123, 4.123}), ((vector4double){1.123, 2.123, 3.123, 4.123}))
+static_assert(__builtin_elementwise_abs((float)-1.123) - (float)1.123 < 1e-6); // making sure one element works
+#undef CHECK_FOUR_FLOAT_VEC
