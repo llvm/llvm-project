@@ -83,8 +83,6 @@ static std::optional<llvm::StringRef> IsNumber(llvm::StringRef &remainder,
                                                bool &isFloat) {
   llvm::StringRef tail = remainder;
   llvm::StringRef body = tail.take_while(IsNumberBodyChar);
-  if (body.empty())
-    return std::nullopt;
   size_t dots = body.count('.');
   if (dots > 1 || dots == body.size())
     return std::nullopt;
@@ -93,13 +91,17 @@ static std::optional<llvm::StringRef> IsNumber(llvm::StringRef &remainder,
     char last = body.back();
     tail = tail.drop_front(body.size());
     if (last == 'e' || last == 'E' || last == 'p' || last == 'P') {
-      if (!tail.empty() && (tail.front() == '+' || tail.front() == '-')) {
-        tail = tail.drop_front();
+      if (tail.consume_front("+") || tail.consume_front("-")) {
         tail = tail.drop_while(IsNumberBodyChar);
+        isFloat = true;
       }
     }
     size_t number_length = remainder.size() - tail.size();
     llvm::StringRef number = remainder.take_front(number_length);
+    if (!isFloat) {
+      isFloat = number.contains('p') ||                          // 0x1p1 = 2.0
+                (!number.contains('x') && number.contains('e')); // 1e1 = 10.0
+    }
     remainder = remainder.drop_front(number_length);
     return number;
   }
