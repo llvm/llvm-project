@@ -85,13 +85,13 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
         if (LoadInst *Load = dyn_cast<LoadInst>(Inst)) {
           NewRecipe = new VPWidenLoadRecipe(
               *Load, Ingredient.getOperand(0), nullptr /*Mask*/,
-              false /*Consecutive*/, false /*Reverse*/, VPIRMetadata(*Load),
+              false /*Consecutive*/, VPIRMetadata(*Load),
               Ingredient.getDebugLoc());
         } else if (StoreInst *Store = dyn_cast<StoreInst>(Inst)) {
           NewRecipe = new VPWidenStoreRecipe(
               *Store, Ingredient.getOperand(1), Ingredient.getOperand(0),
-              nullptr /*Mask*/, false /*Consecutive*/, false /*Reverse*/,
-              VPIRMetadata(*Store), Ingredient.getDebugLoc());
+              nullptr /*Mask*/, false /*Consecutive*/, VPIRMetadata(*Store),
+              Ingredient.getDebugLoc());
         } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
           NewRecipe = new VPWidenGEPRecipe(GEP, Ingredient.operands());
         } else if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
@@ -2129,6 +2129,22 @@ void VPlanTransforms::addActiveLaneMask(
   HeaderMask->eraseFromParent();
 }
 
+static VPValue *extractConditionMask(VPValue *OrigMask, VPValue *HeaderMask) {
+  VPValue *ReversedMask;
+  if (match(OrigMask,
+            m_VPInstruction<VPInstruction::Reverse>(m_VPValue(ReversedMask)))) {
+    VPValue *NewMask = extractConditionMask(ReversedMask, HeaderMask);
+    if (!NewMask)
+      return nullptr;
+    cast<VPInstruction>(OrigMask)->setOperand(0, NewMask);
+    return OrigMask;
+  }
+  VPValue *Mask;
+  if (match(OrigMask, m_LogicalAnd(m_Specific(HeaderMask), m_VPValue(Mask))))
+    return Mask;
+  return HeaderMask == OrigMask ? nullptr : OrigMask;
+}
+
 /// Try to optimize a \p CurRecipe masked by \p HeaderMask to a corresponding
 /// EVL-based recipe without the header mask. Returns nullptr if no EVL-based
 /// recipe could be created.
@@ -2142,26 +2158,17 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
                                        VPRecipeBase &CurRecipe,
                                        VPTypeAnalysis &TypeInfo,
                                        VPValue &AllOneMask, VPValue &EVL) {
-  auto GetNewMask = [&](VPValue *OrigMask) -> VPValue * {
-    assert(OrigMask && "Unmasked recipe when folding tail");
-    // HeaderMask will be handled using EVL.
-    VPValue *Mask;
-    if (match(OrigMask, m_LogicalAnd(m_Specific(HeaderMask), m_VPValue(Mask))))
-      return Mask;
-    return HeaderMask == OrigMask ? nullptr : OrigMask;
-  };
-
   return TypeSwitch<VPRecipeBase *, VPRecipeBase *>(&CurRecipe)
       .Case<VPWidenLoadRecipe>([&](VPWidenLoadRecipe *L) {
-        VPValue *NewMask = GetNewMask(L->getMask());
+        VPValue *NewMask = extractConditionMask(L->getMask(), HeaderMask);
         return new VPWidenLoadEVLRecipe(*L, EVL, NewMask);
       })
       .Case<VPWidenStoreRecipe>([&](VPWidenStoreRecipe *S) {
-        VPValue *NewMask = GetNewMask(S->getMask());
+        VPValue *NewMask = extractConditionMask(S->getMask(), HeaderMask);
         return new VPWidenStoreEVLRecipe(*S, EVL, NewMask);
       })
       .Case<VPReductionRecipe>([&](VPReductionRecipe *Red) {
-        VPValue *NewMask = GetNewMask(Red->getCondOp());
+        VPValue *NewMask = extractConditionMask(Red->getCondOp(), HeaderMask);
         return new VPReductionEVLRecipe(*Red, EVL, NewMask);
       })
       .Case<VPInstruction>([&](VPInstruction *VPI) -> VPRecipeBase * {
@@ -2180,6 +2187,32 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
             TypeInfo.inferScalarType(LHS), VPI->getDebugLoc());
       })
       .Default([&](VPRecipeBase *R) { return nullptr; });
+}
+
+static void convertToEVLReverse(VPlan &Plan, VPTypeAnalysis &TypeInfo,
+                                VPValue &AllOneMask, VPValue &EVL) {
+  SmallVector<VPRecipeBase *> ToRemove;
+
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
+      auto *VPI = dyn_cast<VPInstruction>(&R);
+      if (!VPI || VPI->getOpcode() != VPInstruction::Reverse)
+        continue;
+
+      SmallVector<VPValue *> Ops(VPI->operands());
+      Ops.append({&AllOneMask, &EVL});
+      auto *NewReverse = new VPWidenIntrinsicRecipe(
+          Intrinsic::experimental_vp_reverse, Ops,
+          TypeInfo.inferScalarType(VPI), VPI->getDebugLoc());
+      NewReverse->insertBefore(VPI);
+      VPI->replaceAllUsesWith(NewReverse);
+      ToRemove.push_back(VPI);
+    }
+  }
+
+  for (VPRecipeBase *R : ToRemove)
+    R->eraseFromParent();
 }
 
 /// Replace recipes with their EVL variants.
@@ -2294,6 +2327,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
     }
     ToErase.push_back(CurRecipe);
   }
+  convertToEVLReverse(Plan, TypeInfo, *AllOneMask, EVL);
   // Remove dead EVL mask.
   if (EVLMask->getNumUsers() == 0)
     EVLMask->getDefiningRecipe()->eraseFromParent();
@@ -3559,8 +3593,8 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
       // process one original iteration.
       auto *L = new VPWidenLoadRecipe(
           *cast<LoadInst>(LoadGroup->getInterleaveGroup()->getInsertPos()),
-          LoadGroup->getAddr(), LoadGroup->getMask(), /*Consecutive=*/true,
-          /*Reverse=*/false, {}, LoadGroup->getDebugLoc());
+          LoadGroup->getAddr(), LoadGroup->getMask(), /*Consecutive=*/true, {},
+          LoadGroup->getDebugLoc());
       L->insertBefore(LoadGroup);
       return L;
     }
@@ -3602,8 +3636,8 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
 
     auto *S = new VPWidenStoreRecipe(
         *cast<StoreInst>(StoreGroup->getInterleaveGroup()->getInsertPos()),
-        StoreGroup->getAddr(), Res, nullptr, /*Consecutive=*/true,
-        /*Reverse=*/false, {}, StoreGroup->getDebugLoc());
+        StoreGroup->getAddr(), Res, nullptr, /*Consecutive=*/true, {},
+        StoreGroup->getDebugLoc());
     S->insertBefore(StoreGroup);
     StoreGroup->eraseFromParent();
   }
