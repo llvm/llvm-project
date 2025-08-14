@@ -29,6 +29,25 @@ attributes(global) subroutine test_log()
 end subroutine
 
 ! CHECK-LABEL: _QPtest_log
-! CHECK: %{{.*}} = fir.call @__logf(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
-! CHECK: %{{.*}} = fir.call @__log2f(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
-! CHECK: %{{.*}} = fir.call @__log10f(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_logf(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_log2f(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_log10f(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
+
+attributes(global) subroutine test_sinf()
+  real :: res
+  real :: r
+  res = __sinf(r)
+end subroutine
+
+! CHECK-LABEL: _QPtest_sinf
+! CHECK: %{{.*}} = fir.call @__nv_sinf(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
+
+attributes(global) subroutine test_tanf()
+  real :: res
+  real :: r
+  res = __tanf(r)
+end subroutine
+
+! CHECK-LABEL: _QPtest_tanf
+! CHECK: %{{.*}} = fir.call @__nv_tanf(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
+
