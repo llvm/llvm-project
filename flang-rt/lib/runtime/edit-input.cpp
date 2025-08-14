@@ -534,7 +534,7 @@ static RT_API_ATTRS ScannedRealInput ScanRealInput(
       next = io.NextInField(remaining, edit);
     }
     if (!next || *next == ')') { // NextInField fails on separators like ')'
-      std::size_t byteCount{0};
+      std::size_t byteCount{1};
       if (!next) {
         next = io.GetCurrentChar(byteCount);
       }
