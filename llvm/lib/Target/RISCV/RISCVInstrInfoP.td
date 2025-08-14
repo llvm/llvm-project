@@ -98,6 +98,14 @@ class RVPShift_ri<bits<3> f, bits<3> funct3, string opcodestr, Operand ImmType>
   let Inst{27}    = 0b0;
 }
 
+class RVPShiftD_ri<bits<3> f, bits<3> funct3, string opcodestr>
+    : RVPShift_ri<f, funct3, opcodestr, uimm6> {
+  bits<6> shamt;
+
+  let Inst{26} = 0b1;
+  let Inst{25-20} = shamt;
+}
+
 class RVPShiftW_ri<bits<3> f, bits<3> funct3, string opcodestr>
     : RVPShift_ri<f, funct3, opcodestr, uimm5> {
   bits<5> shamt;
@@ -136,34 +144,36 @@ class RVPUnary_ri<bits<2> w, bits<5> uf, string opcodestr>
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtP] in {
-let IsSignExtendingOpW = 1 in
-def CLS    : Unary_r<0b011000000011, 0b001, "cls">;
-def ABS    : Unary_r<0b011000000111, 0b001, "abs">;
+  let IsSignExtendingOpW = 1 in
+  def CLS    : Unary_r<0b011000000011, 0b001, "cls">;
+  def ABS    : Unary_r<0b011000000111, 0b001, "abs">;
 } // Predicates = [HasStdExtP]
-let Predicates = [HasStdExtP, IsRV32] in
-def REV_RV32  : Unary_r<0b011010011111, 0b101, "rev">;
+
+let Predicates = [HasStdExtP, IsRV32] in {
+  def REV_RV32  : Unary_r<0b011010011111, 0b101, "rev">;
+} // Predicates = [HasStdExtP, IsRV32]
 
 let Predicates = [HasStdExtP, IsRV64] in {
-def REV16      : Unary_r<0b011010110000, 0b101, "rev16">;
-def REV_RV64   : Unary_r<0b011010111111, 0b101, "rev">;
+  def REV16      : Unary_r<0b011010110000, 0b101, "rev16">;
+  def REV_RV64   : Unary_r<0b011010111111, 0b101, "rev">;
 
-let IsSignExtendingOpW = 1 in {
-def CLSW  : UnaryW_r<0b011000000011, 0b001, "clsw">;
-def ABSW  : UnaryW_r<0b011000000111, 0b001, "absw">;
-}
+  let IsSignExtendingOpW = 1 in {
+    def CLSW  : UnaryW_r<0b011000000011, 0b001, "clsw">;
+    def ABSW  : UnaryW_r<0b011000000111, 0b001, "absw">;
+  }
 } // Predicates = [HasStdExtP, IsRV64]
 
 let Predicates = [HasStdExtP] in {
-def PSLLI_B  : RVPShiftB_ri<0b000, 0b010, "pslli.b">;
-def PSLLI_H  : RVPShiftH_ri<0b000, 0b010, "pslli.h">;
-def PSSLAI_H : RVPShiftH_ri<0b101, 0b010, "psslai.h">;
+  def PSLLI_B  : RVPShiftB_ri<0b000, 0b010, "pslli.b">;
+  def PSLLI_H  : RVPShiftH_ri<0b000, 0b010, "pslli.h">;
+  def PSSLAI_H : RVPShiftH_ri<0b101, 0b010, "psslai.h">;
 } // Predicates = [HasStdExtP]
-let DecoderNamespace = "RV32Only",
-    Predicates = [HasStdExtP, IsRV32] in
-def SSLAI    : RVPShiftW_ri<0b101, 0b010, "sslai">;
+let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
+  def SSLAI    : RVPShiftW_ri<0b101, 0b010, "sslai">;
+} // Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only"
 let Predicates = [HasStdExtP, IsRV64] in {
-def PSLLI_W  : RVPShiftW_ri<0b000, 0b010, "pslli.w">;
-def PSSLAI_W : RVPShiftW_ri<0b101, 0b010, "psslai.w">;
+  def PSLLI_W  : RVPShiftW_ri<0b000, 0b010, "pslli.w">;
+  def PSSLAI_W : RVPShiftW_ri<0b101, 0b010, "psslai.w">;
 } // Predicates = [HasStdExtP, IsRV64]
 
 let Predicates = [HasStdExtP] in
@@ -174,16 +184,50 @@ let Predicates = [HasStdExtP] in
 def PLI_B : PLI_B_i<0b10110100, "pli.b">;
 
 let Predicates = [HasStdExtP] in {
-def PSEXT_H_B : RVPUnary_ri<0b00, 0b00100, "psext.h.b">;
-def PSABS_H   : RVPUnary_ri<0b00, 0b00111, "psabs.h">;
-def PSABS_B   : RVPUnary_ri<0b10, 0b00111, "psabs.b">;
+  def PSEXT_H_B : RVPUnary_ri<0b00, 0b00100, "psext.h.b">;
+  def PSABS_H   : RVPUnary_ri<0b00, 0b00111, "psabs.h">;
+  def PSABS_B   : RVPUnary_ri<0b10, 0b00111, "psabs.b">;
 } // Predicates = [HasStdExtP]
 let Predicates = [HasStdExtP, IsRV64] in {
-def PSEXT_W_B : RVPUnary_ri<0b01, 0b00100, "psext.w.b">;
-def PSEXT_W_H : RVPUnary_ri<0b01, 0b00101, "psext.w.h">;
+  def PSEXT_W_B : RVPUnary_ri<0b01, 0b00100, "psext.w.b">;
+  def PSEXT_W_H : RVPUnary_ri<0b01, 0b00101, "psext.w.h">;
 } // Predicates = [HasStdExtP, IsRV64]
 
 let Predicates = [HasStdExtP] in
 def PLUI_H : PLUI_i<0b1111000, "plui.h">;
 let Predicates = [HasStdExtP, IsRV64] in
 def PLUI_W : PLUI_i<0b1111001, "plui.w">;
+
+let Predicates = [HasStdExtP] in {
+  def PSRLI_B    : RVPShiftB_ri<0b000, 0b100, "psrli.b">;
+  def PSRLI_H    : RVPShiftH_ri<0b000, 0b100, "psrli.h">;
+
+  def PUSATI_H   : RVPShiftH_ri<0b010, 0b100, "pusati.h">;
+
+  def PSRAI_B    : RVPShiftB_ri<0b100, 0b100, "psrai.b">;
+  def PSRAI_H    : RVPShiftH_ri<0b100, 0b100, "psrai.h">;
+
+  def PSRARI_H   : RVPShiftH_ri<0b101, 0b100, "psrari.h">;
+
+  def PSATI_H    : RVPShiftH_ri<0b110, 0b100, "psati.h">;
+} // Predicates = [HasStdExtP]
+let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
+  def USATI_RV32 : RVPShiftW_ri<0b010, 0b100, "usati">;
+
+  def SRARI_RV32 : RVPShiftW_ri<0b101, 0b100, "srari">;
+
+  def SATI_RV32  : RVPShiftW_ri<0b110, 0b100, "sati">;
+} // Predicates = [HasStdExtP, IsRV32]
+let Predicates = [HasStdExtP, IsRV64] in {
+  def PSRLI_W    : RVPShiftW_ri<0b000, 0b100, "psrli.w">;
+  def PSRAI_W    : RVPShiftW_ri<0b100, 0b100, "psrai.w">;
+
+  def PUSATI_W   : RVPShiftW_ri<0b010, 0b100, "pusati.w">;
+  def USATI_RV64 : RVPShiftD_ri<0b010, 0b100, "usati">;
+
+  def PSRARI_W   : RVPShiftW_ri<0b101, 0b100, "psrari.w">;
+  def SRARI_RV64 : RVPShiftD_ri<0b101, 0b100, "srari">;
+
+  def PSATI_W    : RVPShiftW_ri<0b110, 0b100, "psati.w">;
+  def SATI_RV64  : RVPShiftD_ri<0b110, 0b100, "sati">;
+} // Predicates = [HasStdExtP, IsRV64]

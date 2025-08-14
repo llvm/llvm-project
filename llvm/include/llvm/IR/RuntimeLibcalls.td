@@ -406,17 +406,6 @@ multiclass LibmLongDoubleLibCall<string libcall_basename = !toupper(NAME),
 def SC_MEMCPY : RuntimeLibcall;
 def SC_MEMMOVE : RuntimeLibcall;
 def SC_MEMSET : RuntimeLibcall;
-def SC_MEMCHR: RuntimeLibcall;
-
-// AArch64 SME ABI calls
-def SMEABI_SME_STATE : RuntimeLibcall;
-def SMEABI_TPIDR2_SAVE : RuntimeLibcall;
-def SMEABI_ZA_DISABLE : RuntimeLibcall;
-def SMEABI_TPIDR2_RESTORE : RuntimeLibcall;
-def SMEABI_GET_CURRENT_VG : RuntimeLibcall;
-def SMEABI_SME_STATE_SIZE : RuntimeLibcall;
-def SMEABI_SME_SAVE : RuntimeLibcall;
-def SMEABI_SME_RESTORE : RuntimeLibcall;
 
 // ARM EABI calls
 def AEABI_MEMCPY4 : RuntimeLibcall; // Align 4
@@ -1234,34 +1223,7 @@ defset list<RuntimeLibcallImpl> AArch64LibcallImpls = {
   def __arm_sc_memcpy : RuntimeLibcallImpl<SC_MEMCPY>;
   def __arm_sc_memmove : RuntimeLibcallImpl<SC_MEMMOVE>;
   def __arm_sc_memset : RuntimeLibcallImpl<SC_MEMSET>;
-  def __arm_sc_memchr : RuntimeLibcallImpl<SC_MEMCHR>;
 } // End AArch64LibcallImpls
-
-def __arm_sme_state : RuntimeLibcallImpl<SMEABI_SME_STATE>;
-def __arm_tpidr2_save : RuntimeLibcallImpl<SMEABI_TPIDR2_SAVE>;
-def __arm_za_disable : RuntimeLibcallImpl<SMEABI_ZA_DISABLE>;
-def __arm_tpidr2_restore : RuntimeLibcallImpl<SMEABI_TPIDR2_RESTORE>;
-def __arm_get_current_vg : RuntimeLibcallImpl<SMEABI_GET_CURRENT_VG>;
-def __arm_sme_state_size : RuntimeLibcallImpl<SMEABI_SME_STATE_SIZE>;
-def __arm_sme_save : RuntimeLibcallImpl<SMEABI_SME_SAVE>;
-def __arm_sme_restore : RuntimeLibcallImpl<SMEABI_SME_RESTORE>;
-
-def SMEABI_LibCalls_PreserveMost_From_X0 : LibcallsWithCC<(add
-  __arm_tpidr2_save,
-  __arm_za_disable,
-  __arm_tpidr2_restore),
-  SMEABI_PreserveMost_From_X0>;
-
-def SMEABI_LibCalls_PreserveMost_From_X1 : LibcallsWithCC<(add
-  __arm_get_current_vg,
-  __arm_sme_state_size,
-  __arm_sme_save,
-  __arm_sme_restore),
-  SMEABI_PreserveMost_From_X1>;
-
-def SMEABI_LibCalls_PreserveMost_From_X2 : LibcallsWithCC<(add
-  __arm_sme_state),
-  SMEABI_PreserveMost_From_X2>;
 
 def isAArch64_ExceptArm64EC
     : RuntimeLibcallPredicate<"(TT.isAArch64() && !TT.isWindowsArm64EC())">;
@@ -1282,10 +1244,7 @@ def AArch64SystemLibrary : SystemRuntimeLibrary<
        LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
        DefaultLibmExp10,
        DefaultStackProtector,
-       SecurityCheckCookieIfWinMSVC,
-       SMEABI_LibCalls_PreserveMost_From_X0,
-       SMEABI_LibCalls_PreserveMost_From_X1,
-       SMEABI_LibCalls_PreserveMost_From_X2)
+       SecurityCheckCookieIfWinMSVC)
 >;
 
 // Prepend a # to every name
@@ -1320,6 +1279,9 @@ def AMDGPUSystemLibrary : SystemRuntimeLibrary<isAMDGPU, (add)>;
 //===----------------------------------------------------------------------===//
 // ARM Runtime Libcalls
 //===----------------------------------------------------------------------===//
+
+def isTargetAEABIAndAAPCS_ABI : RuntimeLibcallPredicate<
+  [{TT.isTargetAEABI() && isAAPCS_ABI(TT, ABIName)}]>;
 
 // if (isTargetMachO()) {
 // if (Subtarget->isThumb() && Subtarget->hasVFP2Base() &&
@@ -1514,13 +1476,33 @@ def __udivmodsi4 : RuntimeLibcallImpl<UDIVREM_I32>;
 // a __gnu_ prefix (which is the default).
 // isTargetAEABI()
 def __aeabi_f2h : RuntimeLibcallImpl<FPROUND_F32_F16>; // CallingConv::ARM_AAPCS
-//def __aeabi_d2h : RuntimeLibcallImpl<FPROUND_F64_F16>; // CallingConv::ARM_AAPCS
 def __aeabi_h2f : RuntimeLibcallImpl<FPEXT_F16_F32>; // CallingConv::ARM_AAPCS
 
 // !isTargetMachO()
 def __gnu_f2h_ieee : RuntimeLibcallImpl<FPROUND_F32_F16>;
 def __gnu_h2f_ieee : RuntimeLibcallImpl<FPEXT_F16_F32>;
 
+// In EABI, these functions have an __aeabi_ prefix, but in GNUEABI
+// they have a __gnu_ prefix (which is the default).
+def EABIHalfConvertCalls : LibcallImpls<(add __aeabi_f2h, __aeabi_h2f),
+                                        isTargetAEABIAndAAPCS_ABI> {
+  let CallingConv = ARM_AAPCS;
+}
+
+// The half <-> float conversion functions are always soft-float on
+// non-watchos platforms, but are needed for some targets which use a
+// hard-float calling convention by default.
+def ARMHalfConvertLibcallCallingConv : LibcallCallingConv<
+  [{TT.isWatchABI() ? DefaultCC :
+    (isAAPCS_ABI(TT, ABIName) ? CallingConv::ARM_AAPCS : CallingConv::ARM_APCS)}]
+>;
+
+def GNUEABIHalfConvertCalls :
+  LibcallImpls<(add __gnu_f2h_ieee, __gnu_h2f_ieee),
+    RuntimeLibcallPredicate<[{!TT.isOSBinFormatMachO() &&
+                              !TT.isTargetAEABI()}]>> {
+  let CallingConv = ARMHalfConvertLibcallCallingConv;
+}
 
 def WindowARMDivRemCalls : LibcallImpls<
   (add __rt_sdiv, __rt_sdiv64, __rt_udiv, __rt_udiv64),
@@ -1539,8 +1521,101 @@ def WindowARMFPIntCasts : LibcallImpls<
 def AEABIDivRemCalls : LibcallImpls<
   (add __aeabi_idivmod, __aeabi_ldivmod,
        __aeabi_uidivmod, __aeabi_uldivmod),
-  RuntimeLibcallPredicate<[{TT.isTargetAEABI() || TT.isAndroid() || TT.isTargetGNUAEABI() ||
-    TT.isTargetMuslAEABI()}]>> {
+  RuntimeLibcallPredicate<[{hasAEABILibcalls(TT)}]>> {
+  let CallingConv = ARM_AAPCS;
+}
+
+def AEABICalls : LibcallImpls<
+  (add
+      // Double-precision floating-point arithmetic helper functions
+      // RTABI chapter 4.1.2, Table 2
+      __aeabi_dadd,
+      __aeabi_ddiv,
+      __aeabi_dmul,
+      __aeabi_dsub,
+
+      // Double-precision floating-point comparison helper functions
+      // RTABI chapter 4.1.2, Table 3
+      __aeabi_dcmpeq__oeq,
+      __aeabi_dcmpeq__une,
+      __aeabi_dcmplt,
+      __aeabi_dcmple,
+      __aeabi_dcmpge,
+      __aeabi_dcmpgt,
+       __aeabi_dcmpun,
+
+      // Single-precision floating-point arithmetic helper functions
+      // RTABI chapter 4.1.2, Table 4
+      __aeabi_fadd,
+      __aeabi_fdiv,
+      __aeabi_fmul,
+      __aeabi_fsub,
+
+      // Single-precision floating-point comparison helper functions
+      // RTABI chapter 4.1.2, Table 5
+      __aeabi_fcmpeq__oeq,
+      __aeabi_fcmpeq__une,
+      __aeabi_fcmplt,
+      __aeabi_fcmple,
+      __aeabi_fcmpge,
+      __aeabi_fcmpgt,
+      __aeabi_fcmpun,
+
+      // Floating-point to integer conversions.
+      // RTABI chapter 4.1.2, Table 6
+      __aeabi_d2iz,
+      __aeabi_d2uiz,
+      __aeabi_d2lz,
+      __aeabi_d2ulz,
+      __aeabi_f2iz,
+      __aeabi_f2uiz,
+      __aeabi_f2lz,
+      __aeabi_f2ulz,
+
+      // Conversions between floating types.
+      // RTABI chapter 4.1.2, Table 7
+      __aeabi_d2f,
+      __aeabi_f2d,
+      //__aeabi_h2f added separately
+      //__aeabi_f2h added separately
+      __aeabi_d2h,
+
+      // Integer to floating-point conversions.
+      // RTABI chapter 4.1.2, Table 8
+      __aeabi_i2d,
+      __aeabi_ui2d,
+      __aeabi_l2d,
+      __aeabi_ul2d,
+      __aeabi_i2f,
+      __aeabi_ui2f,
+      __aeabi_l2f,
+      __aeabi_ul2f,
+
+      // Long long helper functions
+      // RTABI chapter 4.2, Table 9
+      __aeabi_lmul,
+      __aeabi_llsl,
+      __aeabi_llsr,
+      __aeabi_lasr,
+
+      // Integer division functions
+      // RTABI chapter 4.3.1
+      __aeabi_idiv,
+      __aeabi_uidiv),
+  RuntimeLibcallPredicate<[{hasAEABILibcalls(TT) && isAAPCS_ABI(TT, ABIName)}]>> {
+  let CallingConv = ARM_AAPCS;
+}
+
+// EABI dependent RTLIB, Memory operations
+// RTABI chapter 4.3.4
+def AEABI45MemCalls : LibcallImpls<
+  (add __aeabi_memcpy,  __aeabi_memcpy4, __aeabi_memcpy8,
+       __aeabi_memmove, __aeabi_memmove4, __aeabi_memmove8,
+       __aeabi_memset, __aeabi_memset4, __aeabi_memset8,
+       __aeabi_memclr, __aeabi_memclr4, __aeabi_memclr8),
+  RuntimeLibcallPredicate<[{(EABIVersion == EABI::EABI4 ||
+                             EABIVersion == EABI::EABI5) &&
+                             hasAEABILibcalls(TT) && isAAPCS_ABI(TT, ABIName)}]>> {
   let CallingConv = ARM_AAPCS;
 }
 
@@ -1559,6 +1634,11 @@ def ARMSystemLibrary
            DarwinSinCosStret, DarwinExp10,
            LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
            DefaultLibmExp10,
+
+           AEABICalls,
+           AEABI45MemCalls,
+           EABIHalfConvertCalls,
+           GNUEABIHalfConvertCalls,
 
            // Use divmod compiler-rt calls for iOS 5.0 and later.
            LibcallImpls<(add __divmodsi4, __udivmodsi4),
