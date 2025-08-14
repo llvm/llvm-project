@@ -2103,8 +2103,10 @@ void COFFDumper::printCOFFPseudoReloc() {
   if (RelocEnd.getValue() < RelocBegin.getValue()) {
     reportWarning(
         createStringError(
-            "the begin marker symbol for runtime pseudo-relocation must point "
-            "to a lower address than where the end marker points"),
+            "the end marker symbol for runtime pseudo-relocation must point "
+            "to a higher address than where the begin marker points to: "
+            "expected >=0x%x, but got 0x%x",
+            RelocBegin.getValue(), RelocEnd.getValue()),
         Obj->getFileName());
     return;
   }
