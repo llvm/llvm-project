@@ -1265,7 +1265,8 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
 #else
   bool mustDoCopyIn = false;
   bool mustDoCopyOut = false;
-  if constexpr (std::is_same_v<decltype(arg.entity), const Fortran::evaluate::ActualArgument *>) {
+  if constexpr (std::is_same_v<decltype(arg.entity),
+                               const Fortran::evaluate::ActualArgument *>) {
     mustDoCopyIn = actual.isArray() && arg.entity->GetMayNeedCopyIn();
     mustDoCopyIn = arg.entity->GetMayNeedCopyOut();
   }
