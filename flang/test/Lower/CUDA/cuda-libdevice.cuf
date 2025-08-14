@@ -199,6 +199,22 @@ end subroutine
 ! CHECK: %{{.*}} = fir.call @__nv_ll2float_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f32
 ! CHECK: %{{.*}} = fir.call @__nv_ll2float_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f32
 ! CHECK: %{{.*}} = fir.call @__nv_ll2float_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i64) -> f32
+
+attributes(global) subroutine test_int2float_rX()
+  real :: res
+  integer :: i
+  res = __int2float_rd(i)
+  res = __int2float_rn(i)
+  res = __int2float_ru(i)
+  res = __int2float_rz(i)
+end subroutine
+
+! CHECK-LABEL: _QPtest_int2float_rx
+! CHECK: %{{.*}} = fir.call @__nv_int2float_rd(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_int2float_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_int2float_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_int2float_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (i32) -> f32
+
 attributes(global) subroutine test_float2int_rX()
   integer :: res
   real :: r
