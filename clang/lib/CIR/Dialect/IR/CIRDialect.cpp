@@ -2432,7 +2432,7 @@ void cir::InlineAsmOp::print(OpAsmPrinter &p) {
   auto *nameIt = names.begin();
   auto *attrIt = getOperandAttrs().begin();
 
-  for (auto ops : getAsmOperands()) {
+  for (mlir::OperandRange ops : getAsmOperands()) {
     p << *nameIt << " = ";
 
     p << '[';
@@ -2504,7 +2504,7 @@ ParseResult cir::InlineAsmOp::parse(OpAsmParser &parser,
   llvm::SmallVector<int32_t> operandsGroupSizes;
   std::string asmString, constraints;
   Type resType;
-  auto *ctxt = parser.getBuilder().getContext();
+  MLIRContext *ctxt = parser.getBuilder().getContext();
 
   auto error = [&](const Twine &msg) -> LogicalResult {
     return parser.emitError(parser.getCurrentLocation(), msg);
@@ -2528,7 +2528,7 @@ ParseResult cir::InlineAsmOp::parse(OpAsmParser &parser,
     OpAsmParser::UnresolvedOperand op;
 
     if (parser.parseOperand(op) || parser.parseColon())
-      return mlir::failure();
+      return error("can't parse operand");
 
     Type typ;
     if (parser.parseType(typ).failed())
@@ -2556,26 +2556,30 @@ ParseResult cir::InlineAsmOp::parse(OpAsmParser &parser,
       return mlir::success();
     }
 
-    if (parser.parseCommaSeparatedList([&]() {
-          Value val;
-          if (parseValue(val).succeeded()) {
-            result.operands.push_back(val);
-            size++;
+    auto parseOperand = [&]() {
+      Value val;
+      if (parseValue(val).succeeded()) {
+        result.operands.push_back(val);
+        size++;
 
-            if (parser.parseOptionalLParen().failed()) {
-              operandAttrs.push_back(mlir::Attribute());
-              return mlir::success();
-            }
+        if (parser.parseOptionalLParen().failed()) {
+          operandAttrs.push_back(mlir::Attribute());
+          return mlir::success();
+        }
 
-            if (parser.parseKeyword("maybe_memory").succeeded()) {
-              operandAttrs.push_back(mlir::UnitAttr::get(ctxt));
-              if (parser.parseRParen())
-                return expected(")");
-              return mlir::success();
-            }
-          }
-          return mlir::failure();
-        }))
+        if (parser.parseKeyword("maybe_memory").succeeded()) {
+          operandAttrs.push_back(mlir::UnitAttr::get(ctxt));
+          if (parser.parseRParen())
+            return expected(")");
+          return mlir::success();
+        } else {
+          return expected("maybe_memory");
+        }
+      }
+      return mlir::failure();
+    };
+
+    if (parser.parseCommaSeparatedList(parseOperand).failed())
       return mlir::failure();
 
     if (parser.parseRSquare().failed() || parser.parseComma().failed())
