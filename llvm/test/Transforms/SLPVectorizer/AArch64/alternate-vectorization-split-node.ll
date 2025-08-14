@@ -8,8 +8,11 @@ define i32 @test(ptr %c) {
 ; CHECK-NEXT:    [[BITLEN:%.*]] = getelementptr i8, ptr [[C]], i64 136
 ; CHECK-NEXT:    [[INCDEC_PTR_3_1:%.*]] = getelementptr i8, ptr [[C]], i64 115
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[BITLEN]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 0, i32 0, i32 0>
-; CHECK-NEXT:    [[TMP5:%.*]] = lshr <8 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> poison, <6 x i32> <i32 1, i32 1, i32 1, i32 1, i32 0, i32 0>
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr <6 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> poison, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 1, i32 0, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <6 x i64> [[TMP2]], <6 x i64> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i64> [[TMP4]], <8 x i64> [[TMP3]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 13, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc <8 x i64> [[TMP5]] to <8 x i8>
 ; CHECK-NEXT:    store <8 x i8> [[TMP6]], ptr [[INCDEC_PTR_3_1]], align 1
 ; CHECK-NEXT:    ret i32 0

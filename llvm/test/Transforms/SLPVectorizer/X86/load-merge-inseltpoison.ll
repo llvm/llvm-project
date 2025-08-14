@@ -101,8 +101,10 @@ define <4 x float> @PR16739_byref_alt(ptr nocapture readonly dereferenceable(16)
 define <4 x float> @PR16739_byval(ptr nocapture readonly dereferenceable(16) %x) {
 ; CHECK-LABEL: @PR16739_byval(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[X:%.*]], align 16
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr <4 x i64> [[TMP2]], <i64 0, i64 32, i64 0, i64 0>
+; CHECK-NEXT:    [[T1:%.*]] = load i64, ptr [[X]], align 16
+; CHECK-NEXT:    [[T8:%.*]] = lshr i64 [[T1]], 32
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> poison, <4 x i32> <i32 0, i32 poison, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i64> [[TMP2]], i64 [[T8]], i32 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc <4 x i64> [[TMP3]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i32> [[TMP4]] to <4 x float>
 ; CHECK-NEXT:    ret <4 x float> [[TMP5]]
