@@ -1553,18 +1553,17 @@ void FilterChooser::reportRegion(bitAttr_t RA, unsigned StartBit,
 bool FilterChooser::filterProcessor(bool AllowMixed, bool Greedy) {
   Filters.clear();
   BestIndex = -1;
-  unsigned numInstructions = Opcodes.size();
 
-  assert(numInstructions && "Filter created with no instructions");
+  assert(!Opcodes.empty() && "Filter created with no instructions");
 
   // No further filtering is necessary.
-  if (numInstructions == 1)
+  if (Opcodes.size() == 1)
     return true;
 
   // Heuristics.  See also doFilter()'s "Heuristics" comment when num of
   // instructions is 3.
   if (AllowMixed && !Greedy) {
-    assert(numInstructions == 3);
+    assert(Opcodes.size() == 3);
 
     for (const auto &Opcode : Opcodes) {
       insn_t Insn = insnWithID(Opcode.EncodingID);
@@ -1578,8 +1577,6 @@ bool FilterChooser::filterProcessor(bool AllowMixed, bool Greedy) {
       }
     }
   }
-
-  unsigned BitIndex;
 
   // We maintain BIT_WIDTH copies of the bitAttrs automaton.
   // The automaton consumes the corresponding bit from each
@@ -1602,14 +1599,14 @@ bool FilterChooser::filterProcessor(bool AllowMixed, bool Greedy) {
 
   // FILTERED bit positions provide no entropy and are not worthy of pursuing.
   // Filter::recurse() set either BIT_TRUE or BIT_FALSE for each position.
-  for (BitIndex = 0; BitIndex < BitWidth; ++BitIndex)
+  for (unsigned BitIndex = 0; BitIndex < BitWidth; ++BitIndex)
     if (FilterBitValues[BitIndex].isSet())
       bitAttrs[BitIndex] = ATTR_FILTERED;
 
   for (const auto &OpcPair : Opcodes) {
     insn_t insn = insnWithID(OpcPair.EncodingID);
 
-    for (BitIndex = 0; BitIndex < BitWidth; ++BitIndex) {
+    for (unsigned BitIndex = 0; BitIndex < BitWidth; ++BitIndex) {
       switch (bitAttrs[BitIndex]) {
       case ATTR_NONE:
         if (insn[BitIndex] == BitValue::BIT_UNSET)
@@ -1655,7 +1652,7 @@ bool FilterChooser::filterProcessor(bool AllowMixed, bool Greedy) {
   bitAttr_t RA = ATTR_NONE;
   unsigned StartBit = 0;
 
-  for (BitIndex = 0; BitIndex < BitWidth; ++BitIndex) {
+  for (unsigned BitIndex = 0; BitIndex < BitWidth; ++BitIndex) {
     bitAttr_t bitAttr = bitAttrs[BitIndex];
 
     assert(bitAttr != ATTR_NONE && "Bit without attributes");
@@ -1736,12 +1733,12 @@ bool FilterChooser::filterProcessor(bool AllowMixed, bool Greedy) {
   case ATTR_FILTERED:
     break;
   case ATTR_ALL_SET:
-    reportRegion(RA, StartBit, BitIndex, AllowMixed);
+    reportRegion(RA, StartBit, BitWidth, AllowMixed);
     break;
   case ATTR_ALL_UNSET:
     break;
   case ATTR_MIXED:
-    reportRegion(RA, StartBit, BitIndex, AllowMixed);
+    reportRegion(RA, StartBit, BitWidth, AllowMixed);
     break;
   }
 
@@ -1773,8 +1770,7 @@ bool FilterChooser::filterProcessor(bool AllowMixed, bool Greedy) {
 // the instructions.  A conflict of instructions may occur, in which case we
 // dump the conflict set to the standard error.
 void FilterChooser::doFilter() {
-  unsigned Num = Opcodes.size();
-  assert(Num && "FilterChooser created with no instructions");
+  assert(!Opcodes.empty() && "FilterChooser created with no instructions");
 
   // Try regions of consecutive known bit values first.
   if (filterProcessor(false))
@@ -1788,7 +1784,7 @@ void FilterChooser::doFilter() {
   // no single instruction for the maximum ATTR_MIXED region Inst{14-4} has a
   // well-known encoding pattern.  In such case, we backtrack and scan for the
   // the very first consecutive ATTR_ALL_SET region and assign a filter to it.
-  if (Num == 3 && filterProcessor(true, false))
+  if (Opcodes.size() == 3 && filterProcessor(true, false))
     return;
 
   // If we come to here, the instruction decoding has failed.
