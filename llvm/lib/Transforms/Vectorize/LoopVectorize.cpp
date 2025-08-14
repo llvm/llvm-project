@@ -7137,18 +7137,21 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
                          CostCtx.isLegacyUniformAfterVectorization(AddrI, VF))
           return true;
 
-        if (WidenMemR->isReverse()) {
-          // If the stored value of a reverse store is invariant, LICM will
-          // hoist the reverse operation to the preheader. In this case, the
-          // result of the VPlan-based cost model will diverge from that of
-          // the legacy model.
+        // If the stored value of a reverse store is invariant, LICM will
+        // hoist the reverse operation to the preheader. In this case, the
+        // result of the VPlan-based cost model will diverge from that of
+        // the legacy model.
+        if (isa<VPWidenStoreRecipe, VPWidenStoreEVLRecipe>(WidenMemR)) {
+          VPValue *StoredVal;
           if (auto *StoreR = dyn_cast<VPWidenStoreRecipe>(WidenMemR))
-            if (StoreR->getStoredValue()->isDefinedOutsideLoopRegions())
-              return true;
+            StoredVal = StoreR->getStoredValue();
+          else
+            StoredVal =
+                cast<VPWidenStoreEVLRecipe>(WidenMemR)->getStoredValue();
 
-          if (auto *StoreR = dyn_cast<VPWidenStoreEVLRecipe>(WidenMemR))
-            if (StoreR->getStoredValue()->isDefinedOutsideLoopRegions())
-              return true;
+          using namespace VPlanPatternMatch;
+          if (match(StoredVal, m_Reverse(m_VPValue())))
+            return StoredVal->isDefinedOutsideLoopRegions();
         }
       }
 
@@ -7757,10 +7760,13 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
     Ptr = VectorPtr;
   }
 
+  if (Reverse && Mask)
+    Mask = Builder.createNaryOp(VPInstruction::Reverse, Mask, I->getDebugLoc());
+
   if (VPI->getOpcode() == Instruction::Load) {
     auto *Load = cast<LoadInst>(I);
-    auto *LoadR = new VPWidenLoadRecipe(*Load, Ptr, Mask, Consecutive, Reverse,
-                                        *VPI, Load->getDebugLoc());
+    auto *LoadR = new VPWidenLoadRecipe(*Load, Ptr, Mask, Consecutive, *VPI,
+                                        Load->getDebugLoc());
     if (Reverse) {
       Builder.insert(LoadR);
       return new VPInstruction(VPInstruction::Reverse, LoadR, {}, {},
@@ -7774,8 +7780,8 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
   if (Reverse)
     StoredVal = Builder.createNaryOp(VPInstruction::Reverse, StoredVal,
                                      Store->getDebugLoc());
-  return new VPWidenStoreRecipe(*Store, Ptr, StoredVal, Mask, Consecutive,
-                                Reverse, *VPI, Store->getDebugLoc());
+  return new VPWidenStoreRecipe(*Store, Ptr, StoredVal, Mask, Consecutive, *VPI,
+                                Store->getDebugLoc());
 }
 
 VPWidenIntOrFpInductionRecipe *
