@@ -59,7 +59,7 @@ static Value *getFCmpValue(unsigned Code, Value *LHS, Value *RHS,
 /// in x86InstCombine.cpp?)
 static Value *createLogicFromTable3Var(const std::bitset<8> &Table, Value *Op0,
                                        Value *Op1, Value *Op2, Value *Root,
-                                       IRBuilderBase &Builder, bool HasOneUse) {
+                                       IRBuilderBase &Builder) {
   uint8_t TruthValue = Table.to_ulong();
   auto FoldConstant = [&](bool Val) {
     Type *Ty = Op0->getType();
@@ -70,43 +70,29 @@ static Value *createLogicFromTable3Var(const std::bitset<8> &Table, Value *Op0,
   switch (TruthValue) {
   default:
     return nullptr;
-
   case 0x00: // Always FALSE
     Result = FoldConstant(false);
     break;
-
   case 0xFF: // Always TRUE
     Result = FoldConstant(true);
     break;
-
   case 0xE1: // ~((Op1 | Op2) ^ Op0)
-    if (!HasOneUse)
-      return nullptr;
-    {
-      Value *Or = Builder.CreateOr(Op1, Op2);
-      Value *Xor = Builder.CreateXor(Or, Op0);
-      Result = Builder.CreateNot(Xor);
-    }
-    break;
-
+  {
+    Value *Or = Builder.CreateOr(Op1, Op2);
+    Value *Xor = Builder.CreateXor(Or, Op0);
+    Result = Builder.CreateNot(Xor);
+  } break;
   case 0x60: // Op0 & (Op1 ^ Op2)
-    if (!HasOneUse)
-      return nullptr;
-    {
-      Value *Xor = Builder.CreateXor(Op1, Op2);
-      Result = Builder.CreateAnd(Op0, Xor);
-    }
-    break;
-
+  {
+    Value *Xor = Builder.CreateXor(Op1, Op2);
+    Result = Builder.CreateAnd(Op0, Xor);
+  } break;
   case 0xD2: // ((Op1 | Op2) ^ Op0) ^ Op1
-    if (!HasOneUse)
-      return nullptr;
-    {
-      Value *Or = Builder.CreateOr(Op1, Op2);
-      Value *Xor1 = Builder.CreateXor(Or, Op0);
-      Result = Builder.CreateXor(Xor1, Op1);
-    }
-    break;
+  {
+    Value *Or = Builder.CreateOr(Op1, Op2);
+    Value *Xor1 = Builder.CreateXor(Or, Op0);
+    Result = Builder.CreateXor(Xor1, Op1);
+  } break;
   }
 
   return Result;
@@ -119,6 +105,9 @@ extractThreeVariables(Value *Root) {
                                     // (see bitreverse-hang.ll)
   SmallVector<Value *> Worklist;
   Worklist.push_back(Root);
+
+  // Track all instructions to ensure they're in the same BB
+  BasicBlock *FirstBB = nullptr;
 
   while (!Worklist.empty()) {
     Value *V = Worklist.pop_back_val();
@@ -134,6 +123,15 @@ extractThreeVariables(Value *Root) {
       continue;
     }
     if (auto *BO = dyn_cast<BinaryOperator>(V)) {
+      if (!BO->isBitwiseLogicOp())
+        return {nullptr, nullptr, nullptr};
+
+      // Check BB consistency
+      if (!FirstBB)
+        FirstBB = BO->getParent();
+      else if (BO->getParent() != FirstBB)
+        return {nullptr, nullptr, nullptr};
+
       if (V == Root || V->hasOneUse()) {
         Visited.insert(BO->getOperand(0));
         Visited.insert(BO->getOperand(1));
@@ -148,19 +146,22 @@ extractThreeVariables(Value *Root) {
   }
 
   if (Variables.size() == 3) {
-    // Sort variables by pointer value to ensure deterministic ordering
+    // Sort variables by instruction order
     SmallVector<Value *, 3> SortedVars(Variables.begin(), Variables.end());
-    llvm::sort(SortedVars, [](Value *A, Value *B) { return A < B; });
+    llvm::sort(SortedVars, [](Value *A, Value *B) {
+      if (auto *IA = dyn_cast<Instruction>(A))
+        if (auto *IB = dyn_cast<Instruction>(B))
+          return IA->comesBefore(IB);
+      return A < B;
+    });
     return {SortedVars[0], SortedVars[1], SortedVars[2]};
   }
   return {nullptr, nullptr, nullptr};
 }
 
-/// Evaluate a boolean expression with concrete variable values.
-static std::optional<bool>
-evaluateBooleanExpression(Value *Expr,
-                          const SmallMapVector<Value *, bool, 4> &Values) {
-
+/// Evaluate a boolean expression with bit-vector inputs for all 8 combinations.
+static std::optional<std::bitset<8>>
+evaluateBooleanExpression(Value *Expr, Value *Op0, Value *Op1, Value *Op2) {
   // Post-order traversal of the expression tree
   SmallVector<Instruction *> Instructions;
   SmallVector<Value *> ToVisit;
@@ -179,45 +180,42 @@ evaluateBooleanExpression(Value *Expr,
     }
   }
 
-  // Check for instructions being in the same BB
-  if (!Instructions.empty()) {
-    BasicBlock *FirstBB = Instructions.front()->getParent();
-    if (!llvm::all_of(Instructions, [FirstBB](Instruction *I) {
-          return I->getParent() == FirstBB;
-        })) {
-      return std::nullopt;
-    }
-  }
-
   // Sort instructions within the same BB
   llvm::sort(Instructions,
              [](Instruction *A, Instruction *B) { return A->comesBefore(B); });
 
-  //  Now in topological order we can evaluate the expression
-  SmallDenseMap<Value *, bool> Computed(Values.begin(), Values.end());
+  // Initialize bit-vector values for the 3 variables
+  // Op0: 0b11110000 (true for combinations 000,001,010,011)
+  // Op1: 0b11001100 (true for combinations 000,001,100,101)
+  // Op2: 0b10101010 (true for combinations 000,010,100,110)
+  SmallDenseMap<Value *, std::bitset<8>> Computed;
+  Computed[Op0] = std::bitset<8>(0xF0); // 11110000
+  Computed[Op1] = std::bitset<8>(0xCC); // 11001100
+  Computed[Op2] = std::bitset<8>(0xAA); // 10101010
 
   for (Instruction *I : Instructions) {
     Value *NotV;
     if (match(I, m_Not(m_Value(NotV)))) {
-      auto It = Computed.find(NotV);
-      if (It == Computed.end())
+      if (!Computed.count(NotV))
         return std::nullopt;
-      Computed[I] = !It->second;
+      Computed[I] = ~Computed.at(NotV); // Bitwise NOT
     } else if (auto *BO = dyn_cast<BinaryOperator>(I)) {
-      auto LHSIt = Computed.find(BO->getOperand(0));
-      auto RHSIt = Computed.find(BO->getOperand(1));
-      if (LHSIt == Computed.end() || RHSIt == Computed.end())
+      if (!Computed.count(BO->getOperand(0)) ||
+          !Computed.count(BO->getOperand(1)))
         return std::nullopt;
+
+      auto &LHS = Computed.at(BO->getOperand(0));
+      auto &RHS = Computed.at(BO->getOperand(1));
 
       switch (BO->getOpcode()) {
       case Instruction::And:
-        Computed[I] = LHSIt->second && RHSIt->second;
+        Computed[I] = LHS & RHS; // Bitwise AND
         break;
       case Instruction::Or:
-        Computed[I] = LHSIt->second || RHSIt->second;
+        Computed[I] = LHS | RHS; // Bitwise OR
         break;
       case Instruction::Xor:
-        Computed[I] = LHSIt->second != RHSIt->second;
+        Computed[I] = LHS ^ RHS; // Bitwise XOR
         break;
       default:
         return std::nullopt;
@@ -226,65 +224,30 @@ evaluateBooleanExpression(Value *Expr,
   }
 
   auto It = Computed.find(Expr);
-  return It != Computed.end() ? std::optional<bool>(It->second) : std::nullopt;
-}
-
-/// Extracts the truth table from a 3-variable boolean expression.
-/// The truth table is a 8-bit integer where each bit corresponds to a possible
-/// combination of the three variables.
-/// The bits are ordered as follows:
-/// 000, 001, 010, 011, 100, 101, 110, 111
-/// The result is a bitset where the i-th bit is set if the expression is true
-/// for the i-th combination of the variables.
-static std::optional<std::bitset<8>>
-extractThreeBitTruthTable(Value *Expr, Value *Op0, Value *Op1, Value *Op2) {
-  std::bitset<8> Table;
-  for (int I = 0; I < 8; I++) {
-    bool Val0 = (I >> 2) & 1;
-    bool Val1 = (I >> 1) & 1;
-    bool Val2 = I & 1;
-    SmallMapVector<Value *, bool, 4> Values;
-    Values[Op0] = Val0;
-    Values[Op1] = Val1;
-    Values[Op2] = Val2;
-    auto Result = evaluateBooleanExpression(Expr, Values);
-    if (!Result)
-      return std::nullopt;
-    Table[I] = *Result;
-  }
-  return Table;
+  return It != Computed.end() ? std::optional<std::bitset<8>>(It->second)
+                              : std::nullopt;
 }
 
 /// Try to canonicalize 3-variable boolean expressions using truth table lookup.
-static Value *foldThreeVarBoolExpr(Value *Root,
+static Value *foldThreeVarBoolExpr(Instruction &Root,
                                    InstCombiner::BuilderTy &Builder) {
-  // Only proceed if this is a "complex" expression.
-  if (!isa<BinaryOperator>(Root))
+
+  auto &BO = cast<BinaryOperator>(Root);
+  assert(BO.isBitwiseLogicOp() && "Unexpected opcode for boolean expression");
+
+  if (!isa<BinaryOperator>(BO.getOperand(0)) ||
+      !isa<BinaryOperator>(BO.getOperand(1)))
     return nullptr;
 
-  // Early bailout for expressions with too many uses (avoid expensive analysis
-  // andorxor.ll)
-  if (!Root->hasOneUse())
-    return nullptr;
-
-  // Skip transformation if expression is already simple (at most 2 levels
-  // deep).
-  if (auto *BO = dyn_cast<BinaryOperator>(Root)) {
-    bool IsSimple = !isa<BinaryOperator>(BO->getOperand(0)) ||
-                    !isa<BinaryOperator>(BO->getOperand(1));
-    if (IsSimple)
-      return nullptr;
-  }
-
-  auto [Op0, Op1, Op2] = extractThreeVariables(Root);
+  auto [Op0, Op1, Op2] = extractThreeVariables(&Root);
   if (!Op0 || !Op1 || !Op2)
     return nullptr;
 
-  auto Table = extractThreeBitTruthTable(Root, Op0, Op1, Op2);
+  auto Table = evaluateBooleanExpression(&Root, Op0, Op1, Op2);
   if (!Table)
     return nullptr;
 
-  return createLogicFromTable3Var(*Table, Op0, Op1, Op2, Root, Builder, true);
+  return createLogicFromTable3Var(*Table, Op0, Op1, Op2, &Root, Builder);
 }
 
 /// Emit a computation of: (V >= Lo && V < Hi) if Inside is true, otherwise
@@ -2637,7 +2600,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   if (Instruction *Phi = foldBinopWithPhiOperands(I))
     return Phi;
 
-  if (Value *Canonical = foldThreeVarBoolExpr(&I, Builder))
+  if (Value *Canonical = foldThreeVarBoolExpr(I, Builder))
     return replaceInstUsesWith(I, Canonical);
 
   // See if we can simplify any instructions used by the instruction whose sole
@@ -4145,7 +4108,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (Instruction *Phi = foldBinopWithPhiOperands(I))
     return Phi;
 
-  if (Value *Canonical = foldThreeVarBoolExpr(&I, Builder))
+  if (Value *Canonical = foldThreeVarBoolExpr(I, Builder))
     return replaceInstUsesWith(I, Canonical);
 
   // See if we can simplify any instructions used by the instruction whose sole
@@ -4173,7 +4136,6 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     return replaceInstUsesWith(I, V);
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-
   Type *Ty = I.getType();
   if (Ty->isIntOrIntVectorTy(1)) {
     if (auto *SI0 = dyn_cast<SelectInst>(Op0)) {
@@ -5299,7 +5261,7 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
   if (Instruction *Phi = foldBinopWithPhiOperands(I))
     return Phi;
 
-  if (Value *Canonical = foldThreeVarBoolExpr(&I, Builder))
+  if (Value *Canonical = foldThreeVarBoolExpr(I, Builder))
     return replaceInstUsesWith(I, Canonical);
 
   if (Instruction *NewXor = foldXorToXor(I, Builder))
