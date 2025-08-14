@@ -1,24 +1,28 @@
 ; REQUIRES: asserts
 ; RUN: opt -passes=loop-vectorize -mtriple riscv64-linux-gnu \
 ; RUN:   -mattr=+v,+d -debug-only=loop-vectorize,vplan --disable-output \
-; RUN:   -force-vector-width=1 \
+; RUN:   -force-vector-width=1 -prefer-predicate-over-epilogue=scalar-epilogue \
 ; RUN:   -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK-SCALAR
 ; RUN: opt -passes=loop-vectorize -mtriple riscv64-linux-gnu \
 ; RUN:   -mattr=+v,+d -debug-only=loop-vectorize,vplan --disable-output \
-; RUN:   -riscv-v-register-bit-width-lmul=1 \
+; RUN:   -riscv-v-register-bit-width-lmul=1 -prefer-predicate-over-epilogue=scalar-epilogue \
 ; RUN:   -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK-LMUL1
 ; RUN: opt -passes=loop-vectorize -mtriple riscv64-linux-gnu \
 ; RUN:   -mattr=+v,+d -debug-only=loop-vectorize,vplan --disable-output \
-; RUN:   -riscv-v-register-bit-width-lmul=2 \
+; RUN:   -riscv-v-register-bit-width-lmul=2 -prefer-predicate-over-epilogue=scalar-epilogue \
 ; RUN:   -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK-LMUL2
 ; RUN: opt -passes=loop-vectorize -mtriple riscv64-linux-gnu \
 ; RUN:   -mattr=+v,+d -debug-only=loop-vectorize,vplan --disable-output \
-; RUN:   -riscv-v-register-bit-width-lmul=4 \
+; RUN:   -riscv-v-register-bit-width-lmul=4 -prefer-predicate-over-epilogue=scalar-epilogue \
 ; RUN:   -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK-LMUL4
 ; RUN: opt -passes=loop-vectorize -mtriple riscv64-linux-gnu \
 ; RUN:   -mattr=+v,+d -debug-only=loop-vectorize,vplan --disable-output \
-; RUN:   -riscv-v-register-bit-width-lmul=8 \
+; RUN:   -riscv-v-register-bit-width-lmul=8 -prefer-predicate-over-epilogue=scalar-epilogue \
 ; RUN:   -S < %s 2>&1 | FileCheck %s --check-prefix=CHECK-LMUL8
+
+; TODO: -prefer-predicate-over-epilogue=scalar-epilogue was added to allow
+; unrolling. Calculate register pressure for all VPlans, not just unrolled ones,
+; and remove.
 
 define void @add(ptr noalias nocapture readonly %src1, ptr noalias nocapture readonly %src2, i32 signext %size, ptr noalias nocapture writeonly %result) {
 ; CHECK-LABEL: add

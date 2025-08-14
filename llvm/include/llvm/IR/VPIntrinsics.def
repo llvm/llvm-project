@@ -587,6 +587,12 @@ VP_PROPERTY_FUNCTIONAL_OPC(Load)
 VP_PROPERTY_FUNCTIONAL_INTRINSIC(masked_load)
 END_REGISTER_VP(vp_load, VP_LOAD)
 
+BEGIN_REGISTER_VP_INTRINSIC(vp_load_ff, 1, 2)
+// val,chain = VP_LOAD_FF chain,base,mask,evl
+BEGIN_REGISTER_VP_SDNODE(VP_LOAD_FF, -1, vp_load_ff, 2, 3)
+HELPER_MAP_VPID_TO_VPSD(vp_load_ff, VP_LOAD_FF)
+VP_PROPERTY_NO_FUNCTIONAL
+END_REGISTER_VP(vp_load_ff, VP_LOAD_FF)
 // llvm.experimental.vp.strided.load(ptr,stride,mask,vlen)
 BEGIN_REGISTER_VP_INTRINSIC(experimental_vp_strided_load, 2, 3)
 // chain = EXPERIMENTAL_VP_STRIDED_LOAD chain,base,offset,stride,mask,evl

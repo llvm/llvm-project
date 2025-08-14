@@ -8,7 +8,7 @@
 program sample
    use omp_lib
    integer i, j
-   !ERROR: Hint clause other than omp_sync_hint_none cannot be specified for an unnamed CRITICAL directive
+   !ERROR: When HINT other than 'omp_sync_hint_none' is present, CRITICAL directive should have a name
    !$omp critical hint(omp_lock_hint_speculative)
    j = j + 1
    !$omp end critical
@@ -17,7 +17,7 @@ program sample
    i = i - 1
    !$omp end critical (foo)
 
-   !ERROR: Hint clause other than omp_sync_hint_none cannot be specified for an unnamed CRITICAL directive
+   !ERROR: When HINT other than 'omp_sync_hint_none' is present, CRITICAL directive should have a name
    !$omp critical hint(omp_lock_hint_nonspeculative)
    j = j + 1
    !$omp end critical
@@ -26,7 +26,7 @@ program sample
    i = i - 1
    !$omp end critical (foo)
 
-   !ERROR: Hint clause other than omp_sync_hint_none cannot be specified for an unnamed CRITICAL directive
+   !ERROR: When HINT other than 'omp_sync_hint_none' is present, CRITICAL directive should have a name
    !$omp critical hint(omp_lock_hint_contended)
    j = j + 1
    !$omp end critical
@@ -35,7 +35,7 @@ program sample
    i = i - 1
    !$omp end critical (foo)
 
-   !ERROR: Hint clause other than omp_sync_hint_none cannot be specified for an unnamed CRITICAL directive
+   !ERROR: When HINT other than 'omp_sync_hint_none' is present, CRITICAL directive should have a name
    !$omp critical hint(omp_lock_hint_uncontended)
    j = j + 1
    !$omp end critical

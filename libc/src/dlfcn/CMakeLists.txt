@@ -14,7 +14,6 @@ add_entrypoint_object(
     dlerror.h
   DEPENDS
     libc.include.dlfcn
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -25,7 +24,6 @@ add_entrypoint_object(
     dlopen.h
   DEPENDS
     libc.include.dlfcn
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -36,7 +34,6 @@ add_entrypoint_object(
     dlsym.h
   DEPENDS
     libc.include.dlfcn
-    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -47,5 +44,14 @@ add_entrypoint_object(
     dlinfo.h
   DEPENDS
     libc.include.dlfcn
-    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  dladdr
+  SRCS
+    dladdr.cpp
+  HDRS
+    dladdr.h
+  DEPENDS
+    libc.include.dlfcn
 )

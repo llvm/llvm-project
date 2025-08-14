@@ -19,7 +19,7 @@ coro.alloc:                                       ; preds = %entry
 init.suspend:                                     ; preds = %entry, %coro.alloc
   %3 = phi ptr [ null, %entry ], [ %call, %coro.alloc ]
   %4 = call ptr @llvm.coro.begin(token %0, ptr %3) #12
-  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %__promise) #3
+  call void @llvm.lifetime.start.p0(ptr nonnull %__promise) #3
   store ptr null, ptr %__promise, align 8
   %5 = call token @llvm.coro.save(ptr null)
   %6 = call i8 @llvm.coro.suspend(token %5, i1 false)
@@ -80,7 +80,7 @@ cleanup3:
   br label %cleanup62
 
 cleanup62:                                        ; preds = %await2.suspend, %await.suspend, %init.suspend, %final.suspend
-  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %__promise) #3
+  call void @llvm.lifetime.end.p0(ptr nonnull %__promise) #3
   %18 = call ptr @llvm.coro.free(token %0, ptr %4)
   %.not = icmp eq ptr %18, null
   br i1 %.not, label %coro.ret, label %coro.free
@@ -99,9 +99,9 @@ declare i1 @llvm.coro.alloc(token) #3
 declare dso_local noundef nonnull ptr @_Znwm(i64 noundef) local_unnamed_addr #4
 declare i64 @llvm.coro.size.i64() #5
 declare ptr @llvm.coro.begin(token, ptr writeonly) #3
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #6
+declare void @llvm.lifetime.start.p0(ptr nocapture) #6
 declare token @llvm.coro.save(ptr) #7
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #6
+declare void @llvm.lifetime.end.p0(ptr nocapture) #6
 declare i8 @llvm.coro.suspend(token, i1) #3
 declare ptr @_Z5Innerv() local_unnamed_addr
 declare dso_local void @_ZdlPv(ptr noundef) local_unnamed_addr #8

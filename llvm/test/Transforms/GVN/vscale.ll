@@ -696,7 +696,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 ; MDEP-LABEL: @bigexample(
 ; MDEP-NEXT:  entry:
 ; MDEP-NEXT:    [[REF_TMP:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
-; MDEP-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr nonnull [[REF_TMP]])
+; MDEP-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[REF_TMP]])
 ; MDEP-NEXT:    [[A_ELT:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[A:%.*]], 0
 ; MDEP-NEXT:    store <vscale x 4 x i32> [[A_ELT]], ptr [[REF_TMP]], align 16
 ; MDEP-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
@@ -720,13 +720,13 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 ; MDEP-NEXT:    [[TMP9:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP7]], <vscale x 16 x i8> [[TMP8]], 2
 ; MDEP-NEXT:    [[TMP10:%.*]] = bitcast <vscale x 4 x i32> [[A_ELT6]] to <vscale x 16 x i8>
 ; MDEP-NEXT:    [[TMP11:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP9]], <vscale x 16 x i8> [[TMP10]], 3
-; MDEP-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr nonnull [[REF_TMP]])
+; MDEP-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[REF_TMP]])
 ; MDEP-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP11]]
 ;
 ; MSSA-LABEL: @bigexample(
 ; MSSA-NEXT:  entry:
 ; MSSA-NEXT:    [[REF_TMP:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
-; MSSA-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr nonnull [[REF_TMP]])
+; MSSA-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[REF_TMP]])
 ; MSSA-NEXT:    [[A_ELT:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[A:%.*]], 0
 ; MSSA-NEXT:    store <vscale x 4 x i32> [[A_ELT]], ptr [[REF_TMP]], align 16
 ; MSSA-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
@@ -750,12 +750,12 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 ; MSSA-NEXT:    [[TMP6:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP5]], <vscale x 16 x i8> [[DOTUNPACK10]], 2
 ; MSSA-NEXT:    [[DOTUNPACK12:%.*]] = load <vscale x 16 x i8>, ptr [[REF_TMP_REPACK5]], align 16
 ; MSSA-NEXT:    [[TMP7:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP6]], <vscale x 16 x i8> [[DOTUNPACK12]], 3
-; MSSA-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr nonnull [[REF_TMP]])
+; MSSA-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[REF_TMP]])
 ; MSSA-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP7]]
 ;
 entry:
   %ref.tmp = alloca { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
-  call void @llvm.lifetime.start.p0(i64 -1, ptr nonnull %ref.tmp)
+  call void @llvm.lifetime.start.p0(ptr nonnull %ref.tmp)
   %a.elt = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } %a, 0
   store <vscale x 4 x i32> %a.elt, ptr %ref.tmp, align 16
   %0 = call i64 @llvm.vscale.i64()
@@ -790,7 +790,7 @@ entry:
   %.elt11 = getelementptr inbounds i8, ptr %ref.tmp, i64 %14
   %.unpack12 = load <vscale x 16 x i8>, ptr %.elt11, align 16
   %15 = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %12, <vscale x 16 x i8> %.unpack12, 3
-  call void @llvm.lifetime.end.p0(i64 -1, ptr nonnull %ref.tmp)
+  call void @llvm.lifetime.end.p0(ptr nonnull %ref.tmp)
   ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %15
 }
 

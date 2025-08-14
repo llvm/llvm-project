@@ -1220,38 +1220,6 @@ llvm.func @gpu_wmma_mma_op_invalid_result(%arg0: vector<2 x f16>, %arg1: vector<
 
 // -----
 
-llvm.func @wmmald_matrix(%arg0: !llvm.ptr) {
-  // expected-error@+1 {{'nvvm.ldmatrix' op expected source pointer in memory space 3}}
-  %l = nvvm.ldmatrix %arg0 {num = 1 : i32, layout = #nvvm.mma_layout<row>} : (!llvm.ptr) -> i32
-  llvm.return
-}
-
-// -----
-
-llvm.func @wmmald_matrix(%arg0: !llvm.ptr<3>) {
-  // expected-error@+1 {{'nvvm.ldmatrix' op expected num attribute to be 1, 2 or 4}}
-  %l = nvvm.ldmatrix %arg0 {num = 3 : i32, layout = #nvvm.mma_layout<row>} : (!llvm.ptr<3>) -> i32
-  llvm.return
-}
-
-// -----
-
-llvm.func @wmmald_matrix(%arg0: !llvm.ptr<3>) {
-  // expected-error@+1 {{'nvvm.ldmatrix' op expected destination type is i32}}
-  %l = nvvm.ldmatrix %arg0 {num = 1 : i32, layout = #nvvm.mma_layout<row>} : (!llvm.ptr<3>) -> !llvm.struct<(i32)>
-  llvm.return
-}
-
-// -----
-
-llvm.func @wmmald_matrix(%arg0: !llvm.ptr<3>) {
-  // expected-error@+1 {{'nvvm.ldmatrix' op expected destination type is a structure of 4 elements of type i32}}
-  %l = nvvm.ldmatrix %arg0 {num = 4 : i32, layout = #nvvm.mma_layout<row>} : (!llvm.ptr<3>) -> !llvm.struct<(i32, i32)>
-  llvm.return
-}
-
-// -----
-
 llvm.func @caller() {
   // expected-error @below {{expected function call to produce a value}}
   llvm.call @callee() : () -> ()
@@ -1307,8 +1275,8 @@ func.func @cp_async(%arg0: !llvm.ptr<3>, %arg1: !llvm.ptr<1>) {
 // -----
 
 func.func @mapa(%a: !llvm.ptr, %b : i32) {
-  // expected-error @below {{`res` and `a` should have the same type}}
-  %0 = nvvm.mapa %a, %b: !llvm.ptr -> !llvm.ptr<3>
+  // expected-error @below {{'nvvm.mapa' op failed to verify that Valid address-space check(or mapping) for mapa Op}}
+  %0 = nvvm.mapa %a, %b: !llvm.ptr -> !llvm.ptr<7>
   return
 }
 

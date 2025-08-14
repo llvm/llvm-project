@@ -108,13 +108,13 @@ entry:
   store ptr %samples, ptr %samples.addr, align 8
   store double %Y, ptr %Y.addr, align 8
   store double %Z, ptr %Z.addr, align 8
-  call void @llvm.lifetime.start.p0(i64 4, ptr %i) #2
-  call void @llvm.lifetime.start.p0(i64 4, ptr %block) #2
-  call void @llvm.lifetime.start.p0(i64 8, ptr %rngVal) #2
-  call void @llvm.lifetime.start.p0(i64 8, ptr %callValue) #2
-  call void @llvm.lifetime.start.p0(i64 8, ptr %v0) #2
+  call void @llvm.lifetime.start.p0(ptr %i) #2
+  call void @llvm.lifetime.start.p0(ptr %block) #2
+  call void @llvm.lifetime.start.p0(ptr %rngVal) #2
+  call void @llvm.lifetime.start.p0(ptr %callValue) #2
+  call void @llvm.lifetime.start.p0(ptr %v0) #2
   store double 0.000000e+00, ptr %v0, align 8
-  call void @llvm.lifetime.start.p0(i64 8, ptr %v1) #2
+  call void @llvm.lifetime.start.p0(ptr %v1) #2
   store double 0.000000e+00, ptr %v1, align 8
   store i32 0, ptr %i, align 4
   br label %for.cond
@@ -169,12 +169,12 @@ for.end:                                          ; preds = %for.cond
   %15 = load double, ptr %v0, align 8
   %16 = load double, ptr %v1, align 8
   %add5 = fadd fast double %15, %16
-  call void @llvm.lifetime.end.p0(i64 8, ptr %v1) #2
-  call void @llvm.lifetime.end.p0(i64 8, ptr %v0) #2
-  call void @llvm.lifetime.end.p0(i64 8, ptr %callValue) #2
-  call void @llvm.lifetime.end.p0(i64 8, ptr %rngVal) #2
-  call void @llvm.lifetime.end.p0(i64 4, ptr %block) #2
-  call void @llvm.lifetime.end.p0(i64 4, ptr %i) #2
+  call void @llvm.lifetime.end.p0(ptr %v1) #2
+  call void @llvm.lifetime.end.p0(ptr %v0) #2
+  call void @llvm.lifetime.end.p0(ptr %callValue) #2
+  call void @llvm.lifetime.end.p0(ptr %rngVal) #2
+  call void @llvm.lifetime.end.p0(ptr %block) #2
+  call void @llvm.lifetime.end.p0(ptr %i) #2
   ret double %add5
 }
 
@@ -305,13 +305,13 @@ entry:
   store ptr %samples, ptr %samples.addr, align 8
   store double %Y, ptr %Y.addr, align 8
   store double %Z, ptr %Z.addr, align 8
-  call void @llvm.lifetime.start.p0(i64 4, ptr %i) #4
-  call void @llvm.lifetime.start.p0(i64 4, ptr %block) #4
-  call void @llvm.lifetime.start.p0(i64 8, ptr %rngVal) #4
-  call void @llvm.lifetime.start.p0(i64 8, ptr %callValue) #4
-  call void @llvm.lifetime.start.p0(i64 8, ptr %v0) #4
+  call void @llvm.lifetime.start.p0(ptr %i) #4
+  call void @llvm.lifetime.start.p0(ptr %block) #4
+  call void @llvm.lifetime.start.p0(ptr %rngVal) #4
+  call void @llvm.lifetime.start.p0(ptr %callValue) #4
+  call void @llvm.lifetime.start.p0(ptr %v0) #4
   store double 0.000000e+00, ptr %v0, align 8
-  call void @llvm.lifetime.start.p0(i64 8, ptr %v1) #4
+  call void @llvm.lifetime.start.p0(ptr %v1) #4
   store double 0.000000e+00, ptr %v1, align 8
   store i32 0, ptr %block, align 4
   br label %for.cond
@@ -389,19 +389,19 @@ for.end10:                                        ; preds = %for.cond
   %21 = load double, ptr %v0, align 8
   %22 = load double, ptr %v1, align 8
   %add11 = fadd fast double %21, %22
-  call void @llvm.lifetime.end.p0(i64 8, ptr %v1) #4
-  call void @llvm.lifetime.end.p0(i64 8, ptr %v0) #4
-  call void @llvm.lifetime.end.p0(i64 8, ptr %callValue) #4
-  call void @llvm.lifetime.end.p0(i64 8, ptr %rngVal) #4
-  call void @llvm.lifetime.end.p0(i64 4, ptr %block) #4
-  call void @llvm.lifetime.end.p0(i64 4, ptr %i) #4
+  call void @llvm.lifetime.end.p0(ptr %v1) #4
+  call void @llvm.lifetime.end.p0(ptr %v0) #4
+  call void @llvm.lifetime.end.p0(ptr %callValue) #4
+  call void @llvm.lifetime.end.p0(ptr %rngVal) #4
+  call void @llvm.lifetime.end.p0(ptr %block) #4
+  call void @llvm.lifetime.end.p0(ptr %i) #4
   ret double %add11
 }
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
 declare void @resample(i32 noundef, ptr noundef)
 declare double @llvm.exp2.f64(double)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
