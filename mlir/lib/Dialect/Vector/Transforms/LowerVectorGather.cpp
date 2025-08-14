@@ -64,7 +64,7 @@ struct UnrollGather : OpRewritePattern<vector::GatherOp> {
       return rewriter.notifyMatchFailure(op, "cannot unroll scalable dim");
 
     Location loc = op.getLoc();
-    Value indexVec = op.getIndexVec();
+    Value indexVec = op.getIndices();
     Value maskVec = op.getMask();
     Value passThruVec = op.getPassThru();
 
@@ -83,7 +83,7 @@ struct UnrollGather : OpRewritePattern<vector::GatherOp> {
       Value passThruSubVec =
           vector::ExtractOp::create(rewriter, loc, passThruVec, thisIdx);
       Value subGather = vector::GatherOp::create(
-          rewriter, loc, subTy, op.getBase(), op.getIndices(), indexSubVec,
+          rewriter, loc, subTy, op.getBase(), op.getOffsets(), indexSubVec,
           maskSubVec, passThruSubVec);
       result =
           vector::InsertOp::create(rewriter, loc, subGather, result, thisIdx);
@@ -158,18 +158,18 @@ struct RemoveStrideFromGatherSource : OpRewritePattern<vector::GatherOp> {
     // 2. Generate new gather indices that will model the
     // strided access.
     IntegerAttr stride = rewriter.getIndexAttr(srcTrailingDim);
-    VectorType vType = op.getIndexVec().getType();
+    VectorType vType = op.getIndices().getType();
     Value mulCst = arith::ConstantOp::create(
         rewriter, op.getLoc(), vType, DenseElementsAttr::get(vType, stride));
 
     Value newIdxs =
-        arith::MulIOp::create(rewriter, op.getLoc(), op.getIndexVec(), mulCst);
+        arith::MulIOp::create(rewriter, op.getLoc(), op.getIndices(), mulCst);
 
     // 3. Create an updated gather op with the collapsed input memref and the
     // updated indices.
     Value newGather = vector::GatherOp::create(
         rewriter, op.getLoc(), op.getResult().getType(), collapsed,
-        op.getIndices(), newIdxs, op.getMask(), op.getPassThru());
+        op.getOffsets(), newIdxs, op.getMask(), op.getPassThru());
     rewriter.replaceOp(op, newGather);
 
     return success();
@@ -212,8 +212,8 @@ struct Gather1DToConditionalLoads : OpRewritePattern<vector::GatherOp> {
 
     Value indexVec = rewriter.createOrFold<arith::IndexCastOp>(
         loc, op.getIndexVectorType().clone(rewriter.getIndexType()),
-        op.getIndexVec());
-    auto baseOffsets = llvm::to_vector(op.getIndices());
+        op.getIndices());
+    auto baseOffsets = llvm::to_vector(op.getOffsets());
     Value lastBaseOffset = baseOffsets.back();
 
     Value result = op.getPassThru();
