@@ -10,14 +10,9 @@
 # RUN: %clang %cflags  %t.o -o %t.exe -Wl,-q
 # RUN: llvm-bolt %t.exe -o %t.exe.bolt --no-threads | FileCheck %s --check-prefix=CHECK-BOLT
 
-# CHECK-BOLT: BOLT-INFO: inconsistent RAStates in function foo
-# CHECK-BOLT-NEXT: BOLT-INFO: ptr authenticating inst encountered in Unsigned RA state.
-
-# CHECK-BOLT: BOLT-INFO: inconsistent RAStates in function bar
-# CHECK-BOLT-NEXT: BOLT-INFO: ptr signing inst encountered in Signed RA state
-
-# CHECK-BOLT: BOLT-INFO: inconsistent RAStates in function baz
-# CHECK-BOLT-NEXT: BOLT-INFO: ptr sign/auth inst without .cfi_negate_ra_state
+# CHECK-BOLT: BOLT-INFO: inconsistent RAStates in function foo: ptr authenticating inst encountered in Unsigned RA state
+# CHECK-BOLT: BOLT-INFO: inconsistent RAStates in function bar: ptr signing inst encountered in Signed RA state
+# CHECK-BOLT: BOLT-INFO: inconsistent RAStates in function baz: ptr sign/auth inst without .cfi_negate_ra_state
 
 # Check that the incorrect functions got ignored, so they are not in the new .text section
 # RUN: llvm-objdump %t.exe.bolt -d -j .text | FileCheck %s --check-prefix=CHECK-OBJDUMP

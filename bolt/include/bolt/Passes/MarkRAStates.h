@@ -25,7 +25,10 @@ public:
 
   /// Pass entry point
   Error runOnFunctions(BinaryContext &BC) override;
-  void runOnFunction(BinaryFunction &BF);
+  bool runOnFunction(BinaryFunction &BF);
+
+private:
+  uint64_t FunctionsIgnored{0};
 };
 
 } // namespace bolt

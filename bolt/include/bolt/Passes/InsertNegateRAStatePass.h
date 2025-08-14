@@ -28,6 +28,7 @@ public:
   void runOnFunction(BinaryFunction &BF);
 
 private:
+  uint64_t FunctionsModified{0};
   /// Because states are tracked as MCAnnotations on individual instructions,
   /// newly inserted instructions do not have a state associated with them.
   /// New states are "inherited" from the last known state.

@@ -115,11 +115,12 @@ void InsertNegateRAState::inferUnknownStates(BinaryFunction &BF) {
 
 Error InsertNegateRAState::runOnFunctions(BinaryContext &BC) {
   ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
-    if (BF.containedNegateRAState()) {
+    if (BF.containedNegateRAState() && !BF.isIgnored()) {
       // We can skip functions which did not include negate-ra-state CFIs. This
       // includes code using pac-ret hardening as well, if the binary is
       // compiled with `-fno-exceptions -fno-unwind-tables
       // -fno-asynchronous-unwind-tables`
+      FunctionsModified++;
       runOnFunction(BF);
     }
   };
@@ -128,6 +129,11 @@ Error InsertNegateRAState::runOnFunctions(BinaryContext &BC) {
       BC, ParallelUtilities::SchedulingPolicy::SP_TRIVIAL, WorkFun, nullptr,
       "InsertNegateRAStatePass");
 
+  BC.outs() << "BOLT-INFO: rewritten pac-ret DWARF info in "
+            << FunctionsModified << " out of " << BC.getBinaryFunctions().size()
+            << " functions "
+            << format("(%.2lf%%).\n", (100.0 * FunctionsModified) /
+                                          BC.getBinaryFunctions().size());
   return Error::success();
 }
 

@@ -31,10 +31,7 @@ using namespace llvm;
 namespace llvm {
 namespace bolt {
 
-void MarkRAStates::runOnFunction(BinaryFunction &BF) {
-
-  if (BF.isIgnored())
-    return;
+bool MarkRAStates::runOnFunction(BinaryFunction &BF) {
 
   BinaryContext &BC = BF.getBinaryContext();
 
@@ -49,10 +46,9 @@ void MarkRAStates::runOnFunction(BinaryFunction &BF) {
         // annotation.
         BF.setIgnored();
         BC.outs() << "BOLT-INFO: inconsistent RAStates in function "
-                  << BF.getPrintName() << "\n";
-        BC.outs()
-            << "BOLT-INFO: ptr sign/auth inst without .cfi_negate_ra_state\n";
-        return;
+                  << BF.getPrintName()
+                  << ": ptr sign/auth inst without .cfi_negate_ra_state\n";
+        return false;
       }
     }
   }
@@ -72,11 +68,10 @@ void MarkRAStates::runOnFunction(BinaryFunction &BF) {
         if (RAState) {
           // RA signing instructions should only follow unsigned RA state.
           BC.outs() << "BOLT-INFO: inconsistent RAStates in function "
-                    << BF.getPrintName() << "\n";
-          BC.outs() << "BOLT-INFO: ptr signing inst encountered in Signed RA "
-                       "state.\n";
+                    << BF.getPrintName()
+                    << ": ptr signing inst encountered in Signed RA state\n";
           BF.setIgnored();
-          return;
+          return false;
         }
         // The signing instruction itself is unsinged, but the next will be
         // signed.
@@ -85,11 +80,11 @@ void MarkRAStates::runOnFunction(BinaryFunction &BF) {
         if (!RAState) {
           // RA authenticating instructions should only follow signed RA state.
           BC.outs() << "BOLT-INFO: inconsistent RAStates in function "
-                    << BF.getPrintName() << "\n";
-          BC.outs() << "BOLT-INFO: ptr authenticating inst encountered in "
-                       "Unsigned RA state.\n";
+                    << BF.getPrintName()
+                    << ": ptr authenticating inst encountered in Unsigned RA "
+                       "state\n";
           BF.setIgnored();
-          return;
+          return false;
         }
         // The authenticating instruction itself is signed, but the next will be
         // unsigned.
@@ -120,22 +115,35 @@ void MarkRAStates::runOnFunction(BinaryFunction &BF) {
       }
     }
   }
+  return true;
 }
 
 Error MarkRAStates::runOnFunctions(BinaryContext &BC) {
   ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
-    if (BF.containedNegateRAState()) {
+    if (BF.containedNegateRAState() && !BF.isIgnored()) {
       // We can skip functions which did not include negate-ra-state CFIs. This
       // includes code using pac-ret hardening as well, if the binary is
       // compiled with `-fno-exceptions -fno-unwind-tables
       // -fno-asynchronous-unwind-tables`
-      runOnFunction(BF);
+      if (!runOnFunction(BF)) {
+        FunctionsIgnored++;
+      }
     }
   };
 
   ParallelUtilities::runOnEachFunction(
       BC, ParallelUtilities::SchedulingPolicy::SP_TRIVIAL, WorkFun, nullptr,
       "MarkRAStates");
+
+  int Total = llvm::count_if(
+      BC.getBinaryFunctions(),
+      [&](std::pair<const unsigned long, BinaryFunction> &P) {
+        return P.second.containedNegateRAState() && !P.second.isIgnored();
+      });
+  BC.outs() << "BOLT-INFO: MarkRAStates ran on " << Total
+            << " functions. Ignored " << FunctionsIgnored << " functions "
+            << format("(%.2lf%%)", (100.0 * FunctionsIgnored) / Total)
+            << " because of CFI inconsistencies.\n";
 
   return Error::success();
 }
