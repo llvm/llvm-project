@@ -205,8 +205,8 @@ define {<4 x i32>, <4 x i32>} @vpload_factor2_interleaved_mask_intrinsic(ptr %pt
   ret {<4 x i32>, <4 x i32>} %res1
 }
 
+; mask = %m, skip the last two fields.
 define {<2 x i32>, <2 x i32>} @vpload_factor4_interleaved_mask_intrinsic_skip_fields(ptr %ptr, <2 x i1> %m) {
-  ; mask = %m, skip the last two fields.
 ; CHECK-LABEL: vpload_factor4_interleaved_mask_intrinsic_skip_fields:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 16
