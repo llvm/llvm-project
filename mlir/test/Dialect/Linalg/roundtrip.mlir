@@ -454,10 +454,10 @@ func.func @reduce_not_short_form_compatible(%input: tensor<16x32x64xf32>,
 }
 
 // CHECK-LABEL: func @reduce_not_short_form_compatible
-// CHECK-SAME:  %[[ARG0:.*]]: tensor<16x32x64xf32>
-// CHECK-SAME:  %[[ARG1:.*]]: tensor<16x64xf32>
-// CHECK-NOT: linalg.reduce { arith.addf } ins(%[[ARG0]] : tensor<16x32x64xf32>
-// CHECK:     linalg.reduce ins(%[[ARG0]] : tensor<16x32x64xf32>) outs(%[[ARG1]] : tensor<16x64xf32>) 
+// CHECK-SAME:  %[[INPUT:.*]]: tensor<16x32x64xf32>
+// CHECK-SAME:  %[[INIT:.*]]: tensor<16x64xf32>
+// CHECK-NOT: linalg.reduce { arith.addf } ins(%[[INPUT]] : tensor<16x32x64xf32>
+// CHECK:     linalg.reduce ins(%[[INPUT]] : tensor<16x32x64xf32>) outs(%[[INIT]] : tensor<16x64xf32>) 
 // CHECK-SAME:  dimensions = [1]
 // CHECK:       (%[[IN1:.*]]: f32, %[[IN2:.*]]: f32) {
 // CHECK-NEXT:    %[[ADD_RESULT:.*]] = arith.addf %[[IN1]], %[[IN2]] : f32
@@ -620,9 +620,8 @@ func.func @map_arith_with_attr(%lhs: tensor<64xf32>, %rhs: tensor<64xf32>,
 
 // -----
 
-func.func @map_not_short_form_compatible(%arg0: tensor<1x32xf32>, %arg1: tensor<1x32xf32>) -> tensor<1x32xf32> {
-  %res = tensor.empty() : tensor<1x32xf32>
-  %mapped = linalg.map ins(%arg0, %arg1 : tensor<1x32xf32>, tensor<1x32xf32>) outs(%res : tensor<1x32xf32>)
+func.func @map_not_short_form_compatible(%lhs: tensor<1x32xf32>, %rhs: tensor<1x32xf32>, %init: tensor<1x32xf32>) -> tensor<1x32xf32> {
+  %mapped = linalg.map ins(%lhs, %rhs : tensor<1x32xf32>, tensor<1x32xf32>) outs(%init : tensor<1x32xf32>)
     (%in_1: f32, %in_2: f32) {
       %1 = arith.maximumf %in_1, %in_2 : f32
       linalg.yield %in_1 : f32
@@ -631,11 +630,10 @@ func.func @map_not_short_form_compatible(%arg0: tensor<1x32xf32>, %arg1: tensor<
 }
 
 // CHECK-LABEL: func @map_not_short_form_compatible
-// CHECK-SAME:        %[[ARG0:.*]]: tensor<1x32xf32>, %[[ARG1:.*]]: tensor<1x32xf32>
-// CHECK:         %[[RES:.*]] = tensor.empty() : tensor<1x32xf32>
-// CHECK-NOT:     linalg.map { arith.maximumf } ins(%[[ARG0]] : tensor<1x32xf32>
-// CHECK:         linalg.map ins(%[[ARG0]], %[[ARG1]] : tensor<1x32xf32>, tensor<1x32xf32>) 
-// CHECK-SAME:               outs(%[[RES]] : tensor<1x32xf32>)
+// CHECK-SAME:        %[[LHS:.*]]: tensor<1x32xf32>, %[[RHS:.*]]: tensor<1x32xf32>, %[[INIT:.*]]: tensor<1x32xf32>
+// CHECK-NOT:     linalg.map { arith.maximumf } ins(%[[LHS]] : tensor<1x32xf32>
+// CHECK:         linalg.map ins(%[[LHS]], %[[RHS]] : tensor<1x32xf32>, tensor<1x32xf32>) 
+// CHECK-SAME:               outs(%[[INIT]] : tensor<1x32xf32>)
 // CHECK-NEXT:      (%[[IN1:.*]]: f32, %[[IN2:.*]]: f32) {
 // CHECK-NEXT:        %[[MAX_RESULT:.*]] = arith.maximumf %[[IN1]], %[[IN2]] : f32
 // CHECK-NEXT:        linalg.yield %[[IN1]] : f32
