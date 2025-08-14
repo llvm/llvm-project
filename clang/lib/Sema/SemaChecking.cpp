@@ -2976,12 +2976,6 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     break;
 
   case Builtin::BI__builtin_ct_select: {
-    // check to see if the Arch supports it
-    if (!Context.getTargetInfo().hasFeature("ctselect")) {
-      return Diag(TheCall->getBeginLoc(), diag::err_builtin_target_unsupported)
-             << TheCall->getSourceRange();
-    }
-
     if (TheCall->getNumArgs() != 3) {
       // Simple argument count check without complex diagnostics
       if (TheCall->getNumArgs() < 3) {

@@ -1846,6 +1846,9 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
 }
 
 SDValue DAGCombiner::visit(SDNode *N) {
+  if (N->getFlags().hasNoMerge())
+    return SDValue();
+
   // clang-format off
   switch (N->getOpcode()) {
   default: break;
