@@ -6324,20 +6324,18 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
 
   SetLLVMFunctionAttributesForDefinition(D, Fn);
 
-  auto getPriority = [this](auto *Attr) -> int {
-    int priority = Attr->DefaultPriority;
+  auto GetPriority = [this](const auto *Attr) -> int {
     Expr *E = Attr->getPriority();
     if (E) {
-      if (auto CE = E->getIntegerConstantExpr(this->getContext()))
-        priority = CE->getExtValue();
+      return E->EvaluateKnownConstInt(this->getContext()).getExtValue();
     }
-    return priority;
+    return Attr->DefaultPriority;
   };
 
   if (const ConstructorAttr *CA = D->getAttr<ConstructorAttr>())
-    AddGlobalCtor(Fn, getPriority(CA));
+    AddGlobalCtor(Fn, GetPriority(CA));
   if (const DestructorAttr *DA = D->getAttr<DestructorAttr>())
-    AddGlobalDtor(Fn, getPriority(DA), true);
+    AddGlobalDtor(Fn, GetPriority(DA), true);
   if (getLangOpts().OpenMP && D->hasAttr<OMPDeclareTargetDeclAttr>())
     getOpenMPRuntime().emitDeclareTargetFunction(D, GV);
 }
