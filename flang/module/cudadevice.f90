@@ -392,6 +392,20 @@ implicit none
     end function
   end interface
 
+  interface __sinf
+    attributes(device) real function __sinf(r) bind(c, name='__nv_sinf')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
+    end function
+  end interface
+
+  interface __tanf
+    attributes(device) real function __tanf(r) bind(c, name='__nv_tanf')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
+    end function
+  end interface
+
   interface
     attributes(device) real(4) function cospif(x) bind(c,name='__nv_cospif')
       real(4), value :: x
