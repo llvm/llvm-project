@@ -1085,7 +1085,7 @@ def LLVM_masked_expandload
     uint64_t alignment = 1;
     if (argAttrs.has_value()) {
       NamedAttrList argAttr = cast<DictionaryAttr>((*argAttrs)[0]);
-      auto maybeAlignmentAttr = argAttr.get("llvm.align");
+      auto maybeAlignmentAttr = argAttr.get(LLVMDialect::getAlignAttrName());
       IntegerAttr alignmentAttr = maybeAlignmentAttr ? dyn_cast<IntegerAttr>(maybeAlignmentAttr) : nullptr;
       alignment = alignmentAttr ? alignmentAttr.getValue().getZExtValue() : 1;
     }
@@ -1099,7 +1099,7 @@ def LLVM_masked_expandload
       if (align != 1) {
         auto emptyDictAttr = $_builder.getDictionaryAttr({});
         auto alignmentAttr = $_builder.getI64IntegerAttr(align);
-        auto namedAttr = $_builder.getNamedAttr("llvm.align", alignmentAttr);
+        auto namedAttr = $_builder.getNamedAttr(LLVMDialect::getAlignAttrName(), alignmentAttr);
         SmallVector<mlir::NamedAttribute> attrs = {namedAttr};
         auto alignDictAttr = $_builder.getDictionaryAttr(attrs);
         callArgs = $_builder.getArrayAttr({alignDictAttr, emptyDictAttr, emptyDictAttr});
@@ -1126,7 +1126,7 @@ def LLVM_masked_compressstore
     uint64_t alignment = 1;
     if (argAttrs.has_value()) {
       NamedAttrList argAttr = cast<DictionaryAttr>((*argAttrs)[1]);
-      auto maybeAlignmentAttr = argAttr.get("llvm.align");
+      auto maybeAlignmentAttr = argAttr.get(LLVMDialect::getAlignAttrName());
       IntegerAttr alignmentAttr = maybeAlignmentAttr ? dyn_cast<IntegerAttr>(maybeAlignmentAttr) : nullptr;
       alignment = alignmentAttr ? alignmentAttr.getValue().getZExtValue() : 1;
     }
@@ -1140,7 +1140,7 @@ def LLVM_masked_compressstore
       if (align != 1) {
         auto emptyDictAttr = $_builder.getDictionaryAttr({});
         auto alignmentAttr = $_builder.getI64IntegerAttr(align);
-        auto namedAttr = $_builder.getNamedAttr("llvm.align", alignmentAttr);
+        auto namedAttr = $_builder.getNamedAttr(LLVMDialect::getAlignAttrName(), alignmentAttr);
         SmallVector<mlir::NamedAttribute> attrs = {namedAttr};
         auto alignDictAttr = $_builder.getDictionaryAttr(attrs);
         callArgs = $_builder.getArrayAttr({emptyDictAttr, alignDictAttr, emptyDictAttr});
