@@ -106,7 +106,7 @@ static constexpr CustomOperand MsgOperands[] = {
   {{"MSG_GET_DDID"},            ID_GET_DDID,                isGFX10},
   {{"MSG_HS_TESSFACTOR"},       ID_HS_TESSFACTOR_GFX11Plus, isGFX11Plus},
   {{"MSG_DEALLOC_VGPRS"},       ID_DEALLOC_VGPRS_GFX11Plus, isGFX11Plus},
-  {{""}},
+  {{"MSG_SAVEWAVE_HAS_TDM"},    ID_SAVEWAVE_HAS_TDM,        isGFX1250},
   {{"MSG_SYSMSG"},              ID_SYSMSG},
   {{"MSG_RTN_GET_DOORBELL"},    ID_RTN_GET_DOORBELL,        isGFX11Plus},
   {{"MSG_RTN_GET_DDID"},        ID_RTN_GET_DDID,            isGFX11Plus},
