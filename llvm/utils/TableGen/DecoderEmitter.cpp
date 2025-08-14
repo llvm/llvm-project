@@ -1579,8 +1579,6 @@ bool FilterChooser::filterProcessor(bool AllowMixed, bool Greedy) {
     }
   }
 
-  unsigned BitIndex;
-
   // We maintain BIT_WIDTH copies of the bitAttrs automaton.
   // The automaton consumes the corresponding bit from each
   // instruction.
@@ -1602,14 +1600,14 @@ bool FilterChooser::filterProcessor(bool AllowMixed, bool Greedy) {
 
   // FILTERED bit positions provide no entropy and are not worthy of pursuing.
   // Filter::recurse() set either BIT_TRUE or BIT_FALSE for each position.
-  for (BitIndex = 0; BitIndex < BitWidth; ++BitIndex)
+  for (unsigned BitIndex = 0; BitIndex < BitWidth; ++BitIndex)
     if (FilterBitValues[BitIndex].isSet())
       bitAttrs[BitIndex] = ATTR_FILTERED;
 
   for (const auto &OpcPair : Opcodes) {
     insn_t insn = insnWithID(OpcPair.EncodingID);
 
-    for (BitIndex = 0; BitIndex < BitWidth; ++BitIndex) {
+    for (unsigned BitIndex = 0; BitIndex < BitWidth; ++BitIndex) {
       switch (bitAttrs[BitIndex]) {
       case ATTR_NONE:
         if (insn[BitIndex] == BitValue::BIT_UNSET)
@@ -1655,7 +1653,7 @@ bool FilterChooser::filterProcessor(bool AllowMixed, bool Greedy) {
   bitAttr_t RA = ATTR_NONE;
   unsigned StartBit = 0;
 
-  for (BitIndex = 0; BitIndex < BitWidth; ++BitIndex) {
+  for (unsigned BitIndex = 0; BitIndex < BitWidth; ++BitIndex) {
     bitAttr_t bitAttr = bitAttrs[BitIndex];
 
     assert(bitAttr != ATTR_NONE && "Bit without attributes");
@@ -1736,12 +1734,12 @@ bool FilterChooser::filterProcessor(bool AllowMixed, bool Greedy) {
   case ATTR_FILTERED:
     break;
   case ATTR_ALL_SET:
-    reportRegion(RA, StartBit, BitIndex, AllowMixed);
+    reportRegion(RA, StartBit, BitWidth, AllowMixed);
     break;
   case ATTR_ALL_UNSET:
     break;
   case ATTR_MIXED:
-    reportRegion(RA, StartBit, BitIndex, AllowMixed);
+    reportRegion(RA, StartBit, BitWidth, AllowMixed);
     break;
   }
 
