@@ -806,9 +806,9 @@ bool RISCVDAGToDAGISel::tryBitfieldInsertOpFromXor(SDNode *Node) {
   if (isInt<5>(Imm)) {
     Opc = RISCV::QC_INSBI;
     ImmNode = CurDAG->getSignedTargetConstant(Imm, DL, MVT::i32);
-  } else
+  } else {
     ImmNode = selectImm(CurDAG, DL, MVT::i32, Imm, *Subtarget);
-
+  }
   SDValue Ops[] = {X, ImmNode, CurDAG->getTargetConstant(Width, DL, MVT::i32),
                    CurDAG->getTargetConstant(ShAmt, DL, MVT::i32)};
   ReplaceNode(Node, CurDAG->getMachineNode(Opc, DL, MVT::i32, Ops));
