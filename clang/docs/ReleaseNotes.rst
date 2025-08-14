@@ -192,6 +192,9 @@ Bug Fixes to Attribute Support
 
 - ``[[nodiscard]]`` is now respected on Objective-C and Objective-C++ methods.
   (#GH141504)
+- Fixes some late parsed attributes, when applied to function definitions, not being parsed
+  in function try blocks, and some situations where parsing of the function body
+  is skipped, such as error recovery and code completion. (#GH153551)
 - Using ``[[gnu::cleanup(some_func)]]`` where some_func is annotated with
   ``[[gnu::error("some error")]]`` now correctly triggers an error. (#GH146520)
 
