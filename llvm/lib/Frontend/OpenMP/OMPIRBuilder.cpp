@@ -1506,12 +1506,12 @@ Error OpenMPIRBuilder::emitCancelationCheckImpl(
   return Error::success();
 }
 
-// Create wrapper function used to gather the outlined function's argument
-// structure from a shared buffer and to forward them to it when running in
-// Generic mode.
-//
-// The outlined function is expected to receive 2 integer arguments followed by
-// an optional pointer argument to an argument structure holding the rest.
+/// Create wrapper function used to gather the outlined function's argument
+/// structure from a shared buffer and to forward them to it when running in
+/// Generic mode.
+///
+/// The outlined function is expected to receive 2 integer arguments followed by
+/// an optional pointer argument to an argument structure holding the rest.
 static Function *createTargetParallelWrapper(OpenMPIRBuilder *OMPIRBuilder,
                                              Function &OutlinedFn) {
   size_t NumArgs = OutlinedFn.arg_size();
@@ -1642,7 +1642,7 @@ static void targetParallelCallback(
   std::optional<omp::OMPTgtExecModeFlags> ExecMode =
       getTargetKernelExecMode(*OuterFn);
   Value *WrapperFn;
-  if (ExecMode && *ExecMode & OMP_TGT_EXEC_MODE_GENERIC)
+  if (ExecMode && (*ExecMode & OMP_TGT_EXEC_MODE_GENERIC))
     WrapperFn = createTargetParallelWrapper(OMPIRBuilder, OutlinedFn);
   else
     WrapperFn = Constant::getNullValue(PtrTy);
