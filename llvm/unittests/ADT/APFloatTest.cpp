@@ -6093,6 +6093,10 @@ auto testCases() {
       TestCase{{DMAX, 0.0}, 128, true}.withAll(
           "170141183460469231731687303715884105727", Invalid),
 
+      // Input: Largest semPPCDoubleDoubleLegacy
+      TestCase{{DMAX, 0x1.ffffffffffffep+969}, 128, true}.withAll(
+          "170141183460469231731687303715884105727", Invalid),
+
       // 7. Round to negative -0
       TestCase{{-PM100, 0.0}, 32, true}
           .with(RTZ, "0", Inexact)
