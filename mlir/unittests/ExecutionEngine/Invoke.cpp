@@ -327,11 +327,11 @@ static int initCnt = 0;
 static void initCallback() { initCnt += 1; }
 
 #if __has_feature(memory_sanitizer) || __has_feature(address_sanitizer)
-#define MAYBE_JITCallback DISABLED_JITCallback
+#define MAYBE_JITCallbackInGlobalCtor DISABLED_JITCallbackInGlobalCtor
 #else
-#define MAYBE_JITCallback SKIP_WITHOUT_JIT(JITCallback)
+#define MAYBE_JITCallbackInGlobalCtor SKIP_WITHOUT_JIT(JITCallbackInGlobalCtor)
 #endif
-TEST(GlobalCtorJit, MAYBE_JITCallback) {
+TEST(MLIRExecutionEngine, MAYBE_JITCallbackInGlobalCtor) {
   std::string moduleStr = R"mlir(
   llvm.mlir.global_ctors ctors = [@ctor], priorities = [0 : i32], data = [#llvm.zero]
   llvm.func @ctor() {
