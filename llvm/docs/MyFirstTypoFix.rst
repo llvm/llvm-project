@@ -164,7 +164,7 @@ into ``llvm-project/``:
 
 .. code:: console
 
-   $ ln -s build/compile_commands.json ../
+   $ ln -s build/compile_commands.json ./
 
 (This isn't strictly necessary for building and testing, but allows
 tools like clang-tidy, clang-query, and clangd to work in your source
