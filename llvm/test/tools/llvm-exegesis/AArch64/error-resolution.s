@@ -23,6 +23,30 @@
 # ADDXri_throughput-NEXT:     ADDXri [[REG1:X[0-9]+|LR]] [[REG2:X[0-9]+|LR]] i_0x0 i_0x0
 # ADDXri_throughput: ...
 
+
+
+// Test for omitting OperandType::OPERAND_MSL_SHIFT_4S
+
+// MOVIv2s_msl: MOVI vd, #imm{, shift}
+# RUN: llvm-exegesis --mtriple=aarch64 --mcpu=neoverse-v2 --mode=latency  --benchmark-phase=prepare-and-assemble-snippet --opcode-name=MOVIv4s_msl 2>&1 | FileCheck %s --check-prefix=MOVIv4s_msl_latency
+# RUN: llvm-exegesis --mtriple=aarch64 --mcpu=neoverse-v2 --mode=inverse_throughput --benchmark-phase=prepare-and-assemble-snippet --opcode-name=MOVIv4s_msl 2>&1 | FileCheck %s --check-prefix=MOVIv4s_msl_throughput
+# MOVIv4s_msl_latency-NOT: Not all operands were initialized by the snippet generator for MOVIv4s_msl opcode
+
+// TODO: Add test to check if the immediate value is correct when serial execution strategy is added for MOVIv4s_msl
+
+
+# MOVIv4s_msl_throughput-NOT: Not all operands were initialized by the snippet generator for MOVIv4s_msl opcode
+# MOVIv4s_msl_throughput: ---
+# MOVIv4s_msl_throughput-NEXT: mode: inverse_throughput
+# MOVIv4s_msl_throughput-NEXT: key: 
+# MOVIv4s_msl_throughput-NEXT:   instructions:
+# MOVIv4s_msl_throughput-NEXT:     MOVIv4s_msl [[REG1:Q[0-9]+|LR]] i_0x1 i_0x110
+# MOVIv4s_msl_throughput: ...
+
+
+
+// Test for omitting OperandType::OPERAND_MSL_SHIFT_2S
+
 // MOVIv2s_msl: MOVI vd, #imm{, shift}
 # RUN: llvm-exegesis --mtriple=aarch64 --mcpu=neoverse-v2 --mode=latency  --benchmark-phase=prepare-and-assemble-snippet --opcode-name=MOVIv2s_msl 2>&1 | FileCheck %s --check-prefix=MOVIv2s_msl_latency
 # RUN: llvm-exegesis --mtriple=aarch64 --mcpu=neoverse-v2 --mode=inverse_throughput --benchmark-phase=prepare-and-assemble-snippet --opcode-name=MOVIv2s_msl 2>&1 | FileCheck %s --check-prefix=MOVIv2s_msl_throughput
