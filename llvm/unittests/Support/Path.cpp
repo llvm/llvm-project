@@ -1479,6 +1479,7 @@ TEST_F(FileSystemTest, FileMappingSync) {
   ASSERT_TRUE((bool)TempFileOrError);
   fs::TempFile File = std::move(*TempFileOrError);
   StringRef Content("hello there");
+  std::string FileName = File.TmpName;
   ASSERT_NO_ERROR(
       fs::resize_file_before_mapping_readwrite(File.FD, Content.size()));
   {
@@ -1487,20 +1488,24 @@ TEST_F(FileSystemTest, FileMappingSync) {
     fs::mapped_file_region MFR(fs::convertFDToNativeFile(File.FD),
                                fs::mapped_file_region::readwrite,
                                Content.size(), 0, EC);
+
+    // Keep the file so it can be read.
+    ASSERT_FALSE((bool)File.keep());
+
+    // Write content through mapped memory.
     ASSERT_NO_ERROR(EC);
     std::copy(Content.begin(), Content.end(), MFR.data());
 
-    // Synchronize and check the contents before unmapping.
+    // Synchronize to file system.
     ASSERT_FALSE((bool)MFR.sync());
-    auto Buffer = MemoryBuffer::getFile(File.TmpName);
-    if (!Buffer)
-      llvm::errs() << "failed to open \'" << File.TmpName
-                   << "\': " << Buffer.getError().message() << "\n";
-    sleep(1);
+
+    // Check the file content using file IO APIs.
+    auto Buffer = MemoryBuffer::getFile(FileName);
     ASSERT_TRUE((bool)Buffer);
     ASSERT_EQ(Content, Buffer->get()->getBuffer());
   }
-  ASSERT_FALSE((bool)File.discard());
+  // Manually remove the test file.
+  ASSERT_FALSE((bool)fs::remove(FileName));
 }
 
 TEST(Support, NormalizePath) {

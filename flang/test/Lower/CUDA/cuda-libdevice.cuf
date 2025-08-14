@@ -116,6 +116,22 @@ end subroutine
 ! CHECK: %{{.*}} = fir.call @__nv_double2ll_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> i64
 ! CHECK: %{{.*}} = fir.call @__nv_double2ll_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> i64
 
+
+attributes(global) subroutine test_drcp_rX()
+  double precision :: res
+  double precision :: r
+  res = __drcp_rd(r)
+  res = __drcp_rn(r)
+  res = __drcp_ru(r)
+  res = __drcp_rz(r)
+end subroutine
+
+! CHECK-LABEL: _QPtest_drcp_rx
+! CHECK: %{{.*}} = fir.call @__nv_drcp_rd(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
+! CHECK: %{{.*}} = fir.call @__nv_drcp_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
+! CHECK: %{{.*}} = fir.call @__nv_drcp_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
+! CHECK: %{{.*}} = fir.call @__nv_drcp_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> f64
+
 attributes(global) subroutine test_double2ull_rX()
   integer(8) :: res
   double precision :: r
@@ -130,3 +146,4 @@ end subroutine
 ! CHECK: %{{.*}} = fir.call @__nv_double2ull_rn(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> i64
 ! CHECK: %{{.*}} = fir.call @__nv_double2ull_ru(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> i64
 ! CHECK: %{{.*}} = fir.call @__nv_double2ull_rz(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f64) -> i64
+
