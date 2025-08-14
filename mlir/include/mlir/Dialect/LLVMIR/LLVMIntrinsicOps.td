@@ -1080,8 +1080,6 @@ def LLVM_masked_expandload
 
   let arguments = !con(args, baseArgs);
 
-  let builders = [LLVM_OneResultOpBuilder];
-
   string llvmBuilder = [{
     auto argAttrs = op.getArgAttrs();
     uint64_t alignment = 1;
