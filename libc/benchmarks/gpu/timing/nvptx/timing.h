@@ -105,7 +105,6 @@ throughput_baseline(const cpp::array<T, N> &inputs) {
 
   cpp::atomic_thread_fence(cpp::MemoryOrder::ACQ_REL);
   uint64_t start = gpu::processor_clock();
-
   asm("" ::"llr"(start));
 
   T result{};
@@ -116,11 +115,10 @@ throughput_baseline(const cpp::array<T, N> &inputs) {
   }
 
   uint64_t stop = gpu::processor_clock();
-  cpp::atomic_thread_fence(cpp::MemoryOrder::ACQ_REL);
   asm("" ::"r"(stop));
+  cpp::atomic_thread_fence(cpp::MemoryOrder::ACQ_REL);
 
   volatile auto output = result;
-  (void)output;
 
   return stop - start;
 }
@@ -136,7 +134,6 @@ static LIBC_INLINE uint64_t throughput(F f, const cpp::array<T, N> &inputs) {
 
   cpp::atomic_thread_fence(cpp::MemoryOrder::ACQ_REL);
   uint64_t start = gpu::processor_clock();
-
   asm("" ::"llr"(start));
 
   T result{};
@@ -147,11 +144,10 @@ static LIBC_INLINE uint64_t throughput(F f, const cpp::array<T, N> &inputs) {
   }
 
   uint64_t stop = gpu::processor_clock();
-  cpp::atomic_thread_fence(cpp::MemoryOrder::ACQ_REL);
   asm("" ::"r"(stop));
+  cpp::atomic_thread_fence(cpp::MemoryOrder::ACQ_REL);
 
   volatile auto output = result;
-  (void)output;
 
   const uint64_t measured = stop - start;
   return measured > baseline ? (measured - baseline) : 0;
@@ -166,7 +162,6 @@ static LIBC_INLINE uint64_t throughput_baseline(
 
   cpp::atomic_thread_fence(cpp::MemoryOrder::ACQ_REL);
   uint64_t start = gpu::processor_clock();
-
   asm("" ::"llr"(start));
 
   T result{};
@@ -179,11 +174,10 @@ static LIBC_INLINE uint64_t throughput_baseline(
   }
 
   uint64_t stop = gpu::processor_clock();
-  cpp::atomic_thread_fence(cpp::MemoryOrder::ACQ_REL);
   asm("" ::"r"(stop));
+  cpp::atomic_thread_fence(cpp::MemoryOrder::ACQ_REL);
 
   volatile auto output = result;
-  (void)output;
 
   return stop - start;
 }
@@ -200,7 +194,6 @@ static LIBC_INLINE uint64_t throughput(F f, const cpp::array<T, N> &inputs1,
 
   cpp::atomic_thread_fence(cpp::MemoryOrder::ACQ_REL);
   uint64_t start = gpu::processor_clock();
-
   asm("" ::"llr"(start));
 
   T result{};
@@ -213,11 +206,10 @@ static LIBC_INLINE uint64_t throughput(F f, const cpp::array<T, N> &inputs1,
   }
 
   uint64_t stop = gpu::processor_clock();
-  cpp::atomic_thread_fence(cpp::MemoryOrder::ACQ_REL);
   asm("" ::"r"(stop));
+  cpp::atomic_thread_fence(cpp::MemoryOrder::ACQ_REL);
 
   volatile auto output = result;
-  (void)output;
 
   const uint64_t measured = stop - start;
   return measured > baseline ? (measured - baseline) : 0;
