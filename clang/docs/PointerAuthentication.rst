@@ -1164,11 +1164,12 @@ pointer authentication.
   inject code that can be used as a :ref:`signing oracle<Signing Oracles>`.
   The same is true if they can write to the instruction stream.
 
-- If an attacker can remap read-only program sections to be writable, then any
-  use of :ref:`relative addresses` in global data becomes insecure.
+- If an attacker can remap read-only program data sections to be writable, then
+  any use of :ref:`relative addresses` in global data becomes insecure.
 
-- If an attacker can remap read-only program sections to be writable, then it is
-  unsafe to use unsigned pointers in `global offset tables`_.
+- On platforms that use them, if an attacker can remap the memory containing
+  the `global offset tables`_ as writable, then any unsigned pointers in those
+  tables are insecure.
 
 Remapping memory in this way often requires the attacker to have already
 substantively subverted the control flow of the process.  Nonetheless, if the
@@ -1330,8 +1331,9 @@ is almost entirely reserved for this purpose.
 Global offset tables
 ~~~~~~~~~~~~~~~~~~~~
 
-The global offset table (GOT) is not ABI, but it is a common implementation
-technique for dynamic linking which deserves special discussion here.
+The global offset table (GOT) is not language ABI, but it is a common
+implementation technique for dynamic linking which deserves special discussion
+here.
 
 Whenever possible, signed pointers should be materialized directly in code
 rather than via the GOT, e.g. using an ``adrp+add+pac`` sequence on ARMv8.3.
@@ -1383,6 +1385,22 @@ entry as part of producing a signed pointer constant is not vulnerable to
 `register clobbering`_.  If the linker also generates code for this, e.g. for
 call stubs, this generated code must take the same precautions.
 
+Dynamic symbol lookup
+~~~~~~~~~~~~~~~~~~~~~
+
+On platforms that support dynamically loading or resolving symbols it is
+necessary for them to define the pointer authentication semantics of the APIs
+provided to perform such lookups. While the platform may choose to reply
+unsigned pointers from such function and rely on the caller performing the
+initial signing, doing so creates the opportunity for caller side errors that
+create :ref:`signing oracles<Signing Oracles>`.
+
+On arm64e the `dlsym` function is used to resolve a symbol at runtime. If the
+resolved symbol is a function or other code pointer the returned pointer is
+signed using the default function signing schema described in
+`C function pointers`_. If the resolved symbol is not a code pointer it is
+returned as an unsigned pointer.
+
 C function pointers
 ~~~~~~~~~~~~~~~~~~~
 
@@ -1415,8 +1433,9 @@ By default the pointer to a C++ virtual table is currently signed with the
 hash (see `ptrauth_string_discriminator`_) of the mangled v-table identifier
 of the primary base class for the v-table. To support existing code or ABI
 constraints it is possible to use the `ptrauth_vtable_pointer` attribute to
-override the policy configure the key, address discrimination, and extra
-discriminator used.
+override the schema used for the v-table pointer of the base type of
+polymorphic class hierarchy. This attribute permits the configuration of the
+key, address diversity mode, and any extra constant discriminator to be used.
 
 Virtual functions in a C++ virtual table are signed with the ``IA`` key, address
 diversity, and a constant discriminator equal to the string hash (see
