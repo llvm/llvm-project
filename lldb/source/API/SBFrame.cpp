@@ -1165,24 +1165,20 @@ lldb::LanguageType SBFrame::GuessLanguage() const {
 
 // BEGIN SWIFT
 bool SBFrame::IsSwiftThunk() const {
-  std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
-  
-  StackFrame *frame = nullptr;
-  Target *target = exe_ctx.GetTargetPtr();
-  Process *process = exe_ctx.GetProcessPtr();
-  if (!target || !process)
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::API), exe_ctx.takeError(), "{0}");
     return false;
-  Process::StopLocker stop_locker;
-  if (!stop_locker.TryLock(&process->GetRunLock()))
-    return false;
-  frame = exe_ctx.GetFramePtr();
+  }
+
+  StackFrame *frame = exe_ctx->GetFramePtr();
   if (!frame)
     return false;
-  SymbolContext sc;
-  sc = frame->GetSymbolContext(eSymbolContextSymbol);
+  SymbolContext sc = frame->GetSymbolContext(eSymbolContextSymbol);
   if (!sc.symbol)
     return false;
+  Process *process = exe_ctx->GetProcessPtr();
   auto *runtime = process->GetLanguageRuntime(eLanguageTypeSwift);
   if (!runtime)
     return false;
