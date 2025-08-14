@@ -75,8 +75,8 @@ AST Dumping Potentially Breaking Changes
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
 - Members of anonymous unions/structs are now injected as ``IndirectFieldDecl``
-into the enclosing record even if their names conflict with other names in the
-scope. These ``IndirectFieldDecl`` are marked invalid.
+  into the enclosing record even if their names conflict with other names in the
+  scope. These ``IndirectFieldDecl`` are marked invalid.
 
 Clang Python Bindings Potentially Breaking Changes
 --------------------------------------------------
