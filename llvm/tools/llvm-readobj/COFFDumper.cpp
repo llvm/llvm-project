@@ -2033,7 +2033,7 @@ void COFFDumper::printCOFFPseudoReloc() {
     if (Expected<COFFSymbolRef> SymOrErr = Obj->getSymbol(i)) {
       Sym = *SymOrErr;
     } else {
-      reportWarning(SymOrErr.takeError(), Obj->getFileName());
+      reportUniqueWarning(SymOrErr.takeError());
       continue;
     }
 
@@ -2046,7 +2046,7 @@ void COFFDumper::printCOFFPseudoReloc() {
     if (Expected<StringRef> NameOrErr = Obj->getSymbolName(Sym)) {
       Name = *NameOrErr;
     } else {
-      reportWarning(NameOrErr.takeError(), Obj->getFileName());
+      reportUniqueWarning(NameOrErr.takeError());
       continue;
     }
 
@@ -2060,7 +2060,7 @@ void COFFDumper::printCOFFPseudoReloc() {
             Obj->getSection(Sym.getSectionNumber())) {
       Sec = *SecOrErr;
     } else {
-      reportWarning(SecOrErr.takeError(), Obj->getFileName());
+      reportUniqueWarning(SecOrErr.takeError());
       continue;
     }
 
@@ -2069,10 +2069,8 @@ void COFFDumper::printCOFFPseudoReloc() {
   }
 
   if (!RelocBegin.getRawPtr() || !RelocEnd.getRawPtr()) {
-    reportWarning(
-        createStringError(
-            "the marker symbols for runtime pseudo-relocation were not found"),
-        Obj->getFileName());
+    reportUniqueWarning(createStringError(
+        "the marker symbols for runtime pseudo-relocation were not found"));
     return;
   }
 
@@ -2081,18 +2079,16 @@ void COFFDumper::printCOFFPseudoReloc() {
           Obj->getSection(RelocBegin.getSectionNumber())) {
     Section = *SecOrErr;
   } else {
-    reportWarning(SecOrErr.takeError(), Obj->getFileName());
+    reportUniqueWarning(SecOrErr.takeError());
     return;
   }
 
   if (RelocBegin.getSectionNumber() != RelocEnd.getSectionNumber()) {
-    reportWarning(
-        createStringError(
-            "the end marker symbol for runtime pseudo-relocation must "
-            "point to the same section where the begin marker points to: "
-            "expected %d, but got %d",
-            RelocBegin.getSectionNumber(), RelocEnd.getSectionNumber()),
-        Obj->getFileName());
+    reportUniqueWarning(createStringError(
+        "the end marker symbol for runtime pseudo-relocation must "
+        "point to the same section where the begin marker points to: "
+        "expected %d, but got %d",
+        RelocBegin.getSectionNumber(), RelocEnd.getSectionNumber()));
     return;
   }
 
@@ -2101,29 +2097,26 @@ void COFFDumper::printCOFFPseudoReloc() {
     return;
 
   if (RelocEnd.getValue() < RelocBegin.getValue()) {
-    reportWarning(
-        createStringError(
-            "the end marker symbol for runtime pseudo-relocation must point "
-            "to a higher address than where the begin marker points to: "
-            "expected >=0x%x, but got 0x%x",
-            RelocBegin.getValue(), RelocEnd.getValue()),
-        Obj->getFileName());
+    reportUniqueWarning(createStringError(
+        "the end marker symbol for runtime pseudo-relocation must point "
+        "to a higher address than where the begin marker points to: "
+        "expected >=0x%x, but got 0x%x",
+        RelocBegin.getValue(), RelocEnd.getValue()));
     return;
   }
 
   ArrayRef<uint8_t> Data;
   if (auto E = Obj->getSectionContents(Section, Data)) {
-    reportWarning(std::move(E), Obj->getFileName());
+    reportUniqueWarning(std::move(E));
     return;
   }
 
   if (const uint32_t Begin = RelocBegin.getValue(), End = RelocEnd.getValue();
       Data.size() <= Begin || Data.size() <= End) {
-    reportWarning(
+    reportUniqueWarning(
         createStringError("the marker symbol of runtime pseudo-relocation "
                           "points past the end of the section: 0x%x",
-                          Data.size() <= Begin ? Begin : End),
-        Obj->getFileName());
+                          Data.size() <= Begin ? Begin : End));
     return;
   }
 
@@ -2139,9 +2132,8 @@ void COFFDumper::printCOFFPseudoReloc() {
   const PseudoRelocationHeader HeaderV2(1);
   if (RawRelocs.size() < sizeof(HeaderV2) ||
       (memcmp(RawRelocs.data(), &HeaderV2, sizeof(HeaderV2)) != 0)) {
-    reportWarning(
-        createStringError("invalid runtime pseudo-relocation records"),
-        Obj->getFileName());
+    reportUniqueWarning(
+        createStringError("invalid runtime pseudo-relocation records"));
     return;
   }
 
@@ -2178,7 +2170,7 @@ void COFFDumper::printCOFFPseudoReloc() {
       });
     }
 
-    Expected<StringRef> find(uint32_t EntryRVA) {
+    Expected<StringRef> find(COFFDumper *Self, uint32_t EntryRVA) {
       static constexpr char Msg[] =
           "the address referenced by pseudo-relocation is not a valid import entry: 0x%x";
       if (auto Ite = ImportedSymbols.find(EntryRVA);
@@ -2201,7 +2193,7 @@ void COFFDumper::printCOFFPseudoReloc() {
         if (RVA == EntryRVA) {
           StringRef &NameDst = ImportedSymbols[RVA];
           if (auto E = S.getSymbolName(NameDst)) {
-            reportWarning(std::move(E), Obj->getFileName());
+            Self->reportUniqueWarning(std::move(E));
             NameDst = "(no symbol)";
           }
           return NameDst;
@@ -2232,10 +2224,11 @@ void COFFDumper::printCOFFPseudoReloc() {
     DictScope Entry(W, "Entry");
 
     W.printHex("Symbol", Reloc.Symbol);
-    if (Expected<StringRef> SymOrErr = ImportedSymbols.find(Reloc.Symbol)) {
+    if (Expected<StringRef> SymOrErr =
+            ImportedSymbols.find(this, Reloc.Symbol)) {
       W.printString("SymbolName", *SymOrErr);
     } else {
-      reportWarning(SymOrErr.takeError(), Obj->getFileName());
+      reportUniqueWarning(SymOrErr.takeError());
       W.printString("SymbolName", "(missing)");
     }
 
@@ -2257,7 +2250,7 @@ void COFFDumper::printCOFFPseudoReloc() {
       W.printSymbolOffset("TargetSymbol", *NameOrErr,
                           Reloc.Target - Ite->Section->VirtualAddress);
     } else {
-      reportWarning(NameOrErr.takeError(), Obj->getFileName());
+      reportUniqueWarning(NameOrErr.takeError());
       W.printSymbolOffset("TargetSymbol", "(base)", Reloc.Target);
     }
 
