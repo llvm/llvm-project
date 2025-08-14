@@ -1012,12 +1012,12 @@ bool GCNTTIImpl::isSourceOfDivergence(const Value *V) const {
       // Similarly, if the dimension has size 1, it is also uniform.
       const Function *F = Intrinsic->getFunction();
       std::optional<unsigned> ReqdXDimSize = ST->getReqdWorkGroupSize(*F, 0);
-      if (ReqdXDimSize.has_value() && isPowerOf2_32(*ReqdXDimSize) &&
+      if (ReqdXDimSize && isPowerOf2_32(*ReqdXDimSize) &&
           *ReqdXDimSize >= ST->getWavefrontSize())
         return false;
       std::optional<unsigned> ThisDimSize = ST->getReqdWorkGroupSize(
           *F, IID == Intrinsic::amdgcn_workitem_id_y ? 1 : 2);
-      return !(ThisDimSize.has_value() && *ThisDimSize == 1);
+      return !ThisDimSize || *ThisDimSize != 1;
     }
     default:
       return AMDGPU::isIntrinsicSourceOfDivergence(IID);

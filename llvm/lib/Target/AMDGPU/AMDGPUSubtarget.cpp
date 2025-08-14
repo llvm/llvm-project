@@ -253,8 +253,8 @@ bool AMDGPUSubtarget::isMesaKernel(const Function &F) const {
 unsigned AMDGPUSubtarget::getMaxWorkitemID(const Function &Kernel,
                                            unsigned Dimension) const {
   std::optional<unsigned> ReqdSize = getReqdWorkGroupSize(Kernel, Dimension);
-  if (ReqdSize.has_value())
-    return ReqdSize.value() - 1;
+  if (ReqdSize)
+    return *ReqdSize - 1;
   return getFlatWorkGroupSizes(Kernel).second - 1;
 }
 
@@ -306,7 +306,7 @@ bool AMDGPUSubtarget::makeLIDRangeMetadata(Instruction *I) const {
 
       if (Dim <= 3) {
         std::optional<unsigned> ReqdSize = getReqdWorkGroupSize(*Kernel, Dim);
-        if (ReqdSize.has_value())
+        if (ReqdSize)
           MinSize = MaxSize = *ReqdSize;
       }
     }
