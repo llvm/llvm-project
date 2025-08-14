@@ -90,9 +90,8 @@ bool ExternalFileUnit::Emit(const char *data, std::size_t bytes,
   CheckDirectAccess(handler);
   WriteFrame(frameOffsetInFile_, recordOffsetInFrame_ + furthestAfter, handler);
   if (positionInRecord > furthestPositionInRecord) {
-    runtime::memset(
-        Frame() + recordOffsetInFrame_ + furthestPositionInRecord, ' ',
-        positionInRecord - furthestPositionInRecord);
+    runtime::memset(Frame() + recordOffsetInFrame_ + furthestPositionInRecord,
+        ' ', positionInRecord - furthestPositionInRecord);
   }
   char *to{Frame() + recordOffsetInFrame_ + positionInRecord};
   runtime::memcpy(to, data, bytes);

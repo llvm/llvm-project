@@ -147,8 +147,8 @@ uid_t RTNAME(GetUID)() {
 }
 
 void GetUsernameEnvVar(const char *envName, char *arg, std::int64_t length) {
-  Descriptor name{*Descriptor::Create(1, runtime::strlen(envName) + 1,
-      const_cast<char *>(envName), 0)};
+  Descriptor name{*Descriptor::Create(
+      1, runtime::strlen(envName) + 1, const_cast<char *>(envName), 0)};
   Descriptor value{*Descriptor::Create(1, length, arg, 0)};
 
   RTNAME(GetEnvVariable)

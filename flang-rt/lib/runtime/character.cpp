@@ -617,8 +617,7 @@ void RTDEF(CharacterConcatenate)(Descriptor &accumulator,
   for (; elements-- > 0;
        to += newBytes, p += oldBytes, from.IncrementSubscripts(fromAt)) {
     runtime::memcpy(to, p, oldBytes);
-    runtime::memcpy(
-        to + oldBytes, from.Element<char>(fromAt), fromBytes);
+    runtime::memcpy(to + oldBytes, from.Element<char>(fromAt), fromBytes);
   }
   FreeMemory(old);
 }

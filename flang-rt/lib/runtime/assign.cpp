@@ -298,8 +298,7 @@ RT_API_ATTRS int AssignTicket::Begin(WorkQueue &workQueue) {
       auto descBytes{from_->SizeInBytes()};
       Descriptor &newFrom{tempDescriptor_.descriptor()};
       persist_ = true; // tempDescriptor_ state must outlive child tickets
-      runtime::memcpy(
-          reinterpret_cast<void *>(&newFrom), from_, descBytes);
+      runtime::memcpy(reinterpret_cast<void *>(&newFrom), from_, descBytes);
       // Pretend the temporary descriptor is for an ALLOCATABLE
       // entity, otherwise, the Deallocate() below will not
       // free the descriptor memory.

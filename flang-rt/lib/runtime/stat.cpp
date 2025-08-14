@@ -87,8 +87,7 @@ RT_API_ATTRS int ToErrmsg(const Descriptor *errmsg, int stat) {
         runtime::memcpy(buffer, msg, bufferLength);
       } else {
         runtime::memcpy(buffer, msg, msgLength);
-        runtime::memset(
-            buffer + msgLength, ' ', bufferLength - msgLength);
+        runtime::memset(buffer + msgLength, ' ', bufferLength - msgLength);
       }
     }
   }

@@ -561,8 +561,7 @@ RT_API_ATTRS void CopyAndPad(
   } else if (toChars <= fromChars) {
     runtime::memcpy(to, from, toChars * sizeof(TO));
   } else {
-    runtime::memcpy(
-        to, from, std::min(toChars, fromChars) * sizeof(TO));
+    runtime::memcpy(to, from, std::min(toChars, fromChars) * sizeof(TO));
     for (std::size_t j{fromChars}; j < toChars; ++j) {
       to[j] = static_cast<TO>(' ');
     }

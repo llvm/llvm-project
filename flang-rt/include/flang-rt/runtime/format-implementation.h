@@ -49,8 +49,7 @@ RT_API_ATTRS FormatControl<CONTEXT>::FormatControl(const Terminator &terminator,
       SubscriptValue at[maxRank];
       formatDescriptor->GetLowerBounds(at);
       for (std::size_t j{0}; j < elements; ++j) {
-        runtime::memcpy(
-            p, formatDescriptor->Element<char>(at), elementBytes);
+        runtime::memcpy(p, formatDescriptor->Element<char>(at), elementBytes);
         p += elementBytes;
         formatDescriptor->IncrementSubscripts(at);
       }

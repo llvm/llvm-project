@@ -150,8 +150,7 @@ RT_API_ATTRS void ShallowCopyDiscontiguousToContiguous(
   for (std::size_t n{to.Elements()}; n-- > 0;
       toAt += elementBytes, fromIt.Advance()) {
     if constexpr (typeElementBytes != 1) {
-      runtime::memcpy(
-          toAt, fromIt.template Get<P>(), typeElementBytes);
+      runtime::memcpy(toAt, fromIt.template Get<P>(), typeElementBytes);
     } else {
       runtime::memcpy(toAt, fromIt.template Get<P>(), elementBytes);
     }
@@ -171,8 +170,7 @@ RT_API_ATTRS void ShallowCopyContiguousToDiscontiguous(
   for (std::size_t n{to.Elements()}; n-- > 0;
       toIt.Advance(), fromAt += elementBytes) {
     if constexpr (typeElementBytes != 1) {
-      runtime::memcpy(
-          toIt.template Get<P>(), fromAt, typeElementBytes);
+      runtime::memcpy(toIt.template Get<P>(), fromAt, typeElementBytes);
     } else {
       runtime::memcpy(toIt.template Get<P>(), fromAt, elementBytes);
     }
