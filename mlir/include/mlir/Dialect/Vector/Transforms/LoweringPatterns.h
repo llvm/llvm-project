@@ -303,6 +303,28 @@ void populateVectorRankReducingFMAPattern(RewritePatternSet &patterns);
 void populateVectorToFromElementsToShuffleTreePatterns(
     RewritePatternSet &patterns, PatternBenefit benefit = 1);
 
+/// Populate the pattern set with the following patterns:
+///
+/// [ContractionOpToMatmulOpLowering]
+/// Lowers `vector.contract` to `llvm.intr.matrix.multiply`.
+///
+/// Given the high benefit, this will be prioriotised over other
+/// contract-lowering patterns. As such, the convert-vector-to-llvm pass will
+/// only run this registration conditionally.
+void populateVectorContractToMatrixMultiply(RewritePatternSet &patterns,
+                                            PatternBenefit benefit = 100);
+
+/// Populate the pattern set with the following patterns:
+///
+/// [TransposeOpLowering]
+/// Lowers `vector.transpose` to `llvm.intr.matrix.flat_transpose`.
+///
+/// Given the high benefit, this will be prioriotised over other
+/// transpose-lowering patterns. As such, the convert-vector-to-llvm pass will
+/// only run this registration conditionally.
+void populateVectorTransposeToFlatTranspose(RewritePatternSet &patterns,
+                                            PatternBenefit benefit = 100);
+
 } // namespace vector
 } // namespace mlir
 

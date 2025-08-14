@@ -692,6 +692,9 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
                 "0102030405060708"  # t4
                 "0102030405060708"  # t5
                 "0102030405060708"  # t6
+                "6162636465666768"  # pc
+                "0000C03F"  # ft0
+                "e07a6147a8a40940"  # ft1
             )
 
             def qXferRead(self, obj, annex, offset, length):
@@ -736,6 +739,10 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
                                 <reg name="t5" bitsize="64" type="int"/>
                                 <reg name="t6" bitsize="64" type="int"/>
                                 <reg name="pc" bitsize="64" type="code_ptr"/>
+                            </feature>
+                            <feature name='org.gnu.gdb.riscv.fpu'>
+                                <reg name='ft0' bitsize='32' type='ieee_single'/>
+                                <reg name='ft1' bitsize='64' type='ieee_double'/>
                             </feature>
                         </target>""",
                         False,
@@ -799,6 +806,10 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
         self.match("register read x29", ["t4 = 0x0807060504030201"])
         self.match("register read x30", ["t5 = 0x0807060504030201"])
         self.match("register read x31", ["t6 = 0x0807060504030201"])
+        self.match("register read pc", ["pc = 0x6867666564636261"])
+        # test FPU registers
+        self.match("register read ft0", ["ft0 = 1.5"])
+        self.match("register read ft1", ["ft1 = 3.2053990913985757"])
 
     @skipIfXmlSupportMissing
     @skipIfRemote

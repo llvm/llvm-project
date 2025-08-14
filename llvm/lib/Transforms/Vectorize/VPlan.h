@@ -906,10 +906,10 @@ template <unsigned PartOpIdx> class LLVM_ABI_FOR_TEST VPUnrollPartAccessor {
 protected:
   /// Return the VPValue operand containing the unroll part or null if there is
   /// no such operand.
-  VPValue *getUnrollPartOperand(VPUser &U) const;
+  VPValue *getUnrollPartOperand(const VPUser &U) const;
 
   /// Return the unroll part.
-  unsigned getUnrollPart(VPUser &U) const;
+  unsigned getUnrollPart(const VPUser &U) const;
 };
 
 /// Helper to manage IR metadata for recipes. It filters out metadata that
@@ -991,6 +991,9 @@ public:
     // operand). Only generates scalar values (either for the first lane only or
     // for all lanes, depending on its uses).
     PtrAdd,
+    // Add a vector offset in bytes (second operand) to a scalar base pointer
+    // (first operand).
+    WidePtrAdd,
     // Returns a scalar boolean value, which is true if any lane of its
     // (boolean) vector operands is true. It produces the reduced value across
     // all unrolled iterations. Unrolling will add all copies of its original
@@ -1012,7 +1015,15 @@ public:
     ReductionStartVector,
     // Creates a step vector starting from 0 to VF with a step of 1.
     StepVector,
-
+    /// Extracts a single lane (first operand) from a set of vector operands.
+    /// The lane specifies an index into a vector formed by combining all vector
+    /// operands (all operands after the first one).
+    ExtractLane,
+    /// Explicit user for the resume phi of the canonical induction in the main
+    /// VPlan, used by the epilogue vector loop.
+    ResumeForEpilogue,
+    /// Returns the value for vscale.
+    VScale,
   };
 
 private:
@@ -1160,6 +1171,7 @@ public:
     switch (VPI->getOpcode()) {
     case VPInstruction::WideIVStep:
     case VPInstruction::StepVector:
+    case VPInstruction::VScale:
       return true;
     default:
       return false;
@@ -1235,12 +1247,24 @@ struct LLVM_ABI_FOR_TEST VPPhi : public VPInstruction, public VPPhiAccessors {
       : VPInstruction(Instruction::PHI, Operands, DL, Name) {}
 
   static inline bool classof(const VPUser *U) {
-    auto *R = dyn_cast<VPInstruction>(U);
-    return R && R->getOpcode() == Instruction::PHI;
+    auto *VPI = dyn_cast<VPInstruction>(U);
+    return VPI && VPI->getOpcode() == Instruction::PHI;
+  }
+
+  static inline bool classof(const VPValue *V) {
+    auto *VPI = dyn_cast<VPInstruction>(V);
+    return VPI && VPI->getOpcode() == Instruction::PHI;
+  }
+
+  static inline bool classof(const VPSingleDefRecipe *SDR) {
+    auto *VPI = dyn_cast<VPInstruction>(SDR);
+    return VPI && VPI->getOpcode() == Instruction::PHI;
   }
 
   VPPhi *clone() override {
-    return new VPPhi(operands(), getDebugLoc(), getName());
+    auto *PhiR = new VPPhi(operands(), getDebugLoc(), getName());
+    PhiR->setUnderlyingValue(getUnderlyingValue());
+    return PhiR;
   }
 
   void execute(VPTransformState &State) override;
@@ -1272,7 +1296,7 @@ public:
 
   /// Create a new VPIRPhi for \p \I, if it is a PHINode, otherwise create a
   /// VPIRInstruction.
-  static VPIRInstruction *create(Instruction &I);
+  LLVM_ABI_FOR_TEST static VPIRInstruction *create(Instruction &I);
 
   VP_CLASSOF_IMPL(VPDef::VPIRInstructionSC)
 
@@ -1286,8 +1310,8 @@ public:
   void execute(VPTransformState &State) override;
 
   /// Return the cost of this VPIRInstruction.
-  InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override;
+  LLVM_ABI_FOR_TEST InstructionCost
+  computeCost(ElementCount VF, VPCostContext &Ctx) const override;
 
   Instruction &getInstruction() const { return I; }
 
@@ -1325,7 +1349,8 @@ public:
 /// cast/dyn_cast/isa and execute() implementation. A single VPValue operand is
 /// allowed, and it is used to add a new incoming value for the single
 /// predecessor VPBB.
-struct VPIRPhi : public VPIRInstruction, public VPPhiAccessors {
+struct LLVM_ABI_FOR_TEST VPIRPhi : public VPIRInstruction,
+                                   public VPPhiAccessors {
   VPIRPhi(PHINode &PN) : VPIRInstruction(PN) {}
 
   static inline bool classof(const VPRecipeBase *U) {
@@ -1357,9 +1382,10 @@ class LLVM_ABI_FOR_TEST VPWidenRecipe : public VPRecipeWithIRFlags,
 
 public:
   VPWidenRecipe(unsigned Opcode, ArrayRef<VPValue *> Operands,
-                const VPIRFlags &Flags, DebugLoc DL)
+                const VPIRFlags &Flags, const VPIRMetadata &Metadata,
+                DebugLoc DL)
       : VPRecipeWithIRFlags(VPDef::VPWidenSC, Operands, Flags, DL),
-        Opcode(Opcode) {}
+        VPIRMetadata(Metadata), Opcode(Opcode) {}
 
   VPWidenRecipe(Instruction &I, ArrayRef<VPValue *> Operands)
       : VPRecipeWithIRFlags(VPDef::VPWidenSC, Operands, I), VPIRMetadata(I),
@@ -1368,8 +1394,9 @@ public:
   ~VPWidenRecipe() override = default;
 
   VPWidenRecipe *clone() override {
-    auto *R = new VPWidenRecipe(*getUnderlyingInstr(), operands());
-    R->transferFlags(*this);
+    auto *R =
+        new VPWidenRecipe(getOpcode(), operands(), *this, *this, getDebugLoc());
+    R->setUnderlyingValue(getUnderlyingValue());
     return R;
   }
 
@@ -1660,6 +1687,8 @@ struct LLVM_ABI_FOR_TEST VPWidenSelectRecipe : public VPRecipeWithIRFlags,
              VPSlotTracker &SlotTracker) const override;
 #endif
 
+  unsigned getOpcode() const { return Instruction::Select; }
+
   VPValue *getCond() const {
     return getOperand(0);
   }
@@ -1833,6 +1862,10 @@ public:
                                      getGEPNoWrapFlags(), getDebugLoc());
   }
 
+  /// Return true if this VPVectorPointerRecipe corresponds to part 0. Note that
+  /// this is only accurate after the VPlan has been unrolled.
+  bool isFirstPart() const { return getUnrollPart(*this) == 0; }
+
   /// Return the cost of this VPHeaderPHIRecipe.
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override {
@@ -1967,6 +2000,9 @@ public:
   /// Update the step value of the recipe.
   void setStepValue(VPValue *V) { setOperand(1, V); }
 
+  VPValue *getVFValue() { return getOperand(2); }
+  const VPValue *getVFValue() const { return getOperand(2); }
+
   /// Returns the number of incoming values, also number of incoming blocks.
   /// Note that at the moment, VPWidenPointerInductionRecipe only has a single
   /// incoming value, its start value.
@@ -2056,9 +2092,6 @@ public:
              VPSlotTracker &SlotTracker) const override;
 #endif
 
-  VPValue *getVFValue() { return getOperand(2); }
-  const VPValue *getVFValue() const { return getOperand(2); }
-
   VPValue *getSplatVFValue() {
     // If the recipe has been unrolled return the VPValue for the induction
     // increment.
@@ -2094,8 +2127,7 @@ public:
   }
 };
 
-class VPWidenPointerInductionRecipe : public VPWidenInductionRecipe,
-                                      public VPUnrollPartAccessor<4> {
+class VPWidenPointerInductionRecipe : public VPWidenInductionRecipe {
   bool IsScalarAfterVectorization;
 
 public:
@@ -2124,17 +2156,13 @@ public:
   VP_CLASSOF_IMPL(VPDef::VPWidenPointerInductionSC)
 
   /// Generate vector values for the pointer induction.
-  void execute(VPTransformState &State) override;
+  void execute(VPTransformState &State) override {
+    llvm_unreachable("cannot execute this recipe, should be expanded via "
+                     "expandVPWidenPointerInduction");
+  };
 
   /// Returns true if only scalar values will be generated.
   bool onlyScalarsGenerated(bool IsScalable);
-
-  /// Returns the VPValue representing the value of this induction at
-  /// the first unrolled part, if it exists. Returns itself if unrolling did not
-  /// take place.
-  VPValue *getFirstUnrolledPartOperand() {
-    return getUnrollPart(*this) == 0 ? this : getOperand(3);
-  }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -2300,14 +2328,15 @@ public:
   /// respective masks, ordered [I0, M0, I1, M1, I2, M2, ...]. Note that M0 can
   /// be omitted (implied by passing an odd number of operands) in which case
   /// all other incoming values are merged into it.
-  VPBlendRecipe(PHINode *Phi, ArrayRef<VPValue *> Operands)
-      : VPSingleDefRecipe(VPDef::VPBlendSC, Operands, Phi, Phi->getDebugLoc()) {
+  VPBlendRecipe(PHINode *Phi, ArrayRef<VPValue *> Operands, DebugLoc DL)
+      : VPSingleDefRecipe(VPDef::VPBlendSC, Operands, Phi, DL) {
     assert(Operands.size() > 0 && "Expected at least one operand!");
   }
 
   VPBlendRecipe *clone() override {
     SmallVector<VPValue *> Ops(operands());
-    return new VPBlendRecipe(cast<PHINode>(getUnderlyingValue()), Ops);
+    return new VPBlendRecipe(cast_or_null<PHINode>(getUnderlyingValue()), Ops,
+                             getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPBlendSC)
@@ -2333,8 +2362,9 @@ public:
     return Idx == 0 ? getOperand(1) : getOperand(Idx * 2 + !isNormalized());
   }
 
-  /// Generate the phi/select nodes.
-  void execute(VPTransformState &State) override;
+  void execute(VPTransformState &State) override {
+    llvm_unreachable("VPBlendRecipe should be expanded by simplifyBlends");
+  }
 
   /// Return the cost of this VPWidenMemoryRecipe.
   InstructionCost computeCost(ElementCount VF,
@@ -2383,11 +2413,11 @@ public:
     // TODO: extend the masked interleaved-group support to reversed access.
     assert((!Mask || !IG->isReverse()) &&
            "Reversed masked interleave-group not supported.");
-    for (unsigned i = 0; i < IG->getFactor(); ++i)
-      if (Instruction *I = IG->getMember(i)) {
-        if (I->getType()->isVoidTy())
+    for (unsigned I = 0; I < IG->getFactor(); ++I)
+      if (Instruction *Inst = IG->getMember(I)) {
+        if (Inst->getType()->isVoidTy())
           continue;
-        new VPValue(I, this);
+        new VPValue(Inst, this);
       }
 
     for (auto *SV : StoredValues)
@@ -3481,7 +3511,7 @@ public:
 
   /// Return true if this VPScalarIVStepsRecipe corresponds to part 0. Note that
   /// this is only accurate after the VPlan has been unrolled.
-  bool isPart0() { return getUnrollPart(*this) == 0; }
+  bool isPart0() const { return getUnrollPart(*this) == 0; }
 
   VP_CLASSOF_IMPL(VPDef::VPScalarIVStepsSC)
 
@@ -3943,10 +3973,6 @@ public:
     VPBB->setPlan(this);
   }
 
-  /// Prepare the plan for execution, setting up the required live-in values.
-  void prepareToExecute(Value *TripCount, Value *VectorTripCount,
-                        VPTransformState &State);
-
   /// Generate the IR code for this VPlan.
   void execute(VPTransformState *State);
 
@@ -4051,6 +4077,10 @@ public:
   /// Returns VF * UF of the vector loop region.
   VPValue &getVFxUF() { return VFxUF; }
 
+  LLVMContext &getContext() const {
+    return getScalarHeader()->getIRBasicBlock()->getContext();
+  }
+
   void addVF(ElementCount VF) { VFs.insert(VF); }
 
   void setVF(ElementCount VF) {
@@ -4113,6 +4143,18 @@ public:
 
     assert(It->second->isLiveIn() && "Only live-ins should be in mapping");
     return It->second;
+  }
+
+  /// Return a VPValue wrapping i1 true.
+  VPValue *getTrue() {
+    LLVMContext &Ctx = getContext();
+    return getOrAddLiveIn(ConstantInt::getTrue(Ctx));
+  }
+
+  /// Return a VPValue wrapping i1 false.
+  VPValue *getFalse() {
+    LLVMContext &Ctx = getContext();
+    return getOrAddLiveIn(ConstantInt::getFalse(Ctx));
   }
 
   /// Return the live-in VPValue for \p V, if there is one or nullptr otherwise.
@@ -4186,13 +4228,11 @@ public:
     return VPB;
   }
 
-  /// Create a new VPRegionBlock with \p Name and entry and exiting blocks set
-  /// to nullptr. If \p IsReplicator is true, the region is a replicate region.
-  /// The returned block is owned by the VPlan and deleted once the VPlan is
-  /// destroyed.
-  VPRegionBlock *createVPRegionBlock(const std::string &Name = "",
-                                     bool IsReplicator = false) {
-    auto *VPB = new VPRegionBlock(Name, IsReplicator);
+  /// Create a new loop VPRegionBlock with \p Name and entry and exiting blocks set
+  /// to nullptr. The returned block is owned by the VPlan and deleted once the
+  /// VPlan is destroyed.
+  VPRegionBlock *createVPRegionBlock(const std::string &Name = "") {
+    auto *VPB = new VPRegionBlock(Name);
     CreatedBlocks.push_back(VPB);
     return VPB;
   }
@@ -4213,7 +4253,10 @@ public:
   /// block with multiple predecessors (one for the exit via the latch and one
   /// via the other early exit).
   bool hasEarlyExit() const {
-    return ExitBlocks.size() > 1 ||
+    return count_if(ExitBlocks,
+                    [](VPIRBasicBlock *EB) {
+                      return EB->getNumPredecessors() != 0;
+                    }) > 1 ||
            (ExitBlocks.size() == 1 && ExitBlocks[0]->getNumPredecessors() > 1);
   }
 

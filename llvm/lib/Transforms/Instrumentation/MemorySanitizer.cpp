@@ -158,7 +158,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/bit.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -1216,7 +1215,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   };
   SmallVector<ShadowOriginAndInsertPoint, 16> InstrumentationList;
   DenseMap<const DILocation *, int> LazyWarningDebugLocationCount;
-  bool InstrumentLifetimeStart = ClHandleLifetimeIntrinsics;
   SmallSetVector<AllocaInst *, 16> AllocaSet;
   SmallVector<std::pair<IntrinsicInst *, AllocaInst *>, 16> LifetimeStartList;
   SmallVector<StoreInst *, 16> StoreList;
@@ -1623,7 +1621,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     // Poison llvm.lifetime.start intrinsics, if we haven't fallen back to
     // instrumenting only allocas.
-    if (InstrumentLifetimeStart) {
+    if (ClHandleLifetimeIntrinsics) {
       for (auto Item : LifetimeStartList) {
         instrumentAlloca(*Item.second, Item.first);
         AllocaSet.remove(Item.second);
@@ -2692,6 +2690,54 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     SC.Done(&I);
   }
 
+  // Perform a bitwise OR on the horizontal pairs (or other specified grouping)
+  // of elements.
+  //
+  // For example, suppose we have:
+  //   VectorA: <a1, a2, a3, a4, a5, a6>
+  //   VectorB: <b1, b2, b3, b4, b5, b6>
+  //   ReductionFactor: 3.
+  // The output would be:
+  //   <a1|a2|a3, a4|a5|a6, b1|b2|b3, b4|b5|b6>
+  //
+  // This is convenient for instrumenting horizontal add/sub.
+  // For bitwise OR on "vertical" pairs, see maybeHandleSimpleNomemIntrinsic().
+  Value *horizontalReduce(IntrinsicInst &I, unsigned ReductionFactor,
+                          Value *VectorA, Value *VectorB) {
+    assert(isa<FixedVectorType>(VectorA->getType()));
+    unsigned TotalNumElems =
+        cast<FixedVectorType>(VectorA->getType())->getNumElements();
+
+    if (VectorB) {
+      assert(VectorA->getType() == VectorB->getType());
+      TotalNumElems = TotalNumElems * 2;
+    }
+
+    assert(TotalNumElems % ReductionFactor == 0);
+
+    Value *Or = nullptr;
+
+    IRBuilder<> IRB(&I);
+    for (unsigned i = 0; i < ReductionFactor; i++) {
+      SmallVector<int, 16> Mask;
+      for (unsigned X = 0; X < TotalNumElems; X += ReductionFactor)
+        Mask.push_back(X + i);
+
+      Value *Masked;
+      if (VectorB)
+        Masked = IRB.CreateShuffleVector(VectorA, VectorB, Mask);
+      else
+        Masked = IRB.CreateShuffleVector(VectorA, Mask);
+
+      if (Or)
+        Or = IRB.CreateOr(Or, Masked);
+      else
+        Or = Masked;
+    }
+
+    return Or;
+  }
+
   /// Propagate shadow for 1- or 2-vector intrinsics that combine adjacent
   /// fields.
   ///
@@ -2703,7 +2749,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     assert(I.getType()->isVectorTy());
     assert(I.getArgOperand(0)->getType()->isVectorTy());
 
-    FixedVectorType *ParamType =
+    [[maybe_unused]] FixedVectorType *ParamType =
         cast<FixedVectorType>(I.getArgOperand(0)->getType());
     assert((I.arg_size() != 2) ||
            (ParamType == cast<FixedVectorType>(I.getArgOperand(1)->getType())));
@@ -2713,31 +2759,16 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
            2 * ReturnType->getNumElements());
 
     IRBuilder<> IRB(&I);
-    unsigned Width = ParamType->getNumElements() * I.arg_size();
 
     // Horizontal OR of shadow
-    SmallVector<int, 8> EvenMask;
-    SmallVector<int, 8> OddMask;
-    for (unsigned X = 0; X < Width; X += 2) {
-      EvenMask.push_back(X);
-      OddMask.push_back(X + 1);
-    }
-
     Value *FirstArgShadow = getShadow(&I, 0);
-    Value *EvenShadow;
-    Value *OddShadow;
-    if (I.arg_size() == 2) {
-      Value *SecondArgShadow = getShadow(&I, 1);
-      EvenShadow =
-          IRB.CreateShuffleVector(FirstArgShadow, SecondArgShadow, EvenMask);
-      OddShadow =
-          IRB.CreateShuffleVector(FirstArgShadow, SecondArgShadow, OddMask);
-    } else {
-      EvenShadow = IRB.CreateShuffleVector(FirstArgShadow, EvenMask);
-      OddShadow = IRB.CreateShuffleVector(FirstArgShadow, OddMask);
-    }
+    Value *SecondArgShadow = nullptr;
+    if (I.arg_size() == 2)
+      SecondArgShadow = getShadow(&I, 1);
 
-    Value *OrShadow = IRB.CreateOr(EvenShadow, OddShadow);
+    Value *OrShadow = horizontalReduce(I, /*ReductionFactor=*/2, FirstArgShadow,
+                                       SecondArgShadow);
+
     OrShadow = CreateShadowCast(IRB, OrShadow, getShadowTy(&I));
 
     setShadow(&I, OrShadow);
@@ -2770,23 +2801,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     IRBuilder<> IRB(&I);
 
-    unsigned TotalNumElems = ParamType->getNumElements() * I.arg_size();
     FixedVectorType *ReinterpretShadowTy = nullptr;
     assert(isAligned(Align(ReinterpretElemWidth),
                      ParamType->getPrimitiveSizeInBits()));
     ReinterpretShadowTy = FixedVectorType::get(
         IRB.getIntNTy(ReinterpretElemWidth),
         ParamType->getPrimitiveSizeInBits() / ReinterpretElemWidth);
-    TotalNumElems = ReinterpretShadowTy->getNumElements() * I.arg_size();
 
     // Horizontal OR of shadow
-    SmallVector<int, 8> EvenMask;
-    SmallVector<int, 8> OddMask;
-    for (unsigned X = 0; X < TotalNumElems - 1; X += 2) {
-      EvenMask.push_back(X);
-      OddMask.push_back(X + 1);
-    }
-
     Value *FirstArgShadow = getShadow(&I, 0);
     FirstArgShadow = IRB.CreateBitCast(FirstArgShadow, ReinterpretShadowTy);
 
@@ -2798,22 +2820,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         Align(2),
         cast<FixedVectorType>(FirstArgShadow->getType())->getNumElements()));
 
-    Value *EvenShadow;
-    Value *OddShadow;
+    Value *SecondArgShadow = nullptr;
     if (I.arg_size() == 2) {
-      Value *SecondArgShadow = getShadow(&I, 1);
+      SecondArgShadow = getShadow(&I, 1);
       SecondArgShadow = IRB.CreateBitCast(SecondArgShadow, ReinterpretShadowTy);
-
-      EvenShadow =
-          IRB.CreateShuffleVector(FirstArgShadow, SecondArgShadow, EvenMask);
-      OddShadow =
-          IRB.CreateShuffleVector(FirstArgShadow, SecondArgShadow, OddMask);
-    } else {
-      EvenShadow = IRB.CreateShuffleVector(FirstArgShadow, EvenMask);
-      OddShadow = IRB.CreateShuffleVector(FirstArgShadow, OddMask);
     }
 
-    Value *OrShadow = IRB.CreateOr(EvenShadow, OddShadow);
+    Value *OrShadow = horizontalReduce(I, /*ReductionFactor=*/2, FirstArgShadow,
+                                       SecondArgShadow);
+
     OrShadow = CreateShadowCast(IRB, OrShadow, getShadowTy(&I));
 
     setShadow(&I, OrShadow);
@@ -3221,7 +3236,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// Caller guarantees that this intrinsic does not access memory.
   ///
   /// TODO: "horizontal"/"pairwise" intrinsics are often incorrectly matched by
-  ///       by this handler.
+  ///       by this handler. See horizontalReduce().
   [[maybe_unused]] bool
   maybeHandleSimpleNomemIntrinsic(IntrinsicInst &I,
                                   unsigned int trailingFlags) {
@@ -3303,10 +3318,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void handleLifetimeStart(IntrinsicInst &I) {
     if (!PoisonStack)
       return;
-    AllocaInst *AI = llvm::findAllocaForValue(I.getArgOperand(1));
-    if (!AI)
-      InstrumentLifetimeStart = false;
-    LifetimeStartList.push_back(std::make_pair(&I, AI));
+    AllocaInst *AI = dyn_cast<AllocaInst>(I.getArgOperand(0));
+    if (AI)
+      LifetimeStartList.push_back(std::make_pair(&I, AI));
   }
 
   void handleBswap(IntrinsicInst &I) {
@@ -4773,6 +4787,79 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
+  // Approximately handle AVX Galois Field Affine Transformation
+  //
+  // e.g.,
+  //     <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8>, <16 x i8>, i8)
+  //     <32 x i8> @llvm.x86.vgf2p8affineqb.256(<32 x i8>, <32 x i8>, i8)
+  //     <64 x i8> @llvm.x86.vgf2p8affineqb.512(<64 x i8>, <64 x i8>, i8)
+  //      Out                                    A          x          b
+  // where A and x are packed matrices, b is a vector,
+  //       Out = A * x + b in GF(2)
+  //
+  // Multiplication in GF(2) is equivalent to bitwise AND. However, the matrix
+  // computation also includes a parity calculation.
+  //
+  // For the bitwise AND of bits V1 and V2, the exact shadow is:
+  //     Out_Shadow =   (V1_Shadow & V2_Shadow)
+  //                  | (V1        & V2_Shadow)
+  //                  | (V1_Shadow & V2       )
+  //
+  // We approximate the shadow of gf2p8affineqb using:
+  //     Out_Shadow =   gf2p8affineqb(x_Shadow, A_shadow, 0)
+  //                  | gf2p8affineqb(x,        A_shadow, 0)
+  //                  | gf2p8affineqb(x_Shadow, A,        0)
+  //                  | set1_epi8(b_Shadow)
+  //
+  // This approximation has false negatives: if an intermediate dot-product
+  // contains an even number of 1's, the parity is 0.
+  // It has no false positives.
+  void handleAVXGF2P8Affine(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+
+    assert(I.arg_size() == 3);
+    Value *A = I.getOperand(0);
+    Value *X = I.getOperand(1);
+    Value *B = I.getOperand(2);
+
+    assert(isFixedIntVector(A));
+    assert(cast<VectorType>(A->getType())
+               ->getElementType()
+               ->getScalarSizeInBits() == 8);
+
+    assert(A->getType() == X->getType());
+
+    assert(B->getType()->isIntegerTy());
+    assert(B->getType()->getScalarSizeInBits() == 8);
+
+    assert(I.getType() == A->getType());
+
+    Value *AShadow = getShadow(A);
+    Value *XShadow = getShadow(X);
+    Value *BZeroShadow = getCleanShadow(B);
+
+    CallInst *AShadowXShadow = IRB.CreateIntrinsic(
+        I.getType(), I.getIntrinsicID(), {XShadow, AShadow, BZeroShadow});
+    CallInst *AShadowX = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
+                                             {X, AShadow, BZeroShadow});
+    CallInst *XShadowA = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
+                                             {XShadow, A, BZeroShadow});
+
+    unsigned NumElements = cast<FixedVectorType>(I.getType())->getNumElements();
+    Value *BShadow = getShadow(B);
+    Value *BBroadcastShadow = getCleanShadow(AShadow);
+    // There is no LLVM IR intrinsic for _mm512_set1_epi8.
+    // This loop generates a lot of LLVM IR, which we expect that CodeGen will
+    // lower appropriately (e.g., VPBROADCASTB).
+    // Besides, b is often a constant, in which case it is fully initialized.
+    for (unsigned i = 0; i < NumElements; i++)
+      BBroadcastShadow = IRB.CreateInsertElement(BBroadcastShadow, BShadow, i);
+
+    setShadow(&I, IRB.CreateOr(
+                      {AShadowXShadow, AShadowX, XShadowA, BBroadcastShadow}));
+    setOriginForNaryOp(I);
+  }
+
   // Handle Arm NEON vector load intrinsics (vld*).
   //
   // The WithLane instructions (ld[234]lane) are similar to:
@@ -5607,6 +5694,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       visitGenericScalarHalfwordInst(I);
       break;
     }
+
+    // AVX Galois Field New Instructions
+    case Intrinsic::x86_vgf2p8affineqb_128:
+    case Intrinsic::x86_vgf2p8affineqb_256:
+    case Intrinsic::x86_vgf2p8affineqb_512:
+      handleAVXGF2P8Affine(I);
+      break;
 
     case Intrinsic::fshl:
     case Intrinsic::fshr:

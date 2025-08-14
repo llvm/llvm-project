@@ -831,7 +831,7 @@ struct FormatStyle {
     /// Never merge functions into a single line.
     SFS_None,
     /// Only merge functions defined inside a class. Same as ``inline``,
-    /// except it does not implies ``empty``: i.e. top level empty functions
+    /// except it does not imply ``empty``: i.e. top level empty functions
     /// are not merged either.
     /// \code
     ///   class Foo {
@@ -4704,6 +4704,13 @@ struct FormatStyle {
     ///      <conditional-body>                     <conditional-body>
     /// \endcode
     bool AfterIfMacros;
+    /// If ``true``, put a space between alternative operator ``not`` and the
+    /// opening parenthesis.
+    /// \code
+    ///    true:                                  false:
+    ///    return not (a || b);            vs.    return not(a || b);
+    /// \endcode
+    bool AfterNot;
     /// If ``true``, put a space between operator overloading and opening
     /// parentheses.
     /// \code
@@ -4752,9 +4759,9 @@ struct FormatStyle {
         : AfterControlStatements(false), AfterForeachMacros(false),
           AfterFunctionDeclarationName(false),
           AfterFunctionDefinitionName(false), AfterIfMacros(false),
-          AfterOverloadedOperator(false), AfterPlacementOperator(true),
-          AfterRequiresInClause(false), AfterRequiresInExpression(false),
-          BeforeNonEmptyParentheses(false) {}
+          AfterNot(false), AfterOverloadedOperator(false),
+          AfterPlacementOperator(true), AfterRequiresInClause(false),
+          AfterRequiresInExpression(false), BeforeNonEmptyParentheses(false) {}
 
     bool operator==(const SpaceBeforeParensCustom &Other) const {
       return AfterControlStatements == Other.AfterControlStatements &&
@@ -4763,6 +4770,7 @@ struct FormatStyle {
                  Other.AfterFunctionDeclarationName &&
              AfterFunctionDefinitionName == Other.AfterFunctionDefinitionName &&
              AfterIfMacros == Other.AfterIfMacros &&
+             AfterNot == Other.AfterNot &&
              AfterOverloadedOperator == Other.AfterOverloadedOperator &&
              AfterPlacementOperator == Other.AfterPlacementOperator &&
              AfterRequiresInClause == Other.AfterRequiresInClause &&

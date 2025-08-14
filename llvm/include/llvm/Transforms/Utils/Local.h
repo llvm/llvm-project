@@ -325,7 +325,6 @@ LLVM_ABI void salvageDebugInfo(Instruction &I);
 /// Mark undef if salvaging cannot be completed.
 LLVM_ABI void
 salvageDebugInfoForDbgValues(Instruction &I,
-                             ArrayRef<DbgVariableIntrinsic *> Insns,
                              ArrayRef<DbgVariableRecord *> DPInsns);
 
 /// Given an instruction \p I and DIExpression \p DIExpr operating on

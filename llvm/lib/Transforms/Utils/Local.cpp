@@ -481,17 +481,15 @@ bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
       return true;
 
     if (II->isLifetimeStartOrEnd()) {
-      auto *Arg = II->getArgOperand(1);
-      // Lifetime intrinsics are dead when their right-hand is undef.
-      if (isa<UndefValue>(Arg))
+      auto *Arg = II->getArgOperand(0);
+      if (isa<PoisonValue>(Arg))
         return true;
-      // If the right-hand is an alloc, global, or argument and the only uses
-      // are lifetime intrinsics then the intrinsics are dead.
-      if (isa<AllocaInst>(Arg) || isa<GlobalValue>(Arg) || isa<Argument>(Arg))
-        return llvm::all_of(Arg->uses(), [](Use &Use) {
-          return isa<LifetimeIntrinsic>(Use.getUser());
-        });
-      return false;
+
+      // If the only uses of the alloca are lifetime intrinsics, then the
+      // intrinsics are dead.
+      return llvm::all_of(Arg->uses(), [](Use &Use) {
+        return isa<LifetimeIntrinsic>(Use.getUser());
+      });
     }
 
     // Assumptions are dead if their condition is trivially true.
@@ -610,14 +608,11 @@ void llvm::RecursivelyDeleteTriviallyDeadInstructions(
 }
 
 bool llvm::replaceDbgUsesWithUndef(Instruction *I) {
-  SmallVector<DbgVariableIntrinsic *, 1> DbgUsers;
   SmallVector<DbgVariableRecord *, 1> DPUsers;
-  findDbgUsers(DbgUsers, I, &DPUsers);
-  for (auto *DII : DbgUsers)
-    DII->setKillLocation();
+  findDbgUsers(I, DPUsers);
   for (auto *DVR : DPUsers)
     DVR->setKillLocation();
-  return !DbgUsers.empty() || !DPUsers.empty();
+  return !DPUsers.empty();
 }
 
 /// areAllUsesEqual - Check whether the uses of a value are all the same.
@@ -1604,15 +1599,9 @@ static bool PhiHasDebugValue(DILocalVariable *DIVar,
   // Since we can't guarantee that the original dbg.declare intrinsic
   // is removed by LowerDbgDeclare(), we need to make sure that we are
   // not inserting the same dbg.value intrinsic over and over.
-  SmallVector<DbgValueInst *, 1> DbgValues;
   SmallVector<DbgVariableRecord *, 1> DbgVariableRecords;
-  findDbgValues(DbgValues, APN, &DbgVariableRecords);
-  for (auto *DVI : DbgValues) {
-    assert(is_contained(DVI->getValues(), APN));
-    if ((DVI->getVariable() == DIVar) && (DVI->getExpression() == DIExpr))
-      return true;
-  }
-  for (auto *DVR : DbgVariableRecords) {
+  findDbgValues(APN, DbgVariableRecords);
+  for (DbgVariableRecord *DVR : DbgVariableRecords) {
     assert(is_contained(DVR->location_ops(), APN));
     if ((DVR->getVariable() == DIVar) && (DVR->getExpression() == DIExpr))
       return true;
@@ -1971,7 +1960,6 @@ bool llvm::replaceDbgDeclare(Value *Address, Value *NewAddress,
 static void updateOneDbgValueForAlloca(const DebugLoc &Loc,
                                        DILocalVariable *DIVar,
                                        DIExpression *DIExpr, Value *NewAddress,
-                                       DbgValueInst *DVI,
                                        DbgVariableRecord *DVR,
                                        DIBuilder &Builder, int Offset) {
   assert(DIVar && "Missing variable");
@@ -1987,42 +1975,28 @@ static void updateOneDbgValueForAlloca(const DebugLoc &Loc,
   if (Offset)
     DIExpr = DIExpression::prepend(DIExpr, 0, Offset);
 
-  if (DVI) {
-    DVI->setExpression(DIExpr);
-    DVI->replaceVariableLocationOp(0u, NewAddress);
-  } else {
-    assert(DVR);
-    DVR->setExpression(DIExpr);
-    DVR->replaceVariableLocationOp(0u, NewAddress);
-  }
+  DVR->setExpression(DIExpr);
+  DVR->replaceVariableLocationOp(0u, NewAddress);
 }
 
 void llvm::replaceDbgValueForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
                                     DIBuilder &Builder, int Offset) {
-  SmallVector<DbgValueInst *, 1> DbgUsers;
   SmallVector<DbgVariableRecord *, 1> DPUsers;
-  findDbgValues(DbgUsers, AI, &DPUsers);
-
-  // Attempt to replace dbg.values that use this alloca.
-  for (auto *DVI : DbgUsers)
-    updateOneDbgValueForAlloca(DVI->getDebugLoc(), DVI->getVariable(),
-                               DVI->getExpression(), NewAllocaAddress, DVI,
-                               nullptr, Builder, Offset);
+  findDbgValues(AI, DPUsers);
 
   // Replace any DbgVariableRecords that use this alloca.
   for (DbgVariableRecord *DVR : DPUsers)
     updateOneDbgValueForAlloca(DVR->getDebugLoc(), DVR->getVariable(),
-                               DVR->getExpression(), NewAllocaAddress, nullptr,
-                               DVR, Builder, Offset);
+                               DVR->getExpression(), NewAllocaAddress, DVR,
+                               Builder, Offset);
 }
 
 /// Where possible to salvage debug information for \p I do so.
 /// If not possible mark undef.
 void llvm::salvageDebugInfo(Instruction &I) {
-  SmallVector<DbgVariableIntrinsic *, 1> DbgUsers;
   SmallVector<DbgVariableRecord *, 1> DPUsers;
-  findDbgUsers(DbgUsers, &I, &DPUsers);
-  salvageDebugInfoForDbgValues(I, DbgUsers, DPUsers);
+  findDbgUsers(&I, DPUsers);
+  salvageDebugInfoForDbgValues(I, DPUsers);
 }
 
 template <typename T> static void salvageDbgAssignAddress(T *Assign) {
@@ -2060,9 +2034,8 @@ template <typename T> static void salvageDbgAssignAddress(T *Assign) {
   }
 }
 
-void llvm::salvageDebugInfoForDbgValues(
-    Instruction &I, ArrayRef<DbgVariableIntrinsic *> DbgUsers,
-    ArrayRef<DbgVariableRecord *> DPUsers) {
+void llvm::salvageDebugInfoForDbgValues(Instruction &I,
+                                        ArrayRef<DbgVariableRecord *> DPUsers) {
   // These are arbitrary chosen limits on the maximum number of values and the
   // maximum size of a debug expression we can salvage up to, used for
   // performance reasons.
@@ -2070,66 +2043,6 @@ void llvm::salvageDebugInfoForDbgValues(
   const unsigned MaxExpressionSize = 128;
   bool Salvaged = false;
 
-  for (auto *DII : DbgUsers) {
-    if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(DII)) {
-      if (DAI->getAddress() == &I) {
-        salvageDbgAssignAddress(DAI);
-        Salvaged = true;
-      }
-      if (DAI->getValue() != &I)
-        continue;
-    }
-
-    // Do not add DW_OP_stack_value for DbgDeclare, because they are implicitly
-    // pointing out the value as a DWARF memory location description.
-    bool StackValue = isa<DbgValueInst>(DII);
-    auto DIILocation = DII->location_ops();
-    assert(
-        is_contained(DIILocation, &I) &&
-        "DbgVariableIntrinsic must use salvaged instruction as its location");
-    SmallVector<Value *, 4> AdditionalValues;
-    // `I` may appear more than once in DII's location ops, and each use of `I`
-    // must be updated in the DIExpression and potentially have additional
-    // values added; thus we call salvageDebugInfoImpl for each `I` instance in
-    // DIILocation.
-    Value *Op0 = nullptr;
-    DIExpression *SalvagedExpr = DII->getExpression();
-    auto LocItr = find(DIILocation, &I);
-    while (SalvagedExpr && LocItr != DIILocation.end()) {
-      SmallVector<uint64_t, 16> Ops;
-      unsigned LocNo = std::distance(DIILocation.begin(), LocItr);
-      uint64_t CurrentLocOps = SalvagedExpr->getNumLocationOperands();
-      Op0 = salvageDebugInfoImpl(I, CurrentLocOps, Ops, AdditionalValues);
-      if (!Op0)
-        break;
-      SalvagedExpr =
-          DIExpression::appendOpsToArg(SalvagedExpr, Ops, LocNo, StackValue);
-      LocItr = std::find(++LocItr, DIILocation.end(), &I);
-    }
-    // salvageDebugInfoImpl should fail on examining the first element of
-    // DbgUsers, or none of them.
-    if (!Op0)
-      break;
-
-    SalvagedExpr = SalvagedExpr->foldConstantMath();
-    DII->replaceVariableLocationOp(&I, Op0);
-    bool IsValidSalvageExpr = SalvagedExpr->getNumElements() <= MaxExpressionSize;
-    if (AdditionalValues.empty() && IsValidSalvageExpr) {
-      DII->setExpression(SalvagedExpr);
-    } else if (isa<DbgValueInst>(DII) && IsValidSalvageExpr &&
-               DII->getNumVariableLocationOps() + AdditionalValues.size() <=
-                   MaxDebugArgs) {
-      DII->addVariableLocationOps(AdditionalValues, SalvagedExpr);
-    } else {
-      // Do not salvage using DIArgList for dbg.declare, as it is not currently
-      // supported in those instructions. Also do not salvage if the resulting
-      // DIArgList would contain an unreasonably large number of values.
-      DII->setKillLocation();
-    }
-    LLVM_DEBUG(dbgs() << "SALVAGE: " << *DII << '\n');
-    Salvaged = true;
-  }
-  // Duplicate of above block for DbgVariableRecords.
   for (auto *DVR : DPUsers) {
     if (DVR->isDbgAssign()) {
       if (DVR->getAddress() == &I) {
@@ -2197,9 +2110,6 @@ void llvm::salvageDebugInfoForDbgValues(
 
   if (Salvaged)
     return;
-
-  for (auto *DII : DbgUsers)
-    DII->setKillLocation();
 
   for (auto *DVR : DPUsers)
     DVR->setKillLocation();
@@ -2419,15 +2329,10 @@ static bool rewriteDebugUsers(
     Instruction &From, Value &To, Instruction &DomPoint, DominatorTree &DT,
     function_ref<DbgValReplacement(DbgVariableRecord &DVR)> RewriteDVRExpr) {
   // Find debug users of From.
-  SmallVector<DbgVariableIntrinsic *, 1> Users;
   SmallVector<DbgVariableRecord *, 1> DPUsers;
-  findDbgUsers(Users, &From, &DPUsers);
-  if (Users.empty() && DPUsers.empty())
+  findDbgUsers(&From, DPUsers);
+  if (DPUsers.empty())
     return false;
-
-  // Ignore intrinsic-users: they are no longer supported and should never
-  // appear.
-  assert(Users.empty());
 
   // Prevent use-before-def of To.
   bool Changed = false;
@@ -3081,6 +2986,12 @@ static void combineMetadata(Instruction *K, const Instruction *J,
       case LLVMContext::MD_memprof:
       case LLVMContext::MD_callsite:
         break;
+      case LLVMContext::MD_callee_type:
+        if (!AAOnly) {
+          K->setMetadata(LLVMContext::MD_callee_type,
+                         MDNode::getMergedCalleeTypeMetadata(KMD, JMD));
+        }
+        break;
       case LLVMContext::MD_align:
         if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
           K->setMetadata(
@@ -3272,9 +3183,8 @@ void llvm::patchReplacementInstruction(Instruction *I, Value *Repl) {
   combineMetadataForCSE(ReplInst, I, false);
 }
 
-template <typename RootType, typename ShouldReplaceFn>
+template <typename ShouldReplaceFn>
 static unsigned replaceDominatedUsesWith(Value *From, Value *To,
-                                         const RootType &Root,
                                          const ShouldReplaceFn &ShouldReplace) {
   assert(From->getType() == To->getType());
 
@@ -3283,7 +3193,7 @@ static unsigned replaceDominatedUsesWith(Value *From, Value *To,
     auto *II = dyn_cast<IntrinsicInst>(U.getUser());
     if (II && II->getIntrinsicID() == Intrinsic::fake_use)
       continue;
-    if (!ShouldReplace(Root, U))
+    if (!ShouldReplace(U))
       continue;
     LLVM_DEBUG(dbgs() << "Replace dominated use of '";
                From->printAsOperand(dbgs());
@@ -3312,39 +3222,33 @@ unsigned llvm::replaceNonLocalUsesWith(Instruction *From, Value *To) {
 unsigned llvm::replaceDominatedUsesWith(Value *From, Value *To,
                                         DominatorTree &DT,
                                         const BasicBlockEdge &Root) {
-  auto Dominates = [&DT](const BasicBlockEdge &Root, const Use &U) {
-    return DT.dominates(Root, U);
-  };
-  return ::replaceDominatedUsesWith(From, To, Root, Dominates);
+  auto Dominates = [&](const Use &U) { return DT.dominates(Root, U); };
+  return ::replaceDominatedUsesWith(From, To, Dominates);
 }
 
 unsigned llvm::replaceDominatedUsesWith(Value *From, Value *To,
                                         DominatorTree &DT,
                                         const BasicBlock *BB) {
-  auto Dominates = [&DT](const BasicBlock *BB, const Use &U) {
-    return DT.dominates(BB, U);
-  };
-  return ::replaceDominatedUsesWith(From, To, BB, Dominates);
+  auto Dominates = [&](const Use &U) { return DT.dominates(BB, U); };
+  return ::replaceDominatedUsesWith(From, To, Dominates);
 }
 
 unsigned llvm::replaceDominatedUsesWithIf(
     Value *From, Value *To, DominatorTree &DT, const BasicBlockEdge &Root,
     function_ref<bool(const Use &U, const Value *To)> ShouldReplace) {
-  auto DominatesAndShouldReplace =
-      [&DT, &ShouldReplace, To](const BasicBlockEdge &Root, const Use &U) {
-        return DT.dominates(Root, U) && ShouldReplace(U, To);
-      };
-  return ::replaceDominatedUsesWith(From, To, Root, DominatesAndShouldReplace);
+  auto DominatesAndShouldReplace = [&](const Use &U) {
+    return DT.dominates(Root, U) && ShouldReplace(U, To);
+  };
+  return ::replaceDominatedUsesWith(From, To, DominatesAndShouldReplace);
 }
 
 unsigned llvm::replaceDominatedUsesWithIf(
     Value *From, Value *To, DominatorTree &DT, const BasicBlock *BB,
     function_ref<bool(const Use &U, const Value *To)> ShouldReplace) {
-  auto DominatesAndShouldReplace = [&DT, &ShouldReplace,
-                                    To](const BasicBlock *BB, const Use &U) {
+  auto DominatesAndShouldReplace = [&](const Use &U) {
     return DT.dominates(BB, U) && ShouldReplace(U, To);
   };
-  return ::replaceDominatedUsesWith(From, To, BB, DominatesAndShouldReplace);
+  return ::replaceDominatedUsesWith(From, To, DominatesAndShouldReplace);
 }
 
 bool llvm::callsGCLeafFunction(const CallBase *Call,
@@ -3426,11 +3330,8 @@ void llvm::copyRangeMetadata(const DataLayout &DL, const LoadInst &OldLI,
 }
 
 void llvm::dropDebugUsers(Instruction &I) {
-  SmallVector<DbgVariableIntrinsic *, 1> DbgUsers;
   SmallVector<DbgVariableRecord *, 1> DPUsers;
-  findDbgUsers(DbgUsers, &I, &DPUsers);
-  for (auto *DII : DbgUsers)
-    DII->eraseFromParent();
+  findDbgUsers(&I, DPUsers);
   for (auto *DVR : DPUsers)
     DVR->eraseFromParent();
 }
@@ -3945,6 +3846,10 @@ bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
   // argument; swifterror pointers are not allowed to be used in select or phi
   // instructions.
   if (Op->isSwiftError())
+    return false;
+
+  // Cannot replace alloca argument with phi/select.
+  if (I->isLifetimeStartOrEnd())
     return false;
 
   // Early exit.

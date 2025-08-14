@@ -43,6 +43,7 @@ from . import lldbtest_config
 from . import test_categories
 from . import test_result
 from ..support import seven
+from ..support import temp_file
 
 
 def is_exe(fpath):
@@ -294,9 +295,11 @@ def parseOptionsAndInitTestdirs():
                 "Custom libc++ requires both --libcxx-include-dir and --libcxx-library-dir"
             )
             sys.exit(-1)
-    configuration.libcxx_include_dir = args.libcxx_include_dir
-    configuration.libcxx_include_target_dir = args.libcxx_include_target_dir
-    configuration.libcxx_library_dir = args.libcxx_library_dir
+        else:
+            configuration.libcxx_include_dir = args.libcxx_include_dir
+            configuration.libcxx_include_target_dir = args.libcxx_include_target_dir
+            configuration.libcxx_library_dir = args.libcxx_library_dir
+
     configuration.cmake_build_type = args.cmake_build_type.lower()
 
     if args.channels:
@@ -319,8 +322,13 @@ def parseOptionsAndInitTestdirs():
             logging.error("No SDK found with the name %s; aborting...", args.apple_sdk)
             sys.exit(-1)
 
+    if args.triple:
+        configuration.triple = args.triple
+
     if args.arch:
         configuration.arch = args.arch
+    elif args.triple:
+        configuration.arch = args.triple.split("-")[0]
     else:
         configuration.arch = platform_machine
 
@@ -778,8 +786,8 @@ def canRunLibcxxTests():
         return True, "libc++ always present"
 
     if platform == "linux":
-        with tempfile.NamedTemporaryFile() as f:
-            cmd = [configuration.compiler, "-xc++", "-stdlib=libc++", "-o", f.name, "-"]
+        with temp_file.OnDiskTempFile() as f:
+            cmd = [configuration.compiler, "-xc++", "-stdlib=libc++", "-o", f.path, "-"]
             p = subprocess.Popen(
                 cmd,
                 stdin=subprocess.PIPE,
@@ -838,8 +846,8 @@ def canRunMsvcStlTests():
     if platform != "windows":
         return False, f"Don't know how to build with MSVC's STL on {platform}"
 
-    with tempfile.NamedTemporaryFile() as f:
-        cmd = [configuration.compiler, "-xc++", "-o", f.name, "-E", "-"]
+    with temp_file.OnDiskTempFile() as f:
+        cmd = [configuration.compiler, "-xc++", "-o", f.path, "-E", "-"]
         p = subprocess.Popen(
             cmd,
             stdin=subprocess.PIPE,

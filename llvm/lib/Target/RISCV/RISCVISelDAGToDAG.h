@@ -59,19 +59,14 @@ public:
     return SelectAddrRegRegScale(Addr, MaxShift, Base, Index, Scale);
   }
 
+  bool SelectAddrRegZextRegScale(SDValue Addr, unsigned MaxShiftAmount,
+                                 unsigned Bits, SDValue &Base, SDValue &Index,
+                                 SDValue &Scale);
+
   template <unsigned MaxShift, unsigned Bits>
   bool SelectAddrRegZextRegScale(SDValue Addr, SDValue &Base, SDValue &Index,
                                  SDValue &Scale) {
-    if (SelectAddrRegRegScale(Addr, MaxShift, Base, Index, Scale)) {
-      if (Index.getOpcode() == ISD::AND) {
-        auto *C = dyn_cast<ConstantSDNode>(Index.getOperand(1));
-        if (C && C->getZExtValue() == maskTrailingOnes<uint64_t>(Bits)) {
-          Index = Index.getOperand(0);
-          return true;
-        }
-      }
-    }
-    return false;
+    return SelectAddrRegZextRegScale(Addr, MaxShift, Bits, Base, Index, Scale);
   }
 
   bool SelectAddrRegReg(SDValue Addr, SDValue &Base, SDValue &Offset);

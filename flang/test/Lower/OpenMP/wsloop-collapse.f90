@@ -2,7 +2,7 @@
 
 ! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck %s
 
-!CHECK-LABEL:   func.func @_QQmain() attributes {fir.bindc_name = "wsloop_collapse"} {
+!CHECK-LABEL:   func.func @_QQmain() attributes {fir.bindc_name = "WSLOOP_COLLAPSE"} {
 program wsloop_collapse
 !CHECK:           %[[VAL_6:.*]] = fir.alloca i32 {bindc_name = "a", uniq_name = "_QFEa"}
 !CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]] {uniq_name = "_QFEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)

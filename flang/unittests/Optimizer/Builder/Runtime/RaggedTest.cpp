@@ -14,7 +14,7 @@ TEST_F(RuntimeCallTest, genRaggedArrayAllocateTest) {
   auto loc = firBuilder->getUnknownLoc();
   mlir::TupleType headerTy =
       fir::factory::getRaggedArrayHeaderType(*firBuilder);
-  mlir::Value header = firBuilder->create<fir::UndefOp>(loc, headerTy);
+  mlir::Value header = fir::UndefOp::create(*firBuilder, loc, headerTy);
   mlir::Value eleSize = firBuilder->createIntegerConstant(loc, i32Ty, 1);
   mlir::Value extent = firBuilder->createIntegerConstant(loc, i32Ty, 1);
   // Use a dummy header just to test the correctness of the generated call.
@@ -29,7 +29,7 @@ TEST_F(RuntimeCallTest, genRaggedArrayDeallocateTest) {
   mlir::TupleType headerTy =
       fir::factory::getRaggedArrayHeaderType(*firBuilder);
   // Use a dummy header just to test the correctness of the generated call.
-  mlir::Value header = firBuilder->create<fir::UndefOp>(loc, headerTy);
+  mlir::Value header = fir::UndefOp::create(*firBuilder, loc, headerTy);
   fir::runtime::genRaggedArrayDeallocate(loc, *firBuilder, header);
   checkCallOpFromResultBox(
       header, "_FortranARaggedArrayDeallocate", 1, /*addLocArgs=*/false);

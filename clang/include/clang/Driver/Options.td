@@ -1156,7 +1156,7 @@ def offload_arch_EQ : CommaJoined<["--"], "offload-arch=">,
            "If 'native' is used the compiler will detect locally installed architectures. "
            "For HIP offloading, the device architecture can be followed by target ID features "
            "delimited by a colon (e.g. gfx908:xnack+:sramecc-). May be specified more than once.">;
-def no_offload_arch_EQ : Joined<["--"], "no-offload-arch=">,
+def no_offload_arch_EQ : CommaJoined<["--"], "no-offload-arch=">,
   Visibility<[ClangOption, FlangOption]>,
   HelpText<"Remove CUDA/HIP offloading device architecture (e.g. sm_35, gfx906) from the list of devices to compile for. "
            "'all' resets the list to its default value.">;
@@ -1435,6 +1435,8 @@ def openacc_macro_override_EQ
 
 // End Clang specific/exclusive options for OpenACC.
 
+def libclc_lib_EQ : Joined<["--"], "libclc-lib=">, Group<opencl_Group>,
+  HelpText<"Namespec of libclc OpenCL bitcode library to link">;
 def libomptarget_amdgpu_bc_path_EQ : Joined<["--"], "libomptarget-amdgpu-bc-path=">, Group<i_Group>,
   HelpText<"Path to libomptarget-amdgcn bitcode library">;
 def libomptarget_amdgcn_bc_path_EQ : Joined<["--"], "libomptarget-amdgcn-bc-path=">, Group<i_Group>,
@@ -1637,7 +1639,7 @@ defm auto_import : BoolFOption<"auto-import",
 // In the future this option will be supported by other offloading
 // languages and accept other values such as CPU/GPU architectures,
 // offload kinds and target aliases.
-def offload_EQ : CommaJoined<["--"], "offload=">, Flags<[NoXarchOption]>,
+def offload_EQ : CommaJoined<["--"], "offload=">, Flags<[NoXarchOption]>, Alias<offload_targets_EQ>,
   HelpText<"Specify comma-separated list of offloading target triples (CUDA and HIP only)">;
 
 // C++ Coroutines
@@ -1916,6 +1918,14 @@ defm bounds_safety : BoolFOption<
   NegFlag<SetFalse, [], [CC1Option], "Disable">,
   BothFlags<[], [CC1Option],
           " experimental bounds safety extension for C">>;
+
+defm lifetime_safety : BoolFOption<
+  "experimental-lifetime-safety",
+  LangOpts<"EnableLifetimeSafety">, DefaultFalse,
+  PosFlag<SetTrue, [], [CC1Option], "Enable">,
+  NegFlag<SetFalse, [], [CC1Option], "Disable">,
+  BothFlags<[], [CC1Option],
+          " experimental lifetime safety for C++">>;
 
 defm addrsig : BoolFOption<"addrsig",
   CodeGenOpts<"Addrsig">, DefaultFalse,
@@ -2325,21 +2335,21 @@ def fsymbol_partition_EQ : Joined<["-"], "fsymbol-partition=">, Group<f_Group>,
 
 defm atomic_remote_memory : BoolFOption<"atomic-remote-memory",
   LangOpts<"AtomicRemoteMemory">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option], "May have">,
-  NegFlag<SetFalse, [], [ClangOption], "Assume no">,
-  BothFlags<[], [ClangOption], " atomic operations on remote memory">>;
+  PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option], "May have">,
+  NegFlag<SetFalse, [], [ClangOption, FlangOption], "Assume no">,
+  BothFlags<[], [ClangOption, FlangOption], " atomic operations on remote memory">>;
 
 defm atomic_fine_grained_memory : BoolFOption<"atomic-fine-grained-memory",
   LangOpts<"AtomicFineGrainedMemory">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option], "May have">,
-  NegFlag<SetFalse, [], [ClangOption], "Assume no">,
-  BothFlags<[], [ClangOption], " atomic operations on fine-grained memory">>;
+  PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option], "May have">,
+  NegFlag<SetFalse, [], [ClangOption, FlangOption], "Assume no">,
+  BothFlags<[], [ClangOption, FlangOption], " atomic operations on fine-grained memory">>;
 
 defm atomic_ignore_denormal_mode : BoolFOption<"atomic-ignore-denormal-mode",
   LangOpts<"AtomicIgnoreDenormalMode">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Allow">,
-  NegFlag<SetFalse, [], [ClangOption], "Disallow">,
-  BothFlags<[], [ClangOption], " atomic operations to ignore denormal mode">>;
+  PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option], "Allow">,
+  NegFlag<SetFalse, [], [ClangOption, FlangOption], "Disallow">,
+  BothFlags<[], [ClangOption, FlangOption], " atomic operations to ignore denormal mode">>;
 
 defm memory_profile : OptInCC1FFlag<"memory-profile", "Enable", "Disable", " heap memory profiling">;
 def fmemory_profile_EQ : Joined<["-"], "fmemory-profile=">,
@@ -2602,6 +2612,16 @@ def fsanitize_undefined_trap_on_error
 def fno_sanitize_undefined_trap_on_error
     : Flag<["-"], "fno-sanitize-undefined-trap-on-error">, Group<f_clang_Group>,
       Alias<fno_sanitize_trap_EQ>, AliasArgs<["undefined"]>;
+defm sanitize_debug_trap_reasons
+    : BoolFOption<
+          "sanitize-debug-trap-reasons",
+          CodeGenOpts<"SanitizeDebugTrapReasons">, DefaultTrue,
+          PosFlag<SetTrue, [], [ClangOption, CC1Option],
+                  "Annotate trap blocks in debug info with UBSan trap reasons">,
+          NegFlag<SetFalse, [], [ClangOption, CC1Option],
+                  "Do not annotate trap blocks in debug info with UBSan trap "
+                  "reasons">>;
+
 defm sanitize_minimal_runtime : BoolOption<"f", "sanitize-minimal-runtime",
   CodeGenOpts<"SanitizeMinimalRuntime">, DefaultFalse,
   PosFlag<SetTrue>,
@@ -3270,13 +3290,14 @@ defm skip_odr_check_in_gmf : BoolOption<"f", "skip-odr-check-in-gmf",
           "Perform ODR checks for decls in the global module fragment.">>,
   Group<f_Group>;
 
-def modules_reduced_bmi : Flag<["-"], "fmodules-reduced-bmi">,
-  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Generate the reduced BMI">,
-  MarshallingInfoFlag<FrontendOpts<"GenReducedBMI">>;
+defm modules_reduced_bmi : BoolOption<"f", "modules-reduced-bmi",
+  FrontendOpts<"GenReducedBMI">, DefaultFalse,
+  NegFlag<SetFalse>,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Generate the reduced BMI">>;
 
 def experimental_modules_reduced_bmi : Flag<["-"], "fexperimental-modules-reduced-bmi">,
-  Group<f_Group>, Visibility<[ClangOption, CC1Option]>, Alias<modules_reduced_bmi>;
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>, Alias<fmodules_reduced_bmi>;
 
 def fmodules_embed_all_files : Joined<["-"], "fmodules-embed-all-files">,
   Visibility<[ClangOption, CC1Option, CLOption]>,
@@ -5306,6 +5327,8 @@ def mextended_const : Flag<["-"], "mextended-const">, Group<m_wasm_Features_Grou
 def mno_extended_const : Flag<["-"], "mno-extended-const">, Group<m_wasm_Features_Group>;
 def mfp16 : Flag<["-"], "mfp16">, Group<m_wasm_Features_Group>;
 def mno_fp16 : Flag<["-"], "mno-fp16">, Group<m_wasm_Features_Group>;
+def mgc : Flag<["-"], "mgc">, Group<m_wasm_Features_Group>;
+def mno_gc : Flag<["-"], "mno-gc">, Group<m_wasm_Features_Group>;
 def mmultimemory : Flag<["-"], "mmultimemory">, Group<m_wasm_Features_Group>;
 def mno_multimemory : Flag<["-"], "mno-multimemory">, Group<m_wasm_Features_Group>;
 def mmultivalue : Flag<["-"], "mmultivalue">, Group<m_wasm_Features_Group>;
@@ -5364,9 +5387,9 @@ defm amdgpu_precise_memory_op
                   " precise memory mode (AMDGPU only)">;
 
 def munsafe_fp_atomics : Flag<["-"], "munsafe-fp-atomics">,
-  Visibility<[ClangOption, CC1Option]>, Alias<fatomic_ignore_denormal_mode>;
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>, Alias<fatomic_ignore_denormal_mode>;
 def mno_unsafe_fp_atomics : Flag<["-"], "mno-unsafe-fp-atomics">,
-  Visibility<[ClangOption]>, Alias<fno_atomic_ignore_denormal_mode>;
+  Visibility<[ClangOption, FlangOption]>, Alias<fno_atomic_ignore_denormal_mode>;
 
 def faltivec : Flag<["-"], "faltivec">, Group<f_Group>;
 def fno_altivec : Flag<["-"], "fno-altivec">, Group<f_Group>;
@@ -5566,7 +5589,8 @@ def mno_outline_atomics : Flag<["-"], "mno-outline-atomics">, Group<f_clang_Grou
   HelpText<"Don't generate local calls to out-of-line atomic operations">;
 def mno_implicit_float : Flag<["-"], "mno-implicit-float">, Group<m_Group>,
   HelpText<"Don't generate implicit floating point or vector instructions">;
-def mimplicit_float : Flag<["-"], "mimplicit-float">, Group<m_Group>;
+def mimplicit_float : Flag<["-"], "mimplicit-float">, Group<m_Group>,
+  HelpText<"Generate implicit floating point or vector instructions">;
 def mrecip : Flag<["-"], "mrecip">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Equivalent to '-mrecip=all'">;
@@ -7142,6 +7166,8 @@ def fintrinsic_modules_path : Separate<["-"], "fintrinsic-modules-path">,  Group
   HelpText<"Specify where to find the compiled intrinsic modules">,
   DocBrief<[{This option specifies the location of pre-compiled intrinsic modules,
   if they are not in the default location expected by the compiler.}]>;
+def fintrinsic_modules_path_EQ : Joined<["-"], "fintrinsic-modules-path=">,
+  Group<f_Group>, Alias<fintrinsic_modules_path>;
 
 defm backslash : OptInFC1FFlag<"backslash", "Specify that backslash in string introduces an escape character">;
 defm xor_operator : OptInFC1FFlag<"xor-operator", "Enable .XOR. as a synonym of .NEQV.">;
@@ -8263,6 +8289,9 @@ def stats_file : Joined<["-"], "stats-file=">,
 def stats_file_append : Flag<["-"], "stats-file-append">,
   HelpText<"If stats should be appended to stats-file instead of overwriting it">,
   MarshallingInfoFlag<FrontendOpts<"AppendStats">>;
+def stats_file_timers : Flag<["-"], "stats-file-timers">,
+                        HelpText<"If stats should include timers.">,
+                        MarshallingInfoFlag<CodeGenOpts<"TimePassesStatsFile">>;
 def fdump_record_layouts_simple : Flag<["-"], "fdump-record-layouts-simple">,
   HelpText<"Dump record layout information in a simple form used for testing">,
   MarshallingInfoFlag<LangOpts<"DumpRecordLayoutsSimple">>;

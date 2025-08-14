@@ -1191,6 +1191,7 @@ def PadTilingInterfaceOp : Op<Transform_Dialect, "structured.pad_tiling_interfac
     iteration domain induces a padding of the operands that is consistent
     across the op semantics and, unlike for simple elementwise ops, may not be
     trivially deducible or specifiable on operands only (e.g. convolutions).
+    Currently, only a limited set of projected permutation maps are supported.
     
     The specification of `padding_sizes` follows that of `tile_sizes` during
     tiling: the value "0" on a particular iterator encode "no padding". Like in
@@ -2347,6 +2348,9 @@ def VectorizeChildrenAndApplyPatternsOp :
     operation that is contained inside the vectorization target.
 
     This transformation supports the following attributes:
+    - `fold_type_extensions_into_contract`: a `UnitAttr` to enable the folding of
+      type extension operations into `vector.contract` to create a mixed precision
+      operation.
     - `vectorize_padding`: a `UnitAttr` to activate the vectorization of
       `tensor.pad` ops. Different pipelines may prefer to lower such ops to
       loops.
@@ -2367,6 +2371,7 @@ def VectorizeChildrenAndApplyPatternsOp :
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target,
+                   UnitAttr:$fold_type_extensions_into_contract,
                    UnitAttr:$vectorize_padding,
                    UnitAttr:$vectorize_nd_extract,
                    UnitAttr:$flatten_1d_depthwise_conv,
@@ -2380,6 +2385,7 @@ def VectorizeChildrenAndApplyPatternsOp :
 
   let builders = [
     OpBuilder<(ins "Value":$target,
+               CArg<"bool", "false">:$foldTypeExtensionsIntoContract,
                CArg<"bool", "false">:$vectorizePadding,
                CArg<"bool", "false">:$vectorizeNDExtract,
                CArg<"bool", "false">:$flatten1DDepthwise)>
@@ -2431,12 +2437,12 @@ def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target,
-                       Variadic<TransformAnyParamTypeOrAnyHandle>:$vector_sizes,
-                       DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:
-                          $static_vector_sizes,
-                       OptionalAttr<UnitAttr>:$vectorize_nd_extract,
-                       DefaultValuedOptionalAttr<DenseBoolArrayAttr, "{}">:
-                          $scalable_sizes);
+      Variadic<TransformAnyParamTypeOrAnyHandle>:$vector_sizes,
+      DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_vector_sizes,
+      OptionalAttr<UnitAttr>:$vectorize_nd_extract,
+      OptionalAttr<UnitAttr>:$assume_dynamic_dims_match_vec_sizes,
+      OptionalAttr<UnitAttr>:$create_named_contraction,
+      DefaultValuedOptionalAttr<DenseBoolArrayAttr, "{}">:$scalable_sizes);
 
   let results = (outs);
 

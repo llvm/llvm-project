@@ -106,6 +106,7 @@ private:
   bool fixVALUTransUseHazard(MachineInstr *MI);
   bool fixVALUTransCoexecutionHazards(MachineInstr *MI);
   bool fixWMMAHazards(MachineInstr *MI);
+  bool fixWMMACoexecutionHazards(MachineInstr *MI);
   bool fixShift64HighRegBug(MachineInstr *MI);
   bool fixVALUMaskWriteHazard(MachineInstr *MI);
   bool fixRequiredExportPriority(MachineInstr *MI);

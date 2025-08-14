@@ -5441,8 +5441,10 @@ def err_template_arg_must_be_expr : Error<
   "template argument for non-type template parameter must be an expression">;
 def err_template_arg_nontype_ambig : Error<
   "template argument for non-type template parameter is treated as function type %0">;
-def err_template_arg_must_be_template : Error<
-  "template argument for template template parameter must be a class template%select{| or type alias template}0">;
+def err_template_arg_must_be_template
+    : Error<"template argument for template template parameter must be a "
+            "%select{class template%select{| or type alias template}1|variable "
+            "template|concept}0">;
 def ext_template_arg_local_type : ExtWarn<
   "template argument uses local type %0">, InGroup<LocalTypeTemplateArgs>;
 def ext_template_arg_unnamed_type : ExtWarn<
@@ -5457,11 +5459,14 @@ def note_template_unnamed_type_here : Note<
   "unnamed type used in template argument was declared here">;
 def err_template_arg_overload_type : Error<
   "template argument is the type of an unresolved overloaded function">;
-def err_template_arg_not_valid_template : Error<
-  "template argument does not refer to a class or alias template, or template "
-  "template parameter">;
-def note_template_arg_refers_here_func : Note<
-  "template argument refers to function template %0, here">;
+def err_template_arg_not_valid_template
+    : Error<"template argument does not refer to a %select{class or alias "
+            "template|variable template|concept}0, or template "
+            "template parameter">;
+
+def note_template_arg_refers_to_template_here
+    : Note<"template argument refers to a %select{function template|class "
+           "template|variable template|concept}0 %1, here">;
 def err_template_arg_template_params_mismatch : Error<
   "template template argument has different template parameters than its "
   "corresponding template template parameter">;
@@ -7575,6 +7580,8 @@ def err_typecheck_illegal_increment_decrement : Error<
   "cannot %select{decrement|increment}1 value of type %0">;
 def err_typecheck_expect_int : Error<
   "used type %0 where integer is required">;
+def err_typecheck_expect_function_pointer
+    : Error<"used type %0 where function pointer is required">;
 def err_typecheck_expect_hlsl_resource : Error<
   "used type %0 where __hlsl_resource_t is required">;
 def err_typecheck_arithmetic_incomplete_or_sizeless_type : Error<
@@ -9329,8 +9336,28 @@ def err_atomic_builtin_pointer_size : Error<
   "address argument to atomic builtin must be a pointer to 1,2,4,8 or 16 byte "
   "type (%0 invalid)">;
 def err_atomic_exclusive_builtin_pointer_size : Error<
-  "address argument to load or store exclusive builtin must be a pointer to"
-  " 1,2,4 or 8 byte type (%0 invalid)">;
+  "address argument to load or store exclusive builtin must be a pointer to "
+  // Because the range of legal sizes for load/store exclusive varies with the
+  // Arm architecture version, this error message wants to be able to specify
+  // various different subsets of the sizes 1, 2, 4, 8. Rather than make a
+  // separate diagnostic for each subset, I've arranged here that _this_ error
+  // can display any combination of the sizes. For each size there are two
+  // %select parameters: the first chooses whether you need a "," or " or " to
+  // separate the number from a previous one (or neither), and the second
+  // parameter indicates whether to display the number itself.
+  //
+  // (The very first of these parameters isn't really necessary, since you
+  // never want to start with "," or " or " before the first number in the
+  // list, but it keeps it simple to make it look exactly like the other cases,
+  // and also allows a loop constructing this diagnostic to handle every case
+  // exactly the same.)
+  "%select{|,| or }1%select{|1}2"
+  "%select{|,| or }3%select{|2}4"
+  "%select{|,| or }5%select{|4}6"
+  "%select{|,| or }7%select{|8}8"
+  " byte type (%0 invalid)">;
+def err_atomic_exclusive_builtin_pointer_size_none : Error<
+  "load and store exclusive builtins are not available on this architecture">;
 def err_atomic_builtin_ext_int_size : Error<
   "atomic memory operand must have a power-of-two size">;
 def err_atomic_builtin_bit_int_prohibit : Error<
@@ -10396,9 +10423,10 @@ def warn_format_conversion_argument_type_mismatch : Warning<
 def warn_format_conversion_argument_type_mismatch_pedantic : Extension<
   warn_format_conversion_argument_type_mismatch.Summary>,
   InGroup<FormatPedantic>;
-def warn_format_conversion_argument_type_mismatch_signedness : Warning<
-  warn_format_conversion_argument_type_mismatch.Summary>,
-  InGroup<FormatSignedness>, DefaultIgnore;
+def warn_format_conversion_argument_type_mismatch_signedness: Warning<
+      "format specifies type %0 but the argument has %select{type|underlying "
+      "type}2 %1, which differs in signedness" >
+    , InGroup<FormatSignedness>, DefaultIgnore;
 def warn_format_conversion_argument_type_mismatch_confusion : Warning<
   warn_format_conversion_argument_type_mismatch.Summary>,
   InGroup<FormatTypeConfusion>, DefaultIgnore;
@@ -10510,8 +10538,10 @@ def warn_format_cmp_sensitivity_mismatch : Warning<
   "it should be %select{unspecified|private|public|sensitive}1">, InGroup<Format>;
 def warn_format_cmp_specifier_mismatch : Warning<
   "format specifier '%0' is incompatible with '%1'">, InGroup<Format>;
-def warn_format_cmp_specifier_sign_mismatch : Warning<
-  "signedness of format specifier '%0' is incompatible with '%1'">, InGroup<Format>;
+def warn_format_cmp_specifier_sign_mismatch
+    : Warning<"signedness of format specifier '%0' is incompatible with '%1'">,
+      InGroup<FormatSignedness>,
+      DefaultIgnore;
 def warn_format_cmp_specifier_mismatch_pedantic : Extension<
   warn_format_cmp_specifier_sign_mismatch.Summary>, InGroup<FormatPedantic>;
 def note_format_cmp_with : Note<
@@ -12389,6 +12419,13 @@ def err_invalid_module_name : Error<"%0 is an invalid name for a module">;
 def err_extern_def_in_header_unit : Error<
   "non-inline external definitions are not permitted in C++ header units">;
 
+def warn_exposure : Warning <
+  "TU local entity %0 is exposed">,
+  InGroup<DiagGroup<"TU-local-entity-exposure">>;
+def warn_reference_tu_local_entity_in_other_tu : Warning <
+  "instantiation of %0 triggers reference to TU-local entity %1 from other TU '%2'">,
+  InGroup<DiagGroup<"reference-tu-local-entity-in-other-tu">>;
+
 def warn_experimental_header_unit : Warning<
   "the implementation of header units is in an experimental phase">,
   InGroup<DiagGroup<"experimental-header-units">>;
@@ -12910,31 +12947,29 @@ def err_sycl_special_type_num_init_method : Error<
 
 // SYCL kernel entry point diagnostics
 def err_sycl_entry_point_invalid : Error<
-  "'sycl_kernel_entry_point' attribute cannot be applied to a"
+  "the %0 attribute cannot be applied to a"
   " %select{non-static member function|variadic function|deleted function|"
            "defaulted function|constexpr function|consteval function|"
            "function declared with the 'noreturn' attribute|coroutine|"
-           "function defined with a function try block}0">;
+           "function defined with a function try block}1">;
 def err_sycl_entry_point_invalid_redeclaration : Error<
-  "'sycl_kernel_entry_point' kernel name argument does not match prior"
-  " declaration%diff{: $ vs $|}0,1">;
+  "the %0 kernel name argument does not match prior"
+  " declaration%diff{: $ vs $|}1,2">;
 def err_sycl_kernel_name_conflict : Error<
-  "'sycl_kernel_entry_point' kernel name argument conflicts with a previous"
-  " declaration">;
+  "the %0 kernel name argument conflicts with a previous declaration">;
 def warn_sycl_kernel_name_not_a_class_type : Warning<
   "%0 is not a valid SYCL kernel name type; a non-union class type is required">,
   InGroup<DiagGroup<"nonportable-sycl">>, DefaultError;
 def warn_sycl_entry_point_redundant_declaration : Warning<
-  "redundant 'sycl_kernel_entry_point' attribute">, InGroup<RedundantAttribute>;
+  "redundant %0 attribute">, InGroup<RedundantAttribute>;
 def err_sycl_entry_point_after_definition : Error<
-  "'sycl_kernel_entry_point' attribute cannot be added to a function after the"
-  " function is defined">;
+  "the %0 attribute cannot be added to a function after the function is"
+  " defined">;
 def err_sycl_entry_point_return_type : Error<
-  "'sycl_kernel_entry_point' attribute only applies to functions with a"
-  " 'void' return type">;
+  "the %0 attribute only applies to functions with a 'void' return type">;
 def err_sycl_entry_point_deduced_return_type : Error<
-  "'sycl_kernel_entry_point' attribute only applies to functions with a"
-  " non-deduced 'void' return type">;
+  "the %0 attribute only applies to functions with a non-deduced 'void' return"
+  " type">;
 
 def warn_cuda_maxclusterrank_sm_90 : Warning<
   "maxclusterrank requires sm_90 or higher, CUDA arch provided: %0, ignoring "
@@ -13202,6 +13237,10 @@ def err_wasm_builtin_arg_must_match_table_element_type : Error <
   "%ordinal0 argument must match the element type of the WebAssembly table in the %ordinal1 argument">;
 def err_wasm_builtin_arg_must_be_integer_type : Error <
   "%ordinal0 argument must be an integer">;
+def err_wasm_builtin_test_fp_sig_cannot_include_struct_or_union
+    : Error<"not supported with the multivalue ABI for "
+            "function pointers with a struct/union as %select{return "
+            "value|parameter}0">;
 
 // OpenACC diagnostics.
 def warn_acc_routine_unimplemented
@@ -13257,6 +13296,11 @@ def err_acc_not_a_var_ref
 def err_acc_not_a_var_ref_use_device_declare
     : Error<"OpenACC variable %select{in 'use_device' clause|on 'declare' "
             "construct}0 is not a valid variable name or array name">;
+def ext_acc_array_section_use_device_declare
+    : Extension<
+          "sub-array as a variable %select{in 'use_device' clause|on "
+          "'declare' construct}0 is not a valid variable name or array name">,
+      InGroup<DiagGroup<"openacc-extension">>;
 def err_acc_not_a_var_ref_cache
     : Error<"OpenACC variable in 'cache' directive is not a valid sub-array or "
             "array element">;
@@ -13318,8 +13362,9 @@ def err_acc_reduction_num_gangs_conflict
             "appear on a '%2' construct "
             "with a '%3' clause%select{ with more than 1 argument|}0">;
 def err_acc_reduction_type
-    : Error<"OpenACC 'reduction' variable must be of scalar type, sub-array, or a "
-            "composite of scalar types;%select{| sub-array base}1 type is %0">;
+    : Error<"OpenACC 'reduction' variable must be of scalar type, aggregate, "
+            "sub-array, or a composite of scalar types;%select{| sub-array "
+            "base}1 type is %0">;
 def err_acc_reduction_composite_type
     : Error<"OpenACC 'reduction' variable must be a composite of scalar types; "
             "%1 %select{is not a class or struct|is incomplete|is not an "
@@ -13438,13 +13483,13 @@ def note_acc_atomic_mismatch_operand
     : Note<"left hand side of assignment operation(%0) must match one side "
            "of the sub-operation on the right hand side(%1 and %2)">;
 def note_acc_atomic_mismatch_compound_operand
-    : Note<"variable %select{|in unary expression|on right hand side of "
+    : Note<"sub-expression %select{|in unary expression|on right hand side of "
            "assignment|on left hand side of assignment|on left hand side of "
            "compound assignment|on left hand side of assignment}2(%3) must "
-           "match variable used %select{|in unary expression|on right hand "
-           "side of assignment|<not possible>|on left hand side of compound "
-           "assignment|on left hand side of assignment}0(%1) from the first "
-           "statement">;
+           "match sub-expression used %select{|in unary expression|on right "
+           "hand side of assignment|<not possible>|on left hand side of "
+           "compound assignment|on left hand side of assignment}0(%1) from the "
+           "first statement">;
 def err_acc_declare_required_clauses
     : Error<"no valid clauses specified in OpenACC 'declare' directive">;
 def err_acc_declare_clause_at_global
@@ -13487,12 +13532,18 @@ def err_acc_invalid_modifier
 def err_acc_invalid_default_type
     : Error<"invalid value %0 in '%1' clause; valid values are %2">;
 def err_acc_device_type_multiple_archs
-    : Error<"OpenACC 'device_type' clause on a 'set' construct only permits "
+    : Error<"OpenACC 'device_type' clause on a '%0' construct only permits "
             "one architecture">;
+def warn_acc_var_referenced_non_const_array
+    : Warning<"variable of array type %0 referenced in OpenACC '%1' clause "
+              "does not have constant bounds; initialization will happen after "
+              "decay to pointer">,
+      InGroup<DiagGroup<"openacc-var-non-const-array">>;
 def warn_acc_var_referenced_lacks_op
     : Warning<"variable of type %0 referenced in OpenACC '%1' clause does not "
               "have a %enum_select<AccVarReferencedReason>{%DefCtor{default "
-              "constructor}|%Dtor{destructor}}2; reference has no effect">,
+              "constructor}|%CopyCtor{copy constructor}|%Dtor{destructor}}2; "
+              "reference has no effect">,
       InGroup<DiagGroup<"openacc-var-lacks-operation">>,
       DefaultError;
 

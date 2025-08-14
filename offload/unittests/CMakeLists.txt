@@ -15,7 +15,12 @@ if (NOT TARGET llvm_gtest)
   return ()
 endif ()
 
+set(OFFLOAD_UNITTESTS_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+
 function(add_offload_test_device_code test_filename test_name)
+  cmake_parse_arguments(
+    "OFFLOAD_TESTS" "WITH_DEVICE_MATH_LIBS" "" "" ${ARGN})
+
   set(SRC_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${test_filename})
   set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 
@@ -35,13 +40,26 @@ function(add_offload_test_device_code test_filename test_name)
     endif()
 
     if(nvptx_arch AND CUDAToolkit_FOUND)
+      set(nvptx_compile_flags ${OFFLOAD_TESTS_UNPARSED_ARGUMENTS})
+
+      if(OFFLOAD_TESTS_WITH_DEVICE_MATH_LIBS)
+        file(GLOB libdevice_paths "${CUDAToolkit_LIBRARY_ROOT}/nvvm/libdevice/libdevice.*.bc")
+        if(libdevice_paths)
+          list(GET libdevice_paths 0 libdevice_path)
+          list(APPEND nvptx_compile_flags "-Xclang" "-mlink-builtin-bitcode")
+          list(APPEND nvptx_compile_flags "-Xclang" "${libdevice_path}")
+          list(APPEND nvptx_compile_flags "-DCUDA_MATH_FOUND=1")
+        endif()
+      endif()
+
       set(output_file "${CMAKE_CURRENT_BINARY_DIR}/${test_name}.nvptx64.bin")
       add_custom_command(
         OUTPUT ${output_file}
-        COMMAND ${CMAKE_C_COMPILER}
+        COMMAND ${CMAKE_CXX_COMPILER}
+        -I${OFFLOAD_UNITTESTS_DIR}
         --target=nvptx64-nvidia-cuda -march=${nvptx_arch}
-        -nogpulib --cuda-path=${CUDA_ROOT} -flto ${ARGN}
-        -c ${SRC_PATH} -o ${output_file}
+        -nogpulib --cuda-path=${cuda_path} -flto ${nvptx_compile_flags}
+        ${SRC_PATH} -o ${output_file}
         DEPENDS ${SRC_PATH}
       )
       add_custom_target(${test_name}.nvptx64 DEPENDS ${output_file})
@@ -59,12 +77,25 @@ function(add_offload_test_device_code test_filename test_name)
     endif()
 
     if(amdgpu_arch)
+      set(amdgpu_compile_flags ${OFFLOAD_TESTS_UNPARSED_ARGUMENTS})
+
+      if(OFFLOAD_TESTS_WITH_DEVICE_MATH_LIBS)
+        find_package(AMDDeviceLibs QUIET HINTS ${CMAKE_INSTALL_PREFIX} PATHS /opt/rocm)
+        if(AMDDeviceLibs_FOUND)
+          get_target_property(ocml_path ocml IMPORTED_LOCATION)
+          list(APPEND amdgpu_compile_flags "-Xclang" "-mlink-builtin-bitcode")
+          list(APPEND amdgpu_compile_flags "-Xclang" "${ocml_path}")
+          list(APPEND amdgpu_compile_flags "-DHIP_MATH_FOUND=1")
+        endif()
+      endif()
+
       set(output_file "${CMAKE_CURRENT_BINARY_DIR}/${test_name}.amdgpu.bin")
       add_custom_command(
         OUTPUT ${output_file}
-        COMMAND ${CMAKE_C_COMPILER}
+        COMMAND ${CMAKE_CXX_COMPILER}
+        -I${OFFLOAD_UNITTESTS_DIR}
         --target=amdgcn-amd-amdhsa -mcpu=${amdgpu_arch}
-        -nogpulib -flto ${ARGN} -c ${SRC_PATH} -o ${output_file}
+        -nogpulib -flto ${amdgpu_compile_flags} ${SRC_PATH} -o ${output_file}
         DEPENDS ${SRC_PATH}
       )
       add_custom_target(${test_name}.amdgpu DEPENDS ${output_file})
@@ -100,22 +131,16 @@ function(add_conformance_test test_name)
 
   list(TRANSFORM ARGN PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/" OUTPUT_VARIABLE files)
 
-  if(NOT TARGET libc)
-    message(WARNING "Cannot run conformance tests without the LLVM C library")
-    return()
-  endif()
-
   add_executable(${target_name} ${files})
-  add_dependencies(${target_name} ${PLUGINS_TEST_COMMON} ${test_name}.bin)
-  target_compile_definitions(${target_name} PRIVATE DEVICE_CODE_PATH="${CONFORMANCE_TEST_DEVICE_CODE_PATH}")
+  add_dependencies(${target_name} conformance_device_binaries)
+  target_compile_definitions(${target_name}
+    PRIVATE DEVICE_BINARY_DIR="${OFFLOAD_CONFORMANCE_DEVICE_BINARY_DIR}")
   target_link_libraries(${target_name} PRIVATE ${PLUGINS_TEST_COMMON} libc)
-  target_include_directories(${target_name} PRIVATE ${PLUGINS_TEST_INCLUDE})
   set_target_properties(${target_name} PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
   add_custom_target(offload.conformance.${test_name}
     COMMAND $<TARGET_FILE:${target_name}>
-    DEPENDS ${target_name}
-    COMMENT "Running conformance test ${test_name}")
+    DEPENDS ${target_name})
   add_dependencies(offload.conformance offload.conformance.${test_name})
 endfunction()
 

@@ -648,6 +648,55 @@ define void @masked_store_factor4_v2(<vscale x 1 x i1> %mask, <vscale x 1 x i32>
   ret void
 }
 
+define <vscale x 2 x i32> @load_factor2_oneactive(ptr %ptr, i32 %evl) {
+; RV32-LABEL: load_factor2_oneactive:
+; RV32:       # %bb.0:
+; RV32-NEXT:    slli a1, a1, 2
+; RV32-NEXT:    srli a1, a1, 1
+; RV32-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; RV32-NEXT:    vlseg2e32.v v7, (a0)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: load_factor2_oneactive:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a1, a1, 34
+; RV64-NEXT:    srli a1, a1, 33
+; RV64-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; RV64-NEXT:    vlseg2e32.v v7, (a0)
+; RV64-NEXT:    ret
+  %rvl = mul nuw i32 %evl, 4
+  %wide.masked.load = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr %ptr, <vscale x 4 x i1> splat (i1 true), i32 %rvl)
+  %deinterleaved.results = call { <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave2.nxv4i32(<vscale x 4 x i32> %wide.masked.load)
+  %t0 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %deinterleaved.results, 1
+  ret <vscale x 2 x i32> %t0
+}
+
+define <vscale x 2 x i32> @load_factor5_oneactive(ptr %ptr, i32 %evl) {
+; RV32-LABEL: load_factor5_oneactive:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi a0, a0, 12
+; RV32-NEXT:    li a2, 20
+; RV32-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; RV32-NEXT:    vlse32.v v8, (a0), a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: load_factor5_oneactive:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a1, a1, 32
+; RV64-NEXT:    addi a0, a0, 12
+; RV64-NEXT:    srli a1, a1, 32
+; RV64-NEXT:    li a2, 20
+; RV64-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; RV64-NEXT:    vlse32.v v8, (a0), a2
+; RV64-NEXT:    ret
+  %rvl = mul nuw i32 %evl, 5
+  %wide.masked.load = call <vscale x 10 x i32> @llvm.vp.load(ptr %ptr, <vscale x 10 x i1> splat (i1 true), i32 %rvl)
+  %deinterleaved.results = call { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave5(<vscale x 10 x i32> %wide.masked.load)
+  %t3 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %deinterleaved.results, 3
+  ret <vscale x 2 x i32> %t3
+}
+
+
 ; Negative tests
 
 define {<vscale x 2 x i32>, <vscale x 2 x i32>} @not_same_mask(<vscale x 2 x i1> %mask0, <vscale x 2 x i1> %mask1, ptr %ptr, i32 %evl) {

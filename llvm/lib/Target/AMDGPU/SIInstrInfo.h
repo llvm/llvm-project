@@ -33,6 +33,7 @@ class LiveVariables;
 class MachineDominatorTree;
 class MachineRegisterInfo;
 class RegScavenger;
+class SIMachineFunctionInfo;
 class TargetRegisterClass;
 class ScheduleHazardRecognizer;
 
@@ -196,8 +197,7 @@ protected:
                            AMDGPU::OpName Src0OpName, MachineOperand &Src1,
                            AMDGPU::OpName Src1OpName) const;
   bool isLegalToSwap(const MachineInstr &MI, unsigned fromIdx,
-                     const MachineOperand *fromMO, unsigned toIdx,
-                     const MachineOperand *toMO) const;
+                     unsigned toIdx) const;
   MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                        unsigned OpIdx0,
                                        unsigned OpIdx1) const override;
@@ -286,6 +286,15 @@ public:
 
   bool getConstValDefinedInReg(const MachineInstr &MI, const Register Reg,
                                int64_t &ImmVal) const override;
+
+  unsigned getVectorRegSpillSaveOpcode(Register Reg,
+                                       const TargetRegisterClass *RC,
+                                       unsigned Size,
+                                       const SIMachineFunctionInfo &MFI) const;
+  unsigned
+  getVectorRegSpillRestoreOpcode(Register Reg, const TargetRegisterClass *RC,
+                                 unsigned Size,
+                                 const SIMachineFunctionInfo &MFI) const;
 
   void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
@@ -669,6 +678,12 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::FLAT;
   }
 
+  /// \returns true for SCRATCH_ instructions, or FLAT_ instructions with
+  /// SCRATCH_ memory operands.
+  /// Conservatively correct; will return true if \p MI cannot be proven
+  /// to not hit scratch.
+  bool mayAccessScratchThroughFlat(const MachineInstr &MI) const;
+
   static bool isBlockLoadStore(uint16_t Opcode) {
     switch (Opcode) {
     case AMDGPU::SI_BLOCK_SPILL_V1024_SAVE:
@@ -981,6 +996,11 @@ public:
 
   bool isBarrier(unsigned Opcode) const {
     return isBarrierStart(Opcode) || Opcode == AMDGPU::S_BARRIER_WAIT ||
+           Opcode == AMDGPU::S_BARRIER_INIT_M0 ||
+           Opcode == AMDGPU::S_BARRIER_INIT_IMM ||
+           Opcode == AMDGPU::S_BARRIER_JOIN_IMM ||
+           Opcode == AMDGPU::S_BARRIER_LEAVE ||
+           Opcode == AMDGPU::S_BARRIER_LEAVE_IMM ||
            Opcode == AMDGPU::DS_GWS_INIT || Opcode == AMDGPU::DS_GWS_BARRIER;
   }
 
@@ -1103,7 +1123,6 @@ public:
   // that will not require an additional 4-bytes; this function assumes that it
   // will.
   bool isInlineConstant(const MachineOperand &MO, uint8_t OperandType) const {
-    assert(!MO.isReg() && "isInlineConstant called on register operand!");
     if (!MO.isImm())
       return false;
     return isInlineConstant(MO.getImm(), OperandType);
@@ -1206,6 +1225,8 @@ public:
                    MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
                    Register Reg, SlotIndexes *Indexes = nullptr) const;
 
+  MachineInstr *getWholeWaveFunctionSetup(MachineFunction &MF) const;
+
   /// Return the correct register class for \p OpNo.  For target-specific
   /// instructions, this will return the register class that has been defined
   /// in tablegen.  For generic instructions, like REG_SEQUENCE it will return
@@ -1271,6 +1292,19 @@ public:
                          const MachineOperand &MO) const;
   bool isLegalRegOperand(const MachineInstr &MI, unsigned OpIdx,
                          const MachineOperand &MO) const;
+
+  /// Check if \p MO would be a legal operand for gfx12+ packed math FP32
+  /// instructions. Packed math FP32 instructions typically accept SGPRs or
+  /// VGPRs as source operands. On gfx12+, if a source operand uses SGPRs, the
+  /// HW can only read the first SGPR and use it for both the low and high
+  /// operations.
+  /// \p SrcN can be 0, 1, or 2, representing src0, src1, and src2,
+  /// respectively. If \p MO is nullptr, the operand corresponding to SrcN will
+  /// be used.
+  bool isLegalGFX12PlusPackedMathFP32Operand(
+      const MachineRegisterInfo &MRI, const MachineInstr &MI, unsigned SrcN,
+      const MachineOperand *MO = nullptr) const;
+
   /// Legalize operands in \p MI by either commuting it or inserting a
   /// copy of src1.
   void legalizeOperandsVOP2(MachineRegisterInfo &MRI, MachineInstr &MI) const;

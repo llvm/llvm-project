@@ -190,7 +190,6 @@ public:
 };
 
 struct AllocaInfo {
-  using DbgUserVec = SmallVector<DbgVariableIntrinsic *, 1>;
   using DPUserVec = SmallVector<DbgVariableRecord *, 1>;
 
   SmallVector<BasicBlock *, 32> DefiningBlocks;
@@ -201,7 +200,6 @@ struct AllocaInfo {
   bool OnlyUsedInOneBlock;
 
   /// Debug users of the alloca - does not include dbg.assign intrinsics.
-  DbgUserVec DbgUsers;
   DPUserVec DPUsers;
   /// Helper to update assignment tracking debug info.
   AssignmentTrackingInfo AssignmentTracking;
@@ -212,7 +210,6 @@ struct AllocaInfo {
     OnlyStore = nullptr;
     OnlyBlock = nullptr;
     OnlyUsedInOneBlock = true;
-    DbgUsers.clear();
     DPUsers.clear();
     AssignmentTracking.clear();
   }
@@ -246,13 +243,8 @@ struct AllocaInfo {
           OnlyUsedInOneBlock = false;
       }
     }
-    DbgUserVec AllDbgUsers;
     SmallVector<DbgVariableRecord *> AllDPUsers;
-    findDbgUsers(AllDbgUsers, AI, &AllDPUsers);
-    std::copy_if(AllDbgUsers.begin(), AllDbgUsers.end(),
-                 std::back_inserter(DbgUsers), [](DbgVariableIntrinsic *DII) {
-                   return !isa<DbgAssignIntrinsic>(DII);
-                 });
+    findDbgUsers(AI, AllDPUsers);
     std::copy_if(AllDPUsers.begin(), AllDPUsers.end(),
                  std::back_inserter(DPUsers),
                  [](DbgVariableRecord *DVR) { return !DVR->isDbgAssign(); });
@@ -380,10 +372,9 @@ struct PromoteMem2Reg {
   /// to.
   DenseMap<PHINode *, unsigned> PhiToAllocaMap;
 
-  /// For each alloca, we keep track of the dbg.declare intrinsic that
+  /// For each alloca, we keep track of the dbg.declare record that
   /// describes it, if any, so that we can convert it to a dbg.value
-  /// intrinsic if the alloca gets promoted.
-  SmallVector<AllocaInfo::DbgUserVec, 8> AllocaDbgUsers;
+  /// record if the alloca gets promoted.
   SmallVector<AllocaInfo::DPUserVec, 8> AllocaDPUsers;
 
   /// For each alloca, keep an instance of a helper class that gives us an easy
@@ -741,14 +732,11 @@ promoteSingleBlockAlloca(AllocaInst *AI, const AllocaInfo &Info,
   AI->eraseFromParent();
 
   // The alloca's debuginfo can be removed as well.
-  auto DbgUpdateForAlloca = [&](auto &Container) {
-    for (auto *DbgItem : Container)
-      if (DbgItem->isAddressOfVariable() ||
-          DbgItem->getExpression()->startsWithDeref())
-        DbgItem->eraseFromParent();
-  };
-  DbgUpdateForAlloca(Info.DbgUsers);
-  DbgUpdateForAlloca(Info.DPUsers);
+  for (DbgVariableRecord *DbgItem : Info.DPUsers) {
+    if (DbgItem->isAddressOfVariable() ||
+        DbgItem->getExpression()->startsWithDeref())
+      DbgItem->eraseFromParent();
+  }
 
   ++NumLocalPromoted;
   return true;
@@ -757,7 +745,6 @@ promoteSingleBlockAlloca(AllocaInst *AI, const AllocaInfo &Info,
 void PromoteMem2Reg::run() {
   Function &F = *DT.getRoot()->getParent();
 
-  AllocaDbgUsers.resize(Allocas.size());
   AllocaATInfo.resize(Allocas.size());
   AllocaDPUsers.resize(Allocas.size());
 
@@ -816,9 +803,7 @@ void PromoteMem2Reg::run() {
     if (BBNumPreds.empty())
       BBNumPreds.resize(F.getMaxBlockNumber());
 
-    // Remember the dbg.declare intrinsic describing this alloca, if any.
-    if (!Info.DbgUsers.empty())
-      AllocaDbgUsers[AllocaNum] = Info.DbgUsers;
+    // Remember the dbg.declare record describing this alloca, if any.
     if (!Info.AssignmentTracking.empty())
       AllocaATInfo[AllocaNum] = Info.AssignmentTracking;
     if (!Info.DPUsers.empty())
@@ -894,16 +879,12 @@ void PromoteMem2Reg::run() {
   }
 
   // Remove alloca's dbg.declare intrinsics from the function.
-  auto RemoveDbgDeclares = [&](auto &Container) {
-    for (auto &DbgUsers : Container) {
-      for (auto *DbgItem : DbgUsers)
-        if (DbgItem->isAddressOfVariable() ||
-            DbgItem->getExpression()->startsWithDeref())
-          DbgItem->eraseFromParent();
-    }
-  };
-  RemoveDbgDeclares(AllocaDbgUsers);
-  RemoveDbgDeclares(AllocaDPUsers);
+  for (auto &DbgUsers : AllocaDPUsers) {
+    for (DbgVariableRecord *DbgItem : DbgUsers)
+      if (DbgItem->isAddressOfVariable() ||
+          DbgItem->getExpression()->startsWithDeref())
+        DbgItem->eraseFromParent();
+  }
 
   // Loop over all of the PHI nodes and see if there are any that we can get
   // rid of because they merge all of the same incoming values.  This can
