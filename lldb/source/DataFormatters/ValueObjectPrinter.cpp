@@ -79,7 +79,7 @@ static const char *maybeNewline(const std::string &s) {
 }
 
 bool ValueObjectPrinter::ShouldPrintObjectDescription() {
-  return ShouldPrintValueObject() && m_options.m_use_objc && !IsNil() &&
+  return ShouldPrintValueObject() && m_options.m_use_object_desc && !IsNil() &&
          !IsUninitialized() && !m_options.m_pointer_as_array;
 }
 
@@ -104,7 +104,7 @@ llvm::Error ValueObjectPrinter::PrintValueObject() {
       *m_stream << "error: " << error_msg << maybeNewline(error_msg);
 
       // Print the value object directly.
-      m_options.DisableObjectiveC();
+      m_options.DisableObjectDescription();
     } else {
       object_desc = *object_desc_or_err;
     }
@@ -517,7 +517,7 @@ bool ValueObjectPrinter::ShouldPrintChildren(
   if (m_options.m_pointer_as_array)
     return true;
 
-  if (m_options.m_use_objc)
+  if (m_options.m_use_object_desc)
     return false;
 
   bool print_children = true;

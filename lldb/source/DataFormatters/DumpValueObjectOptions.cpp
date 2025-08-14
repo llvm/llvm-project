@@ -17,7 +17,7 @@ DumpValueObjectOptions::DumpValueObjectOptions()
     : m_summary_sp(), m_root_valobj_name(), m_decl_printing_helper(),
       m_child_printing_decider(), m_pointer_as_array(), m_use_synthetic(true),
       m_scope_already_checked(false), m_flat_output(false), m_ignore_cap(false),
-      m_show_types(false), m_show_location(false), m_use_objc(false),
+      m_show_types(false), m_show_location(false), m_use_object_desc(false),
       m_hide_root_type(false), m_hide_root_name(false), m_hide_name(false),
       m_hide_value(false), m_run_validator(false),
       m_use_type_display_name(true), m_allow_oneliner_mode(true),
@@ -65,9 +65,9 @@ DumpValueObjectOptions &DumpValueObjectOptions::SetShowLocation(bool show) {
   return *this;
 }
 
-DumpValueObjectOptions &DumpValueObjectOptions::DisableObjectiveC() {
+DumpValueObjectOptions &DumpValueObjectOptions::DisableObjectDescription() {
   // Reset these options to their default values.
-  SetUseObjectiveC(false);
+  SetUseObjectDescription(false);
   SetHideRootType(false);
   SetHideName(false);
   SetHideValue(false);
@@ -75,8 +75,9 @@ DumpValueObjectOptions &DumpValueObjectOptions::DisableObjectiveC() {
   return *this;
 }
 
-DumpValueObjectOptions &DumpValueObjectOptions::SetUseObjectiveC(bool use) {
-  m_use_objc = use;
+DumpValueObjectOptions &
+DumpValueObjectOptions::SetUseObjectDescription(bool use) {
+  m_use_object_desc = use;
   return *this;
 }
 
