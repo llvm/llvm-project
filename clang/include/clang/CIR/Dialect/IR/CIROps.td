@@ -2266,8 +2266,8 @@ def CIR_InlineAsmOp : CIR_Op<"asm", [RecursiveMemoryEffects]> {
   let description = [{
     The `cir.asm` operation represents C/C++ asm inline.
 
-    CIR constraints strings follow barely the same rules that are established
-    for the C level assembler constraints with several differences caused by
+    CIR constraints strings follow the same rules that are established for
+    the C level assembler constraints with several differences caused by
     clang::AsmStmt processing.
 
     Thus, numbers that appears in the constraint string may also refer to:
@@ -2277,11 +2277,9 @@ def CIR_InlineAsmOp : CIR_Op<"asm", [RecursiveMemoryEffects]> {
     Operand attributes are a storage, where each element corresponds to the
     operand with the same index. The first index relates to the operation
     result (if any).
-    Note, the operands themselves are stored as VariadicOfVariadic in the next
-    order: output, input and then in/out operands.
-
-    Note, when several output operands are present, the result type may be
-    represented as an anon record type.
+    The operands themselves are stored as VariadicOfVariadic in the following
+    order: output, input and then in/out operands. When several output operands
+    are present, the result type may be represented as an anonymous record type.
 
     Example:
     ```C++
