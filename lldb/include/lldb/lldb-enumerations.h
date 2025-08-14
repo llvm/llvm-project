@@ -791,6 +791,7 @@ enum SectionType {
   eSectionTypeLLDBTypeSummaries,
   eSectionTypeLLDBFormatters,
   eSectionTypeSwiftModules,
+  eSectionTypeWasmName,
 };
 
 FLAGS_ENUM(EmulateInstructionOptions){
