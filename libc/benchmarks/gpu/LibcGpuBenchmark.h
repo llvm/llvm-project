@@ -43,17 +43,17 @@ public:
     sum_of_squared_cycles += cycles * cycles;
   }
 
+  void update(const RefinableRuntimeEstimator &other) noexcept {
+    iterations += other.iterations;
+    sum_of_cycles += other.sum_of_cycles;
+    sum_of_squared_cycles += other.sum_of_squared_cycles;
+  }
+
   double get_mean() const noexcept {
     if (iterations == 0)
       return 0.0;
 
     return static_cast<double>(sum_of_cycles) / iterations;
-  }
-
-  void update(const RefinableRuntimeEstimator &other) noexcept {
-    iterations += other.iterations;
-    sum_of_cycles += other.sum_of_cycles;
-    sum_of_squared_cycles += other.sum_of_squared_cycles;
   }
 
   double get_variance() const noexcept {
