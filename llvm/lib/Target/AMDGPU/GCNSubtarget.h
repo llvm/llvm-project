@@ -1722,6 +1722,10 @@ public:
   /// unit requirement.
   unsigned getMaxNumVGPRs(const MachineFunction &MF) const;
 
+  bool supportsWave32() const { return getGeneration() >= GFX10; }
+
+  bool supportsWave64() const { return !hasGFX1250Insts(); }
+
   bool isWave32() const {
     return getWavefrontSize() == 32;
   }
