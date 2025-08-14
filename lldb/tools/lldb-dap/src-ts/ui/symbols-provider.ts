@@ -103,7 +103,7 @@ export class SymbolsProvider extends DisposableContext {
     const symbolsTableScriptPath = panel.webview.asWebviewUri(vscode.Uri.joinPath(this.getExtensionResourcePath(), "symbols-table-view.js"));
 
     panel.webview.html = this.getHTMLContentForSymbols(tabulatorJsPath, tabulatorCssPath, symbolsTableScriptPath, symbols);
-    panel.webview.postMessage({ command: "setSymbols", symbols: symbols });
+    panel.webview.postMessage({ command: "updateSymbols", symbols: symbols });
   }
 
   private getHTMLContentForSymbols(tabulatorJsPath: vscode.Uri, tabulatorCssPath: vscode.Uri, symbolsTableScriptPath: vscode.Uri, symbols: DAPSymbol[]): string {

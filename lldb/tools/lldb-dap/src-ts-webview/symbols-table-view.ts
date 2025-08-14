@@ -31,20 +31,19 @@ const SYMBOL_TABLE_COLUMNS: ColumnDefinition[] = [
     }
 ]
 
-console.log("FUCK");
-console.log("Symbols table columns:", SYMBOL_TABLE_COLUMNS);
-
 declare const Tabulator: any; // HACK: real definition comes from tabulator.min.js
-const SYMBOLS_TABLE = new Tabulator("#symbols-table", {
+const SYMBOLS_TABLE = new Tabulator("#table", {
     columns: SYMBOL_TABLE_COLUMNS,
     layout: "fitData",
     data: [],
 });
 
 window.addEventListener("message", (event: MessageEvent<any>) => {
+    console.log("FUCK1");
     const message = event.data;
-    switch (message.type) {
+    switch (message.command) {
         case "updateSymbols":
+            console.log("Received symbols update:", message.symbols);
             SYMBOLS_TABLE.setData(message.symbols);
             break;
     }
