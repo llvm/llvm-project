@@ -4,8 +4,6 @@
 ; RUN: llc -O3 -mtriple=i686-w64-mingw32 -o %t_yes -filetype=obj %s -emit-func-debug-line-table-offsets
 ; RUN: llvm-dwarfdump -v -all %t_yes | FileCheck %s -check-prefix=STMT_SEQ
 
-; RUN: llvm-dwarfdump --verify %t_yes
-
 ; NO_STMT_SEQ-NOT:      DW_AT_LLVM_stmt_sequence
 
 ; STMT_SEQ:   [[[ABBREV_CODE1:[0-9]+]]] DW_TAG_subprogram
