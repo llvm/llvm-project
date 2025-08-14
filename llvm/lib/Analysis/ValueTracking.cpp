@@ -429,7 +429,6 @@ static void computeKnownBitsMul(const Value *Op0, const Value *Op1, bool NSW,
   // or (zext x) * (zext x), then the result cannot set bits above the maximum
   // possible square. This allows InstCombine and other passes to fold (x * x) &
   // (1 << N) to 0 when N is out of range.
-  using namespace PatternMatch;
   const Value *A = nullptr;
   // Only handle the case where both operands are the same extension of the same
   // value.
