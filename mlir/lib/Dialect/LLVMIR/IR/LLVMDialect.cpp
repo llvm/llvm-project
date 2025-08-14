@@ -167,11 +167,10 @@ static ArrayAttr getLLVMAlignParamForCompressExpand(OpBuilder &builder,
   //   argument. The align parameter attribute can be provided for
   //   [compressstore]'s second argument.
   int pos = isExpandLoad ? 0 : 1;
-  auto arrayAttr =
-      pos == 0
-          ? builder.getArrayAttr({alignDictAttr, emptyDictAttr, emptyDictAttr})
-          : builder.getArrayAttr({emptyDictAttr, alignDictAttr, emptyDictAttr});
-  return builder.getArrayAttr(arrayAttr);
+  return pos == 0 ? builder.getArrayAttr(
+                        {alignDictAttr, emptyDictAttr, emptyDictAttr})
+                  : builder.getArrayAttr(
+                        {emptyDictAttr, alignDictAttr, emptyDictAttr});
 }
 
 //===----------------------------------------------------------------------===//
