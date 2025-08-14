@@ -326,6 +326,11 @@ static int initCnt = 0;
 // A helper function that will be called during the JIT's initialization.
 static void initCallback() { initCnt += 1; }
 
+#if __has_feature(memory_sanitizer) || __has_feature(address_sanitizer)
+#define MAYBE_JITCallback DISABLED_JITCallback
+#else
+#define MAYBE_JITCallback SKIP_WITHOUT_JIT(JITCallback)
+#endif
 TEST(GlobalCtorJit, MAYBE_JITCallback) {
   std::string moduleStr = R"mlir(
   llvm.mlir.global_ctors ctors = [@ctor], priorities = [0 : i32], data = [#llvm.zero]
