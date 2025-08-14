@@ -803,7 +803,7 @@ struct TestUnrollVectorFromElements
 
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
-    populateVectorFromElementsUnrollingPatterns(patterns);
+    populateVectorFromElementsLoweringPatterns(patterns);
     (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };

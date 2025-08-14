@@ -141,7 +141,7 @@ void transform::ApplyLowerGatherPatternsOp::populatePatterns(
 
 void transform::ApplyUnrollFromElementsPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  vector::populateVectorFromElementsUnrollingPatterns(patterns);
+  vector::populateVectorFromElementsLoweringPatterns(patterns);
 }
 
 void transform::ApplyLowerScanPatternsOp::populatePatterns(

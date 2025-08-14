@@ -780,7 +780,7 @@ void mlir::vector::populateVectorToFromElementsToShuffleTreePatterns(
                                                    benefit);
 }
 
-void mlir::vector::populateVectorFromElementsUnrollingPatterns(
+void mlir::vector::populateVectorFromElementsLoweringPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
   patterns.add<UnrollFromElements>(patterns.getContext(), benefit);
 }

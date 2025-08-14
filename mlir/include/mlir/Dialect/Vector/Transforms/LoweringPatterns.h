@@ -308,8 +308,8 @@ void populateVectorToFromElementsToShuffleTreePatterns(
 /// [UnrollFromElements]
 /// Unrolls 2 or more dimensional `vector.from_elements` ops by unrolling the
 /// outermost dimension.
-void populateVectorFromElementsUnrollingPatterns(RewritePatternSet &patterns,
-                                                 PatternBenefit benefit = 1);
+void populateVectorFromElementsLoweringPatterns(RewritePatternSet &patterns,
+                                                PatternBenefit benefit = 1);
 
 /// Populate the pattern set with the following patterns:
 ///
