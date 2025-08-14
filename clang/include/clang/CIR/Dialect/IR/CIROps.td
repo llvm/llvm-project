@@ -2227,7 +2227,7 @@ def CIR_ReturnAddrOp : CIR_FuncAddrBuiltinOp<"return_address"> {
       "The return address of the current function, or of one of its callers";
 
   let description = [{
-    Represents call to builtin function ` __builtin_return_address` in CIR.
+    Represents a call to builtin function ` __builtin_return_address` in CIR.
     This builtin function returns the return address of the current function,
     or of one of its callers.
     The `level` argument is number of frames to scan up the call stack.
@@ -2248,7 +2248,7 @@ def CIR_FrameAddrOp : CIR_FuncAddrBuiltinOp<"frame_address"> {
       "The frame address of the current function, or of one of its callers";
 
   let description = [{
-    Represents call to builtin function ` __builtin_frame_address` in CIR.
+    Represents a call to builtin function ` __builtin_frame_address` in CIR.
     This builtin function returns the frame address of the current function,
     or of one of its callers. The frame is the area on the stack that holds
     local variables and saved registers. The frame address is normally the

@@ -273,7 +273,7 @@ createCallLLVMIntrinsicOp(mlir::ConversionPatternRewriter &rewriter,
                           mlir::Type resultTy, mlir::ValueRange operands) {
   auto intrinsicNameAttr =
       mlir::StringAttr::get(rewriter.getContext(), intrinsicName);
-  return rewriter.create<mlir::LLVM::CallIntrinsicOp>(
+  return mlir::LLVM::CallIntrinsicOp::create(rewriter,
       loc, resultTy, intrinsicNameAttr, operands);
 }
 

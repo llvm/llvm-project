@@ -319,11 +319,11 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
         e->getArg(0), e->getArg(0)->getType());
     uint64_t level = mlir::cast<cir::IntAttr>(levelAttr).getUInt();
     if (builtinID == Builtin::BI__builtin_return_address) {
-      return RValue::get(builder.create<cir::ReturnAddrOp>(
+      return RValue::get(cir::ReturnAddrOp::create(builder,
           loc, builder.getUInt32(level, loc)));
     }
     return RValue::get(
-        builder.create<cir::FrameAddrOp>(loc, builder.getUInt32(level, loc)));
+        cir::FrameAddrOp::create(builder, loc, builder.getUInt32(level, loc)));
   }
 
   case Builtin::BI__builtin_trap:
