@@ -33,6 +33,7 @@ add_clang_library(clangCIR
   CIRGenStmtOpenACC.cpp
   CIRGenStmtOpenACCLoop.cpp
   CIRGenTypes.cpp
+  CIRGenVTables.cpp
   TargetInfo.cpp
 
   DEPENDS

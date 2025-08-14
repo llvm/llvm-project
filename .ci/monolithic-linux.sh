@@ -13,49 +13,14 @@
 # run only the relevant tests.
 #
 
-set -ex
-set -o pipefail
+source .ci/utils.sh
 
-MONOREPO_ROOT="${MONOREPO_ROOT:="$(git rev-parse --show-toplevel)"}"
-BUILD_DIR="${BUILD_DIR:=${MONOREPO_ROOT}/build}"
 INSTALL_DIR="${BUILD_DIR}/install"
-rm -rf "${BUILD_DIR}"
-
-sccache --zero-stats
 
 mkdir -p artifacts/reproducers
 
-# Make sure any clang reproducers will end up as artifacts.
+# Make sure any clang reproducers will end up as artifacts
 export CLANG_CRASH_DIAGNOSTICS_DIR=`realpath artifacts/reproducers`
-
-function at-exit {
-  retcode=$?
-
-  sccache --show-stats > artifacts/sccache_stats.txt
-  cp "${BUILD_DIR}"/.ninja_log artifacts/.ninja_log
-  cp "${BUILD_DIR}"/test-results.*.xml artifacts/ || :
-
-  # If building fails there will be no results files.
-  shopt -s nullglob
-  
-  if [[ "$GITHUB_STEP_SUMMARY" != "" ]]; then
-    python3 "${MONOREPO_ROOT}"/.ci/generate_test_report_github.py \
-      $retcode "${BUILD_DIR}"/test-results.*.xml >> $GITHUB_STEP_SUMMARY
-  fi
-}
-trap at-exit EXIT
-
-function start-group {
-  groupname=$1
-  if [[ "$GITHUB_ACTIONS" != "" ]]; then
-    echo "::endgroup"
-    echo "::group::$groupname"
-  elif [[ "$POSTCOMMIT_CI" != "" ]]; then
-    echo "@@@$STEP@@@"
-  else
-    echo "Starting $groupname"
-  fi
-}
 
 projects="${1}"
 targets="${2}"
@@ -64,7 +29,7 @@ runtime_targets="${4}"
 runtime_targets_needs_reconfig="${5}"
 enable_cir="${6}"
 
-lit_args="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-output-file-name --timeout=1200 --time-tests"
+lit_args="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-output-file-name --timeout=1200 --time-tests --succinct"
 
 start-group "CMake"
 export PIP_BREAK_SYSTEM_PACKAGES=1
@@ -100,12 +65,12 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
 start-group "ninja"
 
 # Targets are not escaped as they are passed as separate arguments.
-ninja -C "${BUILD_DIR}" -k 0 ${targets}
+ninja -C "${BUILD_DIR}" -k 0 ${targets} |& tee ninja.log
 
 if [[ "${runtime_targets}" != "" ]]; then
   start-group "ninja Runtimes"
 
-  ninja -C "${BUILD_DIR}" ${runtime_targets}
+  ninja -C "${BUILD_DIR}" ${runtime_targets} |& tee ninja_runtimes.log
 fi
 
 # Compiling runtimes with just-built Clang and running their tests
@@ -120,7 +85,8 @@ if [[ "${runtime_targets_needs_reconfig}" != "" ]]; then
 
   start-group "ninja Runtimes C++26"
 
-  ninja -C "${BUILD_DIR}" ${runtime_targets_needs_reconfig}
+  ninja -C "${BUILD_DIR}" ${runtime_targets_needs_reconfig} \
+    |& tee ninja_runtimes_needs_reconfig1.log
 
   start-group "CMake Runtimes Clang Modules"
 
@@ -131,5 +97,6 @@ if [[ "${runtime_targets_needs_reconfig}" != "" ]]; then
 
   start-group "ninja Runtimes Clang Modules"
 
-  ninja -C "${BUILD_DIR}" ${runtime_targets_needs_reconfig}
+  ninja -C "${BUILD_DIR}" ${runtime_targets_needs_reconfig} \
+    |& tee ninja_runtimes_needs_reconfig2.log
 fi
