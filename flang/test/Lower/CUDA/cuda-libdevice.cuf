@@ -89,3 +89,14 @@ end subroutine
 
 ! CHECK-LABEL: _QPtest_tanf
 ! CHECK: %{{.*}} = fir.call @__nv_tanf(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
+
+attributes(global) subroutine test_exp()
+  real :: res
+  real :: r
+  res = __expf(r)
+  res = __exp10f(r)
+end subroutine
+
+! CHECK-LABEL: _QPtest_exp
+! CHECK: %{{.*}} = fir.call @__nv_expf(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
+! CHECK: %{{.*}} = fir.call @__nv_exp10f(%{{.*}}) proc_attrs<bind_c> fastmath<contract> : (f32) -> f32
