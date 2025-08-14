@@ -38,13 +38,13 @@ struct RISCVMoveMerge : public MachineFunctionPass {
   // Merge the two instructions indicated into a single pair instruction.
   MachineBasicBlock::iterator
   mergePairedInsns(MachineBasicBlock::iterator I,
-                   MachineBasicBlock::iterator Paired, bool MoveFromAToS);
+                   MachineBasicBlock::iterator Paired, bool MoveFromSToA);
 
   // Look for C.MV instruction that can be combined with
   // the given instruction into CM.MVA01S or CM.MVSA01. Return the matching
   // instruction if one exists.
   MachineBasicBlock::iterator
-  findMatchingInst(MachineBasicBlock::iterator &MBBI, bool MoveFromAToS,
+  findMatchingInst(MachineBasicBlock::iterator &MBBI, bool MoveFromSToA,
                    const DestSourcePair &RegPair);
   bool mergeMoveSARegPair(MachineBasicBlock &MBB);
   bool runOnMachineFunction(MachineFunction &Fn) override;
@@ -59,7 +59,7 @@ char RISCVMoveMerge::ID = 0;
 INITIALIZE_PASS(RISCVMoveMerge, "riscv-move-merge", RISCV_MOVE_MERGE_NAME,
                 false, false)
 
-static unsigned getMoveFromAToSOpcode(const RISCVSubtarget &ST) {
+static unsigned getMoveFromSToAOpcode(const RISCVSubtarget &ST) {
   if (ST.hasStdExtZcmp())
     return RISCV::CM_MVA01S;
 
@@ -69,7 +69,7 @@ static unsigned getMoveFromAToSOpcode(const RISCVSubtarget &ST) {
   llvm_unreachable("Unhandled subtarget with paired A to S move.");
 }
 
-static unsigned getMoveFromSToAOpcode(const RISCVSubtarget &ST) {
+static unsigned getMoveFromAToSOpcode(const RISCVSubtarget &ST) {
   if (ST.hasStdExtZcmp())
     return RISCV::CM_MVSA01;
 
@@ -104,18 +104,23 @@ bool RISCVMoveMerge::isCandidateToMergeMVSA01(const DestSourcePair &RegPair) {
 MachineBasicBlock::iterator
 RISCVMoveMerge::mergePairedInsns(MachineBasicBlock::iterator I,
                                  MachineBasicBlock::iterator Paired,
-                                 bool MoveFromAToS) {
+                                 bool MoveFromSToA) {
   const MachineOperand *Sreg1, *Sreg2;
   MachineBasicBlock::iterator E = I->getParent()->end();
   MachineBasicBlock::iterator NextI = next_nodbg(I, E);
   DestSourcePair FirstPair = TII->isCopyInstrImpl(*I).value();
   DestSourcePair PairedRegs = TII->isCopyInstrImpl(*Paired).value();
-  Register ARegInFirstPair = MoveFromAToS ? FirstPair.Destination->getReg()
+  Register ARegInFirstPair = MoveFromSToA ? FirstPair.Destination->getReg()
                                           : FirstPair.Source->getReg();
 
   if (NextI == Paired)
     NextI = next_nodbg(NextI, E);
   DebugLoc DL = I->getDebugLoc();
+
+  // Make a copy so we can update the kill flag in the MoveFromSToA case. The
+  // copied operand needs to be scoped outside the if since we make a pointer
+  // to it.
+  MachineOperand PairedSource = *PairedRegs.Source;
 
   // The order of S-reg depends on which instruction holds A0, instead of
   // the order of register pair.
@@ -127,12 +132,19 @@ RISCVMoveMerge::mergePairedInsns(MachineBasicBlock::iterator I,
   //   mv a1, s1    =>  cm.mva01s s2,s1
   bool StartWithX10 = ARegInFirstPair == RISCV::X10;
   unsigned Opcode;
-  if (MoveFromAToS) {
-    Opcode = getMoveFromAToSOpcode(*ST);
-    Sreg1 = StartWithX10 ? FirstPair.Source : PairedRegs.Source;
-    Sreg2 = StartWithX10 ? PairedRegs.Source : FirstPair.Source;
-  } else {
+  if (MoveFromSToA) {
+    // We are moving one of the copies earlier so its kill flag may become
+    // invalid. Clear the copied kill flag if there are any reads of the
+    // register between the new location and the old location.
+    for (auto It = std::next(I); It != Paired && PairedSource.isKill(); ++It)
+      if (It->readsRegister(PairedSource.getReg(), TRI))
+        PairedSource.setIsKill(false);
+
     Opcode = getMoveFromSToAOpcode(*ST);
+    Sreg1 = StartWithX10 ? FirstPair.Source : &PairedSource;
+    Sreg2 = StartWithX10 ? &PairedSource : FirstPair.Source;
+  } else {
+    Opcode = getMoveFromAToSOpcode(*ST);
     Sreg1 = StartWithX10 ? FirstPair.Destination : PairedRegs.Destination;
     Sreg2 = StartWithX10 ? PairedRegs.Destination : FirstPair.Destination;
   }
@@ -146,7 +158,7 @@ RISCVMoveMerge::mergePairedInsns(MachineBasicBlock::iterator I,
 
 MachineBasicBlock::iterator
 RISCVMoveMerge::findMatchingInst(MachineBasicBlock::iterator &MBBI,
-                                 bool MoveFromAToS,
+                                 bool MoveFromSToA,
                                  const DestSourcePair &RegPair) {
   MachineBasicBlock::iterator E = MBBI->getParent()->end();
 
@@ -164,7 +176,7 @@ RISCVMoveMerge::findMatchingInst(MachineBasicBlock::iterator &MBBI,
       Register SourceReg = SecondPair->Source->getReg();
       Register DestReg = SecondPair->Destination->getReg();
 
-      if (MoveFromAToS && isCandidateToMergeMVA01S(*SecondPair)) {
+      if (MoveFromSToA && isCandidateToMergeMVA01S(*SecondPair)) {
         // If register pair is valid and destination registers are different.
         if ((RegPair.Destination->getReg() == DestReg))
           return E;
@@ -178,7 +190,7 @@ RISCVMoveMerge::findMatchingInst(MachineBasicBlock::iterator &MBBI,
           return E;
 
         return I;
-      } else if (!MoveFromAToS && isCandidateToMergeMVSA01(*SecondPair)) {
+      } else if (!MoveFromSToA && isCandidateToMergeMVSA01(*SecondPair)) {
         if ((RegPair.Source->getReg() == SourceReg) ||
             (RegPair.Destination->getReg() == DestReg))
           return E;
@@ -208,17 +220,17 @@ bool RISCVMoveMerge::mergeMoveSARegPair(MachineBasicBlock &MBB) {
     // can, return Dest/Src register pair.
     auto RegPair = TII->isCopyInstrImpl(*MBBI);
     if (RegPair.has_value()) {
-      bool MoveFromAToS = isCandidateToMergeMVA01S(*RegPair);
-      if (!MoveFromAToS && !isCandidateToMergeMVSA01(*RegPair)) {
+      bool MoveFromSToA = isCandidateToMergeMVA01S(*RegPair);
+      if (!MoveFromSToA && !isCandidateToMergeMVSA01(*RegPair)) {
         ++MBBI;
         continue;
       }
 
       MachineBasicBlock::iterator Paired =
-          findMatchingInst(MBBI, MoveFromAToS, RegPair.value());
+          findMatchingInst(MBBI, MoveFromSToA, RegPair.value());
       // If matching instruction can be found merge them.
       if (Paired != E) {
-        MBBI = mergePairedInsns(MBBI, Paired, MoveFromAToS);
+        MBBI = mergePairedInsns(MBBI, Paired, MoveFromSToA);
         Modified = true;
         continue;
       }
