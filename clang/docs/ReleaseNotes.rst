@@ -115,7 +115,7 @@ Non-comprehensive list of changes in this release
 -------------------------------------------------
 - Added ``__builtin_elementwise_fshl`` and ``__builtin_elementwise_fshr``.
 
-- Added `__builtin_elementwise_abs`.
+- ``__builtin_elementwise_abs`` can now be used in constant expression.
 
 - Added ``__builtin_elementwise_minnumnum`` and ``__builtin_elementwise_maxnumnum``.
 

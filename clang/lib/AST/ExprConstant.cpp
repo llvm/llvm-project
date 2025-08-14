@@ -11634,12 +11634,6 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
             APValue(APSInt(Elt.reverseBits(),
                            DestEltTy->isUnsignedIntegerOrEnumerationType())));
         break;
-      case Builtin::BI__builtin_elementwise_abs: {
-        APInt Val = Source.getVectorElt(EltNum).getInt().abs();
-        ResultElements.push_back(APValue(
-            APSInt(Val, DestEltTy->isUnsignedIntegerOrEnumerationType())));
-        break;
-      }
       }
     }
 
