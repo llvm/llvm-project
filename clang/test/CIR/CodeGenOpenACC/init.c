@@ -11,12 +11,8 @@ void acc_init(int cond) {
   // CHECK-NEXT: acc.init attributes {device_types = [#acc.device_type<star>]}
 #pragma acc init device_type(nvidia)
   // CHECK-NEXT: acc.init attributes {device_types = [#acc.device_type<nvidia>]}
-#pragma acc init device_type(host, multicore)
-  // CHECK-NEXT: acc.init attributes {device_types = [#acc.device_type<host>, #acc.device_type<multicore>]}
 #pragma acc init device_type(NVIDIA)
   // CHECK-NEXT: acc.init attributes {device_types = [#acc.device_type<nvidia>]}
-#pragma acc init device_type(HoSt, MuLtIcORe)
-  // CHECK-NEXT: acc.init attributes {device_types = [#acc.device_type<host>, #acc.device_type<multicore>]}
 #pragma acc init device_type(HoSt) device_type(MuLtIcORe)
   // CHECK-NEXT: acc.init attributes {device_types = [#acc.device_type<host>, #acc.device_type<multicore>]}
 
