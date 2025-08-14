@@ -65,7 +65,7 @@ namespace {
 
     /// Visit a nested-name-specifier that occurs within an expression
     /// or statement.
-    virtual void VisitNestedNameSpecifier(NestedNameSpecifier *NNS) = 0;
+    virtual void VisitNestedNameSpecifier(NestedNameSpecifier NNS) = 0;
 
     /// Visit a template name that occurs within an expression or
     /// statement.
@@ -167,10 +167,10 @@ namespace {
       ID.AddPointer(II);
     }
 
-    void VisitNestedNameSpecifier(NestedNameSpecifier *NNS) override {
+    void VisitNestedNameSpecifier(NestedNameSpecifier NNS) override {
       if (Canonical)
-        NNS = Context.getCanonicalNestedNameSpecifier(NNS);
-      ID.AddPointer(NNS);
+        NNS = NNS.getCanonical();
+      NNS.Profile(ID);
     }
 
     void VisitTemplateName(TemplateName Name) override {
@@ -226,11 +226,10 @@ namespace {
     void VisitTemplateName(TemplateName Name) override {
       Hash.AddTemplateName(Name);
     }
-    void VisitNestedNameSpecifier(NestedNameSpecifier *NNS) override {
-      ID.AddBoolean(NNS);
-      if (NNS) {
+    void VisitNestedNameSpecifier(NestedNameSpecifier NNS) override {
+      ID.AddBoolean(bool(NNS));
+      if (NNS)
         Hash.AddNestedNameSpecifier(NNS);
-      }
     }
   };
 }
