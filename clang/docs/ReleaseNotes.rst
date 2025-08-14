@@ -220,7 +220,6 @@ Improvements to Coverage Mapping
 
 Bug Fixes in This Version
 -------------------------
-
 - Fix a crash when marco name is empty in ``#pragma push_macro("")`` or
   ``#pragma pop_macro("")``. (#GH149762).
 - `-Wunreachable-code`` now diagnoses tautological or contradictory
