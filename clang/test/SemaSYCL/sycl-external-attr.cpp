@@ -20,24 +20,20 @@ namespace { struct S4 {}; }
 [[clang::sycl_external]] void func4(S4) {}
 
 // expected-error@+3{{'clang::sycl_external' can only be applied to functions with external linkage}}
+namespace { struct S5 {}; }
+template<typename> [[clang::sycl_external]] void func5();
+template<> [[clang::sycl_external]] void func5<S5>() {}
+
 namespace { struct S6 {}; }
 template<typename>
 [[clang::sycl_external]] void func6() {}
 template void func6<S6>();
-// expected-note@-1{{in instantiation of function template specialization 'func6<(anonymous namespace)::S6>' requested here}}
 
-// FIXME: C++23 [temp.expl.spec]p12 states:
-//   ... Similarly, attributes appearing in the declaration of a template
-//   have no effect on an explicit specialization of that template.
-// Clang currently instantiates and propagates attributes from a function
-// template to its explicit specializations resulting in the following
-// spurious error.
-// expected-error@+3 2{{'clang::sycl_external' can only be applied to functions with external linkage}}
+// expected-error@+3{{'clang::sycl_external' can only be applied to functions with external linkage}}
 namespace { struct S7 {}; }
 template<typename>
 [[clang::sycl_external]] void func7();
 template<> void func7<S7>() {}
-// expected-note@-1{{in instantiation of function template specialization 'func7<(anonymous namespace)::S7>' requested here}}
 
 // FIXME: The explicit function template specialization appears to trigger
 // instantiation of a declaration from the primary template without the
@@ -51,21 +47,17 @@ template<> [[clang::sycl_external]] void func8<S8>() {}
 // expected-error@-2{{'clang::sycl_external' can only be applied to functions with external linkage}}
 // expected-note@-3{{previous declaration is here}}
 
-// FIXME: The implicit instantiation of func9<S9>() is valid.
 namespace { struct S9 {}; }
 struct T9 {
   using type = S9;
 };
-// expected-error@+2{{'clang::sycl_external' can only be applied to functions with external linkage}}
 template<typename>
 [[clang::sycl_external]] void func9() {}
-// expected-note@+3{{in instantiation of function template specialization 'func9<(anonymous namespace)::S9>' requested here}}
 template<typename T>
 [[clang::sycl_external]] void test_func9() {
   func9<typename T::type>();
 }
-// expected-note@+1{{in instantiation of function template specialization 'test_func9<T9>' requested here}}
-template void test_func9<T9>(); // FIXME: don't diagnose implicit instantiation of func9<S9>().
+template void test_func9<T9>();
 
 // The first declaration of a SYCL external function is required to have this attribute.
 // expected-note@+1{{previous declaration is here}}
@@ -79,10 +71,8 @@ void goo();
 [[clang::sycl_external]] void goo();
 void goo() {}
 
-// expected-note@+2{{previous definition is here}}
 // expected-note@+1{{previous declaration is here}}
 void hoo() {}
-// expected-warning@+2{{attribute declaration must precede definition}}
 // expected-warning@+1{{'clang::sycl_external' attribute does not appear on the first declaration}}
 [[clang::sycl_external]] void hoo();
 

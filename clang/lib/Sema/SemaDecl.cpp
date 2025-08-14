@@ -3068,6 +3068,10 @@ static void checkNewAttributesAfterDef(Sema &S, Decl *New, const Decl *Old) {
       cast<SYCLKernelEntryPointAttr>(NewAttribute)->setInvalidAttr();
       ++I;
       continue;
+    } else if (isa<SYCLExternalAttr>(NewAttribute)) {
+      // SYCLExternalAttr may be added after a definition.
+      ++I;
+      continue;
     }
 
     S.Diag(NewAttribute->getLocation(),
