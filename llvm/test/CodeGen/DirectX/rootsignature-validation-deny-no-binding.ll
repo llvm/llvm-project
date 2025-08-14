@@ -1,6 +1,6 @@
 ; RUN: opt -S -passes='dxil-post-optimization-validation' %s 2>&1 
 ; expected-no-diagnostics
-target triple = "dxil-pc-shadermodel6.6-geometry"
+target triple = "dxil-pc-shadermodel6.6-pixel"
 
 define void @CSMain() #0 {
 entry:

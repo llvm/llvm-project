@@ -21,6 +21,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/Support/DXILABI.h"
+#include "llvm/Support/ErrorHandling.h"
 
 #define DEBUG_TYPE "dxil-post-optimization-validation"
 
@@ -274,8 +275,9 @@ static void reportIfDeniedShaderStageAccess(Module &M, dxbc::RootFlags Flags,
   }
 }
 
-static void validateRootFlags(Module &M, const mcdxbc::RootSignatureDesc &RSD,
-                              const dxil::ModuleMetadataInfo &MMI) {
+static void validateDeniedStagedNotInUse(Module &M,
+                                         const mcdxbc::RootSignatureDesc &RSD,
+                                         const dxil::ModuleMetadataInfo &MMI) {
   dxbc::RootFlags Flags = dxbc::RootFlags(RSD.Flags);
 
   switch (MMI.ShaderProfile) {
@@ -308,7 +310,7 @@ static void validateRootFlags(Module &M, const mcdxbc::RootSignatureDesc &RSD,
         M, Flags, dxbc::RootFlags::DenyAmplificationShaderRootAccess);
     break;
   default:
-    break;
+    llvm_unreachable("Invalid triple to shader stage conversion");
   }
 }
 
@@ -372,7 +374,7 @@ static void validateDescriptorTables(Module &M,
   }
 }
 
-static void validateRootSignatureBindings(Module &M,
+static bool validateRootSignatureBindings(Module &M,
                                           const mcdxbc::RootSignatureDesc &RSD,
                                           dxil::ModuleMetadataInfo &MMI,
                                           DXILResourceMap &DRM) {
@@ -444,6 +446,8 @@ static void validateRootSignatureBindings(Module &M,
             Builder.findOverlapping(ReportedBinding);
         reportOverlappingRegisters(M, ReportedBinding, Overlaping);
       });
+  bool HasBindings = false;
+
   // Next checks require that the root signature definition is valid.
   if (!HasOverlap) {
     SmallVector<ResourceInfo::ResourceBinding> RDs =
@@ -460,10 +464,13 @@ static void validateRootSignatureBindings(Module &M,
 
         if (!Info.isBound(ResList.first, ResBinding.Space, ResRange))
           reportRegNotBound(M, ResList.first, ResBinding);
+        else
+          HasBindings = true;
       }
       reportInvalidHandleTy(M, RDs, ResList.second);
     }
   }
+  return HasBindings;
 }
 
 mcdxbc::RootSignatureDesc *getRootSignature(RootSignatureBindingInfo &RSBI,
@@ -487,9 +494,10 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
                                        "DXILResourceImplicitBinding pass");
 
   if (mcdxbc::RootSignatureDesc *RSD = getRootSignature(RSBI, MMI)) {
-    validateRootSignatureBindings(M, *RSD, MMI, DRM);
+    bool HasBindings = validateRootSignatureBindings(M, *RSD, MMI, DRM);
     validateDescriptorTables(M, *RSD);
-    validateRootFlags(M, *RSD, MMI);
+    if (HasBindings && MMI.ShaderProfile != Triple::Compute)
+      validateDeniedStagedNotInUse(M, *RSD, MMI);
   }
 }
 
