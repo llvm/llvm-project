@@ -148,12 +148,11 @@ FailureOr<Value> buildIndependentOp(OpBuilder &b, tensor::EmptyOp emptyOp,
 /// This fails when the specified collapse cannot be represented by a valid
 /// ExtractSliceOp.
 LogicalResult
-getCollapsedExtractSliceInfo(tensor::ExtractSliceOp sliceOp,
+getCollapsedExtractSliceInfo(OpBuilder &b, tensor::ExtractSliceOp sliceOp,
                              ArrayRef<ReassociationIndices> reassociation,
                              SmallVectorImpl<OpFoldResult> &collapsedOffsets,
                              SmallVectorImpl<OpFoldResult> &collapsedSizes,
-                             SmallVectorImpl<OpFoldResult> &collapsedStrides,
-                             OpBuilder &b);
+                             SmallVectorImpl<OpFoldResult> &collapsedStrides);
 
 /// Computes the offsets, sizes, and strides needed to build an expanded
 /// `sliceOp`. The dimensions to expand are specified by `reassociation` and
@@ -162,13 +161,12 @@ getCollapsedExtractSliceInfo(tensor::ExtractSliceOp sliceOp,
 /// This fails when the specified expansion cannot be represented by a valid
 /// ExtractSliceOp.
 LogicalResult
-getExpandedExtractSliceInfo(tensor::ExtractSliceOp sliceOp,
+getExpandedExtractSliceInfo(OpBuilder &b, tensor::ExtractSliceOp sliceOp,
                             ArrayRef<ReassociationIndices> reassociation,
                             ArrayRef<int64_t> expandedShape,
                             SmallVectorImpl<OpFoldResult> &expandedOffsets,
                             SmallVectorImpl<OpFoldResult> &expandedSizes,
-                            SmallVectorImpl<OpFoldResult> &expandedStrides,
-                            OpBuilder &b);
+                            SmallVectorImpl<OpFoldResult> &expandedStrides);
 
 } // namespace tensor
 } // namespace mlir

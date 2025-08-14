@@ -335,8 +335,8 @@ struct BubbleUpExpandShapeThroughExtractSlice
         expandShapeOp.getReassociationIndices();
 
     SmallVector<OpFoldResult> offsets, sizes, strides;
-    if (failed(getCollapsedExtractSliceInfo(sliceOp, reassociation, offsets,
-                                            sizes, strides, rewriter)))
+    if (failed(getCollapsedExtractSliceInfo(rewriter, sliceOp, reassociation,
+                                            offsets, sizes, strides)))
       return failure();
 
     // The shape of the result can be obtained from the sizes passed in.
@@ -443,9 +443,8 @@ struct BubbleUpCollapseShapeThroughExtractSlice
 
     SmallVector<OpFoldResult> offsets, sizes, strides;
     if (failed(getExpandedExtractSliceInfo(
-            sliceOp, collapseShapeOp.getReassociationIndices(),
-            collapseShapeOp.getSrcType().getShape(), offsets, sizes, strides,
-            rewriter)))
+            rewriter, sliceOp, collapseShapeOp.getReassociationIndices(),
+            collapseShapeOp.getSrcType().getShape(), offsets, sizes, strides)))
       return failure();
 
     Value newSliceOp = tensor::ExtractSliceOp::create(
@@ -462,11 +461,11 @@ struct BubbleUpCollapseShapeThroughExtractSlice
 } // namespace
 
 LogicalResult mlir::tensor::getCollapsedExtractSliceInfo(
-    tensor::ExtractSliceOp sliceOp,
+    OpBuilder &b, tensor::ExtractSliceOp sliceOp,
     ArrayRef<ReassociationIndices> reassociation,
     SmallVectorImpl<OpFoldResult> &collapsedOffsets,
     SmallVectorImpl<OpFoldResult> &collapsedSizes,
-    SmallVectorImpl<OpFoldResult> &collapsedStrides, OpBuilder &b) {
+    SmallVectorImpl<OpFoldResult> &collapsedStrides) {
   if (!sliceOp.hasUnitStride()) {
     return failure();
   }
@@ -582,12 +581,12 @@ LogicalResult mlir::tensor::getCollapsedExtractSliceInfo(
 }
 
 LogicalResult mlir::tensor::getExpandedExtractSliceInfo(
-    tensor::ExtractSliceOp sliceOp,
+    OpBuilder &b, tensor::ExtractSliceOp sliceOp,
     ArrayRef<ReassociationIndices> reassociation,
     ArrayRef<int64_t> expandedShape,
     SmallVectorImpl<OpFoldResult> &expandedOffsets,
     SmallVectorImpl<OpFoldResult> &expandedSizes,
-    SmallVectorImpl<OpFoldResult> &expandedStrides, OpBuilder &b) {
+    SmallVectorImpl<OpFoldResult> &expandedStrides) {
   if (!sliceOp.hasUnitStride()) {
     return failure();
   }
