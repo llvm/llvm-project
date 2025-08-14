@@ -1969,41 +1969,6 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "range_reduction_double",
-    hdrs = [
-        "src/math/generic/range_reduction_double_common.h",
-        "src/math/generic/range_reduction_double_fma.h",
-        "src/math/generic/range_reduction_double_nofma.h",
-    ],
-    deps = [
-        ":__support_common",
-        ":__support_fputil_double_double",
-        ":__support_fputil_dyadic_float",
-        ":__support_fputil_fp_bits",
-        ":__support_fputil_multiply_add",
-        ":__support_fputil_nearest_integer",
-        ":__support_fputil_rounding_mode",
-        ":__support_integer_literals",
-    ],
-)
-
-libc_support_library(
-    name = "sincos_eval",
-    hdrs = [
-        "src/math/generic/sincos_eval.h",
-    ],
-    deps = [
-        ":__support_common",
-        ":__support_fputil_double_double",
-        ":__support_fputil_dyadic_float",
-        ":__support_fputil_fp_bits",
-        ":__support_fputil_multiply_add",
-        ":__support_fputil_polyeval",
-        ":__support_integer_literals",
-    ],
-)
-
-libc_support_library(
     name = "sincosf_utils",
     hdrs = ["src/math/generic/sincosf_utils.h"],
     deps = [
@@ -2426,6 +2391,19 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_cos",
+    hdrs = ["src/__support/math/cos.h"],
+    deps = [
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_except_value_utils",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+        ":__support_range_reduction_double",
+        ":__support_sincos_eval",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_erff",
     hdrs = ["src/__support/math/erff.h"],
     deps = [
@@ -2676,6 +2654,41 @@ libc_support_library(
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
         ":__support_math_exp10f16_utils",
+    ],
+)
+
+libc_support_library(
+    name = "__support_range_reduction_double",
+    hdrs = [
+        "src/__support/math/range_reduction_double_common.h",
+        "src/__support/math/range_reduction_double_fma.h",
+        "src/__support/math/range_reduction_double_nofma.h",
+    ],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_double_double",
+        ":__support_fputil_dyadic_float",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_rounding_mode",
+        ":__support_integer_literals",
+    ],
+)
+
+libc_support_library(
+    name = "__support_sincos_eval",
+    hdrs = [
+        "src/__support/math/sincos_eval.h",
+    ],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_double_double",
+        ":__support_fputil_dyadic_float",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_integer_literals",
     ],
 )
 
@@ -3128,11 +3141,7 @@ libc_math_function(name = "copysignf16")
 libc_math_function(
     name = "cos",
     additional_deps = [
-        ":__support_fputil_multiply_add",
-        ":__support_macros_optimization",
-        ":__support_macros_properties_cpu_features",
-        ":range_reduction_double",
-        ":sincos_eval",
+        ":__support_math_cos",
     ],
 )
 
@@ -4252,8 +4261,8 @@ libc_math_function(
         ":__support_fputil_multiply_add",
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
-        ":range_reduction_double",
-        ":sincos_eval",
+        ":__support_range_reduction_double",
+        ":__support_sincos_eval",
     ],
 )
 
@@ -4285,8 +4294,8 @@ libc_math_function(
         ":__support_fputil_multiply_add",
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
-        ":range_reduction_double",
-        ":sincos_eval",
+        ":__support_range_reduction_double",
+        ":__support_sincos_eval",
     ],
 )
 
@@ -4380,8 +4389,8 @@ libc_math_function(
         ":__support_fputil_multiply_add",
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
-        ":range_reduction_double",
-        ":sincos_eval",
+        ":__support_range_reduction_double",
+        ":__support_sincos_eval",
     ],
 )
 
