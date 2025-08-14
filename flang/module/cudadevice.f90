@@ -392,6 +392,20 @@ implicit none
     end function
   end interface
 
+  interface __sinf
+    attributes(device) real function __sinf(r) bind(c, name='__nv_sinf')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
+    end function
+  end interface
+
+  interface __tanf
+    attributes(device) real function __tanf(r) bind(c, name='__nv_tanf')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
+    end function
+  end interface
+
   interface
     attributes(device) real(4) function cospif(x) bind(c,name='__nv_cospif')
       real(4), value :: x
@@ -718,6 +732,34 @@ implicit none
 
   interface __ull2double_rz
     attributes(device) double precision function __ull2double_rz(i) bind(c, name='__nv_ull2double_rz')
+      !dir$ ignore_tkr (d) i
+      integer(8), value :: i
+    end function
+  end interface
+
+  interface __ull2float_rd
+    attributes(device) real function __ull2float_rd(i) bind(c, name='__nv_ull2float_rd')
+      !dir$ ignore_tkr (d) i
+      integer(8), value :: i
+    end function
+  end interface
+
+  interface __ull2float_rn
+    attributes(device) real function __ull2float_rn(i) bind(c, name='__nv_ull2float_rn')
+      !dir$ ignore_tkr (d) i
+      integer(8), value :: i
+    end function
+  end interface
+
+  interface __ull2float_ru
+    attributes(device) real function __ull2float_ru(i) bind(c, name='__nv_ull2float_ru')
+      !dir$ ignore_tkr (d) i
+      integer(8), value :: i
+    end function
+  end interface
+
+  interface __ull2float_rz
+    attributes(device) real function __ull2float_rz(i) bind(c, name='__nv_ull2float_rz')
       !dir$ ignore_tkr (d) i
       integer(8), value :: i
     end function
@@ -1675,6 +1717,27 @@ implicit none
 
   interface
     attributes(device,host) logical function on_device() bind(c)
+    end function
+  end interface
+
+  interface __log2f
+    attributes(device) real function __log2f(r) bind(c, name='__nv_log2f')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
+    end function
+  end interface
+
+  interface __log10f
+    attributes(device) real function __log10f(r) bind(c, name='__nv_log10f')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
+    end function
+  end interface
+
+  interface __logf
+    attributes(device) real function __logf(r) bind(c, name='__nv_logf')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
     end function
   end interface
 
