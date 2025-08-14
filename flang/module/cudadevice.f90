@@ -1741,6 +1741,20 @@ implicit none
     end function
   end interface
 
+  interface __expf
+    attributes(device) real function __expf(r) bind(c, name='__nv_expf')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
+    end function
+  end interface
+
+  interface __exp10f
+    attributes(device) real function __exp10f(r) bind(c, name='__nv_exp10f')
+      !dir$ ignore_tkr (d) r
+      real, value :: r
+    end function
+  end interface
+
 contains
 
   attributes(device) subroutine syncthreads()
