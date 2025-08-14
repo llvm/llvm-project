@@ -471,6 +471,45 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Hint &x) {
   }
 }
 
+void OmpStructureChecker::Enter(const parser::OmpClause::DynGroupprivate &x) {
+  CheckAllowedClause(llvm::omp::Clause::OMPC_dyn_groupprivate);
+  parser::CharBlock source{GetContext().clauseSource};
+
+  OmpVerifyModifiers(x.v, llvm::omp::OMPC_dyn_groupprivate, source, context_);
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::Grainsize &x) {
+  CheckAllowedClause(llvm::omp::Clause::OMPC_grainsize);
+  parser::CharBlock source{GetContext().clauseSource};
+
+  if (OmpVerifyModifiers(x.v, llvm::omp::OMPC_grainsize, source, context_)) {
+    auto &modifiers{OmpGetModifiers(x.v)};
+    for (auto *mod :
+        OmpGetRepeatableModifier<parser::OmpPrescriptiveness>(modifiers)) {
+      if (mod->v != parser::OmpPrescriptiveness::Value::Strict) {
+        context_.Say(OmpGetModifierSource(modifiers, mod),
+            "Only STRICT is allowed as prescriptiveness on this clause"_err_en_US);
+      }
+    }
+  }
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::NumTasks &x) {
+  CheckAllowedClause(llvm::omp::Clause::OMPC_num_tasks);
+  parser::CharBlock source{GetContext().clauseSource};
+
+  if (OmpVerifyModifiers(x.v, llvm::omp::OMPC_num_tasks, source, context_)) {
+    auto &modifiers{OmpGetModifiers(x.v)};
+    for (auto *mod :
+        OmpGetRepeatableModifier<parser::OmpPrescriptiveness>(modifiers)) {
+      if (mod->v != parser::OmpPrescriptiveness::Value::Strict) {
+        context_.Say(OmpGetModifierSource(modifiers, mod),
+            "Only STRICT is allowed as prescriptiveness on this clause"_err_en_US);
+      }
+    }
+  }
+}
+
 void OmpStructureChecker::Enter(const parser::OmpDirectiveSpecification &x) {
   // OmpDirectiveSpecification exists on its own only in METADIRECTIVE.
   // In other cases it's a part of other constructs that handle directive
@@ -2542,6 +2581,32 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &) {
     }
   }
 
+  // Default access-group for DYN_GROUPPRIVATE is "cgroup". On a given
+  // construct there can be at most one DYN_GROUPPRIVATE with a given
+  // access-group.
+  const parser::OmpClause
+      *accGrpClause[parser::OmpAccessGroup::Value_enumSize] = {nullptr};
+  for (auto [_, clause] :
+      FindClauses(llvm::omp::Clause::OMPC_dyn_groupprivate)) {
+    auto &wrapper{std::get<parser::OmpClause::DynGroupprivate>(clause->u)};
+    auto &modifiers{OmpGetModifiers(wrapper.v)};
+    auto accGrp{parser::OmpAccessGroup::Value::Cgroup};
+    if (auto *ag{OmpGetUniqueModifier<parser::OmpAccessGroup>(modifiers)}) {
+      accGrp = ag->v;
+    }
+    auto &firstClause{accGrpClause[llvm::to_underlying(accGrp)]};
+    if (firstClause) {
+      context_
+          .Say(clause->source,
+              "The access-group modifier can only occur on a single clause in a construct"_err_en_US)
+          .Attach(firstClause->source,
+              "Previous clause with access-group modifier"_en_US);
+      break;
+    } else {
+      firstClause = clause;
+    }
+  }
+
   CheckRequireAtLeastOneOf();
 }
 
@@ -2593,18 +2658,15 @@ CHECK_SIMPLE_CLAUSE(Default, OMPC_default)
 CHECK_SIMPLE_CLAUSE(Depobj, OMPC_depobj)
 CHECK_SIMPLE_CLAUSE(DeviceType, OMPC_device_type)
 CHECK_SIMPLE_CLAUSE(DistSchedule, OMPC_dist_schedule)
-CHECK_SIMPLE_CLAUSE(DynGroupprivate, OMPC_dyn_groupprivate)
 CHECK_SIMPLE_CLAUSE(Exclusive, OMPC_exclusive)
 CHECK_SIMPLE_CLAUSE(Final, OMPC_final)
 CHECK_SIMPLE_CLAUSE(Flush, OMPC_flush)
 CHECK_SIMPLE_CLAUSE(Full, OMPC_full)
-CHECK_SIMPLE_CLAUSE(Grainsize, OMPC_grainsize)
 CHECK_SIMPLE_CLAUSE(Holds, OMPC_holds)
 CHECK_SIMPLE_CLAUSE(Inclusive, OMPC_inclusive)
 CHECK_SIMPLE_CLAUSE(Initializer, OMPC_initializer)
 CHECK_SIMPLE_CLAUSE(Match, OMPC_match)
 CHECK_SIMPLE_CLAUSE(Nontemporal, OMPC_nontemporal)
-CHECK_SIMPLE_CLAUSE(NumTasks, OMPC_num_tasks)
 CHECK_SIMPLE_CLAUSE(Order, OMPC_order)
 CHECK_SIMPLE_CLAUSE(Read, OMPC_read)
 CHECK_SIMPLE_CLAUSE(Threadprivate, OMPC_threadprivate)

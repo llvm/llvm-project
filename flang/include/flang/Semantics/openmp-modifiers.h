@@ -67,6 +67,7 @@ template <typename SpecificTy> const OmpModifierDescriptor &OmpGetDescriptor();
 #define DECLARE_DESCRIPTOR(name) \
   template <> const OmpModifierDescriptor &OmpGetDescriptor<name>()
 
+DECLARE_DESCRIPTOR(parser::OmpAccessGroup);
 DECLARE_DESCRIPTOR(parser::OmpAlignment);
 DECLARE_DESCRIPTOR(parser::OmpAlignModifier);
 DECLARE_DESCRIPTOR(parser::OmpAllocatorComplexModifier);
