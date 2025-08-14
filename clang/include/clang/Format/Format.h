@@ -1596,7 +1596,7 @@ struct FormatStyle {
     ///                    }
     /// \endcode
     // bool SplitEmptyRecord;
-    
+
     /// If ``false``, empty namespace body can be put on a single line.
     /// This option is used only if the opening brace of the namespace has
     /// already been wrapped, i.e. the ``AfterNamespace`` brace wrapping mode is
