@@ -86,7 +86,6 @@ ReassocOp<T, Op0, Op1> reassocOp(const Op0 &op0, const Op1 &op1) {
 
 struct ReassocRewriter : public evaluate::rewrite::Identity {
   using Id = evaluate::rewrite::Identity;
-  using Id::operator();
   struct NonIntegralTag {};
 
   ReassocRewriter(const SomeExpr &atom) : atom_(atom) {}
