@@ -250,30 +250,30 @@ Error ExegesisAArch64Target::randomizeTargetMCOperand(
   //   encodings or unreliable benchmark results for these system-level
   //   instructions.
   switch (OperandType) {
-    case MCOI::OperandType::OPERAND_UNKNOWN: {
-      AssignedValue = MCOperand::createImm(0);
-      return Error::success();
-    }
-    // MSL (Masking Shift Left) imm operand for 32-bit splatted SIMD constants
-    // Correspond to AArch64InstructionSelector::tryAdvSIMDModImm321s()
-    case llvm::AArch64::OPERAND_MSL_SHIFT_2S: {
-      // Type 7: Pattern 0x00 0x00 abcdefgh 0xFF 0x00 0x00 abcdefgh 0xFF
-      // Creates 2-element 32-bit vector with 8-bit imm at positions [15:8] &
-      // [47:40] Shift value 264 (0x108) for Type 7 pattern encoding Corresponds
-      // to AArch64_AM::encodeAdvSIMDModImmType7()
-      AssignedValue = MCOperand::createImm(264);
-      return Error::success();
-    }
-    case llvm::AArch64::OPERAND_MSL_SHIFT_4S: {
-        // Type 8: Pattern 0x00 abcdefgh 0xFF 0xFF 0x00 abcdefgh 0xFF 0xFF
-        // Creates 4-element 32-bit vector with 8-bit imm at positions [23:16] &
-        // [55:48] Shift value 272 (0x110) for Type 8 pattern encoding Corresponds
-        // to AArch64_AM::encodeAdvSIMDModImmType8()
-        AssignedValue = MCOperand::createImm(272);
-        return Error::success();
-    }
-    case MCOI::OperandType::OPERAND_PCREL:
-    case MCOI::OperandType::OPERAND_FIRST_TARGET:
+  case MCOI::OperandType::OPERAND_UNKNOWN: {
+    AssignedValue = MCOperand::createImm(0);
+    return Error::success();
+  }
+  // MSL (Masking Shift Left) imm operand for 32-bit splatted SIMD constants
+  // Correspond to AArch64InstructionSelector::tryAdvSIMDModImm321s()
+  case llvm::AArch64::OPERAND_MSL_SHIFT_2S: {
+    // Type 7: Pattern 0x00 0x00 abcdefgh 0xFF 0x00 0x00 abcdefgh 0xFF
+    // Creates 2-element 32-bit vector with 8-bit imm at positions [15:8] &
+    // [47:40] Shift value 264 (0x108) for Type 7 pattern encoding Corresponds
+    // to AArch64_AM::encodeAdvSIMDModImmType7()
+    AssignedValue = MCOperand::createImm(264);
+    return Error::success();
+  }
+  case llvm::AArch64::OPERAND_MSL_SHIFT_4S: {
+    // Type 8: Pattern 0x00 abcdefgh 0xFF 0xFF 0x00 abcdefgh 0xFF 0xFF
+    // Creates 4-element 32-bit vector with 8-bit imm at positions [23:16] &
+    // [55:48] Shift value 272 (0x110) for Type 8 pattern encoding Corresponds
+    // to AArch64_AM::encodeAdvSIMDModImmType8()
+    AssignedValue = MCOperand::createImm(272);
+    return Error::success();
+  }
+  case MCOI::OperandType::OPERAND_PCREL:
+  case MCOI::OperandType::OPERAND_FIRST_TARGET:
     AssignedValue = MCOperand::createImm(0);
     return Error::success();
   default:

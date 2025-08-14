@@ -65,7 +65,7 @@ void initLLVMToCVRegMapping(MCRegisterInfo *MRI);
 bool isHForm(const MCInst &MI, const MCInstrInfo *MCII);
 bool isQForm(const MCInst &MI, const MCInstrInfo *MCII);
 bool isFpOrNEON(const MCInst &MI, const MCInstrInfo *MCII);
-}
+} // namespace AArch64_MC
 
 namespace AArch64 {
 enum OperandType {
@@ -75,7 +75,7 @@ enum OperandType {
 };
 } // namespace AArch64
 
-} // End llvm namespace
+} // namespace llvm
 
 // Defines symbolic names for AArch64 registers.  This defines a mapping from
 // register name to register number.
