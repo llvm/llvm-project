@@ -642,7 +642,7 @@ void CommandObjectExpression::DoExecute(llvm::StringRef command,
 
           if (!expr.empty()) {
             result.GetOutputStream().Printf(
-              "Warning: trailing input is ignored in --repl mode\n");
+                "Warning: trailing input is ignored in --repl mode\n");
           }
 
           IOHandlerSP io_handler_sp(repl_sp->GetIOHandler());
