@@ -54,6 +54,8 @@ static void printColumnHeaders(raw_ostream &OS, ArrayRef<size_t> Lengths) {
 }
 
 static size_t digitsForNumber(size_t N) {
+  if (N == 0)
+    return 1;
   return static_cast<size_t>(log10(static_cast<double>(N))) + 1;
 }
 
