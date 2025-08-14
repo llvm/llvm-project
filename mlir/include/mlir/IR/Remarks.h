@@ -374,7 +374,7 @@ inline InFlightRemark withEngine(Fn fn, Location loc, Args &&...args) {
 
   RemarkEngine *enginePtr = ctx->getRemarkEngine();
 
-  if (enginePtr)
+  if (LLVM_UNLIKELY(enginePtr))
     return (enginePtr->*fn)(loc, std::forward<Args>(args)...);
 
   return {};
