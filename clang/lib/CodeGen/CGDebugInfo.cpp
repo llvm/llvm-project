@@ -4183,11 +4183,11 @@ llvm::DICompositeType *CGDebugInfo::CreateLimitedType(const RecordType *Ty) {
         llvm::MDNode::replaceWithDistinct(llvm::TempDICompositeType(RealDecl));
     break;
   }
-  auto *Decl = Ty->getDecl();
-  if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(Decl)) {
-    Decl = CTSD->getSpecializedTemplate()->getTemplateDecl();
+  
+  if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD)) {
+    RD = CTSD->getSpecializedTemplate()->getTemplatedDecl();
   }
-  RegionMap[Decl].reset(RealDecl);
+  RegionMap[RD].reset(RealDecl);
   TypeCache[QualType(Ty, 0).getAsOpaquePtr()].reset(RealDecl);
 
   if (const auto *TSpecial = dyn_cast<ClassTemplateSpecializationDecl>(RD))
