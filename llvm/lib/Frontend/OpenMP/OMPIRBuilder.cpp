@@ -92,6 +92,18 @@ static bool isConflictIP(IRBuilder<>::InsertPoint IP1,
   return IP1.getBlock() == IP2.getBlock() && IP1.getPoint() == IP2.getPoint();
 }
 
+/// This is wrapper over IRBuilderBase::restoreIP that also restores the current
+/// debug location to the last instruction in the specified basic block if the
+/// insert point points to the end of the block.
+static void restoreIPandDebugLoc(llvm::IRBuilderBase &Builder,
+                                 llvm::IRBuilderBase::InsertPoint IP) {
+  Builder.restoreIP(IP);
+  llvm::BasicBlock *BB = Builder.GetInsertBlock();
+  llvm::BasicBlock::iterator I = Builder.GetInsertPoint();
+  if (!BB->empty() && I == BB->end())
+    Builder.SetCurrentDebugLocation(BB->back().getStableDebugLoc());
+}
+
 static bool isValidWorkshareLoopScheduleType(OMPScheduleType SchedType) {
   // Valid ordered/unordered and base algorithm combinations.
   switch (SchedType & ~OMPScheduleType::MonotonicityMask) {
@@ -8993,7 +9005,7 @@ Error OpenMPIRBuilder::emitOffloadingArrays(
     ArrayType *SizeArrayType = ArrayType::get(Int64Ty, Info.NumberOfPtrs);
     Info.RTArgs.SizesArray = Builder.CreateAlloca(
         SizeArrayType, /* ArraySize = */ nullptr, ".offload_sizes");
-    Builder.restoreIP(CodeGenIP);
+    restoreIPandDebugLoc(Builder, CodeGenIP);
   } else {
     auto *SizesArrayInit = ConstantArray::get(
         ArrayType::get(Int64Ty, ConstSizes.size()), ConstSizes);
@@ -9012,7 +9024,7 @@ Error OpenMPIRBuilder::emitOffloadingArrays(
       AllocaInst *Buffer = Builder.CreateAlloca(
           SizeArrayType, /* ArraySize = */ nullptr, ".offload_sizes");
       Buffer->setAlignment(OffloadSizeAlign);
-      Builder.restoreIP(CodeGenIP);
+      restoreIPandDebugLoc(Builder, CodeGenIP);
       Builder.CreateMemCpy(
           Buffer, M.getDataLayout().getPrefTypeAlign(Buffer->getType()),
           SizesArrayGbl, OffloadSizeAlign,
@@ -9022,7 +9034,7 @@ Error OpenMPIRBuilder::emitOffloadingArrays(
 
       Info.RTArgs.SizesArray = Buffer;
     }
-    Builder.restoreIP(CodeGenIP);
+    restoreIPandDebugLoc(Builder, CodeGenIP);
   }
 
   // The map types are always constant so we don't need to generate code to
