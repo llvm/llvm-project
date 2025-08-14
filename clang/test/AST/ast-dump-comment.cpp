@@ -140,3 +140,9 @@ int Test_HTMLSummaryTag(int Aaa);
 // CHECK:           HTMLStartTagComment{{.*}} Name="summary"
 // CHECK-NEXT:        TextComment{{.*}} Text="Short summary"
 // CHECK-NEXT:        HTMLEndTagComment{{.*}} Name="summary"
+
+/// \thread_safe test for underscore in special command
+int Test_UnderscoreInSpecialCommand;
+// CHECK:      VarDecl{{.*}}Test_UnderscoreInSpecialCommand 'int'
+// CHECK:        InlineCommandComment{{.*}} Name="thread_safe" RenderNormal
+// CHECK-NEXT:     TextComment{{.*}} Text=" test for underscore in special command"

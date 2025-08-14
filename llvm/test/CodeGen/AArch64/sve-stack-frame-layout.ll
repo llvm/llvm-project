@@ -421,10 +421,10 @@ define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, 
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x4e, 0x0a, 0x92, 0x2e, 0x00, 0x11, 0x48, 0x1e, 0x22, 0x11, 0x50, 0x22 // $d14 @ cfa - 56 * VG - 48
 ; CHECK-NEXT:    .cfi_escape 0x10, 0x4f, 0x0a, 0x92, 0x2e, 0x00, 0x11, 0x40, 0x1e, 0x22, 0x11, 0x50, 0x22 // $d15 @ cfa - 64 * VG - 48
 ; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    bl __arm_sme_state
+; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    //APP
 ; CHECK-NEXT:    //NO_APP
-; CHECK-NEXT:    bl __arm_sme_state
-; CHECK-NEXT:    and x19, x0, #0x1
 ; CHECK-NEXT:    .cfi_offset vg, -32
 ; CHECK-NEXT:    tbz w19, #0, .LBB7_2
 ; CHECK-NEXT:  // %bb.1: // %entry
