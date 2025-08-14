@@ -1246,10 +1246,8 @@ struct MemorySpaceCastOpLowering
       auto result = UnrankedMemRefDescriptor::poison(
           rewriter, loc, typeConverter->convertType(resultTypeU));
       result.setRank(rewriter, loc, rank);
-      SmallVector<Value, 1> sizes;
-      UnrankedMemRefDescriptor::computeSizes(rewriter, loc, *getTypeConverter(),
-                                             result, resultAddrSpace, sizes);
-      Value resultUnderlyingSize = sizes.front();
+      Value resultUnderlyingSize = UnrankedMemRefDescriptor::computeSize(
+          rewriter, loc, *getTypeConverter(), result, resultAddrSpace);
       Value resultUnderlyingDesc =
           LLVM::AllocaOp::create(rewriter, loc, getPtrType(),
                                  rewriter.getI8Type(), resultUnderlyingSize);
@@ -1530,12 +1528,11 @@ private:
     auto targetDesc = UnrankedMemRefDescriptor::poison(
         rewriter, loc, typeConverter->convertType(targetType));
     targetDesc.setRank(rewriter, loc, resultRank);
-    SmallVector<Value, 4> sizes;
-    UnrankedMemRefDescriptor::computeSizes(rewriter, loc, *getTypeConverter(),
-                                           targetDesc, addressSpace, sizes);
+    Value allocationSize = UnrankedMemRefDescriptor::computeSize(
+        rewriter, loc, *getTypeConverter(), targetDesc, addressSpace);
     Value underlyingDescPtr = LLVM::AllocaOp::create(
         rewriter, loc, getPtrType(), IntegerType::get(getContext(), 8),
-        sizes.front());
+        allocationSize);
     targetDesc.setMemRefDescPtr(rewriter, loc, underlyingDescPtr);
 
     // Extract pointers and offset from the source memref.

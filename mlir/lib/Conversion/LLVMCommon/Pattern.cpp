@@ -239,12 +239,6 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
   if (unrankedMemrefs.empty())
     return success();
 
-  // Compute allocation sizes.
-  SmallVector<Value> sizes;
-  UnrankedMemRefDescriptor::computeSizes(builder, loc, *getTypeConverter(),
-                                         unrankedMemrefs, unrankedAddressSpaces,
-                                         sizes);
-
   // Get frequently used types.
   Type indexType = getTypeConverter()->getIndexType();
 
@@ -267,8 +261,10 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
     Type type = origTypes[i];
     if (!isa<UnrankedMemRefType>(type))
       continue;
-    Value allocationSize = sizes[unrankedMemrefPos++];
     UnrankedMemRefDescriptor desc(operands[i]);
+    Value allocationSize = UnrankedMemRefDescriptor::computeSize(
+        builder, loc, *getTypeConverter(), desc,
+        unrankedAddressSpaces[unrankedMemrefPos++]);
 
     // Allocate memory, copy, and free the source if necessary.
     Value memory =
