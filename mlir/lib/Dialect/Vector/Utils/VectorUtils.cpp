@@ -279,14 +279,16 @@ vector::createUnrollIterator(VectorType vType, int64_t targetRank) {
   // Attempt to unroll until targetRank or the first scalable dimension (which
   // cannot be unrolled).
   auto shapeToUnroll = vType.getShape().drop_back(targetRank);
-  auto scalableDimsToUnroll = vType.getScalableDims().drop_back(targetRank);
-  auto it = llvm::find(scalableDimsToUnroll, true);
-  auto firstScalableDim = it - scalableDimsToUnroll.begin();
+  auto inputScalableVecDimsToUnroll =
+      vType.getScalableDims().drop_back(targetRank);
+  auto it = llvm::find(inputScalableVecDimsToUnroll, true);
+  auto firstScalableDim = it - inputScalableVecDimsToUnroll.begin();
   if (firstScalableDim == 0)
     return {};
   // All scalable dimensions should be removed now.
-  scalableDimsToUnroll = scalableDimsToUnroll.slice(0, firstScalableDim);
-  assert(!llvm::is_contained(scalableDimsToUnroll, true) &&
+  inputScalableVecDimsToUnroll =
+      inputScalableVecDimsToUnroll.slice(0, firstScalableDim);
+  assert(!llvm::is_contained(inputScalableVecDimsToUnroll, true) &&
          "unexpected leading scalable dimension");
   // Create an unroll iterator for leading dimensions.
   shapeToUnroll = shapeToUnroll.slice(0, firstScalableDim);
@@ -319,15 +321,15 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
                                      ArrayRef<int64_t> inputVectorSizes,
                                      Value padValue,
                                      bool useInBoundsInsteadOfMasking,
-                                     ArrayRef<bool> scalableDims) {
+                                     ArrayRef<bool> inputScalableVecDims) {
   assert(!llvm::is_contained(inputVectorSizes, ShapedType::kDynamic) &&
          "invalid input vector sizes");
   auto sourceShapedType = cast<ShapedType>(source.getType());
   auto sourceShape = sourceShapedType.getShape();
   assert(sourceShape.size() == inputVectorSizes.size() &&
          "expected same ranks.");
-  auto vectorType =
-      VectorType::get(inputVectorSizes, padValue.getType(), scalableDims);
+  auto vectorType = VectorType::get(inputVectorSizes, padValue.getType(),
+                                    inputScalableVecDims);
   assert(padValue.getType() == sourceShapedType.getElementType() &&
          "expected same pad element type to match source element type");
   int64_t readRank = inputVectorSizes.size();
@@ -356,8 +358,8 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
           ? memref::getMixedSizes(builder, loc, source)
           : tensor::getMixedSizes(builder, loc, source);
 
-  auto maskType =
-      VectorType::get(inputVectorSizes, builder.getI1Type(), scalableDims);
+  auto maskType = VectorType::get(inputVectorSizes, builder.getI1Type(),
+                                  inputScalableVecDims);
   Value mask =
       vector::CreateMaskOp::create(builder, loc, maskType, mixedSourceDims);
   return mlir::vector::maskOperation(builder, transferReadOp, mask)
@@ -385,8 +387,7 @@ vector::isValidMaskedInputVector(ArrayRef<int64_t> shape,
                              staticSize <= inputSize;
                     })) {
     LDBG() << "Input vector sizes must be greater than or equal to iteration "
-              "space "
-              "static sizes";
+              "space static sizes";
     return failure();
   }
   return success();

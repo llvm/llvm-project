@@ -65,25 +65,25 @@ define void @test_free_intrinsics(i64 %x) {
 ; CHECK-LABEL: @test_free_intrinsics(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[PTR:%.*]] = alloca i8, align 1
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 100000000032, ptr [[PTR]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 100000000064, ptr [[PTR]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 100000000128, ptr [[PTR]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[PTR]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[PTR]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[PTR]])
 ; CHECK-NEXT:    [[I:%.*]] = call ptr @llvm.invariant.start.p0(i64 100000000256, ptr [[PTR]])
 ; CHECK-NEXT:    call void @llvm.invariant.end.p0(ptr [[I]], i64 100000000256, ptr [[PTR]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %ptr = alloca i8
-  call void @llvm.lifetime.start.p0(i64 100000000032, ptr %ptr)
-  call void @llvm.lifetime.start.p0(i64 100000000064, ptr %ptr)
-  call void @llvm.lifetime.end.p0(i64 100000000128, ptr %ptr)
+  call void @llvm.lifetime.start.p0(ptr %ptr)
+  call void @llvm.lifetime.start.p0(ptr %ptr)
+  call void @llvm.lifetime.end.p0(ptr %ptr)
   %i = call ptr @llvm.invariant.start.p0(i64 100000000256, ptr %ptr)
   call void @llvm.invariant.end.p0(ptr %i, i64 100000000256, ptr %ptr)
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64, ptr)
-declare void @llvm.lifetime.end.p0(i64, ptr)
+declare void @llvm.lifetime.start.p0(ptr)
+declare void @llvm.lifetime.end.p0(ptr)
 
 declare ptr @llvm.invariant.start.p0(i64, ptr nocapture)
 declare void @llvm.invariant.end.p0(ptr, i64, ptr nocapture)

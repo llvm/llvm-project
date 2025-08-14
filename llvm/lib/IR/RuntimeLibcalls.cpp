@@ -8,6 +8,10 @@
 
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/ADT/StringTable.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/TargetParser/ARMTargetParser.h"
+
+#define DEBUG_TYPE "runtime-libcalls-info"
 
 using namespace llvm;
 using namespace RTLIB;
@@ -19,8 +23,39 @@ using namespace RTLIB;
 #undef GET_SET_TARGET_RUNTIME_LIBCALL_SETS
 
 static void setARMLibcallNames(RuntimeLibcallsInfo &Info, const Triple &TT,
-                               FloatABI::ABIType FloatABIType,
-                               EABI EABIVersion) {
+                               FloatABI::ABIType FloatABIType, EABI EABIVersion,
+                               StringRef ABIName) {
+  // The half <-> float conversion functions are always soft-float on
+  // non-watchos platforms, but are needed for some targets which use a
+  // hard-float calling convention by default.
+  if (!TT.isWatchABI()) {
+    ARM::ARMABI TargetABI = ARM::computeTargetABI(TT, ABIName);
+
+    if (TargetABI == ARM::ARM_ABI_AAPCS || TargetABI == ARM::ARM_ABI_AAPCS16) {
+      Info.setLibcallImplCallingConv(RTLIB::__truncsfhf2,
+                                     CallingConv::ARM_AAPCS);
+      Info.setLibcallImplCallingConv(RTLIB::__truncdfhf2,
+                                     CallingConv::ARM_AAPCS);
+      Info.setLibcallImplCallingConv(RTLIB::__extendhfsf2,
+                                     CallingConv::ARM_AAPCS);
+      Info.setLibcallImplCallingConv(RTLIB::__gnu_h2f_ieee,
+                                     CallingConv::ARM_AAPCS);
+      Info.setLibcallImplCallingConv(RTLIB::__gnu_f2h_ieee,
+                                     CallingConv::ARM_AAPCS);
+    } else {
+      Info.setLibcallImplCallingConv(RTLIB::__truncsfhf2,
+                                     CallingConv::ARM_APCS);
+      Info.setLibcallImplCallingConv(RTLIB::__truncdfhf2,
+                                     CallingConv::ARM_APCS);
+      Info.setLibcallImplCallingConv(RTLIB::__extendhfsf2,
+                                     CallingConv::ARM_APCS);
+      Info.setLibcallImplCallingConv(RTLIB::__gnu_h2f_ieee,
+                                     CallingConv::ARM_APCS);
+      Info.setLibcallImplCallingConv(RTLIB::__gnu_f2h_ieee,
+                                     CallingConv::ARM_APCS);
+    }
+  }
+
   static const RTLIB::LibcallImpl AAPCS_Libcalls[] = {
       RTLIB::__aeabi_dadd,        RTLIB::__aeabi_ddiv,
       RTLIB::__aeabi_dmul,        RTLIB::__aeabi_dsub,
@@ -44,11 +79,9 @@ static void setARMLibcallNames(RuntimeLibcallsInfo &Info, const Triple &TT,
       RTLIB::__aeabi_ui2f,        RTLIB::__aeabi_l2f,
       RTLIB::__aeabi_ul2f,        RTLIB::__aeabi_lmul,
       RTLIB::__aeabi_llsl,        RTLIB::__aeabi_llsr,
-      RTLIB::__aeabi_lasr,        RTLIB::__aeabi_idiv__i8,
-      RTLIB::__aeabi_idiv__i16,   RTLIB::__aeabi_idiv__i32,
+      RTLIB::__aeabi_lasr,        RTLIB::__aeabi_idiv,
       RTLIB::__aeabi_idivmod,     RTLIB::__aeabi_uidivmod,
-      RTLIB::__aeabi_ldivmod,     RTLIB::__aeabi_uidiv__i8,
-      RTLIB::__aeabi_uidiv__i16,  RTLIB::__aeabi_uidiv__i32,
+      RTLIB::__aeabi_ldivmod,     RTLIB::__aeabi_uidiv,
       RTLIB::__aeabi_uldivmod,    RTLIB::__aeabi_f2h,
       RTLIB::__aeabi_d2h,         RTLIB::__aeabi_h2f,
       RTLIB::__aeabi_memcpy,      RTLIB::__aeabi_memmove,
@@ -62,12 +95,6 @@ static void setARMLibcallNames(RuntimeLibcallsInfo &Info, const Triple &TT,
     Info.setLibcallImplCallingConv(Impl, CallingConv::ARM_AAPCS);
 }
 
-void RTLIB::RuntimeLibcallsInfo::initDefaultLibCallImpls() {
-  std::memcpy(LibcallImpls, DefaultLibcallImpls, sizeof(LibcallImpls));
-  static_assert(sizeof(LibcallImpls) == sizeof(DefaultLibcallImpls),
-                "libcall array size should match");
-}
-
 /// Set default libcall names. If a target wants to opt-out of a libcall it
 /// should be placed here.
 void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
@@ -76,57 +103,12 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
                                        EABI EABIVersion, StringRef ABIName) {
   setTargetRuntimeLibcallSets(TT, FloatABI);
 
-  // Early exit for targets that have fully ported to tablegen.
-  if (TT.isAMDGPU() || TT.isNVPTX() || TT.isWasm())
-    return;
-
-  if (TT.isX86() || TT.isVE() || TT.isARM() || TT.isThumb()) {
-    if (ExceptionModel == ExceptionHandling::SjLj)
-      setLibcallImpl(RTLIB::UNWIND_RESUME, RTLIB::_Unwind_SjLj_Resume);
-  }
-
-  // A few names are different on particular architectures or environments.
-  if (TT.isOSDarwin()) {
-    // For f16/f32 conversions, Darwin uses the standard naming scheme,
-    // instead of the gnueabi-style __gnu_*_ieee.
-    // FIXME: What about other targets?
-    setLibcallImpl(RTLIB::FPEXT_F16_F32, RTLIB::__extendhfsf2);
-    setLibcallImpl(RTLIB::FPROUND_F32_F16, RTLIB::__truncsfhf2);
-
-    if (!darwinHasExp10(TT)) {
-      setLibcallImpl(RTLIB::EXP10_F32, RTLIB::Unsupported);
-      setLibcallImpl(RTLIB::EXP10_F64, RTLIB::Unsupported);
-    }
-  }
-
-  if (TT.isOSOpenBSD()) {
-    setLibcallImpl(RTLIB::STACKPROTECTOR_CHECK_FAIL, RTLIB::Unsupported);
-    setLibcallImpl(RTLIB::STACK_SMASH_HANDLER, RTLIB::__stack_smash_handler);
-  }
-
-  // Skip default manual processing for targets that have been fully ported to
-  // tablegen for now. Eventually the rest of this should be deleted.
-  if (TT.isX86() || TT.isAArch64() || TT.isWasm())
-    return;
+  if (ExceptionModel == ExceptionHandling::SjLj)
+    setLibcallImpl(RTLIB::UNWIND_RESUME, RTLIB::_Unwind_SjLj_Resume);
 
   if (TT.isARM() || TT.isThumb()) {
-    setARMLibcallNames(*this, TT, FloatABI, EABIVersion);
+    setARMLibcallNames(*this, TT, FloatABI, EABIVersion, ABIName);
     return;
-  }
-
-  if (hasSinCos(TT)) {
-    setLibcallImpl(RTLIB::SINCOS_F32, RTLIB::sincosf);
-    setLibcallImpl(RTLIB::SINCOS_F64, RTLIB::sincos);
-    setLibcallImpl(RTLIB::SINCOS_F128, RTLIB::sincos_f128);
-  }
-
-  // These libcalls are only available in compiler-rt, not libgcc.
-  if (TT.isArch64Bit()) {
-    setLibcallImpl(RTLIB::SHL_I128, RTLIB::__ashlti3);
-    setLibcallImpl(RTLIB::SRL_I128, RTLIB::__lshrti3);
-    setLibcallImpl(RTLIB::SRA_I128, RTLIB::__ashrti3);
-    setLibcallImpl(RTLIB::MUL_I128, RTLIB::__multi3);
-    setLibcallImpl(RTLIB::MULO_I64, RTLIB::__mulodi4);
   }
 
   if (TT.getArch() == Triple::ArchType::msp430) {

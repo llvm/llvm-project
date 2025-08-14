@@ -192,7 +192,7 @@ L
 **LSDA**
     Language Specific Data Area.  C++ "zero cost" unwinding is built on top a
     generic unwinding mechanism.  As the unwinder walks each frame, it calls
-    a "personality" function to do language specific analysis.  Each function's
+    a "personality" function to do language-specific analysis.  Each function's
     FDE points to an optional LSDA which is passed to the personality function.
     For C++, the LSDA contain info about the type and location of catch
     statements in that function.
