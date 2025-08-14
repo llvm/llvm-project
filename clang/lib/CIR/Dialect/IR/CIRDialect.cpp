@@ -1649,7 +1649,27 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
 
 // TODO(CIR): The properties of functions that require verification haven't
 // been implemented yet.
-mlir::LogicalResult cir::FuncOp::verify() { return success(); }
+mlir::LogicalResult cir::FuncOp::verify() {
+
+  std::set<llvm::StringRef> labels;
+  std::set<llvm::StringRef> gotos;
+
+  getOperation()->walk([&](mlir::Operation *op) {
+    if (auto lab = dyn_cast<cir::LabelOp>(op)) {
+      labels.emplace(lab.getLabel());
+    } else if (auto goTo = dyn_cast<cir::GotoOp>(op)) {
+      gotos.emplace(goTo.getLabel());
+    }
+  });
+
+  std::vector<llvm::StringRef> mismatched;
+  std::set_difference(gotos.begin(), gotos.end(), labels.begin(), labels.end(),
+                      std::back_inserter(mismatched));
+
+  if (!mismatched.empty())
+    return emitOpError() << "goto/label mismatch";
+  return success();
+}
 
 //===----------------------------------------------------------------------===//
 // BinOp
