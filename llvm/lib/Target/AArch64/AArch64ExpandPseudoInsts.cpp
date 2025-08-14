@@ -1032,8 +1032,7 @@ MachineBasicBlock *AArch64ExpandPseudo::expandCommitOrRestoreZASave(
   MachineInstrBuilder MIB =
       BuildMI(*SMBB, SMBB->end(), DL, TII->get(AArch64::BL));
   // Copy operands (mainly the regmask) from the pseudo.
-  unsigned FirstBLOperand = IsRestoreZA ? 2 : 1;
-  for (unsigned I = FirstBLOperand; I < MI.getNumOperands(); ++I)
+  for (unsigned I = 2; I < MI.getNumOperands(); ++I)
     MIB.add(MI.getOperand(I));
 
   if (IsRestoreZA) {
@@ -1045,8 +1044,9 @@ MachineBasicBlock *AArch64ExpandPseudo::expandCommitOrRestoreZASave(
     BuildMI(*SMBB, SMBB->end(), DL, TII->get(AArch64::MSR))
         .addImm(AArch64SysReg::TPIDR2_EL0)
         .addReg(AArch64::XZR);
-    bool ZeroZA = MI.definesRegister(AArch64::ZAB0, TRI);
+    bool ZeroZA = MI.getOperand(1).getImm() != 0;
     if (ZeroZA) {
+      assert(MI.definesRegister(AArch64::ZAB0, TRI) && "should define ZA!");
       BuildMI(*SMBB, SMBB->end(), DL, TII->get(AArch64::ZERO_M))
           .addImm(ZERO_ALL_ZA_MASK)
           .addDef(AArch64::ZAB0, RegState::ImplicitDefine);

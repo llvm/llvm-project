@@ -101,7 +101,7 @@ let hasSideEffects = 1 in {
 
 def CommitZASavePseudo
   : Pseudo<(outs),
-           (ins GPR64:$tpidr2_el0, i64imm:$commit_routine, variable_ops), []>,
+           (ins GPR64:$tpidr2_el0, i1imm:$zero_za, i64imm:$commit_routine, variable_ops), []>,
            Sched<[]>;
 
 def AArch64_inout_za_use

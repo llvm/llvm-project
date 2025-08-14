@@ -547,13 +547,16 @@ void MachineSMEABI::emitNewZAPrologue(MachineBasicBlock &MBB,
       .addReg(TPIDR2EL0, RegState::Define)
       .addImm(AArch64SysReg::TPIDR2_EL0);
   // If TPIDR2_EL0 is non-zero, commit the lazy save.
+  // NOTE: Functions that only use ZT0 don't need to zero ZA.
+  bool ZeroZA =
+      MF->getInfo<AArch64FunctionInfo>()->getSMEFnAttrs().hasZAState();
   auto CommitZASave =
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::CommitZASavePseudo))
           .addReg(TPIDR2EL0)
+          .addImm(ZeroZA ? 1 : 0)
           .addExternalSymbol(TLI->getLibcallName(RTLIB::SMEABI_TPIDR2_SAVE))
           .addRegMask(TRI->SMEABISupportRoutinesCallPreservedMaskFromX0());
-  // NOTE: Functions that only use ZT0 don't need to zero ZA.
-  if (MF->getInfo<AArch64FunctionInfo>()->getSMEFnAttrs().hasZAState())
+  if (ZeroZA)
     CommitZASave.addDef(AArch64::ZAB0, RegState::ImplicitDefine);
   // Enable ZA (as ZA could have previously been in the OFF state).
   BuildMI(MBB, MBBI, DL, TII->get(AArch64::MSRpstatesvcrImm1))
