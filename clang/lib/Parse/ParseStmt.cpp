@@ -36,24 +36,27 @@ using namespace clang;
 // C99 6.8: Statements and Blocks.
 //===----------------------------------------------------------------------===//
 
-StmtResult Parser::ParseStatement(SourceLocation *TrailingElseLoc,
-                                  ParsedStmtContext StmtCtx, SmallVectorImpl<LabelDecl *> *LoopOrSwitchNames) {
+StmtResult
+Parser::ParseStatement(SourceLocation *TrailingElseLoc,
+                       ParsedStmtContext StmtCtx,
+                       SmallVectorImpl<LabelDecl *> *LoopOrSwitchNames) {
   StmtResult Res;
 
   // We may get back a null statement if we found a #pragma. Keep going until
   // we get an actual statement.
   StmtVector Stmts;
   do {
-    Res = ParseStatementOrDeclaration(Stmts, StmtCtx, TrailingElseLoc, LoopOrSwitchNames);
+    Res = ParseStatementOrDeclaration(Stmts, StmtCtx, TrailingElseLoc,
+                                      LoopOrSwitchNames);
   } while (!Res.isInvalid() && !Res.get());
 
   return Res;
 }
 
-StmtResult
-Parser::ParseStatementOrDeclaration(StmtVector &Stmts,
-                                    ParsedStmtContext StmtCtx,
-                                    SourceLocation *TrailingElseLoc, SmallVectorImpl<LabelDecl *> *LoopOrSwitchNames) {
+StmtResult Parser::ParseStatementOrDeclaration(
+    StmtVector &Stmts, ParsedStmtContext StmtCtx,
+    SourceLocation *TrailingElseLoc,
+    SmallVectorImpl<LabelDecl *> *LoopOrSwitchNames) {
 
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
 
@@ -73,7 +76,8 @@ Parser::ParseStatementOrDeclaration(StmtVector &Stmts,
     MaybeParseMicrosoftAttributes(GNUOrMSAttrs);
 
   StmtResult Res = ParseStatementOrDeclarationAfterAttributes(
-      Stmts, StmtCtx, TrailingElseLoc, CXX11Attrs, GNUOrMSAttrs, LoopOrSwitchNames);
+      Stmts, StmtCtx, TrailingElseLoc, CXX11Attrs, GNUOrMSAttrs,
+      LoopOrSwitchNames);
   MaybeDestroyTemplateIds();
 
   takeAndConcatenateAttrs(CXX11Attrs, std::move(GNUOrMSAttrs));
@@ -130,7 +134,8 @@ private:
 StmtResult Parser::ParseStatementOrDeclarationAfterAttributes(
     StmtVector &Stmts, ParsedStmtContext StmtCtx,
     SourceLocation *TrailingElseLoc, ParsedAttributes &CXX11Attrs,
-    ParsedAttributes &GNUAttrs, SmallVectorImpl<LabelDecl *> *LoopOrSwitchNames) {
+    ParsedAttributes &GNUAttrs,
+    SmallVectorImpl<LabelDecl *> *LoopOrSwitchNames) {
   const char *SemiError = nullptr;
   StmtResult Res;
   SourceLocation GNUAttributeLoc;
@@ -483,7 +488,8 @@ Retry:
   case tok::annot_pragma_loop_hint:
     ProhibitAttributes(CXX11Attrs);
     ProhibitAttributes(GNUAttrs);
-    return ParsePragmaLoopHint(Stmts, StmtCtx, TrailingElseLoc, CXX11Attrs, LoopOrSwitchNames);
+    return ParsePragmaLoopHint(Stmts, StmtCtx, TrailingElseLoc, CXX11Attrs,
+                               LoopOrSwitchNames);
 
   case tok::annot_pragma_dump:
     ProhibitAttributes(CXX11Attrs);
@@ -726,7 +732,8 @@ Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
       StmtVector Stmts;
       ParsedAttributes EmptyCXX11Attrs(AttrFactory);
       SubStmt = ParseStatementOrDeclarationAfterAttributes(
-          Stmts, StmtCtx, nullptr, EmptyCXX11Attrs, TempAttrs, LoopOrSwitchNames);
+          Stmts, StmtCtx, nullptr, EmptyCXX11Attrs, TempAttrs,
+          LoopOrSwitchNames);
       if (!TempAttrs.empty() && !SubStmt.isInvalid())
         SubStmt = Actions.ActOnAttributedStmt(TempAttrs, SubStmt.get());
     }
@@ -1628,8 +1635,9 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
                              ThenStmt.get(), ElseLoc, ElseStmt.get());
 }
 
-StmtResult Parser::ParseSwitchStatement(SourceLocation *TrailingElseLoc,
-                                        SmallVectorImpl<LabelDecl *> *LoopOrSwitchNames) {
+StmtResult
+Parser::ParseSwitchStatement(SourceLocation *TrailingElseLoc,
+                             SmallVectorImpl<LabelDecl *> *LoopOrSwitchNames) {
   assert(Tok.is(tok::kw_switch) && "Not a switch stmt!");
   SourceLocation SwitchLoc = ConsumeToken();  // eat the 'switch'.
 
@@ -1714,7 +1722,9 @@ StmtResult Parser::ParseSwitchStatement(SourceLocation *TrailingElseLoc,
   return Actions.ActOnFinishSwitchStmt(SwitchLoc, Switch.get(), Body.get());
 }
 
-StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc, SmallVectorImpl<LabelDecl *> *LoopOrSwitchNames) {
+StmtResult
+Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc,
+                            SmallVectorImpl<LabelDecl *> *LoopOrSwitchNames) {
   assert(Tok.is(tok::kw_while) && "Not a while stmt!");
   SourceLocation WhileLoc = Tok.getLocation();
   ConsumeToken();  // eat the 'while'.
@@ -1792,7 +1802,8 @@ StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc, SmallVec
   return Actions.ActOnWhileStmt(WhileLoc, LParen, Cond, RParen, Body.get());
 }
 
-StmtResult Parser::ParseDoStatement(SmallVectorImpl<LabelDecl *> *LoopOrSwitchNames) {
+StmtResult
+Parser::ParseDoStatement(SmallVectorImpl<LabelDecl *> *LoopOrSwitchNames) {
   assert(Tok.is(tok::kw_do) && "Not a do stmt!");
   SourceLocation DoLoc = ConsumeToken();  // eat the 'do'.
 
@@ -1894,7 +1905,9 @@ bool Parser::isForRangeIdentifier() {
   return false;
 }
 
-StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc, SmallVectorImpl<LabelDecl *> *LoopOrSwitchNames) {
+StmtResult
+Parser::ParseForStatement(SourceLocation *TrailingElseLoc,
+                          SmallVectorImpl<LabelDecl *> *LoopOrSwitchNames) {
   assert(Tok.is(tok::kw_for) && "Not a for stmt!");
   SourceLocation ForLoc = ConsumeToken();  // eat the 'for'.
 
@@ -2379,10 +2392,11 @@ StmtResult Parser::ParseReturnStatement() {
   return Actions.ActOnReturnStmt(ReturnLoc, R.get(), getCurScope());
 }
 
-StmtResult Parser::ParsePragmaLoopHint(StmtVector &Stmts,
-                                       ParsedStmtContext StmtCtx,
-                                       SourceLocation *TrailingElseLoc,
-                                       ParsedAttributes &Attrs, SmallVectorImpl<LabelDecl *> *LoopOrSwitchNames) {
+StmtResult
+Parser::ParsePragmaLoopHint(StmtVector &Stmts, ParsedStmtContext StmtCtx,
+                            SourceLocation *TrailingElseLoc,
+                            ParsedAttributes &Attrs,
+                            SmallVectorImpl<LabelDecl *> *LoopOrSwitchNames) {
   // Create temporary attribute list.
   ParsedAttributes TempAttrs(AttrFactory);
 
@@ -2406,7 +2420,8 @@ StmtResult Parser::ParsePragmaLoopHint(StmtVector &Stmts,
 
   ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);
   StmtResult S = ParseStatementOrDeclarationAfterAttributes(
-      Stmts, StmtCtx, TrailingElseLoc, Attrs, EmptyDeclSpecAttrs, LoopOrSwitchNames);
+      Stmts, StmtCtx, TrailingElseLoc, Attrs, EmptyDeclSpecAttrs,
+      LoopOrSwitchNames);
 
   Attrs.takeAllFrom(TempAttrs);
 
