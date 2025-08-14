@@ -58,7 +58,9 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto begin() requires (!__simple_view<_View>) {
+  _LIBCPP_HIDE_FROM_ABI constexpr auto begin()
+    requires(!__simple_view<_View>)
+  {
     if constexpr (random_access_range<_View> && sized_range<_View>)
       return ranges::begin(__base_);
     else
@@ -74,7 +76,9 @@ public:
       return common_iterator<iterator_t<const _View>, sentinel_t<const _View>>(ranges::begin(__base_));
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end() requires (!__simple_view<_View>) {
+  _LIBCPP_HIDE_FROM_ABI constexpr auto end()
+    requires(!__simple_view<_View>)
+  {
     if constexpr (random_access_range<_View> && sized_range<_View>)
       return ranges::begin(__base_) + ranges::size(__base_);
     else
