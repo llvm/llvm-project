@@ -147,10 +147,11 @@ TEST_F(InterpreterTest, DeclsAndStatements) {
 }
 
 TEST_F(InterpreterTest, UndoCommand) {
-#FIXME : This test doesn't current work for Emscripten builds.
-#It should be possible to make it work.For details on how it fails and
-#the current progress to enable this test see
-#the following Github issue https: // github.com/llvm/llvm-project/issues/153461
+// FIXME : This test doesn't current work for Emscripten builds.
+// It should be possible to make it work.For details on how it fails and
+// the current progress to enable this test see
+// the following Github issue https: //
+// github.com/llvm/llvm-project/issues/153461
 #ifdef __EMSCRIPTEN__
   GTEST_SKIP() << "Test fails for Emscipten builds";
 #endif
@@ -263,10 +264,11 @@ static NamedDecl *LookupSingleName(Interpreter &Interp, const char *Name) {
 }
 
 TEST_F(InterpreterTest, InstantiateTemplate) {
-#FIXME : This test doesn't current work for Emscripten builds.
-#It should be possible to make it work.For details on how it fails and
-#the current progress to enable this test see
-#the following Github issue https: // github.com/llvm/llvm-project/issues/153461
+// FIXME : This test doesn't current work for Emscripten builds.
+// It should be possible to make it work.For details on how it fails and
+// the current progress to enable this test see
+// the following Github issue https: //
+// github.com/llvm/llvm-project/issues/153461
 #ifdef __EMSCRIPTEN__
   GTEST_SKIP() << "Test fails for Emscipten builds";
 #endif
@@ -309,10 +311,211 @@ TEST_F(InterpreterTest, InstantiateTemplate) {
 }
 
 TEST_F(InterpreterTest, Value) {
-#FIXME : This test doesn't current work for Emscripten builds.
-#It should be possible to make it work.For details on how it fails and
-#the current progress to enable this test see
-#the following Github issue https: // github.com/llvm/llvm-project/issues/153461
+  // FIXME : This test doesn't current work for Emscripten builds.
+  // It should be possible to make it work.For details on how it fails and
+  // the current progress to enable this test see
+  // the following Github issue https: //
+  // github.com/llvm/llvm-project/issues/153461
+  ECT_TRUE(!!RecoverErr);
+}
+
+// Here we test whether the user can mix declarations and statements. The
+// interpreter should be smart enough to recognize the declarations from the
+// statements and wrap the latter into a declaration, producing valid code.
+
+TEST_F(InterpreterTest, DeclsAndStatements) {
+  Args ExtraArgs = {"-Xclang", "-diagnostic-log-file", "-Xclang", "-"};
+
+  // Create the diagnostic engine with unowned consumer.
+  std::string DiagnosticOutput;
+  llvm::raw_string_ostream DiagnosticsOS(DiagnosticOutput);
+  DiagnosticOptions DiagOpts;
+  auto DiagPrinter =
+      std::make_unique<TextDiagnosticPrinter>(DiagnosticsOS, DiagOpts);
+
+  auto Interp = createInterpreter(ExtraArgs, DiagPrinter.get());
+  auto R1 = Interp->Parse(
+      "int var1 = 42; extern \"C\" int printf(const char*, ...);");
+  // gtest doesn't expand into explicit bool conversions.
+  EXPECT_TRUE(!!R1);
+
+  auto *PTU1 = R1->TUPart;
+  EXPECT_EQ(2U, DeclsSize(PTU1));
+
+  auto R2 = Interp->Parse("var1++; printf(\"var1 value %d\\n\", var1);");
+  EXPECT_TRUE(!!R2);
+}
+
+TEST_F(InterpreterTest, UndoCommand) {
+// FIXME : This test doesn't current work for Emscripten builds.
+// It should be possible to make it work.For details on how it fails and
+// the current progress to enable this test see
+// the following Github issue https: //
+// github.com/llvm/llvm-project/issues/153461
+#ifdef __EMSCRIPTEN__
+  GTEST_SKIP() << "Test fails for Emscipten builds";
+#endif
+  Args ExtraArgs = {"-Xclang", "-diagnostic-log-file", "-Xclang", "-"};
+
+  // Create the diagnostic engine with unowned consumer.
+  std::string DiagnosticOutput;
+  llvm::raw_string_ostream DiagnosticsOS(DiagnosticOutput);
+  DiagnosticOptions DiagOpts;
+  auto DiagPrinter =
+      std::make_unique<TextDiagnosticPrinter>(DiagnosticsOS, DiagOpts);
+
+  auto Interp = createInterpreter(ExtraArgs, DiagPrinter.get());
+
+  // Fail to undo.
+  auto Err1 = Interp->Undo();
+  EXPECT_EQ("Operation failed. No input left to undo",
+            llvm::toString(std::move(Err1)));
+  auto Err2 = Interp->Parse("int foo = 42;");
+  EXPECT_TRUE(!!Err2);
+  auto Err3 = Interp->Undo(2);
+  EXPECT_EQ("Operation failed. Wanted to undo 2 inputs, only have 1.",
+            llvm::toString(std::move(Err3)));
+
+  // Succeed to undo.
+  auto Err4 = Interp->Parse("int x = 42;");
+  EXPECT_TRUE(!!Err4);
+  auto Err5 = Interp->Undo();
+  EXPECT_FALSE(Err5);
+  auto Err6 = Interp->Parse("int x = 24;");
+  EXPECT_TRUE(!!Err6);
+  auto Err7 = Interp->Parse("#define X 42");
+  EXPECT_TRUE(!!Err7);
+  auto Err8 = Interp->Undo();
+  EXPECT_FALSE(Err8);
+  auto Err9 = Interp->Parse("#define X 24");
+  EXPECT_TRUE(!!Err9);
+
+  // Undo input contains errors.
+  auto Err10 = Interp->Parse("int y = ;");
+  EXPECT_FALSE(!!Err10);
+  EXPECT_EQ("Parsing failed.", llvm::toString(Err10.takeError()));
+  auto Err11 = Interp->Parse("int y = 42;");
+  EXPECT_TRUE(!!Err11);
+  auto Err12 = Interp->Undo();
+  EXPECT_FALSE(Err12);
+}
+
+static std::string MangleName(NamedDecl *ND) {
+  ASTContext &C = ND->getASTContext();
+  std::unique_ptr<MangleContext> MangleC(C.createMangleContext());
+  std::string mangledName;
+  llvm::raw_string_ostream RawStr(mangledName);
+  MangleC->mangleName(ND, RawStr);
+  return mangledName;
+}
+
+TEST_F(InterpreterTest, FindMangledNameSymbol) {
+  std::unique_ptr<Interpreter> Interp = createInterpreter();
+
+  auto &PTU(cantFail(Interp->Parse("int f(const char*) {return 0;}")));
+  EXPECT_EQ(1U, DeclsSize(PTU.TUPart));
+  auto R1DeclRange = PTU.TUPart->decls();
+
+  NamedDecl *FD = cast<FunctionDecl>(*R1DeclRange.begin());
+  // Lower the PTU
+  if (llvm::Error Err = Interp->Execute(PTU)) {
+    // We cannot execute on the platform.
+    consumeError(std::move(Err));
+    return;
+  }
+
+  std::string MangledName = MangleName(FD);
+  auto Addr = Interp->getSymbolAddress(MangledName);
+  EXPECT_FALSE(!Addr);
+  EXPECT_NE(0U, Addr->getValue());
+  GlobalDecl GD(FD);
+  EXPECT_EQ(*Addr, cantFail(Interp->getSymbolAddress(GD)));
+  cantFail(
+      Interp->ParseAndExecute("extern \"C\" int printf(const char*,...);"));
+  Addr = Interp->getSymbolAddress("printf");
+  EXPECT_FALSE(!Addr);
+
+  // FIXME: Re-enable when we investigate the way we handle dllimports on Win.
+#ifndef _WIN32
+  EXPECT_EQ((uintptr_t)&printf, Addr->getValue());
+#endif // _WIN32
+}
+
+static Value AllocateObject(TypeDecl *TD, Interpreter &Interp) {
+  std::string Name = TD->getQualifiedNameAsString();
+  Value Addr;
+  // FIXME: Consider providing an option in clang::Value to take ownership of
+  // the memory created from the interpreter.
+  // cantFail(Interp.ParseAndExecute("new " + Name + "()", &Addr));
+
+  // The lifetime of the temporary is extended by the clang::Value.
+  cantFail(Interp.ParseAndExecute(Name + "()", &Addr));
+  return Addr;
+}
+
+static NamedDecl *LookupSingleName(Interpreter &Interp, const char *Name) {
+  Sema &SemaRef = Interp.getCompilerInstance()->getSema();
+  ASTContext &C = SemaRef.getASTContext();
+  DeclarationName DeclName = &C.Idents.get(Name);
+  LookupResult R(SemaRef, DeclName, SourceLocation(), Sema::LookupOrdinaryName);
+  SemaRef.LookupName(R, SemaRef.TUScope);
+  assert(!R.empty());
+  return R.getFoundDecl();
+}
+
+TEST_F(InterpreterTest, InstantiateTemplate) {
+// FIXME : This test doesn't current work for Emscripten builds.
+// It should be possible to make it work.For details on how it fails and
+// the current progress to enable this test see
+// the following Github issue https: //
+// github.com/llvm/llvm-project/issues/153461
+#ifdef __EMSCRIPTEN__
+  GTEST_SKIP() << "Test fails for Emscipten builds";
+#endif
+  // FIXME: We cannot yet handle delayed template parsing. If we run with
+  // -fdelayed-template-parsing we try adding the newly created decl to the
+  // active PTU which causes an assert.
+  std::vector<const char *> Args = {"-fno-delayed-template-parsing"};
+  std::unique_ptr<Interpreter> Interp = createInterpreter(Args);
+
+  llvm::cantFail(Interp->Parse("extern \"C\" int printf(const char*,...);"
+                               "class A {};"
+                               "struct B {"
+                               "  template<typename T>"
+                               "  static int callme(T) { return 42; }"
+                               "};"));
+  auto &PTU = llvm::cantFail(Interp->Parse("auto _t = &B::callme<A*>;"));
+  auto PTUDeclRange = PTU.TUPart->decls();
+  EXPECT_EQ(1, std::distance(PTUDeclRange.begin(), PTUDeclRange.end()));
+
+  // Lower the PTU
+  if (llvm::Error Err = Interp->Execute(PTU)) {
+    // We cannot execute on the platform.
+    consumeError(std::move(Err));
+    return;
+  }
+
+  TypeDecl *TD = cast<TypeDecl>(LookupSingleName(*Interp, "A"));
+  Value NewA = AllocateObject(TD, *Interp);
+
+  // Find back the template specialization
+  VarDecl *VD = static_cast<VarDecl *>(*PTUDeclRange.begin());
+  UnaryOperator *UO = llvm::cast<UnaryOperator>(VD->getInit());
+  NamedDecl *TmpltSpec = llvm::cast<DeclRefExpr>(UO->getSubExpr())->getDecl();
+
+  std::string MangledName = MangleName(TmpltSpec);
+  typedef int (*TemplateSpecFn)(void *);
+  auto fn =
+      cantFail(Interp->getSymbolAddress(MangledName)).toPtr<TemplateSpecFn>();
+  EXPECT_EQ(42, fn(NewA.getPtr()));
+}
+
+TEST_F(InterpreterTest, Value) {
+// FIXME : This test doesn't current work for Emscripten builds.
+// It should be possible to make it work.For details on how it fails and
+// the current progress to enable this test see
+// the following Github issue https: //
+// github.com/llvm/llvm-project/issues/153461
 #ifdef __EMSCRIPTEN__
   GTEST_SKIP() << "Test fails for Emscipten builds";
 #endif
