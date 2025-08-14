@@ -141,6 +141,39 @@ static ParseResult parseLLVMLinkage(OpAsmParser &p, LinkageAttr &val) {
   return success();
 }
 
+static ArrayAttr getLLVMAlignParamForCompressExpand(OpBuilder &builder,
+                                                    bool isExpandLoad,
+                                                    uint64_t alignment = 1) {
+  // From
+  // https://llvm.org/docs/LangRef.html#llvm-masked-expandload-intrinsics
+  // https://llvm.org/docs/LangRef.html#llvm-masked-compressstore-intrinsics
+  //
+  //   The pointer alignment defaults to 1.
+  if (alignment == 1) {
+    return nullptr;
+  }
+
+  auto emptyDictAttr = builder.getDictionaryAttr({});
+  auto alignmentAttr = builder.getI64IntegerAttr(alignment);
+  auto namedAttr =
+      builder.getNamedAttr(LLVMDialect::getAlignAttrName(), alignmentAttr);
+  SmallVector<mlir::NamedAttribute> attrs = {namedAttr};
+  auto alignDictAttr = builder.getDictionaryAttr(attrs);
+  // From
+  // https://llvm.org/docs/LangRef.html#llvm-masked-expandload-intrinsics
+  // https://llvm.org/docs/LangRef.html#llvm-masked-compressstore-intrinsics
+  //
+  //   The align parameter attribute can be provided for [expandload]'s first
+  //   argument. The align parameter attribute can be provided for
+  //   [compressstore]'s second argument.
+  int pos = isExpandLoad ? 0 : 1;
+  auto arrayAttr =
+      pos == 0
+          ? builder.getArrayAttr({alignDictAttr, emptyDictAttr, emptyDictAttr})
+          : builder.getArrayAttr({emptyDictAttr, alignDictAttr, emptyDictAttr});
+  return builder.getArrayAttr(arrayAttr);
+}
+
 //===----------------------------------------------------------------------===//
 // Operand bundle helpers.
 //===----------------------------------------------------------------------===//
@@ -4124,17 +4157,7 @@ void LLVM::masked_expandload::build(OpBuilder &builder, OperationState &state,
                                     mlir::TypeRange resTys, Value ptr,
                                     Value mask, Value passthru,
                                     uint64_t align) {
-  ArrayAttr callArgs = nullptr;
-  if (align != 1) {
-    auto emptyDictAttr = builder.getDictionaryAttr({});
-    auto alignmentAttr = builder.getI64IntegerAttr(align);
-    auto namedAttr =
-        builder.getNamedAttr(LLVMDialect::getAlignAttrName(), alignmentAttr);
-    SmallVector<mlir::NamedAttribute> attrs = {namedAttr};
-    auto alignDictAttr = builder.getDictionaryAttr(attrs);
-    callArgs =
-        builder.getArrayAttr({emptyDictAttr, alignDictAttr, emptyDictAttr});
-  }
+  ArrayAttr callArgs = getLLVMAlignParamForCompressExpand(builder, true, align);
   build(builder, state, resTys, ptr, mask, passthru, /*arg_attrs=*/callArgs,
         /*res_attrs=*/nullptr);
 }
@@ -4147,17 +4170,8 @@ void LLVM::masked_compressstore::build(OpBuilder &builder,
                                        OperationState &state, Value value,
                                        Value ptr, Value mask, uint64_t align) {
 
-  ArrayAttr callArgs = nullptr;
-  if (align != 1) {
-    auto emptyDictAttr = builder.getDictionaryAttr({});
-    auto alignmentAttr = builder.getI64IntegerAttr(align);
-    auto namedAttr =
-        builder.getNamedAttr(LLVMDialect::getAlignAttrName(), alignmentAttr);
-    SmallVector<mlir::NamedAttribute> attrs = {namedAttr};
-    auto alignDictAttr = builder.getDictionaryAttr(attrs);
-    callArgs =
-        builder.getArrayAttr({emptyDictAttr, alignDictAttr, emptyDictAttr});
-  }
+  ArrayAttr callArgs =
+      getLLVMAlignParamForCompressExpand(builder, false, align);
   build(builder, state, value, ptr, mask, /*arg_attrs=*/callArgs,
         /*res_attrs=*/nullptr);
 }
