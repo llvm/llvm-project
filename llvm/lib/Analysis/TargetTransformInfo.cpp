@@ -1230,10 +1230,11 @@ unsigned TargetTransformInfo::getNumberOfParts(Type *Tp) const {
   return TTIImpl->getNumberOfParts(Tp);
 }
 
-InstructionCost
-TargetTransformInfo::getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
-                                               const SCEV *Ptr) const {
-  InstructionCost Cost = TTIImpl->getAddressComputationCost(PtrTy, SE, Ptr);
+InstructionCost TargetTransformInfo::getAddressComputationCost(
+    Type *PtrTy, ScalarEvolution *SE, const SCEV *Ptr,
+    TTI::TargetCostKind CostKind) const {
+  InstructionCost Cost =
+      TTIImpl->getAddressComputationCost(PtrTy, SE, Ptr, CostKind);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
