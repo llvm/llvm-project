@@ -20,7 +20,7 @@ def FormExpressionsPass : Pass<"form-expressions"> {
   let dependentDialects = ["emitc::EmitCDialect"];
 }
 
-def WrapFuncInClassPass : Pass<"wrap-emitc-func-in-class"> {
+def WrapFuncInClassPass : Pass<"wrap-emitc-func-in-class", "ModuleOp"> {
   let summary = "Wrap functions in classes, using arguments as fields.";
   let description = [{
     This pass transforms `emitc.func` operations into `emitc.class` operations.
@@ -51,6 +51,44 @@ def WrapFuncInClassPass : Pass<"wrap-emitc-func-in-class"> {
     ```
   }];
   let dependentDialects = ["emitc::EmitCDialect"];
+}
+
+def AddReflectionMapPass : Pass<"add-reflection-map", "ModuleOp"> {
+  let summary =
+      "Add a reflection map function to EmitC classes for runtime field lookup";
+  let description = [{
+        This pass adds a `getBufferForName` function to EmitC classes that enables 
+        runtime lookup of field buffers by their string names. 
+        This requires that the class has fields with attributes and a function named `execute`.
+        The `fieldop` attribute is expected to be a dictionary where:
+        - The keys are `namedAttribute`.
+        - The values are arrays containing a single string attribute.
+
+
+        Example:
+
+        ```mlir
+        emitc.class @MyClass {
+          emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.field_ref = ["another_feature"]}
+          emitc.field @fieldName1 : !emitc.array<1xf32> {emitc.field_ref = ["some_feature"]}
+          emitc.func @execute() { ... }
+        }
+
+        // becomes:
+        
+        emitc.class @MyClass {
+          emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.field_ref = ["another_feature"]}
+          emitc.field @fieldName1 : !emitc.array<1xf32> {emitc.field_ref = ["some_feature"]}
+          emitc.field @reflectionMap : !emitc.opaque<"const std::map<std::string, char*>"> = #emitc.opaque<"{ { \22another_feature\22, reinterpret_cast<char*>(&fieldName0) }, { \22some_feature\22, reinterpret_cast<char*>(&fieldName1) } }">
+          emitc.func @execute() { ... }
+        }
+        ```
+    }];
+  let dependentDialects = ["mlir::emitc::EmitCDialect"];
+  let options = [Option<"namedAttribute", "named-attribute", "std::string",
+                        /*default=*/"",
+                        "Attribute key used to extract field names from fields "
+                        "dictionary attributes">];
 }
 
 #endif // MLIR_DIALECT_EMITC_TRANSFORMS_PASSES

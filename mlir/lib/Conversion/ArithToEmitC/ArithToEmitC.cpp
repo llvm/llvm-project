@@ -340,6 +340,86 @@ public:
   }
 };
 
+class MaximumFOpLowering : public OpConversionPattern<arith::MaximumFOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::MaximumFOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+
+    auto newOp = emitc::CallOpaqueOp::create(
+        rewriter, loc, op.getType(), rewriter.getStringAttr("fmax"),
+        ValueRange{adaptor.getLhs(), adaptor.getRhs()});
+
+    // Option 1: Use fmax from math.h
+    rewriter.replaceOp(op, newOp);
+
+    return success();
+  }
+};
+
+class MinimumFOpLowering : public OpConversionPattern<arith::MinimumFOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::MinimumFOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+
+    auto newOp = emitc::CallOpaqueOp::create(
+        rewriter, loc, op.getType(), rewriter.getStringAttr("fmin"),
+        ValueRange{adaptor.getLhs(), adaptor.getRhs()});
+
+    // Option 1: Use fmin from math.h
+    rewriter.replaceOp(op, newOp);
+
+    return success();
+  }
+};
+
+class MinSIOpLowering : public OpConversionPattern<arith::MinSIOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::MinSIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+
+    auto newOp = emitc::CallOpaqueOp::create(
+        rewriter, loc, op.getType(), rewriter.getStringAttr("min"),
+        ValueRange{adaptor.getLhs(), adaptor.getRhs()});
+
+    // Option 1: Use min from math.h
+    rewriter.replaceOp(op, newOp);
+
+    return success();
+  }
+};
+
+class MaxSIOpLowering : public OpConversionPattern<arith::MaxSIOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::MaxSIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+
+    auto newOp = emitc::CallOpaqueOp::create(
+        rewriter, loc, op.getType(), rewriter.getStringAttr("max"),
+        ValueRange{adaptor.getLhs(), adaptor.getRhs()});
+
+    // Option 1: Use max from math.h
+    rewriter.replaceOp(op, newOp);
+
+    return success();
+  }
+};
+
 template <typename ArithOp, bool castToUnsigned>
 class CastConversion : public OpConversionPattern<ArithOp> {
 public:
@@ -829,6 +909,10 @@ void mlir::populateArithToEmitCPatterns(TypeConverter &typeConverter,
     CmpFOpConversion,
     CmpIOpConversion,
     NegFOpConversion,
+    MaximumFOpLowering,
+    MinSIOpLowering,
+    MaxSIOpLowering,
+    MinimumFOpLowering,
     SelectOpConversion,
     // Truncation is guaranteed for unsigned types.
     UnsignedCastConversion<arith::TruncIOp>,
