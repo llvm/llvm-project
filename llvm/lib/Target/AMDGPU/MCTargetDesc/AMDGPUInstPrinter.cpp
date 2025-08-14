@@ -1273,7 +1273,7 @@ void AMDGPUInstPrinter::printPackedModifier(const MCInst *MI,
 
   for (auto [SrcMod, Src] : MOps) {
     if (!AMDGPU::hasNamedOperand(Opc, Src))
-      break;
+      continue; // Some instructions have src0, src2, but no src1. 
 
     int ModIdx = AMDGPU::getNamedOperandIdx(Opc, SrcMod);
     Ops[NumOps++] =
@@ -1347,14 +1347,6 @@ void AMDGPUInstPrinter::printOpSel(const MCInst *MI, unsigned,
     unsigned BC = !!(MI->getOperand(BCN).getImm() & SISrcMods::OP_SEL_0);
     if (FI || BC)
       O << " op_sel:[" << FI << ',' << BC << ']';
-    return;
-  }
-  if (Opc == AMDGPU::V_INTERP_P2_F16_opsel_gfx9) {
-    int ModIdx =
-        AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0_modifiers);
-    uint32_t ModVal = MI->getOperand(ModIdx).getImm();
-    if (ModVal & SISrcMods::DST_OP_SEL)
-      O << " op_sel:[0,0,0,1]";
     return;
   }
 

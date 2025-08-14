@@ -9218,17 +9218,29 @@ void AMDGPUAsmParser::cvtVOP3Interp(MCInst &Inst, const OperandVector &Operands)
   if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::op_sel)) {
     addOptionalImmOperand(Inst, Operands, OptionalIdx,
                           AMDGPUOperand::ImmTyOpSel);
-
     int OpSelIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel);
     unsigned OpSel = Inst.getOperand(OpSelIdx).getImm();
 
-    // Check if op_sel[3] is set, which is meant for dst.
-    if ((OpSel & (1 << 3)) != 0) {
-      int ModIdx =
-          AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0_modifiers);
+    const AMDGPU::OpName Ops[] = {AMDGPU::OpName::src0, AMDGPU::OpName::src1,
+                                  AMDGPU::OpName::src2};
+    const AMDGPU::OpName ModOps[] = {AMDGPU::OpName::src0_modifiers,
+                                     AMDGPU::OpName::src1_modifiers,
+                                     AMDGPU::OpName::src2_modifiers};
+    // Some v_interp instructions in GFX9 have src0, src2, but no src1.
+    for (int J = 0; J < 3; ++J) {
+      int OpIdx = AMDGPU::getNamedOperandIdx(Opc, Ops[J]);
+      if (OpIdx == -1)
+        continue;
+
+      int ModIdx = AMDGPU::getNamedOperandIdx(Opc, ModOps[J]);
       uint32_t ModVal = Inst.getOperand(ModIdx).getImm();
 
-      ModVal |= SISrcMods::DST_OP_SEL;
+      if ((OpSel & (1 << J)) != 0)
+        ModVal |= SISrcMods::OP_SEL_0;
+      // op_sel[3] is encoded in src0_modifiers.
+      if (ModOps[J] == AMDGPU::OpName::src0_modifiers &&
+          (OpSel & (1 << 3)) != 0)
+        ModVal |= SISrcMods::DST_OP_SEL;
 
       Inst.getOperand(ModIdx).setImm(ModVal);
     }

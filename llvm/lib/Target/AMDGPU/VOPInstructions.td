@@ -420,6 +420,9 @@ class VOP3a_ScaleSel_gfx1250<bits<10> op, VOPProfile p> : VOP3e_gfx11_gfx12<op, 
 }
 
 class VOP3Interp_OpSel_gfx9<bits<10> op, VOPProfile p> : VOP3Interp_vi<op, p> {
+  let Inst{11} = src0_modifiers{2};
+  // There's no src1
+  let Inst{13} = src2_modifiers{2};
   let Inst{14} = !if(p.HasDst,  src0_modifiers{3}, 0);
 }
 
